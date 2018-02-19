@@ -10,6 +10,7 @@ public class MinerNetwork {
 	private int bench;
 	private int ddos[];
 	private int badGuy[];
+	private int totalMiners;
 	
 	public MinerNetwork(int p, int s, int b)
 	{
@@ -25,6 +26,7 @@ public class MinerNetwork {
 		chain = new Blockchain();
 		chain.addBlock(g);
 		maxTransactionTime = 300;
+		totalMiners = p*(1+s+b);
 	}
 	
 	public MinerNetwork(int p, int s, int b, double q)
@@ -41,6 +43,7 @@ public class MinerNetwork {
 		chain = new Blockchain();
 		chain.addBlock(g);
 		maxTransactionTime = 300;
+		totalMiners = p*(1+s+b);
 	}
 	
 	public MinerNetwork(int p, int s, int b, double q, int[] dos, int[] bg)
@@ -57,6 +60,7 @@ public class MinerNetwork {
 		chain = new Blockchain();
 		chain.addBlock(g);
 		maxTransactionTime = 300;
+		totalMiners = p*(1+s+b);
 	}
 	
 	/**
@@ -123,6 +127,11 @@ public class MinerNetwork {
 		return bench;
 	}
 	
+	public int getTotalMiners()
+	{
+		return totalMiners;
+	}
+	
 	public boolean isBadGuy(int col, int row)
 	{
 		boolean bad = false;
@@ -162,9 +171,9 @@ public class MinerNetwork {
 	 */
 	public Miner getMiner(int i)
 	{
-		int x = i%(network.length * network[0].length);
-		//return network[x%network.length][x/network.length];
-		return network[x%primary][x/primary];
+		//		int x = i%(network.length * network[0].length);
+		// return network[x%network.length][x/network.length];
+		return network[i%primary][i/primary];
 	}
 	
 	/**
@@ -183,20 +192,6 @@ public class MinerNetwork {
 				getMiner(miner[i]).addTransaction(t);
 			}
 		}
-	}
-	
-	public boolean transactionsLeft()
-	{
-		boolean stillThere = false;
-		int numberOfMiners = primary * (1 + secondary);
-		for(int i = 0; i < numberOfMiners & !stillThere; i++)
-		{
-			if(getMiner(i).getTransactionPool().size() > 0)
-			{
-				stillThere = true;
-			}
-		}
-		return stillThere;
 	}
 
 }

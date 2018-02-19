@@ -37,6 +37,21 @@ public class MinerProtocol0 extends Miner{
 	 * genesis block is set to b
 	 * @param b the genesis block for the blockchain
 	 * @param d the balance of the Client's Account
+	 * @param minerID the miner ID
+	 */
+	public MinerProtocol0(Block b, double d, Integer minerID)
+	{
+		super(b,d, minerID);
+		waitingVerification = new LinkedList<Block>();
+		waitingConfirmation = new ArrayList<Block>();
+	}
+	
+	/**
+	 * Creates a miner with a Client, a pool of transactions, and a blockchain.
+	 * The client's account is initialized to a balance of d and the blockchain's
+	 * genesis block is set to b
+	 * @param b the genesis block for the blockchain
+	 * @param d the balance of the Client's Account
 	 */
 	public MinerProtocol0(Block b, double d)
 	{
@@ -232,12 +247,33 @@ public class MinerProtocol0 extends Miner{
 	 */
 	public Block consolidateBlocks(ArrayList<Block> b)
 	{
-		Block working = new Block();
-		if(b.size() > 0)
+		Block working = b.get(0);
+		/**
+		for(int i = 0; i < b.size(); i++)
 		{
-			working = b.get(0);
+			if(!verifyNewBlockHash(b.get(i)))
+			{
+				b.remove(i);
+				i--;
+			}
 		}
 		
+		
+		boolean found = false;
+		ArrayList<byte[]> hashes = new ArrayList<byte[]>();
+		for(int i = 0; i < b.size() && !found; i++)
+		{
+			if(!hashes.contains(b.get(i).getCurrentHash()))
+			{
+				hashes.add(b.get(i).getCurrentHash());
+			}
+			else
+			{
+				found = true;
+				working = b.get(i);
+			}
+		}
+		*/
 		for(int j = 1; j < b.size(); j++)
 		{
 			if(working.sameBlock(b.get(j)))
@@ -252,3 +288,5 @@ public class MinerProtocol0 extends Miner{
  
 	
 }
+
+

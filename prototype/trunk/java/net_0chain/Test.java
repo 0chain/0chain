@@ -6,19 +6,19 @@ public class Test {
 	public static void main(String args[]) throws ClassNotFoundException, IOException
 	{
 		int i;
-		int numBlocks = 3;
-		MinerNetworkProtocols mn = new MinerNetworkProtocols(3, 2, 0, 0.50, new int[]{1,3,6}, new int[]{});
+		int numBlocks = 1;
+		MinerNetworkProtocols mn = new MinerNetworkProtocols(3, 2, 2, 0.50, new int[]{}, new int[]{6});
 		//MinerNetwork mn = new MinerNetwork(3, 2, 2, .50);
 
-		for(i = 0; i < 2000; i++)
+		for(i = 0; i < 1000; i++)
 		{
-			mn.acceptTransaction(mn.createTransaction(0, 1, 0.0001));
+			mn.acceptTransaction(mn.createTransaction(0, 10, 0.0001));
 		}
 		
 		long start = System.currentTimeMillis();
 		for(i = 0; i < numBlocks; i++)
 		{
-			mn.singleRoundProtocol0(i);
+			mn.singleRoundProtocol2(6);
 			//mn.getChain().printCurrentBlock();
 		}
 		long finish = System.currentTimeMillis();
@@ -30,5 +30,11 @@ public class Test {
 			System.out.println("Block rate: 1 block per "+ ((finish-start)/(mn.getChain().getLength()-1))+" milliseconds");
 		}
 		mn.printMinerBlocks();
+		
+		System.out.println();
+		System.out.println("The miners generate the cryptographic-quality random number");
+			
+		mn.runRandProtocol();
+			
 	}
 }

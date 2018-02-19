@@ -30,7 +30,8 @@ public class MinerNetworkProtocols extends MinerNetwork{
 		{
 			for(j = 0; j < network[0].length; j++)
 			{
-				network[i][j] = new MinerProtocol0(g, 10.0);
+				network[i][j] = new MinerProtocol0(g, 10.0, createMinerID(i, j));
+				network[i][j].setMinertype(calcMinertype(p, b, createMinerID(i,j)));
 				accounts.add(network[i][j].getAccount());
 			}
 		}
@@ -67,7 +68,8 @@ public class MinerNetworkProtocols extends MinerNetwork{
 		{
 			for(j = 0; j < network[0].length; j++)
 			{
-				network[i][j] = new MinerProtocol0(g, 10.0);
+				network[i][j] = new MinerProtocol0(g, 10.0, createMinerID(i, j));
+				network[i][j].setMinertype(calcMinertype(p, s, createMinerID(i,j)));
 				accounts.add(network[i][j].getAccount());
 			}
 		}
@@ -113,6 +115,42 @@ public class MinerNetworkProtocols extends MinerNetwork{
 		}
 	}
 	
+	/**
+	 * This method calculates whether the miner is a primary, secondary or bench miner based 
+	 * on the miner Id
+	 * @param p the number of primary miners
+	 * @param b the number of secondary miners for each primary
+	 * @param minerId the miner ID
+	 * @return the type of the miner from the enum MinerType
+	 */
+	
+	public MinerType calcMinertype(int p, int b, int minerId)
+	{
+		if(minerId >= 0 && minerId < p)
+		{
+			return MinerType.PRIMARY;
+		}
+		else if(minerId >=p  && minerId < p*(b+1))
+		{
+			return MinerType.SECONDARY;
+		}
+		else
+		{
+			return MinerType.BENCH;
+		}
+		
+	}
+	
+	/**
+	 * This method returns the minerID
+	 * @param rowIndex row index of the miner in the network array
+	 * @param columnIndex column index of the miner in the network array
+	 * @return the ID of the miner
+	 */
+	private Integer createMinerID(int row_index, int column_index)
+	{
+		return ((1+getSecondary()+getBench())*row_index) + (column_index);
+	}
 	
 	/**
 	 * This method has the network run through one round of block creation and all the rounds of verification
@@ -122,17 +160,14 @@ public class MinerNetworkProtocols extends MinerNetwork{
 	public void singleRoundProtocol0(int start)
 	{
 		int i;
-		if(transactionsLeft())
+		ArrayList<Block> temp = generate(start%network.length);
+		for(i = 1; i < network.length;i++)
 		{
-			ArrayList<Block> temp = generate(start%network.length);
-			for(i = 1; i < network.length;i++)
-			{
-				//System.out.println("Verification round "+i);
-				temp = verifyRound((start + i)%network.length, temp);
-			}
-			//System.out.println();
-			decideBlocks(temp);
+			//System.out.println("Verification round "+i);
+			temp = verifyRound((start + i)%network.length, temp);
 		}
+		//System.out.println();
+		decideBlocks(temp);
 	}
 	
 	public void singleRoundProtocol1(int start, int preGenCount)
@@ -327,10 +362,6 @@ public class MinerNetworkProtocols extends MinerNetwork{
 					blocks.add(temp);
 				}
 			}
-			else
-			{
-				blocks.add(working);
-			}
 		}
 		//System.out.println("Replay took "+(System.currentTimeMillis()-startTime));
 		
@@ -385,7 +416,7 @@ public class MinerNetworkProtocols extends MinerNetwork{
 	
 	/**
 	 * This method prints an array that matches the miner network.
-	 * Each interger in the array shows the number of blocks in that 
+	 * Each integer in the array shows the number of blocks in that 
 	 * miner's chain
 	 */
 	public void printMinerBlocks()
@@ -457,5 +488,125 @@ public class MinerNetworkProtocols extends MinerNetwork{
 		return working;
 	}
 	*/
+	
+	/**
+	 * This method is called from the runRandProtocol() function to keep track of the 
+	 * miner information for the random number and shuffling protocol.
+	 */
+	public void broadcastProtoInfo(Miner minerObj)
+	{
+		for(int i = 0; i < network.length; i++)
+		{
+			for(int j = 0; j < network[0].length - getBench(); j++)
+			{
+				network[i][j].updateRandProtoInfo(minerObj.getMinerID(),minerObj.getRandProto());
+ 			}
+		}
+	}
+	
+	/**
+	 * This method calls the functions in the Miner class to simulate the Random Number and
+	 * Shuffling Miners protocol.
+	 */
+	
+	public void runRandProtocol()
+	{
+		int i, j;
+		
+		for(i = 0; i < network.length; i++)
+		{
+			for(j = 0; j < network[0].length - getBench(); j++)
+			{
+				network[i][j].minerRandProtocolRun(network[i][j].getMinerID());
+ 			}
+			
+		}
+			
+		for(i = 0; i < network.length; i++)
+		{
+			for(j = 0; j < network[0].length - getBench(); j++)
+			{
+				network[i][j].updateRandProtoInfo(network[i][j].getMinerID(),network[i][j].getRandProto());
+				broadcastProtoInfo(network[i][j]);
+ 			}
+			
+		}
+		for(i = 0; i < network.length; i++)
+		{
+			for(j = 0; j < network[0].length - getBench(); j++)
+			{
+	           
+	    		System.out.println(network[i][j].getMinerID());
+		    }
+			System.out.println();
+		}
+
+		for(i = 0; i < network.length; i++)
+		{
+			for(j = 0; j < network[0].length - getBench(); j++)
+			{
+	            System.out.println("The Miner ID :"+network[i][j].getMinerID() +" has the Miner type is: "+
+			    network[i][j].getMinertype().toString());
+				network[i][j].printRandProto();
+		    }
+			System.out.println();
+		}
+		
+		for(i = 0; i < network.length; i++)
+		{
+			for(j = 0; j < network[0].length - getBench(); j++)
+			{
+	            System.out.println("The Miner ID :"+network[i][j].getMinerID() + " verifying the signatures and they are :");
+				network[i][j].minerVerifySignHash();
+		    }
+			System.out.println();
+		}
+		
+		
+		for(i = 0; i < network.length; i++)
+		{
+			for(j = 0; j < network[0].length - getBench(); j++)
+			{
+	            System.out.println("The Miner ID :"+network[i][j].getMinerID() + " verifying the hash and random numbers matches and they are: ");
+				network[i][j].minerVerifySignHash();
+		    }
+			System.out.println();
+		}
+	
+		byte[] finalRand = null;
+		
+		for(i = 0; i < network.length; i++)
+		{
+			for(j = 0; j < network[0].length - getBench(); j++)
+			{
+	            System.out.println("The Miner ID :"+network[i][j].getMinerID() + " is calculating the final rand for shuffling miners");
+				finalRand = network[i][j].minerConcatRandNum();
+		    }
+			System.out.println();
+		}
+		
+		for(i = 0; i < network.length; i++)
+		{
+			for(j = getSecondary() + 1; j < getSecondary() + getBench() + 1; j++)
+			{
+			    
+				network[i][j].benchMinerSetFinalRand(finalRand);
+					
+		    }
+			System.out.println();
+		}
+		
+		for(i = 0; i < network.length; i++)
+		{
+			for(j = 0; j < network[0].length; j++)
+			{
+			   
+				network[i][j].minerShufflePositions(getTotalMiners());
+					
+		    }
+			System.out.println();
+		}
+		
+	}
 	
 }
