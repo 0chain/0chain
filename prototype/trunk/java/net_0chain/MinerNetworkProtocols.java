@@ -31,7 +31,6 @@ public class MinerNetworkProtocols extends MinerNetwork{
 			for(j = 0; j < network[0].length; j++)
 			{
 				network[i][j] = new MinerProtocol0(g, 10.0, createMinerID(i, j));
-				network[i][j].setMinertype(calcMinertype(p, b, createMinerID(i,j)));
 				accounts.add(network[i][j].getAccount());
 			}
 		}
@@ -69,7 +68,6 @@ public class MinerNetworkProtocols extends MinerNetwork{
 			for(j = 0; j < network[0].length; j++)
 			{
 				network[i][j] = new MinerProtocol0(g, 10.0, createMinerID(i, j));
-				network[i][j].setMinertype(calcMinertype(p, s, createMinerID(i,j)));
 				accounts.add(network[i][j].getAccount());
 			}
 		}
@@ -115,41 +113,16 @@ public class MinerNetworkProtocols extends MinerNetwork{
 		}
 	}
 	
-	/**
-	 * This method calculates whether the miner is a primary, secondary or bench miner based 
-	 * on the miner Id
-	 * @param p the number of primary miners
-	 * @param b the number of secondary miners for each primary
-	 * @param minerId the miner ID
-	 * @return the type of the miner from the enum MinerType
-	 */
-	
-	public MinerType calcMinertype(int p, int b, int minerId)
-	{
-		if(minerId >= 0 && minerId < p)
-		{
-			return MinerType.PRIMARY;
-		}
-		else if(minerId >=p  && minerId < p*(b+1))
-		{
-			return MinerType.SECONDARY;
-		}
-		else
-		{
-			return MinerType.BENCH;
-		}
-		
-	}
 	
 	/**
-	 * This method returns the minerID
+	 * This method returns the minerID. The minerIDs are 10000, 10001, 10002, 10003 till 10014
 	 * @param rowIndex row index of the miner in the network array
 	 * @param columnIndex column index of the miner in the network array
 	 * @return the ID of the miner
 	 */
 	private Integer createMinerID(int row_index, int column_index)
 	{
-		return ((1+getSecondary()+getBench())*row_index) + (column_index);
+		return ((1+getSecondary()+getBench())*row_index) + (column_index) + 10000;
 	}
 	
 	/**
@@ -490,8 +463,8 @@ public class MinerNetworkProtocols extends MinerNetwork{
 	*/
 	
 	/**
-	 * This method is called from the runRandProtocol() function to keep track of the 
-	 * miner information for the random number and shuffling protocol.
+	 * This method is called from the runShuffleProtocol() function to keep track of the 
+	 * miner information.
 	 */
 	public void broadcastProtoInfo(Miner minerObj)
 	{
@@ -499,17 +472,34 @@ public class MinerNetworkProtocols extends MinerNetwork{
 		{
 			for(int j = 0; j < network[0].length - getBench(); j++)
 			{
-				network[i][j].updateRandProtoInfo(minerObj.getMinerID(),minerObj.getRandProto());
+				network[i][j].updateShuffleProtoInfo(minerObj.getMinerID(),minerObj.getShuffleProto());
  			}
 		}
 	}
 	
 	/**
-	 * This method calls the functions in the Miner class to simulate the Random Number and
-	 * Shuffling Miners protocol.
+	 * This method prints the initial active miner set along with the bench miners. It displays the
+	 * initial minerIDs in the network.
+	 */
+	public void printMinerSet()
+	{
+		for(int i = 0; i < network.length; i++)
+		 {
+			for(int j = 0; j < network[0].length; j++)
+			{
+				System.out.print(network[i][j].getMinerID()+"\t");
+			}
+			System.out.println();
+		 }
+	}
+	
+	/**
+	 * This method calls the functions in the Miner class to simulate the Random Number 
+	 * and Shuffling Miners protocol.
+	 * @return networkShuffleIDs which has the new shuffled positions for the minerIDs.
 	 */
 	
-	public void runRandProtocol()
+	public int[][] runShuffleProtocol()
 	{
 		int i, j;
 		
@@ -517,7 +507,7 @@ public class MinerNetworkProtocols extends MinerNetwork{
 		{
 			for(j = 0; j < network[0].length - getBench(); j++)
 			{
-				network[i][j].minerRandProtocolRun(network[i][j].getMinerID());
+				network[i][j].minerShuffleProtocolRun(network[i][j].getMinerID());
  			}
 			
 		}
@@ -526,38 +516,27 @@ public class MinerNetworkProtocols extends MinerNetwork{
 		{
 			for(j = 0; j < network[0].length - getBench(); j++)
 			{
-				network[i][j].updateRandProtoInfo(network[i][j].getMinerID(),network[i][j].getRandProto());
+				network[i][j].updateShuffleProtoInfo(network[i][j].getMinerID(),network[i][j].getShuffleProto());
 				broadcastProtoInfo(network[i][j]);
  			}
 			
 		}
-		for(i = 0; i < network.length; i++)
+		
+    	for(i = 0; i < network.length; i++)
 		{
 			for(j = 0; j < network[0].length - getBench(); j++)
 			{
-	           
-	    		System.out.println(network[i][j].getMinerID());
-		    }
-			System.out.println();
-		}
-
-		for(i = 0; i < network.length; i++)
-		{
-			for(j = 0; j < network[0].length - getBench(); j++)
-			{
-	            System.out.println("The Miner ID :"+network[i][j].getMinerID() +" has the Miner type is: "+
-			    network[i][j].getMinertype().toString());
+	            System.out.println("The Miner ID :"+network[i][j].getMinerID());
 				network[i][j].printRandProto();
 		    }
 			System.out.println();
-		}
+		} 
 		
 		for(i = 0; i < network.length; i++)
 		{
 			for(j = 0; j < network[0].length - getBench(); j++)
 			{
-	            System.out.println("The Miner ID :"+network[i][j].getMinerID() + " verifying the signatures and they are :");
-				network[i][j].minerVerifySignHash();
+	            System.out.println("The Miner ID :"+network[i][j].getMinerID() + " verifying the miner's signatures and they are :" + network[i][j].minerVerifySignHash());
 		    }
 			System.out.println();
 		}
@@ -567,11 +546,11 @@ public class MinerNetworkProtocols extends MinerNetwork{
 		{
 			for(j = 0; j < network[0].length - getBench(); j++)
 			{
-	            System.out.println("The Miner ID :"+network[i][j].getMinerID() + " verifying the hash and random numbers matches and they are: ");
-				network[i][j].minerVerifySignHash();
+	            System.out.println("The Miner ID :"+network[i][j].getMinerID() + " verifying the hash and random numbers matches and they are: " + network[i][j].minerVerifyRandHash());
+				network[i][j].minerVerifyRandHash();
 		    }
 			System.out.println();
-		}
+		} 
 	
 		byte[] finalRand = null;
 		
@@ -593,20 +572,50 @@ public class MinerNetworkProtocols extends MinerNetwork{
 				network[i][j].benchMinerSetFinalRand(finalRand);
 					
 		    }
-			System.out.println();
+			
 		}
 		
+		int[][] networkShuffleArray = null;
+		
+		System.out.print("All the miners generates the shuffled array position");
 		for(i = 0; i < network.length; i++)
 		{
 			for(j = 0; j < network[0].length; j++)
 			{
 			   
-				network[i][j].minerShufflePositions(getTotalMiners());
+			 networkShuffleArray = network[i][j].minerShufflePositions(getPrimary(),getSecondary(), getBench());
 					
 		    }
 			System.out.println();
 		}
 		
-	}
+		System.out.println("The contents of network shuffle array : ");
+		
+		for(i = 0; i < networkShuffleArray.length; i++)
+		 {
+			for(j = 0; j < networkShuffleArray[0].length; j++)
+			{
+				System.out.print(networkShuffleArray[i][j]+"\t");
+			}
+			System.out.println();
+		 }
+		
+		int[][] networkShuffleIDs = networkShuffleArray;
+		
+		for(i = 0; i < networkShuffleArray.length; i++)
+		 {
+				for(j = 0; j < networkShuffleArray[0].length; j++)
+				{
+					int row_index = networkShuffleArray[i][j]/(1+getSecondary()+getBench());
+					int column_index = networkShuffleArray[i][j]%(1+getSecondary()+getBench());
+					networkShuffleIDs[i][j] = network[row_index][column_index].getMinerID();
+				}
+			
+		 }
+		
+		
+		return networkShuffleIDs;
+	
+  }
 	
 }

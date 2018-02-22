@@ -104,7 +104,6 @@ public class ShuffleProtocol{
 	 * The Miner ID and its corresponding RandNumProtocol for lookup. The hash is created 
 	 * by using SHA256.
 	 * @param minerID the ID of the miner
-	 * @return random number's hash in hex format
 	 */
 
 	public void createRandHash(int minerID)
@@ -161,8 +160,8 @@ public class ShuffleProtocol{
 		    Integer key = entry.getKey();
 		    ShuffleProtocol valueobj = entry.getValue();    
 		    System.out.println ("Miner id : " + key + " has the Random Num :  " + valueobj.getRandomNumber() + " and hash " 
-		    + displayRandHash(valueobj.getRandHash()) + "\n" + " and the signed hash :" + 
-		    valueobj.getHashSignature());
+		    + displayRandHash(valueobj.getRandHash())); 
+		    //+ "\n" + " and the signed hash :" + valueobj.getHashSignature());
 		    System.out.println();
 		}
 		
@@ -219,7 +218,6 @@ public class ShuffleProtocol{
 			
 		}
 		
-		   System.out.println(verified);
 		   return verified;
 	}
 	
@@ -276,7 +274,6 @@ public class ShuffleProtocol{
 		    
 		    sumRand = sumRand + valueobj.getRandomNumber();
 		}
-		System.out.println("Concatenating the random numbers : "+sumRand);
 		
 		try
 		{
@@ -304,21 +301,26 @@ public class ShuffleProtocol{
 	
 	/**
 	 * This method calculates the new shuffled positions for each miner for the next round. The array
-	 * is initialized to -1 in the beginning. The array returns the new miner positions as indices and 
-	 * the miner IDs as the array contents. The spillerArray is used to remove collision.
+	 * is initialized to -1 in the beginning. The array returns the new miner positions for each miner
+	 * for the next round. The spillerArray is used to remove collision.
 	 * We assign the first miner to position rand mod n, the second miner to position hash(rand) mod n,
      * the third miner to position hash(hash(rand)) mod n and so on.
-	 * @param totalMiners the total number of miners in the network
+	 * @param p the number of primary miners
+	 * @param s the number of secondary miners
+	 * @param b the number of bench miners
+	 * @return the 2D array, networkShuffleArray which has the new shuffled positions.
 	 */
 
-	 public void shufflePositions(int totalMiners) 
+	 public int[][] shufflePositions(int p, int s, int b) 
 	 {
+		 int i,j = 0;
+		 int totalMiners = p*(1+s+b);
 		 shuffleArray = new int[totalMiners];
 		 List<Integer> spillerArray = new ArrayList<Integer>();
 		 Arrays.fill(shuffleArray, -1);
 		 ByteBuffer buffer = ByteBuffer.wrap(finalRandHash);
 		 long current = buffer.getLong();
-		 for(int i=0;i<shuffleArray.length;i++)
+		 for(i=0;i<shuffleArray.length;i++)
 		 {
 			 	int newMinerPosition = (int) Math.abs((current % totalMiners));
 			 	if(shuffleArray[newMinerPosition] == -1)
@@ -335,26 +337,35 @@ public class ShuffleProtocol{
 			 	current = buffer.getLong();
 		 }
 
-		 int g=0;
-		 for(int k=0;k<shuffleArray.length;k++)
+		 for(i=0;i<shuffleArray.length;i++)
 		 {
-			 if(shuffleArray[k] == -1)
+			 if(shuffleArray[i] == -1)
 			 {
-				 shuffleArray[k] = spillerArray.get(g);
-				 g++;
+				 shuffleArray[i] = spillerArray.get(j);
+				 j++;
 			 }
 		 }
-		 for(int k=0;k<shuffleArray.length;k++)
+		
+		 int networkShuffleArray[][] = new int[p][1+s+b];
+		 int k=0;
+		 
+		 for(i = 0; i < p; i++)
 		 {
-			 System.out.print(shuffleArray[k] + " ");
+				for(j = 0; j < (1+s+b); j++)
+				{
+					networkShuffleArray[i][j] = shuffleArray[k];
+					k++;
+				}
 		 }
-		 System.out.println();
+		 
+		 return networkShuffleArray;
 		 
 	}
 	
 	 	/**
 	 	 * This method calculates the hash for finding the shuffled positions.
 	 	 * @param current the current hash calculated for the shuffled position.
+	 	 * @return calculates the hash on current
 	 	 */
 		 
 	 	public byte[] hashChainforShufflePositions(long current) 
