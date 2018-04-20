@@ -1,0 +1,18 @@
+<project>
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>net.chain0</groupId>
+	<artifactId>test-net</artifactId>
+	<version>0.0.0</version>
+	<packaging>pom</packaging>
+
+	<modules>
+		<module>transactionServer</module>
+		<module>registrationServer</module>
+		<module>utils</module>
+		<module>transactionClient</module>
+		<module>registrationClient</module>
+		<module>registrationTest</module>
+		<module>transactionTest</module>
+	</modules>
+
+</project>

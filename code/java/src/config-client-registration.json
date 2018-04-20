@@ -1,0 +1,8 @@
+{
+	"library"			:	"jersey1",
+	"groupId"			:	"net.chain0.client.registration",
+	"apiPackage"		:	"net.chain0.client.registration.api",
+	"modelPackage"		:	"net.chain0.client.registration.model",
+	"artifactId"		:	"registration",
+	"serializableModel"	:	true
+}

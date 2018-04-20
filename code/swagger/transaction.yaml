@@ -1,0 +1,73 @@
+swagger: '2.0'
+info:
+  version: 0.0.0
+  title: Miner Servlet
+host: 'localhost:8080'
+basePath: /transaction
+schemes:
+  - http
+paths:
+  /accept_transaction:
+    get:
+      tags:
+        - minerAcceptTransaction
+      description: |
+        Gets a table of `transaction` objects.
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: Successful response
+          schema:
+            title: TransactionTable
+            type: array
+            items:
+              $ref: '#/definitions/transaction'
+    post:
+      tags:
+        - minerAcceptTransaction
+      description: |
+        Sends `Transaction` object for validation and registration.
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          schema:
+            $ref: '#/definitions/transaction'
+      responses:
+        '200':
+          description: Transaction denied
+          schema:
+            $ref: '#/definitions/reply'
+        '201':
+          description: Transaction accepeted
+          schema:
+            $ref: '#/definitions/reply'
+        '418':
+          description: I'm a teapot?
+          schema:
+            $ref: '#/definitions/reply'
+definitions:
+  transaction:
+    type: object
+    properties:
+      clientID:
+        type: string
+      data:
+        type: string
+      timestamp:
+        type: string
+      hash_msg:
+        type: string
+      sign:
+        type: string
+  reply:
+    type: object
+    properties:
+      name:
+        type: string
+      message:
+        type: string
