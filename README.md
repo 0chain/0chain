@@ -4,7 +4,7 @@
 
 Building the API miner war requires [Maven](https://maven.apache.org/), [PostgreSQL](https://www.postgresql.org), and [Tomcat](https://tomcat.apache.org) to be installed. 
 
-***Please add swagger-codegen-cli.jar to this code/java/bin directory AND apache-maven-3.5.3 to /opt directory***
+***Please add swagger-codegen-cli.jar to this code/java/bin directory AND apache-maven-3.5.3 to /opt directory.***
 The build script assumes that apache-maven-3.5.3 is installed in the opt directory, and that swagger-codegen-cli.jar is in the bin directory (same one as the script).
 
 ### Assumptions
