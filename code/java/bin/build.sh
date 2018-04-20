@@ -6,6 +6,9 @@ main ()
 {
 	case $1 in
 		build)
+			if [ ! -f swagger-codegen-cli.jar ]; then
+				curl http://central.maven.org/maven2/io/swagger/swagger-codegen-cli/2.3.1/swagger-codegen-cli-2.3.1.jar -o swagger-codegen-cli.jar
+			fi
 			case $2 in
 				all)
 					createBuildDirectory
