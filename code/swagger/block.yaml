@@ -1,0 +1,75 @@
+swagger: '2.0'
+info:
+  version: 0.0.0
+  title: Miner Servlet
+host: 'localhost:8080'
+basePath: /generation
+schemes:
+  - http
+paths:
+  /create_block:
+    get:
+      tags:
+        - minerCreateBlock
+      description: |
+        Miner produces a block for verification
+      produces: 
+        - application/json
+      responses:
+        '200':
+          description: Successful response
+          schema:
+            $ref: '#/definitions/block'
+definitions:
+  block:
+    type: object
+    properties:
+      header:
+        $ref: "#/definitions/block_header"
+      body:
+        $ref: "#/definitions/block_body"
+  block_header:
+    type: object
+    properties:
+      block_hash:
+        type: string
+      prev_block_hash:
+        type: string
+      block_signature:
+        type: string
+      miner_Id:
+        type: string
+      transaction_hash_list:
+        type: array
+        items:
+          type: object
+          properties:
+            hash_msg:
+              type: string
+  block_body:
+    type: object
+    properties:
+      transacton_list:
+        type: array
+        items:
+          $ref: "#/definitions/transaction"
+      signature_list:
+        type: array
+        items:
+          type: object
+          properties:
+            sign:
+              type: string
+  transaction:
+    type: object
+    properties:
+      clientID:
+        type: string
+      data:
+        type: string
+      timestamp:
+        type: string
+      hash_msg:
+        type: string
+      sign:
+        type: string

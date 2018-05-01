@@ -1,0 +1,8 @@
+{
+	"library"			:	"jersey1",
+	"groupId"			:	"net.chain0.transaction",
+	"apiPackage"		:	"net.chain0.transaction.api",
+	"modelPackage"		:	"net.chain0.transaction.model",
+	"artifactId"		:	"transactionClient",
+	"serializableModel"	:	true
+}

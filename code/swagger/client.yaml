@@ -1,0 +1,57 @@
+swagger: '2.0'
+info:
+  version: 0.0.0
+  title: Miner Servlet
+host: 'localhost:8080'
+schemes:
+  - http
+paths:
+  /client:
+    post:
+      tags:
+        - client
+      description: |
+        Sends `Client` object for validation and registration.
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          schema:
+            $ref: '#/definitions/client'
+      responses:
+        '200':
+          description: Client denied
+          schema:
+            $ref: '#/definitions/reply'
+        '201':
+          description: Client added to miner's client list
+          schema:
+            $ref: '#/definitions/reply'
+        '208':
+          description: Client ID has already been registered
+          schema:
+            $ref: '#/definitions/reply'
+        '418':
+          description: I'm a teapot
+          schema:
+            $ref: '#/definitions/reply'
+definitions:
+  client:
+    type: object
+    properties:
+      public_key:
+        type: string
+      clientID:
+        type: string
+      signature:
+        type: string
+  reply:
+    type: object
+    properties:
+      name:
+        type: string
+      message:
+        type: string
