@@ -1,8 +1,0 @@
-{
-	"library"			:	"jersey1",
-	"groupId"			:	"net.chain0.miner.registration",
-	"apiPackage"		:	"net.chain0.miner.registration.api",
-	"modelPackage"		:	"net.chain0.miner.registration.model",
-	"artifactId"		:	"registration",
-	"serializableModel"	:	true
-}

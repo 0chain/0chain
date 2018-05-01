@@ -1,7 +1,0 @@
-<Context>
-    <Resource name="jdbc/postgres" auth="Container"
-              type="javax.sql.DataSource" driverClassName="org.postgresql.Driver"
-              url="jdbc:postgresql://localhost:5432/0chain"
-              username="miner" password="0n32b!Ndt43M" maxActive="300" maxIdle="1"
-              maxWait="-1"/>
-</Context>
