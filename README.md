@@ -45,7 +45,6 @@ CREATE TABLE public.clients
 (
   public_key text NOT NULL,
   hash_key text NOT NULL,
-  sign text NOT NULL,
   CONSTRAINT clients_pkey PRIMARY KEY (hash_key)
 )
 WITH (

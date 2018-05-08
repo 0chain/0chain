@@ -37,7 +37,7 @@ public class ClientTest {
 
 	@Test
 	public void testEmptyClientPost() {
-		ResponseEntity<Response> responseEntity = restTemplate.postForEntity("/v1/registration", new ClientEntity(), Response.class);
+		ResponseEntity<Response> responseEntity = restTemplate.postForEntity("/v1/client", new ClientEntity(), Response.class);
         Response client = responseEntity.getBody();
         assertEquals("Error",client.getName());
         assertEquals("Bad json... BAD!!!",client.getMessage());
@@ -51,10 +51,9 @@ public class ClientTest {
 		String private_key = Utils.toHexString(keys.getPrivate().getEncoded());
 		String public_key = Utils.toHexString(keys.getPublic().getEncoded());
 		String client_id = Utils.createHash(public_key);
-		String sign = algo.createSignature(private_key,client_id);
 		ClientEntity clientEntity = new ClientEntity();
 		clientEntity.setPublic_key(public_key);
-		ResponseEntity<Response> responseEntity = restTemplate.postForEntity("/v1/registration", clientEntity, Response.class);
+		ResponseEntity<Response> responseEntity = restTemplate.postForEntity("/v1/client", clientEntity, Response.class);
         Response client = responseEntity.getBody();
         assertEquals("Error",client.getName());
         assertEquals("Bad json... BAD!!!",client.getMessage());
@@ -65,13 +64,11 @@ public class ClientTest {
 	{
 		AsymmetricSigning algo = new EDDSA();
 		KeyPair keys = algo.createKeys();
-		String private_key = Utils.toHexString(keys.getPrivate().getEncoded());
 		String public_key = Utils.toHexString(keys.getPublic().getEncoded());
 		String client_id = Utils.createHash(public_key);
-		String sign = algo.createSignature(private_key,client_id);
 		ClientEntity clientEntity = new ClientEntity();
 		clientEntity.setHash_key(client_id);
-		ResponseEntity<Response> responseEntity = restTemplate.postForEntity("/v1/registration", clientEntity, Response.class);
+		ResponseEntity<Response> responseEntity = restTemplate.postForEntity("/v1/client", clientEntity, Response.class);
         Response client = responseEntity.getBody();
         assertEquals("Error",client.getName());
         assertEquals("Bad json... BAD!!!",client.getMessage());
@@ -82,13 +79,10 @@ public class ClientTest {
 	{
 		AsymmetricSigning algo = new EDDSA();
 		KeyPair keys = algo.createKeys();
-		String private_key = Utils.toHexString(keys.getPrivate().getEncoded());
 		String public_key = Utils.toHexString(keys.getPublic().getEncoded());
 		String client_id = Utils.createHash(public_key);
-		String sign = algo.createSignature(private_key,client_id);
 		ClientEntity clientEntity = new ClientEntity();
-		clientEntity.setSign(sign);
-		ResponseEntity<Response> responseEntity = restTemplate.postForEntity("/v1/registration", clientEntity, Response.class);
+		ResponseEntity<Response> responseEntity = restTemplate.postForEntity("/v1/client", clientEntity, Response.class);
         Response client = responseEntity.getBody();
         assertEquals("Error",client.getName());
         assertEquals("Bad json... BAD!!!",client.getMessage());
@@ -99,15 +93,12 @@ public class ClientTest {
 	{
 		AsymmetricSigning algo = new EDDSA();
 		KeyPair keys = algo.createKeys();
-		String private_key = Utils.toHexString(keys.getPrivate().getEncoded());
 		String public_key = Utils.toHexString(keys.getPublic().getEncoded());
 		String client_id = Utils.createHash(public_key+"03AF");
-		String sign = algo.createSignature(private_key,client_id);
 		ClientEntity clientEntity = new ClientEntity();
 		clientEntity.setPublic_key(public_key);
 		clientEntity.setHash_key(client_id);
-		clientEntity.setSign(sign);
-		ResponseEntity<Response> responseEntity = restTemplate.postForEntity("/v1/registration", clientEntity, Response.class);
+		ResponseEntity<Response> responseEntity = restTemplate.postForEntity("/v1/client", clientEntity, Response.class);
         Response client = responseEntity.getBody();
         assertEquals("Error",client.getName());
         assertEquals("Invalid clientID",client.getMessage());
@@ -118,15 +109,12 @@ public class ClientTest {
 	{
 		AsymmetricSigning algo = new EDDSA();
 		KeyPair keys = algo.createKeys();
-		String private_key = Utils.toHexString(keys.getPrivate().getEncoded());
 		String public_key = Utils.toHexString(keys.getPublic().getEncoded());
 		String client_id = Utils.createHash(public_key);
-		String sign = algo.createSignature(private_key,client_id);
 		ClientEntity clientEntity = new ClientEntity();
 		clientEntity.setPublic_key(public_key+"0B2C");
 		clientEntity.setHash_key(client_id);
-		clientEntity.setSign(sign);
-		ResponseEntity<Response> responseEntity = restTemplate.postForEntity("/v1/registration", clientEntity, Response.class);
+		ResponseEntity<Response> responseEntity = restTemplate.postForEntity("/v1/client", clientEntity, Response.class);
         Response client = responseEntity.getBody();
         assertEquals("Error",client.getName());
         assertEquals("Invalid key",client.getMessage());
@@ -137,38 +125,16 @@ public class ClientTest {
 	{
 		AsymmetricSigning algo = new EDDSA();
 		KeyPair keys = algo.createKeys();
-		String private_key = Utils.toHexString(keys.getPrivate().getEncoded());
 		String public_key = Utils.toHexString(keys.getPublic().getEncoded());
+		String private_key = Utils.toHexString(keys.getPrivate().getEncoded());
 		String client_id = Utils.createHash(private_key);
-		String sign = algo.createSignature(private_key,client_id);
 		ClientEntity clientEntity = new ClientEntity();
 		clientEntity.setPublic_key(private_key);
 		clientEntity.setHash_key(client_id);
-		clientEntity.setSign(sign);
-		ResponseEntity<Response> responseEntity = restTemplate.postForEntity("/v1/registration", clientEntity, Response.class);
+		ResponseEntity<Response> responseEntity = restTemplate.postForEntity("/v1/client", clientEntity, Response.class);
         Response client = responseEntity.getBody();
         assertEquals("Error",client.getName());
         assertEquals("Invalid key",client.getMessage());
-	}
-
-	@Test
-	public void testWrongSignaturePost()
-	{
-		AsymmetricSigning algo = new EDDSA();
-		KeyPair keys = algo.createKeys();
-		KeyPair keys1 = algo.createKeys();
-		String private_key = Utils.toHexString(keys.getPrivate().getEncoded());
-		String public_key = Utils.toHexString(keys.getPublic().getEncoded());
-		String client_id = Utils.createHash(public_key);
-		String sign = algo.createSignature(Utils.toHexString(keys1.getPrivate().getEncoded()),client_id);
-		ClientEntity clientEntity = new ClientEntity();
-		clientEntity.setPublic_key(public_key);
-		clientEntity.setHash_key(client_id);
-		clientEntity.setSign(sign);
-		ResponseEntity<Response> responseEntity = restTemplate.postForEntity("/v1/registration", clientEntity, Response.class);
-        Response client = responseEntity.getBody();
-        assertEquals("Error",client.getName());
-        assertEquals("Invalid signature",client.getMessage());
 	}
 
 	@Test
@@ -176,11 +142,9 @@ public class ClientTest {
 	{
 		AsymmetricSigning algo = new ECDSA();
 		KeyPair keys = algo.createKeys();
-		String private_key = Utils.toHexString(keys.getPrivate().getEncoded());
 		String public_key = Utils.toHexString(keys.getPublic().getEncoded());
 		String client_id = Utils.createHash(public_key);
-		String sign = algo.createSignature(private_key,client_id);
-		ResponseEntity<Response> responseEntity = restTemplate.postForEntity("/v1/registration", new ClientEntity(public_key,client_id,sign), Response.class);
+		ResponseEntity<Response> responseEntity = restTemplate.postForEntity("/v1/client", new ClientEntity(public_key,client_id), Response.class);
         Response client = responseEntity.getBody();
         assertEquals("Error",client.getName());
         assertEquals("Invalid key",client.getMessage());
@@ -191,12 +155,10 @@ public class ClientTest {
 	{
 		AsymmetricSigning algo = new EDDSA();
 		KeyPair keys = algo.createKeys();
-		String private_key = Utils.toHexString(keys.getPrivate().getEncoded());
 		String public_key = Utils.toHexString(keys.getPublic().getEncoded());
 		String client_id = Utils.createHash(public_key);
-		String sign = algo.createSignature(private_key,client_id);
-		restTemplate.postForEntity("/v1/registration", new ClientEntity(public_key,client_id,sign), Response.class);
-		ResponseEntity<Response> responseEntity = restTemplate.postForEntity("/v1/registration", new ClientEntity(public_key,client_id,sign), Response.class);
+		restTemplate.postForEntity("/v1/client", new ClientEntity(public_key,client_id), Response.class);
+		ResponseEntity<Response> responseEntity = restTemplate.postForEntity("/v1/client", new ClientEntity(public_key,client_id), Response.class);
         Response client = responseEntity.getBody();
         assertEquals("Error",client.getName());
         assertEquals("Client already exists",client.getMessage());
@@ -207,11 +169,9 @@ public class ClientTest {
 	{
 		AsymmetricSigning algo = new EDDSA();
 		KeyPair keys = algo.createKeys();
-		String private_key = Utils.toHexString(keys.getPrivate().getEncoded());
 		String public_key = Utils.toHexString(keys.getPublic().getEncoded());
 		String client_id = Utils.createHash(public_key);
-		String sign = algo.createSignature(private_key,client_id);
-		ResponseEntity<Response> responseEntity = restTemplate.postForEntity("/v1/registration", new ClientEntity(public_key,client_id,sign), Response.class);
+		ResponseEntity<Response> responseEntity = restTemplate.postForEntity("/v1/client", new ClientEntity(public_key,client_id), Response.class);
         Response client = responseEntity.getBody();
         assertEquals("Success",client.getName());
         assertEquals("Client registration completed",client.getMessage());

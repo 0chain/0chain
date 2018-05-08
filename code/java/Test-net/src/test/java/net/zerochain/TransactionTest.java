@@ -43,8 +43,7 @@ public class TransactionTest {
 		String private_key = Utils.toHexString(keys.getPrivate().getEncoded());
 		String public_key = Utils.toHexString(keys.getPublic().getEncoded());
 		String client_id = Utils.createHash(public_key);
-		String sign = algo.createSignature(private_key,client_id);
-		restTemplate.postForEntity("/v1/registration", new ClientEntity(public_key,client_id,sign), Response.class);
+		restTemplate.postForEntity("/v1/client", new ClientEntity(public_key,client_id), Response.class);
 
 		ResponseEntity<Response> responseEntity = restTemplate.postForEntity("/v1/transaction", new TransactionEntity(), Response.class);
 
@@ -61,8 +60,7 @@ public class TransactionTest {
 		String private_key = Utils.toHexString(keys.getPrivate().getEncoded());
 		String public_key = Utils.toHexString(keys.getPublic().getEncoded());
 		String client_id = Utils.createHash(public_key);
-		String sign = algo.createSignature(private_key,client_id);
-		restTemplate.postForEntity("/v1/registration", new ClientEntity(public_key,client_id,sign), Response.class);
+		restTemplate.postForEntity("/v1/client", new ClientEntity(public_key,client_id), Response.class);
 
 		String data = "test";
 		Timestamp timestamp = Utils.getTimestamp();
@@ -103,8 +101,7 @@ public class TransactionTest {
 		String private_key = Utils.toHexString(keys.getPrivate().getEncoded());
 		String public_key = Utils.toHexString(keys.getPublic().getEncoded());
 		String client_id = Utils.createHash(public_key);
-		String sign = algo.createSignature(private_key,client_id);
-		restTemplate.postForEntity("/v1/registration", new ClientEntity(public_key,client_id,sign), Response.class);
+		restTemplate.postForEntity("/v1/client", new ClientEntity(public_key,client_id), Response.class);
 
 		String wrongPrivate_key = Utils.toHexString(algo.createKeys().getPrivate().getEncoded());
 
@@ -128,8 +125,7 @@ public class TransactionTest {
 		String private_key = Utils.toHexString(keys.getPrivate().getEncoded());
 		String public_key = Utils.toHexString(keys.getPublic().getEncoded());
 		String client_id = Utils.createHash(public_key);
-		String sign = algo.createSignature(private_key,client_id);
-		restTemplate.postForEntity("/v1/registration", new ClientEntity(public_key,client_id,sign), Response.class);
+		restTemplate.postForEntity("/v1/client", new ClientEntity(public_key,client_id), Response.class);
 
 		String data = "test";
 		Timestamp timestamp = Utils.getTimestamp();
@@ -151,8 +147,7 @@ public class TransactionTest {
 		String private_key = Utils.toHexString(keys.getPrivate().getEncoded());
 		String public_key = Utils.toHexString(keys.getPublic().getEncoded());
 		String client_id = Utils.createHash(public_key);
-		String sign = algo.createSignature(private_key,client_id);
-		restTemplate.postForEntity("/v1/registration", new ClientEntity(public_key,client_id,sign), Response.class);
+		restTemplate.postForEntity("/v1/client", new ClientEntity(public_key,client_id), Response.class);
 
 		String data = "test";
 		Timestamp timestamp = Utils.getTimestamp();
@@ -181,8 +176,7 @@ public class TransactionTest {
 		String private_key = Utils.toHexString(keys.getPrivate().getEncoded());
 		String public_key = Utils.toHexString(keys.getPublic().getEncoded());
 		String client_id = Utils.createHash(public_key);
-		String sign = algo.createSignature(private_key,client_id);
-		restTemplate.postForEntity("/v1/registration", new ClientEntity(public_key,client_id,sign), Response.class);
+		restTemplate.postForEntity("/v1/client", new ClientEntity(public_key,client_id), Response.class);
 
 		String data = "test";
 		Timestamp timestamp = Utils.getTimestamp();

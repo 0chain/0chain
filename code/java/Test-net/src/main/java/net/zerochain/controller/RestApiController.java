@@ -29,7 +29,7 @@ public class RestApiController {
 	
 	//--------- Post Registration--------
 	
-	@RequestMapping(value = "/registration", method = RequestMethod.POST)
+	@RequestMapping(value = "/client", method = RequestMethod.POST)
 	public ResponseEntity<Response> postRegistration(@RequestBody ClientEntity clientEntity){
 		logger.info("Recieved Client: "+ clientEntity);
 		Response test = iClientService.verifyNewClient(clientEntity);

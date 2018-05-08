@@ -4,11 +4,11 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>net.zerochain</groupId>
-	<artifactId>miner</artifactId>
+	<artifactId>test_net</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
-	<name>miner</name>
+	<name>test_net</name>
 	<description>Demo project for Spring Boot</description>
 
 	<parent>

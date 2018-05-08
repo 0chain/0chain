@@ -32,9 +32,8 @@ public class ClientSeviceImpl implements IClientService {
 		AsymmetricSigning algo = new EDDSA();
 		boolean validKey = algo.verifyKey(clientEntity.getPublic_key());
 		boolean correctHash = validKey && Utils.verifyHash(clientEntity.getPublic_key(), clientEntity.getHash_key());
-		boolean signedCorrectly = correctHash && algo.verifySignature(clientEntity.getPublic_key(), clientEntity.getSign(), clientEntity.getHash_key());
-		boolean newClient = signedCorrectly && !lookupClient(clientEntity);
-		if(clientEntity.getPublic_key()==null || clientEntity.getHash_key() == null || clientEntity.getSign() == null)
+		boolean newClient = correctHash && !lookupClient(clientEntity);
+		if(clientEntity.getPublic_key()==null || clientEntity.getHash_key() == null)
 		{
 			response.setName("Error");
 			response.setMessage("Bad json... BAD!!!");
@@ -48,11 +47,6 @@ public class ClientSeviceImpl implements IClientService {
 		{
 			response.setName("Error");
 			response.setMessage("Invalid clientID");
-		}
-		else if(!signedCorrectly)
-		{
-			response.setName("Error");
-			response.setMessage("Invalid signature");
 		}
 		else if(!newClient)
 		{

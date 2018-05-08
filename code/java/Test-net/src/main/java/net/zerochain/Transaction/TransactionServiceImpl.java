@@ -39,7 +39,7 @@ public class TransactionServiceImpl implements ITransactionService{
         AsymmetricSigning algo = new EDDSA();
 		Response response = new Response();
 		Timestamp minerTime = Utils.getTimestamp();
-		ClientEntity clientEntity = new ClientEntity("",transactionEntity.getClient_id(),"");
+		ClientEntity clientEntity = new ClientEntity("",transactionEntity.getClient_id());
 		String public_key = "";
 		boolean isRegistered = iClientDAO.lookupClient(clientEntity);
 		if(isRegistered)

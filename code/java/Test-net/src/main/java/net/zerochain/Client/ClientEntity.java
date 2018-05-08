@@ -21,13 +21,9 @@ public class ClientEntity implements Serializable {
 	@Column(name = "hash_key")
 	private String hash_key;
 
-	@Column(name = "sign")
-	private String sign;
-
-	public ClientEntity(String public_key, String hash_key, String sign) {
+	public ClientEntity(String public_key, String hash_key) {
 		this.public_key = public_key;
 		this.hash_key = hash_key;
-		this.sign = sign;
 	}
 
 	public ClientEntity() {
@@ -47,19 +43,11 @@ public class ClientEntity implements Serializable {
 		this.hash_key = hash_key;
 	}
 
-	public String getSign() {
-		return sign;
-	}
-	public void setSign(String sign) {
-		this.sign = sign;
-	}
-
 	@Override
 	public String toString() {
 		return "MinerEntity{" +
 				" public_key='" + public_key + '\'' +
 				", hash_key='" + hash_key + '\'' +
-				", sign='" + sign + '\'' +
 				'}';
 	}
 }
