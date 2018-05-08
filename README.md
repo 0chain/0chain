@@ -9,7 +9,7 @@ The build script assumes that apache-maven-3.5.3 is installed in the opt directo
 
 ### Assumptions
 
-PostgresSQL is running locally on port 5432 and Tomcat is running locally on port 8080.
+PostgresSQL is running locally on port 5432.
 
 ### Postgresql 
 
@@ -56,57 +56,18 @@ ALTER TABLE public.clients
 ```
 
 ## Installation
-For the first time building the modules the following command should be used
+First install the Utils module. CD into the Utils directory and use maven clean install
 ```
-./build.sh build all
+mvn clean install
 ```
-
-If the swagger YAML files for the modules change you can rebuild them with the swagger-codegen by typing one of the following...
+Next, cd into the Test-net directory and type the following to run the modules.
 ```
-./build.sh build registration
-
-./build.sh build transaction
+mvn spring-boot:run
 ```
-
-To update the utils used by the registration and transaction server type
-```
-./build.sh build utils
-```
-
-To update integration tests type
-```
-./build.sh build integrationTest
-```
-
-If only the implementations of the business logic has changed type one of the three commands for the appropriate files that have been changed
-```
-./build.sh update all
-
-./build.sh update registration
-
-./build.sh update transaction
-```
-
-## Deployment
-
-The build script creates a new build directory with sub directory for each module.
-The war files for the servers are located in the build directory...
-	/transactionServer/target/transaction.war
-	/registrationServer/target/registration.war
-and can be deployed in a Tomcat server.
 
 ## Testing
-Test Regsitration Server
-```
-./build.sh test registration
-```
 
-Test Transaction Server
+To run the integration tests type:
 ```
-./build.sh test transacton
-```
-
-Test Both
-```
-./build.sh test all
+mvn clean test
 ```

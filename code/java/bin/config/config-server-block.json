@@ -1,8 +1,0 @@
-{
-	"library"			:	"jersey1",
-	"groupId"			:	"net.chain0.block",
-	"apiPackage"		:	"net.chain0.block.api",
-	"modelPackage"		:	"net.chain0.block.model",
-	"artifactId"		:	"block",
-	"serializableModel"	:	true
-}
