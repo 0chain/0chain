@@ -1,0 +1,439 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "version": "0.0.0",
+        "title": "0chain Services"
+    },
+    "host": "172.33.1.134:8080",
+    "paths": {
+
+        "/clients": {
+            "post": {
+                "description": "Accepts json object containing 
+                                  clientID,
+                                  public_key
+                                for persistent storage. All fields required.\n",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/client"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Client Persisted",
+                        "schema": {
+                            "title": "Response",
+                            "type": "object",
+                            "items": {
+                                "$ref": "#/definitions/response"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request.",
+                        "schema": {
+                            "title": "Response",
+                            "type": "object",
+                            "items": {
+                                "$ref": "#/definitions/response"
+                            }
+                        }
+                    }
+                }
+            },
+
+            "get": {
+                "description": "Accepts json object containing 
+                                  clientID,
+                                  public_key
+                                for retrieval. ClientID must be present.\n",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/client"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Client Retrieved",
+                        "schema": {
+			    "title" : "Client",
+                            "type": "object",
+                            "items": {
+                                "$ref": "#/definitions/client"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request.",
+                        "schema": {
+                            "title": "Response",
+                            "type": "object",
+                            "items": {
+                                "$ref": "#/definitions/response"
+                            }
+                        }
+                    }
+                }
+            },
+
+            "delete": {
+                "description": "Accepts json object containing 
+                                  clientID,
+                                  public_key
+                                for deletion. ClientID must be present.\n",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/client"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Client Deleted",
+                        "schema": {
+                            "title": "Response",
+                            "type": "object",
+                            "items": {
+                                "$ref": "#/definitions/response"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request.",
+                        "schema": {
+                            "title": "Response",
+                            "type": "object",
+                            "items": {
+                                "$ref": "#/definitions/response"
+                            }
+                        }
+                    }
+                }
+            },
+
+            "patch": {
+                "description": "Accepts json object containing 
+                                  clientID,
+                                  public_key
+                                for update. ClientID must be present.\n",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/client"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Client Updated",
+                        "schema": {
+                            "title": "Response",
+                            "type": "object",
+                            "items": {
+                                "$ref": "#/definitions/response"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request.",
+                        "schema": {
+                            "title": "Response",
+                            "type": "object",
+                            "items": {
+                                "$ref": "#/definitions/response"
+                            }
+                        }
+                    }
+                }
+            }
+
+        },
+
+
+        "/transactions": {
+            "post": {
+                "description": "Accepts json object containing 
+                                  clientID,
+                                  transaction_data,
+                                  createdate,
+                                  hash,
+                                  signature
+                                for persistent storage. All fields required.\n",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/transaction"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Transaction Accepted",
+                        "schema": {
+                            "title": "Response",
+                            "type": "object",
+                            "items": {
+                                "$ref": "#/definitions/response"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request.",
+                        "schema": {
+                            "title": "Response",
+                            "type": "object",
+                            "items": {
+                                "$ref": "#/definitions/response"
+                            }
+                        }
+                    }
+                }
+            },
+
+            "get": {
+                "description": "Accepts json object containing 
+                                  clientID,
+                                  transaction_data,
+                                  createdate,
+                                  hash,
+                                  signature
+                                for retrieval. Hash field required. Other fields ignored\n",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/transaction"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Transaction retrieved",
+                        "schema": {
+                            "title": "Transaction",
+                            "type": "object",
+                            "items": {
+                                "$ref": "#/definitions/transaction"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request.",
+                        "schema": {
+                            "title": "Response",
+                            "type": "object",
+                            "items": {
+                                "$ref": "#/definitions/response"
+                            }
+                        }
+                    }
+                }
+            },
+
+            "delete": {
+                "description": "Accepts json object containing 
+                                  clientID,
+                                  transaction_data,
+                                  createdate,
+                                  hash,
+                                  signature
+                                for deletion. Hash field required. Other fields ignored.\n",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/transaction"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Transaction deleted",
+                        "schema": {
+                            "title": "Response",
+                            "type": "object",
+                            "items": {
+                                "$ref": "#/definitions/response"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request.",
+                        "schema": {
+                            "title": "Response",
+                            "type": "object",
+                            "items": {
+                                "$ref": "#/definitions/response"
+                            }
+                        }
+                    }
+                }
+            },
+
+            "patch": {
+                "description": "Accepts json object containing 
+                                  clientID,
+                                  transaction_data,
+                                  createdate,
+                                  hash,
+                                  signature
+                                for update. hash field required, other fields if present will be used for update.\n",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/transaction"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Transaction Accepted",
+                        "schema": {
+                            "title": "Response",
+                            "type": "object",
+                            "items": {
+                                "$ref": "#/definitions/response"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request.",
+                        "schema": {
+                            "title": "Response",
+                            "type": "object",
+                            "items": {
+                                "$ref": "#/definitions/response"
+                            }
+                        }
+                    }
+                }
+            }
+
+        }
+
+    },
+    "definitions": {
+        "client": {
+            "type": "object",
+            "properties": {
+                "clientid": {
+                    "type": "string"
+                },
+                "public_key": {
+                    "type": "string"
+                }
+            }
+        },
+
+	"transaction": {
+	    "type": "object",
+	    "properties": {
+		"clientid": {
+		    "type": "string"
+		},
+		"transaction_data": {
+		    "type": "string"
+		},
+		"createdate": {
+		    "type": "string"
+		},
+		"hash": {
+		    "type": "string"
+		},
+		"signature": {
+		    "type": "string"
+		}
+	    }
+	},
+
+        "response": {
+            "type": "object",
+            "properties": {
+                "title": {
+                    "type": "string"
+                },
+		"code": {
+		    "type": "string"
+		},
+                "message": {
+                    "type": "string"
+                }
+            }
+	}
+    }
+}
