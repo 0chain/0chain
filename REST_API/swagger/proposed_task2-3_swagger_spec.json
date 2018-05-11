@@ -1,0 +1,145 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "version": "0.0.0",
+        "title": "0chain Services"
+    },
+    "paths": {
+
+        "/client": {
+            "post": {
+                "description": "Accepts client ID (hash_key) and public_key to register a new client with the server\n",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/client_register"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Client Registration is Complete",
+                        "schema": {
+                            "title": "Response Table",
+                            "type": "object",
+                            "items": {
+                                "$ref": "#/definitions/response"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request. Client already exists, Client json was empty, Client json not formmated correctly, invalid clientID, invalid signature and invalid key.",
+                        "schema": {
+                            "title": "Response Table",
+                            "type": "object",
+                            "items": {
+                                "$ref": "#/definitions/response"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+
+        "/transaction": {
+            "post": {
+                "description": "Create a Transaction",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "parameters": [
+                    {
+                        "in": "body",
+                        "name": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/transaction"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Transaction Accepted",
+                        "schema": {
+                            "title": "Response Table",
+                            "type": "object",
+                            "items": {
+                                "$ref": "#/definitions/response"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request. Transaction already exists, Transaction json was empty, Transaction json not formmated correctly",
+                        "schema": {
+                            "title": "Response Table",
+                            "type": "object",
+                            "items": {
+                                "$ref": "#/definitions/response"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+    },
+    "definitions": {
+        "client_register": {
+            "type": "object",
+            "properties": {
+                "public_key": {
+                    "type": "string"
+                },
+                "clientID": {
+                    "type": "string"
+                },
+		"sign": {
+		    "type": "string"
+		}
+            }
+        },
+	"transaction": {
+	    "type": "object",
+	    "properties": {
+		"clientID": {
+		    "type": "string"
+		},
+		"data": {
+		    "type": "string"
+		},
+		"timestamp": {
+		    "type": "string"
+		},
+		"hash_msg": {
+		    "type": "string"
+		},
+		"sign": {
+		    "type": "string"
+		}
+	    }
+	},
+        "response": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+	}
+    }
+}
