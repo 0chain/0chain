@@ -9,7 +9,7 @@
 
 package swagger
 
-type Transaction struct {
+type TransactionResponseTransaction struct {
 
 	Clientid string `json:"clientid,omitempty"`
 

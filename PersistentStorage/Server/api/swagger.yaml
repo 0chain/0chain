@@ -2,13 +2,12 @@
 swagger: "2.0"
 info:
   version: "0.0.0"
-  title: "0chain Services"
-host: "172.33.1.134:8080"
+  title: "0chain Persistent Storage Services"
 paths:
   /clients:
     get:
       description: "Accepts json object containing  clientID, public_key for retrieval.\
-        \ Either public_key or clientID must be present.\n"
+        \ ClientID must be present.\n"
       consumes:
       - "application/json"
       produces:
@@ -62,7 +61,7 @@ paths:
             properties: {}
     delete:
       description: "Accepts json object containing  clientID, public_key for deletion.\
-        \ Either public_key or clientID must be present.\n"
+        \ ClientID must be present.\n"
       consumes:
       - "application/json"
       produces:
@@ -232,6 +231,17 @@ definitions:
         type: "string"
       public_key:
         type: "string"
+  client_response:
+    type: "object"
+    properties:
+      title:
+        type: "string"
+      code:
+        type: "string"
+      message:
+        type: "string"
+      client:
+        $ref: "#/definitions/client_response_client"
   transaction:
     type: "object"
     properties:
@@ -245,6 +255,17 @@ definitions:
         type: "string"
       signature:
         type: "string"
+  transaction_response:
+    type: "object"
+    properties:
+      title:
+        type: "string"
+      code:
+        type: "string"
+      message:
+        type: "string"
+      transaction:
+        $ref: "#/definitions/transaction_response_transaction"
   response:
     type: "object"
     properties:
@@ -253,4 +274,22 @@ definitions:
       code:
         type: "string"
       message:
+        type: "string"
+  client_response_client:
+    properties:
+      clientid:
+        type: "string"
+      public_key:
+        type: "string"
+  transaction_response_transaction:
+    properties:
+      clientid:
+        type: "string"
+      transaction_data:
+        type: "string"
+      createdate:
+        type: "string"
+      hash:
+        type: "string"
+      signature:
         type: "string"

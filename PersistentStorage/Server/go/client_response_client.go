@@ -9,15 +9,9 @@
 
 package swagger
 
-type Transaction struct {
+type ClientResponseClient struct {
 
 	Clientid string `json:"clientid,omitempty"`
 
-	TransactionData string `json:"transaction_data,omitempty"`
-
-	Createdate string `json:"createdate,omitempty"`
-
-	Hash string `json:"hash,omitempty"`
-
-	Signature string `json:"signature,omitempty"`
+	PublicKey string `json:"public_key,omitempty"`
 }

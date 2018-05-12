@@ -2,11 +2,9 @@
     "swagger": "2.0",
     "info": {
         "version": "0.0.0",
-        "title": "0chain Services"
+        "title": "0chain Persistent Storage Services"
     },
-    "host": "172.33.1.134:8080",
     "paths": {
-
         "/clients": {
             "post": {
                 "description": "Accepts json object containing 
@@ -81,7 +79,7 @@
 			    "title" : "Client",
                             "type": "object",
                             "items": {
-                                "$ref": "#/definitions/client"
+                                "$ref": "#/definitions/client_response"
                             }
                         }
                     },
@@ -190,7 +188,6 @@
 
         },
 
-
         "/transactions": {
             "post": {
                 "description": "Accepts json object containing 
@@ -271,7 +268,7 @@
                             "title": "Transaction",
                             "type": "object",
                             "items": {
-                                "$ref": "#/definitions/transaction"
+                                "$ref": "#/definitions/transaction_response"
                             }
                         }
                     },
@@ -383,7 +380,6 @@
                     }
                 }
             }
-
         }
 
     },
@@ -399,6 +395,31 @@
                 }
             }
         },
+        "client_response": {
+            "type": "object",
+            "properties": {
+                "title": {
+                    "type": "string"
+                },
+		"code": {
+		    "type": "string"
+		},
+                "message": {
+                    "type": "string"
+                },
+		"client": {
+		    "type": "object",
+		    "properties": {
+			"clientid": {
+			    "type": "string"
+			},
+			"public_key": {
+			    "type": "string"
+			}
+		    }
+		}		
+            }
+	},
 
 	"transaction": {
 	    "type": "object",
@@ -421,6 +442,41 @@
 	    }
 	},
 
+        "transaction_response": {
+            "type": "object",
+            "properties": {
+                "title": {
+                    "type": "string"
+                },
+		"code": {
+		    "type": "string"
+		},
+                "message": {
+                    "type": "string"
+                },
+		"transaction": {
+		    "type": "object",
+		    "properties": {
+			"clientid": {
+			    "type": "string"
+			},
+			"transaction_data": {
+			    "type": "string"
+			},
+			"createdate": {
+			    "type": "string"
+			},
+			"hash": {
+			    "type": "string"
+			},
+			"signature": {
+			    "type": "string"
+			}
+		    }
+		},				
+            }
+	},
+	
         "response": {
             "type": "object",
             "properties": {
