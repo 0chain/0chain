@@ -6,7 +6,7 @@
     },
     "paths": {
 
-        "/client": {
+        "/v1/client": {
             "post": {
                 "description": "Accepts client ID (hash_key) and public_key to register a new client with the server\n",
                 "consumes": [
@@ -21,7 +21,7 @@
                         "name": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/client_register"
+                            "$ref": "#/definitions/Client"
                         }
                     }
                 ],
@@ -32,7 +32,7 @@
                             "title": "Response Table",
                             "type": "object",
                             "items": {
-                                "$ref": "#/definitions/response"
+                                "$ref": "#/definitions/Response"
                             }
                         }
                     },
@@ -42,7 +42,7 @@
                             "title": "Response Table",
                             "type": "object",
                             "items": {
-                                "$ref": "#/definitions/response"
+                                "$ref": "#/definitions/Response"
                             }
                         }
                     }
@@ -50,7 +50,7 @@
             }
         },
 
-        "/transaction": {
+        "/v1/transaction": {
             "post": {
                 "description": "Create a Transaction",
                 "consumes": [
@@ -65,7 +65,7 @@
                         "name": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/transaction"
+                            "$ref": "#/definitions/Transaction"
                         }
                     }
                 ],
@@ -76,7 +76,7 @@
                             "title": "Response Table",
                             "type": "object",
                             "items": {
-                                "$ref": "#/definitions/response"
+                                "$ref": "#/definitions/Response"
                             }
                         }
                     },
@@ -86,7 +86,7 @@
                             "title": "Response Table",
                             "type": "object",
                             "items": {
-                                "$ref": "#/definitions/response"
+                                "$ref": "#/definitions/Response"
                             }
                         }
                     }
@@ -96,7 +96,7 @@
 
     },
     "definitions": {
-        "client_register": {
+        "Client": {
             "type": "object",
             "properties": {
                 "public_key": {
@@ -110,7 +110,7 @@
 		}
             }
         },
-	"transaction": {
+	"Transaction": {
 	    "type": "object",
 	    "properties": {
 		"clientID": {
@@ -130,7 +130,7 @@
 		}
 	    }
 	},
-        "response": {
+        "Response": {
             "type": "object",
             "properties": {
                 "name": {
