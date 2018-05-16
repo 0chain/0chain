@@ -104,9 +104,6 @@
                 },
                 "clientID": {
                     "type": "string"
-                },
-		"sign": {
-		    "type": "string"
 		}
             }
         },
