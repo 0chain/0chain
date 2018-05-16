@@ -1,0 +1,6 @@
+\.*
+!.gitignore
+*.class
+*.jar
+**/target/
+**/bin/
