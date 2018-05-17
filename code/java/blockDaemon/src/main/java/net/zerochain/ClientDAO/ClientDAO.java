@@ -19,27 +19,13 @@ public class ClientDAO implements IClientDAO {
 	
 	@PersistenceContext 
 	private EntityManager entityManager;
-	
-	@Override
-	public void saveRegistration(ClientEntity clientEntity) {
-		entityManager.persist(clientEntity);
-	}
 
 	@Override
-	public boolean lookupClient(ClientEntity clientEntity)
-	{
-		Criteria crit = entityManager.unwrap(Session.class).createCriteria(ClientEntity.class);
-		crit.add(Restrictions.eq("clientid",clientEntity.getClientID()));
-		List<ClientEntity> clients = crit.list();
-		return clients.size() > 0;
-	}
-
-	@Override
-	public String getClientPublic_key(ClientEntity clientEntity)
+	public String getClientPublic_key(String client_id)
 	{
 		String public_key = "";
 		Criteria crit = entityManager.unwrap(Session.class).createCriteria(ClientEntity.class);
-		crit.add(Restrictions.eq("clientid",clientEntity.getClientID()));
+		crit.add(Restrictions.eq("clientid",client_id));
 		List<ClientEntity> clients = crit.list();
 		if(clients.size() > 0)
 		{

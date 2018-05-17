@@ -1,24 +1,13 @@
 package net.zerochain.Client;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Table;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
 import java.io.Serializable;
 
-@Entity
-@Table(name="clients")
 public class ClientEntity implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 
-	@Column(name = "public_key")
 	private String public_key;
 
-	@Id
-	@Column(name = "clientid")
 	private String clientid;
 
 	public ClientEntity(String public_key, String clientid) {
@@ -27,6 +16,8 @@ public class ClientEntity implements Serializable {
 	}
 
 	public ClientEntity() {
+		this.public_key = "";
+		this.clientid = "";
 	}
 
 	public String getPublic_key() {
@@ -45,9 +36,9 @@ public class ClientEntity implements Serializable {
 
 	@Override
 	public String toString() {
-		return "MinerEntity{" +
-				" public_key='" + public_key + '\'' +
-				", clientid='" + clientid + '\'' +
+		return "{" +
+				"\"public_key\":\"" + public_key + '\"' +
+				",\"clientid\":\"" + clientid + '\"' +
 				'}';
 	}
 }

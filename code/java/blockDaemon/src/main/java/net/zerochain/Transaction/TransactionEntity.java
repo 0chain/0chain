@@ -38,6 +38,9 @@ public class TransactionEntity implements Serializable{
 	
 	@Column(name = "sign")
 	private String sign;
+
+	@Column(name = "status")
+	private String status;
 	
 	public TransactionEntity (String clientid,String data, Timestamp timestamp,String hash_msg, String sign) {
 		this.clientid = clientid;
@@ -89,6 +92,16 @@ public class TransactionEntity implements Serializable{
 	}
 	public void setSign(String sign) {
 		this.sign = sign;
+	}
+
+	public String getStatus()
+	{
+		return status;
+	}
+
+	public void setStatus(String status)
+	{
+		this.status = status;
 	}
 
 	@Override

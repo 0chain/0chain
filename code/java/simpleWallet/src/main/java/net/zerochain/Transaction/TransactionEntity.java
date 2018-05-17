@@ -4,39 +4,21 @@ import java.io.Serializable;
 import java.sql.Date;
 import java.sql.Timestamp;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.Table;
-import javax.persistence.Temporal;
-import javax.persistence.TemporalType;
-
 import net.zerochain.resources.Utils;
 
-
-@Entity
-@Table(name = "transactions")
 public class TransactionEntity implements Serializable{
 
 	
 	private static final long serialVersionUID = 1L;
 	
-	@Column(name = "clientid")
 	private String clientid;
-	
-	@Column(name = "data")
+
 	private String data;
-	
-	@Column(name = "timestamp")
+
 	private Timestamp timestamp;
-	
-	@Id
-	@Column(name = "hash_msg")
+
 	private String hash_msg;
-	
-	@Column(name = "sign")
+
 	private String sign;
 	
 	public TransactionEntity (String clientid,String data, Timestamp timestamp,String hash_msg, String sign) {
@@ -96,10 +78,10 @@ public class TransactionEntity implements Serializable{
 	{
 		return "TransactionEntity{" +
 				" clientid='" + clientid + '\'' +
-				", data='" + data + '\'' +
+				", transaction_data='" + data + '\'' +
 				", timestamp='" + Utils.timestampToString(timestamp) +'\'' +
-				", hash_msg='" + hash_msg + '\'' +
-				", sign='" + sign + '\'' +
+				", hash='" + hash_msg + '\'' +
+				", signature='" + sign + '\'' +
 				'}'; 
 	}
 

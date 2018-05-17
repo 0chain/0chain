@@ -67,7 +67,7 @@ public class ClientTest {
 		String public_key = Utils.toHexString(keys.getPublic().getEncoded());
 		String client_id = Utils.createHash(public_key);
 		ClientEntity clientEntity = new ClientEntity();
-		clientEntity.setHash_key(client_id);
+		clientEntity.setClientID(client_id);
 		ResponseEntity<Response> responseEntity = restTemplate.postForEntity("/v1/client", clientEntity, Response.class);
         Response client = responseEntity.getBody();
         assertEquals("Error",client.getName());
@@ -97,7 +97,7 @@ public class ClientTest {
 		String client_id = Utils.createHash(public_key+"03AF");
 		ClientEntity clientEntity = new ClientEntity();
 		clientEntity.setPublic_key(public_key);
-		clientEntity.setHash_key(client_id);
+		clientEntity.setClientID(client_id);
 		ResponseEntity<Response> responseEntity = restTemplate.postForEntity("/v1/client", clientEntity, Response.class);
         Response client = responseEntity.getBody();
         assertEquals("Error",client.getName());
@@ -113,7 +113,7 @@ public class ClientTest {
 		String client_id = Utils.createHash(public_key);
 		ClientEntity clientEntity = new ClientEntity();
 		clientEntity.setPublic_key(public_key+"0B2C");
-		clientEntity.setHash_key(client_id);
+		clientEntity.setClientID(client_id);
 		ResponseEntity<Response> responseEntity = restTemplate.postForEntity("/v1/client", clientEntity, Response.class);
         Response client = responseEntity.getBody();
         assertEquals("Error",client.getName());
@@ -130,7 +130,7 @@ public class ClientTest {
 		String client_id = Utils.createHash(private_key);
 		ClientEntity clientEntity = new ClientEntity();
 		clientEntity.setPublic_key(private_key);
-		clientEntity.setHash_key(client_id);
+		clientEntity.setClientID(client_id);
 		ResponseEntity<Response> responseEntity = restTemplate.postForEntity("/v1/client", clientEntity, Response.class);
         Response client = responseEntity.getBody();
         assertEquals("Error",client.getName());

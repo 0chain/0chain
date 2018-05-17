@@ -31,9 +31,9 @@ public class ClientSeviceImpl implements IClientService {
 		Response response = new Response();
 		AsymmetricSigning algo = new EDDSA();
 		boolean validKey = algo.verifyKey(clientEntity.getPublic_key());
-		boolean correctHash = validKey && Utils.verifyHash(clientEntity.getPublic_key(), clientEntity.getHash_key());
+		boolean correctHash = validKey && Utils.verifyHash(clientEntity.getPublic_key(), clientEntity.getClientID());
 		boolean newClient = correctHash && !lookupClient(clientEntity);
-		if(clientEntity.getPublic_key()==null || clientEntity.getHash_key() == null)
+		if(clientEntity.getPublic_key()==null || clientEntity.getClientID() == null)
 		{
 			response.setName("Error");
 			response.setMessage("Bad json... BAD!!!");

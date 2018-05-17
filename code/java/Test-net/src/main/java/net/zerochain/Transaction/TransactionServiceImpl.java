@@ -39,14 +39,14 @@ public class TransactionServiceImpl implements ITransactionService{
         AsymmetricSigning algo = new EDDSA();
 		Response response = new Response();
 		Timestamp minerTime = Utils.getTimestamp();
-		ClientEntity clientEntity = new ClientEntity("",transactionEntity.getClient_id());
+		ClientEntity clientEntity = new ClientEntity("",transactionEntity.getClientID());
 		String public_key = "";
 		boolean isRegistered = iClientDAO.lookupClient(clientEntity);
 		if(isRegistered)
 		{
 			public_key = iClientDAO.getClientPublic_key(clientEntity);
 		}
-		boolean correctTransactionHash = isRegistered && Utils.verifyHash(transactionEntity.getClient_id()+transactionEntity.getData()+Utils.timestampToString(transactionEntity.getTimestamp()), transactionEntity.getHash_msg());
+		boolean correctTransactionHash = isRegistered && Utils.verifyHash(transactionEntity.getClientID()+transactionEntity.getData()+Utils.timestampToString(transactionEntity.getTimestamp()), transactionEntity.getHash_msg());
         boolean signedCorrectly = false;
         if(algo.verifyKey(public_key))
         {
@@ -55,7 +55,7 @@ public class TransactionServiceImpl implements ITransactionService{
         boolean freshTransaction = correctTransactionHash && signedCorrectly && !iTransactionDAO.lookupTransaction(transactionEntity);
         boolean validTransaction = freshTransaction && Utils.inTime(minerTime,transactionEntity.getTimestamp());
 
-        if(transactionEntity.getClient_id().equals("") || transactionEntity.getData().equals("") || transactionEntity.getTimestamp().equals(new Timestamp(1L)) || transactionEntity.getHash_msg().equals("") || transactionEntity.getSign().equals(""))
+        if(transactionEntity.getClientID().equals("") || transactionEntity.getData().equals("") || transactionEntity.getTimestamp().equals(new Timestamp(1L)) || transactionEntity.getHash_msg().equals("") || transactionEntity.getSign().equals(""))
         {
             response.setName("Error");
             response.setMessage("JSON not filled in correctly");
