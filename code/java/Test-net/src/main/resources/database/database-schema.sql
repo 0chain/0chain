@@ -31,6 +31,7 @@ CREATE TABLE public.block
   prev_block_hash text NOT NULL,
   block_signature text NOT NULL,
   miner_id text NOT NULL,
+  "timestamp" timestamp without time zone NOT NULL,
   round integer NOT NULL
 )
 WITH (
