@@ -4,3 +4,11 @@
 *.jar
 **/target/
 **/bin/
+**/pkg/
+**/go/hash
+**/go/miner
+**/go/sharder
+**/go/blobber
+**/test/
+**/examples/
+**/hash/main.go
