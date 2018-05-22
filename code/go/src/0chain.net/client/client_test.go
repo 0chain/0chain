@@ -10,7 +10,7 @@ import (
 	"0chain.net/encryption"
 )
 
-func TestClientChunkSave(t *testing.T) {
+func BenchmarkClientChunkSave(t *testing.B) {
 	fmt.Printf("time : %v\n", time.Now().UnixNano()/int64(time.Millisecond))
 	start := time.Now()
 	fmt.Printf("Testing at %v\n", start)

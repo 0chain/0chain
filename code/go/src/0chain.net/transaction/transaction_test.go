@@ -15,7 +15,7 @@ import (
 var keyPairs = make(map[string]string)
 var publicKeys = make([]string, 0, 1000)
 
-func TestTransactionWrite(t *testing.T) {
+func BenchmarkTransactionWrite(t *testing.B) {
 	fmt.Printf("time : %v\n", time.Now().UnixNano()/int64(time.Millisecond))
 	numClients := 1000
 	createClients(numClients)

@@ -36,7 +36,6 @@ type ContextKey string
 
 func process(w http.ResponseWriter, data interface{}, err error) {
 	if err != nil {
-		fmt.Printf("error is : %v", err)
 		http.Error(w, err.Error(), 400)
 	} else {
 		w.Header().Set("Content-Type", "application/json")
