@@ -20,13 +20,13 @@ func BenchmarkTransactionWrite(t *testing.B) {
 	numClients := 1000
 	createClients(numClients)
 	start := time.Now()
-	numTxns := 100000
+	numTxns := 40000
 	done := make(chan bool, numTxns)
 	txnchannel := make(chan *Transaction, 10000)
 	for i := 1; i <= 100; i++ {
 		go processWorker(txnchannel, done)
 	}
-	for i := 1; i <= numTxns; i++ {
+	for i := 0; i < numTxns; i++ {
 		publicKey := publicKeys[i%1000]
 		pvtKey := keyPairs[publicKey]
 		txnData := fmt.Sprintf("Txn(%v) Pay %v from %s\n", i, i%100, publicKey)
@@ -49,8 +49,7 @@ func createClients(numClients int) {
 	fmt.Printf("Testing at %v\n", start)
 	done := make(chan bool, numClients)
 	for i := 1; i <= numClients; i++ {
-		// This should be replaced with Key generation
-		privateKey, publicKey := encryption.GenerateKeys()
+		publicKey, privateKey := encryption.GenerateKeys()
 		keyPairs[publicKey] = privateKey
 		publicKeys = append(publicKeys, publicKey)
 		go postClient(privateKey, publicKey, done)
@@ -93,8 +92,13 @@ func postTransaction(privateKey string, publicKey string, txnData string, txnCha
 	t.ClientID = encryption.Hash(publicKey)
 	t.TransactionData = txnData
 	t.CreationDate = common.Now()
-	t.Signature = encryption.Hash(txnData) //TODO: This should eventually be encryption.Sign(privateKey,txnData)
-	t.Hash = encryption.Hash(t.Signature)
+	t.Hash = encryption.Hash(t.TransactionData)
+	signature, err := encryption.Sign(privateKey, t.Hash)
+	if err != nil {
+		fmt.Printf("error signing %v\n", err)
+		return
+	}
+	t.Signature = signature
 	txnChannel <- t
 }
 

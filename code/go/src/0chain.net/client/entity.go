@@ -47,9 +47,9 @@ func (c *Client) Delete(ctx context.Context) error {
 	return datastore.Delete(ctx, c)
 }
 
-/*Decrypt - given an encrypted message decrypt it with the client's public key */
-func (c *Client) Decrypt(encryptedMsg string) (string, error) { // TODO: Decrypt based on public key
-	return encryptedMsg, nil
+/*Verify - given a signature and hash verify it with client's public key */
+func (c *Client) Verify(signature string, hash string) (bool, error) {
+	return encryption.Verify(c.PublicKey, signature, hash)
 }
 
 /*ClientProvider - entity provider for client object */

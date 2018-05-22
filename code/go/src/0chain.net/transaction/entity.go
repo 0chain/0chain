@@ -8,7 +8,6 @@ import (
 	"0chain.net/client"
 	"0chain.net/common"
 	"0chain.net/datastore"
-	"0chain.net/encryption"
 )
 
 /*Transaction type for capturing the transaction data */
@@ -58,14 +57,11 @@ func (t *Transaction) Validate(ctx context.Context) error {
 	if t.ID != t.Hash {
 		return common.NewError("id_hash_mismatch", "ID and Hash don't match")
 	}
-	/*
-		if !t.VerifyHash() {
-			return common.InvalidRequest("Transaction hash verification error")
-		}
-		err = t.VerifySignature(ctx)
-		if err != nil {
-			return err
-		}*/
+
+	err = t.VerifySignature(ctx)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -109,18 +105,13 @@ func (t *Transaction) GetClient(ctx context.Context) (*client.Client, error) {
 	return co, nil
 }
 
-/*VerifyHash - verify the transaction hash */
-func (t *Transaction) VerifyHash() bool { //TODO
-	return encryption.Hash(t.Signature) == t.Hash
-}
-
 /*VerifySignature - verify the transaction hash */
 func (t *Transaction) VerifySignature(ctx context.Context) error { //TODO
 	co, err := t.GetClient(ctx)
 	if err != nil {
 		return err
 	}
-	_, err = co.Decrypt(t.Signature)
+	_, err = co.Verify(t.Signature, t.Hash)
 	if err != nil {
 		return err
 	}

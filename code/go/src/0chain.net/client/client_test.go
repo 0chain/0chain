@@ -17,9 +17,12 @@ func BenchmarkClientChunkSave(t *testing.B) {
 	numWorkers := 1
 	done := make(chan bool, numWorkers)
 	for i := 1; i <= numWorkers; i++ {
-		msg := fmt.Sprintf("0chain.net %v", i)
-		fmt.Printf("msg: %v\n", msg)
-		go postClient(encryption.Hash(msg), done)
+		publicKey, privateKey := encryption.GenerateKeys()
+		if privateKey == "" {
+			fmt.Println("Error genreating keys")
+			continue
+		}
+		go postClient(publicKey, done)
 	}
 	for count := 0; true; {
 		<-done
@@ -39,7 +42,8 @@ func postClient(publicKey string, done chan<- bool) {
 		fmt.Printf("it's not ok!\n")
 	}
 	client.PublicKey = publicKey
-	client.ID = encryption.Hash(publicKey)
+	client.SetKey(encryption.Hash(client.PublicKey))
+
 	//ctx := datastore.WithAsyncChannel(context.Background(), ClientEntityChannel)
 	ctx := datastore.WithConnection(context.Background())
 	_, err := PutClient(ctx, entity)
