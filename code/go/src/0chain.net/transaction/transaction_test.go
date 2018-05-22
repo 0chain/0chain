@@ -92,8 +92,11 @@ func postTransaction(privateKey string, publicKey string, txnData string, txnCha
 	t.ClientID = encryption.Hash(publicKey)
 	t.TransactionData = txnData
 	t.CreationDate = common.Now()
-	t.Hash = encryption.Hash(t.TransactionData)
-	signature, err := encryption.Sign(privateKey, t.Hash)
+	c := &client.Client{}
+	c.PublicKey = publicKey
+	c.ID = encryption.Hash(publicKey)
+	signature, err := t.Sign(c, privateKey)
+	encryption.Sign(privateKey, t.Hash)
 	if err != nil {
 		fmt.Printf("error signing %v\n", err)
 		return

@@ -8,6 +8,7 @@ import (
 	"0chain.net/client"
 	"0chain.net/common"
 	"0chain.net/datastore"
+	"0chain.net/encryption"
 )
 
 /*Transaction type for capturing the transaction data */
@@ -137,3 +138,10 @@ func TransactionProvider() interface{} {
 * Chunk Workers = 8
  */
 var TransactionEntityChannel = datastore.SetupWorkers(10240, 250*time.Millisecond, 128, 32, 8)
+
+/*Sign - given a client and client's private key, sign this tranasction */
+func (t *Transaction) Sign(client *client.Client, privateKey string) (string, error) {
+	// TODO: The actual hash could be based on a combination of things (client_id, creation_date and txn data)
+	t.Hash = encryption.Hash(t.TransactionData)
+	return encryption.Sign(privateKey, t.Hash)
+}
