@@ -29,7 +29,7 @@ func (t *Time) Parse(buf []byte) error {
 
 /*MarshalJSON - to control how the timestamp will be sent */
 func (t *Time) MarshalJSON() ([]byte, error) {
-	return []byte(t.ToString()), nil
+	return []byte(`"` + t.ToString() + `"`), nil
 }
 
 /*ToString - get formatted string representation */
