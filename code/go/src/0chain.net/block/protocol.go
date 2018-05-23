@@ -15,6 +15,7 @@ const BLOCK_SIZE = 500
  */
 func (b *Block) GenerateBlock(ctx context.Context) error {
 	txns := make([]*transaction.Transaction, BLOCK_SIZE)
+	b.Txns = make([]interface{}, BLOCK_SIZE)
 	idx := 0
 	var txnIterHandler = func(ctx context.Context, qe datastore.CollectionEntity) bool {
 		select {
@@ -30,6 +31,7 @@ func (b *Block) GenerateBlock(ctx context.Context) error {
 			return true
 		}
 		txns[idx] = txn
+		b.Txns[idx] = txn.Hash
 		idx++
 		if len(txns) == BLOCK_SIZE {
 			// TODO: createBlock(ctx)
@@ -46,28 +48,29 @@ func (b *Block) ValidateBlock(ctx context.Context, txns []interface{}) (bool, er
 	return true, nil
 }
 
-/*UpdateTxnStatusToMined - given a set of transaction ids within a block, update them to mined */
-func (b *Block) UpdateTxnStatusToMined(ctx context.Context, txns []interface{}) error {
+/*Finalize - given a set of transaction ids within a block, update them to finalized */
+func (b *Block) Finalize(ctx context.Context) error {
 	transactions, err := datastore.AllocateEntities(BLOCK_SIZE, transaction.TransactionProvider)
 	modifiedTxns := make([]datastore.Entity, BLOCK_SIZE)
 
 	if err != nil {
 		return err
 	}
-	for start := 0; start < len(txns); start += BLOCK_SIZE {
+	for start := 0; start < len(b.Txns); start += BLOCK_SIZE {
 		end := start + BLOCK_SIZE
-		if end > len(txns) {
-			end = len(txns)
+		if end > len(b.Txns) {
+			end = len(b.Txns)
 		}
-		keys := txns[start:end]
+		keys := b.Txns[start:end]
 		datastore.MultiRead(ctx, keys, transactions)
 		ind := 0
 		for i := 0; i < end-start; i++ {
 			if transactions[i].GetKey() == nil {
+				// May be this txn never reached this server
 				continue
 			}
 			txn := transactions[i].(*transaction.Transaction)
-			txn.Status = transaction.TXN_STATUS_MINED
+			txn.Status = transaction.TXN_STATUS_FINALIZED
 			modifiedTxns[ind] = txn
 			ind++
 		}

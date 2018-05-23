@@ -18,6 +18,9 @@ type Block struct {
 	MinerID   string `json:"miner_id"`
 	Round     int64  `json:"round"`
 	ChainID   string `json:"chain_id"`
+
+	Txns      []interface{}
+	PrevBlock *Block
 }
 
 /*GetEntityName - implementing the interface */
@@ -73,4 +76,13 @@ func BlockProvider() interface{} {
 	b.EntityCollection = blockEntityCollection
 	b.InitializeCreationDate()
 	return b
+}
+
+func (b *Block) GetPreviousBlock() *Block {
+	if b.PrevBlock != nil {
+		return b.PrevBlock
+	} else {
+		// TODO: Query from the datastore and ensure the b.Txns array is populated
+		return nil
+	}
 }

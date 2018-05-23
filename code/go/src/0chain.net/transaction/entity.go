@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"0chain.net/chain"
 	"0chain.net/client"
 	"0chain.net/common"
 	"0chain.net/datastore"
@@ -33,7 +32,7 @@ const (
 	/*TXN_STATUS_PENDING - transaction that is yet being worked on by putting it into the block */
 	TXN_STATUS_PENDING = 1
 	/*TXN_STATUS_MINED - transaction that is already mined */
-	TXN_STATUS_MINED = 2
+	TXN_STATUS_FINALIZED = 2
 	/*TXN_STATUS_CANCELLED - the transaction is cancelled via error reporting protocol */
 	TXN_STATUS_CANCELLED = 3
 )
@@ -45,10 +44,11 @@ func (t *Transaction) GetEntityName() string {
 
 /*Validate - Entity implementation */
 func (t *Transaction) Validate(ctx context.Context) error {
+	/* TODO: Circular Dependency
 	err := chain.ValidChain(t.ChainID)
 	if err != nil {
 		return err
-	}
+	}*/
 	if t.ID == "" {
 		if t.Hash == "" {
 			return common.InvalidRequest("hash required for transaction")
@@ -59,7 +59,7 @@ func (t *Transaction) Validate(ctx context.Context) error {
 		return common.NewError("id_hash_mismatch", "ID and Hash don't match")
 	}
 
-	err = t.VerifySignature(ctx)
+	err := t.VerifySignature(ctx)
 	if err != nil {
 		return err
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"0chain.net/block"
 	"0chain.net/common"
 	"0chain.net/datastore"
 )
@@ -39,8 +40,10 @@ func GetServerChainID() string {
 type Chain struct {
 	datastore.IDField
 	datastore.CreationDateField
-	ClientID      string `json:"client_id"`    // Client who created this chain
-	LatestBlockID string `json:"latest_block"` // Latest block on the chain the program is aware of
+	ClientID string `json:"client_id"` // Client who created this chain
+
+	LatestFinalizedBlock *block.Block
+	//LatstFinalizedBlockID string `json:"latest_block"` // Latest block on the chain the program is aware of
 }
 
 /*GetEntityName - implementing the interface */
@@ -88,4 +91,13 @@ func ValidChain(chain string) error {
 		return nil
 	}
 	return ErrSupportedChain
+}
+
+func (c *Chain) UpdateFinalizedBlock(ctx context.Context, lfb *block.Block) {
+	if lfb.Hash == c.LatestFinalizedBlock.Hash {
+		return
+	}
+	for b := lfb; b != nil && b != c.LatestFinalizedBlock; b = b.GetPreviousBlock() {
+		b.Finalize(ctx)
+	}
 }
