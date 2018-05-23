@@ -10,6 +10,7 @@ import (
 	"0chain.net/block"
 	"0chain.net/chain"
 	"0chain.net/client"
+	"0chain.net/common"
 	"0chain.net/config"
 	"0chain.net/encryption"
 	"0chain.net/node"
@@ -23,6 +24,7 @@ func initServer() {
 func initHandlers() {
 	if config.Configuration.TestMode {
 		http.HandleFunc("/_hash", encryption.HashHandler)
+		http.HandleFunc("/_sign", common.ToJSONResponse(encryption.SignHandler))
 	}
 	node.SetupHandlers()
 
