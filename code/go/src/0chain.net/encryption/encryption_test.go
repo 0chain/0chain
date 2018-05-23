@@ -10,15 +10,21 @@ var expectedHash = "6cb51770083ba34e046bc6c953f9f05b64e16a0956d4e496758b97c9cf56
 
 func TestHash(t *testing.T) {
 	if Hash(data) != expectedHash {
-		fmt.Printf("invalid hash")
+		fmt.Printf("invalid hash\n")
 	} else {
-		fmt.Printf("hash successful")
+		fmt.Printf("hash successful\n")
 	}
 }
 
 func TestGenerateKeys(t *testing.T) {
 	publicKey, privateKey := GenerateKeys()
 	fmt.Printf("keys: %v,%v\n", privateKey, publicKey)
+}
+
+func BenchmarkGenerateKeys(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		GenerateKeys()
+	}
 }
 
 func TestSignAndVerify(t *testing.T) {
@@ -33,5 +39,23 @@ func TestSignAndVerify(t *testing.T) {
 		fmt.Printf("Verification failed\n")
 	} else {
 		fmt.Printf("Signing Verification successful\n")
+	}
+}
+
+func BenchmarkSign(b *testing.B) {
+	_, privateKey := GenerateKeys()
+	for i := 0; i < b.N; i++ {
+		Sign(privateKey, expectedHash)
+	}
+}
+
+func BenchmarkVerify(b *testing.B) {
+	publicKey, privateKey := GenerateKeys()
+	signature, err := Sign(privateKey, expectedHash)
+	if err != nil {
+		return
+	}
+	for i := 0; i < b.N; i++ {
+		Verify(publicKey, signature, expectedHash)
 	}
 }
