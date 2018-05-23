@@ -5,7 +5,7 @@
 **/target/
 **/bin/
 **/pkg/
-**/go/hash
+**/go/sign
 **/go/miner
 **/go/sharder
 **/go/blobber
