@@ -1,8 +1,10 @@
 package encryption
 
 import (
+	"bufio"
 	"crypto/rand"
 	"encoding/hex"
+	"io"
 
 	"golang.org/x/crypto/ed25519"
 )
@@ -14,6 +16,15 @@ func GenerateKeys() (publicKey string, privateKey string) {
 		return "", ""
 	}
 	return hex.EncodeToString(public), hex.EncodeToString(private)
+}
+
+func ReadKeys(reader io.Reader) (publicKey string, privateKey string) {
+	scanner := bufio.NewScanner(reader)
+	scanner.Scan()
+	publicKey = scanner.Text()
+	scanner.Scan()
+	privateKey = scanner.Text()
+	return publicKey, privateKey
 }
 
 //Sign - given a private key and data, compute it's signature

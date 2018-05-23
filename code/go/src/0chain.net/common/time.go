@@ -14,6 +14,11 @@ var timeFormat = time.RFC3339Nano
 
 /*UnmarshalJSON - to control how the timestamp will be received */
 func (t *Time) UnmarshalJSON(buf []byte) error {
+	return t.Parse(buf)
+}
+
+/*ParseTime - parse the time */
+func (t *Time) Parse(buf []byte) error {
 	tt, err := time.Parse(timeFormat, strings.Trim(string(buf), `"`))
 	if err != nil {
 		return err

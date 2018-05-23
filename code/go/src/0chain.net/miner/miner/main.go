@@ -12,6 +12,7 @@ import (
 	"0chain.net/client"
 	"0chain.net/config"
 	"0chain.net/encryption"
+	"0chain.net/node"
 	"0chain.net/transaction"
 )
 
@@ -23,6 +24,8 @@ func initHandlers() {
 	if config.Configuration.TestMode {
 		http.HandleFunc("/_hash", encryption.HashHandler)
 	}
+	node.SetupHandlers()
+
 	chain.SetupHandlers()
 	client.SetupHandlers()
 	transaction.SetupHandlers()
@@ -36,20 +39,55 @@ func main() {
 	host := flag.String("host", "", "hostname")
 	port := flag.Int("port", 7220, "port")
 	chainID := flag.String("chain", "", "chain id")
-	testmode := flag.Bool("test", false, "test mode?")
+	testMode := flag.Bool("test", false, "test mode?")
+	nodesFile := flag.String("nodes_file", "singe_machine_nodes.txt", "nodes file")
+	keysFile := flag.String("keys_file", "keys.txt", "keys file")
 	flag.Parse()
+
 	address := fmt.Sprintf("%v:%v", *host, *port)
 	chain.SetServerChainID(*chainID)
 	config.Configuration.Host = *host
 	config.Configuration.Port = *port
 	config.Configuration.ChainID = *chainID
-	config.Configuration.TestMode = *testmode
+	config.Configuration.TestMode = *testMode
+
+	reader, err := os.Open(*keysFile)
+	if err != nil {
+		panic(err)
+	}
+	publicKey, privateKey := encryption.ReadKeys(reader)
+	reader.Close()
+
+	if *nodesFile == "" {
+		panic("Please specify --node_file file.txt option with a file.txt containing peer nodes")
+	}
+
+	reader, err = os.Open(*nodesFile)
+	if err != nil {
+		panic(err)
+	}
+	node.ReadNodes(reader, &node.Miners, &node.Sharders, &node.Blobbers)
+	reader.Close()
+	if node.Self == nil {
+		panic("node definition for self node doesn't exist")
+	} else {
+		if node.Self.PublicKey != publicKey {
+			fmt.Printf("self: %v\n", node.Self)
+			panic(fmt.Sprintf("Pulbic key from the keys file and nodes file don't match %v %v", publicKey, node.Self.PublicKey))
+		}
+		node.Self.SetPrivateKey(privateKey)
+		privateKey = ""
+	}
+
+	go node.Miners.StatusMonitor()
+	go node.Sharders.StatusMonitor()
+	go node.Blobbers.StatusMonitor()
+
 	mode := "main net"
-	if *testmode {
+	if *testMode {
 		mode = "test net"
 	}
 	fmt.Printf("Num CPUs available %v\n", runtime.NumCPU())
-	//runtime.GOMAXPROCS(1)
 	fmt.Printf("Starting %v on %v for chain %v in %v mode ...\n", os.Args[0], address, chain.GetServerChainID(), mode)
 	initServer()
 	initHandlers()
