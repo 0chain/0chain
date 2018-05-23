@@ -70,6 +70,7 @@ func (b *Block) Finalize(ctx context.Context) error {
 				continue
 			}
 			txn := transactions[i].(*transaction.Transaction)
+			txn.BlockID = b.ID
 			txn.Status = transaction.TXN_STATUS_FINALIZED
 			modifiedTxns[ind] = txn
 			ind++

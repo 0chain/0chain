@@ -21,6 +21,7 @@ type Transaction struct {
 	Signature       string      `json:"signature"`
 	CreationDate    common.Time `json:"creation_date"`
 	Status          byte        `json:"status"`
+	BlockID         interface{} `json:"block_id,omitempty"` // This is the block that finalized this transaction
 
 	Client   *client.Client `json:"-"`
 	ToClient *client.Client `json:"-"`
