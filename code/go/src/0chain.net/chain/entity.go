@@ -40,10 +40,11 @@ func GetServerChainID() string {
 type Chain struct {
 	datastore.IDField
 	datastore.CreationDateField
-	ClientID string `json:"client_id"` // Client who created this chain
+	ClientID      string `json:"client_id"`                 // Client who created this chain
+	ParentChainID string `json:"parent_chain_id,omitempty"` // Chain from which this chain is forked off
+	Decimals      int8   `json:"decimals"`                  // Number of decimals allowed for the token on this chain
 
-	LatestFinalizedBlock *block.Block
-	//LatstFinalizedBlockID string `json:"latest_block"` // Latest block on the chain the program is aware of
+	LatestFinalizedBlock *block.Block `json:"latest_finalized_block,omitempty"` // Latest block on the chain the program is aware of
 }
 
 /*GetEntityName - implementing the interface */
@@ -93,10 +94,12 @@ func ValidChain(chain string) error {
 	return ErrSupportedChain
 }
 
-func (c *Chain) UpdateFinalizedBlock(ctx context.Context, lfb *block.Block) {
+/*UpdateFinalizedBlock - update the latest finalized block */
+func (c *Chain) UpdateFinalizedBlock(lfb *block.Block) {
 	if lfb.Hash == c.LatestFinalizedBlock.Hash {
 		return
 	}
+	ctx := datastore.WithConnection(context.Background())
 	for b := lfb; b != nil && b != c.LatestFinalizedBlock; b = b.GetPreviousBlock() {
 		b.Finalize(ctx)
 	}

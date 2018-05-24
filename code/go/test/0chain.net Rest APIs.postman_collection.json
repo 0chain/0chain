@@ -152,16 +152,20 @@
 				{
 					"listen": "prerequest",
 					"script": {
-						"id": "3adb614b-d146-4e1d-86dd-2b3f24d72c7a",
+						"id": "e10f43d8-86ee-4466-81a6-fec68c240607",
 						"type": "text/javascript",
 						"exec": [
 							"var timestamp = new Date().toISOString();",
 							"postman.setEnvironmentVariable('timestampIso8601Local',timestamp);",
-							"var data = \"Pay 144 bucks to me\";",
+							"",
+							"var amount = Math.random()*Math.pow(10,18)",
+							"postman.setEnvironmentVariable('amount',amount);",
+							"",
+							"var data = `Pay ${amount} ZCHN.decimal units to me`;",
 							"var private_key = \"6bf558761ce5e475acdc4a24f807b578edfd91f20928e0f9963ff4dd52546f43eaa9d6bce2264afa51ac5eaaa258dcc59350b3e60bd2ffe111447b06e01eb67a\";",
 							"var public_key = \"eaa9d6bce2264afa51ac5eaaa258dcc59350b3e60bd2ffe111447b06e01eb67a\";",
 							"",
-							"var url = \"http://localhost:7070/_sign?private_key=\"+private_key+\"&public_key=\"+public_key+\"&timestamp=\"+timestamp+\"&data=\"+encodeURIComponent(data);",
+							"var url = \"http://localhost:7070/_sign?private_key=\"+private_key+\"&public_key=\"+public_key+\"&timestamp=\"+timestamp+\"&data=\"+encodeURIComponent(amount+\":\"+data);",
 							"",
 							"pm.sendRequest(url, ",
 							"function (err, res) {",
@@ -169,6 +173,7 @@
 							" postman.setEnvironmentVariable('client_id',json.client_id)",
 							" postman.setEnvironmentVariable('hash',json.hash)",
 							" postman.setEnvironmentVariable('signature',json.signature)",
+							" postman.setEnvironmentVariable('data',data)",
 							"})"
 						]
 					}
@@ -184,7 +189,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n\t\"hash\": \"{{hash}}\",\n\t\"client_id\": \"{{client_id}}\",\n\t\"transaction_data\": \"{{data}}\",\n\t\"signature\": \"{{signature}}\",\n\t\"creation_date\": \"{{timestampIso8601Local}}\",\n\t\"chain_id\" : \"0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe\"\n}"
+					"raw": "{\n\t\"hash\": \"{{hash}}\",\n\t\"client_id\": \"{{client_id}}\",\n\t\"transaction_data\": \"{{data}}\",\n\t\"signature\": \"{{signature}}\",\n\t\"creation_date\": \"{{timestampIso8601Local}}\",\n\t\"chain_id\" : \"0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe\",\n\t\"transaction_value\": {{amount}}\n}"
 				},
 				"url": {
 					"raw": "http://localhost:7070/v1/transaction/put",

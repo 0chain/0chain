@@ -6,19 +6,20 @@ import (
 
 	"0chain.net/common"
 	"0chain.net/datastore"
+	"0chain.net/transaction"
 )
 
 /*Block - data structure that holds the block data*/
 type Block struct {
 	datastore.CollectionIDField
 	datastore.CreationDateField
-	Hash      string `json:"hash"`
-	PrevHash  string `json:"prev_hash"`
-	Signature string `json:"signature"`
-	MinerID   string `json:"miner_id"`
-	Round     int64  `json:"round"`
-	ChainID   string `json:"chain_id"`
-
+	Hash      string  `json:"hash"`
+	PrevHash  string  `json:"prev_hash"`
+	Signature string  `json:"signature"`
+	MinerID   string  `json:"miner_id"`
+	Round     int64   `json:"round"`
+	ChainID   string  `json:"chain_id"`
+	Weight    float64 `json:"weight"`
 	Txns      []interface{}
 	PrevBlock *Block
 }
@@ -70,19 +71,31 @@ func (b *Block) GetCollectionName() string {
 	return blockEntityCollection.GetCollectionName(b.ChainID)
 }
 
-/*BlockProvider - entity provider for block object */
-func BlockProvider() interface{} {
+/*Provider - entity provider for block object */
+func Provider() interface{} {
 	b := &Block{}
 	b.EntityCollection = blockEntityCollection
 	b.InitializeCreationDate()
 	return b
 }
 
+/*GetPreviousBlock - returns the previous block */
 func (b *Block) GetPreviousBlock() *Block {
 	if b.PrevBlock != nil {
 		return b.PrevBlock
-	} else {
-		// TODO: Query from the datastore and ensure the b.Txns array is populated
-		return nil
 	}
+	// TODO: Query from the datastore and ensure the b.Txns array is populated
+	return nil
+
+}
+
+/*GetWeight - Get the weight/score of this block */
+func (b *Block) GetWeight() float64 {
+	return b.Weight
+}
+
+/*AddTransaction - add a transaction to the block */
+func (b *Block) AddTransaction(t *transaction.Transaction) {
+	b.Txns = append(b.Txns, t)
+	b.Weight += t.GetWeight()
 }

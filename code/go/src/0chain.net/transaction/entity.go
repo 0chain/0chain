@@ -15,18 +15,18 @@ import (
 /*Transaction type for capturing the transaction data */
 type Transaction struct {
 	datastore.CollectionIDField
-	Hash            string      `json:"hash"`
-	ClientID        string      `json:"client_id"`
-	ToClientID      string      `json:"to_client_id,omitempty"`
-	ChainID         string      `json:"chain_id,omitempty"`
-	TransactionData string      `json:"transaction_data"`
-	Signature       string      `json:"signature"`
-	CreationDate    common.Time `json:"creation_date"`
-	Status          byte        `json:"status"`
-	BlockID         interface{} `json:"block_id,omitempty"` // This is the block that finalized this transaction
-
-	Client   *client.Client `json:"-"`
-	ToClient *client.Client `json:"-"`
+	Hash            string         `json:"hash"`
+	ClientID        string         `json:"client_id"`
+	ToClientID      string         `json:"to_client_id,omitempty"`
+	ChainID         string         `json:"chain_id,omitempty"`
+	TransactionData string         `json:"transaction_data"`
+	Value           int64          `json:"transaction_value"` // The value associated with this transaction
+	Signature       string         `json:"signature"`
+	CreationDate    common.Time    `json:"creation_date"`
+	Status          byte           `json:"status"`
+	BlockID         interface{}    `json:"block_id,omitempty"` // This is the block that finalized this transaction
+	Client          *client.Client `json:"-"`
+	ToClient        *client.Client `json:"-"`
 }
 
 const (
@@ -112,11 +112,16 @@ func (t *Transaction) GetClient(ctx context.Context) (*client.Client, error) {
 	return co, nil
 }
 
+/*ComputeHash - compute the hash from the various components of the transaction */
+func (t *Transaction) ComputeHash() string {
+	hashdata := fmt.Sprintf("%v:%v:%v:%v", t.ClientID, t.CreationDate.ToString(), t.Value, t.TransactionData)
+	return encryption.Hash(hashdata)
+}
+
 /*VerifyHash - Verify the hash of the transaction */
 func (t *Transaction) VerifyHash(ctx context.Context) error {
-	hashdata := fmt.Sprintf("%v:%v:%v", t.ClientID, t.CreationDate.ToString(), t.TransactionData)
-	if t.Hash != encryption.Hash(hashdata) {
-		return common.NewError("hash_mismatch", fmt.Sprintf("The has of the data doesn't match with the provided hash"))
+	if t.Hash != t.ComputeHash() {
+		return common.NewError("hash_mismatch", fmt.Sprintf("The hash of the data doesn't match with the provided hash"))
 	}
 	return nil
 }
@@ -159,8 +164,12 @@ var TransactionEntityChannel = datastore.SetupWorkers(10240, 250*time.Millisecon
 
 /*Sign - given a client and client's private key, sign this tranasction */
 func (t *Transaction) Sign(client *client.Client, privateKey string) (string, error) {
-	// TODO: The actual hash could be based on a combination of things (client_id, creation_date and txn data)
-	hashdata := fmt.Sprintf("%v:%v:%v", t.ClientID, t.CreationDate.String(), t.TransactionData)
-	t.Hash = encryption.Hash(hashdata)
+	t.Hash = t.ComputeHash()
 	return encryption.Sign(privateKey, t.Hash)
+}
+
+/*GetWeight - get the weight/score of this transction */
+func (t *Transaction) GetWeight() float64 {
+	// TODO: For now all transactions weigh the same
+	return 1.0
 }

@@ -15,7 +15,7 @@ const BLOCK_SIZE = 500
  */
 func (b *Block) GenerateBlock(ctx context.Context) error {
 	txns := make([]*transaction.Transaction, BLOCK_SIZE)
-	b.Txns = make([]interface{}, BLOCK_SIZE)
+	b.Txns = make([]interface{}, 0, BLOCK_SIZE)
 	idx := 0
 	var txnIterHandler = func(ctx context.Context, qe datastore.CollectionEntity) bool {
 		select {
@@ -31,7 +31,7 @@ func (b *Block) GenerateBlock(ctx context.Context) error {
 			return true
 		}
 		txns[idx] = txn
-		b.Txns[idx] = txn.Hash
+		b.AddTransaction(txn)
 		idx++
 		if len(txns) == BLOCK_SIZE {
 			// TODO: createBlock(ctx)

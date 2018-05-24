@@ -13,12 +13,12 @@ import (
 /*SetupHandlers sets up the necessary API end points */
 func SetupHandlers() {
 	http.HandleFunc("/v1/block/get", common.ToJSONResponse(datastore.WithConnectionHandler(GetBlock)))
-	http.HandleFunc("/v1/block/put", common.ToJSONEntityReqResponse(datastore.WithConnectionEntityJSONHandler(PutBlock), BlockProvider))
+	http.HandleFunc("/v1/block/put", common.ToJSONEntityReqResponse(datastore.WithConnectionEntityJSONHandler(PutBlock), Provider))
 }
 
 /*GetBlock - given an id returns the block information */
 func GetBlock(ctx context.Context, r *http.Request) (interface{}, error) {
-	return datastore.GetEntityHandler(ctx, r, BlockProvider, "hash")
+	return datastore.GetEntityHandler(ctx, r, Provider, "hash")
 }
 
 /*BLOCK_TIME_TOLERANCE - the txn creation date should be within 5 seconds before/after of current time */
