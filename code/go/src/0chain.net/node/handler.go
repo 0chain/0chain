@@ -8,23 +8,23 @@ import (
 )
 
 func SetupHandlers() {
-	http.HandleFunc("/_nh/status", NodeStatusHandler)
+	http.HandleFunc("/_nh/status", StatusHandler)
 	http.HandleFunc("/_nh/whoami", WhoAmIHandler)
 	http.HandleFunc("/_nh/list/m", GetMinersHandler)
 	http.HandleFunc("/_nh/list/s", GetShardersHandler)
 	http.HandleFunc("/_nh/list/b", GetBlobbersHandler)
 }
 
-/*NodeStatusHandler - allows checking the status of the node */
-func NodeStatusHandler(w http.ResponseWriter, r *http.Request) {
+/*StatusHandler - allows checking the status of the node */
+func StatusHandler(w http.ResponseWriter, r *http.Request) {
 	id := r.FormValue("id")
 	if id == "" {
 		return
 	}
 	publicKey := r.FormValue("publicKey")
-	time := r.FormValue("time")
+	timestamp := r.FormValue("timestamp")
 	ts := common.Now()
-	ts.Parse([]byte(time))
+	ts.Parse([]byte(timestamp))
 	data := r.FormValue("data")
 	hash := r.FormValue("hash")
 	signature := r.FormValue("signature")
@@ -54,6 +54,7 @@ func NodeStatusHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+//WhoAmIHandler - who am i?
 func WhoAmIHandler(w http.ResponseWriter, r *http.Request) {
 	if Self == nil {
 		return
