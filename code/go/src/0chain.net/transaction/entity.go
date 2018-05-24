@@ -2,6 +2,8 @@ package transaction
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
 	"0chain.net/client"
@@ -60,7 +62,10 @@ func (t *Transaction) Validate(ctx context.Context) error {
 		return common.NewError("id_hash_mismatch", "ID and Hash don't match")
 	}
 
-	err := t.VerifySignature(ctx)
+	err := t.VerifyHash(ctx)
+	if err == nil {
+		err = t.VerifySignature(ctx)
+	}
 	if err != nil {
 		return err
 	}
@@ -107,15 +112,26 @@ func (t *Transaction) GetClient(ctx context.Context) (*client.Client, error) {
 	return co, nil
 }
 
+func (t *Transaction) VerifyHash(ctx context.Context) error {
+	hashdata := fmt.Sprintf("%v:%v:%v", t.ClientID, t.CreationDate.ToString(), t.TransactionData)
+	if t.Hash != encryption.Hash(hashdata) {
+		return errors.New("The hash is not correct")
+	}
+	return nil
+}
+
 /*VerifySignature - verify the transaction hash */
 func (t *Transaction) VerifySignature(ctx context.Context) error { //TODO
 	co, err := t.GetClient(ctx)
 	if err != nil {
 		return err
 	}
-	_, err = co.Verify(t.Signature, t.Hash)
+	correctSignature, err := co.Verify(t.Signature, t.Hash)
 	if err != nil {
 		return err
+	}
+	if !correctSignature {
+		return errors.New("Not signed correctly")
 	}
 	/*
 		if msg != t.TransactionData {
@@ -143,6 +159,7 @@ var TransactionEntityChannel = datastore.SetupWorkers(10240, 250*time.Millisecon
 /*Sign - given a client and client's private key, sign this tranasction */
 func (t *Transaction) Sign(client *client.Client, privateKey string) (string, error) {
 	// TODO: The actual hash could be based on a combination of things (client_id, creation_date and txn data)
-	t.Hash = encryption.Hash(t.TransactionData)
+	hashdata := fmt.Sprintf("%v:%v:%v", t.ClientID, t.CreationDate.String(), t.TransactionData)
+	t.Hash = encryption.Hash(hashdata)
 	return encryption.Sign(privateKey, t.Hash)
 }
