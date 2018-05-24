@@ -42,8 +42,8 @@ func main() {
 	port := flag.Int("port", 7220, "port")
 	chainID := flag.String("chain", "", "chain id")
 	testMode := flag.Bool("test", false, "test mode?")
-	nodesFile := flag.String("nodes_file", "singe_machine_nodes.txt", "nodes file")
-	keysFile := flag.String("keys_file", "keys.txt", "keys file")
+	nodesFile := flag.String("nodes_file", "config/single_node.txt", "nodes_file")
+	keysFile := flag.String("keys_file", "config/single_node_keys.txt", "keys_file")
 	flag.Parse()
 
 	address := fmt.Sprintf("%v:%v", *host, *port)
@@ -78,7 +78,6 @@ func main() {
 			panic(fmt.Sprintf("Pulbic key from the keys file and nodes file don't match %v %v", publicKey, node.Self.PublicKey))
 		}
 		node.Self.SetPrivateKey(privateKey)
-		privateKey = ""
 	}
 
 	go node.Miners.StatusMonitor()

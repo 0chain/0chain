@@ -9,6 +9,5 @@
 **/go/miner
 **/go/sharder
 **/go/blobber
-**/test/
 **/examples/
 **/hash/main.go
