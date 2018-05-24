@@ -217,18 +217,29 @@ func MultiRead(ctx context.Context, keys []interface{}, entities []Entity) error
 * If the entities belong to a collection, then all entities should belong to
 * the same collection (including partitioning)
  */
-func MultiWrite(ctx context.Context, entities ...Entity) error {
+func MultiWrite(ctx context.Context, entities []Entity) error {
+	if len(entities) <= BATCH_SIZE {
+		return multiWriteAux(ctx, entities)
+	}
+	for start := 0; start < len(entities); start += BATCH_SIZE {
+		end := start + BATCH_SIZE
+		if end > len(entities) {
+			end = len(entities)
+		}
+		err := multiWriteAux(ctx, entities[start:end])
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func multiWriteAux(ctx context.Context, entities []Entity) error {
 	kvpair := make([]interface{}, 2*len(entities))
 	hasCollectionEntity := false
 	for idx, entity := range entities {
 		if !hasCollectionEntity {
 			_, hasCollectionEntity = entity.(CollectionEntity)
 		}
-		/*
-			entity.ComputeProperties()
-			if err := entity.Validate(ctx); err != nil {
-				return err
-			} */
 		kvpair[2*idx] = GetEntityKey(entity)
 		kvpair[2*idx+1] = bytes.NewBuffer(make([]byte, 0, 256))
 		json.NewEncoder(kvpair[2*idx+1].(*bytes.Buffer)).Encode(entity)

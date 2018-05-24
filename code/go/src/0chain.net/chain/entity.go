@@ -7,6 +7,7 @@ import (
 	"0chain.net/block"
 	"0chain.net/common"
 	"0chain.net/datastore"
+	"0chain.net/round"
 )
 
 /*MAIN_CHAIN - the main 0chain.net blockchain id */
@@ -44,6 +45,7 @@ type Chain struct {
 	ParentChainID string `json:"parent_chain_id,omitempty"` // Chain from which this chain is forked off
 	Decimals      int8   `json:"decimals"`                  // Number of decimals allowed for the token on this chain
 
+	RoundsChannel        chan *round.Round
 	LatestFinalizedBlock *block.Block `json:"latest_finalized_block,omitempty"` // Latest block on the chain the program is aware of
 }
 
@@ -78,9 +80,10 @@ func (c *Chain) Delete(ctx context.Context) error {
 	return datastore.Delete(ctx, c)
 }
 
-/*ChainProvider - entity provider for chain object */
-func ChainProvider() interface{} {
+/*Provider - entity provider for chain object */
+func Provider() interface{} {
 	c := &Chain{}
+	c.RoundsChannel = make(chan *round.Round)
 	c.InitializeCreationDate()
 	return c
 }
@@ -103,4 +106,8 @@ func (c *Chain) UpdateFinalizedBlock(lfb *block.Block) {
 	for b := lfb; b != nil && b != c.LatestFinalizedBlock; b = b.GetPreviousBlock() {
 		b.Finalize(ctx)
 	}
+}
+
+func (c *Chain) GetRoundsChannel() chan *round.Round {
+	return c.RoundsChannel
 }

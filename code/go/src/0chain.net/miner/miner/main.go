@@ -87,6 +87,7 @@ func main() {
 	mode := "main net"
 	if *testMode {
 		mode = "test net"
+		block.BLOCK_SIZE = 100
 	}
 	fmt.Printf("Num CPUs available %v\n", runtime.NumCPU())
 	fmt.Printf("Starting %v on %v for chain %v in %v mode ...\n", os.Args[0], address, chain.GetServerChainID(), mode)

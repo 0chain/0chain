@@ -11,12 +11,12 @@ import (
 /*SetupHandlers sets up the necessary API end points */
 func SetupHandlers() {
 	http.HandleFunc("/v1/chain/get", common.ToJSONResponse(datastore.WithConnectionHandler(GetChain)))
-	http.HandleFunc("/v1/chain/put", common.ToJSONEntityReqResponse(datastore.WithConnectionEntityJSONHandler(PutChain), ChainProvider))
+	http.HandleFunc("/v1/chain/put", common.ToJSONEntityReqResponse(datastore.WithConnectionEntityJSONHandler(PutChain), Provider))
 }
 
 /*GetChain - given an id returns the chain information */
 func GetChain(ctx context.Context, r *http.Request) (interface{}, error) {
-	return datastore.GetEntityHandler(ctx, r, ChainProvider, "id")
+	return datastore.GetEntityHandler(ctx, r, Provider, "id")
 }
 
 /*PutChain - Given a chain data, it stores it */

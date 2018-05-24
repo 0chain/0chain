@@ -7,14 +7,14 @@ import (
 	"0chain.net/transaction"
 )
 
-const BLOCK_SIZE = 500
+var BLOCK_SIZE = 250000
 
 /*GenerateBlock - This works on generating a block
 * The context should be a background context which can be used to stop this logic if there is a new
 * block published while working on this
  */
 func (b *Block) GenerateBlock(ctx context.Context) error {
-	txns := make([]*transaction.Transaction, BLOCK_SIZE)
+	txns := make([]datastore.Entity, BLOCK_SIZE)
 	b.Txns = make([]interface{}, 0, BLOCK_SIZE)
 	idx := 0
 	var txnIterHandler = func(ctx context.Context, qe datastore.CollectionEntity) bool {
@@ -30,11 +30,12 @@ func (b *Block) GenerateBlock(ctx context.Context) error {
 		if txn.Status != transaction.TXN_STATUS_FREE {
 			return true
 		}
+		txn.Status = transaction.TXN_STATUS_PENDING
 		txns[idx] = txn
 		b.AddTransaction(txn)
 		idx++
-		if len(txns) == BLOCK_SIZE {
-			// TODO: createBlock(ctx)
+		if idx == BLOCK_SIZE {
+			b.UpdateTxnsToPending(ctx, txns)
 			return false
 		}
 		return true
@@ -43,8 +44,13 @@ func (b *Block) GenerateBlock(ctx context.Context) error {
 	return err
 }
 
-/*ValidateBlock - given a set of transaction ids within a block, validate the block */
-func (b *Block) ValidateBlock(ctx context.Context, txns []interface{}) (bool, error) {
+/*UpdateTxnsToPending - marks all the given transactions to pending */
+func (b *Block) UpdateTxnsToPending(ctx context.Context, txns []datastore.Entity) {
+	datastore.MultiWrite(ctx, txns)
+}
+
+/*VerifyBlock - given a set of transaction ids within a block, validate the block */
+func (b *Block) VerifyBlock(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
@@ -76,7 +82,7 @@ func (b *Block) Finalize(ctx context.Context) error {
 			ind++
 		}
 		if ind > 0 {
-			datastore.MultiWrite(ctx, modifiedTxns[:ind]...)
+			datastore.MultiWrite(ctx, modifiedTxns[:ind])
 		}
 	}
 	return nil

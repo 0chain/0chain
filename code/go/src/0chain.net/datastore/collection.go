@@ -145,6 +145,7 @@ func IterateCollection(ctx context.Context, handler CollectionIteratorHandler, e
 	bucket := make([]Entity, BATCH_SIZE)
 	maxscore := math.MaxInt64
 	offset := 0
+	proceed := true
 	for idx := 0; true; idx += BATCH_SIZE {
 		con.Send("ZREVRANGEBYSCORE", qname, maxscore, 0, "LIMIT", offset, BATCH_SIZE)
 		con.Flush()
@@ -166,7 +167,13 @@ func IterateCollection(ctx context.Context, handler CollectionIteratorHandler, e
 			return err
 		}
 		for idx := range bkeys {
-			handler(ctx, bucket[idx].(CollectionEntity))
+			proceed = handler(ctx, bucket[idx].(CollectionEntity))
+			if !proceed {
+				break
+			}
+		}
+		if !proceed {
+			break
 		}
 		if len(bkeys) < BATCH_SIZE {
 			break

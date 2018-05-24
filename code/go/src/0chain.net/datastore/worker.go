@@ -142,7 +142,7 @@ func (bs *ChunkStorer) run() {
 	defer GetCon(ctx).Close()
 	for true {
 		chunk := <-bs.ChunkChannel
-		err := MultiWrite(ctx, chunk.Buffer...)
+		err := MultiWrite(ctx, chunk.Buffer)
 		if err != nil {
 			fmt.Printf("multiwrite error : %v\n", err)
 		}

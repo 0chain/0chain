@@ -75,7 +75,7 @@ func TestEntityWriteRead(t *testing.T) {
 	zeroChain2.InitCollectionScore()
 	zeroChain2.SetCollectionScore(zeroChain2.GetCollectionScore() + 10)
 
-	MultiWrite(ctx, zeroChain, zeroChain2)
+	MultiWrite(ctx, []Entity{zeroChain, zeroChain2})
 	fmt.Printf("iterating\n")
 	IterateCollection(ctx, PrintIterator, CompanyProvider)
 }
