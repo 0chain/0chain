@@ -23,7 +23,8 @@ func (np *Pool) StatusMonitor() {
 		activeCount := 0
 		for _, node := range nodes {
 			statusURL := node.GetStatusURL()
-			data, hash, signature, err := Self.TimeStampSignature(Self.privateKey)
+			ts := common.Now()
+			data, hash, signature, err := Self.TimeStampSignature()
 			if err != nil {
 				panic(err)
 			}
@@ -44,9 +45,10 @@ func (np *Pool) StatusMonitor() {
 					node.Status = NodeStatusActive
 					fmt.Printf("node %v became active\n", node.GetID())
 				}
-				node.LastActiveTime = common.Now()
+				node.LastActiveTime = ts
 			}
 		}
+
 		activeCount++
 		if activeCount*3 < len(nodes) {
 			np.SendAtleast(1, np.DownloadNodeData)
@@ -65,7 +67,14 @@ func (np *Pool) DownloadNodeData(node *Node) bool {
 	if err != nil {
 		return false
 	}
-	ReadNodes(resp.Body, np, np, np)
+	dnp := NewPool(NodeTypeMiner)
+	ReadNodes(resp.Body, &dnp, &dnp, &dnp)
+	for _, node := range dnp.Nodes {
+		if _, ok := np.NodesMap[node.GetID()]; !ok {
+			node.Status = NodeStatusActive
+			np.AddNode(node)
+		}
+	}
 	return true
 }
 

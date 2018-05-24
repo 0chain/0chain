@@ -97,7 +97,9 @@ func (np *Pool) GetRandomNodes(num int) []*Node {
 func (np *Pool) Print(w io.Writer) {
 	nodes := np.shuffleNodes()
 	for _, node := range nodes {
-		node.Print(w)
+		if node.Status == NodeStatusActive {
+			node.Print(w)
+		}
 	}
 }
 
@@ -110,7 +112,7 @@ func ReadNodes(r io.Reader, minerPool *Pool, sharderPool *Pool, blobberPool *Poo
 		if err != nil {
 			panic(err)
 		}
-		if Self != nil && node == Self.Node {
+		if Self != nil && node.Equals(Self.Node) {
 			continue
 		}
 		switch node.Type {

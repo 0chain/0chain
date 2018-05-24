@@ -12,8 +12,8 @@ import (
 )
 
 var (
+	NodeStatusInactive = 0
 	NodeStatusActive   = 1
-	NodeStatusInactive = 2
 )
 
 var (
@@ -37,6 +37,17 @@ type Node struct {
 /*GetID - get the id of the node */
 func (n *Node) GetID() string {
 	return n.ID
+}
+
+/*Equals - if two nodes are equal. Only check by id, we don't accept configuration from anyone */
+func (n *Node) Equals(n2 *Node) bool {
+	if n.GetID() == n2.GetID() {
+		return true
+	}
+	if n.Port == n2.Port && n.Host == n2.Host {
+		return true
+	}
+	return false
 }
 
 /*Print - print node's info that is consumable by Read */
@@ -77,7 +88,7 @@ func Read(line string) (*Node, error) {
 	node.Port = int(port)
 	node.ID = fields[3]
 	node.PublicKey = fields[4]
-	if node.Host == config.Configuration.Host && node.Port == config.Configuration.Port {
+	if Self == nil && node.Host == config.Configuration.Host && node.Port == config.Configuration.Port {
 		Self = &SelfNode{Node: node}
 	}
 	return node, nil
@@ -95,17 +106,6 @@ func (n *Node) GetURLBase() string {
 /*GetStatusURL - get the end point where to ping for the status */
 func (n *Node) GetStatusURL() string {
 	return fmt.Sprintf("%v/_nh/status?id=%v&publicKey=%v", n.GetURLBase(), n.ID, n.PublicKey)
-}
-
-/*TimeStampSignature - get timestamp based signature */
-func (n *Node) TimeStampSignature(privateKey string) (string, string, string, error) {
-	data := fmt.Sprintf("%v:%v", n.ID, common.Now())
-	hash := encryption.Hash(data)
-	signature, err := encryption.Sign(privateKey, hash)
-	if err != nil {
-		return "", "", "", err
-	}
-	return data, hash, signature, err
 }
 
 /*Verify signature */
@@ -137,6 +137,17 @@ type SelfNode struct {
 /*SetPrivateKey - setter */
 func (sn *SelfNode) SetPrivateKey(privateKey string) {
 	sn.privateKey = privateKey
+}
+
+/*TimeStampSignature - get timestamp based signature */
+func (sn *SelfNode) TimeStampSignature() (string, string, string, error) {
+	data := fmt.Sprintf("%v:%v", sn.ID, common.Now())
+	hash := encryption.Hash(data)
+	signature, err := encryption.Sign(sn.privateKey, hash)
+	if err != nil {
+		return "", "", "", err
+	}
+	return data, hash, signature, err
 }
 
 /*Self represents the node of this intance */
