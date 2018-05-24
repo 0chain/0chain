@@ -112,10 +112,11 @@ func (t *Transaction) GetClient(ctx context.Context) (*client.Client, error) {
 	return co, nil
 }
 
+/*VerifyHash - Verify the hash of the transaction */
 func (t *Transaction) VerifyHash(ctx context.Context) error {
 	hashdata := fmt.Sprintf("%v:%v:%v", t.ClientID, t.CreationDate.ToString(), t.TransactionData)
 	if t.Hash != encryption.Hash(hashdata) {
-		return errors.New("The hash is not correct")
+		return common.NewError("hash_mismatch", fmt.Sprintf("The has of the data doesn't match with the provided hash"))
 	}
 	return nil
 }

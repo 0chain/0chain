@@ -18,6 +18,8 @@ func GenerateKeys() (publicKey string, privateKey string) {
 	return hex.EncodeToString(public), hex.EncodeToString(private)
 }
 
+/*ReadKeys - reads a publicKey and a privateKey from a Reader.
+They are assumed to be in two separate lines one followed by the other*/
 func ReadKeys(reader io.Reader) (publicKey string, privateKey string) {
 	scanner := bufio.NewScanner(reader)
 	scanner.Scan()

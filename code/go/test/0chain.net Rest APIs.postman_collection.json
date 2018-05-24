@@ -1,0 +1,237 @@
+{
+	"info": {
+		"_postman_id": "ac798925-26a5-4618-8679-1257945dad4d",
+		"name": "0chain.net Rest APIs",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "http://localhost:7070/v1/client/put",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"id": "4958889a-1409-4367-a2db-5652a242c704",
+						"type": "text/javascript",
+						"exec": [
+							"pm.sendRequest('http://localhost:7070/_hash?text='+JSON.parse(request.data).public_key, ",
+							"function (err, res) {",
+							" postman.setEnvironmentVariable('client_id',res.text())    ",
+							"})",
+							"",
+							"    ",
+							"",
+							""
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"id\":\"{{client_id}}\",\"public_key\":\"eaa9d6bce2264afa51ac5eaaa258dcc59350b3e60bd2ffe111447b06e01eb67a\"}"
+				},
+				"url": {
+					"raw": "http://localhost:7070/v1/client/put",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "7070",
+					"path": [
+						"v1",
+						"client",
+						"put"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "http://localhost:7070/v1/client/get?id=2959efc38703e4c508dd6e751b3a3d56cbb09def6378a1d5946765c0c6394fe5",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "http://localhost:7070/v1/client/get?id=33e39a003bea75224adefe585b352bf4c988df6019d25a946211b9b50b9f1c8d",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "7070",
+					"path": [
+						"v1",
+						"client",
+						"get"
+					],
+					"query": [
+						{
+							"key": "id",
+							"value": "33e39a003bea75224adefe585b352bf4c988df6019d25a946211b9b50b9f1c8d"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "http://localhost:7070/v1/chain/put",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"id\": \"0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe\",\n\t\"client_id\": \"33e39a003bea75224adefe585b352bf4c988df6019d25a946211b9b50b9f1c8d\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:7070/v1/chain/put",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "7070",
+					"path": [
+						"v1",
+						"chain",
+						"put"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "http://localhost:7070/v1/chain/get?id=0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "http://localhost:7070/v1/chain/get?id=0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "7070",
+					"path": [
+						"v1",
+						"chain",
+						"get"
+					],
+					"query": [
+						{
+							"key": "id",
+							"value": "0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "http://localhost:7070/v1/transaction/put",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"id": "3adb614b-d146-4e1d-86dd-2b3f24d72c7a",
+						"type": "text/javascript",
+						"exec": [
+							"var timestamp = new Date().toISOString();",
+							"postman.setEnvironmentVariable('timestampIso8601Local',timestamp);",
+							"var data = \"Pay 144 bucks to me\";",
+							"var private_key = \"6bf558761ce5e475acdc4a24f807b578edfd91f20928e0f9963ff4dd52546f43eaa9d6bce2264afa51ac5eaaa258dcc59350b3e60bd2ffe111447b06e01eb67a\";",
+							"var public_key = \"eaa9d6bce2264afa51ac5eaaa258dcc59350b3e60bd2ffe111447b06e01eb67a\";",
+							"",
+							"var url = \"http://localhost:7070/_sign?private_key=\"+private_key+\"&public_key=\"+public_key+\"&timestamp=\"+timestamp+\"&data=\"+encodeURIComponent(data);",
+							"",
+							"pm.sendRequest(url, ",
+							"function (err, res) {",
+							"var json = res.json()",
+							" postman.setEnvironmentVariable('client_id',json.client_id)",
+							" postman.setEnvironmentVariable('hash',json.hash)",
+							" postman.setEnvironmentVariable('signature',json.signature)",
+							"})"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"hash\": \"{{hash}}\",\n\t\"client_id\": \"{{client_id}}\",\n\t\"transaction_data\": \"{{data}}\",\n\t\"signature\": \"{{signature}}\",\n\t\"creation_date\": \"{{timestampIso8601Local}}\",\n\t\"chain_id\" : \"0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:7070/v1/transaction/put",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "7070",
+					"path": [
+						"v1",
+						"transaction",
+						"put"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "http://localhost:7070/v1/transaction/get?hash=34e1ec4b7ca4bdecddb30c4d6b3cc8ce32a07b67acce2b275c3cdf8f0cd18970",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "http://localhost:7070/v1/transaction/get?hash=3f4f3427c3b7abb7d51a77f552f7710cd23179d89d30aae25ac504b857f30b3e",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "7070",
+					"path": [
+						"v1",
+						"transaction",
+						"get"
+					],
+					"query": [
+						{
+							"key": "hash",
+							"value": "3f4f3427c3b7abb7d51a77f552f7710cd23179d89d30aae25ac504b857f30b3e"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
