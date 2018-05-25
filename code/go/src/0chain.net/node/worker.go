@@ -74,7 +74,7 @@ func (np *Pool) DownloadNodeData(node *Node) bool {
 		return false
 	}
 	dnp := NewPool(NodeTypeMiner)
-	ReadNodes(resp.Body, &dnp, &dnp, &dnp)
+	ReadNodes(resp.Body, dnp, dnp, dnp)
 	for _, node := range dnp.Nodes {
 		if _, ok := np.NodesMap[node.GetID()]; !ok {
 			node.Status = NodeStatusActive
@@ -83,12 +83,3 @@ func (np *Pool) DownloadNodeData(node *Node) bool {
 	}
 	return true
 }
-
-/*Miners - this is the pool of miners */
-var Miners = NewPool(NodeTypeMiner)
-
-/*Sharders - this is the pool of sharders */
-var Sharders = NewPool(NodeTypeSharder)
-
-/*Blobbers - this is the pool of blobbers */
-var Blobbers = NewPool(NodeTypeBlobber)

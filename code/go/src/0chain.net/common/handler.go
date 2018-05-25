@@ -31,9 +31,6 @@ type JSONEntityReqResponderF func(ctx context.Context, object interface{}) (inte
 /*EntityProvider - returns an entity */
 type EntityProvider func() interface{}
 
-/*ContextKey - type for key used to store values into context */
-type ContextKey string
-
 func process(w http.ResponseWriter, data interface{}, err error) {
 	if err != nil {
 		http.Error(w, err.Error(), 400)

@@ -8,14 +8,24 @@ import (
 
 	"0chain.net/block"
 	"0chain.net/common"
+	"0chain.net/node"
 	"0chain.net/round"
 )
 
 func TestChainSetupWorker(t *testing.T) {
-	block.BLOCK_SIZE = 10 // Just for testing
+	common.SetupRootContext(node.GetNodeContext())
+	//bookstrapping with a genesis block & main chain as the one being mined
+	gb := block.Provider().(*block.Block)
+	gb.Hash = block.GenesisBlockHash
+	gb.Round = 0
 	c := Provider().(*Chain)
 	c.ID = GetServerChainID()
+	SetServerChain(c)
+	gb.ChainID = fmt.Sprintf("%v", c.ID)
+	c.LatestFinalizedBlock = gb
 	c.SetupWorkers(common.GetRootContext())
+
+	block.BLOCK_SIZE = 10 // Just for testing
 	timer := time.NewTimer(10 * time.Second)
 	startTime := time.Now()
 	go RoundLogic(common.GetRootContext(), c)
@@ -44,6 +54,7 @@ func RoundLogic(ctx context.Context, c *Chain) {
 			}
 			r.Number++
 			b := block.Provider().(*block.Block)
+			b.ChainID = GetServerChainID()
 			r.Block = b
 			if r.Role == round.RoleVerifier {
 				r.Role = round.RoleGenerator

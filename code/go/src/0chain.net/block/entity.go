@@ -9,6 +9,9 @@ import (
 	"0chain.net/transaction"
 )
 
+/*GenesisBlockHash - block of 0chain.net main chain */
+var GenesisBlockHash = "ed79cae70d439c11258236da1dfa6fc550f7cc569768304623e8fbd7d70efae4" //TODO
+
 /*Block - data structure that holds the block data*/
 type Block struct {
 	datastore.CollectionIDField
@@ -16,7 +19,7 @@ type Block struct {
 	Hash      string  `json:"hash"`
 	PrevHash  string  `json:"prev_hash"`
 	Signature string  `json:"signature"`
-	MinerID   string  `json:"miner_id"`
+	MinerID   string  `json:"miner_id"` // TODO: Is miner_id & node_id same?
 	Round     int64   `json:"round"`
 	ChainID   string  `json:"chain_id"`
 	Weight    float64 `json:"weight"`

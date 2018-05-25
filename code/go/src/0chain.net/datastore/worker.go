@@ -93,6 +93,7 @@ func (ecb *EntityChunkBuilder) run(ctx context.Context) {
 		if ecb.MaxHoldupTime > 0 {
 			select {
 			case <-ctx.Done():
+				ecb.TimeoutChannel.Stop()
 				return
 			case e := <-ecb.EntityChannel:
 				ecb.addEntity(e)

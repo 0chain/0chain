@@ -7,6 +7,7 @@ import (
 	"0chain.net/block"
 	"0chain.net/common"
 	"0chain.net/datastore"
+	"0chain.net/node"
 	"0chain.net/round"
 )
 
@@ -15,6 +16,9 @@ const MAIN_CHAIN = "0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca861
 
 /*ServerChainID - the chain this server is responsible for */
 var ServerChainID = ""
+
+/*ServerChain - the chain object of the chain  the server is responsible for */
+var ServerChain *Chain
 
 /*ErrSupportedChain error for indicating which chain is supported by the server */
 var ErrSupportedChain error
@@ -37,6 +41,16 @@ func GetServerChainID() string {
 	return ServerChainID
 }
 
+/*SetServerChain - set the server chain object */
+func SetServerChain(c *Chain) {
+	ServerChain = c
+}
+
+/*GetServerChain - returns the chain object for the server chain */
+func GetServerChain() *Chain {
+	return ServerChain
+}
+
 /*Chain - data structure that holds the chain data*/
 type Chain struct {
 	datastore.IDField
@@ -45,8 +59,18 @@ type Chain struct {
 	ParentChainID string `json:"parent_chain_id,omitempty"` // Chain from which this chain is forked off
 	Decimals      int8   `json:"decimals"`                  // Number of decimals allowed for the token on this chain
 
-	RoundsChannel        chan *round.Round
-	LatestFinalizedBlock *block.Block `json:"latest_finalized_block,omitempty"` // Latest block on the chain the program is aware of
+	/*Miners - this is the pool of miners */
+	Miners *node.Pool
+
+	/*Sharders - this is the pool of sharders */
+	Sharders *node.Pool
+
+	/*Blobbers - this is the pool of blobbers */
+	Blobbers *node.Pool
+
+	RoundsChannel        chan *round.Round `json:"-"`
+	LatestFinalizedBlock *block.Block      `json:"latest_finalized_block,omitempty"` // Latest block on the chain the program is aware of
+
 }
 
 /*GetEntityName - implementing the interface */
@@ -85,6 +109,9 @@ func Provider() interface{} {
 	c := &Chain{}
 	c.RoundsChannel = make(chan *round.Round)
 	c.InitializeCreationDate()
+	c.Miners = node.NewPool(node.NodeTypeMiner)
+	c.Sharders = node.NewPool(node.NodeTypeSharder)
+	c.Blobbers = node.NewPool(node.NodeTypeBlobber)
 	return c
 }
 
@@ -108,6 +135,19 @@ func (c *Chain) UpdateFinalizedBlock(lfb *block.Block) {
 	}
 }
 
+/*GetRoundsChannel - a channel that provides the round messages */
 func (c *Chain) GetRoundsChannel() chan *round.Round {
 	return c.RoundsChannel
+}
+
+func GetChain(chainID interface{}) *Chain {
+	c := GetServerChain()
+
+	gb := block.Provider().(*block.Block)
+	gb.Hash = block.GenesisBlockHash
+	gb.Round = 0
+	gb.ChainID = fmt.Sprintf("%v", c.ID) // TODO: Cleanup the interface/string/key mess
+
+	c.LatestFinalizedBlock = gb
+	return c
 }

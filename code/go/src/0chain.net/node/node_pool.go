@@ -16,10 +16,10 @@ type Pool struct {
 }
 
 /*NewPool - create a new node pool of given type */
-func NewPool(Type int) Pool {
+func NewPool(Type int) *Pool {
 	np := Pool{Type: Type}
 	np.NodesMap = make(map[string]*Node)
-	return np
+	return &np
 }
 
 /*Size - size of the pool without regards to the node status */
@@ -78,8 +78,6 @@ func (np *Pool) computeNodesArray() {
 	}
 	np.Nodes = array
 }
-
-var r = rand.New(rand.NewSource(99))
 
 /*GetRandomNodes - get a random set of nodes from the pool
 * Doesn't consider active/inactive status

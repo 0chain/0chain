@@ -8,6 +8,8 @@ import (
 	"0chain.net/encryption"
 )
 
+var Miners = NewPool(NodeTypeMiner)
+
 func TestNodeSetup(t *testing.T) {
 	sd := Node{Host: "127.0.0.1", Port: 7070, Type: NodeTypeMiner, Status: NodeStatusActive, ID: "sd"}
 	sd.PublicKey = encryption.Hash(sd.ID)

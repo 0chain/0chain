@@ -27,7 +27,6 @@ func initHandlers() {
 		http.HandleFunc("/_sign", common.ToJSONResponse(encryption.SignHandler))
 	}
 	node.SetupHandlers()
-
 	chain.SetupHandlers()
 	client.SetupHandlers()
 	transaction.SetupHandlers()
@@ -48,6 +47,10 @@ func main() {
 
 	address := fmt.Sprintf("%v:%v", *host, *port)
 	chain.SetServerChainID(*chainID)
+	serverChain := chain.Provider().(*chain.Chain)
+	serverChain.ID = chain.GetServerChainID()
+	chain.SetServerChain(serverChain)
+
 	config.Configuration.Host = *host
 	config.Configuration.Port = *port
 	config.Configuration.ChainID = *chainID
@@ -68,7 +71,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	node.ReadNodes(reader, &node.Miners, &node.Sharders, &node.Blobbers)
+	node.ReadNodes(reader, serverChain.Miners, serverChain.Sharders, serverChain.Blobbers)
 	reader.Close()
 	if node.Self == nil {
 		panic("node definition for self node doesn't exist")
@@ -80,13 +83,8 @@ func main() {
 		node.Self.SetPrivateKey(privateKey)
 	}
 
+	common.SetupRootContext(node.GetNodeContext())
 	ctx := common.GetRootContext()
-	go node.Miners.StatusMonitor(ctx)
-	go node.Sharders.StatusMonitor(ctx)
-	go node.Blobbers.StatusMonitor(ctx)
-	c := chain.Provider().(*chain.Chain)
-	c.ID = chain.GetServerChainID()
-	c.SetupWorkers(ctx)
 
 	mode := "main net"
 	if *testMode {
@@ -95,8 +93,13 @@ func main() {
 	}
 	fmt.Printf("Num CPUs available %v\n", runtime.NumCPU())
 	fmt.Printf("Starting %v on %v for chain %v in %v mode ...\n", os.Args[0], address, chain.GetServerChainID(), mode)
+
 	initServer()
 	initHandlers()
+
+	serverChain.SetupWorkers(ctx)
+	serverChain.SetupNodeHandlers()
+
 	if err := http.ListenAndServe(address, nil); err != nil {
 		panic(err)
 	}
