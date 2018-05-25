@@ -33,6 +33,13 @@ func initHandlers() {
 	block.SetupHandlers()
 }
 
+func initEntities() {
+	block.SetupEntity()
+	chain.SetupEntity()
+	client.SetupEntity()
+	transaction.SetupEntity()
+}
+
 /*Chain - the chain this miner will be working on */
 var Chain string
 
@@ -94,6 +101,7 @@ func main() {
 	fmt.Printf("Num CPUs available %v\n", runtime.NumCPU())
 	fmt.Printf("Starting %v on %v for chain %v in %v mode ...\n", os.Args[0], address, chain.GetServerChainID(), mode)
 
+	initEntities()
 	initServer()
 	initHandlers()
 

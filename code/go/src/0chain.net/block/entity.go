@@ -67,7 +67,7 @@ func (b *Block) Delete(ctx context.Context) error {
 	return datastore.Delete(ctx, b)
 }
 
-var blockEntityCollection = &datastore.EntityCollection{CollectionName: "collection.block", CollectionSize: 1000, CollectionDuration: time.Hour}
+var blockEntityCollection *datastore.EntityCollection
 
 /*GetCollectionName - override GetCollectionName to provide queues partitioned by ChainID */
 func (b *Block) GetCollectionName() string {
@@ -80,6 +80,12 @@ func Provider() interface{} {
 	b.EntityCollection = blockEntityCollection
 	b.InitializeCreationDate()
 	return b
+}
+
+/*SetupEntity - setup the entity */
+func SetupEntity() {
+	datastore.RegisterEntityProvider("block", Provider)
+	blockEntityCollection = &datastore.EntityCollection{CollectionName: "collection.block", CollectionSize: 1000, CollectionDuration: time.Hour}
 }
 
 /*GetPreviousBlock - returns the previous block */

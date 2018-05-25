@@ -66,7 +66,7 @@ func createClients(numClients int) {
 }
 
 func postClient(privateKey string, publicKey string, done chan<- bool) {
-	entity := client.ClientProvider()
+	entity := client.Provider()
 	c, ok := entity.(*client.Client)
 	if !ok {
 		fmt.Printf("it's not ok!\n")
@@ -84,7 +84,7 @@ func postClient(privateKey string, publicKey string, done chan<- bool) {
 }
 
 func postTransaction(privateKey string, publicKey string, txnData string, txnChannel chan<- *Transaction, done chan<- bool) {
-	entity := TransactionProvider()
+	entity := Provider()
 	t, ok := entity.(*Transaction)
 	if !ok {
 		fmt.Printf("it's not ok!\n")

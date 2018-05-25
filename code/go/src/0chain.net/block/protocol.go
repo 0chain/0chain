@@ -20,6 +20,7 @@ func (b *Block) GenerateBlock(ctx context.Context) error {
 	var txnIterHandler = func(ctx context.Context, qe datastore.CollectionEntity) bool {
 		select {
 		case <-ctx.Done():
+			datastore.GetCon(ctx).Close()
 			return false
 		default:
 		}
@@ -40,7 +41,7 @@ func (b *Block) GenerateBlock(ctx context.Context) error {
 		}
 		return true
 	}
-	err := datastore.IterateCollection(ctx, txnIterHandler, transaction.TransactionProvider)
+	err := datastore.IterateCollection(ctx, txnIterHandler, transaction.Provider)
 	return err
 }
 
@@ -56,7 +57,7 @@ func (b *Block) VerifyBlock(ctx context.Context) (bool, error) {
 
 /*Finalize - given a set of transaction ids within a block, update them to finalized */
 func (b *Block) Finalize(ctx context.Context) error {
-	transactions, err := datastore.AllocateEntities(BLOCK_SIZE, transaction.TransactionProvider)
+	transactions, err := datastore.AllocateEntities(BLOCK_SIZE, transaction.Provider)
 	modifiedTxns := make([]datastore.Entity, BLOCK_SIZE)
 
 	if err != nil {

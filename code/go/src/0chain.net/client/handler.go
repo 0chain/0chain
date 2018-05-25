@@ -11,12 +11,12 @@ import (
 /*SetupHandlers sets up the necessary API end points */
 func SetupHandlers() {
 	http.HandleFunc("/v1/client/get", common.ToJSONResponse(datastore.WithConnectionHandler(GetClient)))
-	http.HandleFunc("/v1/client/put", common.ToJSONEntityReqResponse(datastore.DoAsyncEntityJSONHandler(PutClient, ClientEntityChannel), ClientProvider))
+	http.HandleFunc("/v1/client/put", common.ToJSONEntityReqResponse(datastore.DoAsyncEntityJSONHandler(PutClient, ClientEntityChannel), Provider))
 }
 
 /*GetClient - given an id returns the client information */
 func GetClient(ctx context.Context, r *http.Request) (interface{}, error) {
-	return datastore.GetEntityHandler(ctx, r, ClientProvider, "id")
+	return datastore.GetEntityHandler(ctx, r, Provider, "id")
 }
 
 /*PutClient - Given a client data, it stores it */

@@ -13,12 +13,12 @@ import (
 /*SetupHandlers sets up the necessary API end points */
 func SetupHandlers() {
 	http.HandleFunc("/v1/transaction/get", common.ToJSONResponse(datastore.WithConnectionHandler(GetTransaction)))
-	http.HandleFunc("/v1/transaction/put", common.ToJSONEntityReqResponse(datastore.DoAsyncEntityJSONHandler(datastore.WithConnectionEntityJSONHandler(PutTransaction), TransactionEntityChannel), TransactionProvider))
+	http.HandleFunc("/v1/transaction/put", common.ToJSONEntityReqResponse(datastore.DoAsyncEntityJSONHandler(datastore.WithConnectionEntityJSONHandler(PutTransaction), TransactionEntityChannel), Provider))
 }
 
 /*GetTransaction - given an id returns the transaction information */
 func GetTransaction(ctx context.Context, r *http.Request) (interface{}, error) {
-	return datastore.GetEntityHandler(ctx, r, TransactionProvider, "hash")
+	return datastore.GetEntityHandler(ctx, r, Provider, "hash")
 }
 
 /*TXN_TIME_TOLERANCE - the txn creation date should be within 5 seconds before/after of current time */

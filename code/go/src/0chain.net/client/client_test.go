@@ -36,7 +36,7 @@ func BenchmarkClientChunkSave(t *testing.B) {
 }
 
 func postClient(publicKey string, done chan<- bool) {
-	entity := ClientProvider()
+	entity := Provider()
 	client, ok := entity.(*Client)
 	if !ok {
 		fmt.Printf("it's not ok!\n")

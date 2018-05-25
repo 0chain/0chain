@@ -115,6 +115,11 @@ func Provider() interface{} {
 	return c
 }
 
+/*SetupEntity - setup the entity */
+func SetupEntity() {
+	datastore.RegisterEntityProvider("chain", Provider)
+}
+
 /*ValidChain - Is this the chain this server is supposed to process? */
 func ValidChain(chain string) error {
 	result := chain == ServerChainID || (chain == "" && ServerChainID == MAIN_CHAIN)

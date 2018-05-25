@@ -52,18 +52,24 @@ func (c *Client) Verify(signature string, hash string) (bool, error) {
 	return encryption.Verify(c.PublicKey, signature, hash)
 }
 
-/*ClientProvider - entity provider for client object */
-func ClientProvider() interface{} {
+/*Provider - entity provider for client object */
+func Provider() interface{} {
 	c := &Client{}
 	c.InitializeCreationDate()
 	return c
 }
 
-/*
-* Entity Buffer Size = 1024
-* Timeout = 500 milliseconds
-* Entity Chunk Size = 64
-* Chunk Buffer Size = 16
-* Chunk Workers = 2
- */
-var ClientEntityChannel = datastore.SetupWorkers(common.GetRootContext(), 1024, 500*time.Millisecond, 64, 16, 2)
+/*SetupEntity - setup the entity */
+func SetupEntity() {
+	datastore.RegisterEntityProvider("client", Provider)
+	/*
+	* Entity Buffer Size = 1024
+	* Timeout = 500 milliseconds
+	* Entity Chunk Size = 64
+	* Chunk Buffer Size = 16
+	* Chunk Workers = 2
+	 */
+	ClientEntityChannel = datastore.SetupWorkers(common.GetRootContext(), 1024, 500*time.Millisecond, 64, 16, 2)
+}
+
+var ClientEntityChannel chan datastore.Entity

@@ -94,7 +94,7 @@ func (t *Transaction) Delete(ctx context.Context) error {
 	return datastore.Delete(ctx, t)
 }
 
-var txnEntityCollection = &datastore.EntityCollection{CollectionName: "collection.txn", CollectionSize: 10000000, CollectionDuration: time.Hour}
+var txnEntityCollection *datastore.EntityCollection
 
 /*GetCollectionName - override to partition by chain id */
 func (t *Transaction) GetCollectionName() string {
@@ -147,20 +147,28 @@ func (t *Transaction) VerifySignature(ctx context.Context) error { //TODO
 }
 
 /*TransactionProvider - entity provider for client object */
-func TransactionProvider() interface{} {
+func Provider() interface{} {
 	c := &Transaction{}
 	c.EntityCollection = txnEntityCollection
 	c.Status = TXN_STATUS_FREE
 	return c
 }
 
-/*Entity Buffer Size = 10240
-* Timeout = 250 milliseconds
-* Entity Chunk Size = 128
-* Chunk Buffer Size = 32
-* Chunk Workers = 8
- */
-var TransactionEntityChannel = datastore.SetupWorkers(common.GetRootContext(), 10240, 250*time.Millisecond, 128, 32, 8)
+var TransactionEntityChannel chan datastore.Entity
+
+/*SetupEntity - setup the entity */
+func SetupEntity() {
+	datastore.RegisterEntityProvider("block", Provider)
+	txnEntityCollection = &datastore.EntityCollection{CollectionName: "collection.txn", CollectionSize: 10000000, CollectionDuration: time.Hour}
+
+	/*Entity Buffer Size = 10240
+	* Timeout = 250 milliseconds
+	* Entity Chunk Size = 128
+	* Chunk Buffer Size = 32
+	* Chunk Workers = 8
+	 */
+	TransactionEntityChannel = datastore.SetupWorkers(common.GetRootContext(), 10240, 250*time.Millisecond, 128, 32, 8)
+}
 
 /*Sign - given a client and client's private key, sign this tranasction */
 func (t *Transaction) Sign(client *client.Client, privateKey string) (string, error) {

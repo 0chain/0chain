@@ -16,6 +16,20 @@ var (
 	EntityDuplicate = "duplicate_entity"
 )
 
+var providers = make(map[string]common.EntityProvider)
+
+/*RegisterEntityProvider - keep track of a list of entity providers. An entity can be registered with multiple names
+* as long as two entities don't use the same name
+ */
+func RegisterEntityProvider(entityName string, provider common.EntityProvider) {
+	providers[entityName] = provider
+}
+
+/*GetProvider - return the provider registered for the given entity */
+func GetProvider(entityName string) common.EntityProvider {
+	return providers[entityName]
+}
+
 /*Entity - interface that reads and writes any implementing structure as JSON into the store */
 type Entity interface {
 	GetEntityName() string
@@ -74,6 +88,7 @@ func (cd *CreationDateField) InitializeCreationDate() {
 	cd.CreationDate = common.Now()
 }
 
+/*GetCreationTime - Get the creation time */
 func (cd *CreationDateField) GetCreationTime() common.Time {
 	return cd.CreationDate
 }

@@ -7,13 +7,19 @@ import (
 	"time"
 
 	"0chain.net/block"
+	"0chain.net/client"
 	"0chain.net/common"
 	"0chain.net/node"
 	"0chain.net/round"
+	"0chain.net/transaction"
 )
 
 func TestChainSetupWorker(t *testing.T) {
 	common.SetupRootContext(node.GetNodeContext())
+	block.SetupEntity()
+	SetupEntity()
+	client.SetupEntity()
+	transaction.SetupEntity()
 	//bookstrapping with a genesis block & main chain as the one being mined
 	gb := block.Provider().(*block.Block)
 	gb.Hash = block.GenesisBlockHash

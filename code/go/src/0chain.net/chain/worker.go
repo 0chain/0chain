@@ -27,7 +27,6 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 		case r := <-rounds:
 			if cancel != nil {
 				cancel()
-				datastore.GetCon(lctx).Close()
 			}
 			var ccancel context.CancelFunc
 			lctx, ccancel = context.WithCancel(ctx)
@@ -37,7 +36,7 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 			case round.RoleGenerator:
 				go generateBlock(lctx, r)
 			case round.RoleVerifier:
-				//TODO
+				go verifyBlock(lctx, r)
 			default:
 				//TODO
 			}
