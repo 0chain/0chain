@@ -66,4 +66,4 @@ func ClientProvider() interface{} {
 * Chunk Buffer Size = 16
 * Chunk Workers = 2
  */
-var ClientEntityChannel = datastore.SetupWorkers(1024, 500*time.Millisecond, 64, 16, 2)
+var ClientEntityChannel = datastore.SetupWorkers(common.GetRootContext(), 1024, 500*time.Millisecond, 64, 16, 2)

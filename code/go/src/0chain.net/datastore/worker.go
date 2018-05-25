@@ -79,6 +79,7 @@ type EntityChunkBuilder struct {
 	Chunk          *Chunk
 }
 
+/*NewChunk - create a new chunk of given size */
 func NewChunk(size int) *Chunk {
 	c := Chunk{}
 	c.Buffer = make([]Entity, size)
@@ -86,19 +87,25 @@ func NewChunk(size int) *Chunk {
 	return &c
 }
 
-func (ebb *EntityChunkBuilder) run() {
-	ebb.Chunk = NewChunk(ebb.ChunkSize)
+func (ecb *EntityChunkBuilder) run(ctx context.Context) {
+	ecb.Chunk = NewChunk(ecb.ChunkSize)
 	for true {
-		if ebb.MaxHoldupTime > 0 {
+		if ecb.MaxHoldupTime > 0 {
 			select {
-			case e := <-ebb.EntityChannel:
-				ebb.addEntity(e)
-			case _ = <-ebb.TimeoutChannel.C:
-				ebb.sendChunk(ebb.ChunkChannel)
+			case <-ctx.Done():
+				return
+			case e := <-ecb.EntityChannel:
+				ecb.addEntity(e)
+			case _ = <-ecb.TimeoutChannel.C:
+				ecb.sendChunk(ecb.ChunkChannel)
 			}
 		} else {
-			e := <-ebb.EntityChannel
-			ebb.addEntity(e)
+			select {
+			case <-ctx.Done():
+				return
+			case e := <-ecb.EntityChannel:
+				ecb.addEntity(e)
+			}
 		}
 	}
 }
@@ -111,60 +118,63 @@ func creationDate(entity Entity) common.Time {
 	return common.Now()
 }
 
-func (ebb *EntityChunkBuilder) addEntity(entity Entity) {
-	ebb.Chunk.Add(entity)
-	if ebb.Chunk.Size() == ebb.ChunkSize {
-		ebb.sendChunk(ebb.ChunkChannel)
+func (ecb *EntityChunkBuilder) addEntity(entity Entity) {
+	ecb.Chunk.Add(entity)
+	if ecb.Chunk.Size() == ecb.ChunkSize {
+		ecb.sendChunk(ecb.ChunkChannel)
 		return
 	}
-	if ebb.MaxHoldupTime > 0 && ebb.Chunk.Size() == 1 {
-		delta := creationDate(ebb.Chunk.Get(0)).Add(ebb.MaxHoldupTime).Sub(time.Now())
-		ebb.TimeoutChannel.Reset(delta)
+	if ecb.MaxHoldupTime > 0 && ecb.Chunk.Size() == 1 {
+		delta := creationDate(ecb.Chunk.Get(0)).Add(ecb.MaxHoldupTime).Sub(time.Now())
+		ecb.TimeoutChannel.Reset(delta)
 	}
 }
 
-func (ebb *EntityChunkBuilder) sendChunk(channel chan<- *Chunk) {
-	if ebb.Chunk.Length == 0 {
+func (ecb *EntityChunkBuilder) sendChunk(channel chan<- *Chunk) {
+	if ecb.Chunk.Length == 0 {
 		return
 	}
-	ebb.Chunk.Trim()
-	channel <- ebb.Chunk
-	ebb.Chunk = NewChunk(ebb.ChunkSize)
+	ecb.Chunk.Trim()
+	channel <- ecb.Chunk
+	ecb.Chunk = NewChunk(ecb.ChunkSize)
 }
 
 type ChunkStorer struct {
 	ChunkChannel <-chan *Chunk
 }
 
-func (bs *ChunkStorer) run() {
+func (bs *ChunkStorer) run(ctx context.Context) {
 	// TODO: What happens if a connection expires? We need a way to catch exception and get a new connection
-	ctx := WithConnection(context.Background())
-	defer GetCon(ctx).Close()
+	lctx := WithConnection(ctx)
+	defer GetCon(lctx).Close()
 	for true {
-		chunk := <-bs.ChunkChannel
-		err := MultiWrite(ctx, chunk.Buffer)
-		if err != nil {
-			fmt.Printf("multiwrite error : %v\n", err)
+		select {
+		case <-ctx.Done():
+			return
+		case chunk := <-bs.ChunkChannel:
+			err := MultiWrite(lctx, chunk.Buffer)
+			if err != nil {
+				fmt.Printf("multiwrite error : %v\n", err)
+			}
 		}
 	}
 }
 
 /*SetupWorkers - This setups up workers that allows aggregating and storing entities in chunks */
-func SetupWorkers(entityBufferSize int, maxHoldupTime time.Duration, chunkSize int, chunkBufferSize int, numChunkWorkers int) chan Entity {
+func SetupWorkers(ctx context.Context, entityBufferSize int, maxHoldupTime time.Duration, chunkSize int, chunkBufferSize int, numChunkWorkers int) chan Entity {
 	echannel := make(chan Entity, entityBufferSize)
 	bchannel := make(chan *Chunk, chunkBufferSize)
-	var ebb EntityChunkBuilder
-	ebb.ChunkSize = chunkSize
-	ebb.MaxHoldupTime = maxHoldupTime
-	ebb.EntityChannel = echannel
-	ebb.ChunkChannel = bchannel
-	ebb.TimeoutChannel = time.NewTimer(-100 * time.Second)
-
+	var ecb EntityChunkBuilder
+	ecb.ChunkSize = chunkSize
+	ecb.MaxHoldupTime = maxHoldupTime
+	ecb.EntityChannel = echannel
+	ecb.ChunkChannel = bchannel
+	ecb.TimeoutChannel = time.NewTimer(-100 * time.Second)
 	bworkers := make([]ChunkStorer, numChunkWorkers)
 	for _, bworker := range bworkers {
 		bworker.ChunkChannel = bchannel
-		go bworker.run()
+		go bworker.run(ctx)
 	}
-	go ebb.run()
+	go ecb.run(ctx)
 	return echannel
 }

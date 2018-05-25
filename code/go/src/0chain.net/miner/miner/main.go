@@ -80,9 +80,13 @@ func main() {
 		node.Self.SetPrivateKey(privateKey)
 	}
 
-	go node.Miners.StatusMonitor()
-	go node.Sharders.StatusMonitor()
-	go node.Blobbers.StatusMonitor()
+	ctx := common.GetRootContext()
+	go node.Miners.StatusMonitor(ctx)
+	go node.Sharders.StatusMonitor(ctx)
+	go node.Blobbers.StatusMonitor(ctx)
+	c := chain.Provider().(*chain.Chain)
+	c.ID = chain.GetServerChainID()
+	c.SetupWorkers(ctx)
 
 	mode := "main net"
 	if *testMode {

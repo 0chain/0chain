@@ -96,6 +96,6 @@ func (b *Block) GetWeight() float64 {
 
 /*AddTransaction - add a transaction to the block */
 func (b *Block) AddTransaction(t *transaction.Transaction) {
-	b.Txns = append(b.Txns, t)
+	b.Txns = append(b.Txns, t.GetKey())
 	b.Weight += t.GetWeight()
 }

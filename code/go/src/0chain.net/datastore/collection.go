@@ -208,26 +208,31 @@ func trackCollection(qe CollectionEntity) {
 
 func CollectionTrimmer(collection string, trimSize int64, trimBeyond time.Duration) {
 	fmt.Printf("starting collection trimmer for %v\n", collection)
-	ctx := WithConnection(context.Background())
+	ctx := WithConnection(common.GetRootContext())
 	con := GetCon(ctx)
 	defer con.Close()
 	ticker := time.NewTicker(trimBeyond)
-	for t := range ticker.C {
-		con.Send("ZCARD", collection)
-		con.Flush()
-		data, err := con.Receive()
-		if err != nil {
-			fmt.Printf("collection trimmer %v %v error: %v\n", t, collection, err)
-			continue
+	for true {
+		select {
+		case <-ctx.Done():
+			return
+		case t := <-ticker.C:
+			con.Send("ZCARD", collection)
+			con.Flush()
+			data, err := con.Receive()
+			if err != nil {
+				fmt.Printf("collection trimmer %v %v error: %v\n", t, collection, err)
+				continue
+			}
+			size, ok := data.(int64)
+			if !ok {
+				fmt.Printf("collection trimmer %v %v data: %v\n", t, collection, data)
+			}
+			if size < trimSize {
+				continue
+			}
+			score := getScore(time.Now().Add(-trimBeyond))
+			con.Send("ZREMRANGEBYSCORE", collection, 0, score)
 		}
-		size, ok := data.(int64)
-		if !ok {
-			fmt.Printf("collection trimmer %v %v data: %v\n", t, collection, data)
-		}
-		if size < trimSize {
-			continue
-		}
-		score := getScore(time.Now().Add(-trimBeyond))
-		con.Send("ZREMRANGEBYSCORE", collection, 0, score)
 	}
 }

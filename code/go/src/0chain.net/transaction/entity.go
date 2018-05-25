@@ -160,7 +160,7 @@ func TransactionProvider() interface{} {
 * Chunk Buffer Size = 32
 * Chunk Workers = 8
  */
-var TransactionEntityChannel = datastore.SetupWorkers(10240, 250*time.Millisecond, 128, 32, 8)
+var TransactionEntityChannel = datastore.SetupWorkers(common.GetRootContext(), 10240, 250*time.Millisecond, 128, 32, 8)
 
 /*Sign - given a client and client's private key, sign this tranasction */
 func (t *Transaction) Sign(client *client.Client, privateKey string) (string, error) {

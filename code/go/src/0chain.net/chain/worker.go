@@ -8,26 +8,31 @@ import (
 )
 
 /*BlockWorker - a job that does all the work related to blocks in each round */
-func BlockWorker(rootCtx context.Context, chain *Chain) {
-	rounds := chain.GetRoundsChannel()
+func (c *Chain) BlockWorker(ctx context.Context) {
+	rounds := c.GetRoundsChannel()
 	var cancel context.CancelFunc
-	ctx := rootCtx
-	for r := range rounds {
-		if cancel != nil {
-			cancel()
-			datastore.GetCon(ctx).Close()
-		}
-		var ccancel context.CancelFunc
-		ctx, ccancel = context.WithCancel(rootCtx)
-		ctx = datastore.WithConnection(ctx)
-		cancel = ccancel
-		switch r.Role {
-		case round.RoleGenerator:
-			go generateBlock(ctx, r)
-		case round.RoleVerifier:
-			//TODO
-		default:
-			//TODO
+	lctx := ctx
+	for true {
+		select {
+		case <-ctx.Done():
+			return
+		case r := <-rounds:
+			if cancel != nil {
+				cancel()
+				datastore.GetCon(lctx).Close()
+			}
+			var ccancel context.CancelFunc
+			lctx, ccancel = context.WithCancel(ctx)
+			lctx = datastore.WithConnection(lctx)
+			cancel = ccancel
+			switch r.Role {
+			case round.RoleGenerator:
+				go generateBlock(lctx, r)
+			case round.RoleVerifier:
+				//TODO
+			default:
+				//TODO
+			}
 		}
 	}
 }
@@ -40,7 +45,7 @@ func verifyBlock(ctx context.Context, r *round.Round) {
 	r.Block.VerifyBlock(ctx)
 }
 
-/*SetupBlockWorker - setup a blockworker for a chain */
-func SetupBlockWorker(ctx context.Context, c *Chain) {
-	go BlockWorker(ctx, c)
+/*SetupWorkers - setup a blockworker for a chain */
+func (c *Chain) SetupWorkers(ctx context.Context) {
+	go c.BlockWorker(ctx)
 }
