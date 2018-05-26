@@ -12,24 +12,42 @@ import (
 /*GenesisBlockHash - block of 0chain.net main chain */
 var GenesisBlockHash = "ed79cae70d439c11258236da1dfa6fc550f7cc569768304623e8fbd7d70efae4" //TODO
 
-/*BlockBody - used to compute the signature */
+/*VerificationTicket - verification ticket for the block */
+type VerificationTicket struct {
+	VerifierID string `json:"verifier_id"`
+	Signature  string `json:"signature"`
+}
+
+/*BlockBody - used to compute the signature
+* This is what is used to verify the correctness of the block & the associated signature
+ */
 type BlockBody struct {
-	PrevHash string  `json:"prev_hash"`
-	MinerID  string  `json:"miner_id"` // TODO: Is miner_id & node_id same?
-	Round    int64   `json:"round"`
-	ChainID  string  `json:"chain_id"`
-	Weight   float64 `json:"weight"`
-	Txns     []*transaction.Transaction
+	PrevHash                    string                `json:"prev_hash"`
+	PrevBlockVerficationTickets []*VerificationTicket `json:"prev_verification_tickets"`
+
+	MinerID string  `json:"miner_id"` // TODO: Is miner_id & node_id same?
+	Round   int64   `json:"round"`
+	ChainID string  `json:"chain_id"`
+	Weight  float64 `json:"weight"`
+	Txns    []*transaction.Transaction
+}
+
+/*VerifiedBlockBody - block body with verification tickets attached to it
+*This is what goes to the sharder once the block reached consensus
+ */
+type VerifiedBlockBody struct {
+	BlockBody
+	Hash                string                `json:"hash"`
+	Signature           string                `json:"signature"`
+	VerificationTickets []*VerificationTicket `json:"verification_tickets"`
 }
 
 /*Block - data structure that holds the block data*/
 type Block struct {
-	BlockBody
+	VerifiedBlockBody
 	datastore.CollectionIDField
 	datastore.CreationDateField
-	Hash      string `json:"hash"`
-	Signature string `json:"signature"`
-	PrevBlock *Block
+	PrevBlock *Block `json:"-"`
 }
 
 /*GetEntityName - implementing the interface */
@@ -82,6 +100,9 @@ func (b *Block) GetCollectionName() string {
 /*Provider - entity provider for block object */
 func Provider() interface{} {
 	b := &Block{}
+	b.PrevBlockVerficationTickets = make([]*VerificationTicket, 0, 1)
+	b.VerificationTickets = make([]*VerificationTicket, 0, 1)
+
 	b.EntityCollection = blockEntityCollection
 	b.InitializeCreationDate()
 	return b
