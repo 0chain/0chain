@@ -152,11 +152,11 @@
 				{
 					"listen": "prerequest",
 					"script": {
-						"id": "e10f43d8-86ee-4466-81a6-fec68c240607",
+						"id": "4528f90e-63d6-4f82-98ae-cbc36e5eaa53",
 						"type": "text/javascript",
 						"exec": [
-							"var timestamp = new Date().toISOString();",
-							"postman.setEnvironmentVariable('timestampIso8601Local',timestamp);",
+							"var timestamp = Math.floor(new Date().getTime()/1000);",
+							"postman.setEnvironmentVariable('timestamp',timestamp);",
 							"",
 							"var amount = Math.random()*Math.pow(10,18)",
 							"postman.setEnvironmentVariable('amount',amount);",
@@ -189,7 +189,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n\t\"hash\": \"{{hash}}\",\n\t\"client_id\": \"{{client_id}}\",\n\t\"transaction_data\": \"{{data}}\",\n\t\"signature\": \"{{signature}}\",\n\t\"creation_date\": \"{{timestampIso8601Local}}\",\n\t\"chain_id\" : \"0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe\",\n\t\"transaction_value\": {{amount}}\n}"
+					"raw": "{\n\t\"hash\": \"{{hash}}\",\n\t\"client_id\": \"{{client_id}}\",\n\t\"transaction_data\": \"{{data}}\",\n\t\"signature\": \"{{signature}}\",\n\t\"creation_date\": {{timestamp}},\n\t\"chain_id\" : \"0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe\",\n\t\"transaction_value\": {{amount}}\n}"
 				},
 				"url": {
 					"raw": "http://localhost:7070/v1/transaction/put",
