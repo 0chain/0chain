@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"time"
 
 	"0chain.net/common"
 	"0chain.net/datastore"
@@ -31,13 +30,12 @@ func PutTransaction(ctx context.Context, object interface{}) (interface{}, error
 		return nil, fmt.Errorf("invalid request %T", object)
 	}
 	txn.ComputeProperties()
+	if !common.Within(int64(txn.CreationDate), TXN_TIME_TOLERANCE) {
+		return nil, common.InvalidRequest("Transaction creation time not within tolerance")
+	}
 	err := txn.Validate(ctx)
 	if err != nil {
 		return nil, err
-	}
-	deltaTime := time.Now().UTC().Unix() - int64(txn.CreationDate)
-	if deltaTime < -TXN_TIME_TOLERANCE || deltaTime > TXN_TIME_TOLERANCE {
-		return nil, common.InvalidRequest("Transaction creation time not within tolerance")
 	}
 	if datastore.DoAsync(ctx, txn) {
 		return txn, nil

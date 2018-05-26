@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"time"
 
 	"0chain.net/common"
 	"0chain.net/datastore"
@@ -30,8 +29,7 @@ func PutBlock(ctx context.Context, object interface{}) (interface{}, error) {
 	if !ok {
 		return nil, fmt.Errorf("invalid request %T", object)
 	}
-	deltaTime := time.Now().UTC().Unix() - int64(txn.CreationDate)
-	if deltaTime < -BLOCK_TIME_TOLERANCE || deltaTime > BLOCK_TIME_TOLERANCE {
+	if !common.Within(int64(txn.CreationDate), BLOCK_TIME_TOLERANCE) {
 		return nil, common.InvalidRequest("Block creation time not within tolerance")
 	}
 	err := txn.Write(ctx)
