@@ -16,15 +16,10 @@ var GenesisBlockHash = "ed79cae70d439c11258236da1dfa6fc550f7cc569768304623e8fbd7
 type Block struct {
 	datastore.CollectionIDField
 	datastore.CreationDateField
-	Hash      string  `json:"hash"`
-	PrevHash  string  `json:"prev_hash"`
-	Signature string  `json:"signature"`
-	MinerID   string  `json:"miner_id"` // TODO: Is miner_id & node_id same?
-	Round     int64   `json:"round"`
-	ChainID   string  `json:"chain_id"`
-	Weight    float64 `json:"weight"`
-	Txns      []interface{}
+	Hash      string `json:"hash"`
+	Signature string `json:"signature"`
 	PrevBlock *Block
+	BlockBody *BlockBody
 }
 
 /*GetEntityName - implementing the interface */
@@ -46,7 +41,7 @@ func (b *Block) Validate(ctx context.Context) error {
 	if b.ID == "" {
 		return common.InvalidRequest("block id is required")
 	}
-	if b.MinerID == "" {
+	if b.BlockBody.MinerID == "" {
 		return common.InvalidRequest("miner id is required")
 	}
 	return nil
@@ -71,7 +66,7 @@ var blockEntityCollection *datastore.EntityCollection
 
 /*GetCollectionName - override GetCollectionName to provide queues partitioned by ChainID */
 func (b *Block) GetCollectionName() string {
-	return blockEntityCollection.GetCollectionName(b.ChainID)
+	return blockEntityCollection.GetCollectionName(b.BlockBody.ChainID)
 }
 
 /*Provider - entity provider for block object */
@@ -100,11 +95,20 @@ func (b *Block) GetPreviousBlock() *Block {
 
 /*GetWeight - Get the weight/score of this block */
 func (b *Block) GetWeight() float64 {
-	return b.Weight
+	return b.BlockBody.Weight
 }
 
 /*AddTransaction - add a transaction to the block */
 func (b *Block) AddTransaction(t *transaction.Transaction) {
-	b.Txns = append(b.Txns, t.GetKey())
-	b.Weight += t.GetWeight()
+	b.BlockBody.Txns = append(b.BlockBody.Txns, t.GetKey())
+	b.BlockBody.Weight += t.GetWeight()
+}
+
+type BlockBody struct {
+	PrevHash string  `json:"prev_hash"`
+	MinerID  string  `json:"miner_id"` // TODO: Is miner_id & node_id same?
+	Round    int64   `json:"round"`
+	ChainID  string  `json:"chain_id"`
+	Weight   float64 `json:"weight"`
+	Txns     []interface{}
 }
