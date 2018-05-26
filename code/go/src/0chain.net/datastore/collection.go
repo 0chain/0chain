@@ -24,7 +24,7 @@ type CollectionEntity interface {
 	InitCollectionScore()
 	SetCollectionScore(score int64)
 	GetCollectionScore() int64 // larger scores have higher priority
-	AddToCollection(ctx context.Context, qname string) error
+	AddToCollection(ctx context.Context, collectionName string) error
 }
 
 /*EntityCollection - Entities can be organized into collections. EntityCollection provides configuration for those collections */
@@ -85,9 +85,9 @@ func getScore(ts time.Time) int64 {
 }
 
 /*AddToCollection - default implementation for CollectionEntity interface */
-func (cf *CollectionIDField) AddToCollection(ctx context.Context, qname string) error {
+func (cf *CollectionIDField) AddToCollection(ctx context.Context, collectionName string) error {
 	con := GetCon(ctx)
-	con.Send("ZADD", qname, cf.GetCollectionScore(), cf.GetKey())
+	con.Send("ZADD", collectionName, cf.GetCollectionScore(), cf.GetKey())
 	con.Flush()
 	_, err := con.Receive()
 	if err != nil {
@@ -133,21 +133,17 @@ type CollectionIteratorHandler func(ctx context.Context, ce CollectionEntity) bo
 /*BATCH_SIZE size of the batch */
 const BATCH_SIZE = 100
 
-/*IterateCollection - iterate a collection with a callback that is given the entities. Iteration can be stopped by returning false */
-func IterateCollection(ctx context.Context, handler CollectionIteratorHandler, entityProvider common.EntityProvider) error {
+/*IterateCollection - iterate a collection with a callback that is given the entities.
+*Iteration can be stopped by returning false
+ */
+func IterateCollection(ctx context.Context, collectionName string, handler CollectionIteratorHandler, entityProvider common.EntityProvider) error {
 	con := GetCon(ctx)
-	entity := entityProvider()
-	qe, ok := entity.(CollectionEntity)
-	if !ok {
-		return common.NewError("invalid_entity", fmt.Sprintf("not a valid entity: %T", entity))
-	}
-	qname := qe.GetCollectionName()
 	bucket := make([]Entity, BATCH_SIZE)
 	maxscore := math.MaxInt64
 	offset := 0
 	proceed := true
 	for idx := 0; true; idx += BATCH_SIZE {
-		con.Send("ZREVRANGEBYSCORE", qname, maxscore, 0, "LIMIT", offset, BATCH_SIZE)
+		con.Send("ZREVRANGEBYSCORE", collectionName, maxscore, 0, "LIMIT", offset, BATCH_SIZE)
 		con.Flush()
 		data, err := con.Receive()
 		if err != nil {

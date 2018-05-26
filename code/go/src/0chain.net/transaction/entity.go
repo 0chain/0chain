@@ -146,7 +146,7 @@ func (t *Transaction) VerifySignature(ctx context.Context) error { //TODO
 	return nil
 }
 
-/*TransactionProvider - entity provider for client object */
+/*Provider - entity provider for client object */
 func Provider() interface{} {
 	c := &Transaction{}
 	c.EntityCollection = txnEntityCollection

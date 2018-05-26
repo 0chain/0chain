@@ -31,7 +31,7 @@ func TestChainSetupWorker(t *testing.T) {
 	c.LatestFinalizedBlock = gb
 	c.SetupWorkers(common.GetRootContext())
 
-	block.BLOCK_SIZE = 10 // Just for testing
+	block.BLOCK_SIZE = 1 // Just for testing
 	timer := time.NewTimer(10 * time.Second)
 	startTime := time.Now()
 	go RoundLogic(common.GetRootContext(), c)

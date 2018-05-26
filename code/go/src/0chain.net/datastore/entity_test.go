@@ -80,7 +80,7 @@ func TestEntityWriteRead(t *testing.T) {
 
 	MultiWrite(ctx, []Entity{zeroChain, zeroChain2})
 	fmt.Printf("iterating\n")
-	IterateCollection(ctx, PrintIterator, CompanyProvider)
+	IterateCollection(ctx, zeroChain.GetCollectionName(), PrintIterator, CompanyProvider)
 }
 
 /*

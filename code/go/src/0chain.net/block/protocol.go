@@ -33,6 +33,10 @@ func (b *Block) GenerateBlock(ctx context.Context) error {
 			return true
 		}
 		txn.Status = transaction.TXN_STATUS_PENDING
+		/*TODO: In a perfect scenario where new transactions are feeding, I think there is no need for this.
+		//Reduce the score so this gets pushed down and later gets trimmed
+		txn.SetCollectionScore(txn.GetCollectionScore() - 10*60)
+		*/
 		b.Txns[idx] = txn
 		txns[idx] = txn
 		b.AddTransaction(txn)
@@ -43,7 +47,10 @@ func (b *Block) GenerateBlock(ctx context.Context) error {
 		}
 		return true
 	}
-	err := datastore.IterateCollection(ctx, txnIterHandler, transaction.Provider)
+	txn := transaction.Provider().(*transaction.Transaction)
+	txn.ChainID = b.ChainID
+	collectionName := txn.GetCollectionName()
+	err := datastore.IterateCollection(ctx, collectionName, txnIterHandler, transaction.Provider)
 	return err
 }
 
