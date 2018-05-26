@@ -33,6 +33,7 @@ func (np *Pool) AddNode(node *Node) {
 		return
 	}
 	var nodeID = node.GetID()
+	RegisterNode(node)
 	np.NodesMap[nodeID] = node
 	np.computeNodesArray()
 }

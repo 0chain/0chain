@@ -31,12 +31,14 @@ type JSONEntityReqResponderF func(ctx context.Context, object interface{}) (inte
 /*EntityProvider - returns an entity */
 type EntityProvider func() interface{}
 
-func process(w http.ResponseWriter, data interface{}, err error) {
+func Respond(w http.ResponseWriter, data interface{}, err error) {
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 	} else {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(data)
+		if data != nil {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(data)
+		}
 	}
 }
 
@@ -54,7 +56,7 @@ func ToJSONResponse(handler JSONResponderF) ReqRespHandlerf {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		data, err := handler(ctx, r)
-		process(w, data, err)
+		Respond(w, data, err)
 	}
 }
 
@@ -79,7 +81,7 @@ func ToJSONReqResponse(handler JSONReqResponderF) ReqRespHandlerf {
 		}
 		ctx := r.Context()
 		data, err := handler(ctx, jsonData)
-		process(w, data, err)
+		Respond(w, data, err)
 	}
 }
 
@@ -103,7 +105,7 @@ func ToJSONEntityReqResponse(handler JSONEntityReqResponderF, entityProvider Ent
 		}
 		ctx := r.Context()
 		data, err := handler(ctx, entity)
-		process(w, data, err)
+		Respond(w, data, err)
 	}
 }
 
@@ -124,4 +126,10 @@ func JSONString(json map[string]interface{}, field string, required bool) (strin
 	default:
 		return fmt.Sprintf("%v", sval), nil
 	}
+}
+
+/*PrintEntityHandler - handler that prints the received entity */
+func PrintEntityHandler(ctx context.Context, object interface{}) (interface{}, error) {
+	fmt.Printf("%v\n", object)
+	return nil, nil
 }

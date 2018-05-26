@@ -15,13 +15,6 @@ func SetupHandlers() {
 	http.HandleFunc("/v1/chain/put", common.ToJSONEntityReqResponse(datastore.WithConnectionEntityJSONHandler(PutChainHandler), Provider))
 }
 
-func (c *Chain) SetupNodeHandlers() {
-	http.HandleFunc("/_nh/status", c.StatusHandler)
-	http.HandleFunc("/_nh/list/m", c.GetMinersHandler)
-	http.HandleFunc("/_nh/list/s", c.GetShardersHandler)
-	http.HandleFunc("/_nh/list/b", c.GetBlobbersHandler)
-}
-
 /*GetChainHandler - given an id returns the chain information */
 func GetChainHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	return datastore.GetEntityHandler(ctx, r, Provider, "id")

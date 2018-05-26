@@ -35,6 +35,7 @@ type Entity interface {
 	GetEntityName() string
 	SetKey(key interface{})
 	GetKey() interface{}
+	GetStringKey() string
 	Validate(ctx context.Context) error
 	Read(ctx context.Context, key string) error
 	Write(ctx context.Context) error
@@ -55,6 +56,10 @@ func (k *IDField) SetKey(key interface{}) {
 /*GetKey returns the key for the entity */
 func (k *IDField) GetKey() interface{} {
 	return k.ID
+}
+
+func (k *IDField) GetStringKey() string {
+	return fmt.Sprintf("%v", k.ID)
 }
 
 func (k *IDField) Validate(ctx context.Context) error {

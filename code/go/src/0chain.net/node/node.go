@@ -11,6 +11,26 @@ import (
 	"0chain.net/encryption"
 )
 
+var nodes = make(map[string]*Node)
+
+/*RegisterNode - register a node to a global registery
+* We need to keep track of a global register of nodes. This is required to ensure we can verify a signed request
+* coming from a node
+ */
+func RegisterNode(node *Node) {
+	nodes[node.GetID()] = node
+}
+
+/*DeregisterNode - deregisters a node */
+func DeregisterNode(nodeID string) {
+	delete(nodes, nodeID)
+}
+
+/*GetNode - get the node from the registery */
+func GetNode(nodeID string) *Node {
+	return nodes[nodeID]
+}
+
 var (
 	NodeStatusInactive = 0
 	NodeStatusActive   = 1

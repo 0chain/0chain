@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"testing"
 	"time"
+
+	"0chain.net/common"
 )
 
 /*Company - a test data type */
@@ -45,7 +47,8 @@ func CompanyProvider() interface{} {
 
 func TestEntityWriteRead(t *testing.T) {
 	fmt.Printf("time : %v\n", time.Now().UnixNano()/int64(time.Millisecond))
-	ctx := WithConnection(context.Background())
+	common.SetupRootContext(context.Background())
+	ctx := WithConnection(common.GetRootContext())
 	zeroChain := CompanyProvider().(*Company)
 	zeroChain2 := CompanyProvider().(*Company)
 	keys := []interface{}{"0chain.net", "0chain.io"}

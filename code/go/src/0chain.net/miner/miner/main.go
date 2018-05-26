@@ -102,11 +102,12 @@ func main() {
 	fmt.Printf("Starting %v on %v for chain %v in %v mode ...\n", os.Args[0], address, chain.GetServerChainID(), mode)
 
 	initEntities()
+	serverChain.SetupWorkers(ctx)
+	node.SetupN2NHandlers()
+	serverChain.SetupNodeHandlers()
+
 	initServer()
 	initHandlers()
-
-	serverChain.SetupWorkers(ctx)
-	serverChain.SetupNodeHandlers()
 
 	if err := http.ListenAndServe(address, nil); err != nil {
 		panic(err)
