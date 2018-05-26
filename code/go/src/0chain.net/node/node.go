@@ -159,6 +159,10 @@ func (sn *SelfNode) SetPrivateKey(privateKey string) {
 	sn.privateKey = privateKey
 }
 
+func (sn *SelfNode) GetPrivateKey() string {
+	return sn.privateKey
+}
+
 /*TimeStampSignature - get timestamp based signature */
 func (sn *SelfNode) TimeStampSignature() (string, string, string, error) {
 	data := fmt.Sprintf("%v:%v", sn.ID, common.Now())
