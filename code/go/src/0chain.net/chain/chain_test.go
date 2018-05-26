@@ -66,7 +66,7 @@ func RoundLogic(ctx context.Context, c *Chain) {
 				r.Role = round.RoleGenerator
 			} else {
 				r.Role = round.RoleVerifier
-				b.Txns = make([]interface{}, 0)
+				b.Txns = make([]*transaction.Transaction, 0)
 			}
 			roundsChannel <- r
 		}
