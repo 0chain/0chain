@@ -93,10 +93,10 @@ type SendOptions struct {
 }
 
 /*SendEntityHandler provides a client API to send an entity */
-func SendEntityHandler(url string, options SendOptions) EntitySendHandler {
+func SendEntityHandler(uri string, options SendOptions) EntitySendHandler {
 	return func(entity datastore.Entity) SendHandler {
 		return func(n *Node) bool {
-			url := fmt.Sprintf("%v/%v", n.GetURLBase(), url)
+			url := fmt.Sprintf("%v/%v", n.GetURLBase(), uri)
 			client := &http.Client{Timeout: 500 * time.Millisecond}
 
 			buffer := new(bytes.Buffer)
@@ -136,7 +136,8 @@ func ToN2NReceiveEntityHandler(handler common.JSONEntityReqResponderF) common.Re
 			return
 		}
 
-		//	reqTS := r.Header.Get(HeaderRequestTimeStamp)
+		//TODO: check the timestamp?
+		//reqTS := r.Header.Get(HeaderRequestTimeStamp)
 		reqHashdata := r.Header.Get(HeaderRequestHashData)
 		reqHash := r.Header.Get(HeaderRequestHash)
 		//TODO: Do we need this check?
@@ -147,8 +148,6 @@ func ToN2NReceiveEntityHandler(handler common.JSONEntityReqResponderF) common.Re
 		if ok, _ := encryption.Verify(sender.PublicKey, reqSignature, reqHash); !ok {
 			return
 		}
-
-		//hashdata := fmt.Sprintf("%v:%v:%v", nodeId, reqTS, data)
 
 		entityName := r.Header.Get(HeaderRequestEntityName)
 		if entityName == "" {
