@@ -60,13 +60,13 @@ type Chain struct {
 	Decimals      int8   `json:"decimals"`                  // Number of decimals allowed for the token on this chain
 
 	/*Miners - this is the pool of miners */
-	Miners *node.Pool
+	Miners *node.Pool `json:"-"`
 
 	/*Sharders - this is the pool of sharders */
-	Sharders *node.Pool
+	Sharders *node.Pool `json:"-"`
 
 	/*Blobbers - this is the pool of blobbers */
-	Blobbers *node.Pool
+	Blobbers *node.Pool `json:"-"`
 
 	RoundsChannel        chan *round.Round `json:"-"`
 	LatestFinalizedBlock *block.Block      `json:"latest_finalized_block,omitempty"` // Latest block on the chain the program is aware of
