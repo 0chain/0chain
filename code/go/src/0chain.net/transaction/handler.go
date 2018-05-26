@@ -35,7 +35,7 @@ func PutTransaction(ctx context.Context, object interface{}) (interface{}, error
 	if err != nil {
 		return nil, err
 	}
-	deltaTime := int64(time.Since(txn.CreationDate.Time) / time.Second)
+	deltaTime := time.Now().UTC().Unix() - int64(txn.CreationDate)
 	if deltaTime < -TXN_TIME_TOLERANCE || deltaTime > TXN_TIME_TOLERANCE {
 		return nil, common.InvalidRequest("Transaction creation time not within tolerance")
 	}

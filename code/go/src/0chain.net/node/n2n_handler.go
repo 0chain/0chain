@@ -66,7 +66,7 @@ func (np *Pool) SendAtleast(numNodes int, handler SendHandler) {
 /*SetHeaders - sets the request headers */
 func SetHeaders(req *http.Request, entity datastore.Entity, maxRelayLength int64, currentRelayLength int64) bool {
 	ts := common.Now()
-	hashdata := fmt.Sprintf("%v:%v:%v", Self.GetID(), ts.ToString(), entity.GetKey())
+	hashdata := fmt.Sprintf("%v:%v:%v", Self.GetID(), ts, entity.GetKey())
 	hash := encryption.Hash(hashdata)
 	//TODO: Replace Self.privateKey with API from Ken
 	signature, err := encryption.Sign(Self.privateKey, hash)
@@ -74,7 +74,7 @@ func SetHeaders(req *http.Request, entity datastore.Entity, maxRelayLength int64
 		return false
 	}
 	req.Header.Set(HeaderNodeID, Self.GetID())
-	req.Header.Set(HeaderRequestTimeStamp, ts.ToString())
+	req.Header.Set(HeaderRequestTimeStamp, strconv.FormatInt(int64(ts), 10))
 	req.Header.Set(HeaderRequestHashData, hashdata)
 	req.Header.Set(HeaderRequestHash, hash)
 	req.Header.Set(HeaderNodeRequestSignature, signature)

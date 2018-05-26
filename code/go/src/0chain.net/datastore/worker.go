@@ -111,12 +111,12 @@ func (ecb *EntityChunkBuilder) run(ctx context.Context) {
 	}
 }
 
-func creationDate(entity Entity) common.Time {
+func creationDate(entity Entity) time.Time {
 	cf, ok := entity.(CreationTrackable)
 	if ok {
-		return cf.GetCreationTime()
+		return time.Unix(int64(cf.GetCreationTime()), 0)
 	}
-	return common.Now()
+	return time.Now().UTC()
 }
 
 func (ecb *EntityChunkBuilder) addEntity(entity Entity) {
@@ -126,7 +126,7 @@ func (ecb *EntityChunkBuilder) addEntity(entity Entity) {
 		return
 	}
 	if ecb.MaxHoldupTime > 0 && ecb.Chunk.Size() == 1 {
-		delta := creationDate(ecb.Chunk.Get(0)).Add(ecb.MaxHoldupTime).Sub(time.Now())
+		delta := creationDate(ecb.Chunk.Get(0)).Add(ecb.MaxHoldupTime).Sub(time.Now().UTC())
 		ecb.TimeoutChannel.Reset(delta)
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"time"
 
 	"0chain.net/common"
 	"0chain.net/config"
@@ -48,7 +49,7 @@ type Node struct {
 	Port           int
 	Type           int
 	Status         int
-	LastActiveTime common.Time
+	LastActiveTime time.Time
 	ID             string
 	PublicKey      string
 	ErrorCount     int
@@ -129,7 +130,7 @@ func (n *Node) GetStatusURL() string {
 }
 
 /*Verify signature */
-func (n *Node) Verify(ts common.Time, data string, hash string, signature string) (bool, error) {
+func (n *Node) Verify(ts common.Timestamp, data string, hash string, signature string) (bool, error) {
 	// TODO: Ensure time is within 3 seconds  and hash and signature match using n.PublicKey using encryption.Verify()
 	return true, nil
 }

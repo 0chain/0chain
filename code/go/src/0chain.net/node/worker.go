@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"time"
-
-	"0chain.net/common"
 )
 
 /*StatusMonitor - a background job that keeps checking the status of the nodes */
@@ -29,7 +27,7 @@ func (np *Pool) StatusMonitor(ctx context.Context) {
 		activeCount := 0
 		for _, node := range nodes {
 			statusURL := node.GetStatusURL()
-			ts := common.Now()
+			ts := time.Now().UTC()
 			data, hash, signature, err := Self.TimeStampSignature()
 			if err != nil {
 				panic(err)

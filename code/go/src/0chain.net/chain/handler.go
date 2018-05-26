@@ -3,7 +3,9 @@ package chain
 import (
 	"context"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	"0chain.net/common"
 	"0chain.net/datastore"
@@ -33,8 +35,10 @@ func (c *Chain) StatusHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	publicKey := r.FormValue("publicKey")
 	timestamp := r.FormValue("timestamp")
-	ts := common.Now()
-	ts.Parse([]byte(timestamp))
+	ts, err := strconv.ParseInt(timestamp, 10, 64)
+	if err != nil {
+		return
+	}
 	data := r.FormValue("data")
 	hash := r.FormValue("hash")
 	signature := r.FormValue("signature")
@@ -54,11 +58,11 @@ func (c *Chain) StatusHandler(w http.ResponseWriter, r *http.Request) {
 		// TODO: Node's ip address changed. Should we update ourselves?
 	}
 	if node.PublicKey == publicKey {
-		ok, err := node.Verify(ts, data, hash, signature)
+		ok, err := node.Verify(common.Timestamp(ts), data, hash, signature)
 		if !ok || err != nil {
 			return
 		}
-		node.LastActiveTime = common.Now()
+		node.LastActiveTime = time.Now().UTC()
 	} else {
 		// TODO: private/public keys changed by the node. Should we update ourselves?
 	}

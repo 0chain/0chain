@@ -30,7 +30,7 @@ func PutBlock(ctx context.Context, object interface{}) (interface{}, error) {
 	if !ok {
 		return nil, fmt.Errorf("invalid request %T", object)
 	}
-	deltaTime := int64(time.Since(txn.CreationDate.Time) / time.Second)
+	deltaTime := time.Now().UTC().Unix() - int64(txn.CreationDate)
 	if deltaTime < -BLOCK_TIME_TOLERANCE || deltaTime > BLOCK_TIME_TOLERANCE {
 		return nil, common.InvalidRequest("Block creation time not within tolerance")
 	}

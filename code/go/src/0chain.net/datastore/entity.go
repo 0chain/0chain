@@ -80,12 +80,12 @@ func (k *IDField) Write(ctx context.Context) error {
 }
 
 type CreationTrackable interface {
-	GetCreationTime() common.Time
+	GetCreationTime() common.Timestamp
 }
 
 /*CreationDateField - Can be used to add a creation date functionality to an entity */
 type CreationDateField struct {
-	CreationDate common.Time `json:"creation_date"`
+	CreationDate common.Timestamp `json:"creation_date"`
 }
 
 /*InitializeCreationDate sets the creation date to current time */
@@ -94,7 +94,7 @@ func (cd *CreationDateField) InitializeCreationDate() {
 }
 
 /*GetCreationTime - Get the creation time */
-func (cd *CreationDateField) GetCreationTime() common.Time {
+func (cd *CreationDateField) GetCreationTime() common.Timestamp {
 	return cd.CreationDate
 }
 
