@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	"0chain.net/common"
 	"0chain.net/datastore"
 	"0chain.net/encryption"
+	"github.com/golang/snappy"
 )
 
 var (
@@ -90,6 +92,7 @@ func SetHeaders(req *http.Request, entity datastore.Entity, maxRelayLength int64
 type SendOptions struct {
 	MaxRelayLength     int64
 	CurrentRelayLength int64
+	Compress           bool
 }
 
 /*SendEntityHandler provides a client API to send an entity */
@@ -101,9 +104,18 @@ func SendEntityHandler(uri string, options SendOptions) EntitySendHandler {
 
 			buffer := new(bytes.Buffer)
 			json.NewEncoder(buffer).Encode(entity)
+			if options.Compress {
+				cbytes := snappy.Encode(nil, buffer.Bytes())
+				buffer = bytes.NewBuffer(cbytes)
+			}
 			req, err := http.NewRequest("POST", url, buffer)
 			if err != nil {
 				return false
+			}
+			defer req.Body.Close()
+
+			if options.Compress {
+				req.Header.Set("Content-Encoding", "snappy")
 			}
 			req.Header.Set("Content-Type", "application/json; charset=utf-8")
 			SetHeaders(req, entity, options.MaxRelayLength, options.CurrentRelayLength)
@@ -157,7 +169,18 @@ func ToN2NReceiveEntityHandler(handler common.JSONEntityReqResponderF) common.Re
 		if entityProvider == nil {
 			return
 		}
-		decoder := json.NewDecoder(r.Body)
+		var buffer io.Reader = r.Body
+		if r.Header.Get("Content-Encoding") == "snappy" {
+			cbuffer := new(bytes.Buffer)
+			cbuffer.ReadFrom(r.Body)
+
+			cbytes, err := snappy.Decode(nil, cbuffer.Bytes())
+			if err != nil {
+				return
+			}
+			buffer = bytes.NewReader(cbytes)
+		}
+		decoder := json.NewDecoder(buffer)
 		entity := entityProvider()
 		err := decoder.Decode(entity)
 		if err != nil {

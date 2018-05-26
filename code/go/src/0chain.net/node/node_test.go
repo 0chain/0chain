@@ -88,6 +88,7 @@ func TestNode2NodeCommunication(t *testing.T) {
 	np.AddNode(n2)
 	np.AddNode(n3)
 
-	sendHandler := SendEntityHandler("v1/_n2n/entity/post", SendOptions{MaxRelayLength: 0, CurrentRelayLength: 0})
+	options := SendOptions{MaxRelayLength: 0, CurrentRelayLength: 0, Compress: true}
+	sendHandler := SendEntityHandler("v1/_n2n/entity/post", options)
 	np.SendAtleast(2, sendHandler(entity))
 }
