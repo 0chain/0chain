@@ -69,7 +69,7 @@ func SetHeaders(req *http.Request, entity datastore.Entity, maxRelayLength int64
 	hashdata := fmt.Sprintf("%v:%v:%v", Self.GetID(), ts, entity.GetKey())
 	hash := encryption.Hash(hashdata)
 	//TODO: Replace Self.privateKey with API from Ken
-	signature, err := encryption.Sign(Self.privateKey, hash)
+	signature, err := Self.Sign(hash)
 	if err != nil {
 		return false
 	}
@@ -157,7 +157,7 @@ func ToN2NReceiveEntityHandler(handler common.JSONEntityReqResponderF) common.Re
 			return
 		}
 		reqSignature := r.Header.Get(HeaderNodeRequestSignature)
-		if ok, _ := encryption.Verify(sender.PublicKey, reqSignature, reqHash); !ok {
+		if ok, _ := sender.Verify(reqSignature, reqHash); !ok {
 			return
 		}
 

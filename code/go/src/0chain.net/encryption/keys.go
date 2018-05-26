@@ -29,6 +29,12 @@ func ReadKeys(reader io.Reader) (publicKey string, privateKey string) {
 	return publicKey, privateKey
 }
 
+/*SignerVerifier - an interface that can sign a hash and verify a signature and hash */
+type SignerVerifier interface {
+	Sign(hash string) (string, error)
+	Verify(signature string, hash string) (bool, error)
+}
+
 //Sign - given a private key and data, compute it's signature
 func Sign(privateKey string, hash string) (string, error) {
 	private, err := hex.DecodeString(privateKey)

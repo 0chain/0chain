@@ -39,9 +39,15 @@ func (c *Chain) StatusHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
+	if !common.Within(ts, 5) {
+		return
+	}
 	data := r.FormValue("data")
 	hash := r.FormValue("hash")
 	signature := r.FormValue("signature")
+	if data == "" || hash == "" || signature == "" {
+		return
+	}
 	addressParts := strings.Split(r.RemoteAddr, ":")
 	node := c.Miners.GetNode(id)
 	if node == nil {
@@ -57,8 +63,9 @@ func (c *Chain) StatusHandler(w http.ResponseWriter, r *http.Request) {
 	if node.Host != addressParts[0] {
 		// TODO: Node's ip address changed. Should we update ourselves?
 	}
+	// TODO: Verify hash
 	if node.PublicKey == publicKey {
-		ok, err := node.Verify(common.Timestamp(ts), data, hash, signature)
+		ok, err := node.Verify(signature, hash)
 		if !ok || err != nil {
 			return
 		}
