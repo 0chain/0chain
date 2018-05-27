@@ -1,0 +1,164 @@
+package main
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"math/rand"
+	"net/http"
+	"os"
+	"strconv"
+	"strings"
+	"time"
+
+	"0chain.net/common"
+	"0chain.net/encryption"
+)
+
+func GetClient(maxConnections int) *http.Client {
+	tr := &http.Transport{
+		MaxIdleConns:       1000,
+		IdleConnTimeout:    90 * time.Second, // more than the frequency of checking will ensure always on
+		DisableCompression: true,
+	}
+	client := &http.Client{Transport: tr, Timeout: 500 * time.Millisecond}
+	return client
+}
+
+var httpclient *http.Client
+
+func SendRequest(httpclient *http.Client, url string, entity interface{}) bool {
+	buffer := new(bytes.Buffer)
+	json.NewEncoder(buffer).Encode(entity)
+	req, err := http.NewRequest("POST", url, buffer)
+	if err != nil {
+		return false
+	}
+	defer req.Body.Close()
+
+	req.Header.Set("Content-type", "application/json; charset=utf-8")
+	resp, err := httpclient.Do(req)
+	if err != nil {
+		msg := err.Error()
+		if strings.Contains(msg, "EOF") || strings.Contains(msg, "connection reset by peer") {
+			fmt.Printf("error: %v\n", msg)
+		}
+		return false
+	}
+	if resp.StatusCode != http.StatusOK || resp.StatusCode == 400 || resp.StatusCode == 500 {
+		bodyBytes, _ := ioutil.ReadAll(resp.Body)
+		bodyString := string(bodyBytes)
+		fmt.Printf("resp code: %v: %v\n", resp.StatusCode, bodyString)
+		return false
+	}
+	io.Copy(ioutil.Discard, resp.Body)
+	return true
+}
+
+type Client struct {
+	publicKey  string
+	clientID   string
+	privateKey string
+}
+
+var serverAddress = "http://localhost:7070"
+
+func GetURL(uri string) string {
+	return fmt.Sprintf("%v%v", serverAddress, uri)
+}
+
+func CreateClients(numClients int) []Client {
+	clients := make([]Client, numClients)
+	for i := 0; i < numClients; i++ {
+		publicKey, privateKey := encryption.GenerateKeys()
+		client := make(map[string]string)
+		client["public_key"] = publicKey
+		clientID := encryption.Hash(publicKey)
+		client["id"] = clientID
+		for true {
+			ok := SendRequest(httpclient, GetURL("/v1/client/put"), client)
+			if ok {
+				time.Sleep(5 * time.Millisecond)
+				break
+			}
+		}
+		clients[i] = Client{publicKey, clientID, privateKey}
+	}
+	return clients
+}
+
+func CreateTransaction(httpclient *http.Client, client Client) bool {
+	txn := make(map[string]interface{})
+	value := rand.Int63n(1000000000000)
+	txn["client_id"] = client.clientID
+	txn["transaction_value"] = value
+	data := fmt.Sprintf("Pay me %v zchn.cents", value)
+	txn["transaction_data"] = data
+	for true {
+		ts := common.Now()
+		txn["creation_date"] = ts
+		hashdata := fmt.Sprintf("%v:%v:%v:%v", client.clientID, ts, value, data)
+		hash := encryption.Hash(hashdata)
+		signature, err := encryption.Sign(client.privateKey, hash)
+		if err != nil {
+			fmt.Printf("error: %v\n", err)
+			break
+		}
+		txn["hash"] = hash
+		txn["signature"] = signature
+		ok := SendRequest(httpclient, GetURL("/v1/transaction/put"), txn)
+		if ok {
+			return true
+		}
+	}
+	return true
+}
+
+func main() {
+	numClients, err := strconv.Atoi(os.Args[1])
+	if err != nil {
+		fmt.Printf("Error parsing num clients:%v\n", err)
+		return
+	}
+	numTxns, err := strconv.Atoi(os.Args[2])
+	if err != nil {
+		fmt.Printf("Error parsing num txns:%v\n", err)
+		return
+	}
+	maxConcurrentClients := 100
+	httpclient = GetClient(maxConcurrentClients)
+
+	fmt.Printf("creating clients\n")
+	clients := CreateClients(numClients)
+	time.Sleep(time.Second)
+	fmt.Printf("clients created\n")
+	ticketCannel := make(chan bool, maxConcurrentClients)
+	doneChannel := make(chan bool)
+	for i := 0; i < maxConcurrentClients; i++ {
+		ticketCannel <- true
+	}
+	fmt.Printf("starting transactions\n")
+	start := time.Now()
+	count := 0
+	for i := 0; i < maxConcurrentClients; i++ {
+		go func() {
+			for _ = range ticketCannel {
+				CreateTransaction(httpclient, clients[rand.Intn(len(clients))])
+				doneChannel <- true
+			}
+		}()
+	}
+	for _ = range doneChannel {
+		count++
+		if count == numTxns {
+			fmt.Printf("Elapsed time: %v\n", time.Since(start))
+			break
+		}
+		if count+maxConcurrentClients <= numTxns {
+			ticketCannel <- true
+		}
+	}
+	close(doneChannel)
+}

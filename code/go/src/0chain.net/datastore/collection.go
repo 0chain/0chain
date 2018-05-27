@@ -10,7 +10,15 @@ import (
 	"0chain.net/common"
 )
 
-//var collections = map[string] bool
+/*CollectionOptions - to tune the performance charactersistics of a collection */
+type CollectionOptions struct {
+	EntityBufferSize int
+	MaxHoldupTime    time.Duration
+	NumChunkCreators int
+	ChunkSize        int
+	ChunkBufferSize  int
+	NumChunkStorers  int
+}
 
 /*CollectionEntity - An entity can implement the CollectionEntity interface by including a CollectionIDField
 *It can optionally override GetCollectionName to provide multiple collections partitioned by some key

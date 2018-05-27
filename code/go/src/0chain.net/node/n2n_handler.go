@@ -123,7 +123,7 @@ func SendEntityHandler(uri string, options SendOptions) EntitySendHandler {
 			if err != nil {
 				return false
 			}
-			if resp.Status != "200" {
+			if resp.StatusCode != http.StatusOK {
 				return false
 			}
 			return true

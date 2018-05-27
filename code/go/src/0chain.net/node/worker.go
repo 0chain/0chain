@@ -33,7 +33,7 @@ func (np *Pool) StatusMonitor(ctx context.Context) {
 				panic(err)
 			}
 			statusURL = fmt.Sprintf("%v&data=%v&hash=%v&signature=%v", statusURL, data, hash, signature)
-			_, err = client.Get(statusURL)
+			resp, err := client.Get(statusURL)
 			if err != nil {
 				node.ErrorCount++
 				if node.Status == NodeStatusActive {
@@ -44,6 +44,7 @@ func (np *Pool) StatusMonitor(ctx context.Context) {
 					}
 				}
 			} else {
+				resp.Body.Close()
 				if node.Status == NodeStatusInactive {
 					node.ErrorCount = 0
 					node.Status = NodeStatusActive
@@ -71,6 +72,7 @@ func (np *Pool) DownloadNodeData(node *Node) bool {
 	if err != nil {
 		return false
 	}
+	defer resp.Body.Close()
 	dnp := NewPool(NodeTypeMiner)
 	ReadNodes(resp.Body, dnp, dnp, dnp)
 	for _, node := range dnp.Nodes {

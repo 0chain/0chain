@@ -62,14 +62,16 @@ func Provider() interface{} {
 /*SetupEntity - setup the entity */
 func SetupEntity() {
 	datastore.RegisterEntityProvider("client", Provider)
-	/*
-	* Entity Buffer Size = 1024
-	* Timeout = 500 milliseconds
-	* Entity Chunk Size = 64
-	* Chunk Buffer Size = 16
-	* Chunk Workers = 2
-	 */
-	ClientEntityChannel = datastore.SetupWorkers(common.GetRootContext(), 1024, 500*time.Millisecond, 64, 16, 2)
+
+	var collectionOptions = datastore.CollectionOptions{
+		EntityBufferSize: 1024,
+		MaxHoldupTime:    500 * time.Millisecond,
+		NumChunkCreators: 1,
+		ChunkSize:        64,
+		ChunkBufferSize:  16,
+		NumChunkStorers:  2,
+	}
+	ClientEntityChannel = datastore.SetupWorkers(common.GetRootContext(), &collectionOptions)
 }
 
 var ClientEntityChannel chan datastore.Entity

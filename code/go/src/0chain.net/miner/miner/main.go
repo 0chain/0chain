@@ -3,9 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"runtime"
+	"time"
 
 	"0chain.net/block"
 	"0chain.net/chain"
@@ -108,8 +110,20 @@ func main() {
 
 	initServer()
 	initHandlers()
-
-	if err := http.ListenAndServe(address, nil); err != nil {
-		panic(err)
+	/*
+		l, err := net.Listen("tcp", address)
+		if err != nil {
+			log.Fatalf("Listen: %v", err)
+		}
+		defer l.Close()
+		l = netutil.LimitListener(l, 1000)
+	*/
+	server := &http.Server{
+		Addr:           address,
+		ReadTimeout:    30 * time.Second,
+		WriteTimeout:   30 * time.Second,
+		MaxHeaderBytes: 1 << 20,
 	}
+	//log.Fatal(server.Serve(l))
+	log.Fatal(server.ListenAndServe())
 }

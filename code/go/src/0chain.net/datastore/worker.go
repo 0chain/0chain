@@ -162,16 +162,16 @@ func (bs *ChunkStorer) run(ctx context.Context) {
 }
 
 /*SetupWorkers - This setups up workers that allows aggregating and storing entities in chunks */
-func SetupWorkers(ctx context.Context, entityBufferSize int, maxHoldupTime time.Duration, chunkSize int, chunkBufferSize int, numChunkWorkers int) chan Entity {
-	echannel := make(chan Entity, entityBufferSize)
-	bchannel := make(chan *Chunk, chunkBufferSize)
+func SetupWorkers(ctx context.Context, options *CollectionOptions) chan Entity {
+	echannel := make(chan Entity, options.EntityBufferSize)
+	bchannel := make(chan *Chunk, options.ChunkBufferSize)
 	var ecb EntityChunkBuilder
-	ecb.ChunkSize = chunkSize
-	ecb.MaxHoldupTime = maxHoldupTime
+	ecb.ChunkSize = options.ChunkSize
+	ecb.MaxHoldupTime = options.MaxHoldupTime
 	ecb.EntityChannel = echannel
 	ecb.ChunkChannel = bchannel
 	ecb.TimeoutChannel = time.NewTimer(-100 * time.Second)
-	bworkers := make([]ChunkStorer, numChunkWorkers)
+	bworkers := make([]ChunkStorer, options.NumChunkStorers)
 	for _, bworker := range bworkers {
 		bworker.ChunkChannel = bchannel
 		go bworker.run(ctx)
