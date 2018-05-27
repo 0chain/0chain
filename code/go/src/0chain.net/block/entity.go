@@ -18,25 +18,34 @@ type VerificationTicket struct {
 	Signature  string `json:"signature"`
 }
 
-/*BlockBody - used to compute the signature
+/*UnverifiedBlockBody - used to compute the signature
 * This is what is used to verify the correctness of the block & the associated signature
  */
-type BlockBody struct {
+type UnverifiedBlockBody struct {
 	PrevHash                    string                `json:"prev_hash"`
 	PrevBlockVerficationTickets []*VerificationTicket `json:"prev_verification_tickets"`
 
-	MinerID string  `json:"miner_id"` // TODO: Is miner_id & node_id same?
-	Round   int64   `json:"round"`
-	ChainID string  `json:"chain_id"`
-	Weight  float64 `json:"weight"`
-	Txns    []*transaction.Transaction
+	MinerID string `json:"miner_id"` // TODO: Is miner_id & node_id same?
+	Round   int64  `json:"round"`
+	ChainID string `json:"chain_id"`
+
+	// TODO: Float can mess up signature due to precision
+	// Also, do we need Weight as part of the Unverified Block Body? Who would care about this?
+	Weight float64 `json:"weight"`
+
+	// We only need either Txns or TxnHashes but not both
+	// The entire transaction payload to represent full block
+	Txns *[]*transaction.Transaction `json:"transactions,omitempty"`
+
+	// Just the hashes of the entire transaction payload to repesent a compact block
+	TxnHashes *[]string `json:"transaction_hashes,omitempty"`
 }
 
 /*VerifiedBlockBody - block body with verification tickets attached to it
 *This is what goes to the sharder once the block reached consensus
  */
 type VerifiedBlockBody struct {
-	BlockBody
+	UnverifiedBlockBody
 	Hash                string                `json:"hash"`
 	Signature           string                `json:"signature"`
 	VerificationTickets []*VerificationTicket `json:"verification_tickets"`
@@ -132,4 +141,34 @@ func (b *Block) GetWeight() float64 {
 /*AddTransaction - add a transaction to the block */
 func (b *Block) AddTransaction(t *transaction.Transaction) {
 	b.Weight += t.GetWeight()
+}
+
+/*CompactBlock - Get rid of transaction objects but ensure txn hashes are stored */
+func (b *Block) CompactBlock() {
+	if b.Txns == nil {
+		return
+	}
+	if b.TxnHashes == nil {
+		hashes := make([]string, len(*b.Txns))
+		for idx, txn := range *b.Txns {
+			hashes[idx] = txn.Hash
+		}
+		b.TxnHashes = &hashes
+	}
+	b.Txns = nil
+}
+
+/*ExpandBlock - Given a block with txn hashes, load up all the txns
+* This is a very expensive operation - use it wisely
+ */
+func (b *Block) ExpandBlock(ctx context.Context) {
+	if b.TxnHashes == nil {
+		return
+	}
+	if b.Txns == nil {
+		txns := make([]*transaction.Transaction, len(*b.TxnHashes))
+		// TODO: Block loading for miners has to happen from datastore
+		// Block loading for sharders has to happen from persistence layer
+		b.Txns = &txns
+	}
 }

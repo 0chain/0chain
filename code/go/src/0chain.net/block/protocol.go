@@ -14,9 +14,10 @@ var BLOCK_SIZE = 250000
 * block published while working on this
  */
 func (b *Block) GenerateBlock(ctx context.Context) error {
-	b.Txns = make([]*transaction.Transaction, BLOCK_SIZE)
+	txns := make([]*transaction.Transaction, BLOCK_SIZE)
+	b.Txns = &txns
 	//TODO: wasting this because we []interface{} != []*transaction.Transaction in Go
-	txns := make([]datastore.Entity, BLOCK_SIZE)
+	etxns := make([]datastore.Entity, BLOCK_SIZE)
 	idx := 0
 	var txnIterHandler = func(ctx context.Context, qe datastore.CollectionEntity) bool {
 		select {
@@ -37,12 +38,12 @@ func (b *Block) GenerateBlock(ctx context.Context) error {
 		//Reduce the score so this gets pushed down and later gets trimmed
 		txn.SetCollectionScore(txn.GetCollectionScore() - 10*60)
 		*/
-		b.Txns[idx] = txn
 		txns[idx] = txn
+		etxns[idx] = txn
 		b.AddTransaction(txn)
 		idx++
 		if idx == BLOCK_SIZE {
-			b.UpdateTxnsToPending(ctx, txns)
+			b.UpdateTxnsToPending(ctx, etxns)
 			return false
 		}
 		return true
@@ -67,7 +68,7 @@ func (b *Block) VerifyBlock(ctx context.Context) (bool, error) {
 /*Finalize - finalize the transactions in the block */
 func (b *Block) Finalize(ctx context.Context) error {
 	modifiedTxns := make([]datastore.Entity, 0, BLOCK_SIZE)
-	for idx, txn := range b.Txns {
+	for idx, txn := range *b.Txns {
 		txn.BlockID = b.ID
 		txn.Status = transaction.TXN_STATUS_FINALIZED
 		modifiedTxns[idx] = txn

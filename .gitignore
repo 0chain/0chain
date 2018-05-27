@@ -9,5 +9,6 @@
 **/go/miner
 **/go/sharder
 **/go/blobber
+**/go/test/miner_stress
 **/examples/
 **/hash/main.go

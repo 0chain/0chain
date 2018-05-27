@@ -55,7 +55,7 @@ func RoundLogic(ctx context.Context, c *Chain) {
 		case <-ticker.C:
 			fmt.Printf("round: %v\n", r)
 			if r.Block != nil {
-				for idx, txn := range r.Block.Txns {
+				for idx, txn := range *r.Block.Txns {
 					fmt.Printf("txn(%v): %v\n", idx, txn)
 				}
 			}
@@ -67,7 +67,8 @@ func RoundLogic(ctx context.Context, c *Chain) {
 				r.Role = round.RoleGenerator
 			} else {
 				r.Role = round.RoleVerifier
-				b.Txns = make([]*transaction.Transaction, 0)
+				txns := make([]*transaction.Transaction, 0)
+				b.Txns = &txns
 			}
 			roundsChannel <- r
 		}
