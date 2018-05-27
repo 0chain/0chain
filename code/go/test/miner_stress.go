@@ -3,13 +3,12 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
-	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -19,7 +18,7 @@ import (
 
 func GetClient(maxConnections int) *http.Client {
 	tr := &http.Transport{
-		MaxIdleConns:       1000,
+		MaxIdleConns:       maxConnections,
 		IdleConnTimeout:    90 * time.Second, // more than the frequency of checking will ensure always on
 		DisableCompression: true,
 	}
@@ -63,7 +62,7 @@ type Client struct {
 	privateKey string
 }
 
-var serverAddress = "http://localhost:7070"
+var serverAddress string
 
 func GetURL(uri string) string {
 	return fmt.Sprintf("%v%v", serverAddress, uri)
@@ -117,32 +116,28 @@ func CreateTransaction(httpclient *http.Client, client Client) bool {
 }
 
 func main() {
-	numClients, err := strconv.Atoi(os.Args[1])
-	if err != nil {
-		fmt.Printf("Error parsing num clients:%v\n", err)
-		return
-	}
-	numTxns, err := strconv.Atoi(os.Args[2])
-	if err != nil {
-		fmt.Printf("Error parsing num txns:%v\n", err)
-		return
-	}
-	maxConcurrentClients := 100
-	httpclient = GetClient(maxConcurrentClients)
+	address := flag.String("address", "localhohst:7070", "address")
+	numClients := flag.Int("num_clients", 100, "num_clients")
+	numTxns := flag.Int("num_txns", 1000, "num_txns")
+	maxConcurrentClients := flag.Int("max_concurrent_users", 100, "max_concurrent_users")
+	flag.Parse()
+	serverAddress = fmt.Sprintf("http://%v", *address)
+	fmt.Printf("server address: %v\n", serverAddress)
+	httpclient = GetClient(*maxConcurrentClients)
 
 	fmt.Printf("creating clients\n")
-	clients := CreateClients(numClients)
+	clients := CreateClients(*numClients)
 	time.Sleep(time.Second)
 	fmt.Printf("clients created\n")
-	ticketCannel := make(chan bool, maxConcurrentClients)
+	ticketCannel := make(chan bool, *maxConcurrentClients)
 	doneChannel := make(chan bool)
-	for i := 0; i < maxConcurrentClients; i++ {
+	for i := 0; i < *maxConcurrentClients; i++ {
 		ticketCannel <- true
 	}
 	fmt.Printf("starting transactions\n")
 	start := time.Now()
 	count := 0
-	for i := 0; i < maxConcurrentClients; i++ {
+	for i := 0; i < *maxConcurrentClients; i++ {
 		go func() {
 			for _ = range ticketCannel {
 				CreateTransaction(httpclient, clients[rand.Intn(len(clients))])
@@ -152,11 +147,11 @@ func main() {
 	}
 	for _ = range doneChannel {
 		count++
-		if count == numTxns {
+		if count == *numTxns {
 			fmt.Printf("Elapsed time: %v\n", time.Since(start))
 			break
 		}
-		if count+maxConcurrentClients <= numTxns {
+		if count+*maxConcurrentClients <= *numTxns {
 			ticketCannel <- true
 		}
 	}
