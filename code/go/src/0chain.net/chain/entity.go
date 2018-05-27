@@ -15,13 +15,9 @@ import (
 /*ServerChain - the chain object of the chain  the server is responsible for */
 var ServerChain *Chain
 
-/*ErrSupportedChain error for indicating which chain is supported by the server */
-var ErrSupportedChain error
-
 /*SetServerChain - set the server chain object */
 func SetServerChain(c *Chain) {
 	ServerChain = c
-	ErrSupportedChain = common.NewError("supported_chain", fmt.Sprintf("chain %v is not supported by this server", c.ID))
 }
 
 /*GetServerChain - returns the chain object for the server chain */
@@ -104,7 +100,7 @@ func ValidChain(chain string) error {
 	if result {
 		return nil
 	}
-	return ErrSupportedChain
+	return config.ErrSupportedChain
 }
 
 /*UpdateFinalizedBlock - update the latest finalized block */

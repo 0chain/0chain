@@ -1,5 +1,11 @@
 package config
 
+import (
+	"fmt"
+
+	"0chain.net/common"
+)
+
 /*Config - all the config options passed from the command line*/
 type Config struct {
 	Host     string
@@ -16,8 +22,16 @@ func TestNet() bool {
 	return Configuration.TestMode
 }
 
+/*ErrSupportedChain error for indicating which chain is supported by the server */
+var ErrSupportedChain error
+
 /*MAIN_CHAIN - the main 0chain.net blockchain id */
 const MAIN_CHAIN = "0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe" // TODO:
+
+/*GetMainChainID - get the main chain id */
+func GetMainChainID() string {
+	return MAIN_CHAIN
+}
 
 /*ServerChainID - the chain this server is responsible for */
 var ServerChainID = ""
@@ -29,6 +43,7 @@ func SetServerChainID(chain string) {
 	} else {
 		ServerChainID = chain
 	}
+	ErrSupportedChain = common.NewError("supported_chain", fmt.Sprintf("chain %v is not supported by this server", chain))
 }
 
 /*GetServerChainID - get the chain this server is responsible for processing */

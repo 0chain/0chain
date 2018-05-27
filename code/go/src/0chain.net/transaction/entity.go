@@ -8,6 +8,7 @@ import (
 
 	"0chain.net/client"
 	"0chain.net/common"
+	"0chain.net/config"
 	"0chain.net/datastore"
 	"0chain.net/encryption"
 )
@@ -57,9 +58,12 @@ func (t *Transaction) Validate(ctx context.Context) error {
 			return common.InvalidRequest("hash required for transaction")
 		}
 		t.ID = t.Hash
-	}
-	if t.ID != t.Hash {
+	} else if t.ID != t.Hash {
 		return common.NewError("id_hash_mismatch", "ID and Hash don't match")
+	}
+
+	if t.ChainID != config.GetServerChainID() {
+		return config.ErrSupportedChain
 	}
 
 	err := t.VerifyHash(ctx)
@@ -76,6 +80,9 @@ func (t *Transaction) Validate(ctx context.Context) error {
 func (t *Transaction) ComputeProperties() {
 	if t.Hash != "" {
 		t.ID = t.Hash
+	}
+	if t.ChainID == "" {
+		t.ChainID = config.GetMainChainID()
 	}
 }
 
@@ -151,6 +158,8 @@ func Provider() interface{} {
 	c := &Transaction{}
 	c.EntityCollection = txnEntityCollection
 	c.Status = TXN_STATUS_FREE
+	c.CreationDate = common.Now()
+	c.ChainID = config.GetMainChainID()
 	return c
 }
 
