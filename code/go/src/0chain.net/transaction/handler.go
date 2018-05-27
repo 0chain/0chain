@@ -77,7 +77,7 @@ func GetTransactions(ctx context.Context, r *http.Request) (interface{}, error) 
 		if !ok {
 			return true
 		}
-		if txn.ClientID == client_id {
+		if txn.ClientID == client_id || txn.ToClientID == client_id {
 			txns = append(txns, txn)
 			if len(txns) > 5 {
 				return false
