@@ -6,17 +6,12 @@ import (
 
 	"0chain.net/common"
 	"0chain.net/datastore"
+	"0chain.net/node"
 	"0chain.net/transaction"
 )
 
 /*GenesisBlockHash - block of 0chain.net main chain */
 var GenesisBlockHash = "ed79cae70d439c11258236da1dfa6fc550f7cc569768304623e8fbd7d70efae4" //TODO
-
-/*VerificationTicket - verification ticket for the block */
-type VerificationTicket struct {
-	VerifierID string `json:"verifier_id"`
-	Signature  string `json:"signature"`
-}
 
 /*UnverifiedBlockBody - used to compute the signature
 * This is what is used to verify the correctness of the block & the associated signature
@@ -171,4 +166,29 @@ func (b *Block) ExpandBlock(ctx context.Context) {
 		// Block loading for sharders has to happen from persistence layer
 		b.Txns = &txns
 	}
+}
+
+/*AddVerificationTicket - Add a verification ticket to a block
+*Assuming this is done single-threaded at least per block
+*It's the callers responsibility to decide what to do if this operation is successful
+*  - the miner of the block for example will decide if the consensus is reached and send it off to others
+ */
+func (b *Block) AddVerificationTicket(vt *VerificationTicket) bool {
+	for _, ivt := range b.VerificationTickets {
+		if vt.ID == ivt.ID {
+			return false
+		}
+	}
+	//TODO: Assuming verifier_id is same as the node_id
+	nd := node.GetNode(vt.StringKey())
+	// We don't have the verifier information
+	if nd == nil {
+		// TODO: If I am the miner of this block, I better try to do some work and get this verifier data
+		return false
+	}
+	if ok, _ := nd.Verify(vt.Signature, b.Signature); !ok {
+		return false
+	}
+	b.VerificationTickets = append(b.VerificationTickets, vt)
+	return true
 }
