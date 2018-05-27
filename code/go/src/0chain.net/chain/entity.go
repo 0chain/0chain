@@ -6,16 +6,11 @@ import (
 
 	"0chain.net/block"
 	"0chain.net/common"
+	"0chain.net/config"
 	"0chain.net/datastore"
 	"0chain.net/node"
 	"0chain.net/round"
 )
-
-/*MAIN_CHAIN - the main 0chain.net blockchain id */
-const MAIN_CHAIN = "0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe" // TODO:
-
-/*ServerChainID - the chain this server is responsible for */
-var ServerChainID = ""
 
 /*ServerChain - the chain object of the chain  the server is responsible for */
 var ServerChain *Chain
@@ -23,27 +18,10 @@ var ServerChain *Chain
 /*ErrSupportedChain error for indicating which chain is supported by the server */
 var ErrSupportedChain error
 
-/*SetServerChainID  - set the chain this server is responsible for processing */
-func SetServerChainID(chain string) {
-	if chain == "" {
-		ServerChainID = MAIN_CHAIN
-	} else {
-		ServerChainID = chain
-	}
-	ErrSupportedChain = common.NewError("supported_chain", fmt.Sprintf("chain %v is not supported by this server", ServerChainID))
-}
-
-/*GetServerChainID - get the chain this server is responsible for processing */
-func GetServerChainID() string {
-	if ServerChainID == "" {
-		return MAIN_CHAIN
-	}
-	return ServerChainID
-}
-
 /*SetServerChain - set the server chain object */
 func SetServerChain(c *Chain) {
 	ServerChain = c
+	ErrSupportedChain = common.NewError("supported_chain", fmt.Sprintf("chain %v is not supported by this server", c.ID))
 }
 
 /*GetServerChain - returns the chain object for the server chain */
@@ -122,7 +100,7 @@ func SetupEntity() {
 
 /*ValidChain - Is this the chain this server is supposed to process? */
 func ValidChain(chain string) error {
-	result := chain == ServerChainID || (chain == "" && ServerChainID == MAIN_CHAIN)
+	result := chain == config.ServerChainID || (chain == "" && config.ServerChainID == config.MAIN_CHAIN)
 	if result {
 		return nil
 	}

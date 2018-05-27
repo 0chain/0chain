@@ -55,9 +55,9 @@ func main() {
 	flag.Parse()
 
 	address := fmt.Sprintf("%v:%v", *host, *port)
-	chain.SetServerChainID(*chainID)
+	config.SetServerChainID(*chainID)
 	serverChain := chain.Provider().(*chain.Chain)
-	serverChain.ID = chain.GetServerChainID()
+	serverChain.ID = config.GetServerChainID()
 	chain.SetServerChain(serverChain)
 
 	config.Configuration.Host = *host
@@ -101,7 +101,7 @@ func main() {
 		block.BLOCK_SIZE = 100
 	}
 	fmt.Printf("Num CPUs available %v\n", runtime.NumCPU())
-	fmt.Printf("Starting %v on %v for chain %v in %v mode ...\n", os.Args[0], address, chain.GetServerChainID(), mode)
+	fmt.Printf("Starting %v on %v for chain %v in %v mode ...\n", os.Args[0], address, config.GetServerChainID(), mode)
 
 	initEntities()
 	serverChain.SetupWorkers(ctx)

@@ -9,6 +9,7 @@ import (
 	"0chain.net/block"
 	"0chain.net/client"
 	"0chain.net/common"
+	"0chain.net/config"
 	"0chain.net/node"
 	"0chain.net/round"
 	"0chain.net/transaction"
@@ -25,7 +26,7 @@ func TestChainSetupWorker(t *testing.T) {
 	gb.Hash = block.GenesisBlockHash
 	gb.Round = 0
 	c := Provider().(*Chain)
-	c.ID = GetServerChainID()
+	c.ID = config.GetServerChainID()
 	SetServerChain(c)
 	gb.ChainID = fmt.Sprintf("%v", c.ID)
 	c.LatestFinalizedBlock = gb
@@ -60,7 +61,7 @@ func RoundLogic(ctx context.Context, c *Chain) {
 			}
 			r.Number++
 			b := block.Provider().(*block.Block)
-			b.ChainID = GetServerChainID()
+			b.ChainID = config.GetServerChainID()
 			r.Block = b
 			if r.Role == round.RoleVerifier {
 				r.Role = round.RoleGenerator

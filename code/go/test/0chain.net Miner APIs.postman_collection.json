@@ -1,7 +1,7 @@
 {
 	"info": {
 		"_postman_id": "ac798925-26a5-4618-8679-1257945dad4d",
-		"name": "0chain.net Rest APIs",
+		"name": "0chain.net Miner APIs",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
