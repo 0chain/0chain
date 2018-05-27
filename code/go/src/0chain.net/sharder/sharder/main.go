@@ -47,11 +47,11 @@ var Chain string
 
 func main() {
 	host := flag.String("host", "", "hostname")
-	port := flag.Int("port", 7220, "port")
+	port := flag.Int("port", 7320, "port")
 	chainID := flag.String("chain", "", "chain id")
 	testMode := flag.Bool("test", false, "test mode?")
 	nodesFile := flag.String("nodes_file", "config/single_node.txt", "nodes_file")
-	keysFile := flag.String("keys_file", "config/single_node_miner_keys.txt", "keys_file")
+	keysFile := flag.String("keys_file", "config/single_node_sharder_keys.txt", "keys_file")
 	flag.Parse()
 
 	address := fmt.Sprintf("%v:%v", *host, *port)
