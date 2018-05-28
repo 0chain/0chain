@@ -78,7 +78,7 @@ func GetTransactions(ctx context.Context, r *http.Request) (interface{}, error) 
 		if !ok {
 			return true
 		}
-		if txn.ClientID == client_id_key || txn.ToClientID == client_id_key {
+		if datastore.IsEqual(txn.ClientID, client_id_key) || datastore.IsEqual(txn.ToClientID, client_id_key) {
 			txns = append(txns, txn)
 			if len(txns) > 5 {
 				return false

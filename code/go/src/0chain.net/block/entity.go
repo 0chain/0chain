@@ -65,7 +65,7 @@ func (b *Block) ComputeProperties() {
 	if b.Hash != "" {
 		b.ID = datastore.ToKey(b.Hash)
 	}
-	if b.ChainID == "" {
+	if datastore.IsEmpty(b.ChainID) {
 		b.ChainID = datastore.ToKey(config.GetMainChainID())
 	}
 }
@@ -76,7 +76,7 @@ func (b *Block) Validate(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if b.ID == "" {
+	if datastore.IsEmpty(b.ID) {
 		if b.Hash == "" {
 			return common.InvalidRequest("hash required for block")
 		}
@@ -84,10 +84,10 @@ func (b *Block) Validate(ctx context.Context) error {
 	if b.ID != datastore.ToKey(b.Hash) {
 		return common.NewError("id_hash_mismatch", "ID and Hash don't match")
 	}
-	if b.ID == "" {
+	if datastore.IsEmpty(b.ID) {
 		return common.InvalidRequest("block id is required")
 	}
-	if b.MinerID == "" {
+	if datastore.IsEmpty(b.MinerID) {
 		return common.InvalidRequest("miner id is required")
 	}
 	return nil
@@ -189,7 +189,7 @@ func (b *Block) ExpandBlock(ctx context.Context) {
  */
 func (b *Block) AddVerificationTicket(vt *VerificationTicket) bool {
 	for _, ivt := range b.VerificationTickets {
-		if vt.ID == ivt.ID {
+		if datastore.IsEqual(vt.ID, ivt.ID) {
 			return false
 		}
 	}

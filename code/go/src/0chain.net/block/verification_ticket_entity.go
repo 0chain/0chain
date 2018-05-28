@@ -33,7 +33,7 @@ func (bvt *BlockVerificationTicket) GetEntityName() string {
 
 /*Validate - implementing the interface */
 func (bvt *BlockVerificationTicket) Validate(ctx context.Context) error {
-	if bvt.ID == "" {
+	if datastore.IsEmpty(bvt.ID) {
 		return common.InvalidRequest("block_verification_ticket id is required")
 	}
 	return nil

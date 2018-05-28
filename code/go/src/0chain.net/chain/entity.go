@@ -52,10 +52,10 @@ func (c *Chain) GetEntityName() string {
 
 /*Validate - implementing the interface */
 func (c *Chain) Validate(ctx context.Context) error {
-	if c.ID == "" {
+	if datastore.IsEmpty(c.ID) {
 		return common.InvalidRequest("chain id is required")
 	}
-	if c.ClientID == "" {
+	if datastore.IsEmpty(c.ClientID) {
 		return common.InvalidRequest("client id is required")
 	}
 	return nil
