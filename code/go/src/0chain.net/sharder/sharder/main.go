@@ -105,13 +105,6 @@ func main() {
 	fmt.Printf("Num CPUs available %v\n", runtime.NumCPU())
 	fmt.Printf("Starting %v on %v for chain %v in %v mode ...\n", os.Args[0], address, config.GetServerChainID(), mode)
 
-	initEntities()
-	serverChain.SetupWorkers(ctx)
-	node.SetupN2NHandlers()
-	serverChain.SetupNodeHandlers()
-
-	initServer()
-	initHandlers()
 	/*
 		l, err := net.Listen("tcp", address)
 		if err != nil {
@@ -126,6 +119,17 @@ func main() {
 		WriteTimeout:   30 * time.Second,
 		MaxHeaderBytes: 1 << 20,
 	}
+	common.HandleShutdown(server)
+
+	initEntities()
+	serverChain.SetupWorkers(ctx)
+	node.SetupN2NHandlers()
+	serverChain.SetupNodeHandlers()
+
+	initServer()
+	initHandlers()
+
+	fmt.Printf("Ready to listen to the requests\n")
 	//log.Fatal(server.Serve(l))
 	log.Fatal(server.ListenAndServe())
 }
