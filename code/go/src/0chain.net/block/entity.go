@@ -1,12 +1,15 @@
 package block
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"time"
 
 	"0chain.net/common"
 	"0chain.net/config"
 	"0chain.net/datastore"
+	"0chain.net/encryption"
 	"0chain.net/node"
 	"0chain.net/transaction"
 )
@@ -205,4 +208,10 @@ func (b *Block) AddVerificationTicket(vt *VerificationTicket) bool {
 	}
 	b.VerificationTickets = append(b.VerificationTickets, vt)
 	return true
+}
+
+func (b *Block) HashBlock() {
+	buf := new(bytes.Buffer)
+	json.NewEncoder(buf).Encode(b.UnverifiedBlockBody)
+	b.Hash = encryption.Hash(buf.String())
 }

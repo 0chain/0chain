@@ -34,7 +34,7 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 			cancel = ccancel
 			switch r.Role {
 			case round.RoleGenerator:
-				go generateBlock(lctx, r)
+				go generateBlock(lctx, r, c)
 			case round.RoleVerifier:
 				go verifyBlock(lctx, r)
 			default:
@@ -44,8 +44,9 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 	}
 }
 
-func generateBlock(ctx context.Context, r *round.Round) {
-	r.Block.GenerateBlock(ctx)
+func generateBlock(ctx context.Context, r *round.Round, c *Chain) {
+	//c.LatestFinalizedBlock should be a specualtive block
+	r.Block.GenerateBlock(ctx, c.ID, c.LatestFinalizedBlock)
 }
 
 func verifyBlock(ctx context.Context, r *round.Round) {
