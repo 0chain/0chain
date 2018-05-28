@@ -18,6 +18,19 @@ import (
 	"github.com/golang/snappy"
 )
 
+/*SENDER - key used to get the connection object from the context */
+const SENDER common.ContextKey = "node.sender"
+
+/*WithNode takes a context and adds a connection value to it */
+func WithNode(ctx context.Context, node *Node) context.Context {
+	return context.WithValue(ctx, SENDER, node)
+}
+
+/*GetSender returns a connection stored in the context which got created via WithConnection */
+func GetSender(ctx context.Context) *Node {
+	return ctx.Value(SENDER).(*Node)
+}
+
 var (
 	HeaderRequestTimeStamp      = "X-Request-Timestamp"
 	HeaderRequestHashData       = "X-Request-Hashdata"
@@ -28,6 +41,7 @@ var (
 	HeaderRequestEntityID       = "X-Request-Entity-ID"
 	HeaderRequestChainID        = "X-Chain-Id"
 
+	HeaderInitialNodeID        = "X-Initial-Node-Id"
 	HeaderNodeID               = "X-Node-Id"
 	HeaderNodeRequestSignature = "X-Node-Request-Signature"
 )
@@ -38,13 +52,15 @@ type SendHandler func(n *Node) bool
 /*EntitySendHandler is used to send an entity to a given node */
 type EntitySendHandler func(entity datastore.Entity) SendHandler
 
-type ReceiveEntityHandlerF func(ctx context.Context, entity *datastore.Entity) (interface{}, error)
+type ReceiveEntityHandlerF func(ctx context.Context, entity datastore.Entity) (interface{}, error)
 
-/*SendAtleast - It tries to communicate to at least the given number of active nodes */
-func (np *Pool) SendAtleast(numNodes int, handler SendHandler) {
+/*SendAtleast - It tries to communicate to at least the given number of active nodes
+* TODO: May need to pass a context object so we can cancel at will. Also, for sending in parallel
+ */
+func (np *Pool) SendAtleast(numNodes int, handler SendHandler) []*Node {
 	const THRESHOLD = 2
 	nodes := np.shuffleNodes()
-
+	sentTo := make([]*Node, 0, numNodes)
 	validCount := 0
 	allCount := 0
 	for _, node := range nodes {
@@ -54,6 +70,7 @@ func (np *Pool) SendAtleast(numNodes int, handler SendHandler) {
 		allCount++
 		valid := handler(node)
 		if valid {
+			sentTo = append(sentTo, node)
 			validCount++
 			if validCount == numNodes {
 				break
@@ -63,10 +80,12 @@ func (np *Pool) SendAtleast(numNodes int, handler SendHandler) {
 			break
 		}
 	}
+	return sentTo
 }
 
-/*SetHeaders - sets the request headers */
-func SetHeaders(req *http.Request, entity datastore.Entity, maxRelayLength int64, currentRelayLength int64) bool {
+/*SetHeaders - sets the request headers
+ */
+func SetHeaders(req *http.Request, entity datastore.Entity, options *SendOptions) bool {
 	ts := common.Now()
 	hashdata := fmt.Sprintf("%v:%v:%v", Self.GetID(), ts, entity.GetKey())
 	hash := encryption.Hash(hashdata)
@@ -77,18 +96,20 @@ func SetHeaders(req *http.Request, entity datastore.Entity, maxRelayLength int64
 	}
 	req.Header.Set(HeaderRequestChainID, config.GetServerChainID())
 	req.Header.Set(HeaderNodeID, Self.GetID())
+	if options.InitialNodeID != "" {
+		req.Header.Set(HeaderInitialNodeID, options.InitialNodeID)
+	}
 	req.Header.Set(HeaderRequestTimeStamp, strconv.FormatInt(int64(ts), 10))
 	req.Header.Set(HeaderRequestHashData, hashdata)
 	req.Header.Set(HeaderRequestHash, hash)
 	req.Header.Set(HeaderNodeRequestSignature, signature)
-
-	if maxRelayLength > 0 {
-		req.Header.Set(HeaderRequestMaxRelayLength, strconv.FormatInt(maxRelayLength, 10))
-	}
-	req.Header.Set(HeaderRequestRelayLength, strconv.FormatInt(currentRelayLength, 10))
-
 	req.Header.Set(HeaderRequestEntityName, entity.GetEntityName())
 	req.Header.Set(HeaderRequestEntityID, datastore.ToString(entity.GetKey()))
+
+	if options.MaxRelayLength > 0 {
+		req.Header.Set(HeaderRequestMaxRelayLength, strconv.FormatInt(options.MaxRelayLength, 10))
+	}
+	req.Header.Set(HeaderRequestRelayLength, strconv.FormatInt(options.CurrentRelayLength, 10))
 	return true
 }
 
@@ -96,10 +117,11 @@ type SendOptions struct {
 	MaxRelayLength     int64
 	CurrentRelayLength int64
 	Compress           bool
+	InitialNodeID      string
 }
 
 /*SendEntityHandler provides a client API to send an entity */
-func SendEntityHandler(uri string, options SendOptions) EntitySendHandler {
+func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 	return func(entity datastore.Entity) SendHandler {
 		return func(n *Node) bool {
 			url := fmt.Sprintf("%v/%v", n.GetURLBase(), uri)
@@ -121,7 +143,7 @@ func SendEntityHandler(uri string, options SendOptions) EntitySendHandler {
 				req.Header.Set("Content-Encoding", "snappy")
 			}
 			req.Header.Set("Content-Type", "application/json; charset=utf-8")
-			SetHeaders(req, entity, options.MaxRelayLength, options.CurrentRelayLength)
+			SetHeaders(req, entity, options)
 			resp, err := client.Do(req)
 			if err != nil {
 				return false
@@ -156,7 +178,6 @@ func ToN2NReceiveEntityHandler(handler common.JSONEntityReqResponderF) common.Re
 			fmt.Printf("received request from unrecognized node %v\n", nodeID)
 			return
 		}
-
 		//TODO: check the timestamp?
 		//reqTS := r.Header.Get(HeaderRequestTimeStamp)
 		reqHashdata := r.Header.Get(HeaderRequestHashData)
@@ -197,6 +218,16 @@ func ToN2NReceiveEntityHandler(handler common.JSONEntityReqResponderF) common.Re
 			return
 		}
 		ctx := r.Context()
+		initialNodeId := r.Header.Get(HeaderInitialNodeID)
+		if initialNodeId != "" {
+			initSender := GetNode(initialNodeId)
+			if initSender == nil {
+				return
+			}
+			ctx = WithNode(ctx, initSender)
+		} else {
+			ctx = WithNode(ctx, sender)
+		}
 		data, err := handler(ctx, entity)
 		common.Respond(w, data, err)
 	}

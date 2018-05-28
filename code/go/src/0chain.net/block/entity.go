@@ -189,12 +189,12 @@ func (b *Block) ExpandBlock(ctx context.Context) {
  */
 func (b *Block) AddVerificationTicket(vt *VerificationTicket) bool {
 	for _, ivt := range b.VerificationTickets {
-		if datastore.IsEqual(vt.ID, ivt.ID) {
+		if datastore.IsEqual(vt.VerifierID, ivt.VerifierID) {
 			return false
 		}
 	}
 	//TODO: Assuming verifier_id is same as the node_id
-	nd := node.GetNode(datastore.ToString(vt.GetKey()))
+	nd := node.GetNode(datastore.ToString(vt.VerifierID))
 	// We don't have the verifier information
 	if nd == nil {
 		// TODO: If I am the miner of this block, I better try to do some work and get this verifier data

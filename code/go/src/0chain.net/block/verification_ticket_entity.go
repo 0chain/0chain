@@ -9,8 +9,8 @@ import (
 
 /*VerificationTicket - verification ticket for the block */
 type VerificationTicket struct {
-	datastore.IDField
-	Signature string `json:"signature"`
+	VerifierID datastore.Key `json:"verifier_id"`
+	Signature  string        `json:"signature"`
 }
 
 /*BlockVerificationTicket - verification ticket with the block id.
@@ -24,19 +24,31 @@ type BlockVerificationTicket struct {
 }
 
 /*TODO: Making BlockVerificationTicket an entity for now as N2N handler framework uses entity.
-* May be we get rid of the entity requirement later */
+* May be we get rid of the entity requirement later as there is no true ID for this */
 
 /*GetEntityName - implementing the interface */
 func (bvt *BlockVerificationTicket) GetEntityName() string {
 	return "block_verification_ticket"
 }
 
+/*ComputeProperties - implementing the interface */
+func (bvt *BlockVerificationTicket) ComputeProperties() {
+}
+
 /*Validate - implementing the interface */
 func (bvt *BlockVerificationTicket) Validate(ctx context.Context) error {
-	if datastore.IsEmpty(bvt.ID) {
+	if datastore.IsEmpty(bvt.VerifierID) {
 		return common.InvalidRequest("block_verification_ticket id is required")
 	}
 	return nil
+}
+
+func (bvt *BlockVerificationTicket) GetKey() datastore.Key {
+	return datastore.EmptyKey
+}
+
+func (bvt *BlockVerificationTicket) SetKey(key datastore.Key) {
+
 }
 
 /*Read - datastore read */

@@ -43,6 +43,8 @@ type Chain struct {
 	RoundsChannel        chan *round.Round `json:"-"`
 	LatestFinalizedBlock *block.Block      `json:"latest_finalized_block,omitempty"` // Latest block on the chain the program is aware of
 
+	// Max round seen so far
+	MaxRound int64 `json:"-"`
 }
 
 /*GetEntityName - implementing the interface */

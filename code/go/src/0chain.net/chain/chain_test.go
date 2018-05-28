@@ -16,7 +16,7 @@ import (
 	"0chain.net/transaction"
 )
 
-func TestChainSetupWorker(t *testing.T) {
+func BenchmarkChainSetupWorker(b *testing.B) {
 	common.SetupRootContext(node.GetNodeContext())
 	block.SetupEntity()
 	SetupEntity()
