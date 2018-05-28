@@ -16,6 +16,7 @@ import (
 	"0chain.net/config"
 	"0chain.net/datastore"
 	"0chain.net/encryption"
+	"0chain.net/miner"
 	"0chain.net/node"
 	"0chain.net/transaction"
 )
@@ -60,6 +61,7 @@ func main() {
 	serverChain := chain.Provider().(*chain.Chain)
 	serverChain.ID = datastore.ToKey(config.GetServerChainID())
 	chain.SetServerChain(serverChain)
+	miner.SetupMinerChain(serverChain)
 
 	config.Configuration.Host = *host
 	config.Configuration.Port = *port

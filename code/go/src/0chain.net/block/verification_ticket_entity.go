@@ -31,6 +31,15 @@ func (bvt *BlockVerificationTicket) GetEntityName() string {
 	return "block_verification_ticket"
 }
 
+/*GetKey - implementing the interface */
+func (bvt *BlockVerificationTicket) GetKey() datastore.Key {
+	return datastore.EmptyKey
+}
+
+/*SetKey - implementing the interface */
+func (bvt *BlockVerificationTicket) SetKey(key datastore.Key) {
+}
+
 /*ComputeProperties - implementing the interface */
 func (bvt *BlockVerificationTicket) ComputeProperties() {
 }
@@ -41,14 +50,6 @@ func (bvt *BlockVerificationTicket) Validate(ctx context.Context) error {
 		return common.InvalidRequest("block_verification_ticket id is required")
 	}
 	return nil
-}
-
-func (bvt *BlockVerificationTicket) GetKey() datastore.Key {
-	return datastore.EmptyKey
-}
-
-func (bvt *BlockVerificationTicket) SetKey(key datastore.Key) {
-
 }
 
 /*Read - datastore read */

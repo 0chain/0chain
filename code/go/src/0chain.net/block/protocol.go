@@ -15,7 +15,7 @@ var BLOCK_SIZE = 250000
 * The context should be a background context which can be used to stop this logic if there is a new
 * block published while working on this
  */
-func (b *Block) GenerateBlock(ctx context.Context, chainID string, prevBlock *Block) error {
+func (b *Block) GenerateBlock(ctx context.Context) error {
 	txns := make([]*transaction.Transaction, BLOCK_SIZE)
 	b.Txns = &txns
 	//TODO: wasting this because we []interface{} != []*transaction.Transaction in Go
@@ -26,13 +26,6 @@ func (b *Block) GenerateBlock(ctx context.Context, chainID string, prevBlock *Bl
 		b.MinerID = self.ID
 	}
 	b.Round = 0
-	b.ChainID = chainID
-	if prevBlock != nil {
-		b.PrevBlock = prevBlock
-		b.PrevHash = prevBlock.Hash
-		b.Round = prevBlock.Round + 1
-		b.PrevBlockVerficationTickets = prevBlock.VerificationTickets
-	}
 	var txnIterHandler = func(ctx context.Context, qe datastore.CollectionEntity) bool {
 		select {
 		case <-ctx.Done():

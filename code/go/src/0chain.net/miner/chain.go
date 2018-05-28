@@ -13,10 +13,16 @@ import (
 NOTE: This is all work in progress. All of it might change.
 */
 
-var MinerChain = &Chain{}
+var minerChain = &Chain{}
 
+/*SetupMinerChain - setup the miner's chain */
+func SetupMinerChain(c *chain.Chain) {
+	minerChain.Chain = *c
+}
+
+/*GetMinerChain - get the miner's chain */
 func GetMinerChain() *Chain {
-	return MinerChain
+	return minerChain
 }
 
 /*Chain - A miner chain is a chain that also tracks all the speculative SpeculativeChains and Blocks */

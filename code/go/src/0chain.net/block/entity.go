@@ -28,10 +28,6 @@ type UnverifiedBlockBody struct {
 	Round   int64         `json:"round"`
 	ChainID datastore.Key `json:"chain_id"`
 
-	// TODO: Float can mess up signature due to precision
-	// Also, do we need Weight as part of the Unverified Block Body? Who would care about this?
-	Weight float64 `json:"weight"`
-
 	// We only need either Txns or TxnHashes but not both
 	// The entire transaction payload to represent full block
 	Txns *[]*transaction.Transaction `json:"transactions,omitempty"`
@@ -48,6 +44,11 @@ type VerifiedBlockBody struct {
 	Hash                string                `json:"hash"`
 	Signature           string                `json:"signature"`
 	VerificationTickets []*VerificationTicket `json:"verification_tickets"`
+
+	/*Weight is not part of the block signature. It is later determined per the ranking protocol
+	and the highest weight block will win. This ensures all the generators will try to create blocks
+	as they don't upfront know whether their block wins or not */
+	Weight int64 `json:"weight"`
 }
 
 /*Block - data structure that holds the block data*/
@@ -135,6 +136,13 @@ func SetupEntity() {
 	blockEntityCollection = &datastore.EntityCollection{CollectionName: "collection.block", CollectionSize: 1000, CollectionDuration: time.Hour}
 }
 
+func (b *Block) SetPreviousBlock(prevBlock *Block) {
+	b.PrevBlock = prevBlock
+	b.PrevHash = prevBlock.Hash
+	b.Round = prevBlock.Round + 1
+	b.PrevBlockVerficationTickets = prevBlock.VerificationTickets
+}
+
 /*GetPreviousBlock - returns the previous block */
 func (b *Block) GetPreviousBlock() *Block {
 	if b.PrevBlock != nil {
@@ -146,13 +154,14 @@ func (b *Block) GetPreviousBlock() *Block {
 }
 
 /*GetWeight - Get the weight/score of this block */
-func (b *Block) GetWeight() float64 {
+func (b *Block) GetWeight() int64 {
 	return b.Weight
 }
 
 /*AddTransaction - add a transaction to the block */
 func (b *Block) AddTransaction(t *transaction.Transaction) {
-	b.Weight += t.GetWeight()
+	// For now this does nothign. May be we don't need. Txn can't influence the weight of the block, or else,
+	// everyone will try to maximize the block which is not good
 }
 
 /*CompactBlock - Get rid of transaction objects but ensure txn hashes are stored */

@@ -113,6 +113,7 @@ func SetHeaders(req *http.Request, entity datastore.Entity, options *SendOptions
 	return true
 }
 
+/*SendOptions - options to tune how the messages are sent within the network */
 type SendOptions struct {
 	MaxRelayLength     int64
 	CurrentRelayLength int64
@@ -200,6 +201,7 @@ func ToN2NReceiveEntityHandler(handler common.JSONEntityReqResponderF) common.Re
 			return
 		}
 		var buffer io.Reader = r.Body
+		defer r.Body.Close()
 		if r.Header.Get("Content-Encoding") == "snappy" {
 			cbuffer := new(bytes.Buffer)
 			cbuffer.ReadFrom(r.Body)
