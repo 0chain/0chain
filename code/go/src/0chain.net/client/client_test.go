@@ -42,7 +42,7 @@ func postClient(publicKey string, done chan<- bool) {
 		fmt.Printf("it's not ok!\n")
 	}
 	client.PublicKey = publicKey
-	client.SetKey(encryption.Hash(client.PublicKey))
+	client.SetKey(datastore.ToKey(encryption.Hash(client.PublicKey)))
 
 	//ctx := datastore.WithAsyncChannel(context.Background(), ClientEntityChannel)
 	ctx := datastore.WithConnection(context.Background())

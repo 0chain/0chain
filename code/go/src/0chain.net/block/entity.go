@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"0chain.net/common"
+	"0chain.net/config"
 	"0chain.net/datastore"
 	"0chain.net/node"
 	"0chain.net/transaction"
@@ -20,9 +21,9 @@ type UnverifiedBlockBody struct {
 	PrevHash                    string                `json:"prev_hash"`
 	PrevBlockVerficationTickets []*VerificationTicket `json:"prev_verification_tickets"`
 
-	MinerID string `json:"miner_id"` // TODO: Is miner_id & node_id same?
-	Round   int64  `json:"round"`
-	ChainID string `json:"chain_id"`
+	MinerID datastore.Key `json:"miner_id"` // TODO: Is miner_id & node_id same?
+	Round   int64         `json:"round"`
+	ChainID datastore.Key `json:"chain_id"`
 
 	// TODO: Float can mess up signature due to precision
 	// Also, do we need Weight as part of the Unverified Block Body? Who would care about this?
@@ -59,15 +60,28 @@ func (b *Block) GetEntityName() string {
 	return "block"
 }
 
+/*ComputeProperties - Entity implementation */
+func (b *Block) ComputeProperties() {
+	if b.Hash != "" {
+		b.ID = datastore.ToKey(b.Hash)
+	}
+	if b.ChainID == "" {
+		b.ChainID = datastore.ToKey(config.GetMainChainID())
+	}
+}
+
 /*Validate - implementing the interface */
 func (b *Block) Validate(ctx context.Context) error {
+	err := config.ValidChain(datastore.ToString(b.ChainID))
+	if err != nil {
+		return err
+	}
 	if b.ID == "" {
 		if b.Hash == "" {
 			return common.InvalidRequest("hash required for block")
 		}
-		b.ID = b.Hash
 	}
-	if b.ID != b.Hash {
+	if b.ID != datastore.ToKey(b.Hash) {
 		return common.NewError("id_hash_mismatch", "ID and Hash don't match")
 	}
 	if b.ID == "" {
@@ -80,7 +94,7 @@ func (b *Block) Validate(ctx context.Context) error {
 }
 
 /*Read - datastore read */
-func (b *Block) Read(ctx context.Context, key string) error {
+func (b *Block) Read(ctx context.Context, key datastore.Key) error {
 	return datastore.Read(ctx, key, b)
 }
 
@@ -180,7 +194,7 @@ func (b *Block) AddVerificationTicket(vt *VerificationTicket) bool {
 		}
 	}
 	//TODO: Assuming verifier_id is same as the node_id
-	nd := node.GetNode(vt.StringKey())
+	nd := node.GetNode(datastore.ToString(vt.GetKey()))
 	// We don't have the verifier information
 	if nd == nil {
 		// TODO: If I am the miner of this block, I better try to do some work and get this verifier data

@@ -116,7 +116,7 @@ func CreateTransaction(httpclient *http.Client, client Client) bool {
 }
 
 func main() {
-	address := flag.String("address", "localhohst:7070", "address")
+	address := flag.String("address", "localhost:7070", "address")
 	numClients := flag.Int("num_clients", 100, "num_clients")
 	numTxns := flag.Int("num_txns", 1000, "num_txns")
 	maxConcurrentClients := flag.Int("max_concurrent_users", 100, "max_concurrent_users")

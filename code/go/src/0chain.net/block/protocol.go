@@ -3,6 +3,7 @@ package block
 import (
 	"context"
 
+	"0chain.net/common"
 	"0chain.net/datastore"
 	"0chain.net/transaction"
 )
@@ -30,6 +31,7 @@ func (b *Block) GenerateBlock(ctx context.Context) error {
 		if !ok {
 			return true
 		}
+
 		if txn.Status != transaction.TXN_STATUS_FREE {
 			return true
 		}
@@ -52,7 +54,14 @@ func (b *Block) GenerateBlock(ctx context.Context) error {
 	txn.ChainID = b.ChainID
 	collectionName := txn.GetCollectionName()
 	err := datastore.IterateCollection(ctx, collectionName, txnIterHandler, transaction.Provider)
-	return err
+	if err != nil {
+		return err
+	}
+	if idx != BLOCK_SIZE {
+		b.Txns = nil
+		return common.NewError("insufficient_txns", "Not sufficient txns to make a block yet\n")
+	}
+	return nil
 }
 
 /*UpdateTxnsToPending - marks all the given transactions to pending */

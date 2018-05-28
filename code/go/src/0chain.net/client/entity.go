@@ -23,17 +23,17 @@ func (c *Client) GetEntityName() string {
 
 /*Validate - implementing the interface */
 func (c *Client) Validate(ctx context.Context) error {
-	if c.ID == "" {
+	if datastore.IsEmpty(c.ID) {
 		return common.InvalidRequest("client id is required")
 	}
-	if c.ID != encryption.Hash(c.PublicKey) {
+	if !datastore.IsEqual(c.ID, datastore.ToKey(encryption.Hash(c.PublicKey))) {
 		return common.InvalidRequest("client id is not a SHA3-256 hash of the public key")
 	}
 	return nil
 }
 
 /*Read - datastore read */
-func (c *Client) Read(ctx context.Context, key string) error {
+func (c *Client) Read(ctx context.Context, key datastore.Key) error {
 	return datastore.Read(ctx, key, c)
 }
 

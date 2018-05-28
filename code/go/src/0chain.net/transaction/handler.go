@@ -65,6 +65,7 @@ func PutTransaction(ctx context.Context, object interface{}) (interface{}, error
  */
 func GetTransactions(ctx context.Context, r *http.Request) (interface{}, error) {
 	client_id := r.FormValue("client_id")
+	client_id_key := datastore.ToKey(client_id)
 	txns := make([]*Transaction, 0, 1)
 	var txnIterHandler = func(ctx context.Context, qe datastore.CollectionEntity) bool {
 		select {
@@ -77,7 +78,7 @@ func GetTransactions(ctx context.Context, r *http.Request) (interface{}, error) 
 		if !ok {
 			return true
 		}
-		if txn.ClientID == client_id || txn.ToClientID == client_id {
+		if txn.ClientID == client_id_key || txn.ToClientID == client_id_key {
 			txns = append(txns, txn)
 			if len(txns) > 5 {
 				return false
@@ -86,7 +87,7 @@ func GetTransactions(ctx context.Context, r *http.Request) (interface{}, error) 
 		return true
 	}
 	txn := Provider().(*Transaction)
-	txn.ChainID = config.GetServerChainID()
+	txn.ChainID = datastore.ToKey(config.GetServerChainID())
 	collectionName := txn.GetCollectionName()
 	//TODO: 10 seconds is a lot but OK for testing.
 	//But because this is off of redis and we don't have good filtering capability, we have to settle for large time.

@@ -53,3 +53,12 @@ func GetServerChainID() string {
 	}
 	return ServerChainID
 }
+
+/*ValidChain - Is this the chain this server is supposed to process? */
+func ValidChain(chain string) error {
+	result := chain == ServerChainID || (chain == "" && ServerChainID == MAIN_CHAIN)
+	if result {
+		return nil
+	}
+	return ErrSupportedChain
+}

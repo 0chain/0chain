@@ -10,6 +10,7 @@ import (
 	"0chain.net/client"
 	"0chain.net/common"
 	"0chain.net/config"
+	"0chain.net/datastore"
 	"0chain.net/node"
 	"0chain.net/round"
 	"0chain.net/transaction"
@@ -26,14 +27,14 @@ func TestChainSetupWorker(t *testing.T) {
 	gb.Hash = block.GenesisBlockHash
 	gb.Round = 0
 	c := Provider().(*Chain)
-	c.ID = config.GetServerChainID()
+	c.ID = datastore.ToKey(config.GetServerChainID())
 	SetServerChain(c)
-	gb.ChainID = fmt.Sprintf("%v", c.ID)
+	gb.ChainID = c.GetKey()
 	c.LatestFinalizedBlock = gb
 	c.SetupWorkers(common.GetRootContext())
 
 	block.BLOCK_SIZE = 1 // Just for testing
-	timer := time.NewTimer(10 * time.Second)
+	timer := time.NewTimer(5 * time.Second)
 	startTime := time.Now()
 	go RoundLogic(common.GetRootContext(), c)
 	ts := <-timer.C
@@ -54,14 +55,14 @@ func RoundLogic(ctx context.Context, c *Chain) {
 			return
 		case <-ticker.C:
 			fmt.Printf("round: %v\n", r)
-			if r.Block != nil {
+			if r.Block != nil && r.Block.Txns != nil {
 				for idx, txn := range *r.Block.Txns {
 					fmt.Printf("txn(%v): %v\n", idx, txn)
 				}
 			}
 			r.Number++
 			b := block.Provider().(*block.Block)
-			b.ChainID = config.GetServerChainID()
+			b.ChainID = GetServerChain().GetKey()
 			r.Block = b
 			if r.Role == round.RoleVerifier {
 				r.Role = round.RoleGenerator

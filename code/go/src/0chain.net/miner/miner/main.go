@@ -14,6 +14,7 @@ import (
 	"0chain.net/client"
 	"0chain.net/common"
 	"0chain.net/config"
+	"0chain.net/datastore"
 	"0chain.net/encryption"
 	"0chain.net/node"
 	"0chain.net/transaction"
@@ -57,7 +58,7 @@ func main() {
 	address := fmt.Sprintf("%v:%v", *host, *port)
 	config.SetServerChainID(*chainID)
 	serverChain := chain.Provider().(*chain.Chain)
-	serverChain.ID = config.GetServerChainID()
+	serverChain.ID = datastore.ToKey(config.GetServerChainID())
 	chain.SetServerChain(serverChain)
 
 	config.Configuration.Host = *host

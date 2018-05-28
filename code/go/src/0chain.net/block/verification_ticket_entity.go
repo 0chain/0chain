@@ -20,7 +20,7 @@ type VerificationTicket struct {
  */
 type BlockVerificationTicket struct {
 	VerificationTicket
-	BlockID string `json:"block_id"`
+	BlockID datastore.Key `json:"block_id"`
 }
 
 /*TODO: Making BlockVerificationTicket an entity for now as N2N handler framework uses entity.
@@ -40,7 +40,7 @@ func (bvt *BlockVerificationTicket) Validate(ctx context.Context) error {
 }
 
 /*Read - datastore read */
-func (bvt *BlockVerificationTicket) Read(ctx context.Context, key string) error {
+func (bvt *BlockVerificationTicket) Read(ctx context.Context, key datastore.Key) error {
 	return datastore.Read(ctx, key, bvt)
 }
 

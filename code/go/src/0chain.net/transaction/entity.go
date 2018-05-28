@@ -17,17 +17,18 @@ import (
 type Transaction struct {
 	datastore.CollectionIDField
 	Hash            string           `json:"hash"`
-	ClientID        string           `json:"client_id"`
-	ToClientID      string           `json:"to_client_id,omitempty"`
-	ChainID         string           `json:"chain_id,omitempty"`
+	ClientID        datastore.Key    `json:"client_id"`
+	ToClientID      datastore.Key    `json:"to_client_id,omitempty"`
+	ChainID         datastore.Key    `json:"chain_id,omitempty"`
 	TransactionData string           `json:"transaction_data"`
 	Value           int64            `json:"transaction_value"` // The value associated with this transaction
 	Signature       string           `json:"signature"`
 	CreationDate    common.Timestamp `json:"creation_date"`
 	Status          byte             `json:"status"`
-	BlockID         interface{}      `json:"block_id,omitempty"` // This is the block that finalized this transaction
-	Client          *client.Client   `json:"-"`
-	ToClient        *client.Client   `json:"-"`
+	BlockID         datastore.Key    `json:"block_id,omitempty"` // This is the block that finalized this transaction
+
+	Client   *client.Client `json:"-"`
+	ToClient *client.Client `json:"-"`
 }
 
 const (
@@ -46,27 +47,34 @@ func (t *Transaction) GetEntityName() string {
 	return "txn"
 }
 
+/*ComputeProperties - Entity implementation */
+func (t *Transaction) ComputeProperties() {
+	if t.Hash != "" {
+		t.ID = datastore.ToKey(t.Hash)
+	}
+	if datastore.IsEmpty(t.ChainID) {
+		t.ChainID = datastore.ToKey(config.GetMainChainID())
+	}
+}
+
 /*Validate - Entity implementation */
 func (t *Transaction) Validate(ctx context.Context) error {
-	/* TODO: Circular Dependency
-	err := chain.ValidChain(t.ChainID)
+	err := config.ValidChain(datastore.ToString(t.ChainID))
 	if err != nil {
 		return err
-	}*/
-	if t.ID == "" {
-		if t.Hash == "" {
-			return common.InvalidRequest("hash required for transaction")
-		}
-		t.ID = t.Hash
-	} else if t.ID != t.Hash {
+	}
+	if t.Hash == "" {
+		return common.InvalidRequest("hash required for transaction")
+	}
+	if t.ID != datastore.ToKey(t.Hash) {
 		return common.NewError("id_hash_mismatch", "ID and Hash don't match")
 	}
 
-	if t.ChainID != config.GetServerChainID() {
+	if t.ChainID != datastore.ToKey(config.GetServerChainID()) {
 		return config.ErrSupportedChain
 	}
 
-	err := t.VerifyHash(ctx)
+	err = t.VerifyHash(ctx)
 	if err == nil {
 		err = t.VerifySignature(ctx)
 	}
@@ -76,18 +84,8 @@ func (t *Transaction) Validate(ctx context.Context) error {
 	return nil
 }
 
-/*ComputeProperties - Entity implementation */
-func (t *Transaction) ComputeProperties() {
-	if t.Hash != "" {
-		t.ID = t.Hash
-	}
-	if t.ChainID == "" {
-		t.ChainID = config.GetMainChainID()
-	}
-}
-
 /*Read - datastore read */
-func (t *Transaction) Read(ctx context.Context, key string) error {
+func (t *Transaction) Read(ctx context.Context, key datastore.Key) error {
 	return datastore.Read(ctx, key, t)
 }
 
@@ -111,7 +109,7 @@ func (t *Transaction) GetCollectionName() string {
 /*GetClient - get the Client object associated with the transaction */
 func (t *Transaction) GetClient(ctx context.Context) (*client.Client, error) {
 	co := &client.Client{}
-	err := datastore.Read(ctx, t.ClientID, co)
+	err := datastore.Read(ctx, datastore.ToKey(t.ClientID), co)
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +157,7 @@ func Provider() interface{} {
 	c.EntityCollection = txnEntityCollection
 	c.Status = TXN_STATUS_FREE
 	c.CreationDate = common.Now()
-	c.ChainID = config.GetMainChainID()
+	c.ChainID = datastore.ToKey(config.GetMainChainID())
 	return c
 }
 

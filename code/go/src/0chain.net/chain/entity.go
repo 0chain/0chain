@@ -2,11 +2,9 @@ package chain
 
 import (
 	"context"
-	"fmt"
 
 	"0chain.net/block"
 	"0chain.net/common"
-	"0chain.net/config"
 	"0chain.net/datastore"
 	"0chain.net/node"
 	"0chain.net/round"
@@ -29,9 +27,9 @@ func GetServerChain() *Chain {
 type Chain struct {
 	datastore.IDField
 	datastore.CreationDateField
-	ClientID      string `json:"client_id"`                 // Client who created this chain
-	ParentChainID string `json:"parent_chain_id,omitempty"` // Chain from which this chain is forked off
-	Decimals      int8   `json:"decimals"`                  // Number of decimals allowed for the token on this chain
+	ClientID      datastore.Key `json:"client_id"`                 // Client who created this chain
+	ParentChainID datastore.Key `json:"parent_chain_id,omitempty"` // Chain from which this chain is forked off
+	Decimals      int8          `json:"decimals"`                  // Number of decimals allowed for the token on this chain
 
 	/*Miners - this is the pool of miners */
 	Miners *node.Pool `json:"-"`
@@ -64,7 +62,7 @@ func (c *Chain) Validate(ctx context.Context) error {
 }
 
 /*Read - datastore read */
-func (c *Chain) Read(ctx context.Context, key string) error {
+func (c *Chain) Read(ctx context.Context, key datastore.Key) error {
 	return datastore.Read(ctx, key, c)
 }
 
@@ -94,15 +92,6 @@ func SetupEntity() {
 	datastore.RegisterEntityProvider("chain", Provider)
 }
 
-/*ValidChain - Is this the chain this server is supposed to process? */
-func ValidChain(chain string) error {
-	result := chain == config.ServerChainID || (chain == "" && config.ServerChainID == config.MAIN_CHAIN)
-	if result {
-		return nil
-	}
-	return config.ErrSupportedChain
-}
-
 /*UpdateFinalizedBlock - update the latest finalized block */
 func (c *Chain) UpdateFinalizedBlock(lfb *block.Block) {
 	if lfb.Hash == c.LatestFinalizedBlock.Hash {
@@ -117,16 +106,4 @@ func (c *Chain) UpdateFinalizedBlock(lfb *block.Block) {
 /*GetRoundsChannel - a channel that provides the round messages */
 func (c *Chain) GetRoundsChannel() chan *round.Round {
 	return c.RoundsChannel
-}
-
-func GetChain(chainID interface{}) *Chain {
-	c := GetServerChain()
-
-	gb := block.Provider().(*block.Block)
-	gb.Hash = block.GenesisBlockHash
-	gb.Round = 0
-	gb.ChainID = fmt.Sprintf("%v", c.ID) // TODO: Cleanup the interface/string/key mess
-
-	c.LatestFinalizedBlock = gb
-	return c
 }

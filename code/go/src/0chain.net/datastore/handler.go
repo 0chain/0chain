@@ -56,7 +56,7 @@ func GetEntityHandler(ctx context.Context, r *http.Request, entityProvider commo
 	if !ok {
 		return nil, common.NewError("dev_error", "Invalid entity provider")
 	}
-	err := entity.Read(ctx, id)
+	err := entity.Read(ctx, ToKey(id))
 	if err != nil {
 		return nil, err
 	}

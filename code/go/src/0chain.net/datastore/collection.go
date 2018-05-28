@@ -43,8 +43,8 @@ type EntityCollection struct {
 }
 
 /*GetCollectionName - Given an partitioning key (such as parent key), returns the key for the collection */
-func (eq *EntityCollection) GetCollectionName(parent string) string {
-	if parent == "" {
+func (eq *EntityCollection) GetCollectionName(parent Key) string {
+	if IsEmpty(parent) {
 		return eq.CollectionName
 	}
 	return fmt.Sprintf("%s:%s", eq.CollectionName, parent)
@@ -147,6 +147,7 @@ const BATCH_SIZE = 100
 func IterateCollection(ctx context.Context, collectionName string, handler CollectionIteratorHandler, entityProvider common.EntityProvider) error {
 	con := GetCon(ctx)
 	bucket := make([]Entity, BATCH_SIZE)
+	keys := make([]Key, BATCH_SIZE)
 	maxscore := math.MaxInt64
 	offset := 0
 	proceed := true
@@ -165,8 +166,10 @@ func IterateCollection(ctx context.Context, collectionName string, handler Colle
 		}
 		for bidx := range bkeys {
 			bucket[bidx] = entityProvider().(Entity)
+			keys[bidx] = ToKey(bkeys[bidx])
 		}
-		err = MultiRead(ctx, bkeys, bucket)
+
+		err = MultiRead(ctx, keys[:len(bkeys)], bucket)
 		if err != nil {
 			return err
 		}

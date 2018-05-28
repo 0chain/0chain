@@ -33,35 +33,62 @@ func GetProvider(entityName string) common.EntityProvider {
 /*Entity - interface that reads and writes any implementing structure as JSON into the store */
 type Entity interface {
 	GetEntityName() string
-	SetKey(key interface{})
-	GetKey() interface{}
-	GetStringKey() string
+	SetKey(key Key)
+	GetKey() Key
 	Validate(ctx context.Context) error
-	Read(ctx context.Context, key string) error
+	Read(ctx context.Context, key Key) error
 	Write(ctx context.Context) error
 	Delete(ctx context.Context) error
 	ComputeProperties()
 }
 
+/*Key - a type for the entity key */
+type Key = string
+
+/*ToString - return string representation of the key */
+func ToString(key Key) string {
+	return string(key)
+}
+
+func IsEmpty(key Key) bool {
+	return len(key) == 0
+}
+
+func IsEqual(key1 Key, key2 Key) bool {
+   return key1 == key2
+}
+
+/*EmptyKey - Represents an empty key */
+var EmptyKey = Key("")
+
+/*ToKey - takes an interface and returns a Key */
+func ToKey(key interface{}) Key {
+	switch v := key.(type) {
+	case string:
+		return Key(v)
+	case []byte:
+		return Key(v)
+	default:
+		return Key(fmt.Sprintf("%v", v))
+	}
+}
+
 /*IDField - Useful to embed this into all the entities and get consistent behavior */
 type IDField struct {
-	ID interface{} `json:"id"`
+	ID Key `json:"id"`
 }
 
 /*SetKey sets the key */
-func (k *IDField) SetKey(key interface{}) {
+func (k *IDField) SetKey(key Key) {
 	k.ID = key
 }
 
 /*GetKey returns the key for the entity */
-func (k *IDField) GetKey() interface{} {
+func (k *IDField) GetKey() Key {
 	return k.ID
 }
 
-func (k *IDField) GetStringKey() string {
-	return fmt.Sprintf("%v", k.ID)
-}
-
+/*Validate - just an abstract implementation */
 func (k *IDField) Validate(ctx context.Context) error {
 	return nil
 }
@@ -99,12 +126,17 @@ func (cd *CreationDateField) GetCreationTime() common.Timestamp {
 }
 
 /*GetEntityKey = entity name + entity id */
-func GetEntityKey(entity Entity) string {
-	return fmt.Sprintf("%s:%s", entity.GetEntityName(), entity.GetKey())
+func GetEntityKey(entity Entity) Key {
+	var key interface{} = entity.GetKey()
+	switch v := key.(type) {
+	case string: 	return ToKey(fmt.Sprintf("%s:%v", entity.GetEntityName(), v))
+	case []byte: return ToKey(append(append([]byte(entity.GetEntityName()),':'),v...))
+	default: return EmptyKey
+	}
 }
 
 /*Read an entity from the store by providing the key */
-func Read(ctx context.Context, key interface{}, entity Entity) error {
+func Read(ctx context.Context, key Key, entity Entity) error {
 	entity.SetKey(key)
 	redisKey := GetEntityKey(entity)
 	c := GetCon(ctx)
@@ -196,11 +228,11 @@ func AllocateEntities(size int, entityProvider common.EntityProvider) ([]Entity,
 }
 
 /*MultiRead - allows reading multiple entities at the same time */
-func MultiRead(ctx context.Context, keys []interface{}, entities []Entity) error {
+func MultiRead(ctx context.Context, keys []Key, entities []Entity) error {
 	rkeys := make([]interface{}, len(keys))
 	for idx, key := range keys {
 		entity := entities[idx]
-		entity.SetKey(key)
+		entity.SetKey(ToKey(key))
 		rkeys[idx] = GetEntityKey(entity)
 	}
 	c := GetCon(ctx)
@@ -220,7 +252,7 @@ func MultiRead(ctx context.Context, keys []interface{}, entities []Entity) error
 			instead setting key to nil
 			entities[idx] = nil
 			*/
-			entities[idx].SetKey(nil)
+			entities[idx].SetKey(EmptyKey)
 			continue
 		}
 		entity := entities[idx]

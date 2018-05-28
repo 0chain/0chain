@@ -58,7 +58,7 @@ func (c *Company) Validate(ctx context.Context) error {
 	return nil
 }
 
-func (c *Company) Read(ctx context.Context, id string) error {
+func (c *Company) Read(ctx context.Context, id datastore.Key) error {
 	return datastore.Read(ctx, id, c)
 }
 
@@ -74,12 +74,12 @@ func (c *Company) Delete(ctx context.Context) error {
 func TestNode2NodeCommunication(t *testing.T) {
 	publicKey, _ := encryption.GenerateKeys()
 	entity := client.Provider().(*client.Client)
-	entity.ID = encryption.Hash(publicKey)
+	entity.ID = datastore.ToKey(encryption.Hash(publicKey))
 	entity.PublicKey = publicKey
 
-	n1 := &Node{ID: "node1", Type: NodeTypeMiner, Host: "", Port: 7071, Status: NodeStatusActive}
-	n2 := &Node{ID: "node2", Type: NodeTypeMiner, Host: "", Port: 7072, Status: NodeStatusActive}
-	n3 := &Node{ID: "node3", Type: NodeTypeMiner, Host: "", Port: 7073, Status: NodeStatusActive}
+	n1 := &Node{ID: "mnode1", Type: NodeTypeMiner, Host: "", Port: 7071, Status: NodeStatusActive}
+	n2 := &Node{ID: "mnode2", Type: NodeTypeMiner, Host: "", Port: 7072, Status: NodeStatusActive}
+	n3 := &Node{ID: "mnode3", Type: NodeTypeMiner, Host: "", Port: 7073, Status: NodeStatusActive}
 
 	Self = &SelfNode{}
 	Self.Node = n1

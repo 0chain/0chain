@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"0chain.net/common"
+	"0chain.net/config"
 	"0chain.net/datastore"
 	"0chain.net/encryption"
 	"github.com/golang/snappy"
@@ -25,6 +26,7 @@ var (
 	HeaderRequestMaxRelayLength = "X-Request-Max-Relay-Length"
 	HeaderRequestEntityName     = "X-Request-Entity-Name"
 	HeaderRequestEntityID       = "X-Request-Entity-ID"
+	HeaderRequestChainID        = "X-Chain-Id"
 
 	HeaderNodeID               = "X-Node-Id"
 	HeaderNodeRequestSignature = "X-Node-Request-Signature"
@@ -73,6 +75,7 @@ func SetHeaders(req *http.Request, entity datastore.Entity, maxRelayLength int64
 	if err != nil {
 		return false
 	}
+	req.Header.Set(HeaderRequestChainID, config.GetServerChainID())
 	req.Header.Set(HeaderNodeID, Self.GetID())
 	req.Header.Set(HeaderRequestTimeStamp, strconv.FormatInt(int64(ts), 10))
 	req.Header.Set(HeaderRequestHashData, hashdata)
@@ -85,7 +88,7 @@ func SetHeaders(req *http.Request, entity datastore.Entity, maxRelayLength int64
 	req.Header.Set(HeaderRequestRelayLength, strconv.FormatInt(currentRelayLength, 10))
 
 	req.Header.Set(HeaderRequestEntityName, entity.GetEntityName())
-	req.Header.Set(HeaderRequestEntityID, entity.GetStringKey())
+	req.Header.Set(HeaderRequestEntityID, datastore.ToString(entity.GetKey()))
 	return true
 }
 
@@ -141,6 +144,12 @@ func ToN2NReceiveEntityHandler(handler common.JSONEntityReqResponderF) common.Re
 			http.Error(w, "Header Content-type=application/json not found", 400)
 			return
 		}
+
+		chainID := r.Header.Get(HeaderRequestChainID)
+		if config.GetServerChainID() != chainID {
+			return
+		}
+
 		nodeID := r.Header.Get(HeaderNodeID)
 		sender := GetNode(nodeID)
 		if sender == nil {
