@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"0chain.net/common"
-	"0chain.net/datastore"
+	"0chain.net/memorystore"
 	"0chain.net/node"
 	"0chain.net/transaction"
 )
@@ -19,17 +19,17 @@ func (b *Block) GenerateBlock(ctx context.Context) error {
 	txns := make([]*transaction.Transaction, BLOCK_SIZE)
 	b.Txns = &txns
 	//TODO: wasting this because we []interface{} != []*transaction.Transaction in Go
-	etxns := make([]datastore.Entity, BLOCK_SIZE)
+	etxns := make([]memorystore.MemoryEntity, BLOCK_SIZE)
 	idx := 0
 	self := node.GetSelfNode(ctx)
 	if self != nil {
 		b.MinerID = self.ID
 	}
 	b.Round = 0
-	var txnIterHandler = func(ctx context.Context, qe datastore.CollectionEntity) bool {
+	var txnIterHandler = func(ctx context.Context, qe memorystore.CollectionEntity) bool {
 		select {
 		case <-ctx.Done():
-			datastore.GetCon(ctx).Close()
+			memorystore.GetCon(ctx).Close()
 			return false
 		default:
 		}
@@ -62,7 +62,7 @@ func (b *Block) GenerateBlock(ctx context.Context) error {
 	txn := transaction.Provider().(*transaction.Transaction)
 	txn.ChainID = b.ChainID
 	collectionName := txn.GetCollectionName()
-	err := datastore.IterateCollection(ctx, collectionName, txnIterHandler, transaction.Provider)
+	err := memorystore.IterateCollection(ctx, collectionName, txnIterHandler, transaction.Provider)
 	if err == nil && self != nil {
 		b.Signature, err = self.Sign(b.Hash)
 	}
@@ -77,8 +77,8 @@ func (b *Block) GenerateBlock(ctx context.Context) error {
 }
 
 /*UpdateTxnsToPending - marks all the given transactions to pending */
-func (b *Block) UpdateTxnsToPending(ctx context.Context, txns []datastore.Entity) {
-	datastore.MultiWrite(ctx, txns)
+func (b *Block) UpdateTxnsToPending(ctx context.Context, txns []memorystore.MemoryEntity) {
+	memorystore.MultiWrite(ctx, txns)
 }
 
 /*VerifyBlock - given a set of transaction ids within a block, validate the block */
@@ -88,13 +88,13 @@ func (b *Block) VerifyBlock(ctx context.Context) (bool, error) {
 
 /*Finalize - finalize the transactions in the block */
 func (b *Block) Finalize(ctx context.Context) error {
-	modifiedTxns := make([]datastore.Entity, 0, BLOCK_SIZE)
+	modifiedTxns := make([]memorystore.MemoryEntity, 0, BLOCK_SIZE)
 	for idx, txn := range *b.Txns {
 		txn.BlockID = b.ID
 		txn.Status = transaction.TXN_STATUS_FINALIZED
 		modifiedTxns[idx] = txn
 	}
-	err := datastore.MultiWrite(ctx, modifiedTxns)
+	err := memorystore.MultiWrite(ctx, modifiedTxns)
 	if err != nil {
 		return err
 	}

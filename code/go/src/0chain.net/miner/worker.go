@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"0chain.net/common"
-	"0chain.net/datastore"
+	"0chain.net/memorystore"
 	"0chain.net/round"
 )
 
@@ -33,13 +33,13 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 }
 
 func generateBlock(ctx context.Context, r *round.Round) {
-	lctx := datastore.WithConnection(ctx)
-	defer datastore.GetCon(lctx).Close()
+	lctx := memorystore.WithConnection(ctx)
+	defer memorystore.GetCon(lctx).Close()
 	r.Block.GenerateBlock(ctx)
 }
 
 func verifyBlock(ctx context.Context, r *round.Round) {
-	lctx := datastore.WithConnection(ctx)
-	defer datastore.GetCon(lctx).Close()
+	lctx := memorystore.WithConnection(ctx)
+	defer memorystore.GetCon(lctx).Close()
 	r.Block.VerifyBlock(ctx)
 }

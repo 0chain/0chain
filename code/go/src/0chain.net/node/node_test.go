@@ -9,6 +9,7 @@ import (
 	"0chain.net/client"
 	"0chain.net/datastore"
 	"0chain.net/encryption"
+	"0chain.net/memorystore"
 )
 
 var Miners = NewPool(NodeTypeMiner)
@@ -70,15 +71,15 @@ func (c *Company) Validate(ctx context.Context) error {
 }
 
 func (c *Company) Read(ctx context.Context, id datastore.Key) error {
-	return datastore.Read(ctx, id, c)
+	return memorystore.Read(ctx, id, c)
 }
 
 func (c *Company) Write(ctx context.Context) error {
-	return datastore.Write(ctx, c)
+	return memorystore.Write(ctx, c)
 }
 
 func (c *Company) Delete(ctx context.Context) error {
-	return datastore.Delete(ctx, c)
+	return memorystore.Delete(ctx, c)
 }
 
 // TODO: Assuming node2 & 3 are running - figure out a way to make this self-contained without the dependency
@@ -89,11 +90,11 @@ func TestNode2NodeCommunication(t *testing.T) {
 	entity.PublicKey = publicKey
 
 	n1 := &Node{Type: NodeTypeMiner, Host: "", Port: 7071, Status: NodeStatusActive}
-	n1.ID = "mnode1"
+	n1.ID = "24e23c52e2e40689fdb700180cd68ac083a42ed292d90cc021119adaa4d21509"
 	n2 := &Node{Type: NodeTypeMiner, Host: "", Port: 7072, Status: NodeStatusActive}
-	n2.ID = "mnode2"
+	n2.ID = "5fbb6924c222e96df6c491dfc4a542e1bbfc75d821bcca992544899d62121b55"
 	n3 := &Node{Type: NodeTypeMiner, Host: "", Port: 7073, Status: NodeStatusActive}
-	n3.ID = "mnode3"
+	n3.ID = "103c274502661e78a2b5c470057e57699e372a4382a4b96b29c1bec993b1d19c"
 
 	Self = &SelfNode{}
 	Self.Node = n1

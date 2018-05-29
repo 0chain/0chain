@@ -8,7 +8,6 @@ import (
 
 	"0chain.net/client"
 	"0chain.net/common"
-	"0chain.net/datastore"
 	"0chain.net/encryption"
 	"0chain.net/node"
 )
@@ -76,11 +75,11 @@ func postClient(privateKey string, publicKey string, done chan<- bool) {
 		fmt.Printf("it's not ok!\n")
 	}
 	c.PublicKey = publicKey
-	c.ID = datastore.ToKey(encryption.Hash(publicKey))
-	ctx := datastore.WithAsyncChannel(context.Background(), client.ClientEntityChannel)
-	//ctx := datastore.WithConnection(context.Background())
+	c.ID = memorystore.ToKey(encryption.Hash(publicKey))
+	ctx := memorystore.WithAsyncChannel(context.Background(), client.ClientEntityChannel)
+	//ctx := memorystore.WithConnection(context.Background())
 	_, err := client.PutClient(ctx, entity)
-	//datastore.GetCon(ctx).Close()
+	//memorystore.GetCon(ctx).Close()
 	if err != nil {
 		fmt.Printf("error for %v : %v\n", publicKey, err)
 	}
@@ -93,12 +92,12 @@ func postTransaction(privateKey string, publicKey string, txnData string, txnCha
 	if !ok {
 		fmt.Printf("it's not ok!\n")
 	}
-	t.ClientID = datastore.ToKey(encryption.Hash(publicKey))
+	t.ClientID = memorystore.ToKey(encryption.Hash(publicKey))
 	t.TransactionData = txnData
 	t.CreationDate = common.Now()
 	c := &client.Client{}
 	c.PublicKey = publicKey
-	c.ID = datastore.ToKey(encryption.Hash(publicKey))
+	c.ID = memorystore.ToKey(encryption.Hash(publicKey))
 	signature, err := t.Sign(c, privateKey)
 	encryption.Sign(privateKey, t.Hash)
 	if err != nil {
@@ -110,11 +109,11 @@ func postTransaction(privateKey string, publicKey string, txnData string, txnCha
 }
 
 func processWorker(txnChannel <-chan *Transaction, done chan<- bool) {
-	ctx := datastore.WithConnection(context.Background())
-	defer datastore.GetCon(ctx).Close()
+	ctx := memorystore.WithConnection(context.Background())
+	defer memorystore.GetCon(ctx).Close()
 
 	for entity := range txnChannel {
-		ctx = datastore.WithAsyncChannel(ctx, TransactionEntityChannel)
+		ctx = memorystore.WithAsyncChannel(ctx, TransactionEntityChannel)
 		_, err := PutTransaction(ctx, entity)
 		if err != nil {
 			fmt.Printf("error for %v : %v\n", entity, err)

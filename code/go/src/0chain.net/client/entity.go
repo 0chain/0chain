@@ -7,6 +7,7 @@ import (
 	"0chain.net/common"
 	"0chain.net/datastore"
 	"0chain.net/encryption"
+	"0chain.net/memorystore"
 )
 
 /*Client - data structure that holds the client data */
@@ -32,19 +33,19 @@ func (c *Client) Validate(ctx context.Context) error {
 	return nil
 }
 
-/*Read - datastore read */
+/*Read - store read */
 func (c *Client) Read(ctx context.Context, key datastore.Key) error {
-	return datastore.Read(ctx, key, c)
+	return memorystore.Read(ctx, key, c)
 }
 
-/*Write - datastore read */
+/*Write - store read */
 func (c *Client) Write(ctx context.Context) error {
-	return datastore.Write(ctx, c)
+	return memorystore.Write(ctx, c)
 }
 
-/*Delete - datastore read */
+/*Delete - store read */
 func (c *Client) Delete(ctx context.Context) error {
-	return datastore.Delete(ctx, c)
+	return memorystore.Delete(ctx, c)
 }
 
 /*Verify - given a signature and hash verify it with client's public key */
@@ -61,9 +62,9 @@ func Provider() interface{} {
 
 /*SetupEntity - setup the entity */
 func SetupEntity() {
-	datastore.RegisterEntityProvider("client", Provider)
+	memorystore.RegisterEntityProvider("client", Provider)
 
-	var collectionOptions = datastore.CollectionOptions{
+	var collectionOptions = memorystore.CollectionOptions{
 		EntityBufferSize: 1024,
 		MaxHoldupTime:    500 * time.Millisecond,
 		NumChunkCreators: 1,
@@ -71,7 +72,7 @@ func SetupEntity() {
 		ChunkBufferSize:  16,
 		NumChunkStorers:  2,
 	}
-	ClientEntityChannel = datastore.SetupWorkers(common.GetRootContext(), &collectionOptions)
+	ClientEntityChannel = memorystore.SetupWorkers(common.GetRootContext(), &collectionOptions)
 }
 
-var ClientEntityChannel chan datastore.Entity
+var ClientEntityChannel chan memorystore.MemoryEntity

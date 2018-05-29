@@ -15,6 +15,7 @@ import (
 	"0chain.net/config"
 	"0chain.net/datastore"
 	"0chain.net/encryption"
+	"0chain.net/memorystore"
 	"0chain.net/node"
 	"0chain.net/round"
 	"0chain.net/transaction"
@@ -27,7 +28,7 @@ func TestBlockGeneration(t *testing.T) {
 	block.SetupEntity()
 	client.SetupEntity()
 	ctx := common.GetRootContext()
-	ctx = datastore.WithConnection(ctx)
+	ctx = memorystore.WithConnection(ctx)
 	block.BLOCK_SIZE = 1
 	b := block.Provider().(*block.Block)
 	b.ChainID = datastore.ToKey(config.GetServerChainID())

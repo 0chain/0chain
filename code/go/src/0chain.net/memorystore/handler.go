@@ -1,4 +1,4 @@
-package datastore
+package memorystore
 
 import (
 	"context"
@@ -6,10 +6,11 @@ import (
 	"net/http"
 
 	"0chain.net/common"
+	"0chain.net/datastore"
 	"github.com/gomodule/redigo/redis"
 )
 
-/*WithConnectionHandler - a json response handler that adds a datastore connection to the Context
+/*WithConnectionHandler - a json response handler that adds a memorystore connection to the Context
 * It reclaims the connection at the end so there is no connection leak
  */
 func WithConnectionHandler(handler common.JSONResponderF) common.JSONResponderF {
@@ -21,7 +22,7 @@ func WithConnectionHandler(handler common.JSONResponderF) common.JSONResponderF 
 	}
 }
 
-/*WithConnectionJSONHandler - a json request response handler that adds a datastore connection to the Context
+/*WithConnectionJSONHandler - a json request response handler that adds a memorystore connection to the Context
 * It reclaims the connection at the end so there is no connection leak
  */
 func WithConnectionJSONHandler(handler common.JSONReqResponderF) common.JSONReqResponderF {
@@ -33,7 +34,7 @@ func WithConnectionJSONHandler(handler common.JSONReqResponderF) common.JSONReqR
 	}
 }
 
-/*WithConnectionEntityJSONHandler - a json request response handler that adds a datastore connection to the Context
+/*WithConnectionEntityJSONHandler - a json request response handler that adds a memorystore connection to the Context
 * Request is deserialized into an entity
 * It reclaims the connection at the end so there is no connection leak
  */
@@ -52,18 +53,18 @@ func GetEntityHandler(ctx context.Context, r *http.Request, entityProvider commo
 	if id == "" {
 		return nil, common.InvalidRequest(fmt.Sprintf("%v is required", idparam))
 	}
-	entity, ok := entityProvider().(Entity)
+	entity, ok := entityProvider().(MemoryEntity)
 	if !ok {
 		return nil, common.NewError("dev_error", "Invalid entity provider")
 	}
-	err := entity.Read(ctx, ToKey(id))
+	err := entity.Read(ctx, datastore.ToKey(id))
 	if err != nil {
 		return nil, err
 	}
 	return entity, nil
 }
 
-func DoAsync(ctx context.Context, entity Entity) bool {
+func DoAsync(ctx context.Context, entity MemoryEntity) bool {
 	channel := AsyncChannel(ctx)
 	if channel != nil {
 		channel <- entity
@@ -74,7 +75,7 @@ func DoAsync(ctx context.Context, entity Entity) bool {
 
 /*PutEntityHandler - default put handler implementation for any Entity */
 func PutEntityHandler(ctx context.Context, object interface{}) (interface{}, error) {
-	entity, ok := object.(Entity)
+	entity, ok := object.(MemoryEntity)
 	if !ok {
 		return nil, fmt.Errorf("invalid request %T", object)
 	}

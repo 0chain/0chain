@@ -11,11 +11,12 @@ import (
 	"0chain.net/config"
 	"0chain.net/datastore"
 	"0chain.net/encryption"
+	"0chain.net/memorystore"
 )
 
 /*Transaction type for capturing the transaction data */
 type Transaction struct {
-	datastore.CollectionIDField
+	memorystore.CollectionIDField
 	Hash            string           `json:"hash"`
 	ClientID        datastore.Key    `json:"client_id"`
 	ToClientID      datastore.Key    `json:"to_client_id,omitempty"`
@@ -84,22 +85,22 @@ func (t *Transaction) Validate(ctx context.Context) error {
 	return nil
 }
 
-/*Read - datastore read */
+/*Read - store read */
 func (t *Transaction) Read(ctx context.Context, key datastore.Key) error {
-	return datastore.Read(ctx, key, t)
+	return memorystore.Read(ctx, key, t)
 }
 
-/*Write - datastore read */
+/*Write - store read */
 func (t *Transaction) Write(ctx context.Context) error {
-	return datastore.Write(ctx, t)
+	return memorystore.Write(ctx, t)
 }
 
-/*Delete - datastore read */
+/*Delete - store read */
 func (t *Transaction) Delete(ctx context.Context) error {
-	return datastore.Delete(ctx, t)
+	return memorystore.Delete(ctx, t)
 }
 
-var txnEntityCollection *datastore.EntityCollection
+var txnEntityCollection *memorystore.EntityCollection
 
 /*GetCollectionName - override to partition by chain id */
 func (t *Transaction) GetCollectionName() string {
@@ -109,7 +110,7 @@ func (t *Transaction) GetCollectionName() string {
 /*GetClient - get the Client object associated with the transaction */
 func (t *Transaction) GetClient(ctx context.Context) (*client.Client, error) {
 	co := &client.Client{}
-	err := datastore.Read(ctx, datastore.ToKey(t.ClientID), co)
+	err := co.Read(ctx, t.ClientID)
 	if err != nil {
 		return nil, err
 	}
@@ -161,12 +162,12 @@ func Provider() interface{} {
 	return c
 }
 
-var TransactionEntityChannel chan datastore.Entity
+var TransactionEntityChannel chan memorystore.MemoryEntity
 
 /*SetupEntity - setup the entity */
 func SetupEntity() {
-	datastore.RegisterEntityProvider("block", Provider)
-	txnEntityCollection = &datastore.EntityCollection{CollectionName: "collection.txn", CollectionSize: 10000000, CollectionDuration: time.Hour}
+	memorystore.RegisterEntityProvider("block", Provider)
+	txnEntityCollection = &memorystore.EntityCollection{CollectionName: "collection.txn", CollectionSize: 10000000, CollectionDuration: time.Hour}
 
 	/*Entity Buffer Size = 10240
 	* Timeout = 250 milliseconds
@@ -174,7 +175,7 @@ func SetupEntity() {
 	* Chunk Buffer Size = 32
 	* Chunk Workers = 8
 	 */
-	var collectionOptions = datastore.CollectionOptions{
+	var collectionOptions = memorystore.CollectionOptions{
 		EntityBufferSize: 10240,
 		MaxHoldupTime:    250 * time.Millisecond,
 		NumChunkCreators: 1,
@@ -182,7 +183,7 @@ func SetupEntity() {
 		ChunkBufferSize:  32,
 		NumChunkStorers:  8,
 	}
-	TransactionEntityChannel = datastore.SetupWorkers(common.GetRootContext(), &collectionOptions)
+	TransactionEntityChannel = memorystore.SetupWorkers(common.GetRootContext(), &collectionOptions)
 }
 
 /*Sign - given a client and client's private key, sign this tranasction */

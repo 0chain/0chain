@@ -10,6 +10,7 @@ import (
 	"0chain.net/config"
 	"0chain.net/datastore"
 	"0chain.net/encryption"
+	"0chain.net/memorystore"
 	"0chain.net/node"
 	"0chain.net/transaction"
 )
@@ -49,12 +50,15 @@ type VerifiedBlockBody struct {
 	and the highest weight block will win. This ensures all the generators will try to create blocks
 	as they don't upfront know whether their block wins or not */
 	Weight int64 `json:"weight"`
+
+	/*The cumulative weight represents the total weight of the chain up to this block */
+	CumulativeWeight int64 `json:"cumulative_weight"`
 }
 
 /*Block - data structure that holds the block data*/
 type Block struct {
 	VerifiedBlockBody
-	datastore.CollectionIDField
+	memorystore.CollectionIDField
 	datastore.CreationDateField
 	PrevBlock *Block `json:"-"`
 }
@@ -97,22 +101,22 @@ func (b *Block) Validate(ctx context.Context) error {
 	return nil
 }
 
-/*Read - datastore read */
+/*Read - store read */
 func (b *Block) Read(ctx context.Context, key datastore.Key) error {
-	return datastore.Read(ctx, key, b)
+	return memorystore.Read(ctx, key, b)
 }
 
-/*Write - datastore read */
+/*Write - store read */
 func (b *Block) Write(ctx context.Context) error {
-	return datastore.Write(ctx, b)
+	return memorystore.Write(ctx, b)
 }
 
-/*Delete - datastore read */
+/*Delete - store read */
 func (b *Block) Delete(ctx context.Context) error {
-	return datastore.Delete(ctx, b)
+	return memorystore.Delete(ctx, b)
 }
 
-var blockEntityCollection *datastore.EntityCollection
+var blockEntityCollection *memorystore.EntityCollection
 
 /*GetCollectionName - override GetCollectionName to provide queues partitioned by ChainID */
 func (b *Block) GetCollectionName() string {
@@ -132,8 +136,8 @@ func Provider() interface{} {
 
 /*SetupEntity - setup the entity */
 func SetupEntity() {
-	datastore.RegisterEntityProvider("block", Provider)
-	blockEntityCollection = &datastore.EntityCollection{CollectionName: "collection.block", CollectionSize: 1000, CollectionDuration: time.Hour}
+	memorystore.RegisterEntityProvider("block", Provider)
+	blockEntityCollection = &memorystore.EntityCollection{CollectionName: "collection.block", CollectionSize: 1000, CollectionDuration: time.Hour}
 }
 
 func (b *Block) SetPreviousBlock(prevBlock *Block) {
@@ -148,7 +152,7 @@ func (b *Block) GetPreviousBlock() *Block {
 	if b.PrevBlock != nil {
 		return b.PrevBlock
 	}
-	// TODO: Query from the datastore and ensure the b.Txns array is populated
+	// TODO: Query from the store and ensure the b.Txns array is populated
 	return nil
 
 }
@@ -188,7 +192,7 @@ func (b *Block) ExpandBlock(ctx context.Context) {
 	}
 	if b.Txns == nil {
 		txns := make([]*transaction.Transaction, len(*b.TxnHashes))
-		// TODO: Block loading for miners has to happen from datastore
+		// TODO: Block loading for miners has to happen from store
 		// Block loading for sharders has to happen from persistence layer
 		b.Txns = &txns
 	}

@@ -15,6 +15,7 @@ import (
 	"0chain.net/config"
 	"0chain.net/datastore"
 	"0chain.net/encryption"
+	"0chain.net/memorystore"
 	"github.com/golang/snappy"
 )
 
@@ -170,6 +171,7 @@ func ToN2NReceiveEntityHandler(handler common.JSONEntityReqResponderF) common.Re
 
 		chainID := r.Header.Get(HeaderRequestChainID)
 		if config.GetServerChainID() != chainID {
+			//TODO: We can't do this in cross-chain messaging
 			return
 		}
 
@@ -196,7 +198,7 @@ func ToN2NReceiveEntityHandler(handler common.JSONEntityReqResponderF) common.Re
 		if entityName == "" {
 			return
 		}
-		entityProvider := datastore.GetProvider(entityName)
+		entityProvider := memorystore.GetProvider(entityName)
 		if entityProvider == nil {
 			return
 		}
@@ -220,9 +222,9 @@ func ToN2NReceiveEntityHandler(handler common.JSONEntityReqResponderF) common.Re
 			return
 		}
 		ctx := r.Context()
-		initialNodeId := r.Header.Get(HeaderInitialNodeID)
-		if initialNodeId != "" {
-			initSender := GetNode(initialNodeId)
+		initialNodeID := r.Header.Get(HeaderInitialNodeID)
+		if initialNodeID != "" {
+			initSender := GetNode(initialNodeID)
 			if initSender == nil {
 				return
 			}

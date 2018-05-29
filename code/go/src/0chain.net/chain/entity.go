@@ -6,6 +6,7 @@ import (
 	"0chain.net/block"
 	"0chain.net/common"
 	"0chain.net/datastore"
+	"0chain.net/memorystore"
 	"0chain.net/node"
 	"0chain.net/round"
 )
@@ -63,19 +64,19 @@ func (c *Chain) Validate(ctx context.Context) error {
 	return nil
 }
 
-/*Read - datastore read */
+/*Read - store read */
 func (c *Chain) Read(ctx context.Context, key datastore.Key) error {
-	return datastore.Read(ctx, key, c)
+	return memorystore.Read(ctx, key, c)
 }
 
-/*Write - datastore read */
+/*Write - store read */
 func (c *Chain) Write(ctx context.Context) error {
-	return datastore.Write(ctx, c)
+	return memorystore.Write(ctx, c)
 }
 
-/*Delete - datastore read */
+/*Delete - store read */
 func (c *Chain) Delete(ctx context.Context) error {
-	return datastore.Delete(ctx, c)
+	return memorystore.Delete(ctx, c)
 }
 
 /*Provider - entity provider for chain object */
@@ -91,7 +92,7 @@ func Provider() interface{} {
 
 /*SetupEntity - setup the entity */
 func SetupEntity() {
-	datastore.RegisterEntityProvider("chain", Provider)
+	memorystore.RegisterEntityProvider("chain", Provider)
 }
 
 /*UpdateFinalizedBlock - update the latest finalized block */
@@ -99,7 +100,7 @@ func (c *Chain) UpdateFinalizedBlock(lfb *block.Block) {
 	if lfb.Hash == c.LatestFinalizedBlock.Hash {
 		return
 	}
-	ctx := datastore.WithConnection(context.Background())
+	ctx := memorystore.WithConnection(context.Background())
 	for b := lfb; b != nil && b != c.LatestFinalizedBlock; b = b.GetPreviousBlock() {
 		b.Finalize(ctx)
 	}

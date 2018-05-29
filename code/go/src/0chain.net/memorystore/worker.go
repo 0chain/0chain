@@ -1,4 +1,4 @@
-package datastore
+package memorystore
 
 import (
 	"context"
@@ -6,34 +6,35 @@ import (
 	"time"
 
 	"0chain.net/common"
+	"0chain.net/datastore"
 )
 
 /*ASYNC_CHANNEL - key used to get the async channel from the context */
 const ASYNC_CHANNEL common.ContextKey = "async"
 
 /*WithAsyncChannel takes a context and adds a channel value used for async processing */
-func WithAsyncChannel(ctx context.Context, channel chan<- Entity) context.Context {
+func WithAsyncChannel(ctx context.Context, channel chan<- MemoryEntity) context.Context {
 	return context.WithValue(ctx, ASYNC_CHANNEL, channel)
 }
 
 /*AsyncChannel - Get Async Channel associated with this context */
-func AsyncChannel(ctx context.Context) chan<- Entity {
+func AsyncChannel(ctx context.Context) chan<- MemoryEntity {
 	async := ctx.Value(ASYNC_CHANNEL)
 	if async == nil {
 		return nil
 	}
-	channel, ok := async.(chan<- Entity)
+	channel, ok := async.(chan<- MemoryEntity)
 	if !ok {
 		return nil
 	}
 	return channel
 }
 
-/*DoAsyncEntityJSONHandler - a json request response handler that adds a datastore connection to the Context
+/*DoAsyncEntityJSONHandler - a json request response handler that adds a memorystore connection to the Context
 * Request is deserialized into an entity
 * It reclaims the connection at the end so there is no connection leak
  */
-func DoAsyncEntityJSONHandler(handler common.JSONEntityReqResponderF, channel chan<- Entity) common.JSONEntityReqResponderF {
+func DoAsyncEntityJSONHandler(handler common.JSONEntityReqResponderF, channel chan<- MemoryEntity) common.JSONEntityReqResponderF {
 	return func(ctx context.Context, object interface{}) (interface{}, error) {
 		ctx = WithAsyncChannel(ctx, channel)
 		entity, err := handler(ctx, object)
@@ -48,7 +49,7 @@ func DoAsyncEntityJSONHandler(handler common.JSONEntityReqResponderF, channel ch
 }
 
 type Chunk struct {
-	Buffer []Entity
+	Buffer []MemoryEntity
 	Length int
 }
 
@@ -56,12 +57,12 @@ func (c *Chunk) Size() int {
 	return c.Length
 }
 
-func (c *Chunk) Add(entity Entity) {
+func (c *Chunk) Add(entity MemoryEntity) {
 	c.Buffer[c.Length] = entity
 	c.Length++
 }
 
-func (c *Chunk) Get(index int) Entity {
+func (c *Chunk) Get(index int) MemoryEntity {
 	// TODO? Add array checks or assume it's all good for performance?
 	return c.Buffer[index]
 }
@@ -73,7 +74,7 @@ func (c *Chunk) Trim() {
 type EntityChunkBuilder struct {
 	ChunkSize      int           // Size of the chunks
 	MaxHoldupTime  time.Duration // Max holdup time from the first entity added
-	EntityChannel  <-chan Entity
+	EntityChannel  <-chan MemoryEntity
 	ChunkChannel   chan<- *Chunk
 	TimeoutChannel *time.Timer
 	Chunk          *Chunk
@@ -82,7 +83,7 @@ type EntityChunkBuilder struct {
 /*NewChunk - create a new chunk of given size */
 func NewChunk(size int) *Chunk {
 	c := Chunk{}
-	c.Buffer = make([]Entity, size)
+	c.Buffer = make([]MemoryEntity, size)
 	c.Length = 0
 	return &c
 }
@@ -111,15 +112,15 @@ func (ecb *EntityChunkBuilder) run(ctx context.Context) {
 	}
 }
 
-func creationDate(entity Entity) time.Time {
-	cf, ok := entity.(CreationTrackable)
+func creationDate(entity MemoryEntity) time.Time {
+	cf, ok := entity.(datastore.CreationTrackable)
 	if ok {
 		return time.Unix(int64(cf.GetCreationTime()), 0)
 	}
 	return time.Now().UTC()
 }
 
-func (ecb *EntityChunkBuilder) addEntity(entity Entity) {
+func (ecb *EntityChunkBuilder) addEntity(entity MemoryEntity) {
 	ecb.Chunk.Add(entity)
 	if ecb.Chunk.Size() == ecb.ChunkSize {
 		ecb.sendChunk(ecb.ChunkChannel)
@@ -162,8 +163,8 @@ func (bs *ChunkStorer) run(ctx context.Context) {
 }
 
 /*SetupWorkers - This setups up workers that allows aggregating and storing entities in chunks */
-func SetupWorkers(ctx context.Context, options *CollectionOptions) chan Entity {
-	echannel := make(chan Entity, options.EntityBufferSize)
+func SetupWorkers(ctx context.Context, options *CollectionOptions) chan MemoryEntity {
+	echannel := make(chan MemoryEntity, options.EntityBufferSize)
 	bchannel := make(chan *Chunk, options.ChunkBufferSize)
 	var ecb EntityChunkBuilder
 	ecb.ChunkSize = options.ChunkSize

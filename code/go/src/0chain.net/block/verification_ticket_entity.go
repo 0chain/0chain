@@ -5,6 +5,7 @@ import (
 
 	"0chain.net/common"
 	"0chain.net/datastore"
+	"0chain.net/memorystore"
 )
 
 /*VerificationTicket - verification ticket for the block */
@@ -52,19 +53,19 @@ func (bvt *BlockVerificationTicket) Validate(ctx context.Context) error {
 	return nil
 }
 
-/*Read - datastore read */
+/*Read - memorystore read */
 func (bvt *BlockVerificationTicket) Read(ctx context.Context, key datastore.Key) error {
-	return datastore.Read(ctx, key, bvt)
+	return memorystore.Read(ctx, key, bvt)
 }
 
-/*Write - datastore read */
+/*Write - store read */
 func (bvt *BlockVerificationTicket) Write(ctx context.Context) error {
-	return datastore.Write(ctx, bvt)
+	return memorystore.Write(ctx, bvt)
 }
 
-/*Delete - datastore read */
+/*Delete - store read */
 func (bvt *BlockVerificationTicket) Delete(ctx context.Context) error {
-	return datastore.Delete(ctx, bvt)
+	return memorystore.Delete(ctx, bvt)
 }
 
 /*BVTProvider - entity provider for block_verification_ticket object */
@@ -75,5 +76,5 @@ func BVTProvider() interface{} {
 
 /*SetupBVTEntity - setup the entity */
 func SetupBVTEntity() {
-	datastore.RegisterEntityProvider("block_verification_ticket", BVTProvider)
+	memorystore.RegisterEntityProvider("block_verification_ticket", BVTProvider)
 }

@@ -9,22 +9,23 @@ import (
 	"0chain.net/common"
 	"0chain.net/config"
 	"0chain.net/datastore"
+	"0chain.net/memorystore"
 )
 
 /*SetupHandlers sets up the necessary API end points */
 func SetupHandlers() {
-	http.HandleFunc("/v1/transaction/get", common.ToJSONResponse(datastore.WithConnectionHandler(GetTransaction)))
-	http.HandleFunc("/v1/transaction/put", common.ToJSONEntityReqResponse(datastore.DoAsyncEntityJSONHandler(datastore.WithConnectionEntityJSONHandler(PutTransaction), TransactionEntityChannel), Provider))
+	http.HandleFunc("/v1/transaction/get", common.ToJSONResponse(memorystore.WithConnectionHandler(GetTransaction)))
+	http.HandleFunc("/v1/transaction/put", common.ToJSONEntityReqResponse(memorystore.DoAsyncEntityJSONHandler(memorystore.WithConnectionEntityJSONHandler(PutTransaction), TransactionEntityChannel), Provider))
 }
 
 /*SetupSharderHandlers sets up the necessary API end points for Sharders */
 func SetupSharderHandlers() {
-	http.HandleFunc("/v1/transaction/search", common.ToJSONResponse(datastore.WithConnectionHandler(GetTransactions)))
+	http.HandleFunc("/v1/transaction/search", common.ToJSONResponse(memorystore.WithConnectionHandler(GetTransactions)))
 }
 
 /*GetTransaction - given an id returns the transaction information */
 func GetTransaction(ctx context.Context, r *http.Request) (interface{}, error) {
-	return datastore.GetEntityHandler(ctx, r, Provider, "hash")
+	return memorystore.GetEntityHandler(ctx, r, Provider, "hash")
 }
 
 /*TXN_TIME_TOLERANCE - the txn creation date should be within 5 seconds before/after of current time */
@@ -44,10 +45,10 @@ func PutTransaction(ctx context.Context, object interface{}) (interface{}, error
 	if err != nil {
 		return nil, err
 	}
-	if datastore.DoAsync(ctx, txn) {
+	if memorystore.DoAsync(ctx, txn) {
 		return txn, nil
 	}
-	err = datastore.Write(ctx, txn)
+	err = memorystore.Write(ctx, txn)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +56,7 @@ func PutTransaction(ctx context.Context, object interface{}) (interface{}, error
 }
 
 /*GetTransactions - returns a list of transactions for a client
-*	//TODO: This is currently implemented via the miner's datastore cache
+*	//TODO: This is currently implemented via the miner's memorystore cache
 *	//I think this should be handled by sharders who have access to historic data.
 *	//Also, the sharder data is stored in NoSQL with index on both txn.ClientID and txn.ToClientID
 *	//So, it should be a query of the form
@@ -67,10 +68,10 @@ func GetTransactions(ctx context.Context, r *http.Request) (interface{}, error) 
 	client_id := r.FormValue("client_id")
 	client_id_key := datastore.ToKey(client_id)
 	txns := make([]*Transaction, 0, 1)
-	var txnIterHandler = func(ctx context.Context, qe datastore.CollectionEntity) bool {
+	var txnIterHandler = func(ctx context.Context, qe memorystore.CollectionEntity) bool {
 		select {
 		case <-ctx.Done():
-			datastore.GetCon(ctx).Close()
+			memorystore.GetCon(ctx).Close()
 			return false
 		default:
 		}
@@ -93,7 +94,7 @@ func GetTransactions(ctx context.Context, r *http.Request) (interface{}, error) 
 	//But because this is off of redis and we don't have good filtering capability, we have to settle for large time.
 	ctx, cancelf := context.WithTimeout(ctx, 10*time.Second)
 	defer cancelf()
-	err := datastore.IterateCollection(ctx, collectionName, txnIterHandler, Provider)
+	err := memorystore.IterateCollection(ctx, collectionName, txnIterHandler, Provider)
 	if err != nil {
 		return nil, err
 	}

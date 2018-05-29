@@ -1,4 +1,4 @@
-package datastore
+package memorystore
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"0chain.net/common"
+	"0chain.net/datastore"
 )
 
 /*CollectionOptions - to tune the performance charactersistics of a collection */
@@ -25,7 +26,7 @@ type CollectionOptions struct {
 * Example - transactions and blocks can be partioned by chain
  */
 type CollectionEntity interface {
-	Entity
+	MemoryEntity
 	GetCollectionName() string
 	GetCollectionSize() int64
 	GetCollectionDuration() time.Duration
@@ -43,8 +44,8 @@ type EntityCollection struct {
 }
 
 /*GetCollectionName - Given an partitioning key (such as parent key), returns the key for the collection */
-func (eq *EntityCollection) GetCollectionName(parent Key) string {
-	if IsEmpty(parent) {
+func (eq *EntityCollection) GetCollectionName(parent datastore.Key) string {
+	if datastore.IsEmpty(parent) {
 		return eq.CollectionName
 	}
 	return fmt.Sprintf("%s:%s", eq.CollectionName, parent)
@@ -52,7 +53,7 @@ func (eq *EntityCollection) GetCollectionName(parent Key) string {
 
 /*CollectionIDField - An entity with a CollectionIDField will automatically put that entity into a collection */
 type CollectionIDField struct {
-	IDField
+	datastore.IDField
 	EntityCollection *EntityCollection `json:"-"`
 	CollectionScore  int64             `json:"-"`
 }
@@ -105,7 +106,7 @@ func (cf *CollectionIDField) AddToCollection(ctx context.Context, collectionName
 }
 
 /*MultiAddToCollection adds multiple entities to a collection */
-func MultiAddToCollection(ctx context.Context, entities []Entity) error {
+func MultiAddToCollection(ctx context.Context, entities []MemoryEntity) error {
 	// Assuming all entities belong to the same collection.
 	if len(entities) == 0 {
 		return nil
@@ -146,8 +147,8 @@ const BATCH_SIZE = 100
  */
 func IterateCollection(ctx context.Context, collectionName string, handler CollectionIteratorHandler, entityProvider common.EntityProvider) error {
 	con := GetCon(ctx)
-	bucket := make([]Entity, BATCH_SIZE)
-	keys := make([]Key, BATCH_SIZE)
+	bucket := make([]MemoryEntity, BATCH_SIZE)
+	keys := make([]datastore.Key, BATCH_SIZE)
 	maxscore := math.MaxInt64
 	offset := 0
 	proceed := true
@@ -165,8 +166,8 @@ func IterateCollection(ctx context.Context, collectionName string, handler Colle
 			return common.NewError("error", fmt.Sprintf("error casting data to []interface{} : %T", data))
 		}
 		for bidx := range bkeys {
-			bucket[bidx] = entityProvider().(Entity)
-			keys[bidx] = ToKey(bkeys[bidx])
+			bucket[bidx] = entityProvider().(MemoryEntity)
+			keys[bidx] = datastore.ToKey(bkeys[bidx])
 		}
 
 		err = MultiRead(ctx, keys[:len(bkeys)], bucket)

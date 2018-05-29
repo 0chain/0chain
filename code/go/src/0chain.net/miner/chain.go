@@ -3,10 +3,12 @@ package miner
 import (
 	"context"
 	"math/rand"
+	"sync"
 
 	"0chain.net/block"
 	"0chain.net/chain"
 	"0chain.net/datastore"
+	"0chain.net/round"
 )
 
 /*
@@ -18,6 +20,8 @@ var minerChain = &Chain{}
 /*SetupMinerChain - setup the miner's chain */
 func SetupMinerChain(c *chain.Chain) {
 	minerChain.Chain = *c
+	minerChain.roundsMutex = &sync.Mutex{}
+	minerChain.BlocksChannel = make(chan *block.Block)
 }
 
 /*GetMinerChain - get the miner's chain */
@@ -30,6 +34,9 @@ type Chain struct {
 	chain.Chain
 	SpeculativeChains []*block.Block
 	Blocks            map[datastore.Key]*block.Block
+	BlocksChannel     chan *block.Block
+	roundsMutex       *sync.Mutex
+	rounds            map[int64]*round.Round
 }
 
 /*IsBlockPresent - do we already have this block? */
@@ -155,4 +162,27 @@ func ComputeSpeculativeChain(c *chain.Chain, b *block.Block) []*block.Block {
 		sc[i], sc[j] = sc[j], sc[i]
 	}
 	return sc
+}
+
+func (c *Chain) GetRound(roundNumber int64) *round.Round {
+	round, ok := c.rounds[roundNumber]
+	if !ok {
+		return nil
+	}
+	return round
+}
+
+func (c *Chain) AddRound(r *round.Round) bool {
+	_, ok := c.rounds[r.Number]
+	if ok {
+		return false
+	}
+	c.roundsMutex.Lock()
+	defer c.roundsMutex.Unlock()
+	_, ok = c.rounds[r.Number]
+	if ok {
+		return false
+	}
+	c.rounds[r.Number] = r
+	return true
 }

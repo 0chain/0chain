@@ -1,4 +1,4 @@
-package datastore
+package memorystore
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"0chain.net/common"
+	"0chain.net/datastore"
 )
 
 /*Company - a test data type */
@@ -38,7 +39,7 @@ func (c *Company) Validate(ctx context.Context) error {
 	return nil
 } */
 
-func (c *Company) Read(ctx context.Context, id Key) error {
+func (c *Company) Read(ctx context.Context, id datastore.Key) error {
 	return Read(ctx, id, c)
 }
 
@@ -65,8 +66,8 @@ func TestEntityWriteRead(t *testing.T) {
 	ctx := WithConnection(common.GetRootContext())
 	zeroChain := CompanyProvider().(*Company)
 	zeroChain2 := CompanyProvider().(*Company)
-	keys := []Key{ToKey([]byte("0chain.net")), ToKey("0chain.io")}
-	entities := []Entity{zeroChain, zeroChain2}
+	keys := []datastore.Key{datastore.ToKey([]byte("0chain.net")), datastore.ToKey("0chain.io")}
+	entities := []MemoryEntity{zeroChain, zeroChain2}
 	fmt.Printf("keys : %v\n", keys)
 	err := MultiRead(ctx, keys, entities)
 	if err != nil {
@@ -77,14 +78,14 @@ func TestEntityWriteRead(t *testing.T) {
 	}
 	zeroChain.Domain = "0chain.net"
 	zeroChain.Name = "0chain"
-	zeroChain.ID = ToKey(zeroChain.Domain)
+	zeroChain.ID = datastore.ToKey(zeroChain.Domain)
 	zeroChain.CollectionIDField.EntityCollection = companyEntityCollection
 	err = InsertIfNE(ctx, zeroChain)
 	if err != nil {
 		fmt.Printf("error ifne: %v\n", err)
 	}
 	zeroChain2.Domain = "0chain.io"
-	err = Read(ctx, ToKey(zeroChain2.Domain), zeroChain2)
+	err = Read(ctx, datastore.ToKey(zeroChain2.Domain), zeroChain2)
 	if err != nil {
 		fmt.Printf("error reading: %v\n", err)
 	} else {
@@ -92,7 +93,7 @@ func TestEntityWriteRead(t *testing.T) {
 	}
 	zeroChain2.InitCollectionScore()
 	zeroChain2.SetCollectionScore(zeroChain2.GetCollectionScore() + 10)
-	MultiWrite(ctx, []Entity{zeroChain, zeroChain2})
+	MultiWrite(ctx, []MemoryEntity{zeroChain, zeroChain2})
 
 	fmt.Printf("iterating\n")
 	IterateCollection(ctx, zeroChain.GetCollectionName(), PrintIterator, CompanyProvider)
