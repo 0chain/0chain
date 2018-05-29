@@ -40,3 +40,32 @@ func GetEntityKey(entity PersistenceEntity) datastore.Key {
 		return datastore.EmptyKey
 	}
 }
+
+func Write(w http.ResponseWriter, r *http.Request) {
+    var errs []string
+    sharder, errs := FormToSharder(r)
+
+    // have we created a sharder correctly
+    var created bool = false
+
+    // if we had no errors from FormToSharder, we will
+    // attempt to save our data to Cassandra
+    if len(errs) == 0 {
+        fmt.Println("creating a new sharder")
+        // write data to Cassandra
+        if err := session.Query(`
+            INSERT INTO block (block_hash, prev_block_hash, block_signature, miner_id, timestamp, round) VALUES (?, ?, ?, ?, ?, ?)`,
+            sharder.Block_hash, sharder.Prev_block_hash, sharder.Block_signature, sharder.Miner_id, sharder.Timestamp, sharder.Round).Exec(); err != nil {
+            errs = append(errs, err.Error())
+        } else {
+            created = true
+        }
+    }
+
+    if created {
+        fmt.Println("Data inserted")
+    } else {
+        fmt.Println("errors", errs)
+        json.NewEncoder(w).Encode(ErrorResponse{Errors: errs})
+    }
+}
