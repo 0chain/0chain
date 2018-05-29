@@ -14,25 +14,36 @@ import (
 var Miners = NewPool(NodeTypeMiner)
 
 func TestNodeSetup(t *testing.T) {
-	sd := Node{Host: "127.0.0.1", Port: 7070, Type: NodeTypeMiner, Status: NodeStatusActive, ID: "sd"}
-	sd.PublicKey = encryption.Hash(sd.ID)
+	sd := Node{Host: "127.0.0.1", Port: 7071, Type: NodeTypeMiner, Status: NodeStatusActive}
+	publicKey, _ := encryption.GenerateKeys()
+	sd.ID = encryption.Hash(publicKey)
+	sd.PublicKey = publicKey
 	Miners.AddNode(&sd)
 
-	sb := Node{Host: "127.0.0.2", Port: 7070, Type: NodeTypeMiner, Status: NodeStatusActive, ID: "sb"}
-	sb.PublicKey = encryption.Hash(sb.ID)
+	sb := Node{Host: "127.0.0.2", Port: 7070, Type: NodeTypeMiner, Status: NodeStatusActive}
+	publicKey, _ = encryption.GenerateKeys()
+	sb.ID = encryption.Hash(publicKey)
+	sb.PublicKey = publicKey
 	Miners.AddNode(&sb)
 
-	ns := Node{Host: "127.0.0.3", Port: 7070, Type: NodeTypeMiner, Status: NodeStatusActive, ID: "ns"}
-	ns.PublicKey = encryption.Hash(ns.ID)
+	ns := Node{Host: "127.0.0.3", Port: 7070, Type: NodeTypeMiner, Status: NodeStatusActive}
+	publicKey, _ = encryption.GenerateKeys()
+	ns.ID = encryption.Hash(publicKey)
+	ns.PublicKey = publicKey
 	Miners.AddNode(&ns)
 
-	nr := Node{Host: "127.0.0.4", Port: 7070, Type: NodeTypeMiner, Status: NodeStatusActive, ID: "ns"}
-	nr.PublicKey = encryption.Hash(nr.ID)
+	nr := Node{Host: "127.0.0.4", Port: 7070, Type: NodeTypeMiner, Status: NodeStatusActive}
+	publicKey, _ = encryption.GenerateKeys()
+	nr.ID = encryption.Hash(publicKey)
+	nr.PublicKey = publicKey
 	Miners.AddNode(&nr)
 
-	gg := Node{Host: "127.0.0.5", Port: 7070, Type: NodeTypeMiner, Status: NodeStatusActive, ID: "gg"}
-	gg.PublicKey = encryption.Hash(gg.ID)
+	gg := Node{Host: "127.0.0.5", Port: 7070, Type: NodeTypeMiner, Status: NodeStatusActive}
+	publicKey, _ = encryption.GenerateKeys()
+	gg.ID = encryption.Hash(publicKey)
+	gg.PublicKey = publicKey
 	Miners.AddNode(&gg)
+
 	Miners.Print(os.Stdout)
 }
 
@@ -77,9 +88,12 @@ func TestNode2NodeCommunication(t *testing.T) {
 	entity.ID = datastore.ToKey(encryption.Hash(publicKey))
 	entity.PublicKey = publicKey
 
-	n1 := &Node{ID: "mnode1", Type: NodeTypeMiner, Host: "", Port: 7071, Status: NodeStatusActive}
-	n2 := &Node{ID: "mnode2", Type: NodeTypeMiner, Host: "", Port: 7072, Status: NodeStatusActive}
-	n3 := &Node{ID: "mnode3", Type: NodeTypeMiner, Host: "", Port: 7073, Status: NodeStatusActive}
+	n1 := &Node{Type: NodeTypeMiner, Host: "", Port: 7071, Status: NodeStatusActive}
+	n1.ID = "mnode1"
+	n2 := &Node{Type: NodeTypeMiner, Host: "", Port: 7072, Status: NodeStatusActive}
+	n2.ID = "mnode2"
+	n3 := &Node{Type: NodeTypeMiner, Host: "", Port: 7073, Status: NodeStatusActive}
+	n3.ID = "mnode3"
 
 	Self = &SelfNode{}
 	Self.Node = n1
@@ -90,5 +104,6 @@ func TestNode2NodeCommunication(t *testing.T) {
 
 	options := SendOptions{MaxRelayLength: 0, CurrentRelayLength: 0, Compress: true}
 	sendHandler := SendEntityHandler("v1/_n2n/entity/post", &options)
-	np.SendAtleast(2, sendHandler(entity))
+	sentTo := np.SendAtleast(2, sendHandler(entity))
+	fmt.Printf("sent to %v nodes\n", len(sentTo))
 }

@@ -44,8 +44,8 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 			if node.Status == NodeStatusActive {
 				if node.ErrorCount > 5 {
 					node.Status = NodeStatusInactive
-					fmt.Printf("error connecting to %v: %v\n", node.GetID(), err)
-					fmt.Printf("node %v became inactive\n", node.GetID())
+					fmt.Printf("error connecting to %v: %v\n", node.GetKey(), err)
+					fmt.Printf("node %v became inactive\n", node.GetKey())
 				}
 			}
 		} else {
@@ -53,7 +53,7 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 			if node.Status == NodeStatusInactive {
 				node.ErrorCount = 0
 				node.Status = NodeStatusActive
-				fmt.Printf("node %v became active\n", node.GetID())
+				fmt.Printf("node %v became active\n", node.GetKey())
 			}
 			node.LastActiveTime = ts
 		}
@@ -80,7 +80,7 @@ func (np *Pool) DownloadNodeData(node *Node) bool {
 	dnp := NewPool(NodeTypeMiner)
 	ReadNodes(resp.Body, dnp, dnp, dnp)
 	for _, node := range dnp.Nodes {
-		if _, ok := np.NodesMap[node.GetID()]; !ok {
+		if _, ok := np.NodesMap[node.GetKey()]; !ok {
 			node.Status = NodeStatusActive
 			np.AddNode(node)
 		}

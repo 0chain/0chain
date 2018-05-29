@@ -57,7 +57,7 @@ func VerificationTicketReceiptHandler(ctx context.Context, object interface{}) (
 		return nil, err
 	}
 	sender := node.GetSender(ctx)
-	if !datastore.IsEqual(sender.GetID(), bvt.VerifierID) {
+	if !datastore.IsEqual(sender.GetKey(), bvt.VerifierID) {
 		return nil, common.InvalidRequest("Verifier and original sender are not the same")
 	}
 	if ok, _ := sender.Verify(bvt.Signature, block.Signature); !ok {

@@ -7,8 +7,10 @@ import (
 	"strings"
 	"time"
 
+	"0chain.net/client"
 	"0chain.net/common"
 	"0chain.net/config"
+	"0chain.net/datastore"
 	"0chain.net/encryption"
 )
 
@@ -19,7 +21,7 @@ var nodes = make(map[string]*Node)
 * coming from a node
  */
 func RegisterNode(node *Node) {
-	nodes[node.GetID()] = node
+	nodes[node.GetKey()] = node
 }
 
 /*DeregisterNode - deregisters a node */
@@ -45,24 +47,24 @@ var (
 
 /*Node - a struct holding the node information */
 type Node struct {
+	client.Client
 	Host           string
 	Port           int
 	Type           int
 	Status         int
 	LastActiveTime time.Time
-	ID             string
-	PublicKey      string
 	ErrorCount     int
 }
 
 /*GetID - get the id of the node */
+/*
 func (n *Node) GetID() string {
 	return n.ID
-}
+}*/
 
 /*Equals - if two nodes are equal. Only check by id, we don't accept configuration from anyone */
 func (n *Node) Equals(n2 *Node) bool {
-	if n.GetID() == n2.GetID() {
+	if datastore.IsEqual(n.GetKey(), n2.GetKey()) {
 		return true
 	}
 	if n.Port == n2.Port && n.Host == n2.Host {
@@ -73,7 +75,7 @@ func (n *Node) Equals(n2 *Node) bool {
 
 /*Print - print node's info that is consumable by Read */
 func (n *Node) Print(w io.Writer) {
-	fmt.Fprintf(w, "%v,%v,%v,%v,%v\n", n.GetNodeType(), n.Host, n.Port, n.GetID(), n.PublicKey)
+	fmt.Fprintf(w, "%v,%v,%v,%v,%v\n", n.GetNodeType(), n.Host, n.Port, n.GetKey(), n.PublicKey)
 }
 
 /*Read - read a node config line and create the node */
@@ -98,7 +100,7 @@ func Read(line string) (*Node, error) {
 		if node.Port != config.Configuration.Port {
 			node.Host = config.Configuration.Host
 		} else {
-			panic(fmt.Sprintf("invalid node setup for %v\n", node.GetID()))
+			panic(fmt.Sprintf("invalid node setup for %v\n", node.GetKey()))
 		}
 	}
 
@@ -109,6 +111,10 @@ func Read(line string) (*Node, error) {
 	node.Port = int(port)
 	node.ID = fields[3]
 	node.PublicKey = fields[4]
+	hash := encryption.Hash(node.PublicKey)
+	if node.ID != hash {
+		return nil, common.NewError("invalid_client_id", fmt.Sprintf("public key: %v, client_id: %v, hash: %v\n", node.PublicKey, node.ID, hash))
+	}
 	if Self == nil && node.Host == config.Configuration.Host && node.Port == config.Configuration.Port {
 		Self = &SelfNode{Node: node}
 	}

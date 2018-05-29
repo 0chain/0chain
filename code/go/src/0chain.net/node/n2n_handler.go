@@ -87,7 +87,7 @@ func (np *Pool) SendAtleast(numNodes int, handler SendHandler) []*Node {
  */
 func SetHeaders(req *http.Request, entity datastore.Entity, options *SendOptions) bool {
 	ts := common.Now()
-	hashdata := fmt.Sprintf("%v:%v:%v", Self.GetID(), ts, entity.GetKey())
+	hashdata := fmt.Sprintf("%v:%v:%v", Self.GetKey(), ts, entity.GetKey())
 	hash := encryption.Hash(hashdata)
 	//TODO: Replace Self.privateKey with API from Ken
 	signature, err := Self.Sign(hash)
@@ -95,7 +95,7 @@ func SetHeaders(req *http.Request, entity datastore.Entity, options *SendOptions
 		return false
 	}
 	req.Header.Set(HeaderRequestChainID, config.GetServerChainID())
-	req.Header.Set(HeaderNodeID, Self.GetID())
+	req.Header.Set(HeaderNodeID, Self.GetKey())
 	if options.InitialNodeID != "" {
 		req.Header.Set(HeaderInitialNodeID, options.InitialNodeID)
 	}

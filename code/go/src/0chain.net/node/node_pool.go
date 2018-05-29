@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
+
+	"0chain.net/datastore"
 )
 
 /*Pool - a pool of nodes used for the same purpose */
@@ -32,7 +34,7 @@ func (np *Pool) AddNode(node *Node) {
 	if np.Type != node.Type {
 		return
 	}
-	var nodeID = node.GetID()
+	var nodeID = datastore.ToString(node.GetKey())
 	RegisterNode(node)
 	np.NodesMap[nodeID] = node
 	np.computeNodesArray()
@@ -122,7 +124,7 @@ func ReadNodes(r io.Reader, minerPool *Pool, sharderPool *Pool, blobberPool *Poo
 		case NodeTypeBlobber:
 			blobberPool.AddNode(node)
 		default:
-			panic(fmt.Sprintf("unkown node type %v:%v\n", node.GetID(), node.Type))
+			panic(fmt.Sprintf("unkown node type %v:%v\n", node.GetKey(), node.Type))
 		}
 	}
 }
