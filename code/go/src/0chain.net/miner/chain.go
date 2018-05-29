@@ -7,6 +7,7 @@ import (
 
 	"0chain.net/block"
 	"0chain.net/chain"
+	"0chain.net/common"
 	"0chain.net/datastore"
 	"0chain.net/round"
 )
@@ -164,25 +165,43 @@ func ComputeSpeculativeChain(c *chain.Chain, b *block.Block) []*block.Block {
 	return sc
 }
 
-func (c *Chain) GetRound(roundNumber int64) *round.Round {
-	round, ok := c.rounds[roundNumber]
+/*GetRound - get a round */
+func (mc *Chain) GetRound(roundNumber int64) *round.Round {
+	round, ok := mc.rounds[roundNumber]
 	if !ok {
 		return nil
 	}
 	return round
 }
 
-func (c *Chain) AddRound(r *round.Round) bool {
-	_, ok := c.rounds[r.Number]
+/*AddRound - Add Round to the block */
+func (mc *Chain) AddRound(r *round.Round) bool {
+	_, ok := mc.rounds[r.Number]
 	if ok {
 		return false
 	}
-	c.roundsMutex.Lock()
-	defer c.roundsMutex.Unlock()
-	_, ok = c.rounds[r.Number]
+	mc.roundsMutex.Lock()
+	defer mc.roundsMutex.Unlock()
+	_, ok = mc.rounds[r.Number]
 	if ok {
 		return false
 	}
-	c.rounds[r.Number] = r
+	mc.rounds[r.Number] = r
 	return true
+}
+
+/*GenerateBlock - given a round number generates a block*/
+func (mc *Chain) GenerateBlock(ctx context.Context, roundNumber int64) error {
+	pround := mc.GetRound(roundNumber - 1)
+	if pround == nil {
+		return common.NewError("invalid_round,", "Round not available")
+	}
+	r := mc.GetRound(roundNumber)
+	if r == nil {
+		r = &round.Round{Number: roundNumber}
+		mc.AddRound(r)
+	}
+	b := block.Block{}
+	b.SetPreviousBlock(pround.Block)
+	return b.GenerateBlock(ctx)
 }
