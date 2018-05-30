@@ -59,14 +59,7 @@ func Read(ctx context.Context, key datastore.Key, entity MemoryEntity) error {
 	if data == nil {
 		return common.NewError(datastore.EntityNotFound, fmt.Sprintf("%v not found with id = %v", entity.GetEntityName(), redisKey))
 	}
-	jsondata, ok := data.([]byte)
-	if !ok {
-		return fmt.Errorf("not a valid entity json: (%v): %T: %v", redisKey, data, data)
-	}
-	err = json.Unmarshal(jsondata, entity)
-	if err != nil {
-		return err
-	}
+	datastore.FromJSON(data, entity)
 	entity.ComputeProperties()
 	return nil
 }
@@ -77,8 +70,7 @@ func Write(ctx context.Context, entity MemoryEntity) error {
 }
 
 func writeAux(ctx context.Context, entity MemoryEntity, overwrite bool) error {
-	buffer := bytes.NewBuffer(make([]byte, 0, 256))
-	json.NewEncoder(buffer).Encode(entity)
+	buffer := datastore.ToJSON(entity)
 	redisKey := GetEntityKey(entity)
 	c := GetCon(ctx)
 	if overwrite {

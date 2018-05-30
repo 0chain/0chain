@@ -3,7 +3,6 @@ package node
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -129,8 +128,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			url := fmt.Sprintf("%v/%v", n.GetURLBase(), uri)
 			client := &http.Client{Timeout: 500 * time.Millisecond}
 
-			buffer := new(bytes.Buffer)
-			json.NewEncoder(buffer).Encode(entity)
+			buffer := datastore.ToJSON(entity)
 			if options.Compress {
 				cbytes := snappy.Encode(nil, buffer.Bytes())
 				buffer = bytes.NewBuffer(cbytes)
@@ -214,9 +212,10 @@ func ToN2NReceiveEntityHandler(handler common.JSONEntityReqResponderF) common.Re
 			}
 			buffer = bytes.NewReader(cbytes)
 		}
-		decoder := json.NewDecoder(buffer)
+		//decoder := json.NewDecoder(buffer)
 		entity := entityProvider()
-		err := decoder.Decode(entity)
+		//err := decoder.Decode(entity)
+		err := datastore.FromJSON(buffer, entity.(datastore.Entity))
 		if err != nil {
 			http.Error(w, "Error decoding json", 500)
 			return
