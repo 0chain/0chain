@@ -22,7 +22,7 @@ func TestBlockGeneration(t *testing.T) {
 	SetUpSelf()
 	ctx := common.GetRootContext()
 	ctx = memorystore.WithConnection(ctx)
-	block.BLOCK_SIZE = 1
+	block.BLOCK_SIZE = 1000
 	b := block.Provider().(*block.Block)
 	b.ChainID = datastore.ToKey(config.GetServerChainID())
 	// pb = ... // TODO: Setup a privious block
@@ -42,6 +42,9 @@ func TestBlockGeneration(t *testing.T) {
 		fmt.Printf("Error generating block: %v\n", err)
 	} else {
 		fmt.Printf("%v\n", datastore.ToJSON(b))
+		fmt.Printf("%v\n", datastore.ToMsgpack(b))
+		fmt.Printf("json length: %v\n", datastore.ToJSON(b).Len())
+		fmt.Printf("msgpack length: %v\n", datastore.ToMsgpack(b).Len())
 	}
 	common.Done()
 }

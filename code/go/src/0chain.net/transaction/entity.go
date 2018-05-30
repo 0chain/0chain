@@ -17,16 +17,16 @@ import (
 /*Transaction type for capturing the transaction data */
 type Transaction struct {
 	memorystore.CollectionIDField
-	Hash            string           `json:"hash"`
-	ClientID        datastore.Key    `json:"client_id"`
-	ToClientID      datastore.Key    `json:"to_client_id,omitempty"`
-	ChainID         datastore.Key    `json:"chain_id,omitempty"`
-	TransactionData string           `json:"transaction_data"`
-	Value           int64            `json:"transaction_value"` // The value associated with this transaction
-	Signature       string           `json:"signature"`
-	CreationDate    common.Timestamp `json:"creation_date"`
-	Status          byte             `json:"status"`
-	BlockID         datastore.Key    `json:"block_id,omitempty"` // This is the block that finalized this transaction
+	Hash            string           `json:"hash" msgpack:"h"`
+	ClientID        datastore.Key    `json:"client_id" msgpack:"cid"`
+	ToClientID      datastore.Key    `json:"to_client_id,omitempty" msgpack:"tcid,omitempty"`
+	ChainID         datastore.Key    `json:"chain_id,omitempty" msgpack:"chid"`
+	TransactionData string           `json:"transaction_data" msgpack:"d"`
+	Value           int64            `json:"transaction_value" msgpack:"v"` // The value associated with this transaction
+	Signature       string           `json:"signature" msgpack:"s"`
+	CreationDate    common.Timestamp `json:"creation_date" msgpack:"ts"`
+	Status          byte             `json:"status" msgpack:"st"`
+	BlockID         datastore.Key    `json:"block_id,omitempty" msgpack:"bid"` // This is the block that finalized this transaction
 
 	Client   *client.Client `json:"-"`
 	ToClient *client.Client `json:"-"`

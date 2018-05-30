@@ -2,10 +2,7 @@ package datastore
 
 import (
   "context"
-  "io"
  "fmt"
- "bytes"
- "encoding/json"
  "0chain.net/common"
 )
 
@@ -115,25 +112,4 @@ func (cd *CreationDateField) InitializeCreationDate() {
 /*GetCreationTime - Get the creation time */
 func (cd *CreationDateField) GetCreationTime() common.Timestamp {
 	return cd.CreationDate
-}
-
-/*ToJSON - given an entity, get the json of that entity as a buffer */
-func ToJSON(entity Entity) *bytes.Buffer {
-  buffer := bytes.NewBuffer(make([]byte, 0, 256))
-	json.NewEncoder(buffer).Encode(entity)
-  return buffer
-}
-
-/*FromJSON - read data into an entity */
-func FromJSON(data interface{}, entity Entity) error {
-  switch jsondata := data.(type) {
-  case []byte:
-    return json.Unmarshal(jsondata, entity)
-  case string:
-    return json.Unmarshal([]byte(jsondata), entity)
-  case io.Reader:
-    return json.NewDecoder(jsondata).Decode(entity)
-  default:
-    return common.NewError("unknown_data_type",fmt.Sprintf("unknown data type for reading entity from json: %T, %v\n",data,data))
-  }
 }

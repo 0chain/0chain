@@ -40,6 +40,7 @@ var (
 	HeaderRequestEntityName     = "X-Request-Entity-Name"
 	HeaderRequestEntityID       = "X-Request-Entity-ID"
 	HeaderRequestChainID        = "X-Chain-Id"
+	HeaderRequestCODEC          = "X-Chain-CODEC"
 
 	HeaderInitialNodeID        = "X-Initial-Node-Id"
 	HeaderNodeID               = "X-Node-Id"
@@ -110,7 +111,11 @@ func SetHeaders(req *http.Request, entity datastore.Entity, options *SendOptions
 	req.Header.Set(HeaderNodeRequestSignature, signature)
 	req.Header.Set(HeaderRequestEntityName, entity.GetEntityName())
 	req.Header.Set(HeaderRequestEntityID, datastore.ToString(entity.GetKey()))
-
+	if options.CODEC == 0 {
+		req.Header.Set(HeaderRequestCODEC, "JSON")
+	} else {
+		req.Header.Set(HeaderRequestCODEC, "Msgpack")
+	}
 	if options.MaxRelayLength > 0 {
 		req.Header.Set(HeaderRequestMaxRelayLength, strconv.FormatInt(options.MaxRelayLength, 10))
 	}
@@ -124,6 +129,7 @@ type SendOptions struct {
 	CurrentRelayLength int64
 	Compress           bool
 	InitialNodeID      string
+	CODEC              int
 }
 
 /*SendEntityHandler provides a client API to send an entity */
@@ -133,7 +139,12 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			url := fmt.Sprintf("%v%v", n.GetURLBase(), uri)
 			client := &http.Client{Timeout: 500 * time.Millisecond}
 
-			buffer := datastore.ToJSON(entity)
+			var buffer *bytes.Buffer
+			if options.CODEC == datastore.CodecJSON {
+				buffer = datastore.ToJSON(entity)
+			} else {
+				buffer = datastore.ToMsgpack(entity)
+			}
 			if options.Compress {
 				cbytes := snappy.Encode(nil, buffer.Bytes())
 				buffer = bytes.NewBuffer(cbytes)
@@ -224,10 +235,14 @@ func ToN2NReceiveEntityHandler(handler common.JSONEntityReqResponderF) common.Re
 			}
 			buffer = bytes.NewReader(cbytes)
 		}
-		//decoder := json.NewDecoder(buffer)
+		var err error
 		entity := entityProvider()
-		//err := decoder.Decode(entity)
-		err := datastore.FromJSON(buffer, entity.(datastore.Entity))
+		if r.Header.Get(HeaderRequestCODEC) == "JSON" {
+			err = datastore.FromJSON(buffer, entity.(datastore.Entity))
+		} else {
+			err = datastore.FromMsgpack(buffer, entity.(datastore.Entity))
+		}
+
 		if err != nil {
 			http.Error(w, "Error decoding json", 500)
 			return
