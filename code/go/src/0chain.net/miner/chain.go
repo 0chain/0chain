@@ -23,6 +23,7 @@ func SetupMinerChain(c *chain.Chain) {
 	minerChain.Chain = *c
 	minerChain.roundsMutex = &sync.Mutex{}
 	minerChain.BlocksChannel = make(chan *block.Block)
+	minerChain.rounds = make(map[int64]*round.Round)
 }
 
 /*GetMinerChain - get the miner's chain */
@@ -191,17 +192,25 @@ func (mc *Chain) AddRound(r *round.Round) bool {
 }
 
 /*GenerateBlock - given a round number generates a block*/
-func (mc *Chain) GenerateBlock(ctx context.Context, roundNumber int64) error {
+func (mc *Chain) GenerateBlock(ctx context.Context, roundNumber int64) (*block.Block, error) {
 	pround := mc.GetRound(roundNumber - 1)
 	if pround == nil {
-		return common.NewError("invalid_round,", "Round not available")
+		return nil, common.NewError("invalid_round,", "Round not available")
 	}
 	r := mc.GetRound(roundNumber)
 	if r == nil {
 		r = &round.Round{Number: roundNumber}
 		mc.AddRound(r)
 	}
-	b := block.Block{}
+	b := &block.Block{}
+	b.ChainID = mc.ID
 	b.SetPreviousBlock(pround.Block)
-	return b.GenerateBlock(ctx)
+	err := b.GenerateBlock(ctx)
+	if err != nil {
+		return nil, err
+	}
+	r.Block = b
+	r.AddBlock(b) // We need to add our own generated block to the list of blocks
+	mc.Miners.SendAll(VBSender(b))
+	return b, nil
 }

@@ -127,9 +127,3 @@ func JSONString(json map[string]interface{}, field string, required bool) (strin
 		return fmt.Sprintf("%v", sval), nil
 	}
 }
-
-/*PrintEntityHandler - handler that prints the received entity */
-func PrintEntityHandler(ctx context.Context, object interface{}) (interface{}, error) {
-	fmt.Printf("%v\n", object)
-	return nil, nil
-}

@@ -129,6 +129,8 @@ func main() {
 
 	initServer()
 	initHandlers()
+	miner.SetupM2MSenders()
+	miner.SetupM2MReceivers()
 
 	//log.Fatal(server.Serve(l))
 	fmt.Printf("Ready to listen to the requests\n")

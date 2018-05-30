@@ -166,7 +166,7 @@ var TransactionEntityChannel chan memorystore.MemoryEntity
 
 /*SetupEntity - setup the entity */
 func SetupEntity() {
-	memorystore.RegisterEntityProvider("block", Provider)
+	memorystore.RegisterEntityProvider("txn", Provider)
 	txnEntityCollection = &memorystore.EntityCollection{CollectionName: "collection.txn", CollectionSize: 10000000, CollectionDuration: time.Hour}
 
 	/*Entity Buffer Size = 10240

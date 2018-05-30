@@ -16,16 +16,18 @@ var VTSender node.EntitySendHandler
 
 /*SetupM2MSenders - setup senders for miner to miner communication */
 func SetupM2MSenders() {
-	options := node.SendOptions{Compress: false}
-	VTSender = node.SendEntityHandler("/v1/_m2m/block/verification_ticket", &options)
-	options = node.SendOptions{Compress: true}
-	VBSender = node.SendEntityHandler("/v1/_m2m/block/verify", &options)
+	options := &node.SendOptions{MaxRelayLength: 0, CurrentRelayLength: 0, Compress: true}
+	VBSender = node.SendEntityHandler("/v1/_m2m/block/verify", options)
+
+	options = &node.SendOptions{MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
+	VTSender = node.SendEntityHandler("/v1/_m2m/block/verification_ticket", options)
 }
 
 /*SetupM2MReceivers - setup receivers for miner to miner communication */
 func SetupM2MReceivers() {
-	http.HandleFunc("/v1/_m2m/block/verification_ticket", node.ToN2NReceiveEntityHandler(VerificationTicketReceiptHandler))
 	http.HandleFunc("/v1/_m2m/block/verify", node.ToN2NReceiveEntityHandler(VerifyBlockHandler))
+
+	http.HandleFunc("/v1/_m2m/block/verification_ticket", node.ToN2NReceiveEntityHandler(VerificationTicketReceiptHandler))
 }
 
 /*VerifyBlockHandler - verify the block that is received */

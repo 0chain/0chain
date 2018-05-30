@@ -54,6 +54,11 @@ type EntitySendHandler func(entity datastore.Entity) SendHandler
 
 type ReceiveEntityHandlerF func(ctx context.Context, entity datastore.Entity) (interface{}, error)
 
+/*SendAll - send to every node */
+func (np *Pool) SendAll(handler SendHandler) []*Node {
+	return np.SendAtleast(len(np.Nodes), handler)
+}
+
 /*SendAtleast - It tries to communicate to at least the given number of active nodes
 * TODO: May need to pass a context object so we can cancel at will. Also, for sending in parallel
  */
@@ -125,7 +130,7 @@ type SendOptions struct {
 func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 	return func(entity datastore.Entity) SendHandler {
 		return func(n *Node) bool {
-			url := fmt.Sprintf("%v/%v", n.GetURLBase(), uri)
+			url := fmt.Sprintf("%v%v", n.GetURLBase(), uri)
 			client := &http.Client{Timeout: 500 * time.Millisecond}
 
 			buffer := datastore.ToJSON(entity)
@@ -146,9 +151,15 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			SetHeaders(req, entity, options)
 			resp, err := client.Do(req)
 			if err != nil {
+				fmt.Printf("Error sending to node(%v): %v\n", n.GetKey(), err)
 				return false
 			}
+			defer resp.Body.Close()
 			if resp.StatusCode != http.StatusOK {
+				var rbuf bytes.Buffer
+				rbuf.ReadFrom(resp.Body)
+				fmt.Printf("Error sending to node(%v): %v: %v\n", n.GetKey(), resp.StatusCode, rbuf.String())
+
 				return false
 			}
 			return true
@@ -208,6 +219,7 @@ func ToN2NReceiveEntityHandler(handler common.JSONEntityReqResponderF) common.Re
 
 			cbytes, err := snappy.Decode(nil, cbuffer.Bytes())
 			if err != nil {
+				fmt.Printf("Error decoding: %v\n", err)
 				return
 			}
 			buffer = bytes.NewReader(cbytes)
@@ -220,6 +232,7 @@ func ToN2NReceiveEntityHandler(handler common.JSONEntityReqResponderF) common.Re
 			http.Error(w, "Error decoding json", 500)
 			return
 		}
+
 		ctx := r.Context()
 		initialNodeID := r.Header.Get(HeaderInitialNodeID)
 		if initialNodeID != "" {
@@ -239,5 +252,5 @@ func ToN2NReceiveEntityHandler(handler common.JSONEntityReqResponderF) common.Re
 /*SetupN2NHandlers - Setup all the node 2 node communiations
  */
 func SetupN2NHandlers() {
-	http.HandleFunc("/v1/_n2n/entity/post", ToN2NReceiveEntityHandler(common.PrintEntityHandler))
+	http.HandleFunc("/v1/_n2n/entity/post", ToN2NReceiveEntityHandler(datastore.PrintEntityHandler))
 }

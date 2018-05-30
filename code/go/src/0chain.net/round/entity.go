@@ -29,3 +29,10 @@ var RoleVerifier = 2
 func (r *Round) AddBlock(b *block.Block) {
 	r.blocks[b.Hash] = b
 }
+
+/*Provider - entity provider for client object */
+func Provider() interface{} {
+	r := &Round{}
+	r.blocks = make(map[datastore.Key]*block.Block)
+	return r
+}

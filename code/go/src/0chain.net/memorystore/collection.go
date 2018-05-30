@@ -160,6 +160,9 @@ func IterateCollection(ctx context.Context, collectionName string, handler Colle
 			return err
 		}
 		bkeys, ok := data.([]interface{})
+		if len(bkeys) == 0 {
+			return nil
+		}
 		// wonder if WITHSCORES and adjusting the maxscore is more performant rather than adjusting offest
 		offset += len(bkeys)
 		if !ok {

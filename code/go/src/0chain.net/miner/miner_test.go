@@ -1,9 +1,7 @@
 package miner
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
@@ -14,7 +12,6 @@ import (
 	"0chain.net/common"
 	"0chain.net/config"
 	"0chain.net/datastore"
-	"0chain.net/encryption"
 	"0chain.net/memorystore"
 	"0chain.net/node"
 	"0chain.net/round"
@@ -23,10 +20,6 @@ import (
 
 func TestBlockGeneration(t *testing.T) {
 	SetUpSelf()
-	common.SetupRootContext(node.GetNodeContext())
-	transaction.SetupEntity()
-	block.SetupEntity()
-	client.SetupEntity()
 	ctx := common.GetRootContext()
 	ctx = memorystore.WithConnection(ctx)
 	block.BLOCK_SIZE = 1
@@ -34,31 +27,59 @@ func TestBlockGeneration(t *testing.T) {
 	b.ChainID = datastore.ToKey(config.GetServerChainID())
 	// pb = ... // TODO: Setup a privious block
 	// b.SetPreviousBlock(pb)
-	b.GenerateBlock(ctx)
-	buf := new(bytes.Buffer)
-	json.NewEncoder(buf).Encode(b)
-	fmt.Printf("%v\n", buf)
+	gb := block.Provider().(*block.Block)
+	gb.Hash = block.GenesisBlockHash
+	mc := GetMinerChain()
+	r := round.Provider().(*round.Round)
+	r.Block = gb
+	mc.AddRound(r)
+	r = round.Provider().(*round.Round)
+	r.Number = 1
+	mc.AddRound(r)
+
+	b, err := mc.GenerateBlock(ctx, 1)
+	if err != nil {
+		fmt.Printf("Error generating block: %v\n", err)
+	} else {
+		fmt.Printf("%v\n", datastore.ToJSON(b))
+	}
 	common.Done()
 }
 
 func SetUpSelf() {
-	var sn node.SelfNode
-	var n node.Node
-	n.Type = node.NodeTypeMiner
-	n.PublicKey = "1c2313e4d2115b88c516b3e27cead994a0902c83411506e7804ad9c1fb276624"
-	n.ID = encryption.Hash(n.PublicKey)
-	sn.SetPrivateKey("1ad5c839b37be0d87e7eb71c3d6c81197f6a990a34007387defa694b2ed66cbc1c2313e4d2115b88c516b3e27cead994a0902c83411506e7804ad9c1fb276624")
-	sn.Node = &n
-	node.Self = &sn
+	n1 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7071, Status: node.NodeStatusActive}
+	n1.ID = "24e23c52e2e40689fdb700180cd68ac083a42ed292d90cc021119adaa4d21509"
+	n2 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7072, Status: node.NodeStatusActive}
+	n2.ID = "5fbb6924c222e96df6c491dfc4a542e1bbfc75d821bcca992544899d62121b55"
+	n3 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7073, Status: node.NodeStatusActive}
+	n3.ID = "103c274502661e78a2b5c470057e57699e372a4382a4b96b29c1bec993b1d19c"
+
+	node.Self = &node.SelfNode{}
+	node.Self.Node = n1
+	node.Self.SetPrivateKey("aa3e1ae2290987959dc44e43d138c81f15f93b2d56d7a06c51465f345df1a8a6e065fc02aaf7aaafaebe5d2dedb9c7c1d63517534644434b813cb3bdab0f94a0")
+	np := node.NewPool(node.NodeTypeMiner)
+	np.AddNode(n2)
+	np.AddNode(n3)
+	common.SetupRootContext(node.GetNodeContext())
+	config.SetServerChainID(config.GetMainChainID())
+	common.SetupRootContext(node.GetNodeContext())
+	transaction.SetupEntity()
+	block.SetupEntity()
+	client.SetupEntity()
+
+	c := chain.Provider().(*chain.Chain)
+	c.ID = datastore.ToKey(config.GetServerChainID())
+	c.Miners = np
+	chain.SetServerChain(c)
+	SetupMinerChain(c)
+	mc := GetMinerChain()
+	mc.Miners = np
+	SetupM2MSenders()
 }
 
 func BenchmarkChainSetupWorker(b *testing.B) {
-	SetUpSelf()
 	common.SetupRootContext(node.GetNodeContext())
-	block.SetupEntity()
-	chain.SetupEntity()
-	client.SetupEntity()
-	transaction.SetupEntity()
+
 	//bookstrapping with a genesis block & main chain as the one being mined
 	gb := block.Provider().(*block.Block)
 	gb.Hash = block.GenesisBlockHash

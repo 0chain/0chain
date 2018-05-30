@@ -8,7 +8,9 @@ import (
 
 	"0chain.net/client"
 	"0chain.net/common"
+	"0chain.net/datastore"
 	"0chain.net/encryption"
+	"0chain.net/memorystore"
 	"0chain.net/node"
 )
 
@@ -75,7 +77,7 @@ func postClient(privateKey string, publicKey string, done chan<- bool) {
 		fmt.Printf("it's not ok!\n")
 	}
 	c.PublicKey = publicKey
-	c.ID = memorystore.ToKey(encryption.Hash(publicKey))
+	c.ID = datastore.ToKey(encryption.Hash(publicKey))
 	ctx := memorystore.WithAsyncChannel(context.Background(), client.ClientEntityChannel)
 	//ctx := memorystore.WithConnection(context.Background())
 	_, err := client.PutClient(ctx, entity)
@@ -92,12 +94,12 @@ func postTransaction(privateKey string, publicKey string, txnData string, txnCha
 	if !ok {
 		fmt.Printf("it's not ok!\n")
 	}
-	t.ClientID = memorystore.ToKey(encryption.Hash(publicKey))
+	t.ClientID = datastore.ToKey(encryption.Hash(publicKey))
 	t.TransactionData = txnData
 	t.CreationDate = common.Now()
 	c := &client.Client{}
 	c.PublicKey = publicKey
-	c.ID = memorystore.ToKey(encryption.Hash(publicKey))
+	c.ID = datastore.ToKey(encryption.Hash(publicKey))
 	signature, err := t.Sign(c, privateKey)
 	encryption.Sign(privateKey, t.Hash)
 	if err != nil {
