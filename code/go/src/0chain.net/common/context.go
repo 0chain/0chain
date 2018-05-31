@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+var ErrStop = NewError("stop_error", "Stop signal error")
+
 var rootContext context.Context
 var rootCancel context.CancelFunc
 

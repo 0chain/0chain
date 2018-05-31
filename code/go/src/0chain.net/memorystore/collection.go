@@ -145,6 +145,11 @@ func IterateCollection(ctx context.Context, collectionName string, handler Colle
 	offset := 0
 	proceed := true
 	for idx := 0; true; idx += BATCH_SIZE {
+		select {
+		case <-ctx.Done():
+			return common.ErrStop
+		default:
+		}
 		con.Send("ZREVRANGEBYSCORE", collectionName, maxscore, 0, "LIMIT", offset, BATCH_SIZE)
 		con.Flush()
 		data, err := con.Receive()

@@ -31,12 +31,6 @@ func (b *Block) GenerateBlock(ctx context.Context) error {
 	b.MinerID = self.ID
 	b.Round = 0
 	var txnIterHandler = func(ctx context.Context, qe memorystore.CollectionEntity) bool {
-		select {
-		case <-ctx.Done():
-			//memorystore.GetCon(ctx).Close()
-			return false
-		default:
-		}
 		txn, ok := qe.(*transaction.Transaction)
 		if !ok {
 			return true
