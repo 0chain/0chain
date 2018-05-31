@@ -71,7 +71,7 @@ func GetTransactions(ctx context.Context, r *http.Request) (interface{}, error) 
 	var txnIterHandler = func(ctx context.Context, qe memorystore.CollectionEntity) bool {
 		select {
 		case <-ctx.Done():
-			memorystore.GetCon(ctx).Close()
+			//	memorystore.GetCon(ctx).Close()
 			return false
 		default:
 		}

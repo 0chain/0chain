@@ -50,6 +50,7 @@ func DoAsyncEntityJSONHandler(handler datastore.JSONEntityReqResponderF, channel
 
 /*ChunkingOptions - to tune the performance charactersistics of async batch writing */
 type ChunkingOptions struct {
+	EntityMetadata   datastore.EntityMetadata
 	EntityBufferSize int
 	MaxHoldupTime    time.Duration
 	NumChunkCreators int
@@ -152,19 +153,20 @@ func (ecb *EntityChunkBuilder) sendChunk(channel chan<- *Chunk) {
 }
 
 type ChunkStorer struct {
-	ChunkChannel <-chan *Chunk
+	EntityMetadata datastore.EntityMetadata
+	ChunkChannel   <-chan *Chunk
 }
 
 func (bs *ChunkStorer) run(ctx context.Context) {
 	// TODO: What happens if a connection expires? We need a way to catch exception and get a new connection
-	lctx := WithConnection(ctx)
-	defer GetCon(lctx).Close()
+	lctx := WithEntityConnection(ctx, bs.EntityMetadata)
+	defer Close(lctx)
 	for true {
 		select {
 		case <-ctx.Done():
 			return
 		case chunk := <-bs.ChunkChannel:
-			err := MultiWrite(lctx, chunk.Buffer)
+			err := MultiWrite(lctx, bs.EntityMetadata, chunk.Buffer)
 			if err != nil {
 				fmt.Printf("multiwrite error : %v\n", err)
 			}
@@ -184,6 +186,7 @@ func SetupWorkers(ctx context.Context, options *ChunkingOptions) chan MemoryEnti
 	ecb.TimeoutChannel = time.NewTimer(-100 * time.Second)
 	bworkers := make([]ChunkStorer, options.NumChunkStorers)
 	for _, bworker := range bworkers {
+		bworker.EntityMetadata = options.EntityMetadata
 		bworker.ChunkChannel = bchannel
 		go bworker.run(ctx)
 	}

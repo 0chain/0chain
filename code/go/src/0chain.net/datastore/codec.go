@@ -49,16 +49,22 @@ func ToJSONPipe(entity Entity) *io.PipeReader {
 
 /*FromJSON - read data into an entity */
 func FromJSON(data interface{}, entity Entity) error {
+	var err error
 	switch jsondata := data.(type) {
 	case []byte:
-		return json.Unmarshal(jsondata, entity)
+		err = json.Unmarshal(jsondata, entity)
 	case string:
-		return json.Unmarshal([]byte(jsondata), entity)
+		err = json.Unmarshal([]byte(jsondata), entity)
 	case io.Reader:
-		return json.NewDecoder(jsondata).Decode(entity)
+		err = json.NewDecoder(jsondata).Decode(entity)
 	default:
 		return common.NewError("unknown_data_type", fmt.Sprintf("unknown data type for reading entity from json: %T, %v\n", data, data))
 	}
+	if err != nil {
+		return err
+	}
+	entity.ComputeProperties()
+	return nil
 }
 
 func ReadJSON(r io.Reader, entity Entity) error {
@@ -67,20 +73,26 @@ func ReadJSON(r io.Reader, entity Entity) error {
 
 /*FromMsgpack - read data into an entity */
 func FromMsgpack(data interface{}, entity Entity) error {
+	var err error
 	switch jsondata := data.(type) {
 	case []byte:
 		decoder := msgpack.NewDecoder(bytes.NewBuffer(jsondata))
 		decoder.UseJSONTag(true)
-		return decoder.Decode(entity)
+		err = decoder.Decode(entity)
 	case string:
 		decoder := msgpack.NewDecoder(bytes.NewBuffer([]byte(jsondata)))
 		decoder.UseJSONTag(true)
-		return decoder.Decode(entity)
+		err = decoder.Decode(entity)
 	case io.Reader:
 		decoder := msgpack.NewDecoder(jsondata)
 		decoder.UseJSONTag(true)
-		return decoder.Decode(entity)
+		err = decoder.Decode(entity)
 	default:
 		return common.NewError("unknown_data_type", fmt.Sprintf("unknown data type for reading entity from json: %T, %v\n", data, data))
 	}
+	if err != nil {
+		return err
+	}
+	entity.ComputeProperties()
+	return nil
 }

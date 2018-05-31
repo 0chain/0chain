@@ -30,7 +30,7 @@ func (b *Block) GenerateBlock(ctx context.Context) error {
 	var txnIterHandler = func(ctx context.Context, qe memorystore.CollectionEntity) bool {
 		select {
 		case <-ctx.Done():
-			memorystore.GetCon(ctx).Close()
+			//memorystore.GetCon(ctx).Close()
 			return false
 		default:
 		}
@@ -77,7 +77,7 @@ func (b *Block) GenerateBlock(ctx context.Context) error {
 
 /*UpdateTxnsToPending - marks all the given transactions to pending */
 func (b *Block) UpdateTxnsToPending(ctx context.Context, txns []memorystore.MemoryEntity) {
-	memorystore.MultiWrite(ctx, txns)
+	memorystore.MultiWrite(ctx, datastore.GetEntityMetadata("txn"), txns)
 }
 
 /*VerifyBlock - given a set of transaction ids within a block, validate the block */
@@ -118,7 +118,7 @@ func (b *Block) Finalize(ctx context.Context) error {
 		txn.Status = transaction.TXN_STATUS_FINALIZED
 		modifiedTxns[idx] = txn
 	}
-	err := memorystore.MultiWrite(ctx, modifiedTxns)
+	err := memorystore.MultiWrite(ctx, datastore.GetEntityMetadata("txn"), modifiedTxns)
 	if err != nil {
 		return err
 	}

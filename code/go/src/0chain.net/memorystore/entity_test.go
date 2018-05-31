@@ -74,13 +74,13 @@ func CompanyProvider() datastore.Entity {
 func TestEntityWriteRead(t *testing.T) {
 	fmt.Printf("time : %v\n", time.Now().UnixNano()/int64(time.Millisecond))
 	common.SetupRootContext(context.Background())
-	ctx := WithConnection(common.GetRootContext())
+	ctx := WithEntityConnection(common.GetRootContext(), companyEntityMetadata)
 	zeroChain := CompanyProvider().(*Company)
 	zeroChain2 := CompanyProvider().(*Company)
 	keys := []datastore.Key{datastore.ToKey([]byte("0chain.net")), datastore.ToKey("0chain.io")}
 	entities := []MemoryEntity{zeroChain, zeroChain2}
 	fmt.Printf("keys : %v\n", keys)
-	err := MultiRead(ctx, keys, entities)
+	err := MultiRead(ctx, companyEntityMetadata, keys, entities)
 	if err != nil {
 		fmt.Printf("error reading : %v\n", err)
 	} else {
@@ -104,7 +104,7 @@ func TestEntityWriteRead(t *testing.T) {
 	}
 	zeroChain2.InitCollectionScore()
 	zeroChain2.SetCollectionScore(zeroChain2.GetCollectionScore() + 10)
-	MultiWrite(ctx, []MemoryEntity{zeroChain, zeroChain2})
+	MultiWrite(ctx, companyEntityMetadata, []MemoryEntity{zeroChain, zeroChain2})
 
 	fmt.Printf("iterating\n")
 	IterateCollection(ctx, zeroChain.GetCollectionName(), PrintIterator, companyEntityMetadata)

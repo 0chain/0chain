@@ -7,7 +7,6 @@ import (
 
 	"0chain.net/common"
 	"0chain.net/datastore"
-	"github.com/gomodule/redigo/redis"
 )
 
 /*WithConnectionHandler - a json response handler that adds a memorystore connection to the Context
@@ -16,8 +15,7 @@ import (
 func WithConnectionHandler(handler common.JSONResponderF) common.JSONResponderF {
 	return func(ctx context.Context, r *http.Request) (interface{}, error) {
 		ctx = WithConnection(ctx)
-		con := ctx.Value(CONNECTION).(redis.Conn)
-		defer con.Close()
+		defer Close(ctx)
 		return handler(ctx, r)
 	}
 }
@@ -28,8 +26,7 @@ func WithConnectionHandler(handler common.JSONResponderF) common.JSONResponderF 
 func WithConnectionJSONHandler(handler common.JSONReqResponderF) common.JSONReqResponderF {
 	return func(ctx context.Context, json map[string]interface{}) (interface{}, error) {
 		ctx = WithConnection(ctx)
-		con := ctx.Value(CONNECTION).(redis.Conn)
-		defer con.Close()
+		defer Close(ctx)
 		return handler(ctx, json)
 	}
 }
@@ -41,8 +38,7 @@ func WithConnectionJSONHandler(handler common.JSONReqResponderF) common.JSONReqR
 func WithConnectionEntityJSONHandler(handler datastore.JSONEntityReqResponderF, entityMetadata datastore.EntityMetadata) datastore.JSONEntityReqResponderF {
 	return func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		ctx = WithEntityConnection(ctx, entityMetadata)
-		con := GetEntityCon(ctx, entityMetadata)
-		defer con.Close()
+		defer Close(ctx)
 		return handler(ctx, entity)
 	}
 }

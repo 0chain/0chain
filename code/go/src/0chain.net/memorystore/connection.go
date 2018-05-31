@@ -38,7 +38,7 @@ func init() {
 }
 
 func getConnectionCtxKey(dbid string) common.ContextKey {
-	return common.ContextKey(fmt.Sprintf("connection.%v", dbid))
+	return common.ContextKey(fmt.Sprintf("%v%v", CONNECTION, dbid))
 }
 
 /*AddPool - add a database pool to the repository of db pools */
@@ -75,7 +75,7 @@ func GetEntityConnection(entityMetadata datastore.EntityMetadata) redis.Conn {
 }
 
 /*CONNECTION - key used to get the connection object from the context */
-const CONNECTION common.ContextKey = "connection"
+const CONNECTION common.ContextKey = "connection."
 
 /*WithConnection takes a context and adds a connection value to it */
 func WithConnection(ctx context.Context) context.Context {
@@ -103,4 +103,9 @@ func GetEntityCon(ctx context.Context, entityMetadata datastore.EntityMetadata) 
 	}
 	dbpool := getdbpool(entityMetadata)
 	return ctx.Value(dbpool.CtxKey).(redis.Conn)
+}
+
+/*Close - Close takes care of maintaining the closing of connection(s) stored in the context */
+func Close(ctx context.Context) {
+	// TODO:
 }

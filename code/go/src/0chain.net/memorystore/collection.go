@@ -23,7 +23,7 @@ type CollectionEntity interface {
 	InitCollectionScore()
 	SetCollectionScore(score int64)
 	GetCollectionScore() int64 // larger scores have higher priority
-	AddToCollection(ctx context.Context, collectionName string) error
+	AddToCollection(ctx context.Context, entityMetadata datastore.EntityMetadata, collectionName string) error
 }
 
 /*EntityCollection - Entities can be organized into collections. EntityCollection provides configuration for those collections */
@@ -55,10 +55,12 @@ func (cf *CollectionIDField) GetCollectionName() string {
 	return cf.EntityCollection.CollectionName
 }
 
+/*GetCollectionSize - get the max size of the collection before trimming */
 func (cf *CollectionIDField) GetCollectionSize() int64 {
 	return cf.EntityCollection.CollectionSize
 }
 
+/*GetCollectionDuration - get the max duration beyond which the collection should be trimmed */
 func (cf *CollectionIDField) GetCollectionDuration() time.Duration {
 	return cf.EntityCollection.CollectionDuration
 }
@@ -84,8 +86,8 @@ func getScore(ts time.Time) int64 {
 }
 
 /*AddToCollection - default implementation for CollectionEntity interface */
-func (cf *CollectionIDField) AddToCollection(ctx context.Context, collectionName string) error {
-	con := GetCon(ctx)
+func (cf *CollectionIDField) AddToCollection(ctx context.Context, entityMetadata datastore.EntityMetadata, collectionName string) error {
+	con := GetEntityCon(ctx, entityMetadata)
 	con.Send("ZADD", collectionName, cf.GetCollectionScore(), cf.GetKey())
 	con.Flush()
 	_, err := con.Receive()
@@ -96,14 +98,14 @@ func (cf *CollectionIDField) AddToCollection(ctx context.Context, collectionName
 }
 
 /*MultiAddToCollection adds multiple entities to a collection */
-func MultiAddToCollection(ctx context.Context, entities []MemoryEntity) error {
+func MultiAddToCollection(ctx context.Context, entityMetadata datastore.EntityMetadata, entities []MemoryEntity) error {
 	// Assuming all entities belong to the same collection.
 	if len(entities) == 0 {
 		return nil
 	}
 	svpair := make([]interface{}, 1+2*len(entities))
 	ce := entities[0].(CollectionEntity)
-	trackCollection(ce)
+	trackCollection(entityMetadata, ce)
 	svpair[0] = ce.GetCollectionName()
 	offset := 1
 	for idx, entity := range entities {
@@ -119,7 +121,7 @@ func MultiAddToCollection(ctx context.Context, entities []MemoryEntity) error {
 		svpair[ind] = ce.GetCollectionScore()
 		svpair[ind+1] = ce.GetKey()
 	}
-	con := GetCon(ctx)
+	con := GetEntityCon(ctx, entityMetadata)
 	con.Send("ZADD", svpair...)
 	con.Flush()
 	_, err := con.Receive()
@@ -136,7 +138,7 @@ const BATCH_SIZE = 100
 *Iteration can be stopped by returning false
  */
 func IterateCollection(ctx context.Context, collectionName string, handler CollectionIteratorHandler, entityMetadata datastore.EntityMetadata) error {
-	con := GetCon(ctx)
+	con := GetEntityCon(ctx, entityMetadata)
 	bucket := make([]MemoryEntity, BATCH_SIZE)
 	keys := make([]datastore.Key, BATCH_SIZE)
 	maxscore := math.MaxInt64
@@ -163,7 +165,7 @@ func IterateCollection(ctx context.Context, collectionName string, handler Colle
 			keys[bidx] = datastore.ToKey(bkeys[bidx])
 		}
 
-		err = MultiRead(ctx, keys[:len(bkeys)], bucket)
+		err = MultiRead(ctx, entityMetadata, keys[:len(bkeys)], bucket)
 		if err != nil {
 			return err
 		}
@@ -192,7 +194,7 @@ func PrintIterator(ctx context.Context, qe CollectionEntity) bool {
 var collections = make(map[string]bool)
 var collectionsMutex = &sync.Mutex{}
 
-func trackCollection(qe CollectionEntity) {
+func trackCollection(entityMetadata datastore.EntityMetadata, qe CollectionEntity) {
 	_, ok := collections[qe.GetCollectionName()]
 	if ok {
 		return
@@ -203,15 +205,16 @@ func trackCollection(qe CollectionEntity) {
 	if ok {
 		return
 	}
-	go CollectionTrimmer(qe.GetCollectionName(), qe.GetCollectionSize(), qe.GetCollectionDuration())
+	go CollectionTrimmer(entityMetadata, qe.GetCollectionName(), qe.GetCollectionSize(), qe.GetCollectionDuration())
 	collections[qe.GetCollectionName()] = true
 }
 
-func CollectionTrimmer(collection string, trimSize int64, trimBeyond time.Duration) {
+/*CollectionTrimmer - trims the collection based on size and duration options */
+func CollectionTrimmer(entityMetadata datastore.EntityMetadata, collection string, trimSize int64, trimBeyond time.Duration) {
 	fmt.Printf("starting collection trimmer for %v\n", collection)
-	ctx := WithConnection(common.GetRootContext())
-	con := GetCon(ctx)
-	defer con.Close()
+	ctx := WithEntityConnection(common.GetRootContext(), entityMetadata)
+	con := GetEntityCon(ctx, entityMetadata)
+	defer Close(ctx)
 	ticker := time.NewTicker(trimBeyond)
 	for true {
 		select {

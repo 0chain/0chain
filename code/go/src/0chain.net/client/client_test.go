@@ -48,8 +48,6 @@ func postClient(publicKey string, done chan<- bool) {
 	client.SetKey(datastore.ToKey(encryption.Hash(client.PublicKey)))
 
 	ctx := memorystore.WithAsyncChannel(context.Background(), ClientEntityChannel)
-	//ctx := memorystore.WithConnection(context.Background())
-	//defer memorystore.GetCon(ctx).Close()
 	_, err := PutClient(ctx, entity)
 	if err != nil {
 		fmt.Printf("error for %v : %v\n", publicKey, err)

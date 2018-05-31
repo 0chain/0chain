@@ -34,12 +34,12 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 
 func generateBlock(ctx context.Context, r *round.Round) {
 	lctx := memorystore.WithConnection(ctx)
-	defer memorystore.GetCon(lctx).Close()
+	defer memorystore.Close(lctx)
 	r.Block.GenerateBlock(ctx)
 }
 
 func verifyBlock(ctx context.Context, r *round.Round) {
 	lctx := memorystore.WithConnection(ctx)
-	defer memorystore.GetCon(lctx).Close()
+	defer memorystore.Close(lctx)
 	r.Block.VerifyBlock(ctx)
 }

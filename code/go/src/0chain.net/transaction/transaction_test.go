@@ -79,9 +79,9 @@ func postClient(privateKey string, publicKey string, done chan<- bool) {
 	c.PublicKey = publicKey
 	c.ID = datastore.ToKey(encryption.Hash(publicKey))
 	ctx := memorystore.WithAsyncChannel(context.Background(), client.ClientEntityChannel)
-	//ctx := memorystore.WithConnection(context.Background())
+	//ctx := memorystore.WithEntityConnection(context.Background(),entity.GetEntityMetadata())
 	_, err := client.PutClient(ctx, entity)
-	//memorystore.GetCon(ctx).Close()
+	//memorystore.Close(ctx)
 	if err != nil {
 		fmt.Printf("error for %v : %v\n", publicKey, err)
 	}
@@ -111,8 +111,8 @@ func postTransaction(privateKey string, publicKey string, txnData string, txnCha
 }
 
 func processWorker(txnChannel <-chan *Transaction, done chan<- bool) {
-	ctx := memorystore.WithConnection(context.Background())
-	defer memorystore.GetCon(ctx).Close()
+	ctx := memorystore.WithEntityConnection(context.Background(), transactionEntityMetadata)
+	defer memorystore.Close(ctx)
 
 	for entity := range txnChannel {
 		ctx = memorystore.WithAsyncChannel(ctx, TransactionEntityChannel)

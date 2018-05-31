@@ -183,6 +183,7 @@ func SetupEntity() {
 	* Chunk Workers = 8
 	 */
 	var chunkingOptions = memorystore.ChunkingOptions{
+		EntityMetadata:   transactionEntityMetadata,
 		EntityBufferSize: 10240,
 		MaxHoldupTime:    250 * time.Millisecond,
 		NumChunkCreators: 1,

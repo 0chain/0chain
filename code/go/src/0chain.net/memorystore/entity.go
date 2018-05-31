@@ -34,7 +34,7 @@ func GetEntityKey(entity MemoryEntity) datastore.Key {
 func Read(ctx context.Context, key datastore.Key, entity MemoryEntity) error {
 	entity.SetKey(key)
 	redisKey := GetEntityKey(entity)
-	c := GetCon(ctx)
+	c := GetEntityCon(ctx, entity.GetEntityMetadata())
 	c.Send("GET", redisKey)
 	c.Flush()
 	data, err := c.Receive()
@@ -58,7 +58,7 @@ func Write(ctx context.Context, entity MemoryEntity) error {
 func writeAux(ctx context.Context, entity MemoryEntity, overwrite bool) error {
 	buffer := datastore.ToJSON(entity)
 	redisKey := GetEntityKey(entity)
-	c := GetCon(ctx)
+	c := GetEntityCon(ctx, entity.GetEntityMetadata())
 	if overwrite {
 		c.Send("SET", redisKey, buffer)
 	} else {
@@ -79,7 +79,7 @@ func writeAux(ctx context.Context, entity MemoryEntity, overwrite bool) error {
 	if ce.GetCollectionScore() == 0 {
 		ce.InitCollectionScore()
 	}
-	err = ce.AddToCollection(ctx, ce.GetCollectionName())
+	err = ce.AddToCollection(ctx, entity.GetEntityMetadata(), ce.GetCollectionName())
 	return err
 }
 
@@ -95,7 +95,7 @@ func InsertIfNE(ctx context.Context, entity MemoryEntity) error {
  */
 func Delete(ctx context.Context, entity MemoryEntity) error {
 	redisKey := GetEntityKey(entity)
-	c := GetCon(ctx)
+	c := GetEntityCon(ctx, entity.GetEntityMetadata())
 	c.Send("DEL", redisKey)
 	c.Flush()
 	_, err := c.Receive()
@@ -115,14 +115,14 @@ func AllocateEntities(size int, entityMetadata datastore.EntityMetadata) ([]Memo
 }
 
 /*MultiRead - allows reading multiple entities at the same time */
-func MultiRead(ctx context.Context, keys []datastore.Key, entities []MemoryEntity) error {
+func MultiRead(ctx context.Context, entityMetadata datastore.EntityMetadata, keys []datastore.Key, entities []MemoryEntity) error {
 	rkeys := make([]interface{}, len(keys))
 	for idx, key := range keys {
 		entity := entities[idx]
 		entity.SetKey(datastore.ToKey(key))
 		rkeys[idx] = GetEntityKey(entity)
 	}
-	c := GetCon(ctx)
+	c := GetEntityCon(ctx, entityMetadata)
 	c.Send("MGET", rkeys...)
 	c.Flush()
 	data, err := c.Receive()
@@ -156,23 +156,23 @@ func MultiRead(ctx context.Context, keys []datastore.Key, entities []MemoryEntit
 * If the entities belong to a collection, then all entities should belong to
 * the same collection (including partitioning)
  */
-func MultiWrite(ctx context.Context, entities []MemoryEntity) error {
+func MultiWrite(ctx context.Context, entityMetadata datastore.EntityMetadata, entities []MemoryEntity) error {
 	if len(entities) <= BATCH_SIZE {
-		return multiWriteAux(ctx, entities)
+		return multiWriteAux(ctx, entityMetadata, entities)
 	}
 	for start := 0; start < len(entities); start += BATCH_SIZE {
 		end := start + BATCH_SIZE
 		if end > len(entities) {
 			end = len(entities)
 		}
-		err := multiWriteAux(ctx, entities[start:end])
+		err := multiWriteAux(ctx, entityMetadata, entities[start:end])
 		if err != nil {
 			return err
 		}
 	}
 	return nil
 }
-func multiWriteAux(ctx context.Context, entities []MemoryEntity) error {
+func multiWriteAux(ctx context.Context, entityMetadata datastore.EntityMetadata, entities []MemoryEntity) error {
 	kvpair := make([]interface{}, 2*len(entities))
 	hasCollectionEntity := false
 	for idx, entity := range entities {
@@ -183,7 +183,7 @@ func multiWriteAux(ctx context.Context, entities []MemoryEntity) error {
 		kvpair[2*idx+1] = bytes.NewBuffer(make([]byte, 0, 256))
 		json.NewEncoder(kvpair[2*idx+1].(*bytes.Buffer)).Encode(entity)
 	}
-	c := GetCon(ctx)
+	c := GetEntityCon(ctx, entityMetadata)
 	c.Send("MSET", kvpair...)
 	c.Flush()
 	_, err := c.Receive()
@@ -191,7 +191,7 @@ func multiWriteAux(ctx context.Context, entities []MemoryEntity) error {
 		return err
 	}
 	if hasCollectionEntity {
-		err = MultiAddToCollection(ctx, entities)
+		err = MultiAddToCollection(ctx, entityMetadata, entities)
 	}
 	return err
 }

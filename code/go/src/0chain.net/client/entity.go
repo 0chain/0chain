@@ -17,10 +17,11 @@ type Client struct {
 	PublicKey string `json:"public_key"`
 }
 
-var clientEntityMetadata = &datastore.EntityMetadataImpl{Name: "client", MemoryDB: "client", Provider: Provider}
+var clientEntityMetadata = &datastore.EntityMetadataImpl{Name: "client", MemoryDB: "", Provider: Provider}
 
 func init() {
 	memorystore.AddPool("clientdb", memorystore.DefaultPool)
+	//memorystore.AddPool("clientdb", memorystore.NewPool(":6380"))
 }
 
 /*GetEntityMetadata - implementing the interface */
@@ -76,6 +77,7 @@ func SetupEntity() {
 	datastore.RegisterEntityMetadata("client", clientEntityMetadata)
 
 	var chunkingOptions = memorystore.ChunkingOptions{
+		EntityMetadata:   clientEntityMetadata,
 		EntityBufferSize: 1024,
 		MaxHoldupTime:    500 * time.Millisecond,
 		NumChunkCreators: 1,
