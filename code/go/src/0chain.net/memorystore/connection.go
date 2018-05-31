@@ -114,6 +114,9 @@ func GetCon(ctx context.Context) redis.Conn {
 /*WithEntityConnection - returns a connection as per the configuration of the entity */
 func WithEntityConnection(ctx context.Context, entityMetadata datastore.EntityMetadata) context.Context {
 	dbpool := getdbpool(entityMetadata)
+	if dbpool.Pool == DefaultPool {
+		return WithConnection(ctx)
+	}
 	c := ctx.Value(CONNECTION)
 	if c == nil {
 		cMap := make(connections)
@@ -135,6 +138,9 @@ func GetEntityCon(ctx context.Context, entityMetadata datastore.EntityMetadata) 
 		return GetEntityConnection(entityMetadata)
 	}
 	dbpool := getdbpool(entityMetadata)
+	if dbpool.Pool == DefaultPool {
+		return GetCon(ctx)
+	}
 	c := ctx.Value(CONNECTION)
 	if c == nil {
 		return nil

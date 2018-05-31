@@ -2,6 +2,8 @@ package block
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"0chain.net/common"
 	"0chain.net/datastore"
@@ -23,9 +25,10 @@ func (b *Block) GenerateBlock(ctx context.Context) error {
 	etxns := make([]memorystore.MemoryEntity, BLOCK_SIZE)
 	idx := 0
 	self := node.GetSelfNode(ctx)
-	if self != nil {
-		b.MinerID = self.ID
+	if self == nil {
+		panic("Invalid setup, could not find the self node")
 	}
+	b.MinerID = self.ID
 	b.Round = 0
 	var txnIterHandler = func(ctx context.Context, qe memorystore.CollectionEntity) bool {
 		select {
@@ -43,17 +46,14 @@ func (b *Block) GenerateBlock(ctx context.Context) error {
 			return true
 		}
 		txn.Status = transaction.TXN_STATUS_PENDING
-		/*TODO: In a perfect scenario where new transactions are feeding, I think there is no need for this.
-		//Reduce the score so this gets pushed down and later gets trimmed
+		//Setting the score lower so the next time blocks are generated these transactions don't show up at the top
 		txn.SetCollectionScore(txn.GetCollectionScore() - 10*60)
-		*/
+
 		txns[idx] = txn
 		etxns[idx] = txn
 		b.AddTransaction(txn)
 		idx++
 		if idx == BLOCK_SIZE {
-			b.UpdateTxnsToPending(ctx, etxns)
-			b.HashBlock()
 			return false
 		}
 		return true
@@ -61,10 +61,9 @@ func (b *Block) GenerateBlock(ctx context.Context) error {
 	txn := transaction.Provider().(*transaction.Transaction)
 	txn.ChainID = b.ChainID
 	collectionName := txn.GetCollectionName()
+	//TODO: remove timing code later (or make it applicable to test mode)
+	start := time.Now()
 	err := memorystore.IterateCollection(ctx, collectionName, txnIterHandler, datastore.GetEntityMetadata("txn"))
-	if err == nil && self != nil {
-		b.Signature, err = self.Sign(b.Hash)
-	}
 	if err != nil {
 		return err
 	}
@@ -72,6 +71,16 @@ func (b *Block) GenerateBlock(ctx context.Context) error {
 		b.Txns = nil
 		return common.NewError("insufficient_txns", "Not sufficient txns to make a block yet\n")
 	}
+	fmt.Printf("time to assemble block: %v\n", time.Since(start))
+	b.UpdateTxnsToPending(ctx, etxns)
+	fmt.Printf("time to assemble + write block: %v\n", time.Since(start))
+	b.HashBlock()
+	b.Signature, err = self.Sign(b.Hash)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("time to assemble+write+sign block: %v\n", time.Since(start))
+
 	return nil
 }
 
@@ -93,9 +102,9 @@ func (b *Block) VerifyBlock(ctx context.Context) (bool, error) {
 		b.Hash = hashCameWithBlock
 		return false, common.NewError("hash wrong", "The hash of the block is wrong\n")
 	}
-	sender := node.GetNode(b.MinerID)
+	miner := node.GetNode(b.MinerID)
 	var ok bool
-	ok, err = sender.Verify(b.Signature, b.Hash)
+	ok, err = miner.Verify(b.Signature, b.Hash)
 	if err != nil {
 		return false, err
 	} else if !ok {

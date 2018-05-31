@@ -22,6 +22,7 @@ func ToJSON(entity Entity) *bytes.Buffer {
 	return buffer
 }
 
+/*WriteJSON - writes the entity json to a stream */
 func WriteJSON(w io.Writer, entity Entity) error {
 	return json.NewEncoder(w).Encode(entity)
 }
@@ -67,6 +68,7 @@ func FromJSON(data interface{}, entity Entity) error {
 	return nil
 }
 
+/*ReadJSON - read entity json from a stream */
 func ReadJSON(r io.Reader, entity Entity) error {
 	return json.NewDecoder(r).Decode(entity)
 }

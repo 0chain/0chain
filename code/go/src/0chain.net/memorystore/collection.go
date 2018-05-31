@@ -132,7 +132,7 @@ func MultiAddToCollection(ctx context.Context, entityMetadata datastore.EntityMe
 type CollectionIteratorHandler func(ctx context.Context, ce CollectionEntity) bool
 
 /*BATCH_SIZE size of the batch */
-const BATCH_SIZE = 100
+const BATCH_SIZE = 256
 
 /*IterateCollection - iterate a collection with a callback that is given the entities.
 *Iteration can be stopped by returning false
