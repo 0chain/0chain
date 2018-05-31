@@ -13,7 +13,6 @@ var (
 	EntityDuplicate = "duplicate_entity"
 )
 
-
 /*Key - a type for the entity key */
 type Key = string
 
@@ -48,6 +47,7 @@ func ToKey(key interface{}) Key {
 /*Entity - interface that reads and writes any implementing structure as JSON into the store */
 type Entity interface {
 	GetEntityName() string
+  GetEntityMetadata() EntityMetadata
 	SetKey(key Key)
 	GetKey() Key
 	ComputeProperties()

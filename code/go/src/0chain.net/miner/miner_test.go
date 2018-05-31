@@ -22,7 +22,7 @@ func TestBlockGeneration(t *testing.T) {
 	SetUpSelf()
 	ctx := common.GetRootContext()
 	ctx = memorystore.WithConnection(ctx)
-	block.BLOCK_SIZE = 1000
+	block.BLOCK_SIZE = 10
 	b := block.Provider().(*block.Block)
 	b.ChainID = datastore.ToKey(config.GetServerChainID())
 	// pb = ... // TODO: Setup a privious block
@@ -69,6 +69,7 @@ func SetUpSelf() {
 	transaction.SetupEntity()
 	block.SetupEntity()
 	client.SetupEntity()
+	chain.SetupEntity()
 
 	c := chain.Provider().(*chain.Chain)
 	c.ID = datastore.ToKey(config.GetServerChainID())

@@ -34,18 +34,28 @@ func AsyncChannel(ctx context.Context) chan<- MemoryEntity {
 * Request is deserialized into an entity
 * It reclaims the connection at the end so there is no connection leak
  */
-func DoAsyncEntityJSONHandler(handler common.JSONEntityReqResponderF, channel chan<- MemoryEntity) common.JSONEntityReqResponderF {
-	return func(ctx context.Context, object interface{}) (interface{}, error) {
+func DoAsyncEntityJSONHandler(handler datastore.JSONEntityReqResponderF, channel chan<- MemoryEntity) datastore.JSONEntityReqResponderF {
+	return func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		ctx = WithAsyncChannel(ctx, channel)
-		entity, err := handler(ctx, object)
+		rentity, err := handler(ctx, entity)
 		if err != nil {
 			return nil, err
 		}
 		data := make(map[string]interface{})
-		data["entity"] = entity
+		data["entity"] = rentity
 		data["async"] = true
 		return data, nil
 	}
+}
+
+/*ChunkingOptions - to tune the performance charactersistics of async batch writing */
+type ChunkingOptions struct {
+	EntityBufferSize int
+	MaxHoldupTime    time.Duration
+	NumChunkCreators int
+	ChunkSize        int
+	ChunkBufferSize  int
+	NumChunkStorers  int
 }
 
 type Chunk struct {
@@ -163,7 +173,7 @@ func (bs *ChunkStorer) run(ctx context.Context) {
 }
 
 /*SetupWorkers - This setups up workers that allows aggregating and storing entities in chunks */
-func SetupWorkers(ctx context.Context, options *CollectionOptions) chan MemoryEntity {
+func SetupWorkers(ctx context.Context, options *ChunkingOptions) chan MemoryEntity {
 	echannel := make(chan MemoryEntity, options.EntityBufferSize)
 	bchannel := make(chan *Chunk, options.ChunkBufferSize)
 	var ecb EntityChunkBuilder

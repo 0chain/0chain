@@ -14,7 +14,6 @@ import (
 	"0chain.net/config"
 	"0chain.net/datastore"
 	"0chain.net/encryption"
-	"0chain.net/memorystore"
 	"github.com/golang/snappy"
 )
 
@@ -95,7 +94,6 @@ func SetHeaders(req *http.Request, entity datastore.Entity, options *SendOptions
 	ts := common.Now()
 	hashdata := fmt.Sprintf("%v:%v:%v", Self.GetKey(), ts, entity.GetKey())
 	hash := encryption.Hash(hashdata)
-	//TODO: Replace Self.privateKey with API from Ken
 	signature, err := Self.Sign(hash)
 	if err != nil {
 		return false
@@ -170,7 +168,6 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 				var rbuf bytes.Buffer
 				rbuf.ReadFrom(resp.Body)
 				fmt.Printf("Error sending to node(%v): %v: %v\n", n.GetKey(), resp.StatusCode, rbuf.String())
-
 				return false
 			}
 			return true
@@ -181,7 +178,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 /*ToN2NReceiveEntityHandler - takes a handler that accepts an entity, processes and responds and converts it
 * into somethign suitable for Node 2 Node communication
  */
-func ToN2NReceiveEntityHandler(handler common.JSONEntityReqResponderF) common.ReqRespHandlerf {
+func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF) common.ReqRespHandlerf {
 	return func(w http.ResponseWriter, r *http.Request) {
 		contentType := r.Header.Get("Content-type")
 		if !strings.HasPrefix(contentType, "application/json") {
@@ -218,8 +215,8 @@ func ToN2NReceiveEntityHandler(handler common.JSONEntityReqResponderF) common.Re
 		if entityName == "" {
 			return
 		}
-		entityProvider := memorystore.GetProvider(entityName)
-		if entityProvider == nil {
+		entityMetadata := datastore.GetEntityMetadata(entityName)
+		if entityMetadata == nil {
 			return
 		}
 		var buffer io.Reader = r.Body
@@ -236,7 +233,8 @@ func ToN2NReceiveEntityHandler(handler common.JSONEntityReqResponderF) common.Re
 			buffer = bytes.NewReader(cbytes)
 		}
 		var err error
-		entity := entityProvider()
+		entity := entityMetadata.Instance()
+
 		if r.Header.Get(HeaderRequestCODEC) == "JSON" {
 			err = datastore.FromJSON(buffer, entity.(datastore.Entity))
 		} else {

@@ -10,20 +10,6 @@ import (
 	"0chain.net/datastore"
 )
 
-var providers = make(map[string]common.EntityProvider)
-
-/*RegisterEntityProvider - keep track of a list of entity providers. An entity can be registered with multiple names
-* as long as two entities don't use the same name
- */
-func RegisterEntityProvider(entityName string, provider common.EntityProvider) {
-	providers[entityName] = provider
-}
-
-/*GetProvider - return the provider registered for the given entity */
-func GetProvider(entityName string) common.EntityProvider {
-	return providers[entityName]
-}
-
 type MemoryEntity interface {
 	datastore.Entity
 	Read(ctx context.Context, key datastore.Key) error
@@ -116,10 +102,10 @@ func Delete(ctx context.Context, entity MemoryEntity) error {
 	return err
 }
 
-func AllocateEntities(size int, entityProvider common.EntityProvider) ([]MemoryEntity, error) {
+func AllocateEntities(size int, entityMetadata datastore.EntityMetadata) ([]MemoryEntity, error) {
 	entities := make([]MemoryEntity, size)
 	for i := 0; i < size; i++ {
-		entity, ok := entityProvider().(MemoryEntity)
+		entity, ok := entityMetadata.Instance().(MemoryEntity)
 		if !ok {
 			return nil, common.NewError("invalid_entity_provider", "Could not type cast to entity")
 		}

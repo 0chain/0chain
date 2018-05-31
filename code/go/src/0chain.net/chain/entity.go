@@ -48,6 +48,13 @@ type Chain struct {
 	MaxRound int64 `json:"-"`
 }
 
+var chainEntityMetadata = &datastore.EntityMetadataImpl{Name: "chain", Provider: Provider}
+
+/*GetEntityMetadata - implementing the interface */
+func (c *Chain) GetEntityMetadata() datastore.EntityMetadata {
+	return chainEntityMetadata
+}
+
 /*GetEntityName - implementing the interface */
 func (c *Chain) GetEntityName() string {
 	return "chain"
@@ -80,7 +87,7 @@ func (c *Chain) Delete(ctx context.Context) error {
 }
 
 /*Provider - entity provider for chain object */
-func Provider() interface{} {
+func Provider() datastore.Entity {
 	c := &Chain{}
 	c.RoundsChannel = make(chan *round.Round)
 	c.InitializeCreationDate()
@@ -92,7 +99,7 @@ func Provider() interface{} {
 
 /*SetupEntity - setup the entity */
 func SetupEntity() {
-	memorystore.RegisterEntityProvider("chain", Provider)
+	datastore.RegisterEntityMetadata("chain", chainEntityMetadata)
 }
 
 /*UpdateFinalizedBlock - update the latest finalized block */

@@ -17,6 +17,17 @@ type Client struct {
 	PublicKey string `json:"public_key"`
 }
 
+var clientEntityMetadata = &datastore.EntityMetadataImpl{Name: "client", MemoryDB: "client", Provider: Provider}
+
+func init() {
+	memorystore.AddPool("clientdb", memorystore.DefaultPool)
+}
+
+/*GetEntityMetadata - implementing the interface */
+func (c *Client) GetEntityMetadata() datastore.EntityMetadata {
+	return clientEntityMetadata
+}
+
 /*GetEntityName - implementing the interface */
 func (c *Client) GetEntityName() string {
 	return "client"
@@ -54,7 +65,7 @@ func (c *Client) Verify(signature string, hash string) (bool, error) {
 }
 
 /*Provider - entity provider for client object */
-func Provider() interface{} {
+func Provider() datastore.Entity {
 	c := &Client{}
 	c.InitializeCreationDate()
 	return c
@@ -62,9 +73,9 @@ func Provider() interface{} {
 
 /*SetupEntity - setup the entity */
 func SetupEntity() {
-	memorystore.RegisterEntityProvider("client", Provider)
+	datastore.RegisterEntityMetadata("client", clientEntityMetadata)
 
-	var collectionOptions = memorystore.CollectionOptions{
+	var chunkingOptions = memorystore.ChunkingOptions{
 		EntityBufferSize: 1024,
 		MaxHoldupTime:    500 * time.Millisecond,
 		NumChunkCreators: 1,
@@ -72,7 +83,7 @@ func SetupEntity() {
 		ChunkBufferSize:  16,
 		NumChunkStorers:  2,
 	}
-	ClientEntityChannel = memorystore.SetupWorkers(common.GetRootContext(), &collectionOptions)
+	ClientEntityChannel = memorystore.SetupWorkers(common.GetRootContext(), &chunkingOptions)
 }
 
 var ClientEntityChannel chan memorystore.MemoryEntity

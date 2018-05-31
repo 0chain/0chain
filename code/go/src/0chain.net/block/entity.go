@@ -63,6 +63,13 @@ type Block struct {
 	PrevBlock *Block `json:"-"`
 }
 
+var blockEntityMetadata = &datastore.EntityMetadataImpl{Name: "block", Provider: Provider}
+
+/*GetEntityMetadata - implementing the interface */
+func (b *Block) GetEntityMetadata() datastore.EntityMetadata {
+	return blockEntityMetadata
+}
+
 /*GetEntityName - implementing the interface */
 func (b *Block) GetEntityName() string {
 	return "block"
@@ -124,7 +131,7 @@ func (b *Block) GetCollectionName() string {
 }
 
 /*Provider - entity provider for block object */
-func Provider() interface{} {
+func Provider() datastore.Entity {
 	b := &Block{}
 	b.PrevBlockVerficationTickets = make([]*VerificationTicket, 0, 1)
 	b.VerificationTickets = make([]*VerificationTicket, 0, 1)
@@ -136,7 +143,7 @@ func Provider() interface{} {
 
 /*SetupEntity - setup the entity */
 func SetupEntity() {
-	memorystore.RegisterEntityProvider("block", Provider)
+	datastore.RegisterEntityMetadata("block", blockEntityMetadata)
 	blockEntityCollection = &memorystore.EntityCollection{CollectionName: "collection.block", CollectionSize: 1000, CollectionDuration: time.Hour}
 }
 

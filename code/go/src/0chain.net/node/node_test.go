@@ -62,6 +62,12 @@ type Company struct {
 	Name   string `json:"name,omitempty"`
 }
 
+var companyEntityMetadata = &datastore.EntityMetadataImpl{Name: "company", MemoryDB: "company"}
+
+func (c *Company) GetEntityMetadata() datastore.EntityMetadata {
+	return companyEntityMetadata
+}
+
 func (c *Company) GetEntityName() string {
 	return "company"
 }

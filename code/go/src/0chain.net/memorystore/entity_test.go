@@ -22,6 +22,17 @@ func (c *Company) GetEntityName() string {
 	return "company"
 }
 
+var companyEntityMetadata = &datastore.EntityMetadataImpl{Name: "company", MemoryDB: "company", Provider: CompanyProvider}
+
+func init() {
+	AddPool("company", DefaultPool)
+}
+
+/*GetEntityMetadata - implementing the interface */
+func (c *Company) GetEntityMetadata() datastore.EntityMetadata {
+	return companyEntityMetadata
+}
+
 /*
 func (c *Company) SetKey(key Key) {
 	c.ID = key
@@ -54,7 +65,7 @@ func (c *Company) Delete(ctx context.Context) error {
 var companyEntityCollection = &EntityCollection{CollectionName: "collection.company", CollectionSize: 10000, CollectionDuration: time.Hour}
 
 /*TransactionProvider - entity provider for client object */
-func CompanyProvider() interface{} {
+func CompanyProvider() datastore.Entity {
 	c := &Company{}
 	c.CollectionIDField.EntityCollection = companyEntityCollection
 	return c
@@ -96,8 +107,7 @@ func TestEntityWriteRead(t *testing.T) {
 	MultiWrite(ctx, []MemoryEntity{zeroChain, zeroChain2})
 
 	fmt.Printf("iterating\n")
-	IterateCollection(ctx, zeroChain.GetCollectionName(), PrintIterator, CompanyProvider)
-
+	IterateCollection(ctx, zeroChain.GetCollectionName(), PrintIterator, companyEntityMetadata)
 }
 
 /*

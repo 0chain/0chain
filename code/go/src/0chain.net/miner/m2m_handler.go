@@ -31,8 +31,8 @@ func SetupM2MReceivers() {
 }
 
 /*VerifyBlockHandler - verify the block that is received */
-func VerifyBlockHandler(ctx context.Context, object interface{}) (interface{}, error) {
-	b, ok := object.(*block.Block)
+func VerifyBlockHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+	b, ok := entity.(*block.Block)
 	if !ok {
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
@@ -48,8 +48,8 @@ func VerifyBlockHandler(ctx context.Context, object interface{}) (interface{}, e
 }
 
 /*VerificationTicketReceiptHandler - Add a verification ticket to the block */
-func VerificationTicketReceiptHandler(ctx context.Context, object interface{}) (interface{}, error) {
-	bvt, ok := object.(*block.BlockVerificationTicket)
+func VerificationTicketReceiptHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+	bvt, ok := entity.(*block.BlockVerificationTicket)
 	if !ok {
 		return nil, common.InvalidRequest("Invalid Entity")
 	}

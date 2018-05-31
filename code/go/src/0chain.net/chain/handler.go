@@ -8,23 +8,24 @@ import (
 	"time"
 
 	"0chain.net/common"
+	"0chain.net/datastore"
 	"0chain.net/memorystore"
 )
 
 /*SetupHandlers sets up the necessary API end points */
 func SetupHandlers() {
 	http.HandleFunc("/v1/chain/get", common.ToJSONResponse(memorystore.WithConnectionHandler(GetChainHandler)))
-	http.HandleFunc("/v1/chain/put", common.ToJSONEntityReqResponse(memorystore.WithConnectionEntityJSONHandler(PutChainHandler), Provider))
+	http.HandleFunc("/v1/chain/put", datastore.ToJSONEntityReqResponse(memorystore.WithConnectionEntityJSONHandler(PutChainHandler, chainEntityMetadata), chainEntityMetadata))
 }
 
 /*GetChainHandler - given an id returns the chain information */
 func GetChainHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	return memorystore.GetEntityHandler(ctx, r, Provider, "id")
+	return memorystore.GetEntityHandler(ctx, r, chainEntityMetadata, "id")
 }
 
 /*PutChainHandler - Given a chain data, it stores it */
-func PutChainHandler(ctx context.Context, object interface{}) (interface{}, error) {
-	return memorystore.PutEntityHandler(ctx, object)
+func PutChainHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+	return memorystore.PutEntityHandler(ctx, entity)
 }
 
 /*StatusHandler - allows checking the status of the node */

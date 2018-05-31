@@ -38,22 +38,22 @@ func WithConnectionJSONHandler(handler common.JSONReqResponderF) common.JSONReqR
 * Request is deserialized into an entity
 * It reclaims the connection at the end so there is no connection leak
  */
-func WithConnectionEntityJSONHandler(handler common.JSONEntityReqResponderF) common.JSONEntityReqResponderF {
-	return func(ctx context.Context, object interface{}) (interface{}, error) {
-		ctx = WithConnection(ctx)
-		con := ctx.Value(CONNECTION).(redis.Conn)
+func WithConnectionEntityJSONHandler(handler datastore.JSONEntityReqResponderF, entityMetadata datastore.EntityMetadata) datastore.JSONEntityReqResponderF {
+	return func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+		ctx = WithEntityConnection(ctx, entityMetadata)
+		con := GetEntityCon(ctx, entityMetadata)
 		defer con.Close()
-		return handler(ctx, object)
+		return handler(ctx, entity)
 	}
 }
 
 /*GetEntityHandler - default get handler implementation for any Entity */
-func GetEntityHandler(ctx context.Context, r *http.Request, entityProvider common.EntityProvider, idparam string) (interface{}, error) {
+func GetEntityHandler(ctx context.Context, r *http.Request, entityMetadata datastore.EntityMetadata, idparam string) (interface{}, error) {
 	id := r.FormValue(idparam)
 	if id == "" {
 		return nil, common.InvalidRequest(fmt.Sprintf("%v is required", idparam))
 	}
-	entity, ok := entityProvider().(MemoryEntity)
+	entity, ok := entityMetadata.Instance().(MemoryEntity)
 	if !ok {
 		return nil, common.NewError("dev_error", "Invalid entity provider")
 	}

@@ -43,6 +43,13 @@ const (
 	TXN_STATUS_CANCELLED = 3
 )
 
+var transactionEntityMetadata = &datastore.EntityMetadataImpl{Name: "txn", Provider: Provider}
+
+/*GetEntityMetadata - implementing the interface */
+func (t *Transaction) GetEntityMetadata() datastore.EntityMetadata {
+	return transactionEntityMetadata
+}
+
 /*GetEntityName - Entity implementation */
 func (t *Transaction) GetEntityName() string {
 	return "txn"
@@ -153,7 +160,7 @@ func (t *Transaction) VerifySignature(ctx context.Context) error { //TODO
 }
 
 /*Provider - entity provider for client object */
-func Provider() interface{} {
+func Provider() datastore.Entity {
 	c := &Transaction{}
 	c.EntityCollection = txnEntityCollection
 	c.Status = TXN_STATUS_FREE
@@ -166,8 +173,8 @@ var TransactionEntityChannel chan memorystore.MemoryEntity
 
 /*SetupEntity - setup the entity */
 func SetupEntity() {
-	memorystore.RegisterEntityProvider("txn", Provider)
-	txnEntityCollection = &memorystore.EntityCollection{CollectionName: "collection.txn", CollectionSize: 10000000, CollectionDuration: time.Hour}
+	datastore.RegisterEntityMetadata("txn", transactionEntityMetadata)
+	txnEntityCollection = &memorystore.EntityCollection{CollectionName: "collection.txn", CollectionSize: 60000000, CollectionDuration: time.Hour}
 
 	/*Entity Buffer Size = 10240
 	* Timeout = 250 milliseconds
@@ -175,7 +182,7 @@ func SetupEntity() {
 	* Chunk Buffer Size = 32
 	* Chunk Workers = 8
 	 */
-	var collectionOptions = memorystore.CollectionOptions{
+	var chunkingOptions = memorystore.ChunkingOptions{
 		EntityBufferSize: 10240,
 		MaxHoldupTime:    250 * time.Millisecond,
 		NumChunkCreators: 1,
@@ -183,7 +190,7 @@ func SetupEntity() {
 		ChunkBufferSize:  32,
 		NumChunkStorers:  8,
 	}
-	TransactionEntityChannel = memorystore.SetupWorkers(common.GetRootContext(), &collectionOptions)
+	TransactionEntityChannel = memorystore.SetupWorkers(common.GetRootContext(), &chunkingOptions)
 }
 
 /*Sign - given a client and client's private key, sign this tranasction */

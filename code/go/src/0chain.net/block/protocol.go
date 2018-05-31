@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"0chain.net/common"
+	"0chain.net/datastore"
 	"0chain.net/memorystore"
 	"0chain.net/node"
 	"0chain.net/transaction"
@@ -62,7 +63,7 @@ func (b *Block) GenerateBlock(ctx context.Context) error {
 	txn := transaction.Provider().(*transaction.Transaction)
 	txn.ChainID = b.ChainID
 	collectionName := txn.GetCollectionName()
-	err := memorystore.IterateCollection(ctx, collectionName, txnIterHandler, transaction.Provider)
+	err := memorystore.IterateCollection(ctx, collectionName, txnIterHandler, datastore.GetEntityMetadata("txn"))
 	if err == nil && self != nil {
 		b.Signature, err = self.Sign(b.Hash)
 	}

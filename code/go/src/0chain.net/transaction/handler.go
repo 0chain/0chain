@@ -15,7 +15,7 @@ import (
 /*SetupHandlers sets up the necessary API end points */
 func SetupHandlers() {
 	http.HandleFunc("/v1/transaction/get", common.ToJSONResponse(memorystore.WithConnectionHandler(GetTransaction)))
-	http.HandleFunc("/v1/transaction/put", common.ToJSONEntityReqResponse(memorystore.DoAsyncEntityJSONHandler(memorystore.WithConnectionEntityJSONHandler(PutTransaction), TransactionEntityChannel), Provider))
+	http.HandleFunc("/v1/transaction/put", datastore.ToJSONEntityReqResponse(memorystore.DoAsyncEntityJSONHandler(memorystore.WithConnectionEntityJSONHandler(PutTransaction, transactionEntityMetadata), TransactionEntityChannel), transactionEntityMetadata))
 }
 
 /*SetupSharderHandlers sets up the necessary API end points for Sharders */
@@ -25,17 +25,17 @@ func SetupSharderHandlers() {
 
 /*GetTransaction - given an id returns the transaction information */
 func GetTransaction(ctx context.Context, r *http.Request) (interface{}, error) {
-	return memorystore.GetEntityHandler(ctx, r, Provider, "hash")
+	return memorystore.GetEntityHandler(ctx, r, transactionEntityMetadata, "hash")
 }
 
 /*TXN_TIME_TOLERANCE - the txn creation date should be within 5 seconds before/after of current time */
 const TXN_TIME_TOLERANCE = 5
 
 /*PutTransaction - Given a transaction data, it stores it */
-func PutTransaction(ctx context.Context, object interface{}) (interface{}, error) {
-	txn, ok := object.(*Transaction)
+func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+	txn, ok := entity.(*Transaction)
 	if !ok {
-		return nil, fmt.Errorf("invalid request %T", object)
+		return nil, fmt.Errorf("invalid request %T", entity)
 	}
 	txn.ComputeProperties()
 	if !common.Within(int64(txn.CreationDate), TXN_TIME_TOLERANCE) {
@@ -94,7 +94,7 @@ func GetTransactions(ctx context.Context, r *http.Request) (interface{}, error) 
 	//But because this is off of redis and we don't have good filtering capability, we have to settle for large time.
 	ctx, cancelf := context.WithTimeout(ctx, 10*time.Second)
 	defer cancelf()
-	err := memorystore.IterateCollection(ctx, collectionName, txnIterHandler, Provider)
+	err := memorystore.IterateCollection(ctx, collectionName, txnIterHandler, transactionEntityMetadata)
 	if err != nil {
 		return nil, err
 	}

@@ -11,16 +11,6 @@ import (
 	"0chain.net/datastore"
 )
 
-/*CollectionOptions - to tune the performance charactersistics of a collection */
-type CollectionOptions struct {
-	EntityBufferSize int
-	MaxHoldupTime    time.Duration
-	NumChunkCreators int
-	ChunkSize        int
-	ChunkBufferSize  int
-	NumChunkStorers  int
-}
-
 /*CollectionEntity - An entity can implement the CollectionEntity interface by including a CollectionIDField
 *It can optionally override GetCollectionName to provide multiple collections partitioned by some key
 * Example - transactions and blocks can be partioned by chain
@@ -145,7 +135,7 @@ const BATCH_SIZE = 100
 /*IterateCollection - iterate a collection with a callback that is given the entities.
 *Iteration can be stopped by returning false
  */
-func IterateCollection(ctx context.Context, collectionName string, handler CollectionIteratorHandler, entityProvider common.EntityProvider) error {
+func IterateCollection(ctx context.Context, collectionName string, handler CollectionIteratorHandler, entityMetadata datastore.EntityMetadata) error {
 	con := GetCon(ctx)
 	bucket := make([]MemoryEntity, BATCH_SIZE)
 	keys := make([]datastore.Key, BATCH_SIZE)
@@ -169,7 +159,7 @@ func IterateCollection(ctx context.Context, collectionName string, handler Colle
 			return common.NewError("error", fmt.Sprintf("error casting data to []interface{} : %T", data))
 		}
 		for bidx := range bkeys {
-			bucket[bidx] = entityProvider().(MemoryEntity)
+			bucket[bidx] = entityMetadata.Instance().(MemoryEntity)
 			keys[bidx] = datastore.ToKey(bkeys[bidx])
 		}
 

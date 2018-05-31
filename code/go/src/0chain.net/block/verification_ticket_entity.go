@@ -27,6 +27,13 @@ type BlockVerificationTicket struct {
 /*TODO: Making BlockVerificationTicket an entity for now as N2N handler framework uses entity.
 * May be we get rid of the entity requirement later as there is no true ID for this */
 
+var bvtEntityMetadata = &datastore.EntityMetadataImpl{Name: "block_verification_ticket", Provider: BVTProvider}
+
+/*GetEntityMetadata - implementing the interface */
+func (bvt *BlockVerificationTicket) GetEntityMetadata() datastore.EntityMetadata {
+	return bvtEntityMetadata
+}
+
 /*GetEntityName - implementing the interface */
 func (bvt *BlockVerificationTicket) GetEntityName() string {
 	return "block_verification_ticket"
@@ -69,12 +76,12 @@ func (bvt *BlockVerificationTicket) Delete(ctx context.Context) error {
 }
 
 /*BVTProvider - entity provider for block_verification_ticket object */
-func BVTProvider() interface{} {
+func BVTProvider() datastore.Entity {
 	bvt := &BlockVerificationTicket{}
 	return bvt
 }
 
 /*SetupBVTEntity - setup the entity */
 func SetupBVTEntity() {
-	memorystore.RegisterEntityProvider("block_verification_ticket", BVTProvider)
+	datastore.RegisterEntityMetadata("block_verification_ticket", bvtEntityMetadata)
 }

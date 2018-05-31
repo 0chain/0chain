@@ -23,14 +23,6 @@ type JSONResponderF func(ctx context.Context, r *http.Request) (interface{}, err
  */
 type JSONReqResponderF func(ctx context.Context, json map[string]interface{}) (interface{}, error)
 
-/*JSONEntityReqResponderF - a handler that takes a JSON request and responds with a json response
-* Useful for GET operation where the input is coming via url parameters
- */
-type JSONEntityReqResponderF func(ctx context.Context, object interface{}) (interface{}, error)
-
-/*EntityProvider - returns an entity */
-type EntityProvider func() interface{}
-
 func Respond(w http.ResponseWriter, data interface{}, err error) {
 	if err != nil {
 		http.Error(w, err.Error(), 400)
@@ -81,30 +73,6 @@ func ToJSONReqResponse(handler JSONReqResponderF) ReqRespHandlerf {
 		}
 		ctx := r.Context()
 		data, err := handler(ctx, jsonData)
-		Respond(w, data, err)
-	}
-}
-
-/*ToJSONEntityReqResponse - Similar to ToJSONReqResponse except it takes an EntityProvider
-* that returns an interface into which the incoming request json is unmarshalled
-* Avoids extra map creation and also wiring it manually from the map to the entity object
- */
-func ToJSONEntityReqResponse(handler JSONEntityReqResponderF, entityProvider EntityProvider) ReqRespHandlerf {
-	return func(w http.ResponseWriter, r *http.Request) {
-		contentType := r.Header.Get("Content-type")
-		if !strings.HasPrefix(contentType, "application/json") {
-			http.Error(w, "Header Content-type=application/json not found", 400)
-			return
-		}
-		decoder := json.NewDecoder(r.Body)
-		entity := entityProvider()
-		err := decoder.Decode(entity)
-		if err != nil {
-			http.Error(w, "Error decoding json", 500)
-			return
-		}
-		ctx := r.Context()
-		data, err := handler(ctx, entity)
 		Respond(w, data, err)
 	}
 }
