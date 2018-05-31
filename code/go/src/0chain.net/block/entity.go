@@ -83,6 +83,11 @@ func (b *Block) ComputeProperties() {
 	if datastore.IsEmpty(b.ChainID) {
 		b.ChainID = datastore.ToKey(config.GetMainChainID())
 	}
+	if b.Txns != nil {
+		for _, txn := range *b.Txns {
+			txn.ComputeProperties()
+		}
+	}
 }
 
 /*Validate - implementing the interface */
@@ -147,6 +152,7 @@ func SetupEntity() {
 	blockEntityCollection = &memorystore.EntityCollection{CollectionName: "collection.block", CollectionSize: 1000, CollectionDuration: time.Hour}
 }
 
+/*SetPreviousBlock - set the previous block of this block */
 func (b *Block) SetPreviousBlock(prevBlock *Block) {
 	b.PrevBlock = prevBlock
 	b.PrevHash = prevBlock.Hash
@@ -230,8 +236,14 @@ func (b *Block) AddVerificationTicket(vt *VerificationTicket) bool {
 	return true
 }
 
-func (b *Block) HashBlock() {
+/*ComputeHash - compute the hash of the block */
+func (b *Block) ComputeHash() string {
 	buf := new(bytes.Buffer)
 	json.NewEncoder(buf).Encode(b.UnverifiedBlockBody)
-	b.Hash = encryption.Hash(buf.String())
+	return encryption.Hash(buf.String())
+}
+
+/*HashBlock - compute and set the hash of the block */
+func (b *Block) HashBlock() {
+	b.Hash = b.ComputeHash()
 }

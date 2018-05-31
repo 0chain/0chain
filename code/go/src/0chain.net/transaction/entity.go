@@ -17,8 +17,11 @@ import (
 /*Transaction type for capturing the transaction data */
 type Transaction struct {
 	memorystore.CollectionIDField
-	Hash            string           `json:"hash" msgpack:"h"`
-	ClientID        datastore.Key    `json:"client_id" msgpack:"cid"`
+	Hash string `json:"hash" msgpack:"h"`
+
+	ClientID  datastore.Key `json:"client_id" msgpack:"cid,omitempty"`
+	PublicKey string        `json:"-" msgpack:"puk,omitempty"`
+
 	ToClientID      datastore.Key    `json:"to_client_id,omitempty" msgpack:"tcid,omitempty"`
 	ChainID         datastore.Key    `json:"chain_id,omitempty" msgpack:"chid"`
 	TransactionData string           `json:"transaction_data" msgpack:"d"`
@@ -62,6 +65,14 @@ func (t *Transaction) ComputeProperties() {
 	}
 	if datastore.IsEmpty(t.ChainID) {
 		t.ChainID = datastore.ToKey(config.GetMainChainID())
+	}
+	if t.PublicKey != "" {
+		if t.ClientID == "" {
+			// Doing this is OK because the transaction signature has ClientID
+			// that won't pass verification if some other client's public is put in
+			t.ClientID = encryption.Hash(t.PublicKey)
+			t.PublicKey = ""
+		}
 	}
 }
 

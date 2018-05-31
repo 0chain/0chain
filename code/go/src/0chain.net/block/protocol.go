@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/client"
 	"0chain.net/common"
 	"0chain.net/datastore"
 	"0chain.net/memorystore"
@@ -19,6 +20,7 @@ var BLOCK_SIZE = 250000
 * block published while working on this
  */
 func (b *Block) GenerateBlock(ctx context.Context) error {
+	clients := make(map[string]*client.Client)
 	txns := make([]*transaction.Transaction, BLOCK_SIZE)
 	b.Txns = &txns
 	//TODO: wasting this because we []interface{} != []*transaction.Transaction in Go
@@ -39,6 +41,7 @@ func (b *Block) GenerateBlock(ctx context.Context) error {
 		if txn.Status != transaction.TXN_STATUS_FREE {
 			return true
 		}
+
 		txn.Status = transaction.TXN_STATUS_PENDING
 		//Setting the score lower so the next time blocks are generated these transactions don't show up at the top
 		txn.SetCollectionScore(txn.GetCollectionScore() - 10*60)
@@ -47,6 +50,9 @@ func (b *Block) GenerateBlock(ctx context.Context) error {
 		etxns[idx] = txn
 		b.AddTransaction(txn)
 		idx++
+
+		clients[txn.ClientID] = nil
+
 		if idx == BLOCK_SIZE {
 			return false
 		}
@@ -65,11 +71,22 @@ func (b *Block) GenerateBlock(ctx context.Context) error {
 		b.Txns = nil
 		return common.NewError("insufficient_txns", "Not sufficient txns to make a block yet\n")
 	}
+
+	client.GetClients(ctx, clients)
 	fmt.Printf("time to assemble block: %v\n", time.Since(start))
 	b.UpdateTxnsToPending(ctx, etxns)
 	fmt.Printf("time to assemble + write block: %v\n", time.Since(start))
 	b.HashBlock()
 	b.Signature, err = self.Sign(b.Hash)
+	//TODO: After the hashblock is done with the txn hashes, the publickey/clientid switch can move right after GetClients
+	for _, txn := range txns {
+		client := clients[txn.ClientID]
+		if client == nil {
+			return common.NewError("invalid_client_id", "client id not available")
+		}
+		txn.PublicKey = client.PublicKey
+		txn.ClientID = datastore.EmptyKey
+	}
 	if err != nil {
 		return err
 	}
@@ -85,6 +102,7 @@ func (b *Block) UpdateTxnsToPending(ctx context.Context, txns []memorystore.Memo
 
 /*VerifyBlock - given a set of transaction ids within a block, validate the block */
 func (b *Block) VerifyBlock(ctx context.Context) (bool, error) {
+	start := time.Now()
 	b.ComputeProperties()
 	err := b.Validate(ctx)
 	if err != nil {
@@ -97,6 +115,9 @@ func (b *Block) VerifyBlock(ctx context.Context) (bool, error) {
 		return false, common.NewError("hash wrong", "The hash of the block is wrong\n")
 	}
 	miner := node.GetNode(b.MinerID)
+	if miner == nil {
+		return false, common.NewError("unknown_miner", "Do not know this miner\n")
+	}
 	var ok bool
 	ok, err = miner.Verify(b.Signature, b.Hash)
 	if err != nil {
@@ -110,6 +131,7 @@ func (b *Block) VerifyBlock(ctx context.Context) (bool, error) {
 			return false, err
 		}
 	}
+	fmt.Printf("Block verification time:%v\n", time.Since(start))
 	return true, nil
 }
 

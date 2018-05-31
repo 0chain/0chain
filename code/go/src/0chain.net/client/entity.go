@@ -89,3 +89,27 @@ func SetupEntity() {
 }
 
 var ClientEntityChannel chan memorystore.MemoryEntity
+
+/*GetClients - given a set of client ids, return the clients */
+func GetClients(ctx context.Context, clients map[string]*Client) {
+	clientIDs := make([]string, len(clients))
+	idx := 0
+	for key := range clients {
+		clientIDs[idx] = key
+		idx++
+	}
+	for i, start := 0, 0; start < len(clients); start += memorystore.BATCH_SIZE {
+		end := start + memorystore.BATCH_SIZE
+		if end > len(clients) {
+			end = len(clients)
+		}
+		cEntities := make([]memorystore.MemoryEntity, end-start+1)
+		for j := 0; j < len(cEntities); j++ {
+			cEntities[j] = clientEntityMetadata.Instance().(*Client)
+		}
+		memorystore.MultiRead(ctx, clientEntityMetadata, clientIDs[start:end], cEntities)
+		for j := 0; i < end; i, j = i+1, j+1 {
+			clients[clientIDs[i]] = cEntities[j].(*Client)
+		}
+	}
+}

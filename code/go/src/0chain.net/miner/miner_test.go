@@ -66,6 +66,17 @@ func TestBlockGeneration(t *testing.T) {
 				fmt.Printf("Block hash is: %v\n", b2.Hash)
 			}
 		}
+		b.ComputeProperties()
+		valid, err := b.VerifyBlock(ctx)
+		if err != nil {
+			fmt.Printf("Error verifying block: %v\n", err)
+		} else {
+			if !valid {
+				fmt.Printf("hash verification is working\n")
+			} else {
+				fmt.Printf("hash verification problem\n")
+			}
+		}
 	}
 	common.Done()
 }
