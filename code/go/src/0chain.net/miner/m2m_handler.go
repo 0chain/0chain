@@ -8,6 +8,7 @@ import (
 	"0chain.net/block"
 	"0chain.net/common"
 	"0chain.net/datastore"
+	"0chain.net/memorystore"
 	"0chain.net/node"
 )
 
@@ -25,7 +26,7 @@ func SetupM2MSenders() {
 
 /*SetupM2MReceivers - setup receivers for miner to miner communication */
 func SetupM2MReceivers() {
-	http.HandleFunc("/v1/_m2m/block/verify", node.ToN2NReceiveEntityHandler(VerifyBlockHandler))
+	http.HandleFunc("/v1/_m2m/block/verify", node.ToN2NReceiveEntityHandler(memorystore.WithConnectionEntityJSONHandler(VerifyBlockHandler, datastore.GetEntityMetadata("block"))))
 
 	http.HandleFunc("/v1/_m2m/block/verification_ticket", node.ToN2NReceiveEntityHandler(VerificationTicketReceiptHandler))
 }
@@ -42,7 +43,7 @@ func VerifyBlockHandler(ctx context.Context, entity datastore.Entity) (interface
 		return nil, err
 	}
 	if !ok {
-		return nil, common.InvalidRequest("Block couuldnot be verified")
+		return nil, common.InvalidRequest("Block couldnot be verified")
 	}
 	return true, nil
 }

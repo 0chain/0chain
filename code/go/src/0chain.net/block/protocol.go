@@ -82,6 +82,7 @@ func (b *Block) UpdateTxnsToPending(ctx context.Context, txns []memorystore.Memo
 
 /*VerifyBlock - given a set of transaction ids within a block, validate the block */
 func (b *Block) VerifyBlock(ctx context.Context) (bool, error) {
+	b.ComputeProperties()
 	err := b.Validate(ctx)
 	if err != nil {
 		return false, err

@@ -3,6 +3,8 @@ package miner
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/user"
 	"testing"
 	"time"
 
@@ -37,14 +39,33 @@ func TestBlockGeneration(t *testing.T) {
 	r.Number = 1
 	mc.AddRound(r)
 
-	b, err := mc.GenerateBlock(ctx, 1)
+	usr, err := user.Current()
+	if err != nil {
+		panic(err)
+	}
+	block.SetupFileBlockStore(fmt.Sprintf("%v%s.0chain.net", usr.HomeDir, string(os.PathSeparator)))
+
+	b, err = mc.GenerateBlock(ctx, 1)
+
 	if err != nil {
 		fmt.Printf("Error generating block: %v\n", err)
 	} else {
-		fmt.Printf("%v\n", datastore.ToJSON(b))
+		/* fmt.Printf("%v\n", datastore.ToJSON(b))
 		fmt.Printf("%v\n", datastore.ToMsgpack(b))
+		*/
 		fmt.Printf("json length: %v\n", datastore.ToJSON(b).Len())
 		fmt.Printf("msgpack length: %v\n", datastore.ToMsgpack(b).Len())
+		err = block.Store.Write(b)
+		if err != nil {
+			fmt.Printf("Error writing the block: %v\n", err)
+		} else {
+			b2, err := block.Store.Read(b.Hash, b.Round)
+			if err != nil {
+				fmt.Printf("Error reading the block: %v\n", err)
+			} else {
+				fmt.Printf("Block hash is: %v\n", b2.Hash)
+			}
+		}
 	}
 	common.Done()
 }

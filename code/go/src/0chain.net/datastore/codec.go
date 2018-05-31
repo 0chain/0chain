@@ -22,6 +22,10 @@ func ToJSON(entity Entity) *bytes.Buffer {
 	return buffer
 }
 
+func WriteJSON(w io.Writer, entity Entity) error {
+	return json.NewEncoder(w).Encode(entity)
+}
+
 /*ToMsgpack - msgpack encoding */
 func ToMsgpack(entity Entity) *bytes.Buffer {
 	buffer := bytes.NewBuffer(make([]byte, 0, 256))
@@ -55,6 +59,10 @@ func FromJSON(data interface{}, entity Entity) error {
 	default:
 		return common.NewError("unknown_data_type", fmt.Sprintf("unknown data type for reading entity from json: %T, %v\n", data, data))
 	}
+}
+
+func ReadJSON(r io.Reader, entity Entity) error {
+	return json.NewDecoder(r).Decode(entity)
 }
 
 /*FromMsgpack - read data into an entity */
