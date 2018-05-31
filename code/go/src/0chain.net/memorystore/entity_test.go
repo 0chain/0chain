@@ -75,6 +75,7 @@ func TestEntityWriteRead(t *testing.T) {
 	fmt.Printf("time : %v\n", time.Now().UnixNano()/int64(time.Millisecond))
 	common.SetupRootContext(context.Background())
 	ctx := WithEntityConnection(common.GetRootContext(), companyEntityMetadata)
+	defer Close(ctx)
 	zeroChain := CompanyProvider().(*Company)
 	zeroChain2 := CompanyProvider().(*Company)
 	keys := []datastore.Key{datastore.ToKey([]byte("0chain.net")), datastore.ToKey("0chain.io")}

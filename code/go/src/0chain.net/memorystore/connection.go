@@ -38,6 +38,9 @@ func init() {
 }
 
 func getConnectionCtxKey(dbid string) common.ContextKey {
+	if dbid == "" {
+		return CONNECTION
+	}
 	return common.ContextKey(fmt.Sprintf("%v%v", CONNECTION, dbid))
 }
 
@@ -77,9 +80,23 @@ func GetEntityConnection(entityMetadata datastore.EntityMetadata) redis.Conn {
 /*CONNECTION - key used to get the connection object from the context */
 const CONNECTION common.ContextKey = "connection."
 
+type connections map[common.ContextKey]redis.Conn
+
 /*WithConnection takes a context and adds a connection value to it */
 func WithConnection(ctx context.Context) context.Context {
-	return context.WithValue(ctx, CONNECTION, GetConnection())
+	cons := ctx.Value(CONNECTION)
+	if cons == nil {
+		cMap := make(connections)
+		cMap[CONNECTION] = GetConnection()
+		return context.WithValue(ctx, CONNECTION, cMap)
+	} else {
+		cMap, ok := cons.(connections)
+		_, ok = cMap[CONNECTION]
+		if !ok {
+			cMap[CONNECTION] = GetConnection()
+		}
+		return ctx
+	}
 }
 
 /*GetCon returns a connection stored in the context which got created via WithConnection */
@@ -87,13 +104,29 @@ func GetCon(ctx context.Context) redis.Conn {
 	if ctx == nil {
 		return GetConnection()
 	}
-	return ctx.Value(CONNECTION).(redis.Conn)
+	c := ctx.Value(CONNECTION)
+	if c == nil {
+		return nil
+	}
+	return c.(connections)[CONNECTION]
 }
 
 /*WithEntityConnection - returns a connection as per the configuration of the entity */
 func WithEntityConnection(ctx context.Context, entityMetadata datastore.EntityMetadata) context.Context {
 	dbpool := getdbpool(entityMetadata)
-	return context.WithValue(ctx, dbpool.CtxKey, dbpool.Pool.Get())
+	c := ctx.Value(CONNECTION)
+	if c == nil {
+		cMap := make(connections)
+		cMap[dbpool.CtxKey] = dbpool.Pool.Get()
+		return context.WithValue(ctx, CONNECTION, cMap)
+	}
+	cMap, ok := c.(connections)
+	_, ok = cMap[dbpool.CtxKey]
+	if !ok {
+		cMap[dbpool.CtxKey] = dbpool.Pool.Get()
+	}
+	return ctx
+
 }
 
 /*GetEntityCon returns a connection stored in the context which got created via WithEntityConnection */
@@ -102,10 +135,28 @@ func GetEntityCon(ctx context.Context, entityMetadata datastore.EntityMetadata) 
 		return GetEntityConnection(entityMetadata)
 	}
 	dbpool := getdbpool(entityMetadata)
-	return ctx.Value(dbpool.CtxKey).(redis.Conn)
+	c := ctx.Value(CONNECTION)
+	if c == nil {
+		return nil
+	}
+	cMap, ok := c.(connections)
+
+	con, ok := cMap[dbpool.CtxKey]
+	if !ok {
+		con = GetEntityConnection(entityMetadata)
+		cMap[dbpool.CtxKey] = con
+	}
+	return con
 }
 
 /*Close - Close takes care of maintaining the closing of connection(s) stored in the context */
 func Close(ctx context.Context) {
-	// TODO:
+	c := ctx.Value(CONNECTION)
+	if c == nil {
+		return
+	}
+	cMap := c.(connections)
+	for _, con := range cMap {
+		con.Close()
+	}
 }

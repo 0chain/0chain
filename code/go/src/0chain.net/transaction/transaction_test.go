@@ -22,17 +22,17 @@ func BenchmarkTransactionWrite(t *testing.B) {
 	client.SetupEntity()
 	SetupEntity()
 	fmt.Printf("time : %v\n", time.Now().UnixNano()/int64(time.Millisecond))
-	numClients := 1000
+	numClients := 10
 	createClients(numClients)
 	start := time.Now()
-	numTxns := 100000
+	numTxns := 1000
 	done := make(chan bool, numTxns)
 	txnchannel := make(chan *Transaction, 10000)
 	for i := 1; i <= 100; i++ {
 		go processWorker(txnchannel, done)
 	}
 	for i := 0; i < numTxns; i++ {
-		publicKey := publicKeys[i%1000]
+		publicKey := publicKeys[i%numClients]
 		pvtKey := keyPairs[publicKey]
 		txnData := fmt.Sprintf("Txn(%v) Pay %v from %s\n", i, i%100, publicKey)
 		postTransaction(pvtKey, publicKey, txnData, txnchannel, done)
@@ -46,7 +46,7 @@ func BenchmarkTransactionWrite(t *testing.B) {
 		}
 	}
 	fmt.Printf("Elapsed time for txns: %v\n", time.Since(start))
-	time.Sleep(60 * time.Second)
+	time.Sleep(10 * time.Second)
 }
 
 func createClients(numClients int) {

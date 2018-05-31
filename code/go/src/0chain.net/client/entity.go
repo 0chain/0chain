@@ -17,7 +17,7 @@ type Client struct {
 	PublicKey string `json:"public_key"`
 }
 
-var clientEntityMetadata = &datastore.EntityMetadataImpl{Name: "client", MemoryDB: "", Provider: Provider}
+var clientEntityMetadata = &datastore.EntityMetadataImpl{Name: "client", MemoryDB: "clientdb", Provider: Provider}
 
 func init() {
 	memorystore.AddPool("clientdb", memorystore.DefaultPool)
