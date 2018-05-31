@@ -42,16 +42,14 @@ func (b *Block) GenerateBlock(ctx context.Context) error {
 		if txn.Status != transaction.TXN_STATUS_FREE {
 			return true
 		}
-		if txn.Validate(ctx) == nil {
-			txn.Status = transaction.TXN_STATUS_PENDING
-			/*TODO: In a perfect scenario where new transactions are feeding, I think there is no need for this.
-			//Reduce the score so this gets pushed down and later gets trimmed
-			txn.SetCollectionScore(txn.GetCollectionScore() - 10*60)
-			*/
-			txns[idx] = txn
-			etxns[idx] = txn
-			b.AddTransaction(txn)
-		}
+		txn.Status = transaction.TXN_STATUS_PENDING
+		/*TODO: In a perfect scenario where new transactions are feeding, I think there is no need for this.
+		//Reduce the score so this gets pushed down and later gets trimmed
+		txn.SetCollectionScore(txn.GetCollectionScore() - 10*60)
+		*/
+		txns[idx] = txn
+		etxns[idx] = txn
+		b.AddTransaction(txn)
 		idx++
 		if idx == BLOCK_SIZE {
 			b.UpdateTxnsToPending(ctx, etxns)
@@ -84,6 +82,30 @@ func (b *Block) UpdateTxnsToPending(ctx context.Context, txns []memorystore.Memo
 
 /*VerifyBlock - given a set of transaction ids within a block, validate the block */
 func (b *Block) VerifyBlock(ctx context.Context) (bool, error) {
+	err := b.Validate(ctx)
+	if err != nil {
+		return false, err
+	}
+	hashCameWithBlock := b.Hash
+	b.HashBlock()
+	if hashCameWithBlock != b.Hash {
+		b.Hash = hashCameWithBlock
+		return false, common.NewError("hash wrong", "The hash of the block is wrong\n")
+	}
+	sender := node.GetNode(b.MinerID)
+	var ok bool
+	ok, err = sender.Verify(b.Signature, b.Hash)
+	if err != nil {
+		return false, err
+	} else if !ok {
+		return false, common.NewError("signature invalid", "The block wasn't signed correctly")
+	}
+	for _, txn := range *b.Txns {
+		err = txn.Validate(ctx)
+		if err != nil {
+			return false, err
+		}
+	}
 	return true, nil
 }
 
