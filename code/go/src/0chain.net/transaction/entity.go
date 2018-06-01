@@ -71,7 +71,6 @@ func (t *Transaction) ComputeProperties() {
 			// Doing this is OK because the transaction signature has ClientID
 			// that won't pass verification if some other client's public is put in
 			t.ClientID = encryption.Hash(t.PublicKey)
-			t.PublicKey = ""
 		}
 	}
 }
@@ -89,14 +88,12 @@ func (t *Transaction) Validate(ctx context.Context) error {
 		return common.NewError("id_hash_mismatch", "ID and Hash don't match")
 	}
 
-	if t.ChainID != datastore.ToKey(config.GetServerChainID()) {
-		return config.ErrSupportedChain
+	err = t.VerifyHash(ctx)
+	if err != nil {
+		return err
 	}
 
-	err = t.VerifyHash(ctx)
-	if err == nil {
-		err = t.VerifySignature(ctx)
-	}
+	err = t.VerifySignature(ctx)
 	if err != nil {
 		return err
 	}
@@ -152,9 +149,17 @@ func (t *Transaction) VerifyHash(ctx context.Context) error {
 
 /*VerifySignature - verify the transaction hash */
 func (t *Transaction) VerifySignature(ctx context.Context) error { //TODO
-	co, err := t.GetClient(ctx)
-	if err != nil {
-		return err
+	var err error
+	co := datastore.GetEntityMetadata("client").Instance().(*client.Client)
+	if t.PublicKey == "" {
+		co, err = t.GetClient(ctx)
+		if err != nil {
+			return err
+		}
+	} else {
+		co.ID = t.ClientID
+		co.PublicKey = t.PublicKey
+		t.PublicKey = ""
 	}
 	correctSignature, err := co.Verify(t.Signature, t.Hash)
 	if err != nil {
@@ -208,7 +213,12 @@ func SetupEntity() {
 /*Sign - given a client and client's private key, sign this tranasction */
 func (t *Transaction) Sign(client *client.Client, privateKey string) (string, error) {
 	t.Hash = t.ComputeHash()
-	return encryption.Sign(privateKey, t.Hash)
+	signature, err := encryption.Sign(privateKey, t.Hash)
+	if err != nil {
+		return signature, err
+	}
+	t.Signature = signature
+	return signature, nil
 }
 
 /*GetWeight - get the weight/score of this transction */

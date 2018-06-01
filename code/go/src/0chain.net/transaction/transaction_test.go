@@ -8,6 +8,7 @@ import (
 
 	"0chain.net/client"
 	"0chain.net/common"
+	"0chain.net/config"
 	"0chain.net/datastore"
 	"0chain.net/encryption"
 	"0chain.net/memorystore"
@@ -17,7 +18,61 @@ import (
 var keyPairs = make(map[string]string)
 var publicKeys = make([]string, 0, 1000)
 
-func BenchmarkTransactionWrite(t *testing.B) {
+func BenchmarkTransactionVerify(b *testing.B) {
+	common.SetupRootContext(node.GetNodeContext())
+	client.SetupEntity()
+	SetupEntity()
+
+	publicKey, privateKey := encryption.GenerateKeys()
+	keyPairs[publicKey] = privateKey
+	publicKeys = append(publicKeys, publicKey)
+
+	txnData := fmt.Sprintf("Txn: Pay %v from %s\n", 42, publicKey)
+	t := datastore.GetEntityMetadata("txn").Instance().(*Transaction)
+	t.ClientID = datastore.ToKey(encryption.Hash(publicKey))
+	t.TransactionData = txnData
+	t.CreationDate = common.Now()
+	c := &client.Client{}
+	c.PublicKey = publicKey
+	c.ID = datastore.ToKey(encryption.Hash(publicKey))
+	_, err := t.Sign(c, privateKey)
+	if err != nil {
+		fmt.Printf("Error signing\n")
+	}
+	ctx := common.GetRootContext()
+	for i := 0; i < b.N; i++ {
+		t.PublicKey = publicKey
+		t.VerifySignature(ctx)
+	}
+}
+
+func BenchmarkTransactionRead(b *testing.B) {
+	common.SetupRootContext(node.GetNodeContext())
+	client.SetupEntity()
+	SetupEntity()
+
+	ctx := memorystore.WithEntityConnection(context.Background(), transactionEntityMetadata)
+	defer memorystore.Close(ctx)
+
+	txn := transactionEntityMetadata.Instance().(*Transaction)
+	txn.ChainID = config.GetMainChainID()
+	txnIDs := make([]datastore.Key, 0, memorystore.BATCH_SIZE)
+	getTxnsFunc := func(ctx context.Context, qe memorystore.CollectionEntity) bool {
+		txnIDs = append(txnIDs, qe.GetKey())
+		return len(txnIDs) != memorystore.BATCH_SIZE
+	}
+
+	memorystore.IterateCollection(ctx, txn.GetCollectionName(), getTxnsFunc, transactionEntityMetadata)
+	txns, err := memorystore.AllocateEntities(memorystore.BATCH_SIZE, transactionEntityMetadata)
+	if err != nil {
+		fmt.Printf("Error allocating entities\n")
+	}
+	for i := 0; i < b.N; i++ {
+		memorystore.MultiRead(ctx, transactionEntityMetadata, txnIDs, txns)
+	}
+}
+
+func B1enchmarkTransactionWrite(t *testing.B) {
 	common.SetupRootContext(node.GetNodeContext())
 	client.SetupEntity()
 	SetupEntity()

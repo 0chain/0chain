@@ -23,7 +23,7 @@ func (b *Block) GenerateBlock(ctx context.Context) error {
 	clients := make(map[string]*client.Client)
 	txns := make([]*transaction.Transaction, BLOCK_SIZE)
 	b.Txns = &txns
-	//TODO: wasting this because we []interface{} != []*transaction.Transaction in Go
+	//TODO: wasting this because []interface{} != []*transaction.Transaction in Go
 	etxns := make([]memorystore.MemoryEntity, BLOCK_SIZE)
 	idx := 0
 	self := node.GetSelfNode(ctx)
@@ -124,14 +124,54 @@ func (b *Block) VerifyBlock(ctx context.Context) (bool, error) {
 	} else if !ok {
 		return false, common.NewError("signature invalid", "The block wasn't signed correctly")
 	}
-	for _, txn := range *b.Txns {
-		err = txn.Validate(ctx)
-		if err != nil {
-			return false, err
+	fmt.Printf("time before validating txns:%v\n", time.Since(start))
+	txns := *b.Txns
+	/*
+		verification takes 162895 ns/op, 2000 take 0.326 seconds, close to the 3 blocks per second goal
+	*/
+	size := 2000
+	numWorkers := len(txns) / size
+	if numWorkers*size < len(txns) {
+		numWorkers++
+	}
+	validChannel := make(chan bool, len(txns)/size+1)
+	var cancel bool
+
+	for start := 0; start < len(txns); start += size {
+		end := start + size
+		if end > len(txns) {
+			end = len(txns)
+		}
+		go validate(ctx, txns[start:end], &cancel, validChannel)
+	}
+	count := 0
+	for result := range validChannel {
+		if !result {
+			fmt.Printf("Block verification time due to failure:%v\n", time.Since(start))
+			return false, common.NewError("txn_validation_failed", "Transaction validation failed")
+		}
+		count++
+		if count == numWorkers {
+			break
 		}
 	}
 	fmt.Printf("Block verification time:%v\n", time.Since(start))
 	return true, nil
+}
+
+func validate(ctx context.Context, txns []*transaction.Transaction, cancel *bool, validChannel chan<- bool) {
+	for _, txn := range txns {
+		err := txn.Validate(ctx)
+		err = common.ErrStop
+		if err != nil {
+			*cancel = true
+			validChannel <- false
+		}
+		if *cancel {
+			return
+		}
+	}
+	validChannel <- true
 }
 
 /*Finalize - finalize the transactions in the block */
