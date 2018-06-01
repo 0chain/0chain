@@ -20,6 +20,8 @@ import (
 /*SENDER - key used to get the connection object from the context */
 const SENDER common.ContextKey = "node.sender"
 
+const MAX_NP_REQUESTS = 2
+
 const (
 	CODEC_JSON    = 0
 	CODEC_MSGPACK = 1
@@ -65,32 +67,89 @@ func (np *Pool) SendAll(handler SendHandler) []*Node {
 }
 
 /*SendAtleast - It tries to communicate to at least the given number of active nodes
-* TODO: May need to pass a context object so we can cancel at will. Also, for sending in parallel
+* TODO: May need to pass a context object so we can cancel at will.
  */
 func (np *Pool) SendAtleast(numNodes int, handler SendHandler) []*Node {
 	const THRESHOLD = 2
 	nodes := np.shuffleNodes()
 	sentTo := make([]*Node, 0, numNodes)
+
+	if numNodes == 1 {
+		node := np.sendOne(handler, nodes)
+		if node == nil {
+			return sentTo
+		}
+		sentTo = append(sentTo, node)
+		return sentTo
+	}
+	start := time.Now()
 	validCount := 0
-	allCount := 0
+	activeCount := 0
+	numWorkers := numNodes
+	if numWorkers > MAX_NP_REQUESTS {
+		numWorkers = MAX_NP_REQUESTS
+	}
+	sendBucket := make(chan *Node, numNodes)
+	validBucket := make(chan *Node, numNodes)
+	done := make(chan bool)
+	for i := 0; i < numWorkers; i++ {
+		go func() {
+			for node := range sendBucket {
+				valid := handler(node)
+				if valid {
+					validBucket <- node
+				}
+				done <- true
+			}
+		}()
+	}
 	for _, node := range nodes {
 		if node.Status == NodeStatusInactive {
 			continue
 		}
-		allCount++
-		valid := handler(node)
-		if valid {
+		sendBucket <- node
+		activeCount++
+	}
+	doneCount := 0
+	for true {
+		select {
+		case node := <-validBucket:
 			sentTo = append(sentTo, node)
 			validCount++
 			if validCount == numNodes {
-				break
+				close(sendBucket)
+				fmt.Printf("sent to (all=%v,requested=%v,activeSent=%v,valid=%v) in %v\n", len(nodes), numNodes, activeCount, len(sentTo), time.Since(start))
+				return sentTo
 			}
-		}
-		if allCount >= numNodes+THRESHOLD {
-			break
+		case <-done:
+			doneCount++
+			if doneCount >= numNodes+THRESHOLD || doneCount >= activeCount {
+				fmt.Printf("sent to (all=%v,requested=%v,activeSent=%v, valid=%v) in %v\n", len(nodes), numNodes, activeCount, len(sentTo), time.Since(start))
+				close(sendBucket)
+				return sentTo
+			}
 		}
 	}
 	return sentTo
+}
+
+/*SendOne - send message to a single node in the pool */
+func (np *Pool) SendOne(handler SendHandler) *Node {
+	nodes := np.shuffleNodes()
+	return np.sendOne(handler, nodes)
+}
+
+func (np *Pool) sendOne(handler SendHandler, nodes []*Node) *Node {
+	for _, node := range nodes {
+		if node.Status == NodeStatusInactive {
+			continue
+		}
+		valid := handler(node)
+		if valid {
+			return node
+		}
+	}
+	return nil
 }
 
 /*SetHeaders - sets the request headers

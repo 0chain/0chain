@@ -112,5 +112,7 @@ func TestNode2NodeCommunication(t *testing.T) {
 	options := SendOptions{MaxRelayLength: 0, CurrentRelayLength: 0, Compress: true, CODEC: datastore.CodecMsgpack}
 	sendHandler := SendEntityHandler("/v1/_n2n/entity/post", &options)
 	sentTo := np.SendAtleast(2, sendHandler(entity))
-	fmt.Printf("sent to %v nodes\n", len(sentTo))
+	for _, r := range sentTo {
+		fmt.Printf("sentTo:%v\n", r.GetKey())
+	}
 }
