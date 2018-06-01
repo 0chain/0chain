@@ -20,6 +20,11 @@ import (
 /*SENDER - key used to get the connection object from the context */
 const SENDER common.ContextKey = "node.sender"
 
+const (
+	CODEC_JSON    = 0
+	CODEC_MSGPACK = 1
+)
+
 /*WithNode takes a context and adds a connection value to it */
 func WithNode(ctx context.Context, node *Node) context.Context {
 	return context.WithValue(ctx, SENDER, node)
@@ -123,6 +128,7 @@ func SetHeaders(req *http.Request, entity datastore.Entity, options *SendOptions
 
 /*SendOptions - options to tune how the messages are sent within the network */
 type SendOptions struct {
+	Timeout            time.Duration
 	MaxRelayLength     int64
 	CurrentRelayLength int64
 	Compress           bool
@@ -135,7 +141,11 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 	return func(entity datastore.Entity) SendHandler {
 		return func(n *Node) bool {
 			url := fmt.Sprintf("%v%v", n.GetURLBase(), uri)
-			client := &http.Client{Timeout: 500 * time.Millisecond}
+			timeout := 500 * time.Millisecond
+			if options.Timeout > 0 {
+				timeout = options.Timeout
+			}
+			client := &http.Client{Timeout: timeout}
 
 			var buffer *bytes.Buffer
 			if options.CODEC == datastore.CodecJSON {
@@ -246,6 +256,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF) common
 			return
 		}
 
+		entity.ComputeProperties()
 		ctx := r.Context()
 		initialNodeID := r.Header.Get(HeaderInitialNodeID)
 		if initialNodeID != "" {

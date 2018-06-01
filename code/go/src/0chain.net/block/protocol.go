@@ -78,6 +78,7 @@ func (b *Block) GenerateBlock(ctx context.Context) error {
 	fmt.Printf("time to assemble + write block: %v\n", time.Since(start))
 	b.HashBlock()
 	b.Signature, err = self.Sign(b.Hash)
+
 	//TODO: After the hashblock is done with the txn hashes, the publickey/clientid switch can move right after GetClients
 	for _, txn := range txns {
 		client := clients[txn.ClientID]
@@ -103,20 +104,18 @@ func (b *Block) UpdateTxnsToPending(ctx context.Context, txns []memorystore.Memo
 /*VerifyBlock - given a set of transaction ids within a block, validate the block */
 func (b *Block) VerifyBlock(ctx context.Context) (bool, error) {
 	start := time.Now()
-	b.ComputeProperties()
 	err := b.Validate(ctx)
 	if err != nil {
 		return false, err
 	}
 	hashCameWithBlock := b.Hash
-	b.HashBlock()
-	if hashCameWithBlock != b.Hash {
-		b.Hash = hashCameWithBlock
-		return false, common.NewError("hash wrong", "The hash of the block is wrong\n")
+	hash := b.ComputeHash()
+	if hashCameWithBlock != hash {
+		return false, common.NewError("hash wrong", "The hash of the block is wrong")
 	}
 	miner := node.GetNode(b.MinerID)
 	if miner == nil {
-		return false, common.NewError("unknown_miner", "Do not know this miner\n")
+		return false, common.NewError("unknown_miner", "Do not know this miner")
 	}
 	var ok bool
 	ok, err = miner.Verify(b.Signature, b.Hash)

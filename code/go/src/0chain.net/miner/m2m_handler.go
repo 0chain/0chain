@@ -4,6 +4,7 @@ package miner
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"0chain.net/block"
 	"0chain.net/common"
@@ -17,7 +18,7 @@ var VTSender node.EntitySendHandler
 
 /*SetupM2MSenders - setup senders for miner to miner communication */
 func SetupM2MSenders() {
-	options := &node.SendOptions{MaxRelayLength: 0, CurrentRelayLength: 0, Compress: true}
+	options := &node.SendOptions{Timeout: 2 * time.Second, MaxRelayLength: 0, CurrentRelayLength: 0, CODEC: node.CODEC_MSGPACK, Compress: true}
 	VBSender = node.SendEntityHandler("/v1/_m2m/block/verify", options)
 
 	options = &node.SendOptions{MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
