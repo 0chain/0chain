@@ -9,7 +9,6 @@ import (
 	"0chain.net/common"
 	"0chain.net/datastore"
 	"0chain.net/encryption"
-	"0chain.net/memorystore"
 )
 
 func TestClientChunkSave(t *testing.T) {
@@ -18,7 +17,7 @@ func TestClientChunkSave(t *testing.T) {
 	fmt.Printf("time : %v\n", time.Now().UnixNano()/int64(time.Millisecond))
 	start := time.Now()
 	fmt.Printf("Testing at %v\n", start)
-	numWorkers := 10000
+	numWorkers := 1000
 	done := make(chan bool, 100)
 	for i := 1; i <= numWorkers; i++ {
 		publicKey, privateKey := encryption.GenerateKeys()
@@ -35,6 +34,8 @@ func TestClientChunkSave(t *testing.T) {
 			break
 		}
 	}
+	time.Sleep(1000 * time.Millisecond)
+	common.Done()
 	fmt.Printf("Elapsed time: %v\n", time.Since(start))
 }
 
@@ -47,7 +48,9 @@ func postClient(publicKey string, done chan<- bool) {
 	client.PublicKey = publicKey
 	client.SetKey(datastore.ToKey(encryption.Hash(client.PublicKey)))
 
-	ctx := memorystore.WithAsyncChannel(context.Background(), ClientEntityChannel)
+	ctx := datastore.WithAsyncChannel(context.Background(), ClientEntityChannel)
+	//ctx := memorystore.WithEntityConnection(context.Background(), clientEntityMetadata)
+	//defer memorystore.Close(ctx)
 	_, err := PutClient(ctx, entity)
 	if err != nil {
 		fmt.Printf("error for %v : %v\n", publicKey, err)

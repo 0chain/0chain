@@ -76,7 +76,7 @@ func Provider() datastore.Entity {
 func SetupEntity() {
 	datastore.RegisterEntityMetadata("client", clientEntityMetadata)
 
-	var chunkingOptions = memorystore.ChunkingOptions{
+	var chunkingOptions = datastore.ChunkingOptions{
 		EntityMetadata:   clientEntityMetadata,
 		EntityBufferSize: 1024,
 		MaxHoldupTime:    500 * time.Millisecond,
@@ -88,7 +88,7 @@ func SetupEntity() {
 	ClientEntityChannel = memorystore.SetupWorkers(common.GetRootContext(), &chunkingOptions)
 }
 
-var ClientEntityChannel chan memorystore.MemoryEntity
+var ClientEntityChannel chan datastore.QueuedEntity
 
 /*GetClients - given a set of client ids, return the clients */
 func GetClients(ctx context.Context, clients map[string]*Client) {

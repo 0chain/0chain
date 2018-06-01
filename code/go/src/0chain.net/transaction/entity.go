@@ -185,7 +185,7 @@ func Provider() datastore.Entity {
 	return c
 }
 
-var TransactionEntityChannel chan memorystore.MemoryEntity
+var TransactionEntityChannel chan datastore.QueuedEntity
 
 /*SetupEntity - setup the entity */
 func SetupEntity() {
@@ -198,14 +198,14 @@ func SetupEntity() {
 	* Chunk Buffer Size = 32
 	* Chunk Workers = 8
 	 */
-	var chunkingOptions = memorystore.ChunkingOptions{
+	var chunkingOptions = datastore.ChunkingOptions{
 		EntityMetadata:   transactionEntityMetadata,
 		EntityBufferSize: 10240,
 		MaxHoldupTime:    250 * time.Millisecond,
 		NumChunkCreators: 1,
 		ChunkSize:        128,
-		ChunkBufferSize:  32,
-		NumChunkStorers:  8,
+		ChunkBufferSize:  64,
+		NumChunkStorers:  16,
 	}
 	TransactionEntityChannel = memorystore.SetupWorkers(common.GetRootContext(), &chunkingOptions)
 }

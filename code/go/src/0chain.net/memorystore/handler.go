@@ -60,15 +60,6 @@ func GetEntityHandler(ctx context.Context, r *http.Request, entityMetadata datas
 	return entity, nil
 }
 
-func DoAsync(ctx context.Context, entity MemoryEntity) bool {
-	channel := AsyncChannel(ctx)
-	if channel != nil {
-		channel <- entity
-		return true
-	}
-	return false
-}
-
 /*PutEntityHandler - default put handler implementation for any Entity */
 func PutEntityHandler(ctx context.Context, object interface{}) (interface{}, error) {
 	entity, ok := object.(MemoryEntity)
@@ -79,7 +70,7 @@ func PutEntityHandler(ctx context.Context, object interface{}) (interface{}, err
 	if err := entity.Validate(ctx); err != nil {
 		return nil, err
 	}
-	if DoAsync(ctx, entity) {
+	if datastore.DoAsync(ctx, entity) {
 		return entity, nil
 	}
 	err := entity.Write(ctx)

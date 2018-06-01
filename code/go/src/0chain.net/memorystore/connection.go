@@ -13,7 +13,7 @@ import (
 func NewPool(address string) *redis.Pool {
 	return &redis.Pool{
 		MaxIdle:   80,
-		MaxActive: 1000, // max number of connections
+		MaxActive: 10000, // max number of connections
 		Dial: func() (redis.Conn, error) {
 			c, err := redis.Dial("tcp", address)
 			if err != nil {
@@ -31,7 +31,7 @@ type dbpool struct {
 }
 
 var pools = make(map[string]*dbpool)
-var DefaultPool = NewPool(":6379")
+var DefaultPool = NewPool("127.0.0.1:6379")
 
 func init() {
 	pools[""] = &dbpool{ID: "", CtxKey: CONNECTION, Pool: DefaultPool}

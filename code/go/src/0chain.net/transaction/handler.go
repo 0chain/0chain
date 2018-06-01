@@ -15,7 +15,7 @@ import (
 /*SetupHandlers sets up the necessary API end points */
 func SetupHandlers() {
 	http.HandleFunc("/v1/transaction/get", common.ToJSONResponse(memorystore.WithConnectionHandler(GetTransaction)))
-	http.HandleFunc("/v1/transaction/put", datastore.ToJSONEntityReqResponse(memorystore.DoAsyncEntityJSONHandler(memorystore.WithConnectionEntityJSONHandler(PutTransaction, transactionEntityMetadata), TransactionEntityChannel), transactionEntityMetadata))
+	http.HandleFunc("/v1/transaction/put", datastore.ToJSONEntityReqResponse(datastore.DoAsyncEntityJSONHandler(memorystore.WithConnectionEntityJSONHandler(PutTransaction, transactionEntityMetadata), TransactionEntityChannel), transactionEntityMetadata))
 }
 
 /*SetupSharderHandlers sets up the necessary API end points for Sharders */
@@ -45,7 +45,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	if err != nil {
 		return nil, err
 	}
-	if memorystore.DoAsync(ctx, txn) {
+	if datastore.DoAsync(ctx, txn) {
 		return txn, nil
 	}
 	err = memorystore.Write(ctx, txn)
