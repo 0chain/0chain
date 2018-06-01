@@ -165,6 +165,7 @@ func SetUpSingleSelf() {
 	SetupMinerChain(c)
 	mc := GetMinerChain()
 	mc.Miners = np
+	SetupM2MSenders()
 }
 
 func TestBlockGeneration(t *testing.T) {
