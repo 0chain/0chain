@@ -162,7 +162,6 @@ func (b *Block) VerifyBlock(ctx context.Context) (bool, error) {
 func validate(ctx context.Context, txns []*transaction.Transaction, cancel *bool, validChannel chan<- bool) {
 	for _, txn := range txns {
 		err := txn.Validate(ctx)
-		err = common.ErrStop
 		if err != nil {
 			*cancel = true
 			validChannel <- false
