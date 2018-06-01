@@ -332,8 +332,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF) common
 	}
 }
 
-/*SetupN2NHandlers - Setup all the node 2 node communiations
- */
+/*SetupN2NHandlers - Setup all the node 2 node communiations*/
 func SetupN2NHandlers() {
 	http.HandleFunc("/v1/_n2n/entity/post", ToN2NReceiveEntityHandler(datastore.PrintEntityHandler))
 }

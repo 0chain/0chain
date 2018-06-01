@@ -15,8 +15,8 @@ func SetupWorkers() {
 }
 
 /*BlockWorker - a job that does all the work related to blocks in each round */
-func (c *Chain) BlockWorker(ctx context.Context) {
-	rounds := c.GetRoundsChannel()
+func (mc *Chain) BlockWorker(ctx context.Context) {
+	rounds := mc.GetRoundsChannel()
 	for true {
 		select {
 		case <-ctx.Done():
@@ -24,22 +24,22 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 		case r := <-rounds:
 			switch r.Role {
 			case round.RoleGenerator:
-				go generateBlock(ctx, r)
+				go mc.generateBlock(ctx, r)
 			case round.RoleVerifier:
-				go verifyBlock(ctx, r)
+				go mc.verifyBlock(ctx, r)
 			}
 		}
 	}
 }
 
-func generateBlock(ctx context.Context, r *round.Round) {
+func (mc *Chain) generateBlock(ctx context.Context, r *round.Round) {
 	lctx := memorystore.WithConnection(ctx)
 	defer memorystore.Close(lctx)
-	r.Block.GenerateBlock(ctx)
+	mc.GenerateBlock(ctx, r.Block)
 }
 
-func verifyBlock(ctx context.Context, r *round.Round) {
+func (mc *Chain) verifyBlock(ctx context.Context, r *round.Round) {
 	lctx := memorystore.WithConnection(ctx)
 	defer memorystore.Close(lctx)
-	r.Block.VerifyBlock(ctx)
+	mc.VerifyBlock(ctx, r.Block)
 }

@@ -60,6 +60,8 @@ func main() {
 	config.SetServerChainID(*chainID)
 	serverChain := chain.Provider().(*chain.Chain)
 	serverChain.ID = datastore.ToKey(config.GetServerChainID())
+	serverChain.Decimals = 10
+	serverChain.BlockSize = 10000
 	chain.SetServerChain(serverChain)
 	miner.SetupMinerChain(serverChain)
 
@@ -101,7 +103,7 @@ func main() {
 	mode := "main net"
 	if *testMode {
 		mode = "test net"
-		block.BLOCK_SIZE = 100
+		serverChain.BlockSize = 10000
 	}
 	fmt.Printf("Num CPUs available %v\n", runtime.NumCPU())
 	fmt.Printf("Starting %v on %v for chain %v in %v mode ...\n", os.Args[0], address, config.GetServerChainID(), mode)

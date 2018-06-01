@@ -24,7 +24,6 @@ func TestBlockGeneration(t *testing.T) {
 	SetUpSelf()
 	ctx := common.GetRootContext()
 	ctx = memorystore.WithConnection(ctx)
-	block.BLOCK_SIZE = 10
 	b := block.Provider().(*block.Block)
 	b.ChainID = datastore.ToKey(config.GetServerChainID())
 	// pb = ... // TODO: Setup a privious block
@@ -32,6 +31,7 @@ func TestBlockGeneration(t *testing.T) {
 	gb := block.Provider().(*block.Block)
 	gb.Hash = block.GenesisBlockHash
 	mc := GetMinerChain()
+	mc.BlockSize = 10000
 	r := round.Provider().(*round.Round)
 	r.Block = gb
 	mc.AddRound(r)
@@ -45,7 +45,7 @@ func TestBlockGeneration(t *testing.T) {
 	}
 	block.SetupFileBlockStore(fmt.Sprintf("%v%s.0chain.net", usr.HomeDir, string(os.PathSeparator)))
 
-	b, err = mc.GenerateBlock(ctx, 1)
+	b, err = mc.GenerateRoundBlock(ctx, 1)
 
 	if err != nil {
 		fmt.Printf("Error generating block: %v\n", err)
@@ -67,7 +67,7 @@ func TestBlockGeneration(t *testing.T) {
 			}
 		}
 		b.ComputeProperties()
-		valid, err := b.VerifyBlock(ctx)
+		valid, err := mc.VerifyBlock(ctx, b)
 		if err != nil {
 			fmt.Printf("Error verifying block: %v\n", err)
 		} else {
@@ -127,8 +127,8 @@ func BenchmarkChainSetupWorker(b *testing.B) {
 	gb.ChainID = c.GetKey()
 	c.LatestFinalizedBlock = gb
 	c.SetupWorkers(common.GetRootContext())
-
-	block.BLOCK_SIZE = 1 // Just for testing
+	mc := GetMinerChain()
+	mc.BlockSize = 10000
 	timer := time.NewTimer(5 * time.Second)
 	startTime := time.Now()
 	go RoundLogic(common.GetRootContext(), GetMinerChain())

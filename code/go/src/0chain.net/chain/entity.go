@@ -30,7 +30,9 @@ type Chain struct {
 	datastore.CreationDateField
 	ClientID      datastore.Key `json:"client_id"`                 // Client who created this chain
 	ParentChainID datastore.Key `json:"parent_chain_id,omitempty"` // Chain from which this chain is forked off
-	Decimals      int8          `json:"decimals"`                  // Number of decimals allowed for the token on this chain
+
+	Decimals  int8  `json:"decimals"`   // Number of decimals allowed for the token on this chain
+	BlockSize int32 `json:"block_size"` // Number of transactions in a block
 
 	/*Miners - this is the pool of miners */
 	Miners *node.Pool `json:"-"`
@@ -100,17 +102,6 @@ func Provider() datastore.Entity {
 /*SetupEntity - setup the entity */
 func SetupEntity() {
 	datastore.RegisterEntityMetadata("chain", chainEntityMetadata)
-}
-
-/*UpdateFinalizedBlock - update the latest finalized block */
-func (c *Chain) UpdateFinalizedBlock(lfb *block.Block) {
-	if lfb.Hash == c.LatestFinalizedBlock.Hash {
-		return
-	}
-	ctx := memorystore.WithConnection(context.Background())
-	for b := lfb; b != nil && b != c.LatestFinalizedBlock; b = b.GetPreviousBlock() {
-		b.Finalize(ctx)
-	}
 }
 
 /*GetRoundsChannel - a channel that provides the round messages */

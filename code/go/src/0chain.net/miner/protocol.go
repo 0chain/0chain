@@ -1,10 +1,11 @@
-package block
+package miner
 
 import (
 	"context"
 	"fmt"
 	"time"
 
+	"0chain.net/block"
 	"0chain.net/client"
 	"0chain.net/common"
 	"0chain.net/datastore"
@@ -13,19 +14,17 @@ import (
 	"0chain.net/transaction"
 )
 
-var BLOCK_SIZE = 250000
-
 /*GenerateBlock - This works on generating a block
 * The context should be a background context which can be used to stop this logic if there is a new
 * block published while working on this
  */
-func (b *Block) GenerateBlock(ctx context.Context) error {
+func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block) error {
 	clients := make(map[string]*client.Client)
-	txns := make([]*transaction.Transaction, BLOCK_SIZE)
+	txns := make([]*transaction.Transaction, mc.BlockSize)
 	b.Txns = &txns
 	//TODO: wasting this because []interface{} != []*transaction.Transaction in Go
-	etxns := make([]memorystore.MemoryEntity, BLOCK_SIZE)
-	idx := 0
+	etxns := make([]memorystore.MemoryEntity, mc.BlockSize)
+	var idx int32 = 0
 	self := node.GetSelfNode(ctx)
 	if self == nil {
 		panic("Invalid setup, could not find the self node")
@@ -53,7 +52,7 @@ func (b *Block) GenerateBlock(ctx context.Context) error {
 
 		clients[txn.ClientID] = nil
 
-		if idx == BLOCK_SIZE {
+		if idx == mc.BlockSize {
 			return false
 		}
 		return true
@@ -67,14 +66,14 @@ func (b *Block) GenerateBlock(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if idx != BLOCK_SIZE {
+	if idx != mc.BlockSize {
 		b.Txns = nil
 		return common.NewError("insufficient_txns", "Not sufficient txns to make a block yet\n")
 	}
 
 	client.GetClients(ctx, clients)
 	fmt.Printf("time to assemble block: %v\n", time.Since(start))
-	b.UpdateTxnsToPending(ctx, etxns)
+	UpdateTxnsToPending(ctx, etxns)
 	fmt.Printf("time to assemble + write block: %v\n", time.Since(start))
 	b.HashBlock()
 	b.Signature, err = self.Sign(b.Hash)
@@ -97,13 +96,12 @@ func (b *Block) GenerateBlock(ctx context.Context) error {
 }
 
 /*UpdateTxnsToPending - marks all the given transactions to pending */
-func (b *Block) UpdateTxnsToPending(ctx context.Context, txns []memorystore.MemoryEntity) {
+func UpdateTxnsToPending(ctx context.Context, txns []memorystore.MemoryEntity) {
 	memorystore.MultiWrite(ctx, datastore.GetEntityMetadata("txn"), txns)
 }
 
 /*VerifyBlock - given a set of transaction ids within a block, validate the block */
-func (b *Block) VerifyBlock(ctx context.Context) (bool, error) {
-	start := time.Now()
+func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (bool, error) {
 	err := b.Validate(ctx)
 	if err != nil {
 		return false, err
@@ -124,7 +122,7 @@ func (b *Block) VerifyBlock(ctx context.Context) (bool, error) {
 	} else if !ok {
 		return false, common.NewError("signature invalid", "The block wasn't signed correctly")
 	}
-	fmt.Printf("time before validating txns:%v\n", time.Since(start))
+	start := time.Now()
 	txns := *b.Txns
 	/*
 		verification takes 162895 ns/op, 2000 take 0.326 seconds, close to the 3 blocks per second goal
@@ -155,7 +153,7 @@ func (b *Block) VerifyBlock(ctx context.Context) (bool, error) {
 			break
 		}
 	}
-	fmt.Printf("Block verification time:%v\n", time.Since(start))
+	fmt.Printf("Block verification time(%v,%v):%v\n", len(txns), numWorkers, time.Since(start))
 	return true, nil
 }
 
@@ -174,8 +172,8 @@ func validate(ctx context.Context, txns []*transaction.Transaction, cancel *bool
 }
 
 /*Finalize - finalize the transactions in the block */
-func (b *Block) Finalize(ctx context.Context) error {
-	modifiedTxns := make([]memorystore.MemoryEntity, 0, BLOCK_SIZE)
+func (mc *Chain) Finalize(ctx context.Context, b *block.Block) error {
+	modifiedTxns := make([]memorystore.MemoryEntity, 0, mc.BlockSize)
 	for idx, txn := range *b.Txns {
 		txn.BlockID = b.ID
 		txn.Status = transaction.TXN_STATUS_FINALIZED

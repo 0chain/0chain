@@ -9,6 +9,7 @@ import (
 	"0chain.net/chain"
 	"0chain.net/common"
 	"0chain.net/datastore"
+	"0chain.net/memorystore"
 	"0chain.net/round"
 )
 
@@ -192,7 +193,7 @@ func (mc *Chain) AddRound(r *round.Round) bool {
 }
 
 /*GenerateBlock - given a round number generates a block*/
-func (mc *Chain) GenerateBlock(ctx context.Context, roundNumber int64) (*block.Block, error) {
+func (mc *Chain) GenerateRoundBlock(ctx context.Context, roundNumber int64) (*block.Block, error) {
 	pround := mc.GetRound(roundNumber - 1)
 	if pround == nil {
 		return nil, common.NewError("invalid_round,", "Round not available")
@@ -205,7 +206,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, roundNumber int64) (*block.B
 	b := &block.Block{}
 	b.ChainID = mc.ID
 	b.SetPreviousBlock(pround.Block)
-	err := b.GenerateBlock(ctx)
+	err := mc.GenerateBlock(ctx, b)
 	if err != nil {
 		return nil, err
 	}
@@ -213,4 +214,15 @@ func (mc *Chain) GenerateBlock(ctx context.Context, roundNumber int64) (*block.B
 	r.AddBlock(b) // We need to add our own generated block to the list of blocks
 	mc.Miners.SendAll(VBSender(b))
 	return b, nil
+}
+
+/*UpdateFinalizedBlock - update the latest finalized block */
+func (mc *Chain) UpdateFinalizedBlock(lfb *block.Block) {
+	if lfb.Hash == mc.LatestFinalizedBlock.Hash {
+		return
+	}
+	ctx := memorystore.WithConnection(context.Background())
+	for b := lfb; b != nil && b != mc.LatestFinalizedBlock; b = b.GetPreviousBlock() {
+		mc.Finalize(ctx, b)
+	}
 }

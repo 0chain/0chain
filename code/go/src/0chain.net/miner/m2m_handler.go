@@ -38,8 +38,9 @@ func VerifyBlockHandler(ctx context.Context, entity datastore.Entity) (interface
 	if !ok {
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
+	mc := GetMinerChain()
 	// TODO: This should be async process where the block goes into the Rounds channel
-	ok, err := b.VerifyBlock(ctx)
+	ok, err := mc.VerifyBlock(ctx, b)
 	if err != nil {
 		return nil, err
 	}
