@@ -205,6 +205,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, roundNumber int64) (*bl
 	}
 	b := &block.Block{}
 	b.ChainID = mc.ID
+	b.Round = roundNumber
 	b.SetPreviousBlock(pround.Block)
 	err := mc.GenerateBlock(ctx, b)
 	if err != nil {
