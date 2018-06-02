@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"net/http"
-	"strings"
 	"time"
 
 	"0chain.net/common"
@@ -18,9 +17,10 @@ import (
 
 func GetClient(maxConnections int) *http.Client {
 	tr := &http.Transport{
-		MaxIdleConns:       maxConnections,
-		IdleConnTimeout:    90 * time.Second, // more than the frequency of checking will ensure always on
-		DisableCompression: true,
+		MaxIdleConns:        5 * maxConnections,
+		MaxIdleConnsPerHost: 2 * maxConnections,
+		IdleConnTimeout:     90 * time.Second, // more than the frequency of checking will ensure always on
+		DisableCompression:  true,
 	}
 	client := &http.Client{Transport: tr, Timeout: 500 * time.Millisecond}
 	return client
@@ -41,9 +41,7 @@ func SendRequest(httpclient *http.Client, url string, entity interface{}) bool {
 	resp, err := httpclient.Do(req)
 	if err != nil {
 		msg := err.Error()
-		if strings.Contains(msg, "EOF") || strings.Contains(msg, "connection reset by peer") {
-			fmt.Printf("error: %v\n", msg)
-		}
+		fmt.Printf("error: %v\n", msg)
 		return false
 	}
 	if resp.StatusCode != http.StatusOK || resp.StatusCode == 400 || resp.StatusCode == 500 {
@@ -109,14 +107,36 @@ func CreateTransaction(httpclient *http.Client, client Client) bool {
 		txn["signature"] = signature
 		ok := SendRequest(httpclient, GetURL("/v1/transaction/put"), txn)
 		if ok {
+			//time.Sleep(10 * time.Millisecond)
 			return true
 		}
 	}
 	return true
 }
 
+func GetHash(httpclient *http.Client, data string) bool {
+	url := fmt.Sprintf("/_hash?text=%v", data)
+	resp, err := http.Get(GetURL(url))
+
+	if err != nil {
+		fmt.Printf("debug error: %v\n", err)
+		return false
+	}
+	defer resp.Body.Close()
+
+	/*
+		var rbuf bytes.Buffer
+		rbuf.ReadFrom(resp.Body)
+		fmt.Printf("%v: %v\n", data, rbuf.String())
+	*/
+	if resp.StatusCode == 200 {
+		return true
+	}
+	return false
+}
+
 func main() {
-	address := flag.String("address", "localhost:7070", "address")
+	address := flag.String("address", "127.0.0.1:7070", "address")
 	numClients := flag.Int("num_clients", 100, "num_clients")
 	numTxns := flag.Int("num_txns", 1000, "num_txns")
 	maxConcurrentClients := flag.Int("max_concurrent_users", 100, "max_concurrent_users")
@@ -128,9 +148,9 @@ func main() {
 	fmt.Printf("creating clients\n")
 	clients := CreateClients(*numClients)
 	time.Sleep(time.Second)
-	fmt.Printf("clients created\n")
+	fmt.Printf("clients created: %v\n", len(clients))
 	ticketCannel := make(chan bool, *maxConcurrentClients)
-	doneChannel := make(chan bool)
+	doneChannel := make(chan bool, *maxConcurrentClients)
 	for i := 0; i < *maxConcurrentClients; i++ {
 		ticketCannel <- true
 	}
@@ -141,19 +161,21 @@ func main() {
 		go func() {
 			for _ = range ticketCannel {
 				CreateTransaction(httpclient, clients[rand.Intn(len(clients))])
+				//GetHash(httpclient, "hello-world")
 				doneChannel <- true
 			}
 		}()
 	}
 	for _ = range doneChannel {
 		count++
+		if count+*maxConcurrentClients <= *numTxns {
+			ticketCannel <- true
+		}
 		if count == *numTxns {
 			fmt.Printf("Elapsed time: %v\n", time.Since(start))
 			break
 		}
-		if count+*maxConcurrentClients <= *numTxns {
-			ticketCannel <- true
-		}
+
 	}
 	close(doneChannel)
 }

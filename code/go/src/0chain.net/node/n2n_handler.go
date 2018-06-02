@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
@@ -248,6 +249,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 				fmt.Printf("Error sending to node(%v): %v: %v\n", n.GetKey(), resp.StatusCode, rbuf.String())
 				return false
 			}
+			io.Copy(ioutil.Discard, resp.Body)
 			return true
 		}
 	}
