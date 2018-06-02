@@ -192,7 +192,7 @@ func (mc *Chain) AddRound(r *round.Round) bool {
 	return true
 }
 
-/*GenerateBlock - given a round number generates a block*/
+/*GenerateRoundBlock - given a round number generates a block*/
 func (mc *Chain) GenerateRoundBlock(ctx context.Context, roundNumber int64) (*block.Block, error) {
 	pround := mc.GetRound(roundNumber - 1)
 	if pround == nil {

@@ -192,7 +192,11 @@ func (mc *Chain) IsCurrentlyWinningBlock(b *block.Block) bool {
 	return true
 }
 
-func (mc *Chain) VerifyTicket(bvt *block.BlockVerificationTicket) error {
+/*VerifyTicket - verify the ticket */
+func (mc *Chain) VerifyTicket(b *block.Block, bvt *block.BlockVerificationTicket) error {
+	if bvt.VerifierID == b.MinerID {
+		return common.InvalidRequest("Self signing not allowed")
+	}
 	sender := mc.Miners.GetNode(bvt.VerifierID)
 	if sender == nil {
 		return common.InvalidRequest("Verifier unknown or not authorized at this time")
@@ -204,6 +208,7 @@ func (mc *Chain) VerifyTicket(bvt *block.BlockVerificationTicket) error {
 	return nil
 }
 
+/*AddVerificationTicket - add a verified ticket to the list of verification tickets of the block */
 func (mc *Chain) AddVerificationTicket(ctx context.Context, b *block.Block, bvt *block.VerificationTicket) {
 	b.AddVerificationTicket(bvt)
 	vtCount := b.GetVerificationTicketsCount()

@@ -68,7 +68,7 @@ func VerificationTicketReceiptHandler(ctx context.Context, entity datastore.Enti
 		// TODO: If we didn't see this block so far, may be it's better to ask for it
 		return nil, err
 	}
-	err = mc.VerifyTicket(bvt)
+	err = mc.VerifyTicket(block, bvt)
 	if err != nil {
 		return nil, err
 	}
