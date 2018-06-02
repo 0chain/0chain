@@ -42,9 +42,10 @@ type UnverifiedBlockBody struct {
  */
 type VerifiedBlockBody struct {
 	UnverifiedBlockBody
-	Hash                string                `json:"hash"`
-	Signature           string                `json:"signature"`
-	VerificationTickets []*VerificationTicket `json:"verification_tickets"`
+	VerificationTickets []*VerificationTicket `json:"verification_tickets,omitempty"`
+
+	Hash      string `json:"hash"`
+	Signature string `json:"signature"`
 
 	/*Weight is not part of the block signature. It is later determined per the ranking protocol
 	and the highest weight block will win. This ensures all the generators will try to create blocks
@@ -139,7 +140,6 @@ func (b *Block) GetCollectionName() string {
 func Provider() datastore.Entity {
 	b := &Block{}
 	b.PrevBlockVerficationTickets = make([]*VerificationTicket, 0, 1)
-	b.VerificationTickets = make([]*VerificationTicket, 0, 1)
 
 	b.EntityCollection = blockEntityCollection
 	b.InitializeCreationDate()
@@ -150,6 +150,8 @@ func Provider() datastore.Entity {
 func SetupEntity() {
 	datastore.RegisterEntityMetadata("block", blockEntityMetadata)
 	blockEntityCollection = &memorystore.EntityCollection{CollectionName: "collection.block", CollectionSize: 1000, CollectionDuration: time.Hour}
+	SetupBVTEntity()
+	SetupConsensusEntity()
 }
 
 /*SetPreviousBlock - set the previous block of this block */
@@ -217,9 +219,11 @@ func (b *Block) ExpandBlock(ctx context.Context) {
 *  - the miner of the block for example will decide if the consensus is reached and send it off to others
  */
 func (b *Block) AddVerificationTicket(vt *VerificationTicket) bool {
-	for _, ivt := range b.VerificationTickets {
-		if datastore.IsEqual(vt.VerifierID, ivt.VerifierID) {
-			return false
+	if b.VerificationTickets != nil {
+		for _, ivt := range b.VerificationTickets {
+			if datastore.IsEqual(vt.VerifierID, ivt.VerifierID) {
+				return false
+			}
 		}
 	}
 	//TODO: Assuming verifier_id is same as the node_id
@@ -232,8 +236,19 @@ func (b *Block) AddVerificationTicket(vt *VerificationTicket) bool {
 	if ok, _ := nd.Verify(vt.Signature, b.Signature); !ok {
 		return false
 	}
+	if b.VerificationTickets == nil {
+		b.VerificationTickets = make([]*VerificationTicket, 0, 1)
+	}
 	b.VerificationTickets = append(b.VerificationTickets, vt)
 	return true
+}
+
+/*GetVerificationTicketsCount - get the number of verification tickets for the block */
+func (b *Block) GetVerificationTicketsCount() int {
+	if b.VerificationTickets == nil {
+		return 0
+	}
+	return len(b.VerificationTickets)
 }
 
 /*ComputeHash - compute the hash of the block */

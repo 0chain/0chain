@@ -153,6 +153,15 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (bool, error) 
 			break
 		}
 	}
+	var bvt block.BlockVerificationTicket
+	bvt.BlockID = b.Hash
+	self := node.GetSelfNode(ctx)
+	if self == nil {
+		panic("Invalid setup, could not find the self node")
+	}
+	bvt.VerifierID = self.GetKey()
+	bvt.Signature, err = self.Sign(b.Hash)
+	mc.Miners.SendTo(VTSender(&bvt), b.MinerID)
 	fmt.Printf("Block verification time(%v,%v):%v\n", len(txns), numWorkers, time.Since(start))
 	return true, nil
 }
@@ -169,6 +178,43 @@ func validate(ctx context.Context, txns []*transaction.Transaction, cancel *bool
 		}
 	}
 	validChannel <- true
+}
+
+/*ReachedConsensus - Does the given number of signatures means consensus reached?
+TODO: For now, we just assume more than 50% */
+func (mc *Chain) ReachedConsensus(numSignatures int) bool {
+	return 2*numSignatures > mc.Miners.Size()-1
+}
+
+/*IsCurrentlyWinningBlock - Is this currently the winning block for it's round? */
+func (mc *Chain) IsCurrentlyWinningBlock(b *block.Block) bool {
+	//TODO: Ideally block's round's block should be the best if we are doing that book keeping
+	return true
+}
+
+func (mc *Chain) VerifyTicket(bvt *block.BlockVerificationTicket) error {
+	sender := mc.Miners.GetNode(bvt.VerifierID)
+	if sender == nil {
+		return common.InvalidRequest("Verifier unknown or not authorized at this time")
+	}
+
+	if ok, _ := sender.Verify(bvt.Signature, bvt.BlockID); !ok {
+		return common.InvalidRequest("Couldn't verify the signature")
+	}
+	return nil
+}
+
+func (mc *Chain) AddVerificationTicket(ctx context.Context, b *block.Block, bvt *block.VerificationTicket) {
+	b.AddVerificationTicket(bvt)
+	vtCount := b.GetVerificationTicketsCount()
+	if mc.ReachedConsensus(vtCount) {
+		if mc.IsCurrentlyWinningBlock(b) {
+			consensus := datastore.GetEntityMetadata("block_consensus").Instance().(*block.Consensus)
+			consensus.BlockID = b.Hash
+			consensus.VerificationTickets = b.VerificationTickets
+			mc.Miners.SendAll(ConsensusSender(consensus))
+		}
+	}
 }
 
 /*Finalize - finalize the transactions in the block */

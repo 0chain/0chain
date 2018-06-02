@@ -113,3 +113,21 @@ func (cd *CreationDateField) InitializeCreationDate() {
 func (cd *CreationDateField) GetCreationTime() common.Timestamp {
 	return cd.CreationDate
 }
+
+/*NOIDFied - used when we just want to create a datastore entity that doesn't
+have it's own id (like 1-to-many) that is only required to send it around with the parent key */
+type NOIDField struct {
+}
+
+/*GetKey - implementing the interface */
+func (nif *NOIDField) GetKey() Key {
+	return EmptyKey
+}
+
+/*SetKey - implementing the interface */
+func (nif *NOIDField) SetKey(key Key) {
+}
+
+/*ComputeProperties - implementing the interface */
+func (nif *NOIDField) ComputeProperties() {
+}

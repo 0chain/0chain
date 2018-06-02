@@ -15,6 +15,7 @@ import (
 
 var VBSender node.EntitySendHandler
 var VTSender node.EntitySendHandler
+var ConsensusSender node.EntitySendHandler
 
 /*SetupM2MSenders - setup senders for miner to miner communication */
 func SetupM2MSenders() {
@@ -23,6 +24,9 @@ func SetupM2MSenders() {
 
 	options = &node.SendOptions{MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
 	VTSender = node.SendEntityHandler("/v1/_m2m/block/verification_ticket", options)
+
+	options = &node.SendOptions{Timeout: time.Second, MaxRelayLength: 0, CurrentRelayLength: 0, CODEC: node.CODEC_MSGPACK, Compress: true}
+	ConsensusSender = node.SendEntityHandler("/v1/_m2m/block/consensus", options)
 }
 
 /*SetupM2MReceivers - setup receivers for miner to miner communication */
@@ -30,6 +34,8 @@ func SetupM2MReceivers() {
 	http.HandleFunc("/v1/_m2m/block/verify", node.ToN2NReceiveEntityHandler(memorystore.WithConnectionEntityJSONHandler(VerifyBlockHandler, datastore.GetEntityMetadata("block"))))
 
 	http.HandleFunc("/v1/_m2m/block/verification_ticket", node.ToN2NReceiveEntityHandler(VerificationTicketReceiptHandler))
+
+	http.HandleFunc("/v1/_m2m/block/consensus", node.ToN2NReceiveEntityHandler(ConsensusReceiptHandler))
 }
 
 /*VerifyBlockHandler - verify the block that is received */
@@ -59,15 +65,22 @@ func VerificationTicketReceiptHandler(ctx context.Context, entity datastore.Enti
 	mc := GetMinerChain()
 	block, err := mc.GetBlock(ctx, bvt.BlockID)
 	if err != nil {
+		// TODO: If we didn't see this block so far, may be it's better to ask for it
 		return nil, err
 	}
-	sender := node.GetSender(ctx)
-	if !datastore.IsEqual(sender.GetKey(), bvt.VerifierID) {
-		return nil, common.InvalidRequest("Verifier and original sender are not the same")
+	err = mc.VerifyTicket(bvt)
+	if err != nil {
+		return nil, err
 	}
-	if ok, _ := sender.Verify(bvt.Signature, block.Signature); !ok {
-		return nil, common.InvalidRequest("Couldn't verify the signature")
-	}
-	block.AddVerificationTicket(&bvt.VerificationTicket)
+	mc.AddVerificationTicket(ctx, block, &bvt.VerificationTicket)
 	return true, nil
+}
+
+/*ConsensusReceiptHandler - handles the receipt of a consensus for a block */
+func ConsensusReceiptHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+	//TODO
+	// If we already saw this, ignore it
+	// Validate consensus is correctly
+	// Finalize the previous block of this consenus block
+	return nil, nil
 }
