@@ -66,6 +66,15 @@ func (np *Pool) SendAll(handler SendHandler) []*Node {
 	return np.SendAtleast(len(np.Nodes), handler)
 }
 
+/*SendTo - send to a specific node */
+func (np *Pool) SendTo(handler SendHandler, to string) (bool, error) {
+	recepient := np.GetNode(to)
+	if recepient == nil {
+		return false, ErrNodeNotFound
+	}
+	return handler(recepient), nil
+}
+
 /*SendAtleast - It tries to communicate to at least the given number of active nodes
 * TODO: May need to pass a context object so we can cancel at will.
  */

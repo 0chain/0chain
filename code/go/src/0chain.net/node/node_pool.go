@@ -6,8 +6,11 @@ import (
 	"io"
 	"math/rand"
 
+	"0chain.net/common"
 	"0chain.net/datastore"
 )
+
+var ErrNodeNotFound = common.NewError("node_not_found", "Requested node is not found")
 
 /*Pool - a pool of nodes used for the same purpose */
 type Pool struct {
