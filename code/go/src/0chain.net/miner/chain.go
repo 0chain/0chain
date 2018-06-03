@@ -101,7 +101,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, roundNumber int64) (*bl
 		r = &round.Round{Number: roundNumber}
 		mc.AddRound(r)
 	}
-	b := &block.Block{}
+	b := datastore.GetEntityMetadata("block").Instance().(*block.Block)
 	b.ChainID = mc.ID
 	b.Round = roundNumber
 	b.SetPreviousBlock(pround.Block)

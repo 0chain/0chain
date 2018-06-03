@@ -9,11 +9,12 @@ import (
 	"0chain.net/common"
 	"0chain.net/datastore"
 	"0chain.net/encryption"
+	"0chain.net/memorystore"
 )
 
 func TestClientChunkSave(t *testing.T) {
 	common.SetupRootContext(context.Background())
-	SetupEntity()
+	SetupEntity(memorystore.GetStorageProvider())
 	fmt.Printf("time : %v\n", time.Now().UnixNano()/int64(time.Millisecond))
 	start := time.Now()
 	fmt.Printf("Testing at %v\n", start)

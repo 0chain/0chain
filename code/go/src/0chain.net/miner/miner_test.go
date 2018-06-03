@@ -23,7 +23,7 @@ import (
 var numOfTransactions int
 
 func init() {
-	flag.IntVar(&numOfTransactions, "number_of_transactions", 10000, "number of transactions per block")
+	flag.IntVar(&numOfTransactions, "number_of_transactions", 1000, "number of transactions per block")
 }
 
 func getContext() context.Context {
@@ -53,11 +53,12 @@ func generateSingleBlock(ctx context.Context) (*block.Block, error) {
 	}
 	block.SetupFileBlockStore(fmt.Sprintf("%v%s.0chain.net", usr.HomeDir, string(os.PathSeparator)))
 	b, err = mc.GenerateRoundBlock(ctx, 1)
-	if err == nil {
-		b.ComputeProperties()
-		block.Store.Write(b)
+	if err != nil {
+		return nil, err
 	}
-	return b, err
+	b.ComputeProperties()
+	block.Store.Write(b)
+	return b, nil
 }
 
 func TestBlockVerification(t *testing.T) {
@@ -86,9 +87,9 @@ func TestBlockVerificationBadHash(t *testing.T) {
 		_, err = mc.VerifyBlock(ctx, b)
 	}
 	if err == nil {
-		t.Error("Block with bad hash passed verification")
+		t.Error("FAIL: Block with bad hash passed verification")
 	} else {
-		t.Log("Block with bad hash failed verifcation")
+		t.Log("SUCCESS: Block with bad hash failed verifcation")
 	}
 	common.Done()
 }
@@ -97,22 +98,25 @@ func TestBlockVerificationTooFewTransactions(t *testing.T) {
 	SetUpSingleSelf()
 	ctx := getContext()
 	b, err := generateSingleBlock(ctx)
+	if err != nil {
+		t.Errorf("Error generating block: %v", err)
+		return
+	}
 	mc := GetMinerChain()
 	txnLength := numOfTransactions - 1
-	txn0 := make([]*transaction.Transaction, txnLength)
+	b.Txns = make([]*transaction.Transaction, txnLength)
 	if b != nil {
-		for idx, txn := range *b.Txns {
+		for idx, txn := range b.Txns {
 			if idx < txnLength {
-				txn0[idx] = txn
+				b.Txns[idx] = txn
 			}
 		}
-		b.Txns = &txn0
 		_, err = mc.VerifyBlock(ctx, b)
 	}
 	if err == nil {
-		t.Error("Block with too few transactions passed verification")
+		t.Error("FAIL: Block with too few transactions passed verification")
 	} else {
-		t.Log("Block with too few transactions failed verifcation")
+		t.Log("SUCCESS: Block with too few transactions failed verifcation")
 	}
 	common.Done()
 }
@@ -123,7 +127,7 @@ func BenchmarkGenerateALotTransactions(b *testing.B) {
 
 	block, _ := generateSingleBlock(ctx)
 	if block != nil {
-		b.Logf("Created block with %v transactions", len(*block.Txns))
+		b.Logf("Created block with %v transactions", len(block.Txns))
 	} else {
 		b.Error("Failed to even generate a block... OUCH!")
 	}
@@ -137,9 +141,9 @@ func BenchmarkGenerateAndVerifyALotTransactions(b *testing.B) {
 	if block != nil && err == nil {
 		_, err = mc.VerifyBlock(ctx, block)
 		if err != nil {
-			b.Errorf("Block with %v transactions failed verication", len(*block.Txns))
+			b.Errorf("Block with %v transactions failed verication", len(block.Txns))
 		} else {
-			b.Logf("Created block with %v transactions", len(*block.Txns))
+			b.Logf("Created block with %v transactions", len(block.Txns))
 		}
 	} else {
 		b.Error("Failed to even generate a block... OUCH!")
@@ -158,10 +162,10 @@ func SetUpSingleSelf() {
 	np.AddNode(n1)
 	config.SetServerChainID(config.GetMainChainID())
 	common.SetupRootContext(node.GetNodeContext())
-	transaction.SetupEntity()
-	block.SetupEntity()
-	client.SetupEntity()
-	chain.SetupEntity()
+	transaction.SetupEntity(memorystore.GetStorageProvider())
+	block.SetupEntity(memorystore.GetStorageProvider())
+	client.SetupEntity(memorystore.GetStorageProvider())
+	chain.SetupEntity(memorystore.GetStorageProvider())
 
 	c := chain.Provider().(*chain.Chain)
 	c.ID = datastore.ToKey(config.GetServerChainID())
@@ -201,22 +205,22 @@ func TestBlockGeneration(t *testing.T) {
 	b, err = mc.GenerateRoundBlock(ctx, 1)
 
 	if err != nil {
-		fmt.Printf("Error generating block: %v\n", err)
+		t.Errorf("Error generating block: %v\n", err)
 	} else {
 		/* fmt.Printf("%v\n", datastore.ToJSON(b))
 		fmt.Printf("%v\n", datastore.ToMsgpack(b))
 		*/
-		fmt.Printf("json length: %v\n", datastore.ToJSON(b).Len())
-		fmt.Printf("msgpack length: %v\n", datastore.ToMsgpack(b).Len())
+		t.Logf("json length: %v\n", datastore.ToJSON(b).Len())
+		t.Logf("msgpack length: %v\n", datastore.ToMsgpack(b).Len())
 		err = block.Store.Write(b)
 		if err != nil {
-			fmt.Printf("Error writing the block: %v\n", err)
+			t.Errorf("Error writing the block: %v\n", err)
 		} else {
 			b2, err := block.Store.Read(b.Hash, b.Round)
 			if err != nil {
-				fmt.Printf("Error reading the block: %v\n", err)
+				t.Errorf("Error reading the block: %v\n", err)
 			} else {
-				fmt.Printf("Block hash is: %v\n", b2.Hash)
+				t.Logf("Block hash is: %v\n", b2.Hash)
 			}
 		}
 	}
@@ -240,10 +244,10 @@ func SetUpSelf() {
 	common.SetupRootContext(node.GetNodeContext())
 	config.SetServerChainID(config.GetMainChainID())
 	common.SetupRootContext(node.GetNodeContext())
-	transaction.SetupEntity()
-	block.SetupEntity()
-	client.SetupEntity()
-	chain.SetupEntity()
+	transaction.SetupEntity(memorystore.GetStorageProvider())
+	block.SetupEntity(memorystore.GetStorageProvider())
+	client.SetupEntity(memorystore.GetStorageProvider())
+	chain.SetupEntity(memorystore.GetStorageProvider())
 
 	c := chain.Provider().(*chain.Chain)
 	c.ID = datastore.ToKey(config.GetServerChainID())

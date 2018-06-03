@@ -13,11 +13,12 @@ import (
 /*Client - data structure that holds the client data */
 type Client struct {
 	datastore.IDField
+	datastore.VersionField
 	datastore.CreationDateField
 	PublicKey string `json:"public_key"`
 }
 
-var clientEntityMetadata = &datastore.EntityMetadataImpl{Name: "client", MemoryDB: "clientdb", Provider: Provider}
+var clientEntityMetadata *datastore.EntityMetadataImpl
 
 func init() {
 	memorystore.AddPool("clientdb", memorystore.DefaultPool)
@@ -47,17 +48,17 @@ func (c *Client) Validate(ctx context.Context) error {
 
 /*Read - store read */
 func (c *Client) Read(ctx context.Context, key datastore.Key) error {
-	return memorystore.Read(ctx, key, c)
+	return c.GetEntityMetadata().GetStore().Read(ctx, key, c)
 }
 
 /*Write - store read */
 func (c *Client) Write(ctx context.Context) error {
-	return memorystore.Write(ctx, c)
+	return c.GetEntityMetadata().GetStore().Write(ctx, c)
 }
 
 /*Delete - store read */
 func (c *Client) Delete(ctx context.Context) error {
-	return memorystore.Delete(ctx, c)
+	return c.GetEntityMetadata().GetStore().Delete(ctx, c)
 }
 
 /*Verify - given a signature and hash verify it with client's public key */
@@ -68,12 +69,15 @@ func (c *Client) Verify(signature string, hash string) (bool, error) {
 /*Provider - entity provider for client object */
 func Provider() datastore.Entity {
 	c := &Client{}
+	c.Version = "1.0"
 	c.InitializeCreationDate()
 	return c
 }
 
 /*SetupEntity - setup the entity */
-func SetupEntity() {
+func SetupEntity(store datastore.Store) {
+	clientEntityMetadata = &datastore.EntityMetadataImpl{Name: "client", MemoryDB: "clientdb", Provider: Provider, Store: store}
+
 	datastore.RegisterEntityMetadata("client", clientEntityMetadata)
 
 	var chunkingOptions = datastore.ChunkingOptions{
@@ -103,11 +107,11 @@ func GetClients(ctx context.Context, clients map[string]*Client) {
 		if end > len(clients) {
 			end = len(clients)
 		}
-		cEntities := make([]memorystore.MemoryEntity, end-start+1)
+		cEntities := make([]datastore.Entity, end-start+1)
 		for j := 0; j < len(cEntities); j++ {
 			cEntities[j] = clientEntityMetadata.Instance().(*Client)
 		}
-		memorystore.MultiRead(ctx, clientEntityMetadata, clientIDs[start:end], cEntities)
+		clientEntityMetadata.GetStore().MultiRead(ctx, clientEntityMetadata, clientIDs[start:end], cEntities)
 		for j := 0; i < end; i, j = i+1, j+1 {
 			clients[clientIDs[i]] = cEntities[j].(*Client)
 		}

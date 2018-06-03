@@ -16,7 +16,8 @@ import (
 
 /*Transaction type for capturing the transaction data */
 type Transaction struct {
-	memorystore.CollectionIDField
+	datastore.CollectionIDField
+	datastore.VersionField
 	Hash string `json:"hash" msgpack:"h"`
 
 	ClientID  datastore.Key `json:"client_id" msgpack:"cid,omitempty"`
@@ -46,7 +47,7 @@ const (
 	TXN_STATUS_CANCELLED = 3
 )
 
-var transactionEntityMetadata = &datastore.EntityMetadataImpl{Name: "txn", Provider: Provider}
+var transactionEntityMetadata *datastore.EntityMetadataImpl
 
 /*GetEntityMetadata - implementing the interface */
 func (t *Transaction) GetEntityMetadata() datastore.EntityMetadata {
@@ -102,20 +103,20 @@ func (t *Transaction) Validate(ctx context.Context) error {
 
 /*Read - store read */
 func (t *Transaction) Read(ctx context.Context, key datastore.Key) error {
-	return memorystore.Read(ctx, key, t)
+	return t.GetEntityMetadata().GetStore().Read(ctx, key, t)
 }
 
 /*Write - store read */
 func (t *Transaction) Write(ctx context.Context) error {
-	return memorystore.Write(ctx, t)
+	return t.GetEntityMetadata().GetStore().Write(ctx, t)
 }
 
 /*Delete - store read */
 func (t *Transaction) Delete(ctx context.Context) error {
-	return memorystore.Delete(ctx, t)
+	return t.GetEntityMetadata().GetStore().Delete(ctx, t)
 }
 
-var txnEntityCollection *memorystore.EntityCollection
+var txnEntityCollection *datastore.EntityCollection
 
 /*GetCollectionName - override to partition by chain id */
 func (t *Transaction) GetCollectionName() string {
@@ -178,6 +179,7 @@ func (t *Transaction) VerifySignature(ctx context.Context) error { //TODO
 /*Provider - entity provider for client object */
 func Provider() datastore.Entity {
 	c := &Transaction{}
+	c.Version = "1.0"
 	c.EntityCollection = txnEntityCollection
 	c.Status = TXN_STATUS_FREE
 	c.CreationDate = common.Now()
@@ -188,9 +190,11 @@ func Provider() datastore.Entity {
 var TransactionEntityChannel chan datastore.QueuedEntity
 
 /*SetupEntity - setup the entity */
-func SetupEntity() {
+func SetupEntity(store datastore.Store) {
+	transactionEntityMetadata = &datastore.EntityMetadataImpl{Name: "txn", Provider: Provider, Store: store}
+
 	datastore.RegisterEntityMetadata("txn", transactionEntityMetadata)
-	txnEntityCollection = &memorystore.EntityCollection{CollectionName: "collection.txn", CollectionSize: 60000000, CollectionDuration: time.Hour}
+	txnEntityCollection = &datastore.EntityCollection{CollectionName: "collection.txn", CollectionSize: 60000000, CollectionDuration: time.Hour}
 
 	/*Entity Buffer Size = 10240
 	* Timeout = 250 milliseconds
@@ -219,10 +223,4 @@ func (t *Transaction) Sign(client *client.Client, privateKey string) (string, er
 	}
 	t.Signature = signature
 	return signature, nil
-}
-
-/*GetWeight - get the weight/score of this transction */
-func (t *Transaction) GetWeight() float64 {
-	// TODO: For now all transactions weigh the same
-	return 1.0
 }

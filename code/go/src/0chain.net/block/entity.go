@@ -10,7 +10,6 @@ import (
 	"0chain.net/config"
 	"0chain.net/datastore"
 	"0chain.net/encryption"
-	"0chain.net/memorystore"
 	"0chain.net/node"
 	"0chain.net/transaction"
 )
@@ -22,8 +21,11 @@ var GenesisBlockHash = "ed79cae70d439c11258236da1dfa6fc550f7cc569768304623e8fbd7
 * This is what is used to verify the correctness of the block & the associated signature
  */
 type UnverifiedBlockBody struct {
+	datastore.VersionField
+	datastore.CreationDateField
+
 	PrevHash                    string                `json:"prev_hash"`
-	PrevBlockVerficationTickets []*VerificationTicket `json:"prev_verification_tickets"`
+	PrevBlockVerficationTickets []*VerificationTicket `json:"prev_verification_tickets,omitempty"`
 
 	MinerID datastore.Key `json:"miner_id"` // TODO: Is miner_id & node_id same?
 	Round   int64         `json:"round"`
@@ -31,40 +33,25 @@ type UnverifiedBlockBody struct {
 
 	// We only need either Txns or TxnHashes but not both
 	// The entire transaction payload to represent full block
-	Txns *[]*transaction.Transaction `json:"transactions,omitempty"`
+	Txns []*transaction.Transaction `json:"transactions,omitempty"`
 
 	// Just the hashes of the entire transaction payload to repesent a compact block
-	TxnHashes *[]string `json:"transaction_hashes,omitempty"`
+	TxnHashes []string `json:"transaction_hashes,omitempty"`
 }
 
-/*VerifiedBlockBody - block body with verification tickets attached to it
-*This is what goes to the sharder once the block reached consensus
- */
-type VerifiedBlockBody struct {
+/*Block - data structure that holds the block data */
+type Block struct {
+	datastore.CollectionIDField
 	UnverifiedBlockBody
 	VerificationTickets []*VerificationTicket `json:"verification_tickets,omitempty"`
 
 	Hash      string `json:"hash"`
 	Signature string `json:"signature"`
 
-	/*Weight is not part of the block signature. It is later determined per the ranking protocol
-	and the highest weight block will win. This ensures all the generators will try to create blocks
-	as they don't upfront know whether their block wins or not */
-	Weight int64 `json:"weight"`
-
-	/*The cumulative weight represents the total weight of the chain up to this block */
-	CumulativeWeight int64 `json:"cumulative_weight"`
-}
-
-/*Block - data structure that holds the block data*/
-type Block struct {
-	VerifiedBlockBody
-	memorystore.CollectionIDField
-	datastore.CreationDateField
 	PrevBlock *Block `json:"-"`
 }
 
-var blockEntityMetadata = &datastore.EntityMetadataImpl{Name: "block", Provider: Provider}
+var blockEntityMetadata *datastore.EntityMetadataImpl
 
 /*GetEntityMetadata - implementing the interface */
 func (b *Block) GetEntityMetadata() datastore.EntityMetadata {
@@ -85,7 +72,7 @@ func (b *Block) ComputeProperties() {
 		b.ChainID = datastore.ToKey(config.GetMainChainID())
 	}
 	if b.Txns != nil {
-		for _, txn := range *b.Txns {
+		for _, txn := range b.Txns {
 			txn.ComputeProperties()
 		}
 	}
@@ -116,20 +103,20 @@ func (b *Block) Validate(ctx context.Context) error {
 
 /*Read - store read */
 func (b *Block) Read(ctx context.Context, key datastore.Key) error {
-	return memorystore.Read(ctx, key, b)
+	return b.GetEntityMetadata().GetStore().Read(ctx, key, b)
 }
 
 /*Write - store read */
 func (b *Block) Write(ctx context.Context) error {
-	return memorystore.Write(ctx, b)
+	return b.GetEntityMetadata().GetStore().Write(ctx, b)
 }
 
 /*Delete - store read */
 func (b *Block) Delete(ctx context.Context) error {
-	return memorystore.Delete(ctx, b)
+	return b.GetEntityMetadata().GetStore().Delete(ctx, b)
 }
 
-var blockEntityCollection *memorystore.EntityCollection
+var blockEntityCollection *datastore.EntityCollection
 
 /*GetCollectionName - override GetCollectionName to provide queues partitioned by ChainID */
 func (b *Block) GetCollectionName() string {
@@ -139,6 +126,7 @@ func (b *Block) GetCollectionName() string {
 /*Provider - entity provider for block object */
 func Provider() datastore.Entity {
 	b := &Block{}
+	b.Version = "1.0"
 	b.PrevBlockVerficationTickets = make([]*VerificationTicket, 0, 1)
 
 	b.EntityCollection = blockEntityCollection
@@ -147,9 +135,10 @@ func Provider() datastore.Entity {
 }
 
 /*SetupEntity - setup the entity */
-func SetupEntity() {
+func SetupEntity(store datastore.Store) {
+	blockEntityMetadata = &datastore.EntityMetadataImpl{Name: "block", Provider: Provider, Store: store}
 	datastore.RegisterEntityMetadata("block", blockEntityMetadata)
-	blockEntityCollection = &memorystore.EntityCollection{CollectionName: "collection.block", CollectionSize: 1000, CollectionDuration: time.Hour}
+	blockEntityCollection = &datastore.EntityCollection{CollectionName: "collection.block", CollectionSize: 1000, CollectionDuration: time.Hour}
 	SetupBVTEntity()
 }
 
@@ -171,11 +160,6 @@ func (b *Block) GetPreviousBlock() *Block {
 
 }
 
-/*GetWeight - Get the weight/score of this block */
-func (b *Block) GetWeight() int64 {
-	return b.Weight
-}
-
 /*AddTransaction - add a transaction to the block */
 func (b *Block) AddTransaction(t *transaction.Transaction) {
 	// For now this does nothign. May be we don't need. Txn can't influence the weight of the block, or else,
@@ -188,11 +172,10 @@ func (b *Block) CompactBlock() {
 		return
 	}
 	if b.TxnHashes == nil {
-		hashes := make([]string, len(*b.Txns))
-		for idx, txn := range *b.Txns {
-			hashes[idx] = txn.Hash
+		b.TxnHashes = make([]string, len(b.Txns))
+		for idx, txn := range b.Txns {
+			b.TxnHashes[idx] = txn.Hash
 		}
-		b.TxnHashes = &hashes
 	}
 	b.Txns = nil
 }
@@ -205,10 +188,9 @@ func (b *Block) ExpandBlock(ctx context.Context) {
 		return
 	}
 	if b.Txns == nil {
-		txns := make([]*transaction.Transaction, len(*b.TxnHashes))
+		b.Txns = make([]*transaction.Transaction, len(b.TxnHashes))
 		// TODO: Block loading for miners has to happen from store
 		// Block loading for sharders has to happen from persistence layer
-		b.Txns = &txns
 	}
 }
 

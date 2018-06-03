@@ -20,8 +20,8 @@ var publicKeys = make([]string, 0, 1000)
 
 func BenchmarkTransactionVerify(b *testing.B) {
 	common.SetupRootContext(node.GetNodeContext())
-	client.SetupEntity()
-	SetupEntity()
+	client.SetupEntity(memorystore.GetStorageProvider())
+	SetupEntity(memorystore.GetStorageProvider())
 
 	publicKey, privateKey := encryption.GenerateKeys()
 	keyPairs[publicKey] = privateKey
@@ -48,8 +48,8 @@ func BenchmarkTransactionVerify(b *testing.B) {
 
 func BenchmarkTransactionRead(b *testing.B) {
 	common.SetupRootContext(node.GetNodeContext())
-	client.SetupEntity()
-	SetupEntity()
+	client.SetupEntity(memorystore.GetStorageProvider())
+	SetupEntity(memorystore.GetStorageProvider())
 
 	ctx := memorystore.WithEntityConnection(context.Background(), transactionEntityMetadata)
 	defer memorystore.Close(ctx)
@@ -57,25 +57,22 @@ func BenchmarkTransactionRead(b *testing.B) {
 	txn := transactionEntityMetadata.Instance().(*Transaction)
 	txn.ChainID = config.GetMainChainID()
 	txnIDs := make([]datastore.Key, 0, memorystore.BATCH_SIZE)
-	getTxnsFunc := func(ctx context.Context, qe memorystore.CollectionEntity) bool {
+	getTxnsFunc := func(ctx context.Context, qe datastore.CollectionEntity) bool {
 		txnIDs = append(txnIDs, qe.GetKey())
 		return len(txnIDs) != memorystore.BATCH_SIZE
 	}
 
-	memorystore.IterateCollection(ctx, txn.GetCollectionName(), getTxnsFunc, transactionEntityMetadata)
-	txns, err := memorystore.AllocateEntities(memorystore.BATCH_SIZE, transactionEntityMetadata)
-	if err != nil {
-		fmt.Printf("Error allocating entities\n")
-	}
+	transactionEntityMetadata.GetStore().IterateCollection(ctx, transactionEntityMetadata, txn.GetCollectionName(), getTxnsFunc)
+	txns := datastore.AllocateEntities(memorystore.BATCH_SIZE, transactionEntityMetadata)
 	for i := 0; i < b.N; i++ {
-		memorystore.MultiRead(ctx, transactionEntityMetadata, txnIDs, txns)
+		transactionEntityMetadata.GetStore().MultiRead(ctx, transactionEntityMetadata, txnIDs, txns)
 	}
 }
 
 func B1enchmarkTransactionWrite(t *testing.B) {
 	common.SetupRootContext(node.GetNodeContext())
-	client.SetupEntity()
-	SetupEntity()
+	client.SetupEntity(memorystore.GetStorageProvider())
+	SetupEntity(memorystore.GetStorageProvider())
 	fmt.Printf("time : %v\n", time.Now().UnixNano()/int64(time.Millisecond))
 	numClients := 10
 	createClients(numClients)

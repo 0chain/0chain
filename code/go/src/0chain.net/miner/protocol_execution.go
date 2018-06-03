@@ -9,7 +9,6 @@ import (
 	"0chain.net/client"
 	"0chain.net/common"
 	"0chain.net/datastore"
-	"0chain.net/memorystore"
 	"0chain.net/node"
 	"0chain.net/transaction"
 )
@@ -20,10 +19,9 @@ import (
  */
 func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block) error {
 	clients := make(map[string]*client.Client)
-	txns := make([]*transaction.Transaction, mc.BlockSize)
-	b.Txns = &txns
+	b.Txns = make([]*transaction.Transaction, mc.BlockSize)
 	//TODO: wasting this because []interface{} != []*transaction.Transaction in Go
-	etxns := make([]memorystore.MemoryEntity, mc.BlockSize)
+	etxns := make([]datastore.Entity, mc.BlockSize)
 	var idx int32
 	self := node.GetSelfNode(ctx)
 	if self == nil {
@@ -31,7 +29,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block) error {
 	}
 	b.MinerID = self.ID
 	b.Round = 0
-	var txnIterHandler = func(ctx context.Context, qe memorystore.CollectionEntity) bool {
+	var txnIterHandler = func(ctx context.Context, qe datastore.CollectionEntity) bool {
 		txn, ok := qe.(*transaction.Transaction)
 		if !ok {
 			return true
@@ -45,7 +43,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block) error {
 		//Setting the score lower so the next time blocks are generated these transactions don't show up at the top
 		txn.SetCollectionScore(txn.GetCollectionScore() - 10*60)
 
-		txns[idx] = txn
+		b.Txns[idx] = txn
 		etxns[idx] = txn
 		b.AddTransaction(txn)
 		idx++
@@ -57,12 +55,13 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block) error {
 		}
 		return true
 	}
-	txn := transaction.Provider().(*transaction.Transaction)
+	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
+	txn := transactionEntityMetadata.Instance().(*transaction.Transaction)
 	txn.ChainID = b.ChainID
 	collectionName := txn.GetCollectionName()
 	//TODO: remove timing code later (or make it applicable to test mode)
 	start := time.Now()
-	err := memorystore.IterateCollection(ctx, collectionName, txnIterHandler, datastore.GetEntityMetadata("txn"))
+	err := transactionEntityMetadata.GetStore().IterateCollection(ctx, transactionEntityMetadata, collectionName, txnIterHandler)
 	if err != nil {
 		return err
 	}
@@ -79,7 +78,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block) error {
 	b.Signature, err = self.Sign(b.Hash)
 
 	//TODO: After the hashblock is done with the txn hashes, the publickey/clientid switch can move right after GetClients
-	for _, txn := range txns {
+	for _, txn := range b.Txns {
 		client := clients[txn.ClientID]
 		if client == nil {
 			return common.NewError("invalid_client_id", "client id not available")
@@ -94,8 +93,9 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block) error {
 	return nil
 }
 
-func updateTxnsToPending(ctx context.Context, txns []memorystore.MemoryEntity) {
-	memorystore.MultiWrite(ctx, datastore.GetEntityMetadata("txn"), txns)
+func updateTxnsToPending(ctx context.Context, txns []datastore.Entity) {
+	transactionMetadataProvider := datastore.GetEntityMetadata("txn")
+	transactionMetadataProvider.GetStore().MultiWrite(ctx, transactionMetadataProvider, txns)
 }
 
 /*VerifyBlock - given a set of transaction ids within a block, validate the block */
@@ -120,21 +120,20 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockV
 	} else if !ok {
 		return nil, common.NewError("signature invalid", "The block wasn't signed correctly")
 	}
-	txns := *b.Txns
 	size := 2000
-	numWorkers := len(txns) / size
-	if numWorkers*size < len(txns) {
+	numWorkers := len(b.Txns) / size
+	if numWorkers*size < len(b.Txns) {
 		numWorkers++
 	}
-	validChannel := make(chan bool, len(txns)/size+1)
+	validChannel := make(chan bool, len(b.Txns)/size+1)
 	var cancel bool
 	start := time.Now()
-	for start := 0; start < len(txns); start += size {
+	for start := 0; start < len(b.Txns); start += size {
 		end := start + size
-		if end > len(txns) {
-			end = len(txns)
+		if end > len(b.Txns) {
+			end = len(b.Txns)
 		}
-		go validate(ctx, txns[start:end], &cancel, validChannel)
+		go validate(ctx, b.Txns[start:end], &cancel, validChannel)
 	}
 	count := 0
 	for result := range validChannel {
@@ -158,7 +157,7 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockV
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("Block verification time(%v,%v):%v\n", len(txns), numWorkers, time.Since(start))
+	fmt.Printf("Block verification time(%v,%v):%v\n", len(b.Txns), numWorkers, time.Since(start))
 	return &bvt, nil
 }
 
@@ -215,13 +214,14 @@ func (mc *Chain) AddVerificationTicket(ctx context.Context, b *block.Block, bvt 
 
 /*Finalize - finalize the transactions in the block */
 func (mc *Chain) Finalize(ctx context.Context, b *block.Block) error {
-	modifiedTxns := make([]memorystore.MemoryEntity, 0, mc.BlockSize)
-	for idx, txn := range *b.Txns {
+	modifiedTxns := make([]datastore.Entity, 0, mc.BlockSize)
+	for idx, txn := range b.Txns {
 		txn.BlockID = b.ID
 		txn.Status = transaction.TXN_STATUS_FINALIZED
 		modifiedTxns[idx] = txn
 	}
-	err := memorystore.MultiWrite(ctx, datastore.GetEntityMetadata("txn"), modifiedTxns)
+	transactionMetadataProvider := datastore.GetEntityMetadata("txn")
+	err := transactionMetadataProvider.GetStore().MultiWrite(ctx, transactionMetadataProvider, modifiedTxns)
 	if err != nil {
 		return err
 	}

@@ -25,11 +25,13 @@ type EntityMetadata interface {
 	GetName() string
 	GetMemoryDB() string
 	Instance() Entity
+	GetStore() Store
 }
 
 type EntityMetadataImpl struct {
 	Name     string
 	MemoryDB string
+	Store    Store
 	Provider InstanceProvider
 }
 
@@ -43,4 +45,8 @@ func (em *EntityMetadataImpl) GetMemoryDB() string {
 
 func (em *EntityMetadataImpl) Instance() Entity {
 	return em.Provider()
+}
+
+func (em *EntityMetadataImpl) GetStore() Store {
+	return em.Store
 }

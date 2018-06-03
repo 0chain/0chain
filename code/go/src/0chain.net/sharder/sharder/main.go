@@ -16,6 +16,7 @@ import (
 	"0chain.net/config"
 	"0chain.net/datastore"
 	"0chain.net/encryption"
+	"0chain.net/memorystore"
 	"0chain.net/node"
 	"0chain.net/transaction"
 )
@@ -38,10 +39,12 @@ func initHandlers() {
 }
 
 func initEntities() {
-	block.SetupEntity()
-	chain.SetupEntity()
-	client.SetupEntity()
-	transaction.SetupEntity()
+	//TODO: For now using memory storage, but we don't need it.
+	memoryStorage := memorystore.GetStorageProvider()
+	block.SetupEntity(memoryStorage)
+	chain.SetupEntity(memoryStorage)
+	client.SetupEntity(memoryStorage)
+	transaction.SetupEntity(memoryStorage)
 }
 
 /*Chain - the chain this miner will be working on */

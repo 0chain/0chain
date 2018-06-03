@@ -12,7 +12,7 @@ import (
 
 /*Company - a test data type */
 type Company struct {
-	CollectionIDField
+	datastore.CollectionIDField
 	//ID     Key    `json:"id"`
 	Domain string `json:"domain"`
 	Name   string `json:"name,omitempty"`
@@ -22,7 +22,7 @@ func (c *Company) GetEntityName() string {
 	return "company"
 }
 
-var companyEntityMetadata = &datastore.EntityMetadataImpl{Name: "company", MemoryDB: "company", Provider: CompanyProvider}
+var companyEntityMetadata = &datastore.EntityMetadataImpl{Name: "company", MemoryDB: "company", Store: GetStorageProvider(), Provider: CompanyProvider}
 
 func init() {
 	AddPool("company", DefaultPool)
@@ -51,18 +51,18 @@ func (c *Company) Validate(ctx context.Context) error {
 } */
 
 func (c *Company) Read(ctx context.Context, id datastore.Key) error {
-	return Read(ctx, id, c)
+	return c.GetEntityMetadata().GetStore().Read(ctx, id, c)
 }
 
 func (c *Company) Write(ctx context.Context) error {
-	return Write(ctx, c)
+	return c.GetEntityMetadata().GetStore().Write(ctx, c)
 }
 
 func (c *Company) Delete(ctx context.Context) error {
-	return Delete(ctx, c)
+	return c.GetEntityMetadata().GetStore().Delete(ctx, c)
 }
 
-var companyEntityCollection = &EntityCollection{CollectionName: "collection.company", CollectionSize: 10000, CollectionDuration: time.Hour}
+var companyEntityCollection = &datastore.EntityCollection{CollectionName: "collection.company", CollectionSize: 10000, CollectionDuration: time.Hour}
 
 /*TransactionProvider - entity provider for client object */
 func CompanyProvider() datastore.Entity {
@@ -79,9 +79,9 @@ func TestEntityWriteRead(t *testing.T) {
 	zeroChain := CompanyProvider().(*Company)
 	zeroChain2 := CompanyProvider().(*Company)
 	keys := []datastore.Key{datastore.ToKey([]byte("0chain.net")), datastore.ToKey("0chain.io")}
-	entities := []MemoryEntity{zeroChain, zeroChain2}
+	entities := []datastore.Entity{zeroChain, zeroChain2}
 	fmt.Printf("keys : %v\n", keys)
-	err := MultiRead(ctx, companyEntityMetadata, keys, entities)
+	err := companyEntityMetadata.GetStore().MultiRead(ctx, companyEntityMetadata, keys, entities)
 	if err != nil {
 		fmt.Printf("error reading : %v\n", err)
 	} else {
@@ -92,12 +92,12 @@ func TestEntityWriteRead(t *testing.T) {
 	zeroChain.Name = "0chain"
 	zeroChain.ID = datastore.ToKey(zeroChain.Domain)
 	zeroChain.CollectionIDField.EntityCollection = companyEntityCollection
-	err = InsertIfNE(ctx, zeroChain)
+	err = companyEntityMetadata.GetStore().InsertIfNE(ctx, zeroChain)
 	if err != nil {
 		fmt.Printf("error ifne: %v\n", err)
 	}
 	zeroChain2.Domain = "0chain.io"
-	err = Read(ctx, datastore.ToKey(zeroChain2.Domain), zeroChain2)
+	err = companyEntityMetadata.GetStore().Read(ctx, datastore.ToKey(zeroChain2.Domain), zeroChain2)
 	if err != nil {
 		fmt.Printf("error reading: %v\n", err)
 	} else {
@@ -105,10 +105,10 @@ func TestEntityWriteRead(t *testing.T) {
 	}
 	zeroChain2.InitCollectionScore()
 	zeroChain2.SetCollectionScore(zeroChain2.GetCollectionScore() + 10)
-	MultiWrite(ctx, companyEntityMetadata, []MemoryEntity{zeroChain, zeroChain2})
+	companyEntityMetadata.GetStore().MultiWrite(ctx, companyEntityMetadata, []datastore.Entity{zeroChain, zeroChain2})
 
 	fmt.Printf("iterating\n")
-	IterateCollection(ctx, zeroChain.GetCollectionName(), PrintIterator, companyEntityMetadata)
+	companyEntityMetadata.GetStore().IterateCollection(ctx, companyEntityMetadata, zeroChain.GetCollectionName(), PrintIterator)
 }
 
 /*

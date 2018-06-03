@@ -6,7 +6,6 @@ import (
 	"0chain.net/block"
 	"0chain.net/common"
 	"0chain.net/datastore"
-	"0chain.net/memorystore"
 	"0chain.net/node"
 )
 
@@ -26,6 +25,7 @@ func GetServerChain() *Chain {
 /*Chain - data structure that holds the chain data*/
 type Chain struct {
 	datastore.IDField
+	datastore.VersionField
 	datastore.CreationDateField
 	ClientID      datastore.Key `json:"client_id"`                 // Client who created this chain
 	ParentChainID datastore.Key `json:"parent_chain_id,omitempty"` // Chain from which this chain is forked off
@@ -45,7 +45,7 @@ type Chain struct {
 	LatestFinalizedBlock *block.Block `json:"latest_finalized_block,omitempty"` // Latest block on the chain the program is aware of
 }
 
-var chainEntityMetadata = &datastore.EntityMetadataImpl{Name: "chain", Provider: Provider}
+var chainEntityMetadata *datastore.EntityMetadataImpl
 
 /*GetEntityMetadata - implementing the interface */
 func (c *Chain) GetEntityMetadata() datastore.EntityMetadata {
@@ -70,22 +70,23 @@ func (c *Chain) Validate(ctx context.Context) error {
 
 /*Read - store read */
 func (c *Chain) Read(ctx context.Context, key datastore.Key) error {
-	return memorystore.Read(ctx, key, c)
+	return c.GetEntityMetadata().GetStore().Read(ctx, key, c)
 }
 
 /*Write - store read */
 func (c *Chain) Write(ctx context.Context) error {
-	return memorystore.Write(ctx, c)
+	return c.GetEntityMetadata().GetStore().Write(ctx, c)
 }
 
 /*Delete - store read */
 func (c *Chain) Delete(ctx context.Context) error {
-	return memorystore.Delete(ctx, c)
+	return c.GetEntityMetadata().GetStore().Delete(ctx, c)
 }
 
 /*Provider - entity provider for chain object */
 func Provider() datastore.Entity {
 	c := &Chain{}
+	c.Version = "1.0"
 	c.InitializeCreationDate()
 	c.Miners = node.NewPool(node.NodeTypeMiner)
 	c.Sharders = node.NewPool(node.NodeTypeSharder)
@@ -94,6 +95,7 @@ func Provider() datastore.Entity {
 }
 
 /*SetupEntity - setup the entity */
-func SetupEntity() {
+func SetupEntity(store datastore.Store) {
+	chainEntityMetadata = &datastore.EntityMetadataImpl{Name: "chain", Provider: Provider, Store: store}
 	datastore.RegisterEntityMetadata("chain", chainEntityMetadata)
 }

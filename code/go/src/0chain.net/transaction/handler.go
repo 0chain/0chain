@@ -48,7 +48,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	if datastore.DoAsync(ctx, txn) {
 		return txn, nil
 	}
-	err = memorystore.Write(ctx, txn)
+	err = entity.GetEntityMetadata().GetStore().Write(ctx, txn)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +68,7 @@ func GetTransactions(ctx context.Context, r *http.Request) (interface{}, error) 
 	client_id := r.FormValue("client_id")
 	client_id_key := datastore.ToKey(client_id)
 	txns := make([]*Transaction, 0, 1)
-	var txnIterHandler = func(ctx context.Context, qe memorystore.CollectionEntity) bool {
+	var txnIterHandler = func(ctx context.Context, qe datastore.CollectionEntity) bool {
 		select {
 		case <-ctx.Done():
 			//	memorystore.GetCon(ctx).Close()
@@ -94,7 +94,7 @@ func GetTransactions(ctx context.Context, r *http.Request) (interface{}, error) 
 	//But because this is off of redis and we don't have good filtering capability, we have to settle for large time.
 	ctx, cancelf := context.WithTimeout(ctx, 10*time.Second)
 	defer cancelf()
-	err := memorystore.IterateCollection(ctx, collectionName, txnIterHandler, transactionEntityMetadata)
+	err := transactionEntityMetadata.GetStore().IterateCollection(ctx, transactionEntityMetadata, collectionName, txnIterHandler)
 	if err != nil {
 		return nil, err
 	}

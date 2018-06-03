@@ -31,7 +31,7 @@ func SetupWorkers(ctx context.Context, options *datastore.ChunkingOptions) chan 
 }
 
 type MemoryDBChunk struct {
-	Buffer []MemoryEntity
+	Buffer []datastore.Entity
 	Length int
 }
 
@@ -59,7 +59,7 @@ type MemoryDBChunkProvider struct {
 
 func (mcp *MemoryDBChunkProvider) Create(size int) datastore.Chunk {
 	c := MemoryDBChunk{}
-	c.Buffer = make([]MemoryEntity, size)
+	c.Buffer = make([]datastore.Entity, size)
 	c.Length = 0
 	return &c
 }
@@ -75,7 +75,8 @@ func (mcp *MemoryDBChunkProcessor) Process(ctx context.Context, chunk datastore.
 	if !ok {
 		panic("invalid chunk into the memory db chunk channel\n")
 	}
-	err := MultiWrite(ctx, mcp.EntityMetadata, mchunk.Buffer)
+	store := mcp.EntityMetadata.GetStore()
+	err := store.MultiWrite(ctx, mcp.EntityMetadata, mchunk.Buffer)
 	if err != nil {
 		fmt.Printf("multiwrite error : %v\n", err)
 	}
