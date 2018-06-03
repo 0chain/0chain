@@ -62,14 +62,11 @@ func generateSingleBlock() (*block.Block, error, context.Context) {
 func TestBlockVerification(t *testing.T) {
 	b, err, ctx := generateSingleBlock()
 	mc := GetMinerChain()
-	var ok bool
 	if b != nil {
-		ok, err = mc.VerifyBlock(ctx, b)
+		_, err = mc.VerifyBlock(ctx, b)
 	}
-	if !ok && err != nil {
+	if err != nil {
 		t.Errorf("Block failed verification because %v", err.Error())
-	} else if !ok {
-		t.Error("Disconnect between block generation and verification")
 	} else {
 		t.Log("Block passed verification")
 	}
@@ -79,12 +76,11 @@ func TestBlockVerification(t *testing.T) {
 func TestBlockVerificationBadHash(t *testing.T) {
 	b, err, ctx := generateSingleBlock()
 	mc := GetMinerChain()
-	var ok bool
 	if b != nil {
 		b.Hash = "bad hash"
-		ok, err = mc.VerifyBlock(ctx, b)
+		_, err = mc.VerifyBlock(ctx, b)
 	}
-	if ok && err == nil {
+	if err == nil {
 		t.Error("Block with bad hash passed verification")
 	} else {
 		t.Log("Block with bad hash failed verifcation")
@@ -97,7 +93,6 @@ func TestBlockVerificationTooFewTransactions(t *testing.T) {
 	mc := GetMinerChain()
 	txnLength := numOfTransactions - 1
 	txn0 := make([]*transaction.Transaction, txnLength)
-	var ok bool
 	if b != nil {
 		for idx, txn := range *b.Txns {
 			if idx < txnLength {
@@ -105,9 +100,9 @@ func TestBlockVerificationTooFewTransactions(t *testing.T) {
 			}
 		}
 		b.Txns = &txn0
-		ok, err = mc.VerifyBlock(ctx, b)
+		_, err = mc.VerifyBlock(ctx, b)
 	}
-	if ok && err == nil {
+	if err == nil {
 		t.Error("Block with too few transactions passed verification")
 	} else {
 		t.Log("Block with too few transactions failed verifcation")
@@ -125,15 +120,14 @@ func BenchmarkGenerateALotTransactions(b *testing.B) {
 }
 
 func BenchmarkGenerateAndVerifyALotTransactions(b *testing.B) {
-	var ok bool
 	block, err, ctx := generateSingleBlock()
 	mc := GetMinerChain()
 	if block != nil && err == nil {
-		ok, err = mc.VerifyBlock(ctx, block)
-		if ok {
-			b.Logf("Created block with %v transactions", len(*block.Txns))
-		} else {
+		_, err = mc.VerifyBlock(ctx, block)
+		if err != nil {
 			b.Errorf("Block with %v transactions failed verication", len(*block.Txns))
+		} else {
+			b.Logf("Created block with %v transactions", len(*block.Txns))
 		}
 	} else {
 		b.Error("Failed to even generate a block... OUCH!")
@@ -215,15 +209,11 @@ func TestBlockGeneration(t *testing.T) {
 			}
 		}
 		b.ComputeProperties()
-		valid, err := mc.VerifyBlock(ctx, b)
+		_, err := mc.VerifyBlock(ctx, b)
 		if err != nil {
 			fmt.Printf("Error verifying block: %v\n", err)
 		} else {
-			if !valid {
-				fmt.Printf("hash verification is working\n")
-			} else {
-				fmt.Printf("hash verification problem\n")
-			}
+			fmt.Printf("hash verification is working\n")
 		}
 	}
 	common.Done()

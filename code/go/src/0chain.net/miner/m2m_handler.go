@@ -46,13 +46,11 @@ func VerifyBlockHandler(ctx context.Context, entity datastore.Entity) (interface
 	}
 	mc := GetMinerChain()
 	// TODO: This should be async process where the block goes into the Rounds channel
-	ok, err := mc.VerifyBlock(ctx, b)
+	bvt, err := mc.VerifyBlock(ctx, b)
 	if err != nil {
 		return nil, err
 	}
-	if !ok {
-		return nil, common.InvalidRequest("Block couldnot be verified")
-	}
+	mc.Miners.SendTo(VTSender(bvt), b.MinerID)
 	return true, nil
 }
 
@@ -63,17 +61,25 @@ func VerificationTicketReceiptHandler(ctx context.Context, entity datastore.Enti
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
 	mc := GetMinerChain()
-	block, err := mc.GetBlock(ctx, bvt.BlockID)
+	b, err := mc.GetBlock(ctx, bvt.BlockID)
 	if err != nil {
 		// TODO: If we didn't see this block so far, may be it's better to ask for it
 		return nil, err
 	}
-	err = mc.VerifyTicket(block, bvt)
+	err = mc.VerifyTicket(ctx, b, bvt)
 	if err != nil {
 		return nil, err
 	}
-	mc.AddVerificationTicket(ctx, block, &bvt.VerificationTicket)
-	return true, nil
+	if mc.AddVerificationTicket(ctx, b, &bvt.VerificationTicket) {
+		if mc.ReachedConsensus(ctx, b) {
+			consensus := datastore.GetEntityMetadata("block_consensus").Instance().(*block.Consensus)
+			consensus.BlockID = b.Hash
+			consensus.VerificationTickets = b.VerificationTickets
+			mc.Miners.SendAll(ConsensusSender(consensus))
+		}
+		return true, nil
+	}
+	return false, nil
 }
 
 /*ConsensusReceiptHandler - handles the receipt of a consensus for a block */

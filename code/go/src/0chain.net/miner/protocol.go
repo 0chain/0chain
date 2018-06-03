@@ -14,6 +14,16 @@ import (
 	"0chain.net/transaction"
 )
 
+/*Protocol - this is the interface to understand the miner's protocol */
+type Protocol interface {
+	GenerateBlock(ctx context.Context, b *block.Block) error
+	VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockVerificationTicket, error)
+	VerifyTicket(ctx context.Context, b *block.Block, bvt *block.BlockVerificationTicket) error
+	AddVerificationTicket(ctx context.Context, b *block.Block, bvt *block.VerificationTicket) bool
+	ReachedConsensus(ctx context.Context, b *block.Block) bool
+	Finalize(ctx context.Context, b *block.Block) error
+}
+
 /*GenerateBlock - This works on generating a block
 * The context should be a background context which can be used to stop this logic if there is a new
 * block published while working on this
@@ -24,7 +34,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block) error {
 	b.Txns = &txns
 	//TODO: wasting this because []interface{} != []*transaction.Transaction in Go
 	etxns := make([]memorystore.MemoryEntity, mc.BlockSize)
-	var idx int32 = 0
+	var idx int32
 	self := node.GetSelfNode(ctx)
 	if self == nil {
 		panic("Invalid setup, could not find the self node")
@@ -101,26 +111,26 @@ func UpdateTxnsToPending(ctx context.Context, txns []memorystore.MemoryEntity) {
 }
 
 /*VerifyBlock - given a set of transaction ids within a block, validate the block */
-func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (bool, error) {
+func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockVerificationTicket, error) {
 	err := b.Validate(ctx)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	hashCameWithBlock := b.Hash
 	hash := b.ComputeHash()
 	if hashCameWithBlock != hash {
-		return false, common.NewError("hash wrong", "The hash of the block is wrong")
+		return nil, common.NewError("hash wrong", "The hash of the block is wrong")
 	}
 	miner := node.GetNode(b.MinerID)
 	if miner == nil {
-		return false, common.NewError("unknown_miner", "Do not know this miner")
+		return nil, common.NewError("unknown_miner", "Do not know this miner")
 	}
 	var ok bool
 	ok, err = miner.Verify(b.Signature, b.Hash)
 	if err != nil {
-		return false, err
+		return nil, err
 	} else if !ok {
-		return false, common.NewError("signature invalid", "The block wasn't signed correctly")
+		return nil, common.NewError("signature invalid", "The block wasn't signed correctly")
 	}
 	start := time.Now()
 	txns := *b.Txns
@@ -146,7 +156,7 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (bool, error) 
 	for result := range validChannel {
 		if !result {
 			fmt.Printf("Block verification time due to failure:%v\n", time.Since(start))
-			return false, common.NewError("txn_validation_failed", "Transaction validation failed")
+			return nil, common.NewError("txn_validation_failed", "Transaction validation failed")
 		}
 		count++
 		if count == numWorkers {
@@ -161,9 +171,11 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (bool, error) 
 	}
 	bvt.VerifierID = self.GetKey()
 	bvt.Signature, err = self.Sign(b.Hash)
-	mc.Miners.SendTo(VTSender(&bvt), b.MinerID)
+	if err != nil {
+		return nil, err
+	}
 	fmt.Printf("Block verification time(%v,%v):%v\n", len(txns), numWorkers, time.Since(start))
-	return true, nil
+	return &bvt, nil
 }
 
 func validate(ctx context.Context, txns []*transaction.Transaction, cancel *bool, validChannel chan<- bool) {
@@ -182,8 +194,12 @@ func validate(ctx context.Context, txns []*transaction.Transaction, cancel *bool
 
 /*ReachedConsensus - Does the given number of signatures means consensus reached?
 TODO: For now, we just assume more than 50% */
-func (mc *Chain) ReachedConsensus(numSignatures int) bool {
-	return 2*numSignatures > mc.Miners.Size()-1
+func (mc *Chain) ReachedConsensus(ctx context.Context, b *block.Block) bool {
+	numSignatures := b.GetVerificationTicketsCount()
+	if 2*numSignatures > mc.Miners.Size()-1 {
+		return mc.IsCurrentlyWinningBlock(b)
+	}
+	return false
 }
 
 /*IsCurrentlyWinningBlock - Is this currently the winning block for it's round? */
@@ -193,7 +209,7 @@ func (mc *Chain) IsCurrentlyWinningBlock(b *block.Block) bool {
 }
 
 /*VerifyTicket - verify the ticket */
-func (mc *Chain) VerifyTicket(b *block.Block, bvt *block.BlockVerificationTicket) error {
+func (mc *Chain) VerifyTicket(ctx context.Context, b *block.Block, bvt *block.BlockVerificationTicket) error {
 	if bvt.VerifierID == b.MinerID {
 		return common.InvalidRequest("Self signing not allowed")
 	}
@@ -209,17 +225,8 @@ func (mc *Chain) VerifyTicket(b *block.Block, bvt *block.BlockVerificationTicket
 }
 
 /*AddVerificationTicket - add a verified ticket to the list of verification tickets of the block */
-func (mc *Chain) AddVerificationTicket(ctx context.Context, b *block.Block, bvt *block.VerificationTicket) {
-	b.AddVerificationTicket(bvt)
-	vtCount := b.GetVerificationTicketsCount()
-	if mc.ReachedConsensus(vtCount) {
-		if mc.IsCurrentlyWinningBlock(b) {
-			consensus := datastore.GetEntityMetadata("block_consensus").Instance().(*block.Consensus)
-			consensus.BlockID = b.Hash
-			consensus.VerificationTickets = b.VerificationTickets
-			mc.Miners.SendAll(ConsensusSender(consensus))
-		}
-	}
+func (mc *Chain) AddVerificationTicket(ctx context.Context, b *block.Block, bvt *block.VerificationTicket) bool {
+	return b.AddVerificationTicket(bvt)
 }
 
 /*Finalize - finalize the transactions in the block */
