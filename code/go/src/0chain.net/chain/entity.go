@@ -8,7 +8,6 @@ import (
 	"0chain.net/datastore"
 	"0chain.net/memorystore"
 	"0chain.net/node"
-	"0chain.net/round"
 )
 
 /*ServerChain - the chain object of the chain  the server is responsible for */
@@ -43,11 +42,7 @@ type Chain struct {
 	/*Blobbers - this is the pool of blobbers */
 	Blobbers *node.Pool `json:"-"`
 
-	RoundsChannel        chan *round.Round `json:"-"`
-	LatestFinalizedBlock *block.Block      `json:"latest_finalized_block,omitempty"` // Latest block on the chain the program is aware of
-
-	// Max round seen so far
-	MaxRound int64 `json:"-"`
+	LatestFinalizedBlock *block.Block `json:"latest_finalized_block,omitempty"` // Latest block on the chain the program is aware of
 }
 
 var chainEntityMetadata = &datastore.EntityMetadataImpl{Name: "chain", Provider: Provider}
@@ -91,7 +86,6 @@ func (c *Chain) Delete(ctx context.Context) error {
 /*Provider - entity provider for chain object */
 func Provider() datastore.Entity {
 	c := &Chain{}
-	c.RoundsChannel = make(chan *round.Round)
 	c.InitializeCreationDate()
 	c.Miners = node.NewPool(node.NodeTypeMiner)
 	c.Sharders = node.NewPool(node.NodeTypeSharder)
@@ -102,9 +96,4 @@ func Provider() datastore.Entity {
 /*SetupEntity - setup the entity */
 func SetupEntity() {
 	datastore.RegisterEntityMetadata("chain", chainEntityMetadata)
-}
-
-/*GetRoundsChannel - a channel that provides the round messages */
-func (c *Chain) GetRoundsChannel() chan *round.Round {
-	return c.RoundsChannel
 }

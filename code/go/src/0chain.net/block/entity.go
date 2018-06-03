@@ -151,7 +151,6 @@ func SetupEntity() {
 	datastore.RegisterEntityMetadata("block", blockEntityMetadata)
 	blockEntityCollection = &memorystore.EntityCollection{CollectionName: "collection.block", CollectionSize: 1000, CollectionDuration: time.Hour}
 	SetupBVTEntity()
-	SetupConsensusEntity()
 }
 
 /*SetPreviousBlock - set the previous block of this block */

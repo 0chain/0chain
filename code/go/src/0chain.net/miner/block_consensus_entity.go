@@ -1,8 +1,9 @@
-package block
+package miner
 
 import (
 	"context"
 
+	"0chain.net/block"
 	"0chain.net/datastore"
 )
 
@@ -10,7 +11,7 @@ import (
 that are good enough to reach consensus */
 type Consensus struct {
 	datastore.NOIDField
-	VerificationTickets []*VerificationTicket
+	VerificationTickets []*block.VerificationTicket
 	BlockID             datastore.Key `json:"block_id"`
 }
 
@@ -18,7 +19,7 @@ var consensusEntityMetadata = &datastore.EntityMetadataImpl{Name: "block_consens
 
 /*GetEntityMetadata - implementing the interface */
 func (consensus *Consensus) GetEntityMetadata() datastore.EntityMetadata {
-	return bvtEntityMetadata
+	return consensusEntityMetadata
 }
 
 /*GetEntityName - implementing the interface */

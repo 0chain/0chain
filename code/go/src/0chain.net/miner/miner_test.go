@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/user"
 	"testing"
-	"time"
 
 	"0chain.net/block"
 	"0chain.net/chain"
@@ -27,10 +26,13 @@ func init() {
 	flag.IntVar(&numOfTransactions, "number_of_transactions", 10000, "number of transactions per block")
 }
 
-func generateSingleBlock() (*block.Block, error, context.Context) {
-	SetUpSingleSelf()
+func getContext() context.Context {
 	ctx := common.GetRootContext()
 	ctx = memorystore.WithConnection(ctx)
+	return ctx
+}
+
+func generateSingleBlock(ctx context.Context) (*block.Block, error) {
 	b := block.Provider().(*block.Block)
 	b.ChainID = datastore.ToKey(config.GetServerChainID())
 	// pb = ... // TODO: Setup a privious block
@@ -55,12 +57,13 @@ func generateSingleBlock() (*block.Block, error, context.Context) {
 		b.ComputeProperties()
 		block.Store.Write(b)
 	}
-	return b, err, ctx
-
+	return b, err
 }
 
 func TestBlockVerification(t *testing.T) {
-	b, err, ctx := generateSingleBlock()
+	SetUpSingleSelf()
+	ctx := getContext()
+	b, err := generateSingleBlock(ctx)
 	mc := GetMinerChain()
 	if b != nil {
 		_, err = mc.VerifyBlock(ctx, b)
@@ -74,7 +77,9 @@ func TestBlockVerification(t *testing.T) {
 }
 
 func TestBlockVerificationBadHash(t *testing.T) {
-	b, err, ctx := generateSingleBlock()
+	SetUpSingleSelf()
+	ctx := getContext()
+	b, err := generateSingleBlock(ctx)
 	mc := GetMinerChain()
 	if b != nil {
 		b.Hash = "bad hash"
@@ -89,7 +94,9 @@ func TestBlockVerificationBadHash(t *testing.T) {
 }
 
 func TestBlockVerificationTooFewTransactions(t *testing.T) {
-	b, err, ctx := generateSingleBlock()
+	SetUpSingleSelf()
+	ctx := getContext()
+	b, err := generateSingleBlock(ctx)
 	mc := GetMinerChain()
 	txnLength := numOfTransactions - 1
 	txn0 := make([]*transaction.Transaction, txnLength)
@@ -111,7 +118,10 @@ func TestBlockVerificationTooFewTransactions(t *testing.T) {
 }
 
 func BenchmarkGenerateALotTransactions(b *testing.B) {
-	block, _, _ := generateSingleBlock()
+	SetUpSingleSelf()
+	ctx := getContext()
+
+	block, _ := generateSingleBlock(ctx)
 	if block != nil {
 		b.Logf("Created block with %v transactions", len(*block.Txns))
 	} else {
@@ -120,7 +130,9 @@ func BenchmarkGenerateALotTransactions(b *testing.B) {
 }
 
 func BenchmarkGenerateAndVerifyALotTransactions(b *testing.B) {
-	block, err, ctx := generateSingleBlock()
+	SetUpSingleSelf()
+	ctx := getContext()
+	block, err := generateSingleBlock(ctx)
 	mc := GetMinerChain()
 	if block != nil && err == nil {
 		_, err = mc.VerifyBlock(ctx, block)
@@ -144,7 +156,6 @@ func SetUpSingleSelf() {
 	node.Self.SetPrivateKey("aa3e1ae2290987959dc44e43d138c81f15f93b2d56d7a06c51465f345df1a8a6e065fc02aaf7aaafaebe5d2dedb9c7c1d63517534644434b813cb3bdab0f94a0")
 	np := node.NewPool(node.NodeTypeMiner)
 	np.AddNode(n1)
-	common.SetupRootContext(node.GetNodeContext())
 	config.SetServerChainID(config.GetMainChainID())
 	common.SetupRootContext(node.GetNodeContext())
 	transaction.SetupEntity()
@@ -173,7 +184,7 @@ func TestBlockGeneration(t *testing.T) {
 	gb := block.Provider().(*block.Block)
 	gb.Hash = block.GenesisBlockHash
 	mc := GetMinerChain()
-	mc.BlockSize = 10000
+	mc.BlockSize = int32(numOfTransactions)
 	r := round.Provider().(*round.Round)
 	r.Block = gb
 	mc.AddRound(r)
@@ -207,13 +218,6 @@ func TestBlockGeneration(t *testing.T) {
 			} else {
 				fmt.Printf("Block hash is: %v\n", b2.Hash)
 			}
-		}
-		b.ComputeProperties()
-		_, err := mc.VerifyBlock(ctx, b)
-		if err != nil {
-			fmt.Printf("Error verifying block: %v\n", err)
-		} else {
-			fmt.Printf("hash verification is working\n")
 		}
 	}
 	common.Done()
@@ -249,62 +253,4 @@ func SetUpSelf() {
 	mc := GetMinerChain()
 	mc.Miners = np
 	SetupM2MSenders()
-}
-
-func BenchmarkChainSetupWorker(b *testing.B) {
-	common.SetupRootContext(node.GetNodeContext())
-
-	//bookstrapping with a genesis block & main chain as the one being mined
-	gb := block.Provider().(*block.Block)
-	gb.Hash = block.GenesisBlockHash
-	gb.Round = 0
-	c := chain.Provider().(*chain.Chain)
-	c.ID = datastore.ToKey(config.GetServerChainID())
-	chain.SetServerChain(c)
-	SetupMinerChain(c)
-	gb.ChainID = c.GetKey()
-	c.LatestFinalizedBlock = gb
-	c.SetupWorkers(common.GetRootContext())
-	mc := GetMinerChain()
-	mc.BlockSize = 10000
-	timer := time.NewTimer(5 * time.Second)
-	startTime := time.Now()
-	go RoundLogic(common.GetRootContext(), GetMinerChain())
-	ts := <-timer.C
-	fmt.Printf("reached timeout: %v %v\n", time.Since(startTime), ts)
-	common.Done()
-}
-
-func RoundLogic(ctx context.Context, c *Chain) {
-	ticker := time.NewTicker(100 * time.Millisecond)
-	r := &round.Round{}
-	r.Number = 0
-	r.Role = round.RoleVerifier
-	roundsChannel := c.GetRoundsChannel()
-	for true {
-		select {
-		case <-ctx.Done():
-			ticker.Stop()
-			return
-		case <-ticker.C:
-			fmt.Printf("round: %v\n", r)
-			if r.Block != nil && r.Block.Txns != nil {
-				for idx, txn := range *r.Block.Txns {
-					fmt.Printf("txn(%v): %v\n", idx, txn)
-				}
-			}
-			r.Number++
-			b := block.Provider().(*block.Block)
-			b.ChainID = datastore.ToKey(config.GetServerChainID())
-			r.Block = b
-			if r.Role == round.RoleVerifier {
-				r.Role = round.RoleGenerator
-			} else {
-				r.Role = round.RoleVerifier
-				txns := make([]*transaction.Transaction, 0)
-				b.Txns = &txns
-			}
-			roundsChannel <- r
-		}
-	}
 }

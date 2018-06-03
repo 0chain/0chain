@@ -42,6 +42,7 @@ func initEntities() {
 	chain.SetupEntity()
 	client.SetupEntity()
 	transaction.SetupEntity()
+	miner.SetupConsensusEntity()
 }
 
 /*Chain - the chain this miner will be working on */
@@ -133,6 +134,7 @@ func main() {
 	initHandlers()
 	miner.SetupM2MSenders()
 	miner.SetupM2MReceivers()
+	miner.SetupWorkers()
 
 	//log.Fatal(server.Serve(l))
 	fmt.Printf("Ready to listen to the requests\n")
