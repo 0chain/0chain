@@ -2,49 +2,50 @@ package persistencestore
 
 import (
 	"context"
+	"fmt"
 
 	"0chain.net/common"
+	"0chain.net/datastore"
 	"github.com/gocql/gocql"
 )
 
 // Session holds our connection to Cassandra
-var session *gocql.Session
+var Session *gocql.Session
 
-func getCluster() *gocql.ClusterConfig {
+func init() {
+	var err error
+
 	cluster := gocql.NewCluster("127.0.0.1")
 	cluster.Keyspace = "ochaincluster"
-	cluster.Consistency = gocql.One
-	cluster.Port = 9042 // default port
-	cluster.NumConns = 1
-	return cluster
-}
-
-func initSession() error {
-	var err error
-	if session == nil || session.Closed() {
-		session, err = getCluster().CreateSession()
+	Session, err = cluster.CreateSession()
+	if err != nil {
+		panic(err)
 	}
-	return err
+	fmt.Println("cassandra init done")
 }
 
-/*GetConnection - returns a connection from the Pool
-* Should always use right after getting the connection to avoid leaks
-* defer c.Close()
- */
+// /*GetConnection - returns a connection from the Pool
+// * Should always use right after getting the connection to avoid leaks
+// * defer c.Close()
+//  */
 func GetConnection() *gocql.Session {
-	return session
+	fmt.Println("in cassandra")
+	return Session
 }
 
-/*CONNECTION - key used to get the connection object from the context */
+//
+// /*CONNECTION - key used to get the connection object from the context */
 const CONNECTION common.ContextKey = "pconnection"
 
+//
 /*WithConnection takes a context and adds a connection value to it */
-func WithConnection(ctx context.Context) context.Context {
+func WithConnection(ctx context.Context, entityMetadata datastore.EntityMetadata) context.Context {
 	return context.WithValue(ctx, CONNECTION, GetConnection())
 }
 
-/*GetCon returns a connection stored in the context which got created via WithConnection */
+// /*GetCon returns a connection stored in the context which got created via WithConnection */
 func GetCon(ctx context.Context) *gocql.Session {
+	fmt.Println("I am at cassandra")
 	if ctx == nil {
 		return GetConnection()
 	}

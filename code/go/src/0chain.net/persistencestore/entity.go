@@ -6,23 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"0chain.net/common"
 	"0chain.net/datastore"
 )
-
-var providers = make(map[string]common.EntityProvider)
-
-/*RegisterEntityProvider - keep track of a list of entity providers. An entity can be registered with multiple names
-* as long as two entities don't use the same name
- */
-func RegisterEntityProvider(entityName string, provider common.EntityProvider) {
-	providers[entityName] = provider
-}
-
-/*GetProvider - return the provider registered for the given entity */
-func GetProvider(entityName string) common.EntityProvider {
-	return providers[entityName]
-}
 
 /*PersistenceEntity - Persistence Entity */
 type PersistenceEntity interface {
@@ -37,13 +22,11 @@ func PRead(ctx context.Context, key datastore.Key, entity PersistenceEntity) err
 	err := json.NewDecoder(buffer).Decode(entity)
 	c := GetCon(ctx)
 	var errs []string
-
-	fmt.Println("here : ", entity)
+	fmt.Println("Printing Entity contents here  : ", entity)
 
 	if err != nil {
 		panic(err)
 	}
-
 	if err := c.Query(
 		"SELECT JSON * from block").Exec(); err != nil {
 		errs = append(errs, err.Error())
@@ -56,24 +39,25 @@ func PWrite(ctx context.Context, entity PersistenceEntity) error {
 }
 
 func PWriteAux(ctx context.Context, entity PersistenceEntity, overwrite bool) error {
-	buffer := bytes.NewBuffer(make([]byte, 0, 256))
-	json.NewEncoder(buffer).Encode(entity)
+	buffer := datastore.ToJSON(entity)
 	c := GetCon(ctx)
 	var errs []string
 
-	fmt.Println("here : ", entity)
+	fmt.Println("PWrite here : ", buffer)
 
-	b, err := json.Marshal(entity)
+	jData, err := json.Marshal(entity)
 	if err != nil {
 		panic(err)
 	}
+	//fmt.Println("PWrite here jData: ", jData)
 
 	if err := c.Query(
-		"INSERT INTO block JSON ?", b).Exec(); err != nil {
+		"INSERT INTO block JSON ?", jData).Exec(); err != nil {
 		errs = append(errs, err.Error())
 	} else {
 		overwrite = true
 	}
+	fmt.Println("errors : ", errs)
 	return nil
 }
 

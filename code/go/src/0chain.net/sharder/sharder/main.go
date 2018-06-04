@@ -18,6 +18,7 @@ import (
 	"0chain.net/encryption"
 	"0chain.net/memorystore"
 	"0chain.net/node"
+	"0chain.net/sharder"
 	"0chain.net/transaction"
 )
 
@@ -36,6 +37,7 @@ func initHandlers() {
 	transaction.SetupHandlers()
 	transaction.SetupSharderHandlers()
 	block.SetupHandlers()
+	sharder.SetupHandlers()
 }
 
 func initEntities() {
