@@ -23,7 +23,7 @@ import (
 var numOfTransactions int
 
 func init() {
-	flag.IntVar(&numOfTransactions, "number_of_transactions", 4000, "number of transactions per block")
+	flag.IntVar(&numOfTransactions, "num_txns", 4000, "number of transactions per block")
 }
 
 func getContext() context.Context {
@@ -32,21 +32,26 @@ func getContext() context.Context {
 	return ctx
 }
 
-func generateSingleBlock(ctx context.Context) (*block.Block, error) {
+func generateSingleBlock(ctx context.Context, prevBlock *block.Block, roundNum int64) (*block.Block, error) {
 	b := block.Provider().(*block.Block)
-	b.ChainID = datastore.ToKey(config.GetServerChainID())
+	r := round.Provider().(*round.Round)
+	mc := GetMinerChain()
+	if prevBlock == nil {
+		fmt.Println("...")
+		prevBlock = block.Provider().(*block.Block)
+		prevBlock.Hash = chain.GenesisBlockHash
+		prevBlock.ChainID = datastore.ToKey(config.GetServerChainID())
+		r.Number = roundNum - 1
+		r.Block = prevBlock
+		r.AddBlock(prevBlock)
+		mc.AddRound(r)
+	}
+	b.ChainID = prevBlock.ChainID
 	// pb = ... // TODO: Setup a privious block
 	// b.SetPreviousBlock(pb)
-	gb := block.Provider().(*block.Block)
-	gb.Hash = chain.GenesisBlockHash
-	mc := GetMinerChain()
 	mc.BlockSize = int32(numOfTransactions)
-	r := round.Provider().(*round.Round)
-	r.Block = gb
-	mc.AddRound(r)
 	r = round.Provider().(*round.Round)
-	r.Number = 1
-	mc.AddRound(r)
+	r.Number = roundNum
 	usr, err := user.Current()
 	if err != nil {
 		panic(err)
@@ -57,6 +62,8 @@ func generateSingleBlock(ctx context.Context) (*block.Block, error) {
 		return nil, err
 	}
 	b.ComputeProperties()
+	r.AddBlock(b)
+	mc.AddRound(r)
 	block.Store.Write(b)
 	return b, nil
 }
@@ -64,10 +71,10 @@ func generateSingleBlock(ctx context.Context) (*block.Block, error) {
 func TestBlockVerification(t *testing.T) {
 	SetUpSingleSelf()
 	ctx := getContext()
-	b, err := generateSingleBlock(ctx)
+	b, err := generateSingleBlock(ctx, nil, 1)
 	mc := GetMinerChain()
 	if b != nil {
-		_, err = mc.VerifyBlock(ctx, b)
+		_, err = mc.VerifyRoundBlock(ctx, b)
 	}
 	if err != nil {
 		t.Errorf("Block failed verification because %v", err.Error())
@@ -77,14 +84,50 @@ func TestBlockVerification(t *testing.T) {
 	common.Done()
 }
 
+func TestTwoCorrectBlocks(t *testing.T) {
+	SetUpSingleSelf()
+	ctx := getContext()
+	b0, err := generateSingleBlock(ctx, nil, 1)
+	mc := GetMinerChain()
+	if b0 != nil {
+		var b1 *block.Block
+		b1, err = generateSingleBlock(ctx, b0, 2)
+		_, err = mc.VerifyRoundBlock(ctx, b1)
+	}
+	if err != nil {
+		t.Errorf("Block failed verification because %v", err.Error())
+	} else {
+		t.Log("Block passed verification")
+	}
+	common.Done()
+}
+
+func TestTwoBlocksWrongRound(t *testing.T) {
+	SetUpSingleSelf()
+	ctx := getContext()
+	b0, err := generateSingleBlock(ctx, nil, 1)
+	//mc := GetMinerChain()
+	if b0 != nil {
+		//var b1 *block.Block
+		_, err = generateSingleBlock(ctx, b0, 3)
+		//_, err = mc.VerifyRoundBlock(ctx, b1)
+	}
+	if err != nil {
+		t.Log("Second block failed to generate")
+	} else {
+		t.Error("Second block generated")
+	}
+	common.Done()
+}
+
 func TestBlockVerificationBadHash(t *testing.T) {
 	SetUpSingleSelf()
 	ctx := getContext()
-	b, err := generateSingleBlock(ctx)
+	b, err := generateSingleBlock(ctx, nil, 1)
 	mc := GetMinerChain()
 	if b != nil {
 		b.Hash = "bad hash"
-		_, err = mc.VerifyBlock(ctx, b)
+		_, err = mc.VerifyRoundBlock(ctx, b)
 	}
 	if err == nil {
 		t.Error("FAIL: Block with bad hash passed verification")
@@ -97,7 +140,7 @@ func TestBlockVerificationBadHash(t *testing.T) {
 func TestBlockVerificationTooFewTransactions(t *testing.T) {
 	SetUpSingleSelf()
 	ctx := getContext()
-	b, err := generateSingleBlock(ctx)
+	b, err := generateSingleBlock(ctx, nil, 1)
 	if err != nil {
 		t.Errorf("Error generating block: %v", err)
 		return
@@ -111,7 +154,7 @@ func TestBlockVerificationTooFewTransactions(t *testing.T) {
 				b.Txns[idx] = txn
 			}
 		}
-		_, err = mc.VerifyBlock(ctx, b)
+		_, err = mc.VerifyRoundBlock(ctx, b)
 	}
 	if err == nil {
 		t.Error("FAIL: Block with too few transactions passed verification")
@@ -125,7 +168,7 @@ func BenchmarkGenerateALotTransactions(b *testing.B) {
 	SetUpSingleSelf()
 	ctx := getContext()
 
-	block, _ := generateSingleBlock(ctx)
+	block, _ := generateSingleBlock(ctx, nil, 1)
 	if block != nil {
 		b.Logf("Created block with %v transactions", len(block.Txns))
 	} else {
@@ -136,10 +179,10 @@ func BenchmarkGenerateALotTransactions(b *testing.B) {
 func BenchmarkGenerateAndVerifyALotTransactions(b *testing.B) {
 	SetUpSingleSelf()
 	ctx := getContext()
-	block, err := generateSingleBlock(ctx)
+	block, err := generateSingleBlock(ctx, nil, 1)
 	mc := GetMinerChain()
 	if block != nil && err == nil {
-		_, err = mc.VerifyBlock(ctx, block)
+		_, err = mc.VerifyRoundBlock(ctx, block)
 		if err != nil {
 			b.Errorf("Block with %v transactions failed verication", len(block.Txns))
 		} else {

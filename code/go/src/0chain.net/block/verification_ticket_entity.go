@@ -59,3 +59,11 @@ func BVTProvider() datastore.Entity {
 func SetupBVTEntity() {
 	datastore.RegisterEntityMetadata("block_verification_ticket", bvtEntityMetadata)
 }
+
+func (vt *VerificationTicket) GetBlockVerificationTicket(b *Block) *BlockVerificationTicket {
+	bvt := BVTProvider().(*BlockVerificationTicket)
+	bvt.VerifierID = vt.VerifierID
+	bvt.Signature = vt.Signature
+	bvt.BlockID = b.ID
+	return bvt
+}

@@ -10,6 +10,7 @@ import (
 	"0chain.net/common"
 	"0chain.net/datastore"
 	"0chain.net/memorystore"
+	"0chain.net/node"
 	"0chain.net/round"
 )
 
@@ -128,6 +129,48 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *round.Round) (*block
 	mc.AddBlock(b)
 	mc.SendBlock(ctx, b)
 	return b, nil
+}
+
+/*VerifyRoundBlock - given a block is verified for a round*/
+func (mc *Chain) VerifyRoundBlock(ctx context.Context, b *block.Block) (bool, error) {
+	if b == nil {
+		return false, common.NewError("invalid_block", "Block not available")
+	}
+	pround := mc.GetRound(b.Round - 1)
+	if pround == nil {
+		//TODO: create previous round AND request previous block from miner who sent current block for verification
+		return false, common.NewError("invalid_round,", "Round not available")
+	}
+	prevBlock, _ := pround.GetBlock(b.PrevHash)
+	if prevBlock == nil {
+		//TODO: create previous round AND request previous block from miner who sent current block for verification
+		return false, common.NewError("invalid_block", "Prevous block doesn't exist")
+	}
+
+	for _, ticket := range prevBlock.VerificationTickets {
+		bvt := ticket.GetBlockVerificationTicket(b)
+		if mc.VerifyTicket(ctx, prevBlock, bvt) != nil {
+			return false, common.NewError("invalid_prev_block_ticket", "The previous block has a bad verification ticket")
+		}
+	}
+
+	bvt, err := mc.VerifyBlock(ctx, b)
+	if err != nil {
+		return false, err
+	}
+	r := mc.GetRound(b.Round)
+	if r == nil {
+		r = &round.Round{Number: b.Round}
+		mc.AddRound(r)
+	}
+	self := node.GetSelfNode(ctx)
+	if self == nil {
+		panic("Invalid setup, could not find the self node")
+	}
+	r.Block = b
+	r.AddBlock(b)
+	mc.SendVerificationTicket(ctx, b, bvt)
+	return true, nil
 }
 
 /*UpdateFinalizedBlock - update the latest finalized block */

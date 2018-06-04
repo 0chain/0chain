@@ -5,6 +5,7 @@ import (
 	"math/rand"
 
 	"0chain.net/block"
+	"0chain.net/common"
 	"0chain.net/datastore"
 )
 
@@ -71,4 +72,15 @@ func (r *Round) ComputeRanks(n int) {
 /*GetRank - get the rank of element at the elementIdx position based on the permutation of the round */
 func (r *Round) GetRank(elementIdx int) int {
 	return r.perm[elementIdx]
+}
+
+func (r *Round) GetBlock(hash string) (*block.Block, error) {
+	if r.blocks == nil {
+		return nil, common.NewError("invalid_round", "Round's blocks haven't been initialized")
+	}
+	block := r.blocks[hash]
+	if block == nil {
+		return nil, common.NewError("invalid_request", "Block doesn't exist")
+	}
+	return block, nil
 }
