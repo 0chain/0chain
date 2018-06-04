@@ -6,42 +6,48 @@ import (
 	"testing"
 )
 
-func TestCreateMerkleTree(t *testing.T) {
+type MerkleTestTransaction struct {
+	TestTransactionID   string
+	TestTransactionData string
+}
 
-	var transactionIDs = make([]string, 8)
-	var transactionString string
-	for i := 0; i < 8; i++ {
-		t := strconv.Itoa(rand.Int())
-		transactionIDs[i] = Hash(t)
-		transactionString = transactionString + transactionIDs[i]
+/*GetHashID - Entity implementation for Merkle tree */
+func (t *MerkleTestTransaction) GetHashID() string {
+	return t.TestTransactionID
+}
+
+func TestCountLeafNodesEven(t *testing.T) {
+	var transactions = make([]MerkleTreeInterface, 20)
+	for i := 0; i < 20; i++ {
+		obj := new(MerkleTestTransaction)
+		obj.TestTransactionData = strconv.Itoa(rand.Int())
+		obj.TestTransactionID = Hash(obj.TestTransactionData)
+		transactions[i] = obj
+		//	fmt.Printf("The transactionIDs are : %v\n", obj.TestTransactionID)
 	}
-	//fmt.Printf("The list of transactionIDs are : %v\n", transactionIDs)
-	//fmt.Println(len(transactionIDs))
-
-	MerkleTree, err := CreateMerkleTree(transactionIDs)
+	MerkleTree, err := CreateMerkleTree(transactions)
 	if err != nil {
 		t.Error("Unexpected error: ", err)
 	}
-	if MerkleTree.GetMerkleRoot() == Hash(transactionString) {
-		t.Errorf("Error, expected hash equal to %v got %v", Hash(transactionString), MerkleTree.GetMerkleRoot())
-	}
-
-}
-
-func TestCountLeafNodes(t *testing.T) {
-	var transactionIDs = make([]string, 100)
-	for i := 0; i < 100; i++ {
-		t := strconv.Itoa(rand.Int())
-		transactionIDs[i] = Hash(t)
-	}
-	//fmt.Printf("The list of transactionIDs are : %v\n", transactionIDs)
-	//fmt.Println(len(transactionIDs))
-	MerkleTree, err := CreateMerkleTree(transactionIDs)
-	if err != nil {
-		t.Error("Unexpected error :  ", err)
-	}
-	if len(MerkleTree.Leafs) != len(transactionIDs) {
+	if len(MerkleTree.Leafs) != len(transactions) {
 		t.Errorf("The leaf counts do not match with the number of transactionIDs")
 	}
+}
 
+func TestCountLeafNodesOdd(t *testing.T) {
+	var transactions = make([]MerkleTreeInterface, 9)
+	for i := 0; i < 9; i++ {
+		obj := new(MerkleTestTransaction)
+		obj.TestTransactionData = strconv.Itoa(rand.Int())
+		obj.TestTransactionID = Hash(obj.TestTransactionData)
+		transactions[i] = obj
+		//fmt.Printf("The transactionIDs are : %v\n", obj.TestTransactionID)
+	}
+	MerkleTree, err := CreateMerkleTree(transactions)
+	if err != nil {
+		t.Error("Unexpected error: ", err)
+	}
+	if len(MerkleTree.Leafs) == len(transactions) {
+		t.Errorf("The leaf counts do not match for odd number of transactionIDs")
+	}
 }

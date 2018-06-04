@@ -8,6 +8,11 @@ import (
 	"strings"
 )
 
+//MerkleTreeInterface is used to create the merkle root for a generic type */
+type MerkleTreeInterface interface {
+	GetHashID() string
+}
+
 /*MerkleTree - used to represent a  merkle tree */
 type MerkleTree struct {
 	RootNode   *MerkleNode
@@ -17,16 +22,17 @@ type MerkleTree struct {
 
 /*MerkleNode - used to represent a merkle tree node */
 type MerkleNode struct {
-	Parent *MerkleNode
-	Left   *MerkleNode
-	Right  *MerkleNode
-	Data   string /*For transaction IDs*/
-	leaf   bool
+	Parent     *MerkleNode
+	Left       *MerkleNode
+	Right      *MerkleNode
+	Data       string /*For transaction IDs*/
+	leaf       bool
+	MInterface MerkleTreeInterface
 }
 
 /*CreateMerkleTree - creating the merkle tree */
-func CreateMerkleTree(transactionIDs []string) (*MerkleTree, error) {
-	root, leafs, err := CreateMerkleNode(transactionIDs)
+func CreateMerkleTree(mInterface []MerkleTreeInterface) (*MerkleTree, error) {
+	root, leafs, err := CreateMerkleNode(mInterface)
 	if err != nil {
 		return nil, err
 	}
@@ -39,16 +45,26 @@ func CreateMerkleTree(transactionIDs []string) (*MerkleTree, error) {
 }
 
 /*CreateMerkleNode - creates a merkle tree with the transactionIDs and returns the root and the Leafs*/
-func CreateMerkleNode(transactionIDs []string) (*MerkleNode, []*MerkleNode, error) {
-	if len(transactionIDs) == 0 {
+func CreateMerkleNode(mInterface []MerkleTreeInterface) (*MerkleNode, []*MerkleNode, error) {
+	if len(mInterface) == 0 {
 		return nil, nil, errors.New("Cannot create a merkle tree with no transactionIDs as content")
 	}
 	var leafs []*MerkleNode
-	for i := 0; i < len(transactionIDs); i++ {
+	for _, c := range mInterface {
 		leafs = append(leafs, &MerkleNode{
-			Data: transactionIDs[i],
-			leaf: true,
+			Data:       c.GetHashID(),
+			MInterface: c,
+			leaf:       true,
 		})
+	}
+
+	if len(leafs)%2 == 1 {
+		duplicateMerkleNode := &MerkleNode{
+			Data:       leafs[len(leafs)-1].Data,
+			MInterface: leafs[len(leafs)-1].MInterface,
+			leaf:       true,
+		}
+		leafs = append(leafs, duplicateMerkleNode)
 	}
 
 	root := BuildIntermediateNodes(leafs)
