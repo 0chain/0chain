@@ -229,3 +229,8 @@ func (b *Block) HashBlock() {
 	b.Hash = b.ComputeHash()
 	b.ID = datastore.ToKey(b.Hash)
 }
+
+/*GetHash - get the hash of the block */
+func (b *Block) GetHash() string {
+	return b.Hash
+}
