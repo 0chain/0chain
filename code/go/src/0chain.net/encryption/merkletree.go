@@ -80,15 +80,17 @@ func BuildIntermediateNodes(mnode []*MerkleNode) *MerkleNode {
 		if n+1 == len(mnode) {
 			right = n
 		}
-		leftHash := Hash(mnode[left].Data)
-		rightHash := Hash(mnode[right].Data)
+		leftHash := mnode[left].Data
+		rightHash := mnode[right].Data
 		values := []string{leftHash, rightHash}
-		prevHash := strings.Join(values, "")
-		hash := Hash(prevHash)
+		joinHash := strings.Join(values, "")
+		//fmt.Printf("The concatenated hash is %s\n", joinHash)
+		computeHash := Hash(joinHash)
+		//fmt.Printf("The new computed hash is %s\n", computeHash)
 		newNode := &MerkleNode{
 			Left:  mnode[left],
 			Right: mnode[right],
-			Data:  hash,
+			Data:  computeHash,
 		}
 		nodes = append(nodes, newNode)
 		mnode[left].Parent = newNode
