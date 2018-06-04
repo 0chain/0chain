@@ -87,7 +87,7 @@ func main() {
 	serverChain := chain.Provider().(*chain.Chain)
 	serverChain.ID = datastore.ToKey(config.GetServerChainID())
 	serverChain.Decimals = 10
-	serverChain.BlockSize = 10000
+	serverChain.BlockSize = 5000
 	chain.SetServerChain(serverChain)
 	miner.SetupMinerChain(serverChain)
 

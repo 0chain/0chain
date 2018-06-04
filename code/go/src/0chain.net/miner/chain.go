@@ -100,6 +100,16 @@ func (mc *Chain) AddRound(r *round.Round) bool {
 	return true
 }
 
+/*DeleteRound - delete a round and associated block data */
+func (mc *Chain) DeleteRound(ctx context.Context, r *round.Round) {
+	for bid, blk := range mc.Blocks {
+		if blk.Round == r.Number {
+			delete(mc.Blocks, bid)
+		}
+	}
+	delete(mc.rounds, r.Number)
+}
+
 /*GenerateRoundBlock - given a round number generates a block*/
 func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *round.Round) (*block.Block, error) {
 	pround := mc.GetRound(r.Number - 1)

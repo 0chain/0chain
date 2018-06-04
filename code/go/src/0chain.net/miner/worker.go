@@ -60,6 +60,10 @@ func (mc *Chain) startNewRound(ctx context.Context, r *round.Round) {
 	if !mc.AddRound(r) {
 		return
 	}
+	ppr := mc.GetRound(r.Number - 2)
+	if ppr != nil {
+		mc.DeleteRound(ctx, ppr)
+	}
 	self := node.GetSelfNode(ctx)
 	rank := r.GetRank(self.SetIndex)
 	fmt.Printf("*** Starting round (%v) with (set index=%v, round rank=%v)\n", r.Number, self.SetIndex, rank)
