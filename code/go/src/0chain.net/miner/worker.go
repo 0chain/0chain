@@ -79,7 +79,7 @@ func (mc *Chain) startNewRound(ctx context.Context, r *round.Round) {
 
 /*HandleVerifyBlockMessage - handles the verify block message */
 func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage) {
-	bvt, err := mc.VerifyBlock(ctx, msg.Block)
+	bvt, err := mc.VerifyRoundBlock(ctx, msg.Block)
 	if err != nil {
 		return
 	}

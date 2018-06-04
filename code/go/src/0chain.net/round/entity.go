@@ -75,12 +75,8 @@ func (r *Round) GetRank(elementIdx int) int {
 }
 
 func (r *Round) GetBlock(hash string) (*block.Block, error) {
-	if r.blocks == nil {
-		return nil, common.NewError("invalid_round", "Round's blocks haven't been initialized")
-	}
-	block := r.blocks[hash]
-	if block == nil {
+	if r.Block == nil {
 		return nil, common.NewError("invalid_request", "Block doesn't exist")
 	}
-	return block, nil
+	return r.Block, nil
 }

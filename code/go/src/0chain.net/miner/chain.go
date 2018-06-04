@@ -132,31 +132,33 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *round.Round) (*block
 }
 
 /*VerifyRoundBlock - given a block is verified for a round*/
-func (mc *Chain) VerifyRoundBlock(ctx context.Context, b *block.Block) (bool, error) {
+func (mc *Chain) VerifyRoundBlock(ctx context.Context, b *block.Block) (*block.BlockVerificationTicket, error) {
 	if b == nil {
-		return false, common.NewError("invalid_block", "Block not available")
+		return nil, common.NewError("invalid_block", "Block not available")
 	}
 	pround := mc.GetRound(b.Round - 1)
 	if pround == nil {
 		//TODO: create previous round AND request previous block from miner who sent current block for verification
-		return false, common.NewError("invalid_round,", "Round not available")
+		return nil, common.NewError("invalid_round,", "Round not available")
 	}
 	prevBlock, _ := pround.GetBlock(b.PrevHash)
 	if prevBlock == nil {
 		//TODO: create previous round AND request previous block from miner who sent current block for verification
-		return false, common.NewError("invalid_block", "Prevous block doesn't exist")
+		return nil, common.NewError("invalid_block", "Prevous block doesn't exist")
 	}
-
+	var err error
 	for _, ticket := range prevBlock.VerificationTickets {
 		bvt := ticket.GetBlockVerificationTicket(b)
-		if mc.VerifyTicket(ctx, prevBlock, bvt) != nil {
-			return false, common.NewError("invalid_prev_block_ticket", "The previous block has a bad verification ticket")
+		err = mc.VerifyTicket(ctx, prevBlock, bvt)
+		if err != nil {
+			fmt.Println(err.Error()) //this line will be deleted once the miners can get through more than 3 rounds consistently
+			return nil, err
 		}
 	}
 
 	bvt, err := mc.VerifyBlock(ctx, b)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	r := mc.GetRound(b.Round)
 	if r == nil {
@@ -169,8 +171,7 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, b *block.Block) (bool, er
 	}
 	r.Block = b
 	r.AddBlock(b)
-	mc.SendVerificationTicket(ctx, b, bvt)
-	return true, nil
+	return bvt, nil
 }
 
 /*UpdateFinalizedBlock - update the latest finalized block */
