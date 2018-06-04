@@ -22,6 +22,11 @@ func (consensus *Consensus) GetEntityMetadata() datastore.EntityMetadata {
 	return consensusEntityMetadata
 }
 
+/*GetKey - overwrites the interface to return the block id */
+func (consensus *Consensus) GetKey() datastore.Key {
+	return datastore.ToKey(consensus.BlockID)
+}
+
 /*GetEntityName - implementing the interface */
 func (consensus *Consensus) GetEntityName() string {
 	return "block_consensus"

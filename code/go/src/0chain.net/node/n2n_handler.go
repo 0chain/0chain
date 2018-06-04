@@ -114,6 +114,9 @@ func (np *Pool) SendAtleast(numNodes int, handler SendHandler) []*Node {
 		}()
 	}
 	for _, node := range nodes {
+		if node == Self.Node {
+			continue
+		}
 		if node.Status == NodeStatusInactive {
 			continue
 		}
@@ -299,6 +302,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF) common
 		if entityMetadata == nil {
 			return
 		}
+		fmt.Printf("received %v.%v from %v\n", entityName, reqHashdata, sender.SetIndex)
 		var buffer io.Reader = r.Body
 		defer r.Body.Close()
 		if r.Header.Get("Content-Encoding") == "snappy" {

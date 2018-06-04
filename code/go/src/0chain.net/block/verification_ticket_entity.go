@@ -36,6 +36,11 @@ func (bvt *BlockVerificationTicket) GetEntityName() string {
 	return "block_verification_ticket"
 }
 
+/*GetKey - returning the block id as the key */
+func (bvt *BlockVerificationTicket) GetKey() datastore.Key {
+	return datastore.ToKey(bvt.BlockID)
+}
+
 /*Validate - implementing the interface */
 func (bvt *BlockVerificationTicket) Validate(ctx context.Context) error {
 	if datastore.IsEmpty(bvt.VerifierID) {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
+	"sort"
 
 	"0chain.net/common"
 	"0chain.net/datastore"
@@ -83,6 +84,7 @@ func (np *Pool) computeNodesArray() {
 		array = append(array, v)
 	}
 	np.Nodes = array
+	np.computeNodePositions()
 }
 
 /*GetRandomNodes - get a random set of nodes from the pool
@@ -116,9 +118,10 @@ func ReadNodes(r io.Reader, minerPool *Pool, sharderPool *Pool, blobberPool *Poo
 		if err != nil {
 			panic(err)
 		}
-		if Self != nil && node.Equals(Self.Node) {
-			continue
-		}
+		/*
+			if Self != nil && node.Equals(Self.Node) {
+				continue
+			}*/
 		switch node.Type {
 		case NodeTypeMiner:
 			minerPool.AddNode(node)
@@ -129,5 +132,12 @@ func ReadNodes(r io.Reader, minerPool *Pool, sharderPool *Pool, blobberPool *Poo
 		default:
 			panic(fmt.Sprintf("unkown node type %v:%v\n", node.GetKey(), node.Type))
 		}
+	}
+}
+
+func (np *Pool) computeNodePositions() {
+	sort.SliceStable(np.Nodes, func(i, j int) bool { return np.Nodes[i].GetKey() < np.Nodes[j].GetKey() })
+	for idx, node := range np.Nodes {
+		node.SetIndex = idx
 	}
 }

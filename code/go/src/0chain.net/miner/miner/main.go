@@ -19,6 +19,7 @@ import (
 	"0chain.net/memorystore"
 	"0chain.net/miner"
 	"0chain.net/node"
+	"0chain.net/round"
 	"0chain.net/transaction"
 )
 
@@ -30,6 +31,7 @@ func initHandlers() {
 	if config.Configuration.TestMode {
 		http.HandleFunc("/_hash", encryption.HashHandler)
 		http.HandleFunc("/_sign", common.ToJSONResponse(encryption.SignHandler))
+		http.HandleFunc("/_start", StartChainHandler)
 	}
 	node.SetupHandlers()
 	chain.SetupHandlers()
@@ -40,10 +42,14 @@ func initHandlers() {
 
 func initEntities() {
 	memoryStorage := memorystore.GetStorageProvider()
-	block.SetupEntity(memoryStorage)
+
 	chain.SetupEntity(memoryStorage)
+	round.SetupEntity(memoryStorage)
+	block.SetupEntity(memoryStorage)
+
 	client.SetupEntity(memoryStorage)
 	transaction.SetupEntity(memoryStorage)
+
 	miner.SetupConsensusEntity()
 }
 
@@ -60,13 +66,6 @@ func main() {
 	flag.Parse()
 
 	address := fmt.Sprintf("%v:%v", *host, *port)
-	config.SetServerChainID(*chainID)
-	serverChain := chain.Provider().(*chain.Chain)
-	serverChain.ID = datastore.ToKey(config.GetServerChainID())
-	serverChain.Decimals = 10
-	serverChain.BlockSize = 10000
-	chain.SetServerChain(serverChain)
-	miner.SetupMinerChain(serverChain)
 
 	config.Configuration.Host = *host
 	config.Configuration.Port = *port
@@ -84,6 +83,14 @@ func main() {
 		panic("Please specify --node_file file.txt option with a file.txt containing peer nodes")
 	}
 
+	config.SetServerChainID(*chainID)
+	serverChain := chain.Provider().(*chain.Chain)
+	serverChain.ID = datastore.ToKey(config.GetServerChainID())
+	serverChain.Decimals = 10
+	serverChain.BlockSize = 10000
+	chain.SetServerChain(serverChain)
+	miner.SetupMinerChain(serverChain)
+
 	reader, err = os.Open(*nodesFile)
 	if err != nil {
 		panic(err)
@@ -98,10 +105,14 @@ func main() {
 			panic(fmt.Sprintf("Pulbic key from the keys file and nodes file don't match %v %v", publicKey, node.Self.PublicKey))
 		}
 		node.Self.SetPrivateKey(privateKey)
+		fmt.Printf("I am (%v,%v)\n", node.Self.Node.SetIndex, node.Self.Node.GetKey())
 	}
-
 	common.SetupRootContext(node.GetNodeContext())
 	ctx := common.GetRootContext()
+	initEntities()
+
+	//TODO: This should not be required
+	setupGenesisBlock()
 
 	mode := "main net"
 	if *testMode {
@@ -127,7 +138,6 @@ func main() {
 	}
 	common.HandleShutdown(server)
 
-	initEntities()
 	serverChain.SetupWorkers(ctx)
 	node.SetupN2NHandlers()
 	serverChain.SetupNodeHandlers()
@@ -141,4 +151,28 @@ func main() {
 	//log.Fatal(server.Serve(l))
 	fmt.Printf("Ready to listen to the requests\n")
 	log.Fatal(server.ListenAndServe())
+}
+
+func setupGenesisBlock() {
+	mc := miner.GetMinerChain()
+	gb := mc.GenerateGenesisBlock()
+	gr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
+	gr.Number = 0
+	gr.Block = gb
+	mc.AddRound(gr)
+}
+
+/*StartChainHandler - start the chain if it's at Genesis round */
+func StartChainHandler(w http.ResponseWriter, r *http.Request) {
+	mc := miner.GetMinerChain()
+	if mc.GetRound(1) != nil {
+		return
+	}
+	sr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
+	sr.Number = 1
+	sr.RandomSeed = time.Now().UnixNano()
+	msg := miner.BlockMessage{Type: miner.MessageStartRound, Round: sr}
+	msgChannel := mc.GetBlockMessageChannel()
+	msgChannel <- &msg
+	mc.SendRoundStart(common.GetRootContext(), sr)
 }

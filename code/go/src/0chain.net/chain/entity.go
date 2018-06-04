@@ -5,6 +5,7 @@ import (
 
 	"0chain.net/block"
 	"0chain.net/common"
+	"0chain.net/config"
 	"0chain.net/datastore"
 	"0chain.net/node"
 )
@@ -98,4 +99,19 @@ func Provider() datastore.Entity {
 func SetupEntity(store datastore.Store) {
 	chainEntityMetadata = &datastore.EntityMetadataImpl{Name: "chain", Provider: Provider, Store: store}
 	datastore.RegisterEntityMetadata("chain", chainEntityMetadata)
+}
+
+/*GenesisBlockHash - block of 0chain.net main chain */
+var GenesisBlockHash = "ed79cae70d439c11258236da1dfa6fc550f7cc569768304623e8fbd7d70efae4" //TODO
+
+/*GenerateGenesisBlock - Create the genesis block for the chain */
+func (c *Chain) GenerateGenesisBlock() *block.Block {
+	if c.ID != config.GetMainChainID() {
+		// TODO
+		return nil
+	}
+	b := datastore.GetEntityMetadata("block").Instance().(*block.Block)
+	b.Hash = GenesisBlockHash
+	b.Round = 0
+	return b
 }

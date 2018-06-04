@@ -10,12 +10,8 @@ import (
 	"0chain.net/config"
 	"0chain.net/datastore"
 	"0chain.net/encryption"
-	"0chain.net/node"
 	"0chain.net/transaction"
 )
-
-/*GenesisBlockHash - block of 0chain.net main chain */
-var GenesisBlockHash = "ed79cae70d439c11258236da1dfa6fc550f7cc569768304623e8fbd7d70efae4" //TODO
 
 /*UnverifiedBlockBody - used to compute the signature
 * This is what is used to verify the correctness of the block & the associated signature
@@ -128,7 +124,6 @@ func Provider() datastore.Entity {
 	b := &Block{}
 	b.Version = "1.0"
 	b.PrevBlockVerficationTickets = make([]*VerificationTicket, 0, 1)
-
 	b.EntityCollection = blockEntityCollection
 	b.InitializeCreationDate()
 	return b
@@ -207,16 +202,6 @@ func (b *Block) AddVerificationTicket(vt *VerificationTicket) bool {
 			}
 		}
 	}
-	//TODO: Assuming verifier_id is same as the node_id
-	nd := node.GetNode(datastore.ToString(vt.VerifierID))
-	// We don't have the verifier information
-	if nd == nil {
-		// TODO: If I am the miner of this block, I better try to do some work and get this verifier data
-		return false
-	}
-	if ok, _ := nd.Verify(vt.Signature, b.Signature); !ok {
-		return false
-	}
 	if b.VerificationTickets == nil {
 		b.VerificationTickets = make([]*VerificationTicket, 0, 1)
 	}
@@ -242,4 +227,5 @@ func (b *Block) ComputeHash() string {
 /*HashBlock - compute and set the hash of the block */
 func (b *Block) HashBlock() {
 	b.Hash = b.ComputeHash()
+	b.ID = datastore.ToKey(b.Hash)
 }

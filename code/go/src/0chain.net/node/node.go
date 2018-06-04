@@ -51,6 +51,7 @@ type Node struct {
 	Host           string
 	Port           int
 	Type           int
+	SetIndex       int
 	Status         int
 	LastActiveTime time.Time
 	ErrorCount     int

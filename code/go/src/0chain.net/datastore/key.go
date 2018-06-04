@@ -68,6 +68,11 @@ func (nif *NOIDField) SetKey(key Key) {
 func (nif *NOIDField) ComputeProperties() {
 }
 
+/*Validate - implementing the interface */
+func (nif *NOIDField) Validate(ctx context.Context) error {
+  return nil
+}
+
 /*ToString - return string representation of the key */
 func ToString(key Key) string {
 	return string(key)

@@ -10,8 +10,14 @@ import (
 	"0chain.net/common"
 	"0chain.net/datastore"
 	"0chain.net/node"
+	"0chain.net/round"
 	"0chain.net/transaction"
 )
+
+/*StartRound - start a new round */
+func (mc *Chain) StartRound(ctx context.Context, r *round.Round) {
+	mc.AddRound(r)
+}
 
 /*GenerateBlock - This works on generating a block
 * The context should be a background context which can be used to stop this logic if there is a new
@@ -28,7 +34,6 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block) error {
 		panic("Invalid setup, could not find the self node")
 	}
 	b.MinerID = self.ID
-	b.Round = 0
 	var txnIterHandler = func(ctx context.Context, qe datastore.CollectionEntity) bool {
 		txn, ok := qe.(*transaction.Transaction)
 		if !ok {
@@ -89,7 +94,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("time to assemble+write+sign block: %v\n", time.Since(start))
+	fmt.Printf("time to assemble+write+sign block (%v): %v\n", b.Hash, time.Since(start))
 	return nil
 }
 
@@ -179,7 +184,7 @@ func validate(ctx context.Context, txns []*transaction.Transaction, cancel *bool
 TODO: For now, we just assume more than 50% */
 func (mc *Chain) ReachedConsensus(ctx context.Context, b *block.Block) bool {
 	numSignatures := b.GetVerificationTicketsCount()
-	if 2*numSignatures > mc.Miners.Size()-1 {
+	if 3*numSignatures >= 2*mc.Miners.Size() {
 		return mc.IsCurrentlyWinningBlock(b)
 	}
 	return false

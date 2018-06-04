@@ -23,7 +23,7 @@ import (
 var numOfTransactions int
 
 func init() {
-	flag.IntVar(&numOfTransactions, "number_of_transactions", 1000, "number of transactions per block")
+	flag.IntVar(&numOfTransactions, "number_of_transactions", 4000, "number of transactions per block")
 }
 
 func getContext() context.Context {
@@ -38,7 +38,7 @@ func generateSingleBlock(ctx context.Context) (*block.Block, error) {
 	// pb = ... // TODO: Setup a privious block
 	// b.SetPreviousBlock(pb)
 	gb := block.Provider().(*block.Block)
-	gb.Hash = block.GenesisBlockHash
+	gb.Hash = chain.GenesisBlockHash
 	mc := GetMinerChain()
 	mc.BlockSize = int32(numOfTransactions)
 	r := round.Provider().(*round.Round)
@@ -52,7 +52,7 @@ func generateSingleBlock(ctx context.Context) (*block.Block, error) {
 		panic(err)
 	}
 	block.SetupFileBlockStore(fmt.Sprintf("%v%s.0chain.net", usr.HomeDir, string(os.PathSeparator)))
-	b, err = mc.GenerateRoundBlock(ctx, 1)
+	b, err = mc.GenerateRoundBlock(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -166,6 +166,7 @@ func SetUpSingleSelf() {
 	block.SetupEntity(memorystore.GetStorageProvider())
 	client.SetupEntity(memorystore.GetStorageProvider())
 	chain.SetupEntity(memorystore.GetStorageProvider())
+	round.SetupEntity(memorystore.GetStorageProvider())
 
 	c := chain.Provider().(*chain.Chain)
 	c.ID = datastore.ToKey(config.GetServerChainID())
@@ -186,7 +187,7 @@ func TestBlockGeneration(t *testing.T) {
 	// pb = ... // TODO: Setup a privious block
 	// b.SetPreviousBlock(pb)
 	gb := block.Provider().(*block.Block)
-	gb.Hash = block.GenesisBlockHash
+	gb.Hash = chain.GenesisBlockHash
 	mc := GetMinerChain()
 	mc.BlockSize = int32(numOfTransactions)
 	r := round.Provider().(*round.Round)
@@ -202,7 +203,7 @@ func TestBlockGeneration(t *testing.T) {
 	}
 	block.SetupFileBlockStore(fmt.Sprintf("%v%s.0chain.net", usr.HomeDir, string(os.PathSeparator)))
 
-	b, err = mc.GenerateRoundBlock(ctx, 1)
+	b, err = mc.GenerateRoundBlock(ctx, r)
 
 	if err != nil {
 		t.Errorf("Error generating block: %v\n", err)
@@ -239,6 +240,7 @@ func SetUpSelf() {
 	node.Self.Node = n1
 	node.Self.SetPrivateKey("aa3e1ae2290987959dc44e43d138c81f15f93b2d56d7a06c51465f345df1a8a6e065fc02aaf7aaafaebe5d2dedb9c7c1d63517534644434b813cb3bdab0f94a0")
 	np := node.NewPool(node.NodeTypeMiner)
+	np.AddNode(n1)
 	np.AddNode(n2)
 	np.AddNode(n3)
 	common.SetupRootContext(node.GetNodeContext())
@@ -248,6 +250,7 @@ func SetUpSelf() {
 	block.SetupEntity(memorystore.GetStorageProvider())
 	client.SetupEntity(memorystore.GetStorageProvider())
 	chain.SetupEntity(memorystore.GetStorageProvider())
+	round.SetupEntity(memorystore.GetStorageProvider())
 
 	c := chain.Provider().(*chain.Chain)
 	c.ID = datastore.ToKey(config.GetServerChainID())

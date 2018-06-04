@@ -44,7 +44,6 @@ func TestNodeSetup(t *testing.T) {
 	gg.ID = encryption.Hash(publicKey)
 	gg.PublicKey = publicKey
 	Miners.AddNode(&gg)
-
 	Miners.Print(os.Stdout)
 }
 
@@ -62,7 +61,7 @@ type Company struct {
 	Name   string `json:"name,omitempty"`
 }
 
-var companyEntityMetadata = &datastore.EntityMetadataImpl{Name: "company", MemoryDB: "company"}
+var companyEntityMetadata = &datastore.EntityMetadataImpl{Name: "company", MemoryDB: "company", Store: memorystore.GetStorageProvider()}
 
 func (c *Company) GetEntityMetadata() datastore.EntityMetadata {
 	return companyEntityMetadata
@@ -77,15 +76,15 @@ func (c *Company) Validate(ctx context.Context) error {
 }
 
 func (c *Company) Read(ctx context.Context, id datastore.Key) error {
-	return memorystore.Read(ctx, id, c)
+	return c.GetEntityMetadata().GetStore().Read(ctx, id, c)
 }
 
 func (c *Company) Write(ctx context.Context) error {
-	return memorystore.Write(ctx, c)
+	return c.GetEntityMetadata().GetStore().Write(ctx, c)
 }
 
 func (c *Company) Delete(ctx context.Context) error {
-	return memorystore.Delete(ctx, c)
+	return c.GetEntityMetadata().GetStore().Delete(ctx, c)
 }
 
 // TODO: Assuming node2 & 3 are running - figure out a way to make this self-contained without the dependency
@@ -106,6 +105,7 @@ func TestNode2NodeCommunication(t *testing.T) {
 	Self.Node = n1
 	Self.privateKey = "aa3e1ae2290987959dc44e43d138c81f15f93b2d56d7a06c51465f345df1a8a6e065fc02aaf7aaafaebe5d2dedb9c7c1d63517534644434b813cb3bdab0f94a0"
 	np := NewPool(NodeTypeMiner)
+	np.AddNode(n1)
 	np.AddNode(n2)
 	np.AddNode(n3)
 

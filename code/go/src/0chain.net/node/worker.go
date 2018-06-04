@@ -31,6 +31,9 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 	nodes := np.shuffleNodes()
 	activeCount := 0
 	for _, node := range nodes {
+		if node == Self.Node {
+			continue
+		}
 		statusURL := node.GetStatusURL()
 		ts := time.Now().UTC()
 		data, hash, signature, err := Self.TimeStampSignature()
@@ -53,7 +56,7 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 			if node.Status == NodeStatusInactive {
 				node.ErrorCount = 0
 				node.Status = NodeStatusActive
-				fmt.Printf("node %v became active\n", node.GetKey())
+				fmt.Printf("node (%v) %v became active\n", node.SetIndex, node.GetKey())
 			}
 			node.LastActiveTime = ts
 		}

@@ -2,6 +2,7 @@ package miner
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"0chain.net/block"
@@ -24,6 +25,7 @@ func SetupMinerChain(c *chain.Chain) {
 	minerChain.roundsMutex = &sync.Mutex{}
 	minerChain.BlockMessageChannel = make(chan *BlockMessage, 25)
 	minerChain.rounds = make(map[int64]*round.Round)
+	minerChain.Blocks = make(map[string]*block.Block)
 }
 
 /*GetMinerChain - get the miner's chain */
@@ -41,6 +43,7 @@ type Chain struct {
 	rounds              map[int64]*round.Round
 }
 
+/*GetBlockMessageChannel - get the block messages channel */
 func (mc *Chain) GetBlockMessageChannel() chan *BlockMessage {
 	return mc.BlockMessageChannel
 }
@@ -51,18 +54,24 @@ func (mc *Chain) IsBlockPresent(hash string) bool {
 	return ok
 }
 
+/*AddBlock - adds a block to the cache */
+func (mc *Chain) AddBlock(b *block.Block) {
+	mc.Blocks[b.Hash] = b
+}
+
 /*GetBlock - returns a known block for a given hash from the speculative list of blocks */
 func (mc *Chain) GetBlock(ctx context.Context, hash string) (*block.Block, error) {
-	b, ok := mc.Blocks[datastore.Key(hash)]
+	b, ok := mc.Blocks[datastore.ToKey(hash)]
 	if ok {
 		return b, nil
 	}
-	b = block.Provider().(*block.Block)
-	err := b.Read(ctx, datastore.ToKey(hash))
-	if err != nil {
-		return b, nil
-	}
-	return nil, err
+	/*
+		b = block.Provider().(*block.Block)
+		err := b.Read(ctx, datastore.ToKey(hash))
+		if err != nil {
+			return b, nil
+		}*/
+	return nil, common.NewError(datastore.EntityNotFound, fmt.Sprintf("Block with hash (%v) not found", hash))
 }
 
 /*GetRound - get a round */
@@ -86,24 +95,19 @@ func (mc *Chain) AddRound(r *round.Round) bool {
 	if ok {
 		return false
 	}
+	r.ComputeRanks(mc.Miners.Size())
 	mc.rounds[r.Number] = r
 	return true
 }
 
 /*GenerateRoundBlock - given a round number generates a block*/
-func (mc *Chain) GenerateRoundBlock(ctx context.Context, roundNumber int64) (*block.Block, error) {
-	pround := mc.GetRound(roundNumber - 1)
+func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *round.Round) (*block.Block, error) {
+	pround := mc.GetRound(r.Number - 1)
 	if pround == nil {
 		return nil, common.NewError("invalid_round,", "Round not available")
 	}
-	r := mc.GetRound(roundNumber)
-	if r == nil {
-		r = &round.Round{Number: roundNumber}
-		mc.AddRound(r)
-	}
 	b := datastore.GetEntityMetadata("block").Instance().(*block.Block)
 	b.ChainID = mc.ID
-	b.Round = roundNumber
 	b.SetPreviousBlock(pround.Block)
 	err := mc.GenerateBlock(ctx, b)
 	if err != nil {
@@ -111,6 +115,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, roundNumber int64) (*bl
 	}
 	r.Block = b
 	r.AddBlock(b) // We need to add our own generated block to the list of blocks
+	mc.AddBlock(b)
 	mc.SendBlock(ctx, b)
 	return b, nil
 }
