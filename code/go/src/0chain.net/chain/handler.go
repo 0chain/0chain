@@ -20,12 +20,12 @@ func SetupHandlers() {
 
 /*GetChainHandler - given an id returns the chain information */
 func GetChainHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	return memorystore.GetEntityHandler(ctx, r, chainEntityMetadata, "id")
+	return datastore.GetEntityHandler(ctx, r, chainEntityMetadata, "id")
 }
 
 /*PutChainHandler - Given a chain data, it stores it */
 func PutChainHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-	return memorystore.PutEntityHandler(ctx, entity)
+	return datastore.PutEntityHandler(ctx, entity)
 }
 
 /*StatusHandler - allows checking the status of the node */

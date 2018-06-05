@@ -18,6 +18,9 @@ type Entity interface {
 	GetKey() Key
 	ComputeProperties()
 	Validate(ctx context.Context) error
+	Read(ctx context.Context, key Key) error
+	Write(ctx context.Context) error
+	Delete(ctx context.Context) error
 }
 
 func AllocateEntities(size int, entityMetadata EntityMetadata) []Entity {

@@ -46,7 +46,7 @@ func (ms *Store) IterateCollection(ctx context.Context, entityMetadata datastore
 			return common.NewError("error", fmt.Sprintf("error casting data to []interface{} : %T", data))
 		}
 		for bidx := range bkeys {
-			bucket[bidx] = entityMetadata.Instance().(MemoryEntity)
+			bucket[bidx] = entityMetadata.Instance()
 			keys[bidx] = datastore.ToKey(bkeys[bidx])
 		}
 
