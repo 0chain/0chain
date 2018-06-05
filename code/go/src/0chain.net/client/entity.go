@@ -20,11 +20,6 @@ type Client struct {
 
 var clientEntityMetadata *datastore.EntityMetadataImpl
 
-func init() {
-	memorystore.AddPool("clientdb", memorystore.DefaultPool)
-	//memorystore.AddPool("clientdb", memorystore.NewPool(":6380"))
-}
-
 /*GetEntityMetadata - implementing the interface */
 func (c *Client) GetEntityMetadata() datastore.EntityMetadata {
 	return clientEntityMetadata
@@ -73,7 +68,6 @@ func Provider() datastore.Entity {
 func SetupEntity(store datastore.Store) {
 	clientEntityMetadata = datastore.MetadataProvider()
 	clientEntityMetadata.Name = "client"
-	clientEntityMetadata.MemoryDB = "clientdb"
 	clientEntityMetadata.Provider = Provider
 	clientEntityMetadata.Store = store
 
