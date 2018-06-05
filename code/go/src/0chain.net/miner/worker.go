@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 
+	"0chain.net/block"
 	"0chain.net/common"
 	"0chain.net/datastore"
 	"0chain.net/memorystore"
@@ -98,7 +99,7 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *Block
 	if mc.ReachedConsensus(ctx, msg.Block) {
 		return
 	}
-	err := mc.VerifyTicket(ctx, msg.Block, msg.BlockVerificationTicket)
+	err := mc.VerifyTicket(ctx, msg.Block, &msg.BlockVerificationTicket.VerificationTicket)
 	if err != nil {
 		return
 	}
@@ -117,12 +118,28 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *Block
 				go mc.startNewRound(ctx, nr)
 				mc.Miners.SendAll(RoundStartSender(nr))
 			}
-			//TODO: Finalize previous round
+			pr := mc.GetRound(r.Number - 1)
+			if pr != nil && pr.Block != nil {
+				mc.FinalizeBlock(ctx, pr.Block)
+			}
 		}
 	}
 }
 
 /*HandleConsensusMessage - handles the block consensus message */
 func (mc *Chain) HandleConsensusMessage(ctx context.Context, msg *BlockMessage) {
-	//TODO: Finalize previous round
+	pr := mc.GetRound(msg.Block.Round - 1)
+	if pr != nil && pr.Number != 0 && pr.Block != nil {
+		mc.FinalizeBlock(ctx, pr.Block)
+	}
+}
+
+/*FinalizeBlock - finalize a block */
+func (mc *Chain) FinalizeBlock(ctx context.Context, b *block.Block) {
+	fmt.Printf("Finalizing block: %v\n", b.Hash)
+	txnEntityMetadata := datastore.GetEntityMetadata("txn")
+	ctx = memorystore.WithEntityConnection(ctx, txnEntityMetadata)
+	defer memorystore.Close(ctx)
+	mc.Finalize(ctx, b)
+	mc.SendFinalizedBlock(ctx, b)
 }

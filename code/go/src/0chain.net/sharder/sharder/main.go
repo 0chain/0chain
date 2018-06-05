@@ -37,7 +37,6 @@ func initHandlers() {
 	transaction.SetupHandlers()
 	transaction.SetupSharderHandlers()
 	block.SetupHandlers()
-	sharder.SetupHandlers()
 }
 
 func initEntities() {
@@ -133,6 +132,7 @@ func main() {
 	serverChain.SetupWorkers(ctx)
 	node.SetupN2NHandlers()
 	serverChain.SetupNodeHandlers()
+	sharder.SetupM2SReceivers()
 
 	initServer()
 	initHandlers()

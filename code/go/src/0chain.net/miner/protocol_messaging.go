@@ -32,3 +32,9 @@ func (mc *Chain) SendConsensus(ctx context.Context, consensus *Consensus) {
 	fmt.Printf("sending block consensus message from %v(%v)\n", node.Self.Node.SetIndex, node.Self.Node.GetKey())
 	mc.Miners.SendAll(BlockConsensusSender(consensus))
 }
+
+/*SendFinalizedBlock - send the finalized block to the sharders */
+func (mc *Chain) SendFinalizedBlock(ctx context.Context, b *block.Block) {
+	fmt.Printf("sending finalized block message from %v(%v)\n", node.Self.Node.SetIndex, node.Self.Node.GetKey())
+	mc.Sharders.SendAll(FinalizedBlockSender(b))
+}

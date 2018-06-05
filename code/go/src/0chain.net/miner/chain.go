@@ -148,8 +148,8 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, b *block.Block) (*block.B
 	}
 
 	for _, ticket := range prevBlock.VerificationTickets {
-		bvt := ticket.GetBlockVerificationTicket(prevBlock)
-		if err := mc.VerifyTicket(ctx, prevBlock, bvt); err != nil {
+		//bvt := ticket.GetBlockVerificationTicket(prevBlock)
+		if err := mc.VerifyTicket(ctx, prevBlock, ticket); err != nil {
 			return nil, err
 		}
 	}

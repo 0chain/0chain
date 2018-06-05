@@ -15,6 +15,8 @@ type ProtocolMessaging interface {
 	SendBlock(ctx context.Context, b *block.Block)
 	SendVerificationTicket(ctx context.Context, b *block.Block, bvt *block.BlockVerificationTicket)
 	SendConsensus(ctx context.Context, consensus *Consensus)
+
+	SendFinalizedBlock(ctx context.Context, b *block.Block)
 }
 
 /*ProtocolExecution - this is the interface to understand the miner's workload related to creating a block */
@@ -22,9 +24,10 @@ type ProtocolExecution interface {
 	StartRound(ctx context.Context, round *round.Round)
 	GenerateBlock(ctx context.Context, b *block.Block) error
 	VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockVerificationTicket, error)
-	VerifyTicket(ctx context.Context, b *block.Block, bvt *block.BlockVerificationTicket) error
+	VerifyTicket(ctx context.Context, b *block.Block, vt *block.VerificationTicket) error
 	AddVerificationTicket(ctx context.Context, b *block.Block, bvt *block.VerificationTicket) bool
 	ReachedConsensus(ctx context.Context, b *block.Block) bool
+	VerifyConsensus(ctx context.Context, b *block.Block) error
 	Finalize(ctx context.Context, b *block.Block) error
 }
 

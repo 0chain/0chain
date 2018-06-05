@@ -197,7 +197,7 @@ func (mc *Chain) IsCurrentlyWinningBlock(b *block.Block) bool {
 }
 
 /*VerifyTicket - verify the ticket */
-func (mc *Chain) VerifyTicket(ctx context.Context, b *block.Block, bvt *block.BlockVerificationTicket) error {
+func (mc *Chain) VerifyTicket(ctx context.Context, b *block.Block, bvt *block.VerificationTicket) error {
 	if bvt.VerifierID == b.MinerID {
 		return common.InvalidRequest("Self signing not allowed")
 	}
@@ -206,7 +206,7 @@ func (mc *Chain) VerifyTicket(ctx context.Context, b *block.Block, bvt *block.Bl
 		return common.InvalidRequest("Verifier unknown or not authorized at this time")
 	}
 
-	if ok, _ := sender.Verify(bvt.Signature, bvt.BlockID); !ok {
+	if ok, _ := sender.Verify(bvt.Signature, b.Hash); !ok {
 		return common.InvalidRequest("Couldn't verify the signature")
 	}
 	return nil
@@ -217,9 +217,24 @@ func (mc *Chain) AddVerificationTicket(ctx context.Context, b *block.Block, bvt 
 	return b.AddVerificationTicket(bvt)
 }
 
+/*VerifyConsensus - verify that the consensus is correct */
+func (mc *Chain) VerifyConsensus(ctx context.Context, b *block.Block, bvt []*block.VerificationTicket) error {
+	if b.Round != 0 && bvt == nil {
+		return common.NewError("no_verification_tickets", "No verification tickets for this block")
+	}
+	// TODO: Logic similar to ReachedConsensus to check the count satisfies (refactor)
+
+	for _, vt := range bvt {
+		if err := mc.VerifyTicket(ctx, b, vt); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 /*Finalize - finalize the transactions in the block */
 func (mc *Chain) Finalize(ctx context.Context, b *block.Block) error {
-	modifiedTxns := make([]datastore.Entity, 0, mc.BlockSize)
+	modifiedTxns := make([]datastore.Entity, len(b.Txns))
 	for idx, txn := range b.Txns {
 		txn.BlockID = b.ID
 		txn.Status = transaction.TXN_STATUS_FINALIZED

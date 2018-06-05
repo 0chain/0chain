@@ -146,6 +146,7 @@ func main() {
 	initHandlers()
 	miner.SetupM2MSenders()
 	miner.SetupM2MReceivers()
+	miner.SetupM2SSenders()
 	miner.SetupWorkers()
 
 	//log.Fatal(server.Serve(l))
