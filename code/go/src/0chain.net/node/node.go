@@ -45,6 +45,13 @@ var (
 	NodeTypeBlobber = 3
 )
 
+type NodeTypeLookup struct {
+	Code  string
+	Value string
+}
+
+var NodeTypeNames []*NodeTypeLookup = []*NodeTypeLookup{nil, &NodeTypeLookup{Code: "m", Value: "Miner"}, &NodeTypeLookup{Code: "s", Value: "Sharder"}, &NodeTypeLookup{Code: "b", Value: "Blobber"}}
+
 /*Node - a struct holding the node information */
 type Node struct {
 	client.Client
@@ -143,14 +150,9 @@ func (n *Node) Verify(signature string, hash string) (bool, error) {
 
 /*GetNodeType - as a string */
 func (n *Node) GetNodeType() string {
-	switch n.Type {
-	case NodeTypeMiner:
-		return "m"
-	case NodeTypeSharder:
-		return "s"
-	case NodeTypeBlobber:
-		return "b"
-	default:
-		return "u"
-	}
+	return NodeTypeNames[n.Type].Code
+}
+
+func (n *Node) GetNodeTypeName() string {
+	return NodeTypeNames[n.Type].Value
 }

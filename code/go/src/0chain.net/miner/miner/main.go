@@ -23,6 +23,8 @@ import (
 	"0chain.net/transaction"
 )
 
+var startTime time.Time
+
 func initServer() {
 	// TODO; when a new server is brought up, it needs to first download all the state before it can start accepting requests
 }
@@ -33,6 +35,7 @@ func initHandlers() {
 		http.HandleFunc("/_sign", common.ToJSONResponse(encryption.SignHandler))
 		http.HandleFunc("/_start", StartChainHandler)
 	}
+	http.HandleFunc("/", HomePageHandler)
 	node.SetupHandlers()
 	chain.SetupHandlers()
 	client.SetupHandlers()
@@ -151,6 +154,7 @@ func main() {
 
 	//log.Fatal(server.Serve(l))
 	fmt.Printf("Ready to listen to the requests\n")
+	startTime = time.Now().UTC()
 	log.Fatal(server.ListenAndServe())
 }
 
@@ -177,4 +181,12 @@ func StartChainHandler(w http.ResponseWriter, r *http.Request) {
 	msgChannel := mc.GetBlockMessageChannel()
 	msgChannel <- &msg
 	mc.SendRoundStart(common.GetRootContext(), sr)
+}
+
+/*HomePageHandler - provides basic info when accessing the home page of the server */
+func HomePageHandler(w http.ResponseWriter, r *http.Request) {
+	mc := miner.GetMinerChain()
+	fmt.Fprintf(w, "<div>Running since %v ...\n", startTime)
+	fmt.Fprintf(w, "<div>Working on the chain: %v</div>\n", mc.GetKey())
+	fmt.Fprintf(w, "<div>I am a %v with set rank of (%v) <ul><li>id:%v</li><li>public_key:%v</li></ul></div>\n", node.Self.GetNodeTypeName(), node.Self.SetIndex, node.Self.GetKey(), node.Self.PublicKey)
 }
