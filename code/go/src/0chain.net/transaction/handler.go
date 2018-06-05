@@ -25,7 +25,7 @@ func SetupSharderHandlers() {
 
 /*GetTransaction - given an id returns the transaction information */
 func GetTransaction(ctx context.Context, r *http.Request) (interface{}, error) {
-	return memorystore.GetEntityHandler(ctx, r, transactionEntityMetadata, "hash")
+	return datastore.GetEntityHandler(ctx, r, transactionEntityMetadata, "hash")
 }
 
 /*TXN_TIME_TOLERANCE - the txn creation date should be within 5 seconds before/after of current time */

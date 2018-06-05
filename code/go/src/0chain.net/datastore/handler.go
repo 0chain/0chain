@@ -51,3 +51,37 @@ func PrintEntityHandler(ctx context.Context, entity Entity) (interface{}, error)
 	fmt.Printf("%v: %v\n", emd.GetName(), ToJSON(entity))
 	return nil, nil
 }
+
+/*GetEntityHandler - default get handler implementation for any Entity */
+func GetEntityHandler(ctx context.Context, r *http.Request, entityMetadata EntityMetadata, idparam string) (interface{}, error) {
+	id := r.FormValue(idparam)
+	if id == "" {
+		return nil, common.InvalidRequest(fmt.Sprintf("%v is required", idparam))
+	}
+	entity := entityMetadata.Instance()
+	err := entity.Read(ctx, ToKey(id))
+	if err != nil {
+		return nil, err
+	}
+	return entity, nil
+}
+
+/*PutEntityHandler - default put handler implementation for any Entity */
+func PutEntityHandler(ctx context.Context, object interface{}) (interface{}, error) {
+	entity, ok := object.(Entity)
+	if !ok {
+		return nil, fmt.Errorf("invalid request %T", object)
+	}
+	entity.ComputeProperties()
+	if err := entity.Validate(ctx); err != nil {
+		return nil, err
+	}
+	if DoAsync(ctx, entity) {
+		return entity, nil
+	}
+	err := entity.Write(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return entity, nil
+}

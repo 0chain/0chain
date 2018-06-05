@@ -55,6 +55,21 @@ have it's own id (like 1-to-many) that is only required to send it around with t
 type NOIDField struct {
 }
 
+/*Read - abstract method for memory store read */
+func (nif *NOIDField) Read(ctx context.Context, key string) error {
+	return common.NewError("abstract_read", "Calling entity.Read() requires implementing the method")
+}
+
+/*Write - abstract method for memory store write */
+func (nif *NOIDField) Write(ctx context.Context) error {
+	return common.NewError("abstract_write", "Calling entity.Write() requires implementing the method")
+}
+
+/*Delete - abstract method for memory store delete */
+func (nif *NOIDField) Delete(ctx context.Context) error {
+	return common.NewError("abstract_delete", "Calling entity.Delete() requires implementing the method")
+}
+
 /*GetKey - implementing the interface */
 func (nif *NOIDField) GetKey() Key {
 	return EmptyKey

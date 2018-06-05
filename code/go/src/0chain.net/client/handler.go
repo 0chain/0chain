@@ -17,10 +17,10 @@ func SetupHandlers() {
 
 /*GetClient - given an id returns the client information */
 func GetClient(ctx context.Context, r *http.Request) (interface{}, error) {
-	return memorystore.GetEntityHandler(ctx, r, clientEntityMetadata, "id")
+	return datastore.GetEntityHandler(ctx, r, clientEntityMetadata, "id")
 }
 
 /*PutClient - Given a client data, it stores it */
 func PutClient(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-	return memorystore.PutEntityHandler(ctx, entity)
+	return datastore.PutEntityHandler(ctx, entity)
 }

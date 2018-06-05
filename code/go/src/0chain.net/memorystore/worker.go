@@ -40,7 +40,7 @@ func (mc *MemoryDBChunk) Size() int {
 }
 
 func (mc *MemoryDBChunk) Add(entity datastore.Entity) {
-	mc.Buffer[mc.Length] = entity.(MemoryEntity)
+	mc.Buffer[mc.Length] = entity
 	mc.Length++
 }
 
