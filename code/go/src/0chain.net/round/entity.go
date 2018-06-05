@@ -55,7 +55,10 @@ func Provider() datastore.Entity {
 
 /*SetupEntity - setup the entity */
 func SetupEntity(store datastore.Store) {
-	roundEntityMetadata = &datastore.EntityMetadataImpl{Name: "round", Provider: Provider}
+	roundEntityMetadata = datastore.MetadataProvider()
+	roundEntityMetadata.Name = "round"
+	roundEntityMetadata.Provider = Provider
+	roundEntityMetadata.IDColumnName = "number"
 	datastore.RegisterEntityMetadata("round", roundEntityMetadata)
 }
 
@@ -69,6 +72,7 @@ func (r *Round) GetRank(elementIdx int) int {
 	return r.perm[elementIdx]
 }
 
+/*GetBlock - given a hash, return the block from this round */
 func (r *Round) GetBlock(hash string) (*block.Block, error) {
 	if r.blocks == nil {
 		return nil, common.NewError("invalid_round", "Round's blocks haven't been initialized")

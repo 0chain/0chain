@@ -15,7 +15,7 @@ type Consensus struct {
 	BlockID             datastore.Key `json:"block_id"`
 }
 
-var consensusEntityMetadata = &datastore.EntityMetadataImpl{Name: "block_consensus", Provider: ConsensusProvider}
+var consensusEntityMetadata *datastore.EntityMetadataImpl
 
 /*GetEntityMetadata - implementing the interface */
 func (consensus *Consensus) GetEntityMetadata() datastore.EntityMetadata {
@@ -41,5 +41,10 @@ func ConsensusProvider() datastore.Entity {
 
 /*SetupConsensusEntity - setup the entity */
 func SetupConsensusEntity() {
+	consensusEntityMetadata = datastore.MetadataProvider()
+	consensusEntityMetadata.Name = "block_consensus"
+	consensusEntityMetadata.Provider = ConsensusProvider
+	consensusEntityMetadata.IDColumnName = "block_id"
+
 	datastore.RegisterEntityMetadata("block_consensus", consensusEntityMetadata)
 }

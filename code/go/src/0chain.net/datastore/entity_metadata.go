@@ -26,13 +26,20 @@ type EntityMetadata interface {
 	GetMemoryDB() string
 	Instance() Entity
 	GetStore() Store
+	GetIDColumnName() string
 }
 
 type EntityMetadataImpl struct {
-	Name     string
-	MemoryDB string
-	Store    Store
-	Provider InstanceProvider
+	Name         string
+	MemoryDB     string
+	Store        Store
+	Provider     InstanceProvider
+	IDColumnName string
+}
+
+func MetadataProvider() *EntityMetadataImpl {
+	em := EntityMetadataImpl{IDColumnName: "id"}
+	return &em
 }
 
 func (em *EntityMetadataImpl) GetName() string {
@@ -49,4 +56,8 @@ func (em *EntityMetadataImpl) Instance() Entity {
 
 func (em *EntityMetadataImpl) GetStore() Store {
 	return em.Store
+}
+
+func (em *EntityMetadataImpl) GetIDColumnName() string {
+	return em.IDColumnName
 }

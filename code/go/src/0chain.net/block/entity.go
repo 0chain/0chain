@@ -126,7 +126,11 @@ func Provider() datastore.Entity {
 
 /*SetupEntity - setup the entity */
 func SetupEntity(store datastore.Store) {
-	blockEntityMetadata = &datastore.EntityMetadataImpl{Name: "block", Provider: Provider, Store: store}
+	blockEntityMetadata = datastore.MetadataProvider()
+	blockEntityMetadata.Name = "block"
+	blockEntityMetadata.Provider = Provider
+	blockEntityMetadata.Store = store
+	blockEntityMetadata.IDColumnName = "hash"
 	datastore.RegisterEntityMetadata("block", blockEntityMetadata)
 	blockEntityCollection = &datastore.EntityCollection{CollectionName: "collection.block", CollectionSize: 1000, CollectionDuration: time.Hour}
 	SetupBVTEntity()

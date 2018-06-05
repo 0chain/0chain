@@ -92,7 +92,10 @@ func Provider() datastore.Entity {
 
 /*SetupEntity - setup the entity */
 func SetupEntity(store datastore.Store) {
-	chainEntityMetadata = &datastore.EntityMetadataImpl{Name: "chain", Provider: Provider, Store: store}
+	chainEntityMetadata = datastore.MetadataProvider()
+	chainEntityMetadata.Name = "chain"
+	chainEntityMetadata.Provider = Provider
+	chainEntityMetadata.Store = store
 	datastore.RegisterEntityMetadata("chain", chainEntityMetadata)
 }
 

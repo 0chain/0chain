@@ -24,7 +24,7 @@ type BlockVerificationTicket struct {
 	BlockID datastore.Key `json:"block_id"`
 }
 
-var bvtEntityMetadata = &datastore.EntityMetadataImpl{Name: "block_verification_ticket", Provider: BVTProvider}
+var bvtEntityMetadata *datastore.EntityMetadataImpl
 
 /*GetEntityMetadata - implementing the interface */
 func (bvt *BlockVerificationTicket) GetEntityMetadata() datastore.EntityMetadata {
@@ -52,9 +52,14 @@ func BVTProvider() datastore.Entity {
 
 /*SetupBVTEntity - setup the entity */
 func SetupBVTEntity() {
+	bvtEntityMetadata = datastore.MetadataProvider()
+	bvtEntityMetadata.Name = "block_verification_ticket"
+	bvtEntityMetadata.Provider = BVTProvider
+	bvtEntityMetadata.IDColumnName = "block_id"
 	datastore.RegisterEntityMetadata("block_verification_ticket", bvtEntityMetadata)
 }
 
+/*GetBlockVerificationTicket - Get Block Verification Ticket */
 func (vt *VerificationTicket) GetBlockVerificationTicket(b *Block) *BlockVerificationTicket {
 	bvt := BVTProvider().(*BlockVerificationTicket)
 	bvt.VerifierID = vt.VerifierID

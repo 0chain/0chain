@@ -191,7 +191,10 @@ var TransactionEntityChannel chan datastore.QueuedEntity
 
 /*SetupEntity - setup the entity */
 func SetupEntity(store datastore.Store) {
-	transactionEntityMetadata = &datastore.EntityMetadataImpl{Name: "txn", Provider: Provider, Store: store}
+	transactionEntityMetadata = datastore.MetadataProvider()
+	transactionEntityMetadata.Name = "txn"
+	transactionEntityMetadata.Provider = Provider
+	transactionEntityMetadata.Store = store
 
 	datastore.RegisterEntityMetadata("txn", transactionEntityMetadata)
 	txnEntityCollection = &datastore.EntityCollection{CollectionName: "collection.txn", CollectionSize: 60000000, CollectionDuration: time.Hour}

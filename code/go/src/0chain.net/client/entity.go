@@ -71,7 +71,11 @@ func Provider() datastore.Entity {
 
 /*SetupEntity - setup the entity */
 func SetupEntity(store datastore.Store) {
-	clientEntityMetadata = &datastore.EntityMetadataImpl{Name: "client", MemoryDB: "clientdb", Provider: Provider, Store: store}
+	clientEntityMetadata = datastore.MetadataProvider()
+	clientEntityMetadata.Name = "client"
+	clientEntityMetadata.MemoryDB = "clientdb"
+	clientEntityMetadata.Provider = Provider
+	clientEntityMetadata.Store = store
 
 	datastore.RegisterEntityMetadata("client", clientEntityMetadata)
 
