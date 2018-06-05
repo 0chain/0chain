@@ -31,6 +31,10 @@ type dbpool struct {
 }
 
 var pools = make(map[string]*dbpool)
+
+//if using docker then use the following DefaultPool
+//var DefaultPool = NewPool("redis:6379")
+//else use this
 var DefaultPool = NewPool("127.0.0.1:6379")
 
 func init() {
