@@ -30,25 +30,29 @@ func SetupWorkers(ctx context.Context, options *datastore.ChunkingOptions) chan 
 	return echannel
 }
 
+/*MemoryDBChunk - implement db chunk */
 type MemoryDBChunk struct {
 	Buffer []datastore.Entity
 	Length int
 }
 
+/*Size - interface implementation */
 func (mc *MemoryDBChunk) Size() int {
 	return mc.Length
 }
 
+/*Add - interface implementation */
 func (mc *MemoryDBChunk) Add(entity datastore.Entity) {
 	mc.Buffer[mc.Length] = entity
 	mc.Length++
 }
 
+/*Get - interface implementation */
 func (mc *MemoryDBChunk) Get(index int) datastore.Entity {
-	// TODO? Add array checks or assume it's all good for performance?
 	return mc.Buffer[index]
 }
 
+/*Trim - interface implementation */
 func (mc *MemoryDBChunk) Trim() {
 	mc.Buffer = mc.Buffer[:mc.Length]
 }
@@ -57,6 +61,7 @@ func (mc *MemoryDBChunk) Trim() {
 type MemoryDBChunkProvider struct {
 }
 
+/*Create - interface implementation */
 func (mcp *MemoryDBChunkProvider) Create(size int) datastore.Chunk {
 	c := MemoryDBChunk{}
 	c.Buffer = make([]datastore.Entity, size)
@@ -70,28 +75,29 @@ type MemoryDBChunkProcessor struct {
 	ChunkChannel   <-chan datastore.Chunk
 }
 
+/*Process - interface implementation */
 func (mcp *MemoryDBChunkProcessor) Process(ctx context.Context, chunk datastore.Chunk) {
 	mchunk, ok := chunk.(*MemoryDBChunk)
 	if !ok {
 		panic("invalid chunk into the memory db chunk channel\n")
 	}
+	lctx := WithEntityConnection(ctx, mcp.EntityMetadata)
+	defer Close(lctx)
 	store := mcp.EntityMetadata.GetStore()
-	err := store.MultiWrite(ctx, mcp.EntityMetadata, mchunk.Buffer)
+	err := store.MultiWrite(lctx, mcp.EntityMetadata, mchunk.Buffer)
 	if err != nil {
 		fmt.Printf("multiwrite error : %v\n", err)
 	}
 }
 
+/*Run - interface implementation */
 func (mcp *MemoryDBChunkProcessor) Run(ctx context.Context) {
-	// TODO: What happens if a connection expires? We need a way to catch exception and get a new connection
-	lctx := WithEntityConnection(ctx, mcp.EntityMetadata)
-	defer Close(lctx)
 	for true {
 		select {
 		case <-ctx.Done():
 			return
 		case chunk := <-mcp.ChunkChannel:
-			mcp.Process(lctx, chunk)
+			mcp.Process(ctx, chunk)
 		}
 	}
 }

@@ -2,7 +2,6 @@ package transaction
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -13,6 +12,11 @@ import (
 	"0chain.net/encryption"
 	"0chain.net/memorystore"
 )
+
+func init() {
+	memorystore.AddPool("txndb", memorystore.DefaultPool) //TODO: This is temporary
+	//memorystore.AddPool("txndb", memorystore.NewPool(":6479"))
+}
 
 /*Transaction type for capturing the transaction data */
 type Transaction struct {
@@ -149,7 +153,7 @@ func (t *Transaction) VerifyHash(ctx context.Context) error {
 }
 
 /*VerifySignature - verify the transaction hash */
-func (t *Transaction) VerifySignature(ctx context.Context) error { //TODO
+func (t *Transaction) VerifySignature(ctx context.Context) error {
 	var err error
 	co := datastore.GetEntityMetadata("client").Instance().(*client.Client)
 	if t.PublicKey == "" {
@@ -167,12 +171,8 @@ func (t *Transaction) VerifySignature(ctx context.Context) error { //TODO
 		return err
 	}
 	if !correctSignature {
-		return errors.New("Not signed correctly")
+		return common.NewError("invalid_signature", "Invalid Signature")
 	}
-	/*
-		if msg != t.TransactionData {
-			return common.NewError("hash_signature_mismatch", "Decrypted signature doesn't match the hash of the transaction")
-		} */
 	return nil
 }
 
@@ -193,6 +193,7 @@ var TransactionEntityChannel chan datastore.QueuedEntity
 func SetupEntity(store datastore.Store) {
 	transactionEntityMetadata = datastore.MetadataProvider()
 	transactionEntityMetadata.Name = "txn"
+	transactionEntityMetadata.MemoryDB = "txndb"
 	transactionEntityMetadata.Provider = Provider
 	transactionEntityMetadata.Store = store
 
