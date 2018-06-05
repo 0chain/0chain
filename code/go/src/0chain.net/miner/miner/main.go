@@ -159,6 +159,7 @@ func setupGenesisBlock() {
 	gr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 	gr.Number = 0
 	gr.Block = gb
+	gr.AddBlock(gb)
 	mc.AddRound(gr)
 }
 

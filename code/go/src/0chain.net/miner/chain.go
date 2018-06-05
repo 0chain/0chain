@@ -146,12 +146,10 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, b *block.Block) (*block.B
 		//TODO: create previous round AND request previous block from miner who sent current block for verification
 		return nil, common.NewError("invalid_block", "Prevous block doesn't exist")
 	}
-	var err error
+
 	for _, ticket := range prevBlock.VerificationTickets {
-		bvt := ticket.GetBlockVerificationTicket(b)
-		err = mc.VerifyTicket(ctx, prevBlock, bvt)
-		if err != nil {
-			fmt.Println(err.Error()) //this line will be deleted once the miners can get through more than 3 rounds consistently
+		bvt := ticket.GetBlockVerificationTicket(prevBlock)
+		if mc.VerifyTicket(ctx, prevBlock, bvt) != nil {
 			return nil, err
 		}
 	}
@@ -169,7 +167,6 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, b *block.Block) (*block.B
 	if self == nil {
 		panic("Invalid setup, could not find the self node")
 	}
-	r.Block = b
 	r.AddBlock(b)
 	return bvt, nil
 }
