@@ -25,7 +25,8 @@ type Store struct {
 func (ms *Store) Read(ctx context.Context, key datastore.Key, entity datastore.Entity) error {
 	entity.SetKey(key)
 	redisKey := GetEntityKey(entity)
-	c := GetEntityCon(ctx, entity.GetEntityMetadata())
+	emd := entity.GetEntityMetadata()
+	c := GetEntityCon(ctx, emd)
 	c.Send("GET", redisKey)
 	c.Flush()
 	data, err := c.Receive()
@@ -34,7 +35,7 @@ func (ms *Store) Read(ctx context.Context, key datastore.Key, entity datastore.E
 	}
 
 	if data == nil {
-		return common.NewError(datastore.EntityNotFound, fmt.Sprintf("%v not found with id = %v", entity.GetEntityName(), redisKey))
+		return common.NewError(datastore.EntityNotFound, fmt.Sprintf("%v not found with id = %v", emd.GetName(), redisKey))
 	}
 	datastore.FromJSON(data, entity)
 	entity.ComputeProperties()
@@ -49,7 +50,8 @@ func (ms *Store) Write(ctx context.Context, entity datastore.Entity) error {
 func writeAux(ctx context.Context, entity datastore.Entity, overwrite bool) error {
 	buffer := datastore.ToJSON(entity)
 	redisKey := GetEntityKey(entity)
-	c := GetEntityCon(ctx, entity.GetEntityMetadata())
+	emd := entity.GetEntityMetadata()
+	c := GetEntityCon(ctx, emd)
 	if overwrite {
 		c.Send("SET", redisKey, buffer)
 	} else {
@@ -61,7 +63,7 @@ func writeAux(ctx context.Context, entity datastore.Entity, overwrite bool) erro
 		return err
 	}
 	if val, ok := data.(int64); ok && val == 0 {
-		return common.NewError("duplicate_entity", fmt.Sprintf("%v with key %v already exists", entity.GetEntityName(), entity.GetKey()))
+		return common.NewError("duplicate_entity", fmt.Sprintf("%v with key %v already exists", emd.GetName(), entity.GetKey()))
 	}
 	ce, ok := entity.(datastore.CollectionEntity)
 	if !ok {

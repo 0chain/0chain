@@ -27,11 +27,6 @@ func (consensus *Consensus) GetKey() datastore.Key {
 	return datastore.ToKey(consensus.BlockID)
 }
 
-/*GetEntityName - implementing the interface */
-func (consensus *Consensus) GetEntityName() string {
-	return "block_consensus"
-}
-
 /*Validate - implementing the interface */
 func (consensus *Consensus) Validate(ctx context.Context) error {
 	// TODO

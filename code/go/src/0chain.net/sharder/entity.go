@@ -17,10 +17,6 @@ type Sharder struct {
 
 var blockEntityMetadata = &datastore.EntityMetadataImpl{Name: "sharder", Provider: Provider}
 
-func (s *Sharder) GetEntityName() string {
-	return "sharder"
-}
-
 func (s *Sharder) PWrite(ctx context.Context) error {
 	return persistencestore.PWrite(ctx, s)
 }

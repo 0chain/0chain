@@ -54,11 +54,6 @@ func (b *Block) GetEntityMetadata() datastore.EntityMetadata {
 	return blockEntityMetadata
 }
 
-/*GetEntityName - implementing the interface */
-func (b *Block) GetEntityName() string {
-	return "block"
-}
-
 /*ComputeProperties - Entity implementation */
 func (b *Block) ComputeProperties() {
 	if b.Hash != "" {

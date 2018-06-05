@@ -13,7 +13,6 @@ var (
 
 /*Entity - interface that reads and writes any implementing structure as JSON into the store */
 type Entity interface {
-	GetEntityName() string
 	GetEntityMetadata() EntityMetadata
 	SetKey(key Key)
 	GetKey() Key

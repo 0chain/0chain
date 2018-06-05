@@ -30,11 +30,6 @@ func (c *Client) GetEntityMetadata() datastore.EntityMetadata {
 	return clientEntityMetadata
 }
 
-/*GetEntityName - implementing the interface */
-func (c *Client) GetEntityName() string {
-	return "client"
-}
-
 /*Validate - implementing the interface */
 func (c *Client) Validate(ctx context.Context) error {
 	if datastore.IsEmpty(c.ID) {

@@ -31,11 +31,6 @@ func (bvt *BlockVerificationTicket) GetEntityMetadata() datastore.EntityMetadata
 	return bvtEntityMetadata
 }
 
-/*GetEntityName - implementing the interface */
-func (bvt *BlockVerificationTicket) GetEntityName() string {
-	return "block_verification_ticket"
-}
-
 /*GetKey - returning the block id as the key */
 func (bvt *BlockVerificationTicket) GetKey() datastore.Key {
 	return datastore.ToKey(bvt.BlockID)

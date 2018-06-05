@@ -53,11 +53,6 @@ func (c *Chain) GetEntityMetadata() datastore.EntityMetadata {
 	return chainEntityMetadata
 }
 
-/*GetEntityName - implementing the interface */
-func (c *Chain) GetEntityName() string {
-	return "chain"
-}
-
 /*Validate - implementing the interface */
 func (c *Chain) Validate(ctx context.Context) error {
 	if datastore.IsEmpty(c.ID) {

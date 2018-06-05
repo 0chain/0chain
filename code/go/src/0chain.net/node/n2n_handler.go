@@ -184,7 +184,7 @@ func SetHeaders(req *http.Request, entity datastore.Entity, options *SendOptions
 	req.Header.Set(HeaderRequestHashData, hashdata)
 	req.Header.Set(HeaderRequestHash, hash)
 	req.Header.Set(HeaderNodeRequestSignature, signature)
-	req.Header.Set(HeaderRequestEntityName, entity.GetEntityName())
+	req.Header.Set(HeaderRequestEntityName, entity.GetEntityMetadata().GetName())
 	req.Header.Set(HeaderRequestEntityID, datastore.ToString(entity.GetKey()))
 	if options.CODEC == 0 {
 		req.Header.Set(HeaderRequestCODEC, "JSON")

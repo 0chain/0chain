@@ -36,11 +36,6 @@ func (r *Round) GetEntityMetadata() datastore.EntityMetadata {
 	return roundEntityMetadata
 }
 
-/*GetEntityName - implementing the interface */
-func (r *Round) GetEntityName() string {
-	return "round"
-}
-
 /*GetKey - returns the round number as the key */
 func (r *Round) GetKey() datastore.Key {
 	return datastore.ToKey(fmt.Sprintf("%v", r.Number))

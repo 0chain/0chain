@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"0chain.net/client"
+	"0chain.net/common"
 	"0chain.net/datastore"
 	"0chain.net/encryption"
 	"0chain.net/memorystore"
@@ -67,10 +68,6 @@ func (c *Company) GetEntityMetadata() datastore.EntityMetadata {
 	return companyEntityMetadata
 }
 
-func (c *Company) GetEntityName() string {
-	return "company"
-}
-
 func (c *Company) Validate(ctx context.Context) error {
 	return nil
 }
@@ -89,6 +86,8 @@ func (c *Company) Delete(ctx context.Context) error {
 
 // TODO: Assuming node2 & 3 are running - figure out a way to make this self-contained without the dependency
 func TestNode2NodeCommunication(t *testing.T) {
+	common.SetupRootContext(context.Background())
+	client.SetupEntity(memorystore.GetStorageProvider())
 	publicKey, _ := encryption.GenerateKeys()
 	entity := client.Provider().(*client.Client)
 	entity.ID = datastore.ToKey(encryption.Hash(publicKey))

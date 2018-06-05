@@ -44,6 +44,10 @@ func ToJSONEntityReqResponse(handler JSONEntityReqResponderF, entityMetadata Ent
 
 /*PrintEntityHandler - handler that prints the received entity */
 func PrintEntityHandler(ctx context.Context, entity Entity) (interface{}, error) {
-	fmt.Printf("%v: %v\n", entity.GetEntityName(), ToJSON(entity))
+	emd := entity.GetEntityMetadata()
+	if emd == nil {
+		return nil, common.NewError("unknown_entity", "Entity with nil entity metadata")
+	}
+	fmt.Printf("%v: %v\n", emd.GetName(), ToJSON(entity))
 	return nil, nil
 }

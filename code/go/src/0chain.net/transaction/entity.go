@@ -54,11 +54,6 @@ func (t *Transaction) GetEntityMetadata() datastore.EntityMetadata {
 	return transactionEntityMetadata
 }
 
-/*GetEntityName - Entity implementation */
-func (t *Transaction) GetEntityName() string {
-	return "txn"
-}
-
 /*GetEntityName - Entity implementation for Merkle tree */
 func (t *Transaction) GetHashID() string {
 	return t.ID
