@@ -13,7 +13,7 @@ import (
 func NewPool(address string) *redis.Pool {
 	return &redis.Pool{
 		MaxIdle:   80,
-		MaxActive: 10000, // max number of connections
+		MaxActive: 1000, // max number of connections
 		Dial: func() (redis.Conn, error) {
 			c, err := redis.Dial("tcp", address)
 			if err != nil {
@@ -93,14 +93,17 @@ func WithConnection(ctx context.Context) context.Context {
 		cMap := make(connections)
 		cMap[CONNECTION] = GetConnection()
 		return context.WithValue(ctx, CONNECTION, cMap)
-	} else {
-		cMap, ok := cons.(connections)
-		_, ok = cMap[CONNECTION]
-		if !ok {
-			cMap[CONNECTION] = GetConnection()
-		}
-		return ctx
 	}
+	cMap, ok := cons.(connections)
+	if !ok {
+		panic("invalid setup")
+	}
+	_, ok = cMap[CONNECTION]
+	if !ok {
+		cMap[CONNECTION] = GetConnection()
+	}
+	return ctx
+
 }
 
 /*GetCon returns a connection stored in the context which got created via WithConnection */
@@ -108,11 +111,23 @@ func GetCon(ctx context.Context) redis.Conn {
 	if ctx == nil {
 		return GetConnection()
 	}
-	c := ctx.Value(CONNECTION)
-	if c == nil {
-		return nil
+	cons := ctx.Value(CONNECTION)
+	if cons == nil {
+		con := GetConnection()
+		cMap := make(connections)
+		cMap[CONNECTION] = con
+		return con
 	}
-	return c.(connections)[CONNECTION]
+	cMap, ok := cons.(connections)
+	if !ok {
+		panic("invalid setup")
+	}
+	con, ok := cMap[CONNECTION]
+	if !ok {
+		con = GetConnection()
+		cMap[CONNECTION] = con
+	}
+	return con
 }
 
 /*WithEntityConnection - returns a connection as per the configuration of the entity */
