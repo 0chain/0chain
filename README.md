@@ -11,6 +11,7 @@ TestNet Setup with Docker Containers:
 
 *) Create a network called testnet0 where all the nodes have an IP address so they can talk to each other.
    Note: The config file should be providing the IP address of the nodes as per the IP addresses in this network.
+
 > docker network create --driver=bridge --subnet=198.18.0.0/15 --gateway=198.18.0.255 testnet0
 
 *) From the working directory of git/0chain, issue the following commands. Build by removing intermediate containers
@@ -24,6 +25,7 @@ TestNet Setup with Docker Containers:
 *) Syncing time (the host and the containers are being offset by a few seconds that throws validation errors as we accept transactions that are within 5 seconds of creation). This step is needed periodically when you see the validation error.
 
 > docker run --rm --privileged alpine hwclock -s
+
 *)Open 3 terminals and go to the directory miner1 , 2 and 3 respectively that were created under git/0chain. From there issue the 3 commands one on each terminal respectively.
 
 
