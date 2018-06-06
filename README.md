@@ -16,7 +16,9 @@ TestNet Setup with Docker Containers:
 *) From the working directory of git/0chain, issue the following commands. Build by removing intermediate containers
 
 > export MINER=1; docker-compose -p miner1 build --force-rm
+
 > export MINER=2; docker-compose -p miner2 build --force-rm
+
 > export MINER=3; docker-compose -p miner3 build --force-rm
 
 *) Syncing time (the host and the containers are being offset by a few seconds that throws validation errors as we accept transactions that are within 5 seconds of creation). This step is needed periodically when you see the validation error.
@@ -26,14 +28,18 @@ TestNet Setup with Docker Containers:
 
 
 > export MINER=1; docker-compose -p miner1 up
+
 > export MINER=2; docker-compose -p miner2 up
+
 > export MINER=3; docker-compose -p miner3 up
 
 
 Alternate and more flexible way but don’t use this as it’s hard to debug what’s going on if there is a problem.
 
 > export MINER=1; docker-compose -p miner1 run -p "7071:7071” miner
+
 > export MINER=2; docker-compose -p miner2 run -p "7072:7072” miner
+
 > export MINER=3; docker-compose -p miner3 run -p "7073:7073” miner
 
 
@@ -48,7 +54,9 @@ This should display a few containers and should include containers with images m
 *) Confirming the servers are up and running. From a browser, visit
 
 http://localhost:7071/
+
 http://localhost:7072/
+
 http://localhost:7073/
 
 to see the status of the servers.
@@ -59,14 +67,18 @@ to see the status of the servers.
 Default redis (used for clients and state):
 
 > export MINER=1; docker-compose -p miner1 exec redis redis-cli
+
 > export MINER=2; docker-compose -p miner2 exec redis redis-cli
+
 > export MINER=3; docker-compose -p miner3 exec redis redis-cli
 
 
 Redis used for transactions:
 
 > export MINER=1; docker-compose -p miner1 exec redis_txns redis-cli
+
 > export MINER=2; docker-compose -p miner2 exec redis_txns redis-cli
+
 > export MINER=3; docker-compose -p miner3 exec redis_txns redis-cli
 
 
