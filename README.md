@@ -1,72 +1,79 @@
-# Java Test-net
 
-## Requirements
+TestNet Setup with Docker Containers:
 
-Building the API miner war requires [Maven](https://maven.apache.org/), [PostgreSQL](https://www.postgresql.org), and [Tomcat](https://tomcat.apache.org) to be installed. 
+1) Directory setup. In the git/0chain directory, create 3 directories called miner1, miner2 and miner3. Within these directories create data/db/redis directory using
 
-***Please add apache-maven-3.5.3 to /opt directory.***
-The build script assumes that apache-maven-3.5.3 is installed in the opt directory.
+> mkdir -p data/db/redis
 
-### Assumptions
 
-PostgresSQL is running locally on port 5432.
+2) Docker commands
 
-### Postgresql 
 
-The database and tables can be created by coping and pasting this into a postgres terminal with a user with privilege
-```
-create user miner WITH PASSWORD '0n32b!Ndt43M';
+*) Create a network called testnet0 where all the nodes have an IP address so they can talk to each other.
+   Note: The config file should be providing the IP address of the nodes as per the IP addresses in this network.
+> docker network create --driver=bridge --subnet=198.18.0.0/15 --gateway=198.18.0.255 testnet0
 
-create database "0chain" with owner = miner;
+*) From the working directory of git/0chain, issue the following commands. Build by removing intermediate containers
 
-\connect 0chain;
+> export MINER=1; docker-compose -p miner1 build --force-rm
+> export MINER=2; docker-compose -p miner2 build --force-rm
+> export MINER=3; docker-compose -p miner3 build --force-rm
 
-CREATE TABLE public.transaction
-(
-  client_id text NOT NULL,
-  data text NOT NULL,
-  "timestamp" timestamp without time zone NOT NULL,
-  hash_msg text NOT NULL,
-  sign text NOT NULL,
-  CONSTRAINT transaction_pkey PRIMARY KEY (hash_msg)
-)
-WITH (
-  OIDS=FALSE
-);
-ALTER TABLE public.transaction
-  OWNER TO miner;
+*) Syncing time (the host and the containers are being offset by a few seconds that throws validation errors as we accept transactions that are within 5 seconds of creation). This step is needed periodically when you see the validation error.
 
-CREATE INDEX transaction_cliend_id_idx
-  ON public.transaction
-  USING btree
-  (client_id COLLATE pg_catalog."default");
+> docker run --rm --privileged alpine hwclock -s
+*)Open 3 terminals and go to the directory miner1 , 2 and 3 respectively that were created under git/0chain. From there issue the 3 commands one on each terminal respectively.
 
-CREATE TABLE public.clients
-(
-  public_key text NOT NULL,
-  hash_key text NOT NULL,
-  CONSTRAINT clients_pkey PRIMARY KEY (hash_key)
-)
-WITH (
-  OIDS=FALSE
-);
-ALTER TABLE public.clients
-  OWNER TO miner;
-```
 
-## Installation
-First install the Utils module. CD into the Utils directory and use maven clean install
-```
-mvn clean install
-```
-Next, cd into the Test-net directory and type the following to run the modules.
-```
-mvn spring-boot:run
-```
+> export MINER=1; docker-compose -p miner1 up
+> export MINER=2; docker-compose -p miner2 up
+> export MINER=3; docker-compose -p miner3 up
 
-## Testing
 
-To run the integration tests type:
-```
-mvn clean test
-```
+Alternate and more flexible way but don’t use this as it’s hard to debug what’s going on if there is a problem.
+
+> export MINER=1; docker-compose -p miner1 run -p "7071:7071” miner
+> export MINER=2; docker-compose -p miner2 run -p "7072:7072” miner
+> export MINER=3; docker-compose -p miner3 run -p "7073:7073” miner
+
+
+3) Troubleshooting:
+
+*) Ensure the port mapping is all correct
+
+> docker ps
+
+This should display a few containers and should include containers with images miner1_miner, miner2_miner and miner3_miner and they should have the ports mapped like "0.0.0.0:7071->7071/tcp"
+
+*) Confirming the servers are up and running. From a browser, visit
+
+http://localhost:7071/
+http://localhost:7072/
+http://localhost:7073/
+
+to see the status of the servers.
+
+
+*) Connecting to redis servers running within the containers
+
+Default redis (used for clients and state):
+
+> export MINER=1; docker-compose -p miner1 exec redis redis-cli
+> export MINER=2; docker-compose -p miner2 exec redis redis-cli
+> export MINER=3; docker-compose -p miner3 exec redis redis-cli
+
+
+Redis used for transactions:
+
+> export MINER=1; docker-compose -p miner1 exec redis_txns redis-cli
+> export MINER=2; docker-compose -p miner2 exec redis_txns redis-cli
+> export MINER=3; docker-compose -p miner3 exec redis_txns redis-cli
+
+
+4) Miscellaneous
+
+Cleanup
+
+*) Get rid of old unused docker resources :
+
+> docker system prune
