@@ -10,6 +10,9 @@ import (
 	"github.com/gomodule/redigo/redis"
 )
 
+/*DefaultPool - the default redis pool against a service (host) named redis */
+var DefaultPool = NewPool("redis", 6379)
+
 /*NewPool - create a new redis pool accessible at the given address */
 func NewPool(host string, port int) *redis.Pool {
 	var address string
@@ -38,11 +41,6 @@ type dbpool struct {
 }
 
 var pools = make(map[string]*dbpool)
-
-//if using docker then use the following DefaultPool
-//var DefaultPool = NewPool("redis:6379")
-//else use this
-var DefaultPool = NewPool("redis", 6379)
 
 func init() {
 	pools[""] = &dbpool{ID: "", CtxKey: CONNECTION, Pool: DefaultPool}

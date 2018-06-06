@@ -22,7 +22,7 @@ services:
      - redis_txns
     links:
       - redis:redis
-      - redis_txns:redis
+      - redis_txns:redis_txns
     build: .
     ports:
       - "7070:7070"
