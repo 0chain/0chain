@@ -69,7 +69,7 @@ func main() {
 	flag.Parse()
 
 	//address := fmt.Sprintf("%v:%v", *host, *port)
-	address := fmt.Sprintf("127.0.0.1:%v", *port)
+	address := fmt.Sprintf(":%v", *port)
 
 	config.Configuration.Host = *host
 	config.Configuration.Port = *port
