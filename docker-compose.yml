@@ -2,21 +2,25 @@ version: '3'
 services:
   redis:
     image: "redis:alpine"
-    container_name: "redis"
     volumes:
       - ./config:/0chain/config
-      - ./data:/0chain/data
+      - ./miner${MINER}/data:/0chain/data
+    networks:
+      default:
     command: redis-server /0chain/config/redis/state.redis.conf
 
   redis_txns:
     image: "redis:alpine"
-    container_name: "redis_txns"
     volumes:
       - ./config:/0chain/config
-      - ./data:/0chain/data
+      - ./miner${MINER}/data:/0chain/data
+    networks:
+      default:
     command: redis-server /0chain/config/redis/transactions.redis.conf
 
-  app:
+  miner:
+    environment:
+      - DOCKER=true
     depends_on:
      - redis
      - redis_txns
@@ -24,10 +28,21 @@ services:
       - redis:redis
       - redis_txns:redis_txns
     build: .
-    ports:
-      - "7070:7070"
     volumes:
       - ./config:/0chain/config
+    ports:
+      - "707${MINER}:707${MINER}"
+    networks:
+      default:
+      testnet0:
+        ipv4_address: 198.18.0.7${MINER}
+    command: ./miner  --host 198.18.0.7${MINER} --port 707${MINER} -test --keys_file config/mnode${MINER}_keys.txt --nodes_file config/single_machine_3_nodes.txt
+
+networks:
+  default:
+    driver: bridge
+  testnet0:
+    external: true
 
 volumes:
   data:

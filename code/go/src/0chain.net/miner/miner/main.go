@@ -68,7 +68,8 @@ func main() {
 	keysFile := flag.String("keys_file", "config/single_node_miner_keys.txt", "keys_file")
 	flag.Parse()
 
-	address := fmt.Sprintf("%v:%v", *host, *port)
+	//address := fmt.Sprintf("%v:%v", *host, *port)
+	address := fmt.Sprintf("127.0.0.1:%v", *port)
 
 	config.Configuration.Host = *host
 	config.Configuration.Port = *port

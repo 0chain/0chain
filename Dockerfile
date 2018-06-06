@@ -16,9 +16,3 @@ ADD ./code/go/src $SRC_DIR/go/src
 
 # Build it:
 RUN go build 0chain.net/miner/miner
-
-#TODO: this env variable is used to detect if we are running within docker
-ENV DOCKER=true
-
-# Run the code once the build is successful
-CMD ./miner --port 7070 -test
