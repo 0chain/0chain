@@ -26,6 +26,8 @@ services:
     build: .
     ports:
       - "7070:7070"
+    volumes:
+      - ./config:/0chain/config
 
 volumes:
   data:
