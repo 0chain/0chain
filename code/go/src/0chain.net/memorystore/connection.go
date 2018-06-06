@@ -3,6 +3,7 @@ package memorystore
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"0chain.net/common"
 	"0chain.net/datastore"
@@ -10,7 +11,13 @@ import (
 )
 
 /*NewPool - create a new redis pool accessible at the given address */
-func NewPool(address string) *redis.Pool {
+func NewPool(host string, port int) *redis.Pool {
+	var address string
+	if os.Getenv("DOCKER") != "" {
+		address = fmt.Sprintf("%v:6379", host)
+	} else {
+		address = fmt.Sprintf("127.0.0.1:%v", port)
+	}
 	return &redis.Pool{
 		MaxIdle:   80,
 		MaxActive: 1000, // max number of connections
@@ -35,7 +42,7 @@ var pools = make(map[string]*dbpool)
 //if using docker then use the following DefaultPool
 //var DefaultPool = NewPool("redis:6379")
 //else use this
-var DefaultPool = NewPool("127.0.0.1:6379")
+var DefaultPool = NewPool("redis", 6379)
 
 func init() {
 	pools[""] = &dbpool{ID: "", CtxKey: CONNECTION, Pool: DefaultPool}

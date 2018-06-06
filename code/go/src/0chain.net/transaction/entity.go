@@ -14,8 +14,8 @@ import (
 )
 
 func init() {
-	memorystore.AddPool("txndb", memorystore.DefaultPool) //TODO: This is temporary
-	//memorystore.AddPool("txndb", memorystore.NewPool(":6479"))
+	//memorystore.AddPool("txndb", memorystore.DefaultPool) //TODO: This is temporary
+	memorystore.AddPool("txndb", memorystore.NewPool("redis_txns", 6479))
 }
 
 /*Transaction type for capturing the transaction data */
