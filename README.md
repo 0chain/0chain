@@ -2,7 +2,7 @@ TestNet Setup with Docker Containers:
 
 Initial Setup:
 
-1) Directory setup for miners & sharders. In the git/0chain/docker.local run the following command
+1) Directory setup for miners & sharders. In the git/0chain run the following command
 
 > ./docker.local/bin/init_setup.sh
 
