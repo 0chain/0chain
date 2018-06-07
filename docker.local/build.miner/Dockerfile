@@ -1,6 +1,6 @@
 FROM iron/go:dev
 
-ENV SRC_DIR /0chain
+ENV SRC_DIR=/0chain
 ENV GOPATH=$SRC_DIR/go
 
 WORKDIR $SRC_DIR

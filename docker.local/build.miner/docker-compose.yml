@@ -3,8 +3,8 @@ services:
   redis:
     image: "redis:alpine"
     volumes:
-      - ./config:/0chain/config
-      - ./miner${MINER}/data:/0chain/data
+      - ../config:/0chain/config
+      - ../miner${MINER}/data:/0chain/data
     networks:
       default:
     command: redis-server /0chain/config/redis/state.redis.conf
@@ -12,8 +12,8 @@ services:
   redis_txns:
     image: "redis:alpine"
     volumes:
-      - ./config:/0chain/config
-      - ./miner${MINER}/data:/0chain/data
+      - ../config:/0chain/config
+      - ../miner${MINER}/data:/0chain/data
     networks:
       default:
     command: redis-server /0chain/config/redis/transactions.redis.conf
@@ -27,9 +27,11 @@ services:
     links:
       - redis:redis
       - redis_txns:redis_txns
-    build: .
+    build:
+      context: ../..
+      dockerfile: ./docker.local/build.miner/Dockerfile
     volumes:
-      - ./config:/0chain/config
+      - ../config:/0chain/config
     ports:
       - "707${MINER}:707${MINER}"
     networks:

@@ -3,6 +3,8 @@ package persistencestore
 import (
 	"context"
 	"fmt"
+	"os"
+	"time"
 
 	"0chain.net/common"
 	"0chain.net/datastore"
@@ -16,11 +18,23 @@ var Session *gocql.Session
 
 func init() {
 	var err error
-
-	cluster := gocql.NewCluster("127.0.0.1")
+	var cluster *gocql.ClusterConfig
+	if os.Getenv("DOCKER") != "" {
+		cluster = gocql.NewCluster("cassandra")
+	} else {
+		cluster = gocql.NewCluster("127.0.0.1")
+	}
 	cluster.Keyspace = KeySpace
-	Session, err = cluster.CreateSession()
-	if err != nil {
+	delay := time.Second
+	for tries := 0; tries <= 20; tries++ {
+		Session, err = cluster.CreateSession()
+		if err != nil {
+			time.Sleep(delay)
+		} else {
+			break
+		}
+	}
+	if Session == nil {
 		panic(err)
 	}
 	fmt.Println("cassandra init done")

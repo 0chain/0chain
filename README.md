@@ -1,13 +1,12 @@
 
 TestNet Setup with Docker Containers:
 
-1) Directory setup. In the git/0chain directory, create 3 directories called miner1, miner2 and miner3. Within these directories create data/db/redis directory using
+1) Directory setup. In the git/0chain/docker.local directory create 3 directories called miner1, miner2 and miner3. Within these directories create data/db/redis directory using
 
 > mkdir -p data/db/redis
 
 
 2) Docker commands
-
 
 *) Create a network called testnet0 where all the nodes have an IP address so they can talk to each other.
    Note: The config file should be providing the IP address of the nodes as per the IP addresses in this network.
@@ -16,33 +15,23 @@ TestNet Setup with Docker Containers:
 
 *) From the working directory of git/0chain, issue the following commands. Build by removing intermediate containers
 
-> export MINER=1; docker-compose -p miner1 build --force-rm
+> export MINER=1; docker-compose -p miner1 -f docker.local/build.miner/docker-compose.yml  build --force-rm
 
-> export MINER=2; docker-compose -p miner2 build --force-rm
+> export MINER=2; docker-compose -p miner2 -f docker.local/build.miner/docker-compose.yml  build --force-rm
 
-> export MINER=3; docker-compose -p miner3 build --force-rm
+> export MINER=3; docker-compose -p miner3 -f docker.local/build.miner/docker-compose.yml  build --force-rm
 
 *) Syncing time (the host and the containers are being offset by a few seconds that throws validation errors as we accept transactions that are within 5 seconds of creation). This step is needed periodically when you see the validation error.
 
 > docker run --rm --privileged alpine hwclock -s
 
-*)Open 3 terminals and go to the directory miner1 , 2 and 3 respectively that were created under git/0chain. From there issue the 3 commands one on each terminal respectively.
+*)Open 3 terminals and go to the directory miner1 , 2 and 3 respectively that were created under git/0chain/docker.local. From there issue the 3 commands one on each terminal respectively.
 
+> export MINER=1; docker-compose -p miner1 -f ../build.miner/docker-compose.yml up
 
-> export MINER=1; docker-compose -p miner1 up
+> export MINER=2; docker-compose -p miner2 -f ../build.miner/docker-compose.yml up
 
-> export MINER=2; docker-compose -p miner2 up
-
-> export MINER=3; docker-compose -p miner3 up
-
-
-Alternate and more flexible way but don’t use this as it’s hard to debug what’s going on if there is a problem.
-
-> export MINER=1; docker-compose -p miner1 run -p "7071:7071” miner
-
-> export MINER=2; docker-compose -p miner2 run -p "7072:7072” miner
-
-> export MINER=3; docker-compose -p miner3 run -p "7073:7073” miner
+> export MINER=3; docker-compose -p miner3 -f ../build.miner/docker-compose.yml up
 
 
 3) Troubleshooting:
@@ -64,25 +53,25 @@ http://localhost:7073/
 to see the status of the servers.
 
 
-*) Connecting to redis servers running within the containers
+*) Connecting to redis servers running within the containers (you are within git/0chain directory)
 
 Default redis (used for clients and state):
 
-> export MINER=1; docker-compose -p miner1 exec redis redis-cli
+> export MINER=1; docker-compose -p miner1 -f docker.local/build.miner/docker-compose.yml exec redis redis-cli
 
-> export MINER=2; docker-compose -p miner2 exec redis redis-cli
+> export MINER=2; docker-compose -p miner2 -f docker.local/build.miner/docker-compose.yml exec redis redis-cli
 
-> export MINER=3; docker-compose -p miner3 exec redis redis-cli
+> export MINER=3; docker-compose -p miner3 -f docker.local/build.miner/docker-compose.yml exec redis redis-cli
+
 
 
 Redis used for transactions:
 
-> export MINER=1; docker-compose -p miner1 exec redis_txns redis-cli
+> export MINER=1; docker-compose -p miner1 -f docker.local/build.miner/docker-compose.yml exec redis_txns redis-cli
 
-> export MINER=2; docker-compose -p miner2 exec redis_txns redis-cli
+> export MINER=2; docker-compose -p miner2 -f docker.local/build.miner/docker-compose.yml exec redis_txns redis-cli
 
-> export MINER=3; docker-compose -p miner3 exec redis_txns redis-cli
-
+> export MINER=3; docker-compose -p miner3 -f docker.local/build.miner/docker-compose.yml exec redis_txns redis-cli
 
 4) Miscellaneous
 
