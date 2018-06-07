@@ -2,7 +2,6 @@ package persistencestore
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"time"
 
@@ -25,8 +24,9 @@ func init() {
 		cluster = gocql.NewCluster("127.0.0.1")
 	}
 	cluster.Keyspace = KeySpace
+	//TODO: Till we can have healthcheck in docker compose to work, we will keep waiting in the server code
 	delay := time.Second
-	for tries := 0; tries <= 20; tries++ {
+	for tries := 0; tries <= 40; tries++ {
 		Session, err = cluster.CreateSession()
 		if err != nil {
 			time.Sleep(delay)
@@ -37,7 +37,6 @@ func init() {
 	if Session == nil {
 		panic(err)
 	}
-	fmt.Println("cassandra init done")
 }
 
 /*GetConnection - returns a connection from the Pool

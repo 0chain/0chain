@@ -6,7 +6,7 @@ TestNet Setup with Docker Containers:
 > mkdir -p data/db/redis
 
 
-2) Docker commands
+2) Docker commands for Miners
 
 *) Create a network called testnet0 where all the nodes have an IP address so they can talk to each other.
    Note: The config file should be providing the IP address of the nodes as per the IP addresses in this network.
@@ -73,7 +73,17 @@ Redis used for transactions:
 
 > export MINER=3; docker-compose -p miner3 -f docker.local/build.miner/docker-compose.yml exec redis_txns redis-cli
 
-4) Miscellaneous
+4) Docker Commands for Sharder (single sharder for now in the local test)
+
+4.1) Build: from git/0chain, issue the following command to build the containers
+
+> export SHARDER=1; docker-compose -p sharder1 -f docker.local/build.sharder/docker-compose.yml  build --force-rm
+
+4.2) Start the sharder: from git/0chain/docker.local/sharder1 directory, issue the following command
+
+> export SHARDER=1; docker-compose -p sharder1 -f ../build.sharder/docker-compose.yml up
+
+5) Miscellaneous
 
 Cleanup
 
