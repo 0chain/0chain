@@ -5,6 +5,7 @@
 **/target/
 **/data/
 **/bin/
+!docker.local/bin/
 **/pkg/
 **/go/sign
 **/go/miner

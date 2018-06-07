@@ -47,8 +47,8 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 			if node.Status == NodeStatusActive {
 				if node.ErrorCount > 5 {
 					node.Status = NodeStatusInactive
-					fmt.Printf("error connecting to %v: %v\n", node.GetKey(), err)
-					fmt.Printf("node %v became inactive\n", node.GetKey())
+					fmt.Printf("error connecting to %v node(%v): %v %v\n", node.GetNodeTypeName(), node.SetIndex, node.GetKey(), err)
+					fmt.Printf("%v node(%v) %v became inactive\n", node.GetNodeTypeName(), node.SetIndex, node.GetKey())
 				}
 			}
 		} else {
@@ -56,7 +56,7 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 			if node.Status == NodeStatusInactive {
 				node.ErrorCount = 0
 				node.Status = NodeStatusActive
-				fmt.Printf("node (%v) %v became active\n", node.SetIndex, node.GetKey())
+				fmt.Printf("%v node(%v) %v became active\n", node.GetNodeTypeName(), node.SetIndex, node.GetKey())
 			}
 			node.LastActiveTime = ts
 		}
