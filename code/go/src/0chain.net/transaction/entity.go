@@ -58,11 +58,6 @@ func (t *Transaction) GetEntityMetadata() datastore.EntityMetadata {
 	return transactionEntityMetadata
 }
 
-/*GetEntityName - Entity implementation for Merkle tree */
-func (t *Transaction) GetHashID() string {
-	return t.ID
-}
-
 /*ComputeProperties - Entity implementation */
 func (t *Transaction) ComputeProperties() {
 	if t.Hash != "" {
