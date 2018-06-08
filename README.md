@@ -42,15 +42,27 @@ On the sharder terminal, use
 
 > ../bin/sharder.start.sh
 
-4) Troubleshooting:
+4) Generating Test Transactions:
 
-4.1) Ensure the port mapping is all correct
+4.1) To build the miner_stress program from git/0chain directory
+
+> ./docker.local/bin/build_txns_generator.sh
+
+4.2) To run the miner_stress program after starting the 3 miners
+
+> ./docker.local/bin/generate_txns.sh num-txns
+
+If num-txns is not specified, then 25000 transactions are generated for each miner
+
+5) Troubleshooting:
+
+5.1) Ensure the port mapping is all correct
 
 > docker ps
 
 This should display a few containers and should include containers with images miner1_miner, miner2_miner and miner3_miner and they should have the ports mapped like "0.0.0.0:7071->7071/tcp"
 
-4.2) Confirming the servers are up and running. From a browser, visit
+5.2) Confirming the servers are up and running. From a browser, visit
 
 http://localhost:7071/
 
@@ -60,7 +72,7 @@ http://localhost:7073/
 
 to see the status of the miners.
 
-4.3) Connecting to redis servers running within the containers (you are within the appropriate miner directories)
+5.3) Connecting to redis servers running within the containers (you are within the appropriate miner directories)
 
 Default redis (used for clients and state):
 
@@ -70,10 +82,10 @@ Redis used for transactions:
 
 > ../bin/run.sh redis_txns redis-cli
 
-5) Miscellaneous
+6) Miscellaneous
 
 Cleanup
 
-5.1) Get rid of old unused docker resources :
+6.1) Get rid of old unused docker resources :
 
 > docker system prune
