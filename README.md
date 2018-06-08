@@ -60,24 +60,15 @@ http://localhost:7073/
 
 to see the status of the miners.
 
-4.3) Connecting to redis servers running within the containers (you are within git/0chain directory)
+4.3) Connecting to redis servers running within the containers (you are within the appropriate miner directories)
 
 Default redis (used for clients and state):
 
-> MINER=1 docker-compose -p miner1 -f docker.local/build.miner/docker-compose.yml exec redis redis-cli
-
-> MINER=2 docker-compose -p miner2 -f docker.local/build.miner/docker-compose.yml exec redis redis-cli
-
-> MINER=3 docker-compose -p miner3 -f docker.local/build.miner/docker-compose.yml exec redis redis-cli
+> ../bin/run.sh redis redis-cli
 
 Redis used for transactions:
 
-> MINER=1 docker-compose -p miner1 -f docker.local/build.miner/docker-compose.yml exec redis_txns redis-cli
-
-> MINER=2 docker-compose -p miner2 -f docker.local/build.miner/docker-compose.yml exec redis_txns redis-cli
-
-> MINER=3 docker-compose -p miner3 -f docker.local/build.miner/docker-compose.yml exec redis_txns redis-cli
-
+> ../bin/run.sh redis_txns redis-cli
 
 5) Miscellaneous
 
