@@ -22,7 +22,7 @@ func GetClient(maxConnections int) *http.Client {
 		IdleConnTimeout:     90 * time.Second, // more than the frequency of checking will ensure always on
 		DisableCompression:  true,
 	}
-	client := &http.Client{Transport: tr, Timeout: 500 * time.Millisecond}
+	client := &http.Client{Transport: tr, Timeout: 5 * time.Second}
 	return client
 }
 
@@ -107,7 +107,7 @@ func CreateTransaction(httpclient *http.Client, client Client) bool {
 		txn["signature"] = signature
 		ok := SendRequest(httpclient, GetURL("/v1/transaction/put"), txn)
 		if ok {
-			//time.Sleep(10 * time.Millisecond)
+			time.Sleep(50 * time.Millisecond)
 			return true
 		}
 	}
