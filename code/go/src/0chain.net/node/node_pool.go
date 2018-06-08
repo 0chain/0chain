@@ -39,9 +39,7 @@ func (np *Pool) AddNode(node *Node) {
 		return
 	}
 	var nodeID = datastore.ToString(node.GetKey())
-	RegisterNode(node)
 	np.NodesMap[nodeID] = node
-	np.computeNodesArray()
 }
 
 /*GetNode - given node id, get the node object or nil */
@@ -139,5 +137,14 @@ func (np *Pool) computeNodePositions() {
 	sort.SliceStable(np.Nodes, func(i, j int) bool { return np.Nodes[i].GetKey() < np.Nodes[j].GetKey() })
 	for idx, node := range np.Nodes {
 		node.SetIndex = idx
+		//fmt.Printf("setting node %v to %v of %v\n", node.GetKey(), idx, len(np.Nodes))
+	}
+}
+
+func (np *Pool) ComputeProperties() {
+	np.computeNodesArray()
+	np.computeNodePositions()
+	for _, node := range np.Nodes {
+		RegisterNode(node)
 	}
 }

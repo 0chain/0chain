@@ -100,6 +100,9 @@ func main() {
 		panic(err)
 	}
 	node.ReadNodes(reader, serverChain.Miners, serverChain.Sharders, serverChain.Blobbers)
+	serverChain.Miners.ComputeProperties()
+	serverChain.Sharders.ComputeProperties()
+	serverChain.Blobbers.ComputeProperties()
 	reader.Close()
 	if node.Self == nil {
 		panic("node definition for self node doesn't exist")

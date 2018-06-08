@@ -82,11 +82,17 @@ func (np *Pool) DownloadNodeData(node *Node) bool {
 	defer resp.Body.Close()
 	dnp := NewPool(NodeTypeMiner)
 	ReadNodes(resp.Body, dnp, dnp, dnp)
+	var changed = false
 	for _, node := range dnp.Nodes {
 		if _, ok := np.NodesMap[node.GetKey()]; !ok {
 			node.Status = NodeStatusActive
+			//fmt.Printf("Discovered a new node:%v , %v \n", node.GetKey(), node.SetIndex)
 			np.AddNode(node)
+			changed = true
 		}
+	}
+	if changed {
+		np.ComputeProperties()
 	}
 	return true
 }
