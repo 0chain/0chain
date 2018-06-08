@@ -53,7 +53,7 @@ func initEntities() {
 	client.SetupEntity(memoryStorage)
 	transaction.SetupEntity(memoryStorage)
 
-	miner.SetupConsensusEntity()
+	miner.SetupNotarizationEntity()
 }
 
 /*Chain - the chain this miner will be working on */

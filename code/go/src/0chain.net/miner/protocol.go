@@ -14,7 +14,7 @@ type ProtocolMessaging interface {
 
 	SendBlock(ctx context.Context, b *block.Block)
 	SendVerificationTicket(ctx context.Context, b *block.Block, bvt *block.BlockVerificationTicket)
-	SendConsensus(ctx context.Context, consensus *Consensus)
+	SendNotarization(ctx context.Context, notarization *Notarization)
 
 	SendFinalizedBlock(ctx context.Context, b *block.Block)
 }
@@ -23,11 +23,15 @@ type ProtocolMessaging interface {
 type ProtocolExecution interface {
 	StartRound(ctx context.Context, round *round.Round)
 	GenerateBlock(ctx context.Context, b *block.Block) error
+	AddToVerification(ctx context.Context, b *block.Block)
+
+	round.CollectBlocks
+
 	VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockVerificationTicket, error)
 	VerifyTicket(ctx context.Context, b *block.Block, vt *block.VerificationTicket) error
 	AddVerificationTicket(ctx context.Context, b *block.Block, bvt *block.VerificationTicket) bool
-	ReachedConsensus(ctx context.Context, b *block.Block) bool
-	VerifyConsensus(ctx context.Context, b *block.Block) error
+	VerifyNotarization(ctx context.Context, b *block.Block) error
+	CancelVerification(ctx context.Context, r *round.Round)
 	Finalize(ctx context.Context, b *block.Block) error
 }
 

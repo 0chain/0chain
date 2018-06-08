@@ -1,7 +1,6 @@
 package miner
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -26,13 +25,14 @@ func init() {
 	flag.IntVar(&numOfTransactions, "num_txns", 4000, "number of transactions per block")
 }
 
+/*
 func getContext() context.Context {
 	ctx := common.GetRootContext()
 	ctx = memorystore.WithConnection(ctx)
 	return ctx
 }
 
-func generateSingleBlock(ctx context.Context, prevBlock *block.Block, roundNum int64) (*block.Block, error) {
+func generateSingleBlock(ctx context.Context, prevBlock *block.Block, r *round.Round) (*block.Block, error) {
 	b := block.Provider().(*block.Block)
 	r := round.Provider().(*round.Round)
 	mc := GetMinerChain()
@@ -41,7 +41,6 @@ func generateSingleBlock(ctx context.Context, prevBlock *block.Block, roundNum i
 		prevBlock = block.Provider().(*block.Block)
 		prevBlock.Hash = chain.GenesisBlockHash
 		prevBlock.ChainID = datastore.ToKey(config.GetServerChainID())
-		r.Number = roundNum - 1
 		r.Block = prevBlock
 		r.AddBlock(prevBlock)
 		mc.AddRound(r)
@@ -191,8 +190,7 @@ func BenchmarkGenerateAndVerifyALotTransactions(b *testing.B) {
 	} else {
 		b.Error("Failed to even generate a block... OUCH!")
 	}
-
-}
+} */
 
 func SetUpSingleSelf() {
 	n1 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7071, Status: node.NodeStatusActive}
@@ -203,6 +201,40 @@ func SetUpSingleSelf() {
 	node.Self.SetPrivateKey("aa3e1ae2290987959dc44e43d138c81f15f93b2d56d7a06c51465f345df1a8a6e065fc02aaf7aaafaebe5d2dedb9c7c1d63517534644434b813cb3bdab0f94a0")
 	np := node.NewPool(node.NodeTypeMiner)
 	np.AddNode(n1)
+	config.SetServerChainID(config.GetMainChainID())
+	common.SetupRootContext(node.GetNodeContext())
+	transaction.SetupEntity(memorystore.GetStorageProvider())
+	block.SetupEntity(memorystore.GetStorageProvider())
+	client.SetupEntity(memorystore.GetStorageProvider())
+	chain.SetupEntity(memorystore.GetStorageProvider())
+	round.SetupEntity(memorystore.GetStorageProvider())
+
+	c := chain.Provider().(*chain.Chain)
+	c.ID = datastore.ToKey(config.GetServerChainID())
+	c.Miners = np
+	chain.SetServerChain(c)
+	SetupMinerChain(c)
+	mc := GetMinerChain()
+	mc.Miners = np
+	SetupM2MSenders()
+}
+
+func SetUpSelf() {
+	n1 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7071, Status: node.NodeStatusActive}
+	n1.ID = "24e23c52e2e40689fdb700180cd68ac083a42ed292d90cc021119adaa4d21509"
+	n2 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7072, Status: node.NodeStatusActive}
+	n2.ID = "5fbb6924c222e96df6c491dfc4a542e1bbfc75d821bcca992544899d62121b55"
+	n3 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7073, Status: node.NodeStatusActive}
+	n3.ID = "103c274502661e78a2b5c470057e57699e372a4382a4b96b29c1bec993b1d19c"
+
+	node.Self = &node.SelfNode{}
+	node.Self.Node = n1
+	node.Self.SetPrivateKey("aa3e1ae2290987959dc44e43d138c81f15f93b2d56d7a06c51465f345df1a8a6e065fc02aaf7aaafaebe5d2dedb9c7c1d63517534644434b813cb3bdab0f94a0")
+	np := node.NewPool(node.NodeTypeMiner)
+	np.AddNode(n1)
+	np.AddNode(n2)
+	np.AddNode(n3)
+	common.SetupRootContext(node.GetNodeContext())
 	config.SetServerChainID(config.GetMainChainID())
 	common.SetupRootContext(node.GetNodeContext())
 	transaction.SetupEntity(memorystore.GetStorageProvider())
@@ -269,38 +301,4 @@ func TestBlockGeneration(t *testing.T) {
 		}
 	}
 	common.Done()
-}
-
-func SetUpSelf() {
-	n1 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7071, Status: node.NodeStatusActive}
-	n1.ID = "24e23c52e2e40689fdb700180cd68ac083a42ed292d90cc021119adaa4d21509"
-	n2 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7072, Status: node.NodeStatusActive}
-	n2.ID = "5fbb6924c222e96df6c491dfc4a542e1bbfc75d821bcca992544899d62121b55"
-	n3 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7073, Status: node.NodeStatusActive}
-	n3.ID = "103c274502661e78a2b5c470057e57699e372a4382a4b96b29c1bec993b1d19c"
-
-	node.Self = &node.SelfNode{}
-	node.Self.Node = n1
-	node.Self.SetPrivateKey("aa3e1ae2290987959dc44e43d138c81f15f93b2d56d7a06c51465f345df1a8a6e065fc02aaf7aaafaebe5d2dedb9c7c1d63517534644434b813cb3bdab0f94a0")
-	np := node.NewPool(node.NodeTypeMiner)
-	np.AddNode(n1)
-	np.AddNode(n2)
-	np.AddNode(n3)
-	common.SetupRootContext(node.GetNodeContext())
-	config.SetServerChainID(config.GetMainChainID())
-	common.SetupRootContext(node.GetNodeContext())
-	transaction.SetupEntity(memorystore.GetStorageProvider())
-	block.SetupEntity(memorystore.GetStorageProvider())
-	client.SetupEntity(memorystore.GetStorageProvider())
-	chain.SetupEntity(memorystore.GetStorageProvider())
-	round.SetupEntity(memorystore.GetStorageProvider())
-
-	c := chain.Provider().(*chain.Chain)
-	c.ID = datastore.ToKey(config.GetServerChainID())
-	c.Miners = np
-	chain.SetServerChain(c)
-	SetupMinerChain(c)
-	mc := GetMinerChain()
-	mc.Miners = np
-	SetupM2MSenders()
 }

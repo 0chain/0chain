@@ -41,6 +41,7 @@ type Block struct {
 	UnverifiedBlockBody
 	VerificationTickets []*VerificationTicket `json:"verification_tickets,omitempty"`
 
+	RoundRank int    `json:"-"` // rank of the block in the round it belongs to
 	Hash      string `json:"hash"`
 	Signature string `json:"signature"`
 
@@ -191,7 +192,7 @@ func (b *Block) ExpandBlock(ctx context.Context) {
 /*AddVerificationTicket - Add a verification ticket to a block
 *Assuming this is done single-threaded at least per block
 *It's the callers responsibility to decide what to do if this operation is successful
-*  - the miner of the block for example will decide if the consensus is reached and send it off to others
+*  - the miner of the block for example will decide if the notarization is received and send it off to others
  */
 func (b *Block) AddVerificationTicket(vt *VerificationTicket) bool {
 	if b.VerificationTickets != nil {

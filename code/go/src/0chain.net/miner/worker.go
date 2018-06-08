@@ -38,8 +38,8 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 				mc.HandleVerifyBlockMessage(ctx, msg)
 			case MessageVerificationTicket:
 				mc.HandleVerificationTicketMessage(ctx, msg)
-			case MessageConsensus:
-				mc.HandleConsensusMessage(ctx, msg)
+			case MessageNotarization:
+				mc.HandleNotarizationMessage(ctx, msg)
 			}
 		}
 	}
@@ -80,23 +80,12 @@ func (mc *Chain) startNewRound(ctx context.Context, r *round.Round) {
 
 /*HandleVerifyBlockMessage - handles the verify block message */
 func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage) {
-	bvt, err := mc.VerifyRoundBlock(ctx, msg.Block)
-	if err != nil {
-		return
-	}
-	r := mc.GetRound(msg.Block.Round)
-	if r != nil {
-		if r.Block == nil {
-			r.Block = msg.Block
-		}
-	}
-	mc.AddBlock(msg.Block)
-	mc.SendVerificationTicket(ctx, msg.Block, bvt)
+	mc.AddToVerification(ctx, msg.Block)
 }
 
 /*HandleVerificationTicketMessage - handles the verification ticket message */
 func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *BlockMessage) {
-	if mc.ReachedConsensus(ctx, msg.Block) {
+	if mc.ValidNotarization(ctx, msg.Block) {
 		return
 	}
 	err := mc.VerifyTicket(ctx, msg.Block, &msg.BlockVerificationTicket.VerificationTicket)
@@ -104,11 +93,11 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *Block
 		return
 	}
 	if mc.AddVerificationTicket(ctx, msg.Block, &msg.BlockVerificationTicket.VerificationTicket) {
-		if mc.ReachedConsensus(ctx, msg.Block) {
-			consensus := datastore.GetEntityMetadata("block_consensus").Instance().(*Consensus)
-			consensus.BlockID = msg.Block.Hash
-			consensus.VerificationTickets = msg.Block.VerificationTickets
-			mc.SendConsensus(ctx, consensus)
+		if mc.ValidNotarization(ctx, msg.Block) {
+			notarization := datastore.GetEntityMetadata("block_notarization").Instance().(*Notarization)
+			notarization.BlockID = msg.Block.Hash
+			notarization.VerificationTickets = msg.Block.VerificationTickets
+			mc.SendNotarization(ctx, notarization)
 			r := mc.GetRound(msg.Block.Round)
 			r.Block = msg.Block
 			if mc.GetRound(r.Number+1) == nil {
@@ -126,8 +115,16 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *Block
 	}
 }
 
-/*HandleConsensusMessage - handles the block consensus message */
-func (mc *Chain) HandleConsensusMessage(ctx context.Context, msg *BlockMessage) {
+/*HandleNotarizationMessage - handles the block notarization message */
+func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessage) {
+	r := mc.GetRound(msg.Block.Round)
+	if r != nil {
+		r.CancelVerification()
+	}
+	//TODO: Check this condition carefully
+	if r.Number < mc.CurrentRound-1 || r.Number > mc.CurrentRound {
+		return
+	}
 	pr := mc.GetRound(msg.Block.Round - 1)
 	if pr != nil && pr.Number != 0 && pr.Block != nil {
 		mc.FinalizeBlock(ctx, pr.Block)

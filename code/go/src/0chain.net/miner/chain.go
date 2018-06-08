@@ -14,9 +14,7 @@ import (
 	"0chain.net/round"
 )
 
-/*
-NOTE: This is all work in progress. All of it might change.
-*/
+var ErrRoundMismatch = common.NewError("round_mismatch", "Current round number of the chain doesn't match the block generation round")
 
 var minerChain = &Chain{}
 
@@ -42,6 +40,7 @@ type Chain struct {
 	BlockMessageChannel chan *BlockMessage
 	roundsMutex         *sync.Mutex
 	rounds              map[int64]*round.Round
+	CurrentRound        int64
 }
 
 /*GetBlockMessageChannel - get the block messages channel */
@@ -98,6 +97,9 @@ func (mc *Chain) AddRound(r *round.Round) bool {
 	}
 	r.ComputeRanks(mc.Miners.Size())
 	mc.rounds[r.Number] = r
+	if r.Number > mc.CurrentRound {
+		mc.CurrentRound = r.Number
+	}
 	return true
 }
 
@@ -124,17 +126,18 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *round.Round) (*block
 	if err != nil {
 		return nil, err
 	}
-	r.Block = b
-	r.AddBlock(b) // We need to add our own generated block to the list of blocks
-	mc.AddBlock(b)
+	//mc.AddBlock(b)
 	mc.SendBlock(ctx, b)
 	return b, nil
 }
 
 /*VerifyRoundBlock - given a block is verified for a round*/
-func (mc *Chain) VerifyRoundBlock(ctx context.Context, b *block.Block) (*block.BlockVerificationTicket, error) {
-	if b == nil {
-		return nil, common.NewError("invalid_block", "Block not available")
+func (mc *Chain) VerifyRoundBlock(ctx context.Context, r *round.Round, b *block.Block) (*block.BlockVerificationTicket, error) {
+	if mc.CurrentRound != r.Number {
+		return nil, ErrRoundMismatch
+	}
+	if b.MinerID == node.Self.GetKey() {
+		return mc.SignBlock(ctx, b)
 	}
 	pround := mc.GetRound(b.Round - 1)
 	if pround == nil {
@@ -144,30 +147,20 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, b *block.Block) (*block.B
 	prevBlock, _ := pround.GetBlock(b.PrevHash)
 	if prevBlock == nil {
 		//TODO: create previous round AND request previous block from miner who sent current block for verification
-		return nil, common.NewError("invalid_block", "Prevous block doesn't exist")
+		return nil, common.NewError("invalid_block", fmt.Sprintf("Previous block doesn't exist: %v", b.PrevHash))
 	}
 
-	for _, ticket := range prevBlock.VerificationTickets {
-		//bvt := ticket.GetBlockVerificationTicket(prevBlock)
-		if err := mc.VerifyTicket(ctx, prevBlock, ticket); err != nil {
-			return nil, err
-		}
+	/* Note: We are verifying the notrization of the previous block we have with
+	   the prev verification tickets of the current block. This is right as all the
+	   necessary verification tickets & notarization message may not have arrived to us */
+	if err := mc.VerifyNotarization(ctx, prevBlock, b.PrevBlockVerficationTickets); err != nil {
+		return nil, err
 	}
 
 	bvt, err := mc.VerifyBlock(ctx, b)
 	if err != nil {
 		return nil, err
 	}
-	r := mc.GetRound(b.Round)
-	if r == nil {
-		r = &round.Round{Number: b.Round}
-		mc.AddRound(r)
-	}
-	self := node.GetSelfNode(ctx)
-	if self == nil {
-		panic("Invalid setup, could not find the self node")
-	}
-	r.AddBlock(b)
 	return bvt, nil
 }
 

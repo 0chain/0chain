@@ -10,7 +10,7 @@ const (
 	MessageStartRound         = 1
 	MessageVerify             = 2
 	MessageVerificationTicket = 3
-	MessageConsensus          = 4
+	MessageNotarization       = 4
 )
 
 /*BlockMessage - Used for the various messages that need to be handled to generate a block */
@@ -20,5 +20,5 @@ type BlockMessage struct {
 	Round                   *round.Round
 	Block                   *block.Block
 	BlockVerificationTicket *block.BlockVerificationTicket
-	Consensus               *Consensus
+	Notarization            *Notarization
 }

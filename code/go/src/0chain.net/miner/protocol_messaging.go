@@ -27,10 +27,10 @@ func (mc *Chain) SendVerificationTicket(ctx context.Context, b *block.Block, bvt
 	mc.Miners.SendTo(VerificationTicketSender(bvt), b.MinerID)
 }
 
-/*SendConsensus - send the block consensus (collection of verification tickets enough to say consensus is reached) */
-func (mc *Chain) SendConsensus(ctx context.Context, consensus *Consensus) {
-	fmt.Printf("sending block consensus message from %v(%v)\n", node.Self.Node.SetIndex, node.Self.Node.GetKey())
-	mc.Miners.SendAll(BlockConsensusSender(consensus))
+/*SendNotarization - send the block notarization (collection of verification tickets enough to say notarization is reached) */
+func (mc *Chain) SendNotarization(ctx context.Context, notarization *Notarization) {
+	fmt.Printf("sending block notarization message from %v(%v)\n", node.Self.Node.SetIndex, node.Self.Node.GetKey())
+	mc.Miners.SendAll(BlockNotarizationSender(notarization))
 }
 
 /*SendFinalizedBlock - send the finalized block to the sharders */

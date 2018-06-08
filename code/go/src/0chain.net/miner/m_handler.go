@@ -23,8 +23,8 @@ var VerifyBlockSender node.EntitySendHandler
 /*VerificationTicketSender - Send a verification ticket to a node */
 var VerificationTicketSender node.EntitySendHandler
 
-/*BlockConsensusSender - Send the block consensus to a node */
-var BlockConsensusSender node.EntitySendHandler
+/*BlockNotarizationSender - Send the block notarization to a node */
+var BlockNotarizationSender node.EntitySendHandler
 
 /*SetupM2MSenders - setup senders for miner to miner communication */
 func SetupM2MSenders() {
@@ -39,7 +39,7 @@ func SetupM2MSenders() {
 	VerificationTicketSender = node.SendEntityHandler("/v1/_m2m/block/verification_ticket", options)
 
 	options = &node.SendOptions{Timeout: time.Second, MaxRelayLength: 0, CurrentRelayLength: 0, CODEC: node.CODEC_MSGPACK, Compress: true}
-	BlockConsensusSender = node.SendEntityHandler("/v1/_m2m/block/consensus", options)
+	BlockNotarizationSender = node.SendEntityHandler("/v1/_m2m/block/notarization", options)
 }
 
 /*SetupM2MReceivers - setup receivers for miner to miner communication */
@@ -49,7 +49,7 @@ func SetupM2MReceivers() {
 
 	http.HandleFunc("/v1/_m2m/block/verify", node.ToN2NReceiveEntityHandler(memorystore.WithConnectionEntityJSONHandler(VerifyBlockHandler, datastore.GetEntityMetadata("block"))))
 	http.HandleFunc("/v1/_m2m/block/verification_ticket", node.ToN2NReceiveEntityHandler(VerificationTicketReceiptHandler))
-	http.HandleFunc("/v1/_m2m/block/consensus", node.ToN2NReceiveEntityHandler(ConsensusReceiptHandler))
+	http.HandleFunc("/v1/_m2m/block/notarization", node.ToN2NReceiveEntityHandler(NotarizationReceiptHandler))
 }
 
 /*StartRoundHandler - handles the starting of a new round */
@@ -92,19 +92,19 @@ func VerificationTicketReceiptHandler(ctx context.Context, entity datastore.Enti
 	return true, nil
 }
 
-/*ConsensusReceiptHandler - handles the receipt of a consensus for a block */
-func ConsensusReceiptHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-	consensus, ok := entity.(*Consensus)
+/*NotarizationReceiptHandler - handles the receipt of a notarization for a block */
+func NotarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+	notarization, ok := entity.(*Notarization)
 	if !ok {
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
 	mc := GetMinerChain()
-	b, err := mc.GetBlock(ctx, consensus.BlockID)
+	b, err := mc.GetBlock(ctx, notarization.BlockID)
 	if err != nil {
 		// TODO: If we didn't see this block so far, may be it's better to ask for it
 		return nil, err
 	}
-	msg := &BlockMessage{Sender: node.GetSender(ctx), Type: MessageConsensus, Block: b, Consensus: consensus}
+	msg := &BlockMessage{Sender: node.GetSender(ctx), Type: MessageNotarization, Block: b, Notarization: notarization}
 	mc.GetBlockMessageChannel() <- msg
 	return true, nil
 }

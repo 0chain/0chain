@@ -95,12 +95,29 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block) error {
 		return err
 	}
 	fmt.Printf("time to assemble+write+sign block (%v): %v\n", b.Hash, time.Since(start))
+	mc.AddToVerification(ctx, b)
 	return nil
 }
 
 func updateTxnsToPending(ctx context.Context, txns []datastore.Entity) {
 	transactionMetadataProvider := datastore.GetEntityMetadata("txn")
 	transactionMetadataProvider.GetStore().MultiWrite(ctx, transactionMetadataProvider, txns)
+}
+
+/*AddToVerification - Add a block to verify : WARNING: does not support concurrent access for a given round */
+func (mc *Chain) AddToVerification(ctx context.Context, b *block.Block) {
+	r := mc.GetRound(b.Round)
+	// TODO: This can happen because
+	// 1) This is past round that is no longer applicable - reject it
+	// 2) This is a future round we didn't know about yet as our network is slow or something
+	// 3) The verify message received before the start round message
+	if r == nil {
+		r = datastore.GetEntityMetadata("round").Instance().(*round.Round)
+		r.Number = b.Round
+		mc.AddRound(r)
+	}
+	r.StartVerificationBlockCollection(ctx, mc.CollectBlocksForVerification)
+	r.AddBlock(b)
 }
 
 /*VerifyBlock - given a set of transaction ids within a block, validate the block */
@@ -151,19 +168,29 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockV
 			break
 		}
 	}
-	var bvt block.BlockVerificationTicket
+	bvt, err := mc.SignBlock(ctx, b)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Printf("Block verification time(%v,%v):%v\n", len(b.Txns), numWorkers, time.Since(start))
+	return bvt, nil
+}
+
+/*SignBlock - sign the block and provide the verification ticket */
+func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (*block.BlockVerificationTicket, error) {
+	var bvt = &block.BlockVerificationTicket{}
 	bvt.BlockID = b.Hash
 	self := node.GetSelfNode(ctx)
 	if self == nil {
 		panic("Invalid setup, could not find the self node")
 	}
+	var err error
 	bvt.VerifierID = self.GetKey()
 	bvt.Signature, err = self.Sign(b.Hash)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("Block verification time(%v,%v):%v\n", len(b.Txns), numWorkers, time.Since(start))
-	return &bvt, nil
+	return bvt, nil
 }
 
 func validate(ctx context.Context, txns []*transaction.Transaction, cancel *bool, validChannel chan<- bool) {
@@ -180,9 +207,9 @@ func validate(ctx context.Context, txns []*transaction.Transaction, cancel *bool
 	validChannel <- true
 }
 
-/*ReachedConsensus - Does the given number of signatures means consensus reached?
+/*ReachedNotarization - Does the given number of signatures means eligible for notraization?
 TODO: For now, we just assume more than 50% */
-func (mc *Chain) ReachedConsensus(ctx context.Context, b *block.Block) bool {
+func (mc *Chain) ValidNotarization(ctx context.Context, b *block.Block) bool {
 	numSignatures := b.GetVerificationTicketsCount()
 	if 3*numSignatures >= 2*mc.Miners.Size() {
 		return mc.IsCurrentlyWinningBlock(b)
@@ -217,12 +244,12 @@ func (mc *Chain) AddVerificationTicket(ctx context.Context, b *block.Block, bvt 
 	return b.AddVerificationTicket(bvt)
 }
 
-/*VerifyConsensus - verify that the consensus is correct */
-func (mc *Chain) VerifyConsensus(ctx context.Context, b *block.Block, bvt []*block.VerificationTicket) error {
+/*VerifyNotarization - verify that the notarization is correct */
+func (mc *Chain) VerifyNotarization(ctx context.Context, b *block.Block, bvt []*block.VerificationTicket) error {
 	if b.Round != 0 && bvt == nil {
 		return common.NewError("no_verification_tickets", "No verification tickets for this block")
 	}
-	// TODO: Logic similar to ReachedConsensus to check the count satisfies (refactor)
+	// TODO: Logic similar to ReachedNotarization to check the count satisfies (refactor)
 
 	for _, vt := range bvt {
 		if err := mc.VerifyTicket(ctx, b, vt); err != nil {
