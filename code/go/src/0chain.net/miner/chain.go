@@ -126,7 +126,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *round.Round) (*block
 	if err != nil {
 		return nil, err
 	}
-	//mc.AddBlock(b)
+	mc.AddBlock(b)
 	mc.SendBlock(ctx, b)
 	return b, nil
 }

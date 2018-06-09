@@ -3,6 +3,7 @@ package miner
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"time"
 
 	"0chain.net/block"
@@ -117,6 +118,7 @@ func (mc *Chain) AddToVerification(ctx context.Context, b *block.Block) {
 		mc.AddRound(r)
 	}
 	r.StartVerificationBlockCollection(ctx, mc.CollectBlocksForVerification)
+	mc.AddBlock(b)
 	r.AddBlock(b)
 }
 
@@ -207,6 +209,31 @@ func validate(ctx context.Context, txns []*transaction.Transaction, cancel *bool
 	validChannel <- true
 }
 
+/*ProcessVerifiedTicket - once a verified ticket is receiveid, do further processing with it */
+func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *round.Round, b *block.Block, vt *block.VerificationTicket) {
+	if mc.AddVerificationTicket(ctx, b, vt) {
+		if mc.ValidNotarization(ctx, b) {
+			r.Block = b
+			r.CancelVerification() // No need for further verification of any blocks
+			notarization := datastore.GetEntityMetadata("block_notarization").Instance().(*Notarization)
+			notarization.BlockID = b.Hash
+			notarization.VerificationTickets = b.VerificationTickets
+			mc.SendNotarization(ctx, notarization)
+			if mc.GetRound(r.Number+1) == nil {
+				nr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
+				nr.Number = r.Number + 1
+				nr.RandomSeed = rand.New(rand.NewSource(r.RandomSeed)).Int63()
+				go mc.startNewRound(ctx, nr)
+				mc.Miners.SendAll(RoundStartSender(nr))
+			}
+			pr := mc.GetRound(r.Number - 1)
+			if pr != nil && pr.Block != nil {
+				mc.FinalizeBlock(ctx, pr.Block)
+			}
+		}
+	}
+}
+
 /*ReachedNotarization - Does the given number of signatures means eligible for notraization?
 TODO: For now, we just assume more than 50% */
 func (mc *Chain) ValidNotarization(ctx context.Context, b *block.Block) bool {
@@ -225,9 +252,10 @@ func (mc *Chain) IsCurrentlyWinningBlock(b *block.Block) bool {
 
 /*VerifyTicket - verify the ticket */
 func (mc *Chain) VerifyTicket(ctx context.Context, b *block.Block, bvt *block.VerificationTicket) error {
+	/* Seems like this is allowed per Dfiniity protocol
 	if bvt.VerifierID == b.MinerID {
 		return common.InvalidRequest("Self signing not allowed")
-	}
+	} */
 	sender := mc.Miners.GetNode(bvt.VerifierID)
 	if sender == nil {
 		return common.InvalidRequest("Verifier unknown or not authorized at this time")

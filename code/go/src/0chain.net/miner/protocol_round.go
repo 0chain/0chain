@@ -19,17 +19,16 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *round.Roun
 	verifyAndSend := func(ctx context.Context, r *round.Round, b *block.Block) bool {
 		pb := r.Block
 		r.Block = b
-		mc.AddBlock(b)
 		bvt, err := mc.VerifyRoundBlock(ctx, r, b)
 		if err != nil {
 			r.Block = pb
 			fmt.Printf("DEBUG: verify round block error: %v\n", err)
 			return false
 		}
-		if b.MinerID == node.Self.GetKey() {
-			return true
+		mc.ProcessVerifiedTicket(ctx, r, b, &bvt.VerificationTicket)
+		if b.MinerID != node.Self.GetKey() {
+			mc.SendVerificationTicket(ctx, b, bvt)
 		}
-		mc.SendVerificationTicket(ctx, b, bvt)
 		return true
 	}
 	var blocks = make([]*block.Block, 0, 10)

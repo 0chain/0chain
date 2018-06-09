@@ -3,7 +3,6 @@ package miner
 import (
 	"context"
 	"fmt"
-	"math/rand"
 
 	"0chain.net/block"
 	"0chain.net/common"
@@ -85,6 +84,10 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 
 /*HandleVerificationTicketMessage - handles the verification ticket message */
 func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *BlockMessage) {
+	r := mc.GetRound(msg.Block.Round)
+	if r == nil {
+		return
+	}
 	if mc.ValidNotarization(ctx, msg.Block) {
 		return
 	}
@@ -92,27 +95,7 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *Block
 	if err != nil {
 		return
 	}
-	if mc.AddVerificationTicket(ctx, msg.Block, &msg.BlockVerificationTicket.VerificationTicket) {
-		if mc.ValidNotarization(ctx, msg.Block) {
-			notarization := datastore.GetEntityMetadata("block_notarization").Instance().(*Notarization)
-			notarization.BlockID = msg.Block.Hash
-			notarization.VerificationTickets = msg.Block.VerificationTickets
-			mc.SendNotarization(ctx, notarization)
-			r := mc.GetRound(msg.Block.Round)
-			r.Block = msg.Block
-			if mc.GetRound(r.Number+1) == nil {
-				nr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
-				nr.Number = r.Number + 1
-				nr.RandomSeed = rand.New(rand.NewSource(r.RandomSeed)).Int63()
-				go mc.startNewRound(ctx, nr)
-				mc.Miners.SendAll(RoundStartSender(nr))
-			}
-			pr := mc.GetRound(r.Number - 1)
-			if pr != nil && pr.Block != nil {
-				mc.FinalizeBlock(ctx, pr.Block)
-			}
-		}
-	}
+	mc.ProcessVerifiedTicket(ctx, r, msg.Block, &msg.BlockVerificationTicket.VerificationTicket)
 }
 
 /*HandleNotarizationMessage - handles the block notarization message */
@@ -120,6 +103,9 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 	r := mc.GetRound(msg.Block.Round)
 	if r != nil {
 		r.CancelVerification()
+		if r.Block == nil {
+			r.Block = msg.Block
+		}
 	}
 	//TODO: Check this condition carefully
 	if r.Number < mc.CurrentRound-1 || r.Number > mc.CurrentRound {
