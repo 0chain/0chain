@@ -78,11 +78,15 @@ to see the status of the miners.
 
 Default redis (used for clients and state):
 
-> ../bin/run.sh redis redis-cli
+> ../bin/run.miner.sh redis redis-cli
 
 Redis used for transactions:
 
-> ../bin/run.sh redis_txns redis-cli
+> ../bin/run.miner.sh redis_txns redis-cli
+
+5.4) Connecting to cassandra used in the sharder (you are within the appropriate sharder directories)
+
+> ../bin/run.sharder.sh cassandra cqlsh
 
 6) Miscellaneous
 
