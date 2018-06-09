@@ -36,7 +36,9 @@ for building the 1 sharder.
 
 3) Starting the nodes. On each of the miner terminals use the commands (note the .. at the beginning. This is because, these commands are run from within the docker.local/<miner/sharder|i> directories and the bin is one level above relative to these directories)
 
-> ../bin/miner.start.sh
+> ../bin/miner.start.sh block-size
+
+If block-size is not specified, a default of 5000 is used. Block size argument only works in test mode
 
 On the sharder terminal, use
 

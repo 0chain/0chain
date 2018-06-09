@@ -66,6 +66,7 @@ func main() {
 	testMode := flag.Bool("test", false, "test mode?")
 	nodesFile := flag.String("nodes_file", "config/single_node.txt", "nodes_file")
 	keysFile := flag.String("keys_file", "config/single_node_miner_keys.txt", "keys_file")
+	blockSize := flag.Int("block_size", 5000, "block_size")
 	flag.Parse()
 
 	//address := fmt.Sprintf("%v:%v", *host, *port)
@@ -91,7 +92,12 @@ func main() {
 	serverChain := chain.Provider().(*chain.Chain)
 	serverChain.ID = datastore.ToKey(config.GetServerChainID())
 	serverChain.Decimals = 10
-	serverChain.BlockSize = 5000
+	if *testMode {
+		serverChain.BlockSize = int32(*blockSize)
+	} else {
+		// TODO: This should come from configuration
+		serverChain.BlockSize = 5000
+	}
 	chain.SetServerChain(serverChain)
 	miner.SetupMinerChain(serverChain)
 
