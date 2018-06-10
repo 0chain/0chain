@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	. "0chain.net/logging"
+	"go.uber.org/zap"
 )
 
 /*StatusMonitor - a background job that keeps checking the status of the nodes */
@@ -47,8 +50,11 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 			if node.Status == NodeStatusActive {
 				if node.ErrorCount > 5 {
 					node.Status = NodeStatusInactive
-					fmt.Printf("error connecting to %v node(%v): %v %v\n", node.GetNodeTypeName(), node.SetIndex, node.GetKey(), err)
-					fmt.Printf("%v node(%v) %v became inactive\n", node.GetNodeTypeName(), node.SetIndex, node.GetKey())
+
+					Logger.Error("error connecting", zap.Any("to node", node.GetNodeTypeName()), zap.Any("Node index", node.SetIndex), zap.Any("key", node.GetKey()), zap.Error(err))
+					//fmt.Printf("error connecting to %v node(%v): %v %v\n", node.GetNodeTypeName(), node.SetIndex, node.GetKey(), err)
+					Logger.Error("Node inactive", zap.Any("to node", node.GetNodeTypeName()), zap.Any("Node index", node.SetIndex), zap.Any("key", node.GetKey()))
+					//fmt.Printf("%v node(%v) %v became inactive\n", node.GetNodeTypeName(), node.SetIndex, node.GetKey())
 				}
 			}
 		} else {
@@ -56,7 +62,8 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 			if node.Status == NodeStatusInactive {
 				node.ErrorCount = 0
 				node.Status = NodeStatusActive
-				fmt.Printf("%v node(%v) %v became active\n", node.GetNodeTypeName(), node.SetIndex, node.GetKey())
+				Logger.Info("Node active", zap.Any("Node", node.GetNodeTypeName()), zap.Any("Node index", node.SetIndex), zap.Any("key", node.GetKey()))
+				//fmt.Printf("%v node(%v) %v became active\n", node.GetNodeTypeName(), node.SetIndex, node.GetKey())
 			}
 			node.LastActiveTime = ts
 		}

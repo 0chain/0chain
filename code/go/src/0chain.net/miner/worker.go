@@ -2,13 +2,15 @@ package miner
 
 import (
 	"context"
-	"fmt"
 
 	"0chain.net/block"
 	"0chain.net/common"
 	"0chain.net/datastore"
+	. "0chain.net/logging"
 	"0chain.net/memorystore"
 	"0chain.net/node"
+	"go.uber.org/zap"
+
 	"0chain.net/round"
 )
 
@@ -26,9 +28,11 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 			return
 		case msg := <-mc.GetBlockMessageChannel():
 			if msg.Sender != nil {
-				fmt.Printf("received message: %v from %v(%v)\n", msg.Type, msg.Sender.SetIndex, msg.Sender.GetKey())
+				Logger.Info("received message", zap.Any("Msg", msg.Type), zap.Any("sender index", msg.Sender.SetIndex), zap.Any("Key", msg.Sender.GetKey()))
+				//fmt.Printf("received message: %v from %v(%v)\n", msg.Type, msg.Sender.SetIndex, msg.Sender.GetKey())
 			} else {
-				fmt.Printf("received message: %v\n", msg.Type)
+				Logger.Info("recived message", zap.Any("Msg", msg.Type))
+				//fmt.Printf("received message: %v\n", msg.Type)
 			}
 			switch msg.Type {
 			case MessageStartRound:
@@ -66,7 +70,8 @@ func (mc *Chain) startNewRound(ctx context.Context, r *round.Round) {
 	}
 	self := node.GetSelfNode(ctx)
 	rank := r.GetRank(self.SetIndex)
-	fmt.Printf("*** Starting round (%v) with (set index=%v, round rank=%v)\n", r.Number, self.SetIndex, rank)
+	Logger.Info("*** Starting round", zap.Any("round number", r.Number), zap.Any("index", self.SetIndex), zap.Any("rank", rank))
+	//fmt.Printf("*** Starting round (%v) with (set index=%v, round rank=%v)\n", r.Number, self.SetIndex, rank)
 	//TODO: For now, if the rank happens to be in the bottom half, we assume no need to generate block
 	if 2*rank > mc.Miners.Size() {
 		return
@@ -126,7 +131,8 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 
 /*FinalizeBlock - finalize a block */
 func (mc *Chain) FinalizeBlock(ctx context.Context, b *block.Block) {
-	fmt.Printf("Finalizing block: %v\n", b.Hash)
+	Logger.Info("Finalizing block", zap.Any("hash", b.Hash))
+	//fmt.Printf("Finalizing block: %v\n", b.Hash)
 	txnEntityMetadata := datastore.GetEntityMetadata("txn")
 	ctx = memorystore.WithEntityConnection(ctx, txnEntityMetadata)
 	defer memorystore.Close(ctx)

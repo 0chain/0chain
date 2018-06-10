@@ -15,7 +15,9 @@ import (
 	"0chain.net/config"
 	"0chain.net/datastore"
 	"0chain.net/encryption"
+	. "0chain.net/logging"
 	"github.com/golang/snappy"
+	"go.uber.org/zap"
 )
 
 /*SENDER - key used to get the connection object from the context */
@@ -131,13 +133,15 @@ func (np *Pool) SendAtleast(numNodes int, handler SendHandler) []*Node {
 			validCount++
 			if validCount == numNodes {
 				close(sendBucket)
-				fmt.Printf("sent to (all=%v,requested=%v,activeSent=%v,valid=%v) in %v\n", len(nodes), numNodes, activeCount, len(sentTo), time.Since(start))
+				//fmt.Printf("sent to (all=%v,requested=%v,activeSent=%v,valid=%v) in %v\n", len(nodes), numNodes, activeCount, len(sentTo), time.Since(start))
+				Logger.Info("", zap.Any("all nodes", len(nodes)), zap.Any("requested", numNodes), zap.Any("activesent", activeCount), zap.Any("Valid Since", time.Since(start)))
 				return sentTo
 			}
 		case <-done:
 			doneCount++
 			if doneCount >= numNodes+THRESHOLD || doneCount >= activeCount {
-				fmt.Printf("sent to (all=%v,requested=%v,activeSent=%v, valid=%v) in %v\n", len(nodes), numNodes, activeCount, len(sentTo), time.Since(start))
+				//fmt.Printf("sent to (all=%v,requested=%v,activeSent=%v, valid=%v) in %v\n", len(nodes), numNodes, activeCount, len(sentTo), time.Since(start))
+				Logger.Info("", zap.Any("all nodes", len(nodes)), zap.Any("requested", numNodes), zap.Any("activesent", activeCount), zap.Any("Valid Since", time.Since(start)))
 				close(sendBucket)
 				return sentTo
 			}
@@ -242,14 +246,16 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			SetHeaders(req, entity, options)
 			resp, err := client.Do(req)
 			if err != nil {
-				fmt.Printf("Error sending to node(%v): %v\n", n.SetIndex, err)
+				//fmt.Printf("Error sending to node(%v): %v\n", n.GetKey(), err)
+				Logger.Error("Error sending to node: ", zap.Any("key", n.GetKey()), zap.Any("Error ", err))
 				return false
 			}
 			defer resp.Body.Close()
 			if resp.StatusCode != http.StatusOK {
 				var rbuf bytes.Buffer
 				rbuf.ReadFrom(resp.Body)
-				fmt.Printf("Error sending to node(%v): %v: %v\n", n.SetIndex, resp.StatusCode, rbuf.String())
+				//fmt.Printf("Error sending to node(%v): %v: %v\n", n.GetKey(), resp.StatusCode, rbuf.String())
+				Logger.Info("", zap.Any("Error sending to ", n.GetKey()), zap.Any("Status Code", resp.StatusCode), zap.Any("result buffer", rbuf.String()))
 				return false
 			}
 			io.Copy(ioutil.Discard, resp.Body)
@@ -278,7 +284,8 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF) common
 		nodeID := r.Header.Get(HeaderNodeID)
 		sender := GetNode(nodeID)
 		if sender == nil {
-			fmt.Printf("received request from unrecognized node %v\n", nodeID)
+			//fmt.Printf("received request from unrecognized node %v\n", nodeID)
+			Logger.Info("", zap.Any("received request from unrecognized node", nodeID))
 			return
 		}
 		//TODO: check the timestamp?
@@ -302,7 +309,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF) common
 		if entityMetadata == nil {
 			return
 		}
-		fmt.Printf("received(%v) %v/%v.%v\n", sender.SetIndex, r.URL.RequestURI(), entityName, reqHashdata)
+		fmt.Printf("received %v.%v from %v\n", entityName, reqHashdata, sender.SetIndex)
 		var buffer io.Reader = r.Body
 		defer r.Body.Close()
 		if r.Header.Get("Content-Encoding") == "snappy" {
@@ -311,7 +318,8 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF) common
 
 			cbytes, err := snappy.Decode(nil, cbuffer.Bytes())
 			if err != nil {
-				fmt.Printf("Error decoding: %v\n", err)
+				//fmt.Printf("Error decoding: %v\n", err)
+				Logger.Error("", zap.Any("Error decoding: ", err))
 				return
 			}
 			buffer = bytes.NewReader(cbytes)

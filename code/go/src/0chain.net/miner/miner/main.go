@@ -16,11 +16,13 @@ import (
 	"0chain.net/config"
 	"0chain.net/datastore"
 	"0chain.net/encryption"
+	. "0chain.net/logging"
 	"0chain.net/memorystore"
 	"0chain.net/miner"
 	"0chain.net/node"
 	"0chain.net/round"
 	"0chain.net/transaction"
+	"go.uber.org/zap"
 )
 
 var startTime time.Time
@@ -60,6 +62,7 @@ func initEntities() {
 var Chain string
 
 func main() {
+	LoggerInit("development", "appLogs")
 	host := flag.String("host", "", "hostname")
 	port := flag.Int("port", 7220, "port")
 	chainID := flag.String("chain", "", "chain id")
@@ -103,7 +106,7 @@ func main() {
 
 	reader, err = os.Open(*nodesFile)
 	if err != nil {
-		panic(err)
+		log.Fatalf("%v", err)
 	}
 	node.ReadNodes(reader, serverChain.Miners, serverChain.Sharders, serverChain.Blobbers)
 	serverChain.Miners.ComputeProperties()
@@ -111,10 +114,12 @@ func main() {
 	serverChain.Blobbers.ComputeProperties()
 	reader.Close()
 	if node.Self == nil {
-		panic("node definition for self node doesn't exist")
+		Logger.DPanic("node definition for self node doesn't exist")
+		//panic("node definition for self node doesn't exist")
 	} else {
 		if node.Self.PublicKey != publicKey {
-			fmt.Printf("self: %v\n", node.Self)
+			//logger.Info("self: %v", node.Self)
+			//fmt.Printf("self: %v\n", node.Self)
 			panic(fmt.Sprintf("Pulbic key from the keys file and nodes file don't match %v %v", publicKey, node.Self.PublicKey))
 		}
 		node.Self.SetPrivateKey(privateKey)
@@ -132,8 +137,14 @@ func main() {
 		mode = "test net"
 		serverChain.BlockSize = 10000
 	}
-	fmt.Printf("Num CPUs available %v\n", runtime.NumCPU())
-	fmt.Printf("Starting %v on %v for chain %v in %v mode ...\n", os.Args[0], address, config.GetServerChainID(), mode)
+
+	Logger.Info("CPU information", zap.Int("No of CPU available ", runtime.NumCPU()))
+
+	//zap.Int("Number of CPU available", runtime.NumCPU())
+	//fmt.Printf("Num CPUs available %v\n", runtime.NumCPU())
+	Logger.Info("Miner Information", zap.String("arg", os.Args[0]), zap.String("Port", address), zap.String("Chain ID", config.GetServerChainID()), zap.String("mode", mode))
+	//Logger.Info("Starting")
+	//fmt.Printf("Starting %v on %v for chain %v in %v mode ...\n", os.Args[0], address, config.GetServerChainID(), mode)
 
 	/*
 		l, err := net.Listen("tcp", address)
@@ -163,7 +174,8 @@ func main() {
 	miner.SetupWorkers()
 
 	//log.Fatal(server.Serve(l))
-	fmt.Printf("Ready to listen to the requests\n")
+	Logger.Info("Ready to listen to the requests")
+	//fmt.Printf("Ready to listen to the requests\n")
 	startTime = time.Now().UTC()
 	log.Fatal(server.ListenAndServe())
 }
@@ -196,7 +208,10 @@ func StartChainHandler(w http.ResponseWriter, r *http.Request) {
 /*HomePageHandler - provides basic info when accessing the home page of the server */
 func HomePageHandler(w http.ResponseWriter, r *http.Request) {
 	mc := miner.GetMinerChain()
-	fmt.Fprintf(w, "<div>Running since %v ...\n", startTime)
-	fmt.Fprintf(w, "<div>Working on the chain: %v</div>\n", mc.GetKey())
-	fmt.Fprintf(w, "<div>I am a %v with set rank of (%v) <ul><li>id:%v</li><li>public_key:%v</li></ul></div>\n", node.Self.GetNodeTypeName(), node.Self.SetIndex, node.Self.GetKey(), node.Self.PublicKey)
+	Logger.Info("", zap.Any("Writer Response", w), zap.Any("Running Since", startTime))
+	//fmt.Fprintf(w, "<div>Running since %v ...\n", startTime)
+	Logger.Info("", zap.Any("Working on the chain", mc.GetKey()))
+	//fmt.Fprintf(w, "<div>Working on the chain: %v</div>\n", mc.GetKey())
+	Logger.Info("", zap.Any("Node", node.Self.GetNodeTypeName()), zap.Any("rank", node.Self.SetIndex), zap.Any("id", node.Self.SetIndex), zap.Any("public key", node.Self.PublicKey))
+	//fmt.Fprintf(w, "<div>I am a %v with set rank of (%v) <ul><li>id:%v</li><li>public_key:%v</li></ul></div>\n", node.Self.GetNodeTypeName(), node.Self.SetIndex, node.Self.GetKey(), node.Self.PublicKey)
 }
