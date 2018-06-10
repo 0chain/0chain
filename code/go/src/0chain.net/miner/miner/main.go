@@ -138,22 +138,9 @@ func main() {
 		serverChain.BlockSize = 10000
 	}
 
-	Logger.Info("CPU information", zap.Int("No of CPU available", runtime.NumCPU()))
+	Logger.Info("CPU information", zap.Int("available_cpus", runtime.NumCPU()))
+	Logger.Info("Starting miner", zap.String("port", address), zap.String("chain_id", config.GetServerChainID()), zap.String("mode", mode))
 
-	//zap.Int("Number of CPU available", runtime.NumCPU())
-	//fmt.Printf("Num CPUs available %v\n", runtime.NumCPU())
-	Logger.Info("Miner Information", zap.String("arg", os.Args[0]), zap.String("Port", address), zap.String("Chain ID", config.GetServerChainID()), zap.String("mode", mode))
-	//Logger.Info("Starting")
-	//fmt.Printf("Starting %v on %v for chain %v in %v mode ...\n", os.Args[0], address, config.GetServerChainID(), mode)
-
-	/*
-		l, err := net.Listen("tcp", address)
-		if err != nil {
-			log.Fatalf("Listen: %v", err)
-		}
-		defer l.Close()
-		l = netutil.LimitListener(l, 1000)
-	*/
 	server := &http.Server{
 		Addr:           address,
 		ReadTimeout:    30 * time.Second,
@@ -173,9 +160,7 @@ func main() {
 	miner.SetupM2SSenders()
 	miner.SetupWorkers()
 
-	//log.Fatal(server.Serve(l))
 	Logger.Info("Ready to listen to the requests")
-	//fmt.Printf("Ready to listen to the requests\n")
 	startTime = time.Now().UTC()
 	log.Fatal(server.ListenAndServe())
 }
@@ -208,10 +193,7 @@ func StartChainHandler(w http.ResponseWriter, r *http.Request) {
 /*HomePageHandler - provides basic info when accessing the home page of the server */
 func HomePageHandler(w http.ResponseWriter, r *http.Request) {
 	mc := miner.GetMinerChain()
-	Logger.Info("", zap.Any("Writer Response", w), zap.Any("Running Since", startTime))
-	//fmt.Fprintf(w, "<div>Running since %v ...\n", startTime)
-	Logger.Info("", zap.Any("Working on the chain", mc.GetKey()))
-	//fmt.Fprintf(w, "<div>Working on the chain: %v</div>\n", mc.GetKey())
-	Logger.Info("", zap.Any("Node", node.Self.GetNodeTypeName()), zap.Any("rank", node.Self.SetIndex), zap.Any("id", node.Self.SetIndex), zap.Any("public key", node.Self.PublicKey))
-	//fmt.Fprintf(w, "<div>I am a %v with set rank of (%v) <ul><li>id:%v</li><li>public_key:%v</li></ul></div>\n", node.Self.GetNodeTypeName(), node.Self.SetIndex, node.Self.GetKey(), node.Self.PublicKey)
+	fmt.Fprintf(w, "<div>Running since %v ...\n", startTime)
+	fmt.Fprintf(w, "<div>Working on the chain: %v</div>\n", mc.GetKey())
+	fmt.Fprintf(w, "<div>I am a %v with set rank of (%v) <ul><li>id:%v</li><li>public_key:%v</li></ul></div>\n", node.Self.GetNodeTypeName(), node.Self.SetIndex, node.Self.GetKey(), node.Self.PublicKey)
 }

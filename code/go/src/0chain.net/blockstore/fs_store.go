@@ -29,9 +29,9 @@ func (fbs *FSBlockStore) getFileName(hash string, round int64) string {
 	var dir bytes.Buffer
 	fmt.Fprintf(&dir, "%s%s%v", fbs.RootDirectory, string(os.PathSeparator), int64(round/DIR_ROUND_RANGE))
 	for i := 0; i < 4; i++ {
-		fmt.Fprintf(&dir, "%s%c", string(os.PathSeparator), hash[i])
+		fmt.Fprintf(&dir, "%s%s", string(os.PathSeparator), hash[2*i:2*i+2])
 	}
-	fmt.Fprintf(&dir, "%s%s", string(os.PathSeparator), hash[4:])
+	fmt.Fprintf(&dir, "%s%s", string(os.PathSeparator), hash[8:])
 	fmt.Fprintf(&dir, ".dat.zlib")
 	return dir.String()
 }

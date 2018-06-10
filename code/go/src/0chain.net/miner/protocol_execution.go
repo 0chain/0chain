@@ -10,9 +10,11 @@ import (
 	"0chain.net/client"
 	"0chain.net/common"
 	"0chain.net/datastore"
+	. "0chain.net/logging"
 	"0chain.net/node"
 	"0chain.net/round"
 	"0chain.net/transaction"
+	"go.uber.org/zap"
 )
 
 /*StartRound - start a new round */
@@ -77,9 +79,9 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block) error {
 	}
 
 	client.GetClients(ctx, clients)
-	fmt.Printf("time to assemble block: %v\n", time.Since(start))
+	Logger.Info("time to assemble block", zap.Any("block", b.Hash), zap.Any("time", time.Since(start)))
 	updateTxnsToPending(ctx, etxns)
-	fmt.Printf("time to assemble + write block: %v\n", time.Since(start))
+	Logger.Info("time to assemble + write block", zap.Any("block", b.Hash), zap.Any("time", time.Since(start)))
 	b.HashBlock()
 	b.Signature, err = self.Sign(b.Hash)
 
@@ -95,7 +97,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("time to assemble+write+sign block (%v): %v\n", b.Hash, time.Since(start))
+	Logger.Info("time to assemble+write+sign block", zap.Any("block", b.Hash), zap.Any("time", time.Since(start)))
 	mc.AddToVerification(ctx, b)
 	return nil
 }
@@ -108,11 +110,15 @@ func updateTxnsToPending(ctx context.Context, txns []datastore.Entity) {
 /*AddToVerification - Add a block to verify : WARNING: does not support concurrent access for a given round */
 func (mc *Chain) AddToVerification(ctx context.Context, b *block.Block) {
 	r := mc.GetRound(b.Round)
-	// TODO: This can happen because
-	// 1) This is past round that is no longer applicable - reject it
-	// 2) This is a future round we didn't know about yet as our network is slow or something
-	// 3) The verify message received before the start round message
-	if r == nil {
+	if r != nil {
+		if r.IsVerificationComplete() {
+			return
+		}
+	} else {
+		// TODO: This can happen because
+		// 1) This is past round that is no longer applicable - reject it
+		// 2) This is a future round we didn't know about yet as our network is slow or something
+		// 3) The verify message received before the start round message
 		r = datastore.GetEntityMetadata("round").Instance().(*round.Round)
 		r.Number = b.Round
 		mc.AddRound(r)

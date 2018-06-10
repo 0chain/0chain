@@ -133,13 +133,13 @@ func (np *Pool) SendAtleast(numNodes int, handler SendHandler) []*Node {
 			validCount++
 			if validCount == numNodes {
 				close(sendBucket)
-				Logger.Info("", zap.Any("all nodes", len(nodes)), zap.Any("requested", numNodes), zap.Any("activesent", activeCount), zap.Any("Valid Since", time.Since(start)))
+				Logger.Info("", zap.Any("all_nodes", len(nodes)), zap.Any("requested", numNodes), zap.Any("active", activeCount), zap.Any("sent_to", len(nodes)), zap.Any("time", time.Since(start)))
 				return sentTo
 			}
 		case <-done:
 			doneCount++
 			if doneCount >= numNodes+THRESHOLD || doneCount >= activeCount {
-				Logger.Info("", zap.Any("all nodes", len(nodes)), zap.Any("requested", numNodes), zap.Any("activesent", activeCount), zap.Any("Valid Since", time.Since(start)))
+				Logger.Info("", zap.Any("all_nodes", len(nodes)), zap.Any("requested", numNodes), zap.Any("active", activeCount), zap.Any("sent_to", len(nodes)), zap.Any("time", time.Since(start)))
 				close(sendBucket)
 				return sentTo
 			}
@@ -242,6 +242,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			}
 			req.Header.Set("Content-Type", "application/json; charset=utf-8")
 			SetHeaders(req, entity, options)
+			Logger.Info("sending", zap.Any("set_index", n.SetIndex), zap.Any("handler", url), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Error(err))
 			resp, err := client.Do(req)
 			if err != nil {
 				Logger.Error("sending", zap.Any("set_index", n.SetIndex), zap.Any("handler", url), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Error(err))
@@ -304,7 +305,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF) common
 		if entityMetadata == nil {
 			return
 		}
-		Logger.Info("Received", zap.Any("from", sender.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("entity", entityName), zap.Any("data", reqHashdata))
+		Logger.Info("message received", zap.Any("from", sender.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("entity", entityName), zap.Any("data", reqHashdata))
 		var buffer io.Reader = r.Body
 		defer r.Body.Close()
 		if r.Header.Get("Content-Encoding") == "snappy" {

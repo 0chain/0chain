@@ -45,12 +45,7 @@ var (
 	NodeTypeBlobber = 3
 )
 
-type NodeTypeLookup struct {
-	Code  string
-	Value string
-}
-
-var NodeTypeNames []*NodeTypeLookup = []*NodeTypeLookup{nil, &NodeTypeLookup{Code: "m", Value: "Miner"}, &NodeTypeLookup{Code: "s", Value: "Sharder"}, &NodeTypeLookup{Code: "b", Value: "Blobber"}}
+var NodeTypeNames []*common.Lookup = common.CreateLookups("m", "Miner", "s", "Sharder", "b", "Blobber")
 
 /*Node - a struct holding the node information */
 type Node struct {

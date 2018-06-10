@@ -34,6 +34,9 @@ type Round struct {
 	blocksToVerifyChannel chan *block.Block
 
 	verificationCancelf context.CancelFunc
+
+	verificationComplete bool
+	finalized            bool
 }
 
 var roundEntityMetadata *datastore.EntityMetadataImpl
@@ -50,6 +53,9 @@ func (r *Round) GetKey() datastore.Key {
 
 /*AddBlock - adds a block to the round. Assumes non-concurrent update */
 func (r *Round) AddBlock(b *block.Block) {
+	if r.verificationComplete {
+		return
+	}
 	if r.Number != b.Round {
 		return
 	}
@@ -62,6 +68,21 @@ func (r *Round) AddBlock(b *block.Block) {
 	b.RoundRank = r.GetRank(bNode.SetIndex)
 	r.blocksToVerifyChannel <- b
 	r.blocks[b.Hash] = b
+}
+
+/*IsVerificationComplete - indicates if the verification process for the round is complete */
+func (r *Round) IsVerificationComplete() bool {
+	return r.verificationComplete
+}
+
+/*Finalize - finalize the round */
+func (r *Round) Finalize() {
+	r.finalized = true
+}
+
+/*IsFinalized - indicates if the round is finalized */
+func (r *Round) IsFinalized() bool {
+	return r.finalized
 }
 
 /*Provider - entity provider for client object */
@@ -137,6 +158,10 @@ func (r *Round) StartVerificationBlockCollection(ctx context.Context, collection
 
 /*CancelVerification - Cancel verification of blocks */
 func (r *Round) CancelVerification() {
+	if r.verificationComplete {
+		return
+	}
+	r.verificationComplete = true
 	if r.verificationCancelf != nil {
 		r.verificationCancelf()
 	}

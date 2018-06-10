@@ -28,11 +28,9 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 			return
 		case msg := <-mc.GetBlockMessageChannel():
 			if msg.Sender != nil {
-				Logger.Info("received message", zap.Any("Msg", msg.Type), zap.Any("sender index", msg.Sender.SetIndex), zap.Any("Key", msg.Sender.GetKey()))
-				//fmt.Printf("received message: %v from %v(%v)\n", msg.Type, msg.Sender.SetIndex, msg.Sender.GetKey())
+				Logger.Info("message", zap.Any("msg", GetMessageLookup(msg.Type)), zap.Any("sender_index", msg.Sender.SetIndex), zap.Any("id", msg.Sender.GetKey()))
 			} else {
-				Logger.Info("recived message", zap.Any("Msg", msg.Type))
-				//fmt.Printf("received message: %v\n", msg.Type)
+				Logger.Info("message", zap.Any("msg", GetMessageLookup(msg.Type)))
 			}
 			switch msg.Type {
 			case MessageStartRound:
@@ -70,8 +68,7 @@ func (mc *Chain) startNewRound(ctx context.Context, r *round.Round) {
 	}
 	self := node.GetSelfNode(ctx)
 	rank := r.GetRank(self.SetIndex)
-	Logger.Info("*** Starting round", zap.Any("round number", r.Number), zap.Any("index", self.SetIndex), zap.Any("rank", rank))
-	//fmt.Printf("*** Starting round (%v) with (set index=%v, round rank=%v)\n", r.Number, self.SetIndex, rank)
+	Logger.Info("*** starting round ***", zap.Any("round", r.Number), zap.Any("index", self.SetIndex), zap.Any("rank", rank))
 	//TODO: For now, if the rank happens to be in the bottom half, we assume no need to generate block
 	if 2*rank > mc.Miners.Size() {
 		return
@@ -124,15 +121,16 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 		return
 	}
 	pr := mc.GetRound(b.Round - 1)
-	if pr != nil && pr.Number != 0 && pr.Block != nil {
-		mc.FinalizeBlock(ctx, pr.Block)
+	if pr != nil {
+		if pr.Number != 0 && pr.Block != nil && !pr.IsFinalized() {
+			mc.FinalizeBlock(ctx, pr.Block)
+		}
 	}
 }
 
 /*FinalizeBlock - finalize a block */
 func (mc *Chain) FinalizeBlock(ctx context.Context, b *block.Block) {
-	Logger.Info("Finalizing block", zap.Any("hash", b.Hash))
-	//fmt.Printf("Finalizing block: %v\n", b.Hash)
+	Logger.Info("finalizing block", zap.Any("hash", b.Hash))
 	txnEntityMetadata := datastore.GetEntityMetadata("txn")
 	ctx = memorystore.WithEntityConnection(ctx, txnEntityMetadata)
 	defer memorystore.Close(ctx)
