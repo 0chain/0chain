@@ -80,14 +80,7 @@ func VerificationTicketReceiptHandler(ctx context.Context, entity datastore.Enti
 	if !ok {
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
-	mc := GetMinerChain()
-	b, err := mc.GetBlock(ctx, bvt.BlockID)
-	if err != nil {
-		// TODO: If we didn't see this block so far, may be it's better to ask for it
-		return nil, err
-	}
-
-	msg := &BlockMessage{Sender: node.GetSender(ctx), Type: MessageVerificationTicket, Block: b, BlockVerificationTicket: bvt}
+	msg := &BlockMessage{Sender: node.GetSender(ctx), Type: MessageVerificationTicket, BlockVerificationTicket: bvt}
 	GetMinerChain().GetBlockMessageChannel() <- msg
 	return true, nil
 }
@@ -99,12 +92,13 @@ func NotarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (i
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
 	mc := GetMinerChain()
-	b, err := mc.GetBlock(ctx, notarization.BlockID)
-	if err != nil {
-		// TODO: If we didn't see this block so far, may be it's better to ask for it
-		return nil, err
+	r := mc.GetRound(notarization.Round)
+	if r == nil {
+		//TODO: Should we implicitly start a round?
+		return nil, common.InvalidRequest("Not started this round yet")
 	}
-	msg := &BlockMessage{Sender: node.GetSender(ctx), Type: MessageNotarization, Block: b, Notarization: notarization}
-	mc.GetBlockMessageChannel() <- msg
+	r.CancelVerification()
+	msg := &BlockMessage{Sender: node.GetSender(ctx), Type: MessageNotarization, Round: r, Notarization: notarization}
+	GetMinerChain().GetBlockMessageChannel() <- msg
 	return true, nil
 }

@@ -242,14 +242,14 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			SetHeaders(req, entity, options)
 			resp, err := client.Do(req)
 			if err != nil {
-				fmt.Printf("Error sending to node(%v): %v\n", n.GetKey(), err)
+				fmt.Printf("Error sending to node(%v): %v\n", n.SetIndex, err)
 				return false
 			}
 			defer resp.Body.Close()
 			if resp.StatusCode != http.StatusOK {
 				var rbuf bytes.Buffer
 				rbuf.ReadFrom(resp.Body)
-				fmt.Printf("Error sending to node(%v): %v: %v\n", n.GetKey(), resp.StatusCode, rbuf.String())
+				fmt.Printf("Error sending to node(%v): %v: %v\n", n.SetIndex, resp.StatusCode, rbuf.String())
 				return false
 			}
 			io.Copy(ioutil.Discard, resp.Body)
@@ -302,7 +302,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF) common
 		if entityMetadata == nil {
 			return
 		}
-		fmt.Printf("received %v.%v from %v\n", entityName, reqHashdata, sender.SetIndex)
+		fmt.Printf("received(%v) %v/%v.%v\n", sender.SetIndex, r.URL.RequestURI(), entityName, reqHashdata)
 		var buffer io.Reader = r.Body
 		defer r.Body.Close()
 		if r.Header.Get("Content-Encoding") == "snappy" {

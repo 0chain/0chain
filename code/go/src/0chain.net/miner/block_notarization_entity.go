@@ -13,6 +13,7 @@ type Notarization struct {
 	datastore.NOIDField
 	VerificationTickets []*block.VerificationTicket
 	BlockID             datastore.Key `json:"block_id"`
+	Round               int64
 }
 
 var notarizationEntityMetadata *datastore.EntityMetadataImpl

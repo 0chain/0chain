@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"0chain.net/block"
+	"0chain.net/blockstore"
 	"0chain.net/chain"
 	"0chain.net/client"
 	"0chain.net/common"
@@ -276,7 +277,7 @@ func TestBlockGeneration(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	block.SetupFileBlockStore(fmt.Sprintf("%v%s.0chain.net", usr.HomeDir, string(os.PathSeparator)))
+	blockstore.SetupFSBlockStore(fmt.Sprintf("%v%s.0chain.net", usr.HomeDir, string(os.PathSeparator)))
 
 	b, err = mc.GenerateRoundBlock(ctx, r)
 
@@ -288,11 +289,11 @@ func TestBlockGeneration(t *testing.T) {
 		*/
 		t.Logf("json length: %v\n", datastore.ToJSON(b).Len())
 		t.Logf("msgpack length: %v\n", datastore.ToMsgpack(b).Len())
-		err = block.Store.Write(b)
+		err = blockstore.Store.Write(b)
 		if err != nil {
 			t.Errorf("Error writing the block: %v\n", err)
 		} else {
-			b2, err := block.Store.Read(b.Hash, b.Round)
+			b2, err := blockstore.Store.Read(b.Hash, b.Round)
 			if err != nil {
 				t.Errorf("Error reading the block: %v\n", err)
 			} else {

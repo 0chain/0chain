@@ -84,34 +84,41 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 
 /*HandleVerificationTicketMessage - handles the verification ticket message */
 func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *BlockMessage) {
-	r := mc.GetRound(msg.Block.Round)
+	b, err := mc.GetBlock(ctx, msg.BlockVerificationTicket.BlockID)
+	if err != nil {
+		// TODO: If we didn't see this block so far, may be it's better to ask for it
+		return
+	}
+	r := mc.GetRound(b.Round)
 	if r == nil {
 		return
 	}
-	if mc.ValidNotarization(ctx, msg.Block) {
+	if mc.ValidNotarization(ctx, b) {
 		return
 	}
-	err := mc.VerifyTicket(ctx, msg.Block, &msg.BlockVerificationTicket.VerificationTicket)
+	err = mc.VerifyTicket(ctx, b, &msg.BlockVerificationTicket.VerificationTicket)
 	if err != nil {
 		return
 	}
-	mc.ProcessVerifiedTicket(ctx, r, msg.Block, &msg.BlockVerificationTicket.VerificationTicket)
+	mc.ProcessVerifiedTicket(ctx, r, b, &msg.BlockVerificationTicket.VerificationTicket)
 }
 
 /*HandleNotarizationMessage - handles the block notarization message */
 func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessage) {
-	r := mc.GetRound(msg.Block.Round)
-	if r != nil {
-		r.CancelVerification()
-		if r.Block == nil {
-			r.Block = msg.Block
-		}
+	b, err := mc.GetBlock(ctx, msg.Notarization.BlockID)
+	if err != nil {
+		// TODO: If we didn't see this block so far, may be it's better to ask for it
+		return
+	}
+	r := msg.Round
+	if r.Block == nil {
+		r.Block = b
 	}
 	//TODO: Check this condition carefully
 	if r.Number < mc.CurrentRound-1 || r.Number > mc.CurrentRound {
 		return
 	}
-	pr := mc.GetRound(msg.Block.Round - 1)
+	pr := mc.GetRound(b.Round - 1)
 	if pr != nil && pr.Number != 0 && pr.Block != nil {
 		mc.FinalizeBlock(ctx, pr.Block)
 	}

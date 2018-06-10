@@ -117,8 +117,8 @@ func (mc *Chain) AddToVerification(ctx context.Context, b *block.Block) {
 		r.Number = b.Round
 		mc.AddRound(r)
 	}
-	r.StartVerificationBlockCollection(ctx, mc.CollectBlocksForVerification)
 	mc.AddBlock(b)
+	r.StartVerificationBlockCollection(ctx, mc.CollectBlocksForVerification)
 	r.AddBlock(b)
 }
 
@@ -217,6 +217,7 @@ func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *round.Round, b *b
 			r.CancelVerification() // No need for further verification of any blocks
 			notarization := datastore.GetEntityMetadata("block_notarization").Instance().(*Notarization)
 			notarization.BlockID = b.Hash
+			notarization.Round = b.Round
 			notarization.VerificationTickets = b.VerificationTickets
 			mc.SendNotarization(ctx, notarization)
 			if mc.GetRound(r.Number+1) == nil {
