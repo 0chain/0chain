@@ -12,6 +12,7 @@ type Store interface {
 
 	MultiRead(ctx context.Context, entityMetadata EntityMetadata, keys []Key, entities []Entity) error
 	MultiWrite(ctx context.Context, entityMetadata EntityMetadata, entities []Entity) error
+	MultiDelete(ctx context.Context, entityMetadata EntityMetadata, entities []Entity) error
 
 	AddToCollection(ctx context.Context, entity CollectionEntity) error
 	IterateCollection(ctx context.Context, entityMetadata EntityMetadata, collectionName string, handler CollectionIteratorHandler) error

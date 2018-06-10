@@ -2,6 +2,7 @@ package persistencestore
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"0chain.net/block"
@@ -9,15 +10,19 @@ import (
 	"0chain.net/datastore"
 )
 
+func init() {
+	block.SetupBlockSummaryEntity(GetStorageProvider())
+}
+
 func TestInsert(t *testing.T) {
 	b := block.BlockSummaryProvider().(*block.BlockSummary)
-	b.Hash = "abc"
-	b.MerkleRoot = "def"
-	b.Round = 0
+	b.Hash = "abcd"
+	b.MerkleRoot = "defd"
+	b.Round = 1
 	b.CreationDate = common.Now()
 	ctx := context.Background()
 	ctx = WithEntityConnection(ctx, b.GetEntityMetadata())
-	store := Store{}
+	store := GetStorageProvider()
 	err := store.Write(ctx, b)
 	if err != nil {
 		t.Errorf("Error writing the entity: %v\n", err.Error())
@@ -26,10 +31,10 @@ func TestInsert(t *testing.T) {
 
 func TestRead(t *testing.T) {
 	key := "abc"
-	b := &block.BlockSummary{}
+	b := block.BlockSummaryProvider().(*block.BlockSummary)
 	ctx := context.Background()
 	ctx = WithEntityConnection(ctx, b.GetEntityMetadata())
-	store := Store{}
+	store := GetStorageProvider()
 	err := store.Read(ctx, key, b)
 	if err != nil {
 		t.Errorf("Error reading the entity: %v\n", err.Error())
@@ -46,7 +51,7 @@ func TestInsertIfNE(t *testing.T) {
 	b.CreationDate = common.Now()
 	ctx := context.Background()
 	ctx = WithEntityConnection(ctx, b.GetEntityMetadata())
-	store := Store{}
+	store := GetStorageProvider()
 	err := store.InsertIfNE(ctx, b)
 	if err != nil {
 		t.Errorf("Error inserting the entity: %v\n", err.Error())
@@ -63,11 +68,46 @@ func TestDelete(t *testing.T) {
 	b.CreationDate = common.Now()
 	ctx := context.Background()
 	ctx = WithEntityConnection(ctx, b.GetEntityMetadata())
-	store := Store{}
+	store := GetStorageProvider()
 	err := store.Delete(ctx, b)
 	if err != nil {
 		t.Errorf("Error deleting the entity: %v\n", err.Error())
 	} else {
 		t.Logf("successfully deleted the entity: %v\n", b.GetKey())
+	}
+}
+
+func TestMultiWrite(t *testing.T) {
+	blockEntityMetadata := datastore.GetEntityMetadata("block_summary")
+	blocks := datastore.AllocateEntities(1000, blockEntityMetadata)
+	for idx, blk := range blocks {
+		b := blk.(*block.BlockSummary)
+		b.Hash = fmt.Sprintf("test_multi_insert_%v", idx)
+		b.Round = int64(idx)
+	}
+	ctx := context.Background()
+	ctx = WithEntityConnection(ctx, blockEntityMetadata)
+	store := GetStorageProvider()
+	err := store.MultiWrite(ctx, blockEntityMetadata, blocks)
+	if err != nil {
+		t.Errorf("Error reading the entity: %v\n", err.Error())
+	}
+}
+
+func TestMultiRead(t *testing.T) {
+	blockEntityMetadata := datastore.GetEntityMetadata("block_summary")
+	blocks := datastore.AllocateEntities(1000, blockEntityMetadata)
+	ctx := context.Background()
+	ctx = WithEntityConnection(ctx, blockEntityMetadata)
+	store := GetStorageProvider()
+	keys := make([]datastore.Key, len(blocks))
+	for idx := range keys {
+		keys[idx] = datastore.ToKey(fmt.Sprintf("test_multi_insert_%v", idx))
+	}
+	err := store.MultiRead(ctx, blockEntityMetadata, keys, blocks)
+	if err != nil {
+		t.Errorf("Error reading the entity: %v\n", err.Error())
+	} else {
+		t.Logf("Entity: %v\n%v\n", datastore.ToJSON(blocks[0]), datastore.ToJSON(blocks[1]))
 	}
 }

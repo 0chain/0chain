@@ -10,11 +10,13 @@ import (
 	"github.com/gocql/gocql"
 )
 
+//KeySpace - the keyspace usef for the 0chain data
 var KeySpace = "zerochain"
 
 // Session holds our connection to Cassandra
 var Session *gocql.Session
 
+/*InitSession - initialize a storage session */
 func InitSession() {
 	var err error
 	var cluster *gocql.ClusterConfig

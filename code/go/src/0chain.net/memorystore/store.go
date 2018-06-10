@@ -10,6 +10,9 @@ import (
 	"0chain.net/datastore"
 )
 
+/*BATCH_SIZE size of the batch */
+const BATCH_SIZE = 256
+
 var storageAPI = &Store{}
 
 /*GetStorageProvider - get the storage provider for the memorystore */
@@ -97,6 +100,23 @@ func (ms *Store) Delete(ctx context.Context, entity datastore.Entity) error {
 
 /*MultiRead - allows reading multiple entities at the same time */
 func (ms *Store) MultiRead(ctx context.Context, entityMetadata datastore.EntityMetadata, keys []datastore.Key, entities []datastore.Entity) error {
+	if len(entities) <= BATCH_SIZE {
+		return ms.multiReadAux(ctx, entityMetadata, keys, entities)
+	}
+	for start := 0; start < len(entities); start += BATCH_SIZE {
+		end := start + BATCH_SIZE
+		if end > len(entities) {
+			end = len(entities)
+		}
+		err := ms.multiReadAux(ctx, entityMetadata, keys[start:end], entities[start:end])
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (ms *Store) multiReadAux(ctx context.Context, entityMetadata datastore.EntityMetadata, keys []datastore.Key, entities []datastore.Entity) error {
 	rkeys := make([]interface{}, len(keys))
 	for idx, key := range keys {
 		entity := entities[idx]
@@ -117,8 +137,7 @@ func (ms *Store) MultiRead(ctx context.Context, entityMetadata datastore.EntityM
 	for idx, ae := range array {
 		if ae == nil {
 			/* not setting this to nil so it's possible to reuse the same array used for block processing
-			instead setting key to nil
-			entities[idx] = nil
+			instead setting key to EmptyKey
 			*/
 			entities[idx].SetKey(datastore.EmptyKey)
 			continue
@@ -194,6 +213,23 @@ func (ms *Store) AddToCollection(ctx context.Context, ce datastore.CollectionEnt
 
 /*MultiAddToCollection adds multiple entities to a collection */
 func (ms *Store) MultiAddToCollection(ctx context.Context, entityMetadata datastore.EntityMetadata, entities []datastore.Entity) error {
+	if len(entities) <= BATCH_SIZE {
+		return ms.multiAddToCollectionAux(ctx, entityMetadata, entities)
+	}
+	for start := 0; start < len(entities); start += BATCH_SIZE {
+		end := start + BATCH_SIZE
+		if end > len(entities) {
+			end = len(entities)
+		}
+		err := ms.multiAddToCollectionAux(ctx, entityMetadata, entities[start:end])
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (ms *Store) multiAddToCollectionAux(ctx context.Context, entityMetadata datastore.EntityMetadata, entities []datastore.Entity) error {
 	// Assuming all entities belong to the same collection.
 	if len(entities) == 0 {
 		return nil
@@ -221,4 +257,37 @@ func (ms *Store) MultiAddToCollection(ctx context.Context, entityMetadata datast
 	con.Flush()
 	_, err := con.Receive()
 	return err
+}
+
+/*MultiDelete - delete multiple entities from the store */
+func (ms *Store) MultiDelete(ctx context.Context, entityMetadata datastore.EntityMetadata, entities []datastore.Entity) error {
+	if len(entities) <= BATCH_SIZE {
+		return ms.multiDeleteAux(ctx, entityMetadata, entities)
+	}
+	for start := 0; start < len(entities); start += BATCH_SIZE {
+		end := start + BATCH_SIZE
+		if end > len(entities) {
+			end = len(entities)
+		}
+		err := ms.multiDeleteAux(ctx, entityMetadata, entities[start:end])
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (ms *Store) multiDeleteAux(ctx context.Context, entityMetadata datastore.EntityMetadata, entities []datastore.Entity) error {
+	rkeys := make([]interface{}, len(entities))
+	for idx, entity := range entities {
+		rkeys[idx] = GetEntityKey(entity)
+	}
+	c := GetEntityCon(ctx, entityMetadata)
+	c.Send("DEL", rkeys...)
+	c.Flush()
+	_, err := c.Receive()
+	if err != nil {
+		return err
+	}
+	return nil
 }
