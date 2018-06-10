@@ -3,48 +3,18 @@ package persistencestore
 import (
 	"context"
 	"testing"
-	"time"
 
+	"0chain.net/block"
+	"0chain.net/common"
 	"0chain.net/datastore"
 )
 
-type Block struct {
-	datastore.NOIDField
-	Hash       string `json:"hash"`
-	MerkleRoot string `json:"merkle_root"`
-	Round      int64  `json:"round"`
-	Timestamp  int64  `json:"timestamp"`
-	NumTxns    int    `json:"num_txns"`
-}
-
-var blockEntityMetadata = datastore.MetadataProvider()
-
-func init() {
-	blockEntityMetadata.Name = "block"
-	blockEntityMetadata.Provider = Provider
-	blockEntityMetadata.IDColumnName = "hash"
-}
-
-func Provider() datastore.Entity {
-	b := &Block{}
-	b.Timestamp = time.Now().Unix()
-	return b
-}
-
-func (b *Block) GetEntityName() string {
-	return "block"
-}
-
-func (b *Block) GetEntityMetadata() datastore.EntityMetadata {
-	return blockEntityMetadata
-}
-
-func (b *Block) GetKey() datastore.Key {
-	return datastore.ToKey(b.Hash)
-}
-
 func TestInsert(t *testing.T) {
-	b := &Block{Hash: "abc", MerkleRoot: "def", Round: 0, Timestamp: time.Now().Unix(), NumTxns: 5000}
+	b := block.BlockSummaryProvider().(*block.BlockSummary)
+	b.Hash = "abc"
+	b.MerkleRoot = "def"
+	b.Round = 0
+	b.CreationDate = common.Now()
 	ctx := context.Background()
 	ctx = WithEntityConnection(ctx, b.GetEntityMetadata())
 	store := Store{}
@@ -56,7 +26,7 @@ func TestInsert(t *testing.T) {
 
 func TestRead(t *testing.T) {
 	key := "abc"
-	b := &Block{}
+	b := &block.BlockSummary{}
 	ctx := context.Background()
 	ctx = WithEntityConnection(ctx, b.GetEntityMetadata())
 	store := Store{}
@@ -69,7 +39,11 @@ func TestRead(t *testing.T) {
 }
 
 func TestInsertIfNE(t *testing.T) {
-	b := &Block{Hash: "abc", MerkleRoot: "def", Round: 0, Timestamp: time.Now().Unix(), NumTxns: 10000}
+	b := block.BlockSummaryProvider().(*block.BlockSummary)
+	b.Hash = "abc"
+	b.MerkleRoot = "def"
+	b.Round = 1
+	b.CreationDate = common.Now()
 	ctx := context.Background()
 	ctx = WithEntityConnection(ctx, b.GetEntityMetadata())
 	store := Store{}
@@ -77,12 +51,16 @@ func TestInsertIfNE(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error inserting the entity: %v\n", err.Error())
 	} else {
-		t.Logf("should not have num txns as: %v\n", b.NumTxns)
+		t.Logf("should not have num txns as: %v\n", b.Round)
 	}
 }
 
 func TestDelete(t *testing.T) {
-	b := &Block{Hash: "abc", MerkleRoot: "def", Round: 0, Timestamp: time.Now().Unix(), NumTxns: 10000}
+	b := block.BlockSummaryProvider().(*block.BlockSummary)
+	b.Hash = "abc"
+	b.MerkleRoot = "def"
+	b.Round = 0
+	b.CreationDate = common.Now()
 	ctx := context.Background()
 	ctx = WithEntityConnection(ctx, b.GetEntityMetadata())
 	store := Store{}
