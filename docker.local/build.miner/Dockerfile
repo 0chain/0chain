@@ -10,6 +10,7 @@ RUN go get github.com/golang/snappy
 RUN go get github.com/gomodule/redigo/redis
 RUN go get github.com/vmihailenco/msgpack
 RUN go get -u golang.org/x/crypto/...
+RUN go get go.uber.org/zap
 
 #Add the source code
 ADD ./code/go/src $SRC_DIR/go/src

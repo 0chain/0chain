@@ -138,7 +138,7 @@ func main() {
 		serverChain.BlockSize = 10000
 	}
 
-	Logger.Info("CPU information", zap.Int("No of CPU available ", runtime.NumCPU()))
+	Logger.Info("CPU information", zap.Int("No of CPU available", runtime.NumCPU()))
 
 	//zap.Int("Number of CPU available", runtime.NumCPU())
 	//fmt.Printf("Num CPUs available %v\n", runtime.NumCPU())

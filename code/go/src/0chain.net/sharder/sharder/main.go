@@ -17,11 +17,13 @@ import (
 	"0chain.net/config"
 	"0chain.net/datastore"
 	"0chain.net/encryption"
+	. "0chain.net/logging"
 	"0chain.net/memorystore"
 	"0chain.net/node"
 	"0chain.net/persistencestore"
 	"0chain.net/sharder"
 	"0chain.net/transaction"
+	"go.uber.org/zap"
 )
 
 func initServer() {
@@ -67,6 +69,11 @@ func main() {
 	keysFile := flag.String("keys_file", "config/single_node_sharder_keys.txt", "keys_file")
 	flag.Parse()
 
+	if *testMode {
+		LoggerInit("development", "appLogs")
+	} else {
+		LoggerInit("production", "appLogs")
+	}
 	address := fmt.Sprintf("%v:%v", *host, *port)
 	config.SetServerChainID(*chainID)
 	serverChain := chain.Provider().(*chain.Chain)
@@ -119,7 +126,7 @@ func main() {
 		mode = "test net"
 		serverChain.BlockSize = 10000
 	}
-	fmt.Printf("Num CPUs available %v\n", runtime.NumCPU())
+	Logger.Info("CPU information", zap.Int("No of CPU available", runtime.NumCPU()))
 	fmt.Printf("Starting %v on %v for chain %v in %v mode ...\n", os.Args[0], address, config.GetServerChainID(), mode)
 
 	/*
