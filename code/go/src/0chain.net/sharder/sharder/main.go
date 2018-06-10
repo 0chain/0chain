@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"0chain.net/block"
+	"0chain.net/blockstore"
 	"0chain.net/chain"
 	"0chain.net/client"
 	"0chain.net/common"
@@ -18,6 +19,7 @@ import (
 	"0chain.net/encryption"
 	"0chain.net/memorystore"
 	"0chain.net/node"
+	"0chain.net/persistencestore"
 	"0chain.net/sharder"
 	"0chain.net/transaction"
 )
@@ -46,6 +48,11 @@ func initEntities() {
 	chain.SetupEntity(memoryStorage)
 	client.SetupEntity(memoryStorage)
 	transaction.SetupEntity(memoryStorage)
+
+	persistencestore.InitSession()
+	persistenceStorage := persistencestore.GetStorageProvider()
+	block.SetupBlockSummaryEntity(persistenceStorage)
+	transaction.SetupTxnSummaryEntity(persistenceStorage)
 }
 
 /*Chain - the chain this miner will be working on */
@@ -130,6 +137,8 @@ func main() {
 		MaxHeaderBytes: 1 << 20,
 	}
 	common.HandleShutdown(server)
+
+	blockstore.SetupFSBlockStore("data/blocks")
 
 	initEntities()
 	serverChain.SetupWorkers(ctx)

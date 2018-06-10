@@ -15,7 +15,7 @@ var KeySpace = "zerochain"
 // Session holds our connection to Cassandra
 var Session *gocql.Session
 
-func init() {
+func InitSession() {
 	var err error
 	var cluster *gocql.ClusterConfig
 	if os.Getenv("DOCKER") != "" {
@@ -44,6 +44,9 @@ func init() {
  * defer c.Close()
 */
 func GetConnection() *gocql.Session {
+	if Session == nil {
+		InitSession()
+	}
 	return Session
 }
 
@@ -63,11 +66,12 @@ func GetCon(ctx context.Context) *gocql.Session {
 	return ctx.Value(CONNECTION).(*gocql.Session)
 }
 
-/*WithConnection takes a context and adds a connection value to it */
+/*WithEntityConnection takes a context and adds a connection value to it */
 func WithEntityConnection(ctx context.Context, entityMetadata datastore.EntityMetadata) context.Context {
 	return WithConnection(ctx)
 }
 
+/*Close - close all the connections in the context */
 func Close(ctx context.Context) {
 	// TODO: Is this just a NOOP or anything required?
 }

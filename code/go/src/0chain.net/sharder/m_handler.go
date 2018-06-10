@@ -2,7 +2,6 @@ package sharder
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"0chain.net/block"
@@ -23,7 +22,6 @@ func FinalizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 	if !ok {
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
-	//TODO: Store the block in file system and also persistence store
-	fmt.Printf("Received Round(%v) Block(%v)\n", b.Round, b.GetKey())
+	StoreBlock(b)
 	return true, nil
 }

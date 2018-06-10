@@ -1,4 +1,4 @@
-package block
+package blockstore
 
 import (
 	"bytes"
@@ -7,17 +7,12 @@ import (
 	"os"
 	"path/filepath"
 
+	"0chain.net/block"
 	"0chain.net/datastore"
 )
 
-/*BlockStore - an interface to read and write blocks to some storage */
-type BlockStore interface {
-	Write(b *Block) error
-	Read(hash string, round int64) (*Block, error)
-}
-
-/*FileBlockStore - a block store implementation using file system */
-type FileBlockStore struct {
+/*FSBlockStore - a block store implementation using file system */
+type FSBlockStore struct {
 	RootDirectory string
 }
 
@@ -25,30 +20,29 @@ const (
 	DIR_ROUND_RANGE = 10000000
 )
 
-var Store BlockStore
-
-/*SetupFileBlockStore - Setup a file system based block storage */
-func SetupFileBlockStore(rootDir string) {
-	Store = &FileBlockStore{RootDirectory: rootDir}
+/*SetupFSBlockStore - Setup a file system based block storage */
+func SetupFSBlockStore(rootDir string) {
+	Store = &FSBlockStore{RootDirectory: rootDir}
 }
 
-func (fbs *FileBlockStore) getFileName(hash string, round int64) string {
+func (fbs *FSBlockStore) getFileName(hash string, round int64) string {
 	var dir bytes.Buffer
-	fmt.Fprintf(&dir, "%v%s%v", fbs.RootDirectory, string(os.PathSeparator), int64(round/DIR_ROUND_RANGE))
-	for i := 0; i < 8; i++ {
-		fmt.Fprintf(&dir, "%s%v", string(os.PathSeparator), hash[i:i+8])
+	fmt.Fprintf(&dir, "%s%s%v", fbs.RootDirectory, string(os.PathSeparator), int64(round/DIR_ROUND_RANGE))
+	for i := 0; i < 4; i++ {
+		fmt.Fprintf(&dir, "%s%c", string(os.PathSeparator), hash[i])
 	}
+	fmt.Fprintf(&dir, "%s%s", string(os.PathSeparator), hash[4:])
 	fmt.Fprintf(&dir, ".dat.zlib")
 	return dir.String()
 }
 
 /*GetFileName - given a block, get the file name it maps to */
-func (fbs *FileBlockStore) GetFileName(b *Block) string {
+func (fbs *FSBlockStore) GetFileName(b *block.Block) string {
 	return fbs.getFileName(b.Hash, b.Round)
 }
 
 /*Write - write the block to the file system */
-func (fbs *FileBlockStore) Write(b *Block) error {
+func (fbs *FSBlockStore) Write(b *block.Block) error {
 	fileName := fbs.GetFileName(b)
 	dir := filepath.Dir(fileName)
 	//file := filepath.Base(fileName)
@@ -65,7 +59,7 @@ func (fbs *FileBlockStore) Write(b *Block) error {
 }
 
 /*Read - read the block from the file system */
-func (fbs *FileBlockStore) Read(hash string, round int64) (*Block, error) {
+func (fbs *FSBlockStore) Read(hash string, round int64) (*block.Block, error) {
 	fileName := fbs.getFileName(hash, round)
 	f, err := os.Open(fileName)
 	if err != nil {
@@ -77,7 +71,7 @@ func (fbs *FileBlockStore) Read(hash string, round int64) (*Block, error) {
 		return nil, err
 	}
 	defer r.Close()
-	var b Block
+	var b block.Block
 	err = datastore.ReadJSON(r, &b)
 	if err != nil {
 		return nil, err

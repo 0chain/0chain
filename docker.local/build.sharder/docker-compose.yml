@@ -5,7 +5,10 @@ services:
     networks:
       - default
     volumes:
-      - ../sharder${SHARDER}/data:/var/lib/cassandra
+      - ../sharder${SHARDER}/data/cassandra:/var/lib/cassandra
+      - ../../sql:/0chain/sql
+    ports:
+      - "9042:9042"
     healthcheck:
       test: ["CMD-SHELL", "[ $$(nodetool statusgossip) = running ]"]
       interval: 30s
@@ -23,6 +26,7 @@ services:
       dockerfile: ./docker.local/build.sharder/Dockerfile
     volumes:
       - ../config:/0chain/config
+      - ../sharder${SHARDER}/data:/0chain/data
     ports:
       - "717${SHARDER}:717${SHARDER}"
     networks:
