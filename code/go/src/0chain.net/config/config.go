@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"0chain.net/common"
+	"github.com/spf13/viper"
 )
 
 /*Config - all the config options passed from the command line*/
@@ -17,9 +18,20 @@ type Config struct {
 /*Configuration of the system */
 var Configuration Config
 
+func init() {
+	viper.SetConfigName("0chainConfig")
+	viper.AddConfigPath(".")
+	err := viper.ReadInConfig()
+	if err != nil {
+		panic(fmt.Errorf("Fatal error cannot read the config file: %s \n", err))
+	}
+}
+
 /*TestNet is the program running in TestNet mode? */
 func TestNet() bool {
+
 	return Configuration.TestMode
+
 }
 
 /*ErrSupportedChain error for indicating which chain is supported by the server */
@@ -52,6 +64,12 @@ func GetServerChainID() string {
 		return MAIN_CHAIN
 	}
 	return ServerChainID
+}
+
+/*GetServerChainBlockSize - get the block size as specified in the config file */
+func GetServerChainBlockSize() int32 {
+	BlockSize := viper.GetInt32("BlockSize")
+	return BlockSize
 }
 
 /*ValidChain - Is this the chain this server is supposed to process? */
