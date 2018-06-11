@@ -7,8 +7,10 @@ import (
 	"0chain.net/block"
 	"0chain.net/common"
 	"0chain.net/datastore"
+	. "0chain.net/logging"
 	"0chain.net/node"
 	"0chain.net/persistencestore"
+	"go.uber.org/zap"
 )
 
 /*SetupM2SReceivers - setup handlers for all the messages received from the miner */
@@ -22,6 +24,12 @@ func FinalizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 	if !ok {
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
-	StoreBlock(b)
+	err := StoreBlock(ctx, b)
+	if err != nil {
+		Logger.Info("save block failed", zap.Any("round", b.Round), zap.Any("hash", b.Hash), zap.Error(err))
+		return false, err
+	}
+	sender := node.GetSender(ctx)
+	Logger.Info("saved block", zap.Any("sender_set_index", sender.SetIndex), zap.Any("round", b.Round), zap.Any("hash", b.Hash), zap.Any("prev_hash", b.PrevHash))
 	return true, nil
 }

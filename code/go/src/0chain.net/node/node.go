@@ -40,9 +40,9 @@ var (
 )
 
 var (
-	NodeTypeMiner   = 1
-	NodeTypeSharder = 2
-	NodeTypeBlobber = 3
+	NodeTypeMiner   = 0
+	NodeTypeSharder = 1
+	NodeTypeBlobber = 2
 )
 
 var NodeTypeNames []*common.Lookup = common.CreateLookups("m", "Miner", "s", "Sharder", "b", "Blobber")

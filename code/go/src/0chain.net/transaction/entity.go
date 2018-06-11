@@ -122,6 +122,11 @@ func (t *Transaction) GetCollectionName() string {
 	return txnEntityCollection.GetCollectionName(t.ChainID)
 }
 
+/*GetHash - return the hash of the transaction */
+func (t *Transaction) GetHash() string {
+	return t.Hash
+}
+
 /*GetClient - get the Client object associated with the transaction */
 func (t *Transaction) GetClient(ctx context.Context) (*client.Client, error) {
 	co := &client.Client{}

@@ -5,6 +5,7 @@ import (
 	"0chain.net/datastore"
 )
 
+/*TransactionSummary - the summary of the transaction */
 type TransactionSummary struct {
 	datastore.VersionField
 	datastore.CreationDateField
@@ -22,10 +23,6 @@ func TransactionSummaryProvider() datastore.Entity {
 	t.Version = "1.0"
 	t.CreationDate = common.Now()
 	return t
-}
-
-func (t *TransactionSummary) GetEntityName() string {
-	return "txn_summary"
 }
 
 func (t *TransactionSummary) GetEntityMetadata() datastore.EntityMetadata {

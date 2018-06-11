@@ -42,6 +42,20 @@ func TestMerkleTreeGetNVerifyPath(t *testing.T) {
 	}
 }
 
+func TestMerkleTreeSetTree(t *testing.T) {
+	txns := make([]Hashable, 100)
+	for i := 0; i < len(txns); i++ {
+		txns[i] = &Txn{hash: fmt.Sprintf("%v", 1001-i)}
+	}
+	var mt MerkleTreeI = &MerkleTree{}
+	mt.ComputeTree(txns)
+	var mt2 MerkleTreeI = &MerkleTree{}
+	mt2.SetTree(len(txns), mt.GetTree())
+	if mt.GetRoot() != mt2.GetRoot() {
+		t.Errorf("Merkle roots didn't match")
+	}
+}
+
 func BenchmarkMerkleTreeComputeTree(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		txns := make([]Hashable, 10000)

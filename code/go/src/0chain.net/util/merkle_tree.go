@@ -54,6 +54,7 @@ func (mt *MerkleTree) GetTree() []string {
 
 /*SetTree - set the entire merkle tree */
 func (mt *MerkleTree) SetTree(leaves int, tree []string) {
+	mt.tree = tree
 	mt.computeOffsets(leaves)
 }
 

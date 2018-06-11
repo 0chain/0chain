@@ -5,6 +5,7 @@ import (
 	"0chain.net/datastore"
 )
 
+/*BlockSummary - the summary of the block */
 type BlockSummary struct {
 	datastore.VersionField
 	datastore.CreationDateField
@@ -23,10 +24,7 @@ func BlockSummaryProvider() datastore.Entity {
 	return b
 }
 
-func (b *BlockSummary) GetEntityName() string {
-	return "block_summary"
-}
-
+/*GetEntityMetadata - implement interface */
 func (b *BlockSummary) GetEntityMetadata() datastore.EntityMetadata {
 	return blockSummaryEntityMetadata
 }
