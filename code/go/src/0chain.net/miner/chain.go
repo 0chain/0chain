@@ -9,9 +9,11 @@ import (
 	"0chain.net/chain"
 	"0chain.net/common"
 	"0chain.net/datastore"
+	. "0chain.net/logging"
 	"0chain.net/memorystore"
 	"0chain.net/node"
 	"0chain.net/round"
+	"go.uber.org/zap"
 )
 
 var ErrRoundMismatch = common.NewError("round_mismatch", "Current round number of the chain doesn't match the block generation round")
@@ -32,10 +34,9 @@ func GetMinerChain() *Chain {
 	return minerChain
 }
 
-/*Chain - A miner chain is a chain that also tracks all the speculative SpeculativeChains and Blocks */
+/*Chain - A miner chain to manage the miner activities */
 type Chain struct {
 	chain.Chain
-	SpeculativeChains   []*block.Block
 	Blocks              map[datastore.Key]*block.Block
 	BlockMessageChannel chan *BlockMessage
 	roundsMutex         *sync.Mutex
@@ -113,15 +114,29 @@ func (mc *Chain) DeleteRound(ctx context.Context, r *round.Round) {
 	delete(mc.rounds, r.Number)
 }
 
+/*GetBlockToExtend - Get the block to extend from the given round */
+func (mc *Chain) GetBlockToExtend(r *round.Round) *block.Block {
+	//TODO: We need to ensure the block exists but also that it has received the notarization
+	if r.Block != nil {
+		return r.Block
+	}
+	return nil
+}
+
 /*GenerateRoundBlock - given a round number generates a block*/
 func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *round.Round) (*block.Block, error) {
 	pround := mc.GetRound(r.Number - 1)
 	if pround == nil {
 		return nil, common.NewError("invalid_round,", "Round not available")
 	}
+	pb := mc.GetBlockToExtend(pround)
+	if pb == nil {
+		Logger.Error("block generation failed", zap.Any("round", r.Number))
+		return nil, common.NewError("block_gen_no_block_to_extend", "Do not have the block to extend this round")
+	}
 	b := datastore.GetEntityMetadata("block").Instance().(*block.Block)
 	b.ChainID = mc.ID
-	b.SetPreviousBlock(pround.Block)
+	b.SetPreviousBlock(pb)
 	err := mc.GenerateBlock(ctx, b)
 	if err != nil {
 		return nil, err
