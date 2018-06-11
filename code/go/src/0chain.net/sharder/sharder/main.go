@@ -67,6 +67,7 @@ func main() {
 	testMode := flag.Bool("test", false, "test mode?")
 	nodesFile := flag.String("nodes_file", "config/single_node.txt", "nodes_file")
 	keysFile := flag.String("keys_file", "config/single_node_sharder_keys.txt", "keys_file")
+	induceDelay := flag.Bool("induce_delay", false, "induce_delay")
 	flag.Parse()
 
 	if *testMode {
@@ -88,6 +89,7 @@ func main() {
 	config.Configuration.Port = *port
 	config.Configuration.ChainID = *chainID
 	config.Configuration.TestMode = *testMode
+	config.Configuration.InduceDelay = *induceDelay
 
 	reader, err := os.Open(*keysFile)
 	if err != nil {

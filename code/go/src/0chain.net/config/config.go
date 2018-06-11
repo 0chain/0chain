@@ -2,16 +2,15 @@ package config
 
 import (
 	"fmt"
-
-	"0chain.net/common"
 )
 
 /*Config - all the config options passed from the command line*/
 type Config struct {
-	Host     string
-	Port     int
-	ChainID  string
-	TestMode bool
+	Host        string
+	Port        int
+	ChainID     string
+	TestMode    bool
+	InduceDelay bool
 }
 
 /*Configuration of the system */
@@ -43,7 +42,7 @@ func SetServerChainID(chain string) {
 	} else {
 		ServerChainID = chain
 	}
-	ErrSupportedChain = common.NewError("supported_chain", fmt.Sprintf("chain %v is not supported by this server", chain))
+	ErrSupportedChain = fmt.Errorf("chain %v is not supported by this server", chain)
 }
 
 /*GetServerChainID - get the chain this server is responsible for processing */
@@ -61,4 +60,9 @@ func ValidChain(chain string) error {
 		return nil
 	}
 	return ErrSupportedChain
+}
+
+/*InduceDelay - indicates if artificial delay should be induced to test resiliance */
+func InduceDelay() bool {
+	return Configuration.InduceDelay
 }

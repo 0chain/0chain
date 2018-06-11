@@ -107,6 +107,7 @@ func (np *Pool) SendAtleast(numNodes int, handler SendHandler) []*Node {
 	for i := 0; i < numWorkers; i++ {
 		go func() {
 			for node := range sendBucket {
+				common.InduceDelay()
 				valid := handler(node)
 				if valid {
 					validBucket <- node
@@ -351,6 +352,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF) common
 		} else {
 			ctx = WithNode(ctx, sender)
 		}
+		common.InduceDelay()
 		data, err := handler(ctx, entity)
 		common.Respond(w, data, err)
 	}
