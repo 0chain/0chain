@@ -82,6 +82,7 @@ func main() {
 	serverChain.BlockSize = 10000
 
 	chain.SetServerChain(serverChain)
+	sharder.SetupSharderChain(serverChain)
 
 	config.Configuration.Host = *host
 	config.Configuration.Port = *port
@@ -152,6 +153,7 @@ func main() {
 	node.SetupN2NHandlers()
 	serverChain.SetupNodeHandlers()
 	sharder.SetupM2SReceivers()
+	sharder.SetupWorkers()
 
 	initServer()
 	initHandlers()
