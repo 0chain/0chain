@@ -7,6 +7,8 @@
 **/bin/
 !docker.local/bin/
 **/pkg/
+**github.com/
+**golang.org/
 **/go/sign
 **/go/miner
 **/go/sharder
