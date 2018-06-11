@@ -27,8 +27,6 @@ type UnverifiedBlockBody struct {
 
 	// The entire transaction payload to represent full block
 	Txns []*transaction.Transaction `json:"transactions,omitempty"`
-
-	MerkleTree []string `json:"merkle_tree,omitempty"`
 }
 
 /*Block - data structure that holds the block data */
@@ -185,11 +183,6 @@ func (b *Block) GetVerificationTicketsCount() int {
 
 /*GetMerkleTree - return the merkle tree of this block using the transactions as leaf nodes */
 func (b *Block) GetMerkleTree() *util.MerkleTree {
-	if len(b.MerkleTree) > 0 {
-		var mt util.MerkleTree
-		mt.SetTree(len(b.Txns), b.MerkleTree)
-		return &mt
-	}
 	var hashables = make([]util.Hashable, len(b.Txns))
 	for idx, txn := range b.Txns {
 		hashables[idx] = txn
@@ -202,7 +195,6 @@ func (b *Block) GetMerkleTree() *util.MerkleTree {
 /*ComputeHash - compute the hash of the block */
 func (b *Block) ComputeHash() string {
 	mt := b.GetMerkleTree()
-	b.MerkleTree = mt.GetTree()
 	return mt.GetRoot()
 }
 
