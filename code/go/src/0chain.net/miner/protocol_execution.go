@@ -75,17 +75,10 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block) error {
 	}
 	if idx != mc.BlockSize {
 		b.Txns = nil
-		return common.NewError("insufficient_txns", "Not sufficient txns to make a block yet\n")
+		return common.NewError("insufficient_txns", fmt.Sprintf("Not sufficient txns to make a block yet for round %v", b.Round))
 	}
 
 	client.GetClients(ctx, clients)
-	Logger.Info("time to assemble block", zap.Any("block", b.Hash), zap.Any("time", time.Since(start)))
-	updateTxnsToPending(ctx, etxns)
-	Logger.Info("time to assemble + write block", zap.Any("block", b.Hash), zap.Any("time", time.Since(start)))
-	b.HashBlock()
-	b.Signature, err = self.Sign(b.Hash)
-
-	//TODO: After the hashblock is done with the txn hashes, the publickey/clientid switch can move right after GetClients
 	for _, txn := range b.Txns {
 		client := clients[txn.ClientID]
 		if client == nil {
@@ -94,10 +87,18 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block) error {
 		txn.PublicKey = client.PublicKey
 		txn.ClientID = datastore.EmptyKey
 	}
+	Logger.Info("time to assemble block", zap.Any("block", b.Hash), zap.Any("time", time.Since(start)))
+
+	updateTxnsToPending(ctx, etxns)
+	Logger.Info("time to assemble + update transaction state", zap.Any("block", b.Hash), zap.Any("time", time.Since(start)))
+
+	b.HashBlock()
+	b.Signature, err = self.Sign(b.Hash)
 	if err != nil {
 		return err
 	}
-	Logger.Info("time to assemble+write+sign block", zap.Any("block", b.Hash), zap.Any("time", time.Since(start)))
+
+	Logger.Info("time to assemble+update+sign block", zap.Any("block", b.Hash), zap.Any("time", time.Since(start)))
 	mc.AddToVerification(ctx, b)
 	return nil
 }
@@ -230,7 +231,8 @@ func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *round.Round, b *b
 				nr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 				nr.Number = r.Number + 1
 				nr.RandomSeed = rand.New(rand.NewSource(r.RandomSeed)).Int63()
-				go mc.startNewRound(ctx, nr)
+				// Even if the context is cancelled, we want to proceed with the next round, hence start with a root context
+				go mc.startNewRound(common.GetRootContext(), nr)
 				mc.Miners.SendAll(RoundStartSender(nr))
 			}
 			pr := mc.GetRound(r.Number - 1)

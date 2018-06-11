@@ -24,7 +24,7 @@ func (ms *Store) IterateCollection(ctx context.Context, entityMetadata datastore
 	for idx := 0; true; idx += BATCH_SIZE {
 		select {
 		case <-ctx.Done():
-			return common.ErrStop
+			return ctx.Err()
 		default:
 		}
 		con.Send("ZREVRANGEBYSCORE", collectionName, maxscore, 0, "LIMIT", offset, BATCH_SIZE)
@@ -37,7 +37,7 @@ func (ms *Store) IterateCollection(ctx context.Context, entityMetadata datastore
 		if len(bkeys) == 0 {
 			return nil
 		}
-		// wonder if WITHSCORES and adjusting the maxscore is more performant rather than adjusting offest
+		// TODO: wonder if WITHSCORES and adjusting the maxscore is more performant rather than adjusting offest
 		offset += len(bkeys)
 		if !ok {
 			return common.NewError("error", fmt.Sprintf("error casting data to []interface{} : %T", data))

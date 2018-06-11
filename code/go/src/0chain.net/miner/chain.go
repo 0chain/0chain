@@ -127,11 +127,12 @@ func (mc *Chain) GetBlockToExtend(r *round.Round) *block.Block {
 func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *round.Round) (*block.Block, error) {
 	pround := mc.GetRound(r.Number - 1)
 	if pround == nil {
+		Logger.Error("generate block (prior round not found)", zap.Any("round", r.Number-1))
 		return nil, common.NewError("invalid_round,", "Round not available")
 	}
 	pb := mc.GetBlockToExtend(pround)
 	if pb == nil {
-		Logger.Error("block generation failed", zap.Any("round", r.Number))
+		Logger.Error("generate block (prior block not found)", zap.Any("round", r.Number))
 		return nil, common.NewError("block_gen_no_block_to_extend", "Do not have the block to extend this round")
 	}
 	b := datastore.GetEntityMetadata("block").Instance().(*block.Block)
@@ -139,6 +140,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *round.Round) (*block
 	b.SetPreviousBlock(pb)
 	err := mc.GenerateBlock(ctx, b)
 	if err != nil {
+		Logger.Error("generate block error", zap.Error(err))
 		return nil, err
 	}
 	mc.AddBlock(b)
