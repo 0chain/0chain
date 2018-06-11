@@ -62,7 +62,6 @@ func initEntities() {
 var Chain string
 
 func main() {
-
 	LoggerInit("development", "appLogs")
 	host := flag.String("host", "", "hostname")
 	port := flag.Int("port", 7220, "port")
@@ -99,9 +98,9 @@ func main() {
 	if *testMode {
 		serverChain.BlockSize = int32(*blockSize)
 	} else {
-		serverChain.BlockSize = config.GetServerChainBlockSize()
+		// TODO: This should come from configuration
+		serverChain.BlockSize = 5000
 	}
-
 	chain.SetServerChain(serverChain)
 	miner.SetupMinerChain(serverChain)
 
@@ -164,7 +163,6 @@ func main() {
 	Logger.Info("Ready to listen to the requests")
 	startTime = time.Now().UTC()
 	log.Fatal(server.ListenAndServe())
-
 }
 
 func setupGenesisBlock() {
