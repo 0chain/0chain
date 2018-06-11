@@ -95,7 +95,7 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *Block
 	if r == nil {
 		return
 	}
-	if mc.ValidNotarization(ctx, b) {
+	if mc.IsBlockNotarized(ctx, b) {
 		return
 	}
 	err = mc.VerifyTicket(ctx, b, &msg.BlockVerificationTicket.VerificationTicket)
@@ -112,10 +112,13 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 		// TODO: If we didn't see this block so far, may be it's better to ask for it
 		return
 	}
-	r := msg.Round
-	if r.Block == nil {
-		r.Block = b
+	if err := mc.VerifyNotarization(ctx, b, msg.Notarization.VerificationTickets); err != nil {
+		return
 	}
+	r := msg.Round
+	r.CancelVerification()
+	r.Block = b
+
 	//TODO: Check this condition carefully
 	if r.Number < mc.CurrentRound-1 || r.Number > mc.CurrentRound {
 		return

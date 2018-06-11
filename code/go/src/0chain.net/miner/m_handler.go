@@ -97,7 +97,6 @@ func NotarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (i
 		//TODO: Should we implicitly start a round?
 		return nil, common.InvalidRequest("Not started this round yet")
 	}
-	r.CancelVerification()
 	msg := &BlockMessage{Sender: node.GetSender(ctx), Type: MessageNotarization, Round: r, Notarization: notarization}
 	GetMinerChain().GetBlockMessageChannel() <- msg
 	return true, nil

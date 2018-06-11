@@ -25,10 +25,10 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *round.Roun
 			fmt.Printf("DEBUG: verify round block error: %v\n", err)
 			return false
 		}
-		mc.ProcessVerifiedTicket(ctx, r, b, &bvt.VerificationTicket)
 		if b.MinerID != node.Self.GetKey() {
 			mc.SendVerificationTicket(ctx, b, bvt)
 		}
+		mc.ProcessVerifiedTicket(ctx, r, b, &bvt.VerificationTicket)
 		return true
 	}
 	var blocks = make([]*block.Block, 0, 10)

@@ -30,7 +30,8 @@ type ProtocolExecution interface {
 	VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockVerificationTicket, error)
 	VerifyTicket(ctx context.Context, b *block.Block, vt *block.VerificationTicket) error
 	AddVerificationTicket(ctx context.Context, b *block.Block, bvt *block.VerificationTicket) bool
-	VerifyNotarization(ctx context.Context, b *block.Block) error
+	IsBlockNotarized(ctx context.Context, b *block.Block) error
+	VerifyNotarization(ctx context.Context, b *block.Block, bvt []*block.VerificationTicket)
 	CancelVerification(ctx context.Context, r *round.Round)
 	Finalize(ctx context.Context, b *block.Block) error
 }

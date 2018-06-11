@@ -218,7 +218,7 @@ func validate(ctx context.Context, txns []*transaction.Transaction, cancel *bool
 /*ProcessVerifiedTicket - once a verified ticket is receiveid, do further processing with it */
 func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *round.Round, b *block.Block, vt *block.VerificationTicket) {
 	if mc.AddVerificationTicket(ctx, b, vt) {
-		if mc.ValidNotarization(ctx, b) {
+		if mc.IsBlockNotarized(ctx, b) {
 			r.Block = b
 			r.CancelVerification() // No need for further verification of any blocks
 			notarization := datastore.GetEntityMetadata("block_notarization").Instance().(*Notarization)
@@ -241,9 +241,9 @@ func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *round.Round, b *b
 	}
 }
 
-/*ReachedNotarization - Does the given number of signatures means eligible for notraization?
+/*IsBlockNotarized - Does the given number of signatures means eligible for notraization?
 TODO: For now, we just assume more than 50% */
-func (mc *Chain) ValidNotarization(ctx context.Context, b *block.Block) bool {
+func (mc *Chain) IsBlockNotarized(ctx context.Context, b *block.Block) bool {
 	numSignatures := b.GetVerificationTicketsCount()
 	if 3*numSignatures >= 2*mc.Miners.Size() {
 		return mc.IsCurrentlyWinningBlock(b)
