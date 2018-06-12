@@ -64,6 +64,7 @@ func (r *Round) AddBlock(b *block.Block) {
 		r.blocks[b.Hash] = b
 		return
 	}
+	b.RoundRandomSeed = r.RandomSeed
 	bNode := node.GetNode(b.MinerID)
 	//TODO: view change in the middle of a round will throw off the SetIndex
 	b.RoundRank = r.GetRank(bNode.SetIndex)

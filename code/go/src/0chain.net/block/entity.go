@@ -23,9 +23,9 @@ type UnverifiedBlockBody struct {
 	PrevHash                    string                `json:"prev_hash"`
 	PrevBlockVerficationTickets []*VerificationTicket `json:"prev_verification_tickets,omitempty"`
 
-	MinerID datastore.Key `json:"miner_id"`
-	Round   int64         `json:"round"`
-	ChainID datastore.Key `json:"chain_id"`
+	MinerID         datastore.Key `json:"miner_id"`
+	Round           int64         `json:"round"`
+	RoundRandomSeed int64         `json:"round_random_seed"`
 
 	// The entire transaction payload to represent full block
 	Txns []*transaction.Transaction `json:"transactions,omitempty"`
@@ -37,9 +37,10 @@ type Block struct {
 	UnverifiedBlockBody
 	VerificationTickets []*VerificationTicket `json:"verification_tickets,omitempty"`
 
-	RoundRank int    `json:"-"` // rank of the block in the round it belongs to
-	Hash      string `json:"hash"`
-	Signature string `json:"signature"`
+	ChainID   datastore.Key `json:"chain_id"`
+	RoundRank int           `json:"-"` // rank of the block in the round it belongs to
+	Hash      string        `json:"hash"`
+	Signature string        `json:"signature"`
 
 	PrevBlock *Block `json:"-"`
 

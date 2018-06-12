@@ -10,9 +10,9 @@ type BlockSummary struct {
 	datastore.VersionField
 	datastore.CreationDateField
 	datastore.NOIDField
-	Hash       string `json:"hash"`
-	MerkleRoot string `json:"merkle_root"`
-	Round      int64  `json:"round"`
+	Hash            string `json:"hash"`
+	Round           int64  `json:"round"`
+	RoundRandomSeed int64  `json:"round_random_seed"`
 }
 
 var blockSummaryEntityMetadata *datastore.EntityMetadataImpl
