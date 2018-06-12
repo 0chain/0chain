@@ -4,7 +4,7 @@ Initial Setup:
 
 1) Directory setup for miners & sharders. In the git/0chain run the following command
 
-> ./docker.local/bin/init_setup.sh
+> ./docker.local/bin/init.setup.sh
 
 2) Setup a network called testnet0 for each of these node containers to talk to each other.
 
