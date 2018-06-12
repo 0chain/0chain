@@ -1,6 +1,7 @@
 package util
 
 import (
+	"fmt"
 	"sort"
 )
 
@@ -57,10 +58,15 @@ func (mt *MerkleTree) GetTree() []string {
 }
 
 /*SetTree - set the entire merkle tree */
-func (mt *MerkleTree) SetTree(leavesCount int, tree []string) {
+func (mt *MerkleTree) SetTree(leavesCount int, tree []string) error {
+	size, levels := mt.computeSize(leavesCount)
+	if size != len(tree) {
+		return fmt.Errorf("Merkle tree with leaves %v should have size %v but only %v is given", leavesCount, size, len(tree))
+	}
+	mt.levels = levels
 	mt.tree = tree
 	mt.leavesCount = leavesCount
-	_, mt.levels = mt.computeSize(leavesCount)
+	return nil
 }
 
 /*GetLeafIndex - Get the index of the leaf node in the tree */
