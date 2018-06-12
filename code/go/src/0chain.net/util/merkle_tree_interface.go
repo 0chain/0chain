@@ -15,7 +15,7 @@ type MerkleTreeI interface {
 	GetTree() []string
 
 	//API to load an existing tree
-	SetTree(leaves int, tree []string)
+	SetTree(leavesCount int, tree []string)
 
 	// API for verification when the leaf node is known
 	GetPath(hash Hashable) []MTPathNode               // Server needs to provide this

@@ -28,9 +28,9 @@ func TestMerkleTreeComputeTree(t *testing.T) {
 }
 
 func TestMerkleTreeGetNVerifyPath(t *testing.T) {
-	txns := make([]Hashable, 100)
+	txns := make([]Hashable, 101)
 	for i := 0; i < len(txns); i++ {
-		txns[i] = &Txn{hash: fmt.Sprintf("%v", 1001-i)}
+		txns[i] = &Txn{hash: fmt.Sprintf("1000%v", i)}
 	}
 	var mt MerkleTreeI = &MerkleTree{}
 	mt.ComputeTree(txns)
