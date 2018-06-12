@@ -10,8 +10,6 @@ import (
 	"0chain.net/common"
 	"0chain.net/datastore"
 	. "0chain.net/logging"
-	"0chain.net/memorystore"
-	"0chain.net/node"
 	"0chain.net/round"
 	"go.uber.org/zap"
 )
@@ -120,82 +118,4 @@ func (mc *Chain) DeleteRound(ctx context.Context, r *round.Round) {
 		}
 	}
 	delete(mc.rounds, r.Number)
-}
-
-/*GetBlockToExtend - Get the block to extend from the given round */
-func (mc *Chain) GetBlockToExtend(r *round.Round) *block.Block {
-	//TODO: We need to ensure the block exists but also that it has received the notarization
-	if r.Block != nil {
-		return r.Block
-	}
-	return nil
-}
-
-/*GenerateRoundBlock - given a round number generates a block*/
-func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *round.Round) (*block.Block, error) {
-	pround := mc.GetRound(r.Number - 1)
-	if pround == nil {
-		Logger.Error("generate block (prior round not found)", zap.Any("round", r.Number-1))
-		return nil, common.NewError("invalid_round,", "Round not available")
-	}
-	pb := mc.GetBlockToExtend(pround)
-	if pb == nil {
-		Logger.Error("generate block (prior block not found)", zap.Any("round", r.Number))
-		return nil, common.NewError("block_gen_no_block_to_extend", "Do not have the block to extend this round")
-	}
-	b := datastore.GetEntityMetadata("block").Instance().(*block.Block)
-	b.ChainID = mc.ID
-	b.SetPreviousBlock(pb)
-	err := mc.GenerateBlock(ctx, b)
-	if err != nil {
-		Logger.Error("generate block error", zap.Error(err))
-		return nil, err
-	}
-	mc.AddBlock(b)
-	mc.SendBlock(ctx, b)
-	return b, nil
-}
-
-/*VerifyRoundBlock - given a block is verified for a round*/
-func (mc *Chain) VerifyRoundBlock(ctx context.Context, r *round.Round, b *block.Block) (*block.BlockVerificationTicket, error) {
-	if mc.CurrentRound != r.Number {
-		return nil, ErrRoundMismatch
-	}
-	if b.MinerID == node.Self.GetKey() {
-		return mc.SignBlock(ctx, b)
-	}
-	pround := mc.GetRound(b.Round - 1)
-	if pround == nil {
-		//TODO: create previous round AND request previous block from miner who sent current block for verification
-		return nil, common.NewError("invalid_round,", "Round not available")
-	}
-	prevBlock, _ := pround.GetBlock(b.PrevHash)
-	if prevBlock == nil {
-		//TODO: create previous round AND request previous block from miner who sent current block for verification
-		return nil, common.NewError("invalid_block", fmt.Sprintf("Previous block doesn't exist: %v", b.PrevHash))
-	}
-
-	/* Note: We are verifying the notrization of the previous block we have with
-	   the prev verification tickets of the current block. This is right as all the
-	   necessary verification tickets & notarization message may not have arrived to us */
-	if err := mc.VerifyNotarization(ctx, prevBlock, b.PrevBlockVerficationTickets); err != nil {
-		return nil, err
-	}
-
-	bvt, err := mc.VerifyBlock(ctx, b)
-	if err != nil {
-		return nil, err
-	}
-	return bvt, nil
-}
-
-/*UpdateFinalizedBlock - update the latest finalized block */
-func (mc *Chain) UpdateFinalizedBlock(lfb *block.Block) {
-	if lfb.Hash == mc.LatestFinalizedBlock.Hash {
-		return
-	}
-	ctx := memorystore.WithConnection(context.Background())
-	for b := lfb; b != nil && b != mc.LatestFinalizedBlock; b = b.GetPreviousBlock() {
-		mc.Finalize(ctx, b)
-	}
 }

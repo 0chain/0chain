@@ -7,7 +7,6 @@ import (
 	"sort"
 
 	"0chain.net/block"
-	"0chain.net/common"
 	"0chain.net/datastore"
 	"0chain.net/node"
 )
@@ -69,7 +68,6 @@ func (r *Round) AddBlock(b *block.Block) {
 	//TODO: view change in the middle of a round will throw off the SetIndex
 	b.RoundRank = r.GetRank(bNode.SetIndex)
 	r.blocksToVerifyChannel <- b
-	r.blocks[b.Hash] = b
 }
 
 /*IsVerificationComplete - indicates if the verification process for the round is complete */
@@ -112,18 +110,6 @@ func (r *Round) ComputeRanks(n int) {
 /*GetRank - get the rank of element at the elementIdx position based on the permutation of the round */
 func (r *Round) GetRank(elementIdx int) int {
 	return r.perm[elementIdx]
-}
-
-/*GetBlock - given a hash, return the block from this round */
-func (r *Round) GetBlock(hash string) (*block.Block, error) {
-	if r.blocks == nil {
-		return nil, common.NewError("invalid_round", "Round's blocks haven't been initialized")
-	}
-	block := r.blocks[hash]
-	if block == nil {
-		return nil, common.NewError("invalid_request", "Block doesn't exist")
-	}
-	return block, nil
 }
 
 /*GetBlocksByRank - return the currently stored blocks in the order of best rank for the round */
