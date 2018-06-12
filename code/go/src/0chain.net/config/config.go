@@ -6,11 +6,11 @@ import (
 
 /*Config - all the config options passed from the command line*/
 type Config struct {
-	Host        string
-	Port        int
-	ChainID     string
-	TestMode    bool
-	InduceDelay bool
+	Host     string
+	Port     int
+	ChainID  string
+	TestMode bool
+	MaxDelay int
 }
 
 /*Configuration of the system */
@@ -62,7 +62,7 @@ func ValidChain(chain string) error {
 	return ErrSupportedChain
 }
 
-/*InduceDelay - indicates if artificial delay should be induced to test resiliance */
-func InduceDelay() bool {
-	return Configuration.InduceDelay
+/*MaxDelay - indicates the amount of artificial delay to induce for testing resilience */
+func MaxDelay() int {
+	return Configuration.MaxDelay
 }

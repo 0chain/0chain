@@ -70,7 +70,7 @@ func main() {
 	nodesFile := flag.String("nodes_file", "config/single_node.txt", "nodes_file")
 	keysFile := flag.String("keys_file", "config/single_node_miner_keys.txt", "keys_file")
 	blockSize := flag.Int("block_size", 5000, "block_size")
-	induceDelay := flag.Bool("induce_delay", false, "induce_delay")
+	maxDelay := flag.Int("max_delay", 0, "max_delay")
 	flag.Parse()
 
 	//address := fmt.Sprintf("%v:%v", *host, *port)
@@ -80,7 +80,7 @@ func main() {
 	config.Configuration.Port = *port
 	config.Configuration.ChainID = *chainID
 	config.Configuration.TestMode = *testMode
-	config.Configuration.InduceDelay = *induceDelay
+	config.Configuration.MaxDelay = *maxDelay
 
 	reader, err := os.Open(*keysFile)
 	if err != nil {

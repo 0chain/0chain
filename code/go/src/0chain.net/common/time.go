@@ -23,8 +23,8 @@ func Within(ts int64, seconds int64) bool {
 
 /*InduceDelay - induces some random delay - useful to test resilience */
 func InduceDelay() {
-	if config.TestNet() && config.InduceDelay() {
-		r := rand.Intn(1000)
+	if config.TestNet() && config.MaxDelay() > 0 {
+		r := rand.Intn(config.MaxDelay())
 		if r < 500 {
 			time.Sleep(time.Duration(r) * time.Millisecond)
 		}
