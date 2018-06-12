@@ -7,8 +7,10 @@ import (
 	"0chain.net/common"
 	"0chain.net/config"
 	"0chain.net/datastore"
+	. "0chain.net/logging"
 	"0chain.net/transaction"
 	"0chain.net/util"
+	"go.uber.org/zap"
 )
 
 /*UnverifiedBlockBody - used to compute the signature
@@ -40,6 +42,9 @@ type Block struct {
 	Signature string `json:"signature"`
 
 	PrevBlock *Block `json:"-"`
+
+	//TODO: May be this should be replaced with a bloom filter & check against sorted txns
+	TxnsMap map[string]bool `json:"-"`
 }
 
 var blockEntityMetadata *datastore.EntityMetadataImpl
@@ -202,4 +207,84 @@ func (b *Block) ComputeHash() string {
 func (b *Block) HashBlock() {
 	b.Hash = b.ComputeHash()
 	b.ID = datastore.ToKey(b.Hash)
+}
+
+/*ComputeTxnMap - organize the transactions into a hashmap for check if the txn exists*/
+func (b *Block) ComputeTxnMap() {
+	b.TxnsMap = make(map[string]bool, len(b.Txns))
+	for _, txn := range b.Txns {
+		b.TxnsMap[txn.Hash] = true
+	}
+}
+
+/*HasTransaction - check if the transaction exists in this block */
+func (b *Block) HasTransaction(hash string) bool {
+	_, ok := b.TxnsMap[hash]
+	return ok
+}
+
+/*ChainHasTransaction - indicates if this chain has the transaction */
+func (b *Block) ChainHasTransaction(txn *transaction.Transaction) (bool, error) {
+	for blk := b; blk != nil; blk = blk.PrevBlock {
+		if blk.Round == 0 {
+			return false, nil
+		}
+		if blk.HasTransaction(txn.Hash) {
+			return true, nil
+		}
+		if blk.CreationDate < txn.CreationDate {
+			return false, nil
+		}
+	}
+	return false, common.NewError("insufficient_chain", "Chain length not sufficient to confirm the presence of this transaction")
+}
+
+/*ValidateTransactions - validate the transactions in the block */
+func (b *Block) ValidateTransactions(ctx context.Context) error {
+	validate := func(ctx context.Context, txns []*transaction.Transaction, cancel *bool, validChannel chan<- bool) {
+		for _, txn := range txns {
+			err := txn.Validate(ctx)
+			if err != nil {
+				*cancel = true
+				validChannel <- false
+			}
+			ok, err := b.PrevBlock.ChainHasTransaction(txn)
+			if ok || err != nil {
+				if err != nil {
+					Logger.Error("validation transactions: chain has transactions", zap.Any("round", b.Round), zap.Any("block", b), zap.Error(err))
+				}
+				return
+			}
+			if *cancel {
+				return
+			}
+		}
+		validChannel <- true
+	}
+
+	size := 2000
+	numWorkers := len(b.Txns) / size
+	if numWorkers*size < len(b.Txns) {
+		numWorkers++
+	}
+	validChannel := make(chan bool, len(b.Txns)/size+1)
+	var cancel bool
+	for start := 0; start < len(b.Txns); start += size {
+		end := start + size
+		if end > len(b.Txns) {
+			end = len(b.Txns)
+		}
+		go validate(ctx, b.Txns[start:end], &cancel, validChannel)
+	}
+	count := 0
+	for result := range validChannel {
+		if !result {
+			return common.NewError("txn_validation_failed", "Transaction validation failed")
+		}
+		count++
+		if count == numWorkers {
+			break
+		}
+	}
+	return nil
 }

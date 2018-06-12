@@ -58,6 +58,14 @@ func (mc *Chain) IsBlockPresent(hash string) bool {
 /*AddBlock - adds a block to the cache */
 func (mc *Chain) AddBlock(b *block.Block) {
 	mc.Blocks[b.Hash] = b
+	if b.Round > 0 && b.PrevBlock == nil {
+		pb, ok := mc.Blocks[b.PrevHash]
+		if ok {
+			b.PrevBlock = pb
+		} else {
+			Logger.Error("Prev block not present", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("prev_block", b.PrevHash))
+		}
+	}
 }
 
 /*GetBlock - returns a known block for a given hash from the speculative list of blocks */

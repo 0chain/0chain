@@ -62,10 +62,11 @@ func (mc *Chain) startNewRound(ctx context.Context, r *round.Round) {
 	if !mc.AddRound(r) {
 		return
 	}
+	/* TODO: We need time based pruning which will happen when we also start building blocks with transactions that are within certain timeframe.
 	ppr := mc.GetRound(r.Number - 2)
 	if ppr != nil {
 		mc.DeleteRound(ctx, ppr)
-	}
+	} */
 	self := node.GetSelfNode(ctx)
 	rank := r.GetRank(self.SetIndex)
 	Logger.Info("*** starting round ***", zap.Any("round", r.Number), zap.Any("index", self.SetIndex), zap.Any("rank", rank))
@@ -116,8 +117,10 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 		return
 	}
 	r := msg.Round
-	r.CancelVerification()
-	r.Block = b
+	if !r.IsVerificationComplete() {
+		r.CancelVerification()
+		r.Block = b
+	}
 
 	//TODO: Check this condition carefully
 	if r.Number < mc.CurrentRound-1 || r.Number > mc.CurrentRound {

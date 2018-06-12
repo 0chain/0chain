@@ -60,6 +60,7 @@ func (r *Round) AddBlock(b *block.Block) {
 		return
 	}
 	if r.Number == 0 {
+		r.Block = b
 		r.blocks[b.Hash] = b
 		return
 	}

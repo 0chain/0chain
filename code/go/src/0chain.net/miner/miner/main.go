@@ -170,11 +170,15 @@ func main() {
 func setupGenesisBlock() {
 	mc := miner.GetMinerChain()
 	gb := mc.GenerateGenesisBlock()
+	if gb == nil {
+		panic("Genesis block canot be null")
+	}
 	gr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 	gr.Number = 0
 	gr.Block = gb
 	gr.AddBlock(gb)
 	mc.AddRound(gr)
+	mc.AddBlock(gb)
 }
 
 /*StartChainHandler - start the chain if it's at Genesis round */

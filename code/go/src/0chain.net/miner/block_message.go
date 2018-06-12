@@ -26,6 +26,7 @@ type BlockMessage struct {
 
 var messageLookups = common.CreateLookups("start_round", "Start Round", "verify_block", "Verify Block", "verification_ticket", "Verification Ticket", "notarization", "Notarization")
 
+/*GetMessageLookup - get the message type lookup */
 func GetMessageLookup(msgType int) *common.Lookup {
 	return messageLookups[msgType]
 }

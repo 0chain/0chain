@@ -2,12 +2,13 @@ package miner
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"0chain.net/block"
+	. "0chain.net/logging"
 	"0chain.net/node"
 	"0chain.net/round"
+	"go.uber.org/zap"
 )
 
 const BLOCK_TIME = 300 * time.Millisecond
@@ -22,7 +23,7 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *round.Roun
 		bvt, err := mc.VerifyRoundBlock(ctx, r, b)
 		if err != nil {
 			r.Block = pb
-			fmt.Printf("DEBUG: verify round block error: %v\n", err)
+			Logger.Error("verify round block", zap.Any("round", r.Number), zap.Any("block", b.Hash), zap.Error(err))
 			return false
 		}
 		if b.MinerID != node.Self.GetKey() {
@@ -53,7 +54,7 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *round.Roun
 				if r.Block == nil || b.RoundRank < r.Block.RoundRank {
 					verifyAndSend(ctx, r, b)
 				}
-			} else { // Accumulate all the blocks till the BlockTime time out into this array
+			} else { // Accumulate all the blocks into this array till the BlockTime timeout
 				blocks = append(blocks, b)
 			}
 		}

@@ -37,12 +37,18 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block) error {
 		panic("Invalid setup, could not find the self node")
 	}
 	b.MinerID = self.ID
+	var ierr error
 	var txnIterHandler = func(ctx context.Context, qe datastore.CollectionEntity) bool {
 		txn, ok := qe.(*transaction.Transaction)
 		if !ok {
 			return true
 		}
-
+		if ok, err := b.PrevBlock.ChainHasTransaction(txn); ok || err != nil {
+			if err != nil {
+				ierr = err
+			}
+			return true
+		}
 		if txn.Status != transaction.TXN_STATUS_FREE {
 			return true
 		}
@@ -70,6 +76,9 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block) error {
 	//TODO: remove timing code later (or make it applicable to test mode)
 	start := time.Now()
 	err := transactionEntityMetadata.GetStore().IterateCollection(ctx, transactionEntityMetadata, collectionName, txnIterHandler)
+	if ierr != nil {
+		Logger.Error("transaction reinclusion check", zap.Any("round", b.Round), zap.Error(ierr))
+	}
 	if err != nil {
 		return err
 	}
@@ -100,6 +109,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block) error {
 
 	Logger.Info("time to assemble+update+sign block", zap.Any("block", b.Hash), zap.Any("time", time.Since(start)))
 	mc.AddToVerification(ctx, b)
+	go b.ComputeTxnMap()
 	return nil
 }
 
@@ -110,27 +120,25 @@ func updateTxnsToPending(ctx context.Context, txns []datastore.Entity) {
 
 /*AddToVerification - Add a block to verify : WARNING: does not support concurrent access for a given round */
 func (mc *Chain) AddToVerification(ctx context.Context, b *block.Block) {
+	mc.AddBlock(b)
 	r := mc.GetRound(b.Round)
-	if r != nil {
-		if r.IsVerificationComplete() {
-			return
-		}
-	} else {
+	if r == nil {
 		// TODO: This can happen because
 		// 1) This is past round that is no longer applicable - reject it
 		// 2) This is a future round we didn't know about yet as our network is slow or something
 		// 3) The verify message received before the start round message
+		// WARNING: Because of this, we don't know the ranks of the round as we don't have the seed in this implementation
 		r = datastore.GetEntityMetadata("round").Instance().(*round.Round)
 		r.Number = b.Round
 		mc.AddRound(r)
 	}
-	mc.AddBlock(b)
 	r.StartVerificationBlockCollection(ctx, mc.CollectBlocksForVerification)
 	r.AddBlock(b)
 }
 
 /*VerifyBlock - given a set of transaction ids within a block, validate the block */
 func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockVerificationTicket, error) {
+	start := time.Now()
 	err := b.Validate(ctx)
 	if err != nil {
 		return nil, err
@@ -151,37 +159,15 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockV
 	} else if !ok {
 		return nil, common.NewError("signature invalid", "The block wasn't signed correctly")
 	}
-	size := 2000
-	numWorkers := len(b.Txns) / size
-	if numWorkers*size < len(b.Txns) {
-		numWorkers++
-	}
-	validChannel := make(chan bool, len(b.Txns)/size+1)
-	var cancel bool
-	start := time.Now()
-	for start := 0; start < len(b.Txns); start += size {
-		end := start + size
-		if end > len(b.Txns) {
-			end = len(b.Txns)
-		}
-		go validate(ctx, b.Txns[start:end], &cancel, validChannel)
-	}
-	count := 0
-	for result := range validChannel {
-		if !result {
-			fmt.Printf("Block verification time due to failure:%v\n", time.Since(start))
-			return nil, common.NewError("txn_validation_failed", "Transaction validation failed")
-		}
-		count++
-		if count == numWorkers {
-			break
-		}
+	err = b.ValidateTransactions(ctx)
+	if err != nil {
+		return nil, err
 	}
 	bvt, err := mc.SignBlock(ctx, b)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("Block verification time(%v,%v):%v\n", len(b.Txns), numWorkers, time.Since(start))
+	Logger.Info("Block verification time", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("num_txns", len(b.Txns)), zap.Any("duration", time.Since(start)))
 	return bvt, nil
 }
 
@@ -200,20 +186,6 @@ func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (*block.BlockVer
 		return nil, err
 	}
 	return bvt, nil
-}
-
-func validate(ctx context.Context, txns []*transaction.Transaction, cancel *bool, validChannel chan<- bool) {
-	for _, txn := range txns {
-		err := txn.Validate(ctx)
-		if err != nil {
-			*cancel = true
-			validChannel <- false
-		}
-		if *cancel {
-			return
-		}
-	}
-	validChannel <- true
 }
 
 /*ProcessVerifiedTicket - once a verified ticket is receiveid, do further processing with it */
