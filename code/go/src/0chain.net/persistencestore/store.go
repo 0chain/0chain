@@ -110,30 +110,26 @@ func (ps *Store) MultiRead(ctx context.Context, entityMetadata datastore.EntityM
 
 func (ps *Store) multiReadAux(ctx context.Context, entityMetadata datastore.EntityMetadata, keys []datastore.Key, entities []datastore.Entity) error {
 	ikeys := make([]interface{}, len(keys))
-	keyIdx := make(map[datastore.Key]int)
 	for idx, key := range keys {
-		keyIdx[key] = idx
 		ikeys[idx] = key
+		entities[idx].SetKey(datastore.EmptyKey)
 	}
 	c := GetCon(ctx)
 	iter := c.Query(getJSONSelectN(entityMetadata.GetName(), entityMetadata.GetIDColumnName(), len(keys)), ikeys...).Iter()
 	var json string
-	oentities := make([]datastore.Entity, len(keys))
+	keyIdx := make(map[datastore.Key]datastore.Entity)
 	for i := 0; i < len(keys); i++ {
 		valid := iter.Scan(&json)
 		if !valid {
-			return common.NewError("not_all_keys_found", "Did not find entities for all the keys")
+			break
+			//return common.NewError("not_all_keys_found", "Did not find entities for all the keys")
 		}
 		datastore.FromJSON(json, entities[i])
-		oentities[keyIdx[entities[i].GetKey()]] = entities[i]
+		keyIdx[entities[i].GetKey()] = entities[i]
 	}
-	for idx := range keys {
-		if oentities[idx] == nil {
-			//If we didn't fetch an object we set it's entity key to empty
-			entities[idx].SetKey(datastore.EmptyKey)
-		} else {
-			entities[idx] = oentities[idx]
-		}
+	// We may have gotten fewer rows , so we are mapping to the same sequences as keys
+	for idx, key := range keys {
+		entities[idx] = keyIdx[key]
 	}
 	return nil
 }

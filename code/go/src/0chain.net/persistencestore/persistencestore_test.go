@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"0chain.net/block"
 	"0chain.net/common"
@@ -96,10 +97,12 @@ func TestMultiWrite(t *testing.T) {
 
 func TestMultiRead(t *testing.T) {
 	blockEntityMetadata := datastore.GetEntityMetadata("block_summary")
-	blocks := datastore.AllocateEntities(1000, blockEntityMetadata)
+	blocks := datastore.AllocateEntities(BATCH_SIZE, blockEntityMetadata)
 	ctx := context.Background()
+	start := time.Now()
 	ctx = WithEntityConnection(ctx, blockEntityMetadata)
 	store := GetStorageProvider()
+	fmt.Printf("debug : %v\n", time.Since(start))
 	keys := make([]datastore.Key, len(blocks))
 	for idx := range keys {
 		keys[idx] = datastore.ToKey(fmt.Sprintf("test_multi_insert_%v", idx))
@@ -108,6 +111,10 @@ func TestMultiRead(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error reading the entity: %v\n", err.Error())
 	} else {
-		t.Logf("Entity: %v\n%v\n", datastore.ToJSON(blocks[0]), datastore.ToJSON(blocks[1]))
+		for idx, key := range keys {
+			if key != blocks[idx].GetKey() {
+				t.Logf("Entity: %v %v %v\n", idx, key, datastore.ToJSON(blocks[idx]))
+			}
+		}
 	}
 }

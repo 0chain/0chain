@@ -7,7 +7,9 @@ import (
 
 	"0chain.net/common"
 	"0chain.net/datastore"
+	. "0chain.net/logging"
 	"github.com/gocql/gocql"
+	"go.uber.org/zap"
 )
 
 //KeySpace - the keyspace usef for the 0chain data
@@ -25,12 +27,19 @@ func InitSession() {
 	} else {
 		cluster = gocql.NewCluster("127.0.0.1")
 	}
+
+	// This reduces the time to create the session from 9+ seconds to 5 seconds when running the tests.
+	//cluster.DisableInitialHostLookup = true
+
 	cluster.Keyspace = KeySpace
 	//TODO: Till we can have healthcheck in docker compose to work, we will keep waiting in the server code
 	delay := time.Second
 	for tries := 0; tries <= 40; tries++ {
+		start := time.Now()
 		Session, err = cluster.CreateSession()
+		Logger.Info("time to creation cassandra session", zap.Any("duration", time.Since(start)))
 		if err != nil {
+			Logger.Error("error creating session", zap.Any("retry", tries))
 			time.Sleep(delay)
 		} else {
 			break
