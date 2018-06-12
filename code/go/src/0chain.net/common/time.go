@@ -21,10 +21,12 @@ func Within(ts int64, seconds int64) bool {
 	return now > ts-seconds && now < ts+seconds
 }
 
+var randGenerator = rand.New(rand.NewSource(time.Now().UnixNano()))
+
 /*InduceDelay - induces some random delay - useful to test resilience */
 func InduceDelay() {
 	if config.TestNet() && config.MaxDelay() > 0 {
-		r := rand.Intn(config.MaxDelay())
+		r := randGenerator.Intn(config.MaxDelay())
 		if r < 500 {
 			time.Sleep(time.Duration(r) * time.Millisecond)
 		}
