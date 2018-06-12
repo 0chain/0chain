@@ -5,4 +5,4 @@ SHARDER_ID=`echo $SHARDER_DIR | sed -e 's/.*\(.\)$/\1/'`
 
 echo Starting sharder$SHARDER_ID ...
 
-SHARDER=$SHARDER_ID docker-compose -p sharder$SHARDER -f ../build.sharder/docker-compose.yml up
+SHARDER=$SHARDER_ID docker-compose -p sharder$SHARDER_ID -f ../build.sharder/docker-compose.yml up
