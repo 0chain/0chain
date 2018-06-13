@@ -21,6 +21,7 @@ import (
 	"0chain.net/memorystore"
 	"0chain.net/node"
 	"0chain.net/persistencestore"
+	"0chain.net/round"
 	"0chain.net/sharder"
 	"0chain.net/transaction"
 	"go.uber.org/zap"
@@ -46,8 +47,10 @@ func initHandlers() {
 func initEntities() {
 	//TODO: For now using memory storage, but we don't need it.
 	memoryStorage := memorystore.GetStorageProvider()
-	block.SetupEntity(memoryStorage)
 	chain.SetupEntity(memoryStorage)
+	round.SetupEntity(memoryStorage)
+	block.SetupEntity(memoryStorage)
+
 	client.SetupEntity(memoryStorage)
 	transaction.SetupEntity(memoryStorage)
 

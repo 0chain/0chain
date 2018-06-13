@@ -7,7 +7,7 @@ import (
 
 var sharderChain = &Chain{}
 
-/*SetupMinerChain - setup the miner's chain */
+/*SetupSharderChain - setup the miner's chain */
 func SetupSharderChain(c *chain.Chain) {
 	sharderChain.Chain = *c
 	sharderChain.BlockChannel = make(chan *block.Block, 1024)
