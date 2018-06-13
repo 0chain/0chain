@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"sort"
+	"sync"
 
 	"0chain.net/block"
 	"0chain.net/datastore"
@@ -27,12 +28,12 @@ type Round struct {
 
 	perm []int
 
-	// All blocks in a given round
-	blocks map[datastore.Key]*block.Block
-
 	blocksToVerifyChannel chan *block.Block
 
 	verificationCancelf context.CancelFunc
+
+	notarizedBlocks      []*block.Block
+	notarizedBlocksMutex *sync.Mutex
 
 	verificationComplete bool
 	finalized            bool
@@ -60,7 +61,6 @@ func (r *Round) AddBlock(b *block.Block) {
 	}
 	if r.Number == 0 {
 		r.Block = b
-		r.blocks[b.Hash] = b
 		return
 	}
 	b.RoundRandomSeed = r.RandomSeed
@@ -68,6 +68,24 @@ func (r *Round) AddBlock(b *block.Block) {
 	//TODO: view change in the middle of a round will throw off the SetIndex
 	b.RoundRank = r.GetRank(bNode.SetIndex)
 	r.blocksToVerifyChannel <- b
+}
+
+/*AddNotarizedBlock - this will be concurrent as notarization is recognized by verifying as well as notarization message from others */
+func (r *Round) AddNotarizedBlock(b *block.Block) bool {
+	for _, blk := range r.notarizedBlocks {
+		if blk.Hash == b.Hash {
+			return false
+		}
+	}
+	r.notarizedBlocksMutex.Lock()
+	defer r.notarizedBlocksMutex.Unlock()
+	for _, blk := range r.notarizedBlocks {
+		if blk.Hash == b.Hash {
+			return false
+		}
+	}
+	r.notarizedBlocks = append(r.notarizedBlocks, b)
+	return true
 }
 
 /*IsVerificationComplete - indicates if the verification process for the round is complete */
@@ -88,8 +106,9 @@ func (r *Round) IsFinalized() bool {
 /*Provider - entity provider for client object */
 func Provider() datastore.Entity {
 	r := &Round{}
-	r.blocks = make(map[datastore.Key]*block.Block)
 	r.blocksToVerifyChannel = make(chan *block.Block, 200)
+	r.notarizedBlocks = make([]*block.Block, 0, 1)
+	r.notarizedBlocksMutex = &sync.Mutex{}
 	return r
 }
 
@@ -129,7 +148,7 @@ func (r *Round) GetBlocksToVerifyChannel() chan *block.Block {
  */
 type CollectionFunc func(ctx context.Context, r *Round)
 
-/*CollectionBlocks - an interface that starts collecting and verifying blocks */
+/*CollectBlocks - an interface that starts collecting and verifying blocks */
 type CollectBlocks interface {
 	CollectionBlocksForVerification(ctx context.Context, r *Round)
 }

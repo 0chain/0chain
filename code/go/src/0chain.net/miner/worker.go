@@ -3,7 +3,6 @@ package miner
 import (
 	"context"
 
-	"0chain.net/block"
 	"0chain.net/common"
 	"0chain.net/datastore"
 	. "0chain.net/logging"
@@ -126,20 +125,11 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 	if r.Number < mc.CurrentRound-1 || r.Number > mc.CurrentRound {
 		return
 	}
+	r.AddNotarizedBlock(b)
 	pr := mc.GetRound(b.Round - 1)
 	if pr != nil {
-		if pr.Number != 0 && pr.Block != nil && !pr.IsFinalized() {
-			mc.FinalizeBlock(ctx, pr.Block)
+		if pr.Number != 0 && pr.Block != nil {
+			mc.FinalizeRoundBlock(ctx, pr)
 		}
 	}
-}
-
-/*FinalizeBlock - finalize a block */
-func (mc *Chain) FinalizeBlock(ctx context.Context, b *block.Block) {
-	Logger.Info("finalizing block", zap.Any("hash", b.Hash))
-	txnEntityMetadata := datastore.GetEntityMetadata("txn")
-	ctx = memorystore.WithEntityConnection(ctx, txnEntityMetadata)
-	defer memorystore.Close(ctx)
-	mc.Finalize(ctx, b)
-	mc.SendFinalizedBlock(ctx, b)
 }

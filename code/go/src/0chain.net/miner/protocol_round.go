@@ -16,6 +16,7 @@ import (
 )
 
 const BLOCK_TIME = 300 * time.Millisecond
+const FINALIZATION_TIME = 300 * time.Millisecond
 
 /*GetBlockToExtend - Get the block to extend from the given round */
 func (mc *Chain) GetBlockToExtend(r *round.Round) *block.Block {
@@ -131,6 +132,33 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r *round.Round, b *block.
 		return nil, err
 	}
 	return bvt, nil
+}
+
+/*ComputeFinalizedBlock - compute the block that has been finalized. It should be the one in the prior round */
+func (mc *Chain) ComputeFinalizedBlock(ctx context.Context, r *round.Round) (*round.Round, *block.Block) {
+	// TODO: current behavior is we are returning r.Block
+	return r, r.Block
+}
+
+/*FinalizeRoundBlock - finalize a block */
+func (mc *Chain) FinalizeRoundBlock(ctx context.Context, r *round.Round) {
+	/*TODO: This is incorrect because when we ask r to finalize, it's actually the r-1 round's block that gets finalized */
+	if r.IsFinalized() {
+		return
+	}
+	var finzalizeTimer = time.NewTimer(FINALIZATION_TIME)
+	select {
+	case <-finzalizeTimer.C:
+		break
+	}
+	fr, b := mc.ComputeFinalizedBlock(ctx, r)
+	fr.Finalize()
+	Logger.Info("finalizing block", zap.Any("round", fr), zap.Any("hash", b.Hash))
+	txnEntityMetadata := datastore.GetEntityMetadata("txn")
+	ctx = memorystore.WithEntityConnection(ctx, txnEntityMetadata)
+	defer memorystore.Close(ctx)
+	mc.Finalize(ctx, b)
+	mc.SendFinalizedBlock(ctx, b)
 }
 
 /*UpdateFinalizedBlock - update the latest finalized block */
