@@ -107,7 +107,6 @@ func (np *Pool) SendAtleast(numNodes int, handler SendHandler) []*Node {
 	for i := 0; i < numWorkers; i++ {
 		go func() {
 			for node := range sendBucket {
-				common.InduceDelay()
 				valid := handler(node)
 				if valid {
 					validBucket <- node
@@ -243,17 +242,18 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			}
 			req.Header.Set("Content-Type", "application/json; charset=utf-8")
 			SetHeaders(req, entity, options)
-			Logger.Info("sending", zap.Any("set_index", n.SetIndex), zap.Any("handler", url), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Error(err))
+			delay := common.InduceDelay()
+			Logger.Info("sending", zap.Any("from", Self.SetIndex), zap.Any("to", n.SetIndex), zap.Any("handler", url), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Any("delay", delay))
 			resp, err := client.Do(req)
 			if err != nil {
-				Logger.Error("sending", zap.Any("set_index", n.SetIndex), zap.Any("handler", url), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Error(err))
+				Logger.Error("sending", zap.Any("from", Self.SetIndex), zap.Any("to", n.SetIndex), zap.Any("handler", url), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Error(err))
 				return false
 			}
 			defer resp.Body.Close()
 			if resp.StatusCode != http.StatusOK {
 				var rbuf bytes.Buffer
 				rbuf.ReadFrom(resp.Body)
-				Logger.Error("sending", zap.Any("set_index", n.SetIndex), zap.Any("handler", url), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Any("status_code", resp.StatusCode), zap.Any("response", rbuf.String()))
+				Logger.Error("sending", zap.Any("from", Self.SetIndex), zap.Any("to", n.SetIndex), zap.Any("handler", url), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Any("status_code", resp.StatusCode), zap.Any("response", rbuf.String()))
 				return false
 			}
 			io.Copy(ioutil.Discard, resp.Body)
@@ -306,7 +306,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF) common
 		if entityMetadata == nil {
 			return
 		}
-		Logger.Info("message received", zap.Any("from", sender.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("entity", entityName), zap.Any("data", reqHashdata))
+		Logger.Info("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("entity", entityName), zap.Any("data", reqHashdata))
 		var buffer io.Reader = r.Body
 		defer r.Body.Close()
 		if r.Header.Get("Content-Encoding") == "snappy" {
@@ -352,7 +352,10 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF) common
 		} else {
 			ctx = WithNode(ctx, sender)
 		}
-		common.InduceDelay()
+		delay := common.InduceDelay()
+		if delay > 0 {
+			Logger.Info("message delayed", zap.Any("from", sender.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("entity", entityName), zap.Any("data", reqHashdata))
+		}
 		data, err := handler(ctx, entity)
 		common.Respond(w, data, err)
 	}

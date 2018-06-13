@@ -107,7 +107,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block) error {
 		return err
 	}
 
-	Logger.Info("time to assemble+update+sign block", zap.Any("block", b.Hash), zap.Any("time", time.Since(start)))
+	Logger.Info("time to assemble+update+sign block", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("time", time.Since(start)))
 	mc.AddToVerification(ctx, b)
 	go b.ComputeTxnMap()
 	return nil
@@ -130,8 +130,9 @@ func (mc *Chain) AddToVerification(ctx context.Context, b *block.Block) {
 		// WARNING: Because of this, we don't know the ranks of the round as we don't have the seed in this implementation
 		r := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 		r.Number = b.Round
+		r.RandomSeed = b.RoundRandomSeed
 		mr = mc.CreateRound(r)
-		mc.AddRound(mr)
+		mc.startNewRound(ctx, mr)
 	}
 	vctx := mr.StartVerificationBlockCollection(ctx)
 	if vctx != nil {
