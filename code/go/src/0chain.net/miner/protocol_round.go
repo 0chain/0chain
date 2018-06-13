@@ -138,40 +138,81 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r *Round, b *block.Block)
 }
 
 /*ComputeFinalizedBlock - compute the block that has been finalized. It should be the one in the prior round */
-func (mc *Chain) ComputeFinalizedBlock(ctx context.Context, r *Round) (*Round, *block.Block) {
+func (mc *Chain) ComputeFinalizedBlock(ctx context.Context, r *Round) *block.Block {
 	// TODO: current behavior is we are returning r.Block
-	return r, r.Block
+	//return r, r.Block
+	tips := r.GetNotarizedBlocks()
+	for true {
+		ntips := make([]*block.Block, 0, 1)
+		for _, b := range tips {
+			if b.Hash == mc.LatestFinalizedBlock.Hash {
+				break
+			}
+			found := false
+			for _, nb := range ntips {
+				if b.PrevHash == nb.Hash {
+					found = true
+					break
+				}
+			}
+			if found {
+				continue
+			}
+			ntips = append(ntips, b.PrevBlock)
+		}
+		tips = ntips
+		if len(tips) == 1 {
+			break
+		}
+	}
+	if len(tips) != 1 {
+		return nil
+	}
+	fb := tips[0]
+	if fb.Round == r.Number {
+		return nil
+	}
+	return fb
 }
 
-/*FinalizeRound - finalize a block */
-func (mc *Chain) FinalizeRound(ctx context.Context, r *Round) error {
+/*FinalizeRound - starting from the given round work backwards and identify the round that can be assumed to be finalized as only one chain has survived */
+func (mc *Chain) FinalizeRound(ctx context.Context, r *Round) {
 	/*TODO: This is incorrect because when we ask r to finalize, it's actually the r-1 round's block that gets finalized */
 	if r.IsFinalized() {
-		return nil
+		return
 	}
 	var finzalizeTimer = time.NewTimer(FINALIZATION_TIME)
 	select {
 	case <-finzalizeTimer.C:
 		break
 	}
-	fr, b := mc.ComputeFinalizedBlock(ctx, r)
-	fr.Finalize()
-	Logger.Info("finalizing round", zap.Any("round", fr), zap.Any("hash", b.Hash))
+	fb := mc.ComputeFinalizedBlock(ctx, r)
+	if fb == nil {
+		Logger.Info("finalization - no decisive block to finalize yet", zap.Any("round", r.Number))
+		return
+	}
+	frchain := make([]*block.Block, 0, 1)
+	for b := fb; b != nil && b.Hash != mc.LatestFinalizedBlock.Hash; b = b.PrevBlock {
+		frchain = append(frchain, b)
+	}
+	for idx := range frchain {
+		fb = frchain[len(frchain)-1-idx]
+		fr := mc.GetRound(fb.Round)
+		fr.Finalize()
+		Logger.Info("finalizing round", zap.Any("round", r.Number), zap.Any("finalized_round", fb.Round), zap.Any("hash", fb.Hash))
+		mc.UpdateFinalizedBlock(ctx, fb)
+		mc.SendFinalizedBlock(ctx, fb)
+	}
+	mc.LatestFinalizedBlock = fb
+}
+
+/*UpdateFinalizedBlock - update the latest finalized block */
+func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
+	if b.Hash == mc.LatestFinalizedBlock.Hash {
+		return
+	}
 	txnEntityMetadata := datastore.GetEntityMetadata("txn")
 	ctx = memorystore.WithEntityConnection(ctx, txnEntityMetadata)
 	defer memorystore.Close(ctx)
 	mc.FinalizeBlock(ctx, b)
-	mc.SendFinalizedBlock(ctx, b)
-	return nil
-}
-
-/*UpdateFinalizedBlock - update the latest finalized block */
-func (mc *Chain) UpdateFinalizedBlock(lfb *block.Block) {
-	if lfb.Hash == mc.LatestFinalizedBlock.Hash {
-		return
-	}
-	ctx := memorystore.WithConnection(context.Background())
-	for b := lfb; b != nil && b != mc.LatestFinalizedBlock; b = b.GetPreviousBlock() {
-		mc.FinalizeBlock(ctx, b)
-	}
 }

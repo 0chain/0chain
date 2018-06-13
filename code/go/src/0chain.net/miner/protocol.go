@@ -24,7 +24,7 @@ type ProtocolRound interface {
 	StartRound(ctx context.Context, round *Round)
 	CollectBlocksForVerification(ctx context.Context, r *Round)
 	CancelVerification(ctx context.Context, r *Round)
-	FinalizeRound(ctx context.Context, r *Round) error
+	FinalizeRound(ctx context.Context, r *Round)
 }
 
 /*ProtocolBlock - this is the interface that deals with the block level logic of the protocol */

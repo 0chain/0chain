@@ -263,8 +263,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 }
 
 /*ToN2NReceiveEntityHandler - takes a handler that accepts an entity, processes and responds and converts it
-* into somethign suitable for Node 2 Node communication
- */
+* into somethign suitable for Node 2 Node communication*/
 func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF) common.ReqRespHandlerf {
 	return func(w http.ResponseWriter, r *http.Request) {
 		contentType := r.Header.Get("Content-type")
@@ -282,15 +281,20 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF) common
 		nodeID := r.Header.Get(HeaderNodeID)
 		sender := GetNode(nodeID)
 		if sender == nil {
-			Logger.Info("", zap.Any("received request from unrecognized node", nodeID))
+			Logger.Info("message received", zap.Any("from", nodeID), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("error", "request from unrecognized node"))
 			return
 		}
-		//TODO: check the timestamp?
-		//reqTS := r.Header.Get(HeaderRequestTimeStamp)
+
+		entityName := r.Header.Get(HeaderRequestEntityName)
+		if entityName == "" {
+			Logger.Info("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("error", "entity name blank"))
+			return
+		}
+
 		reqHashdata := r.Header.Get(HeaderRequestHashData)
 		reqHash := r.Header.Get(HeaderRequestHash)
-		//TODO: Do we need this check?
 		if reqHash != encryption.Hash(reqHashdata) {
+			Logger.Info("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("error", "request data hash invalid"))
 			return
 		}
 		reqSignature := r.Header.Get(HeaderNodeRequestSignature)
@@ -298,15 +302,25 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF) common
 			return
 		}
 
-		entityName := r.Header.Get(HeaderRequestEntityName)
-		if entityName == "" {
+		Logger.Info("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("entity", entityName), zap.Any("data", reqHashdata))
+		reqTS := r.Header.Get(HeaderRequestTimeStamp)
+		if reqTS == "" {
+			Logger.Error("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("entity", entityName), zap.Any("data", reqHashdata), zap.Any("error", "no timestamp for the message"))
 			return
 		}
+		reqTSn, err := strconv.ParseInt(reqTS, 10, 64)
+		if err != nil {
+			Logger.Error("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("entity", entityName), zap.Any("data", reqHashdata), zap.Error(err))
+			return
+		}
+		if !common.Within(reqTSn, 5) {
+
+		}
+
 		entityMetadata := datastore.GetEntityMetadata(entityName)
 		if entityMetadata == nil {
 			return
 		}
-		Logger.Info("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("entity", entityName), zap.Any("data", reqHashdata))
 		var buffer io.Reader = r.Body
 		defer r.Body.Close()
 		if r.Header.Get("Content-Encoding") == "snappy" {
@@ -320,7 +334,6 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF) common
 			}
 			buffer = bytes.NewReader(cbytes)
 		}
-		var err error
 		entity := entityMetadata.Instance()
 
 		if r.Header.Get(HeaderRequestCODEC) == "JSON" {
@@ -354,7 +367,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF) common
 		}
 		delay := common.InduceDelay()
 		if delay > 0 {
-			Logger.Info("message delayed", zap.Any("from", sender.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("entity", entityName), zap.Any("data", reqHashdata))
+			Logger.Info("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("entity", entityName), zap.Any("data", reqHashdata), zap.Any("delay", delay))
 		}
 		data, err := handler(ctx, entity)
 		common.Respond(w, data, err)

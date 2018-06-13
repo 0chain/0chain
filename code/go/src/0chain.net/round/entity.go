@@ -59,6 +59,11 @@ func (r *Round) AddNotarizedBlock(b *block.Block) bool {
 	return true
 }
 
+/*GetNotarizedBlocks - return all the notarized blocks associated with this round */
+func (r *Round) GetNotarizedBlocks() []*block.Block {
+	return r.notarizedBlocks
+}
+
 /*Finalize - finalize the round */
 func (r *Round) Finalize() {
 	r.finalized = true
@@ -66,7 +71,7 @@ func (r *Round) Finalize() {
 
 /*IsFinalized - indicates if the round is finalized */
 func (r *Round) IsFinalized() bool {
-	return r.finalized
+	return r.finalized || r.Number == 0
 }
 
 /*Provider - entity provider for client object */

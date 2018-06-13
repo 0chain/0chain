@@ -103,7 +103,9 @@ func (mc *Chain) IsBlockPresent(hash string) bool {
 /*AddBlock - adds a block to the cache */
 func (mc *Chain) AddBlock(b *block.Block) {
 	mc.Blocks[b.Hash] = b
-	if b.Round > 0 && b.PrevBlock == nil {
+	if b.Round == 0 {
+		mc.LatestFinalizedBlock = b // Genesis block is always finalized
+	} else if b.PrevBlock == nil {
 		pb, ok := mc.Blocks[b.PrevHash]
 		if ok {
 			b.PrevBlock = pb
