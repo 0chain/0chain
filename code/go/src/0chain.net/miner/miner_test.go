@@ -268,10 +268,12 @@ func TestBlockGeneration(t *testing.T) {
 	mc.BlockSize = int32(numOfTransactions)
 	r := round.Provider().(*round.Round)
 	r.Block = gb
-	mc.AddRound(r)
+	mr := mc.CreateRound(r)
+	mc.AddRound(mr)
 	r = round.Provider().(*round.Round)
 	r.Number = 1
-	mc.AddRound(r)
+	mr = mc.CreateRound(r)
+	mc.AddRound(mr)
 
 	usr, err := user.Current()
 	if err != nil {
@@ -279,7 +281,7 @@ func TestBlockGeneration(t *testing.T) {
 	}
 	blockstore.SetupFSBlockStore(fmt.Sprintf("%v%s.0chain.net", usr.HomeDir, string(os.PathSeparator)))
 
-	b, err = mc.GenerateRoundBlock(ctx, r)
+	b, err = mc.GenerateRoundBlock(ctx, mr)
 
 	if err != nil {
 		t.Errorf("Error generating block: %v\n", err)
