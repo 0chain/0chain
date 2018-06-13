@@ -88,10 +88,30 @@ Redis used for transactions:
 
 > ../bin/run.sharder.sh cassandra cqlsh
 
-6) Miscellaneous
+6) Debugging
+
+The logs of the nodes are going to be stored in a file (currently appLogs). The typical issues that need to be debugged is errors in the log, why certain things have not happeend which requires reviewing the timestamp of a sequence of events in the network. Here is an example set of commands to do some debugging.
+
+6.1) Find arrors in all the miner nodes (from git/0chain)
+
+> docker.local/bin/run_all.miner.sh grep ERROR appLogs
+
+This gives a set of errors in the log. Say an error indicates a problem for a specific block, then
+
+> docker.local/bin/run_all.miner.sh grep block-id appLogs
+
+gives all the logs related to that block-id (which is the specific hash you got from the earlier command)
+
+To get the start time of all the rounds
+
+> docker.local/bin/run_all.miner.sh grep 'starting round' appLogs
+
+This gives the start timestamps that can be used to correlate the events and their timings.
+
+7) Miscellaneous
 
 Cleanup
 
-6.1) Get rid of old unused docker resources :
+7.1) Get rid of old unused docker resources :
 
 > docker system prune

@@ -8,4 +8,4 @@ CMD=$1; shift
 
 echo $NODE_DIR: running $SERVICE $CMD $*
 
-MINER=$MINER_ID docker-compose -p $NODE_DIR -f ../build.miner/docker-compose.yml exec $SERVICE $CMD $*
+MINER=$MINER_ID BLOCK_SIZE=10 docker-compose -p $NODE_DIR -f ../build.miner/docker-compose.yml exec $SERVICE $CMD $*
