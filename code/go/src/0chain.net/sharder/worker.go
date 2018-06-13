@@ -36,7 +36,7 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			er, ok := rounds[b.Round]
 			if ok {
 				nb := er.GetNotarizedBlocks()
-				if len(nb) > 0 {
+				if len(nb) > 0 && nb[len(nb)-1].RoundRandomSeed == b.RoundRandomSeed {
 					Logger.Error("*** different blocks for the same round ***", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("existing_block", nb[0].Hash))
 				}
 			} else {

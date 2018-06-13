@@ -12,6 +12,7 @@ type BlockSummary struct {
 	datastore.NOIDField
 	Hash            string `json:"hash"`
 	Round           int64  `json:"round"`
+	PrevHash        string `json:"prev_hash"`
 	RoundRandomSeed int64  `json:"round_random_seed"`
 }
 

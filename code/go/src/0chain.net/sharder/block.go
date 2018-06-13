@@ -6,6 +6,7 @@ import (
 	"0chain.net/block"
 	"0chain.net/blockstore"
 	. "0chain.net/logging"
+	"0chain.net/persistencestore"
 	"go.uber.org/zap"
 )
 
@@ -24,5 +25,16 @@ func StoreBlock(ctx context.Context, b *block.Block) error {
 	}
 
 	// TODO: Store the block summary and transaction summary information
+	bs := block.BlockSummaryProvider().(*block.BlockSummary)
+	bs.Hash = b.Hash
+	bs.RoundRandomSeed = b.RoundRandomSeed
+	bs.PrevHash = b.PrevHash
+	bs.Round = b.Round
+	ctx = persistencestore.WithEntityConnection(ctx, bs.GetEntityMetadata())
+	store := persistencestore.GetStorageProvider()
+	err = store.Write(ctx, bs)
+	if err != nil {
+		Logger.Error("can't write to DB", zap.Any("Error", err.Error()))
+	}
 	return err
 }
