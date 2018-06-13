@@ -4,7 +4,6 @@ import (
 	"0chain.net/block"
 	"0chain.net/common"
 	"0chain.net/node"
-	"0chain.net/round"
 )
 
 const (
@@ -18,7 +17,7 @@ const (
 type BlockMessage struct {
 	Type                    int
 	Sender                  *node.Node
-	Round                   *round.Round
+	Round                   *Round
 	Block                   *block.Block
 	BlockVerificationTicket *block.BlockVerificationTicket
 	Notarization            *Notarization

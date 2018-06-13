@@ -18,7 +18,7 @@ import (
 )
 
 /*StartRound - start a new round */
-func (mc *Chain) StartRound(ctx context.Context, r *round.Round) {
+func (mc *Chain) StartRound(ctx context.Context, r *Round) {
 	mc.AddRound(r)
 }
 
@@ -121,19 +121,23 @@ func updateTxnsToPending(ctx context.Context, txns []datastore.Entity) {
 /*AddToVerification - Add a block to verify : WARNING: does not support concurrent access for a given round */
 func (mc *Chain) AddToVerification(ctx context.Context, b *block.Block) {
 	mc.AddBlock(b)
-	r := mc.GetRound(b.Round)
-	if r == nil {
+	mr := mc.GetRound(b.Round)
+	if mr == nil {
 		// TODO: This can happen because
 		// 1) This is past round that is no longer applicable - reject it
 		// 2) This is a future round we didn't know about yet as our network is slow or something
 		// 3) The verify message received before the start round message
 		// WARNING: Because of this, we don't know the ranks of the round as we don't have the seed in this implementation
-		r = datastore.GetEntityMetadata("round").Instance().(*round.Round)
+		r := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 		r.Number = b.Round
-		mc.AddRound(r)
+		mr = mc.CreateRound(r)
+		mc.AddRound(mr)
 	}
-	r.StartVerificationBlockCollection(ctx, mc.CollectBlocksForVerification)
-	r.AddBlock(b)
+	vctx := mr.StartVerificationBlockCollection(ctx)
+	if vctx != nil {
+		go mc.CollectBlocksForVerification(vctx, mr)
+	}
+	mr.AddBlockToVerify(b)
 }
 
 /*VerifyBlock - given a set of transaction ids within a block, validate the block */
@@ -188,12 +192,17 @@ func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (*block.BlockVer
 	return bvt, nil
 }
 
+/*CancelVerification - cancel verifications happening within a round */
+func (mc *Chain) CancelVerification(ctx context.Context, r *Round) {
+	r.CancelVerification() // No need for further verification of any blocks
+}
+
 /*ProcessVerifiedTicket - once a verified ticket is receiveid, do further processing with it */
-func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *round.Round, b *block.Block, vt *block.VerificationTicket) {
+func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.Block, vt *block.VerificationTicket) {
 	if mc.AddVerificationTicket(ctx, b, vt) {
 		if mc.IsBlockNotarized(ctx, b) {
 			r.Block = b
-			r.CancelVerification() // No need for further verification of any blocks
+			mc.CancelVerification(ctx, r)
 			notarization := datastore.GetEntityMetadata("block_notarization").Instance().(*Notarization)
 			notarization.BlockID = b.Hash
 			notarization.Round = b.Round
@@ -204,13 +213,14 @@ func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *round.Round, b *b
 				nr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 				nr.Number = r.Number + 1
 				nr.RandomSeed = rand.New(rand.NewSource(r.RandomSeed)).Int63()
+				nmr := mc.CreateRound(nr)
 				// Even if the context is cancelled, we want to proceed with the next round, hence start with a root context
-				go mc.startNewRound(common.GetRootContext(), nr)
+				go mc.startNewRound(common.GetRootContext(), nmr)
 				mc.Miners.SendAll(RoundStartSender(nr))
 			}
 			pr := mc.GetRound(r.Number - 1)
 			if pr != nil && pr.Block != nil {
-				mc.FinalizeRoundBlock(ctx, pr)
+				mc.FinalizeRound(ctx, pr)
 			}
 		}
 	}
@@ -269,8 +279,8 @@ func (mc *Chain) VerifyNotarization(ctx context.Context, b *block.Block, bvt []*
 	return nil
 }
 
-/*Finalize - finalize the transactions in the block */
-func (mc *Chain) Finalize(ctx context.Context, b *block.Block) error {
+/*FinalizeBlock - finalize the transactions in the block */
+func (mc *Chain) FinalizeBlock(ctx context.Context, b *block.Block) error {
 	modifiedTxns := make([]datastore.Entity, len(b.Txns))
 	for idx, txn := range b.Txns {
 		txn.BlockID = b.ID

@@ -23,7 +23,7 @@ func SetupMinerChain(c *chain.Chain) {
 	minerChain.Chain = *c
 	minerChain.roundsMutex = &sync.Mutex{}
 	minerChain.BlockMessageChannel = make(chan *BlockMessage, 25)
-	minerChain.rounds = make(map[int64]*round.Round)
+	minerChain.rounds = make(map[int64]*Round)
 	minerChain.Blocks = make(map[string]*block.Block)
 }
 
@@ -38,8 +38,55 @@ type Chain struct {
 	Blocks              map[datastore.Key]*block.Block
 	BlockMessageChannel chan *BlockMessage
 	roundsMutex         *sync.Mutex
-	rounds              map[int64]*round.Round
+	rounds              map[int64]*Round
 	CurrentRound        int64
+}
+
+/*CreateRound - create a round */
+func (mc *Chain) CreateRound(r *round.Round) *Round {
+	var mr Round
+	mr.Round = *r
+	mr.blocksToVerifyChannel = make(chan *block.Block, 200)
+	return &mr
+}
+
+/*AddRound - Add Round to the block */
+func (mc *Chain) AddRound(r *Round) bool {
+	_, ok := mc.rounds[r.Number]
+	if ok {
+		return false
+	}
+	mc.roundsMutex.Lock()
+	defer mc.roundsMutex.Unlock()
+	_, ok = mc.rounds[r.Number]
+	if ok {
+		return false
+	}
+	r.ComputeRanks(mc.Miners.Size())
+	mc.rounds[r.Number] = r
+	if r.Number > mc.CurrentRound {
+		mc.CurrentRound = r.Number
+	}
+	return true
+}
+
+/*GetRound - get a round */
+func (mc *Chain) GetRound(roundNumber int64) *Round {
+	round, ok := mc.rounds[roundNumber]
+	if !ok {
+		return nil
+	}
+	return round
+}
+
+/*DeleteRound - delete a round and associated block data */
+func (mc *Chain) DeleteRound(ctx context.Context, r *round.Round) {
+	for bid, blk := range mc.Blocks {
+		if blk.Round == r.Number {
+			delete(mc.Blocks, bid)
+		}
+	}
+	delete(mc.rounds, r.Number)
 }
 
 /*GetBlockMessageChannel - get the block messages channel */
@@ -79,43 +126,4 @@ func (mc *Chain) GetBlock(ctx context.Context, hash string) (*block.Block, error
 			return b, nil
 		}*/
 	return nil, common.NewError(datastore.EntityNotFound, fmt.Sprintf("Block with hash (%v) not found", hash))
-}
-
-/*GetRound - get a round */
-func (mc *Chain) GetRound(roundNumber int64) *round.Round {
-	round, ok := mc.rounds[roundNumber]
-	if !ok {
-		return nil
-	}
-	return round
-}
-
-/*AddRound - Add Round to the block */
-func (mc *Chain) AddRound(r *round.Round) bool {
-	_, ok := mc.rounds[r.Number]
-	if ok {
-		return false
-	}
-	mc.roundsMutex.Lock()
-	defer mc.roundsMutex.Unlock()
-	_, ok = mc.rounds[r.Number]
-	if ok {
-		return false
-	}
-	r.ComputeRanks(mc.Miners.Size())
-	mc.rounds[r.Number] = r
-	if r.Number > mc.CurrentRound {
-		mc.CurrentRound = r.Number
-	}
-	return true
-}
-
-/*DeleteRound - delete a round and associated block data */
-func (mc *Chain) DeleteRound(ctx context.Context, r *round.Round) {
-	for bid, blk := range mc.Blocks {
-		if blk.Round == r.Number {
-			delete(mc.Blocks, bid)
-		}
-	}
-	delete(mc.rounds, r.Number)
 }

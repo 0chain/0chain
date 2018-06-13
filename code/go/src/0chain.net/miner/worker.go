@@ -9,8 +9,6 @@ import (
 	"0chain.net/memorystore"
 	"0chain.net/node"
 	"go.uber.org/zap"
-
-	"0chain.net/round"
 )
 
 /*SetupWorkers - Setup the miner's workers */
@@ -21,6 +19,7 @@ func SetupWorkers() {
 
 /*BlockWorker - a job that does all the work related to blocks in each round */
 func (mc *Chain) BlockWorker(ctx context.Context) {
+	// var protocol Protocol = mc
 	for true {
 		select {
 		case <-ctx.Done():
@@ -51,24 +50,24 @@ func (mc *Chain) HandleStartRound(ctx context.Context, msg *BlockMessage) {
 	mc.startNewRound(ctx, r)
 }
 
-func (mc *Chain) startNewRound(ctx context.Context, r *round.Round) {
-	pr := mc.GetRound(r.Number - 1)
+func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
+	pr := mc.GetRound(mr.Number - 1)
 	//TODO: If for some reason the server is lagging behind (like network outage) we need to fetch the previous round info
 	// before proceeding
 	if pr == nil {
 		return
 	}
-	if !mc.AddRound(r) {
+	if !mc.AddRound(mr) {
 		return
 	}
 	/* TODO: We need time based pruning which will happen when we also start building blocks with transactions that are within certain timeframe.
-	ppr := mc.GetRound(r.Number - 2)
+	ppr := mc.GetRound(mr.Number - 2)
 	if ppr != nil {
 		mc.DeleteRound(ctx, ppr)
 	} */
 	self := node.GetSelfNode(ctx)
-	rank := r.GetRank(self.SetIndex)
-	Logger.Info("*** starting round ***", zap.Any("round", r.Number), zap.Any("index", self.SetIndex), zap.Any("rank", rank))
+	rank := mr.GetRank(self.SetIndex)
+	Logger.Info("*** starting round ***", zap.Any("round", mr.Number), zap.Any("index", self.SetIndex), zap.Any("rank", rank))
 	//TODO: For now, if the rank happens to be in the bottom half, we assume no need to generate block
 	if 2*rank > mc.Miners.Size() {
 		return
@@ -76,7 +75,7 @@ func (mc *Chain) startNewRound(ctx context.Context, r *round.Round) {
 	txnEntityMetadata := datastore.GetEntityMetadata("txn")
 	ctx = memorystore.WithEntityConnection(ctx, txnEntityMetadata)
 	defer memorystore.Close(ctx)
-	mc.GenerateRoundBlock(ctx, r)
+	mc.GenerateRoundBlock(ctx, mr)
 }
 
 /*HandleVerifyBlockMessage - handles the verify block message */
@@ -129,7 +128,7 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 	pr := mc.GetRound(b.Round - 1)
 	if pr != nil {
 		if pr.Number != 0 && pr.Block != nil {
-			mc.FinalizeRoundBlock(ctx, pr)
+			mc.FinalizeRound(ctx, pr)
 		}
 	}
 }

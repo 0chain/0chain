@@ -21,19 +21,18 @@ type ProtocolMessaging interface {
 
 /*ProtocolExecution - this is the interface to understand the miner's workload related to creating a block */
 type ProtocolExecution interface {
-	StartRound(ctx context.Context, round *round.Round)
+	StartRound(ctx context.Context, round *Round)
 	GenerateBlock(ctx context.Context, b *block.Block) error
 	AddToVerification(ctx context.Context, b *block.Block)
-
-	round.CollectBlocks
-
+	CollectBlocksForVerification(ctx context.Context, r *Round)
 	VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockVerificationTicket, error)
 	VerifyTicket(ctx context.Context, b *block.Block, vt *block.VerificationTicket) error
 	AddVerificationTicket(ctx context.Context, b *block.Block, bvt *block.VerificationTicket) bool
-	IsBlockNotarized(ctx context.Context, b *block.Block) error
-	VerifyNotarization(ctx context.Context, b *block.Block, bvt []*block.VerificationTicket)
-	CancelVerification(ctx context.Context, r *round.Round)
-	Finalize(ctx context.Context, b *block.Block) error
+	IsBlockNotarized(ctx context.Context, b *block.Block) bool
+	VerifyNotarization(ctx context.Context, b *block.Block, bvt []*block.VerificationTicket) error
+	CancelVerification(ctx context.Context, r *Round)
+	FinalizeRound(ctx context.Context, r *Round) error
+	FinalizeBlock(ctx context.Context, b *block.Block) error
 }
 
 /*Protocol - this is the interface to understand the miner's activity related to creating a block */

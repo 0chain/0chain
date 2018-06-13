@@ -176,8 +176,9 @@ func setupGenesisBlock() {
 	gr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 	gr.Number = 0
 	gr.Block = gb
-	gr.AddBlock(gb)
-	mc.AddRound(gr)
+	mgr := mc.CreateRound(gr)
+	mgr.AddBlockToVerify(gb)
+	mc.AddRound(mgr)
 	mc.AddBlock(gb)
 }
 
@@ -190,7 +191,8 @@ func StartChainHandler(w http.ResponseWriter, r *http.Request) {
 	sr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 	sr.Number = 1
 	sr.RandomSeed = time.Now().UnixNano()
-	msg := miner.BlockMessage{Type: miner.MessageStartRound, Round: sr}
+	msr := mc.CreateRound(sr)
+	msg := miner.BlockMessage{Type: miner.MessageStartRound, Round: msr}
 	msgChannel := mc.GetBlockMessageChannel()
 	msgChannel <- &msg
 	mc.SendRoundStart(common.GetRootContext(), sr)

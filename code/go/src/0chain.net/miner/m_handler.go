@@ -58,8 +58,10 @@ func StartRoundHandler(ctx context.Context, entity datastore.Entity) (interface{
 	if !ok {
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
-	msg := &BlockMessage{Sender: node.GetSender(ctx), Type: MessageStartRound, Round: r}
-	GetMinerChain().GetBlockMessageChannel() <- msg
+	mc := GetMinerChain()
+	mr := mc.CreateRound(r)
+	msg := &BlockMessage{Sender: node.GetSender(ctx), Type: MessageStartRound, Round: mr}
+	mc.GetBlockMessageChannel() <- msg
 	return true, nil
 }
 

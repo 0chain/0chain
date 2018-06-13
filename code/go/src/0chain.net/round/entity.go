@@ -1,22 +1,18 @@
 package round
 
 import (
-	"context"
 	"fmt"
 	"math/rand"
-	"sort"
 	"sync"
 
 	"0chain.net/block"
 	"0chain.net/datastore"
-	"0chain.net/node"
 )
 
 /*Round - data structure for the round */
 type Round struct {
 	datastore.NOIDField
-	Number int64 `json:"number"`
-
+	Number     int64 `json:"number"`
 	RandomSeed int64 `json:"round_random_seed"`
 
 	SelfRandomFunctionValue int64 `json:"-"`
@@ -26,17 +22,11 @@ type Round struct {
 	// Once a notraization is received and finalized, this is the finalized block of the given round
 	Block *block.Block `json:"-"`
 
-	perm []int
-
-	blocksToVerifyChannel chan *block.Block
-
-	verificationCancelf context.CancelFunc
+	perm      []int
+	finalized bool
 
 	notarizedBlocks      []*block.Block
 	notarizedBlocksMutex *sync.Mutex
-
-	verificationComplete bool
-	finalized            bool
 }
 
 var roundEntityMetadata *datastore.EntityMetadataImpl
@@ -49,25 +39,6 @@ func (r *Round) GetEntityMetadata() datastore.EntityMetadata {
 /*GetKey - returns the round number as the key */
 func (r *Round) GetKey() datastore.Key {
 	return datastore.ToKey(fmt.Sprintf("%v", r.Number))
-}
-
-/*AddBlock - adds a block to the round. Assumes non-concurrent update */
-func (r *Round) AddBlock(b *block.Block) {
-	if r.verificationComplete {
-		return
-	}
-	if r.Number != b.Round {
-		return
-	}
-	if r.Number == 0 {
-		r.Block = b
-		return
-	}
-	b.RoundRandomSeed = r.RandomSeed
-	bNode := node.GetNode(b.MinerID)
-	//TODO: view change in the middle of a round will throw off the SetIndex
-	b.RoundRank = r.GetRank(bNode.SetIndex)
-	r.blocksToVerifyChannel <- b
 }
 
 /*AddNotarizedBlock - this will be concurrent as notarization is recognized by verifying as well as notarization message from others */
@@ -88,11 +59,6 @@ func (r *Round) AddNotarizedBlock(b *block.Block) bool {
 	return true
 }
 
-/*IsVerificationComplete - indicates if the verification process for the round is complete */
-func (r *Round) IsVerificationComplete() bool {
-	return r.verificationComplete
-}
-
 /*Finalize - finalize the round */
 func (r *Round) Finalize() {
 	r.finalized = true
@@ -106,7 +72,6 @@ func (r *Round) IsFinalized() bool {
 /*Provider - entity provider for client object */
 func Provider() datastore.Entity {
 	r := &Round{}
-	r.blocksToVerifyChannel = make(chan *block.Block, 200)
 	r.notarizedBlocks = make([]*block.Block, 0, 1)
 	r.notarizedBlocksMutex = &sync.Mutex{}
 	return r
@@ -129,47 +94,4 @@ func (r *Round) ComputeRanks(n int) {
 /*GetRank - get the rank of element at the elementIdx position based on the permutation of the round */
 func (r *Round) GetRank(elementIdx int) int {
 	return r.perm[elementIdx]
-}
-
-/*GetBlocksByRank - return the currently stored blocks in the order of best rank for the round */
-func (r *Round) GetBlocksByRank(blocks []*block.Block) []*block.Block {
-	sort.SliceStable(blocks, func(i, j int) bool { return blocks[i].RoundRank < blocks[j].RoundRank })
-	return blocks
-}
-
-/*GetBlocksToVerifyChannel - a channel where all the blocks requiring verification are put into */
-func (r *Round) GetBlocksToVerifyChannel() chan *block.Block {
-	return r.blocksToVerifyChannel
-}
-
-/*CollectionFunc - function to start collecting blocks
-* TODO: clean up with better design?
-* As we can't have circular dependency between miner and round packages, this is the workaround
- */
-type CollectionFunc func(ctx context.Context, r *Round)
-
-/*CollectBlocks - an interface that starts collecting and verifying blocks */
-type CollectBlocks interface {
-	CollectionBlocksForVerification(ctx context.Context, r *Round)
-}
-
-/*StartVerificationBlockCollection - WARNING: Doesn't support concurrent calling */
-func (r *Round) StartVerificationBlockCollection(ctx context.Context, collectionf CollectionFunc) {
-	if r.verificationCancelf != nil {
-		return
-	}
-	lctx, cancelf := context.WithCancel(ctx)
-	r.verificationCancelf = cancelf
-	go collectionf(lctx, r)
-}
-
-/*CancelVerification - Cancel verification of blocks */
-func (r *Round) CancelVerification() {
-	if r.verificationComplete {
-		return
-	}
-	r.verificationComplete = true
-	if r.verificationCancelf != nil {
-		r.verificationCancelf()
-	}
 }

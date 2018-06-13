@@ -11,7 +11,6 @@ import (
 	. "0chain.net/logging"
 	"0chain.net/memorystore"
 	"0chain.net/node"
-	"0chain.net/round"
 	"go.uber.org/zap"
 )
 
@@ -19,7 +18,7 @@ const BLOCK_TIME = 300 * time.Millisecond
 const FINALIZATION_TIME = 300 * time.Millisecond
 
 /*GetBlockToExtend - Get the block to extend from the given round */
-func (mc *Chain) GetBlockToExtend(r *round.Round) *block.Block {
+func (mc *Chain) GetBlockToExtend(r *Round) *block.Block {
 	//TODO: We need to ensure the block exists but also that it has received the notarization
 	if r.Block != nil {
 		return r.Block
@@ -28,7 +27,7 @@ func (mc *Chain) GetBlockToExtend(r *round.Round) *block.Block {
 }
 
 /*GenerateRoundBlock - given a round number generates a block*/
-func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *round.Round) (*block.Block, error) {
+func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block, error) {
 	pround := mc.GetRound(r.Number - 1)
 	if pround == nil {
 		Logger.Error("generate block (prior round not found)", zap.Any("round", r.Number-1))
@@ -53,10 +52,10 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *round.Round) (*block
 }
 
 /*CollectBlocksForVerification - keep collecting the blocks till timeout and then start verifying */
-func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *round.Round) {
+func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 	var blockTimeTimer = time.NewTimer(BLOCK_TIME)
 	var sendVerification = false
-	verifyAndSend := func(ctx context.Context, r *round.Round, b *block.Block) bool {
+	verifyAndSend := func(ctx context.Context, r *Round, b *block.Block) bool {
 		pb := r.Block
 		r.Block = b
 		bvt, err := mc.VerifyRoundBlock(ctx, r, b)
@@ -101,7 +100,7 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *round.Roun
 }
 
 /*VerifyRoundBlock - given a block is verified for a round*/
-func (mc *Chain) VerifyRoundBlock(ctx context.Context, r *round.Round, b *block.Block) (*block.BlockVerificationTicket, error) {
+func (mc *Chain) VerifyRoundBlock(ctx context.Context, r *Round, b *block.Block) (*block.BlockVerificationTicket, error) {
 	if mc.CurrentRound != r.Number {
 		return nil, ErrRoundMismatch
 	}
@@ -135,16 +134,16 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r *round.Round, b *block.
 }
 
 /*ComputeFinalizedBlock - compute the block that has been finalized. It should be the one in the prior round */
-func (mc *Chain) ComputeFinalizedBlock(ctx context.Context, r *round.Round) (*round.Round, *block.Block) {
+func (mc *Chain) ComputeFinalizedBlock(ctx context.Context, r *Round) (*Round, *block.Block) {
 	// TODO: current behavior is we are returning r.Block
 	return r, r.Block
 }
 
-/*FinalizeRoundBlock - finalize a block */
-func (mc *Chain) FinalizeRoundBlock(ctx context.Context, r *round.Round) {
+/*FinalizeRound - finalize a block */
+func (mc *Chain) FinalizeRound(ctx context.Context, r *Round) error {
 	/*TODO: This is incorrect because when we ask r to finalize, it's actually the r-1 round's block that gets finalized */
 	if r.IsFinalized() {
-		return
+		return nil
 	}
 	var finzalizeTimer = time.NewTimer(FINALIZATION_TIME)
 	select {
@@ -153,12 +152,13 @@ func (mc *Chain) FinalizeRoundBlock(ctx context.Context, r *round.Round) {
 	}
 	fr, b := mc.ComputeFinalizedBlock(ctx, r)
 	fr.Finalize()
-	Logger.Info("finalizing block", zap.Any("round", fr), zap.Any("hash", b.Hash))
+	Logger.Info("finalizing round", zap.Any("round", fr), zap.Any("hash", b.Hash))
 	txnEntityMetadata := datastore.GetEntityMetadata("txn")
 	ctx = memorystore.WithEntityConnection(ctx, txnEntityMetadata)
 	defer memorystore.Close(ctx)
-	mc.Finalize(ctx, b)
+	mc.FinalizeBlock(ctx, b)
 	mc.SendFinalizedBlock(ctx, b)
+	return nil
 }
 
 /*UpdateFinalizedBlock - update the latest finalized block */
@@ -168,6 +168,6 @@ func (mc *Chain) UpdateFinalizedBlock(lfb *block.Block) {
 	}
 	ctx := memorystore.WithConnection(context.Background())
 	for b := lfb; b != nil && b != mc.LatestFinalizedBlock; b = b.GetPreviousBlock() {
-		mc.Finalize(ctx, b)
+		mc.FinalizeBlock(ctx, b)
 	}
 }
