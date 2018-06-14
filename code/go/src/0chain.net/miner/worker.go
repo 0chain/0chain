@@ -8,6 +8,7 @@ import (
 	. "0chain.net/logging"
 	"0chain.net/memorystore"
 	"0chain.net/node"
+	"0chain.net/round"
 	"go.uber.org/zap"
 )
 
@@ -80,7 +81,21 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 
 /*HandleVerifyBlockMessage - handles the verify block message */
 func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage) {
-	mc.AddToVerification(ctx, msg.Block)
+	b := msg.Block
+	mr := mc.GetRound(b.Round)
+	if mr == nil {
+		// TODO: This can happen because
+		// 1) This is past round that is no longer applicable - reject it
+		// 2) This is a future round we didn't know about yet as our network is slow or something
+		// 3) The verify message received before the start round message
+		// WARNING: Because of this, we don't know the ranks of the round as we don't have the seed in this implementation
+		r := datastore.GetEntityMetadata("round").Instance().(*round.Round)
+		r.Number = b.Round
+		r.RandomSeed = b.RoundRandomSeed
+		mr = mc.CreateRound(r)
+		mc.startNewRound(ctx, mr)
+	}
+	mc.AddToRoundVerification(ctx, mr, b)
 }
 
 /*HandleVerificationTicketMessage - handles the verification ticket message */

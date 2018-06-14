@@ -3,6 +3,7 @@ package miner
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"time"
 
 	"0chain.net/block"
@@ -11,11 +12,13 @@ import (
 	. "0chain.net/logging"
 	"0chain.net/memorystore"
 	"0chain.net/node"
+	"0chain.net/round"
 	"go.uber.org/zap"
 )
 
-const BLOCK_TIME = 300 * time.Millisecond
-const FINALIZATION_TIME = 300 * time.Millisecond
+const DELTA = 200 * time.Millisecond
+const BLOCK_TIME = 3 * DELTA
+const FINALIZATION_TIME = 2 * DELTA
 
 /*GetBlockToExtend - Get the block to extend from the given round */
 func (mc *Chain) GetBlockToExtend(r *Round) *block.Block {
@@ -44,15 +47,31 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	}
 	b := datastore.GetEntityMetadata("block").Instance().(*block.Block)
 	b.ChainID = mc.ID
+	b.MagicBlockHash = mc.CurrentMagicBlock.Hash
 	b.SetPreviousBlock(pb)
 	err := mc.GenerateBlock(ctx, b)
 	if err != nil {
 		Logger.Error("generate block error", zap.Error(err))
 		return nil, err
 	}
+	mc.AddToRoundVerification(ctx, r, b)
 	mc.AddBlock(b)
 	mc.SendBlock(ctx, b)
 	return b, nil
+}
+
+/*AddToRoundVerification - Add a block to verify : WARNING: does not support concurrent access for a given round */
+func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block.Block) {
+	if !mc.ValidateMagicBlock(ctx, b) {
+		Logger.Info("invalid magic block", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("magic_block", b.MagicBlockHash))
+		return
+	}
+	mc.AddBlock(b)
+	vctx := mr.StartVerificationBlockCollection(ctx)
+	if vctx != nil {
+		go mc.CollectBlocksForVerification(vctx, mr)
+	}
+	mr.AddBlockToVerify(b)
 }
 
 /*CollectBlocksForVerification - keep collecting the blocks till timeout and then start verifying */
@@ -137,6 +156,40 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r *Round, b *block.Block)
 		return nil, err
 	}
 	return bvt, nil
+}
+
+/*ProcessVerifiedTicket - once a verified ticket is receiveid, do further processing with it */
+func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.Block, vt *block.VerificationTicket) {
+	if mc.AddVerificationTicket(ctx, b, vt) {
+		if mc.IsBlockNotarized(ctx, b) {
+			r.Block = b
+			mc.CancelRoundVerification(ctx, r)
+			notarization := datastore.GetEntityMetadata("block_notarization").Instance().(*Notarization)
+			notarization.BlockID = b.Hash
+			notarization.Round = b.Round
+			notarization.VerificationTickets = b.VerificationTickets
+			r.AddNotarizedBlock(b)
+			mc.SendNotarization(ctx, notarization)
+			if mc.GetRound(r.Number+1) == nil {
+				nr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
+				nr.Number = r.Number + 1
+				nr.RandomSeed = rand.New(rand.NewSource(r.RandomSeed)).Int63()
+				nmr := mc.CreateRound(nr)
+				// Even if the context is cancelled, we want to proceed with the next round, hence start with a root context
+				go mc.startNewRound(common.GetRootContext(), nmr)
+				mc.Miners.SendAll(RoundStartSender(nr))
+			}
+			pr := mc.GetRound(r.Number - 1)
+			if pr != nil && pr.Block != nil {
+				mc.FinalizeRound(ctx, pr)
+			}
+		}
+	}
+}
+
+/*CancelRoundVerification - cancel verifications happening within a round */
+func (mc *Chain) CancelRoundVerification(ctx context.Context, r *Round) {
+	r.CancelVerification() // No need for further verification of any blocks
 }
 
 /*ComputeFinalizedBlock - compute the block that has been finalized. It should be the one in the prior round */

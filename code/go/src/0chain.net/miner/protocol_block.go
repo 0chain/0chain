@@ -3,7 +3,6 @@ package miner
 import (
 	"context"
 	"fmt"
-	"math/rand"
 	"time"
 
 	"0chain.net/block"
@@ -12,7 +11,6 @@ import (
 	"0chain.net/datastore"
 	. "0chain.net/logging"
 	"0chain.net/node"
-	"0chain.net/round"
 	"0chain.net/transaction"
 	"go.uber.org/zap"
 )
@@ -108,7 +106,6 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block) error {
 	}
 
 	Logger.Info("time to assemble+update+sign block", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("time", time.Since(start)))
-	mc.AddToVerification(ctx, b)
 	go b.ComputeTxnMap()
 	return nil
 }
@@ -116,29 +113,6 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block) error {
 func updateTxnsToPending(ctx context.Context, txns []datastore.Entity) {
 	transactionMetadataProvider := datastore.GetEntityMetadata("txn")
 	transactionMetadataProvider.GetStore().MultiWrite(ctx, transactionMetadataProvider, txns)
-}
-
-/*AddToVerification - Add a block to verify : WARNING: does not support concurrent access for a given round */
-func (mc *Chain) AddToVerification(ctx context.Context, b *block.Block) {
-	mc.AddBlock(b)
-	mr := mc.GetRound(b.Round)
-	if mr == nil {
-		// TODO: This can happen because
-		// 1) This is past round that is no longer applicable - reject it
-		// 2) This is a future round we didn't know about yet as our network is slow or something
-		// 3) The verify message received before the start round message
-		// WARNING: Because of this, we don't know the ranks of the round as we don't have the seed in this implementation
-		r := datastore.GetEntityMetadata("round").Instance().(*round.Round)
-		r.Number = b.Round
-		r.RandomSeed = b.RoundRandomSeed
-		mr = mc.CreateRound(r)
-		mc.startNewRound(ctx, mr)
-	}
-	vctx := mr.StartVerificationBlockCollection(ctx)
-	if vctx != nil {
-		go mc.CollectBlocksForVerification(vctx, mr)
-	}
-	mr.AddBlockToVerify(b)
 }
 
 /*VerifyBlock - given a set of transaction ids within a block, validate the block */
@@ -191,40 +165,6 @@ func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (*block.BlockVer
 		return nil, err
 	}
 	return bvt, nil
-}
-
-/*CancelVerification - cancel verifications happening within a round */
-func (mc *Chain) CancelVerification(ctx context.Context, r *Round) {
-	r.CancelVerification() // No need for further verification of any blocks
-}
-
-/*ProcessVerifiedTicket - once a verified ticket is receiveid, do further processing with it */
-func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.Block, vt *block.VerificationTicket) {
-	if mc.AddVerificationTicket(ctx, b, vt) {
-		if mc.IsBlockNotarized(ctx, b) {
-			r.Block = b
-			mc.CancelVerification(ctx, r)
-			notarization := datastore.GetEntityMetadata("block_notarization").Instance().(*Notarization)
-			notarization.BlockID = b.Hash
-			notarization.Round = b.Round
-			notarization.VerificationTickets = b.VerificationTickets
-			r.AddNotarizedBlock(b)
-			mc.SendNotarization(ctx, notarization)
-			if mc.GetRound(r.Number+1) == nil {
-				nr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
-				nr.Number = r.Number + 1
-				nr.RandomSeed = rand.New(rand.NewSource(r.RandomSeed)).Int63()
-				nmr := mc.CreateRound(nr)
-				// Even if the context is cancelled, we want to proceed with the next round, hence start with a root context
-				go mc.startNewRound(common.GetRootContext(), nmr)
-				mc.Miners.SendAll(RoundStartSender(nr))
-			}
-			pr := mc.GetRound(r.Number - 1)
-			if pr != nil && pr.Block != nil {
-				mc.FinalizeRound(ctx, pr)
-			}
-		}
-	}
 }
 
 /*IsBlockNotarized - Does the given number of signatures means eligible for notraization?

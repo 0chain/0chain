@@ -22,15 +22,17 @@ type ProtocolMessaging interface {
 /*ProtocolRound - this is the interface that deals with the round level logic of the protocol */
 type ProtocolRound interface {
 	StartRound(ctx context.Context, round *Round)
+	AddToRoundVerification(ctx context.Context, r *Round, b *block.Block)
 	CollectBlocksForVerification(ctx context.Context, r *Round)
-	CancelVerification(ctx context.Context, r *Round)
+	CancelRoundVerification(ctx context.Context, r *Round)
+	ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.Block, vt *block.VerificationTicket)
 	FinalizeRound(ctx context.Context, r *Round)
 }
 
 /*ProtocolBlock - this is the interface that deals with the block level logic of the protocol */
 type ProtocolBlock interface {
 	GenerateBlock(ctx context.Context, b *block.Block) error
-	AddToVerification(ctx context.Context, b *block.Block)
+	ValidateMagicBlock(ctx context.Context, b *block.Block) bool
 	VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockVerificationTicket, error)
 	VerifyTicket(ctx context.Context, b *block.Block, vt *block.VerificationTicket) error
 	AddVerificationTicket(ctx context.Context, b *block.Block, bvt *block.VerificationTicket) bool

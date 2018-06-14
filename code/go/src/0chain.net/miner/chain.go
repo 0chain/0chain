@@ -41,6 +41,7 @@ type Chain struct {
 	roundsMutex         *sync.Mutex
 	rounds              map[int64]*Round
 	CurrentRound        int64
+	CurrentMagicBlock   *block.Block
 }
 
 /*GetBlockMessageChannel - get the block messages channel */
@@ -100,6 +101,7 @@ func (mc *Chain) AddBlock(b *block.Block) {
 	mc.Blocks[b.Hash] = b
 	if b.Round == 0 {
 		mc.LatestFinalizedBlock = b // Genesis block is always finalized
+		mc.CurrentMagicBlock = b    // Genesis block is always a magic block
 	} else if b.PrevBlock == nil {
 		pb, ok := mc.Blocks[b.PrevHash]
 		if ok {
@@ -139,4 +141,10 @@ func (mc *Chain) GetRoundBlocks(round int64) []*block.Block {
 		}
 	}
 	return blocks
+}
+
+/*ValidateMagicBlock - validate the block for a given round has the right magic block */
+func (mc *Chain) ValidateMagicBlock(ctx context.Context, b *block.Block) bool {
+	//TODO: This needs to take the round number into account and go backwards as needed to validate
+	return b.MagicBlockHash == mc.CurrentMagicBlock.Hash
 }

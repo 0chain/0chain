@@ -20,6 +20,7 @@ type UnverifiedBlockBody struct {
 	datastore.VersionField
 	datastore.CreationDateField
 
+	MagicBlockHash              string                `json:"magic_block_hash"`
 	PrevHash                    string                `json:"prev_hash"`
 	PrevBlockVerficationTickets []*VerificationTicket `json:"prev_verification_tickets,omitempty"`
 
@@ -37,12 +38,12 @@ type Block struct {
 	UnverifiedBlockBody
 	VerificationTickets []*VerificationTicket `json:"verification_tickets,omitempty"`
 
-	ChainID   datastore.Key `json:"chain_id"`
-	RoundRank int           `json:"-"` // rank of the block in the round it belongs to
-	Hash      string        `json:"hash"`
-	Signature string        `json:"signature"`
+	Hash      string `json:"hash"`
+	Signature string `json:"signature"`
 
-	PrevBlock *Block `json:"-"`
+	ChainID   datastore.Key `json:"chain_id"` // TODO: Do we need chain id at all?
+	RoundRank int           `json:"-"`        // rank of the block in the round it belongs to
+	PrevBlock *Block        `json:"-"`
 
 	//TODO: May be this should be replaced with a bloom filter & check against sorted txns
 	TxnsMap map[string]bool `json:"-"`
@@ -155,8 +156,8 @@ func (b *Block) GetPreviousBlock() *Block {
 
 /*AddTransaction - add a transaction to the block */
 func (b *Block) AddTransaction(t *transaction.Transaction) {
-	// For now this does nothign. May be we don't need. Txn can't influence the weight of the block, or else,
-	// everyone will try to maximize the block which is not good
+	// For now this does nothing. May be we don't need. Txn can't influence the weight of the block,
+	// or else, everyone will try to maximize the block which is not good
 }
 
 /*AddVerificationTicket - Add a verification ticket to a block
