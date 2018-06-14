@@ -1,19 +1,20 @@
 # TestNet Setup with Docker Containers
 
 ## Table of Contents
-	- [Initial Setup](#initial-setup)
-		- [Directory Setup for Miners & Sharders](#directory-setup-for-miners-&-sharders)
-		- [Setup Network](#setup-network)
-	- [Building and Starting the Nodes](#building-and-starting-the-nodes)
-	- [Generating Test Transactions](#generating-test-transactions)
-	- [Troubleshooting](#troubleshooting)
-	- [Debugging](#debugging)
-	- [Miscellaneous](#miscellaneous)
-		- [Cleanup](#cleanup)
+
+- [Initial Setup](#initial-setup)
+	- [Directory Setup for Miners & Sharders](#directory-setup-for-miners-&-sharders)
+	- [Setup Network](#setup-network)
+- [Building and Starting the Nodes](#building-and-starting-the-nodes)
+- [Generating Test Transactions](#generating-test-transactions)
+- [Troubleshooting](#troubleshooting)
+- [Debugging](#debugging)
+- [Miscellaneous](#miscellaneous)
+	- [Cleanup](#cleanup)
 
 ## Initial Setup
 
-### Directory Setup for Miners & Sharders 
+### Directory Setup for Miners & Sharders
 
 In the git/0chain run the following command
 ```
