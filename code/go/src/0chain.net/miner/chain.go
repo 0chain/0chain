@@ -35,11 +35,17 @@ func GetMinerChain() *Chain {
 /*Chain - A miner chain to manage the miner activities */
 type Chain struct {
 	chain.Chain
+	/* This is a cache of blocks that include speculative blocks */
 	Blocks              map[datastore.Key]*block.Block
 	BlockMessageChannel chan *BlockMessage
 	roundsMutex         *sync.Mutex
 	rounds              map[int64]*Round
 	CurrentRound        int64
+}
+
+/*GetBlockMessageChannel - get the block messages channel */
+func (mc *Chain) GetBlockMessageChannel() chan *BlockMessage {
+	return mc.BlockMessageChannel
 }
 
 /*CreateRound - create a round */
@@ -89,17 +95,6 @@ func (mc *Chain) DeleteRound(ctx context.Context, r *round.Round) {
 	delete(mc.rounds, r.Number)
 }
 
-/*GetBlockMessageChannel - get the block messages channel */
-func (mc *Chain) GetBlockMessageChannel() chan *BlockMessage {
-	return mc.BlockMessageChannel
-}
-
-/*IsBlockPresent - do we already have this block? */
-func (mc *Chain) IsBlockPresent(hash string) bool {
-	_, ok := mc.Blocks[hash]
-	return ok
-}
-
 /*AddBlock - adds a block to the cache */
 func (mc *Chain) AddBlock(b *block.Block) {
 	mc.Blocks[b.Hash] = b
@@ -115,7 +110,7 @@ func (mc *Chain) AddBlock(b *block.Block) {
 	}
 }
 
-/*GetBlock - returns a known block for a given hash from the speculative list of blocks */
+/*GetBlock - returns a known block for a given hash from the cache */
 func (mc *Chain) GetBlock(ctx context.Context, hash string) (*block.Block, error) {
 	b, ok := mc.Blocks[datastore.ToKey(hash)]
 	if ok {
@@ -128,4 +123,20 @@ func (mc *Chain) GetBlock(ctx context.Context, hash string) (*block.Block, error
 			return b, nil
 		}*/
 	return nil, common.NewError(datastore.EntityNotFound, fmt.Sprintf("Block with hash (%v) not found", hash))
+}
+
+/*DeleteBlock - delete a block from the cache */
+func (mc *Chain) DeleteBlock(ctx context.Context, b *block.Block) {
+	delete(mc.Blocks, b.Hash)
+}
+
+/*GetRoundBlocks - get the blocks for a given round */
+func (mc *Chain) GetRoundBlocks(round int64) []*block.Block {
+	blocks := make([]*block.Block, 0, 1)
+	for _, blk := range mc.Blocks {
+		if blk.Round == round {
+			blocks = append(blocks, blk)
+		}
+	}
+	return blocks
 }

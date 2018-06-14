@@ -19,9 +19,13 @@ const FINALIZATION_TIME = 300 * time.Millisecond
 
 /*GetBlockToExtend - Get the block to extend from the given round */
 func (mc *Chain) GetBlockToExtend(r *Round) *block.Block {
-	//TODO: We need to ensure the block exists but also that it has received the notarization
-	if r.Block != nil {
-		return r.Block
+	rnb := r.GetNotarizedBlocks()
+	if len(rnb) > 0 {
+		if len(rnb) == 1 {
+			return rnb[0]
+		}
+		//TODO: pick the best possible block
+		return rnb[0]
 	}
 	return nil
 }
@@ -56,11 +60,8 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 	var blockTimeTimer = time.NewTimer(BLOCK_TIME)
 	var sendVerification = false
 	verifyAndSend := func(ctx context.Context, r *Round, b *block.Block) bool {
-		pb := r.Block
-		r.Block = b
 		bvt, err := mc.VerifyRoundBlock(ctx, r, b)
 		if err != nil {
-			r.Block = pb
 			if err == ErrRoundMismatch {
 				Logger.Info("verify round block", zap.Any("round", r.Number), zap.Any("block", b.Hash), zap.Any("current_round", mc.CurrentRound))
 			} else {
@@ -68,6 +69,7 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			}
 			return false
 		}
+		r.Block = b
 		if b.MinerID != node.Self.GetKey() {
 			mc.SendVerificationTicket(ctx, b, bvt)
 		}
@@ -139,8 +141,6 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r *Round, b *block.Block)
 
 /*ComputeFinalizedBlock - compute the block that has been finalized. It should be the one in the prior round */
 func (mc *Chain) ComputeFinalizedBlock(ctx context.Context, r *Round) *block.Block {
-	// TODO: current behavior is we are returning r.Block
-	//return r, r.Block
 	tips := r.GetNotarizedBlocks()
 	for true {
 		ntips := make([]*block.Block, 0, 1)
@@ -175,7 +175,10 @@ func (mc *Chain) ComputeFinalizedBlock(ctx context.Context, r *Round) *block.Blo
 	return fb
 }
 
-/*FinalizeRound - starting from the given round work backwards and identify the round that can be assumed to be finalized as only one chain has survived */
+/*FinalizeRound - starting from the given round work backwards and identify the round that can be
+  assumed to be finalized as only one chain has survived.
+  Note: It is that round and prior that actually get finalized.
+*/
 func (mc *Chain) FinalizeRound(ctx context.Context, r *Round) {
 	/*TODO: This is incorrect because when we ask r to finalize, it's actually the r-1 round's block that gets finalized */
 	if r.IsFinalized() {
@@ -191,19 +194,33 @@ func (mc *Chain) FinalizeRound(ctx context.Context, r *Round) {
 		Logger.Info("finalization - no decisive block to finalize yet", zap.Any("round", r.Number))
 		return
 	}
+	lfbHash := mc.LatestFinalizedBlock.Hash
+	mc.LatestFinalizedBlock = fb
 	frchain := make([]*block.Block, 0, 1)
-	for b := fb; b != nil && b.Hash != mc.LatestFinalizedBlock.Hash; b = b.PrevBlock {
+	for b := fb; b != nil && b.Hash != lfbHash; b = b.PrevBlock {
 		frchain = append(frchain, b)
 	}
+	deadBlocks := make([]*block.Block, 0, 1)
 	for idx := range frchain {
 		fb = frchain[len(frchain)-1-idx]
 		fr := mc.GetRound(fb.Round)
-		fr.Finalize()
 		Logger.Info("finalizing round", zap.Any("round", r.Number), zap.Any("finalized_round", fb.Round), zap.Any("hash", fb.Hash))
+		fr.Finalize(fb)
 		mc.UpdateFinalizedBlock(ctx, fb)
 		mc.SendFinalizedBlock(ctx, fb)
+		frb := mc.GetRoundBlocks(r.Number)
+		for _, b := range frb {
+			if b.Hash != fb.Hash {
+				deadBlocks = append(deadBlocks, b)
+			}
+		}
 	}
-	mc.LatestFinalizedBlock = fb
+	// Prune all the dead blocks
+	go func() {
+		for _, b := range deadBlocks {
+			mc.DeleteBlock(ctx, b)
+		}
+	}()
 }
 
 /*UpdateFinalizedBlock - update the latest finalized block */

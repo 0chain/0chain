@@ -119,9 +119,7 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 		r.CancelVerification()
 		r.Block = b
 	}
-
-	//TODO: Check this condition carefully
-	if r.Number < mc.CurrentRound-1 || r.Number > mc.CurrentRound {
+	if r.Number <= mc.LatestFinalizedBlock.Round {
 		return
 	}
 	r.AddNotarizedBlock(b)

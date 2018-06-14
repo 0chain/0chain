@@ -176,7 +176,7 @@ func setupGenesisBlock() {
 	}
 	gr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 	gr.Number = 0
-	gr.Block = gb
+	gr.AddNotarizedBlock(gb)
 	mgr := mc.CreateRound(gr)
 	mgr.AddBlockToVerify(gb)
 	mc.AddRound(mgr)

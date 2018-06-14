@@ -19,7 +19,7 @@ type Round struct {
 
 	// For generator, this is the block the miner is generating till a notraization is received
 	// For a verifier, this is the block that is currently the best block received for verification.
-	// Once a notraization is received and finalized, this is the finalized block of the given round
+	// Once a round is finalized, this is the finalized block of the given round
 	Block *block.Block `json:"-"`
 
 	perm      []int
@@ -65,8 +65,9 @@ func (r *Round) GetNotarizedBlocks() []*block.Block {
 }
 
 /*Finalize - finalize the round */
-func (r *Round) Finalize() {
+func (r *Round) Finalize(b *block.Block) {
 	r.finalized = true
+	r.Block = b
 }
 
 /*IsFinalized - indicates if the round is finalized */
