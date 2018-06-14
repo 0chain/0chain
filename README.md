@@ -1,26 +1,26 @@
-#TestNet Setup with Docker Containers
+# TestNet Setup with Docker Containers
 
-##Table of Contents
-	-[Initial Setup](#initial-setup)
-		-[Directory Setup for Miners & Sharders](#directory-setup-for-miners-&-sharders)
-		-[Setup Network](#setup-network)
-	-[Building and Starting the Nodes](#building-and-starting-the-nodes)
-	-[Generating Test Transactions](#generating-test-transactions)
-	-[Troubleshooting](#troubleshooting)
-	-[Debugging](#debugging)
-	-[Miscellaneous](#miscellaneous)
-		-[Cleanup](#cleanup)
+## Table of Contents
+	- [Initial Setup](#initial-setup)
+		- [Directory Setup for Miners & Sharders](#directory-setup-for-miners-&-sharders)
+		- [Setup Network](#setup-network)
+	- [Building and Starting the Nodes](#building-and-starting-the-nodes)
+	- [Generating Test Transactions](#generating-test-transactions)
+	- [Troubleshooting](#troubleshooting)
+	- [Debugging](#debugging)
+	- [Miscellaneous](#miscellaneous)
+		- [Cleanup](#cleanup)
 
-##Initial Setup
+## Initial Setup
 
-###Directory Setup for Miners & Sharders 
+### Directory Setup for Miners & Sharders 
 
 In the git/0chain run the following command
 ```
 $ ./docker.local/bin/init.setup.sh
 ```
 
-###Setup Network
+### Setup Network
 
 Setup a network called testnet0 for each of these node containers to talk to each other.
 
@@ -29,7 +29,7 @@ Setup a network called testnet0 for each of these node containers to talk to eac
 $ ./docker.local/bin/setup_network.sh
 ```
 
-##Building and Starting the Nodes
+## Building and Starting the Nodes
 
 1) Open 5 terminal tabs. Use the first one for building the containers by being in git/0chain directory. Use the next 3 for 3 miners and be in the respective miner<i> directories created above in docker.local. Use the 5th terminal and be in the sharder1 directory.
 
@@ -62,7 +62,7 @@ On the sharder terminal, use
 ```
 $ ../bin/start.sharder.sh
 ```
-##Generating Test Transactions
+## Generating Test Transactions
 
 1) To build the miner_stress program from git/0chain directory
 ```$ ./docker.local/bin/build_txns_generator.sh```
@@ -70,7 +70,7 @@ $ ../bin/start.sharder.sh
 ```$ ./docker.local/bin/generate_txns.sh num-txns```
 If num-txns is not specified, then 25000 transactions are generated for each miner
 
-##Troubleshooting
+## Troubleshooting
 
 1) Ensure the port mapping is all correct:
 ```
@@ -102,7 +102,7 @@ $ ../bin/run.miner.sh redis_txns redis-cli
 ```
 $ ../bin/run.sharder.sh cassandra cqlsh
 ```
-##Debugging
+## Debugging
 
 The logs of the nodes are going to be stored in a file (currently appLogs). The typical issues that need to be debugged is errors in the log, why certain things have not happeend which requires reviewing the timestamp of a sequence of events in the network. Here is an example set of commands to do some debugging.
 
@@ -122,9 +122,9 @@ $ docker.local/bin/run_all.miner.sh grep 'starting round' appLogs
 ```
 This gives the start timestamps that can be used to correlate the events and their timings.
 
-##Miscellaneous
+## Miscellaneous
 
-###Cleanup
+### Cleanup
 
 Get rid of old unused docker resources:
 ```
