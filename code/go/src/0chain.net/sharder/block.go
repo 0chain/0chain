@@ -5,6 +5,7 @@ import (
 
 	"0chain.net/block"
 	"0chain.net/blockstore"
+	"0chain.net/datastore"
 	. "0chain.net/logging"
 	"0chain.net/persistencestore"
 	"go.uber.org/zap"
@@ -14,18 +15,18 @@ import (
 func StoreBlock(ctx context.Context, b *block.Block) error {
 	err := b.Validate(ctx)
 	if err != nil {
-		Logger.Info("block validation failed", zap.Any("round", b.Round), zap.Any("hash", b.Hash), zap.Error(err))
+		Logger.Error("block validation", zap.Any("round", b.Round), zap.Any("hash", b.Hash), zap.Error(err))
 		return err
 	}
 	err = blockstore.GetStore().Write(b)
 	if err != nil {
-		Logger.Info("block save failed", zap.Any("round", b.Round), zap.Any("hash", b.Hash), zap.Error(err))
+		Logger.Error("block save", zap.Any("round", b.Round), zap.Any("hash", b.Hash), zap.Error(err))
 	} else {
 		Logger.Info("saved block", zap.Any("round", b.Round), zap.Any("hash", b.Hash), zap.Any("prev_hash", b.PrevHash))
 	}
 
 	// TODO: Store the block summary and transaction summary information
-	bs := block.BlockSummaryProvider().(*block.BlockSummary)
+	bs := datastore.GetEntityMetadata("block_summary").Instance().(*block.BlockSummary)
 	bs.Hash = b.Hash
 	bs.RoundRandomSeed = b.RoundRandomSeed
 	bs.PrevHash = b.PrevHash

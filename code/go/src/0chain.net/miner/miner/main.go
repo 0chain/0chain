@@ -73,6 +73,7 @@ func main() {
 	maxDelay := flag.Int("max_delay", 0, "max_delay")
 	flag.Parse()
 
+	//TODO: for docker compose mapping, we can't use the host
 	//address := fmt.Sprintf("%v:%v", *host, *port)
 	address := fmt.Sprintf(":%v", *port)
 

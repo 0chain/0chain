@@ -13,15 +13,25 @@ import (
 
 /*SetupWorkers - setup the background workers */
 func SetupWorkers() {
+	ClearWorkerState()
 	ctx := common.GetRootContext()
 	go GetSharderChain().BlockWorker(ctx)
 }
 
+//TODO: The blocks and rounds data structures are temporary for debugging.
+var blocks map[string]*block.Block
+var rounds map[int64]*round.Round
+
+/*ClearWorkerState - clears the worker state */
+func ClearWorkerState() {
+	Logger.Info("clearing worker state")
+	blocks = make(map[string]*block.Block)
+	rounds = make(map[int64]*round.Round)
+}
+
 /*BlockWorker - stores the blocks */
 func (sc *Chain) BlockWorker(ctx context.Context) {
-	//TODO: The blocks and rounds data structures are temporary for debugging.
-	blocks := make(map[string]*block.Block)
-	rounds := make(map[int64]*round.Round)
+
 	for true {
 		select {
 		case <-ctx.Done():
@@ -36,7 +46,7 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			er, ok := rounds[b.Round]
 			if ok {
 				nb := er.GetNotarizedBlocks()
-				if len(nb) > 0 && nb[len(nb)-1].RoundRandomSeed == b.RoundRandomSeed {
+				if len(nb) > 0 {
 					Logger.Error("*** different blocks for the same round ***", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("existing_block", nb[0].Hash))
 				}
 			} else {

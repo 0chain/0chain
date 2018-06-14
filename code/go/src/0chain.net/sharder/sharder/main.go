@@ -35,6 +35,7 @@ func initHandlers() {
 	if config.Configuration.TestMode {
 		http.HandleFunc("/_hash", encryption.HashHandler)
 		http.HandleFunc("/_sign", common.ToJSONResponse(encryption.SignHandler))
+		http.HandleFunc("/_start", StartChainHandler)
 	}
 	node.SetupHandlers()
 	chain.SetupHandlers()
@@ -78,7 +79,9 @@ func main() {
 	} else {
 		LoggerInit("production", "appLogs")
 	}
-	address := fmt.Sprintf("%v:%v", *host, *port)
+	//TODO: for docker compose mapping, we can't use the host
+	//address := fmt.Sprintf("%v:%v", *host, *port)
+	address := fmt.Sprintf(":%v", *port)
 	config.SetServerChainID(*chainID)
 	serverChain := chain.Provider().(*chain.Chain)
 	serverChain.ID = datastore.ToKey(config.GetServerChainID())
@@ -166,4 +169,9 @@ func main() {
 	fmt.Printf("Ready to listen to the requests\n")
 	//log.Fatal(server.Serve(l))
 	log.Fatal(server.ListenAndServe())
+}
+
+/*StartChainHandler - start the chain (for now just clears the state) */
+func StartChainHandler(w http.ResponseWriter, r *http.Request) {
+	sharder.ClearWorkerState()
 }
