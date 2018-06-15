@@ -20,9 +20,9 @@ func init() {
 
 /*Transaction type for capturing the transaction data */
 type Transaction struct {
-	datastore.CollectionIDField
+	datastore.HashIDField
+	datastore.CollectionMemberField
 	datastore.VersionField
-	Hash string `json:"hash" msgpack:"h"`
 
 	ClientID  datastore.Key `json:"client_id" msgpack:"cid,omitempty"`
 	PublicKey string        `json:"-" msgpack:"puk,omitempty"`
@@ -60,9 +60,6 @@ func (t *Transaction) GetEntityMetadata() datastore.EntityMetadata {
 
 /*ComputeProperties - Entity implementation */
 func (t *Transaction) ComputeProperties() {
-	if t.Hash != "" {
-		t.ID = datastore.ToKey(t.Hash)
-	}
 	if datastore.IsEmpty(t.ChainID) {
 		t.ChainID = datastore.ToKey(config.GetMainChainID())
 	}
@@ -83,9 +80,6 @@ func (t *Transaction) Validate(ctx context.Context) error {
 	}
 	if t.Hash == "" {
 		return common.InvalidRequest("hash required for transaction")
-	}
-	if t.ID != datastore.ToKey(t.Hash) {
-		return common.NewError("id_hash_mismatch", "ID and Hash don't match")
 	}
 
 	err = t.VerifyHash(ctx)

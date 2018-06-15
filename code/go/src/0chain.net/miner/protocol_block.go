@@ -39,9 +39,12 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	}
 	b.MinerID = self.ID
 	var ierr error
+	var count int64
 	var txnIterHandler = func(ctx context.Context, qe datastore.CollectionEntity) bool {
+		count++
 		txn, ok := qe.(*transaction.Transaction)
 		if !ok {
+			Logger.Error("generate block", zap.Any("error", "wrong entity"), zap.Any("entity", qe))
 			return true
 		}
 		if ok, err := b.PrevBlock.ChainHasTransaction(txn); ok || err != nil {
@@ -53,7 +56,6 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		if txn.Status != transaction.TXN_STATUS_FREE {
 			return true
 		}
-
 		txn.Status = transaction.TXN_STATUS_PENDING
 		//Setting the score lower so the next time blocks are generated these transactions don't show up at the top
 		txn.SetCollectionScore(txn.GetCollectionScore() - 10*60)
@@ -83,8 +85,10 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	if err != nil {
 		return err
 	}
+
 	if idx != mc.BlockSize {
 		b.Txns = nil
+		Logger.Info("generate block", zap.Any("iteration_count", count), zap.Any("block_size", mc.BlockSize), zap.Any("num_txns", idx))
 		return common.NewError("insufficient_txns", fmt.Sprintf("Not sufficient txns to make a block yet for round %v", b.Round))
 	}
 
@@ -188,7 +192,7 @@ func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 func (mc *Chain) FinalizeBlock(ctx context.Context, b *block.Block) error {
 	modifiedTxns := make([]datastore.Entity, len(b.Txns))
 	for idx, txn := range b.Txns {
-		txn.BlockID = b.ID
+		txn.BlockID = b.Hash
 		txn.Status = transaction.TXN_STATUS_FINALIZED
 		modifiedTxns[idx] = txn
 	}

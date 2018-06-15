@@ -115,3 +115,19 @@ func ToKey(key interface{}) Key {
 		return Key(fmt.Sprintf("%v", v))
 	}
 }
+
+/*HashIDField - Useful to embed this into all the entities and get consistent behavior */
+type HashIDField struct {
+	Hash Key `json:"hash" msgpack:"h"`
+}
+
+
+/*GetKey - Entity implementation */
+func (h *HashIDField) GetKey() Key {
+	return ToKey(h.Hash)
+}
+
+/*SetKey - Entity implementation */
+func (h *HashIDField) SetKey(key Key) {
+	h.Hash = ToString(key)
+}

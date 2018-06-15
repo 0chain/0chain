@@ -12,7 +12,8 @@ import (
 
 /*Company - a test data type */
 type Company struct {
-	datastore.CollectionIDField
+	datastore.IDField
+	datastore.CollectionMemberField
 	//ID     Key    `json:"id"`
 	Domain string `json:"domain"`
 	Name   string `json:"name,omitempty"`
@@ -63,7 +64,7 @@ var companyEntityCollection = &datastore.EntityCollection{CollectionName: "colle
 /*TransactionProvider - entity provider for client object */
 func CompanyProvider() datastore.Entity {
 	c := &Company{}
-	c.CollectionIDField.EntityCollection = companyEntityCollection
+	c.EntityCollection = companyEntityCollection
 	return c
 }
 
@@ -87,7 +88,7 @@ func TestEntityWriteRead(t *testing.T) {
 	zeroChain.Domain = "0chain.net"
 	zeroChain.Name = "0chain"
 	zeroChain.ID = datastore.ToKey(zeroChain.Domain)
-	zeroChain.CollectionIDField.EntityCollection = companyEntityCollection
+	zeroChain.EntityCollection = companyEntityCollection
 	err = companyEntityMetadata.GetStore().InsertIfNE(ctx, zeroChain)
 	if err != nil {
 		fmt.Printf("error ifne: %v\n", err)

@@ -34,11 +34,11 @@ type UnverifiedBlockBody struct {
 
 /*Block - data structure that holds the block data */
 type Block struct {
-	datastore.CollectionIDField
+	datastore.CollectionMemberField
 	UnverifiedBlockBody
 	VerificationTickets []*VerificationTicket `json:"verification_tickets,omitempty"`
 
-	Hash      string `json:"hash"`
+	datastore.HashIDField
 	Signature string `json:"signature"`
 
 	ChainID   datastore.Key `json:"chain_id"` // TODO: Do we need chain id at all?
@@ -58,9 +58,6 @@ func (b *Block) GetEntityMetadata() datastore.EntityMetadata {
 
 /*ComputeProperties - Entity implementation */
 func (b *Block) ComputeProperties() {
-	if b.Hash != "" {
-		b.ID = datastore.ToKey(b.Hash)
-	}
 	if datastore.IsEmpty(b.ChainID) {
 		b.ChainID = datastore.ToKey(config.GetMainChainID())
 	}
@@ -77,11 +74,10 @@ func (b *Block) Validate(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if datastore.IsEmpty(b.ID) {
-		if b.Hash == "" {
-			return common.InvalidRequest("hash required for block")
-		}
+	if b.Hash == "" {
+		return common.InvalidRequest("hash required for block")
 	}
+
 	if datastore.IsEmpty(b.MinerID) {
 		return common.InvalidRequest("miner id is required")
 	}
@@ -208,7 +204,6 @@ func (b *Block) ComputeHash() string {
 /*HashBlock - compute and set the hash of the block */
 func (b *Block) HashBlock() {
 	b.Hash = b.ComputeHash()
-	b.ID = datastore.ToKey(b.Hash)
 }
 
 /*ComputeTxnMap - organize the transactions into a hashmap for check if the txn exists*/

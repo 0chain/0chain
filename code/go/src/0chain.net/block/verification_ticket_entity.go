@@ -64,6 +64,6 @@ func (vt *VerificationTicket) GetBlockVerificationTicket(b *Block) *BlockVerific
 	bvt := BVTProvider().(*BlockVerificationTicket)
 	bvt.VerifierID = vt.VerifierID
 	bvt.Signature = vt.Signature
-	bvt.BlockID = b.ID
+	bvt.BlockID = b.Hash
 	return bvt
 }
