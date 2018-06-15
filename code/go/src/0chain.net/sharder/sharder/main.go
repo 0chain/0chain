@@ -157,6 +157,8 @@ func main() {
 	blockstore.SetupFSBlockStore("data/blocks")
 
 	initEntities()
+	sharder.GetSharderChain().SetupGenesisBlock()
+
 	serverChain.SetupWorkers(ctx)
 	node.SetupN2NHandlers()
 	serverChain.SetupNodeHandlers()

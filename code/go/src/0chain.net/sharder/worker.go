@@ -4,9 +4,9 @@ import (
 	"context"
 	"log"
 	"os"
+	"sort"
 	"time"
 
-	"0chain.net/block"
 	"0chain.net/common"
 	"0chain.net/datastore"
 	. "0chain.net/logging"
@@ -26,13 +26,11 @@ func SetupWorkers() {
 var timer metrics.Timer
 
 //TODO: The blocks and rounds data structures are temporary for debugging.
-var blocks map[string]*block.Block
 var rounds map[int64]*round.Round
 
 /*ClearWorkerState - clears the worker state */
 func ClearWorkerState() {
 	Logger.Info("clearing worker state")
-	blocks = make(map[string]*block.Block)
 	rounds = make(map[int64]*round.Round)
 	if timer != nil {
 		metrics.Unregister("block_time")
@@ -48,12 +46,16 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case b := <-sc.GetBlockChannel():
-			_, ok := blocks[b.Hash]
-			if ok {
-				Logger.Info("block already received", zap.Any("round", b.Round), zap.Any("block", b.Hash))
-				continue
+			eb, err := sc.GetBlock(ctx, b.Hash)
+			if eb != nil {
+				if err == nil {
+					Logger.Info("block already received", zap.Any("round", b.Round), zap.Any("block", b.Hash))
+					continue
+				} else {
+					Logger.Error("get block", zap.Any("block", b.Hash), zap.Error(err))
+				}
 			}
-			blocks[b.Hash] = b
+			sc.AddBlock(b)
 			er, ok := rounds[b.Round]
 			if ok {
 				nb := er.GetNotarizedBlocks()
@@ -71,6 +73,8 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			}
 			ts = time.Now()
 			er.AddNotarizedBlock(b)
+			// Sort transactions by their hash - useful for quick search
+			sort.SliceStable(b.Txns, func(i, j int) bool { return b.Txns[i].Hash < b.Txns[j].Hash })
 			StoreBlock(ctx, b)
 		}
 	}

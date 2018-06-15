@@ -29,3 +29,13 @@ type Chain struct {
 func (sc *Chain) GetBlockChannel() chan *block.Block {
 	return sc.BlockChannel
 }
+
+/*SetupGenesisBlock - setup the genesis block for this chain */
+func (sc *Chain) SetupGenesisBlock() *block.Block {
+	gr, gb := sc.GenerateGenesisBlock()
+	if gr == nil || gb == nil {
+		panic("Genesis round/block canot be null")
+	}
+	sc.AddBlock(gb)
+	return gb
+}
