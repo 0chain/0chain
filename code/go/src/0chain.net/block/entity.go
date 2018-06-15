@@ -290,3 +290,15 @@ func (b *Block) ValidateTransactions(ctx context.Context) error {
 	}
 	return nil
 }
+
+/*GetSummary - get the block summary of this block */
+func (b *Block) GetSummary() *BlockSummary {
+	bs := datastore.GetEntityMetadata("block_summary").Instance().(*BlockSummary)
+	bs.Version = b.Version
+	bs.Hash = b.Hash
+	bs.PrevHash = b.PrevHash
+	bs.Round = b.Round
+	bs.RoundRandomSeed = b.RoundRandomSeed
+	bs.CreationDate = b.CreationDate
+	return bs
+}

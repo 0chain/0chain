@@ -20,7 +20,7 @@ func SetupWorkers() {
 
 /*BlockWorker - a job that does all the work related to blocks in each round */
 func (mc *Chain) BlockWorker(ctx context.Context) {
-	// var protocol Protocol = mc
+	var protocol Protocol = mc
 	for true {
 		select {
 		case <-ctx.Done():
@@ -33,13 +33,13 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 			}
 			switch msg.Type {
 			case MessageStartRound:
-				mc.HandleStartRound(ctx, msg)
+				protocol.HandleStartRound(ctx, msg)
 			case MessageVerify:
-				mc.HandleVerifyBlockMessage(ctx, msg)
+				protocol.HandleVerifyBlockMessage(ctx, msg)
 			case MessageVerificationTicket:
-				mc.HandleVerificationTicketMessage(ctx, msg)
+				protocol.HandleVerificationTicketMessage(ctx, msg)
 			case MessageNotarization:
-				mc.HandleNotarizationMessage(ctx, msg)
+				protocol.HandleNotarizationMessage(ctx, msg)
 			}
 		}
 	}

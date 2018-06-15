@@ -2,16 +2,12 @@ package miner
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"0chain.net/block"
 	"0chain.net/chain"
 	"0chain.net/common"
-	"0chain.net/datastore"
-	. "0chain.net/logging"
 	"0chain.net/round"
-	"go.uber.org/zap"
 )
 
 var ErrRoundMismatch = common.NewError("round_mismatch", "Current round number of the chain doesn't match the block generation round")
@@ -24,7 +20,6 @@ func SetupMinerChain(c *chain.Chain) {
 	minerChain.roundsMutex = &sync.Mutex{}
 	minerChain.BlockMessageChannel = make(chan *BlockMessage, 25)
 	minerChain.rounds = make(map[int64]*Round)
-	minerChain.Blocks = make(map[string]*block.Block)
 }
 
 /*GetMinerChain - get the miner's chain */
@@ -35,18 +30,27 @@ func GetMinerChain() *Chain {
 /*Chain - A miner chain to manage the miner activities */
 type Chain struct {
 	chain.Chain
-	/* This is a cache of blocks that include speculative blocks */
-	Blocks              map[datastore.Key]*block.Block
 	BlockMessageChannel chan *BlockMessage
 	roundsMutex         *sync.Mutex
 	rounds              map[int64]*Round
-	CurrentRound        int64
-	CurrentMagicBlock   *block.Block
 }
 
 /*GetBlockMessageChannel - get the block messages channel */
 func (mc *Chain) GetBlockMessageChannel() chan *BlockMessage {
 	return mc.BlockMessageChannel
+}
+
+/*SetupGenesisBlock - setup the genesis block for this chain */
+func (mc *Chain) SetupGenesisBlock() *block.Block {
+	gr, gb := mc.GenerateGenesisBlock()
+	if gr == nil || gb == nil {
+		panic("Genesis round/block canot be null")
+	}
+	mgr := mc.CreateRound(gr)
+	mgr.AddBlockToVerify(gb)
+	mc.AddRound(mgr)
+	mc.AddBlock(gb)
+	return gb
 }
 
 /*CreateRound - create a round */
@@ -94,42 +98,6 @@ func (mc *Chain) DeleteRound(ctx context.Context, r *round.Round) {
 		}
 	}
 	delete(mc.rounds, r.Number)
-}
-
-/*AddBlock - adds a block to the cache */
-func (mc *Chain) AddBlock(b *block.Block) {
-	mc.Blocks[b.Hash] = b
-	if b.Round == 0 {
-		mc.LatestFinalizedBlock = b // Genesis block is always finalized
-		mc.CurrentMagicBlock = b    // Genesis block is always a magic block
-	} else if b.PrevBlock == nil {
-		pb, ok := mc.Blocks[b.PrevHash]
-		if ok {
-			b.PrevBlock = pb
-		} else {
-			Logger.Error("Prev block not present", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("prev_block", b.PrevHash))
-		}
-	}
-}
-
-/*GetBlock - returns a known block for a given hash from the cache */
-func (mc *Chain) GetBlock(ctx context.Context, hash string) (*block.Block, error) {
-	b, ok := mc.Blocks[datastore.ToKey(hash)]
-	if ok {
-		return b, nil
-	}
-	/*
-		b = block.Provider().(*block.Block)
-		err := b.Read(ctx, datastore.ToKey(hash))
-		if err != nil {
-			return b, nil
-		}*/
-	return nil, common.NewError(datastore.EntityNotFound, fmt.Sprintf("Block with hash (%v) not found", hash))
-}
-
-/*DeleteBlock - delete a block from the cache */
-func (mc *Chain) DeleteBlock(ctx context.Context, b *block.Block) {
-	delete(mc.Blocks, b.Hash)
 }
 
 /*GetRoundBlocks - get the blocks for a given round */

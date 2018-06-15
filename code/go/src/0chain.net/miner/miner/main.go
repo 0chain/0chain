@@ -43,6 +43,7 @@ func initHandlers() {
 	client.SetupHandlers()
 	transaction.SetupHandlers()
 	block.SetupHandlers()
+	miner.SetupHandlers()
 }
 
 func initEntities() {
@@ -51,6 +52,7 @@ func initEntities() {
 	chain.SetupEntity(memoryStorage)
 	round.SetupEntity(memoryStorage)
 	block.SetupEntity(memoryStorage)
+	block.SetupBlockSummaryEntity(memoryStorage)
 
 	client.SetupEntity(memoryStorage)
 	transaction.SetupEntity(memoryStorage)
@@ -132,8 +134,7 @@ func main() {
 	ctx := common.GetRootContext()
 	initEntities()
 
-	//TODO: This should not be required
-	setupGenesisBlock()
+	miner.GetMinerChain().SetupGenesisBlock()
 
 	mode := "main net"
 	if *testMode {
@@ -166,21 +167,6 @@ func main() {
 	Logger.Info("Ready to listen to the requests")
 	startTime = time.Now().UTC()
 	log.Fatal(server.ListenAndServe())
-}
-
-func setupGenesisBlock() {
-	mc := miner.GetMinerChain()
-	gb := mc.GenerateGenesisBlock()
-	if gb == nil {
-		panic("Genesis block canot be null")
-	}
-	gr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
-	gr.Number = 0
-	gr.AddNotarizedBlock(gb)
-	mgr := mc.CreateRound(gr)
-	mgr.AddBlockToVerify(gb)
-	mc.AddRound(mgr)
-	mc.AddBlock(gb)
 }
 
 /*StartChainHandler - start the chain if it's at Genesis round */

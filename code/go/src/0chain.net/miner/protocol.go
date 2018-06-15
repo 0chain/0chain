@@ -7,8 +7,8 @@ import (
 	"0chain.net/round"
 )
 
-/*ProtocolMessaging - this is the interace to understand the miner's P2P messages related to creating a block */
-type ProtocolMessaging interface {
+/*ProtocolMessageSender - this is the interace to understand the messages the miner sends to the network */
+type ProtocolMessageSender interface {
 	//TODO: This is temporary till the RVF protocol is finalized
 	SendRoundStart(ctx context.Context, r *round.Round)
 
@@ -17,6 +17,14 @@ type ProtocolMessaging interface {
 	SendNotarization(ctx context.Context, notarization *Notarization)
 
 	SendFinalizedBlock(ctx context.Context, b *block.Block)
+}
+
+/*ProtocolMessageReceiver - this is the interface to understand teh messages the miner receives from the network */
+type ProtocolMessageReceiver interface {
+	HandleStartRound(ctx context.Context, msg *BlockMessage)
+	HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage)
+	HandleVerificationTicketMessage(ctx context.Context, msg *BlockMessage)
+	HandleNotarizationMessage(ctx context.Context, msg *BlockMessage)
 }
 
 /*ProtocolRound - this is the interface that deals with the round level logic of the protocol */
@@ -43,7 +51,8 @@ type ProtocolBlock interface {
 
 /*Protocol - this is the interface to understand the miner's activity related to creating a block */
 type Protocol interface {
-	ProtocolMessaging
+	ProtocolMessageSender
+	ProtocolMessageReceiver
 	ProtocolRound
 	ProtocolBlock
 }

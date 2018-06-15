@@ -192,42 +192,6 @@ func (mc *Chain) CancelRoundVerification(ctx context.Context, r *Round) {
 	r.CancelVerification() // No need for further verification of any blocks
 }
 
-/*ComputeFinalizedBlock - compute the block that has been finalized. It should be the one in the prior round */
-func (mc *Chain) ComputeFinalizedBlock(ctx context.Context, r *Round) *block.Block {
-	tips := r.GetNotarizedBlocks()
-	for true {
-		ntips := make([]*block.Block, 0, 1)
-		for _, b := range tips {
-			if b.Hash == mc.LatestFinalizedBlock.Hash {
-				break
-			}
-			found := false
-			for _, nb := range ntips {
-				if b.PrevHash == nb.Hash {
-					found = true
-					break
-				}
-			}
-			if found {
-				continue
-			}
-			ntips = append(ntips, b.PrevBlock)
-		}
-		tips = ntips
-		if len(tips) == 1 {
-			break
-		}
-	}
-	if len(tips) != 1 {
-		return nil
-	}
-	fb := tips[0]
-	if fb.Round == r.Number {
-		return nil
-	}
-	return fb
-}
-
 /*FinalizeRound - starting from the given round work backwards and identify the round that can be
   assumed to be finalized as only one chain has survived.
   Note: It is that round and prior that actually get finalized.
@@ -242,7 +206,7 @@ func (mc *Chain) FinalizeRound(ctx context.Context, r *Round) {
 	case <-finzalizeTimer.C:
 		break
 	}
-	fb := mc.ComputeFinalizedBlock(ctx, r)
+	fb := mc.ComputeFinalizedBlock(ctx, &r.Round)
 	if fb == nil {
 		Logger.Info("finalization - no decisive block to finalize yet", zap.Any("round", r.Number))
 		return

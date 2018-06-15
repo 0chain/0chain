@@ -2,12 +2,16 @@ package chain
 
 import (
 	"context"
+	"fmt"
 
 	"0chain.net/block"
 	"0chain.net/common"
 	"0chain.net/config"
 	"0chain.net/datastore"
+	. "0chain.net/logging"
 	"0chain.net/node"
+	"0chain.net/round"
+	"go.uber.org/zap"
 )
 
 /*ServerChain - the chain object of the chain  the server is responsible for */
@@ -43,7 +47,11 @@ type Chain struct {
 	/*Blobbers - this is the pool of blobbers */
 	Blobbers *node.Pool `json:"-"`
 
-	LatestFinalizedBlock *block.Block `json:"latest_finalized_block,omitempty"` // Latest block on the chain the program is aware of
+	/* This is a cache of blocks that may include speculative blocks */
+	Blocks               map[datastore.Key]*block.Block `json:"-"`
+	LatestFinalizedBlock *block.Block                   `json:"latest_finalized_block,omitempty"` // Latest block on the chain the program is aware of
+	CurrentRound         int64
+	CurrentMagicBlock    *block.Block
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
@@ -87,6 +95,7 @@ func Provider() datastore.Entity {
 	c.Miners = node.NewPool(node.NodeTypeMiner)
 	c.Sharders = node.NewPool(node.NodeTypeSharder)
 	c.Blobbers = node.NewPool(node.NodeTypeBlobber)
+	c.Blocks = make(map[string]*block.Block)
 	return c
 }
 
@@ -103,13 +112,88 @@ func SetupEntity(store datastore.Store) {
 var GenesisBlockHash = "ed79cae70d439c11258236da1dfa6fc550f7cc569768304623e8fbd7d70efae4" //TODO
 
 /*GenerateGenesisBlock - Create the genesis block for the chain */
-func (c *Chain) GenerateGenesisBlock() *block.Block {
+func (c *Chain) GenerateGenesisBlock() (*round.Round, *block.Block) {
 	if c.ID != config.GetMainChainID() {
 		// TODO
+		return nil, nil
+	}
+	gb := datastore.GetEntityMetadata("block").Instance().(*block.Block)
+	gb.Hash = GenesisBlockHash
+	gb.Round = 0
+	gr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
+	gr.Number = 0
+	gr.AddNotarizedBlock(gb)
+	return gr, gb
+}
+
+/*ComputeFinalizedBlock - compute the block that has been finalized. It should be the one in the prior round */
+func (c *Chain) ComputeFinalizedBlock(ctx context.Context, r *round.Round) *block.Block {
+	tips := r.GetNotarizedBlocks()
+	for true {
+		ntips := make([]*block.Block, 0, 1)
+		for _, b := range tips {
+			if b.Hash == c.LatestFinalizedBlock.Hash {
+				break
+			}
+			found := false
+			for _, nb := range ntips {
+				if b.PrevHash == nb.Hash {
+					found = true
+					break
+				}
+			}
+			if found {
+				continue
+			}
+			ntips = append(ntips, b.PrevBlock)
+		}
+		tips = ntips
+		if len(tips) == 1 {
+			break
+		}
+	}
+	if len(tips) != 1 {
 		return nil
 	}
-	b := datastore.GetEntityMetadata("block").Instance().(*block.Block)
-	b.Hash = GenesisBlockHash
-	b.Round = 0
-	return b
+	fb := tips[0]
+	if fb.Round == r.Number {
+		return nil
+	}
+	return fb
+}
+
+/*AddBlock - adds a block to the cache */
+func (c *Chain) AddBlock(b *block.Block) {
+	c.Blocks[b.Hash] = b
+	if b.Round == 0 {
+		c.LatestFinalizedBlock = b // Genesis block is always finalized
+		c.CurrentMagicBlock = b    // Genesis block is always a magic block
+	} else if b.PrevBlock == nil {
+		pb, ok := c.Blocks[b.PrevHash]
+		if ok {
+			b.PrevBlock = pb
+		} else {
+			Logger.Error("Prev block not present", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("prev_block", b.PrevHash))
+		}
+	}
+}
+
+/*GetBlock - returns a known block for a given hash from the cache */
+func (c *Chain) GetBlock(ctx context.Context, hash string) (*block.Block, error) {
+	b, ok := c.Blocks[datastore.ToKey(hash)]
+	if ok {
+		return b, nil
+	}
+	/*
+		b = block.Provider().(*block.Block)
+		err := b.Read(ctx, datastore.ToKey(hash))
+		if err != nil {
+			return b, nil
+		}*/
+	return nil, common.NewError(datastore.EntityNotFound, fmt.Sprintf("Block with hash (%v) not found", hash))
+}
+
+/*DeleteBlock - delete a block from the cache */
+func (c *Chain) DeleteBlock(ctx context.Context, b *block.Block) {
+	delete(c.Blocks, b.Hash)
 }
