@@ -171,57 +171,9 @@ func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (*block.BlockVer
 	return bvt, nil
 }
 
-/*IsBlockNotarized - Does the given number of signatures means eligible for notraization?
-TODO: For now, we just assume more than 50% */
-func (mc *Chain) IsBlockNotarized(ctx context.Context, b *block.Block) bool {
-	numSignatures := b.GetVerificationTicketsCount()
-	if 3*numSignatures >= 2*mc.Miners.Size() {
-		return mc.IsCurrentlyWinningBlock(b)
-	}
-	return false
-}
-
-/*IsCurrentlyWinningBlock - Is this currently the winning block for it's round? */
-func (mc *Chain) IsCurrentlyWinningBlock(b *block.Block) bool {
-	//TODO: Ideally block's round's block should be the best if we are doing that book keeping
-	return true
-}
-
-/*VerifyTicket - verify the ticket */
-func (mc *Chain) VerifyTicket(ctx context.Context, b *block.Block, bvt *block.VerificationTicket) error {
-	/* Seems like this is allowed per Dfiniity protocol
-	if bvt.VerifierID == b.MinerID {
-		return common.InvalidRequest("Self signing not allowed")
-	} */
-	sender := mc.Miners.GetNode(bvt.VerifierID)
-	if sender == nil {
-		return common.InvalidRequest("Verifier unknown or not authorized at this time")
-	}
-
-	if ok, _ := sender.Verify(bvt.Signature, b.Hash); !ok {
-		return common.InvalidRequest("Couldn't verify the signature")
-	}
-	return nil
-}
-
 /*AddVerificationTicket - add a verified ticket to the list of verification tickets of the block */
 func (mc *Chain) AddVerificationTicket(ctx context.Context, b *block.Block, bvt *block.VerificationTicket) bool {
 	return b.AddVerificationTicket(bvt)
-}
-
-/*VerifyNotarization - verify that the notarization is correct */
-func (mc *Chain) VerifyNotarization(ctx context.Context, b *block.Block, bvt []*block.VerificationTicket) error {
-	if b.Round != 0 && bvt == nil {
-		return common.NewError("no_verification_tickets", "No verification tickets for this block")
-	}
-	// TODO: Logic similar to ReachedNotarization to check the count satisfies (refactor)
-
-	for _, vt := range bvt {
-		if err := mc.VerifyTicket(ctx, b, vt); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 /*UpdateFinalizedBlock - update the latest finalized block */

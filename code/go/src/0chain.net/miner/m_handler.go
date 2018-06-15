@@ -71,8 +71,12 @@ func VerifyBlockHandler(ctx context.Context, entity datastore.Entity) (interface
 	if !ok {
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
+	mc := GetMinerChain()
+	if b.Round < mc.LatestFinalizedBlock.Round {
+		return true, nil
+	}
 	msg := &BlockMessage{Sender: node.GetSender(ctx), Type: MessageVerify, Block: b}
-	GetMinerChain().GetBlockMessageChannel() <- msg
+	mc.GetBlockMessageChannel() <- msg
 	return true, nil
 }
 

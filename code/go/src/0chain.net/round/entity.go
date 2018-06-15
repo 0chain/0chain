@@ -9,6 +9,14 @@ import (
 	"0chain.net/datastore"
 )
 
+const (
+	RoundGenerating               = 0
+	RoundGenerated                = 1
+	RoundCollectingBlockProposals = 2
+	RoundStateFinalizing          = 3
+	RoundStateFinalized           = 4
+)
+
 /*Round - data structure for the round */
 type Round struct {
 	datastore.NOIDField
@@ -22,8 +30,8 @@ type Round struct {
 	// Once a round is finalized, this is the finalized block of the given round
 	Block *block.Block `json:"-"`
 
-	perm      []int
-	finalized bool
+	perm  []int
+	state int
 
 	notarizedBlocks      []*block.Block
 	notarizedBlocksMutex *sync.Mutex
@@ -64,15 +72,25 @@ func (r *Round) GetNotarizedBlocks() []*block.Block {
 	return r.notarizedBlocks
 }
 
+/*Finalizing - the round is being finalized */
+func (r *Round) Finalizing() {
+	r.state = RoundStateFinalizing
+}
+
 /*Finalize - finalize the round */
 func (r *Round) Finalize(b *block.Block) {
-	r.finalized = true
+	r.state = RoundStateFinalized
 	r.Block = b
+}
+
+/*IsFinalizing - is the round finalizing */
+func (r *Round) IsFinalizing() bool {
+	return r.state == RoundStateFinalizing
 }
 
 /*IsFinalized - indicates if the round is finalized */
 func (r *Round) IsFinalized() bool {
-	return r.finalized || r.Number == 0
+	return r.state == RoundStateFinalized || r.Number == 0
 }
 
 /*Provider - entity provider for client object */

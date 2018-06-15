@@ -4,7 +4,6 @@ import (
 	"context"
 	"log"
 	"os"
-	"sort"
 	"time"
 
 	"0chain.net/common"
@@ -55,6 +54,8 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 					Logger.Error("get block", zap.Any("block", b.Hash), zap.Error(err))
 				}
 			}
+			/* Run validations before accepting */
+			//TODO: We need to ensure this block is notarized. However, the block payload doesn't include it's own notarizations.
 			sc.AddBlock(b)
 			er, ok := rounds[b.Round]
 			if ok {
@@ -73,9 +74,10 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			}
 			ts = time.Now()
 			er.AddNotarizedBlock(b)
-			// Sort transactions by their hash - useful for quick search
-			sort.SliceStable(b.Txns, func(i, j int) bool { return b.Txns[i].Hash < b.Txns[j].Hash })
-			StoreBlock(ctx, b)
+			//TODO: Need better round state management like in the miner
+			if b.Round > 1 {
+				sc.FinalizeRound(ctx, rounds[b.Round-1], sc)
+			}
 		}
 	}
 }

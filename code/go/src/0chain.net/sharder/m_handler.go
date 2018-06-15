@@ -22,6 +22,10 @@ func FinalizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 	if !ok {
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
-	GetSharderChain().GetBlockChannel() <- b
+	sc := GetSharderChain()
+	if b.Round < sc.LatestFinalizedBlock.Round {
+		return true, nil
+	}
+	sc.GetBlockChannel() <- b
 	return true, nil
 }

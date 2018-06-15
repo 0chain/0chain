@@ -2,6 +2,7 @@ package sharder
 
 import (
 	"context"
+	"sort"
 
 	"0chain.net/block"
 	"0chain.net/blockstore"
@@ -10,6 +11,18 @@ import (
 	"0chain.net/persistencestore"
 	"go.uber.org/zap"
 )
+
+/*UpdatePendingBlock - update the pending block */
+func (sc *Chain) UpdatePendingBlock(ctx context.Context, b *block.Block, txns []datastore.Entity) {
+
+}
+
+/*UpdateFinalizedBlock - updates the finalized block */
+func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
+	// Sort transactions by their hash - useful for quick search
+	sort.SliceStable(b.Txns, func(i, j int) bool { return b.Txns[i].Hash < b.Txns[j].Hash })
+	StoreBlock(ctx, b)
+}
 
 /*StoreBlock - store the block to persistence storage */
 func StoreBlock(ctx context.Context, b *block.Block) error {
@@ -35,7 +48,7 @@ func StoreBlock(ctx context.Context, b *block.Block) error {
 	store := persistencestore.GetStorageProvider()
 	err = store.Write(ctx, bs)
 	if err != nil {
-		Logger.Error("can't write to DB", zap.Any("Error", err.Error()))
+		Logger.Error("db save error", zap.Error(err))
 	}
 	return err
 }

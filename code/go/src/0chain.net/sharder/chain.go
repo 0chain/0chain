@@ -3,6 +3,7 @@ package sharder
 import (
 	"0chain.net/block"
 	"0chain.net/chain"
+	"0chain.net/round"
 )
 
 var sharderChain = &Chain{}
@@ -22,7 +23,7 @@ func GetSharderChain() *Chain {
 type Chain struct {
 	chain.Chain
 	BlockChannel chan *block.Block
-	CurrentRound int64
+	rounds       map[int64]*round.Round
 }
 
 /*GetBlockChannel - get the block channel where the incoming blocks from the network are put into for further processing */
@@ -34,8 +35,9 @@ func (sc *Chain) GetBlockChannel() chan *block.Block {
 func (sc *Chain) SetupGenesisBlock() *block.Block {
 	gr, gb := sc.GenerateGenesisBlock()
 	if gr == nil || gb == nil {
-		panic("Genesis round/block canot be null")
+		panic("Genesis round/block can not be null")
 	}
+	//sc.AddRound(gr)
 	sc.AddBlock(gb)
 	return gb
 }

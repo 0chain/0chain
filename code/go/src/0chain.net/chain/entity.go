@@ -136,7 +136,9 @@ func (c *Chain) GenerateGenesisBlock() (*round.Round, *block.Block) {
 	return gr, gb
 }
 
-/*ComputeFinalizedBlock - compute the block that has been finalized. It should be the one in the prior round */
+/*ComputeFinalizedBlock - compute the block that has been finalized. It should be the one in the prior round
+TODO: This logic needs refinement when the sharders start saving only partial set of blocks they are responsible for
+*/
 func (c *Chain) ComputeFinalizedBlock(ctx context.Context, r *round.Round) *block.Block {
 	tips := r.GetNotarizedBlocks()
 	for true {
@@ -177,10 +179,10 @@ func (c *Chain) ComputeFinalizedBlock(ctx context.Context, r *round.Round) *bloc
   Note: It is that round and prior that actually get finalized.
 */
 func (c *Chain) FinalizeRound(ctx context.Context, r *round.Round, bsh BlockStateHandler) {
-	/*TODO: This is incorrect because when we ask r to finalize, it's actually the r-1 round's block that gets finalized */
-	if r.IsFinalized() {
+	if r.IsFinalizing() || r.IsFinalized() {
 		return
 	}
+	r.Finalizing()
 	var finzalizeTimer = time.NewTimer(FINALIZATION_TIME)
 	select {
 	case <-finzalizeTimer.C:
@@ -214,6 +216,7 @@ func (c *Chain) FinalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 		for _, b := range deadBlocks {
 			c.DeleteBlock(ctx, b)
 		}
+		Logger.Info("finalize round", zap.Any("round", r.Number), zap.Any("block_cache_size", len(c.Blocks)))
 	}()
 }
 
@@ -262,4 +265,48 @@ func (c *Chain) GetRoundBlocks(round int64) []*block.Block {
 		}
 	}
 	return blocks
+}
+
+/*VerifyTicket - verify the ticket */
+func (c *Chain) VerifyTicket(ctx context.Context, b *block.Block, bvt *block.VerificationTicket) error {
+	sender := c.Miners.GetNode(bvt.VerifierID)
+	if sender == nil {
+		return common.InvalidRequest("Verifier unknown or not authorized at this time")
+	}
+
+	if ok, _ := sender.Verify(bvt.Signature, b.Hash); !ok {
+		return common.InvalidRequest("Couldn't verify the signature")
+	}
+	return nil
+}
+
+/*VerifyNotarization - verify that the notarization is correct */
+func (c *Chain) VerifyNotarization(ctx context.Context, b *block.Block, bvt []*block.VerificationTicket) error {
+	if b.Round != 0 && bvt == nil {
+		return common.NewError("no_verification_tickets", "No verification tickets for this block")
+	}
+	// TODO: Logic similar to ReachedNotarization to check the count satisfies (refactor)
+
+	for _, vt := range bvt {
+		if err := c.VerifyTicket(ctx, b, vt); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+/*IsBlockNotarized - Does the given number of signatures means eligible for notraization?
+TODO: For now, we just assume more than 50% */
+func (c *Chain) IsBlockNotarized(ctx context.Context, b *block.Block) bool {
+	numSignatures := b.GetVerificationTicketsCount()
+	if 3*numSignatures >= 2*c.Miners.Size() {
+		return true
+	}
+	return false
+}
+
+/*ValidateMagicBlock - validate the block for a given round has the right magic block */
+func (c *Chain) ValidateMagicBlock(ctx context.Context, b *block.Block) bool {
+	//TODO: This needs to take the round number into account and go backwards as needed to validate
+	return b.MagicBlockHash == c.CurrentMagicBlock.Hash
 }

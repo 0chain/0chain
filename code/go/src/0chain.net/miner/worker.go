@@ -105,6 +105,9 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *Block
 		// TODO: If we didn't see this block so far, may be it's better to ask for it
 		return
 	}
+	if b.Round < mc.LatestFinalizedBlock.Round {
+		return
+	}
 	r := mc.GetRound(b.Round)
 	if r == nil {
 		return
@@ -124,6 +127,9 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 	b, err := mc.GetBlock(ctx, msg.Notarization.BlockID)
 	if err != nil {
 		// TODO: If we didn't see this block so far, may be it's better to ask for it
+		return
+	}
+	if b.Round < mc.LatestFinalizedBlock.Round {
 		return
 	}
 	if err := mc.VerifyNotarization(ctx, b, msg.Notarization.VerificationTickets); err != nil {

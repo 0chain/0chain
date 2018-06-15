@@ -99,9 +99,3 @@ func (mc *Chain) DeleteRound(ctx context.Context, r *round.Round) {
 	}
 	delete(mc.rounds, r.Number)
 }
-
-/*ValidateMagicBlock - validate the block for a given round has the right magic block */
-func (mc *Chain) ValidateMagicBlock(ctx context.Context, b *block.Block) bool {
-	//TODO: This needs to take the round number into account and go backwards as needed to validate
-	return b.MagicBlockHash == mc.CurrentMagicBlock.Hash
-}
