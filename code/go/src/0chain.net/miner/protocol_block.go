@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/chain"
+	"0chain.net/memorystore"
+
 	"0chain.net/block"
 	"0chain.net/client"
 	"0chain.net/common"
@@ -24,7 +27,7 @@ func (mc *Chain) StartRound(ctx context.Context, r *Round) {
 * The context should be a background context which can be used to stop this logic if there is a new
 * block published while working on this
  */
-func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block) error {
+func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.BlockStateHandler) error {
 	clients := make(map[string]*client.Client)
 	b.Txns = make([]*transaction.Transaction, mc.BlockSize)
 	//TODO: wasting this because []interface{} != []*transaction.Transaction in Go
@@ -96,7 +99,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block) error {
 	}
 	Logger.Info("time to assemble block", zap.Any("block", b.Hash), zap.Any("time", time.Since(start)))
 
-	updateTxnsToPending(ctx, etxns)
+	bsh.UpdatePendingBlock(ctx, b, etxns)
 	Logger.Info("time to assemble + update transaction state", zap.Any("block", b.Hash), zap.Any("time", time.Since(start)))
 
 	b.HashBlock()
@@ -110,7 +113,8 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block) error {
 	return nil
 }
 
-func updateTxnsToPending(ctx context.Context, txns []datastore.Entity) {
+/*UpdatePendingBlock - updates the block that is generated and pending rest of the process */
+func (mc *Chain) UpdatePendingBlock(ctx context.Context, b *block.Block, txns []datastore.Entity) {
 	transactionMetadataProvider := datastore.GetEntityMetadata("txn")
 	transactionMetadataProvider.GetStore().MultiWrite(ctx, transactionMetadataProvider, txns)
 }
@@ -220,6 +224,14 @@ func (mc *Chain) VerifyNotarization(ctx context.Context, b *block.Block, bvt []*
 	return nil
 }
 
+/*UpdateFinalizedBlock - update the latest finalized block */
+func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
+	fr := mc.GetRound(b.Round)
+	fr.Finalize(b)
+	mc.FinalizeBlock(ctx, b)
+	mc.SendFinalizedBlock(ctx, b)
+}
+
 /*FinalizeBlock - finalize the transactions in the block */
 func (mc *Chain) FinalizeBlock(ctx context.Context, b *block.Block) error {
 	modifiedTxns := make([]datastore.Entity, len(b.Txns))
@@ -229,6 +241,8 @@ func (mc *Chain) FinalizeBlock(ctx context.Context, b *block.Block) error {
 		modifiedTxns[idx] = txn
 	}
 	transactionMetadataProvider := datastore.GetEntityMetadata("txn")
+	ctx = memorystore.WithEntityConnection(ctx, transactionMetadataProvider)
+	defer memorystore.Close(ctx)
 	err := transactionMetadataProvider.GetStore().MultiWrite(ctx, transactionMetadataProvider, modifiedTxns)
 	if err != nil {
 		return err

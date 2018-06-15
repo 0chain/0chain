@@ -92,7 +92,10 @@ func SetupEntity(store datastore.Store) {
 	datastore.RegisterEntityMetadata("round", roundEntityMetadata)
 }
 
-/*ComputeRanks - Compute random order of n elements given the random see of the round */
+/*ComputeRanks - Compute random order of n elements given the random see of the round
+NOTE: The permutation is deterministic using a PRNG that uses a starting seed. The starting seed itself
+      is crytgraphically generated random number and is not known till the threshold signature is reached.
+*/
 func (r *Round) ComputeRanks(n int) {
 	r.perm = rand.New(rand.NewSource(r.RandomSeed)).Perm(n)
 }

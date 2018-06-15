@@ -52,12 +52,6 @@ func (r *Round) IsVerificationComplete() bool {
 	return r.verificationComplete
 }
 
-/*CollectionFunc - function to start collecting blocks
-* TODO: clean up with better design?
-* As we can't have circular dependency between miner and round packages, this is the workaround
- */
-type CollectionFunc func(ctx context.Context, r *Round)
-
 /*StartVerificationBlockCollection - WARNING: Doesn't support concurrent calling */
 func (r *Round) StartVerificationBlockCollection(ctx context.Context) context.Context {
 	if r.verificationCancelf != nil {

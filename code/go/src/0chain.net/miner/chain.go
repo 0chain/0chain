@@ -100,17 +100,6 @@ func (mc *Chain) DeleteRound(ctx context.Context, r *round.Round) {
 	delete(mc.rounds, r.Number)
 }
 
-/*GetRoundBlocks - get the blocks for a given round */
-func (mc *Chain) GetRoundBlocks(round int64) []*block.Block {
-	blocks := make([]*block.Block, 0, 1)
-	for _, blk := range mc.Blocks {
-		if blk.Round == round {
-			blocks = append(blocks, blk)
-		}
-	}
-	return blocks
-}
-
 /*ValidateMagicBlock - validate the block for a given round has the right magic block */
 func (mc *Chain) ValidateMagicBlock(ctx context.Context, b *block.Block) bool {
 	//TODO: This needs to take the round number into account and go backwards as needed to validate

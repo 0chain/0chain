@@ -3,6 +3,7 @@ package chain
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"0chain.net/block"
 	"0chain.net/common"
@@ -13,6 +14,9 @@ import (
 	"0chain.net/round"
 	"go.uber.org/zap"
 )
+
+const DELTA = 200 * time.Millisecond
+const FINALIZATION_TIME = 2 * DELTA
 
 /*ServerChain - the chain object of the chain  the server is responsible for */
 var ServerChain *Chain
@@ -25,6 +29,12 @@ func SetServerChain(c *Chain) {
 /*GetServerChain - returns the chain object for the server chain */
 func GetServerChain() *Chain {
 	return ServerChain
+}
+
+/*BlockStateHandler - handles the block state changes */
+type BlockStateHandler interface {
+	UpdatePendingBlock(ctx context.Context, b *block.Block, txns []datastore.Entity)
+	UpdateFinalizedBlock(ctx context.Context, b *block.Block)
 }
 
 /*Chain - data structure that holds the chain data*/
@@ -162,6 +172,51 @@ func (c *Chain) ComputeFinalizedBlock(ctx context.Context, r *round.Round) *bloc
 	return fb
 }
 
+/*FinalizeRound - starting from the given round work backwards and identify the round that can be
+  assumed to be finalized as only one chain has survived.
+  Note: It is that round and prior that actually get finalized.
+*/
+func (c *Chain) FinalizeRound(ctx context.Context, r *round.Round, bsh BlockStateHandler) {
+	/*TODO: This is incorrect because when we ask r to finalize, it's actually the r-1 round's block that gets finalized */
+	if r.IsFinalized() {
+		return
+	}
+	var finzalizeTimer = time.NewTimer(FINALIZATION_TIME)
+	select {
+	case <-finzalizeTimer.C:
+		break
+	}
+	fb := c.ComputeFinalizedBlock(ctx, r)
+	if fb == nil {
+		Logger.Info("finalization - no decisive block to finalize yet", zap.Any("round", r.Number))
+		return
+	}
+	lfbHash := c.LatestFinalizedBlock.Hash
+	c.LatestFinalizedBlock = fb
+	frchain := make([]*block.Block, 0, 1)
+	for b := fb; b != nil && b.Hash != lfbHash; b = b.PrevBlock {
+		frchain = append(frchain, b)
+	}
+	deadBlocks := make([]*block.Block, 0, 1)
+	for idx := range frchain {
+		fb = frchain[len(frchain)-1-idx]
+		Logger.Info("finalizing round", zap.Any("round", r.Number), zap.Any("finalized_round", fb.Round), zap.Any("hash", fb.Hash))
+		bsh.UpdateFinalizedBlock(ctx, fb)
+		frb := c.GetRoundBlocks(fb.Round)
+		for _, b := range frb {
+			if b.Hash != fb.Hash {
+				deadBlocks = append(deadBlocks, b)
+			}
+		}
+	}
+	// Prune all the dead blocks
+	go func() {
+		for _, b := range deadBlocks {
+			c.DeleteBlock(ctx, b)
+		}
+	}()
+}
+
 /*AddBlock - adds a block to the cache */
 func (c *Chain) AddBlock(b *block.Block) {
 	c.Blocks[b.Hash] = b
@@ -196,4 +251,15 @@ func (c *Chain) GetBlock(ctx context.Context, hash string) (*block.Block, error)
 /*DeleteBlock - delete a block from the cache */
 func (c *Chain) DeleteBlock(ctx context.Context, b *block.Block) {
 	delete(c.Blocks, b.Hash)
+}
+
+/*GetRoundBlocks - get the blocks for a given round */
+func (c *Chain) GetRoundBlocks(round int64) []*block.Block {
+	blocks := make([]*block.Block, 0, 1)
+	for _, blk := range c.Blocks {
+		if blk.Round == round {
+			blocks = append(blocks, blk)
+		}
+	}
+	return blocks
 }

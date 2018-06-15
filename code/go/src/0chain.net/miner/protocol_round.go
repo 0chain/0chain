@@ -7,18 +7,16 @@ import (
 	"time"
 
 	"0chain.net/block"
+	"0chain.net/chain"
 	"0chain.net/common"
 	"0chain.net/datastore"
 	. "0chain.net/logging"
-	"0chain.net/memorystore"
 	"0chain.net/node"
 	"0chain.net/round"
 	"go.uber.org/zap"
 )
 
-const DELTA = 200 * time.Millisecond
-const BLOCK_TIME = 3 * DELTA
-const FINALIZATION_TIME = 2 * DELTA
+const BLOCK_TIME = 3 * chain.DELTA
 
 /*GetBlockToExtend - Get the block to extend from the given round */
 func (mc *Chain) GetBlockToExtend(r *Round) *block.Block {
@@ -49,7 +47,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	b.ChainID = mc.ID
 	b.MagicBlockHash = mc.CurrentMagicBlock.Hash
 	b.SetPreviousBlock(pb)
-	err := mc.GenerateBlock(ctx, b)
+	err := mc.GenerateBlock(ctx, b, mc)
 	if err != nil {
 		Logger.Error("generate block error", zap.Error(err))
 		return nil, err
@@ -181,7 +179,7 @@ func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.B
 			}
 			pr := mc.GetRound(r.Number - 1)
 			if pr != nil && pr.Block != nil {
-				mc.FinalizeRound(ctx, pr)
+				mc.FinalizeRound(ctx, &pr.Round, mc)
 			}
 		}
 	}
@@ -190,63 +188,4 @@ func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.B
 /*CancelRoundVerification - cancel verifications happening within a round */
 func (mc *Chain) CancelRoundVerification(ctx context.Context, r *Round) {
 	r.CancelVerification() // No need for further verification of any blocks
-}
-
-/*FinalizeRound - starting from the given round work backwards and identify the round that can be
-  assumed to be finalized as only one chain has survived.
-  Note: It is that round and prior that actually get finalized.
-*/
-func (mc *Chain) FinalizeRound(ctx context.Context, r *Round) {
-	/*TODO: This is incorrect because when we ask r to finalize, it's actually the r-1 round's block that gets finalized */
-	if r.IsFinalized() {
-		return
-	}
-	var finzalizeTimer = time.NewTimer(FINALIZATION_TIME)
-	select {
-	case <-finzalizeTimer.C:
-		break
-	}
-	fb := mc.ComputeFinalizedBlock(ctx, &r.Round)
-	if fb == nil {
-		Logger.Info("finalization - no decisive block to finalize yet", zap.Any("round", r.Number))
-		return
-	}
-	lfbHash := mc.LatestFinalizedBlock.Hash
-	mc.LatestFinalizedBlock = fb
-	frchain := make([]*block.Block, 0, 1)
-	for b := fb; b != nil && b.Hash != lfbHash; b = b.PrevBlock {
-		frchain = append(frchain, b)
-	}
-	deadBlocks := make([]*block.Block, 0, 1)
-	for idx := range frchain {
-		fb = frchain[len(frchain)-1-idx]
-		fr := mc.GetRound(fb.Round)
-		Logger.Info("finalizing round", zap.Any("round", r.Number), zap.Any("finalized_round", fb.Round), zap.Any("hash", fb.Hash))
-		fr.Finalize(fb)
-		mc.UpdateFinalizedBlock(ctx, fb)
-		mc.SendFinalizedBlock(ctx, fb)
-		frb := mc.GetRoundBlocks(r.Number)
-		for _, b := range frb {
-			if b.Hash != fb.Hash {
-				deadBlocks = append(deadBlocks, b)
-			}
-		}
-	}
-	// Prune all the dead blocks
-	go func() {
-		for _, b := range deadBlocks {
-			mc.DeleteBlock(ctx, b)
-		}
-	}()
-}
-
-/*UpdateFinalizedBlock - update the latest finalized block */
-func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
-	if b.Hash == mc.LatestFinalizedBlock.Hash {
-		return
-	}
-	txnEntityMetadata := datastore.GetEntityMetadata("txn")
-	ctx = memorystore.WithEntityConnection(ctx, txnEntityMetadata)
-	defer memorystore.Close(ctx)
-	mc.FinalizeBlock(ctx, b)
 }

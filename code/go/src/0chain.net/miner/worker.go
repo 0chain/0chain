@@ -141,7 +141,7 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 	pr := mc.GetRound(b.Round - 1)
 	if pr != nil {
 		if pr.Number != 0 && pr.Block != nil {
-			mc.FinalizeRound(ctx, pr)
+			mc.FinalizeRound(ctx, &pr.Round, mc)
 		}
 	}
 }

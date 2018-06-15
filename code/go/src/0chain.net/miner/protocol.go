@@ -3,6 +3,8 @@ package miner
 import (
 	"context"
 
+	"0chain.net/chain"
+
 	"0chain.net/block"
 	"0chain.net/round"
 )
@@ -34,12 +36,12 @@ type ProtocolRound interface {
 	CollectBlocksForVerification(ctx context.Context, r *Round)
 	CancelRoundVerification(ctx context.Context, r *Round)
 	ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.Block, vt *block.VerificationTicket)
-	FinalizeRound(ctx context.Context, r *Round)
+	FinalizeRound(ctx context.Context, r *round.Round, bsh chain.BlockStateHandler)
 }
 
 /*ProtocolBlock - this is the interface that deals with the block level logic of the protocol */
 type ProtocolBlock interface {
-	GenerateBlock(ctx context.Context, b *block.Block) error
+	GenerateBlock(ctx context.Context, b *block.Block, bsh chain.BlockStateHandler) error
 	ValidateMagicBlock(ctx context.Context, b *block.Block) bool
 	VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockVerificationTicket, error)
 	VerifyTicket(ctx context.Context, b *block.Block, vt *block.VerificationTicket) error
@@ -51,6 +53,7 @@ type ProtocolBlock interface {
 
 /*Protocol - this is the interface to understand the miner's activity related to creating a block */
 type Protocol interface {
+	chain.BlockStateHandler
 	ProtocolMessageSender
 	ProtocolMessageReceiver
 	ProtocolRound
