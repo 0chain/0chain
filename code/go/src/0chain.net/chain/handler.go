@@ -16,6 +16,7 @@ import (
 func SetupHandlers() {
 	http.HandleFunc("/v1/chain/get", common.ToJSONResponse(memorystore.WithConnectionHandler(GetChainHandler)))
 	http.HandleFunc("/v1/chain/put", datastore.ToJSONEntityReqResponse(memorystore.WithConnectionEntityJSONHandler(PutChainHandler, chainEntityMetadata), chainEntityMetadata))
+	http.HandleFunc("/v1/latest_finalized_block", common.ToJSONResponse(LatestFinalizedBlockHandler))
 }
 
 /*GetChainHandler - given an id returns the chain information */
@@ -92,4 +93,9 @@ func (c *Chain) GetShardersHandler(w http.ResponseWriter, r *http.Request) {
 func (c *Chain) GetBlobbersHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain;charset=UTF-8")
 	c.Blobbers.Print(w)
+}
+
+/*LatestFinalizedBlockHandler - provide the latest finalized block by this miner */
+func LatestFinalizedBlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	return GetServerChain().LatestFinalizedBlock.GetSummary(), nil
 }

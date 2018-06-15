@@ -49,7 +49,7 @@ func (mc *Chain) SetupGenesisBlock() *block.Block {
 	mgr := mc.CreateRound(gr)
 	mgr.AddBlockToVerify(gb)
 	mc.AddRound(mgr)
-	mc.AddBlock(gb)
+	mc.AddGenesisBlock(gb)
 	return gb
 }
 

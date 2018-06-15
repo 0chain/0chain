@@ -220,13 +220,23 @@ func (c *Chain) FinalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 	}()
 }
 
+/*AddGenesisBlock - adds the genesis block to the chain */
+func (c *Chain) AddGenesisBlock(b *block.Block) {
+	if b.Round != 0 {
+		return
+	}
+	c.LatestFinalizedBlock = b // Genesis block is always finalized
+	c.CurrentMagicBlock = b    // Genesis block is always a magic block
+	c.Blocks[b.Hash] = b
+	return
+}
+
 /*AddBlock - adds a block to the cache */
 func (c *Chain) AddBlock(b *block.Block) {
-	c.Blocks[b.Hash] = b
-	if b.Round == 0 {
-		c.LatestFinalizedBlock = b // Genesis block is always finalized
-		c.CurrentMagicBlock = b    // Genesis block is always a magic block
-	} else if b.PrevBlock == nil {
+	if b.Round <= c.LatestFinalizedBlock.Round {
+		return
+	}
+	if b.PrevBlock == nil {
 		pb, ok := c.Blocks[b.PrevHash]
 		if ok {
 			b.PrevBlock = pb

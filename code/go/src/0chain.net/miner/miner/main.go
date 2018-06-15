@@ -43,7 +43,6 @@ func initHandlers() {
 	client.SetupHandlers()
 	transaction.SetupHandlers()
 	block.SetupHandlers()
-	miner.SetupHandlers()
 }
 
 func initEntities() {
@@ -106,8 +105,8 @@ func main() {
 		// TODO: This should come from configuration
 		serverChain.BlockSize = 5000
 	}
-	chain.SetServerChain(serverChain)
 	miner.SetupMinerChain(serverChain)
+	chain.SetServerChain(&miner.GetMinerChain().Chain)
 
 	reader, err = os.Open(*nodesFile)
 	if err != nil {

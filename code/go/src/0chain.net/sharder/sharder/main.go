@@ -51,6 +51,7 @@ func initEntities() {
 	chain.SetupEntity(memoryStorage)
 	round.SetupEntity(memoryStorage)
 	block.SetupEntity(memoryStorage)
+	block.SetupBlockSummaryEntity(memoryStorage)
 
 	client.SetupEntity(memoryStorage)
 	transaction.SetupEntity(memoryStorage)
@@ -88,8 +89,8 @@ func main() {
 	serverChain.Decimals = 10
 	serverChain.BlockSize = 10000
 
-	chain.SetServerChain(serverChain)
 	sharder.SetupSharderChain(serverChain)
+	chain.SetServerChain(&sharder.GetSharderChain().Chain)
 
 	config.Configuration.Host = *host
 	config.Configuration.Port = *port

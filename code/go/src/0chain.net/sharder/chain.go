@@ -38,6 +38,6 @@ func (sc *Chain) SetupGenesisBlock() *block.Block {
 		panic("Genesis round/block can not be null")
 	}
 	//sc.AddRound(gr)
-	sc.AddBlock(gb)
+	sc.AddGenesisBlock(gb)
 	return gb
 }
