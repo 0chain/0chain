@@ -22,6 +22,7 @@ import (
 	"0chain.net/node"
 	"0chain.net/round"
 	"0chain.net/transaction"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
@@ -63,16 +64,20 @@ func initEntities() {
 var Chain string
 
 func main() {
-	LoggerInit("development", "appLogs")
 	host := flag.String("host", "", "hostname")
 	port := flag.Int("port", 7220, "port")
-	chainID := flag.String("chain", "", "chain id")
 	testMode := flag.Bool("test", false, "test mode?")
 	nodesFile := flag.String("nodes_file", "config/single_node.txt", "nodes_file")
 	keysFile := flag.String("keys_file", "config/single_node_miner_keys.txt", "keys_file")
-	blockSize := flag.Int("block_size", 5000, "block_size")
 	maxDelay := flag.Int("max_delay", 0, "max_delay")
+	blockSize := flag.Int("block_size", 0, "block_size") // 0 => take from the config file
 	flag.Parse()
+	config.SetupConfig()
+	if *testMode {
+		LoggerInit("development", "appLogs")
+	} else {
+		LoggerInit("production", "appLogs")
+	}
 
 	//TODO: for docker compose mapping, we can't use the host
 	//address := fmt.Sprintf("%v:%v", *host, *port)
@@ -80,7 +85,7 @@ func main() {
 
 	config.Configuration.Host = *host
 	config.Configuration.Port = *port
-	config.Configuration.ChainID = *chainID
+	config.Configuration.ChainID = viper.GetString("server_chain.id")
 	config.Configuration.TestMode = *testMode
 	config.Configuration.MaxDelay = *maxDelay
 
@@ -90,57 +95,53 @@ func main() {
 	}
 	publicKey, privateKey := encryption.ReadKeys(reader)
 	reader.Close()
+	config.SetServerChainID(config.Configuration.ChainID)
+	serverChain := chain.Provider().(*chain.Chain)
+	serverChain.ID = datastore.ToKey(config.Configuration.ChainID)
+	serverChain.Decimals = int8(viper.GetInt("server_chain.decimals"))
+	serverChain.BlockSize = viper.GetInt32("server_chain.block.size")
+	if *testMode {
+		if *blockSize > 0 {
+			serverChain.BlockSize = int32(*blockSize)
+		}
+	}
 
 	if *nodesFile == "" {
 		panic("Please specify --node_file file.txt option with a file.txt containing peer nodes")
 	}
-
-	config.SetServerChainID(*chainID)
-	serverChain := chain.Provider().(*chain.Chain)
-	serverChain.ID = datastore.ToKey(config.GetServerChainID())
-	serverChain.Decimals = 10
-	if *testMode {
-		serverChain.BlockSize = int32(*blockSize)
-	} else {
-		// TODO: This should come from configuration
-		serverChain.BlockSize = 5000
-	}
-	miner.SetupMinerChain(serverChain)
-	chain.SetServerChain(&miner.GetMinerChain().Chain)
-
 	reader, err = os.Open(*nodesFile)
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
 	node.ReadNodes(reader, serverChain.Miners, serverChain.Sharders, serverChain.Blobbers)
+	reader.Close()
+
+	miner.SetupMinerChain(serverChain)
+	chain.SetServerChain(&miner.GetMinerChain().Chain)
+
 	serverChain.Miners.ComputeProperties()
 	serverChain.Sharders.ComputeProperties()
 	serverChain.Blobbers.ComputeProperties()
-	reader.Close()
+
 	if node.Self == nil {
 		Logger.DPanic("node definition for self node doesn't exist")
-		//panic("node definition for self node doesn't exist")
 	} else {
 		if node.Self.PublicKey != publicKey {
-			//logger.Info("self: %v", node.Self)
-			//fmt.Printf("self: %v\n", node.Self)
 			panic(fmt.Sprintf("Pulbic key from the keys file and nodes file don't match %v %v", publicKey, node.Self.PublicKey))
 		}
 		node.Self.SetPrivateKey(privateKey)
-		fmt.Printf("I am (%v,%v)\n", node.Self.Node.SetIndex, node.Self.Node.GetKey())
+		Logger.Info("self identity", zap.Any("set_index", node.Self.Node.SetIndex), zap.Any("id", node.Self.Node.GetKey()))
 	}
+
 	common.SetupRootContext(node.GetNodeContext())
 	ctx := common.GetRootContext()
 	initEntities()
-
-	miner.GetMinerChain().SetupGenesisBlock()
+	miner.GetMinerChain().SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"))
 
 	mode := "main net"
 	if *testMode {
 		mode = "test net"
-		serverChain.BlockSize = 10000
 	}
-
 	Logger.Info("CPU information", zap.Int("available_cpus", runtime.NumCPU()))
 	Logger.Info("Starting miner", zap.String("port", address), zap.String("chain_id", config.GetServerChainID()), zap.String("mode", mode))
 

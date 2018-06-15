@@ -150,7 +150,7 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockV
 	if err != nil {
 		return nil, err
 	}
-	Logger.Info("Block verification time", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("num_txns", len(b.Txns)), zap.Any("duration", time.Since(start)))
+	Logger.Info("block verification time", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("num_txns", len(b.Txns)), zap.Any("duration", time.Since(start)))
 	return bvt, nil
 }
 
@@ -160,7 +160,7 @@ func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (*block.BlockVer
 	bvt.BlockID = b.Hash
 	self := node.GetSelfNode(ctx)
 	if self == nil {
-		panic("Invalid setup, could not find the self node")
+		panic("invalid setup, could not find the self node")
 	}
 	var err error
 	bvt.VerifierID = self.GetKey()

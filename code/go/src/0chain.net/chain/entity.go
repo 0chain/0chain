@@ -7,7 +7,6 @@ import (
 
 	"0chain.net/block"
 	"0chain.net/common"
-	"0chain.net/config"
 	"0chain.net/datastore"
 	. "0chain.net/logging"
 	"0chain.net/node"
@@ -56,6 +55,8 @@ type Chain struct {
 
 	/*Blobbers - this is the pool of blobbers */
 	Blobbers *node.Pool `json:"-"`
+
+	GenesisBlockHash string `json:"genesis_block_hash"`
 
 	/* This is a cache of blocks that may include speculative blocks */
 	Blocks               map[datastore.Key]*block.Block `json:"-"`
@@ -118,17 +119,11 @@ func SetupEntity(store datastore.Store) {
 	datastore.RegisterEntityMetadata("chain", chainEntityMetadata)
 }
 
-/*GenesisBlockHash - block of 0chain.net main chain */
-var GenesisBlockHash = "ed79cae70d439c11258236da1dfa6fc550f7cc569768304623e8fbd7d70efae4" //TODO
-
 /*GenerateGenesisBlock - Create the genesis block for the chain */
-func (c *Chain) GenerateGenesisBlock() (*round.Round, *block.Block) {
-	if c.ID != config.GetMainChainID() {
-		// TODO
-		return nil, nil
-	}
+func (c *Chain) GenerateGenesisBlock(hash string) (*round.Round, *block.Block) {
+	c.GenesisBlockHash = hash
 	gb := datastore.GetEntityMetadata("block").Instance().(*block.Block)
-	gb.Hash = GenesisBlockHash
+	gb.Hash = hash
 	gb.Round = 0
 	gr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 	gr.Number = 0
@@ -236,12 +231,13 @@ func (c *Chain) AddBlock(b *block.Block) {
 	if b.Round <= c.LatestFinalizedBlock.Round {
 		return
 	}
+	c.Blocks[b.Hash] = b
 	if b.PrevBlock == nil {
 		pb, ok := c.Blocks[b.PrevHash]
 		if ok {
 			b.PrevBlock = pb
 		} else {
-			Logger.Error("Prev block not present", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("prev_block", b.PrevHash))
+			Logger.Info("previous block not present", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("prev_block", b.PrevHash))
 		}
 	}
 }

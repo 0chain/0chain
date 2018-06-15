@@ -24,6 +24,7 @@ import (
 	"0chain.net/round"
 	"0chain.net/sharder"
 	"0chain.net/transaction"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
@@ -68,33 +69,25 @@ var Chain string
 func main() {
 	host := flag.String("host", "", "hostname")
 	port := flag.Int("port", 7320, "port")
-	chainID := flag.String("chain", "", "chain id")
 	testMode := flag.Bool("test", false, "test mode?")
 	nodesFile := flag.String("nodes_file", "config/single_node.txt", "nodes_file")
 	keysFile := flag.String("keys_file", "config/single_node_sharder_keys.txt", "keys_file")
 	maxDelay := flag.Int("max_delay", 0, "max_delay")
 	flag.Parse()
-
+	config.SetupConfig()
 	if *testMode {
 		LoggerInit("development", "appLogs")
 	} else {
 		LoggerInit("production", "appLogs")
 	}
+
 	//TODO: for docker compose mapping, we can't use the host
 	//address := fmt.Sprintf("%v:%v", *host, *port)
 	address := fmt.Sprintf(":%v", *port)
-	config.SetServerChainID(*chainID)
-	serverChain := chain.Provider().(*chain.Chain)
-	serverChain.ID = datastore.ToKey(config.GetServerChainID())
-	serverChain.Decimals = 10
-	serverChain.BlockSize = 10000
-
-	sharder.SetupSharderChain(serverChain)
-	chain.SetServerChain(&sharder.GetSharderChain().Chain)
 
 	config.Configuration.Host = *host
 	config.Configuration.Port = *port
-	config.Configuration.ChainID = *chainID
+	config.Configuration.ChainID = viper.GetString("server_chain.id")
 	config.Configuration.TestMode = *testMode
 	config.Configuration.MaxDelay = *maxDelay
 
@@ -105,27 +98,37 @@ func main() {
 	publicKey, privateKey := encryption.ReadKeys(reader)
 	reader.Close()
 
+	config.SetServerChainID(config.Configuration.ChainID)
+	serverChain := chain.Provider().(*chain.Chain)
+	serverChain.ID = datastore.ToKey(config.Configuration.ChainID)
+	serverChain.Decimals = int8(viper.GetInt("server_chain.decimals"))
+	serverChain.BlockSize = viper.GetInt32("server_chain.block.size")
+
 	if *nodesFile == "" {
 		panic("Please specify --node_file file.txt option with a file.txt containing peer nodes")
 	}
-
 	reader, err = os.Open(*nodesFile)
 	if err != nil {
-		panic(err)
+		log.Fatalf("%v", err)
 	}
 	node.ReadNodes(reader, serverChain.Miners, serverChain.Sharders, serverChain.Blobbers)
+	reader.Close()
+
+	sharder.SetupSharderChain(serverChain)
+	chain.SetServerChain(&sharder.GetSharderChain().Chain)
+
 	serverChain.Miners.ComputeProperties()
 	serverChain.Sharders.ComputeProperties()
 	serverChain.Blobbers.ComputeProperties()
-	reader.Close()
+
 	if node.Self == nil {
-		panic("node definition for self node doesn't exist")
+		Logger.DPanic("node definition for self node doesn't exist")
 	} else {
 		if node.Self.PublicKey != publicKey {
-			fmt.Printf("self: %v\n", node.Self)
 			panic(fmt.Sprintf("Pulbic key from the keys file and nodes file don't match %v %v", publicKey, node.Self.PublicKey))
 		}
 		node.Self.SetPrivateKey(privateKey)
+		Logger.Info("self identity", zap.Any("set_index", node.Self.Node.SetIndex), zap.Any("id", node.Self.Node.GetKey()))
 	}
 
 	common.SetupRootContext(node.GetNodeContext())
@@ -158,7 +161,7 @@ func main() {
 	blockstore.SetupFSBlockStore("data/blocks")
 
 	initEntities()
-	sharder.GetSharderChain().SetupGenesisBlock()
+	sharder.GetSharderChain().SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"))
 
 	serverChain.SetupWorkers(ctx)
 	node.SetupN2NHandlers()

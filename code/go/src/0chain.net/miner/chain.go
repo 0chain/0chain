@@ -41,8 +41,8 @@ func (mc *Chain) GetBlockMessageChannel() chan *BlockMessage {
 }
 
 /*SetupGenesisBlock - setup the genesis block for this chain */
-func (mc *Chain) SetupGenesisBlock() *block.Block {
-	gr, gb := mc.GenerateGenesisBlock()
+func (mc *Chain) SetupGenesisBlock(hash string) *block.Block {
+	gr, gb := mc.GenerateGenesisBlock(hash)
 	if gr == nil || gb == nil {
 		panic("Genesis round/block canot be null")
 	}

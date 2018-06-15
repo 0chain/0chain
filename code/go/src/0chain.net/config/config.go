@@ -2,7 +2,19 @@ package config
 
 import (
 	"fmt"
+
+	"github.com/spf13/viper"
 )
+
+/*SetupConfig - setup the configuration system */
+func SetupConfig() {
+	viper.SetConfigName("0chain")
+	viper.AddConfigPath("./config")
+	err := viper.ReadInConfig() // Find and read the config file
+	if err != nil {             // Handle errors reading the config file
+		panic(fmt.Errorf("fatal error config file: %s", err))
+	}
+}
 
 /*Config - all the config options passed from the command line*/
 type Config struct {

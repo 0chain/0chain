@@ -32,8 +32,8 @@ func (sc *Chain) GetBlockChannel() chan *block.Block {
 }
 
 /*SetupGenesisBlock - setup the genesis block for this chain */
-func (sc *Chain) SetupGenesisBlock() *block.Block {
-	gr, gb := sc.GenerateGenesisBlock()
+func (sc *Chain) SetupGenesisBlock(hash string) *block.Block {
+	gr, gb := sc.GenerateGenesisBlock(hash)
 	if gr == nil || gb == nil {
 		panic("Genesis round/block can not be null")
 	}
