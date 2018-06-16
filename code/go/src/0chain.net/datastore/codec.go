@@ -7,7 +7,9 @@ import (
 	"io"
 
 	"0chain.net/common"
+	. "0chain.net/logging"
 	"github.com/vmihailenco/msgpack"
+	"go.uber.org/zap"
 )
 
 const (
@@ -42,7 +44,7 @@ func ToJSONPipe(entity Entity) *io.PipeReader {
 		defer pw.Close()
 		err := json.NewEncoder(pw).Encode(entity)
 		if err != nil {
-			fmt.Printf("TOJSONPipe:error: %v\n", err)
+			Logger.Error("TOJSONPipe:error", zap.Error(err))
 		}
 	}()
 	return pr

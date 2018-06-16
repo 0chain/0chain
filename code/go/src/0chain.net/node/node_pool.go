@@ -137,7 +137,6 @@ func (np *Pool) computeNodePositions() {
 	sort.SliceStable(np.Nodes, func(i, j int) bool { return np.Nodes[i].GetKey() < np.Nodes[j].GetKey() })
 	for idx, node := range np.Nodes {
 		node.SetIndex = idx
-		//fmt.Printf("setting node %v to %v of %v\n", node.GetKey(), idx, len(np.Nodes))
 	}
 }
 

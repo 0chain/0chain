@@ -2,12 +2,14 @@ package common
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	. "0chain.net/logging"
+	"go.uber.org/zap"
 )
 
 var ErrStop = NewError("stop_error", "Stop signal error")
@@ -23,7 +25,7 @@ func SetupRootContext(nodectx context.Context) {
 	go func() {
 		select {
 		case <-done:
-			fmt.Printf("Shutting down all workers...\n")
+			Logger.Info("Shutting down all workers...")
 			rootCancel()
 		}
 	}()
@@ -38,7 +40,7 @@ func GetRootContext() context.Context {
 
 /*Done - call this when the program needs to stop and notify all workers */
 func Done() {
-	fmt.Printf("Initiating shutdown...\n")
+	Logger.Info("Initiating shutdown...")
 	rootCancel()
 	//TODO: How do we ensure every worker is completed any shutdown sequence before we finally shut down
 	//the server using server.Shutdown(ctx)
@@ -62,7 +64,7 @@ func HandleShutdown(server *http.Server) {
 				server.Shutdown(ctx)
 				cancelf()
 			default:
-				fmt.Printf("unhandled signal is %T, %v\n", sig, sig)
+				Logger.Debug("unhandled signal", zap.Any("signal", sig))
 			}
 		}
 	}()

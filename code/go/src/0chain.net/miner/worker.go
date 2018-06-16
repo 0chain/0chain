@@ -27,9 +27,9 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 			return
 		case msg := <-mc.GetBlockMessageChannel():
 			if msg.Sender != nil {
-				Logger.Info("message", zap.Any("msg", GetMessageLookup(msg.Type)), zap.Any("sender_index", msg.Sender.SetIndex), zap.Any("id", msg.Sender.GetKey()))
+				Logger.Debug("message", zap.Any("msg", GetMessageLookup(msg.Type)), zap.Any("sender_index", msg.Sender.SetIndex), zap.Any("id", msg.Sender.GetKey()))
 			} else {
-				Logger.Info("message", zap.Any("msg", GetMessageLookup(msg.Type)))
+				Logger.Debug("message", zap.Any("msg", GetMessageLookup(msg.Type)))
 			}
 			switch msg.Type {
 			case MessageStartRound:

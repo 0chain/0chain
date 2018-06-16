@@ -185,7 +185,7 @@ func (c *Chain) FinalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 	}
 	fb := c.ComputeFinalizedBlock(ctx, r)
 	if fb == nil {
-		Logger.Info("finalization - no decisive block to finalize yet", zap.Any("round", r.Number))
+		Logger.Debug("finalization - no decisive block to finalize yet", zap.Any("round", r.Number))
 		return
 	}
 	lfbHash := c.LatestFinalizedBlock.Hash
@@ -197,7 +197,7 @@ func (c *Chain) FinalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 	deadBlocks := make([]*block.Block, 0, 1)
 	for idx := range frchain {
 		fb = frchain[len(frchain)-1-idx]
-		Logger.Info("finalizing round", zap.Any("round", r.Number), zap.Any("finalized_round", fb.Round), zap.Any("hash", fb.Hash))
+		Logger.Debug("finalizing round", zap.Any("round", r.Number), zap.Any("finalized_round", fb.Round), zap.Any("hash", fb.Hash))
 		bsh.UpdateFinalizedBlock(ctx, fb)
 		frb := c.GetRoundBlocks(fb.Round)
 		for _, b := range frb {
@@ -211,7 +211,7 @@ func (c *Chain) FinalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 		for _, b := range deadBlocks {
 			c.DeleteBlock(ctx, b)
 		}
-		Logger.Info("finalize round", zap.Any("round", r.Number), zap.Any("block_cache_size", len(c.Blocks)))
+		Logger.Debug("finalize round", zap.Any("round", r.Number), zap.Any("block_cache_size", len(c.Blocks)))
 	}()
 }
 
@@ -237,7 +237,7 @@ func (c *Chain) AddBlock(b *block.Block) {
 		if ok {
 			b.PrevBlock = pb
 		} else {
-			Logger.Info("previous block not present", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("prev_block", b.PrevHash))
+			Logger.Debug("previous block not present", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("prev_block", b.PrevHash))
 		}
 	}
 }

@@ -9,6 +9,8 @@ import (
 
 	"0chain.net/common"
 	"0chain.net/datastore"
+	. "0chain.net/logging"
+	"go.uber.org/zap"
 )
 
 /*IterateCollection - iterate a collection with a callback that is given the entities.
@@ -93,7 +95,7 @@ func trackCollection(entityMetadata datastore.EntityMetadata, qe datastore.Colle
 
 /*CollectionTrimmer - trims the collection based on size and duration options */
 func CollectionTrimmer(entityMetadata datastore.EntityMetadata, collection string, trimSize int64, trimBeyond time.Duration) {
-	fmt.Printf("starting collection trimmer for %v\n", collection)
+	Logger.Debug("starting collection trimmer", zap.String("collection", collection))
 	ctx := WithEntityConnection(common.GetRootContext(), entityMetadata)
 	con := GetEntityCon(ctx, entityMetadata)
 	defer Close(ctx)
@@ -107,12 +109,12 @@ func CollectionTrimmer(entityMetadata datastore.EntityMetadata, collection strin
 			con.Flush()
 			data, err := con.Receive()
 			if err != nil {
-				fmt.Printf("collection trimmer %v %v error: %v\n", t, collection, err)
+				Logger.Error("collection trimmer", zap.String("collection", collection), zap.Time("time", t), zap.Error(err))
 				continue
 			}
 			size, ok := data.(int64)
 			if !ok {
-				fmt.Printf("collection trimmer %v %v data: %v\n", t, collection, data)
+				Logger.Error("collection trimmer", zap.String("collection", collection), zap.Time("time", t), zap.Any("data", data))
 			}
 			if size < trimSize {
 				continue

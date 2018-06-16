@@ -141,7 +141,7 @@ func main() {
 		serverChain.BlockSize = 10000
 	}
 	Logger.Info("CPU information", zap.Int("No of CPU available", runtime.NumCPU()))
-	fmt.Printf("Starting %v on %v for chain %v in %v mode ...\n", os.Args[0], address, config.GetServerChainID(), mode)
+	Logger.Info("Starting sharder", zap.String("port", address), zap.String("chain_id", config.GetServerChainID()), zap.String("mode", mode))
 
 	/*
 		l, err := net.Listen("tcp", address)
@@ -173,7 +173,7 @@ func main() {
 	initServer()
 	initHandlers()
 
-	fmt.Printf("Ready to listen to the requests\n")
+	Logger.Info("Ready to listen to the requests\n")
 	//log.Fatal(server.Serve(l))
 	log.Fatal(server.ListenAndServe())
 }

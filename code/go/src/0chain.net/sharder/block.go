@@ -35,7 +35,7 @@ func StoreBlock(ctx context.Context, b *block.Block) error {
 	if err != nil {
 		Logger.Error("block save", zap.Any("round", b.Round), zap.Any("hash", b.Hash), zap.Error(err))
 	} else {
-		Logger.Info("saved block", zap.Any("round", b.Round), zap.Any("hash", b.Hash), zap.Any("prev_hash", b.PrevHash))
+		Logger.Debug("saved block", zap.Any("round", b.Round), zap.Any("hash", b.Hash), zap.Any("prev_hash", b.PrevHash))
 	}
 
 	// TODO: Store the block summary and transaction summary information

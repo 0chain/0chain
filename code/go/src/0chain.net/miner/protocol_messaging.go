@@ -4,10 +4,7 @@ import (
 	"context"
 
 	"0chain.net/block"
-	. "0chain.net/logging"
-	"0chain.net/node"
 	"0chain.net/round"
-	"go.uber.org/zap"
 )
 
 /*SendRoundStart - send a new round start message */
@@ -32,6 +29,5 @@ func (mc *Chain) SendNotarization(ctx context.Context, notarization *Notarizatio
 
 /*SendFinalizedBlock - send the finalized block to the sharders */
 func (mc *Chain) SendFinalizedBlock(ctx context.Context, b *block.Block) {
-	Logger.Info("sending finalized block message", zap.Any("set_index", node.Self.Node.SetIndex), zap.Any("id", node.Self.Node.GetKey()))
 	mc.Sharders.SendAll(FinalizedBlockSender(b))
 }

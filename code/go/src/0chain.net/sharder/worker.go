@@ -29,7 +29,7 @@ var rounds map[int64]*round.Round
 
 /*ClearWorkerState - clears the worker state */
 func ClearWorkerState() {
-	Logger.Info("clearing worker state")
+	Logger.Debug("clearing worker state")
 	rounds = make(map[int64]*round.Round)
 	if timer != nil {
 		metrics.Unregister("block_time")
@@ -48,7 +48,7 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			eb, err := sc.GetBlock(ctx, b.Hash)
 			if eb != nil {
 				if err == nil {
-					Logger.Info("block already received", zap.Any("round", b.Round), zap.Any("block", b.Hash))
+					Logger.Debug("block already received", zap.Any("round", b.Round), zap.Any("block", b.Hash))
 					continue
 				} else {
 					Logger.Error("get block", zap.Any("block", b.Hash), zap.Error(err))

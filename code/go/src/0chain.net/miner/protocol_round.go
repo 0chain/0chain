@@ -61,7 +61,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 /*AddToRoundVerification - Add a block to verify : WARNING: does not support concurrent access for a given round */
 func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block.Block) {
 	if !mc.ValidateMagicBlock(ctx, b) {
-		Logger.Info("invalid magic block", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("magic_block", b.MagicBlockHash))
+		Logger.Error("invalid magic block", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("magic_block", b.MagicBlockHash))
 		return
 	}
 	mc.AddBlock(b)
@@ -80,7 +80,7 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 		bvt, err := mc.VerifyRoundBlock(ctx, r, b)
 		if err != nil {
 			if err == ErrRoundMismatch {
-				Logger.Info("verify round block", zap.Any("round", r.Number), zap.Any("block", b.Hash), zap.Any("current_round", mc.CurrentRound))
+				Logger.Debug("verify round block", zap.Any("round", r.Number), zap.Any("block", b.Hash), zap.Any("current_round", mc.CurrentRound))
 			} else {
 				Logger.Error("verify round block", zap.Any("round", r.Number), zap.Any("block", b.Hash), zap.Error(err))
 			}

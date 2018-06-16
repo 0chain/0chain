@@ -12,7 +12,6 @@ var (
 
 /*InitLogging - intialize logging system */
 func InitLogging(mode string) {
-	Logger = zap.NewNop()
 	LoggerInit(mode, "log/0chain.log")
 }
 
@@ -37,7 +36,6 @@ func LoggerInit(logMode, logFile string) {
 	var err error
 	Logger, err = conf.Build()
 	if err != nil {
-		//panic(fmt.Sprintf("error initializing the logging system: %v", err))
-		fmt.Printf("error initializing logging: %v", err)
+		panic(fmt.Sprintf("error initializing the logging system: %v", err))
 	}
 }

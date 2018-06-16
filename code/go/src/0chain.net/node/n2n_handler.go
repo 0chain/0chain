@@ -133,13 +133,13 @@ func (np *Pool) SendAtleast(numNodes int, handler SendHandler) []*Node {
 			validCount++
 			if validCount == numNodes {
 				close(sendBucket)
-				Logger.Info("", zap.Any("all_nodes", len(nodes)), zap.Any("requested", numNodes), zap.Any("active", activeCount), zap.Any("sent_to", len(nodes)), zap.Any("time", time.Since(start)))
+				Logger.Debug("", zap.Any("all_nodes", len(nodes)), zap.Any("requested", numNodes), zap.Any("active", activeCount), zap.Any("sent_to", len(nodes)), zap.Any("time", time.Since(start)))
 				return sentTo
 			}
 		case <-done:
 			doneCount++
 			if doneCount >= numNodes+THRESHOLD || doneCount >= activeCount {
-				Logger.Info("", zap.Any("all_nodes", len(nodes)), zap.Any("requested", numNodes), zap.Any("active", activeCount), zap.Any("sent_to", len(nodes)), zap.Any("time", time.Since(start)))
+				Logger.Debug("", zap.Any("all_nodes", len(nodes)), zap.Any("requested", numNodes), zap.Any("active", activeCount), zap.Any("sent_to", len(nodes)), zap.Any("time", time.Since(start)))
 				close(sendBucket)
 				return sentTo
 			}
@@ -243,7 +243,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			req.Header.Set("Content-Type", "application/json; charset=utf-8")
 			SetHeaders(req, entity, options)
 			delay := common.InduceDelay()
-			Logger.Info("sending", zap.Any("from", Self.SetIndex), zap.Any("to", n.SetIndex), zap.Any("handler", url), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Any("delay", delay))
+			Logger.Debug("sending", zap.Any("from", Self.SetIndex), zap.Any("to", n.SetIndex), zap.Any("handler", url), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Any("delay", delay))
 			resp, err := client.Do(req)
 			if err != nil {
 				Logger.Error("sending", zap.Any("from", Self.SetIndex), zap.Any("to", n.SetIndex), zap.Any("handler", url), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Error(err))
@@ -281,20 +281,20 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF) common
 		nodeID := r.Header.Get(HeaderNodeID)
 		sender := GetNode(nodeID)
 		if sender == nil {
-			Logger.Info("message received", zap.Any("from", nodeID), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("error", "request from unrecognized node"))
+			Logger.Error("message received", zap.Any("from", nodeID), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("error", "request from unrecognized node"))
 			return
 		}
 
 		entityName := r.Header.Get(HeaderRequestEntityName)
 		if entityName == "" {
-			Logger.Info("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("error", "entity name blank"))
+			Logger.Error("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("error", "entity name blank"))
 			return
 		}
 
 		reqHashdata := r.Header.Get(HeaderRequestHashData)
 		reqHash := r.Header.Get(HeaderRequestHash)
 		if reqHash != encryption.Hash(reqHashdata) {
-			Logger.Info("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("error", "request data hash invalid"))
+			Logger.Error("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("error", "request data hash invalid"))
 			return
 		}
 		reqSignature := r.Header.Get(HeaderNodeRequestSignature)
@@ -302,7 +302,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF) common
 			return
 		}
 
-		Logger.Info("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("entity", entityName), zap.Any("data", reqHashdata))
+		Logger.Debug("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("entity", entityName), zap.Any("data", reqHashdata))
 		reqTS := r.Header.Get(HeaderRequestTimeStamp)
 		if reqTS == "" {
 			Logger.Error("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("entity", entityName), zap.Any("data", reqHashdata), zap.Any("error", "no timestamp for the message"))
@@ -367,7 +367,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF) common
 		}
 		delay := common.InduceDelay()
 		if delay > 0 {
-			Logger.Info("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("entity", entityName), zap.Any("data", reqHashdata), zap.Any("delay", delay))
+			Logger.Debug("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("entity", entityName), zap.Any("data", reqHashdata), zap.Any("delay", delay))
 		}
 		data, err := handler(ctx, entity)
 		common.Respond(w, data, err)

@@ -101,10 +101,10 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		txn.PublicKey = client.PublicKey
 		txn.ClientID = datastore.EmptyKey
 	}
-	Logger.Info("time to assemble block", zap.Any("block", b.Hash), zap.Any("time", time.Since(start)))
+	Logger.Debug("time to assemble block", zap.Any("block", b.Hash), zap.Any("time", time.Since(start)))
 
 	bsh.UpdatePendingBlock(ctx, b, etxns)
-	Logger.Info("time to assemble + update transaction state", zap.Any("block", b.Hash), zap.Any("time", time.Since(start)))
+	Logger.Debug("time to assemble + update transaction state", zap.Any("block", b.Hash), zap.Any("time", time.Since(start)))
 
 	b.HashBlock()
 	b.Signature, err = self.Sign(b.Hash)
@@ -112,7 +112,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		return err
 	}
 
-	Logger.Info("time to assemble+update+sign block", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("time", time.Since(start)))
+	Logger.Debug("time to assemble+update+sign block", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("time", time.Since(start)))
 	go b.ComputeTxnMap()
 	return nil
 }
@@ -154,7 +154,7 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockV
 	if err != nil {
 		return nil, err
 	}
-	Logger.Info("block verification time", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("num_txns", len(b.Txns)), zap.Any("duration", time.Since(start)))
+	Logger.Debug("block verification time", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("num_txns", len(b.Txns)), zap.Any("duration", time.Since(start)))
 	return bvt, nil
 }
 

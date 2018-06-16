@@ -112,7 +112,6 @@ func (ecb *EntityChunkBuilder) Run(ctx context.Context) {
 			case qe := <-ecb.EntityChannel:
 				ecb.addEntity(qe)
 			case <-ecb.TimeoutChannel.C:
-				//fmt.Printf("reached timeout: %v\n", t)
 				ecb.sendChunk(ecb.ChunkChannel)
 			}
 		} else {
