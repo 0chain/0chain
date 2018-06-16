@@ -7,13 +7,13 @@ import (
 
 	"0chain.net/common"
 	"0chain.net/datastore"
-	"0chain.net/memorystore"
 )
 
 /*SetupHandlers sets up the necessary API end points */
 func SetupHandlers() {
-	http.HandleFunc("/v1/block/get", common.ToJSONResponse(memorystore.WithConnectionHandler(GetBlock)))
-	http.HandleFunc("/v1/block/put", datastore.ToJSONEntityReqResponse(memorystore.WithConnectionEntityJSONHandler(PutBlock, blockEntityMetadata), blockEntityMetadata))
+	//TODO: These handlers may not be necessary
+	//http.HandleFunc("/v1/block/get", common.ToJSONResponse(memorystore.WithConnectionHandler(GetBlock)))
+	//http.HandleFunc("/v1/block/put", datastore.ToJSONEntityReqResponse(memorystore.WithConnectionEntityJSONHandler(PutBlock, blockEntityMetadata), blockEntityMetadata))
 }
 
 /*GetBlock - given an id returns the block information */
