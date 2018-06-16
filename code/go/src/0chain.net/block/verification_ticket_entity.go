@@ -9,8 +9,8 @@ import (
 
 /*VerificationTicket - verification ticket for the block */
 type VerificationTicket struct {
-	VerifierID datastore.Key `json:"verifier_id"`
-	Signature  string        `json:"signature"`
+	VerifierID datastore.Key `json:"verifier_id" msgpack:"v_id"`
+	Signature  string        `json:"signature" msgpack:"sig"`
 }
 
 /*BlockVerificationTicket - verification ticket with the block id.
