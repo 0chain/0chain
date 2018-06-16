@@ -65,11 +65,21 @@ $ ../bin/start.sharder.sh
 ```
 ## Generating Test Transactions
 
-1) To build the miner_stress program from git/0chain directory
-```$ ./docker.local/bin/build_txns_generator.sh```
-2) To run the miner_stress program after starting the 3 miners
-```$ ./docker.local/bin/generate_txns.sh num-txns```
-If num-txns is not specified, then 25000 transactions are generated for each miner
+1) To build the miner_stress program from git/0chain directory, you need to make sure go is installed and all the dependent packges are installed. To know the dpeendency just run the following command and any missing dependencies are thrown as errors. At that point you 
+can use the "go get" command and install the packages.
+
+```
+$ ./docker.local/bin/build_txns_generator.sh
+```
+2) To generate data, start the block chain generation process
+```
+$ ./docker.local/bin/run.test.sh num-txns
+```
+
+If num-txns value is not specified, then 1000 transactions are generated for each miner. The run.test.sh first generates specified number of
+transactions on each of the 3 miners, then calls /_start on sharder1 to reset the state and then calls /_start on miner1 who starts the 1st
+round by generating a random number and send it to the other 2 (Note, the actual mechanism to get started is going to be different and the
+current process of using /_start is only for testing purpose)
 
 ## Troubleshooting
 
