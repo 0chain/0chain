@@ -6,7 +6,6 @@ import (
 	"0chain.net/common"
 	"0chain.net/datastore"
 	. "0chain.net/logging"
-	"0chain.net/memorystore"
 	"0chain.net/node"
 	"0chain.net/round"
 	"go.uber.org/zap"
@@ -61,11 +60,6 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 	if !mc.AddRound(mr) {
 		return
 	}
-	/* TODO: We need time based pruning which will happen when we also start building blocks with transactions that are within certain timeframe.
-	ppr := mc.GetRound(mr.Number - 2)
-	if ppr != nil {
-		mc.DeleteRound(ctx, ppr)
-	} */
 	self := node.GetSelfNode(ctx)
 	rank := mr.GetRank(self.SetIndex)
 	Logger.Info("*** starting round ***", zap.Any("round", mr.Number), zap.Any("index", self.SetIndex), zap.Any("rank", rank))
@@ -73,9 +67,7 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 	if 2*rank > mc.Miners.Size() {
 		return
 	}
-	txnEntityMetadata := datastore.GetEntityMetadata("txn")
-	ctx = memorystore.WithEntityConnection(ctx, txnEntityMetadata)
-	defer memorystore.Close(ctx)
+	//TODO: If there are not enough txns, this will not advance further even though rest of the network is
 	mc.GenerateRoundBlock(ctx, mr)
 }
 

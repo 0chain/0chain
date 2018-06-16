@@ -11,6 +11,7 @@ import (
 	"0chain.net/common"
 	"0chain.net/datastore"
 	. "0chain.net/logging"
+	"0chain.net/memorystore"
 	"0chain.net/node"
 	"0chain.net/round"
 	"go.uber.org/zap"
@@ -33,6 +34,9 @@ func (mc *Chain) GetBlockToExtend(r *Round) *block.Block {
 
 /*GenerateRoundBlock - given a round number generates a block*/
 func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block, error) {
+	txnEntityMetadata := datastore.GetEntityMetadata("txn")
+	ctx = memorystore.WithEntityConnection(ctx, txnEntityMetadata)
+	defer memorystore.Close(ctx)
 	pround := mc.GetRound(r.Number - 1)
 	if pround == nil {
 		Logger.Error("generate block (prior round not found)", zap.Any("round", r.Number-1))
@@ -47,10 +51,26 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	b.ChainID = mc.ID
 	b.MagicBlockHash = mc.CurrentMagicBlock.Hash
 	b.SetPreviousBlock(pb)
-	err := mc.GenerateBlock(ctx, b, mc)
-	if err != nil {
-		Logger.Error("generate block error", zap.Error(err))
-		return nil, err
+	for true {
+		if mc.CurrentRound > b.Round {
+			return nil, common.NewError("round_mismatch", "Current round and block round do not match")
+		}
+		delay := 128 * time.Millisecond
+		err := mc.GenerateBlock(ctx, b, mc)
+		if err != nil {
+			cerr, ok := err.(*common.Error)
+			if ok && cerr.Code == InsufficientTxns {
+				time.Sleep(delay)
+				delay := 2 * delay
+				if delay > time.Second {
+					delay = time.Second
+				}
+				continue
+			}
+			Logger.Error("generate block", zap.Error(err))
+			return nil, err
+		}
+		break
 	}
 	mc.AddToRoundVerification(ctx, r, b)
 	mc.AddBlock(b)

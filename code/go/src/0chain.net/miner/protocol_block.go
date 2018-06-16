@@ -18,6 +18,8 @@ import (
 	"go.uber.org/zap"
 )
 
+var InsufficientTxns = "insufficient_txns"
+
 /*StartRound - start a new round */
 func (mc *Chain) StartRound(ctx context.Context, r *Round) {
 	mc.AddRound(r)
@@ -89,7 +91,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	if idx != mc.BlockSize {
 		b.Txns = nil
 		Logger.Info("generate block", zap.Any("iteration_count", count), zap.Any("block_size", mc.BlockSize), zap.Any("num_txns", idx))
-		return common.NewError("insufficient_txns", fmt.Sprintf("Not sufficient txns to make a block yet for round %v", b.Round))
+		return common.NewError(InsufficientTxns, fmt.Sprintf("Not sufficient txns to make a block yet for round %v", b.Round))
 	}
 
 	client.GetClients(ctx, clients)
@@ -184,6 +186,7 @@ func (mc *Chain) AddVerificationTicket(ctx context.Context, b *block.Block, bvt 
 func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	fr := mc.GetRound(b.Round)
 	fr.Finalize(b)
+	mc.DeleteRound(ctx, &fr.Round)
 	mc.FinalizeBlock(ctx, b)
 	mc.SendFinalizedBlock(ctx, b)
 }
