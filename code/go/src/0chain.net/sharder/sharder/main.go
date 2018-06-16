@@ -181,4 +181,7 @@ func main() {
 /*StartChainHandler - start the chain (for now just clears the state) */
 func StartChainHandler(w http.ResponseWriter, r *http.Request) {
 	sharder.ClearWorkerState()
+	sc := sharder.GetSharderChain()
+	sc.Initialize()
+	sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"))
 }

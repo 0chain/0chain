@@ -3,6 +3,7 @@ package chain
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"0chain.net/block"
@@ -58,6 +59,7 @@ type Chain struct {
 
 	GenesisBlockHash string `json:"genesis_block_hash"`
 
+	blocksMutex *sync.Mutex
 	/* This is a cache of blocks that may include speculative blocks */
 	Blocks               map[datastore.Key]*block.Block `json:"-"`
 	LatestFinalizedBlock *block.Block                   `json:"latest_finalized_block,omitempty"` // Latest block on the chain the program is aware of
@@ -101,13 +103,22 @@ func (c *Chain) Delete(ctx context.Context) error {
 /*Provider - entity provider for chain object */
 func Provider() datastore.Entity {
 	c := &Chain{}
+	c.Initialize()
 	c.Version = "1.0"
+	c.blocksMutex = &sync.Mutex{}
 	c.InitializeCreationDate()
 	c.Miners = node.NewPool(node.NodeTypeMiner)
 	c.Sharders = node.NewPool(node.NodeTypeSharder)
 	c.Blobbers = node.NewPool(node.NodeTypeBlobber)
-	c.Blocks = make(map[string]*block.Block)
 	return c
+}
+
+/*Initialize - intializes internal datastructures to start again */
+func (c *Chain) Initialize() {
+	c.Blocks = make(map[string]*block.Block)
+	c.CurrentRound = 0
+	c.LatestFinalizedBlock = nil
+	c.CurrentMagicBlock = nil
 }
 
 /*SetupEntity - setup the entity */
@@ -231,6 +242,11 @@ func (c *Chain) AddBlock(b *block.Block) {
 	if b.Round <= c.LatestFinalizedBlock.Round {
 		return
 	}
+	c.blocksMutex.Lock()
+	defer c.blocksMutex.Unlock()
+	if _, ok := c.Blocks[b.Hash]; ok {
+		return
+	}
 	c.Blocks[b.Hash] = b
 	if b.PrevBlock == nil {
 		pb, ok := c.Blocks[b.PrevHash]
@@ -244,6 +260,8 @@ func (c *Chain) AddBlock(b *block.Block) {
 
 /*GetBlock - returns a known block for a given hash from the cache */
 func (c *Chain) GetBlock(ctx context.Context, hash string) (*block.Block, error) {
+	c.blocksMutex.Lock()
+	defer c.blocksMutex.Unlock()
 	b, ok := c.Blocks[datastore.ToKey(hash)]
 	if ok {
 		return b, nil
@@ -259,6 +277,11 @@ func (c *Chain) GetBlock(ctx context.Context, hash string) (*block.Block, error)
 
 /*DeleteBlock - delete a block from the cache */
 func (c *Chain) DeleteBlock(ctx context.Context, b *block.Block) {
+	c.blocksMutex.Lock()
+	defer c.blocksMutex.Unlock()
+	if _, ok := c.Blocks[b.Hash]; !ok {
+		return
+	}
 	delete(c.Blocks, b.Hash)
 }
 

@@ -74,6 +74,9 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 /*HandleVerifyBlockMessage - handles the verify block message */
 func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage) {
 	b := msg.Block
+	if b.Round < mc.CurrentRound {
+		return
+	}
 	mr := mc.GetRound(b.Round)
 	if mr == nil {
 		// TODO: This can happen because
@@ -86,6 +89,7 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 		r.RandomSeed = b.RoundRandomSeed
 		mr = mc.CreateRound(r)
 		mc.startNewRound(ctx, mr)
+		mr = mc.GetRound(b.Round) // Need this again just in case there is another round already setup and the start didn't happen
 	}
 	mc.AddToRoundVerification(ctx, mr, b)
 }

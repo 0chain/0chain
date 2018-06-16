@@ -17,8 +17,14 @@ var minerChain = &Chain{}
 /*SetupMinerChain - setup the miner's chain */
 func SetupMinerChain(c *chain.Chain) {
 	minerChain.Chain = *c
+	minerChain.Initialize()
 	minerChain.roundsMutex = &sync.Mutex{}
 	minerChain.BlockMessageChannel = make(chan *BlockMessage, 25)
+}
+
+/*Initialize - intializes internal datastructures to start again */
+func (mc *Chain) Initialize() {
+	minerChain.Chain.Initialize()
 	minerChain.rounds = make(map[int64]*Round)
 }
 
@@ -47,8 +53,8 @@ func (mc *Chain) SetupGenesisBlock(hash string) *block.Block {
 		panic("Genesis round/block canot be null")
 	}
 	mgr := mc.CreateRound(gr)
-	mgr.AddBlockToVerify(gb)
 	mc.AddRound(mgr)
+	mgr.AddBlockToVerify(gb)
 	mc.AddGenesisBlock(gb)
 	return gb
 }
@@ -63,13 +69,9 @@ func (mc *Chain) CreateRound(r *round.Round) *Round {
 
 /*AddRound - Add Round to the block */
 func (mc *Chain) AddRound(r *Round) bool {
-	_, ok := mc.rounds[r.Number]
-	if ok {
-		return false
-	}
 	mc.roundsMutex.Lock()
 	defer mc.roundsMutex.Unlock()
-	_, ok = mc.rounds[r.Number]
+	_, ok := mc.rounds[r.Number]
 	if ok {
 		return false
 	}
@@ -83,6 +85,8 @@ func (mc *Chain) AddRound(r *Round) bool {
 
 /*GetRound - get a round */
 func (mc *Chain) GetRound(roundNumber int64) *Round {
+	mc.roundsMutex.Lock()
+	defer mc.roundsMutex.Unlock()
 	round, ok := mc.rounds[roundNumber]
 	if !ok {
 		return nil
@@ -92,10 +96,7 @@ func (mc *Chain) GetRound(roundNumber int64) *Round {
 
 /*DeleteRound - delete a round and associated block data */
 func (mc *Chain) DeleteRound(ctx context.Context, r *round.Round) {
-	for bid, blk := range mc.Blocks {
-		if blk.Round == r.Number {
-			delete(mc.Blocks, bid)
-		}
-	}
+	mc.roundsMutex.Lock()
+	defer mc.roundsMutex.Unlock()
 	delete(mc.rounds, r.Number)
 }

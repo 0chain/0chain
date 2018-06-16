@@ -80,6 +80,9 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 
 /*AddToRoundVerification - Add a block to verify : WARNING: does not support concurrent access for a given round */
 func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block.Block) {
+	if mr.IsFinalizing() || mr.IsFinalized() {
+		return
+	}
 	if !mc.ValidateMagicBlock(ctx, b) {
 		Logger.Error("invalid magic block", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("magic_block", b.MagicBlockHash))
 		return

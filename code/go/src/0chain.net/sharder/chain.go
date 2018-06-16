@@ -14,6 +14,11 @@ func SetupSharderChain(c *chain.Chain) {
 	sharderChain.BlockChannel = make(chan *block.Block, 1024)
 }
 
+/*Initialize - intializes internal datastructures to start again */
+func (sc *Chain) Initialize() {
+	sc.Chain.Initialize()
+}
+
 /*GetSharderChain - get the miner's chain */
 func GetSharderChain() *Chain {
 	return sharderChain

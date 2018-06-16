@@ -173,6 +173,8 @@ func main() {
 /*StartChainHandler - start the chain if it's at Genesis round */
 func StartChainHandler(w http.ResponseWriter, r *http.Request) {
 	mc := miner.GetMinerChain()
+	mc.Initialize()
+	mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"))
 	if mc.GetRound(1) != nil {
 		return
 	}
