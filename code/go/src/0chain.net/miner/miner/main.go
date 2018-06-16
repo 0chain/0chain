@@ -34,7 +34,7 @@ func initServer() {
 }
 
 func initHandlers() {
-	if config.Configuration.TestMode {
+	if config.Development() {
 		http.HandleFunc("/_hash", encryption.HashHandler)
 		http.HandleFunc("/_sign", common.ToJSONResponse(encryption.SignHandler))
 		http.HandleFunc("/_start", StartChainHandler)
@@ -67,15 +67,17 @@ var Chain string
 func main() {
 	host := flag.String("host", "", "hostname")
 	port := flag.Int("port", 7220, "port")
-	testMode := flag.Bool("test", false, "test mode?")
+	deploymentMode := flag.Int("deployment_mode", 2, "deployment_mode")
 	nodesFile := flag.String("nodes_file", "config/single_node.txt", "nodes_file")
 	keysFile := flag.String("keys_file", "config/single_node_miner_keys.txt", "keys_file")
 	maxDelay := flag.Int("max_delay", 0, "max_delay")
 	blockSize := flag.Int("block_size", 0, "block_size") // 0 => take from the config file
 	flag.Parse()
+	config.Configuration.DeploymentMode = byte(*deploymentMode)
 	config.SetupConfig()
-	if *testMode {
-		logging.InitLogging("testing")
+
+	if config.Development() {
+		logging.InitLogging("development")
 	} else {
 		logging.InitLogging("production")
 	}
@@ -87,7 +89,6 @@ func main() {
 	config.Configuration.Host = *host
 	config.Configuration.Port = *port
 	config.Configuration.ChainID = viper.GetString("server_chain.id")
-	config.Configuration.TestMode = *testMode
 	config.Configuration.MaxDelay = *maxDelay
 
 	reader, err := os.Open(*keysFile)
@@ -101,7 +102,7 @@ func main() {
 	serverChain.ID = datastore.ToKey(config.Configuration.ChainID)
 	serverChain.Decimals = int8(viper.GetInt("server_chain.decimals"))
 	serverChain.BlockSize = viper.GetInt32("server_chain.block.size")
-	if *testMode {
+	if config.Development() {
 		if *blockSize > 0 {
 			serverChain.BlockSize = int32(*blockSize)
 		}
@@ -140,7 +141,9 @@ func main() {
 	miner.GetMinerChain().SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"))
 
 	mode := "main net"
-	if *testMode {
+	if config.Development() {
+		mode = "development"
+	} else if config.TestNet() {
 		mode = "test net"
 	}
 	Logger.Info("CPU information", zap.Int("available_cpus", runtime.NumCPU()))

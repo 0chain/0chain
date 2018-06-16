@@ -16,13 +16,19 @@ func SetupConfig() {
 	}
 }
 
+const (
+	DeploymentDevelopment = 0
+	DeploymentTestNet     = 1
+	DeploymentMainNet     = 2
+)
+
 /*Config - all the config options passed from the command line*/
 type Config struct {
-	Host     string
-	Port     int
-	ChainID  string
-	TestMode bool
-	MaxDelay int
+	Host           string
+	Port           int
+	ChainID        string
+	DeploymentMode byte
+	MaxDelay       int
 }
 
 /*Configuration of the system */
@@ -30,7 +36,12 @@ var Configuration Config
 
 /*TestNet is the program running in TestNet mode? */
 func TestNet() bool {
-	return Configuration.TestMode
+	return Configuration.DeploymentMode == DeploymentTestNet
+}
+
+/*Development - is the programming running in development mode? */
+func Development() bool {
+	return Configuration.DeploymentMode == DeploymentDevelopment
 }
 
 /*ErrSupportedChain error for indicating which chain is supported by the server */

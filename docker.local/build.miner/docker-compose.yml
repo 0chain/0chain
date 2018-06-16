@@ -39,7 +39,7 @@ services:
       default:
       testnet0:
         ipv4_address: 198.18.0.7${MINER}
-    command: ./miner  --host 198.18.0.7${MINER} --port 707${MINER} -test --keys_file config/mnode${MINER}_keys.txt --nodes_file config/single_machine_3_nodes.txt --block_size $BLOCK_SIZE
+    command: ./miner  --host 198.18.0.7${MINER} --port 707${MINER} --deployment_mode 0 --keys_file config/mnode${MINER}_keys.txt --nodes_file config/single_machine_3_nodes.txt --block_size $BLOCK_SIZE
 
 networks:
   default:

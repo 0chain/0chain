@@ -34,7 +34,7 @@ func initServer() {
 }
 
 func initHandlers() {
-	if config.Configuration.TestMode {
+	if config.Development() {
 		http.HandleFunc("/_hash", encryption.HashHandler)
 		http.HandleFunc("/_sign", common.ToJSONResponse(encryption.SignHandler))
 		http.HandleFunc("/_start", StartChainHandler)
@@ -70,13 +70,13 @@ var Chain string
 func main() {
 	host := flag.String("host", "", "hostname")
 	port := flag.Int("port", 7320, "port")
-	testMode := flag.Bool("test", false, "test mode?")
+	deploymentMode := flag.Int("deployment_mode", 2, "deployment_mode")
 	nodesFile := flag.String("nodes_file", "config/single_node.txt", "nodes_file")
 	keysFile := flag.String("keys_file", "config/single_node_sharder_keys.txt", "keys_file")
 	maxDelay := flag.Int("max_delay", 0, "max_delay")
 	flag.Parse()
 	config.SetupConfig()
-	if *testMode {
+	if *deploymentMode == 0 {
 		logging.InitLogging("development")
 	} else {
 		logging.InitLogging("production")
@@ -89,7 +89,7 @@ func main() {
 	config.Configuration.Host = *host
 	config.Configuration.Port = *port
 	config.Configuration.ChainID = viper.GetString("server_chain.id")
-	config.Configuration.TestMode = *testMode
+	config.Configuration.DeploymentMode = byte(*deploymentMode)
 	config.Configuration.MaxDelay = *maxDelay
 
 	reader, err := os.Open(*keysFile)
@@ -136,9 +136,10 @@ func main() {
 	ctx := common.GetRootContext()
 
 	mode := "main net"
-	if *testMode {
+	if config.Development() {
+		mode = "development"
+	} else if config.TestNet() {
 		mode = "test net"
-		serverChain.BlockSize = 10000
 	}
 	Logger.Info("CPU information", zap.Int("No of CPU available", runtime.NumCPU()))
 	Logger.Info("Starting sharder", zap.String("port", address), zap.String("chain_id", config.GetServerChainID()), zap.String("mode", mode))
