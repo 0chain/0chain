@@ -17,6 +17,7 @@ import (
 	"0chain.net/config"
 	"0chain.net/datastore"
 	"0chain.net/encryption"
+	"0chain.net/logging"
 	. "0chain.net/logging"
 	"0chain.net/memorystore"
 	"0chain.net/node"
@@ -76,9 +77,9 @@ func main() {
 	flag.Parse()
 	config.SetupConfig()
 	if *testMode {
-		LoggerInit("development", "appLogs")
+		logging.InitLogging("development")
 	} else {
-		LoggerInit("production", "appLogs")
+		logging.InitLogging("production")
 	}
 
 	//TODO: for docker compose mapping, we can't use the host

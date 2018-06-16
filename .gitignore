@@ -4,6 +4,7 @@
 *.jar
 **/target/
 **/data/
+**/log/
 **/bin/
 !docker.local/bin/
 **/pkg/
