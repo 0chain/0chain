@@ -12,6 +12,8 @@ RUN go get github.com/vmihailenco/msgpack
 RUN go get -u golang.org/x/crypto/...
 RUN go get go.uber.org/zap
 RUN go get github.com/spf13/viper
+RUN go get gopkg.in/natefinch/lumberjack.v2
+
 
 #Add the source code
 ADD ./code/go/src $SRC_DIR/go/src

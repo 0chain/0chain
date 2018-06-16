@@ -1,9 +1,9 @@
 package logging
 
 import (
-	"fmt"
-
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	lumberjack "gopkg.in/natefinch/lumberjack.v2"
 )
 
 var (
@@ -12,30 +12,47 @@ var (
 
 /*InitLogging - intialize logging system */
 func InitLogging(mode string) {
+	Logger = zap.NewNop()
 	LoggerInit(mode, "log/0chain.log")
 }
 
 /*LoggerInit - initialize the logger */
-func LoggerInit(logMode, logFile string) {
-	var conf zap.Config
-	if logMode == "development" {
-		conf = zap.NewDevelopmentConfig()
-	} else if logMode == "production" {
-		conf = zap.NewProductionConfig()
-	} else {
-		conf = zap.NewDevelopmentConfig()
-	}
+func LoggerInit(logMode, logFile string) *zap.Logger {
+	conf := zap.NewDevelopmentEncoderConfig()
+	writer := zapcore.AddSync(&lumberjack.Logger{
+		Filename:   "log/0chain.log",
+		MaxSize:    10, // megabytes
+		MaxBackups: 3,
+		MaxAge:     28, // days
+	})
 
-	if logFile != "" {
-		if logMode == "production" {
-			conf.OutputPaths = []string{logFile}
-		} else {
-			conf.OutputPaths = append(conf.OutputPaths, logFile)
-		}
+	if logMode == "development" {
+		conf = zap.NewDevelopmentEncoderConfig()
+	} else if logMode == "production" {
+		conf = zap.NewProductionEncoderConfig()
+	} else {
+		conf = zap.NewDevelopmentEncoderConfig()
 	}
-	var err error
-	Logger, err = conf.Build()
-	if err != nil {
-		panic(fmt.Sprintf("error initializing the logging system: %v", err))
+	conf = zapcore.EncoderConfig{
+		TimeKey:        "@timestamp",
+		LevelKey:       "level",
+		NameKey:        "logger",
+		CallerKey:      "caller",
+		MessageKey:     "msg",
+		StacktraceKey:  "stacktrace",
+		EncodeLevel:    zapcore.LowercaseLevelEncoder,
+		EncodeTime:     zapcore.ISO8601TimeEncoder,
+		EncodeDuration: zapcore.NanosDurationEncoder,
 	}
+	core := zapcore.NewCore(
+		zapcore.NewJSONEncoder(conf),
+		writer,
+		zap.InfoLevel,
+	)
+	Logger = zap.New(core)
+
+	zapLogger := zap.New(core, zap.AddCaller())
+
+	return zapLogger
+
 }
