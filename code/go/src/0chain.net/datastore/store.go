@@ -15,5 +15,10 @@ type Store interface {
 	MultiDelete(ctx context.Context, entityMetadata EntityMetadata, entities []Entity) error
 
 	AddToCollection(ctx context.Context, entity CollectionEntity) error
+	MultiAddToCollection(ctx context.Context, entityMetadata EntityMetadata, entities []Entity) error
+
+	DeleteFromCollection(ctx context.Context, entity CollectionEntity) error
+	MultiDeleteFromCollection(ctx context.Context, entityMetadata EntityMetadata, entities []Entity) error
+
 	IterateCollection(ctx context.Context, entityMetadata EntityMetadata, collectionName string, handler CollectionIteratorHandler) error
 }

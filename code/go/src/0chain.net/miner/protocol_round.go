@@ -14,6 +14,7 @@ import (
 	"0chain.net/memorystore"
 	"0chain.net/node"
 	"0chain.net/round"
+	"0chain.net/transaction"
 	"go.uber.org/zap"
 )
 
@@ -55,15 +56,22 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		if mc.CurrentRound > b.Round {
 			return nil, common.NewError("round_mismatch", "Current round and block round do not match")
 		}
-		delay := 128 * time.Millisecond
+		txnCount := transaction.TransactionCount
 		err := mc.GenerateBlock(ctx, b, mc)
 		if err != nil {
 			cerr, ok := err.(*common.Error)
 			if ok && cerr.Code == InsufficientTxns {
-				time.Sleep(delay)
-				delay := 2 * delay
-				if delay > time.Second {
-					delay = time.Second
+				delay := 128 * time.Millisecond
+				for true {
+					if txnCount != transaction.TransactionCount {
+						break
+					}
+					time.Sleep(delay)
+					Logger.Debug("generate block", zap.Any("delay", delay), zap.Any("txn_count", txnCount), zap.Any("t.txn_count", transaction.TransactionCount))
+					delay = 2 * delay
+					if delay > time.Second {
+						delay = time.Second
+					}
 				}
 				continue
 			}

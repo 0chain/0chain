@@ -175,8 +175,21 @@ func (ps *Store) AddToCollection(ctx context.Context, entity datastore.Collectio
 	return nil
 }
 
+/*MultiAddToCollection - Add multiple entities to collection */
+func (ps *Store) MultiAddToCollection(ctx context.Context, entityMetadata datastore.EntityMetadata, entities []datastore.Entity) error {
+	return nil
+}
+
 /*IterateCollection - iterate the given collection */
 func (ps *Store) IterateCollection(ctx context.Context, entityMetadata datastore.EntityMetadata, collectionName string, handler datastore.CollectionIteratorHandler) error {
 	// This may not be the righ API for filtered queries
+	return nil
+}
+
+func (ps *Store) DeleteFromCollection(ctx context.Context, entity datastore.CollectionEntity) error {
+	return nil
+}
+
+func (ps *Store) MultiDeleteFromCollection(ctx context.Context, entityMetadata datastore.EntityMetadata, entities []datastore.Entity) error {
 	return nil
 }

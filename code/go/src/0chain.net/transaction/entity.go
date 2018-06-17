@@ -13,6 +13,8 @@ import (
 	"0chain.net/memorystore"
 )
 
+var TransactionCount = 0
+
 func init() {
 	memorystore.AddPool("txndb", memorystore.NewPool("redis_txns", 6479))
 }

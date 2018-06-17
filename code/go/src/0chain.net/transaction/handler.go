@@ -46,12 +46,14 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		return nil, err
 	}
 	if datastore.DoAsync(ctx, txn) {
+		TransactionCount++
 		return txn, nil
 	}
 	err = entity.GetEntityMetadata().GetStore().Write(ctx, txn)
 	if err != nil {
 		return nil, err
 	}
+	TransactionCount++
 	return txn, nil
 }
 

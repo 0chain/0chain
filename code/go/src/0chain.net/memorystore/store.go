@@ -279,8 +279,13 @@ func (ms *Store) MultiDelete(ctx context.Context, entityMetadata datastore.Entit
 
 func (ms *Store) multiDeleteAux(ctx context.Context, entityMetadata datastore.EntityMetadata, entities []datastore.Entity) error {
 	rkeys := make([]interface{}, len(entities))
+
+	hasCollectionEntity := false
 	for idx, entity := range entities {
 		rkeys[idx] = GetEntityKey(entity)
+		if !hasCollectionEntity {
+			_, hasCollectionEntity = entity.(datastore.CollectionEntity)
+		}
 	}
 	c := GetEntityCon(ctx, entityMetadata)
 	c.Send("DEL", rkeys...)
@@ -289,5 +294,61 @@ func (ms *Store) multiDeleteAux(ctx context.Context, entityMetadata datastore.En
 	if err != nil {
 		return err
 	}
+	if hasCollectionEntity {
+		err = ms.MultiDeleteFromCollection(ctx, entityMetadata, entities)
+	}
 	return nil
+}
+
+func (ms *Store) DeleteFromCollection(ctx context.Context, ce datastore.CollectionEntity) error {
+	entityMetadata := ce.GetEntityMetadata()
+	collectionName := ce.GetCollectionName()
+
+	con := GetEntityCon(ctx, entityMetadata)
+	con.Send("ZREM", collectionName, ce.GetKey())
+	con.Flush()
+	_, err := con.Receive()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ms *Store) MultiDeleteFromCollection(ctx context.Context, entityMetadata datastore.EntityMetadata, entities []datastore.Entity) error {
+	if len(entities) <= BATCH_SIZE {
+		return ms.multiDeleteFromCollectionAux(ctx, entityMetadata, entities)
+	}
+	for start := 0; start < len(entities); start += BATCH_SIZE {
+		end := start + BATCH_SIZE
+		if end > len(entities) {
+			end = len(entities)
+		}
+		err := ms.multiDeleteFromCollectionAux(ctx, entityMetadata, entities[start:end])
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (ms *Store) multiDeleteFromCollectionAux(ctx context.Context, entityMetadata datastore.EntityMetadata, entities []datastore.Entity) error {
+	// Assuming all entities belong to the same collection.
+	if len(entities) == 0 {
+		return nil
+	}
+	keys := make([]interface{}, 1+len(entities))
+	ce := entities[0].(datastore.CollectionEntity)
+	keys[0] = ce.GetCollectionName()
+	for idx, entity := range entities {
+		ce, ok := entity.(datastore.CollectionEntity)
+		if !ok {
+			return common.NewError("dev_error", "Entity needs to be CollectionEntity")
+		}
+		keys[idx+1] = ce.GetKey()
+	}
+	con := GetEntityCon(ctx, entityMetadata)
+	con.Send("ZREM", keys...)
+	con.Flush()
+	_, err := con.Receive()
+	return err
 }

@@ -58,7 +58,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		if txn.Status != transaction.TXN_STATUS_FREE {
 			return true
 		}
-		txn.Status = transaction.TXN_STATUS_PENDING
+		//txn.Status = transaction.TXN_STATUS_PENDING
 		//Setting the score lower so the next time blocks are generated these transactions don't show up at the top
 		txn.SetCollectionScore(txn.GetCollectionScore() - 10*60)
 
@@ -202,7 +202,8 @@ func (mc *Chain) FinalizeBlock(ctx context.Context, b *block.Block) error {
 	transactionMetadataProvider := datastore.GetEntityMetadata("txn")
 	ctx = memorystore.WithEntityConnection(ctx, transactionMetadataProvider)
 	defer memorystore.Close(ctx)
-	err := transactionMetadataProvider.GetStore().MultiWrite(ctx, transactionMetadataProvider, modifiedTxns)
+	//err := transactionMetadataProvider.GetStore().MultiWrite(ctx, transactionMetadataProvider, modifiedTxns)
+	err := transactionMetadataProvider.GetStore().MultiDelete(ctx, transactionMetadataProvider, modifiedTxns)
 	if err != nil {
 		return err
 	}
