@@ -51,11 +51,6 @@ func (r *Round) GetKey() datastore.Key {
 
 /*AddNotarizedBlock - this will be concurrent as notarization is recognized by verifying as well as notarization message from others */
 func (r *Round) AddNotarizedBlock(b *block.Block) bool {
-	for _, blk := range r.notarizedBlocks {
-		if blk.Hash == b.Hash {
-			return false
-		}
-	}
 	r.notarizedBlocksMutex.Lock()
 	defer r.notarizedBlocksMutex.Unlock()
 	for _, blk := range r.notarizedBlocks {

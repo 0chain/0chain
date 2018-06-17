@@ -62,13 +62,11 @@ func (c *Chain) StatusHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if node == nil {
-		// TODO: This doesn't allow adding new nodes that weren't already known.
 		return
 	}
 	if node.Host != addressParts[0] {
 		// TODO: Node's ip address changed. Should we update ourselves?
 	}
-	// TODO: Verify hash
 	if node.PublicKey == publicKey {
 		ok, err := node.Verify(signature, hash)
 		if !ok || err != nil {

@@ -14,7 +14,6 @@ import (
 )
 
 func init() {
-	//memorystore.AddPool("txndb", memorystore.DefaultPool) //TODO: This is temporary
 	memorystore.AddPool("txndb", memorystore.NewPool("redis_txns", 6479))
 }
 
@@ -60,6 +59,7 @@ func (t *Transaction) GetEntityMetadata() datastore.EntityMetadata {
 
 /*ComputeProperties - Entity implementation */
 func (t *Transaction) ComputeProperties() {
+	t.EntityCollection = txnEntityCollection
 	if datastore.IsEmpty(t.ChainID) {
 		t.ChainID = datastore.ToKey(config.GetMainChainID())
 	}
@@ -172,13 +172,13 @@ func (t *Transaction) VerifySignature(ctx context.Context) error {
 
 /*Provider - entity provider for client object */
 func Provider() datastore.Entity {
-	c := &Transaction{}
-	c.Version = "1.0"
-	c.EntityCollection = txnEntityCollection
-	c.Status = TXN_STATUS_FREE
-	c.CreationDate = common.Now()
-	c.ChainID = datastore.ToKey(config.GetMainChainID())
-	return c
+	t := &Transaction{}
+	t.Version = "1.0"
+	t.Status = TXN_STATUS_FREE
+	t.CreationDate = common.Now()
+	t.ChainID = datastore.ToKey(config.GetMainChainID())
+	t.EntityCollection = txnEntityCollection
+	return t
 }
 
 var TransactionEntityChannel chan datastore.QueuedEntity

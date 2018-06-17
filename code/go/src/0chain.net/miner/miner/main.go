@@ -167,7 +167,7 @@ func main() {
 	miner.SetupM2MReceivers()
 	miner.SetupM2SSenders()
 	miner.SetupWorkers()
-
+	go StartProtocol()
 	Logger.Info("Ready to listen to the requests")
 	startTime = time.Now().UTC()
 	log.Fatal(server.ListenAndServe())
@@ -175,6 +175,10 @@ func main() {
 
 /*StartChainHandler - start the chain if it's at Genesis round */
 func StartChainHandler(w http.ResponseWriter, r *http.Request) {
+	StartProtocol()
+}
+
+func StartProtocol() {
 	mc := miner.GetMinerChain()
 	mc.Initialize()
 	mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"))

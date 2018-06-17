@@ -79,13 +79,9 @@ var collections = make(map[string]bool)
 var collectionsMutex = &sync.Mutex{}
 
 func trackCollection(entityMetadata datastore.EntityMetadata, qe datastore.CollectionEntity) {
-	_, ok := collections[qe.GetCollectionName()]
-	if ok {
-		return
-	}
 	collectionsMutex.Lock()
 	defer collectionsMutex.Unlock()
-	_, ok = collections[qe.GetCollectionName()]
+	_, ok := collections[qe.GetCollectionName()]
 	if ok {
 		return
 	}

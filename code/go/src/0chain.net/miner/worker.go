@@ -68,7 +68,7 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 		return
 	}
 	//TODO: If there are not enough txns, this will not advance further even though rest of the network is
-	mc.GenerateRoundBlock(ctx, mr)
+	go mc.GenerateRoundBlock(ctx, mr)
 }
 
 /*HandleVerifyBlockMessage - handles the verify block message */
