@@ -33,9 +33,7 @@ func (mt *MerkleTree) ComputeTree(hashes []Hashable) {
 	for idx, hashable := range hashes {
 		mt.tree[idx] = hashable.GetHash()
 	}
-	sort.SliceStable(mt.tree[0:mt.leavesCount], func(i int, j int) bool { return mt.tree[i] < mt.tree[j] })
-	//for l, pl0, l0 := 1, 0, 0; l < len(mt.offsets); l, pl0 = l+1, l0 {
-	//	l0 = mt.offsets[l]
+	sort.Strings(mt.tree[:mt.leavesCount])
 	for pl0, plsize := 0, mt.leavesCount; plsize > 1; pl0, plsize = pl0+plsize, (plsize+1)/2 {
 		l0 := pl0 + plsize
 		for i, j := 0, 0; i < plsize; i, j = i+2, j+1 {

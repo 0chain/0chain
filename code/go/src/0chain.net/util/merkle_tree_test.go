@@ -57,11 +57,11 @@ func TestMerkleTreeSetTree(t *testing.T) {
 }
 
 func BenchmarkMerkleTreeComputeTree(b *testing.B) {
+	txns := make([]Hashable, 10000)
+	for i := 0; i < len(txns); i++ {
+		txns[i] = &Txn{hash: fmt.Sprintf("%v", len(txns)-i)}
+	}
 	for i := 0; i < b.N; i++ {
-		txns := make([]Hashable, 10000)
-		for i := 0; i < len(txns); i++ {
-			txns[i] = &Txn{hash: fmt.Sprintf("%v", len(txns)-i)}
-		}
 		var mt MerkleTreeI = &MerkleTree{}
 		mt.ComputeTree(txns)
 	}
