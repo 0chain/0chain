@@ -248,8 +248,10 @@ func (b *Block) ValidateTransactions(ctx context.Context) error {
 			ok, err := b.PrevBlock.ChainHasTransaction(txn)
 			if ok || err != nil {
 				if err != nil {
-					Logger.Error("validation transactions: chain has transactions", zap.Any("round", b.Round), zap.Any("block", b), zap.Error(err))
+					Logger.Error("validate transactions", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Error(err))
 				}
+				*cancel = true
+				validChannel <- false
 				return
 			}
 			if *cancel {
