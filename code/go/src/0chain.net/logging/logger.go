@@ -89,8 +89,8 @@ import (
 // }
 
 var (
-	Logger      *zap.Logger
-	LoggerSugar *zap.SugaredLogger
+	Logger *zap.Logger
+	N2n    *zap.Logger
 )
 
 type WriteSyncer struct {
@@ -103,8 +103,8 @@ func (ws WriteSyncer) Sync() error {
 
 func InitLogging(mode string) {
 	var cfg zap.Config
-	var logName = "0chain.log"
-	var slogName = "n2n.log"
+	var logName = "log/0chain.log"
+	var slogName = "log/n2n.log"
 
 	if mode == "production" {
 		cfg = zap.NewProductionConfig()
@@ -133,9 +133,15 @@ func InitLogging(mode string) {
 	}
 	defer l.Sync()
 
+	ls, err := cfg.Build(SetOutput(swSugar, cfg))
+	if err != nil {
+		panic(err)
+	}
+	defer ls.Sync()
+
 	Logger = l
-	sugar := Logger.Sugar()
-	LoggerSugar = sugar.Desugar().WithOptions(SetOutput(swSugar, cfg)).Sugar()
+	N2n = ls
+
 }
 
 // SetOutput replaces existing Core with new, that writes to passed WriteSyncer.
