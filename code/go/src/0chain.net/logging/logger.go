@@ -101,12 +101,12 @@ func (ws WriteSyncer) Sync() error {
 	return nil
 }
 
-func InitLogging(runMode string) {
+func InitLogging(mode string) {
 	var cfg zap.Config
 	var logName = "0chain.log"
 	var slogName = "n2n.log"
 
-	if runMode == "production" {
+	if mode == "production" {
 		cfg = zap.NewProductionConfig()
 		cfg.DisableCaller = true
 	} else {
