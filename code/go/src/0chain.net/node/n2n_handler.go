@@ -133,14 +133,13 @@ func (np *Pool) SendAtleast(numNodes int, handler SendHandler) []*Node {
 			validCount++
 			if validCount == numNodes {
 				close(sendBucket)
-				LoggerSugar.Debug("", zap.Any("all_nodes", len(nodes)), zap.Any("requested", numNodes), zap.Any("active", activeCount), zap.Any("sent_to", len(nodes)), zap.Any("time", time.Since(start)))
-				//Logger.Debug("", zap.Any("all_nodes", len(nodes)), zap.Any("requested", numNodes), zap.Any("active", activeCount), zap.Any("sent_to", len(nodes)), zap.Any("time", time.Since(start)))
+				N2n.Debug("", zap.Any("all_nodes", len(nodes)), zap.Any("requested", numNodes), zap.Any("active", activeCount), zap.Any("sent_to", len(nodes)), zap.Any("time", time.Since(start)))
 				return sentTo
 			}
 		case <-done:
 			doneCount++
 			if doneCount >= numNodes+THRESHOLD || doneCount >= activeCount {
-				LoggerSugar.Debug("", zap.Any("all_nodes", len(nodes)), zap.Any("requested", numNodes), zap.Any("active", activeCount), zap.Any("sent_to", len(nodes)), zap.Any("time", time.Since(start)))
+				N2n.Debug("", zap.Any("all_nodes", len(nodes)), zap.Any("requested", numNodes), zap.Any("active", activeCount), zap.Any("sent_to", len(nodes)), zap.Any("time", time.Since(start)))
 				//Logger.Debug("", zap.Any("all_nodes", len(nodes)), zap.Any("requested", numNodes), zap.Any("active", activeCount), zap.Any("sent_to", len(nodes)), zap.Any("time", time.Since(start)))
 				close(sendBucket)
 				return sentTo
@@ -245,20 +244,17 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			req.Header.Set("Content-Type", "application/json; charset=utf-8")
 			SetHeaders(req, entity, options)
 			delay := common.InduceDelay()
-			LoggerSugar.Debug("sending", zap.Any("from", Self.SetIndex), zap.Any("to", n.SetIndex), zap.Any("handler", url), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Any("delay", delay))
-			//Logger.Debug("sending", zap.Any("from", Self.SetIndex), zap.Any("to", n.SetIndex), zap.Any("handler", url), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Any("delay", delay))
+			N2n.Debug("sending", zap.Any("from", Self.SetIndex), zap.Any("to", n.SetIndex), zap.Any("handler", url), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Any("delay", delay))
 			resp, err := client.Do(req)
 			if err != nil {
-				LoggerSugar.Error("sending", zap.Any("from", Self.SetIndex), zap.Any("to", n.SetIndex), zap.Any("handler", url), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Error(err))
-				//Logger.Error("sending", zap.Any("from", Self.SetIndex), zap.Any("to", n.SetIndex), zap.Any("handler", url), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Error(err))
+				N2n.Error("sending", zap.Any("from", Self.SetIndex), zap.Any("to", n.SetIndex), zap.Any("handler", url), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Error(err))
 				return false
 			}
 			defer resp.Body.Close()
 			if resp.StatusCode != http.StatusOK {
 				var rbuf bytes.Buffer
 				rbuf.ReadFrom(resp.Body)
-				LoggerSugar.Error("sending", zap.Any("from", Self.SetIndex), zap.Any("to", n.SetIndex), zap.Any("handler", url), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Any("status_code", resp.StatusCode), zap.Any("response", rbuf.String()))
-				//Logger.Error("sending", zap.Any("from", Self.SetIndex), zap.Any("to", n.SetIndex), zap.Any("handler", url), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Any("status_code", resp.StatusCode), zap.Any("response", rbuf.String()))
+				N2n.Error("sending", zap.Any("from", Self.SetIndex), zap.Any("to", n.SetIndex), zap.Any("handler", url), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Any("status_code", resp.StatusCode), zap.Any("response", rbuf.String()))
 				return false
 			}
 			io.Copy(ioutil.Discard, resp.Body)
@@ -286,23 +282,20 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF) common
 		nodeID := r.Header.Get(HeaderNodeID)
 		sender := GetNode(nodeID)
 		if sender == nil {
-			LoggerSugar.Error("message received", zap.Any("from", nodeID), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("error", "request from unrecognized node"))
-			//Logger.Error("message received", zap.Any("from", nodeID), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("error", "request from unrecognized node"))
+			N2n.Error("message received", zap.Any("from", nodeID), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("error", "request from unrecognized node"))
 			return
 		}
 
 		entityName := r.Header.Get(HeaderRequestEntityName)
 		if entityName == "" {
-			LoggerSugar.Error("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("error", "entity name blank"))
-			//Logger.Error("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("error", "entity name blank"))
+			N2n.Error("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("error", "entity name blank"))
 			return
 		}
 
 		reqHashdata := r.Header.Get(HeaderRequestHashData)
 		reqHash := r.Header.Get(HeaderRequestHash)
 		if reqHash != encryption.Hash(reqHashdata) {
-			LoggerSugar.Error("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("error", "request data hash invalid"))
-			//Logger.Error("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("error", "request data hash invalid"))
+			N2n.Error("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("error", "request data hash invalid"))
 			return
 		}
 		reqSignature := r.Header.Get(HeaderNodeRequestSignature)
@@ -310,18 +303,15 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF) common
 			return
 		}
 
-		LoggerSugar.Debug("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("entity", entityName), zap.Any("data", reqHashdata))
-		//	Logger.Debug("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("entity", entityName), zap.Any("data", reqHashdata))
+		N2n.Debug("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("entity", entityName), zap.Any("data", reqHashdata))
 		reqTS := r.Header.Get(HeaderRequestTimeStamp)
 		if reqTS == "" {
-			LoggerSugar.Error("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("entity", entityName), zap.Any("data", reqHashdata), zap.Any("error", "no timestamp for the message"))
-			//Logger.Error("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("entity", entityName), zap.Any("data", reqHashdata), zap.Any("error", "no timestamp for the message"))
+			N2n.Error("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("entity", entityName), zap.Any("data", reqHashdata), zap.Any("error", "no timestamp for the message"))
 			return
 		}
 		reqTSn, err := strconv.ParseInt(reqTS, 10, 64)
 		if err != nil {
-			LoggerSugar.Error("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("entity", entityName), zap.Any("data", reqHashdata), zap.Error(err))
-			//Logger.Error("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("entity", entityName), zap.Any("data", reqHashdata), zap.Error(err))
+			N2n.Error("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("entity", entityName), zap.Any("data", reqHashdata), zap.Error(err))
 			return
 		}
 		if !common.Within(reqTSn, 5) {
@@ -340,8 +330,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF) common
 
 			cbytes, err := snappy.Decode(nil, cbuffer.Bytes())
 			if err != nil {
-				LoggerSugar.Error("snappy decoding", zap.Any("error", err))
-				//Logger.Error("snappy decoding", zap.Any("error", err))
+				N2n.Error("snappy decoding", zap.Any("error", err))
 				return
 			}
 			buffer = bytes.NewReader(cbytes)
@@ -351,14 +340,12 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF) common
 		if r.Header.Get(HeaderRequestCODEC) == "JSON" {
 			err = datastore.FromJSON(buffer, entity.(datastore.Entity))
 			if err != nil {
-				LoggerSugar.Error("json decoding", zap.Any("error", err))
-				//Logger.Error("json decoding", zap.Any("error", err))
+				N2n.Error("json decoding", zap.Any("error", err))
 			}
 		} else {
 			err = datastore.FromMsgpack(buffer, entity.(datastore.Entity))
 			if err != nil {
-				LoggerSugar.Error("msgpack decoding", zap.Any("error", err))
-				//Logger.Error("msgpack decoding", zap.Any("error", err))
+				N2n.Error("msgpack decoding", zap.Any("error", err))
 			}
 		}
 
@@ -381,8 +368,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF) common
 		}
 		delay := common.InduceDelay()
 		if delay > 0 {
-			LoggerSugar.Debug("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("entity", entityName), zap.Any("data", reqHashdata), zap.Any("delay", delay))
-			//Logger.Debug("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("entity", entityName), zap.Any("data", reqHashdata), zap.Any("delay", delay))
+			N2n.Debug("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("entity", entityName), zap.Any("data", reqHashdata), zap.Any("delay", delay))
 		}
 		data, err := handler(ctx, entity)
 		common.Respond(w, data, err)

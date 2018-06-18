@@ -33,6 +33,8 @@ services:
       dockerfile: ./docker.local/build.miner/Dockerfile
     volumes:
       - ../config:/0chain/config
+      - ../config:/0chain/log
+
     ports:
       - "707${MINER}:707${MINER}"
     networks:
