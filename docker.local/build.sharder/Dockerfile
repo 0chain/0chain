@@ -22,3 +22,9 @@ ADD ./code/go/src $SRC_DIR/go/src
 
 # Build it:
 RUN go build 0chain.net/sharder/sharder
+
+FROM alpine
+ENV APP_DIR=/0chain
+WORKDIR $APP_DIR
+RUN mkdir -p $APP_DIR/bin
+COPY --from=0 $APP_DIR/sharder $APP_DIR/bin
