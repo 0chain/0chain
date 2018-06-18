@@ -141,6 +141,12 @@ func main() {
 	numTxns := flag.Int("num_txns", 1000, "num_txns")
 	maxConcurrentClients := flag.Int("max_concurrent_users", 100, "max_concurrent_users")
 	flag.Parse()
+	if *numTxns < *numClients {
+		*numClients = *numTxns
+	}
+	if *numClients < *maxConcurrentClients {
+		*maxConcurrentClients = *numClients
+	}
 	serverAddress = fmt.Sprintf("http://%v", *address)
 	fmt.Printf("server address: %v\n", serverAddress)
 	httpclient = GetClient(*maxConcurrentClients)
