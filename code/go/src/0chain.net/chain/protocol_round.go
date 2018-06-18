@@ -62,15 +62,24 @@ func (c *Chain) FinalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 	}()
 }
 
+/*PruneChain - prunces the chain */
 func (c *Chain) PruneChain(ctx context.Context, b *block.Block) {
+	//TODO: Pruning causes problem with block.ChainHasTransaction which walks back to see if the txn is already used
+	// Once we stop including txns that are older than 5 seconds, then everything should work as block.CreationDate will be
+	// greater than txn.CreationDate as time passes
+	if true {
+		return
+	}
 	ts := common.Now() - 60 // prune anything that got created 60 seconds before
-	for l, cb := 0, b; cb != nil; l, cb = l+1, cb.PrevBlock {
+	for l, pb, cb := 0, b, b.PrevBlock; cb != nil; l, pb, cb = l+1, cb, cb.PrevBlock {
 		if cb.CreationDate > ts {
 			continue
 		}
 		if l < 50 {
 			continue // Let's hold atleast 50 blocks
 		}
+		Logger.Debug("prune chain", zap.Any("round", cb.Round), zap.Any("block", cb.Hash), zap.Any("from_block", pb.Hash))
 		c.DeleteBlock(ctx, cb)
+		pb.PrevBlock = nil
 	}
 }

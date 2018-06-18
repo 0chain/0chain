@@ -161,22 +161,24 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r *Round, b *block.Block)
 	if b.MinerID == node.Self.GetKey() {
 		return mc.SignBlock(ctx, b)
 	}
-	prevBlock, err := mc.GetBlock(ctx, b.PrevHash)
-	if err != nil {
-		//TODO: create previous round AND request previous block from miner who sent current block for verification
-		Logger.Error("verify round", zap.Any("round", r.Number), zap.Any("block", b.Hash), zap.Any("prev_block", b.PrevHash), zap.Error(err))
-		return nil, common.NewError("prev_block_error", "Error getting the previous block")
-	}
+	if b.PrevBlock == nil {
+		prevBlock, err := mc.GetBlock(ctx, b.PrevHash)
+		if err != nil {
+			//TODO: create previous round AND request previous block from miner who sent current block for verification
+			Logger.Error("verify round", zap.Any("round", r.Number), zap.Any("block", b.Hash), zap.Any("prev_block", b.PrevHash), zap.Error(err))
+			return nil, common.NewError("prev_block_error", "Error getting the previous block")
+		}
 
-	if prevBlock == nil {
-		//TODO: create previous round AND request previous block from miner who sent current block for verification
-		return nil, common.NewError("invalid_block", fmt.Sprintf("Previous block doesn't exist: %v", b.PrevHash))
+		if prevBlock == nil {
+			//TODO: create previous round AND request previous block from miner who sent current block for verification
+			return nil, common.NewError("invalid_block", fmt.Sprintf("Previous block doesn't exist: %v", b.PrevHash))
+		}
+		b.PrevBlock = prevBlock
 	}
-
 	/* Note: We are verifying the notrization of the previous block we have with
 	   the prev verification tickets of the current block. This is right as all the
 	   necessary verification tickets & notarization message may not have arrived to us */
-	if err := mc.VerifyNotarization(ctx, prevBlock, b.PrevBlockVerficationTickets); err != nil {
+	if err := mc.VerifyNotarization(ctx, b.PrevBlock, b.PrevBlockVerficationTickets); err != nil {
 		return nil, err
 	}
 

@@ -180,6 +180,7 @@ func StartChainHandler(w http.ResponseWriter, r *http.Request) {
 	StartProtocol()
 }
 
+/*StartProtocol - start the miner protocol */
 func StartProtocol() {
 	mc := miner.GetMinerChain()
 	mc.Initialize()
@@ -189,7 +190,14 @@ func StartProtocol() {
 	}
 	sr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 	sr.Number = 1
-	sr.RandomSeed = time.Now().UnixNano()
+	//TODO: For the first round, everyone can generate a block for now as there is no common random number
+	for true {
+		sr.RandomSeed = time.Now().UnixNano()
+		sr.ComputeRanks(mc.Miners.Size())
+		if 2*sr.GetRank(node.Self.SetIndex) <= mc.Miners.Size() {
+			break
+		}
+	}
 	msr := mc.CreateRound(sr)
 	msg := miner.BlockMessage{Type: miner.MessageStartRound, Round: msr}
 	msgChannel := mc.GetBlockMessageChannel()

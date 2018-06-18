@@ -7,6 +7,7 @@ import (
 	"0chain.net/block"
 	"0chain.net/chain"
 	"0chain.net/common"
+	"0chain.net/node"
 	"0chain.net/round"
 )
 
@@ -99,4 +100,18 @@ func (mc *Chain) DeleteRound(ctx context.Context, r *round.Round) {
 	mc.roundsMutex.Lock()
 	defer mc.roundsMutex.Unlock()
 	delete(mc.rounds, r.Number)
+}
+
+/*CanGenerateRound - checks if the miner can generate a block in the given round */
+func (mc *Chain) CanGenerateRound(r *round.Round, miner *node.Node) bool {
+	return 2*r.GetRank(miner.SetIndex) <= mc.Miners.Size()
+}
+
+/*ValidGenerator - check whether this block is from a valid generator */
+func (mc *Chain) ValidGenerator(r *round.Round, b *block.Block) bool {
+	miner := mc.Miners.GetNode(b.MinerID)
+	if miner == nil {
+		return false
+	}
+	return mc.CanGenerateRound(r, miner)
 }

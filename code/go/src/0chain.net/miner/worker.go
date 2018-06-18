@@ -63,11 +63,10 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 	self := node.GetSelfNode(ctx)
 	rank := mr.GetRank(self.SetIndex)
 	Logger.Info("*** starting round ***", zap.Any("round", mr.Number), zap.Any("index", self.SetIndex), zap.Any("rank", rank))
-	//TODO: For now, if the rank happens to be in the bottom half, we assume no need to generate block
-	if 2*rank > mc.Miners.Size() {
+	if !mc.CanGenerateRound(&mr.Round, self.Node) {
 		return
 	}
-	//TODO: If there are not enough txns, this will not advance further even though rest of the network is
+	//NOTE: If there are not enough txns, this will not advance further even though rest of the network is. That's why this is a goroutine
 	go mc.GenerateRoundBlock(ctx, mr)
 }
 
@@ -87,9 +86,16 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 		r := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 		r.Number = b.Round
 		r.RandomSeed = b.RoundRandomSeed
+		if !mc.ValidGenerator(r, b) {
+			return
+		}
 		mr = mc.CreateRound(r)
 		mc.startNewRound(ctx, mr)
 		mr = mc.GetRound(b.Round) // Need this again just in case there is another round already setup and the start didn't happen
+	} else {
+		if !mc.ValidGenerator(&mr.Round, b) {
+			return
+		}
 	}
 	mc.AddToRoundVerification(ctx, mr, b)
 }
