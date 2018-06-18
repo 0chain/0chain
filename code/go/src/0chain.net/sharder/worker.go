@@ -57,8 +57,8 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			/* Run validations before accepting */
 			//TODO: We need to ensure this block is notarized. However, the block payload doesn't include it's own notarizations.
 			sc.AddBlock(b)
-			er, ok := rounds[b.Round]
-			if ok {
+			er := sc.GetRound(b.Round)
+			if er != nil {
 				nb := er.GetNotarizedBlocks()
 				if len(nb) > 0 {
 					Logger.Error("*** different blocks for the same round ***", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("existing_block", nb[0].Hash))
@@ -67,16 +67,15 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 				er = datastore.GetEntityMetadata("round").Instance().(*round.Round)
 				er.Number = b.Round
 				er.RandomSeed = b.RoundRandomSeed
-				rounds[er.Number] = er
+				sc.AddRound(er)
 			}
 			if b.Round != 1 {
 				timer.UpdateSince(ts)
 			}
 			ts = time.Now()
 			er.AddNotarizedBlock(b)
-			//TODO: Need better round state management like in the miner
 			if b.Round > 1 {
-				sc.FinalizeRound(ctx, rounds[b.Round-1], sc)
+				sc.FinalizeRound(ctx, er, sc)
 			}
 		}
 	}

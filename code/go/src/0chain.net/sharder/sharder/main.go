@@ -45,6 +45,7 @@ func initHandlers() {
 	transaction.SetupHandlers()
 	transaction.SetupSharderHandlers()
 	block.SetupHandlers()
+	sharder.SetupHandlers()
 }
 
 func initEntities() {

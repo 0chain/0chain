@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"0chain.net/node"
+
 	"0chain.net/block"
 	"0chain.net/common"
 	"0chain.net/datastore"
@@ -17,7 +19,11 @@ import (
 func SetupHandlers() {
 	http.HandleFunc("/v1/chain/get", common.ToJSONResponse(memorystore.WithConnectionHandler(GetChainHandler)))
 	http.HandleFunc("/v1/chain/put", datastore.ToJSONEntityReqResponse(memorystore.WithConnectionEntityJSONHandler(PutChainHandler, chainEntityMetadata), chainEntityMetadata))
-	http.HandleFunc("/v1/block/get", common.ToJSONResponse(BlockHandler))
+
+	// Miner can only provide recent blocks, sharders can provide any block (for content other than full) and the block they store for full
+	if node.Self.Type == node.NodeTypeMiner {
+		http.HandleFunc("/v1/block/get", common.ToJSONResponse(BlockHandler))
+	}
 	http.HandleFunc("/v1/block/get/latest_finalized", common.ToJSONResponse(LatestFinalizedBlockHandler))
 	http.HandleFunc("/v1/block/get/recent_finalized", common.ToJSONResponse(RecentFinalizedBlockHandler))
 }
@@ -99,20 +105,25 @@ func (c *Chain) GetBlobbersHandler(w http.ResponseWriter, r *http.Request) {
 func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	hash := r.FormValue("block")
 	content := r.FormValue("content")
+	if content == "" {
+		content = "header"
+	}
 	parts := strings.Split(content, ",")
 	b, err := GetServerChain().GetBlock(ctx, hash)
 	if err != nil {
 		return nil, err
 	}
-	data := make(map[string]interface{}, len(parts))
-	for _, part := range parts {
+	return GetBlockResponse(b, parts)
+}
+
+func GetBlockResponse(b *block.Block, contentParts []string) (interface{}, error) {
+	data := make(map[string]interface{}, len(contentParts))
+	for _, part := range contentParts {
 		switch part {
 		case "full":
 			data["block"] = b
-		case "summary":
-			data["block_summary"] = b.GetSummary()
 		case "header":
-			data["header"] = "header" // TODO
+			data["header"] = b.GetSummary()
 		case "merkle_tree":
 			data["merkle_tree"] = b.GetMerkleTree().GetTree()
 		}
