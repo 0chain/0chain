@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"strconv"
 	"sync"
 	"time"
 
@@ -21,6 +22,7 @@ func (ms *Store) IterateCollection(ctx context.Context, entityMetadata datastore
 	bucket := make([]datastore.Entity, BATCH_SIZE)
 	keys := make([]datastore.Key, BATCH_SIZE)
 	maxscore := math.MaxInt64
+	minscore := math.MinInt64
 	offset := 0
 	proceed := true
 	for idx := 0; true; idx += BATCH_SIZE {
@@ -29,32 +31,45 @@ func (ms *Store) IterateCollection(ctx context.Context, entityMetadata datastore
 			return ctx.Err()
 		default:
 		}
-		con.Send("ZREVRANGEBYSCORE", collectionName, maxscore, 0, "LIMIT", offset, BATCH_SIZE)
+		con.Send("ZREVRANGEBYSCORE", collectionName, maxscore, minscore, "WITHSCORES", "LIMIT", offset, BATCH_SIZE)
 		con.Flush()
 		data, err := con.Receive()
 		if err != nil {
 			return err
 		}
 		bkeys, ok := data.([]interface{})
-		if len(bkeys) == 0 {
+		count := len(bkeys) / 2
+		if count == 0 {
 			return nil
 		}
 		// TODO: wonder if WITHSCORES and adjusting the maxscore is more performant rather than adjusting offest
-		offset += len(bkeys)
+		offset += count
 		if !ok {
 			return common.NewError("error", fmt.Sprintf("error casting data to []interface{} : %T", data))
 		}
-		for bidx := range bkeys {
-			bucket[bidx] = entityMetadata.Instance()
-			keys[bidx] = datastore.ToKey(bkeys[bidx])
+		for i := 0; i < count; i++ {
+			bucket[i] = entityMetadata.Instance()
+			keys[i] = datastore.ToKey(bkeys[2*i])
+			ce := bucket[i].(datastore.CollectionEntity)
+			scoredata, ok := bkeys[2*i+1].([]byte)
+			if ok {
+				score, err := strconv.ParseInt(string(scoredata), 10, 63)
+				if err != nil {
+					Logger.Debug("iterator error", zap.Any("score", scoredata), zap.Any("type", fmt.Sprintf("%T", bkeys[2*i+1])))
+					return err
+				}
+				ce.SetCollectionScore(score)
+			} else {
+				Logger.Debug("iterator error", zap.Any("score", bkeys[2*i+1]), zap.Any("type", fmt.Sprintf("%T", bkeys[2*i+1])))
+			}
 		}
 
-		err = ms.MultiRead(ctx, entityMetadata, keys[:len(bkeys)], bucket)
+		err = ms.MultiRead(ctx, entityMetadata, keys[:count], bucket)
 		if err != nil {
 			return err
 		}
-		for idx := range bkeys {
-			proceed = handler(ctx, bucket[idx].(datastore.CollectionEntity))
+		for i := 0; i < count; i++ {
+			proceed = handler(ctx, bucket[i].(datastore.CollectionEntity))
 			if !proceed {
 				break
 			}
@@ -62,7 +77,7 @@ func (ms *Store) IterateCollection(ctx context.Context, entityMetadata datastore
 		if !proceed {
 			break
 		}
-		if len(bkeys) < BATCH_SIZE {
+		if count < BATCH_SIZE {
 			break
 		}
 	}
