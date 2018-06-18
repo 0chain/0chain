@@ -95,6 +95,8 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	}
 
 	client.GetClients(ctx, clients)
+	Logger.Debug("time to assemble block", zap.Any("block", b.Hash), zap.Any("time", time.Since(start)))
+	bsh.UpdatePendingBlock(ctx, b, etxns)
 	for _, txn := range b.Txns {
 		client := clients[txn.ClientID]
 		if client == nil {
@@ -103,9 +105,6 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		txn.PublicKey = client.PublicKey
 		txn.ClientID = datastore.EmptyKey
 	}
-	Logger.Debug("time to assemble block", zap.Any("block", b.Hash), zap.Any("time", time.Since(start)))
-
-	bsh.UpdatePendingBlock(ctx, b, etxns)
 	Logger.Debug("time to assemble + update transaction state", zap.Any("block", b.Hash), zap.Any("time", time.Since(start)))
 
 	b.HashBlock()
