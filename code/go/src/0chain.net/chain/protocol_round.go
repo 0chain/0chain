@@ -11,6 +11,15 @@ import (
 	"go.uber.org/zap"
 )
 
+var DELTA = 200 * time.Millisecond
+var FINALIZATION_TIME = 2 * DELTA
+
+/*SetNetworkRelayTime - setup the network relay time */
+func SetNetworkRelayTime(delta time.Duration) {
+	DELTA = delta
+	FINALIZATION_TIME = 2 * delta
+}
+
 /*FinalizeRound - starting from the given round work backwards and identify the round that can be
   assumed to be finalized as only one chain has survived.
   Note: It is that round and prior that actually get finalized.

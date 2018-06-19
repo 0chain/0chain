@@ -76,7 +76,9 @@ func main() {
 	keysFile := flag.String("keys_file", "config/single_node_sharder_keys.txt", "keys_file")
 	maxDelay := flag.Int("max_delay", 0, "max_delay")
 	flag.Parse()
+	viper.SetDefault("server_chain.network.relay_time", 200)
 	config.SetupConfig()
+
 	if *deploymentMode == 0 {
 		logging.InitLogging("development")
 	} else {
@@ -105,6 +107,7 @@ func main() {
 	serverChain.ID = datastore.ToKey(config.Configuration.ChainID)
 	serverChain.Decimals = int8(viper.GetInt("server_chain.decimals"))
 	serverChain.BlockSize = viper.GetInt32("server_chain.block.size")
+	chain.SetNetworkRelayTime(viper.GetDuration("server_chain.network.relay_time") * time.Millisecond)
 
 	if *nodesFile == "" {
 		panic("Please specify --node_file file.txt option with a file.txt containing peer nodes")

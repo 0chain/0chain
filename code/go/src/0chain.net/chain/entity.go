@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
 
 	"0chain.net/block"
 	"0chain.net/common"
@@ -14,9 +13,6 @@ import (
 	"0chain.net/round"
 	"go.uber.org/zap"
 )
-
-const DELTA = 200 * time.Millisecond
-const FINALIZATION_TIME = 2 * DELTA
 
 /*ServerChain - the chain object of the chain  the server is responsible for */
 var ServerChain *Chain

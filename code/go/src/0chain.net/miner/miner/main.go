@@ -74,6 +74,7 @@ func main() {
 	blockSize := flag.Int("block_size", 0, "block_size") // 0 => take from the config file
 	flag.Parse()
 	config.Configuration.DeploymentMode = byte(*deploymentMode)
+	viper.SetDefault("server_chain.network.relay_time", 200)
 	config.SetupConfig()
 
 	if config.Development() {
@@ -102,6 +103,7 @@ func main() {
 	serverChain.ID = datastore.ToKey(config.Configuration.ChainID)
 	serverChain.Decimals = int8(viper.GetInt("server_chain.decimals"))
 	serverChain.BlockSize = viper.GetInt32("server_chain.block.size")
+	miner.SetNetworkRelayTime(viper.GetDuration("server_chain.network.relay_time") * time.Millisecond)
 	if config.Development() {
 		if *blockSize > 0 {
 			serverChain.BlockSize = int32(*blockSize)

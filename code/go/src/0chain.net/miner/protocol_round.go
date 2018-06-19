@@ -18,7 +18,12 @@ import (
 	"go.uber.org/zap"
 )
 
-const BLOCK_TIME = 3 * chain.DELTA
+var BLOCK_TIME = 3 * chain.DELTA
+
+func SetNetworkRelayTime(delta time.Duration) {
+	chain.SetNetworkRelayTime(delta)
+	BLOCK_TIME = 3 * delta
+}
 
 /*GetBlockToExtend - Get the block to extend from the given round */
 func (mc *Chain) GetBlockToExtend(r *Round) *block.Block {
