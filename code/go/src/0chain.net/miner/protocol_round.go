@@ -74,6 +74,10 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 					if txnCount != transaction.TransactionCount {
 						break
 					}
+					if mc.CurrentRound > b.Round {
+						Logger.Error("generate block (round mismatch)", zap.Any("round", r.Number), zap.Any("current_round", mc.CurrentRound))
+						return nil, common.NewError("round_mismatch", "Current round and block round do not match")
+					}
 					time.Sleep(delay)
 					Logger.Debug("generate block", zap.Any("delay", delay), zap.Any("txn_count", txnCount), zap.Any("t.txn_count", transaction.TransactionCount))
 					delay = 2 * delay
@@ -203,29 +207,42 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r *Round, b *block.Block)
 
 /*ProcessVerifiedTicket - once a verified ticket is receiveid, do further processing with it */
 func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.Block, vt *block.VerificationTicket) {
-	if mc.AddVerificationTicket(ctx, b, vt) {
-		if mc.IsBlockNotarized(ctx, b) {
-			r.Block = b
-			mc.CancelRoundVerification(ctx, r)
-			notarization := datastore.GetEntityMetadata("block_notarization").Instance().(*Notarization)
-			notarization.BlockID = b.Hash
-			notarization.Round = b.Round
-			notarization.VerificationTickets = b.VerificationTickets
-			r.AddNotarizedBlock(b)
-			mc.SendNotarization(ctx, notarization)
-			if mc.GetRound(r.Number+1) == nil {
-				nr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
-				nr.Number = r.Number + 1
-				nr.RandomSeed = rand.New(rand.NewSource(r.RandomSeed)).Int63()
-				nmr := mc.CreateRound(nr)
-				// Even if the context is cancelled, we want to proceed with the next round, hence start with a root context
-				go mc.startNewRound(common.GetRootContext(), nmr)
-				mc.Miners.SendAll(RoundStartSender(nr))
-			}
-			pr := mc.GetRound(r.Number - 1)
-			if pr != nil && pr.Block != nil {
-				mc.FinalizeRound(ctx, &pr.Round, mc)
-			}
+	notarized := mc.IsBlockNotarized(ctx, b)
+	//NOTE: We keep collecting verification tickets even if a block is notarized.
+	// This is useful since Dfinity suggest broadcasting the previous notarized block when verifying the current block
+	// If we know how many verifications already exists for a block, we only need to broadcast to the rest. Hence collecting any prior block verifications is OK.
+	if !mc.AddVerificationTicket(ctx, b, vt) {
+		return
+	}
+	if notarized {
+		return
+	}
+	if mc.IsBlockNotarized(ctx, b) {
+		r.Block = b
+		mc.CancelRoundVerification(ctx, r)
+		notarization := datastore.GetEntityMetadata("block_notarization").Instance().(*Notarization)
+		notarization.BlockID = b.Hash
+		notarization.Round = b.Round
+		notarization.VerificationTickets = b.VerificationTickets
+		r.AddNotarizedBlock(b)
+
+		//TODO: Dfinity suggests broadcasting the prior block so it saturates the network
+		//While saturation is good, it's going to be expensive, hence TODO for now
+
+		mc.SendNotarization(ctx, notarization)
+		if mc.GetRound(r.Number+1) == nil {
+			nr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
+			nr.Number = r.Number + 1
+			//TODO: We need to do VRF
+			nr.RandomSeed = rand.New(rand.NewSource(r.RandomSeed)).Int63()
+			nmr := mc.CreateRound(nr)
+			// Even if the context is cancelled, we want to proceed with the next round, hence start with a root context
+			go mc.startNewRound(common.GetRootContext(), nmr)
+			mc.Miners.SendAll(RoundStartSender(nr))
+		}
+		pr := mc.GetRound(r.Number - 1)
+		if pr != nil && pr.Block != nil {
+			mc.FinalizeRound(ctx, &pr.Round, mc)
 		}
 	}
 }

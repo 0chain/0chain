@@ -208,7 +208,7 @@ func (b *Block) getHashData() string {
 func (b *Block) ComputeHash() string {
 	hashData := b.getHashData()
 	hash := encryption.Hash(hashData)
-	Logger.Debug("hash of the block", zap.String("hash", hash), zap.String("hashdata", hashData))
+	//Logger.Debug("hash of the block", zap.String("hash", hash), zap.String("hashdata", hashData))
 	return hash
 }
 
