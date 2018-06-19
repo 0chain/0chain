@@ -2,11 +2,13 @@ package block
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"0chain.net/common"
 	"0chain.net/config"
 	"0chain.net/datastore"
+	"0chain.net/encryption"
 	. "0chain.net/logging"
 	"0chain.net/transaction"
 	"0chain.net/util"
@@ -83,7 +85,7 @@ func (b *Block) Validate(ctx context.Context) error {
 	}
 	hash := b.ComputeHash()
 	if b.Hash != hash {
-		return common.NewError("incorrect_block_hash", "Block hash doesn't match the merkle tree root")
+		return common.NewError("incorrect_block_hash", fmt.Sprintf("computed block hash doesn't match with the hash of the block: %v: %v: %v", b.Hash, hash, b.getHashData()))
 	}
 	return nil
 }
@@ -195,10 +197,19 @@ func (b *Block) GetMerkleTree() *util.MerkleTree {
 	return &mt
 }
 
+func (b *Block) getHashData() string {
+	mt := b.GetMerkleTree()
+	merkleRoot := mt.GetRoot()
+	hashData := fmt.Sprintf("%v:%v:%v:%v", b.CreationDate, b.Round, b.RoundRandomSeed, merkleRoot)
+	return hashData
+}
+
 /*ComputeHash - compute the hash of the block */
 func (b *Block) ComputeHash() string {
-	mt := b.GetMerkleTree()
-	return mt.GetRoot()
+	hashData := b.getHashData()
+	hash := encryption.Hash(hashData)
+	Logger.Debug("hash of the block", zap.String("hash", hash), zap.String("hashdata", hashData))
+	return hash
 }
 
 /*HashBlock - compute and set the hash of the block */

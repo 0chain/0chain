@@ -42,7 +42,12 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	b.MinerID = self.ID
 	var ierr error
 	var count int64
+	var roundMismatch bool
 	var txnIterHandler = func(ctx context.Context, qe datastore.CollectionEntity) bool {
+		if mc.CurrentRound > b.Round {
+			roundMismatch = true
+			return false
+		}
 		count++
 		txn, ok := qe.(*transaction.Transaction)
 		if !ok {
@@ -55,10 +60,12 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 			}
 			return true
 		}
-		if txn.Status != transaction.TXN_STATUS_FREE {
-			return true
-		}
-		//txn.Status = transaction.TXN_STATUS_PENDING
+		/*
+			if txn.Status != transaction.TXN_STATUS_FREE {
+				return true
+			}
+			txn.Status = transaction.TXN_STATUS_PENDING
+		*/
 		//Setting the score lower so the next time blocks are generated these transactions don't show up at the top
 		txn.SetCollectionScore(txn.GetCollectionScore() - 10*60)
 
@@ -78,9 +85,12 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	txn := transactionEntityMetadata.Instance().(*transaction.Transaction)
 	txn.ChainID = b.ChainID
 	collectionName := txn.GetCollectionName()
-	//TODO: remove timing code later (or make it applicable to test mode)
 	start := time.Now()
 	err := transactionEntityMetadata.GetStore().IterateCollection(ctx, transactionEntityMetadata, collectionName, txnIterHandler)
+	if roundMismatch {
+		Logger.Error("generate block (round mismatch)", zap.Any("round", b.Round), zap.Any("current_round", mc.CurrentRound))
+		return common.NewError("round_mismatch", "current round different from generation round")
+	}
 	if ierr != nil {
 		Logger.Error("transaction reinclusion check", zap.Any("round", b.Round), zap.Error(ierr))
 	}
@@ -90,12 +100,12 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 
 	if idx != mc.BlockSize {
 		b.Txns = nil
-		Logger.Info("generate block", zap.Any("iteration_count", count), zap.Any("block_size", mc.BlockSize), zap.Any("num_txns", idx))
+		Logger.Debug("generate block", zap.Any("round", b.Round), zap.Any("iteration_count", count), zap.Any("block_size", mc.BlockSize), zap.Any("num_txns", idx))
 		return common.NewError(InsufficientTxns, fmt.Sprintf("Not sufficient txns to make a block yet for round %v", b.Round))
 	}
 
 	client.GetClients(ctx, clients)
-	Logger.Debug("time to assemble block", zap.Any("block", b.Hash), zap.Any("time", time.Since(start)))
+	Logger.Debug("time to assemble block", zap.Any("round", b.Round), zap.Any("time", time.Since(start)))
 	bsh.UpdatePendingBlock(ctx, b, etxns)
 	for _, txn := range b.Txns {
 		client := clients[txn.ClientID]
@@ -105,7 +115,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		txn.PublicKey = client.PublicKey
 		txn.ClientID = datastore.EmptyKey
 	}
-	Logger.Debug("time to assemble + update transaction state", zap.Any("block", b.Hash), zap.Any("time", time.Since(start)))
+	Logger.Debug("time to assemble + update transaction state", zap.Any("round", b.Round), zap.Any("time", time.Since(start)))
 
 	b.HashBlock()
 	b.Signature, err = self.Sign(b.Hash)
@@ -113,7 +123,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		return err
 	}
 
-	Logger.Debug("time to assemble+update+sign block", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("time", time.Since(start)))
+	Logger.Debug("time to assemble+update+sign block", zap.Any("round", b.Round), zap.Any("time", time.Since(start)), zap.Any("block", b.Hash))
 	go b.ComputeTxnMap()
 	return nil
 }

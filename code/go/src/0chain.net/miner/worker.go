@@ -55,9 +55,11 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 	//TODO: If for some reason the server is lagging behind (like network outage) we need to fetch the previous round info
 	// before proceeding
 	if pr == nil {
+		Logger.Debug("start new round (previous round not found)", zap.Int64("round", mr.Number))
 		return
 	}
 	if !mc.AddRound(mr) {
+		Logger.Debug("start new round (round already exists)", zap.Int64("round", mr.Number))
 		return
 	}
 	self := node.GetSelfNode(ctx)
@@ -87,14 +89,19 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 		r.Number = b.Round
 		r.RandomSeed = b.RoundRandomSeed
 		if !mc.ValidGenerator(r, b) {
+			Logger.Debug("verify block (no mr, invalid generator)", zap.Any("round", r.Number), zap.Any("block", b.Hash))
 			return
 		}
 		mr = mc.CreateRound(r)
 		mc.startNewRound(ctx, mr)
 		mr = mc.GetRound(b.Round) // Need this again just in case there is another round already setup and the start didn't happen
 	} else {
-		if !mc.ValidGenerator(&mr.Round, b) {
-			return
+		// TODO: since everyone starts generating in the first round, we are excluding the valid generator check for this
+		if mr.Number != 1 {
+			if !mc.ValidGenerator(&mr.Round, b) {
+				Logger.Debug("verify block (yes mr, invalid generator)", zap.Any("round", mr.Number), zap.Any("block", b.Hash))
+				return
+			}
 		}
 	}
 	mc.AddToRoundVerification(ctx, mr, b)
@@ -105,13 +112,16 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *Block
 	b, err := mc.GetBlock(ctx, msg.BlockVerificationTicket.BlockID)
 	if err != nil {
 		// TODO: If we didn't see this block so far, may be it's better to ask for it
+		Logger.Debug("verification message (no block)", zap.String("block", msg.BlockVerificationTicket.BlockID), zap.Error(err))
 		return
 	}
 	if b.Round < mc.LatestFinalizedBlock.Round {
+		Logger.Debug("verification message (round mismatch)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("finalized_round", mc.LatestFinalizedBlock.Round))
 		return
 	}
 	r := mc.GetRound(b.Round)
 	if r == nil {
+		Logger.Debug("verification message (no round)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("finalized_round", mc.LatestFinalizedBlock.Round))
 		return
 	}
 	if mc.IsBlockNotarized(ctx, b) {
@@ -119,6 +129,7 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *Block
 	}
 	err = mc.VerifyTicket(ctx, b, &msg.BlockVerificationTicket.VerificationTicket)
 	if err != nil {
+		Logger.Debug("verification ticket", zap.Error(err))
 		return
 	}
 	mc.ProcessVerifiedTicket(ctx, r, b, &msg.BlockVerificationTicket.VerificationTicket)
@@ -126,24 +137,24 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *Block
 
 /*HandleNotarizationMessage - handles the block notarization message */
 func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessage) {
+	r := msg.Round
+	if r.Number < mc.LatestFinalizedBlock.Round {
+		Logger.Debug("notarization message", zap.Int64("round", r.Number), zap.String("block", msg.Notarization.BlockID), zap.Int64("finalized_round", mc.LatestFinalizedBlock.Round))
+		return
+	}
 	b, err := mc.GetBlock(ctx, msg.Notarization.BlockID)
 	if err != nil {
 		// TODO: If we didn't see this block so far, may be it's better to ask for it
-		return
-	}
-	if b.Round < mc.LatestFinalizedBlock.Round {
+		Logger.Debug("notarization message", zap.Any("block", msg.Notarization.BlockID), zap.Error(err))
 		return
 	}
 	if err := mc.VerifyNotarization(ctx, b, msg.Notarization.VerificationTickets); err != nil {
+		Logger.Debug("notarization message", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
 		return
 	}
-	r := msg.Round
 	if !r.IsVerificationComplete() {
 		r.CancelVerification()
 		r.Block = b
-	}
-	if r.Number <= mc.LatestFinalizedBlock.Round {
-		return
 	}
 	r.AddNotarizedBlock(b)
 	pr := mc.GetRound(b.Round - 1)

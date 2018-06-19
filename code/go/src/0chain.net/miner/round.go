@@ -29,7 +29,10 @@ func (r *Round) AddBlockToVerify(b *block.Block) {
 		r.Block = b
 		return
 	}
-	b.RoundRandomSeed = r.RandomSeed
+	//TODO: since there is no deterministic random number for round 1 in the current implementation we don't overwrite what came from the block
+	if b.Round > 1 {
+		b.RoundRandomSeed = r.RandomSeed
+	}
 	bNode := node.GetNode(b.MinerID)
 	//TODO: view change in the middle of a round will throw off the SetIndex
 	b.RoundRank = r.GetRank(bNode.SetIndex)

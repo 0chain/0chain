@@ -56,18 +56,21 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	b := datastore.GetEntityMetadata("block").Instance().(*block.Block)
 	b.ChainID = mc.ID
 	b.MagicBlockHash = mc.CurrentMagicBlock.Hash
+	b.RoundRandomSeed = r.RandomSeed
 	b.SetPreviousBlock(pb)
 	for true {
 		if mc.CurrentRound > b.Round {
+			Logger.Error("generate block (round mismatch)", zap.Any("round", r.Number), zap.Any("current_round", mc.CurrentRound))
 			return nil, common.NewError("round_mismatch", "Current round and block round do not match")
 		}
 		txnCount := transaction.TransactionCount
 		err := mc.GenerateBlock(ctx, b, mc)
 		if err != nil {
+			Logger.Error("generate block", zap.Error(err))
 			cerr, ok := err.(*common.Error)
 			if ok && cerr.Code == InsufficientTxns {
 				delay := 128 * time.Millisecond
-				for true {
+				for i := 0; i < 25; i++ {
 					if txnCount != transaction.TransactionCount {
 						break
 					}
@@ -85,8 +88,12 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		}
 		break
 	}
-	mc.AddToRoundVerification(ctx, r, b)
+	if mc.CurrentRound > b.Round {
+		Logger.Error("generate block (round mismatch)", zap.Any("round", r.Number), zap.Any("current_round", mc.CurrentRound))
+		return nil, common.NewError("round_mismatch", "Current round and block round do not match")
+	}
 	mc.AddBlock(b)
+	mc.AddToRoundVerification(ctx, r, b)
 	mc.SendBlock(ctx, b)
 	return b, nil
 }

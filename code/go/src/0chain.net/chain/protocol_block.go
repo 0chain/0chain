@@ -4,7 +4,9 @@ import (
 	"context"
 
 	"0chain.net/block"
+	. "0chain.net/logging"
 	"0chain.net/round"
+	"go.uber.org/zap"
 )
 
 /*ComputeFinalizedBlock - compute the block that has been finalized. It should be the one in the prior round
@@ -27,6 +29,9 @@ func (c *Chain) ComputeFinalizedBlock(ctx context.Context, r *round.Round) *bloc
 			}
 			if found {
 				continue
+			}
+			if b.PrevBlock == nil {
+				Logger.Debug("compute finalized block: null prev block", zap.Any("round", r.Number), zap.Any("block_round", b.Round), zap.Any("block", b.Hash))
 			}
 			ntips = append(ntips, b.PrevBlock)
 		}
