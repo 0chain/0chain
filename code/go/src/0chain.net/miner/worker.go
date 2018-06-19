@@ -88,20 +88,17 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 		r := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 		r.Number = b.Round
 		r.RandomSeed = b.RoundRandomSeed
-		if !mc.ValidGenerator(r, b) {
-			Logger.Debug("verify block (no mr, invalid generator)", zap.Any("round", r.Number), zap.Any("block", b.Hash))
+		mr = mc.CreateRound(r)
+		if !mc.ValidGenerator(&mr.Round, b) {
+			Logger.Debug("verify block (yes mr, invalid generator)", zap.Any("round", mr.Number), zap.Any("block", b.Hash))
 			return
 		}
-		mr = mc.CreateRound(r)
 		mc.startNewRound(ctx, mr)
 		mr = mc.GetRound(b.Round) // Need this again just in case there is another round already setup and the start didn't happen
 	} else {
-		// TODO: since everyone starts generating in the first round, we are excluding the valid generator check for this
-		if mr.Number != 1 {
-			if !mc.ValidGenerator(&mr.Round, b) {
-				Logger.Debug("verify block (yes mr, invalid generator)", zap.Any("round", mr.Number), zap.Any("block", b.Hash))
-				return
-			}
+		if !mc.ValidGenerator(&mr.Round, b) {
+			Logger.Debug("verify block (yes mr, invalid generator)", zap.Any("round", mr.Number), zap.Any("block", b.Hash))
+			return
 		}
 	}
 	mc.AddToRoundVerification(ctx, mr, b)
