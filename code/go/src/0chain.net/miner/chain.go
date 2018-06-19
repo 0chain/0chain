@@ -62,9 +62,9 @@ func (mc *Chain) SetupGenesisBlock(hash string) *block.Block {
 /*CreateRound - create a round */
 func (mc *Chain) CreateRound(r *round.Round) *Round {
 	var mr Round
+	r.ComputeRanks(mc.Miners.Size())
 	mr.Round = *r
 	mr.blocksToVerifyChannel = make(chan *block.Block, 200)
-	r.ComputeRanks(mc.Miners.Size())
 	return &mr
 }
 
