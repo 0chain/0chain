@@ -26,7 +26,7 @@ services:
       dockerfile: ./docker.local/build.sharder/Dockerfile
     volumes:
       - ../config:/0chain/config
-      - ../log:/0chain/log
+      - ../sharder${SHARDER}/log:/0chain/log
       - ../sharder${SHARDER}/data:/0chain/data
     ports:
       - "717${SHARDER}:717${SHARDER}"
