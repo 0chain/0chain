@@ -308,5 +308,6 @@ func (b *Block) GetSummary() *BlockSummary {
 	bs.Round = b.Round
 	bs.RoundRandomSeed = b.RoundRandomSeed
 	bs.CreationDate = b.CreationDate
+	bs.MerkleTreeRoot = b.GetMerkleTree().GetRoot()
 	return bs
 }

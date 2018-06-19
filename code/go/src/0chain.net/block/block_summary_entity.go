@@ -14,6 +14,7 @@ type BlockSummary struct {
 	Round           int64  `json:"round"`
 	PrevHash        string `json:"prev_hash"`
 	RoundRandomSeed int64  `json:"round_random_seed"`
+	MerkleTreeRoot  string `json:"merkle_tree_root"`
 }
 
 var blockSummaryEntityMetadata *datastore.EntityMetadataImpl
