@@ -201,6 +201,8 @@ func (c *Chain) DeleteBlock(ctx context.Context, b *block.Block) {
 /*GetRoundBlocks - get the blocks for a given round */
 func (c *Chain) GetRoundBlocks(round int64) []*block.Block {
 	blocks := make([]*block.Block, 0, 1)
+	c.blocksMutex.Lock()
+	defer c.blocksMutex.Unlock()
 	for _, blk := range c.Blocks {
 		if blk.Round == round {
 			blocks = append(blocks, blk)
