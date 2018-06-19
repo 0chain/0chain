@@ -69,7 +69,7 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 				er.RandomSeed = b.RoundRandomSeed
 				sc.AddRound(er)
 			}
-			if b.Round != 1 {
+			if time.Since(ts) < 5*time.Second {
 				timer.UpdateSince(ts)
 			}
 			ts = time.Now()
