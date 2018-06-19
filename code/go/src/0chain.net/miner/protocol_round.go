@@ -70,7 +70,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 			cerr, ok := err.(*common.Error)
 			if ok && cerr.Code == InsufficientTxns {
 				delay := 128 * time.Millisecond
-				for i := 0; i < 25; i++ {
+				for true {
 					if txnCount != transaction.TransactionCount {
 						break
 					}

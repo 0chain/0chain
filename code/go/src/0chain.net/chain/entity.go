@@ -134,6 +134,7 @@ func (c *Chain) GenerateGenesisBlock(hash string) (*round.Round, *block.Block) {
 	gb.Round = 0
 	gr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 	gr.Number = 0
+	gr.Block = gb
 	gr.AddNotarizedBlock(gb)
 	return gr, gb
 }

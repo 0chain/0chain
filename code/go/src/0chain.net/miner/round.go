@@ -5,8 +5,10 @@ import (
 	"sort"
 
 	"0chain.net/block"
+	. "0chain.net/logging"
 	"0chain.net/node"
 	"0chain.net/round"
+	"go.uber.org/zap"
 )
 
 /*Round - a round from miner's perspective */
@@ -29,9 +31,9 @@ func (r *Round) AddBlockToVerify(b *block.Block) {
 		r.Block = b
 		return
 	}
-	//TODO: since there is no deterministic random number for round 1 in the current implementation we don't overwrite what came from the block
-	if b.Round > 1 {
-		b.RoundRandomSeed = r.RandomSeed
+	if b.RoundRandomSeed != r.RandomSeed {
+		Logger.Info("block proposal (incorrect round random number)", zap.Int64("block_random_seed", b.RoundRandomSeed), zap.Int64("round_random_seed", r.RandomSeed))
+		return
 	}
 	bNode := node.GetNode(b.MinerID)
 	//TODO: view change in the middle of a round will throw off the SetIndex

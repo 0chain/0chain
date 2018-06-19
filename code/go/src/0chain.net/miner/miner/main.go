@@ -192,14 +192,10 @@ func StartProtocol() {
 	}
 	sr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 	sr.Number = 1
-	//TODO: For the first round, everyone can generate a block for now as there is no common random number
-	for true {
-		sr.RandomSeed = time.Now().UnixNano()
-		sr.ComputeRanks(mc.Miners.Size())
-		if 2*sr.GetRank(node.Self.SetIndex) <= mc.Miners.Size() {
-			break
-		}
-	}
+
+	//TODO: For now, hardcoding a random seed for the first round
+	sr.RandomSeed = 839695260482366265
+	sr.ComputeRanks(mc.Miners.Size())
 	msr := mc.CreateRound(sr)
 	msg := miner.BlockMessage{Type: miner.MessageStartRound, Round: msr}
 	msgChannel := mc.GetBlockMessageChannel()
