@@ -39,7 +39,7 @@ func InitLogging(mode string) {
 		cfg.EncoderConfig.StacktraceKey = "stacktrace"
 	}
 
-	cfg.Encoding = "json"
+	cfg.Encoding = "console"
 	cfg.EncoderConfig.TimeKey = "timestamp"
 	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 

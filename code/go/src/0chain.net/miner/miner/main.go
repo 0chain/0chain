@@ -170,8 +170,7 @@ func main() {
 	miner.SetupM2SSenders()
 	miner.SetupWorkers()
 	go StartProtocol()
-	// below is just an example for initialize LoggerSugar
-	N2n.Info("This is just an example")
+
 	Logger.Info("Ready to listen to the requests")
 	startTime = time.Now().UTC()
 	log.Fatal(server.ListenAndServe())
