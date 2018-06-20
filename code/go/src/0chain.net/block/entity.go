@@ -61,7 +61,7 @@ func (b *Block) GetEntityMetadata() datastore.EntityMetadata {
 /*ComputeProperties - Entity implementation */
 func (b *Block) ComputeProperties() {
 	if datastore.IsEmpty(b.ChainID) {
-		b.ChainID = datastore.ToKey(config.GetMainChainID())
+		b.ChainID = datastore.ToKey(config.GetServerChainID())
 	}
 	if b.Txns != nil {
 		for _, txn := range b.Txns {
@@ -118,6 +118,7 @@ func Provider() datastore.Entity {
 	b.Version = "1.0"
 	b.PrevBlockVerficationTickets = make([]*VerificationTicket, 0, 1)
 	b.EntityCollection = blockEntityCollection
+	b.ChainID = datastore.ToKey(config.GetServerChainID())
 	b.InitializeCreationDate()
 	return b
 }

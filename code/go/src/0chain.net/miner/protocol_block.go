@@ -204,8 +204,6 @@ func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 func (mc *Chain) FinalizeBlock(ctx context.Context, b *block.Block) error {
 	modifiedTxns := make([]datastore.Entity, len(b.Txns))
 	for idx, txn := range b.Txns {
-		txn.BlockID = b.Hash
-		txn.Status = transaction.TXN_STATUS_FINALIZED
 		modifiedTxns[idx] = txn
 	}
 	transactionMetadataProvider := datastore.GetEntityMetadata("txn")

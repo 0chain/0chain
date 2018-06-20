@@ -34,23 +34,10 @@ type Transaction struct {
 	Value           int64            `json:"transaction_value" msgpack:"v"` // The value associated with this transaction
 	Signature       string           `json:"signature" msgpack:"s"`
 	CreationDate    common.Timestamp `json:"creation_date" msgpack:"ts"`
-	Status          byte             `json:"status" msgpack:"st"`
-	BlockID         datastore.Key    `json:"block_id,omitempty" msgpack:"bid"` // This is the block that finalized this transaction
 
-	Client   *client.Client `json:"-"`
-	ToClient *client.Client `json:"-"`
+	//Client   *client.Client `json:"-"`
+	//ToClient *client.Client `json:"-"`
 }
-
-const (
-	/*TXN_STATUS_FREE - transaction that is yet to be put into a block */
-	TXN_STATUS_FREE = 0
-	/*TXN_STATUS_PENDING - transaction that is yet being worked on by putting it into the block */
-	TXN_STATUS_PENDING = 1
-	/*TXN_STATUS_MINED - transaction that is already mined */
-	TXN_STATUS_FINALIZED = 2
-	/*TXN_STATUS_CANCELLED - the transaction is cancelled via error reporting protocol */
-	TXN_STATUS_CANCELLED = 3
-)
 
 var transactionEntityMetadata *datastore.EntityMetadataImpl
 
@@ -63,7 +50,7 @@ func (t *Transaction) GetEntityMetadata() datastore.EntityMetadata {
 func (t *Transaction) ComputeProperties() {
 	t.EntityCollection = txnEntityCollection
 	if datastore.IsEmpty(t.ChainID) {
-		t.ChainID = datastore.ToKey(config.GetMainChainID())
+		t.ChainID = datastore.ToKey(config.GetServerChainID())
 	}
 	if t.PublicKey != "" {
 		if t.ClientID == "" {
@@ -130,7 +117,7 @@ func (t *Transaction) GetClient(ctx context.Context) (*client.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	t.Client = co
+	//t.Client = co
 	return co, nil
 }
 
@@ -176,9 +163,8 @@ func (t *Transaction) VerifySignature(ctx context.Context) error {
 func Provider() datastore.Entity {
 	t := &Transaction{}
 	t.Version = "1.0"
-	t.Status = TXN_STATUS_FREE
 	t.CreationDate = common.Now()
-	t.ChainID = datastore.ToKey(config.GetMainChainID())
+	t.ChainID = datastore.ToKey(config.GetServerChainID())
 	t.EntityCollection = txnEntityCollection
 	return t
 }
@@ -196,12 +182,6 @@ func SetupEntity(store datastore.Store) {
 	datastore.RegisterEntityMetadata("txn", transactionEntityMetadata)
 	txnEntityCollection = &datastore.EntityCollection{CollectionName: "collection.txn", CollectionSize: 60000000, CollectionDuration: time.Hour}
 
-	/*Entity Buffer Size = 10240
-	* Timeout = 250 milliseconds
-	* Entity Chunk Size = 128
-	* Chunk Buffer Size = 32
-	* Chunk Workers = 8
-	 */
 	var chunkingOptions = datastore.ChunkingOptions{
 		EntityMetadata:   transactionEntityMetadata,
 		EntityBufferSize: 10240,

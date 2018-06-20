@@ -76,10 +76,10 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 					}
 					if mc.CurrentRound > b.Round {
 						Logger.Error("generate block (round mismatch)", zap.Any("round", r.Number), zap.Any("current_round", mc.CurrentRound))
-						return nil, common.NewError("round_mismatch", "Current round and block round do not match")
+						return nil, common.NewError("round_mismatch", "current round and block round do not match")
 					}
 					time.Sleep(delay)
-					Logger.Debug("generate block", zap.Any("delay", delay), zap.Any("txn_count", txnCount), zap.Any("t.txn_count", transaction.TransactionCount))
+					Logger.Debug("generate block", zap.Any("round", r.Number), zap.Any("delay", delay), zap.Any("txn_count", txnCount), zap.Any("t.txn_count", transaction.TransactionCount))
 					delay = 2 * delay
 					if delay > time.Second {
 						delay = time.Second
