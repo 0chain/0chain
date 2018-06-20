@@ -1,5 +1,6 @@
 \.*
 !.gitignore
+!.dockerignore
 *.class
 *.jar
 **/target/
