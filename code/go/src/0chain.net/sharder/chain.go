@@ -55,6 +55,7 @@ func (sc *Chain) SetupGenesisBlock(hash string) *block.Block {
 	return gb
 }
 
+/*GetBlockFromStore - get the block from the store */
 func (sc *Chain) GetBlockFromStore(blockHash string, round int64) (*block.Block, error) {
 	return blockstore.GetStore().Read(blockHash, round)
 }
