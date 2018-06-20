@@ -32,6 +32,7 @@ func (c *Chain) ComputeFinalizedBlock(ctx context.Context, r *round.Round) *bloc
 			}
 			if b.PrevBlock == nil {
 				Logger.Debug("compute finalized block: null prev block", zap.Any("round", r.Number), zap.Any("block_round", b.Round), zap.Any("block", b.Hash))
+				return nil
 			}
 			ntips = append(ntips, b.PrevBlock)
 		}

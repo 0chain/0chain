@@ -125,6 +125,10 @@ func (np *Pool) SendAtleast(numNodes int, handler SendHandler) []*Node {
 		sendBucket <- node
 		activeCount++
 	}
+	if activeCount == 0 {
+		Logger.Debug("send message (no active nodes)")
+		return sentTo
+	}
 	doneCount := 0
 	for true {
 		select {
@@ -133,14 +137,13 @@ func (np *Pool) SendAtleast(numNodes int, handler SendHandler) []*Node {
 			validCount++
 			if validCount == numNodes {
 				close(sendBucket)
-				N2n.Debug("", zap.Any("all_nodes", len(nodes)), zap.Any("requested", numNodes), zap.Any("active", activeCount), zap.Any("sent_to", len(nodes)), zap.Any("time", time.Since(start)))
+				N2n.Debug("send message", zap.Any("all_nodes", len(nodes)), zap.Any("requested", numNodes), zap.Any("active", activeCount), zap.Any("sent_to", len(nodes)), zap.Any("time", time.Since(start)))
 				return sentTo
 			}
 		case <-done:
 			doneCount++
 			if doneCount >= numNodes+THRESHOLD || doneCount >= activeCount {
-				N2n.Debug("", zap.Any("all_nodes", len(nodes)), zap.Any("requested", numNodes), zap.Any("active", activeCount), zap.Any("sent_to", len(nodes)), zap.Any("time", time.Since(start)))
-				//Logger.Debug("", zap.Any("all_nodes", len(nodes)), zap.Any("requested", numNodes), zap.Any("active", activeCount), zap.Any("sent_to", len(nodes)), zap.Any("time", time.Since(start)))
+				N2n.Debug("send message", zap.Any("all_nodes", len(nodes)), zap.Any("requested", numNodes), zap.Any("active", activeCount), zap.Any("sent_to", len(nodes)), zap.Any("time", time.Since(start)))
 				close(sendBucket)
 				return sentTo
 			}
@@ -314,6 +317,9 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF) common
 			N2n.Error("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("entity", entityName), zap.Any("data", reqHashdata), zap.Error(err))
 			return
 		}
+		sender.Status = NodeStatusActive
+		sender.LastActiveTime = time.Unix(reqTSn, 0)
+
 		if !common.Within(reqTSn, 5) {
 
 		}

@@ -51,15 +51,15 @@ func (mc *Chain) HandleStartRound(ctx context.Context, msg *BlockMessage) {
 }
 
 func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
+	if !mc.AddRound(mr) {
+		Logger.Debug("start new round (round already exists)", zap.Int64("round", mr.Number))
+		return
+	}
 	pr := mc.GetRound(mr.Number - 1)
 	//TODO: If for some reason the server is lagging behind (like network outage) we need to fetch the previous round info
 	// before proceeding
 	if pr == nil {
 		Logger.Debug("start new round (previous round not found)", zap.Int64("round", mr.Number))
-		return
-	}
-	if !mc.AddRound(mr) {
-		Logger.Debug("start new round (round already exists)", zap.Int64("round", mr.Number))
 		return
 	}
 	self := node.GetSelfNode(ctx)
@@ -76,6 +76,7 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage) {
 	b := msg.Block
 	if b.Round < mc.CurrentRound {
+		Logger.Debug("verify block (round mismatch", zap.Int64("current_round", mc.CurrentRound), zap.Int64("block_round", b.Round))
 		return
 	}
 	mr := mc.GetRound(b.Round)
@@ -122,6 +123,7 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *Block
 		return
 	}
 	if mc.IsBlockNotarized(ctx, b) {
+		Logger.Debug("verification ticket (already notarized)", zap.Int64("round", b.Round), zap.String("block", b.Hash))
 		return
 	}
 	err = mc.VerifyTicket(ctx, b, &msg.BlockVerificationTicket.VerificationTicket)

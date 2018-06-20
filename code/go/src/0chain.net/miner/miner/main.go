@@ -171,6 +171,9 @@ func main() {
 	miner.SetupWorkers()
 	go StartProtocol()
 
+	if config.Development() {
+		go TransactionGenerator(serverChain.BlockSize)
+	}
 	Logger.Info("Ready to listen to the requests")
 	startTime = time.Now().UTC()
 	log.Fatal(server.ListenAndServe())
@@ -196,8 +199,25 @@ func StartProtocol() {
 	sr.RandomSeed = 839695260482366265
 	sr.ComputeRanks(mc.Miners.Size())
 	msr := mc.CreateRound(sr)
+
+	active := mc.Miners.GetActiveCount()
+	if 3*active < 2*mc.Miners.Size() {
+		ticker := time.NewTicker(5 * chain.DELTA)
+		for ts := range ticker.C {
+			Logger.Debug("waiting for sufficient nodes", zap.Time("ts", ts), zap.Int("active", active))
+			if mc.CurrentRound != 0 {
+				break
+			}
+			active := mc.Miners.GetActiveCount()
+			if 3*active >= 2*mc.Miners.Size() {
+				break
+			}
+		}
+	}
+
 	msg := miner.BlockMessage{Type: miner.MessageStartRound, Round: msr}
 	msgChannel := mc.GetBlockMessageChannel()
+	Logger.Debug("starting the blockchain ...")
 	msgChannel <- &msg
 	mc.SendRoundStart(common.GetRootContext(), sr)
 }

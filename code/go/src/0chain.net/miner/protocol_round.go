@@ -2,7 +2,6 @@ package miner
 
 import (
 	"context"
-	"fmt"
 	"math/rand"
 	"time"
 
@@ -76,7 +75,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 					}
 					if mc.CurrentRound > b.Round {
 						Logger.Error("generate block (round mismatch)", zap.Any("round", r.Number), zap.Any("current_round", mc.CurrentRound))
-						return nil, common.NewError("round_mismatch", "current round and block round do not match")
+						return nil, common.NewError("round_mismatch", "Current round and block round do not match")
 					}
 					time.Sleep(delay)
 					Logger.Debug("generate block", zap.Any("round", r.Number), zap.Any("delay", delay), zap.Any("txn_count", txnCount), zap.Any("t.txn_count", transaction.TransactionCount))
@@ -105,6 +104,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 /*AddToRoundVerification - Add a block to verify : WARNING: does not support concurrent access for a given round */
 func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block.Block) {
 	if mr.IsFinalizing() || mr.IsFinalized() {
+		Logger.Debug("add to verification", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("finalizing", mr.IsFinalizing()), zap.Any("finalized", mr.IsFinalized()))
 		return
 	}
 	if !mc.ValidateMagicBlock(ctx, b) {
@@ -183,11 +183,6 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r *Round, b *block.Block)
 			//TODO: create previous round AND request previous block from miner who sent current block for verification
 			Logger.Error("verify round", zap.Any("round", r.Number), zap.Any("block", b.Hash), zap.Any("prev_block", b.PrevHash), zap.Error(err))
 			return nil, common.NewError("prev_block_error", "Error getting the previous block")
-		}
-
-		if prevBlock == nil {
-			//TODO: create previous round AND request previous block from miner who sent current block for verification
-			return nil, common.NewError("invalid_block", fmt.Sprintf("Previous block doesn't exist: %v", b.PrevHash))
 		}
 		b.PrevBlock = prevBlock
 	}

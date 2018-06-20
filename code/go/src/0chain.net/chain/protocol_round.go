@@ -36,7 +36,7 @@ func (c *Chain) FinalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 	}
 	fb := c.ComputeFinalizedBlock(ctx, r)
 	if fb == nil {
-		Logger.Debug("finalization - no decisive block to finalize yet", zap.Any("round", r.Number))
+		Logger.Debug("finalization - no decisive block to finalize yet or don't have all the necessary blocks", zap.Any("round", r.Number))
 		return
 	}
 	lfbHash := c.LatestFinalizedBlock.Hash

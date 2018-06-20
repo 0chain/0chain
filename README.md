@@ -53,33 +53,22 @@ $ ./docker.local/bin/sync_clock.sh
 
 3) Starting the nodes. On each of the miner terminals use the commands (note the .. at the beginning. This is because, these commands are run from within the docker.local/<miner/sharder|i> directories and the bin is one level above relative to these directories)
 
-
-```
-$ ../bin/start.miner.sh block-size
-```
-If block-size is not specified, a default of 5000 is used. Block size argument only works in test mode
-
 On the sharder terminal, use
 ```
 $ ../bin/start.sharder.sh
 ```
+Wait till the cassandra is started and the sharder is ready to listen to requests.
+
+```
+$ ../bin/start.miner.sh block-size
+```
+If block-size is not specified, a default of 5000 is used. Block size argument only works in test mode. Start 3 miners.
+
+
 ## Generating Test Transactions
 
-1) To build the miner_stress program from git/0chain directory, you need to make sure go is installed and all the dependent packges are installed. To know the dpeendency just run the following command and any missing dependencies are thrown as errors. At that point you 
-can use the "go get" command and install the packages.
-
-```
-$ ./docker.local/bin/build_txns_generator.sh
-```
-2) To generate data, start the block chain generation process
-```
-$ ./docker.local/bin/run.test.sh num-txns
-```
-
-If num-txns value is not specified, then 1000 transactions are generated for each miner. The run.test.sh first generates specified number of
-transactions on each of the 3 miners, then calls /_start on sharder1 to reset the state and then calls /_start on miner1 who starts the 1st
-round by generating a random number and send it to the other 2 (Note, the actual mechanism to get started is going to be different and the
-current process of using /_start is only for testing purpose)
+There is no need to generate the test data separately. In development mode, the transaction data is automatically generated at a certain rate based on the
+block size.
 
 ## Troubleshooting
 

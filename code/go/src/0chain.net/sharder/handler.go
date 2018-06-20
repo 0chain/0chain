@@ -77,8 +77,11 @@ func BlockStatsHandler(w http.ResponseWriter, r *http.Request) {
 	pvals := timer.Percentiles(percentiles)
 	fmt.Fprintf(w, "<table>")
 	fmt.Fprintf(w, "<tr><td>Delta</td><td>%v</td></tr>", chain.DELTA)
+	fmt.Fprintf(w, "<tr><td>Block Size</td><td>%v</td></tr>", GetSharderChain().BlockSize)
 	fmt.Fprintf(w, "<tr><td>Count</td><td>%v</td></tr>", timer.Count())
-	fmt.Fprintf(w, "<tr><td>Min, Mean (Standard Dev), Max</td><td>%.2f, %.2f (%.2f), %.2f</td></tr>", scale(float64(timer.Min())), scale(timer.Mean()), scale(timer.StdDev()), scale(float64(timer.Max())))
+	fmt.Fprintf(w, "<tr><td>Min</td><td>%.2f</td></tr>", scale(float64(timer.Min())))
+	fmt.Fprintf(w, "<tr><td>Mean</td><td>%.2f &plusmn;%.2f</td></tr>", scale(timer.Mean()), scale(timer.StdDev()))
+	fmt.Fprintf(w, "<tr><td>Max</td><td>%.2f</td></tr>", scale(float64(timer.Max())))
 	for idx, p := range percentiles {
 		fmt.Fprintf(w, "<tr><td>%.2f%%</td><td>%.2f</td></tr>", 100*p, scale(pvals[idx]))
 	}

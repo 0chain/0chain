@@ -34,9 +34,6 @@ type Transaction struct {
 	Value           int64            `json:"transaction_value" msgpack:"v"` // The value associated with this transaction
 	Signature       string           `json:"signature" msgpack:"s"`
 	CreationDate    common.Timestamp `json:"creation_date" msgpack:"ts"`
-
-	//Client   *client.Client `json:"-"`
-	//ToClient *client.Client `json:"-"`
 }
 
 var transactionEntityMetadata *datastore.EntityMetadataImpl
@@ -117,7 +114,6 @@ func (t *Transaction) GetClient(ctx context.Context) (*client.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	//t.Client = co
 	return co, nil
 }
 
@@ -195,7 +191,7 @@ func SetupEntity(store datastore.Store) {
 }
 
 /*Sign - given a client and client's private key, sign this tranasction */
-func (t *Transaction) Sign(client *client.Client, privateKey string) (string, error) {
+func (t *Transaction) Sign(privateKey string) (string, error) {
 	t.Hash = t.ComputeHash()
 	signature, err := encryption.Sign(privateKey, t.Hash)
 	if err != nil {

@@ -234,17 +234,19 @@ func (b *Block) HasTransaction(hash string) bool {
 
 /*ChainHasTransaction - indicates if this chain has the transaction */
 func (b *Block) ChainHasTransaction(txn *transaction.Transaction) (bool, error) {
-	for blk := b; blk != nil; blk = blk.PrevBlock {
-		if blk.Round == 0 {
+	var pb = b
+	for cb := b; cb != nil; pb, cb = cb, cb.PrevBlock {
+		if cb.Round == 0 {
 			return false, nil
 		}
-		if blk.HasTransaction(txn.Hash) {
+		if cb.HasTransaction(txn.Hash) {
 			return true, nil
 		}
-		if blk.CreationDate < txn.CreationDate {
+		if cb.CreationDate < txn.CreationDate {
 			return false, nil
 		}
 	}
+	Logger.Debug("chain has txn", zap.Int64("round", b.Round), zap.Int64("upto_round", pb.Round), zap.Any("txn_ts", txn.CreationDate), zap.Any("upto_block_ts", pb.CreationDate))
 	return false, common.NewError("insufficient_chain", "Chain length not sufficient to confirm the presence of this transaction")
 }
 
@@ -255,6 +257,7 @@ func (b *Block) ValidateTransactions(ctx context.Context) error {
 			err := txn.Validate(ctx)
 			if err != nil {
 				*cancel = true
+				Logger.Error("validate transactions", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Error(err))
 				validChannel <- false
 			}
 			ok, err := b.PrevBlock.ChainHasTransaction(txn)

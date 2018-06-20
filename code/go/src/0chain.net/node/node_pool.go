@@ -85,6 +85,20 @@ func (np *Pool) computeNodesArray() {
 	np.computeNodePositions()
 }
 
+/*GetActiveCount - get the active count */
+func (np *Pool) GetActiveCount() int {
+	count := 0
+	for _, node := range nodes {
+		if node == Self.Node {
+			continue
+		}
+		if node.Status == NodeStatusActive {
+			count++
+		}
+	}
+	return count
+}
+
 /*GetRandomNodes - get a random set of nodes from the pool
 * Doesn't consider active/inactive status
  */

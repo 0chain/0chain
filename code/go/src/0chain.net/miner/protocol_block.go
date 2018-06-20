@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"0chain.net/chain"
-	"0chain.net/memorystore"
 
 	"0chain.net/block"
 	"0chain.net/client"
@@ -34,14 +33,10 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	b.Txns = make([]*transaction.Transaction, mc.BlockSize)
 	//TODO: wasting this because []interface{} != []*transaction.Transaction in Go
 	etxns := make([]datastore.Entity, mc.BlockSize)
+	var invalidTxns []datastore.Entity
 	var idx int32
-	self := node.GetSelfNode(ctx)
-	if self == nil {
-		panic("Invalid setup, could not find the self node")
-	}
-	b.MinerID = self.ID
 	var ierr error
-	var count int64
+	var count int32
 	var roundMismatch bool
 	var txnIterHandler = func(ctx context.Context, qe datastore.CollectionEntity) bool {
 		if mc.CurrentRound > b.Round {
@@ -51,21 +46,23 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		count++
 		txn, ok := qe.(*transaction.Transaction)
 		if !ok {
-			Logger.Error("generate block", zap.Any("error", "wrong entity"), zap.Any("entity", qe))
+			Logger.Error("generate block (invalid entity)", zap.Any("entity", qe))
 			return true
 		}
+
+		//TODO: this needs to be uncommented once we have a way to generate a steady stream of transactions
+		/*
+			if !common.Within(int64(txn.CreationDate), 5) {
+				invalidTxns = append(invalidTxns, qe)
+			}*/
+
 		if ok, err := b.PrevBlock.ChainHasTransaction(txn); ok || err != nil {
 			if err != nil {
 				ierr = err
 			}
 			return true
 		}
-		/*
-			if txn.Status != transaction.TXN_STATUS_FREE {
-				return true
-			}
-			txn.Status = transaction.TXN_STATUS_PENDING
-		*/
+
 		//Setting the score lower so the next time blocks are generated these transactions don't show up at the top
 		txn.SetCollectionScore(txn.GetCollectionScore() - 10*60)
 
@@ -81,18 +78,23 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		}
 		return true
 	}
+
+	start := time.Now()
+	b.CreationDate = common.Now()
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
 	txn := transactionEntityMetadata.Instance().(*transaction.Transaction)
-	txn.ChainID = b.ChainID
 	collectionName := txn.GetCollectionName()
-	start := time.Now()
 	err := transactionEntityMetadata.GetStore().IterateCollection(ctx, transactionEntityMetadata, collectionName, txnIterHandler)
 	if roundMismatch {
 		Logger.Error("generate block (round mismatch)", zap.Any("round", b.Round), zap.Any("current_round", mc.CurrentRound))
 		return common.NewError("round_mismatch", "current round different from generation round")
 	}
 	if ierr != nil {
-		Logger.Error("transaction reinclusion check", zap.Any("round", b.Round), zap.Error(ierr))
+		Logger.Error("generate block (txn reinclusion check)", zap.Any("round", b.Round), zap.Error(ierr))
+	}
+	if len(invalidTxns) > 0 {
+		Logger.Error("generate block (found invalid txns)", zap.Any("round", b.Round), zap.Int("num_invalid_txns", len(invalidTxns)))
+		go mc.deleteTxns(invalidTxns)
 	}
 	if err != nil {
 		return err
@@ -100,12 +102,15 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 
 	if idx != mc.BlockSize {
 		b.Txns = nil
-		Logger.Debug("generate block", zap.Any("round", b.Round), zap.Any("iteration_count", count), zap.Any("block_size", mc.BlockSize), zap.Any("num_txns", idx))
-		return common.NewError(InsufficientTxns, fmt.Sprintf("Not sufficient txns to make a block yet for round %v", b.Round))
+		Logger.Debug("generate block (insufficient txns)", zap.Any("round", b.Round), zap.Any("iteration_count", count), zap.Any("block_size", mc.BlockSize), zap.Any("num_txns", idx))
+		return common.NewError(InsufficientTxns, fmt.Sprintf("not sufficient txns to make a block yet for round %v", b.Round))
 	}
-
+	if count > 10*mc.BlockSize {
+		Logger.Debug("generate block (too much iteration", zap.Any("round", b.Round), zap.Any("iteration_count", count))
+	}
 	client.GetClients(ctx, clients)
-	Logger.Debug("time to assemble block", zap.Any("round", b.Round), zap.Any("time", time.Since(start)))
+	Logger.Debug("generate block (time to assemble block)", zap.Any("round", b.Round), zap.Any("time", time.Since(start)))
+
 	bsh.UpdatePendingBlock(ctx, b, etxns)
 	for _, txn := range b.Txns {
 		client := clients[txn.ClientID]
@@ -115,15 +120,17 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		txn.PublicKey = client.PublicKey
 		txn.ClientID = datastore.EmptyKey
 	}
-	Logger.Debug("time to assemble + update transaction state", zap.Any("round", b.Round), zap.Any("time", time.Since(start)))
+	Logger.Debug("generate block (time to assemble + update txns)", zap.Any("round", b.Round), zap.Any("time", time.Since(start)))
 
+	self := node.GetSelfNode(ctx)
+	b.MinerID = self.ID
 	b.HashBlock()
 	b.Signature, err = self.Sign(b.Hash)
 	if err != nil {
 		return err
 	}
+	Logger.Debug("generate block (time to assemble+update+sign block)", zap.Any("round", b.Round), zap.Any("time", time.Since(start)), zap.Any("block", b.Hash))
 
-	Logger.Debug("time to assemble+update+sign block", zap.Any("round", b.Round), zap.Any("time", time.Since(start)), zap.Any("block", b.Hash))
 	go b.ComputeTxnMap()
 	return nil
 }
@@ -131,7 +138,10 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 /*UpdatePendingBlock - updates the block that is generated and pending rest of the process */
 func (mc *Chain) UpdatePendingBlock(ctx context.Context, b *block.Block, txns []datastore.Entity) {
 	transactionMetadataProvider := datastore.GetEntityMetadata("txn")
-	transactionMetadataProvider.GetStore().MultiWrite(ctx, transactionMetadataProvider, txns)
+
+	//NOTE: Since we are not explicitly maintaining state in the db, we just need to adjust the collection score and don't need to write the entities themselves
+	//transactionMetadataProvider.GetStore().MultiWrite(ctx, transactionMetadataProvider, txns)
+	transactionMetadataProvider.GetStore().MultiAddToCollection(ctx, transactionMetadataProvider, txns)
 }
 
 /*VerifyBlock - given a set of transaction ids within a block, validate the block */
@@ -174,9 +184,6 @@ func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (*block.BlockVer
 	var bvt = &block.BlockVerificationTicket{}
 	bvt.BlockID = b.Hash
 	self := node.GetSelfNode(ctx)
-	if self == nil {
-		panic("invalid setup, could not find the self node")
-	}
 	var err error
 	bvt.VerifierID = self.GetKey()
 	bvt.Signature, err = self.Sign(b.Hash)
@@ -206,13 +213,5 @@ func (mc *Chain) FinalizeBlock(ctx context.Context, b *block.Block) error {
 	for idx, txn := range b.Txns {
 		modifiedTxns[idx] = txn
 	}
-	transactionMetadataProvider := datastore.GetEntityMetadata("txn")
-	ctx = memorystore.WithEntityConnection(ctx, transactionMetadataProvider)
-	defer memorystore.Close(ctx)
-	//err := transactionMetadataProvider.GetStore().MultiWrite(ctx, transactionMetadataProvider, modifiedTxns)
-	err := transactionMetadataProvider.GetStore().MultiDelete(ctx, transactionMetadataProvider, modifiedTxns)
-	if err != nil {
-		return err
-	}
-	return nil
+	return mc.deleteTxns(modifiedTxns)
 }
