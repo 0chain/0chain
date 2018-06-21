@@ -211,44 +211,6 @@ func (c *Chain) GetRoundBlocks(round int64) []*block.Block {
 	return blocks
 }
 
-/*VerifyTicket - verify the ticket */
-func (c *Chain) VerifyTicket(ctx context.Context, b *block.Block, bvt *block.VerificationTicket) error {
-	sender := c.Miners.GetNode(bvt.VerifierID)
-	if sender == nil {
-		return common.InvalidRequest("Verifier unknown or not authorized at this time")
-	}
-
-	if ok, _ := sender.Verify(bvt.Signature, b.Hash); !ok {
-		return common.InvalidRequest("Couldn't verify the signature")
-	}
-	return nil
-}
-
-/*VerifyNotarization - verify that the notarization is correct */
-func (c *Chain) VerifyNotarization(ctx context.Context, b *block.Block, bvt []*block.VerificationTicket) error {
-	if b.Round != 0 && bvt == nil {
-		return common.NewError("no_verification_tickets", "No verification tickets for this block")
-	}
-	// TODO: Logic similar to ReachedNotarization to check the count satisfies (refactor)
-
-	for _, vt := range bvt {
-		if err := c.VerifyTicket(ctx, b, vt); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-/*IsBlockNotarized - Does the given number of signatures means eligible for notraization?
-TODO: For now, we just assume more than 50% */
-func (c *Chain) IsBlockNotarized(ctx context.Context, b *block.Block) bool {
-	numSignatures := b.GetVerificationTicketsCount()
-	if 3*numSignatures >= 2*c.Miners.Size() {
-		return true
-	}
-	return false
-}
-
 /*ValidateMagicBlock - validate the block for a given round has the right magic block */
 func (c *Chain) ValidateMagicBlock(ctx context.Context, b *block.Block) bool {
 	//TODO: This needs to take the round number into account and go backwards as needed to validate

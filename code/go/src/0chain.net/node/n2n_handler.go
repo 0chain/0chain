@@ -137,13 +137,13 @@ func (np *Pool) SendAtleast(numNodes int, handler SendHandler) []*Node {
 			validCount++
 			if validCount == numNodes {
 				close(sendBucket)
-				N2n.Debug("send message", zap.Any("all_nodes", len(nodes)), zap.Any("requested", numNodes), zap.Any("active", activeCount), zap.Any("sent_to", len(nodes)), zap.Any("time", time.Since(start)))
+				N2n.Debug("send message", zap.Any("all_nodes", len(nodes)), zap.Any("requested", numNodes), zap.Any("active", activeCount), zap.Any("sent_to", len(sentTo)), zap.Any("time", time.Since(start)))
 				return sentTo
 			}
 		case <-done:
 			doneCount++
 			if doneCount >= numNodes+THRESHOLD || doneCount >= activeCount {
-				N2n.Debug("send message", zap.Any("all_nodes", len(nodes)), zap.Any("requested", numNodes), zap.Any("active", activeCount), zap.Any("sent_to", len(nodes)), zap.Any("time", time.Since(start)))
+				N2n.Debug("send message", zap.Any("all_nodes", len(nodes)), zap.Any("requested", numNodes), zap.Any("active", activeCount), zap.Any("sent_to", len(sentTo)), zap.Any("time", time.Since(start)))
 				close(sendBucket)
 				return sentTo
 			}

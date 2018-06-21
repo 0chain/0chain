@@ -134,28 +134,45 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			return false
 		}
 		r.Block = b
-		if b.MinerID != node.Self.GetKey() {
-			mc.SendVerificationTicket(ctx, b, bvt)
+
+		//TODO: Dfinity suggests broadcasting the prior block so it saturates the network
+		//While saturation is good, it's going to be expensive, hence TODO for now. Also, if we are proceeding verification based on partial block info,
+		// we can't broadcast that block
+		if !mc.IsBlockNotarized(ctx, b) {
+			if b.MinerID != node.Self.GetKey() {
+				mc.SendVerificationTicket(ctx, b, bvt)
+			}
+			mc.ProcessVerifiedTicket(ctx, r, b, &bvt.VerificationTicket)
 		}
-		mc.ProcessVerifiedTicket(ctx, r, b, &bvt.VerificationTicket)
 		return true
 	}
 	var blocks = make([]*block.Block, 0, 10)
+
+	initiateVerification := func() {
+		sendVerification = true
+		// Sort the accumulated blocks by the rank and process them
+		blocks = r.GetBlocksByRank(blocks)
+		var verified bool
+		// Keep verifying all the blocks collected so far in the best rank order till the first successul verification
+		for _, b := range blocks {
+			if verifyAndSend(ctx, r, b) {
+				verified = true
+				break
+			}
+		}
+		if !verified {
+			mc.startRound(&r.Round)
+		}
+	}
 	for true {
 		select {
 		case <-ctx.Done():
+			if !sendVerification {
+				initiateVerification()
+			}
 			return
 		case <-blockTimeTimer.C:
-			sendVerification = true
-			// Sort the accumulated blocks by the rank and process them
-			blocks = r.GetBlocksByRank(blocks)
-			// Keep verifying all the blocks collected so far in the best rank order till the first
-			// successul verification
-			for _, b := range blocks {
-				if verifyAndSend(ctx, r, b) {
-					break
-				}
-			}
+			initiateVerification()
 		case b := <-r.GetBlocksToVerifyChannel():
 			if sendVerification {
 				// Is this better than the current best block
@@ -178,15 +195,23 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r *Round, b *block.Block)
 		return mc.SignBlock(ctx, b)
 	}
 	if b.PrevBlock == nil {
-		prevBlock, err := mc.GetBlock(ctx, b.PrevHash)
+		pb, err := mc.GetBlock(ctx, b.PrevHash)
 		if err != nil {
-			//TODO: create previous round AND request previous block from miner who sent current block for verification
 			Logger.Error("verify round", zap.Any("round", r.Number), zap.Any("block", b.Hash), zap.Any("prev_block", b.PrevHash), zap.Error(err))
-			return nil, common.NewError("prev_block_error", "Error getting the previous block")
+			//NOTE: when we don't have the prior block, we construct partial block to try to proceed
+			//TODO: Need to figure out how to convert this partial block into a full block
+			// key missing info for pb: txns and prevblock data.
+			pb = datastore.GetEntityMetadata("block").Instance().(*block.Block)
+			pb.ChainID = mc.ID
+			pb.MagicBlockHash = mc.CurrentMagicBlock.Hash
+			pb.RoundRandomSeed = r.RandomSeed
+			pb.Hash = b.PrevHash
+			pb.VerificationTickets = b.PrevBlockVerficationTickets
+			mc.AddBlock(pb)
 		}
-		b.PrevBlock = prevBlock
+		b.PrevBlock = pb
 	}
-	/* Note: We are verifying the notrization of the previous block we have with
+	/* Note: We are verifying the notarization of the previous block we have with
 	   the prev verification tickets of the current block. This is right as all the
 	   necessary verification tickets & notarization message may not have arrived to us */
 	if err := mc.VerifyNotarization(ctx, b.PrevBlock, b.PrevBlockVerficationTickets); err != nil {
@@ -219,26 +244,34 @@ func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.B
 		notarization.BlockID = b.Hash
 		notarization.Round = b.Round
 		notarization.VerificationTickets = b.VerificationTickets
-		r.AddNotarizedBlock(b)
-
-		//TODO: Dfinity suggests broadcasting the prior block so it saturates the network
-		//While saturation is good, it's going to be expensive, hence TODO for now
-
 		mc.SendNotarization(ctx, notarization)
-		if mc.GetRound(r.Number+1) == nil {
-			nr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
-			nr.Number = r.Number + 1
-			//TODO: We need to do VRF
-			nr.RandomSeed = rand.New(rand.NewSource(r.RandomSeed)).Int63()
-			nmr := mc.CreateRound(nr)
-			// Even if the context is cancelled, we want to proceed with the next round, hence start with a root context
-			go mc.startNewRound(common.GetRootContext(), nmr)
-			mc.Miners.SendAll(RoundStartSender(nr))
-		}
-		pr := mc.GetRound(r.Number - 1)
-		if pr != nil && pr.Block != nil {
-			mc.FinalizeRound(ctx, &pr.Round, mc)
-		}
+		mc.AddNotarizedBlock(ctx, &r.Round, b)
+	}
+}
+
+/*AddNotarizedBlock - add a notarized block for a given round */
+func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *round.Round, b *block.Block) {
+	r.AddNotarizedBlock(b)
+	mc.startRound(r)
+
+	pr := mc.GetRound(r.Number - 1)
+	if pr != nil {
+		pr.CancelVerification()
+		mc.FinalizeRound(ctx, &pr.Round, mc)
+	}
+}
+
+func (mc *Chain) startRound(r *round.Round) {
+	if mc.GetRound(r.Number+1) == nil {
+		nr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
+		nr.Number = r.Number + 1
+		//TODO: We need to do VRF
+		nr.RandomSeed = rand.New(rand.NewSource(r.RandomSeed)).Int63()
+		nmr := mc.CreateRound(nr)
+		// Even if the context is cancelled, we want to proceed with the next round, hence start with a root context
+		Logger.Debug("starting a new round", zap.Int64("round", nr.Number))
+		go mc.startNewRound(common.GetRootContext(), nmr)
+		mc.Miners.SendAll(RoundStartSender(nr))
 	}
 }
 

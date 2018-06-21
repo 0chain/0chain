@@ -64,8 +64,10 @@ func (b *Block) ComputeProperties() {
 		b.ChainID = datastore.ToKey(config.GetServerChainID())
 	}
 	if b.Txns != nil {
+		b.TxnsMap = make(map[string]bool, len(b.Txns))
 		for _, txn := range b.Txns {
 			txn.ComputeProperties()
+			b.TxnsMap[txn.Hash] = true
 		}
 	}
 }

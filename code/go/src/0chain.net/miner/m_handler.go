@@ -9,9 +9,11 @@ import (
 	"0chain.net/block"
 	"0chain.net/common"
 	"0chain.net/datastore"
+	. "0chain.net/logging"
 	"0chain.net/memorystore"
 	"0chain.net/node"
 	"0chain.net/round"
+	"go.uber.org/zap"
 )
 
 /*RoundStartSender - Start a new round */
@@ -73,6 +75,7 @@ func VerifyBlockHandler(ctx context.Context, entity datastore.Entity) (interface
 	}
 	mc := GetMinerChain()
 	if b.Round < mc.LatestFinalizedBlock.Round {
+		Logger.Debug("verify block handler", zap.Int64("round", b.Round), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round))
 		return true, nil
 	}
 	msg := &BlockMessage{Sender: node.GetSender(ctx), Type: MessageVerify, Block: b}
@@ -101,6 +104,7 @@ func NotarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (i
 	r := mc.GetRound(notarization.Round)
 	if r == nil {
 		//TODO: Should we implicitly start a round?
+		Logger.Debug("notarization receipt handler (round not started yet)", zap.String("block", notarization.BlockID))
 		return nil, common.InvalidRequest("Not started this round yet")
 	}
 	msg := &BlockMessage{Sender: node.GetSender(ctx), Type: MessageNotarization, Round: r, Notarization: notarization}

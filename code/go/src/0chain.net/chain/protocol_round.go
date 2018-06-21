@@ -39,6 +39,9 @@ func (c *Chain) FinalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 		Logger.Debug("finalization - no decisive block to finalize yet or don't have all the necessary blocks", zap.Any("round", r.Number))
 		return
 	}
+	if fb.Hash == c.LatestFinalizedBlock.Hash {
+		return
+	}
 	lfbHash := c.LatestFinalizedBlock.Hash
 	c.LatestFinalizedBlock = fb
 	frchain := make([]*block.Block, 0, 1)

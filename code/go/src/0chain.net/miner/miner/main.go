@@ -217,9 +217,11 @@ func StartProtocol() {
 
 	msg := miner.BlockMessage{Type: miner.MessageStartRound, Round: msr}
 	msgChannel := mc.GetBlockMessageChannel()
-	Logger.Debug("starting the blockchain ...")
-	msgChannel <- &msg
-	mc.SendRoundStart(common.GetRootContext(), sr)
+	if mc.CurrentRound == 0 {
+		Logger.Debug("starting the blockchain ...")
+		msgChannel <- &msg
+		mc.SendRoundStart(common.GetRootContext(), sr)
+	}
 }
 
 /*HomePageHandler - provides basic info when accessing the home page of the server */

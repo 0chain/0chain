@@ -22,13 +22,11 @@ type Round struct {
 /*AddBlockToVerify - adds a block to the round. Assumes non-concurrent update */
 func (r *Round) AddBlockToVerify(b *block.Block) {
 	if r.verificationComplete {
+		Logger.Debug("block proposal (verification complete)", zap.Int64("round", r.Number), zap.String("block", b.Hash))
 		return
 	}
 	if r.Number != b.Round {
-		return
-	}
-	if r.Number == 0 {
-		r.Block = b
+		Logger.Debug("block proposal (round mismatch)", zap.Int64("round", r.Number), zap.Int64("block_round", b.Round), zap.String("block", b.Hash))
 		return
 	}
 	if b.RoundRandomSeed != r.RandomSeed {
@@ -69,11 +67,14 @@ func (r *Round) StartVerificationBlockCollection(ctx context.Context) context.Co
 
 /*CancelVerification - Cancel verification of blocks */
 func (r *Round) CancelVerification() {
+	f := r.verificationCancelf
 	if r.verificationComplete {
 		return
 	}
 	r.verificationComplete = true
-	if r.verificationCancelf != nil {
-		r.verificationCancelf()
+	//close(r.blocksToVerifyChannel)
+	if f != nil {
+		r.verificationCancelf = nil
+		f()
 	}
 }

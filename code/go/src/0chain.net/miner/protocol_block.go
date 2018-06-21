@@ -106,7 +106,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		return common.NewError(InsufficientTxns, fmt.Sprintf("not sufficient txns to make a block yet for round %v", b.Round))
 	}
 	if count > 10*mc.BlockSize {
-		Logger.Debug("generate block (too much iteration", zap.Any("round", b.Round), zap.Any("iteration_count", count))
+		Logger.Debug("generate block (too much iteration)", zap.Any("round", b.Round), zap.Any("iteration_count", count))
 	}
 	client.GetClients(ctx, clients)
 	Logger.Debug("generate block (time to assemble block)", zap.Any("round", b.Round), zap.Any("time", time.Since(start)))
