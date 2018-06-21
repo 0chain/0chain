@@ -1,6 +1,9 @@
 package wallet
 
 import (
+	"fmt"
+	"math/rand"
+
 	"0chain.net/datastore"
 	"0chain.net/encryption"
 	"0chain.net/transaction"
@@ -32,8 +35,8 @@ func (w *Wallet) CreateTransaction(toClient string) *transaction.Transaction {
 	txn := transactionMetadataProvider.Instance().(*transaction.Transaction)
 	txn.ClientID = w.ClientID
 	txn.ToClientID = toClient
-	txn.TransactionData = "0chain zerochain zipcode Europe rightthing Oriental California honest accurate India network"
-	txn.Value = 10
+	txn.Value = rand.Int63n(100000)
+	txn.TransactionData = fmt.Sprintf("0chain zerochain zipcode Europe rightthing Oriental California honest accurate India network %v %v", rand.Int63(), txn.Value)
 	txn.Sign(w.PrivateKey)
 	return txn
 }

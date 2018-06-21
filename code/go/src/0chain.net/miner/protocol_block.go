@@ -115,6 +115,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	for _, txn := range b.Txns {
 		client := clients[txn.ClientID]
 		if client == nil {
+			Logger.Debug("generate block (invalid client id)", zap.String("client_id", txn.ClientID))
 			return common.NewError("invalid_client_id", "client id not available")
 		}
 		txn.PublicKey = client.PublicKey

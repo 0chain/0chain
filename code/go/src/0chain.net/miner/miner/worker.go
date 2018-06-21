@@ -20,17 +20,14 @@ func TransactionGenerator(blockSize int32) {
 	ctx := datastore.WithAsyncChannel(common.GetRootContext(), transaction.TransactionEntityChannel)
 	txnMetadataProvider := datastore.GetEntityMetadata("txn")
 	ctx = memorystore.WithEntityConnection(ctx, txnMetadataProvider)
-	ticker := time.NewTicker(2 * time.Second)
-	numTxns := 2 * blockSize
 	GenerateClients(100)
+	numTxns := 2 * blockSize
+	ticker := time.NewTicker(2 * time.Second)
 	for true {
 		select {
 		case <-ctx.Done():
 			return
 		case _ = <-ticker.C:
-			if len(wallets) < 10000 && rand.Intn(100) < 10 {
-				GenerateClients(100)
-			}
 			for i := int32(0); i < numTxns; i++ {
 				rs := rand.NewSource(time.Now().UnixNano())
 				prng := rand.New(rs)
@@ -45,6 +42,9 @@ func TransactionGenerator(blockSize int32) {
 				txn := wf.CreateTransaction(wt.ClientID)
 				datastore.DoAsync(ctx, txn)
 				transaction.TransactionCount++
+			}
+			if len(wallets) < 10000 && rand.Intn(100) < 10 {
+				go GenerateClients(100)
 			}
 		}
 	}

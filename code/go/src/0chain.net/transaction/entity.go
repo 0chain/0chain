@@ -10,7 +10,9 @@ import (
 	"0chain.net/config"
 	"0chain.net/datastore"
 	"0chain.net/encryption"
+	. "0chain.net/logging"
 	"0chain.net/memorystore"
+	"go.uber.org/zap"
 )
 
 var TransactionCount = 0
@@ -117,15 +119,21 @@ func (t *Transaction) GetClient(ctx context.Context) (*client.Client, error) {
 	return co, nil
 }
 
+/*HashData - data used to hash the transaction */
+func (t *Transaction) HashData() string {
+	hashdata := fmt.Sprintf("%v:%v:%v:%v:%v", t.CreationDate, t.ClientID, t.ToClientID, t.Value, t.TransactionData)
+	return hashdata
+}
+
 /*ComputeHash - compute the hash from the various components of the transaction */
 func (t *Transaction) ComputeHash() string {
-	hashdata := fmt.Sprintf("%v:%v:%v:%v", t.ClientID, t.CreationDate, t.Value, t.TransactionData)
-	return encryption.Hash(hashdata)
+	return encryption.Hash(t.HashData())
 }
 
 /*VerifyHash - Verify the hash of the transaction */
 func (t *Transaction) VerifyHash(ctx context.Context) error {
 	if t.Hash != t.ComputeHash() {
+		Logger.Debug("verify hash (hash mismatch)", zap.String("hash", t.Hash), zap.String("computed_hash", t.ComputeHash()), zap.String("hash_data", t.HashData()), zap.String("txn", datastore.ToJSON(t).String()))
 		return common.NewError("hash_mismatch", fmt.Sprintf("The hash of the data doesn't match with the provided hash"))
 	}
 	return nil
