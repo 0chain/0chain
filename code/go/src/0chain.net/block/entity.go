@@ -179,6 +179,13 @@ func (b *Block) AddVerificationTicket(vt *VerificationTicket) bool {
 	return true
 }
 
+/*MergeVerificationTickets - merge the verification tickets with what's already there */
+func (b *Block) MergeVerificationTickets(vts []*VerificationTicket) {
+	//TODO: we need to do the actual merging (assume incoming is valid and unique from the notarization).
+	// Doing sort and merge will ensure O(n*log(n)) behavior instead of O(n^2)
+	b.VerificationTickets = vts
+}
+
 /*GetVerificationTicketsCount - get the number of verification tickets for the block */
 func (b *Block) GetVerificationTicketsCount() int {
 	if b.VerificationTickets == nil {

@@ -155,6 +155,7 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 		r.CancelVerification()
 		r.Block = b
 	}
+	b.MergeVerificationTickets(msg.Notarization.VerificationTickets)
 	r.AddNotarizedBlock(b)
 	pr := mc.GetRound(b.Round - 1)
 	if pr != nil {
