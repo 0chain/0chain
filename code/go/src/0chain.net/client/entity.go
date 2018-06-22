@@ -100,7 +100,7 @@ func GetClients(ctx context.Context, clients map[string]*Client) {
 		if end > len(clients) {
 			end = len(clients)
 		}
-		cEntities := make([]datastore.Entity, end-start+1)
+		cEntities := make([]datastore.Entity, end-start)
 		for j := 0; j < len(cEntities); j++ {
 			cEntities[j] = clientEntityMetadata.Instance().(*Client)
 		}
