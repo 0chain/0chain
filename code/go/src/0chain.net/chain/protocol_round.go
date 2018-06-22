@@ -91,4 +91,7 @@ func (c *Chain) PruneChain(ctx context.Context, b *block.Block) {
 		c.DeleteBlock(ctx, cb)
 		pb.PrevBlock = nil
 	}
+	// This is needed when we don't have block chain continuity (some intermediate blocks didn't make it)
+	c.DeleteBlocksBelowRound(b.Round - 50)
+	// Todo: Same is required for pruning the rounds as well
 }

@@ -203,12 +203,25 @@ func (c *Chain) GetRoundBlocks(round int64) []*block.Block {
 	blocks := make([]*block.Block, 0, 1)
 	c.blocksMutex.Lock()
 	defer c.blocksMutex.Unlock()
-	for _, blk := range c.Blocks {
-		if blk.Round == round {
-			blocks = append(blocks, blk)
+	for _, b := range c.Blocks {
+		if b.Round == round {
+			blocks = append(blocks, b)
 		}
 	}
 	return blocks
+}
+
+/*DeleteBlocksBelowRound - delete all the blocks below this round */
+func (c *Chain) DeleteBlocksBelowRound(round int64) {
+	c.blocksMutex.Lock()
+	defer c.blocksMutex.Unlock()
+	ts := common.Now() - 60
+	for _, b := range c.Blocks {
+		if b.Round < round && b.CreationDate < ts {
+			Logger.Debug("found block to delete", zap.Int64("round", round), zap.Int64("block_round", b.Round), zap.Int64("current_round", c.CurrentRound), zap.Int64("lf_round", c.LatestFinalizedBlock.Round))
+			delete(c.Blocks, b.Hash)
+		}
+	}
 }
 
 /*ValidateMagicBlock - validate the block for a given round has the right magic block */

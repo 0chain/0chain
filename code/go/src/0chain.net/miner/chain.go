@@ -104,6 +104,17 @@ func (mc *Chain) DeleteRound(ctx context.Context, r *round.Round) {
 	delete(mc.rounds, r.Number)
 }
 
+/*DeleteRoundsBelow - delete rounds below */
+func (mc *Chain) DeleteRoundsBelow(ctx context.Context, round int64) {
+	mc.roundsMutex.Lock()
+	defer mc.roundsMutex.Unlock()
+	for key, r := range mc.rounds {
+		if r.Number < round {
+			delete(mc.rounds, key)
+		}
+	}
+}
+
 /*CanGenerateRound - checks if the miner can generate a block in the given round */
 func (mc *Chain) CanGenerateRound(r *round.Round, miner *node.Node) bool {
 	return 2*r.GetRank(miner.SetIndex) <= mc.Miners.Size()

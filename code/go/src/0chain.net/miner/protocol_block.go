@@ -50,11 +50,10 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 			return true
 		}
 
-		//TODO: this needs to be uncommented once we have a way to generate a steady stream of transactions
-		/*
-			if !common.Within(int64(txn.CreationDate), 5) {
-				invalidTxns = append(invalidTxns, qe)
-			}*/
+		if !common.Within(int64(txn.CreationDate), transaction.TXN_TIME_TOLERANCE) {
+			invalidTxns = append(invalidTxns, qe)
+			return true
+		}
 
 		if ok, err := b.PrevBlock.ChainHasTransaction(txn); ok || err != nil {
 			if err != nil {
@@ -93,7 +92,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		Logger.Error("generate block (txn reinclusion check)", zap.Any("round", b.Round), zap.Error(ierr))
 	}
 	if len(invalidTxns) > 0 {
-		Logger.Error("generate block (found invalid txns)", zap.Any("round", b.Round), zap.Int("num_invalid_txns", len(invalidTxns)))
+		Logger.Info("generate block (found txns very old)", zap.Any("round", b.Round), zap.Int("num_invalid_txns", len(invalidTxns)))
 		go mc.deleteTxns(invalidTxns)
 	}
 	if err != nil {
@@ -130,7 +129,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	if err != nil {
 		return err
 	}
-	Logger.Debug("generate block (assemble+update+sign)", zap.Int64("round", b.Round), zap.Duration("time", time.Since(start)), zap.String("block", b.Hash), zap.String("prev_block", b.PrevBlock.Hash))
+	Logger.Info("generate block (assemble+update+sign)", zap.Int64("round", b.Round), zap.Duration("time", time.Since(start)), zap.String("block", b.Hash), zap.String("prev_block", b.PrevBlock.Hash), zap.Int32("iteration_count", count))
 
 	go b.ComputeTxnMap()
 	return nil
@@ -203,7 +202,7 @@ func (mc *Chain) AddVerificationTicket(ctx context.Context, b *block.Block, bvt 
 func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	fr := mc.GetRound(b.Round)
 	fr.Finalize(b)
-	mc.DeleteRound(ctx, &fr.Round)
+	mc.DeleteRoundsBelow(ctx, fr.Number)
 	mc.FinalizeBlock(ctx, b)
 	mc.SendFinalizedBlock(ctx, b)
 }

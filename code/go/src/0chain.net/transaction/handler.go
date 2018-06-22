@@ -28,9 +28,6 @@ func GetTransaction(ctx context.Context, r *http.Request) (interface{}, error) {
 	return datastore.GetEntityHandler(ctx, r, transactionEntityMetadata, "hash")
 }
 
-/*TXN_TIME_TOLERANCE - the txn creation date should be within 5 seconds before/after of current time */
-const TXN_TIME_TOLERANCE = 5
-
 /*PutTransaction - Given a transaction data, it stores it */
 func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 	txn, ok := entity.(*Transaction)
@@ -38,9 +35,6 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		return nil, fmt.Errorf("invalid request %T", entity)
 	}
 	txn.ComputeProperties()
-	if !common.Within(int64(txn.CreationDate), TXN_TIME_TOLERANCE) {
-		return nil, common.InvalidRequest("Transaction creation time not within tolerance")
-	}
 	err := txn.Validate(ctx)
 	if err != nil {
 		return nil, err

@@ -15,6 +15,9 @@ import (
 	"go.uber.org/zap"
 )
 
+/*TXN_TIME_TOLERANCE - the txn creation date should be within 5 seconds before/after of current time */
+const TXN_TIME_TOLERANCE = 5
+
 var TransactionCount = 0
 
 func init() {
@@ -69,7 +72,9 @@ func (t *Transaction) Validate(ctx context.Context) error {
 	if t.Hash == "" {
 		return common.InvalidRequest("hash required for transaction")
 	}
-
+	if !common.Within(int64(t.CreationDate), TXN_TIME_TOLERANCE) {
+		return common.InvalidRequest("Transaction creation time not within tolerance")
+	}
 	err = t.VerifyHash(ctx)
 	if err != nil {
 		return err

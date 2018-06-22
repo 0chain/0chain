@@ -44,7 +44,7 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 	}
 	self := node.GetSelfNode(ctx)
 	rank := mr.GetRank(self.SetIndex)
-	Logger.Info("*** starting round ***", zap.Any("round", mr.Number), zap.Any("index", self.SetIndex), zap.Any("rank", rank))
+	Logger.Info("*** starting round ***", zap.Int64("round", mr.Number), zap.Int("index", self.SetIndex), zap.Int("rank", rank), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round))
 	if !mc.CanGenerateRound(&mr.Round, self.Node) {
 		return
 	}
