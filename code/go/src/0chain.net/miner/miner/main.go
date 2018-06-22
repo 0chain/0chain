@@ -31,6 +31,7 @@ var startTime time.Time
 
 func initServer() {
 	// TODO; when a new server is brought up, it needs to first download all the state before it can start accepting requests
+	time.Sleep(time.Second)
 }
 
 func initHandlers() {
@@ -149,8 +150,7 @@ func main() {
 	} else if config.TestNet() {
 		mode = "test net"
 	}
-	Logger.Info("CPU information", zap.Int("available_cpus", runtime.NumCPU()))
-	Logger.Info("Starting miner", zap.String("port", address), zap.String("chain_id", config.GetServerChainID()), zap.String("mode", mode))
+	Logger.Info("Starting miner", zap.Int("available_cpus", runtime.NumCPU()), zap.String("port", address), zap.String("chain_id", config.GetServerChainID()), zap.String("mode", mode))
 
 	server := &http.Server{
 		Addr:           address,
@@ -164,12 +164,12 @@ func main() {
 	node.SetupN2NHandlers()
 	serverChain.SetupNodeHandlers()
 
-	initServer()
 	initHandlers()
 	miner.SetupM2MSenders()
 	miner.SetupM2MReceivers()
 	miner.SetupM2SSenders()
 	miner.SetupWorkers()
+	initServer()
 	go StartProtocol()
 
 	if config.Development() {

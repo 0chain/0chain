@@ -34,7 +34,7 @@ func TransactionGenerator(blockSize int32) {
 			return
 		case _ = <-ticker.C:
 			txnCount := int32(txnMetadataProvider.GetStore().GetCollectionSize(ctx, txnMetadataProvider, collectionName))
-			if txnCount >= 20*blockSize {
+			if txnCount >= 200*blockSize {
 				continue
 			}
 			for i := int32(0); i < numTxns; i++ {

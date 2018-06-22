@@ -17,6 +17,8 @@ import (
 	"go.uber.org/zap"
 )
 
+const PreviousBlockUnknown = "previous_block_not_known"
+
 var BLOCK_TIME = 3 * chain.DELTA
 
 func SetNetworkRelayTime(delta time.Duration) {
@@ -185,24 +187,16 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 		sendVerification = true
 		// Sort the accumulated blocks by the rank and process them
 		blocks = r.GetBlocksByRank(blocks)
-		var verified bool
 		// Keep verifying all the blocks collected so far in the best rank order till the first successul verification
 		for _, b := range blocks {
 			if verifyAndSend(ctx, r, b) {
-				verified = true
 				break
 			}
-		}
-		if !verified {
-			mc.startRound(&r.Round)
 		}
 	}
 	for true {
 		select {
 		case <-ctx.Done():
-			if !sendVerification {
-				initiateVerification()
-			}
 			return
 		case <-blockTimeTimer.C:
 			initiateVerification()
@@ -231,17 +225,7 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r *Round, b *block.Block)
 		pb, err := mc.GetBlock(ctx, b.PrevHash)
 		if err != nil {
 			Logger.Error("verify round", zap.Any("round", r.Number), zap.Any("block", b.Hash), zap.Any("prev_block", b.PrevHash), zap.Error(err))
-			//NOTE: when we don't have the prior block, we construct partial block to try to proceed
-			//TODO: Need to figure out how to convert this partial block into a full block
-			// key missing info for pb: txns and prevblock data.
-			pb = datastore.GetEntityMetadata("block").Instance().(*block.Block)
-			pb.ChainID = mc.ID
-			pb.Round = b.Round - 1
-			pb.MagicBlockHash = mc.CurrentMagicBlock.Hash
-			pb.RoundRandomSeed = r.RandomSeed
-			pb.Hash = b.PrevHash
-			pb.VerificationTickets = b.PrevBlockVerficationTickets
-			mc.AddBlock(pb)
+			return nil, common.NewError(PreviousBlockUnknown, "Previous block is not known")
 		}
 		b.PrevBlock = pb
 	}
