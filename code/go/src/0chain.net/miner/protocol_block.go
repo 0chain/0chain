@@ -102,14 +102,14 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 
 	if idx != mc.BlockSize {
 		b.Txns = nil
-		Logger.Debug("generate block (insufficient txns)", zap.Any("round", b.Round), zap.Any("iteration_count", count), zap.Any("block_size", mc.BlockSize), zap.Any("num_txns", idx))
+		Logger.Debug("generate block (insufficient txns)", zap.Int64("round", b.Round), zap.Int32("iteration_count", count), zap.Int32("block_size", mc.BlockSize), zap.Int32("num_txns", idx))
 		return common.NewError(InsufficientTxns, fmt.Sprintf("not sufficient txns to make a block yet for round %v", b.Round))
 	}
 	if count > 10*mc.BlockSize {
-		Logger.Debug("generate block (too much iteration)", zap.Any("round", b.Round), zap.Any("iteration_count", count))
+		Logger.Debug("generate block (too much iteration)", zap.Int64("round", b.Round), zap.Int32("iteration_count", count))
 	}
 	client.GetClients(ctx, clients)
-	Logger.Debug("generate block (time to assemble block)", zap.Any("round", b.Round), zap.Any("time", time.Since(start)))
+	Logger.Debug("generate block (assemble)", zap.Int64("round", b.Round), zap.Duration("time", time.Since(start)))
 
 	bsh.UpdatePendingBlock(ctx, b, etxns)
 	for _, txn := range b.Txns {
@@ -121,7 +121,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		txn.PublicKey = client.PublicKey
 		txn.ClientID = datastore.EmptyKey
 	}
-	Logger.Debug("generate block (time to assemble + update txns)", zap.Any("round", b.Round), zap.Any("time", time.Since(start)))
+	Logger.Debug("generate block (assemble+update)", zap.Int64("round", b.Round), zap.Duration("time", time.Since(start)))
 
 	self := node.GetSelfNode(ctx)
 	b.MinerID = self.ID
@@ -130,7 +130,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	if err != nil {
 		return err
 	}
-	Logger.Debug("generate block (time to assemble+update+sign block)", zap.Any("round", b.Round), zap.Any("time", time.Since(start)), zap.Any("block", b.Hash))
+	Logger.Debug("generate block (assemble+update+sign)", zap.Int64("round", b.Round), zap.Duration("time", time.Since(start)), zap.String("block", b.Hash), zap.String("prev_block", b.PrevBlock.Hash))
 
 	go b.ComputeTxnMap()
 	return nil

@@ -255,7 +255,9 @@ func (b *Block) ChainHasTransaction(txn *transaction.Transaction) (bool, error) 
 			return false, nil
 		}
 	}
-	Logger.Debug("chain has txn", zap.Int64("round", b.Round), zap.Int64("upto_round", pb.Round), zap.Any("txn_ts", txn.CreationDate), zap.Any("upto_block_ts", pb.CreationDate))
+	if false {
+		Logger.Debug("chain has txn", zap.Int64("round", b.Round), zap.Int64("upto_round", pb.Round), zap.Any("txn_ts", txn.CreationDate), zap.Any("upto_block_ts", pb.CreationDate))
+	}
 	return false, common.NewError("insufficient_chain", "Chain length not sufficient to confirm the presence of this transaction")
 }
 

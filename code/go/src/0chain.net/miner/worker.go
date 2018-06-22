@@ -6,7 +6,6 @@ import (
 	"0chain.net/common"
 	"0chain.net/datastore"
 	. "0chain.net/logging"
-	"0chain.net/node"
 	"0chain.net/round"
 	"go.uber.org/zap"
 )
@@ -53,28 +52,6 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 func (mc *Chain) HandleStartRound(ctx context.Context, msg *BlockMessage) {
 	r := msg.Round
 	mc.startNewRound(ctx, r)
-}
-
-func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
-	if !mc.AddRound(mr) {
-		Logger.Debug("start new round (round already exists)", zap.Int64("round", mr.Number))
-		return
-	}
-	pr := mc.GetRound(mr.Number - 1)
-	//TODO: If for some reason the server is lagging behind (like network outage) we need to fetch the previous round info
-	// before proceeding
-	if pr == nil {
-		Logger.Debug("start new round (previous round not found)", zap.Int64("round", mr.Number))
-		return
-	}
-	self := node.GetSelfNode(ctx)
-	rank := mr.GetRank(self.SetIndex)
-	Logger.Info("*** starting round ***", zap.Any("round", mr.Number), zap.Any("index", self.SetIndex), zap.Any("rank", rank))
-	if !mc.CanGenerateRound(&mr.Round, self.Node) {
-		return
-	}
-	//NOTE: If there are not enough txns, this will not advance further even though rest of the network is. That's why this is a goroutine
-	go mc.GenerateRoundBlock(ctx, mr)
 }
 
 /*HandleVerifyBlockMessage - handles the verify block message */

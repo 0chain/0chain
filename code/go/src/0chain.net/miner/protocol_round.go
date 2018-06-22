@@ -24,6 +24,28 @@ func SetNetworkRelayTime(delta time.Duration) {
 	BLOCK_TIME = 3 * delta
 }
 
+func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
+	if !mc.AddRound(mr) {
+		Logger.Debug("start new round (round already exists)", zap.Int64("round", mr.Number))
+		return
+	}
+	pr := mc.GetRound(mr.Number - 1)
+	//TODO: If for some reason the server is lagging behind (like network outage) we need to fetch the previous round info
+	// before proceeding
+	if pr == nil {
+		Logger.Debug("start new round (previous round not found)", zap.Int64("round", mr.Number))
+		return
+	}
+	self := node.GetSelfNode(ctx)
+	rank := mr.GetRank(self.SetIndex)
+	Logger.Info("*** starting round ***", zap.Any("round", mr.Number), zap.Any("index", self.SetIndex), zap.Any("rank", rank))
+	if !mc.CanGenerateRound(&mr.Round, self.Node) {
+		return
+	}
+	//NOTE: If there are not enough txns, this will not advance further even though rest of the network is. That's why this is a goroutine
+	go mc.GenerateRoundBlock(ctx, mr)
+}
+
 /*GetBlockToExtend - Get the block to extend from the given round */
 func (mc *Chain) GetBlockToExtend(r *Round) *block.Block {
 	for true { // Need to do this for timing issues where a start round might come before a notarization and there is no notarized block to extend from
@@ -128,7 +150,7 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 
 /*CollectBlocksForVerification - keep collecting the blocks till timeout and then start verifying */
 func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
-	var blockTimeTimer = time.NewTimer(BLOCK_TIME)
+	var blockTimeTimer = time.NewTimer(chain.DELTA)
 	var sendVerification = false
 	verifyAndSend := func(ctx context.Context, r *Round, b *block.Block) bool {
 		bvt, err := mc.VerifyRoundBlock(ctx, r, b)
