@@ -25,6 +25,10 @@ func SetNetworkRelayTime(delta time.Duration) {
 }
 
 func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
+	if mr.Number < mc.CurrentRound {
+		Logger.Debug("start new round (current round higher)", zap.Int64("round", mr.Number), zap.Int64("current_round", mc.CurrentRound))
+		return
+	}
 	if !mc.AddRound(mr) {
 		Logger.Debug("start new round (round already exists)", zap.Int64("round", mr.Number))
 		return

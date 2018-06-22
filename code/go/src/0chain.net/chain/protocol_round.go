@@ -63,10 +63,10 @@ func (c *Chain) FinalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 			}
 		}
 	}
-	// Prune the chain from the oldest finalized block
-	c.PruneChain(ctx, frchain[len(frchain)-1])
 	// Prune all the dead blocks
 	go func() {
+		// Prune the chain from the oldest finalized block
+		c.PruneChain(ctx, frchain[len(frchain)-1])
 		for _, b := range deadBlocks {
 			c.DeleteBlock(ctx, b)
 		}
