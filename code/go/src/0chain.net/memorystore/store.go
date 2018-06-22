@@ -352,3 +352,19 @@ func (ms *Store) multiDeleteFromCollectionAux(ctx context.Context, entityMetadat
 	_, err := con.Receive()
 	return err
 }
+
+func (ms *Store) GetCollectionSize(ctx context.Context, entityMetadata datastore.EntityMetadata, collectionName string) int64 {
+	con := GetEntityCon(ctx, entityMetadata)
+	con.Send("ZCARD", collectionName)
+	con.Flush()
+	data, err := con.Receive()
+	if err != nil {
+		return -1
+	} else {
+		val, ok := data.(int64)
+		if !ok {
+			return -1
+		}
+		return val
+	}
+}

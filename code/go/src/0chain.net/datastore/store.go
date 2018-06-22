@@ -20,5 +20,6 @@ type Store interface {
 	DeleteFromCollection(ctx context.Context, entity CollectionEntity) error
 	MultiDeleteFromCollection(ctx context.Context, entityMetadata EntityMetadata, entities []Entity) error
 
+	GetCollectionSize(ctx context.Context, entityMetadata EntityMetadata, collectionName string) int64
 	IterateCollection(ctx context.Context, entityMetadata EntityMetadata, collectionName string, handler CollectionIteratorHandler) error
 }

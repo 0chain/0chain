@@ -4,6 +4,8 @@ import (
 	"math/rand"
 	"time"
 
+	"0chain.net/miner"
+
 	"0chain.net/client"
 	"0chain.net/common"
 	"0chain.net/datastore"
@@ -23,11 +25,18 @@ func TransactionGenerator(blockSize int32) {
 	GenerateClients(100)
 	numTxns := 2 * blockSize
 	ticker := time.NewTicker(2 * time.Second)
+	txn := txnMetadataProvider.Instance().(*transaction.Transaction)
+	txn.ChainID = miner.GetMinerChain().ID
+	collectionName := txn.GetCollectionName()
 	for true {
 		select {
 		case <-ctx.Done():
 			return
 		case _ = <-ticker.C:
+			txnCount := int32(txnMetadataProvider.GetStore().GetCollectionSize(ctx, txnMetadataProvider, collectionName))
+			if txnCount >= 20*blockSize {
+				continue
+			}
 			for i := int32(0); i < numTxns; i++ {
 				rs := rand.NewSource(time.Now().UnixNano())
 				prng := rand.New(rs)

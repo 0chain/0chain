@@ -193,3 +193,7 @@ func (ps *Store) DeleteFromCollection(ctx context.Context, entity datastore.Coll
 func (ps *Store) MultiDeleteFromCollection(ctx context.Context, entityMetadata datastore.EntityMetadata, entities []datastore.Entity) error {
 	return nil
 }
+
+func (ps *Store) GetCollectionSize(ctx context.Context, entityMetadata datastore.EntityMetadata, collectionName string) int64 {
+	return -1
+}
