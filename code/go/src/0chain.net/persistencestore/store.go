@@ -61,6 +61,9 @@ func (ps *Store) Read(ctx context.Context, key datastore.Key, entity datastore.E
 		return common.NewError(datastore.EntityNotFound, fmt.Sprintf("%v not found with id = %v", emd.GetName(), key))
 	}
 	datastore.FromJSON(json, entity)
+	if err := iter.Close(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -126,6 +129,9 @@ func (ps *Store) multiReadAux(ctx context.Context, entityMetadata datastore.Enti
 		}
 		datastore.FromJSON(json, entities[i])
 		keyIdx[entities[i].GetKey()] = entities[i]
+	}
+	if err := iter.Close(); err != nil {
+		return err
 	}
 	// We may have gotten fewer rows , so we are mapping to the same sequences as keys
 	for idx, key := range keys {
