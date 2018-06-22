@@ -6,14 +6,15 @@ import (
 	"net/http"
 	"time"
 
+	"0chain.net/common"
 	. "0chain.net/logging"
 	"go.uber.org/zap"
 )
 
 /*StatusMonitor - a background job that keeps checking the status of the nodes */
 func (np *Pool) StatusMonitor(ctx context.Context) {
-	//ticker := time.NewTicker(2 * time.Minute)
-	ticker := time.NewTicker(20 * time.Second)
+	np.statusMonitor(ctx)
+	ticker := time.NewTicker(10 * time.Second)
 	for true {
 		select {
 		case <-ctx.Done():
@@ -35,6 +36,9 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 	activeCount := 0
 	for _, node := range nodes {
 		if node == Self.Node {
+			continue
+		}
+		if common.Within(node.LastActiveTime.Unix(), 10) {
 			continue
 		}
 		statusURL := node.GetStatusURL()

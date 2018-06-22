@@ -217,8 +217,8 @@ type SendOptions struct {
 /*SendEntityHandler provides a client API to send an entity */
 func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 	return func(entity datastore.Entity) SendHandler {
-		return func(n *Node) bool {
-			url := fmt.Sprintf("%v%v", n.GetURLBase(), uri)
+		return func(receiver *Node) bool {
+			url := fmt.Sprintf("%v%v", receiver.GetURLBase(), uri)
 			timeout := 500 * time.Millisecond
 			if options.Timeout > 0 {
 				timeout = options.Timeout
@@ -247,18 +247,20 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			req.Header.Set("Content-Type", "application/json; charset=utf-8")
 			SetHeaders(req, entity, options)
 			delay := common.InduceDelay()
-			N2n.Debug("sending", zap.Any("from", Self.SetIndex), zap.Any("to", n.SetIndex), zap.Any("handler", url), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Any("delay", delay))
+			N2n.Debug("sending", zap.Any("from", Self.SetIndex), zap.Any("to", receiver.SetIndex), zap.Any("handler", uri), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Any("delay", delay))
 			resp, err := client.Do(req)
 			if err != nil {
-				N2n.Error("sending", zap.Any("from", Self.SetIndex), zap.Any("to", n.SetIndex), zap.Any("handler", url), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Error(err))
+				N2n.Error("sending", zap.Any("from", Self.SetIndex), zap.Any("to", receiver.SetIndex), zap.Any("handler", uri), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Error(err))
 				return false
 			}
 			defer resp.Body.Close()
 			if resp.StatusCode != http.StatusOK {
 				var rbuf bytes.Buffer
 				rbuf.ReadFrom(resp.Body)
-				N2n.Error("sending", zap.Any("from", Self.SetIndex), zap.Any("to", n.SetIndex), zap.Any("handler", url), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Any("status_code", resp.StatusCode), zap.Any("response", rbuf.String()))
+				N2n.Error("sending", zap.Any("from", Self.SetIndex), zap.Any("to", receiver.SetIndex), zap.Any("handler", uri), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Any("status_code", resp.StatusCode), zap.Any("response", rbuf.String()))
 				return false
+			} else {
+				receiver.LastActiveTime = time.Now()
 			}
 			io.Copy(ioutil.Discard, resp.Body)
 			return true
