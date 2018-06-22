@@ -75,6 +75,7 @@ func main() {
 	flag.Parse()
 	config.Configuration.DeploymentMode = byte(*deploymentMode)
 	viper.SetDefault("server_chain.network.relay_time", 200)
+	viper.SetDefault("logging.level", "info")
 	config.SetupConfig()
 
 	if config.Development() {

@@ -77,6 +77,7 @@ func main() {
 	maxDelay := flag.Int("max_delay", 0, "max_delay")
 	flag.Parse()
 	viper.SetDefault("server_chain.network.relay_time", 200)
+	viper.SetDefault("logging.level", "info")
 	config.SetupConfig()
 
 	if *deploymentMode == 0 {

@@ -1,9 +1,12 @@
 package logging
 
 import (
+	"fmt"
 	"io"
 	"os"
+	"strings"
 
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	lumberjack "gopkg.in/natefinch/lumberjack.v2"
@@ -22,6 +25,30 @@ func (ws WriteSyncer) Sync() error {
 	return nil
 }
 
+func MapLogLevelString(level string) zap.AtomicLevel {
+	lvl := zapcore.DebugLevel
+
+	switch strings.ToUpper(level) {
+	case "DEBUG":
+		lvl = zapcore.DebugLevel
+	case "INFO":
+		lvl = zapcore.InfoLevel
+	case "WARN":
+		lvl = zapcore.WarnLevel
+	case "ERROR":
+		lvl = zapcore.ErrorLevel
+	case "DEBUG PANIC", "DPANIC":
+		lvl = zapcore.DPanicLevel
+	case "PANIC":
+		fmt.Println("inside panic")
+		lvl = zapcore.PanicLevel
+	case "FATAL":
+		lvl = zapcore.FatalLevel
+	}
+
+	return zap.NewAtomicLevelAt(lvl)
+}
+
 func InitLogging(mode string) {
 	var cfg zap.Config
 	var logName = "log/0chain.log"
@@ -29,9 +56,12 @@ func InitLogging(mode string) {
 
 	if mode == "production" {
 		cfg = zap.NewProductionConfig()
+		cfg.Level = MapLogLevelString(viper.GetString("logging.level"))
 		cfg.DisableCaller = true
 	} else {
 		cfg = zap.NewDevelopmentConfig()
+		cfg.Level = MapLogLevelString(viper.GetString("logging.level"))
+
 		cfg.EncoderConfig.LevelKey = "level"
 		cfg.EncoderConfig.NameKey = "name"
 		cfg.EncoderConfig.MessageKey = "msg"
