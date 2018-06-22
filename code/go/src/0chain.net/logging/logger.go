@@ -91,6 +91,7 @@ func getWriteSyncer(logName string) zapcore.WriteSyncer {
 		LocalTime:  true,
 		Compress:   false, // disabled by default
 	}
+	ioWriter.Rotate()
 	var sw = WriteSyncer{
 		ioWriter,
 	}
