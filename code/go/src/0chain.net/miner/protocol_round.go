@@ -26,14 +26,21 @@ func SetNetworkRelayTime(delta time.Duration) {
 
 /*GetBlockToExtend - Get the block to extend from the given round */
 func (mc *Chain) GetBlockToExtend(r *Round) *block.Block {
-	rnb := r.GetNotarizedBlocks()
-	if len(rnb) > 0 {
-		if len(rnb) == 1 {
+	for true { // Need to do this for timing issues where a start round might come before a notarization and there is no notarized block to extend from
+		rnb := r.GetNotarizedBlocks()
+		if len(rnb) > 0 {
+			if len(rnb) == 1 {
+				return rnb[0]
+			}
+			//TODO: pick the best possible block
 			return rnb[0]
 		}
-		//TODO: pick the best possible block
-		return rnb[0]
+		if r.Number+1 != mc.CurrentRound {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
 	}
+	Logger.Debug("no block to extend", zap.Int64("round", r.Number), zap.Int64("current_round", mc.CurrentRound), zap.Int("nb_count", len(r.GetNotarizedBlocks())))
 	return nil
 }
 
@@ -203,6 +210,7 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r *Round, b *block.Block)
 			// key missing info for pb: txns and prevblock data.
 			pb = datastore.GetEntityMetadata("block").Instance().(*block.Block)
 			pb.ChainID = mc.ID
+			pb.Round = b.Round - 1
 			pb.MagicBlockHash = mc.CurrentMagicBlock.Hash
 			pb.RoundRandomSeed = r.RandomSeed
 			pb.Hash = b.PrevHash
