@@ -79,9 +79,6 @@ func (c *Chain) PruneChain(ctx context.Context, b *block.Block) {
 	//TODO: Pruning causes problem with block.ChainHasTransaction which walks back to see if the txn is already used
 	// Once we stop including txns that are older than 5 seconds, then everything should work as block.CreationDate will be
 	// greater than txn.CreationDate as time passes
-	if true {
-		return
-	}
 	ts := common.Now() - 60 // prune anything that got created 60 seconds before
 	for l, pb, cb := 0, b, b.PrevBlock; cb != nil; l, pb, cb = l+1, cb, cb.PrevBlock {
 		if cb.CreationDate > ts {
