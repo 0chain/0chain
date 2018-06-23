@@ -1,7 +1,6 @@
 package logging
 
 import (
-	"io"
 	"os"
 
 	"github.com/spf13/viper"
@@ -15,20 +14,19 @@ var (
 	N2n    *zap.Logger
 )
 
-type WriteSyncer struct {
-	io.Writer
-}
-
-func (ws WriteSyncer) Sync() error {
-	return nil
-}
-
 func InitLogging(mode string) {
-	var cfg zap.Config
 	var logName = "log/0chain.log"
-	var slogName = "log/n2n.log"
+	var n2nLogName = "log/n2n.log"
 
-	if mode == "production" {
+	var logWriter = getWriteSyncer(logName)
+	var n2nLogWriter = getWriteSyncer(n2nLogName)
+
+	var cfg zap.Config
+	cfg.Level.UnmarshalText([]byte(viper.GetString("logging.level")))
+	cfg.Encoding = "console"
+	cfg.EncoderConfig.TimeKey = "timestamp"
+	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	if mode != "development" {
 		cfg = zap.NewProductionConfig()
 		cfg.DisableCaller = true
 	} else {
@@ -38,31 +36,22 @@ func InitLogging(mode string) {
 		cfg.EncoderConfig.MessageKey = "msg"
 		cfg.EncoderConfig.CallerKey = "caller"
 		cfg.EncoderConfig.StacktraceKey = "stacktrace"
+		logWriter = zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout), logWriter)
+		n2nLogWriter = zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout), n2nLogWriter)
 	}
-	cfg.Level.UnmarshalText([]byte(viper.GetString("logging.level")))
 
-	cfg.Encoding = "console"
-	cfg.EncoderConfig.TimeKey = "timestamp"
-	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
-
-	sw := zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout), getWriteSyncer(logName))
-	swSugar := zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout), getWriteSyncer(slogName))
-
-	l, err := cfg.Build(SetOutput(sw, cfg))
+	l, err := cfg.Build(SetOutput(logWriter, cfg))
 	if err != nil {
 		panic(err)
 	}
-	defer l.Sync()
 
-	ls, err := cfg.Build(SetOutput(swSugar, cfg))
+	ls, err := cfg.Build(SetOutput(n2nLogWriter, cfg))
 	if err != nil {
 		panic(err)
 	}
-	defer ls.Sync()
 
 	Logger = l
 	N2n = ls
-
 }
 
 // SetOutput replaces existing Core with new, that writes to passed WriteSyncer.
@@ -92,8 +81,5 @@ func getWriteSyncer(logName string) zapcore.WriteSyncer {
 		Compress:   false, // disabled by default
 	}
 	ioWriter.Rotate()
-	var sw = WriteSyncer{
-		ioWriter,
-	}
-	return sw
+	return zapcore.AddSync(ioWriter)
 }
