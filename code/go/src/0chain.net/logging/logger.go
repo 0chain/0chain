@@ -22,10 +22,6 @@ func InitLogging(mode string) {
 	var n2nLogWriter = getWriteSyncer(n2nLogName)
 
 	var cfg zap.Config
-	cfg.Level.UnmarshalText([]byte(viper.GetString("logging.level")))
-	cfg.Encoding = "console"
-	cfg.EncoderConfig.TimeKey = "timestamp"
-	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	if mode != "development" {
 		cfg = zap.NewProductionConfig()
 		cfg.DisableCaller = true
@@ -39,6 +35,10 @@ func InitLogging(mode string) {
 		logWriter = zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout), logWriter)
 		n2nLogWriter = zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout), n2nLogWriter)
 	}
+	cfg.Level.UnmarshalText([]byte(viper.GetString("logging.level")))
+	cfg.Encoding = "console"
+	cfg.EncoderConfig.TimeKey = "timestamp"
+	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 
 	l, err := cfg.Build(SetOutput(logWriter, cfg))
 	if err != nil {
