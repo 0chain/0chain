@@ -199,12 +199,14 @@ func (mc *Chain) AddVerificationTicket(ctx context.Context, b *block.Block, bvt 
 
 /*UpdateFinalizedBlock - update the latest finalized block */
 func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
-	fr := mc.GetRound(b.Round)
-	fr.Finalize(b)
-	mc.DeleteRoundsBelow(ctx, fr.Number)
 	mc.FinalizeBlock(ctx, b)
 	mc.SendFinalizedBlock(ctx, b)
 	Logger.Debug("update finalized block (done)", zap.Int64("round", b.Round), zap.String("block", b.Hash))
+	fr := mc.GetRound(b.Round)
+	if fr != nil {
+		fr.Finalize(b)
+		mc.DeleteRoundsBelow(ctx, fr.Number)
+	}
 }
 
 /*FinalizeBlock - finalize the transactions in the block */
