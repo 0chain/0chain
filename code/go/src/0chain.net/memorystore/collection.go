@@ -69,6 +69,9 @@ func (ms *Store) IterateCollection(ctx context.Context, entityMetadata datastore
 			return err
 		}
 		for i := 0; i < count; i++ {
+			if datastore.IsEmpty(bucket[i].GetKey()) {
+				continue
+			}
 			proceed = handler(ctx, bucket[i].(datastore.CollectionEntity))
 			if !proceed {
 				break
