@@ -216,11 +216,25 @@ func (c *Chain) DeleteBlocksBelowRound(round int64) {
 	c.blocksMutex.Lock()
 	defer c.blocksMutex.Unlock()
 	ts := common.Now() - 60
+	blocks := make([]*block.Block, 0, 1)
 	for _, b := range c.Blocks {
 		if b.Round < round && b.CreationDate < ts {
 			Logger.Debug("found block to delete", zap.Int64("round", round), zap.Int64("block_round", b.Round), zap.Int64("current_round", c.CurrentRound), zap.Int64("lf_round", c.LatestFinalizedBlock.Round))
-			delete(c.Blocks, b.Hash)
+			blocks = append(blocks, b)
 		}
+	}
+	for _, b := range blocks {
+		delete(c.Blocks, b.Hash)
+	}
+
+}
+
+/*DeleteBlocks - delete a list of blocks */
+func (c *Chain) DeleteBlocks(blocks []*block.Block) {
+	c.blocksMutex.Lock()
+	defer c.blocksMutex.Unlock()
+	for _, b := range blocks {
+		delete(c.Blocks, b.Hash)
 	}
 }
 

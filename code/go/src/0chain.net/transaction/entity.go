@@ -16,7 +16,7 @@ import (
 )
 
 /*TXN_TIME_TOLERANCE - the txn creation date should be within 5 seconds before/after of current time */
-const TXN_TIME_TOLERANCE = 5
+const TXN_TIME_TOLERANCE = 10
 
 var TransactionCount = 0
 

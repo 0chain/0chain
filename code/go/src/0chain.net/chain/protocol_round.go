@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"0chain.net/block"
-	"0chain.net/common"
 	. "0chain.net/logging"
 	"0chain.net/round"
 	"go.uber.org/zap"
@@ -54,7 +53,7 @@ func (c *Chain) FinalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 	deadBlocks := make([]*block.Block, 0, 1)
 	for idx := range frchain {
 		fb = frchain[len(frchain)-1-idx]
-		Logger.Debug("finalizing round", zap.Any("round", r.Number), zap.Any("finalized_round", fb.Round), zap.Any("hash", fb.Hash))
+		Logger.Debug("finalize round", zap.Any("round", r.Number), zap.Any("finalized_round", fb.Round), zap.Any("hash", fb.Hash))
 		bsh.UpdateFinalizedBlock(ctx, fb)
 		frb := c.GetRoundBlocks(fb.Round)
 		for _, b := range frb {
@@ -64,34 +63,13 @@ func (c *Chain) FinalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 		}
 	}
 	// Prune all the dead blocks
-	go func() {
-		// Prune the chain from the oldest finalized block
-		c.PruneChain(ctx, frchain[len(frchain)-1])
-		for _, b := range deadBlocks {
-			c.DeleteBlock(ctx, b)
-		}
-		Logger.Debug("finalize round", zap.Any("round", r.Number), zap.Any("block_cache_size", len(c.Blocks)))
-	}()
+	c.DeleteBlocks(deadBlocks)
+	// Prune the chain from the oldest finalized block
+	c.PruneChain(ctx, frchain[len(frchain)-1])
+	Logger.Debug("finalize round", zap.Any("round", r.Number), zap.Any("block_cache_size", len(c.Blocks)))
 }
 
 /*PruneChain - prunces the chain */
 func (c *Chain) PruneChain(ctx context.Context, b *block.Block) {
-	//TODO: Pruning causes problem with block.ChainHasTransaction which walks back to see if the txn is already used
-	// Once we stop including txns that are older than 5 seconds, then everything should work as block.CreationDate will be
-	// greater than txn.CreationDate as time passes
-	ts := common.Now() - 60 // prune anything that got created 60 seconds before
-	for l, pb, cb := 0, b, b.PrevBlock; cb != nil; l, pb, cb = l+1, cb, cb.PrevBlock {
-		if cb.CreationDate > ts {
-			continue
-		}
-		if l < 50 {
-			continue // Let's hold atleast 50 blocks
-		}
-		Logger.Debug("prune chain", zap.Any("round", cb.Round), zap.Any("block", cb.Hash), zap.Any("from_block", pb.Hash))
-		c.DeleteBlock(ctx, cb)
-		pb.PrevBlock = nil
-	}
-	// This is needed when we don't have block chain continuity (some intermediate blocks didn't make it)
 	c.DeleteBlocksBelowRound(b.Round - 50)
-	// Todo: Same is required for pruning the rounds as well
 }

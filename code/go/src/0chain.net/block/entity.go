@@ -304,6 +304,7 @@ func (b *Block) ValidateTransactions(ctx context.Context) error {
 	count := 0
 	for result := range validChannel {
 		if !result {
+			//Logger.Debug("validate transactions failure", zap.String("block", datastore.ToJSON(b).String()))
 			return common.NewError("txn_validation_failed", "Transaction validation failed")
 		}
 		count++

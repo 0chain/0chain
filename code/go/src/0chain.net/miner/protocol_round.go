@@ -275,7 +275,7 @@ func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *round.Round, b *block
 	pr := mc.GetRound(r.Number - 1)
 	if pr != nil {
 		pr.CancelVerification()
-		mc.FinalizeRound(ctx, &pr.Round, mc)
+		go mc.FinalizeRound(ctx, &pr.Round, mc)
 	}
 }
 

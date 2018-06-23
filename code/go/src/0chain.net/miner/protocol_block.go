@@ -49,8 +49,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 			Logger.Error("generate block (invalid entity)", zap.Any("entity", qe))
 			return true
 		}
-
-		if !common.Within(int64(txn.CreationDate), transaction.TXN_TIME_TOLERANCE) {
+		if !common.Within(int64(txn.CreationDate), transaction.TXN_TIME_TOLERANCE-1) {
 			invalidTxns = append(invalidTxns, qe)
 			return true
 		}
@@ -93,7 +92,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	}
 	if len(invalidTxns) > 0 {
 		Logger.Info("generate block (found txns very old)", zap.Any("round", b.Round), zap.Int("num_invalid_txns", len(invalidTxns)))
-		go mc.deleteTxns(invalidTxns)
+		go mc.deleteTxns(invalidTxns) // OK to do in background
 	}
 	if err != nil {
 		return err
@@ -205,6 +204,7 @@ func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	mc.DeleteRoundsBelow(ctx, fr.Number)
 	mc.FinalizeBlock(ctx, b)
 	mc.SendFinalizedBlock(ctx, b)
+	Logger.Debug("update finalized block (done)", zap.Int64("round", b.Round), zap.String("block", b.Hash))
 }
 
 /*FinalizeBlock - finalize the transactions in the block */
