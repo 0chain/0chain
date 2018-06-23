@@ -4,6 +4,8 @@ import (
 	"math/rand"
 	"time"
 
+	"0chain.net/chain"
+
 	"0chain.net/miner"
 
 	"0chain.net/client"
@@ -22,28 +24,25 @@ func TransactionGenerator(blockSize int32) {
 	ctx := datastore.WithAsyncChannel(common.GetRootContext(), transaction.TransactionEntityChannel)
 	txnMetadataProvider := datastore.GetEntityMetadata("txn")
 	ctx = memorystore.WithEntityConnection(ctx, txnMetadataProvider)
-	GenerateClients(100)
-	numTxns := 2 * blockSize
-	ticker := time.NewTicker(2 * time.Second)
+	GenerateClients(1000)
+	csize := len(wallets)
+	numTxns := blockSize
+	P := time.Duration(1 + blockSize/1000)
+	N := time.Duration(2)
+	ticker := time.NewTicker(N*chain.DELTA + P*100*time.Millisecond)
 	txn := txnMetadataProvider.Instance().(*transaction.Transaction)
 	txn.ChainID = miner.GetMinerChain().ID
 	collectionName := txn.GetCollectionName()
-	for true {
-		select {
-		case <-ctx.Done():
-			return
-		case _ = <-ticker.C:
-			txnCount := int32(txnMetadataProvider.GetStore().GetCollectionSize(ctx, txnMetadataProvider, collectionName))
-			if txnCount >= 200*blockSize {
-				continue
-			}
-			for i := int32(0); i < numTxns; i++ {
-				rs := rand.NewSource(time.Now().UnixNano())
+	rs := rand.NewSource(time.Now().UnixNano())
+	txnChannel := make(chan bool, blockSize)
+	for i := 0; i < int(blockSize/10); i++ {
+		go func() {
+			for range txnChannel {
 				prng := rand.New(rs)
 				var wf, wt *wallet.Wallet
 				for true {
-					wf = wallets[prng.Intn(len(wallets))]
-					wt = wallets[prng.Intn(len(wallets))]
+					wf = wallets[prng.Intn(csize)]
+					wt = wallets[prng.Intn(csize)]
 					if wf != wt {
 						break
 					}
@@ -52,8 +51,19 @@ func TransactionGenerator(blockSize int32) {
 				datastore.DoAsync(ctx, txn)
 				transaction.TransactionCount++
 			}
-			if len(wallets) < 10000 && rand.Intn(100) < 10 {
-				go GenerateClients(100)
+		}()
+	}
+	for true {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			txnCount := int32(txnMetadataProvider.GetStore().GetCollectionSize(ctx, txnMetadataProvider, collectionName))
+			if txnCount >= 20*blockSize {
+				continue
+			}
+			for i := int32(0); i < numTxns; i++ {
+				txnChannel <- true
 			}
 		}
 	}
