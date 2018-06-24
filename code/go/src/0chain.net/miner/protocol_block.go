@@ -11,13 +11,15 @@ import (
 	"0chain.net/client"
 	"0chain.net/common"
 	"0chain.net/datastore"
+	"0chain.net/logging"
 	. "0chain.net/logging"
 	"0chain.net/node"
 	"0chain.net/transaction"
 	"go.uber.org/zap"
 )
 
-var InsufficientTxns = "insufficient_txns"
+const InsufficientTxns = "insufficient_txns"
+const RoundMismatch = "round_mismatch"
 
 /*StartRound - start a new round */
 func (mc *Chain) StartRound(ctx context.Context, r *Round) {
@@ -84,8 +86,8 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	collectionName := txn.GetCollectionName()
 	err := transactionEntityMetadata.GetStore().IterateCollection(ctx, transactionEntityMetadata, collectionName, txnIterHandler)
 	if roundMismatch {
-		Logger.Error("generate block (round mismatch)", zap.Any("round", b.Round), zap.Any("current_round", mc.CurrentRound))
-		return common.NewError("round_mismatch", "current round different from generation round")
+		Logger.Debug("generate block (round mismatch)", zap.Any("round", b.Round), zap.Any("current_round", mc.CurrentRound))
+		return common.NewError(RoundMismatch, "current round different from generation round")
 	}
 	if ierr != nil {
 		Logger.Error("generate block (txn reinclusion check)", zap.Any("round", b.Round), zap.Error(ierr))
@@ -150,22 +152,6 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockV
 	if err != nil {
 		return nil, err
 	}
-	hashCameWithBlock := b.Hash
-	hash := b.ComputeHash()
-	if hashCameWithBlock != hash {
-		return nil, common.NewError("hash wrong", "The hash of the block is wrong")
-	}
-	miner := node.GetNode(b.MinerID)
-	if miner == nil {
-		return nil, common.NewError("unknown_miner", "Do not know this miner")
-	}
-	var ok bool
-	ok, err = miner.Verify(b.Signature, b.Hash)
-	if err != nil {
-		return nil, err
-	} else if !ok {
-		return nil, common.NewError("signature invalid", "The block wasn't signed correctly")
-	}
 	err = b.ValidateTransactions(ctx)
 	if err != nil {
 		return nil, err
@@ -199,9 +185,12 @@ func (mc *Chain) AddVerificationTicket(ctx context.Context, b *block.Block, bvt 
 
 /*UpdateFinalizedBlock - update the latest finalized block */
 func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
+	Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("lf_round", mc.LatestFinalizedBlock.Round), zap.Any("current_round", mc.CurrentRound), zap.Any("blocks_size", len(mc.Blocks)), zap.Any("rounds_size", len(mc.rounds)))
+	if b.Round%1000 == 0 {
+		common.LogRuntime(logging.Logger, zap.Int64("round", b.Round))
+	}
 	mc.FinalizeBlock(ctx, b)
 	mc.SendFinalizedBlock(ctx, b)
-	Logger.Debug("update finalized block (done)", zap.Int64("round", b.Round), zap.String("block", b.Hash))
 	fr := mc.GetRound(b.Round)
 	if fr != nil {
 		fr.Finalize(b)

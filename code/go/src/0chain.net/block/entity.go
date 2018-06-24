@@ -10,6 +10,7 @@ import (
 	"0chain.net/datastore"
 	"0chain.net/encryption"
 	. "0chain.net/logging"
+	"0chain.net/node"
 	"0chain.net/transaction"
 	"0chain.net/util"
 	"go.uber.org/zap"
@@ -89,6 +90,17 @@ func (b *Block) Validate(ctx context.Context) error {
 	hash := b.ComputeHash()
 	if b.Hash != hash {
 		return common.NewError("incorrect_block_hash", fmt.Sprintf("computed block hash doesn't match with the hash of the block: %v: %v: %v", b.Hash, hash, b.getHashData()))
+	}
+	miner := node.GetNode(b.MinerID)
+	if miner == nil {
+		return common.NewError("unknown_miner", "Do not know this miner")
+	}
+	var ok bool
+	ok, err = miner.Verify(b.Signature, b.Hash)
+	if err != nil {
+		return err
+	} else if !ok {
+		return common.NewError("signature invalid", "The block wasn't signed correctly")
 	}
 	return nil
 }
@@ -347,4 +359,13 @@ func (b *Block) ComputeChainWeight() {
 	} else {
 		b.ChainWeight = b.PrevBlock.ChainWeight + b.Weight()
 	}
+}
+
+/*Clear - clear the block */
+func (b *Block) Clear() {
+	b.PrevBlock = nil
+	b.PrevBlockVerficationTickets = nil
+	b.VerificationTickets = nil
+	b.Txns = nil
+	b.TxnsMap = nil
 }

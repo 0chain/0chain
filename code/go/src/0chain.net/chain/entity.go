@@ -224,7 +224,7 @@ func (c *Chain) DeleteBlocksBelowRound(round int64) {
 		}
 	}
 	for _, b := range blocks {
-		b.PrevBlock = nil
+		b.Clear()
 		delete(c.Blocks, b.Hash)
 	}
 
@@ -235,7 +235,7 @@ func (c *Chain) DeleteBlocks(blocks []*block.Block) {
 	c.blocksMutex.Lock()
 	defer c.blocksMutex.Unlock()
 	for _, b := range blocks {
-		b.PrevBlock = nil
+		b.Clear()
 		delete(c.Blocks, b.Hash)
 	}
 }
