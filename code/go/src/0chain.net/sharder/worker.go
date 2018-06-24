@@ -24,13 +24,9 @@ func SetupWorkers() {
 
 var timer metrics.Timer
 
-//TODO: The blocks and rounds data structures are temporary for debugging.
-var rounds map[int64]*round.Round
-
 /*ClearWorkerState - clears the worker state */
 func ClearWorkerState() {
 	Logger.Debug("clearing worker state")
-	rounds = make(map[int64]*round.Round)
 	if timer != nil {
 		metrics.Unregister("block_time")
 	}
@@ -80,8 +76,9 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			}
 			ts = time.Now()
 			er.AddNotarizedBlock(b)
-			if b.Round > 1 {
-				sc.FinalizeRound(ctx, er, sc)
+			pr := sc.GetRound(er.Number - 1)
+			if pr != nil {
+				go sc.FinalizeRound(ctx, pr, sc)
 			}
 		}
 	}

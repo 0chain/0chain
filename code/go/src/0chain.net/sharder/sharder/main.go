@@ -179,7 +179,7 @@ func main() {
 	initServer()
 	initHandlers()
 
-	Logger.Info("Ready to listen to the requests\n")
+	Logger.Info("Ready to listen to the requests")
 	//log.Fatal(server.Serve(l))
 	log.Fatal(server.ListenAndServe())
 }
