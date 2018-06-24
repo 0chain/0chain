@@ -62,7 +62,6 @@ func (c *Chain) FinalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 	c.DeleteBlocks(deadBlocks)
 	// Prune the chain from the oldest finalized block
 	c.PruneChain(ctx, frchain[len(frchain)-1])
-	Logger.Debug("finalize round", zap.Any("round", r.Number), zap.Any("block_cache_size", len(c.Blocks)))
 }
 
 /*PruneChain - prunces the chain */

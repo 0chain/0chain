@@ -105,25 +105,31 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		err := mc.GenerateBlock(ctx, b, mc)
 		if err != nil {
 			cerr, ok := err.(*common.Error)
-			if ok && cerr.Code == InsufficientTxns {
-				Logger.Info("generate block", zap.Error(err))
-				delay := 128 * time.Millisecond
-				for true {
-					if txnCount != transaction.TransactionCount {
-						break
+			if ok {
+				switch cerr.Code {
+				case InsufficientTxns:
+					Logger.Info("generate block", zap.Error(err))
+					delay := 128 * time.Millisecond
+					for true {
+						if txnCount != transaction.TransactionCount {
+							break
+						}
+						if mc.CurrentRound > b.Round {
+							Logger.Debug("generate block (round mismatch)", zap.Any("round", r.Number), zap.Any("current_round", mc.CurrentRound))
+							return nil, common.NewError("round_mismatch", "Current round and block round do not match")
+						}
+						time.Sleep(delay)
+						Logger.Debug("generate block", zap.Any("round", r.Number), zap.Any("delay", delay), zap.Any("txn_count", txnCount), zap.Any("t.txn_count", transaction.TransactionCount))
+						delay = 2 * delay
+						if delay > time.Second {
+							delay = time.Second
+						}
 					}
-					if mc.CurrentRound > b.Round {
-						Logger.Debug("generate block (round mismatch)", zap.Any("round", r.Number), zap.Any("current_round", mc.CurrentRound))
-						return nil, common.NewError("round_mismatch", "Current round and block round do not match")
-					}
-					time.Sleep(delay)
-					Logger.Debug("generate block", zap.Any("round", r.Number), zap.Any("delay", delay), zap.Any("txn_count", txnCount), zap.Any("t.txn_count", transaction.TransactionCount))
-					delay = 2 * delay
-					if delay > time.Second {
-						delay = time.Second
-					}
+					continue
+				case RoundMismatch:
+					Logger.Info("generate block", zap.Error(err))
+					continue
 				}
-				continue
 			}
 			Logger.Error("generate block", zap.Error(err))
 			return nil, err
