@@ -33,12 +33,12 @@ func TransactionGenerator(blockSize int32) {
 	txn := txnMetadataProvider.Instance().(*transaction.Transaction)
 	txn.ChainID = miner.GetMinerChain().ID
 	collectionName := txn.GetCollectionName()
-	rs := rand.NewSource(time.Now().UnixNano())
 	txnChannel := make(chan bool, blockSize)
 	for i := 0; i < int(blockSize/10); i++ {
 		go func() {
+			rs := rand.NewSource(time.Now().UnixNano())
+			prng := rand.New(rs)
 			for range txnChannel {
-				prng := rand.New(rs)
 				var wf, wt *wallet.Wallet
 				for true {
 					wf = wallets[prng.Intn(csize)]
