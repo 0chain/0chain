@@ -33,7 +33,6 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 	}
 	client := &http.Client{Transport: tr, Timeout: 500 * time.Millisecond}
 	nodes := np.shuffleNodes()
-	activeCount := 0
 	for _, node := range nodes {
 		if node == Self.Node {
 			continue
@@ -68,14 +67,7 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 			node.LastActiveTime = ts
 		}
 	}
-
-	activeCount++
-	if activeCount*3 < len(nodes) {
-		np.SendAtleast(1, np.DownloadNodeData)
-	} else {
-		//TODO: This is just to test but we do the downloading of node definitions less frequently than node status check
-		np.SendAtleast(1, np.DownloadNodeData)
-	}
+	//TODO: No downloading of node data from other nodes as discovery happens through magic block
 }
 
 /*DownloadNodeData - downloads the node definition data for the given pool type from the given node */
