@@ -28,11 +28,7 @@ func (c *Chain) FinalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 		return
 	}
 	r.Finalizing()
-	var finzalizeTimer = time.NewTimer(FINALIZATION_TIME)
-	select {
-	case <-finzalizeTimer.C:
-		break
-	}
+	time.Sleep(FINALIZATION_TIME)
 	fb := c.ComputeFinalizedBlock(ctx, r)
 	if fb == nil {
 		Logger.Debug("finalization - no decisive block to finalize yet or don't have all the necessary blocks", zap.Any("round", r.Number))
