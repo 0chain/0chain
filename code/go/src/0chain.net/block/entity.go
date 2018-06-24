@@ -43,9 +43,10 @@ type Block struct {
 	datastore.HashIDField
 	Signature string `json:"signature"`
 
-	ChainID   datastore.Key `json:"chain_id"` // TODO: Do we need chain id at all?
-	RoundRank int           `json:"-"`        // rank of the block in the round it belongs to
-	PrevBlock *Block        `json:"-"`
+	ChainID     datastore.Key `json:"chain_id"` // TODO: Do we need chain id at all?
+	ChainWeight float64       `json:"chain_weight"`
+	RoundRank   int           `json:"-"` // rank of the block in the round it belongs to
+	PrevBlock   *Block        `json:"-"`
 
 	//TODO: May be this should be replaced with a bloom filter & check against sorted txns
 	TxnsMap map[string]bool `json:"-"`
@@ -326,4 +327,24 @@ func (b *Block) GetSummary() *BlockSummary {
 	bs.CreationDate = b.CreationDate
 	bs.MerkleTreeRoot = b.GetMerkleTree().GetRoot()
 	return bs
+}
+
+/*Weight - weight of the block */
+func (b *Block) Weight() float64 {
+	var w = 1.0
+	var cw = 1.0
+	for i := 1; i < b.RoundRank; i++ {
+		cw /= 2
+		w += cw
+	}
+	return w
+}
+
+/*ComputeChainWeight - compute the weight of the chain up to this block */
+func (b *Block) ComputeChainWeight() {
+	if b.PrevBlock == nil {
+		b.ChainWeight = b.Weight()
+	} else {
+		b.ChainWeight = b.PrevBlock.ChainWeight + b.Weight()
+	}
 }
