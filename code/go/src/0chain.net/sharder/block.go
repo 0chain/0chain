@@ -22,6 +22,12 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	// Sort transactions by their hash - useful for quick search
 	sort.SliceStable(b.Txns, func(i, j int) bool { return b.Txns[i].Hash < b.Txns[j].Hash })
 	StoreBlock(ctx, b)
+	Logger.Debug("update finalized block (done)", zap.Int64("round", b.Round), zap.String("block", b.Hash))
+	fr := sc.GetRound(b.Round)
+	if fr != nil {
+		fr.Finalize(b)
+		sc.DeleteRoundsBelow(ctx, fr.Number)
+	}
 }
 
 /*StoreBlock - store the block to persistence storage */
