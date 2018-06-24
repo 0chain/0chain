@@ -22,8 +22,9 @@ import (
 
 /*SENDER - key used to get the connection object from the context */
 const SENDER common.ContextKey = "node.sender"
-
 const MAX_NP_REQUESTS = 2
+
+const N2N_TIME_TOLERANCE = 4 // in seconds
 
 const (
 	CODEC_JSON    = 0
@@ -214,17 +215,22 @@ type SendOptions struct {
 	CODEC              int
 }
 
+var transport *http.Transport
+var httpClient *http.Client
+
+func init() {
+	transport = &http.Transport{MaxIdleConnsPerHost: 5}
+	httpClient = &http.Client{Transport: transport}
+}
+
 /*SendEntityHandler provides a client API to send an entity */
 func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 	return func(entity datastore.Entity) SendHandler {
 		return func(receiver *Node) bool {
-			url := fmt.Sprintf("%v%v", receiver.GetURLBase(), uri)
 			timeout := 500 * time.Millisecond
 			if options.Timeout > 0 {
 				timeout = options.Timeout
 			}
-			client := &http.Client{Timeout: timeout}
-
 			var buffer *bytes.Buffer
 			if options.CODEC == datastore.CodecJSON {
 				buffer = datastore.ToJSON(entity)
@@ -235,6 +241,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 				cbytes := snappy.Encode(nil, buffer.Bytes())
 				buffer = bytes.NewBuffer(cbytes)
 			}
+			url := fmt.Sprintf("%v%v", receiver.GetURLBase(), uri)
 			req, err := http.NewRequest("POST", url, buffer)
 			if err != nil {
 				return false
@@ -245,10 +252,18 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 				req.Header.Set("Content-Encoding", "snappy")
 			}
 			req.Header.Set("Content-Type", "application/json; charset=utf-8")
-			SetHeaders(req, entity, options)
 			delay := common.InduceDelay()
 			N2n.Debug("sending", zap.Any("from", Self.SetIndex), zap.Any("to", receiver.SetIndex), zap.Any("handler", uri), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Any("delay", delay))
-			resp, err := client.Do(req)
+
+			// Keep the number of messages to a node bounded
+			<-receiver.CommChannel
+			SetHeaders(req, entity, options)
+			ctx, cancel := context.WithCancel(context.TODO())
+			req = req.WithContext(ctx)
+			time.AfterFunc(timeout, cancel)
+			resp, err := httpClient.Do(req)
+			receiver.CommChannel <- true
+
 			if err != nil {
 				N2n.Error("sending", zap.Any("from", Self.SetIndex), zap.Any("to", receiver.SetIndex), zap.Any("handler", uri), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Error(err))
 				return false
@@ -323,46 +338,20 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF) common
 		sender.Status = NodeStatusActive
 		sender.LastActiveTime = time.Unix(reqTSn, 0)
 
-		if !common.Within(reqTSn, 5) {
-
+		if !common.Within(reqTSn, N2N_TIME_TOLERANCE) {
+			N2n.Debug("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("enitty", entityName), zap.Any("ts", reqTSn), zap.Any("tstime", time.Unix(reqTSn, 0)))
+			return
 		}
 
 		entityMetadata := datastore.GetEntityMetadata(entityName)
 		if entityMetadata == nil {
 			return
 		}
-		var buffer io.Reader = r.Body
-		defer r.Body.Close()
-		if r.Header.Get("Content-Encoding") == "snappy" {
-			cbuffer := new(bytes.Buffer)
-			cbuffer.ReadFrom(r.Body)
-
-			cbytes, err := snappy.Decode(nil, cbuffer.Bytes())
-			if err != nil {
-				N2n.Error("snappy decoding", zap.Any("error", err))
-				return
-			}
-			buffer = bytes.NewReader(cbytes)
-		}
-		entity := entityMetadata.Instance()
-
-		if r.Header.Get(HeaderRequestCODEC) == "JSON" {
-			err = datastore.FromJSON(buffer, entity.(datastore.Entity))
-			if err != nil {
-				N2n.Error("json decoding", zap.Any("error", err))
-			}
-		} else {
-			err = datastore.FromMsgpack(buffer, entity.(datastore.Entity))
-			if err != nil {
-				N2n.Error("msgpack decoding", zap.Any("error", err))
-			}
-		}
-
+		entity, err := getEntity(r, entityMetadata)
 		if err != nil {
-			http.Error(w, "Error decoding json", 500)
+			http.Error(w, fmt.Sprintf("Error reading entity: %v", err), 500)
 			return
 		}
-
 		entity.ComputeProperties()
 		ctx := r.Context()
 		initialNodeID := r.Header.Get(HeaderInitialNodeID)
@@ -382,6 +371,35 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF) common
 		data, err := handler(ctx, entity)
 		common.Respond(w, data, err)
 	}
+}
+
+func getEntity(r *http.Request, entityMetadata datastore.EntityMetadata) (datastore.Entity, error) {
+	defer r.Body.Close()
+	var buffer io.Reader = r.Body
+	if r.Header.Get("Content-Encoding") == "snappy" {
+		cbuffer := new(bytes.Buffer)
+		cbuffer.ReadFrom(r.Body)
+		cbytes, err := snappy.Decode(nil, cbuffer.Bytes())
+		if err != nil {
+			N2n.Error("snappy decoding", zap.Any("error", err))
+			return nil, err
+		}
+		buffer = bytes.NewReader(cbytes)
+	}
+	entity := entityMetadata.Instance()
+
+	if r.Header.Get(HeaderRequestCODEC) == "JSON" {
+		if err := datastore.FromJSON(buffer, entity.(datastore.Entity)); err != nil {
+			N2n.Error("json decoding", zap.Any("error", err))
+			return nil, err
+		}
+	} else {
+		if err := datastore.FromMsgpack(buffer, entity.(datastore.Entity)); err != nil {
+			N2n.Error("msgpack decoding", zap.Any("error", err))
+			return nil, err
+		}
+	}
+	return entity, nil
 }
 
 /*SetupN2NHandlers - Setup all the node 2 node communiations*/

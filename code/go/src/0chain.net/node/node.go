@@ -57,13 +57,20 @@ type Node struct {
 	Status         int
 	LastActiveTime time.Time
 	ErrorCount     int
+	CommChannel    chan bool
 }
 
-/*GetID - get the id of the node */
-/*
-func (n *Node) GetID() string {
-	return n.ID
-}*/
+/*Provider - create a node object */
+func Provider() *Node {
+	node := &Node{}
+	// queue up at most these many messages to a node
+	// because of this, we don't want the status monitoring to use this communication layer
+	node.CommChannel = make(chan bool, 5)
+	for i := 0; i < cap(node.CommChannel); i++ {
+		node.CommChannel <- true
+	}
+	return node
+}
 
 /*Equals - if two nodes are equal. Only check by id, we don't accept configuration from anyone */
 func (n *Node) Equals(n2 *Node) bool {
@@ -83,7 +90,7 @@ func (n *Node) Print(w io.Writer) {
 
 /*Read - read a node config line and create the node */
 func Read(line string) (*Node, error) {
-	node := &Node{}
+	node := Provider()
 	fields := strings.Split(line, ",")
 	if len(fields) != 5 {
 		return nil, common.NewError("invalid_num_fields", fmt.Sprintf("invalid number of fields [%v]", line))
