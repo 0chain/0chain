@@ -101,7 +101,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	if idx != mc.BlockSize {
 		b.Txns = nil
 		Logger.Debug("generate block (insufficient txns)", zap.Int64("round", b.Round), zap.Int32("iteration_count", count), zap.Int32("block_size", mc.BlockSize), zap.Int32("num_txns", idx))
-		return common.NewError(InsufficientTxns, fmt.Sprintf("not sufficient txns to make a block yet for round %v", b.Round))
+		return common.NewError(InsufficientTxns, fmt.Sprintf("not sufficient txns to make a block yet for round %v (iterated %v, invalid %v)", b.Round, count, len(invalidTxns)))
 	}
 	if count > 10*mc.BlockSize {
 		Logger.Debug("generate block (too much iteration)", zap.Int64("round", b.Round), zap.Int32("iteration_count", count))

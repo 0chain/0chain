@@ -94,22 +94,22 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	b.SetPreviousBlock(pb)
 	for true {
 		if mc.CurrentRound > b.Round {
-			Logger.Error("generate block (round mismatch)", zap.Any("round", r.Number), zap.Any("current_round", mc.CurrentRound))
+			Logger.Debug("generate block (round mismatch)", zap.Any("round", r.Number), zap.Any("current_round", mc.CurrentRound))
 			return nil, common.NewError("round_mismatch", "Current round and block round do not match")
 		}
 		txnCount := transaction.TransactionCount
 		err := mc.GenerateBlock(ctx, b, mc)
 		if err != nil {
-			Logger.Error("generate block", zap.Error(err))
 			cerr, ok := err.(*common.Error)
 			if ok && cerr.Code == InsufficientTxns {
+				Logger.Info("generate block", zap.Error(err))
 				delay := 128 * time.Millisecond
 				for true {
 					if txnCount != transaction.TransactionCount {
 						break
 					}
 					if mc.CurrentRound > b.Round {
-						Logger.Error("generate block (round mismatch)", zap.Any("round", r.Number), zap.Any("current_round", mc.CurrentRound))
+						Logger.Debug("generate block (round mismatch)", zap.Any("round", r.Number), zap.Any("current_round", mc.CurrentRound))
 						return nil, common.NewError("round_mismatch", "Current round and block round do not match")
 					}
 					time.Sleep(delay)
@@ -283,7 +283,8 @@ func (mc *Chain) startRound(r *round.Round) {
 	if mc.GetRound(r.Number+1) == nil {
 		nr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 		nr.Number = r.Number + 1
-		//TODO: We need to do VRF
+		//TODO: We need to do VRF at which time the Sleep should be removed
+		time.Sleep(chain.DELTA)
 		nr.RandomSeed = rand.New(rand.NewSource(r.RandomSeed)).Int63()
 		nmr := mc.CreateRound(nr)
 		// Even if the context is cancelled, we want to proceed with the next round, hence start with a root context

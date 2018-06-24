@@ -3,12 +3,12 @@ package sharder
 import (
 	"context"
 	"sort"
+	"time"
 
 	"0chain.net/block"
 	"0chain.net/blockstore"
 	"0chain.net/datastore"
 	. "0chain.net/logging"
-	"0chain.net/persistencestore"
 	"go.uber.org/zap"
 )
 
@@ -26,16 +26,12 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 
 /*StoreBlock - store the block to persistence storage */
 func StoreBlock(ctx context.Context, b *block.Block) error {
-	err := b.Validate(ctx)
-	if err != nil {
-		Logger.Error("block validation", zap.Any("round", b.Round), zap.Any("hash", b.Hash), zap.Error(err))
-		return err
-	}
-	err = blockstore.GetStore().Write(b)
+	ts := time.Now()
+	err := blockstore.GetStore().Write(b)
 	if err != nil {
 		Logger.Error("block save", zap.Any("round", b.Round), zap.Any("hash", b.Hash), zap.Error(err))
 	} else {
-		Logger.Debug("saved block", zap.Any("round", b.Round), zap.Any("hash", b.Hash), zap.Any("prev_hash", b.PrevHash))
+		Logger.Info("saved block", zap.Any("round", b.Round), zap.Any("hash", b.Hash), zap.Any("prev_hash", b.PrevHash), zap.Duration("duration", time.Since(ts)))
 	}
 
 	// TODO: Store the block summary and transaction summary information
@@ -44,11 +40,12 @@ func StoreBlock(ctx context.Context, b *block.Block) error {
 	bs.RoundRandomSeed = b.RoundRandomSeed
 	bs.PrevHash = b.PrevHash
 	bs.Round = b.Round
-	ctx = persistencestore.WithEntityConnection(ctx, bs.GetEntityMetadata())
-	store := persistencestore.GetStorageProvider()
-	err = store.Write(ctx, bs)
-	if err != nil {
-		Logger.Error("db save error", zap.Error(err))
-	}
+	/*
+		ctx = persistencestore.WithEntityConnection(ctx, bs.GetEntityMetadata())
+		store := persistencestore.GetStorageProvider()
+			err = store.Write(ctx, bs)
+			if err != nil {
+				Logger.Error("db save error", zap.Error(err))
+			}*/
 	return err
 }

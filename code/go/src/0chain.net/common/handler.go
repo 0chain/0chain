@@ -8,6 +8,9 @@ import (
 	"strings"
 )
 
+/*AppErrorHeader - a http response header to send an application error code */
+const AppErrorHeader = "X-App-Error-Code"
+
 /*ReqRespHandlerf - a type for the default hanlder signature */
 type ReqRespHandlerf func(w http.ResponseWriter, r *http.Request)
 
@@ -23,8 +26,12 @@ type JSONResponderF func(ctx context.Context, r *http.Request) (interface{}, err
  */
 type JSONReqResponderF func(ctx context.Context, json map[string]interface{}) (interface{}, error)
 
+/*Respond - respond either data or error as a response */
 func Respond(w http.ResponseWriter, data interface{}, err error) {
 	if err != nil {
+		if cerr, ok := err.(*Error); ok {
+			w.Header().Set(AppErrorHeader, cerr.Code)
+		}
 		http.Error(w, err.Error(), 400)
 	} else {
 		if data != nil {
