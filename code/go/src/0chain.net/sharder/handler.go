@@ -75,9 +75,11 @@ func BlockStatsHandler(w http.ResponseWriter, r *http.Request) {
 	timer = metrics.GetOrRegisterTimer("block_time", nil)
 	percentiles := []float64{0.5, 0.9, 0.95, 0.99, 0.999}
 	pvals := timer.Percentiles(percentiles)
+	sc := GetSharderChain()
 	fmt.Fprintf(w, "<table>")
 	fmt.Fprintf(w, "<tr><td>Delta</td><td>%v</td></tr>", chain.DELTA)
-	fmt.Fprintf(w, "<tr><td>Block Size</td><td>%v</td></tr>", GetSharderChain().BlockSize)
+	fmt.Fprintf(w, "<tr><td>Block Size</td><td>%v</td></tr>", sc.BlockSize)
+	fmt.Fprintf(w, "<tr><td>Rounds</td><td>%v</td></tr>", sc.CurrentRound)
 	fmt.Fprintf(w, "<tr><td>Count</td><td>%v</td></tr>", timer.Count())
 	fmt.Fprintf(w, "<tr><td>Min</td><td>%.2f</td></tr>", scale(float64(timer.Min())))
 	fmt.Fprintf(w, "<tr><td>Mean</td><td>%.2f &plusmn;%.2f</td></tr>", scale(timer.Mean()), scale(timer.StdDev()))
