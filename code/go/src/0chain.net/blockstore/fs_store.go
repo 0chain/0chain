@@ -1,6 +1,7 @@
 package blockstore
 
 import (
+	"bufio"
 	"bytes"
 	"compress/zlib"
 	"fmt"
@@ -28,10 +29,10 @@ func SetupFSBlockStore(rootDir string) {
 func (fbs *FSBlockStore) getFileName(hash string, round int64) string {
 	var dir bytes.Buffer
 	fmt.Fprintf(&dir, "%s%s%v", fbs.RootDirectory, string(os.PathSeparator), int64(round/DIR_ROUND_RANGE))
-	for i := 0; i < 4; i++ {
-		fmt.Fprintf(&dir, "%s%s", string(os.PathSeparator), hash[2*i:2*i+2])
+	for i := 0; i < 3; i++ {
+		fmt.Fprintf(&dir, "%s%s", string(os.PathSeparator), hash[3*i:3*i+3])
 	}
-	fmt.Fprintf(&dir, "%s%s", string(os.PathSeparator), hash[8:])
+	fmt.Fprintf(&dir, "%s%s", string(os.PathSeparator), hash[9:])
 	fmt.Fprintf(&dir, ".dat.zlib")
 	return dir.String()
 }
@@ -45,16 +46,17 @@ func (fbs *FSBlockStore) GetFileName(b *block.Block) string {
 func (fbs *FSBlockStore) Write(b *block.Block) error {
 	fileName := fbs.GetFileName(b)
 	dir := filepath.Dir(fileName)
-	//file := filepath.Base(fileName)
-	os.MkdirAll(dir, 0777)
-	f, err := os.Create(fileName)
+	os.MkdirAll(dir, 0755)
+	f, err := os.OpenFile(fileName, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
-	w := zlib.NewWriter(f)
-	defer w.Close()
+	bf := bufio.NewWriterSize(f, 64*1024)
+	w, _ := zlib.NewWriterLevel(bf, zlib.BestCompression)
 	datastore.WriteJSON(w, b)
+	w.Close()
+	bf.Flush()
+	f.Close()
 	return nil
 }
 
