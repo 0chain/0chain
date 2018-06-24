@@ -3,6 +3,7 @@ package miner
 import (
 	"context"
 	"math/rand"
+	"sort"
 	"time"
 
 	"0chain.net/block"
@@ -57,10 +58,13 @@ func (mc *Chain) GetBlockToExtend(r *Round) *block.Block {
 	for true { // Need to do this for timing issues where a start round might come before a notarization and there is no notarized block to extend from
 		rnb := r.GetNotarizedBlocks()
 		if len(rnb) > 0 {
-			if len(rnb) == 1 {
-				return rnb[0]
+			if len(rnb) > 1 {
+				Logger.Info("multiple blocks to extend from")
+				sort.Slice(rnb, func(i int, j int) bool { return rnb[i].ChainWeight > rnb[j].ChainWeight })
+				for _, b := range rnb {
+					Logger.Info("multiple blocks to extend from", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.Int("round_rank", b.RoundRank), zap.Float64("chain_weight", b.ChainWeight))
+				}
 			}
-			//TODO: pick the best possible block
 			return rnb[0]
 		}
 		if r.Number+1 != mc.CurrentRound {

@@ -36,6 +36,7 @@ func (r *Round) AddBlockToVerify(b *block.Block) {
 	bNode := node.GetNode(b.MinerID)
 	//TODO: view change in the middle of a round will throw off the SetIndex
 	b.RoundRank = r.GetRank(bNode.SetIndex)
+	b.ComputeChainWeight()
 	r.blocksToVerifyChannel <- b
 }
 
