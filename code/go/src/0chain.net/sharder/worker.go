@@ -54,8 +54,14 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 					Logger.Error("get block", zap.Any("block", b.Hash), zap.Error(err))
 				}
 			}
-			/* Run validations before accepting */
-			//TODO: We need to ensure this block is notarized. However, the block payload doesn't include it's own notarizations.
+			if err := sc.VerifyNotarization(ctx, b, b.VerificationTickets); err != nil {
+				Logger.Error("notarization verification failed", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
+				continue
+			}
+			if err := b.Validate(ctx); err != nil {
+				Logger.Error("block validation", zap.Any("round", b.Round), zap.Any("hash", b.Hash), zap.Error(err))
+				continue
+			}
 			sc.AddBlock(b)
 			er := sc.GetRound(b.Round)
 			if er != nil {
@@ -69,7 +75,7 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 				er.RandomSeed = b.RoundRandomSeed
 				sc.AddRound(er)
 			}
-			if time.Since(ts) < 5*time.Second {
+			if time.Since(ts) < 10*time.Second {
 				timer.UpdateSince(ts)
 			}
 			ts = time.Now()

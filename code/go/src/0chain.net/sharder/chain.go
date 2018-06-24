@@ -17,7 +17,7 @@ func SetupSharderChain(c *chain.Chain) {
 	sharderChain.Chain = *c
 	sharderChain.Initialize()
 	sharderChain.roundsMutex = &sync.Mutex{}
-	sharderChain.BlockChannel = make(chan *block.Block, 1024)
+	sharderChain.BlockChannel = make(chan *block.Block, 128)
 }
 
 /*Initialize - intializes internal datastructures to start again */
