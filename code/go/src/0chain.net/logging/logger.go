@@ -32,8 +32,10 @@ func InitLogging(mode string) {
 		cfg.EncoderConfig.MessageKey = "msg"
 		cfg.EncoderConfig.CallerKey = "caller"
 		cfg.EncoderConfig.StacktraceKey = "stacktrace"
-		logWriter = zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout), logWriter)
-		n2nLogWriter = zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout), n2nLogWriter)
+		if viper.GetBool("logging.console") {
+			logWriter = zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout), logWriter)
+			n2nLogWriter = zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout), n2nLogWriter)
+		}
 	}
 	cfg.Level.UnmarshalText([]byte(viper.GetString("logging.level")))
 	cfg.Encoding = "console"

@@ -2,6 +2,7 @@ version: 1.0
 
 logging:
   level: "debug"
+  console: false # printing log to console is only supported in development mode
 
 zerochain:
   id: "0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe"
