@@ -115,7 +115,19 @@ func (mc *Chain) DeleteRoundsBelow(ctx context.Context, round int64) {
 		}
 	}
 	for _, r := range rounds {
+		r.Clear()
 		delete(mc.rounds, r.Number)
+	}
+}
+
+/*CancelRoundsBelow - delete rounds below */
+func (mc *Chain) CancelRoundsBelow(ctx context.Context, round int64) {
+	mc.roundsMutex.Lock()
+	defer mc.roundsMutex.Unlock()
+	for _, r := range mc.rounds {
+		if r.Number < round {
+			r.CancelVerification()
+		}
 	}
 }
 

@@ -3,6 +3,7 @@ package miner
 import (
 	"context"
 	"sort"
+	"sync"
 
 	"0chain.net/block"
 	. "0chain.net/logging"
@@ -10,6 +11,8 @@ import (
 	"0chain.net/round"
 	"go.uber.org/zap"
 )
+
+var mutex = &sync.Mutex{}
 
 /*Round - a round from miner's perspective */
 type Round struct {
@@ -58,7 +61,12 @@ func (r *Round) IsVerificationComplete() bool {
 
 /*StartVerificationBlockCollection - WARNING: Doesn't support concurrent calling */
 func (r *Round) StartVerificationBlockCollection(ctx context.Context) context.Context {
+	mutex.Lock()
+	defer mutex.Unlock()
 	if r.verificationCancelf != nil {
+		return nil
+	}
+	if r.verificationComplete {
 		return nil
 	}
 	lctx, cancelf := context.WithCancel(ctx)
@@ -68,6 +76,8 @@ func (r *Round) StartVerificationBlockCollection(ctx context.Context) context.Co
 
 /*CancelVerification - Cancel verification of blocks */
 func (r *Round) CancelVerification() {
+	mutex.Lock()
+	defer mutex.Unlock()
 	f := r.verificationCancelf
 	if r.verificationComplete {
 		return
@@ -78,4 +88,9 @@ func (r *Round) CancelVerification() {
 		r.verificationCancelf = nil
 		f()
 	}
+}
+
+/*Clear - clear any pending state before deleting this round */
+func (r *Round) Clear() {
+	r.CancelVerification()
 }

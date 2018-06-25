@@ -166,8 +166,6 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 
 /*CollectBlocksForVerification - keep collecting the blocks till timeout and then start verifying */
 func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
-	var blockTimeTimer = time.NewTimer(chain.DELTA)
-	var sendVerification = false
 	verifyAndSend := func(ctx context.Context, r *Round, b *block.Block) bool {
 		bvt, err := mc.VerifyRoundBlock(ctx, r, b)
 		if err != nil {
@@ -191,10 +189,9 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 		}
 		return true
 	}
-	var blocks = make([]*block.Block, 0, 10)
-
+	var sendVerification = false
+	var blocks = make([]*block.Block, 0, 8)
 	initiateVerification := func() {
-		sendVerification = true
 		// Sort the accumulated blocks by the rank and process them
 		blocks = r.GetBlocksByRank(blocks)
 		// Keep verifying all the blocks collected so far in the best rank order till the first successul verification
@@ -203,7 +200,9 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 				break
 			}
 		}
+		sendVerification = true
 	}
+	var blockTimeTimer = time.NewTimer(chain.DELTA)
 	for true {
 		select {
 		case <-ctx.Done():

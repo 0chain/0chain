@@ -164,7 +164,7 @@ func (c *Chain) AddBlock(b *block.Block) {
 	if b.PrevBlock == nil {
 		pb, ok := c.Blocks[b.PrevHash]
 		if ok {
-			b.PrevBlock = pb
+			b.SetPreviousBlock(pb)
 		} else {
 			Logger.Debug("previous block not present", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("prev_block", b.PrevHash))
 		}
