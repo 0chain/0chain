@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/config"
+
 	"0chain.net/chain"
 
 	"0chain.net/block"
@@ -131,7 +133,6 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		return err
 	}
 	Logger.Info("generate block (assemble+update+sign)", zap.Int64("round", b.Round), zap.Duration("time", time.Since(start)), zap.String("block", b.Hash), zap.String("prev_block", b.PrevBlock.Hash), zap.Int32("iteration_count", count))
-
 	go b.ComputeTxnMap()
 	return nil
 }
@@ -186,15 +187,17 @@ func (mc *Chain) AddVerificationTicket(ctx context.Context, b *block.Block, bvt 
 /*UpdateFinalizedBlock - update the latest finalized block */
 func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("lf_round", mc.LatestFinalizedBlock.Round), zap.Any("current_round", mc.CurrentRound), zap.Any("blocks_size", len(mc.Blocks)), zap.Any("rounds_size", len(mc.rounds)))
-	if b.Round%1000 == 0 {
-		common.LogRuntime(logging.Logger, zap.Int64("round", b.Round))
-	}
 	mc.FinalizeBlock(ctx, b)
 	mc.SendFinalizedBlock(ctx, b)
 	fr := mc.GetRound(b.Round)
 	if fr != nil {
 		fr.Finalize(b)
 		mc.DeleteRoundsBelow(ctx, fr.Number)
+	}
+	if b.Round%100 == 0 {
+		if config.Development() || b.Round%1000 == 0 {
+			common.LogRuntime(logging.Logger, zap.Int64("round", b.Round))
+		}
 	}
 }
 

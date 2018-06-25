@@ -1,8 +1,11 @@
 package common
 
 import (
+	"os"
 	"runtime"
+	"runtime/pprof"
 
+	"0chain.net/config"
 	"go.uber.org/zap"
 )
 
@@ -14,5 +17,7 @@ func LogRuntime(logger *zap.Logger, ref zap.Field) {
 	runtime.ReadMemStats(&mem)
 	logger.Info("runtime", ref, zap.Int("goroutines", runtime.NumGoroutine()), zap.Uint64("heap_objects", mem.HeapObjects), zap.Uint32("gc", mem.NumGC), zap.Uint64("gc_pause", mem.PauseNs[(mem.NumGC+255)%256]))
 	logger.Info("runtime", ref, zap.Uint64("total_alloc", mem.TotalAlloc/MB), zap.Uint64("sys", mem.Sys/MB), zap.Uint64("heap_sys", mem.HeapSys/MB), zap.Uint64("heap_alloc", mem.HeapAlloc/MB))
-
+	if config.Development() {
+		pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
+	}
 }
