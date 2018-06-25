@@ -72,7 +72,6 @@ func main() {
 	nodesFile := flag.String("nodes_file", "config/single_node.txt", "nodes_file")
 	keysFile := flag.String("keys_file", "config/single_node_miner_keys.txt", "keys_file")
 	maxDelay := flag.Int("max_delay", 0, "max_delay")
-	blockSize := flag.Int("block_size", 0, "block_size") // 0 => take from the config file
 	flag.Parse()
 	config.Configuration.DeploymentMode = byte(*deploymentMode)
 	viper.SetDefault("server_chain.network.relay_time", 200)
@@ -106,11 +105,6 @@ func main() {
 	serverChain.Decimals = int8(viper.GetInt("server_chain.decimals"))
 	serverChain.BlockSize = viper.GetInt32("server_chain.block.size")
 	miner.SetNetworkRelayTime(viper.GetDuration("server_chain.network.relay_time") * time.Millisecond)
-	if config.Development() {
-		if *blockSize > 0 {
-			serverChain.BlockSize = int32(*blockSize)
-		}
-	}
 
 	if *nodesFile == "" {
 		panic("Please specify --node_file file.txt option with a file.txt containing peer nodes")

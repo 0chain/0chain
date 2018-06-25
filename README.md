@@ -30,7 +30,7 @@ Setup a network called testnet0 for each of these node containers to talk to eac
 $ ./docker.local/bin/setup_network.sh
 ```
 
-## Building and Starting the Nodes
+## Building the Nodes
 
 1) Open 5 terminal tabs. Use the first one for building the containers by being in git/0chain directory. Use the next 3 for 3 miners and be in the respective miner<i> directories created above in docker.local. Use the 5th terminal and be in the sharder1 directory.
 
@@ -51,7 +51,19 @@ for building the 1 sharder.
 $ ./docker.local/bin/sync_clock.sh
 ```
 
-3) Starting the nodes. On each of the miner terminals use the commands (note the .. at the beginning. This is because, these commands are run from within the docker.local/<miner/sharder|i> directories and the bin is one level above relative to these directories)
+## Configuring the nodes
+1) Use ./docker.local/config/0chain.yaml to configure the blockchain properties. The default options are setup for running the blockchain fast in development.
+
+1.1) If you want the logs to appear on the console - change logging.console from false to true
+
+1.2) If you want the debug statements in the logs to appear - change logging.level from 'info' to 'debug'
+
+1.3) If you want to change the block size, set the value of server_chain.block.size
+
+1.4) If you want to adjust the network relay time, set the value of server_chain.network.relay_time
+
+## Starting the nodes
+1) Starting the nodes. On each of the miner terminals use the commands (note the .. at the beginning. This is because, these commands are run from within the docker.local/<miner/sharder|i> directories and the bin is one level above relative to these directories)
 
 On the sharder terminal, use
 ```
@@ -60,10 +72,8 @@ $ ../bin/start.sharder.sh
 Wait till the cassandra is started and the sharder is ready to listen to requests.
 
 ```
-$ ../bin/start.miner.sh block-size
+$ ../bin/start.miner.sh 
 ```
-If block-size is not specified, a default of 5000 is used. Block size argument only works in test mode. Start 3 miners.
-
 
 ## Generating Test Transactions
 
