@@ -32,9 +32,9 @@ func InitSession() {
 	//cluster.DisableInitialHostLookup = true
 
 	cluster.Keyspace = KeySpace
-	//TODO: Till we can have healthcheck in docker compose to work, we will keep waiting in the server code
 	delay := time.Second
-	for tries := 0; tries <= 40; tries++ {
+	// We need to keep waiting till whatever time it takes for cassandra to come up and running that includes data operations which takes longer with growing data
+	for tries := 0; true; tries++ {
 		start := time.Now()
 		Session, err = cluster.CreateSession()
 		Logger.Info("time to creation cassandra session", zap.Any("duration", time.Since(start)))
