@@ -71,8 +71,32 @@ $ ../bin/start.sharder.sh
 ```
 Wait till the cassandra is started and the sharder is ready to listen to requests.
 
+
+## Setting up Cassandra Schema
+
+Start the sharder service that also brings up the cassandra service. To run commands on cassandra, use the following command
+
 ```
-$ ../bin/start.miner.sh 
+$ ../bin/run.sharder.sh cassandra cqlsh
+```
+
+1) To create zerochain keyspace, do the following
+
+```
+$ ../bin/run.sharder.sh cassandra cqlsh -f /0chain/sql/zerochain_keyspace.sql
+```
+
+2) To create the tables, do the following
+
+```
+$ ../bin/run.sharder.sh cassandra cqlsh -k zerochain -f /0chain/sql/block_summary.sql
+$ ../bin/run.sharder.sh cassandra cqlsh -k zerochain -f /0chain/sql/txn_summary.sql
+```
+
+3) When you want to truncate existing data (use caution), do the following
+
+```
+$ ../bin/run.sharder.sh cassandra cqlsh -k zerochain -f /0chain/sql/truncate_tables.sql
 ```
 
 ## Generating Test Transactions
