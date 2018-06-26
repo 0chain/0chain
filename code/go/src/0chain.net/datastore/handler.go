@@ -24,6 +24,9 @@ type JSONEntityReqResponderF func(ctx context.Context, entity Entity) (interface
  */
 func ToJSONEntityReqResponse(handler JSONEntityReqResponderF, entityMetadata EntityMetadata) common.ReqRespHandlerf {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if !common.CheckCrossOrigin(w, r) {
+			return
+		}
 		contentType := r.Header.Get("Content-type")
 		if !strings.HasPrefix(contentType, "application/json") {
 			http.Error(w, "Header Content-type=application/json not found", 400)

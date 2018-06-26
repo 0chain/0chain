@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 )
 
@@ -46,6 +47,35 @@ func getContext(r *http.Request) (context.Context, error) {
 	return ctx, nil
 }
 
+var domainRE = regexp.MustCompile(`https?://([^:]+)(:[0-9]+)?$`)
+
+func getHost(origin string) string {
+	return domainRE.FindStringSubmatch(origin)[0]
+}
+
+func validOrigin(origin string) bool {
+	host := getHost(origin)
+	if host == "localhost" {
+		return true
+	}
+	if host == "0chain.net" || strings.HasSuffix(host, ".0chain.net") {
+		return true
+	}
+	return false
+}
+
+func CheckCrossOrigin(w http.ResponseWriter, r *http.Request) bool {
+	origin := r.Header.Get("HTTP_ORIGIN")
+	if origin == "" {
+		return true
+	}
+	if validOrigin(origin) {
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+		return true
+	}
+	return false
+}
+
 /*ToJSONResponse - An adapter that takes a handler of the form
 * func AHandler(r *http.Request) (interface{}, error)
 * which takes a request object, processes and returns an object or an error
@@ -53,6 +83,9 @@ func getContext(r *http.Request) (context.Context, error) {
  */
 func ToJSONResponse(handler JSONResponderF) ReqRespHandlerf {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if !CheckCrossOrigin(w, r) {
+			return
+		}
 		ctx := r.Context()
 		data, err := handler(ctx, r)
 		Respond(w, data, err)
@@ -66,6 +99,9 @@ func ToJSONResponse(handler JSONResponderF) ReqRespHandlerf {
  */
 func ToJSONReqResponse(handler JSONReqResponderF) ReqRespHandlerf {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if !CheckCrossOrigin(w, r) {
+			return
+		}
 		contentType := r.Header.Get("Content-type")
 		if !strings.HasPrefix(contentType, "application/json") {
 			http.Error(w, "Header Content-type=application/json not found", 400)
