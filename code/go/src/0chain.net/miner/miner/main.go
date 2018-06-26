@@ -46,6 +46,7 @@ func initHandlers() {
 	client.SetupHandlers()
 	transaction.SetupHandlers()
 	block.SetupHandlers()
+	miner.SetupHandlers()
 }
 
 func initEntities() {

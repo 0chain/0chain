@@ -140,7 +140,6 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		Logger.Error("generate block (round mismatch)", zap.Any("round", r.Number), zap.Any("current_round", mc.CurrentRound))
 		return nil, common.NewError("round_mismatch", "Current round and block round do not match")
 	}
-	mc.AddBlock(b)
 	mc.AddToRoundVerification(ctx, r, b)
 	mc.SendBlock(ctx, b)
 	return b, nil
@@ -299,6 +298,7 @@ func (mc *Chain) startRound(r *round.Round) {
 		// Even if the context is cancelled, we want to proceed with the next round, hence start with a root context
 		Logger.Debug("starting a new round", zap.Int64("round", nr.Number))
 		go mc.startNewRound(common.GetRootContext(), nmr)
+		//TODO: Not required once VRF is in place
 		mc.Miners.SendAll(RoundStartSender(nr))
 	}
 }

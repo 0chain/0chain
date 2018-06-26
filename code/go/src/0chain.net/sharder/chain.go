@@ -12,7 +12,7 @@ import (
 
 var sharderChain = &Chain{}
 
-/*SetupSharderChain - setup the miner's chain */
+/*SetupSharderChain - setup the sharder's chain */
 func SetupSharderChain(c *chain.Chain) {
 	sharderChain.Chain = *c
 	sharderChain.Initialize()
@@ -26,7 +26,7 @@ func (sc *Chain) Initialize() {
 	sc.rounds = make(map[int64]*round.Round)
 }
 
-/*GetSharderChain - get the miner's chain */
+/*GetSharderChain - get the sharder's chain */
 func GetSharderChain() *Chain {
 	return sharderChain
 }

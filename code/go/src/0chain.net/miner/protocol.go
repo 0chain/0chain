@@ -11,13 +11,14 @@ import (
 
 /*ProtocolMessageSender - this is the interace to understand the messages the miner sends to the network */
 type ProtocolMessageSender interface {
-	//TODO: This is temporary till the RVF protocol is finalized
+	//TODO: This is temporary till the VRF protocol is finalized
 	SendRoundStart(ctx context.Context, r *round.Round)
 
 	SendBlock(ctx context.Context, b *block.Block)
 	SendVerificationTicket(ctx context.Context, b *block.Block, bvt *block.BlockVerificationTicket)
 	SendNotarization(ctx context.Context, notarization *Notarization)
 
+	//TODO: This may be removed if the sharder receives all the notarized blocks
 	SendFinalizedBlock(ctx context.Context, b *block.Block)
 }
 

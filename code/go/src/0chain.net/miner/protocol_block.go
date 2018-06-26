@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"0chain.net/config"
+	metrics "github.com/rcrowley/go-metrics"
 
 	"0chain.net/chain"
 
@@ -22,6 +23,14 @@ import (
 
 const InsufficientTxns = "insufficient_txns"
 const RoundMismatch = "round_mismatch"
+
+var bgTimer metrics.Timer
+var bvTimer metrics.Timer
+
+func init() {
+	bgTimer = metrics.GetOrRegisterTimer("bg_time", nil)
+	bvTimer = metrics.GetOrRegisterTimer("bv_time", nil)
+}
 
 /*StartRound - start a new round */
 func (mc *Chain) StartRound(ctx context.Context, r *Round) {
@@ -123,6 +132,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		txn.PublicKey = client.PublicKey
 		txn.ClientID = datastore.EmptyKey
 	}
+	bgTimer.UpdateSince(start)
 	Logger.Debug("generate block (assemble+update)", zap.Int64("round", b.Round), zap.Duration("time", time.Since(start)))
 
 	self := node.GetSelfNode(ctx)
@@ -161,6 +171,7 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockV
 	if err != nil {
 		return nil, err
 	}
+	bvTimer.UpdateSince(start)
 	Logger.Debug("block verification time", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("num_txns", len(b.Txns)), zap.Any("duration", time.Since(start)))
 	return bvt, nil
 }
