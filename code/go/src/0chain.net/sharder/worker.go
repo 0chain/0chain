@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"0chain.net/common"
+	"0chain.net/config"
 	"0chain.net/datastore"
 	. "0chain.net/logging"
 	"0chain.net/round"
@@ -19,7 +20,9 @@ func SetupWorkers() {
 	ClearWorkerState()
 	ctx := common.GetRootContext()
 	go GetSharderChain().BlockWorker(ctx)
-	go metrics.LogScaled(metrics.DefaultRegistry, 60*time.Second, time.Millisecond, log.New(os.Stderr, "metrics: ", log.Lmicroseconds))
+	if config.Development() {
+		go metrics.LogScaled(metrics.DefaultRegistry, 60*time.Second, time.Millisecond, log.New(os.Stderr, "metrics: ", log.Lmicroseconds))
+	}
 }
 
 var timer metrics.Timer

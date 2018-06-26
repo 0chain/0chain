@@ -333,7 +333,6 @@ func (b *Block) GetSummary() *BlockSummary {
 	bs := datastore.GetEntityMetadata("block_summary").Instance().(*BlockSummary)
 	bs.Version = b.Version
 	bs.Hash = b.Hash
-	bs.PrevHash = b.PrevHash
 	bs.Round = b.Round
 	bs.RoundRandomSeed = b.RoundRandomSeed
 	bs.CreationDate = b.CreationDate

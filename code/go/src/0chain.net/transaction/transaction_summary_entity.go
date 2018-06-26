@@ -11,7 +11,7 @@ type TransactionSummary struct {
 	datastore.CreationDateField
 	datastore.NOIDField
 	Hash       string        `json:"hash"`
-	Block      string        `json:"block_hash"`
+	BlockHash  string        `json:"block_hash"`
 	ClientID   datastore.Key `json:"client_id"`
 	ToClientID datastore.Key `json:"to_client_id"`
 }

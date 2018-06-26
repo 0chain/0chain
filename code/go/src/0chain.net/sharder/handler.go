@@ -32,18 +32,7 @@ func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	var err error
 	var b *block.Block
 	if hash == "" {
-		if round != "" {
-			roundNumber, err = strconv.ParseInt(round, 10, 63)
-			if err != nil {
-				return nil, err
-			}
-			// TODO: Get the hash from the round
-		} else {
-			b = chain.GetServerChain().LatestFinalizedBlock
-			if b != nil {
-				return chain.GetBlockResponse(b, parts)
-			}
-		}
+		return nil, common.InvalidRequest("Block hash is required")
 	}
 	b, err = chain.GetServerChain().GetBlock(ctx, hash)
 	if err == nil {

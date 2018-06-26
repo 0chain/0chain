@@ -179,12 +179,6 @@ func (c *Chain) GetBlock(ctx context.Context, hash string) (*block.Block, error)
 	if ok {
 		return b, nil
 	}
-	/*
-		b = block.Provider().(*block.Block)
-		err := b.Read(ctx, datastore.ToKey(hash))
-		if err != nil {
-			return b, nil
-		}*/
 	return nil, common.NewError(datastore.EntityNotFound, fmt.Sprintf("Block with hash (%v) not found", hash))
 }
 

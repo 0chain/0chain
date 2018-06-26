@@ -12,6 +12,7 @@ import (
 	"0chain.net/datastore"
 	"0chain.net/logging"
 	. "0chain.net/logging"
+	"0chain.net/persistencestore"
 	"go.uber.org/zap"
 )
 
@@ -39,7 +40,7 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 }
 
 /*StoreBlock - store the block to persistence storage */
-func (sc *Chain) StoreBlock(ctx context.Context, b *block.Block) error {
+func (sc *Chain) StoreBlock(ctx context.Context, b *block.Block) {
 	ts := time.Now()
 	err := blockstore.GetStore().Write(b)
 	if err != nil {
@@ -47,19 +48,19 @@ func (sc *Chain) StoreBlock(ctx context.Context, b *block.Block) error {
 	} else {
 		Logger.Info("saved block", zap.Any("round", b.Round), zap.Any("hash", b.Hash), zap.Any("prev_hash", b.PrevHash), zap.Duration("duration", time.Since(ts)))
 	}
-
-	// TODO: Store the block summary and transaction summary information
-	bs := datastore.GetEntityMetadata("block_summary").Instance().(*block.BlockSummary)
-	bs.Hash = b.Hash
-	bs.RoundRandomSeed = b.RoundRandomSeed
-	bs.PrevHash = b.PrevHash
-	bs.Round = b.Round
-	/*
-		ctx = persistencestore.WithEntityConnection(ctx, bs.GetEntityMetadata())
-		store := persistencestore.GetStorageProvider()
-			err = store.Write(ctx, bs)
-			if err != nil {
-				Logger.Error("db save error", zap.Error(err))
-			}*/
-	return err
+	bs := b.GetSummary()
+	ctx = persistencestore.WithEntityConnection(ctx, bs.GetEntityMetadata())
+	store := persistencestore.GetStorageProvider()
+	err = store.Write(ctx, bs)
+	if err != nil {
+		Logger.Error("db error (save block)", zap.String("block", b.Hash), zap.Error(err))
+	}
+	for _, txn := range b.Txns {
+		txnSummary := txn.GetSummary()
+		txnSummary.BlockHash = b.Hash
+		err := store.Write(ctx, txnSummary)
+		if err != nil {
+			Logger.Error("db error (save transaction)", zap.String("block", b.Hash), zap.String("txn", txnSummary.Hash), zap.Error(err))
+		}
+	}
 }
