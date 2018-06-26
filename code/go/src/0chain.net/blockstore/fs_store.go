@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	"0chain.net/block"
+	"0chain.net/common"
 	"0chain.net/datastore"
 )
 
@@ -60,8 +61,17 @@ func (fbs *FSBlockStore) Write(b *block.Block) error {
 	return nil
 }
 
+/*ReadWithBlockSummary - read the block given the block summary */
+func (fbs *FSBlockStore) ReadWithBlockSummary(bs *block.BlockSummary) (*block.Block, error) {
+	return fbs.read(bs.Hash, bs.Round)
+}
+
 /*Read - read the block from the file system */
-func (fbs *FSBlockStore) Read(hash string, round int64) (*block.Block, error) {
+func (fbs *FSBlockStore) Read(hash string) (*block.Block, error) {
+	return nil, common.NewError("interface_not_implemented", "FSBlockStore cannot provide this interface")
+}
+
+func (fbs *FSBlockStore) read(hash string, round int64) (*block.Block, error) {
 	fileName := fbs.getFileName(hash, round)
 	f, err := os.Open(fileName)
 	if err != nil {

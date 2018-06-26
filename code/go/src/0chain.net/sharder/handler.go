@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"0chain.net/block"
+	"0chain.net/blockstore"
 	"0chain.net/chain"
 	"0chain.net/common"
 	"0chain.net/diagnostics"
@@ -19,16 +19,14 @@ func SetupHandlers() {
 	http.HandleFunc("/_block_stats", BlockStatsHandler)
 }
 
-//BlockHandler - a handler to respond to block queries */
+/*BlockHandler - a handler to respond to block queries */
 func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	hash := r.FormValue("block")
-	round := r.FormValue("round")
 	content := r.FormValue("content")
 	if content == "" {
 		content = "header"
 	}
 	parts := strings.Split(content, ",")
-	var roundNumber int64 = -1
 	var err error
 	var b *block.Block
 	if hash == "" {
@@ -39,19 +37,15 @@ func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 		return chain.GetBlockResponse(b, parts)
 	}
 	sc := GetSharderChain()
-	if roundNumber == -1 {
-		if round != "" {
-			roundNumber, err = strconv.ParseInt(round, 10, 63)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			// TODO: Get the round from the hash
+	/*NOTE: We store DIR_ROUND_RANGE number of blocks in the same directory and that's a large number (10M).
+	So, as long as people query the last 10M blocks most of the time, we only end up with 1 or 2 iterations.
+	Anything older than that, there is a cost to query the database and get the round informatio anyway.
+	*/
+	for r := sc.LatestFinalizedBlock.Round; r > 0; r -= blockstore.DIR_ROUND_RANGE {
+		b, err = sc.GetBlockFromStore(hash, r)
+		if err != nil {
+			return nil, err
 		}
-	}
-	b, err = sc.GetBlockFromStore(hash, roundNumber)
-	if err != nil {
-		return nil, err
 	}
 	return chain.GetBlockResponse(b, parts)
 }
