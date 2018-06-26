@@ -55,12 +55,15 @@ func (sc *Chain) StoreBlock(ctx context.Context, b *block.Block) {
 	if err != nil {
 		Logger.Error("db error (save block)", zap.String("block", b.Hash), zap.Error(err))
 	}
-	for _, txn := range b.Txns {
+	var sTxns = make([]datastore.Entity, len(b.Txns))
+	for idx, txn := range b.Txns {
 		txnSummary := txn.GetSummary()
 		txnSummary.BlockHash = b.Hash
-		err := store.Write(ctx, txnSummary)
-		if err != nil {
-			Logger.Error("db error (save transaction)", zap.String("block", b.Hash), zap.String("txn", txnSummary.Hash), zap.Error(err))
-		}
+		sTxns[idx] = txnSummary
+	}
+	txnSummaryMetdata := datastore.GetEntityMetadata("txn_summary")
+	err = store.MultiWrite(ctx, txnSummaryMetdata, sTxns)
+	if err != nil {
+		Logger.Error("db error (save transaction)", zap.String("block", b.Hash), zap.Error(err))
 	}
 }
