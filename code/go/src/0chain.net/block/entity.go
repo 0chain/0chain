@@ -274,60 +274,6 @@ func (b *Block) ChainHasTransaction(txn *transaction.Transaction) (bool, error) 
 	return false, common.NewError("insufficient_chain", "Chain length not sufficient to confirm the presence of this transaction")
 }
 
-/*ValidateTransactions - validate the transactions in the block */
-func (b *Block) ValidateTransactions(ctx context.Context) error {
-	validate := func(ctx context.Context, txns []*transaction.Transaction, cancel *bool, validChannel chan<- bool) {
-		for _, txn := range txns {
-			err := txn.Validate(ctx)
-			if err != nil {
-				*cancel = true
-				Logger.Error("validate transactions", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Error(err))
-				validChannel <- false
-			}
-			ok, err := b.PrevBlock.ChainHasTransaction(txn)
-			if ok || err != nil {
-				if err != nil {
-					Logger.Error("validate transactions", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Error(err))
-				}
-				*cancel = true
-				validChannel <- false
-				return
-			}
-			if *cancel {
-				return
-			}
-		}
-		validChannel <- true
-	}
-
-	size := 2000
-	numWorkers := len(b.Txns) / size
-	if numWorkers*size < len(b.Txns) {
-		numWorkers++
-	}
-	validChannel := make(chan bool, len(b.Txns)/size+1)
-	var cancel bool
-	for start := 0; start < len(b.Txns); start += size {
-		end := start + size
-		if end > len(b.Txns) {
-			end = len(b.Txns)
-		}
-		go validate(ctx, b.Txns[start:end], &cancel, validChannel)
-	}
-	count := 0
-	for result := range validChannel {
-		if !result {
-			//Logger.Debug("validate transactions failure", zap.String("block", datastore.ToJSON(b).String()))
-			return common.NewError("txn_validation_failed", "Transaction validation failed")
-		}
-		count++
-		if count == numWorkers {
-			break
-		}
-	}
-	return nil
-}
-
 /*GetSummary - get the block summary of this block */
 func (b *Block) GetSummary() *BlockSummary {
 	bs := datastore.GetEntityMetadata("block_summary").Instance().(*BlockSummary)

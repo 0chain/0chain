@@ -163,7 +163,7 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockV
 	if err != nil {
 		return nil, err
 	}
-	err = b.ValidateTransactions(ctx)
+	err = mc.ValidateTransactions(ctx, b)
 	if err != nil {
 		return nil, err
 	}
@@ -174,6 +174,68 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockV
 	bvTimer.UpdateSince(start)
 	Logger.Debug("block verification time", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("num_txns", len(b.Txns)), zap.Any("duration", time.Since(start)))
 	return bvt, nil
+}
+
+/*ValidateTransactions - validate the transactions in the block */
+func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error {
+	var cancel bool
+	size := 2000
+	numWorkers := len(b.Txns) / size
+	if numWorkers*size < len(b.Txns) {
+		numWorkers++
+	}
+	validChannel := make(chan bool, len(b.Txns)/size+1)
+	validate := func(ctx context.Context, txns []*transaction.Transaction) {
+		for _, txn := range txns {
+			if cancel {
+				Logger.Debug("validate transactions (cancelled)", zap.Any("round", b.Round), zap.Any("block", b.Hash))
+				validChannel <- false
+				return
+			}
+			if mc.CurrentRound > b.Round {
+				cancel = true
+				validChannel <- false
+				Logger.Debug("validate transactions (round mismatch)", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("current_round", mc.CurrentRound))
+				return
+			}
+			err := txn.Validate(ctx)
+			if err != nil {
+				cancel = true
+				Logger.Error("validate transactions", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Error(err))
+				validChannel <- false
+				return
+			}
+			ok, err := b.PrevBlock.ChainHasTransaction(txn)
+			if ok || err != nil {
+				if err != nil {
+					Logger.Error("validate transactions", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Error(err))
+				}
+				cancel = true
+				validChannel <- false
+				return
+			}
+		}
+		validChannel <- true
+	}
+	for start := 0; start < len(b.Txns); start += size {
+		end := start + size
+		if end > len(b.Txns) {
+			end = len(b.Txns)
+		}
+		go validate(ctx, b.Txns[start:end])
+	}
+	count := 0
+	for result := range validChannel {
+		if !result {
+			//Logger.Debug("validate transactions failure", zap.String("block", datastore.ToJSON(b).String()))
+			return common.NewError("txn_validation_failed", "Transaction validation failed")
+		}
+		count++
+		if count == numWorkers {
+			break
+		}
+	}
+	return nil
 }
 
 /*SignBlock - sign the block and provide the verification ticket */
