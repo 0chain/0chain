@@ -9,9 +9,9 @@ import (
 )
 
 /*WriteStatistics - write the statistics of the given timer */
-func WriteStatistics(w http.ResponseWriter, c *chain.Chain, timer metrics.Timer) {
+func WriteStatistics(w http.ResponseWriter, c *chain.Chain, timer metrics.Timer, scaleBy float64) {
 	scale := func(n float64) float64 {
-		return (n / 1000000.0)
+		return (n / scaleBy)
 	}
 	percentiles := []float64{0.5, 0.9, 0.95, 0.99, 0.999}
 	pvals := timer.Percentiles(percentiles)

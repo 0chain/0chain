@@ -2,6 +2,7 @@ package sharder
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -57,6 +58,8 @@ func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 
 /*BlockStatsHandler - a handler to provide block statistics */
 func BlockStatsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
 	c := &GetSharderChain().Chain
-	diagnostics.WriteStatistics(w, c, timer)
+	fmt.Fprintf(w, "<h2>Block Finalization Statistics</h2>")
+	diagnostics.WriteStatistics(w, c, timer, 1000000.0)
 }

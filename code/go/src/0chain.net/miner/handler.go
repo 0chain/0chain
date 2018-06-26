@@ -14,9 +14,10 @@ func SetupHandlers() {
 
 /*BlockStatsHandler - a handler to provide block statistics */
 func BlockStatsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
 	c := &GetMinerChain().Chain
 	fmt.Fprintf(w, "<h2>Block Generation Statistics</h2>")
-	diagnostics.WriteStatistics(w, c, bgTimer)
+	diagnostics.WriteStatistics(w, c, bgTimer, 1000000.0)
 	fmt.Fprintf(w, "<h2>Block Verification Statistics</h2>")
-	diagnostics.WriteStatistics(w, c, bvTimer)
+	diagnostics.WriteStatistics(w, c, bvTimer, 1000000.0)
 }
