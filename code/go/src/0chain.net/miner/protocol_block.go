@@ -178,6 +178,7 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockV
 
 /*ValidateTransactions - validate the transactions in the block */
 func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error {
+	var roundMismatch bool
 	var cancel bool
 	size := 2000
 	numWorkers := len(b.Txns) / size
@@ -188,14 +189,13 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 	validate := func(ctx context.Context, txns []*transaction.Transaction) {
 		for _, txn := range txns {
 			if cancel {
-				Logger.Debug("validate transactions (cancelled)", zap.Any("round", b.Round), zap.Any("block", b.Hash))
 				validChannel <- false
 				return
 			}
 			if mc.CurrentRound > b.Round {
 				cancel = true
+				roundMismatch = true
 				validChannel <- false
-				Logger.Debug("validate transactions (round mismatch)", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("current_round", mc.CurrentRound))
 				return
 			}
 			err := txn.Validate(ctx)
@@ -226,6 +226,10 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 	}
 	count := 0
 	for result := range validChannel {
+		if roundMismatch {
+			Logger.Info("validate transactions (round mismatch)", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("current_round", mc.CurrentRound))
+			return common.NewError(RoundMismatch, "current round different from generation round")
+		}
 		if !result {
 			//Logger.Debug("validate transactions failure", zap.String("block", datastore.ToJSON(b).String()))
 			return common.NewError("txn_validation_failed", "Transaction validation failed")
