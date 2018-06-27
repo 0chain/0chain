@@ -8,6 +8,33 @@ import (
 	metrics "github.com/rcrowley/go-metrics"
 )
 
+/*GetStatistics - write the statistics of the given timer */
+func GetStatistics(c *chain.Chain, timer metrics.Timer, scaleBy float64) interface{} {
+	scale := func(n float64) float64 {
+		return (n / scaleBy)
+	}
+	percentiles := []float64{0.5, 0.9, 0.95, 0.99, 0.999}
+	pvals := timer.Percentiles(percentiles)
+	stats := make(map[string]interface{})
+	stats["delta"] = chain.DELTA
+	stats["block_size"] = c.BlockSize
+	stats["current_round"] = c.CurrentRound
+	stats["count"] = timer.Count()
+	stats["min"] = scale(float64(timer.Min()))
+	stats["mean"] = scale(timer.Mean())
+	stats["std_dev"] = scale(timer.StdDev())
+	stats["max"] = scale(float64(timer.Max()))
+
+	for idx, p := range percentiles {
+		stats[fmt.Sprintf("%v", 100*p)] = scale(pvals[idx])
+	}
+	stats["rate_1_min"] = timer.Rate1()
+	stats["rate_5_min"] = timer.Rate5()
+	stats["rate_15_min"] = timer.Rate15()
+	stats["rate_mean"] = timer.RateMean()
+	return stats
+}
+
 /*WriteStatistics - write the statistics of the given timer */
 func WriteStatistics(w http.ResponseWriter, c *chain.Chain, timer metrics.Timer, scaleBy float64) {
 	scale := func(n float64) float64 {

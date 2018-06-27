@@ -52,8 +52,13 @@ func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 
 /*BlockStatsHandler - a handler to provide block statistics */
 func BlockStatsHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/html")
 	c := &GetSharderChain().Chain
-	fmt.Fprintf(w, "<h2>Block Finalization Statistics</h2>")
-	diagnostics.WriteStatistics(w, c, timer, 1000000.0)
+	if r.FormValue("type") == "json" {
+		w.Header().Set("Content-Type", "text/json")
+		common.Respond(w, diagnostics.GetStatistics(c, timer, 1000000.0), nil)
+	} else {
+		w.Header().Set("Content-Type", "text/html")
+		fmt.Fprintf(w, "<h2>Block Finalization Statistics</h2>")
+		diagnostics.WriteStatistics(w, c, timer, 1000000.0)
+	}
 }
