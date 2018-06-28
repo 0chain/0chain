@@ -24,7 +24,7 @@ func TransactionGenerator(blockSize int32) {
 	ctx := datastore.WithAsyncChannel(common.GetRootContext(), transaction.TransactionEntityChannel)
 	txnMetadataProvider := datastore.GetEntityMetadata("txn")
 	ctx = memorystore.WithEntityConnection(ctx, txnMetadataProvider)
-	GenerateClients(1000)
+	GenerateClients(1024)
 	csize := len(wallets)
 	numTxns := blockSize
 	P := time.Duration(1 + blockSize/1000)
@@ -34,7 +34,22 @@ func TransactionGenerator(blockSize int32) {
 	txn.ChainID = miner.GetMinerChain().ID
 	collectionName := txn.GetCollectionName()
 	txnChannel := make(chan bool, blockSize)
-	for i := 0; i < int(blockSize/10); i++ {
+	numWorkers := 1
+	switch {
+	case blockSize <= 10:
+		numWorkers = 1
+	case blockSize <= 100:
+		numWorkers = 5
+	case blockSize <= 1000:
+		numWorkers = 10
+	case blockSize <= 10000:
+		numWorkers = 25
+	case blockSize <= 100000:
+		numWorkers = 50
+	default:
+		numWorkers = 100
+	}
+	for i := 0; i < numWorkers; i++ {
 		go func() {
 			rs := rand.NewSource(time.Now().UnixNano())
 			prng := rand.New(rs)
