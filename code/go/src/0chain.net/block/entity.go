@@ -289,10 +289,8 @@ func (b *Block) GetSummary() *BlockSummary {
 /*Weight - weight of the block */
 func (b *Block) Weight() float64 {
 	var w = 1.0
-	var cw = 1.0
-	for i := 1; i < b.RoundRank; i++ {
-		cw /= 2
-		w += cw
+	for i := 0; i < b.RoundRank; i++ {
+		w /= 2
 	}
 	return w
 }
