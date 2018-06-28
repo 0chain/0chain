@@ -9,7 +9,6 @@ import (
 	"0chain.net/common"
 	"0chain.net/datastore"
 	"0chain.net/memorystore"
-	"0chain.net/node"
 	"0chain.net/round"
 )
 
@@ -129,20 +128,6 @@ func (mc *Chain) CancelRoundsBelow(ctx context.Context, round int64) {
 			r.CancelVerification()
 		}
 	}
-}
-
-/*CanGenerateRound - checks if the miner can generate a block in the given round */
-func (mc *Chain) CanGenerateRound(r *round.Round, miner *node.Node) bool {
-	return 2*r.GetRank(miner.SetIndex) <= mc.Miners.Size()
-}
-
-/*ValidGenerator - check whether this block is from a valid generator */
-func (mc *Chain) ValidGenerator(r *round.Round, b *block.Block) bool {
-	miner := mc.Miners.GetNode(b.MinerID)
-	if miner == nil {
-		return false
-	}
-	return mc.CanGenerateRound(r, miner)
 }
 
 func (mc *Chain) deleteTxns(txns []datastore.Entity) error {

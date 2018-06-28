@@ -41,8 +41,9 @@ type Chain struct {
 	ClientID      datastore.Key `json:"client_id"`                 // Client who created this chain
 	ParentChainID datastore.Key `json:"parent_chain_id,omitempty"` // Chain from which this chain is forked off
 
-	Decimals  int8  `json:"decimals"`   // Number of decimals allowed for the token on this chain
-	BlockSize int32 `json:"block_size"` // Number of transactions in a block
+	Decimals      int8  `json:"decimals"`       // Number of decimals allowed for the token on this chain
+	BlockSize     int32 `json:"block_size"`     // Number of transactions in a block
+	NumGenerators int   `json:"num_generators"` // Number of block generators
 
 	/*Miners - this is the pool of miners */
 	Miners *node.Pool `json:"-"`
@@ -238,4 +239,18 @@ func (c *Chain) DeleteBlocks(blocks []*block.Block) {
 func (c *Chain) ValidateMagicBlock(ctx context.Context, b *block.Block) bool {
 	//TODO: This needs to take the round number into account and go backwards as needed to validate
 	return b.MagicBlockHash == c.CurrentMagicBlock.Hash
+}
+
+/*CanGenerateRound - checks if the miner can generate a block in the given round */
+func (c *Chain) CanGenerateRound(r *round.Round, miner *node.Node) bool {
+	return r.GetRank(miner.SetIndex)+1 <= c.NumGenerators
+}
+
+/*ValidGenerator - check whether this block is from a valid generator */
+func (c *Chain) ValidGenerator(r *round.Round, b *block.Block) bool {
+	miner := c.Miners.GetNode(b.MinerID)
+	if miner == nil {
+		return false
+	}
+	return c.CanGenerateRound(r, miner)
 }

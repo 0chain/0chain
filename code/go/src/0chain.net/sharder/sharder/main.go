@@ -108,6 +108,7 @@ func main() {
 	serverChain.ID = datastore.ToKey(config.Configuration.ChainID)
 	serverChain.Decimals = int8(viper.GetInt("server_chain.decimals"))
 	serverChain.BlockSize = viper.GetInt32("server_chain.block.size")
+	serverChain.NumGenerators = viper.GetInt("server_chain.block.generators")
 	chain.SetNetworkRelayTime(viper.GetDuration("server_chain.network.relay_time") * time.Millisecond)
 
 	if *nodesFile == "" {
