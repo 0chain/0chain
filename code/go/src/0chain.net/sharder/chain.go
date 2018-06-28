@@ -58,7 +58,12 @@ func (sc *Chain) SetupGenesisBlock(hash string) *block.Block {
 /*GetBlockFromStore - get the block from the store */
 func (sc *Chain) GetBlockFromStore(blockHash string, round int64) (*block.Block, error) {
 	bs := block.BlockSummary{Hash: blockHash, Round: round}
-	return blockstore.GetStore().ReadWithBlockSummary(&bs)
+	return sc.GetBlockFromStoreBySummary(&bs)
+}
+
+/*GetBlockFromStoreBySummary - get the block from the store */
+func (sc *Chain) GetBlockFromStoreBySummary(bs *block.BlockSummary) (*block.Block, error) {
+	return blockstore.GetStore().ReadWithBlockSummary(bs)
 }
 
 /*AddRound - Add Round to the block */

@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"0chain.net/block"
-	"0chain.net/chain"
 	"0chain.net/transaction"
 
 	"0chain.net/datastore"
@@ -48,10 +47,9 @@ func GetTransactionConfirmation(ctx context.Context, hash string) (*transaction.
 	confirmation.Round = bs.Round
 	confirmation.RoundRandomSeed = bs.RoundRandomSeed
 	confirmation.CreationDate = bs.CreationDate
-	b, err := chain.GetServerChain().GetBlock(ctx, bs.Hash)
+	b, err := GetSharderChain().GetBlockBySummary(ctx, bs)
 	if err != nil {
-		//We are able to send partial information
-		return confirmation, err
+		return nil, err
 	}
 	mt := b.GetMerkleTree()
 	confirmation.MerkleTreeRoot = mt.GetRoot()
