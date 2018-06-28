@@ -83,17 +83,20 @@ func (b *Block) Validate(ctx context.Context) error {
 	if b.Hash == "" {
 		return common.InvalidRequest("hash required for block")
 	}
-
 	if datastore.IsEmpty(b.MinerID) {
 		return common.InvalidRequest("miner id is required")
-	}
-	hash := b.ComputeHash()
-	if b.Hash != hash {
-		return common.NewError("incorrect_block_hash", fmt.Sprintf("computed block hash doesn't match with the hash of the block: %v: %v: %v", b.Hash, hash, b.getHashData()))
 	}
 	miner := node.GetNode(b.MinerID)
 	if miner == nil {
 		return common.NewError("unknown_miner", "Do not know this miner")
+	}
+	if b.ChainWeight > float64(b.Round) {
+		return common.NewError("chain_weight_gt_round", "Chain weight can't be greater than the block round")
+	}
+
+	hash := b.ComputeHash()
+	if b.Hash != hash {
+		return common.NewError("incorrect_block_hash", fmt.Sprintf("computed block hash doesn't match with the hash of the block: %v: %v: %v", b.Hash, hash, b.getHashData()))
 	}
 	var ok bool
 	ok, err = miner.Verify(b.Signature, b.Hash)

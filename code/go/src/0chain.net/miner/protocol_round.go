@@ -166,7 +166,16 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 		}
 		mc.AddBlock(b)
 		b.RoundRank = mr.GetRank(bNode.SetIndex)
-		b.ComputeChainWeight()
+		if b.PrevBlock != nil {
+			b.ComputeChainWeight()
+		} else {
+			// We can establish an upper bound for chain weight at the current round, subtract 1 and add block's own weight and check if that's less than the chain weight sent
+			chainWeightUpperBound := mc.LatestFinalizedBlock.ChainWeight + float64(b.Round-mc.LatestFinalizedBlock.Round)
+			if b.ChainWeight > chainWeightUpperBound-1+b.Weight() {
+				Logger.Info("add to verification (wrong chain weight)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Float64("chain_weight", b.ChainWeight))
+				return
+			}
+		}
 	}
 	Logger.Info("adding block to verify", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Float64("weight", b.Weight()), zap.Float64("chain_weight", b.ChainWeight))
 	vctx := mr.StartVerificationBlockCollection(ctx)
