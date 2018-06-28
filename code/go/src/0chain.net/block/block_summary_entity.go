@@ -1,6 +1,8 @@
 package block
 
 import (
+	"context"
+
 	"0chain.net/common"
 	"0chain.net/datastore"
 )
@@ -39,6 +41,21 @@ func (b *BlockSummary) GetKey() datastore.Key {
 /*SetKey - implement interface */
 func (b *BlockSummary) SetKey(key datastore.Key) {
 	b.Hash = datastore.ToString(key)
+}
+
+/*Read - store read */
+func (b *BlockSummary) Read(ctx context.Context, key datastore.Key) error {
+	return b.GetEntityMetadata().GetStore().Read(ctx, key, b)
+}
+
+/*Write - store read */
+func (b *BlockSummary) Write(ctx context.Context) error {
+	return b.GetEntityMetadata().GetStore().Write(ctx, b)
+}
+
+/*Delete - store read */
+func (b *BlockSummary) Delete(ctx context.Context) error {
+	return b.GetEntityMetadata().GetStore().Delete(ctx, b)
 }
 
 /*SetupBlockSummaryEntity - setup the block summary entity */

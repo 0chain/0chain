@@ -50,8 +50,7 @@ func (sc *Chain) StoreBlock(ctx context.Context, b *block.Block) {
 	}
 	bs := b.GetSummary()
 	ctx = persistencestore.WithEntityConnection(ctx, bs.GetEntityMetadata())
-	store := persistencestore.GetStorageProvider()
-	err = store.Write(ctx, bs)
+	err = bs.Write(ctx)
 	if err != nil {
 		Logger.Error("db error (save block)", zap.String("block", b.Hash), zap.Error(err))
 	}
@@ -61,8 +60,8 @@ func (sc *Chain) StoreBlock(ctx context.Context, b *block.Block) {
 		txnSummary.BlockHash = b.Hash
 		sTxns[idx] = txnSummary
 	}
-	txnSummaryMetdata := datastore.GetEntityMetadata("txn_summary")
-	err = store.MultiWrite(ctx, txnSummaryMetdata, sTxns)
+	txnSummaryMetadata := datastore.GetEntityMetadata("txn_summary")
+	err = txnSummaryMetadata.GetStore().MultiWrite(ctx, txnSummaryMetadata, sTxns)
 	if err != nil {
 		Logger.Error("db error (save transaction)", zap.String("block", b.Hash), zap.Error(err))
 	}
