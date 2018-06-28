@@ -134,9 +134,9 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 			Logger.Error("generate block", zap.Error(err))
 			return nil, err
 		}
+		mc.AddBlock(b)
 		b.RoundRank = r.GetRank(node.GetSelfNode(ctx).SetIndex)
 		b.ComputeChainWeight()
-		mc.AddBlock(b)
 		break
 	}
 	if mc.CurrentRound > b.Round {
@@ -151,22 +151,24 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 /*AddToRoundVerification - Add a block to verify : WARNING: does not support concurrent access for a given round */
 func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block.Block) {
 	if mr.IsFinalizing() || mr.IsFinalized() {
-		Logger.Debug("add to verification", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("finalizing", mr.IsFinalizing()), zap.Any("finalized", mr.IsFinalized()))
+		Logger.Debug("add to verification", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Bool("finalizing", mr.IsFinalizing()), zap.Bool("finalized", mr.IsFinalized()))
 		return
 	}
 	if !mc.ValidateMagicBlock(ctx, b) {
-		Logger.Error("invalid magic block", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("magic_block", b.MagicBlockHash))
+		Logger.Error("invalid magic block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("magic_block", b.MagicBlockHash))
 		return
 	}
 	if b.MinerID != node.GetSelfNode(ctx).GetKey() {
 		bNode := node.GetNode(b.MinerID)
 		if bNode == nil {
+			Logger.Error("add to round verification (invalid miner)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("miner_id", b.MinerID))
 			return
 		}
+		mc.AddBlock(b)
 		b.RoundRank = mr.GetRank(bNode.SetIndex)
 		b.ComputeChainWeight()
-		mc.AddBlock(b)
 	}
+	Logger.Info("adding block to verify", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Float64("weight", b.Weight()), zap.Float64("chain_weight", b.ChainWeight))
 	vctx := mr.StartVerificationBlockCollection(ctx)
 	if vctx != nil {
 		go mc.CollectBlocksForVerification(vctx, mr)
