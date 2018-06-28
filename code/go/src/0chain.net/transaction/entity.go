@@ -60,6 +60,10 @@ func (t *Transaction) ComputeProperties() {
 			// that won't pass verification if some other client's public is put in
 			t.ClientID = encryption.Hash(t.PublicKey)
 		}
+	} else {
+		if t.ClientID == "" {
+			Logger.Error("invalid transaction", zap.String("txn", datastore.ToJSON(t).String()))
+		}
 	}
 }
 

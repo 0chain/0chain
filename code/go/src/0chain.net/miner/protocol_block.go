@@ -125,9 +125,9 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	bsh.UpdatePendingBlock(ctx, b, etxns)
 	for _, txn := range b.Txns {
 		client := clients[txn.ClientID]
-		if client == nil {
-			Logger.Debug("generate block (invalid client id)", zap.String("client_id", txn.ClientID))
-			return common.NewError("invalid_client_id", "client id not available")
+		if client == nil || client.PublicKey == "" {
+			Logger.Error("generate block (invalid client)", zap.String("client_id", txn.ClientID))
+			return common.NewError("invalid_client", "client not available")
 		}
 		txn.PublicKey = client.PublicKey
 		txn.ClientID = datastore.EmptyKey
@@ -201,7 +201,7 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 			err := txn.Validate(ctx)
 			if err != nil {
 				cancel = true
-				Logger.Error("validate transactions", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Error(err))
+				Logger.Error("validate transactions", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.String("txn", datastore.ToJSON(txn).String()), zap.Error(err))
 				validChannel <- false
 				return
 			}
