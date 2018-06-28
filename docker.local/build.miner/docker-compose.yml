@@ -7,6 +7,8 @@ services:
       - ../miner${MINER}/data:/0chain/data
     networks:
       default:
+    sysctls:
+      net.core.somaxconn: '511'
     command: redis-server /0chain/config/redis/state.redis.conf
 
   redis_txns:
@@ -16,6 +18,8 @@ services:
       - ../miner${MINER}/data:/0chain/data
     networks:
       default:
+    sysctls:
+      net.core.somaxconn: '511'
     command: redis-server /0chain/config/redis/transactions.redis.conf
 
   miner:
