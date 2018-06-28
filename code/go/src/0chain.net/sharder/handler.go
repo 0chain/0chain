@@ -19,7 +19,7 @@ import (
 /*SetupHandlers sets up the necessary API end points */
 func SetupHandlers() {
 	http.HandleFunc("/v1/block/get", common.ToJSONResponse(BlockHandler))
-	http.HandleFunc("/v1/transaction/confirm", common.ToJSONResponse(TransactionConfirmationHandler))
+	http.HandleFunc("/v1/transaction/get/confirmation", common.ToJSONResponse(TransactionConfirmationHandler))
 	http.HandleFunc("/_block_stats", BlockStatsHandler)
 }
 
