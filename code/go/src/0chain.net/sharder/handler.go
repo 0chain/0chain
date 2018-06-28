@@ -6,6 +6,9 @@ import (
 	"net/http"
 	"strings"
 
+	"0chain.net/datastore"
+	"0chain.net/persistencestore"
+
 	"0chain.net/block"
 	"0chain.net/blockstore"
 	"0chain.net/chain"
@@ -16,6 +19,7 @@ import (
 /*SetupHandlers sets up the necessary API end points */
 func SetupHandlers() {
 	http.HandleFunc("/v1/block/get", common.ToJSONResponse(BlockHandler))
+	http.HandleFunc("/v1/transaction/confirm", common.ToJSONResponse(TransactionConfirmationHandler))
 	http.HandleFunc("/_block_stats", BlockStatsHandler)
 }
 
@@ -61,4 +65,15 @@ func BlockStatsHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "<h2>Block Finalization Statistics</h2>")
 		diagnostics.WriteStatistics(w, c, timer, 1000000.0)
 	}
+}
+
+/*TransactionConfirmationHandler - given a transaction hash, confirm it's presence in a block */
+func TransactionConfirmationHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	hash := r.FormValue("hash")
+	if hash == "" {
+		return nil, common.InvalidRequest("transaction hash (parameter hash) is required")
+	}
+	transactionConfirmationEntityMetadata := datastore.GetEntityMetadata("txn_confirmation")
+	ctx = persistencestore.WithEntityConnection(ctx, transactionConfirmationEntityMetadata)
+	return GetTransactionConfirmation(ctx, hash)
 }

@@ -63,6 +63,7 @@ func initEntities() {
 	persistenceStorage := persistencestore.GetStorageProvider()
 	block.SetupBlockSummaryEntity(persistenceStorage)
 	transaction.SetupTxnSummaryEntity(persistenceStorage)
+	transaction.SetupTxnConfirmationEntity(persistenceStorage)
 }
 
 /*Chain - the chain this miner will be working on */
