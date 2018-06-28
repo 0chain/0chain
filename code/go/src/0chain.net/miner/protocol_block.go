@@ -142,7 +142,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	if err != nil {
 		return err
 	}
-	Logger.Info("generate block (assemble+update+sign)", zap.Int64("round", b.Round), zap.Duration("time", time.Since(start)), zap.String("block", b.Hash), zap.String("prev_block", b.PrevBlock.Hash), zap.Int32("iteration_count", count))
+	Logger.Info("generate block (assemble+update+sign)", zap.Int64("round", b.Round), zap.Duration("time", time.Since(start)), zap.String("block", b.Hash), zap.String("prev_block", b.PrevBlock.Hash), zap.Int32("iteration_count", count), zap.Float64("p_chain_weight", b.PrevBlock.ChainWeight))
 	go b.ComputeTxnMap()
 	return nil
 }
@@ -263,7 +263,7 @@ func (mc *Chain) AddVerificationTicket(ctx context.Context, b *block.Block, bvt 
 
 /*UpdateFinalizedBlock - update the latest finalized block */
 func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
-	Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("lf_round", mc.LatestFinalizedBlock.Round), zap.Any("current_round", mc.CurrentRound), zap.Any("blocks_size", len(mc.Blocks)), zap.Any("rounds_size", len(mc.rounds)))
+	Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round), zap.Int64("current_round", mc.CurrentRound), zap.Float64("weight", b.Weight()), zap.Float64("chain_weight", b.ChainWeight), zap.Int("blocks_size", len(mc.Blocks)), zap.Int("rounds_size", len(mc.rounds)))
 	mc.FinalizeBlock(ctx, b)
 	mc.SendFinalizedBlock(ctx, b)
 	fr := mc.GetRound(b.Round)

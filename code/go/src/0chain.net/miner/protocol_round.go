@@ -134,6 +134,9 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 			Logger.Error("generate block", zap.Error(err))
 			return nil, err
 		}
+		b.RoundRank = r.GetRank(node.GetSelfNode(ctx).SetIndex)
+		b.ComputeChainWeight()
+		mc.AddBlock(b)
 		break
 	}
 	if mc.CurrentRound > b.Round {
@@ -155,7 +158,15 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 		Logger.Error("invalid magic block", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("magic_block", b.MagicBlockHash))
 		return
 	}
-	mc.AddBlock(b)
+	if b.MinerID != node.GetSelfNode(ctx).GetKey() {
+		bNode := node.GetNode(b.MinerID)
+		if bNode == nil {
+			return
+		}
+		b.RoundRank = mr.GetRank(bNode.SetIndex)
+		b.ComputeChainWeight()
+		mc.AddBlock(b)
+	}
 	vctx := mr.StartVerificationBlockCollection(ctx)
 	if vctx != nil {
 		go mc.CollectBlocksForVerification(vctx, mr)

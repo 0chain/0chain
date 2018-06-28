@@ -7,7 +7,6 @@ import (
 
 	"0chain.net/block"
 	. "0chain.net/logging"
-	"0chain.net/node"
 	"0chain.net/round"
 	"go.uber.org/zap"
 )
@@ -36,10 +35,6 @@ func (r *Round) AddBlockToVerify(b *block.Block) {
 		Logger.Info("block proposal (incorrect round random number)", zap.Int64("block_random_seed", b.RoundRandomSeed), zap.Int64("round_random_seed", r.RandomSeed))
 		return
 	}
-	bNode := node.GetNode(b.MinerID)
-	//TODO: view change in the middle of a round will throw off the SetIndex
-	b.RoundRank = r.GetRank(bNode.SetIndex)
-	b.ComputeChainWeight()
 	r.blocksToVerifyChannel <- b
 }
 
