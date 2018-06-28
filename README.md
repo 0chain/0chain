@@ -71,6 +71,12 @@ $ ../bin/start.sharder.sh
 ```
 Wait till the cassandra is started and the sharder is ready to listen to requests.
 
+On the respective miner terminal, use
+```
+$ ../bin/start.miner.sh
+```
+
+
 
 ## Setting up Cassandra Schema
 
