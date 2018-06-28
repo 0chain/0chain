@@ -28,9 +28,9 @@ services:
     environment:
       - DOCKER=true
     depends_on:
-      - cassandra
+      - cassandra-init
     links:
-      - cassandra:cassandra
+      - cassandra-init:cassandra-init
     build:
       context: ../..
       dockerfile: ./docker.local/build.sharder/Dockerfile
