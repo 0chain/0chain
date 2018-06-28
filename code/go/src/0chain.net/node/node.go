@@ -125,6 +125,7 @@ func Read(line string) (*Node, error) {
 	if node.ID != hash {
 		return nil, common.NewError("invalid_client_id", fmt.Sprintf("public key: %v, client_id: %v, hash: %v\n", node.PublicKey, node.ID, hash))
 	}
+	node.ComputeProperties()
 	if Self == nil && node.Host == config.Configuration.Host && node.Port == config.Configuration.Port {
 		Self = &SelfNode{Node: node}
 	}
@@ -143,11 +144,6 @@ func (n *Node) GetURLBase() string {
 /*GetStatusURL - get the end point where to ping for the status */
 func (n *Node) GetStatusURL() string {
 	return fmt.Sprintf("%v/_nh/status?id=%v&publicKey=%v", n.GetURLBase(), n.ID, n.PublicKey)
-}
-
-/*Verify - verify the given signature and hash */
-func (n *Node) Verify(signature string, hash string) (bool, error) {
-	return encryption.Verify(n.PublicKey, signature, hash)
 }
 
 /*GetNodeType - as a string */
