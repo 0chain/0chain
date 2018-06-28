@@ -14,6 +14,16 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+
+  cassandra-init:
+    image: cassandra:latest
+    volumes:
+      - ../config/cassandra:/0chain/cassandra
+    command: bash /0chain/cassandra/cassandra-init.sh
+    links:
+      - cassandra:cassandra
+    restart: on-failure
+
   sharder:
     environment:
       - DOCKER=true
