@@ -7,6 +7,3 @@ round_random_seed bigint,
 merkle_tree_root text,
 PRIMARY KEY(hash)
 );
-
-CREATE INDEX IF NOT EXISTS block_summary_nu1_creation_date ON zerochain.block_summary (creation_date);
-CREATE INDEX IF NOT EXISTS block_summary_u1_round ON zerochain.block_summary (round);
