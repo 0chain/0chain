@@ -47,10 +47,10 @@ func getContext(r *http.Request) (context.Context, error) {
 	return ctx, nil
 }
 
-var domainRE = regexp.MustCompile(`https?://([^:]+)(:[0-9]+)?$`)
+var domainRE = regexp.MustCompile(`^(?:https?:\/\/)?(?:[^@\/\n]+@)?(?:www\.)?([^:\/\n]+)`)
 
 func getHost(origin string) string {
-	return domainRE.FindStringSubmatch(origin)[0]
+	return domainRE.FindStringSubmatch(origin)[1]
 }
 
 func validOrigin(origin string) bool {
@@ -65,7 +65,7 @@ func validOrigin(origin string) bool {
 }
 
 func CheckCrossOrigin(w http.ResponseWriter, r *http.Request) bool {
-	origin := r.Header.Get("HTTP_ORIGIN")
+	origin := r.Header.Get("Origin")
 	if origin == "" {
 		return true
 	}
