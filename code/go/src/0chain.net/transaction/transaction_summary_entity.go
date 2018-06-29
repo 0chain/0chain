@@ -12,10 +12,8 @@ type TransactionSummary struct {
 	datastore.VersionField
 	datastore.CreationDateField
 	datastore.NOIDField
-	Hash       string        `json:"hash"`
-	BlockHash  string        `json:"block_hash"`
-	ClientID   datastore.Key `json:"client_id"`
-	ToClientID datastore.Key `json:"to_client_id"`
+	Hash      string `json:"hash"`
+	BlockHash string `json:"block_hash"`
 }
 
 var transactionSummaryEntityMetadata *datastore.EntityMetadataImpl
