@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"0chain.net/config"
 	metrics "github.com/rcrowley/go-metrics"
 
 	"0chain.net/chain"
@@ -14,7 +13,6 @@ import (
 	"0chain.net/client"
 	"0chain.net/common"
 	"0chain.net/datastore"
-	"0chain.net/logging"
 	. "0chain.net/logging"
 	"0chain.net/node"
 	"0chain.net/transaction"
@@ -270,11 +268,6 @@ func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	if fr != nil {
 		fr.Finalize(b)
 		mc.DeleteRoundsBelow(ctx, fr.Number)
-	}
-	if b.Round%100 == 0 {
-		if config.Development() || b.Round%1000 == 0 {
-			common.LogRuntime(logging.Logger, zap.Int64("round", b.Round))
-		}
 	}
 }
 

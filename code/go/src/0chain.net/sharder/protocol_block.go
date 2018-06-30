@@ -7,10 +7,7 @@ import (
 
 	"0chain.net/block"
 	"0chain.net/blockstore"
-	"0chain.net/common"
-	"0chain.net/config"
 	"0chain.net/datastore"
-	"0chain.net/logging"
 	. "0chain.net/logging"
 	"0chain.net/persistencestore"
 	"go.uber.org/zap"
@@ -24,11 +21,6 @@ func (sc *Chain) UpdatePendingBlock(ctx context.Context, b *block.Block, txns []
 /*UpdateFinalizedBlock - updates the finalized block */
 func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("lf_round", sc.LatestFinalizedBlock.Round), zap.Any("current_round", sc.CurrentRound), zap.Any("blocks_size", len(sc.Blocks)), zap.Any("rounds_size", len(sc.rounds)))
-	if b.Round%100 == 0 {
-		if config.Development() || b.Round%1000 == 0 {
-			common.LogRuntime(logging.Logger, zap.Int64("round", b.Round))
-		}
-	}
 	// Sort transactions by their hash - useful for quick search
 	sort.SliceStable(b.Txns, func(i, j int) bool { return b.Txns[i].Hash < b.Txns[j].Hash })
 	sc.StoreBlock(ctx, b)

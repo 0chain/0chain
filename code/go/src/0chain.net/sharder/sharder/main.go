@@ -9,6 +9,8 @@ import (
 	"runtime"
 	"time"
 
+	_ "net/http/pprof"
+
 	"0chain.net/block"
 	"0chain.net/blockstore"
 	"0chain.net/chain"
@@ -151,19 +153,21 @@ func main() {
 	Logger.Info("CPU information", zap.Int("No of CPU available", runtime.NumCPU()))
 	Logger.Info("Starting sharder", zap.String("port", address), zap.String("chain_id", config.GetServerChainID()), zap.String("mode", mode))
 
-	/*
-		l, err := net.Listen("tcp", address)
-		if err != nil {
-			log.Fatalf("Listen: %v", err)
+	var server *http.Server
+	if config.Development() {
+		// No WriteTimeout setup to enable pprof
+		server = &http.Server{
+			Addr:           address,
+			ReadTimeout:    30 * time.Second,
+			MaxHeaderBytes: 1 << 20,
 		}
-		defer l.Close()
-		l = netutil.LimitListener(l, 1000)
-	*/
-	server := &http.Server{
-		Addr:           address,
-		ReadTimeout:    30 * time.Second,
-		WriteTimeout:   30 * time.Second,
-		MaxHeaderBytes: 1 << 20,
+	} else {
+		server = &http.Server{
+			Addr:           address,
+			ReadTimeout:    30 * time.Second,
+			WriteTimeout:   30 * time.Second,
+			MaxHeaderBytes: 1 << 20,
+		}
 	}
 	common.HandleShutdown(server)
 
