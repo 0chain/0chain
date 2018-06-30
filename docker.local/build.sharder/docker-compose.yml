@@ -19,6 +19,8 @@ services:
     image: cassandra:latest
     volumes:
       - ../config/cassandra:/0chain/cassandra
+      - ../../sql:/0chain/sql
+
     command: bash /0chain/cassandra/cassandra-init.sh
     links:
       - cassandra:cassandra
