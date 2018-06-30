@@ -24,10 +24,9 @@ func SetNetworkRelayTime(delta time.Duration) {
   Note: It is that round and prior that actually get finalized.
 */
 func (c *Chain) FinalizeRound(ctx context.Context, r *round.Round, bsh BlockStateHandler) {
-	if r.IsFinalizing() || r.IsFinalized() {
+	if !r.SetFinalizing() {
 		return
 	}
-	r.Finalizing()
 	time.Sleep(FINALIZATION_TIME)
 	fb := c.ComputeFinalizedBlock(ctx, r)
 	if fb == nil {

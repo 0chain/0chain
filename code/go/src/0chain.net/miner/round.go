@@ -78,7 +78,6 @@ func (r *Round) CancelVerification() {
 		return
 	}
 	r.verificationComplete = true
-	//close(r.blocksToVerifyChannel)
 	if f != nil {
 		r.verificationCancelf = nil
 		f()
