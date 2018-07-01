@@ -110,6 +110,18 @@ $ ../bin/run.sharder.sh cassandra cqlsh -k zerochain -f /0chain/sql/truncate_tab
 There is no need to generate the test data separately. In development mode, the transaction data is automatically generated at a certain rate based on the
 block size.
 
+## Monitoring the progress
+
+1) From the browser access http://localhost:7073/_block_stats that provides the statistics of the blocks finalization from the sharder's point of view. User the appropriate host and port for the specific sharder.
+
+2) From the browser access http://localhost:7071/_block_stats that provides the statistics of the block generation and verification from the miner's point of view. Use the appropriate host and port for the specific miner.
+
+3) To access the latest finalized blocks use the REST end point http://localhost:7071/v1/block/get/recent_finalized
+
+4) To access a specific block, use http://localhost:7171/v1/block/get?content=[type]&block=[block-hash]. The content parameter can be 'full' and 'header'. The block-id parameter is the hash of the block
+
+5) To get the confirmation status of a transaction, use http://localhost:7171/v1/transaction/get/confirmation?hash=[txn-hash]
+
 ## Troubleshooting
 
 1) Ensure the port mapping is all correct:
@@ -144,21 +156,21 @@ $ ../bin/run.sharder.sh cassandra cqlsh
 ```
 ## Debugging
 
-The logs of the nodes are going to be stored in a file (currently appLogs). The typical issues that need to be debugged is errors in the log, why certain things have not happeend which requires reviewing the timestamp of a sequence of events in the network. Here is an example set of commands to do some debugging.
+The logs of the nodes are stored in log directory (/0chain/log on the container and docker.local/miner|sharder[n]/log in the host). The 0chain.log contains all the logs related to the protocol and the n2n.log contains all the node to node communication logs. The typical issues that need to be debugged is errors in the log, why certain things have not happeend which requires reviewing the timestamp of a sequence of events in the network. Here is an example set of commands to do some debugging.
 
 Find arrors in all the miner nodes (from git/0chain)
 ```
-$ docker.local/bin/run_all.miner.sh grep ERROR appLogs
+$ grep ERROR docker.local/miner*/log/0chain.log
 ```
-This gives a set of errors in the log. Say an error indicates a problem for a specific block, then
+This gives a set of errors in the log. Say an error indicates a problem for a specific block, say abc, then
 ```
-$ docker.local/bin/run_all.miner.sh grep block-id appLogs
+$ grep abc docker.local/miner*/log/0chain.log
 ```
-gives all the logs related to that block-id (which is the specific hash you got from the earlier command)
+gives all the logs related to block 'abc'
 
 To get the start time of all the rounds
 ```
-$ docker.local/bin/run_all.miner.sh grep 'starting round' appLogs
+$ grep 'starting round' docker.local/miner*/log/0chain.log
 ```
 This gives the start timestamps that can be used to correlate the events and their timings.
 

@@ -223,7 +223,5 @@ func (t *Transaction) GetSummary() *TransactionSummary {
 	summary := datastore.GetEntityMetadata("txn_summary").Instance().(*TransactionSummary)
 	summary.Hash = t.Hash
 	summary.CreationDate = t.CreationDate
-	summary.ClientID = t.ClientID
-	summary.ToClientID = t.ToClientID
 	return summary
 }

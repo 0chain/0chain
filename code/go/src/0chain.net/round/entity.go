@@ -67,20 +67,26 @@ func (r *Round) GetNotarizedBlocks() []*block.Block {
 	return r.notarizedBlocks
 }
 
-/*Finalizing - the round is being finalized */
-func (r *Round) Finalizing() {
+/*SetFinalizing - the round is being finalized */
+func (r *Round) SetFinalizing() bool {
+	r.notarizedBlocksMutex.Lock()
+	defer r.notarizedBlocksMutex.Unlock()
+	if r.IsFinalized() || r.IsFinalizing() {
+		return false
+	}
 	r.state = RoundStateFinalizing
+	return true
+}
+
+/*IsFinalizing - is the round finalizing */
+func (r *Round) IsFinalizing() bool {
+	return r.state == RoundStateFinalizing
 }
 
 /*Finalize - finalize the round */
 func (r *Round) Finalize(b *block.Block) {
 	r.state = RoundStateFinalized
 	r.Block = b
-}
-
-/*IsFinalizing - is the round finalizing */
-func (r *Round) IsFinalizing() bool {
-	return r.state == RoundStateFinalizing
 }
 
 /*IsFinalized - indicates if the round is finalized */

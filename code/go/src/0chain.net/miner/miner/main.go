@@ -9,6 +9,8 @@ import (
 	"runtime"
 	"time"
 
+	_ "net/http/pprof"
+
 	"0chain.net/block"
 	"0chain.net/chain"
 	"0chain.net/client"
@@ -148,11 +150,22 @@ func main() {
 	}
 	Logger.Info("Starting miner", zap.Int("available_cpus", runtime.NumCPU()), zap.String("port", address), zap.String("chain_id", config.GetServerChainID()), zap.String("mode", mode))
 
-	server := &http.Server{
-		Addr:           address,
-		ReadTimeout:    30 * time.Second,
-		WriteTimeout:   30 * time.Second,
-		MaxHeaderBytes: 1 << 20,
+	var server *http.Server
+
+	if config.Development() {
+		// No WriteTimeout setup to enable pprof
+		server = &http.Server{
+			Addr:           address,
+			ReadTimeout:    30 * time.Second,
+			MaxHeaderBytes: 1 << 20,
+		}
+	} else {
+		server = &http.Server{
+			Addr:           address,
+			ReadTimeout:    30 * time.Second,
+			WriteTimeout:   30 * time.Second,
+			MaxHeaderBytes: 1 << 20,
+		}
 	}
 	common.HandleShutdown(server)
 

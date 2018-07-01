@@ -3,6 +3,7 @@ package block
 import (
 	"context"
 	"fmt"
+	"sort"
 	"time"
 
 	"0chain.net/common"
@@ -199,9 +200,25 @@ func (b *Block) AddVerificationTicket(vt *VerificationTicket) bool {
 
 /*MergeVerificationTickets - merge the verification tickets with what's already there */
 func (b *Block) MergeVerificationTickets(vts []*VerificationTicket) {
-	//TODO: we need to do the actual merging (assume incoming is valid and unique from the notarization).
-	// Doing sort and merge will ensure O(n*log(n)) behavior instead of O(n^2)
-	b.VerificationTickets = vts
+	if b.VerificationTickets == nil || len(b.VerificationTickets) == 0 {
+		b.VerificationTickets = vts
+		return
+	}
+	tickets, blockTickets := vts, b.VerificationTickets
+	if len(blockTickets) > len(tickets) {
+		tickets, blockTickets = blockTickets, tickets
+	}
+
+	sort.Slice(tickets, func(i, j int) bool { return tickets[i].VerifierID < tickets[j].VerifierID })
+	ticketsLen := len(tickets)
+	for _, ticket := range blockTickets {
+		ticketIndex := sort.Search(ticketsLen, func(i int) bool { return tickets[i].VerifierID >= ticket.VerifierID })
+		if ticketIndex < ticketsLen && ticket.VerifierID == tickets[ticketIndex].VerifierID { // present in both
+			continue
+		}
+		tickets = append(tickets, ticket)
+	}
+	b.VerificationTickets = tickets
 }
 
 /*GetVerificationTicketsCount - get the number of verification tickets for the block */
