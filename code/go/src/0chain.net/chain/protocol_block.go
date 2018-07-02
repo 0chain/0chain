@@ -73,6 +73,16 @@ func (c *Chain) VerifyNotarization(ctx context.Context, b *block.Block, bvt []*b
 	}
 	// TODO: Logic similar to IsBlockNotarized to check the count satisfies (refactor)
 
+	signMap := make(map[string]bool, len(bvt))
+	for _, vt := range bvt {
+		sign := vt.Signature
+		_, signExists := signMap[sign]
+		if signExists {
+			return
+		}
+		signMap[sign] = true
+	}
+
 	for _, vt := range bvt {
 		if err := c.VerifyTicket(ctx, b, vt); err != nil {
 			return err
