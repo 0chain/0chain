@@ -3,7 +3,6 @@ package block
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"sort"
 	"time"
 
@@ -201,37 +200,25 @@ func (b *Block) AddVerificationTicket(vt *VerificationTicket) bool {
 
 /*MergeVerificationTickets - merge the verification tickets with what's already there */
 func (b *Block) MergeVerificationTickets(vts []*VerificationTicket) {
-	if b.VerificationTickets == nil || len(b.VerificationTickets) <= 0 {
+	if b.VerificationTickets == nil || len(b.VerificationTickets) == 0 {
 		b.VerificationTickets = vts
-	} else {
-		bvtsLen := len(b.VerificationTickets)
-		vtsLen := len(vts)
-
-		tickets := vts
-		blockTickets := b.VerificationTickets
-		if bvtsLen > vtsLen {
-			tickets = b.VerificationTickets
-			blockTickets = vts
-		}
-
-		sort.Slice(tickets, func(i, j int) bool {
-			return tickets[i].VerifierID < tickets[j].VerifierID
-		})
-
-		for index := 0; index < len(blockTickets); index++ {
-			vTicket := blockTickets[index]
-			ticketIndex := sort.Search(len(tickets), func(i int) bool {
-				return tickets[i].VerifierID >= vTicket.VerifierID
-			})
-			if ticketIndex < len(tickets) && reflect.DeepEqual(vTicket, tickets[ticketIndex]) {
-				blockTickets[index] = blockTickets[len(blockTickets)-1]
-				blockTickets = blockTickets[:len(blockTickets)-1]
-				index--
-			}
-		}
-
-		b.VerificationTickets = append(blockTickets, tickets...)
+		return
 	}
+	tickets, blockTickets := vts, b.VerificationTickets
+	if len(blockTickets) > len(tickets) {
+		tickets, blockTickets = blockTickets, tickets
+	}
+
+	sort.Slice(tickets, func(i, j int) bool { return tickets[i].VerifierID < tickets[j].VerifierID })
+	ticketsLen := len(tickets)
+	for _, ticket := range blockTickets {
+		ticketIndex := sort.Search(ticketsLen, func(i int) bool { return tickets[i].VerifierID >= ticket.VerifierID })
+		if ticketIndex < ticketsLen && ticket.VerifierID == tickets[ticketIndex].VerifierID { // present in both
+			continue
+		}
+		tickets = append(tickets, ticket)
+	}
+	b.VerificationTickets = tickets
 }
 
 /*GetVerificationTicketsCount - get the number of verification tickets for the block */
