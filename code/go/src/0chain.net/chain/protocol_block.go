@@ -78,7 +78,7 @@ func (c *Chain) VerifyNotarization(ctx context.Context, b *block.Block, bvt []*b
 		sign := vt.Signature
 		_, signExists := signMap[sign]
 		if signExists {
-			return
+			return common.NewError("duplicate_ticket_signature", "Found duplicate signature for verification ticket of the block")
 		}
 		signMap[sign] = true
 	}
