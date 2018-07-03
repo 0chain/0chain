@@ -257,11 +257,12 @@ func (c *Chain) ValidGenerator(r *round.Round, b *block.Block) bool {
 	return c.CanGenerateRound(r, miner)
 }
 
-/*GetNotarizationThreshold - gives the threshold value for block to be notarized */
+/*GetNotarizationThreshold - gives the threshold percentage for block to be notarized */
 func (c *Chain) GetNotarizationThreshold() int {
 	return c.NotarizationThreshold
 }
 
+/*GetNotarizationThresholdCount - gives the threshold count for block to be notarized*/
 func (c *Chain) GetNotarizationThresholdCount() int {
 	notarizedPercent := float64(c.NotarizationThreshold) / 100
 	thresholdCount := float64(c.Miners.Size()) * notarizedPercent
