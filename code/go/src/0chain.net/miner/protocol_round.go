@@ -288,11 +288,7 @@ func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.B
 	if mc.IsBlockNotarized(ctx, b) {
 		r.Block = b
 		mc.CancelRoundVerification(ctx, r)
-		notarization := datastore.GetEntityMetadata("block_notarization").Instance().(*Notarization)
-		notarization.BlockID = b.Hash
-		notarization.Round = b.Round
-		notarization.VerificationTickets = b.VerificationTickets
-		mc.SendNotarization(ctx, notarization)
+		mc.SendNotarization(ctx, b)
 		mc.AddNotarizedBlock(ctx, &r.Round, b)
 	}
 }

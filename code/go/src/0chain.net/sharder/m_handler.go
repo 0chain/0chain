@@ -14,10 +14,16 @@ import (
 /*SetupM2SReceivers - setup handlers for all the messages received from the miner */
 func SetupM2SReceivers() {
 	http.HandleFunc("/v1/_m2s/block/finalized", node.ToN2NReceiveEntityHandler(persistencestore.WithConnectionEntityJSONHandler(FinalizedBlockHandler, datastore.GetEntityMetadata("block"))))
+	http.HandleFunc("/v1/_m2s/block/notarized", node.ToN2NReceiveEntityHandler(persistencestore.WithConnectionEntityJSONHandler(NotarizedBlockHandler, datastore.GetEntityMetadata("block"))))
 }
 
 /*FinalizedBlockHandler - handle the finalized block */
 func FinalizedBlockHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+	return NotarizedBlockHandler(ctx, entity)
+}
+
+/*NotarizedBlockHandler - handle the notarized block */
+func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 	b, ok := entity.(*block.Block)
 	if !ok {
 		return nil, common.InvalidRequest("Invalid Entity")

@@ -22,6 +22,7 @@ func SetupMinerChain(c *chain.Chain) {
 	minerChain.Initialize()
 	minerChain.roundsMutex = &sync.Mutex{}
 	minerChain.BlockMessageChannel = make(chan *BlockMessage, 25)
+	minerChain.BlocksToSharder = 1
 }
 
 /*Initialize - intializes internal datastructures to start again */
@@ -35,12 +36,18 @@ func GetMinerChain() *Chain {
 	return minerChain
 }
 
+const (
+	NOTARIZED = 1
+	FINALIZED = 2
+)
+
 /*Chain - A miner chain to manage the miner activities */
 type Chain struct {
 	chain.Chain
 	BlockMessageChannel chan *BlockMessage
 	roundsMutex         *sync.Mutex
 	rounds              map[int64]*Round
+	BlocksToSharder     int
 }
 
 /*GetBlockMessageChannel - get the block messages channel */
