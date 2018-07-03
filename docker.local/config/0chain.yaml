@@ -2,7 +2,7 @@ version: 1.0
 
 logging:
   level: "info"
-  console: false # printing log to console is only supported in development mode
+  console: true # printing log to console is only supported in development mode
 
 zerochain:
   id: "0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe"
@@ -18,5 +18,6 @@ server_chain:
   block:
     size: 100
     generators: 2
+    notarization_threshold: 60 # percentage
   network:
     relay_time: 100 # milliseconds

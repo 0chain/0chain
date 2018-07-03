@@ -3,6 +3,7 @@ package chain
 import (
 	"context"
 	"fmt"
+	"math"
 	"sync"
 
 	"0chain.net/block"
@@ -41,9 +42,10 @@ type Chain struct {
 	ClientID      datastore.Key `json:"client_id"`                 // Client who created this chain
 	ParentChainID datastore.Key `json:"parent_chain_id,omitempty"` // Chain from which this chain is forked off
 
-	Decimals      int8  `json:"decimals"`       // Number of decimals allowed for the token on this chain
-	BlockSize     int32 `json:"block_size"`     // Number of transactions in a block
-	NumGenerators int   `json:"num_generators"` // Number of block generators
+	Decimals              int8  `json:"decimals"`                // Number of decimals allowed for the token on this chain
+	BlockSize             int32 `json:"block_size"`              // Number of transactions in a block
+	NumGenerators         int   `json:"num_generators"`          // Number of block generators
+	NotarizationThreshold int   `json: "notarization_threshold"` // Threshold for a block to be notarized
 
 	/*Miners - this is the pool of miners */
 	Miners *node.Pool `json:"-"`
@@ -253,4 +255,15 @@ func (c *Chain) ValidGenerator(r *round.Round, b *block.Block) bool {
 		return false
 	}
 	return c.CanGenerateRound(r, miner)
+}
+
+/*GetNotarizationThreshold - gives the threshold value for block to be notarized */
+func (c *Chain) GetNotarizationThreshold() int {
+	return c.NotarizationThreshold
+}
+
+func (c *Chain) GetNotarizationThresholdCount() int {
+	notarizedPercent := float64(c.NotarizationThreshold) / 100
+	thresholdCount := float64(c.Miners.Size()) * notarizedPercent
+	return int(math.Ceil(thresholdCount))
 }

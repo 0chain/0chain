@@ -68,12 +68,18 @@ func (c *Chain) VerifyTicket(ctx context.Context, b *block.Block, bvt *block.Ver
 
 /*VerifyNotarization - verify that the notarization is correct */
 func (c *Chain) VerifyNotarization(ctx context.Context, b *block.Block, bvt []*block.VerificationTicket) error {
-	if b.Round != 0 && bvt == nil {
+	if b.Round == 0 {
+		return nil
+	} else if bvt == nil {
 		return common.NewError("no_verification_tickets", "No verification tickets for this block")
 	}
-	// TODO: Logic similar to IsBlockNotarized to check the count satisfies (refactor)
 
-	signMap := make(map[string]bool, len(bvt))
+	numSignatures := len(bvt)
+	if numSignatures < c.GetNotarizationThresholdCount() {
+		return common.NewError("block_not_notarized", "Number of Verification tickets for the block are less than notarization threshold count")
+	}
+
+	signMap := make(map[string]bool, numSignatures)
 	for _, vt := range bvt {
 		sign := vt.Signature
 		_, signExists := signMap[sign]
@@ -91,11 +97,11 @@ func (c *Chain) VerifyNotarization(ctx context.Context, b *block.Block, bvt []*b
 	return nil
 }
 
-/*IsBlockNotarized - Does the given number of signatures means eligible for notraization?
+/*IsBlockNotarized - Does the given number of signatures means eligible for notarization?
 TODO: For now, we just assume more than 50% */
 func (c *Chain) IsBlockNotarized(ctx context.Context, b *block.Block) bool {
 	numSignatures := b.GetVerificationTicketsCount()
-	if 3*numSignatures >= 2*c.Miners.Size() {
+	if numSignatures >= c.GetNotarizationThresholdCount() {
 		return true
 	}
 	return false
