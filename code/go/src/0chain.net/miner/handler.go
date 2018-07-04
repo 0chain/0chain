@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"0chain.net/chain"
 	"0chain.net/diagnostics"
 )
 
@@ -16,6 +17,8 @@ func SetupHandlers() {
 func BlockStatsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 	c := &GetMinerChain().Chain
+	fmt.Fprintf(w, "<h2>Block Finalization Statistics</h2>")
+	diagnostics.WriteStatistics(w, c, chain.FinalizationTimer, 1000000.0)
 	fmt.Fprintf(w, "<h2>Block Generation Statistics</h2>")
 	diagnostics.WriteStatistics(w, c, bgTimer, 1000000.0)
 	fmt.Fprintf(w, "<h2>Block Verification Statistics</h2>")

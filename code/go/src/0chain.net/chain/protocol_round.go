@@ -7,6 +7,7 @@ import (
 	"0chain.net/block"
 	. "0chain.net/logging"
 	"0chain.net/round"
+	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
 
@@ -17,6 +18,16 @@ var FINALIZATION_TIME = 2 * DELTA
 func SetNetworkRelayTime(delta time.Duration) {
 	DELTA = delta
 	FINALIZATION_TIME = 2 * delta
+}
+
+var FinalizationTimer metrics.Timer
+var fts time.Time
+
+func init() {
+	if FinalizationTimer != nil {
+		metrics.Unregister("finalization_time")
+	}
+	FinalizationTimer = metrics.GetOrRegisterTimer("finalization_time", nil)
 }
 
 /*FinalizeRound - starting from the given round work backwards and identify the round that can be
@@ -49,6 +60,10 @@ func (c *Chain) FinalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 	for idx := range frchain {
 		fb = frchain[len(frchain)-1-idx]
 		Logger.Debug("finalize round", zap.Int64("round", r.Number), zap.Int64("finalized_round", fb.Round), zap.String("hash", fb.Hash))
+		if time.Since(fts) < 10*time.Second {
+			FinalizationTimer.UpdateSince(fts)
+		}
+		fts = time.Now()
 		bsh.UpdateFinalizedBlock(ctx, fb)
 		frb := c.GetRoundBlocks(fb.Round)
 		for _, b := range frb {

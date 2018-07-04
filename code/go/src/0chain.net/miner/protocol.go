@@ -16,9 +16,10 @@ type ProtocolMessageSender interface {
 
 	SendBlock(ctx context.Context, b *block.Block)
 	SendVerificationTicket(ctx context.Context, b *block.Block, bvt *block.BlockVerificationTicket)
-	SendNotarization(ctx context.Context, notarization *Notarization)
+	SendNotarization(ctx context.Context, b *block.Block)
 
-	//TODO: This may be removed if the sharder receives all the notarized blocks
+	SendNotarizedBlock(ctx context.Context, b *block.Block)
+
 	SendFinalizedBlock(ctx context.Context, b *block.Block)
 }
 
