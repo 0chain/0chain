@@ -25,20 +25,12 @@ func SetupWorkers() {
 	}
 }
 
-var timer metrics.Timer
-
 /*ClearWorkerState - clears the worker state */
 func ClearWorkerState() {
-	Logger.Debug("clearing worker state")
-	if timer != nil {
-		metrics.Unregister("block_time")
-	}
-	timer = metrics.GetOrRegisterTimer("block_time", nil)
 }
 
 /*BlockWorker - stores the blocks */
 func (sc *Chain) BlockWorker(ctx context.Context) {
-	var ts time.Time
 	for true {
 		select {
 		case <-ctx.Done():
@@ -74,10 +66,6 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 				er.RandomSeed = b.RoundRandomSeed
 				sc.AddRound(er)
 			}
-			if time.Since(ts) < 10*time.Second {
-				timer.UpdateSince(ts)
-			}
-			ts = time.Now()
 			er.AddNotarizedBlock(b)
 			pr := sc.GetRound(er.Number - 1)
 			if pr != nil {

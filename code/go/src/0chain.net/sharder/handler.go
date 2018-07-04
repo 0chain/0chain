@@ -59,11 +59,11 @@ func BlockStatsHandler(w http.ResponseWriter, r *http.Request) {
 	c := &GetSharderChain().Chain
 	if r.FormValue("type") == "json" {
 		w.Header().Set("Content-Type", "text/json")
-		common.Respond(w, diagnostics.GetStatistics(c, timer, 1000000.0), nil)
+		common.Respond(w, diagnostics.GetStatistics(c, chain.FinalizationTimer, 1000000.0), nil)
 	} else {
 		w.Header().Set("Content-Type", "text/html")
 		fmt.Fprintf(w, "<h2>Block Finalization Statistics</h2>")
-		diagnostics.WriteStatistics(w, c, timer, 1000000.0)
+		diagnostics.WriteStatistics(w, c, chain.FinalizationTimer, 1000000.0)
 	}
 }
 
