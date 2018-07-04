@@ -1,0 +1,16 @@
+---
+- name: Create Network in AWS
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - access/aws_vars.yml
+
+  environment:
+    AWS_SHARED_CREDENTIALS_FILE: "{{ aws_credentials }}"
+    AWS_PROFILE: "{{ aws_profile }}"
+
+  tasks:
+  - include_tasks: access/tasks.yml
+
+...
