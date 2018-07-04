@@ -99,7 +99,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	for true {
 		if mc.CurrentRound > b.Round {
 			Logger.Debug("generate block (round mismatch)", zap.Any("round", r.Number), zap.Any("current_round", mc.CurrentRound))
-			return nil, common.NewError("round_mismatch", "Current round and block round do not match")
+			return nil, ErrRoundMismatch
 		}
 		txnCount := transaction.TransactionCount
 		err := mc.GenerateBlock(ctx, b, mc)
@@ -116,7 +116,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 						}
 						if mc.CurrentRound > b.Round {
 							Logger.Debug("generate block (round mismatch)", zap.Any("round", r.Number), zap.Any("current_round", mc.CurrentRound))
-							return nil, common.NewError("round_mismatch", "Current round and block round do not match")
+							return nil, ErrRoundMismatch
 						}
 						time.Sleep(delay)
 						Logger.Debug("generate block", zap.Any("round", r.Number), zap.Any("delay", delay), zap.Any("txn_count", txnCount), zap.Any("t.txn_count", transaction.TransactionCount))
@@ -141,7 +141,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	}
 	if mc.CurrentRound > b.Round {
 		Logger.Error("generate block (round mismatch)", zap.Any("round", r.Number), zap.Any("current_round", mc.CurrentRound))
-		return nil, common.NewError("round_mismatch", "Current round and block round do not match")
+		return nil, ErrRoundMismatch
 	}
 	mc.AddToRoundVerification(ctx, r, b)
 	mc.SendBlock(ctx, b)
@@ -190,8 +190,13 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 	verifyAndSend := func(ctx context.Context, r *Round, b *block.Block) bool {
 		bvt, err := mc.VerifyRoundBlock(ctx, r, b)
 		if err != nil {
-			if err == ErrRoundMismatch {
-				Logger.Debug("verify round block", zap.Any("round", r.Number), zap.Any("block", b.Hash), zap.Any("current_round", mc.CurrentRound))
+			ierr, ok := err.(*common.Error)
+			if ok {
+				if ierr.Code == RoundMismatch {
+					Logger.Debug("verify round block", zap.Any("round", r.Number), zap.Any("block", b.Hash), zap.Any("current_round", mc.CurrentRound))
+				} else {
+					Logger.Error("verify round block", zap.Any("round", r.Number), zap.Any("block", b.Hash), zap.Error(err))
+				}
 			} else {
 				Logger.Error("verify round block", zap.Any("round", r.Number), zap.Any("block", b.Hash), zap.Error(err))
 			}

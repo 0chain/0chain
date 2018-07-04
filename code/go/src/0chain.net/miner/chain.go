@@ -12,6 +12,8 @@ import (
 	"0chain.net/round"
 )
 
+const RoundMismatch = "round_mismatch"
+
 var ErrRoundMismatch = common.NewError("round_mismatch", "Current round number of the chain doesn't match the block generation round")
 
 var minerChain = &Chain{}
