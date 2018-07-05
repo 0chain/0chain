@@ -20,7 +20,6 @@ import (
 )
 
 const InsufficientTxns = "insufficient_txns"
-const RoundMismatch = "round_mismatch"
 
 var bgTimer metrics.Timer
 var bvTimer metrics.Timer

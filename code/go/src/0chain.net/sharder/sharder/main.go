@@ -112,6 +112,7 @@ func main() {
 	serverChain.Decimals = int8(viper.GetInt("server_chain.decimals"))
 	serverChain.BlockSize = viper.GetInt32("server_chain.block.size")
 	serverChain.NumGenerators = viper.GetInt("server_chain.block.generators")
+	serverChain.NotarizationThreshold = viper.GetInt("server_chain.block.notarization_threshold")
 	chain.SetNetworkRelayTime(viper.GetDuration("server_chain.network.relay_time") * time.Millisecond)
 
 	if *nodesFile == "" {

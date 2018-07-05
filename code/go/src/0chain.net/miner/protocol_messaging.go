@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"0chain.net/block"
+	"0chain.net/datastore"
 	"0chain.net/round"
 )
 
@@ -23,11 +24,25 @@ func (mc *Chain) SendVerificationTicket(ctx context.Context, b *block.Block, bvt
 }
 
 /*SendNotarization - send the block notarization (collection of verification tickets enough to say notarization is reached) */
-func (mc *Chain) SendNotarization(ctx context.Context, notarization *Notarization) {
+func (mc *Chain) SendNotarization(ctx context.Context, b *block.Block) {
+	notarization := datastore.GetEntityMetadata("block_notarization").Instance().(*Notarization)
+	notarization.BlockID = b.Hash
+	notarization.Round = b.Round
+	notarization.VerificationTickets = b.VerificationTickets
 	mc.Miners.SendAll(BlockNotarizationSender(notarization))
+	mc.SendNotarizedBlock(ctx, b)
+}
+
+/*SendNotarizedBlock - send the notarized block */
+func (mc *Chain) SendNotarizedBlock(ctx context.Context, b *block.Block) {
+	if mc.BlocksToSharder == NOTARIZED {
+		mc.Sharders.SendAll(NotarizedBlockSender(b))
+	}
 }
 
 /*SendFinalizedBlock - send the finalized block to the sharders */
 func (mc *Chain) SendFinalizedBlock(ctx context.Context, b *block.Block) {
-	mc.Sharders.SendAll(FinalizedBlockSender(b))
+	if mc.BlocksToSharder == FINALIZED {
+		mc.Sharders.SendAll(FinalizedBlockSender(b))
+	}
 }
