@@ -27,6 +27,10 @@ func ToJSONEntityReqResponse(handler JSONEntityReqResponderF, entityMetadata Ent
 		if !common.CheckCrossOrigin(w, r) {
 			return
 		}
+		if r.Method == "OPTIONS" {
+			common.SetupCORSResponse(w, r)
+			return
+		}
 		contentType := r.Header.Get("Content-type")
 		if !strings.HasPrefix(contentType, "application/json") {
 			http.Error(w, "Header Content-type=application/json not found", 400)

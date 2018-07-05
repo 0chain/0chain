@@ -76,6 +76,11 @@ func CheckCrossOrigin(w http.ResponseWriter, r *http.Request) bool {
 	return false
 }
 
+func SetupCORSResponse(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type")
+}
+
 /*ToJSONResponse - An adapter that takes a handler of the form
 * func AHandler(r *http.Request) (interface{}, error)
 * which takes a request object, processes and returns an object or an error
