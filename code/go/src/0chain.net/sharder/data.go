@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"0chain.net/block"
+	"0chain.net/ememorystore"
 	"0chain.net/transaction"
 
 	"0chain.net/datastore"
@@ -37,7 +38,10 @@ func GetTransactionConfirmation(ctx context.Context, hash string) (*transaction.
 	if err != nil {
 		return nil, err
 	}
-	bs, err := GetBlockSummary(ctx, ts.BlockHash)
+	bSummaryEntityMetadata := datastore.GetEntityMetadata("block_summary")
+	bctx := ememorystore.WithEntityConnection(ctx, bSummaryEntityMetadata)
+	defer ememorystore.Close(bctx)
+	bs, err := GetBlockSummary(bctx, ts.BlockHash)
 	if err != nil {
 		return nil, err
 	}

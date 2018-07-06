@@ -36,8 +36,8 @@ const (
 
 /*MTPathNode - The merkle tree path node that provides left/right direction */
 type MTPathNode struct {
-	Hash string
-	Side byte
+	Hash string `json:"hash"`
+	Side byte   `json:"side"`
 }
 
 /*Hash - the hashing used for the merkle tree construction */

@@ -44,6 +44,7 @@ func (sc *Chain) StoreBlock(ctx context.Context, b *block.Block) {
 	bs := b.GetSummary()
 	bSummaryEntityMetadata := bs.GetEntityMetadata()
 	bctx := ememorystore.WithEntityConnection(ctx, bSummaryEntityMetadata)
+	defer ememorystore.Close(bctx)
 	err = bs.Write(bctx)
 	if err != nil {
 		Logger.Error("db error (save block)", zap.String("block", b.Hash), zap.Error(err))
@@ -62,6 +63,7 @@ func (sc *Chain) StoreBlock(ctx context.Context, b *block.Block) {
 	}
 	txnSummaryMetadata := datastore.GetEntityMetadata("txn_summary")
 	tctx := persistencestore.WithEntityConnection(ctx, txnSummaryMetadata)
+	defer persistencestore.Close(tctx)
 	err = txnSummaryMetadata.GetStore().MultiWrite(tctx, txnSummaryMetadata, sTxns)
 	if err != nil {
 		Logger.Error("db error (save transaction)", zap.String("block", b.Hash), zap.Error(err))
