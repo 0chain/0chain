@@ -1,50 +1,56 @@
-package memorystore
+package ememorystore
 
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"0chain.net/common"
 	"0chain.net/datastore"
-	"github.com/gomodule/redigo/redis"
+	"github.com/tecbot/gorocksdb"
 )
-
-/*DefaultPool - the default redis pool against a service (host) named redis */
-var DefaultPool = NewPool("redis", 6379)
-
-/*NewPool - create a new redis pool accessible at the given address */
-func NewPool(host string, port int) *redis.Pool {
-	var address string
-	if os.Getenv("DOCKER") != "" {
-		address = fmt.Sprintf("%v:6379", host)
-	} else {
-		address = fmt.Sprintf("127.0.0.1:%v", port)
-	}
-	return &redis.Pool{
-		MaxIdle:   80,
-		MaxActive: 1000, // max number of connections
-		Dial: func() (redis.Conn, error) {
-			c, err := redis.Dial("tcp", address)
-			if err != nil {
-				panic(err.Error())
-			}
-			return c, err
-		},
-	}
-}
 
 type dbpool struct {
 	ID     string
 	CtxKey common.ContextKey
-	Pool   *redis.Pool
+	Pool   *gorocksdb.TransactionDB
+}
+
+/*Connection - a struct that manages an underlying connection */
+type Connection struct {
+	Conn               *gorocksdb.Transaction
+	ReadOptions        *gorocksdb.ReadOptions
+	WriteOptions       *gorocksdb.WriteOptions
+	TransactionOptions *gorocksdb.TransactionOptions
+}
+
+/*Commit - delegates the commit call to underlying connection */
+func (c *Connection) Commit() error {
+	return c.Conn.Commit()
+}
+
+/*CreateDB - create a database */
+func CreateDB(dataDir string) (*gorocksdb.TransactionDB, error) {
+	bbto := gorocksdb.NewDefaultBlockBasedTableOptions()
+	bbto.SetBlockCache(gorocksdb.NewLRUCache(3 << 30))
+	opts := gorocksdb.NewDefaultOptions()
+	opts.SetBlockBasedTableFactory(bbto)
+	opts.SetCreateIfMissing(true)
+	tdbopts := gorocksdb.NewDefaultTransactionDBOptions()
+	return gorocksdb.OpenTransactionDb(opts, tdbopts, dataDir)
+}
+
+var DefaultPool *gorocksdb.TransactionDB
+
+func init() {
+	dp, err := CreateDB("data/rocksdb")
+	if err != nil {
+		panic(err)
+	}
+	AddPool("", dp)
+	DefaultPool = dp
 }
 
 var pools = make(map[string]*dbpool)
-
-func init() {
-	pools[""] = &dbpool{ID: "", CtxKey: CONNECTION, Pool: DefaultPool}
-}
 
 func getConnectionCtxKey(dbid string) common.ContextKey {
 	if dbid == "" {
@@ -54,9 +60,10 @@ func getConnectionCtxKey(dbid string) common.ContextKey {
 }
 
 /*AddPool - add a database pool to the repository of db pools */
-func AddPool(dbid string, pool *redis.Pool) {
-	dbpool := &dbpool{ID: dbid, CtxKey: getConnectionCtxKey(dbid), Pool: pool}
+func AddPool(dbid string, db *gorocksdb.TransactionDB) *dbpool {
+	dbpool := &dbpool{ID: dbid, CtxKey: getConnectionCtxKey(dbid), Pool: db}
 	pools[dbid] = dbpool
+	return dbpool
 }
 
 func getdbpool(entityMetadata datastore.EntityMetadata) *dbpool {
@@ -72,24 +79,35 @@ func getdbpool(entityMetadata datastore.EntityMetadata) *dbpool {
 * Should always use right after getting the connection to avoid leaks
 * defer c.Close()
  */
-func GetConnection() redis.Conn {
-	return DefaultPool.Get()
+func GetConnection() *Connection {
+	return GetTransaction(DefaultPool)
+}
+
+/*GetTransaction - get the transaction object associated with this db */
+func GetTransaction(db *gorocksdb.TransactionDB) *Connection {
+	ro := gorocksdb.NewDefaultReadOptions()
+	wo := gorocksdb.NewDefaultWriteOptions()
+	to := gorocksdb.NewDefaultTransactionOptions()
+
+	t := db.TransactionBegin(wo, to, nil)
+	conn := &Connection{Conn: t, ReadOptions: ro, WriteOptions: wo, TransactionOptions: to}
+	return conn
 }
 
 /*GetEntityConnection - retuns a connection from the pool configured for the entity */
-func GetEntityConnection(entityMetadata datastore.EntityMetadata) redis.Conn {
+func GetEntityConnection(entityMetadata datastore.EntityMetadata) *Connection {
 	dbid := entityMetadata.GetDB()
 	if dbid == "" {
 		return GetConnection()
 	}
 	dbpool := getdbpool(entityMetadata)
-	return dbpool.Pool.Get()
+	return GetTransaction(dbpool.Pool)
 }
 
 /*CONNECTION - key used to get the connection object from the context */
 const CONNECTION common.ContextKey = "connection."
 
-type connections map[common.ContextKey]redis.Conn
+type connections map[common.ContextKey]*Connection
 
 /*WithConnection takes a context and adds a connection value to it */
 func WithConnection(ctx context.Context) context.Context {
@@ -112,7 +130,7 @@ func WithConnection(ctx context.Context) context.Context {
 }
 
 /*GetCon returns a connection stored in the context which got created via WithConnection */
-func GetCon(ctx context.Context) redis.Conn {
+func GetCon(ctx context.Context) *Connection {
 	if ctx == nil {
 		return GetConnection()
 	}
@@ -144,20 +162,20 @@ func WithEntityConnection(ctx context.Context, entityMetadata datastore.EntityMe
 	c := ctx.Value(CONNECTION)
 	if c == nil {
 		cMap := make(connections)
-		cMap[dbpool.CtxKey] = dbpool.Pool.Get()
+		cMap[dbpool.CtxKey] = GetTransaction(dbpool.Pool)
 		return context.WithValue(ctx, CONNECTION, cMap)
 	}
 	cMap, ok := c.(connections)
 	_, ok = cMap[dbpool.CtxKey]
 	if !ok {
-		cMap[dbpool.CtxKey] = dbpool.Pool.Get()
+		cMap[dbpool.CtxKey] = GetTransaction(dbpool.Pool)
 	}
 	return ctx
 
 }
 
 /*GetEntityCon returns a connection stored in the context which got created via WithEntityConnection */
-func GetEntityCon(ctx context.Context, entityMetadata datastore.EntityMetadata) redis.Conn {
+func GetEntityCon(ctx context.Context, entityMetadata datastore.EntityMetadata) *Connection {
 	if ctx == nil {
 		return GetEntityConnection(entityMetadata)
 	}
@@ -187,6 +205,10 @@ func Close(ctx context.Context) {
 	}
 	cMap := c.(connections)
 	for _, con := range cMap {
-		con.Close()
+		con.ReadOptions.Destroy()
+		con.WriteOptions.Destroy()
+		con.TransactionOptions.Destroy()
+		con.Conn.Rollback() // commit is expected to be done by the caller of the get connection
+		con.Conn.Destroy()
 	}
 }

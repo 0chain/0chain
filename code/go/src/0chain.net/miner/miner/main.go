@@ -60,6 +60,8 @@ func initEntities() {
 	block.SetupBlockSummaryEntity(memoryStorage)
 
 	client.SetupEntity(memoryStorage)
+
+	transaction.SetupTransactionDB()
 	transaction.SetupEntity(memoryStorage)
 
 	miner.SetupNotarizationEntity()
