@@ -1,4 +1,4 @@
-FROM iron/go:dev
+FROM zchain_base
 
 ENV SRC_DIR=/0chain
 ENV GOPATH=$SRC_DIR/go
@@ -7,6 +7,7 @@ WORKDIR $SRC_DIR
 
 #Download the dependencies
 RUN go get github.com/golang/snappy
+RUN go get github.com/tecbot/gorocksdb
 RUN go get github.com/gomodule/redigo/redis
 RUN go get github.com/vmihailenco/msgpack
 RUN go get -u golang.org/x/crypto/...
@@ -21,7 +22,7 @@ ADD ./code/go/src $SRC_DIR/go/src
 # Build it:
 RUN go build 0chain.net/miner/miner
 
-FROM alpine
+FROM zchain_base
 ENV APP_DIR=/0chain
 WORKDIR $APP_DIR
 RUN mkdir -p $APP_DIR/bin
