@@ -18,6 +18,7 @@ import (
 	"0chain.net/common"
 	"0chain.net/config"
 	"0chain.net/datastore"
+	"0chain.net/ememorystore"
 	"0chain.net/encryption"
 	"0chain.net/logging"
 	. "0chain.net/logging"
@@ -56,14 +57,16 @@ func initEntities() {
 	chain.SetupEntity(memoryStorage)
 	round.SetupEntity(memoryStorage)
 	block.SetupEntity(memoryStorage)
-	block.SetupBlockSummaryEntity(memoryStorage)
+
+	block.SetupBlockSummaryDB()
+	ememoryStorage := ememorystore.GetStorageProvider()
+	block.SetupBlockSummaryEntity(ememoryStorage)
 
 	client.SetupEntity(memoryStorage)
 	transaction.SetupEntity(memoryStorage)
 
 	persistencestore.InitSession()
 	persistenceStorage := persistencestore.GetStorageProvider()
-	block.SetupBlockSummaryEntity(persistenceStorage)
 	transaction.SetupTxnSummaryEntity(persistenceStorage)
 	transaction.SetupTxnConfirmationEntity(persistenceStorage)
 }
