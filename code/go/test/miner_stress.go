@@ -96,7 +96,7 @@ func CreateTransaction(httpclient *http.Client, client Client) bool {
 	for true {
 		ts := common.Now()
 		txn["creation_date"] = ts
-		hashdata := fmt.Sprintf("%v:%v:%v:%v", client.clientID, ts, value, data)
+		hashdata := fmt.Sprintf("%v:%v:%v:%v:%v", ts, client.clientID, "", value, data)
 		hash := encryption.Hash(hashdata)
 		signature, err := encryption.Sign(client.privateKey, hash)
 		if err != nil {
@@ -136,7 +136,7 @@ func GetHash(httpclient *http.Client, data string) bool {
 }
 
 func main() {
-	address := flag.String("address", "127.0.0.1:7070", "address")
+	address := flag.String("address", "127.0.0.1:7071", "address")
 	numClients := flag.Int("num_clients", 100, "num_clients")
 	numTxns := flag.Int("num_txns", 1000, "num_txns")
 	maxConcurrentClients := flag.Int("max_concurrent_users", 100, "max_concurrent_users")
