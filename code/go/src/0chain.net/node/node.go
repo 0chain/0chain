@@ -126,8 +126,8 @@ func Read(line string) (*Node, error) {
 		return nil, common.NewError("invalid_client_id", fmt.Sprintf("public key: %v, client_id: %v, hash: %v\n", node.PublicKey, node.ID, hash))
 	}
 	node.ComputeProperties()
-	if Self == nil && node.Host == config.Configuration.Host && node.Port == config.Configuration.Port {
-		Self = &SelfNode{Node: node}
+	if Self.PublicKey == node.PublicKey {
+		Self.Node = node
 	}
 	return node, nil
 }
