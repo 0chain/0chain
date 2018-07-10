@@ -112,7 +112,7 @@ func main() {
 	chain.SetNetworkRelayTime(viper.GetDuration("server_chain.network.relay_time") * time.Millisecond)
 
 	if *nodesFile == "" {
-		panic("Please specify --node_file file.txt option with a file.txt containing peer nodes")
+		panic("Please specify --nodes_file file.txt option with a file.txt containing nodes including self")
 	}
 	reader, err = os.Open(*nodesFile)
 	if err != nil {
