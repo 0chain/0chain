@@ -161,6 +161,7 @@ func main() {
 	}
 	common.HandleShutdown(server)
 
+	memorystore.GetInfo()
 	serverChain.SetupWorkers(ctx)
 	node.SetupN2NHandlers()
 	serverChain.SetupNodeHandlers()

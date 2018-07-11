@@ -4,10 +4,14 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"regexp"
+	"time"
 
 	"0chain.net/common"
 	"0chain.net/datastore"
+	. "0chain.net/logging"
 	"github.com/gomodule/redigo/redis"
+	"go.uber.org/zap"
 )
 
 /*DefaultPool - the default redis pool against a service (host) named redis */
@@ -74,6 +78,23 @@ func getdbpool(entityMetadata datastore.EntityMetadata) *dbpool {
  */
 func GetConnection() redis.Conn {
 	return DefaultPool.Get()
+}
+
+func GetInfo() redis.Conn {
+	conn := DefaultPool.Get()
+	delay := 10 * time.Second
+	for tries := 0; true; tries++ {
+		info, err := redis.String(conn.Do("INFO", "persistence"))
+		if err != nil {
+			panic("invalid setup")
+		}
+		re := regexp.MustCompile("loading:1")
+		if re.MatchString(info) {
+			Logger.Info("Redis is not ready to take connections", zap.Any("retry", tries))
+			time.Sleep(delay)
+		}
+	}
+	return conn
 }
 
 /*GetEntityConnection - retuns a connection from the pool configured for the entity */
