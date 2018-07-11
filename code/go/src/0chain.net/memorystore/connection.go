@@ -80,6 +80,8 @@ func GetConnection() redis.Conn {
 	return DefaultPool.Get()
 }
 
+/*GetInfo - returns a connection from the Pool and will do info persistence on Redis to see the status of redis
+ */
 func GetInfo() redis.Conn {
 	conn := DefaultPool.Get()
 	delay := 10 * time.Second
@@ -92,6 +94,8 @@ func GetInfo() redis.Conn {
 		if re.MatchString(info) {
 			Logger.Info("Redis is not ready to take connections", zap.Any("retry", tries))
 			time.Sleep(delay)
+		} else {
+			break
 		}
 	}
 	return conn
