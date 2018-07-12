@@ -29,6 +29,7 @@ type ProtocolMessageReceiver interface {
 	HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage)
 	HandleVerificationTicketMessage(ctx context.Context, msg *BlockMessage)
 	HandleNotarizationMessage(ctx context.Context, msg *BlockMessage)
+	HandleRoundTimeout(ctx context.Context)
 }
 
 /*ProtocolRound - this is the interface that deals with the round level logic of the protocol */
