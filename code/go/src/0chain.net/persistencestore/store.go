@@ -11,7 +11,7 @@ import (
 )
 
 /*BATCH_SIZE size of the batch */
-const BATCH_SIZE = 64
+const BATCH_SIZE = 16
 
 var storageAPI = &Store{}
 
