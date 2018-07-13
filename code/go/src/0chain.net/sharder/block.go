@@ -5,6 +5,7 @@ import (
 
 	"0chain.net/block"
 	"0chain.net/chain"
+	"0chain.net/datastore"
 )
 
 /*GetBlockBySummary - get a block */
@@ -20,4 +21,15 @@ func (sc *Chain) GetBlockBySummary(ctx context.Context, bs *block.BlockSummary) 
 		}
 	}
 	return b, nil
+}
+
+/*GetBlockSummary - given a block hash, get the block summary */
+func GetBlockSummary(ctx context.Context, hash string) (*block.BlockSummary, error) {
+	blockSummaryEntityMetadata := datastore.GetEntityMetadata("block_summary")
+	blockSummary := blockSummaryEntityMetadata.Instance().(*block.BlockSummary)
+	err := blockSummaryEntityMetadata.GetStore().Read(ctx, datastore.ToKey(hash), blockSummary)
+	if err != nil {
+		return nil, err
+	}
+	return blockSummary, nil
 }
