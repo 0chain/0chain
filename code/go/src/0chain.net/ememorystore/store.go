@@ -26,7 +26,8 @@ func (ems *Store) Read(ctx context.Context, key datastore.Key, entity datastore.
 	if err != nil {
 		return err
 	}
-	datastore.FromJSON(data, entity)
+	defer data.Free()
+	datastore.FromJSON(data.Data(), entity)
 	return nil
 }
 
