@@ -85,12 +85,12 @@ func GetConnection() redis.Conn {
 func GetInfo() redis.Conn {
 	conn := DefaultPool.Get()
 	delay := 10 * time.Second
+	re := regexp.MustCompile("loading:1")
 	for tries := 0; true; tries++ {
 		info, err := redis.String(conn.Do("INFO", "persistence"))
 		if err != nil {
 			panic("invalid setup")
 		}
-		re := regexp.MustCompile("loading:1")
 		if re.MatchString(info) {
 			Logger.Info("Redis is not ready to take connections", zap.Any("retry", tries))
 			time.Sleep(delay)
