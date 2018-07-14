@@ -18,7 +18,7 @@ func RawHash(data interface{}) []byte {
 	case []byte:
 		databuf = dataImpl
 	case string:
-		databuf = []byte(dataImpl)
+		databuf = stringToBytes(dataImpl)
 	default:
 		panic("unknown type")
 	}
@@ -26,4 +26,20 @@ func RawHash(data interface{}) []byte {
 	hash.Write(databuf)
 	var buf []byte
 	return hash.Sum(buf)
+}
+
+/*hexToString - convert either a regular string or hex string to byte array */
+func stringToBytes(data string) []byte {
+	var hdata []byte
+	var err error
+	if len(data)%2 == 1 {
+		hdata, err = hex.DecodeString("0" + data)
+	} else {
+		hdata, err = hex.DecodeString(data)
+	}
+	if err == nil {
+		return hdata
+	} else {
+		return []byte(data)
+	}
 }
