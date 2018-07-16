@@ -46,7 +46,6 @@ func initHandlers() {
 	chain.SetupHandlers()
 	client.SetupHandlers()
 	transaction.SetupHandlers()
-	transaction.SetupSharderHandlers()
 	block.SetupHandlers()
 	sharder.SetupHandlers()
 }

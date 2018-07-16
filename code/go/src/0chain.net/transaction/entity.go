@@ -39,6 +39,11 @@ type Transaction struct {
 	Value           int64            `json:"transaction_value" msgpack:"v"` // The value associated with this transaction
 	Signature       string           `json:"signature" msgpack:"s"`
 	CreationDate    common.Timestamp `json:"creation_date" msgpack:"ts"`
+
+	TransactionType int `json:"transaction_type" msgpack:"tt"`
+
+	// a parent transaction introdcues certain state and this state is managed as new transactions are created referencing to this parent transaction
+	ParentTransactionHash datastore.Key `json:"parent_txn_hash,omitempty" msgpack:"ptid,omitempty"`
 }
 
 var transactionEntityMetadata *datastore.EntityMetadataImpl
@@ -87,6 +92,11 @@ func (t *Transaction) Validate(ctx context.Context) error {
 	err = t.VerifySignature(ctx)
 	if err != nil {
 		return err
+	}
+	if t.TransactionType%2 == 1 {
+		if t.ParentTransactionHash == "" {
+			return common.InvalidRequest("Transaction type requires a parent transaction")
+		}
 	}
 	return nil
 }
