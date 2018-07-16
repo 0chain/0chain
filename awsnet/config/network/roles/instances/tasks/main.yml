@@ -1,0 +1,89 @@
+- name: "Prepare miner instance"
+  set_fact:
+    network_type: "{{znetwork.network_type}}"
+    network_name: "{{znetwork.network_name}}"
+  tags:
+    - server-launch
+    - server-terminate
+
+- name: "Launch the server instances..."
+  ec2:
+    region: "{{regions[item.region]}}"
+    key_name: "{{key_pair}}"
+    instance_type: "{{instances[item.role].instance_type}}"
+    image: "{{instance_images[item.role][item.region]['ami_id']}}"
+    wait: no
+    termination_protection: no
+    group:
+    instance_tags:
+      role: "{{item.role}}"
+      network_type: "{{network_type}}"
+      network_name: "{{network_name}}"
+      Name: "{{item.name}}"
+    exact_count: 1
+    count_tag:
+      network_type: "{{network_type}}"
+      network_name: "{{network_name}}"
+      role: "{{item.role}}"
+      Name: "{{item.name}}"
+  register: ec2
+  with_items:
+    - "{{znetwork.layout.miners}}"
+    #- "{{znetwork.layout.sharders}}"
+    #- "{{znetwork.layout.blobbers}}"
+  check_mode: no
+  tags:
+    - server-launch
+
+- debug: var=item.public_ip
+  with_items: "{{ec2 | json_query('results[*].tagged_instances')}}"
+  tags:
+    - server-launch
+
+- name: "Add the servers to the groups..."
+  add_host:
+    hostname: "{{item.public_ip}}"
+    groupname: zchain_servers
+    ansible_user: ubuntu
+  with_items: "{{ec2 | json_query('results[*].tagged_instances')}}"
+  tags:
+    - server-launch
+
+- name: Wait for SSH to come up...
+  wait_for:
+    host: "{{item.public_ip}}"
+    port: 22
+    state: started
+  with_items: "{{ec2 | json_query('results[*].tagged_instances')}}"
+  tags:
+    - server-launch
+
+- name: "Terminate the servers..."
+  ec2:
+    region: "{{regions[item.region]}}"
+    key_name: "{{key_pair}}"
+    instance_type: "{{instances[item.role].instance_type}}"
+    image: "{{instance_images[item.role][item.region]['ami_id']}}"
+    wait: no
+    termination_protection: no
+    group:
+    instance_tags:
+      role: "{{item.role}}"
+      network_type: "{{network_type}}"
+      network_name: "{{network_name}}"
+      Name: "{{item.name}}"
+    exact_count: 0
+    count_tag:
+      network_type: "{{network_type}}"
+      network_name: "{{network_name}}"
+      role: "{{item.role}}"
+      Name: "{{item.name}}"
+
+  with_items:
+    - "{{znetwork.layout.miners}}"
+    - "{{znetwork.layout.sharders}}"
+    - "{{znetwork.layout.blobbers}}"
+  check_mode: no
+  tags:
+    - server-terminate
+

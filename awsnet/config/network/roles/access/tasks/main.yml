@@ -1,0 +1,46 @@
+
+- name: "Create key={{key_pair}} in region={{primary_region}}"
+  ec2_key:
+    name: "{{key_pair}}"
+    region: "{{primary_region.name}}"
+  register: keypair
+  tags:
+    - key-create
+
+- debug: msg="key={{key_pair}} contents={{keypair}}"
+  tags:
+    - key-create
+
+- name: "Save key={{key_pair}} to file={{key_pair_file}}"
+  copy:
+    dest: "{{key_pair_file}}"
+    content: "{{ keypair.key.private_key }}"
+    mode: 0600
+  when: keypair.changed
+  tags:
+    - key-create
+
+
+- name: "Add key={{key_pair}} to regions={{region_tags}}"
+  ec2_key:
+    name: "{{key_pair}}"
+    region: "{{ item.value.name }}"
+    state: present
+  with_dict: "{{ regions }}"
+  tags:
+    - key-region-add
+
+
+- name: "Remove key={{key_pair}} from regions={{region_tags}}"
+  ec2_key:
+    name: "{{key_pair}}"
+    region: "{{ item.value.name }}"
+    state: absent
+  with_dict: "{{ regions }}"
+  tags:
+    - key-region-remove
+
+- name: "Delete key={{key_pair}} file={{key_pair_file}}"
+  file: path="{{key_pair_file}}" state=absent
+  tags:
+    - key-file-delete

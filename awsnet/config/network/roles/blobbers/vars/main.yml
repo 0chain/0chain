@@ -1,0 +1,23 @@
+---
+blobbers:
+  'b00': rank="00"
+  'b01': rank="01"
+  'b02': rank="02"
+  'b03': rank="03"
+  'b04': rank="04"
+  'b05': rank="05"
+  'b06': rank="06"
+  'b07': rank="07"
+  'b08': rank="08"
+  'b09': rank="09"
+  'b10': rank="10"
+  'b11': rank="11"
+  'b12': rank="12"
+  'b13': rank="13"
+  'b14': rank="14"
+  'b15': rank="15"
+  'b16': rank="16"
+  'b17': rank="17"
+  'b18': rank="18"
+  'b19': rank="19"
+...

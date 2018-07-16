@@ -1,0 +1,34 @@
+---
+- hosts: localhost
+  connection: local
+  vars_files:
+    - "{{ access }}/credentials.yml"
+  environment:
+    AWS_ACCESS_KEY: "{{ aws_access_key }}"
+    AWS_SECRET_KEY: "{{ aws_secret_key }}"
+  roles:
+    - role: control
+    - role: regions
+    - role: access
+    - role: servers
+    - role: storage
+    - role: miners
+    - role: sharders
+    - role: blobbers
+    - role: eip
+    - role: receipes
+    - role: instances
+
+#- hosts: zchain_servers
+#  roles:
+#    - role: control
+#    - role: access
+#  vars:
+#    ansible_ssh_private_key_file: "{{key_pair_file}}"
+#  tasks:
+#  - name: return motd
+#    command: cat /etc/motd
+#    tags:
+#      - server-launch
+
+...
