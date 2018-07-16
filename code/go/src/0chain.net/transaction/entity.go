@@ -97,6 +97,11 @@ func (t *Transaction) Validate(ctx context.Context) error {
 		if t.ParentTransactionHash == "" {
 			return common.InvalidRequest("Transaction type requires a parent transaction")
 		}
+	} else {
+		//Do we want to support multi-level transactions?
+		if t.ParentTransactionHash != "" {
+			return common.InvalidRequest("a parent transaction can't have a parent transaction")
+		}
 	}
 	return nil
 }
@@ -234,4 +239,11 @@ func (t *Transaction) GetSummary() *TransactionSummary {
 	summary.Hash = t.Hash
 	summary.CreationDate = t.CreationDate
 	return summary
+}
+
+/*GenerateChildTransactions - generate child transactions for this parent transaction */
+func (t *Transaction) GenerateChildTransactions(ctx context.Context) []*Transaction {
+	//TODO: putting a transaction into a block may need to accompany associated child transactions
+	// E.g: When a storage allocation lockin transaction is processed, it may need to add additional child transactions to the block one for each blobber
+	return nil
 }

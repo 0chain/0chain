@@ -77,11 +77,21 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		b.Txns[idx] = txn
 		etxns[idx] = txn
 		b.AddTransaction(txn)
+		clients[txn.ClientID] = nil
 		idx++
 
-		clients[txn.ClientID] = nil
+		childTxns := txn.GenerateChildTransactions(ctx)
+		if childTxns != nil {
+			for _, ctxn := range childTxns {
+				b.Txns[idx] = ctxn
+				etxns[idx] = ctxn
+				b.AddTransaction(ctxn)
+				clients[ctxn.ClientID] = nil
+				idx++
+			}
+		}
 
-		if idx == mc.BlockSize {
+		if idx >= mc.BlockSize {
 			return false
 		}
 		return true
