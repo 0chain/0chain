@@ -36,6 +36,7 @@ services:
       dockerfile: ./docker.local/build.miner/Dockerfile
     volumes:
       - ../config:/0chain/config
+      - ../miner${MINER}/data:/0chain/data
       - ../miner${MINER}/log:/0chain/log
 
     ports:
@@ -44,7 +45,7 @@ services:
       default:
       testnet0:
         ipv4_address: 198.18.0.7${MINER}
-    command: ./bin/miner  --host 198.18.0.7${MINER} --port 707${MINER} --deployment_mode 0 --keys_file config/mnode${MINER}_keys.txt --nodes_file config/single_machine_3_nodes.txt
+    command: ./bin/miner  --deployment_mode 0 --keys_file config/mnode${MINER}_keys.txt --nodes_file config/single_machine_3_nodes.txt
 
 networks:
   default:

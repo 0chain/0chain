@@ -8,6 +8,7 @@ import (
 	"0chain.net/block"
 	"0chain.net/blockstore"
 	"0chain.net/datastore"
+	"0chain.net/ememorystore"
 	. "0chain.net/logging"
 	"0chain.net/persistencestore"
 	"go.uber.org/zap"
@@ -41,10 +42,18 @@ func (sc *Chain) StoreBlock(ctx context.Context, b *block.Block) {
 		Logger.Info("saved block", zap.Any("round", b.Round), zap.Any("hash", b.Hash), zap.Any("prev_hash", b.PrevHash), zap.Duration("duration", time.Since(ts)))
 	}
 	bs := b.GetSummary()
-	ctx = persistencestore.WithEntityConnection(ctx, bs.GetEntityMetadata())
-	err = bs.Write(ctx)
+	bSummaryEntityMetadata := bs.GetEntityMetadata()
+	bctx := ememorystore.WithEntityConnection(ctx, bSummaryEntityMetadata)
+	defer ememorystore.Close(bctx)
+	err = bs.Write(bctx)
 	if err != nil {
 		Logger.Error("db error (save block)", zap.String("block", b.Hash), zap.Error(err))
+	} else {
+		con := ememorystore.GetEntityCon(bctx, bSummaryEntityMetadata)
+		err := con.Commit()
+		if err != nil {
+			Logger.Error("db error (save block)", zap.String("block", b.Hash), zap.Error(err))
+		}
 	}
 	var sTxns = make([]datastore.Entity, len(b.Txns))
 	for idx, txn := range b.Txns {
@@ -53,7 +62,9 @@ func (sc *Chain) StoreBlock(ctx context.Context, b *block.Block) {
 		sTxns[idx] = txnSummary
 	}
 	txnSummaryMetadata := datastore.GetEntityMetadata("txn_summary")
-	err = txnSummaryMetadata.GetStore().MultiWrite(ctx, txnSummaryMetadata, sTxns)
+	tctx := persistencestore.WithEntityConnection(ctx, txnSummaryMetadata)
+	defer persistencestore.Close(tctx)
+	err = txnSummaryMetadata.GetStore().MultiWrite(tctx, txnSummaryMetadata, sTxns)
 	if err != nil {
 		Logger.Error("db error (save transaction)", zap.String("block", b.Hash), zap.Error(err))
 	}

@@ -20,7 +20,7 @@ const TXN_TIME_TOLERANCE = 10
 
 var TransactionCount = 0
 
-func init() {
+func SetupTransactionDB() {
 	memorystore.AddPool("txndb", memorystore.NewPool("redis_txns", 6479))
 }
 
@@ -188,7 +188,7 @@ var TransactionEntityChannel chan datastore.QueuedEntity
 func SetupEntity(store datastore.Store) {
 	transactionEntityMetadata = datastore.MetadataProvider()
 	transactionEntityMetadata.Name = "txn"
-	transactionEntityMetadata.MemoryDB = "txndb"
+	transactionEntityMetadata.DB = "txndb"
 	transactionEntityMetadata.Provider = Provider
 	transactionEntityMetadata.Store = store
 

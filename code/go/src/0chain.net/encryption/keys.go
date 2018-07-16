@@ -36,24 +36,44 @@ type SignerVerifier interface {
 }
 
 //Sign - given a private key and data, compute it's signature
-func Sign(privateKey string, hash string) (string, error) {
+func Sign(privateKey string, hash interface{}) (string, error) {
 	private, err := hex.DecodeString(privateKey)
 	if err != nil {
 		return "", err
 	}
-	data, err := hex.DecodeString(hash)
-	if err != nil {
-		return "", err
+	var rawHash []byte
+	switch hashImpl := hash.(type) {
+	case []byte:
+		rawHash = hashImpl
+	case string:
+		decoded, err := hex.DecodeString(hashImpl)
+		if err != nil {
+			return "", err
+		}
+		rawHash = decoded
+	default:
+		panic("unknown hash type")
 	}
-	return hex.EncodeToString(ed25519.Sign(private, data)), nil
+
+	return hex.EncodeToString(ed25519.Sign(private, rawHash)), nil
 }
 
-//Verify - given a public key and a signature,
-func Verify(publicKey string, signature string, hash string) (bool, error) {
-	public, err := hex.DecodeString(publicKey)
-	if err != nil {
-		return false, err
+//Verify - given a public key and a signature and the hash used to create the signature, verify the signature
+func Verify(publicKey interface{}, signature string, hash string) (bool, error) {
+	var public []byte
+	switch publicImpl := publicKey.(type) {
+	case []byte:
+		public = publicImpl
+	case string:
+		decoded, err := hex.DecodeString(publicImpl)
+		if err != nil {
+			return false, err
+		}
+		public = decoded
+	default:
+		panic("unknown public key type")
 	}
+
 	sign, err := hex.DecodeString(signature)
 	if err != nil {
 		return false, err

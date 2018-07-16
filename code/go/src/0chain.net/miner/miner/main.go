@@ -60,6 +60,8 @@ func initEntities() {
 	block.SetupBlockSummaryEntity(memoryStorage)
 
 	client.SetupEntity(memoryStorage)
+
+	transaction.SetupTransactionDB()
 	transaction.SetupEntity(memoryStorage)
 
 	miner.SetupNotarizationEntity()
@@ -69,8 +71,6 @@ func initEntities() {
 var Chain string
 
 func main() {
-	host := flag.String("host", "", "hostname")
-	port := flag.Int("port", 7220, "port")
 	deploymentMode := flag.Int("deployment_mode", 2, "deployment_mode")
 	nodesFile := flag.String("nodes_file", "config/single_node.txt", "nodes_file")
 	keysFile := flag.String("keys_file", "config/single_node_miner_keys.txt", "keys_file")
@@ -87,12 +87,6 @@ func main() {
 		logging.InitLogging("production")
 	}
 
-	//TODO: for docker compose mapping, we can't use the host
-	//address := fmt.Sprintf("%v:%v", *host, *port)
-	address := fmt.Sprintf(":%v", *port)
-
-	config.Configuration.Host = *host
-	config.Configuration.Port = *port
 	config.Configuration.ChainID = viper.GetString("server_chain.id")
 	config.Configuration.MaxDelay = *maxDelay
 
@@ -101,6 +95,7 @@ func main() {
 		panic(err)
 	}
 	publicKey, privateKey := encryption.ReadKeys(reader)
+	node.Self.SetKeys(publicKey, privateKey)
 	reader.Close()
 	config.SetServerChainID(config.Configuration.ChainID)
 	serverChain := chain.Provider().(*chain.Chain)
@@ -112,7 +107,7 @@ func main() {
 	miner.SetNetworkRelayTime(viper.GetDuration("server_chain.network.relay_time") * time.Millisecond)
 
 	if *nodesFile == "" {
-		panic("Please specify --node_file file.txt option with a file.txt containing peer nodes")
+		panic("Please specify --nodes_file file.txt option with a file.txt containing nodes including self")
 	}
 	reader, err = os.Open(*nodesFile)
 	if err != nil {
@@ -120,6 +115,12 @@ func main() {
 	}
 	node.ReadNodes(reader, serverChain.Miners, serverChain.Sharders, serverChain.Blobbers)
 	reader.Close()
+	if node.Self.ID == "" {
+		Logger.Panic("node definition for self node doesn't exist")
+	} else {
+		Logger.Info("self identity", zap.Any("set_index", node.Self.Node.SetIndex), zap.Any("id", node.Self.Node.GetKey()))
+	}
+	address := fmt.Sprintf(":%v", node.Self.Port)
 
 	miner.SetupMinerChain(serverChain)
 	chain.SetServerChain(&miner.GetMinerChain().Chain)
@@ -127,16 +128,6 @@ func main() {
 	serverChain.Miners.ComputeProperties()
 	serverChain.Sharders.ComputeProperties()
 	serverChain.Blobbers.ComputeProperties()
-
-	if node.Self == nil {
-		Logger.DPanic("node definition for self node doesn't exist")
-	} else {
-		if node.Self.PublicKey != publicKey {
-			panic(fmt.Sprintf("Pulbic key from the keys file and nodes file don't match %v %v", publicKey, node.Self.PublicKey))
-		}
-		node.Self.SetPrivateKey(privateKey)
-		Logger.Info("self identity", zap.Any("set_index", node.Self.Node.SetIndex), zap.Any("id", node.Self.Node.GetKey()))
-	}
 
 	common.SetupRootContext(node.GetNodeContext())
 	ctx := common.GetRootContext()
@@ -170,6 +161,7 @@ func main() {
 	}
 	common.HandleShutdown(server)
 
+	memorystore.GetInfo()
 	serverChain.SetupWorkers(ctx)
 	node.SetupN2NHandlers()
 	serverChain.SetupNodeHandlers()

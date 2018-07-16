@@ -13,8 +13,9 @@ type SelfNode struct {
 	privateKey string
 }
 
-/*SetPrivateKey - setter */
-func (sn *SelfNode) SetPrivateKey(privateKey string) {
+/*SetKeys - setter */
+func (sn *SelfNode) SetKeys(publicKey string, privateKey string) {
+	sn.PublicKey = publicKey
 	sn.privateKey = privateKey
 }
 
@@ -36,3 +37,8 @@ func (sn *SelfNode) TimeStampSignature() (string, string, string, error) {
 
 /*Self represents the node of this intance */
 var Self *SelfNode
+
+func init() {
+	Self = &SelfNode{}
+	Self.Node = &Node{}
+}

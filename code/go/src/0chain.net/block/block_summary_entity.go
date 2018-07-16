@@ -5,6 +5,7 @@ import (
 
 	"0chain.net/common"
 	"0chain.net/datastore"
+	"0chain.net/ememorystore"
 )
 
 /*BlockSummary - the summary of the block */
@@ -16,6 +17,15 @@ type BlockSummary struct {
 	Round           int64  `json:"round"`
 	RoundRandomSeed int64  `json:"round_random_seed"`
 	MerkleTreeRoot  string `json:"merkle_tree_root"`
+}
+
+/*SetupBlockSummaryDB - sets up the block summary database */
+func SetupBlockSummaryDB() {
+	db, err := ememorystore.CreateDB("data/blocksummarydb")
+	if err != nil {
+		panic(err)
+	}
+	ememorystore.AddPool("blocksummarydb", db)
 }
 
 var blockSummaryEntityMetadata *datastore.EntityMetadataImpl
@@ -62,6 +72,7 @@ func (b *BlockSummary) Delete(ctx context.Context) error {
 func SetupBlockSummaryEntity(store datastore.Store) {
 	blockSummaryEntityMetadata = datastore.MetadataProvider()
 	blockSummaryEntityMetadata.Name = "block_summary"
+	blockSummaryEntityMetadata.DB = "blocksummarydb"
 	blockSummaryEntityMetadata.Provider = BlockSummaryProvider
 	blockSummaryEntityMetadata.Store = store
 	blockSummaryEntityMetadata.IDColumnName = "hash"

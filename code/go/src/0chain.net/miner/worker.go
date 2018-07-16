@@ -2,13 +2,18 @@ package miner
 
 import (
 	"context"
+	"time"
 
+	"0chain.net/chain"
 	"0chain.net/common"
 	"0chain.net/datastore"
 	. "0chain.net/logging"
+	"0chain.net/node"
 	"0chain.net/round"
 	"go.uber.org/zap"
 )
+
+var ROUND_TIMEOUT = 50 * chain.DELTA
 
 /*SetupWorkers - Setup the miner's workers */
 func SetupWorkers() {
@@ -20,10 +25,12 @@ func SetupWorkers() {
 func (mc *Chain) BlockWorker(ctx context.Context) {
 	var protocol Protocol = mc
 	for true {
+		var roundTimeout = time.NewTimer(ROUND_TIMEOUT)
 		select {
 		case <-ctx.Done():
 			return
 		case msg := <-mc.GetBlockMessageChannel():
+			roundTimeout.Stop()
 			if msg.Sender != nil {
 				Logger.Debug("message", zap.Any("msg", GetMessageLookup(msg.Type)), zap.Any("sender_index", msg.Sender.SetIndex), zap.Any("id", msg.Sender.GetKey()))
 			} else {
@@ -44,6 +51,8 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 			} else {
 				Logger.Debug("message (done)", zap.Any("msg", GetMessageLookup(msg.Type)))
 			}
+		case <-roundTimeout.C:
+			protocol.HandleRoundTimeout(ctx)
 		}
 	}
 }
@@ -139,4 +148,14 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 	}
 	b.MergeVerificationTickets(msg.Notarization.VerificationTickets)
 	mc.AddNotarizedBlock(ctx, &r.Round, b)
+}
+
+/*HandleRoundTimeout - handles the timeout of a round*/
+func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
+	Logger.Info("round timeout occured", zap.Any("round", mc.CurrentRound))
+	r := mc.GetRound(mc.CurrentRound)
+	r.Round.Block = nil
+	if mc.CanGenerateRound(&r.Round, node.GetSelfNode(ctx).Node) {
+		go mc.GenerateRoundBlock(ctx, r)
+	}
 }

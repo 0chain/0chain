@@ -34,6 +34,11 @@ $ ./docker.local/bin/setup_network.sh
 
 1) Open 5 terminal tabs. Use the first one for building the containers by being in git/0chain directory. Use the next 3 for 3 miners and be in the respective miner<i> directories created above in docker.local. Use the 5th terminal and be in the sharder1 directory.
 
+1.1) First build the base container, zchain_base
+```
+$ ./docker.local/bin/build.base.sh
+```
+
 2) Building the miners and sharders. From the git/0chain directory use
 
 2.1) To build the miner containers
