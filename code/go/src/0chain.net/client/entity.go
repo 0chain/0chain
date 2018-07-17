@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"encoding/hex"
 	"time"
 
 	"0chain.net/common"
@@ -66,7 +67,19 @@ func Provider() datastore.Entity {
 }
 
 func (c *Client) ComputeProperties() {
-	c.PublicKeyBytes.SetBytesFromString(c.PublicKey)
+	c.setPublicKey()
+}
+
+func (c *Client) setPublicKey() {
+	c.SetPublicKey(c.PublicKey)
+}
+
+func (c *Client) SetPublicKey(key string) {
+	b, _ := hex.DecodeString(key)
+	if len(b) > len(c.PublicKeyBytes) {
+		b = b[len(b)-encryption.HASH_LENGTH:]
+	}
+	copy(c.PublicKeyBytes[encryption.HASH_LENGTH-len(b):], b)
 }
 
 /*SetupEntity - setup the entity */

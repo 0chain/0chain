@@ -15,21 +15,6 @@ func Hash(data interface{}) string {
 	return hex.EncodeToString(RawHash(data))
 }
 
-func (h *HashBytes) SetBytes(b []byte) {
-	if len(b) > len(h) {
-		b = b[len(b)-HASH_LENGTH:]
-	}
-	copy(h[HASH_LENGTH-len(b):], b)
-}
-
-func (h *HashBytes) SetBytesFromString(s string) {
-	b, _ := hex.DecodeString(s)
-	if len(b) > len(h) {
-		b = b[len(b)-HASH_LENGTH:]
-	}
-	copy(h[HASH_LENGTH-len(b):], b)
-}
-
 /*RawHash - Logic to hash the text and return the hash bytes */
 func RawHash(data interface{}) []byte {
 	var databuf []byte
