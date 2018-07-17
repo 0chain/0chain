@@ -65,6 +65,10 @@ func Provider() datastore.Entity {
 	return c
 }
 
+func (c *Client) ComputeProperties() {
+	c.PublicKeyBytes.SetBytesFromString(c.PublicKey)
+}
+
 /*SetupEntity - setup the entity */
 func SetupEntity(store datastore.Store) {
 	clientEntityMetadata = datastore.MetadataProvider()
