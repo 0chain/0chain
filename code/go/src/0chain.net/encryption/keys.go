@@ -64,6 +64,8 @@ func Verify(publicKey interface{}, signature string, hash string) (bool, error) 
 	switch publicImpl := publicKey.(type) {
 	case []byte:
 		public = publicImpl
+	case HashBytes:
+		public = publicImpl[:]
 	case string:
 		decoded, err := hex.DecodeString(publicImpl)
 		if err != nil {

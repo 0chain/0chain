@@ -15,7 +15,8 @@ type Client struct {
 	datastore.IDField
 	datastore.VersionField
 	datastore.CreationDateField
-	PublicKey string `json:"public_key"`
+	PublicKey      string `json:"public_key"`
+	PublicKeyBytes encryption.HashBytes
 }
 
 var clientEntityMetadata *datastore.EntityMetadataImpl
@@ -30,7 +31,7 @@ func (c *Client) Validate(ctx context.Context) error {
 	if datastore.IsEmpty(c.ID) {
 		return common.InvalidRequest("client id is required")
 	}
-	if !datastore.IsEqual(c.ID, datastore.ToKey(encryption.Hash(c.PublicKey))) {
+	if !datastore.IsEqual(c.ID, datastore.ToKey(encryption.Hash(c.PublicKeyBytes))) {
 		return common.InvalidRequest("client id is not a SHA3-256 hash of the public key")
 	}
 	return nil
@@ -53,7 +54,7 @@ func (c *Client) Delete(ctx context.Context) error {
 
 /*Verify - given a signature and hash verify it with client's public key */
 func (c *Client) Verify(signature string, hash string) (bool, error) {
-	return encryption.Verify(c.PublicKey, signature, hash)
+	return encryption.Verify(c.PublicKeyBytes, signature, hash)
 }
 
 /*Provider - entity provider for client object */
