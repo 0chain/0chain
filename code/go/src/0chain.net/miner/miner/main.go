@@ -103,6 +103,7 @@ func main() {
 	serverChain.Decimals = int8(viper.GetInt("server_chain.decimals"))
 	serverChain.BlockSize = viper.GetInt32("server_chain.block.size")
 	serverChain.NumGenerators = viper.GetInt("server_chain.block.generators")
+	serverChain.NumSharders = viper.GetInt("server_chain.block.sharders")
 	serverChain.NotarizationThreshold = viper.GetInt("server_chain.block.notarization_threshold")
 	miner.SetNetworkRelayTime(viper.GetDuration("server_chain.network.relay_time") * time.Millisecond)
 

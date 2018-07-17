@@ -17,6 +17,7 @@ server_chain:
   block:
     size: 10000
     generators: 2
+    sharders: 3
     notarization_threshold: 60 # percentage
   network:
     relay_time: 100 # milliseconds

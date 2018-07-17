@@ -42,10 +42,11 @@ type Chain struct {
 	ClientID      datastore.Key `json:"client_id"`                 // Client who created this chain
 	ParentChainID datastore.Key `json:"parent_chain_id,omitempty"` // Chain from which this chain is forked off
 
-	Decimals              int8  `json:"decimals"`                // Number of decimals allowed for the token on this chain
-	BlockSize             int32 `json:"block_size"`              // Number of transactions in a block
-	NumGenerators         int   `json:"num_generators"`          // Number of block generators
-	NotarizationThreshold int   `json: "notarization_threshold"` // Threshold for a block to be notarized
+	Decimals              int8  `json:"decimals"`               // Number of decimals allowed for the token on this chain
+	BlockSize             int32 `json:"block_size"`             // Number of transactions in a block
+	NumGenerators         int   `json:"num_generators"`         // Number of block generators
+	NumSharders           int   `json:"num_sharders"`           // Number of sharders that can store the block
+	NotarizationThreshold int   `json:"notarization_threshold"` // Threshold for a block to be notarized
 
 	/*Miners - this is the pool of miners */
 	Miners *node.Pool `json:"-"`
@@ -246,6 +247,11 @@ func (c *Chain) ValidateMagicBlock(ctx context.Context, b *block.Block) bool {
 /*CanGenerateRound - checks if the miner can generate a block in the given round */
 func (c *Chain) CanGenerateRound(r *round.Round, miner *node.Node) bool {
 	return r.GetRank(miner.SetIndex)+1 <= c.NumGenerators
+}
+
+/*CanStoreBlock - checks if the sharder can store the block in the given round */
+func (c *Chain) CanStoreBlock(r *round.Round, sharder *node.Node) bool {
+	return r.GetRank(sharder.SetIndex)+1 <= c.NumSharders
 }
 
 /*ValidGenerator - check whether this block is from a valid generator */

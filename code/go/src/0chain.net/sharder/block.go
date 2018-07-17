@@ -6,6 +6,7 @@ import (
 	"0chain.net/block"
 	"0chain.net/chain"
 	"0chain.net/datastore"
+	"0chain.net/ememorystore"
 )
 
 /*GetBlockBySummary - get a block */
@@ -32,4 +33,34 @@ func GetBlockSummary(ctx context.Context, hash string) (*block.BlockSummary, err
 		return nil, err
 	}
 	return blockSummary, nil
+}
+
+/*GetBlock - given the block hash, get the block */
+func (sc *Chain) GetBlockFromHash(ctx context.Context, hash string, roundNum int64) (*block.Block, error) {
+	b, err := chain.GetServerChain().GetBlock(ctx, hash)
+	if err != nil {
+		b, err = sc.GetBlockFromStore(hash, roundNum)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return b, nil
+}
+
+/*StoreBlock - store the block to ememory/rocksdb */
+func (sc *Chain) StoreBlock(ctx context.Context, b *block.Block) error {
+	bs := b.GetSummary()
+	bSummaryEntityMetadata := bs.GetEntityMetadata()
+	bctx := ememorystore.WithEntityConnection(ctx, bSummaryEntityMetadata)
+	defer ememorystore.Close(bctx)
+	err := bs.Write(bctx)
+	if err != nil {
+		return err
+	}
+	con := ememorystore.GetEntityCon(bctx, bSummaryEntityMetadata)
+	err = con.Commit()
+	if err != nil {
+		return err
+	}
+	return nil
 }

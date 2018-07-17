@@ -90,3 +90,18 @@ func (fbs *FSBlockStore) read(hash string, round int64) (*block.Block, error) {
 	}
 	return &b, nil
 }
+
+/*Delete - delete from the hash of the block*/
+func (fbs *FSBlockStore) Delete(hash string) error {
+	return common.NewError("interface_not_implemented", "FSBlockStore cannote provide this interface")
+}
+
+/*Delete - delete the given block from the file system */
+func (fbs *FSBlockStore) DeleteBlock(b *block.Block) error {
+	fileName := fbs.GetFileName(b)
+	err := os.Remove(fileName)
+	if err != nil {
+		return err
+	}
+	return nil
+}

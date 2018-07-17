@@ -7,6 +7,7 @@ import (
 	"0chain.net/block"
 	"0chain.net/blockstore"
 	"0chain.net/chain"
+	"0chain.net/datastore"
 	"0chain.net/round"
 )
 
@@ -18,6 +19,8 @@ func SetupSharderChain(c *chain.Chain) {
 	sharderChain.Initialize()
 	sharderChain.roundsMutex = &sync.Mutex{}
 	sharderChain.BlockChannel = make(chan *block.Block, 128)
+	//TODO experiment on different buffer sizes for Round Channel
+	sharderChain.RoundChannel = make(chan *round.Round, 128)
 }
 
 /*Initialize - intializes internal datastructures to start again */
@@ -35,6 +38,7 @@ func GetSharderChain() *Chain {
 type Chain struct {
 	chain.Chain
 	BlockChannel chan *block.Block
+	RoundChannel chan *round.Round
 	roundsMutex  *sync.Mutex
 	rounds       map[int64]*round.Round
 }
@@ -42,6 +46,11 @@ type Chain struct {
 /*GetBlockChannel - get the block channel where the incoming blocks from the network are put into for further processing */
 func (sc *Chain) GetBlockChannel() chan *block.Block {
 	return sc.BlockChannel
+}
+
+/*GetRoundChannel - get the round channel where the finalized rounds are put into for further processing */
+func (sc *Chain) GetRoundChannel() chan *round.Round {
+	return sc.RoundChannel
 }
 
 /*SetupGenesisBlock - setup the genesis block for this chain */
@@ -64,6 +73,14 @@ func (sc *Chain) GetBlockFromStore(blockHash string, round int64) (*block.Block,
 /*GetBlockFromStoreBySummary - get the block from the store */
 func (sc *Chain) GetBlockFromStoreBySummary(bs *block.BlockSummary) (*block.Block, error) {
 	return blockstore.GetStore().ReadWithBlockSummary(bs)
+}
+
+//TODO do we need this at this level
+func (sc *Chain) GetRoundFromStore(ctx context.Context, roundNum int64) (*round.Round, error) {
+	r := datastore.GetEntity("round").(*round.Round)
+	r.Number = roundNum
+	err := r.Read(ctx, r.GetKey())
+	return r, err
 }
 
 /*AddRound - Add Round to the block */

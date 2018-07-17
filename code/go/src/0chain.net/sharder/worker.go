@@ -6,6 +6,10 @@ import (
 	"os"
 	"time"
 
+	"0chain.net/blockstore"
+
+	"0chain.net/node"
+
 	"0chain.net/common"
 	"0chain.net/config"
 	"0chain.net/datastore"
@@ -20,6 +24,7 @@ func SetupWorkers() {
 	ClearWorkerState()
 	ctx := common.GetRootContext()
 	go GetSharderChain().BlockWorker(ctx)
+	go GetSharderChain().BlockStorageWorker(ctx)
 	if config.Development() {
 		go metrics.LogScaled(metrics.DefaultRegistry, 60*time.Second, time.Millisecond, log.New(os.Stderr, "metrics: ", log.Lmicroseconds))
 	}
@@ -70,6 +75,45 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			pr := sc.GetRound(er.Number - 1)
 			if pr != nil {
 				go sc.FinalizeRound(ctx, pr, sc)
+			}
+		}
+	}
+}
+
+func (sc *Chain) BlockStorageWorker(ctx context.Context) {
+	for true {
+		select {
+		case <-ctx.Done():
+			return
+		case r := <-sc.GetRoundChannel():
+			b, err := sc.GetBlockFromHash(ctx, r.BlockHash, r.Number)
+			if err != nil {
+				Logger.Error("failed to get block", zap.String("blockhash", r.BlockHash), zap.Error(err))
+			}
+			self := node.GetSelfNode(ctx)
+			if sc.CanStoreBlock(r, self.Node) {
+				if b != nil {
+					var sTxns = make([]datastore.Entity, len(b.Txns))
+					for idx, txn := range b.Txns {
+						txnSummary := txn.GetSummary()
+						txnSummary.BlockHash = b.Hash
+						sTxns[idx] = txnSummary
+					}
+					err = sc.StoreTransactions(ctx, sTxns)
+					if err != nil {
+						Logger.Error("db error (save transaction)", zap.String("block", b.Hash), zap.Error(err))
+					} else {
+						err = sc.StoreBlock(ctx, b)
+						if err != nil {
+							Logger.Error("db error (save block)", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
+						}
+					}
+				}
+			} else {
+				err = blockstore.GetStore().DeleteBlock(b)
+				if err != nil {
+					Logger.Error("failed to delete block from file system", zap.String("blockhash", b.Hash), zap.Error(err))
+				}
 			}
 		}
 	}

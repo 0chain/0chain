@@ -54,12 +54,13 @@ func initEntities() {
 	//TODO: For now using memory storage, but we don't need it.
 	memoryStorage := memorystore.GetStorageProvider()
 	chain.SetupEntity(memoryStorage)
-	round.SetupEntity(memoryStorage)
 	block.SetupEntity(memoryStorage)
 
+	round.SetupRoundSummaryDB()
 	block.SetupBlockSummaryDB()
 	ememoryStorage := ememorystore.GetStorageProvider()
 	block.SetupBlockSummaryEntity(ememoryStorage)
+	round.SetupEntity(ememoryStorage)
 
 	client.SetupEntity(memoryStorage)
 	transaction.SetupEntity(memoryStorage)
@@ -107,6 +108,7 @@ func main() {
 	serverChain.Decimals = int8(viper.GetInt("server_chain.decimals"))
 	serverChain.BlockSize = viper.GetInt32("server_chain.block.size")
 	serverChain.NumGenerators = viper.GetInt("server_chain.block.generators")
+	serverChain.NumSharders = viper.GetInt("server_chain.block.sharders")
 	serverChain.NotarizationThreshold = viper.GetInt("server_chain.block.notarization_threshold")
 	chain.SetNetworkRelayTime(viper.GetDuration("server_chain.network.relay_time") * time.Millisecond)
 
