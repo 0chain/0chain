@@ -2,11 +2,6 @@ package util
 
 import "0chain.net/encryption"
 
-/*Hashable - any thing that can provide it's hash */
-type Hashable interface {
-	GetHash() string
-}
-
 /*MerkleTreeI - a merkle tree interface required for constructing and providing verification */
 type MerkleTreeI interface {
 	//API to create a tree from leaf nodes
