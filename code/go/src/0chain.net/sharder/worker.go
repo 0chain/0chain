@@ -6,6 +6,8 @@ import (
 	"os"
 	"time"
 
+	"0chain.net/block"
+
 	"0chain.net/blockstore"
 
 	"0chain.net/node"
@@ -101,7 +103,7 @@ func (sc *Chain) BlockStorageWorker(ctx context.Context) {
 					}
 					err = sc.StoreTransactions(ctx, sTxns)
 					if err != nil {
-						Logger.Error("db error (save transaction)", zap.String("block", b.Hash), zap.Error(err))
+						sc.retryPersistingTransactions(ctx, sTxns, b)
 					} else {
 						err = sc.StoreBlock(ctx, b)
 						if err != nil {
@@ -117,4 +119,19 @@ func (sc *Chain) BlockStorageWorker(ctx context.Context) {
 			}
 		}
 	}
+}
+
+func (sc *Chain) retryPersistingTransactions(ctx context.Context, sTxns []datastore.Entity, b *block.Block) {
+	var err error
+	for numTrials := 1; numTrials <= 10; numTrials++ {
+		time.Sleep(10 * time.Millisecond)
+		err = sc.StoreTransactions(ctx, sTxns)
+		if err != nil {
+			Logger.Info("Retrying to save transactions to db", zap.Any("trail", numTrials), zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Error(err))
+		} else {
+			Logger.Info("Save transactions to db successful", zap.Any("round", b.Round), zap.Any("block", b.Hash))
+			return
+		}
+	}
+	Logger.Error("db error (save transaction)", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
 }
