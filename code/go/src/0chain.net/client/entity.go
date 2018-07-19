@@ -16,8 +16,8 @@ type Client struct {
 	datastore.IDField
 	datastore.VersionField
 	datastore.CreationDateField
-	PublicKey      string `json:"public_key"`
-	PublicKeyBytes encryption.HashBytes
+	PublicKey      string               `json:"public_key"`
+	PublicKeyBytes encryption.HashBytes `json:"-"`
 }
 
 var clientEntityMetadata *datastore.EntityMetadataImpl
@@ -66,20 +66,24 @@ func Provider() datastore.Entity {
 	return c
 }
 
+/*ComputeProperties - implement interface */
 func (c *Client) ComputeProperties() {
-	c.setPublicKey()
+	c.computePublicKeyBytes(c.PublicKey)
 }
 
-func (c *Client) setPublicKey() {
-	c.SetPublicKey(c.PublicKey)
-}
-
-func (c *Client) SetPublicKey(key string) {
+func (c *Client) computePublicKeyBytes(key string) {
 	b, _ := hex.DecodeString(key)
 	if len(b) > len(c.PublicKeyBytes) {
 		b = b[len(b)-encryption.HASH_LENGTH:]
 	}
 	copy(c.PublicKeyBytes[encryption.HASH_LENGTH-len(b):], b)
+}
+
+/*SetPublicKey - set the public key */
+func (c *Client) SetPublicKey(key string) {
+	c.PublicKey = key
+	c.computePublicKeyBytes(key)
+	c.ID = encryption.Hash(c.PublicKeyBytes)
 }
 
 /*SetupEntity - setup the entity */

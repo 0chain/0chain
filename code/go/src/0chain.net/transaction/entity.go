@@ -12,6 +12,7 @@ import (
 	"0chain.net/encryption"
 	. "0chain.net/logging"
 	"0chain.net/memorystore"
+	"0chain.net/util"
 	"go.uber.org/zap"
 )
 
@@ -63,7 +64,9 @@ func (t *Transaction) ComputeProperties() {
 		if t.ClientID == "" {
 			// Doing this is OK because the transaction signature has ClientID
 			// that won't pass verification if some other client's public is put in
-			t.ClientID = encryption.Hash(t.PublicKey)
+			co := &client.Client{}
+			co.SetPublicKey(t.PublicKey)
+			t.ClientID = co.ID
 		}
 	} else {
 		if t.ClientID == "" {
@@ -133,6 +136,11 @@ func (t *Transaction) GetHash() string {
 	return t.Hash
 }
 
+/*GetHashBytes - implement Hashable interface */
+func (t *Transaction) GetHashBytes() []byte {
+	return util.HashStringToBytes(t.Hash)
+}
+
 /*GetClient - get the Client object associated with the transaction */
 func (t *Transaction) GetClient(ctx context.Context) (*client.Client, error) {
 	co := &client.Client{}
@@ -158,7 +166,7 @@ func (t *Transaction) ComputeHash() string {
 func (t *Transaction) VerifyHash(ctx context.Context) error {
 	if t.Hash != t.ComputeHash() {
 		Logger.Debug("verify hash (hash mismatch)", zap.String("hash", t.Hash), zap.String("computed_hash", t.ComputeHash()), zap.String("hash_data", t.HashData()), zap.String("txn", datastore.ToJSON(t).String()))
-		return common.NewError("hash_mismatch", fmt.Sprintf("The hash of the data doesn't match with the provided hash"))
+		return common.NewError("hash_mismatch", fmt.Sprintf("The hash of the data doesn't match with the provided hash: %v %v %v", t.Hash, t.ComputeHash(), t.HashData()))
 	}
 	return nil
 }
@@ -224,7 +232,7 @@ func SetupEntity(store datastore.Store) {
 }
 
 /*Sign - given a client and client's private key, sign this tranasction */
-func (t *Transaction) Sign(privateKey string) (string, error) {
+func (t *Transaction) Sign(privateKey []byte) (string, error) {
 	t.Hash = t.ComputeHash()
 	signature, err := encryption.Sign(privateKey, t.Hash)
 	if err != nil {
