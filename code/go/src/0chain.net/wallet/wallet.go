@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"encoding/hex"
 	"fmt"
 	"math/rand"
 
@@ -11,15 +12,24 @@ import (
 
 /*Wallet - a struct representing the client's wallet */
 type Wallet struct {
-	PublicKey  string
-	PrivateKey string
-	ClientID   string
+	PublicKey       string
+	PrivateKey      string
+	PrivateKeyBytes []byte
+	PublicKeyBytes  []byte
+	ClientID        string
 }
 
 /*Initialize - initialize a wallet with public/private keys */
 func (w *Wallet) Initialize() {
-	w.PublicKey, w.PrivateKey = encryption.GenerateKeys()
-	w.ClientID = encryption.Hash(w.PublicKey)
+	publicKey, privateKey, err := encryption.GenerateKeysBytes()
+	if err != nil {
+		panic(err)
+	}
+	w.PublicKeyBytes = publicKey
+	w.PrivateKeyBytes = privateKey
+	w.PublicKey = hex.EncodeToString(publicKey)
+	w.PrivateKey = hex.EncodeToString(privateKey)
+	w.ClientID = encryption.Hash(publicKey)
 }
 
 var transactionMetadataProvider datastore.EntityMetadata
@@ -37,6 +47,6 @@ func (w *Wallet) CreateTransaction(toClient string) *transaction.Transaction {
 	txn.ToClientID = toClient
 	txn.Value = rand.Int63n(100000)
 	txn.TransactionData = fmt.Sprintf("0chain zerochain zipcode Europe rightthing Oriental California honest accurate India network %v %v", rand.Int63(), txn.Value)
-	txn.Sign(w.PrivateKey)
+	txn.Sign(w.PrivateKeyBytes)
 	return txn
 }

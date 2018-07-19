@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"math/rand"
 	"time"
 
@@ -21,19 +22,12 @@ var wallets []*wallet.Wallet
 /*TransactionGenerator - generates a steady stream of transactions */
 func TransactionGenerator(blockSize int32) {
 	wallet.SetupWallet()
-	ctx := datastore.WithAsyncChannel(common.GetRootContext(), transaction.TransactionEntityChannel)
-	txnMetadataProvider := datastore.GetEntityMetadata("txn")
-	ctx = memorystore.WithEntityConnection(ctx, txnMetadataProvider)
 	GenerateClients(1024)
 	csize := len(wallets)
 	numTxns := blockSize
 	P := time.Duration(1 + blockSize/1000)
 	N := time.Duration(2)
 	ticker := time.NewTicker(N*chain.DELTA + P*100*time.Millisecond)
-	txn := txnMetadataProvider.Instance().(*transaction.Transaction)
-	txn.ChainID = miner.GetMinerChain().ID
-	collectionName := txn.GetCollectionName()
-	txnChannel := make(chan bool, blockSize)
 	numWorkers := 1
 	switch {
 	case blockSize <= 10:
@@ -49,7 +43,12 @@ func TransactionGenerator(blockSize int32) {
 	default:
 		numWorkers = 100
 	}
+	txnMetadataProvider := datastore.GetEntityMetadata("txn")
+
+	txnChannel := make(chan bool, blockSize)
 	for i := 0; i < numWorkers; i++ {
+		ctx := memorystore.WithEntityConnection(common.GetRootContext(), txnMetadataProvider)
+		ctx = datastore.WithAsyncChannel(ctx, transaction.TransactionEntityChannel)
 		go func() {
 			rs := rand.NewSource(time.Now().UnixNano())
 			prng := rand.New(rs)
@@ -63,11 +62,19 @@ func TransactionGenerator(blockSize int32) {
 					}
 				}
 				txn := wf.CreateTransaction(wt.ClientID)
-				datastore.DoAsync(ctx, txn)
+				_, err := transaction.PutTransaction(ctx, txn)
+				if err != nil {
+					fmt.Printf("error: %v\n", err)
+					panic(err)
+				}
 				transaction.TransactionCount++
 			}
 		}()
 	}
+	ctx := memorystore.WithEntityConnection(common.GetRootContext(), txnMetadataProvider)
+	txn := txnMetadataProvider.Instance().(*transaction.Transaction)
+	txn.ChainID = miner.GetMinerChain().ID
+	collectionName := txn.GetCollectionName()
 	for true {
 		select {
 		case <-ctx.Done():
@@ -96,10 +103,13 @@ func GenerateClients(numClients int) {
 		w.Initialize()
 		wallets = append(wallets, w)
 
-		//Server side code by passing REST for speed
-		client := clientMetadataProvider.Instance().(*client.Client)
-		client.PublicKey = w.PublicKey
-		client.ID = w.ClientID
-		datastore.DoAsync(ctx, client)
+		//Server side code bypassing REST for speed
+		c := clientMetadataProvider.Instance().(*client.Client)
+		c.PublicKey = w.PublicKey
+		c.ID = w.ClientID
+		_, err := client.PutClient(ctx, c)
+		if err != nil {
+			panic(err)
+		}
 	}
 }
