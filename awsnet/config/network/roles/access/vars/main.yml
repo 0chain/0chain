@@ -3,4 +3,6 @@ aws_credentials: "{{access}}/credentials"
 aws_profile: "{{ network }}"
 key_pair: "{{ network }}"
 key_pair_file: "{{network_dir}}/{{ key_dir }}/{{key_pair}}.pem"
+public_key_file: "{{network_dir}}/{{ key_dir }}/{{key_pair}}.pub"
+
 ...

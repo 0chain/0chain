@@ -51,7 +51,15 @@ server_versions:
     processor: 'Intel Xeon E5-2676v3'
 
 instance_images:
-  miner:
+    'oregon':
+      zone: 'us-west-2'
+      release: 'xenial'
+      version: '16.04 LTS'
+      arch: 'amd64'
+      instance_type: 'hvm:ebs-ssd'
+      date: '20180627'
+      ami_id: 'ami-ba602bc2'
+
     'california':
       zone: 'us-west-1'
       release: 'xenial'
@@ -89,79 +97,3 @@ instance_images:
       date: '20180627'
       ami_id: 'ami-de8fb135'
 
-
-  sharder:
-    'california':
-      zone: 'us-west-1'
-      release: 'xenial'
-      version: '16.04 LTS'
-      arch: 'amd64'
-      instance_type: 'hvm:ebs-ssd'
-      date: '20180627'
-      ami_id: 'ami-4aa04129'
-
-    'virginia':
-      zone: 'us-east-1'
-      release: 'xenial'
-      version: '16.04 LTS'
-      arch: 'amd64'
-      instance_type: 'hvm:ebs-ssd'
-      date: '20180627'
-      ami_id: 'ami-759bc50a'
-
-
-    'canada':
-      zone: 'ca-central-1'
-      release: 'xenial'
-      version: '16.04 LTS'
-      arch: 'amd64'
-      instance_type: 'hvm:ebs-ssd'
-      date: '20180627'
-      ami_id: 'ami-db9e1cbf'
-
-    'frankfurt':
-      zone: 'eu-central-1'
-      release: 'xenial'
-      version: '16.04 LTS'
-      arch: 'amd64'
-      instance_type: 'hvm:ebs-ssd'
-      date: '20180627'
-      ami_id: 'ami-de8fb135'
-
-  blobber:
-    'california':
-      zone: 'us-west-1'
-      release: 'xenial'
-      version: '16.04 LTS'
-      arch: 'amd64'
-      instance_type: 'hvm:ebs-ssd'
-      date: '20180627'
-      ami_id: 'ami-4aa04129'
-
-    'virginia':
-      zone: 'us-east-1'
-      release: 'xenial'
-      version: '16.04 LTS'
-      arch: 'amd64'
-      instance_type: 'hvm:ebs-ssd'
-      date: '20180627'
-      ami_id: 'ami-759bc50a'
-
-
-    'canada':
-      zone: 'ca-central-1'
-      release: 'xenial'
-      version: '16.04 LTS'
-      arch: 'amd64'
-      instance_type: 'hvm:ebs-ssd'
-      date: '20180627'
-      ami_id: 'ami-db9e1cbf'
-
-    'frankfurt':
-      zone: 'eu-central-1'
-      release: 'xenial'
-      version: '16.04 LTS'
-      arch: 'amd64'
-      instance_type: 'hvm:ebs-ssd'
-      date: '20180627'
-      ami_id: 'ami-de8fb135'

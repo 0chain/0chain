@@ -4,8 +4,8 @@
   vars_files:
     - "{{ access }}/credentials.yml"
   environment:
-    AWS_ACCESS_KEY: "{{ aws_access_key }}"
-    AWS_SECRET_KEY: "{{ aws_secret_key }}"
+    AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
   roles:
     - role: control
     - role: regions
@@ -19,16 +19,33 @@
     - role: receipes
     - role: instances
 
-#- hosts: zchain_servers
-#  roles:
-#    - role: control
-#    - role: access
-#  vars:
-#    ansible_ssh_private_key_file: "{{key_pair_file}}"
-#  tasks:
-#  - name: return motd
-#    command: cat /etc/motd
-#    tags:
-#      - server-launch
+#- hosts: tag_role_miner, tag_role_sharder
+- hosts: [tag_role_miner, tag_role_sharder]
+  become: true
+  gather_facts: no
+  vars_files:
+    - "{{ access }}/credentials.yml"
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+  roles:
+    - role: control
+    - role: inventory
+    - role: access
+    - role: primer
+      tags: ['server-prime']
 
+- hosts: [tag_role_miner, tag_role_sharder]
+  become: true
+  gather_facts: yes
+  vars_files:
+    - "{{ access }}/credentials.yml"
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+  roles:
+    - role: control
+    - role: inventory
+    - role: access
+    - role: docker
 ...

@@ -30,23 +30,29 @@ SERVER:=$(SERVER_LAUNCH) $(SERVER_TERMINATE)
 
 ZCHAIN_SERVER=zchain-motd
 
-ACCESS_TARGETS=key-create key-region-add key-region-remove key-file-delete
+KEY_GOALS=key-create key-delete
 
 EIP_TARGETS=eip-create eip-list-all
 
+DOCKER_SETUP=server-prime docker-install docker-hello
+
 ZCHAIN=zchain-show
 
-TARGETS:=$(CONTROL_DIR) $(SERVER) $(REGIONS) $(ACCESS_TARGETS) $(EIP_TARGETS) $(ZCHAIN) $(ZCHAIN_SERVER)
+testnet-launch: key-create server-launch server-prime docker-install docker-hello
 
-keys-install: key-create key-region-add
+testnet-reset: key-delete
 
-keys-uninstall: key-region-remove key-file-delete
+testnet-teardown: server-terminate
+
+WORKFLOW=testnet-launch testnet-reset testnet-teardown
+
+TARGETS:=$(CONTROL_DIR) $(SERVER) $(REGIONS) $(KEY_GOALS) $(EIP_TARGETS) $(ZCHAIN) $(ZCHAIN_SERVER) $(DOCKER_SETUP) $(WORKFLOW)
 
 .PHONY: $(TARGETS) netgen clean show
 
 $(TARGETS): show
 	@echo "Make running target=$@"
-	@$(APB) -i $(CONFIG_DIR)/hosts $(CONFIG_FILE) --extra-vars="access=$(ACCESS) network=$(network) zchain_base=$(ZCHAIN_BASE) network_dir=$(NETWORK_DIR)" --tags $@
+	@$(APB) -i $(CONFIG_DIR)/inventory/ec2.py $(CONFIG_FILE) --extra-vars="access=$(ACCESS) network=$(network) zchain_base=$(ZCHAIN_BASE) network_dir=$(NETWORK_DIR)" --tags $@
 
 netgen: show
 	@echo "Generate configuration files for 0chain network=$(network)..."
