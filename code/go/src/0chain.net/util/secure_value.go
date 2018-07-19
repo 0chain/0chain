@@ -2,6 +2,7 @@ package util
 
 import (
 	"encoding/hex"
+	"strings"
 
 	"0chain.net/encryption"
 )
@@ -40,6 +41,11 @@ type SecureSerializableValue struct {
 /*GetHash - implement interface */
 func (spv *SecureSerializableValue) GetHash() string {
 	return ToHex(spv.GetHashBytes())
+}
+
+/*ToHex - converts a byte array to hex encoding with upper case */
+func ToHex(buf []byte) string {
+	return strings.ToUpper(hex.EncodeToString(buf))
 }
 
 /*GetHashBytes - implement interface */
