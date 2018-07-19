@@ -82,8 +82,9 @@ func GetConnection() redis.Conn {
 
 /*GetInfo - returns a connection from the Pool and will do info persistence on Redis to see the status of redis
  */
-func GetInfo() redis.Conn {
+func GetInfo() {
 	conn := DefaultPool.Get()
+	defer conn.Close()
 	delay := 10 * time.Second
 	re := regexp.MustCompile("loading:1")
 	for tries := 0; true; tries++ {
@@ -98,7 +99,6 @@ func GetInfo() redis.Conn {
 			break
 		}
 	}
-	return conn
 }
 
 /*GetEntityConnection - retuns a connection from the pool configured for the entity */
