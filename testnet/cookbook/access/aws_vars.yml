@@ -1,0 +1,11 @@
+---
+zchain: "/Volumes/work/0CHAIN/codebox/0chain"
+key_pair: "testnet"
+aws_region: "us-east-1"
+aws: "{{ zchain }}/testnet/aws"
+aws_credentials: "{{aws}}/credentials"
+aws_profile: "testnet"
+key_pair_file: "{{aws}}/{{key_pair}}.pem"
+aws_access_key: "AKIAIEP4LDUAY4FNU62A"
+aws_secret_key: "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"
+...

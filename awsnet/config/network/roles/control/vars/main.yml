@@ -1,0 +1,7 @@
+---
+  key_dir: "keys"
+  control_dirs:
+  - "{{ key_dir }}"
+  - miner
+  - sharder
+...

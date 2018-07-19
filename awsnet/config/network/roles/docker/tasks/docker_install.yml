@@ -1,0 +1,72 @@
+- name: Create the docker group
+  group:
+    name: docker
+    state: present
+
+- name: Add user to docker group
+  user:
+    name: ubuntu
+    groups: docker
+    append: yes
+
+
+- name: Update the apt cache...
+  apt:
+    update_cache: yes
+
+- name: Update docker requirement packages...
+  apt:
+    name: "{{packages}}"
+  vars:
+    packages:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - software-properties-common
+      - python-setuptools
+    update_cache: yes
+
+- name: Install the pip utility...
+  easy_install:
+    name: pip
+    state: latest
+
+- name: Add the docker official GPG key...
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+
+- name: Add docker to the apt repository...
+  apt_repository:
+    repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ansible_lsb.codename}} stable"
+    state: present
+
+- name: Update the apt cache after adding docker to the repository...
+  apt:
+    update_cache: yes
+
+- name: Install the docker version
+  apt:
+    name: docker-ce
+
+- name: Install the docker python helpers...
+  pip:
+    name: "{{packages}}"
+  vars:
+    packages:
+      - docker-py
+      - docker-compose
+
+- name: Make sure docker is started at boot time
+  systemd: state=started name=docker
+
+- name: Run Hello World Docker...
+  command: docker run hello-world
+  register: hello
+  tags:
+    - docker-hello
+
+- debug: var=hello
+  tags:
+    - docker-hello
+
