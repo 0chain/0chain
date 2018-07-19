@@ -65,6 +65,11 @@ func (c *Confirmation) GetHash() string {
 	return c.Hash
 }
 
+/*GetHash - hashable implementation */
+func (c *Confirmation) GetHashBytes() []byte {
+	return util.HashStringToBytes(c.Hash)
+}
+
 func TransactionConfirmationProvider() datastore.Entity {
 	t := &Confirmation{}
 	t.Version = "1.0"
