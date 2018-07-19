@@ -19,6 +19,7 @@ type Serializable interface {
 	Decode([]byte) error
 }
 
+/*HashStringToBytes - convert a hex hash string to bytes */
 func HashStringToBytes(hash string) []byte {
 	hashBytes, err := hex.DecodeString(hash)
 	if err != nil {
