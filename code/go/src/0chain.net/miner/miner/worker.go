@@ -64,10 +64,9 @@ func TransactionGenerator(blockSize int32) {
 				txn := wf.CreateTransaction(wt.ClientID)
 				_, err := transaction.PutTransaction(ctx, txn)
 				if err != nil {
-					fmt.Printf("error: %v\n", err)
-					panic(err)
+					fmt.Printf("error:%v: %v\n", time.Now(), err)
+					//panic(err)
 				}
-				transaction.TransactionCount++
 			}
 		}()
 	}
