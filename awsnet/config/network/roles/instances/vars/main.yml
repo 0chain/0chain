@@ -1,0 +1,11 @@
+---
+instance_tag: "{{znetwork.instance_tag}}"
+mi_tag: "{{instance_tag.miner}}"
+si_tag: "{{instance_tag.sharder}}"
+bi_tag: "{{instance_tag.blobber}}"
+instances:
+  miner: "{{server_versions[mi_tag]}}"
+  blobber: "{{server_versions[bi_tag]}}"
+  sharder: "{{server_versions[si_tag]}}"
+
+...

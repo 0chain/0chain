@@ -1,0 +1,51 @@
+---
+- hosts: localhost
+  connection: local
+  vars_files:
+    - "{{ access }}/credentials.yml"
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+  roles:
+    - role: control
+    - role: regions
+    - role: access
+    - role: servers
+    - role: storage
+    - role: miners
+    - role: sharders
+    - role: blobbers
+    - role: eip
+    - role: receipes
+    - role: instances
+
+#- hosts: tag_role_miner, tag_role_sharder
+- hosts: [tag_role_miner, tag_role_sharder]
+  become: true
+  gather_facts: no
+  vars_files:
+    - "{{ access }}/credentials.yml"
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+  roles:
+    - role: control
+    - role: inventory
+    - role: access
+    - role: primer
+      tags: ['server-prime']
+
+- hosts: [tag_role_miner, tag_role_sharder]
+  become: true
+  gather_facts: yes
+  vars_files:
+    - "{{ access }}/credentials.yml"
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_key }}"
+  roles:
+    - role: control
+    - role: inventory
+    - role: access
+    - role: docker
+...

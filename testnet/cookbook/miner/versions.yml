@@ -1,0 +1,19 @@
+---
+versions:
+  miner_xlarge:
+    instance_type: "c4.xlarge"
+    image: "ami-a4dc46db"
+    assign_public_ip: "yes"
+    count: 3
+    ebs_optimized: "true"
+    instance_tags:
+      Network: "testnet"
+      Role: "miner"
+      Contact: "sachin@0chain.net"
+...
+
+
+
+
+
+

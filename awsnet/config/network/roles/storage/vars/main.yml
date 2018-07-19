@@ -1,0 +1,9 @@
+storage:
+  'GP2_8GIB_SDF':
+    device: "/dev/sdf"
+
+  'GP2_20GIB_SDH':
+    device: "/dev/sdh"
+
+  'IO1_1TIB_SDI':
+    device: "/dev/sdi"

@@ -18,3 +18,4 @@
 **/go/test/miner_stress
 **/examples/
 **/hash/main.go
+*.iml
