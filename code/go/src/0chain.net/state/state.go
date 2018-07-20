@@ -25,6 +25,12 @@ func (s *State) Encode() []byte {
 	return []byte(fmt.Sprintf("%v", s.Balance))
 }
 
+/*Decode - implement interface */
 func (s *State) Decode(data []byte) error {
-	balance, err := strconv.ParseInt(data, 10, 63)
+	balance, err := strconv.ParseInt(string(data), 10, 63)
+	if err != nil {
+		return err
+	}
+	s.Balance = Balance(balance)
+	return nil
 }

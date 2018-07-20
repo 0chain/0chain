@@ -64,8 +64,77 @@ func (mndb *MemoryNodeDB) DeleteNode(key Key) error {
 
 /*Iterate - implement interface */
 func (mndb *MemoryNodeDB) Iterate(ctx context.Context, handler NodeDBIteratorHandler) error {
-	// TODO: Do we need this for in-memory node db?
+	for key, node := range mndb.Nodes {
+		err := handler(ctx, Key(key), node)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
+}
+
+func (mndb *MemoryNodeDB) reachable(node Node, node2 Node) (bool, error) {
+	switch nodeImpl := node.(type) {
+	case *ExtensionNode:
+		fn, _ := mndb.GetNode(nodeImpl.NodeKey)
+		if fn == nil {
+			return false, ErrNodeNotFound
+		}
+		if node2 == fn {
+			return true, nil
+		}
+		return mndb.reachable(fn, node2)
+	case *FullNode:
+		for i := byte(0); i < 16; i++ {
+			child := nodeImpl.GetChild(nodeImpl.indexToByte(i))
+			if child == nil {
+				continue
+			}
+			childNode, err := mndb.GetNode(child)
+			if err != nil {
+				continue
+			}
+			if node2 == childNode {
+				return true, nil
+			}
+			ok, err := mndb.reachable(childNode, node2)
+			if ok {
+				return ok, nil
+			}
+		}
+	}
+	return false, nil
+}
+
+/*ComputeRoot - compute root from partial set of nodes in this db */
+func (mndb *MemoryNodeDB) ComputeRoot() Node {
+	var root Node
+	handler := func(ctx context.Context, key Key, node Node) error {
+		if !IncludesNodeType(NodeTypeFullNode|NodeTypeExtensionNode, node.GetNodeType()) {
+			return nil
+		}
+		if root == nil {
+			root = node
+			return nil
+		}
+		ok, err := mndb.reachable(root, node)
+		if err != nil {
+			return err
+		}
+		if ok {
+			return nil
+		}
+		ok, err = mndb.reachable(node, root)
+		if err != nil {
+			return err
+		}
+		if ok {
+			root = node
+		}
+		return nil
+	}
+	mndb.Iterate(nil, handler)
+	return root
 }
 
 /*LevelNodeDB - a multi-level node db. It has a current node db and a previous node db. This is useful to update without changing the previous db. */
@@ -113,6 +182,36 @@ func (lndb *LevelNodeDB) DeleteNode(key Key) error {
 
 /*Iterate - implement interface */
 func (lndb *LevelNodeDB) Iterate(ctx context.Context, handler NodeDBIteratorHandler) error {
-	// TODO: Do we need this for level node db?
-	return nil
+	err := lndb.C.Iterate(ctx, handler)
+	if err != nil {
+		return err
+	}
+	return lndb.P.Iterate(ctx, handler)
+}
+
+/*GetChanges - get the list of changes */
+func GetChanges(ctx context.Context, ndb NodeDB, start Origin, end Origin) (map[Origin]MerklePatriciaTrieI, error) {
+	mpts := make(map[Origin]MerklePatriciaTrieI, int64(end-start+1))
+	handler := func(ctx context.Context, key Key, node Node) error {
+		origin := node.GetOrigin()
+		if !(start <= origin && origin <= end) {
+			return nil
+		}
+		mpt, ok := mpts[origin]
+		if !ok {
+			mndb := NewMemoryNodeDB()
+			mpt = NewMerklePatriciaTrie(mndb)
+			mpts[origin] = mpt
+		}
+		mpt.GetNodeDB().PutNode(key, node)
+		return nil
+	}
+	ndb.Iterate(ctx, handler)
+	for _, mpt := range mpts {
+		root := mpt.GetNodeDB().(*MemoryNodeDB).ComputeRoot()
+		if root != nil {
+			mpt.SetRoot(root.GetHashBytes())
+		}
+	}
+	return mpts, nil
 }

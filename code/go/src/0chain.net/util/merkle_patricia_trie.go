@@ -7,7 +7,7 @@ import (
 	"io"
 )
 
-/*MerklePatriciaTrie - it's a patricia trie and a merkle tree */
+/*MerklePatriciaTrie - it's a merkle tree and a patricia trie */
 type MerklePatriciaTrie struct {
 	Root Key
 	DB   NodeDB
@@ -17,6 +17,11 @@ type MerklePatriciaTrie struct {
 func NewMerklePatriciaTrie(db NodeDB) *MerklePatriciaTrie {
 	mpt := &MerklePatriciaTrie{DB: db}
 	return mpt
+}
+
+/*GetNodeDB - implement interface */
+func (mpt *MerklePatriciaTrie) GetNodeDB() NodeDB {
+	return mpt.DB
 }
 
 /*SetRoot - implement interface */
@@ -492,9 +497,11 @@ func (mpt *MerklePatriciaTrie) iterate(ctx context.Context, path Path, key Key, 
 			}
 		}
 	case *ExtensionNode:
-		err = handler(ctx, path, key, node)
-		if err != nil {
-			return err
+		if IncludesNodeType(visitNodeTypes, NodeTypeExtensionNode) {
+			err = handler(ctx, path, key, node)
+			if err != nil {
+				return err
+			}
 		}
 		npath := append(path, nodeImpl.Path...)
 		return mpt.iterate(ctx, npath, nodeImpl.NodeKey, handler, visitNodeTypes)
@@ -544,6 +551,7 @@ func (mpt *MerklePatriciaTrie) pp(w io.Writer, key Key, depth byte, initpad bool
 		fmt.Fprintf(w, "err %v %v\n", ToHex(key), err)
 		return err
 	}
+	fmt.Printf("%v ", ToHex(key))
 	switch nodeImpl := node.(type) {
 	case *LeafNode:
 		fmt.Fprintf(w, "L:%v (%v)\n", ToHex(nodeImpl.Encode()), string(nodeImpl.Path))

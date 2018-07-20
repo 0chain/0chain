@@ -16,6 +16,8 @@ type MPTIteratorHandler func(ctx context.Context, path Path, key Key, node Node)
 
 //MerklePatriciaTrieI - interface of the merkle patricia trie
 type MerklePatriciaTrieI interface {
+	GetNodeDB() NodeDB
+
 	GetRoot() Key
 	SetRoot(root Key)
 

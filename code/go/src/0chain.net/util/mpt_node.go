@@ -35,6 +35,7 @@ type Origin int64
 /*Node - a node interface */
 type Node interface {
 	Clone() Node
+	GetNodeType() byte
 	SecureSerializableValueI
 	OriginTrackerI
 }
@@ -50,6 +51,11 @@ func (vn *ValueNode) Clone() Node {
 	clone := &ValueNode{}
 	clone.SetValue(vn.GetValue())
 	return clone
+}
+
+/*GetNodeType - implement interface */
+func (vn *ValueNode) GetNodeType() byte {
+	return NodeTypeValueNode
 }
 
 /*GetHash - implements SecureSerializableValue interface */
@@ -177,6 +183,11 @@ func (ln *LeafNode) Clone() Node {
 	clone.Path = ln.Path // path will never be updated inplace and so ok
 	clone.SetValue(ln.GetValue())
 	return clone
+}
+
+/*GetNodeType - implement interface */
+func (ln *LeafNode) GetNodeType() byte {
+	return NodeTypeLeafNode
 }
 
 /*Encode - implement interface */
@@ -322,6 +333,11 @@ func (fn *FullNode) Clone() Node {
 	return clone
 }
 
+/*GetNodeType - implement interface */
+func (fn *FullNode) GetNodeType() byte {
+	return NodeTypeFullNode
+}
+
 func (fn *FullNode) index(c byte) byte {
 	if c >= 48 && c <= 57 {
 		return c - 48
@@ -414,6 +430,11 @@ func (en *ExtensionNode) Clone() Node {
 	clone.Path = en.Path       // path will never be updated inplace and so ok
 	clone.NodeKey = en.NodeKey // nodekey will never be updated inplace and so ok
 	return clone
+}
+
+/*GetNodeType - implement interface */
+func (en *ExtensionNode) GetNodeType() byte {
+	return NodeTypeExtensionNode
 }
 
 /*Encode - implement interface */

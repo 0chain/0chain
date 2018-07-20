@@ -85,12 +85,12 @@ func TestMerkeTreePruning(t *testing.T) {
 		roots = append(roots, mpt2.GetRoot())
 		fmt.Printf("root(%v) = %v: changes: %v\n", origin, ToHex(mpt2.GetRoot()), len(cc.GetChanges()))
 		err = cc.UpdateChanges(pndb, Origin(origin), false)
-		mpt.SetRoot(mpt2.GetRoot())
-		mpt.PrettyPrint(os.Stdout)
-		fmt.Printf("\n")
 		if err != nil {
 			panic(err)
 		}
+		mpt.SetRoot(mpt2.GetRoot())
+		mpt.PrettyPrint(os.Stdout)
+		fmt.Printf("\n")
 		origin++
 	}
 	numStates := 200
@@ -126,6 +126,49 @@ func TestMerkeTreePruning(t *testing.T) {
 	err = mpt.Iterate(context.TODO(), iterHandler, NodeTypeValueNode|NodeTypeFullNode|NodeTypeExtensionNode)
 	if err != nil {
 		fmt.Printf("iterate error: %v\n", err)
+	}
+}
+
+func TestMerkeTreeGetChanges(t *testing.T) {
+	pndb, err := NewPNodeDB("/tmp/mpt")
+	if err != nil {
+		panic(err)
+	}
+	defer pndb.db.Close()
+	if err != nil {
+		panic(err)
+	}
+
+	mpt := NewMerklePatriciaTrie(pndb)
+	var mndb = NewMemoryNodeDB()
+	db := NewLevelNodeDB(mndb, mpt.DB, false)
+	mpt2 := NewMerklePatriciaTrie(db)
+	origin := 2016
+	roots := make([]Key, 0, 10)
+	for i := int64(0); i < 10; i++ {
+		cc := NewChangeCollector()
+		doStateValInsert("add 100 to c1", cc, mpt2, "0123456", 100+i, false)
+		doStateValInsert("add 1000 to c2", cc, mpt2, "0123457", 1000+i, false)
+		doStateValInsert("add 1000 to c3", cc, mpt2, "0123458", 1000000+i, false)
+		doStateValInsert("add 1000 to c4", cc, mpt2, "0133458", 1000000000+i, false)
+		roots = append(roots, mpt2.GetRoot())
+		fmt.Printf("root(%v) = %v: changes: %v ndb size: %v\n", origin, ToHex(mpt2.GetRoot()), len(cc.GetChanges()), len(mndb.Nodes))
+		err = cc.UpdateChanges(pndb, Origin(origin), false)
+		if err != nil {
+			panic(err)
+		}
+		//mpt2.PrettyPrint(os.Stdout)
+		origin++
+	}
+	fmt.Printf("get changes\n")
+	mpts, err := GetChanges(context.TODO(), mndb, Origin(origin-3), Origin(origin))
+	if err != nil {
+		panic(err)
+	}
+	for origin, mpt := range mpts {
+		fmt.Printf("origin:%v: root:%v\n", origin, ToHex(mpt.GetRoot()))
+		mpt.PrettyPrint(os.Stdout)
+		mpt.Iterate(context.TODO(), iterHandler, NodeTypeValueNode)
 	}
 }
 
