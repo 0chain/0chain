@@ -6,6 +6,8 @@ import (
 	"os"
 	"time"
 
+	"0chain.net/chain"
+
 	"0chain.net/block"
 
 	"0chain.net/blockstore"
@@ -63,9 +65,11 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			sc.AddBlock(b)
 			er := sc.GetRound(b.Round)
 			if er != nil {
-				nb := er.GetNotarizedBlocks()
-				if len(nb) > 0 {
-					Logger.Error("*** different blocks for the same round ***", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("existing_block", nb[0].Hash))
+				if sc.BlocksToSharder == chain.FINALIZED {
+					nb := er.GetNotarizedBlocks()
+					if len(nb) > 0 {
+						Logger.Error("*** different blocks for the same round ***", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("existing_block", nb[0].Hash))
+					}
 				}
 			} else {
 				er = datastore.GetEntityMetadata("round").Instance().(*round.Round)

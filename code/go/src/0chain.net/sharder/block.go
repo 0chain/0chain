@@ -35,7 +35,7 @@ func GetBlockSummary(ctx context.Context, hash string) (*block.BlockSummary, err
 	return blockSummary, nil
 }
 
-/*GetBlock - given the block hash, get the block */
+/*GetBlockFromHash - given the block hash, get the block */
 func (sc *Chain) GetBlockFromHash(ctx context.Context, hash string, roundNum int64) (*block.Block, error) {
 	b, err := chain.GetServerChain().GetBlock(ctx, hash)
 	if err != nil {

@@ -15,6 +15,11 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	NOTARIZED = 1
+	FINALIZED = 2
+)
+
 /*ServerChain - the chain object of the chain  the server is responsible for */
 var ServerChain *Chain
 
@@ -65,6 +70,7 @@ type Chain struct {
 	LatestFinalizedBlock *block.Block                   `json:"latest_finalized_block,omitempty"` // Latest block on the chain the program is aware of
 	CurrentRound         int64
 	CurrentMagicBlock    *block.Block
+	BlocksToSharder      int
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
@@ -119,6 +125,7 @@ func (c *Chain) Initialize() {
 	c.CurrentRound = 0
 	c.LatestFinalizedBlock = nil
 	c.CurrentMagicBlock = nil
+	c.BlocksToSharder = 1
 }
 
 /*SetupEntity - setup the entity */
