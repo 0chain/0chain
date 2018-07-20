@@ -91,10 +91,9 @@ func (sc *Chain) BlockStorageWorker(ctx context.Context) {
 			b, err := sc.GetBlockFromHash(ctx, r.BlockHash, r.Number)
 			if err != nil {
 				Logger.Error("failed to get block", zap.String("blockhash", r.BlockHash), zap.Error(err))
-			}
-			self := node.GetSelfNode(ctx)
-			if sc.CanStoreBlock(r, self.Node) {
-				if b != nil {
+			} else {
+				self := node.GetSelfNode(ctx)
+				if sc.CanStoreBlock(r, self.Node) {
 					var sTxns = make([]datastore.Entity, len(b.Txns))
 					for idx, txn := range b.Txns {
 						txnSummary := txn.GetSummary()
@@ -103,25 +102,28 @@ func (sc *Chain) BlockStorageWorker(ctx context.Context) {
 					}
 					err = sc.StoreTransactions(ctx, sTxns)
 					if err != nil {
-						sc.retryPersistingTransactions(ctx, sTxns, b)
-					} else {
-						err = sc.StoreBlock(ctx, b)
+						err = sc.retryPersistingTransactions(ctx, sTxns, b)
 						if err != nil {
-							Logger.Error("db error (save block)", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
+							Logger.Error("db error (save transaction)", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
+							continue
 						}
 					}
-				}
-			} else {
-				err = blockstore.GetStore().DeleteBlock(b)
-				if err != nil {
-					Logger.Error("failed to delete block from file system", zap.String("blockhash", b.Hash), zap.Error(err))
+					err = sc.StoreBlock(ctx, b)
+					if err != nil {
+						Logger.Error("db error (save block)", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
+					}
+				} else {
+					err = blockstore.GetStore().DeleteBlock(b)
+					if err != nil {
+						Logger.Error("failed to delete block from file system", zap.String("blockhash", b.Hash), zap.Error(err))
+					}
 				}
 			}
 		}
 	}
 }
 
-func (sc *Chain) retryPersistingTransactions(ctx context.Context, sTxns []datastore.Entity, b *block.Block) {
+func (sc *Chain) retryPersistingTransactions(ctx context.Context, sTxns []datastore.Entity, b *block.Block) error {
 	var err error
 	for numTrials := 1; numTrials <= 10; numTrials++ {
 		time.Sleep(10 * time.Millisecond)
@@ -130,8 +132,8 @@ func (sc *Chain) retryPersistingTransactions(ctx context.Context, sTxns []datast
 			Logger.Info("Retrying to save transactions to db", zap.Any("trail", numTrials), zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Error(err))
 		} else {
 			Logger.Info("Save transactions to db successful", zap.Any("round", b.Round), zap.Any("block", b.Hash))
-			return
+			return nil
 		}
 	}
-	Logger.Error("db error (save transaction)", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
+	return err
 }
