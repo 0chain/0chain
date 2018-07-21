@@ -1,0 +1,24 @@
+- name: "Terminate the servers..."
+  ec2:
+    region: "{{regions[item.region]}}"
+    key_name: "{{aws_key_pair}}"
+    instance_type: "{{zchain.instance_type[item.role]}}"
+    image: "{{instance_images[item.region]['ami_id']}}"
+    wait: no
+    termination_protection: no
+    group:
+    instance_tags:
+      Name: "{{item.name}}"
+      role: "{{item.role}}"
+      network: "{{zchain.network_type}}"
+    exact_count: 0
+    count_tag:
+      Name: "{{item.name}}"
+      role: "{{item.role}}"
+      network: "{{zchain.network_type}}"
+
+  with_items:
+    - "{{zchain.layout.miners}}"
+    - "{{zchain.layout.sharders}}"
+  check_mode: no
+

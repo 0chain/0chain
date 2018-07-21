@@ -1,0 +1,3 @@
+- name: Install docker
+  import_tasks: docker-install.yml
+  tags: ['docker-install']

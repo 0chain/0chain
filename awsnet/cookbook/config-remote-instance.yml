@@ -1,0 +1,40 @@
+---
+- hosts: [tag_role_miner, tag_role_sharder]
+  become: true
+  gather_facts: no
+  vars_files:
+    - "{{ credential }}/aws/credentials.yml"
+    - common/keyregistry.yml
+    - common/regions.yml
+    - common/miner.yml
+    - common/sharder.yml
+    - common/receipes.yml
+
+  environment: "{{aws_vars}}"
+
+  roles:
+    - role: common
+    - role: control
+    - role: inventory
+    - role: instances
+
+- hosts: [tag_role_miner, tag_role_sharder]
+  become: true
+  gather_facts: yes
+  vars_files:
+    - "{{ credential }}/aws/credentials.yml"
+    - "{{ credential }}/aws/credentials.yml"
+    - common/keyregistry.yml
+    - common/regions.yml
+    - common/miner.yml
+    - common/sharder.yml
+    - common/receipes.yml
+
+  environment: "{{aws_vars}}"
+  roles:
+    - role: common
+    - role: control
+    - role: inventory
+    - role: docker
+    - role: gitrepo
+...

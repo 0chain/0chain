@@ -1,0 +1,9 @@
+---
+- name: "Push the gitrepostiory"
+
+- import_tasks: gitrepo-assemble.yml
+  tags: ['gitrepo-assemble']
+
+- import_tasks: gitrepo-teardown.yml
+  tags: ['gitrepo-teardown']
+...

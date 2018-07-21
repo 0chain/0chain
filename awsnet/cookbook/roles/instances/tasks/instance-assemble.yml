@@ -1,0 +1,54 @@
+- name: "Launch the server instances..."
+  ec2:
+    region: "{{regions[item.region]}}"
+    key_name: "{{aws_key_pair}}"
+    instance_type: "{{zchain.instance_type[item.role]}}"
+    image: "{{instance_images[item.region]['ami_id']}}"
+    wait: no
+    termination_protection: no
+    group:
+    instance_tags:
+      Name: "{{item.name}}"
+      role: "{{item.role}}"
+      network: "{{zchain.network_type}}"
+    exact_count: 1
+    count_tag:
+      Name: "{{item.name}}"
+      role: "{{item.role}}"
+      network: "{{zchain.network_type}}"
+  register: ec2
+  with_items:
+    - "{{zchain.layout.miners}}"
+    - "{{zchain.layout.sharders}}"
+  check_mode: no
+
+- set_fact:
+    nascent: "{{ec2 | json_query('results[*].tagged_instances')}}"
+
+- debug: var=item.public_ip
+  with_items: "{{nascent}}"
+
+- name: Wait for SSH to come up...
+  wait_for:
+    host: "{{item.public_ip}}"
+    port: 22
+    state: started
+  with_items: "{{nascent}}"
+
+- debug: var=item
+  with_items: "{{nascent}}"
+
+- name: "Add the instance to the groups..."
+  add_host:
+    name: "{{item.tags.Name}}"
+    hostname: "{{item.public_ip}}"
+    groupname: "zservers"
+    ansible_host: "{{item.public_ip}}"
+    ansible_port: 22
+    ansible_user: ubuntu
+    ansible_ssh_private_key_file: "{{aws_key_pair_file}}"
+    ansible_ssh_extra_args: "-i {{aws_key_pair_file}} -o StrictHostKeyChecking=no"
+  with_items: "{{nascent}}"
+
+...
+

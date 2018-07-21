@@ -1,0 +1,5 @@
+---
+- import_playbook: config-local-instance.yml
+- import_playbook: config-remote-instance.yml
+- import_playbook: config-testnet.yml
+...

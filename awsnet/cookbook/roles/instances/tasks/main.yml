@@ -1,0 +1,16 @@
+---
+- name: "Prepare miner instance"
+  set_fact:
+    network_type: "{{znetwork.network_type}}"
+    network_name: "{{znetwork.network_name}}"
+
+- import_tasks: instance-assemble.yml
+  tags: ['instance-assemble']
+
+- import_tasks: instance-teardown.yml
+  tags: ['instance-teardown']
+
+- import_tasks: instance-prime.yml
+  tags: ['instance-prime']
+...
+
