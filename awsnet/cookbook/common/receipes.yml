@@ -60,5 +60,9 @@ zchain_networks:
   'tyndall':
   'russell':
 
-zchain: "{{zchain_networks[network]}}"
+zchain:
+  network: "{{zchain_networks[network]}}"
+  credentials: "{{credential}}"
+  repodest: "{{zchain_dest}}"
+
 ...

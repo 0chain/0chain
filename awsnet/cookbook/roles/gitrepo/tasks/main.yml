@@ -1,6 +1,4 @@
 ---
-- name: "Push the gitrepostiory"
-
 - import_tasks: gitrepo-assemble.yml
   tags: ['gitrepo-assemble']
 

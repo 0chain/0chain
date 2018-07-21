@@ -1,2 +1,156 @@
 ---
+#The common script depends upon the following variables which are set in the Makefile
+# credential - The location of the AWS keys
+# network - The network to launch. Check receipes for the name of the network
+# repodest - The destination directory to copy out the 0chain repository.
+
+#AWS Key Setup
+aws_credentials: "{{credential}}/aws/credentials"
+aws_key_dir: "{{credential}}/{{network}}"
+aws_profile: "{{ network }}"
+
+aws_key_pair: "{{network}}"
+aws_key_pair_file: "{{aws_key_dir}}/{{aws_key_pair}}.pem"
+aws_public_key_file: "{{aws_key_dir }}/{{aws_key_pair}}.pub"
+
+#Git Key Setup
+git_key_dir: "{{credential}}/git"
+git_key_pair: "github"
+git_key_pair_file: "{{git_key_dir}}/{{git_key_pair}}.pem"
+git_public_key_file: "{{git_key_dir }}/{{git_key_pair}}.pub"
+
+#Regions that are supported
+regions:
+  'virginia': "us-east-1"
+  'ohio': "us-east-2"
+  'california': "us-west-1"
+  'oregon': "us-west-2"
+  'canada': "ca-central-1"
+  'frankfurt': "eu-central-1"
+
+region_tags: "{{regions.keys()}}"
+
+primary: 'virginia'
+
+primary_region: "{{regions[primary]}}"
+
+miners:
+  'm00': rank="00"
+  'm01': rank="01"
+  'm02': rank="02"
+  'm03': rank="03"
+  'm04': rank="04"
+  'm05': rank="05"
+  'm06': rank="06"
+  'm07': rank="07"
+  'm08': rank="08"
+  'm09': rank="09"
+  'm10': rank="10"
+  'm11': rank="11"
+  'm12': rank="12"
+  'm13': rank="13"
+  'm14': rank="14"
+  'm15': rank="15"
+  'm16': rank="16"
+  'm17': rank="17"
+  'm18': rank="18"
+  'm19': rank="19"
+
+sharders:
+  's00': rank="00"
+  's01': rank="01"
+  's02': rank="02"
+  's03': rank="03"
+  's04': rank="04"
+  's05': rank="05"
+  's06': rank="06"
+  's07': rank="07"
+  's08': rank="08"
+  's09': rank="09"
+  's10': rank="10"
+  's11': rank="11"
+  's12': rank="12"
+  's13': rank="13"
+  's14': rank="14"
+  's15': rank="15"
+  's16': rank="16"
+  's17': rank="17"
+  's18': rank="18"
+  's19': rank="19"
+
+#Git configuration
+git:
+  repo: ssh://git@0chain.github.com/0chain/0chain.git
+  dest: "{{zchain_artifact}}/0chain"
+
+artifact:
+  dir: "{{zchain_artifact}}"
+  subdirs:
+    - 0chain
+    - miner
+    - sharder
+    - keys
+
+#Names of the testnet regions are derived from the california fourteeners
+#https://en.wikipedia.org/wiki/List_of_California_fourteeners
+#
+zchain_networks:
+  'whitney':
+    network_type: 'testnet'
+    network_name: 'whitney'
+    instance_type:
+      miner: 'c4.large'
+      sharder: 'c4.large'
+
+    layout:
+      'miners':
+        - {name: m00, role: miner, region: oregon}
+        - {name: m01, role: miner, region: virginia}
+        - {name: m02, role: miner, region: frankfurt}
+        - {name: m03, role: miner, region: oregon}
+        - {name: m04, role: miner, region: virginia}
+        - {name: m05, role: miner, region: frankfurt}
+        - {name: m06, role: miner, region: oregon}
+        - {name: m07, role: miner, region: virginia}
+        - {name: m08, role: miner, region: frankfurt}
+
+      'sharders':
+        - {name: s00, role: sharder, region: oregon}
+        - {name: s01, role: sharder, region: virginia}
+        - {name: s02, role: sharder, region: frankfurt}
+
+  'palisade':
+    mode: 'testnet'
+    regions:
+      - 'virginia'
+      - 'california'
+      - 'frankfurt'
+  'sill':
+    mode: 'testnet'
+    regions:
+      - 'virginia'
+      - 'california'
+      - 'frankfurt'
+  'shasta':
+    mode: 'testnet'
+    regions:
+      - 'virginia'
+      - 'california'
+      - 'frankfurt'
+  'langley':
+    mode: 'testnet'
+    regions:
+      - 'virginia'
+      - 'california'
+      - 'frankfurt'
+  'muir':
+  'tyndall':
+  'russell':
+
+zchain:
+  network: "{{zchain_networks[network]}}"
+  credentials: "{{credential}}"
+  artifact: "{{artifact}}"
+  git: "{{git}}"
+
 ...

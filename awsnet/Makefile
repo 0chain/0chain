@@ -20,7 +20,8 @@ CONFIG_DIR=$(CONFIG)/network
 
 CONFIG_FILE=$(CONFIG_DIR)/config.yml
 
-NETWORK_DIR=$(AWSNET_BASE)/$(network)
+#Destination directoy to store local assests
+ZCHAIN_ARTIFACT?=$(AWSNET_BASE)/testnet/$(network)
 
 NETWORK_TARGETS=network-setup network-destroy
 
@@ -28,12 +29,13 @@ REGIONS=regions-display
 
 CONTROL_DIR=control-dir-setup
 
-KEYADMIN=keyadmin-aws-create keyadmin-aws-delete keyadmin-git-create keyadmin-git-delete
+ADMIN_KEY=keyadmin-aws-create keyadmin-aws-delete keyadmin-git-create keyadmin-git-delete
+ADMIN_GIT=gitrepo-assemble gitrepo-teardown
+ADMIN_INSTANCE=instance-assemble instance-teardown
 #Create the key for the different subsystems
 keyadmin-assemble: keyadmin-aws-create keyadmin-git-create
 keyadmin-teardown: keyadmin-aws-delete keyadmin-git-delete
 
-LOCAL_INSTANCE_GOALS=instance-assemble instance-teardown
 
 #Create the instances...
 testnet-assemble: keyadmin-assemble instance-assemble instance-prime docker-install docker-hello
@@ -44,10 +46,12 @@ REMOTE_DOCKER_GOAL=docker-assemble docker-install docker-hello
 docker-assemble: docker-install
 
 #All instance setup goals are done using the local connection.
-LOCAL_INSTANCE=$(KEYADMIN) $(INSTANCE) $(DOCKER_GOAL)
-$(LOCAL_INSTANCE): show
+EXTRA_VARS="credential=$(CREDENTIAL) network=$(network) repo=$(ZCHAIN_REPO) zchain_artifact=$(ZCHAIN_ARTIFACT)"
+
+LOCAL_INSTANCE_GOALS=$(ADMIN_KEY) $(ADMIN_GIT) $(ADMIN_INSTANCE)
+$(LOCAL_INSTANCE_GOALS): show
 	@echo "Make target=$@"
-	@$(PLAYBOOK) -i $(INVENTORY) $(COOKBOOK)/config-local-instance.yml -l localhost --connection=local --extra-vars=$(EXTRA_VARS) --tags $@
+	$(PLAYBOOK) -i $(INVENTORY) $(COOKBOOK)/config-local-instance.yml -l localhost --connection=local --extra-vars=$(EXTRA_VARS) --tags $@
 
 REMOTE_INSTANCE_GOALS=instance-prime $(REMOTE_DOCKER_GOAL)
 $(REMOTE_INSTANCE_GOALS): show
@@ -82,7 +86,6 @@ export AWS_ACCESS_KEY_ID=AKIAIEP4LDUAY4FNU62A
 export AWS_SECRET_ACCESS_KEY=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
 
 PLAYBOOK=ansible-playbook
-EXTRA_VARS="credential=$(CREDENTIAL) network=$(network) repo=$(ZCHAIN_REPO)"
 
 $(AWS_TARGETS): show
 	@echo "Make target=$@"

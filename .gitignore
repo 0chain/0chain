@@ -20,4 +20,4 @@
 **/hash/main.go
 *.iml
 awsnet/credentials/
-
+awsnet/testnet

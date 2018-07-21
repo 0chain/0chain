@@ -2,20 +2,15 @@
 - hosts: localhost
 
   vars_files:
-    - "{{ credential }}/aws/credentials.yml"
-    - common/keyregistry.yml
-    - common/regions.yml
-    - common/miner.yml
-    - common/sharder.yml
-    - common/receipes.yml
+   - "{{ credential }}/aws/credentials.yml"
 
   environment: "{{aws_vars}}"
 
   roles:
     - role: common
-    - role: control
     - role: keyadmin
     - role: instances
+    - role: gitrepo
     - role: storage
     - role: miners
     - role: sharders

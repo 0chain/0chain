@@ -1,0 +1,3 @@
+- git:
+    repo: "{{zchain.git.repo}}"
+    dest: "{{zchain.git.dest}}"
