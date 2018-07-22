@@ -5,11 +5,19 @@ import (
 	"encoding/hex"
 	"time"
 
+	"0chain.net/cache"
 	"0chain.net/common"
 	"0chain.net/datastore"
 	"0chain.net/encryption"
 	"0chain.net/memorystore"
 )
+
+var cacher cache.Cache
+
+func init() {
+	cacher = cache.GetLFUCacheProvider()
+	cacher.New(256)
+}
 
 /*Client - data structure that holds the client data */
 type Client struct {
@@ -34,6 +42,28 @@ func (c *Client) Validate(ctx context.Context) error {
 	}
 	if !datastore.IsEqual(c.ID, datastore.ToKey(encryption.Hash(c.PublicKeyBytes))) {
 		return common.InvalidRequest("client id is not a SHA3-256 hash of the public key")
+	}
+	return nil
+}
+
+/*GetClient - gets client from either cache or database*/
+func (c *Client) GetClient(ctx context.Context, key datastore.Key) error {
+	var ok bool
+	var co *Client
+	ico, cerr := cacher.Get(key)
+	if cerr == nil {
+		co, ok = ico.(*Client)
+	}
+	if !ok {
+		err := c.Read(ctx, key)
+		if err == nil {
+			cacher.Add(key, c)
+		}
+		return err
+	} else {
+		c.ID = co.ID
+		c.PublicKey = co.PublicKey
+		c.SetPublicKey(c.PublicKey)
 	}
 	return nil
 }

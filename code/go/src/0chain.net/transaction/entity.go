@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"0chain.net/cache"
 	"0chain.net/client"
 	"0chain.net/common"
 	"0chain.net/config"
@@ -21,12 +20,6 @@ import (
 const TXN_TIME_TOLERANCE = 10
 
 var TransactionCount = 0
-var cacher cache.Cache
-
-func init() {
-	cacher = cache.GetLFUCacheProvider()
-	cacher.New(256)
-}
 
 func SetupTransactionDB() {
 	memorystore.AddPool("txndb", memorystore.NewPool("redis_txns", 6479))
@@ -151,7 +144,7 @@ func (t *Transaction) GetHashBytes() []byte {
 /*GetClient - get the Client object associated with the transaction */
 func (t *Transaction) GetClient(ctx context.Context) (*client.Client, error) {
 	co := &client.Client{}
-	err := co.Read(ctx, t.ClientID)
+	err := co.GetClient(ctx, t.ClientID)
 	if err != nil {
 		return nil, err
 	}
@@ -183,16 +176,9 @@ func (t *Transaction) VerifySignature(ctx context.Context) error {
 	var err error
 	co := datastore.GetEntityMetadata("client").Instance().(*client.Client)
 	if t.PublicKey == "" {
-		var ok bool
-		ico, cerr := cacher.Get(t.ClientID)
-		if cerr != nil {
-			co, ok = ico.(*client.Client)
-		}
-		if !ok {
-			co, err = t.GetClient(ctx)
-			if err != nil {
-				return err
-			}
+		co, err = t.GetClient(ctx)
+		if err != nil {
+			return err
 		}
 	} else {
 		co.ID = t.ClientID
@@ -207,7 +193,6 @@ func (t *Transaction) VerifySignature(ctx context.Context) error {
 	if !correctSignature {
 		return common.NewError("invalid_signature", "Invalid Signature")
 	}
-	cacher.Add(t.ClientID, co)
 	return nil
 }
 
