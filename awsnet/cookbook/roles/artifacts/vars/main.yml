@@ -78,18 +78,28 @@ sharders:
   's18': rank="18"
   's19': rank="19"
 
-#Git configuration
+
 git:
-  repo: ssh://git@0chain.github.com/0chain/0chain.git
-  dest: "{{zchain_artifact}}/0chain"
+  repo: "ssh://git@0chain.github.com/0chain/0chain.git"
+  version: "{{git_version}}"
+  staging: "{{zchain_artifact}}/0chain"
+  zip: "{{zchain_artifact}}/0chain.zip"
+
 
 artifact:
-  dir: "{{zchain_artifact}}"
-  subdirs:
-    - 0chain
-    - miner
-    - sharder
-    - keys
+  local:
+    base: "{{zchain_artifact}}"
+    dirs:
+      - 0chain
+      - miner
+      - sharder
+      - keys
+  zchain:
+    base: "/0chain"
+    dirs:
+      - miner
+      - sharder
+      - keys
 
 #Names of the testnet regions are derived from the california fourteeners
 #https://en.wikipedia.org/wiki/List_of_California_fourteeners

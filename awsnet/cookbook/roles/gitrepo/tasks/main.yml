@@ -1,7 +1,30 @@
 ---
-- import_tasks: gitrepo-assemble.yml
-  tags: ['gitrepo-assemble']
+- name: "Creating 0chain zip file...{{zchain.git}}"
+  git:
+    repo: "{{zchain.git.repo}}"
+    dest: "{{zchain.git.staging}}"
+    archive: "{{zchain.git.zip}}"
+    version: "{{zchain.git.version}}"
+  register: result
+  tags: ['gitrepo-assemble-local']
 
-- import_tasks: gitrepo-teardown.yml
-  tags: ['gitrepo-teardown']
+- debug:
+    msg: "Git extract Results: {{zchain.git}} result={{result}}"
+  tags: ['gitrepo-assemble-local']
+
+- debug:
+    msg: "Replicate 0chain zip file...{{zchain.git}}"
+  tags: ['gitrepo-assemble-zchain']
+
+- name: "Copy and extract {{zchain.git.zip}} to the remote machine..."
+  unarchive:
+    src: "{{zchain.git.zip}}"
+    dest: "{{artifact.zchain.base}}"
+    remote_src: no
+  register: result
+  tags: ['gitrepo-assemble-zchain']
+
+- debug:
+    msg: "Extract {{zchain.git.zip}} result={{result}}"
+  tags: ['gitrepo-assemble-zchain']
 ...

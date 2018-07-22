@@ -4,17 +4,13 @@
   gather_facts: no
   vars_files:
     - "{{ credential }}/aws/credentials.yml"
-    - common/keyregistry.yml
-    - common/regions.yml
-    - common/miner.yml
-    - common/sharder.yml
-    - common/receipes.yml
+    - [ "anchor/{{network}}.yml", anchor/defaults.yml ]
 
   environment: "{{aws_vars}}"
 
   roles:
-    - role: common
-    - role: control
+    - role: artifacts
+      when: false
     - role: inventory
     - role: instances
 
@@ -23,17 +19,14 @@
   gather_facts: yes
   vars_files:
     - "{{ credential }}/aws/credentials.yml"
-    - "{{ credential }}/aws/credentials.yml"
-    - common/keyregistry.yml
-    - common/regions.yml
-    - common/miner.yml
-    - common/sharder.yml
-    - common/receipes.yml
+    - [ "anchor/{{network}}.yml", anchor/defaults.yml ]
 
   environment: "{{aws_vars}}"
+
   roles:
-    - role: common
-    - role: control
+    - role: artifacts
+      when: true
+
     - role: inventory
     - role: docker
     - role: gitrepo

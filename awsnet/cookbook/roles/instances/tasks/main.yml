@@ -5,12 +5,12 @@
     network_name: "{{znetwork.network_name}}"
 
 - import_tasks: instance-assemble.yml
-  tags: ['instance-assemble']
+  tags: ['instances-assemble-local']
 
 - import_tasks: instance-teardown.yml
-  tags: ['instance-teardown']
+  tags: ['instances-teardown-local']
 
 - import_tasks: instance-prime.yml
-  tags: ['instance-prime']
+  tags: ['instances-assemble-remote']
 ...
 

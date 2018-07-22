@@ -1,0 +1,18 @@
+---
+- hosts: [tag_role_miner, tag_role_sharder]
+  become: false
+  gather_facts: yes
+  vars_files:
+    - "{{ credential }}/aws/credentials.yml"
+    - [ "anchor/{{network}}.yml", anchor/defaults.yml ]
+
+  environment: "{{aws_vars}}"
+
+  roles:
+    - role: artifacts
+      when: true
+
+    - role: inventory
+    - role: instances
+    - role: gitrepo
+...

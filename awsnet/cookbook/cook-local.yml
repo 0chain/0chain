@@ -2,16 +2,19 @@
 - hosts: localhost
 
   vars_files:
-   - "{{ credential }}/aws/credentials.yml"
+    - "{{ credential }}/aws/credentials.yml"
+    - [ "anchor/{{network}}/defaults.yml", anchor/defaults.yml ]
+    - [ "anchor/{{network}}/clientid.yml", anchor/clientid.yml ]
 
   environment: "{{aws_vars}}"
 
   roles:
-    - role: common
+    - role: artifacts
     - role: keyadmin
     - role: instances
     - role: gitrepo
     - role: storage
     - role: miners
     - role: sharders
+
 ...

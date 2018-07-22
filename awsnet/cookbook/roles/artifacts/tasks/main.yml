@@ -1,0 +1,45 @@
+---
+- name: Run common tasks
+  debug: var=zchain
+  run_once: true
+
+- name: "Create the local artifact - directory {{artifact}}"
+  file: path={{artifact.local.base}} state=directory
+  tags: 'artifacts-assemble-local'
+
+- name: "Create artifact subdirs"
+  file: path="{{artifact.local.base}}/{{item}}" state=directory mode=0755
+  with_items: "{{ artifact.local.dirs }}"
+  tags: 'artifacts-assemble-local'
+
+
+- name: "Delete the local artifact - directory {{artifact}}"
+  file: path={{artifact.local.base}} state=absent
+  tags: 'artifacts-teardown-local'
+
+- name: "Create zchain - directory {{artifact}}"
+  file:
+    path: "{{artifact.zchain.base}}"
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: 0755
+  tags: 'artifacts-assemble-remote'
+
+- name: "Create artifact subdirs"
+  file:
+    path : "{{artifact.zchain.base}}/{{item}}"
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: 0755
+  with_items:
+    - "{{ artifact.zchain.dirs }}"
+  tags: 'artifacts-assemble-remote'
+
+- name: "Delete zchain - directory {{artifact}}"
+  file:
+    path: "{{artifact.zchain.base}}"
+    state: absent
+  tags: 'artifacts-teardown-remote'
+...

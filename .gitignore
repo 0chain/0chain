@@ -21,3 +21,4 @@
 *.iml
 awsnet/credentials/
 awsnet/testnet
+awsnet/cookbook/*.retry
