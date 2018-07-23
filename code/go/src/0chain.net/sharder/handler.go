@@ -20,7 +20,8 @@ import (
 func SetupHandlers() {
 	http.HandleFunc("/v1/block/get", common.ToJSONResponse(BlockHandler))
 	http.HandleFunc("/v1/transaction/get/confirmation", common.ToJSONResponse(TransactionConfirmationHandler))
-	http.HandleFunc("/_block_stats", BlockStatsHandler)
+	http.HandleFunc("/v1/chain/get/stats", common.ToJSONResponse(ChainStatsHandler))
+	http.HandleFunc("/_chain_stats", ChainStatsWriter)
 }
 
 /*BlockHandler - a handler to respond to block queries */
@@ -54,17 +55,18 @@ func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	return chain.GetBlockResponse(b, parts)
 }
 
-/*BlockStatsHandler - a handler to provide block statistics */
-func BlockStatsHandler(w http.ResponseWriter, r *http.Request) {
+/*ChainStatsHandler - a handler to provide block statistics */
+func ChainStatsHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	c := &GetSharderChain().Chain
-	if r.FormValue("type") == "json" {
-		w.Header().Set("Content-Type", "text/json")
-		common.Respond(w, diagnostics.GetStatistics(c, chain.FinalizationTimer, 1000000.0), nil)
-	} else {
-		w.Header().Set("Content-Type", "text/html")
-		fmt.Fprintf(w, "<h2>Block Finalization Statistics</h2>")
-		diagnostics.WriteStatistics(w, c, chain.FinalizationTimer, 1000000.0)
-	}
+	return diagnostics.GetStatistics(c, chain.FinalizationTimer, 1000000.0), nil
+}
+
+/*ChainStatsWriter - a handler to provide block statistics */
+func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
+	c := &GetSharderChain().Chain
+	w.Header().Set("Content-Type", "text/html")
+	fmt.Fprintf(w, "<h2>Block Finalization Statistics</h2>")
+	diagnostics.WriteStatistics(w, c, chain.FinalizationTimer, 1000000.0)
 }
 
 /*TransactionConfirmationHandler - given a transaction hash, confirm it's presence in a block */
