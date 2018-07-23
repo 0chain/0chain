@@ -1,2 +1,4 @@
 #!/usr/bin/env bash
-docker-compose -p miner -f ../build.miner/docker-compose.yml up
+echo Starting miner...
+docker-compose -p miner -f docker.aws/build.miner/docker-compose.yml up
+
