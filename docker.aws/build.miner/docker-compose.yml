@@ -3,8 +3,8 @@ services:
   redis:
     image: "redis:alpine"
     volumes:
-      - ./docker.aws/config:/0chain/config
-      - ./docker.aws/miner/data:/0chain/data
+      - ../config:/0chain/config
+      - ../miner/data:/0chain/data
     networks:
       default:
     sysctls:
@@ -14,8 +14,8 @@ services:
   redis_txns:
     image: "redis:alpine"
     volumes:
-      - ./docker.aws/config:/0chain/config
-      - ./docker.aws/miner/data:/0chain/data
+      - ../config:/0chain/config
+      - ../miner/data:/0chain/data
     networks:
       default:
     sysctls:
@@ -35,9 +35,9 @@ services:
       context: .
       dockerfile: ./docker.aws/build.miner/Dockerfile
     volumes:
-      - ./docker.aws/config:/0chain/config
-      - ./docker.aws/miner/data:/0chain/data
-      - ./docker.aws/miner/log:/0chain/log
+      - ../config:/0chain/config
+      - ../miner/data:/0chain/data
+      - ../miner/log:/0chain/log
 
     ports:
       - "7071:7071"

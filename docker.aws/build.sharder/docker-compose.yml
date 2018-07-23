@@ -5,8 +5,8 @@ services:
     networks:
       - default
     volumes:
-      - ./docker.aws/sharder/data/cassandra:/var/lib/cassandra
-      - ./sql:/0chain/sql
+      - ../sharder/data/cassandra:/var/lib/cassandra
+      - ../../sql:/0chain/sql
     ports:
       - "9042:9042"
     healthcheck:
@@ -18,8 +18,8 @@ services:
   cassandra-init:
     image: cassandra:latest
     volumes:
-      - ./docker.aws/config/cassandra:/0chain/cassandra
-      - ./sql:/0chain/sql
+      - ../config/cassandra:/0chain/cassandra
+      - ../../sql:/0chain/sql
 
     command: bash /0chain/cassandra/cassandra-init.sh
     links:
@@ -37,9 +37,9 @@ services:
       context: .
       dockerfile: ./docker.aws/build.sharder/Dockerfile
     volumes:
-      - ./docker.aws/config:/0chain/config
-      - ./docker.aws/sharder/log:/0chain/log
-      - ./docker.aws/sharder/data:/0chain/data
+      - ../config:/0chain/config
+      - ../sharder/log:/0chain/log
+      - ../sharder/data:/0chain/data
     ports:
       - "7171:7171"
     networks:
