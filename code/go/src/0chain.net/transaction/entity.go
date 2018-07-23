@@ -3,6 +3,7 @@ package transaction
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"0chain.net/client"
@@ -255,4 +256,14 @@ func (t *Transaction) GenerateChildTransactions(ctx context.Context) []*Transact
 	//TODO: putting a transaction into a block may need to accompany associated child transactions
 	// E.g: When a storage allocation lockin transaction is processed, it may need to add additional child transactions to the block one for each blobber
 	return nil
+}
+
+/*DebugTxn - is this a transaction that needs being debugged
+- applicable only when running in test mode and the transaction_data string contains debug keyword somewhere in it
+*/
+func (t *Transaction) DebugTxn() bool {
+	if !config.Development() {
+		return false
+	}
+	return strings.Index(t.TransactionData, "debug") >= 0
 }

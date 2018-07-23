@@ -8,6 +8,7 @@ import (
 	metrics "github.com/rcrowley/go-metrics"
 
 	"0chain.net/chain"
+	"0chain.net/config"
 
 	"0chain.net/block"
 	"0chain.net/client"
@@ -59,8 +60,17 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 			Logger.Error("generate block (invalid entity)", zap.Any("entity", qe))
 			return true
 		}
+		var debugTxn = txn.DebugTxn()
+
+		if debugTxn {
+			Logger.Info("generate block (debug transaction)", zap.String("txn", txn.Hash), zap.String("txn_object", datastore.ToJSON(txn).String()))
+		}
+
 		if !common.Within(int64(txn.CreationDate), transaction.TXN_TIME_TOLERANCE-1) {
 			invalidTxns = append(invalidTxns, qe)
+			if debugTxn {
+				Logger.Info("generate block (debug transaction) error - txn creation not within tolerance", zap.String("txn", txn.Hash), zap.Any("now", common.Now()))
+			}
 			return true
 		}
 
@@ -271,6 +281,14 @@ func (mc *Chain) AddVerificationTicket(ctx context.Context, b *block.Block, bvt 
 /*UpdateFinalizedBlock - update the latest finalized block */
 func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round), zap.Int64("current_round", mc.CurrentRound), zap.Float64("weight", b.Weight()), zap.Float64("chain_weight", b.ChainWeight), zap.Int("blocks_size", len(mc.Blocks)), zap.Int("rounds_size", len(mc.rounds)))
+	if config.Development() {
+		for _, t := range b.Txns {
+			if !t.DebugTxn() {
+				continue
+			}
+			Logger.Info("update finalized block (debug transaction)", zap.String("txn", t.Hash), zap.String("block", b.Hash))
+		}
+	}
 	mc.FinalizeBlock(ctx, b)
 	mc.SendFinalizedBlock(ctx, b)
 	fr := mc.GetRound(b.Round)

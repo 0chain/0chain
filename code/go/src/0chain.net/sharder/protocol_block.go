@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"0chain.net/blockstore"
+	"0chain.net/config"
 
 	"0chain.net/block"
 	"0chain.net/datastore"
@@ -21,6 +22,14 @@ func (sc *Chain) UpdatePendingBlock(ctx context.Context, b *block.Block, txns []
 func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	fr := sc.GetRound(b.Round)
 	Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("lf_round", sc.LatestFinalizedBlock.Round), zap.Any("current_round", sc.CurrentRound), zap.Any("blocks_size", len(sc.Blocks)), zap.Any("rounds_size", len(sc.rounds)))
+	if config.Development() {
+		for _, t := range b.Txns {
+			if !t.DebugTxn() {
+				continue
+			}
+			Logger.Info("update finalized block (debug transaction)", zap.String("txn", t.Hash), zap.String("block", b.Hash))
+		}
+	}
 	// Sort transactions by their hash - useful for quick search
 	sort.SliceStable(b.Txns, func(i, j int) bool { return b.Txns[i].Hash < b.Txns[j].Hash })
 	err := blockstore.GetStore().Write(b)
