@@ -1,0 +1,24 @@
+---
+- name: "Creating the node mapping file..."
+  debug:
+    msg: "agent={{item}}"
+  with_items: "{{agents}}"
+  tags: ['clientid-assemble-local']
+
+- name: "Delete old node key file..."
+  file:
+    path: "{{nodefiles.nodes.dir}}/{{item.key}}.txt"
+    state: absent
+  with_items: "{{agents}}"
+  tags: ['clientid-assemble-local']
+
+- name: "Create the new node file..."
+  lineinfile:
+      path: "{{nodefiles.nodes.dir}}/{{item.key}}.txt"
+      create: yes
+      line: >-
+        {{clientid[item.key].public}}
+        {{clientid[item.key].private}}
+  with_items: "{{agents}}"
+  tags: ['clientid-assemble-local']
+...

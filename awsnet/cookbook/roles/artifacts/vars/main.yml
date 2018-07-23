@@ -81,7 +81,7 @@ sharders:
 
 git:
   repo: "ssh://git@0chain.github.com/0chain/0chain.git"
-  version: "{{git_version}}"
+  version: "{{blueprint}}.git_version"
   staging: "{{zchain_artifact}}/0chain"
   zip: "{{zchain_artifact}}/0chain.zip"
 
@@ -91,74 +91,26 @@ artifact:
     base: "{{zchain_artifact}}"
     dirs:
       - 0chain
+      - nodes
       - miner
       - sharder
       - keys
   zchain:
     base: "/0chain"
     dirs:
+      - 0chain
       - miner
       - sharder
-      - keys
+      - nodes
 
-#Names of the testnet regions are derived from the california fourteeners
-#https://en.wikipedia.org/wiki/List_of_California_fourteeners
-#
-zchain_networks:
-  'whitney':
-    network_type: 'testnet'
-    network_name: 'whitney'
-    instance_type:
-      miner: 'c4.large'
-      sharder: 'c4.large'
-
-    layout:
-      'miners':
-        - {name: m00, role: miner, region: oregon}
-        - {name: m01, role: miner, region: virginia}
-        - {name: m02, role: miner, region: frankfurt}
-        - {name: m03, role: miner, region: oregon}
-        - {name: m04, role: miner, region: virginia}
-        - {name: m05, role: miner, region: frankfurt}
-        - {name: m06, role: miner, region: oregon}
-        - {name: m07, role: miner, region: virginia}
-        - {name: m08, role: miner, region: frankfurt}
-
-      'sharders':
-        - {name: s00, role: sharder, region: oregon}
-        - {name: s01, role: sharder, region: virginia}
-        - {name: s02, role: sharder, region: frankfurt}
-
-  'palisade':
-    mode: 'testnet'
-    regions:
-      - 'virginia'
-      - 'california'
-      - 'frankfurt'
-  'sill':
-    mode: 'testnet'
-    regions:
-      - 'virginia'
-      - 'california'
-      - 'frankfurt'
-  'shasta':
-    mode: 'testnet'
-    regions:
-      - 'virginia'
-      - 'california'
-      - 'frankfurt'
-  'langley':
-    mode: 'testnet'
-    regions:
-      - 'virginia'
-      - 'california'
-      - 'frankfurt'
-  'muir':
-  'tyndall':
-  'russell':
+nodefiles:
+  nodes:
+    dir: "{{artifact.local.base}}/nodes"
+    local: "{{artifact.local.base}}/nodes/nodes.txt"
+    zchain: "{{artifact.zchain.base}}/nodes/nodes.txt"
 
 zchain:
-  network: "{{zchain_networks[network]}}"
+  blueprint: "{{blueprint}}"
   credentials: "{{credential}}"
   artifact: "{{artifact}}"
   git: "{{git}}"

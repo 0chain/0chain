@@ -82,7 +82,7 @@ func makeMode(legend string, count int, sort bool) []byte {
 
 	var buffer []byte
 	for i := 0; i < count; i++ {
-		data := []byte(fmt.Sprintf(" %c%02d: rank=%02d client=%v public=%v private=%v\n",
+		data := []byte(fmt.Sprintf(" %c%02d: {rank: %02d, client: %v, public: %v, private: %v}\n",
 			legend[0],
 			i, i, clients[i].client, clients[i].publicKey, clients[i].privateKey))
 		buffer = append(buffer, data...)

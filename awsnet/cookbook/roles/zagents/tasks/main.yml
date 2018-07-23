@@ -1,0 +1,6 @@
+---
+- name: "Create the remote directories for the various agents."
+  debug:
+    msg: "var=sample"
+  tags: ['zagents-assemble-zchain']
+...

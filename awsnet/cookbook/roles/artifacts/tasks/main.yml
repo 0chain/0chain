@@ -12,6 +12,10 @@
   with_items: "{{ artifact.local.dirs }}"
   tags: 'artifacts-assemble-local'
 
+- name: "Set all the agents for the zchain roles"
+  set_fact:
+    agents: "{{zchain.blueprint.sharders| dict2items | union(zchain.blueprint.miners | dict2items)}}"
+  tags: 'artifacts-assemble-local'
 
 - name: "Delete the local artifact - directory {{artifact}}"
   file: path={{artifact.local.base}} state=absent

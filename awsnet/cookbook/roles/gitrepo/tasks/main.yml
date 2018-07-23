@@ -19,7 +19,7 @@
 - name: "Copy and extract {{zchain.git.zip}} to the remote machine..."
   unarchive:
     src: "{{zchain.git.zip}}"
-    dest: "{{artifact.zchain.base}}"
+    dest: "{{artifact.zchain.base}}/0chain"
     remote_src: no
   register: result
   tags: ['gitrepo-assemble-zchain']

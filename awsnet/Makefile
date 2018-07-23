@@ -30,7 +30,7 @@ REGIONS=regions-display
 CONTROL_DIR=control-dir-setup
 
 ADMIN_KEY=keyadmin-aws-create keyadmin-aws-delete
-ADMIN_INSTANCE=instance-assemble instance-teardown
+#ADMIN_INSTANCE=instance-assemble instance-teardown
 #Create the key for the different subsystems
 keyadmin-assemble: keyadmin-aws-create
 keyadmin-teardown: keyadmin-aws-delete

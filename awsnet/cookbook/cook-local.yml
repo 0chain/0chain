@@ -3,8 +3,11 @@
 
   vars_files:
     - "{{ credential }}/aws/credentials.yml"
-    - [ "anchor/{{network}}/defaults.yml", anchor/defaults.yml ]
-    - [ "anchor/{{network}}/clientid.yml", anchor/clientid.yml ]
+    - [ "anchor/{{network}}/layout.yml", anchor/testnet/layout.yml ]
+    - [ "anchor/{{network}}/clientid.yml", anchor/testnet/clientid.yml ]
+
+  vars:
+    agents: "{{zchain.blueprint.sharders| dict2items | union(zchain.blueprint.miners | dict2items)}}"
 
   environment: "{{aws_vars}}"
 
@@ -12,9 +15,7 @@
     - role: artifacts
     - role: keyadmin
     - role: instances
+    - role: clientid
     - role: gitrepo
-    - role: storage
-    - role: miners
-    - role: sharders
-
+    - role: zagents
 ...

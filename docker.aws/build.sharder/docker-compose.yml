@@ -1,0 +1,57 @@
+version: '3'
+services:
+  cassandra:
+    image: cassandra:latest
+    networks:
+      - default
+    volumes:
+      - ../sharder${SHARDER}/data/cassandra:/var/lib/cassandra
+      - ../../sql:/0chain/sql
+    ports:
+      - "9042:9042"
+    healthcheck:
+      test: ["CMD-SHELL", "[ $$(nodetool statusgossip) = running ]"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  cassandra-init:
+    image: cassandra:latest
+    volumes:
+      - ../config/cassandra:/0chain/cassandra
+      - ../../sql:/0chain/sql
+
+    command: bash /0chain/cassandra/cassandra-init.sh
+    links:
+      - cassandra:cassandra
+    restart: on-failure
+
+  sharder:
+    environment:
+      - DOCKER=true
+    depends_on:
+      - cassandra-init
+    links:
+      - cassandra-init:cassandra-init
+    build:
+      context: ../..
+      dockerfile: ./docker.local/build.sharder/Dockerfile
+    volumes:
+      - ../config:/0chain/config
+      - ../sharder/log:/0chain/log
+      - ../sharder/data:/0chain/data
+    ports:
+      - "7171:7171"
+    networks:
+      default:
+    command: ./bin/sharder --deployment_mode 0 --keys_file config/sharder_keys.txt --nodes_file config/nodes.txt
+
+networks:
+  default:
+    driver: bridge
+  testnet0:
+    external: true
+
+volumes:
+  data:
+  config:
