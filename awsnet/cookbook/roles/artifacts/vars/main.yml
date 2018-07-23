@@ -81,7 +81,7 @@ sharders:
 
 git:
   repo: "ssh://git@0chain.github.com/0chain/0chain.git"
-  version: "{{blueprint}}.git_version"
+  version: "{{blueprint.git_version}}"
   staging: "{{zchain_artifact}}/0chain"
   zip: "{{zchain_artifact}}/0chain.zip"
 

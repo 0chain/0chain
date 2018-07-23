@@ -5,6 +5,7 @@
     dest: "{{zchain.git.staging}}"
     archive: "{{zchain.git.zip}}"
     version: "{{zchain.git.version}}"
+    force: yes
   register: result
   tags: ['gitrepo-assemble-local']
 

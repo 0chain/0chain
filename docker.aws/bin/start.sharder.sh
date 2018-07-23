@@ -1,0 +1,3 @@
+#!/bin/sh
+echo Starting sharder...
+docker-compose -f ../build.sharder/docker-compose.yml up
