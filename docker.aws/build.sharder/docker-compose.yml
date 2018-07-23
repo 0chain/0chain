@@ -34,7 +34,7 @@ services:
     links:
       - cassandra-init:cassandra-init
     build:
-      context: ../..
+      context: .
       dockerfile: ./docker.aws/build.sharder/Dockerfile
     volumes:
       - ./docker.aws/config:/0chain/config
