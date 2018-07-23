@@ -49,8 +49,6 @@ services:
 networks:
   default:
     driver: bridge
-  testnet0:
-    external: true
 
 volumes:
   data:
