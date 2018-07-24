@@ -32,18 +32,19 @@ services:
       - redis:redis
       - redis_txns:redis_txns
     build:
-      context: .
+      context: ../..
+      dockerfile: ./docker.aws/build.miner/Dockerfile
     volumes:
-      - ./config:/0chain/config
-      - ./nodes:/0chain/nodes
-      - ./miner/data:/0chain/data
-      - ./miner/log:/0chain/log
+      - ../config:/0chain/config
+      - ../nodes:/0chain/nodes
+      - ../miner/data:/0chain/data
+      - ../miner/log:/0chain/log
 
     ports:
       - "7071:7071"
     networks:
       default:
-    command: ./bin/miner  --deployment_mode 0 --keys_file /0chain/nodes/{MINER}.txt --nodes_file /0chain/nodes/nodes.txt
+    command: ./bin/miner  --deployment_mode 0 --keys_file nodes/{MINER}.txt --nodes_file nodes/nodes.txt
 
 networks:
   default:

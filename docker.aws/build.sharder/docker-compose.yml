@@ -36,10 +36,10 @@ services:
     build:
       context: .
     volumes:
-      - ./config:/0chain/config
-      - ./nodes:/0chain/nodes
-      - ./sharder/log:/0chain/log
-      - ./sharder/data:/0chain/data
+      - ../config:/0chain/config
+      - ../nodes:/0chain/nodes
+      - ../sharder/log:/0chain/log
+      - ../sharder/data:/0chain/data
     ports:
       - "7171:7171"
     networks:
