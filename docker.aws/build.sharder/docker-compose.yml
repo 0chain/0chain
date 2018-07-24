@@ -38,13 +38,14 @@ services:
       dockerfile: ./docker.aws/build.sharder/Dockerfile
     volumes:
       - ../config:/0chain/config
+      - ../nodes:/0chain/nodes
       - ../sharder/log:/0chain/log
       - ../sharder/data:/0chain/data
     ports:
       - "7171:7171"
     networks:
       default:
-    command: ./bin/sharder --deployment_mode 0 --keys_file config/sharder_keys.txt --nodes_file config/nodes.txt
+    command: ./bin/sharder --deployment_mode 0 --keys_file nodes/{SHARDER}.txt --nodes_file nodes/nodes.txt
 
 networks:
   default:

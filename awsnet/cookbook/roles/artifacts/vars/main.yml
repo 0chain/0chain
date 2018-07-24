@@ -104,10 +104,10 @@ artifact:
       - nodes
 
 nodefiles:
-  nodes:
-    dir: "{{artifact.local.base}}/nodes"
-    local: "{{artifact.local.base}}/nodes/nodes.txt"
-    zchain: "{{artifact.zchain.base}}/nodes/nodes.txt"
+  file: "nodes.txt"
+  dir:
+    local: "{{artifact.local.base}}/nodes"
+    zchain: "{{artifact.zchain.base}}/0chain/docker.aws/nodes"
 
 zchain:
   blueprint: "{{blueprint}}"

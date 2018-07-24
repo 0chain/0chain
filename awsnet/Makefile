@@ -7,6 +7,7 @@ ZCHAIN_REPO=$(abspath $(AWSNET_BASE)/..)
 ENVIRONMENT?=testnet
 
 INVENTORY=$(COOKBOOK)/inventory
+export EC2_INI_PATH=$(INVENTORY)/ec2.ini
 
 #Credentials directory will store the actual key/access values.
 CREDENTIAL=$(AWSNET_BASE)/credentials

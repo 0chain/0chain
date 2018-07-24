@@ -1,0 +1,79 @@
+---
+- name: "Show the agents...."
+  debug:
+    msg: "Agents={{agents}}"
+  tags: ['always']
+
+- name: "Ensure the nodes are in started state..."
+  delegate_to: localhost
+  ec2:
+    region: "{{regions[item.value.region]}}"
+    key_name: "{{aws_key_pair}}"
+    instance_type: "{{zchain.blueprint.instance_type[item.value.role]}}"
+    image: "{{instance_images[item.value.region]['ami_id']}}"
+    wait: no
+    termination_protection: no
+    group:
+    instance_tags:
+      Name: "{{item.key}}"
+      role: "{{item.value.role}}"
+      network: "{{zchain.blueprint.network_type}}"
+    state: running
+    count_tag:
+      Name: "{{item.key}}"
+      role: "{{item.value.role}}"
+      network: "{{zchain.blueprint.network_type}}"
+  register: ec2
+  with_items: "{{agents}}"
+  check_mode: no
+
+- name: "Launch the server instances..."
+  delegate_to: localhost
+  ec2:
+    region: "{{regions[item.value.region]}}"
+    key_name: "{{aws_key_pair}}"
+    instance_type: "{{zchain.blueprint.instance_type[item.value.role]}}"
+    image: "{{instance_images[item.value.region]['ami_id']}}"
+    wait: no
+    termination_protection: no
+    group:
+    instance_tags:
+      Name: "{{item.key}}"
+      role: "{{item.value.role}}"
+      network: "{{zchain.blueprint.network_type}}"
+    exact_count: 1
+    count_tag:
+      Name: "{{item.key}}"
+      role: "{{item.value.role}}"
+      network: "{{zchain.blueprint.network_type}}"
+  register: ec2
+  with_items: "{{agents}}"
+  check_mode: no
+
+- set_fact:
+    nodes: "{{ec2 | json_query('results[*].tagged_instances')}}"
+  delegate_to: localhost
+
+- set_fact:
+    iprole: "{{ iprole | default({}) | combine( {item.public_ip: item.tags.Name})}}"
+  with_items: "{{nodes}}"
+
+- debug: var=nodes
+
+- name: "Nodefile storage"
+  delegate_to: localhost
+  debug:
+    msg: "Node files storage: {{nodefiles}}"
+
+- name: "Transport the key files to the respective machines.."
+  delegate_to: localhost
+  debug:
+    msg: "{{item.key}} {{item.value}}"
+  with_dict: "{{iprole}}"
+
+- name: "Transport the key files to the respective machines..{{aws_key_pair_file}}"
+  synchronize:
+    src: "{{nodefiles.dir.local}}/"
+    dest: "{{nodefiles.dir.zchain}}/"
+  with_dict: "{{iprole}}"
+...

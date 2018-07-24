@@ -1,12 +1,10 @@
-#- name: Get all the instances
-#  set_fact:
-#    agents: "{{zchain.blueprint.sharders| dict2items | union(zchain.blueprint.miners | dict2items)}}"
+---
+- name: "Show the agents...."
+  debug:
+    msg: "Agents={{agents}}"
+  tags: ['always']
 
-
-# Weird ec2 module behaviour - state and exact_count are mutually exclusive. Hence starting/launching an instance are
-# considered different operations. This hack is to get around that problem
-#
-- name: "Start the server instances..."
+- name: "Ensure the nodes are in started state..."
   ec2:
     region: "{{regions[item.value.region]}}"
     key_name: "{{aws_key_pair}}"
@@ -24,6 +22,7 @@
       Name: "{{item.key}}"
       role: "{{item.value.role}}"
       network: "{{zchain.blueprint.network_type}}"
+  register: ec2
   with_items: "{{agents}}"
   check_mode: no
 
@@ -49,31 +48,30 @@
   with_items: "{{agents}}"
   check_mode: no
 
-
 - set_fact:
-    nascent: "{{ec2 | json_query('results[*].tagged_instances')}}"
+    nodes: "{{ec2 | json_query('results[*].tagged_instances')}}"
 
-- name: Nodefiles
+- debug: var=nodes
+
+- name: "Nodefile storage"
   debug:
     msg: "Node files storage: {{nodefiles}}"
 
 - name: Clean the old nodefile
   file:
     state: absent
-    path: "{{nodefiles.nodes.local}}"
+    path: "{{nodefiles.dir.local}}"
 
-- name: Create the ip to role mapping...
-  set_fact:
-    ip2role: "{{ ip2role |default({}) | combine({item.public_ip: item.tags.Name})}}"
-  with_items: "{{nascent}}"
+- set_fact:
+    iprole: "{{ iprole | default({}) | combine( {item.public_ip: item.tags.Name})}}"
+  with_items: "{{nodes}}"
 
-- name: Show the ip2role registry
-  debug:
-    msg: "ip2role={{ip2role}}"
+- debug:
+    msg: "Show iprole {{iprole}}"
 
 - name: "Show name and public ip mapping..."
   lineinfile:
-    path: "{{nodefiles.nodes.local}}"
+    path: "{{nodefiles.dir.local}}/{{nodefiles.file}}"
     create: yes
     line: >-
       {{item.tags.Name[0:3]}},
@@ -81,30 +79,26 @@
       {{zchain.blueprint.ports[item.tags.role]}},
       {{clientid[item.tags.Name].client}},
       {{clientid[item.tags.Name].public}}
+  with_items: "{{nodes}}"
 
-  with_items: "{{nascent}}"
+- name: "Creating the node mapping file..."
+  debug:
+    msg: "agent={{item}}"
+  with_items: "{{agents}}"
 
-- name: Wait for SSH to come up...
-  wait_for:
-    host: "{{item.public_ip}}"
-    port: 22
-    state: started
-  with_items: "{{nascent}}"
+- name: "Delete old node key file..."
+  file:
+    path: "{{nodefiles.dir.local}}/{{item.key}}.txt"
+    state: absent
+  with_items: "{{agents}}"
 
-- debug: var=item
-  with_items: "{{nascent}}"
 
-- name: "Add the instance to the groups..."
-  add_host:
-    name: "{{item.tags.Name}}"
-    hostname: "{{item.public_ip}}"
-    groupname: "zservers"
-    ansible_host: "{{item.public_ip}}"
-    ansible_port: 22
-    ansible_user: ubuntu
-    ansible_ssh_private_key_file: "{{aws_key_pair_file}}"
-    ansible_ssh_extra_args: "-i {{aws_key_pair_file}} -o StrictHostKeyChecking=no"
-  with_items: "{{nascent}}"
-
+- name: "Create the new node file..."
+  lineinfile:
+      path: "{{nodefiles.dir.local}}/{{item.key}}.txt"
+      create: yes
+      line: >-
+        {{clientid[item.key].public}}
+        {{clientid[item.key].private}}
+  with_items: "{{agents}}"
 ...
-

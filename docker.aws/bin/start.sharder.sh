@@ -1,4 +1,4 @@
 #!/bin/sh
-echo Starting sharder...
+echo Starting sharder...$SHARDER
 docker-compose -f docker.aws/build.sharder/docker-compose.yml up
 
