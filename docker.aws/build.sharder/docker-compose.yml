@@ -34,7 +34,7 @@ services:
     links:
       - cassandra-init:cassandra-init
     build:
-      context: .
+      context: ../..
     volumes:
       - ../config:/0chain/config
       - ../nodes:/0chain/nodes
