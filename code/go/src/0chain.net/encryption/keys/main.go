@@ -36,7 +36,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	publicKey, privateKey := encryption.ReadKeys(reader)
+	_, publicKey, privateKey := encryption.ReadKeys(reader)
 	clientID := encryption.Hash(publicKey)
 	reader.Close()
 	time := common.Now()
