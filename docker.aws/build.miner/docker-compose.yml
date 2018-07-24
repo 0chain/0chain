@@ -44,7 +44,7 @@ services:
       - "7071:7071"
     networks:
       default:
-    command: ./bin/miner  --deployment_mode 0 --keys_file nodes/{MINER}.txt --nodes_file nodes/nodes.txt
+    command: ./bin/miner  --deployment_mode 0 --keys_file nodes/miner_key.txt --nodes_file nodes/nodes.txt
 
 networks:
   default:

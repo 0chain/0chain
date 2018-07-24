@@ -76,4 +76,32 @@
     src: "{{nodefiles.dir.local}}/"
     dest: "{{nodefiles.dir.zchain}}/"
   with_dict: "{{iprole}}"
+
+- name: get public IP address
+  ipify_facts:
+  register: ipify_results
+
+- set_fact:
+    agent_ip: "{{ipify_results.ansible_facts.ipify_public_ip}}"
+
+- set_fact:
+    agent_tag: "{{iprole[agent_ip]}}"
+
+
+- set_fact:
+    agent_role: "{{ agents|selectattr('key', 'equalto', agent_tag ) | map(attribute='value.role') | list | first }}"
+
+- debug: var=agent_ip
+- debug: var=agent_tag
+- debug: var=agent_role
+
+
+- name: Link the sharder and miner file...
+  file:
+    src: "{{iprole[agent_ip]}}.txt"
+    dest: "{{nodefiles.dir.zchain}}/{{agent_role}}_key.txt"
+    state: link
+
+
+
 ...
