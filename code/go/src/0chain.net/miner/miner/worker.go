@@ -6,12 +6,14 @@ import (
 	"time"
 
 	"0chain.net/chain"
+	"go.uber.org/zap"
 
 	"0chain.net/miner"
 
 	"0chain.net/client"
 	"0chain.net/common"
 	"0chain.net/datastore"
+	. "0chain.net/logging"
 	"0chain.net/memorystore"
 	"0chain.net/transaction"
 	"0chain.net/wallet"
@@ -24,10 +26,6 @@ func TransactionGenerator(blockSize int32) {
 	wallet.SetupWallet()
 	GenerateClients(1024)
 	csize := len(wallets)
-	numTxns := blockSize
-	P := time.Duration(1 + blockSize/1000)
-	N := time.Duration(2)
-	ticker := time.NewTicker(N*chain.DELTA + P*100*time.Millisecond)
 	numWorkers := 1
 	switch {
 	case blockSize <= 10:
@@ -74,13 +72,31 @@ func TransactionGenerator(blockSize int32) {
 	txn := txnMetadataProvider.Instance().(*transaction.Transaction)
 	txn.ChainID = miner.GetMinerChain().ID
 	collectionName := txn.GetCollectionName()
+	sc := chain.GetServerChain()
+	numTxns := blockSize
 	for true {
+		numGenerators := sc.NumGenerators
+		numMiners := sc.Miners.Size()
+		blockRate := chain.FinalizationTimer.Rate1()
+		if chain.FinalizationTimer.Count() < 250 && blockRate < 2 {
+			blockRate = 2
+		}
+		totalBlocks := float64(numGenerators) * blockRate
+		blocksPerMiner := totalBlocks / float64(numMiners)
+		if blocksPerMiner < 1 {
+			blocksPerMiner = 1
+		}
+		waitTime := time.Millisecond * time.Duration(1000./1.05/blocksPerMiner)
+		timer := time.NewTimer(waitTime)
+		if sc.CurrentRound%100 == 0 {
+			Logger.Info("background transactions generation", zap.Duration("frequency", waitTime), zap.Float64("blocks", blocksPerMiner))
+		}
 		select {
 		case <-ctx.Done():
 			return
-		case <-ticker.C:
+		case <-timer.C:
 			txnCount := int32(txnMetadataProvider.GetStore().GetCollectionSize(ctx, txnMetadataProvider, collectionName))
-			if txnCount >= 20*blockSize {
+			if float64(txnCount) >= blocksPerMiner*float64(3*blockSize) {
 				continue
 			}
 			for i := int32(0); i < numTxns; i++ {
