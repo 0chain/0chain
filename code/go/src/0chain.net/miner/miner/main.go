@@ -68,7 +68,7 @@ func initEntities() {
 }
 
 /*Chain - the chain this miner will be working on */
-var Chain string
+var  Chain string
 
 func main() {
 	deploymentMode := flag.Int("deployment_mode", 2, "deployment_mode")
@@ -94,7 +94,12 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	publicKey, privateKey := encryption.ReadKeys(reader)
+	error, publicKey, privateKey := encryption.ReadKeys(reader)
+	if(error == false) {
+		Logger.Info("Public key in Keys file =%v", zap.String("publicKey", publicKey))
+		Logger.Panic("Error reading keys file")
+	}
+
 	node.Self.SetKeys(publicKey, privateKey)
 	reader.Close()
 	config.SetServerChainID(config.Configuration.ChainID)

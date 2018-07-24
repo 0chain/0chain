@@ -20,13 +20,21 @@ func GenerateKeys() (publicKey string, privateKey string) {
 
 /*ReadKeys - reads a publicKey and a privateKey from a Reader.
 They are assumed to be in two separate lines one followed by the other*/
-func ReadKeys(reader io.Reader) (publicKey string, privateKey string) {
+func ReadKeys(reader io.Reader) (error bool, publicKey string, privateKey string) {
+	publicKey = ""
+	privateKey = ""
 	scanner := bufio.NewScanner(reader)
-	scanner.Scan()
+	result := scanner.Scan()
+	if result == false {
+		return false, publicKey, privateKey;
+	}
 	publicKey = scanner.Text()
-	scanner.Scan()
+	result = scanner.Scan();
+	if result == false {
+		return false, publicKey, privateKey;
+	}
 	privateKey = scanner.Text()
-	return publicKey, privateKey
+	return true, publicKey, privateKey
 }
 
 /*SignerVerifier - an interface that can sign a hash and verify a signature and hash */
