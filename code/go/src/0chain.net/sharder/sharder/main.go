@@ -98,7 +98,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	publicKey, privateKey := encryption.ReadKeys(reader)
+	_, publicKey, privateKey := encryption.ReadKeys(reader)
 	node.Self.SetKeys(publicKey, privateKey)
 	reader.Close()
 
