@@ -32,6 +32,8 @@ type UnverifiedBlockBody struct {
 	Round           int64         `json:"round"`
 	RoundRandomSeed int64         `json:"round_random_seed"`
 
+	ClientStateHash util.Key `json:"state_hash"`
+
 	// The entire transaction payload to represent full block
 	Txns []*transaction.Transaction `json:"transactions,omitempty"`
 }

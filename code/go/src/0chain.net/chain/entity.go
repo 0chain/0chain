@@ -13,6 +13,7 @@ import (
 	. "0chain.net/logging"
 	"0chain.net/node"
 	"0chain.net/round"
+	"0chain.net/state"
 	"0chain.net/util"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -168,12 +169,33 @@ func SetupStateDB() {
 	stateDB = db
 }
 
+func (c *Chain) getInitialState() util.Serializable {
+	tokens := viper.GetInt64("server_chain.tokens")
+	balance := &state.State{}
+	var cents int64 = 1
+	for i := int8(0); i < c.Decimals; i++ {
+		cents *= 10
+	}
+	balance.Balance = state.Balance(tokens * cents)
+	return balance
+}
+
+/*setupInitialState - setup the initial state based on configuration */
+func (c *Chain) setupInitialState() util.Key {
+	pmt := util.NewMerklePatriciaTrie(c.StateDB)
+	cc := util.NewChangeCollector()
+	pmt.Insert(util.Path(c.OwnerID), c.getInitialState(), cc)
+	cc.UpdateChanges(c.StateDB, 0, false)
+	return pmt.GetRoot()
+}
+
 /*GenerateGenesisBlock - Create the genesis block for the chain */
 func (c *Chain) GenerateGenesisBlock(hash string) (*round.Round, *block.Block) {
 	c.GenesisBlockHash = hash
 	gb := datastore.GetEntityMetadata("block").Instance().(*block.Block)
 	gb.Hash = hash
 	gb.Round = 0
+	gb.ClientStateHash = c.setupInitialState()
 	gr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 	gr.Number = 0
 	gr.Block = gb
