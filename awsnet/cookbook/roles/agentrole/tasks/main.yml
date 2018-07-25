@@ -1,4 +1,6 @@
 ---
 - import_tasks: agentrole-assemble-remote.yml
   tags: ['agentrole-assemble-remote']
+- import_tasks: agentrole-teardown-remote.yml
+  tags: ['agentrole-teardown-remote']
 ...

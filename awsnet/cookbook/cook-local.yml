@@ -20,5 +20,6 @@
     - role: instance
     - role: clientid
     - role: gitrepo
-    - role: zagents
+    - role: agentbuild
+    - role: agentrole
 ...
