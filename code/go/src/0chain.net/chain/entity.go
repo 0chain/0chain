@@ -8,10 +8,13 @@ import (
 
 	"0chain.net/block"
 	"0chain.net/common"
+	"0chain.net/config"
 	"0chain.net/datastore"
 	. "0chain.net/logging"
 	"0chain.net/node"
 	"0chain.net/round"
+	"0chain.net/util"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
@@ -44,7 +47,7 @@ type Chain struct {
 	datastore.IDField
 	datastore.VersionField
 	datastore.CreationDateField
-	ClientID      datastore.Key `json:"client_id"`                 // Client who created this chain
+	OwnerID       datastore.Key `json:"owner_id"`                  // Client who created this chain
 	ParentChainID datastore.Key `json:"parent_chain_id,omitempty"` // Chain from which this chain is forked off
 
 	Decimals              int8  `json:"decimals"`               // Number of decimals allowed for the token on this chain
@@ -71,6 +74,8 @@ type Chain struct {
 	CurrentRound         int64
 	CurrentMagicBlock    *block.Block
 	BlocksToSharder      int
+
+	StateDB util.NodeDB
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
@@ -85,8 +90,8 @@ func (c *Chain) Validate(ctx context.Context) error {
 	if datastore.IsEmpty(c.ID) {
 		return common.InvalidRequest("chain id is required")
 	}
-	if datastore.IsEmpty(c.ClientID) {
-		return common.InvalidRequest("client id is required")
+	if datastore.IsEmpty(c.OwnerID) {
+		return common.InvalidRequest("owner id is required")
 	}
 	return nil
 }
@@ -104,6 +109,19 @@ func (c *Chain) Write(ctx context.Context) error {
 /*Delete - store read */
 func (c *Chain) Delete(ctx context.Context) error {
 	return c.GetEntityMetadata().GetStore().Delete(ctx, c)
+}
+
+//NewChainFromConfig - create a new chain from config
+func NewChainFromConfig() *Chain {
+	chain := Provider().(*Chain)
+	chain.ID = datastore.ToKey(config.Configuration.ChainID)
+	chain.Decimals = int8(viper.GetInt("server_chain.decimals"))
+	chain.BlockSize = viper.GetInt32("server_chain.block.size")
+	chain.NumGenerators = viper.GetInt("server_chain.block.generators")
+	chain.NumSharders = viper.GetInt("server_chain.block.sharders")
+	chain.NotarizationThreshold = viper.GetInt("server_chain.block.notarization_threshold")
+	chain.OwnerID = viper.GetString("server_chain.owner")
+	return chain
 }
 
 /*Provider - entity provider for chain object */
@@ -126,6 +144,7 @@ func (c *Chain) Initialize() {
 	c.LatestFinalizedBlock = nil
 	c.CurrentMagicBlock = nil
 	c.BlocksToSharder = 1
+	c.StateDB = stateDB
 }
 
 /*SetupEntity - setup the entity */
@@ -135,6 +154,18 @@ func SetupEntity(store datastore.Store) {
 	chainEntityMetadata.Provider = Provider
 	chainEntityMetadata.Store = store
 	datastore.RegisterEntityMetadata("chain", chainEntityMetadata)
+	SetupStateDB()
+}
+
+var stateDB *util.PNodeDB
+
+//SetupStateDB - setup the state db
+func SetupStateDB() {
+	db, err := util.NewPNodeDB("data/rocksdb/state")
+	if err != nil {
+		panic(err)
+	}
+	stateDB = db
 }
 
 /*GenerateGenesisBlock - Create the genesis block for the chain */

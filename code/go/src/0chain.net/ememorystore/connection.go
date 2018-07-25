@@ -39,9 +39,10 @@ func CreateDB(dataDir string) (*gorocksdb.TransactionDB, error) {
 	return gorocksdb.OpenTransactionDb(opts, tdbopts, dataDir)
 }
 
+//DefaultPool - default db pool
 var DefaultPool *gorocksdb.TransactionDB
 
-func init() {
+func init1() {
 	dp, err := CreateDB("data/rocksdb")
 	if err != nil {
 		panic(err)
