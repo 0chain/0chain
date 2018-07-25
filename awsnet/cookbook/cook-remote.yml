@@ -4,30 +4,38 @@
   gather_facts: no
   vars_files:
     - "{{ credential }}/aws/credentials.yml"
-    - [ "anchor/{{network}}.yml", anchor/defaults.yml ]
+    - [ "anchor/{{network}}/layout.yml", anchor/testnet/layout.yml ]
+    - [ "anchor/{{network}}/clientid.yml", anchor/testnet/clientid.yml ]
+  vars:
+    agents: "{{zchain.blueprint.sharders| dict2items | union(zchain.blueprint.miners | dict2items)}}"
 
   environment: "{{aws_vars}}"
 
   roles:
     - role: artifacts
-      when: false
     - role: inventory
-    - role: instances
+    - role: instance
 
+#This playbook is similar to the remote one above but is used exclusively for zchain
+#targets.
 - hosts: [tag_role_miner, tag_role_sharder]
   become: true
   gather_facts: yes
   vars_files:
     - "{{ credential }}/aws/credentials.yml"
-    - [ "anchor/{{network}}.yml", anchor/defaults.yml ]
+    - [ "anchor/{{network}}/layout.yml", anchor/testnet/layout.yml ]
+    - [ "anchor/{{network}}/clientid.yml", anchor/testnet/clientid.yml ]
+  vars:
+    agents: "{{zchain.blueprint.sharders| dict2items | union(zchain.blueprint.miners | dict2items)}}"
 
   environment: "{{aws_vars}}"
 
   roles:
     - role: artifacts
-      when: true
-
     - role: inventory
     - role: docker
     - role: gitrepo
+    - role: clientid
+    - role: agentbuild
+    - role: agentrole
 ...

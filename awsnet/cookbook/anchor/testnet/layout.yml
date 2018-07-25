@@ -12,6 +12,10 @@ blueprint:
   ports:
     miner: 7071
     sharder: 7171
+  regions:
+    - oregon
+    - virginia
+    - frankfurt
 
   miners:
     m00: {role: miner, region: oregon}

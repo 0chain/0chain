@@ -15,18 +15,23 @@
     miner: 7071
     sharder: 7171
 
+  regions:
+    - oregon
+    - virginia
+    - frankfurt
+
   miners:
     m00: {role: miner, region: oregon}
-#    m01: {role: miner, region: virginia}
-#    m02: {role: miner, region: frankfurt}
-#    m03: {role: miner, region: oregon}
-#    m04: {role: miner, region: virginia}
-#    m05: {role: miner, region: frankfurt}
-#    m06: {role: miner, region: oregon}
-#    m07: {role: miner, region: virginia}
-#    m08: {role: miner, region: frankfurt}
+    m01: {role: miner, region: virginia}
+    m02: {role: miner, region: frankfurt}
+    m03: {role: miner, region: oregon}
+    m04: {role: miner, region: virginia}
+    m05: {role: miner, region: frankfurt}
+    m06: {role: miner, region: oregon}
+    m07: {role: miner, region: virginia}
+    m08: {role: miner, region: frankfurt}
   sharders:
     s00: {role: sharder, region: oregon}
-#    s01: {role: sharder, region: virginia}
-#    s02: {role: sharder, region: frankfurt}
+    s01: {role: sharder, region: virginia}
+    s02: {role: sharder, region: frankfurt}
 ...

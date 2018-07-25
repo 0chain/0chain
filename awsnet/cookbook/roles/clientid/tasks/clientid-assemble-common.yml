@@ -1,0 +1,21 @@
+---
+- name: "Collect facts on up agents"
+  delegate_to: localhost
+  ec2_instance_facts:
+    region: "{{regions[item]}}"
+    filters:
+      "tag:network": testnet
+      "instance-state-name": running
+  register: ec2_facts
+  with_items: "{{zchain.blueprint.regions}}"
+
+- set_fact:
+   nodes: "{{ec2_facts | json_query('results[*].instances')}}"
+
+- debug:
+   msg: "{{nodes}}"
+
+- set_fact:
+   iprole: "{{ iprole | default({}) | combine( {item.public_ip_address: item.tags.Name})}}"
+  with_items: "{{nodes}}"
+...

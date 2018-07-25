@@ -13,8 +13,11 @@
 
   roles:
     - role: artifacts
-    - role: keyadmin
-    - role: instances
+
+    - role: keyaws
+    - role: keygit
+
+    - role: instance
     - role: clientid
     - role: gitrepo
     - role: zagents

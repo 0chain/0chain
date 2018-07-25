@@ -26,6 +26,7 @@
       network: "{{zchain.blueprint.network_type}}"
   with_items: "{{agents}}"
   check_mode: no
+  ignore_errors: yes
 
 - name: "Launch the server instances..."
   ec2:
@@ -52,37 +53,6 @@
 
 - set_fact:
     nascent: "{{ec2 | json_query('results[*].tagged_instances')}}"
-
-- name: Nodefiles
-  debug:
-    msg: "Node files storage: {{nodefiles}}"
-
-- name: Clean the old nodefile
-  file:
-    state: absent
-    path: "{{nodefiles.nodes.local}}"
-
-- name: Create the ip to role mapping...
-  set_fact:
-    ip2role: "{{ ip2role |default({}) | combine({item.public_ip: item.tags.Name})}}"
-  with_items: "{{nascent}}"
-
-- name: Show the ip2role registry
-  debug:
-    msg: "ip2role={{ip2role}}"
-
-- name: "Show name and public ip mapping..."
-  lineinfile:
-    path: "{{nodefiles.nodes.local}}"
-    create: yes
-    line: >-
-      {{item.tags.Name[0:3]}},
-      {{item.public_ip}},
-      {{zchain.blueprint.ports[item.tags.role]}},
-      {{clientid[item.tags.Name].client}},
-      {{clientid[item.tags.Name].public}}
-
-  with_items: "{{nascent}}"
 
 - name: Wait for SSH to come up...
   wait_for:

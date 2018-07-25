@@ -1,0 +1,4 @@
+---
+- import_tasks: agentrole-assemble-remote.yml
+  tags: ['agentrole-assemble-remote']
+...

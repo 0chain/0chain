@@ -9,21 +9,8 @@
     groups: docker
     append: yes
 
-
 - name: Update the apt cache...
   apt:
-    update_cache: yes
-
-- name: Update docker requirement packages...
-  apt:
-    name: "{{packages}}"
-  vars:
-    packages:
-      - apt-transport-https
-      - ca-certificates
-      - curl
-      - software-properties-common
-      - python-setuptools
     update_cache: yes
 
 - name: Install the pip utility...
@@ -36,26 +23,23 @@
     url: https://download.docker.com/linux/ubuntu/gpg
     state: present
 
-- name: Add docker to the apt repository...
+- name: Add docker API to the apt repository...
   apt_repository:
     repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ansible_lsb.codename}} stable"
     state: present
 
-- name: Update the apt cache after adding docker to the repository...
+- name: Update docker requirement packages...
   apt:
+    name: "{{item}}"
     update_cache: yes
-
-- name: Install the docker version
-  apt:
-    name: docker-ce
-
-- name: Install the docker python helpers...
-  pip:
-    name: "{{packages}}"
-  vars:
-    packages:
-      - docker-py
-      - docker-compose
+    state: present
+  with_items:
+    - apt-transport-https
+    - ca-certificates
+    - curl
+    - software-properties-common
+    - docker-ce
+    - python-setuptools
 
 - name: Make sure docker is started at boot time
   systemd: state=started name=docker
@@ -63,10 +47,12 @@
 - name: Run Hello World Docker...
   command: docker run hello-world
   register: hello
-  tags:
-    - docker-hello
 
 - debug: var=hello
-  tags:
-    - docker-hello
+
+- name: Ensure docker-compose is installed and available
+  get_url:
+    url : https://github.com/docker/compose/releases/download/1.22.0/docker-compose-{{ ansible_system }}-{{ ansible_userspace_architecture }}
+    dest: /usr/local/bin/docker-compose
+    mode: 'u+x,g+x,o+x'
 

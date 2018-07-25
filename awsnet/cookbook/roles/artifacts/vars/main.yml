@@ -91,17 +91,16 @@ artifact:
     base: "{{zchain_artifact}}"
     dirs:
       - 0chain
-      - nodes
       - miner
       - sharder
-      - keys
+
   zchain:
     base: "/0chain"
+    code: "/0chain/0chain"
     dirs:
       - 0chain
       - miner
       - sharder
-      - nodes
 
 nodefiles:
   file: "nodes.txt"

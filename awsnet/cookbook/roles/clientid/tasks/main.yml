@@ -1,7 +1,10 @@
 ---
-- import_tasks: clientid-assemble.yml
+- import_tasks: clientid-assemble-common.yml
+  tags: ['clientid-assemble-local', 'clientid-assemble-remote']
+
+- import_tasks: clientid-assemble-local.yml
   tags: ['clientid-assemble-local']
 
-- import_tasks: clientid-replicate.yml
-  tags: ['clientid-assemble-zchain']
+- import_tasks: clientid-assemble-remote.yml
+  tags: ['clientid-assemble-remote']
 ...

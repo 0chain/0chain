@@ -1,0 +1,7 @@
+---
+- import_tasks: keyaws-assemble.yml
+  tags: keyaws-assemble-local
+
+- import_tasks: keyaws-teardown.yml
+  tags: keyaws-teardown-local
+...
