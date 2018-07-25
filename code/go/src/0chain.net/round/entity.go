@@ -122,8 +122,9 @@ func (r *Round) Delete(ctx context.Context) error {
 	return r.GetEntityMetadata().GetStore().Delete(ctx, r)
 }
 
+//SetupRoundSummaryDB - setup the round summary db
 func SetupRoundSummaryDB() {
-	db, err := ememorystore.CreateDB("data/roundsummarydb")
+	db, err := ememorystore.CreateDB("data/rocksdb/roundsummary")
 	if err != nil {
 		panic(err)
 	}

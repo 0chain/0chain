@@ -21,7 +21,7 @@ type BlockSummary struct {
 
 /*SetupBlockSummaryDB - sets up the block summary database */
 func SetupBlockSummaryDB() {
-	db, err := ememorystore.CreateDB("data/blocksummarydb")
+	db, err := ememorystore.CreateDB("data/rocksdb/blocksummary")
 	if err != nil {
 		panic(err)
 	}
