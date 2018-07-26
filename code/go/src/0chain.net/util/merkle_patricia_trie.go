@@ -21,6 +21,12 @@ func NewMerklePatriciaTrie(db NodeDB) *MerklePatriciaTrie {
 	return mpt
 }
 
+/*SetNodeDB - implement interface */
+func (mpt *MerklePatriciaTrie) SetNodeDB(ndb NodeDB) {
+	mpt.DB = ndb
+	mpt.ResetChangeCollector()
+}
+
 /*GetNodeDB - implement interface */
 func (mpt *MerklePatriciaTrie) GetNodeDB() NodeDB {
 	return mpt.DB

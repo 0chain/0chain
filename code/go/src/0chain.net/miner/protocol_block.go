@@ -17,7 +17,6 @@ import (
 	. "0chain.net/logging"
 	"0chain.net/node"
 	"0chain.net/transaction"
-	"0chain.net/util"
 	"go.uber.org/zap"
 )
 
@@ -42,11 +41,6 @@ func (mc *Chain) StartRound(ctx context.Context, r *Round) {
  */
 func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.BlockStateHandler) error {
 	clients := make(map[string]*client.Client)
-	pndb := b.PrevBlock.ClientStateMT.GetNodeDB()
-	mndb := util.NewMemoryNodeDB()
-	ndb := util.NewLevelNodeDB(mndb, pndb, false)
-	b.ClientStateMT = util.NewMerklePatriciaTrie(ndb)
-
 	b.Txns = make([]*transaction.Transaction, mc.BlockSize)
 	//wasting this because []interface{} != []*transaction.Transaction in Go
 	etxns := make([]datastore.Entity, mc.BlockSize)

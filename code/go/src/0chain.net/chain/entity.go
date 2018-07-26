@@ -232,6 +232,7 @@ func (c *Chain) AddBlock(b *block.Block) {
 		if ok {
 			b.SetPreviousBlock(pb)
 		} else {
+			b.SetClientStateDB(nil)
 			Logger.Debug("previous block not present", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("prev_block", b.PrevHash))
 		}
 	}

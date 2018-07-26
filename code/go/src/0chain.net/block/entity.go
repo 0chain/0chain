@@ -164,10 +164,16 @@ func (b *Block) SetPreviousBlock(prevBlock *Block) {
 	b.PrevHash = prevBlock.Hash
 	b.Round = prevBlock.Round + 1
 	b.PrevBlockVerficationTickets = prevBlock.VerificationTickets
+	b.SetClientStateDB(prevBlock)
+}
+
+/*SetClientStateDB - set the client state from the previous block */
+func (b *Block) SetClientStateDB(prevBlock *Block) {
 	var pndb util.NodeDB
-	if prevBlock.ClientStateMT != nil {
+	if prevBlock != nil && prevBlock.ClientStateMT != nil {
 		pndb = prevBlock.ClientStateMT.GetNodeDB()
 	} else {
+		Logger.Info("TODO: state sync\n", zap.Int64("round", b.Round))
 		pndb = util.NewMemoryNodeDB() // TODO: state sync
 	}
 	mndb := util.NewMemoryNodeDB()
