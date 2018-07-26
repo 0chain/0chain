@@ -8,6 +8,8 @@ type NodeChange struct {
 
 /*ChangeCollectorI - an interface to collect node changes */
 type ChangeCollectorI interface {
+	SetRoot(key Key)
+	GetRoot() Key
 	AddChange(oldNode Node, newNode Node)
 	DeleteChange(oldNode Node)
 	GetChanges() []*NodeChange
@@ -18,6 +20,7 @@ type ChangeCollectorI interface {
 
 /*ChangeCollector - node change collector interface implementation */
 type ChangeCollector struct {
+	Root    Key
 	Changes map[Node]Node
 	Deletes []Node
 }
@@ -27,6 +30,16 @@ func NewChangeCollector() ChangeCollectorI {
 	cc := &ChangeCollector{}
 	cc.Changes = make(map[Node]Node)
 	return cc
+}
+
+/*SetRoot - implement interface */
+func (cc *ChangeCollector) SetRoot(root Key) {
+	cc.Root = root
+}
+
+/*GetRoot - implement interface */
+func (cc *ChangeCollector) GetRoot() Key {
+	return cc.Root
 }
 
 /*AddChange - implement interface */

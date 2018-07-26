@@ -187,6 +187,7 @@ func (c *Chain) setupInitialState() util.MerklePatriciaTrieI {
 	pmt := util.NewMerklePatriciaTrie(c.StateDB)
 	pmt.Insert(util.Path(c.OwnerID), c.getInitialState())
 	pmt.SaveChanges(c.StateDB, 0, false)
+	Logger.Info("initial state root", zap.Any("hash", pmt.GetRoot()))
 	return pmt
 }
 

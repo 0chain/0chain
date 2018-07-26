@@ -67,6 +67,7 @@ func (c *Chain) FinalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 		fts = time.Now()
 		if fb.ClientStateMT != nil {
 			fb.ClientStateMT.SaveChanges(c.StateDB, util.Origin(fb.Round), false)
+			Logger.Info("finalize round - save state", zap.String("hash", util.ToHex(fb.ClientStateMT.GetRoot())), zap.Int("changes", len(fb.ClientStateMT.GetChangeCollector().GetChanges())))
 		}
 		bsh.UpdateFinalizedBlock(ctx, fb)
 		frb := c.GetRoundBlocks(fb.Round)

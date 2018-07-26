@@ -68,6 +68,7 @@ func (mpt *MerklePatriciaTrie) Insert(path Path, value Serializable) (Key, error
 	if err != nil {
 		return nil, err
 	}
+	mpt.ChangeCollector.SetRoot(newRootHash)
 	return newRootHash, nil
 }
 
@@ -77,6 +78,7 @@ func (mpt *MerklePatriciaTrie) Delete(path Path) (Key, error) {
 	if err != nil {
 		return nil, err
 	}
+	mpt.ChangeCollector.SetRoot(newRootHash)
 	return newRootHash, nil
 }
 
@@ -92,7 +94,15 @@ func (mpt *MerklePatriciaTrie) ResetChangeCollector() {
 
 /*SaveChanges - implement interface */
 func (mpt *MerklePatriciaTrie) SaveChanges(ndb NodeDB, origin Origin, includeDeletes bool) error {
-	return mpt.ChangeCollector.UpdateChanges(ndb, origin, includeDeletes)
+	cc := mpt.ChangeCollector
+	err := cc.UpdateChanges(ndb, origin, includeDeletes)
+	if err != nil {
+		return err
+	}
+	if cc.GetRoot() != nil {
+		mpt.SetRoot(cc.GetRoot())
+	}
+	return nil
 }
 
 /*Iterate - iterate the entire trie */
