@@ -110,7 +110,11 @@ func (sc *Chain) BlockStorageWorker(ctx context.Context) {
 						if err != nil {
 							Logger.Error("db error (save transaction)", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
 							continue
+						} else {
+							Logger.Info("transaction saved successfully", zap.Any("round", b.Round), zap.Any("block", b.Hash))
 						}
+					} else {
+						Logger.Info("transaction saved successfully", zap.Any("round", b.Round), zap.Any("block", b.Hash))
 					}
 					err = sc.StoreBlock(ctx, b)
 					if err != nil {
@@ -131,11 +135,9 @@ func (sc *Chain) retryPersistingTransactions(ctx context.Context, sTxns []datast
 	var err error
 	for numTrials := 1; numTrials <= 10; numTrials++ {
 		time.Sleep(10 * time.Millisecond)
+		Logger.Info("retrying to save transactions to db", zap.Any("trail", numTrials), zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Error(err))
 		err = sc.StoreTransactions(ctx, sTxns)
-		if err != nil {
-			Logger.Info("Retrying to save transactions to db", zap.Any("trail", numTrials), zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Error(err))
-		} else {
-			Logger.Info("Save transactions to db successful", zap.Any("round", b.Round), zap.Any("block", b.Hash))
+		if err == nil {
 			return nil
 		}
 	}
