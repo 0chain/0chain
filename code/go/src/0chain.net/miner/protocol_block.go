@@ -42,11 +42,12 @@ func (mc *Chain) StartRound(ctx context.Context, r *Round) {
  */
 func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.BlockStateHandler) error {
 	clients := make(map[string]*client.Client)
-	b.Txns = make([]*transaction.Transaction, mc.BlockSize)
 	pndb := b.PrevBlock.ClientStateMT.GetNodeDB()
 	mndb := util.NewMemoryNodeDB()
 	ndb := util.NewLevelNodeDB(mndb, pndb, false)
 	b.ClientStateMT = util.NewMerklePatriciaTrie(ndb)
+
+	b.Txns = make([]*transaction.Transaction, mc.BlockSize)
 	//wasting this because []interface{} != []*transaction.Transaction in Go
 	etxns := make([]datastore.Entity, mc.BlockSize)
 	var invalidTxns []datastore.Entity
@@ -135,13 +136,14 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	if err != nil {
 		return err
 	}
-
 	if idx != mc.BlockSize {
 		if !hasOwnerTxn {
 			b.Txns = nil
 			Logger.Debug("generate block (insufficient txns)", zap.Int64("round", b.Round), zap.Int32("iteration_count", count), zap.Int32("block_size", mc.BlockSize), zap.Int32("num_txns", idx))
 			return common.NewError(InsufficientTxns, fmt.Sprintf("not sufficient txns to make a block yet for round %v (iterated %v, invalid %v)", b.Round, count, len(invalidTxns)))
 		}
+		b.Txns = b.Txns[:idx]
+		etxns = etxns[:idx]
 	}
 	if count > 10*mc.BlockSize {
 		Logger.Info("generate block (too much iteration)", zap.Int64("round", b.Round), zap.Int32("iteration_count", count))
