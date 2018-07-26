@@ -13,7 +13,7 @@ export EC2_INI_PATH=$(INVENTORY)/ec2.ini
 CREDENTIAL=$(AWSNET_BASE)/credentials
 
 #Create a testnet with the following name
-network?=whitney
+network?=chinook
 
 CONFIG=$(AWSNET_BASE)/config
 
@@ -62,36 +62,57 @@ artifacts-assemble-local artifacts-teardown-local:
 keyaws-assemble-local keyaws-teardown-local keygit-assemble-local keygit-teardown-local:
 	$(LOCAL_PLAY)
 
+#Create an AWS instance.
 instance-assemble-local instance-teardown-local:
 	$(LOCAL_PLAY)
 
+#Instance the packages such as ansible, python, tree etc...
 instance-assemble-remote:
 	$(REMOTE_PLAY)
 
+#Create the EBS volume and mount it for reboot.
+storage-assemble-remote:
+	$(REMOTE_PLAY)
+
+#Install docker related routines on the remote machine
 docker-assemble-remote:
 	$(REMOTE_PLAY)
 
+#Create the remote directories such as /0chain
 artifacts-assemble-remote:
 	$(REMOTE_PLAY)
 
+#Zip the git repo locally.
 gitrepo-assemble-local:
 	$(LOCAL_PLAY)
 
+#Move the entire git repo to the remote machine and install it
 gitrepo-assemble-zchain:
 	$(REMOTE_PLAY)
 
+#Create the local copy of the nodes file.
 clientid-assemble-local:
 	$(LOCAL_PLAY)
 
+#Transport the nodes file and client keys file to the remote machines.
 clientid-assemble-remote:
 	$(REMOTE_PLAY)
 
+#Remove records from Route53
+clientid-teardown-local:
+	$(LOCAL_PLAY)
+
+#Build the zchain_base, miner and sharder
 agentbuild-assemble-remote:
 	$(REMOTE_PLAY)
 
-agentrole-assemble-remote agentrole-teardown-remote:
+#Start the sharder and miner
+agentrole-assemble-remote:
 	$(REMOTE_PLAY)
 
+# Stop the sharder, miner
+agentrole-teardown-remote:
+	$(REMOTE_PLAY)
 $(TARGETS): show
 	@echo "Make running target=$@"
 	@$(PLAYBOOK) -i $(INVENTORY) $(CONFIG_FILE) --extra-vars="access=$(ACCESS) network=$(network) repo=$(ZCHAIN_REPO) network_dir=$(NETWORK_DIR)" --tags $@

@@ -5,7 +5,7 @@
 'blueprint':
   git_version: "testnet-aws"
   network_type: 'testnet'
-  network_name: 'whitney'
+  network_name: 'chinook'
 
   instance_type:
     miner: 'c4.large'

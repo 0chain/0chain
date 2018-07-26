@@ -20,7 +20,7 @@
   with_items: "{{agents}}"
   check_mode: no
   ignore_errors: yes
-- name: "Wait for the servers to terminaet..."
+- name: "Wait for the servers to terminate..."
   ec2:
     region: "{{regions[item.value.region]}}"
     key_name: "{{aws_key_pair}}"

@@ -107,5 +107,23 @@ instance_images:
       date: '20180627'
       ami_id: 'ami-de8fb135'
 
+storage:
+  '8GIB_GP2_SDF':
+    device_name: "/dev/sdf"
+    volume_type: gp2
+    volume_size: 8
 
+  '20GIB_IO1_SDI':
+    device_name: "/dev/sdi"
+    ubuntu_disk: "/dev/xvdi"
+    volume_type: io1
+    volume_size: 60
+    iops: 1500
+
+  '1TIB_IO1_SDI':
+    device_name: "/dev/sdi"
+    ubuntu_disk: "/dev/xvdi"
+    volume_type: io1
+    volume_size: 1024
+    iops: 32000
 ...

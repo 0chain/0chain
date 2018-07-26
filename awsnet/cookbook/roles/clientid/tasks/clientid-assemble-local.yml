@@ -69,6 +69,18 @@
     line: "{{item.tags.Name[0]}},{{item.public_ip_address}},{{zchain.blueprint.ports[item.tags.role]}},{{clientid[item.tags.Name].client}},{{clientid[item.tags.Name].public}}"
   with_items: "{{nodes}}"
 
+- name: "Update Route53 database"
+  route53:
+    state: present
+    zone: testnet-0chain.net
+    record: "{{item.tags.Name}}.testnet-0chain.net"
+    value: "{{item.public_ip_address}}"
+    type: A
+    wait: no
+    ttl: 60
+  with_items: "{{nodes}}"
+
+
 - name: "Creating the node mapping file..."
   debug:
     msg: "agent={{item}}"

@@ -5,11 +5,9 @@
     region: "{{ item.value}}"
     state: absent
   with_dict: "{{ regions }}"
-  tags:
-    - keyadmin-delete
 
 - name: "Delete key={{aws_key_pair}} file={{aws_key_pair_file}}"
-  file: path="{{aws_key_pair_file}}" state=absent
-  tags:
-    - keyadmin-delete
+  file:
+    path: "{{aws_key_pair_file}}"
+    state: absent
 ...

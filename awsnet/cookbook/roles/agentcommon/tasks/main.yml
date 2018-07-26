@@ -1,0 +1,4 @@
+---
+  - import_tasks: agentcommon-assemble-remote.yml
+    tags: ['always']
+...

@@ -11,4 +11,6 @@
     - tree
     - zip
     - unzip
+    - htop
+    - iperf
 ...

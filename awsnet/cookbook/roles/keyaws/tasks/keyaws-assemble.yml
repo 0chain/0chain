@@ -24,6 +24,8 @@
   command: ssh-keygen -y -f "{{aws_key_pair_file}}" -t rsa -q
   register: publickey
 
+- debug: var=publickey
+
 - name: "Save public key {{publickey}} to  {{aws_public_key_file}}"
   copy:
     dest: "{{aws_public_key_file}}"

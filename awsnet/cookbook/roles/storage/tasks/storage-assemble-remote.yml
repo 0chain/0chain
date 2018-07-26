@@ -1,0 +1,34 @@
+---
+- name: "Set the device to format"
+  set_fact:
+    device_name: "{{storage[zchain.blueprint.storage_type[agent_role]].ubuntu_disk}}"
+
+- debug:
+    msg: "{{agent_role}}:{{agent_tag}} storage=>{{device_name}}"
+
+- name: Install the file-system for on the EBS block
+  filesystem:
+    fstype: ext4
+    dev: "{{device_name}}"
+    force: no
+
+- name: "Set the base directory to mount"
+  set_fact:
+    mount_point: "{{zchain.artifact.zchain.base}}"
+
+- name: Create the mount point
+  file:
+    path: mount_point
+    state: directory
+    owner: ubuntu
+    group: ubuntu
+    mode: 0755
+
+- name: Mount the device
+  mount:
+    path: "{{mount_point}}"
+    src: "{{device_name}}"
+    state: mounted
+    fstype: ext4
+    boot: yes
+...

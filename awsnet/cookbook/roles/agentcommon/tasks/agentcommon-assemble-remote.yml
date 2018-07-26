@@ -18,4 +18,21 @@
 - set_fact:
    iprole: "{{ iprole | default({}) | combine( {item.public_ip_address: item.tags.Name})}}"
   with_items: "{{nodes}}"
+
+- name: get public IP address
+  ipify_facts:
+  register: ipify_results
+
+- set_fact:
+    agent_ip: "{{ipify_results.ansible_facts.ipify_public_ip}}"
+
+- set_fact:
+    agent_tag: "{{iprole[agent_ip]}}"
+
+
+- set_fact:
+    agent_role: "{{ agents|selectattr('key', 'equalto', agent_tag ) | map(attribute='value.role') | list | first }}"
+
+- debug:
+    msg: "{{agent_role}}=={{agent_tag}}=={{agent_ip}}"
 ...
