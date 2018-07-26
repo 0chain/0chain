@@ -72,7 +72,7 @@ func SetupWallet() {
 
 /*CreateTransaction - create a transaction */
 func (w *Wallet) CreateTransaction(toClient string) *transaction.Transaction {
-	value := rand.Int63n(10) * 10000000000
+	value := (1 + rand.Int63n(10)) * 10000000000
 	msg := fmt.Sprintf("0chain zerochain zipcode Europe rightthing Oriental California honest accurate India network %v %v", rand.Int63(), value)
 	return w.CreateSendTransaction(toClient, value, msg)
 }
