@@ -164,8 +164,12 @@ func (b *Block) SetPreviousBlock(prevBlock *Block) {
 	b.PrevHash = prevBlock.Hash
 	b.Round = prevBlock.Round + 1
 	b.PrevBlockVerficationTickets = prevBlock.VerificationTickets
-
-	pndb := prevBlock.ClientStateMT.GetNodeDB()
+	var pndb util.NodeDB
+	if prevBlock.ClientStateMT != nil {
+		pndb = prevBlock.ClientStateMT.GetNodeDB()
+	} else {
+		pndb = util.NewMemoryNodeDB() // TODO: state sync
+	}
 	mndb := util.NewMemoryNodeDB()
 	ndb := util.NewLevelNodeDB(mndb, pndb, false)
 	b.ClientStateMT = util.NewMerklePatriciaTrie(ndb)
