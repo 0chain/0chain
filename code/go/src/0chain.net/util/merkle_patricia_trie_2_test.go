@@ -27,7 +27,6 @@ func (as *AState) Decode(buf []byte) error {
 }
 
 func TestMerkleTreeSaveToDB(t *testing.T) {
-	cc := NewChangeCollector()
 	pndb, err := NewPNodeDB("/tmp/mpt")
 	if err != nil {
 		panic(err)
@@ -38,14 +37,14 @@ func TestMerkleTreeSaveToDB(t *testing.T) {
 	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.DB, false)
 	mpt2 := NewMerklePatriciaTrie(db)
 
-	doStateValInsert("add 100 to c1", cc, mpt2, "0123456", 100, false)
-	doStateValInsert("add 1000 to c2", cc, mpt2, "0123457", 1000, false)
-	doStateValInsert("add 1000 to c3", cc, mpt2, "0123458", 1000000, false)
-	doStateValInsert("add 1000 to c4", cc, mpt2, "0133458", 1000000000, true)
+	doStateValInsert("add 100 to c1", mpt2, "0123456", 100, false)
+	doStateValInsert("add 1000 to c2", mpt2, "0123457", 1000, false)
+	doStateValInsert("add 1000 to c3", mpt2, "0123458", 1000000, false)
+	doStateValInsert("add 1000 to c4", mpt2, "0133458", 1000000000, true)
 
-	printChanges(cc)
+	printChanges(mpt2.GetChangeCollector())
 
-	err = cc.UpdateChanges(pndb, Origin(2016), false)
+	err = mpt2.SaveChanges(pndb, Origin(2016), false)
 	if err != nil {
 		panic(err)
 	}
@@ -77,14 +76,14 @@ func TestMerkeTreePruning(t *testing.T) {
 	origin := 2016
 	roots := make([]Key, 0, 10)
 	for i := int64(0); i < 1000; i++ {
-		cc := NewChangeCollector()
-		doStateValInsert("add 100 to c1", cc, mpt2, "0123456", 100+i, false)
-		doStateValInsert("add 1000 to c2", cc, mpt2, "0123457", 1000+i, false)
-		doStateValInsert("add 1000 to c3", cc, mpt2, "0123458", 1000000+i, false)
-		doStateValInsert("add 1000 to c4", cc, mpt2, "0133458", 1000000000+i, true)
+		mpt2.ResetChangeCollector()
+		doStateValInsert("add 100 to c1", mpt2, "0123456", 100+i, false)
+		doStateValInsert("add 1000 to c2", mpt2, "0123457", 1000+i, false)
+		doStateValInsert("add 1000 to c3", mpt2, "0123458", 1000000+i, false)
+		doStateValInsert("add 1000 to c4", mpt2, "0133458", 1000000000+i, true)
 		roots = append(roots, mpt2.GetRoot())
-		fmt.Printf("root(%v) = %v: changes: %v\n", origin, ToHex(mpt2.GetRoot()), len(cc.GetChanges()))
-		err = cc.UpdateChanges(pndb, Origin(origin), false)
+		fmt.Printf("root(%v) = %v: changes: %v\n", origin, ToHex(mpt2.GetRoot()), len(mpt.GetChangeCollector().GetChanges()))
+		err = mpt2.SaveChanges(pndb, Origin(origin), false)
 		if err != nil {
 			panic(err)
 		}
@@ -146,14 +145,14 @@ func TestMerkeTreeGetChanges(t *testing.T) {
 	origin := 2016
 	roots := make([]Key, 0, 10)
 	for i := int64(0); i < 10; i++ {
-		cc := NewChangeCollector()
-		doStateValInsert("add 100 to c1", cc, mpt2, "0123456", 100+i, false)
-		doStateValInsert("add 1000 to c2", cc, mpt2, "0123457", 1000+i, false)
-		doStateValInsert("add 1000 to c3", cc, mpt2, "0123458", 1000000+i, false)
-		doStateValInsert("add 1000 to c4", cc, mpt2, "0133458", 1000000000+i, false)
+		mpt2.ResetChangeCollector()
+		doStateValInsert("add 100 to c1", mpt2, "0123456", 100+i, false)
+		doStateValInsert("add 1000 to c2", mpt2, "0123457", 1000+i, false)
+		doStateValInsert("add 1000 to c3", mpt2, "0123458", 1000000+i, false)
+		doStateValInsert("add 1000 to c4", mpt2, "0133458", 1000000000+i, false)
 		roots = append(roots, mpt2.GetRoot())
-		fmt.Printf("root(%v) = %v: changes: %v ndb size: %v\n", origin, ToHex(mpt2.GetRoot()), len(cc.GetChanges()), len(mndb.Nodes))
-		err = cc.UpdateChanges(pndb, Origin(origin), false)
+		fmt.Printf("root(%v) = %v: changes: %v ndb size: %v\n", origin, ToHex(mpt2.GetRoot()), len(mpt2.GetChangeCollector().GetChanges()), len(mndb.Nodes))
+		err = mpt2.SaveChanges(pndb, Origin(origin), false)
 		if err != nil {
 			panic(err)
 		}
@@ -172,10 +171,10 @@ func TestMerkeTreeGetChanges(t *testing.T) {
 	}
 }
 
-func doStateValInsert(testcase string, cc ChangeCollectorI, mpt MerklePatriciaTrieI, key string, value int64, print bool) {
+func doStateValInsert(testcase string, mpt MerklePatriciaTrieI, key string, value int64, print bool) {
 	state := &AState{}
 	state.balance = value
-	newRoot, err := mpt.Insert([]byte(key), state, cc)
+	newRoot, err := mpt.Insert([]byte(key), state)
 	if err != nil {
 		fmt.Printf("error: %v\n", err)
 	}
