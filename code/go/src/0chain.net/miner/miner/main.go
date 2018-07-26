@@ -206,8 +206,7 @@ func StartProtocol() {
 			if mc.CurrentRound != 0 {
 				break
 			}
-			active := mc.Miners.GetActiveCount()
-			if 3*active >= 2*mc.Miners.Size() {
+			if mc.CanStartNetwork() {
 				break
 			}
 		}
@@ -216,7 +215,7 @@ func StartProtocol() {
 	msg := miner.BlockMessage{Type: miner.MessageStartRound, Round: msr}
 	msgChannel := mc.GetBlockMessageChannel()
 	if mc.CurrentRound == 0 {
-		Logger.Debug("starting the blockchain ...")
+		Logger.Info("starting the blockchain ...")
 		msgChannel <- &msg
 		mc.SendRoundStart(common.GetRootContext(), sr)
 	}

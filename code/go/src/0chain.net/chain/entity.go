@@ -76,7 +76,8 @@ type Chain struct {
 	CurrentMagicBlock    *block.Block
 	BlocksToSharder      int
 
-	StateDB util.NodeDB
+	StateDB                 util.NodeDB         `json:"-"`
+	ClientStateDeserializer state.DeserializerI `json:"-"`
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
@@ -122,6 +123,7 @@ func NewChainFromConfig() *Chain {
 	chain.NumSharders = viper.GetInt("server_chain.block.sharders")
 	chain.NotarizationThreshold = viper.GetInt("server_chain.block.notarization_threshold")
 	chain.OwnerID = viper.GetString("server_chain.owner")
+	chain.ClientStateDeserializer = &state.Deserializer{}
 	return chain
 }
 
@@ -181,12 +183,11 @@ func (c *Chain) getInitialState() util.Serializable {
 }
 
 /*setupInitialState - setup the initial state based on configuration */
-func (c *Chain) setupInitialState() util.Key {
+func (c *Chain) setupInitialState() util.MerklePatriciaTrieI {
 	pmt := util.NewMerklePatriciaTrie(c.StateDB)
-	cc := util.NewChangeCollector()
-	pmt.Insert(util.Path(c.OwnerID), c.getInitialState(), cc)
-	cc.UpdateChanges(c.StateDB, 0, false)
-	return pmt.GetRoot()
+	pmt.Insert(util.Path(c.OwnerID), c.getInitialState())
+	pmt.SaveChanges(c.StateDB, 0, false)
+	return pmt
 }
 
 /*GenerateGenesisBlock - Create the genesis block for the chain */
@@ -195,7 +196,8 @@ func (c *Chain) GenerateGenesisBlock(hash string) (*round.Round, *block.Block) {
 	gb := datastore.GetEntityMetadata("block").Instance().(*block.Block)
 	gb.Hash = hash
 	gb.Round = 0
-	gb.ClientStateHash = c.setupInitialState()
+	gb.ClientStateMT = c.setupInitialState()
+	gb.ClientStateHash = gb.ClientStateMT.GetRoot()
 	gr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 	gr.Number = 0
 	gr.Block = gb
@@ -333,4 +335,10 @@ func (c *Chain) GetNotarizationThresholdCount() int {
 	notarizedPercent := float64(c.NotarizationThreshold) / 100
 	thresholdCount := float64(c.Miners.Size()) * notarizedPercent
 	return int(math.Ceil(thresholdCount))
+}
+
+/*CanStartNetwork - check whether the network can start */
+func (c *Chain) CanStartNetwork() bool {
+	active := c.Miners.GetActiveCount()
+	return active >= c.GetNotarizationThresholdCount()
 }
