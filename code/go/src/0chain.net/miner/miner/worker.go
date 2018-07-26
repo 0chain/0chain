@@ -3,9 +3,11 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"os"
 	"time"
 
 	"0chain.net/chain"
+	"0chain.net/encryption"
 	"go.uber.org/zap"
 
 	"0chain.net/miner"
@@ -106,12 +108,44 @@ func TransactionGenerator(blockSize int32) {
 	}
 }
 
-/*GenerateClients - generate the given number of clients */
-func GenerateClients(numClients int) {
+/*GetOwnerWallet - get the owner wallet. Used to get the initial state get going */
+func GetOwnerWallet(keysFile string) *wallet.Wallet {
+	reader, err := os.Open(keysFile)
+	if err != nil {
+		panic(err)
+	}
+	publicKey, privateKey := encryption.ReadKeys(reader)
+	w := &wallet.Wallet{}
+	err = w.SetKeys(publicKey, privateKey)
+	if err != nil {
+		panic(err)
+	}
 	clientMetadataProvider := datastore.GetEntityMetadata("client")
 	ctx := memorystore.WithEntityConnection(common.GetRootContext(), clientMetadataProvider)
 	defer memorystore.Close(ctx)
 	ctx = datastore.WithAsyncChannel(ctx, client.ClientEntityChannel)
+	err = w.Register(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return w
+}
+
+/*GenerateClients - generate the given number of clients */
+func GenerateClients(numClients int) {
+	ownerWallet := GetOwnerWallet("config/owner_keys.txt")
+	rs := rand.NewSource(time.Now().UnixNano())
+	prng := rand.New(rs)
+
+	clientMetadataProvider := datastore.GetEntityMetadata("client")
+	ctx := memorystore.WithEntityConnection(common.GetRootContext(), clientMetadataProvider)
+	defer memorystore.Close(ctx)
+	ctx = datastore.WithAsyncChannel(ctx, client.ClientEntityChannel)
+
+	txnMetadataProvider := datastore.GetEntityMetadata("txn")
+	tctx := memorystore.WithEntityConnection(common.GetRootContext(), txnMetadataProvider)
+	tctx = datastore.WithAsyncChannel(ctx, transaction.TransactionEntityChannel)
+
 	for i := 0; i < numClients; i++ {
 		//client side code
 		w := &wallet.Wallet{}
@@ -119,12 +153,19 @@ func GenerateClients(numClients int) {
 		wallets = append(wallets, w)
 
 		//Server side code bypassing REST for speed
-		c := clientMetadataProvider.Instance().(*client.Client)
-		c.PublicKey = w.PublicKey
-		c.ID = w.ClientID
-		_, err := client.PutClient(ctx, c)
+		err := w.Register(ctx)
 		if err != nil {
 			panic(err)
+		}
+	}
+	time.Sleep(time.Second)
+	for _, w := range wallets {
+		//generous airdrop in dev/test mode :)
+		txn := ownerWallet.CreateSendTransaction(w.ClientID, prng.Int63n(10000)*10000000000, "generous air drop! :)")
+		_, err := transaction.PutTransaction(tctx, txn)
+		if err != nil {
+			fmt.Printf("error:%v: %v\n", time.Now(), err)
+			//panic(err)
 		}
 	}
 }
