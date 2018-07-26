@@ -48,6 +48,10 @@ func (c *Chain) FinalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 	if lfb.Hash == c.LatestFinalizedBlock.Hash {
 		return
 	}
+	if lfb.Round < c.LatestFinalizedBlock.Round {
+		Logger.Info("finalize round - TODO: need to repair", zap.Any("lf_round", c.LatestFinalizedBlock.Round), zap.Int64("new_lf_round", lfb.Round))
+		return
+	}
 	lfbHash := c.LatestFinalizedBlock.Hash
 	c.LatestFinalizedBlock = lfb
 	frchain := make([]*block.Block, 0, 1)
