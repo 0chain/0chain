@@ -54,6 +54,8 @@ type Block struct {
 
 	//TODO: May be this should be replaced with a bloom filter & check against sorted txns
 	TxnsMap map[string]bool `json:"-"`
+
+	ClientStateMT util.MerklePatriciaTrieI `json:"-"`
 }
 
 var blockEntityMetadata *datastore.EntityMetadataImpl
@@ -162,6 +164,11 @@ func (b *Block) SetPreviousBlock(prevBlock *Block) {
 	b.PrevHash = prevBlock.Hash
 	b.Round = prevBlock.Round + 1
 	b.PrevBlockVerficationTickets = prevBlock.VerificationTickets
+
+	pndb := prevBlock.ClientStateMT.GetNodeDB()
+	mndb := util.NewMemoryNodeDB()
+	ndb := util.NewLevelNodeDB(mndb, pndb, false)
+	b.ClientStateMT = util.NewMerklePatriciaTrie(ndb)
 }
 
 /*GetPreviousBlock - returns the previous block */
