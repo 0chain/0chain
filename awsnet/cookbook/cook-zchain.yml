@@ -1,5 +1,5 @@
 ---
-- hosts: [tag_role_miner, tag_role_sharder]
+- hosts: [tag_network_name_chinook, tag_network_name_chinook]
   become: false
   gather_facts: yes
   vars_files:

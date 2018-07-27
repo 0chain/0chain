@@ -55,15 +55,27 @@ LOCAL_PLAY=@$(PLAYBOOK) -i $(INVENTORY) $(COOKBOOK)/cook-local.yml --extra-vars=
 REMOTE_PLAY=@$(PLAYBOOK) -i $(INVENTORY) $(COOKBOOK)/cook-remote.yml --extra-vars=$(EXTRA_VARS) --tags $@
 
 #Artifacts:
-artifacts-assemble-local artifacts-teardown-local:
+artifacts-assemble-local:
+	$(LOCAL_PLAY)
+
+artifacts-tear-down-local:
 	$(LOCAL_PLAY)
 
 #Key Role related targets
-keyaws-assemble-local keyaws-teardown-local keygit-assemble-local keygit-teardown-local:
+keyaws-assemble-local:
+	$(LOCAL_PLAY)
+
+keygit-assemble-local keygit-teardown-local:
+	$(LOCAL_PLAY)
+
+keyaws-teardown-local:
 	$(LOCAL_PLAY)
 
 #Create an AWS instance.
-instance-assemble-local instance-teardown-local:
+instance-assemble-local:
+	$(LOCAL_PLAY)
+
+instance-teardown-local:
 	$(LOCAL_PLAY)
 
 #Instance the packages such as ansible, python, tree etc...

@@ -1,5 +1,5 @@
 ---
-- hosts: [tag_role_miner, tag_role_sharder]
+- hosts: [tag_network_name_chinook]
   become: true
   gather_facts: no
   vars_files:
@@ -20,7 +20,7 @@
 
 #This playbook is similar to the remote one above but is used exclusively for zchain
 #targets.
-- hosts: [tag_role_miner, tag_role_sharder]
+- hosts: [tag_network_name_chinook]
   become: true
   gather_facts: yes
   vars_files:

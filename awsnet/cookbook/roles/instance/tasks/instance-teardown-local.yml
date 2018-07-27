@@ -10,12 +10,14 @@
     instance_tags:
       Name: "{{item.key}}"
       role: "{{item.value.role}}"
-      network: "{{zchain.blueprint.network_type}}"
+      network_type: "{{zchain.blueprint.network_type}}"
+      network_name: "{{zchain.blueprint.network_name}}"
     exact_count: 0
     count_tag:
       Name: "{{item.key}}"
       role: "{{item.value.role}}"
-      network: "{{zchain.blueprint.network_type}}"
+      network_type: "{{zchain.blueprint.network_type}}"
+      network_name: "{{zchain.blueprint.network_name}}"
 
   with_items: "{{agents}}"
   check_mode: no
@@ -32,12 +34,14 @@
     instance_tags:
       Name: "{{item.key}}"
       role: "{{item.value.role}}"
-      network: "{{zchain.blueprint.network_type}}"
+      network_name: "{{zchain.blueprint.network_name}}"
+      network_type: "{{zchain.blueprint.network_type}}"
     exact_count: 0
     count_tag:
       Name: "{{item.key}}"
       role: "{{item.value.role}}"
-      network: "{{zchain.blueprint.network_type}}"
+      network_type: "{{zchain.blueprint.network_type}}"
+      network_name: "{{zchain.blueprint.network_name}}"
 
   with_items: "{{agents}}"
   check_mode: no
