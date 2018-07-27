@@ -70,6 +70,9 @@ instance-assemble-local instance-teardown-local:
 instance-assemble-remote:
 	$(REMOTE_PLAY)
 
+istart-assemble-local:
+	$(LOCAL_PLAY)
+
 #Create the EBS volume and mount it for reboot.
 storage-assemble-remote:
 	$(REMOTE_PLAY)
@@ -90,7 +93,7 @@ gitrepo-assemble-local:
 gitrepo-assemble-zchain:
 	$(REMOTE_PLAY)
 
-#Create the local copy of the nodes file.
+#Create the local copy of the nodes file. Route 53 gets updated here as well.
 clientid-assemble-local:
 	$(LOCAL_PLAY)
 
@@ -113,6 +116,10 @@ agentrole-assemble-remote:
 # Stop the sharder, miner
 agentrole-teardown-remote:
 	$(REMOTE_PLAY)
+
+#Instance management - start and stop
+istop-teardown-local:
+	$(LOCAL_PLAY)
 
 
 $(TARGETS): show

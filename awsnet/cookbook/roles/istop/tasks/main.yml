@@ -1,0 +1,5 @@
+---
+- import_tasks: istop-teardown-local.yml
+  tags: ['istop-teardown-local']
+...
+

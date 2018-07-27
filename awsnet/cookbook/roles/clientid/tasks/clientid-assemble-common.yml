@@ -5,6 +5,7 @@
     region: "{{regions[item]}}"
     filters:
       "tag:network_name": "{{zchain.blueprint.network_name}}"
+      "tag:network_type": "{{zchain.blueprint.network_type}}"
       "instance-state-name": running
   register: ec2_facts
   with_items: "{{zchain.blueprint.regions}}"

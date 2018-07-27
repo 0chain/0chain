@@ -17,6 +17,8 @@
     - role: keyaws
     - role: keygit
     - role: instance
+    - role: istart
+    - role: istop
     - role: gitrepo
     - role: clientid
     - role: agentbuild
