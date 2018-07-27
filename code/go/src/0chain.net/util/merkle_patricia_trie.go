@@ -90,6 +90,7 @@ func (mpt *MerklePatriciaTrie) GetChangeCollector() ChangeCollectorI {
 /*ResetChangeCollector - implement interface */
 func (mpt *MerklePatriciaTrie) ResetChangeCollector() {
 	mpt.ChangeCollector = NewChangeCollector()
+	mpt.ChangeCollector.SetRoot(mpt.GetRoot())
 }
 
 /*SaveChanges - implement interface */

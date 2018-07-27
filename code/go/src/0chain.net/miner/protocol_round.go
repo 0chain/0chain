@@ -99,12 +99,12 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	b.RoundRandomSeed = r.RandomSeed
 	b.SetPreviousBlock(pb)
 	if b.Round == 1 {
-		val, err := b.ClientStateMT.GetNodeValue(util.Path(mc.OwnerID))
+		val, err := b.ClientState.GetNodeValue(util.Path(mc.OwnerID))
 		if err != nil {
 			panic(err)
 		} else {
 			state := mc.ClientStateDeserializer.Deserialize(val).(*state.State)
-			Logger.Info("initial tokens: %v\n", zap.Any("state", state))
+			Logger.Info("initial tokens", zap.Any("state", state))
 		}
 	}
 	for true {
@@ -113,7 +113,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 			return nil, ErrRoundMismatch
 		}
 		txnCount := transaction.TransactionCount
-		b.ClientStateMT.ResetChangeCollector()
+		b.ClientState.ResetChangeCollector()
 		err := mc.GenerateBlock(ctx, b, mc)
 		if err != nil {
 			cerr, ok := err.(*common.Error)
@@ -189,7 +189,7 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 			}
 		}
 	}
-	Logger.Info("adding block to verify", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Float64("weight", b.Weight()), zap.Float64("chain_weight", b.ChainWeight))
+	Logger.Info("adding block to verify", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("block_state", util.ToHex(b.ClientStateHash)), zap.Float64("weight", b.Weight()), zap.Float64("chain_weight", b.ChainWeight))
 	vctx := mr.StartVerificationBlockCollection(ctx)
 	if vctx != nil {
 		go mc.CollectBlocksForVerification(vctx, mr)
@@ -275,6 +275,9 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r *Round, b *block.Block)
 			return nil, common.NewError(PreviousBlockUnknown, "Previous block is not known")
 		}
 		b.SetPreviousBlock(pb)
+		if pb.PrevBlockVerficationTickets == nil {
+			Logger.Info("verify round (incomplete prev block) TODO: sync block", zap.Any("round", r.Number), zap.Any("block", b.Hash), zap.Any("prev_block", b.PrevHash))
+		}
 	}
 	/* Note: We are verifying the notarization of the previous block we have with
 	   the prev verification tickets of the current block. This is right as all the
