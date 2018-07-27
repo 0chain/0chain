@@ -38,7 +38,7 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 	clientState := b.ClientState
 	fs, err := c.getState(clientState, txn.ClientID)
 	if err != nil {
-		Logger.Error("update state", zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
+		Logger.Debug("update state", zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
 		return false
 	}
 	tbalance := state.Balance(txn.Value)
@@ -61,7 +61,7 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 		}
 		ts, err := c.getState(clientState, txn.ToClientID)
 		if err != nil {
-			Logger.Error("update state (to client)", zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
+			Logger.Debug("update state (to client)", zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
 			return false
 		}
 		ts.Balance += tbalance
