@@ -6,11 +6,9 @@
   shell: docker.aws/bin/stop.sharder.sh
   args:
     chdir: "{{zchain_code}}"
-  tags: ['agentrole-sharder-stop']
 
 - name: "Stop the miner"
   shell: docker.aws/bin/stop.miner.sh
   args:
     chdir: "{{zchain_code}}"
-  tags: ['agentrole-miner-stop']
 ...

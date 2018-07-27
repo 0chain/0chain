@@ -6,11 +6,9 @@
   shell: docker.aws/bin/spawn.sharder.sh
   args:
     chdir: "{{zchain_code}}"
-  tags: ['agentbuild-base']
 
 - name: "Spawn the miner"
   shell: docker.aws/bin/spawn.miner.sh
   args:
     chdir: "{{zchain_code}}"
-  tags: ['agentbuild-miner']
 ...
