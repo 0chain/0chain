@@ -197,8 +197,8 @@ func (c *Chain) GenerateGenesisBlock(hash string) (*round.Round, *block.Block) {
 	gb := datastore.GetEntityMetadata("block").Instance().(*block.Block)
 	gb.Hash = hash
 	gb.Round = 0
-	gb.ClientStateMT = c.setupInitialState()
-	gb.ClientStateHash = gb.ClientStateMT.GetRoot()
+	gb.ClientState = c.setupInitialState()
+	gb.ClientStateHash = gb.ClientState.GetRoot()
 	gr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 	gr.Number = 0
 	gr.Block = gb

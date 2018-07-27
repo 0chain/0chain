@@ -55,7 +55,7 @@ type Block struct {
 	//TODO: May be this should be replaced with a bloom filter & check against sorted txns
 	TxnsMap map[string]bool `json:"-"`
 
-	ClientStateMT util.MerklePatriciaTrieI `json:"-"`
+	ClientState util.MerklePatriciaTrieI `json:"-"`
 }
 
 var blockEntityMetadata *datastore.EntityMetadataImpl
@@ -171,18 +171,18 @@ func (b *Block) SetPreviousBlock(prevBlock *Block) {
 func (b *Block) SetClientStateDB(prevBlock *Block) {
 	var pndb util.NodeDB
 	var rootHash util.Key
-	if prevBlock != nil && prevBlock.ClientStateMT != nil {
-		pndb = prevBlock.ClientStateMT.GetNodeDB()
-		rootHash = prevBlock.ClientStateMT.GetChangeCollector().GetRoot()
-		Logger.Info("prev state root\n", zap.Int64("round", b.Round), zap.String("root", util.ToHex(rootHash)))
+	if prevBlock != nil && prevBlock.ClientState != nil {
+		pndb = prevBlock.ClientState.GetNodeDB()
+		rootHash = prevBlock.ClientStateHash
+		Logger.Info("prev state root", zap.Int64("round", b.Round), zap.String("prev_block", prevBlock.Hash), zap.String("root", util.ToHex(rootHash)))
 	} else {
-		Logger.Info("TODO: state sync\n", zap.Int64("round", b.Round))
+		Logger.Info("TODO: state sync", zap.Int64("round", b.Round))
 		pndb = util.NewMemoryNodeDB() // TODO: state sync
 	}
 	mndb := util.NewMemoryNodeDB()
 	ndb := util.NewLevelNodeDB(mndb, pndb, false)
-	b.ClientStateMT = util.NewMerklePatriciaTrie(ndb)
-	b.ClientStateMT.SetRoot(rootHash)
+	b.ClientState = util.NewMerklePatriciaTrie(ndb)
+	b.ClientState.SetRoot(rootHash)
 }
 
 /*GetPreviousBlock - returns the previous block */
