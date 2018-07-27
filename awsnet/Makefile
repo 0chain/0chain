@@ -102,7 +102,10 @@ gitrepo-assemble-local:
 	$(LOCAL_PLAY)
 
 #Move the entire git repo to the remote machine and install it
-gitrepo-assemble-zchain:
+gitrepo-assemble-remote:
+	$(REMOTE_PLAY)
+
+gitrepo-teardown-remote:
 	$(REMOTE_PLAY)
 
 #Create the local copy of the nodes file. Route 53 gets updated here as well.

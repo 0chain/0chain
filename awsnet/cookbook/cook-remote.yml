@@ -19,9 +19,9 @@
     - role: storage
 
 #This playbook is similar to the remote one above but is used exclusively for zchain
-#targets.
+#targets. These targets should be executed under ubuntu.
 - hosts: [tag_network_name_chinook]
-  become: true
+  become: false
   gather_facts: yes
   vars_files:
     - "{{ credential }}/aws/credentials.yml"
