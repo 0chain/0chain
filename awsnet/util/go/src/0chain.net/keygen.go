@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"bytes"
+	"encoding/hex"
 )
 
 // Type of the client structure
@@ -67,12 +68,12 @@ func makeMode(legend string, count int, sort bool) []byte {
 	var clients = make([]Client, count);
 	for i := 0; i < count; i++ {
 
-		publicKey, privateKey := encryption.GenerateKeys()
+		publicKey, privateKey, _ := encryption.GenerateKeysBytes()
 
 		client := encryption.Hash(publicKey)
 
-		clients[i].privateKey = privateKey
-		clients[i].publicKey = publicKey
+		clients[i].privateKey = hex.EncodeToString(privateKey)
+		clients[i].publicKey = hex.EncodeToString(publicKey)
 		clients[i].client = client
 	}
 
