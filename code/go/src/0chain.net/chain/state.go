@@ -11,7 +11,7 @@ import (
 * The block starts off with the state from the prior block and as transactions are processed into a block, the state gets updated
 * If a state can't be updated (e.g low balance), then a false is returned so that the transaction will not make it into the block
  */
-func (c *Chain) UpdateState(txn *transaction.Transaction, b *block.Block) bool {
+func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 	s := &state.State{}
 	s.Balance = state.Balance(0)
 	clientStateMT := b.ClientStateMT
