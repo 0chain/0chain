@@ -32,6 +32,8 @@ type UnverifiedBlockBody struct {
 	Round           int64         `json:"round"`
 	RoundRandomSeed int64         `json:"round_random_seed"`
 
+	ClientStateHash util.Key `json:"state_hash"`
+
 	// The entire transaction payload to represent full block
 	Txns []*transaction.Transaction `json:"transactions,omitempty"`
 }
@@ -52,6 +54,8 @@ type Block struct {
 
 	//TODO: May be this should be replaced with a bloom filter & check against sorted txns
 	TxnsMap map[string]bool `json:"-"`
+
+	ClientStateMT util.MerklePatriciaTrieI `json:"-"`
 }
 
 var blockEntityMetadata *datastore.EntityMetadataImpl
@@ -160,6 +164,21 @@ func (b *Block) SetPreviousBlock(prevBlock *Block) {
 	b.PrevHash = prevBlock.Hash
 	b.Round = prevBlock.Round + 1
 	b.PrevBlockVerficationTickets = prevBlock.VerificationTickets
+	b.SetClientStateDB(prevBlock)
+}
+
+/*SetClientStateDB - set the client state from the previous block */
+func (b *Block) SetClientStateDB(prevBlock *Block) {
+	var pndb util.NodeDB
+	if prevBlock != nil && prevBlock.ClientStateMT != nil {
+		pndb = prevBlock.ClientStateMT.GetNodeDB()
+	} else {
+		Logger.Info("TODO: state sync\n", zap.Int64("round", b.Round))
+		pndb = util.NewMemoryNodeDB() // TODO: state sync
+	}
+	mndb := util.NewMemoryNodeDB()
+	ndb := util.NewLevelNodeDB(mndb, pndb, false)
+	b.ClientStateMT = util.NewMerklePatriciaTrie(ndb)
 }
 
 /*GetPreviousBlock - returns the previous block */

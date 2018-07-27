@@ -199,10 +199,9 @@ func BenchmarkGenerateAndVerifyALotTransactions(b *testing.B) {
 func SetUpSingleSelf() {
 	n1 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7071, Status: node.NodeStatusActive}
 	n1.ID = "24e23c52e2e40689fdb700180cd68ac083a42ed292d90cc021119adaa4d21509"
-	n1.PublicKey = "e065fc02aaf7aaafaebe5d2dedb9c7c1d63517534644434b813cb3bdab0f94a0"
 	node.Self = &node.SelfNode{}
 	node.Self.Node = n1
-	node.Self.SetPrivateKey("aa3e1ae2290987959dc44e43d138c81f15f93b2d56d7a06c51465f345df1a8a6e065fc02aaf7aaafaebe5d2dedb9c7c1d63517534644434b813cb3bdab0f94a0")
+	node.Self.SetKeys("e065fc02aaf7aaafaebe5d2dedb9c7c1d63517534644434b813cb3bdab0f94a0", "aa3e1ae2290987959dc44e43d138c81f15f93b2d56d7a06c51465f345df1a8a6e065fc02aaf7aaafaebe5d2dedb9c7c1d63517534644434b813cb3bdab0f94a0")
 	np := node.NewPool(node.NodeTypeMiner)
 	np.AddNode(n1)
 	config.SetServerChainID(config.GetMainChainID())
@@ -243,7 +242,7 @@ func SetUpSelf() {
 
 	node.Self = &node.SelfNode{}
 	node.Self.Node = n1
-	node.Self.SetPrivateKey("aa3e1ae2290987959dc44e43d138c81f15f93b2d56d7a06c51465f345df1a8a6e065fc02aaf7aaafaebe5d2dedb9c7c1d63517534644434b813cb3bdab0f94a0")
+	node.Self.SetKeys("", "aa3e1ae2290987959dc44e43d138c81f15f93b2d56d7a06c51465f345df1a8a6e065fc02aaf7aaafaebe5d2dedb9c7c1d63517534644434b813cb3bdab0f94a0")
 	np := node.NewPool(node.NodeTypeMiner)
 	np.AddNode(n1)
 	np.AddNode(n2)
@@ -299,7 +298,7 @@ func TestBlockGeneration(t *testing.T) {
 		if err != nil {
 			t.Errorf("Error writing the block: %v\n", err)
 		} else {
-			b2, err := blockstore.Store.Read(b.Hash, b.Round)
+			b2, err := blockstore.Store.Read(b.Hash)
 			if err != nil {
 				t.Errorf("Error reading the block: %v\n", err)
 			} else {

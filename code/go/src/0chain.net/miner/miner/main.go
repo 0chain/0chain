@@ -103,12 +103,11 @@ func main() {
 	node.Self.SetKeys(publicKey, privateKey)
 	reader.Close()
 	config.SetServerChainID(config.Configuration.ChainID)
-	serverChain := chain.Provider().(*chain.Chain)
-	serverChain.ID = datastore.ToKey(config.Configuration.ChainID)
-	serverChain.Decimals = int8(viper.GetInt("server_chain.decimals"))
-	serverChain.BlockSize = viper.GetInt32("server_chain.block.size")
-	serverChain.NumGenerators = viper.GetInt("server_chain.block.generators")
-	serverChain.NotarizationThreshold = viper.GetInt("server_chain.block.notarization_threshold")
+
+	common.SetupRootContext(node.GetNodeContext())
+	ctx := common.GetRootContext()
+	initEntities()
+	serverChain := chain.NewChainFromConfig()
 	miner.SetNetworkRelayTime(viper.GetDuration("server_chain.network.relay_time") * time.Millisecond)
 
 	if *nodesFile == "" {
@@ -133,10 +132,6 @@ func main() {
 	serverChain.Miners.ComputeProperties()
 	serverChain.Sharders.ComputeProperties()
 	serverChain.Blobbers.ComputeProperties()
-
-	common.SetupRootContext(node.GetNodeContext())
-	ctx := common.GetRootContext()
-	initEntities()
 	miner.GetMinerChain().SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"))
 
 	mode := "main net"
@@ -216,8 +211,7 @@ func StartProtocol() {
 			if mc.CurrentRound != 0 {
 				break
 			}
-			active := mc.Miners.GetActiveCount()
-			if 3*active >= 2*mc.Miners.Size() {
+			if mc.CanStartNetwork() {
 				break
 			}
 		}
@@ -226,7 +220,7 @@ func StartProtocol() {
 	msg := miner.BlockMessage{Type: miner.MessageStartRound, Round: msr}
 	msgChannel := mc.GetBlockMessageChannel()
 	if mc.CurrentRound == 0 {
-		Logger.Debug("starting the blockchain ...")
+		Logger.Info("starting the blockchain ...")
 		msgChannel <- &msg
 		mc.SendRoundStart(common.GetRootContext(), sr)
 	}

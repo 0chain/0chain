@@ -10,11 +10,11 @@ import (
 
 /*SetupHandlers - setup miner handlers */
 func SetupHandlers() {
-	http.HandleFunc("/_block_stats", BlockStatsHandler)
+	http.HandleFunc("/_chain_stats", ChainStatsHandler)
 }
 
-/*BlockStatsHandler - a handler to provide block statistics */
-func BlockStatsHandler(w http.ResponseWriter, r *http.Request) {
+/*ChainStatsHandler - a handler to provide block statistics */
+func ChainStatsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 	c := &GetMinerChain().Chain
 	fmt.Fprintf(w, "<h2>Block Finalization Statistics</h2>")

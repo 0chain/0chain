@@ -121,7 +121,8 @@ func Read(line string) (*Node, error) {
 	node.Port = int(port)
 	node.ID = fields[3]
 	node.PublicKey = fields[4]
-	hash := encryption.Hash(node.PublicKey)
+	node.Client.SetPublicKey(node.PublicKey)
+	hash := encryption.Hash(node.PublicKeyBytes)
 	if node.ID != hash {
 		return nil, common.NewError("invalid_client_id", fmt.Sprintf("public key: %v, client_id: %v, hash: %v\n", node.PublicKey, node.ID, hash))
 	}

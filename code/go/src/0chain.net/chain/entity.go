@@ -8,11 +8,20 @@ import (
 
 	"0chain.net/block"
 	"0chain.net/common"
+	"0chain.net/config"
 	"0chain.net/datastore"
 	. "0chain.net/logging"
 	"0chain.net/node"
 	"0chain.net/round"
+	"0chain.net/state"
+	"0chain.net/util"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
+)
+
+const (
+	NOTARIZED = 1
+	FINALIZED = 2
 )
 
 /*ServerChain - the chain object of the chain  the server is responsible for */
@@ -39,13 +48,14 @@ type Chain struct {
 	datastore.IDField
 	datastore.VersionField
 	datastore.CreationDateField
-	ClientID      datastore.Key `json:"client_id"`                 // Client who created this chain
+	OwnerID       datastore.Key `json:"owner_id"`                  // Client who created this chain
 	ParentChainID datastore.Key `json:"parent_chain_id,omitempty"` // Chain from which this chain is forked off
 
-	Decimals              int8  `json:"decimals"`                // Number of decimals allowed for the token on this chain
-	BlockSize             int32 `json:"block_size"`              // Number of transactions in a block
-	NumGenerators         int   `json:"num_generators"`          // Number of block generators
-	NotarizationThreshold int   `json: "notarization_threshold"` // Threshold for a block to be notarized
+	Decimals              int8  `json:"decimals"`               // Number of decimals allowed for the token on this chain
+	BlockSize             int32 `json:"block_size"`             // Number of transactions in a block
+	NumGenerators         int   `json:"num_generators"`         // Number of block generators
+	NumSharders           int   `json:"num_sharders"`           // Number of sharders that can store the block
+	NotarizationThreshold int   `json:"notarization_threshold"` // Threshold for a block to be notarized
 
 	/*Miners - this is the pool of miners */
 	Miners *node.Pool `json:"-"`
@@ -64,6 +74,10 @@ type Chain struct {
 	LatestFinalizedBlock *block.Block                   `json:"latest_finalized_block,omitempty"` // Latest block on the chain the program is aware of
 	CurrentRound         int64
 	CurrentMagicBlock    *block.Block
+	BlocksToSharder      int
+
+	StateDB                 util.NodeDB         `json:"-"`
+	ClientStateDeserializer state.DeserializerI `json:"-"`
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
@@ -78,8 +92,8 @@ func (c *Chain) Validate(ctx context.Context) error {
 	if datastore.IsEmpty(c.ID) {
 		return common.InvalidRequest("chain id is required")
 	}
-	if datastore.IsEmpty(c.ClientID) {
-		return common.InvalidRequest("client id is required")
+	if datastore.IsEmpty(c.OwnerID) {
+		return common.InvalidRequest("owner id is required")
 	}
 	return nil
 }
@@ -97,6 +111,20 @@ func (c *Chain) Write(ctx context.Context) error {
 /*Delete - store read */
 func (c *Chain) Delete(ctx context.Context) error {
 	return c.GetEntityMetadata().GetStore().Delete(ctx, c)
+}
+
+//NewChainFromConfig - create a new chain from config
+func NewChainFromConfig() *Chain {
+	chain := Provider().(*Chain)
+	chain.ID = datastore.ToKey(config.Configuration.ChainID)
+	chain.Decimals = int8(viper.GetInt("server_chain.decimals"))
+	chain.BlockSize = viper.GetInt32("server_chain.block.size")
+	chain.NumGenerators = viper.GetInt("server_chain.block.generators")
+	chain.NumSharders = viper.GetInt("server_chain.block.sharders")
+	chain.NotarizationThreshold = viper.GetInt("server_chain.block.notarization_threshold")
+	chain.OwnerID = viper.GetString("server_chain.owner")
+	chain.ClientStateDeserializer = &state.Deserializer{}
+	return chain
 }
 
 /*Provider - entity provider for chain object */
@@ -118,6 +146,8 @@ func (c *Chain) Initialize() {
 	c.CurrentRound = 0
 	c.LatestFinalizedBlock = nil
 	c.CurrentMagicBlock = nil
+	c.BlocksToSharder = 1
+	c.StateDB = stateDB
 }
 
 /*SetupEntity - setup the entity */
@@ -127,6 +157,37 @@ func SetupEntity(store datastore.Store) {
 	chainEntityMetadata.Provider = Provider
 	chainEntityMetadata.Store = store
 	datastore.RegisterEntityMetadata("chain", chainEntityMetadata)
+	SetupStateDB()
+}
+
+var stateDB *util.PNodeDB
+
+//SetupStateDB - setup the state db
+func SetupStateDB() {
+	db, err := util.NewPNodeDB("data/rocksdb/state")
+	if err != nil {
+		panic(err)
+	}
+	stateDB = db
+}
+
+func (c *Chain) getInitialState() util.Serializable {
+	tokens := viper.GetInt64("server_chain.tokens")
+	balance := &state.State{}
+	var cents int64 = 1
+	for i := int8(0); i < c.Decimals; i++ {
+		cents *= 10
+	}
+	balance.Balance = state.Balance(tokens * cents)
+	return balance
+}
+
+/*setupInitialState - setup the initial state based on configuration */
+func (c *Chain) setupInitialState() util.MerklePatriciaTrieI {
+	pmt := util.NewMerklePatriciaTrie(c.StateDB)
+	pmt.Insert(util.Path(c.OwnerID), c.getInitialState())
+	pmt.SaveChanges(c.StateDB, 0, false)
+	return pmt
 }
 
 /*GenerateGenesisBlock - Create the genesis block for the chain */
@@ -135,6 +196,8 @@ func (c *Chain) GenerateGenesisBlock(hash string) (*round.Round, *block.Block) {
 	gb := datastore.GetEntityMetadata("block").Instance().(*block.Block)
 	gb.Hash = hash
 	gb.Round = 0
+	gb.ClientStateMT = c.setupInitialState()
+	gb.ClientStateHash = gb.ClientStateMT.GetRoot()
 	gr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 	gr.Number = 0
 	gr.Block = gb
@@ -169,6 +232,7 @@ func (c *Chain) AddBlock(b *block.Block) {
 		if ok {
 			b.SetPreviousBlock(pb)
 		} else {
+			b.SetClientStateDB(nil)
 			Logger.Debug("previous block not present", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("prev_block", b.PrevHash))
 		}
 	}
@@ -248,6 +312,11 @@ func (c *Chain) CanGenerateRound(r *round.Round, miner *node.Node) bool {
 	return r.GetRank(miner.SetIndex)+1 <= c.NumGenerators
 }
 
+/*CanStoreBlock - checks if the sharder can store the block in the given round */
+func (c *Chain) CanStoreBlock(r *round.Round, sharder *node.Node) bool {
+	return r.GetRank(sharder.SetIndex)+1 <= c.NumSharders
+}
+
 /*ValidGenerator - check whether this block is from a valid generator */
 func (c *Chain) ValidGenerator(r *round.Round, b *block.Block) bool {
 	miner := c.Miners.GetNode(b.MinerID)
@@ -267,4 +336,10 @@ func (c *Chain) GetNotarizationThresholdCount() int {
 	notarizedPercent := float64(c.NotarizationThreshold) / 100
 	thresholdCount := float64(c.Miners.Size()) * notarizedPercent
 	return int(math.Ceil(thresholdCount))
+}
+
+/*CanStartNetwork - check whether the network can start */
+func (c *Chain) CanStartNetwork() bool {
+	active := c.Miners.GetActiveCount()
+	return active >= c.GetNotarizationThresholdCount()
 }

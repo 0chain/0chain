@@ -10,12 +10,17 @@ import (
 )
 
 //GenerateKeys - Generate assymetric private/public keys
-func GenerateKeys() (publicKey string, privateKey string) {
-	public, private, err := ed25519.GenerateKey(rand.Reader)
+func GenerateKeys() (publicKey string, privateKey string, err error) {
+	public, private, err := GenerateKeysBytes()
 	if err != nil {
-		return "", ""
+		return "", "", err
 	}
-	return hex.EncodeToString(public), hex.EncodeToString(private)
+	return hex.EncodeToString(public), hex.EncodeToString(private), nil
+}
+
+//GenerateKeysBytes - Generate assymetric private/public keys
+func GenerateKeysBytes() ([]byte, []byte, error) {
+	return ed25519.GenerateKey(rand.Reader)
 }
 
 /*ReadKeys - reads a publicKey and a privateKey from a Reader.
@@ -44,10 +49,17 @@ type SignerVerifier interface {
 }
 
 //Sign - given a private key and data, compute it's signature
-func Sign(privateKey string, hash interface{}) (string, error) {
-	private, err := hex.DecodeString(privateKey)
-	if err != nil {
-		return "", err
+func Sign(privateKey interface{}, hash interface{}) (string, error) {
+	var pkBytes []byte
+	switch pkImpl := privateKey.(type) {
+	case []byte:
+		pkBytes = pkImpl
+	case string:
+		decoded, err := hex.DecodeString(pkImpl)
+		if err != nil {
+			return "", err
+		}
+		pkBytes = decoded
 	}
 	var rawHash []byte
 	switch hashImpl := hash.(type) {
@@ -63,7 +75,7 @@ func Sign(privateKey string, hash interface{}) (string, error) {
 		panic("unknown hash type")
 	}
 
-	return hex.EncodeToString(ed25519.Sign(private, rawHash)), nil
+	return hex.EncodeToString(ed25519.Sign(pkBytes, rawHash)), nil
 }
 
 //Verify - given a public key and a signature and the hash used to create the signature, verify the signature
@@ -72,6 +84,8 @@ func Verify(publicKey interface{}, signature string, hash string) (bool, error) 
 	switch publicImpl := publicKey.(type) {
 	case []byte:
 		public = publicImpl
+	case HashBytes:
+		public = publicImpl[:]
 	case string:
 		decoded, err := hex.DecodeString(publicImpl)
 		if err != nil {

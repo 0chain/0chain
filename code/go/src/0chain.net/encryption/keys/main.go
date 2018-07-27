@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -17,7 +18,10 @@ func main() {
 	generateKeys := flag.Bool("generate_keys", false, "generate_keys")
 	flag.Parse()
 	if *generateKeys {
-		publicKey, privateKey := encryption.GenerateKeys()
+		publicKey, privateKey, err := encryption.GenerateKeys()
+		if err != nil {
+			panic(err)
+		}
 		if len(*keysFile) > 0 {
 			data := []byte(fmt.Sprintf("%v\n%v", publicKey, privateKey))
 			err := ioutil.WriteFile(*keysFile, data, 0600)
@@ -37,7 +41,11 @@ func main() {
 		panic(err)
 	}
 	_, publicKey, privateKey := encryption.ReadKeys(reader)
-	clientID := encryption.Hash(publicKey)
+	pubKeyBytes, err := hex.DecodeString(publicKey)
+	if err != nil {
+		panic(err)
+	}
+	clientID := encryption.Hash(pubKeyBytes)
 	reader.Close()
 	time := common.Now()
 	fmt.Printf("data: %v\n", *data)

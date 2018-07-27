@@ -17,7 +17,6 @@ import (
 	"0chain.net/client"
 	"0chain.net/common"
 	"0chain.net/config"
-	"0chain.net/datastore"
 	"0chain.net/ememorystore"
 	"0chain.net/encryption"
 	"0chain.net/logging"
@@ -46,7 +45,6 @@ func initHandlers() {
 	chain.SetupHandlers()
 	client.SetupHandlers()
 	transaction.SetupHandlers()
-	transaction.SetupSharderHandlers()
 	block.SetupHandlers()
 	sharder.SetupHandlers()
 }
@@ -55,12 +53,13 @@ func initEntities() {
 	//TODO: For now using memory storage, but we don't need it.
 	memoryStorage := memorystore.GetStorageProvider()
 	chain.SetupEntity(memoryStorage)
-	round.SetupEntity(memoryStorage)
 	block.SetupEntity(memoryStorage)
 
+	round.SetupRoundSummaryDB()
 	block.SetupBlockSummaryDB()
 	ememoryStorage := ememorystore.GetStorageProvider()
 	block.SetupBlockSummaryEntity(ememoryStorage)
+	round.SetupEntity(ememoryStorage)
 
 	client.SetupEntity(memoryStorage)
 	transaction.SetupEntity(memoryStorage)
@@ -103,12 +102,12 @@ func main() {
 	reader.Close()
 
 	config.SetServerChainID(config.Configuration.ChainID)
-	serverChain := chain.Provider().(*chain.Chain)
-	serverChain.ID = datastore.ToKey(config.Configuration.ChainID)
-	serverChain.Decimals = int8(viper.GetInt("server_chain.decimals"))
-	serverChain.BlockSize = viper.GetInt32("server_chain.block.size")
-	serverChain.NumGenerators = viper.GetInt("server_chain.block.generators")
-	serverChain.NotarizationThreshold = viper.GetInt("server_chain.block.notarization_threshold")
+
+	common.SetupRootContext(node.GetNodeContext())
+	ctx := common.GetRootContext()
+	initEntities()
+
+	serverChain := chain.NewChainFromConfig()
 	chain.SetNetworkRelayTime(viper.GetDuration("server_chain.network.relay_time") * time.Millisecond)
 
 	if *nodesFile == "" {
@@ -133,9 +132,6 @@ func main() {
 	serverChain.Miners.ComputeProperties()
 	serverChain.Sharders.ComputeProperties()
 	serverChain.Blobbers.ComputeProperties()
-
-	common.SetupRootContext(node.GetNodeContext())
-	ctx := common.GetRootContext()
 
 	mode := "main net"
 	if config.Development() {
@@ -166,7 +162,6 @@ func main() {
 
 	blockstore.SetupFSBlockStore("data/blocks")
 
-	initEntities()
 	sharder.GetSharderChain().SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"))
 
 	serverChain.SetupWorkers(ctx)

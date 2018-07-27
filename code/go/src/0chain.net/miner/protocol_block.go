@@ -8,6 +8,7 @@ import (
 	metrics "github.com/rcrowley/go-metrics"
 
 	"0chain.net/chain"
+	"0chain.net/config"
 
 	"0chain.net/block"
 	"0chain.net/client"
@@ -41,13 +42,14 @@ func (mc *Chain) StartRound(ctx context.Context, r *Round) {
 func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.BlockStateHandler) error {
 	clients := make(map[string]*client.Client)
 	b.Txns = make([]*transaction.Transaction, mc.BlockSize)
-	//TODO: wasting this because []interface{} != []*transaction.Transaction in Go
+	//wasting this because []interface{} != []*transaction.Transaction in Go
 	etxns := make([]datastore.Entity, mc.BlockSize)
 	var invalidTxns []datastore.Entity
 	var idx int32
 	var ierr error
 	var count int32
 	var roundMismatch bool
+	var hasOwnerTxn bool
 	var txnIterHandler = func(ctx context.Context, qe datastore.CollectionEntity) bool {
 		if mc.CurrentRound > b.Round {
 			roundMismatch = true
@@ -59,29 +61,50 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 			Logger.Error("generate block (invalid entity)", zap.Any("entity", qe))
 			return true
 		}
-		if !common.Within(int64(txn.CreationDate), transaction.TXN_TIME_TOLERANCE-1) {
+		var debugTxn = txn.DebugTxn()
+
+		if debugTxn {
+			Logger.Info("generate block (debug transaction)", zap.String("txn", txn.Hash), zap.String("txn_object", datastore.ToJSON(txn).String()))
+		}
+		if !mc.validateTransaction(txn) {
 			invalidTxns = append(invalidTxns, qe)
+			if debugTxn {
+				Logger.Info("generate block (debug transaction) error - txn creation not within tolerance", zap.String("txn", txn.Hash), zap.Any("now", common.Now()))
+			}
 			return true
 		}
-
 		if ok, err := b.PrevBlock.ChainHasTransaction(txn); ok || err != nil {
 			if err != nil {
 				ierr = err
 			}
 			return true
 		}
-
+		if !mc.UpdateState(txn, b) {
+			return true
+		}
+		if txn.ClientID == mc.OwnerID {
+			hasOwnerTxn = true
+		}
 		//Setting the score lower so the next time blocks are generated these transactions don't show up at the top
 		txn.SetCollectionScore(txn.GetCollectionScore() - 10*60)
-
 		b.Txns[idx] = txn
 		etxns[idx] = txn
 		b.AddTransaction(txn)
+		clients[txn.ClientID] = nil
 		idx++
 
-		clients[txn.ClientID] = nil
+		childTxns := txn.GenerateChildTransactions(ctx)
+		if childTxns != nil {
+			for _, ctxn := range childTxns {
+				b.Txns[idx] = ctxn
+				etxns[idx] = ctxn
+				b.AddTransaction(ctxn)
+				clients[ctxn.ClientID] = nil
+				idx++
+			}
+		}
 
-		if idx == mc.BlockSize {
+		if idx >= mc.BlockSize {
 			return false
 		}
 		return true
@@ -107,14 +130,17 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	if err != nil {
 		return err
 	}
-
 	if idx != mc.BlockSize {
-		b.Txns = nil
-		Logger.Debug("generate block (insufficient txns)", zap.Int64("round", b.Round), zap.Int32("iteration_count", count), zap.Int32("block_size", mc.BlockSize), zap.Int32("num_txns", idx))
-		return common.NewError(InsufficientTxns, fmt.Sprintf("not sufficient txns to make a block yet for round %v (iterated %v, invalid %v)", b.Round, count, len(invalidTxns)))
+		if !hasOwnerTxn {
+			b.Txns = nil
+			Logger.Debug("generate block (insufficient txns)", zap.Int64("round", b.Round), zap.Int32("iteration_count", count), zap.Int32("block_size", mc.BlockSize), zap.Int32("num_txns", idx))
+			return common.NewError(InsufficientTxns, fmt.Sprintf("not sufficient txns to make a block yet for round %v (iterated %v, invalid %v)", b.Round, count, len(invalidTxns)))
+		}
+		b.Txns = b.Txns[:idx]
+		etxns = etxns[:idx]
 	}
 	if count > 10*mc.BlockSize {
-		Logger.Debug("generate block (too much iteration)", zap.Int64("round", b.Round), zap.Int32("iteration_count", count))
+		Logger.Info("generate block (too much iteration)", zap.Int64("round", b.Round), zap.Int32("iteration_count", count))
 	}
 	client.GetClients(ctx, clients)
 	Logger.Debug("generate block (assemble)", zap.Int64("round", b.Round), zap.Duration("time", time.Since(start)))
@@ -142,6 +168,13 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	Logger.Info("generate block (assemble+update+sign)", zap.Int64("round", b.Round), zap.Duration("time", time.Since(start)), zap.String("block", b.Hash), zap.String("prev_block", b.PrevBlock.Hash), zap.Int32("iteration_count", count), zap.Float64("p_chain_weight", b.PrevBlock.ChainWeight))
 	go b.ComputeTxnMap()
 	return nil
+}
+
+func (mc *Chain) validateTransaction(txn *transaction.Transaction) bool {
+	if !common.Within(int64(txn.CreationDate), transaction.TXN_TIME_TOLERANCE-1) {
+		return false
+	}
+	return true
 }
 
 /*UpdatePendingBlock - updates the block that is generated and pending rest of the process */
@@ -261,6 +294,14 @@ func (mc *Chain) AddVerificationTicket(ctx context.Context, b *block.Block, bvt 
 /*UpdateFinalizedBlock - update the latest finalized block */
 func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round), zap.Int64("current_round", mc.CurrentRound), zap.Float64("weight", b.Weight()), zap.Float64("chain_weight", b.ChainWeight), zap.Int("blocks_size", len(mc.Blocks)), zap.Int("rounds_size", len(mc.rounds)))
+	if config.Development() {
+		for _, t := range b.Txns {
+			if !t.DebugTxn() {
+				continue
+			}
+			Logger.Info("update finalized block (debug transaction)", zap.String("txn", t.Hash), zap.String("block", b.Hash))
+		}
+	}
 	mc.FinalizeBlock(ctx, b)
 	mc.SendFinalizedBlock(ctx, b)
 	fr := mc.GetRound(b.Round)

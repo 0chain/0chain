@@ -21,7 +21,7 @@ func TestClientChunkSave(t *testing.T) {
 	numWorkers := 1000
 	done := make(chan bool, 100)
 	for i := 1; i <= numWorkers; i++ {
-		publicKey, privateKey := encryption.GenerateKeys()
+		publicKey, privateKey, _ := encryption.GenerateKeys()
 		if privateKey == "" {
 			fmt.Println("Error genreating keys")
 			continue

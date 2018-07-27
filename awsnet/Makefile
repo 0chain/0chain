@@ -113,6 +113,8 @@ agentrole-assemble-remote:
 # Stop the sharder, miner
 agentrole-teardown-remote:
 	$(REMOTE_PLAY)
+
+
 $(TARGETS): show
 	@echo "Make running target=$@"
 	@$(PLAYBOOK) -i $(INVENTORY) $(CONFIG_FILE) --extra-vars="access=$(ACCESS) network=$(network) repo=$(ZCHAIN_REPO) network_dir=$(NETWORK_DIR)" --tags $@

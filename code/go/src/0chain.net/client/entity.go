@@ -2,20 +2,30 @@ package client
 
 import (
 	"context"
+	"encoding/hex"
 	"time"
 
+	"0chain.net/cache"
 	"0chain.net/common"
 	"0chain.net/datastore"
 	"0chain.net/encryption"
 	"0chain.net/memorystore"
 )
 
+var cacher cache.Cache
+
+func init() {
+	cacher = cache.GetLFUCacheProvider()
+	cacher.New(256)
+}
+
 /*Client - data structure that holds the client data */
 type Client struct {
 	datastore.IDField
 	datastore.VersionField
 	datastore.CreationDateField
-	PublicKey string `json:"public_key"`
+	PublicKey      string               `json:"public_key"`
+	PublicKeyBytes encryption.HashBytes `json:"-"`
 }
 
 var clientEntityMetadata *datastore.EntityMetadataImpl
@@ -30,8 +40,30 @@ func (c *Client) Validate(ctx context.Context) error {
 	if datastore.IsEmpty(c.ID) {
 		return common.InvalidRequest("client id is required")
 	}
-	if !datastore.IsEqual(c.ID, datastore.ToKey(encryption.Hash(c.PublicKey))) {
+	if !datastore.IsEqual(c.ID, datastore.ToKey(encryption.Hash(c.PublicKeyBytes))) {
 		return common.InvalidRequest("client id is not a SHA3-256 hash of the public key")
+	}
+	return nil
+}
+
+/*GetClient - gets client from either cache or database*/
+func (c *Client) GetClient(ctx context.Context, key datastore.Key) error {
+	var ok bool
+	var co *Client
+	ico, cerr := cacher.Get(key)
+	if cerr == nil {
+		co, ok = ico.(*Client)
+	}
+	if !ok {
+		err := c.Read(ctx, key)
+		if err == nil {
+			cacher.Add(key, c)
+		}
+		return err
+	} else {
+		c.ID = co.ID
+		c.PublicKey = co.PublicKey
+		c.SetPublicKey(c.PublicKey)
 	}
 	return nil
 }
@@ -53,7 +85,7 @@ func (c *Client) Delete(ctx context.Context) error {
 
 /*Verify - given a signature and hash verify it with client's public key */
 func (c *Client) Verify(signature string, hash string) (bool, error) {
-	return encryption.Verify(c.PublicKey, signature, hash)
+	return encryption.Verify(c.PublicKeyBytes, signature, hash)
 }
 
 /*Provider - entity provider for client object */
@@ -62,6 +94,26 @@ func Provider() datastore.Entity {
 	c.Version = "1.0"
 	c.InitializeCreationDate()
 	return c
+}
+
+/*ComputeProperties - implement interface */
+func (c *Client) ComputeProperties() {
+	c.computePublicKeyBytes(c.PublicKey)
+}
+
+func (c *Client) computePublicKeyBytes(key string) {
+	b, _ := hex.DecodeString(key)
+	if len(b) > len(c.PublicKeyBytes) {
+		b = b[len(b)-encryption.HASH_LENGTH:]
+	}
+	copy(c.PublicKeyBytes[encryption.HASH_LENGTH-len(b):], b)
+}
+
+/*SetPublicKey - set the public key */
+func (c *Client) SetPublicKey(key string) {
+	c.PublicKey = key
+	c.computePublicKeyBytes(key)
+	c.ID = encryption.Hash(c.PublicKeyBytes)
 }
 
 /*SetupEntity - setup the entity */

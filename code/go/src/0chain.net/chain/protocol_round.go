@@ -7,6 +7,7 @@ import (
 	"0chain.net/block"
 	. "0chain.net/logging"
 	"0chain.net/round"
+	"0chain.net/util"
 	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
@@ -39,18 +40,18 @@ func (c *Chain) FinalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 		return
 	}
 	time.Sleep(FINALIZATION_TIME)
-	fb := c.ComputeFinalizedBlock(ctx, r)
-	if fb == nil {
+	lfb := c.ComputeFinalizedBlock(ctx, r)
+	if lfb == nil {
 		Logger.Debug("finalization - no decisive block to finalize yet or don't have all the necessary blocks", zap.Any("round", r.Number))
 		return
 	}
-	if fb.Hash == c.LatestFinalizedBlock.Hash {
+	if lfb.Hash == c.LatestFinalizedBlock.Hash {
 		return
 	}
 	lfbHash := c.LatestFinalizedBlock.Hash
-	c.LatestFinalizedBlock = fb
+	c.LatestFinalizedBlock = lfb
 	frchain := make([]*block.Block, 0, 1)
-	for b := fb; b != nil && b.Hash != lfbHash; b = b.PrevBlock {
+	for b := lfb; b != nil && b.Hash != lfbHash; b = b.PrevBlock {
 		frchain = append(frchain, b)
 	}
 	if len(frchain) == 0 {
@@ -58,12 +59,15 @@ func (c *Chain) FinalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 	}
 	deadBlocks := make([]*block.Block, 0, 1)
 	for idx := range frchain {
-		fb = frchain[len(frchain)-1-idx]
-		Logger.Debug("finalize round", zap.Int64("round", r.Number), zap.Int64("finalized_round", fb.Round), zap.String("hash", fb.Hash))
+		fb := frchain[len(frchain)-1-idx]
+		Logger.Info("finalize round", zap.Int64("round", r.Number), zap.Int64("finalized_round", fb.Round), zap.String("hash", fb.Hash))
 		if time.Since(fts) < 10*time.Second {
 			FinalizationTimer.UpdateSince(fts)
 		}
 		fts = time.Now()
+		if fb.ClientStateMT != nil {
+			fb.ClientStateMT.SaveChanges(c.StateDB, util.Origin(fb.Round), false)
+		}
 		bsh.UpdateFinalizedBlock(ctx, fb)
 		frb := c.GetRoundBlocks(fb.Round)
 		for _, b := range frb {
@@ -71,6 +75,9 @@ func (c *Chain) FinalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 				deadBlocks = append(deadBlocks, b)
 			}
 		}
+	}
+	if lfb.ClientStateMT != nil {
+		lfb.ClientStateMT.SetNodeDB(c.StateDB)
 	}
 	// Prune all the dead blocks
 	c.DeleteBlocks(deadBlocks)

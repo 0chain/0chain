@@ -17,8 +17,8 @@ func TestHash(t *testing.T) {
 }
 
 func TestGenerateKeys(t *testing.T) {
-	publicKey, privateKey := GenerateKeys()
-	fmt.Printf("keys: %v,%v\n", privateKey, publicKey)
+	publicKey, privateKey, err := GenerateKeys()
+	fmt.Printf("keys: %v,%v, %v\n", privateKey, publicKey, err)
 }
 
 func BenchmarkGenerateKeys(b *testing.B) {
@@ -28,7 +28,7 @@ func BenchmarkGenerateKeys(b *testing.B) {
 }
 
 func TestSignAndVerify(t *testing.T) {
-	publicKey, privateKey := GenerateKeys()
+	publicKey, privateKey, err := GenerateKeys()
 	signature, err := Sign(privateKey, expectedHash)
 	if err != nil {
 		fmt.Printf("error signing: %v\n", err)
@@ -43,14 +43,17 @@ func TestSignAndVerify(t *testing.T) {
 }
 
 func BenchmarkSign(b *testing.B) {
-	_, privateKey := GenerateKeys()
+	_, privateKey, err := GenerateKeys()
+	if err == nil {
+		return
+	}
 	for i := 0; i < b.N; i++ {
 		Sign(privateKey, expectedHash)
 	}
 }
 
 func BenchmarkVerify(b *testing.B) {
-	publicKey, privateKey := GenerateKeys()
+	publicKey, privateKey, err := GenerateKeys()
 	signature, err := Sign(privateKey, expectedHash)
 	if err != nil {
 		return

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"0chain.net/ememorystore"
+	"0chain.net/persistencestore"
 	"0chain.net/transaction"
 
 	"0chain.net/datastore"
@@ -47,4 +48,16 @@ func GetTransactionConfirmation(ctx context.Context, hash string) (*transaction.
 	confirmation.MerkleTreeRoot = mt.GetRoot()
 	confirmation.MerkleTreePath = mt.GetPath(confirmation)
 	return confirmation, nil
+}
+
+/*StoreTransactions - persists given list of transactions*/
+func (sc *Chain) StoreTransactions(ctx context.Context, txns []datastore.Entity) error {
+	txnSummaryMetadata := datastore.GetEntityMetadata("txn_summary")
+	tctx := persistencestore.WithEntityConnection(ctx, txnSummaryMetadata)
+	defer persistencestore.Close(tctx)
+	err := txnSummaryMetadata.GetStore().MultiWrite(tctx, txnSummaryMetadata, txns)
+	if err != nil {
+		return err
+	}
+	return nil
 }

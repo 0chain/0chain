@@ -3,6 +3,7 @@ package transaction
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"0chain.net/client"
@@ -12,6 +13,7 @@ import (
 	"0chain.net/encryption"
 	. "0chain.net/logging"
 	"0chain.net/memorystore"
+	"0chain.net/util"
 	"go.uber.org/zap"
 )
 
@@ -39,6 +41,11 @@ type Transaction struct {
 	Value           int64            `json:"transaction_value" msgpack:"v"` // The value associated with this transaction
 	Signature       string           `json:"signature" msgpack:"s"`
 	CreationDate    common.Timestamp `json:"creation_date" msgpack:"ts"`
+
+	TransactionType int `json:"transaction_type" msgpack:"tt"`
+
+	// a parent transaction introdcues certain state and this state is managed as new transactions are created referencing to this parent transaction
+	ParentTransactionHash datastore.Key `json:"parent_txn_hash,omitempty" msgpack:"ptid,omitempty"`
 }
 
 var transactionEntityMetadata *datastore.EntityMetadataImpl
@@ -58,7 +65,9 @@ func (t *Transaction) ComputeProperties() {
 		if t.ClientID == "" {
 			// Doing this is OK because the transaction signature has ClientID
 			// that won't pass verification if some other client's public is put in
-			t.ClientID = encryption.Hash(t.PublicKey)
+			co := &client.Client{}
+			co.SetPublicKey(t.PublicKey)
+			t.ClientID = co.ID
 		}
 	} else {
 		if t.ClientID == "" {
@@ -77,7 +86,7 @@ func (t *Transaction) Validate(ctx context.Context) error {
 		return common.InvalidRequest("hash required for transaction")
 	}
 	if !common.Within(int64(t.CreationDate), TXN_TIME_TOLERANCE) {
-		return common.InvalidRequest("Transaction creation time not within tolerance")
+		return common.InvalidRequest(fmt.Sprintf("Transaction creation time not within tolerance: now=%v txn.creation_date=%v", time.Now().Unix(), t.CreationDate))
 	}
 	err = t.VerifyHash(ctx)
 	if err != nil {
@@ -87,6 +96,16 @@ func (t *Transaction) Validate(ctx context.Context) error {
 	err = t.VerifySignature(ctx)
 	if err != nil {
 		return err
+	}
+	if t.TransactionType%2 == 1 {
+		if t.ParentTransactionHash == "" {
+			return common.InvalidRequest("Transaction type requires a parent transaction")
+		}
+	} else {
+		//Do we want to support multi-level transactions?
+		if t.ParentTransactionHash != "" {
+			return common.InvalidRequest("a parent transaction can't have a parent transaction")
+		}
 	}
 	return nil
 }
@@ -118,10 +137,15 @@ func (t *Transaction) GetHash() string {
 	return t.Hash
 }
 
+/*GetHashBytes - implement Hashable interface */
+func (t *Transaction) GetHashBytes() []byte {
+	return util.HashStringToBytes(t.Hash)
+}
+
 /*GetClient - get the Client object associated with the transaction */
 func (t *Transaction) GetClient(ctx context.Context) (*client.Client, error) {
 	co := &client.Client{}
-	err := co.Read(ctx, t.ClientID)
+	err := co.GetClient(ctx, t.ClientID)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +167,7 @@ func (t *Transaction) ComputeHash() string {
 func (t *Transaction) VerifyHash(ctx context.Context) error {
 	if t.Hash != t.ComputeHash() {
 		Logger.Debug("verify hash (hash mismatch)", zap.String("hash", t.Hash), zap.String("computed_hash", t.ComputeHash()), zap.String("hash_data", t.HashData()), zap.String("txn", datastore.ToJSON(t).String()))
-		return common.NewError("hash_mismatch", fmt.Sprintf("The hash of the data doesn't match with the provided hash"))
+		return common.NewError("hash_mismatch", fmt.Sprintf("The hash of the data doesn't match with the provided hash: %v %v %v", t.Hash, t.ComputeHash(), t.HashData()))
 	}
 	return nil
 }
@@ -161,6 +185,7 @@ func (t *Transaction) VerifySignature(ctx context.Context) error {
 		co.ID = t.ClientID
 		co.PublicKey = t.PublicKey
 		t.PublicKey = ""
+		co.SetPublicKey(co.PublicKey)
 	}
 	correctSignature, err := co.Verify(t.Signature, t.Hash)
 	if err != nil {
@@ -208,7 +233,7 @@ func SetupEntity(store datastore.Store) {
 }
 
 /*Sign - given a client and client's private key, sign this tranasction */
-func (t *Transaction) Sign(privateKey string) (string, error) {
+func (t *Transaction) Sign(privateKey []byte) (string, error) {
 	t.Hash = t.ComputeHash()
 	signature, err := encryption.Sign(privateKey, t.Hash)
 	if err != nil {
@@ -224,4 +249,21 @@ func (t *Transaction) GetSummary() *TransactionSummary {
 	summary.Hash = t.Hash
 	summary.CreationDate = t.CreationDate
 	return summary
+}
+
+/*GenerateChildTransactions - generate child transactions for this parent transaction */
+func (t *Transaction) GenerateChildTransactions(ctx context.Context) []*Transaction {
+	//TODO: putting a transaction into a block may need to accompany associated child transactions
+	// E.g: When a storage allocation lockin transaction is processed, it may need to add additional child transactions to the block one for each blobber
+	return nil
+}
+
+/*DebugTxn - is this a transaction that needs being debugged
+- applicable only when running in test mode and the transaction_data string contains debug keyword somewhere in it
+*/
+func (t *Transaction) DebugTxn() bool {
+	if !config.Development() {
+		return false
+	}
+	return strings.Index(t.TransactionData, "debug") >= 0
 }

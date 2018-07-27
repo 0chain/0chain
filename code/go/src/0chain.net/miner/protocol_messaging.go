@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"0chain.net/block"
+	"0chain.net/chain"
 	"0chain.net/datastore"
 	"0chain.net/round"
 )
@@ -35,14 +36,14 @@ func (mc *Chain) SendNotarization(ctx context.Context, b *block.Block) {
 
 /*SendNotarizedBlock - send the notarized block */
 func (mc *Chain) SendNotarizedBlock(ctx context.Context, b *block.Block) {
-	if mc.BlocksToSharder == NOTARIZED {
+	if mc.BlocksToSharder == chain.NOTARIZED {
 		mc.Sharders.SendAll(NotarizedBlockSender(b))
 	}
 }
 
 /*SendFinalizedBlock - send the finalized block to the sharders */
 func (mc *Chain) SendFinalizedBlock(ctx context.Context, b *block.Block) {
-	if mc.BlocksToSharder == FINALIZED {
+	if mc.BlocksToSharder == chain.FINALIZED {
 		mc.Sharders.SendAll(FinalizedBlockSender(b))
 	}
 }

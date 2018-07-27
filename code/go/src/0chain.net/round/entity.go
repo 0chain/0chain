@@ -1,9 +1,12 @@
 package round
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"sync"
+
+	"0chain.net/ememorystore"
 
 	"0chain.net/block"
 	"0chain.net/datastore"
@@ -28,7 +31,8 @@ type Round struct {
 	// For generator, this is the block the miner is generating till a notraization is received
 	// For a verifier, this is the block that is currently the best block received for verification.
 	// Once a round is finalized, this is the finalized block of the given round
-	Block *block.Block `json:"-"`
+	Block     *block.Block `json:"-"`
+	BlockHash string       `json:"block_hash"`
 
 	perm  []int
 	state int
@@ -87,6 +91,7 @@ func (r *Round) IsFinalizing() bool {
 func (r *Round) Finalize(b *block.Block) {
 	r.state = RoundStateFinalized
 	r.Block = b
+	r.BlockHash = b.Hash
 }
 
 /*IsFinalized - indicates if the round is finalized */
@@ -102,11 +107,37 @@ func Provider() datastore.Entity {
 	return r
 }
 
+/*Read - read round entity from store */
+func (r *Round) Read(ctx context.Context, key datastore.Key) error {
+	return r.GetEntityMetadata().GetStore().Read(ctx, key, r)
+}
+
+/*Write - write round entity to store */
+func (r *Round) Write(ctx context.Context) error {
+	return r.GetEntityMetadata().GetStore().Write(ctx, r)
+}
+
+/*Delete - delete round entity from store */
+func (r *Round) Delete(ctx context.Context) error {
+	return r.GetEntityMetadata().GetStore().Delete(ctx, r)
+}
+
+//SetupRoundSummaryDB - setup the round summary db
+func SetupRoundSummaryDB() {
+	db, err := ememorystore.CreateDB("data/rocksdb/roundsummary")
+	if err != nil {
+		panic(err)
+	}
+	ememorystore.AddPool("roundsummarydb", db)
+}
+
 /*SetupEntity - setup the entity */
 func SetupEntity(store datastore.Store) {
 	roundEntityMetadata = datastore.MetadataProvider()
 	roundEntityMetadata.Name = "round"
+	roundEntityMetadata.DB = "roundsummarydb"
 	roundEntityMetadata.Provider = Provider
+	roundEntityMetadata.Store = store
 	roundEntityMetadata.IDColumnName = "number"
 	datastore.RegisterEntityMetadata("round", roundEntityMetadata)
 }

@@ -6,7 +6,6 @@ chmod +x /0chain/cassandra/wait-for-it.sh
 cd ../0chain/sql
 
 cqlsh -f zerochain_keyspace.sql cassandra
-cqlsh -f block_summary.sql cassandra
 cqlsh -f txn_summary.sql cassandra
 
 echo "### CASSANDRA INITIALISED! ###"
