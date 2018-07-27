@@ -48,6 +48,10 @@ func (c *Chain) FinalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 	if lfb.Hash == c.LatestFinalizedBlock.Hash {
 		return
 	}
+	if lfb.Round < c.LatestFinalizedBlock.Round {
+		Logger.Info("finalize round - TODO: need to repair", zap.Any("lf_round", c.LatestFinalizedBlock.Round), zap.Int64("new_lf_round", lfb.Round))
+		return
+	}
 	lfbHash := c.LatestFinalizedBlock.Hash
 	c.LatestFinalizedBlock = lfb
 	frchain := make([]*block.Block, 0, 1)
@@ -67,6 +71,7 @@ func (c *Chain) FinalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 		fts = time.Now()
 		if fb.ClientStateMT != nil {
 			fb.ClientStateMT.SaveChanges(c.StateDB, util.Origin(fb.Round), false)
+			Logger.Info("finalize round - save state", zap.String("hash", util.ToHex(fb.ClientStateMT.GetRoot())), zap.Int("changes", len(fb.ClientStateMT.GetChangeCollector().GetChanges())))
 		}
 		bsh.UpdateFinalizedBlock(ctx, fb)
 		frb := c.GetRoundBlocks(fb.Round)

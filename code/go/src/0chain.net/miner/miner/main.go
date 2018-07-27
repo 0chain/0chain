@@ -173,10 +173,6 @@ func main() {
 	miner.SetupWorkers()
 	initServer()
 	go StartProtocol()
-
-	if config.Development() {
-		go TransactionGenerator(serverChain.BlockSize)
-	}
 	Logger.Info("Ready to listen to the requests")
 	startTime = time.Now().UTC()
 	log.Fatal(server.ListenAndServe())
@@ -216,7 +212,9 @@ func StartProtocol() {
 			}
 		}
 	}
-
+	if config.Development() {
+		go TransactionGenerator(mc.BlockSize)
+	}
 	msg := miner.BlockMessage{Type: miner.MessageStartRound, Round: msr}
 	msgChannel := mc.GetBlockMessageChannel()
 	if mc.CurrentRound == 0 {

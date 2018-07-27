@@ -170,8 +170,11 @@ func (b *Block) SetPreviousBlock(prevBlock *Block) {
 /*SetClientStateDB - set the client state from the previous block */
 func (b *Block) SetClientStateDB(prevBlock *Block) {
 	var pndb util.NodeDB
+	var rootHash util.Key
 	if prevBlock != nil && prevBlock.ClientStateMT != nil {
 		pndb = prevBlock.ClientStateMT.GetNodeDB()
+		rootHash = prevBlock.ClientStateMT.GetChangeCollector().GetRoot()
+		Logger.Info("prev state root\n", zap.Int64("round", b.Round), zap.String("root", util.ToHex(rootHash)))
 	} else {
 		Logger.Info("TODO: state sync\n", zap.Int64("round", b.Round))
 		pndb = util.NewMemoryNodeDB() // TODO: state sync
@@ -179,6 +182,7 @@ func (b *Block) SetClientStateDB(prevBlock *Block) {
 	mndb := util.NewMemoryNodeDB()
 	ndb := util.NewLevelNodeDB(mndb, pndb, false)
 	b.ClientStateMT = util.NewMerklePatriciaTrie(ndb)
+	b.ClientStateMT.SetRoot(rootHash)
 }
 
 /*GetPreviousBlock - returns the previous block */

@@ -168,4 +168,5 @@ func GenerateClients(numClients int) {
 			//panic(err)
 		}
 	}
+	Logger.Info("generation of wallets complete", zap.Int("wallets", len(wallets)))
 }

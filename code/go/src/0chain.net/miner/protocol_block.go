@@ -9,6 +9,7 @@ import (
 
 	"0chain.net/chain"
 	"0chain.net/config"
+	"0chain.net/util"
 
 	"0chain.net/block"
 	"0chain.net/client"
@@ -79,7 +80,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 			}
 			return true
 		}
-		if !mc.UpdateState(txn, b) {
+		if !mc.UpdateState(b, txn) {
 			return true
 		}
 		if txn.ClientID == mc.OwnerID {
@@ -165,7 +166,9 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	if err != nil {
 		return err
 	}
-	Logger.Info("generate block (assemble+update+sign)", zap.Int64("round", b.Round), zap.Duration("time", time.Since(start)), zap.String("block", b.Hash), zap.String("prev_block", b.PrevBlock.Hash), zap.Int32("iteration_count", count), zap.Float64("p_chain_weight", b.PrevBlock.ChainWeight))
+	Logger.Info("generate block (assemble+update+sign)", zap.Int64("round", b.Round), zap.Duration("time", time.Since(start)),
+		zap.String("block", b.Hash), zap.String("prev_block", b.PrevBlock.Hash), zap.String("state_hash", util.ToHex(b.ClientStateMT.GetChangeCollector().GetRoot())),
+		zap.Int32("iteration_count", count), zap.Float64("p_chain_weight", b.PrevBlock.ChainWeight))
 	go b.ComputeTxnMap()
 	return nil
 }
@@ -244,6 +247,11 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 				validChannel <- false
 				return
 			}
+			if !mc.UpdateState(b, txn) {
+				cancel = true
+				validChannel <- false
+				return
+			}
 		}
 		validChannel <- true
 	}
@@ -269,6 +277,7 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 			break
 		}
 	}
+	//TODO: state hash computed with local state updates should match the state hash in the block
 	return nil
 }
 

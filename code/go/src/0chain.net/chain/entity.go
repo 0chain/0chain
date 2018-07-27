@@ -187,6 +187,7 @@ func (c *Chain) setupInitialState() util.MerklePatriciaTrieI {
 	pmt := util.NewMerklePatriciaTrie(c.StateDB)
 	pmt.Insert(util.Path(c.OwnerID), c.getInitialState())
 	pmt.SaveChanges(c.StateDB, 0, false)
+	Logger.Info("initial state root", zap.Any("hash", pmt.GetRoot()))
 	return pmt
 }
 
@@ -233,7 +234,7 @@ func (c *Chain) AddBlock(b *block.Block) {
 			b.SetPreviousBlock(pb)
 		} else {
 			b.SetClientStateDB(nil)
-			Logger.Debug("previous block not present", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("prev_block", b.PrevHash))
+			Logger.Info("previous block not present", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("prev_block", b.PrevHash))
 		}
 	}
 }

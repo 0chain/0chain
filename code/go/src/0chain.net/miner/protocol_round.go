@@ -14,7 +14,9 @@ import (
 	"0chain.net/memorystore"
 	"0chain.net/node"
 	"0chain.net/round"
+	"0chain.net/state"
 	"0chain.net/transaction"
+	"0chain.net/util"
 	"go.uber.org/zap"
 )
 
@@ -96,12 +98,22 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	b.MagicBlockHash = mc.CurrentMagicBlock.Hash
 	b.RoundRandomSeed = r.RandomSeed
 	b.SetPreviousBlock(pb)
+	if b.Round == 1 {
+		val, err := b.ClientStateMT.GetNodeValue(util.Path(mc.OwnerID))
+		if err != nil {
+			panic(err)
+		} else {
+			state := mc.ClientStateDeserializer.Deserialize(val).(*state.State)
+			Logger.Info("initial tokens: %v\n", zap.Any("state", state))
+		}
+	}
 	for true {
 		if mc.CurrentRound > b.Round {
 			Logger.Debug("generate block (round mismatch)", zap.Any("round", r.Number), zap.Any("current_round", mc.CurrentRound))
 			return nil, ErrRoundMismatch
 		}
 		txnCount := transaction.TransactionCount
+		b.ClientStateMT.ResetChangeCollector()
 		err := mc.GenerateBlock(ctx, b, mc)
 		if err != nil {
 			cerr, ok := err.(*common.Error)
@@ -262,7 +274,7 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r *Round, b *block.Block)
 			Logger.Error("verify round", zap.Any("round", r.Number), zap.Any("block", b.Hash), zap.Any("prev_block", b.PrevHash), zap.Error(err))
 			return nil, common.NewError(PreviousBlockUnknown, "Previous block is not known")
 		}
-		b.PrevBlock = pb
+		b.SetPreviousBlock(pb)
 	}
 	/* Note: We are verifying the notarization of the previous block we have with
 	   the prev verification tickets of the current block. This is right as all the
