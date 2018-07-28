@@ -39,3 +39,32 @@ type MerklePatriciaTrieI interface {
 	// only for testing and debugging
 	PrettyPrint(w io.Writer) error
 }
+
+//ContextKey - a type for context key
+type ContextKey string
+
+/*PruneStatsKey - key used to get the prune stats object from the context */
+const PruneStatsKey ContextKey = "prunestatskey"
+
+/*WithPruneStats - return a context with a prune stats object */
+func WithPruneStats(ctx context.Context) context.Context {
+	ps := &PruneStats{}
+	return context.WithValue(ctx, PruneStatsKey, ps)
+}
+
+/*GetPruneStats - returns a prune stats object from the context */
+func GetPruneStats(ctx context.Context) *PruneStats {
+	v := ctx.Value(PruneStatsKey)
+	if v == nil {
+		return nil
+	}
+	return v.(*PruneStats)
+}
+
+/*PruneStats - gathers statistics while pruning */
+type PruneStats struct {
+	Origin      Origin
+	Total       int64
+	BelowOrigin int64
+	Deleted     int64
+}
