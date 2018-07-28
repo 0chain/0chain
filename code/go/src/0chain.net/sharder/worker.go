@@ -90,6 +90,7 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 	}
 }
 
+/*BlockStorageWorker - a background worker that processes a block to store it in suitable formats */
 func (sc *Chain) BlockStorageWorker(ctx context.Context) {
 	for true {
 		select {
@@ -110,15 +111,16 @@ func (sc *Chain) BlockStorageWorker(ctx context.Context) {
 					}
 					err = sc.StoreTransactions(ctx, sTxns)
 					if err != nil {
+						Logger.Error("save transactions error", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
 						err = sc.retryPersistingTransactions(ctx, sTxns, b)
 						if err != nil {
-							Logger.Error("db error (save transaction)", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
+							Logger.Error("save transactions error", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
 							continue
 						} else {
-							Logger.Info("transaction saved successfully", zap.Any("round", b.Round), zap.Any("block", b.Hash))
+							Logger.Info("transactions saved successfully", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Int("block_size", len(b.Txns)))
 						}
 					} else {
-						Logger.Info("transaction saved successfully", zap.Any("round", b.Round), zap.Any("block", b.Hash))
+						Logger.Info("transactions saved successfully", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Int("block_size", len(b.Txns)))
 					}
 					err = sc.StoreBlock(ctx, b)
 					if err != nil {
@@ -138,11 +140,16 @@ func (sc *Chain) BlockStorageWorker(ctx context.Context) {
 func (sc *Chain) retryPersistingTransactions(ctx context.Context, sTxns []datastore.Entity, b *block.Block) error {
 	var err error
 	for numTrials := 1; numTrials <= 10; numTrials++ {
-		time.Sleep(10 * time.Millisecond)
-		Logger.Info("retrying to save transactions to db", zap.Any("trail", numTrials), zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Error(err))
+		Logger.Info("retrying to save transactions to db", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("trail", numTrials), zap.Error(err))
 		err = sc.StoreTransactions(ctx, sTxns)
 		if err == nil {
 			return nil
+		}
+		if err.Error() == "gocql: no host available in the pool" {
+			// long gc pauses can result in this error and so waiting longer to retry
+			time.Sleep(100 * time.Millisecond)
+		} else {
+			time.Sleep(10 * time.Millisecond)
 		}
 	}
 	return err
