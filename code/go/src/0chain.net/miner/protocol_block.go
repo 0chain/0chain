@@ -83,7 +83,8 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		}
 		if !mc.UpdateState(b, txn) {
 			failedStateCount++
-			return true
+			//TODO: state is WIP
+			//return true
 		}
 		if txn.ClientID == mc.OwnerID {
 			hasOwnerTxn = true
@@ -206,7 +207,7 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockV
 	}
 	err = mc.ComputeState(ctx, b)
 	if err != nil {
-		Logger.Error("verify block - error computing state (TODO sync)", zap.Error(err))
+		Logger.Debug("verify block - error computing state (TODO sync)", zap.Error(err))
 		//return nil, err
 	}
 	bvt, err := mc.SignBlock(ctx, b)

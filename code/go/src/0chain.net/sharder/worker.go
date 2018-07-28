@@ -79,7 +79,7 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 			}
 			err = sc.ComputeState(ctx, b)
 			if err != nil {
-				Logger.Error("error computing the state", zap.Error(err))
+				Logger.Debug("error computing the state (TODO sync state)", zap.Error(err))
 			}
 			er.AddNotarizedBlock(b)
 			pr := sc.GetRound(er.Number - 1)
