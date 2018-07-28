@@ -51,6 +51,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	var count int32
 	var roundMismatch bool
 	var hasOwnerTxn bool
+	var failedStateCount int32
 	var txnIterHandler = func(ctx context.Context, qe datastore.CollectionEntity) bool {
 		if mc.CurrentRound > b.Round {
 			roundMismatch = true
@@ -81,6 +82,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 			return true
 		}
 		if !mc.UpdateState(b, txn) {
+			failedStateCount++
 			return true
 		}
 		if txn.ClientID == mc.OwnerID {
@@ -136,7 +138,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		if blockSize == 0 || !hasOwnerTxn {
 			b.Txns = nil
 			Logger.Debug("generate block (insufficient txns)", zap.Int64("round", b.Round), zap.Int32("iteration_count", count), zap.Int32("block_size", blockSize))
-			return common.NewError(InsufficientTxns, fmt.Sprintf("not sufficient txns to make a block yet for round %v (iterated %v,valid %v, invalid %v)", b.Round, count, blockSize, len(invalidTxns)))
+			return common.NewError(InsufficientTxns, fmt.Sprintf("not sufficient txns to make a block yet for round %v (iterated %v,block_size %v,state failure %v, invalid %v)", b.Round, count, blockSize, failedStateCount, len(invalidTxns)))
 		}
 		b.Txns = b.Txns[:blockSize]
 		etxns = etxns[:blockSize]
