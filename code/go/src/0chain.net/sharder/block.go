@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"0chain.net/block"
-	"0chain.net/chain"
 	"0chain.net/datastore"
 	"0chain.net/ememorystore"
 )
@@ -12,7 +11,7 @@ import (
 /*GetBlockBySummary - get a block */
 func (sc *Chain) GetBlockBySummary(ctx context.Context, bs *block.BlockSummary) (*block.Block, error) {
 	//Try to get the block from the cache
-	b, err := chain.GetServerChain().GetBlock(ctx, bs.Hash)
+	b, err := sc.GetBlock(ctx, bs.Hash)
 	if err != nil {
 		//TODO: based on round random seed, check whether this sharder should have the block or not before fetching from the store
 		b, err = sc.GetBlockFromStoreBySummary(bs)
@@ -37,7 +36,7 @@ func GetBlockSummary(ctx context.Context, hash string) (*block.BlockSummary, err
 
 /*GetBlockFromHash - given the block hash, get the block */
 func (sc *Chain) GetBlockFromHash(ctx context.Context, hash string, roundNum int64) (*block.Block, error) {
-	b, err := chain.GetServerChain().GetBlock(ctx, hash)
+	b, err := sc.GetBlock(ctx, hash)
 	if err != nil {
 		b, err = sc.GetBlockFromStore(hash, roundNum)
 		if err != nil {
