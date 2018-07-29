@@ -152,7 +152,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		break
 	}
 	if mc.CurrentRound > b.Round {
-		Logger.Error("generate block (round mismatch)", zap.Any("round", r.Number), zap.Any("current_round", mc.CurrentRound))
+		Logger.Info("generate block (round mismatch)", zap.Any("round", r.Number), zap.Any("current_round", mc.CurrentRound))
 		return nil, ErrRoundMismatch
 	}
 	mc.AddToRoundVerification(ctx, r, b)
@@ -223,7 +223,11 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			if b.MinerID != node.Self.GetKey() {
 				mc.SendVerificationTicket(ctx, b, bvt)
 			}
-			mc.ProcessVerifiedTicket(ctx, r, b, &bvt.VerificationTicket)
+
+			// since block.AddVerificationTicket is not thread-safe, directly doing ProcessVerifiedTicket will not work in rare cases as incoming verification tickets get added concurrently
+			//mc.ProcessVerifiedTicket(ctx, r, b, &bvt.VerificationTicket)
+			bm := &BlockMessage{Type: MessageVerificationTicket, Sender: node.Self.Node, Block: b, Round: r, BlockVerificationTicket: bvt}
+			mc.BlockMessageChannel <- bm
 		}
 		return true
 	}
@@ -283,6 +287,7 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r *Round, b *block.Block)
 	   the prev verification tickets of the current block. This is right as all the
 	   necessary verification tickets & notarization message may not have arrived to us */
 	if err := mc.VerifyNotarization(ctx, b.PrevBlock, b.PrevBlockVerficationTickets); err != nil {
+		Logger.Info("verify round block (prior block verify notarization)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Error(err))
 		return nil, err
 	}
 

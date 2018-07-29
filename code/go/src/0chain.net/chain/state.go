@@ -45,9 +45,7 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 	switch txn.TransactionType {
 	case transaction.TxnTypeSend:
 		if fs.Balance < tbalance {
-			//TODO: we need to return false once state starts working properly
-			//return false
-			return true
+			return false
 		}
 		fs.Balance -= tbalance
 		if fs.Balance == 0 {

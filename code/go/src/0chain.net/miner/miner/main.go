@@ -108,7 +108,12 @@ func main() {
 	ctx := common.GetRootContext()
 	initEntities()
 	serverChain := chain.NewChainFromConfig()
+	miner.SetupMinerChain(serverChain)
+	serverChain = &miner.GetMinerChain().Chain
+	chain.SetServerChain(serverChain)
+
 	miner.SetNetworkRelayTime(viper.GetDuration("server_chain.network.relay_time") * time.Millisecond)
+	node.SetMaxConcurrentRequests(viper.GetInt("server_chain.network.max_concurrent_requests"))
 
 	if *nodesFile == "" {
 		panic("Please specify --nodes_file file.txt option with a file.txt containing nodes including self")
@@ -125,9 +130,6 @@ func main() {
 		Logger.Info("self identity", zap.Any("set_index", node.Self.Node.SetIndex), zap.Any("id", node.Self.Node.GetKey()))
 	}
 	address := fmt.Sprintf(":%v", node.Self.Port)
-
-	miner.SetupMinerChain(serverChain)
-	chain.SetServerChain(&miner.GetMinerChain().Chain)
 
 	serverChain.Miners.ComputeProperties()
 	serverChain.Sharders.ComputeProperties()
