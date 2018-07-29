@@ -1,6 +1,16 @@
 ---
+- import_tasks: instance-facts.yml
+  tags:
+    - instance-assemble-local
+    - instance-assemble-remote
+    - instance-teardown-local
+    - istart-assemble-local
+
 - import_tasks: instance-assemble-local.yml
   tags: ['instance-assemble-local']
+
+- import_tasks: istart-assemble-local.yml
+  tags: ['istart-assemble-local', 'instance-assemble-local']
 
 - import_tasks: instance-teardown-local.yml
   tags: ['instance-teardown-local']

@@ -1,0 +1,13 @@
+---
+- hosts: localhost
+
+  vars_files:
+    - "{{ credential }}/aws/credentials.yml"
+    - [ "anchor/{{network}}/blueprint.yml"]
+    - [ "anchor/{{network}}/clientid.yml"]
+
+  roles:
+    - role: artifacts
+    - role: keyaws
+    - role: keygit
+...

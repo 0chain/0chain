@@ -1,23 +1,14 @@
-#- name: Get all the instances
-#  set_fact:
-#    agents: "{{zchain.blueprint.sharders| dict2items | union(zchain.blueprint.miners | dict2items)}}"
-
-
-# Weird ec2 module behaviour - state and exact_count are mutually exclusive. Hence starting/launching an instance are
-# considered different operations. This hack is to get around that problem
+#- name: "Start the server instances..."
+#  ec2:
+#    region: "{{regions[item.value.region]}}"
+#    key_name: "{{aws_key_pair}}"
+#    wait: yes
+#    instance_tags: "{{instance_tags[item.key]}}"
+#    state: running
+#  with_dict: "{{agents_dict}}"
+#  check_mode: no
+#  ignore_errors: yes
 #
-- name: "Start the server instances..."
-  ec2:
-    region: "{{regions[item.value.region]}}"
-    key_name: "{{aws_key_pair}}"
-    wait: yes
-    instance_tags:
-      Name: "{{item.key}}"
-    state: running
-  with_items: "{{agents}}"
-  check_mode: no
-  ignore_errors: yes
-
 - name: "Launch the server instances..."
   ec2:
     region: "{{regions[item.value.region]}}"
@@ -27,18 +18,9 @@
     wait: no
     termination_protection: no
     group:
-    instance_tags:
-      Name: "{{item.key}}"
-      role: "{{item.value.role}}"
-      network_type: "{{zchain.blueprint.network_type}}"
-      network_name: "{{zchain.blueprint.network_name}}"
-
+    instance_tags: "{{instance_tags[item.key]}}"
     exact_count: 1
-    count_tag:
-      Name: "{{item.key}}"
-      role: "{{item.value.role}}"
-      network_type: "{{zchain.blueprint.network_type}}"
-      network_name: "{{zchain.blueprint.network_name}}"
+    count_tag: "{{instance_tags[item.key]}}"
     ebs_optimized: yes
     volumes:
       - device_name: "{{storage[zchain.blueprint.storage_type[item.value.role]].device_name}}"
@@ -47,46 +29,46 @@
         iops: "{{storage[zchain.blueprint.storage_type[item.value.role]].iops}}"
         delete_on_termination: true
   register: ec2
-  with_items: "{{agents}}"
+  with_dict: "{{agents_dict}}"
   check_mode: no
 
-- set_fact:
-    nascent: "{{ec2 | json_query('results[*].tagged_instances')}}"
-
-- name: "Collect facts on up agents"
-  delegate_to: localhost
-  ec2_instance_facts:
-    region: "{{regions[item]}}"
-    filters:
-      "tag:network_name": "{{zchain.blueprint.network_name}}"
-      "instance-state-name": running
-  register: ec2_facts
-  with_items: "{{zchain.blueprint.regions}}"
-
-- set_fact:
-   nodes: "{{ec2_facts | json_query('results[*].instances')}}"
-
-- debug:
-   msg: "{{nodes}}"
-
-- name: Wait for SSH to come up...
-  wait_for:
-    host: "{{item.public_ip_address}}"
-    port: 22
-    state: started
-  with_items: "{{nodes}}"
-
-- name: "Add the instance to the groups..."
-  add_host:
-    name: "{{item.tags.Name}}"
-    hostname: "{{item.public_ip_address}}"
-    groupname: "zservers"
-    ansible_host: "{{item.public_ip_address}}"
-    ansible_port: 22
-    ansible_user: ubuntu
-    ansible_ssh_private_key_file: "{{aws_key_pair_file}}"
-    ansible_ssh_extra_args: "-i {{aws_key_pair_file}} -o StrictHostKeyChecking=no"
-  with_items: "{{nodes}}"
-
+#- set_fact:
+#    nascent: "{{ec2 | json_query('results[*].tagged_instances')}}"
+#
+#- name: "Collect facts on up agents"
+#  delegate_to: localhost
+#  ec2_instance_facts:
+#    region: "{{regions[item]}}"
+#    filters:
+#      "tag:network_name": "{{zchain.blueprint.network_name}}"
+#      "instance-state-name": running
+#  register: ec2_facts
+#  with_items: "{{zchain.blueprint.regions}}"
+#
+#- set_fact:
+#   nodes: "{{ec2_facts | json_query('results[*].instances')}}"
+#
+#- debug:
+#   msg: "{{nodes}}"
+#
+#- name: Wait for SSH to come up...
+#  wait_for:
+#    host: "{{item.public_ip_address}}"
+#    port: 22
+#    state: started
+#  with_items: "{{nodes}}"
+#
+#- name: "Add the instance to the groups..."
+#  add_host:
+#    name: "{{item.tags.Name}}"
+#    hostname: "{{item.public_ip_address}}"
+#    groupname: "zservers"
+#    ansible_host: "{{item.public_ip_address}}"
+#    ansible_port: 22
+#    ansible_user: ubuntu
+#    ansible_ssh_private_key_file: "{{aws_key_pair_file}}"
+#    ansible_ssh_extra_args: "-i {{aws_key_pair_file}} -o StrictHostKeyChecking=no"
+#  with_items: "{{nodes}}"
+#
 ...
 

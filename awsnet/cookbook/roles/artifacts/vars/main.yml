@@ -108,10 +108,16 @@ nodefiles:
     local: "{{artifact.local.base}}/nodes"
     zchain: "{{artifact.zchain.base}}/0chain/docker.aws/nodes"
 
+blueprint.instance_tags: network_type={{blueprint.network_type}} network_name={{blueprint.network_name}}
+
+
 zchain:
   blueprint: "{{blueprint}}"
   credentials: "{{credential}}"
   artifact: "{{artifact}}"
   git: "{{git}}"
+
+agents: "{{zchain.blueprint.sharders| dict2items | union(zchain.blueprint.miners | dict2items)}}"
+agents_dict: "{{zchain.blueprint.sharders | combine(zchain.blueprint.miners)}}"
 
 ...

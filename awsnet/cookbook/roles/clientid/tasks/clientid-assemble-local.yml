@@ -23,7 +23,7 @@
   route53:
     state: present
     zone: testnet-0chain.net
-    record: "{{item.tags.Name}}.testnet-0chain.net"
+    record: "{{item.tags.Name}}.{{blueprint.network_name}}.testnet-0chain.net"
     value: "{{item.public_ip_address}}"
     type: A
     wait: no

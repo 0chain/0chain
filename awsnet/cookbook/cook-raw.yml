@@ -1,0 +1,14 @@
+---
+- hosts: ["{{blueprint.hosts}}"]
+  become: true
+  gather_facts: false
+  vars_files:
+    - "{{ credential }}/aws/credentials.yml"
+    - "anchor/{{network}}/blueprint.yml"
+    - "anchor/{{network}}/clientid.yml"
+
+  roles:
+    - role: artifacts
+    - role: inventory
+    - role: instance
+...

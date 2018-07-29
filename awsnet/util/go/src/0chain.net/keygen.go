@@ -110,7 +110,6 @@ func main() {
 	if (*mode == "all") {
 		buffer = append(buffer, makeMode("miner", *count, *sort)...)
 		buffer = append(buffer, makeMode("sharder", *count, *sort)...)
-		buffer = append(buffer, makeMode("blobber", *count, *sort)...)
 	} else {
 		buffer = append(buffer, makeMode(*mode, *count, *sort)...)
 	}

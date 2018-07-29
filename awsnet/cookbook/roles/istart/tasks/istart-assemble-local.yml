@@ -3,10 +3,9 @@
     region: "{{regions[item.value.region]}}"
     key_name: "{{aws_key_pair}}"
     wait: yes
-    instance_tags:
-      Name: "{{item.key}}"
+    instance_tags: "{{instance_tags[item.key]}}"
     state: running
-  with_items: "{{agents}}"
+  with_items: "{{agents_dict}}"
   check_mode: no
   ignore_errors: yes
 

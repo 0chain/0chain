@@ -22,6 +22,10 @@
     src: "{{zchain.git.zip}}"
     dest: "{{artifact.zchain.base}}/0chain"
     remote_src: no
+    group: ubuntu
+    owner: ubuntu
+    creates:
+    list_files: no
   register: result
   tags: ['gitrepo-assemble-remote']
 
@@ -33,6 +37,6 @@
   tags: ['gitrepo-teardown-remote']
 
 - debug:
-    msg: "Extract {{zchain.git.zip}} result={{result}}"
+    msg: "Extract {{zchain.git.zip}} result failed={{result.failed}}"
   tags: ['gitrepo-assemble-remote']
 ...
