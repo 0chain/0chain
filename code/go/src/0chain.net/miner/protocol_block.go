@@ -51,6 +51,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	var count int32
 	var roundMismatch bool
 	var hasOwnerTxn bool
+	var failedStateCount int32
 	var txnIterHandler = func(ctx context.Context, qe datastore.CollectionEntity) bool {
 		if mc.CurrentRound > b.Round {
 			roundMismatch = true
@@ -81,7 +82,9 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 			return true
 		}
 		if !mc.UpdateState(b, txn) {
-			return true
+			failedStateCount++
+			//TODO: state is WIP
+			//return true
 		}
 		if txn.ClientID == mc.OwnerID {
 			hasOwnerTxn = true
@@ -131,14 +134,15 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	if err != nil {
 		return err
 	}
-	if idx != mc.BlockSize {
-		if !hasOwnerTxn {
+	blockSize := idx
+	if blockSize != mc.BlockSize {
+		if blockSize == 0 || !hasOwnerTxn {
 			b.Txns = nil
-			Logger.Debug("generate block (insufficient txns)", zap.Int64("round", b.Round), zap.Int32("iteration_count", count), zap.Int32("block_size", mc.BlockSize), zap.Int32("num_txns", idx))
-			return common.NewError(InsufficientTxns, fmt.Sprintf("not sufficient txns to make a block yet for round %v (iterated %v, invalid %v)", b.Round, count, len(invalidTxns)))
+			Logger.Debug("generate block (insufficient txns)", zap.Int64("round", b.Round), zap.Int32("iteration_count", count), zap.Int32("block_size", blockSize))
+			return common.NewError(InsufficientTxns, fmt.Sprintf("not sufficient txns to make a block yet for round %v (iterated %v,block_size %v,state failure %v, invalid %v)", b.Round, count, blockSize, failedStateCount, len(invalidTxns)))
 		}
-		b.Txns = b.Txns[:idx]
-		etxns = etxns[:idx]
+		b.Txns = b.Txns[:blockSize]
+		etxns = etxns[:blockSize]
 	}
 	if count > 10*mc.BlockSize {
 		Logger.Info("generate block (too much iteration)", zap.Int64("round", b.Round), zap.Int32("iteration_count", count))
@@ -156,6 +160,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		txn.PublicKey = client.PublicKey
 		txn.ClientID = datastore.EmptyKey
 	}
+	b.ClientStateHash = b.ClientState.GetChangeCollector().GetRoot()
 	bgTimer.UpdateSince(start)
 	Logger.Debug("generate block (assemble+update)", zap.Int64("round", b.Round), zap.Duration("time", time.Since(start)))
 
@@ -166,8 +171,8 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	if err != nil {
 		return err
 	}
-	Logger.Info("generate block (assemble+update+sign)", zap.Int64("round", b.Round), zap.Duration("time", time.Since(start)),
-		zap.String("block", b.Hash), zap.String("prev_block", b.PrevBlock.Hash), zap.String("state_hash", util.ToHex(b.ClientStateMT.GetChangeCollector().GetRoot())),
+	Logger.Info("generate block (assemble+update+sign)", zap.Int64("round", b.Round), zap.Int32("block_size", blockSize), zap.Duration("time", time.Since(start)),
+		zap.String("block", b.Hash), zap.String("prev_block", b.PrevBlock.Hash), zap.String("state_hash", util.ToHex(b.ClientStateHash)),
 		zap.Int32("iteration_count", count), zap.Float64("p_chain_weight", b.PrevBlock.ChainWeight))
 	go b.ComputeTxnMap()
 	return nil
@@ -199,6 +204,11 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockV
 	err = mc.ValidateTransactions(ctx, b)
 	if err != nil {
 		return nil, err
+	}
+	err = mc.ComputeState(ctx, b)
+	if err != nil {
+		Logger.Debug("verify block - error computing state (TODO sync)", zap.Error(err))
+		//return nil, err
 	}
 	bvt, err := mc.SignBlock(ctx, b)
 	if err != nil {
@@ -247,11 +257,6 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 				validChannel <- false
 				return
 			}
-			if !mc.UpdateState(b, txn) {
-				cancel = true
-				validChannel <- false
-				return
-			}
 		}
 		validChannel <- true
 	}
@@ -277,7 +282,6 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 			break
 		}
 	}
-	//TODO: state hash computed with local state updates should match the state hash in the block
 	return nil
 }
 

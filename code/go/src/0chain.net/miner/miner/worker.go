@@ -76,6 +76,14 @@ func TransactionGenerator(blockSize int32) {
 	collectionName := txn.GetCollectionName()
 	sc := chain.GetServerChain()
 	numTxns := blockSize
+
+	//Ensure the initial set of transactions succeed or become invalid
+	txnCount := int32(txnMetadataProvider.GetStore().GetCollectionSize(ctx, txnMetadataProvider, collectionName))
+	for txnCount > blockSize {
+		time.Sleep(20 * time.Millisecond)
+		txnCount = int32(txnMetadataProvider.GetStore().GetCollectionSize(ctx, txnMetadataProvider, collectionName))
+	}
+
 	for true {
 		numGenerators := sc.NumGenerators
 		numMiners := sc.Miners.Size()
@@ -98,7 +106,7 @@ func TransactionGenerator(blockSize int32) {
 			return
 		case <-timer.C:
 			txnCount := int32(txnMetadataProvider.GetStore().GetCollectionSize(ctx, txnMetadataProvider, collectionName))
-			if float64(txnCount) >= blocksPerMiner*float64(3*blockSize) {
+			if float64(txnCount) >= blocksPerMiner*float64(8*blockSize) {
 				continue
 			}
 			for i := int32(0); i < numTxns; i++ {

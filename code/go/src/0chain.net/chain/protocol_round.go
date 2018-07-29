@@ -69,9 +69,9 @@ func (c *Chain) FinalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 			FinalizationTimer.UpdateSince(fts)
 		}
 		fts = time.Now()
-		if fb.ClientStateMT != nil {
-			fb.ClientStateMT.SaveChanges(c.StateDB, util.Origin(fb.Round), false)
-			Logger.Info("finalize round - save state", zap.String("hash", util.ToHex(fb.ClientStateMT.GetRoot())), zap.Int("changes", len(fb.ClientStateMT.GetChangeCollector().GetChanges())))
+		if fb.ClientState != nil {
+			fb.ClientState.SaveChanges(c.StateDB, util.Origin(fb.Round), false)
+			Logger.Info("finalize round - save state", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.String("hash", util.ToHex(fb.ClientState.GetRoot())), zap.Int("changes", len(fb.ClientState.GetChangeCollector().GetChanges())))
 		}
 		bsh.UpdateFinalizedBlock(ctx, fb)
 		frb := c.GetRoundBlocks(fb.Round)
@@ -81,8 +81,13 @@ func (c *Chain) FinalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 			}
 		}
 	}
-	if lfb.ClientStateMT != nil {
-		lfb.ClientStateMT.SetNodeDB(c.StateDB)
+	if lfb.ClientState != nil {
+		ndb := lfb.ClientState.GetNodeDB()
+		lfb.ClientState.SetNodeDB(c.StateDB)
+		if lndb, ok := ndb.(*util.LevelNodeDB); ok {
+			lndb.C = c.StateDB
+			lndb.P = util.NewMemoryNodeDB() // break the chain to reclaim memory
+		}
 	}
 	// Prune all the dead blocks
 	c.DeleteBlocks(deadBlocks)

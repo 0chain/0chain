@@ -108,6 +108,10 @@ func main() {
 	initEntities()
 
 	serverChain := chain.NewChainFromConfig()
+	sharder.SetupSharderChain(serverChain)
+	serverChain = &sharder.GetSharderChain().Chain
+	chain.SetServerChain(serverChain)
+
 	chain.SetNetworkRelayTime(viper.GetDuration("server_chain.network.relay_time") * time.Millisecond)
 
 	if *nodesFile == "" {
@@ -125,9 +129,6 @@ func main() {
 		Logger.Info("self identity", zap.Any("set_index", node.Self.Node.SetIndex), zap.Any("id", node.Self.Node.GetKey()))
 	}
 	address := fmt.Sprintf(":%v", node.Self.Port)
-
-	sharder.SetupSharderChain(serverChain)
-	chain.SetServerChain(&sharder.GetSharderChain().Chain)
 
 	serverChain.Miners.ComputeProperties()
 	serverChain.Sharders.ComputeProperties()

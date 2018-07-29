@@ -90,6 +90,7 @@ func (mpt *MerklePatriciaTrie) GetChangeCollector() ChangeCollectorI {
 /*ResetChangeCollector - implement interface */
 func (mpt *MerklePatriciaTrie) ResetChangeCollector() {
 	mpt.ChangeCollector = NewChangeCollector()
+	mpt.ChangeCollector.SetRoot(mpt.GetRoot())
 }
 
 /*SaveChanges - implement interface */
@@ -611,34 +612,51 @@ func (mpt *MerklePatriciaTrie) pp(w io.Writer, key Key, depth byte, initpad bool
 
 /*UpdateOrigin - updates the origin of all the nodes in this tree to the given origin */
 func (mpt *MerklePatriciaTrie) UpdateOrigin(ctx context.Context, origin Origin) error {
-	fmt.Printf("updating to origin: %v\n", origin)
+	ps := GetPruneStats(ctx)
+	if ps != nil {
+		ps.Origin = origin
+	}
+	var count int64
 	handler := func(ctx context.Context, path Path, key Key, node Node) error {
 		if node.GetOrigin() >= origin {
 			return nil
 		}
+		count++
 		node.SetOrigin(origin)
-		fmt.Printf("updating node: %v\n", string(key))
 		err := mpt.DB.PutNode(key, node)
 		if err != nil {
 			fmt.Printf("DEBUG: updated origin to : %v %v\n", origin, err)
 		}
 		return err
 	}
-	return mpt.Iterate(ctx, handler, NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
+	err := mpt.Iterate(ctx, handler, NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
+	if ps != nil {
+		ps.BelowOrigin = count
+	}
+	return err
 }
 
 /*PruneBelowOrigin - prune the state below the given origin */
 func (mpt *MerklePatriciaTrie) PruneBelowOrigin(ctx context.Context, origin Origin) error {
-	fmt.Printf("pruning to origin: %v\n", origin)
+	ps := GetPruneStats(ctx)
+	var total int64
+	var count int64
 	handler := func(ctx context.Context, key Key, node Node) error {
+		total++
 		if node.GetOrigin() >= origin {
 			return nil
 		}
+		count++
 		err := mpt.DB.DeleteNode(key)
 		if err != nil {
 			fmt.Printf("DEBUG: deleting node: %v %v\n", node.GetOrigin(), err)
 		}
 		return err
 	}
-	return mpt.DB.Iterate(ctx, handler)
+	err := mpt.DB.Iterate(ctx, handler)
+	if ps != nil {
+		ps.Total = total
+		ps.Deleted = count
+	}
+	return err
 }
