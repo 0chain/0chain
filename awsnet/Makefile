@@ -73,10 +73,6 @@ TARGETS:=$(CONTROL_DIR) $(SERVER) $(REGIONS) $(KEY_GOALS) $(EIP_TARGETS) $(ZCHAI
 .PHONY: $(TARGETS) show __check_defined_FORCE
 __check_defined_FORCE:
 
-#Executable to be invoked.
-#export AWS_ACCESS_KEY_ID=AKIAIEP4LDUAY4FNU62A
-#export AWS_SECRET_ACCESS_KEY=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
-
 #The AWS_ACCESS_KEY and other related variables can be installed using aws-vault.
 #This ensures all the access keys are kept safe.
 export AWS_ACCESS_KEY_ID:=$(shell aws-vault exec 0chain -- env | grep AWS_ACCESS_KEY_ID | cut -d'=' -f2)
@@ -170,34 +166,34 @@ gitrepo-assemble-local:
 	$(LOCAL_PLAY)
 
 #Move the entire git repo to the remote machine and install it
-gitrepo-assemble-remote:
-	$(REMOTE_PLAY)
+gitrepo-assemble-zchain:
+	$(ZCHAIN_PLAY)
 
-gitrepo-teardown-remote:
-	$(REMOTE_PLAY)
+gitrepo-teardown-zchain:
+	$(ZCHAIN_PLAY)
 
 #Create the local copy of the nodes file. Route 53 gets updated here as well.
 clientid-assemble-local:
 	$(LOCAL_PLAY)
 
 #Transport the nodes file and client keys file to the remote machines.
-clientid-assemble-remote:
-	$(REMOTE_PLAY)
+clientid-assemble-zchain:
+	$(ZCHAIN_PLAY)
 
 #Remove records from Route53
 clientid-teardown-local:
 	$(LOCAL_PLAY)
 
 #Build the zchain_base, miner and sharder
-agentbuild-assemble-remote:
+agentbuild-assemble-zchain:
 	$(ZCHAIN_PLAY)
 
 #Start the sharder and miner
-agentrole-assemble-remote:
+agentrole-assemble-zchain:
 	$(ZCHAIN_PLAY)
 
 # Stop the sharder, miner
-agentrole-teardown-remote:
+agentrole-teardown-zchain:
 	$(ZCHAIN_PLAY)
 
 #Instance management - start and stop

@@ -15,7 +15,7 @@
 
 - debug:
     msg: "Replicate 0chain zip file...{{zchain.git}}"
-  tags: ['gitrepo-assemble-remote']
+  tags: ['gitrepo-assemble-zchain']
 
 - name: "Copy and extract {{zchain.git.zip}} to the remote machine..."
   unarchive:
@@ -27,16 +27,16 @@
     creates:
     list_files: no
   register: result
-  tags: ['gitrepo-assemble-remote']
+  tags: ['gitrepo-assemble-zchain']
 
 
 - name: "Delete the git repository.."
   file:
     dest: "{{artifact.zchain.base}}/0chain"
     state: absent
-  tags: ['gitrepo-teardown-remote']
+  tags: ['gitrepo-teardown-zchain']
 
 - debug:
     msg: "Extract {{zchain.git.zip}} result failed={{result.failed}}"
-  tags: ['gitrepo-assemble-remote']
+  tags: ['gitrepo-assemble-zchain']
 ...

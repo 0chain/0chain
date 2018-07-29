@@ -1,6 +1,6 @@
 ---
-- import_tasks: agentrole-assemble-remote.yml
-  tags: ['agentrole-assemble-remote']
-- import_tasks: agentrole-teardown-remote.yml
-  tags: ['agentrole-teardown-remote']
+- import_tasks: agentrole-assemble-zchain.yml
+  tags: ['agentrole-assemble-zchain']
+- import_tasks: agentrole-teardown-zchain.yml
+  tags: ['agentrole-teardown-zchain']
 ...

@@ -14,6 +14,7 @@
   synchronize:
     src: "{{nodefiles.dir.local}}/"
     dest: "{{nodefiles.dir.zchain}}/"
+    recursive: yes
   with_dict: "{{iprole}}"
 
 - name: get public IP address

@@ -15,5 +15,4 @@
     - role: docker
     - role: agentcommon
     - role: storage
-    - role: gitrepo
 ...

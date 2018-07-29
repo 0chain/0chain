@@ -6,7 +6,7 @@ blueprint:
   git_version: "master"
   network_type: 'testnet'
   network_name: 'whitney'
-  hosts: 'tag_network_name_chinook'
+  hosts: 'tag_network_name_whitney'
 
   instance_type:
     miner: 'c4.large'

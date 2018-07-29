@@ -13,6 +13,8 @@
     - role: artifacts
     - role: inventory
     - role: gitrepo
+    - role: agentcommon
+    - role: clientid
     - role: agentbuild
     - role: agentrole
 ...
