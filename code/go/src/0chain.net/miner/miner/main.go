@@ -43,6 +43,7 @@ func initHandlers() {
 		http.HandleFunc("/_start", StartChainHandler)
 	}
 	http.HandleFunc("/", HomePageHandler)
+	config.SetupHandlers()
 	node.SetupHandlers()
 	chain.SetupHandlers()
 	client.SetupHandlers()
