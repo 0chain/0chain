@@ -22,7 +22,9 @@ import (
 
 /*SENDER - key used to get the connection object from the context */
 const SENDER common.ContextKey = "node.sender"
-const MAX_NP_REQUESTS = 2
+
+/*MaxConcurrentRequests - max number of concurrent requests when sending a message to the node pool */
+var MaxConcurrentRequests = 2
 
 const N2N_TIME_TOLERANCE = 4 // in seconds
 
@@ -30,6 +32,11 @@ const (
 	CODEC_JSON    = 0
 	CODEC_MSGPACK = 1
 )
+
+/*SetMaxConcurrentRequests - set the max number of concurrent requests */
+func SetMaxConcurrentRequests(maxConcurrentRequests int) {
+	MaxConcurrentRequests = maxConcurrentRequests
+}
 
 /*WithNode takes a context and adds a connection value to it */
 func WithNode(ctx context.Context, node *Node) context.Context {
@@ -99,8 +106,8 @@ func (np *Pool) SendAtleast(numNodes int, handler SendHandler) []*Node {
 	validCount := 0
 	activeCount := 0
 	numWorkers := numNodes
-	if numWorkers > MAX_NP_REQUESTS {
-		numWorkers = MAX_NP_REQUESTS
+	if numWorkers > MaxConcurrentRequests && MaxConcurrentRequests > 0 {
+		numWorkers = MaxConcurrentRequests
 	}
 	sendBucket := make(chan *Node, numNodes)
 	validBucket := make(chan *Node, numNodes)
