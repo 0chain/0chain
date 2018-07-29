@@ -65,6 +65,7 @@ func ChainStatsHandler(ctx context.Context, r *http.Request) (interface{}, error
 func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	c := &GetSharderChain().Chain
 	w.Header().Set("Content-Type", "text/html")
+	diagnostics.WriteStatisticsCSS(w)
 	fmt.Fprintf(w, "<h2>Block Finalization Statistics</h2>")
 	diagnostics.WriteStatistics(w, c, chain.FinalizationTimer, 1000000.0)
 }
