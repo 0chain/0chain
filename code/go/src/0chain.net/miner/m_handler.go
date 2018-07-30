@@ -28,6 +28,9 @@ var VerificationTicketSender node.EntitySendHandler
 /*BlockNotarizationSender - Send the block notarization to a node */
 var BlockNotarizationSender node.EntitySendHandler
 
+/*MinerNotarizedBlockSender - Send a notarized block to a node*/
+var MinerNotarizedBlockSender node.EntitySendHandler
+
 /*SetupM2MSenders - setup senders for miner to miner communication */
 func SetupM2MSenders() {
 
@@ -36,6 +39,7 @@ func SetupM2MSenders() {
 
 	options = &node.SendOptions{Timeout: 2 * time.Second, MaxRelayLength: 0, CurrentRelayLength: 0, CODEC: node.CODEC_MSGPACK, Compress: true}
 	VerifyBlockSender = node.SendEntityHandler("/v1/_m2m/block/verify", options)
+	MinerNotarizedBlockSender = node.SendEntityHandler("/v1/_m2m/block/notarized_block", options)
 
 	options = &node.SendOptions{MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
 	VerificationTicketSender = node.SendEntityHandler("/v1/_m2m/block/verification_ticket", options)
@@ -52,6 +56,7 @@ func SetupM2MReceivers() {
 	http.HandleFunc("/v1/_m2m/block/verify", node.ToN2NReceiveEntityHandler(memorystore.WithConnectionEntityJSONHandler(VerifyBlockHandler, datastore.GetEntityMetadata("block"))))
 	http.HandleFunc("/v1/_m2m/block/verification_ticket", node.ToN2NReceiveEntityHandler(VerificationTicketReceiptHandler))
 	http.HandleFunc("/v1/_m2m/block/notarization", node.ToN2NReceiveEntityHandler(NotarizationReceiptHandler))
+	http.HandleFunc("/v1/_m2m/block/notarized_block", node.ToN2NReceiveEntityHandler(NotarizedBlockHandler))
 }
 
 /*StartRoundHandler - handles the starting of a new round */
@@ -107,5 +112,21 @@ func NotarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (i
 	msg := NewBlockMessage(MessageNotarization, node.GetSender(ctx), nil, nil)
 	msg.Notarization = notarization
 	GetMinerChain().GetBlockMessageChannel() <- msg
+	return true, nil
+}
+
+/*NotarizedBlockHandler - handles a notarized block*/
+func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+	b, ok := entity.(*block.Block)
+	if !ok {
+		return nil, common.InvalidRequest("Invalid Entity")
+	}
+	mc := GetMinerChain()
+	if b.Round >= mc.CurrentRound {
+		Logger.Debug("notarized block handler (round not started yet)", zap.String("block", b.Hash), zap.Any("round", b.Round))
+		return true, nil
+	}
+	msg := &BlockMessage{Sender: node.GetSender(ctx), Type: MessageNotarizedBlock, Block: b}
+	mc.GetBlockMessageChannel() <- msg
 	return true, nil
 }

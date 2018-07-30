@@ -350,3 +350,14 @@ func (mc *Chain) startRound(r *round.Round) {
 func (mc *Chain) CancelRoundVerification(ctx context.Context, r *Round) {
 	r.CancelVerification() // No need for further verification of any blocks
 }
+
+/*BroadcastNotarizedBlocks - send all the notarized blocks to all generating miners for a round*/
+func (mc *Chain) BroadcastNotarizedBlocks(ctx context.Context, r *Round) {
+	nb := r.GetNotarizedBlocks()
+	miners := mc.GetMinersByRank(ctx, &r.Round)
+	for i := 0; mc.CanGenerateRound(&r.Round, miners[i]); i++ {
+		for _, b := range nb {
+			mc.SendNotarizedBlockTo(ctx, b, miners[i].ID)
+		}
+	}
+}
