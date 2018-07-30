@@ -193,6 +193,7 @@ agent-stage-cluster: \
 	gitrepo-assemble-zchain \
 	agent-clientid-assemble-local \
 	agent-clientid-assemble-zchain \
+	agent-config-assemble-zchain \
 	agent-build-assemble-zchain
 
 #Build the zchain_base, miner and sharder

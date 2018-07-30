@@ -3,12 +3,12 @@
     zchain_code: "{{artifact.zchain.code}}"
 
 - name: "Stop the sharder"
-  shell: docker.aws/bin/stop.sharder.sh
+  shell: ./docker.aws/bin/stop.sharder.sh
   args:
     chdir: "{{zchain_code}}"
 
 - name: "Stop the miner"
-  shell: docker.aws/bin/stop.miner.sh
+  shell: ./docker.aws/bin/stop.miner.sh
   args:
     chdir: "{{zchain_code}}"
 ...
