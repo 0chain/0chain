@@ -17,6 +17,13 @@ func (c *Chain) SetupWorkers(ctx context.Context) {
 	go c.PruneClientStateWorker(ctx)
 }
 
+/*BlockFinalizationWorker - a worker that handles the finalized blocks */
+func (c *Chain) BlockFinalizationWorker(ctx context.Context, bsh BlockStateHandler) {
+	for r := range c.FinalizedRoundsChannel {
+		c.finalizeRound(ctx, r, bsh)
+	}
+}
+
 /*PruneBelowCount - prune nodes below these many rounds */
 const PruneBelowCount = 100
 

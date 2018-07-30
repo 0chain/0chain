@@ -182,7 +182,6 @@ func StartChainHandler(w http.ResponseWriter, r *http.Request) {
 /*StartProtocol - start the miner protocol */
 func StartProtocol() {
 	mc := miner.GetMinerChain()
-	mc.Initialize()
 	mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"))
 	if mc.GetRound(1) != nil {
 		return

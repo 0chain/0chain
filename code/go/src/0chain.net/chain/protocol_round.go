@@ -40,6 +40,10 @@ func (c *Chain) FinalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 		return
 	}
 	time.Sleep(FINALIZATION_TIME)
+	c.FinalizedRoundsChannel <- r
+}
+
+func (c *Chain) finalizeRound(ctx context.Context, r *round.Round, bsh BlockStateHandler) {
 	lfb := c.ComputeFinalizedBlock(ctx, r)
 	if lfb == nil {
 		Logger.Debug("finalization - no decisive block to finalize yet or don't have all the necessary blocks", zap.Any("round", r.Number))
