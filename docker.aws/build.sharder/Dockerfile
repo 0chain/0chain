@@ -20,7 +20,7 @@ RUN go get github.com/koding/cache
 RUN go get github.com/hashicorp/golang-lru
 
 #Add the source code
-ADD /0chain/0chain/code/go/src $SRC_DIR/go/src
+ADD ./code/go/src $SRC_DIR/go/src
 
 # Build it:
 RUN go build 0chain.net/sharder/sharder

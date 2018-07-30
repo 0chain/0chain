@@ -32,7 +32,7 @@ services:
       - redis:redis
       - redis_txns:redis_txns
     build:
-      context: /0chain/0chain/docker.aws/build.miner
+      context: /0chain/0chain
       dockerfile: /0chain/0chain/docker.aws/build.miner/Dockerfile
     volumes:
       - /0chain/config:/0chain/config
