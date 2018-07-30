@@ -173,27 +173,31 @@ gitrepo-teardown-zchain:
 	$(ZCHAIN_PLAY)
 
 #Create the local copy of the nodes file. Route 53 gets updated here as well.
-clientid-assemble-local:
+agent-clientid-assemble-local:
 	$(LOCAL_PLAY)
 
 #Transport the nodes file and client keys file to the remote machines.
-clientid-assemble-zchain:
+agent-clientid-assemble-zchain:
 	$(ZCHAIN_PLAY)
 
 #Remove records from Route53
-clientid-teardown-local:
+agent-clientid-teardown-local:
 	$(LOCAL_PLAY)
 
+#Copy the configuration file.
+agent-config-assemble-zchain:
+	$(ZCHAIN_PLAY)
+
 #Build the zchain_base, miner and sharder
-agentbuild-assemble-zchain:
+agent-build-assemble-zchain:
 	$(ZCHAIN_PLAY)
 
 #Start the sharder and miner
-agentrole-assemble-zchain:
+agent-role-assemble-zchain:
 	$(ZCHAIN_PLAY)
 
 # Stop the sharder, miner
-agentrole-teardown-zchain:
+agent-role-teardown-zchain:
 	$(ZCHAIN_PLAY)
 
 #Instance management - start and stop

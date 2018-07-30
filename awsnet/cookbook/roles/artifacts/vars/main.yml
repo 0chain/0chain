@@ -110,6 +110,11 @@ nodefiles:
 
 blueprint.instance_tags: network_type={{blueprint.network_type}} network_name={{blueprint.network_name}}
 
+zchain_config:
+  file: "0chain.yaml"
+  dir:
+    local: "anchor/{{network}}"
+    zchain: "{{artifact.zchain.base}}/0chain/config"
 
 zchain:
   blueprint: "{{blueprint}}"

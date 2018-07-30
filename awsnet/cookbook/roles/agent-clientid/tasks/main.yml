@@ -1,0 +1,13 @@
+---
+- import_tasks: agent-clientid-assemble-common.yml
+  tags: ['agent-clientid-assemble-local', 'agent-clientid-assemble-zchain', 'agent-clientid-teardown-local']
+
+- import_tasks: agent-clientid-assemble-local.yml
+  tags: ['agent-clientid-assemble-local']
+
+- import_tasks: agent-clientid-teardown-local.yml
+  tags: ['agent-clientid-teardown-local']
+
+- import_tasks: agent-clientid-assemble-zchain.yml
+  tags: ['agent-clientid-assemble-zchain']
+...

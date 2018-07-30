@@ -1,0 +1,6 @@
+---
+- import_tasks: agent-role-assemble-zchain.yml
+  tags: ['agent-role-assemble-zchain']
+- import_tasks: agent-role-teardown-zchain.yml
+  tags: ['agent-role-teardown-zchain']
+...

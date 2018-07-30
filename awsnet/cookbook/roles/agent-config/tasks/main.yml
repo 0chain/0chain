@@ -1,0 +1,4 @@
+---
+- import_tasks: agent-config-assemble-zchain.yml
+  tags: ['agent-config-assemble-zchain']
+...
