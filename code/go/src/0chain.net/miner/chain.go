@@ -12,9 +12,11 @@ import (
 	"0chain.net/round"
 )
 
+//RoundMismatch - to indicate an error where the current round and the given round don't match
 const RoundMismatch = "round_mismatch"
 
-var ErrRoundMismatch = common.NewError("round_mismatch", "Current round number of the chain doesn't match the block generation round")
+//ErrRoundMismatch - an error object for mismatched round error
+var ErrRoundMismatch = common.NewError(RoundMismatch, "Current round number of the chain doesn't match the block generation round")
 
 var minerChain = &Chain{}
 

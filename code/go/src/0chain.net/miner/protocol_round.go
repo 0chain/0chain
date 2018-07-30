@@ -20,13 +20,12 @@ import (
 	"go.uber.org/zap"
 )
 
+//PreviousBlockUnknown - to indicate an error condition when the previous block of a given block is not known
 const PreviousBlockUnknown = "previous_block_not_known"
 
-var BLOCK_TIME = 3 * chain.DELTA
-
+//SetNetworkRelayTime - set the network relay time
 func SetNetworkRelayTime(delta time.Duration) {
 	chain.SetNetworkRelayTime(delta)
-	BLOCK_TIME = 3 * delta
 }
 
 func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
