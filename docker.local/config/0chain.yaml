@@ -24,4 +24,4 @@ server_chain:
     notarization_threshold: 60 # percentage
   network:
     relay_time: 180 # milliseconds
-    max_concurrent_requests: 6
+    max_concurrent_requests: 2
