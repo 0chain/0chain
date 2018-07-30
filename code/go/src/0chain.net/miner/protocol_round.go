@@ -226,7 +226,8 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 
 			// since block.AddVerificationTicket is not thread-safe, directly doing ProcessVerifiedTicket will not work in rare cases as incoming verification tickets get added concurrently
 			//mc.ProcessVerifiedTicket(ctx, r, b, &bvt.VerificationTicket)
-			bm := &BlockMessage{Type: MessageVerificationTicket, Sender: node.Self.Node, Block: b, Round: r, BlockVerificationTicket: bvt}
+			bm := NewBlockMessage(MessageVerificationTicket, node.Self.Node, r, b)
+			bm.BlockVerificationTicket = bvt
 			mc.BlockMessageChannel <- bm
 		}
 		return true
