@@ -1,0 +1,30 @@
+version: '3'
+services:
+  wallet:
+    environment:
+      - DOCKER=true
+    build:
+      context: ../..
+      dockerfile: ./docker.local/build.wallet/Dockerfile
+    volumes:
+      - ../config:/0chain/config
+      - ../wallet${WALLET}/data:/0chain/data
+      - ../wallet${WALLET}/log:/0chain/log
+
+    ports:
+      - "777${WALLET}:777${WALLET}"
+    networks:
+      default:
+      testnet0:
+        ipv4_address: 198.18.0.9${WALLET}
+    command: ./bin/wallet  
+
+networks:
+  default:
+    driver: bridge
+  testnet0:
+    external: true
+
+volumes:
+  data:
+  config:

@@ -47,3 +47,8 @@ func (mc *Chain) SendFinalizedBlock(ctx context.Context, b *block.Block) {
 		mc.Sharders.SendAll(FinalizedBlockSender(b))
 	}
 }
+
+/*SendNotarizedBlockTo - send a notarized block to a miner*/
+func (mc *Chain) SendNotarizedBlockTo(ctx context.Context, b *block.Block, minerID string) {
+	mc.Miners.SendTo(MinerNotarizedBlockSender(b), minerID)
+}
