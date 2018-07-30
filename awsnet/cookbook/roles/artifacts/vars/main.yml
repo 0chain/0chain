@@ -99,6 +99,7 @@ artifact:
     code: "/0chain/0chain"
     dirs:
       - 0chain
+      - nodes
       - miner
       - sharder
 
@@ -106,7 +107,7 @@ nodefiles:
   file: "nodes.txt"
   dir:
     local: "{{artifact.local.base}}/nodes"
-    zchain: "{{artifact.zchain.base}}/0chain/docker.aws/nodes"
+    zchain: "{{artifact.zchain.base}}/nodes"
 
 blueprint.instance_tags: network_type={{blueprint.network_type}} network_name={{blueprint.network_name}}
 
@@ -114,7 +115,7 @@ zchain_config:
   file: "0chain.yaml"
   dir:
     local: "anchor/{{network}}"
-    zchain: "{{artifact.zchain.base}}/0chain/config"
+    zchain: "{{artifact.zchain.code}}/config"
 
 zchain:
   blueprint: "{{blueprint}}"
