@@ -13,8 +13,6 @@ import (
 	"go.uber.org/zap"
 )
 
-var ROUND_TIMEOUT = 50 * chain.DELTA
-
 /*SetupWorkers - Setup the miner's workers */
 func SetupWorkers() {
 	ctx := common.GetRootContext()
@@ -23,9 +21,10 @@ func SetupWorkers() {
 
 /*BlockWorker - a job that does all the work related to blocks in each round */
 func (mc *Chain) BlockWorker(ctx context.Context) {
+	var RoundTimeout = 50 * chain.DELTA
 	var protocol Protocol = mc
 	for true {
-		var roundTimeout = time.NewTimer(ROUND_TIMEOUT)
+		var roundTimeout = time.NewTimer(RoundTimeout)
 		select {
 		case <-ctx.Done():
 			return
