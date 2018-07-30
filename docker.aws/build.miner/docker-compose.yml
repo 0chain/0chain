@@ -9,7 +9,7 @@ services:
       default:
     sysctls:
       net.core.somaxconn: '511'
-    command: redis-server /0chain/0chain/config/redis/state.redis.conf
+    command: redis-server /0chain/config/redis/state.redis.conf
 
   redis_txns:
     image: "redis:alpine"
@@ -20,7 +20,7 @@ services:
       default:
     sysctls:
       net.core.somaxconn: '511'
-    command: redis-server /0chain/0chain/config/redis/transactions.redis.conf
+    command: redis-server /0chain/config/redis/transactions.redis.conf
 
   miner:
     environment:

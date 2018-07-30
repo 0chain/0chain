@@ -188,6 +188,13 @@ agent-clientid-teardown-local:
 agent-config-assemble-zchain:
 	$(ZCHAIN_PLAY)
 
+agent-stage-cluster: \
+	gitrepo-assemble-local \
+	gitrepo-assemble-zchain \
+	agent-clientid-assemble-local \
+	agent-clientid-assemble-zchain \
+	agent-build-assemble-zchain
+
 #Build the zchain_base, miner and sharder
 agent-build-assemble-zchain:
 	$(ZCHAIN_PLAY)
