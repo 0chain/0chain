@@ -13,8 +13,6 @@ import (
 	"go.uber.org/zap"
 )
 
-var ROUND_TIMEOUT = 50 * chain.DELTA
-
 /*SetupWorkers - Setup the miner's workers */
 func SetupWorkers() {
 	ctx := common.GetRootContext()
@@ -23,9 +21,10 @@ func SetupWorkers() {
 
 /*BlockWorker - a job that does all the work related to blocks in each round */
 func (mc *Chain) BlockWorker(ctx context.Context) {
+	var RoundTimeout = 50 * chain.DELTA
 	var protocol Protocol = mc
 	for true {
-		var roundTimeout = time.NewTimer(ROUND_TIMEOUT)
+		var roundTimeout = time.NewTimer(RoundTimeout)
 		select {
 		case <-ctx.Done():
 			return
@@ -103,8 +102,12 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *Block
 	if b == nil {
 		b, err = mc.GetBlock(ctx, msg.BlockVerificationTicket.BlockID)
 		if err != nil {
-			// TODO: If we didn't see this block so far, may be it's better to ask for it
-			Logger.Debug("verification message (no block)", zap.String("block", msg.BlockVerificationTicket.BlockID), zap.Error(err))
+			if msg.ShouldRetry() {
+				Logger.Info("verification message (no block) retrying", zap.String("block", msg.BlockVerificationTicket.BlockID), zap.Int8("retry_count", msg.RetryCount), zap.Error(err))
+				msg.Retry(mc.BlockMessageChannel)
+			} else {
+				Logger.Error("verification message (no block)", zap.String("block", msg.BlockVerificationTicket.BlockID), zap.Int8("retry_count", msg.RetryCount), zap.Error(err))
+			}
 			return
 		}
 		if b.Round < mc.LatestFinalizedBlock.Round {
@@ -136,15 +139,29 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *Block
 
 /*HandleNotarizationMessage - handles the block notarization message */
 func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessage) {
-	r := msg.Round
+	r := mc.GetRound(msg.Notarization.Round)
+	if r == nil {
+		if msg.ShouldRetry() {
+			Logger.Info("notarization receipt handler (round not started yet) retrying", zap.String("block", msg.Notarization.BlockID), zap.Int8("retry_count", msg.RetryCount))
+			msg.Retry(mc.BlockMessageChannel)
+		} else {
+			Logger.Error("notarization receipt handler (round not started yet)", zap.String("block", msg.Notarization.BlockID), zap.Int8("retry_count", msg.RetryCount))
+		}
+		return
+	}
+	msg.Round = r
 	if r.Number < mc.LatestFinalizedBlock.Round {
 		Logger.Debug("notarization message", zap.Int64("round", r.Number), zap.String("block", msg.Notarization.BlockID), zap.Int64("finalized_round", mc.LatestFinalizedBlock.Round))
 		return
 	}
 	b, err := mc.GetBlock(ctx, msg.Notarization.BlockID)
 	if err != nil {
-		// TODO: If we didn't see this block so far, may be it's better to ask for it
-		Logger.Debug("notarization message", zap.Any("block", msg.Notarization.BlockID), zap.Error(err))
+		if msg.ShouldRetry() {
+			Logger.Info("notarization receipt handler (block not found) retrying", zap.Any("block", msg.Notarization.BlockID), zap.Int8("retry_count", msg.RetryCount), zap.Error(err))
+			msg.Retry(mc.BlockMessageChannel)
+		} else {
+			Logger.Error("notarization receipt handler (block not found)", zap.Any("block", msg.Notarization.BlockID), zap.Int8("retry_count", msg.RetryCount), zap.Error(err))
+		}
 		return
 	}
 	if err := mc.VerifyNotarization(ctx, b, msg.Notarization.VerificationTickets); err != nil {

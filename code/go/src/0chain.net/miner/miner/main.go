@@ -43,6 +43,7 @@ func initHandlers() {
 		http.HandleFunc("/_start", StartChainHandler)
 	}
 	http.HandleFunc("/", HomePageHandler)
+	config.SetupHandlers()
 	node.SetupHandlers()
 	chain.SetupHandlers()
 	client.SetupHandlers()
@@ -217,11 +218,11 @@ func StartProtocol() {
 	if config.Development() {
 		go TransactionGenerator(mc.BlockSize)
 	}
-	msg := miner.BlockMessage{Type: miner.MessageStartRound, Round: msr}
+	msg := miner.NewBlockMessage(miner.MessageStartRound, node.Self.Node, msr, nil)
 	msgChannel := mc.GetBlockMessageChannel()
 	if mc.CurrentRound == 0 {
 		Logger.Info("starting the blockchain ...")
-		msgChannel <- &msg
+		msgChannel <- msg
 		mc.SendRoundStart(common.GetRootContext(), sr)
 	}
 }

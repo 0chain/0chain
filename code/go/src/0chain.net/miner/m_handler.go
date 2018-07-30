@@ -61,8 +61,11 @@ func StartRoundHandler(ctx context.Context, entity datastore.Entity) (interface{
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
 	mc := GetMinerChain()
+	if r.Number < mc.LatestFinalizedBlock.Round {
+		return false, nil
+	}
 	mr := mc.CreateRound(r)
-	msg := &BlockMessage{Sender: node.GetSender(ctx), Type: MessageStartRound, Round: mr}
+	msg := NewBlockMessage(MessageStartRound, node.GetSender(ctx), mr, nil)
 	mc.GetBlockMessageChannel() <- msg
 	return true, nil
 }
@@ -78,7 +81,7 @@ func VerifyBlockHandler(ctx context.Context, entity datastore.Entity) (interface
 		Logger.Debug("verify block handler", zap.Int64("round", b.Round), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round))
 		return true, nil
 	}
-	msg := &BlockMessage{Sender: node.GetSender(ctx), Type: MessageVerify, Block: b}
+	msg := NewBlockMessage(MessageVerify, node.GetSender(ctx), nil, b)
 	mc.GetBlockMessageChannel() <- msg
 	return true, nil
 }
@@ -89,7 +92,8 @@ func VerificationTicketReceiptHandler(ctx context.Context, entity datastore.Enti
 	if !ok {
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
-	msg := &BlockMessage{Sender: node.GetSender(ctx), Type: MessageVerificationTicket, BlockVerificationTicket: bvt}
+	msg := NewBlockMessage(MessageVerificationTicket, node.GetSender(ctx), nil, nil)
+	msg.BlockVerificationTicket = bvt
 	GetMinerChain().GetBlockMessageChannel() <- msg
 	return true, nil
 }
@@ -100,14 +104,8 @@ func NotarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (i
 	if !ok {
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
-	mc := GetMinerChain()
-	r := mc.GetRound(notarization.Round)
-	if r == nil {
-		//TODO: Should we implicitly start a round?
-		Logger.Debug("notarization receipt handler (round not started yet)", zap.String("block", notarization.BlockID))
-		return nil, common.InvalidRequest("Not started this round yet")
-	}
-	msg := &BlockMessage{Sender: node.GetSender(ctx), Type: MessageNotarization, Round: r, Notarization: notarization}
+	msg := NewBlockMessage(MessageNotarization, node.GetSender(ctx), nil, nil)
+	msg.Notarization = notarization
 	GetMinerChain().GetBlockMessageChannel() <- msg
 	return true, nil
 }

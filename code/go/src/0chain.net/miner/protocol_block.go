@@ -21,6 +21,7 @@ import (
 	"go.uber.org/zap"
 )
 
+//InsufficientTxns - to indicate an error when the transactions are not sufficient to make a block
 const InsufficientTxns = "insufficient_txns"
 
 var bgTimer metrics.Timer

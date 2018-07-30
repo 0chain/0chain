@@ -20,13 +20,12 @@ import (
 	"go.uber.org/zap"
 )
 
+//PreviousBlockUnknown - to indicate an error condition when the previous block of a given block is not known
 const PreviousBlockUnknown = "previous_block_not_known"
 
-var BLOCK_TIME = 3 * chain.DELTA
-
+//SetNetworkRelayTime - set the network relay time
 func SetNetworkRelayTime(delta time.Duration) {
 	chain.SetNetworkRelayTime(delta)
-	BLOCK_TIME = 3 * delta
 }
 
 func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
@@ -226,7 +225,8 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 
 			// since block.AddVerificationTicket is not thread-safe, directly doing ProcessVerifiedTicket will not work in rare cases as incoming verification tickets get added concurrently
 			//mc.ProcessVerifiedTicket(ctx, r, b, &bvt.VerificationTicket)
-			bm := &BlockMessage{Type: MessageVerificationTicket, Sender: node.Self.Node, Block: b, Round: r, BlockVerificationTicket: bvt}
+			bm := NewBlockMessage(MessageVerificationTicket, node.Self.Node, r, b)
+			bm.BlockVerificationTicket = bvt
 			mc.BlockMessageChannel <- bm
 		}
 		return true

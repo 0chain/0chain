@@ -41,6 +41,7 @@ func initHandlers() {
 		http.HandleFunc("/_sign", common.ToJSONResponse(encryption.SignHandler))
 		http.HandleFunc("/_start", StartChainHandler)
 	}
+	config.SetupHandlers()
 	node.SetupHandlers()
 	chain.SetupHandlers()
 	client.SetupHandlers()
