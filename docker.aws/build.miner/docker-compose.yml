@@ -35,7 +35,7 @@ services:
       context: /0chain/0chain
       dockerfile: /0chain/0chain/docker.aws/build.miner/Dockerfile
     volumes:
-      - /0chain/config:/0chain/config
+      - /0chain/0chain/config:/0chain/config
       - /0chain/nodes:/0chain/nodes
       - /0chain/miner/data:/0chain/data
       - /0chain/miner/log:/0chain/log
