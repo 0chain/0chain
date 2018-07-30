@@ -12,7 +12,7 @@
     - role: istart
     - role: istop
     - role: gitrepo
-    - role: clientid
-    - role: agentbuild
-    - role: agentrole
+    - role: agent-clientid
+    - role: agent-build
+    - role: agent-role
 ...

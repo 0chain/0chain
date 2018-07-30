@@ -13,6 +13,6 @@
     - role: artifacts
     - role: instance
     - role: docker
-    - role: agentcommon
+    - role: agent-common
     - role: storage
 ...
