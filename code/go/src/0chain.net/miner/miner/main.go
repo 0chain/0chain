@@ -17,6 +17,7 @@ import (
 	"0chain.net/common"
 	"0chain.net/config"
 	"0chain.net/datastore"
+	"0chain.net/diagnostics"
 	"0chain.net/encryption"
 	"0chain.net/logging"
 	. "0chain.net/logging"
@@ -29,8 +30,6 @@ import (
 	"go.uber.org/zap"
 )
 
-var startTime time.Time
-
 func initServer() {
 	// TODO; when a new server is brought up, it needs to first download all the state before it can start accepting requests
 	time.Sleep(time.Second)
@@ -40,9 +39,7 @@ func initHandlers() {
 	if config.Development() {
 		http.HandleFunc("/_hash", encryption.HashHandler)
 		http.HandleFunc("/_sign", common.ToJSONResponse(encryption.SignHandler))
-		http.HandleFunc("/_start", StartChainHandler)
 	}
-	http.HandleFunc("/", HomePageHandler)
 	config.SetupHandlers()
 	node.SetupHandlers()
 	chain.SetupHandlers()
@@ -50,6 +47,7 @@ func initHandlers() {
 	transaction.SetupHandlers()
 	block.SetupHandlers()
 	miner.SetupHandlers()
+	diagnostics.SetupHandlers()
 }
 
 func initEntities() {
@@ -177,7 +175,7 @@ func main() {
 	initServer()
 	go StartProtocol()
 	Logger.Info("Ready to listen to the requests")
-	startTime = time.Now().UTC()
+	chain.StartTime = time.Now().UTC()
 	log.Fatal(server.ListenAndServe())
 }
 
@@ -225,12 +223,4 @@ func StartProtocol() {
 		msgChannel <- msg
 		mc.SendRoundStart(common.GetRootContext(), sr)
 	}
-}
-
-/*HomePageHandler - provides basic info when accessing the home page of the server */
-func HomePageHandler(w http.ResponseWriter, r *http.Request) {
-	mc := miner.GetMinerChain()
-	fmt.Fprintf(w, "<div>Running since %v ...\n", startTime)
-	fmt.Fprintf(w, "<div>Working on the chain: %v</div>\n", mc.GetKey())
-	fmt.Fprintf(w, "<div>I am a %v with set rank of (%v) <ul><li>id:%v</li><li>public_key:%v</li></ul></div>\n", node.Self.GetNodeTypeName(), node.Self.SetIndex, node.Self.GetKey(), node.Self.PublicKey)
 }

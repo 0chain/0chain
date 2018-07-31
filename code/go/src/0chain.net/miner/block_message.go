@@ -14,6 +14,7 @@ const (
 	MessageVerify             = 1
 	MessageVerificationTicket = 2
 	MessageNotarization       = 3
+	MessageNotarizedBlock     = 4
 )
 
 /*BlockMessage - Used for the various messages that need to be handled to generate a block */
@@ -39,7 +40,7 @@ func NewBlockMessage(messageType int, sender *node.Node, round *Round, block *bl
 	return bm
 }
 
-var messageLookups = common.CreateLookups("start_round", "Start Round", "verify_block", "Verify Block", "verification_ticket", "Verification Ticket", "notarization", "Notarization")
+var messageLookups = common.CreateLookups("start_round", "Start Round", "verify_block", "Verify Block", "verification_ticket", "Verification Ticket", "notarization", "Notarization", "notarized_block", "Notarized Block")
 
 /*GetMessageLookup - get the message type lookup */
 func GetMessageLookup(msgType int) *common.Lookup {

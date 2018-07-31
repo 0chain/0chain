@@ -69,6 +69,7 @@ func (c *Chain) FinalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 			FinalizationTimer.UpdateSince(fts)
 		}
 		fts = time.Now()
+		UpdateInfo(fb)
 		if fb.ClientState != nil {
 			fb.ClientState.SaveChanges(c.StateDB, util.Origin(fb.Round), false)
 			Logger.Info("finalize round - save state", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.String("hash", util.ToHex(fb.ClientState.GetRoot())), zap.Int("changes", len(fb.ClientState.GetChangeCollector().GetChanges())))
@@ -95,7 +96,7 @@ func (c *Chain) FinalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 	c.PruneChain(ctx, frchain[len(frchain)-1])
 }
 
-/*PruneChain - prunces the chain */
+/*PruneChain - prunes the chain */
 func (c *Chain) PruneChain(ctx context.Context, b *block.Block) {
 	c.DeleteBlocksBelowRound(b.Round - 50)
 }

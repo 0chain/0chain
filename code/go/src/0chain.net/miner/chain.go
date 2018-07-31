@@ -2,6 +2,7 @@ package miner
 
 import (
 	"context"
+	"sort"
 	"sync"
 
 	"0chain.net/block"
@@ -9,6 +10,7 @@ import (
 	"0chain.net/common"
 	"0chain.net/datastore"
 	"0chain.net/memorystore"
+	"0chain.net/node"
 	"0chain.net/round"
 )
 
@@ -121,6 +123,14 @@ func (mc *Chain) DeleteRoundsBelow(ctx context.Context, round int64) {
 		r.Clear()
 		delete(mc.rounds, r.Number)
 	}
+}
+
+/*GetMinersByRank - get miners by their rank for a certain round*/
+func (mc *Chain) GetMinersByRank(ctx context.Context, r *round.Round) []*node.Node {
+	sort.Slice(mc.Miners.Nodes, func(i int, j int) bool {
+		return r.GetRank(mc.Miners.Nodes[i].SetIndex) < r.GetRank(mc.Miners.Nodes[j].SetIndex)
+	})
+	return mc.Miners.Nodes
 }
 
 /*CancelRoundsBelow - delete rounds below */

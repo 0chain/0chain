@@ -137,6 +137,15 @@ func SetupEntity(store datastore.Store) {
 	ClientEntityChannel = memorystore.SetupWorkers(common.GetRootContext(), &chunkingOptions)
 }
 
+func SetupEntityForWallet(store datastore.Store) {
+	clientEntityMetadata = datastore.MetadataProvider()
+	clientEntityMetadata.Name = "client"
+	clientEntityMetadata.Provider = Provider
+	clientEntityMetadata.Store = store
+
+	datastore.RegisterEntityMetadata("client", clientEntityMetadata)
+}
+
 var ClientEntityChannel chan datastore.QueuedEntity
 
 /*GetClients - given a set of client ids, return the clients */

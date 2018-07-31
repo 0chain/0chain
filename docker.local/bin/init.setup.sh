@@ -15,3 +15,9 @@ do
   mkdir -p docker.local/sharder$i/data/cassandra
   mkdir -p docker.local/sharder$i/log
 done
+
+for i in $(seq 1 1)
+do
+  mkdir -p docker.local/wallet$i/data/keys
+  mkdir -p docker.local/wallet$i/log
+done

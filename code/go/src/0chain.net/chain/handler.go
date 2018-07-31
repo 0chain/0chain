@@ -2,6 +2,7 @@ package chain
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -26,6 +27,8 @@ func SetupHandlers() {
 	}
 	http.HandleFunc("/v1/block/get/latest_finalized", common.ToJSONResponse(LatestFinalizedBlockHandler))
 	http.HandleFunc("/v1/block/get/recent_finalized", common.ToJSONResponse(RecentFinalizedBlockHandler))
+
+	http.HandleFunc("/", HomePageHandler)
 }
 
 /*GetChainHandler - given an id returns the chain information */
@@ -143,4 +146,35 @@ func RecentFinalizedBlockHandler(ctx context.Context, r *http.Request) (interfac
 		fbs = append(fbs, b.GetSummary())
 	}
 	return fbs, nil
+}
+
+//StartTime - time when the server has started
+var StartTime time.Time
+
+/*HomePageHandler - provides basic info when accessing the home page of the server */
+func HomePageHandler(w http.ResponseWriter, r *http.Request) {
+	sc := GetServerChain()
+	fmt.Fprintf(w, "<div>Running since %v ...\n", StartTime)
+	fmt.Fprintf(w, "<div>Working on the chain: %v</div>\n", sc.GetKey())
+	fmt.Fprintf(w, "<div>I am a %v with set rank of (%v) <ul><li>id:%v</li><li>public_key:%v</li></ul></div>\n", node.Self.GetNodeTypeName(), node.Self.SetIndex, node.Self.GetKey(), node.Self.PublicKey)
+}
+
+/*InfoHandler - handler to get the information of the chain */
+func InfoHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "<table>")
+	fmt.Fprintf(w, "<tr><th>Finalized Round</th><th>Finalized Blocks Count</th><th>Chain Weight</th><th>Finalized Block Hash</th></tr>")
+	for idx := 0; idx < len(ChainInfo); idx++ {
+		cf := ChainInfo[idx]
+		if cf.FinalizedRound == 0 {
+			break
+		}
+		fmt.Fprintf(w, "<tr>")
+		fmt.Fprintf(w, "<td>%11d</td>", cf.FinalizedRound)
+		fmt.Fprintf(w, "<td>%11d</td>", cf.FinalizedCount)
+		fmt.Fprintf(w, "<td>%.8f</td>", cf.ChainWeight)
+		fmt.Fprintf(w, "<td>%s</td>", cf.BlockHash)
+
+		fmt.Fprintf(w, "</tr>")
+	}
+	fmt.Fprintf(w, "</table>")
 }

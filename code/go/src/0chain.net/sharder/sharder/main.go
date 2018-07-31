@@ -17,6 +17,7 @@ import (
 	"0chain.net/client"
 	"0chain.net/common"
 	"0chain.net/config"
+	"0chain.net/diagnostics"
 	"0chain.net/ememorystore"
 	"0chain.net/encryption"
 	"0chain.net/logging"
@@ -39,15 +40,13 @@ func initHandlers() {
 	if config.Development() {
 		http.HandleFunc("/_hash", encryption.HashHandler)
 		http.HandleFunc("/_sign", common.ToJSONResponse(encryption.SignHandler))
-		http.HandleFunc("/_start", StartChainHandler)
 	}
 	config.SetupHandlers()
 	node.SetupHandlers()
 	chain.SetupHandlers()
-	client.SetupHandlers()
-	transaction.SetupHandlers()
 	block.SetupHandlers()
 	sharder.SetupHandlers()
+	diagnostics.SetupHandlers()
 }
 
 func initEntities() {
@@ -177,7 +176,7 @@ func main() {
 	initHandlers()
 
 	Logger.Info("Ready to listen to the requests")
-	//log.Fatal(server.Serve(l))
+	chain.StartTime = time.Now().UTC()
 	log.Fatal(server.ListenAndServe())
 }
 

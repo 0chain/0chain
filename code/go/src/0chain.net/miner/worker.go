@@ -44,6 +44,8 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 				protocol.HandleVerificationTicketMessage(ctx, msg)
 			case MessageNotarization:
 				protocol.HandleNotarizationMessage(ctx, msg)
+			case MessageNotarizedBlock:
+				protocol.HandleNotarizedBlockMessage(ctx, msg)
 			}
 			if msg.Sender != nil {
 				Logger.Debug("message (done)", zap.Any("msg", GetMessageLookup(msg.Type)), zap.Any("sender_index", msg.Sender.SetIndex), zap.Any("id", msg.Sender.GetKey()))
@@ -190,5 +192,41 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
 	r.Round.Block = nil
 	if mc.CanGenerateRound(&r.Round, node.GetSelfNode(ctx).Node) {
 		go mc.GenerateRoundBlock(ctx, r)
+	} else {
+		pr := mc.GetRound(r.Number - 1)
+		go mc.BroadcastNotarizedBlocks(ctx, pr)
 	}
+}
+
+/*HandleNotarizedBlockMessage - handles a notarized block for a previous round*/
+func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMessage) {
+	r := mc.GetRound(msg.Block.Round)
+	nb := r.GetNotarizedBlocks()
+	for _, blk := range nb {
+		if blk.Hash == msg.Block.Hash {
+			return
+		}
+	}
+	if !mc.ValidGenerator(&r.Round, msg.Block) {
+		Logger.Debug("verify block (yes mr, invalid generator)", zap.Any("round", r.Number), zap.Any("block", msg.Block.Hash))
+		return
+	}
+	if err := mc.VerifyNotarization(ctx, msg.Block, msg.Block.VerificationTickets); err != nil {
+		Logger.Error("notarized block", zap.Int64("round", msg.Block.Round), zap.String("block", msg.Block.Hash), zap.Error(err))
+		return
+	}
+	b, err := mc.GetBlock(ctx, msg.Block.Hash)
+	if err == nil {
+		b.MergeVerificationTickets(msg.Block.VerificationTickets)
+	} else {
+		b = msg.Block
+		mc.AddBlock(b)
+	}
+	if !r.IsVerificationComplete() {
+		r.CancelVerification()
+		if r.Block == nil || r.Block.Weight() < b.Weight() {
+			r.Block = b
+		}
+	}
+	mc.AddNotarizedBlock(ctx, &r.Round, b)
 }
