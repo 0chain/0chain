@@ -6,10 +6,11 @@ import (
 
 /*Info - a struct to capture the chain info at runtime */
 type Info struct {
-	FinalizedRound int64
-	FinalizedCount int64
-	BlockHash      string
-	ChainWeight    float64
+	FinalizedRound int64   `json:"round"`
+	FinalizedCount int64   `json:"finalized_blocks_count"`
+	BlockHash      string  `json:"block_hash"`
+	ChainWeight    float64 `json:"chain_weight"`
+	MissedBlocks   int64   `json:"missed_blocks_count"`
 }
 
 /*ChainInfo - gather stats of the chain at the powers of 10 */
@@ -24,7 +25,7 @@ func init() {
 }
 
 /*UpdateInfo - update the chain information */
-func UpdateInfo(b *block.Block) {
+func (c *Chain) UpdateInfo(b *block.Block) {
 	powers := len(ChainInfo)
 	for idx, tp := 0, int64(1); idx < powers && b.Round%tp == 0; idx, tp = idx+1, 10*tp {
 		ci := ChainInfo[idx]
@@ -32,5 +33,6 @@ func UpdateInfo(b *block.Block) {
 		ci.BlockHash = b.Hash
 		ci.ChainWeight = b.ChainWeight
 		ci.FinalizedCount = FinalizationTimer.Count()
+		ci.MissedBlocks = c.MissedBlocks
 	}
 }

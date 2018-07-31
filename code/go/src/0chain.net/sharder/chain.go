@@ -75,7 +75,7 @@ func (sc *Chain) GetBlockFromStoreBySummary(bs *block.BlockSummary) (*block.Bloc
 	return blockstore.GetStore().ReadWithBlockSummary(bs)
 }
 
-//TODO do we need this at this level
+//GetRoundFromStore - get the round from a store
 func (sc *Chain) GetRoundFromStore(ctx context.Context, roundNum int64) (*round.Round, error) {
 	r := datastore.GetEntity("round").(*round.Round)
 	r.Number = roundNum

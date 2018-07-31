@@ -2,7 +2,6 @@ package util
 
 import (
 	"fmt"
-	"sort"
 )
 
 /*MerkleTree - A data structure that implements MerkleTreeI interface */
@@ -33,7 +32,6 @@ func (mt *MerkleTree) ComputeTree(hashes []Hashable) {
 	for idx, hashable := range hashes {
 		mt.tree[idx] = hashable.GetHash()
 	}
-	sort.Strings(mt.tree[:mt.leavesCount])
 	for pl0, plsize := 0, mt.leavesCount; plsize > 1; pl0, plsize = pl0+plsize, (plsize+1)/2 {
 		l0 := pl0 + plsize
 		for i, j := 0, 0; i < plsize; i, j = i+2, j+1 {
@@ -70,57 +68,66 @@ func (mt *MerkleTree) SetTree(leavesCount int, tree []string) error {
 /*GetLeafIndex - Get the index of the leaf node in the tree */
 func (mt *MerkleTree) GetLeafIndex(hash Hashable) int {
 	hs := hash.GetHash()
-	return sort.SearchStrings(mt.tree[:mt.leavesCount], hs)
+	for i := 0; i < mt.leavesCount; i++ {
+		if mt.tree[i] == hs {
+			return i
+		}
+	}
+	return -1
 }
 
 /*GetPath - get the path that can be used to verify the merkle tree */
-func (mt *MerkleTree) GetPath(hash Hashable) []MTPathNode {
+func (mt *MerkleTree) GetPath(hash Hashable) MTPath {
 	hidx := mt.GetLeafIndex(hash)
 	if hidx < 0 {
-		return nil
+		return MTPath{}
 	}
 	return mt.GetPathByIndex(hidx)
 }
 
 /*VerifyPath - given a leaf node and the path, verify that the node is part of the tree */
-func (mt *MerkleTree) VerifyPath(hash Hashable, path []MTPathNode) bool {
+func (mt *MerkleTree) VerifyPath(hash Hashable, path MTPath) bool {
 	hs := hash.GetHash()
 	mthash := hs
-	pl := len(path)
+	pathNodes := path.Nodes
+	pl := len(pathNodes)
+	idx := path.LeafIndex
 	for i := 0; i < pl; i++ {
-		if path[i].Side == Left {
-			mthash = MHash(path[i].Hash, mthash)
+		if idx&1 == 1 {
+			mthash = MHash(pathNodes[i], mthash)
 		} else {
-			mthash = MHash(mthash, path[i].Hash)
+			mthash = MHash(mthash, pathNodes[i])
 		}
+		idx = (idx - idx&1) / 2
 	}
 	return mthash == mt.GetRoot()
 }
 
 /*GetPathByIndex - get the path of a leaf node at index i */
-func (mt *MerkleTree) GetPathByIndex(idx int) []MTPathNode {
-	path := make([]MTPathNode, 1, mt.levels-1)
+func (mt *MerkleTree) GetPathByIndex(idx int) MTPath {
+	path := make([]string, 1, mt.levels-1)
+	leafIdx := idx
 	if idx&1 == 1 {
-		path[0] = MTPathNode{Hash: mt.tree[idx-1], Side: Left}
+		path[0] = mt.tree[idx-1]
 	} else {
 		if idx+1 < mt.leavesCount {
-			path[0] = MTPathNode{Hash: mt.tree[idx+1], Side: Right}
+			path[0] = mt.tree[idx+1]
 		} else {
-			path[0] = MTPathNode{Hash: mt.tree[idx], Side: Right}
+			path[0] = mt.tree[idx]
 		}
 	}
 	for pl0, plsize := 0, mt.leavesCount; plsize > 2; pl0, plsize = pl0+plsize, (plsize+1)/2 {
 		l0 := pl0 + plsize
 		idx = (idx - idx&1) / 2
 		if idx&1 == 1 {
-			path = append(path, MTPathNode{Hash: mt.tree[l0+idx-1], Side: Left})
+			path = append(path, mt.tree[l0+idx-1])
 		} else {
 			if l0+idx+1 < l0+(plsize+1)/2 {
-				path = append(path, MTPathNode{Hash: mt.tree[l0+idx+1], Side: Right})
+				path = append(path, mt.tree[l0+idx+1])
 			} else {
-				path = append(path, MTPathNode{Hash: mt.tree[l0+idx], Side: Right})
+				path = append(path, mt.tree[l0+idx])
 			}
 		}
 	}
-	return path
+	return MTPath{Nodes: path, LeafIndex: leafIdx}
 }

@@ -27,8 +27,11 @@ import (
 func SetupWorkers() {
 	ClearWorkerState()
 	ctx := common.GetRootContext()
-	go GetSharderChain().BlockWorker(ctx)
-	go GetSharderChain().BlockStorageWorker(ctx)
+	sc := GetSharderChain()
+	go sc.BlockWorker(ctx)                 // 1) receives incoming blocks from the network
+	go sc.BlockFinalizationWorker(ctx, sc) // 2) sequentially runs finalization logic
+	go sc.BlockStorageWorker(ctx)          // 3) persists the blocks
+
 	if config.Development() {
 		go metrics.LogScaled(metrics.DefaultRegistry, 60*time.Second, time.Millisecond, log.New(os.Stderr, "metrics: ", log.Lmicroseconds))
 	}

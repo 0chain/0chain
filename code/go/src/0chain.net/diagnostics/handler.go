@@ -5,12 +5,15 @@ import (
 	"net/http"
 
 	"0chain.net/chain"
+	"0chain.net/common"
 	metrics "github.com/rcrowley/go-metrics"
 )
 
 /*SetupHandlers - setup diagnostics handlers */
 func SetupHandlers() {
-	http.HandleFunc("/_diagnostics/info", chain.InfoHandler)
+	http.HandleFunc("/_diagnostics/info", chain.InfoWriter)
+	http.HandleFunc("/v1/diagnostics/get/info", common.ToJSONResponse(chain.InfoHandler))
+
 }
 
 /*GetStatistics - write the statistics of the given timer */

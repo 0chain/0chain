@@ -78,6 +78,9 @@ type Chain struct {
 
 	StateDB                 util.NodeDB         `json:"-"`
 	ClientStateDeserializer state.DeserializerI `json:"-"`
+
+	FinalizedRoundsChannel chan *round.Round `json:"-"`
+	MissedBlocks           int64             `json:"-"`
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
@@ -147,6 +150,7 @@ func (c *Chain) Initialize() {
 	c.LatestFinalizedBlock = nil
 	c.CurrentMagicBlock = nil
 	c.BlocksToSharder = 1
+	c.FinalizedRoundsChannel = make(chan *round.Round, 128)
 	c.StateDB = stateDB
 }
 

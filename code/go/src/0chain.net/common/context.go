@@ -64,7 +64,7 @@ func HandleShutdown(server *http.Server) {
 				server.Shutdown(ctx)
 				cancelf()
 			default:
-				Logger.Debug("unhandled signal", zap.Any("signal", sig))
+				Logger.Info("unhandled signal", zap.Any("signal", sig))
 			}
 		}
 	}()
