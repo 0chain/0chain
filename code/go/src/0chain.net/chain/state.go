@@ -71,6 +71,9 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 }
 
 func (c *Chain) getState(clientState util.MerklePatriciaTrieI, clientID string) (*state.State, error) {
+	if clientState == nil {
+		return nil, common.NewError("get state", "client state does not exist")
+	}
 	s := &state.State{}
 	s.Balance = state.Balance(0)
 	ss, err := clientState.GetNodeValue(util.Path(clientID))
