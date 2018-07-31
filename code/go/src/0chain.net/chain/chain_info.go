@@ -6,11 +6,11 @@ import (
 
 /*Info - a struct to capture the chain info at runtime */
 type Info struct {
-	FinalizedRound int64
-	FinalizedCount int64
-	BlockHash      string
-	ChainWeight    float64
-	MissedBlocks   int64
+	FinalizedRound int64   `json:"round"`
+	FinalizedCount int64   `json:"finalized_blocks_count"`
+	BlockHash      string  `json:"block_hash"`
+	ChainWeight    float64 `json:"chain_weight"`
+	MissedBlocks   int64   `json:"missed_blocks_count"`
 }
 
 /*ChainInfo - gather stats of the chain at the powers of 10 */

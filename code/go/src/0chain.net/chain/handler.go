@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"0chain.net/config"
 	"0chain.net/node"
 
 	"0chain.net/block"
@@ -157,10 +158,27 @@ func HomePageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<div>Running since %v ...\n", StartTime)
 	fmt.Fprintf(w, "<div>Working on the chain: %v</div>\n", sc.GetKey())
 	fmt.Fprintf(w, "<div>I am a %v with set rank of (%v) <ul><li>id:%v</li><li>public_key:%v</li></ul></div>\n", node.Self.GetNodeTypeName(), node.Self.SetIndex, node.Self.GetKey(), node.Self.PublicKey)
+	if !config.MainNet() {
+		fmt.Fprintf(w, "<ul>")
+		fmt.Fprintf(w, "<li><a href='/_chain_stats'>/_chain_stats</a>")
+		fmt.Fprintf(w, "<li><a href='/_diagnostics/info'>/_diagnostics/info</a>")
+		fmt.Fprintf(w, "</ul>")
+	}
 }
 
 /*InfoHandler - handler to get the information of the chain */
-func InfoHandler(w http.ResponseWriter, r *http.Request) {
+func InfoHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	idx := 0
+	for ; idx < len(ChainInfo); idx++ {
+		if ChainInfo[idx].FinalizedRound == 0 {
+			break
+		}
+	}
+	return ChainInfo[:idx], nil
+}
+
+/*InfoWriter - a handler to get the information of the chain */
+func InfoWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<style>\n")
 	fmt.Fprintf(w, ".number { text-align: right; }\n")
 	fmt.Fprintf(w, "table, td, th { border: 1px solid black; }\n")

@@ -34,14 +34,19 @@ type Config struct {
 /*Configuration of the system */
 var Configuration Config
 
-/*TestNet is the program running in TestNet mode? */
+/*TestNet - is the server running in TestNet mode? */
 func TestNet() bool {
 	return Configuration.DeploymentMode == DeploymentTestNet
 }
 
-/*Development - is the programming running in development mode? */
+/*Development - is the server running in development mode? */
 func Development() bool {
 	return Configuration.DeploymentMode == DeploymentDevelopment
+}
+
+/*MainNet - is the server running in mainnet mode? */
+func MainNet() bool {
+	return Configuration.DeploymentMode == DeploymentMainNet
 }
 
 /*ErrSupportedChain error for indicating which chain is supported by the server */
