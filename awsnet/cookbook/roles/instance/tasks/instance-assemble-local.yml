@@ -23,6 +23,11 @@
     count_tag: "{{instance_tags[item.key]}}"
     ebs_optimized: yes
     volumes:
+      - device_name: "/dev/sda1"
+        volume_type: "io1"
+        volume_size: "64"
+        iops: "1500"
+        delete_on_termination: true
       - device_name: "{{storage[zchain.blueprint.storage_type[item.value.role]].device_name}}"
         volume_type: "{{storage[zchain.blueprint.storage_type[item.value.role]].volume_type}}"
         volume_size: "{{storage[zchain.blueprint.storage_type[item.value.role]].volume_size}}"

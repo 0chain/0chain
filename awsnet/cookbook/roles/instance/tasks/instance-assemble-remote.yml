@@ -13,4 +13,5 @@
     - unzip
     - htop
     - iperf
+    - ncdu
 ...

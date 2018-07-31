@@ -11,4 +11,12 @@
   shell: ./docker.aws/bin/stop.miner.sh
   args:
     chdir: "{{zchain_code}}"
+
+- name: "Brute force docker"
+  shell: docker ps -a -q
+  register: process_list
+
+- name: "Kill the containers"
+  shell: docker stop "{{item}}"
+  with_items: "{{process_list.stdout_lines}}"
 ...

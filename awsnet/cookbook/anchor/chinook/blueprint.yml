@@ -12,7 +12,8 @@ blueprint:
     sharder: 'c4.large'
 
   storage_type:
-    miner: '20GIB_IO1_SDI'
+    root: '64GIB_IO1_SDI'
+    miner: '64GIB_IO1_SDI'
     sharder: '1TIB_IO1_SDI'
 
   ports:
