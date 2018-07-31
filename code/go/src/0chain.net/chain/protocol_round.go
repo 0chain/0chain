@@ -56,7 +56,8 @@ func (c *Chain) finalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 		Logger.Info("finalize round - TODO: need to repair", zap.Any("lf_round", c.LatestFinalizedBlock.Round), zap.Int64("new_lf_round", lfb.Round))
 		return
 	}
-	lfbHash := c.LatestFinalizedBlock.Hash
+	plfb := c.LatestFinalizedBlock
+	lfbHash := plfb.Hash
 	c.LatestFinalizedBlock = lfb
 	frchain := make([]*block.Block, 0, 1)
 	for b := lfb; b != nil && b.Hash != lfbHash; b = b.PrevBlock {
@@ -64,6 +65,11 @@ func (c *Chain) finalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 	}
 	if len(frchain) == 0 {
 		return
+	}
+	fb := frchain[len(frchain)-1]
+	if fb.PrevBlock == nil {
+		Logger.Info("finalize round (missed blocks)", zap.Int64("from", plfb.Round+1), zap.Int64("to", fb.Round-1))
+		c.MissedBlocks += fb.Round - 1 - plfb.Round
 	}
 	deadBlocks := make([]*block.Block, 0, 1)
 	for idx := range frchain {
@@ -73,7 +79,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 			FinalizationTimer.UpdateSince(fts)
 		}
 		fts = time.Now()
-		UpdateInfo(fb)
+		c.UpdateInfo(fb)
 		if fb.ClientState != nil {
 			fb.ClientState.SaveChanges(c.StateDB, util.Origin(fb.Round), false)
 			Logger.Info("finalize round - save state", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.String("hash", util.ToHex(fb.ClientState.GetRoot())), zap.Int("changes", len(fb.ClientState.GetChangeCollector().GetChanges())))

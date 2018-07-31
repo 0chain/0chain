@@ -80,6 +80,7 @@ type Chain struct {
 	ClientStateDeserializer state.DeserializerI `json:"-"`
 
 	FinalizedRoundsChannel chan *round.Round `json:"-"`
+	MissedBlocks           int64             `json:"-"`
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
