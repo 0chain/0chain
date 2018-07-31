@@ -32,7 +32,7 @@ const (
 /*MTPath - The merkle tree path*/
 type MTPath struct {
 	Nodes     []string `json:"nodes"`
-	LeafIndex int      `json:"leafIndex"`
+	LeafIndex int      `json:"leaf_index"`
 }
 
 /*Hash - the hashing used for the merkle tree construction */
