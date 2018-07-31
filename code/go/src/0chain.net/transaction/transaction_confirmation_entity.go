@@ -13,10 +13,10 @@ type Confirmation struct {
 	Hash      string `json:"hash"`
 	BlockHash string `json:"block_hash"`
 	datastore.CreationDateField
-	Round           int64             `json:"round"`
-	RoundRandomSeed int64             `json:"round_random_seed"`
-	MerkleTreeRoot  string            `json:"merkle_tree_root"`
-	MerkleTreePath  []util.MTPathNode `json:"merkle_tree_path"`
+	Round           int64       `json:"round"`
+	RoundRandomSeed int64       `json:"round_random_seed"`
+	MerkleTreeRoot  string      `json:"merkle_tree_root"`
+	MerkleTreePath  util.MTPath `json:"merkle_tree_path"`
 }
 
 var transactionConfirmationEntityMetadata *datastore.EntityMetadataImpl

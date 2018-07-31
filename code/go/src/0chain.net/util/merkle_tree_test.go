@@ -102,7 +102,7 @@ func BenchmarkMerkleTreeVerifyPath(b *testing.B) {
 	}
 	var mt MerkleTreeI = &MerkleTree{}
 	mt.ComputeTree(txns)
-	paths := make([][]MTPathNode, len(txns))
+	paths := make([]MTPath, len(txns))
 	for j := 0; j < len(txns); j++ {
 		paths[j] = mt.GetPath(txns[j])
 	}

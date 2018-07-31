@@ -13,12 +13,12 @@ type MerkleTreeI interface {
 	SetTree(leavesCount int, tree []string) error
 
 	// API for verification when the leaf node is known
-	GetPath(hash Hashable) []MTPathNode               // Server needs to provide this
-	VerifyPath(hash Hashable, path []MTPathNode) bool //This is only required by a client but useful for testing
+	GetPath(hash Hashable) MTPath               // Server needs to provide this
+	VerifyPath(hash Hashable, path MTPath) bool //This is only required by a client but useful for testing
 
 	/* API for random verification when the leaf node is uknown
 	(verification of the data to hash used as leaf node is outside this API) */
-	GetPathByIndex(idx int) []MTPathNode
+	GetPathByIndex(idx int) MTPath
 }
 
 const (
@@ -29,10 +29,10 @@ const (
 	Right = 1
 )
 
-/*MTPathNode - The merkle tree path node that provides left/right direction */
-type MTPathNode struct {
-	Hash string `json:"hash"`
-	Side byte   `json:"side"`
+/*MTPath - The merkle tree path*/
+type MTPath struct {
+	Nodes     []string `json:"nodes"`
+	LeafIndex int      `json:"leafIndex"`
 }
 
 /*Hash - the hashing used for the merkle tree construction */
