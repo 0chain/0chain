@@ -160,8 +160,9 @@ func HomePageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<div>I am a %v with set rank of (%v) <ul><li>id:%v</li><li>public_key:%v</li></ul></div>\n", node.Self.GetNodeTypeName(), node.Self.SetIndex, node.Self.GetKey(), node.Self.PublicKey)
 	if !config.MainNet() {
 		fmt.Fprintf(w, "<ul>")
-		fmt.Fprintf(w, "<li><a href='/_chain_stats'>/_chain_stats</a>")
-		fmt.Fprintf(w, "<li><a href='/_diagnostics/info'>/_diagnostics/info</a>")
+		fmt.Fprintf(w, "<li><a href='/v1/config/get'>/v1/config/get</a></li>")
+		fmt.Fprintf(w, "<li><a href='/_chain_stats'>/_chain_stats</a></li>")
+		fmt.Fprintf(w, "<li><a href='/_diagnostics/info'>/_diagnostics/info</a></li>")
 		fmt.Fprintf(w, "</ul>")
 	}
 }
