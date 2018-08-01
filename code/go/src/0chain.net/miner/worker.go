@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"0chain.net/chain"
 	"0chain.net/common"
 	"0chain.net/datastore"
 	. "0chain.net/logging"
@@ -23,7 +22,7 @@ func SetupWorkers() {
 
 /*BlockWorker - a job that does all the work related to blocks in each round */
 func (mc *Chain) BlockWorker(ctx context.Context) {
-	var RoundTimeout = 50 * chain.DELTA
+	var RoundTimeout = 10 * time.Second
 	var protocol Protocol = mc
 	for true {
 		var roundTimeout = time.NewTimer(RoundTimeout)
