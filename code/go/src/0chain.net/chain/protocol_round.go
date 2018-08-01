@@ -96,8 +96,8 @@ func (c *Chain) finalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 		ndb := lfb.ClientState.GetNodeDB()
 		lfb.ClientState.SetNodeDB(c.StateDB)
 		if lndb, ok := ndb.(*util.LevelNodeDB); ok {
-			lndb.C = c.StateDB
-			lndb.P = util.NewMemoryNodeDB() // break the chain to reclaim memory
+			lndb.SetCurrentDB(c.StateDB)
+			lndb.ClearPrevousDB() // break the chain to reclaim memory
 		}
 	}
 	// Prune all the dead blocks

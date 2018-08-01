@@ -84,13 +84,22 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	defer memorystore.Close(ctx)
 	pround := mc.GetRound(r.Number - 1)
 	if pround == nil {
-		Logger.Error("generate block (prior round not found)", zap.Any("round", r.Number-1))
+		Logger.Error("generate round block (prior round not found)", zap.Any("round", r.Number-1))
 		return nil, common.NewError("invalid_round,", "Round not available")
 	}
 	pb := mc.GetBlockToExtend(pround)
 	if pb == nil {
-		Logger.Error("generate block (prior block not found)", zap.Any("round", r.Number))
+		Logger.Error("generate round block (prior block not found)", zap.Any("round", r.Number))
 		return nil, common.NewError("block_gen_no_block_to_extend", "Do not have the block to extend this round")
+	}
+	if pb.GetBlockState() == block.StateVerificationPending || pb.GetBlockState() == block.StateVerificationAccepted {
+		Logger.Info("waiting for prior block verification", zap.Any("round", r.Number), zap.Any("block", pb.Hash), zap.Any("state", pb.GetBlockState()))
+		<-pb.VerificationChannel
+		Logger.Info("waiting for prior block verification (done)", zap.Any("round", r.Number), zap.Any("block", pb.Hash), zap.Any("state", pb.GetBlockState()))
+		if !(pb.GetBlockState() == block.StateVerificationSuccessful || pb.GetBlockState() == block.StateNotarized) {
+			Logger.Info("generate round block (prior block compute state)", zap.Any("round", r.Number), zap.Any("block", pb.Hash), zap.Any("state", pb.GetBlockState()))
+			mc.ComputeState(ctx, pb)
+		}
 	}
 	b := datastore.GetEntityMetadata("block").Instance().(*block.Block)
 	b.ChainID = mc.ID
@@ -162,16 +171,19 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 /*AddToRoundVerification - Add a block to verify : WARNING: does not support concurrent access for a given round */
 func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block.Block) {
 	if mr.IsFinalizing() || mr.IsFinalized() {
+		b.SetBlockState(block.StateVerificationRejected)
 		Logger.Debug("add to verification", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Bool("finalizing", mr.IsFinalizing()), zap.Bool("finalized", mr.IsFinalized()))
 		return
 	}
 	if !mc.ValidateMagicBlock(ctx, b) {
+		b.SetBlockState(block.StateVerificationRejected)
 		Logger.Error("invalid magic block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("magic_block", b.MagicBlockHash))
 		return
 	}
 	if b.MinerID != node.GetSelfNode(ctx).GetKey() {
 		bNode := node.GetNode(b.MinerID)
 		if bNode == nil {
+			b.SetBlockState(block.StateVerificationRejected)
 			Logger.Error("add to round verification (invalid miner)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("miner_id", b.MinerID))
 			return
 		}
@@ -199,8 +211,10 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 /*CollectBlocksForVerification - keep collecting the blocks till timeout and then start verifying */
 func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 	verifyAndSend := func(ctx context.Context, r *Round, b *block.Block) bool {
+		b.SetBlockState(block.StateVerificationAccepted)
 		bvt, err := mc.VerifyRoundBlock(ctx, r, b)
 		if err != nil {
+			b.SetBlockState(block.StateVerificationFailed)
 			ierr, ok := err.(*common.Error)
 			if ok {
 				if ierr.Code == RoundMismatch {
@@ -213,6 +227,7 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			}
 			return false
 		}
+		b.SetBlockState(block.StateVerificationSuccessful)
 		r.Block = b
 
 		//TODO: Dfinity suggests broadcasting the prior block so it saturates the network
@@ -228,6 +243,8 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			bm := NewBlockMessage(MessageVerificationTicket, node.Self.Node, r, b)
 			bm.BlockVerificationTicket = bvt
 			mc.BlockMessageChannel <- bm
+		} else {
+			b.SetBlockState(block.StateNotarized)
 		}
 		return true
 	}
@@ -240,6 +257,11 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 		for _, b := range blocks {
 			if verifyAndSend(ctx, r, b) {
 				break
+			}
+		}
+		for _, b := range blocks {
+			if b.GetBlockState() == block.StateVerificationPending {
+				b.SetBlockState(block.StateVerificationRejected)
 			}
 		}
 		sendVerification = true
@@ -256,8 +278,11 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 				// Is this better than the current best block
 				if r.Block == nil || b.RoundRank < r.Block.RoundRank {
 					verifyAndSend(ctx, r, b)
+				} else {
+					b.SetBlockState(block.StateVerificationRejected)
 				}
 			} else { // Accumulate all the blocks into this array till the BlockTime timeout
+				b.SetBlockState(block.StateVerificationPending)
 				blocks = append(blocks, b)
 			}
 		}
@@ -311,6 +336,7 @@ func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.B
 		return
 	}
 	if mc.IsBlockNotarized(ctx, b) {
+		b.SetBlockState(block.StateNotarized)
 		r.Block = b
 		mc.CancelRoundVerification(ctx, r)
 		mc.SendNotarization(ctx, b)

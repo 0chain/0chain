@@ -114,7 +114,6 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		}
 		return true
 	}
-
 	start := time.Now()
 	b.CreationDate = common.Now()
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
@@ -175,6 +174,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	Logger.Info("generate block (assemble+update+sign)", zap.Int64("round", b.Round), zap.Int32("block_size", blockSize), zap.Duration("time", time.Since(start)),
 		zap.String("block", b.Hash), zap.String("prev_block", b.PrevBlock.Hash), zap.String("state_hash", util.ToHex(b.ClientStateHash)),
 		zap.Int32("iteration_count", count), zap.Float64("p_chain_weight", b.PrevBlock.ChainWeight))
+	b.SetBlockState(block.StateGenerated)
 	go b.ComputeTxnMap()
 	return nil
 }

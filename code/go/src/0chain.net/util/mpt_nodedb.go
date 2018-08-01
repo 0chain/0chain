@@ -215,3 +215,19 @@ func GetChanges(ctx context.Context, ndb NodeDB, start Origin, end Origin) (map[
 	}
 	return mpts, nil
 }
+
+var blankdb NodeDB
+
+func init() {
+	blankdb = NewMemoryNodeDB()
+}
+
+/*ClearPrevousDB - set a blank database as the previous database as current should have everything */
+func (lndb *LevelNodeDB) ClearPrevousDB() {
+	lndb.P = blankdb
+}
+
+/*SetCurrentDB - set the current database */
+func (lndb *LevelNodeDB) SetCurrentDB(ndb NodeDB) {
+	lndb.C = ndb
+}

@@ -186,7 +186,7 @@ func InfoWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "table, td, th { border: 1px solid black; }\n")
 	fmt.Fprintf(w, "</style>")
 	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
-	fmt.Fprintf(w, "<tr><th>Round</th><th>Blocks Count</th><th>Chain Weight</th><th>Missed Blocks</th><th>Block Hash</th></tr>")
+	fmt.Fprintf(w, "<tr><th>Round</th><th>Chain Weight</th><th>Block Hash</th><th>Blocks Count</th><th>Missed Blocks</th></tr>")
 	for idx := 0; idx < len(ChainInfo); idx++ {
 		cf := ChainInfo[idx]
 		if cf.FinalizedRound == 0 {
@@ -194,11 +194,10 @@ func InfoWriter(w http.ResponseWriter, r *http.Request) {
 		}
 		fmt.Fprintf(w, "<tr>")
 		fmt.Fprintf(w, "<td class='number'>%11d</td>", cf.FinalizedRound)
-		fmt.Fprintf(w, "<td class='number'>%11d</td>", cf.FinalizedCount)
 		fmt.Fprintf(w, "<td class='number'>%.8f</td>", cf.ChainWeight)
-		fmt.Fprintf(w, "<td class='number'>%6d</td>", cf.MissedBlocks)
 		fmt.Fprintf(w, "<td>%s</td>", cf.BlockHash)
-
+		fmt.Fprintf(w, "<td class='number'>%11d</td>", cf.FinalizedCount)
+		fmt.Fprintf(w, "<td class='number'>%6d</td>", cf.MissedBlocks)
 		fmt.Fprintf(w, "</tr>")
 	}
 	fmt.Fprintf(w, "</table>")

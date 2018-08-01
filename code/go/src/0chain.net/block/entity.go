@@ -17,6 +17,17 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	StateGenerated              = 10
+	StateVerificationPending    = 20
+	StateVerificationAccepted   = 30
+	StateVerificationRejected   = 40
+	StateVerifying              = 50
+	StateVerificationSuccessful = 60
+	StateVerificationFailed     = 70
+	StateNotarized              = 80
+)
+
 /*UnverifiedBlockBody - used to compute the signature
 * This is what is used to verify the correctness of the block & the associated signature
  */
@@ -56,6 +67,9 @@ type Block struct {
 	TxnsMap map[string]bool `json:"-"`
 
 	ClientState util.MerklePatriciaTrieI `json:"-"`
+
+	blockState          byte
+	VerificationChannel chan bool `json:"-"`
 }
 
 var blockEntityMetadata *datastore.EntityMetadataImpl
@@ -142,6 +156,7 @@ func Provider() datastore.Entity {
 	b.PrevBlockVerficationTickets = make([]*VerificationTicket, 0, 1)
 	b.EntityCollection = blockEntityCollection
 	b.ChainID = datastore.ToKey(config.GetServerChainID())
+	b.VerificationChannel = make(chan bool, 1)
 	b.InitializeCreationDate()
 	return b
 }
@@ -173,8 +188,11 @@ func (b *Block) SetClientStateDB(prevBlock *Block) {
 	var rootHash util.Key
 	if prevBlock != nil && prevBlock.ClientState != nil {
 		pndb = prevBlock.ClientState.GetNodeDB()
+		if pndb == nil {
+			Logger.Info("missing pndb")
+		}
 		rootHash = prevBlock.ClientStateHash
-		Logger.Info("prev state root", zap.Int64("round", b.Round), zap.String("prev_block", prevBlock.Hash), zap.String("root", util.ToHex(rootHash)))
+		Logger.Debug("prev state root", zap.Int64("round", b.Round), zap.String("prev_block", prevBlock.Hash), zap.String("root", util.ToHex(rootHash)))
 	} else {
 		Logger.Info("TODO: state sync", zap.Int64("round", b.Round))
 		pndb = util.NewMemoryNodeDB() // TODO: state sync
@@ -354,4 +372,25 @@ func (b *Block) Clear() {
 	b.VerificationTickets = nil
 	b.Txns = nil
 	b.TxnsMap = nil
+}
+
+/*SetBlockState - set the state of the block */
+func (b *Block) SetBlockState(blockState byte) {
+	b.blockState = blockState
+	switch blockState {
+	case StateVerificationRejected:
+		b.VerificationChannel <- false
+		close(b.VerificationChannel)
+	case StateVerificationFailed:
+		b.VerificationChannel <- false
+		close(b.VerificationChannel)
+	case StateVerificationSuccessful:
+		b.VerificationChannel <- true
+		close(b.VerificationChannel)
+	}
+}
+
+/*GetBlockState - get the state of the block */
+func (b *Block) GetBlockState() byte {
+	return b.blockState
 }
