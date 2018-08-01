@@ -152,11 +152,20 @@ func NewLevelNodeDB(curNDB NodeDB, prevNDB NodeDB, propagateDeletes bool) *Level
 	return lndb
 }
 
+func (lndb *LevelNodeDB) isCurrentPersistent() bool {
+	_, ok := lndb.C.(*PNodeDB)
+	return ok
+}
+
 /*GetNode - implement interface */
 func (lndb *LevelNodeDB) GetNode(key Key) (Node, error) {
 	node, err := lndb.C.GetNode(key)
 	if err != nil {
-		return lndb.P.GetNode(key)
+		if !lndb.isCurrentPersistent() {
+			return lndb.P.GetNode(key)
+		} else {
+			return nil, err
+		}
 	}
 	return node, nil
 }
@@ -171,7 +180,9 @@ func (lndb *LevelNodeDB) DeleteNode(key Key) error {
 	_, err := lndb.C.GetNode(key)
 	if err != nil {
 		if lndb.PropagateDeletes {
-			return lndb.P.DeleteNode(key)
+			if !lndb.isCurrentPersistent() {
+				return lndb.P.DeleteNode(key)
+			}
 		}
 		skey := StrKey(key)
 		lndb.DeletedNodes[skey] = true
@@ -186,7 +197,10 @@ func (lndb *LevelNodeDB) Iterate(ctx context.Context, handler NodeDBIteratorHand
 	if err != nil {
 		return err
 	}
-	return lndb.P.Iterate(ctx, handler)
+	if !lndb.isCurrentPersistent() {
+		return lndb.P.Iterate(ctx, handler)
+	}
+	return nil
 }
 
 /*GetChanges - get the list of changes */
@@ -222,12 +236,8 @@ func init() {
 	blankdb = NewMemoryNodeDB()
 }
 
-/*ClearPrevousDB - set a blank database as the previous database as current should have everything */
-func (lndb *LevelNodeDB) ClearPrevousDB() {
-	lndb.P = blankdb
-}
-
-/*SetCurrentDB - set the current database */
-func (lndb *LevelNodeDB) SetCurrentDB(ndb NodeDB) {
+/*RebaseCurrentDB - set the current database */
+func (lndb *LevelNodeDB) RebaseCurrentDB(ndb NodeDB) {
 	lndb.C = ndb
+	lndb.P = blankdb
 }
