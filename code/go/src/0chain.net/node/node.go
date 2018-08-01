@@ -58,7 +58,6 @@ type Node struct {
 	LastActiveTime time.Time
 	ErrorCount     int
 	CommChannel    chan bool
-	CollusionGroup int
 }
 
 /*Provider - create a node object */
@@ -93,8 +92,8 @@ func (n *Node) Print(w io.Writer) {
 func Read(line string) (*Node, error) {
 	node := Provider()
 	fields := strings.Split(line, ",")
-	if len(fields) != 5 && len(fields) != 6 {
-		return nil, common.NewError("invalid_num_fields", fmt.Sprintf("invalid number of fields [%v] len: %v", line, len(fields)))
+	if len(fields) != 5 {
+		return nil, common.NewError("invalid_num_fields", fmt.Sprintf("invalid number of fields [%v] len: %v"))
 	}
 	switch fields[0] {
 	case "m":
@@ -124,14 +123,6 @@ func Read(line string) (*Node, error) {
 	node.PublicKey = fields[4]
 	node.Client.SetPublicKey(node.PublicKey)
 	hash := encryption.Hash(node.PublicKeyBytes)
-	if len(fields) == 6 {
-		ran, cerr := strconv.Atoi(fields[5])
-		if cerr == nil {
-			node.CollusionGroup = ran
-		}
-	} else {
-		node.CollusionGroup = 0
-	}
 	if node.ID != hash {
 		return nil, common.NewError("invalid_client_id", fmt.Sprintf("public key: %v, client_id: %v, hash: %v\n", node.PublicKey, node.ID, hash))
 	}
