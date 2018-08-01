@@ -40,11 +40,11 @@ services:
       - /0chain/miner/data:/0chain/data
       - /0chain/miner/log:/0chain/log
 
-    driver: "json-file"
-    options:
-      max-size: "10M"
-      max-file: "10"
-
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10M"
+        max-file: "10"
     ports:
       - "7071:7071"
     networks:

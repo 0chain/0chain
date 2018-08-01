@@ -43,10 +43,11 @@ services:
       - /0chain/sharder/log:/0chain/log
       - /0chain/sharder/data:/0chain/data
 
-    driver: "json-file"
-    options:
-      max-size: "10M"
-      max-file: "10"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10M"
+        max-file: "10"
 
     ports:
       - "7171:7171"
