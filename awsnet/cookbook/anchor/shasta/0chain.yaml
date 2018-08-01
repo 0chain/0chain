@@ -2,7 +2,7 @@
 version: 1.0
 
 logging:
-  console: "true"
+  console: "false"
   level: "info"
 
 zerochain:
