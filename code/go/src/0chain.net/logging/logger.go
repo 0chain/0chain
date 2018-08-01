@@ -3,15 +3,19 @@ package logging
 import (
 	"os"
 
+	"go.uber.org/zap/zaptest/observer"
+
+	"go.uber.org/zap/zapcore"
+
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	lumberjack "gopkg.in/natefinch/lumberjack.v2"
 )
 
 var (
-	Logger *zap.Logger
-	N2n    *zap.Logger
+	Logger  *zap.Logger
+	N2n     *zap.Logger
+	MemLogs *observer.ObservedLogs
 )
 
 func InitLogging(mode string) {
@@ -42,22 +46,35 @@ func InitLogging(mode string) {
 	cfg.EncoderConfig.TimeKey = "timestamp"
 	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 
-	l, err := cfg.Build(SetOutput(logWriter, cfg))
+	//TODO : check if there is other way to do inmemory logging and see if can assign some buffer size
+
+	//Added inmemory logger to application logger (Logger)
+	core, logs := observer.New(zap.ErrorLevel)
+	option := createOptionFromCores(getZapCore(logWriter, cfg), core)
+	l, err := cfg.Build(option)
 	if err != nil {
 		panic(err)
 	}
 
-	ls, err := cfg.Build(SetOutput(n2nLogWriter, cfg))
+	option = createOptionFromCores(getZapCore(n2nLogWriter, cfg))
+	ls, err := cfg.Build(option)
 	if err != nil {
 		panic(err)
 	}
 
 	Logger = l
 	N2n = ls
+	MemLogs = logs
 }
 
-// SetOutput replaces existing Core with new, that writes to passed WriteSyncer.
-func SetOutput(ws zapcore.WriteSyncer, conf zap.Config) zap.Option {
+func createOptionFromCores(cores ...zapcore.Core) zap.Option {
+	return zap.WrapCore(func(core zapcore.Core) zapcore.Core {
+		return zapcore.NewTee(cores...)
+	})
+
+}
+
+func getZapCore(ws zapcore.WriteSyncer, conf zap.Config) zapcore.Core {
 	var enc zapcore.Encoder
 	switch conf.Encoding {
 	case "json":
@@ -67,10 +84,7 @@ func SetOutput(ws zapcore.WriteSyncer, conf zap.Config) zap.Option {
 	default:
 		panic("unknown encoding")
 	}
-
-	return zap.WrapCore(func(core zapcore.Core) zapcore.Core {
-		return zapcore.NewCore(enc, ws, conf.Level)
-	})
+	return zapcore.NewCore(enc, ws, conf.Level)
 }
 
 func getWriteSyncer(logName string) zapcore.WriteSyncer {
