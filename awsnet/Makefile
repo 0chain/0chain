@@ -76,8 +76,8 @@ __check_defined_FORCE:
 #The AWS_ACCESS_KEY and other related variables can be installed using aws-vault.
 #This ensures all the access keys are kept safe.
 export AWS_ACCESS_KEY_ID:=$(shell aws-vault exec 0chain -- env | grep AWS_ACCESS_KEY_ID | cut -d'=' -f2)
-export AWS_SECRET_ACCESS_KEY:=$(shell aws-vault exec 0chain -- env | grep AWS_SECRET_ACCESS_KEY|cut -d'=' -f2)
-export AWS_SESSION_TOKEN:=$(shell aws-vault exec 0chain -- env | grep AWS_SESSION_TOKEN | cut -d'=' -f2)
+export AWS_SECRET_ACCESS_KEY:=$(shell aws-vault exec 0chain  -- env | grep AWS_SECRET_ACCESS_KEY|cut -d'=' -f2)
+export AWS_SESSION_TOKEN:=$(shell aws-vault exec 0chain  -- env | grep AWS_SESSION_TOKEN | cut -d'=' -f2)
 export AWS_SECURITY_TOKEN:=$(shell aws-vault exec 0chain -- env | grep AWS_SECURITY_TOKEN|cut -d'=' -f2)
 
 PLAYBOOK=ansible-playbook
@@ -125,7 +125,10 @@ artifacts-tear-down-local:
 #ADMIN - These are super-destructive roles. They should be executed only once
 #when setting up the keys for the cluster. Once the keys have been installed,
 #then don't update the keys.
-keyaws-assemble-local:
+keyaws-create-private-local:
+	$(ADMIN_PLAY)
+
+keyaws-install-public-local:
 	$(ADMIN_PLAY)
 
 keyaws-teardown-local:
@@ -220,8 +223,12 @@ $(TARGETS): show
 
 workon_chinook:
 	echo  "ZCHAIN_TESTNET=chinook" > $(CONTEXT)
+
+
 workon_shasta:
 	echo  "ZCHAIN_TESTNET=shasta" > $(CONTEXT)
+
+
 workon_whitney:
 	echo  "ZCHAIN_TESTNET=whitney" > $(CONTEXT)
 

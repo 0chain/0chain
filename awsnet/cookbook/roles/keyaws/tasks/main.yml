@@ -1,7 +1,10 @@
 ---
-- import_tasks: keyaws-assemble.yml
-  tags: keyaws-assemble-local
+- import_tasks: keyaws-create-private-local.yml
+  tags: keyaws-create-private-local
 
-- import_tasks: keyaws-teardown.yml
+- import_tasks: keyaws-install-public-local.yml
+  tags: keyaws-install-public-local
+
+- import_tasks: keyaws-teardown-local.yml
   tags: keyaws-teardown-local
 ...
