@@ -19,4 +19,8 @@
 - name: "Kill the containers"
   shell: docker stop "{{item}}"
   with_items: "{{process_list.stdout_lines}}"
+
+- name: "Remove the containers"
+  shell: docker rm "{{item}}"
+  with_items: "{{process_list.stdout_lines}}"
 ...
