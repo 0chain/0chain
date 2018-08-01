@@ -48,10 +48,6 @@ func (r *Round) GetEntityMetadata() datastore.EntityMetadata {
 	return roundEntityMetadata
 }
 
-func (r *Round) DeleteNotarizedBlocks() {
-	r.notarizedBlocks = make([]*block.Block, 0, 1)
-}
-
 /*GetKey - returns the round number as the key */
 func (r *Round) GetKey() datastore.Key {
 	return datastore.ToKey(fmt.Sprintf("%v", r.Number))

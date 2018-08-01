@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"0chain.net/chain"
 	"0chain.net/common"
 	"0chain.net/datastore"
 	. "0chain.net/logging"
@@ -23,7 +22,7 @@ func SetupWorkers() {
 
 /*BlockWorker - a job that does all the work related to blocks in each round */
 func (mc *Chain) BlockWorker(ctx context.Context) {
-	var RoundTimeout = 50 * chain.DELTA
+	var RoundTimeout = 10 * time.Second
 	var protocol Protocol = mc
 	for true {
 		var roundTimeout = time.NewTimer(RoundTimeout)
@@ -194,7 +193,7 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
 	r.Round.Block = nil
 	if mc.CanGenerateRound(&r.Round, node.GetSelfNode(ctx).Node) {
 		go mc.GenerateRoundBlock(ctx, r)
-	} else {
+	} else if r.Number > 1 {
 		pr := mc.GetRound(r.Number - 1)
 		go mc.BroadcastNotarizedBlocks(ctx, pr)
 	}
@@ -203,6 +202,9 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
 /*HandleNotarizedBlockMessage - handles a notarized block for a previous round*/
 func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMessage) {
 	r := mc.GetRound(msg.Block.Round)
+	if r == nil {
+		return
+	}
 	nb := r.GetNotarizedBlocks()
 	for _, blk := range nb {
 		if blk.Hash == msg.Block.Hash {
