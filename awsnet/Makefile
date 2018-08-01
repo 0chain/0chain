@@ -125,7 +125,10 @@ artifacts-tear-down-local:
 #ADMIN - These are super-destructive roles. They should be executed only once
 #when setting up the keys for the cluster. Once the keys have been installed,
 #then don't update the keys.
-keyaws-assemble-local:
+keyaws-create-private-local:
+	$(ADMIN_PLAY)
+
+keyaws-install-public-local:
 	$(ADMIN_PLAY)
 
 keyaws-teardown-local:
@@ -220,8 +223,12 @@ $(TARGETS): show
 
 workon_chinook:
 	echo  "ZCHAIN_TESTNET=chinook" > $(CONTEXT)
+
+
 workon_shasta:
 	echo  "ZCHAIN_TESTNET=shasta" > $(CONTEXT)
+
+
 workon_whitney:
 	echo  "ZCHAIN_TESTNET=whitney" > $(CONTEXT)
 
