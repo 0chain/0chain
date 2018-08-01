@@ -48,48 +48,52 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case b := <-sc.GetBlockChannel():
-			eb, err := sc.GetBlock(ctx, b.Hash)
-			if eb != nil {
-				if err == nil {
-					Logger.Debug("block already received", zap.Any("round", b.Round), zap.Any("block", b.Hash))
-					continue
-				} else {
-					Logger.Error("get block", zap.Any("block", b.Hash), zap.Error(err))
-				}
-			}
-			if err := sc.VerifyNotarization(ctx, b, b.VerificationTickets); err != nil {
-				Logger.Error("notarization verification failed", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
-				continue
-			}
-			if err := b.Validate(ctx); err != nil {
-				Logger.Error("block validation", zap.Any("round", b.Round), zap.Any("hash", b.Hash), zap.Error(err))
-				continue
-			}
-			sc.AddBlock(b)
-			er := sc.GetRound(b.Round)
-			if er != nil {
-				if sc.BlocksToSharder == chain.FINALIZED {
-					nb := er.GetNotarizedBlocks()
-					if len(nb) > 0 {
-						Logger.Error("*** different blocks for the same round ***", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("existing_block", nb[0].Hash))
-					}
-				}
-			} else {
-				er = datastore.GetEntityMetadata("round").Instance().(*round.Round)
-				er.Number = b.Round
-				er.RandomSeed = b.RoundRandomSeed
-				sc.AddRound(er)
-			}
-			err = sc.ComputeState(ctx, b)
-			if err != nil {
-				Logger.Debug("error computing the state (TODO sync state)", zap.Error(err))
-			}
-			er.AddNotarizedBlock(b)
-			pr := sc.GetRound(er.Number - 1)
-			if pr != nil {
-				go sc.FinalizeRound(ctx, pr, sc)
+			sc.processBlock(ctx, b)
+		}
+	}
+}
+
+func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
+	eb, err := sc.GetBlock(ctx, b.Hash)
+	if eb != nil {
+		if err == nil {
+			Logger.Debug("block already received", zap.Any("round", b.Round), zap.Any("block", b.Hash))
+			return
+		} else {
+			Logger.Error("get block", zap.Any("block", b.Hash), zap.Error(err))
+		}
+	}
+	if err := sc.VerifyNotarization(ctx, b, b.VerificationTickets); err != nil {
+		Logger.Error("notarization verification failed", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
+		return
+	}
+	if err := b.Validate(ctx); err != nil {
+		Logger.Error("block validation", zap.Any("round", b.Round), zap.Any("hash", b.Hash), zap.Error(err))
+		return
+	}
+	sc.AddBlock(b)
+	er := sc.GetRound(b.Round)
+	if er != nil {
+		if sc.BlocksToSharder == chain.FINALIZED {
+			nb := er.GetNotarizedBlocks()
+			if len(nb) > 0 {
+				Logger.Error("*** different blocks for the same round ***", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("existing_block", nb[0].Hash))
 			}
 		}
+	} else {
+		er = datastore.GetEntityMetadata("round").Instance().(*round.Round)
+		er.Number = b.Round
+		er.RandomSeed = b.RoundRandomSeed
+		sc.AddRound(er)
+	}
+	err = sc.ComputeState(ctx, b)
+	if err != nil {
+		Logger.Debug("error computing the state (TODO sync state)", zap.Error(err))
+	}
+	er.AddNotarizedBlock(b)
+	pr := sc.GetRound(er.Number - 1)
+	if pr != nil {
+		go sc.FinalizeRound(ctx, pr, sc)
 	}
 }
 
