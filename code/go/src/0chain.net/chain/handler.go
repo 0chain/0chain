@@ -163,6 +163,7 @@ func HomePageHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "<li><a href='/v1/config/get'>/v1/config/get</a></li>")
 		fmt.Fprintf(w, "<li><a href='/_chain_stats'>/_chain_stats</a></li>")
 		fmt.Fprintf(w, "<li><a href='/_diagnostics/info'>/_diagnostics/info</a></li>")
+		fmt.Fprintf(w, "<li><a href='/debug/pprof/'>/debug/pprof/</a></li>")
 		fmt.Fprintf(w, "</ul>")
 	}
 }
