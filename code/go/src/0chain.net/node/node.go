@@ -93,7 +93,7 @@ func Read(line string) (*Node, error) {
 	node := Provider()
 	fields := strings.Split(line, ",")
 	if len(fields) != 5 {
-		return nil, common.NewError("invalid_num_fields", fmt.Sprintf("invalid number of fields [%v] len: %v"))
+		return nil, common.NewError("invalid_num_fields", fmt.Sprintf("invalid number of fields [%v]", line))
 	}
 	switch fields[0] {
 	case "m":
