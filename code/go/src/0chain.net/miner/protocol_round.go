@@ -270,6 +270,12 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 	for true {
 		select {
 		case <-ctx.Done():
+			for _, b := range blocks {
+				if b.GetBlockState() == block.StateVerificationPending || b.GetBlockState() == block.StateVerificationAccepted {
+					Logger.Info("cancel verification (failing block)", zap.Int64("round", r.Number), zap.String("block", b.Hash))
+					b.SetBlockState(block.StateVerificationFailed)
+				}
+			}
 			return
 		case <-blockTimeTimer.C:
 			initiateVerification()
@@ -378,8 +384,8 @@ func (mc *Chain) CancelRoundVerification(ctx context.Context, r *Round) {
 }
 
 /*BroadcastNotarizedBlocks - send all the notarized blocks to all generating miners for a round*/
-func (mc *Chain) BroadcastNotarizedBlocks(ctx context.Context, r *Round) {
-	nb := r.GetNotarizedBlocks()
+func (mc *Chain) BroadcastNotarizedBlocks(ctx context.Context, pr *Round, r *Round) {
+	nb := pr.GetNotarizedBlocks()
 	miners := mc.GetMinersByRank(ctx, &r.Round)
 	for i := 0; mc.CanGenerateRound(&r.Round, miners[i]); i++ {
 		for _, b := range nb {

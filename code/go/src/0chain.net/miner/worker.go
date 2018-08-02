@@ -171,14 +171,14 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 		Logger.Error("notarization message", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
 		return
 	}
+	b.MergeVerificationTickets(msg.Notarization.VerificationTickets)
+	mc.AddNotarizedBlock(ctx, &r.Round, b)
 	if !r.IsVerificationComplete() {
 		r.CancelVerification()
 		if r.Block == nil || r.Block.Weight() < b.Weight() {
 			r.Block = b
 		}
 	}
-	b.MergeVerificationTickets(msg.Notarization.VerificationTickets)
-	mc.AddNotarizedBlock(ctx, &r.Round, b)
 }
 
 /*HandleRoundTimeout - handles the timeout of a round*/
@@ -195,7 +195,7 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
 		go mc.GenerateRoundBlock(ctx, r)
 	} else if r.Number > 1 {
 		pr := mc.GetRound(r.Number - 1)
-		go mc.BroadcastNotarizedBlocks(ctx, pr)
+		go mc.BroadcastNotarizedBlocks(ctx, pr, r)
 	}
 }
 
@@ -226,11 +226,11 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMess
 		b = msg.Block
 		mc.AddBlock(b)
 	}
+	mc.AddNotarizedBlock(ctx, &r.Round, b)
 	if !r.IsVerificationComplete() {
 		r.CancelVerification()
 		if r.Block == nil || r.Block.Weight() < b.Weight() {
 			r.Block = b
 		}
 	}
-	mc.AddNotarizedBlock(ctx, &r.Round, b)
 }
