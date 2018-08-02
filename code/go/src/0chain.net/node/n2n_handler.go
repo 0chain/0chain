@@ -111,7 +111,7 @@ func (np *Pool) SendAtleast(numNodes int, handler SendHandler) []*Node {
 	}
 	sendBucket := make(chan *Node, numNodes)
 	validBucket := make(chan *Node, numNodes)
-	done := make(chan bool)
+	done := make(chan bool, numNodes)
 	for i := 0; i < numWorkers; i++ {
 		go func() {
 			for node := range sendBucket {
@@ -145,13 +145,13 @@ func (np *Pool) SendAtleast(numNodes int, handler SendHandler) []*Node {
 			validCount++
 			if validCount == numNodes {
 				close(sendBucket)
-				N2n.Debug("send message", zap.Any("all_nodes", len(nodes)), zap.Any("requested", numNodes), zap.Any("active", activeCount), zap.Any("sent_to", len(sentTo)), zap.Any("time", time.Since(start)))
+				N2n.Error("send message (valid)", zap.Any("all_nodes", len(nodes)), zap.Any("requested", numNodes), zap.Any("active", activeCount), zap.Any("sent_to", len(sentTo)), zap.Any("time", time.Since(start)))
 				return sentTo
 			}
 		case <-done:
 			doneCount++
 			if doneCount >= numNodes+THRESHOLD || doneCount >= activeCount {
-				N2n.Debug("send message", zap.Any("all_nodes", len(nodes)), zap.Any("requested", numNodes), zap.Any("active", activeCount), zap.Any("sent_to", len(sentTo)), zap.Any("time", time.Since(start)))
+				N2n.Info("send message (done)", zap.Any("all_nodes", len(nodes)), zap.Any("requested", numNodes), zap.Any("active", activeCount), zap.Any("sent_to", len(sentTo)), zap.Any("time", time.Since(start)))
 				close(sendBucket)
 				return sentTo
 			}
