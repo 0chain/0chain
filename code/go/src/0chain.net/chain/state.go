@@ -18,16 +18,7 @@ const StateMismatch = "state_mismatch"
 
 /*ComputeState - compute the state for the block */
 func (c *Chain) ComputeState(ctx context.Context, b *block.Block) error {
-	lfb := c.LatestFinalizedBlock
-	ndb := lfb.ClientState.GetNodeDB()
-	if ndb != c.StateDB {
-		lfb.ClientState.SetNodeDB(c.StateDB)
-		if lndb, ok := ndb.(*util.LevelNodeDB); ok {
-			Logger.Info("finalize round - rebasing current state db", zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash), zap.String("hash", util.ToHex(lfb.ClientState.GetRoot())))
-			lndb.RebaseCurrentDB(c.StateDB)
-			Logger.Info("finalize round - rebased current state db", zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash), zap.String("hash", util.ToHex(lfb.ClientState.GetRoot())))
-		}
-	}
+	c.rebaseState()
 	for _, txn := range b.Txns {
 		if !c.UpdateState(b, txn) {
 			return common.NewError("state_update_error", "error updating state")
@@ -38,6 +29,19 @@ func (c *Chain) ComputeState(ctx context.Context, b *block.Block) error {
 		return common.NewError(StateMismatch, "computed state hash doesn't match with the state hash of the block")
 	}
 	return nil
+}
+
+func (c *Chain) rebaseState() {
+	lfb := c.LatestFinalizedBlock
+	ndb := lfb.ClientState.GetNodeDB()
+	if ndb != c.StateDB {
+		lfb.ClientState.SetNodeDB(c.StateDB)
+		if lndb, ok := ndb.(*util.LevelNodeDB); ok {
+			Logger.Debug("finalize round - rebasing current state db", zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash), zap.String("hash", util.ToHex(lfb.ClientState.GetRoot())))
+			lndb.RebaseCurrentDB(c.StateDB)
+			Logger.Debug("finalize round - rebased current state db", zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash), zap.String("hash", util.ToHex(lfb.ClientState.GetRoot())))
+		}
+	}
 }
 
 /*UpdateState - update the state of the transaction w.r.t the given block
