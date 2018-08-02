@@ -6,6 +6,7 @@ import (
 	"sort"
 	"time"
 
+	"0chain.net/client"
 	"0chain.net/common"
 	"0chain.net/config"
 	"0chain.net/datastore"
@@ -393,4 +394,29 @@ func (b *Block) SetBlockState(blockState byte) {
 /*GetBlockState - get the state of the block */
 func (b *Block) GetBlockState() byte {
 	return b.blockState
+}
+
+/*GetClients - get all the clients of this block */
+func (b *Block) GetClients() []*client.Client {
+	clientMetadataProvider := datastore.GetEntityMetadata("client")
+	cmap := make(map[string]*client.Client)
+	for _, t := range b.Txns {
+		if t.PublicKey == "" {
+			continue
+		}
+		if _, ok := cmap[t.PublicKey]; ok {
+			continue
+		}
+		c := clientMetadataProvider.Instance().(*client.Client)
+		c.SetPublicKey(t.PublicKey)
+		cmap[t.PublicKey] = c
+		t.PublicKey = ""
+	}
+	clients := make([]*client.Client, len(cmap))
+	idx := 0
+	for _, c := range cmap {
+		clients[idx] = c
+		idx++
+	}
+	return clients
 }

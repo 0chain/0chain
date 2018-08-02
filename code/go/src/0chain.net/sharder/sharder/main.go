@@ -70,9 +70,6 @@ func initEntities() {
 	transaction.SetupTxnConfirmationEntity(persistenceStorage)
 }
 
-/*Chain - the chain this miner will be working on */
-var Chain string
-
 func main() {
 	deploymentMode := flag.Int("deployment_mode", 2, "deployment_mode")
 	nodesFile := flag.String("nodes_file", "config/single_node.txt", "nodes_file")

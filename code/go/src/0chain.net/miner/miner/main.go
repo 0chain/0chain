@@ -66,9 +66,6 @@ func initEntities() {
 	miner.SetupNotarizationEntity()
 }
 
-/*Chain - the chain this miner will be working on */
-var  Chain string
-
 func main() {
 	deploymentMode := flag.Int("deployment_mode", 2, "deployment_mode")
 	nodesFile := flag.String("nodes_file", "config/single_node.txt", "nodes_file")
@@ -94,7 +91,7 @@ func main() {
 		panic(err)
 	}
 	error, publicKey, privateKey := encryption.ReadKeys(reader)
-	if(error == false) {
+	if error == false {
 		Logger.Info("Public key in Keys file =%v", zap.String("publicKey", publicKey))
 		Logger.Panic("Error reading keys file")
 	}
@@ -108,6 +105,8 @@ func main() {
 	initEntities()
 	serverChain := chain.NewChainFromConfig()
 	miner.SetupMinerChain(serverChain)
+	mc := miner.GetMinerChain()
+	mc.DiscoverClients = viper.GetBool("server_chain.client.discover")
 	serverChain = &miner.GetMinerChain().Chain
 	chain.SetServerChain(serverChain)
 
@@ -133,7 +132,7 @@ func main() {
 	serverChain.Miners.ComputeProperties()
 	serverChain.Sharders.ComputeProperties()
 	serverChain.Blobbers.ComputeProperties()
-	miner.GetMinerChain().SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"))
+	mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"))
 
 	mode := "main net"
 	if config.Development() {
