@@ -167,6 +167,25 @@ func HomePageHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "<li><a href='/debug/pprof/'>/debug/pprof/</a></li>")
 		fmt.Fprintf(w, "</ul>")
 	}
+	fmt.Fprintf(w, "<div><div>Miners (%v)</div>", sc.Miners.Size())
+	printNodePool(w, sc.Miners)
+	fmt.Fprintf(w, "</div>")
+	fmt.Fprintf(w, "<div><div>Sharders (%v)</div>", sc.Sharders.Size())
+	printNodePool(w, sc.Sharders)
+	fmt.Fprintf(w, "</div>")
+}
+
+func printNodePool(w http.ResponseWriter, np *node.Pool) {
+	nodes := np.Nodes
+	fmt.Fprintf(w, "<ul>")
+	for _, nd := range nodes {
+		if nd == node.Self.Node {
+			fmt.Fprintf(w, "<li>%v%.3d</li>", nd.GetNodeTypeName(), nd.SetIndex)
+		} else {
+			fmt.Fprintf(w, "<li><a href='http://%v:%v/'>%v%.3d</a></li>", nd.Host, nd.Port, nd.GetNodeTypeName(), nd.SetIndex)
+		}
+	}
+	fmt.Fprintf(w, "</ul>")
 }
 
 /*InfoHandler - handler to get the information of the chain */
