@@ -294,12 +294,24 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 
 /*SaveClients - save clients from the block */
 func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) error {
-	clientMetadataProvider := datastore.GetEntityMetadata("client")
-	ctx = memorystore.WithEntityConnection(common.GetRootContext(), clientMetadataProvider)
-	defer memorystore.Close(ctx)
-	ctx = datastore.WithAsyncChannel(ctx, client.ClientEntityChannel)
 	var err error
-	for _, c := range clients {
+	clientKeys := make([]datastore.Key, len(clients))
+	for idx, c := range clients {
+		clientKeys[idx] = c.GetKey()
+	}
+	clientEntityMetadata := datastore.GetEntityMetadata("client")
+	cEntities := datastore.AllocateEntities(len(clients), clientEntityMetadata)
+	ctx = memorystore.WithEntityConnection(common.GetRootContext(), clientEntityMetadata)
+	defer memorystore.Close(ctx)
+	err = clientEntityMetadata.GetStore().MultiRead(ctx, clientEntityMetadata, clientKeys, cEntities)
+	if err != nil {
+		return err
+	}
+	ctx = datastore.WithAsyncChannel(ctx, client.ClientEntityChannel)
+	for idx, c := range clients {
+		if !datastore.IsEmpty(cEntities[idx].GetKey()) {
+			continue
+		}
 		_, cerr := client.PutClient(ctx, c)
 		if cerr != nil {
 			err = cerr
