@@ -52,6 +52,9 @@ func (mpt *MerklePatriciaTrie) GetNodeValue(path Path) (Serializable, error) {
 	if err != nil {
 		return nil, err
 	}
+	if rootNode == nil {
+		return nil, ErrNodeNotFound
+	}
 	return mpt.getNodeKey(path, rootNode)
 }
 
@@ -151,7 +154,7 @@ func (mpt *MerklePatriciaTrie) getNodeKey(path Path, node Node) (Serializable, e
 		}
 		return nil, ErrValueNotPresent
 	default:
-		panic("unknown node type")
+		panic(fmt.Sprintf("unknown node type: %T %v", node, node))
 	}
 }
 

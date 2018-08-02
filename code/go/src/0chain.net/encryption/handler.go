@@ -2,6 +2,7 @@ package encryption
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"net/http"
 )
@@ -26,7 +27,11 @@ func SignHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	publicKey := r.FormValue("public_key")
 	data := r.FormValue("data")
 	timestamp := r.FormValue("timestamp")
-	clientID := Hash(publicKey)
+	key, err := hex.DecodeString(publicKey)
+	if err != nil {
+		return nil, err
+	}
+	clientID := Hash(key)
 	var hashdata string
 	if timestamp != "" {
 		hashdata = fmt.Sprintf("%v:%v:%v", clientID, timestamp, data)
