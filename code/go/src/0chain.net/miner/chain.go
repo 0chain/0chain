@@ -47,6 +47,7 @@ type Chain struct {
 	BlockMessageChannel chan *BlockMessage
 	roundsMutex         *sync.Mutex
 	rounds              map[int64]*Round
+	DiscoverClients     bool
 }
 
 /*GetBlockMessageChannel - get the block messages channel */

@@ -9,6 +9,7 @@ import (
 
 	"0chain.net/chain"
 	"0chain.net/config"
+	"0chain.net/memorystore"
 	"0chain.net/util"
 
 	"0chain.net/block"
@@ -285,7 +286,26 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 			break
 		}
 	}
+	if mc.DiscoverClients {
+		go mc.SaveClients(ctx, b.GetClients())
+	}
 	return nil
+}
+
+/*SaveClients - save clients from the block */
+func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) error {
+	clientMetadataProvider := datastore.GetEntityMetadata("client")
+	ctx = memorystore.WithEntityConnection(common.GetRootContext(), clientMetadataProvider)
+	defer memorystore.Close(ctx)
+	ctx = datastore.WithAsyncChannel(ctx, client.ClientEntityChannel)
+	var err error
+	for _, c := range clients {
+		_, cerr := client.PutClient(ctx, c)
+		if cerr != nil {
+			err = cerr
+		}
+	}
+	return err
 }
 
 /*SignBlock - sign the block and provide the verification ticket */

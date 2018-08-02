@@ -184,7 +184,6 @@ func (t *Transaction) VerifySignature(ctx context.Context) error {
 	} else {
 		co.ID = t.ClientID
 		co.PublicKey = t.PublicKey
-		t.PublicKey = ""
 		co.SetPublicKey(co.PublicKey)
 	}
 	correctSignature, err := co.Verify(t.Signature, t.Hash)
