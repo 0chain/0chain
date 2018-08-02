@@ -23,6 +23,8 @@ server_chain:
     generators: 2
     sharders: 1
     notarization_threshold: 60 # percentage
+  client:
+    discover: true
   network:
     relay_time: 20 # milliseconds
     max_concurrent_requests: 3
