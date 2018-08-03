@@ -281,10 +281,9 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 				rbuf.ReadFrom(resp.Body)
 				N2n.Error("sending", zap.Any("from", Self.SetIndex), zap.Any("to", receiver.SetIndex), zap.Any("handler", uri), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Any("status_code", resp.StatusCode), zap.Any("response", rbuf.String()))
 				return false
-			} else {
-				receiver.Status = NodeStatusActive
-				receiver.LastActiveTime = time.Now()
 			}
+			receiver.Status = NodeStatusActive
+			receiver.LastActiveTime = time.Now()
 			io.Copy(ioutil.Discard, resp.Body)
 			return true
 		}

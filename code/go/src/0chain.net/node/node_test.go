@@ -17,31 +17,31 @@ var Miners = NewPool(NodeTypeMiner)
 
 func TestNodeSetup(t *testing.T) {
 	sd := Node{Host: "127.0.0.1", Port: 7071, Type: NodeTypeMiner, Status: NodeStatusActive}
-	publicKey, _ := encryption.GenerateKeys()
+	publicKey, _, _ := encryption.GenerateKeys()
 	sd.ID = encryption.Hash(publicKey)
 	sd.PublicKey = publicKey
 	Miners.AddNode(&sd)
 
 	sb := Node{Host: "127.0.0.2", Port: 7070, Type: NodeTypeMiner, Status: NodeStatusActive}
-	publicKey, _ = encryption.GenerateKeys()
+	publicKey, _, _ = encryption.GenerateKeys()
 	sb.ID = encryption.Hash(publicKey)
 	sb.PublicKey = publicKey
 	Miners.AddNode(&sb)
 
 	ns := Node{Host: "127.0.0.3", Port: 7070, Type: NodeTypeMiner, Status: NodeStatusActive}
-	publicKey, _ = encryption.GenerateKeys()
+	publicKey, _, _ = encryption.GenerateKeys()
 	ns.ID = encryption.Hash(publicKey)
 	ns.PublicKey = publicKey
 	Miners.AddNode(&ns)
 
 	nr := Node{Host: "127.0.0.4", Port: 7070, Type: NodeTypeMiner, Status: NodeStatusActive}
-	publicKey, _ = encryption.GenerateKeys()
+	publicKey, _, _ = encryption.GenerateKeys()
 	nr.ID = encryption.Hash(publicKey)
 	nr.PublicKey = publicKey
 	Miners.AddNode(&nr)
 
 	gg := Node{Host: "127.0.0.5", Port: 7070, Type: NodeTypeMiner, Status: NodeStatusActive}
-	publicKey, _ = encryption.GenerateKeys()
+	publicKey, _, _ = encryption.GenerateKeys()
 	gg.ID = encryption.Hash(publicKey)
 	gg.PublicKey = publicKey
 	Miners.AddNode(&gg)
@@ -62,7 +62,7 @@ type Company struct {
 	Name   string `json:"name,omitempty"`
 }
 
-var companyEntityMetadata = &datastore.EntityMetadataImpl{Name: "company", MemoryDB: "company", Store: memorystore.GetStorageProvider()}
+var companyEntityMetadata = &datastore.EntityMetadataImpl{Name: "company", DB: "company", Store: memorystore.GetStorageProvider()}
 
 func (c *Company) GetEntityMetadata() datastore.EntityMetadata {
 	return companyEntityMetadata
@@ -88,7 +88,7 @@ func (c *Company) Delete(ctx context.Context) error {
 func TestNode2NodeCommunication(t *testing.T) {
 	common.SetupRootContext(context.Background())
 	client.SetupEntity(memorystore.GetStorageProvider())
-	publicKey, _ := encryption.GenerateKeys()
+	publicKey, _, _ := encryption.GenerateKeys()
 	entity := client.Provider().(*client.Client)
 	entity.ID = datastore.ToKey(encryption.Hash(publicKey))
 	entity.PublicKey = publicKey

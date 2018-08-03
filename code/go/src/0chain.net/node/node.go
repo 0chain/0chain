@@ -45,7 +45,7 @@ var (
 	NodeTypeBlobber = 2
 )
 
-var NodeTypeNames []*common.Lookup = common.CreateLookups("m", "Miner", "s", "Sharder", "b", "Blobber")
+var NodeTypeNames = common.CreateLookups("m", "Miner", "s", "Sharder", "b", "Blobber")
 
 /*Node - a struct holding the node information */
 type Node struct {
@@ -152,6 +152,7 @@ func (n *Node) GetNodeType() string {
 	return NodeTypeNames[n.Type].Code
 }
 
+/*GetNodeTypeName - get the name of this node type */
 func (n *Node) GetNodeTypeName() string {
 	return NodeTypeNames[n.Type].Value
 }

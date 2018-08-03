@@ -2,6 +2,7 @@ package node
 
 import "net/http"
 
+//SetupHandlers - setup all the handlers
 func SetupHandlers() {
 	http.HandleFunc("/_nh/whoami", WhoAmIHandler)
 }

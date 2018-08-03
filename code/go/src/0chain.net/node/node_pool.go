@@ -11,6 +11,7 @@ import (
 	"0chain.net/datastore"
 )
 
+//ErrNodeNotFound - to indicate that a node is not present in the pool
 var ErrNodeNotFound = common.NewError("node_not_found", "Requested node is not found")
 
 /*Pool - a pool of nodes used for the same purpose */
@@ -49,15 +50,6 @@ func (np *Pool) GetNode(id string) *Node {
 		return nil
 	}
 	return node
-}
-
-/*RemoveNode - Remove a node from the pool */
-func (np *Pool) RemoveNode(nodeID string) {
-	if _, ok := np.NodesMap[nodeID]; !ok {
-		return
-	}
-	delete(np.NodesMap, nodeID)
-	np.computeNodesArray()
 }
 
 var none = make([]*Node, 0)
@@ -130,10 +122,6 @@ func ReadNodes(r io.Reader, minerPool *Pool, sharderPool *Pool, blobberPool *Poo
 		if err != nil {
 			panic(err)
 		}
-		/*
-			if Self != nil && node.Equals(Self.Node) {
-				continue
-			}*/
 		switch node.Type {
 		case NodeTypeMiner:
 			minerPool.AddNode(node)
@@ -154,9 +142,9 @@ func (np *Pool) computeNodePositions() {
 	}
 }
 
+/*ComputeProperties - compute properties after all the initialization of the node pool */
 func (np *Pool) ComputeProperties() {
 	np.computeNodesArray()
-	np.computeNodePositions()
 	for _, node := range np.Nodes {
 		RegisterNode(node)
 	}
