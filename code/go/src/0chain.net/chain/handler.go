@@ -25,7 +25,7 @@ func SetupHandlers() {
 
 	// Miner can only provide recent blocks, sharders can provide any block (for content other than full) and the block they store for full
 	if node.Self.Type == node.NodeTypeMiner {
-		http.HandleFunc("/v1/block/get", common.ToJSONResponse(BlockHandler))
+		http.HandleFunc("/v1/block/get", common.ToJSONResponse(GetBlockHandler))
 	}
 	http.HandleFunc("/v1/block/get/latest_finalized", common.ToJSONResponse(LatestFinalizedBlockHandler))
 	http.HandleFunc("/v1/block/get/recent_finalized", common.ToJSONResponse(RecentFinalizedBlockHandler))
@@ -107,7 +107,7 @@ func (c *Chain) GetBlobbersHandler(w http.ResponseWriter, r *http.Request) {
 	c.Blobbers.Print(w)
 }
 
-func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+func GetBlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	hash := r.FormValue("block")
 	content := r.FormValue("content")
 	if content == "" {
@@ -121,6 +121,7 @@ func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	return GetBlockResponse(b, parts)
 }
 
+/*GetBlockResponse - a handler to get the block */
 func GetBlockResponse(b *block.Block, contentParts []string) (interface{}, error) {
 	data := make(map[string]interface{}, len(contentParts))
 	for _, part := range contentParts {
@@ -206,7 +207,15 @@ func InfoHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 			break
 		}
 	}
-	return ChainInfo[:idx], nil
+	info := make(map[string]interface{})
+	info["chain_info"] = ChainInfo[:idx]
+	for idx = 0; idx < len(RoundInfo); idx++ {
+		if RoundInfo[idx].Number == 0 {
+			break
+		}
+	}
+	info["round_info"] = RoundInfo[:idx]
+	return info, nil
 }
 
 /*InfoWriter - a handler to get the information of the chain */
@@ -229,6 +238,22 @@ func InfoWriter(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "<td>%v</td>", util.ToHex(cf.ClientStateHash))
 		fmt.Fprintf(w, "<td class='number'>%11d</td>", cf.FinalizedCount)
 		fmt.Fprintf(w, "<td class='number'>%6d</td>", cf.MissedBlocks)
+		fmt.Fprintf(w, "</tr>")
+	}
+	fmt.Fprintf(w, "</table>")
+	fmt.Fprintf(w, "<br/>")
+	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
+	fmt.Fprintf(w, "<tr><th>Round</th><th>Blocks Count</th><th>Multi Block Count</th><th>Zero Block Count</tr></tr>")
+	for idx := 0; idx < len(RoundInfo); idx++ {
+		rf := RoundInfo[idx]
+		if rf.Number == 0 {
+			break
+		}
+		fmt.Fprintf(w, "<tr>")
+		fmt.Fprintf(w, "<td class='number'>%d</td>", rf.Number)
+		fmt.Fprintf(w, "<td class='number'>%d</td>", rf.NotarizedBlocksCount)
+		fmt.Fprintf(w, "<td class='number'>%d</td>", rf.MultiNotarizedBlocksCount)
+		fmt.Fprintf(w, "<td class='number'>%6d</td>", rf.ZeroNotarizedBlocksCount)
 		fmt.Fprintf(w, "</tr>")
 	}
 	fmt.Fprintf(w, "</table>")
