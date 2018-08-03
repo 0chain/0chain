@@ -1,14 +1,4 @@
-#- name: "Start the server instances..."
-#  ec2:
-#    region: "{{regions[item.value.region]}}"
-#    key_name: "{{aws_key_pair}}"
-#    wait: yes
-#    instance_tags: "{{instance_tags[item.key]}}"
-#    state: running
-#  with_dict: "{{agents_dict}}"
-#  check_mode: no
-#  ignore_errors: yes
-#
+---
 - name: "Launch the server instances..."
   ec2:
     region: "{{regions[item.value.region]}}"
@@ -23,57 +13,13 @@
     count_tag: "{{instance_tags[item.key]}}"
     ebs_optimized: yes
     volumes:
-      - device_name: "/dev/sda1"
-        volume_type: "io1"
-        volume_size: "64"
-        iops: "1500"
-        delete_on_termination: true
-      - device_name: "{{storage[zchain.blueprint.storage_type[item.value.role]].device_name}}"
-        volume_type: "{{storage[zchain.blueprint.storage_type[item.value.role]].volume_type}}"
-        volume_size: "{{storage[zchain.blueprint.storage_type[item.value.role]].volume_size}}"
-        iops: "{{storage[zchain.blueprint.storage_type[item.value.role]].iops}}"
-        delete_on_termination: true
+      #Root value
+      -  "{{storage[zchain.blueprint.storage_type.root]}}"
+      #Volumes for miner / sharder
+      -  "{{storage[zchain.blueprint.storage_type[item.value.role]]}}"
+
   register: ec2
   with_dict: "{{agents_dict}}"
   check_mode: no
-
-#- set_fact:
-#    nascent: "{{ec2 | json_query('results[*].tagged_instances')}}"
-#
-#- name: "Collect facts on up agents"
-#  delegate_to: localhost
-#  ec2_instance_facts:
-#    region: "{{regions[item]}}"
-#    filters:
-#      "tag:network_name": "{{zchain.blueprint.network_name}}"
-#      "instance-state-name": running
-#  register: ec2_facts
-#  with_items: "{{zchain.blueprint.regions}}"
-#
-#- set_fact:
-#   nodes: "{{ec2_facts | json_query('results[*].instances')}}"
-#
-#- debug:
-#   msg: "{{nodes}}"
-#
-#- name: Wait for SSH to come up...
-#  wait_for:
-#    host: "{{item.public_ip_address}}"
-#    port: 22
-#    state: started
-#  with_items: "{{nodes}}"
-#
-#- name: "Add the instance to the groups..."
-#  add_host:
-#    name: "{{item.tags.Name}}"
-#    hostname: "{{item.public_ip_address}}"
-#    groupname: "zservers"
-#    ansible_host: "{{item.public_ip_address}}"
-#    ansible_port: 22
-#    ansible_user: ubuntu
-#    ansible_ssh_private_key_file: "{{aws_key_pair_file}}"
-#    ansible_ssh_extra_args: "-i {{aws_key_pair_file}} -o StrictHostKeyChecking=no"
-#  with_items: "{{nodes}}"
-#
 ...
 
