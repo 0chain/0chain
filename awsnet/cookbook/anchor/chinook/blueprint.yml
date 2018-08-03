@@ -13,9 +13,7 @@ blueprint:
 
   storage_type:
     root: '64GIB_GP2_SDA1'
-
     miner: '64GIB_GP2_SDI'
-
     sharder: '1TIB_GP2_SDI'
 
   ports:
