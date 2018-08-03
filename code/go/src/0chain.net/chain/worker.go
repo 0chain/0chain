@@ -20,7 +20,15 @@ func (c *Chain) SetupWorkers(ctx context.Context) {
 /*BlockFinalizationWorker - a worker that handles the finalized blocks */
 func (c *Chain) BlockFinalizationWorker(ctx context.Context, bsh BlockStateHandler) {
 	for r := range c.FinalizedRoundsChannel {
+		nbCount := len(r.GetNotarizedBlocks())
+		if nbCount == 0 {
+			c.ZeroNotarizedBlocksCount++
+		}
+		if nbCount > 1 {
+			c.MultiNotarizedBlocksCount++
+		}
 		c.finalizeRound(ctx, r, bsh)
+		c.UpdateRoundInfo(r)
 	}
 }
 

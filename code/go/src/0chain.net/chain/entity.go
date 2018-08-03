@@ -81,6 +81,9 @@ type Chain struct {
 
 	FinalizedRoundsChannel chan *round.Round `json:"-"`
 	MissedBlocks           int64             `json:"-"`
+
+	ZeroNotarizedBlocksCount  int64 `json:"-"`
+	MultiNotarizedBlocksCount int64 `json:"-"`
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl

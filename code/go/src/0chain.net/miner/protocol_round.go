@@ -71,6 +71,7 @@ func (mc *Chain) GetBlockToExtend(r *Round) *block.Block {
 		if r.Number+1 != mc.CurrentRound {
 			break
 		}
+		Logger.Warn("block to extend - no notarized block yet", zap.Int64("round", r.Number))
 		time.Sleep(10 * time.Millisecond)
 	}
 	Logger.Debug("no block to extend", zap.Int64("round", r.Number), zap.Int64("current_round", mc.CurrentRound), zap.Int("nb_count", len(r.GetNotarizedBlocks())))
