@@ -58,6 +58,10 @@ type Node struct {
 	LastActiveTime time.Time
 	ErrorCount     int
 	CommChannel    chan bool
+
+	//These are approximiate as we are not going to lock to update
+	Sent     int64 // messages sent to this node
+	Received int64 // messages received from this node
 }
 
 /*Provider - create a node object */
@@ -155,4 +159,15 @@ func (n *Node) GetNodeType() string {
 /*GetNodeTypeName - get the name of this node type */
 func (n *Node) GetNodeTypeName() string {
 	return NodeTypeNames[n.Type].Value
+}
+
+//Grab - grab a slot to send message
+func (n *Node) Grab() {
+	<-n.CommChannel
+	n.Sent++
+}
+
+//Release - release a slot after sending the message
+func (n *Node) Release() {
+	n.CommChannel <- true
 }

@@ -177,15 +177,25 @@ func HomePageHandler(w http.ResponseWriter, r *http.Request) {
 
 func printNodePool(w http.ResponseWriter, np *node.Pool) {
 	nodes := np.Nodes
-	fmt.Fprintf(w, "<ul>")
+	fmt.Fprintf(w, "<style>\n")
+	fmt.Fprintf(w, ".number { text-align: right; }\n")
+	fmt.Fprintf(w, "table, td, th { border: 1px solid black; }\n")
+	fmt.Fprintf(w, "</style>")
+	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
+	fmt.Fprintf(w, "<tr><td>Set Index</td><td>Node</td><td>Sent</td><td>Received</td></tr>")
 	for _, nd := range nodes {
+		fmt.Fprintf(w, "<tr>")
+		fmt.Fprintf(w, "<td>%d</td>", nd.SetIndex)
 		if nd == node.Self.Node {
-			fmt.Fprintf(w, "<li>%v%.3d</li>", nd.GetNodeTypeName(), nd.SetIndex)
+			fmt.Fprintf(w, "<td>%v%.3d</td>", nd.GetNodeTypeName(), nd.SetIndex)
 		} else {
-			fmt.Fprintf(w, "<li><a href='http://%v:%v/'>%v%.3d</a></li>", nd.Host, nd.Port, nd.GetNodeTypeName(), nd.SetIndex)
+			fmt.Fprintf(w, "<td><a href='http://%v:%v/'>%v%.3d</a></td>", nd.Host, nd.Port, nd.GetNodeTypeName(), nd.SetIndex)
 		}
+		fmt.Fprintf(w, "<td class='number'>%d</td>", nd.Sent)
+		fmt.Fprintf(w, "<td class='number'>%d</td>", nd.Received)
+		fmt.Fprintf(w, "</tr>")
 	}
-	fmt.Fprintf(w, "</ul>")
+	fmt.Fprintf(w, "</table>")
 }
 
 /*InfoHandler - handler to get the information of the chain */

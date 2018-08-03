@@ -179,8 +179,7 @@ func (np *Pool) sendOne(handler SendHandler, nodes []*Node) *Node {
 	return nil
 }
 
-/*SetHeaders - sets the request headers
- */
+/*SetHeaders - sets the request headers*/
 func SetHeaders(req *http.Request, entity datastore.Entity, options *SendOptions) bool {
 	ts := common.Now()
 	hashdata := fmt.Sprintf("%v:%v:%v", Self.GetKey(), ts, entity.GetKey())
@@ -263,13 +262,13 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			N2n.Debug("sending", zap.Any("from", Self.SetIndex), zap.Any("to", receiver.SetIndex), zap.Any("handler", uri), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Any("delay", delay))
 
 			// Keep the number of messages to a node bounded
-			<-receiver.CommChannel
+			receiver.Grab()
 			SetHeaders(req, entity, options)
 			ctx, cancel := context.WithCancel(context.TODO())
 			req = req.WithContext(ctx)
 			time.AfterFunc(timeout, cancel)
 			resp, err := httpClient.Do(req)
-			receiver.CommChannel <- true
+			receiver.Release()
 
 			if err != nil {
 				N2n.Error("sending", zap.Any("from", Self.SetIndex), zap.Any("to", receiver.SetIndex), zap.Any("handler", uri), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Error(err))
@@ -376,6 +375,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF) common
 		}
 		data, err := handler(ctx, entity)
 		common.Respond(w, data, err)
+		sender.Received++
 	}
 }
 
