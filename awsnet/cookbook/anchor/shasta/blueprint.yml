@@ -3,7 +3,7 @@
 #https://en.wikipedia.org/wiki/List_of_California_fourteeners
 #
 blueprint:
-  git_version: "testnet-gp2"
+  git_version: "testnet-v0.6"
   network_type: 'testnet'
   network_name: 'shasta'
   hosts: 'tag_network_name_shasta'
