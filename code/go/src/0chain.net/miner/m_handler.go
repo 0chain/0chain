@@ -82,6 +82,9 @@ func VerifyBlockHandler(ctx context.Context, entity datastore.Entity) (interface
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
 	mc := GetMinerChain()
+	if b.MinerID == mc.ID {
+		return nil, nil
+	}
 	if b.Round < mc.LatestFinalizedBlock.Round {
 		Logger.Debug("verify block handler", zap.Int64("round", b.Round), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round))
 		return true, nil

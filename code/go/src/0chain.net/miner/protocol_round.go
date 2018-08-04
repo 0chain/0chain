@@ -330,7 +330,7 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r *Round, b *block.Block)
 	return bvt, nil
 }
 
-/*ProcessVerifiedTicket - once a verified ticket is receiveid, do further processing with it */
+/*ProcessVerifiedTicket - once a verified ticket is received, do further processing with it */
 func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.Block, vt *block.VerificationTicket) {
 	notarized := mc.IsBlockNotarized(ctx, b)
 	//NOTE: We keep collecting verification tickets even if a block is notarized.
@@ -352,8 +352,10 @@ func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.B
 }
 
 /*AddNotarizedBlock - add a notarized block for a given round */
-func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *round.Round, b *block.Block) {
-	r.AddNotarizedBlock(b)
+func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *round.Round, b *block.Block) bool {
+	if !r.AddNotarizedBlock(b) {
+		return false
+	}
 	mc.startRound(r)
 
 	pr := mc.GetRound(r.Number - 1)
@@ -361,6 +363,7 @@ func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *round.Round, b *block
 		pr.CancelVerification()
 		go mc.FinalizeRound(ctx, &pr.Round, mc)
 	}
+	return true
 }
 
 func (mc *Chain) startRound(r *round.Round) {
@@ -387,10 +390,11 @@ func (mc *Chain) CancelRoundVerification(ctx context.Context, r *Round) {
 /*BroadcastNotarizedBlocks - send all the notarized blocks to all generating miners for a round*/
 func (mc *Chain) BroadcastNotarizedBlocks(ctx context.Context, pr *Round, r *Round) {
 	nb := pr.GetNotarizedBlocks()
-	miners := mc.GetMinersByRank(ctx, &r.Round)
-	for i := 0; mc.CanGenerateRound(&r.Round, miners[i]); i++ {
-		for _, b := range nb {
-			mc.SendNotarizedBlockTo(ctx, b, miners[i].ID)
-		}
+	rg := mc.GetGenerators(&r.Round)
+	//miners := mc.GetMinersByRank(ctx, &r.Round)
+	//for i := 0; mc.CanGenerateRound(&r.Round, miners[i]); i++ {
+	for _, b := range nb {
+		mc.SendNotarizedBlockToGenerators(ctx, b, rg)
 	}
+	//	}
 }

@@ -86,14 +86,26 @@ func (np *Pool) SendTo(handler SendHandler, to string) (bool, error) {
 	return handler(recepient), nil
 }
 
+/*SendToMultiple - send to multiple nodes */
+func (np *Pool) SendToMultiple(handler SendHandler, nodes []*Node) (bool, error) {
+	sentTo := np.sendTo(len(nodes), nodes, handler)
+	if len(sentTo) == len(nodes) {
+		return true, nil
+	}
+	return false, common.NewError("send_to_given_nodes_successful", "Sending to given nodes not successful")
+}
+
 /*SendAtleast - It tries to communicate to at least the given number of active nodes
 * TODO: May need to pass a context object so we can cancel at will.
  */
 func (np *Pool) SendAtleast(numNodes int, handler SendHandler) []*Node {
-	const THRESHOLD = 2
 	nodes := np.shuffleNodes()
-	sentTo := make([]*Node, 0, numNodes)
+	return np.sendTo(numNodes, nodes, handler)
+}
 
+func (np *Pool) sendTo(numNodes int, nodes []*Node, handler SendHandler) []*Node {
+	const THRESHOLD = 2
+	sentTo := make([]*Node, 0, numNodes)
 	if numNodes == 1 {
 		node := np.sendOne(handler, nodes)
 		if node == nil {

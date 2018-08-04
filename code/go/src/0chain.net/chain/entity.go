@@ -321,6 +321,19 @@ func (c *Chain) CanGenerateRound(r *round.Round, miner *node.Node) bool {
 	return r.GetRank(miner.SetIndex)+1 <= c.NumGenerators
 }
 
+/*GetGenerators - get all the block generators for a given round */
+func (c *Chain) GetGenerators(r *round.Round) []*node.Node {
+	generators := make([]*node.Node, c.NumGenerators)
+	i := 0
+	for _, node := range c.Miners.Nodes {
+		if r.GetRank(node.SetIndex) < c.NumGenerators {
+			generators[i] = node
+			i++
+		}
+	}
+	return generators
+}
+
 /*CanStoreBlock - checks if the sharder can store the block in the given round */
 func (c *Chain) CanStoreBlock(r *round.Round, sharder *node.Node) bool {
 	return r.GetRank(sharder.SetIndex)+1 <= c.NumSharders

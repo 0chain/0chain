@@ -6,6 +6,7 @@ import (
 	"0chain.net/block"
 	"0chain.net/chain"
 	"0chain.net/datastore"
+	"0chain.net/node"
 	"0chain.net/round"
 )
 
@@ -48,7 +49,7 @@ func (mc *Chain) SendFinalizedBlock(ctx context.Context, b *block.Block) {
 	}
 }
 
-/*SendNotarizedBlockTo - send a notarized block to a miner*/
-func (mc *Chain) SendNotarizedBlockTo(ctx context.Context, b *block.Block, minerID string) {
-	mc.Miners.SendTo(MinerNotarizedBlockSender(b), minerID)
+/*SendNotarizedBlockToGenerators - send a notarized block to a miner */
+func (mc *Chain) SendNotarizedBlockToGenerators(ctx context.Context, b *block.Block, generators []*node.Node) {
+	mc.Miners.SendToMultiple(MinerNotarizedBlockSender(b), generators)
 }

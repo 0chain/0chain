@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"0chain.net/chain"
 	"0chain.net/common"
 	"0chain.net/datastore"
 	. "0chain.net/logging"
@@ -172,11 +173,19 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 		return
 	}
 	b.MergeVerificationTickets(msg.Notarization.VerificationTickets)
-	mc.AddNotarizedBlock(ctx, &r.Round, b)
+	if !mc.AddNotarizedBlock(ctx, &r.Round, b) {
+		return
+	}
 	if !r.IsVerificationComplete() {
 		r.CancelVerification()
 		if r.Block == nil || r.Block.Weight() < b.Weight() {
 			r.Block = b
+		}
+	}
+	if mc.BlocksToSharder == chain.NOTARIZED {
+		//We assume those who can generate a block in a round are also responsible for sending it to the sharders
+		if mc.CanGenerateRound(&r.Round, node.GetSelfNode(ctx).Node) {
+			go mc.SendNotarizedBlock(ctx, b)
 		}
 	}
 }
