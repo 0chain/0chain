@@ -45,7 +45,7 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 		return
 	}
 	self := node.GetSelfNode(ctx)
-	rank := mr.GetRank(self.SetIndex)
+	rank := mr.GetMinerRank(self.SetIndex)
 	Logger.Info("*** starting round ***", zap.Int64("round", mr.Number), zap.Int("index", self.SetIndex), zap.Int("rank", rank), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round))
 	if !mc.CanGenerateRound(&mr.Round, self.Node) {
 		return
@@ -156,7 +156,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 			return nil, err
 		}
 		mc.AddBlock(b)
-		b.RoundRank = r.GetRank(node.GetSelfNode(ctx).SetIndex)
+		b.RoundRank = r.GetMinerRank(node.GetSelfNode(ctx).SetIndex)
 		b.ComputeChainWeight()
 		break
 	}
@@ -189,7 +189,7 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 			return
 		}
 		mc.AddBlock(b)
-		b.RoundRank = mr.GetRank(bNode.SetIndex)
+		b.RoundRank = mr.GetMinerRank(bNode.SetIndex)
 		if b.PrevBlock != nil {
 			b.ComputeChainWeight()
 		} else {

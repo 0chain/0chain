@@ -70,7 +70,7 @@ func (mc *Chain) SetupGenesisBlock(hash string) *block.Block {
 /*CreateRound - create a round */
 func (mc *Chain) CreateRound(r *round.Round) *Round {
 	var mr Round
-	r.ComputeRanks(mc.Miners.Size())
+	r.ComputeRanks(mc.Miners.Size(), mc.Sharders.Size())
 	mr.Round = *r
 	mr.blocksToVerifyChannel = make(chan *block.Block, 200)
 	return &mr
@@ -84,7 +84,7 @@ func (mc *Chain) AddRound(r *Round) bool {
 	if ok {
 		return false
 	}
-	r.ComputeRanks(mc.Miners.Size())
+	r.ComputeRanks(mc.Miners.Size(), mc.Sharders.Size())
 	mc.rounds[r.Number] = r
 	if r.Number > mc.CurrentRound {
 		mc.CurrentRound = r.Number
@@ -129,7 +129,7 @@ func (mc *Chain) DeleteRoundsBelow(ctx context.Context, round int64) {
 /*GetMinersByRank - get miners by their rank for a certain round*/
 func (mc *Chain) GetMinersByRank(ctx context.Context, r *round.Round) []*node.Node {
 	sort.Slice(mc.Miners.Nodes, func(i int, j int) bool {
-		return r.GetRank(mc.Miners.Nodes[i].SetIndex) < r.GetRank(mc.Miners.Nodes[j].SetIndex)
+		return r.GetMinerRank(mc.Miners.Nodes[i].SetIndex) < r.GetMinerRank(mc.Miners.Nodes[j].SetIndex)
 	})
 	return mc.Miners.Nodes
 }

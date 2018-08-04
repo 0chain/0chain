@@ -195,7 +195,7 @@ func StartProtocol() {
 
 	//TODO: For now, hardcoding a random seed for the first round
 	sr.RandomSeed = 839695260482366265
-	sr.ComputeRanks(mc.Miners.Size())
+	sr.ComputeRanks(mc.Miners.Size(), mc.Sharders.Size())
 	msr := mc.CreateRound(sr)
 
 	active := mc.Miners.GetActiveCount()

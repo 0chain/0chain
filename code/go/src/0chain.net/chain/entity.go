@@ -318,12 +318,12 @@ func (c *Chain) ValidateMagicBlock(ctx context.Context, b *block.Block) bool {
 
 /*CanGenerateRound - checks if the miner can generate a block in the given round */
 func (c *Chain) CanGenerateRound(r *round.Round, miner *node.Node) bool {
-	return r.GetRank(miner.SetIndex)+1 <= c.NumGenerators
+	return r.GetMinerRank(miner.SetIndex)+1 <= c.NumGenerators
 }
 
 /*CanStoreBlock - checks if the sharder can store the block in the given round */
 func (c *Chain) CanStoreBlock(r *round.Round, sharder *node.Node) bool {
-	return r.GetRank(sharder.SetIndex)+1 <= c.NumSharders
+	return r.GetSharderRank(sharder.SetIndex)+1 <= c.NumSharders
 }
 
 /*ValidGenerator - check whether this block is from a valid generator */

@@ -91,7 +91,7 @@ func (sc *Chain) AddRound(r *round.Round) bool {
 	if ok {
 		return false
 	}
-	r.ComputeRanks(sc.Miners.Size())
+	r.ComputeRanks(sc.Miners.Size(), sc.Sharders.Size())
 	sc.rounds[r.Number] = r
 	if r.Number > sc.CurrentRound {
 		sc.CurrentRound = r.Number
