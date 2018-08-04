@@ -193,6 +193,7 @@ agent-config-assemble-zchain:
 
 agent-stage-cluster: \
 	gitrepo-assemble-local \
+	artifacts-assemble-remote \
 	gitrepo-assemble-zchain \
 	agent-clientid-assemble-local \
 	agent-clientid-assemble-zchain \

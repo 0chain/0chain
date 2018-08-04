@@ -34,8 +34,9 @@ type Round struct {
 	Block     *block.Block `json:"-"`
 	BlockHash string       `json:"block_hash"`
 
-	perm  []int
-	state int
+	minerPerm   []int
+	sharderPerm []int
+	state       int
 
 	notarizedBlocks      []*block.Block
 	notarizedBlocksMutex *sync.Mutex
@@ -146,11 +147,17 @@ func SetupEntity(store datastore.Store) {
 NOTE: The permutation is deterministic using a PRNG that uses a starting seed. The starting seed itself
       is crytgraphically generated random number and is not known till the threshold signature is reached.
 */
-func (r *Round) ComputeRanks(n int) {
-	r.perm = rand.New(rand.NewSource(r.RandomSeed)).Perm(n)
+func (r *Round) ComputeRanks(m int, s int) {
+	r.minerPerm = rand.New(rand.NewSource(r.RandomSeed)).Perm(m)
+	r.sharderPerm = rand.New(rand.NewSource(r.RandomSeed)).Perm(s)
 }
 
-/*GetRank - get the rank of element at the elementIdx position based on the permutation of the round */
-func (r *Round) GetRank(elementIdx int) int {
-	return r.perm[elementIdx]
+/*GetMinerRank - get the rank of element at the elementIdx position based on the permutation of the round */
+func (r *Round) GetMinerRank(elementIdx int) int {
+	return r.minerPerm[elementIdx]
+}
+
+/*GetSharderRank - get the rank of element at the elementIdx position based on the permutation of the round */
+func (r *Round) GetSharderRank(elementIdx int) int {
+	return r.sharderPerm[elementIdx]
 }
