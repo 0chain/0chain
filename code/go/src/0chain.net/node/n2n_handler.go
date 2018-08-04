@@ -273,24 +273,26 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			delay := common.InduceDelay()
 			N2n.Debug("sending", zap.Any("from", Self.SetIndex), zap.Any("to", receiver.SetIndex), zap.Any("handler", uri), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Any("delay", delay))
 
-			// Keep the number of messages to a node bounded
-			receiver.Grab()
 			SetHeaders(req, entity, options)
 			ctx, cancel := context.WithCancel(context.TODO())
 			req = req.WithContext(ctx)
 			time.AfterFunc(timeout, cancel)
+			// Keep the number of messages to a node bounded
+			receiver.Grab()
+			ts := time.Now()
 			resp, err := httpClient.Do(req)
 			receiver.Release()
+			N2n.Info("sending", zap.Any("from", Self.SetIndex), zap.Any("to", receiver.SetIndex), zap.Duration("duration", time.Since(ts)), zap.Any("handler", uri), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()))
 
 			if err != nil {
-				N2n.Error("sending", zap.Any("from", Self.SetIndex), zap.Any("to", receiver.SetIndex), zap.Any("handler", uri), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Error(err))
+				N2n.Error("sending", zap.Any("from", Self.SetIndex), zap.Any("to", receiver.SetIndex), zap.Duration("duration", time.Since(ts)), zap.Any("handler", uri), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Error(err))
 				return false
 			}
 			defer resp.Body.Close()
 			if resp.StatusCode != http.StatusOK {
 				var rbuf bytes.Buffer
 				rbuf.ReadFrom(resp.Body)
-				N2n.Error("sending", zap.Any("from", Self.SetIndex), zap.Any("to", receiver.SetIndex), zap.Any("handler", uri), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Any("status_code", resp.StatusCode), zap.Any("response", rbuf.String()))
+				N2n.Error("sending", zap.Any("from", Self.SetIndex), zap.Any("to", receiver.SetIndex), zap.Duration("duration", time.Since(ts)), zap.Any("handler", uri), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Any("status_code", resp.StatusCode), zap.Any("response", rbuf.String()))
 				return false
 			}
 			receiver.Status = NodeStatusActive

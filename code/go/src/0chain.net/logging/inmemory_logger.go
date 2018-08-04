@@ -10,7 +10,7 @@ import (
 
 //TODO make buffer size configurable
 const (
-	BUFFER_SIZE = 50
+	BUFFER_SIZE = 1024
 )
 
 type MemCore struct {

@@ -46,16 +46,14 @@ func InitLogging(mode string) {
 	cfg.EncoderConfig.TimeKey = "timestamp"
 	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 
-	level := zap.ErrorLevel
-
-	MLogger = createMemLogger(level, cfg)
+	MLogger = createMemLogger(zap.ErrorLevel, cfg)
 	option := createOptionFromCores(createZapCore(logWriter, cfg), MLogger.GetCore())
 	l, err := cfg.Build(option)
 	if err != nil {
 		panic(err)
 	}
 
-	N2NMLogger = createMemLogger(level, cfg)
+	N2NMLogger = createMemLogger(zap.InfoLevel, cfg)
 	option = createOptionFromCores(createZapCore(n2nLogWriter, cfg), N2NMLogger.GetCore())
 	ls, err := cfg.Build(option)
 	if err != nil {
