@@ -326,7 +326,7 @@ func (c *Chain) GetGenerators(r *round.Round) []*node.Node {
 	generators := make([]*node.Node, c.NumGenerators)
 	i := 0
 	for _, node := range c.Miners.Nodes {
-		if r.GetRank(node.SetIndex) < c.NumGenerators {
+		if r.GetMinerRank(node.SetIndex) < c.NumGenerators {
 			generators[i] = node
 			i++
 		}
