@@ -391,10 +391,7 @@ func (mc *Chain) CancelRoundVerification(ctx context.Context, r *Round) {
 func (mc *Chain) BroadcastNotarizedBlocks(ctx context.Context, pr *Round, r *Round) {
 	nb := pr.GetNotarizedBlocks()
 	rg := mc.GetGenerators(&r.Round)
-	//miners := mc.GetMinersByRank(ctx, &r.Round)
-	//for i := 0; mc.CanGenerateRound(&r.Round, miners[i]); i++ {
 	for _, b := range nb {
 		mc.SendNotarizedBlockToGenerators(ctx, b, rg)
 	}
-	//	}
 }
