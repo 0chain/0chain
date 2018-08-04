@@ -13,6 +13,9 @@ import (
 var (
 	Logger *zap.Logger
 	N2n    *zap.Logger
+
+	MLogger    *MemLogger
+	N2NMLogger *MemLogger
 )
 
 func InitLogging(mode string) {
@@ -43,12 +46,18 @@ func InitLogging(mode string) {
 	cfg.EncoderConfig.TimeKey = "timestamp"
 	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 
-	l, err := cfg.Build(SetOutput(logWriter, cfg))
+	level := zap.ErrorLevel
+
+	MLogger = createMemLogger(level, cfg)
+	option := createOptionFromCores(createZapCore(logWriter, cfg), MLogger.GetCore())
+	l, err := cfg.Build(option)
 	if err != nil {
 		panic(err)
 	}
 
-	ls, err := cfg.Build(SetOutput(n2nLogWriter, cfg))
+	N2NMLogger = createMemLogger(level, cfg)
+	option = createOptionFromCores(createZapCore(n2nLogWriter, cfg), N2NMLogger.GetCore())
+	ls, err := cfg.Build(option)
 	if err != nil {
 		panic(err)
 	}
@@ -57,8 +66,24 @@ func InitLogging(mode string) {
 	N2n = ls
 }
 
-// SetOutput replaces existing Core with new, that writes to passed WriteSyncer.
-func SetOutput(ws zapcore.WriteSyncer, conf zap.Config) zap.Option {
+func createMemLogger(level zapcore.Level, conf zap.Config) *MemLogger {
+	enc := getEncoder(conf)
+	return NewMemLogger(enc, level)
+}
+
+func createZapCore(ws zapcore.WriteSyncer, conf zap.Config) zapcore.Core {
+	enc := getEncoder(conf)
+	return zapcore.NewCore(enc, ws, conf.Level)
+}
+
+func createOptionFromCores(cores ...zapcore.Core) zap.Option {
+	return zap.WrapCore(func(core zapcore.Core) zapcore.Core {
+		return zapcore.NewTee(cores...)
+	})
+
+}
+
+func getEncoder(conf zap.Config) zapcore.Encoder {
 	var enc zapcore.Encoder
 	switch conf.Encoding {
 	case "json":
@@ -68,9 +93,7 @@ func SetOutput(ws zapcore.WriteSyncer, conf zap.Config) zap.Option {
 	default:
 		panic("unknown encoding")
 	}
-	return zap.WrapCore(func(core zapcore.Core) zapcore.Core {
-		return zapcore.NewCore(enc, ws, conf.Level)
-	})
+	return enc
 }
 
 func getWriteSyncer(logName string) zapcore.WriteSyncer {

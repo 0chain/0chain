@@ -13,7 +13,8 @@ import (
 func SetupHandlers() {
 	http.HandleFunc("/_diagnostics/info", chain.InfoWriter)
 	http.HandleFunc("/v1/diagnostics/get/info", common.ToJSONResponse(chain.InfoHandler))
-
+	http.HandleFunc("/_diagnostics/logs", chain.LogWriter)
+	http.HandleFunc("/_diagnostics/n2n_logs", chain.N2NLogWriter)
 }
 
 /*GetStatistics - write the statistics of the given timer */
