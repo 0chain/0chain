@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"0chain.net/chain"
+	"0chain.net/node"
 
 	"0chain.net/block"
 	"0chain.net/round"
@@ -21,6 +22,8 @@ type ProtocolMessageSender interface {
 	SendNotarizedBlock(ctx context.Context, b *block.Block)
 
 	SendFinalizedBlock(ctx context.Context, b *block.Block)
+
+	SendNotarizedBlockToMiners(ctx context.Context, b *block.Block, node []*node.Node)
 }
 
 /*ProtocolMessageReceiver - this is the interface to understand teh messages the miner receives from the network */

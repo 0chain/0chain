@@ -392,6 +392,6 @@ func (mc *Chain) BroadcastNotarizedBlocks(ctx context.Context, pr *Round, r *Rou
 	nb := pr.GetNotarizedBlocks()
 	rg := mc.GetGenerators(&r.Round)
 	for _, b := range nb {
-		mc.SendNotarizedBlockToGenerators(ctx, b, rg)
+		mc.SendNotarizedBlockToMiners(ctx, b, rg)
 	}
 }

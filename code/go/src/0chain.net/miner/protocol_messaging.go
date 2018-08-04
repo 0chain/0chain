@@ -49,7 +49,7 @@ func (mc *Chain) SendFinalizedBlock(ctx context.Context, b *block.Block) {
 	}
 }
 
-/*SendNotarizedBlockToGenerators - send a notarized block to a miner */
-func (mc *Chain) SendNotarizedBlockToGenerators(ctx context.Context, b *block.Block, generators []*node.Node) {
-	mc.Miners.SendToMultiple(MinerNotarizedBlockSender(b), generators)
+/*SendNotarizedBlockToMiners - send a notarized block to a miner */
+func (mc *Chain) SendNotarizedBlockToMiners(ctx context.Context, b *block.Block, miners []*node.Node) {
+	mc.Miners.SendToMultiple(MinerNotarizedBlockSender(b), miners)
 }
