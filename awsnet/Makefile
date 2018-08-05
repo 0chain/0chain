@@ -227,7 +227,7 @@ workon_chinook:
 
 
 workon_eddy:
-	echo  "ZCHAIN_TESTNET=eddys" > $(CONTEXT)
+	echo  "ZCHAIN_TESTNET=eddy" > $(CONTEXT)
 
 
 workon_shasta:
