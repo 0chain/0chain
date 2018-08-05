@@ -76,7 +76,7 @@ func TestMerkeTreePruning(t *testing.T) {
 	origin := 2016
 	roots := make([]Key, 0, 10)
 	for i := int64(0); i < 1000; i++ {
-		mpt2.ResetChangeCollector()
+		mpt2.ResetChangeCollector(mpt2.GetRoot())
 		doStateValInsert("add 100 to c1", mpt2, "0123456", 100+i, false)
 		doStateValInsert("add 1000 to c2", mpt2, "0123457", 1000+i, false)
 		doStateValInsert("add 1000 to c3", mpt2, "0123458", 1000000+i, false)
@@ -145,7 +145,7 @@ func TestMerkeTreeGetChanges(t *testing.T) {
 	origin := 2016
 	roots := make([]Key, 0, 10)
 	for i := int64(0); i < 10; i++ {
-		mpt2.ResetChangeCollector()
+		mpt2.ResetChangeCollector(mpt2.GetRoot())
 		doStateValInsert("add 100 to c1", mpt2, "0123456", 100+i, false)
 		doStateValInsert("add 1000 to c2", mpt2, "0123457", 1000+i, false)
 		doStateValInsert("add 1000 to c3", mpt2, "0123458", 1000000+i, false)

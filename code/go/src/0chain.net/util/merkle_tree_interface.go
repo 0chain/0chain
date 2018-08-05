@@ -21,14 +21,6 @@ type MerkleTreeI interface {
 	GetPathByIndex(idx int) MTPath
 }
 
-const (
-	//Left - The node is to the left of the previous node in the path
-	Left = 0
-
-	//Right - The node is to the right of the previous node in the path
-	Right = 1
-)
-
 /*MTPath - The merkle tree path*/
 type MTPath struct {
 	Nodes     []string `json:"nodes"`

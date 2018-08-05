@@ -1,6 +1,7 @@
 package block
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"sort"
@@ -426,6 +427,11 @@ func (b *Block) IsStateComputed() bool {
 	//TODO: as we are moving forward even with state failing for now, unless we return true for the following states, we may end up doing a lot of computation
 	if b.blockState == StateVerificationSuccessful || b.blockState == StateNotarized {
 		return true
+	}
+	if b.PrevBlock != nil {
+		if bytes.Compare(b.ClientState.GetRoot(), b.PrevBlock.ClientStateHash) != 0 {
+			return true
+		}
 	}
 	return b.stateComputed
 }
