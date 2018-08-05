@@ -8,10 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"go.uber.org/zap/zaptest/observer"
-
-	"0chain.net/logging"
-
 	"0chain.net/config"
 	"0chain.net/node"
 	"0chain.net/util"
@@ -263,47 +259,6 @@ func InfoWriter(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "</tr>")
 	}
 	fmt.Fprintf(w, "</table>")
-}
-
-const (
-	MESSAGE_ONLY       = 1
-	INCLUDE_FIELDS     = 2
-	INCLUDE_STACKTRACE = 3
-)
-
-/*LogWriter - a handler to get recent logs*/
-func LogWriter(w http.ResponseWriter, r *http.Request) {
-	queryValues := r.URL.Query()
-	detailLevel, _ := strconv.Atoi(queryValues.Get("detail"))
-	logs := logging.MLogger.GetLogs()
-	for idx := 0; idx < len(logs); idx++ {
-		if logs[idx] != nil {
-			fmt.Fprintf(w, "%s \n", getLogResponseString(logs[idx], detailLevel))
-		}
-	}
-}
-
-/*N2NLogWriter - a handler to get recent node to node logs*/
-func N2NLogWriter(w http.ResponseWriter, r *http.Request) {
-	queryValues := r.URL.Query()
-	detailLevel, _ := strconv.Atoi(queryValues.Get("detail"))
-	logs := logging.N2NMLogger.GetLogs()
-	for idx := 0; idx < len(logs); idx++ {
-		if logs[idx] != nil {
-			fmt.Fprintf(w, "%s \n", getLogResponseString(logs[idx], detailLevel))
-		}
-	}
-}
-
-func getLogResponseString(log *observer.LoggedEntry, detailLevel int) string {
-	str := fmt.Sprintf("%s [%s] %s %s", log.Level, log.Time.Format("2006-01-02 15:04:05.000"), log.Caller.TrimmedPath(), log.Message)
-	if detailLevel >= INCLUDE_FIELDS {
-		str += " " + getFieldStrValue(log.ContextMap())
-	}
-	if detailLevel >= INCLUDE_STACKTRACE {
-		str += " " + log.Stack
-	}
-	return str
 }
 
 func getFieldStrValue(fields map[string]interface{}) string {

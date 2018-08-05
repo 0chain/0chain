@@ -6,6 +6,7 @@ import (
 
 	"0chain.net/chain"
 	"0chain.net/common"
+	"0chain.net/logging"
 	metrics "github.com/rcrowley/go-metrics"
 )
 
@@ -13,8 +14,8 @@ import (
 func SetupHandlers() {
 	http.HandleFunc("/_diagnostics/info", chain.InfoWriter)
 	http.HandleFunc("/v1/diagnostics/get/info", common.ToJSONResponse(chain.InfoHandler))
-	http.HandleFunc("/_diagnostics/logs", chain.LogWriter)
-	http.HandleFunc("/_diagnostics/n2n_logs", chain.N2NLogWriter)
+	http.HandleFunc("/_diagnostics/logs", logging.LogWriter)
+	http.HandleFunc("/_diagnostics/n2n_logs", logging.N2NLogWriter)
 }
 
 /*GetStatistics - write the statistics of the given timer */

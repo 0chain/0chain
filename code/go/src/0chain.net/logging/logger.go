@@ -46,14 +46,19 @@ func InitLogging(mode string) {
 	cfg.EncoderConfig.TimeKey = "timestamp"
 	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 
-	MLogger = createMemLogger(zap.ErrorLevel, cfg)
+	mlcfg := cfg
+	mlcfg.Level.Enabled(zap.ErrorLevel)
+
+	MLogger = createMemLogger(mlcfg)
 	option := createOptionFromCores(createZapCore(logWriter, cfg), MLogger.GetCore())
 	l, err := cfg.Build(option)
 	if err != nil {
 		panic(err)
 	}
 
-	N2NMLogger = createMemLogger(zap.InfoLevel, cfg)
+	mn2ncfg := cfg
+	mn2ncfg.Level.Enabled(zap.InfoLevel)
+	N2NMLogger = createMemLogger(mn2ncfg)
 	option = createOptionFromCores(createZapCore(n2nLogWriter, cfg), N2NMLogger.GetCore())
 	ls, err := cfg.Build(option)
 	if err != nil {
@@ -64,21 +69,20 @@ func InitLogging(mode string) {
 	N2n = ls
 }
 
-func createMemLogger(level zapcore.Level, conf zap.Config) *MemLogger {
-	enc := getEncoder(conf)
-	return NewMemLogger(enc, level)
-}
-
 func createZapCore(ws zapcore.WriteSyncer, conf zap.Config) zapcore.Core {
 	enc := getEncoder(conf)
 	return zapcore.NewCore(enc, ws, conf.Level)
+}
+
+func createMemLogger(conf zap.Config) *MemLogger {
+	enc := getEncoder(conf)
+	return NewMemLogger(enc, conf.Level)
 }
 
 func createOptionFromCores(cores ...zapcore.Core) zap.Option {
 	return zap.WrapCore(func(core zapcore.Core) zapcore.Core {
 		return zapcore.NewTee(cores...)
 	})
-
 }
 
 func getEncoder(conf zap.Config) zapcore.Encoder {
