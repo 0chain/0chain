@@ -178,18 +178,9 @@ func main() {
 	log.Fatal(server.ListenAndServe())
 }
 
-/*StartChainHandler - start the chain if it's at Genesis round */
-func StartChainHandler(w http.ResponseWriter, r *http.Request) {
-	StartProtocol()
-}
-
 /*StartProtocol - start the miner protocol */
 func StartProtocol() {
 	mc := miner.GetMinerChain()
-	mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"))
-	if mc.GetRound(1) != nil {
-		return
-	}
 	sr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 	sr.Number = 1
 
