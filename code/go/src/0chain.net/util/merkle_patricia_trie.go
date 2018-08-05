@@ -5,6 +5,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+
+	. "0chain.net/logging"
+	"go.uber.org/zap"
 )
 
 /*MerklePatriciaTrie - it's a merkle tree and a patricia trie */
@@ -55,7 +58,14 @@ func (mpt *MerklePatriciaTrie) GetNodeValue(path Path) (Serializable, error) {
 	if rootNode == nil {
 		return nil, ErrNodeNotFound
 	}
-	return mpt.getNodeKey(path, rootNode)
+	v, err := mpt.getNodeValue(path, rootNode)
+	if err != nil {
+		return nil, err
+	}
+	if v == nil { // This can happen if path given is partial that aligns with a full node that has no value
+		return nil, ErrValueNotPresent
+	}
+	return v, err
 }
 
 /*Insert - inserts (updates) a value into this trie and updates the trie all the way up and produces a new root */
@@ -71,7 +81,7 @@ func (mpt *MerklePatriciaTrie) Insert(path Path, value Serializable) (Key, error
 	if err != nil {
 		return nil, err
 	}
-	mpt.ChangeCollector.SetRoot(newRootHash)
+	mpt.SetRoot(newRootHash)
 	return newRootHash, nil
 }
 
@@ -81,7 +91,7 @@ func (mpt *MerklePatriciaTrie) Delete(path Path) (Key, error) {
 	if err != nil {
 		return nil, err
 	}
-	mpt.ChangeCollector.SetRoot(newRootHash)
+	mpt.SetRoot(newRootHash)
 	return newRootHash, nil
 }
 
@@ -93,7 +103,7 @@ func (mpt *MerklePatriciaTrie) GetChangeCollector() ChangeCollectorI {
 /*ResetChangeCollector - implement interface */
 func (mpt *MerklePatriciaTrie) ResetChangeCollector() {
 	mpt.ChangeCollector = NewChangeCollector()
-	mpt.ChangeCollector.SetRoot(mpt.GetRoot())
+	mpt.SetRoot(mpt.GetRoot())
 }
 
 /*SaveChanges - implement interface */
@@ -102,9 +112,6 @@ func (mpt *MerklePatriciaTrie) SaveChanges(ndb NodeDB, origin Origin, includeDel
 	err := cc.UpdateChanges(ndb, origin, includeDeletes)
 	if err != nil {
 		return err
-	}
-	if cc.GetRoot() != nil {
-		mpt.SetRoot(cc.GetRoot())
 	}
 	return nil
 }
@@ -123,7 +130,7 @@ func (mpt *MerklePatriciaTrie) PrettyPrint(w io.Writer) error {
 	return mpt.pp(w, Key(mpt.Root), 0, false)
 }
 
-func (mpt *MerklePatriciaTrie) getNodeKey(path Path, node Node) (Serializable, error) {
+func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node) (Serializable, error) {
 	switch nodeImpl := node.(type) {
 	case *LeafNode:
 		if bytes.Compare(nodeImpl.Path, path) == 0 {
@@ -140,17 +147,22 @@ func (mpt *MerklePatriciaTrie) getNodeKey(path Path, node Node) (Serializable, e
 		}
 		nnode, err := mpt.DB.GetNode(ckey)
 		if err != nil {
+			Logger.Debug("getNodeValue(fn) - node not found", zap.String("root", ToHex(mpt.GetRoot())), zap.String("key", ToHex(ckey)))
 			return nil, ErrNodeNotFound
 		}
-		return mpt.getNodeKey(path[1:], nnode)
+		return mpt.getNodeValue(path[1:], nnode)
 	case *ExtensionNode:
 		prefix := mpt.matchingPrefix(path, nodeImpl.Path)
+		if len(prefix) == 0 {
+			return nil, ErrValueNotPresent
+		}
 		if bytes.Compare(nodeImpl.Path, prefix) == 0 {
 			nnode, err := mpt.DB.GetNode(nodeImpl.NodeKey)
 			if err != nil {
+				Logger.Debug("getNodeValue(en) - node not found", zap.String("root", ToHex(mpt.GetRoot())), zap.String("key", ToHex(nodeImpl.NodeKey)))
 				return nil, ErrNodeNotFound
 			}
-			return mpt.getNodeKey(path[len(prefix):], nnode)
+			return mpt.getNodeValue(path[len(prefix):], nnode)
 		}
 		return nil, ErrValueNotPresent
 	default:
