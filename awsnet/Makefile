@@ -226,6 +226,10 @@ workon_chinook:
 	echo  "ZCHAIN_TESTNET=chinook" > $(CONTEXT)
 
 
+workon_eddy:
+	echo  "ZCHAIN_TESTNET=eddys" > $(CONTEXT)
+
+
 workon_shasta:
 	echo  "ZCHAIN_TESTNET=shasta" > $(CONTEXT)
 
