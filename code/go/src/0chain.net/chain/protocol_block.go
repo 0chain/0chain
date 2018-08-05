@@ -3,6 +3,8 @@ package chain
 import (
 	"context"
 
+	"0chain.net/node"
+
 	"0chain.net/block"
 	"0chain.net/common"
 	. "0chain.net/logging"
@@ -97,12 +99,35 @@ func (c *Chain) VerifyNotarization(ctx context.Context, b *block.Block, bvt []*b
 	return nil
 }
 
-/*IsBlockNotarized - Does the given number of signatures means eligible for notarization?
-TODO: For now, we just assume more than 50% */
+/*IsBlockNotarized - Does the given number of signatures means eligible for notarization? */
 func (c *Chain) IsBlockNotarized(ctx context.Context, b *block.Block) bool {
 	numSignatures := b.GetVerificationTicketsCount()
 	if numSignatures >= c.GetNotarizationThresholdCount() {
 		return true
 	}
 	return false
+}
+
+/*UpdateNodeState - based on the incoming valid blocks, update the nodes that notarized the block to be active
+ Useful to increase the speed of node status discovery which increases the reliablity of the network
+Simple 3 miner scenario :
+
+1) a discovered b & c.
+2) b discovered a.
+3) b and c are yet to discover each other
+4) a generated a block and sent it to b & c, got it notarized send next round started
+5) c is the generator who generated the block. He will only send it to a as b is not discovered to be active.
+    But if the prior block has b's signature (may or may not, but if it did), c can discover b is active before generating the block and so will send it to b
+*/
+func (c *Chain) UpdateNodeState(b *block.Block) {
+	for _, vt := range b.VerificationTickets {
+		signer := c.Miners.GetNode(vt.VerifierID)
+		if signer == nil {
+			Logger.Error("this should not happen!")
+			continue
+		}
+		if signer.Status != node.NodeStatusActive {
+			signer.Status = node.NodeStatusActive
+		}
+	}
 }

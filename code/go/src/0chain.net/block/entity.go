@@ -67,9 +67,9 @@ type Block struct {
 	//TODO: May be this should be replaced with a bloom filter & check against sorted txns
 	TxnsMap map[string]bool `json:"-"`
 
-	ClientState util.MerklePatriciaTrieI `json:"-"`
-
-	blockState          byte
+	ClientState         util.MerklePatriciaTrieI `json:"-"`
+	stateComputed       bool
+	blockState          int8
 	VerificationChannel chan bool `json:"-"`
 }
 
@@ -376,7 +376,7 @@ func (b *Block) Clear() {
 }
 
 /*SetBlockState - set the state of the block */
-func (b *Block) SetBlockState(blockState byte) {
+func (b *Block) SetBlockState(blockState int8) {
 	b.blockState = blockState
 	switch blockState {
 	case StateVerificationRejected:
@@ -392,7 +392,7 @@ func (b *Block) SetBlockState(blockState byte) {
 }
 
 /*GetBlockState - get the state of the block */
-func (b *Block) GetBlockState() byte {
+func (b *Block) GetBlockState() int8 {
 	return b.blockState
 }
 
@@ -419,4 +419,14 @@ func (b *Block) GetClients() []*client.Client {
 		idx++
 	}
 	return clients
+}
+
+/*IsStateComputed - indicates if the client state of the block is computed */
+func (b *Block) IsStateComputed() bool {
+	return b.stateComputed
+}
+
+/*SetStateIsComputed - set if the client state is computed or not for the block */
+func (b *Block) SetStateIsComputed(computed bool) {
+	b.stateComputed = computed
 }

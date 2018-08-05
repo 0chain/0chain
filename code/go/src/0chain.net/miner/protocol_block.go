@@ -161,7 +161,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		txn.PublicKey = client.PublicKey
 		txn.ClientID = datastore.EmptyKey
 	}
-	b.ClientStateHash = b.ClientState.GetChangeCollector().GetRoot()
+	b.ClientStateHash = b.ClientState.GetRoot()
 	bgTimer.UpdateSince(start)
 	Logger.Debug("generate block (assemble+update)", zap.Int64("round", b.Round), zap.Duration("time", time.Since(start)))
 
@@ -176,6 +176,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.String("state_hash", util.ToHex(b.ClientStateHash)),
 		zap.Float64("p_chain_weight", b.PrevBlock.ChainWeight), zap.Int32("iteration_count", count))
 	b.SetBlockState(block.StateGenerated)
+	b.SetStateIsComputed(true)
 	go b.ComputeTxnMap()
 	return nil
 }
@@ -209,7 +210,7 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockV
 	}
 	serr := mc.ComputeState(ctx, b)
 	if serr != nil {
-		Logger.Debug("verify block - error computing state (TODO sync)", zap.Error(serr))
+		Logger.Error("verify block - error computing state (TODO sync)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Error(serr))
 		//return nil, serr
 	}
 	bvt, err := mc.SignBlock(ctx, b)
@@ -331,6 +332,7 @@ func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (*block.BlockVer
 	if err != nil {
 		return nil, err
 	}
+	b.SetBlockState(block.StateVerificationSuccessful)
 	return bvt, nil
 }
 

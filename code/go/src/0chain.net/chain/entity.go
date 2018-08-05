@@ -19,6 +19,12 @@ import (
 	"go.uber.org/zap"
 )
 
+//PreviousBlockUnavailable - to indicate an error condition when the previous block of a given block is not available
+const PreviousBlockUnavailable = "previous_block_unavailable"
+
+//ErrPreviousBlockUnavailable - error for previous block is not available
+var ErrPreviousBlockUnavailable = common.NewError(PreviousBlockUnavailable, "Previous block is not available")
+
 const (
 	NOTARIZED = 1
 	FINALIZED = 2
@@ -205,6 +211,7 @@ func (c *Chain) GenerateGenesisBlock(hash string) (*round.Round, *block.Block) {
 	gb.Hash = hash
 	gb.Round = 0
 	gb.ClientState = c.setupInitialState()
+	gb.SetStateIsComputed(true)
 	gb.SetBlockState(block.StateNotarized)
 	gb.ClientStateHash = gb.ClientState.GetRoot()
 	gr := datastore.GetEntityMetadata("round").Instance().(*round.Round)

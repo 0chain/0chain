@@ -20,9 +20,6 @@ import (
 	"go.uber.org/zap"
 )
 
-//PreviousBlockUnknown - to indicate an error condition when the previous block of a given block is not known
-const PreviousBlockUnknown = "previous_block_not_known"
-
 //SetNetworkRelayTime - set the network relay time
 func SetNetworkRelayTime(delta time.Duration) {
 	chain.SetNetworkRelayTime(delta)
@@ -97,9 +94,10 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		Logger.Info("waiting for prior block verification", zap.Any("round", r.Number), zap.Any("block", pb.Hash), zap.Any("state", pb.GetBlockState()))
 		<-pb.VerificationChannel
 		Logger.Info("waiting for prior block verification (done)", zap.Any("round", r.Number), zap.Any("block", pb.Hash), zap.Any("state", pb.GetBlockState()))
-		if !(pb.GetBlockState() == block.StateVerificationSuccessful || pb.GetBlockState() == block.StateNotarized) {
+		if !pb.IsStateComputed() {
 			Logger.Info("generate round block (prior block compute state)", zap.Any("round", r.Number), zap.Any("block", pb.Hash), zap.Any("state", pb.GetBlockState()))
 			mc.ComputeState(ctx, pb)
+
 		}
 	}
 	b := datastore.GetEntityMetadata("block").Instance().(*block.Block)
@@ -228,7 +226,6 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			}
 			return false
 		}
-		b.SetBlockState(block.StateVerificationSuccessful)
 		r.Block = b
 
 		//TODO: Dfinity suggests broadcasting the prior block so it saturates the network
@@ -308,25 +305,30 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r *Round, b *block.Block)
 		pb, err := mc.GetBlock(ctx, b.PrevHash)
 		if err != nil {
 			Logger.Error("verify round", zap.Any("round", r.Number), zap.Any("block", b.Hash), zap.Any("prev_block", b.PrevHash), zap.Error(err))
-			return nil, common.NewError(PreviousBlockUnknown, "Previous block is not known")
+			return nil, chain.ErrPreviousBlockUnavailable
 		}
 		b.SetPreviousBlock(pb)
 		if pb.PrevBlockVerficationTickets == nil {
-			Logger.Info("verify round (incomplete prev block) TODO: sync block", zap.Any("round", r.Number), zap.Any("block", b.Hash), zap.Any("prev_block", b.PrevHash))
+			Logger.Info("verify round (incomplete prev block) TODO: sync block", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
 		}
 	}
 	/* Note: We are verifying the notarization of the previous block we have with
 	   the prev verification tickets of the current block. This is right as all the
 	   necessary verification tickets & notarization message may not have arrived to us */
 	if err := mc.VerifyNotarization(ctx, b.PrevBlock, b.PrevBlockVerficationTickets); err != nil {
-		Logger.Info("verify round block (prior block verify notarization)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Error(err))
+		Logger.Info("verify round block (prior block verify notarization)", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Error(err))
 		return nil, err
 	}
-
+	pbState := b.PrevBlock.GetBlockState()
+	if !b.PrevBlock.IsStateComputed() {
+		Logger.Info("verify round block - previous block state not ready", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Int8("prev_block_state", pbState))
+		mc.ComputeState(ctx, b.PrevBlock)
+	}
 	bvt, err := mc.VerifyBlock(ctx, b)
 	if err != nil {
 		return nil, err
 	}
+	mc.UpdateNodeState(b)
 	return bvt, nil
 }
 
