@@ -5,8 +5,8 @@
 blueprint:
   git_version: "testnet-v0.7"
   network_type: 'testnet'
-  network_name: 'shasta'
-  hosts: 'tag_network_name_shasta'
+  network_name: 'eddy'
+  hosts: 'tag_network_name_eddy'
 
   instance_type:
     miner: 'c4.large'
