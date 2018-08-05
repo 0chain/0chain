@@ -2,7 +2,6 @@ package logging
 
 import (
 	"container/ring"
-	"fmt"
 	"io"
 
 	"go.uber.org/zap"
@@ -13,7 +12,7 @@ import (
 
 //TODO make buffer size configurable
 const (
-	BUFFER_SIZE = 1024
+	BufferSize = 1024
 )
 
 const (
@@ -32,7 +31,6 @@ type MemCore struct {
 /*MemLogger - a struct for ring buffered inmemory logger */
 type MemLogger struct {
 	core *MemCore
-	logs [BUFFER_SIZE]*observer.LoggedEntry
 }
 
 /*NewMemLogger - create a new memory logger */
@@ -41,7 +39,7 @@ func NewMemLogger(enc zapcore.Encoder, enab zapcore.LevelEnabler) *MemLogger {
 		core: &MemCore{
 			LevelEnabler: enab,
 			enc:          enc,
-			r:            ring.New(BUFFER_SIZE),
+			r:            ring.New(BufferSize),
 		},
 	}
 }
@@ -52,16 +50,17 @@ func (ml *MemLogger) GetCore() zapcore.Core {
 }
 
 /*GetLogs - get the inmemory logs */
-func (ml *MemLogger) GetLogs() [BUFFER_SIZE]*observer.LoggedEntry {
+func (ml *MemLogger) GetLogs() []*observer.LoggedEntry {
 	var index = 0
 	mc := ml.core
+	logs := make([]*observer.LoggedEntry, BufferSize)
 	mc.r.Do(func(val interface{}) {
 		if val != nil {
-			ml.logs[index] = val.(*observer.LoggedEntry)
+			logs[index] = val.(*observer.LoggedEntry)
 			index++
 		}
 	})
-	return ml.logs
+	return logs
 }
 
 /*WriteLogs - write the logs to a io.Writer */
@@ -74,11 +73,13 @@ func (ml *MemLogger) WriteLogs(w io.Writer, detailLevel int) {
 
 	if detailLevel >= IncludeStacktrace {
 		cfg.EncoderConfig.StacktraceKey = "stacktrace"
+	} else {
+		cfg.EncoderConfig.StacktraceKey = ""
 	}
 	encoder := zapcore.NewConsoleEncoder(cfg.EncoderConfig)
 	logs := ml.GetLogs()
-	for idx := 0; idx < len(ml.logs); idx++ {
-		if ml.logs[idx] != nil {
+	for idx := 0; idx < len(logs); idx++ {
+		if logs[idx] != nil {
 			ml.writeEntry(w, encoder, logs[idx], detailLevel)
 		}
 	}
@@ -94,7 +95,6 @@ func (ml *MemLogger) writeEntry(w io.Writer, encoder zapcore.Encoder, entry *obs
 		return
 	}
 	w.Write(buf.Bytes())
-	fmt.Fprintf(w, "\n")
 }
 
 /*With - implement interface */
