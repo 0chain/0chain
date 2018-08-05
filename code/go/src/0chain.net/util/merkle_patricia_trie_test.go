@@ -190,7 +190,7 @@ func TestMPTUniverse(t *testing.T) {
 
 	doStrValInsert("", mpt2, "123", "world", true)
 
-	mpt.ResetChangeCollector() // adding a new change collector so there are changes with old nodes that are not nil
+	mpt.ResetChangeCollector(mpt.GetRoot()) // adding a new change collector so there are changes with old nodes that are not nil
 
 	doStrValInsert("", mpt2, "12346", "proxima centauri", true)
 	doStrValInsert("", mpt2, "1", "hello", true)

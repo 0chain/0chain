@@ -20,14 +20,14 @@ type MerklePatriciaTrie struct {
 /*NewMerklePatriciaTrie - create a new patricia merkle trie */
 func NewMerklePatriciaTrie(db NodeDB) *MerklePatriciaTrie {
 	mpt := &MerklePatriciaTrie{DB: db}
-	mpt.ResetChangeCollector()
+	mpt.ResetChangeCollector(nil)
 	return mpt
 }
 
 /*SetNodeDB - implement interface */
 func (mpt *MerklePatriciaTrie) SetNodeDB(ndb NodeDB) {
 	mpt.DB = ndb
-	mpt.ResetChangeCollector()
+	mpt.ResetChangeCollector(nil)
 }
 
 /*GetNodeDB - implement interface */
@@ -101,9 +101,9 @@ func (mpt *MerklePatriciaTrie) GetChangeCollector() ChangeCollectorI {
 }
 
 /*ResetChangeCollector - implement interface */
-func (mpt *MerklePatriciaTrie) ResetChangeCollector() {
+func (mpt *MerklePatriciaTrie) ResetChangeCollector(root Key) {
 	mpt.ChangeCollector = NewChangeCollector()
-	mpt.SetRoot(mpt.GetRoot())
+	mpt.SetRoot(root)
 }
 
 /*SaveChanges - implement interface */

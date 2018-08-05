@@ -29,7 +29,7 @@ type MerklePatriciaTrieI interface {
 	Iterate(ctx context.Context, handler MPTIteratorHandler, visitNodeTypes byte) error
 
 	GetChangeCollector() ChangeCollectorI
-	ResetChangeCollector()
+	ResetChangeCollector(root Key)
 	SaveChanges(ndb NodeDB, origin Origin, includeDeletes bool) error
 
 	// useful for pruning the state below a certain origin number

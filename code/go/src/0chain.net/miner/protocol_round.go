@@ -97,7 +97,6 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		if !pb.IsStateComputed() {
 			Logger.Info("generate round block (prior block compute state)", zap.Any("round", r.Number), zap.Any("block", pb.Hash), zap.Any("state", pb.GetBlockState()))
 			mc.ComputeState(ctx, pb)
-
 		}
 	}
 	b := datastore.GetEntityMetadata("block").Instance().(*block.Block)
@@ -120,7 +119,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 			return nil, ErrRoundMismatch
 		}
 		txnCount := transaction.TransactionCount
-		b.ClientState.ResetChangeCollector()
+		b.ClientState.ResetChangeCollector(b.PrevBlock.ClientStateHash)
 		err := mc.GenerateBlock(ctx, b, mc)
 		if err != nil {
 			cerr, ok := err.(*common.Error)
