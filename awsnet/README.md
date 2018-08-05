@@ -2,13 +2,13 @@
 
 ## Table of Contents
 
--   [Step One: Context Setup for Cluster](#step-one:-context-setup-for-cluster)
--   [Step Two: Stop Agents - Sharder + Miner](#step-two:-stop-agents---sharder-+-miner)
--   [Step Three: Stage the Cluster](#step-three:-upload-git-repository,-nodes-files-and-start-the-cluster)
--   [Step Four: Start the Agents](#step-four:-start-the-agents)
--   [Step Five: Start Block Explore](#step-five:-start-block-explorer-for-the-respective-cluster-and-issue-few-transactions)
+-   [Step One: Context Setup for Cluster](#context-setup-for-cluster)
+-   [Step Two: Stop Agents - Sharder + Miner](#stop-agents---sharder-+-miner)
+-   [Step Three: Stage the Cluster](#upload-git-repository,-nodes-files-and-start-the-cluster)
+-   [Step Four: Start the Agents](#start-the-agents)
+-   [Step Five: Start Block Explore](#start-block-explorer-for-the-respective-cluster-and-issue-few-transactions)
 
-## STEP ONE: Context Setup for Cluster
+## Context Setup for Cluster
 
 Each cluster in the testnet configuration has a name and associated directory under awsnet/cookbook/anchor. 
 
@@ -33,7 +33,7 @@ ZCHAIN_TESTNET=shasta
 $ make workon_shasta
 ```
 
-## STEP TWO: STOP AGENTS - SHARDER + MINER
+## STOP AGENTS - SHARDER + MINER
 
 Before upgrading the cluster, ensure all the agents - ie sharder and miner are stopped. 
 
@@ -43,7 +43,7 @@ Issue the following command to stop all the agents and their containers.
 $ make agent-role-teardown-zchain
 ```
 
-## STEP THREE: Upload git repository, nodes files and start the cluster
+## Upload git repository, nodes files and start the cluster
 
 The command 'make agent-stage-cluster' will do the following actions:
 
@@ -61,14 +61,14 @@ step to complete for the first time.
 $ make agent-stage-cluster
 ```
 
-## STEP FOUR: Start the agents
+## Start the agents
 The command 'agent-role-asemble-zchain' will start the sharder and miner. It runs the scripts listed under docker.aws.
 
 ```
 $ make agent-role-assemble-zchain
 ```
 
-## STEP FIVE: Start Block explorer for the respective cluster and issue few transactions
+## Start Block explorer for the respective cluster and issue few transactions
 
 Download and run the block-explore with the settings file for that cluster. 
 
