@@ -2,21 +2,30 @@
 
 ## Table of Contents
 
-- [Initial Setup](#initial-setup)
-	- [Directory Setup for Miners & Sharders](#directory-setup-for-miners-&-sharders)
-	- [Setup Network](#setup-network)
-- [Building and Starting the Nodes](#building-and-starting-the-nodes)
-- [Generating Test Transactions](#generating-test-transactions)
-- [Troubleshooting](#troubleshooting)
-- [Debugging](#debugging)
-- [Miscellaneous](#miscellaneous)
-	- [Cleanup](#cleanup)
+- [Step One: Context Setup for Cluster](#step-one:-context-setup-for-cluster)
+- [Step Two: Stop Agents - Sharder + Miner](#step-two:-stop-agents---sharder-+-miner)
+- [Step Three: Stage the Cluster](#step-three:-upload-git-repository,-nodes-files-and-start-the-cluster)
+- [Step Four: Start the Agents](#step-four:-start-the-agents)
+- [Step Five: Start Block Explore](#step-five:-start-block-explorer-for-the-respective-cluster-and-issue-few-transactions.)
 
-## Initial Setup
+## STEP ONE: Context Setup for Cluster
 
-### Context Setup for Cluster
+Each cluster in the testnet configuration has a name and associated directory under awsnet/cookbook/anchor. 
 
-Each cluster has a name such as chinook, eddy, shasta or whitney. Setup the context for future commands by using the workon_<cluster-name> target. If you are going to manage "shasta", then issue "workon_shasta". This command will create a file called "context" that will export the environment variable ZCHAIN_TESTNET. Here are the contents of the file when workon_shasta is invoked.
+Under the cluster specific directory there are three files:
+- 0chain.yaml - 0chain configuration parameters
+- blueprint.yml - Allocation of regions, miner, sharders, instance types etc.
+- clientid.yml - Client Id, Public Key and Private key. This file is generated using the keygen util in the awsnet/util directory.
+
+If you need to update the git/branch to be replicated check the blueprint.yaml.  
+
+Setup the context for future commands by using the workon_<cluster-name> target. 
+
+For example:
+
+If you are going to manage "shasta", then issue "make workon_shasta". 
+
+This command will create a file called "context", that will export the environment variable ZCHAIN_TESTNET=shasta for all future commands.
 
 ZCHAIN_TESTNET=shasta
 
@@ -24,61 +33,48 @@ ZCHAIN_TESTNET=shasta
 $ make workon_shasta
 ```
 
-### Stop the sharder and miner
-The sharder and miner are addressed as agents in the Makefile and the cookbook. To stop all the existing agents, issue the command agent-role-teardown-zchain.
+## STEP TWO: STOP AGENTS - SHARDER + MINER
+
+Before upgrading the cluster, ensure all the agents - ie sharder and miner are stopped. 
+
+Issue the following command to stop all the agents and their containers.
 
 ```
 $ make agent-role-teardown-zchain
 ```
 
-## Upload git repository, nodes files and start the cluster
+## STEP THREE: Upload git repository, nodes files and start the cluster
 
-The git branch or tag version should be updated in the respective "blueprint.yaml" under awsnet/cook/anchor/<cluster-name>/blueprint.yaml.
+The command 'make agent-stage-cluster' will do the following actions:
 
+   
+- gitrepo-assemble-local: Create a zip file from the repository. The git branch/tag version is listed under "blueprint.yml"
+- artifacts-assemble-remote - Create the necessary directories on the remote cluster under "/0chain"
+- gitrepo-assemble-zchain - Copy the repository tar file to the clusters and untar them
+- agent-clientid-assemble-local - Create a master copy of the clientid and nodes file. Update AWS Route53 with IP and DNS names
+- agent-clientid-assemble-zchain - Install nodes.txt and clientid files on the remote cluster
+- agent-config-assemble-zchain - Install cluster specific configuration file 0chain.yaml file. 
+- agent-build-assemble-zchain - Build zchain_base, miner and sharder docker images. <br> This step is the longest step. It can take upwards of 45 minutes for this 
+step to complete for the first time.
 
 ```
 $ make agent-stage-cluster
 ```
 
-The "agent-stage-cluster" is comprised of following steps.
-
-gitrepo-assemble-local
-artifacts-assemble-remote
-gitrepo-assemble-zchain
-agent-clientid-assemble-local
-agent-clientid-assemble-zchain
-agent-config-assemble-zchain
-agent-build-assemble-zchain
-
-## GITREPO-ASSEMBLE-LOCAL
+## STEP FOUR: Start the agents
+The command 'agent-role-asemble-zchain' will start the sharder and miner. It runs the scripts listed under docker.aws.
 
 ```
-$ make gitrepo-assemble-local 
-```
-## ARTIFACTS-ASSEMBLE-REMOTE
-```
-$ make gitrepo-assemble-local 
+$ make agent-role-assemble-zchain
 ```
 
-## GITREPO-ASSEMBLE-ZCHAIN
-```
-$ make gitrepo-assemble-local 
-```
+## STEP FIVE: Start Block explorer for the respective cluster and issue few transactions.
 
-## AGENT-CLIENTID-ASSEMBlE-LOCAL
+Download and run the block-explore with the settings file for that cluster. 
+
+For example to run block-explorer for shasta, run the following command
+
 ```
-$ make agent-clientid-assemble-local
-```
-## AGENT-CLIENTID-ASSEMBLE-ZCHAIN
-```
-$ make agent-clientid-assemble-zchain
-```
-## AGENT-CONFIG-ASSEMBLE-ZCHAIN
-```
-$ make agent-config-assemble-zchain
-```
-## AGENT-BUILD-ASSEMBlE-ZCHAIN
-```
-$ make agent-build-assemble-zchain
+$ meteor --settings ./.deploy/shasta-settings.json
 ```
 
