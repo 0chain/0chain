@@ -3,8 +3,8 @@
 ## Table of Contents
 
 -   [Step One: Context Setup for Cluster](#context-setup-for-cluster)
--   [Step Two: Stop Agents - Sharder + Miner](#stop-agents---sharder-+-miner)
--   [Step Three: Stage the Cluster](#upload-git-repository,-nodes-files-and-start-the-cluster)
+-   [Step Two: Stop Agents - Sharder + Miner](#stop-sharder-and-miner)
+-   [Step Three: Stage the Cluster](#upload-git-repository-nodes-files-and-start-the-cluster)
 -   [Step Four: Start the Agents](#start-the-agents)
 -   [Step Five: Start Block Explore](#start-block-explorer-for-the-respective-cluster-and-issue-few-transactions)
 
@@ -33,7 +33,7 @@ ZCHAIN_TESTNET=shasta
 $ make workon_shasta
 ```
 
-## STOP AGENTS - SHARDER + MINER
+## STOP sharder and miner
 
 Before upgrading the cluster, ensure all the agents - ie sharder and miner are stopped. 
 
@@ -43,7 +43,7 @@ Issue the following command to stop all the agents and their containers.
 $ make agent-role-teardown-zchain
 ```
 
-## Upload git repository, nodes files and start the cluster
+## Upload git repository nodes files and start the cluster
 
 The command 'make agent-stage-cluster' will do the following actions:
 
