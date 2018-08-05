@@ -2,11 +2,11 @@
 
 ## Table of Contents
 
-- [Step One: Context Setup for Cluster](#step-one:-context-setup-for-cluster)
-- [Step Two: Stop Agents - Sharder + Miner](#step-two:-stop-agents---sharder-+-miner)
-- [Step Three: Stage the Cluster](#step-three:-upload-git-repository,-nodes-files-and-start-the-cluster)
-- [Step Four: Start the Agents](#step-four:-start-the-agents)
-- [Step Five: Start Block Explore](#step-five:-start-block-explorer-for-the-respective-cluster-and-issue-few-transactions.)
+-   [Step One: Context Setup for Cluster](#step-one:-context-setup-for-cluster)
+-   [Step Two: Stop Agents - Sharder + Miner](#step-two:-stop-agents---sharder-+-miner)
+-   [Step Three: Stage the Cluster](#step-three:-upload-git-repository,-nodes-files-and-start-the-cluster)
+-   [Step Four: Start the Agents](#step-four:-start-the-agents)
+-   [Step Five: Start Block Explore](#step-five:-start-block-explorer-for-the-respective-cluster-and-issue-few-transactions)
 
 ## STEP ONE: Context Setup for Cluster
 
@@ -68,7 +68,7 @@ The command 'agent-role-asemble-zchain' will start the sharder and miner. It run
 $ make agent-role-assemble-zchain
 ```
 
-## STEP FIVE: Start Block explorer for the respective cluster and issue few transactions.
+## STEP FIVE: Start Block explorer for the respective cluster and issue few transactions
 
 Download and run the block-explore with the settings file for that cluster. 
 
