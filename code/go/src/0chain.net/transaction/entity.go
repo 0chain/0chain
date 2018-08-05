@@ -61,6 +61,11 @@ func (t *Transaction) ComputeProperties() {
 	if datastore.IsEmpty(t.ChainID) {
 		t.ChainID = datastore.ToKey(config.GetServerChainID())
 	}
+	t.ComputeClientID()
+}
+
+/*ComputeClientID - compute the client id if there is a public key in the tranasction */
+func (t *Transaction) ComputeClientID() {
 	if t.PublicKey != "" {
 		if t.ClientID == "" {
 			// Doing this is OK because the transaction signature has ClientID
