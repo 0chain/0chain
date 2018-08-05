@@ -227,6 +227,7 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			return false
 		}
 		r.Block = b
+		b.SetBlockState(block.StateVerificationSuccessful)
 
 		//TODO: Dfinity suggests broadcasting the prior block so it saturates the network
 		//While saturation is good, it's going to be expensive, hence TODO for now. Also, if we are proceeding verification based on partial block info,

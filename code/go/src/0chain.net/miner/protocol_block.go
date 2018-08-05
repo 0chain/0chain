@@ -332,7 +332,6 @@ func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (*block.BlockVer
 	if err != nil {
 		return nil, err
 	}
-	b.SetBlockState(block.StateVerificationSuccessful)
 	return bvt, nil
 }
 
