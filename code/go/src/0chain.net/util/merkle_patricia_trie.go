@@ -309,7 +309,7 @@ func (mpt *MerklePatriciaTrie) insertAtNode(value Serializable, node Node, path 
 
 		cnode := &FullNode{}
 
-		// existing leaf path and the given path have a prefix (one or more) and separate suffixes (node.Path = "hello world", path = "hello earth")
+		// existing branch path and the given path have a prefix (one or more) and separate suffixes (node.Path = "hello world", path = "hello earth")
 		// a full node that would contain children with indexes "w" and "e" , an extension node with path "hello "
 		if bytes.Compare(prefix, path) != 0 {
 			gcnode1 := NewLeafNode(path[plen+1:], value)
@@ -322,10 +322,15 @@ func (mpt *MerklePatriciaTrie) insertAtNode(value Serializable, node Node, path 
 			// path is a prefix of the existing extension (node.Path = "hello world", path = "hello")
 			cnode.SetValue(value)
 		}
-		gcnode2 := &ExtensionNode{Path: nodeImpl.Path[plen+1:], NodeKey: nodeImpl.NodeKey}
-		_, gckey2, err := mpt.insertNode(nil, gcnode2)
-		if err != nil {
-			return nil, nil, err
+		var gckey2 Key
+		if len(nodeImpl.Path) == plen+1 {
+			gckey2 = nodeImpl.NodeKey
+		} else {
+			gcnode2 := &ExtensionNode{Path: nodeImpl.Path[plen+1:], NodeKey: nodeImpl.NodeKey}
+			_, gckey2, err = mpt.insertNode(nil, gcnode2)
+			if err != nil {
+				return nil, nil, err
+			}
 		}
 		cnode.PutChild(nodeImpl.Path[plen], gckey2)
 		var prevNode Node

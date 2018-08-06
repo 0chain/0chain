@@ -239,7 +239,7 @@ func doGetStrValue(mpt MerklePatriciaTrieI, key string, value string) {
 		return
 	}
 	if err != nil {
-		fmt.Printf("error: getting inserted value: %v %v", key, value)
+		fmt.Printf("error: getting inserted value: %v %v", key, err)
 		panic("doGetStrValueError")
 	}
 	if val == nil {
