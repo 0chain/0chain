@@ -35,6 +35,19 @@ server_versions:
     frequency: '2.9GHz'
     processor: 'Intel Xeon E5-2666v3'
 
+  'C4_2XLARGE':
+    instance_type: 'c4.2xlarge'
+    memory: "15GiB"
+    vcpus: 8
+    ecpus: 31
+    storage: 'EBS'
+    network: 'high'
+    intel-aesni: true
+    intel-avx: true
+    intel-turbo: true
+    frequency: '2.9GHz'
+    processor: 'Intel Xeon E5-2666v3'
+
   'R4_LARGE':
     instance_type: 'r4.large'
     memory: '15.25GiB'

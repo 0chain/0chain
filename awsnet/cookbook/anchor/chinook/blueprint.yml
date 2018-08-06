@@ -8,8 +8,8 @@ blueprint:
   network_name: 'chinook'
   hosts: 'tag_network_name_chinook'
   instance_type:
-    miner: 'c4.large'
-    sharder: 'c4.large'
+    miner: 'c4.2xlarge'
+    sharder: 'c4.2xlarge'
 
   storage_type:
     root: '64GIB_GP2_SDA1'
