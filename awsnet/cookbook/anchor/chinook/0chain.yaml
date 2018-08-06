@@ -23,6 +23,8 @@ server_chain:
     generators: 2
     sharders: 1
     notarization_threshold: 60 # percentage
+    validation:
+        batch_size: 1000
   client:
     discover: true
   network:
