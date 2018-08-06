@@ -214,9 +214,6 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
 /*HandleNotarizedBlockMessage - handles a notarized block for a previous round*/
 func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMessage) {
 	r := mc.GetRound(msg.Block.Round)
-	if r == nil {
-		return
-	}
 	nb := r.GetNotarizedBlocks()
 	for _, blk := range nb {
 		if blk.Hash == msg.Block.Hash {

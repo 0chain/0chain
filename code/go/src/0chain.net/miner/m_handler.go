@@ -129,6 +129,10 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 		Logger.Debug("notarized block handler (round not started yet)", zap.String("block", b.Hash), zap.Any("round", b.Round))
 		return true, nil
 	}
+	r := mc.GetRound(msg.Block.Round)
+	if r == nil || len(r.GetNotarizedBlocks()) > 0 {
+		return nil, common.NewError("notarized_block", "already have notarized blocks")
+	}
 	msg := &BlockMessage{Sender: node.GetSender(ctx), Type: MessageNotarizedBlock, Block: b}
 	mc.GetBlockMessageChannel() <- msg
 	return true, nil
