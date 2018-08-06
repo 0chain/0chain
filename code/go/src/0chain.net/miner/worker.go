@@ -72,7 +72,7 @@ func (mc *Chain) HandleStartRound(ctx context.Context, msg *BlockMessage) {
 /*HandleVerifyBlockMessage - handles the verify block message */
 func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage) {
 	b := msg.Block
-	if b.Round < mc.CurrentRound {
+	if b.Round < mc.CurrentRound-1 {
 		Logger.Debug("verify block (round mismatch)", zap.Int64("current_round", mc.CurrentRound), zap.Int64("block_round", b.Round))
 		return
 	}
