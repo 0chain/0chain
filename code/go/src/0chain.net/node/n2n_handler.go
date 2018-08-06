@@ -390,6 +390,11 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF) common
 		}
 		data, err := handler(ctx, entity)
 		common.Respond(w, data, err)
+		if err != nil {
+			N2n.Error("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("entity", entityName), zap.Any("id", entity.GetKey()), zap.Error(err))
+		} else {
+			N2n.Info("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("entity", entityName), zap.Any("id", entity.GetKey()))
+		}
 		sender.Received++
 	}
 }
