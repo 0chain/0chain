@@ -51,16 +51,16 @@ func (ml *MemLogger) GetCore() zapcore.Core {
 
 /*GetLogs - get the inmemory logs */
 func (ml *MemLogger) GetLogs() []*observer.LoggedEntry {
-	var index = 0
+	var index = BufferSize - 1
 	mc := ml.core
 	logs := make([]*observer.LoggedEntry, BufferSize)
 	mc.r.Do(func(val interface{}) {
 		if val != nil {
 			logs[index] = val.(*observer.LoggedEntry)
-			index++
+			index--
 		}
 	})
-	return logs
+	return logs[index + 1:BufferSize]
 }
 
 /*WriteLogs - write the logs to a io.Writer */
