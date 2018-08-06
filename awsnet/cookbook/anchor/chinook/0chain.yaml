@@ -28,6 +28,6 @@ server_chain:
   client:
     discover: true
   network:
-    relay_time: 500 # milliseconds
+    relay_time: 200 # milliseconds
     max_concurrent_requests: 3
 
