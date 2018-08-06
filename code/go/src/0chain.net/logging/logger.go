@@ -18,6 +18,7 @@ var (
 	N2NMLogger *MemLogger
 )
 
+//InitLogging - initialize the logging submodule
 func InitLogging(mode string) {
 	var logName = "log/0chain.log"
 	var n2nLogName = "log/n2n.log"
@@ -46,9 +47,8 @@ func InitLogging(mode string) {
 	cfg.EncoderConfig.TimeKey = "timestamp"
 	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 
-	mlcfg := cfg
-	mlcfg.Level.Enabled(zap.ErrorLevel)
-
+	mlcfg := zap.NewDevelopmentConfig()
+	mlcfg.Level.SetLevel(zapcore.ErrorLevel)
 	MLogger = createMemLogger(mlcfg)
 	option := createOptionFromCores(createZapCore(logWriter, cfg), MLogger.GetCore())
 	l, err := cfg.Build(option)
@@ -56,8 +56,8 @@ func InitLogging(mode string) {
 		panic(err)
 	}
 
-	mn2ncfg := cfg
-	mn2ncfg.Level.Enabled(zap.InfoLevel)
+	mn2ncfg := zap.NewDevelopmentConfig()
+	mn2ncfg.Level.SetLevel(zapcore.InfoLevel)
 	N2NMLogger = createMemLogger(mn2ncfg)
 	option = createOptionFromCores(createZapCore(n2nLogWriter, cfg), N2NMLogger.GetCore())
 	ls, err := cfg.Build(option)
