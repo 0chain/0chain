@@ -1,10 +1,10 @@
 package block
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"sort"
+	"sync"
 	"time"
 
 	"0chain.net/client"
@@ -28,6 +28,13 @@ const (
 	StateVerificationSuccessful = 60
 	StateVerificationFailed     = 70
 	StateNotarized              = 80
+)
+
+const (
+	StatePending    = 0
+	StateComputing  = 10
+	StateFailed     = 20
+	StateSuccessful = 30
 )
 
 /*UnverifiedBlockBody - used to compute the signature
@@ -68,10 +75,10 @@ type Block struct {
 	//TODO: May be this should be replaced with a bloom filter & check against sorted txns
 	TxnsMap map[string]bool `json:"-"`
 
-	ClientState         util.MerklePatriciaTrieI `json:"-"`
-	stateComputed       bool
-	blockState          int8
-	VerificationChannel chan bool `json:"-"`
+	ClientState util.MerklePatriciaTrieI `json:"-"`
+	StateStatus int8
+	StateMutex  *sync.Mutex
+	blockState  int8
 }
 
 var blockEntityMetadata *datastore.EntityMetadataImpl
@@ -158,8 +165,8 @@ func Provider() datastore.Entity {
 	b.PrevBlockVerficationTickets = make([]*VerificationTicket, 0, 1)
 	b.EntityCollection = blockEntityCollection
 	b.ChainID = datastore.ToKey(config.GetServerChainID())
-	b.VerificationChannel = make(chan bool, 1)
 	b.InitializeCreationDate()
+	b.StateMutex = &sync.Mutex{}
 	return b
 }
 
@@ -374,22 +381,12 @@ func (b *Block) Clear() {
 	b.VerificationTickets = nil
 	b.Txns = nil
 	b.TxnsMap = nil
+	b.StateMutex = nil
 }
 
 /*SetBlockState - set the state of the block */
 func (b *Block) SetBlockState(blockState int8) {
 	b.blockState = blockState
-	switch blockState {
-	case StateVerificationRejected:
-		b.VerificationChannel <- false
-		close(b.VerificationChannel)
-	case StateVerificationFailed:
-		b.VerificationChannel <- false
-		close(b.VerificationChannel)
-	case StateVerificationSuccessful:
-		b.VerificationChannel <- true
-		close(b.VerificationChannel)
-	}
 }
 
 /*GetBlockState - get the state of the block */
@@ -422,21 +419,24 @@ func (b *Block) GetClients() []*client.Client {
 	return clients
 }
 
-/*IsStateComputed - indicates if the client state of the block is computed */
-func (b *Block) IsStateComputed() bool {
-	//TODO: as we are moving forward even with state failing for now, unless we return true for the following states, we may end up doing a lot of computation
-	if b.blockState == StateVerificationSuccessful || b.blockState == StateNotarized {
-		return true
-	}
-	if b.PrevBlock != nil {
-		if bytes.Compare(b.ClientState.GetRoot(), b.PrevBlock.ClientStateHash) != 0 {
-			return true
-		}
-	}
-	return b.stateComputed
+/*GetStateStatus - indicates if the client state of the block is computed */
+func (b *Block) GetStateStatus() int8 {
+	return b.StateStatus
 }
 
-/*SetStateIsComputed - set if the client state is computed or not for the block */
-func (b *Block) SetStateIsComputed(computed bool) {
-	b.stateComputed = computed
+/*IsStateComputed - is the state of this block computed? */
+func (b *Block) IsStateComputed() bool {
+	if b.StateStatus == StateSuccessful {
+		return true
+	}
+	//TODO: the following is temporary
+	if b.StateStatus == StateFailed {
+		return true
+	}
+	return false
+}
+
+/*SetStateStatus - set if the client state is computed or not for the block */
+func (b *Block) SetStateStatus(status int8) {
+	b.StateStatus = status
 }

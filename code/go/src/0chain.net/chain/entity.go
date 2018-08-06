@@ -90,6 +90,8 @@ type Chain struct {
 
 	ZeroNotarizedBlocksCount  int64 `json:"-"`
 	MultiNotarizedBlocksCount int64 `json:"-"`
+
+	ValidationBatchSize int `json:"validation_size"`
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
@@ -136,6 +138,7 @@ func NewChainFromConfig() *Chain {
 	chain.NotarizationThreshold = viper.GetInt("server_chain.block.notarization_threshold")
 	chain.OwnerID = viper.GetString("server_chain.owner")
 	chain.ClientStateDeserializer = &state.Deserializer{}
+	chain.ValidationBatchSize = viper.GetInt("server_chain.block.validation.batch_size")
 	return chain
 }
 
@@ -159,6 +162,7 @@ func (c *Chain) Initialize() {
 	c.LatestFinalizedBlock = nil
 	c.CurrentMagicBlock = nil
 	c.BlocksToSharder = 1
+	c.ValidationBatchSize = 2000
 	c.FinalizedRoundsChannel = make(chan *round.Round, 128)
 	c.StateDB = stateDB
 }
@@ -211,7 +215,7 @@ func (c *Chain) GenerateGenesisBlock(hash string) (*round.Round, *block.Block) {
 	gb.Hash = hash
 	gb.Round = 0
 	gb.ClientState = c.setupInitialState()
-	gb.SetStateIsComputed(true)
+	gb.SetStateStatus(block.StateSuccessful)
 	gb.SetBlockState(block.StateNotarized)
 	gb.ClientStateHash = gb.ClientState.GetRoot()
 	gr := datastore.GetEntityMetadata("round").Instance().(*round.Round)

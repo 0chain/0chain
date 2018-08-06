@@ -90,14 +90,9 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		Logger.Error("generate round block (prior block not found)", zap.Any("round", r.Number))
 		return nil, common.NewError("block_gen_no_block_to_extend", "Do not have the block to extend this round")
 	}
-	if pb.GetBlockState() == block.StateVerificationPending || pb.GetBlockState() == block.StateVerificationAccepted {
-		Logger.Info("waiting for prior block verification", zap.Any("round", r.Number), zap.Any("block", pb.Hash), zap.Any("state", pb.GetBlockState()))
-		<-pb.VerificationChannel
-		Logger.Info("waiting for prior block verification (done)", zap.Any("round", r.Number), zap.Any("block", pb.Hash), zap.Any("state", pb.GetBlockState()))
-		if !pb.IsStateComputed() {
-			Logger.Info("generate round block (prior block compute state)", zap.Any("round", r.Number), zap.Any("block", pb.Hash), zap.Any("state", pb.GetBlockState()))
-			mc.ComputeState(ctx, pb)
-		}
+	if !pb.IsStateComputed() {
+		Logger.Info("generate round block (prior block compute state)", zap.Any("round", r.Number), zap.Any("block", pb.Hash), zap.Any("state", pb.GetBlockState()))
+		mc.ComputeState(ctx, pb)
 	}
 	b := datastore.GetEntityMetadata("block").Instance().(*block.Block)
 	b.ChainID = mc.ID

@@ -176,7 +176,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.String("state_hash", util.ToHex(b.ClientStateHash)),
 		zap.Float64("p_chain_weight", b.PrevBlock.ChainWeight), zap.Int32("iteration_count", count))
 	b.SetBlockState(block.StateGenerated)
-	b.SetStateIsComputed(true)
+	b.SetStateStatus(block.StateSuccessful)
 	go b.ComputeTxnMap()
 	return nil
 }
@@ -228,12 +228,11 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockV
 func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error {
 	var roundMismatch bool
 	var cancel bool
-	size := 2000
-	numWorkers := len(b.Txns) / size
-	if numWorkers*size < len(b.Txns) {
+	numWorkers := len(b.Txns) / mc.ValidationBatchSize
+	if numWorkers*mc.ValidationBatchSize < len(b.Txns) {
 		numWorkers++
 	}
-	validChannel := make(chan bool, len(b.Txns)/size+1)
+	validChannel := make(chan bool, len(b.Txns)/mc.ValidationBatchSize+1)
 	validate := func(ctx context.Context, txns []*transaction.Transaction) {
 		for _, txn := range txns {
 			if cancel {
@@ -265,8 +264,8 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 		}
 		validChannel <- true
 	}
-	for start := 0; start < len(b.Txns); start += size {
-		end := start + size
+	for start := 0; start < len(b.Txns); start += mc.ValidationBatchSize {
+		end := start + mc.ValidationBatchSize
 		if end > len(b.Txns) {
 			end = len(b.Txns)
 		}

@@ -19,10 +19,11 @@ const StateMismatch = "state_mismatch"
 
 /*ComputeState - compute the state for the block */
 func (c *Chain) ComputeState(ctx context.Context, b *block.Block) error {
+	b.StateMutex.Lock()
+	defer b.StateMutex.Unlock()
 	if b.IsStateComputed() {
 		return nil
 	}
-	/*TODO - this needs to be robust. Will lead to stackoverflow at the moment as we are not strict on state correctness
 	if b.PrevBlock != nil {
 		pbState := b.PrevBlock.GetBlockState()
 		if !b.PrevBlock.IsStateComputed() {
@@ -30,23 +31,26 @@ func (c *Chain) ComputeState(ctx context.Context, b *block.Block) error {
 			c.ComputeState(ctx, b.PrevBlock)
 		}
 	} else {
+		b.SetStateStatus(block.StateFailed)
 		Logger.Error("compute state - previous block not available", zap.Int64("round", b.Round), zap.String("block", b.Hash))
 		return ErrPreviousBlockUnavailable
-	}*/
+	}
 	c.rebaseState()
 	for _, txn := range b.Txns {
 		if datastore.IsEmpty(txn.ClientID) {
 			txn.ComputeClientID()
 		}
 		if !c.UpdateState(b, txn) {
+			b.SetStateStatus(block.StateFailed)
 			return common.NewError("state_update_error", "error updating state")
 		}
 	}
 	if bytes.Compare(b.ClientStateHash, b.ClientState.GetRoot()) != 0 {
+		b.SetStateStatus(block.StateFailed)
 		Logger.Error("validate transaction state hash error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("block_size", len(b.Txns)), zap.Int("changes", len(b.ClientState.GetChangeCollector().GetChanges())), zap.String("block_state_hash", util.ToHex(b.ClientStateHash)), zap.String("computed_state_hash", util.ToHex(b.ClientState.GetRoot())))
 		return common.NewError(StateMismatch, "computed state hash doesn't match with the state hash of the block")
 	}
-	b.SetStateIsComputed(true)
+	b.SetStateStatus(block.StateSuccessful)
 	return nil
 }
 
@@ -71,18 +75,19 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 	clientState := b.ClientState
 	fs, err := c.getState(clientState, txn.ClientID)
 	if err != nil {
-		if err != util.ErrValueNotPresent {
-			Logger.Debug("update state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int8("block_state", b.GetBlockState()), zap.Any("txn", txn), zap.Error(err))
-			return false
-		} else {
-			Logger.Debug("update state (value not present)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int8("block_state", b.GetBlockState()), zap.Any("txn", txn), zap.Error(err))
-		}
+		Logger.Error("update state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
+		return false
 	}
 	tbalance := state.Balance(txn.Value)
 	switch txn.TransactionType {
 	case transaction.TxnTypeSend:
 		if fs.Balance < tbalance {
 			Logger.Debug("low balance", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("state", fs), zap.Any("txn", txn))
+			return false
+		}
+		ts, err := c.getState(clientState, txn.ToClientID)
+		if err != nil {
+			Logger.Error("update state (to client)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
 			return false
 		}
 		fs.Balance -= tbalance
@@ -92,15 +97,13 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 			_, err = clientState.Insert(util.Path(txn.ClientID), fs)
 		}
 		if err != nil {
-			Logger.Debug("update state - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
-		}
-		ts, err := c.getState(clientState, txn.ToClientID)
-		if err != nil {
-			Logger.Debug("update state (to client)", zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
-			return false
+			Logger.Error("update state - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
 		}
 		ts.Balance += tbalance
-		clientState.Insert(util.Path(txn.ToClientID), ts)
+		_, err = clientState.Insert(util.Path(txn.ToClientID), ts)
+		if err != nil {
+			Logger.Error("update state - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
+		}
 		return true
 	default:
 		return true // TODO: This should eventually return false by default for all unkown cases
