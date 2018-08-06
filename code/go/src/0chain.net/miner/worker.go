@@ -31,7 +31,6 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case msg := <-mc.GetBlockMessageChannel():
-			roundTimeout.Stop()
 			if msg.Sender != nil {
 				Logger.Debug("message", zap.Any("msg", GetMessageLookup(msg.Type)), zap.Any("sender_index", msg.Sender.SetIndex), zap.Any("id", msg.Sender.GetKey()))
 			} else {
@@ -39,12 +38,16 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 			}
 			switch msg.Type {
 			case MessageStartRound:
+				roundTimeout.Stop()
 				protocol.HandleStartRound(ctx, msg)
 			case MessageVerify:
+				roundTimeout.Stop()
 				protocol.HandleVerifyBlockMessage(ctx, msg)
 			case MessageVerificationTicket:
+				roundTimeout.Stop()
 				protocol.HandleVerificationTicketMessage(ctx, msg)
 			case MessageNotarization:
+				roundTimeout.Stop()
 				protocol.HandleNotarizationMessage(ctx, msg)
 			case MessageNotarizedBlock:
 				protocol.HandleNotarizedBlockMessage(ctx, msg)
