@@ -5,6 +5,7 @@ import (
 	"io"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"0chain.net/client"
@@ -12,9 +13,12 @@ import (
 	"0chain.net/config"
 	"0chain.net/datastore"
 	"0chain.net/encryption"
+	metrics "github.com/rcrowley/go-metrics"
 )
 
 var nodes = make(map[string]*Node)
+
+var mutex sync.Mutex
 
 /*RegisterNode - register a node to a global registery
 * We need to keep track of a global register of nodes. This is required to ensure we can verify a signed request
@@ -62,6 +66,8 @@ type Node struct {
 	//These are approximiate as we are not going to lock to update
 	Sent     int64 // messages sent to this node
 	Received int64 // messages received from this node
+
+	TimersByURI map[string]metrics.Timer
 }
 
 /*Provider - create a node object */
@@ -73,6 +79,7 @@ func Provider() *Node {
 	for i := 0; i < cap(node.CommChannel); i++ {
 		node.CommChannel <- true
 	}
+	node.TimersByURI = make(map[string]metrics.Timer, 10)
 	return node
 }
 
@@ -170,4 +177,19 @@ func (n *Node) Grab() {
 //Release - release a slot after sending the message
 func (n *Node) Release() {
 	n.CommChannel <- true
+}
+
+//GetTimer - get the timer
+func (n *Node) GetTimer(uri string) metrics.Timer {
+	timer, ok := n.TimersByURI[uri]
+	if !ok {
+		timerID := fmt.Sprintf("%v.%v", n.ID, uri)
+		timer = metrics.GetOrRegisterTimer(timerID, nil)
+		// We will incur this cost only the first time and n.TimersByURI will not have concurrent read/write because of this mutex.
+		// We could have had mutex by node, but as it's only for the initial registration, it may be ok
+		mutex.Lock()
+		defer mutex.Unlock()
+		n.TimersByURI[uri] = timer
+	}
+	return timer
 }

@@ -200,7 +200,7 @@ func (c *Chain) setupInitialState() util.MerklePatriciaTrieI {
 	pmt := util.NewMerklePatriciaTrie(c.StateDB)
 	pmt.Insert(util.Path(c.OwnerID), c.getInitialState())
 	pmt.SaveChanges(c.StateDB, 0, false)
-	Logger.Info("initial state root", zap.Any("hash", pmt.GetRoot()))
+	Logger.Info("initial state root", zap.Any("hash", util.ToHex(pmt.GetRoot())))
 	return pmt
 }
 
@@ -300,6 +300,7 @@ func (c *Chain) DeleteBlocksBelowRound(round int64) {
 			blocks = append(blocks, b)
 		}
 	}
+	Logger.Info("delete blocks below round", zap.Int64("round", c.CurrentRound), zap.Int64("below_round", round), zap.Any("before", ts), zap.Int("total", len(c.Blocks)), zap.Int("count", len(blocks)))
 	for _, b := range blocks {
 		b.Clear()
 		delete(c.Blocks, b.Hash)

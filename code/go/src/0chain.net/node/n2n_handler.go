@@ -92,7 +92,7 @@ func (np *Pool) SendToMultiple(handler SendHandler, nodes []*Node) (bool, error)
 	if len(sentTo) == len(nodes) {
 		return true, nil
 	}
-	return false, common.NewError("send_to_given_nodes_successful", "Sending to given nodes not successful")
+	return false, common.NewError("send_to_given_nodes_unsuccessful", "Sending to given nodes not successful")
 }
 
 /*SendAtleast - It tries to communicate to at least the given number of active nodes
@@ -245,6 +245,7 @@ func init() {
 func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 	return func(entity datastore.Entity) SendHandler {
 		return func(receiver *Node) bool {
+			timer := receiver.GetTimer(uri)
 			timeout := 500 * time.Millisecond
 			if options.Timeout > 0 {
 				timeout = options.Timeout
@@ -272,7 +273,6 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			req.Header.Set("Content-Type", "application/json; charset=utf-8")
 			delay := common.InduceDelay()
 			N2n.Debug("sending", zap.Any("from", Self.SetIndex), zap.Any("to", receiver.SetIndex), zap.Any("handler", uri), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Any("delay", delay))
-
 			SetHeaders(req, entity, options)
 			ctx, cancel := context.WithCancel(context.TODO())
 			req = req.WithContext(ctx)
@@ -282,6 +282,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			ts := time.Now()
 			resp, err := httpClient.Do(req)
 			receiver.Release()
+			timer.UpdateSince(ts)
 			N2n.Info("sending", zap.Any("from", Self.SetIndex), zap.Any("to", receiver.SetIndex), zap.Duration("duration", time.Since(ts)), zap.Any("handler", uri), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()))
 
 			if err != nil {

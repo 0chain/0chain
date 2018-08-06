@@ -107,6 +107,7 @@ func (c *Chain) GetBlobbersHandler(w http.ResponseWriter, r *http.Request) {
 	c.Blobbers.Print(w)
 }
 
+/*GetBlockHandler - get the block from local cache */
 func GetBlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	hash := r.FormValue("block")
 	content := r.FormValue("content")
@@ -261,20 +262,28 @@ func InfoWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</table>")
 }
 
-func getFieldStrValue(fields map[string]interface{}) string {
-	s := "{ "
-	for key, value := range fields {
-		s += key
-		switch valueType := value.(type) {
-		case string:
-			s = s + " : " + valueType
-		case fmt.Stringer:
-			s = s + " : " + valueType.String()
-		default:
-			s = s + fmt.Sprintf(" : %v", value)
+//SendStatsWriter - writes the send stats of all the nodes
+func (c *Chain) SendStatsWriter(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "<style>\n")
+	fmt.Fprintf(w, ".number { text-align: right; }\n")
+	fmt.Fprintf(w, "table, td, th { border: 1px solid black; }\n")
+	fmt.Fprintf(w, "</style>")
+	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
+	fmt.Fprintf(w, "<tr><td>URI</td><td>Count</td><td>Min</td><td>Average</td><td>Max</td></tr>")
+	for _, n := range c.Miners.Nodes {
+		if n == node.Self.Node {
+			continue
 		}
-		s = s + " , "
+		fmt.Fprintf(w, "<tr><th colspan='5'>%s</th></tr>", fmt.Sprintf("%v%3d", n.GetNodeTypeName(), n.SetIndex))
+		n.PrintSendStats(w)
 	}
-	s += "} "
-	return s
+
+	for _, n := range c.Sharders.Nodes {
+		if n == node.Self.Node {
+			continue
+		}
+		fmt.Fprintf(w, "<tr><th colspan='5'>%s</th></tr>", fmt.Sprintf("%v%3d", n.GetNodeTypeName(), n.SetIndex))
+		n.PrintSendStats(w)
+	}
+	fmt.Fprintf(w, "</table>")
 }
