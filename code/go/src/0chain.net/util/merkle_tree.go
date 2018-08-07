@@ -12,6 +12,9 @@ type MerkleTree struct {
 }
 
 func (mt *MerkleTree) computeSize(leaves int) (int, int) {
+	if leaves == 1 {
+		return 2, 2
+	}
 	var tsize int
 	var levels int
 	for ll := leaves; ll > 1; ll = (ll + 1) / 2 {
