@@ -332,7 +332,6 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r *Round, b *block.Block)
 	if err != nil {
 		return nil, err
 	}
-	mc.UpdateNodeState(b)
 	return bvt, nil
 }
 
@@ -362,6 +361,7 @@ func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *round.Round, b *block
 	if !r.AddNotarizedBlock(b) {
 		return false
 	}
+	mc.UpdateNodeState(b)
 	mc.startRound(r)
 
 	pr := mc.GetRound(r.Number - 1)
