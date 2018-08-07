@@ -123,14 +123,12 @@ func main() {
 	reader.Close()
 	if node.Self.ID == "" {
 		Logger.Panic("node definition for self node doesn't exist")
-	} else {
-		Logger.Info("self identity", zap.Any("set_index", node.Self.Node.SetIndex), zap.Any("id", node.Self.Node.GetKey()))
 	}
-	address := fmt.Sprintf(":%v", node.Self.Port)
 
 	serverChain.Miners.ComputeProperties()
 	serverChain.Sharders.ComputeProperties()
 	serverChain.Blobbers.ComputeProperties()
+	Logger.Info("self identity", zap.Any("set_index", node.Self.Node.SetIndex), zap.Any("id", node.Self.Node.GetKey()))
 
 	mode := "main net"
 	if config.Development() {
@@ -138,8 +136,9 @@ func main() {
 	} else if config.TestNet() {
 		mode = "test net"
 	}
-	Logger.Info("CPU information", zap.Int("No of CPU available", runtime.NumCPU()))
-	Logger.Info("Starting sharder", zap.String("port", address), zap.String("chain_id", config.GetServerChainID()), zap.String("mode", mode))
+
+	address := fmt.Sprintf(":%v", node.Self.Port)
+	Logger.Info("Starting sharder", zap.Int("available_cpus", runtime.NumCPU()), zap.String("port", address), zap.String("chain_id", config.GetServerChainID()), zap.String("mode", mode))
 
 	var server *http.Server
 	if config.Development() {

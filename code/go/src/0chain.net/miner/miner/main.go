@@ -124,14 +124,13 @@ func main() {
 	reader.Close()
 	if node.Self.ID == "" {
 		Logger.Panic("node definition for self node doesn't exist")
-	} else {
-		Logger.Info("self identity", zap.Any("set_index", node.Self.Node.SetIndex), zap.Any("id", node.Self.Node.GetKey()))
 	}
-	address := fmt.Sprintf(":%v", node.Self.Port)
 
 	serverChain.Miners.ComputeProperties()
 	serverChain.Sharders.ComputeProperties()
 	serverChain.Blobbers.ComputeProperties()
+	Logger.Info("self identity", zap.Any("set_index", node.Self.Node.SetIndex), zap.Any("id", node.Self.Node.GetKey()))
+
 	mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"))
 
 	mode := "main net"
@@ -140,6 +139,8 @@ func main() {
 	} else if config.TestNet() {
 		mode = "test net"
 	}
+
+	address := fmt.Sprintf(":%v", node.Self.Port)
 	Logger.Info("Starting miner", zap.Int("available_cpus", runtime.NumCPU()), zap.String("port", address), zap.String("chain_id", config.GetServerChainID()), zap.String("mode", mode))
 
 	var server *http.Server
