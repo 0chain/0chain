@@ -167,8 +167,8 @@ func HomePageHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "<li><a href='/_chain_stats'>/_chain_stats</a></li>")
 		fmt.Fprintf(w, "<li><a href='/_diagnostics/info'>/_diagnostics/info</a></li>")
 		fmt.Fprintf(w, "<li><a href='/_diagnostics/n2n/info'>/_diagnostics/n2n/info</a></li>")
-		fmt.Fprintf(w, "<li><a href='/_diagnostics/logs'>/_diagnostics/logs</a></li>")
-		fmt.Fprintf(w, "<li><a href='/_diagnostics/n2n_logs'>/_diagnostics/n2n_logs</a></li>")
+		fmt.Fprintf(w, "<li>/_diagnostics/logs [Level <a href='/_diagnostics/logs?detail=1'>1</a>, <a href='/_diagnostics/logs?detail=2'>2</a>, <a href='/_diagnostics/logs?detail=3'>3</a>]</li>")
+		fmt.Fprintf(w, "<li>/_diagnostics/n2n_logs [Level <a href='/_diagnostics/n2n_logs?detail=1'>1</a>, <a href='/_diagnostics/n2n_logs?detail=2'>2</a>, <a href='/_diagnostics/n2n_logs?detail=3'>3</a>]</li>")
 		fmt.Fprintf(w, "<li><a href='/debug/pprof/'>/debug/pprof/</a></li>")
 		fmt.Fprintf(w, "</ul>")
 	}
