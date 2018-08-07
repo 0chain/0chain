@@ -9,6 +9,7 @@ import (
 	"0chain.net/block"
 	"0chain.net/chain"
 	"0chain.net/common"
+	"0chain.net/config"
 	"0chain.net/datastore"
 	. "0chain.net/logging"
 	"0chain.net/memorystore"
@@ -92,7 +93,10 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	}
 	if !pb.IsStateComputed() {
 		Logger.Info("generate round block (prior block compute state)", zap.Any("round", r.Number), zap.Any("block", pb.Hash), zap.Any("state", pb.GetBlockState()))
-		mc.ComputeState(ctx, pb)
+		err := mc.ComputeState(ctx, pb)
+		if err != nil {
+			Logger.Error("generate round block (prior block compute state)", zap.Any("round", r.Number), zap.Any("block", pb.Hash), zap.Any("state", pb.GetBlockState()), zap.Error(err))
+		}
 	}
 	b := datastore.GetEntityMetadata("block").Instance().(*block.Block)
 	b.ChainID = mc.ID
@@ -121,7 +125,9 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 			if ok {
 				switch cerr.Code {
 				case InsufficientTxns:
-					Logger.Info("generate block", zap.Error(err))
+					if !config.MainNet() {
+						Logger.Error("generate block", zap.Error(err))
+					}
 					delay := 128 * time.Millisecond
 					for true {
 						if txnCount != transaction.TransactionCount {
@@ -317,7 +323,10 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r *Round, b *block.Block)
 	pbState := b.PrevBlock.GetBlockState()
 	if !b.PrevBlock.IsStateComputed() {
 		Logger.Info("verify round block - previous block state not ready", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Int8("prev_block_state", pbState))
-		mc.ComputeState(ctx, b.PrevBlock)
+		err := mc.ComputeState(ctx, b.PrevBlock)
+		if err != nil {
+			Logger.Error("verify round block - previous block state error", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Int8("prev_block_state", pbState), zap.Error(err))
+		}
 	}
 	bvt, err := mc.VerifyBlock(ctx, b)
 	if err != nil {

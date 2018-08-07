@@ -47,7 +47,7 @@ func InitLogging(mode string) {
 	cfg.EncoderConfig.TimeKey = "timestamp"
 	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 
-	mlcfg := zap.NewDevelopmentConfig()
+	mlcfg := zap.NewProductionConfig()
 	mlcfg.Level.SetLevel(zapcore.ErrorLevel)
 	MLogger = createMemLogger(mlcfg)
 	option := createOptionFromCores(createZapCore(logWriter, cfg), MLogger.GetCore())
@@ -56,7 +56,7 @@ func InitLogging(mode string) {
 		panic(err)
 	}
 
-	mn2ncfg := zap.NewDevelopmentConfig()
+	mn2ncfg := zap.NewProductionConfig()
 	mn2ncfg.Level.SetLevel(zapcore.InfoLevel)
 	N2NMLogger = createMemLogger(mn2ncfg)
 	option = createOptionFromCores(createZapCore(n2nLogWriter, cfg), N2NMLogger.GetCore())

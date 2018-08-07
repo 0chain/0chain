@@ -76,7 +76,7 @@ type Block struct {
 	TxnsMap map[string]bool `json:"-"`
 
 	ClientState util.MerklePatriciaTrieI `json:"-"`
-	StateStatus int8
+	stateStatus int8
 	StateMutex  *sync.Mutex
 	blockState  int8
 }
@@ -188,11 +188,11 @@ func (b *Block) SetPreviousBlock(prevBlock *Block) {
 	b.PrevHash = prevBlock.Hash
 	b.Round = prevBlock.Round + 1
 	b.PrevBlockVerficationTickets = prevBlock.VerificationTickets
-	b.SetClientStateDB(prevBlock)
+	b.SetStateDB(prevBlock)
 }
 
-/*SetClientStateDB - set the client state from the previous block */
-func (b *Block) SetClientStateDB(prevBlock *Block) {
+/*SetStateDB - set the state from the previous block */
+func (b *Block) SetStateDB(prevBlock *Block) {
 	var pndb util.NodeDB
 	var rootHash util.Key
 	if prevBlock != nil && prevBlock.ClientState != nil {
@@ -421,16 +421,16 @@ func (b *Block) GetClients() []*client.Client {
 
 /*GetStateStatus - indicates if the client state of the block is computed */
 func (b *Block) GetStateStatus() int8 {
-	return b.StateStatus
+	return b.stateStatus
 }
 
 /*IsStateComputed - is the state of this block computed? */
 func (b *Block) IsStateComputed() bool {
-	if b.StateStatus == StateSuccessful {
+	if b.stateStatus == StateSuccessful {
 		return true
 	}
 	//TODO: the following is temporary
-	if b.StateStatus == StateFailed {
+	if b.stateStatus == StateFailed {
 		return true
 	}
 	return false
@@ -438,5 +438,5 @@ func (b *Block) IsStateComputed() bool {
 
 /*SetStateStatus - set if the client state is computed or not for the block */
 func (b *Block) SetStateStatus(status int8) {
-	b.StateStatus = status
+	b.stateStatus = status
 }
