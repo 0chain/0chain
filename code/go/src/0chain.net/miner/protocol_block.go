@@ -85,8 +85,9 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		}
 		if !mc.UpdateState(b, txn) {
 			failedStateCount++
-			//TODO: state is WIP
-			//return true
+			if config.DevConfiguration.State {
+				return true
+			}
 		}
 		if txn.ClientID == mc.OwnerID {
 			hasOwnerTxn = true
@@ -210,8 +211,10 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockV
 	}
 	serr := mc.ComputeState(ctx, b)
 	if serr != nil {
-		Logger.Error("verify block - error computing state (TODO sync)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Error(serr))
-		//return nil, serr
+		if config.DevConfiguration.State {
+			Logger.Error("verify block - error computing state (TODO sync)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Error(serr))
+			return nil, serr
+		}
 	}
 	bvt, err := mc.SignBlock(ctx, b)
 	if err != nil {
