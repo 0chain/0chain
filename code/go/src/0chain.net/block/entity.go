@@ -293,7 +293,7 @@ func (b *Block) GetMerkleTree() *util.MerkleTree {
 func (b *Block) getHashData() string {
 	mt := b.GetMerkleTree()
 	merkleRoot := mt.GetRoot()
-	hashData := fmt.Sprintf("%v:%v:%v:%v", b.CreationDate, b.Round, b.RoundRandomSeed, merkleRoot)
+	hashData := fmt.Sprintf("%v:%v:%v:%v:%v", b.CreationDate, b.Round, b.RoundRandomSeed, merkleRoot, b.PrevHash)
 	return hashData
 }
 
