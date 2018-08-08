@@ -19,7 +19,7 @@ server_chain:
   genesis_block:
     id: "ed79cae70d439c11258236da1dfa6fc550f7cc569768304623e8fbd7d70efae4"
   block:
-    size: 1000
+    size: 10000
     generators: 2
     sharders: 2
     notarization_threshold: 60 # percentage
@@ -28,6 +28,6 @@ server_chain:
   client:
     discover: true
   network:
-    relay_time: 100 # milliseconds
+    relay_time: 350 # milliseconds
     max_concurrent_requests: 6
 
