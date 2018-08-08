@@ -5,7 +5,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 
+	"0chain.net/config"
 	. "0chain.net/logging"
 	"go.uber.org/zap"
 )
@@ -147,7 +149,13 @@ func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node) (Serializable,
 		}
 		nnode, err := mpt.DB.GetNode(ckey)
 		if err != nil {
-			Logger.Debug("getNodeValue(fn) - node not found", zap.String("root", ToHex(mpt.GetRoot())), zap.String("key", ToHex(ckey)))
+			if config.DevConfiguration.State {
+				Logger.Error("getNodeValue(fn) - node not found", zap.String("root", ToHex(mpt.GetRoot())), zap.String("key", ToHex(ckey)))
+				fmt.Printf("getNodeValue(fn) - node not found %v\n", ToHex(ckey))
+				mpt.PrettyPrint(os.Stdout)
+				fmt.Printf("****")
+				Logger.DPanic("node not found!")
+			}
 			return nil, ErrNodeNotFound
 		}
 		return mpt.getNodeValue(path[1:], nnode)
@@ -159,7 +167,14 @@ func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node) (Serializable,
 		if bytes.Compare(nodeImpl.Path, prefix) == 0 {
 			nnode, err := mpt.DB.GetNode(nodeImpl.NodeKey)
 			if err != nil {
-				Logger.Debug("getNodeValue(en) - node not found", zap.String("root", ToHex(mpt.GetRoot())), zap.String("key", ToHex(nodeImpl.NodeKey)))
+				if config.DevConfiguration.State {
+					Logger.Error("getNodeValue(en) - node not found", zap.String("root", ToHex(mpt.GetRoot())), zap.String("key", ToHex(nodeImpl.NodeKey)))
+					fmt.Printf("getNodeValue(en) - node not found\n")
+					mpt.PrettyPrint(os.Stdout)
+					fmt.Printf("****")
+					Logger.DPanic("node not found!")
+
+				}
 				return nil, ErrNodeNotFound
 			}
 			return mpt.getNodeValue(path[len(prefix):], nnode)

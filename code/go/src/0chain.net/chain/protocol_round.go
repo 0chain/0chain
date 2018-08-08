@@ -92,6 +92,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 			}
 		}
 	}
+	c.rebaseState()
 	// Prune all the dead blocks
 	c.DeleteBlocks(deadBlocks)
 	// Prune the chain from the oldest finalized block
