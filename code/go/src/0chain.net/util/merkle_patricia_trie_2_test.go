@@ -77,12 +77,20 @@ func TestMerkeTreePruning(t *testing.T) {
 	roots := make([]Key, 0, 10)
 	for i := int64(0); i < 1000; i++ {
 		mpt2.ResetChangeCollector(mpt2.GetRoot())
-		doStateValInsert("add 100 to c1", mpt2, "0123456", 100+i, false)
-		doStateValInsert("add 1000 to c2", mpt2, "0123457", 1000+i, false)
-		doStateValInsert("add 1000 to c3", mpt2, "0123458", 1000000+i, false)
-		doStateValInsert("add 1000 to c4", mpt2, "0133458", 1000000000+i, true)
+		if i%2 == 0 {
+			doStateValInsert("add 100 to c1", mpt2, "0123456", 100+i, false)
+		}
+		if i%3 == 0 {
+			doStateValInsert("add 1000 to c2", mpt2, "0123457", 1000+i, false)
+		}
+		if i%5 == 0 {
+			doStateValInsert("add 1000 to c3", mpt2, "0123458", 1000000+i, false)
+		}
+		if i%7 == 0 {
+			doStateValInsert("add 1000 to c4", mpt2, "0133458", 1000000000+i, true)
+		}
 		roots = append(roots, mpt2.GetRoot())
-		fmt.Printf("root(%v) = %v: changes: %v\n", origin, ToHex(mpt2.GetRoot()), len(mpt.GetChangeCollector().GetChanges()))
+		fmt.Printf("root(%v) = %v: changes: %v\n", origin, ToHex(mpt2.GetRoot()), len(mpt2.GetChangeCollector().GetChanges()))
 		err = mpt2.SaveChanges(pndb, Origin(origin), false)
 		if err != nil {
 			panic(err)
@@ -105,6 +113,8 @@ func TestMerkeTreePruning(t *testing.T) {
 		fmt.Printf("iterate error: %v\n", err)
 	}
 
+	pndb.Iterate(context.TODO(), dbIteratorHandler)
+
 	err = mpt.UpdateOrigin(context.TODO(), newOrigin)
 	if err != nil {
 		fmt.Printf("error updating origin: %v\n", err)
@@ -115,8 +125,10 @@ func TestMerkeTreePruning(t *testing.T) {
 	if err != nil {
 		fmt.Printf("iterate error: %v\n", err)
 	}
-
+	fmt.Printf("pruning db\n")
 	err = mpt.PruneBelowOrigin(context.TODO(), newOrigin)
+	pndb.Iterate(context.TODO(), dbIteratorHandler)
+
 	if err != nil {
 		fmt.Printf("error pruning origin: %v\n", err)
 	}
@@ -208,5 +220,10 @@ func stateIterHandler(ctx context.Context, path Path, key Key, node Node) error 
 	} else {
 		fmt.Printf("iterate:%20s: p=%v k=%v\n", fmt.Sprintf("%T", node), hex.EncodeToString(path), hex.EncodeToString(key))
 	}
+	return nil
+}
+
+func dbIteratorHandler(ctx context.Context, key Key, node Node) error {
+	fmt.Printf("iteratedb: %v %v %v\n", ToHex(key), node.GetOrigin(), string(node.Encode()))
 	return nil
 }

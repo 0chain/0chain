@@ -608,14 +608,14 @@ func (mpt *MerklePatriciaTrie) pp(w io.Writer, key Key, depth byte, initpad bool
 	fmt.Printf("%v ", ToHex(key))
 	switch nodeImpl := node.(type) {
 	case *LeafNode:
-		fmt.Fprintf(w, "L:%v (%v)\n", ToHex(nodeImpl.Encode()), string(nodeImpl.Path))
+		fmt.Fprintf(w, "L:%v (%v,%v)\n", ToHex(nodeImpl.Encode()), string(nodeImpl.Path), node.GetOrigin())
 	case *ExtensionNode:
-		fmt.Fprintf(w, "E:%v (%v,%v)\n", ToHex(nodeImpl.Encode()), string(nodeImpl.Path), ToHex(nodeImpl.NodeKey))
+		fmt.Fprintf(w, "E:%v (%v,%v,%v)\n", ToHex(nodeImpl.Encode()), string(nodeImpl.Path), ToHex(nodeImpl.NodeKey), node.GetOrigin())
 		mpt.pp(w, nodeImpl.NodeKey, depth+2, true)
 	case *FullNode:
 		w.Write([]byte("F:"))
 		if nodeImpl.HasValue() {
-			fmt.Fprintf(w, "%v", GetValueNode(nodeImpl).GetHash())
+			fmt.Fprintf(w, "%v, %v", GetValueNode(nodeImpl).GetHash(), node.GetOrigin())
 		}
 		w.Write([]byte("\n"))
 		for idx, cnode := range nodeImpl.Children {
@@ -641,6 +641,7 @@ func (mpt *MerklePatriciaTrie) UpdateOrigin(ctx context.Context, origin Origin) 
 		if node.GetOrigin() >= origin {
 			return nil
 		}
+		fmt.Printf("debug: %v %v %v %v\n", node.GetOrigin(), string(path), ToHex(key), string(node.Encode()))
 		count++
 		node.SetOrigin(origin)
 		err := mpt.DB.PutNode(key, node)
