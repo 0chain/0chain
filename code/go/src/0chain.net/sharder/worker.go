@@ -2,8 +2,6 @@ package sharder
 
 import (
 	"context"
-	"log"
-	"os"
 	"time"
 
 	"0chain.net/chain"
@@ -21,7 +19,6 @@ import (
 	"0chain.net/datastore"
 	. "0chain.net/logging"
 	"0chain.net/round"
-	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
 
@@ -33,10 +30,6 @@ func SetupWorkers() {
 	go sc.BlockWorker(ctx)                 // 1) receives incoming blocks from the network
 	go sc.BlockFinalizationWorker(ctx, sc) // 2) sequentially runs finalization logic
 	go sc.BlockStorageWorker(ctx)          // 3) persists the blocks
-
-	if config.Development() {
-		go metrics.LogScaled(metrics.DefaultRegistry, 60*time.Second, time.Millisecond, log.New(os.Stderr, "metrics: ", log.Lmicroseconds))
-	}
 }
 
 /*ClearWorkerState - clears the worker state */
