@@ -52,7 +52,9 @@ func (c *Chain) PruneClientStateWorker(ctx context.Context) {
 			}
 			pruning = true
 			mpt := util.NewMerklePatriciaTrie(c.StateDB)
-			newOrigin := util.Origin(c.CurrentRound - PruneBelowCount)
+			no := c.CurrentRound - PruneBelowCount
+			no -= no % 100
+			newOrigin := util.Origin(no)
 			pctx := util.WithPruneStats(ctx)
 			err := mpt.UpdateOrigin(pctx, newOrigin)
 			d1 := time.Since(t)

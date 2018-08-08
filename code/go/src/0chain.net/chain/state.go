@@ -65,8 +65,7 @@ func (c *Chain) ComputeState(ctx context.Context, b *block.Block) error {
 	return nil
 }
 
-func (c *Chain) rebaseState() {
-	lfb := c.LatestFinalizedBlock
+func (c *Chain) rebaseState(lfb *block.Block) {
 	ndb := lfb.ClientState.GetNodeDB()
 	if ndb != c.StateDB {
 		lfb.ClientState.SetNodeDB(c.StateDB)

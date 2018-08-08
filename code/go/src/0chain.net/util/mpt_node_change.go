@@ -75,13 +75,12 @@ func (cc *ChangeCollector) UpdateChanges(ndb NodeDB, origin Origin, includeDelet
 			return err
 		}
 	}
-	if !includeDeletes {
-		return nil
-	}
-	for _, d := range cc.Deletes {
-		err := ndb.DeleteNode(d.GetHashBytes())
-		if err != nil {
-			return err
+	if includeDeletes {
+		for _, d := range cc.Deletes {
+			err := ndb.DeleteNode(d.GetHashBytes())
+			if err != nil {
+				return err
+			}
 		}
 	}
 	if pndb, ok := ndb.(*PNodeDB); ok {
