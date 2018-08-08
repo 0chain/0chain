@@ -91,7 +91,9 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 	Logger.Info("received block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.String("prev_state", util.ToHex(b.ClientState.GetRoot())))
 	err = sc.ComputeState(ctx, b)
 	if err != nil {
-		Logger.Error("error computing the state (TODO sync state)", zap.Error(err))
+		if config.DevConfiguration.State {
+			Logger.Error("error computing the state (TODO sync state)", zap.Error(err))
+		}
 	}
 	if b.Round == 1 {
 		val, err := b.ClientState.GetNodeValue(util.Path(sc.OwnerID))
