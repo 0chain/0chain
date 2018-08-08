@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 
 	"0chain.net/config"
 	. "0chain.net/logging"
@@ -151,10 +150,7 @@ func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node) (Serializable,
 		if err != nil {
 			if config.DevConfiguration.State {
 				Logger.Error("getNodeValue(fn) - node not found", zap.String("root", ToHex(mpt.GetRoot())), zap.String("key", ToHex(ckey)))
-				fmt.Printf("getNodeValue(fn) - node not found %v\n", ToHex(ckey))
-				mpt.PrettyPrint(os.Stdout)
-				fmt.Printf("****")
-				Logger.DPanic("node not found!")
+				fmt.Printf("getNodeValue(en) - node not found r=%v k=%v\n", ToHex(mpt.GetRoot()), ToHex(ckey))
 			}
 			return nil, ErrNodeNotFound
 		}
@@ -169,11 +165,7 @@ func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node) (Serializable,
 			if err != nil {
 				if config.DevConfiguration.State {
 					Logger.Error("getNodeValue(en) - node not found", zap.String("root", ToHex(mpt.GetRoot())), zap.String("key", ToHex(nodeImpl.NodeKey)))
-					fmt.Printf("getNodeValue(en) - node not found\n")
-					mpt.PrettyPrint(os.Stdout)
-					fmt.Printf("****")
-					Logger.DPanic("node not found!")
-
+					fmt.Printf("getNodeValue(en) - node not found r=%v k=%v\n", ToHex(mpt.GetRoot()), ToHex(nodeImpl.NodeKey))
 				}
 				return nil, ErrNodeNotFound
 			}

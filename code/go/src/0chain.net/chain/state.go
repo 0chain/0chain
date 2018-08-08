@@ -45,6 +45,7 @@ func (c *Chain) ComputeState(ctx context.Context, b *block.Block) error {
 		Logger.Error("compute state - previous block not available", zap.Int64("round", b.Round), zap.String("block", b.Hash))
 		return ErrPreviousBlockUnavailable
 	}
+	Logger.Info("compute state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.String("prev_block", b.PrevHash), zap.String("prev_client_state", util.ToHex(b.PrevBlock.ClientStateHash)))
 	for _, txn := range b.Txns {
 		if datastore.IsEmpty(txn.ClientID) {
 			txn.ComputeClientID()

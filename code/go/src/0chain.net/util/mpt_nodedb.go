@@ -3,6 +3,7 @@ package util
 import (
 	"context"
 	"errors"
+	"fmt"
 )
 
 /*ErrNodeNotFound - error indicating that the node is not found */
@@ -161,11 +162,11 @@ func (lndb *LevelNodeDB) isCurrentPersistent() bool {
 func (lndb *LevelNodeDB) GetNode(key Key) (Node, error) {
 	node, err := lndb.C.GetNode(key)
 	if err != nil {
-		if !lndb.isCurrentPersistent() {
-			return lndb.P.GetNode(key)
-		} else {
-			return nil, err
+		node, err = lndb.P.GetNode(key)
+		if err != nil {
+			fmt.Printf("debug: %T %v\n", lndb.P, ToHex(key))
 		}
+		return node, err
 	}
 	return node, nil
 }
@@ -180,9 +181,7 @@ func (lndb *LevelNodeDB) DeleteNode(key Key) error {
 	_, err := lndb.C.GetNode(key)
 	if err != nil {
 		if lndb.PropagateDeletes {
-			if !lndb.isCurrentPersistent() {
-				return lndb.P.DeleteNode(key)
-			}
+			return lndb.P.DeleteNode(key)
 		}
 		skey := StrKey(key)
 		lndb.DeletedNodes[skey] = true
@@ -230,14 +229,8 @@ func GetChanges(ctx context.Context, ndb NodeDB, start Origin, end Origin) (map[
 	return mpts, nil
 }
 
-var blankdb NodeDB
-
-func init() {
-	blankdb = NewMemoryNodeDB()
-}
-
 /*RebaseCurrentDB - set the current database */
 func (lndb *LevelNodeDB) RebaseCurrentDB(ndb NodeDB) {
 	lndb.C = ndb
-	lndb.P = blankdb
+	lndb.P = ndb
 }

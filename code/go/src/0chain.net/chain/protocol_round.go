@@ -81,8 +81,12 @@ func (c *Chain) finalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 		fts = time.Now()
 		c.UpdateChainInfo(fb)
 		if fb.ClientState != nil {
-			fb.ClientState.SaveChanges(c.StateDB, util.Origin(fb.Round), false)
-			Logger.Info("finalize round - save state", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.String("hash", util.ToHex(fb.ClientState.GetRoot())), zap.Int("changes", len(fb.ClientState.GetChangeCollector().GetChanges())))
+			err := fb.ClientState.SaveChanges(c.StateDB, util.Origin(fb.Round), false)
+			if err != nil {
+				Logger.Error("finalize round - save state", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.String("client_state", util.ToHex(fb.ClientState.GetRoot())), zap.Int("changes", len(fb.ClientState.GetChangeCollector().GetChanges())), zap.Error(err))
+			} else {
+				Logger.Info("finalize round - save state", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.String("client_state", util.ToHex(fb.ClientState.GetRoot())), zap.Int("changes", len(fb.ClientState.GetChangeCollector().GetChanges())))
+			}
 		}
 		bsh.UpdateFinalizedBlock(ctx, fb)
 		frb := c.GetRoundBlocks(fb.Round)

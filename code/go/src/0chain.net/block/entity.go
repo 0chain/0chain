@@ -429,9 +429,11 @@ func (b *Block) IsStateComputed() bool {
 	if b.stateStatus == StateSuccessful {
 		return true
 	}
-	//TODO: the following is temporary
-	if b.stateStatus == StateFailed {
-		return true
+	if config.DevConfiguration.State {
+	} else {
+		if b.stateStatus == StateFailed {
+			return true
+		}
 	}
 	return false
 }
