@@ -9,8 +9,8 @@ blueprint:
   hosts: 'tag_network_name_shasta'
 
   instance_type:
-    miner: 'c4.xlarge'
-    sharder: 'c4.xlarge'
+    miner: 'c4.2xlarge'
+    sharder: 'c4.2xlarge'
 
   storage_type:
     root: '64GIB_GP2_SDA1'
