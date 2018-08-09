@@ -60,7 +60,7 @@ func (ml *MemLogger) GetLogs() []*observer.LoggedEntry {
 			index--
 		}
 	})
-	return logs[index + 1:BufferSize]
+	return logs[index+1 : BufferSize]
 }
 
 /*WriteLogs - write the logs to a io.Writer */
@@ -116,13 +116,11 @@ func (mc *MemCore) Check(ent zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.C
 
 /*Write - implement interface */
 func (mc *MemCore) Write(ent zapcore.Entry, fields []zapcore.Field) error {
-	if mc.r != nil {
-		mc.r.Value = &observer.LoggedEntry{
-			Entry:   ent,
-			Context: fields,
-		}
-		mc.r = mc.r.Next()
+	mc.r.Value = &observer.LoggedEntry{
+		Entry:   ent,
+		Context: fields,
 	}
+	mc.r = mc.r.Next()
 	return nil
 }
 
