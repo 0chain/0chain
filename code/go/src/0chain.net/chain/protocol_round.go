@@ -86,6 +86,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 			err := fb.ClientState.SaveChanges(c.StateDB, util.Origin(fb.Round), false)
 			if config.DevConfiguration.State && stateOut != nil {
 				fmt.Fprintf(stateOut, "round: %v block: %v state: %v prev_block: %v prev_state: %v\n", fb.Round, fb.Hash, util.ToHex(fb.ClientStateHash), fb.PrevHash, fb.PrevBlock.ClientStateHash)
+				c.rebaseState(fb)
 				fb.ClientState.PrettyPrint(stateOut)
 				stateOut.Sync()
 			}
@@ -103,7 +104,6 @@ func (c *Chain) finalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 			}
 		}
 	}
-	c.rebaseState(lfb)
 	// Prune all the dead blocks
 	c.DeleteBlocks(deadBlocks)
 	// Prune the chain from the oldest finalized block
