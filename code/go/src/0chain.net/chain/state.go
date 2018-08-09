@@ -93,6 +93,9 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 		if config.DevConfiguration.State {
 			Logger.Error("update state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", txn), zap.Error(err))
 			for _, txn := range b.Txns {
+				if txn == nil {
+					break
+				}
 				Logger.Info("update state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn))
 			}
 			clientState.PrettyPrint(os.Stdout)
