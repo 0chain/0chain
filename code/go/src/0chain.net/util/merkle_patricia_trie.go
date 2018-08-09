@@ -648,7 +648,7 @@ func (mpt *MerklePatriciaTrie) UpdateOrigin(ctx context.Context, origin Origin) 
 			return nil
 		}
 		if config.DevConfiguration.State {
-			Logger.Info("update origin - bumping up", zap.String("path", string(path)), zap.String("key", ToHex(key)), zap.Any("old_origin", node.GetOrigin()), zap.Any("new_origin", origin))
+			Logger.Debug("update origin - bumping up", zap.String("path", string(path)), zap.String("key", ToHex(key)), zap.Any("old_origin", node.GetOrigin()), zap.Any("new_origin", origin))
 		}
 		count++
 		node.SetOrigin(origin)
@@ -667,9 +667,11 @@ func (mpt *MerklePatriciaTrie) UpdateOrigin(ctx context.Context, origin Origin) 
 
 /*PruneBelowOrigin - prune the state below the given origin */
 func (mpt *MerklePatriciaTrie) PruneBelowOrigin(ctx context.Context, origin Origin) error {
+	BatchSize := 64
 	ps := GetPruneStats(ctx)
 	var total int64
 	var count int64
+	batch := make([]Key, 0, BatchSize)
 	handler := func(ctx context.Context, key Key, node Node) error {
 		total++
 		if node.GetOrigin() >= origin {
@@ -677,15 +679,26 @@ func (mpt *MerklePatriciaTrie) PruneBelowOrigin(ctx context.Context, origin Orig
 		}
 		count++
 		if config.DevConfiguration.State {
-			Logger.Info("prune below origin - deleting node", zap.String("key", ToHex(key)), zap.Any("old_origin", node.GetOrigin()), zap.Any("new_origin", origin))
+			Logger.Debug("prune below origin - deleting node", zap.String("key", ToHex(key)), zap.Any("old_origin", node.GetOrigin()), zap.Any("new_origin", origin))
 		}
-		err := mpt.DB.DeleteNode(key)
-		if err != nil {
-			fmt.Printf("DEBUG: deleting node: %v %v\n", node.GetOrigin(), err)
+		batch = append(batch, key)
+		if len(batch) == BatchSize {
+			err := mpt.DB.MultiDeleteNode(batch)
+			if err != nil {
+				fmt.Printf("DEBUG: deleting node: %v %v\n", node.GetOrigin(), err)
+				return err
+			}
+			batch = batch[:0]
 		}
-		return err
+		return nil
 	}
 	err := mpt.DB.Iterate(ctx, handler)
+	if len(batch) > 0 {
+		err := mpt.DB.MultiDeleteNode(batch)
+		if err != nil {
+			return err
+		}
+	}
 	if ps != nil {
 		ps.Total = total
 		ps.Deleted = count

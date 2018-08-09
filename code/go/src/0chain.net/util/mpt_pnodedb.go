@@ -3,9 +3,10 @@ package util
 import (
 	"bytes"
 	"context"
-	"fmt"
 
+	. "0chain.net/logging"
 	"github.com/tecbot/gorocksdb"
+	"go.uber.org/zap"
 )
 
 /*
@@ -56,7 +57,6 @@ func (pndb *PNodeDB) GetNode(key Key) (Node, error) {
 	}
 	defer data.Free()
 	buf := data.Data()
-	//fmt.Printf("DEBUG get node: key=%v value=%v\n", hex.EncodeToString(key), hex.EncodeToString(buf))
 	if buf == nil || len(buf) == 0 {
 		return nil, ErrNodeNotFound
 	}
@@ -66,7 +66,6 @@ func (pndb *PNodeDB) GetNode(key Key) (Node, error) {
 /*PutNode - implement interface */
 func (pndb *PNodeDB) PutNode(key Key, node Node) error {
 	data := node.Encode()
-	//fmt.Printf("DEBUG put node: %T %v : %v\n", node, hex.EncodeToString(key), hex.EncodeToString(data))
 	err := pndb.db.Put(pndb.wo, key, data)
 	return err
 }
@@ -75,6 +74,16 @@ func (pndb *PNodeDB) PutNode(key Key, node Node) error {
 func (pndb *PNodeDB) DeleteNode(key Key) error {
 	err := pndb.db.Delete(pndb.wo, key)
 	return err
+}
+
+/*MultiDeleteNode - implement interface */
+func (pndb *PNodeDB) MultiDeleteNode(keys []Key) error {
+	wb := gorocksdb.NewWriteBatch()
+	defer wb.Destroy()
+	for _, key := range keys {
+		wb.Delete(key)
+	}
+	return pndb.db.Write(pndb.wo, wb)
 }
 
 /*Iterate - implement interface */
@@ -88,12 +97,12 @@ func (pndb *PNodeDB) Iterate(ctx context.Context, handler NodeDBIteratorHandler)
 		value := it.Value()
 		node, err := CreateNode(bytes.NewReader(value.Data()))
 		if err != nil {
-			fmt.Printf("debug: error creating node: %v\n", err)
+			Logger.Error("iterate - create node", zap.String("key", ToHex(key.Data())), zap.Error(err))
 			continue
 		}
 		err = handler(ctx, key.Data(), node)
 		if err != nil {
-			fmt.Printf("debug: error from handler: %v\n", err)
+			Logger.Error("iterate - create node handler error", zap.String("key", ToHex(key.Data())), zap.Error(err))
 			break
 		}
 		key.Free()

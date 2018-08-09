@@ -3,7 +3,10 @@ package util
 import (
 	"context"
 	"errors"
-	"fmt"
+
+	"0chain.net/config"
+	. "0chain.net/logging"
+	"go.uber.org/zap"
 )
 
 /*ErrNodeNotFound - error indicating that the node is not found */
@@ -20,8 +23,9 @@ type NodeDB interface {
 	GetNode(key Key) (Node, error)
 	PutNode(key Key, node Node) error
 	DeleteNode(key Key) error
-
 	Iterate(ctx context.Context, handler NodeDBIteratorHandler) error
+
+	MultiDeleteNode(keys []Key) error
 }
 
 /*StrKey - data type for the key used to store the node into some storage (this is needed as hashmap keys can't be []byte */
@@ -60,6 +64,17 @@ func (mndb *MemoryNodeDB) PutNode(key Key, node Node) error {
 func (mndb *MemoryNodeDB) DeleteNode(key Key) error {
 	skey := StrKey(key)
 	delete(mndb.Nodes, skey)
+	return nil
+}
+
+/*MultiDeleteNode - implement interface */
+func (mndb *MemoryNodeDB) MultiDeleteNode(keys []Key) error {
+	for _, key := range keys {
+		err := mndb.DeleteNode(key)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -164,7 +179,9 @@ func (lndb *LevelNodeDB) GetNode(key Key) (Node, error) {
 	if err != nil {
 		node, err = lndb.P.GetNode(key)
 		if err != nil {
-			fmt.Printf("debug: %T %v\n", lndb.P, ToHex(key))
+			if config.DevConfiguration.State {
+				Logger.Error("get node", zap.String("key", ToHex(key)), zap.Error(err))
+			}
 		}
 		return node, err
 	}
@@ -188,6 +205,17 @@ func (lndb *LevelNodeDB) DeleteNode(key Key) error {
 		return nil
 	}
 	return lndb.C.DeleteNode(key)
+}
+
+/*MultiDeleteNode - implement interface */
+func (lndb *LevelNodeDB) MultiDeleteNode(keys []Key) error {
+	for _, key := range keys {
+		err := lndb.DeleteNode(key)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 /*Iterate - implement interface */
