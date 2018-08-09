@@ -132,15 +132,15 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 					}
 					delay := 128 * time.Millisecond
 					for true {
-						if txnCount != transaction.TransactionCount {
-							break
-						}
+						time.Sleep(delay)
+						Logger.Debug("generate block", zap.Any("round", r.Number), zap.Any("delay", delay), zap.Any("txn_count", txnCount), zap.Any("t.txn_count", transaction.TransactionCount))
 						if mc.CurrentRound > b.Round {
 							Logger.Debug("generate block (round mismatch)", zap.Any("round", r.Number), zap.Any("current_round", mc.CurrentRound))
 							return nil, ErrRoundMismatch
 						}
-						time.Sleep(delay)
-						Logger.Debug("generate block", zap.Any("round", r.Number), zap.Any("delay", delay), zap.Any("txn_count", txnCount), zap.Any("t.txn_count", transaction.TransactionCount))
+						if txnCount != transaction.TransactionCount {
+							break
+						}
 						delay = 2 * delay
 						if delay > time.Second {
 							delay = time.Second
