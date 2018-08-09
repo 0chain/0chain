@@ -123,16 +123,16 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	collectionName := txn.GetCollectionName()
 	Logger.Info("generate block starting iteration", zap.Int64("round", b.Round), zap.String("prev_block", b.PrevHash), zap.String("prev_state_hash", util.ToHex(b.PrevBlock.ClientStateHash)))
 	err := transactionEntityMetadata.GetStore().IterateCollection(ctx, transactionEntityMetadata, collectionName, txnIterHandler)
+	if len(invalidTxns) > 0 {
+		Logger.Info("generate block (found txns very old)", zap.Any("round", b.Round), zap.Int("num_invalid_txns", len(invalidTxns)))
+		go mc.deleteTxns(invalidTxns) // OK to do in background
+	}
 	if roundMismatch {
 		Logger.Debug("generate block (round mismatch)", zap.Any("round", b.Round), zap.Any("current_round", mc.CurrentRound))
 		return common.NewError(RoundMismatch, "current round different from generation round")
 	}
 	if ierr != nil {
 		Logger.Error("generate block (txn reinclusion check)", zap.Any("round", b.Round), zap.Error(ierr))
-	}
-	if len(invalidTxns) > 0 {
-		Logger.Info("generate block (found txns very old)", zap.Any("round", b.Round), zap.Int("num_invalid_txns", len(invalidTxns)))
-		go mc.deleteTxns(invalidTxns) // OK to do in background
 	}
 	if err != nil {
 		return err
