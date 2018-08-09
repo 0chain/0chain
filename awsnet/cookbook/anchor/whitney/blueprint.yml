@@ -3,14 +3,14 @@
 #https://en.wikipedia.org/wiki/List_of_California_fourteeners
 #
 blueprint:
-  git_version: "master"
+  git_version: "testnet-10K"
   network_type: 'testnet'
   network_name: 'whitney'
   hosts: 'tag_network_name_whitney'
 
   instance_type:
-    miner: 'c4.large'
-    sharder: 'c4.large'
+    miner: 'c4.2xlarge'
+    sharder: 'c4.2xlarge'
 
   storage_type:
     root: '64GIB_GP2_SDA1'
