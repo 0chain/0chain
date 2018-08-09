@@ -47,9 +47,9 @@ func TransactionGenerator(blockSize int32) {
 
 	txnChannel := make(chan bool, blockSize)
 	for i := 0; i < numWorkers; i++ {
-		ctx := memorystore.WithEntityConnection(common.GetRootContext(), txnMetadataProvider)
-		ctx = datastore.WithAsyncChannel(ctx, transaction.TransactionEntityChannel)
+		ctx := datastore.WithAsyncChannel(common.GetRootContext(), transaction.TransactionEntityChannel)
 		go func() {
+			ctx = memorystore.WithEntityConnection(ctx, txnMetadataProvider)
 			rs := rand.NewSource(time.Now().UnixNano())
 			prng := rand.New(rs)
 			for range txnChannel {
