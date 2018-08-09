@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 
 	"0chain.net/config"
 	. "0chain.net/logging"
@@ -105,7 +104,9 @@ func (mpt *MerklePatriciaTrie) GetChangeCollector() ChangeCollectorI {
 /*ResetChangeCollector - implement interface */
 func (mpt *MerklePatriciaTrie) ResetChangeCollector(root Key) {
 	mpt.ChangeCollector = NewChangeCollector()
-	mpt.SetRoot(root)
+	if root != nil {
+		mpt.SetRoot(root)
+	}
 }
 
 /*SaveChanges - implement interface */
@@ -151,10 +152,7 @@ func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node) (Serializable,
 		if err != nil {
 			if config.DevConfiguration.State {
 				Logger.Error("getNodeValue(fn) - node not found", zap.String("root", ToHex(mpt.GetRoot())), zap.String("key", ToHex(ckey)))
-				fmt.Printf("getNodeValue(fn) - node not found %v\n", ToHex(ckey))
-				mpt.PrettyPrint(os.Stdout)
-				fmt.Printf("****")
-				Logger.DPanic("node not found!")
+				fmt.Printf("getNodeValue(en) - node not found r=%v k=%v\n", ToHex(mpt.GetRoot()), ToHex(ckey))
 			}
 			return nil, ErrNodeNotFound
 		}
@@ -169,11 +167,7 @@ func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node) (Serializable,
 			if err != nil {
 				if config.DevConfiguration.State {
 					Logger.Error("getNodeValue(en) - node not found", zap.String("root", ToHex(mpt.GetRoot())), zap.String("key", ToHex(nodeImpl.NodeKey)))
-					fmt.Printf("getNodeValue(en) - node not found\n")
-					mpt.PrettyPrint(os.Stdout)
-					fmt.Printf("****")
-					Logger.DPanic("node not found!")
-
+					fmt.Printf("getNodeValue(en) - node not found r=%v k=%v\n", ToHex(mpt.GetRoot()), ToHex(nodeImpl.NodeKey))
 				}
 				return nil, ErrNodeNotFound
 			}
@@ -620,18 +614,15 @@ func (mpt *MerklePatriciaTrie) pp(w io.Writer, key Key, depth byte, initpad bool
 		fmt.Fprintf(w, "err %v %v\n", ToHex(key), err)
 		return err
 	}
-	fmt.Printf("%v ", ToHex(key))
 	switch nodeImpl := node.(type) {
 	case *LeafNode:
-		fmt.Fprintf(w, "L:%v (%v,%v)\n", ToHex(nodeImpl.Encode()), string(nodeImpl.Path), node.GetOrigin())
+		fmt.Fprintf(w, "L:%v (%v,%v)\n", ToHex(key), string(nodeImpl.Path), node.GetOrigin())
 	case *ExtensionNode:
-		fmt.Fprintf(w, "E:%v (%v,%v,%v)\n", ToHex(nodeImpl.Encode()), string(nodeImpl.Path), ToHex(nodeImpl.NodeKey), node.GetOrigin())
+		fmt.Fprintf(w, "E:%v (%v,%v,%v)\n", ToHex(key), string(nodeImpl.Path), ToHex(nodeImpl.NodeKey), node.GetOrigin())
 		mpt.pp(w, nodeImpl.NodeKey, depth+2, true)
 	case *FullNode:
 		w.Write([]byte("F:"))
-		if nodeImpl.HasValue() {
-			fmt.Fprintf(w, "%v, %v", GetValueNode(nodeImpl).GetHash(), node.GetOrigin())
-		}
+		fmt.Fprintf(w, "%v (,%v)", ToHex(key), node.GetOrigin())
 		w.Write([]byte("\n"))
 		for idx, cnode := range nodeImpl.Children {
 			if cnode == nil {
@@ -656,43 +647,20 @@ func (mpt *MerklePatriciaTrie) UpdateOrigin(ctx context.Context, origin Origin) 
 		if node.GetOrigin() >= origin {
 			return nil
 		}
-		fmt.Printf("debug: %v %v %v %v\n", node.GetOrigin(), string(path), ToHex(key), string(node.Encode()))
+		if config.DevConfiguration.State {
+			Logger.Debug("update origin - bumping up", zap.String("path", string(path)), zap.String("key", ToHex(key)), zap.Any("old_origin", node.GetOrigin()), zap.Any("new_origin", origin))
+		}
 		count++
 		node.SetOrigin(origin)
 		err := mpt.DB.PutNode(key, node)
 		if err != nil {
-			fmt.Printf("DEBUG: updated origin to : %v %v\n", origin, err)
+			Logger.Error("update origin - bumping up", zap.String("path", string(path)), zap.String("key", ToHex(key)), zap.Any("old_origin", node.GetOrigin()), zap.Any("new_origin", origin), zap.Error(err))
 		}
 		return err
 	}
 	err := mpt.Iterate(ctx, handler, NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
 	if ps != nil {
 		ps.BelowOrigin = count
-	}
-	return err
-}
-
-/*PruneBelowOrigin - prune the state below the given origin */
-func (mpt *MerklePatriciaTrie) PruneBelowOrigin(ctx context.Context, origin Origin) error {
-	ps := GetPruneStats(ctx)
-	var total int64
-	var count int64
-	handler := func(ctx context.Context, key Key, node Node) error {
-		total++
-		if node.GetOrigin() >= origin {
-			return nil
-		}
-		count++
-		err := mpt.DB.DeleteNode(key)
-		if err != nil {
-			fmt.Printf("DEBUG: deleting node: %v %v\n", node.GetOrigin(), err)
-		}
-		return err
-	}
-	err := mpt.DB.Iterate(ctx, handler)
-	if ps != nil {
-		ps.Total = total
-		ps.Deleted = count
 	}
 	return err
 }

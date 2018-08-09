@@ -3,9 +3,11 @@ package util
 import (
 	"bytes"
 	"context"
-	"fmt"
 
+	"0chain.net/config"
+	. "0chain.net/logging"
 	"github.com/tecbot/gorocksdb"
+	"go.uber.org/zap"
 )
 
 /*
@@ -56,7 +58,6 @@ func (pndb *PNodeDB) GetNode(key Key) (Node, error) {
 	}
 	defer data.Free()
 	buf := data.Data()
-	//fmt.Printf("DEBUG get node: key=%v value=%v\n", hex.EncodeToString(key), hex.EncodeToString(buf))
 	if buf == nil || len(buf) == 0 {
 		return nil, ErrNodeNotFound
 	}
@@ -66,7 +67,6 @@ func (pndb *PNodeDB) GetNode(key Key) (Node, error) {
 /*PutNode - implement interface */
 func (pndb *PNodeDB) PutNode(key Key, node Node) error {
 	data := node.Encode()
-	//fmt.Printf("DEBUG put node: %T %v : %v\n", node, hex.EncodeToString(key), hex.EncodeToString(data))
 	err := pndb.db.Put(pndb.wo, key, data)
 	return err
 }
@@ -75,6 +75,16 @@ func (pndb *PNodeDB) PutNode(key Key, node Node) error {
 func (pndb *PNodeDB) DeleteNode(key Key) error {
 	err := pndb.db.Delete(pndb.wo, key)
 	return err
+}
+
+/*MultiDeleteNode - implement interface */
+func (pndb *PNodeDB) MultiDeleteNode(keys []Key) error {
+	wb := gorocksdb.NewWriteBatch()
+	defer wb.Destroy()
+	for _, key := range keys {
+		wb.Delete(key)
+	}
+	return pndb.db.Write(pndb.wo, wb)
 }
 
 /*Iterate - implement interface */
@@ -88,12 +98,12 @@ func (pndb *PNodeDB) Iterate(ctx context.Context, handler NodeDBIteratorHandler)
 		value := it.Value()
 		node, err := CreateNode(bytes.NewReader(value.Data()))
 		if err != nil {
-			fmt.Printf("debug: error creating node: %v\n", err)
+			Logger.Error("iterate - create node", zap.String("key", ToHex(key.Data())), zap.Error(err))
 			continue
 		}
 		err = handler(ctx, key.Data(), node)
 		if err != nil {
-			fmt.Printf("debug: error from handler: %v\n", err)
+			Logger.Error("iterate - create node handler error", zap.String("key", ToHex(key.Data())), zap.Error(err))
 			break
 		}
 		key.Free()
@@ -105,4 +115,49 @@ func (pndb *PNodeDB) Iterate(ctx context.Context, handler NodeDBIteratorHandler)
 /*Flush - flush the db */
 func (pndb *PNodeDB) Flush() {
 	pndb.db.Flush(pndb.fo)
+}
+
+/*PruneBelowOrigin - prune the state below the given origin */
+func (pndb *PNodeDB) PruneBelowOrigin(ctx context.Context, origin Origin) error {
+	BatchSize := 64
+	ps := GetPruneStats(ctx)
+	var total int64
+	var count int64
+	batch := make([]Key, 0, BatchSize)
+	handler := func(ctx context.Context, key Key, node Node) error {
+		total++
+		if node.GetOrigin() >= origin {
+			return nil
+		}
+		count++
+		if config.DevConfiguration.State {
+			Logger.Debug("prune below origin - deleting node", zap.String("key", ToHex(key)), zap.Any("old_origin", node.GetOrigin()), zap.Any("new_origin", origin))
+		}
+		batch = append(batch, key)
+		if len(batch) == BatchSize {
+			err := pndb.MultiDeleteNode(batch)
+			if config.DevConfiguration.State {
+				Logger.Info("prune below origin - deleting nodes", zap.String("key", ToHex(key)), zap.Any("old_origin", node.GetOrigin()), zap.Any("new_origin", origin))
+			}
+			if err != nil {
+				Logger.Error("prune below origin - error deleting node", zap.String("key", ToHex(key)), zap.Any("old_origin", node.GetOrigin()), zap.Any("new_origin", origin), zap.Error(err))
+				return err
+			}
+			batch = batch[:0]
+		}
+		return nil
+	}
+	err := pndb.Iterate(ctx, handler)
+	if len(batch) > 0 {
+		err := pndb.MultiDeleteNode(batch)
+		if err != nil {
+			Logger.Error("prune below origin - error deleting node", zap.Any("new_origin", origin), zap.Error(err))
+			return err
+		}
+	}
+	if ps != nil {
+		ps.Total = total
+		ps.Deleted = count
+	}
+	return err
 }

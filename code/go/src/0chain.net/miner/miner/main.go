@@ -191,7 +191,7 @@ func StartProtocol() {
 	msr := mc.CreateRound(sr)
 
 	active := mc.Miners.GetActiveCount()
-	if 3*active < 2*mc.Miners.Size() {
+	if !mc.CanStartNetwork() {
 		ticker := time.NewTicker(5 * chain.DELTA)
 		for ts := range ticker.C {
 			Logger.Debug("waiting for sufficient nodes", zap.Time("ts", ts), zap.Int("active", active))

@@ -2,8 +2,10 @@ package chain
 
 import (
 	"context"
+	"fmt"
 	"time"
 
+	"0chain.net/config"
 	. "0chain.net/logging"
 	"0chain.net/util"
 	"go.uber.org/zap"
@@ -46,23 +48,33 @@ func (c *Chain) PruneClientStateWorker(ctx context.Context) {
 				Logger.Info("pruning still going on")
 				continue
 			}
-			if c.CurrentRound < PruneBelowCount {
+			lfb := c.LatestFinalizedBlock
+			for ; lfb != nil && !lfb.IsStateComputed(); lfb = lfb.PrevBlock {
+			}
+			if lfb == nil {
+				continue
+			}
+			if lfb.Round < PruneBelowCount {
 				Logger.Info("prune client state (not enough rounds)", zap.Int64("round", c.CurrentRound))
 				continue
 			}
 			pruning = true
-			mpt := util.NewMerklePatriciaTrie(c.StateDB)
-			no := c.CurrentRound - PruneBelowCount
+			mpt := lfb.ClientState // TODO: We actually need the root hash at the newOrigin, we shouldn't be pruning w.r.t nodes reachable from current
+			no := lfb.Round - PruneBelowCount
 			no -= no % 100
 			newOrigin := util.Origin(no)
 			pctx := util.WithPruneStats(ctx)
 			err := mpt.UpdateOrigin(pctx, newOrigin)
 			d1 := time.Since(t)
+			if config.DevConfiguration.State {
+				fmt.Fprintf(stateOut, "update to new origin: %v %v %v %v\n", util.ToHex(mpt.GetRoot()), lfb.Round, lfb.IsStateComputed(), newOrigin)
+				mpt.PrettyPrint(stateOut)
+			}
 			t1 := time.Now()
 			if err != nil {
 				Logger.Info("prune client state (update origin)", zap.Error(err))
 			}
-			err = mpt.PruneBelowOrigin(pctx, newOrigin)
+			err = c.StateDB.PruneBelowOrigin(pctx, newOrigin)
 			if err != nil {
 				Logger.Error("prune client state error", zap.Error(err))
 			}

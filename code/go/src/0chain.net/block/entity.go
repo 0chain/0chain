@@ -293,7 +293,7 @@ func (b *Block) GetMerkleTree() *util.MerkleTree {
 func (b *Block) getHashData() string {
 	mt := b.GetMerkleTree()
 	merkleRoot := mt.GetRoot()
-	hashData := fmt.Sprintf("%v:%v:%v:%v", b.CreationDate, b.Round, b.RoundRandomSeed, merkleRoot)
+	hashData := fmt.Sprintf("%v:%v:%v:%v:%v", b.CreationDate, b.Round, b.RoundRandomSeed, merkleRoot, b.PrevHash)
 	return hashData
 }
 
@@ -429,9 +429,11 @@ func (b *Block) IsStateComputed() bool {
 	if b.stateStatus == StateSuccessful {
 		return true
 	}
-	//TODO: the following is temporary
-	if b.stateStatus == StateFailed {
-		return true
+	if config.DevConfiguration.State {
+	} else {
+		if b.stateStatus == StateFailed {
+			return true
+		}
 	}
 	return false
 }

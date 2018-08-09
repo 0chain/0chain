@@ -3,6 +3,10 @@ package util
 import (
 	"context"
 	"errors"
+
+	"0chain.net/config"
+	. "0chain.net/logging"
+	"go.uber.org/zap"
 )
 
 /*ErrNodeNotFound - error indicating that the node is not found */
@@ -19,8 +23,11 @@ type NodeDB interface {
 	GetNode(key Key) (Node, error)
 	PutNode(key Key, node Node) error
 	DeleteNode(key Key) error
-
 	Iterate(ctx context.Context, handler NodeDBIteratorHandler) error
+
+	MultiDeleteNode(keys []Key) error
+
+	PruneBelowOrigin(ctx context.Context, origin Origin) error
 }
 
 /*StrKey - data type for the key used to store the node into some storage (this is needed as hashmap keys can't be []byte */
@@ -62,6 +69,17 @@ func (mndb *MemoryNodeDB) DeleteNode(key Key) error {
 	return nil
 }
 
+/*MultiDeleteNode - implement interface */
+func (mndb *MemoryNodeDB) MultiDeleteNode(keys []Key) error {
+	for _, key := range keys {
+		err := mndb.DeleteNode(key)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 /*Iterate - implement interface */
 func (mndb *MemoryNodeDB) Iterate(ctx context.Context, handler NodeDBIteratorHandler) error {
 	for key, node := range mndb.Nodes {
@@ -70,6 +88,11 @@ func (mndb *MemoryNodeDB) Iterate(ctx context.Context, handler NodeDBIteratorHan
 			return err
 		}
 	}
+	return nil
+}
+
+func (mndb *MemoryNodeDB) PruneBelowOrigin(ctx context.Context, origin Origin) error {
+	// TODO
 	return nil
 }
 
@@ -161,11 +184,13 @@ func (lndb *LevelNodeDB) isCurrentPersistent() bool {
 func (lndb *LevelNodeDB) GetNode(key Key) (Node, error) {
 	node, err := lndb.C.GetNode(key)
 	if err != nil {
-		if !lndb.isCurrentPersistent() {
-			return lndb.P.GetNode(key)
-		} else {
-			return nil, err
+		node, err = lndb.P.GetNode(key)
+		if err != nil {
+			if config.DevConfiguration.State {
+				Logger.Error("get node", zap.String("key", ToHex(key)), zap.Error(err))
+			}
 		}
+		return node, err
 	}
 	return node, nil
 }
@@ -180,15 +205,24 @@ func (lndb *LevelNodeDB) DeleteNode(key Key) error {
 	_, err := lndb.C.GetNode(key)
 	if err != nil {
 		if lndb.PropagateDeletes {
-			if !lndb.isCurrentPersistent() {
-				return lndb.P.DeleteNode(key)
-			}
+			return lndb.P.DeleteNode(key)
 		}
 		skey := StrKey(key)
 		lndb.DeletedNodes[skey] = true
 		return nil
 	}
 	return lndb.C.DeleteNode(key)
+}
+
+/*MultiDeleteNode - implement interface */
+func (lndb *LevelNodeDB) MultiDeleteNode(keys []Key) error {
+	for _, key := range keys {
+		err := lndb.DeleteNode(key)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 /*Iterate - implement interface */
@@ -200,6 +234,11 @@ func (lndb *LevelNodeDB) Iterate(ctx context.Context, handler NodeDBIteratorHand
 	if !lndb.isCurrentPersistent() {
 		return lndb.P.Iterate(ctx, handler)
 	}
+	return nil
+}
+
+func (lndb *LevelNodeDB) PruneBelowOrigin(ctx context.Context, origin Origin) error {
+	// TODO
 	return nil
 }
 
@@ -230,14 +269,8 @@ func GetChanges(ctx context.Context, ndb NodeDB, start Origin, end Origin) (map[
 	return mpts, nil
 }
 
-var blankdb NodeDB
-
-func init() {
-	blankdb = NewMemoryNodeDB()
-}
-
 /*RebaseCurrentDB - set the current database */
 func (lndb *LevelNodeDB) RebaseCurrentDB(ndb NodeDB) {
 	lndb.C = ndb
-	lndb.P = blankdb
+	lndb.P = ndb
 }

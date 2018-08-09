@@ -35,6 +35,10 @@ func (mt *MerkleTree) ComputeTree(hashes []Hashable) {
 	for idx, hashable := range hashes {
 		mt.tree[idx] = hashable.GetHash()
 	}
+	if len(hashes) == 1 {
+		mt.tree[1] = MHash(mt.tree[0], mt.tree[0])
+		return
+	}
 	for pl0, plsize := 0, mt.leavesCount; plsize > 1; pl0, plsize = pl0+plsize, (plsize+1)/2 {
 		l0 := pl0 + plsize
 		for i, j := 0, 0; i < plsize; i, j = i+2, j+1 {
