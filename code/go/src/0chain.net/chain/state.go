@@ -22,8 +22,12 @@ const StateMismatch = "state_mismatch"
 
 /*ComputeState - compute the state for the block */
 func (c *Chain) ComputeState(ctx context.Context, b *block.Block) error {
-	b.StateMutex.Lock()
-	defer b.StateMutex.Unlock()
+	lock := b.StateMutex
+	if lock == nil {
+		return common.NewError("invalid_block", "Invalid block")
+	}
+	lock.Lock()
+	defer lock.Unlock()
 	if b.IsStateComputed() {
 		return nil
 	}
@@ -35,7 +39,7 @@ func (c *Chain) ComputeState(ctx context.Context, b *block.Block) error {
 			err := c.ComputeState(ctx, b.PrevBlock)
 			if err != nil {
 				if config.DevConfiguration.State {
-					Logger.Error("compute state - error computing previous state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Int8("prev_block_state", pbState))
+					Logger.Error("compute state - error computing previous state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Error(err))
 					return err
 				}
 			}
@@ -153,4 +157,16 @@ func (c *Chain) getState(clientState util.MerklePatriciaTrieI, clientID string) 
 		s = c.ClientStateDeserializer.Deserialize(ss).(*state.State)
 	}
 	return s, nil
+}
+
+var stateOut *os.File
+
+/*SetupStateLogger - a separate logger for state to be able to debug state */
+func SetupStateLogger(file string) {
+	out, err := os.Create(file)
+	if err != nil {
+		panic(err)
+	}
+	stateOut = out
+	fmt.Fprintf(stateOut, "starting state log ...\n")
 }

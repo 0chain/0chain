@@ -159,7 +159,9 @@ func main() {
 	common.HandleShutdown(server)
 
 	blockstore.SetupFSBlockStore("data/blocks")
-
+	if config.DevConfiguration.State {
+		chain.SetupStateLogger("/tmp/state.txt")
+	}
 	sharder.GetSharderChain().SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"))
 
 	serverChain.SetupWorkers(ctx)
