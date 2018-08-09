@@ -12,6 +12,8 @@
     - zip
     - unzip
     - htop
-    - iperf
     - ncdu
+    - iperf
+    - nethogs
+    - iperf3
 ...
