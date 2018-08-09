@@ -16,17 +16,22 @@ type State struct {
 	Balance Balance
 }
 
-/*GetHash - implement interface */
+/*GetHash - implement SecureSerializableValueI interface */
 func (s *State) GetHash() string {
-	return encryption.Hash(string(s.Encode()))
+	return util.ToHex(s.GetHashBytes())
 }
 
-/*Encode - implement interface */
+/*GetHashBytes - implement SecureSerializableValueI interface */
+func (s *State) GetHashBytes() []byte {
+	return encryption.RawHash(s.Encode())
+}
+
+/*Encode - implement SecureSerializableValueI interface */
 func (s *State) Encode() []byte {
 	return []byte(fmt.Sprintf("%v", s.Balance))
 }
 
-/*Decode - implement interface */
+/*Decode - implement SecureSerializableValueI interface */
 func (s *State) Decode(data []byte) error {
 	balance, err := strconv.ParseInt(string(data), 10, 63)
 	if err != nil {
