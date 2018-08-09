@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 
+	"0chain.net/config"
 	. "0chain.net/logging"
 	"github.com/tecbot/gorocksdb"
 	"go.uber.org/zap"
@@ -114,4 +115,49 @@ func (pndb *PNodeDB) Iterate(ctx context.Context, handler NodeDBIteratorHandler)
 /*Flush - flush the db */
 func (pndb *PNodeDB) Flush() {
 	pndb.db.Flush(pndb.fo)
+}
+
+/*PruneBelowOrigin - prune the state below the given origin */
+func (pndb *PNodeDB) PruneBelowOrigin(ctx context.Context, origin Origin) error {
+	BatchSize := 64
+	ps := GetPruneStats(ctx)
+	var total int64
+	var count int64
+	batch := make([]Key, 0, BatchSize)
+	handler := func(ctx context.Context, key Key, node Node) error {
+		total++
+		if node.GetOrigin() >= origin {
+			return nil
+		}
+		count++
+		if config.DevConfiguration.State {
+			Logger.Debug("prune below origin - deleting node", zap.String("key", ToHex(key)), zap.Any("old_origin", node.GetOrigin()), zap.Any("new_origin", origin))
+		}
+		batch = append(batch, key)
+		if len(batch) == BatchSize {
+			err := pndb.MultiDeleteNode(batch)
+			if config.DevConfiguration.State {
+				Logger.Info("prune below origin - deleting nodes", zap.String("key", ToHex(key)), zap.Any("old_origin", node.GetOrigin()), zap.Any("new_origin", origin))
+			}
+			if err != nil {
+				Logger.Error("prune below origin - error deleting node", zap.String("key", ToHex(key)), zap.Any("old_origin", node.GetOrigin()), zap.Any("new_origin", origin), zap.Error(err))
+				return err
+			}
+			batch = batch[:0]
+		}
+		return nil
+	}
+	err := pndb.Iterate(ctx, handler)
+	if len(batch) > 0 {
+		err := pndb.MultiDeleteNode(batch)
+		if err != nil {
+			Logger.Error("prune below origin - error deleting node", zap.Any("new_origin", origin), zap.Error(err))
+			return err
+		}
+	}
+	if ps != nil {
+		ps.Total = total
+		ps.Deleted = count
+	}
+	return err
 }

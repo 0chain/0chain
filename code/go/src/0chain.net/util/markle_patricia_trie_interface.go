@@ -33,8 +33,7 @@ type MerklePatriciaTrieI interface {
 	SaveChanges(ndb NodeDB, origin Origin, includeDeletes bool) error
 
 	// useful for pruning the state below a certain origin number
-	UpdateOrigin(ctx context.Context, origin Origin) error     // mark
-	PruneBelowOrigin(ctx context.Context, origin Origin) error // sweep
+	UpdateOrigin(ctx context.Context, origin Origin) error // mark
 
 	// only for testing and debugging
 	PrettyPrint(w io.Writer) error

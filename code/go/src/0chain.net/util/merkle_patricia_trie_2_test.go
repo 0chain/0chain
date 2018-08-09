@@ -126,7 +126,7 @@ func TestMerkeTreePruning(t *testing.T) {
 		fmt.Printf("iterate error: %v\n", err)
 	}
 	fmt.Printf("pruning db\n")
-	err = mpt.PruneBelowOrigin(context.TODO(), newOrigin)
+	err = pndb.PruneBelowOrigin(context.TODO(), newOrigin)
 	pndb.Iterate(context.TODO(), dbIteratorHandler)
 
 	if err != nil {

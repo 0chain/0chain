@@ -74,7 +74,7 @@ func (c *Chain) PruneClientStateWorker(ctx context.Context) {
 			if err != nil {
 				Logger.Info("prune client state (update origin)", zap.Error(err))
 			}
-			err = mpt.PruneBelowOrigin(pctx, newOrigin)
+			err = c.StateDB.PruneBelowOrigin(pctx, newOrigin)
 			if err != nil {
 				Logger.Error("prune client state error", zap.Error(err))
 			}

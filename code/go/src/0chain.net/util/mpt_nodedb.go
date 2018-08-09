@@ -26,6 +26,8 @@ type NodeDB interface {
 	Iterate(ctx context.Context, handler NodeDBIteratorHandler) error
 
 	MultiDeleteNode(keys []Key) error
+
+	PruneBelowOrigin(ctx context.Context, origin Origin) error
 }
 
 /*StrKey - data type for the key used to store the node into some storage (this is needed as hashmap keys can't be []byte */
@@ -86,6 +88,11 @@ func (mndb *MemoryNodeDB) Iterate(ctx context.Context, handler NodeDBIteratorHan
 			return err
 		}
 	}
+	return nil
+}
+
+func (mndb *MemoryNodeDB) PruneBelowOrigin(ctx context.Context, origin Origin) error {
+	// TODO
 	return nil
 }
 
@@ -227,6 +234,11 @@ func (lndb *LevelNodeDB) Iterate(ctx context.Context, handler NodeDBIteratorHand
 	if !lndb.isCurrentPersistent() {
 		return lndb.P.Iterate(ctx, handler)
 	}
+	return nil
+}
+
+func (lndb *LevelNodeDB) PruneBelowOrigin(ctx context.Context, origin Origin) error {
+	// TODO
 	return nil
 }
 
