@@ -110,9 +110,10 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 	switch txn.TransactionType {
 	case transaction.TxnTypeSend:
 		if fs.Balance < tbalance {
-			if config.DevConfiguration.State {
-				Logger.Warn("low balance", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("state", fs), zap.Any("txn", txn))
-			}
+			/*
+				if config.DevConfiguration.State {
+					Logger.Warn("low balance", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("state", fs), zap.Any("txn", txn))
+				} */
 			return false
 		}
 		ts, err := c.getState(clientState, txn.ToClientID)

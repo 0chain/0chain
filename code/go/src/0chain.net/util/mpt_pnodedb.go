@@ -10,15 +10,6 @@ import (
 	"go.uber.org/zap"
 )
 
-/*
-type NodeDB interface {
-	GetNode(key Key) (Node, error)
-	PutNode(key Key, node Node) error
-	DeleteNode(key Key) error
-}
-
-*/
-
 /*PNodeDB - a node db that is persisted */
 type PNodeDB struct {
 	dataDir string
@@ -96,8 +87,8 @@ func (pndb *PNodeDB) Iterate(ctx context.Context, handler NodeDBIteratorHandler)
 	for it.SeekToFirst(); it.Valid(); it.Next() {
 		key := it.Key()
 		value := it.Value()
-		vdata := value.Data()
 		kdata := key.Data()
+		vdata := value.Data()
 		node, err := CreateNode(bytes.NewReader(vdata))
 		if err != nil {
 			key.Free()
@@ -129,7 +120,7 @@ func (pndb *PNodeDB) PruneBelowOrigin(ctx context.Context, origin Origin) error 
 	ps := GetPruneStats(ctx)
 	var total int64
 	var count int64
-	batch := make([]Key, 0, BatchSize)
+	batch := make([]Key, BatchSize)
 	handler := func(ctx context.Context, key Key, node Node) error {
 		total++
 		if node.GetOrigin() >= origin {
@@ -139,12 +130,14 @@ func (pndb *PNodeDB) PruneBelowOrigin(ctx context.Context, origin Origin) error 
 		if config.DevConfiguration.State {
 			Logger.Debug("prune below origin - deleting node", zap.String("key", ToHex(key)), zap.Any("old_origin", node.GetOrigin()), zap.Any("new_origin", origin))
 		}
-		batch = append(batch, key)
+		tkey := make([]byte, len(key))
+		copy(tkey, key)
+		batch = append(batch, tkey)
 		if len(batch) == BatchSize {
 			var err error
 			if config.DevConfiguration.State {
 				err = pndb.MultiDeleteNode(batch)
-				Logger.Info("prune below origin - deleting nodes", zap.String("key", ToHex(key)), zap.Any("old_origin", node.GetOrigin()), zap.Any("new_origin", origin))
+				Logger.Debug("prune below origin - deleting nodes", zap.String("key", ToHex(key)), zap.Any("old_origin", node.GetOrigin()), zap.Any("new_origin", origin))
 			}
 			batch = batch[:0]
 			if err != nil {
