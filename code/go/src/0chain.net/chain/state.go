@@ -87,6 +87,9 @@ func (c *Chain) rebaseState(lfb *block.Block) {
 * If a state can't be updated (e.g low balance), then a false is returned so that the transaction will not make it into the block
  */
 func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
+	if !config.DevConfiguration.State {
+		return true
+	}
 	clientState := b.ClientState
 	fs, err := c.getState(clientState, txn.ClientID)
 	if err != nil {
@@ -160,6 +163,11 @@ func (c *Chain) getState(clientState util.MerklePatriciaTrieI, clientID string) 
 		s = c.ClientStateDeserializer.Deserialize(ss).(*state.State)
 	}
 	return s, nil
+}
+
+/*GetState - Get the state of a client w.r.t a finalized block */
+func (c *Chain) GetState(fb *block.Block, clientID string) (*state.State, error) {
+	return c.getState(fb.ClientState, clientID)
 }
 
 var stateOut *os.File

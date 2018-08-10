@@ -24,6 +24,7 @@ type NodeDB interface {
 	PutNode(key Key, node Node) error
 	DeleteNode(key Key) error
 	Iterate(ctx context.Context, handler NodeDBIteratorHandler) error
+	Size(ctx context.Context) int64
 
 	MultiDeleteNode(keys []Key) error
 
@@ -91,8 +92,18 @@ func (mndb *MemoryNodeDB) Iterate(ctx context.Context, handler NodeDBIteratorHan
 	return nil
 }
 
+/*Size - implement interface */
+func (mndb *MemoryNodeDB) Size(ctx context.Context) int64 {
+	return int64(len(mndb.Nodes))
+}
+
+/*PruneBelowOrigin - implement interface */
 func (mndb *MemoryNodeDB) PruneBelowOrigin(ctx context.Context, origin Origin) error {
-	// TODO
+	for key, node := range mndb.Nodes {
+		if node.GetOrigin() < origin {
+			delete(mndb.Nodes, key)
+		}
+	}
 	return nil
 }
 
@@ -182,9 +193,11 @@ func (lndb *LevelNodeDB) isCurrentPersistent() bool {
 
 /*GetNode - implement interface */
 func (lndb *LevelNodeDB) GetNode(key Key) (Node, error) {
-	node, err := lndb.C.GetNode(key)
-	if err != nil {
-		node, err = lndb.P.GetNode(key)
+	c := lndb.C
+	p := lndb.P
+	node, err := c.GetNode(key)
+	if err != nil && p != c {
+		node, err = p.GetNode(key)
 		if err != nil {
 			if config.DevConfiguration.State {
 				Logger.Error("get node", zap.String("key", ToHex(key)), zap.Error(err))
@@ -202,16 +215,18 @@ func (lndb *LevelNodeDB) PutNode(key Key, node Node) error {
 
 /*DeleteNode - implement interface */
 func (lndb *LevelNodeDB) DeleteNode(key Key) error {
-	_, err := lndb.C.GetNode(key)
+	c := lndb.C
+	p := lndb.P
+	_, err := c.GetNode(key)
 	if err != nil {
-		if lndb.PropagateDeletes {
-			return lndb.P.DeleteNode(key)
+		if lndb.PropagateDeletes && p != c {
+			return p.DeleteNode(key)
 		}
 		skey := StrKey(key)
 		lndb.DeletedNodes[skey] = true
 		return nil
 	}
-	return lndb.C.DeleteNode(key)
+	return c.DeleteNode(key)
 }
 
 /*MultiDeleteNode - implement interface */
@@ -227,16 +242,30 @@ func (lndb *LevelNodeDB) MultiDeleteNode(keys []Key) error {
 
 /*Iterate - implement interface */
 func (lndb *LevelNodeDB) Iterate(ctx context.Context, handler NodeDBIteratorHandler) error {
-	err := lndb.C.Iterate(ctx, handler)
+	c := lndb.C
+	p := lndb.P
+	err := c.Iterate(ctx, handler)
 	if err != nil {
 		return err
 	}
-	if !lndb.isCurrentPersistent() {
-		return lndb.P.Iterate(ctx, handler)
+	if p != c && !lndb.isCurrentPersistent() {
+		return p.Iterate(ctx, handler)
 	}
 	return nil
 }
 
+/*Size - implement interface */
+func (lndb *LevelNodeDB) Size(ctx context.Context) int64 {
+	c := lndb.C
+	p := lndb.P
+	size := c.Size(ctx)
+	if p != c {
+		size += p.Size(ctx)
+	}
+	return size
+}
+
+/*PruneBelowOrigin - implement interface */
 func (lndb *LevelNodeDB) PruneBelowOrigin(ctx context.Context, origin Origin) error {
 	// TODO
 	return nil
@@ -272,5 +301,5 @@ func GetChanges(ctx context.Context, ndb NodeDB, start Origin, end Origin) (map[
 /*RebaseCurrentDB - set the current database */
 func (lndb *LevelNodeDB) RebaseCurrentDB(ndb NodeDB) {
 	lndb.C = ndb
-	lndb.P = ndb
+	lndb.P = lndb.C
 }

@@ -149,10 +149,9 @@ func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node) (Serializable,
 			return nil, ErrValueNotPresent
 		}
 		nnode, err := mpt.DB.GetNode(ckey)
-		if err != nil {
+		if err != nil || nnode == nil {
 			if config.DevConfiguration.State {
-				Logger.Error("getNodeValue(fn) - node not found", zap.String("root", ToHex(mpt.GetRoot())), zap.String("key", ToHex(ckey)))
-				fmt.Printf("getNodeValue(en) - node not found r=%v k=%v\n", ToHex(mpt.GetRoot()), ToHex(ckey))
+				Logger.Error("getNodeValue(fn) - node not found", zap.String("root", ToHex(mpt.GetRoot())), zap.String("key", ToHex(ckey)), zap.Error(err))
 			}
 			return nil, ErrNodeNotFound
 		}
@@ -164,10 +163,9 @@ func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node) (Serializable,
 		}
 		if bytes.Compare(nodeImpl.Path, prefix) == 0 {
 			nnode, err := mpt.DB.GetNode(nodeImpl.NodeKey)
-			if err != nil {
+			if err != nil || nnode == nil {
 				if config.DevConfiguration.State {
-					Logger.Error("getNodeValue(en) - node not found", zap.String("root", ToHex(mpt.GetRoot())), zap.String("key", ToHex(nodeImpl.NodeKey)))
-					fmt.Printf("getNodeValue(en) - node not found r=%v k=%v\n", ToHex(mpt.GetRoot()), ToHex(nodeImpl.NodeKey))
+					Logger.Error("getNodeValue(en) - node not found", zap.String("root", ToHex(mpt.GetRoot())), zap.String("key", ToHex(nodeImpl.NodeKey)), zap.Error(err))
 				}
 				return nil, ErrNodeNotFound
 			}
