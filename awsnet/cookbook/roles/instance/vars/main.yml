@@ -48,6 +48,20 @@ server_versions:
     frequency: '2.9GHz'
     processor: 'Intel Xeon E5-2666v3'
 
+  'C5_2XLARGE':
+    instance_type: 'c5.2xlarge'
+    memory: "16GiB"
+    vcpus: 8
+    ecpus: 31
+    storage: 'EBS'
+    network: '10 Gigabit'
+    intel-aesni: true
+    intel-avx: true
+    intel-turbo: true
+    frequency: '2.9GHz'
+    processor: 'Intel Xeon Platinum 8124M'
+
+
   'R4_LARGE':
     instance_type: 'r4.large'
     memory: '15.25GiB'
@@ -137,6 +151,20 @@ storage:
   '1TIB_GP2_SDI':
     device_name: "/dev/sdi"
     ubuntu_disk: "/dev/xvdi"
+    volume_type: gp2
+    volume_size: 1024
+    delete_on_termination: true
+
+  '64GIB_GP2_NVME':
+    device_name: "/dev/sdi"
+    ubuntu_disk: "/dev/nvme1n1"
+    volume_type: gp2
+    volume_size: 64
+    delete_on_termination: true
+
+  '1TIB_GP2_NVME':
+    device_name: "/dev/sdi"
+    ubuntu_disk: "/dev/nvme1n1"
     volume_type: gp2
     volume_size: 1024
     delete_on_termination: true

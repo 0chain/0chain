@@ -13,6 +13,10 @@
     - unzip
     - htop
     - ncdu
+    - linux-tools-common
+    - linux-tools-4.4.0-1061-aws
+    - linux-cloud-tools-4.4.0-1061-aws
+    - linux-tools-aws
     - iperf
     - nethogs
     - iperf3

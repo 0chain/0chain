@@ -17,5 +17,8 @@
 
 - import_tasks: instance-assemble-remote.yml
   tags: ['instance-assemble-remote']
+
+- import_tasks: instance-reboot-remote.yml
+  tags: ['instance-reboot-remote']
 ...
 

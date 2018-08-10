@@ -4,12 +4,12 @@
 #
 blueprint:
   git_version: "testnet-10K"
+
   aws_key_pair: "shasta"
 
   network_type: 'testnet'
-  network_name: 'shasta'
-
-  hosts: 'tag_network_name_shasta'
+  network_name: 'shasta100'
+  hosts: 'tag_network_name_shasta100'
 
   instance_type:
     miner: 'c5.2xlarge'

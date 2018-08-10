@@ -34,9 +34,10 @@ check-defined-% : __check_defined_FORCE
 AWSNET_BASE?=$(CURDIR)
 
 COOKBOOK=$(AWSNET_BASE)/cookbook
-CONTEXT=$(COOKBOOK)/context
 
-include $(CONTEXT)
+#CONTEXT=$(COOKBOOK)/context
+
+#include $(CONTEXT)
 
 ZCHAIN_REPO=$(abspath $(AWSNET_BASE)/..)
 
@@ -149,6 +150,10 @@ instance-teardown-local:
 instance-assemble-remote:
 	$(RAW_PLAY)
 
+#Reboot all the instances...
+instance-reboot-remote:
+	$(REMOTE_PLAY)
+
 istart-assemble-local:
 	$(LOCAL_PLAY)
 
@@ -191,9 +196,18 @@ agent-clientid-teardown-local:
 agent-config-assemble-zchain:
 	$(ZCHAIN_PLAY)
 
+#These two targets are used to create the instance
+basic-stage-cluster: \
+	instance-assemble-local \
+	instance-assemble-remote \
+	storage-assemble-remote \
+	docker-assemble-remote \
+	artifacts-assemble-remote \
+	agent-clientid-assemble-local \
+	agent-clientid-assemble-zchain
+
 agent-stage-cluster: \
 	gitrepo-assemble-local \
-	artifacts-assemble-remote \
 	gitrepo-assemble-zchain \
 	agent-clientid-assemble-local \
 	agent-clientid-assemble-zchain \
@@ -233,6 +247,14 @@ workon_eddy:
 workon_shasta:
 	echo  "ZCHAIN_TESTNET=shasta" > $(CONTEXT)
 
+workon_shasta15:
+	echo  "ZCHAIN_TESTNET=shasta15" > $(CONTEXT)
+
+workon_shasta100:
+	echo  "ZCHAIN_TESTNET=shasta100" > $(CONTEXT)
+
+workon_shasta250:
+	echo  "ZCHAIN_TESTNET=shasta250" > $(CONTEXT)
 
 workon_whitney:
 	echo  "ZCHAIN_TESTNET=whitney" > $(CONTEXT)
