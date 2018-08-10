@@ -25,11 +25,19 @@ type Info struct {
 var ChainInfo []*Info
 var RoundInfo []*round.Info
 
+var chainMetric Metrics
+var roundMetric Metrics
+
 func init() {
-	powers := 11
-	ChainInfo = make([]*Info, powers, powers)
-	RoundInfo = make([]*round.Info, powers, powers)
-	for i := 0; i < powers; i++ {
+	power := 10
+	len := 10
+	chainMetric = NewPowerMetrics(power, len)
+	roundMetric = NewPowerMetrics(power, len)
+
+	infoLen := power*len + 1
+	ChainInfo = make([]*Info, infoLen, infoLen)
+	RoundInfo = make([]*round.Info, infoLen, infoLen)
+	for i := 0; i < infoLen; i++ {
 		ChainInfo[i] = &Info{}
 		RoundInfo[i] = &round.Info{}
 	}
@@ -37,26 +45,36 @@ func init() {
 
 /*UpdateChainInfo - update the chain information */
 func (c *Chain) UpdateChainInfo(b *block.Block) {
-	powers := len(ChainInfo)
-	for idx, tp := 0, int64(1); idx < powers && b.Round%tp == 0; idx, tp = idx+1, 10*tp {
-		ci := ChainInfo[idx]
-		ci.FinalizedRound = b.Round
-		ci.BlockHash = b.Hash
-		ci.ClientStateHash = b.ClientStateHash
-		ci.ChainWeight = b.ChainWeight
-		ci.FinalizedCount = FinalizationTimer.Count()
-		ci.MissedBlocks = c.MissedBlocks
+	ci := &Info{
+		FinalizedRound:  b.Round,
+		BlockHash:       b.Hash,
+		ClientStateHash: b.ClientStateHash,
+		ChainWeight:     b.ChainWeight,
+		FinalizedCount:  FinalizationTimer.Count(),
+		MissedBlocks:    c.MissedBlocks,
+	}
+	ChainInfo[0] = ci
+
+	chainMetric.Collect(b.Round, ci)
+	data := chainMetric.Retrieve()
+	for i := 0; i < len(data); i++ {
+		ChainInfo[i+1] = data[i].(*Info)
 	}
 }
 
 /*UpdateRoundInfo - update the round information */
 func (c *Chain) UpdateRoundInfo(r *round.Round) {
-	powers := len(RoundInfo)
-	for idx, tp := 0, int64(1); idx < powers && r.Number%tp == 0; idx, tp = idx+1, 10*tp {
-		ri := RoundInfo[idx]
-		ri.Number = r.Number
-		ri.NotarizedBlocksCount = int8(len(r.GetNotarizedBlocks()))
-		ri.MultiNotarizedBlocksCount = c.MultiNotarizedBlocksCount
-		ri.ZeroNotarizedBlocksCount = c.ZeroNotarizedBlocksCount
+	ri := &round.Info{
+		Number:                    r.Number,
+		NotarizedBlocksCount:      int8(len(r.GetNotarizedBlocks())),
+		MultiNotarizedBlocksCount: c.MultiNotarizedBlocksCount,
+		ZeroNotarizedBlocksCount:  c.ZeroNotarizedBlocksCount,
+	}
+	RoundInfo[0] = ri
+
+	roundMetric.Collect(r.Number, ri)
+	data := roundMetric.Retrieve()
+	for i := 0; i < len(data); i++ {
+		RoundInfo[i+1] = data[i].(*round.Info)
 	}
 }

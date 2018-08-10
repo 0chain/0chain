@@ -96,14 +96,20 @@ func (pndb *PNodeDB) Iterate(ctx context.Context, handler NodeDBIteratorHandler)
 	for it.SeekToFirst(); it.Valid(); it.Next() {
 		key := it.Key()
 		value := it.Value()
-		node, err := CreateNode(bytes.NewReader(value.Data()))
+		vdata := value.Data()
+		kdata := key.Data()
+		node, err := CreateNode(bytes.NewReader(vdata))
 		if err != nil {
-			Logger.Error("iterate - create node", zap.String("key", ToHex(key.Data())), zap.Error(err))
+			key.Free()
+			value.Free()
+			Logger.Error("iterate - create node", zap.String("key", ToHex(kdata)), zap.Error(err))
 			continue
 		}
-		err = handler(ctx, key.Data(), node)
+		err = handler(ctx, kdata, node)
 		if err != nil {
-			Logger.Error("iterate - create node handler error", zap.String("key", ToHex(key.Data())), zap.Error(err))
+			key.Free()
+			value.Free()
+			Logger.Error("iterate - create node handler error", zap.String("key", ToHex(kdata)), zap.Any("data", vdata), zap.Error(err))
 			break
 		}
 		key.Free()
@@ -135,29 +141,51 @@ func (pndb *PNodeDB) PruneBelowOrigin(ctx context.Context, origin Origin) error 
 		}
 		batch = append(batch, key)
 		if len(batch) == BatchSize {
-			err := pndb.MultiDeleteNode(batch)
+			var err error
 			if config.DevConfiguration.State {
+				err = pndb.MultiDeleteNode(batch)
 				Logger.Info("prune below origin - deleting nodes", zap.String("key", ToHex(key)), zap.Any("old_origin", node.GetOrigin()), zap.Any("new_origin", origin))
 			}
+			batch = batch[:0]
 			if err != nil {
 				Logger.Error("prune below origin - error deleting node", zap.String("key", ToHex(key)), zap.Any("old_origin", node.GetOrigin()), zap.Any("new_origin", origin), zap.Error(err))
 				return err
 			}
-			batch = batch[:0]
 		}
 		return nil
 	}
 	err := pndb.Iterate(ctx, handler)
 	if len(batch) > 0 {
-		err := pndb.MultiDeleteNode(batch)
-		if err != nil {
-			Logger.Error("prune below origin - error deleting node", zap.Any("new_origin", origin), zap.Error(err))
-			return err
+		if config.DevConfiguration.State {
+			err := pndb.MultiDeleteNode(batch)
+			if err != nil {
+				Logger.Error("prune below origin - error deleting node", zap.Any("new_origin", origin), zap.Error(err))
+				return err
+			}
 		}
 	}
 	if ps != nil {
 		ps.Total = total
 		ps.Deleted = count
 	}
+	if config.DevConfiguration.State {
+		size := pndb.Size(ctx)
+		Logger.Info("prune below origin", zap.Int64("size", size), zap.Any("stats", ps))
+	}
 	return err
+}
+
+/*Size - count number of keys in the db */
+func (pndb *PNodeDB) Size(ctx context.Context) int64 {
+	var count int64
+	handler := func(ctx context.Context, key Key, node Node) error {
+		count++
+		return nil
+	}
+	err := pndb.Iterate(ctx, handler)
+	if err != nil {
+		Logger.Error("count", zap.Error(err))
+		return -1
+	}
+	return count
 }
