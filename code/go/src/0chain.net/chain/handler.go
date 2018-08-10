@@ -158,7 +158,7 @@ var StartTime time.Time
 /*HomePageHandler - provides basic info when accessing the home page of the server */
 func HomePageHandler(w http.ResponseWriter, r *http.Request) {
 	sc := GetServerChain()
-	fmt.Fprintf(w, "<div>Running since %v ...\n", StartTime)
+	fmt.Fprintf(w, "<div>Running since %v (%v) ...\n", StartTime, time.Since(StartTime))
 	fmt.Fprintf(w, "<div>Working on the chain: %v</div>\n", sc.GetKey())
 	fmt.Fprintf(w, "<div>I am a %v with set rank of (%v) <ul><li>id:%v</li><li>public_key:%v</li></ul></div>\n", node.Self.GetNodeTypeName(), node.Self.SetIndex, node.Self.GetKey(), node.Self.PublicKey)
 	if !config.MainNet() {
