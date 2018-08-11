@@ -47,6 +47,7 @@ func initHandlers() {
 	block.SetupHandlers()
 	sharder.SetupHandlers()
 	diagnostics.SetupHandlers()
+	chain.SetupStateHandlers()
 }
 
 func initEntities() {

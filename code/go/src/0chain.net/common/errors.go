@@ -4,6 +4,8 @@ import (
 	"fmt"
 )
 
+var ErrTemporaryFailure = NewError("temporary_failure", "Please retry again later")
+
 /*Error type for a new application error */
 type Error struct {
 	Code string `json:"code,omitempty"`

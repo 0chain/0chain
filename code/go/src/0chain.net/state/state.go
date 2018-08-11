@@ -13,7 +13,7 @@ type Balance int64
 
 //State - state that needs consensus within the blockchain.
 type State struct {
-	Balance Balance
+	Balance Balance `json:"balance"`
 }
 
 /*GetHash - implement SecureSerializableValueI interface */
