@@ -18,6 +18,17 @@ import (
 *Iteration can be stopped by returning false
  */
 func (ms *Store) IterateCollection(ctx context.Context, entityMetadata datastore.EntityMetadata, collectionName string, handler datastore.CollectionIteratorHandler) error {
+	return ms.iterateCollection(ctx, entityMetadata, collectionName, datastore.Descending, handler)
+}
+
+/*IterateCollectionAsc - iterate a collection in ascedning order with a callback that is given the entities.
+*Iteration can be stopped by returning false
+ */
+func (ms *Store) IterateCollectionAsc(ctx context.Context, entityMetadata datastore.EntityMetadata, collectionName string, handler datastore.CollectionIteratorHandler) error {
+	return ms.iterateCollection(ctx, entityMetadata, collectionName, datastore.Ascending, handler)
+}
+
+func (ms *Store) iterateCollection(ctx context.Context, entityMetadata datastore.EntityMetadata, collectionName string, order datastore.Order, handler datastore.CollectionIteratorHandler) error {
 	con := GetEntityCon(ctx, entityMetadata)
 	bucket := make([]datastore.Entity, BATCH_SIZE)
 	keys := make([]datastore.Key, BATCH_SIZE)
@@ -25,13 +36,18 @@ func (ms *Store) IterateCollection(ctx context.Context, entityMetadata datastore
 	minscore := math.MinInt64
 	offset := 0
 	proceed := true
+	selectCommand := "ZREVRANGEBYSCORE"
+	if order == datastore.Ascending {
+		selectCommand = "ZRANGEBYSCORE"
+		maxscore, minscore = minscore, maxscore
+	}
 	for idx := 0; true; idx += BATCH_SIZE {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
 		}
-		con.Send("ZREVRANGEBYSCORE", collectionName, maxscore, minscore, "WITHSCORES", "LIMIT", offset, BATCH_SIZE)
+		con.Send(selectCommand, collectionName, maxscore, minscore, "WITHSCORES", "LIMIT", offset, BATCH_SIZE)
 		con.Flush()
 		data, err := con.Receive()
 		if err != nil {

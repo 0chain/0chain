@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"0chain.net/chain"
-	"0chain.net/common"
 	"0chain.net/datastore"
 	. "0chain.net/logging"
 	"0chain.net/node"
@@ -14,8 +13,7 @@ import (
 )
 
 /*SetupWorkers - Setup the miner's workers */
-func SetupWorkers() {
-	ctx := common.GetRootContext()
+func SetupWorkers(ctx context.Context) {
 	mc := GetMinerChain()
 	go mc.BlockWorker(ctx)
 	go mc.BlockFinalizationWorker(ctx, mc)

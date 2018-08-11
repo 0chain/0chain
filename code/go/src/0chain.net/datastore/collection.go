@@ -6,6 +6,11 @@ import (
 	"time"
 )
 
+type Order int8
+
+const Ascending Order = 1
+const Descending Order = 2
+
 /*CollectionIteratorHandler is a collection iteration handler function type */
 type CollectionIteratorHandler func(ctx context.Context, ce CollectionEntity) bool
 

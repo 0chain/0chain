@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -31,44 +32,6 @@ import (
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
-
-func initServer() {
-	// TODO; when a new server is brought up, it needs to first download all the state before it can start accepting requests
-}
-
-func initHandlers() {
-	if config.Development() {
-		http.HandleFunc("/_hash", encryption.HashHandler)
-		http.HandleFunc("/_sign", common.ToJSONResponse(encryption.SignHandler))
-	}
-	config.SetupHandlers()
-	node.SetupHandlers()
-	chain.SetupHandlers()
-	block.SetupHandlers()
-	sharder.SetupHandlers()
-	diagnostics.SetupHandlers()
-}
-
-func initEntities() {
-	//TODO: For now using memory storage, but we don't need it.
-	memoryStorage := memorystore.GetStorageProvider()
-	chain.SetupEntity(memoryStorage)
-	block.SetupEntity(memoryStorage)
-
-	round.SetupRoundSummaryDB()
-	block.SetupBlockSummaryDB()
-	ememoryStorage := ememorystore.GetStorageProvider()
-	block.SetupBlockSummaryEntity(ememoryStorage)
-	round.SetupEntity(ememoryStorage)
-
-	client.SetupEntity(memoryStorage)
-	transaction.SetupEntity(memoryStorage)
-
-	persistencestore.InitSession()
-	persistenceStorage := persistencestore.GetStorageProvider()
-	transaction.SetupTxnSummaryEntity(persistenceStorage)
-	transaction.SetupTxnConfirmationEntity(persistenceStorage)
-}
 
 func main() {
 	deploymentMode := flag.Int("deployment_mode", 2, "deployment_mode")
@@ -164,12 +127,8 @@ func main() {
 	}
 	sharder.GetSharderChain().SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"))
 
-	serverChain.SetupWorkers(ctx)
-	node.SetupN2NHandlers()
-	serverChain.SetupNodeHandlers()
-	sharder.SetupM2SReceivers()
-	sharder.SetupWorkers()
-
+	initWorkers(ctx)
+	initN2NHandlers()
 	initServer()
 	initHandlers()
 
@@ -178,9 +137,61 @@ func main() {
 	log.Fatal(server.ListenAndServe())
 }
 
+func initServer() {
+	// TODO; when a new server is brought up, it needs to first download all the state before it can start accepting requests
+}
+
+func initHandlers() {
+	if config.Development() {
+		http.HandleFunc("/_hash", encryption.HashHandler)
+		http.HandleFunc("/_sign", common.ToJSONResponse(encryption.SignHandler))
+	}
+	config.SetupHandlers()
+	node.SetupHandlers()
+	chain.SetupHandlers()
+	block.SetupHandlers()
+	sharder.SetupHandlers()
+	diagnostics.SetupHandlers()
+	chain.SetupStateHandlers()
+
+	serverChain := chain.GetServerChain()
+	serverChain.SetupNodeHandlers()
+}
+
+func initEntities() {
+	//TODO: For now using memory storage, but we don't need it.
+	memoryStorage := memorystore.GetStorageProvider()
+	chain.SetupEntity(memoryStorage)
+	block.SetupEntity(memoryStorage)
+
+	round.SetupRoundSummaryDB()
+	block.SetupBlockSummaryDB()
+	ememoryStorage := ememorystore.GetStorageProvider()
+	block.SetupBlockSummaryEntity(ememoryStorage)
+	round.SetupEntity(ememoryStorage)
+
+	client.SetupEntity(memoryStorage)
+	transaction.SetupEntity(memoryStorage)
+
+	persistencestore.InitSession()
+	persistenceStorage := persistencestore.GetStorageProvider()
+	transaction.SetupTxnSummaryEntity(persistenceStorage)
+	transaction.SetupTxnConfirmationEntity(persistenceStorage)
+}
+
+func initN2NHandlers() {
+	node.SetupN2NHandlers()
+	sharder.SetupM2SReceivers()
+}
+
+func initWorkers(ctx context.Context) {
+	serverChain := chain.GetServerChain()
+	serverChain.SetupWorkers(ctx)
+	sharder.SetupWorkers(ctx)
+}
+
 /*StartChainHandler - start the chain (for now just clears the state) */
 func StartChainHandler(w http.ResponseWriter, r *http.Request) {
-	sharder.ClearWorkerState()
 	sc := sharder.GetSharderChain()
 	sc.Initialize()
 	sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"))
