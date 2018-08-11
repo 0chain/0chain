@@ -2,6 +2,7 @@ package common
 
 import (
 	"math/rand"
+	"strconv"
 	"time"
 
 	"0chain.net/config"
@@ -13,6 +14,11 @@ type Timestamp int64
 /*Now - current datetime */
 func Now() Timestamp {
 	return Timestamp(time.Now().Unix())
+}
+
+//TimeToString - return the time stamp as a string
+func TimeToString(ts Timestamp) string {
+	return strconv.FormatInt(int64(ts), 10)
 }
 
 /*Within ensures a given timestamp is within certain number of seconds */
