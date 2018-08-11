@@ -14,7 +14,6 @@ import (
 
 	"0chain.net/node"
 
-	"0chain.net/common"
 	"0chain.net/config"
 	"0chain.net/datastore"
 	. "0chain.net/logging"
@@ -23,17 +22,11 @@ import (
 )
 
 /*SetupWorkers - setup the background workers */
-func SetupWorkers() {
-	ClearWorkerState()
-	ctx := common.GetRootContext()
+func SetupWorkers(ctx context.Context) {
 	sc := GetSharderChain()
 	go sc.BlockWorker(ctx)                 // 1) receives incoming blocks from the network
 	go sc.BlockFinalizationWorker(ctx, sc) // 2) sequentially runs finalization logic
 	go sc.BlockStorageWorker(ctx)          // 3) persists the blocks
-}
-
-/*ClearWorkerState - clears the worker state */
-func ClearWorkerState() {
 }
 
 /*BlockWorker - stores the blocks */

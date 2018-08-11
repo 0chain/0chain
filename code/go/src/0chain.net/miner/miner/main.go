@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -29,43 +30,6 @@ import (
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
-
-func initServer() {
-	// TODO; when a new server is brought up, it needs to first download all the state before it can start accepting requests
-	time.Sleep(time.Second)
-}
-
-func initHandlers() {
-	if config.Development() {
-		http.HandleFunc("/_hash", encryption.HashHandler)
-		http.HandleFunc("/_sign", common.ToJSONResponse(encryption.SignHandler))
-	}
-	config.SetupHandlers()
-	node.SetupHandlers()
-	chain.SetupHandlers()
-	client.SetupHandlers()
-	transaction.SetupHandlers()
-	block.SetupHandlers()
-	miner.SetupHandlers()
-	diagnostics.SetupHandlers()
-	chain.SetupStateHandlers()
-}
-
-func initEntities() {
-	memoryStorage := memorystore.GetStorageProvider()
-
-	chain.SetupEntity(memoryStorage)
-	round.SetupEntity(memoryStorage)
-	block.SetupEntity(memoryStorage)
-	block.SetupBlockSummaryEntity(memoryStorage)
-
-	client.SetupEntity(memoryStorage)
-
-	transaction.SetupTransactionDB()
-	transaction.SetupEntity(memoryStorage)
-
-	miner.SetupNotarizationEntity()
-}
 
 func main() {
 	deploymentMode := flag.Int("deployment_mode", 2, "deployment_mode")
@@ -162,22 +126,71 @@ func main() {
 		}
 	}
 	common.HandleShutdown(server)
-
 	memorystore.GetInfo()
-	serverChain.SetupWorkers(ctx)
-	node.SetupN2NHandlers()
-	serverChain.SetupNodeHandlers()
 
-	initHandlers()
-	miner.SetupM2MSenders()
-	miner.SetupM2MReceivers()
-	miner.SetupM2SSenders()
-	miner.SetupWorkers()
+	initWorkers(ctx)
+	initN2NHandlers()
 	initServer()
+	initHandlers()
+
 	go StartProtocol()
 	Logger.Info("Ready to listen to the requests")
 	chain.StartTime = time.Now().UTC()
 	log.Fatal(server.ListenAndServe())
+}
+
+func initServer() {
+	// TODO; when a new server is brought up, it needs to first download all the state before it can start accepting requests
+	time.Sleep(time.Second)
+}
+
+func initEntities() {
+	memoryStorage := memorystore.GetStorageProvider()
+
+	chain.SetupEntity(memoryStorage)
+	round.SetupEntity(memoryStorage)
+	block.SetupEntity(memoryStorage)
+	block.SetupBlockSummaryEntity(memoryStorage)
+
+	client.SetupEntity(memoryStorage)
+
+	transaction.SetupTransactionDB()
+	transaction.SetupEntity(memoryStorage)
+
+	miner.SetupNotarizationEntity()
+}
+
+func initHandlers() {
+	if config.Development() {
+		http.HandleFunc("/_hash", encryption.HashHandler)
+		http.HandleFunc("/_sign", common.ToJSONResponse(encryption.SignHandler))
+	}
+	config.SetupHandlers()
+	node.SetupHandlers()
+	chain.SetupHandlers()
+	client.SetupHandlers()
+	transaction.SetupHandlers()
+	block.SetupHandlers()
+	miner.SetupHandlers()
+	diagnostics.SetupHandlers()
+	chain.SetupStateHandlers()
+
+	serverChain := chain.GetServerChain()
+	serverChain.SetupNodeHandlers()
+}
+
+func initN2NHandlers() {
+	node.SetupN2NHandlers()
+	miner.SetupM2MSenders()
+	miner.SetupM2MReceivers()
+	miner.SetupM2SSenders()
+}
+
+func initWorkers(ctx context.Context) {
+	serverChain := chain.GetServerChain()
+	serverChain.SetupWorkers(ctx)
+	miner.SetupWorkers(ctx)
+	transaction.SetupWorkers(ctx)
 }
 
 /*StartProtocol - start the miner protocol */
