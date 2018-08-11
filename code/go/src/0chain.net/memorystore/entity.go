@@ -1,8 +1,6 @@
 package memorystore
 
 import (
-	"fmt"
-
 	"0chain.net/datastore"
 )
 
@@ -12,7 +10,7 @@ func GetEntityKey(entity datastore.Entity) datastore.Key {
 	emd := entity.GetEntityMetadata()
 	switch v := key.(type) {
 	case string:
-		return datastore.ToKey(fmt.Sprintf("%s:%v", emd.GetName(), v))
+		return datastore.ToKey(emd.GetName() + ":" + v)
 	case []byte:
 		return datastore.ToKey(append(append([]byte(emd.GetName()), ':'), v...))
 	default:

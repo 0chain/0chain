@@ -2,7 +2,6 @@ package datastore
 
 import (
 	"context"
-	"fmt"
 	"time"
 )
 
@@ -40,7 +39,7 @@ func (eq *EntityCollection) GetCollectionName(parent Key) string {
 	if IsEmpty(parent) {
 		return eq.CollectionName
 	}
-	return fmt.Sprintf("%s:%s", eq.CollectionName, parent)
+	return eq.CollectionName + ":" + parent
 }
 
 /*CollectionMemberField - An entity with a CollectionMemberField will automatically put that entity into a collection */

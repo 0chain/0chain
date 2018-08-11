@@ -3,6 +3,7 @@ package transaction
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -159,7 +160,7 @@ func (t *Transaction) GetClient(ctx context.Context) (*client.Client, error) {
 
 /*HashData - data used to hash the transaction */
 func (t *Transaction) HashData() string {
-	hashdata := fmt.Sprintf("%v:%v:%v:%v:%v", t.CreationDate, t.ClientID, t.ToClientID, t.Value, t.TransactionData)
+	hashdata := common.TimeToString(t.CreationDate) + ":" + t.ClientID + ":" + t.ToClientID + ":" + strconv.FormatInt(t.Value, 10) + ":" + t.TransactionData
 	return hashdata
 }
 
