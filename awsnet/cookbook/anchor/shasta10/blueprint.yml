@@ -3,13 +3,13 @@
 #https://en.wikipedia.org/wiki/List_of_California_fourteeners
 #
 blueprint:
-  git_version: "testnet-10K"
+  git_version: "testnet-v0813"
+
   aws_key_pair: "shasta"
 
   network_type: 'testnet'
-  network_name: 'shasta'
-
-  hosts: 'tag_network_name_shasta'
+  network_name: 'shasta10'
+  hosts: 'tag_network_name_shasta10'
 
   instance_type:
     miner: 'c5.2xlarge'

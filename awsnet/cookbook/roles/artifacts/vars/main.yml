@@ -6,10 +6,10 @@
 
 #AWS Key Setup
 aws_credentials: "{{credential}}/aws/credentials"
-aws_key_dir: "{{credential}}/{{network}}"
-aws_profile: "{{ network }}"
+aws_key_pair: "{{blueprint.aws_key_pair}}"
+aws_key_dir: "{{credential}}/{{aws_key_pair}}"
+#aws_profile: "{{ network }}"
 
-aws_key_pair: "{{network}}"
 aws_key_pair_file: "{{aws_key_dir}}/{{aws_key_pair}}.pem"
 aws_public_key_file: "{{aws_key_dir }}/{{aws_key_pair}}.pub"
 

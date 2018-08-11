@@ -24,10 +24,10 @@ server_chain:
     sharders: 2
     notarization_threshold: 60 # percentage
     validation:
-      batch_size: 1000
+      batch_size: 500
   client:
     discover: true
   network:
-    relay_time: 100 # milliseconds
+    relay_time: 250 # milliseconds
     max_concurrent_requests: 6
 

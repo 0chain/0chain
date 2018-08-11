@@ -1,4 +1,4 @@
-#Whitney config file
+#Shasta Config File
 version: 1.0
 
 logging:
@@ -19,15 +19,15 @@ server_chain:
   genesis_block:
     id: "ed79cae70d439c11258236da1dfa6fc550f7cc569768304623e8fbd7d70efae4"
   block:
-    size: 10000
-    generators: 3
-    sharders: 3
+    size: 1000
+    generators: 2
+    sharders: 2
     notarization_threshold: 60 # percentage
     validation:
-      batch_size: 2500
+      batch_size: 200
   client:
     discover: true
   network:
     relay_time: 250 # milliseconds
-    max_concurrent_requests: 9
+    max_concurrent_requests: 6
 
