@@ -91,7 +91,8 @@ type Chain struct {
 	ZeroNotarizedBlocksCount  int64 `json:"-"`
 	MultiNotarizedBlocksCount int64 `json:"-"`
 
-	ValidationBatchSize int `json:"validation_size"`
+	ValidationBatchSize int   `json:"validation_size"`
+	RoundRange          int64 `json:"round_range"`
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
@@ -139,6 +140,7 @@ func NewChainFromConfig() *Chain {
 	chain.OwnerID = viper.GetString("server_chain.owner")
 	chain.ClientStateDeserializer = &state.Deserializer{}
 	chain.ValidationBatchSize = viper.GetInt("server_chain.block.validation.batch_size")
+	chain.RoundRange = viper.GetInt64("server_chain.round_range")
 	return chain
 }
 

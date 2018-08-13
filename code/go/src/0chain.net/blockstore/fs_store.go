@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"0chain.net/chain"
+
 	"0chain.net/block"
 	"0chain.net/common"
 	"0chain.net/datastore"
@@ -18,10 +20,6 @@ type FSBlockStore struct {
 	RootDirectory string
 }
 
-const (
-	DIR_ROUND_RANGE = 10000000
-)
-
 /*SetupFSBlockStore - Setup a file system based block storage */
 func SetupFSBlockStore(rootDir string) {
 	Store = &FSBlockStore{RootDirectory: rootDir}
@@ -29,7 +27,8 @@ func SetupFSBlockStore(rootDir string) {
 
 func (fbs *FSBlockStore) getFileName(hash string, round int64) string {
 	var dir bytes.Buffer
-	fmt.Fprintf(&dir, "%s%s%v", fbs.RootDirectory, string(os.PathSeparator), int64(round/DIR_ROUND_RANGE))
+	var dirRoundRange = chain.GetServerChain().RoundRange
+	fmt.Fprintf(&dir, "%s%s%v", fbs.RootDirectory, string(os.PathSeparator), round/dirRoundRange)
 	for i := 0; i < 3; i++ {
 		fmt.Fprintf(&dir, "%s%s", string(os.PathSeparator), hash[3*i:3*i+3])
 	}
