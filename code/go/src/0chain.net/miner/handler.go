@@ -19,7 +19,7 @@ func ChainStatsHandler(w http.ResponseWriter, r *http.Request) {
 	c := &GetMinerChain().Chain
 	diagnostics.WriteStatisticsCSS(w)
 	fmt.Fprintf(w, "<h2>Block Finalization Statistics</h2>")
-	diagnostics.WriteStatistics(w, c, chain.FinalizationTimer, 1000000.0)
+	diagnostics.WriteStatistics(w, c, chain.SteadyStateFinalizationTimer, 1000000.0)
 	fmt.Fprintf(w, "<p>Block finalization time = block generation + block verification + k*(network latency)</p>")
 	fmt.Fprintf(w, "<h2>Block Generation Statistics</h2>")
 	diagnostics.WriteStatistics(w, c, bgTimer, 1000000.0)

@@ -58,7 +58,7 @@ func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 /*ChainStatsHandler - a handler to provide block statistics */
 func ChainStatsHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	c := &GetSharderChain().Chain
-	return diagnostics.GetStatistics(c, chain.FinalizationTimer, 1000000.0), nil
+	return diagnostics.GetStatistics(c, chain.SteadyStateFinalizationTimer, 1000000.0), nil
 }
 
 /*ChainStatsWriter - a handler to provide block statistics */
@@ -66,8 +66,10 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	c := &GetSharderChain().Chain
 	w.Header().Set("Content-Type", "text/html")
 	diagnostics.WriteStatisticsCSS(w)
-	fmt.Fprintf(w, "<h2>Block Finalization Statistics</h2>")
-	diagnostics.WriteStatistics(w, c, chain.FinalizationTimer, 1000000.0)
+	fmt.Fprintf(w, "<h2>Block Finalization Statistics (Steady State)</h2>")
+	diagnostics.WriteStatistics(w, c, chain.SteadyStateFinalizationTimer, 1000000.0)
+	fmt.Fprintf(w, "<h2>Block Finalization Statistics (Start to Finish)</h2>")
+	diagnostics.WriteStatistics(w, c, chain.StartToFinalizeTimer, 1000000.0)
 }
 
 /*TransactionConfirmationHandler - given a transaction hash, confirm it's presence in a block */

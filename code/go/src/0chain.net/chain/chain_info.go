@@ -43,7 +43,7 @@ func (c *Chain) UpdateChainInfo(b *block.Block) {
 		BlockHash:       b.Hash,
 		ClientStateHash: b.ClientStateHash,
 		ChainWeight:     b.ChainWeight,
-		FinalizedCount:  FinalizationTimer.Count(),
+		FinalizedCount:  SteadyStateFinalizationTimer.Count(),
 		MissedBlocks:    c.MissedBlocks,
 	}
 	ChainMetric.CurrentValue = ci

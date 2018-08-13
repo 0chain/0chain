@@ -63,6 +63,7 @@ func WriteStatistics(w http.ResponseWriter, c *chain.Chain, timer metrics.Timer,
 	fmt.Fprintf(w, "<tr><td class='sheader' colspan='2'>Configuration</td></tr>")
 	fmt.Fprintf(w, "<tr><td>Block Size</td><td>%v</td></tr>", c.BlockSize)
 	fmt.Fprintf(w, "<tr><td>Network Latency (Delta)</td><td>%v</td></tr>", chain.DELTA)
+	fmt.Fprintf(w, "<tr><td>Validation Batch Size</td><td>%d</td>", c.ValidationBatchSize)
 	fmt.Fprintf(w, "<tr><td class='sheader' colspan=2'>Metrics</td></tr>")
 	fmt.Fprintf(w, "<tr><td>Current Round</td><td>%v</td></tr>", c.CurrentRound)
 	if c.LatestFinalizedBlock != nil {
