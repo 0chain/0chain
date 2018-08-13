@@ -10,6 +10,7 @@ import (
 
 	"0chain.net/config"
 	"0chain.net/node"
+	"0chain.net/round"
 	"0chain.net/util"
 
 	"0chain.net/block"
@@ -207,19 +208,22 @@ func printNodePool(w http.ResponseWriter, np *node.Pool) {
 /*InfoHandler - handler to get the information of the chain */
 func InfoHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	idx := 0
-	for ; idx < len(ChainInfo); idx++ {
-		if ChainInfo[idx].FinalizedRound == 0 {
+	chainInfo := ChainMetric.GetAll()
+	for ; idx < len(chainInfo); idx++ {
+		if chainInfo[idx].GetValue() == 0 {
 			break
 		}
 	}
 	info := make(map[string]interface{})
-	info["chain_info"] = ChainInfo[:idx]
-	for idx = 0; idx < len(RoundInfo); idx++ {
-		if RoundInfo[idx].Number == 0 {
+	info["chain_info"] = chainInfo[:idx]
+
+	roundInfo := RoundMetric.GetAll()
+	for idx = 0; idx < len(roundInfo); idx++ {
+		if roundInfo[idx].GetValue() == 0 {
 			break
 		}
 	}
-	info["round_info"] = RoundInfo[:idx]
+	info["round_info"] = roundInfo[:idx]
 	return info, nil
 }
 
@@ -232,8 +236,9 @@ func InfoWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</style>")
 	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr><th>Round</th><th>Chain Weight</th><th>Block Hash</th><th>Client State Hash</th><th>Blocks Count</th><th>Missed Blocks</th></tr>")
-	for idx := 0; idx < len(ChainInfo); idx++ {
-		cf := ChainInfo[idx]
+	chainInfo := ChainMetric.GetAll()
+	for idx := 0; idx < len(chainInfo); idx++ {
+		cf := chainInfo[idx].(*Info)
 		if cf.FinalizedRound == 0 {
 			break
 		}
@@ -250,8 +255,9 @@ func InfoWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<br/>")
 	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr><th>Round</th><th>Blocks Count</th><th>Multi Block Count</th><th>Zero Block Count</tr></tr>")
-	for idx := 0; idx < len(RoundInfo); idx++ {
-		rf := RoundInfo[idx]
+	roundInfo := RoundMetric.GetAll()
+	for idx := 0; idx < len(roundInfo); idx++ {
+		rf := roundInfo[idx].(*round.Info)
 		if rf.Number == 0 {
 			break
 		}

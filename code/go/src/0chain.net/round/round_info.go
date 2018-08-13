@@ -7,3 +7,7 @@ type Info struct {
 	ZeroNotarizedBlocksCount  int64 `json:"zero_notarized_blocks_count"`
 	MultiNotarizedBlocksCount int64 `json:"multiple_notarized_blocks_count"`
 }
+
+func (info *Info) GetValue() int64 {
+	return info.Number
+}
