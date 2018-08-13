@@ -34,53 +34,59 @@ func (c *Chain) BlockFinalizationWorker(ctx context.Context, bsh BlockStateHandl
 	}
 }
 
-/*PruneBelowCount - prune nodes below these many rounds */
-const PruneBelowCount = 100
-
 /*PruneClientStateWorker - a worker that prunes the client state */
 func (c *Chain) PruneClientStateWorker(ctx context.Context) {
 	ticker := time.NewTicker(PruneBelowCount * time.Second)
 	pruning := false
 	for true {
 		select {
-		case t := <-ticker.C:
+		case <-ticker.C:
 			if pruning {
 				Logger.Info("pruning still going on")
 				continue
 			}
-			lfb := c.LatestFinalizedBlock
-			for ; lfb != nil && !lfb.IsStateComputed(); lfb = lfb.PrevBlock {
-			}
-			if lfb == nil {
-				continue
-			}
-			if lfb.Round < PruneBelowCount {
-				Logger.Info("prune client state (not enough rounds)", zap.Int64("round", c.CurrentRound))
-				continue
-			}
 			pruning = true
-			mpt := lfb.ClientState // TODO: We actually need the root hash at the newOrigin, we shouldn't be pruning w.r.t nodes reachable from current
-			no := lfb.Round - PruneBelowCount
-			no -= no % 100
-			newOrigin := util.Origin(no)
-			pctx := util.WithPruneStats(ctx)
-			err := mpt.UpdateOrigin(pctx, newOrigin)
-			d1 := time.Since(t)
-			if config.DevConfiguration.State {
-				fmt.Fprintf(stateOut, "update to new origin: %v %v %v %v\n", util.ToHex(mpt.GetRoot()), lfb.Round, lfb.IsStateComputed(), newOrigin)
-				mpt.PrettyPrint(stateOut)
-			}
-			t1 := time.Now()
-			if err != nil {
-				Logger.Info("prune client state (update origin)", zap.Error(err))
-			}
-			err = c.StateDB.PruneBelowOrigin(pctx, newOrigin)
-			if err != nil {
-				Logger.Error("prune client state error", zap.Error(err))
-			}
-			ps := util.GetPruneStats(pctx)
-			Logger.Info("client state prune time", zap.Duration("duration", time.Since(t)), zap.Duration("update", d1), zap.Duration("prune", time.Since(t1)), zap.Any("stats", ps))
+			c.pruneClientState(ctx)
 			pruning = false
+
 		}
 	}
+}
+
+/*PruneBelowCount - prune nodes below these many rounds */
+const PruneBelowCount = 100
+
+func (c *Chain) pruneClientState(ctx context.Context) {
+	lfb := c.LatestFinalizedBlock
+	for ; lfb != nil && !lfb.IsStateComputed(); lfb = lfb.PrevBlock {
+	}
+	if lfb == nil {
+		return
+	}
+	if lfb.Round < PruneBelowCount {
+		Logger.Info("prune client state (not enough rounds)", zap.Int64("round", c.CurrentRound))
+		return
+	}
+	mpt := lfb.ClientState // TODO: We actually need the root hash at the newOrigin, we shouldn't be pruning w.r.t nodes reachable from current
+	no := lfb.Round - PruneBelowCount
+	no -= no % 100
+	newOrigin := util.Origin(no)
+	t := time.Now()
+	pctx := util.WithPruneStats(ctx)
+	err := mpt.UpdateOrigin(pctx, newOrigin)
+	d1 := time.Since(t)
+	if config.DevConfiguration.State {
+		fmt.Fprintf(stateOut, "update to new origin: %v %v %v %v\n", util.ToHex(mpt.GetRoot()), lfb.Round, lfb.IsStateComputed(), newOrigin)
+		mpt.PrettyPrint(stateOut)
+	}
+	t1 := time.Now()
+	if err != nil {
+		Logger.Info("prune client state (update origin)", zap.Error(err))
+	}
+	err = c.StateDB.PruneBelowOrigin(pctx, newOrigin)
+	if err != nil {
+		Logger.Error("prune client state error", zap.Error(err))
+	}
+	ps := util.GetPruneStats(pctx)
+	Logger.Info("client state prune time", zap.Duration("duration", time.Since(t)), zap.Duration("update", d1), zap.Duration("prune", time.Since(t1)), zap.Any("stats", ps))
 }
