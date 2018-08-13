@@ -187,7 +187,9 @@ func (b *Block) SetPreviousBlock(prevBlock *Block) {
 	b.PrevBlock = prevBlock
 	b.PrevHash = prevBlock.Hash
 	b.Round = prevBlock.Round + 1
-	b.PrevBlockVerficationTickets = prevBlock.VerificationTickets
+	if len(b.PrevBlockVerficationTickets) == 0 {
+		b.PrevBlockVerficationTickets = prevBlock.VerificationTickets
+	}
 	b.SetStateDB(prevBlock)
 }
 
