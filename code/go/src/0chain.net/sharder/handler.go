@@ -40,7 +40,7 @@ func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 		}
 		sc := GetSharderChain()
 		if roundNumber > sc.LatestFinalizedBlock.Round {
-			return nil, common.InvalidRequest("Block for the given round number is not yet generated")
+			return nil, common.InvalidRequest("Block not available")
 		} else {
 			r := sc.GetRound(roundNumber)
 			if r == nil {
