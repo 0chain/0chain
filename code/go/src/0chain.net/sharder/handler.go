@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"0chain.net/datastore"
@@ -25,16 +26,36 @@ func SetupHandlers() {
 
 /*BlockHandler - a handler to respond to block queries */
 func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	round := r.FormValue("round")
 	hash := r.FormValue("block")
 	content := r.FormValue("content")
 	if content == "" {
 		content = "header"
 	}
 	parts := strings.Split(content, ",")
+	if round != "" {
+		roundNumber, err := strconv.ParseInt(round, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		sc := GetSharderChain()
+		if roundNumber > sc.LatestFinalizedBlock.Round {
+			return nil, common.InvalidRequest("Block for the given round number is not yet generated")
+		} else {
+			r := sc.GetRound(roundNumber)
+			if r == nil {
+				r, err = sc.GetRoundFromStore(ctx, roundNumber)
+				if err != nil {
+					return nil, err
+				}
+			}
+			hash = r.BlockHash
+		}
+	}
 	var err error
 	var b *block.Block
 	if hash == "" {
-		return nil, common.InvalidRequest("Block hash is required")
+		return nil, common.InvalidRequest("Block hash or round number is required")
 	}
 	b, err = chain.GetServerChain().GetBlock(ctx, hash)
 	if err == nil {
