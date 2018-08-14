@@ -28,6 +28,8 @@ server_chain:
   client:
     discover: true
   network:
-    relay_time: 100 # milliseconds
+    relay_time: 180 # milliseconds
     max_concurrent_requests: 6
+    messages:
+      verification_tickets_to: generator
 

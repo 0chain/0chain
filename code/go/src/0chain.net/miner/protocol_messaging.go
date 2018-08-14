@@ -22,7 +22,11 @@ func (mc *Chain) SendBlock(ctx context.Context, b *block.Block) {
 
 /*SendVerificationTicket - send the block verification ticket */
 func (mc *Chain) SendVerificationTicket(ctx context.Context, b *block.Block, bvt *block.BlockVerificationTicket) {
-	mc.Miners.SendTo(VerificationTicketSender(bvt), b.MinerID)
+	if mc.VerificationTicketsTo == chain.Generator {
+		mc.Miners.SendTo(VerificationTicketSender(bvt), b.MinerID)
+	} else {
+		mc.Miners.SendAll(VerificationTicketSender(bvt))
+	}
 }
 
 /*SendNotarization - send the block notarization (collection of verification tickets enough to say notarization is reached) */
@@ -31,7 +35,9 @@ func (mc *Chain) SendNotarization(ctx context.Context, b *block.Block) {
 	notarization.BlockID = b.Hash
 	notarization.Round = b.Round
 	notarization.VerificationTickets = b.VerificationTickets
-	mc.Miners.SendAll(BlockNotarizationSender(notarization))
+	if mc.VerificationTicketsTo == chain.Generator {
+		mc.Miners.SendAll(BlockNotarizationSender(notarization))
+	}
 	mc.SendNotarizedBlock(ctx, b)
 }
 

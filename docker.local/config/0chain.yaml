@@ -30,3 +30,5 @@ server_chain:
   network:
     relay_time: 180 # milliseconds
     max_concurrent_requests: 3
+    messages:
+      verification_tickets_to: generator

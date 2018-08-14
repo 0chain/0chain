@@ -40,8 +40,7 @@ func main() {
 	keysFile := flag.String("keys_file", "config/single_node_sharder_keys.txt", "keys_file")
 	maxDelay := flag.Int("max_delay", 0, "max_delay")
 	flag.Parse()
-	viper.SetDefault("server_chain.network.relay_time", 200)
-	viper.SetDefault("logging.level", "info")
+	config.SetupDefaultConfig()
 	config.SetupConfig()
 
 	if *deploymentMode == 0 {
