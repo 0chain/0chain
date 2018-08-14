@@ -125,13 +125,26 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
 	mc := GetMinerChain()
-	if b.Round >= mc.CurrentRound {
-		Logger.Debug("notarized block handler (round not started yet)", zap.String("block", b.Hash), zap.Any("round", b.Round))
+
+	if b.Round < mc.CurrentRound-1 {
+		Logger.Debug("notarized block handler (round older than the current round)", zap.String("block", b.Hash), zap.Any("round", b.Round))
 		return true, nil
 	}
-	r := mc.GetRound(b.Round)
-	if r == nil || len(r.GetNotarizedBlocks()) > 0 {
-		return nil, common.NewError("notarized_block", "already have notarized blocks")
+	if err := mc.VerifyNotarization(ctx, b, b.VerificationTickets); err != nil {
+		return nil, err
+	}
+	mr := mc.GetRound(b.Round)
+	if mr == nil {
+		r := datastore.GetEntityMetadata("round").Instance().(*round.Round)
+		r.Number = b.Round
+		r.RandomSeed = b.RoundRandomSeed
+		mr = mc.CreateRound(r)
+		mc.AddRound(mr)
+		mr.AddNotarizedBlock(b)
+	}
+	cr := mc.GetRound(b.Round + 1)
+	if cr == nil {
+		mc.startRound(&mr.Round)
 	}
 	msg := &BlockMessage{Sender: node.GetSender(ctx), Type: MessageNotarizedBlock, Block: b}
 	mc.GetBlockMessageChannel() <- msg
