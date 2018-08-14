@@ -381,3 +381,26 @@ func (c *Chain) CanStartNetwork() bool {
 	}
 	return active >= threshold
 }
+
+/*ReadNodePools - read the node pools from configuration */
+func (c *Chain) ReadNodePools(configFile string) {
+	nodeConfig := viper.New()
+	nodeConfig.AddConfigPath("./config")
+	nodeConfig.SetConfigName(configFile)
+	err := nodeConfig.ReadInConfig()
+	if err != nil {
+		panic(fmt.Errorf("fatal error config file: %s", err))
+	}
+	config := nodeConfig.Get("miners")
+	if miners, ok := config.([]interface{}); ok {
+		c.Miners.AddNodes(miners)
+	}
+	config = nodeConfig.Get("sharders")
+	if sharders, ok := config.([]interface{}); ok {
+		c.Sharders.AddNodes(sharders)
+	}
+	config = nodeConfig.Get("blobbers")
+	if blobbers, ok := config.([]interface{}); ok {
+		c.Blobbers.AddNodes(blobbers)
+	}
+}

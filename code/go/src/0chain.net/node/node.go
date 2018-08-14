@@ -44,9 +44,9 @@ var (
 )
 
 var (
-	NodeTypeMiner   = 0
-	NodeTypeSharder = 1
-	NodeTypeBlobber = 2
+	NodeTypeMiner   int8 = 0
+	NodeTypeSharder int8 = 1
+	NodeTypeBlobber int8 = 2
 )
 
 var NodeTypeNames = common.CreateLookups("m", "Miner", "s", "Sharder", "b", "Blobber")
@@ -54,9 +54,10 @@ var NodeTypeNames = common.CreateLookups("m", "Miner", "s", "Sharder", "b", "Blo
 /*Node - a struct holding the node information */
 type Node struct {
 	client.Client
+	N2NHost        string
 	Host           string
 	Port           int
-	Type           int
+	Type           int8
 	SetIndex       int
 	Status         int
 	LastActiveTime time.Time
@@ -144,18 +145,52 @@ func Read(line string) (*Node, error) {
 	return node, nil
 }
 
+/*NewNode - read a node config line and create the node */
+func NewNode(nc map[interface{}]interface{}) (*Node, error) {
+	node := Provider()
+	node.Type = nc["type"].(int8)
+	node.Host = nc["public_ip"].(string)
+	node.N2NHost = nc["n2n_ip"].(string)
+	node.Port = nc["port"].(int)
+	node.ID = nc["id"].(string)
+	node.PublicKey = nc["public_key"].(string)
+
+	node.Client.SetPublicKey(node.PublicKey)
+	hash := encryption.Hash(node.PublicKeyBytes)
+	if node.ID != hash {
+		return nil, common.NewError("invalid_client_id", fmt.Sprintf("public key: %v, client_id: %v, hash: %v\n", node.PublicKey, node.ID, hash))
+	}
+	node.ComputeProperties()
+	if Self.PublicKey == node.PublicKey {
+		Self.Node = node
+	}
+	return node, nil
+}
+
+/*ComputeProperties - implement entity interface */
+func (n *Node) ComputeProperties() {
+	n.Client.ComputeProperties()
+	if n.Host == "" {
+		n.Host = "localhost"
+	}
+	if n.N2NHost == "" {
+		n.N2NHost = n.Host
+	}
+}
+
 /*GetURLBase - get the end point base */
 func (n *Node) GetURLBase() string {
-	host := n.Host
-	if host == "" {
-		host = "localhost"
-	}
-	return fmt.Sprintf("http://%v:%v", host, n.Port)
+	return fmt.Sprintf("http://%v:%v", n.Host, n.Port)
+}
+
+/*GetN2NURLBase - get the end point base for n2n communication */
+func (n *Node) GetN2NURLBase() string {
+	return fmt.Sprintf("http://%v:%v", n.N2NHost, n.Port)
 }
 
 /*GetStatusURL - get the end point where to ping for the status */
 func (n *Node) GetStatusURL() string {
-	return fmt.Sprintf("%v/_nh/status?id=%v&publicKey=%v", n.GetURLBase(), n.ID, n.PublicKey)
+	return fmt.Sprintf("%v/_nh/status?id=%v&publicKey=%v", n.GetN2NURLBase(), n.ID, n.PublicKey)
 }
 
 /*GetNodeType - as a string */
