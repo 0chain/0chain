@@ -23,15 +23,9 @@ var minerChain = &Chain{}
 /*SetupMinerChain - setup the miner's chain */
 func SetupMinerChain(c *chain.Chain) {
 	minerChain.Chain = *c
-	minerChain.Initialize()
+	minerChain.rounds = make(map[int64]*Round)
 	minerChain.roundsMutex = &sync.Mutex{}
 	minerChain.BlockMessageChannel = make(chan *BlockMessage, 25)
-}
-
-/*Initialize - intializes internal datastructures to start again */
-func (mc *Chain) Initialize() {
-	minerChain.Chain.Initialize()
-	minerChain.rounds = make(map[int64]*Round)
 }
 
 /*GetMinerChain - get the miner's chain */
