@@ -147,6 +147,7 @@ func (np *Pool) sendTo(numNodes int, nodes []*Node, handler SendHandler) []*Node
 	}
 	if activeCount == 0 {
 		Logger.Debug("send message (no active nodes)")
+		close(sendBucket)
 		return sentTo
 	}
 	doneCount := 0
