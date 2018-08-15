@@ -117,11 +117,12 @@ func (mc *MemCore) Check(ent zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.C
 /*Write - implement interface */
 func (mc *MemCore) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	var entry *observer.LoggedEntry
-	if mc.r.Value == nil {
+	v := mc.r.Value
+	if v == nil {
 		entry = &observer.LoggedEntry{}
 		mc.r.Value = entry
 	} else {
-		entry = mc.r.Value.(*observer.LoggedEntry)
+		entry = v.(*observer.LoggedEntry)
 	}
 	entry.Entry = ent
 	entry.Context = fields
