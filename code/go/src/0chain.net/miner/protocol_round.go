@@ -3,7 +3,6 @@ package miner
 import (
 	"context"
 	"math/rand"
-	"sort"
 	"time"
 
 	"0chain.net/block"
@@ -61,7 +60,6 @@ func (mc *Chain) GetBlockToExtend(r *Round) *block.Block {
 		if len(rnb) > 0 {
 			if len(rnb) > 1 {
 				Logger.Info("multiple blocks to extend from")
-				sort.Slice(rnb, func(i int, j int) bool { return rnb[i].ChainWeight > rnb[j].ChainWeight })
 				for _, b := range rnb {
 					Logger.Info("multiple blocks to extend from", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.Int("round_rank", b.RoundRank), zap.Float64("chain_weight", b.ChainWeight))
 				}
@@ -421,8 +419,8 @@ func (mc *Chain) CancelRoundVerification(ctx context.Context, r *Round) {
 /*BroadcastNotarizedBlocks - send all the notarized blocks to all generating miners for a round*/
 func (mc *Chain) BroadcastNotarizedBlocks(ctx context.Context, pr *Round, r *Round) {
 	nb := pr.GetNotarizedBlocks()
-	rg := mc.GetGenerators(&r.Round)
-	for _, b := range nb {
-		mc.SendNotarizedBlockToMiners(ctx, b, rg)
+	Logger.Info("sending notarized block", zap.Int64("round", pr.Number), zap.Int("blocks", len(nb)))
+	if len(nb) > 0 {
+		mc.SendNotarizedBlockToMiners(ctx, nb[0])
 	}
 }

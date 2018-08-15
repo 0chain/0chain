@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"sort"
 	"sync"
 
 	"0chain.net/ememorystore"
@@ -69,6 +70,8 @@ func (r *Round) AddNotarizedBlock(b *block.Block) bool {
 
 /*GetNotarizedBlocks - return all the notarized blocks associated with this round */
 func (r *Round) GetNotarizedBlocks() []*block.Block {
+	rnb := r.notarizedBlocks
+	sort.Slice(rnb, func(i int, j int) bool { return rnb[i].ChainWeight > rnb[j].ChainWeight })
 	return r.notarizedBlocks
 }
 
