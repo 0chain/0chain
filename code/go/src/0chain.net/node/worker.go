@@ -72,7 +72,7 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 
 /*DownloadNodeData - downloads the node definition data for the given pool type from the given node */
 func (np *Pool) DownloadNodeData(node *Node) bool {
-	url := fmt.Sprintf("%v/_nh/list/%v", node.GetURLBase(), node.GetNodeType())
+	url := fmt.Sprintf("%v/_nh/list/%v", node.GetN2NURLBase(), node.GetNodeType())
 	client := &http.Client{Timeout: 2000 * time.Millisecond}
 	resp, err := client.Get(url)
 	if err != nil {

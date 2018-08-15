@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"0chain.net/datastore"
 	"0chain.net/persistencestore"
 
 	"0chain.net/block"
-	"0chain.net/blockstore"
 	"0chain.net/chain"
 	"0chain.net/common"
 	"0chain.net/diagnostics"
@@ -26,27 +26,47 @@ func SetupHandlers() {
 
 /*BlockHandler - a handler to respond to block queries */
 func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	round := r.FormValue("round")
 	hash := r.FormValue("block")
 	content := r.FormValue("content")
 	if content == "" {
 		content = "header"
 	}
 	parts := strings.Split(content, ",")
+	if round != "" {
+		roundNumber, err := strconv.ParseInt(round, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		sc := GetSharderChain()
+		if roundNumber > sc.LatestFinalizedBlock.Round {
+			return nil, common.InvalidRequest("Block not available")
+		} else {
+			r := sc.GetRound(roundNumber)
+			if r == nil {
+				r, err = sc.GetRoundFromStore(ctx, roundNumber)
+				if err != nil {
+					return nil, err
+				}
+			}
+			hash = r.BlockHash
+		}
+	}
 	var err error
 	var b *block.Block
 	if hash == "" {
-		return nil, common.InvalidRequest("Block hash is required")
+		return nil, common.InvalidRequest("Block hash or round number is required")
 	}
 	b, err = chain.GetServerChain().GetBlock(ctx, hash)
 	if err == nil {
 		return chain.GetBlockResponse(b, parts)
 	}
 	sc := GetSharderChain()
-	/*NOTE: We store DIR_ROUND_RANGE number of blocks in the same directory and that's a large number (10M).
+	/*NOTE: We store chain.RoundRange number of blocks in the same directory and that's a large number (10M).
 	So, as long as people query the last 10M blocks most of the time, we only end up with 1 or 2 iterations.
-	Anything older than that, there is a cost to query the database and get the round informatio anyway.
+	Anything older than that, there is a cost to query the database and get the round information anyway.
 	*/
-	for r := sc.LatestFinalizedBlock.Round; r > 0; r -= blockstore.DIR_ROUND_RANGE {
+	for r := sc.LatestFinalizedBlock.Round; r > 0; r -= sc.RoundRange {
 		b, err = sc.GetBlockFromStore(hash, r)
 		if err != nil {
 			return nil, err
@@ -58,7 +78,7 @@ func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 /*ChainStatsHandler - a handler to provide block statistics */
 func ChainStatsHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	c := &GetSharderChain().Chain
-	return diagnostics.GetStatistics(c, chain.FinalizationTimer, 1000000.0), nil
+	return diagnostics.GetStatistics(c, chain.SteadyStateFinalizationTimer, 1000000.0), nil
 }
 
 /*ChainStatsWriter - a handler to provide block statistics */
@@ -66,8 +86,10 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	c := &GetSharderChain().Chain
 	w.Header().Set("Content-Type", "text/html")
 	diagnostics.WriteStatisticsCSS(w)
-	fmt.Fprintf(w, "<h2>Block Finalization Statistics</h2>")
-	diagnostics.WriteStatistics(w, c, chain.FinalizationTimer, 1000000.0)
+	fmt.Fprintf(w, "<h2>Block Finalization Statistics (Steady State)</h2>")
+	diagnostics.WriteStatistics(w, c, chain.SteadyStateFinalizationTimer, 1000000.0)
+	fmt.Fprintf(w, "<h2>Block Finalization Statistics (Start to Finish)</h2>")
+	diagnostics.WriteStatistics(w, c, chain.StartToFinalizeTimer, 1000000.0)
 }
 
 /*TransactionConfirmationHandler - given a transaction hash, confirm it's presence in a block */

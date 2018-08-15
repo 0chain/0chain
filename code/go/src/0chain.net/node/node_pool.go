@@ -17,13 +17,13 @@ var ErrNodeNotFound = common.NewError("node_not_found", "Requested node is not f
 /*Pool - a pool of nodes used for the same purpose */
 type Pool struct {
 	//Mutex &sync.Mutex{}
-	Type     int
+	Type     int8
 	Nodes    []*Node
 	NodesMap map[string]*Node
 }
 
 /*NewPool - create a new node pool of given type */
-func NewPool(Type int) *Pool {
+func NewPool(Type int8) *Pool {
 	np := Pool{Type: Type}
 	np.NodesMap = make(map[string]*Node)
 	return &np
@@ -132,6 +132,22 @@ func ReadNodes(r io.Reader, minerPool *Pool, sharderPool *Pool, blobberPool *Poo
 		default:
 			panic(fmt.Sprintf("unkown node type %v:%v\n", node.GetKey(), node.Type))
 		}
+	}
+}
+
+/*AddNodes - add nodes to the node pool */
+func (np *Pool) AddNodes(nodes []interface{}) {
+	for _, nci := range nodes {
+		nc, ok := nci.(map[interface{}]interface{})
+		if !ok {
+			continue
+		}
+		nc["type"] = np.Type
+		nd, err := NewNode(nc)
+		if err != nil {
+			panic(err)
+		}
+		np.AddNode(nd)
 	}
 }
 

@@ -4,6 +4,8 @@ import (
 	"context"
 	"sync"
 
+	"0chain.net/ememorystore"
+
 	"0chain.net/block"
 	"0chain.net/blockstore"
 	"0chain.net/chain"
@@ -79,7 +81,10 @@ func (sc *Chain) GetBlockFromStoreBySummary(bs *block.BlockSummary) (*block.Bloc
 func (sc *Chain) GetRoundFromStore(ctx context.Context, roundNum int64) (*round.Round, error) {
 	r := datastore.GetEntity("round").(*round.Round)
 	r.Number = roundNum
-	err := r.Read(ctx, r.GetKey())
+	roundEntityMetadata := r.GetEntityMetadata()
+	rctx := ememorystore.WithEntityConnection(ctx, roundEntityMetadata)
+	defer ememorystore.Close(rctx)
+	err := r.Read(rctx, r.GetKey())
 	return r, err
 }
 

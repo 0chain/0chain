@@ -54,6 +54,8 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 
 /*GetBlockToExtend - Get the block to extend from the given round */
 func (mc *Chain) GetBlockToExtend(r *Round) *block.Block {
+	count := 0
+	sleepTime := 10 * time.Millisecond
 	for true { // Need to do this for timing issues where a start round might come before a notarization and there is no notarized block to extend from
 		rnb := r.GetNotarizedBlocks()
 		if len(rnb) > 0 {
@@ -70,7 +72,15 @@ func (mc *Chain) GetBlockToExtend(r *Round) *block.Block {
 			break
 		}
 		Logger.Error("block to extend - no notarized block yet", zap.Int64("round", r.Number))
-		time.Sleep(10 * time.Millisecond)
+		count++
+		if count == 10 {
+			count = 0
+			sleepTime *= 2
+			if sleepTime > time.Second {
+				sleepTime = time.Second
+			}
+		}
+		time.Sleep(sleepTime)
 	}
 	Logger.Debug("no block to extend", zap.Int64("round", r.Number), zap.Int64("current_round", mc.CurrentRound), zap.Int("nb_count", len(r.GetNotarizedBlocks())))
 	return nil

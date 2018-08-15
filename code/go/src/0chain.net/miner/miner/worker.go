@@ -87,8 +87,8 @@ func TransactionGenerator(blockSize int32) {
 	for true {
 		numGenerators := sc.NumGenerators
 		numMiners := sc.Miners.Size()
-		blockRate := chain.FinalizationTimer.Rate1()
-		if chain.FinalizationTimer.Count() < 250 && blockRate < 2 {
+		blockRate := chain.SteadyStateFinalizationTimer.Rate1()
+		if chain.SteadyStateFinalizationTimer.Count() < 250 && blockRate < 2 {
 			blockRate = 2
 		}
 		totalBlocks := float64(numGenerators) * blockRate

@@ -260,7 +260,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 				cbytes := snappy.Encode(nil, buffer.Bytes())
 				buffer = bytes.NewBuffer(cbytes)
 			}
-			url := fmt.Sprintf("%v%v", receiver.GetURLBase(), uri)
+			url := fmt.Sprintf("%v%v", receiver.GetN2NURLBase(), uri)
 			req, err := http.NewRequest("POST", url, buffer)
 			if err != nil {
 				return false

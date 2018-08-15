@@ -23,14 +23,22 @@ func SetNetworkRelayTime(delta time.Duration) {
 	FINALIZATION_TIME = 2 * delta
 }
 
-var FinalizationTimer metrics.Timer
-var fts time.Time
+//SteadyStateFinalizationTimer - a metric that tracks the steady state finality time (time between two successive finalized blocks in steady state)
+var SteadyStateFinalizationTimer metrics.Timer
+var ssFTs time.Time
+
+//StartToFinalizeTimer - a metric that tracks the time a block is created to finalized
+var StartToFinalizeTimer metrics.Timer
 
 func init() {
-	if FinalizationTimer != nil {
-		metrics.Unregister("finalization_time")
+	if SteadyStateFinalizationTimer != nil {
+		metrics.Unregister("ss_finalization_time")
 	}
-	FinalizationTimer = metrics.GetOrRegisterTimer("finalization_time", nil)
+	SteadyStateFinalizationTimer = metrics.GetOrRegisterTimer("ss_finalization_time", nil)
+	if StartToFinalizeTimer != nil {
+		metrics.Unregister("s2f_time")
+	}
+	StartToFinalizeTimer = metrics.GetOrRegisterTimer("s2f_time", nil)
 }
 
 /*FinalizeRound - starting from the given round work backwards and identify the round that can be
@@ -77,10 +85,11 @@ func (c *Chain) finalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 	for idx := range frchain {
 		fb := frchain[len(frchain)-1-idx]
 		Logger.Info("finalize round", zap.Int64("round", r.Number), zap.Int64("finalized_round", fb.Round), zap.String("hash", fb.Hash))
-		if time.Since(fts) < 10*time.Second {
-			FinalizationTimer.UpdateSince(fts)
+		if time.Since(ssFTs) < 10*time.Second {
+			SteadyStateFinalizationTimer.UpdateSince(ssFTs)
 		}
-		fts = time.Now()
+		StartToFinalizeTimer.UpdateSince(fb.ToTime())
+		ssFTs = time.Now()
 		c.UpdateChainInfo(fb)
 		if fb.ClientState != nil {
 			ts := time.Now()

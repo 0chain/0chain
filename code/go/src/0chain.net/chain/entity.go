@@ -30,6 +30,12 @@ const (
 	FINALIZED = 2
 )
 
+const (
+	AllMiners  = 11
+	Generator  = 12
+	Generators = 13
+)
+
 /*ServerChain - the chain object of the chain  the server is responsible for */
 var ServerChain *Chain
 
@@ -78,9 +84,11 @@ type Chain struct {
 	/* This is a cache of blocks that may include speculative blocks */
 	Blocks               map[datastore.Key]*block.Block `json:"-"`
 	LatestFinalizedBlock *block.Block                   `json:"latest_finalized_block,omitempty"` // Latest block on the chain the program is aware of
-	CurrentRound         int64
-	CurrentMagicBlock    *block.Block
-	BlocksToSharder      int
+	CurrentRound         int64                          `json:"-"`
+	CurrentMagicBlock    *block.Block                   `json:"-"`
+
+	BlocksToSharder       int `json:"blocks_to_sharder"`
+	VerificationTicketsTo int `json:"verification_tickets_to"`
 
 	StateDB                 util.NodeDB         `json:"-"`
 	ClientStateDeserializer state.DeserializerI `json:"-"`
@@ -91,7 +99,8 @@ type Chain struct {
 	ZeroNotarizedBlocksCount  int64 `json:"-"`
 	MultiNotarizedBlocksCount int64 `json:"-"`
 
-	ValidationBatchSize int `json:"validation_size"`
+	ValidationBatchSize int   `json:"validation_size"`
+	RoundRange          int64 `json:"round_range"`
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
@@ -137,8 +146,14 @@ func NewChainFromConfig() *Chain {
 	chain.NumSharders = viper.GetInt("server_chain.block.sharders")
 	chain.NotarizationThreshold = viper.GetInt("server_chain.block.notarization_threshold")
 	chain.OwnerID = viper.GetString("server_chain.owner")
-	chain.ClientStateDeserializer = &state.Deserializer{}
 	chain.ValidationBatchSize = viper.GetInt("server_chain.block.validation.batch_size")
+	chain.RoundRange = viper.GetInt64("server_chain.round_range")
+	verificationTicketsTo := viper.GetString("server_chain.network.messages.verification_tickets_to")
+	if verificationTicketsTo == "" || verificationTicketsTo == "all_miners" || verificationTicketsTo == "11" {
+		chain.VerificationTicketsTo = AllMiners
+	} else {
+		chain.VerificationTicketsTo = Generator
+	}
 	return chain
 }
 
@@ -162,8 +177,10 @@ func (c *Chain) Initialize() {
 	c.LatestFinalizedBlock = nil
 	c.CurrentMagicBlock = nil
 	c.BlocksToSharder = 1
+	c.VerificationTicketsTo = AllMiners
 	c.ValidationBatchSize = 2000
 	c.FinalizedRoundsChannel = make(chan *round.Round, 128)
+	c.ClientStateDeserializer = &state.Deserializer{}
 	c.StateDB = stateDB
 }
 
@@ -380,4 +397,27 @@ func (c *Chain) CanStartNetwork() bool {
 		threshold = c.Miners.Size()
 	}
 	return active >= threshold
+}
+
+/*ReadNodePools - read the node pools from configuration */
+func (c *Chain) ReadNodePools(configFile string) {
+	nodeConfig := viper.New()
+	nodeConfig.AddConfigPath("./config")
+	nodeConfig.SetConfigName(configFile)
+	err := nodeConfig.ReadInConfig()
+	if err != nil {
+		panic(fmt.Errorf("fatal error config file: %s", err))
+	}
+	config := nodeConfig.Get("miners")
+	if miners, ok := config.([]interface{}); ok {
+		c.Miners.AddNodes(miners)
+	}
+	config = nodeConfig.Get("sharders")
+	if sharders, ok := config.([]interface{}); ok {
+		c.Sharders.AddNodes(sharders)
+	}
+	config = nodeConfig.Get("blobbers")
+	if blobbers, ok := config.([]interface{}); ok {
+		c.Blobbers.AddNodes(blobbers)
+	}
 }

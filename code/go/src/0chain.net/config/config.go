@@ -6,6 +6,13 @@ import (
 	"github.com/spf13/viper"
 )
 
+//SetupDefaultConfig - setup the default config options that can be overridden via the config file
+func SetupDefaultConfig() {
+	viper.SetDefault("logging.level", "info")
+	viper.SetDefault("server_chain.network.relay_time", 200)
+	viper.SetDefault("server_chain.network.messages.verification_tickets_to", "all_miners")
+}
+
 /*SetupConfig - setup the configuration system */
 func SetupConfig() {
 	viper.SetConfigName("0chain")

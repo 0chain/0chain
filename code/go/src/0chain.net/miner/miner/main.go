@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"strings"
 	"time"
 
 	_ "net/http/pprof"
@@ -38,8 +39,7 @@ func main() {
 	maxDelay := flag.Int("max_delay", 0, "max_delay")
 	flag.Parse()
 	config.Configuration.DeploymentMode = byte(*deploymentMode)
-	viper.SetDefault("server_chain.network.relay_time", 200)
-	viper.SetDefault("logging.level", "info")
+	config.SetupDefaultConfig()
 	config.SetupConfig()
 
 	if config.Development() {
@@ -81,12 +81,16 @@ func main() {
 	if *nodesFile == "" {
 		panic("Please specify --nodes_file file.txt option with a file.txt containing nodes including self")
 	}
-	reader, err = os.Open(*nodesFile)
-	if err != nil {
-		log.Fatalf("%v", err)
+	if strings.HasSuffix(*nodesFile, "txt") {
+		reader, err = os.Open(*nodesFile)
+		if err != nil {
+			log.Fatalf("%v", err)
+		}
+		node.ReadNodes(reader, serverChain.Miners, serverChain.Sharders, serverChain.Blobbers)
+		reader.Close()
+	} else {
+		mc.ReadNodePools(*nodesFile)
 	}
-	node.ReadNodes(reader, serverChain.Miners, serverChain.Sharders, serverChain.Blobbers)
-	reader.Close()
 	if node.Self.ID == "" {
 		Logger.Panic("node definition for self node doesn't exist")
 	}

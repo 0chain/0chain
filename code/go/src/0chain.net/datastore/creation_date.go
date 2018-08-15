@@ -1,6 +1,10 @@
 package datastore
 
-import "0chain.net/common"
+import (
+	"time"
+
+	"0chain.net/common"
+)
 
 /*CreationTrackable - an interface that supports tracking the creation time */
 type CreationTrackable interface {
@@ -20,4 +24,9 @@ func (cd *CreationDateField) InitializeCreationDate() {
 /*GetCreationTime - Get the creation time */
 func (cd *CreationDateField) GetCreationTime() common.Timestamp {
 	return cd.CreationDate
+}
+
+/*ToTime - convert the common.Timestamp to time.Time */
+func (cd *CreationDateField) ToTime() time.Time {
+	return time.Unix(int64(cd.CreationDate), 0)
 }
