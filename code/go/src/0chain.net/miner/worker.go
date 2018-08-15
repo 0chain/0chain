@@ -193,51 +193,56 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 
 /*HandleRoundTimeout - handles the timeout of a round*/
 func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
-	if mc.CurrentRound == 0 {
+	if mc.CurrentRound <= 1 {
 		if !mc.CanStartNetwork() {
 			return
 		}
 	}
 	Logger.Info("round timeout occured", zap.Any("round", mc.CurrentRound))
 	r := mc.GetRound(mc.CurrentRound)
+	if r.Number > 1 {
+		pr := mc.GetRound(r.Number - 1)
+		if pr != nil {
+			go mc.BroadcastNotarizedBlocks(ctx, pr, r)
+		}
+	}
 	r.Round.Block = nil
 	if mc.CanGenerateRound(&r.Round, node.GetSelfNode(ctx).Node) {
 		go mc.GenerateRoundBlock(ctx, r)
-	} else if r.Number > 1 {
-		pr := mc.GetRound(r.Number - 1)
-		go mc.BroadcastNotarizedBlocks(ctx, pr, r)
 	}
 }
 
 /*HandleNotarizedBlockMessage - handles a notarized block for a previous round*/
 func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMessage) {
-	r := mc.GetRound(msg.Block.Round)
-	nb := r.GetNotarizedBlocks()
-	for _, blk := range nb {
-		if blk.Hash == msg.Block.Hash {
-			return
+	mb := msg.Block
+	mr := mc.GetRound(mb.Round)
+	if mr == nil {
+		r := datastore.GetEntityMetadata("round").Instance().(*round.Round)
+		r.Number = mb.Round
+		r.RandomSeed = mb.RoundRandomSeed
+		mr = mc.CreateRound(r)
+		mc.AddRound(mr)
+	} else {
+		nb := mr.GetNotarizedBlocks()
+		for _, blk := range nb {
+			if blk.Hash == mb.Hash {
+				return
+			}
 		}
 	}
-	if !mc.ValidGenerator(&r.Round, msg.Block) {
-		Logger.Debug("verify block (yes mr, invalid generator)", zap.Any("round", r.Number), zap.Any("block", msg.Block.Hash))
-		return
-	}
-	if err := mc.VerifyNotarization(ctx, msg.Block, msg.Block.VerificationTickets); err != nil {
-		Logger.Error("notarized block", zap.Int64("round", msg.Block.Round), zap.String("block", msg.Block.Hash), zap.Error(err))
-		return
-	}
-	b, err := mc.GetBlock(ctx, msg.Block.Hash)
+	b, err := mc.GetBlock(ctx, mb.Hash)
 	if err == nil {
-		b.MergeVerificationTickets(msg.Block.VerificationTickets)
+		b.MergeVerificationTickets(mb.VerificationTickets)
 	} else {
-		b = msg.Block
-		mc.AddBlock(b)
+		b = mb
+		mc.AddBlock(mb)
 	}
-	mc.AddNotarizedBlock(ctx, &r.Round, b)
-	if !r.IsVerificationComplete() {
-		r.CancelVerification()
-		if r.Block == nil || r.Block.Weight() < b.Weight() {
-			r.Block = b
+
+	mc.AddNotarizedBlock(ctx, &mr.Round, b)
+	if !mr.IsVerificationComplete() {
+		mr.CancelVerification()
+		if mr.Block == nil || mr.Block.Weight() < b.Weight() {
+			mr.Block = b
 		}
 	}
 }
