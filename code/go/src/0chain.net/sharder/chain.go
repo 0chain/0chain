@@ -18,17 +18,11 @@ var sharderChain = &Chain{}
 /*SetupSharderChain - setup the sharder's chain */
 func SetupSharderChain(c *chain.Chain) {
 	sharderChain.Chain = *c
-	sharderChain.Initialize()
+	sharderChain.rounds = make(map[int64]*round.Round)
 	sharderChain.roundsMutex = &sync.Mutex{}
 	sharderChain.BlockChannel = make(chan *block.Block, 128)
 	//TODO experiment on different buffer sizes for Round Channel
 	sharderChain.RoundChannel = make(chan *round.Round, 128)
-}
-
-/*Initialize - intializes internal datastructures to start again */
-func (sc *Chain) Initialize() {
-	sc.Chain.Initialize()
-	sc.rounds = make(map[int64]*round.Round)
 }
 
 /*GetSharderChain - get the sharder's chain */
