@@ -63,6 +63,9 @@ func (bm *BlockMessage) Retry(bmc chan *BlockMessage) {
 			duration = 10 * time.Millisecond
 		}
 		duration *= 2
+		if duration > time.Second {
+			duration = time.Second
+		}
 		time.Sleep(duration)
 		bm.RetryCount++
 		bmc <- bm
