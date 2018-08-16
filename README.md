@@ -100,7 +100,6 @@ $ ../bin/run.sharder.sh cassandra cqlsh -f /0chain/sql/zerochain_keyspace.sql
 2) To create the tables, do the following
 
 ```
-$ ../bin/run.sharder.sh cassandra cqlsh -k zerochain -f /0chain/sql/block_summary.sql
 $ ../bin/run.sharder.sh cassandra cqlsh -k zerochain -f /0chain/sql/txn_summary.sql
 ```
 
