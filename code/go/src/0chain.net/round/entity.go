@@ -70,9 +70,20 @@ func (r *Round) AddNotarizedBlock(b *block.Block) bool {
 
 /*GetNotarizedBlocks - return all the notarized blocks associated with this round */
 func (r *Round) GetNotarizedBlocks() []*block.Block {
-	rnb := r.notarizedBlocks
-	sort.Slice(rnb, func(i int, j int) bool { return rnb[i].ChainWeight > rnb[j].ChainWeight })
 	return r.notarizedBlocks
+}
+
+/*GetBestNotarizedBlock - get the best notarized block that we have */
+func (r *Round) GetBestNotarizedBlock() *block.Block {
+	rnb := r.notarizedBlocks
+	if len(rnb) == 0 {
+		return nil
+	}
+	if len(rnb) == 1 {
+		return rnb[0]
+	}
+	sort.Slice(rnb, func(i int, j int) bool { return rnb[i].ChainWeight > rnb[j].ChainWeight })
+	return rnb[0]
 }
 
 /*SetFinalizing - the round is being finalized */

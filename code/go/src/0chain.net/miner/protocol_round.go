@@ -56,15 +56,9 @@ func (mc *Chain) GetBlockToExtend(r *Round) *block.Block {
 	count := 0
 	sleepTime := 10 * time.Millisecond
 	for true { // Need to do this for timing issues where a start round might come before a notarization and there is no notarized block to extend from
-		rnb := r.GetNotarizedBlocks()
-		if len(rnb) > 0 {
-			if len(rnb) > 1 {
-				Logger.Info("multiple blocks to extend from")
-				for _, b := range rnb {
-					Logger.Info("multiple blocks to extend from", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.Int("round_rank", b.RoundRank), zap.Float64("chain_weight", b.ChainWeight))
-				}
-			}
-			return rnb[0]
+		bnb := r.GetBestNotarizedBlock()
+		if bnb != nil {
+			return bnb
 		}
 		if r.Number+1 != mc.CurrentRound {
 			break
@@ -80,7 +74,7 @@ func (mc *Chain) GetBlockToExtend(r *Round) *block.Block {
 		}
 		time.Sleep(sleepTime)
 	}
-	Logger.Debug("no block to extend", zap.Int64("round", r.Number), zap.Int64("current_round", mc.CurrentRound), zap.Int("nb_count", len(r.GetNotarizedBlocks())))
+	Logger.Debug("no block to extend", zap.Int64("round", r.Number), zap.Int64("current_round", mc.CurrentRound))
 	return nil
 }
 
@@ -418,9 +412,9 @@ func (mc *Chain) CancelRoundVerification(ctx context.Context, r *Round) {
 
 /*BroadcastNotarizedBlocks - send all the notarized blocks to all generating miners for a round*/
 func (mc *Chain) BroadcastNotarizedBlocks(ctx context.Context, pr *Round, r *Round) {
-	nb := pr.GetNotarizedBlocks()
-	Logger.Info("sending notarized block", zap.Int64("round", pr.Number), zap.Int("blocks", len(nb)))
-	if len(nb) > 0 {
-		mc.SendNotarizedBlockToMiners(ctx, nb[0])
+	nb := pr.GetBestNotarizedBlock()
+	if nb != nil {
+		Logger.Info("sending notarized block", zap.Int64("round", pr.Number),zap.String("block",nb.Hash))
+		mc.SendNotarizedBlockToMiners(ctx, nb)
 	}
 }
