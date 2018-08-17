@@ -10,7 +10,8 @@ import (
 func SetupDefaultConfig() {
 	viper.SetDefault("logging.level", "info")
 	viper.SetDefault("server_chain.network.relay_time", 200)
-	viper.SetDefault("server_chain.network.messages.verification_tickets_to", "all_miners")
+	viper.SetDefault("server_chain.network.messages.verification_tickets_to", "generator")
+	viper.SetDefault("server_chain.round_range", 10000000)
 }
 
 /*SetupConfig - setup the configuration system */
