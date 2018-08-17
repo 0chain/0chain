@@ -4,6 +4,7 @@ package miner
 import (
 	"context"
 	"net/http"
+	"strconv"
 	"time"
 
 	"0chain.net/block"
@@ -57,6 +58,11 @@ func SetupM2MReceivers() {
 	http.HandleFunc("/v1/_m2m/block/verification_ticket", node.ToN2NReceiveEntityHandler(VerificationTicketReceiptHandler))
 	http.HandleFunc("/v1/_m2m/block/notarization", node.ToN2NReceiveEntityHandler(NotarizationReceiptHandler))
 	http.HandleFunc("/v1/_m2m/block/notarized_block", node.ToN2NReceiveEntityHandler(NotarizedBlockHandler))
+}
+
+/*SetupX2MResponders - setup responders */
+func SetupX2MResponders() {
+	http.HandleFunc("/v1/_x2m/block/notarized_block/get", node.ToN2NSendEntityHandler(NotarizedBlockSendHandler))
 }
 
 /*StartRoundHandler - handles the starting of a new round */
@@ -136,4 +142,37 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 	msg := &BlockMessage{Sender: node.GetSender(ctx), Type: MessageNotarizedBlock, Block: b}
 	mc.GetBlockMessageChannel() <- msg
 	return true, nil
+}
+
+//NotarizedBlockSendHandler - handles a request for a notarized block
+func NotarizedBlockSendHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	mc := GetMinerChain()
+	round := r.FormValue("round")
+	var b *block.Block
+	if round != "" {
+		roundN, err := strconv.ParseInt(round, 10, 63)
+		if err != nil {
+			return nil, err
+		}
+		r := mc.GetRound(roundN)
+		if r != nil {
+			b = r.GetBestNotarizedBlock()
+		}
+	} else {
+		hash := r.FormValue("block")
+		if hash != "" {
+			nb, err := mc.GetBlock(ctx, hash)
+			if err != nil {
+				return nil, err
+			}
+			if mc.IsBlockNotarized(ctx, nb) {
+				b = nb
+			}
+		}
+		Logger.Info("notarized block request", zap.String("block", hash), zap.Bool("found", b != nil))
+	}
+	if b != nil {
+		return b, nil
+	}
+	return nil, common.NewError("block_not_available", "Requested block is not available")
 }

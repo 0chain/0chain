@@ -5,8 +5,12 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/node"
+
 	"0chain.net/block"
+	"0chain.net/common"
 	"0chain.net/config"
+	"0chain.net/datastore"
 	. "0chain.net/logging"
 	"0chain.net/round"
 	"0chain.net/util"
@@ -123,4 +127,71 @@ func (c *Chain) finalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 /*PruneChain - prunes the chain */
 func (c *Chain) PruneChain(ctx context.Context, b *block.Block) {
 	c.DeleteBlocksBelowRound(b.Round - 50)
+}
+
+/*GetNotarizedBlockForRound - get a notarized block for a round */
+func (c *Chain) GetNotarizedBlockForRound(r *round.Round, nbrequestor node.EntityReceiveHandler) *block.Block {
+	params := map[string]string{"round": fmt.Sprintf("%v", r.Number)}
+	ctx, cancelf := context.WithCancel(context.TODO())
+	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+		if r.Number+1 != c.CurrentRound {
+			cancelf()
+			return nil, nil
+		}
+		if r.GetBestNotarizedBlock() != nil {
+			cancelf()
+			return nil, nil
+		}
+		b, ok := entity.(*block.Block)
+		if !ok {
+			return nil, common.NewError("invalid_entity", "Invalid entity")
+		}
+		if b.Round != r.Number {
+			return nil, common.NewError("invalid_block", "Block not from the requested round")
+		}
+		if err := b.Validate(ctx); err != nil {
+			return nil, err
+		}
+		if err := c.VerifyNotarization(ctx, b, b.VerificationTickets); err != nil {
+			return nil, err
+		}
+		//TODO: this may not be the best round block or the best chain weight block. Do we do that extra work?
+		r.AddNotarizedBlock(b)
+		Logger.Info("get notarized block", zap.Int64("round", r.Number), zap.String("block", b.Hash))
+		return nil, nil
+	}
+	node := c.Miners.RequestEntity(ctx, nbrequestor(params, handler))
+	if node == nil {
+		return r.GetBestNotarizedBlock()
+	}
+	return nil
+}
+
+/*GetNotarizedBlock - get a notarized block for a round */
+func (c *Chain) GetNotarizedBlock(blockHash string, nbrequestor node.EntityReceiveHandler) *block.Block {
+	cround := c.CurrentRound
+	params := map[string]string{"block": blockHash}
+	ctx, cancelf := context.WithCancel(context.TODO())
+	var b *block.Block
+	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+		if cround != c.CurrentRound {
+			cancelf()
+			return nil, nil
+		}
+		nb, ok := entity.(*block.Block)
+		if !ok {
+			return nil, common.NewError("invalid_entity", "Invalid entity")
+		}
+		if err := nb.Validate(ctx); err != nil {
+			return nil, err
+		}
+		if err := c.VerifyNotarization(ctx, nb, nb.VerificationTickets); err != nil {
+			return nil, err
+		}
+		b = nb
+		Logger.Info("get notarized block", zap.Int64("round", b.Round), zap.String("block", b.Hash))
+		return nil, nil
+	}
+	c.Miners.RequestEntity(ctx, nbrequestor(params, handler))
+	return b
 }

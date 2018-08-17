@@ -185,9 +185,12 @@ func initHandlers() {
 
 func initN2NHandlers() {
 	node.SetupN2NHandlers()
-	miner.SetupM2MSenders()
 	miner.SetupM2MReceivers()
+	miner.SetupM2MSenders()
 	miner.SetupM2SSenders()
+
+	miner.SetupX2MResponders()
+	chain.SetupX2MRequestors()
 }
 
 func initWorkers(ctx context.Context) {
