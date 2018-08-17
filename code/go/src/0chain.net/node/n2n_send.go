@@ -16,7 +16,6 @@ import (
 	"0chain.net/datastore"
 	"0chain.net/encryption"
 	. "0chain.net/logging"
-	"github.com/golang/snappy"
 	"go.uber.org/zap"
 )
 
@@ -160,16 +159,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			if options.Timeout > 0 {
 				timeout = options.Timeout
 			}
-			var buffer *bytes.Buffer
-			if options.CODEC == datastore.CodecJSON {
-				buffer = datastore.ToJSON(entity)
-			} else {
-				buffer = datastore.ToMsgpack(entity)
-			}
-			if options.Compress {
-				cbytes := snappy.Encode(nil, buffer.Bytes())
-				buffer = bytes.NewBuffer(cbytes)
-			}
+			buffer := getResponseData(options, entity)
 			url := receiver.GetN2NURLBase() + uri
 			req, err := http.NewRequest("POST", url, buffer)
 			if err != nil {

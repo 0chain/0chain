@@ -132,11 +132,28 @@ func getEntity(codec string, reader io.Reader, entityMetadata datastore.EntityMe
 			N2n.Error("msgpack decoding", zap.Any("error", err))
 			return nil, err
 		}
+		return entity, nil
 	case CodecJSON:
 		if err := datastore.FromJSON(reader, entity.(datastore.Entity)); err != nil {
 			N2n.Error("json decoding", zap.Any("error", err))
 			return nil, err
 		}
+		return entity, nil
 	}
-	return entity, nil
+	Logger.Error("uknown_encoding", zap.String("encoding", codec))
+	return nil, common.NewError("unkown_encoding", "unknown encoding")
+}
+
+func getResponseData(options *SendOptions, entity datastore.Entity) *bytes.Buffer {
+	var buffer *bytes.Buffer
+	if options.CODEC == datastore.CodecJSON {
+		buffer = datastore.ToJSON(entity)
+	} else {
+		buffer = datastore.ToMsgpack(entity)
+	}
+	if options.Compress {
+		cbytes := snappy.Encode(nil, buffer.Bytes())
+		buffer = bytes.NewBuffer(cbytes)
+	}
+	return buffer
 }

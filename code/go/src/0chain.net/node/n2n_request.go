@@ -3,6 +3,7 @@ package node
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -72,6 +73,9 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 				q.Add(k, v)
 			}
 			req.URL.RawQuery = q.Encode()
+			if options.Compress {
+				req.Header.Set("Content-Encoding", "snappy")
+			}
 			delay := common.InduceDelay()
 			N2n.Debug("requesting", zap.Any("from", Self.SetIndex), zap.Any("to", receiver.SetIndex), zap.Any("handler", uri), zap.Any("entity", entityMetadata.GetName()), zap.Any("params", params), zap.Any("delay", delay))
 			SetRequestHeaders(req, options, entityMetadata)
@@ -101,6 +105,7 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 			receiver.LastActiveTime = time.Now()
 			entity, err := getResponseEntity(resp, entityMetadata)
 			if err != nil {
+				N2n.Error("requesting", zap.Any("from", Self.SetIndex), zap.Any("to", receiver.SetIndex), zap.Duration("duration", time.Since(ts)), zap.Any("handler", uri), zap.Any("entity", entityMetadata.GetName()), zap.Any("params", params), zap.Error(err))
 				return false
 			}
 			entity.ComputeProperties()
@@ -142,10 +147,37 @@ func ToN2NSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 		}
 		ctx := context.TODO()
 		data, err := handler(ctx, r)
-		common.Respond(w, data, err)
 		if err != nil {
+			common.Respond(w, nil, err)
 			N2n.Error("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Error(err))
 		} else {
+			entity, ok := data.(datastore.Entity)
+			if !ok {
+				N2n.Error("message received", zap.String("type", fmt.Sprintf("%T", data)))
+				return
+			}
+			options := &SendOptions{Compress: true}
+			codec := r.Header.Get(HeaderRequestCODEC)
+			switch codec {
+			case "JSON":
+				options.CODEC = CODEC_JSON
+			case "Msgpack":
+				options.CODEC = CODEC_MSGPACK
+			}
+			buffer := getResponseData(options, entity)
+			if options.Compress {
+				w.Header().Set("Content-Encoding", "snappy")
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set(HeaderRequestCODEC, codec)
+			if err != nil {
+				if cerr, ok := err.(*common.Error); ok {
+					w.Header().Set(common.AppErrorHeader, cerr.Code)
+				}
+				http.Error(w, err.Error(), 400)
+				return
+			}
+			w.Write(buffer.Bytes())
 			N2n.Info("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI))
 		}
 		sender.Received++
