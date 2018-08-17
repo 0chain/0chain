@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strconv"
 	"sync"
 	"time"
 
@@ -219,9 +220,7 @@ func (b *Block) GetPreviousBlock() *Block {
 	if b.PrevBlock != nil {
 		return b.PrevBlock
 	}
-	// TODO: Query from the store and ensure the b.Txns array is populated
 	return nil
-
 }
 
 /*AddTransaction - add a transaction to the block */
@@ -295,7 +294,7 @@ func (b *Block) GetMerkleTree() *util.MerkleTree {
 func (b *Block) getHashData() string {
 	mt := b.GetMerkleTree()
 	merkleRoot := mt.GetRoot()
-	hashData := fmt.Sprintf("%v:%v:%v:%v:%v", b.CreationDate, b.Round, b.RoundRandomSeed, merkleRoot, b.PrevHash)
+	hashData := common.TimeToString(b.CreationDate) + ":" + strconv.FormatInt(b.Round, 10) + ":" + strconv.FormatInt(b.RoundRandomSeed, 10) + ":" + merkleRoot + ":" + b.PrevHash
 	return hashData
 }
 
@@ -303,7 +302,6 @@ func (b *Block) getHashData() string {
 func (b *Block) ComputeHash() string {
 	hashData := b.getHashData()
 	hash := encryption.Hash(hashData)
-	//Logger.Debug("hash of the block", zap.String("hash", hash), zap.String("hashdata", hashData))
 	return hash
 }
 
