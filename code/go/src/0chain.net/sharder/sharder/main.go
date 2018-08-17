@@ -188,6 +188,8 @@ func initEntities() {
 func initN2NHandlers() {
 	node.SetupN2NHandlers()
 	sharder.SetupM2SReceivers()
+
+	chain.SetupX2MRequestors()
 }
 
 func initWorkers(ctx context.Context) {
