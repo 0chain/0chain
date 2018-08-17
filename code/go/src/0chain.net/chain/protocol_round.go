@@ -134,6 +134,7 @@ func (c *Chain) GetNotarizedBlockForRound(r *round.Round, nbrequestor node.Entit
 	params := map[string]string{"round": fmt.Sprintf("%v", r.Number)}
 	ctx, cancelf := context.WithCancel(context.TODO())
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+		Logger.Info("get notarized block for round", zap.Int64("round", r.Number), zap.String("block", entity.GetKey()))
 		if r.Number+1 != c.CurrentRound {
 			cancelf()
 			return nil, nil
@@ -174,6 +175,7 @@ func (c *Chain) GetNotarizedBlock(blockHash string, nbrequestor node.EntityRecei
 	ctx, cancelf := context.WithCancel(context.TODO())
 	var b *block.Block
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+		Logger.Info("get notarized block", zap.String("block", blockHash), zap.Int64("cround", cround), zap.Int64("current_round", c.CurrentRound))
 		if cround != c.CurrentRound {
 			cancelf()
 			return nil, nil
@@ -183,14 +185,16 @@ func (c *Chain) GetNotarizedBlock(blockHash string, nbrequestor node.EntityRecei
 			return nil, common.NewError("invalid_entity", "Invalid entity")
 		}
 		if err := nb.Validate(ctx); err != nil {
+			Logger.Error("get notarized block - validate", zap.String("block", blockHash), zap.Error(err), zap.Any("block_obj", nb))
 			return nil, err
 		}
 		if err := c.VerifyNotarization(ctx, nb, nb.VerificationTickets); err != nil {
+			Logger.Error("get notarized block - validate notarization", zap.String("block", blockHash), zap.Error(err))
 			return nil, err
 		}
 		b = nb
 		Logger.Info("get notarized block", zap.Int64("round", b.Round), zap.String("block", b.Hash))
-		return nil, nil
+		return b, nil
 	}
 	c.Miners.RequestEntity(ctx, nbrequestor(params, handler))
 	return b

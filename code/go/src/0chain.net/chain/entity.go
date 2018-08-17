@@ -269,8 +269,14 @@ func (c *Chain) AddBlock(b *block.Block) {
 		if ok {
 			b.SetPreviousBlock(pb)
 		} else {
-			b.SetStateDB(nil)
-			Logger.Info("previous block not present", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("prev_block", b.PrevHash))
+			pb = c.GetNotarizedBlock(b.PrevHash, MinerNotarizedBlockRequestor)
+			//pb = nil
+			if pb != nil {
+				b.SetPreviousBlock(pb)
+			} else {
+				b.SetStateDB(nil)
+				Logger.Info("previous block not present", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("prev_block", b.PrevHash))
+			}
 		}
 	}
 }

@@ -63,6 +63,11 @@ func (mc *Chain) GetBlockToExtend(r *Round) *block.Block {
 		if r.Number+1 != mc.CurrentRound {
 			break
 		}
+		bnb = mc.GetNotarizedBlockForRound(&r.Round, chain.MinerNotarizedBlockRequestor)
+		if bnb != nil {
+			Logger.Info("get block to extend - needed to fetch", zap.Int64("round", r.Number), zap.String("block", bnb.Hash))
+			break
+		}
 		Logger.Error("block to extend - no notarized block yet", zap.Int64("round", r.Number))
 		count++
 		if count == 10 {
@@ -414,7 +419,7 @@ func (mc *Chain) CancelRoundVerification(ctx context.Context, r *Round) {
 func (mc *Chain) BroadcastNotarizedBlocks(ctx context.Context, pr *Round, r *Round) {
 	nb := pr.GetBestNotarizedBlock()
 	if nb != nil {
-		Logger.Info("sending notarized block", zap.Int64("round", pr.Number),zap.String("block",nb.Hash))
+		Logger.Info("sending notarized block", zap.Int64("round", pr.Number), zap.String("block", nb.Hash))
 		mc.SendNotarizedBlockToMiners(ctx, nb)
 	}
 }
