@@ -13,12 +13,12 @@ type MerkleTreeI interface {
 	SetTree(leavesCount int, tree []string) error
 
 	// API for verification when the leaf node is known
-	GetPath(hash Hashable) MTPath               // Server needs to provide this
-	VerifyPath(hash Hashable, path MTPath) bool //This is only required by a client but useful for testing
+	GetPath(hash Hashable) *MTPath               // Server needs to provide this
+	VerifyPath(hash Hashable, path *MTPath) bool //This is only required by a client but useful for testing
 
 	/* API for random verification when the leaf node is uknown
 	(verification of the data to hash used as leaf node is outside this API) */
-	GetPathByIndex(idx int) MTPath
+	GetPathByIndex(idx int) *MTPath
 }
 
 /*MTPath - The merkle tree path*/

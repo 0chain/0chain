@@ -13,10 +13,10 @@ type Confirmation struct {
 	Hash      string `json:"hash"`
 	BlockHash string `json:"block_hash"`
 	datastore.CreationDateField
-	Round           int64       `json:"round"`
-	RoundRandomSeed int64       `json:"round_random_seed"`
-	MerkleTreeRoot  string      `json:"merkle_tree_root"`
-	MerkleTreePath  util.MTPath `json:"merkle_tree_path"`
+	Round           int64        `json:"round"`
+	RoundRandomSeed int64        `json:"round_random_seed"`
+	MerkleTreeRoot  string       `json:"merkle_tree_root"`
+	MerkleTreePath  *util.MTPath `json:"merkle_tree_path"`
 }
 
 var transactionConfirmationEntityMetadata *datastore.EntityMetadataImpl
@@ -41,6 +41,7 @@ func (c *Confirmation) ComputeProperties() {
 
 }
 
+//Validate - implement entity interface
 func (c *Confirmation) Validate(ctx context.Context) error {
 	return nil
 }
@@ -65,7 +66,7 @@ func (c *Confirmation) GetHash() string {
 	return c.Hash
 }
 
-/*GetHash - hashable implementation */
+/*GetHashBytes - hashable implementation */
 func (c *Confirmation) GetHashBytes() []byte {
 	return util.HashStringToBytes(c.Hash)
 }

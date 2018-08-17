@@ -84,16 +84,16 @@ func (mt *MerkleTree) GetLeafIndex(hash Hashable) int {
 }
 
 /*GetPath - get the path that can be used to verify the merkle tree */
-func (mt *MerkleTree) GetPath(hash Hashable) MTPath {
+func (mt *MerkleTree) GetPath(hash Hashable) *MTPath {
 	hidx := mt.GetLeafIndex(hash)
 	if hidx < 0 {
-		return MTPath{}
+		return &MTPath{}
 	}
 	return mt.GetPathByIndex(hidx)
 }
 
 /*VerifyPath - given a leaf node and the path, verify that the node is part of the tree */
-func (mt *MerkleTree) VerifyPath(hash Hashable, path MTPath) bool {
+func (mt *MerkleTree) VerifyPath(hash Hashable, path *MTPath) bool {
 	hs := hash.GetHash()
 	mthash := hs
 	pathNodes := path.Nodes
@@ -111,9 +111,9 @@ func (mt *MerkleTree) VerifyPath(hash Hashable, path MTPath) bool {
 }
 
 /*GetPathByIndex - get the path of a leaf node at index i */
-func (mt *MerkleTree) GetPathByIndex(idx int) MTPath {
-	path := make([]string, 1, mt.levels-1)
-	leafIdx := idx
+func (mt *MerkleTree) GetPathByIndex(idx int) *MTPath {
+	path := make([]string, mt.levels-1, mt.levels-1)
+	mpath := &MTPath{LeafIndex: idx}
 	if idx&1 == 1 {
 		path[0] = mt.tree[idx-1]
 	} else {
@@ -123,18 +123,22 @@ func (mt *MerkleTree) GetPathByIndex(idx int) MTPath {
 			path[0] = mt.tree[idx]
 		}
 	}
-	for pl0, plsize := 0, mt.leavesCount; plsize > 2; pl0, plsize = pl0+plsize, (plsize+1)/2 {
+	for pl0, plsize, pi := 0, mt.leavesCount, 1; plsize > 2; pl0, plsize, pi = pl0+plsize, (plsize+1)/2, pi+1 {
 		l0 := pl0 + plsize
 		idx = (idx - idx&1) / 2
 		if idx&1 == 1 {
-			path = append(path, mt.tree[l0+idx-1])
+			//path = append(path, mt.tree[l0+idx-1])
+			path[pi] = mt.tree[l0+idx-1]
 		} else {
 			if l0+idx+1 < l0+(plsize+1)/2 {
-				path = append(path, mt.tree[l0+idx+1])
+				//path = append(path, mt.tree[l0+idx+1])
+				path[pi] = mt.tree[l0+idx+1]
 			} else {
-				path = append(path, mt.tree[l0+idx])
+				//path = append(path, mt.tree[l0+idx])
+				path[pi] = mt.tree[l0+idx]
 			}
 		}
 	}
-	return MTPath{Nodes: path, LeafIndex: leafIdx}
+	mpath.Nodes = path
+	return mpath
 }
