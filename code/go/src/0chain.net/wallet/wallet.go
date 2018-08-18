@@ -19,6 +19,7 @@ type Wallet struct {
 	PrivateKeyBytes []byte
 	PublicKeyBytes  []byte
 	ClientID        string
+	Balance         int64
 }
 
 /*Initialize - initialize a wallet with public/private keys */
