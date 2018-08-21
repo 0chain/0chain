@@ -32,8 +32,8 @@ func (ms *Store) iterateCollection(ctx context.Context, entityMetadata datastore
 	con := GetEntityCon(ctx, entityMetadata)
 	bucket := make([]datastore.Entity, BATCH_SIZE)
 	keys := make([]datastore.Key, BATCH_SIZE)
-	maxscore := math.MaxInt64
-	minscore := math.MinInt64
+	var maxscore int64 = math.MaxInt64
+	var minscore int64 = math.MinInt64
 	offset := 0
 	proceed := true
 	selectCommand := "ZREVRANGEBYSCORE"
@@ -41,6 +41,7 @@ func (ms *Store) iterateCollection(ctx context.Context, entityMetadata datastore
 		selectCommand = "ZRANGEBYSCORE"
 		maxscore, minscore = minscore, maxscore
 	}
+	ckeys := make(map[datastore.Key]bool)
 	for idx := 0; true; idx += BATCH_SIZE {
 		select {
 		case <-ctx.Done():
@@ -58,7 +59,6 @@ func (ms *Store) iterateCollection(ctx context.Context, entityMetadata datastore
 		if count == 0 {
 			return nil
 		}
-		// TODO: wonder if WITHSCORES and adjusting the maxscore is more performant rather than adjusting offest
 		offset += count
 		if !ok {
 			return common.NewError("error", fmt.Sprintf("error casting data to []interface{} : %T", data))
@@ -79,7 +79,6 @@ func (ms *Store) iterateCollection(ctx context.Context, entityMetadata datastore
 				Logger.Debug("iterator error", zap.Any("score", bkeys[2*i+1]), zap.Any("type", fmt.Sprintf("%T", bkeys[2*i+1])))
 			}
 		}
-
 		err = ms.MultiRead(ctx, entityMetadata, keys[:count], bucket)
 		if err != nil {
 			return err
@@ -87,6 +86,11 @@ func (ms *Store) iterateCollection(ctx context.Context, entityMetadata datastore
 		for i := 0; i < count; i++ {
 			if datastore.IsEmpty(bucket[i].GetKey()) {
 				continue
+			}
+			if e, ok := ckeys[bucket[i].GetKey()]; ok {
+				continue
+			} else {
+				ckeys[bucket[i].GetKey()] = e
 			}
 			proceed = handler(ctx, bucket[i].(datastore.CollectionEntity))
 			if !proceed {
