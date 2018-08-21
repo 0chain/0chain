@@ -11,23 +11,83 @@ import (
 	"0chain.net/util"
 )
 
+var debug = false
 var randTime = time.Now().UnixNano()
-var rs = rand.NewSource(1534554098076517276)
-var prng = rand.New(rs)
+
+var prng *rand.Rand
+
+const (
+	PERSIST = 1
+	MEMORY  = 2
+	LEVEL   = 3
+)
 
 func TestMPTWithWalletTxns(t *testing.T) {
-	mndb := util.NewMemoryNodeDB()
-	mpt := util.NewMerklePatriciaTrie(mndb)
+	clients := 1000
+	transactions := 1000
+	var rs = rand.NewSource(randTime)
+	prng = rand.New(rs)
+	wallets := createWallets(clients)
+	prng = rand.New(rs)
+	fmt.Printf("using in memory db\n")
+	testWithMPT(GetMPT(MEMORY), wallets, transactions)
+	prng = rand.New(rs)
+	fmt.Printf("using level db\n")
+	lmpt := GetMPT(LEVEL)
+	testWithMPT(lmpt, wallets, transactions)
+	pmpt := GetMPT(PERSIST)
+	ts := time.Now()
+	lmpt.GetChangeCollector().UpdateChanges(pmpt.GetNodeDB(), util.Origin(2010), false)
+	fmt.Printf("time taken to persist: %v\n", time.Since(ts))
+	prng = rand.New(rs)
+	fmt.Printf("using persist db\n")
+	testWithMPT(pmpt, wallets, transactions)
+}
 
-	wallets := createWallets(20)
+func GetMPT(dbType int) util.MerklePatriciaTrieI {
+	var mpt util.MerklePatriciaTrieI
 
-	for index := 0; index < len(wallets); index++ {
-		w := wallets[index]
+	switch dbType {
+	case MEMORY:
+		mndb := util.NewMemoryNodeDB()
+		mpt = util.NewMerklePatriciaTrie(mndb)
+	case PERSIST:
+		pndb, err := util.NewPNodeDB("/tmp/mpt")
+		if err != nil {
+			panic(err)
+		}
+		mpt = util.NewMerklePatriciaTrie(pndb)
+	case LEVEL:
+		mndb := util.NewMemoryNodeDB()
+		pndb := util.NewMemoryNodeDB()
+		lndb := util.NewLevelNodeDB(mndb, pndb, false)
+		mpt = util.NewMerklePatriciaTrie(lndb)
+	}
+	return mpt
+}
+
+func testWithMPT(mpt util.MerklePatriciaTrieI, wallets []*Wallet, transactions int) {
+	if debug {
+		fmt.Printf("INFO: random source seed %d\n", randTime)
+	}
+	for idx, w := range wallets {
 		balance := state.Balance(w.Balance)
 		mpt.Insert(util.Path(w.ClientID), &state.State{Balance: balance})
+		state, err := getState(mpt, w.ClientID)
+		if err != nil {
+			panic(err)
+		}
+		if debug {
+			fmt.Printf("INFO:(%v) id:%v balance:%v (%v)\n", idx, w.ClientID, w.Balance, state.Balance)
+		}
 	}
-
-	for count := 1; count <= 10; count++ {
+	fmt.Printf("wallet creation - num changes: %v\n", len(mpt.GetChangeCollector().GetChanges()))
+	if transactions == 0 {
+		return
+	}
+	mpt.ResetChangeCollector(nil)
+	ts := time.Now()
+	for count := 1; count <= transactions; count++ {
 		var wf, wt *Wallet
 		csize := len(wallets)
 		for true {
@@ -44,18 +104,32 @@ func TestMPTWithWalletTxns(t *testing.T) {
 		value := prng.Int63n(wf.Balance) + 1
 		wf.Balance -= value
 		wt.Balance += value
-
+		//fmt.Printf("INFO: from:%v to:%v amt:%v\n", wf.ClientID, wt.ClientID, value)
 		if wf.Balance == 0 {
+			if debug {
+				fmt.Printf("INFO: deleting wallet of %v as balance is zero\n", wf.ClientID)
+			}
 			mpt.Delete(util.Path(wf.ClientID))
 		} else {
-			s, _ := getState(mpt, wf.ClientID)
+			if debug {
+				fmt.Printf("INFO: moving balance %v from %v to %v\n", value, wf.ClientID, wt.ClientID)
+			}
+			s, err := getState(mpt, wf.ClientID)
+			if err != nil {
+				panic(err)
+			}
 			s.Balance -= state.Balance(value)
 			mpt.Insert(util.Path(wf.ClientID), s)
-			s, _ = getState(mpt, wt.ClientID)
-			s.Balance += state.Balance(value)
-			mpt.Insert(util.Path(wt.ClientID), s)
 		}
+		s, err := getState(mpt, wt.ClientID)
+		if err != nil {
+			panic(err)
+		}
+		s.Balance += state.Balance(value)
+		mpt.Insert(util.Path(wt.ClientID), s)
 	}
+	fmt.Printf("transactions - num changes: %v\n", len(mpt.GetChangeCollector().GetChanges()))
+	fmt.Printf("transactions - time taken: %v\n", time.Since(ts))
 
 	for index := 0; index < len(wallets); index++ {
 		w := wallets[index]
@@ -68,23 +142,19 @@ func TestMPTWithWalletTxns(t *testing.T) {
 			}
 		} else {
 			if s.Balance != state.Balance(w.Balance) {
-				fmt.Printf("Balance mismatch ; ")
-				fmt.Printf("Expected : %d; Found : %d\n", w.Balance, s.Balance)
-				fmt.Printf("random source seed %d\n", randTime)
+				fmt.Printf("balance mismatch (%v): %d; Found : %d\n", w.ClientID, w.Balance, s.Balance)
 			}
 		}
 	}
 }
 
-func createWallets(num int64) []*Wallet {
+func createWallets(num int) []*Wallet {
 	wallets := make([]*Wallet, num)
-
 	for i := 0; i < len(wallets); i++ {
 		balance := prng.Int63n(1000)
 		wallets[i] = &Wallet{Balance: balance}
 		wallets[i].Initialize()
 	}
-
 	return wallets
 }
 
