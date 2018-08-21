@@ -18,29 +18,37 @@ type ChangeCollectorI interface {
 
 /*ChangeCollector - node change collector interface implementation */
 type ChangeCollector struct {
-	Changes map[Node]Node
+	Changes map[string]*NodeChange
 	Deletes []Node
 }
 
 /*NewChangeCollector - a constructor to create a change collector */
 func NewChangeCollector() ChangeCollectorI {
 	cc := &ChangeCollector{}
-	cc.Changes = make(map[Node]Node)
+	cc.Changes = make(map[string]*NodeChange)
 	return cc
 }
 
 /*AddChange - implement interface */
 func (cc *ChangeCollector) AddChange(oldNode Node, newNode Node) {
+	nhash := newNode.GetHash()
 	if oldNode == nil {
-		cc.Changes[newNode] = nil
+		change := &NodeChange{}
+		change.New = newNode
+		cc.Changes[nhash] = change
 		return
 	}
-	prevOldNode, ok := cc.Changes[oldNode]
+	ohash := oldNode.GetHash()
+	prevChange, ok := cc.Changes[ohash]
 	if ok {
-		delete(cc.Changes, oldNode)
-		cc.Changes[newNode] = prevOldNode
+		delete(cc.Changes, ohash)
+		prevChange.New = newNode
+		cc.Changes[nhash] = prevChange
 	} else {
-		cc.Changes[newNode] = oldNode
+		change := &NodeChange{}
+		change.New = newNode
+		change.Old = oldNode
+		cc.Changes[nhash] = change
 	}
 }
 
@@ -53,8 +61,8 @@ func (cc *ChangeCollector) DeleteChange(oldNode Node) {
 func (cc *ChangeCollector) GetChanges() []*NodeChange {
 	changes := make([]*NodeChange, len(cc.Changes))
 	idx := 0
-	for k, v := range cc.Changes {
-		changes[idx] = &NodeChange{Old: v, New: k}
+	for _, v := range cc.Changes {
+		changes[idx] = v
 		idx++
 	}
 	return changes
@@ -68,9 +76,9 @@ func (cc *ChangeCollector) GetDeletes() []Node {
 /*UpdateChanges - update all the changes collected to a database */
 func (cc *ChangeCollector) UpdateChanges(ndb NodeDB, origin Origin, includeDeletes bool) error {
 	// TODO: it's possible to do batch changes instead of individual changes for PNodeDB
-	for u := range cc.Changes {
-		u.SetOrigin(origin)
-		err := ndb.PutNode(u.GetHashBytes(), u)
+	for _, c := range cc.Changes {
+		c.New.SetOrigin(origin)
+		err := ndb.PutNode(c.New.GetHashBytes(), c.New)
 		if err != nil {
 			return err
 		}
