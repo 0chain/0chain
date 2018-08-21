@@ -68,6 +68,16 @@ func (pndb *PNodeDB) DeleteNode(key Key) error {
 	return err
 }
 
+/*MultiPutNode - implement interface */
+func (pndb *PNodeDB) MultiPutNode(keys []Key, nodes []Node) error {
+	wb := gorocksdb.NewWriteBatch()
+	defer wb.Destroy()
+	for idx, key := range keys {
+		wb.Put(key, nodes[idx].Encode())
+	}
+	return pndb.db.Write(pndb.wo, wb)
+}
+
 /*MultiDeleteNode - implement interface */
 func (pndb *PNodeDB) MultiDeleteNode(keys []Key) error {
 	wb := gorocksdb.NewWriteBatch()

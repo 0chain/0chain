@@ -26,6 +26,7 @@ type NodeDB interface {
 	Iterate(ctx context.Context, handler NodeDBIteratorHandler) error
 	Size(ctx context.Context) int64
 
+	MultiPutNode(keys []Key, nodes []Node) error
 	MultiDeleteNode(keys []Key) error
 
 	PruneBelowOrigin(ctx context.Context, origin Origin) error
@@ -67,6 +68,17 @@ func (mndb *MemoryNodeDB) PutNode(key Key, node Node) error {
 func (mndb *MemoryNodeDB) DeleteNode(key Key) error {
 	skey := StrKey(key)
 	delete(mndb.Nodes, skey)
+	return nil
+}
+
+/*MultiPutNode - implement interface */
+func (mndb *MemoryNodeDB) MultiPutNode(keys []Key, nodes []Node) error {
+	for idx, key := range keys {
+		err := mndb.PutNode(key, nodes[idx])
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -227,6 +239,17 @@ func (lndb *LevelNodeDB) DeleteNode(key Key) error {
 		return nil
 	}
 	return c.DeleteNode(key)
+}
+
+/*MultiPutNode - implement interface */
+func (lndb *LevelNodeDB) MultiPutNode(keys []Key, nodes []Node) error {
+	for idx, key := range keys {
+		err := lndb.PutNode(key, nodes[idx])
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 /*MultiDeleteNode - implement interface */

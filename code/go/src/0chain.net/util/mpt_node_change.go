@@ -76,12 +76,18 @@ func (cc *ChangeCollector) GetDeletes() []Node {
 /*UpdateChanges - update all the changes collected to a database */
 func (cc *ChangeCollector) UpdateChanges(ndb NodeDB, origin Origin, includeDeletes bool) error {
 	// TODO: it's possible to do batch changes instead of individual changes for PNodeDB
+	keys := make([]Key, len(cc.Changes), len(cc.Changes))
+	nodes := make([]Node, len(cc.Changes), len(cc.Changes))
+	idx := 0
 	for _, c := range cc.Changes {
 		c.New.SetOrigin(origin)
-		err := ndb.PutNode(c.New.GetHashBytes(), c.New)
-		if err != nil {
-			return err
-		}
+		keys[idx] = c.New.GetHashBytes()
+		nodes[idx] = c.New
+		idx++
+	}
+	err := ndb.MultiPutNode(keys, nodes)
+	if err != nil {
+		return err
 	}
 	if includeDeletes {
 		for _, d := range cc.Deletes {
