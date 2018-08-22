@@ -316,9 +316,10 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	if !ok {
 		return nil, fmt.Errorf("invalid request %T", entity)
 	}
-	if GetServerChain().TxnMaxPayload > 0 {
-		txn_size := getTxnPayloadSize(txn) / 1024 //size in KB
-		if txn_size > GetServerChain().TxnMaxPayload {
+	max_txn_size := GetServerChain().TxnMaxPayload * 1024
+	if max_txn_size > 0 {
+		txn_size := getTxnPayloadSize(txn)
+		if txn_size > max_txn_size {
 			s := fmt.Sprintf("transaction payload exceeds the max payload (%d)", GetServerChain().TxnMaxPayload)
 			return nil, common.NewError("txn_exceed_max_payload", s)
 		}
