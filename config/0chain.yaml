@@ -25,6 +25,9 @@ server_chain:
     validation:
       batch_size: 1000
   round_range: 10000000
+  transaction:
+    payload:
+      max_size: 32 # KB
   client:
     discover: true
   network:

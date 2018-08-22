@@ -12,6 +12,7 @@ func SetupDefaultConfig() {
 	viper.SetDefault("server_chain.network.relay_time", 200)
 	viper.SetDefault("server_chain.network.messages.verification_tickets_to", "generator")
 	viper.SetDefault("server_chain.round_range", 10000000)
+	viper.SetDefault("server_chain.transaction.payload.max_size", 32)
 }
 
 /*SetupConfig - setup the configuration system */

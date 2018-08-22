@@ -15,7 +15,6 @@ import (
 /*SetupHandlers sets up the necessary API end points */
 func SetupHandlers() {
 	http.HandleFunc("/v1/transaction/get", common.ToJSONResponse(memorystore.WithConnectionHandler(GetTransaction)))
-	http.HandleFunc("/v1/transaction/put", datastore.ToJSONEntityReqResponse(datastore.DoAsyncEntityJSONHandler(memorystore.WithConnectionEntityJSONHandler(PutTransaction, transactionEntityMetadata), TransactionEntityChannel), transactionEntityMetadata))
 }
 
 /*GetTransaction - given an id returns the transaction information */

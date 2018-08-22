@@ -104,6 +104,7 @@ type Chain struct {
 	RoundRange          int64 `json:"round_range"`
 
 	BlockChain *ring.Ring `json:"-"`
+	TxnMaxPayload       int   `json:"transaction_max_payload"`
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
@@ -151,6 +152,7 @@ func NewChainFromConfig() *Chain {
 	chain.OwnerID = viper.GetString("server_chain.owner")
 	chain.ValidationBatchSize = viper.GetInt("server_chain.block.validation.batch_size")
 	chain.RoundRange = viper.GetInt64("server_chain.round_range")
+	chain.TxnMaxPayload = viper.GetInt("server_chain.transaction.payload.max_size")
 	verificationTicketsTo := viper.GetString("server_chain.network.messages.verification_tickets_to")
 	if verificationTicketsTo == "" || verificationTicketsTo == "all_miners" || verificationTicketsTo == "11" {
 		chain.VerificationTicketsTo = AllMiners

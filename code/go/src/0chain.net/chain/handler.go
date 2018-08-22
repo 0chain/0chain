@@ -4,9 +4,12 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
+
+	"0chain.net/transaction"
 
 	"0chain.net/node"
 	"0chain.net/round"
@@ -32,6 +35,9 @@ func SetupHandlers() {
 
 	http.HandleFunc("/", HomePageHandler)
 	http.HandleFunc("/_diagnostics", DiagnosticsHomepageHandler)
+
+	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
+	http.HandleFunc("/v1/transaction/put", datastore.ToJSONEntityReqResponse(datastore.DoAsyncEntityJSONHandler(memorystore.WithConnectionEntityJSONHandler(PutTransaction, transactionEntityMetadata), transaction.TransactionEntityChannel), transactionEntityMetadata))
 }
 
 /*GetChainHandler - given an id returns the chain information */
@@ -303,4 +309,33 @@ func (c *Chain) SendStatsWriter(w http.ResponseWriter, r *http.Request) {
 		n.PrintSendStats(w)
 	}
 	fmt.Fprintf(w, "</table>")
+}
+
+func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+	txn, ok := entity.(*transaction.Transaction)
+	if !ok {
+		return nil, fmt.Errorf("invalid request %T", entity)
+	}
+	if GetServerChain().TxnMaxPayload > 0 {
+		txn_size := getTxnPayloadSize(txn) / 1024 //size in KB
+		if txn_size > GetServerChain().TxnMaxPayload {
+			s := fmt.Sprintf("transaction payload exceeds the max payload (%d)", GetServerChain().TxnMaxPayload)
+			return nil, common.NewError("txn_exceed_max_payload", s)
+		}
+	}
+	return transaction.PutTransaction(ctx, txn)
+}
+
+func getTxnPayloadSize(txn *transaction.Transaction) int {
+	var sizeInBytes int = 0
+
+	sizeInBytes += len(txn.ClientID)
+	sizeInBytes += int(reflect.TypeOf(txn.CreationDate).Size())
+	sizeInBytes += len(txn.Hash)
+	sizeInBytes += len(txn.Signature)
+	sizeInBytes += len(txn.ToClientID)
+	sizeInBytes += len(txn.TransactionData)
+	sizeInBytes += int(reflect.TypeOf(txn.Value).Size())
+
+	return sizeInBytes
 }
