@@ -26,7 +26,11 @@ var wallets []*wallet.Wallet
 /*TransactionGenerator - generates a steady stream of transactions */
 func TransactionGenerator(blockSize int32) {
 	wallet.SetupWallet()
-	GenerateClients(1024)
+	var numClients int32 = 1024
+	if blockSize*4 < numClients {
+		numClients = 4 * blockSize
+	}
+	GenerateClients(numClients)
 	csize := len(wallets)
 	numWorkers := 1
 	switch {
@@ -140,7 +144,7 @@ func GetOwnerWallet(keysFile string) *wallet.Wallet {
 }
 
 /*GenerateClients - generate the given number of clients */
-func GenerateClients(numClients int) {
+func GenerateClients(numClients int32) {
 	ownerWallet := GetOwnerWallet("config/owner_keys.txt")
 	rs := rand.NewSource(time.Now().UnixNano())
 	prng := rand.New(rs)
@@ -154,7 +158,7 @@ func GenerateClients(numClients int) {
 	tctx := memorystore.WithEntityConnection(common.GetRootContext(), txnMetadataProvider)
 	tctx = datastore.WithAsyncChannel(ctx, transaction.TransactionEntityChannel)
 
-	for i := 0; i < numClients; i++ {
+	for i := int32(0); i < numClients; i++ {
 		//client side code
 		w := &wallet.Wallet{}
 		w.Initialize()
