@@ -27,7 +27,7 @@ server_chain:
   round_range: 10000000
   transaction:
     payload:
-      max_size: 32 # KB
+      max_size: 32768 # bytes
   client:
     discover: true
   network:
