@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"0chain.net/config"
 	"0chain.net/node"
 	"0chain.net/round"
 	"0chain.net/util"
@@ -32,6 +31,7 @@ func SetupHandlers() {
 	http.HandleFunc("/v1/block/get/recent_finalized", common.ToJSONResponse(RecentFinalizedBlockHandler))
 
 	http.HandleFunc("/", HomePageHandler)
+	http.HandleFunc("/_diagnostics", DiagnosticsHomepageHandler)
 }
 
 /*GetChainHandler - given an id returns the chain information */
@@ -159,20 +159,27 @@ var StartTime time.Time
 /*HomePageHandler - provides basic info when accessing the home page of the server */
 func HomePageHandler(w http.ResponseWriter, r *http.Request) {
 	sc := GetServerChain()
+	w.Header().Set("Content-Type", "text/html;charset=UTF-8")
+	fmt.Fprintf(w, "<div>Working on the chain: %v</div>\n", sc.GetKey())
+	fmt.Fprintf(w, "<div>I am a %v with set rank of (%v) <ul><li>id:%v</li><li>public_key:%v</li></ul></div>\n", node.Self.GetNodeTypeName(), node.Self.SetIndex, node.Self.GetKey(), node.Self.PublicKey)
+}
+
+/*DiagnosticsHomepageHandler - handler to display the /_diagnostics page */
+func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
+	sc := GetServerChain()
+	w.Header().Set("Content-Type", "text/html;charset=UTF-8")
 	fmt.Fprintf(w, "<div>Running since %v (%v) ...\n", StartTime, time.Since(StartTime))
 	fmt.Fprintf(w, "<div>Working on the chain: %v</div>\n", sc.GetKey())
 	fmt.Fprintf(w, "<div>I am a %v with set rank of (%v) <ul><li>id:%v</li><li>public_key:%v</li></ul></div>\n", node.Self.GetNodeTypeName(), node.Self.SetIndex, node.Self.GetKey(), node.Self.PublicKey)
-	if !config.MainNet() {
-		fmt.Fprintf(w, "<ul>")
-		fmt.Fprintf(w, "<li><a href='/v1/config/get'>/v1/config/get</a></li>")
-		fmt.Fprintf(w, "<li><a href='/_chain_stats'>/_chain_stats</a></li>")
-		fmt.Fprintf(w, "<li><a href='/_diagnostics/info'>/_diagnostics/info</a></li>")
-		fmt.Fprintf(w, "<li><a href='/_diagnostics/n2n/info'>/_diagnostics/n2n/info</a></li>")
-		fmt.Fprintf(w, "<li>/_diagnostics/logs [Level <a href='/_diagnostics/logs?detail=1'>1</a>, <a href='/_diagnostics/logs?detail=2'>2</a>, <a href='/_diagnostics/logs?detail=3'>3</a>]</li>")
-		fmt.Fprintf(w, "<li>/_diagnostics/n2n_logs [Level <a href='/_diagnostics/n2n_logs?detail=1'>1</a>, <a href='/_diagnostics/n2n_logs?detail=2'>2</a>, <a href='/_diagnostics/n2n_logs?detail=3'>3</a>]</li>")
-		fmt.Fprintf(w, "<li><a href='/debug/pprof/'>/debug/pprof/</a></li>")
-		fmt.Fprintf(w, "</ul>")
-	}
+	fmt.Fprintf(w, "<ul>")
+	fmt.Fprintf(w, "<li><a href='/v1/config/get'>/v1/config/get</a></li>")
+	fmt.Fprintf(w, "<li><a href='/_chain_stats'>/_chain_stats</a></li>")
+	fmt.Fprintf(w, "<li><a href='/_diagnostics/info'>/_diagnostics/info</a></li>")
+	fmt.Fprintf(w, "<li><a href='/_diagnostics/n2n/info'>/_diagnostics/n2n/info</a></li>")
+	fmt.Fprintf(w, "<li>/_diagnostics/logs [Level <a href='/_diagnostics/logs?detail=1'>1</a>, <a href='/_diagnostics/logs?detail=2'>2</a>, <a href='/_diagnostics/logs?detail=3'>3</a>]</li>")
+	fmt.Fprintf(w, "<li>/_diagnostics/n2n_logs [Level <a href='/_diagnostics/n2n_logs?detail=1'>1</a>, <a href='/_diagnostics/n2n_logs?detail=2'>2</a>, <a href='/_diagnostics/n2n_logs?detail=3'>3</a>]</li>")
+	fmt.Fprintf(w, "<li><a href='/debug/pprof/'>/debug/pprof/</a></li>")
+	fmt.Fprintf(w, "</ul>")
 	fmt.Fprintf(w, "<div><div>Miners (%v)</div>", sc.Miners.Size())
 	printNodePool(w, sc.Miners)
 	fmt.Fprintf(w, "</div>")
