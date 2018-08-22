@@ -1,8 +1,8 @@
 package state
 
 import (
-	"fmt"
-	"strconv"
+	"bytes"
+	"encoding/binary"
 
 	"0chain.net/encryption"
 	"0chain.net/util"
@@ -13,7 +13,13 @@ type Balance int64
 
 //State - state that needs consensus within the blockchain.
 type State struct {
-	Balance Balance `json:"balance"`
+	/* Note: origin is way to parallelize state pruning with state saving. That is, when a leaf node is deleted and added later, but the pruning logic of
+	marking the nodes by origin is complete and before the sweeping the nodes to delete, the same leaf node comes back, it gets deleted. However, by
+	having the origin (round in the blockchain) part of the state ensures that the same logical leaf has a new hash and avoid this issue. We are getting
+	parallelism without explicit locks with this approach.
+	*/
+	Origin  util.Origin `json:"origin"`
+	Balance Balance     `json:"balance"`
 }
 
 /*GetHash - implement SecureSerializableValueI interface */
@@ -28,17 +34,27 @@ func (s *State) GetHashBytes() []byte {
 
 /*Encode - implement SecureSerializableValueI interface */
 func (s *State) Encode() []byte {
-	return []byte(fmt.Sprintf("%v", s.Balance))
+	buf := bytes.NewBuffer(nil)
+	binary.Write(buf, binary.LittleEndian, s.Origin)
+	binary.Write(buf, binary.LittleEndian, s.Balance)
+	return buf.Bytes()
 }
 
 /*Decode - implement SecureSerializableValueI interface */
 func (s *State) Decode(data []byte) error {
-	balance, err := strconv.ParseInt(string(data), 10, 63)
-	if err != nil {
-		return err
-	}
+	buf := bytes.NewBuffer(data)
+	var origin util.Origin
+	var balance Balance
+	binary.Read(buf, binary.LittleEndian, &origin)
+	binary.Read(buf, binary.LittleEndian, &balance)
+	s.Origin = origin
 	s.Balance = Balance(balance)
 	return nil
+}
+
+/*SetOrigin - set the origin for this state to make it unique if the same logical state is arrived again in a different round */
+func (s *State) SetOrigin(origin util.Origin) {
+	s.Origin = origin
 }
 
 //Deserializer - a deserializer to convert raw serialized data to a state object

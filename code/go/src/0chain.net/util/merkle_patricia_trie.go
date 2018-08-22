@@ -662,3 +662,8 @@ func (mpt *MerklePatriciaTrie) UpdateOrigin(ctx context.Context, origin Origin) 
 	}
 	return err
 }
+
+/*IsMPTValid - checks if the merkle tree is in valid state or not */
+func IsMPTValid(mpt MerklePatriciaTrieI) error {
+	return mpt.Iterate(context.TODO(), func(ctxt context.Context, path Path, key Key, node Node) error { return nil }, NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
+}

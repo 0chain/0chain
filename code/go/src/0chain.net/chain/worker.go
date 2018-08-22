@@ -70,24 +70,41 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 	mpt := util.NewMerklePatriciaTrie(c.StateDB)
 	mpt.SetRoot(bs.ClientStateHash)
 	newOrigin := util.Origin(bs.Round)
-	t := time.Now()
+	Logger.Info("prune client state - new origin", zap.Int64("current_round", c.CurrentRound), zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.String("state_hash", util.ToHex(bs.ClientStateHash)))
+	/*
+		if err := util.IsMPTValid(mpt); err != nil {
+			panic(err)
+		}
+	*/
 	pctx := util.WithPruneStats(ctx)
+	t := time.Now()
 	err := mpt.UpdateOrigin(pctx, newOrigin)
 	d1 := time.Since(t)
-	Logger.Info("prune client state - new origin", zap.Int64("current_round", c.CurrentRound), zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.String("state_hash", util.ToHex(bs.ClientStateHash)))
+	if err != nil {
+		Logger.Error("prune client state (update origin)", zap.Error(err))
+	} else {
+		Logger.Info("prune client state (update origin)", zap.Int64("current_round", c.CurrentRound), zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.String("state_hash", util.ToHex(bs.ClientStateHash)), zap.Duration("time", d1))
+	}
 	if config.DevConfiguration.State {
 		fmt.Fprintf(stateOut, "update to new origin: %v %v %v\n", util.ToHex(mpt.GetRoot()), bs.Round, newOrigin)
 		mpt.PrettyPrint(stateOut)
+		stateOut.Sync()
 	}
 	t1 := time.Now()
-	if err != nil {
-		Logger.Error("prune client state (update origin)", zap.Error(err))
-	}
 	err = c.StateDB.PruneBelowOrigin(pctx, newOrigin)
 	if err != nil {
 		Logger.Error("prune client state error", zap.Error(err))
 	}
+	d2 := time.Since(t1)
 	ps := util.GetPruneStats(pctx)
 	Logger.Info("prune client state stats", zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.String("state_hash", util.ToHex(bs.ClientStateHash)),
-		zap.Duration("duration", time.Since(t)), zap.Duration("update", d1), zap.Duration("prune", time.Since(t1)), zap.Any("stats", ps))
+		zap.Duration("duration", time.Since(t)), zap.Duration("update", d1), zap.Duration("prune", d2), zap.Any("stats", ps))
+	/*
+			if err = util.IsMPTValid(mpt); err != nil {
+			fmt.Fprintf(stateOut, "prune validation failure: %v %v %v\n", util.ToHex(mpt.GetRoot()), bs.Round, newOrigin)
+			mpt.PrettyPrint(stateOut)
+			stateOut.Sync()
+			panic(err)
+		}
+	*/
 }

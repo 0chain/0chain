@@ -99,13 +99,34 @@ func (c *Chain) finalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 		c.UpdateChainInfo(fb)
 		if fb.ClientState != nil {
 			ts := time.Now()
+			/*
+				if err := util.IsMPTValid(fb.ClientState); err != nil {
+					fmt.Fprintf(stateOut, "save changes failure (bs): %v block: %v state: %v prev_block: %v prev_state: %v\n", fb.Round, fb.Hash, util.ToHex(fb.ClientStateHash), fb.PrevHash, util.ToHex(fb.PrevBlock.ClientStateHash))
+					fb.ClientState.PrettyPrint(stateOut)
+					stateOut.Sync()
+					panic(err)
+				}*/
 			err := fb.ClientState.SaveChanges(c.StateDB, util.Origin(fb.Round), false)
 			if err != nil {
 				Logger.Error("finalize round - save state", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.Duration("time", time.Since(ts)), zap.String("client_state", util.ToHex(fb.ClientStateHash)), zap.Int("changes", len(fb.ClientState.GetChangeCollector().GetChanges())), zap.Error(err))
 			} else {
 				Logger.Info("finalize round - save state", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.Duration("time", time.Since(ts)), zap.String("client_state", util.ToHex(fb.ClientStateHash)), zap.Int("changes", len(fb.ClientState.GetChangeCollector().GetChanges())))
 			}
+			/*
+				if err := util.IsMPTValid(fb.ClientState); err != nil {
+					fmt.Fprintf(stateOut, "save changes failure (br): %v block: %v state: %v prev_block: %v prev_state: %v\n", fb.Round, fb.Hash, util.ToHex(fb.ClientStateHash), fb.PrevHash, util.ToHex(fb.PrevBlock.ClientStateHash))
+					fb.ClientState.PrettyPrint(stateOut)
+					stateOut.Sync()
+					panic(err)
+				}*/
 			c.rebaseState(fb)
+			/*
+				if err := util.IsMPTValid(fb.ClientState); err != nil {
+					fmt.Fprintf(stateOut, "save changes failure (ar): %v block: %v state: %v prev_block: %v prev_state: %v\n", fb.Round, fb.Hash, util.ToHex(fb.ClientStateHash), fb.PrevHash, util.ToHex(fb.PrevBlock.ClientStateHash))
+					fb.ClientState.PrettyPrint(stateOut)
+					stateOut.Sync()
+					panic(err)
+				}*/
 			if config.DevConfiguration.State && stateOut != nil {
 				fmt.Fprintf(stateOut, "round: %v block: %v state: %v prev_block: %v prev_state: %v\n", fb.Round, fb.Hash, util.ToHex(fb.ClientStateHash), fb.PrevHash, util.ToHex(fb.PrevBlock.ClientStateHash))
 				fb.ClientState.PrettyPrint(stateOut)
@@ -160,14 +181,11 @@ func (c *Chain) GetNotarizedBlockForRound(r *round.Round, nbrequestor node.Entit
 		}
 		//TODO: this may not be the best round block or the best chain weight block. Do we do that extra work?
 		r.AddNotarizedBlock(b)
-		Logger.Info("get notarized block", zap.Int64("round", r.Number), zap.String("block", b.Hash))
+		Logger.Info("get notarized block", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.String("state", util.ToHex(b.ClientStateHash)))
 		return nil, nil
 	}
-	node := c.Miners.RequestEntity(ctx, nbrequestor(params, handler))
-	if node == nil {
-		return r.GetBestNotarizedBlock()
-	}
-	return nil
+	c.Miners.RequestEntity(ctx, nbrequestor(params, handler))
+	return r.GetBestNotarizedBlock()
 }
 
 /*GetNotarizedBlock - get a notarized block for a round */

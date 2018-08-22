@@ -127,6 +127,7 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 			}
 			return false
 		}
+		fs.SetOrigin(util.Origin(b.Round))
 		fs.Balance -= tbalance
 		if fs.Balance == 0 {
 			Logger.Info("update state - remove client", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client", txn.ClientID), zap.Any("txn", txn))
@@ -137,6 +138,7 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 		if err != nil {
 			Logger.Error("update state - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
 		}
+		ts.SetOrigin(util.Origin(b.Round))
 		ts.Balance += tbalance
 		_, err = clientState.Insert(util.Path(txn.ToClientID), ts)
 		if err != nil {
