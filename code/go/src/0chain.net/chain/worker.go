@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/block"
 	"0chain.net/config"
 	. "0chain.net/logging"
 	"0chain.net/util"
@@ -54,39 +55,39 @@ func (c *Chain) PruneClientStateWorker(ctx context.Context) {
 }
 
 /*PruneBelowCount - prune nodes below these many rounds */
-const PruneBelowCount = 100
+const PruneBelowCount = 1000
 
 func (c *Chain) pruneClientState(ctx context.Context) {
-	lfb := c.LatestFinalizedBlock
-	for ; lfb != nil && !lfb.IsStateComputed(); lfb = lfb.PrevBlock {
+	bc := c.BlockChain
+	bc = bc.Move(-PruneBelowCount)
+	for i := 0; i < 10 && bc.Value == nil; i++ {
+		bc = bc.Prev()
 	}
-	if lfb == nil {
+	if bc.Value == nil {
 		return
 	}
-	if lfb.Round < PruneBelowCount {
-		Logger.Info("prune client state (not enough rounds)", zap.Int64("round", c.CurrentRound))
-		return
-	}
-	mpt := lfb.ClientState // TODO: We actually need the root hash at the newOrigin, we shouldn't be pruning w.r.t nodes reachable from current
-	no := lfb.Round - PruneBelowCount
-	no -= no % 100
-	newOrigin := util.Origin(no)
+	bs := bc.Value.(*block.BlockSummary)
+	mpt := util.NewMerklePatriciaTrie(c.StateDB)
+	mpt.SetRoot(bs.ClientStateHash)
+	newOrigin := util.Origin(bs.Round)
 	t := time.Now()
 	pctx := util.WithPruneStats(ctx)
 	err := mpt.UpdateOrigin(pctx, newOrigin)
 	d1 := time.Since(t)
+	Logger.Info("prune client state - new origin", zap.Int64("current_round", c.CurrentRound), zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.String("state_hash", util.ToHex(bs.ClientStateHash)))
 	if config.DevConfiguration.State {
-		fmt.Fprintf(stateOut, "update to new origin: %v %v %v %v\n", util.ToHex(mpt.GetRoot()), lfb.Round, lfb.IsStateComputed(), newOrigin)
+		fmt.Fprintf(stateOut, "update to new origin: %v %v %v\n", util.ToHex(mpt.GetRoot()), bs.Round, newOrigin)
 		mpt.PrettyPrint(stateOut)
 	}
 	t1 := time.Now()
 	if err != nil {
-		Logger.Info("prune client state (update origin)", zap.Error(err))
+		Logger.Error("prune client state (update origin)", zap.Error(err))
 	}
 	err = c.StateDB.PruneBelowOrigin(pctx, newOrigin)
 	if err != nil {
 		Logger.Error("prune client state error", zap.Error(err))
 	}
 	ps := util.GetPruneStats(pctx)
-	Logger.Info("client state prune time", zap.Duration("duration", time.Since(t)), zap.Duration("update", d1), zap.Duration("prune", time.Since(t1)), zap.Any("stats", ps))
+	Logger.Info("prune client state stats", zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.String("state_hash", util.ToHex(bs.ClientStateHash)),
+		zap.Duration("duration", time.Since(t)), zap.Duration("update", d1), zap.Duration("prune", time.Since(t1)), zap.Any("stats", ps))
 }

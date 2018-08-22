@@ -6,6 +6,7 @@ import (
 	"0chain.net/common"
 	"0chain.net/datastore"
 	"0chain.net/ememorystore"
+	"0chain.net/util"
 )
 
 /*BlockSummary - the summary of the block */
@@ -13,10 +14,11 @@ type BlockSummary struct {
 	datastore.VersionField
 	datastore.CreationDateField
 	datastore.NOIDField
-	Hash            string `json:"hash"`
-	Round           int64  `json:"round"`
-	RoundRandomSeed int64  `json:"round_random_seed"`
-	MerkleTreeRoot  string `json:"merkle_tree_root"`
+	Hash            string   `json:"hash"`
+	Round           int64    `json:"round"`
+	RoundRandomSeed int64    `json:"round_random_seed"`
+	MerkleTreeRoot  string   `json:"merkle_tree_root"`
+	ClientStateHash util.Key `json:"state_hash"`
 }
 
 /*SetupBlockSummaryDB - sets up the block summary database */

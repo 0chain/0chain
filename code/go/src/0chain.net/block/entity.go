@@ -353,6 +353,7 @@ func (b *Block) GetSummary() *BlockSummary {
 	bs.RoundRandomSeed = b.RoundRandomSeed
 	bs.CreationDate = b.CreationDate
 	bs.MerkleTreeRoot = b.GetMerkleTree().GetRoot()
+	bs.ClientStateHash = b.ClientStateHash
 	return bs
 }
 

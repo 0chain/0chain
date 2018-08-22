@@ -36,6 +36,7 @@ type Origin int64
 type Node interface {
 	Clone() Node
 	GetNodeType() byte
+	Clear()
 	SecureSerializableValueI
 	OriginTrackerI
 }
@@ -56,6 +57,11 @@ func (vn *ValueNode) Clone() Node {
 /*GetNodeType - implement interface */
 func (vn *ValueNode) GetNodeType() byte {
 	return NodeTypeValueNode
+}
+
+/*Clear - implement interface */
+func (vn *ValueNode) Clear() {
+	vn.Value = nil
 }
 
 /*GetHash - implements SecureSerializableValue interface */
@@ -188,6 +194,12 @@ func (ln *LeafNode) Clone() Node {
 /*GetNodeType - implement interface */
 func (ln *LeafNode) GetNodeType() byte {
 	return NodeTypeLeafNode
+}
+
+/*Clear - implement interface */
+func (ln *LeafNode) Clear() {
+	ln.Value = nil
+	ln.Path = nil
 }
 
 /*Encode - implement interface */
@@ -338,6 +350,11 @@ func (fn *FullNode) GetNodeType() byte {
 	return NodeTypeFullNode
 }
 
+/*Clear - implement interface */
+func (fn *FullNode) Clear() {
+	fn.Value = nil
+}
+
 func (fn *FullNode) index(c byte) byte {
 	if c >= 48 && c <= 57 {
 		return c - 48
@@ -435,6 +452,12 @@ func (en *ExtensionNode) Clone() Node {
 /*GetNodeType - implement interface */
 func (en *ExtensionNode) GetNodeType() byte {
 	return NodeTypeExtensionNode
+}
+
+/*Clear - implement interface */
+func (en *ExtensionNode) Clear() {
+	en.Path = nil
+	en.NodeKey = nil
 }
 
 /*Encode - implement interface */

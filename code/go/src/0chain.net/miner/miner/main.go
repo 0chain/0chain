@@ -100,6 +100,10 @@ func main() {
 	serverChain.Blobbers.ComputeProperties()
 	Logger.Info("self identity", zap.Any("set_index", node.Self.Node.SetIndex), zap.Any("id", node.Self.Node.GetKey()))
 
+	if config.DevConfiguration.State {
+		chain.SetupStateLogger("/tmp/state.txt")
+	}
+
 	mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"))
 
 	mode := "main net"

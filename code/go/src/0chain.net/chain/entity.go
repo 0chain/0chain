@@ -1,6 +1,7 @@
 package chain
 
 import (
+	"container/ring"
 	"context"
 	"fmt"
 	"math"
@@ -101,6 +102,8 @@ type Chain struct {
 
 	ValidationBatchSize int   `json:"validation_size"`
 	RoundRange          int64 `json:"round_range"`
+
+	BlockChain *ring.Ring `json:"-"`
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
@@ -182,6 +185,7 @@ func (c *Chain) Initialize() {
 	c.FinalizedRoundsChannel = make(chan *round.Round, 128)
 	c.ClientStateDeserializer = &state.Deserializer{}
 	c.StateDB = stateDB
+	c.BlockChain = ring.New(10000)
 }
 
 /*SetupEntity - setup the entity */
@@ -260,6 +264,10 @@ func (c *Chain) AddBlock(b *block.Block) {
 	}
 	c.blocksMutex.Lock()
 	defer c.blocksMutex.Unlock()
+	c.addBlock(b)
+}
+
+func (c *Chain) addBlock(b *block.Block) {
 	if _, ok := c.Blocks[b.Hash]; ok {
 		return
 	}
@@ -270,9 +278,9 @@ func (c *Chain) AddBlock(b *block.Block) {
 			b.SetPreviousBlock(pb)
 		} else {
 			pb = c.GetNotarizedBlock(b.PrevHash, MinerNotarizedBlockRequestor)
-			//pb = nil
 			if pb != nil {
 				b.SetPreviousBlock(pb)
+				c.addBlock(pb)
 			} else {
 				b.SetStateDB(nil)
 				Logger.Info("previous block not present", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("prev_block", b.PrevHash))
