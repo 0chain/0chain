@@ -9,7 +9,6 @@ import (
 
 	"0chain.net/block"
 	"0chain.net/common"
-	"0chain.net/config"
 	"0chain.net/datastore"
 	. "0chain.net/logging"
 	"0chain.net/round"
@@ -99,39 +98,19 @@ func (c *Chain) finalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 		c.UpdateChainInfo(fb)
 		if fb.ClientState != nil {
 			ts := time.Now()
-			/*
-				if err := util.IsMPTValid(fb.ClientState); err != nil {
-					fmt.Fprintf(stateOut, "save changes failure (bs): %v block: %v state: %v prev_block: %v prev_state: %v\n", fb.Round, fb.Hash, util.ToHex(fb.ClientStateHash), fb.PrevHash, util.ToHex(fb.PrevBlock.ClientStateHash))
-					fb.ClientState.PrettyPrint(stateOut)
-					stateOut.Sync()
-					panic(err)
-				}*/
 			err := fb.ClientState.SaveChanges(c.StateDB, util.Origin(fb.Round), false)
 			if err != nil {
 				Logger.Error("finalize round - save state", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.Duration("time", time.Since(ts)), zap.String("client_state", util.ToHex(fb.ClientStateHash)), zap.Int("changes", len(fb.ClientState.GetChangeCollector().GetChanges())), zap.Error(err))
 			} else {
 				Logger.Info("finalize round - save state", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.Duration("time", time.Since(ts)), zap.String("client_state", util.ToHex(fb.ClientStateHash)), zap.Int("changes", len(fb.ClientState.GetChangeCollector().GetChanges())))
 			}
-			/*
-				if err := util.IsMPTValid(fb.ClientState); err != nil {
-					fmt.Fprintf(stateOut, "save changes failure (br): %v block: %v state: %v prev_block: %v prev_state: %v\n", fb.Round, fb.Hash, util.ToHex(fb.ClientStateHash), fb.PrevHash, util.ToHex(fb.PrevBlock.ClientStateHash))
-					fb.ClientState.PrettyPrint(stateOut)
-					stateOut.Sync()
-					panic(err)
-				}*/
 			c.rebaseState(fb)
 			/*
-				if err := util.IsMPTValid(fb.ClientState); err != nil {
-					fmt.Fprintf(stateOut, "save changes failure (ar): %v block: %v state: %v prev_block: %v prev_state: %v\n", fb.Round, fb.Hash, util.ToHex(fb.ClientStateHash), fb.PrevHash, util.ToHex(fb.PrevBlock.ClientStateHash))
+				if config.DevConfiguration.State && stateOut != nil {
+					fmt.Fprintf(stateOut, "round: %v block: %v state: %v prev_block: %v prev_state: %v\n", fb.Round, fb.Hash, util.ToHex(fb.ClientStateHash), fb.PrevHash, util.ToHex(fb.PrevBlock.ClientStateHash))
 					fb.ClientState.PrettyPrint(stateOut)
 					stateOut.Sync()
-					panic(err)
 				}*/
-			if config.DevConfiguration.State && stateOut != nil {
-				fmt.Fprintf(stateOut, "round: %v block: %v state: %v prev_block: %v prev_state: %v\n", fb.Round, fb.Hash, util.ToHex(fb.ClientStateHash), fb.PrevHash, util.ToHex(fb.PrevBlock.ClientStateHash))
-				fb.ClientState.PrettyPrint(stateOut)
-				stateOut.Sync()
-			}
 		}
 		bsh.UpdateFinalizedBlock(ctx, fb)
 		frb := c.GetRoundBlocks(fb.Round)

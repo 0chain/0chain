@@ -2,11 +2,9 @@ package chain
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"0chain.net/block"
-	"0chain.net/config"
 	. "0chain.net/logging"
 	"0chain.net/util"
 	"go.uber.org/zap"
@@ -71,11 +69,6 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 	mpt.SetRoot(bs.ClientStateHash)
 	newOrigin := util.Origin(bs.Round)
 	Logger.Info("prune client state - new origin", zap.Int64("current_round", c.CurrentRound), zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.String("state_hash", util.ToHex(bs.ClientStateHash)))
-	/*
-		if err := util.IsMPTValid(mpt); err != nil {
-			panic(err)
-		}
-	*/
 	pctx := util.WithPruneStats(ctx)
 	t := time.Now()
 	err := mpt.UpdateOrigin(pctx, newOrigin)
@@ -85,11 +78,12 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 	} else {
 		Logger.Info("prune client state (update origin)", zap.Int64("current_round", c.CurrentRound), zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.String("state_hash", util.ToHex(bs.ClientStateHash)), zap.Duration("time", d1))
 	}
-	if config.DevConfiguration.State {
-		fmt.Fprintf(stateOut, "update to new origin: %v %v %v\n", util.ToHex(mpt.GetRoot()), bs.Round, newOrigin)
-		mpt.PrettyPrint(stateOut)
-		stateOut.Sync()
-	}
+	/*
+		if config.DevConfiguration.State {
+			fmt.Fprintf(stateOut, "update to new origin: %v %v %v\n", util.ToHex(mpt.GetRoot()), bs.Round, newOrigin)
+			mpt.PrettyPrint(stateOut)
+			stateOut.Sync()
+		}*/
 	t1 := time.Now()
 	err = c.StateDB.PruneBelowOrigin(pctx, newOrigin)
 	if err != nil {
