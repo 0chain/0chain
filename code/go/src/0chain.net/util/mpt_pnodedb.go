@@ -24,9 +24,11 @@ type PNodeDB struct {
 func NewPNodeDB(dataDir string) (*PNodeDB, error) {
 	bbto := gorocksdb.NewDefaultBlockBasedTableOptions()
 	bbto.SetBlockCache(gorocksdb.NewLRUCache(3 << 30))
+	bbto.SetFilterPolicy(gorocksdb.NewBloomFilter(10))
 	opts := gorocksdb.NewDefaultOptions()
 	opts.SetBlockBasedTableFactory(bbto)
 	opts.SetCreateIfMissing(true)
+	opts.OptimizeForPointLookup(64)
 	db, err := gorocksdb.OpenDb(opts, dataDir)
 	if err != nil {
 		return nil, err
