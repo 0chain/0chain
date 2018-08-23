@@ -487,7 +487,7 @@ func (mpt *MerklePatriciaTrie) insertAfterPathTraversal(value Serializable, node
 		nnode.PutChild(nodeImpl.Path[0], ckey)
 		return mpt.insertNode(node, nnode)
 	default:
-		panic("uknown node type")
+		panic("unknown node type")
 	}
 }
 
@@ -511,7 +511,7 @@ func (mpt *MerklePatriciaTrie) deleteAfterPathTraversal(node Node) (Node, Key, e
 	case *ExtensionNode:
 		panic("this should not happen!")
 	default:
-		panic("uknown node type")
+		panic("unknown node type")
 	}
 }
 

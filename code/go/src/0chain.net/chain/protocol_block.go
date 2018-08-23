@@ -115,7 +115,7 @@ Simple 3 miner scenario :
 1) a discovered b & c.
 2) b discovered a.
 3) b and c are yet to discover each other
-4) a generated a block and sent it to b & c, got it notarized send next round started
+4) a generated a block and sent it to b & c, got it notarized and next round started
 5) c is the generator who generated the block. He will only send it to a as b is not discovered to be active.
     But if the prior block has b's signature (may or may not, but if it did), c can discover b is active before generating the block and so will send it to b
 */
