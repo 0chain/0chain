@@ -201,7 +201,7 @@ func printNodePool(w http.ResponseWriter, np *node.Pool) {
 	fmt.Fprintf(w, "table, td, th { border: 1px solid black; }\n")
 	fmt.Fprintf(w, "</style>")
 	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
-	fmt.Fprintf(w, "<tr><td>Set Index</td><td>Node</td><td>Sent</td><td>Received</td><td>Last Active</td></tr>")
+	fmt.Fprintf(w, "<tr><td>Set Index</td><td>Node</td><td>Sent</td><td>Send Errors</td><td>Received</td><td>Last Active</td></tr>")
 	for _, nd := range nodes {
 		fmt.Fprintf(w, "<tr>")
 		fmt.Fprintf(w, "<td>%d</td>", nd.SetIndex)
@@ -211,6 +211,7 @@ func printNodePool(w http.ResponseWriter, np *node.Pool) {
 			fmt.Fprintf(w, "<td><a href='http://%v:%v/'>%v%.3d</a></td>", nd.Host, nd.Port, nd.GetNodeTypeName(), nd.SetIndex)
 		}
 		fmt.Fprintf(w, "<td class='number'>%d</td>", nd.Sent)
+		fmt.Fprintf(w, "<td class='number'>%d</td>", nd.SendErrors)
 		fmt.Fprintf(w, "<td class='number'>%d</td>", nd.Received)
 		fmt.Fprintf(w, "<td>%v</td>", nd.LastActiveTime)
 		fmt.Fprintf(w, "</tr>")

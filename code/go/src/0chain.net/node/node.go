@@ -65,8 +65,9 @@ type Node struct {
 	CommChannel    chan bool
 
 	//These are approximiate as we are not going to lock to update
-	Sent     int64 // messages sent to this node
-	Received int64 // messages received from this node
+	Sent       int64 // messages sent to this node
+	SendErrors int64 // failed message sent to this node
+	Received   int64 // messages received from this node
 
 	TimersByURI map[string]metrics.Timer
 }

@@ -186,6 +186,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			N2n.Info("sending", zap.Any("from", Self.SetIndex), zap.Any("to", receiver.SetIndex), zap.Duration("duration", time.Since(ts)), zap.Any("handler", uri), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()))
 
 			if err != nil {
+				receiver.SendErrors++
 				N2n.Error("sending", zap.Any("from", Self.SetIndex), zap.Any("to", receiver.SetIndex), zap.Duration("duration", time.Since(ts)), zap.Any("handler", uri), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Error(err))
 				return false
 			}
