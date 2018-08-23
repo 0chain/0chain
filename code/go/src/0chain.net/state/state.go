@@ -18,8 +18,8 @@ type State struct {
 	having the origin (round in the blockchain) part of the state ensures that the same logical leaf has a new hash and avoid this issue. We are getting
 	parallelism without explicit locks with this approach.
 	*/
-	Origin  util.Origin `json:"origin"`
-	Balance Balance     `json:"balance"`
+	Round   int64   `json:"round"`
+	Balance Balance `json:"balance"`
 }
 
 /*GetHash - implement SecureSerializableValueI interface */
@@ -35,7 +35,7 @@ func (s *State) GetHashBytes() []byte {
 /*Encode - implement SecureSerializableValueI interface */
 func (s *State) Encode() []byte {
 	buf := bytes.NewBuffer(nil)
-	binary.Write(buf, binary.LittleEndian, s.Origin)
+	binary.Write(buf, binary.LittleEndian, s.Round)
 	binary.Write(buf, binary.LittleEndian, s.Balance)
 	return buf.Bytes()
 }
@@ -43,18 +43,18 @@ func (s *State) Encode() []byte {
 /*Decode - implement SecureSerializableValueI interface */
 func (s *State) Decode(data []byte) error {
 	buf := bytes.NewBuffer(data)
-	var origin util.Origin
+	var origin int64
 	var balance Balance
 	binary.Read(buf, binary.LittleEndian, &origin)
 	binary.Read(buf, binary.LittleEndian, &balance)
-	s.Origin = origin
+	s.Round = origin
 	s.Balance = Balance(balance)
 	return nil
 }
 
-/*SetOrigin - set the origin for this state to make it unique if the same logical state is arrived again in a different round */
-func (s *State) SetOrigin(origin util.Origin) {
-	s.Origin = origin
+/*SetRound - set the round for this state to make it unique if the same logical state is arrived again in a different round */
+func (s *State) SetRound(round int64) {
+	s.Round = round
 }
 
 //Deserializer - a deserializer to convert raw serialized data to a state object

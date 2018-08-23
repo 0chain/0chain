@@ -20,11 +20,9 @@ func (c *Chain) GetBalanceHandler(ctx context.Context, r *http.Request) (interfa
 	if lfb == nil {
 		return nil, common.ErrTemporaryFailure
 	}
-	balance, err := c.GetState(lfb, clientID)
+	state, err := c.GetState(lfb, clientID)
 	if err != nil {
 		return nil, err
 	}
-	sr := &StateResponse{Round: lfb.Round, BlockHash: lfb.Hash}
-	sr.State = balance
-	return sr, nil
+	return state, nil
 }
