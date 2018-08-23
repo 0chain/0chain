@@ -29,9 +29,6 @@ var ErrInvalidEncoding = common.NewError("invalid_node_encoding", "invalid node 
 //PathElements - all the bytes that can be used as path elements as ascii characters
 var PathElements = []byte("0123456789abcdef")
 
-//Origin - a data type that tracks the origin of a node , for example a round number of the block
-type Origin int64
-
 /*Node - a node interface */
 type Node interface {
 	Clone() Node
@@ -118,42 +115,6 @@ func (vn *ValueNode) Decode(buf []byte) error {
 	}
 	vn.SetValue(pspv)
 	return nil
-}
-
-/*OriginTrackerI - tracks the origin
-* This is required to do pruning of nodes. When a new node is introduced in a given block generation round due to associated state changes, the node's origin is the
-* corresponding block's round. When we want to do pruning, we start with the state root of a given round's block, sweep through all nodes accessible with that round
-* and mark the origin to that round number. Then, we iterate through the entire db and for any node that has the origin smaller than this value, it can be safely
-* deleted.
- */
-type OriginTrackerI interface {
-	SetOrigin(origin Origin)
-	GetOrigin() Origin
-	Write(w io.Writer) error
-	Read(w io.Reader) error
-}
-
-/*OriginTracker - implements the OriginTrackerI interface */
-type OriginTracker struct {
-	Origin Origin `json:"origin" msgpack:"o"`
-}
-
-/*SetOrigin - set the origin */
-func (o *OriginTracker) SetOrigin(origin Origin) {
-	o.Origin = origin
-}
-
-/*GetOrigin - get the origin */
-func (o *OriginTracker) GetOrigin() Origin {
-	return o.Origin
-}
-
-func (o *OriginTracker) Write(w io.Writer) error {
-	return binary.Write(w, binary.LittleEndian, o.GetOrigin())
-}
-
-func (o *OriginTracker) Read(r io.Reader) error {
-	return binary.Read(r, binary.LittleEndian, &o.Origin)
 }
 
 /*LeafNode - a node that represents the leaf that contains a value and an optional path */
