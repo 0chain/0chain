@@ -104,7 +104,7 @@ func getWriteSyncer(logName string) zapcore.WriteSyncer {
 		MaxSize:    10, // MB
 		MaxBackups: 3,  // number of backups
 		MaxAge:     28, //days
-		LocalTime:  true,
+		LocalTime:  false,
 		Compress:   false, // disabled by default
 	}
 	ioWriter.Rotate()
