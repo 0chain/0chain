@@ -87,8 +87,6 @@ func (c *Chain) finalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 	deadBlocks := make([]*block.Block, 0, 1)
 	for idx := range frchain {
 		fb := frchain[len(frchain)-1-idx]
-		c.BlockChain.Value = fb.GetSummary()
-		c.BlockChain = c.BlockChain.Next()
 		Logger.Info("finalize round", zap.Int64("round", r.Number), zap.Int64("finalized_round", fb.Round), zap.String("hash", fb.Hash))
 		if time.Since(ssFTs) < 10*time.Second {
 			SteadyStateFinalizationTimer.UpdateSince(ssFTs)
@@ -110,9 +108,15 @@ func (c *Chain) finalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 					fmt.Fprintf(stateOut, "round: %v block: %v state: %v prev_block: %v prev_state: %v\n", fb.Round, fb.Hash, util.ToHex(fb.ClientStateHash), fb.PrevHash, util.ToHex(fb.PrevBlock.ClientStateHash))
 					fb.ClientState.PrettyPrint(stateOut)
 					stateOut.Sync()
+					if err = util.IsMPTValid(fb.ClientState); err != nil {
+						fmt.Fprintf(stateOut, "round save: %v %v\n", util.ToHex(fb.ClientState.GetRoot()), fb.Round)
+						panic(err)
+					}
 				}*/
 		}
 		bsh.UpdateFinalizedBlock(ctx, fb)
+		c.BlockChain.Value = fb.GetSummary()
+		c.BlockChain = c.BlockChain.Next()
 		frb := c.GetRoundBlocks(fb.Round)
 		for _, b := range frb {
 			if b.Hash != fb.Hash {
