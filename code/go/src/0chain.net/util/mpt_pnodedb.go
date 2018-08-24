@@ -160,6 +160,9 @@ func (pndb *PNodeDB) PruneBelowOrigin(ctx context.Context, origin Origin) error 
 		return nil
 	}
 	err := pndb.Iterate(ctx, handler)
+	if err != nil {
+		return err
+	}
 	if len(batch) > 0 {
 		if config.DevConfiguration.State {
 			err := pndb.MultiDeleteNode(batch)
@@ -169,6 +172,7 @@ func (pndb *PNodeDB) PruneBelowOrigin(ctx context.Context, origin Origin) error 
 			}
 		}
 	}
+	pndb.Flush()
 	if ps != nil {
 		ps.Total = total
 		ps.Deleted = count
