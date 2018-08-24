@@ -64,7 +64,7 @@ func (mc *Chain) CreateRound(r *round.Round) *Round {
 	var mr Round
 	r.ComputeRanks(mc.Miners.Size(), mc.Sharders.Size())
 	mr.Round = *r
-	mr.blocksToVerifyChannel = make(chan *block.Block, 200)
+	mr.blocksToVerifyChannel = make(chan *block.Block, mc.NumGenerators)
 	return &mr
 }
 
