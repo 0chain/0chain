@@ -115,6 +115,7 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 			}
 			_, err = handler(ctx, entity)
 			if err != nil {
+				N2n.Error("requesting", zap.Any("from", Self.SetIndex), zap.Any("to", receiver.SetIndex), zap.Duration("duration", time.Since(ts)), zap.Any("handler", uri), zap.Any("entity", entityMetadata.GetName()), zap.Any("params", params), zap.Error(err))
 				return false
 			}
 			return true
