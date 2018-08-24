@@ -84,6 +84,9 @@ func (t *Transaction) ComputeClientID() {
 
 /*Validate - Entity implementation */
 func (t *Transaction) Validate(ctx context.Context) error {
+	if t.Value < 0 {
+		return common.InvalidRequest("value must be greater than or equal to zero")
+	}
 	err := config.ValidChain(datastore.ToString(t.ChainID))
 	if err != nil {
 		return err
