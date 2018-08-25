@@ -60,6 +60,9 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 		return
 	}
 	sc.AddBlock(b)
+	if b.PrevBlock == nil {
+		sc.GetPreviousBlock(ctx, b)
+	}
 	er := sc.GetRound(b.Round)
 	if er != nil {
 		if sc.BlocksToSharder == chain.FINALIZED {
