@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 
+	"0chain.net/cache"
 	"0chain.net/ememorystore"
 
 	"0chain.net/block"
@@ -23,6 +24,13 @@ func SetupSharderChain(c *chain.Chain) {
 	sharderChain.BlockChannel = make(chan *block.Block, 128)
 	//TODO experiment on different buffer sizes for Round Channel
 	sharderChain.RoundChannel = make(chan *round.Round, 128)
+	sharderChain.BlockCache = cache.GetLRUCacheProvider()
+	//TODO determine the cache size depending on the block & transaction size
+	bcs := 100
+	sharderChain.BlockCache.New(bcs)
+	sharderChain.BlockTxnCache = cache.GetLRUCacheProvider()
+	tcs := int(c.BlockSize) * bcs
+	sharderChain.BlockTxnCache.New(tcs)
 }
 
 /*GetSharderChain - get the sharder's chain */
@@ -33,10 +41,12 @@ func GetSharderChain() *Chain {
 /*Chain - A chain structure to manage the sharder activities */
 type Chain struct {
 	chain.Chain
-	BlockChannel chan *block.Block
-	RoundChannel chan *round.Round
-	roundsMutex  *sync.Mutex
-	rounds       map[int64]*round.Round
+	BlockChannel  chan *block.Block
+	RoundChannel  chan *round.Round
+	roundsMutex   *sync.Mutex
+	rounds        map[int64]*round.Round
+	BlockCache    cache.Cache
+	BlockTxnCache cache.Cache
 }
 
 /*GetBlockChannel - get the block channel where the incoming blocks from the network are put into for further processing */
@@ -71,7 +81,7 @@ func (sc *Chain) GetBlockFromStoreBySummary(bs *block.BlockSummary) (*block.Bloc
 	return blockstore.GetStore().ReadWithBlockSummary(bs)
 }
 
-//GetRoundFromStore - get the round from a store
+/*GetRoundFromStore - get the round from a store*/
 func (sc *Chain) GetRoundFromStore(ctx context.Context, roundNum int64) (*round.Round, error) {
 	r := datastore.GetEntity("round").(*round.Round)
 	r.Number = roundNum

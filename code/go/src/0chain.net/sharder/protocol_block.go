@@ -4,6 +4,8 @@ import (
 	"context"
 	"sort"
 
+	"0chain.net/transaction"
+
 	"0chain.net/blockstore"
 	"0chain.net/config"
 
@@ -32,6 +34,8 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	}
 	// Sort transactions by their hash - useful for quick search
 	sort.SliceStable(b.Txns, func(i, j int) bool { return b.Txns[i].Hash < b.Txns[j].Hash })
+	sc.BlockCache.Add(b.Hash, b)
+	sc.cacheBlockTxns(b.Hash, b.Txns)
 	err := blockstore.GetStore().Write(b)
 	if err != nil {
 		Logger.Error("block save", zap.Any("round", b.Round), zap.Any("hash", b.Hash), zap.Error(err))
@@ -47,5 +51,13 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 		sc.DeleteRoundsBelow(ctx, fr.Number)
 	} else {
 		Logger.Debug("round - missed", zap.Int64("round", b.Round))
+	}
+}
+
+func (sc *Chain) cacheBlockTxns(hash string, txns []*transaction.Transaction) {
+	for _, txn := range txns {
+		txnSummary := txn.GetSummary()
+		txnSummary.BlockHash = hash
+		sc.BlockTxnCache.Add(txn.Hash, txnSummary)
 	}
 }
