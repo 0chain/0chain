@@ -22,18 +22,19 @@ type Info struct {
 	MaxMultipleBlocks   int64 `json:"max_multiple_blocks"`
 }
 
+//GetValue - implements Metric interface
 func (info *Info) GetValue() int64 {
 	return info.FinalizedRound
 }
 
-var ChainMetric *metric.PowerMetric
-var RoundMetric *metric.PowerMetric
+var chainMetrics *metric.PowerMetric
+var roundMetrics *metric.PowerMetric
 
 func init() {
 	power := 10
 	len := 10
-	ChainMetric = metric.NewPowerMetric(power, len)
-	RoundMetric = metric.NewPowerMetric(power, len)
+	chainMetrics = metric.NewPowerMetric(power, len)
+	roundMetrics = metric.NewPowerMetric(power, len)
 }
 
 /*UpdateChainInfo - update the chain information */
@@ -46,8 +47,8 @@ func (c *Chain) UpdateChainInfo(b *block.Block) {
 		FinalizedCount:  SteadyStateFinalizationTimer.Count(),
 		MissedBlocks:    c.MissedBlocks,
 	}
-	ChainMetric.CurrentValue = ci
-	ChainMetric.Collect(ci)
+	chainMetrics.CurrentValue = ci
+	chainMetrics.Collect(ci)
 }
 
 /*UpdateRoundInfo - update the round information */
@@ -58,6 +59,6 @@ func (c *Chain) UpdateRoundInfo(r *round.Round) {
 		MultiNotarizedBlocksCount: c.MultiNotarizedBlocksCount,
 		ZeroNotarizedBlocksCount:  c.ZeroNotarizedBlocksCount,
 	}
-	RoundMetric.CurrentValue = ri
-	RoundMetric.Collect(ri)
+	roundMetrics.CurrentValue = ri
+	roundMetrics.Collect(ri)
 }

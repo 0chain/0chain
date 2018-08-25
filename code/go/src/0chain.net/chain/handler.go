@@ -222,7 +222,7 @@ func printNodePool(w http.ResponseWriter, np *node.Pool) {
 /*InfoHandler - handler to get the information of the chain */
 func InfoHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	idx := 0
-	chainInfo := ChainMetric.GetAll()
+	chainInfo := chainMetrics.GetAll()
 	for ; idx < len(chainInfo); idx++ {
 		if chainInfo[idx].GetValue() == 0 {
 			break
@@ -231,7 +231,7 @@ func InfoHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	info := make(map[string]interface{})
 	info["chain_info"] = chainInfo[:idx]
 
-	roundInfo := RoundMetric.GetAll()
+	roundInfo := roundMetrics.GetAll()
 	for idx = 0; idx < len(roundInfo); idx++ {
 		if roundInfo[idx].GetValue() == 0 {
 			break
@@ -250,7 +250,7 @@ func InfoWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</style>")
 	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr><th>Round</th><th>Chain Weight</th><th>Block Hash</th><th>Client State Hash</th><th>Blocks Count</th><th>Missed Blocks</th></tr>")
-	chainInfo := ChainMetric.GetAll()
+	chainInfo := chainMetrics.GetAll()
 	for idx := 0; idx < len(chainInfo); idx++ {
 		cf := chainInfo[idx].(*Info)
 		if cf.FinalizedRound == 0 {
@@ -269,7 +269,7 @@ func InfoWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<br/>")
 	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr><th>Round</th><th>Blocks Count</th><th>Multi Block Count</th><th>Zero Block Count</tr></tr>")
-	roundInfo := RoundMetric.GetAll()
+	roundInfo := roundMetrics.GetAll()
 	for idx := 0; idx < len(roundInfo); idx++ {
 		rf := roundInfo[idx].(*round.Info)
 		if rf.Number == 0 {
@@ -312,14 +312,15 @@ func (c *Chain) SendStatsWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</table>")
 }
 
+/*PutTransaction - for validation of transactions using chain level parameters */
 func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 	txn, ok := entity.(*transaction.Transaction)
 	if !ok {
 		return nil, fmt.Errorf("invalid request %T", entity)
 	}
 	if GetServerChain().TxnMaxPayload > 0 {
-		txn_size := getTxnPayloadSize(txn)
-		if txn_size > GetServerChain().TxnMaxPayload {
+		txnSize := getTxnPayloadSize(txn)
+		if txnSize > GetServerChain().TxnMaxPayload {
 			s := fmt.Sprintf("transaction payload exceeds the max payload (%d)", GetServerChain().TxnMaxPayload)
 			return nil, common.NewError("txn_exceed_max_payload", s)
 		}
@@ -328,7 +329,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 }
 
 func getTxnPayloadSize(txn *transaction.Transaction) int {
-	var sizeInBytes int = 0
+	var sizeInBytes int
 
 	sizeInBytes += len(txn.ClientID)
 	sizeInBytes += int(reflect.TypeOf(txn.CreationDate).Size())
