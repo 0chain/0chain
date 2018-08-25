@@ -103,8 +103,8 @@ type Chain struct {
 	ValidationBatchSize int   `json:"validation_size"`
 	RoundRange          int64 `json:"round_range"`
 
-	BlockChain *ring.Ring `json:"-"`
-	TxnMaxPayload       int   `json:"transaction_max_payload"`
+	BlockChain    *ring.Ring `json:"-"`
+	TxnMaxPayload int        `json:"transaction_max_payload"`
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
@@ -275,19 +275,39 @@ func (c *Chain) addBlock(b *block.Block) {
 	}
 	c.Blocks[b.Hash] = b
 	if b.PrevBlock == nil {
-		pb, ok := c.Blocks[b.PrevHash]
-		if ok {
+		if pb, ok := c.Blocks[b.PrevHash]; ok {
 			b.SetPreviousBlock(pb)
-		} else {
-			pb = c.GetNotarizedBlock(b.PrevHash, MinerNotarizedBlockRequestor)
-			if pb != nil {
-				b.SetPreviousBlock(pb)
-				c.addBlock(pb)
-			} else {
-				b.SetStateDB(nil)
-				Logger.Info("previous block not present", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("prev_block", b.PrevHash))
-			}
 		}
+	}
+}
+
+/*GetPreviousBlock - get the previous block from the network */
+func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) {
+	if b.PrevBlock != nil {
+		return
+	}
+	pb, err := c.GetBlock(ctx, b.PrevHash)
+	if err == nil {
+		b.PrevBlock = pb
+		return
+	}
+	blocks := make([]*block.Block, 0, 10)
+	Logger.Info("fetch previous block", zap.Int64("round", b.Round), zap.String("block", b.Hash))
+	for idx, cb := 0, b; idx < 10; idx++ {
+		Logger.Info("fetching previous block", zap.Int("idx", idx), zap.Int64("cround", cb.Round), zap.String("cblock", cb.Hash), zap.String("prev_block", cb.PrevHash))
+		cb := c.GetNotarizedBlock(cb.PrevHash, MinerNotarizedBlockRequestor)
+		if cb == nil {
+			break
+		}
+		blocks = append(blocks, cb)
+		pb, err = c.GetBlock(ctx, cb.PrevHash)
+		if pb != nil {
+			cb.SetPreviousBlock(pb)
+			break
+		}
+	}
+	for idx := len(blocks) - 1; idx >= 0; idx-- {
+		c.ComputeState(ctx, blocks[idx])
 	}
 }
 
