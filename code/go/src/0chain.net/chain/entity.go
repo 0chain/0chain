@@ -295,7 +295,7 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) {
 	Logger.Info("fetch previous block", zap.Int64("round", b.Round), zap.String("block", b.Hash))
 	for idx, cb := 0, b; idx < 10; idx++ {
 		Logger.Info("fetching previous block", zap.Int("idx", idx), zap.Int64("cround", cb.Round), zap.String("cblock", cb.Hash), zap.String("prev_block", cb.PrevHash))
-		cb := c.GetNotarizedBlock(cb.PrevHash, MinerNotarizedBlockRequestor)
+		cb = c.GetNotarizedBlock(cb.PrevHash, MinerNotarizedBlockRequestor)
 		if cb == nil {
 			break
 		}
