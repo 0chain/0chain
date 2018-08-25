@@ -163,7 +163,7 @@ func (t *Transaction) GetClient(ctx context.Context) (*client.Client, error) {
 
 /*HashData - data used to hash the transaction */
 func (t *Transaction) HashData() string {
-	hashdata := common.TimeToString(t.CreationDate) + ":" + t.ClientID + ":" + t.ToClientID + ":" + strconv.FormatInt(t.Value, 10) + ":" + t.TransactionData
+	hashdata := common.TimeToString(t.CreationDate) + ":" + t.ClientID + ":" + t.ToClientID + ":" + strconv.FormatInt(t.Value, 10) + ":" + encryption.Hash(t.TransactionData)
 	return hashdata
 }
 
