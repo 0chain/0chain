@@ -93,6 +93,7 @@ func (pndb *PNodeDB) MultiDeleteNode(keys []Key) error {
 /*Iterate - implement interface */
 func (pndb *PNodeDB) Iterate(ctx context.Context, handler NodeDBIteratorHandler) error {
 	ro := gorocksdb.NewDefaultReadOptions()
+	defer ro.Destroy()
 	ro.SetFillCache(false)
 	it := pndb.db.NewIterator(ro)
 	defer it.Close()
