@@ -293,7 +293,8 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) {
 	}
 	blocks := make([]*block.Block, 0, 10)
 	Logger.Info("fetch previous block", zap.Int64("round", b.Round), zap.String("block", b.Hash))
-	for idx, cb := 0, b; idx < 10; idx++ {
+	cb := b
+	for idx := 0; idx < 10; idx++ {
 		Logger.Info("fetching previous block", zap.Int("idx", idx), zap.Int64("cround", cb.Round), zap.String("cblock", cb.Hash), zap.String("prev_block", cb.PrevHash))
 		cb = c.GetNotarizedBlock(cb.PrevHash, MinerNotarizedBlockRequestor)
 		if cb == nil {
@@ -302,12 +303,17 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) {
 		blocks = append(blocks, cb)
 		pb, err = c.GetBlock(ctx, cb.PrevHash)
 		if pb != nil {
-			cb.SetPreviousBlock(pb)
 			break
 		}
 	}
+	if cb.PrevBlock == nil {
+		Logger.Error("get previous block (missing continuity)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("oldest_fetched_round", cb.Round), zap.String("oldest_fetched_block", cb.Hash), zap.String("missing_prior_block", cb.PrevHash))
+		return
+	}
 	for idx := len(blocks) - 1; idx >= 0; idx-- {
-		c.ComputeState(ctx, blocks[idx])
+		cb := blocks[idx]
+		cb.SetPreviousBlock(cb.PrevBlock)
+		c.ComputeState(ctx, cb)
 	}
 }
 

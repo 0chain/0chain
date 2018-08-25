@@ -66,7 +66,7 @@ func (mc *Chain) GetBlockToExtend(r *Round) *block.Block {
 		bnb = mc.GetNotarizedBlockForRound(&r.Round, chain.MinerNotarizedBlockRequestor)
 		if bnb != nil {
 			Logger.Info("get block to extend - needed to fetch", zap.Int64("round", r.Number), zap.String("block", bnb.Hash))
-			break
+			return bnb
 		}
 		Logger.Error("block to extend - no notarized block yet", zap.Int64("round", r.Number))
 		count++

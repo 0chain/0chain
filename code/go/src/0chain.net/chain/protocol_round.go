@@ -163,6 +163,7 @@ func (c *Chain) GetNotarizedBlockForRound(r *round.Round, nbrequestor node.Entit
 			return nil, err
 		}
 		//TODO: this may not be the best round block or the best chain weight block. Do we do that extra work?
+		c.AddBlock(b)
 		r.AddNotarizedBlock(b)
 		Logger.Info("get notarized block", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.String("state", util.ToHex(b.ClientStateHash)))
 		return nil, nil
@@ -196,6 +197,7 @@ func (c *Chain) GetNotarizedBlock(blockHash string, nbrequestor node.EntityRecei
 			return nil, err
 		}
 		b = nb
+		c.AddBlock(b)
 		Logger.Info("get notarized block", zap.Int64("round", b.Round), zap.String("block", b.Hash))
 		return b, nil
 	}
