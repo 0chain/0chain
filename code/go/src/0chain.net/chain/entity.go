@@ -312,7 +312,12 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) {
 	}
 	for idx := len(blocks) - 1; idx >= 0; idx-- {
 		cb := blocks[idx]
-		cb.SetPreviousBlock(cb.PrevBlock)
+		pb, err := c.GetBlock(ctx, cb.PrevHash)
+		if err != nil {
+			Logger.Error("get previous block (missing continuity)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("cb_round", cb.Round), zap.String("cb_block", cb.Hash), zap.String("missing_prior_block", cb.PrevHash))
+			return
+		}
+		cb.SetPreviousBlock(pb)
 		c.ComputeState(ctx, cb)
 	}
 }
