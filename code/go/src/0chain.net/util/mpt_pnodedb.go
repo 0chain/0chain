@@ -114,7 +114,7 @@ func (pndb *PNodeDB) Iterate(ctx context.Context, handler NodeDBIteratorHandler)
 			key.Free()
 			value.Free()
 			Logger.Error("iterate - create node handler error", zap.String("key", ToHex(kdata)), zap.Any("data", vdata), zap.Error(err))
-			break
+			return err
 		}
 		key.Free()
 		value.Free()

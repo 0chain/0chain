@@ -91,7 +91,8 @@ type Chain struct {
 	BlocksToSharder       int `json:"blocks_to_sharder"`
 	VerificationTicketsTo int `json:"verification_tickets_to"`
 
-	StateDB                 util.NodeDB         `json:"-"`
+	StateDB                 util.NodeDB `json:"-"`
+	stateMutex              *sync.Mutex
 	ClientStateDeserializer state.DeserializerI `json:"-"`
 
 	FinalizedRoundsChannel chan *round.Round `json:"-"`
@@ -168,6 +169,7 @@ func Provider() datastore.Entity {
 	c.Initialize()
 	c.Version = "1.0"
 	c.blocksMutex = &sync.Mutex{}
+	c.stateMutex = &sync.Mutex{}
 	c.InitializeCreationDate()
 	c.Miners = node.NewPool(node.NodeTypeMiner)
 	c.Sharders = node.NewPool(node.NodeTypeSharder)

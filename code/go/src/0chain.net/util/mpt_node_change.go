@@ -75,7 +75,6 @@ func (cc *ChangeCollector) GetDeletes() []Node {
 
 /*UpdateChanges - update all the changes collected to a database */
 func (cc *ChangeCollector) UpdateChanges(ndb NodeDB, origin Origin, includeDeletes bool) error {
-	// TODO: it's possible to do batch changes instead of individual changes for PNodeDB
 	keys := make([]Key, len(cc.Changes), len(cc.Changes))
 	nodes := make([]Node, len(cc.Changes), len(cc.Changes))
 	idx := 0

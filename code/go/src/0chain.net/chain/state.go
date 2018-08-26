@@ -70,6 +70,8 @@ func (c *Chain) ComputeState(ctx context.Context, b *block.Block) error {
 }
 
 func (c *Chain) rebaseState(lfb *block.Block) {
+	c.stateMutex.Lock()
+	defer c.stateMutex.Unlock()
 	ndb := lfb.ClientState.GetNodeDB()
 	if ndb != c.StateDB {
 		lfb.ClientState.SetNodeDB(c.StateDB)
@@ -86,6 +88,8 @@ func (c *Chain) rebaseState(lfb *block.Block) {
 * If a state can't be updated (e.g low balance), then a false is returned so that the transaction will not make it into the block
  */
 func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
+	c.stateMutex.Lock()
+	defer c.stateMutex.Unlock()
 	if !config.DevConfiguration.State {
 		return true
 	}
