@@ -244,6 +244,12 @@ workon_eddy:
 	echo  "ZCHAIN_TESTNET=eddy" > $(CONTEXT)
 
 
+workon_eddy0825:
+	echo "ZCHAIN_TESTNET=eddy0825" > $(CONTEXT)
+
+workon_eddy0826:
+	echo "ZCHAIN_TESTNET=eddy0826" > $(CONTEXT)
+
 workon_shasta:
 	echo  "ZCHAIN_TESTNET=shasta" > $(CONTEXT)
 

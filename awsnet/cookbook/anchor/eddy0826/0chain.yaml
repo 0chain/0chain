@@ -1,4 +1,4 @@
-#Eddy0825 Config File
+#Eddy0826 Config File
 version: 1.0
 
 logging:
@@ -35,4 +35,4 @@ server_chain:
     relay_time: 200 # milliseconds
     max_concurrent_requests: 6
     messages:
-      verification_tickets_to: all_miners
+      verification_tickets_to: generator
