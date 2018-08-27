@@ -119,6 +119,17 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 				} */
 			return false
 		}
+		fs.SetRound(b.Round)
+		fs.Balance -= tbalance
+		if fs.Balance == 0 {
+			Logger.Info("update state - remove client", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client", txn.ClientID), zap.Any("txn", txn))
+			_, err = clientState.Delete(util.Path(txn.ClientID))
+		} else {
+			_, err = clientState.Insert(util.Path(txn.ClientID), fs)
+		}
+		if err != nil {
+			Logger.Error("update state - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
+		}
 		ts, err := c.getState(clientState, txn.ToClientID)
 		if err != nil {
 			if config.DevConfiguration.State {
@@ -130,17 +141,6 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 				Logger.DPanic(fmt.Sprintf("error getting state value: %v %v", txn.ToClientID, err))
 			}
 			return false
-		}
-		fs.SetRound(b.Round)
-		fs.Balance -= tbalance
-		if fs.Balance == 0 {
-			Logger.Info("update state - remove client", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client", txn.ClientID), zap.Any("txn", txn))
-			_, err = clientState.Delete(util.Path(txn.ClientID))
-		} else {
-			_, err = clientState.Insert(util.Path(txn.ClientID), fs)
-		}
-		if err != nil {
-			Logger.Error("update state - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
 		}
 		ts.SetRound(b.Round)
 		ts.Balance += tbalance
