@@ -122,7 +122,11 @@ func (b *Block) Validate(ctx context.Context) error {
 	if b.ChainWeight > float64(b.Round) {
 		return common.NewError("chain_weight_gt_round", "Chain weight can't be greater than the block round")
 	}
-
+	if b.TxnsMap != nil {
+		if len(b.Txns) != len(b.TxnsMap) {
+			return common.NewError("duplicate_transactions", "Block has duplicate transactions")
+		}
+	}
 	hash := b.ComputeHash()
 	if b.Hash != hash {
 		return common.NewError("incorrect_block_hash", fmt.Sprintf("computed block hash doesn't match with the hash of the block: %v: %v: %v", b.Hash, hash, b.getHashData()))
