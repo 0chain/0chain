@@ -85,6 +85,8 @@ $ ../bin/start.miner.sh
 
 ## Setting up Cassandra Schema
 
+The following is no longer required as the schema is automatically loaded.
+
 Start the sharder service that also brings up the cassandra service. To run commands on cassandra, use the following command
 
 ```
@@ -111,20 +113,15 @@ $ ../bin/run.sharder.sh cassandra cqlsh -k zerochain -f /0chain/sql/truncate_tab
 
 ## Generating Test Transactions
 
-There is no need to generate the test data separately. In development mode, the transaction data is automatically generated at a certain rate based on the
-block size.
+There is no need to generate the test data separately. In development mode, the transaction data is automatically generated at a certain rate based on the block size.
+
+However, you can use the <a href='https://github.com/0chain/block-explorer'>block explorer</a> to submit transactions, view the blocks and confirm the transactions.
 
 ## Monitoring the progress
 
-1) From the browser access http://localhost:7073/_block_stats that provides the statistics of the blocks finalization from the sharder's point of view. User the appropriate host and port for the specific sharder.
+1) Use <a href='https://github.com/0chain/block-explorer'>block explorer</a> to see the progress of the block chain.
 
-2) From the browser access http://localhost:7071/_block_stats that provides the statistics of the block generation and verification from the miner's point of view. Use the appropriate host and port for the specific miner.
-
-3) To access the latest finalized blocks use the REST end point http://localhost:7071/v1/block/get/recent_finalized
-
-4) To access a specific block, use http://localhost:7171/v1/block/get?content=[type]&block=[block-hash]. The content parameter can be 'full' and 'header'. The block-id parameter is the hash of the block
-
-5) To get the confirmation status of a transaction, use http://localhost:7171/v1/transaction/get/confirmation?hash=[txn-hash]
+2) In addition, use the '/_diagnostics' link on any node to view internal details of the blockchain and the node.
 
 ## Troubleshooting
 
