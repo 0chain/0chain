@@ -180,6 +180,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			// Keep the number of messages to a node bounded
 			receiver.Grab()
 			ts := time.Now()
+			Self.Node.LastActiveTime = ts
 			resp, err := httpClient.Do(req)
 			receiver.Release()
 			timer.UpdateSince(ts)
@@ -282,7 +283,9 @@ func validateSendRequest(sender *Node, r *http.Request) bool {
 		N2n.Error("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("entity", entityName), zap.Any("id", entityID), zap.Error(err))
 		return false
 	}
-
+	sender.Status = NodeStatusActive
+	sender.LastActiveTime = time.Unix(reqTSn, 0)
+	Self.Node.LastActiveTime = time.Now()
 	if !common.Within(reqTSn, N2NTimeTolerance) {
 		N2n.Debug("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("enitty", entityName), zap.Any("ts", reqTSn), zap.Any("tstime", time.Unix(reqTSn, 0)))
 		return false

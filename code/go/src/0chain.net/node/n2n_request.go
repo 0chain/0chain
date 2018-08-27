@@ -85,6 +85,7 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 			// Keep the number of messages to a node bounded
 			receiver.Grab()
 			ts := time.Now()
+			Self.Node.LastActiveTime = ts
 			resp, err := httpClient.Do(req)
 			receiver.Release()
 			timer.UpdateSince(ts)
