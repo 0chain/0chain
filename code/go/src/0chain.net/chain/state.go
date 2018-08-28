@@ -31,17 +31,15 @@ func (c *Chain) ComputeState(ctx context.Context, b *block.Block) error {
 	if b.IsStateComputed() {
 		return nil
 	}
-
-	if b.PrevBlock != nil {
-		pbState := b.PrevBlock.GetBlockState()
-		if !b.PrevBlock.IsStateComputed() {
+	pb := b.PrevBlock
+	if pb != nil {
+		if !pb.IsStateComputed() {
+			pbState := pb.GetBlockState()
 			Logger.Info("compute state - previous block state not ready", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Int8("prev_block_state", pbState))
-			err := c.ComputeState(ctx, b.PrevBlock)
+			err := c.ComputeState(ctx, pb)
 			if err != nil {
-				if config.DevConfiguration.State {
-					Logger.Error("compute state - error computing previous state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Error(err))
-					return err
-				}
+				Logger.Error("compute state - error computing previous state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Error(err))
+				return err
 			}
 		}
 	} else {
@@ -49,7 +47,7 @@ func (c *Chain) ComputeState(ctx context.Context, b *block.Block) error {
 		Logger.Error("compute state - previous block not available", zap.Int64("round", b.Round), zap.String("block", b.Hash))
 		return ErrPreviousBlockUnavailable
 	}
-	Logger.Info("compute state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.String("prev_block", b.PrevHash), zap.String("prev_client_state", util.ToHex(b.PrevBlock.ClientStateHash)))
+	Logger.Info("compute state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.String("prev_block", b.PrevHash), zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)))
 	for _, txn := range b.Txns {
 		if datastore.IsEmpty(txn.ClientID) {
 			txn.ComputeClientID()
@@ -90,9 +88,6 @@ func (c *Chain) rebaseState(lfb *block.Block) {
 func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 	c.stateMutex.Lock()
 	defer c.stateMutex.Unlock()
-	if !config.DevConfiguration.State {
-		return true
-	}
 	clientState := b.ClientState
 	fs, err := c.getState(clientState, txn.ClientID)
 	if err != nil {
@@ -111,12 +106,10 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 	}
 	tbalance := state.Balance(txn.Value)
 	switch txn.TransactionType {
+	case transaction.TxnTypeData:
+		return true
 	case transaction.TxnTypeSend:
 		if fs.Balance < tbalance {
-			/*
-				if config.DevConfiguration.State {
-					Logger.Warn("low balance", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("state", fs), zap.Any("txn", txn))
-				} */
 			return false
 		}
 		fs.SetRound(b.Round)
