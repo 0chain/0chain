@@ -102,9 +102,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		Logger.Info("generate round block (prior block compute state)", zap.Any("round", r.Number), zap.Any("block", pb.Hash), zap.Any("state", pb.GetBlockState()))
 		err := mc.ComputeState(ctx, pb)
 		if err != nil {
-			if config.DevConfiguration.State {
-				Logger.Error("generate round block (prior block compute state)", zap.Any("round", r.Number), zap.Any("block", pb.Hash), zap.Any("state", pb.GetBlockState()), zap.Error(err))
-			}
+			Logger.Error("generate round block (prior block compute state)", zap.Any("round", r.Number), zap.Any("block", pb.Hash), zap.Any("state", pb.GetBlockState()), zap.Error(err))
 		}
 	}
 	b := datastore.GetEntityMetadata("block").Instance().(*block.Block)
@@ -343,14 +341,12 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r *Round, b *block.Block)
 			}
 		}
 	}
-	pbState := b.PrevBlock.GetBlockState()
 	if !b.PrevBlock.IsStateComputed() {
+		pbState := b.PrevBlock.GetBlockState()
 		Logger.Info("verify round block - previous block state not ready", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Int8("prev_block_state", pbState))
 		err := mc.ComputeState(ctx, b.PrevBlock)
 		if err != nil {
-			if config.DevConfiguration.State {
-				Logger.Error("verify round block - previous block state error", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Int8("prev_block_state", pbState), zap.Error(err))
-			}
+			Logger.Error("verify round block - previous block state error", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Int8("prev_block_state", pbState), zap.Error(err))
 		}
 	}
 	bvt, err := mc.VerifyBlock(ctx, b)

@@ -103,16 +103,6 @@ func (c *Chain) finalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 				Logger.Info("finalize round - save state", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.Duration("time", time.Since(ts)), zap.String("client_state", util.ToHex(fb.ClientStateHash)), zap.Int("changes", len(fb.ClientState.GetChangeCollector().GetChanges())))
 			}
 			c.rebaseState(fb)
-			/*
-				if config.DevConfiguration.State && stateOut != nil {
-					fmt.Fprintf(stateOut, "round: %v block: %v state: %v prev_block: %v prev_state: %v\n", fb.Round, fb.Hash, util.ToHex(fb.ClientStateHash), fb.PrevHash, util.ToHex(fb.PrevBlock.ClientStateHash))
-					fb.ClientState.PrettyPrint(stateOut)
-					stateOut.Sync()
-					if err = util.IsMPTValid(fb.ClientState); err != nil {
-						fmt.Fprintf(stateOut, "round save: %v %v\n", util.ToHex(fb.ClientState.GetRoot()), fb.Round)
-						panic(err)
-					}
-				}*/
 		}
 		bsh.UpdateFinalizedBlock(ctx, fb)
 		c.BlockChain.Value = fb.GetSummary()

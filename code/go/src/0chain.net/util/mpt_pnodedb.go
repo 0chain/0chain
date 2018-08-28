@@ -165,22 +165,16 @@ func (pndb *PNodeDB) PruneBelowOrigin(ctx context.Context, origin Origin) error 
 		return err
 	}
 	if len(batch) > 0 {
-		if config.DevConfiguration.State {
-			err := pndb.MultiDeleteNode(batch)
-			if err != nil {
-				Logger.Error("prune below origin - error deleting node", zap.Any("new_origin", origin), zap.Error(err))
-				return err
-			}
+		err := pndb.MultiDeleteNode(batch)
+		if err != nil {
+			Logger.Error("prune below origin - error deleting node", zap.Any("new_origin", origin), zap.Error(err))
+			return err
 		}
 	}
 	pndb.Flush()
 	if ps != nil {
 		ps.Total = total
 		ps.Deleted = count
-	}
-	if config.DevConfiguration.State {
-		size := pndb.Size(ctx)
-		Logger.Info("prune below origin", zap.Int64("size", size), zap.Any("stats", ps))
 	}
 	return err
 }

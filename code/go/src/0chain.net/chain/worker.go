@@ -88,7 +88,7 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 	Logger.Info("prune client state stats", zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.String("state_hash", util.ToHex(bs.ClientStateHash)),
 		zap.Duration("duration", time.Since(t)), zap.Duration("update", d1), zap.Duration("prune", d2), zap.Any("stats", ps))
 	/*
-		if config.DevConfiguration.State && stateOut != nil {
+		if stateOut != nil {
 			if err = util.IsMPTValid(mpt); err != nil {
 				fmt.Fprintf(stateOut, "prune validation failure: %v %v\n", util.ToHex(mpt.GetRoot()), bs.Round)
 				mpt.PrettyPrint(stateOut)
