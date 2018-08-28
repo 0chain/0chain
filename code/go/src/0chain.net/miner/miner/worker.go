@@ -31,7 +31,6 @@ func TransactionGenerator(blockSize int32) {
 		numClients = 4 * blockSize
 	}
 	GenerateClients(numClients)
-	csize := len(wallets)
 	numWorkers := 1
 	switch {
 	case blockSize <= 10:
@@ -56,16 +55,14 @@ func TransactionGenerator(blockSize int32) {
 			ctx = memorystore.WithEntityConnection(ctx, txnMetadataProvider)
 			rs := rand.NewSource(time.Now().UnixNano())
 			prng := rand.New(rs)
+			var txn *transaction.Transaction
 			for range txnChannel {
-				var wf, wt *wallet.Wallet
-				for true {
-					wf = wallets[prng.Intn(csize)]
-					wt = wallets[prng.Intn(csize)]
-					if wf != wt {
-						break
-					}
+				r := prng.Int63n(100)
+				if r < 25 {
+					txn = createSendTransaction(prng)
+				} else {
+					txn = createDataTransaction(prng)
 				}
-				txn := wf.CreateTransaction(wt.ClientID)
 				_, err := transaction.PutTransaction(ctx, txn)
 				if err != nil {
 					fmt.Printf("error:%v: %v\n", time.Now(), err)
@@ -118,6 +115,27 @@ func TransactionGenerator(blockSize int32) {
 			}
 		}
 	}
+}
+
+func createSendTransaction(prng *rand.Rand) *transaction.Transaction {
+	var wf, wt *wallet.Wallet
+	csize := len(wallets)
+	for true {
+		wf = wallets[prng.Intn(csize)]
+		wt = wallets[prng.Intn(csize)]
+		if wf != wt {
+			break
+		}
+	}
+	txn := wf.CreateRandomSendTransaction(wt.ClientID)
+	return txn
+}
+
+func createDataTransaction(prng *rand.Rand) *transaction.Transaction {
+	csize := len(wallets)
+	wf := wallets[prng.Intn(csize)]
+	txn := wf.CreateRandomDataTransaction()
+	return txn
 }
 
 /*GetOwnerWallet - get the owner wallet. Used to get the initial state get going */

@@ -71,8 +71,8 @@ func SetupWallet() {
 	clientMetadataProvider = datastore.GetEntityMetadata("client")
 }
 
-/*CreateTransaction - create a transaction */
-func (w *Wallet) CreateTransaction(toClient string) *transaction.Transaction {
+/*CreateRandomSendTransaction - create a transaction */
+func (w *Wallet) CreateRandomSendTransaction(toClient string) *transaction.Transaction {
 	value := rand.Int63n(100) * 1000000000
 	if value == 0 {
 		value = 100000000
@@ -88,6 +88,22 @@ func (w *Wallet) CreateSendTransaction(toClient string, value int64, msg string)
 	txn.ToClientID = toClient
 	txn.Value = value
 	txn.TransactionData = msg
+	txn.Sign(w.PrivateKeyBytes)
+	return txn
+}
+
+/*CreateRandomDataTransaction - creat a random data transaction */
+func (w *Wallet) CreateRandomDataTransaction() *transaction.Transaction {
+	msg := fmt.Sprintf("storing some random data - 1234567890 abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ %v", rand.Int63())
+	return w.CreateDataTransaction(msg)
+}
+
+/*CreateDataTransaction - create a data transaction */
+func (w *Wallet) CreateDataTransaction(msg string) *transaction.Transaction {
+	txn := transactionMetadataProvider.Instance().(*transaction.Transaction)
+	txn.ClientID = w.ClientID
+	txn.TransactionData = msg
+	txn.TransactionType = transaction.TxnTypeData
 	txn.Sign(w.PrivateKeyBytes)
 	return txn
 }
