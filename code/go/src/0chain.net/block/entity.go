@@ -219,14 +219,6 @@ func (b *Block) SetStateDB(prevBlock *Block) {
 	b.ClientState.SetRoot(rootHash)
 }
 
-/*GetPreviousBlock - returns the previous block */
-func (b *Block) GetPreviousBlock() *Block {
-	if b.PrevBlock != nil {
-		return b.PrevBlock
-	}
-	return nil
-}
-
 /*AddTransaction - add a transaction to the block */
 func (b *Block) AddTransaction(t *transaction.Transaction) {
 	// For now this does nothing. May be we don't need. Txn can't influence the weight of the block,
