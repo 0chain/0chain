@@ -2,28 +2,37 @@ package metric
 
 import (
 	"container/ring"
+	"fmt"
+	"time"
 )
 
 /*Metric - interface*/
 type Metric interface {
-	GetValue() int64
+	GetKey() int64
+	GetTime() *time.Time
 }
 
 /*PowerMetrics - struct for buffered power values*/
-type PowerMetric struct {
+type PowerMetrics struct {
 	power        int
 	bufferLen    int
 	powerBuffer  []*ring.Ring
 	CurrentValue Metric
 }
 
+//FormattedTime - get the formatted time
+func FormattedTime(metric Metric) string {
+	t := metric.GetTime()
+	return fmt.Sprintf("%02d:%02d", t.Minute(), t.Second())
+}
+
 /*NewPowerMetrics - creates, initializes PowerMetrics*/
-func NewPowerMetric(power int, bufferLen int) *PowerMetric {
+func NewPowerMetrics(power int, bufferLen int) *PowerMetrics {
 	buffer := make([]*ring.Ring, bufferLen)
 	for idx := 0; idx < bufferLen; idx++ {
 		buffer[idx] = ring.New(power)
 	}
-	return &PowerMetric{
+	return &PowerMetrics{
 		power:       power,
 		bufferLen:   bufferLen,
 		powerBuffer: buffer,
@@ -31,10 +40,10 @@ func NewPowerMetric(power int, bufferLen int) *PowerMetric {
 }
 
 /*Collect - checks for power value and then adds it to the buffer*/
-func (pm *PowerMetric) Collect(data Metric) {
+func (pm *PowerMetrics) Collect(data Metric) {
 	var scale = int64(pm.power)
 	for i := 0; i < pm.bufferLen; i++ {
-		if data.GetValue()%scale != 0 {
+		if data.GetKey()%scale != 0 {
 			return
 		} else {
 			pm.powerBuffer[i].Value = data
@@ -45,7 +54,7 @@ func (pm *PowerMetric) Collect(data Metric) {
 }
 
 /*GetAll - gives list of recent power values*/
-func (pm *PowerMetric) GetAll() []Metric {
+func (pm *PowerMetrics) GetAll() []Metric {
 	values := make([]Metric, (pm.power)*(pm.bufferLen)+1)
 	var index = 0
 	if pm.CurrentValue != nil {

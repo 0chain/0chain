@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"0chain.net/metric"
 	"0chain.net/transaction"
 
 	"0chain.net/node"
@@ -224,7 +225,7 @@ func InfoHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	idx := 0
 	chainInfo := chainMetrics.GetAll()
 	for ; idx < len(chainInfo); idx++ {
-		if chainInfo[idx].GetValue() == 0 {
+		if chainInfo[idx].GetKey() == 0 {
 			break
 		}
 	}
@@ -233,7 +234,7 @@ func InfoHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 
 	roundInfo := roundMetrics.GetAll()
 	for idx = 0; idx < len(roundInfo); idx++ {
-		if roundInfo[idx].GetValue() == 0 {
+		if roundInfo[idx].GetKey() == 0 {
 			break
 		}
 	}
@@ -243,13 +244,19 @@ func InfoHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 
 /*InfoWriter - a handler to get the information of the chain */
 func InfoWriter(w http.ResponseWriter, r *http.Request) {
+	showTs := r.FormValue("ts") != ""
 	fmt.Fprintf(w, "<style>\n")
 	fmt.Fprintf(w, ".number { text-align: right; }\n")
 	fmt.Fprintf(w, "table, td, th { border: 1px solid black; }\n")
 	fmt.Fprintf(w, "tr:nth-child(10n + 3) { background-color: #abb2b9; }\n")
 	fmt.Fprintf(w, "</style>")
 	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
-	fmt.Fprintf(w, "<tr><th>Round</th><th>Chain Weight</th><th>Block Hash</th><th>Client State Hash</th><th>Blocks Count</th><th>Missed Blocks</th></tr>")
+	fmt.Fprintf(w, "<tr>")
+	if showTs {
+		fmt.Fprintf(w, "<td>Time</td>")
+	}
+	fmt.Fprintf(w, "<th>Round</th>")
+	fmt.Fprintf(w, "<th>Chain Weight</th><th>Block Hash</th><th>Client State Hash</th><th>Blocks Count</th><th>Missed Blocks</th></tr>")
 	chainInfo := chainMetrics.GetAll()
 	for idx := 0; idx < len(chainInfo); idx++ {
 		cf := chainInfo[idx].(*Info)
@@ -257,7 +264,10 @@ func InfoWriter(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		fmt.Fprintf(w, "<tr>")
-		fmt.Fprintf(w, "<td class='number'>%11d</td>", cf.FinalizedRound)
+		if showTs {
+			fmt.Fprintf(w, "<td class='number'>%v</td>", metric.FormattedTime(cf))
+		}
+		fmt.Fprintf(w, "<td class='number'>%11d</td>", cf.GetKey())
 		fmt.Fprintf(w, "<td class='number'>%.8f</td>", cf.ChainWeight)
 		fmt.Fprintf(w, "<td>%s</td>", cf.BlockHash)
 		fmt.Fprintf(w, "<td>%v</td>", util.ToHex(cf.ClientStateHash))
@@ -268,7 +278,12 @@ func InfoWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</table>")
 	fmt.Fprintf(w, "<br/>")
 	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
-	fmt.Fprintf(w, "<tr><th>Round</th><th>Blocks Count</th><th>Multi Block Count</th><th>Zero Block Count</tr></tr>")
+	fmt.Fprintf(w, "<tr>")
+	if showTs {
+		fmt.Fprintf(w, "<th>Time</th>")
+	}
+	fmt.Fprintf(w, "<th>Round</th>")
+	fmt.Fprintf(w, "<th>Blocks Count</th><th>Multi Block Count</th><th>Zero Block Count</tr></tr>")
 	roundInfo := roundMetrics.GetAll()
 	for idx := 0; idx < len(roundInfo); idx++ {
 		rf := roundInfo[idx].(*round.Info)
@@ -276,7 +291,10 @@ func InfoWriter(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		fmt.Fprintf(w, "<tr>")
-		fmt.Fprintf(w, "<td class='number'>%d</td>", rf.Number)
+		if showTs {
+			fmt.Fprintf(w, "<td class='number'>%v</td>", metric.FormattedTime(rf))
+		}
+		fmt.Fprintf(w, "<td class='number'>%d</td>", rf.GetKey())
 		fmt.Fprintf(w, "<td class='number'>%d</td>", rf.NotarizedBlocksCount)
 		fmt.Fprintf(w, "<td class='number'>%d</td>", rf.MultiNotarizedBlocksCount)
 		fmt.Fprintf(w, "<td class='number'>%6d</td>", rf.ZeroNotarizedBlocksCount)
