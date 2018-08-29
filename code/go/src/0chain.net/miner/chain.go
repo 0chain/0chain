@@ -9,6 +9,7 @@ import (
 	"0chain.net/common"
 	"0chain.net/datastore"
 	"0chain.net/memorystore"
+	"0chain.net/node"
 	"0chain.net/round"
 )
 
@@ -134,4 +135,22 @@ func (mc *Chain) deleteTxns(txns []datastore.Entity) error {
 	ctx := memorystore.WithEntityConnection(common.GetRootContext(), transactionMetadataProvider)
 	defer memorystore.Close(ctx)
 	return transactionMetadataProvider.GetStore().MultiDelete(ctx, transactionMetadataProvider, txns)
+}
+
+/*SetPreviousBlock - set the previous block */
+func (mc *Chain) SetPreviousBlock(ctx context.Context, r *round.Round, b *block.Block, pb *block.Block) {
+	if r == nil {
+		mr := mc.GetRound(b.Round)
+		if mr != nil {
+			r = &mr.Round
+		} else {
+			r = datastore.GetEntityMetadata("round").Instance().(*round.Round)
+			r.Number = b.Round
+			r.RandomSeed = b.RoundRandomSeed
+		}
+	}
+	b.SetPreviousBlock(pb)
+	b.RoundRandomSeed = r.RandomSeed
+	b.RoundRank = r.GetMinerRank(node.GetSelfNode(ctx).SetIndex)
+	b.ComputeChainWeight()
 }

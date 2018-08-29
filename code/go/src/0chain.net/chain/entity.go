@@ -283,50 +283,6 @@ func (c *Chain) addBlock(b *block.Block) {
 	}
 }
 
-/*GetPreviousBlock - get the previous block from the network */
-func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) {
-	if b.PrevBlock != nil {
-		return
-	}
-	pb, err := c.GetBlock(ctx, b.PrevHash)
-	if err == nil {
-		b.PrevBlock = pb
-		return
-	}
-	blocks := make([]*block.Block, 0, 10)
-	Logger.Info("fetch previous block", zap.Int64("round", b.Round), zap.String("block", b.Hash))
-	cb := b
-	for idx := 0; idx < 10; idx++ {
-		Logger.Info("fetching previous block", zap.Int("idx", idx), zap.Int64("cround", cb.Round), zap.String("cblock", cb.Hash), zap.String("prev_block", cb.PrevHash))
-		cb = c.GetNotarizedBlock(cb.PrevHash, MinerNotarizedBlockRequestor)
-		if cb == nil {
-			break
-		}
-		blocks = append(blocks, cb)
-		pb, err = c.GetBlock(ctx, cb.PrevHash)
-		if pb != nil {
-			cb.SetPreviousBlock(pb)
-			break
-		}
-	}
-	if cb.PrevBlock == nil {
-		Logger.Error("get previous block (missing continuity)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("oldest_fetched_round", cb.Round), zap.String("oldest_fetched_block", cb.Hash), zap.String("missing_prior_block", cb.PrevHash))
-		return
-	}
-	for idx := len(blocks) - 1; idx >= 0; idx-- {
-		cb := blocks[idx]
-		if cb.PrevBlock == nil {
-			pb, err := c.GetBlock(ctx, cb.PrevHash)
-			if err != nil {
-				Logger.Error("get previous block (missing continuity)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("cb_round", cb.Round), zap.String("cb_block", cb.Hash), zap.String("missing_prior_block", cb.PrevHash))
-				return
-			}
-			cb.SetPreviousBlock(pb)
-		}
-		c.ComputeState(ctx, cb)
-	}
-}
-
 /*GetBlock - returns a known block for a given hash from the cache */
 func (c *Chain) GetBlock(ctx context.Context, hash string) (*block.Block, error) {
 	c.blocksMutex.Lock()

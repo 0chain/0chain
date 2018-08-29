@@ -52,12 +52,15 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 }
 
 /*GetBlockToExtend - Get the block to extend from the given round */
-func (mc *Chain) GetBlockToExtend(r *Round) *block.Block {
+func (mc *Chain) GetBlockToExtend(ctx context.Context, r *Round) *block.Block {
 	count := 0
 	sleepTime := 10 * time.Millisecond
 	for true { // Need to do this for timing issues where a start round might come before a notarization and there is no notarized block to extend from
 		bnb := r.GetBestNotarizedBlock()
 		if bnb != nil {
+			if !bnb.IsStateComputed() {
+				mc.ComputeState(ctx, bnb)
+			}
 			return bnb
 		}
 		if r.Number+1 != mc.CurrentRound {
@@ -66,6 +69,10 @@ func (mc *Chain) GetBlockToExtend(r *Round) *block.Block {
 		bnb = mc.GetNotarizedBlockForRound(&r.Round, chain.MinerNotarizedBlockRequestor)
 		if bnb != nil {
 			Logger.Info("get block to extend - needed to fetch", zap.Int64("round", r.Number), zap.String("block", bnb.Hash))
+			err := mc.ComputeState(ctx, bnb)
+			if err != nil {
+				Logger.Error("get block to extend (prior block compute state)", zap.Any("round", r.Number), zap.Any("block", bnb.Hash), zap.Error(err))
+			}
 			return bnb
 		}
 		Logger.Error("block to extend - no notarized block yet", zap.Int64("round", r.Number))
@@ -93,23 +100,15 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		Logger.Error("generate round block (prior round not found)", zap.Any("round", r.Number-1))
 		return nil, common.NewError("invalid_round,", "Round not available")
 	}
-	pb := mc.GetBlockToExtend(pround)
+	pb := mc.GetBlockToExtend(ctx, pround)
 	if pb == nil {
 		Logger.Error("generate round block (prior block not found)", zap.Any("round", r.Number))
 		return nil, common.NewError("block_gen_no_block_to_extend", "Do not have the block to extend this round")
 	}
-	if !pb.IsStateComputed() {
-		Logger.Info("generate round block (prior block compute state)", zap.Any("round", r.Number), zap.Any("block", pb.Hash), zap.Any("state", pb.GetBlockState()))
-		err := mc.ComputeState(ctx, pb)
-		if err != nil {
-			Logger.Error("generate round block (prior block compute state)", zap.Any("round", r.Number), zap.Any("block", pb.Hash), zap.Any("state", pb.GetBlockState()), zap.Error(err))
-		}
-	}
 	b := datastore.GetEntityMetadata("block").Instance().(*block.Block)
 	b.ChainID = mc.ID
 	b.MagicBlockHash = mc.CurrentMagicBlock.Hash
-	b.RoundRandomSeed = r.RandomSeed
-	b.SetPreviousBlock(pb)
+	mc.SetPreviousBlock(ctx, &r.Round, b, pb)
 	if b.Round == 1 {
 		val, err := b.ClientState.GetNodeValue(util.Path(mc.OwnerID))
 		if err != nil {
@@ -161,8 +160,6 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 			return nil, err
 		}
 		mc.AddBlock(b)
-		b.RoundRank = r.GetMinerRank(node.GetSelfNode(ctx).SetIndex)
-		b.ComputeChainWeight()
 		break
 	}
 	if mc.CurrentRound > b.Round {
@@ -195,9 +192,6 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 		}
 		b.RoundRank = mr.GetMinerRank(bNode.SetIndex)
 		mc.AddBlock(b)
-		if b.PrevBlock == nil {
-			mc.GetPreviousBlock(ctx, b)
-		}
 		if b.PrevBlock != nil {
 			b.ComputeChainWeight()
 		} else {
@@ -215,6 +209,9 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 		go mc.CollectBlocksForVerification(vctx, mr)
 	}
 	mr.AddBlockToVerify(b)
+	if b.PrevBlock == nil {
+		go mc.GetPreviousBlock(ctx, b)
+	}
 }
 
 /*CollectBlocksForVerification - keep collecting the blocks till timeout and then start verifying */
@@ -329,16 +326,15 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r *Round, b *block.Block)
 	if err := mc.VerifyNotarization(ctx, b.PrevBlock, b.PrevBlockVerficationTickets); err != nil {
 		Logger.Info("verify round block (prior block verify notarization)", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Error(err))
 		return nil, err
-	} else {
-		notarized := mc.IsBlockNotarized(ctx, b.PrevBlock)
-		b.PrevBlock.MergeVerificationTickets(b.PrevBlockVerficationTickets) // grab any unknown verification tickets of previous block from the current block
-		if !notarized {
-			pr := mc.GetRound(b.PrevBlock.Round)
-			if pr != nil {
-				mc.AddNotarizedBlock(ctx, &pr.Round, b.PrevBlock)
-			} else {
-				Logger.Error("verify round - previous round not present", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
-			}
+	}
+	notarized := mc.IsBlockNotarized(ctx, b.PrevBlock)
+	b.PrevBlock.MergeVerificationTickets(b.PrevBlockVerficationTickets) // grab any unknown verification tickets of previous block from the current block
+	if !notarized {
+		pr := mc.GetRound(b.PrevBlock.Round)
+		if pr != nil {
+			mc.AddNotarizedBlock(ctx, &pr.Round, b.PrevBlock)
+		} else {
+			Logger.Error("verify round - previous round not present", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
 		}
 	}
 	if !b.PrevBlock.IsStateComputed() {
