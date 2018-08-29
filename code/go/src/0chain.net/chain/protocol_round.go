@@ -186,9 +186,8 @@ func (c *Chain) GetNotarizedBlock(blockHash string, nbrequestor node.EntityRecei
 			Logger.Error("get notarized block - validate notarization", zap.String("block", blockHash), zap.Error(err))
 			return nil, err
 		}
-		b = nb
-		c.AddBlock(b)
-		Logger.Info("get notarized block", zap.Int64("round", b.Round), zap.String("block", b.Hash))
+		b = c.AddBlock(nb)
+		Logger.Info("get notarized block", zap.Int64("round", nb.Round), zap.String("block", nb.Hash))
 		return b, nil
 	}
 	c.Miners.RequestEntity(ctx, nbrequestor(params, handler))

@@ -262,18 +262,18 @@ func (c *Chain) AddGenesisBlock(b *block.Block) {
 }
 
 /*AddBlock - adds a block to the cache */
-func (c *Chain) AddBlock(b *block.Block) {
-	if b.Round <= c.LatestFinalizedBlock.Round {
-		return
+func (c *Chain) AddBlock(b *block.Block) *block.Block {
+	if b.Round < c.LatestFinalizedBlock.Round {
+		return nil
 	}
 	c.blocksMutex.Lock()
 	defer c.blocksMutex.Unlock()
-	c.addBlock(b)
+	return c.addBlock(b)
 }
 
-func (c *Chain) addBlock(b *block.Block) {
-	if _, ok := c.Blocks[b.Hash]; ok {
-		return
+func (c *Chain) addBlock(b *block.Block) *block.Block {
+	if eb, ok := c.Blocks[b.Hash]; ok {
+		return eb
 	}
 	c.Blocks[b.Hash] = b
 	if b.PrevBlock == nil {
@@ -281,6 +281,7 @@ func (c *Chain) addBlock(b *block.Block) {
 			b.SetPreviousBlock(pb)
 		}
 	}
+	return b
 }
 
 /*GetBlock - returns a known block for a given hash from the cache */
