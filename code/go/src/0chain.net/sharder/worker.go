@@ -60,9 +60,6 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 		return
 	}
 	sc.AddBlock(b)
-	if b.PrevBlock == nil {
-		sc.GetPreviousBlock(ctx, b)
-	}
 	er := sc.GetRound(b.Round)
 	if er != nil {
 		if sc.BlocksToSharder == chain.FINALIZED {
@@ -77,7 +74,7 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 		er.RandomSeed = b.RoundRandomSeed
 		sc.AddRound(er)
 	}
-	Logger.Info("received block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.String("prev_state", util.ToHex(b.ClientState.GetRoot())))
+	Logger.Info("received block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)))
 	err = sc.ComputeState(ctx, b)
 	if err != nil {
 		if config.DevConfiguration.State {
