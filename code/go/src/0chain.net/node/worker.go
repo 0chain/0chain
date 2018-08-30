@@ -3,6 +3,7 @@ package node
 import (
 	"context"
 	"fmt"
+	"math"
 	"net/http"
 	"time"
 
@@ -38,6 +39,19 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 			continue
 		}
 		if common.Within(node.LastActiveTime.Unix(), 10) {
+			var minval float32 = math.MaxFloat32
+			var maxval float32
+			for _, timer := range node.TimersByURI {
+				v := float32(timer.Mean())
+				if v > maxval {
+					maxval = v
+				}
+				if v < minval {
+					minval = v
+				}
+			}
+			node.LargeMessageSendTime = maxval
+			node.SmallMessageSendTime = minval
 			continue
 		}
 		statusURL := node.GetStatusURL()

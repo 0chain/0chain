@@ -70,6 +70,9 @@ type Node struct {
 	Received   int64 // messages received from this node
 
 	TimersByURI map[string]metrics.Timer
+
+	LargeMessageSendTime float32
+	SmallMessageSendTime float32
 }
 
 /*Provider - create a node object */
@@ -228,4 +231,14 @@ func (n *Node) GetTimer(uri string) metrics.Timer {
 		n.TimersByURI[uri] = timer
 	}
 	return timer
+}
+
+//GetLargeMessageSendTime - get the time it takes to send a large message to this node
+func (n *Node) GetLargeMessageSendTime() float32 {
+	return n.LargeMessageSendTime / 1000000
+}
+
+//GetSmallMessageSendTime - get the time it takes to send a small message to this node
+func (n *Node) GetSmallMessageSendTime() float32 {
+	return n.SmallMessageSendTime / 1000000
 }
