@@ -400,7 +400,7 @@ func (c *Chain) GetNotarizationThresholdCount() int {
 
 /*CanStartNetwork - check whether the network can start */
 func (c *Chain) CanStartNetwork() bool {
-	active := c.Miners.GetActiveCount()
+	active := c.Miners.GetActiveCount() + 1
 	threshold := c.GetNotarizationThresholdCount()
 	if config.DevConfiguration.State {
 		threshold = c.Miners.Size()
