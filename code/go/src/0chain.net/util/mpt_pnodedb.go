@@ -22,13 +22,11 @@ type PNodeDB struct {
 
 /*NewPNodeDB - create a new PNodeDB */
 func NewPNodeDB(dataDir string) (*PNodeDB, error) {
-	bbto := gorocksdb.NewDefaultBlockBasedTableOptions()
-	bbto.SetBlockCache(gorocksdb.NewLRUCache(3 << 30))
-	bbto.SetFilterPolicy(gorocksdb.NewBloomFilter(10))
 	opts := gorocksdb.NewDefaultOptions()
-	opts.SetBlockBasedTableFactory(bbto)
 	opts.SetCreateIfMissing(true)
+	opts.SetHashSkipListRep(1024, 12, 4)
 	opts.OptimizeForPointLookup(64)
+	opts.SetAllowConcurrentMemtableWrites(false)
 	db, err := gorocksdb.OpenDb(opts, dataDir)
 	if err != nil {
 		return nil, err
