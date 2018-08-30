@@ -192,7 +192,7 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 			return
 		}
 		b.RoundRank = mr.GetMinerRank(bNode.SetIndex)
-		mc.AddBlock(b)
+		b = mc.AddBlock(b)
 		if b.PrevBlock != nil {
 			b.ComputeChainWeight()
 		} else {

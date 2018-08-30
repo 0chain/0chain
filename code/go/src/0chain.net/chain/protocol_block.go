@@ -158,6 +158,10 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) {
 			break
 		}
 	}
+	if cb == nil {
+		Logger.Error("get previous block (unable to get prior blocks)", zap.Int64("round", b.Round), zap.String("block", b.Hash))
+		return
+	}
 	if cb.PrevBlock == nil {
 		Logger.Error("get previous block (missing continuity)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("oldest_fetched_round", cb.Round), zap.String("oldest_fetched_block", cb.Hash), zap.String("missing_prior_block", cb.PrevHash))
 		return
