@@ -53,7 +53,7 @@ services:
       - "7171:7171"
     networks:
       default:
-    command: ./bin/sharder --deployment_mode 1 --keys_file nodes/sharder_key.txt --nodes_file nodes/nodes.txt
+    command: ./bin/sharder --deployment_mode 0 --keys_file nodes/sharder_key.txt --nodes_file nodes/nodes.txt
 
 networks:
   default:
