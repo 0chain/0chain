@@ -210,9 +210,6 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 		go mc.CollectBlocksForVerification(vctx, mr)
 	}
 	mr.AddBlockToVerify(b)
-	if b.PrevBlock == nil {
-		go mc.GetPreviousBlock(ctx, b)
-	}
 }
 
 /*CollectBlocksForVerification - keep collecting the blocks till timeout and then start verifying */
