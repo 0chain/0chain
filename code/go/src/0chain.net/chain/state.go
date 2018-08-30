@@ -107,14 +107,15 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 			}
 			Logger.Error("update state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.String("prev_client_state", prevState), zap.Any("txn", txn), zap.Error(err))
 		}
-		if config.DevConfiguration.State {
+
+		if config.DevConfiguration.State && stateOut != nil {
 			for _, txn := range b.Txns {
 				if txn == nil {
 					break
 				}
-				Logger.Info("update state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn))
+				fmt.Fprintf(stateOut, "update state r=%v b=%v t=%v", b.Round, b.Hash, txn)
 			}
-			clientState.PrettyPrint(os.Stdout)
+			clientState.PrettyPrint(stateOut)
 			Logger.DPanic(fmt.Sprintf("error getting state value: %v %v", txn.ClientID, err))
 		}
 		return false
