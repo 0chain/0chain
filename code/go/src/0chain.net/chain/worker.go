@@ -35,7 +35,7 @@ func (c *Chain) BlockFinalizationWorker(ctx context.Context, bsh BlockStateHandl
 
 /*PruneClientStateWorker - a worker that prunes the client state */
 func (c *Chain) PruneClientStateWorker(ctx context.Context) {
-	ticker := time.NewTicker(PruneBelowCount * time.Second)
+	ticker := time.NewTicker(time.Duration(c.PruneStateBelowCount) * time.Second)
 	pruning := false
 	for true {
 		select {
@@ -52,12 +52,9 @@ func (c *Chain) PruneClientStateWorker(ctx context.Context) {
 	}
 }
 
-/*PruneBelowCount - prune nodes below these many rounds */
-const PruneBelowCount = 1000
-
 func (c *Chain) pruneClientState(ctx context.Context) {
 	bc := c.BlockChain
-	bc = bc.Move(-PruneBelowCount)
+	bc = bc.Move(-c.PruneStateBelowCount)
 	for i := 0; i < 10 && bc.Value == nil; i++ {
 		bc = bc.Prev()
 	}

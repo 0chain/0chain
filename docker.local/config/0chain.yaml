@@ -4,6 +4,9 @@ logging:
   level: "info"
   console: false # printing log to console is only supported in development mode
 
+development:
+  state: false
+
 zerochain:
   id: "0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe"
   decimals: 10
@@ -35,3 +38,5 @@ server_chain:
     max_concurrent_requests: 3
     messages:
       verification_tickets_to: generator
+  state:
+    prune_below_count: 100 # rounds
