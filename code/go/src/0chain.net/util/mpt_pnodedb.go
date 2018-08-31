@@ -24,7 +24,7 @@ type PNodeDB struct {
 func NewPNodeDB(dataDir string) (*PNodeDB, error) {
 	opts := gorocksdb.NewDefaultOptions()
 	opts.SetCreateIfMissing(true)
-	opts.SetHashSkipListRep(1024, 12, 4)
+	opts.SetHashSkipListRep(1000000, 4, 4)
 	opts.OptimizeForPointLookup(64)
 	opts.SetAllowConcurrentMemtableWrites(false)
 	db, err := gorocksdb.OpenDb(opts, dataDir)
