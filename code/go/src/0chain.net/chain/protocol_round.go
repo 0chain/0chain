@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/config"
 	"0chain.net/node"
 
 	"0chain.net/block"
@@ -95,14 +96,21 @@ func (c *Chain) finalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 		ssFTs = time.Now()
 		c.UpdateChainInfo(fb)
 		if fb.ClientState != nil {
-			ts := time.Now()
-			err := fb.ClientState.SaveChanges(c.StateDB, util.Origin(fb.Round), false)
-			if err != nil {
-				Logger.Error("finalize round - save state", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.Duration("time", time.Since(ts)), zap.String("client_state", util.ToHex(fb.ClientStateHash)), zap.Int("changes", len(fb.ClientState.GetChangeCollector().GetChanges())), zap.Error(err))
+			if fb.GetStateStatus() != block.StateSuccessful {
+				Logger.Error("finalize round state not successful", zap.Int64("round", r.Number), zap.Int64("finalized_round", fb.Round), zap.String("hash", fb.Hash), zap.Int8("state", fb.GetBlockState()))
+				if config.DevConfiguration.State {
+					Logger.DPanic("finalize block - state not successful")
+				}
 			} else {
-				Logger.Info("finalize round - save state", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.Duration("time", time.Since(ts)), zap.String("client_state", util.ToHex(fb.ClientStateHash)), zap.Int("changes", len(fb.ClientState.GetChangeCollector().GetChanges())))
+				ts := time.Now()
+				err := fb.ClientState.SaveChanges(c.StateDB, util.Origin(fb.Round), false)
+				if err != nil {
+					Logger.Error("finalize round - save state", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.String("client_state", util.ToHex(fb.ClientStateHash)), zap.Int("changes", len(fb.ClientState.GetChangeCollector().GetChanges())), zap.Duration("time", time.Since(ts)), zap.Error(err))
+				} else {
+					Logger.Info("finalize round - save state", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.String("client_state", util.ToHex(fb.ClientStateHash)), zap.Int("changes", len(fb.ClientState.GetChangeCollector().GetChanges())), zap.Duration("time", time.Since(ts)))
+				}
+				c.rebaseState(fb)
 			}
-			c.rebaseState(fb)
 		}
 		bsh.UpdateFinalizedBlock(ctx, fb)
 		c.BlockChain.Value = fb.GetSummary()
