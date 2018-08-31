@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 
-	"0chain.net/config"
 	. "0chain.net/logging"
 	"github.com/tecbot/gorocksdb"
 	"go.uber.org/zap"
@@ -138,18 +137,11 @@ func (pndb *PNodeDB) PruneBelowOrigin(ctx context.Context, origin Origin) error 
 			return nil
 		}
 		count++
-		if config.DevConfiguration.State {
-			Logger.Debug("prune below origin - deleting node", zap.String("key", ToHex(key)), zap.Any("old_origin", node.GetOrigin()), zap.Any("new_origin", origin))
-		}
 		tkey := make([]byte, len(key))
 		copy(tkey, key)
 		batch = append(batch, tkey)
 		if len(batch) == BatchSize {
-			var err error
-			if config.DevConfiguration.State {
-				err = pndb.MultiDeleteNode(batch)
-				Logger.Debug("prune below origin - deleting nodes", zap.String("key", ToHex(key)), zap.Any("old_origin", node.GetOrigin()), zap.Any("new_origin", origin))
-			}
+			err := pndb.MultiDeleteNode(batch)
 			batch = batch[:0]
 			if err != nil {
 				Logger.Error("prune below origin - error deleting node", zap.String("key", ToHex(key)), zap.Any("old_origin", node.GetOrigin()), zap.Any("new_origin", origin), zap.Error(err))
