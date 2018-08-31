@@ -44,8 +44,13 @@ func (spv *SecureSerializableValue) GetHash() string {
 	return ToHex(spv.GetHashBytes())
 }
 
-/*ToHex - converts a byte array to hex encoding with upper case */
+/*ToHex - converts a byte array to hex encoding */
 func ToHex(buf []byte) string {
+	return hex.EncodeToString(buf)
+}
+
+/*ToUpperHex - converts a byte array to hex encoding with upper case */
+func ToUpperHex(buf []byte) string {
 	return strings.ToUpper(hex.EncodeToString(buf))
 }
 
