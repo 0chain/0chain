@@ -1,8 +1,6 @@
 package miner
 
 import (
-	"context"
-
 	"0chain.net/block"
 	"0chain.net/datastore"
 )
@@ -26,12 +24,6 @@ func (notarization *Notarization) GetEntityMetadata() datastore.EntityMetadata {
 /*GetKey - overwrites the interface to return the block id */
 func (notarization *Notarization) GetKey() datastore.Key {
 	return datastore.ToKey(notarization.BlockID)
-}
-
-/*Validate - implementing the interface */
-func (notarization *Notarization) Validate(ctx context.Context) error {
-	// TODO
-	return nil
 }
 
 /*NotarizationProvider - entity provider for block_notarization object */
