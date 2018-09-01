@@ -130,10 +130,14 @@ func (pndb *PNodeDB) PruneBelowOrigin(ctx context.Context, origin Origin) error 
 	ps := GetPruneStats(ctx)
 	var total int64
 	var count int64
+	var leaves int64
 	batch := make([]Key, BatchSize)
 	handler := func(ctx context.Context, key Key, node Node) error {
 		total++
 		if node.GetOrigin() >= origin {
+			if _, ok := node.(*LeafNode); ok {
+				leaves++
+			}
 			return nil
 		}
 		count++
@@ -164,6 +168,7 @@ func (pndb *PNodeDB) PruneBelowOrigin(ctx context.Context, origin Origin) error 
 	pndb.Flush()
 	if ps != nil {
 		ps.Total = total
+		ps.Leaves = leaves
 		ps.Deleted = count
 	}
 	return err

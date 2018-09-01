@@ -64,6 +64,7 @@ func GetPruneStats(ctx context.Context) *PruneStats {
 type PruneStats struct {
 	Origin      Origin
 	Total       int64
+	Leaves      int64
 	BelowOrigin int64
 	Deleted     int64
 }
