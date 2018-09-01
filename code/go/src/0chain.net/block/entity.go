@@ -68,12 +68,11 @@ type Block struct {
 	datastore.HashIDField
 	Signature string `json:"signature"`
 
-	ChainID     datastore.Key `json:"chain_id"` // TODO: Do we need chain id at all?
+	ChainID     datastore.Key `json:"chain_id"`
 	ChainWeight float64       `json:"chain_weight"`
 	RoundRank   int           `json:"-"` // rank of the block in the round it belongs to
 	PrevBlock   *Block        `json:"-"`
 
-	//TODO: May be this should be replaced with a bloom filter & check against sorted txns
 	TxnsMap map[string]bool `json:"-"`
 
 	ClientState util.MerklePatriciaTrieI `json:"-"`
@@ -195,24 +194,23 @@ func (b *Block) SetPreviousBlock(prevBlock *Block) {
 	if len(b.PrevBlockVerficationTickets) == 0 {
 		b.PrevBlockVerficationTickets = prevBlock.VerificationTickets
 	}
-	b.SetStateDB(prevBlock)
 }
 
 /*SetStateDB - set the state from the previous block */
 func (b *Block) SetStateDB(prevBlock *Block) {
 	var pndb util.NodeDB
 	var rootHash util.Key
-	if prevBlock != nil && prevBlock.ClientState != nil {
-		pndb = prevBlock.ClientState.GetNodeDB()
-		if pndb == nil {
-			Logger.Info("missing pndb")
+	if prevBlock.ClientState == nil {
+		if config.DevConfiguration.State {
+			Logger.DPanic("set state db - prior state not available")
+		} else {
+			pndb = util.NewMemoryNodeDB()
 		}
-		rootHash = prevBlock.ClientStateHash
-		Logger.Debug("prev state root", zap.Int64("round", b.Round), zap.String("prev_block", prevBlock.Hash), zap.String("root", util.ToHex(rootHash)))
 	} else {
-		Logger.Info("TODO: state sync", zap.Int64("round", b.Round))
-		pndb = util.NewMemoryNodeDB() // TODO: state sync
+		pndb = prevBlock.ClientState.GetNodeDB()
 	}
+	rootHash = prevBlock.ClientStateHash
+	Logger.Debug("prev state root", zap.Int64("round", b.Round), zap.String("prev_block", prevBlock.Hash), zap.String("root", util.ToHex(rootHash)))
 	mndb := util.NewMemoryNodeDB()
 	ndb := util.NewLevelNodeDB(mndb, pndb, false)
 	b.ClientState = util.NewMerklePatriciaTrie(ndb)

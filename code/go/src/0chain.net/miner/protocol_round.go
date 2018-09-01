@@ -14,7 +14,6 @@ import (
 	"0chain.net/memorystore"
 	"0chain.net/node"
 	"0chain.net/round"
-	"0chain.net/state"
 	"0chain.net/transaction"
 	"0chain.net/util"
 	"go.uber.org/zap"
@@ -110,15 +109,6 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	b.MagicBlockHash = mc.CurrentMagicBlock.Hash
 	mc.SetPreviousBlock(ctx, &r.Round, b, pb)
 	b.SetStateDB(pb)
-	if b.Round == 1 {
-		val, err := b.ClientState.GetNodeValue(util.Path(mc.OwnerID))
-		if err != nil {
-			panic(err)
-		} else {
-			state := mc.ClientStateDeserializer.Deserialize(val).(*state.State)
-			Logger.Info("initial tokens", zap.Any("state", state))
-		}
-	}
 	for true {
 		if mc.CurrentRound > b.Round {
 			Logger.Debug("generate block (round mismatch)", zap.Any("round", r.Number), zap.Any("current_round", mc.CurrentRound))
