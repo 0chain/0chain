@@ -228,9 +228,7 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 		//While saturation is good, it's going to be expensive, hence TODO for now. Also, if we are proceeding verification based on partial block info,
 		// we can't broadcast that block
 		if !mc.IsBlockNotarized(ctx, b) {
-			if b.MinerID != node.Self.GetKey() {
-				mc.SendVerificationTicket(ctx, b, bvt)
-			}
+			mc.SendVerificationTicket(ctx, b, bvt)
 
 			// since block.AddVerificationTicket is not thread-safe, directly doing ProcessVerifiedTicket will not work in rare cases as incoming verification tickets get added concurrently
 			//mc.ProcessVerifiedTicket(ctx, r, b, &bvt.VerificationTicket)
