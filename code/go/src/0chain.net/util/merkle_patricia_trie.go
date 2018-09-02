@@ -518,6 +518,7 @@ func (mpt *MerklePatriciaTrie) deleteAfterPathTraversal(node Node) (Node, Key, e
 func (mpt *MerklePatriciaTrie) iterate(ctx context.Context, path Path, key Key, handler MPTIteratorHandler, visitNodeTypes byte) error {
 	node, err := mpt.DB.GetNode(key)
 	if err != nil {
+		Logger.Error("iterate - get node error", zap.Error(err))
 		return err
 	}
 	switch nodeImpl := node.(type) {
@@ -529,9 +530,6 @@ func (mpt *MerklePatriciaTrie) iterate(ctx context.Context, path Path, key Key, 
 			}
 		}
 		npath := append(path, nodeImpl.Path...)
-		if err != nil {
-			return err
-		}
 		if IncludesNodeType(visitNodeTypes, NodeTypeValueNode) && nodeImpl.HasValue() {
 			handler(ctx, npath, nil, nodeImpl.Value)
 		}
