@@ -55,22 +55,19 @@ func (mc *Chain) GetBlockToExtend(ctx context.Context, r *Round) *block.Block {
 	count := 0
 	sleepTime := 10 * time.Millisecond
 	for true { // Need to do this for timing issues where a start round might come before a notarization and there is no notarized block to extend from
-		bnb := r.GetBestNotarizedBlock()
-		if bnb != nil {
-			if !bnb.IsStateComputed() {
-				mc.ComputeState(ctx, bnb)
-			}
-			return bnb
-		}
 		if r.Number+1 != mc.CurrentRound {
 			break
 		}
-		bnb = mc.GetNotarizedBlockForRound(&r.Round, chain.MinerNotarizedBlockRequestor)
+		bnb := r.GetBestNotarizedBlock()
+		if bnb == nil {
+			bnb = mc.GetNotarizedBlockForRound(&r.Round, chain.MinerNotarizedBlockRequestor)
+		}
 		if bnb != nil {
-			Logger.Info("get block to extend - needed to fetch", zap.Int64("round", r.Number), zap.String("block", bnb.Hash))
-			err := mc.ComputeState(ctx, bnb)
-			if err != nil {
-				Logger.Error("get block to extend (prior block compute state)", zap.Any("round", r.Number), zap.Any("block", bnb.Hash), zap.Error(err))
+			if !bnb.IsStateComputed() {
+				err := mc.ComputeState(ctx, bnb)
+				if err != nil {
+					Logger.Error("get block to extend (best nb compute state)", zap.Any("round", r.Number), zap.Any("block", bnb.Hash), zap.Error(err))
+				}
 			}
 			return bnb
 		}
@@ -323,14 +320,15 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r *Round, b *block.Block)
 			Logger.Error("verify round - previous round not present", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
 		}
 	}
-	if !b.PrevBlock.IsStateComputed() {
-		pbState := b.PrevBlock.GetBlockState()
-		Logger.Info("verify round block - previous block state not ready", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Int8("prev_block_state", pbState))
-		err := mc.ComputeState(ctx, b.PrevBlock)
-		if err != nil {
-			Logger.Error("verify round block - previous block state error", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Int8("prev_block_state", pbState), zap.Error(err))
-		}
-	}
+	/*
+		if !b.PrevBlock.IsStateComputed() {
+			pbState := b.PrevBlock.GetBlockState()
+			Logger.Info("verify round block - previous block state not ready", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Int8("prev_block_state", pbState))
+			err := mc.ComputeState(ctx, b.PrevBlock)
+			if err != nil {
+				Logger.Error("verify round block - previous block state error", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Int8("prev_block_state", pbState), zap.Error(err))
+			}
+		}*/
 	bvt, err := mc.VerifyBlock(ctx, b)
 	if err != nil {
 		return nil, err

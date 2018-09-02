@@ -17,6 +17,8 @@ import (
 	"go.uber.org/zap"
 )
 
+var ErrPreviousStateUnavailable = common.NewError("prev_state_unavailable", "Previous state not available")
+
 //StateMismatch - indicate if there is a mismatch between computed state and received state of a block
 const StateMismatch = "state_mismatch"
 
@@ -53,6 +55,9 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 			Logger.Error("compute state - error computing previous state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Error(err))
 			return err
 		}
+	}
+	if pb.ClientState == nil {
+		return ErrPreviousStateUnavailable
 	}
 	b.SetStateDB(pb)
 	Logger.Info("compute state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.String("prev_block", b.PrevHash), zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)))
