@@ -23,9 +23,12 @@ type PNodeDB struct {
 func NewPNodeDB(dataDir string) (*PNodeDB, error) {
 	opts := gorocksdb.NewDefaultOptions()
 	opts.SetCreateIfMissing(true)
+	/* SetHashSkipListRep + OptimizeForPointLookup seems to be corrupting when pruning
 	opts.SetHashSkipListRep(1000000, 4, 4)
-	opts.OptimizeForPointLookup(64)
 	opts.SetAllowConcurrentMemtableWrites(false)
+	*/
+	opts.OptimizeForPointLookup(64)
+	opts.SetCompression(gorocksdb.LZ4Compression)
 	db, err := gorocksdb.OpenDb(opts, dataDir)
 	if err != nil {
 		return nil, err
