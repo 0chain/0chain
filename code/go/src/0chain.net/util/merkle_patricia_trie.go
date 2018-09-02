@@ -356,7 +356,7 @@ func (mpt *MerklePatriciaTrie) insertAtNode(value Serializable, node Node, path 
 		}
 		return cnode, ckey, nil
 	default:
-		panic("uknown node type")
+		panic(fmt.Sprintf("uknown node type: %T %v", node, node))
 	}
 }
 
@@ -416,7 +416,7 @@ func (mpt *MerklePatriciaTrie) deleteAtNode(node Node, path Path) (Node, Key, er
 						lnode.Path = npath
 						nnode = lnode
 					default:
-						panic("invalid node type")
+						panic(fmt.Sprintf("uknown node type: %T %v", ochild, ochild))
 					}
 					return mpt.insertNode(ochild, nnode)
 				}
@@ -487,7 +487,7 @@ func (mpt *MerklePatriciaTrie) insertAfterPathTraversal(value Serializable, node
 		nnode.PutChild(nodeImpl.Path[0], ckey)
 		return mpt.insertNode(node, nnode)
 	default:
-		panic("unknown node type")
+		panic(fmt.Sprintf("uknown node type: %T %v", node, node))
 	}
 }
 
@@ -511,7 +511,7 @@ func (mpt *MerklePatriciaTrie) deleteAfterPathTraversal(node Node) (Node, Key, e
 	case *ExtensionNode:
 		panic("this should not happen!")
 	default:
-		panic("unknown node type")
+		panic(fmt.Sprintf("uknown node type: %T %v", node, node))
 	}
 }
 

@@ -100,7 +100,7 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 	defer c.stateMutex.Unlock()
 	clientState := b.ClientState
 	fs, err := c.getState(clientState, txn.ClientID)
-	if err != nil {
+	if !isValid(err) {
 		if b.Hash != "" || config.DevConfiguration.State {
 			prevState := ""
 			if b.PrevBlock != nil {
@@ -130,7 +130,7 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 			return false
 		}
 		ts, err := c.getState(clientState, txn.ToClientID)
-		if err != nil {
+		if !isValid(err) {
 			if config.DevConfiguration.State {
 				Logger.Error("update state (to client)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
 				for _, txn := range b.Txns {
@@ -174,6 +174,8 @@ func (c *Chain) getState(clientState util.MerklePatriciaTrieI, clientID string) 
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return nil, err
+		} else {
+			return s, err
 		}
 	} else {
 		s = c.ClientStateDeserializer.Deserialize(ss).(*state.State)
@@ -184,6 +186,16 @@ func (c *Chain) getState(clientState util.MerklePatriciaTrieI, clientID string) 
 /*GetState - Get the state of a client w.r.t a finalized block */
 func (c *Chain) GetState(fb *block.Block, clientID string) (*state.State, error) {
 	return c.getState(fb.ClientState, clientID)
+}
+
+func isValid(err error) bool {
+	if err == nil {
+		return true
+	}
+	if err == util.ErrValueNotPresent {
+		return true
+	}
+	return false
 }
 
 var stateOut *os.File
