@@ -161,7 +161,7 @@ func (ps *Store) MultiWrite(ctx context.Context, entityMetadata datastore.Entity
 func (ps *Store) multiWriteAux(ctx context.Context, entityMetadata datastore.EntityMetadata, entities []datastore.Entity) error {
 	c := GetCon(ctx)
 	sql := getJSONInsert(entityMetadata.GetName())
-	batch := gocql.NewBatch(gocql.LoggedBatch)
+	batch := c.NewBatch(gocql.LoggedBatch)
 	for _, entity := range entities {
 		batch.Query(sql, datastore.ToJSON(entity).String())
 	}
