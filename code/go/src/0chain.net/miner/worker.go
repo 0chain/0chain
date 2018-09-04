@@ -97,7 +97,11 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 			return
 		}
 	}
-	mc.AddToRoundVerification(ctx, mr, b)
+	if mr != nil {
+		mc.AddToRoundVerification(ctx, mr, b)
+	} else {
+		Logger.Error("this should not happen %v", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("cround", mc.CurrentRound))
+	}
 }
 
 /*HandleVerificationTicketMessage - handles the verification ticket message */
