@@ -17,7 +17,7 @@ func (c *Chain) SetupNodeHandlers() {
 }
 
 /*MinerNotarizedBlockRequestor - reuqest a notarized block from a node*/
-var MinerNotarizedBlockRequestor node.EntityReceiveHandler
+var MinerNotarizedBlockRequestor node.EntityRequestor
 
 /*SetupX2MRequestors - setup requestors */
 func SetupX2MRequestors() {

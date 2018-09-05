@@ -27,9 +27,6 @@ func SetMaxConcurrentRequests(maxConcurrentRequests int) {
 	MaxConcurrentRequests = maxConcurrentRequests
 }
 
-/*EntitySendHandler is used to send an entity to a given node */
-type EntitySendHandler func(entity datastore.Entity) SendHandler
-
 /*SendAll - send to every node */
 func (np *Pool) SendAll(handler SendHandler) []*Node {
 	return np.SendAtleast(len(np.Nodes), handler)
@@ -44,6 +41,12 @@ func (np *Pool) SendTo(handler SendHandler, to string) (bool, error) {
 	return handler(recepient), nil
 }
 
+/*SendOne - send message to a single node in the pool */
+func (np *Pool) SendOne(handler SendHandler) *Node {
+	nodes := np.shuffleNodes()
+	return np.sendOne(handler, nodes)
+}
+
 /*SendToMultiple - send to multiple nodes */
 func (np *Pool) SendToMultiple(handler SendHandler, nodes []*Node) (bool, error) {
 	sentTo := np.sendTo(len(nodes), nodes, handler)
@@ -53,9 +56,7 @@ func (np *Pool) SendToMultiple(handler SendHandler, nodes []*Node) (bool, error)
 	return false, common.NewError("send_to_given_nodes_unsuccessful", "Sending to given nodes not successful")
 }
 
-/*SendAtleast - It tries to communicate to at least the given number of active nodes
-* TODO: May need to pass a context object so we can cancel at will.
- */
+/*SendAtleast - It tries to communicate to at least the given number of active nodes */
 func (np *Pool) SendAtleast(numNodes int, handler SendHandler) []*Node {
 	nodes := np.shuffleNodes()
 	return np.sendTo(numNodes, nodes, handler)
@@ -129,12 +130,6 @@ func (np *Pool) sendTo(numNodes int, nodes []*Node, handler SendHandler) []*Node
 		}
 	}
 	return sentTo
-}
-
-/*SendOne - send message to a single node in the pool */
-func (np *Pool) SendOne(handler SendHandler) *Node {
-	nodes := np.shuffleNodes()
-	return np.sendOne(handler, nodes)
 }
 
 func (np *Pool) sendOne(handler SendHandler, nodes []*Node) *Node {

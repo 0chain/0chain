@@ -168,7 +168,7 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 		if msg.ShouldRetry() {
 			Logger.Info("notarization receipt handler (block not found) retrying", zap.Any("block", msg.Notarization.BlockID), zap.Int8("retry_count", msg.RetryCount), zap.Error(err))
 			if msg.RetryCount > 2 {
-				go mc.GetNotarizedBlock(msg.Notarization.BlockID, chain.MinerNotarizedBlockRequestor) // Let's try to download the block proactively
+				go mc.GetNotarizedBlock(msg.Notarization.BlockID) // Let's try to download the block proactively
 			} else {
 				msg.Retry(mc.BlockMessageChannel)
 			}

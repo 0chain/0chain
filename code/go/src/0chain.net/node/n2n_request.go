@@ -13,11 +13,9 @@ import (
 	"go.uber.org/zap"
 )
 
-//EntityReceiveHandler - given a key, handles an associated entity
-type EntityReceiveHandler func(params map[string]string, handler datastore.JSONEntityReqResponderF) SendHandler
-
 //RequestEntity - request an entity
-func (np *Pool) RequestEntity(ctx context.Context, handler SendHandler) *Node {
+func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, params map[string]string, handler datastore.JSONEntityReqResponderF) *Node {
+	rhandler := requestor(params, handler)
 	nodes := np.shuffleNodes()
 	for _, nd := range nodes {
 		select {
@@ -31,7 +29,7 @@ func (np *Pool) RequestEntity(ctx context.Context, handler SendHandler) *Node {
 		if nd == Self.Node {
 			continue
 		}
-		if handler(nd) {
+		if rhandler(nd) {
 			return nd
 		}
 	}
@@ -55,7 +53,7 @@ func SetRequestHeaders(req *http.Request, options *SendOptions, entityMetadata d
 }
 
 //RequestEntityHandler - a handler that requests an entity and uses it
-func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datastore.EntityMetadata) EntityReceiveHandler {
+func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datastore.EntityMetadata) EntityRequestor {
 	return func(params map[string]string, handler datastore.JSONEntityReqResponderF) SendHandler {
 		return func(receiver *Node) bool {
 			timer := receiver.GetTimer(uri)

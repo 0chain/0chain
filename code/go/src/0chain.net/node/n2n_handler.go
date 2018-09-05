@@ -89,9 +89,6 @@ func getHashData(clientID datastore.Key, ts common.Timestamp, key datastore.Key)
 	return clientID + ":" + common.TimeToString(ts) + ":" + key
 }
 
-/*SendHandler is used to send any message to a given node */
-type SendHandler func(n *Node) bool
-
 func getRequestEntity(r *http.Request, entityMetadata datastore.EntityMetadata) (datastore.Entity, error) {
 	defer r.Body.Close()
 	var buffer io.Reader = r.Body

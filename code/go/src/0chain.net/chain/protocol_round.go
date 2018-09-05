@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"0chain.net/config"
-	"0chain.net/node"
 
 	"0chain.net/block"
 	"0chain.net/common"
@@ -134,7 +133,8 @@ func (c *Chain) PruneChain(ctx context.Context, b *block.Block) {
 }
 
 /*GetNotarizedBlockForRound - get a notarized block for a round */
-func (c *Chain) GetNotarizedBlockForRound(r *round.Round, nbrequestor node.EntityReceiveHandler) *block.Block {
+func (c *Chain) GetNotarizedBlockForRound(r *round.Round) *block.Block {
+	nbrequestor := MinerNotarizedBlockRequestor
 	params := map[string]string{"round": fmt.Sprintf("%v", r.Number)}
 	ctx, cancelf := context.WithCancel(context.TODO())
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
@@ -166,12 +166,14 @@ func (c *Chain) GetNotarizedBlockForRound(r *round.Round, nbrequestor node.Entit
 		Logger.Info("get notarized block", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.String("state", util.ToHex(b.ClientStateHash)), zap.String("prev_block", b.PrevHash))
 		return nil, nil
 	}
-	c.Miners.RequestEntity(ctx, nbrequestor(params, handler))
+	n2n := c.Miners
+	n2n.RequestEntity(ctx, nbrequestor, params, handler)
 	return r.GetBestNotarizedBlock()
 }
 
 /*GetNotarizedBlock - get a notarized block for a round */
-func (c *Chain) GetNotarizedBlock(blockHash string, nbrequestor node.EntityReceiveHandler) *block.Block {
+func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
+	nbrequestor := MinerNotarizedBlockRequestor
 	cround := c.CurrentRound
 	params := map[string]string{"block": blockHash}
 	ctx, cancelf := context.WithCancel(context.TODO())
@@ -198,6 +200,7 @@ func (c *Chain) GetNotarizedBlock(blockHash string, nbrequestor node.EntityRecei
 		Logger.Info("get notarized block", zap.Int64("round", nb.Round), zap.String("block", nb.Hash))
 		return b, nil
 	}
-	c.Miners.RequestEntity(ctx, nbrequestor(params, handler))
+	n2n := c.Miners
+	n2n.RequestEntity(ctx, nbrequestor, params, handler)
 	return b
 }

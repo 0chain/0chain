@@ -60,7 +60,7 @@ func (mc *Chain) GetBlockToExtend(ctx context.Context, r *Round) *block.Block {
 		}
 		bnb := r.GetBestNotarizedBlock()
 		if bnb == nil {
-			bnb = mc.GetNotarizedBlockForRound(&r.Round, chain.MinerNotarizedBlockRequestor)
+			bnb = mc.GetNotarizedBlockForRound(&r.Round)
 		}
 		if bnb != nil {
 			if !bnb.IsStateComputed() {
