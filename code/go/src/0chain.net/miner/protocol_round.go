@@ -194,6 +194,13 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 	Logger.Info("adding block to verify", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Float64("weight", b.Weight()), zap.Float64("chain_weight", b.ChainWeight))
 	vctx := mr.StartVerificationBlockCollection(ctx)
 	if vctx != nil {
+		miner := mc.Miners.GetNode(b.MinerID)
+		minerNT := time.Duration(int64(1000 * miner.LargeMessageSendTime))
+		if minerNT >= chain.DELTA {
+			mr.delta = time.Millisecond
+		} else {
+			mr.delta = chain.DELTA - minerNT
+		}
 		go mc.CollectBlocksForVerification(vctx, mr)
 	}
 	mr.AddBlockToVerify(b)
@@ -255,7 +262,7 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 		}
 		sendVerification = true
 	}
-	var blockTimeTimer = time.NewTimer(chain.DELTA)
+	var blockTimeTimer = time.NewTimer(r.delta)
 	for true {
 		select {
 		case <-ctx.Done():

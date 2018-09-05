@@ -50,6 +50,9 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 					minval = v
 				}
 			}
+			if minval > maxval {
+				minval = maxval
+			}
 			node.LargeMessageSendTime = maxval
 			node.SmallMessageSendTime = minval
 			continue

@@ -4,6 +4,7 @@ import (
 	"context"
 	"sort"
 	"sync"
+	"time"
 
 	"0chain.net/block"
 	. "0chain.net/logging"
@@ -19,6 +20,7 @@ type Round struct {
 	blocksToVerifyChannel chan *block.Block
 	verificationComplete  bool
 	verificationCancelf   context.CancelFunc
+	delta                 time.Duration
 }
 
 /*AddBlockToVerify - adds a block to the round. Assumes non-concurrent update */
