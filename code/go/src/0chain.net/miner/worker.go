@@ -137,7 +137,7 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *Block
 			Logger.Debug("verification ticket (already notarized)", zap.Int64("round", b.Round), zap.String("block", b.Hash))
 			return
 		}
-		err = mc.VerifyTicket(ctx, b, &msg.BlockVerificationTicket.VerificationTicket)
+		err = mc.VerifyTicket(ctx, b.Hash, &msg.BlockVerificationTicket.VerificationTicket)
 		if err != nil {
 			Logger.Debug("verification ticket", zap.Error(err))
 			return
@@ -177,7 +177,7 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 		}
 		return
 	}
-	if err := mc.VerifyNotarization(ctx, b, msg.Notarization.VerificationTickets); err != nil {
+	if err := mc.VerifyNotarization(ctx, b.Hash, msg.Notarization.VerificationTickets); err != nil {
 		Logger.Error("notarization message", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
 		return
 	}

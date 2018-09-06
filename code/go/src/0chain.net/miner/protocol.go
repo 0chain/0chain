@@ -50,10 +50,12 @@ type ProtocolBlock interface {
 	GenerateBlock(ctx context.Context, b *block.Block, bsh chain.BlockStateHandler) error
 	ValidateMagicBlock(ctx context.Context, b *block.Block) bool
 	VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockVerificationTicket, error)
-	VerifyTicket(ctx context.Context, b *block.Block, vt *block.VerificationTicket) error
+
+	VerifyTicket(ctx context.Context, blockHash string, vt *block.VerificationTicket) error
+	VerifyNotarization(ctx context.Context, blockHash string, bvt []*block.VerificationTicket) error
+
 	AddVerificationTicket(ctx context.Context, b *block.Block, bvt *block.VerificationTicket) bool
 	IsBlockNotarized(ctx context.Context, b *block.Block) bool
-	VerifyNotarization(ctx context.Context, b *block.Block, bvt []*block.VerificationTicket) error
 	FinalizeBlock(ctx context.Context, b *block.Block) error
 }
 

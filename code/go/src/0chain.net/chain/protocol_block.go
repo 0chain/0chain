@@ -56,23 +56,21 @@ func (c *Chain) ComputeFinalizedBlock(ctx context.Context, r *round.Round) *bloc
 }
 
 /*VerifyTicket - verify the ticket */
-func (c *Chain) VerifyTicket(ctx context.Context, b *block.Block, bvt *block.VerificationTicket) error {
+func (c *Chain) VerifyTicket(ctx context.Context, blockHash string, bvt *block.VerificationTicket) error {
 	sender := c.Miners.GetNode(bvt.VerifierID)
 	if sender == nil {
 		return common.InvalidRequest("Verifier unknown or not authorized at this time")
 	}
 
-	if ok, _ := sender.Verify(bvt.Signature, b.Hash); !ok {
+	if ok, _ := sender.Verify(bvt.Signature, blockHash); !ok {
 		return common.InvalidRequest("Couldn't verify the signature")
 	}
 	return nil
 }
 
 /*VerifyNotarization - verify that the notarization is correct */
-func (c *Chain) VerifyNotarization(ctx context.Context, b *block.Block, bvt []*block.VerificationTicket) error {
-	if b.Round == 0 {
-		return nil
-	} else if bvt == nil {
+func (c *Chain) VerifyNotarization(ctx context.Context, blockHash string, bvt []*block.VerificationTicket) error {
+	if bvt == nil {
 		return common.NewError("no_verification_tickets", "No verification tickets for this block")
 	}
 
@@ -92,7 +90,7 @@ func (c *Chain) VerifyNotarization(ctx context.Context, b *block.Block, bvt []*b
 	}
 
 	for _, vt := range bvt {
-		if err := c.VerifyTicket(ctx, b, vt); err != nil {
+		if err := c.VerifyTicket(ctx, blockHash, vt); err != nil {
 			return err
 		}
 	}

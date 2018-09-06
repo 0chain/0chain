@@ -178,10 +178,17 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 			Logger.Error("add to round verification (invalid miner)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("miner_id", b.MinerID))
 			return
 		}
-		b.RoundRank = mr.GetMinerRank(bNode.SetIndex)
+		if b.Round > 1 {
+			if err := mc.VerifyNotarization(ctx, b.PrevHash, b.PrevBlockVerficationTickets); err != nil {
+				Logger.Error("verify round block (prior block verify notarization)", zap.Int64("round", mr.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Error(err))
+				return
+			}
+		}
 		b = mc.AddBlock(b)
+		b.RoundRank = mr.GetMinerRank(bNode.SetIndex)
 		if b.PrevBlock != nil {
 			b.ComputeChainWeight()
+			mc.updatePriorBlock(ctx, mr.Round, b)
 		} else {
 			// We can establish an upper bound for chain weight at the current round, subtract 1 and add block's own weight and check if that's less than the chain weight sent
 			chainWeightUpperBound := mc.LatestFinalizedBlock.ChainWeight + float64(b.Round-mc.LatestFinalizedBlock.Round)
@@ -299,48 +306,44 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r *Round, b *block.Block)
 	if b.MinerID == node.Self.GetKey() {
 		return mc.SignBlock(ctx, b)
 	}
+	/* We will try to move the fetch prev block logic as much as possible only into the state computation
 	if b.PrevBlock == nil {
 		pb, err := mc.GetBlock(ctx, b.PrevHash)
 		if err != nil {
-			Logger.Error("verify round", zap.Any("round", r.Number), zap.Any("block", b.Hash), zap.Any("prev_block", b.PrevHash), zap.Error(err))
-			return nil, chain.ErrPreviousBlockUnavailable
-		}
-		b.SetPreviousBlock(pb)
-		if pb.PrevBlockVerficationTickets == nil {
-			Logger.Info("verify round (incomplete prev block) TODO: sync block", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
-		}
-	}
-	/* Note: We are verifying the notarization of the previous block we have with
-	   the prev verification tickets of the current block. This is right as all the
-	   necessary verification tickets & notarization message may not have arrived to us */
-	if err := mc.VerifyNotarization(ctx, b.PrevBlock, b.PrevBlockVerficationTickets); err != nil {
-		Logger.Info("verify round block (prior block verify notarization)", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Error(err))
-		return nil, err
-	}
-	notarized := mc.IsBlockNotarized(ctx, b.PrevBlock)
-	b.PrevBlock.MergeVerificationTickets(b.PrevBlockVerficationTickets) // grab any unknown verification tickets of previous block from the current block
-	if !notarized {
-		pr := mc.GetRound(b.PrevBlock.Round)
-		if pr != nil {
-			mc.AddNotarizedBlock(ctx, pr.Round, b.PrevBlock)
-		} else {
-			Logger.Error("verify round - previous round not present", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
-		}
-	}
-	/*
-		if !b.PrevBlock.IsStateComputed() {
-			pbState := b.PrevBlock.GetBlockState()
-			Logger.Info("verify round block - previous block state not ready", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Int8("prev_block_state", pbState))
-			err := mc.ComputeState(ctx, b.PrevBlock)
-			if err != nil {
-				Logger.Error("verify round block - previous block state error", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Int8("prev_block_state", pbState), zap.Error(err))
+			if pb == nil {
+				mc.GetPreviousBlock(ctx, b)
+				pb = b.PrevBlock
 			}
-		}*/
+			if pb == nil {
+				return nil, chain.ErrPreviousBlockUnavailable
+			}
+		} else {
+			b.SetPreviousBlock(pb)
+		}
+	}*/
+	var hasPriorBlock = b.PrevBlock != nil
 	bvt, err := mc.VerifyBlock(ctx, b)
 	if err != nil {
 		return nil, err
 	}
+	if !hasPriorBlock && b.PrevBlock != nil {
+		mc.updatePriorBlock(ctx, r.Round, b)
+	}
 	return bvt, nil
+}
+
+func (mc *Chain) updatePriorBlock(ctx context.Context, r *round.Round, b *block.Block) {
+	pb := b.PrevBlock
+	notarized := mc.IsBlockNotarized(ctx, pb)
+	pb.MergeVerificationTickets(b.PrevBlockVerficationTickets) // grab any unknown verification tickets of previous block from the current block
+	if !notarized {
+		pr := mc.GetRound(pb.Round)
+		if pr != nil {
+			mc.AddNotarizedBlock(ctx, pr.Round, pb)
+		} else {
+			Logger.Error("verify round - previous round not present", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
+		}
+	}
 }
 
 /*ProcessVerifiedTicket - once a verified ticket is received, do further processing with it */
