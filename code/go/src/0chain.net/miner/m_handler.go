@@ -136,7 +136,7 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 		Logger.Debug("notarized block handler (round older than the current round)", zap.String("block", b.Hash), zap.Any("round", b.Round))
 		return true, nil
 	}
-	if err := mc.VerifyNotarization(ctx, b, b.VerificationTickets); err != nil {
+	if err := mc.VerifyNotarization(ctx, b.Hash, b.VerificationTickets); err != nil {
 		return nil, err
 	}
 	msg := &BlockMessage{Sender: node.GetSender(ctx), Type: MessageNotarizedBlock, Block: b}
@@ -148,7 +148,7 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 func NotarizedBlockSendHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	mc := GetMinerChain()
 	round := r.FormValue("round")
-	var b *block.Block
+	hash := r.FormValue("block")
 	if round != "" {
 		roundN, err := strconv.ParseInt(round, 10, 63)
 		if err != nil {
@@ -156,23 +156,26 @@ func NotarizedBlockSendHandler(ctx context.Context, r *http.Request) (interface{
 		}
 		r := mc.GetRound(roundN)
 		if r != nil {
-			b = r.GetBestNotarizedBlock()
+			b := r.GetBestNotarizedBlock()
+			if b != nil {
+				return b, nil
+			}
+		}
+	} else if hash != "" {
+		b, err := mc.GetBlock(ctx, hash)
+		if err != nil {
+			return nil, err
+		}
+		if mc.IsBlockNotarized(ctx, b) {
+			return b, nil
 		}
 	} else {
-		hash := r.FormValue("block")
-		if hash != "" {
-			nb, err := mc.GetBlock(ctx, hash)
-			if err != nil {
-				return nil, err
-			}
-			if mc.IsBlockNotarized(ctx, nb) {
-				b = nb
+		for r := mc.GetRound(mc.CurrentRound); r != nil; r = mc.GetRound(r.Number - 1) {
+			b := r.GetBestNotarizedBlock()
+			if b != nil {
+				return b, nil
 			}
 		}
-		Logger.Info("notarized block request", zap.String("block", hash), zap.Bool("found", b != nil))
-	}
-	if b != nil {
-		return b, nil
 	}
 	return nil, common.NewError("block_not_available", "Requested block is not available")
 }
