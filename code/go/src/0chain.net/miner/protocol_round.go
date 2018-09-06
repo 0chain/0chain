@@ -43,7 +43,7 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 	self := node.GetSelfNode(ctx)
 	rank := mr.GetMinerRank(self.SetIndex)
 	Logger.Info("*** starting round ***", zap.Int64("round", mr.Number), zap.Int("index", self.SetIndex), zap.Int("rank", rank), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round))
-	if !mc.CanGenerateRound(&mr.Round, self.Node) {
+	if !mc.CanGenerateRound(mr.Round, self.Node) {
 		return
 	}
 	//NOTE: If there are not enough txns, this will not advance further even though rest of the network is. That's why this is a goroutine
@@ -60,7 +60,7 @@ func (mc *Chain) GetBlockToExtend(ctx context.Context, r *Round) *block.Block {
 		}
 		bnb := r.GetBestNotarizedBlock()
 		if bnb == nil {
-			bnb = mc.GetNotarizedBlockForRound(&r.Round)
+			bnb = mc.GetNotarizedBlockForRound(r.Round)
 		}
 		if bnb != nil {
 			if !bnb.IsStateComputed() {
@@ -104,7 +104,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	b := datastore.GetEntityMetadata("block").Instance().(*block.Block)
 	b.ChainID = mc.ID
 	b.MagicBlockHash = mc.CurrentMagicBlock.Hash
-	mc.SetPreviousBlock(ctx, &r.Round, b, pb)
+	mc.SetPreviousBlock(ctx, r.Round, b, pb)
 	b.SetStateDB(pb)
 	for true {
 		if mc.CurrentRound > b.Round {
@@ -322,7 +322,7 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r *Round, b *block.Block)
 	if !notarized {
 		pr := mc.GetRound(b.PrevBlock.Round)
 		if pr != nil {
-			mc.AddNotarizedBlock(ctx, &pr.Round, b.PrevBlock)
+			mc.AddNotarizedBlock(ctx, pr.Round, b.PrevBlock)
 		} else {
 			Logger.Error("verify round - previous round not present", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
 		}
@@ -360,7 +360,7 @@ func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.B
 		r.Block = b
 		mc.CancelRoundVerification(ctx, r)
 		mc.SendNotarization(ctx, b)
-		mc.AddNotarizedBlock(ctx, &r.Round, b)
+		mc.AddNotarizedBlock(ctx, r.Round, b)
 	}
 }
 
@@ -375,7 +375,7 @@ func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *round.Round, b *block
 	pr := mc.GetRound(r.Number - 1)
 	if pr != nil {
 		pr.CancelVerification()
-		go mc.FinalizeRound(ctx, &pr.Round, mc)
+		go mc.FinalizeRound(ctx, pr.Round, mc)
 	}
 	return true
 }

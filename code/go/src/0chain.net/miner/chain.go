@@ -64,7 +64,7 @@ func (mc *Chain) SetupGenesisBlock(hash string) *block.Block {
 func (mc *Chain) CreateRound(r *round.Round) *Round {
 	var mr Round
 	r.ComputeRanks(mc.Miners.Size(), mc.Sharders.Size())
-	mr.Round = *r
+	mr.Round = r
 	mr.blocksToVerifyChannel = make(chan *block.Block, mc.NumGenerators)
 	return &mr
 }
@@ -142,7 +142,7 @@ func (mc *Chain) SetPreviousBlock(ctx context.Context, r *round.Round, b *block.
 	if r == nil {
 		mr := mc.GetRound(b.Round)
 		if mr != nil {
-			r = &mr.Round
+			r = mr.Round
 		} else {
 			r = datastore.GetEntityMetadata("round").Instance().(*round.Round)
 			r.Number = b.Round

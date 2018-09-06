@@ -85,14 +85,14 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 		r.Number = b.Round
 		r.RandomSeed = b.RoundRandomSeed
 		mr = mc.CreateRound(r)
-		if !mc.ValidGenerator(&mr.Round, b) {
+		if !mc.ValidGenerator(mr.Round, b) {
 			Logger.Debug("verify block (no mr, invalid generator)", zap.Any("round", mr.Number), zap.Any("block", b.Hash))
 			return
 		}
 		mc.startNewRound(ctx, mr)
 		mr = mc.GetRound(b.Round) // Need this again just in case there is another round already setup and the start didn't happen
 	} else {
-		if !mc.ValidGenerator(&mr.Round, b) {
+		if !mc.ValidGenerator(mr.Round, b) {
 			Logger.Debug("verify block (yes mr, invalid generator)", zap.Any("round", mr.Number), zap.Any("block", b.Hash))
 			return
 		}
@@ -182,7 +182,7 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 		return
 	}
 	b.MergeVerificationTickets(msg.Notarization.VerificationTickets)
-	if !mc.AddNotarizedBlock(ctx, &r.Round, b) {
+	if !mc.AddNotarizedBlock(ctx, r.Round, b) {
 		return
 	}
 	if !r.IsVerificationComplete() {
@@ -193,7 +193,7 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 	}
 	if mc.BlocksToSharder == chain.NOTARIZED {
 		//We assume those who can generate a block in a round are also responsible for sending it to the sharders
-		if mc.CanGenerateRound(&r.Round, node.GetSelfNode(ctx).Node) {
+		if mc.CanGenerateRound(r.Round, node.GetSelfNode(ctx).Node) {
 			go mc.SendNotarizedBlock(ctx, b)
 		}
 	}
@@ -215,7 +215,7 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
 		}
 	}
 	r.Round.Block = nil
-	if mc.CanGenerateRound(&r.Round, node.GetSelfNode(ctx).Node) {
+	if mc.CanGenerateRound(r.Round, node.GetSelfNode(ctx).Node) {
 		go mc.GenerateRoundBlock(ctx, r)
 	}
 }
@@ -246,7 +246,7 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMess
 		mc.AddBlock(mb)
 	}
 
-	mc.AddNotarizedBlock(ctx, &mr.Round, b)
+	mc.AddNotarizedBlock(ctx, mr.Round, b)
 	if !mr.IsVerificationComplete() {
 		mr.CancelVerification()
 		if mr.Block == nil || mr.Block.Weight() < b.Weight() {

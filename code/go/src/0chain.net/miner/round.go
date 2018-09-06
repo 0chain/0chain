@@ -16,7 +16,7 @@ var mutex = &sync.Mutex{}
 
 /*Round - a round from miner's perspective */
 type Round struct {
-	round.Round
+	*round.Round
 	blocksToVerifyChannel chan *block.Block
 	verificationComplete  bool
 	verificationCancelf   context.CancelFunc
