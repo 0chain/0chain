@@ -178,8 +178,8 @@ agent-clientid-assemble-local:
 	$(LOCAL_PLAY)
 
 #Transport the nodes file and client keys file to the remote machines.
-agent-clientid-assemble-zchain:
-	$(ZCHAIN_PLAY)
+agent-clientid-assemble-remote:
+	$(REMOTE_PLAY)
 
 #Remove records from Route53
 agent-clientid-teardown-local:

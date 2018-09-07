@@ -28,6 +28,11 @@
   - name: "Docker Setup"
     import_role:
       name: docker
+
+  - name: "Agent Setup"
+    import_role:
+      name: agent-clientid
+
 #  roles:
 #    - artifacts
 
