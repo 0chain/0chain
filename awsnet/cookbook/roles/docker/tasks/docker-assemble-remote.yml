@@ -20,6 +20,10 @@
       name: pip
       state: latest
 
+  - name: Install the docker helper
+    pip:
+      name: docker-py
+
   - name: Add the docker official GPG key...
     apt_key:
       url: https://download.docker.com/linux/ubuntu/gpg
@@ -51,6 +55,15 @@
     register: hello
 
   - debug: var=hello
+
+  - docker_container:
+      name: hello-world
+      state: absent
+
+  - docker_image:
+      name: hello-world
+      state: absent
+      force: yes
 
   - name: Ensure docker-compose is installed and available
     get_url:

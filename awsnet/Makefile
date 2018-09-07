@@ -210,6 +210,9 @@ agent-stage-cluster: \
 agent-build-assemble-remote:
 	$(REMOTE_PLAY)
 
+agent-build-teardown-remote:
+	$(REMOTE_PLAY)
+
 #Start the sharder and miner
 agent-role-assemble-remote:
 	$(REMOTE_PLAY)
