@@ -132,6 +132,7 @@
   loop_control:
     loop_var: agent_dir
     label: "create dir for {{agent_role}} => {{agent_dir.location | default(agent_dir.canonical)}}"
+  become: yes
 
 - name: "Create links to the canonical names"
   file:
@@ -145,4 +146,6 @@
     loop_var: agent_dir
     label: "create link if required for {{agent_role}} => {{agent_dir.canonical}}"
   when: agent_dir.location is defined
+  become: yes
+
 ...
