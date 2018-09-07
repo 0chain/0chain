@@ -5,6 +5,7 @@
     wait: yes
     instance_tags: "{{instance_tags[item.key]}}"
     state: running
+    count: 1
   with_dict: "{{agents_dict}}"
   check_mode: no
   ignore_errors: yes

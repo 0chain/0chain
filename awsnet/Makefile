@@ -76,10 +76,12 @@ __check_defined_FORCE:
 
 #The AWS_ACCESS_KEY and other related variables can be installed using aws-vault.
 #This ensures all the access keys are kept safe.
-export AWS_ACCESS_KEY_ID:=$(shell aws-vault exec 0chain -- env | grep AWS_ACCESS_KEY_ID | cut -d'=' -f2)
-export AWS_SECRET_ACCESS_KEY:=$(shell aws-vault exec 0chain  -- env | grep AWS_SECRET_ACCESS_KEY|cut -d'=' -f2)
-export AWS_SESSION_TOKEN:=$(shell aws-vault exec 0chain  -- env | grep AWS_SESSION_TOKEN | cut -d'=' -f2)
-export AWS_SECURITY_TOKEN:=$(shell aws-vault exec 0chain -- env | grep AWS_SECURITY_TOKEN|cut -d'=' -f2)
+export AWS_VAULT_PROMPT:=osascript
+export AWS_VAULT_KEYCHAIN_NAME:=login
+export AWS_ACCESS_KEY_ID:=$(shell aws-vault exec 0chain --keychain=login --assume-role-ttl=8h --session-ttl=8h -- env | grep AWS_ACCESS_KEY_ID | cut -d'=' -f2)
+export AWS_SECRET_ACCESS_KEY:=$(shell aws-vault exec 0chain  --keychain=login --assume-role-ttl=8h --session-ttl=8h -- env | grep AWS_SECRET_ACCESS_KEY|cut -d'=' -f2)
+export AWS_SESSION_TOKEN:=$(shell aws-vault exec 0chain  --keychain=login --assume-role-ttl=8h --session-ttl=8h -- env | grep AWS_SESSION_TOKEN | cut -d'=' -f2)
+export AWS_SECURITY_TOKEN:=$(shell aws-vault exec 0chain --keychain=login --assume-role-ttl=8h --session-ttl=8h -- env | grep AWS_SECURITY_TOKEN|cut -d'=' -f2)
 
 PLAYBOOK=ansible-playbook
 
@@ -102,7 +104,6 @@ EXTRA_VARS="aws_access_key_id=$(AWS_ACCESS_KEY_ID) \
 
 ADMIN_PLAY=@$(PLAYBOOK) -i $(INVENTORY) $(COOKBOOK)/cook-admin.yml --extra-vars=$(EXTRA_VARS) --tags $@
 LOCAL_PLAY=@$(PLAYBOOK) -i $(INVENTORY) $(COOKBOOK)/cook-local.yml --extra-vars=$(EXTRA_VARS) --tags $@
-RAW_PLAY=@$(PLAYBOOK) -i $(INVENTORY) $(COOKBOOK)/cook-raw.yml --extra-vars=$(EXTRA_VARS) --tags $@
 REMOTE_PLAY=@$(PLAYBOOK) -i $(INVENTORY) $(COOKBOOK)/cook-remote.yml --extra-vars=$(EXTRA_VARS) --tags $@
 ZCHAIN_PLAY=@$(PLAYBOOK) -i $(INVENTORY) $(COOKBOOK)/cook-zchain.yml --extra-vars=$(EXTRA_VARS) --tags $@
 
@@ -148,7 +149,7 @@ instance-teardown-local:
 
 #Instance the packages such as ansible, python, tree etc...
 instance-assemble-remote:
-	$(RAW_PLAY)
+	$(REMOTE_PLAY)
 
 #Reboot all the instances...
 instance-reboot-remote:
@@ -196,7 +197,7 @@ agent-clientid-teardown-local:
 agent-config-assemble-zchain:
 	$(ZCHAIN_PLAY)
 
-#These two targets are used to create the instance
+#Create the basic framework for the instance.
 basic-stage-cluster: \
 	instance-assemble-local \
 	instance-assemble-remote \
@@ -206,6 +207,7 @@ basic-stage-cluster: \
 	agent-clientid-assemble-local \
 	agent-clientid-assemble-zchain
 
+#Create the agents such as miner and sharder.
 agent-stage-cluster: \
 	gitrepo-assemble-local \
 	gitrepo-assemble-zchain \

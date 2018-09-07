@@ -8,7 +8,6 @@
 aws_credentials: "{{credential}}/aws/credentials"
 aws_key_pair: "{{blueprint.aws_key_pair}}"
 aws_key_dir: "{{credential}}/{{aws_key_pair}}"
-#aws_profile: "{{ network }}"
 
 aws_key_pair_file: "{{aws_key_dir}}/{{aws_key_pair}}.pem"
 aws_public_key_file: "{{aws_key_dir }}/{{aws_key_pair}}.pub"
@@ -85,6 +84,10 @@ git:
   staging: "{{zchain_artifact}}/0chain"
   zip: "{{zchain_artifact}}/0chain.zip"
 
+zchain_volumes:
+  root: "/0chain_root"
+  ebs: "/0chain"
+  efs: "/0chain_efs"
 
 artifact:
   local:
@@ -94,14 +97,31 @@ artifact:
       - miner
       - sharder
 
+
   zchain:
-    base: "/0chain"
-    code: "/0chain/0chain"
+    base: "{{zchain_volumes.ebs}}"
+    code: "{{zchain_volumes.ebs}}/0chain"
     dirs:
-      - 0chain
-      - nodes
-      - miner
-      - sharder
+      'miner':
+        - { canonical: "/0chain/config" }
+        - { canonical: "/0chain/nodes" }
+        - { canonical: "/0chain/logs", location:  "{{zchain_volumes.root}}/logs" }
+        - { canonical: "/0chain/data/redis/state" }
+        - { canonical: "/0chain/data/redis/transactions" }
+        - { canonical: "/0chain/data/rocksdb/state" }
+
+
+      'sharder':
+        - { canonical: "/0chain/config" }
+        - { canonical: "/0chain/nodes" }
+        - { canonical: "/0chain/logs", location:  "{{zchain_volumes.root}}/logs" }
+        - { canonical: "/0chain/data/blocks", location:  "{{zchain_volumes.efs}}/data/blocks" }
+        - { canonical: "/0chain/data/cassandra", location:  "{{zchain_volumes.efs}}/data/cassandra"}
+        - { canonical: "/0chain/data/rocksdb/blocksummary" }
+        - { canonical: "/0chain/data/rocksdb/roundsummary" }
+        - { canonical: "/0chain/data/rocksdb/state" }
+
+
 
 nodefiles:
   file: "nodes.txt"

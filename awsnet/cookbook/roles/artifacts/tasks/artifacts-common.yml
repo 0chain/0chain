@@ -16,13 +16,4 @@
     network_name: "{{zchain.blueprint.network_name}}"
   tags: 'always'
   run_once: true
-
-#- include_tasks: artifacts-assemble-remote.yml
-#  tags: ['artifacts-assemble-remote']
-#  loop: "{{agents_dict | dict2items}}"
-#  loop_control:
-#    loop_var: agent
-
-- import_tasks: artifacts-local.yml
-- import_tasks: artifacts-assemble-remote.yml
 ...

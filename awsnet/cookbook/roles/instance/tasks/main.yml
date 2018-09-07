@@ -6,8 +6,14 @@
     - instance-teardown-local
     - istart-assemble-local
 
-- import_tasks: instance-assemble-local.yml
+- include_tasks: instance-assemble-local.yml
   tags: ['instance-assemble-local']
+  loop: "{{agents_dict | dict2items}}"
+  loop_control:
+    loop_var: agent
+
+#- import_tasks: instance-assemble-local.yml
+#  tags: ['instance-assemble-local']
 
 - import_tasks: istart-assemble-local.yml
   tags: ['istart-assemble-local', 'instance-assemble-local']
