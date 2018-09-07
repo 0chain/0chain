@@ -85,7 +85,7 @@ export AWS_SECURITY_TOKEN:=$(shell aws-vault exec 0chain --keychain=login --assu
 
 PLAYBOOK=ansible-playbook
 
-ROLES:=artifacts keyaws instance istart storage docker gitrepo clientid agentbuild agentrole istop
+ROLES:=artifacts keyaws instance istart  docker gitrepo clientid agentbuild agentrole istop
 
 ROLE_TARGETS_LOCAL:=$(foreach role,$(ROLES),$(role)-assemble-local $(role)-teardown-local)
 ROLE_TARGETS_REMOTE:=$(foreach role,$(ROLES),$(role)-assemble-remote $(role)-teardown-remote)
@@ -158,10 +158,6 @@ instance-reboot-remote:
 istart-assemble-local:
 	$(LOCAL_PLAY)
 
-#Create the EBS volume and mount it for reboot.
-storage-assemble-remote:
-	$(REMOTE_PLAY)
-
 #Install docker related routines on the remote machine
 docker-assemble-remote:
 	$(REMOTE_PLAY)
@@ -201,7 +197,6 @@ agent-config-assemble-zchain:
 basic-stage-cluster: \
 	instance-assemble-local \
 	instance-assemble-remote \
-	storage-assemble-remote \
 	docker-assemble-remote \
 	artifacts-assemble-remote \
 	agent-clientid-assemble-local \
@@ -237,35 +232,6 @@ $(TARGETS): show
 	@echo "Make running target=$@"
 	@$(PLAYBOOK) -i $(INVENTORY) $(CONFIG_FILE) --extra-vars="access=$(ACCESS) network=$(network) repo=$(ZCHAIN_REPO) network_dir=$(NETWORK_DIR)" --tags $@
 
-
-workon_chinook:
-	echo  "ZCHAIN_TESTNET=chinook" > $(CONTEXT)
-
-
-workon_eddy:
-	echo  "ZCHAIN_TESTNET=eddy" > $(CONTEXT)
-
-
-workon_eddy0825:
-	echo "ZCHAIN_TESTNET=eddy0825" > $(CONTEXT)
-
-workon_eddy0826:
-	echo "ZCHAIN_TESTNET=eddy0826" > $(CONTEXT)
-
-workon_shasta:
-	echo  "ZCHAIN_TESTNET=shasta" > $(CONTEXT)
-
-workon_shasta15:
-	echo  "ZCHAIN_TESTNET=shasta15" > $(CONTEXT)
-
-workon_shasta100:
-	echo  "ZCHAIN_TESTNET=shasta100" > $(CONTEXT)
-
-workon_shasta250:
-	echo  "ZCHAIN_TESTNET=shasta250" > $(CONTEXT)
-
-workon_whitney:
-	echo  "ZCHAIN_TESTNET=whitney" > $(CONTEXT)
 
 show:
 	@echo "ZCHAIN_TESTNET.......=$(ZCHAIN_TESTNET)"

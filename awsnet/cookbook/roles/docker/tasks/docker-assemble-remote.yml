@@ -1,58 +1,60 @@
-- name: Create the docker group
-  group:
-    name: docker
-    state: present
+- become: yes
+  block:
+  - name: Create the docker group
+    group:
+      name: docker
+      state: present
 
-- name: Add user to docker group
-  user:
-    name: ubuntu
-    groups: docker
-    append: yes
+  - name: Add user to docker group
+    user:
+      name: ubuntu
+      groups: docker
+      append: yes
 
-- name: Update the apt cache...
-  apt:
-    update_cache: yes
+  - name: Update the apt cache...
+    apt:
+      update_cache: yes
 
-- name: Install the pip utility...
-  easy_install:
-    name: pip
-    state: latest
+  - name: Install the pip utility...
+    easy_install:
+      name: pip
+      state: latest
 
-- name: Add the docker official GPG key...
-  apt_key:
-    url: https://download.docker.com/linux/ubuntu/gpg
-    state: present
+  - name: Add the docker official GPG key...
+    apt_key:
+      url: https://download.docker.com/linux/ubuntu/gpg
+      state: present
 
-- name: Add docker API to the apt repository...
-  apt_repository:
-    repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ansible_lsb.codename}} stable"
-    state: present
+  - name: Add docker API to the apt repository...
+    apt_repository:
+      repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ansible_lsb.codename}} stable"
+      state: present
 
-- name: Update docker requirement packages...
-  apt:
-    name: "{{item}}"
-    update_cache: yes
-    state: present
-  with_items:
-    - apt-transport-https
-    - ca-certificates
-    - curl
-    - software-properties-common
-    - docker-ce
-    - python-setuptools
+  - name: Update docker requirement packages...
+    apt:
+      name: "{{item}}"
+      update_cache: yes
+      state: present
+    with_items:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - software-properties-common
+      - docker-ce
+      - python-setuptools
 
-- name: Make sure docker is started at boot time
-  systemd: state=started name=docker
+  - name: Make sure docker is started at boot time
+    systemd: state=started name=docker
 
-- name: Run Hello World Docker...
-  command: docker run hello-world
-  register: hello
+  - name: Run Hello World Docker...
+    command: docker run hello-world
+    register: hello
 
-- debug: var=hello
+  - debug: var=hello
 
-- name: Ensure docker-compose is installed and available
-  get_url:
-    url : https://github.com/docker/compose/releases/download/1.22.0/docker-compose-{{ ansible_system }}-{{ ansible_userspace_architecture }}
-    dest: /usr/local/bin/docker-compose
-    mode: 'u+x,g+x,o+x'
+  - name: Ensure docker-compose is installed and available
+    get_url:
+      url : https://github.com/docker/compose/releases/download/1.22.0/docker-compose-{{ ansible_system }}-{{ ansible_userspace_architecture }}
+      dest: /usr/local/bin/docker-compose
+      mode: 'u+x,g+x,o+x'
 

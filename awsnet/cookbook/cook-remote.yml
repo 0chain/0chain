@@ -25,6 +25,9 @@
     import_role:
       name: instance
 
+  - name: "Docker Setup"
+    import_role:
+      name: docker
 #  roles:
 #    - artifacts
 
