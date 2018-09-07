@@ -162,10 +162,6 @@ istart-assemble-local:
 docker-assemble-remote:
 	$(REMOTE_PLAY)
 
-#Create the remote directories such as /0chain
-artifacts-assemble-remote:
-	$(REMOTE_PLAY)
-
 #Zip the git repo locally.
 gitrepo-assemble-local:
 	$(LOCAL_PLAY)
@@ -198,7 +194,6 @@ basic-stage-cluster: \
 	instance-assemble-local \
 	instance-assemble-remote \
 	docker-assemble-remote \
-	artifacts-assemble-remote \
 	agent-clientid-assemble-local \
 	agent-clientid-assemble-zchain
 
