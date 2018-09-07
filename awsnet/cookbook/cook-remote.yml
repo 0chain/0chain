@@ -33,6 +33,14 @@
     import_role:
       name: agent-clientid
 
+  - name: "0chain configuration update..."
+    import_role:
+      name: agent-config
+
+  - name: "0chain git replication..."
+    import_role:
+      name: gitrepo
+
 #  roles:
 #    - artifacts
 

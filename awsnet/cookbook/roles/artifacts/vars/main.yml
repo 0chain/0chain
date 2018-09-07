@@ -101,6 +101,8 @@ artifact:
   zchain:
     base: "{{zchain_volumes.ebs}}"
     code: "{{zchain_volumes.ebs}}/0chain"
+    config: "{{zchain_volumes.ebs}}/config"
+
     dirs:
       'miner':
         - { canonical: "/0chain/config" }
@@ -135,7 +137,7 @@ zchain_config:
   file: "0chain.yaml"
   dir:
     local: "anchor/{{network}}"
-    zchain: "{{artifact.zchain.code}}/config"
+    zchain: "{{artifact.zchain.config}}"
 
 zchain:
   blueprint: "{{blueprint}}"

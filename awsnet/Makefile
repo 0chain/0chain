@@ -167,8 +167,8 @@ gitrepo-assemble-local:
 	$(LOCAL_PLAY)
 
 #Move the entire git repo to the remote machine and install it
-gitrepo-assemble-zchain:
-	$(ZCHAIN_PLAY)
+gitrepo-assemble-remote:
+	$(REMOTE_PLAY)
 
 gitrepo-teardown-zchain:
 	$(ZCHAIN_PLAY)
@@ -186,8 +186,8 @@ agent-clientid-teardown-local:
 	$(LOCAL_PLAY)
 
 #Copy the configuration file.
-agent-config-assemble-zchain:
-	$(ZCHAIN_PLAY)
+agent-config-assemble-remote:
+	$(REMOTE_PLAY)
 
 #Create the basic framework for the instance.
 basic-stage-cluster: \
@@ -195,15 +195,15 @@ basic-stage-cluster: \
 	instance-assemble-remote \
 	docker-assemble-remote \
 	agent-clientid-assemble-local \
-	agent-clientid-assemble-zchain
+	agent-clientid-assemble-remote
 
 #Create the agents such as miner and sharder.
 agent-stage-cluster: \
 	gitrepo-assemble-local \
 	gitrepo-assemble-zchain \
 	agent-clientid-assemble-local \
-	agent-clientid-assemble-zchain \
-	agent-config-assemble-zchain \
+	agent-clientid-assemble-remote \
+	agent-config-assemble-remote \
 	agent-build-assemble-zchain
 
 #Build the zchain_base, miner and sharder
