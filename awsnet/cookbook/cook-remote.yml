@@ -45,6 +45,10 @@
     import_role:
       name: agent-build
 
+  - name: "Start/Stop the agents..."
+    import_role:
+        name: agent-role
+
 #  roles:
 #    - artifacts
 

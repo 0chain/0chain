@@ -1,4 +1,9 @@
 ---
+- name: Set hostname to match EC2 Name
+  hostname:
+    name: "{{agent_name}}-{{network_name}}"
+  become: yes
+
 - name: Update the apt-get package, install ansible and python3.5
   shell: |
     apt-get -y update

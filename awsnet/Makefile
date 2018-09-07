@@ -211,12 +211,12 @@ agent-build-assemble-remote:
 	$(REMOTE_PLAY)
 
 #Start the sharder and miner
-agent-role-assemble-zchain:
-	$(ZCHAIN_PLAY)
+agent-role-assemble-remote:
+	$(REMOTE_PLAY)
 
 # Stop the sharder, miner
-agent-role-teardown-zchain:
-	$(ZCHAIN_PLAY)
+agent-role-teardown-remote:
+	$(REMOTE_PLAY)
 
 #Instance management - start and stop
 istop-teardown-local:
