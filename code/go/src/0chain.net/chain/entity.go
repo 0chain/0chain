@@ -15,6 +15,7 @@ import (
 	"0chain.net/node"
 	"0chain.net/round"
 	"0chain.net/state"
+	"0chain.net/transaction"
 	"0chain.net/util"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -433,4 +434,24 @@ func (c *Chain) ReadNodePools(configFile string) {
 	if blobbers, ok := config.([]interface{}); ok {
 		c.Blobbers.AddNodes(blobbers)
 	}
+}
+
+/*ChainHasTransaction - indicates if this chain has the transaction */
+func (c *Chain) ChainHasTransaction(ctx context.Context, b *block.Block, txn *transaction.Transaction) (bool, error) {
+	var pb = b
+	for cb := b; cb != nil; pb, cb = cb, c.GetPreviousBlock(ctx, cb) {
+		if cb.Round == 0 {
+			return false, nil
+		}
+		if cb.HasTransaction(txn.Hash) {
+			return true, nil
+		}
+		if cb.CreationDate < txn.CreationDate {
+			return false, nil
+		}
+	}
+	if false {
+		Logger.Debug("chain has txn", zap.Int64("round", b.Round), zap.Int64("upto_round", pb.Round), zap.Any("txn_ts", txn.CreationDate), zap.Any("upto_block_ts", pb.CreationDate))
+	}
+	return false, common.NewError("insufficient_chain", "Chain length not sufficient to confirm the presence of this transaction")
 }

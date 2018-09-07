@@ -77,7 +77,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 			}
 			return true
 		}
-		if ok, err := b.PrevBlock.ChainHasTransaction(txn); ok || err != nil {
+		if ok, err := mc.ChainHasTransaction(ctx, b.PrevBlock, txn); ok || err != nil {
 			if err != nil {
 				ierr = err
 			}
@@ -206,6 +206,9 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockV
 	if err != nil {
 		return nil, err
 	}
+	if pb := mc.GetPreviousBlock(ctx, b); pb == nil {
+		return nil, chain.ErrPreviousBlockUnavailable
+	}
 	err = mc.ValidateTransactions(ctx, b)
 	if err != nil {
 		return nil, err
@@ -256,7 +259,7 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 				validChannel <- false
 				return
 			}
-			ok, err := b.PrevBlock.ChainHasTransaction(txn)
+			ok, err := mc.ChainHasTransaction(ctx, b.PrevBlock, txn)
 			if ok || err != nil {
 				if err != nil {
 					Logger.Error("validate transactions", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Error(err))

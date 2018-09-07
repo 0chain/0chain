@@ -318,26 +318,6 @@ func (b *Block) HasTransaction(hash string) bool {
 	return ok
 }
 
-/*ChainHasTransaction - indicates if this chain has the transaction */
-func (b *Block) ChainHasTransaction(txn *transaction.Transaction) (bool, error) {
-	var pb = b
-	for cb := b; cb != nil; pb, cb = cb, cb.PrevBlock {
-		if cb.Round == 0 {
-			return false, nil
-		}
-		if cb.HasTransaction(txn.Hash) {
-			return true, nil
-		}
-		if cb.CreationDate < txn.CreationDate {
-			return false, nil
-		}
-	}
-	if false {
-		Logger.Debug("chain has txn", zap.Int64("round", b.Round), zap.Int64("upto_round", pb.Round), zap.Any("txn_ts", txn.CreationDate), zap.Any("upto_block_ts", pb.CreationDate))
-	}
-	return false, common.NewError("insufficient_chain", "Chain length not sufficient to confirm the presence of this transaction")
-}
-
 /*GetSummary - get the block summary of this block */
 func (b *Block) GetSummary() *BlockSummary {
 	bs := datastore.GetEntityMetadata("block_summary").Instance().(*BlockSummary)

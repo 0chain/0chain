@@ -131,14 +131,14 @@ func (c *Chain) UpdateNodeState(b *block.Block) {
 }
 
 /*GetPreviousBlock - get the previous block from the network */
-func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) {
+func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Block {
 	if b.PrevBlock != nil {
-		return
+		return b.PrevBlock
 	}
 	pb, err := c.GetBlock(ctx, b.PrevHash)
 	if err == nil {
 		b.SetPreviousBlock(pb)
-		return
+		return pb
 	}
 	blocks := make([]*block.Block, 0, 10)
 	Logger.Info("fetch previous block", zap.Int64("round", b.Round), zap.String("block", b.Hash))
@@ -158,11 +158,11 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) {
 	}
 	if cb == nil {
 		Logger.Error("get previous block (unable to get prior blocks)", zap.Int64("round", b.Round), zap.String("block", b.Hash))
-		return
+		return nil
 	}
 	if cb.PrevBlock == nil {
 		Logger.Error("get previous block (missing continuity)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("oldest_fetched_round", cb.Round), zap.String("oldest_fetched_block", cb.Hash), zap.String("missing_prior_block", cb.PrevHash))
-		return
+		return nil
 	}
 	for idx := len(blocks) - 1; idx >= 0; idx-- {
 		cb := blocks[idx]
@@ -170,7 +170,7 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) {
 			pb, err := c.GetBlock(ctx, cb.PrevHash)
 			if err != nil {
 				Logger.Error("get previous block (missing continuity)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("cb_round", cb.Round), zap.String("cb_block", cb.Hash), zap.String("missing_prior_block", cb.PrevHash))
-				return
+				return nil
 			}
 			cb.SetPreviousBlock(pb)
 		}
@@ -180,4 +180,5 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) {
 	if err == nil {
 		b.SetPreviousBlock(pb)
 	}
+	return pb
 }
