@@ -1,6 +1,20 @@
 ---
-- name: "Transport config file to the agents...{{aws_key_pair_file}}"
+#- name: "Synchronize the config directory from the code base"
+- name: "Copy the configuration file"
   synchronize:
-    src: "{{zchain_config.dir.local}}/{{zchain_config.file}}"
-    dest: "{{zchain_config.dir.zchain}}/{{zchain_config.file}}"
+    src: /0chain/0chain/config/
+    dest: /0chain/config/
+  delegate_to: "{{ inventory_hostname }}"
+
+- set_fact:
+    local_config: "{{zchain_config.dir.local}}/{{zchain_config.file}}"
+    remote_config: "{{zchain_config.dir.zchain}}/{{zchain_config.file}}"
+
+- debug:
+    msg: "local={{local_config}} remote={{remote_config}}"
+
+- name: "Transport config file to the agents"
+  synchronize:
+    src: "{{local_config}}"
+    dest: "{{remote_config}}"
 ...

@@ -133,6 +133,7 @@ nodefiles:
 
 blueprint.instance_tags: network_type={{blueprint.network_type}} network_name={{blueprint.network_name}}
 
+
 zchain_config:
   file: "0chain.yaml"
   dir:
