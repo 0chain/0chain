@@ -1,3 +1,3 @@
 #!/bin/sh
-docker-compose -f docker.aws/build.miner/docker-compose.yml stop
+docker-compose -p zchain -f docker.aws/build.miner/docker-compose.yml stop
 
