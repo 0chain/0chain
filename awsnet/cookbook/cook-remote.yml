@@ -41,6 +41,10 @@
     import_role:
       name: gitrepo
 
+  - name: "Build 0chain code base..."
+    import_role:
+      name: agent-build
+
 #  roles:
 #    - artifacts
 
