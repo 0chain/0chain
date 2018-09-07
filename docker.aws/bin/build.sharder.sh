@@ -1,3 +1,3 @@
 #!/bin/sh
-docker-compose -p zchain -t zchain_sharder -f docker.aws/build.sharder/docker-compose.yml build --force-rm
+docker-compose -p zchain -f docker.aws/build.sharder/docker-compose.yml build --force-rm
 
