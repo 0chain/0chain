@@ -107,7 +107,7 @@ artifact:
       'miner':
         - { canonical: "/0chain/config" }
         - { canonical: "/0chain/nodes" }
-        - { canonical: "/0chain/logs", location:  "{{zchain_volumes.root}}/logs" }
+        - { canonical: "/0chain/log", location:  "{{zchain_volumes.root}}/log" }
         - { canonical: "/0chain/data/redis/state" }
         - { canonical: "/0chain/data/redis/transactions" }
         - { canonical: "/0chain/data/rocksdb/state" }
@@ -116,7 +116,7 @@ artifact:
       'sharder':
         - { canonical: "/0chain/config" }
         - { canonical: "/0chain/nodes" }
-        - { canonical: "/0chain/logs", location:  "{{zchain_volumes.root}}/logs" }
+        - { canonical: "/0chain/log", location:  "{{zchain_volumes.root}}/log" }
         - { canonical: "/0chain/data/blocks", location:  "{{zchain_volumes.efs}}/data/blocks" }
         - { canonical: "/0chain/data/cassandra", location:  "{{zchain_volumes.efs}}/data/cassandra"}
         - { canonical: "/0chain/data/rocksdb/blocksummary" }
