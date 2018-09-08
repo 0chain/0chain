@@ -5,14 +5,31 @@
     - "{{ credential }}/aws/credentials.yml"
     - [ "anchor/{{network}}/blueprint.yml"]
     - [ "anchor/{{network}}/clientid.yml"]
+    - "roles/artifacts/vars/main.yml"
 
-  roles:
-    - role: artifacts
-    - role: instance
-    - role: istart
-    - role: istop
-    - role: gitrepo
-    - role: agent-clientid
-    - role: agent-build
-    - role: agent-role
+  environment: "{{aws_vars}}"
+
+  tasks:
+  - name: "Include artifacts for the network"
+    import_role:
+      name: artifacts
+      tasks_from: artifacts-common
+
+  - name: "Include tasks to administer the local instances"
+    import_role:
+      name: instance
+
+  - name: "Agent Setup"
+    import_role:
+      name: agent-clientid
+
+#  roles:
+#    - role: artifacts
+#    - role: instance
+#    - role: istart
+#    - role: istop
+#    - role: gitrepo
+#    - role: agent-clientid
+#    - role: agent-build
+#    - role: agent-role
 ...

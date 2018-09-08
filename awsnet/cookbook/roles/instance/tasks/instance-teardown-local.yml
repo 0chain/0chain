@@ -1,48 +1,51 @@
-- name: "Fire first request to terminate the servers..."
-  ec2:
-    region: "{{regions[item.value.region]}}"
-    key_name: "{{aws_key_pair}}"
-    instance_type: "{{zchain.blueprint.instance_type[item.value.role]}}"
-    image: "{{instance_images[item.value.region]['ami_id']}}"
-    wait: no
-    termination_protection: no
-    group:
-    instance_tags:
-      Name: "{{item.key}}"
-      role: "{{item.value.role}}"
-      network_type: "{{zchain.blueprint.network_type}}"
-      network_name: "{{zchain.blueprint.network_name}}"
-    exact_count: 0
-    count_tag:
-      Name: "{{item.key}}"
-      role: "{{item.value.role}}"
-      network_type: "{{zchain.blueprint.network_type}}"
-      network_name: "{{zchain.blueprint.network_name}}"
+---
+- block:
+  - set_fact:
+      agent_role: "{{agent.value.role}}"
 
-  with_items: "{{agents}}"
-  check_mode: no
-  ignore_errors: yes
-- name: "Wait for the servers to terminate..."
-  ec2:
-    region: "{{regions[item.value.region]}}"
-    key_name: "{{aws_key_pair}}"
-    instance_type: "{{zchain.blueprint.instance_type[item.value.role]}}"
-    image: "{{instance_images[item.value.region]['ami_id']}}"
-    wait: yes
-    termination_protection: no
-    group:
-    instance_tags:
-      Name: "{{item.key}}"
-      role: "{{item.value.role}}"
-      network_name: "{{zchain.blueprint.network_name}}"
-      network_type: "{{zchain.blueprint.network_type}}"
-    exact_count: 0
-    count_tag:
-      Name: "{{item.key}}"
-      role: "{{item.value.role}}"
-      network_type: "{{zchain.blueprint.network_type}}"
-      network_name: "{{zchain.blueprint.network_name}}"
+  - name: "Fire first request to terminate the servers..."
+    ec2:
+      region: "{{regions[agent.value.region]}}"
+      key_name: "{{aws_key_pair}}"
+      instance_type: "{{zchain.blueprint.instance_type[agent.value.role]}}"
+      image: "{{instance_images[agent.value.region]['ami_id']}}"
+      wait: no
+      termination_protection: no
+      group:
+      instance_tags: "{{instance_tags[agent.key]}}"
+      exact_count: 0
+      count_tag: "{{instance_tags[agent.key]}}"
+    check_mode: no
+    ignore_errors: yes
 
-  with_items: "{{agents}}"
-  check_mode: no
-  ignore_errors: yes
+  - name: "Wait for the servers to terminate..."
+    ec2:
+      region: "{{regions[agent.value.region]}}"
+      key_name: "{{aws_key_pair}}"
+      instance_type: "{{zchain.blueprint.instance_type[agent.value.role]}}"
+      image: "{{instance_images[agent.value.region]['ami_id']}}"
+      wait: yes
+      termination_protection: no
+      group:
+      instance_tags: "{{instance_tags[agent.key]}}"
+      exact_count: 0
+      count_tag: "{{instance_tags[agent.key]}}"
+    check_mode: no
+    ignore_errors: yes
+
+#  - name: "Teardown the EFS file system {{agent_role}} => {{agent.key}} {{agent.value.region}}"
+#    efs:
+#      state: absent
+#      region: "{{regions[agent.value.region]}}"
+#      #name: "{{network_name}}.{{agent.key}}"
+#      name: "{{agent.key}}"
+#      #tags: "{{instance_tags[agent.key]}}"
+#    when: agent_role == "sharder"
+#    register: efs_teardown_result
+
+#  - debug:
+#      msg: "efs teardown status={{efs_teardown_result}}"
+
+
+  tags: ['instance-teardown-local']
+...

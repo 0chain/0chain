@@ -29,7 +29,7 @@
       url: https://download.docker.com/linux/ubuntu/gpg
       state: present
 
-  - name: Add docker API to the apt repository...
+  - name: "Update {{ansible_lsb.codename}} repository with docker API"
     apt_repository:
       repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ansible_lsb.codename}} stable"
       state: present

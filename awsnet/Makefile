@@ -104,6 +104,8 @@ EXTRA_VARS="aws_access_key_id=$(AWS_ACCESS_KEY_ID) \
 
 ADMIN_PLAY=@$(PLAYBOOK) -i $(INVENTORY) $(COOKBOOK)/cook-admin.yml --extra-vars=$(EXTRA_VARS) --tags $@
 LOCAL_PLAY=@$(PLAYBOOK) -i $(INVENTORY) $(COOKBOOK)/cook-local.yml --extra-vars=$(EXTRA_VARS) --tags $@
+RAW_PLAY=@$(PLAYBOOK) -i $(INVENTORY) $(COOKBOOK)/cook-raw.yml --extra-vars=$(EXTRA_VARS) --tags $@
+
 REMOTE_PLAY=@$(PLAYBOOK) -i $(INVENTORY) $(COOKBOOK)/cook-remote.yml --extra-vars=$(EXTRA_VARS) --tags $@
 ZCHAIN_PLAY=@$(PLAYBOOK) -i $(INVENTORY) $(COOKBOOK)/cook-zchain.yml --extra-vars=$(EXTRA_VARS) --tags $@
 
@@ -144,19 +146,25 @@ keyaws-teardown-local:
 instance-assemble-local:
 	$(LOCAL_PLAY)
 
+instance-start-local:
+	$(LOCAL_PLAY)
+
+instance-stop-local:
+	$(LOCAL_PLAY)
+
 instance-teardown-local:
 	$(LOCAL_PLAY)
 
 #Instance the packages such as ansible, python, tree etc...
+instance-assemble-raw:
+	$(RAW_PLAY)
+
 instance-assemble-remote:
 	$(REMOTE_PLAY)
 
 #Reboot all the instances...
 instance-reboot-remote:
 	$(REMOTE_PLAY)
-
-istart-assemble-local:
-	$(LOCAL_PLAY)
 
 #Install docker related routines on the remote machine
 docker-assemble-remote:
@@ -192,6 +200,8 @@ agent-config-assemble-remote:
 #Create the basic framework for the instance.
 basic-stage-cluster: \
 	instance-assemble-local \
+	instance-start-local \
+	instance-assemble-raw \
 	instance-assemble-remote \
 	docker-assemble-remote \
 	agent-clientid-assemble-local \

@@ -9,6 +9,7 @@ blueprint:
 
   network_type: 'testnet'
   network_name: 'eddy0905'
+  network_domain: 'testnet-0chain.net'
   hosts: 'tag_network_name_eddy0905'
 
   instance_type:
@@ -29,17 +30,17 @@ blueprint:
 
   regions:
   - california
-  - virginia
+  - ohio
 
   miners:
     m00: {role: miner, region: california}
-#    m01: {role: miner, region: virginia}
-#    m02: {role: miner, region: california}
-#    m03: {role: miner, region: virginia}
-#    m04: {role: miner, region: california}
-#    m05: {role: miner, region: virginia}
+    m01: {role: miner, region: ohio}
+    m02: {role: miner, region: california}
+    m03: {role: miner, region: ohio}
+    m04: {role: miner, region: california}
+    m05: {role: miner, region: ohio}
 
   sharders:
     s00: {role: sharder, region: california}
-#    s01: {role: sharder, region: virginia}
+    s01: {role: sharder, region: ohio}
 ...

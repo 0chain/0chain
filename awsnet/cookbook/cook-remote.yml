@@ -1,6 +1,24 @@
 ---
+#- hosts: ["{{blueprint.hosts}}"]
+#  gather_facts: false
+#  vars_files:
+#  - "{{ credential }}/aws/credentials.yml"
+#  - "anchor/{{network}}/blueprint.yml"
+#  - "anchor/{{network}}/clientid.yml"
+#  - "roles/artifacts/vars/main.yml"
+#
+#  tasks:
+#  - name: "Include artifacts for the network"
+#    import_role:
+#      name: artifacts
+#      tasks_from: artifacts-common
+#
+#  - name: "Include tasks to setup minimal raw packages"
+#    import_role:
+#      name: instance
+#      tasks_from: instance-assemble-raw
+
 - hosts: ["{{blueprint.hosts}}"]
-  become: false
   gather_facts: true
   vars_files:
     - "{{ credential }}/aws/credentials.yml"
@@ -48,32 +66,4 @@
   - name: "Start/Stop the agents..."
     import_role:
         name: agent-role
-
-#  roles:
-#    - artifacts
-
-
-#  tasks:
-#    - name: "Include the metadata for the instance"
-#      import_role:
-#        name: instance
-#        tasks_from: instance-metadata
-#
-#    - name: "Include the artifacts collection"
-#      import_role:
-#          name: artifacts
-#          tasks_from: artifacts-assemble-remote
-#
-#    - name: "Include remote instance tasks"
-#      import_role:
-#          name: instance
-#          tasks_from: instance-assemble-remote
-#
-#    - name: "Installation of docker"
-#      import_role:
-#          name: docker
-#
-#    - name: "Agent common"
-#      import_role:
-#          name: agent-common
 ...

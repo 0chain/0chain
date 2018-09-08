@@ -1,79 +1,67 @@
 ---
-- name: Set hostname to match EC2 Name
-  hostname:
-    name: "{{agent_name}}-{{network_name}}"
-  become: yes
+- become: yes
+  block:
+  - name: Set hostname to match EC2 Name
+    hostname:
+      name: "{{agent_name}}.{{network_name}}.{{network_domain}}"
 
-- name: Update the apt-get package, install ansible and python3.5
-  shell: |
-    apt-get -y update
-    apt-get -y install python3.5 ansible
-  become: yes
-  args:
-    warn: False
+  - name: Set packages to update
+    set_fact:
+      package_list:
+        - python3.5
+        - ansible
+        - python-setuptools
+        - tree
+        - zip
+        - unzip
+        - htop
+        - ncdu
+        - linux-tools-common
+        - linux-tools-4.4.0-1061-aws
+        - linux-cloud-tools-4.4.0-1061-aws
+        - linux-tools-aws
+        - iperf
+        - nethogs
+        - iperf3
+        - nfs-common
 
-- name: Set packages to update
-  set_fact:
-    package_list:
-      - python3.5
-      - ansible
-      - python-setuptools
-      - tree
-      - zip
-      - unzip
-      - htop
-      - ncdu
-      - linux-tools-common
-      - linux-tools-4.4.0-1061-aws
-      - linux-cloud-tools-4.4.0-1061-aws
-      - linux-tools-aws
-      - iperf
-      - nethogs
-      - iperf3
-      - nfs-common
+  - name: Install base packages
+    apt:
+      name: "{{package_list}}"
+      state: present
 
-- name: Install base packages
-  apt:
-    name: "{{package_list}}"
-    state: present
+  - name: "Set EBS device and mount point"
+    set_fact:
+      ebs_mount_point: "{{zchain_volumes.ebs}}"
+      ebs_device_name: "{{storage[zchain.blueprint.storage_ebs[agent_role]].ubuntu_disk}}"
 
-- name: "Set the EBS device to format"
-  set_fact:
-    ebs_device_name: "{{storage[zchain.blueprint.storage_ebs[agent_role]].ubuntu_disk}}"
+  - debug:
+      msg: "{{agent_role}}:{{agent_name}} => {{ebs_device_name}}"
 
-- debug:
-    msg: "{{agent_role}}:{{agent_name}} => {{ebs_device_name}}"
+  - name: "Install file-system for {{agent_name}} on {{ebs_device_name}}"
+    filesystem:
+      fstype: ext4
+      dev: "{{ebs_device_name}}"
+      force: no
 
-- name: "Install file-system for {{agent_name}} on {{ebs_device_name}}"
-  filesystem:
-    fstype: ext4
-    dev: "{{ebs_device_name}}"
-    force: no
-  become: yes
+  - name: Create the mount point
+    file:
+      path: "{{ebs_mount_point}}"
+      state: directory
+      owner: ubuntu
+      group: ubuntu
+      mode: 0755
 
-- name: "Set the base directory to mount"
-  set_fact:
-    ebs_mount_point: "{{zchain_volumes.ebs}}"
+  - name: Mount the EBS block device
+    mount:
+      path: "{{ebs_mount_point}}"
+      src: "{{ebs_device_name}}"
+      state: mounted
+      fstype: ext4
+      boot: yes
 
-- name: Create the mount point
-  file:
-    path: "{{ebs_mount_point}}"
-    state: directory
-    owner: ubuntu
-    group: ubuntu
-    mode: 0755
-  become: yes
-
-- name: Mount the EBS block device
-  mount:
-    path: "{{ebs_mount_point}}"
-    src: "{{ebs_device_name}}"
-    state: mounted
-    fstype: ext4
-    boot: yes
-  become: yes
-
-- block:
+- become: yes
+  block:
   - name: Get the EFS facts for the instance
     local_action:
       module: efs_facts
@@ -96,7 +84,7 @@
 
   - debug:
       msg: "efs_mount_point={{agent_name}} => {{efs_mount_point}}"
-      verbosity: 2
+      verbosity: 0
 
   - name: "Mount for {{agent_name}} {{efs_mount_point}} at {{zchain_volumes.efs}}"
     mount:
@@ -107,45 +95,42 @@
       state: mounted
     become: yes
 
-  - name: "Register {{zchain_volumes.efs}} to user ubuntu"
+  - name: "Change ownership {{zchain_volumes.efs}} to user ubuntu"
     file:
       path: "{{zchain_volumes.efs}}"
       owner: ubuntu
       group: ubuntu
       mode: "u=rwx,g=rx,o=rx"
     become: yes
-
   when: agent_role == "sharder"
 
+- become: yes
+  block:
+  - set_fact:
+      agent_dirs: "{{artifact.zchain.dirs[agent_role]}}"
 
-- set_fact:
-    agent_dirs: "{{artifact.zchain.dirs[agent_role]}}"
+  - name: "Create subdirs for agents"
+    file:
+      path : "{{agent_dir.location | default(agent_dir.canonical)}}"
+      state: directory
+      owner: ubuntu
+      group: ubuntu
+      mode: 0755
+    loop: "{{agent_dirs}}"
+    loop_control:
+      loop_var: agent_dir
+      label: "create dir for {{agent_role}} => {{agent_dir.location | default(agent_dir.canonical)}}"
 
-- name: "Create subdirs for agents"
-  file:
-    path : "{{agent_dir.location | default(agent_dir.canonical)}}"
-    state: directory
-    owner: ubuntu
-    group: ubuntu
-    mode: 0755
-  loop: "{{agent_dirs}}"
-  loop_control:
-    loop_var: agent_dir
-    label: "create dir for {{agent_role}} => {{agent_dir.location | default(agent_dir.canonical)}}"
-  become: yes
+  - name: "Create links to the canonical names"
+    file:
+      src: "{{agent_dir.location}}"
+      dest: "{{agent_dir.canonical}}"
+      state: link
+      force: yes
+    loop: "{{agent_dirs}}"
 
-- name: "Create links to the canonical names"
-  file:
-    src: "{{agent_dir.location}}"
-    dest: "{{agent_dir.canonical}}"
-    state: link
-    force: yes
-  loop: "{{agent_dirs}}"
-
-  loop_control:
-    loop_var: agent_dir
-    label: "create link if required for {{agent_role}} => {{agent_dir.canonical}}"
-  when: agent_dir.location is defined
-  become: yes
-
+    loop_control:
+      loop_var: agent_dir
+      label: "create link if required for {{agent_role}} => {{agent_dir.canonical}}"
+    when: agent_dir.location is defined
 ...
