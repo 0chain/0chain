@@ -23,6 +23,14 @@
     import_role:
       name: agent-clientid
 
+  - name: "Git Repository local extraction"
+    import_role:
+      name: gitrepo
+
+  - name: "Create the agent-clientid"
+    import_role:
+      name: agent-clientid
+
 #  roles:
 #    - role: artifacts
 #    - role: instance
