@@ -1,9 +1,4 @@
 ---
-- name: "Do basic setup..."
-  shell: docker.aws/bin/init.setup.sh
-  args:
-    chdir: "{{zchain_code}}"
-
 - name: "Build the zchain_base"
   shell: docker.aws/bin/build.base.sh
   args:
