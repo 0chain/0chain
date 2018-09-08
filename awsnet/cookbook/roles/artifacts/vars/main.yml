@@ -105,6 +105,7 @@ artifact:
 
     dirs:
       'miner':
+        - { canonical: "/0chain/0chain" }
         - { canonical: "/0chain/config" }
         - { canonical: "/0chain/nodes" }
         - { canonical: "/0chain/log", location:  "{{zchain_volumes.root}}/log" }
@@ -114,6 +115,7 @@ artifact:
 
 
       'sharder':
+        - { canonical: "/0chain/0chain" }
         - { canonical: "/0chain/config" }
         - { canonical: "/0chain/nodes" }
         - { canonical: "/0chain/log", location:  "{{zchain_volumes.root}}/log" }
