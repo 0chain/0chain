@@ -41,7 +41,7 @@ services:
       - /0chain/config:/0chain/config
       - /0chain/nodes:/0chain/nodes
       - /0chain/log:/0chain/log
-      - /0chain_efs/data:/0chain/data
+      - /0chain/data:/0chain/data
 
     logging:
       driver: "json-file"
