@@ -170,6 +170,9 @@ instance-reboot-remote:
 docker-assemble-remote:
 	$(REMOTE_PLAY)
 
+custom-role-remote:
+	$(REMOTE_PLAY)
+
 #Zip the git repo locally.
 gitrepo-assemble-local:
 	$(LOCAL_PLAY)

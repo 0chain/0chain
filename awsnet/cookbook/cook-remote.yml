@@ -66,4 +66,8 @@
   - name: "Start/Stop the agents..."
     import_role:
         name: agent-role
+
+  - name: "Run custom command..."
+    import_role:
+      name: custom-role
 ...

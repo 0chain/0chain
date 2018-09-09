@@ -100,7 +100,8 @@
       path: "{{zchain_volumes.efs}}"
       owner: ubuntu
       group: ubuntu
-      mode: "u=rwx,g=rx,o=rx"
+      mode: "u=rwX,g=rX,o=rX"
+      recurse: yes
     become: yes
   when: agent_role == "sharder"
 
@@ -115,7 +116,8 @@
       state: directory
       owner: ubuntu
       group: ubuntu
-      mode: 0755
+      mode: "u=rwX,g=rX,o=rX"
+      recurse: yes
     loop: "{{agent_dirs}}"
     loop_control:
       loop_var: agent_dir
