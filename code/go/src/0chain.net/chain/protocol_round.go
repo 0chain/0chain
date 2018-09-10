@@ -154,10 +154,12 @@ func (c *Chain) GetNotarizedBlockForRound(r *round.Round) *block.Block {
 		if b.Round != r.Number {
 			return nil, common.NewError("invalid_block", "Block not from the requested round")
 		}
-		if err := b.Validate(ctx); err != nil {
+		if err := c.VerifyNotarization(ctx, b.Hash, b.VerificationTickets); err != nil {
+			Logger.Error("get notarized block for round - validate notarization", zap.Int64("round", r.Number), zap.Error(err))
 			return nil, err
 		}
-		if err := c.VerifyNotarization(ctx, b.Hash, b.VerificationTickets); err != nil {
+		if err := b.Validate(ctx); err != nil {
+			Logger.Error("get notarized block for round - validate", zap.Int64("round", r.Number), zap.Error(err))
 			return nil, err
 		}
 		//TODO: this may not be the best round block or the best chain weight block. Do we do that extra work?
@@ -188,12 +190,12 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 		if !ok {
 			return nil, common.NewError("invalid_entity", "Invalid entity")
 		}
-		if err := nb.Validate(ctx); err != nil {
-			Logger.Error("get notarized block - validate", zap.String("block", blockHash), zap.Error(err), zap.Any("block_obj", nb))
-			return nil, err
-		}
 		if err := c.VerifyNotarization(ctx, nb.Hash, nb.VerificationTickets); err != nil {
 			Logger.Error("get notarized block - validate notarization", zap.String("block", blockHash), zap.Error(err))
+			return nil, err
+		}
+		if err := nb.Validate(ctx); err != nil {
+			Logger.Error("get notarized block - validate", zap.String("block", blockHash), zap.Any("block_obj", nb), zap.Error(err))
 			return nil, err
 		}
 		b = c.AddBlock(nb)
