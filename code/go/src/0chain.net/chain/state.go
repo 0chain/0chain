@@ -111,7 +111,7 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 			if b.PrevBlock != nil {
 				prevState = util.ToHex(b.PrevBlock.ClientState.GetRoot())
 			}
-			Logger.Error("update state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.String("prev_client_state", prevState), zap.Any("txn", txn), zap.Error(err))
+			Logger.Debug("update state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.String("prev_client_state", prevState), zap.Any("txn", txn), zap.Error(err))
 		}
 
 		if config.DevConfiguration.State && stateOut != nil {
