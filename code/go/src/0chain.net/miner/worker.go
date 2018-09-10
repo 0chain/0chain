@@ -211,7 +211,7 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
 	if r.Number > 1 {
 		pr := mc.GetRound(r.Number - 1)
 		if pr != nil {
-			go mc.BroadcastNotarizedBlocks(ctx, pr, r)
+			mc.BroadcastNotarizedBlocks(ctx, pr, r)
 		}
 	}
 	r.Round.Block = nil
