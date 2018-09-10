@@ -103,6 +103,15 @@ func (np *Pool) GetRandomNodes(num int) []*Node {
 	return nodes[:num]
 }
 
+/*GetNodesByLargeMessageTime - get the nodes in the node pool sorted by the time to send a large message */
+func (np *Pool) GetNodesByLargeMessageTime() []*Node {
+	size := np.Size()
+	sorted := make([]*Node, size)
+	copy(sorted, np.Nodes)
+	sort.SliceStable(np.Nodes, func(i, j int) bool { return sorted[i].LargeMessageSendTime < sorted[j].LargeMessageSendTime })
+	return sorted
+}
+
 /*Print - print this pool. This will be used for http response and Read method should be able to consume it*/
 func (np *Pool) Print(w io.Writer) {
 	nodes := np.shuffleNodes()
