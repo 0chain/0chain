@@ -28,8 +28,8 @@ func (np *Pool) StatusMonitor(ctx context.Context) {
 
 func (np *Pool) statusMonitor(ctx context.Context) {
 	tr := &http.Transport{
-		MaxIdleConns:       1000,            // TODO: since total nodes is expected to be fixed, this may be OK
-		IdleConnTimeout:    2 * time.Minute, // more than the frequency of checking will ensure always on
+		MaxIdleConns:       100,
+		IdleConnTimeout:    time.Minute,
 		DisableCompression: true,
 	}
 	client := &http.Client{Transport: tr, Timeout: 500 * time.Millisecond}
@@ -83,7 +83,6 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 			node.LastActiveTime = ts
 		}
 	}
-	//TODO: No downloading of node data from other nodes as discovery happens through magic block
 }
 
 /*DownloadNodeData - downloads the node definition data for the given pool type from the given node */

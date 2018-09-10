@@ -68,7 +68,6 @@ func (np *Pool) shuffleNodes() []*Node {
 }
 
 func (np *Pool) computeNodesArray() {
-	// TODO: Do we need to use Mutex while doing this?
 	var array = make([]*Node, 0, len(np.NodesMap))
 	for _, v := range np.NodesMap {
 		array = append(array, v)
