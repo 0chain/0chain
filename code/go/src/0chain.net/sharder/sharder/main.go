@@ -165,7 +165,6 @@ func initHandlers() {
 }
 
 func initEntities() {
-	//TODO: For now using memory storage, but we don't need it.
 	memoryStorage := memorystore.GetStorageProvider()
 	chain.SetupEntity(memoryStorage)
 	block.SetupEntity(memoryStorage)

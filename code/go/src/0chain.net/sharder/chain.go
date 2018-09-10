@@ -22,11 +22,9 @@ func SetupSharderChain(c *chain.Chain) {
 	sharderChain.rounds = make(map[int64]*round.Round)
 	sharderChain.roundsMutex = &sync.Mutex{}
 	sharderChain.BlockChannel = make(chan *block.Block, 128)
-	//TODO experiment on different buffer sizes for Round Channel
 	sharderChain.RoundChannel = make(chan *round.Round, 128)
 	sharderChain.BlockCache = cache.GetLRUCacheProvider()
-	//TODO determine the cache size depending on the block & transaction size
-	bcs := 100
+	bcs := 100 //TODO determine the cache size depending on the block & transaction size
 	sharderChain.BlockCache.New(bcs)
 	sharderChain.BlockTxnCache = cache.GetLRUCacheProvider()
 	tcs := int(c.BlockSize) * bcs

@@ -11,9 +11,6 @@ import (
 
 /*SetupHandlers sets up the necessary API end points */
 func SetupHandlers() {
-	//TODO: These handlers may not be necessary
-	//http.HandleFunc("/v1/block/get", common.ToJSONResponse(memorystore.WithConnectionHandler(GetBlock)))
-	//http.HandleFunc("/v1/block/put", datastore.ToJSONEntityReqResponse(memorystore.WithConnectionEntityJSONHandler(PutBlock, blockEntityMetadata), blockEntityMetadata))
 }
 
 /*GetBlock - given an id returns the block information */
