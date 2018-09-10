@@ -239,10 +239,8 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 		//While saturation is good, it's going to be expensive, hence TODO for now. Also, if we are proceeding verification based on partial block info,
 		// we can't broadcast that block
 		if !mc.IsBlockNotarized(ctx, b) {
-			mc.SendVerificationTicket(ctx, b, bvt)
-
+			go mc.SendVerificationTicket(ctx, b, bvt)
 			// since block.AddVerificationTicket is not thread-safe, directly doing ProcessVerifiedTicket will not work in rare cases as incoming verification tickets get added concurrently
-			//mc.ProcessVerifiedTicket(ctx, r, b, &bvt.VerificationTicket)
 			bm := NewBlockMessage(MessageVerificationTicket, node.Self.Node, r, b)
 			bm.BlockVerificationTicket = bvt
 			mc.BlockMessageChannel <- bm
@@ -306,21 +304,6 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r *Round, b *block.Block)
 	if b.MinerID == node.Self.GetKey() {
 		return mc.SignBlock(ctx, b)
 	}
-	/* We will try to move the fetch prev block logic as much as possible only into the state computation
-	if b.PrevBlock == nil {
-		pb, err := mc.GetBlock(ctx, b.PrevHash)
-		if err != nil {
-			if pb == nil {
-				mc.GetPreviousBlock(ctx, b)
-				pb = b.PrevBlock
-			}
-			if pb == nil {
-				return nil, chain.ErrPreviousBlockUnavailable
-			}
-		} else {
-			b.SetPreviousBlock(pb)
-		}
-	}*/
 	var hasPriorBlock = b.PrevBlock != nil
 	bvt, err := mc.VerifyBlock(ctx, b)
 	if err != nil {
@@ -362,8 +345,8 @@ func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.B
 		b.SetBlockState(block.StateNotarized)
 		r.Block = b
 		mc.CancelRoundVerification(ctx, r)
-		mc.SendNotarization(ctx, b)
 		mc.AddNotarizedBlock(ctx, r.Round, b)
+		go mc.SendNotarization(ctx, b)
 	}
 }
 
@@ -373,13 +356,12 @@ func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *round.Round, b *block
 		return false
 	}
 	mc.UpdateNodeState(b)
-	mc.startRound(r)
-
 	pr := mc.GetRound(r.Number - 1)
 	if pr != nil {
 		pr.CancelVerification()
 		go mc.FinalizeRound(ctx, pr.Round, mc)
 	}
+	mc.startRound(r)
 	return true
 }
 
@@ -393,9 +375,10 @@ func (mc *Chain) startRound(r *round.Round) {
 		nmr := mc.CreateRound(nr)
 		// Even if the context is cancelled, we want to proceed with the next round, hence start with a root context
 		Logger.Debug("starting a new round", zap.Int64("round", nr.Number))
-		go mc.startNewRound(common.GetRootContext(), nmr)
+		ctx := common.GetRootContext()
+		go mc.startNewRound(ctx, nmr)
 		//TODO: Not required once VRF is in place
-		mc.Miners.SendAll(RoundStartSender(nr))
+		go mc.SendRoundStart(ctx, nr)
 	}
 }
 
@@ -409,6 +392,6 @@ func (mc *Chain) BroadcastNotarizedBlocks(ctx context.Context, pr *Round, r *Rou
 	nb := pr.GetBestNotarizedBlock()
 	if nb != nil {
 		Logger.Info("sending notarized block", zap.Int64("round", pr.Number), zap.String("block", nb.Hash))
-		mc.SendNotarizedBlockToMiners(ctx, nb)
+		go mc.SendNotarizedBlockToMiners(ctx, nb)
 	}
 }

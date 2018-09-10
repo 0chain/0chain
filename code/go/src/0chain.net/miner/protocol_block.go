@@ -358,7 +358,7 @@ func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 		}
 	}
 	mc.FinalizeBlock(ctx, b)
-	mc.SendFinalizedBlock(ctx, b)
+	go mc.SendFinalizedBlock(ctx, b)
 	fr := mc.GetRound(b.Round)
 	if fr != nil {
 		fr.Finalize(b)
