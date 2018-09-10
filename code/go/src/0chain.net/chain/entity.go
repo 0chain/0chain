@@ -65,11 +65,12 @@ type Chain struct {
 	OwnerID       datastore.Key `json:"owner_id"`                  // Client who created this chain
 	ParentChainID datastore.Key `json:"parent_chain_id,omitempty"` // Chain from which this chain is forked off
 
-	Decimals              int8  `json:"decimals"`               // Number of decimals allowed for the token on this chain
-	BlockSize             int32 `json:"block_size"`             // Number of transactions in a block
-	NumGenerators         int   `json:"num_generators"`         // Number of block generators
-	NumSharders           int   `json:"num_sharders"`           // Number of sharders that can store the block
-	NotarizationThreshold int   `json:"notarization_threshold"` // Threshold for a block to be notarized
+	Decimals           int8  `json:"decimals"`           // Number of decimals allowed for the token on this chain
+	BlockSize          int32 `json:"block_size"`         // Number of transactions in a block
+	NumGenerators      int   `json:"num_generators"`     // Number of block generators
+	NumSharders        int   `json:"num_sharders"`       // Number of sharders that can store the block
+	Threshold_By_Count int   `json:"threshold_by_count"` // Threshold count for a block to be notarized
+	Threshold_By_Stake int   `json:"threshold_by_stake"` // Stake threshold for a block to be notarized
 
 	/*Miners - this is the pool of miners */
 	Miners *node.Pool `json:"-"`
@@ -110,6 +111,8 @@ type Chain struct {
 
 	/*PruneStateBelowCount - prune state below these many rounds */
 	PruneStateBelowCount int
+	minersStake          map[datastore.Key]int
+	stakeMutex           *sync.Mutex
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
@@ -153,7 +156,8 @@ func NewChainFromConfig() *Chain {
 	chain.BlockSize = viper.GetInt32("server_chain.block.size")
 	chain.NumGenerators = viper.GetInt("server_chain.block.generators")
 	chain.NumSharders = viper.GetInt("server_chain.block.sharders")
-	chain.NotarizationThreshold = viper.GetInt("server_chain.block.notarization_threshold")
+	chain.Threshold_By_Count = viper.GetInt("server_chain.block.consensus.threshold_by_count")
+	chain.Threshold_By_Stake = viper.GetInt("server_chain.block.consensus.threshold_by_stake")
 	chain.OwnerID = viper.GetString("server_chain.owner")
 	chain.ValidationBatchSize = viper.GetInt("server_chain.block.validation.batch_size")
 	chain.RoundRange = viper.GetInt64("server_chain.round_range")
@@ -175,6 +179,7 @@ func Provider() datastore.Entity {
 	c.Version = "1.0"
 	c.blocksMutex = &sync.Mutex{}
 	c.stateMutex = &sync.Mutex{}
+	c.stakeMutex = &sync.Mutex{}
 	c.InitializeCreationDate()
 	c.Miners = node.NewPool(node.NodeTypeMiner)
 	c.Sharders = node.NewPool(node.NodeTypeSharder)
@@ -195,6 +200,7 @@ func (c *Chain) Initialize() {
 	c.ClientStateDeserializer = &state.Deserializer{}
 	c.StateDB = stateDB
 	c.BlockChain = ring.New(10000)
+	c.minersStake = make(map[datastore.Key]int)
 }
 
 /*SetupEntity - setup the entity */
@@ -391,14 +397,9 @@ func (c *Chain) ValidGenerator(r *round.Round, b *block.Block) bool {
 	return c.CanGenerateRound(r, miner)
 }
 
-/*GetNotarizationThreshold - gives the threshold percentage for block to be notarized */
-func (c *Chain) GetNotarizationThreshold() int {
-	return c.NotarizationThreshold
-}
-
 /*GetNotarizationThresholdCount - gives the threshold count for block to be notarized*/
 func (c *Chain) GetNotarizationThresholdCount() int {
-	notarizedPercent := float64(c.NotarizationThreshold) / 100
+	notarizedPercent := float64(c.Threshold_By_Count) / 100
 	thresholdCount := float64(c.Miners.Size()) * notarizedPercent
 	return int(math.Ceil(thresholdCount))
 }
@@ -454,4 +455,14 @@ func (c *Chain) ChainHasTransaction(ctx context.Context, b *block.Block, txn *tr
 		Logger.Debug("chain has txn", zap.Int64("round", b.Round), zap.Int64("upto_round", pb.Round), zap.Any("txn_ts", txn.CreationDate), zap.Any("upto_block_ts", pb.CreationDate))
 	}
 	return false, common.NewError("insufficient_chain", "Chain length not sufficient to confirm the presence of this transaction")
+}
+
+func (c *Chain) UpdateMiningStake(minerId datastore.Key, stake int) {
+	c.stakeMutex.Lock()
+	defer c.stakeMutex.Unlock()
+	c.minersStake[minerId] = stake
+}
+
+func (c *Chain) GetMiningStake(minerId datastore.Key) int {
+	return c.minersStake[minerId]
 }

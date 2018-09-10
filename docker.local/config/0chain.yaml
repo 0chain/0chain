@@ -24,7 +24,9 @@ server_chain:
     size: 100
     generators: 2
     sharders: 3
-    notarization_threshold: 60 # percentage
+    consensus:
+      threshold_by_count: 60 # percentage
+      threshold_by_stake: 0
     validation:
       batch_size: 1000
   round_range: 10000000
