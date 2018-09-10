@@ -29,3 +29,4 @@ ENV APP_DIR=/0chain
 WORKDIR $APP_DIR
 RUN mkdir -p $APP_DIR/bin
 COPY --from=0 $APP_DIR/miner $APP_DIR/bin
+USER 1000:1000

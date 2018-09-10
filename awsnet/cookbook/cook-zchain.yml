@@ -1,11 +1,12 @@
 ---
 - hosts: ["{{blueprint.hosts}}"]
   become: false
-  gather_facts: yes
+  gather_facts: true
   vars_files:
     - "{{ credential }}/aws/credentials.yml"
     - "anchor/{{network}}/blueprint.yml"
     - "anchor/{{network}}/clientid.yml"
+    - "roles/artifacts/vars/main.yml"
 
   environment: "{{aws_vars}}"
 
@@ -14,7 +15,6 @@
     - role: inventory
     - role: gitrepo
     - role: agent-common
-    - role: agent-clientid
     - role: agent-config
     - role: agent-build
     - role: agent-role

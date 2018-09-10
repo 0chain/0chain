@@ -1,4 +1,0 @@
----
-  - import_tasks: storage-assemble-remote.yml
-    tags: ['storage-assemble-remote']
-...

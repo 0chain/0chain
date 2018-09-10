@@ -1,7 +1,7 @@
 ---
-
 - debug:
     msg: "ZCHAIN={{zchain}}"
+    verbosity: 2
   run_once: true
   tags: 'always'
 
@@ -11,13 +11,12 @@
   tags: 'always'
   run_once: true
 
-- name: "Prepare miner instance"
-  set_fact:
+- set_fact:
     network_type: "{{zchain.blueprint.network_type}}"
     network_name: "{{zchain.blueprint.network_name}}"
+    network_domain: "{{zchain.blueprint.network_domain}}"
+    zchain_code: "{{artifact.zchain.code}}"
+
   tags: 'always'
   run_once: true
-
-- import_tasks: artifacts-local.yml
-- import_tasks: artifacts-remote.yml
 ...

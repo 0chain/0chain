@@ -115,6 +115,14 @@ instance_images:
       date: '20180627'
       ami_id: 'ami-759bc50a'
 
+    'ohio':
+      zone: 'us-east-2'
+      release: 'xenial'
+      version: '16.04 LTS'
+      arch: 'amd64'
+      instance_type: 'hvm:ebs-ssd'
+      date: '20180627'
+      ami_id: 'ami-5e8bb23b'
 
     'canada':
       zone: 'ca-central-1'
@@ -135,6 +143,12 @@ instance_images:
       ami_id: 'ami-de8fb135'
 
 storage:
+  '32GIB_GP2_SDA1':
+    device_name: "/dev/sda1"
+    volume_type: gp2
+    volume_size: 32
+    delete_on_termination: true
+
   '64GIB_GP2_SDA1':
     device_name: "/dev/sda1"
     volume_type: gp2
@@ -153,6 +167,13 @@ storage:
     ubuntu_disk: "/dev/xvdi"
     volume_type: gp2
     volume_size: 1024
+    delete_on_termination: true
+
+  '32GIB_GP2_NVME':
+    device_name: "/dev/sdi"
+    ubuntu_disk: "/dev/nvme1n1"
+    volume_type: gp2
+    volume_size: 32
     delete_on_termination: true
 
   '64GIB_GP2_NVME':
@@ -185,4 +206,14 @@ storage:
     volume_size: 1024
     iops: 32000
     delete_on_termination: true
+
+  'EFS_SHARDER':
+    device_name: "/dev/efs"
+    ubuntu_disk: "/dev/efs"
+    volume_type: efs
+    volume_size: efs
+    delete_on_termination: true
+
+  'EFS_MINER':
+
 ...
