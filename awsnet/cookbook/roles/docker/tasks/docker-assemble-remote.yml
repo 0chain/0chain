@@ -5,15 +5,25 @@
       name: docker
       state: present
 
-  - name: Add user to docker group
+  - name: Add ubuntu to docker group
     user:
       name: ubuntu
       groups: docker
       append: yes
 
+  - name: Clear old apt update
+    file:
+      path: "{{item}}"
+      state: absent
+    with_items:
+      - /var/lib/apt/lists/lock
+      - /var/cache/apt/archives/lock
+      - /var/lib/dpkg/lock
+
   - name: Update the apt cache...
     apt:
       update_cache: yes
+    ignore_errors: yes
 
   - name: Install the pip utility...
     easy_install:
@@ -47,27 +57,30 @@
       - docker-ce
       - python-setuptools
 
-  - name: Make sure docker is started at boot time
+  - name: Ensure docker is started at boot time
     systemd: state=started name=docker
 
   - name: Run Hello World Docker...
     command: docker run hello-world
     register: hello
 
-  - debug: var=hello
+  - debug: var=hello verbosity=2
 
-  - docker_container:
+  - name: Deleting hello-world container...
+    docker_container:
       name: hello-world
       state: absent
 
-  - docker_image:
+  - name: Deleting hello-world image...
+    docker_image:
       name: hello-world
       state: absent
       force: yes
 
-  - name: Ensure docker-compose is installed and available
+  - name: Install docker-compose...
     get_url:
       url : https://github.com/docker/compose/releases/download/1.22.0/docker-compose-{{ ansible_system }}-{{ ansible_userspace_architecture }}
       dest: /usr/local/bin/docker-compose
       mode: 'u+x,g+x,o+x'
+      timeout: 20
 
