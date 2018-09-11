@@ -233,6 +233,18 @@ func (n *Node) GetTimer(uri string) metrics.Timer {
 	return timer
 }
 
+/*GetMaxMessageCount - get max messages count */
+func (n *Node) GetMaxMessageCount() int64 {
+	var count int64
+	for _, timer := range n.TimersByURI {
+		c := timer.Count()
+		if c > count {
+			count = c
+		}
+	}
+	return count
+}
+
 //GetLargeMessageSendTime - get the time it takes to send a large message to this node
 func (n *Node) GetLargeMessageSendTime() float32 {
 	return n.LargeMessageSendTime / 1000000
