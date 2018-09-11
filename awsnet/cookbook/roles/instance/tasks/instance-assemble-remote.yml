@@ -31,10 +31,6 @@
       name: "{{package_list}}"
       state: present
 
-  - name: "Set the time zone to West Coast.."
-    timezone:
-      name: America/Los_Angeles
-
   - name: "Set EBS device and mount point"
     set_fact:
       ebs_mount_point: "{{zchain_volumes.ebs}}"

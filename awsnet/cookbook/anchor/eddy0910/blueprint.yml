@@ -64,6 +64,6 @@ blueprint:
     s08: {role: sharder, region: tokyo}
 
   explorer:
-    e00: {role: explorer, region: virginia}
+    e00: {role: explorer, region: california}
 
 ...
