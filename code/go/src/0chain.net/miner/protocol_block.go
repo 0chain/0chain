@@ -206,7 +206,8 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockV
 	if err != nil {
 		return nil, err
 	}
-	if pb := mc.GetPreviousBlock(ctx, b); pb == nil {
+	pb := mc.GetPreviousBlock(ctx, b)
+	if pb == nil {
 		return nil, chain.ErrPreviousBlockUnavailable
 	}
 	err = mc.ValidateTransactions(ctx, b)
@@ -227,7 +228,7 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockV
 	bvTimer.UpdateSince(start)
 	Logger.Info("verify block successful", zap.Any("round", b.Round), zap.Int("block_size", len(b.Txns)), zap.Any("time", time.Since(start)),
 		zap.Any("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Int8("state_status", b.GetStateStatus()),
-		zap.Float64("p_chain_weight", b.PrevBlock.ChainWeight), zap.Error(serr))
+		zap.Float64("p_chain_weight", pb.ChainWeight), zap.Error(serr))
 	return bvt, nil
 }
 
@@ -358,7 +359,7 @@ func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 		}
 	}
 	mc.FinalizeBlock(ctx, b)
-	mc.SendFinalizedBlock(ctx, b)
+	go mc.SendFinalizedBlock(ctx, b)
 	fr := mc.GetRound(b.Round)
 	if fr != nil {
 		fr.Finalize(b)

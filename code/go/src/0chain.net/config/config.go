@@ -14,6 +14,7 @@ func SetupDefaultConfig() {
 	viper.SetDefault("server_chain.round_range", 10000000)
 	viper.SetDefault("server_chain.transaction.payload.max_size", 32)
 	viper.SetDefault("server_chain.state.prune_below_count", 100)
+	viper.SetDefault("server_chain.block.consensus.threshold_by_count", 60)
 }
 
 /*SetupConfig - setup the configuration system */
