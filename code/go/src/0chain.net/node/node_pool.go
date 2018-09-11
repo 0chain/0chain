@@ -107,7 +107,7 @@ func (np *Pool) GetNodesByLargeMessageTime() []*Node {
 	size := np.Size()
 	sorted := make([]*Node, size)
 	copy(sorted, np.Nodes)
-	sort.SliceStable(np.Nodes, func(i, j int) bool { return sorted[i].LargeMessageSendTime < sorted[j].LargeMessageSendTime })
+	sort.SliceStable(sorted, func(i, j int) bool { return sorted[i].LargeMessageSendTime < sorted[j].LargeMessageSendTime })
 	return sorted
 }
 
