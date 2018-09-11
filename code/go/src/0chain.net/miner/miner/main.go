@@ -117,7 +117,7 @@ func main() {
 	Logger.Info("Starting miner", zap.Int("available_cpus", runtime.NumCPU()), zap.String("port", address), zap.String("chain_id", config.GetServerChainID()), zap.String("mode", mode))
 
 	//TODO - get stake of miner from biding (currently hard coded)
-	serverChain.UpdateMiningStake(node.Self.Node.GetKey(), 100)
+	serverChain.updateMiningStake(node.Self.Node.GetKey(), 100)
 	var server *http.Server
 
 	if config.Development() {

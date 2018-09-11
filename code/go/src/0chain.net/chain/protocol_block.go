@@ -99,18 +99,18 @@ func (c *Chain) VerifyNotarization(ctx context.Context, blockHash string, bvt []
 
 /*IsBlockNotarized - Does the given number of signatures means eligible for notarization? */
 func (c *Chain) IsBlockNotarized(ctx context.Context, b *block.Block) bool {
-	if c.Threshold_By_Count > 0 {
+	if c.ThresholdByCount > 0 {
 		numSignatures := b.GetVerificationTicketsCount()
 		if numSignatures < c.GetNotarizationThresholdCount() {
 			return false
 		}
 	}
-	if c.Threshold_By_Stake > 0 {
+	if c.ThresholdByStake > 0 {
 		verifiersStake := 0
 		for _, ticket := range b.VerificationTickets {
-			verifiersStake += c.GetMiningStake(ticket.VerifierID)
+			verifiersStake += c.getMiningStake(ticket.VerifierID)
 		}
-		if verifiersStake < c.Threshold_By_Stake {
+		if verifiersStake < c.ThresholdByStake {
 			return false
 		}
 	}
