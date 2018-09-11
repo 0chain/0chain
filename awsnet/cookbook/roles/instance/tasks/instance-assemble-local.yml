@@ -13,12 +13,12 @@
       agent_efs_disk: "{{storage[zchain.blueprint.storage_efs[agent_role]]}}"
     when: agent_role == "sharder"
 
-  - name: "Launch {{agent_role}} => {{agent.key}}"
+  - name: "Launch {{agent_role}} => {{agent.key}} => {{agent.value.region}}"
     ec2:
       region: "{{regions[agent.value.region]}}"
       key_name: "{{aws_key_pair}}"
       instance_type: "{{zchain.blueprint.instance_type[agent.value.role]}}"
-      image: "{{instance_images[agent.value.region]['ami_id']}}"
+      image: "{{instance_images[agent.value.region]}}"
       wait: yes
       termination_protection: no
       group:
@@ -57,7 +57,7 @@
       msg: "efs={{agent_efs_disk}}"
     when: agent_role == "sharder"
 
-  - name: "Create EFS file system {{agent_role}} => {{agent.key}}"
+  - name: "Create EFS file system {{agent_role}}:{{agent.key}}:{{agent.value.region}}"
     efs:
       state: present
       region: "{{regions[agent.value.region]}}"
@@ -70,7 +70,8 @@
     register: efs_result
 
   - debug:
-      msg: "efs={{efs_result}}"
+      msg: "efs={{agent.key}}.{{agent.value.region}}=>{{efs_result.efs.file_system_id}}"
+    when: agent_role == "sharder"
 
   tags: ['instance-assemble-local']
 ...

@@ -6,8 +6,12 @@
   tags: 'always'
 
 - debug:
-    msg: "{{item.key}} ==> {{item.value.region}}"
-  with_items: "{{agents}}"
+    msg: "{{agent.value.role}}:{{agent.key}}:{{agent.value.region}}"
+    verbosity: 2
+  loop: "{{agents}}"
+  loop_control:
+    loop_var: agent
+    label: "{{agent.key}}"
   tags: 'always'
   run_once: true
 
@@ -15,8 +19,8 @@
     network_type: "{{zchain.blueprint.network_type}}"
     network_name: "{{zchain.blueprint.network_name}}"
     network_domain: "{{zchain.blueprint.network_domain}}"
+    network_regions: "{{zchain.blueprint.regions}}"
     zchain_code: "{{artifact.zchain.code}}"
-
   tags: 'always'
   run_once: true
 ...

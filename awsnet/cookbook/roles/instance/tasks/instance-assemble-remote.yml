@@ -8,27 +8,32 @@
   - name: Set packages to update
     set_fact:
       package_list:
-        - python3.5
-        - ansible
-        - python-setuptools
-        - tree
-        - zip
-        - unzip
+        - emacs24
         - htop
-        - ncdu
+        - iperf
+        - iperf3
         - linux-tools-common
         - linux-tools-4.4.0-1061-aws
         - linux-cloud-tools-4.4.0-1061-aws
         - linux-tools-aws
-        - iperf
+        - ncdu
         - nethogs
-        - iperf3
         - nfs-common
+        - python-setuptools
+        - tree
+        - unzip
+        - zip
+        - zsh
+
 
   - name: Install base packages
     apt:
       name: "{{package_list}}"
       state: present
+
+  - name: "Set the time zone to West Coast.."
+    timezone:
+      name: America/Los_Angeles
 
   - name: "Set EBS device and mount point"
     set_fact:
@@ -44,7 +49,7 @@
       dev: "{{ebs_device_name}}"
       force: no
 
-  - name: Create the mount point
+  - name: Create EBS mount points...
     file:
       path: "{{ebs_mount_point}}"
       state: directory
@@ -62,7 +67,7 @@
 
 - become: yes
   block:
-  - name: Get the EFS facts for the instance
+  - name: Get EFS facts for the instance
     local_action:
       module: efs_facts
       aws_access_key: "{{ lookup('env', 'AWS_ACCESS_KEY_ID') }}"
@@ -83,7 +88,7 @@
       efs_mount_point: "{{efs.file_system_id}}.efs.{{ansible_ec2_placement_region}}.amazonaws.com:/"
 
   - debug:
-      msg: "efs_mount_point={{agent_name}} => {{efs_mount_point}}"
+      msg: "efs_mount_point={{ansible_ec2_instance_identity_document_region}}.{{agent_name}}@{{ansible_ec2_public_ipv4}} => {{efs_mount_point}}"
       verbosity: 0
 
   - name: "Mount for {{agent_name}} {{efs_mount_point}} at {{zchain_volumes.efs}}"
@@ -91,7 +96,7 @@
       src: "{{efs_mount_point}}"
       path: "{{zchain_volumes.efs}}"
       fstype: nfs4
-      opts: nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport
+      opts: nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=15,retrans=2,noresvport
       state: mounted
     become: yes
 

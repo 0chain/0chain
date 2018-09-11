@@ -8,7 +8,7 @@
       region: "{{regions[agent.value.region]}}"
       key_name: "{{aws_key_pair}}"
       instance_type: "{{zchain.blueprint.instance_type[agent.value.role]}}"
-      image: "{{instance_images[agent.value.region]['ami_id']}}"
+      image: "{{instance_images[agent.value.region]}}"
       wait: no
       termination_protection: no
       group:
@@ -23,7 +23,7 @@
       region: "{{regions[agent.value.region]}}"
       key_name: "{{aws_key_pair}}"
       instance_type: "{{zchain.blueprint.instance_type[agent.value.role]}}"
-      image: "{{instance_images[agent.value.region]['ami_id']}}"
+      image: "{{instance_images[agent.value.region]}}"
       wait: yes
       termination_protection: no
       group:

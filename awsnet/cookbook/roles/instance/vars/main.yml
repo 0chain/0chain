@@ -87,60 +87,31 @@ server_versions:
     frequency: '2.4GHz'
     processor: 'Intel Xeon E5-2676v3'
 
+instance_version:
+  name: "ubuntu/images/hvm-ssd/ubuntu-xenial-16.04-amd64-server-20180814"
+  state: 'available'
+
+instance_inventory:
+
+
 instance_images:
-    'oregon':
-      zone: 'us-west-2'
-      release: 'xenial'
-      version: '16.04 LTS'
-      arch: 'amd64'
-      instance_type: 'hvm:ebs-ssd'
-      date: '20180627'
-      ami_id: 'ami-ba602bc2'
+  "california": "ami-059e7901352ebaef8"
+  "canada": "ami-9526abf1"
+  "frankfurt": "ami-027583e616ca104df"
+  "ireland": "ami-0181f8d9b6f098ec4"
+  "london": "ami-c7ab5fa0"
+  "mumbai": "ami-00b7e666605d33085"
+  "ohio": "ami-0552e3455b9bc8d50"
+  "oregon": "ami-51537029"
+  "paris": "ami-0370f4064dbc392b9"
+  "saopaulo": "ami-08b78b890b5a86161"
+  "seoul": "ami-00ca7ffe117e2fe91"
+  "singapore": "ami-03221428e6676db69"
+  "sydney": "ami-059b78064586da1b7"
+  "tokyo": "ami-02115cef40fbb46a4"
+  "virginia": "ami-04169656fea786776"
 
-    'california':
-      zone: 'us-west-1'
-      release: 'xenial'
-      version: '16.04 LTS'
-      arch: 'amd64'
-      instance_type: 'hvm:ebs-ssd'
-      date: '20180627'
-      ami_id: 'ami-4aa04129'
 
-    'virginia':
-      zone: 'us-east-1'
-      release: 'xenial'
-      version: '16.04 LTS'
-      arch: 'amd64'
-      instance_type: 'hvm:ebs-ssd'
-      date: '20180627'
-      ami_id: 'ami-759bc50a'
-
-    'ohio':
-      zone: 'us-east-2'
-      release: 'xenial'
-      version: '16.04 LTS'
-      arch: 'amd64'
-      instance_type: 'hvm:ebs-ssd'
-      date: '20180627'
-      ami_id: 'ami-5e8bb23b'
-
-    'canada':
-      zone: 'ca-central-1'
-      release: 'xenial'
-      version: '16.04 LTS'
-      arch: 'amd64'
-      instance_type: 'hvm:ebs-ssd'
-      date: '20180627'
-      ami_id: 'ami-db9e1cbf'
-
-    'frankfurt':
-      zone: 'eu-central-1'
-      release: 'xenial'
-      version: '16.04 LTS'
-      arch: 'amd64'
-      instance_type: 'hvm:ebs-ssd'
-      date: '20180627'
-      ami_id: 'ami-de8fb135'
 
 storage:
   '32GIB_GP2_SDA1':

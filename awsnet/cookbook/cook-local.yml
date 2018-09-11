@@ -3,9 +3,10 @@
 
   vars_files:
     - "{{ credential }}/aws/credentials.yml"
-    - [ "anchor/{{network}}/blueprint.yml"]
-    - [ "anchor/{{network}}/clientid.yml"]
+    - "anchor/{{network}}/blueprint.yml"
+    - "anchor/{{network}}/clientid.yml"
     - "roles/artifacts/vars/main.yml"
+    - "roles/instance/vars/main.yml"
 
   environment: "{{aws_vars}}"
 
@@ -18,6 +19,10 @@
   - name: "Include tasks to administer the local instances"
     import_role:
       name: instance
+
+  - name: "Import the AMI locations"
+    import_role:
+      name: ami-locator
 
   - name: "Agent Setup"
     import_role:

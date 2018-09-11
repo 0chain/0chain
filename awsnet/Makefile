@@ -138,6 +138,10 @@ keyaws-install-public-local:
 keyaws-teardown-local:
 	$(ADMIN_PLAY)
 
+#Locate the AMI for different regions.
+ami-locator-local:
+	$(LOCAL_PLAY)
+
 #keygit-assemble-local keygit-teardown-local:
 #	$(ADMIN_PLAY)
 
