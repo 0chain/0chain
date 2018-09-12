@@ -61,6 +61,19 @@ server_versions:
     frequency: '2.9GHz'
     processor: 'Intel Xeon Platinum 8124M'
 
+  'C5_4XLARGE':
+    instance_type: 'c5.4xlarge'
+    memory: "32GiB"
+    vcpus: 16
+    ecpus: 68
+    storage: 'EBS'
+    network: '10 Gigabit'
+    intel-aesni: true
+    intel-avx: true
+    intel-turbo: true
+    frequency: '2.9GHz'
+    processor: 'Intel Xeon Platinum 8124M'
+
 
   'R4_LARGE':
     instance_type: 'r4.large'
