@@ -9,6 +9,8 @@ services:
       default:
     sysctls:
       net.core.somaxconn: '511'
+
+    user: 0chain
     command: redis-server /0chain/config/redis/state.redis.conf
 
   redis_txns:
@@ -20,6 +22,8 @@ services:
       default:
     sysctls:
       net.core.somaxconn: '511'
+
+    user: 0chain
     command: redis-server /0chain/config/redis/transactions.redis.conf
 
   miner:
@@ -34,6 +38,15 @@ services:
     build:
       context: /0chain/0chain
       dockerfile: /0chain/0chain/docker.aws/build.miner/Dockerfile
+
+    pid: "host"
+
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 20000
+        hard: 40000
+
     volumes:
       - /0chain/config:/0chain/config
       - /0chain/nodes:/0chain/nodes
@@ -47,8 +60,13 @@ services:
         max-file: "10"
     ports:
       - "7071:7071"
+
+    restart: on-failure
+
     networks:
       default:
+
+    user: 0chain
     command: ./bin/miner  --deployment_mode 0 --keys_file nodes/miner_key.txt --nodes_file nodes/nodes.txt
 
 networks:

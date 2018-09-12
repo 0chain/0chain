@@ -37,11 +37,19 @@ services:
       context: /0chain/0chain
       dockerfile: /0chain/0chain/docker.aws/build.sharder/Dockerfile
 
+    pid: "host"
+
     volumes:
       - /0chain/config:/0chain/config
       - /0chain/nodes:/0chain/nodes
       - /0chain/log:/0chain/log
       - /0chain/data:/0chain/data
+
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 20000
+        hard: 40000
 
     logging:
       driver: "json-file"
@@ -51,6 +59,9 @@ services:
 
     ports:
       - "7171:7171"
+
+    restart: on-failure
+
     networks:
       default:
     command: ./bin/sharder --deployment_mode 0 --keys_file nodes/sharder_key.txt --nodes_file nodes/nodes.txt
