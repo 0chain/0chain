@@ -11,13 +11,6 @@
       state: present
       gid: 2000
 
-
-  - name: Create 0chain group
-    group:
-      name: 0chain
-      state: present
-      gid: 2000
-
   - name: Create 0chain user
     user:
       name: 0chain
@@ -76,8 +69,8 @@
     file:
       path: "{{ebs_mount_point}}"
       state: directory
-      owner: ubuntu
-      group: ubuntu
+      owner: 0chain
+      group: 0chain
       mode: 0755
 
   - name: Mount the EBS block device
@@ -123,11 +116,11 @@
       state: mounted
     become: yes
 
-  - name: "Change ownership {{zchain_volumes.efs}} to user ubuntu"
+  - name: "Change ownership {{zchain_volumes.efs}} to 0chain user"
     file:
       path: "{{zchain_volumes.efs}}"
-      owner: ubuntu
-      group: ubuntu
+      owner: 0chain
+      group: 0chain
       mode: "u=rwX,g=rX,o=rX"
       recurse: yes
     become: yes
@@ -142,8 +135,8 @@
     file:
       path : "{{agent_dir.location | default(agent_dir.canonical)}}"
       state: directory
-      owner: ubuntu
-      group: ubuntu
+      owner: 0chain
+      group: 0chain
       mode: "u=rwX,g=rX,o=rX"
       recurse: yes
     loop: "{{agent_dirs}}"

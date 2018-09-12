@@ -1,5 +1,6 @@
 #Eddy0910 Config File
 version: 1.0
+  git_tag: "testnet-v0910"
 
 logging:
   level: "info"
@@ -24,7 +25,7 @@ server_chain:
     sharders: 3
     notarization_threshold: 60 # percentage
     validation:
-      batch_size: 200
+      batch_size: 250
   round_range: 10000000
   transaction:
     payload:

@@ -33,19 +33,18 @@
     check_mode: no
     ignore_errors: yes
 
-#  - name: "Teardown the EFS file system {{agent_role}} => {{agent.key}} {{agent.value.region}}"
-#    efs:
-#      state: absent
-#      region: "{{regions[agent.value.region]}}"
-#      #name: "{{network_name}}.{{agent.key}}"
-#      name: "{{agent.key}}"
-#      #tags: "{{instance_tags[agent.key]}}"
-#    when: agent_role == "sharder"
-#    register: efs_teardown_result
+  - name: "Teardown the EFS file system {{agent_role}} => {{agent.key}} {{agent.value.region}}"
+    efs:
+      state: absent
+      region: "{{regions[agent.value.region]}}"
+      name: "{{network_name}}.{{agent.key}}"
+      tags: "{{instance_tags[agent.key]}}"
+    when: agent_role == "sharder"
+    register: efs_teardown_result
 
-#  - debug:
-#      msg: "efs teardown status={{efs_teardown_result}}"
-
+  - debug:
+      msg: "efs teardown status={{efs_teardown_result}}"
+    when: agent_role == "sharder"
 
   tags: ['instance-teardown-local']
 ...

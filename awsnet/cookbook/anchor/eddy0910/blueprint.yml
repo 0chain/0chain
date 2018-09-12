@@ -10,14 +10,14 @@ blueprint:
   network_type: 'testnet'
   network_name: 'eddy0910'
   network_domain: 'testnet-0chain.net'
-  #Alter this to use a smaller set.
 
+  #Alter this to use a smaller set.
   #hosts: 'tag_network_name_eddy0910'
-  hosts: a00
+  hosts: agents
 
   instance_type:
-    miner: 'c5.2xlarge'
-    sharder: 'c5.2xlarge'
+    miner: 'c5.xlarge'
+    sharder: 'c5.xlarge'
 
   storage_ebs:
     root: '32GIB_GP2_SDA1'

@@ -6,17 +6,34 @@ miners
 e00.eddy0910.testnet-0chain.net
 
 [sharders]
-s*.eddy0910.testnet-0chain.net
+s00.eddy0910.testnet-0chain.net
+s01.eddy0910.testnet-0chain.net
+s02.eddy0910.testnet-0chain.net
+s03.eddy0910.testnet-0chain.net
+s04.eddy0910.testnet-0chain.net
+s05.eddy0910.testnet-0chain.net
+s06.eddy0910.testnet-0chain.net
+s07.eddy0910.testnet-0chain.net
+s08.eddy0910.testnet-0chain.net
 
 [miners]
-m*.eddy0910.testnet-0chain.net
+m00.eddy0910.testnet-0chain.net
+m01.eddy0910.testnet-0chain.net
+m02.eddy0910.testnet-0chain.net
+m03.eddy0910.testnet-0chain.net
+m04.eddy0910.testnet-0chain.net
+m05.eddy0910.testnet-0chain.net
+m06.eddy0910.testnet-0chain.net
+m07.eddy0910.testnet-0chain.net
+m08.eddy0910.testnet-0chain.net
 
-[a00:children]
-s00
-m00
+[axx:children]
+sxx
+mxx
 
-[s00]
+[sxx]
 s00.eddy0910.testnet-0chain.net
 
-[m00]
+[mxx]
 m00.eddy0910.testnet-0chain.net
+m01.eddy0910.testnet-0chain.net
