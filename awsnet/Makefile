@@ -212,10 +212,10 @@ agent-config-assemble-remote:
 basic-stage-cluster: \
 	instance-assemble-local \
 	instance-start-local \
+	agent-clientid-assemble-local \
 	instance-assemble-raw \
 	instance-assemble-remote \
 	docker-assemble-remote \
-	agent-clientid-assemble-local \
 	agent-clientid-assemble-remote
 
 #Create the agents such as miner and sharder.
@@ -240,6 +240,18 @@ agent-role-assemble-remote:
 
 # Stop the sharder, miner
 agent-role-teardown-remote:
+	$(REMOTE_PLAY)
+
+#Launch the block explorer
+block-explorer-assemble-local:
+	$(LOCAL_PLAY)
+
+#Terminate the block explorer
+block-explorer-teardown-local:
+	$(LOCAL_PLAY)
+
+#Install packages on the remote machine.
+block-explorer-remote-local:
 	$(REMOTE_PLAY)
 
 #Instance management - start and stop

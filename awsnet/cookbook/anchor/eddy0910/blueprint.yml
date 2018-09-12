@@ -15,9 +15,11 @@ blueprint:
   #hosts: 'tag_network_name_eddy0910'
   hosts: agents
 
+
   instance_type:
     miner: 'c5.xlarge'
     sharder: 'c5.xlarge'
+    explorer: 'c5.xlarge'
 
   storage_ebs:
     root: '32GIB_GP2_SDA1'
@@ -66,7 +68,7 @@ blueprint:
     s07: {role: sharder, region: frankfurt}
     s08: {role: sharder, region: tokyo}
 
-  explorer:
+  explorers:
     e00: {role: explorer, region: california}
 
 ...

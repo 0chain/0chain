@@ -4,34 +4,28 @@
     msg: "Node files storage: {{nodefiles}}"
 
 - name: "Transport the key files to the respective machines..{{aws_key_pair_file}}"
+  become: yes
   synchronize:
     src: "{{nodefiles.dir.local}}/"
     dest: "{{nodefiles.dir.zchain}}/"
     use_ssh_args: yes
     recursive: yes
 
-#- name: get public IP address
-#  ipify_facts:
-#  register: ipify_results
-#
-#- set_fact:
-#    agent_ip: "{{ipify_results.ansible_facts.ipify_public_ip}}"
-#
-#- set_fact:
-#    agent_tag: "{{iprole[agent_ip]}}"
-#
-#
-#- set_fact:
-#    agent_role: "{{ agents|selectattr('key', 'equalto', agent_tag ) | map(attribute='value.role') | list | first }}"
-#
-#- debug: var=agent_ip
-#- debug: var=agent_tag
-#- debug: var=agent_role
-
+- name: "Alter ownership to 0chain"
+  become: yes
+  file:
+    path: "{{nodefiles.dir.zchain}}"
+    owner: 0chain
+    group: 0chain
+    mode: "u=rwX,g=rX,o=rX"
+    recurse: yes
 
 - name: Link the sharder and miner file...
+  become: yes
   file:
     src: "{{agent_name}}.txt"
     dest: "{{nodefiles.dir.zchain}}/{{agent_role}}_key.txt"
     state: link
+    owner: 0chain
+    group: 0chain
 ...

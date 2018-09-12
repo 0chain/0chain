@@ -2,6 +2,21 @@
 version: 1.0
   git_tag: "testnet-v0910"
 
+  instance_model:
+    miner: "c5.xlarge"
+    sharder: "c5.xlarge"
+
+  agent_zones:
+    "s00,m00" : california
+    "s01,m01" : ohio
+    "s02,m02" : sydney
+    "s03,m03" : oregon
+    "s04,m04" : seoul
+    "s05,m05" : singapore
+    "s06,m06" : ireland
+    "s07,m07" : frankfurt
+    "s08,m08" : tokyo
+
 logging:
   level: "info"
   console: false # printing log to console is only supported in development mode

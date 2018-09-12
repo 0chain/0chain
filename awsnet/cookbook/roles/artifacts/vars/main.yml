@@ -148,4 +148,6 @@ zchain:
 agents: "{{zchain.blueprint.sharders| dict2items | union(zchain.blueprint.miners | dict2items)}}"
 agents_dict: "{{zchain.blueprint.sharders | combine(zchain.blueprint.miners)}}"
 
+explorers: "{{zchain.blueprint.explorers}}"
+
 ...

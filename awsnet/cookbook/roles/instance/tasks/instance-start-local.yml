@@ -4,16 +4,54 @@
       agent_role: "{{agent.value.role}}"
       agent_region: "{{agent.value.region}}"
 
+  - name: "Collect fact on stopped agents in {{agent_region}}"
+    ec2_instance_facts:
+      region: "{{regions[agent_region]}}"
+      filters:
+        instance-state-name: stopped
+        "tag:network_type": "{{zchain.blueprint.network_type}}"
+        "tag:network_name": "{{zchain.blueprint.network_name}}"
+        "tag:role": "{{agent_role}}"
+        "tag:Name": "{{agent.key}}"
+    register: ec2_stopped_results
+
+  - set_fact:
+      down_nodes: "{{ec2_stopped_results | json_query('instances')}}"
+
+  - debug:
+      msg: "state={{node.state}}"
+    with_items: "{{down_nodes}}"
+    loop_control:
+      loop_var: node
+      label: "{{agent.key}} => {{node.instance_id}}"
+
+  #Loop only through down nodes to start them...
   - name: "Start {{agent.key}} in {{agent_region}}..."
     ec2:
       region: "{{regions[agent_region]}}"
       key_name: "{{aws_key_pair}}"
       wait: yes
-      instance_tags: "{{instance_tags[agent.key]}}"
+      instance_ids: "{{node.instance_id}}"
       state: running
       count: 1
     check_mode: no
-    ignore_errors: yes
+    ignore_errors: no
+    with_items: "{{down_nodes}}"
+    loop_control:
+      loop_var: node
+      label: "{{agent.key}} => {{node.instance_id}}"
+
+
+#  - name: "Start {{agent.key}} in {{agent_region}}..."
+#    ec2:
+#      region: "{{regions[agent_region]}}"
+#      key_name: "{{aws_key_pair}}"
+#      wait: yes
+#      instance_tags: "{{instance_tags[agent.key]}}"
+#      state: running
+#      count: 1
+#    check_mode: no
+#    ignore_errors: yes
 
   - name: "Collect fact on agents in {{agent_region}}"
     ec2_instance_facts:
