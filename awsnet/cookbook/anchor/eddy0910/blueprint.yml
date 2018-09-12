@@ -15,7 +15,6 @@ blueprint:
   #hosts: 'tag_network_name_eddy0910'
   hosts: agents
 
-
   instance_type:
     miner: 'c5.xlarge'
     sharder: 'c5.xlarge'
