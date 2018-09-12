@@ -11,7 +11,7 @@ services:
       net.core.somaxconn: '511'
 
     #Start under user 0chain
-    user 2000: 2000
+    user: 2000:2000
     command: redis-server /0chain/config/redis/state.redis.conf
 
   redis_txns:
@@ -25,7 +25,7 @@ services:
       net.core.somaxconn: '511'
 
     #Start under user 0chain
-    user 2000: 2000
+    user: 2000:2000
     command: redis-server /0chain/config/redis/transactions.redis.conf
 
   miner:
@@ -69,7 +69,7 @@ services:
       default:
 
     #Start under user 0chain
-    user 2000: 2000
+    user: 2000:2000
     command: ./bin/miner  --deployment_mode 0 --keys_file nodes/miner_key.txt --nodes_file nodes/nodes.txt
 
 networks:
