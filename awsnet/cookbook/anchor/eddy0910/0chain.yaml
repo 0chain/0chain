@@ -1,5 +1,7 @@
 #Eddy0910 Config File
 version: 1.0
+
+network_blueprint:
   git_tag: "testnet-v0910"
 
   instance_model:
