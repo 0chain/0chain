@@ -8,6 +8,9 @@
     - "roles/artifacts/vars/main.yml"
     - "roles/instance/vars/main.yml"
 
+  vars:
+    sshd_skip_defaults: true
+
   environment: "{{aws_vars}}"
 
   tasks:

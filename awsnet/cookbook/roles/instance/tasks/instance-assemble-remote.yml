@@ -5,6 +5,33 @@
     hostname:
       name: "{{agent_name}}.{{network_name}}.{{network_domain}}"
 
+  - name: Create 0chain group
+    group:
+      name: 0chain
+      state: present
+      gid: 2000
+
+
+  - name: Create 0chain group
+    group:
+      name: 0chain
+      state: present
+      gid: 2000
+
+  - name: Create 0chain user
+    user:
+      name: 0chain
+      state: present
+      password: "$6$ABCDEFGH$uZcwXx6bWrm5fUN8640iLhKJi5OZYLNB7uWGxQ6guZvoFAMxPX8ja3t42xgXWb7ep2su48H3YuCQgfoxXSJIn/"
+      shell: /usr/bin/zsh
+      group: 0chain
+
+  - lineinfile:
+      path: /etc/sudoers
+      state: present
+      regexp: '^%ubuntu\s'
+      line: '%ubuntu ALL=(0chain) NOPASSWD: ALL'
+
   - name: Set packages to update
     set_fact:
       package_list:

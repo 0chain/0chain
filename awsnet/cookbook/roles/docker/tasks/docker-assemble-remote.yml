@@ -5,11 +5,14 @@
       name: docker
       state: present
 
-  - name: Add ubuntu to docker group
+  - name: Add ubuntu and 0chain to docker group
     user:
-      name: ubuntu
+      name: "{{item}}"
       groups: docker
       append: yes
+    with_items:
+      - ubuntu
+      - 0chain
 
   - name: Clear old apt update
     file:

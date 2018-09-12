@@ -43,7 +43,11 @@ ZCHAIN_REPO=$(abspath $(AWSNET_BASE)/..)
 
 ENVIRONMENT?=testnet
 
-INVENTORY=$(COOKBOOK)/inventory
+#INVENTORY=$(COOKBOOK)/inventory
+INVENTORY=$(COOKBOOK)/anchor/$(ZCHAIN_TESTNET)/hosts
+
+export ANSIBLE_CONFIG=$(COOKBOOK)/ansible.cfg
+
 export EC2_INI_PATH=$(INVENTORY)/ec2.ini
 
 #Credentials directory will store the actual key/access values.
