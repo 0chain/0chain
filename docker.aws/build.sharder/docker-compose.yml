@@ -54,8 +54,10 @@ services:
       - /0chain/log:/0chain/log
       - /0chain/data:/0chain/data
 
+    #Hard and soft are required properties.
     ulimits:
       nofile:
+        hard: 32768
         soft: 32768
 
     logging:

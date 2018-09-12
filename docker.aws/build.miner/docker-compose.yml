@@ -47,8 +47,10 @@ services:
 
     pid: "host"
 
+    #Hard and soft are required properties.
     ulimits:
       nofile:
+        hard: 32768
         soft: 32768
 
     volumes:
