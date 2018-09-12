@@ -17,4 +17,6 @@
   synchronize:
     src: "{{local_config}}"
     dest: "{{remote_config}}"
+    use_ssh_args: yes
+    recursive: yes
 ...

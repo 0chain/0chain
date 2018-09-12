@@ -7,6 +7,7 @@
   synchronize:
     src: "{{nodefiles.dir.local}}/"
     dest: "{{nodefiles.dir.zchain}}/"
+    use_ssh_args: yes
     recursive: yes
 
 #- name: get public IP address
