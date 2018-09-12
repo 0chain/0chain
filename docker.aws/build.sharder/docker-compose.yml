@@ -9,6 +9,9 @@ services:
       - /0chain/0chain/sql:/0chain/sql
     ports:
       - "9042:9042"
+
+    #Do under 0chain id.
+    user: 2000:2000
     healthcheck:
       test: ["CMD-SHELL", "[ $$(nodetool statusgossip) = running ]"]
       interval: 30s
@@ -21,6 +24,9 @@ services:
       - /0chain/config/cassandra:/0chain/cassandra
       - /0chain/0chain/sql:/0chain/sql
 
+
+    #Start under user 0chain
+    user 2000: 2000
     command: bash /0chain/cassandra/cassandra-init.sh
     links:
       - cassandra:cassandra
@@ -64,6 +70,9 @@ services:
 
     networks:
       default:
+
+    #Start under user 0chain
+    user 2000: 2000
     command: ./bin/sharder --deployment_mode 0 --keys_file nodes/sharder_key.txt --nodes_file nodes/nodes.txt
 
 networks:
