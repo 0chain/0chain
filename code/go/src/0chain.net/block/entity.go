@@ -6,7 +6,6 @@ import (
 	"sort"
 	"strconv"
 	"sync"
-	"time"
 
 	"0chain.net/client"
 	"0chain.net/common"
@@ -61,7 +60,6 @@ type UnverifiedBlockBody struct {
 
 /*Block - data structure that holds the block data */
 type Block struct {
-	datastore.CollectionMemberField
 	UnverifiedBlockBody
 	VerificationTickets []*VerificationTicket `json:"verification_tickets,omitempty"`
 
@@ -155,19 +153,11 @@ func (b *Block) Delete(ctx context.Context) error {
 	return b.GetEntityMetadata().GetStore().Delete(ctx, b)
 }
 
-var blockEntityCollection *datastore.EntityCollection
-
-/*GetCollectionName - override GetCollectionName to provide queues partitioned by ChainID */
-func (b *Block) GetCollectionName() string {
-	return blockEntityCollection.GetCollectionName(b.ChainID)
-}
-
 /*Provider - entity provider for block object */
 func Provider() datastore.Entity {
 	b := &Block{}
 	b.Version = "1.0"
 	b.PrevBlockVerficationTickets = make([]*VerificationTicket, 0, 1)
-	b.EntityCollection = blockEntityCollection
 	b.ChainID = datastore.ToKey(config.GetServerChainID())
 	b.InitializeCreationDate()
 	b.StateMutex = &sync.Mutex{}
@@ -182,7 +172,6 @@ func SetupEntity(store datastore.Store) {
 	blockEntityMetadata.Store = store
 	blockEntityMetadata.IDColumnName = "hash"
 	datastore.RegisterEntityMetadata("block", blockEntityMetadata)
-	blockEntityCollection = &datastore.EntityCollection{CollectionName: "collection.block", CollectionSize: 1000, CollectionDuration: time.Hour}
 	SetupBVTEntity()
 }
 
