@@ -2,8 +2,8 @@
 - name: "Copy the base configuration files such as redis/cassandra"
   become: yes
   synchronize:
-    src: "/0chain/0chain/config"
-    dest: "{{zchain_config.dir.zchain}}"
+    src: "/0chain/0chain/config/"
+    dest: "{{zchain_config.dir.zchain}}/"
     recursive: yes
   delegate_to: "{{ inventory_hostname }}"
 
