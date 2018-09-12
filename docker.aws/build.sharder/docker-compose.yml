@@ -10,6 +10,8 @@ services:
     ports:
       - "9042:9042"
 
+    restart: on-failure:10
+
     #Do under 0chain id.
     user: 2000:2000
     healthcheck:
@@ -30,7 +32,8 @@ services:
     command: bash /0chain/cassandra/cassandra-init.sh
     links:
       - cassandra:cassandra
-    restart: on-failure
+
+    restart: on-failure:10
 
   sharder:
     environment:
@@ -66,7 +69,7 @@ services:
     ports:
       - "7171:7171"
 
-    restart: on-failure
+    restart: on-failure:10
 
     networks:
       default:

@@ -10,6 +10,8 @@ services:
     sysctls:
       net.core.somaxconn: '511'
 
+    restart: on-failure:10
+
     #Start under user 0chain
     user: 2000:2000
     command: redis-server /0chain/config/redis/state.redis.conf
@@ -23,6 +25,8 @@ services:
       default:
     sysctls:
       net.core.somaxconn: '511'
+
+    restart: on-failure:10
 
     #Start under user 0chain
     user: 2000:2000
@@ -63,7 +67,7 @@ services:
     ports:
       - "7071:7071"
 
-    restart: on-failure
+    restart: on-failure:10
 
     networks:
       default:
