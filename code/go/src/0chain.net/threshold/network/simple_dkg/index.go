@@ -1,47 +1,61 @@
-package simple_dkg
+package network_simple_dkg
 
 import (
 	"context"
 	"time"
 
 	"0chain.net/node"
-	. "0chain.net/threshold/controller"
-	. "0chain.net/threshold/model"
+	"0chain.net/threshold/model"
 	"0chain.net/threshold/model/party"
 	"0chain.net/threshold/model/simple_dkg"
+	. "0chain.net/threshold/network"
 )
 
 type Timeouts struct {
 	retransmit time.Duration
 }
 
+type Msg interface{}
 type ShareMsg struct {
-	m Key
-	v VerificationKey
+	m model.Key
+	v model.VerificationKey
 }
 
-type Output interface{}
+type NetOutput struct {
+	to node.Node
+	m  Msg
+}
+type NetInput struct {
+	from node.Node
+	m    Msg
+}
+
+type Result interface{}
 type Canceled struct{}
 type IncorrectShare *node.Node
-type Success party.Party
+type Success model_party.Party
 
 type Protocol struct {
 	net      *NodeInfo
-	dkg      simple_dkg.DKG
+	dkg      model_simple_dkg.DKG
 	timeouts Timeouts
-	output   chan Output
+
+	netOutput chan NetOutput
+	netInput  chan NetInput
+
+	results chan Result
 }
 
-func newProtocol(net *NodeInfo, t T, timeouts Timeouts) Protocol {
+func newProtocol(net *NodeInfo, t model.T, timeouts Timeouts) Protocol {
 	return Protocol{
 		net:      net,
-		dkg:      simple_dkg.New(t, N(len(net.Peers.Nodes))),
+		dkg:      model_simple_dkg.New(t, model.N(len(net.Peers.Nodes))),
 		timeouts: timeouts,
-		output:   make(chan Output, 10),
+		results:  make(chan Result, 10),
 	}
 }
 func (p *Protocol) newShareMsg(to *node.Node) ShareMsg {
-	i := p.net.PeerIds[to.Host]
+	i := p.net.HostToId[to.Host]
 	m, v := p.dkg.GetShareFor(i)
 	return ShareMsg{
 		m: m,
@@ -56,7 +70,7 @@ func (p *Protocol) transmitAll() {
 	}
 }
 func (p *Protocol) receive(from *node.Node, m ShareMsg) {
-	i := p.net.PeerIds[from.Host]
+	i := p.net.HostToId[from.Host]
 	p.dkg.ReceiveShare(i, m.m, m.v)
 }
 
@@ -66,9 +80,10 @@ func (p *Protocol) run(ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
-			p.output <- Canceled{}
+			p.results <- Canceled{}
 			return
 		case <-retransmit.Done():
+			retransmit, _ = context.WithTimeout(ctx, p.timeouts.retransmit)
 			p.transmitAll()
 			continue
 			// TODO: Receive share from a peer. Optinally quit.
@@ -76,8 +91,8 @@ func (p *Protocol) run(ctx context.Context) {
 	}
 }
 
-func Run(ctx context.Context, net *NodeInfo, t T, timeouts Timeouts) <-chan Output {
+func Run(ctx context.Context, net *NodeInfo, t model.T, timeouts Timeouts) <-chan Result {
 	p := newProtocol(net, t, timeouts)
 	go p.run(ctx)
-	return p.output
+	return p.results
 }

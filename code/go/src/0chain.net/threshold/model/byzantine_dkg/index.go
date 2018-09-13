@@ -1,4 +1,4 @@
-package byzantine_dkg
+package model_byzantine_dkg
 
 import (
 	. "0chain.net/threshold/model"
@@ -19,11 +19,14 @@ func New(t T, n N) DKG {
 		dkg: simple.New(t, n),
 	}
 }
+
 func (dkg *DKG) ReceiveComplaint(from, against PartyId) {
 }
+
 func (dkg *DKG) ReceiveDefend(from, against PartyId,
 	m Key, v VerificationKey) {
 }
+
 func (dkg *DKG) GetDisqualified() []PartyId {
 	return []PartyId{}
 }
