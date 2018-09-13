@@ -17,6 +17,7 @@
       state: present
       password: "$6$ABCDEFGH$uZcwXx6bWrm5fUN8640iLhKJi5OZYLNB7uWGxQ6guZvoFAMxPX8ja3t42xgXWb7ep2su48H3YuCQgfoxXSJIn/"
       shell: /usr/bin/zsh
+      uid: 2000
       group: 0chain
 
   - lineinfile:
