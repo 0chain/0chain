@@ -38,10 +38,14 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 		if node == Self.Node {
 			continue
 		}
+		maxcount := node.GetMaxMessageCount()
 		if common.Within(node.LastActiveTime.Unix(), 10) {
 			var minval float32 = math.MaxFloat32
 			var maxval float32
 			for _, timer := range node.TimersByURI {
+				if timer.Count()*10 < maxcount {
+					continue
+				}
 				v := float32(timer.Mean())
 				if v > maxval {
 					maxval = v
