@@ -1,6 +1,6 @@
-#Eddy0910 Config File
 version: 1.0
 
+#Eddy0910 Config File
 network_blueprint:
   git_tag: "testnet-v0910"
 
@@ -20,8 +20,8 @@ network_blueprint:
     "s08,m08" : tokyo
 
 logging:
+  console: "false"
   level: "info"
-  console: false # printing log to console is only supported in development mode
 
 zerochain:
   id: "0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe"
@@ -40,7 +40,9 @@ server_chain:
     size: 1000
     generators: 3
     sharders: 3
-    notarization_threshold: 60 # percentage
+    consensus:
+      threshold_by_count: 60 # percentage
+      threshold_by_stake: 0
     validation:
       batch_size: 250
   round_range: 10000000
@@ -54,3 +56,6 @@ server_chain:
     max_concurrent_requests: 9
     messages:
       verification_tickets_to: generator
+  state:
+    prune_below_count: 100 # rounds
+
