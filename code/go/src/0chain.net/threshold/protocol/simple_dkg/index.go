@@ -13,14 +13,9 @@ type Timeouts struct {
 	retransmit time.Duration
 }
 
-type ShareMsg struct {
-	m model.Key
-	v model.VerificationKey
-}
-
 type NetMsg struct {
 	peer model.PartyId
-	msg  ShareMsg
+	msg  model_simple_dkg.KeyShare
 }
 
 type Protocol struct {
@@ -31,7 +26,7 @@ type Protocol struct {
 	done     bool
 }
 
-func New(t model.T, n model.N, timeouts Timeouts, network chan NetMsg) Protocol {
+func New(t int, n int, timeouts Timeouts, network chan NetMsg) Protocol {
 	return Protocol{
 		dkg:      model_simple_dkg.New(t, n),
 		timeouts: timeouts,
@@ -42,13 +37,9 @@ func New(t model.T, n model.N, timeouts Timeouts, network chan NetMsg) Protocol 
 }
 
 func (p *Protocol) sendShare(to model.PartyId) {
-	m, v := p.dkg.GetShareFor(to)
 	p.network <- NetMsg{
 		peer: to,
-		msg: ShareMsg{
-			m: m,
-			v: v,
-		},
+		msg:  p.dkg.GetShareFor(to),
 	}
 }
 
@@ -62,8 +53,8 @@ func (p *Protocol) broadcastShares() {
 	}
 }
 
-func (p *Protocol) receiveShare(from model.PartyId, m ShareMsg) error {
-	return p.dkg.ReceiveShare(from, m.m, m.v)
+func (p *Protocol) receiveShare(from model.PartyId, m model_simple_dkg.KeyShare) error {
+	return p.dkg.ReceiveShare(from, m)
 }
 
 func (p *Protocol) run(ctx context.Context) {
@@ -94,7 +85,7 @@ func (p *Protocol) run(ctx context.Context) {
 	}
 }
 
-func Run(ctx context.Context, t model.T, n model.N, timeouts Timeouts, network chan NetMsg) <-chan interface{} {
+func Run(ctx context.Context, t int, n int, timeouts Timeouts, network chan NetMsg) <-chan interface{} {
 	p := New(t, n, timeouts, network)
 	go p.run(ctx)
 	return p.results

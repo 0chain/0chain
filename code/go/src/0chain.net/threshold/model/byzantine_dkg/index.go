@@ -29,18 +29,18 @@ type DKG struct {
 func New(t, n int) DKG {
 	return DKG{
 		Simple:       simple.New(t, n),
-		seenAttacks:  make([]bool, n * n),
-		seenDefends:  make([]simple.KeyShare, n * n),
+		seenAttacks:  make([]bool, n*n),
+		seenDefends:  make([]simple.KeyShare, n*n),
 		disqualified: make([]bool, 4),
 	}
 }
 
 func (d *DKG) attack(a Attack) *bool {
-	return &d.seenAttacks[int(a.attackee) * d.Simple.N + int(a.attacker)]
+	return &d.seenAttacks[int(a.attackee)*d.Simple.N+int(a.attacker)]
 }
 
 func (d *DKG) defend(def Defend) *simple.KeyShare {
-	return &d.seenDefends[int(def.defendee) * d.Simple.N + int(def.defender)]
+	return &d.seenDefends[int(def.defendee)*d.Simple.N+int(def.defender)]
 }
 
 // WARNING: This function is extremely dangerous because a malicious player

@@ -1,7 +1,7 @@
 package model
 
 import (
-	 "strconv"
+	"strconv"
 )
 
 type PartyId int
@@ -10,7 +10,7 @@ type Key [4]uint64
 type VerificationKey Key
 
 type ThresholdError struct {
-	By PartyId
+	By    PartyId
 	Cause string
 }
 

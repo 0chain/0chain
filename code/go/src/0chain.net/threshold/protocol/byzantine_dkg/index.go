@@ -39,7 +39,7 @@ type Protocol struct {
 	done     bool
 }
 
-func New(t model.T, n model.N, timeouts Timeouts, network chan NetMsg) Protocol {
+func New(t int, n int, timeouts Timeouts, network chan NetMsg) Protocol {
 	return Protocol{
 		dkg:      model_byzantine_dkg.New(t, n),
 		timeouts: timeouts,
@@ -92,7 +92,7 @@ func (p *Protocol) broadcastShares() {
 }
 
 func (p *Protocol) receiveShare(from model.PartyId, m ShareMsg) error {
-	return p.dkg.Simple.ReceiveShare(from, m.m, m.v)
+	return p.dkg.Simple.ReceiveShare(from, m)
 }
 
 func (p *Protocol) run(ctx context.Context) {

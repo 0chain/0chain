@@ -8,6 +8,7 @@ type KeyShare struct {
 	m model.Key
 	v model.VerificationKey
 }
+
 var EmptyKeyShare = KeyShare{}
 
 type DKG struct {
