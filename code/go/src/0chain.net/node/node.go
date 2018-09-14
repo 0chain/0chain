@@ -58,6 +58,7 @@ type Node struct {
 	Host           string
 	Port           int
 	Type           int8
+	Description    string
 	SetIndex       int
 	Status         int
 	LastActiveTime time.Time
@@ -158,6 +159,9 @@ func NewNode(nc map[interface{}]interface{}) (*Node, error) {
 	node.Port = nc["port"].(int)
 	node.ID = nc["id"].(string)
 	node.PublicKey = nc["public_key"].(string)
+	if description, ok := nc["description"]; ok {
+		node.Description = description.(string)
+	}
 
 	node.Client.SetPublicKey(node.PublicKey)
 	hash := encryption.Hash(node.PublicKeyBytes)
@@ -220,12 +224,11 @@ func (n *Node) Release() {
 
 //GetTimer - get the timer
 func (n *Node) GetTimer(uri string) metrics.Timer {
+	//TODO: in rare cases this will throw concurrent map read/write error as we are not locking during the read
 	timer, ok := n.TimersByURI[uri]
 	if !ok {
 		timerID := fmt.Sprintf("%v.%v", n.ID, uri)
 		timer = metrics.GetOrRegisterTimer(timerID, nil)
-		// We will incur this cost only the first time and n.TimersByURI will not have concurrent read/write because of this mutex.
-		// We could have had mutex by node, but as it's only for the initial registration, it may be ok
 		mutex.Lock()
 		defer mutex.Unlock()
 		n.TimersByURI[uri] = timer

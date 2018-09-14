@@ -202,7 +202,7 @@ func printNodePool(w http.ResponseWriter, np *node.Pool) {
 	fmt.Fprintf(w, "table, td, th { border: 1px solid black; }\n")
 	fmt.Fprintf(w, "</style>")
 	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
-	fmt.Fprintf(w, "<tr><td>Set Index</td><td>Node</td><td>Sent</td><td>Send Errors</td><td>Received</td><td>Last Active</td><td>Small Msg Time</td><td>Large Msg Time</td></tr>")
+	fmt.Fprintf(w, "<tr><td>Set Index</td><td>Node</td><td>Sent</td><td>Send Errors</td><td>Received</td><td>Last Active</td><td>Small Msg Time</td><td>Large Msg Time</td><td>Description</td></tr>")
 	for _, nd := range nodes {
 		fmt.Fprintf(w, "<tr>")
 		fmt.Fprintf(w, "<td>%d</td>", nd.SetIndex)
@@ -217,6 +217,7 @@ func printNodePool(w http.ResponseWriter, np *node.Pool) {
 		fmt.Fprintf(w, "<td>%v</td>", nd.LastActiveTime)
 		fmt.Fprintf(w, "<td>%.2f</td>", nd.GetSmallMessageSendTime())
 		fmt.Fprintf(w, "<td>%.2f</td>", nd.GetLargeMessageSendTime())
+		fmt.Fprintf(w, "<td>%s</td>", nd.Description)
 		fmt.Fprintf(w, "</tr>")
 	}
 	fmt.Fprintf(w, "</table>")
