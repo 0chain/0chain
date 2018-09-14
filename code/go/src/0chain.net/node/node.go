@@ -18,8 +18,6 @@ import (
 
 var nodes = make(map[string]*Node)
 
-var mutex sync.Mutex
-
 /*RegisterNode - register a node to a global registery
 * We need to keep track of a global register of nodes. This is required to ensure we can verify a signed request
 * coming from a node
@@ -74,6 +72,8 @@ type Node struct {
 
 	LargeMessageSendTime float32
 	SmallMessageSendTime float32
+
+	mutex *sync.Mutex
 }
 
 /*Provider - create a node object */
@@ -85,6 +85,7 @@ func Provider() *Node {
 	for i := 0; i < cap(node.CommChannel); i++ {
 		node.CommChannel <- true
 	}
+	node.mutex = &sync.Mutex{}
 	node.TimersByURI = make(map[string]metrics.Timer, 10)
 	return node
 }
@@ -224,13 +225,12 @@ func (n *Node) Release() {
 
 //GetTimer - get the timer
 func (n *Node) GetTimer(uri string) metrics.Timer {
-	//TODO: in rare cases this will throw concurrent map read/write error as we are not locking during the read
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
 	timer, ok := n.TimersByURI[uri]
 	if !ok {
 		timerID := fmt.Sprintf("%v.%v", n.ID, uri)
 		timer = metrics.GetOrRegisterTimer(timerID, nil)
-		mutex.Lock()
-		defer mutex.Unlock()
 		n.TimersByURI[uri] = timer
 	}
 	return timer
