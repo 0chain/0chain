@@ -1,37 +1,50 @@
 package model_simple_dkg
 
 import (
-	. "0chain.net/threshold/model"
+	"0chain.net/threshold/model"
 )
 
-type Receipt struct {
-	m Key
-	v VerificationKey
+type KeyShare struct {
+	m model.Key
+	v model.VerificationKey
 }
+var EmptyKeyShare = KeyShare{}
 
 type DKG struct {
-	T
-	N
-	receipts []Receipt
+	T           int
+	N           int
+	sending     []KeyShare
+	received    []KeyShare
+	numReceived int
 }
 
-func New(t T, n N) DKG {
+func New(t, n int) DKG {
 	return DKG{
-		T:        t,
-		N:        n,
-		receipts: make([]Receipt, n),
+		T:           t,
+		N:           n,
+		sending:     make([]KeyShare, n),
+		received:    make([]KeyShare, n),
+		numReceived: 0,
 	}
 }
 
-func (dkg *DKG) GetShareFor(i PartyId) (m Key, v VerificationKey) {
-	return Key{}, VerificationKey{}
+func (d *DKG) GetShareFor(i model.PartyId) KeyShare {
+	return d.sending[i]
 }
 
-func (dkg *DKG) ReceiveShare(i PartyId, m Key, v VerificationKey) error {
-	dkg.receipts = append(dkg.receipts, Receipt{m: m, v: v})
+func (d *DKG) GetShareFrom(i model.PartyId) KeyShare {
+	return d.received[i]
+}
+
+func (d *DKG) ReceiveShare(i model.PartyId, share KeyShare) error {
+	// TODO: Check validity and return error if invalid.
+	if d.received[i] != (KeyShare{}) {
+		d.received[i] = share
+		d.numReceived += 1
+	}
 	return nil
 }
 
-func (dkg *DKG) IsDone() bool {
-	return dkg.N == N(len(dkg.receipts))
+func (d *DKG) IsDone() bool {
+	return d.numReceived == d.N
 }
