@@ -6,9 +6,7 @@ import (
 
 	"0chain.net/node"
 	"0chain.net/threshold/model"
-	"0chain.net/threshold/model/party"
-	"0chain.net/threshold/model/simple_dkg"
-	. "0chain.net/threshold/network"
+	"0chain.net/threshold/network"
 )
 
 type Timeouts struct {
@@ -33,11 +31,11 @@ type NetInput struct {
 type Result interface{}
 type Canceled struct{}
 type IncorrectShare *node.Node
-type Success model_party.Party
+type Success model.Party
 
 type Protocol struct {
-	net      *NodeInfo
-	dkg      model_simple_dkg.DKG
+	net      *network.NodeInfo
+	dkg      model.SimpleDKG
 	timeouts Timeouts
 
 	netOutput chan NetOutput
@@ -46,22 +44,20 @@ type Protocol struct {
 	results chan Result
 }
 
-func newProtocol(net *NodeInfo, t model.T, timeouts Timeouts) Protocol {
+func newProtocol(net *network.NodeInfo, t int, timeouts Timeouts) Protocol {
 	return Protocol{
 		net:      net,
-		dkg:      model_simple_dkg.New(t, model.N(len(net.Peers.Nodes))),
+		dkg:      model.NewSimpleDKG(t, len(net.Peers.Nodes)),
 		timeouts: timeouts,
 		results:  make(chan Result, 10),
 	}
 }
-func (p *Protocol) newShareMsg(to *node.Node) ShareMsg {
+
+func (p *Protocol) newShareMsg(to *node.Node) model.KeyShare {
 	i := p.net.HostToId[to.Host]
-	m, v := p.dkg.GetShareFor(i)
-	return ShareMsg{
-		m: m,
-		v: v,
-	}
+	return p.dkg.GetShareFor(i)
 }
+
 func (p *Protocol) transmitAll() {
 	for _, peer := range p.net.Peers.Nodes {
 		m := p.newShareMsg(peer)
@@ -69,9 +65,10 @@ func (p *Protocol) transmitAll() {
 		// TODO: Send m to peer.
 	}
 }
-func (p *Protocol) receive(from *node.Node, m ShareMsg) {
+
+func (p *Protocol) receive(from *node.Node, share model.KeyShare) {
 	i := p.net.HostToId[from.Host]
-	p.dkg.ReceiveShare(i, m.m, m.v)
+	p.dkg.ReceiveShare(i, share)
 }
 
 func (p *Protocol) run(ctx context.Context) {
@@ -91,7 +88,7 @@ func (p *Protocol) run(ctx context.Context) {
 	}
 }
 
-func Run(ctx context.Context, net *NodeInfo, t model.T, timeouts Timeouts) <-chan Result {
+func Run(ctx context.Context, net *network.NodeInfo, t int, timeouts Timeouts) <-chan Result {
 	p := newProtocol(net, t, timeouts)
 	go p.run(ctx)
 	return p.results

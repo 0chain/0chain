@@ -5,18 +5,12 @@ import (
 	"time"
 
 	"0chain.net/threshold/model"
-	"0chain.net/threshold/model/byzantine_dkg"
-	"0chain.net/threshold/model/party"
 )
 
 type Timeouts struct {
 	retransmit time.Duration
 }
 
-type ShareMsg struct {
-	m model.Key
-	v model.VerificationKey
-}
 type ComplaintMsg struct {
 	against model.PartyId
 }
@@ -32,7 +26,7 @@ type NetMsg struct {
 }
 
 type Protocol struct {
-	dkg      model_byzantine_dkg.DKG
+	dkg      model.ByzantineDKG
 	timeouts Timeouts
 	network  chan NetMsg
 	results  chan interface{}
@@ -41,7 +35,7 @@ type Protocol struct {
 
 func New(t int, n int, timeouts Timeouts, network chan NetMsg) Protocol {
 	return Protocol{
-		dkg:      model_byzantine_dkg.New(t, n),
+		dkg:      model.NewByzantineDKG(t, n),
 		timeouts: timeouts,
 		network:  network,
 		results:  make(chan interface{}, 10),
@@ -50,13 +44,10 @@ func New(t int, n int, timeouts Timeouts, network chan NetMsg) Protocol {
 }
 
 func (p *Protocol) sendShare(to model.PartyId) {
-	m, v := p.dkg.Simple.GetShareFor(to)
+	share := p.dkg.Simple.GetShareFor(to)
 	p.network <- NetMsg{
 		peer: to,
-		msg: ShareMsg{
-			m: m,
-			v: v,
-		},
+		msg: share,
 	}
 }
 
@@ -70,6 +61,7 @@ func (p *Protocol) sendComplaint(against, to model.PartyId) {
 }
 
 func (p *Protocol) sendDefendMsg(defending model.PartyId, to model.PartyId) {
+	/*
 	p.dkg.Simple.ReceiveShare()
 	p.network <- NetMsg{
 		peer: to,
@@ -79,6 +71,7 @@ func (p *Protocol) sendDefendMsg(defending model.PartyId, to model.PartyId) {
 			v:       v,
 		},
 	}
+	*/
 }
 
 func (p *Protocol) broadcastShares() {
@@ -91,7 +84,7 @@ func (p *Protocol) broadcastShares() {
 	}
 }
 
-func (p *Protocol) receiveShare(from model.PartyId, m ShareMsg) error {
+func (p *Protocol) receiveShare(from model.PartyId, m model.KeyShare) error {
 	return p.dkg.Simple.ReceiveShare(from, m)
 }
 
@@ -110,12 +103,12 @@ func (p *Protocol) run(ctx context.Context) {
 			retransmit, cancel = context.WithTimeout(ctx, p.timeouts.retransmit)
 			continue
 		case msg := <-p.network:
-			err := p.receiveShare(msg.peer, msg.msg)
+			err := p.receiveShare(msg.peer, msg.msg.(model.KeyShare))
 			if err != nil {
 				p.results <- err
 			}
 			if p.dkg.Simple.IsDone() && !p.done {
-				p.results <- model_party.New(&p.dkg.Simple)
+				p.results <- model.NewParty(&p.dkg.Simple)
 				p.done = true
 			}
 			continue
@@ -123,7 +116,7 @@ func (p *Protocol) run(ctx context.Context) {
 	}
 }
 
-func Run(ctx context.Context, t model.T, n model.N, timeouts Timeouts, network chan NetMsg) <-chan interface{} {
+func Run(ctx context.Context, t, n int, timeouts Timeouts, network chan NetMsg) <-chan interface{} {
 	p := New(t, n, timeouts, network)
 	go p.run(ctx)
 	return p.results

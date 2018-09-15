@@ -1,17 +1,13 @@
-package model_simple_dkg
-
-import (
-	"0chain.net/threshold/model"
-)
+package model
 
 type KeyShare struct {
-	m model.Key
-	v model.VerificationKey
+	m Key
+	v VerificationKey
 }
 
 var EmptyKeyShare = KeyShare{}
 
-type DKG struct {
+type SimpleDKG struct {
 	T           int
 	N           int
 	sending     []KeyShare
@@ -19,8 +15,8 @@ type DKG struct {
 	numReceived int
 }
 
-func New(t, n int) DKG {
-	return DKG{
+func NewSimpleDKG(t, n int) SimpleDKG {
+	return SimpleDKG{
 		T:           t,
 		N:           n,
 		sending:     make([]KeyShare, n),
@@ -29,23 +25,23 @@ func New(t, n int) DKG {
 	}
 }
 
-func (d *DKG) GetShareFor(i model.PartyId) KeyShare {
+func (d *SimpleDKG) GetShareFor(i PartyId) KeyShare {
 	return d.sending[i]
 }
 
-func (d *DKG) GetShareFrom(i model.PartyId) KeyShare {
+func (d *SimpleDKG) GetShareFrom(i PartyId) KeyShare {
 	return d.received[i]
 }
 
-func (d *DKG) ReceiveShare(i model.PartyId, share KeyShare) error {
+func (d *SimpleDKG) ReceiveShare(i PartyId, share KeyShare) error {
 	// TODO: Check validity and return error if invalid.
-	if d.received[i] != (KeyShare{}) {
+	if d.received[i] != EmptyKeyShare {
 		d.received[i] = share
 		d.numReceived += 1
 	}
 	return nil
 }
 
-func (d *DKG) IsDone() bool {
+func (d *SimpleDKG) IsDone() bool {
 	return d.numReceived == d.N
 }

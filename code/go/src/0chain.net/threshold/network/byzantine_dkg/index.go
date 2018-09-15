@@ -3,9 +3,7 @@ package network_byzantine_dkg
 import (
 	"0chain.net/node"
 	"0chain.net/threshold/model"
-	"0chain.net/threshold/model/byzantine_dkg"
-	"0chain.net/threshold/model/party"
-	. "0chain.net/threshold/network"
+	"0chain.net/threshold/network"
 )
 
 type ProtocolMsg interface{}
@@ -24,24 +22,24 @@ type DefendMsg struct {
 
 type ProtocolOutput interface{}
 type DisqualifiedOutput []*node.Node
-type SuccessOutput *model_party.Party
+type SuccessOutput *model.Party
 
 type Protocol struct {
-	info *NodeInfo
-	dkg  model_byzantine_dkg.DKG
+	info *network.NodeInfo
+	dkg  model.ByzantineDKG
 }
 
-func New(info *NodeInfo, t model.T) Protocol {
+func New(info *network.NodeInfo, t int) Protocol {
 	return Protocol{
 		info: info,
-		dkg:  model_byzantine_dkg.New(t, model.N(len(info.Peers.Nodes))),
+		dkg:  model.NewByzantineDKG(t, len(info.Peers.Nodes)),
 	}
 }
 func (p *Protocol) close()                                 {}
 func (p *Protocol) send(to *node.Node, m ProtocolMsg)      {}
 func (p *Protocol) receive(from *node.Node, m ProtocolMsg) {}
 
-func Run(info *NodeInfo, t model.T) chan ProtocolOutput {
+func Run(info *network.NodeInfo, t int) chan ProtocolOutput {
 	New(info, t)
 	return make(chan ProtocolOutput, 1)
 }

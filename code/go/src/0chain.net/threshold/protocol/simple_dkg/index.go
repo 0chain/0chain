@@ -5,8 +5,6 @@ import (
 	"time"
 
 	"0chain.net/threshold/model"
-	"0chain.net/threshold/model/party"
-	"0chain.net/threshold/model/simple_dkg"
 )
 
 type Timeouts struct {
@@ -15,11 +13,11 @@ type Timeouts struct {
 
 type NetMsg struct {
 	peer model.PartyId
-	msg  model_simple_dkg.KeyShare
+	msg  model.KeyShare
 }
 
 type Protocol struct {
-	dkg      model_simple_dkg.DKG
+	dkg      model.SimpleDKG
 	timeouts Timeouts
 	network  chan NetMsg
 	results  chan interface{}
@@ -28,7 +26,7 @@ type Protocol struct {
 
 func New(t int, n int, timeouts Timeouts, network chan NetMsg) Protocol {
 	return Protocol{
-		dkg:      model_simple_dkg.New(t, n),
+		dkg:      model.NewSimpleDKG(t, n),
 		timeouts: timeouts,
 		network:  network,
 		results:  make(chan interface{}, 10),
@@ -53,7 +51,7 @@ func (p *Protocol) broadcastShares() {
 	}
 }
 
-func (p *Protocol) receiveShare(from model.PartyId, m model_simple_dkg.KeyShare) error {
+func (p *Protocol) receiveShare(from model.PartyId, m model.KeyShare) error {
 	return p.dkg.ReceiveShare(from, m)
 }
 
@@ -77,7 +75,7 @@ func (p *Protocol) run(ctx context.Context) {
 				p.results <- err
 			}
 			if p.dkg.IsDone() && !p.done {
-				p.results <- model_party.New(&p.dkg)
+				p.results <- model.NewParty(&p.dkg)
 				p.done = true
 			}
 			continue
@@ -85,7 +83,10 @@ func (p *Protocol) run(ctx context.Context) {
 	}
 }
 
-func Run(ctx context.Context, t int, n int, timeouts Timeouts, network chan NetMsg) <-chan interface{} {
+// The returned channel sends:
+//   0+  error
+//   0-1 model_party.Party
+func Run(ctx context.Context, t, n int, timeouts Timeouts, network chan NetMsg) <-chan interface{} {
 	p := New(t, n, timeouts, network)
 	go p.run(ctx)
 	return p.results

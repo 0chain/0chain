@@ -2,17 +2,16 @@ package network_vrf
 
 import (
 	"0chain.net/node"
-	"0chain.net/threshold/model/party"
-	"0chain.net/threshold/model/vrf"
-	. "0chain.net/threshold/network"
+	"0chain.net/threshold/model"
+	"0chain.net/threshold/network"
 )
 
 type Protocol struct {
-	info *NodeInfo
-	vrf  model_vrf.VRF
+	info *network.NodeInfo
+	vrf  model.VRF
 }
 
-func New(info *NodeInfo, vrf model_vrf.VRF) Protocol {
+func New(info *network.NodeInfo, vrf model.VRF) Protocol {
 	return Protocol{
 		info: info,
 		vrf:  vrf,
@@ -22,13 +21,13 @@ func New(info *NodeInfo, vrf model_vrf.VRF) Protocol {
 func (p *Protocol) close() {
 }
 
-func (p *Protocol) send(to *node.Node, m model_party.SignatureShare) {
+func (p *Protocol) send(to *node.Node, m model.SignatureShare) {
 }
 
-func (p *Protocol) receive(from *node.Node, m model_party.SignatureShare) {
+func (p *Protocol) receive(from *node.Node, m model.SignatureShare) {
 }
 
-func Run(info *NodeInfo, vrf model_vrf.VRF) chan model_vrf.RandomOutput {
+func Run(info *network.NodeInfo, vrf model.VRF) chan model.RandomOutput {
 	New(info, vrf)
-	return make(chan model_vrf.RandomOutput, 1)
+	return make(chan model.RandomOutput, 1)
 }
