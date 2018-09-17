@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
-	"strconv"
 	"strings"
 	"time"
 
@@ -49,52 +48,6 @@ func GetChainHandler(ctx context.Context, r *http.Request) (interface{}, error) 
 /*PutChainHandler - Given a chain data, it stores it */
 func PutChainHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 	return datastore.PutEntityHandler(ctx, entity)
-}
-
-/*StatusHandler - allows checking the status of the node */
-func (c *Chain) StatusHandler(w http.ResponseWriter, r *http.Request) {
-	id := r.FormValue("id")
-	if id == "" {
-		return
-	}
-	publicKey := r.FormValue("publicKey")
-	timestamp := r.FormValue("timestamp")
-	ts, err := strconv.ParseInt(timestamp, 10, 64)
-	if err != nil {
-		return
-	}
-	if !common.Within(ts, 5) {
-		return
-	}
-	data := r.FormValue("data")
-	hash := r.FormValue("hash")
-	signature := r.FormValue("signature")
-	if data == "" || hash == "" || signature == "" {
-		return
-	}
-	addressParts := strings.Split(r.RemoteAddr, ":")
-	node := c.Miners.GetNode(id)
-	if node == nil {
-		node = c.Sharders.GetNode(id)
-		if node == nil {
-			node = c.Blobbers.GetNode(id)
-		}
-	}
-	if node == nil {
-		return
-	}
-	if node.Host != addressParts[0] {
-		// TODO: Node's ip address changed. Should we update ourselves?
-	}
-	if node.PublicKey == publicKey {
-		ok, err := node.Verify(signature, hash)
-		if !ok || err != nil {
-			return
-		}
-		node.LastActiveTime = time.Now().UTC()
-	} else {
-		// TODO: private/public keys changed by the node. Should we update ourselves?
-	}
 }
 
 /*GetMinersHandler - get the list of known miners */

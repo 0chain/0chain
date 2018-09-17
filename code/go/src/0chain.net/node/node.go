@@ -199,7 +199,7 @@ func (n *Node) GetN2NURLBase() string {
 
 /*GetStatusURL - get the end point where to ping for the status */
 func (n *Node) GetStatusURL() string {
-	return fmt.Sprintf("%v/_nh/status?id=%v&publicKey=%v", n.GetN2NURLBase(), n.ID, n.PublicKey)
+	return fmt.Sprintf("%v/_nh/status", n.GetN2NURLBase())
 }
 
 /*GetNodeType - as a string */

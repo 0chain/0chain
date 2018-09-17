@@ -67,7 +67,7 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 		if err != nil {
 			panic(err)
 		}
-		statusURL = fmt.Sprintf("%v&data=%v&hash=%v&signature=%v", statusURL, data, hash, signature)
+		statusURL = fmt.Sprintf("%v?id=%v&publicKey=%v&timestamp=%v&data=%v&hash=%v&signature=%v", statusURL, Self.Node.GetKey(), Self.Node.PublicKey, ts, data, hash, signature)
 		resp, err := client.Get(statusURL)
 		if err != nil {
 			node.ErrorCount++
