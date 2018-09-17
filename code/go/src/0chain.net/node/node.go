@@ -3,6 +3,7 @@ package node
 import (
 	"fmt"
 	"io"
+	"math"
 	"strconv"
 	"strings"
 	"sync"
@@ -256,4 +257,27 @@ func (n *Node) GetLargeMessageSendTime() float32 {
 //GetSmallMessageSendTime - get the time it takes to send a small message to this node
 func (n *Node) GetSmallMessageSendTime() float32 {
 	return n.SmallMessageSendTime / 1000000
+}
+
+func (n *Node) updateMessageTimings() {
+	maxcount := n.GetMaxMessageCount()
+	var minval float32 = math.MaxFloat32
+	var maxval float32
+	for _, timer := range n.TimersByURI {
+		if timer.Count()*10 < maxcount {
+			continue
+		}
+		v := float32(timer.Mean())
+		if v > maxval {
+			maxval = v
+		}
+		if v < minval {
+			minval = v
+		}
+	}
+	if minval > maxval {
+		minval = maxval
+	}
+	n.LargeMessageSendTime = maxval
+	n.SmallMessageSendTime = minval
 }
