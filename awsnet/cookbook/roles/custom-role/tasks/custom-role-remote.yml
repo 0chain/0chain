@@ -1,27 +1,30 @@
 - become: yes
   block:
   - name: Get the docker images...
-    command: docker ps -a -q
-    register: images
-
-  - name: Stop the docker images...
-    command: docker stop "{{item}}"
-    with_items: "{{images.stdout_lines}}"
-    register: stop
-
-  - name: Remove the images...
-    command: docker rm "{{item}}"
-    with_items: "{{images.stdout_lines}}"
-    register: remove
+    command: docker ps
+    register: result
 
   - debug:
-      msg: "result={{remove}}"
+      msg: "{{result.stdout}}"
 
-  - name: Delete 0chain files...
-    file:
-      path: "{{item}}"
-      state: absent
-    with_items:
-      - "/0chain_root"
-      - "/0chain"
-      - "/0chain_efs"
+#  - name: Stop the docker images...
+#    command: docker stop "{{item}}"
+#    with_items: "{{images.stdout_lines}}"
+#    register: stop
+#
+#  - name: Remove the images...
+#    command: docker rm "{{item}}"
+#    with_items: "{{images.stdout_lines}}"
+#    register: remove
+#
+#  - debug:
+#      msg: "result={{remove}}"
+#
+#  - name: Delete 0chain files...
+#    file:
+#      path: "{{item}}"
+#      state: absent
+#    with_items:
+#      - "/0chain_root"
+#      - "/0chain"
+#      - "/0chain_efs"

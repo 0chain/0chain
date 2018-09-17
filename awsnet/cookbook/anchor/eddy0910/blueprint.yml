@@ -14,6 +14,7 @@ blueprint:
   #Alter this to use a smaller set.
   #hosts: 'tag_network_name_eddy0910'
   hosts: agents
+  #hosts: axx
 
   instance_type:
     miner: 'c5.xlarge'
