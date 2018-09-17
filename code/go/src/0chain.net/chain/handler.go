@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
-	"strconv"
 	"strings"
 	"time"
 
@@ -49,52 +48,6 @@ func GetChainHandler(ctx context.Context, r *http.Request) (interface{}, error) 
 /*PutChainHandler - Given a chain data, it stores it */
 func PutChainHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 	return datastore.PutEntityHandler(ctx, entity)
-}
-
-/*StatusHandler - allows checking the status of the node */
-func (c *Chain) StatusHandler(w http.ResponseWriter, r *http.Request) {
-	id := r.FormValue("id")
-	if id == "" {
-		return
-	}
-	publicKey := r.FormValue("publicKey")
-	timestamp := r.FormValue("timestamp")
-	ts, err := strconv.ParseInt(timestamp, 10, 64)
-	if err != nil {
-		return
-	}
-	if !common.Within(ts, 5) {
-		return
-	}
-	data := r.FormValue("data")
-	hash := r.FormValue("hash")
-	signature := r.FormValue("signature")
-	if data == "" || hash == "" || signature == "" {
-		return
-	}
-	addressParts := strings.Split(r.RemoteAddr, ":")
-	node := c.Miners.GetNode(id)
-	if node == nil {
-		node = c.Sharders.GetNode(id)
-		if node == nil {
-			node = c.Blobbers.GetNode(id)
-		}
-	}
-	if node == nil {
-		return
-	}
-	if node.Host != addressParts[0] {
-		// TODO: Node's ip address changed. Should we update ourselves?
-	}
-	if node.PublicKey == publicKey {
-		ok, err := node.Verify(signature, hash)
-		if !ok || err != nil {
-			return
-		}
-		node.LastActiveTime = time.Now().UTC()
-	} else {
-		// TODO: private/public keys changed by the node. Should we update ourselves?
-	}
 }
 
 /*GetMinersHandler - get the list of known miners */
@@ -202,7 +155,7 @@ func printNodePool(w http.ResponseWriter, np *node.Pool) {
 	fmt.Fprintf(w, "table, td, th { border: 1px solid black; }\n")
 	fmt.Fprintf(w, "</style>")
 	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
-	fmt.Fprintf(w, "<tr><td>Set Index</td><td>Node</td><td>Sent</td><td>Send Errors</td><td>Received</td><td>Last Active</td><td>Small Msg Time</td><td>Large Msg Time</td></tr>")
+	fmt.Fprintf(w, "<tr><td>Set Index</td><td>Node</td><td>Sent</td><td>Send Errors</td><td>Received</td><td>Last Active</td><td>Small Msg Time</td><td>Large Msg Time</td><td>Description</td></tr>")
 	for _, nd := range nodes {
 		fmt.Fprintf(w, "<tr>")
 		fmt.Fprintf(w, "<td>%d</td>", nd.SetIndex)
@@ -217,6 +170,7 @@ func printNodePool(w http.ResponseWriter, np *node.Pool) {
 		fmt.Fprintf(w, "<td>%v</td>", nd.LastActiveTime)
 		fmt.Fprintf(w, "<td>%.2f</td>", nd.GetSmallMessageSendTime())
 		fmt.Fprintf(w, "<td>%.2f</td>", nd.GetLargeMessageSendTime())
+		fmt.Fprintf(w, "<td>%s</td>", nd.Description)
 		fmt.Fprintf(w, "</tr>")
 	}
 	fmt.Fprintf(w, "</table>")

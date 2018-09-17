@@ -3,6 +3,7 @@ package node
 import (
 	"fmt"
 	"io"
+	"math"
 	"strconv"
 	"strings"
 	"sync"
@@ -17,8 +18,6 @@ import (
 )
 
 var nodes = make(map[string]*Node)
-
-var mutex sync.Mutex
 
 /*RegisterNode - register a node to a global registery
 * We need to keep track of a global register of nodes. This is required to ensure we can verify a signed request
@@ -58,6 +57,7 @@ type Node struct {
 	Host           string
 	Port           int
 	Type           int8
+	Description    string
 	SetIndex       int
 	Status         int
 	LastActiveTime time.Time
@@ -73,6 +73,8 @@ type Node struct {
 
 	LargeMessageSendTime float32
 	SmallMessageSendTime float32
+
+	mutex *sync.Mutex
 }
 
 /*Provider - create a node object */
@@ -84,6 +86,7 @@ func Provider() *Node {
 	for i := 0; i < cap(node.CommChannel); i++ {
 		node.CommChannel <- true
 	}
+	node.mutex = &sync.Mutex{}
 	node.TimersByURI = make(map[string]metrics.Timer, 10)
 	return node
 }
@@ -158,6 +161,9 @@ func NewNode(nc map[interface{}]interface{}) (*Node, error) {
 	node.Port = nc["port"].(int)
 	node.ID = nc["id"].(string)
 	node.PublicKey = nc["public_key"].(string)
+	if description, ok := nc["description"]; ok {
+		node.Description = description.(string)
+	}
 
 	node.Client.SetPublicKey(node.PublicKey)
 	hash := encryption.Hash(node.PublicKeyBytes)
@@ -194,7 +200,7 @@ func (n *Node) GetN2NURLBase() string {
 
 /*GetStatusURL - get the end point where to ping for the status */
 func (n *Node) GetStatusURL() string {
-	return fmt.Sprintf("%v/_nh/status?id=%v&publicKey=%v", n.GetN2NURLBase(), n.ID, n.PublicKey)
+	return fmt.Sprintf("%v/_nh/status", n.GetN2NURLBase())
 }
 
 /*GetNodeType - as a string */
@@ -220,14 +226,12 @@ func (n *Node) Release() {
 
 //GetTimer - get the timer
 func (n *Node) GetTimer(uri string) metrics.Timer {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
 	timer, ok := n.TimersByURI[uri]
 	if !ok {
 		timerID := fmt.Sprintf("%v.%v", n.ID, uri)
 		timer = metrics.GetOrRegisterTimer(timerID, nil)
-		// We will incur this cost only the first time and n.TimersByURI will not have concurrent read/write because of this mutex.
-		// We could have had mutex by node, but as it's only for the initial registration, it may be ok
-		mutex.Lock()
-		defer mutex.Unlock()
 		n.TimersByURI[uri] = timer
 	}
 	return timer
@@ -253,4 +257,27 @@ func (n *Node) GetLargeMessageSendTime() float32 {
 //GetSmallMessageSendTime - get the time it takes to send a small message to this node
 func (n *Node) GetSmallMessageSendTime() float32 {
 	return n.SmallMessageSendTime / 1000000
+}
+
+func (n *Node) updateMessageTimings() {
+	maxcount := n.GetMaxMessageCount()
+	var minval float32 = math.MaxFloat32
+	var maxval float32
+	for _, timer := range n.TimersByURI {
+		if timer.Count()*10 < maxcount {
+			continue
+		}
+		v := float32(timer.Mean())
+		if v > maxval {
+			maxval = v
+		}
+		if v < minval {
+			minval = v
+		}
+	}
+	if minval > maxval {
+		minval = maxval
+	}
+	n.LargeMessageSendTime = maxval
+	n.SmallMessageSendTime = minval
 }

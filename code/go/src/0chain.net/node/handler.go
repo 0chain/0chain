@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 )
 
 //SetupHandlers - setup all the handlers
 func SetupHandlers() {
 	http.HandleFunc("/_nh/whoami", WhoAmIHandler)
+	http.HandleFunc("/_nh/status", StatusHandler)
 }
 
 //WhoAmIHandler - who am i?
@@ -33,5 +35,43 @@ func (n *Node) PrintSendStats(w io.Writer) {
 		fmt.Fprintf(w, "<td class='number'>%.2f &plusmn;%.2f</td>", timer.Mean()/1000000., timer.StdDev()/1000000.)
 		fmt.Fprintf(w, "<td class='number'>%.2f</td>", scale(timer.Max()))
 		fmt.Fprintf(w, "</tr>")
+	}
+}
+
+/*StatusHandler - allows checking the status of the node */
+func StatusHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.FormValue("id")
+	if id == "" {
+		return
+	}
+	publicKey := r.FormValue("publicKey")
+	data := r.FormValue("data")
+	hash := r.FormValue("hash")
+	signature := r.FormValue("signature")
+	if data == "" || hash == "" || signature == "" {
+		return
+	}
+	if ok, _ := Self.ValidateSignatureTime(data); !ok {
+		return
+	}
+	nd := GetNode(id)
+	if nd == nil {
+		return
+	}
+	/*
+		addressParts := strings.Split(r.RemoteAddr, ":")
+		if nd.Host != addressParts[0] {
+			return
+		} */
+	if nd.PublicKey != publicKey {
+		return
+	}
+	ok, err := nd.Verify(signature, hash)
+	if !ok || err != nil {
+		return
+	}
+	nd.LastActiveTime = time.Now().UTC()
+	if nd.Status == NodeStatusInactive {
+		nd.Status = NodeStatusActive
 	}
 }
