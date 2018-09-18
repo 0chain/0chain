@@ -222,10 +222,10 @@ basic-stage-cluster: \
 #Create the agents such as miner and sharder.
 agent-stage-cluster: \
 	gitrepo-assemble-local \
-	gitrepo-assemble-remote \
 	agent-clientid-assemble-local \
-	agent-clientid-assemble-remote \
+	gitrepo-assemble-remote \
 	agent-config-assemble-remote \
+	agent-clientid-assemble-remote \
 	agent-build-assemble-remote
 
 #Build the zchain_base, miner and sharder
