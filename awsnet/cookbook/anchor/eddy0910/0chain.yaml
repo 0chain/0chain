@@ -45,7 +45,7 @@ server_chain:
     prune_below_count: 100 # rounds
 
 network:
-  relay_time: 180 # milliseconds
+  relay_time: 200 # milliseconds
   max_concurrent_requests: 9
   timeout:
     small_message: 1000 # milliseconds
