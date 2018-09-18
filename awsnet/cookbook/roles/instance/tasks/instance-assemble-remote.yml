@@ -125,7 +125,8 @@
       mode: "u=rwX,g=rX,o=rX"
       recurse: yes
     become: yes
-  when: agent_role == "sharder"
+  when:
+    - agent_role == "sharder"
 
 - become: yes
   block:
