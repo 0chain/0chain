@@ -125,7 +125,8 @@ artifact:
       - { canonical: "/0chain_efs/data/rocksdb/state" }
 
 nodefiles:
-  file: "nodes.txt"
+  file: "nodes.yaml"
+
   dir:
     local: "{{artifact.local.base}}/nodes"
     zchain: "{{artifact.zchain.base}}/nodes"

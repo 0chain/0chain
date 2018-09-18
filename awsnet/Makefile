@@ -196,6 +196,10 @@ gitrepo-teardown-zchain:
 agent-clientid-assemble-local:
 	$(LOCAL_PLAY)
 
+#Create the yaml nodes file
+nodes-yaml-assemble-local:
+	$(LOCAL_PLAY)
+
 #Transport the nodes file and client keys file to the remote machines.
 agent-clientid-assemble-remote:
 	$(REMOTE_PLAY)

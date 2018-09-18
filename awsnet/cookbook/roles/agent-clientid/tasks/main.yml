@@ -4,6 +4,7 @@
     - 'agent-clientid-assemble-local'
     - 'agent-clientid-assemble-remote'
     - 'agent-clientid-teardown-local'
+    - 'nodes-yaml-assemble-local'
 
 - import_tasks: agent-clientid-assemble-local.yml
   tags: ['agent-clientid-assemble-local']
@@ -13,4 +14,7 @@
 
 - import_tasks: agent-clientid-assemble-remote.yml
   tags: ['agent-clientid-assemble-remote']
+
+- import_tasks: nodes-yaml-assemble-local.yml
+  tags: ['nodes-yaml-assemble-local']
 ...
