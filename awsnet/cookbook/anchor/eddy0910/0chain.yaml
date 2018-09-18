@@ -1,5 +1,4 @@
 version: 1.0
-
 #Eddy0910 Config File
 network_blueprint:
   git_tag: "testnet-v0910"
@@ -7,17 +6,6 @@ network_blueprint:
   instance_model:
     miner: "c5.xlarge"
     sharder: "c5.xlarge"
-
-  agent_zones:
-    "s00,m00" : california
-    "s01,m01" : ohio
-    "s02,m02" : sydney
-    "s03,m03" : oregon
-    "s04,m04" : seoul
-    "s05,m05" : singapore
-    "s06,m06" : ireland
-    "s07,m07" : frankfurt
-    "s08,m08" : tokyo
 
 logging:
   console: "false"
@@ -51,11 +39,14 @@ server_chain:
       max_size: 32768 # bytes
   client:
     discover: true
-  network:
-    relay_time: 200 # milliseconds
-    max_concurrent_requests: 9
-    messages:
-      verification_tickets_to: generator
+  messages:
+    verification_tickets_to: generator
   state:
     prune_below_count: 100 # rounds
 
+network:
+  relay_time: 180 # milliseconds
+  max_concurrent_requests: 3
+  timeout:
+    small_message: 1000 # milliseconds
+    large_message: 3000 # milliseconds
