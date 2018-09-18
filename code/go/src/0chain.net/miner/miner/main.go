@@ -75,8 +75,8 @@ func main() {
 	serverChain = &miner.GetMinerChain().Chain
 	chain.SetServerChain(serverChain)
 
-	miner.SetNetworkRelayTime(viper.GetDuration("server_chain.network.relay_time") * time.Millisecond)
-	node.SetMaxConcurrentRequests(viper.GetInt("server_chain.network.max_concurrent_requests"))
+	miner.SetNetworkRelayTime(viper.GetDuration("network.relay_time") * time.Millisecond)
+	node.ReadConfig()
 
 	if *nodesFile == "" {
 		panic("Please specify --nodes_file file.txt option with a file.txt containing nodes including self")

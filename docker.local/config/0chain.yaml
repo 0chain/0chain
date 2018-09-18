@@ -35,10 +35,14 @@ server_chain:
       max_size: 32768 # bytes
   client:
     discover: true
-  network:
-    relay_time: 180 # milliseconds
-    max_concurrent_requests: 3
-    messages:
-      verification_tickets_to: generator
+  messages:
+    verification_tickets_to: generator
   state:
     prune_below_count: 100 # rounds
+
+network:
+  relay_time: 180 # milliseconds
+  max_concurrent_requests: 3
+  timeout:
+    small_message: 1000 # milliseconds
+    large_message: 3000 # milliseconds

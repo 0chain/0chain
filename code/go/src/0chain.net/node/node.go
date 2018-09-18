@@ -15,6 +15,7 @@ import (
 	"0chain.net/datastore"
 	"0chain.net/encryption"
 	metrics "github.com/rcrowley/go-metrics"
+	"github.com/spf13/viper"
 )
 
 var nodes = make(map[string]*Node)
@@ -280,4 +281,11 @@ func (n *Node) updateMessageTimings() {
 	}
 	n.LargeMessageSendTime = maxval
 	n.SmallMessageSendTime = minval
+}
+
+//ReadConfig - read configuration from the default config
+func ReadConfig() {
+	SetTimeoutSmallMessage(viper.GetDuration("network.timeout.small_message") * time.Millisecond)
+	SetTimeoutLargeMessage(viper.GetDuration("network.timeout.large_message") * time.Millisecond)
+	SetMaxConcurrentRequests(viper.GetInt("network.max_concurrent_requests"))
 }

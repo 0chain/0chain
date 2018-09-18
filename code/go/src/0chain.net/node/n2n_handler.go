@@ -15,6 +15,21 @@ import (
 	"go.uber.org/zap"
 )
 
+var (
+	TimeoutSmallMessage = 1000 * time.Millisecond
+	TimeoutLargeMessage = 3000 * time.Millisecond
+)
+
+//SetTimeoutSmallMessage - set the timeout for small message
+func SetTimeoutSmallMessage(ts time.Duration) {
+	TimeoutSmallMessage = ts
+}
+
+//SetTimeoutLargeMessage - set the timeout for large message
+func SetTimeoutLargeMessage(ts time.Duration) {
+	TimeoutLargeMessage = ts
+}
+
 /*SetupN2NHandlers - Setup all the node 2 node communiations*/
 func SetupN2NHandlers() {
 	http.HandleFunc("/v1/_n2n/entity/post", ToN2NReceiveEntityHandler(datastore.PrintEntityHandler))

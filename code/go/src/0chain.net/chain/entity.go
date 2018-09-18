@@ -163,7 +163,7 @@ func NewChainFromConfig() *Chain {
 	chain.RoundRange = viper.GetInt64("server_chain.round_range")
 	chain.TxnMaxPayload = viper.GetInt("server_chain.transaction.payload.max_size")
 	chain.PruneStateBelowCount = viper.GetInt("server_chain.state.prune_below_count")
-	verificationTicketsTo := viper.GetString("server_chain.network.messages.verification_tickets_to")
+	verificationTicketsTo := viper.GetString("server_chain.messages.verification_tickets_to")
 	if verificationTicketsTo == "" || verificationTicketsTo == "all_miners" || verificationTicketsTo == "11" {
 		chain.VerificationTicketsTo = AllMiners
 	} else {

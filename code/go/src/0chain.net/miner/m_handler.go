@@ -5,7 +5,6 @@ import (
 	"context"
 	"net/http"
 	"strconv"
-	"time"
 
 	"0chain.net/block"
 	"0chain.net/common"
@@ -35,17 +34,17 @@ var MinerNotarizedBlockSender node.EntitySendHandler
 /*SetupM2MSenders - setup senders for miner to miner communication */
 func SetupM2MSenders() {
 
-	options := &node.SendOptions{MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
+	options := &node.SendOptions{Timeout: node.TimeoutSmallMessage, MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
 	RoundStartSender = node.SendEntityHandler("/v1/_m2m/round/start", options)
 
-	options = &node.SendOptions{Timeout: 2 * time.Second, MaxRelayLength: 0, CurrentRelayLength: 0, CODEC: node.CODEC_MSGPACK, Compress: true}
+	options = &node.SendOptions{Timeout: node.TimeoutLargeMessage, MaxRelayLength: 0, CurrentRelayLength: 0, CODEC: node.CODEC_MSGPACK, Compress: true}
 	VerifyBlockSender = node.SendEntityHandler("/v1/_m2m/block/verify", options)
 	MinerNotarizedBlockSender = node.SendEntityHandler("/v1/_m2m/block/notarized_block", options)
 
-	options = &node.SendOptions{MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
+	options = &node.SendOptions{Timeout: node.TimeoutSmallMessage, MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
 	VerificationTicketSender = node.SendEntityHandler("/v1/_m2m/block/verification_ticket", options)
 
-	options = &node.SendOptions{Timeout: time.Second, MaxRelayLength: 0, CurrentRelayLength: 0, CODEC: node.CODEC_MSGPACK, Compress: true}
+	options = &node.SendOptions{Timeout: node.TimeoutSmallMessage, MaxRelayLength: 0, CurrentRelayLength: 0, CODEC: node.CODEC_MSGPACK, Compress: true}
 	BlockNotarizationSender = node.SendEntityHandler("/v1/_m2m/block/notarization", options)
 }
 
