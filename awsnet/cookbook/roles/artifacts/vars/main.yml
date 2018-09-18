@@ -129,7 +129,7 @@ nodefiles:
 
   dir:
     local: "{{artifact.local.base}}/nodes"
-    zchain: "{{artifact.zchain.base}}/nodes"
+    zchain: "{{artifact.zchain.base}}/config"
 
 blueprint.instance_tags: network_type={{blueprint.network_type}} network_name={{blueprint.network_name}}
 
