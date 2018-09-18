@@ -1,8 +1,6 @@
 package miner
 
 import (
-	"time"
-
 	"0chain.net/node"
 )
 
@@ -16,9 +14,9 @@ var NotarizedBlockSender node.EntitySendHandler
 
 /*SetupM2SSenders - setup message senders from miners to sharders */
 func SetupM2SSenders() {
-	options := &node.SendOptions{Timeout: 2 * time.Second, MaxRelayLength: 0, CurrentRelayLength: 0, CODEC: node.CODEC_MSGPACK, Compress: true}
+	options := &node.SendOptions{Timeout: node.TimeoutLargeMessage, MaxRelayLength: 0, CurrentRelayLength: 0, CODEC: node.CODEC_MSGPACK, Compress: true}
 	FinalizedBlockSender = node.SendEntityHandler("/v1/_m2s/block/finalized", options)
 
-	options = &node.SendOptions{Timeout: 2 * time.Second, MaxRelayLength: 0, CurrentRelayLength: 0, CODEC: node.CODEC_MSGPACK, Compress: true}
+	options = &node.SendOptions{Timeout: node.TimeoutLargeMessage, MaxRelayLength: 0, CurrentRelayLength: 0, CODEC: node.CODEC_MSGPACK, Compress: true}
 	NotarizedBlockSender = node.SendEntityHandler("/v1/_m2s/block/notarized", options)
 }

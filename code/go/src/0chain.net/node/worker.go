@@ -36,7 +36,7 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 		IdleConnTimeout:    time.Minute,
 		DisableCompression: true,
 	}
-	client := &http.Client{Transport: tr, Timeout: 500 * time.Millisecond}
+	client := &http.Client{Transport: tr, Timeout: TimeoutSmallMessage}
 	nodes := np.shuffleNodes()
 	for _, node := range nodes {
 		if node == Self.Node {
@@ -77,7 +77,7 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 /*DownloadNodeData - downloads the node definition data for the given pool type from the given node */
 func (np *Pool) DownloadNodeData(node *Node) bool {
 	url := fmt.Sprintf("%v/_nh/list/%v", node.GetN2NURLBase(), node.GetNodeType())
-	client := &http.Client{Timeout: 2000 * time.Millisecond}
+	client := &http.Client{Timeout: TimeoutLargeMessage}
 	resp, err := client.Get(url)
 	if err != nil {
 		return false
