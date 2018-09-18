@@ -192,12 +192,9 @@ gitrepo-assemble-remote:
 gitrepo-teardown-zchain:
 	$(ZCHAIN_PLAY)
 
-#Create the local copy of the nodes file. Route 53 gets updated here as well.
+#Create the local copy of the nodes file in yaml format.
+#Route 53 gets updated here as well.
 agent-clientid-assemble-local:
-	$(LOCAL_PLAY)
-
-#Create the yaml nodes file
-nodes-yaml-assemble-local:
 	$(LOCAL_PLAY)
 
 #Transport the nodes file and client keys file to the remote machines.

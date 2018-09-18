@@ -76,7 +76,7 @@ services:
 
     #Start under user 0chain
     user: 2000:2000
-    command: ./bin/sharder --deployment_mode 0 --keys_file nodes/sharder_key.txt --nodes_file nodes/nodes.txt
+    command: ./bin/sharder --deployment_mode 0 --keys_file nodes/sharder_key.txt --nodes_file nodes/nodes.yaml
 
 networks:
   default:
