@@ -79,10 +79,7 @@ func (np *Pool) computeNodesArray() {
 /*GetActiveCount - get the active count */
 func (np *Pool) GetActiveCount() int {
 	count := 0
-	for _, node := range nodes {
-		if node == Self.Node {
-			continue
-		}
+	for _, node := range np.Nodes {
 		if node.Status == NodeStatusActive {
 			count++
 		}

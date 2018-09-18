@@ -65,10 +65,10 @@ type Chain struct {
 	OwnerID       datastore.Key `json:"owner_id"`                  // Client who created this chain
 	ParentChainID datastore.Key `json:"parent_chain_id,omitempty"` // Chain from which this chain is forked off
 
-	Decimals           int8  `json:"decimals"`           // Number of decimals allowed for the token on this chain
-	BlockSize          int32 `json:"block_size"`         // Number of transactions in a block
-	NumGenerators      int   `json:"num_generators"`     // Number of block generators
-	NumSharders        int   `json:"num_sharders"`       // Number of sharders that can store the block
+	Decimals         int8  `json:"decimals"`           // Number of decimals allowed for the token on this chain
+	BlockSize        int32 `json:"block_size"`         // Number of transactions in a block
+	NumGenerators    int   `json:"num_generators"`     // Number of block generators
+	NumSharders      int   `json:"num_sharders"`       // Number of sharders that can store the block
 	ThresholdByCount int   `json:"threshold_by_count"` // Threshold count for a block to be notarized
 	ThresholdByStake int   `json:"threshold_by_stake"` // Stake threshold for a block to be notarized
 
@@ -406,7 +406,7 @@ func (c *Chain) GetNotarizationThresholdCount() int {
 
 /*CanStartNetwork - check whether the network can start */
 func (c *Chain) CanStartNetwork() bool {
-	active := c.Miners.GetActiveCount() + 1
+	active := c.Miners.GetActiveCount()
 	threshold := c.GetNotarizationThresholdCount()
 	if config.DevConfiguration.State {
 		threshold = c.Miners.Size()
