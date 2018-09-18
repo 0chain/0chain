@@ -21,6 +21,8 @@
     nodes_workdir:
     - "{{nodefiles.dir.local}}"
     - "{{nodefiles.dir.local}}/agent_nodes"
+    - "{{nodefiles.dir.local}}/agent_nodes/miner"
+    - "{{nodefiles.dir.local}}/agent_nodes/sharder"
     - "{{nodefiles.dir.local}}/agent_keys"
 
 - name: Delete old contents
@@ -39,7 +41,7 @@
 - name: "Create miner and sharder node attributes"
   template:
     src: "agent_attribute.j2"
-    dest: "{{nodefiles.dir.local}}/agent_nodes/{{item.tags.Name}}.yml"
+    dest: "{{nodefiles.dir.local}}/agent_nodes/{{item.tags.role}}/{{item.tags.Name}}.yml"
   with_items: "{{nodes}}"
   loop_control:
       label: "{{item.tags.Name}}"
@@ -53,13 +55,13 @@
 #Merge the miner files...
 - name: "Merge the miner portion"
   assemble:
-    src: "{{nodefiles.dir.local}}/agent_nodes"
+    src: "{{nodefiles.dir.local}}/agent_nodes/miner"
     regexp: "m*.yml"
     dest: "{{miner_section}}"
 
 - name: "Merge the sharder portion"
   assemble:
-    src: "{{nodefiles.dir.local}}/agent_nodes"
+    src: "{{nodefiles.dir.local}}/agent_nodes/sharder"
     regexp: "s*.yml"
     dest: "{{sharder_section}}"
 
