@@ -14,7 +14,7 @@ type ThresholdError struct {
 	Cause string
 }
 
-func (e *ThresholdError) Error() string {
+func (e ThresholdError) Error() string {
 	return "Party " + strconv.Itoa(int(e.By)) + ": " + e.Cause
 }
 
