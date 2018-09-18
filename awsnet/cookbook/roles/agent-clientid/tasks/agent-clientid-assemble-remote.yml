@@ -28,4 +28,13 @@
     state: link
     owner: 0chain
     group: 0chain
+
+- name: Copy the nodes file to the configuration directory
+  become: yes
+  copy:
+    src: "/0chain/nodes/nodes.yaml"
+    dest: "/0chain/config/nodes.yaml"
+    remote_src: yes
+    owner: 0chain
+    group: 0chain
 ...
