@@ -46,7 +46,7 @@ server_chain:
 
 network:
   relay_time: 180 # milliseconds
-  max_concurrent_requests: 3
+  max_concurrent_requests: 9
   timeout:
     small_message: 1000 # milliseconds
     large_message: 3000 # milliseconds
