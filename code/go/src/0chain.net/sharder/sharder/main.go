@@ -127,7 +127,7 @@ func main() {
 	}
 	common.HandleShutdown(server)
 
-	blockstore.SetupFSBlockStore("data/blocks")
+	blockstore.SetupStore(blockstore.NewFSBlockStore("data/blocks"))
 	if config.DevConfiguration.State {
 		chain.SetupStateLogger("/tmp/state.txt")
 	}

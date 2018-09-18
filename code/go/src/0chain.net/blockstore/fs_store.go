@@ -17,34 +17,35 @@ import (
 
 /*FSBlockStore - a block store implementation using file system */
 type FSBlockStore struct {
-	RootDirectory string
+	RootDirectory         string
+	blockMetadataProvider datastore.EntityMetadata
 }
 
-/*SetupFSBlockStore - Setup a file system based block storage */
-func SetupFSBlockStore(rootDir string) {
-	Store = &FSBlockStore{RootDirectory: rootDir}
+/*NewFSBlockStore - return a new fs block store */
+func NewFSBlockStore(rootDir string) *FSBlockStore {
+	store := &FSBlockStore{RootDirectory: rootDir}
+	store.blockMetadataProvider = datastore.GetEntityMetadata("block")
+	return store
+}
+
+func (fbs *FSBlockStore) getFileWithoutExtension(hash string, round int64) string {
+	var file bytes.Buffer
+	var dirRoundRange = chain.GetServerChain().RoundRange
+	fmt.Fprintf(&file, "%s%s%v", fbs.RootDirectory, string(os.PathSeparator), round/dirRoundRange)
+	for i := 0; i < 3; i++ {
+		fmt.Fprintf(&file, "%s%s", string(os.PathSeparator), hash[3*i:3*i+3])
+	}
+	fmt.Fprintf(&file, "%s%s", string(os.PathSeparator), hash[9:])
+	return file.String()
 }
 
 func (fbs *FSBlockStore) getFileName(hash string, round int64) string {
-	var dir bytes.Buffer
-	var dirRoundRange = chain.GetServerChain().RoundRange
-	fmt.Fprintf(&dir, "%s%s%v", fbs.RootDirectory, string(os.PathSeparator), round/dirRoundRange)
-	for i := 0; i < 3; i++ {
-		fmt.Fprintf(&dir, "%s%s", string(os.PathSeparator), hash[3*i:3*i+3])
-	}
-	fmt.Fprintf(&dir, "%s%s", string(os.PathSeparator), hash[9:])
-	fmt.Fprintf(&dir, ".dat.zlib")
-	return dir.String()
-}
-
-/*GetFileName - given a block, get the file name it maps to */
-func (fbs *FSBlockStore) GetFileName(b *block.Block) string {
-	return fbs.getFileName(b.Hash, b.Round)
+	return fbs.getFileWithoutExtension(hash, round) + ".dat.zlib"
 }
 
 /*Write - write the block to the file system */
 func (fbs *FSBlockStore) Write(b *block.Block) error {
-	fileName := fbs.GetFileName(b)
+	fileName := fbs.getFileName(b.Hash, b.Round)
 	dir := filepath.Dir(fileName)
 	os.MkdirAll(dir, 0755)
 	f, err := os.OpenFile(fileName, os.O_RDWR|os.O_CREATE, 0644)
@@ -95,9 +96,9 @@ func (fbs *FSBlockStore) Delete(hash string) error {
 	return common.NewError("interface_not_implemented", "FSBlockStore cannote provide this interface")
 }
 
-/*Delete - delete the given block from the file system */
+/*DeleteBlock - delete the given block from the file system */
 func (fbs *FSBlockStore) DeleteBlock(b *block.Block) error {
-	fileName := fbs.GetFileName(b)
+	fileName := fbs.getFileName(b.Hash, b.Round)
 	err := os.Remove(fileName)
 	if err != nil {
 		return err
