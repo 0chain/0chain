@@ -5,6 +5,9 @@ import (
 	"io"
 	"net/http"
 	"time"
+
+	. "0chain.net/logging"
+	"go.uber.org/zap"
 )
 
 //SetupHandlers - setup all the handlers
@@ -44,7 +47,13 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 	if id == "" {
 		return
 	}
-	publicKey := r.FormValue("publicKey")
+	nd := GetNode(id)
+	if nd == nil {
+		return
+	}
+	if nd.Status == NodeStatusActive {
+		return
+	}
 	data := r.FormValue("data")
 	hash := r.FormValue("hash")
 	signature := r.FormValue("signature")
@@ -54,18 +63,11 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 	if ok, _ := Self.ValidateSignatureTime(data); !ok {
 		return
 	}
-	nd := GetNode(id)
-	if nd == nil {
-		return
-	}
 	/*
 		addressParts := strings.Split(r.RemoteAddr, ":")
 		if nd.Host != addressParts[0] {
 			return
 		} */
-	if nd.PublicKey != publicKey {
-		return
-	}
 	ok, err := nd.Verify(signature, hash)
 	if !ok || err != nil {
 		return
@@ -73,5 +75,6 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 	nd.LastActiveTime = time.Now().UTC()
 	if nd.Status == NodeStatusInactive {
 		nd.Status = NodeStatusActive
+		Logger.Info("Node active", zap.Any("node_type", nd.GetNodeTypeName()), zap.Any("set_index", nd.SetIndex), zap.Any("key", nd.GetKey()))
 	}
 }

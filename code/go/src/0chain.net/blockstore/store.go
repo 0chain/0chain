@@ -19,3 +19,8 @@ var Store BlockStore
 func GetStore() BlockStore {
 	return Store
 }
+
+/*SetupStore - Setup a file system based block storage */
+func SetupStore(store BlockStore) {
+	Store = store
+}
