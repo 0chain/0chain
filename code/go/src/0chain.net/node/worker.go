@@ -14,13 +14,18 @@ import (
 /*StatusMonitor - a background job that keeps checking the status of the nodes */
 func (np *Pool) StatusMonitor(ctx context.Context) {
 	np.statusMonitor(ctx)
-	ticker := time.NewTicker(10 * time.Second)
+	timer := time.NewTimer(time.Second)
 	for true {
 		select {
 		case <-ctx.Done():
 			return
-		case _ = <-ticker.C:
+		case _ = <-timer.C:
 			np.statusMonitor(ctx)
+			if np.GetActiveCount()*10 < len(np.Nodes)*8 {
+				timer = time.NewTimer(5 * time.Second)
+			} else {
+				timer = time.NewTimer(10 * time.Second)
+			}
 		}
 	}
 }
@@ -47,7 +52,7 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 		if err != nil {
 			panic(err)
 		}
-		statusURL = fmt.Sprintf("%v?id=%v&publicKey=%v&timestamp=%v&data=%v&hash=%v&signature=%v", statusURL, Self.Node.GetKey(), Self.Node.PublicKey, ts, data, hash, signature)
+		statusURL = fmt.Sprintf("%v?id=%v&data=%v&hash=%v&signature=%v", statusURL, Self.Node.GetKey(), data, hash, signature)
 		resp, err := client.Get(statusURL)
 		if err != nil {
 			node.ErrorCount++
