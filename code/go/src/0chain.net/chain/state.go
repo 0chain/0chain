@@ -52,7 +52,9 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 		Logger.Info("compute state - previous block state not ready", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Int8("prev_block_state", pbState))
 		err := c.ComputeState(ctx, pb)
 		if err != nil {
-			Logger.Error("compute state - error computing previous state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Error(err))
+			if config.DevConfiguration.State {
+				Logger.Error("compute state - error computing previous state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Error(err))
+			}
 			return err
 		}
 	}
@@ -67,7 +69,9 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 		}
 		if !c.UpdateState(b, txn) {
 			b.SetStateStatus(block.StateFailed)
-			Logger.Error("compute state - update state failed", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.String("prev_block", b.PrevHash), zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)))
+			if config.DevConfiguration.State {
+				Logger.Error("compute state - update state failed", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.String("prev_block", b.PrevHash), zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)))
+			}
 			return common.NewError("state_update_error", "error updating state")
 		}
 	}
