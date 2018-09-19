@@ -179,18 +179,18 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			resp, err := httpClient.Do(req)
 			receiver.Release()
 			timer.UpdateSince(ts)
-			N2n.Info("sending", zap.Any("from", Self.SetIndex), zap.Any("to", receiver.SetIndex), zap.Duration("duration", time.Since(ts)), zap.Any("handler", uri), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()))
+			N2n.Info("sending", zap.Any("from", Self.SetIndex), zap.Any("to", receiver.SetIndex), zap.Any("handler", uri), zap.Duration("duration", time.Since(ts)), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()))
 
 			if err != nil {
 				receiver.SendErrors++
-				N2n.Error("sending", zap.Any("from", Self.SetIndex), zap.Any("to", receiver.SetIndex), zap.Duration("duration", time.Since(ts)), zap.Any("handler", uri), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Error(err))
+				N2n.Error("sending", zap.Any("from", Self.SetIndex), zap.Any("to", receiver.SetIndex), zap.Any("handler", uri), zap.Duration("duration", time.Since(ts)), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Error(err))
 				return false
 			}
 			defer resp.Body.Close()
 			if resp.StatusCode != http.StatusOK {
 				var rbuf bytes.Buffer
 				rbuf.ReadFrom(resp.Body)
-				N2n.Error("sending", zap.Any("from", Self.SetIndex), zap.Any("to", receiver.SetIndex), zap.Duration("duration", time.Since(ts)), zap.Any("handler", uri), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Any("status_code", resp.StatusCode), zap.Any("response", rbuf.String()))
+				N2n.Error("sending", zap.Any("from", Self.SetIndex), zap.Any("to", receiver.SetIndex), zap.Any("handler", uri), zap.Duration("duration", time.Since(ts)), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Any("status_code", resp.StatusCode), zap.Any("response", rbuf.String()))
 				return false
 			}
 			receiver.Status = NodeStatusActive
@@ -282,7 +282,7 @@ func validateSendRequest(sender *Node, r *http.Request) bool {
 	sender.LastActiveTime = time.Unix(reqTSn, 0)
 	Self.Node.LastActiveTime = time.Now()
 	if !common.Within(reqTSn, N2NTimeTolerance) {
-		N2n.Debug("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("enitty", entityName), zap.Any("ts", reqTSn), zap.Any("tstime", time.Unix(reqTSn, 0)))
+		N2n.Error("message received - tolerance", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("enitty", entityName), zap.Any("ts", reqTSn), zap.Any("tstime", time.Unix(reqTSn, 0)))
 		return false
 	}
 
@@ -350,12 +350,14 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF) common
 		if delay > 0 {
 			N2n.Debug("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("entity", entityName), zap.Any("id", entityID), zap.Any("delay", delay))
 		}
+		start := time.Now()
 		data, err := handler(ctx, entity)
+		duration := time.Since(start)
 		common.Respond(w, data, err)
 		if err != nil {
-			N2n.Error("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("entity", entityName), zap.Any("id", entity.GetKey()), zap.Error(err))
+			N2n.Error("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Duration("duration", duration), zap.Any("entity", entityName), zap.Any("id", entity.GetKey()), zap.Error(err))
 		} else {
-			N2n.Info("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Any("entity", entityName), zap.Any("id", entity.GetKey()))
+			N2n.Info("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.Duration("duration", duration), zap.Any("entity", entityName), zap.Any("id", entity.GetKey()))
 		}
 		sender.Received++
 	}
