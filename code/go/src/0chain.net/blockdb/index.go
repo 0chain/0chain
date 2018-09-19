@@ -51,28 +51,29 @@ func (mi *mapIndex) Encode(writer io.Writer) error {
 		keyos = append(keyos, keyo{k: k, o: o})
 	}
 	sort.SliceStable(keyos, func(i, j int) bool { return keyos[i].k < keyos[j].k })
-
+	buffer := bytes.NewBuffer(nil)
 	for _, ko := range keyos {
 		var key = ko.k
 		var offset = ko.o
 		var klen = int8(len(key))
-		err = binary.Write(writer, binary.LittleEndian, klen)
+		err = binary.Write(buffer, binary.LittleEndian, klen)
 		if err != nil {
 			return err
 		}
-		n, err := writer.Write([]byte(key))
+		n, err := buffer.Write([]byte(key))
 		if err != nil {
 			return err
 		}
 		if n != len(key) {
 			return errors.New("written bytes length doesn't match the key length")
 		}
-		err = binary.Write(writer, binary.LittleEndian, offset)
+		err = binary.Write(buffer, binary.LittleEndian, offset)
 		if err != nil {
 			return err
 		}
 	}
-	return nil
+	_, err = buffer.WriteTo(writer)
+	return err
 }
 
 func (mi *mapIndex) Decode(reader io.Reader) error {
