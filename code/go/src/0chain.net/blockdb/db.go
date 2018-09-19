@@ -1,6 +1,7 @@
 package blockdb
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/binary"
@@ -83,13 +84,14 @@ func (bdb *BlockDB) Read(key Key, record Record) error {
 	if err != nil {
 		return err
 	}
+	dataFile := bufio.NewReader(bdb.dataFile)
 	var dlen int32
-	err = binary.Read(bdb.dataFile, binary.LittleEndian, &dlen)
+	err = binary.Read(dataFile, binary.LittleEndian, &dlen)
 	if err != nil {
 		return err
 	}
 	data := make([]byte, dlen, dlen)
-	n, err := bdb.dataFile.Read(data)
+	n, err := dataFile.Read(data)
 	if err != nil {
 		return err
 	}
