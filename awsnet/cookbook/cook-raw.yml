@@ -1,14 +1,21 @@
 ---
 - hosts: ["{{blueprint.hosts}}"]
-  become: true
+  become: false
   gather_facts: false
   vars_files:
     - "{{ credential }}/aws/credentials.yml"
     - "anchor/{{network}}/blueprint.yml"
     - "anchor/{{network}}/clientid.yml"
+    - "roles/artifacts/vars/main.yml"
 
-  roles:
-    - role: artifacts
-    - role: inventory
-    - role: instance
+  tasks:
+  - name: "Include artifacts for the network"
+    import_role:
+      name: artifacts
+      tasks_from: artifacts-common
+
+  - name: "Include tasks to setup minimal raw packages"
+    import_role:
+      name: instance
+      tasks_from: instance-assemble-raw
 ...
