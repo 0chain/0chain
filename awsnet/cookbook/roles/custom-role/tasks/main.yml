@@ -1,0 +1,3 @@
+- name: Run custom command
+  import_tasks: custom-role-remote.yml
+  tags: ['custom-role-remote']

@@ -1,4 +1,4 @@
 #!/bin/sh
 echo Starting sharder...
-docker-compose -p sharder -f docker.aws/build.sharder/docker-compose.yml up
+docker-compose -p zchain -f docker.aws/build.sharder/docker-compose.yml up
 

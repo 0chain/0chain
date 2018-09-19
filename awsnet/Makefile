@@ -43,7 +43,11 @@ ZCHAIN_REPO=$(abspath $(AWSNET_BASE)/..)
 
 ENVIRONMENT?=testnet
 
-INVENTORY=$(COOKBOOK)/inventory
+#INVENTORY=$(COOKBOOK)/inventory
+INVENTORY=$(COOKBOOK)/anchor/$(ZCHAIN_TESTNET)/hosts
+
+export ANSIBLE_CONFIG=$(COOKBOOK)/ansible.cfg
+
 export EC2_INI_PATH=$(INVENTORY)/ec2.ini
 
 #Credentials directory will store the actual key/access values.
@@ -76,14 +80,16 @@ __check_defined_FORCE:
 
 #The AWS_ACCESS_KEY and other related variables can be installed using aws-vault.
 #This ensures all the access keys are kept safe.
-export AWS_ACCESS_KEY_ID:=$(shell aws-vault exec 0chain -- env | grep AWS_ACCESS_KEY_ID | cut -d'=' -f2)
-export AWS_SECRET_ACCESS_KEY:=$(shell aws-vault exec 0chain  -- env | grep AWS_SECRET_ACCESS_KEY|cut -d'=' -f2)
-export AWS_SESSION_TOKEN:=$(shell aws-vault exec 0chain  -- env | grep AWS_SESSION_TOKEN | cut -d'=' -f2)
-export AWS_SECURITY_TOKEN:=$(shell aws-vault exec 0chain -- env | grep AWS_SECURITY_TOKEN|cut -d'=' -f2)
+export AWS_VAULT_PROMPT:=osascript
+export AWS_VAULT_KEYCHAIN_NAME:=login
+export AWS_ACCESS_KEY_ID:=$(shell aws-vault exec 0chain --keychain=login --assume-role-ttl=8h --session-ttl=8h -- env | grep AWS_ACCESS_KEY_ID | cut -d'=' -f2)
+export AWS_SECRET_ACCESS_KEY:=$(shell aws-vault exec 0chain  --keychain=login --assume-role-ttl=8h --session-ttl=8h -- env | grep AWS_SECRET_ACCESS_KEY|cut -d'=' -f2)
+export AWS_SESSION_TOKEN:=$(shell aws-vault exec 0chain  --keychain=login --assume-role-ttl=8h --session-ttl=8h -- env | grep AWS_SESSION_TOKEN | cut -d'=' -f2)
+export AWS_SECURITY_TOKEN:=$(shell aws-vault exec 0chain --keychain=login --assume-role-ttl=8h --session-ttl=8h -- env | grep AWS_SECURITY_TOKEN|cut -d'=' -f2)
 
 PLAYBOOK=ansible-playbook
 
-ROLES:=artifacts keyaws instance istart storage docker gitrepo clientid agentbuild agentrole istop
+ROLES:=artifacts keyaws instance istart  docker gitrepo clientid agentbuild agentrole istop
 
 ROLE_TARGETS_LOCAL:=$(foreach role,$(ROLES),$(role)-assemble-local $(role)-teardown-local)
 ROLE_TARGETS_REMOTE:=$(foreach role,$(ROLES),$(role)-assemble-remote $(role)-teardown-remote)
@@ -103,6 +109,7 @@ EXTRA_VARS="aws_access_key_id=$(AWS_ACCESS_KEY_ID) \
 ADMIN_PLAY=@$(PLAYBOOK) -i $(INVENTORY) $(COOKBOOK)/cook-admin.yml --extra-vars=$(EXTRA_VARS) --tags $@
 LOCAL_PLAY=@$(PLAYBOOK) -i $(INVENTORY) $(COOKBOOK)/cook-local.yml --extra-vars=$(EXTRA_VARS) --tags $@
 RAW_PLAY=@$(PLAYBOOK) -i $(INVENTORY) $(COOKBOOK)/cook-raw.yml --extra-vars=$(EXTRA_VARS) --tags $@
+
 REMOTE_PLAY=@$(PLAYBOOK) -i $(INVENTORY) $(COOKBOOK)/cook-remote.yml --extra-vars=$(EXTRA_VARS) --tags $@
 ZCHAIN_PLAY=@$(PLAYBOOK) -i $(INVENTORY) $(COOKBOOK)/cook-zchain.yml --extra-vars=$(EXTRA_VARS) --tags $@
 
@@ -135,6 +142,10 @@ keyaws-install-public-local:
 keyaws-teardown-local:
 	$(ADMIN_PLAY)
 
+#Locate the AMI for different regions.
+ami-locator-local:
+	$(LOCAL_PLAY)
+
 #keygit-assemble-local keygit-teardown-local:
 #	$(ADMIN_PLAY)
 
@@ -143,30 +154,31 @@ keyaws-teardown-local:
 instance-assemble-local:
 	$(LOCAL_PLAY)
 
+instance-start-local:
+	$(LOCAL_PLAY)
+
+instance-stop-local:
+	$(LOCAL_PLAY)
+
 instance-teardown-local:
 	$(LOCAL_PLAY)
 
 #Instance the packages such as ansible, python, tree etc...
-instance-assemble-remote:
+instance-assemble-raw:
 	$(RAW_PLAY)
+
+instance-assemble-remote:
+	$(REMOTE_PLAY)
 
 #Reboot all the instances...
 instance-reboot-remote:
-	$(REMOTE_PLAY)
-
-istart-assemble-local:
-	$(LOCAL_PLAY)
-
-#Create the EBS volume and mount it for reboot.
-storage-assemble-remote:
 	$(REMOTE_PLAY)
 
 #Install docker related routines on the remote machine
 docker-assemble-remote:
 	$(REMOTE_PLAY)
 
-#Create the remote directories such as /0chain
-artifacts-assemble-remote:
+custom-role-remote:
 	$(REMOTE_PLAY)
 
 #Zip the git repo locally.
@@ -174,57 +186,74 @@ gitrepo-assemble-local:
 	$(LOCAL_PLAY)
 
 #Move the entire git repo to the remote machine and install it
-gitrepo-assemble-zchain:
-	$(ZCHAIN_PLAY)
+gitrepo-assemble-remote:
+	$(REMOTE_PLAY)
 
 gitrepo-teardown-zchain:
 	$(ZCHAIN_PLAY)
 
-#Create the local copy of the nodes file. Route 53 gets updated here as well.
+#Create the local copy of the nodes file in yaml format.
+#Route 53 gets updated here as well.
 agent-clientid-assemble-local:
 	$(LOCAL_PLAY)
 
 #Transport the nodes file and client keys file to the remote machines.
-agent-clientid-assemble-zchain:
-	$(ZCHAIN_PLAY)
+agent-clientid-assemble-remote:
+	$(REMOTE_PLAY)
 
 #Remove records from Route53
 agent-clientid-teardown-local:
 	$(LOCAL_PLAY)
 
 #Copy the configuration file.
-agent-config-assemble-zchain:
-	$(ZCHAIN_PLAY)
+agent-config-assemble-remote:
+	$(REMOTE_PLAY)
 
-#These two targets are used to create the instance
+#Create the basic framework for the instance.
 basic-stage-cluster: \
 	instance-assemble-local \
-	instance-assemble-remote \
-	storage-assemble-remote \
-	docker-assemble-remote \
-	artifacts-assemble-remote \
+	instance-start-local \
 	agent-clientid-assemble-local \
-	agent-clientid-assemble-zchain
+	instance-assemble-raw \
+	instance-assemble-remote \
+	docker-assemble-remote \
+	agent-clientid-assemble-remote
 
+#Create the agents such as miner and sharder.
 agent-stage-cluster: \
 	gitrepo-assemble-local \
-	gitrepo-assemble-zchain \
 	agent-clientid-assemble-local \
-	agent-clientid-assemble-zchain \
-	agent-config-assemble-zchain \
-	agent-build-assemble-zchain
+	gitrepo-assemble-remote \
+	agent-config-assemble-remote \
+	agent-clientid-assemble-remote \
+	agent-build-assemble-remote
 
 #Build the zchain_base, miner and sharder
-agent-build-assemble-zchain:
-	$(ZCHAIN_PLAY)
+agent-build-assemble-remote:
+	$(REMOTE_PLAY)
+
+agent-build-teardown-remote:
+	$(REMOTE_PLAY)
 
 #Start the sharder and miner
-agent-role-assemble-zchain:
-	$(ZCHAIN_PLAY)
+agent-role-assemble-remote:
+	$(REMOTE_PLAY)
 
 # Stop the sharder, miner
-agent-role-teardown-zchain:
-	$(ZCHAIN_PLAY)
+agent-role-teardown-remote:
+	$(REMOTE_PLAY)
+
+#Launch the block explorer
+block-explorer-assemble-local:
+	$(LOCAL_PLAY)
+
+#Terminate the block explorer
+block-explorer-teardown-local:
+	$(LOCAL_PLAY)
+
+#Install packages on the remote machine.
+block-explorer-remote-local:
+	$(REMOTE_PLAY)
 
 #Instance management - start and stop
 istop-teardown-local:
@@ -235,35 +264,6 @@ $(TARGETS): show
 	@echo "Make running target=$@"
 	@$(PLAYBOOK) -i $(INVENTORY) $(CONFIG_FILE) --extra-vars="access=$(ACCESS) network=$(network) repo=$(ZCHAIN_REPO) network_dir=$(NETWORK_DIR)" --tags $@
 
-
-workon_chinook:
-	echo  "ZCHAIN_TESTNET=chinook" > $(CONTEXT)
-
-
-workon_eddy:
-	echo  "ZCHAIN_TESTNET=eddy" > $(CONTEXT)
-
-
-workon_eddy0825:
-	echo "ZCHAIN_TESTNET=eddy0825" > $(CONTEXT)
-
-workon_eddy0826:
-	echo "ZCHAIN_TESTNET=eddy0826" > $(CONTEXT)
-
-workon_shasta:
-	echo  "ZCHAIN_TESTNET=shasta" > $(CONTEXT)
-
-workon_shasta15:
-	echo  "ZCHAIN_TESTNET=shasta15" > $(CONTEXT)
-
-workon_shasta100:
-	echo  "ZCHAIN_TESTNET=shasta100" > $(CONTEXT)
-
-workon_shasta250:
-	echo  "ZCHAIN_TESTNET=shasta250" > $(CONTEXT)
-
-workon_whitney:
-	echo  "ZCHAIN_TESTNET=whitney" > $(CONTEXT)
 
 show:
 	@echo "ZCHAIN_TESTNET.......=$(ZCHAIN_TESTNET)"

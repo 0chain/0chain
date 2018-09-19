@@ -1,0 +1,13 @@
+---
+- block:
+  - name: Update the apt-get package
+    raw: sudo apt-get -y update
+    args:
+      warn: False
+
+  - name: Install ansible and python3.5
+    raw: sudo apt-get -y install ansible python3.5
+    args:
+      warn: False
+  tags: ['instance-assemble-raw']
+...
