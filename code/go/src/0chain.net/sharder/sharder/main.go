@@ -126,8 +126,13 @@ func main() {
 		}
 	}
 	common.HandleShutdown(server)
+	blockStorageProvider := viper.GetString("server_chain.block.storage.provider")
+	if blockStorageProvider == "" || blockStorageProvider == "blockstore.FSBlockStore" {
+		blockstore.SetupStore(blockstore.NewFSBlockStore("data/blocks"))
+	} else {
+		blockstore.SetupStore(blockstore.NewBlockDBStore("data/blocksdb"))
+	}
 
-	blockstore.SetupStore(blockstore.NewFSBlockStore("data/blocks"))
 	if config.DevConfiguration.State {
 		chain.SetupStateLogger("/tmp/state.txt")
 	}

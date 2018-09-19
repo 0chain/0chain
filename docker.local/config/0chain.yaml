@@ -26,9 +26,11 @@ server_chain:
     sharders: 3
     consensus:
       threshold_by_count: 60 # percentage
-      threshold_by_stake: 0
+      threshold_by_stake: 0 # percent
     validation:
       batch_size: 1000
+    storage:
+      provider: blockstore.FSBlockStore # blockstore.FSBlockStore or blockstore.BlockDBStore
   round_range: 10000000
   transaction:
     payload:
@@ -36,7 +38,7 @@ server_chain:
   client:
     discover: true
   messages:
-    verification_tickets_to: generator
+    verification_tickets_to: generator # generator or all_miners
   state:
     prune_below_count: 100 # rounds
 

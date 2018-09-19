@@ -75,7 +75,7 @@ type Block struct {
 
 	ClientState util.MerklePatriciaTrieI `json:"-"`
 	stateStatus int8
-	StateMutex  *sync.Mutex
+	StateMutex  *sync.Mutex `json:"_"`
 	blockState  int8
 }
 
