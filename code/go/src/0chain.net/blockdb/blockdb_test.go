@@ -40,6 +40,13 @@ func (s *Student) Decode(reader io.Reader) error {
 	return common.FromMsgpack(reader, s)
 }
 
+type StudentProvider struct {
+}
+
+func (sp *StudentProvider) NewRecord() Record {
+	return &Student{}
+}
+
 func TestDBWrite(t *testing.T) {
 	compress := true
 	db, err := NewBlockDB("/tmp/blockdb", 4, compress)
@@ -85,6 +92,25 @@ func TestDBWrite(t *testing.T) {
 			panic(err)
 		}
 		fmt.Printf("student: %v\n", s2)
+	}
+	db.Close()
+
+	db, err = NewBlockDB("/tmp/blockdb", 4, compress)
+	if err != nil {
+		panic(err)
+	}
+	db.SetDBHeader(cls2)
+	err = db.Open()
+	if err != nil {
+		panic(err)
+	}
+	var sp StudentProvider
+	srecs, err := db.ReadAll(&sp)
+	if err != nil {
+		panic(err)
+	}
+	for _, s := range srecs {
+		fmt.Printf("student: %v\n", s)
 	}
 	db.Close()
 }

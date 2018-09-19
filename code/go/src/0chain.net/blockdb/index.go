@@ -181,7 +181,7 @@ func (fkai *fixedKeyArrayIndex) GetKeys() []Key {
 	keys := make([]Key, 0, numKeys)
 	for i := 0; i < numKeys; i++ {
 		start := i * int(ksz)
-		key := Key(fkai.buffer[start+1 : start+klen])
+		key := Key(fkai.buffer[start+1 : start+1+klen])
 		keys = append(keys, key)
 	}
 	return keys
