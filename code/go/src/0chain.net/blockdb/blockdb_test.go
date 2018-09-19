@@ -9,7 +9,8 @@ import (
 )
 
 type Class struct {
-	Grade int8 `json:"grade"`
+	Grade       int8   `json:"grade"`
+	Description string `json:"description"`
 }
 
 func (c *Class) Encode(writer io.Writer) error {
@@ -40,7 +41,7 @@ func (s *Student) Decode(reader io.Reader) error {
 }
 
 func TestDBWrite(t *testing.T) {
-	compress := false
+	compress := true
 	db, err := NewBlockDB("/tmp/blockdb", 4, compress)
 	if err != nil {
 		panic(err)
@@ -49,12 +50,12 @@ func TestDBWrite(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	cls := &Class{Grade: 4}
+	cls := &Class{Grade: 4, Description: "Most pouplar open source projects and technologies"}
 	db.SetDBHeader(cls)
 	students := make([]*Student, 3, 3)
-	students[0] = &Student{Name: "Bitcoin", ID: "2009"}
-	students[1] = &Student{Name: "Linux", ID: "1991"}
-	students[2] = &Student{Name: "Apache", ID: "1995"}
+	students[0] = &Student{Name: "Bitcoin - the first cryptocurrency", ID: "2009"}
+	students[1] = &Student{Name: "Linux - the most popular open source operating system", ID: "1991"}
+	students[2] = &Student{Name: "Apache - the first open source web server", ID: "1995"}
 	for _, s := range students {
 		err = db.WriteData(s)
 		if err != nil {

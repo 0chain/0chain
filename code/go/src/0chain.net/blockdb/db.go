@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -194,17 +195,6 @@ func (bdb *BlockDB) Delete() error {
 	return os.Remove(bdb.getDataFileName())
 }
 
-func (bdb *BlockDB) readHeader(file *os.File) error {
-	err := bdb.readIndex(file)
-	if err != nil {
-		return err
-	}
-	if bdb.dbHeader != nil {
-		err = bdb.dbHeader.Decode(file)
-	}
-	return err
-}
-
 func (bdb *BlockDB) saveHeader() error {
 	headerFile, err := os.OpenFile(bdb.getHeaderFileName(), os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
@@ -216,7 +206,39 @@ func (bdb *BlockDB) saveHeader() error {
 		return err
 	}
 	if bdb.dbHeader != nil {
-		err = bdb.dbHeader.Encode(headerFile)
+		buffer := bytes.NewBuffer(nil)
+		err = bdb.dbHeader.Encode(buffer)
+		if err != nil {
+			return err
+		}
+		if bdb.compress {
+			cbytes := snappy.Encode(nil, buffer.Bytes())
+			buffer = bytes.NewBuffer(cbytes)
+		}
+		_, err = buffer.WriteTo(headerFile)
+	}
+	return err
+}
+
+func (bdb *BlockDB) readHeader(file *os.File) error {
+	err := bdb.readIndex(file)
+	if err != nil {
+		return err
+	}
+	if bdb.dbHeader != nil {
+		var data []byte
+		data, err = ioutil.ReadAll(file)
+		if err != nil {
+			return err
+		}
+		if bdb.compress {
+			data, err = snappy.Decode(nil, data)
+			if err != nil {
+				return err
+			}
+		}
+		buffer := bytes.NewBuffer(data)
+		err = bdb.dbHeader.Decode(buffer)
 	}
 	return err
 }
