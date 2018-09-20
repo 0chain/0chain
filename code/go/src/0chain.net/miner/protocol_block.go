@@ -168,7 +168,6 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	Logger.Debug("generate block (assemble+update)", zap.Int64("round", b.Round), zap.Duration("time", time.Since(start)))
 
 	self := node.GetSelfNode(ctx)
-	b.MinerID = self.ID
 	b.HashBlock()
 	b.Signature, err = self.Sign(b.Hash)
 	if err != nil {

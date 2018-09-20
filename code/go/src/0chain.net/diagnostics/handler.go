@@ -18,6 +18,7 @@ func SetupHandlers() {
 	http.HandleFunc("/_diagnostics/n2n_logs", logging.N2NLogWriter)
 	sc := chain.GetServerChain()
 	http.HandleFunc("/_diagnostics/n2n/info", sc.SendStatsWriter)
+	http.HandleFunc("/_diagnostics/miner_stats", sc.MinerStatsHandler)
 }
 
 /*GetStatistics - write the statistics of the given timer */

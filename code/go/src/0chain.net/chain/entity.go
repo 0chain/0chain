@@ -426,14 +426,18 @@ func (c *Chain) ReadNodePools(configFile string) {
 	config := nodeConfig.Get("miners")
 	if miners, ok := config.([]interface{}); ok {
 		c.Miners.AddNodes(miners)
+		c.Miners.ComputeProperties()
+		c.InitializeMinerPool()
 	}
 	config = nodeConfig.Get("sharders")
 	if sharders, ok := config.([]interface{}); ok {
 		c.Sharders.AddNodes(sharders)
+		c.Sharders.ComputeProperties()
 	}
 	config = nodeConfig.Get("blobbers")
 	if blobbers, ok := config.([]interface{}); ok {
 		c.Blobbers.AddNodes(blobbers)
+		c.Blobbers.ComputeProperties()
 	}
 }
 
@@ -465,4 +469,13 @@ func (c *Chain) updateMiningStake(minerId datastore.Key, stake int) {
 
 func (c *Chain) getMiningStake(minerId datastore.Key) int {
 	return c.minersStake[minerId]
+}
+
+//InitializeMinerPool - initialize the miners after their configuration is read
+func (c *Chain) InitializeMinerPool() {
+	for _, nd := range c.Miners.Nodes {
+		ms := &MinerStats{}
+		ms.FinalizationCountByRank = make([]int64, c.NumGenerators, c.NumGenerators)
+		nd.ProtocolStats = ms
+	}
 }

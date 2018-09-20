@@ -104,6 +104,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	b := datastore.GetEntityMetadata("block").Instance().(*block.Block)
 	b.ChainID = mc.ID
 	b.MagicBlockHash = mc.CurrentMagicBlock.Hash
+	b.MinerID = node.Self.GetKey()
 	mc.SetPreviousBlock(ctx, r.Round, b, pb)
 	b.SetStateDB(pb)
 	for true {

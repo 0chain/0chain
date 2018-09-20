@@ -95,9 +95,6 @@ func main() {
 		Logger.Panic("node definition for self node doesn't exist")
 	}
 
-	serverChain.Miners.ComputeProperties()
-	serverChain.Sharders.ComputeProperties()
-	serverChain.Blobbers.ComputeProperties()
 	Logger.Info("self identity", zap.Any("set_index", node.Self.Node.SetIndex), zap.Any("id", node.Self.Node.GetKey()))
 
 	if config.DevConfiguration.State {

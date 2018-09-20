@@ -134,6 +134,7 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<ul>")
 	fmt.Fprintf(w, "<li><a href='/v1/config/get'>/v1/config/get</a></li>")
 	fmt.Fprintf(w, "<li><a href='/_chain_stats'>/_chain_stats</a></li>")
+	fmt.Fprintf(w, "<li><a href='/_diagnostics/miner_stats'>/_diagnostics/miner_stats</a>")
 	fmt.Fprintf(w, "<li><a href='/_diagnostics/info'>/_diagnostics/info</a> (with <a href='/_diagnostics/info?ts=1'>ts</a>)</li>")
 	fmt.Fprintf(w, "<li><a href='/_diagnostics/n2n/info'>/_diagnostics/n2n/info</a></li>")
 	fmt.Fprintf(w, "<li>/_diagnostics/logs [Level <a href='/_diagnostics/logs?detail=1'>1</a>, <a href='/_diagnostics/logs?detail=2'>2</a>, <a href='/_diagnostics/logs?detail=3'>3</a>]</li>")
@@ -272,7 +273,7 @@ func (c *Chain) SendStatsWriter(w http.ResponseWriter, r *http.Request) {
 		if n == node.Self.Node {
 			continue
 		}
-		fmt.Fprintf(w, "<tr><th colspan='5'>%s</th></tr>", fmt.Sprintf("%v%3d", n.GetNodeTypeName(), n.SetIndex))
+		fmt.Fprintf(w, "<tr><th colspan='5'>%s</th></tr>", fmt.Sprintf("%v%.3d", n.GetNodeTypeName(), n.SetIndex))
 		n.PrintSendStats(w)
 	}
 
@@ -280,7 +281,7 @@ func (c *Chain) SendStatsWriter(w http.ResponseWriter, r *http.Request) {
 		if n == node.Self.Node {
 			continue
 		}
-		fmt.Fprintf(w, "<tr><th colspan='5'>%s</th></tr>", fmt.Sprintf("%v%3d", n.GetNodeTypeName(), n.SetIndex))
+		fmt.Fprintf(w, "<tr><th colspan='5'>%s</th></tr>", fmt.Sprintf("%v%.3d", n.GetNodeTypeName(), n.SetIndex))
 		n.PrintSendStats(w)
 	}
 	fmt.Fprintf(w, "</table>")
@@ -314,4 +315,37 @@ func getTxnPayloadSize(txn *transaction.Transaction) int {
 	sizeInBytes += int(reflect.TypeOf(txn.Value).Size())
 
 	return sizeInBytes
+}
+
+/*MinerStatsHandler - handler for the miner stats */
+func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "<style>\n")
+	fmt.Fprintf(w, ".number { text-align: right; }\n")
+	fmt.Fprintf(w, "table, td, th { border: 1px solid black; }\n")
+	fmt.Fprintf(w, "</style>")
+	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
+	fmt.Fprintf(w, "<tr><td>Miner</td>")
+	for i := 0; i < c.NumGenerators; i++ {
+		fmt.Fprintf(w, "<td>Rank %d</td>", i)
+	}
+	fmt.Fprintf(w, "</tr>")
+	totals := make([]int64, c.NumGenerators, c.NumGenerators)
+	for _, nd := range c.Miners.Nodes {
+		fmt.Fprintf(w, "<tr><td>%v</td>", fmt.Sprintf("%v%.3d", nd.GetNodeTypeName(), nd.SetIndex))
+		ms := nd.ProtocolStats.(*MinerStats)
+		for i := 0; i < c.NumGenerators; i++ {
+			fmt.Fprintf(w, "<td class='number'>%v</td>", ms.FinalizationCountByRank[i])
+			totals[i] += ms.FinalizationCountByRank[i]
+		}
+		fmt.Fprintf(w, "</tr>")
+	}
+	fmt.Fprintf(w, "<tr><td>Totals</td>")
+	var total int64
+	for i := 0; i < c.NumGenerators; i++ {
+		fmt.Fprintf(w, "<td class='number'>%v</td>", totals[i])
+		total += totals[i]
+	}
+	fmt.Fprintf(w, "</tr>")
+	fmt.Fprintf(w, "</table>")
+	fmt.Fprintf(w, "Grand total = %v", total)
 }

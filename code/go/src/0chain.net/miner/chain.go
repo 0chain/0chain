@@ -151,6 +151,7 @@ func (mc *Chain) SetPreviousBlock(ctx context.Context, r *round.Round, b *block.
 	}
 	b.SetPreviousBlock(pb)
 	b.RoundRandomSeed = r.RandomSeed
-	b.RoundRank = r.GetMinerRank(node.GetSelfNode(ctx).SetIndex)
+	bNode := node.GetNode(b.MinerID)
+	b.RoundRank = r.GetMinerRank(bNode.SetIndex)
 	b.ComputeChainWeight()
 }

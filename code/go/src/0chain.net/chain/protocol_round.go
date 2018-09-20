@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"0chain.net/config"
+	"0chain.net/node"
 
 	"0chain.net/block"
 	"0chain.net/common"
@@ -87,6 +88,9 @@ func (c *Chain) finalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 	deadBlocks := make([]*block.Block, 0, 1)
 	for idx := range frchain {
 		fb := frchain[len(frchain)-1-idx]
+		bNode := node.GetNode(fb.MinerID)
+		ms := bNode.ProtocolStats.(*MinerStats)
+		ms.FinalizationCountByRank[fb.RoundRank]++
 		Logger.Info("finalize round", zap.Int64("round", r.Number), zap.Int64("finalized_round", fb.Round), zap.String("hash", fb.Hash), zap.Int8("state", fb.GetBlockState()))
 		if time.Since(ssFTs) < 10*time.Second {
 			SteadyStateFinalizationTimer.UpdateSince(ssFTs)

@@ -76,6 +76,8 @@ type Node struct {
 	SmallMessageSendTime float32
 
 	mutex *sync.Mutex
+
+	ProtocolStats interface{}
 }
 
 /*Provider - create a node object */
