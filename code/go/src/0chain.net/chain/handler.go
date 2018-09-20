@@ -128,7 +128,7 @@ func HomePageHandler(w http.ResponseWriter, r *http.Request) {
 func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	sc := GetServerChain()
 	w.Header().Set("Content-Type", "text/html;charset=UTF-8")
-	fmt.Fprintf(w, "<div>Running since %v (%v) ...\n", StartTime, time.Since(StartTime))
+	fmt.Fprintf(w, "<div>Running since %v (%v) ...\n", StartTime.Format(common.DateTimeFormat), time.Since(StartTime))
 	fmt.Fprintf(w, "<div>Working on the chain: %v</div>\n", sc.GetKey())
 	fmt.Fprintf(w, "<div>I am a %v with set rank of (%v) <ul><li>id:%v</li><li>public_key:%v</li></ul></div>\n", node.Self.GetNodeTypeName(), node.Self.SetIndex, node.Self.GetKey(), node.Self.PublicKey)
 	fmt.Fprintf(w, "<ul>")
@@ -167,7 +167,7 @@ func printNodePool(w http.ResponseWriter, np *node.Pool) {
 		fmt.Fprintf(w, "<td class='number'>%d</td>", nd.Sent)
 		fmt.Fprintf(w, "<td class='number'>%d</td>", nd.SendErrors)
 		fmt.Fprintf(w, "<td class='number'>%d</td>", nd.Received)
-		fmt.Fprintf(w, "<td>%v</td>", nd.LastActiveTime)
+		fmt.Fprintf(w, "<td>%v</td>", nd.LastActiveTime.Format(common.DateTimeFormat))
 		fmt.Fprintf(w, "<td>%.2f</td>", nd.GetSmallMessageSendTime())
 		fmt.Fprintf(w, "<td>%.2f</td>", nd.GetLargeMessageSendTime())
 		fmt.Fprintf(w, "<td>%s</td>", nd.Description)

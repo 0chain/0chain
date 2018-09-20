@@ -8,6 +8,9 @@ import (
 	"0chain.net/config"
 )
 
+//DateTimeFormat - the format in which the date time fields should be displayed in the UI
+var DateTimeFormat = "2006-01-02T15:04:05+00:00"
+
 /*Timestamp - just a wrapper to control the json encoding */
 type Timestamp int64
 
