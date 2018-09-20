@@ -157,7 +157,7 @@ func (b *Block) Delete(ctx context.Context) error {
 func Provider() datastore.Entity {
 	b := &Block{}
 	b.Version = "1.0"
-	b.PrevBlockVerficationTickets = make([]*VerificationTicket, 0, 1)
+	//b.PrevBlockVerficationTickets = make([]*VerificationTicket, 0)
 	b.ChainID = datastore.ToKey(config.GetServerChainID())
 	b.InitializeCreationDate()
 	b.StateMutex = &sync.Mutex{}
@@ -225,34 +225,32 @@ func (b *Block) AddVerificationTicket(vt *VerificationTicket) bool {
 			}
 		}
 	}
-	if b.VerificationTickets == nil {
-		b.VerificationTickets = make([]*VerificationTicket, 0, 1)
-	}
 	b.VerificationTickets = append(b.VerificationTickets, vt)
 	return true
 }
 
 /*MergeVerificationTickets - merge the verification tickets with what's already there */
 func (b *Block) MergeVerificationTickets(vts []*VerificationTicket) {
-	if b.VerificationTickets == nil || len(b.VerificationTickets) == 0 {
+	if len(b.VerificationTickets) == 0 {
 		b.VerificationTickets = vts
 		return
 	}
-	tickets, blockTickets := vts, b.VerificationTickets
-	if len(blockTickets) > len(tickets) {
-		tickets, blockTickets = blockTickets, tickets
+	tickets, tickets2 := vts, b.VerificationTickets
+	if len(tickets2) > len(tickets) {
+		tickets, tickets2 = tickets2, tickets
 	}
-
 	sort.Slice(tickets, func(i, j int) bool { return tickets[i].VerifierID < tickets[j].VerifierID })
 	ticketsLen := len(tickets)
-	for _, ticket := range blockTickets {
+	for _, ticket := range tickets2 {
 		ticketIndex := sort.Search(ticketsLen, func(i int) bool { return tickets[i].VerifierID >= ticket.VerifierID })
 		if ticketIndex < ticketsLen && ticket.VerifierID == tickets[ticketIndex].VerifierID { // present in both
 			continue
 		}
 		tickets = append(tickets, ticket)
 	}
-	b.VerificationTickets = tickets
+	if len(tickets) > len(b.VerificationTickets) {
+		b.VerificationTickets = tickets
+	}
 }
 
 /*GetVerificationTicketsCount - get the number of verification tickets for the block */
@@ -341,11 +339,6 @@ func (b *Block) ComputeChainWeight() {
 /*Clear - clear the block */
 func (b *Block) Clear() {
 	b.PrevBlock = nil
-	b.PrevBlockVerficationTickets = nil
-	b.VerificationTickets = nil
-	b.Txns = nil
-	b.TxnsMap = nil
-	b.StateMutex = nil
 }
 
 /*SetBlockState - set the state of the block */
