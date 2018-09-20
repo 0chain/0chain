@@ -47,7 +47,7 @@ func TransactionGenerator(blockSize int32) {
 		numWorkers = 100
 	}
 	txnMetadataProvider := datastore.GetEntityMetadata("txn")
-
+	blockSize = blockSize * 0.5
 	txnChannel := make(chan bool, blockSize)
 	for i := 0; i < numWorkers; i++ {
 		ctx := datastore.WithAsyncChannel(common.GetRootContext(), transaction.TransactionEntityChannel)
