@@ -2,14 +2,16 @@ package sharder
 
 import (
 	"context"
+	"time"
 
 	"0chain.net/block"
-
-	"0chain.net/ememorystore"
-	"0chain.net/persistencestore"
-	"0chain.net/transaction"
+	"go.uber.org/zap"
 
 	"0chain.net/datastore"
+	"0chain.net/ememorystore"
+	. "0chain.net/logging"
+	"0chain.net/persistencestore"
+	"0chain.net/transaction"
 )
 
 /*GetTransactionSummary - given a transaction hash, get the transaction summary */
@@ -65,13 +67,30 @@ func GetTransactionConfirmation(ctx context.Context, hash string) (*transaction.
 }
 
 /*StoreTransactions - persists given list of transactions*/
-func (sc *Chain) StoreTransactions(ctx context.Context, txns []datastore.Entity) error {
+func (sc *Chain) StoreTransactions(ctx context.Context, b *block.Block) error {
+	var sTxns = make([]datastore.Entity, len(b.Txns))
+	for idx, txn := range b.Txns {
+		txnSummary := txn.GetSummary()
+		txnSummary.BlockHash = b.Hash
+		sTxns[idx] = txnSummary
+	}
 	txnSummaryMetadata := datastore.GetEntityMetadata("txn_summary")
 	tctx := persistencestore.WithEntityConnection(ctx, txnSummaryMetadata)
 	defer persistencestore.Close(tctx)
-	err := txnSummaryMetadata.GetStore().MultiWrite(tctx, txnSummaryMetadata, txns)
-	if err != nil {
-		return err
+	for numTrials := 1; numTrials <= 10; numTrials++ {
+		err := txnSummaryMetadata.GetStore().MultiWrite(tctx, txnSummaryMetadata, sTxns)
+		if err != nil {
+			Logger.Error("save transactions error", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
+			if err.Error() == "gocql: no host available in the pool" {
+				// long gc pauses can result in this error and so waiting longer to retry
+				time.Sleep(100 * time.Millisecond)
+			} else {
+				time.Sleep(10 * time.Millisecond)
+			}
+		} else {
+			Logger.Info("transactions saved successfully", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Int("block_size", len(b.Txns)))
+			break
+		}
 	}
 	return nil
 }
