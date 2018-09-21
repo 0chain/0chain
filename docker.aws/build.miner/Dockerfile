@@ -21,6 +21,7 @@ RUN go get github.com/spf13/viper
 RUN go get gopkg.in/natefinch/lumberjack.v2
 RUN go get github.com/koding/cache
 RUN go get github.com/hashicorp/golang-lru
+RUN go get github.com/valyala/gozstdx
 
 #Add the source code
 ADD ./code/go/src $SRC_DIR/go/src
