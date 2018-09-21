@@ -11,7 +11,6 @@ import (
 	"0chain.net/config"
 	"0chain.net/datastore"
 	. "0chain.net/logging"
-	"github.com/golang/snappy"
 	"go.uber.org/zap"
 )
 
@@ -19,6 +18,13 @@ var (
 	TimeoutSmallMessage = 1000 * time.Millisecond
 	TimeoutLargeMessage = 3000 * time.Millisecond
 )
+
+var compDecomp common.CompDe
+
+func init() {
+	//compDecomp = common.NewSnappyCompDe()
+	compDecomp = common.NewZStdCompDe()
+}
 
 //SetTimeoutSmallMessage - set the timeout for small message
 func SetTimeoutSmallMessage(ts time.Duration) {
@@ -110,7 +116,7 @@ func getRequestEntity(r *http.Request, entityMetadata datastore.EntityMetadata) 
 	if r.Header.Get("Content-Encoding") == "snappy" {
 		cbuffer := new(bytes.Buffer)
 		cbuffer.ReadFrom(r.Body)
-		cbytes, err := snappy.Decode(nil, cbuffer.Bytes())
+		cbytes, err := compDecomp.Decompress(cbuffer.Bytes())
 		if err != nil {
 			N2n.Error("snappy decoding", zap.Any("error", err))
 			return nil, err
@@ -126,7 +132,7 @@ func getResponseEntity(r *http.Response, entityMetadata datastore.EntityMetadata
 	if r.Header.Get("Content-Encoding") == "snappy" {
 		cbuffer := new(bytes.Buffer)
 		cbuffer.ReadFrom(r.Body)
-		cbytes, err := snappy.Decode(nil, cbuffer.Bytes())
+		cbytes, err := compDecomp.Decompress(cbuffer.Bytes())
 		if err != nil {
 			N2n.Error("snappy decoding", zap.Any("error", err))
 			return nil, err
@@ -164,7 +170,7 @@ func getResponseData(options *SendOptions, entity datastore.Entity) *bytes.Buffe
 		buffer = datastore.ToMsgpack(entity)
 	}
 	if options.Compress {
-		cbytes := snappy.Encode(nil, buffer.Bytes())
+		cbytes := compDecomp.Compress(buffer.Bytes())
 		buffer = bytes.NewBuffer(cbytes)
 	}
 	return buffer
