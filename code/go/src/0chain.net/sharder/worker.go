@@ -2,7 +2,6 @@ package sharder
 
 import (
 	"context"
-	"time"
 
 	"0chain.net/chain"
 	"0chain.net/state"
@@ -111,27 +110,9 @@ func (sc *Chain) BlockStorageWorker(ctx context.Context) {
 			if err != nil {
 				Logger.Error("failed to get block", zap.String("blockhash", r.BlockHash), zap.Error(err))
 			} else {
+				sc.StoreTransactions(ctx, b)
 				self := node.GetSelfNode(ctx)
 				if sc.CanStoreBlock(r, self.Node) {
-					var sTxns = make([]datastore.Entity, len(b.Txns))
-					for idx, txn := range b.Txns {
-						txnSummary := txn.GetSummary()
-						txnSummary.BlockHash = b.Hash
-						sTxns[idx] = txnSummary
-					}
-					err = sc.StoreTransactions(ctx, sTxns)
-					if err != nil {
-						Logger.Error("save transactions error", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
-						err = sc.retryPersistingTransactions(ctx, sTxns, b)
-						if err != nil {
-							Logger.Error("save transactions error", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
-							continue
-						} else {
-							Logger.Info("transactions saved successfully", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Int("block_size", len(b.Txns)))
-						}
-					} else {
-						Logger.Info("transactions saved successfully", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Int("block_size", len(b.Txns)))
-					}
 					err = sc.StoreBlock(ctx, b)
 					if err != nil {
 						Logger.Error("db error (save block)", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
@@ -145,22 +126,4 @@ func (sc *Chain) BlockStorageWorker(ctx context.Context) {
 			}
 		}
 	}
-}
-
-func (sc *Chain) retryPersistingTransactions(ctx context.Context, sTxns []datastore.Entity, b *block.Block) error {
-	var err error
-	for numTrials := 1; numTrials <= 10; numTrials++ {
-		Logger.Info("retrying to save transactions to db", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("trail", numTrials), zap.Error(err))
-		err = sc.StoreTransactions(ctx, sTxns)
-		if err == nil {
-			return nil
-		}
-		if err.Error() == "gocql: no host available in the pool" {
-			// long gc pauses can result in this error and so waiting longer to retry
-			time.Sleep(100 * time.Millisecond)
-		} else {
-			time.Sleep(10 * time.Millisecond)
-		}
-	}
-	return err
 }
