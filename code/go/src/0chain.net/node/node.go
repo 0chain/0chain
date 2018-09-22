@@ -150,7 +150,7 @@ func Read(line string) (*Node, error) {
 	}
 	node.ComputeProperties()
 	if Self.PublicKey == node.PublicKey {
-		Self.Node = node
+		setSelfNode(node)
 	}
 	return node, nil
 }
@@ -175,9 +175,14 @@ func NewNode(nc map[interface{}]interface{}) (*Node, error) {
 	}
 	node.ComputeProperties()
 	if Self.PublicKey == node.PublicKey {
-		Self.Node = node
+		setSelfNode(node)
 	}
 	return node, nil
+}
+
+func setSelfNode(n *Node) {
+	Self.Node = n
+	Self.Node.Status = NodeStatusActive
 }
 
 /*ComputeProperties - implement entity interface */
