@@ -14,7 +14,7 @@ RUN cd /tmp && \
     mkdir build && \
     cd build && \
     cmake -DBUILD_SHARED_LIBS=1 -DGFLAGS_INSTALL_SHARED_LIBS=1 .. && \
-    make install && \
+    make install -j $(nproc) && \
     cd /tmp && \
     rm -R /tmp/gflags*
 
@@ -23,7 +23,7 @@ RUN cd /tmp && \
     curl -L -o rocksdb.tar.gz https://github.com/facebook/rocksdb/archive/5.13.fb.tar.gz && \
     tar xf rocksdb.tar.gz && \
     cd rocksdb-* && \
-    make shared_lib && \
+    make shared_lib -j $(nproc) && \
     mkdir -p /usr/local/rocksdb/lib && \
     mkdir /usr/local/rocksdb/include && \
     cp librocksdb.so* /usr/local/rocksdb/lib && \
