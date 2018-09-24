@@ -10,8 +10,7 @@
 !docker.local/bin/
 !docker.aws/bin/
 **/pkg/
-**github.com/
-**golang.org/
+**/vendor/
 **/go/sign
 **/go/miner
 **/go/sharder
@@ -24,4 +23,3 @@ awsnet/credentials/
 awsnet/testnet
 awsnet/cookbook/*.retry
 awsnet/cookbook/context
-
