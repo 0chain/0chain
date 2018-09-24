@@ -11,8 +11,15 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/golang/snappy"
+	"0chain.net/common"
 )
+
+var compDe common.CompDe
+
+func init() {
+	// CompDe = common.NewZStdCompDe()
+	compDe = common.NewZLibCompDe()
+}
 
 /*BlockDB - a simple database that supports write and read of an immutable block on the blockchain where the
 records of the database are the transactions in the block*/
@@ -99,7 +106,7 @@ func (bdb *BlockDB) Read(key Key, record Record) error {
 		return errors.New("read data length doesnot match expected data length")
 	}
 	if bdb.compress {
-		data, err = snappy.Decode(nil, data)
+		data, err = compDe.Decompress(data)
 		if err != nil {
 			return err
 		}
@@ -140,7 +147,7 @@ func (bdb *BlockDB) WriteData(record Record) error {
 		return err
 	}
 	if bdb.compress {
-		cbytes := snappy.Encode(nil, buffer.Bytes())
+		cbytes := compDe.Compress(buffer.Bytes())
 		buffer = bytes.NewBuffer(cbytes)
 	}
 	data := buffer.Bytes()
@@ -214,7 +221,7 @@ func (bdb *BlockDB) saveHeader() error {
 			return err
 		}
 		if bdb.compress {
-			cbytes := snappy.Encode(nil, buffer.Bytes())
+			cbytes := compDe.Compress(buffer.Bytes())
 			buffer = bytes.NewBuffer(cbytes)
 		}
 		_, err = buffer.WriteTo(headerFile)
@@ -234,7 +241,7 @@ func (bdb *BlockDB) readHeader(file *os.File) error {
 			return err
 		}
 		if bdb.compress {
-			data, err = snappy.Decode(nil, data)
+			data, err = compDe.Decompress(data)
 			if err != nil {
 				return err
 			}
