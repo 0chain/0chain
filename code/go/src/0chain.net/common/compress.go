@@ -1,6 +1,10 @@
 package common
 
 import (
+	"bytes"
+	"compress/zlib"
+	"io"
+
 	"github.com/golang/snappy"
 	"github.com/valyala/gozstd"
 )
@@ -32,6 +36,7 @@ func (scd *SnappyCompDe) Decompress(data []byte) ([]byte, error) {
 
 //ZStdCompDe - a CompDe based on zstandard
 type ZStdCompDe struct {
+	level int
 }
 
 //NewZStdCompDe - create a new ZStdCompDe object
@@ -39,12 +44,84 @@ func NewZStdCompDe() *ZStdCompDe {
 	return &ZStdCompDe{}
 }
 
+//SetLevel - set the level of compression. 0 = default from the underlying library
+func (zstd *ZStdCompDe) SetLevel(level int) {
+	zstd.level = level
+}
+
 //Compress - implement interface
 func (zstd *ZStdCompDe) Compress(data []byte) []byte {
-	return gozstd.Compress(nil, data)
+	if zstd.level == 0 {
+		return gozstd.Compress(nil, data)
+	} else {
+		return gozstd.CompressLevel(nil, data, zstd.level)
+	}
 }
 
 //Decompress - implement interface
 func (zstd *ZStdCompDe) Decompress(data []byte) ([]byte, error) {
 	return gozstd.Decompress(nil, data)
+}
+
+//ZStdDictCompDe - a CompDe using dictionary based on zstandard
+type ZStdDictCompDe struct {
+	cdict *gozstd.CDict
+	ddict *gozstd.DDict
+}
+
+//NewZStdCompDeWithDict - create a new ZStdDictCompDe
+func NewZStdCompDeWithDict(dict []byte) (*ZStdDictCompDe, error) {
+	cdict, err := gozstd.NewCDict(dict)
+	if err != nil {
+		return nil, err
+	}
+	ddict, err := gozstd.NewDDict(dict)
+	if err != nil {
+		return nil, err
+	}
+	cd := &ZStdDictCompDe{}
+	cd.cdict = cdict
+	cd.ddict = ddict
+	return cd, nil
+}
+
+//Compress - implement interface
+func (zstd *ZStdDictCompDe) Compress(data []byte) []byte {
+	return gozstd.CompressDict(nil, data, zstd.cdict)
+}
+
+//Decompress - implement interface
+func (zstd *ZStdDictCompDe) Decompress(data []byte) ([]byte, error) {
+	return gozstd.DecompressDict(nil, data, zstd.ddict)
+}
+
+//ZLibCompDe - a CompDe based on zlib
+type ZLibCompDe struct {
+}
+
+//NewZLibCompDe - create a new ZLibCompDe object
+func NewZLibCompDe() *ZLibCompDe {
+	return &ZLibCompDe{}
+}
+
+//Compress - implement interface
+func (zlibcd *ZLibCompDe) Compress(data []byte) []byte {
+	bf := bytes.NewBuffer(nil)
+	w, _ := zlib.NewWriterLevel(bf, zlib.BestCompression)
+	w.Write(data)
+	w.Close()
+	return bf.Bytes()
+}
+
+//Decompress - implement interface
+func (zlibcd *ZLibCompDe) Decompress(data []byte) ([]byte, error) {
+	reader := bytes.NewBuffer(data)
+	r, err := zlib.NewReader(reader)
+	defer r.Close()
+	if err != nil {
+		return nil, err
+	}
+	bf := bytes.NewBuffer(nil)
+	io.Copy(bf, r)
+	return bf.Bytes(), nil
 }

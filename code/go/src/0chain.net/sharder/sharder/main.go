@@ -126,8 +126,13 @@ func main() {
 	blockStorageProvider := viper.GetString("server_chain.block.storage.provider")
 	if blockStorageProvider == "" || blockStorageProvider == "blockstore.FSBlockStore" {
 		blockstore.SetupStore(blockstore.NewFSBlockStore("data/blocks"))
-	} else {
+	} else if blockStorageProvider == "blcokstore.BlockDbStore" {
 		blockstore.SetupStore(blockstore.NewBlockDBStore("data/blocksdb"))
+	} else if blockStorageProvider == "blockstore.MultiBlockstore" {
+		var bs = []blockstore.BlockStore{blockstore.NewFSBlockStore("data/blocks"), blockstore.NewBlockDBStore("data/blocksdb")}
+		blockstore.SetupStore(blockstore.NewMultiBlockStore(bs))
+	} else {
+		panic(fmt.Sprintf("uknown block store provider - %v", blockStorageProvider))
 	}
 
 	if config.DevConfiguration.State {
