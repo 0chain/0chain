@@ -17,8 +17,9 @@ import (
 var compDe common.CompDe
 
 func init() {
-	// CompDe = common.NewZStdCompDe()
-	compDe = common.NewZLibCompDe()
+	zcompde := common.NewZStdCompDe()
+	zcompde.SetLevel(10)
+	compDe = zcompde
 }
 
 /*BlockDB - a simple database that supports write and read of an immutable block on the blockchain where the
