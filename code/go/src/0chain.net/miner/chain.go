@@ -85,6 +85,16 @@ func (mc *Chain) AddRound(r *Round) bool {
 	return true
 }
 
+/*SetLatestFinalizedBlock - Set latest finalized block */
+func (mc *Chain) SetLatestFinalizedBlock(b *block.Block) {
+	var r *round.Round
+	mc.AddBlock(b)
+	r.Number = b.Round
+	r.RandomSeed = b.RoundRandomSeed
+	mr := mc.CreateRound(r)
+	mc.AddRound(mr)
+}
+
 /*GetRound - get a round */
 func (mc *Chain) GetRound(roundNumber int64) *Round {
 	mc.roundsMutex.Lock()

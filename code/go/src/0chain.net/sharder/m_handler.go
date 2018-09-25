@@ -17,6 +17,11 @@ func SetupM2SReceivers() {
 	http.HandleFunc("/v1/_m2s/block/notarized", node.ToN2NReceiveEntityHandler(persistencestore.WithConnectionEntityJSONHandler(NotarizedBlockHandler, datastore.GetEntityMetadata("block"))))
 }
 
+/*SetupM2SResponders - setup handlers for all the requests from the miner */
+func SetupM2SResponders() {
+	http.HandleFunc("/v1/_m2s/block/latest_finalized/get", node.ToN2NSendEntityHandler(LatestFinalizedBlockHandler))
+}
+
 /*FinalizedBlockHandler - handle the finalized block */
 func FinalizedBlockHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 	return NotarizedBlockHandler(ctx, entity)
@@ -34,4 +39,10 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 	}
 	sc.GetBlockChannel() <- b
 	return true, nil
+}
+
+/*LatestFinalizedBlockHandler - handle latest finalized block*/
+func LatestFinalizedBlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	sc := GetSharderChain()
+	return sc.LatestFinalizedBlock, nil
 }

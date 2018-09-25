@@ -3,6 +3,7 @@ package miner
 import (
 	"context"
 	"math/rand"
+	"sync"
 	"time"
 
 	"0chain.net/block"
@@ -395,4 +396,34 @@ func (mc *Chain) BroadcastNotarizedBlocks(ctx context.Context, pr *Round, r *Rou
 		Logger.Info("sending notarized block", zap.Int64("round", pr.Number), zap.String("block", nb.Hash))
 		go mc.SendNotarizedBlockToMiners(ctx, nb)
 	}
+}
+
+/*GetLatestFinalizedBlockFromSharder - request for latest finalized block from all the sharders */
+func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*block.Block {
+	m2s := mc.Sharders
+	finalizedBlocks := make([]*block.Block, 0, 1)
+	fbMutex := &sync.Mutex{}
+	//Params are nil? Do we need to send any params
+	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+		fb, ok := entity.(*block.Block)
+		if !ok {
+			return nil, common.NewError("invalid_entity", "Invalid entity")
+		}
+		err := mc.VerifyNotarization(ctx, fb.Hash, fb.VerificationTickets)
+		if err != nil {
+			return nil, err
+		} else {
+			fbMutex.Lock()
+			defer fbMutex.Unlock()
+			for _, b := range finalizedBlocks {
+				if b.Hash == fb.Hash {
+					return fb, nil
+				}
+			}
+			finalizedBlocks = append(finalizedBlocks, fb)
+			return fb, nil
+		}
+	}
+	m2s.RequestEntityFromAll(ctx, MinerLatestFinalizedBlockRequestor, nil, handler)
+	return finalizedBlocks
 }

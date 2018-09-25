@@ -49,6 +49,31 @@ func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, pa
 	return nil
 }
 
+//RequestEntityFromAll - request an entity from all the nodes
+func (np *Pool) RequestEntityFromAll(ctx context.Context, requestor EntityRequestor, params map[string]string, handler datastore.JSONEntityReqResponderF) {
+	rhandler := requestor(params, handler)
+	var nodes []*Node
+	if FetchStrategy == FetchStrategyRandom {
+		nodes = np.shuffleNodes()
+	} else {
+		nodes = np.GetNodesByLargeMessageTime()
+	}
+	for _, nd := range nodes {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+		if nd.Status == NodeStatusInactive {
+			continue
+		}
+		if nd == Self.Node {
+			continue
+		}
+		rhandler(nd)
+	}
+}
+
 /*SetRequestHeaders - sets the send request headers*/
 func SetRequestHeaders(req *http.Request, options *SendOptions, entityMetadata datastore.EntityMetadata) bool {
 	SetHeaders(req)
