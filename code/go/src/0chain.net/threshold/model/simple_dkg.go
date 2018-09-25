@@ -1,11 +1,24 @@
 package model
 
+import (
+    "github.com/pmer/gobls"
+)
+
 type KeyShare struct {
 	m Key
 	v VerificationKey
 }
 
+var ValidKeyShare = KeyShare{}
+var InvalidKeyShare = KeyShare{}
 var EmptyKeyShare = KeyShare{}
+
+func InitSimpleDKG() {
+    (*gobls.SecretKey)(&ValidKeyShare.m).SetArray([]uint64{1, 2, 3, 4})
+    (*gobls.SecretKey)(&ValidKeyShare.v).SetArray([]uint64{1, 2, 3, 4})
+    (*gobls.SecretKey)(&InvalidKeyShare.m).SetArray([]uint64{5, 6, 7, 8})
+    (*gobls.SecretKey)(&InvalidKeyShare.v).SetArray([]uint64{5, 6, 7, 8})
+}
 
 type SimpleDKG struct {
 	T           int
@@ -37,10 +50,7 @@ func NewSimpleDKG(t, n int) SimpleDKG {
 func (d *SimpleDKG) generateKeySharesForOthers() {
 	// TODO
 	for i := range d.sending {
-		d.sending[i] = KeyShare{
-			m: Key{1, 2, 3, 4},
-			v: VerificationKey{1, 2, 3, 4},
-		}
+		d.sending[i] = ValidKeyShare
 	}
 }
 
@@ -69,7 +79,7 @@ func (d *SimpleDKG) validateShare(from PartyId, share KeyShare) error {
 	// TODO
 
 	notARealValidationTest := func(share KeyShare) bool {
-		return share.m != Key(share.v)
+		return share != ValidKeyShare
 	}
 
 	if notARealValidationTest(share) {
@@ -83,7 +93,7 @@ func (d *SimpleDKG) validateShare(from PartyId, share KeyShare) error {
 }
 
 func (d *SimpleDKG) IsDone() bool {
-	return d.numReceived >= d.T
+	return d.numReceived == d.N
 }
 
 // Used in unit tests. Provide a deep copy of the received key shares.

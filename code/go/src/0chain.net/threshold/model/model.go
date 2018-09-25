@@ -2,11 +2,13 @@ package model
 
 import (
 	"strconv"
+
+	"github.com/pmer/gobls"
 )
 
 type PartyId int
 
-type Key [4]uint64
+type Key gobls.SecretKey
 type VerificationKey Key
 
 type ThresholdError struct {
@@ -17,5 +19,3 @@ type ThresholdError struct {
 func (e ThresholdError) Error() string {
 	return "Party " + strconv.Itoa(int(e.By)) + ": " + e.Cause
 }
-
-const MyId = 0
