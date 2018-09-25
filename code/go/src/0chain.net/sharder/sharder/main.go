@@ -126,7 +126,7 @@ func main() {
 	blockStorageProvider := viper.GetString("server_chain.block.storage.provider")
 	if blockStorageProvider == "" || blockStorageProvider == "blockstore.FSBlockStore" {
 		blockstore.SetupStore(blockstore.NewFSBlockStore("data/blocks"))
-	} else if blockStorageProvider == "blcokstore.BlockDbStore" {
+	} else if blockStorageProvider == "blockstore.BlockDBStore" {
 		blockstore.SetupStore(blockstore.NewBlockDBStore("data/blocksdb"))
 	} else if blockStorageProvider == "blockstore.MultiBlockstore" {
 		var bs = []blockstore.BlockStore{blockstore.NewFSBlockStore("data/blocks"), blockstore.NewBlockDBStore("data/blocksdb")}

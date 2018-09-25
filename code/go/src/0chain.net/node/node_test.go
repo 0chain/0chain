@@ -10,41 +10,52 @@ import (
 	"0chain.net/common"
 	"0chain.net/datastore"
 	"0chain.net/encryption"
+	"0chain.net/logging"
 	"0chain.net/memorystore"
 )
 
 var Miners = NewPool(NodeTypeMiner)
 
-func TestNodeSetup(t *testing.T) {
+func init() {
+	logging.InitLogging("development")
+	createMiners(Miners)
+}
+
+func createMiners(np *Pool) {
 	sd := Node{Host: "127.0.0.1", Port: 7071, Type: NodeTypeMiner, Status: NodeStatusActive}
 	publicKey, _, _ := encryption.GenerateKeys()
-	sd.ID = encryption.Hash(publicKey)
+	sd.SetID(encryption.Hash(publicKey))
 	sd.PublicKey = publicKey
-	Miners.AddNode(&sd)
+	np.AddNode(&sd)
 
 	sb := Node{Host: "127.0.0.2", Port: 7070, Type: NodeTypeMiner, Status: NodeStatusActive}
 	publicKey, _, _ = encryption.GenerateKeys()
-	sb.ID = encryption.Hash(publicKey)
+	sb.SetID(encryption.Hash(publicKey))
 	sb.PublicKey = publicKey
-	Miners.AddNode(&sb)
+	np.AddNode(&sb)
 
 	ns := Node{Host: "127.0.0.3", Port: 7070, Type: NodeTypeMiner, Status: NodeStatusActive}
 	publicKey, _, _ = encryption.GenerateKeys()
-	ns.ID = encryption.Hash(publicKey)
+	ns.SetID(encryption.Hash(publicKey))
 	ns.PublicKey = publicKey
-	Miners.AddNode(&ns)
+	np.AddNode(&ns)
 
 	nr := Node{Host: "127.0.0.4", Port: 7070, Type: NodeTypeMiner, Status: NodeStatusActive}
 	publicKey, _, _ = encryption.GenerateKeys()
-	nr.ID = encryption.Hash(publicKey)
+	nr.SetID(encryption.Hash(publicKey))
 	nr.PublicKey = publicKey
-	Miners.AddNode(&nr)
+	np.AddNode(&nr)
 
 	gg := Node{Host: "127.0.0.5", Port: 7070, Type: NodeTypeMiner, Status: NodeStatusActive}
 	publicKey, _, _ = encryption.GenerateKeys()
-	gg.ID = encryption.Hash(publicKey)
+	gg.SetID(encryption.Hash(publicKey))
 	gg.PublicKey = publicKey
-	Miners.AddNode(&gg)
+	np.AddNode(&gg)
+
+	np.ComputeProperties()
+}
+
+func TestNodeSetup(t *testing.T) {
 	Miners.Print(os.Stdout)
 }
 
@@ -53,35 +64,6 @@ func TestNodeGetRandomNodes(t *testing.T) {
 	for idx, n := range Miners.GetRandomNodes(2) {
 		fmt.Printf("%v: %v\n", idx, *n)
 	}
-}
-
-/*Company - a test data type */
-type Company struct {
-	datastore.IDField
-	Domain string `json:"domain"`
-	Name   string `json:"name,omitempty"`
-}
-
-var companyEntityMetadata = &datastore.EntityMetadataImpl{Name: "company", DB: "company", Store: memorystore.GetStorageProvider()}
-
-func (c *Company) GetEntityMetadata() datastore.EntityMetadata {
-	return companyEntityMetadata
-}
-
-func (c *Company) Validate(ctx context.Context) error {
-	return nil
-}
-
-func (c *Company) Read(ctx context.Context, id datastore.Key) error {
-	return c.GetEntityMetadata().GetStore().Read(ctx, id, c)
-}
-
-func (c *Company) Write(ctx context.Context) error {
-	return c.GetEntityMetadata().GetStore().Write(ctx, c)
-}
-
-func (c *Company) Delete(ctx context.Context) error {
-	return c.GetEntityMetadata().GetStore().Delete(ctx, c)
 }
 
 // TODO: Assuming node2 & 3 are running - figure out a way to make this self-contained without the dependency
@@ -113,5 +95,37 @@ func TestNode2NodeCommunication(t *testing.T) {
 	sentTo := np.SendAtleast(2, sendHandler(entity))
 	for _, r := range sentTo {
 		fmt.Printf("sentTo:%v\n", r.GetKey())
+	}
+}
+
+func TestPoolScorer(t *testing.T) {
+	sharders := NewPool(NodeTypeSharder)
+	for i := 1; i <= 30; i++ {
+		nd := Node{Host: fmt.Sprintf("127.0.0.%v", i), Port: 7171, Type: NodeTypeSharder, Status: NodeStatusActive}
+		publicKey, _, _ := encryption.GenerateKeys()
+		nd.SetID(encryption.Hash(publicKey))
+		nd.PublicKey = publicKey
+		sharders.AddNode(&nd)
+	}
+	sharders.ComputeProperties()
+	hashes := []string{
+		"fb5a64691303a34515d547ea972bfadad10f4a287bba6c434a064b6bd42baee0",
+		"73b64d8e25c570d6a537b6b2d3023a3884468487c11e53886c3b13c87a9d4892",
+		"30235f5cd366fb0ef7f927b4fb4fce1cff1786e9ca6f887dac48a80e4d29ce40",
+		"c31c18b1aa9eb413c1a08d9bf118a9a1acc17dbda3509ea41088a32f06c21fcf",
+		"87c30da10c4b2cdc7c227a7f9bda1a15209cea028af0a16cbc55efff0a9fee40",
+		"0cad4773d086e83ef1bbbeb33a3de052f19d3f610bd9fd971d42114fc5157933",
+	}
+	for _, hash := range hashes {
+		computeScore(sharders, hash)
+	}
+}
+
+func computeScore(np *Pool, hash string) {
+	ps := NewHashPoolScorer(encryption.NewXORHashScorer())
+	nodes := ps.ScoreHashString(np, hash)
+	fmt.Printf("block hash: %v\n", hash)
+	for idx, ns := range nodes {
+		fmt.Printf("%2v %v %2v %v %v\n", idx, ns.Node.GetKey(), ns.Node.SetIndex, ns.Score, ns.Node.IsInTop(nodes, 8))
 	}
 }

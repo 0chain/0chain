@@ -7,6 +7,8 @@ import (
 	"math"
 	"sync"
 
+	"0chain.net/encryption"
+
 	"0chain.net/block"
 	"0chain.net/common"
 	"0chain.net/config"
@@ -113,6 +115,8 @@ type Chain struct {
 	PruneStateBelowCount int
 	minersStake          map[datastore.Key]int
 	stakeMutex           *sync.Mutex
+
+	nodePoolScorer node.PoolScorer
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
@@ -181,6 +185,7 @@ func Provider() datastore.Entity {
 	c.stateMutex = &sync.Mutex{}
 	c.stakeMutex = &sync.Mutex{}
 	c.InitializeCreationDate()
+	c.nodePoolScorer = node.NewHashPoolScorer(encryption.NewXORHashScorer())
 	c.Miners = node.NewPool(node.NodeTypeMiner)
 	c.Sharders = node.NewPool(node.NodeTypeSharder)
 	c.Blobbers = node.NewPool(node.NodeTypeBlobber)
@@ -384,8 +389,9 @@ func (c *Chain) GetGenerators(r *round.Round) []*node.Node {
 }
 
 /*CanStoreBlock - checks if the sharder can store the block in the given round */
-func (c *Chain) CanStoreBlock(r *round.Round, sharder *node.Node) bool {
-	return r.GetSharderRank(sharder.SetIndex)+1 <= c.NumSharders
+func (c *Chain) CanStoreBlock(r *round.Round, b *block.Block, sharder *node.Node) bool {
+	scores := c.nodePoolScorer.ScoreHashString(c.Sharders, b.Hash)
+	return sharder.IsInTop(scores, c.NumSharders)
 }
 
 /*ValidGenerator - check whether this block is from a valid generator */

@@ -66,7 +66,9 @@ func (mc *Chain) GetBlockToExtend(ctx context.Context, r *Round) *block.Block {
 			if !bnb.IsStateComputed() {
 				err := mc.ComputeState(ctx, bnb)
 				if err != nil {
-					Logger.Error("get block to extend (best nb compute state)", zap.Any("round", r.Number), zap.Any("block", bnb.Hash), zap.Error(err))
+					if config.DevConfiguration.State {
+						Logger.Error("get block to extend (best nb compute state)", zap.Any("round", r.Number), zap.Any("block", bnb.Hash), zap.Error(err))
+					}
 				}
 			}
 			return bnb
@@ -362,11 +364,11 @@ func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *round.Round, b *block
 		pr.CancelVerification()
 		go mc.FinalizeRound(ctx, pr.Round, mc)
 	}
-	mc.startRound(r)
+	mc.startNextRound(r)
 	return true
 }
 
-func (mc *Chain) startRound(r *round.Round) {
+func (mc *Chain) startNextRound(r *round.Round) {
 	if mc.GetRound(r.Number+1) == nil {
 		nr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 		nr.Number = r.Number + 1
