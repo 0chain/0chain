@@ -121,11 +121,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:bf87a242876c0005a7dfe50ac6ca64e42a55ab62fa16e433dffb8d7c1991674a"
+  digest = "1:d4b7c2c027f8fd85fc94de31b73635f407d95543c5ef2ffbe87ef665365d2ed5"
   name = "github.com/pmer/gobls"
   packages = ["."]
   pruneopts = "UT"
-  revision = "37809e0081b647f5544196e8f9dfd3c505ed5196"
+  revision = "47667290be176bc5765cecd160a1bf8faf993cc9"
 
 [[projects]]
   branch = "master"

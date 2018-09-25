@@ -38,22 +38,25 @@ RUN apk --update --no-cache add gmp-dev openssl-dev
 RUN printf "#!/bin/sh\necho x86_64\n" > /usr/local/bin/arch && \
     chmod +x /usr/local/bin/arch && \
     cd /tmp && \
-    curl -L -o mcl.tar.gz https://github.com/herumi/mcl/archive/release20170402.tar.gz && \
-    curl -L -o cybozulib.tar.gz https://github.com/herumi/cybozulib/archive/release20170401.tar.gz && \
-    curl -L -o xbyak.tar.gz https://github.com/herumi/xbyak/archive/release20170401.tar.gz && \
+    curl -L -o mcl.tar.gz https://github.com/herumi/mcl/archive/new_deserialize_api.tar.gz && \
+    curl -L -o cybozulib.tar.gz https://github.com/herumi/cybozulib/archive/release20180830.tar.gz && \
+    curl -L -o xbyak.tar.gz https://github.com/herumi/xbyak/archive/v5.73.tar.gz && \
     tar xf mcl.tar.gz && mv mcl-* mcl && \
     tar xf cybozulib.tar.gz && mv cybozulib-* cybozulib && \
     tar xf xbyak.tar.gz && mv xbyak-* xbyak && \
     cd /tmp/mcl && \
       make lib/libmcl.a && \
       cp lib/*.a /usr/local/lib && \
+      cp -r include/mcl /usr/local/include/mcl && \
     cd /tmp && \
-    curl -L -o bls.tar.gz https://github.com/herumi/bls/archive/release20170402.tar.gz && \
+    curl -L -o bls.tar.gz https://github.com/herumi/bls/archive/new_deserialize_api.tar.gz && \
     tar xf bls.tar.gz && mv bls-* bls && \
     cd /tmp/bls && \
-      make lib/libbls.a lib/libbls_if.a && \
-      cp lib/*.a /usr/local/lib && \
-      cp include/*.h /usr/local/include && \
+      make obj/bls.o obj/bls_c.o && \
+      ar -r lib/libbls.a obj/bls.o obj/bls_c.o && \
+      cp lib/libbls.a /usr/local/lib && \
+      mkdir /usr/local/include/bls && \
+      cp include/bls/*.h /usr/local/include/bls && \
     rm -R /tmp/bls* && \
     rm -R /tmp/cybozulib* && \
     rm -R /tmp/mcl* && \
