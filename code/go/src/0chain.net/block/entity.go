@@ -208,8 +208,7 @@ func (b *Block) SetStateDB(prevBlock *Block) {
 
 /*AddTransaction - add a transaction to the block */
 func (b *Block) AddTransaction(t *transaction.Transaction) {
-	// For now this does nothing. May be we don't need. Txn can't influence the weight of the block,
-	// or else, everyone will try to maximize the block which is not good
+	t.OutputHash = t.ComputeOutputHash()
 }
 
 /*AddVerificationTicket - Add a verification ticket to a block
@@ -275,7 +274,9 @@ func (b *Block) GetMerkleTree() *util.MerkleTree {
 func (b *Block) getHashData() string {
 	mt := b.GetMerkleTree()
 	merkleRoot := mt.GetRoot()
-	hashData := common.TimeToString(b.CreationDate) + ":" + strconv.FormatInt(b.Round, 10) + ":" + strconv.FormatInt(b.RoundRandomSeed, 10) + ":" + merkleRoot + ":" + b.PrevHash
+	rmt := b.GetReceiptsMerkleTree()
+	rMerkleRoot := rmt.GetRoot()
+	hashData := b.PrevHash + ":" + common.TimeToString(b.CreationDate) + ":" + strconv.FormatInt(b.Round, 10) + ":" + strconv.FormatInt(b.RoundRandomSeed, 10) + ":" + merkleRoot + ":" + rMerkleRoot
 	return hashData
 }
 
@@ -398,4 +399,15 @@ func (b *Block) IsStateComputed() bool {
 /*SetStateStatus - set if the client state is computed or not for the block */
 func (b *Block) SetStateStatus(status int8) {
 	b.stateStatus = status
+}
+
+/*GetReceiptsMerkleTree - return the merkle tree of this block using the transactions as leaf nodes */
+func (b *Block) GetReceiptsMerkleTree() *util.MerkleTree {
+	var hashables = make([]util.Hashable, len(b.Txns))
+	for idx, txn := range b.Txns {
+		hashables[idx] = transaction.NewTransactionReceipt(txn)
+	}
+	var mt util.MerkleTree
+	mt.ComputeTree(hashables)
+	return &mt
 }
