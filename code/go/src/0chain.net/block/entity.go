@@ -411,3 +411,13 @@ func (b *Block) GetReceiptsMerkleTree() *util.MerkleTree {
 	mt.ComputeTree(hashables)
 	return &mt
 }
+
+//GetTransaction - get the transaction from the block
+func (b *Block) GetTransaction(hash string) *transaction.Transaction {
+	for _, txn := range b.Txns {
+		if txn.GetKey() == hash {
+			return txn
+		}
+	}
+	return nil
+}

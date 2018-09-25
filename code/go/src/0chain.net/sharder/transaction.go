@@ -37,6 +37,10 @@ func GetTransactionConfirmation(ctx context.Context, hash string) (*transaction.
 	} else {
 		ts = t.(*transaction.TransactionSummary)
 	}
+	confirmation := datastore.GetEntityMetadata("txn_confirmation").Instance().(*transaction.Confirmation)
+	confirmation.Hash = hash
+	confirmation.BlockHash = ts.BlockHash
+
 	var b *block.Block
 	bc, err := GetSharderChain().BlockCache.Get(ts.BlockHash)
 	if err != nil {
@@ -47,22 +51,27 @@ func GetTransactionConfirmation(ctx context.Context, hash string) (*transaction.
 		if err != nil {
 			return nil, err
 		}
+		confirmation.Round = bs.Round
+		confirmation.RoundRandomSeed = bs.RoundRandomSeed
+		confirmation.CreationDate = bs.CreationDate
 		b, err = GetSharderChain().GetBlockBySummary(ctx, bs)
 		if err != nil {
-			return nil, err
+			return confirmation, nil
 		}
 	} else {
 		b = bc.(*block.Block)
+		confirmation.Round = b.Round
+		confirmation.RoundRandomSeed = b.RoundRandomSeed
+		confirmation.CreationDate = b.CreationDate
 	}
-	confirmation := datastore.GetEntityMetadata("txn_confirmation").Instance().(*transaction.Confirmation)
-	confirmation.Hash = hash
-	confirmation.BlockHash = ts.BlockHash
-	confirmation.Round = b.Round
-	confirmation.RoundRandomSeed = b.RoundRandomSeed
-	confirmation.CreationDate = b.CreationDate
+	txn := b.GetTransaction(hash)
+	confirmation.Transaction = txn
 	mt := b.GetMerkleTree()
 	confirmation.MerkleTreeRoot = mt.GetRoot()
 	confirmation.MerkleTreePath = mt.GetPath(confirmation)
+	rmt := b.GetReceiptsMerkleTree()
+	confirmation.ReceiptMerkleTreeRoot = rmt.GetRoot()
+	confirmation.ReceiptMerkleTreePath = rmt.GetPath(transaction.NewTransactionReceipt(txn))
 	return confirmation, nil
 }
 
