@@ -1,6 +1,6 @@
 FROM iron/go:dev
 RUN apk add --update --no-cache build-base linux-headers git cmake bash perl
-RUN apk add --update --no-cache zlib zlib-dev bzip2 bzip2-dev snappy snappy-dev lz4 lz4-dev jemalloc jemalloc-dev
+RUN apk add --update --no-cache zlib zlib-dev bzip2 bzip2-dev snappy snappy-dev lz4 lz4-dev jemalloc jemalloc-dev zstd
 
 # installing latest gflags 
 RUN cd /tmp && \
@@ -18,7 +18,7 @@ RUN cd /tmp && \
     git clone https://github.com/facebook/rocksdb.git && \
     cd rocksdb && \
     git checkout 5.13.fb && \
-    make -j 16 shared_lib && \
+    make  shared_lib && \
     mkdir -p /usr/local/rocksdb/lib && \
     mkdir /usr/local/rocksdb/include && \
     cp librocksdb.so* /usr/local/rocksdb/lib && \
@@ -27,4 +27,19 @@ RUN cd /tmp && \
     cp -r include/* /usr/include/ && \
     rm -R /tmp/rocksdb/
 
+#Download the go dependencies
+RUN go get github.com/golang/snappy
+RUN go get -d github.com/valyala/gozstd && \
+    cd $GOPATH/src/github.com/valyala/gozstd && \
+    make clean libzstd.a
+RUN go get github.com/gomodule/redigo/redis
 RUN go get github.com/tecbot/gorocksdb
+RUN go get github.com/vmihailenco/msgpack
+RUN go get -u golang.org/x/crypto/...
+RUN go get go.uber.org/zap
+RUN go get github.com/rcrowley/go-metrics
+RUN go get github.com/spf13/viper
+RUN go get gopkg.in/natefinch/lumberjack.v2
+RUN go get github.com/koding/cache
+RUN go get github.com/hashicorp/golang-lru
+
