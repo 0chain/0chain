@@ -9,6 +9,7 @@
 - [Generating Test Transactions](#generating-test-transactions)
 - [Troubleshooting](#troubleshooting)
 - [Debugging](#debugging)
+- [Unit tests](#unittests)
 - [Miscellaneous](#miscellaneous)
 	- [Cleanup](#cleanup)
 
@@ -174,6 +175,24 @@ To get the start time of all the rounds
 $ grep 'starting round' docker.local/miner*/log/0chain.log
 ```
 This gives the start timestamps that can be used to correlate the events and their timings.
+
+## Unit tests
+
+Unit tests written with the standard Go test framework can be run inside Docker, which takes care of installing the build dependencies for you. For more information on `go test`, see https://golang.org/cmd/go/#hdr-Test_packages and https://golang.org/pkg/testing/.
+
+First build the base Docker image.
+
+```
+$ ./docker.local/bin/build.base.sh
+```
+
+Then run the tests.
+
+```
+$ ./docker.local/bin/go_test.sh [<packages>]
+```
+
+The list of packages is optional, and if provided runs only the tests from those packages. If no packages are specified, all unit tests are run. In both cases, `go test` is run in "package list" mode.
 
 ## Miscellaneous
 
