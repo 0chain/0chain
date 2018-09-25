@@ -178,9 +178,16 @@ This gives the start timestamps that can be used to correlate the events and the
 
 ## Unit tests
 
-Unit tests written with the standard Go test framework can be run inside Docker, which takes care of installing the build dependencies for you. For more information on `go test`, see https://golang.org/cmd/go/#hdr-Test_packages and https://golang.org/pkg/testing/.
+Unit tests can be run with `go test` outside of Docker if you have the correct C++ dependencies installed on your system.
 
-First build the base Docker image.
+```
+$ cd code/go/src/0chain.net/my-pkg
+$ go test
+```
+
+Otherwise, we have a Docker image which takes care of installing the build dependencies for you in an environment identical to our other Docker builds.
+
+First build the base image.
 
 ```
 $ ./docker.local/bin/build.base.sh
@@ -192,7 +199,7 @@ Then run the tests.
 $ ./docker.local/bin/go_test.sh [<packages>]
 ```
 
-The list of packages is optional, and if provided runs only the tests from those packages. If no packages are specified, all unit tests are run. In both cases, `go test` is run in "package list" mode.
+The list of packages is optional, and if provided runs only the tests from those packages. If no packages are specified, all unit tests are run.
 
 ## Miscellaneous
 
