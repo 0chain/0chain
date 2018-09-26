@@ -23,35 +23,49 @@ func init() {
 
 func createMiners(np *Pool) {
 	sd := Node{Host: "127.0.0.1", Port: 7071, Type: NodeTypeMiner, Status: NodeStatusActive}
-	publicKey, _, _ := encryption.GenerateKeys()
-	sd.SetID(encryption.Hash(publicKey))
-	sd.PublicKey = publicKey
+	sigScheme1 := encryption.NewED25519Scheme()
+	err := sigScheme1.GenerateKeys()
+	if err != nil {
+		panic(err)
+	}
+	sd.SetPublicKey(sigScheme1.GetPublicKey())
 	np.AddNode(&sd)
 
 	sb := Node{Host: "127.0.0.2", Port: 7070, Type: NodeTypeMiner, Status: NodeStatusActive}
-	publicKey, _, _ = encryption.GenerateKeys()
-	sb.SetID(encryption.Hash(publicKey))
-	sb.PublicKey = publicKey
+	sigScheme2 := encryption.NewED25519Scheme()
+	err = sigScheme2.GenerateKeys()
+	if err != nil {
+		panic(err)
+	}
+	sb.SetPublicKey(sigScheme2.GetPublicKey())
 	np.AddNode(&sb)
 
 	ns := Node{Host: "127.0.0.3", Port: 7070, Type: NodeTypeMiner, Status: NodeStatusActive}
-	publicKey, _, _ = encryption.GenerateKeys()
-	ns.SetID(encryption.Hash(publicKey))
-	ns.PublicKey = publicKey
+	sigScheme3 := encryption.NewED25519Scheme()
+	err = sigScheme3.GenerateKeys()
+	if err != nil {
+		panic(err)
+	}
+	ns.SetPublicKey(sigScheme3.GetPublicKey())
 	np.AddNode(&ns)
 
 	nr := Node{Host: "127.0.0.4", Port: 7070, Type: NodeTypeMiner, Status: NodeStatusActive}
-	publicKey, _, _ = encryption.GenerateKeys()
-	nr.SetID(encryption.Hash(publicKey))
-	nr.PublicKey = publicKey
+	sigScheme4 := encryption.NewED25519Scheme()
+	err = sigScheme4.GenerateKeys()
+	if err != nil {
+		panic(err)
+	}
+	nr.SetPublicKey(sigScheme4.GetPublicKey())
 	np.AddNode(&nr)
 
 	gg := Node{Host: "127.0.0.5", Port: 7070, Type: NodeTypeMiner, Status: NodeStatusActive}
-	publicKey, _, _ = encryption.GenerateKeys()
-	gg.SetID(encryption.Hash(publicKey))
-	gg.PublicKey = publicKey
+	sigScheme5 := encryption.NewED25519Scheme()
+	err = sigScheme5.GenerateKeys()
+	if err != nil {
+		panic(err)
+	}
+	gg.SetPublicKey(sigScheme5.GetPublicKey())
 	np.AddNode(&gg)
-
 	np.ComputeProperties()
 }
 
@@ -70,10 +84,14 @@ func TestNodeGetRandomNodes(t *testing.T) {
 func TestNode2NodeCommunication(t *testing.T) {
 	common.SetupRootContext(context.Background())
 	client.SetupEntity(memorystore.GetStorageProvider())
-	publicKey, _, _ := encryption.GenerateKeys()
+
+	sigScheme := encryption.NewED25519Scheme()
+	err := sigScheme.GenerateKeys()
+	if err != nil {
+		panic(err)
+	}
 	entity := client.Provider().(*client.Client)
-	entity.ID = datastore.ToKey(encryption.Hash(publicKey))
-	entity.PublicKey = publicKey
+	entity.SetPublicKey(sigScheme.GetPublicKey())
 
 	n1 := &Node{Type: NodeTypeMiner, Host: "", Port: 7071, Status: NodeStatusActive}
 	n1.ID = "24e23c52e2e40689fdb700180cd68ac083a42ed292d90cc021119adaa4d21509"
@@ -102,9 +120,14 @@ func TestPoolScorer(t *testing.T) {
 	sharders := NewPool(NodeTypeSharder)
 	for i := 1; i <= 30; i++ {
 		nd := Node{Host: fmt.Sprintf("127.0.0.%v", i), Port: 7171, Type: NodeTypeSharder, Status: NodeStatusActive}
-		publicKey, _, _ := encryption.GenerateKeys()
-		nd.SetID(encryption.Hash(publicKey))
-		nd.PublicKey = publicKey
+		sigScheme := encryption.NewED25519Scheme()
+		err := sigScheme.GenerateKeys()
+		if err != nil {
+			panic(err)
+		}
+		publicKey := sigScheme.GetPublicKey()
+		nd.SetPublicKey(publicKey)
+		nd.SetID(nd.GetKey())
 		sharders.AddNode(&nd)
 	}
 	sharders.ComputeProperties()

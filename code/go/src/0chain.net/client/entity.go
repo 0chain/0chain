@@ -85,7 +85,14 @@ func (c *Client) Delete(ctx context.Context) error {
 
 /*Verify - given a signature and hash verify it with client's public key */
 func (c *Client) Verify(signature string, hash string) (bool, error) {
-	return encryption.Verify(c.PublicKeyBytes, signature, hash)
+	return c.GetSignatureScheme().Verify(signature, hash)
+}
+
+/*GetSignatureScheme - return the signature scheme used for this client */
+func (c *Client) GetSignatureScheme() encryption.SignatureScheme {
+	ss := encryption.NewED25519Scheme()
+	ss.SetPublicKey(c.PublicKey)
+	return ss
 }
 
 /*Provider - entity provider for client object */

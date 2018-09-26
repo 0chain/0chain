@@ -18,30 +18,36 @@ import (
 var keyPairs = make(map[string]string)
 var publicKeys = make([]string, 0, 1000)
 
+var sigSchemes = make([]encryption.SignatureScheme, 0, 1000)
+
 func BenchmarkTransactionVerify(b *testing.B) {
 	common.SetupRootContext(node.GetNodeContext())
 	client.SetupEntity(memorystore.GetStorageProvider())
 	SetupEntity(memorystore.GetStorageProvider())
 
-	publicKey, privateKey := encryption.GenerateKeys()
-	keyPairs[publicKey] = privateKey
-	publicKeys = append(publicKeys, publicKey)
+	sigScheme := encryption.NewED25519Scheme()
+	err := sigScheme.GenerateKeys()
+	if err != nil {
+		panic(err)
+	}
+	sigSchemes = append(sigSchemes, sigScheme)
 
-	txnData := fmt.Sprintf("Txn: Pay %v from %s\n", 42, publicKey)
+	c := &client.Client{}
+	c.SetPublicKey(sigScheme.GetPublicKey())
+
+	txnData := fmt.Sprintf("Txn: Pay %v from %s\n", 42, c.PublicKey)
 	t := datastore.GetEntityMetadata("txn").Instance().(*Transaction)
-	t.ClientID = datastore.ToKey(encryption.Hash(publicKey))
+	t.ClientID = c.GetKey()
 	t.TransactionData = txnData
 	t.CreationDate = common.Now()
-	c := &client.Client{}
-	c.PublicKey = publicKey
-	c.ID = datastore.ToKey(encryption.Hash(publicKey))
-	_, err := t.Sign(c, privateKey)
+
+	_, err = t.Sign(c, privateKey)
 	if err != nil {
 		fmt.Printf("Error signing\n")
 	}
 	ctx := common.GetRootContext()
 	for i := 0; i < b.N; i++ {
-		t.PublicKey = publicKey
+		t.PublicKey = c.PublicKey
 		t.VerifySignature(ctx)
 	}
 }
@@ -106,10 +112,13 @@ func createClients(numClients int) {
 	fmt.Printf("Testing at %v\n", start)
 	done := make(chan bool, numClients)
 	for i := 1; i <= numClients; i++ {
-		publicKey, privateKey := encryption.GenerateKeys()
-		keyPairs[publicKey] = privateKey
-		publicKeys = append(publicKeys, publicKey)
-		go postClient(privateKey, publicKey, done)
+		sigScheme := encryption.NewED25519Scheme()
+		err := sigScheme.GenerateKeys()
+		if err != nil {
+			panic(err)
+		}
+		sigSchemes = append(sigSchemes, sigScheme)
+		go postClient(sigScheme, done)
 	}
 	for count := 0; true; {
 		<-done
@@ -122,20 +131,20 @@ func createClients(numClients int) {
 	time.Sleep(time.Second)
 }
 
-func postClient(privateKey string, publicKey string, done chan<- bool) {
+func postClient(sigScheme encryption.SignatureScheme, done chan<- bool) {
 	entity := client.Provider()
 	c, ok := entity.(*client.Client)
 	if !ok {
 		fmt.Printf("it's not ok!\n")
 	}
-	c.PublicKey = publicKey
-	c.ID = datastore.ToKey(encryption.Hash(publicKey))
+	c.SetPublicKey(sigScheme.GetPublicKey())
+
 	ctx := datastore.WithAsyncChannel(context.Background(), client.ClientEntityChannel)
 	//ctx := memorystore.WithEntityConnection(context.Background(),entity.GetEntityMetadata())
 	_, err := client.PutClient(ctx, entity)
 	//memorystore.Close(ctx)
 	if err != nil {
-		fmt.Printf("error for %v : %v\n", publicKey, err)
+		fmt.Printf("error for %v : %v\n", c.PublicKey, err)
 	}
 	done <- true
 }

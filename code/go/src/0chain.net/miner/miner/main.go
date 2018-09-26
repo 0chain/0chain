@@ -49,19 +49,20 @@ func main() {
 	}
 
 	config.Configuration.ChainID = viper.GetString("server_chain.id")
+	config.Configuration.DeploymentMode = byte(*deploymentMode)
 	config.Configuration.MaxDelay = *maxDelay
 
 	reader, err := os.Open(*keysFile)
 	if err != nil {
 		panic(err)
 	}
-	error, publicKey, privateKey := encryption.ReadKeys(reader)
-	if error == false {
-		Logger.Info("Public key in Keys file =%v", zap.String("publicKey", publicKey))
+
+	signatureScheme := encryption.NewED25519Scheme()
+	err = signatureScheme.ReadKeys(reader)
+	if err != nil {
 		Logger.Panic("Error reading keys file")
 	}
-
-	node.Self.SetKeys(publicKey, privateKey)
+	node.Self.SetSignatureScheme(signatureScheme)
 	reader.Close()
 	config.SetServerChainID(config.Configuration.ChainID)
 

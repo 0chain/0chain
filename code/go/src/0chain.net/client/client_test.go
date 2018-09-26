@@ -21,12 +21,13 @@ func TestClientChunkSave(t *testing.T) {
 	numWorkers := 1000
 	done := make(chan bool, 100)
 	for i := 1; i <= numWorkers; i++ {
-		publicKey, privateKey, _ := encryption.GenerateKeys()
-		if privateKey == "" {
-			fmt.Println("Error genreating keys")
+		sigScheme := encryption.NewED25519Scheme()
+		err := sigScheme.GenerateKeys()
+		if err != nil {
+			fmt.Printf("Error genreating keys %v\n", err)
 			continue
 		}
-		go postClient(publicKey, done)
+		go postClient(sigScheme.GetPublicKey(), done)
 	}
 	for count := 0; true; {
 		<-done
@@ -46,15 +47,14 @@ func postClient(publicKey string, done chan<- bool) {
 	if !ok {
 		fmt.Printf("it's not ok!\n")
 	}
-	client.PublicKey = publicKey
-	client.SetKey(datastore.ToKey(encryption.Hash(client.PublicKey)))
+	client.SetPublicKey(publicKey)
 
 	ctx := datastore.WithAsyncChannel(context.Background(), ClientEntityChannel)
 	//ctx := memorystore.WithEntityConnection(context.Background(), clientEntityMetadata)
 	//defer memorystore.Close(ctx)
 	_, err := PutClient(ctx, entity)
 	if err != nil {
-		fmt.Printf("error for %v : %v\n", publicKey, err)
+		fmt.Printf("error for %v : %v %v\n", publicKey, client.GetKey(), err)
 	}
 	done <- true
 }

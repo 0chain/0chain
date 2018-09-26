@@ -40,27 +40,31 @@ func main() {
 	keysFile := flag.String("keys_file", "config/single_node_sharder_keys.txt", "keys_file")
 	maxDelay := flag.Int("max_delay", 0, "max_delay")
 	flag.Parse()
+	config.Configuration.DeploymentMode = byte(*deploymentMode)
 	config.SetupDefaultConfig()
 	config.SetupConfig()
 
-	if *deploymentMode == 0 {
+	if config.Development() {
 		logging.InitLogging("development")
 	} else {
 		logging.InitLogging("production")
 	}
 
 	config.Configuration.ChainID = viper.GetString("server_chain.id")
-	config.Configuration.DeploymentMode = byte(*deploymentMode)
 	config.Configuration.MaxDelay = *maxDelay
 
 	reader, err := os.Open(*keysFile)
 	if err != nil {
 		panic(err)
 	}
-	_, publicKey, privateKey := encryption.ReadKeys(reader)
-	node.Self.SetKeys(publicKey, privateKey)
-	reader.Close()
 
+	signatureScheme := encryption.NewED25519Scheme()
+	err = signatureScheme.ReadKeys(reader)
+	if err != nil {
+		Logger.Panic("Error reading keys file")
+	}
+	node.Self.SetSignatureScheme(signatureScheme)
+	reader.Close()
 	config.SetServerChainID(config.Configuration.ChainID)
 
 	common.SetupRootContext(node.GetNodeContext())

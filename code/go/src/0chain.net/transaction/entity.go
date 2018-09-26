@@ -235,9 +235,9 @@ func SetupEntity(store datastore.Store) {
 }
 
 /*Sign - given a client and client's private key, sign this tranasction */
-func (t *Transaction) Sign(privateKey []byte) (string, error) {
+func (t *Transaction) Sign(signatureScheme encryption.SignatureScheme) (string, error) {
 	t.Hash = t.ComputeHash()
-	signature, err := encryption.Sign(privateKey, t.Hash)
+	signature, err := signatureScheme.Sign(t.Hash)
 	if err != nil {
 		return signature, err
 	}

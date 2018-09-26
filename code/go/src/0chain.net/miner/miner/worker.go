@@ -144,9 +144,13 @@ func GetOwnerWallet(keysFile string) *wallet.Wallet {
 	if err != nil {
 		panic(err)
 	}
-	_, publicKey, privateKey := encryption.ReadKeys(reader)
+	sigScheme := encryption.NewED25519Scheme()
+	err = sigScheme.ReadKeys(reader)
+	if err != nil {
+		panic(err)
+	}
 	w := &wallet.Wallet{}
-	err = w.SetKeys(publicKey, privateKey)
+	err = w.SetSignatureScheme(sigScheme)
 	if err != nil {
 		panic(err)
 	}

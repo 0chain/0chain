@@ -1,6 +1,6 @@
 package encryption
 
-//HashMapper - takes two hashes and provides a score
+//HashScorer - takes two hashes and provides a score
 type HashScorer interface {
 	Score(hash1 []byte, hash2 []byte) int32
 }
