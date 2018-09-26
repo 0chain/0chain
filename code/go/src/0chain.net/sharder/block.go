@@ -46,8 +46,8 @@ func (sc *Chain) GetBlockFromHash(ctx context.Context, hash string, roundNum int
 	return b, nil
 }
 
-/*StoreBlock - store the block to ememory/rocksdb */
-func (sc *Chain) StoreBlock(ctx context.Context, b *block.Block) error {
+/*StoreBlockSummary - store the block to ememory/rocksdb */
+func (sc *Chain) StoreBlockSummary(ctx context.Context, b *block.Block) error {
 	bs := b.GetSummary()
 	bSummaryEntityMetadata := bs.GetEntityMetadata()
 	bctx := ememorystore.WithEntityConnection(ctx, bSummaryEntityMetadata)

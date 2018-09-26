@@ -100,17 +100,6 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		clients[txn.ClientID] = nil
 		idx++
 
-		childTxns := txn.GenerateChildTransactions(ctx)
-		if childTxns != nil {
-			for _, ctxn := range childTxns {
-				b.Txns[idx] = ctxn
-				etxns[idx] = ctxn
-				b.AddTransaction(ctxn)
-				clients[ctxn.ClientID] = nil
-				idx++
-			}
-		}
-
 		if idx >= mc.BlockSize {
 			return false
 		}
@@ -249,6 +238,12 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 			if mc.CurrentRound > b.Round {
 				cancel = true
 				roundMismatch = true
+				validChannel <- false
+				return
+			}
+			if txn.OutputHash == "" {
+				cancel = true
+				Logger.Error("validate transactions - no output hash", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.String("txn", datastore.ToJSON(txn).String()))
 				validChannel <- false
 				return
 			}

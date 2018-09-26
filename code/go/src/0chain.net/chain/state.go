@@ -48,8 +48,7 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 		}
 	}
 	if !pb.IsStateComputed() {
-		pbState := pb.GetBlockState()
-		Logger.Info("compute state - previous block state not ready", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Int8("prev_block_state", pbState))
+		Logger.Info("compute state - previous block state not ready", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Int8("prev_block_state", pb.GetBlockState()))
 		err := c.ComputeState(ctx, pb)
 		if err != nil {
 			if config.DevConfiguration.State {
@@ -59,6 +58,9 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 		}
 	}
 	if pb.ClientState == nil {
+		if config.DevConfiguration.State {
+			Logger.Error("compute state - previous state nil", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
+		}
 		return ErrPreviousStateUnavailable
 	}
 	b.SetStateDB(pb)

@@ -15,6 +15,12 @@ func Hash(data interface{}) string {
 	return hex.EncodeToString(RawHash(data))
 }
 
+//EmptyHash - hash of an empty string
+var EmptyHash = Hash("")
+
+//EmptyHashBytes - hash bytes of an empty string
+var EmptyHashBytes = RawHash("")
+
 /*RawHash - Logic to hash the text and return the hash bytes */
 func RawHash(data interface{}) []byte {
 	var databuf []byte
