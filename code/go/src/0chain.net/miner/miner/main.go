@@ -209,6 +209,9 @@ func initWorkers(ctx context.Context) {
 /*StartProtocol - start the miner protocol */
 func StartProtocol(ctx context.Context) {
 	mc := miner.GetMinerChain()
+
+	//TODO - add wait group for status monitor and protocal round worker
+	time.Sleep(2*time.Second)
 	lfBlocks := mc.GetLatestFinalizedBlockFromSharder(ctx)
 
 	var lfb *block.Block

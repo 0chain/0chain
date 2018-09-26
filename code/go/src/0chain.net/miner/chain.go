@@ -87,7 +87,7 @@ func (mc *Chain) AddRound(r *Round) bool {
 
 /*SetLatestFinalizedBlock - Set latest finalized block */
 func (mc *Chain) SetLatestFinalizedBlock(b *block.Block) {
-	var r *round.Round
+	var r *round.Round = datastore.GetEntityMetadata("round").Instance().(*round.Round)
 	mc.AddBlock(b)
 	r.Number = b.Round
 	r.RandomSeed = b.RoundRandomSeed

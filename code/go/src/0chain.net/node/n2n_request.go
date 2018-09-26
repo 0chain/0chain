@@ -65,11 +65,14 @@ func (np *Pool) RequestEntityFromAll(ctx context.Context, requestor EntityReques
 		default:
 		}
 		if nd.Status == NodeStatusInactive {
+			Logger.Info("node status inactive", zap.String("node Id", nd.ID))
 			continue
 		}
 		if nd == Self.Node {
+			Logger.Info("node - self)", zap.String("node Id", nd.ID))
 			continue
 		}
+		Logger.Info("node - request sent", zap.String("to node Id", nd.ID))
 		rhandler(nd)
 	}
 }
