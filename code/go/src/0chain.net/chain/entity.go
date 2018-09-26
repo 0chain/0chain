@@ -390,6 +390,9 @@ func (c *Chain) GetGenerators(r *round.Round) []*node.Node {
 
 /*CanStoreBlock - checks if the sharder can store the block in the given round */
 func (c *Chain) CanStoreBlock(r *round.Round, b *block.Block, sharder *node.Node) bool {
+	if c.NumSharders <= 0 {
+		return true
+	}
 	scores := c.nodePoolScorer.ScoreHashString(c.Sharders, b.Hash)
 	return sharder.IsInTop(scores, c.NumSharders)
 }
