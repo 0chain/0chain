@@ -316,6 +316,7 @@ func (b *Block) GetSummary() *BlockSummary {
 	bs.CreationDate = b.CreationDate
 	bs.MerkleTreeRoot = b.GetMerkleTree().GetRoot()
 	bs.ClientStateHash = b.ClientStateHash
+	bs.ReceiptMerkleTreeRoot = b.GetReceiptsMerkleTree().GetRoot()
 	return bs
 }
 

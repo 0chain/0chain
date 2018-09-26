@@ -54,6 +54,8 @@ func GetTransactionConfirmation(ctx context.Context, hash string) (*transaction.
 		confirmation.Round = bs.Round
 		confirmation.RoundRandomSeed = bs.RoundRandomSeed
 		confirmation.CreationDate = bs.CreationDate
+		confirmation.MerkleTreeRoot = bs.MerkleTreeRoot
+		confirmation.ReceiptMerkleTreeRoot = bs.ReceiptMerkleTreeRoot
 		b, err = GetSharderChain().GetBlockBySummary(ctx, bs)
 		if err != nil {
 			return confirmation, nil
