@@ -96,6 +96,68 @@ func (mpt *MerklePatriciaTrie) Delete(path Path) (Key, error) {
 	return newRootHash, nil
 }
 
+//GetPathNodes - implement interface */
+func (mpt *MerklePatriciaTrie) GetPathNodes(path Path) ([]Node, error) {
+	nodes, err := mpt.getPathNodes([]byte(mpt.Root), path)
+	if err != nil {
+		return nil, err
+	}
+	for i, j := 0, len(nodes)-1; i < j; i, j = i+1, j-1 {
+		nodes[i], nodes[j] = nodes[j], nodes[i]
+	}
+	return nodes, nil
+}
+
+func (mpt *MerklePatriciaTrie) getPathNodes(key Key, path Path) ([]Node, error) {
+	if len(path) == 0 {
+		return nil, nil
+	}
+	node, err := mpt.DB.GetNode(key)
+	if err != nil {
+		return nil, err
+	}
+	switch nodeImpl := node.(type) {
+	case *LeafNode:
+		if bytes.Compare(nodeImpl.Path, path) == 0 {
+			return []Node{node}, nil
+		}
+		return nil, ErrValueNotPresent
+	case *FullNode:
+		ckey := nodeImpl.GetChild(path[0])
+		if ckey == nil {
+			return nil, ErrValueNotPresent
+		}
+		npath, err := mpt.getPathNodes(ckey, path[1:])
+		if err != nil {
+			if config.DevConfiguration.State {
+				Logger.Error("getPathNodes(fn) - node not found", zap.String("root", ToHex(mpt.GetRoot())), zap.String("key", ToHex(ckey)), zap.Error(err))
+			}
+			return nil, err
+		}
+		npath = append(npath, node)
+		return npath, nil
+	case *ExtensionNode:
+		prefix := mpt.matchingPrefix(path, nodeImpl.Path)
+		if len(prefix) == 0 {
+			return nil, ErrValueNotPresent
+		}
+		if bytes.Compare(nodeImpl.Path, prefix) == 0 {
+			npath, err := mpt.getPathNodes(nodeImpl.NodeKey, path[len(prefix):])
+			if err != nil {
+				if config.DevConfiguration.State {
+					Logger.Error("getPathNodes(en) - node not found", zap.String("root", ToHex(mpt.GetRoot())), zap.String("key", ToHex(nodeImpl.NodeKey)), zap.Error(err))
+				}
+				return nil, err
+			}
+			npath = append(npath, node)
+			return npath, nil
+		}
+		return nil, ErrValueNotPresent
+	default:
+		panic(fmt.Sprintf("unknown node type: %T %v", node, node))
+	}
+}
+
 /*GetChangeCollector - implement interface */
 func (mpt *MerklePatriciaTrie) GetChangeCollector() ChangeCollectorI {
 	return mpt.ChangeCollector

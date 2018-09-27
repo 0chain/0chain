@@ -32,6 +32,9 @@ type MerklePatriciaTrieI interface {
 	ResetChangeCollector(root Key)
 	SaveChanges(ndb NodeDB, origin Origin, includeDeletes bool) error
 
+	// useful for syncing up
+	GetPathNodes(path Path) ([]Node, error)
+
 	// useful for pruning the state below a certain origin number
 	UpdateOrigin(ctx context.Context, origin Origin) error // mark
 
