@@ -29,12 +29,19 @@ func WriteJSON(w io.Writer, entity interface{}) error {
 }
 
 /*ToMsgpack - msgpack encoding */
-func ToMsgpack(entity interface{}) *bytes.Buffer {
-	buffer := bytes.NewBuffer(make([]byte, 0, 256))
+func ToMsgpack(entity interface{}) (buffer *bytes.Buffer, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			Logger.Error("Recovered from", zap.Any("error", "BC-14"), zap.Any("panic", r))
+			buffer = nil
+			err = NewError("error encoding", "encoding to msgpack failed")
+		}
+	}()
+	buffer = bytes.NewBuffer(make([]byte, 0, 256))
 	encoder := msgpack.NewEncoder(buffer)
 	encoder.UseJSONTag(true)
 	encoder.Encode(entity)
-	return buffer
+	return buffer, err
 }
 
 func ToJSONPipe(entity interface{}) *io.PipeReader {

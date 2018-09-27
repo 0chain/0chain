@@ -154,7 +154,10 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			if options.Timeout > 0 {
 				timeout = options.Timeout
 			}
-			buffer := getResponseData(options, entity)
+			buffer, berr := getResponseData(options, entity)
+			if berr != nil {
+				return false
+			}
 			url := receiver.GetN2NURLBase() + uri
 			req, err := http.NewRequest("POST", url, buffer)
 			if err != nil {

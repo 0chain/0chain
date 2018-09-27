@@ -177,13 +177,13 @@ func ToN2NSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 			case "Msgpack":
 				options.CODEC = CODEC_MSGPACK
 			}
-			buffer := getResponseData(options, entity)
+			buffer, berr := getResponseData(options, entity)
 			if options.Compress {
 				w.Header().Set("Content-Encoding", "snappy")
 			}
 			w.Header().Set("Content-Type", "application/json")
 			w.Header().Set(HeaderRequestCODEC, codec)
-			if err != nil {
+			if err != nil || berr != nil {
 				if cerr, ok := err.(*common.Error); ok {
 					w.Header().Set(common.AppErrorHeader, cerr.Code)
 				}

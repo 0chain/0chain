@@ -3,8 +3,11 @@ package datastore
 import (
 	"bytes"
 	"io"
+	"time"
 
 	"0chain.net/common"
+	. "0chain.net/logging"
+	"go.uber.org/zap"
 )
 
 const (
@@ -23,8 +26,17 @@ func WriteJSON(w io.Writer, entity Entity) error {
 }
 
 /*ToMsgpack - msgpack encoding */
-func ToMsgpack(entity Entity) *bytes.Buffer {
-	return common.ToMsgpack(entity)
+func ToMsgpack(entity Entity) (*bytes.Buffer, error) {
+	buffer, err := common.ToMsgpack(entity)
+	if err != nil {
+		Logger.Error("failed to encode entity", zap.Any("entity", entity.GetKey()))
+		time.Sleep(time.Millisecond * 10)
+		buffer, err = common.ToMsgpack(entity)
+		if err != nil {
+			Logger.Error("failed retry to encode entity", zap.Any("entity", entity.GetKey()))
+		}
+	}
+	return buffer, err
 }
 
 /*FromJSON - read data into an entity */
