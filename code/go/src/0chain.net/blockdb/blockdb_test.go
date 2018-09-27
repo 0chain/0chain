@@ -14,7 +14,11 @@ type Class struct {
 }
 
 func (c *Class) Encode(writer io.Writer) error {
-	_, err := common.ToMsgpack(c).WriteTo(writer)
+	buffer, err := common.ToMsgpack(c)
+	if err != nil {
+		return err
+	}
+	_, err = buffer.WriteTo(writer)
 	return err
 }
 
@@ -32,7 +36,11 @@ func (s *Student) GetKey() Key {
 }
 
 func (s *Student) Encode(writer io.Writer) error {
-	_, err := common.ToMsgpack(s).WriteTo(writer)
+	buffer, err := common.ToMsgpack(c)
+	if err != nil {
+		return err
+	}
+	_, err = buffer.WriteTo(writer)
 	return err
 }
 

@@ -39,7 +39,15 @@ func TestMPTInsertLeafNode(t *testing.T) {
 
 	doStrValInsert("setup for later test case", mpt2, "12381234", "5", false)
 
-	doStrValInsert("setup for later test case", mpt2, "12391234", "6", false)
+	doStrValInsert("setup for later test case", mpt2, "12391234", "6", true)
+
+	nodes, err := mpt2.GetPathNodes(Path("12391234"))
+	if err != nil {
+		panic(err)
+	}
+	for idx, nd := range nodes {
+		fmt.Printf("n:%v:%v\n", idx, string(nd.GetHash()))
+	}
 
 	doStrValInsert("update leaf node with no path", mpt2, "1234", "1.1", true)
 
@@ -216,7 +224,7 @@ func TestMPTInsertEthereumExample(t *testing.T) {
 }
 
 func doStrValInsert(testcase string, mpt MerklePatriciaTrieI, key string, value string, print bool) {
-	newRoot, err := mpt.Insert([]byte(key), &Txn{value})
+	newRoot, err := mpt.Insert(Path(key), &Txn{value})
 	if err != nil {
 		fmt.Printf("error: %v\n", err)
 	}
@@ -230,7 +238,7 @@ func doStrValInsert(testcase string, mpt MerklePatriciaTrieI, key string, value 
 }
 
 func doGetStrValue(mpt MerklePatriciaTrieI, key string, value string) {
-	val, err := mpt.GetNodeValue([]byte(key))
+	val, err := mpt.GetNodeValue(Path(key))
 	if value == "" {
 		if !(val == nil || err == ErrValueNotPresent) {
 			fmt.Printf("error: setting value to blank didn't return nil value: %v, %v", val, err)

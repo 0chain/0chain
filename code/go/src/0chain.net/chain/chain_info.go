@@ -18,6 +18,7 @@ type Info struct {
 	ClientStateHash util.Key   `json:"client_state_hash"`
 	ChainWeight     float64    `json:"chain_weight"`
 	MissedBlocks    int64      `json:"missed_blocks_count"`
+	RollbackCount   int64      `json:"rollback_count"`
 
 	// Track stats related to multiple blocks to extend from
 	MultipleBlocksCount int64 `json:"multiple_blocks_count"`

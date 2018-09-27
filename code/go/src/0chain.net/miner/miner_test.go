@@ -305,7 +305,10 @@ func TestBlockGeneration(t *testing.T) {
 		fmt.Printf("%v\n", datastore.ToMsgpack(b))
 		*/
 		t.Logf("json length: %v\n", datastore.ToJSON(b).Len())
-		t.Logf("msgpack length: %v\n", datastore.ToMsgpack(b).Len())
+		buffer, err := datastore.ToMsgpack(b)
+		if err == nil {
+			t.Logf("msgpack length: %v\n", buffer.Len())
+		}
 		err = blockstore.Store.Write(b)
 		if err != nil {
 			t.Errorf("Error writing the block: %v\n", err)

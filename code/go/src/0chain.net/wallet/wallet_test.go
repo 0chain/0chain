@@ -242,7 +242,10 @@ func TestGenerateCompressionTrainingData(t *testing.T) {
 		wf.Balance -= value
 		wt.Balance += value
 		txn := wf.CreateSendTransaction(wt.ClientID, value, "")
-		data := common.ToMsgpack(txn)
-		ioutil.WriteFile(fmt.Sprintf("/tmp/txn/data/%v.json", txn.Hash), data.Bytes(), 0644)
+		data, err := common.ToMsgpack(txn)
+		if err == nil {
+			ioutil.WriteFile(fmt.Sprintf("/tmp/txn/data/%v.json", txn.Hash), data.Bytes(), 0644)
+
+		}
 	}
 }

@@ -60,15 +60,27 @@ func (c *Chain) FinalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 func (c *Chain) finalizeRound(ctx context.Context, r *round.Round, bsh BlockStateHandler) {
 	lfb := c.ComputeFinalizedBlock(ctx, r)
 	if lfb == nil {
-		Logger.Debug("finalization - no decisive block to finalize yet or don't have all the necessary blocks", zap.Any("round", r.Number))
+		Logger.Debug("finalize round - no decisive block to finalize yet or don't have all the necessary blocks", zap.Any("round", r.Number))
 		return
 	}
 	if lfb.Hash == c.LatestFinalizedBlock.Hash {
 		return
 	}
-	if lfb.Round < c.LatestFinalizedBlock.Round {
-		Logger.Info("finalize round - TODO: need to repair", zap.Any("lf_round", c.LatestFinalizedBlock.Round), zap.Int64("new_lf_round", lfb.Round))
-		return
+
+	if lfb.Round <= c.LatestFinalizedBlock.Round {
+		b := c.commonAncestor(ctx, c.LatestFinalizedBlock, lfb)
+		if b != nil {
+			// Recovering from incorrectly finalized block
+			Logger.Error("finalize round - rolling back finalized block", zap.Int64("cf_round", c.LatestFinalizedBlock.Round), zap.String("cf_block", c.LatestFinalizedBlock.Hash), zap.Int64("nf_round", b.Round), zap.String("nf_block", b.Hash))
+			c.RollbackCount++
+			rl := c.LatestFinalizedBlock.Round - b.Round
+			if c.LongestRollbackLength < rl {
+				c.LongestRollbackLength = rl
+			}
+			c.LatestFinalizedBlock = b
+		} else {
+			Logger.Error("finalize round - missing common ancestor", zap.Int64("cf_round", c.LatestFinalizedBlock.Round), zap.String("cf_block", c.LatestFinalizedBlock.Hash), zap.Int64("nf_round", lfb.Round), zap.String("nf_block", lfb.Hash))
+		}
 	}
 	plfb := c.LatestFinalizedBlock
 	lfbHash := plfb.Hash
