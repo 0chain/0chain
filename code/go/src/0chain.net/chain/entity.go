@@ -28,6 +28,7 @@ const PreviousBlockUnavailable = "previous_block_unavailable"
 
 //ErrPreviousBlockUnavailable - error for previous block is not available
 var ErrPreviousBlockUnavailable = common.NewError(PreviousBlockUnavailable, "Previous block is not available")
+var ErrInsufficientChain = common.NewError("insufficient_chain", "Chain length not sufficient to perform the logic")
 
 const (
 	NOTARIZED = 1
@@ -101,6 +102,8 @@ type Chain struct {
 
 	FinalizedRoundsChannel chan *round.Round `json:"-"`
 	MissedBlocks           int64             `json:"-"`
+	RollbackCount          int64             `json:"-"`
+	LongestRollbackLength  int64             `json:"-"`
 
 	ZeroNotarizedBlocksCount  int64 `json:"-"`
 	MultiNotarizedBlocksCount int64 `json:"-"`
@@ -467,7 +470,7 @@ func (c *Chain) ChainHasTransaction(ctx context.Context, b *block.Block, txn *tr
 	if false {
 		Logger.Debug("chain has txn", zap.Int64("round", b.Round), zap.Int64("upto_round", pb.Round), zap.Any("txn_ts", txn.CreationDate), zap.Any("upto_block_ts", pb.CreationDate))
 	}
-	return false, common.NewError("insufficient_chain", "Chain length not sufficient to confirm the presence of this transaction")
+	return false, ErrInsufficientChain
 }
 
 func (c *Chain) updateMiningStake(minerId datastore.Key, stake int) {
