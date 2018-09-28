@@ -55,6 +55,7 @@ func (c *Chain) UpdateChainInfo(b *block.Block) {
 		ChainWeight:     b.ChainWeight,
 		FinalizedCount:  SteadyStateFinalizationTimer.Count(),
 		MissedBlocks:    c.MissedBlocks,
+		RollbackCount:   c.RollbackCount,
 	}
 	t := time.Now()
 	ci.TimeStamp = &t
