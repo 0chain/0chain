@@ -92,11 +92,6 @@ func (c *Chain) finalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 	if len(frchain) == 0 {
 		return
 	}
-	fb := frchain[len(frchain)-1]
-	if fb.PrevBlock == nil {
-		Logger.Info("finalize round (missed blocks)", zap.Int64("from", plfb.Round+1), zap.Int64("to", fb.Round-1))
-		c.MissedBlocks += fb.Round - 1 - plfb.Round
-	}
 	deadBlocks := make([]*block.Block, 0, 1)
 	for idx := range frchain {
 		fb := frchain[len(frchain)-1-idx]
@@ -138,6 +133,11 @@ func (c *Chain) finalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 				deadBlocks = append(deadBlocks, b)
 			}
 		}
+	}
+	fb := frchain[len(frchain)-1]
+	if fb.PrevBlock == nil {
+		Logger.Error("finalize round (missed blocks)", zap.Int64("from", plfb.Round+1), zap.Int64("to", fb.Round-1))
+		c.MissedBlocks += fb.Round - 1 - plfb.Round
 	}
 	// Prune all the dead blocks
 	c.DeleteBlocks(deadBlocks)
