@@ -162,17 +162,16 @@ func getEntity(codec string, reader io.Reader, entityMetadata datastore.EntityMe
 	return nil, common.NewError("unkown_encoding", "unknown encoding")
 }
 
-func getResponseData(options *SendOptions, entity datastore.Entity) (*bytes.Buffer, error) {
+func getResponseData(options *SendOptions, entity datastore.Entity) *bytes.Buffer {
 	var buffer *bytes.Buffer
-	var err error
 	if options.CODEC == datastore.CodecJSON {
 		buffer = datastore.ToJSON(entity)
 	} else {
-		buffer, err = datastore.ToMsgpack(entity)
+		buffer = datastore.ToMsgpack(entity)
 	}
 	if options.Compress {
 		cbytes := compDecomp.Compress(buffer.Bytes())
 		buffer = bytes.NewBuffer(cbytes)
 	}
-	return buffer, err
+	return buffer
 }
