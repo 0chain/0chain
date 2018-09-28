@@ -32,11 +32,7 @@ type blockHeader struct {
 
 //Encode - implement interface
 func (bh *blockHeader) Encode(writer io.Writer) error {
-	buffer, err := datastore.ToMsgpack(bh.Block)
-	if err != nil {
-		return err
-	}
-	_, err = buffer.WriteTo(writer)
+	_, err := datastore.ToMsgpack(bh.Block).WriteTo(writer)
 	return err
 }
 
@@ -56,11 +52,7 @@ func (tr *txnRecord) GetKey() blockdb.Key {
 
 //Encode - implement interface
 func (tr *txnRecord) Encode(writer io.Writer) error {
-	buffer, err := datastore.ToMsgpack(tr.Transaction)
-	if err != nil {
-		return err
-	}
-	_, err = buffer.WriteTo(writer)
+	_, err := datastore.ToMsgpack(tr.Transaction).WriteTo(writer)
 	return err
 }
 
