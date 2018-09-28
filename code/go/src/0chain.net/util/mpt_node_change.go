@@ -13,7 +13,7 @@ type ChangeCollectorI interface {
 	GetChanges() []*NodeChange
 	GetDeletes() []Node
 
-	UpdateChanges(ndb NodeDB, origin Origin, includeDeletes bool) error
+	UpdateChanges(ndb NodeDB, origin Sequence, includeDeletes bool) error
 }
 
 /*ChangeCollector - node change collector interface implementation */
@@ -74,7 +74,7 @@ func (cc *ChangeCollector) GetDeletes() []Node {
 }
 
 /*UpdateChanges - update all the changes collected to a database */
-func (cc *ChangeCollector) UpdateChanges(ndb NodeDB, origin Origin, includeDeletes bool) error {
+func (cc *ChangeCollector) UpdateChanges(ndb NodeDB, origin Sequence, includeDeletes bool) error {
 	keys := make([]Key, len(cc.Changes), len(cc.Changes))
 	nodes := make([]Node, len(cc.Changes), len(cc.Changes))
 	idx := 0

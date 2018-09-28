@@ -202,7 +202,7 @@ func (b *Block) SetStateDB(prevBlock *Block) {
 	Logger.Debug("prev state root", zap.Int64("round", b.Round), zap.String("prev_block", prevBlock.Hash), zap.String("root", util.ToHex(rootHash)))
 	mndb := util.NewMemoryNodeDB()
 	ndb := util.NewLevelNodeDB(mndb, pndb, false)
-	b.ClientState = util.NewMerklePatriciaTrie(ndb)
+	b.ClientState = util.NewMerklePatriciaTrie(ndb, util.Sequence(b.Round))
 	b.ClientState.SetRoot(rootHash)
 }
 

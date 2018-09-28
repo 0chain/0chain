@@ -11,9 +11,9 @@ import (
 func TestMPTHexachars(t *testing.T) {
 	cc := NewChangeCollector()
 	mndb := NewMemoryNodeDB()
-	mpt := NewMerklePatriciaTrie(mndb)
+	mpt := NewMerklePatriciaTrie(mndb, Sequence(2018))
 	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.DB, false)
-	var mpt2 MerklePatriciaTrieI = NewMerklePatriciaTrie(db)
+	var mpt2 MerklePatriciaTrieI = NewMerklePatriciaTrie(db, Sequence(2018))
 
 	doStrValInsert("insert a leaf node as root", mpt2, "1", "1", true)
 	doStrValInsert("insert a leaf to create full node as root", mpt2, "2", "2", true)
@@ -25,9 +25,9 @@ func TestMPTHexachars(t *testing.T) {
 
 func TestMPTInsertLeafNode(t *testing.T) {
 	mndb := NewMemoryNodeDB()
-	mpt := NewMerklePatriciaTrie(mndb)
+	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
 	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.DB, false)
-	mpt2 := NewMerklePatriciaTrie(db)
+	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
 
 	doStrValInsert("insert a leaf node as root", mpt2, "1234", "1", true)
 
@@ -70,9 +70,9 @@ func TestMPTInsertLeafNode(t *testing.T) {
 
 func TestMPTInsertFullNode(t *testing.T) {
 	mndb := NewMemoryNodeDB()
-	mpt := NewMerklePatriciaTrie(mndb)
+	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
 	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.DB, false)
-	mpt2 := NewMerklePatriciaTrie(db)
+	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
 
 	doStrValInsert("insert a leaf node as root", mpt2, "1", "1", true)
 	doStrValInsert("insert a leaf node to create a full node as root node", mpt2, "2", "2", true)
@@ -92,9 +92,9 @@ func TestMPTInsertFullNode(t *testing.T) {
 
 func TestMPTInsertExtensionNode(t *testing.T) {
 	mndb := NewMemoryNodeDB()
-	mpt := NewMerklePatriciaTrie(mndb)
+	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
 	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.DB, false)
-	mpt2 := NewMerklePatriciaTrie(db)
+	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
 
 	doStrValInsert("insert a leaf node as root", mpt2, "12345", "12345", true)
 	doStrValInsert("insert a leaf to create an extension node as root node", mpt2, "12346", "12346", true)
@@ -119,9 +119,9 @@ func TestMPTInsertExtensionNode(t *testing.T) {
 
 func TestMPTDelete(t *testing.T) {
 	mndb := NewMemoryNodeDB()
-	mpt := NewMerklePatriciaTrie(mndb)
+	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
 	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.DB, false)
-	mpt2 := NewMerklePatriciaTrie(db)
+	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
 	doStrValInsert("insert a leaf node as root", mpt2, "12345", "12345", false)
 	doStrValInsert("insert a leaf to create a full root node", mpt2, "22345", "22345", false)
 
@@ -164,9 +164,9 @@ func TestMPTDelete(t *testing.T) {
 
 func TestMPTUniverse(t *testing.T) {
 	mndb := NewMemoryNodeDB()
-	mpt := NewMerklePatriciaTrie(mndb)
+	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
 	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.DB, false)
-	mpt2 := NewMerklePatriciaTrie(db)
+	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
 
 	doStrValInsert("root node with a single leaf", mpt2, "1234513", "earth", true)
 
@@ -209,9 +209,9 @@ func TestMPTUniverse(t *testing.T) {
 func TestMPTInsertEthereumExample(t *testing.T) {
 	cc := NewChangeCollector()
 	mndb := NewMemoryNodeDB()
-	mpt := NewMerklePatriciaTrie(mndb)
+	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
 	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.DB, false)
-	mpt2 := NewMerklePatriciaTrie(db)
+	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
 
 	doStrValInsert("setup data", mpt2, "646f", "verb", false)
 	doStrValInsert("setup data", mpt2, "646f67", "puppy", false)
@@ -261,7 +261,7 @@ func iterHandler(ctx context.Context, path Path, key Key, node Node) error {
 	if ok {
 		fmt.Printf("iterate:%20s: p=%v k=%v v=%v\n", fmt.Sprintf("%T", node), hex.EncodeToString(path), hex.EncodeToString(key), string(vn.GetValue().Encode()))
 	} else {
-		fmt.Printf("iterate:%20s: p=%v k=%v\n", fmt.Sprintf("%T", node), hex.EncodeToString(path), hex.EncodeToString(key))
+		fmt.Printf("iterate:%20s: orig=%v ver=%v p=%v k=%v\n", fmt.Sprintf("%T", node), node.GetOrigin(), node.GetVersion(), hex.EncodeToString(path), hex.EncodeToString(key))
 	}
 	return nil
 }

@@ -121,7 +121,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 				}
 			}
 			ts := time.Now()
-			err := fb.ClientState.SaveChanges(c.StateDB, util.Origin(fb.Round), false)
+			err := fb.ClientState.SaveChanges(c.StateDB, false)
 			if err != nil {
 				Logger.Error("finalize round - save state", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.String("client_state", util.ToHex(fb.ClientStateHash)), zap.Int("changes", len(fb.ClientState.GetChangeCollector().GetChanges())), zap.Duration("time", time.Since(ts)), zap.Error(err))
 			} else {

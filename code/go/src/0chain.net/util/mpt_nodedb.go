@@ -29,7 +29,7 @@ type NodeDB interface {
 	MultiPutNode(keys []Key, nodes []Node) error
 	MultiDeleteNode(keys []Key) error
 
-	PruneBelowOrigin(ctx context.Context, origin Origin) error
+	PruneBelowVersion(ctx context.Context, version Sequence) error
 }
 
 /*StrKey - data type for the key used to store the node into some storage (this is needed as hashmap keys can't be []byte */
@@ -109,10 +109,10 @@ func (mndb *MemoryNodeDB) Size(ctx context.Context) int64 {
 	return int64(len(mndb.Nodes))
 }
 
-/*PruneBelowOrigin - implement interface */
-func (mndb *MemoryNodeDB) PruneBelowOrigin(ctx context.Context, origin Origin) error {
+/*PruneBelowVersion - implement interface */
+func (mndb *MemoryNodeDB) PruneBelowVersion(ctx context.Context, version Sequence) error {
 	for key, node := range mndb.Nodes {
-		if node.GetOrigin() < origin {
+		if node.GetVersion() < version {
 			delete(mndb.Nodes, key)
 		}
 	}
@@ -288,37 +288,10 @@ func (lndb *LevelNodeDB) Size(ctx context.Context) int64 {
 	return size
 }
 
-/*PruneBelowOrigin - implement interface */
-func (lndb *LevelNodeDB) PruneBelowOrigin(ctx context.Context, origin Origin) error {
+/*PruneBelowVersion - implement interface */
+func (lndb *LevelNodeDB) PruneBelowVersion(ctx context.Context, version Sequence) error {
 	// TODO
 	return nil
-}
-
-/*GetChanges - get the list of changes */
-func GetChanges(ctx context.Context, ndb NodeDB, start Origin, end Origin) (map[Origin]MerklePatriciaTrieI, error) {
-	mpts := make(map[Origin]MerklePatriciaTrieI, int64(end-start+1))
-	handler := func(ctx context.Context, key Key, node Node) error {
-		origin := node.GetOrigin()
-		if !(start <= origin && origin <= end) {
-			return nil
-		}
-		mpt, ok := mpts[origin]
-		if !ok {
-			mndb := NewMemoryNodeDB()
-			mpt = NewMerklePatriciaTrie(mndb)
-			mpts[origin] = mpt
-		}
-		mpt.GetNodeDB().PutNode(key, node)
-		return nil
-	}
-	ndb.Iterate(ctx, handler)
-	for _, mpt := range mpts {
-		root := mpt.GetNodeDB().(*MemoryNodeDB).ComputeRoot()
-		if root != nil {
-			mpt.SetRoot(root.GetHashBytes())
-		}
-	}
-	return mpts, nil
 }
 
 /*RebaseCurrentDB - set the current database */

@@ -62,13 +62,13 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 		return
 	}
 	bs := bc.Value.(*block.BlockSummary)
-	mpt := util.NewMerklePatriciaTrie(c.StateDB)
+	newVersion := util.Sequence(bs.Round)
+	mpt := util.NewMerklePatriciaTrie(c.StateDB, newVersion)
 	mpt.SetRoot(bs.ClientStateHash)
-	newOrigin := util.Origin(bs.Round)
-	Logger.Info("prune client state - new origin", zap.Int64("current_round", c.CurrentRound), zap.Int64("latest_finalized_round", c.LatestFinalizedBlock.Round), zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.String("state_hash", util.ToHex(bs.ClientStateHash)))
+	Logger.Info("prune client state - new version", zap.Int64("current_round", c.CurrentRound), zap.Int64("latest_finalized_round", c.LatestFinalizedBlock.Round), zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.String("state_hash", util.ToHex(bs.ClientStateHash)))
 	pctx := util.WithPruneStats(ctx)
 	t := time.Now()
-	err := mpt.UpdateOrigin(pctx, newOrigin)
+	err := mpt.UpdateVersion(pctx, newVersion)
 	d1 := time.Since(t)
 	if err != nil {
 		Logger.Error("prune client state (update origin)", zap.Error(err))
@@ -76,7 +76,7 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 		Logger.Info("prune client state (update origin)", zap.Int64("current_round", c.CurrentRound), zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.String("state_hash", util.ToHex(bs.ClientStateHash)), zap.Duration("time", d1))
 	}
 	t1 := time.Now()
-	err = c.StateDB.PruneBelowOrigin(pctx, newOrigin)
+	err = c.StateDB.PruneBelowVersion(pctx, newVersion)
 	if err != nil {
 		Logger.Error("prune client state error", zap.Error(err))
 	}

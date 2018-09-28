@@ -34,11 +34,11 @@ func init() {
 
 func TestMPTWithWalletTxns(t *testing.T) {
 	var rs = rand.NewSource(randTime)
-	transactions := 1000
+	transactions := 0
 	var wallets []*Wallet
-	pmpt := GetMPT(PERSIST)
+	pmpt := GetMPT(PERSIST, util.Sequence(2010))
 	start := 10
-	end := 1000000
+	end := 10
 
 	for clients := start; clients <= end; clients *= 10 {
 		//clients := 1000
@@ -56,14 +56,17 @@ func TestMPTWithWalletTxns(t *testing.T) {
 		*/
 		prng = rand.New(rs)
 		fmt.Printf("using level db\n")
-		lmpt := GetMPT(LEVEL)
+		lmpt := GetMPT(LEVEL, util.Sequence(2010))
 		saveWallets(lmpt, wallets)
-		lmpt.GetChangeCollector().UpdateChanges(pmpt.GetNodeDB(), util.Origin(2010), false)
+		verifyBalance(lmpt, wallets)
+		lmpt.SaveChanges(pmpt.GetNodeDB(), false)
 		(lmpt.GetNodeDB().(*util.LevelNodeDB)).RebaseCurrentDB(pmpt.GetNodeDB())
+
 		lmpt.ResetChangeCollector(nil)
 		generateTransactions(lmpt, wallets, transactions)
+		verifyBalance(lmpt, wallets)
 		ts := time.Now()
-		lmpt.GetChangeCollector().UpdateChanges(pmpt.GetNodeDB(), util.Origin(2010), false)
+		lmpt.SaveChanges(pmpt.GetNodeDB(), false)
 		fmt.Printf("time taken to persist: %v\n", time.Since(ts))
 	}
 	/*
@@ -73,24 +76,24 @@ func TestMPTWithWalletTxns(t *testing.T) {
 	*/
 }
 
-func GetMPT(dbType int) util.MerklePatriciaTrieI {
+func GetMPT(dbType int, version util.Sequence) util.MerklePatriciaTrieI {
 	var mpt util.MerklePatriciaTrieI
 
 	switch dbType {
 	case MEMORY:
 		mndb := util.NewMemoryNodeDB()
-		mpt = util.NewMerklePatriciaTrie(mndb)
+		mpt = util.NewMerklePatriciaTrie(mndb, version)
 	case PERSIST:
 		pndb, err := util.NewPNodeDB("/tmp/mpt")
 		if err != nil {
 			panic(err)
 		}
-		mpt = util.NewMerklePatriciaTrie(pndb)
+		mpt = util.NewMerklePatriciaTrie(pndb, version)
 	case LEVEL:
 		mndb := util.NewMemoryNodeDB()
 		pndb := util.NewMemoryNodeDB()
 		lndb := util.NewLevelNodeDB(mndb, pndb, false)
-		mpt = util.NewMerklePatriciaTrie(lndb)
+		mpt = util.NewMerklePatriciaTrie(lndb, version)
 	}
 	return mpt
 }
@@ -170,6 +173,10 @@ func generateTransactions(mpt util.MerklePatriciaTrieI, wallets []*Wallet, trans
 	if mpt == nil {
 		return
 	}
+}
+
+func verifyBalance(mpt util.MerklePatriciaTrieI, wallets []*Wallet) {
+	fmt.Printf("verifying balance\n")
 	zbcount := 0
 	for index := 0; index < len(wallets); index++ {
 		w := wallets[index]
@@ -210,6 +217,7 @@ func getState(mpt util.MerklePatriciaTrieI, clientID string) (*state.State, erro
 		if err != util.ErrValueNotPresent {
 			return nil, err
 		}
+		return s, err
 	} else {
 		deserializer := &state.Deserializer{}
 		s = deserializer.Deserialize(ss).(*state.State)
