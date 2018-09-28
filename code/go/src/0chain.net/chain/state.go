@@ -93,11 +93,11 @@ func (c *Chain) rebaseState(lfb *block.Block) {
 	c.stateMutex.Lock()
 	defer c.stateMutex.Unlock()
 	ndb := lfb.ClientState.GetNodeDB()
-	if ndb != c.StateDB {
-		lfb.ClientState.SetNodeDB(c.StateDB)
+	if ndb != c.stateDB {
+		lfb.ClientState.SetNodeDB(c.stateDB)
 		if lndb, ok := ndb.(*util.LevelNodeDB); ok {
 			Logger.Debug("finalize round - rebasing current state db", zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash), zap.String("hash", util.ToHex(lfb.ClientState.GetRoot())))
-			lndb.RebaseCurrentDB(c.StateDB)
+			lndb.RebaseCurrentDB(c.stateDB)
 			lfb.ClientState.ResetChangeCollector(nil)
 			Logger.Debug("finalize round - rebased current state db", zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash), zap.String("hash", util.ToHex(lfb.ClientState.GetRoot())))
 		}
@@ -191,7 +191,7 @@ func (c *Chain) getState(clientState util.MerklePatriciaTrieI, clientID string) 
 			return s, err
 		}
 	} else {
-		s = c.ClientStateDeserializer.Deserialize(ss).(*state.State)
+		s = c.clientStateDeserializer.Deserialize(ss).(*state.State)
 	}
 	return s, nil
 }

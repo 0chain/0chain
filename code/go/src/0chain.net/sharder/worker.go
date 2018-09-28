@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"0chain.net/chain"
-	"0chain.net/state"
 	"0chain.net/util"
 
 	"0chain.net/block"
@@ -81,15 +80,6 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 	if err != nil {
 		if config.DevConfiguration.State {
 			Logger.Error("error computing the state (TODO sync state)", zap.Error(err))
-		}
-	}
-	if b.Round == 1 {
-		val, err := b.ClientState.GetNodeValue(util.Path(sc.OwnerID))
-		if err != nil {
-			panic(err)
-		} else {
-			state := sc.ClientStateDeserializer.Deserialize(val).(*state.State)
-			Logger.Info("initial tokens", zap.Any("state", state))
 		}
 	}
 	er.AddNotarizedBlock(b)
