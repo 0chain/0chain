@@ -86,13 +86,15 @@ func (mc *Chain) AddRound(r *Round) bool {
 }
 
 /*SetLatestFinalizedBlock - Set latest finalized block */
-func (mc *Chain) SetLatestFinalizedBlock(b *block.Block) {
-	var r *round.Round = datastore.GetEntityMetadata("round").Instance().(*round.Round)
+func (mc *Chain) SetLatestFinalizedBlock(ctx context.Context, b *block.Block) {
 	mc.AddBlock(b)
+	mc.LatestFinalizedBlock = b
+	var r *round.Round = datastore.GetEntityMetadata("round").Instance().(*round.Round)
 	r.Number = b.Round
 	r.RandomSeed = b.RoundRandomSeed
 	mr := mc.CreateRound(r)
 	mc.AddRound(mr)
+	mc.AddNotarizedBlock(ctx, r, b)
 }
 
 /*GetRound - get a round */

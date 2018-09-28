@@ -211,7 +211,7 @@ func StartProtocol(ctx context.Context) {
 	mc := miner.GetMinerChain()
 
 	//TODO - add wait group for status monitor and protocal round worker
-	time.Sleep(2*time.Second)
+	time.Sleep(2 * time.Second)
 	lfBlocks := mc.GetLatestFinalizedBlockFromSharder(ctx)
 
 	var lfb *block.Block
@@ -222,7 +222,7 @@ func StartProtocol(ctx context.Context) {
 
 	sr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 	if lfb != nil {
-		mc.SetLatestFinalizedBlock(lfb)
+		mc.SetLatestFinalizedBlock(ctx, lfb)
 		//Is this the correct way to add a round?
 		sr.Number = lfb.Round + 1
 		sr.RandomSeed = rand.New(rand.NewSource(lfb.RoundRandomSeed)).Int63()
