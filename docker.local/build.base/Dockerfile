@@ -45,14 +45,14 @@ RUN printf "#!/bin/sh\necho x86_64\n" > /usr/local/bin/arch && \
     tar xf cybozulib.tar.gz && mv cybozulib-* cybozulib && \
     tar xf xbyak.tar.gz && mv xbyak-* xbyak && \
     cd /tmp/mcl && \
-      make lib/libmcl.a && \
+      CFLAGS='-DMCLBN_FP_UNIT_SIZE=4' make lib/libmcl.a && \
       cp lib/*.a /usr/local/lib && \
       cp -r include/mcl /usr/local/include/mcl && \
     cd /tmp && \
     curl -L -o bls.tar.gz https://github.com/herumi/bls/archive/new_deserialize_api.tar.gz && \
     tar xf bls.tar.gz && mv bls-* bls && \
     cd /tmp/bls && \
-      make obj/bls.o obj/bls_c.o && \
+      make UNIT=4 obj/bls.o obj/bls_c.o && \
       ar -r lib/libbls.a obj/bls.o obj/bls_c.o && \
       cp lib/libbls.a /usr/local/lib && \
       mkdir /usr/local/include/bls && \
