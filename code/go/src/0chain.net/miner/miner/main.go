@@ -210,11 +210,12 @@ func initWorkers(ctx context.Context) {
 func StartProtocol(ctx context.Context) {
 	mc := miner.GetMinerChain()
 
-	//TODO - add wait group for status monitor and protocal round worker
+	//TODO - do a min of 1 round of status monitoring 
 	time.Sleep(2 * time.Second)
 	lfBlocks := mc.GetLatestFinalizedBlockFromSharder(ctx)
 
 	var lfb *block.Block
+	//Sorting as per the latest finalized blocks from all the sharders
 	sort.Slice(lfBlocks, func(i int, j int) bool { return lfBlocks[i].Round >= lfBlocks[j].Round })
 	if len(lfBlocks) > 0 {
 		lfb = lfBlocks[0]
@@ -233,7 +234,7 @@ func StartProtocol(ctx context.Context) {
 	}
 	msr := mc.CreateRound(sr)
 
-	Logger.Info("Latest Finalized Block", zap.Int64("lfb_round", mc.LatestFinalizedBlock.Round))
+	Logger.Info("bc1 latest finalized Block", zap.Int64("lfb_round", mc.LatestFinalizedBlock.Round))
 
 	if !mc.CanStartNetwork() {
 		ticker := time.NewTicker(5 * chain.DELTA)

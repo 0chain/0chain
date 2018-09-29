@@ -7,6 +7,8 @@ import (
 	"0chain.net/block"
 	"0chain.net/common"
 	"0chain.net/datastore"
+	"go.uber.org/zap"
+	. "0chain.net/logging"
 	"0chain.net/node"
 	"0chain.net/persistencestore"
 )
@@ -43,6 +45,31 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 
 /*LatestFinalizedBlockHandler - handle latest finalized block*/
 func LatestFinalizedBlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	nodeIndex := node.Self.SetIndex
 	sc := GetSharderChain()
-	return sc.LatestFinalizedBlock, nil
+	lfb := sc.LatestFinalizedBlock
+	if nodeIndex%3 == 0 {
+		// send the right block
+		return lfb, nil
+	}
+
+	if nodeIndex%3 == 1 {
+		// send old block
+		roundNumber := lfb.Round - 10
+		r1, err := sc.GetRoundFromStore(ctx, roundNumber)
+		if err == nil {
+			return r1.Block, nil
+		} else {
+			Logger.Error("could not retrieve round from store", zap.Int64("round", roundNumber))
+			return nil, err
+		}
+	}
+
+	if nodeIndex%3 == 2 {
+		//send corrupt block
+		b := lfb
+		b.CreationDate = common.Now()
+		return b, nil
+	}
+	return lfb, nil
 }
