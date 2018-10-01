@@ -18,7 +18,7 @@ var sharderChain = &Chain{}
 
 /*SetupSharderChain - setup the sharder's chain */
 func SetupSharderChain(c *chain.Chain) {
-	sharderChain.Chain = *c
+	sharderChain.Chain = c
 	sharderChain.rounds = make(map[int64]*round.Round)
 	sharderChain.roundsMutex = &sync.Mutex{}
 	sharderChain.BlockChannel = make(chan *block.Block, 128)
@@ -38,7 +38,7 @@ func GetSharderChain() *Chain {
 
 /*Chain - A chain structure to manage the sharder activities */
 type Chain struct {
-	chain.Chain
+	*chain.Chain
 	BlockChannel  chan *block.Block
 	RoundChannel  chan *round.Round
 	roundsMutex   *sync.Mutex

@@ -23,7 +23,7 @@ var minerChain = &Chain{}
 
 /*SetupMinerChain - setup the miner's chain */
 func SetupMinerChain(c *chain.Chain) {
-	minerChain.Chain = *c
+	minerChain.Chain = c
 	minerChain.rounds = make(map[int64]*Round)
 	minerChain.roundsMutex = &sync.Mutex{}
 	minerChain.BlockMessageChannel = make(chan *BlockMessage, 25)
@@ -36,7 +36,7 @@ func GetMinerChain() *Chain {
 
 /*Chain - A miner chain to manage the miner activities */
 type Chain struct {
-	chain.Chain
+	*chain.Chain
 	BlockMessageChannel chan *BlockMessage
 	roundsMutex         *sync.Mutex
 	rounds              map[int64]*Round
