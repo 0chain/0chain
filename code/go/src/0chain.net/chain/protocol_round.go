@@ -71,7 +71,10 @@ func (c *Chain) finalizeRound(ctx context.Context, r *round.Round, bsh BlockStat
 		b := c.commonAncestor(ctx, c.LatestFinalizedBlock, lfb)
 		if b != nil {
 			// Recovering from incorrectly finalized block
-			Logger.Error("finalize round - rolling back finalized block", zap.Int64("cf_round", c.LatestFinalizedBlock.Round), zap.String("cf_block", c.LatestFinalizedBlock.Hash), zap.Int64("nf_round", b.Round), zap.String("nf_block", b.Hash))
+			Logger.Error("finalize round - rolling back finalized block",
+				zap.Int64("cf_round", c.LatestFinalizedBlock.Round), zap.String("cf_block", c.LatestFinalizedBlock.Hash), zap.String("cf_prev_block", c.LatestFinalizedBlock.PrevHash),
+				zap.Int64("lf_round", lfb.Round), zap.String("lf_block", lfb.Hash), zap.String("lf_prev_block", lfb.PrevHash),
+				zap.Int64("nf_round", b.Round), zap.String("nf_block", b.Hash), zap.String("nf_prev_block", b.PrevHash))
 			c.RollbackCount++
 			rl := c.LatestFinalizedBlock.Round - b.Round
 			if c.LongestRollbackLength < rl {

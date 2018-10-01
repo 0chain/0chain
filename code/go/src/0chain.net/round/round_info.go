@@ -11,6 +11,7 @@ type Info struct {
 	MultiNotarizedBlocksCount int64      `json:"multiple_notarized_blocks_count"`
 	MissedBlocks              int64      `json:"missed_blocks_count"`
 	RollbackCount             int64      `json:"rollback_count"`
+	LongestRollbackLength     int64      `json:"longest_rollback_length"`
 }
 
 //GetKey - implements Metric Interface

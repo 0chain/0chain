@@ -239,7 +239,7 @@ func InfoWriter(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "<th>Time</th>")
 	}
 	fmt.Fprintf(w, "<th>Round</th>")
-	fmt.Fprintf(w, "<th>Blocks Count</th><th>Multi Block Count</th><th>Zero Block Count</th><th>Missed Blocks</th><th>Rollback Count</th></tr>")
+	fmt.Fprintf(w, "<th>Blocks Count</th><th>Multi Block Count</th><th>Zero Block Count</th><th>Missed Blocks</th><th>Rollback Count</th><th>Max Rollback Length</th></tr>")
 	roundInfo := roundMetrics.GetAll()
 	for idx := 0; idx < len(roundInfo); idx++ {
 		rf := roundInfo[idx].(*round.Info)
@@ -256,6 +256,7 @@ func InfoWriter(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "<td class='number'>%6d</td>", rf.ZeroNotarizedBlocksCount)
 		fmt.Fprintf(w, "<td class='number'>%6d</td>", rf.MissedBlocks)
 		fmt.Fprintf(w, "<td class='number'>%6d</td>", rf.RollbackCount)
+		fmt.Fprintf(w, "<td class='number'>%6d</td>", rf.LongestRollbackLength)
 		fmt.Fprintf(w, "</tr>")
 	}
 	fmt.Fprintf(w, "</table>")
