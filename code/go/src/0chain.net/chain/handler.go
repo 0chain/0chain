@@ -213,7 +213,7 @@ func InfoWriter(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "<td>Time</td>")
 	}
 	fmt.Fprintf(w, "<th>Round</th>")
-	fmt.Fprintf(w, "<th>Chain Weight</th><th>Block Hash</th><th>Client State Hash</th><th>Blocks Count</th><th>Rollbacks</th><th>Missed Blocks</th></tr>")
+	fmt.Fprintf(w, "<th>Chain Weight</th><th>Block Hash</th><th>Client State Hash</th><th>Blocks Count</th></tr>")
 	chainInfo := chainMetrics.GetAll()
 	for idx := 0; idx < len(chainInfo); idx++ {
 		cf := chainInfo[idx].(*Info)
@@ -229,8 +229,6 @@ func InfoWriter(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "<td>%s</td>", cf.BlockHash)
 		fmt.Fprintf(w, "<td>%v</td>", util.ToHex(cf.ClientStateHash))
 		fmt.Fprintf(w, "<td class='number'>%11d</td>", cf.FinalizedCount)
-		fmt.Fprintf(w, "<td class='number'>%6d</td>", cf.RollbackCount)
-		fmt.Fprintf(w, "<td class='number'>%6d</td>", cf.MissedBlocks)
 		fmt.Fprintf(w, "</tr>")
 	}
 	fmt.Fprintf(w, "</table>")
@@ -241,7 +239,7 @@ func InfoWriter(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "<th>Time</th>")
 	}
 	fmt.Fprintf(w, "<th>Round</th>")
-	fmt.Fprintf(w, "<th>Blocks Count</th><th>Multi Block Count</th><th>Zero Block Count</tr></tr>")
+	fmt.Fprintf(w, "<th>Blocks Count</th><th>Multi Block Count</th><th>Zero Block Count</th><th>Missed Blocks</th><th>Rollback Count</th><th>Max Rollback Length</th></tr>")
 	roundInfo := roundMetrics.GetAll()
 	for idx := 0; idx < len(roundInfo); idx++ {
 		rf := roundInfo[idx].(*round.Info)
@@ -256,6 +254,9 @@ func InfoWriter(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "<td class='number'>%d</td>", rf.NotarizedBlocksCount)
 		fmt.Fprintf(w, "<td class='number'>%d</td>", rf.MultiNotarizedBlocksCount)
 		fmt.Fprintf(w, "<td class='number'>%6d</td>", rf.ZeroNotarizedBlocksCount)
+		fmt.Fprintf(w, "<td class='number'>%6d</td>", rf.MissedBlocks)
+		fmt.Fprintf(w, "<td class='number'>%6d</td>", rf.RollbackCount)
+		fmt.Fprintf(w, "<td class='number'>%6d</td>", rf.LongestRollbackLength)
 		fmt.Fprintf(w, "</tr>")
 	}
 	fmt.Fprintf(w, "</table>")

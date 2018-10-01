@@ -71,7 +71,7 @@ func StartRoundHandler(ctx context.Context, entity datastore.Entity) (interface{
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
 	mc := GetMinerChain()
-	if r.Number < mc.LatestFinalizedBlock.Round {
+	if r.GetRoundNumber() < mc.LatestFinalizedBlock.Round {
 		return false, nil
 	}
 	mr := mc.CreateRound(r)
@@ -117,9 +117,14 @@ func NotarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (i
 	if !ok {
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
+	mc := GetMinerChain()
+	if notarization.Round < mc.LatestFinalizedBlock.Round {
+		Logger.Debug("notarization receipt handler", zap.Int64("round", notarization.Round), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round))
+		return true, nil
+	}
 	msg := NewBlockMessage(MessageNotarization, node.GetSender(ctx), nil, nil)
 	msg.Notarization = notarization
-	GetMinerChain().GetBlockMessageChannel() <- msg
+	mc.GetBlockMessageChannel() <- msg
 	return true, nil
 }
 
@@ -169,7 +174,7 @@ func NotarizedBlockSendHandler(ctx context.Context, r *http.Request) (interface{
 			return b, nil
 		}
 	} else {
-		for r := mc.GetRound(mc.CurrentRound); r != nil; r = mc.GetRound(r.Number - 1) {
+		for r := mc.GetRound(mc.CurrentRound); r != nil; r = mc.GetRound(r.GetRoundNumber() - 1) {
 			b := r.GetBestNotarizedBlock()
 			if b != nil {
 				return b, nil

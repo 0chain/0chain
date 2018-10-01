@@ -67,14 +67,14 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 			}
 		}
 	} else {
-		er = datastore.GetEntityMetadata("round").Instance().(*round.Round)
-		er.Number = b.Round
-		er.RandomSeed = b.RoundRandomSeed
-		er.ComputeRanks(sc.Miners.Size(), sc.Sharders.Size())
-		sc.AddRound(er)
+		r := datastore.GetEntityMetadata("round").Instance().(*round.Round)
+		r.Number = b.Round
+		r.RandomSeed = b.RoundRandomSeed
+		r.ComputeMinerRanks(sc.Miners.Size())
+		er, _ = sc.AddRound(r).(*round.Round)
 	}
 	bNode := node.GetNode(b.MinerID)
-	b.RoundRank = er.GetMinerRank(bNode.SetIndex)
+	b.RoundRank = er.GetMinerRank(bNode)
 	Logger.Info("received block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)))
 	err = sc.ComputeState(ctx, b)
 	if err != nil {
@@ -83,7 +83,7 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 		}
 	}
 	er.AddNotarizedBlock(b)
-	pr := sc.GetRound(er.Number - 1)
+	pr := sc.GetRound(er.GetRoundNumber() - 1)
 	if pr != nil {
 		go sc.FinalizeRound(ctx, pr, sc)
 	}
@@ -96,7 +96,7 @@ func (sc *Chain) BlockStorageWorker(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case r := <-sc.GetRoundChannel():
-			b, err := sc.GetBlockFromHash(ctx, r.BlockHash, r.Number)
+			b, err := sc.GetBlockFromHash(ctx, r.BlockHash, r.GetRoundNumber())
 			if err != nil {
 				Logger.Error("failed to get block", zap.String("blockhash", r.BlockHash), zap.Error(err))
 			} else {
@@ -113,6 +113,7 @@ func (sc *Chain) BlockStorageWorker(ctx context.Context) {
 					}
 				}
 			}
+			sc.DeleteRoundsBelow(ctx, r.GetRoundNumber()-10)
 		}
 	}
 }

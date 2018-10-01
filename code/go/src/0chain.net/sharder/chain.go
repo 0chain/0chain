@@ -2,7 +2,6 @@ package sharder
 
 import (
 	"context"
-	"sync"
 
 	"0chain.net/cache"
 	"0chain.net/ememorystore"
@@ -18,9 +17,7 @@ var sharderChain = &Chain{}
 
 /*SetupSharderChain - setup the sharder's chain */
 func SetupSharderChain(c *chain.Chain) {
-	sharderChain.Chain = *c
-	sharderChain.rounds = make(map[int64]*round.Round)
-	sharderChain.roundsMutex = &sync.Mutex{}
+	sharderChain.Chain = c
 	sharderChain.BlockChannel = make(chan *block.Block, 128)
 	sharderChain.RoundChannel = make(chan *round.Round, 128)
 	sharderChain.BlockCache = cache.GetLRUCacheProvider()
@@ -38,11 +35,9 @@ func GetSharderChain() *Chain {
 
 /*Chain - A chain structure to manage the sharder activities */
 type Chain struct {
-	chain.Chain
+	*chain.Chain
 	BlockChannel  chan *block.Block
 	RoundChannel  chan *round.Round
-	roundsMutex   *sync.Mutex
-	rounds        map[int64]*round.Round
 	BlockCache    cache.Cache
 	BlockTxnCache cache.Cache
 }
@@ -90,51 +85,15 @@ func (sc *Chain) GetRoundFromStore(ctx context.Context, roundNum int64) (*round.
 	return r, err
 }
 
-/*AddRound - Add Round to the block */
-func (sc *Chain) AddRound(r *round.Round) bool {
-	sc.roundsMutex.Lock()
-	defer sc.roundsMutex.Unlock()
-	_, ok := sc.rounds[r.Number]
-	if ok {
-		return false
+//GetSharderRound - get the sharder's version of the round
+func (sc *Chain) GetSharderRound(roundNumber int64) *round.Round {
+	r := sc.GetRound(roundNumber)
+	if r == nil {
+		return nil
 	}
-	r.ComputeRanks(sc.Miners.Size(), sc.Sharders.Size())
-	sc.rounds[r.Number] = r
-	if r.Number > sc.CurrentRound {
-		sc.CurrentRound = r.Number
-	}
-	return true
-}
-
-/*GetRound - get a round */
-func (sc *Chain) GetRound(roundNumber int64) *round.Round {
-	sc.roundsMutex.Lock()
-	defer sc.roundsMutex.Unlock()
-	round, ok := sc.rounds[roundNumber]
+	sr, ok := r.(*round.Round)
 	if !ok {
 		return nil
 	}
-	return round
-}
-
-/*DeleteRound - delete a round and associated block data */
-func (sc *Chain) DeleteRound(ctx context.Context, r *round.Round) {
-	sc.roundsMutex.Lock()
-	defer sc.roundsMutex.Unlock()
-	delete(sc.rounds, r.Number)
-}
-
-/*DeleteRoundsBelow - delete rounds below */
-func (sc *Chain) DeleteRoundsBelow(ctx context.Context, roundNumber int64) {
-	sc.roundsMutex.Lock()
-	defer sc.roundsMutex.Unlock()
-	rounds := make([]*round.Round, 0, 1)
-	for _, r := range sc.rounds {
-		if r.Number < roundNumber {
-			rounds = append(rounds, r)
-		}
-	}
-	for _, r := range rounds {
-		delete(sc.rounds, r.Number)
-	}
+	return sr
 }

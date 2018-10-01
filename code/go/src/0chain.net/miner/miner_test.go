@@ -62,7 +62,7 @@ func generateSingleBlock(ctx context.Context, prevBlock *block.Block, r *Round) 
 func CreateRound(number int64) *Round {
 	mc := GetMinerChain()
 	r := datastore.GetEntityMetadata("round").Instance().(*round.Round)
-	r.Number = 1
+	r.Number = number
 	mr := mc.CreateRound(r)
 	mc.AddRound(mr)
 	return mr

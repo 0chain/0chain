@@ -72,7 +72,6 @@ func main() {
 	miner.SetupMinerChain(serverChain)
 	mc := miner.GetMinerChain()
 	mc.DiscoverClients = viper.GetBool("server_chain.client.discover")
-	serverChain = &miner.GetMinerChain().Chain
 	chain.SetServerChain(serverChain)
 
 	miner.SetNetworkRelayTime(viper.GetDuration("network.relay_time") * time.Millisecond)
@@ -211,7 +210,7 @@ func StartProtocol() {
 
 	//TODO: For now, hardcoding a random seed for the first round
 	sr.RandomSeed = 839695260482366273
-	sr.ComputeRanks(mc.Miners.Size(), mc.Sharders.Size())
+	sr.ComputeMinerRanks(mc.Miners.Size())
 	msr := mc.CreateRound(sr)
 
 	if !mc.CanStartNetwork() {

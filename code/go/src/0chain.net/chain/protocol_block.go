@@ -15,7 +15,7 @@ import (
 /*ComputeFinalizedBlock - compute the block that has been finalized. It should be the one in the prior round
 TODO: This logic needs refinement when the sharders start saving only partial set of blocks they are responsible for
 */
-func (c *Chain) ComputeFinalizedBlock(ctx context.Context, r *round.Round) *block.Block {
+func (c *Chain) ComputeFinalizedBlock(ctx context.Context, r round.RoundI) *block.Block {
 	tips := r.GetNotarizedBlocks()
 	if len(tips) == 0 {
 		// This can happen due to network or joining in the middle scenario
@@ -25,7 +25,7 @@ func (c *Chain) ComputeFinalizedBlock(ctx context.Context, r *round.Round) *bloc
 		ntips := make([]*block.Block, 0, 1)
 		for _, b := range tips {
 			if b.PrevBlock == nil {
-				Logger.Error("compute finalized block: null prev block", zap.Any("round", r.Number), zap.Any("block_round", b.Round), zap.Any("block", b.Hash))
+				Logger.Error("compute finalized block: null prev block", zap.Any("round", r.GetRoundNumber()), zap.Any("block_round", b.Round), zap.Any("block", b.Hash))
 				return nil
 			}
 			found := false
@@ -49,7 +49,7 @@ func (c *Chain) ComputeFinalizedBlock(ctx context.Context, r *round.Round) *bloc
 		return nil
 	}
 	fb := tips[0]
-	if fb.Round == r.Number {
+	if fb.Round == r.GetRoundNumber() {
 		return nil
 	}
 	return fb

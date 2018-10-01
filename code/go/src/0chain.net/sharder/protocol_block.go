@@ -3,6 +3,7 @@ package sharder
 import (
 	"context"
 
+	"0chain.net/round"
 	"0chain.net/transaction"
 
 	"0chain.net/blockstore"
@@ -22,7 +23,7 @@ func (sc *Chain) UpdatePendingBlock(ctx context.Context, b *block.Block, txns []
 /*UpdateFinalizedBlock - updates the finalized block */
 func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	fr := sc.GetRound(b.Round)
-	Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("lf_round", sc.LatestFinalizedBlock.Round), zap.Any("current_round", sc.CurrentRound), zap.Any("rounds_size", len(sc.rounds)))
+	Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("lf_round", sc.LatestFinalizedBlock.Round), zap.Any("current_round", sc.CurrentRound))
 	if config.Development() {
 		for _, t := range b.Txns {
 			if !t.DebugTxn() {
@@ -39,12 +40,12 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	}
 	if fr != nil {
 		fr.Finalize(b)
-		err := sc.StoreRound(ctx, fr)
+		frImpl, _ := fr.(*round.Round)
+		err := sc.StoreRound(ctx, frImpl)
 		if err != nil {
-			Logger.Error("db error (save round)", zap.Int64("round", fr.Number), zap.Error(err))
+			Logger.Error("db error (save round)", zap.Int64("round", fr.GetRoundNumber()), zap.Error(err))
 		}
-		sc.GetRoundChannel() <- fr
-		sc.DeleteRoundsBelow(ctx, fr.Number)
+		sc.GetRoundChannel() <- frImpl
 	} else {
 		Logger.Debug("round - missed", zap.Int64("round", b.Round))
 	}
