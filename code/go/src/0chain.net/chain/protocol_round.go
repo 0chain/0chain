@@ -202,14 +202,14 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 	nbrequestor := MinerNotarizedBlockRequestor
 	cround := c.CurrentRound
 	params := map[string]string{"block": blockHash}
-	ctx, cancelf := context.WithCancel(context.TODO())
+	ctx := context.TODO()
 	var b *block.Block
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-		Logger.Info("get notarized block", zap.String("block", blockHash), zap.Int64("cround", cround), zap.Int64("current_round", c.CurrentRound))
-		if cround != c.CurrentRound {
-			cancelf()
-			return nil, nil
+		eb, err := c.GetBlock(ctx, blockHash)
+		if err == nil {
+			return eb, nil
 		}
+		Logger.Info("get notarized block", zap.String("block", blockHash), zap.Int64("cround", cround), zap.Int64("current_round", c.CurrentRound))
 		nb, ok := entity.(*block.Block)
 		if !ok {
 			return nil, common.NewError("invalid_entity", "Invalid entity")
