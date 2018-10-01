@@ -46,7 +46,6 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 			Logger.Error("db error (save round)", zap.Int64("round", fr.GetRoundNumber()), zap.Error(err))
 		}
 		sc.GetRoundChannel() <- frImpl
-		sc.DeleteRoundsBelow(ctx, fr.GetRoundNumber()-10)
 	} else {
 		Logger.Debug("round - missed", zap.Int64("round", b.Round))
 	}

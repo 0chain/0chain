@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"0chain.net/ememorystore"
+	"0chain.net/node"
 
 	"0chain.net/block"
 	"0chain.net/datastore"
@@ -175,8 +176,8 @@ func (r *Round) ComputeMinerRanks(m int) {
 }
 
 /*GetMinerRank - get the rank of element at the elementIdx position based on the permutation of the round */
-func (r *Round) GetMinerRank(elementIdx int) int {
-	return r.minerPerm[elementIdx]
+func (r *Round) GetMinerRank(miner *node.Node) int {
+	return r.minerPerm[miner.SetIndex]
 }
 
 //Clear - implement interface

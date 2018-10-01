@@ -37,13 +37,13 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 	//TODO: If for some reason the server is lagging behind (like network outage) we need to fetch the previous round info
 	// before proceeding
 	if pr == nil {
-		Logger.Debug("start new round (previous round not found)", zap.Int64("round", mr.Number))
+		Logger.Debug("start new round (previous round not found)", zap.Int64("round", mr.GetRoundNumber()))
 		return
 	}
 	self := node.GetSelfNode(ctx)
-	rank := mr.GetMinerRank(self.SetIndex)
-	Logger.Info("*** starting round ***", zap.Int64("round", mr.Number), zap.Int("index", self.SetIndex), zap.Int("rank", rank), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round))
-	if !mc.CanGenerateRound(mr.Round, self.Node) {
+	rank := mr.GetMinerRank(self.Node)
+	Logger.Info("*** starting round ***", zap.Int64("round", mr.GetRoundNumber()), zap.Int("index", self.SetIndex), zap.Int("rank", rank), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round))
+	if !mc.CanGenerateRound(mr, self.Node) {
 		return
 	}
 	//NOTE: If there are not enough txns, this will not advance further even though rest of the network is. That's why this is a goroutine
@@ -108,7 +108,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	b.ChainID = mc.ID
 	b.MagicBlockHash = mc.CurrentMagicBlock.Hash
 	b.MinerID = node.Self.GetKey()
-	mc.SetPreviousBlock(ctx, r.Round, b, pb)
+	mc.SetPreviousBlock(ctx, r, b, pb)
 	b.SetStateDB(pb)
 	for true {
 		if mc.CurrentRound > b.Round {
@@ -188,8 +188,10 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 				return
 			}
 		}
-		b = mc.AddBlock(b)
-		b.RoundRank = mr.GetMinerRank(bNode.SetIndex)
+		if mc.AddBlock(b) != b {
+			return
+		}
+		b.RoundRank = mr.GetMinerRank(bNode)
 		if b.PrevBlock != nil {
 			b.ComputeChainWeight()
 			mc.updatePriorBlock(ctx, mr.Round, b)

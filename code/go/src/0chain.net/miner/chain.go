@@ -52,7 +52,11 @@ func (mc *Chain) SetupGenesisBlock(hash string) *block.Block {
 	if gr == nil || gb == nil {
 		panic("Genesis round/block canot be null")
 	}
-	mgr := mc.CreateRound(gr)
+	rr, ok := gr.(*round.Round)
+	if !ok {
+		return nil
+	}
+	mgr := mc.CreateRound(rr)
 	mc.AddRound(mgr)
 	mc.AddGenesisBlock(gb)
 	return gb
@@ -86,21 +90,22 @@ func (mc *Chain) deleteTxns(txns []datastore.Entity) error {
 }
 
 /*SetPreviousBlock - set the previous block */
-func (mc *Chain) SetPreviousBlock(ctx context.Context, r *round.Round, b *block.Block, pb *block.Block) {
+func (mc *Chain) SetPreviousBlock(ctx context.Context, r round.RoundI, b *block.Block, pb *block.Block) {
 	if r == nil {
-		mr := mc.GetMinerRound(b.Round)
+		mr := mc.GetRound(b.Round)
 		if mr != nil {
-			r = mr.Round
+			r = mr
 		} else {
-			r = datastore.GetEntityMetadata("round").Instance().(*round.Round)
-			r.Number = b.Round
-			r.RandomSeed = b.RoundRandomSeed
+			nr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
+			nr.Number = b.Round
+			nr.RandomSeed = b.RoundRandomSeed
+			r = nr
 		}
 	}
 	b.SetPreviousBlock(pb)
 	b.RoundRandomSeed = r.GetRandomSeed()
 	bNode := node.GetNode(b.MinerID)
-	b.RoundRank = r.GetMinerRank(bNode.SetIndex)
+	b.RoundRank = r.GetMinerRank(bNode)
 	b.ComputeChainWeight()
 }
 

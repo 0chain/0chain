@@ -243,7 +243,7 @@ func (c *Chain) setupInitialState() util.MerklePatriciaTrieI {
 }
 
 /*GenerateGenesisBlock - Create the genesis block for the chain */
-func (c *Chain) GenerateGenesisBlock(hash string) (*round.Round, *block.Block) {
+func (c *Chain) GenerateGenesisBlock(hash string) (round.RoundI, *block.Block) {
 	c.GenesisBlockHash = hash
 	gb := datastore.GetEntityMetadata("block").Instance().(*block.Block)
 	gb.Hash = hash
@@ -364,16 +364,16 @@ func (c *Chain) ValidateMagicBlock(ctx context.Context, b *block.Block) bool {
 }
 
 /*CanGenerateRound - checks if the miner can generate a block in the given round */
-func (c *Chain) CanGenerateRound(r *round.Round, miner *node.Node) bool {
-	return r.GetMinerRank(miner.SetIndex)+1 <= c.NumGenerators
+func (c *Chain) CanGenerateRound(r round.RoundI, miner *node.Node) bool {
+	return r.GetMinerRank(miner)+1 <= c.NumGenerators
 }
 
 /*GetGenerators - get all the block generators for a given round */
-func (c *Chain) GetGenerators(r *round.Round) []*node.Node {
+func (c *Chain) GetGenerators(r round.RoundI) []*node.Node {
 	generators := make([]*node.Node, c.NumGenerators)
 	i := 0
 	for _, node := range c.Miners.Nodes {
-		if r.GetMinerRank(node.SetIndex) < c.NumGenerators {
+		if r.GetMinerRank(node) < c.NumGenerators {
 			generators[i] = node
 			i++
 		}
@@ -391,7 +391,7 @@ func (c *Chain) CanStoreBlock(r round.RoundI, b *block.Block, sharder *node.Node
 }
 
 /*ValidGenerator - check whether this block is from a valid generator */
-func (c *Chain) ValidGenerator(r *round.Round, b *block.Block) bool {
+func (c *Chain) ValidGenerator(r round.RoundI, b *block.Block) bool {
 	miner := c.Miners.GetNode(b.MinerID)
 	if miner == nil {
 		return false
@@ -511,7 +511,7 @@ func (c *Chain) GetRound(roundNumber int64) round.RoundI {
 }
 
 /*DeleteRound - delete a round and associated block data */
-func (c *Chain) DeleteRound(ctx context.Context, r *round.Round) {
+func (c *Chain) DeleteRound(ctx context.Context, r round.RoundI) {
 	c.roundsMutex.Lock()
 	defer c.roundsMutex.Unlock()
 	delete(c.rounds, r.GetRoundNumber())
