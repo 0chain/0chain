@@ -117,9 +117,14 @@ func NotarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (i
 	if !ok {
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
+	mc := GetMinerChain()
+	if notarization.Round < mc.LatestFinalizedBlock.Round {
+		Logger.Debug("notarization receipt handler", zap.Int64("round", notarization.Round), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round))
+		return true, nil
+	}
 	msg := NewBlockMessage(MessageNotarization, node.GetSender(ctx), nil, nil)
 	msg.Notarization = notarization
-	GetMinerChain().GetBlockMessageChannel() <- msg
+	mc.GetBlockMessageChannel() <- msg
 	return true, nil
 }
 
