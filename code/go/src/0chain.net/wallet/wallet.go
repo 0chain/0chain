@@ -14,49 +14,37 @@ import (
 
 /*Wallet - a struct representing the client's wallet */
 type Wallet struct {
-	PublicKey       string
-	PrivateKey      string
-	PrivateKeyBytes []byte
+	SignatureScheme encryption.SignatureScheme
 	PublicKeyBytes  []byte
 	ClientID        string
 	Balance         int64
 }
 
 /*Initialize - initialize a wallet with public/private keys */
-func (w *Wallet) Initialize() {
-	publicKey, privateKey, err := encryption.GenerateKeysBytes()
+func (w *Wallet) Initialize() error {
+	sigScheme := encryption.NewED25519Scheme()
+	err := sigScheme.GenerateKeys()
 	if err != nil {
-		panic(err)
+		return err
 	}
-	w.PublicKeyBytes = publicKey
-	w.PrivateKeyBytes = privateKey
-	w.PublicKey = hex.EncodeToString(publicKey)
-	w.PrivateKey = hex.EncodeToString(privateKey)
-	w.ClientID = encryption.Hash(w.PublicKeyBytes)
+	return w.SetSignatureScheme(sigScheme)
 }
 
-/*SetKeys - sets the keys for the wallet */
-func (w *Wallet) SetKeys(publicKey string, privateKey string) error {
-	key, err := hex.DecodeString(publicKey)
+/*SetSignatureScheme - sets the keys for the wallet */
+func (w *Wallet) SetSignatureScheme(signatureScheme encryption.SignatureScheme) error {
+	w.SignatureScheme = signatureScheme
+	publicKeyBytes, err := hex.DecodeString(signatureScheme.GetPublicKey())
 	if err != nil {
 		return err
 	}
-	w.PublicKeyBytes = key
-	w.PublicKey = publicKey
-	key, err = hex.DecodeString(privateKey)
-	if err != nil {
-		return err
-	}
-	w.PrivateKeyBytes = key
-	w.PrivateKey = privateKey
-	w.ClientID = encryption.Hash(w.PublicKeyBytes)
+	w.ClientID = encryption.Hash(publicKeyBytes)
 	return nil
 }
 
 /*Register - register a wallet using the server side api */
 func (w *Wallet) Register(ctx context.Context) error {
 	c := clientMetadataProvider.Instance().(*client.Client)
-	c.PublicKey = w.PublicKey
+	c.PublicKey = w.SignatureScheme.GetPublicKey()
 	c.ID = w.ClientID
 	_, err := client.PutClient(ctx, c)
 	return err
@@ -88,7 +76,7 @@ func (w *Wallet) CreateSendTransaction(toClient string, value int64, msg string)
 	txn.ToClientID = toClient
 	txn.Value = value
 	txn.TransactionData = msg
-	txn.Sign(w.PrivateKeyBytes)
+	txn.Sign(w.SignatureScheme)
 	return txn
 }
 
@@ -104,6 +92,6 @@ func (w *Wallet) CreateDataTransaction(msg string) *transaction.Transaction {
 	txn.ClientID = w.ClientID
 	txn.TransactionData = msg
 	txn.TransactionType = transaction.TxnTypeData
-	txn.Sign(w.PrivateKeyBytes)
+	txn.Sign(w.SignatureScheme)
 	return txn
 }

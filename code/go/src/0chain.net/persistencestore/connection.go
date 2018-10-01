@@ -28,6 +28,9 @@ func InitSession() {
 		cluster = gocql.NewCluster("127.0.0.1")
 	}
 
+	// Setting the following for now because of https://github.com/gocql/gocql/issues/1200
+	cluster.WriteCoalesceWaitTime = 0
+
 	// This reduces the time to create the session from 9+ seconds to 5 seconds when running the tests.
 	//cluster.DisableInitialHostLookup = true
 

@@ -127,8 +127,8 @@ func (pndb *PNodeDB) Flush() {
 	pndb.db.Flush(pndb.fo)
 }
 
-/*PruneBelowOrigin - prune the state below the given origin */
-func (pndb *PNodeDB) PruneBelowOrigin(ctx context.Context, origin Origin) error {
+/*PruneBelowVersion - prune the state below the given origin */
+func (pndb *PNodeDB) PruneBelowVersion(ctx context.Context, version Sequence) error {
 	BatchSize := 64
 	ps := GetPruneStats(ctx)
 	var total int64
@@ -137,7 +137,7 @@ func (pndb *PNodeDB) PruneBelowOrigin(ctx context.Context, origin Origin) error 
 	batch := make([]Key, BatchSize)
 	handler := func(ctx context.Context, key Key, node Node) error {
 		total++
-		if node.GetOrigin() >= origin {
+		if node.GetVersion() >= version {
 			if _, ok := node.(*LeafNode); ok {
 				leaves++
 			}
@@ -151,7 +151,7 @@ func (pndb *PNodeDB) PruneBelowOrigin(ctx context.Context, origin Origin) error 
 			err := pndb.MultiDeleteNode(batch)
 			batch = batch[:0]
 			if err != nil {
-				Logger.Error("prune below origin - error deleting node", zap.String("key", ToHex(key)), zap.Any("old_origin", node.GetOrigin()), zap.Any("new_origin", origin), zap.Error(err))
+				Logger.Error("prune below origin - error deleting node", zap.String("key", ToHex(key)), zap.Any("old_version", node.GetVersion()), zap.Any("new_version", version), zap.Error(err))
 				return err
 			}
 		}
@@ -164,7 +164,7 @@ func (pndb *PNodeDB) PruneBelowOrigin(ctx context.Context, origin Origin) error 
 	if len(batch) > 0 {
 		err := pndb.MultiDeleteNode(batch)
 		if err != nil {
-			Logger.Error("prune below origin - error deleting node", zap.Any("new_origin", origin), zap.Error(err))
+			Logger.Error("prune below origin - error deleting node", zap.Any("new_version", version), zap.Error(err))
 			return err
 		}
 	}

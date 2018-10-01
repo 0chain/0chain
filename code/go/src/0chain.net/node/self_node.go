@@ -13,25 +13,25 @@ import (
 /*SelfNode -- self node type*/
 type SelfNode struct {
 	*Node
-	privateKey string
+	signatureScheme encryption.SignatureScheme
 }
 
-/*SetKeys - setter */
-func (sn *SelfNode) SetKeys(publicKey string, privateKey string) {
-	sn.PublicKey = publicKey
-	sn.privateKey = privateKey
+/*SetSignatureScheme - setter */
+func (sn *SelfNode) SetSignatureScheme(signatureScheme encryption.SignatureScheme) {
+	sn.signatureScheme = signatureScheme
+	sn.SetPublicKey(signatureScheme.GetPublicKey())
 }
 
 /*Sign - sign the given hash */
 func (sn *SelfNode) Sign(hash string) (string, error) {
-	return encryption.Sign(sn.privateKey, hash)
+	return sn.signatureScheme.Sign(hash)
 }
 
 /*TimeStampSignature - get timestamp based signature */
 func (sn *SelfNode) TimeStampSignature() (string, string, string, error) {
 	data := fmt.Sprintf("%v:%v", sn.ID, common.Now())
 	hash := encryption.Hash(data)
-	signature, err := encryption.Sign(sn.privateKey, hash)
+	signature, err := sn.Sign(hash)
 	if err != nil {
 		return "", "", "", err
 	}

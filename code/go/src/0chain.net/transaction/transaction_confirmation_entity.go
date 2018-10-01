@@ -9,14 +9,17 @@ import (
 
 /*Confirmation - a data structure that provides the confirmation that a transaction is included into the block chain */
 type Confirmation struct {
-	Version   string `json:"version"`
-	Hash      string `json:"hash"`
-	BlockHash string `json:"block_hash"`
+	Version     string       `json:"version"`
+	Hash        string       `json:"hash"`
+	BlockHash   string       `json:"block_hash"`
+	Transaction *Transaction `json:"txn,omitempty"`
 	datastore.CreationDateField
-	Round           int64        `json:"round"`
-	RoundRandomSeed int64        `json:"round_random_seed"`
-	MerkleTreeRoot  string       `json:"merkle_tree_root"`
-	MerkleTreePath  *util.MTPath `json:"merkle_tree_path"`
+	Round                 int64        `json:"round"`
+	RoundRandomSeed       int64        `json:"round_random_seed"`
+	MerkleTreeRoot        string       `json:"merkle_tree_root"`
+	MerkleTreePath        *util.MTPath `json:"merkle_tree_path"`
+	ReceiptMerkleTreeRoot string       `json:"receipt_merkle_tree_root"`
+	ReceiptMerkleTreePath *util.MTPath `json:"receipt_merkle_tree_path"`
 }
 
 var transactionConfirmationEntityMetadata *datastore.EntityMetadataImpl

@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"0chain.net/chain"
-	"0chain.net/state"
 	"0chain.net/util"
 
 	"0chain.net/block"
@@ -83,15 +82,6 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 			Logger.Error("error computing the state (TODO sync state)", zap.Error(err))
 		}
 	}
-	if b.Round == 1 {
-		val, err := b.ClientState.GetNodeValue(util.Path(sc.OwnerID))
-		if err != nil {
-			panic(err)
-		} else {
-			state := sc.ClientStateDeserializer.Deserialize(val).(*state.State)
-			Logger.Info("initial tokens", zap.Any("state", state))
-		}
-	}
 	er.AddNotarizedBlock(b)
 	pr := sc.GetRound(er.Number - 1)
 	if pr != nil {
@@ -111,13 +101,12 @@ func (sc *Chain) BlockStorageWorker(ctx context.Context) {
 				Logger.Error("failed to get block", zap.String("blockhash", r.BlockHash), zap.Error(err))
 			} else {
 				sc.StoreTransactions(ctx, b)
+				err = sc.StoreBlockSummary(ctx, b)
+				if err != nil {
+					Logger.Error("db error (save block)", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
+				}
 				self := node.GetSelfNode(ctx)
-				if sc.CanStoreBlock(r, self.Node) {
-					err = sc.StoreBlock(ctx, b)
-					if err != nil {
-						Logger.Error("db error (save block)", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
-					}
-				} else {
+				if !sc.CanStoreBlock(r, b, self.Node) {
 					err = blockstore.GetStore().DeleteBlock(b)
 					if err != nil {
 						Logger.Error("failed to delete block from file system", zap.String("blockhash", b.Hash), zap.Error(err))

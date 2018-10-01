@@ -33,20 +33,89 @@ var PathElements = []byte("0123456789abcdef")
 type Node interface {
 	Clone() Node
 	GetNodeType() byte
-	Clear()
 	SecureSerializableValueI
 	OriginTrackerI
+	GetOriginTracker() OriginTrackerI
+	SetOriginTracker(ot OriginTrackerI)
+}
+
+//OriginTrackerNode - a node that implements origin tracking
+type OriginTrackerNode struct {
+	OriginTracker OriginTrackerI
+}
+
+//NewOriginTrackerNode - create a new origin tracker node
+func NewOriginTrackerNode() *OriginTrackerNode {
+	otn := &OriginTrackerNode{}
+	otn.OriginTracker = &OriginTracker{}
+	return otn
+}
+
+//Clone - clone the given origin tracker node
+func (otn *OriginTrackerNode) Clone() *OriginTrackerNode {
+	clone := NewOriginTrackerNode()
+	clone.OriginTracker.SetOrigin(otn.GetOrigin())
+	clone.OriginTracker.SetVersion(otn.GetVersion())
+	return clone
+}
+
+//SetOriginTracker - implement interface
+func (otn *OriginTrackerNode) SetOriginTracker(ot OriginTrackerI) {
+	otn.OriginTracker = ot
+}
+
+//SetOrigin - implement interface
+func (otn *OriginTrackerNode) SetOrigin(origin Sequence) {
+	otn.OriginTracker.SetOrigin(origin)
+}
+
+//GetOrigin - implement interface
+func (otn *OriginTrackerNode) GetOrigin() Sequence {
+	return otn.OriginTracker.GetOrigin()
+}
+
+//SetVersion - implement interface
+func (otn *OriginTrackerNode) SetVersion(version Sequence) {
+	otn.OriginTracker.SetVersion(version)
+}
+
+//GetVersion - implement interface
+func (otn *OriginTrackerNode) GetVersion() Sequence {
+	return otn.OriginTracker.GetVersion()
+}
+
+//Write - implement interface
+func (otn *OriginTrackerNode) Write(w io.Writer) error {
+	return otn.OriginTracker.Write(w)
+}
+
+//Read - implement interface
+func (otn *OriginTrackerNode) Read(r io.Reader) error {
+	return otn.OriginTracker.Read(r)
+}
+
+//GetOriginTracker - implement interface
+func (otn *OriginTrackerNode) GetOriginTracker() OriginTrackerI {
+	return otn.OriginTracker
 }
 
 /*ValueNode - any node that holds a value should implement this */
 type ValueNode struct {
 	Value Serializable
-	OriginTracker
+	*OriginTrackerNode
+}
+
+//NewValueNode - create a new value node
+func NewValueNode() *ValueNode {
+	vn := &ValueNode{}
+	//vn.OriginTrackerNode = NewOriginTrackerNode()
+	return vn
 }
 
 /*Clone - implement interface */
 func (vn *ValueNode) Clone() Node {
-	clone := &ValueNode{}
+	clone := NewValueNode()
+	clone.OriginTrackerNode = vn.OriginTrackerNode.Clone()
 	clone.SetValue(vn.GetValue())
 	return clone
 }
@@ -54,11 +123,6 @@ func (vn *ValueNode) Clone() Node {
 /*GetNodeType - implement interface */
 func (vn *ValueNode) GetNodeType() byte {
 	return NodeTypeValueNode
-}
-
-/*Clear - implement interface */
-func (vn *ValueNode) Clear() {
-	vn.Value = nil
 }
 
 /*GetHash - implements SecureSerializableValue interface */
@@ -121,13 +185,15 @@ func (vn *ValueNode) Decode(buf []byte) error {
 type LeafNode struct {
 	Path  Path
 	Value *ValueNode
-	OriginTracker
+	*OriginTrackerNode
 }
 
 /*NewLeafNode - create a new leaf node */
-func NewLeafNode(path Path, value Serializable) *LeafNode {
+func NewLeafNode(path Path, origin Sequence, value Serializable) *LeafNode {
 	ln := &LeafNode{}
+	ln.OriginTrackerNode = NewOriginTrackerNode()
 	ln.Path = path
+	ln.SetOrigin(origin)
 	ln.SetValue(value)
 	return ln
 }
@@ -140,6 +206,7 @@ func (ln *LeafNode) GetHash() string {
 /*GetHashBytes - implement interface */
 func (ln *LeafNode) GetHashBytes() []byte {
 	buf := bytes.NewBuffer(nil)
+	binary.Write(buf, binary.LittleEndian, ln.GetOrigin())
 	ln.encode(buf)
 	return encryption.RawHash(buf.Bytes())
 }
@@ -147,6 +214,7 @@ func (ln *LeafNode) GetHashBytes() []byte {
 /*Clone - implement interface */
 func (ln *LeafNode) Clone() Node {
 	clone := &LeafNode{}
+	clone.OriginTrackerNode = NewOriginTrackerNode()
 	clone.Path = ln.Path // path will never be updated inplace and so ok
 	clone.SetValue(ln.GetValue())
 	return clone
@@ -155,12 +223,6 @@ func (ln *LeafNode) Clone() Node {
 /*GetNodeType - implement interface */
 func (ln *LeafNode) GetNodeType() byte {
 	return NodeTypeLeafNode
-}
-
-/*Clear - implement interface */
-func (ln *LeafNode) Clear() {
-	ln.Value = nil
-	ln.Path = nil
 }
 
 /*Encode - implement interface */
@@ -192,7 +254,7 @@ func (ln *LeafNode) Decode(buf []byte) error {
 	if len(buf) == 0 {
 		ln.SetValue(nil)
 	} else {
-		vn := &ValueNode{}
+		vn := NewValueNode()
 		vn.Decode(buf)
 		ln.Value = vn
 	}
@@ -215,7 +277,7 @@ func (ln *LeafNode) GetValue() Serializable {
 /*SetValue - implement interface */
 func (ln *LeafNode) SetValue(value Serializable) {
 	if ln.Value == nil {
-		ln.Value = &ValueNode{}
+		ln.Value = NewValueNode()
 	}
 	ln.Value.SetValue(value)
 }
@@ -224,12 +286,13 @@ func (ln *LeafNode) SetValue(value Serializable) {
 type FullNode struct {
 	Children [16][]byte
 	Value    *ValueNode // This may not be needed as our path is fixed in size
-	OriginTracker
+	*OriginTrackerNode
 }
 
 /*NewFullNode - create a new full node */
 func NewFullNode(value Serializable) *FullNode {
 	fn := &FullNode{}
+	fn.OriginTrackerNode = NewOriginTrackerNode()
 	fn.SetValue(value)
 	return fn
 }
@@ -287,7 +350,7 @@ func (fn *FullNode) Decode(buf []byte) error {
 	if len(buf) == 0 {
 		fn.SetValue(nil)
 	} else {
-		vn := &ValueNode{}
+		vn := NewValueNode()
 		vn.Decode(buf)
 		fn.Value = vn
 	}
@@ -297,6 +360,7 @@ func (fn *FullNode) Decode(buf []byte) error {
 /*Clone - implement interface */
 func (fn *FullNode) Clone() Node {
 	clone := &FullNode{}
+	clone.OriginTrackerNode = NewOriginTrackerNode()
 	for idx, ckey := range fn.Children {
 		clone.Children[idx] = ckey // ckey will never be updated inplace and so ok
 	}
@@ -309,11 +373,6 @@ func (fn *FullNode) Clone() Node {
 /*GetNodeType - implement interface */
 func (fn *FullNode) GetNodeType() byte {
 	return NodeTypeFullNode
-}
-
-/*Clear - implement interface */
-func (fn *FullNode) Clear() {
-	fn.Value = nil
 }
 
 func (fn *FullNode) index(c byte) byte {
@@ -370,7 +429,7 @@ func (fn *FullNode) GetValue() Serializable {
 /*SetValue - implement interface */
 func (fn *FullNode) SetValue(value Serializable) {
 	if fn.Value == nil {
-		fn.Value = &ValueNode{}
+		fn.Value = NewValueNode()
 	}
 	fn.Value.SetValue(value)
 }
@@ -379,12 +438,13 @@ func (fn *FullNode) SetValue(value Serializable) {
 type ExtensionNode struct {
 	Path    Path
 	NodeKey Key
-	OriginTracker
+	*OriginTrackerNode
 }
 
 /*NewExtensionNode - create a new extension node */
 func NewExtensionNode(path Path, key Key) *ExtensionNode {
 	en := &ExtensionNode{}
+	en.OriginTrackerNode = NewOriginTrackerNode()
 	en.Path = path
 	en.NodeKey = key
 	return en
@@ -405,6 +465,7 @@ func (en *ExtensionNode) GetHashBytes() []byte {
 /*Clone - implement interface */
 func (en *ExtensionNode) Clone() Node {
 	clone := &ExtensionNode{}
+	clone.OriginTrackerNode = NewOriginTrackerNode()
 	clone.Path = en.Path       // path will never be updated inplace and so ok
 	clone.NodeKey = en.NodeKey // nodekey will never be updated inplace and so ok
 	return clone
@@ -413,12 +474,6 @@ func (en *ExtensionNode) Clone() Node {
 /*GetNodeType - implement interface */
 func (en *ExtensionNode) GetNodeType() byte {
 	return NodeTypeExtensionNode
-}
-
-/*Clear - implement interface */
-func (en *ExtensionNode) Clear() {
-	en.Path = nil
-	en.NodeKey = nil
 }
 
 /*Encode - implement interface */
@@ -499,19 +554,19 @@ func CreateNode(r io.Reader) (Node, error) {
 	var node Node
 	switch code & NodeTypesAll {
 	case NodeTypeValueNode:
-		node = &ValueNode{}
+		node = NewValueNode()
 	case NodeTypeLeafNode:
-		node = &LeafNode{}
+		node = NewLeafNode(nil, Sequence(0), nil)
 	case NodeTypeFullNode:
-		node = &FullNode{}
+		node = NewFullNode(nil)
 	case NodeTypeExtensionNode:
-		node = &ExtensionNode{}
+		node = NewExtensionNode(nil, nil)
 	default:
 		panic(fmt.Sprintf("unkown node type: %v", code))
 	}
-	var origin Origin
-	binary.Read(r, binary.LittleEndian, &origin)
-	node.SetOrigin(origin)
+	var ot OriginTracker
+	ot.Read(r)
+	node.SetOriginTracker(&ot)
 	buf, err = ioutil.ReadAll(r)
 	err = node.Decode(buf)
 	return node, err
@@ -522,6 +577,6 @@ func writeNodePrefix(w io.Writer, node Node) error {
 	if err != nil {
 		return err
 	}
-	binary.Write(w, binary.LittleEndian, node.GetOrigin())
+	node.GetOriginTracker().Write(w)
 	return nil
 }

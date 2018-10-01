@@ -67,7 +67,9 @@ func (mc *Chain) GetBlockToExtend(ctx context.Context, r *Round) *block.Block {
 			if !bnb.IsStateComputed() {
 				err := mc.ComputeState(ctx, bnb)
 				if err != nil {
-					Logger.Error("get block to extend (best nb compute state)", zap.Any("round", r.Number), zap.Any("block", bnb.Hash), zap.Error(err))
+					if config.DevConfiguration.State {
+						Logger.Error("get block to extend (best nb compute state)", zap.Any("round", r.Number), zap.Any("block", bnb.Hash), zap.Error(err))
+					}
 				}
 			}
 			return bnb
@@ -236,18 +238,16 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 		}
 		r.Block = b
 		b.SetBlockState(block.StateVerificationSuccessful)
-
-		//TODO: Dfinity suggests broadcasting the prior block so it saturates the network
-		//While saturation is good, it's going to be expensive, hence TODO for now. Also, if we are proceeding verification based on partial block info,
-		// we can't broadcast that block
-		if !mc.IsBlockNotarized(ctx, b) {
+		if mc.IsBlockNotarized(ctx, b) {
+			b.SetBlockState(block.StateNotarized)
+		}
+		bnb := r.GetBestNotarizedBlock()
+		if bnb == nil || bnb.RoundRank >= b.RoundRank {
 			go mc.SendVerificationTicket(ctx, b, bvt)
 			// since block.AddVerificationTicket is not thread-safe, directly doing ProcessVerifiedTicket will not work in rare cases as incoming verification tickets get added concurrently
 			bm := NewBlockMessage(MessageVerificationTicket, node.Self.Node, r, b)
 			bm.BlockVerificationTicket = bvt
 			mc.BlockMessageChannel <- bm
-		} else {
-			b.SetBlockState(block.StateNotarized)
 		}
 		return true
 	}
@@ -348,7 +348,10 @@ func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.B
 		r.Block = b
 		mc.CancelRoundVerification(ctx, r)
 		mc.AddNotarizedBlock(ctx, r.Round, b)
-		go mc.SendNotarization(ctx, b)
+		nb := r.GetBestNotarizedBlock()
+		if nb.Hash == b.Hash {
+			go mc.SendNotarization(ctx, b)
+		}
 	}
 }
 
@@ -363,11 +366,11 @@ func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *round.Round, b *block
 		pr.CancelVerification()
 		go mc.FinalizeRound(ctx, pr.Round, mc)
 	}
-	mc.startRound(r)
+	mc.startNextRound(r)
 	return true
 }
 
-func (mc *Chain) startRound(r *round.Round) {
+func (mc *Chain) startNextRound(r *round.Round) {
 	if mc.GetRound(r.Number+1) == nil {
 		nr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 		nr.Number = r.Number + 1

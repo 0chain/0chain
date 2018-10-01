@@ -100,17 +100,6 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		clients[txn.ClientID] = nil
 		idx++
 
-		childTxns := txn.GenerateChildTransactions(ctx)
-		if childTxns != nil {
-			for _, ctxn := range childTxns {
-				b.Txns[idx] = ctxn
-				etxns[idx] = ctxn
-				b.AddTransaction(ctxn)
-				clients[ctxn.ClientID] = nil
-				idx++
-			}
-		}
-
 		if idx >= mc.BlockSize {
 			return false
 		}
@@ -252,6 +241,12 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 				validChannel <- false
 				return
 			}
+			if txn.OutputHash == "" {
+				cancel = true
+				Logger.Error("validate transactions - no output hash", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.String("txn", datastore.ToJSON(txn).String()))
+				validChannel <- false
+				return
+			}
 			err := txn.Validate(ctx)
 			if err != nil {
 				cancel = true
@@ -348,7 +343,7 @@ func (mc *Chain) AddVerificationTicket(ctx context.Context, b *block.Block, bvt 
 
 /*UpdateFinalizedBlock - update the latest finalized block */
 func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
-	Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round), zap.Int64("current_round", mc.CurrentRound), zap.Float64("weight", b.Weight()), zap.Float64("chain_weight", b.ChainWeight), zap.Int("blocks_size", len(mc.Blocks)), zap.Int("rounds_size", len(mc.rounds)))
+	Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round), zap.Int64("current_round", mc.CurrentRound), zap.Float64("weight", b.Weight()), zap.Float64("chain_weight", b.ChainWeight), zap.Int("rounds_size", len(mc.rounds)))
 	if config.Development() {
 		for _, t := range b.Txns {
 			if !t.DebugTxn() {

@@ -17,7 +17,6 @@ type Info struct {
 	BlockHash       string     `json:"block_hash"`
 	ClientStateHash util.Key   `json:"client_state_hash"`
 	ChainWeight     float64    `json:"chain_weight"`
-	MissedBlocks    int64      `json:"missed_blocks_count"`
 
 	// Track stats related to multiple blocks to extend from
 	MultipleBlocksCount int64 `json:"multiple_blocks_count"`
@@ -53,7 +52,6 @@ func (c *Chain) UpdateChainInfo(b *block.Block) {
 		ClientStateHash: b.ClientStateHash,
 		ChainWeight:     b.ChainWeight,
 		FinalizedCount:  SteadyStateFinalizationTimer.Count(),
-		MissedBlocks:    c.MissedBlocks,
 	}
 	t := time.Now()
 	ci.TimeStamp = &t
@@ -69,6 +67,8 @@ func (c *Chain) UpdateRoundInfo(r *round.Round) {
 		NotarizedBlocksCount:      int8(len(r.GetNotarizedBlocks())),
 		MultiNotarizedBlocksCount: c.MultiNotarizedBlocksCount,
 		ZeroNotarizedBlocksCount:  c.ZeroNotarizedBlocksCount,
+		RollbackCount:             c.RollbackCount,
+		MissedBlocks:              c.MissedBlocks,
 	}
 	t := time.Now()
 	ri.TimeStamp = &t

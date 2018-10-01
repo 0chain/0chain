@@ -18,6 +18,7 @@ type MPTIteratorHandler func(ctx context.Context, path Path, key Key, node Node)
 type MerklePatriciaTrieI interface {
 	SetNodeDB(ndb NodeDB)
 	GetNodeDB() NodeDB
+	SetVersion(version Sequence)
 
 	GetRoot() Key
 	SetRoot(root Key)
@@ -30,10 +31,13 @@ type MerklePatriciaTrieI interface {
 
 	GetChangeCollector() ChangeCollectorI
 	ResetChangeCollector(root Key)
-	SaveChanges(ndb NodeDB, origin Origin, includeDeletes bool) error
+	SaveChanges(ndb NodeDB, includeDeletes bool) error
+
+	// useful for syncing up
+	GetPathNodes(path Path) ([]Node, error)
 
 	// useful for pruning the state below a certain origin number
-	UpdateOrigin(ctx context.Context, origin Origin) error // mark
+	UpdateVersion(ctx context.Context, version Sequence) error // mark
 
 	// only for testing and debugging
 	PrettyPrint(w io.Writer) error
@@ -62,7 +66,7 @@ func GetPruneStats(ctx context.Context) *PruneStats {
 
 /*PruneStats - gathers statistics while pruning */
 type PruneStats struct {
-	Origin      Origin
+	Origin      Sequence
 	Total       int64
 	Leaves      int64
 	BelowOrigin int64

@@ -25,7 +25,7 @@ func (c *Chain) ComputeFinalizedBlock(ctx context.Context, r *round.Round) *bloc
 		ntips := make([]*block.Block, 0, 1)
 		for _, b := range tips {
 			if b.PrevBlock == nil {
-				Logger.Debug("compute finalized block: null prev block", zap.Any("round", r.Number), zap.Any("block_round", b.Round), zap.Any("block", b.Hash))
+				Logger.Error("compute finalized block: null prev block", zap.Any("round", r.Number), zap.Any("block_round", b.Round), zap.Any("block", b.Hash))
 				return nil
 			}
 			found := false
@@ -192,4 +192,34 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 		b.SetPreviousBlock(pb)
 	}
 	return pb
+}
+
+//Note: this is expected to work only for small forks
+func (c *Chain) commonAncestor(ctx context.Context, b1 *block.Block, b2 *block.Block) *block.Block {
+	if b1 == nil || b2 == nil {
+		return nil
+	}
+	if b1 == b2 || b1.Hash == b2.Hash {
+		return b1
+	}
+	if b2.Round < b1.Round {
+		b1, b2 = b2, b1
+	}
+	for b2.Round != b1.Round {
+		b2 = c.GetPreviousBlock(ctx, b2)
+		if b2 == nil {
+			return nil
+		}
+	}
+	for b1 != b2 {
+		b1 = c.GetPreviousBlock(ctx, b1)
+		if b1 == nil {
+			return nil
+		}
+		b2 = c.GetPreviousBlock(ctx, b2)
+		if b2 == nil {
+			return nil
+		}
+	}
+	return b1
 }

@@ -1,6 +1,7 @@
 package node
 
 import (
+	"encoding/hex"
 	"fmt"
 	"io"
 	"math"
@@ -78,6 +79,8 @@ type Node struct {
 	mutex *sync.Mutex
 
 	ProtocolStats interface{}
+
+	idBytes []byte
 }
 
 /*Provider - create a node object */
@@ -141,7 +144,7 @@ func Read(line string) (*Node, error) {
 		return nil, err
 	}
 	node.Port = int(port)
-	node.ID = fields[3]
+	node.SetID(fields[3])
 	node.PublicKey = fields[4]
 	node.Client.SetPublicKey(node.PublicKey)
 	hash := encryption.Hash(node.PublicKeyBytes)
@@ -162,7 +165,7 @@ func NewNode(nc map[interface{}]interface{}) (*Node, error) {
 	node.Host = nc["public_ip"].(string)
 	node.N2NHost = nc["n2n_ip"].(string)
 	node.Port = nc["port"].(int)
-	node.ID = nc["id"].(string)
+	node.SetID(nc["id"].(string))
 	node.PublicKey = nc["public_key"].(string)
 	if description, ok := nc["description"]; ok {
 		node.Description = description.(string)
@@ -295,4 +298,15 @@ func ReadConfig() {
 	SetTimeoutSmallMessage(viper.GetDuration("network.timeout.small_message") * time.Millisecond)
 	SetTimeoutLargeMessage(viper.GetDuration("network.timeout.large_message") * time.Millisecond)
 	SetMaxConcurrentRequests(viper.GetInt("network.max_concurrent_requests"))
+}
+
+//SetID - set the id of the node
+func (n *Node) SetID(id string) error {
+	n.ID = id
+	bytes, err := hex.DecodeString(id)
+	if err != nil {
+		return err
+	}
+	n.idBytes = bytes
+	return nil
 }
