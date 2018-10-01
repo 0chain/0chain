@@ -10,7 +10,8 @@ services:
     ports:
       - "9042:9042"
 
-    restart: on-failure:10
+    #uncomment line below for automatic restart
+    #restart: on-failure:10
 
     #Do under 0chain id.
     user: 2000:2000
@@ -33,7 +34,8 @@ services:
     links:
       - cassandra:cassandra
 
-    restart: on-failure:10
+    #uncomment line below for automatic restart
+    #restart: on-failure:10
 
   sharder:
     environment:
@@ -69,7 +71,8 @@ services:
     ports:
       - "7171:7171"
 
-    restart: on-failure:10
+    #uncomment line below for automatic restart
+    #restart: on-failure:10
 
     networks:
       default:
