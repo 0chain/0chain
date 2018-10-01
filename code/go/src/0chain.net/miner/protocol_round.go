@@ -237,18 +237,16 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 		}
 		r.Block = b
 		b.SetBlockState(block.StateVerificationSuccessful)
-
-		//TODO: Dfinity suggests broadcasting the prior block so it saturates the network
-		//While saturation is good, it's going to be expensive, hence TODO for now. Also, if we are proceeding verification based on partial block info,
-		// we can't broadcast that block
-		if !mc.IsBlockNotarized(ctx, b) {
+		if mc.IsBlockNotarized(ctx, b) {
+			b.SetBlockState(block.StateNotarized)
+		}
+		bnb := r.GetBestNotarizedBlock()
+		if bnb == nil || bnb.RoundRank >= b.RoundRank {
 			go mc.SendVerificationTicket(ctx, b, bvt)
 			// since block.AddVerificationTicket is not thread-safe, directly doing ProcessVerifiedTicket will not work in rare cases as incoming verification tickets get added concurrently
 			bm := NewBlockMessage(MessageVerificationTicket, node.Self.Node, r, b)
 			bm.BlockVerificationTicket = bvt
 			mc.BlockMessageChannel <- bm
-		} else {
-			b.SetBlockState(block.StateNotarized)
 		}
 		return true
 	}
