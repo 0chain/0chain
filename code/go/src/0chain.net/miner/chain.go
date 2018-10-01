@@ -24,8 +24,6 @@ var minerChain = &Chain{}
 /*SetupMinerChain - setup the miner's chain */
 func SetupMinerChain(c *chain.Chain) {
 	minerChain.Chain = c
-	minerChain.rounds = make(map[int64]*Round)
-	minerChain.roundsMutex = &sync.Mutex{}
 	minerChain.BlockMessageChannel = make(chan *BlockMessage, 25)
 }
 
@@ -63,60 +61,10 @@ func (mc *Chain) SetupGenesisBlock(hash string) *block.Block {
 /*CreateRound - create a round */
 func (mc *Chain) CreateRound(r *round.Round) *Round {
 	var mr Round
-	r.ComputeRanks(mc.Miners.Size(), mc.Sharders.Size())
+	r.ComputeMinerRanks(mc.Miners.Size())
 	mr.Round = r
 	mr.blocksToVerifyChannel = make(chan *block.Block, mc.NumGenerators)
 	return &mr
-}
-
-/*AddRound - Add Round to the block */
-func (mc *Chain) AddRound(r *Round) bool {
-	mc.roundsMutex.Lock()
-	defer mc.roundsMutex.Unlock()
-	_, ok := mc.rounds[r.Number]
-	if ok {
-		return false
-	}
-	r.ComputeRanks(mc.Miners.Size(), mc.Sharders.Size())
-	mc.rounds[r.Number] = r
-	if r.Number > mc.CurrentRound {
-		mc.CurrentRound = r.Number
-	}
-	return true
-}
-
-/*GetRound - get a round */
-func (mc *Chain) GetRound(roundNumber int64) *Round {
-	mc.roundsMutex.Lock()
-	defer mc.roundsMutex.Unlock()
-	round, ok := mc.rounds[roundNumber]
-	if !ok {
-		return nil
-	}
-	return round
-}
-
-/*DeleteRound - delete a round and associated block data */
-func (mc *Chain) DeleteRound(ctx context.Context, r *round.Round) {
-	mc.roundsMutex.Lock()
-	defer mc.roundsMutex.Unlock()
-	delete(mc.rounds, r.Number)
-}
-
-/*DeleteRoundsBelow - delete rounds below */
-func (mc *Chain) DeleteRoundsBelow(ctx context.Context, round int64) {
-	mc.roundsMutex.Lock()
-	defer mc.roundsMutex.Unlock()
-	rounds := make([]*Round, 0, 1)
-	for _, r := range mc.rounds {
-		if r.Number < round {
-			rounds = append(rounds, r)
-		}
-	}
-	for _, r := range rounds {
-		r.Clear()
-		delete(mc.rounds, r.Number)
-	}
 }
 
 /*CancelRoundsBelow - delete rounds below */
@@ -124,7 +72,7 @@ func (mc *Chain) CancelRoundsBelow(ctx context.Context, round int64) {
 	mc.roundsMutex.Lock()
 	defer mc.roundsMutex.Unlock()
 	for _, r := range mc.rounds {
-		if r.Number < round {
+		if r.GetRoundNumber() < round {
 			r.CancelVerification()
 		}
 	}
@@ -140,7 +88,7 @@ func (mc *Chain) deleteTxns(txns []datastore.Entity) error {
 /*SetPreviousBlock - set the previous block */
 func (mc *Chain) SetPreviousBlock(ctx context.Context, r *round.Round, b *block.Block, pb *block.Block) {
 	if r == nil {
-		mr := mc.GetRound(b.Round)
+		mr := mc.GetMinerRound(b.Round)
 		if mr != nil {
 			r = mr.Round
 		} else {
@@ -150,8 +98,21 @@ func (mc *Chain) SetPreviousBlock(ctx context.Context, r *round.Round, b *block.
 		}
 	}
 	b.SetPreviousBlock(pb)
-	b.RoundRandomSeed = r.RandomSeed
+	b.RoundRandomSeed = r.GetRandomSeed()
 	bNode := node.GetNode(b.MinerID)
 	b.RoundRank = r.GetMinerRank(bNode.SetIndex)
 	b.ComputeChainWeight()
+}
+
+//GetMinerRound - get the miner's version of the round
+func (mc *Chain) GetMinerRound(roundNumber int64) *Round {
+	r := mc.GetRound(roundNumber)
+	if r == nil {
+		return nil
+	}
+	mr, ok := r.(*Round)
+	if !ok {
+		return nil
+	}
+	return mr
 }

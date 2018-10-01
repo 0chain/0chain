@@ -357,7 +357,7 @@ func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	fr := mc.GetRound(b.Round)
 	if fr != nil {
 		fr.Finalize(b)
-		mc.DeleteRoundsBelow(ctx, fr.Number)
+		mc.DeleteRoundsBelow(ctx, fr.GetRoundNumber()-10)
 	}
 }
 

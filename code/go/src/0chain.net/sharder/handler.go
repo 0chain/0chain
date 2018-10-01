@@ -42,7 +42,7 @@ func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 		if roundNumber > sc.LatestFinalizedBlock.Round {
 			return nil, common.InvalidRequest("Block not available")
 		} else {
-			r := sc.GetRound(roundNumber)
+			r := sc.GetSharderRound(roundNumber)
 			if r == nil {
 				r, err = sc.GetRoundFromStore(ctx, roundNumber)
 				if err != nil {

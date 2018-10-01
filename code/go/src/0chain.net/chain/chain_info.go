@@ -61,9 +61,9 @@ func (c *Chain) UpdateChainInfo(b *block.Block) {
 }
 
 /*UpdateRoundInfo - update the round information */
-func (c *Chain) UpdateRoundInfo(r *round.Round) {
+func (c *Chain) UpdateRoundInfo(r round.RoundI) {
 	ri := &round.Info{
-		Number:                    r.Number,
+		Number:                    r.GetRoundNumber(),
 		NotarizedBlocksCount:      int8(len(r.GetNotarizedBlocks())),
 		MultiNotarizedBlocksCount: c.MultiNotarizedBlocksCount,
 		ZeroNotarizedBlocksCount:  c.ZeroNotarizedBlocksCount,

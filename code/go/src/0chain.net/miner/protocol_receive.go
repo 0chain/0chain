@@ -24,14 +24,14 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 		Logger.Debug("verify block (round mismatch)", zap.Int64("current_round", mc.CurrentRound), zap.Int64("block_round", b.Round))
 		return
 	}
-	mr := mc.GetRound(b.Round)
+	mr := mc.GetMinerRound(b.Round)
 	if mr == nil {
 		r := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 		r.Number = b.Round
 		r.RandomSeed = b.RoundRandomSeed
 		mr = mc.CreateRound(r)
 		mc.startNewRound(ctx, mr)
-		mr = mc.GetRound(b.Round) // Need this again just in case there is another round already setup and the start didn't happen
+		mr = mc.GetMinerRound(b.Round) // Need this again just in case there is another round already setup and the start didn't happen
 	}
 	if mr != nil {
 		if !mc.ValidGenerator(mr.Round, b) {
@@ -66,7 +66,7 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *Block
 	r := msg.Round
 	if msg.Sender != node.Self.Node {
 		if r == nil {
-			r = mc.GetRound(b.Round)
+			r = mc.GetMinerRound(b.Round)
 		}
 		if r == nil {
 			Logger.Debug("verification message (no round)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("finalized_round", mc.LatestFinalizedBlock.Round))
@@ -87,7 +87,7 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 		Logger.Debug("notarization message", zap.Int64("round", msg.Notarization.Round), zap.Int64("finalized_round", mc.LatestFinalizedBlock.Round), zap.String("block", msg.Notarization.BlockID))
 		return
 	}
-	r := mc.GetRound(msg.Notarization.Round)
+	r := mc.GetMinerRound(msg.Notarization.Round)
 	if r == nil {
 		if msg.ShouldRetry() {
 			Logger.Info("notarization receipt handler (round not started yet) retrying", zap.String("block", msg.Notarization.BlockID), zap.Int8("retry_count", msg.RetryCount))
@@ -145,9 +145,9 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
 		}
 	}
 	Logger.Info("round timeout occured", zap.Any("round", mc.CurrentRound))
-	r := mc.GetRound(mc.CurrentRound)
-	if r.Number > 1 {
-		pr := mc.GetRound(r.Number - 1)
+	r := mc.GetMinerRound(mc.CurrentRound)
+	if r.GetRoundNumber() > 1 {
+		pr := mc.GetMinerRound(r.GetRoundNumber() - 1)
 		if pr != nil {
 			mc.BroadcastNotarizedBlocks(ctx, pr, r)
 		}
@@ -161,7 +161,7 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
 /*HandleNotarizedBlockMessage - handles a notarized block for a previous round*/
 func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMessage) {
 	mb := msg.Block
-	mr := mc.GetRound(mb.Round)
+	mr := mc.GetMinerRound(mb.Round)
 	if mr == nil {
 		r := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 		r.Number = mb.Round
