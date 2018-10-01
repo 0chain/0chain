@@ -129,10 +129,7 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 	if mc.BlocksToSharder == chain.NOTARIZED {
 		//We assume those who can generate a block in a round are also responsible for sending it to the sharders
 		if mc.CanGenerateRound(r.Round, node.GetSelfNode(ctx).Node) {
-			nb := r.GetBestNotarizedBlock()
-			if nb.Hash == b.Hash {
-				go mc.SendNotarizedBlock(ctx, b)
-			}
+			go mc.SendNotarizedBlock(ctx, b)
 		}
 	}
 }

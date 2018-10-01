@@ -350,10 +350,7 @@ func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.B
 		r.Block = b
 		mc.CancelRoundVerification(ctx, r)
 		mc.AddNotarizedBlock(ctx, r.Round, b)
-		nb := r.GetBestNotarizedBlock()
-		if nb.Hash == b.Hash {
-			go mc.SendNotarization(ctx, b)
-		}
+		go mc.SendNotarization(ctx, b)
 	}
 }
 
