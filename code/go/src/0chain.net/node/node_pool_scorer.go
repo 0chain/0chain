@@ -57,7 +57,7 @@ func (hps *HashPoolScorer) ScoreHashString(np *Pool, hash string) []*Score {
 
 //IsInTop - checks if a node is in the top N
 func (n *Node) IsInTop(nodeScores []*Score, topN int) bool {
-	if topN > 0 {
+	if topN < len(nodeScores) {
 		minScore := nodeScores[topN-1].Score
 		for _, ns := range nodeScores {
 			if ns.Score < minScore {
