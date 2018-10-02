@@ -69,6 +69,7 @@ func (c *Chain) UpdateRoundInfo(r round.RoundI) {
 		ZeroNotarizedBlocksCount:  c.ZeroNotarizedBlocksCount,
 		RollbackCount:             c.RollbackCount,
 		MissedBlocks:              c.MissedBlocks,
+		LongestRollbackLength:     c.LongestRollbackLength,
 	}
 	t := time.Now()
 	ri.TimeStamp = &t
