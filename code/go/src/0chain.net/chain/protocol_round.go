@@ -93,6 +93,9 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 				c.LongestRollbackLength = rl
 			}
 			c.LatestFinalizedBlock = b
+			if b == lfb {
+				return
+			}
 		} else {
 			Logger.Error("finalize round - missing common ancestor", zap.Int64("cf_round", c.LatestFinalizedBlock.Round), zap.String("cf_block", c.LatestFinalizedBlock.Hash), zap.Int64("nf_round", lfb.Round), zap.String("nf_block", lfb.Hash))
 		}
@@ -170,7 +173,7 @@ func (c *Chain) GetNotarizedBlockForRound(r round.RoundI) *block.Block {
 	nbrequestor := MinerNotarizedBlockRequestor
 	roundNumber := r.GetRoundNumber()
 	params := map[string]string{"round": fmt.Sprintf("%v", roundNumber)}
-	ctx, cancelf := context.WithCancel(context.TODO())
+	ctx, cancelf := context.WithCancel(common.GetRootContext())
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		Logger.Info("get notarized block for round", zap.Int64("round", roundNumber), zap.String("block", entity.GetKey()))
 		if roundNumber+1 != c.CurrentRound {
@@ -212,7 +215,7 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 	nbrequestor := MinerNotarizedBlockRequestor
 	cround := c.CurrentRound
 	params := map[string]string{"block": blockHash}
-	ctx := context.TODO()
+	ctx := common.GetRootContext()
 	var b *block.Block
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		eb, err := c.GetBlock(ctx, blockHash)
