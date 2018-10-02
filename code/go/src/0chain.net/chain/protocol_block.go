@@ -12,21 +12,23 @@ import (
 	"go.uber.org/zap"
 )
 
-/*ComputeFinalizedBlock - compute the block that has been finalized. It should be the one in the prior round
-TODO: This logic needs refinement when the sharders start saving only partial set of blocks they are responsible for
-*/
+/*ComputeFinalizedBlock - compute the block that has been finalized
+ */
 func (c *Chain) ComputeFinalizedBlock(ctx context.Context, r round.RoundI) *block.Block {
 	tips := r.GetNotarizedBlocks()
 	if len(tips) == 0 {
-		// This can happen due to network or joining in the middle scenario
+		go c.GetNotarizedBlockForRound(r)
 		return nil
 	}
 	for true {
 		ntips := make([]*block.Block, 0, 1)
 		for _, b := range tips {
 			if b.PrevBlock == nil {
-				Logger.Error("compute finalized block: null prev block", zap.Any("round", r.GetRoundNumber()), zap.Any("block_round", b.Round), zap.Any("block", b.Hash))
-				return nil
+				pb := c.GetPreviousBlock(ctx, b)
+				if pb == nil {
+					Logger.Error("compute finalized block: null prev block", zap.Any("round", r.GetRoundNumber()), zap.Any("block_round", b.Round), zap.Any("block", b.Hash))
+					return nil
+				}
 			}
 			found := false
 			for _, nb := range ntips {
