@@ -17,11 +17,6 @@ type Info struct {
 	BlockHash       string     `json:"block_hash"`
 	ClientStateHash util.Key   `json:"client_state_hash"`
 	ChainWeight     float64    `json:"chain_weight"`
-
-	// Track stats related to multiple blocks to extend from
-	MultipleBlocksCount int64 `json:"multiple_blocks_count"`
-	SumMultipleBlocks   int64 `json:"multiple_blocks_sum"`
-	MaxMultipleBlocks   int64 `json:"max_multiple_blocks"`
 }
 
 //GetKey - implements Metric interface
@@ -62,13 +57,19 @@ func (c *Chain) UpdateChainInfo(b *block.Block) {
 
 /*UpdateRoundInfo - update the round information */
 func (c *Chain) UpdateRoundInfo(r round.RoundI) {
+	nnb := int8(len(r.GetNotarizedBlocks()))
+	if c.MaxMultipleBlocks < nnb {
+		c.MaxMultipleBlocks = nnb
+	}
 	ri := &round.Info{
 		Number:                    r.GetRoundNumber(),
-		NotarizedBlocksCount:      int8(len(r.GetNotarizedBlocks())),
+		NotarizedBlocksCount:      nnb,
 		MultiNotarizedBlocksCount: c.MultiNotarizedBlocksCount,
 		ZeroNotarizedBlocksCount:  c.ZeroNotarizedBlocksCount,
 		RollbackCount:             c.RollbackCount,
 		MissedBlocks:              c.MissedBlocks,
+		LongestRollbackLength:     c.LongestRollbackLength,
+		MaxMultiBlocksCount:       c.MaxMultipleBlocks,
 	}
 	t := time.Now()
 	ri.TimeStamp = &t
