@@ -7,10 +7,11 @@ import (
 	"0chain.net/block"
 	"0chain.net/common"
 	"0chain.net/datastore"
-	"go.uber.org/zap"
 	. "0chain.net/logging"
 	"0chain.net/node"
 	"0chain.net/persistencestore"
+	"go.uber.org/zap"
+	//"go.uber.org/zap"
 )
 
 /*SetupM2SReceivers - setup handlers for all the messages received from the miner */
@@ -48,20 +49,22 @@ func LatestFinalizedBlockHandler(ctx context.Context, r *http.Request) (interfac
 	nodeIndex := node.Self.SetIndex
 	sc := GetSharderChain()
 	lfb := sc.LatestFinalizedBlock
-	if nodeIndex%3 == 0 {
-		// send the right block
-		return lfb, nil
-	}
 
 	if nodeIndex%3 == 1 {
 		// send old block
 		roundNumber := lfb.Round - 10
 		r1, err := sc.GetRoundFromStore(ctx, roundNumber)
 		if err == nil {
-			return r1.Block, nil
+			bHash := r1.BlockHash
+			b, err := sc.GetBlockFromHash(ctx, bHash, roundNumber)
+			if err == nil {
+				return b, nil
+			} else {
+				Logger.Error("could not retrieve block from store", zap.Int64("round", roundNumber), zap.String("hash", bHash))
+				return nil, err
+			}
 		} else {
 			Logger.Error("could not retrieve round from store", zap.Int64("round", roundNumber))
-			return nil, err
 		}
 	}
 
@@ -69,7 +72,11 @@ func LatestFinalizedBlockHandler(ctx context.Context, r *http.Request) (interfac
 		//send corrupt block
 		b := lfb
 		b.CreationDate = common.Now()
+		b.Hash = b.ComputeHash()
 		return b, nil
 	}
+
+	//otherwise send the right block
 	return lfb, nil
+
 }

@@ -210,8 +210,7 @@ func initWorkers(ctx context.Context) {
 func StartProtocol(ctx context.Context) {
 	mc := miner.GetMinerChain()
 
-	//TODO - do a min of 1 round of status monitoring 
-	time.Sleep(2 * time.Second)
+	mc.Sharders.OneTimeStatusMonitor(ctx)
 	lfBlocks := mc.GetLatestFinalizedBlockFromSharder(ctx)
 
 	var lfb *block.Block
@@ -224,7 +223,6 @@ func StartProtocol(ctx context.Context) {
 	sr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 	if lfb != nil {
 		mc.SetLatestFinalizedBlock(ctx, lfb)
-		//Is this the correct way to add a round?
 		sr.Number = lfb.Round + 1
 		sr.RandomSeed = rand.New(rand.NewSource(lfb.RoundRandomSeed)).Int63()
 	} else {
@@ -241,10 +239,6 @@ func StartProtocol(ctx context.Context) {
 		for ts := range ticker.C {
 			active := mc.Miners.GetActiveCount()
 			Logger.Info("waiting for sufficient active nodes", zap.Time("ts", ts), zap.Int("active", active))
-			//This condition is no more valid - once we have miner starting from the middle
-			/* if mc.CurrentRound != 0 {
-				break
-			} */
 			if mc.CanStartNetwork() {
 				break
 			}
@@ -255,10 +249,7 @@ func StartProtocol(ctx context.Context) {
 	}
 	msg := miner.NewBlockMessage(miner.MessageStartRound, node.Self.Node, msr, nil)
 	msgChannel := mc.GetBlockMessageChannel()
-	//This condition is no more valid - once we have miner starting from the middle
-	//if mc.CurrentRound == 0 {
 	Logger.Info("starting the blockchain ...")
 	msgChannel <- msg
 	mc.SendRoundStart(common.GetRootContext(), sr)
-	//}
 }
