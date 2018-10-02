@@ -78,24 +78,23 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 	if lfb.Hash == c.LatestFinalizedBlock.Hash {
 		return
 	}
-
 	if lfb.Round <= c.LatestFinalizedBlock.Round {
 		b := c.commonAncestor(ctx, c.LatestFinalizedBlock, lfb)
 		if b != nil {
 			// Recovering from incorrectly finalized block
-			Logger.Error("finalize round - rolling back finalized block",
-				zap.Int64("cf_round", c.LatestFinalizedBlock.Round), zap.String("cf_block", c.LatestFinalizedBlock.Hash), zap.String("cf_prev_block", c.LatestFinalizedBlock.PrevHash),
-				zap.Int64("lf_round", lfb.Round), zap.String("lf_block", lfb.Hash), zap.String("lf_prev_block", lfb.PrevHash),
-				zap.Int64("nf_round", b.Round), zap.String("nf_block", b.Hash), zap.String("nf_prev_block", b.PrevHash))
 			c.RollbackCount++
 			rl := c.LatestFinalizedBlock.Round - b.Round
 			if c.LongestRollbackLength < int8(rl) {
 				c.LongestRollbackLength = int8(rl)
 			}
-			c.LatestFinalizedBlock = b
-			if b == lfb {
-				return
+			Logger.Error("finalize round - rolling back finalized block",
+				zap.Int64("cf_round", c.LatestFinalizedBlock.Round), zap.String("cf_block", c.LatestFinalizedBlock.Hash), zap.String("cf_prev_block", c.LatestFinalizedBlock.PrevHash), zap.Int64("nf_round", b.Round), zap.String("nf_block", b.Hash))
+			for cfb := c.LatestFinalizedBlock.PrevBlock; cfb != nil && cfb != b; cfb = cfb.PrevBlock {
+				Logger.Error("finalize round - rolling back finalized block -> ",
+					zap.Int64("round", cfb.Round), zap.String("block", cfb.Hash), zap.Int64("nf_round", b.Round), zap.String("nf_block", b.Hash))
 			}
+			c.LatestFinalizedBlock = b
+			return
 		} else {
 			Logger.Error("finalize round - missing common ancestor", zap.Int64("cf_round", c.LatestFinalizedBlock.Round), zap.String("cf_block", c.LatestFinalizedBlock.Hash), zap.Int64("nf_round", lfb.Round), zap.String("nf_block", lfb.Hash))
 		}
