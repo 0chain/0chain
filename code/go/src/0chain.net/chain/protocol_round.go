@@ -89,8 +89,8 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 				zap.Int64("nf_round", b.Round), zap.String("nf_block", b.Hash), zap.String("nf_prev_block", b.PrevHash))
 			c.RollbackCount++
 			rl := c.LatestFinalizedBlock.Round - b.Round
-			if c.LongestRollbackLength < rl {
-				c.LongestRollbackLength = rl
+			if c.LongestRollbackLength < int8(rl) {
+				c.LongestRollbackLength = int8(rl)
 			}
 			c.LatestFinalizedBlock = b
 			if b == lfb {
