@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/smartcontract"
 	metrics "github.com/rcrowley/go-metrics"
 
 	"0chain.net/chain"
@@ -36,6 +37,11 @@ func init() {
 /*StartRound - start a new round */
 func (mc *Chain) StartRound(ctx context.Context, r *Round) {
 	mc.AddRound(r)
+}
+
+func (mc *Chain) executeSmartContract(ctx context.Context, t *transaction.Transaction) (string, error) {
+	output, err := smartcontract.ExecuteSmartContract(ctx, t)
+	return output, err
 }
 
 /*GenerateBlock - This works on generating a block
@@ -82,6 +88,18 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 				ierr = err
 			}
 			return true
+		}
+		if txn.TransactionType == transaction.TxnTypeSmartContract {
+			output, err := mc.executeSmartContract(ctx, txn)
+			if err != nil {
+				invalidTxns = append(invalidTxns, qe)
+				Logger.Error("Smart contract execution returned error", zap.Any("error", err), zap.Any("entity", qe), zap.Any("output", output))
+				return true
+			}
+			txn.TransactionOutput = output
+			txn.OutputHash = txn.ComputeOutputHash()
+
+			Logger.Info("SC executed for transaction: ", zap.String("txn", txn.Hash), zap.String("output_hash", txn.OutputHash), zap.String("txn_output", txn.TransactionOutput))
 		}
 		if !mc.UpdateState(b, txn) {
 			failedStateCount++
@@ -187,6 +205,26 @@ func (mc *Chain) UpdatePendingBlock(ctx context.Context, b *block.Block, txns []
 	transactionMetadataProvider.GetStore().MultiAddToCollection(ctx, transactionMetadataProvider, txns)
 }
 
+func (mc *Chain) executeSmartContracts(ctx context.Context, b *block.Block) error {
+	for _, txn := range b.Txns {
+		if txn.TransactionType == transaction.TxnTypeSmartContract {
+			output, err := mc.executeSmartContract(ctx, txn)
+			if err != nil {
+				Logger.Error("Smart contract execution returned error", zap.Any("error", err), zap.Any("txn", txn), zap.Any("output", output))
+				return common.NewError("smart_contract_verification_failed", "Smart Contract execution failed during verification")
+			}
+			prevOutput := txn.TransactionOutput
+			txn.TransactionOutput = output
+			err = txn.VerifyOutputHash(ctx)
+			if err != nil {
+				Logger.Error("Smart contract output verification failed", zap.Any("error", err), zap.Any("prev_output", prevOutput), zap.Any("current_output", output))
+				return common.NewError("txn_output_verification_failed", "Transaction output hash verification failed")
+			}
+		}
+	}
+	return nil
+}
+
 /*VerifyBlock - given a set of transaction ids within a block, validate the block */
 func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockVerificationTicket, error) {
 	start := time.Now()
@@ -199,6 +237,10 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockV
 		return nil, chain.ErrPreviousBlockUnavailable
 	}
 	err = mc.ValidateTransactions(ctx, b)
+	if err != nil {
+		return nil, err
+	}
+	err = mc.executeSmartContracts(ctx, b)
 	if err != nil {
 		return nil, err
 	}
@@ -247,6 +289,7 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 				validChannel <- false
 				return
 			}
+
 			err := txn.Validate(ctx)
 			if err != nil {
 				cancel = true
