@@ -103,6 +103,8 @@ type Chain struct {
 	stakeMutex  *sync.Mutex
 
 	nodePoolScorer node.PoolScorer
+
+	GenerateTimeout int `json:"-"`
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl

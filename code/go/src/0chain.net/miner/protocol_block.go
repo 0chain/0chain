@@ -42,7 +42,7 @@ func (mc *Chain) StartRound(ctx context.Context, r *Round) {
 * The context should be a background context which can be used to stop this logic if there is a new
 * block published while working on this
  */
-func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.BlockStateHandler) error {
+func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.BlockStateHandler, waitOver bool) error {
 	clients := make(map[string]*client.Client)
 	b.Txns = make([]*transaction.Transaction, mc.BlockSize)
 	//wasting this because []interface{} != []*transaction.Transaction in Go
@@ -128,7 +128,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	}
 	blockSize := idx
 	if blockSize != mc.BlockSize {
-		if blockSize == 0 || !hasOwnerTxn {
+		if blockSize == 0 || !waitOver {
 			b.Txns = nil
 			Logger.Debug("generate block (insufficient txns)", zap.Int64("round", b.Round), zap.Int32("iteration_count", count), zap.Int32("block_size", blockSize))
 			return common.NewError(InsufficientTxns, fmt.Sprintf("not sufficient txns to make a block yet for round %v (iterated %v,block_size %v,state failure %v, invalid %v)", b.Round, count, blockSize, failedStateCount, len(invalidTxns)))

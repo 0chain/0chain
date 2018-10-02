@@ -41,6 +41,8 @@ server_chain:
     verification_tickets_to: generator # generator or all_miners
   state:
     prune_below_count: 100 # rounds
+  generate_timeout: 180 # milliseconds
+  txn_timeout: 20 # seconds
 
 network:
   relay_time: 180 # milliseconds

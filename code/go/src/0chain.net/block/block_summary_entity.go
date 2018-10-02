@@ -20,6 +20,7 @@ type BlockSummary struct {
 	MerkleTreeRoot        string   `json:"merkle_tree_root"`
 	ClientStateHash       util.Key `json:"state_hash"`
 	ReceiptMerkleTreeRoot string   `json:"receipt_merkle_tree_root"`
+	NumTxns               int      `json:"num_txns"`
 }
 
 /*SetupBlockSummaryDB - sets up the block summary database */

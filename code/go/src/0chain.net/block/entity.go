@@ -317,6 +317,7 @@ func (b *Block) GetSummary() *BlockSummary {
 	bs.MerkleTreeRoot = b.GetMerkleTree().GetRoot()
 	bs.ClientStateHash = b.ClientStateHash
 	bs.ReceiptMerkleTreeRoot = b.GetReceiptsMerkleTree().GetRoot()
+	bs.NumTxns = len(b.Txns)
 	return bs
 }
 

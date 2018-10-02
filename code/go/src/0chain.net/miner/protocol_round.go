@@ -110,14 +110,19 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	b.MinerID = node.Self.GetKey()
 	mc.SetPreviousBlock(ctx, r, b, pb)
 	b.SetStateDB(pb)
+	waitTime := time.Now()
+	waitOver := false
 	for true {
+		if time.Now().Sub(waitTime) > time.Millisecond*time.Duration(mc.GenerateTimeout) {
+			waitOver = true
+		}
 		if mc.CurrentRound > b.Round {
-			Logger.Debug("generate block (round mismatch)", zap.Any("round", roundNumber), zap.Any("current_round", mc.CurrentRound))
+			Logger.Debug("generate block (round mismatch)", zap.Any("round", r.Number), zap.Any("current_round", mc.CurrentRound))
 			return nil, ErrRoundMismatch
 		}
 		txnCount := transaction.TransactionCount
 		b.ClientState.ResetChangeCollector(b.PrevBlock.ClientStateHash)
-		err := mc.GenerateBlock(ctx, b, mc)
+		err := mc.GenerateBlock(ctx, b, mc, waitOver)
 		if err != nil {
 			cerr, ok := err.(*common.Error)
 			if ok {

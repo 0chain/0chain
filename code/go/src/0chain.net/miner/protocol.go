@@ -47,7 +47,7 @@ type ProtocolRound interface {
 
 /*ProtocolBlock - this is the interface that deals with the block level logic of the protocol */
 type ProtocolBlock interface {
-	GenerateBlock(ctx context.Context, b *block.Block, bsh chain.BlockStateHandler) error
+	GenerateBlock(ctx context.Context, b *block.Block, bsh chain.BlockStateHandler, waitOver bool) error
 	ValidateMagicBlock(ctx context.Context, b *block.Block) bool
 	VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockVerificationTicket, error)
 
