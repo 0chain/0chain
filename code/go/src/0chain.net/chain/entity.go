@@ -272,9 +272,6 @@ func (c *Chain) AddGenesisBlock(b *block.Block) {
 
 /*AddBlock - adds a block to the cache */
 func (c *Chain) AddBlock(b *block.Block) *block.Block {
-	if b.Round < c.LatestFinalizedBlock.Round {
-		return nil
-	}
 	c.blocksMutex.Lock()
 	defer c.blocksMutex.Unlock()
 	return c.addBlock(b)
