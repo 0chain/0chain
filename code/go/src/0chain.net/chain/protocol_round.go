@@ -189,10 +189,10 @@ func (c *Chain) GetNotarizedBlockForRound(r round.RoundI) *block.Block {
 			return nil, err
 		}
 		//TODO: this may not be the best round block or the best chain weight block. Do we do that extra work?
-		c.AddBlock(b)
-		r.AddNotarizedBlock(b)
+		b = c.AddBlock(b)
+		b = r.AddNotarizedBlock(b)
 		Logger.Info("get notarized block", zap.Int64("round", roundNumber), zap.String("block", b.Hash), zap.String("state", util.ToHex(b.ClientStateHash)), zap.String("prev_block", b.PrevHash))
-		return nil, nil
+		return b, nil
 	}
 	n2n := c.Miners
 	n2n.RequestEntity(ctx, nbrequestor, params, handler)
@@ -230,7 +230,7 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 			// TODO: what if the round object doesn't exist
 		}
 		if r != nil {
-			r.AddNotarizedBlock(b)
+			b = r.AddNotarizedBlock(b)
 		}
 		Logger.Info("get notarized block", zap.Int64("round", nb.Round), zap.String("block", nb.Hash))
 		return b, nil

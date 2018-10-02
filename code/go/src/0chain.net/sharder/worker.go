@@ -57,7 +57,9 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 		Logger.Error("block validation", zap.Any("round", b.Round), zap.Any("hash", b.Hash), zap.Error(err))
 		return
 	}
-	sc.AddBlock(b)
+	if sc.AddBlock(b) != b {
+		return
+	}
 	er := sc.GetRound(b.Round)
 	if er != nil {
 		if sc.BlocksToSharder == chain.FINALIZED {
