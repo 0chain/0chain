@@ -285,6 +285,8 @@ func (c *Chain) addBlock(b *block.Block) *block.Block {
 	if b.PrevBlock == nil {
 		if pb, ok := c.blocks[b.PrevHash]; ok {
 			b.SetPreviousBlock(pb)
+		} else {
+			go c.GetPreviousBlock(common.GetRootContext(), b)
 		}
 	}
 	return b
