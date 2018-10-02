@@ -2,20 +2,15 @@
 
 package model
 
-
 type ID int
 
-type SignShare interface {}
+type SignShare interface{}
 
-type GroupSig interface {}
+type GroupSig interface{}
 
 type Party interface {
-
-func SignMsg() SignShare
-func VerifySign(from ID, share SignShare) bool
-func RecoverGroupSig(from []ID, shares []SignShare) GroupSig
-func VerifyGroupSig(GroupSig) bool
-
+	SignMsg() SignShare
+	VerifySign(from ID, share SignShare) bool
+	RecoverGroupSig(from []ID, shares []SignShare) GroupSig
+	VerifyGroupSig(GroupSig) bool
 }
-
-
