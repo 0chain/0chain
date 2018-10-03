@@ -24,8 +24,11 @@ func (c *Chain) ComputeFinalizedBlock(ctx context.Context, r round.RoundI) *bloc
 		ntips := make([]*block.Block, 0, 1)
 		for _, b := range tips {
 			if b.PrevBlock == nil {
-				Logger.Error("compute finalized block: null prev block", zap.Int64("round", roundNumber), zap.Int64("block_round", b.Round), zap.String("block", b.Hash))
-				return nil
+				pb := c.GetPreviousBlock(ctx, b)
+				if pb == nil {
+					Logger.Error("compute finalized block: null prev block", zap.Int64("round", roundNumber), zap.Int64("block_round", b.Round), zap.String("block", b.Hash))
+					return nil
+				}
 			}
 			found := false
 			for _, nb := range ntips {
@@ -154,11 +157,13 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 	Logger.Info("fetch previous block", zap.Int64("round", b.Round), zap.String("block", b.Hash))
 	cb := b
 	for idx := 0; idx < 10; idx++ {
-		Logger.Info("fetching previous block", zap.Int("idx", idx), zap.Int64("cround", cb.Round), zap.String("cblock", cb.Hash), zap.String("prev_block", cb.PrevHash))
-		cb = c.GetNotarizedBlock(cb.PrevHash)
-		if cb == nil {
-			break
+		Logger.Info("fetching previous block", zap.Int("idx", idx), zap.Int64("cround", cb.Round), zap.String("cblock", cb.Hash), zap.String("cprev_block", cb.PrevHash))
+		nb := c.GetNotarizedBlock(cb.PrevHash)
+		if nb == nil {
+			Logger.Error("get previous block (unable to get prior blocks)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("cround", cb.Round), zap.String("cblock", cb.Hash), zap.String("cprev_block", cb.PrevHash))
+			return nil
 		}
+		cb = nb
 		blocks = append(blocks, cb)
 		pb, err = c.GetBlock(ctx, cb.PrevHash)
 		if pb != nil {
@@ -166,11 +171,7 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 			break
 		}
 	}
-	if cb == nil {
-		Logger.Error("get previous block (unable to get prior blocks)", zap.Int64("round", b.Round), zap.String("block", b.Hash))
-		return nil
-	}
-	if cb.PrevBlock == nil {
+	if cb.PrevBlock == nil { // This happens after fetching as far as per the previous for loop and still not having the prior block
 		Logger.Error("get previous block (missing continuity)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("oldest_fetched_round", cb.Round), zap.String("oldest_fetched_block", cb.Hash), zap.String("missing_prior_block", cb.PrevHash))
 		return nil
 	}
