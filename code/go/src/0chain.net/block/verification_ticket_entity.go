@@ -21,6 +21,7 @@ type VerificationTicket struct {
 type BlockVerificationTicket struct {
 	datastore.NOIDField
 	VerificationTicket
+	Round   int64         `json:"round"`
 	BlockID datastore.Key `json:"block_id"`
 }
 
