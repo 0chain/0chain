@@ -111,7 +111,7 @@ func (sc *Chain) BlockStorageWorker(ctx context.Context) {
 				if !sc.CanStoreBlock(r, b, self.Node) {
 					err = blockstore.GetStore().DeleteBlock(b)
 					if err != nil {
-						Logger.Error("failed to delete block from file system", zap.String("blockhash", b.Hash), zap.Error(err))
+						Logger.Error("failed to delete block from file system", zap.Any("round", b.Round), zap.String("blockhash", b.Hash), zap.Error(err))
 					}
 				}
 			}

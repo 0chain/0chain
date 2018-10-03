@@ -88,10 +88,10 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 				c.LongestRollbackLength = int8(rl)
 			}
 			Logger.Error("finalize round - rolling back finalized block",
-				zap.Int64("cf_round", c.LatestFinalizedBlock.Round), zap.String("cf_block", c.LatestFinalizedBlock.Hash), zap.String("cf_prev_block", c.LatestFinalizedBlock.PrevHash), zap.Int64("nf_round", b.Round), zap.String("nf_block", b.Hash))
+				zap.Int64("cf_round", c.LatestFinalizedBlock.Round), zap.String("cf_block", c.LatestFinalizedBlock.Hash), zap.String("cf_prev_block", c.LatestFinalizedBlock.PrevHash),
+				zap.Int64("nf_round", lfb.Round), zap.String("nf_block", lfb.Hash), zap.Int64("caf_round", b.Round), zap.String("caf_block", b.Hash))
 			for cfb := c.LatestFinalizedBlock.PrevBlock; cfb != nil && cfb != b; cfb = cfb.PrevBlock {
-				Logger.Error("finalize round - rolling back finalized block -> ",
-					zap.Int64("round", cfb.Round), zap.String("block", cfb.Hash), zap.Int64("nf_round", b.Round), zap.String("nf_block", b.Hash))
+				Logger.Error("finalize round - rolling back finalized block -> ", zap.Int64("round", cfb.Round), zap.String("block", cfb.Hash))
 			}
 			c.LatestFinalizedBlock = b
 			return
@@ -242,7 +242,7 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 		if r != nil {
 			b = r.AddNotarizedBlock(b)
 		}
-		Logger.Info("get notarized block", zap.Int64("round", nb.Round), zap.String("block", nb.Hash))
+		Logger.Info("get notarized block", zap.Int64("round", b.Round), zap.String("block", b.Hash))
 		return b, nil
 	}
 	n2n := c.Miners
