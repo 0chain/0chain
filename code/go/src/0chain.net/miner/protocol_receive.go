@@ -54,7 +54,7 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *Block
 				Logger.Info("verification message (no block) retrying", zap.String("block", msg.BlockVerificationTicket.BlockID), zap.Int8("retry_count", msg.RetryCount), zap.Error(err))
 				msg.Retry(mc.BlockMessageChannel)
 			} else {
-				Logger.Error("verification message (no block)", zap.Int64("round", b.Round), zap.String("block", msg.BlockVerificationTicket.BlockID), zap.Int8("retry_count", msg.RetryCount), zap.Error(err))
+				Logger.Error("verification message (no block)", zap.Int64("round", msg.BlockVerificationTicket.Round), zap.String("block", msg.BlockVerificationTicket.BlockID), zap.Int8("retry_count", msg.RetryCount), zap.Error(err))
 			}
 			return
 		}
