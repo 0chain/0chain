@@ -7,6 +7,8 @@ import (
 	"0chain.net/transaction"
 )
 
+const Seperator = ":"
+
 type SmartContract struct {
 	db *smartcontractstate.NodeDB
 	t  *transaction.Transaction
