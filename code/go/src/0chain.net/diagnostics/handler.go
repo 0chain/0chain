@@ -37,6 +37,7 @@ func GetStatistics(c *chain.Chain, timer metrics.Timer, scaleBy float64) interfa
 	stats["mean"] = scale(timer.Mean())
 	stats["std_dev"] = scale(timer.StdDev())
 	stats["max"] = scale(float64(timer.Max()))
+	stats["total_txns"] = c.TotalTxns
 
 	for idx, p := range percentiles {
 		stats[fmt.Sprintf("percentile_%v", 100*p)] = scale(pvals[idx])
