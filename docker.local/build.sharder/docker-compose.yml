@@ -1,32 +1,26 @@
 version: '3'
 services:
-  cassandra:
-    image: cassandra:latest
-    networks:
-      - default
-    volumes:
-      - ../sharder${SHARDER}/data/cassandra:/var/lib/cassandra
+  scylla:
+    image: scylladb/scylla:2.3.0
     ports:
       - "9042:9042"
-    healthcheck:
-      test: ["CMD-SHELL", "[ $$(nodetool statusgossip) = running ]"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+    volumes:
+      - ../sharder${SHARDER}/data/cassandra:/var/lib/scylla/data
 
   cassandra-init:
     image: cassandra:latest
     volumes:
       - ../../bin:/0chain/bin
       - ../../sql:/0chain/sql
-    command: bash /0chain/bin/cassandra-init.sh
+    command: bash /0chain/bin/scylla-init.sh
     links:
-      - cassandra:cassandra
+      - scylla:scylla
     restart: on-failure
 
   sharder:
     environment:
       - DOCKER=true
+      - CASSANDRA_CLUSTER=scylla
     depends_on:
       - cassandra-init
     links:
