@@ -7,6 +7,9 @@ import (
 	"0chain.net/encryption"
 	"0chain.net/smartcontractinterface"
 	"0chain.net/transaction"
+
+	. "0chain.net/logging"
+	"go.uber.org/zap"
 )
 
 const Seperator = smartcontractinterface.Seperator
@@ -99,6 +102,7 @@ func (sc *StorageSmartContract) OpenConnectionWithBlobber(t *transaction.Transac
 	clientBlobberKey := generateClientBlobberKey(openConnection.AllocationID, openConnection.ClientID, openConnection.BlobberID)
 	//check for existing open connections
 	if _, ok := allOpenConnectionsMap[clientBlobberKey]; ok {
+		Logger.Error("An open connection to the blobber already exists from this client", zap.Any("clientBlobberKey", clientBlobberKey), zap.Any("openConnection", allOpenConnectionsMap[clientBlobberKey]))
 		return "", common.NewError("connection_to_blobber_exists", "An open connection to the blobber already exists from this client")
 	}
 
@@ -131,6 +135,7 @@ func (sc *StorageSmartContract) CloseConnectionWithBlobber(t *transaction.Transa
 	clientBlobberKey := generateClientBlobberKey(openConnection.AllocationID, openConnection.ClientID, openConnection.BlobberID)
 	//check for existing open connections
 	if _, ok := allOpenConnectionsMap[clientBlobberKey]; !ok {
+		Logger.Error("An open connection to the blobber from this client could not be found", zap.Any("clientBlobberKey", clientBlobberKey), zap.Any("openConnection", allOpenConnectionsMap[clientBlobberKey]))
 		return "", common.NewError("no_connection_to_blobber_exists", "An open connection to the blobber from this client could not be found")
 	}
 
@@ -144,6 +149,7 @@ func (sc *StorageSmartContract) CloseConnectionWithBlobber(t *transaction.Transa
 	}
 
 	if storedOpenConnection.AllocationID != openConnection.AllocationID || storedOpenConnection.TransactionID != openConnection.TransactionID || storedOpenConnection.BlobberID != openConnection.BlobberID || storedOpenConnection.ClientID != openConnection.ClientID {
+		Logger.Error("An open connection to the blobber from this client could not be found", zap.Any("clientBlobberKey", clientBlobberKey), zap.Any("storedOpenConnection", storedOpenConnection), zap.Any("openConnection", openConnection))
 		return "", common.NewError("invalid_input_data", "Invalid input data to close the connection")
 	}
 	//check for blobber has accepted more data
