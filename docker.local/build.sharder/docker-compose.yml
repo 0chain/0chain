@@ -6,7 +6,6 @@ services:
       - default
     volumes:
       - ../sharder${SHARDER}/data/cassandra:/var/lib/cassandra
-      - ../../sql:/0chain/sql
     ports:
       - "9042:9042"
     healthcheck:
@@ -18,10 +17,9 @@ services:
   cassandra-init:
     image: cassandra:latest
     volumes:
-      - ../config/cassandra:/0chain/cassandra
+      - ../../bin:/0chain/bin
       - ../../sql:/0chain/sql
-
-    command: bash /0chain/cassandra/cassandra-init.sh
+    command: bash /0chain/bin/cassandra-init.sh
     links:
       - cassandra:cassandra
     restart: on-failure
@@ -57,3 +55,4 @@ networks:
 volumes:
   data:
   config:
+  bin:
