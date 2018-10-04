@@ -15,7 +15,9 @@ type SignI interface{}
 type SimpleDKG interface {
 	ComputeKeyShare(forIDs []PartyId) ([]Key, error)
 	GetKeyShareForOther(to PartyId) *DKGKeyShare
-	ReceiveKeyShare(from PartyId, d *DKGKeyShare) error
+	ReceiveAndValidateShare(from PartyId, d *DKGKeyShare) error
+	ReceiveKeyShareFromParty(d *DKGKeyShare) error
+	IsDone() bool
 }
 
 type DKGKeyShare struct {
