@@ -30,12 +30,8 @@ services:
       - scylla:scylla
     restart: on-failure
 
-
     #Start under user 0chain
     user: 2000:2000
-    command: bash /0chain/bin/scylla-init.sh
-    links:
-      - scylla:scylla
 
     #uncomment line below for automatic restart
     #restart: on-failure:10
