@@ -15,6 +15,16 @@ import (
 //KeySpace - the keyspace usef for the 0chain data
 var KeySpace = "zerochain"
 
+//ClusterName - name of the cluster used for cassandra or compatible service
+var ClusterName = "cassandra"
+
+func init() {
+	cname := os.Getenv("CASSANDRA_CLUSTER")
+	if cname != "" {
+		ClusterName = cname
+	}
+}
+
 // Session holds our connection to Cassandra
 var Session *gocql.Session
 
@@ -23,7 +33,7 @@ func InitSession() {
 	var err error
 	var cluster *gocql.ClusterConfig
 	if os.Getenv("DOCKER") != "" {
-		cluster = gocql.NewCluster("cassandra")
+		cluster = gocql.NewCluster(ClusterName)
 	} else {
 		cluster = gocql.NewCluster("127.0.0.1")
 	}
