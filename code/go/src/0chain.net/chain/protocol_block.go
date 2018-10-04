@@ -3,6 +3,7 @@ package chain
 import (
 	"context"
 
+	"0chain.net/datastore"
 	"0chain.net/node"
 
 	"0chain.net/block"
@@ -11,51 +12,6 @@ import (
 	"0chain.net/round"
 	"go.uber.org/zap"
 )
-
-/*ComputeFinalizedBlock - compute the block that has been finalized */
-func (c *Chain) ComputeFinalizedBlock(ctx context.Context, r round.RoundI) *block.Block {
-	roundNumber := r.GetRoundNumber()
-	tips := r.GetNotarizedBlocks()
-	if len(tips) == 0 {
-		Logger.Error("compute finalize block: no notarized blocks", zap.Int64("round", r.GetRoundNumber()))
-		return nil
-	}
-	for true {
-		ntips := make([]*block.Block, 0, 1)
-		for _, b := range tips {
-			if b.PrevBlock == nil {
-				pb := c.GetPreviousBlock(ctx, b)
-				if pb == nil {
-					Logger.Error("compute finalized block: null prev block", zap.Int64("round", roundNumber), zap.Int64("block_round", b.Round), zap.String("block", b.Hash))
-					return nil
-				}
-			}
-			found := false
-			for _, nb := range ntips {
-				if b.PrevHash == nb.Hash {
-					found = true
-					break
-				}
-			}
-			if found {
-				continue
-			}
-			ntips = append(ntips, b.PrevBlock)
-		}
-		tips = ntips
-		if len(tips) == 1 {
-			break
-		}
-	}
-	if len(tips) != 1 {
-		return nil
-	}
-	fb := tips[0]
-	if fb.Round == r.GetRoundNumber() {
-		return nil
-	}
-	return fb
-}
 
 /*VerifyTicket - verify the ticket */
 func (c *Chain) VerifyTicket(ctx context.Context, blockHash string, bvt *block.VerificationTicket) error {
@@ -119,6 +75,51 @@ func (c *Chain) IsBlockNotarized(ctx context.Context, b *block.Block) bool {
 	return true
 }
 
+/*ComputeFinalizedBlock - compute the block that has been finalized */
+func (c *Chain) ComputeFinalizedBlock(ctx context.Context, r round.RoundI) *block.Block {
+	roundNumber := r.GetRoundNumber()
+	tips := r.GetNotarizedBlocks()
+	if len(tips) == 0 {
+		Logger.Error("compute finalize block: no notarized blocks", zap.Int64("round", r.GetRoundNumber()))
+		return nil
+	}
+	for true {
+		ntips := make([]*block.Block, 0, 1)
+		for _, b := range tips {
+			if b.PrevBlock == nil {
+				pb := c.GetPreviousBlock(ctx, b)
+				if pb == nil {
+					Logger.Error("compute finalized block: null prev block", zap.Int64("round", roundNumber), zap.Int64("block_round", b.Round), zap.String("block", b.Hash))
+					return nil
+				}
+			}
+			found := false
+			for _, nb := range ntips {
+				if b.PrevHash == nb.Hash {
+					found = true
+					break
+				}
+			}
+			if found {
+				continue
+			}
+			ntips = append(ntips, b.PrevBlock)
+		}
+		tips = ntips
+		if len(tips) == 1 {
+			break
+		}
+	}
+	if len(tips) != 1 {
+		return nil
+	}
+	fb := tips[0]
+	if fb.Round == r.GetRoundNumber() {
+		return nil
+	}
+	return fb
+}
+
 /*UpdateNodeState - based on the incoming valid blocks, update the nodes that notarized the block to be active
  Useful to increase the speed of node status discovery which increases the reliablity of the network
 Simple 3 miner scenario :
@@ -141,6 +142,47 @@ func (c *Chain) UpdateNodeState(b *block.Block) {
 			signer.Status = node.NodeStatusActive
 		}
 	}
+}
+
+/*GetNotarizedBlock - get a notarized block for a round */
+func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
+	nbrequestor := MinerNotarizedBlockRequestor
+	cround := c.CurrentRound
+	params := map[string]string{"block": blockHash}
+	ctx := common.GetRootContext()
+	var b *block.Block
+	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+		eb, err := c.GetBlock(ctx, blockHash)
+		if err == nil {
+			return eb, nil
+		}
+		Logger.Info("get notarized block", zap.String("block", blockHash), zap.Int64("cround", cround), zap.Int64("current_round", c.CurrentRound))
+		nb, ok := entity.(*block.Block)
+		if !ok {
+			return nil, common.NewError("invalid_entity", "Invalid entity")
+		}
+		if err := c.VerifyNotarization(ctx, nb.Hash, nb.VerificationTickets); err != nil {
+			Logger.Error("get notarized block - validate notarization", zap.String("block", blockHash), zap.Error(err))
+			return nil, err
+		}
+		if err := nb.Validate(ctx); err != nil {
+			Logger.Error("get notarized block - validate", zap.String("block", blockHash), zap.Any("block_obj", nb), zap.Error(err))
+			return nil, err
+		}
+		b = c.AddBlock(nb)
+		r := c.GetRound(b.Round)
+		if r == nil {
+			// TODO: what if the round object doesn't exist
+		}
+		if r != nil {
+			b = r.AddNotarizedBlock(b)
+		}
+		Logger.Info("get notarized block", zap.Int64("round", b.Round), zap.String("block", b.Hash))
+		return b, nil
+	}
+	n2n := c.Miners
+	n2n.RequestEntity(ctx, nbrequestor, params, handler)
+	return b
 }
 
 /*GetPreviousBlock - get the previous block from the network */

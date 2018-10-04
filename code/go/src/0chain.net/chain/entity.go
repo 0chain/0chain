@@ -356,6 +356,11 @@ func (c *Chain) DeleteBlocks(blocks []*block.Block) {
 	}
 }
 
+/*PruneChain - prunes the chain */
+func (c *Chain) PruneChain(ctx context.Context, b *block.Block) {
+	c.DeleteBlocksBelowRound(b.Round - 50)
+}
+
 /*ValidateMagicBlock - validate the block for a given round has the right magic block */
 func (c *Chain) ValidateMagicBlock(ctx context.Context, b *block.Block) bool {
 	//TODO: This needs to take the round number into account and go backwards as needed to validate
