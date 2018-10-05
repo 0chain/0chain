@@ -71,8 +71,7 @@ type Block struct {
 	RoundRank   int           `json:"-"` // rank of the block in the round it belongs to
 	PrevBlock   *Block        `json:"-"`
 
-	TxnsMap         map[string]bool `json:"-"`
-	RunningTxnCount int64           `json:"running_txn_count"`
+	TxnsMap map[string]bool `json:"-"`
 
 	ClientState util.MerklePatriciaTrieI `json:"-"`
 	stateStatus int8
