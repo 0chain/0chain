@@ -154,11 +154,16 @@ func printNodePool(w http.ResponseWriter, np *node.Pool) {
 	fmt.Fprintf(w, "<style>\n")
 	fmt.Fprintf(w, ".number { text-align: right; }\n")
 	fmt.Fprintf(w, "table, td, th { border: 1px solid black; }\n")
+	fmt.Fprintf(w, ".inactive { background-color: #eecccc; }\n")
 	fmt.Fprintf(w, "</style>")
 	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr><td>Set Index</td><td>Node</td><td>Sent</td><td>Send Errors</td><td>Received</td><td>Last Active</td><td>Small Msg Time</td><td>Large Msg Time</td><td>Description</td></tr>")
 	for _, nd := range nodes {
-		fmt.Fprintf(w, "<tr>")
+		if nd.Status == node.NodeStatusInactive {
+			fmt.Fprintf(w, "<tr class='inactive'>")
+		} else {
+			fmt.Fprintf(w, "<tr>")
+		}
 		fmt.Fprintf(w, "<td>%d</td>", nd.SetIndex)
 		if nd == node.Self.Node {
 			fmt.Fprintf(w, "<td>%v%.3d</td>", nd.GetNodeTypeName(), nd.SetIndex)
