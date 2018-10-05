@@ -7,10 +7,9 @@ import (
 	"0chain.net/block"
 	"0chain.net/common"
 	"0chain.net/datastore"
-	. "0chain.net/logging"
+	//. "0chain.net/logging"
 	"0chain.net/node"
 	"0chain.net/persistencestore"
-	"go.uber.org/zap"
 	//"go.uber.org/zap"
 )
 
@@ -50,7 +49,7 @@ func LatestFinalizedBlockHandler(ctx context.Context, r *http.Request) (interfac
 	sc := GetSharderChain()
 	lfb := sc.LatestFinalizedBlock
 
-	if nodeIndex%3 == 1 {
+	/* if nodeIndex%3 == 1 {
 		// send old block
 		roundNumber := lfb.Round - 10
 		r1, err := sc.GetRoundFromStore(ctx, roundNumber)
@@ -66,9 +65,9 @@ func LatestFinalizedBlockHandler(ctx context.Context, r *http.Request) (interfac
 		} else {
 			Logger.Error("could not retrieve round from store", zap.Int64("round", roundNumber))
 		}
-	}
+	} */
 
-	if nodeIndex%3 == 2 {
+	if nodeIndex%3 == 1 {
 		//send corrupt block
 		b := lfb
 		b.CreationDate = common.Now()
