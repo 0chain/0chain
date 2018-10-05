@@ -7,13 +7,14 @@ services:
     ports:
       - "9042:9042"
     volumes:
-      - ../sharder${SHARDER}/data/cassandra:/var/lib/scylla/data
+      - /0chain_efs/data/scylla:/var/lib/scylla/data
+    command: --developer-mode 0
 
     #uncomment line below for automatic restart
     #restart: on-failure:10
 
     #Do under 0chain id.
-    user: 2000:2000
+    #user: 2000:2000
     healthcheck:
       test: ["CMD-SHELL", "[ $$(nodetool statusgossip) = running ]"]
       interval: 30s
