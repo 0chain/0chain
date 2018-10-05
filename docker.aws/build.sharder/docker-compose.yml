@@ -8,7 +8,6 @@ services:
       - "9042:9042"
     volumes:
       - /0chain_efs/data/scylla:/var/lib/scylla/data
-    command: --developer-mode 0
 
     #uncomment line below for automatic restart
     #restart: on-failure:10
