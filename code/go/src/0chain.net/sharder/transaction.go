@@ -92,7 +92,7 @@ func (sc *Chain) StoreTransactions(ctx context.Context, b *block.Block) error {
 	for tries := 1; tries <= 9; tries++ {
 		err := txnSummaryMetadata.GetStore().MultiWrite(tctx, txnSummaryMetadata, sTxns)
 		if err != nil {
-			delay := 2 * delay
+			delay = 2 * delay
 			Logger.Error("save transactions error", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Int("retry", tries), zap.Duration("delay", delay), zap.Error(err))
 			time.Sleep(delay)
 		} else {
