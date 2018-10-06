@@ -184,7 +184,7 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 		}
 		if b.Round > 1 {
 			if err := mc.VerifyNotarization(ctx, b.PrevHash, b.PrevBlockVerficationTickets); err != nil {
-				Logger.Error("verify round block (prior block verify notarization)", zap.Int64("round", mr.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Error(err))
+				Logger.Error("verify round block (prior block verify notarization)", zap.Int64("round", mr.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Int("pb_v_tickets", len(b.PrevBlockVerficationTickets)), zap.Error(err))
 				return
 			}
 		}
@@ -322,7 +322,13 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r *Round, b *block.Block)
 func (mc *Chain) updatePriorBlock(ctx context.Context, r *round.Round, b *block.Block) {
 	pb := b.PrevBlock
 	notarized := mc.IsBlockNotarized(ctx, pb)
-	pb.MergeVerificationTickets(b.PrevBlockVerficationTickets) // grab any unknown verification tickets of previous block from the current block
+
+	// grab any unknown verification tickets of previous block from the current block
+	pb.MergeVerificationTickets(b.PrevBlockVerficationTickets)
+	if len(pb.VerificationTickets) > len(b.PrevBlockVerficationTickets) {
+		b.PrevBlockVerficationTickets = pb.VerificationTickets
+	}
+
 	if !notarized {
 		pr := mc.GetMinerRound(pb.Round)
 		if pr != nil {
@@ -337,8 +343,7 @@ func (mc *Chain) updatePriorBlock(ctx context.Context, r *round.Round, b *block.
 func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.Block, vt *block.VerificationTicket) {
 	notarized := mc.IsBlockNotarized(ctx, b)
 	//NOTE: We keep collecting verification tickets even if a block is notarized.
-	// This is useful since Dfinity suggest broadcasting the previous notarized block when verifying the current block
-	// If we know how many verifications already exists for a block, we only need to broadcast to the rest. Hence collecting any prior block verifications is OK.
+	// Knowing who all know about a block can be used to optimize other parts of the protocol
 	if !mc.AddVerificationTicket(ctx, b, vt) {
 		return
 	}
