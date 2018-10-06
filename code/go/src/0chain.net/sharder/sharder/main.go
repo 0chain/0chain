@@ -74,7 +74,6 @@ func main() {
 	serverChain := chain.NewChainFromConfig()
 	sharder.SetupSharderChain(serverChain)
 	sc := sharder.GetSharderChain()
-	serverChain = &sharder.GetSharderChain().Chain
 	chain.SetServerChain(serverChain)
 
 	chain.SetNetworkRelayTime(viper.GetDuration("network.relay_time") * time.Millisecond)

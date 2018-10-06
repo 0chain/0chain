@@ -3,7 +3,11 @@ package sharder
 import (
 	"context"
 
+	"0chain.net/chain"
+	"0chain.net/node"
+	"0chain.net/round"
 	"0chain.net/transaction"
+	"0chain.net/util"
 
 	"0chain.net/blockstore"
 	"0chain.net/config"
@@ -22,7 +26,7 @@ func (sc *Chain) UpdatePendingBlock(ctx context.Context, b *block.Block, txns []
 /*UpdateFinalizedBlock - updates the finalized block */
 func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	fr := sc.GetRound(b.Round)
-	Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("lf_round", sc.LatestFinalizedBlock.Round), zap.Any("current_round", sc.CurrentRound), zap.Any("rounds_size", len(sc.rounds)))
+	Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("lf_round", sc.LatestFinalizedBlock.Round), zap.Any("current_round", sc.CurrentRound))
 	if config.Development() {
 		for _, t := range b.Txns {
 			if !t.DebugTxn() {
@@ -39,12 +43,12 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	}
 	if fr != nil {
 		fr.Finalize(b)
-		err := sc.StoreRound(ctx, fr)
+		frImpl, _ := fr.(*round.Round)
+		err := sc.StoreRound(ctx, frImpl)
 		if err != nil {
-			Logger.Error("db error (save round)", zap.Int64("round", fr.Number), zap.Error(err))
+			Logger.Error("db error (save round)", zap.Int64("round", fr.GetRoundNumber()), zap.Error(err))
 		}
-		sc.GetRoundChannel() <- fr
-		sc.DeleteRoundsBelow(ctx, fr.Number)
+		sc.GetRoundChannel() <- frImpl
 	} else {
 		Logger.Debug("round - missed", zap.Int64("round", b.Round))
 	}
@@ -56,4 +60,45 @@ func (sc *Chain) cacheBlockTxns(hash string, txns []*transaction.Transaction) {
 		txnSummary.BlockHash = hash
 		sc.BlockTxnCache.Add(txn.Hash, txnSummary)
 	}
+}
+
+func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
+	eb, err := sc.GetBlock(ctx, b.Hash)
+	if eb != nil {
+		if err == nil {
+			Logger.Debug("block already received", zap.Any("round", b.Round), zap.Any("block", b.Hash))
+			return
+		}
+		Logger.Error("get block", zap.Any("block", b.Hash), zap.Error(err))
+	}
+	if err := sc.VerifyNotarization(ctx, b.Hash, b.VerificationTickets); err != nil {
+		Logger.Error("notarization verification failed", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
+		return
+	}
+	if err := b.Validate(ctx); err != nil {
+		Logger.Error("block validation", zap.Any("round", b.Round), zap.Any("hash", b.Hash), zap.Error(err))
+		return
+	}
+	if sc.AddBlock(b) != b {
+		return
+	}
+	er := sc.GetRound(b.Round)
+	if er != nil {
+		if sc.BlocksToSharder == chain.FINALIZED {
+			nb := er.GetNotarizedBlocks()
+			if len(nb) > 0 {
+				Logger.Error("*** different blocks for the same round ***", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("existing_block", nb[0].Hash))
+			}
+		}
+	} else {
+		r := datastore.GetEntityMetadata("round").Instance().(*round.Round)
+		r.Number = b.Round
+		r.RandomSeed = b.RoundRandomSeed
+		r.ComputeMinerRanks(sc.Miners.Size())
+		er, _ = sc.AddRound(r).(*round.Round)
+	}
+	bNode := node.GetNode(b.MinerID)
+	b.RoundRank = er.GetMinerRank(bNode)
+	Logger.Info("received block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)))
+	sc.AddNotarizedBlock(ctx, er, b)
 }

@@ -42,7 +42,7 @@ type ProtocolRound interface {
 	CollectBlocksForVerification(ctx context.Context, r *Round)
 	CancelRoundVerification(ctx context.Context, r *Round)
 	ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.Block, vt *block.VerificationTicket)
-	FinalizeRound(ctx context.Context, r *round.Round, bsh chain.BlockStateHandler)
+	FinalizeRound(ctx context.Context, r round.RoundI, bsh chain.BlockStateHandler)
 }
 
 /*ProtocolBlock - this is the interface that deals with the block level logic of the protocol */

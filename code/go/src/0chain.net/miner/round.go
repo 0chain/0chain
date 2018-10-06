@@ -26,11 +26,11 @@ type Round struct {
 /*AddBlockToVerify - adds a block to the round. Assumes non-concurrent update */
 func (r *Round) AddBlockToVerify(b *block.Block) {
 	if r.verificationComplete {
-		Logger.Debug("block proposal (verification complete)", zap.Int64("round", r.Number), zap.String("block", b.Hash))
+		Logger.Debug("block proposal (verification complete)", zap.Int64("round", r.GetRoundNumber()), zap.String("block", b.Hash))
 		return
 	}
-	if r.Number != b.Round {
-		Logger.Debug("block proposal (round mismatch)", zap.Int64("round", r.Number), zap.Int64("block_round", b.Round), zap.String("block", b.Hash))
+	if r.GetRoundNumber() != b.Round {
+		Logger.Debug("block proposal (round mismatch)", zap.Int64("round", r.GetRoundNumber()), zap.Int64("block_round", b.Round), zap.String("block", b.Hash))
 		return
 	}
 	if b.RoundRandomSeed != r.RandomSeed {

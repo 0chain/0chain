@@ -26,25 +26,25 @@ func SetNetworkRelayTime(delta time.Duration) {
 }
 
 func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
-	if mr.Number < mc.CurrentRound {
-		Logger.Debug("start new round (current round higher)", zap.Int64("round", mr.Number), zap.Int64("current_round", mc.CurrentRound))
+	if mr.GetRoundNumber() < mc.CurrentRound {
+		Logger.Debug("start new round (current round higher)", zap.Int64("round", mr.GetRoundNumber()), zap.Int64("current_round", mc.CurrentRound))
 		return
 	}
-	if !mc.AddRound(mr) {
-		Logger.Debug("start new round (round already exists)", zap.Int64("round", mr.Number))
+	if mc.AddRound(mr) != mr {
+		Logger.Debug("start new round (round already exists)", zap.Int64("round", mr.GetRoundNumber()))
 		return
 	}
-	pr := mc.GetRound(mr.Number - 1)
+	pr := mc.GetRound(mr.GetRoundNumber() - 1)
 	//TODO: If for some reason the server is lagging behind (like network outage) we need to fetch the previous round info
 	// before proceeding
 	if pr == nil {
-		Logger.Debug("start new round (previous round not found)", zap.Int64("round", mr.Number))
+		Logger.Debug("start new round (previous round not found)", zap.Int64("round", mr.GetRoundNumber()))
 		return
 	}
 	self := node.GetSelfNode(ctx)
-	rank := mr.GetMinerRank(self.SetIndex)
-	Logger.Info("*** starting round ***", zap.Int64("round", mr.Number), zap.Int("index", self.SetIndex), zap.Int("rank", rank), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round))
-	if !mc.CanGenerateRound(mr.Round, self.Node) {
+	rank := mr.GetMinerRank(self.Node)
+	Logger.Info("*** starting round ***", zap.Int64("round", mr.GetRoundNumber()), zap.Int("index", self.SetIndex), zap.Int("rank", rank), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round))
+	if !mc.CanGenerateRound(mr, self.Node) {
 		return
 	}
 	//NOTE: If there are not enough txns, this will not advance further even though rest of the network is. That's why this is a goroutine
@@ -52,29 +52,29 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 }
 
 /*GetBlockToExtend - Get the block to extend from the given round */
-func (mc *Chain) GetBlockToExtend(ctx context.Context, r *Round) *block.Block {
+func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) *block.Block {
 	count := 0
 	sleepTime := 10 * time.Millisecond
 	for true { // Need to do this for timing issues where a start round might come before a notarization and there is no notarized block to extend from
-		if r.Number+1 != mc.CurrentRound {
+		if r.GetRoundNumber()+1 != mc.CurrentRound {
 			break
 		}
 		bnb := r.GetBestNotarizedBlock()
 		if bnb == nil {
-			bnb = mc.GetNotarizedBlockForRound(r.Round)
+			bnb = mc.GetNotarizedBlockForRound(r)
 		}
 		if bnb != nil {
 			if !bnb.IsStateComputed() {
 				err := mc.ComputeState(ctx, bnb)
 				if err != nil {
 					if config.DevConfiguration.State {
-						Logger.Error("get block to extend (best nb compute state)", zap.Any("round", r.Number), zap.Any("block", bnb.Hash), zap.Error(err))
+						Logger.Error("get block to extend (best nb compute state)", zap.Any("round", r.GetRoundNumber()), zap.Any("block", bnb.Hash), zap.Error(err))
 					}
 				}
 			}
 			return bnb
 		}
-		Logger.Error("block to extend - no notarized block yet", zap.Int64("round", r.Number))
+		Logger.Error("block to extend - no notarized block yet", zap.Int64("round", r.GetRoundNumber()))
 		count++
 		if count == 10 {
 			count = 0
@@ -85,7 +85,7 @@ func (mc *Chain) GetBlockToExtend(ctx context.Context, r *Round) *block.Block {
 		}
 		time.Sleep(sleepTime)
 	}
-	Logger.Debug("no block to extend", zap.Int64("round", r.Number), zap.Int64("current_round", mc.CurrentRound))
+	Logger.Debug("no block to extend", zap.Int64("round", r.GetRoundNumber()), zap.Int64("current_round", mc.CurrentRound))
 	return nil
 }
 
@@ -94,25 +94,26 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	txnEntityMetadata := datastore.GetEntityMetadata("txn")
 	ctx = memorystore.WithEntityConnection(ctx, txnEntityMetadata)
 	defer memorystore.Close(ctx)
-	pround := mc.GetRound(r.Number - 1)
+	roundNumber := r.GetRoundNumber()
+	pround := mc.GetMinerRound(roundNumber - 1)
 	if pround == nil {
-		Logger.Error("generate round block (prior round not found)", zap.Any("round", r.Number-1))
+		Logger.Error("generate round block (prior round not found)", zap.Any("round", roundNumber-1))
 		return nil, common.NewError("invalid_round,", "Round not available")
 	}
 	pb := mc.GetBlockToExtend(ctx, pround)
 	if pb == nil {
-		Logger.Error("generate round block (prior block not found)", zap.Any("round", r.Number))
+		Logger.Error("generate round block (prior block not found)", zap.Any("round", roundNumber))
 		return nil, common.NewError("block_gen_no_block_to_extend", "Do not have the block to extend this round")
 	}
 	b := datastore.GetEntityMetadata("block").Instance().(*block.Block)
 	b.ChainID = mc.ID
 	b.MagicBlockHash = mc.CurrentMagicBlock.Hash
 	b.MinerID = node.Self.GetKey()
-	mc.SetPreviousBlock(ctx, r.Round, b, pb)
+	mc.SetPreviousBlock(ctx, r, b, pb)
 	b.SetStateDB(pb)
 	for true {
 		if mc.CurrentRound > b.Round {
-			Logger.Debug("generate block (round mismatch)", zap.Any("round", r.Number), zap.Any("current_round", mc.CurrentRound))
+			Logger.Debug("generate block (round mismatch)", zap.Any("round", roundNumber), zap.Any("current_round", mc.CurrentRound))
 			return nil, ErrRoundMismatch
 		}
 		txnCount := transaction.TransactionCount
@@ -129,9 +130,9 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 					delay := 128 * time.Millisecond
 					for true {
 						time.Sleep(delay)
-						Logger.Debug("generate block", zap.Any("round", r.Number), zap.Any("delay", delay), zap.Any("txn_count", txnCount), zap.Any("t.txn_count", transaction.TransactionCount))
+						Logger.Debug("generate block", zap.Any("round", roundNumber), zap.Any("delay", delay), zap.Any("txn_count", txnCount), zap.Any("t.txn_count", transaction.TransactionCount))
 						if mc.CurrentRound > b.Round {
-							Logger.Debug("generate block (round mismatch)", zap.Any("round", r.Number), zap.Any("current_round", mc.CurrentRound))
+							Logger.Debug("generate block (round mismatch)", zap.Any("round", roundNumber), zap.Any("current_round", mc.CurrentRound))
 							return nil, ErrRoundMismatch
 						}
 						if txnCount != transaction.TransactionCount {
@@ -155,7 +156,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		break
 	}
 	if mc.CurrentRound > b.Round {
-		Logger.Info("generate block (round mismatch)", zap.Any("round", r.Number), zap.Any("current_round", mc.CurrentRound))
+		Logger.Info("generate block (round mismatch)", zap.Any("round", roundNumber), zap.Any("current_round", mc.CurrentRound))
 		return nil, ErrRoundMismatch
 	}
 	mc.AddToRoundVerification(ctx, r, b)
@@ -188,8 +189,10 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 				return
 			}
 		}
-		b = mc.AddBlock(b)
-		b.RoundRank = mr.GetMinerRank(bNode.SetIndex)
+		if mc.AddBlock(b) != b {
+			return
+		}
+		b.RoundRank = mr.GetMinerRank(bNode)
 		if b.PrevBlock != nil {
 			b.ComputeChainWeight()
 			mc.updatePriorBlock(ctx, mr.Round, b)
@@ -322,7 +325,7 @@ func (mc *Chain) updatePriorBlock(ctx context.Context, r *round.Round, b *block.
 	notarized := mc.IsBlockNotarized(ctx, pb)
 	pb.MergeVerificationTickets(b.PrevBlockVerficationTickets) // grab any unknown verification tickets of previous block from the current block
 	if !notarized {
-		pr := mc.GetRound(pb.Round)
+		pr := mc.GetMinerRound(pb.Round)
 		if pr != nil {
 			mc.AddNotarizedBlock(ctx, pr.Round, pb)
 		} else {
@@ -348,20 +351,17 @@ func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.B
 		r.Block = b
 		mc.CancelRoundVerification(ctx, r)
 		mc.AddNotarizedBlock(ctx, r.Round, b)
-		nb := r.GetBestNotarizedBlock()
-		if nb.Hash == b.Hash {
-			go mc.SendNotarization(ctx, b)
-		}
+		go mc.SendNotarization(ctx, b)
 	}
 }
 
 /*AddNotarizedBlock - add a notarized block for a given round */
-func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *round.Round, b *block.Block) bool {
-	if !r.AddNotarizedBlock(b) {
+func (mc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI, b *block.Block) bool {
+	if r.AddNotarizedBlock(b) != b {
 		return false
 	}
 	mc.UpdateNodeState(b)
-	pr := mc.GetRound(r.Number - 1)
+	pr := mc.GetMinerRound(r.GetRoundNumber() - 1)
 	if pr != nil {
 		pr.CancelVerification()
 		go mc.FinalizeRound(ctx, pr.Round, mc)
@@ -370,13 +370,14 @@ func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *round.Round, b *block
 	return true
 }
 
-func (mc *Chain) startNextRound(r *round.Round) {
-	if mc.GetRound(r.Number+1) == nil {
+func (mc *Chain) startNextRound(r round.RoundI) {
+	nrNumber := r.GetRoundNumber() + 1
+	if mc.GetRound(nrNumber) == nil {
 		nr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
-		nr.Number = r.Number + 1
+		nr.Number = nrNumber
 		//TODO: We need to do VRF at which time the Sleep should be removed
 		time.Sleep(chain.DELTA)
-		nr.RandomSeed = rand.New(rand.NewSource(r.RandomSeed)).Int63()
+		nr.RandomSeed = rand.New(rand.NewSource(r.GetRandomSeed())).Int63()
 		nmr := mc.CreateRound(nr)
 		// Even if the context is cancelled, we want to proceed with the next round, hence start with a root context
 		Logger.Debug("starting a new round", zap.Int64("round", nr.Number))

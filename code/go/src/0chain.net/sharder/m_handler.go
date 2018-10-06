@@ -9,14 +9,12 @@ import (
 	"0chain.net/datastore"
 	//. "0chain.net/logging"
 	"0chain.net/node"
-	"0chain.net/persistencestore"
-	//"go.uber.org/zap"
 )
 
 /*SetupM2SReceivers - setup handlers for all the messages received from the miner */
 func SetupM2SReceivers() {
-	http.HandleFunc("/v1/_m2s/block/finalized", node.ToN2NReceiveEntityHandler(persistencestore.WithConnectionEntityJSONHandler(FinalizedBlockHandler, datastore.GetEntityMetadata("block"))))
-	http.HandleFunc("/v1/_m2s/block/notarized", node.ToN2NReceiveEntityHandler(persistencestore.WithConnectionEntityJSONHandler(NotarizedBlockHandler, datastore.GetEntityMetadata("block"))))
+	http.HandleFunc("/v1/_m2s/block/finalized", node.ToN2NReceiveEntityHandler(FinalizedBlockHandler))
+	http.HandleFunc("/v1/_m2s/block/notarized", node.ToN2NReceiveEntityHandler(NotarizedBlockHandler))
 }
 
 /*SetupM2SResponders - setup handlers for all the requests from the miner */
@@ -36,7 +34,8 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
 	sc := GetSharderChain()
-	if b.Round < sc.LatestFinalizedBlock.Round {
+	_, err := sc.GetBlock(ctx, b.Hash)
+	if err == nil {
 		return true, nil
 	}
 	sc.GetBlockChannel() <- b

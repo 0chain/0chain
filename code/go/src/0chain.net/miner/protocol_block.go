@@ -326,6 +326,7 @@ func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) erro
 func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (*block.BlockVerificationTicket, error) {
 	var bvt = &block.BlockVerificationTicket{}
 	bvt.BlockID = b.Hash
+	bvt.Round = b.Round
 	self := node.GetSelfNode(ctx)
 	var err error
 	bvt.VerifierID = self.GetKey()
@@ -357,7 +358,7 @@ func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	fr := mc.GetRound(b.Round)
 	if fr != nil {
 		fr.Finalize(b)
-		mc.DeleteRoundsBelow(ctx, fr.Number)
+		mc.DeleteRoundsBelow(ctx, fr.GetRoundNumber()-10)
 	}
 }
 

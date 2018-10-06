@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"0chain.net/ememorystore"
+	"0chain.net/node"
 
 	"0chain.net/block"
 	"0chain.net/datastore"
@@ -35,9 +36,8 @@ type Round struct {
 	Block     *block.Block `json:"-"`
 	BlockHash string       `json:"block_hash"`
 
-	minerPerm   []int
-	sharderPerm []int
-	state       int
+	minerPerm []int
+	state     int
 
 	notarizedBlocks      []*block.Block
 	notarizedBlocksMutex *sync.Mutex
@@ -52,20 +52,30 @@ func (r *Round) GetEntityMetadata() datastore.EntityMetadata {
 
 /*GetKey - returns the round number as the key */
 func (r *Round) GetKey() datastore.Key {
-	return datastore.ToKey(fmt.Sprintf("%v", r.Number))
+	return datastore.ToKey(fmt.Sprintf("%v", r.GetRoundNumber()))
+}
+
+//GetRoundNumber - returns the round number
+func (r *Round) GetRoundNumber() int64 {
+	return r.Number
+}
+
+//GetRandomSeed - returns the random seed of the round
+func (r *Round) GetRandomSeed() int64 {
+	return r.RandomSeed
 }
 
 /*AddNotarizedBlock - this will be concurrent as notarization is recognized by verifying as well as notarization message from others */
-func (r *Round) AddNotarizedBlock(b *block.Block) bool {
+func (r *Round) AddNotarizedBlock(b *block.Block) *block.Block {
 	r.notarizedBlocksMutex.Lock()
 	defer r.notarizedBlocksMutex.Unlock()
 	for _, blk := range r.notarizedBlocks {
 		if blk.Hash == b.Hash {
-			return false
+			return blk
 		}
 	}
 	r.notarizedBlocks = append(r.notarizedBlocks, b)
-	return true
+	return b
 }
 
 /*GetNotarizedBlocks - return all the notarized blocks associated with this round */
@@ -86,6 +96,13 @@ func (r *Round) GetBestNotarizedBlock() *block.Block {
 	return rnb[0]
 }
 
+/*Finalize - finalize the round */
+func (r *Round) Finalize(b *block.Block) {
+	r.state = RoundStateFinalized
+	r.Block = b
+	r.BlockHash = b.Hash
+}
+
 /*SetFinalizing - the round is being finalized */
 func (r *Round) SetFinalizing() bool {
 	r.notarizedBlocksMutex.Lock()
@@ -102,16 +119,9 @@ func (r *Round) IsFinalizing() bool {
 	return r.state == RoundStateFinalizing
 }
 
-/*Finalize - finalize the round */
-func (r *Round) Finalize(b *block.Block) {
-	r.state = RoundStateFinalized
-	r.Block = b
-	r.BlockHash = b.Hash
-}
-
 /*IsFinalized - indicates if the round is finalized */
 func (r *Round) IsFinalized() bool {
-	return r.state == RoundStateFinalized || r.Number == 0
+	return r.state == RoundStateFinalized || r.GetRoundNumber() == 0
 }
 
 /*Provider - entity provider for client object */
@@ -157,21 +167,20 @@ func SetupEntity(store datastore.Store) {
 	datastore.RegisterEntityMetadata("round", roundEntityMetadata)
 }
 
-/*ComputeRanks - Compute random order of n elements given the random see of the round
+/*ComputeMinerRanks - Compute random order of n elements given the random see of the round
 NOTE: The permutation is deterministic using a PRNG that uses a starting seed. The starting seed itself
       is crytgraphically generated random number and is not known till the threshold signature is reached.
 */
-func (r *Round) ComputeRanks(m int, s int) {
+func (r *Round) ComputeMinerRanks(m int) {
 	r.minerPerm = rand.New(rand.NewSource(r.RandomSeed)).Perm(m)
-	r.sharderPerm = rand.New(rand.NewSource(r.RandomSeed)).Perm(s)
 }
 
 /*GetMinerRank - get the rank of element at the elementIdx position based on the permutation of the round */
-func (r *Round) GetMinerRank(elementIdx int) int {
-	return r.minerPerm[elementIdx]
+func (r *Round) GetMinerRank(miner *node.Node) int {
+	return r.minerPerm[miner.SetIndex]
 }
 
-/*GetSharderRank - get the rank of element at the elementIdx position based on the permutation of the round */
-func (r *Round) GetSharderRank(elementIdx int) int {
-	return r.sharderPerm[elementIdx]
+//Clear - implement interface
+func (r *Round) Clear() {
+
 }

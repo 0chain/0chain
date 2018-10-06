@@ -82,6 +82,9 @@ type Chain struct {
 	blocks      map[datastore.Key]*block.Block `json:"-"`
 	blocksMutex *sync.Mutex
 
+	rounds      map[int64]round.RoundI
+	roundsMutex *sync.Mutex
+
 	CurrentRound         int64        `json:"-"`
 	CurrentMagicBlock    *block.Block `json:"-"`
 	LatestFinalizedBlock *block.Block `json:"latest_finalized_block,omitempty"` // Latest block on the chain the program is aware of
@@ -90,7 +93,7 @@ type Chain struct {
 	stateDB                 util.NodeDB
 	stateMutex              *sync.Mutex
 
-	finalizedRoundsChannel chan *round.Round
+	finalizedRoundsChannel chan round.RoundI
 
 	*Stats `json:"-"`
 
@@ -165,7 +168,13 @@ func Provider() datastore.Entity {
 	c.Config = &Config{}
 	c.Initialize()
 	c.Version = "1.0"
+
+	c.blocks = make(map[string]*block.Block)
 	c.blocksMutex = &sync.Mutex{}
+
+	c.rounds = make(map[int64]round.RoundI)
+	c.roundsMutex = &sync.Mutex{}
+
 	c.stateMutex = &sync.Mutex{}
 	c.stakeMutex = &sync.Mutex{}
 	c.InitializeCreationDate()
@@ -179,14 +188,13 @@ func Provider() datastore.Entity {
 
 /*Initialize - intializes internal datastructures to start again */
 func (c *Chain) Initialize() {
-	c.blocks = make(map[string]*block.Block)
 	c.CurrentRound = 0
 	c.LatestFinalizedBlock = nil
 	c.CurrentMagicBlock = nil
 	c.BlocksToSharder = 1
 	c.VerificationTicketsTo = AllMiners
 	c.ValidationBatchSize = 2000
-	c.finalizedRoundsChannel = make(chan *round.Round, 128)
+	c.finalizedRoundsChannel = make(chan round.RoundI, 128)
 	c.clientStateDeserializer = &state.Deserializer{}
 	c.stateDB = stateDB
 	c.BlockChain = ring.New(10000)
@@ -235,7 +243,7 @@ func (c *Chain) setupInitialState() util.MerklePatriciaTrieI {
 }
 
 /*GenerateGenesisBlock - Create the genesis block for the chain */
-func (c *Chain) GenerateGenesisBlock(hash string) (*round.Round, *block.Block) {
+func (c *Chain) GenerateGenesisBlock(hash string) (round.RoundI, *block.Block) {
 	c.GenesisBlockHash = hash
 	gb := datastore.GetEntityMetadata("block").Instance().(*block.Block)
 	gb.Hash = hash
@@ -264,9 +272,6 @@ func (c *Chain) AddGenesisBlock(b *block.Block) {
 
 /*AddBlock - adds a block to the cache */
 func (c *Chain) AddBlock(b *block.Block) *block.Block {
-	if b.Round < c.LatestFinalizedBlock.Round {
-		return nil
-	}
 	c.blocksMutex.Lock()
 	defer c.blocksMutex.Unlock()
 	return c.addBlock(b)
@@ -280,6 +285,8 @@ func (c *Chain) addBlock(b *block.Block) *block.Block {
 	if b.PrevBlock == nil {
 		if pb, ok := c.blocks[b.PrevHash]; ok {
 			b.SetPreviousBlock(pb)
+		} else {
+			go c.GetPreviousBlock(common.GetRootContext(), b)
 		}
 	}
 	return b
@@ -349,6 +356,11 @@ func (c *Chain) DeleteBlocks(blocks []*block.Block) {
 	}
 }
 
+/*PruneChain - prunes the chain */
+func (c *Chain) PruneChain(ctx context.Context, b *block.Block) {
+	c.DeleteBlocksBelowRound(b.Round - 50)
+}
+
 /*ValidateMagicBlock - validate the block for a given round has the right magic block */
 func (c *Chain) ValidateMagicBlock(ctx context.Context, b *block.Block) bool {
 	//TODO: This needs to take the round number into account and go backwards as needed to validate
@@ -356,16 +368,16 @@ func (c *Chain) ValidateMagicBlock(ctx context.Context, b *block.Block) bool {
 }
 
 /*CanGenerateRound - checks if the miner can generate a block in the given round */
-func (c *Chain) CanGenerateRound(r *round.Round, miner *node.Node) bool {
-	return r.GetMinerRank(miner.SetIndex)+1 <= c.NumGenerators
+func (c *Chain) CanGenerateRound(r round.RoundI, miner *node.Node) bool {
+	return r.GetMinerRank(miner)+1 <= c.NumGenerators
 }
 
 /*GetGenerators - get all the block generators for a given round */
-func (c *Chain) GetGenerators(r *round.Round) []*node.Node {
+func (c *Chain) GetGenerators(r round.RoundI) []*node.Node {
 	generators := make([]*node.Node, c.NumGenerators)
 	i := 0
 	for _, node := range c.Miners.Nodes {
-		if r.GetMinerRank(node.SetIndex) < c.NumGenerators {
+		if r.GetMinerRank(node) < c.NumGenerators {
 			generators[i] = node
 			i++
 		}
@@ -374,7 +386,7 @@ func (c *Chain) GetGenerators(r *round.Round) []*node.Node {
 }
 
 /*CanStoreBlock - checks if the sharder can store the block in the given round */
-func (c *Chain) CanStoreBlock(r *round.Round, b *block.Block, sharder *node.Node) bool {
+func (c *Chain) CanStoreBlock(r round.RoundI, b *block.Block, sharder *node.Node) bool {
 	if c.NumSharders <= 0 {
 		return true
 	}
@@ -383,7 +395,7 @@ func (c *Chain) CanStoreBlock(r *round.Round, b *block.Block, sharder *node.Node
 }
 
 /*ValidGenerator - check whether this block is from a valid generator */
-func (c *Chain) ValidGenerator(r *round.Round, b *block.Block) bool {
+func (c *Chain) ValidGenerator(r round.RoundI, b *block.Block) bool {
 	miner := c.Miners.GetNode(b.MinerID)
 	if miner == nil {
 		return false
@@ -471,5 +483,56 @@ func (c *Chain) InitializeMinerPool() {
 		ms := &MinerStats{}
 		ms.FinalizationCountByRank = make([]int64, c.NumGenerators, c.NumGenerators)
 		nd.ProtocolStats = ms
+	}
+}
+
+/*AddRound - Add Round to the block */
+func (c *Chain) AddRound(r round.RoundI) round.RoundI {
+	c.roundsMutex.Lock()
+	defer c.roundsMutex.Unlock()
+	roundNumber := r.GetRoundNumber()
+	er, ok := c.rounds[roundNumber]
+	if ok {
+		return er
+	}
+	//r.ComputeMinerRanks(c.Miners.Size())
+	c.rounds[roundNumber] = r
+	if roundNumber > c.CurrentRound {
+		c.CurrentRound = roundNumber
+	}
+	return r
+}
+
+/*GetRound - get a round */
+func (c *Chain) GetRound(roundNumber int64) round.RoundI {
+	c.roundsMutex.Lock()
+	defer c.roundsMutex.Unlock()
+	round, ok := c.rounds[roundNumber]
+	if !ok {
+		return nil
+	}
+	return round
+}
+
+/*DeleteRound - delete a round and associated block data */
+func (c *Chain) DeleteRound(ctx context.Context, r round.RoundI) {
+	c.roundsMutex.Lock()
+	defer c.roundsMutex.Unlock()
+	delete(c.rounds, r.GetRoundNumber())
+}
+
+/*DeleteRoundsBelow - delete rounds below */
+func (c *Chain) DeleteRoundsBelow(ctx context.Context, roundNumber int64) {
+	c.roundsMutex.Lock()
+	defer c.roundsMutex.Unlock()
+	rounds := make([]round.RoundI, 0, 1)
+	for _, r := range c.rounds {
+		if r.GetRoundNumber() < roundNumber {
+			rounds = append(rounds, r)
+		}
+	}
+	for _, r := range rounds {
+		r.Clear()
+		delete(c.rounds, r.GetRoundNumber())
 	}
 }

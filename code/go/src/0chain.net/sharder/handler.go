@@ -42,7 +42,7 @@ func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 		if roundNumber > sc.LatestFinalizedBlock.Round {
 			return nil, common.InvalidRequest("Block not available")
 		} else {
-			r := sc.GetRound(roundNumber)
+			r := sc.GetSharderRound(roundNumber)
 			if r == nil {
 				r, err = sc.GetRoundFromStore(ctx, roundNumber)
 				if err != nil {
@@ -77,13 +77,13 @@ func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 
 /*ChainStatsHandler - a handler to provide block statistics */
 func ChainStatsHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	c := &GetSharderChain().Chain
+	c := GetSharderChain().Chain
 	return diagnostics.GetStatistics(c, chain.SteadyStateFinalizationTimer, 1000000.0), nil
 }
 
 /*ChainStatsWriter - a handler to provide block statistics */
 func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
-	c := &GetSharderChain().Chain
+	c := GetSharderChain().Chain
 	w.Header().Set("Content-Type", "text/html")
 	diagnostics.WriteStatisticsCSS(w)
 	fmt.Fprintf(w, "<h2>Block Finalization Statistics (Steady State)</h2>")

@@ -74,7 +74,6 @@ func main() {
 	miner.SetupMinerChain(serverChain)
 	mc := miner.GetMinerChain()
 	mc.DiscoverClients = viper.GetBool("server_chain.client.discover")
-	serverChain = &miner.GetMinerChain().Chain
 	chain.SetServerChain(serverChain)
 
 	miner.SetNetworkRelayTime(viper.GetDuration("network.relay_time") * time.Millisecond)
