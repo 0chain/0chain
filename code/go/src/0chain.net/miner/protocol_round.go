@@ -413,21 +413,25 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*bloc
 			return nil, common.NewError("invalid_entity", "Invalid entity")
 		}
 		Logger.Info("bc1 lfb received", zap.Int64("lfb_round", fb.Round))
-		err := mc.VerifyNotarization(ctx, fb.Hash, fb.VerificationTickets)
+		err := fb.Validate(ctx)
+		if err != nil {
+			Logger.Error("bc1 lfb invalid", zap.String("block_hash", fb.Hash))
+			return nil, err
+		}
+		err = mc.VerifyNotarization(ctx, fb.Hash, fb.VerificationTickets)
 		if err != nil {
 			Logger.Info("bc1 lfb notarization failed", zap.Int64("lfb_round", fb.Round))
 			return nil, err
-		} else {
-			fbMutex.Lock()
-			defer fbMutex.Unlock()
-			for _, b := range finalizedBlocks {
-				if b.Hash == fb.Hash {
-					return fb, nil
-				}
-			}
-			finalizedBlocks = append(finalizedBlocks, fb)
-			return fb, nil
 		}
+		fbMutex.Lock()
+		defer fbMutex.Unlock()
+		for _, b := range finalizedBlocks {
+			if b.Hash == fb.Hash {
+				return fb, nil
+			}
+		}
+		finalizedBlocks = append(finalizedBlocks, fb)
+		return fb, nil
 	}
 	m2s.RequestEntityFromAll(ctx, MinerLatestFinalizedBlockRequestor, nil, handler)
 	return finalizedBlocks
