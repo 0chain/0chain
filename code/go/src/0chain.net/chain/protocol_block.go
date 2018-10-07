@@ -77,6 +77,14 @@ func (c *Chain) IsBlockNotarized(ctx context.Context, b *block.Block) bool {
 
 /*ComputeFinalizedBlock - compute the block that has been finalized */
 func (c *Chain) ComputeFinalizedBlock(ctx context.Context, r round.RoundI) *block.Block {
+	isIn := func(blocks []*block.Block, hash string) bool {
+		for _, b := range blocks {
+			if b.Hash == hash {
+				return true
+			}
+		}
+		return false
+	}
 	roundNumber := r.GetRoundNumber()
 	tips := r.GetNotarizedBlocks()
 	if len(tips) == 0 {
@@ -93,14 +101,7 @@ func (c *Chain) ComputeFinalizedBlock(ctx context.Context, r round.RoundI) *bloc
 					return nil
 				}
 			}
-			found := false
-			for _, nb := range ntips {
-				if b.PrevHash == nb.Hash {
-					found = true
-					break
-				}
-			}
-			if found {
+			if isIn(ntips, b.PrevHash) {
 				continue
 			}
 			ntips = append(ntips, b.PrevBlock)
