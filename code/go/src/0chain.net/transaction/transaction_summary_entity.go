@@ -11,8 +11,7 @@ import (
 type TransactionSummary struct {
 	datastore.VersionField
 	datastore.CreationDateField
-	datastore.NOIDField
-	Hash      string `json:"hash"`
+	datastore.HashIDField
 	BlockHash string `json:"block_hash"`
 }
 
