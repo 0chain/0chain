@@ -244,7 +244,7 @@ func InfoWriter(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "<th>Time</th>")
 	}
 	fmt.Fprintf(w, "<th>Round</th>")
-	fmt.Fprintf(w, "<th>Blocks Count</th><th>Max Multi Block Count</th><th>Multi Block Rounds</th><th>Zero Block Rounds</th><th>Missed Blocks</th><th>Rollback Count</th><th>Max Rollback Length</th></tr>")
+	fmt.Fprintf(w, "<th>Notarized Blocks</th><th>Max Notarized Blocks</th><th>Multi Block Rounds</th><th>Zero Block Rounds</th><th>Missed Blocks</th><th>Rollbacks</th><th>Max Rollback Length</th></tr>")
 	roundInfo := roundMetrics.GetAll()
 	for idx := 0; idx < len(roundInfo); idx++ {
 		rf := roundInfo[idx].(*round.Info)
@@ -257,7 +257,7 @@ func InfoWriter(w http.ResponseWriter, r *http.Request) {
 		}
 		fmt.Fprintf(w, "<td class='number'>%d</td>", rf.GetKey())
 		fmt.Fprintf(w, "<td class='number'>%d</td>", rf.NotarizedBlocksCount)
-		fmt.Fprintf(w, "<td class='number'>%d</td>", rf.MaxMultiBlocksCount)
+		fmt.Fprintf(w, "<td class='number'>%d</td>", rf.MaxNotarizedBlocksCount)
 		fmt.Fprintf(w, "<td class='number'>%d</td>", rf.MultiNotarizedBlocksCount)
 		fmt.Fprintf(w, "<td class='number'>%6d</td>", rf.ZeroNotarizedBlocksCount)
 		fmt.Fprintf(w, "<td class='number'>%6d</td>", rf.MissedBlocks)
