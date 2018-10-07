@@ -183,8 +183,8 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 			return
 		}
 		if b.Round > 1 {
-			if err := mc.VerifyNotarization(ctx, b.PrevHash, b.PrevBlockVerficationTickets); err != nil {
-				Logger.Error("verify round block (prior block verify notarization)", zap.Int64("round", mr.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Int("pb_v_tickets", len(b.PrevBlockVerficationTickets)), zap.Error(err))
+			if err := mc.VerifyNotarization(ctx, b.PrevHash, b.PrevBlockVerificationTickets); err != nil {
+				Logger.Error("verify round block (prior block verify notarization)", zap.Int64("round", mr.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Int("pb_v_tickets", len(b.PrevBlockVerificationTickets)), zap.Error(err))
 				return
 			}
 		}
@@ -324,9 +324,9 @@ func (mc *Chain) updatePriorBlock(ctx context.Context, r *round.Round, b *block.
 	notarized := mc.IsBlockNotarized(ctx, pb)
 
 	// grab any unknown verification tickets of previous block from the current block
-	pb.MergeVerificationTickets(b.PrevBlockVerficationTickets)
-	if len(pb.VerificationTickets) > len(b.PrevBlockVerficationTickets) {
-		b.PrevBlockVerficationTickets = pb.VerificationTickets
+	pb.MergeVerificationTickets(b.PrevBlockVerificationTickets)
+	if len(pb.VerificationTickets) > len(b.PrevBlockVerificationTickets) {
+		b.PrevBlockVerificationTickets = pb.VerificationTickets
 	}
 
 	if !notarized {
