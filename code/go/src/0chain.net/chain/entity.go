@@ -279,6 +279,7 @@ func (c *Chain) AddBlock(b *block.Block) *block.Block {
 
 func (c *Chain) addBlock(b *block.Block) *block.Block {
 	if eb, ok := c.blocks[b.Hash]; ok {
+		eb.MergeVerificationTickets(b.VerificationTickets)
 		return eb
 	}
 	c.blocks[b.Hash] = b

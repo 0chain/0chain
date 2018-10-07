@@ -43,9 +43,9 @@ type UnverifiedBlockBody struct {
 	datastore.VersionField
 	datastore.CreationDateField
 
-	MagicBlockHash              string                `json:"magic_block_hash"`
-	PrevHash                    string                `json:"prev_hash"`
-	PrevBlockVerficationTickets []*VerificationTicket `json:"prev_verification_tickets,omitempty"`
+	MagicBlockHash               string                `json:"magic_block_hash"`
+	PrevHash                     string                `json:"prev_hash"`
+	PrevBlockVerificationTickets []*VerificationTicket `json:"prev_verification_tickets,omitempty"`
 
 	MinerID         datastore.Key `json:"miner_id"`
 	Round           int64         `json:"round"`
@@ -156,7 +156,6 @@ func (b *Block) Delete(ctx context.Context) error {
 func Provider() datastore.Entity {
 	b := &Block{}
 	b.Version = "1.0"
-	//b.PrevBlockVerficationTickets = make([]*VerificationTicket, 0)
 	b.ChainID = datastore.ToKey(config.GetServerChainID())
 	b.InitializeCreationDate()
 	b.StateMutex = &sync.Mutex{}
@@ -179,8 +178,8 @@ func (b *Block) SetPreviousBlock(prevBlock *Block) {
 	b.PrevBlock = prevBlock
 	b.PrevHash = prevBlock.Hash
 	b.Round = prevBlock.Round + 1
-	if len(b.PrevBlockVerficationTickets) == 0 {
-		b.PrevBlockVerficationTickets = prevBlock.VerificationTickets
+	if len(b.PrevBlockVerificationTickets) == 0 {
+		b.PrevBlockVerificationTickets = prevBlock.VerificationTickets
 	}
 }
 

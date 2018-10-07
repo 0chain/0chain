@@ -1,10 +1,10 @@
 package datastore
 
 import (
-  "context"
-  "fmt"
+	"context"
+	"fmt"
 
-  "0chain.net/common"
+	"0chain.net/common"
 )
 
 /*Key - a type for the entity key */
@@ -85,7 +85,7 @@ func (nif *NOIDField) ComputeProperties() {
 
 /*Validate - implementing the interface */
 func (nif *NOIDField) Validate(ctx context.Context) error {
-  return nil
+	return nil
 }
 
 /*ToString - return string representation of the key */
@@ -98,7 +98,7 @@ func IsEmpty(key Key) bool {
 }
 
 func IsEqual(key1 Key, key2 Key) bool {
-   return key1 == key2
+	return key1 == key2
 }
 
 /*EmptyKey - Represents an empty key */
@@ -121,7 +121,6 @@ type HashIDField struct {
 	Hash Key `json:"hash" msgpack:"h"`
 }
 
-
 /*GetKey - Entity implementation */
 func (h *HashIDField) GetKey() Key {
 	return ToKey(h.Hash)
@@ -130,4 +129,14 @@ func (h *HashIDField) GetKey() Key {
 /*SetKey - Entity implementation */
 func (h *HashIDField) SetKey(key Key) {
 	h.Hash = ToString(key)
+}
+
+/*ComputeProperties - Entity implementation */
+func (h *HashIDField) ComputeProperties() {
+
+}
+
+/*Validate - Entity implementation */
+func (h *HashIDField) Validate(ctx context.Context) error {
+	return nil
 }
