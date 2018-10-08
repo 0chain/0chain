@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"0chain.net/block"
+	"0chain.net/chain"
 	"0chain.net/config"
 	. "0chain.net/logging"
 	"0chain.net/round"
@@ -14,6 +15,12 @@ import (
 func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI, b *block.Block) bool {
 	if r.AddNotarizedBlock(b) != b {
 		return false
+	}
+	if sc.BlocksToSharder == chain.FINALIZED {
+		nb := r.GetNotarizedBlocks()
+		if len(nb) > 0 {
+			Logger.Error("*** different blocks for the same round ***", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("existing_block", nb[0].Hash))
+		}
 	}
 	sc.UpdateNodeState(b)
 	pr := sc.GetRound(r.GetRoundNumber() - 1)
