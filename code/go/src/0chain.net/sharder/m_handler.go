@@ -7,9 +7,7 @@ import (
 	"0chain.net/block"
 	"0chain.net/common"
 	"0chain.net/datastore"
-	. "0chain.net/logging"
 	"0chain.net/node"
-	"go.uber.org/zap"
 )
 
 /*SetupM2SReceivers - setup handlers for all the messages received from the miner */
@@ -45,7 +43,6 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 
 /*LatestFinalizedBlockHandler - handle latest finalized block*/
 func LatestFinalizedBlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	nodeIndex := node.Self.SetIndex
 	sc := GetSharderChain()
 	lfb := sc.LatestFinalizedBlock
 	return lfb, nil
