@@ -153,10 +153,6 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 	ctx := common.GetRootContext()
 	var b *block.Block
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-		eb, err := c.GetBlock(ctx, blockHash)
-		if err == nil {
-			return eb, nil
-		}
 		Logger.Info("get notarized block", zap.String("block", blockHash), zap.Int64("cround", cround), zap.Int64("current_round", c.CurrentRound))
 		nb, ok := entity.(*block.Block)
 		if !ok {
@@ -173,7 +169,7 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 		b = c.AddBlock(nb)
 		r := c.GetRound(b.Round)
 		if r == nil {
-			// TODO: what if the round object doesn't exist
+			Logger.Error("get notarized block - no round (TODO)", zap.String("block", blockHash), zap.Int64("round", b.Round), zap.Int64("cround", cround), zap.Int64("current_round", c.CurrentRound))
 		}
 		if r != nil {
 			b = r.AddNotarizedBlock(b)
@@ -197,13 +193,13 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 		return pb
 	}
 	blocks := make([]*block.Block, 0, 10)
-	Logger.Info("fetch previous block", zap.Int64("round", b.Round), zap.String("block", b.Hash))
+	Logger.Info("fetch previous block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
 	cb := b
 	for idx := 0; idx < 10; idx++ {
 		Logger.Info("fetching previous block", zap.Int("idx", idx), zap.Int64("cround", cb.Round), zap.String("cblock", cb.Hash), zap.String("cprev_block", cb.PrevHash))
 		nb := c.GetNotarizedBlock(cb.PrevHash)
 		if nb == nil {
-			Logger.Error("get previous block (unable to get prior blocks)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("cround", cb.Round), zap.String("cblock", cb.Hash), zap.String("cprev_block", cb.PrevHash))
+			Logger.Error("get previous block (unable to get prior blocks)", zap.Int("idx", idx), zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("cround", cb.Round), zap.String("cblock", cb.Hash), zap.String("cprev_block", cb.PrevHash))
 			return nil
 		}
 		cb = nb
