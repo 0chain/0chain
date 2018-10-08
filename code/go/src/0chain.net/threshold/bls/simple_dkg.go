@@ -8,34 +8,37 @@ import (
 	"github.com/pmer/gobls"
 )
 
-const CurveFp254BNb = 0
-
 type BLSSimpleDKG struct {
-	T            int
-	N            int
-	mSec         []Key
-	mVec         []VerificationKey
-	secSharesMap map[PartyId]Key
-	numReceived  int
+	T                 int
+	N                 int
+	secKey            Key
+	pubKey            VerificationKey
+	mSec              []Key
+	mVec              []VerificationKey
+	secSharesMap      map[PartyId]Key
+	receivedSecShares []Key
+	receivedPubShares []VerificationKey
+	numReceived       int
 }
 
 func MakeSimpleDKG(t, n int) BLSSimpleDKG {
 
 	dkg := BLSSimpleDKG{
-		T:            t,
-		N:            n,
-		mSec:         make([]Key, t),
-		mVec:         make([]VerificationKey, t),
-		secSharesMap: make(map[PartyId]Key, n),
-		numReceived:  0,
+		T:                 t,
+		N:                 n,
+		secKey:            Key{},
+		pubKey:            VerificationKey{},
+		mSec:              make([]Key, t),
+		mVec:              make([]VerificationKey, t),
+		secSharesMap:      make(map[PartyId]Key, n),
+		receivedSecShares: make([]Key, n),
+		receivedPubShares: make([]VerificationKey, n),
+		numReceived:       0,
 	}
 
-	var sec Key
-	gobls.Init(gobls.CurveFp254BNb)
-	sec.SetByCSPRNG()
-
-	sec.GetMasterSecretKey(t)
-	dkg.mSec = sec.GetMasterSecretKey(t)
+	dkg.secKey.SetByCSPRNG()
+	dkg.pubKey = *(dkg.secKey.GetPublicKey())
+	dkg.mSec = dkg.secKey.GetMasterSecretKey(t)
 	dkg.mVec = gobls.GetMasterPublicKey(dkg.mSec)
 
 	dkg.numReceived += 1
@@ -101,9 +104,11 @@ func (dkg *BLSSimpleDKG) ValidateShare(from PartyId, d *DKGKeyShare) bool {
 /* ReceiveKeyShareFromParty - Gets the seckey share */
 func (dkg *BLSSimpleDKG) ReceiveKeyShareFromParty(d *DKGKeyShare) error {
 
+	dkg.receivedSecShares = append(dkg.receivedSecShares, d.m)
+	dkg.receivedPubShares = append(dkg.receivedPubShares, d.v)
 	dkg.numReceived++
 
-	if d == nil {
+	if d == nil || dkg.receivedSecShares == nil || dkg.receivedPubShares == nil {
 		return fmt.Errorf("Error in share received")
 	}
 	return nil
@@ -113,4 +118,21 @@ func (dkg *BLSSimpleDKG) ReceiveKeyShareFromParty(d *DKGKeyShare) error {
 
 func (dkg *BLSSimpleDKG) IsDone() bool {
 	return dkg.numReceived == dkg.N
+
+}
+
+/* Each party aggregates the received shares from other party */
+func (dkg *BLSSimpleDKG) AggregateShares() (*AfterDKGKeyShare, error) {
+
+	for _, pri := range dkg.receivedSecShares {
+		dkg.secKey.Add(&pri)
+	}
+
+	for _, pub := range dkg.receivedPubShares {
+		dkg.pubKey.Add(&pub)
+	}
+
+	aggShare := &AfterDKGKeyShare{m: dkg.secKey}
+	aggShare.v = dkg.pubKey
+	return aggShare, nil
 }

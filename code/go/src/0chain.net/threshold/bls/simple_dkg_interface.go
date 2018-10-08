@@ -4,10 +4,8 @@ import (
 	"github.com/pmer/gobls"
 )
 
-type PartyId = gobls.ID
 type Key = gobls.SecretKey
 type VerificationKey = gobls.PublicKey
-type Sign = gobls.Sign
 type KeyShare interface{}
 
 type SignI interface{}

@@ -2,9 +2,22 @@ package bls
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"testing"
+
+	"github.com/pmer/gobls"
 )
+
+const CurveFp254BNb = 0
+
+/* The implementation uses the curve Fp254Nb */
+func TestMain(m *testing.M) {
+	gobls.Init(gobls.CurveFp254BNb)
+	os.Exit(m.Run())
+}
+
+var msg = "this is a bls sample for go"
 
 type DKGs []BLSSimpleDKG
 
@@ -41,6 +54,7 @@ func (ds DKGs) send(from int, to int, fromID PartyId) error {
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -60,12 +74,17 @@ func TestMakeSimpleDKG(test *testing.T) {
 
 	variation := func(t, n int) {
 		dkg := MakeSimpleDKG(t, n)
+		bs := MakeSimpleBLS(&dkg, msg)
 		if dkg.mSec == nil {
 			test.Errorf("The master secret key not set")
 		}
 		if dkg.mVec == nil {
 			test.Errorf("The verification key not set")
 		}
+		if bs.msg == " " {
+			test.Errorf("BLS objects not set ")
+		}
+
 	}
 
 	variation(2, 2)
@@ -117,6 +136,7 @@ func TestComputeKeyShares(test *testing.T) {
 		if secShares == nil {
 			test.Errorf("Shares are not derived correctly %v\n", secShares)
 		}
+
 	}
 
 	variation(2, 2)
@@ -147,6 +167,11 @@ func TestRecoverSecretKey(test *testing.T) {
 		if !dkg.mSec[0].IsEqual(&sec2) {
 			test.Errorf("Mismatch in recovered secret key:\n  %s\n  %s.", dkg.mSec[0].GetHexString(), sec2.GetHexString())
 		}
+		bs := MakeSimpleBLS(&dkg, msg)
+		sigShare := bs.SignMsg()
+		if !bs.VerifySign(sigShare) {
+			test.Errorf("Signature share mismatch")
+		}
 	}
 
 	variation(2, 2)
@@ -171,6 +196,10 @@ func TestDKGCanSelfShare(test *testing.T) {
 		if err != nil {
 			test.Errorf("DKG(t=%d,n=%d): Receive own share failed: %v", t, n, err)
 		}
+		aggShares, err := dkg.AggregateShares()
+		if err != nil {
+			test.Errorf("Compute own aggregate share failed: %v", aggShares)
+		}
 	}
 
 	variation(2, 2)
@@ -190,6 +219,7 @@ func TestDKGCanFinish(test *testing.T) {
 		if err != nil {
 			test.Fatalf("DKG(t=%d,n=%d): Key share validation failed: %v", t, n, err)
 		}
+
 		if !dkgs.done(0) {
 			test.Errorf("DKG(t=%d,n=%d): Not done after receiving %d remote shares", t, n, n-1)
 		}
@@ -205,4 +235,40 @@ func TestDKGCanFinish(test *testing.T) {
 /* Function to check if the DKG is done */
 func (ds DKGs) done(i int) bool {
 	return ds[i].IsDone()
+}
+
+/* The id value of "1" will be the self share for the BLS.*/
+func TestSelfShareBLS(test *testing.T) {
+
+	variation := func(t, n int) {
+		dkg := MakeSimpleDKG(t, n)
+
+		forIDs := computeIds(n)
+
+		dkg.ComputeKeyShare(forIDs)
+		var selfId PartyId
+		selfId.SetDecString("1")
+		selfShare := dkg.GetKeyShareForOther(selfId)
+		err := dkg.ReceiveAndValidateShare(selfId, selfShare)
+		if err != nil {
+			test.Errorf("DKG(t=%d,n=%d): Receive own share failed: %v", t, n, err)
+		}
+		aggShares, err := dkg.AggregateShares()
+		if err != nil {
+			test.Errorf("Compute own aggregate share failed: %v", aggShares)
+		}
+		bs := MakeSimpleBLS(&dkg, msg)
+		bs.partyKeyShare = *aggShares
+		sigShare := bs.SignMsg()
+		if !bs.VerifySign(sigShare) {
+			test.Errorf("Sig share not valid: %s", sigShare.GetHexString())
+			test.Errorf("After DKG share not valid: %v", bs.partyKeyShare)
+
+		}
+	}
+
+	variation(2, 2)
+	variation(2, 3)
+	variation(2, 4)
+
 }
