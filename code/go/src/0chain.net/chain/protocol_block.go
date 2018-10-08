@@ -31,13 +31,7 @@ func (c *Chain) VerifyNotarization(ctx context.Context, blockHash string, bvt []
 	if bvt == nil {
 		return common.NewError("no_verification_tickets", "No verification tickets for this block")
 	}
-
-	numSignatures := len(bvt)
-	if numSignatures < c.GetNotarizationThresholdCount() {
-		return common.NewError("block_not_notarized", "Number of Verification tickets for the block are less than notarization threshold count")
-	}
-
-	signMap := make(map[string]bool, numSignatures)
+	signMap := make(map[string]bool, len(bvt))
 	for _, vt := range bvt {
 		sign := vt.Signature
 		_, signExists := signMap[sign]
@@ -46,7 +40,9 @@ func (c *Chain) VerifyNotarization(ctx context.Context, blockHash string, bvt []
 		}
 		signMap[sign] = true
 	}
-
+	if !c.reachedNotarization(bvt) {
+		return common.NewError("block_not_notarized", "Verification tickets not sufficient to reach notarization")
+	}
 	for _, vt := range bvt {
 		if err := c.VerifyTicket(ctx, blockHash, vt); err != nil {
 			return err
@@ -57,15 +53,19 @@ func (c *Chain) VerifyNotarization(ctx context.Context, blockHash string, bvt []
 
 /*IsBlockNotarized - Does the given number of signatures means eligible for notarization? */
 func (c *Chain) IsBlockNotarized(ctx context.Context, b *block.Block) bool {
+	return c.reachedNotarization(b.VerificationTickets)
+}
+
+func (c *Chain) reachedNotarization(bvt []*block.VerificationTicket) bool {
 	if c.ThresholdByCount > 0 {
-		numSignatures := b.GetVerificationTicketsCount()
+		numSignatures := len(bvt)
 		if numSignatures < c.GetNotarizationThresholdCount() {
 			return false
 		}
 	}
 	if c.ThresholdByStake > 0 {
 		verifiersStake := 0
-		for _, ticket := range b.VerificationTickets {
+		for _, ticket := range bvt {
 			verifiersStake += c.getMiningStake(ticket.VerifierID)
 		}
 		if verifiersStake < c.ThresholdByStake {
