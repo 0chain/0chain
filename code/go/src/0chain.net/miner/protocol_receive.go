@@ -173,14 +173,7 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMess
 			}
 		}
 	}
-	b, err := mc.GetBlock(ctx, mb.Hash)
-	if err == nil {
-		b.MergeVerificationTickets(mb.VerificationTickets)
-	} else {
-		b = mb
-		mc.AddBlock(mb)
-	}
-
+	b := mc.AddBlock(mb)
 	mc.AddNotarizedBlock(ctx, mr.Round, b)
 	if !mr.IsVerificationComplete() {
 		mr.CancelVerification()
