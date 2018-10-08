@@ -254,14 +254,6 @@ func (b *Block) unionVerificationTickets(tickets1 []*VerificationTicket, tickets
 	return utickets
 }
 
-/*GetVerificationTicketsCount - get the number of verification tickets for the block */
-func (b *Block) GetVerificationTicketsCount() int {
-	if b.VerificationTickets == nil {
-		return 0
-	}
-	return len(b.VerificationTickets)
-}
-
 /*GetMerkleTree - return the merkle tree of this block using the transactions as leaf nodes */
 func (b *Block) GetMerkleTree() *util.MerkleTree {
 	var hashables = make([]util.Hashable, len(b.Txns))
