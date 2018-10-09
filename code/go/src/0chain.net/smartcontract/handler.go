@@ -7,6 +7,7 @@ import (
 	"0chain.net/common"
 	. "0chain.net/logging"
 	sci "0chain.net/smartcontractinterface"
+	"0chain.net/smartcontractstate"
 	"0chain.net/storagesc"
 	"0chain.net/transaction"
 	"go.uber.org/zap"
@@ -14,16 +15,18 @@ import (
 
 const STORAGE_CONTRACT_ADDRESS = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7"
 
-func getSmartContract(t *transaction.Transaction) sci.SmartContractInterface {
+func getSmartContract(t *transaction.Transaction, ndb smartcontractstate.SCDB) sci.SmartContractInterface {
 	if t.ToClientID == STORAGE_CONTRACT_ADDRESS {
 		storageSC := &storagesc.StorageSmartContract{}
+		storageSC.DB = ndb
+		storageSC.ID = STORAGE_CONTRACT_ADDRESS
 		return storageSC
 	}
 	return nil
 }
 
-func ExecuteSmartContract(ctx context.Context, t *transaction.Transaction) (string, error) {
-	contractObj := getSmartContract(t)
+func ExecuteSmartContract(ctx context.Context, t *transaction.Transaction, ndb smartcontractstate.SCDB) (string, error) {
+	contractObj := getSmartContract(t, ndb)
 	if contractObj != nil {
 		var smartContractData sci.SmartContractTransactionData
 		dataBytes := []byte(t.TransactionData)

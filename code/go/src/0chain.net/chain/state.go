@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"os"
 
+	"0chain.net/smartcontract"
+	"0chain.net/smartcontractstate"
+
 	"0chain.net/block"
 	"0chain.net/common"
 	"0chain.net/config"
@@ -102,6 +105,22 @@ func (c *Chain) rebaseState(lfb *block.Block) {
 			Logger.Debug("finalize round - rebased current state db", zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash), zap.String("hash", util.ToHex(lfb.ClientState.GetRoot())))
 		}
 	}
+
+	sndb := lfb.SCStateDB
+	if sndb != c.scStateDB {
+		lfb.SCStateDB = c.scStateDB
+		if lndb, ok := sndb.(*smartcontractstate.PipedSCDB); ok {
+			Logger.Debug("finalize round - rebasing current smart contract state db", zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash))
+			lndb.RebaseCurrentDB(c.scStateDB)
+			Logger.Debug("finalize round - rebased current smart contract state db", zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash))
+		}
+	}
+}
+
+//ExecuteSmartContract - executes the smart contract for the transaction
+func (c *Chain) ExecuteSmartContract(t *transaction.Transaction, ndb smartcontractstate.SCDB) (string, error) {
+	output, err := smartcontract.ExecuteSmartContract(common.GetRootContext(), t, ndb)
+	return output, err
 }
 
 /*UpdateState - update the state of the transaction w.r.t the given block
@@ -136,6 +155,24 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 	}
 	tbalance := state.Balance(txn.Value)
 	switch txn.TransactionType {
+	case transaction.TxnTypeSmartContract:
+		mndb := smartcontractstate.NewMemorySCDB()
+		ndb := smartcontractstate.NewPipedSCDB(mndb, b.SCStateDB, false)
+		output, err := c.ExecuteSmartContract(txn, ndb)
+		if err != nil {
+			Logger.Error("Smart contract execution returned error", zap.Any("error", err), zap.Any("transaction", txn), zap.Any("output", output))
+			return false
+		}
+		err = smartcontractstate.SaveChanges(common.GetRootContext(), mndb, b.SCStateDB)
+		if err != nil {
+			Logger.Error("Error in saving the state on the block after execution", zap.Any("error", err))
+			return false
+		}
+		txn.TransactionOutput = output
+		txn.OutputHash = txn.ComputeOutputHash()
+
+		Logger.Info("SC executed for transaction: ", zap.String("txn", txn.Hash), zap.String("output_hash", txn.OutputHash), zap.String("txn_output", txn.TransactionOutput))
+		return true
 	case transaction.TxnTypeData:
 		return true
 	case transaction.TxnTypeSend:

@@ -10,8 +10,8 @@ import (
 const Seperator = ":"
 
 type SmartContract struct {
-	db *smartcontractstate.NodeDB
-	t  *transaction.Transaction
+	DB smartcontractstate.SCDB
+	ID string
 }
 
 type SmartContractTransactionData struct {

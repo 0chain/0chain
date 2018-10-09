@@ -6,6 +6,7 @@ import (
 	"0chain.net/common"
 	"0chain.net/encryption"
 	"0chain.net/smartcontractinterface"
+	"0chain.net/smartcontractstate"
 	"0chain.net/transaction"
 
 	. "0chain.net/logging"
@@ -24,6 +25,19 @@ type StorageNode struct {
 	ID        string `json:"id"`
 	BaseURL   string `json:"url"`
 	PublicKey string `json:"-"`
+}
+
+func (sn *StorageNode) Encode() []byte {
+	buff, _ := json.Marshal(sn)
+	return buff
+}
+
+func (sn *StorageNode) Decode(input []byte) error {
+	err := json.Unmarshal(input, sn)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 type StorageAllocation struct {
@@ -57,7 +71,7 @@ type StorageConnection struct {
 }
 
 type StorageSmartContract struct {
-	sc smartcontractinterface.SmartContract
+	smartcontractinterface.SmartContract
 }
 
 var allBlobbersMap = make(map[string]*StorageNode)
@@ -169,7 +183,6 @@ func (sc *StorageSmartContract) CloseConnectionWithBlobber(t *transaction.Transa
 }
 
 func (sc *StorageSmartContract) Execute(t *transaction.Transaction, funcName string, input []byte) (string, error) {
-
 	if funcName == "open_connection" {
 		resp, err := sc.OpenConnectionWithBlobber(t, input)
 		if err != nil {
@@ -235,7 +248,7 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction, funcName str
 			allBlobbersMap[newBlobber.ID] = &newBlobber
 			allBlobbersList = append(allBlobbersList, newBlobber.ID)
 		}
-
+		sc.DB.PutNode(smartcontractstate.Key(newBlobber.ID), newBlobber.Encode())
 		buff, _ := json.Marshal(newBlobber)
 		return string(buff), nil
 	}

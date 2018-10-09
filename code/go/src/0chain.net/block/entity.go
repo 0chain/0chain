@@ -14,6 +14,7 @@ import (
 	"0chain.net/encryption"
 	. "0chain.net/logging"
 	"0chain.net/node"
+	"0chain.net/smartcontractstate"
 	"0chain.net/transaction"
 	"0chain.net/util"
 	"go.uber.org/zap"
@@ -77,6 +78,8 @@ type Block struct {
 	stateStatus int8
 	StateMutex  *sync.Mutex `json:"_"`
 	blockState  int8
+
+	SCStateDB smartcontractstate.SCDB `json:"-"`
 }
 
 var blockEntityMetadata *datastore.EntityMetadataImpl
@@ -185,6 +188,25 @@ func (b *Block) SetPreviousBlock(prevBlock *Block) {
 	}
 }
 
+/*SetSCStateDB - set the smart contract state from the previous block */
+func (b *Block) SetSCStateDB(prevBlock *Block) {
+	var pndb smartcontractstate.SCDB
+
+	if prevBlock.SCStateDB == nil {
+		if config.DevConfiguration.State {
+			Logger.DPanic("set smart contract state db - prior state not available")
+		} else {
+			pndb = smartcontractstate.NewMemorySCDB()
+		}
+	} else {
+		pndb = prevBlock.SCStateDB
+	}
+
+	mndb := smartcontractstate.NewMemorySCDB()
+	ndb := smartcontractstate.NewPipedSCDB(mndb, pndb, false)
+	b.SCStateDB = ndb
+}
+
 /*SetStateDB - set the state from the previous block */
 func (b *Block) SetStateDB(prevBlock *Block) {
 	var pndb util.NodeDB
@@ -204,6 +226,7 @@ func (b *Block) SetStateDB(prevBlock *Block) {
 	ndb := util.NewLevelNodeDB(mndb, pndb, false)
 	b.ClientState = util.NewMerklePatriciaTrie(ndb, util.Sequence(b.Round))
 	b.ClientState.SetRoot(rootHash)
+	b.SetSCStateDB(prevBlock)
 }
 
 /*AddTransaction - add a transaction to the block */

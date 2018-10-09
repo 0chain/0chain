@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/smartcontractstate"
+
 	"0chain.net/config"
 	"0chain.net/node"
 
@@ -143,6 +145,13 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 				Logger.Error("finalize round - save state", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.String("client_state", util.ToHex(fb.ClientStateHash)), zap.Int("changes", len(fb.ClientState.GetChangeCollector().GetChanges())), zap.Duration("time", time.Since(ts)), zap.Error(err))
 			} else {
 				Logger.Info("finalize round - save state", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.String("client_state", util.ToHex(fb.ClientStateHash)), zap.Int("changes", len(fb.ClientState.GetChangeCollector().GetChanges())), zap.Duration("time", time.Since(ts)))
+			}
+			ts = time.Now()
+			err = smartcontractstate.SaveChanges(ctx, fb.SCStateDB, c.scStateDB)
+			if err != nil {
+				Logger.Error("finalize round - save smart contract state", zap.Int64("round", fb.Round), zap.Error(err))
+			} else {
+				Logger.Info("finalize round - save smart contract state", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.Duration("time", time.Since(ts)))
 			}
 			c.rebaseState(fb)
 		}
