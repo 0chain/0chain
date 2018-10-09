@@ -16,8 +16,8 @@ blueprint:
   hosts: agents
 
   instance_type:
-    miner: 'c5.large'
-    sharder: 'c5.large'
+    miner: 'c5.xlarge'
+    sharder: 'c5.xlarge'
     explorer: 'c5.large'
 
   storage_ebs:
