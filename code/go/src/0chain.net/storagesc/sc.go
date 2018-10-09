@@ -49,7 +49,7 @@ type StorageAllocation struct {
 	Size         int64                   `json:"size"`
 	Expiration   common.Timestamp        `json:"expiration_date"`
 	Blobbers     map[string]*StorageNode `json:"blobbers"`
-	Onwer        string                  `json:"owner_id"`
+	Owner        string                  `json:"owner_id"`
 }
 
 type BlobberAllocation struct {
@@ -109,7 +109,7 @@ func (sc *StorageSmartContract) OpenConnectionWithBlobber(t *transaction.Transac
 		return "", common.NewError("invalid_parameters", "Invalid allocation ID")
 	}
 
-	if t.ClientID != openConnection.ClientID || allocationObj.Onwer != t.ClientID {
+	if t.ClientID != openConnection.ClientID || allocationObj.Owner != t.ClientID {
 		return "", common.NewError("invalid_parameters", "Connection has to be opened by the same client as owner of the allocation")
 	}
 
@@ -229,7 +229,7 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction, funcName str
 			}
 			allocationRequest.Blobbers = allocatedBlobbers
 			allocationRequest.ID = t.Hash
-			allocationRequest.Onwer = t.ClientID
+			allocationRequest.Owner = t.ClientID
 			buff, _ := json.Marshal(allocationRequest)
 			allocationRequestMap[t.Hash] = allocationRequest
 			return string(buff), nil
