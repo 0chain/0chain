@@ -11,6 +11,11 @@ blueprint:
   network_name: 'eddydev'
   network_domain: 'testnet-0chain.net'
 
+  #Use different modes.
+  #nascent - to create the EFS directory
+  #mature - EFS directory. All EFS related change ownership is skipped.
+  lifecycle: 'mature'
+
   #Alter this to use a smaller set.
   #hosts: 'tag_network_name_eddy0910'
   hosts: agents

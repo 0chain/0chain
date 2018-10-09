@@ -1,5 +1,7 @@
 [agents:children]
 miners
+sharders
+
 
 [explorer]
 e00.eddydev.testnet-0chain.net
@@ -31,7 +33,7 @@ sxx
 mxx
 
 [sxx]
-s00.eddydev.testnet-0chain.net
+s02.eddydev.testnet-0chain.net
 
 [mxx]
 m00.eddydev.testnet-0chain.net
