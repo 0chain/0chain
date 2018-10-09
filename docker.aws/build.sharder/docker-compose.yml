@@ -24,6 +24,15 @@ services:
       timeout: 10s
       retries: 5
 
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 6G
+        reservations:
+          cpus: '0.25'
+          memory: 2G
+
   cassandra-init:
     image: cassandra:latest
     volumes:
