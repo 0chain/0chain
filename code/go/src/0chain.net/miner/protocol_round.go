@@ -238,13 +238,10 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			}
 			return false
 		}
-		r.Block = b
 		b.SetBlockState(block.StateVerificationSuccessful)
-		if mc.IsBlockNotarized(ctx, b) {
-			b.SetBlockState(block.StateNotarized)
-		}
 		bnb := r.GetBestNotarizedBlock()
 		if bnb == nil || bnb.RoundRank >= b.RoundRank {
+			r.Block = b
 			go mc.SendVerificationTicket(ctx, b, bvt)
 			// since block.AddVerificationTicket is not thread-safe, directly doing ProcessVerifiedTicket will not work in rare cases as incoming verification tickets get added concurrently
 			bm := NewBlockMessage(MessageVerificationTicket, node.Self.Node, r, b)
@@ -332,7 +329,7 @@ func (mc *Chain) updatePriorBlock(ctx context.Context, r *round.Round, b *block.
 	if !notarized {
 		pr := mc.GetMinerRound(pb.Round)
 		if pr != nil {
-			mc.AddNotarizedBlock(ctx, pr.Round, pb)
+			mc.AddNotarizedBlock(ctx, pr, pb)
 		} else {
 			Logger.Error("verify round - previous round not present", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
 		}
@@ -351,26 +348,32 @@ func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.B
 		return
 	}
 	if mc.IsBlockNotarized(ctx, b) {
-		b.SetBlockState(block.StateNotarized)
-		r.Block = b
-		mc.CancelRoundVerification(ctx, r)
-		mc.AddNotarizedBlock(ctx, r.Round, b)
-		go mc.SendNotarization(ctx, b)
+		if mc.AddNotarizedBlock(ctx, r, b) {
+			Logger.Info("process verified ticket - block notarized", zap.Int64("round", b.Round), zap.String("block", b.Hash))
+			go mc.SendNotarization(ctx, b)
+		}
 	}
 }
 
 /*AddNotarizedBlock - add a notarized block for a given round */
-func (mc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI, b *block.Block) bool {
-	if r.AddNotarizedBlock(b) != b {
+func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *Round, b *block.Block) bool {
+	if _, ok := r.AddNotarizedBlock(b); !ok {
 		return false
 	}
-	mc.UpdateNodeState(b)
+	b.SetBlockState(block.StateNotarized)
+	if !r.IsVerificationComplete() {
+		r.CancelVerification()
+		if r.Block == nil || r.Block.RoundRank > b.RoundRank {
+			r.Block = b
+		}
+	}
 	pr := mc.GetMinerRound(r.GetRoundNumber() - 1)
 	if pr != nil {
 		pr.CancelVerification()
 		go mc.FinalizeRound(ctx, pr.Round, mc)
 	}
 	mc.startNextRound(r)
+	mc.UpdateNodeState(b)
 	return true
 }
 
