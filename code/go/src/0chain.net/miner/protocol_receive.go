@@ -117,19 +117,16 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 		return
 	}
 	b.MergeVerificationTickets(msg.Notarization.VerificationTickets)
-	if !mc.AddNotarizedBlock(ctx, r.Round, b) {
+	if !mc.AddNotarizedBlock(ctx, r, b) {
 		return
 	}
-	if !r.IsVerificationComplete() {
-		r.CancelVerification()
-		if r.Block == nil || r.Block.Weight() < b.Weight() {
-			r.Block = b
-		}
-	}
+
 	if mc.BlocksToSharder == chain.NOTARIZED {
-		//We assume those who can generate a block in a round are also responsible for sending it to the sharders
-		if mc.CanGenerateRound(r.Round, node.GetSelfNode(ctx).Node) {
-			go mc.SendNotarizedBlock(ctx, b)
+		if mc.VerificationTicketsTo == chain.Generator {
+			//We assume those who can generate a block in a round are also responsible for sending it to the sharders
+			if mc.CanGenerateRound(r.Round, node.GetSelfNode(ctx).Node) {
+				go mc.SendNotarizedBlock(ctx, b)
+			}
 		}
 	}
 }
@@ -174,11 +171,5 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMess
 		}
 	}
 	b := mc.AddBlock(mb)
-	mc.AddNotarizedBlock(ctx, mr.Round, b)
-	if !mr.IsVerificationComplete() {
-		mr.CancelVerification()
-		if mr.Block == nil || mr.Block.Weight() < b.Weight() {
-			mr.Block = b
-		}
-	}
+	mc.AddNotarizedBlock(ctx, mr, b)
 }

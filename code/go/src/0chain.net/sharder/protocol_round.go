@@ -13,7 +13,7 @@ import (
 
 /*AddNotarizedBlock - add a notarized block for a given round */
 func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI, b *block.Block) bool {
-	if r.AddNotarizedBlock(b) != b {
+	if _, ok := r.AddNotarizedBlock(b); !ok {
 		return false
 	}
 	if sc.BlocksToSharder == chain.FINALIZED {
