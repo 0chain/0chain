@@ -216,11 +216,9 @@ func (b *Block) AddTransaction(t *transaction.Transaction) {
  */
 func (b *Block) AddVerificationTicket(vt *VerificationTicket) bool {
 	bvt := b.VerificationTickets
-	if vt != nil {
-		for _, ivt := range bvt {
-			if datastore.IsEqual(vt.VerifierID, ivt.VerifierID) {
-				return false
-			}
+	for _, t := range bvt {
+		if datastore.IsEqual(vt.VerifierID, t.VerifierID) {
+			return false
 		}
 	}
 	bvt = append(bvt, vt)

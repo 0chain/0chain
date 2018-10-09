@@ -318,21 +318,15 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r *Round, b *block.Block)
 
 func (mc *Chain) updatePriorBlock(ctx context.Context, r *round.Round, b *block.Block) {
 	pb := b.PrevBlock
-	notarized := mc.IsBlockNotarized(ctx, pb)
-
-	// grab any unknown verification tickets of previous block from the current block
 	pb.MergeVerificationTickets(b.PrevBlockVerificationTickets)
+	pr := mc.GetMinerRound(pb.Round)
+	if pr != nil {
+		mc.AddNotarizedBlock(ctx, pr, pb)
+	} else {
+		Logger.Error("verify round - previous round not present", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
+	}
 	if len(pb.VerificationTickets) > len(b.PrevBlockVerificationTickets) {
 		b.PrevBlockVerificationTickets = pb.VerificationTickets
-	}
-
-	if !notarized {
-		pr := mc.GetMinerRound(pb.Round)
-		if pr != nil {
-			mc.AddNotarizedBlock(ctx, pr, pb)
-		} else {
-			Logger.Error("verify round - previous round not present", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
-		}
 	}
 }
 

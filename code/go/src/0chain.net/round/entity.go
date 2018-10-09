@@ -71,6 +71,9 @@ func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool) {
 	defer r.notarizedBlocksMutex.Unlock()
 	for _, blk := range r.notarizedBlocks {
 		if blk.Hash == b.Hash {
+			if blk != b {
+				blk.MergeVerificationTickets(b.VerificationTickets)
+			}
 			return blk, false
 		}
 	}
