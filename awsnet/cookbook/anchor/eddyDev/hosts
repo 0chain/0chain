@@ -2,7 +2,6 @@
 miners
 sharders
 
-
 [explorer]
 e00.eddydev.testnet-0chain.net
 
@@ -36,5 +35,4 @@ mxx
 s02.eddydev.testnet-0chain.net
 
 [mxx]
-m00.eddydev.testnet-0chain.net
-m01.eddydev.testnet-0chain.net
+m02.eddydev.testnet-0chain.net

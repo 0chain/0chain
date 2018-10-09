@@ -1,6 +1,11 @@
 ---
 - become: yes
   block:
+
+  - set_fact:
+      long_path: "{{blueprint.lifecycle | default('nascent') == 'nascent'}}"
+  - debug: var=long_path
+
   - name: Set hostname to match EC2 Name
     hostname:
       name: "{{agent_name}}.{{network_name}}.{{network_domain}}"
@@ -115,10 +120,6 @@
       opts: nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=15,retrans=2,noresvport
       state: mounted
     become: yes
-
-  - set_fact:
-      long_path: "{{blueprint.lifecycle | default('nascent') == 'nascent'}}"
-  - debug: var=long_path
 
   - name: "Change ownership {{zchain_volumes.efs}} to 0chain user"
     file:
