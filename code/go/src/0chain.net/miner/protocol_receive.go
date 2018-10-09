@@ -124,7 +124,7 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 	if mc.BlocksToSharder == chain.NOTARIZED {
 		if mc.VerificationTicketsTo == chain.Generator {
 			//We assume those who can generate a block in a round are also responsible for sending it to the sharders
-			if mc.CanGenerateRound(r.Round, node.GetSelfNode(ctx).Node) {
+			if mc.IsRoundGenerator(r.Round, node.GetSelfNode(ctx).Node) {
 				go mc.SendNotarizedBlock(ctx, b)
 			}
 		}
@@ -147,7 +147,7 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
 		}
 	}
 	r.Round.Block = nil
-	if mc.CanGenerateRound(r.Round, node.GetSelfNode(ctx).Node) {
+	if mc.IsRoundGenerator(r.Round, node.GetSelfNode(ctx).Node) {
 		go mc.GenerateRoundBlock(ctx, r)
 	}
 }

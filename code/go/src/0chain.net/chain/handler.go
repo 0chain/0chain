@@ -142,14 +142,14 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<li><a href='/debug/pprof/'>/debug/pprof/</a></li>")
 	fmt.Fprintf(w, "</ul>")
 	fmt.Fprintf(w, "<div><div>Miners (%v)</div>", sc.Miners.Size())
-	printNodePool(w, sc.Miners)
+	sc.printNodePool(w, sc.Miners)
 	fmt.Fprintf(w, "</div>")
 	fmt.Fprintf(w, "<div><div>Sharders (%v)</div>", sc.Sharders.Size())
-	printNodePool(w, sc.Sharders)
+	sc.printNodePool(w, sc.Sharders)
 	fmt.Fprintf(w, "</div>")
 }
 
-func printNodePool(w http.ResponseWriter, np *node.Pool) {
+func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 	nodes := np.Nodes
 	fmt.Fprintf(w, "<style>\n")
 	fmt.Fprintf(w, ".number { text-align: right; }\n")
@@ -158,13 +158,20 @@ func printNodePool(w http.ResponseWriter, np *node.Pool) {
 	fmt.Fprintf(w, "</style>")
 	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr><td>Set Index</td><td>Node</td><td>Sent</td><td>Send Errors</td><td>Received</td><td>Last Active</td><td>Small Msg Time</td><td>Large Msg Time</td><td>Description</td></tr>")
+	r := c.GetRound(c.CurrentRound)
 	for _, nd := range nodes {
 		if nd.Status == node.NodeStatusInactive {
 			fmt.Fprintf(w, "<tr class='inactive'>")
 		} else {
 			fmt.Fprintf(w, "<tr>")
 		}
-		fmt.Fprintf(w, "<td>%d</td>", nd.SetIndex)
+		fmt.Fprintf(w, "<td>%d", nd.SetIndex)
+		if nd.Type == node.NodeTypeMiner {
+			if r != nil && c.IsRoundGenerator(r, nd) {
+				fmt.Fprintf(w, "*")
+			}
+		}
+		fmt.Fprintf(w, "</td>")
 		if nd == node.Self.Node {
 			fmt.Fprintf(w, "<td>%v%.3d</td>", nd.GetNodeTypeName(), nd.SetIndex)
 		} else {
