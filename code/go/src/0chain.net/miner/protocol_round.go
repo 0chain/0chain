@@ -43,7 +43,7 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 	self := node.GetSelfNode(ctx)
 	rank := mr.GetMinerRank(self.Node)
 	Logger.Info("*** starting round ***", zap.Int64("round", mr.GetRoundNumber()), zap.Int("index", self.SetIndex), zap.Int("rank", rank), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round))
-	if !mc.CanGenerateRound(mr, self.Node) {
+	if !mc.IsRoundGenerator(mr, self.Node) {
 		return
 	}
 	//NOTE: If there are not enough txns, this will not advance further even though rest of the network is. That's why this is a goroutine
