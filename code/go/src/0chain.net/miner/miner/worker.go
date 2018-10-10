@@ -32,6 +32,7 @@ func TransactionGenerator(blockSize int32) {
 	}
 	GenerateClients(numClients)
 	numWorkers := 1
+	numTxns := blockSize
 	switch {
 	case blockSize <= 10:
 		numWorkers = 1
@@ -39,16 +40,18 @@ func TransactionGenerator(blockSize int32) {
 		numWorkers = 5
 	case blockSize <= 1000:
 		numWorkers = 10
+		numTxns = blockSize / 2
 	case blockSize <= 10000:
 		numWorkers = 25
+		numTxns = blockSize / 2
 	case blockSize <= 100000:
 		numWorkers = 50
+		numTxns = blockSize / 2
 	default:
 		numWorkers = 100
 	}
 	txnMetadataProvider := datastore.GetEntityMetadata("txn")
-	//blockSize = blockSize / 2
-	txnChannel := make(chan bool, blockSize)
+	txnChannel := make(chan bool, numTxns)
 	for i := 0; i < numWorkers; i++ {
 		ctx := datastore.WithAsyncChannel(common.GetRootContext(), transaction.TransactionEntityChannel)
 		go func() {
@@ -76,7 +79,6 @@ func TransactionGenerator(blockSize int32) {
 	txn.ChainID = miner.GetMinerChain().ID
 	collectionName := txn.GetCollectionName()
 	sc := chain.GetServerChain()
-	numTxns := blockSize
 
 	//Ensure the initial set of transactions succeed or become invalid
 	txnCount := int32(txnMetadataProvider.GetStore().GetCollectionSize(ctx, txnMetadataProvider, collectionName))
@@ -107,7 +109,7 @@ func TransactionGenerator(blockSize int32) {
 			return
 		case <-timer.C:
 			txnCount := int32(txnMetadataProvider.GetStore().GetCollectionSize(ctx, txnMetadataProvider, collectionName))
-			if float64(txnCount) >= blocksPerMiner*float64(8*blockSize) {
+			if float64(txnCount) >= blocksPerMiner*float64(8*numTxns) {
 				continue
 			}
 			for i := int32(0); i < numTxns; i++ {
