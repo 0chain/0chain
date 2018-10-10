@@ -12,6 +12,7 @@ services:
       - /0chain/data/scylla:/var/lib/scylla
       - /0chain/log/scylla:/var/log/scylla
       - /0chain/0chain/sql:/0chain/sql
+      - /0chain/config/scylla/scylla-server:/etc/sysconfig/scylla-server
 
     #uncomment line below for automatic restart
     #restart: on-failure:10
@@ -23,15 +24,6 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-
-    deploy:
-      resources:
-        limits:
-          cpus: '0.50'
-          memory: 6G
-        reservations:
-          cpus: '0.25'
-          memory: 2G
 
   cassandra-init:
     image: cassandra:latest
