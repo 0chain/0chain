@@ -138,16 +138,16 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 		StartToFinalizeTimer.UpdateSince(fb.ToTime())
 		ssFTs = time.Now()
 		c.UpdateChainInfo(fb)
-		if fb.ClientState != nil {
-			if fb.GetStateStatus() != block.StateSuccessful {
-				err := c.ComputeState(ctx, fb)
-				if err != nil {
+		if fb.GetStateStatus() != block.StateSuccessful {
+			err := c.ComputeState(ctx, fb)
+			if err != nil {
+				if config.DevConfiguration.State {
 					Logger.Error("finalize round state not successful", zap.Int64("round", roundNumber), zap.Int64("finalized_round", fb.Round), zap.String("hash", fb.Hash), zap.Int8("state", fb.GetBlockState()), zap.Error(err))
-					if config.DevConfiguration.State {
-						Logger.DPanic("finalize block - state not successful")
-					}
+					Logger.DPanic("finalize block - state not successful")
 				}
 			}
+		}
+		if fb.ClientState != nil {
 			ts := time.Now()
 			err := fb.ClientState.SaveChanges(c.stateDB, false)
 			if err != nil {
