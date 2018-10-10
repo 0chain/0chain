@@ -48,7 +48,7 @@ func (sc *Chain) BlockStorageWorker(ctx context.Context) {
 					Logger.Error("db error (save block)", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
 				}
 				self := node.GetSelfNode(ctx)
-				if !sc.CanStoreBlock(r, b, self.Node) {
+				if !sc.IsBlockSharder(r, b, self.Node) {
 					err = blockstore.GetStore().DeleteBlock(b)
 					if err != nil {
 						Logger.Error("failed to delete block from file system", zap.Any("round", b.Round), zap.String("blockhash", b.Hash), zap.Error(err))

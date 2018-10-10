@@ -138,16 +138,16 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 		StartToFinalizeTimer.UpdateSince(fb.ToTime())
 		ssFTs = time.Now()
 		c.UpdateChainInfo(fb)
-		if fb.ClientState != nil {
-			if fb.GetStateStatus() != block.StateSuccessful {
-				err := c.ComputeState(ctx, fb)
-				if err != nil {
+		if fb.GetStateStatus() != block.StateSuccessful {
+			err := c.ComputeState(ctx, fb)
+			if err != nil {
+				if config.DevConfiguration.State {
 					Logger.Error("finalize round state not successful", zap.Int64("round", roundNumber), zap.Int64("finalized_round", fb.Round), zap.String("hash", fb.Hash), zap.Int8("state", fb.GetBlockState()), zap.Error(err))
-					if config.DevConfiguration.State {
-						Logger.DPanic("finalize block - state not successful")
-					}
+					Logger.DPanic("finalize block - state not successful")
 				}
 			}
+		}
+		if fb.ClientState != nil {
 			ts := time.Now()
 			err := fb.ClientState.SaveChanges(c.stateDB, false)
 			if err != nil {
@@ -189,24 +189,24 @@ func (c *Chain) GetNotarizedBlockForRound(r round.RoundI) *block.Block {
 			cancelf()
 			return nil, nil
 		}
-		b, ok := entity.(*block.Block)
+		nb, ok := entity.(*block.Block)
 		if !ok {
 			return nil, common.NewError("invalid_entity", "Invalid entity")
 		}
-		if b.Round != roundNumber {
+		if nb.Round != roundNumber {
 			return nil, common.NewError("invalid_block", "Block not from the requested round")
 		}
-		if err := c.VerifyNotarization(ctx, b.Hash, b.VerificationTickets); err != nil {
+		if err := c.VerifyNotarization(ctx, nb.Hash, nb.VerificationTickets); err != nil {
 			Logger.Error("get notarized block for round - validate notarization", zap.Int64("round", roundNumber), zap.Error(err))
 			return nil, err
 		}
-		if err := b.Validate(ctx); err != nil {
+		if err := nb.Validate(ctx); err != nil {
 			Logger.Error("get notarized block for round - validate", zap.Int64("round", roundNumber), zap.Error(err))
 			return nil, err
 		}
+		b := c.AddBlock(nb)
 		//TODO: this may not be the best round block or the best chain weight block. Do we do that extra work?
-		b = c.AddBlock(b)
-		b = r.AddNotarizedBlock(b)
+		b, _ = r.AddNotarizedBlock(b)
 		Logger.Info("get notarized block", zap.Int64("round", roundNumber), zap.String("block", b.Hash), zap.String("state", util.ToHex(b.ClientStateHash)), zap.String("prev_block", b.PrevHash))
 		return b, nil
 	}

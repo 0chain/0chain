@@ -12,8 +12,25 @@ import (
 
 /*SetupM2SReceivers - setup handlers for all the messages received from the miner */
 func SetupM2SReceivers() {
-	http.HandleFunc("/v1/_m2s/block/finalized", node.ToN2NReceiveEntityHandler(FinalizedBlockHandler))
-	http.HandleFunc("/v1/_m2s/block/notarized", node.ToN2NReceiveEntityHandler(NotarizedBlockHandler))
+	sc := GetSharderChain()
+	options := &node.ReceiveOptions{}
+	options.MessageFilter = sc
+	http.HandleFunc("/v1/_m2s/block/finalized", node.ToN2NReceiveEntityHandler(FinalizedBlockHandler, options))
+	http.HandleFunc("/v1/_m2s/block/notarized", node.ToN2NReceiveEntityHandler(NotarizedBlockHandler, options))
+}
+
+//Accept - implement the node.MessageFilterI interface
+func (sc *Chain) Accept(entityName string, entityID string) bool {
+	switch entityName {
+	case "block":
+		_, err := sc.GetBlock(common.GetRootContext(), entityID)
+		if err != nil {
+			return true
+		}
+		return false
+	default:
+		return true
+	}
 }
 
 /*SetupM2SResponders - setup handlers for all the requests from the miner */

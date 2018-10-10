@@ -30,6 +30,13 @@ var Session *gocql.Session
 
 /*InitSession - initialize a storage session */
 func InitSession() {
+	err := initSession(time.Second, 0)
+	if Session == nil {
+		panic(err)
+	}
+}
+
+func initSession(delay time.Duration, maxTries int) error {
 	var err error
 	var cluster *gocql.ClusterConfig
 	if os.Getenv("DOCKER") != "" {
@@ -45,22 +52,19 @@ func InitSession() {
 	//cluster.DisableInitialHostLookup = true
 
 	cluster.Keyspace = KeySpace
-	delay := time.Second
 	// We need to keep waiting till whatever time it takes for cassandra to come up and running that includes data operations which takes longer with growing data
-	for tries := 0; true; tries++ {
+	for tries := 0; maxTries <= 0 || tries <= maxTries; tries++ {
 		start := time.Now()
 		Session, err = cluster.CreateSession()
 		Logger.Info("time to creation cassandra session", zap.Any("duration", time.Since(start)))
 		if err != nil {
-			Logger.Error("error creating session", zap.Any("retry", tries))
+			Logger.Error("error creating session", zap.Any("retry", tries), zap.Error(err))
 			time.Sleep(delay)
 		} else {
-			break
+			return nil
 		}
 	}
-	if Session == nil {
-		panic(err)
-	}
+	return err
 }
 
 /*GetConnection - returns a connection from the Pool

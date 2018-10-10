@@ -40,10 +40,8 @@ func (mc *Chain) SendNotarization(ctx context.Context, b *block.Block) {
 	notarization.BlockID = b.Hash
 	notarization.Round = b.Round
 	notarization.VerificationTickets = b.VerificationTickets
-	if mc.VerificationTicketsTo == chain.Generator {
-		m2m := mc.Miners
-		m2m.SendAll(BlockNotarizationSender(notarization))
-	}
+	m2m := mc.Miners
+	go m2m.SendAll(BlockNotarizationSender(notarization))
 	mc.SendNotarizedBlock(ctx, b)
 }
 

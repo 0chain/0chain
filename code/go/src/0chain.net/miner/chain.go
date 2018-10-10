@@ -68,6 +68,7 @@ func (mc *Chain) CreateRound(r *round.Round) *Round {
 	r.ComputeMinerRanks(mc.Miners.Size())
 	mr.Round = r
 	mr.blocksToVerifyChannel = make(chan *block.Block, mc.NumGenerators)
+	mr.verificationTickets = make(map[string]*block.BlockVerificationTicket)
 	return &mr
 }
 

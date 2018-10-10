@@ -174,7 +174,7 @@ func validateRequest(sender *Node, r *http.Request) bool {
 }
 
 /*ToN2NSendEntityHandler - takes a handler that accepts an entity, processes and responds and converts it
-* into somethign suitable for Node 2 Node communication*/
+* into something suitable for Node 2 Node communication*/
 func ToN2NSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandlerf {
 	return func(w http.ResponseWriter, r *http.Request) {
 		nodeID := r.Header.Get(HeaderNodeID)

@@ -31,13 +31,7 @@ func (c *Chain) VerifyNotarization(ctx context.Context, blockHash string, bvt []
 	if bvt == nil {
 		return common.NewError("no_verification_tickets", "No verification tickets for this block")
 	}
-
-	numSignatures := len(bvt)
-	if numSignatures < c.GetNotarizationThresholdCount() {
-		return common.NewError("block_not_notarized", "Number of Verification tickets for the block are less than notarization threshold count")
-	}
-
-	signMap := make(map[string]bool, numSignatures)
+	signMap := make(map[string]bool, len(bvt))
 	for _, vt := range bvt {
 		sign := vt.Signature
 		_, signExists := signMap[sign]
@@ -46,7 +40,9 @@ func (c *Chain) VerifyNotarization(ctx context.Context, blockHash string, bvt []
 		}
 		signMap[sign] = true
 	}
-
+	if !c.reachedNotarization(bvt) {
+		return common.NewError("block_not_notarized", "Verification tickets not sufficient to reach notarization")
+	}
 	for _, vt := range bvt {
 		if err := c.VerifyTicket(ctx, blockHash, vt); err != nil {
 			return err
@@ -57,15 +53,19 @@ func (c *Chain) VerifyNotarization(ctx context.Context, blockHash string, bvt []
 
 /*IsBlockNotarized - Does the given number of signatures means eligible for notarization? */
 func (c *Chain) IsBlockNotarized(ctx context.Context, b *block.Block) bool {
+	return c.reachedNotarization(b.VerificationTickets)
+}
+
+func (c *Chain) reachedNotarization(bvt []*block.VerificationTicket) bool {
 	if c.ThresholdByCount > 0 {
-		numSignatures := b.GetVerificationTicketsCount()
+		numSignatures := len(bvt)
 		if numSignatures < c.GetNotarizationThresholdCount() {
 			return false
 		}
 	}
 	if c.ThresholdByStake > 0 {
 		verifiersStake := 0
-		for _, ticket := range b.VerificationTickets {
+		for _, ticket := range bvt {
 			verifiersStake += c.getMiningStake(ticket.VerifierID)
 		}
 		if verifiersStake < c.ThresholdByStake {
@@ -77,6 +77,14 @@ func (c *Chain) IsBlockNotarized(ctx context.Context, b *block.Block) bool {
 
 /*ComputeFinalizedBlock - compute the block that has been finalized */
 func (c *Chain) ComputeFinalizedBlock(ctx context.Context, r round.RoundI) *block.Block {
+	isIn := func(blocks []*block.Block, hash string) bool {
+		for _, b := range blocks {
+			if b.Hash == hash {
+				return true
+			}
+		}
+		return false
+	}
 	roundNumber := r.GetRoundNumber()
 	tips := r.GetNotarizedBlocks()
 	if len(tips) == 0 {
@@ -93,14 +101,7 @@ func (c *Chain) ComputeFinalizedBlock(ctx context.Context, r round.RoundI) *bloc
 					return nil
 				}
 			}
-			found := false
-			for _, nb := range ntips {
-				if b.PrevHash == nb.Hash {
-					found = true
-					break
-				}
-			}
-			if found {
+			if isIn(ntips, b.PrevHash) {
 				continue
 			}
 			ntips = append(ntips, b.PrevBlock)
@@ -152,10 +153,6 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 	ctx := common.GetRootContext()
 	var b *block.Block
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-		eb, err := c.GetBlock(ctx, blockHash)
-		if err == nil {
-			return eb, nil
-		}
 		Logger.Info("get notarized block", zap.String("block", blockHash), zap.Int64("cround", cround), zap.Int64("current_round", c.CurrentRound))
 		nb, ok := entity.(*block.Block)
 		if !ok {
@@ -172,10 +169,10 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 		b = c.AddBlock(nb)
 		r := c.GetRound(b.Round)
 		if r == nil {
-			// TODO: what if the round object doesn't exist
+			Logger.Error("get notarized block - no round (TODO)", zap.String("block", blockHash), zap.Int64("round", b.Round), zap.Int64("cround", cround), zap.Int64("current_round", c.CurrentRound))
 		}
 		if r != nil {
-			b = r.AddNotarizedBlock(b)
+			b, _ = r.AddNotarizedBlock(b)
 		}
 		Logger.Info("get notarized block", zap.Int64("round", b.Round), zap.String("block", b.Hash))
 		return b, nil
@@ -196,13 +193,13 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 		return pb
 	}
 	blocks := make([]*block.Block, 0, 10)
-	Logger.Info("fetch previous block", zap.Int64("round", b.Round), zap.String("block", b.Hash))
+	Logger.Info("fetch previous block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
 	cb := b
 	for idx := 0; idx < 10; idx++ {
 		Logger.Info("fetching previous block", zap.Int("idx", idx), zap.Int64("cround", cb.Round), zap.String("cblock", cb.Hash), zap.String("cprev_block", cb.PrevHash))
 		nb := c.GetNotarizedBlock(cb.PrevHash)
 		if nb == nil {
-			Logger.Error("get previous block (unable to get prior blocks)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("cround", cb.Round), zap.String("cblock", cb.Hash), zap.String("cprev_block", cb.PrevHash))
+			Logger.Error("get previous block (unable to get prior blocks)", zap.Int64("current_round", c.CurrentRound), zap.Int("idx", idx), zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("cround", cb.Round), zap.String("cblock", cb.Hash), zap.String("cprev_block", cb.PrevHash))
 			return nil
 		}
 		cb = nb

@@ -7,5 +7,5 @@ type Stats struct {
 	LongestRollbackLength     int8
 	ZeroNotarizedBlocksCount  int64
 	MultiNotarizedBlocksCount int64
-	MaxMultipleBlocks         int8
+	MaxNotarizedBlocksCount   int8
 }
