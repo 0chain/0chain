@@ -148,14 +148,15 @@ func (np *Pool) sendOne(handler SendHandler, nodes []*Node) *Node {
 /*SendEntityHandler provides a client API to send an entity */
 func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 	return func(entity datastore.Entity) SendHandler {
+		timeout := 500 * time.Millisecond
+		if options.Timeout > 0 {
+			timeout = options.Timeout
+		}
+		data := getResponseData(options, entity).Bytes()
 		return func(receiver *Node) bool {
 			timer := receiver.GetTimer(uri)
-			timeout := 500 * time.Millisecond
-			if options.Timeout > 0 {
-				timeout = options.Timeout
-			}
-			buffer := getResponseData(options, entity)
 			url := receiver.GetN2NURLBase() + uri
+			buffer := bytes.NewBuffer(data)
 			req, err := http.NewRequest("POST", url, buffer)
 			if err != nil {
 				return false

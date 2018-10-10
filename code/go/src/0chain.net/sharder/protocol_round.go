@@ -5,7 +5,6 @@ import (
 
 	"0chain.net/block"
 	"0chain.net/chain"
-	"0chain.net/config"
 	. "0chain.net/logging"
 	"0chain.net/round"
 	"go.uber.org/zap"
@@ -27,11 +26,6 @@ func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI, b *block
 	if pr != nil {
 		go sc.FinalizeRound(ctx, pr, sc)
 	}
-	err := sc.ComputeState(ctx, b)
-	if err != nil {
-		if config.DevConfiguration.State {
-			Logger.Error("error computing the state (TODO sync state)", zap.Error(err))
-		}
-	}
+	go sc.ComputeState(ctx, b)
 	return true
 }
