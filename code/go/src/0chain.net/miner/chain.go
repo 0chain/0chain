@@ -81,7 +81,7 @@ func (mc *Chain) SetLatestFinalizedBlock(ctx context.Context, b *block.Block) {
 	r.RandomSeed = b.RoundRandomSeed
 	mr := mc.CreateRound(r)
 	mc.AddRound(mr)
-	mc.AddNotarizedBlock(ctx, r, b)
+	mc.AddNotarizedBlock(ctx, mr, b)
 }
 
 /*CancelRoundsBelow - delete rounds below */

@@ -415,15 +415,15 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*bloc
 		if !ok {
 			return nil, common.NewError("invalid_entity", "Invalid entity")
 		}
-		Logger.Info("bc1 lfb received", zap.Int64("lfb_round", fb.Round))
+		Logger.Info("bc-1 lfb received", zap.Int64("lfb_round", fb.Round))
 		err := fb.Validate(ctx)
 		if err != nil {
-			Logger.Error("bc1 lfb invalid", zap.String("block_hash", fb.Hash))
+			Logger.Error("bc-1 lfb invalid", zap.String("block_hash", fb.Hash))
 			return nil, err
 		}
 		err = mc.VerifyNotarization(ctx, fb.Hash, fb.VerificationTickets)
 		if err != nil {
-			Logger.Info("bc1 lfb notarization failed", zap.Int64("lfb_round", fb.Round))
+			Logger.Info("bc-1 lfb notarization failed", zap.Int64("lfb_round", fb.Round))
 			return nil, err
 		}
 		fbMutex.Lock()
