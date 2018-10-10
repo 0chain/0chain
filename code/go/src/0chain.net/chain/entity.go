@@ -105,8 +105,6 @@ type Chain struct {
 	nodePoolScorer node.PoolScorer
 
 	GenerateTimeout int `json:"-"`
-
-	TotalTxns int64
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
@@ -203,7 +201,6 @@ func (c *Chain) Initialize() {
 	c.stateDB = stateDB
 	c.BlockChain = ring.New(10000)
 	c.minersStake = make(map[datastore.Key]int)
-	c.TotalTxns = 0
 }
 
 /*SetupEntity - setup the entity */

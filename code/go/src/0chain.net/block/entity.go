@@ -73,10 +73,11 @@ type Block struct {
 
 	TxnsMap map[string]bool `json:"-"`
 
-	ClientState util.MerklePatriciaTrieI `json:"-"`
-	stateStatus int8
-	StateMutex  *sync.Mutex `json:"_"`
-	blockState  int8
+	ClientState     util.MerklePatriciaTrieI `json:"-"`
+	stateStatus     int8
+	StateMutex      *sync.Mutex `json:"_"`
+	blockState      int8
+	RunningTxnCount int64 `json:"running_txn_count"`
 }
 
 var blockEntityMetadata *datastore.EntityMetadataImpl

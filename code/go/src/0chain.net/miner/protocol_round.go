@@ -156,6 +156,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 			Logger.Error("generate block", zap.Error(err))
 			return nil, err
 		}
+		b.RunningTxnCount = pb.RunningTxnCount + int64(len(b.Txns))
 		mc.AddBlock(b)
 		break
 	}

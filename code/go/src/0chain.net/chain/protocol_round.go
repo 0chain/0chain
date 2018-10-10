@@ -114,7 +114,6 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 		if time.Since(ssFTs) < 10*time.Second {
 			SteadyStateFinalizationTimer.UpdateSince(ssFTs)
 		}
-		c.TotalTxns += int64(len(fb.Txns))
 		StartToFinalizeTimer.UpdateSince(fb.ToTime())
 		ssFTs = time.Now()
 		c.UpdateChainInfo(fb)
