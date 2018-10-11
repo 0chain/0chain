@@ -30,6 +30,11 @@ func (np *Pool) StatusMonitor(ctx context.Context) {
 	}
 }
 
+/*OneTimeStatusMonitor - checks the status of nodes only once*/
+func (np *Pool) OneTimeStatusMonitor(ctx context.Context) {
+	np.statusMonitor(ctx)
+}
+
 func (np *Pool) statusMonitor(ctx context.Context) {
 	tr := &http.Transport{
 		MaxIdleConns:       100,

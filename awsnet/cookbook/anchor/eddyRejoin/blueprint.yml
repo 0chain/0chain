@@ -3,8 +3,8 @@
 #https://en.wikipedia.org/wiki/List_of_California_fourteeners
 #
 blueprint:
+  #git_version: "Miner-Joining-in-the-middle"
   git_version: "testnet-rejoin"
-
   aws_key_pair: "eddy"
 
   network_type: 'testnet'
@@ -16,14 +16,14 @@ blueprint:
   hosts: agents
 
   instance_type:
-    miner: 'c5.large'
-    sharder: 'c5.large'
-    explorer: 'c5.large'
+    miner: 'c5.xlarge'
+    sharder: 'c5.xlarge'
+    explorer: 'c5.xlarge'
 
   storage_ebs:
-    root: '32GIB_GP2_SDA1'
-    miner: '32GIB_GP2_NVME'
-    sharder: '32GIB_GP2_NVME'
+    root: '64GIB_GP2_SDA1'
+    miner: '64GIB_GP2_NVME'
+    sharder: '1TIB_GP2_NVME'
 
   storage_efs:
     sharder: 'EFS_SHARDER'
@@ -49,6 +49,6 @@ blueprint:
     s01: {role: sharder, region: ohio}
 
   explorers:
-    e00: {role: explorer, region: california}
+    e00: {role: explorer, region: ohio}
 
 ...

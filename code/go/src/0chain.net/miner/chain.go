@@ -72,6 +72,18 @@ func (mc *Chain) CreateRound(r *round.Round) *Round {
 	return &mr
 }
 
+/*SetLatestFinalizedBlock - Set latest finalized block */
+func (mc *Chain) SetLatestFinalizedBlock(ctx context.Context, b *block.Block) {
+	mc.AddBlock(b)
+	mc.LatestFinalizedBlock = b
+	var r *round.Round = datastore.GetEntityMetadata("round").Instance().(*round.Round)
+	r.Number = b.Round
+	r.RandomSeed = b.RoundRandomSeed
+	mr := mc.CreateRound(r)
+	mc.AddRound(mr)
+	mc.AddNotarizedBlock(ctx, mr, b)
+}
+
 /*CancelRoundsBelow - delete rounds below */
 func (mc *Chain) CancelRoundsBelow(ctx context.Context, round int64) {
 	mc.roundsMutex.Lock()

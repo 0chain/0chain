@@ -8,12 +8,15 @@
   shell: docker.aws/bin/build.miner.sh
   args:
     chdir: "{{zchain_code}}"
+  environment:
+    SHARDER: "{{agent_name}}"
   when: agent_role == "miner"
 
 - name: "Build sharder code"
   shell: docker.aws/bin/build.sharder.sh
   args:
     chdir: "{{zchain_code}}"
+  environment:
+    SHARDER: "{{agent_name}}"
   when: agent_role == "sharder"
-
 ...
