@@ -46,17 +46,15 @@ func (r *Round) AddVerificationTicket(bvt *block.BlockVerificationTicket) {
 	r.verificationTickets[bvt.Signature] = bvt
 }
 
-/*MergeVerificationTickets  - merge the verification tickets */
-func (r *Round) MergeVerificationTickets(b *block.Block) {
+/*GetVerificationTickets - get verification tickets for a given block in this round */
+func (r *Round) GetVerificationTickets(blockID string) []*block.VerificationTicket {
 	var vts []*block.VerificationTicket
 	for _, bvt := range r.verificationTickets {
-		if b.Hash == bvt.BlockID {
+		if blockID == bvt.BlockID {
 			vts = append(vts, &bvt.VerificationTicket)
 		}
 	}
-	if len(vts) > 0 {
-		b.MergeVerificationTickets(vts)
-	}
+	return vts
 }
 
 /*GetBlocksByRank - return the currently stored blocks in the order of best rank for the round */

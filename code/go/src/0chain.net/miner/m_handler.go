@@ -182,7 +182,7 @@ func NotarizedBlockSendHandler(ctx context.Context, r *http.Request) (interface{
 		if err != nil {
 			return nil, err
 		}
-		if mc.IsBlockNotarized(ctx, b) {
+		if b.IsBlockNotarized() {
 			return b, nil
 		}
 	} else {

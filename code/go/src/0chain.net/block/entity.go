@@ -76,6 +76,7 @@ type Block struct {
 	stateStatus int8
 	StateMutex  *sync.Mutex `json:"_"`
 	blockState  int8
+	isNotarized bool
 }
 
 var blockEntityMetadata *datastore.EntityMetadataImpl
@@ -413,4 +414,14 @@ func (b *Block) GetTransaction(hash string) *transaction.Transaction {
 		}
 	}
 	return nil
+}
+
+//SetBlockNotarized - set the block as notarized
+func (b *Block) SetBlockNotarized() {
+	b.isNotarized = true
+}
+
+//IsBlockNotarized - is block notarized?
+func (b *Block) IsBlockNotarized() bool {
+	return b.isNotarized
 }
