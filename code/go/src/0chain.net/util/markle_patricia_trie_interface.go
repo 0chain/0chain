@@ -66,9 +66,9 @@ func GetPruneStats(ctx context.Context) *PruneStats {
 
 /*PruneStats - gathers statistics while pruning */
 type PruneStats struct {
-	Origin      Sequence
-	Total       int64
-	Leaves      int64
-	BelowOrigin int64
-	Deleted     int64
+	Version      Sequence `json:"v"`
+	Total        int64    `json:"t"`
+	Leaves       int64    `json:"l"`
+	BelowVersion int64    `json:"bv"`
+	Deleted      int64    `json:"d"`
 }

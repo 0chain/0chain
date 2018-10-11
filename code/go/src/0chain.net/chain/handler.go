@@ -344,7 +344,7 @@ func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "<td>Rank %d</td>", i)
 	}
 	fmt.Fprintf(w, "</tr>")
-	totals := make([]int64, c.NumGenerators, c.NumGenerators)
+	totals := make([]int64, c.NumGenerators)
 	for _, nd := range c.Miners.Nodes {
 		fmt.Fprintf(w, "<tr><td>%v</td>", fmt.Sprintf("%v%.3d", nd.GetNodeTypeName(), nd.SetIndex))
 		ms := nd.ProtocolStats.(*MinerStats)

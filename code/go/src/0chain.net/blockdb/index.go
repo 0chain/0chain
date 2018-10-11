@@ -89,7 +89,7 @@ func (mi *mapIndex) Decode(reader io.Reader) error {
 		if err != nil {
 			return err
 		}
-		buf := make([]byte, klen, klen)
+		buf := make([]byte, klen)
 		n, err := reader.Read(buf)
 		if err != nil {
 			return err
@@ -114,7 +114,7 @@ func (mi *mapIndex) GetKeys() []Key {
 		keyos = append(keyos, keyo{k: k, o: o})
 	}
 	sort.SliceStable(keyos, func(i, j int) bool { return keyos[i].o < keyos[j].o })
-	keys := make([]Key, len(keyos), len(keyos))
+	keys := make([]Key, len(keyos))
 	for idx, key := range keyos {
 		keys[idx] = key.k
 	}
@@ -199,7 +199,7 @@ func (fkai *fixedKeyArrayIndex) Decode(reader io.Reader) error {
 		return err
 	}
 	sz := int(numKeys * int32(fkai.getKeySize()))
-	fkai.buffer = make([]byte, sz, sz)
+	fkai.buffer = make([]byte, sz)
 	n, err := reader.Read(fkai.buffer)
 	if err != nil {
 		return err
