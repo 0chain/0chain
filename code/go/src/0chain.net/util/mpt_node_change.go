@@ -96,6 +96,9 @@ func (cc *ChangeCollector) UpdateChanges(ndb NodeDB, origin Sequence, includeDel
 			}
 		}
 	}
+	if len(cc.Changes) == 0 && (!includeDeletes || len(cc.Deletes) == 0) {
+		return nil
+	}
 	if pndb, ok := ndb.(*PNodeDB); ok {
 		pndb.Flush()
 	}
