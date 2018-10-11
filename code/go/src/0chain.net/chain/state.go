@@ -67,7 +67,7 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 		return ErrPreviousStateUnavailable
 	}
 	b.SetStateDB(pb)
-	Logger.Info("compute state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.String("prev_block", b.PrevHash), zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)))
+	Logger.Info("compute state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.String("begin_client_state", util.ToHex(b.ClientState.GetRoot())), zap.String("prev_block", b.PrevHash), zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)))
 	for _, txn := range b.Txns {
 		if datastore.IsEmpty(txn.ClientID) {
 			txn.ComputeClientID()
@@ -146,9 +146,9 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 				if txn == nil {
 					break
 				}
-				fmt.Fprintf(stateOut, "update state r=%v b=%v t=%v", b.Round, b.Hash, txn)
+				fmt.Fprintf(stateOut, "update state r=%v b=%v t=%v\n", b.Round, b.Hash, txn)
 			}
-			clientState.PrettyPrint(stateOut)
+			clientState.PrettyPrint(os.Stdout)
 			Logger.DPanic(fmt.Sprintf("error getting state value: %v %v", txn.ClientID, err))
 		}
 		return false
@@ -184,7 +184,9 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 			if config.DevConfiguration.State {
 				Logger.Error("update state (to client)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
 				for _, txn := range b.Txns {
-					Logger.Info("update state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn))
+					if txn != nil {
+						Logger.Info("update state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn))
+					}
 				}
 				clientState.PrettyPrint(os.Stdout)
 				Logger.DPanic(fmt.Sprintf("error getting state value: %v %v", txn.ToClientID, err))

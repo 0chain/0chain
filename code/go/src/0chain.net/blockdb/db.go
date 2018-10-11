@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -93,18 +94,22 @@ func (bdb *BlockDB) Read(key Key, record Record) error {
 		return err
 	}
 	dataFile := bufio.NewReader(bdb.dataFile)
+	return bdb.read(dataFile, record)
+}
+
+func (bdb *BlockDB) read(dataFile io.Reader, record Record) error {
 	var dlen int32
-	err = binary.Read(dataFile, binary.LittleEndian, &dlen)
+	err := binary.Read(dataFile, binary.LittleEndian, &dlen)
 	if err != nil {
 		return err
 	}
-	data := make([]byte, dlen, dlen)
-	n, err := dataFile.Read(data)
+	data := make([]byte, dlen)
+	n, err := io.ReadFull(dataFile, data)
 	if err != nil {
 		return err
 	}
 	if int32(n) != dlen {
-		return errors.New("read data length doesnot match expected data length")
+		return fmt.Errorf("read data length doesnot match expected data length dlen=%v n=%v", dlen, n)
 	}
 	if bdb.compress {
 		data, err = compDe.Decompress(data)
@@ -121,9 +126,10 @@ func (bdb *BlockDB) Read(key Key, record Record) error {
 func (bdb *BlockDB) ReadAll(rp RecordProvider) ([]Record, error) {
 	keys := bdb.index.GetKeys()
 	records := make([]Record, 0, len(keys))
-	for _, key := range keys {
+	dataFile := bufio.NewReader(bdb.dataFile)
+	for range keys {
 		record := rp.NewRecord()
-		err := bdb.Read(key, record)
+		err := bdb.read(dataFile, record)
 		if err != nil {
 			if err == io.EOF {
 				break

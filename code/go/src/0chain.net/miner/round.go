@@ -21,6 +21,7 @@ type Round struct {
 	verificationComplete  bool
 	verificationCancelf   context.CancelFunc
 	delta                 time.Duration
+	verificationTickets   map[string]*block.BlockVerificationTicket
 }
 
 /*AddBlockToVerify - adds a block to the round. Assumes non-concurrent update */
@@ -38,6 +39,22 @@ func (r *Round) AddBlockToVerify(b *block.Block) {
 		return
 	}
 	r.blocksToVerifyChannel <- b
+}
+
+/*AddVerificationTicket - add a verification ticket */
+func (r *Round) AddVerificationTicket(bvt *block.BlockVerificationTicket) {
+	r.verificationTickets[bvt.Signature] = bvt
+}
+
+/*GetVerificationTickets - get verification tickets for a given block in this round */
+func (r *Round) GetVerificationTickets(blockID string) []*block.VerificationTicket {
+	var vts []*block.VerificationTicket
+	for _, bvt := range r.verificationTickets {
+		if blockID == bvt.BlockID {
+			vts = append(vts, &bvt.VerificationTicket)
+		}
+	}
+	return vts
 }
 
 /*GetBlocksByRank - return the currently stored blocks in the order of best rank for the round */

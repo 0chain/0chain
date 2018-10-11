@@ -5,9 +5,11 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 
@@ -139,7 +141,7 @@ func main() {
 	initServer()
 	initHandlers()
 
-	go StartProtocol()
+	go StartProtocol(ctx)
 	Logger.Info("Ready to listen to the requests")
 	chain.StartTime = time.Now().UTC()
 	log.Fatal(server.ListenAndServe())
@@ -190,6 +192,7 @@ func initN2NHandlers() {
 	miner.SetupM2MReceivers()
 	miner.SetupM2MSenders()
 	miner.SetupM2SSenders()
+	miner.SetupM2SRequestors()
 
 	miner.SetupX2MResponders()
 	chain.SetupX2MRequestors()
@@ -203,24 +206,38 @@ func initWorkers(ctx context.Context) {
 }
 
 /*StartProtocol - start the miner protocol */
-func StartProtocol() {
+func StartProtocol(ctx context.Context) {
 	mc := miner.GetMinerChain()
-	sr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
-	sr.Number = 1
 
-	//TODO: For now, hardcoding a random seed for the first round
-	sr.RandomSeed = 839695260482366273
-	sr.ComputeMinerRanks(mc.Miners.Size())
+	mc.Sharders.OneTimeStatusMonitor(ctx)
+	lfBlocks := mc.GetLatestFinalizedBlockFromSharder(ctx)
+
+	var lfb *block.Block
+	//Sorting as per the latest finalized blocks from all the sharders
+	sort.Slice(lfBlocks, func(i int, j int) bool { return lfBlocks[i].Round >= lfBlocks[j].Round })
+	if len(lfBlocks) > 0 {
+		lfb = lfBlocks[0]
+	}
+
+	sr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
+	if lfb != nil {
+		mc.SetLatestFinalizedBlock(ctx, lfb)
+		sr.Number = lfb.Round + 1
+		sr.RandomSeed = rand.New(rand.NewSource(lfb.RoundRandomSeed)).Int63()
+	} else {
+		sr.Number = 1
+		//TODO: For now, hardcoding a random seed for the first round
+		sr.RandomSeed = 839695260482366273
+	}
 	msr := mc.CreateRound(sr)
+
+	Logger.Info("bc-1 latest finalized Block", zap.Int64("lfb_round", mc.LatestFinalizedBlock.Round))
 
 	if !mc.CanStartNetwork() {
 		ticker := time.NewTicker(5 * chain.DELTA)
 		for ts := range ticker.C {
 			active := mc.Miners.GetActiveCount()
 			Logger.Info("waiting for sufficient active nodes", zap.Time("ts", ts), zap.Int("active", active))
-			if mc.CurrentRound != 0 {
-				break
-			}
 			if mc.CanStartNetwork() {
 				break
 			}
@@ -231,9 +248,7 @@ func StartProtocol() {
 	}
 	msg := miner.NewBlockMessage(miner.MessageStartRound, node.Self.Node, msr, nil)
 	msgChannel := mc.GetBlockMessageChannel()
-	if mc.CurrentRound == 0 {
-		Logger.Info("starting the blockchain ...")
-		msgChannel <- msg
-		mc.SendRoundStart(common.GetRootContext(), sr)
-	}
+	Logger.Info("starting the blockchain ...")
+	msgChannel <- msg
+	mc.SendRoundStart(common.GetRootContext(), sr)
 }

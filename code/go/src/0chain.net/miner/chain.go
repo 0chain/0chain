@@ -68,7 +68,20 @@ func (mc *Chain) CreateRound(r *round.Round) *Round {
 	r.ComputeMinerRanks(mc.Miners.Size())
 	mr.Round = r
 	mr.blocksToVerifyChannel = make(chan *block.Block, mc.NumGenerators)
+	mr.verificationTickets = make(map[string]*block.BlockVerificationTicket)
 	return &mr
+}
+
+/*SetLatestFinalizedBlock - Set latest finalized block */
+func (mc *Chain) SetLatestFinalizedBlock(ctx context.Context, b *block.Block) {
+	mc.AddBlock(b)
+	mc.LatestFinalizedBlock = b
+	var r = datastore.GetEntityMetadata("round").Instance().(*round.Round)
+	r.Number = b.Round
+	r.RandomSeed = b.RoundRandomSeed
+	mr := mc.CreateRound(r)
+	mc.AddRound(mr)
+	mc.AddNotarizedBlock(ctx, mr, b)
 }
 
 /*CancelRoundsBelow - delete rounds below */

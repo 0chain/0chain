@@ -197,7 +197,8 @@ func initEntities() {
 func initN2NHandlers() {
 	node.SetupN2NHandlers()
 	sharder.SetupM2SReceivers()
-
+	sharder.SetupM2SResponders()
+	
 	chain.SetupX2MRequestors()
 }
 

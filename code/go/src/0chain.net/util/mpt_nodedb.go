@@ -9,6 +9,9 @@ import (
 	"go.uber.org/zap"
 )
 
+//BatchSize - for batching multiple db operations
+const BatchSize = 64
+
 /*ErrNodeNotFound - error indicating that the node is not found */
 var ErrNodeNotFound = errors.New("node not found")
 

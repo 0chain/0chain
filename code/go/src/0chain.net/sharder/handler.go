@@ -86,10 +86,27 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	c := GetSharderChain().Chain
 	w.Header().Set("Content-Type", "text/html")
 	diagnostics.WriteStatisticsCSS(w)
+	diagnostics.WriteSummary(w, c)
+	fmt.Fprintf(w, "<table><tr><td>")
 	fmt.Fprintf(w, "<h2>Block Finalization Statistics (Steady State)</h2>")
 	diagnostics.WriteStatistics(w, c, chain.SteadyStateFinalizationTimer, 1000000.0)
+	fmt.Fprintf(w, "</td><td>")
 	fmt.Fprintf(w, "<h2>Block Finalization Statistics (Start to Finish)</h2>")
 	diagnostics.WriteStatistics(w, c, chain.StartToFinalizeTimer, 1000000.0)
+	fmt.Fprintf(w, "</td></tr>")
+	fmt.Fprintf(w, "<tr><td>")
+	fmt.Fprintf(w, "<h2>State Save Statistics</h2>")
+	diagnostics.WriteStatistics(w, c, chain.StateSaveTimer, 1000000.0)
+	fmt.Fprintf(w, "</td><td>")
+	fmt.Fprintf(w, "<h2>Transactions Save Statistics</h2>")
+	diagnostics.WriteStatistics(w, c, txnSaveTimer, 1000000.0)
+	fmt.Fprintf(w, "</td><tr>")
+	fmt.Fprintf(w, "<tr><td>")
+	fmt.Fprintf(w, "<h2>Block Save Statistics</h2>")
+	diagnostics.WriteStatistics(w, c, blockSaveTimer, 1000000.0)
+	fmt.Fprintf(w, "</td><td>")
+	fmt.Fprintf(w, "</td><tr>")
+	fmt.Fprintf(w, "</table>")
 }
 
 /*TransactionConfirmationHandler - given a transaction hash, confirm it's presence in a block */

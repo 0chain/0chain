@@ -38,7 +38,7 @@ func SetTimeoutLargeMessage(ts time.Duration) {
 
 /*SetupN2NHandlers - Setup all the node 2 node communiations*/
 func SetupN2NHandlers() {
-	http.HandleFunc("/v1/_n2n/entity/post", ToN2NReceiveEntityHandler(datastore.PrintEntityHandler))
+	http.HandleFunc("/v1/_n2n/entity/post", ToN2NReceiveEntityHandler(datastore.PrintEntityHandler, nil))
 }
 
 var (
@@ -77,6 +77,18 @@ type SendOptions struct {
 	Compress           bool
 	InitialNodeID      string
 	CODEC              int
+}
+
+/*MessageFilterI - tells wether the given message should be processed or not
+* This will be useful since if for example a notarized block is received multiple times
+* the cost of decoding and decompressing can be avoided */
+type MessageFilterI interface {
+	Accept(entityName string, entityID string) bool
+}
+
+/*ReceiveOptions - options to tune how the messages are received within the network */
+type ReceiveOptions struct {
+	MessageFilter MessageFilterI
 }
 
 var transport *http.Transport

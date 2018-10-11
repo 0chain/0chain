@@ -129,12 +129,11 @@ func (pndb *PNodeDB) Flush() {
 
 /*PruneBelowVersion - prune the state below the given origin */
 func (pndb *PNodeDB) PruneBelowVersion(ctx context.Context, version Sequence) error {
-	BatchSize := 64
 	ps := GetPruneStats(ctx)
 	var total int64
 	var count int64
 	var leaves int64
-	batch := make([]Key, BatchSize)
+	batch := make([]Key, 0, BatchSize)
 	handler := func(ctx context.Context, key Key, node Node) error {
 		total++
 		if node.GetVersion() >= version {

@@ -2,9 +2,11 @@ package sharder
 
 import (
 	"context"
+	"math"
 	"time"
 
 	"0chain.net/block"
+	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 
 	"0chain.net/datastore"
@@ -13,6 +15,12 @@ import (
 	"0chain.net/persistencestore"
 	"0chain.net/transaction"
 )
+
+var txnSaveTimer metrics.Timer
+
+func init() {
+	txnSaveTimer = metrics.GetOrRegisterTimer("txn_save_time", nil)
+}
 
 /*GetTransactionSummary - given a transaction hash, get the transaction summary */
 func GetTransactionSummary(ctx context.Context, hash string) (*transaction.TransactionSummary, error) {
@@ -88,20 +96,24 @@ func (sc *Chain) StoreTransactions(ctx context.Context, b *block.Block) error {
 	txnSummaryMetadata := datastore.GetEntityMetadata("txn_summary")
 	tctx := persistencestore.WithEntityConnection(ctx, txnSummaryMetadata)
 	defer persistencestore.Close(tctx)
-	for numTrials := 1; numTrials <= 10; numTrials++ {
+	delay := time.Millisecond
+	ts := time.Now()
+	for tries := 1; tries <= 9; tries++ {
 		err := txnSummaryMetadata.GetStore().MultiWrite(tctx, txnSummaryMetadata, sTxns)
 		if err != nil {
-			Logger.Error("save transactions error", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
-			if err.Error() == "gocql: no host available in the pool" {
-				// long gc pauses can result in this error and so waiting longer to retry
-				time.Sleep(100 * time.Millisecond)
-			} else {
-				time.Sleep(10 * time.Millisecond)
-			}
+			delay = 2 * delay
+			Logger.Error("save transactions error", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Int("retry", tries), zap.Duration("delay", delay), zap.Error(err))
+			time.Sleep(delay)
 		} else {
 			Logger.Info("transactions saved successfully", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Int("block_size", len(b.Txns)))
 			break
 		}
+	}
+	duration := time.Since(ts)
+	txnSaveTimer.UpdateSince(ts)
+	p95 := txnSaveTimer.Percentile(.95)
+	if txnSaveTimer.Count() > 100 && 2*p95 < float64(duration) {
+		Logger.Error("save transactions - slow", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Duration("duration", duration), zap.Duration("p95", time.Duration(math.Round(p95/1000000))*time.Millisecond))
 	}
 	return nil
 }
