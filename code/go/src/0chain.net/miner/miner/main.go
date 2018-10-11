@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"0chain.net/threshold"
+
 	_ "net/http/pprof"
 
 	"0chain.net/block"
@@ -168,6 +170,8 @@ func initEntities() {
 	transaction.SetupEntity(memoryStorage)
 
 	miner.SetupNotarizationEntity()
+
+	threshold.SetupDKGEntity()
 }
 
 func initHandlers() {
@@ -209,6 +213,14 @@ func initWorkers(ctx context.Context) {
 /*StartProtocol - start the miner protocol */
 func StartProtocol() {
 	mc := miner.GetMinerChain()
+
+	miners := mc.Miners
+
+	dkg := &threshold.Dkg{ID : 1, 
+		Share: "testDKG"}
+
+	miners.SendTo(miner.DKGShareSender(dkg), miners.Nodes[1].ID)
+
 	sr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 	sr.Number = 1
 

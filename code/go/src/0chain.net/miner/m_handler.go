@@ -2,6 +2,7 @@ package miner
 
 /*This file contains the Miner To Miner send/receive messages */
 import (
+	"0chain.net/threshold"
 	"context"
 	"net/http"
 	"strconv"
@@ -32,11 +33,18 @@ var BlockNotarizationSender node.EntitySendHandler
 /*MinerNotarizedBlockSender - Send a notarized block to a node*/
 var MinerNotarizedBlockSender node.EntitySendHandler
 
+/*DKGShareSender - Send dkg share to a node*/
+var DKGShareSender node.EntitySendHandler
+
 /*SetupM2MSenders - setup senders for miner to miner communication */
 func SetupM2MSenders() {
 
 	options := &node.SendOptions{MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
 	RoundStartSender = node.SendEntityHandler("/v1/_m2m/round/start", options)
+
+	//TODO: changes options and url as per requirements
+	options = &node.SendOptions{Timeout: time.Second, MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
+	DKGShareSender = node.SendEntityHandler("/v1/_m2m/dkg/share", options)
 
 	options = &node.SendOptions{Timeout: 2 * time.Second, MaxRelayLength: 0, CurrentRelayLength: 0, CODEC: node.CODEC_MSGPACK, Compress: true}
 	VerifyBlockSender = node.SendEntityHandler("/v1/_m2m/block/verify", options)
@@ -47,13 +55,14 @@ func SetupM2MSenders() {
 
 	options = &node.SendOptions{Timeout: time.Second, MaxRelayLength: 0, CurrentRelayLength: 0, CODEC: node.CODEC_MSGPACK, Compress: true}
 	BlockNotarizationSender = node.SendEntityHandler("/v1/_m2m/block/notarization", options)
+
 }
 
 /*SetupM2MReceivers - setup receivers for miner to miner communication */
 func SetupM2MReceivers() {
 	// TODO: This is going to abstract the random beacon for now
 	http.HandleFunc("/v1/_m2m/round/start", node.ToN2NReceiveEntityHandler(StartRoundHandler))
-
+	http.HandleFunc("/v1/_m2m/dkg/share", node.ToN2NReceiveEntityHandler(DKGShareHandler))
 	http.HandleFunc("/v1/_m2m/block/verify", node.ToN2NReceiveEntityHandler(memorystore.WithConnectionEntityJSONHandler(VerifyBlockHandler, datastore.GetEntityMetadata("block"))))
 	http.HandleFunc("/v1/_m2m/block/verification_ticket", node.ToN2NReceiveEntityHandler(VerificationTicketReceiptHandler))
 	http.HandleFunc("/v1/_m2m/block/notarization", node.ToN2NReceiveEntityHandler(NotarizationReceiptHandler))
@@ -78,6 +87,18 @@ func StartRoundHandler(ctx context.Context, entity datastore.Entity) (interface{
 	mr := mc.CreateRound(r)
 	msg := NewBlockMessage(MessageStartRound, node.GetSender(ctx), mr, nil)
 	mc.GetBlockMessageChannel() <- msg
+	return true, nil
+}
+
+/*DKGShareHandler - handles the dkg share it receives from a node */
+func DKGShareHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+	//cast to required type and process further
+	dkg, ok := entity.(*threshold.Dkg)
+	if !ok {
+		Logger.Error("invalid entity")
+		return false, nil
+	}
+	Logger.Info("received DKG share", zap.String("share", dkg.Share))
 	return true, nil
 }
 
