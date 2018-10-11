@@ -3,6 +3,7 @@ package miner
 import (
 	"context"
 	"math/rand"
+	"sync"
 	"time"
 
 	"0chain.net/block"
@@ -43,7 +44,7 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 	self := node.GetSelfNode(ctx)
 	rank := mr.GetMinerRank(self.Node)
 	Logger.Info("*** starting round ***", zap.Int64("round", mr.GetRoundNumber()), zap.Int("index", self.SetIndex), zap.Int("rank", rank), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round))
-	if !mc.CanGenerateRound(mr, self.Node) {
+	if !mc.IsRoundGenerator(mr, self.Node) {
 		return
 	}
 	//NOTE: If there are not enough txns, this will not advance further even though rest of the network is. That's why this is a goroutine
@@ -189,8 +190,8 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 			return
 		}
 		if b.Round > 1 {
-			if err := mc.VerifyNotarization(ctx, b.PrevHash, b.PrevBlockVerficationTickets); err != nil {
-				Logger.Error("verify round block (prior block verify notarization)", zap.Int64("round", mr.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Error(err))
+			if err := mc.VerifyNotarization(ctx, b.PrevHash, b.PrevBlockVerificationTickets); err != nil {
+				Logger.Error("verify round block (prior block verify notarization)", zap.Int64("round", mr.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Int("pb_v_tickets", len(b.PrevBlockVerificationTickets)), zap.Error(err))
 				return
 			}
 		}
@@ -244,13 +245,10 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			}
 			return false
 		}
-		r.Block = b
 		b.SetBlockState(block.StateVerificationSuccessful)
-		if mc.IsBlockNotarized(ctx, b) {
-			b.SetBlockState(block.StateNotarized)
-		}
 		bnb := r.GetBestNotarizedBlock()
 		if bnb == nil || bnb.RoundRank >= b.RoundRank {
+			r.Block = b
 			go mc.SendVerificationTicket(ctx, b, bvt)
 			// since block.AddVerificationTicket is not thread-safe, directly doing ProcessVerifiedTicket will not work in rare cases as incoming verification tickets get added concurrently
 			bm := NewBlockMessage(MessageVerificationTicket, node.Self.Node, r, b)
@@ -327,15 +325,15 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r *Round, b *block.Block)
 
 func (mc *Chain) updatePriorBlock(ctx context.Context, r *round.Round, b *block.Block) {
 	pb := b.PrevBlock
-	notarized := mc.IsBlockNotarized(ctx, pb)
-	pb.MergeVerificationTickets(b.PrevBlockVerficationTickets) // grab any unknown verification tickets of previous block from the current block
-	if !notarized {
-		pr := mc.GetMinerRound(pb.Round)
-		if pr != nil {
-			mc.AddNotarizedBlock(ctx, pr.Round, pb)
-		} else {
-			Logger.Error("verify round - previous round not present", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
-		}
+	pb.MergeVerificationTickets(b.PrevBlockVerificationTickets)
+	pr := mc.GetMinerRound(pb.Round)
+	if pr != nil {
+		mc.AddNotarizedBlock(ctx, pr, pb)
+	} else {
+		Logger.Error("verify round - previous round not present", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
+	}
+	if len(pb.VerificationTickets) > len(b.PrevBlockVerificationTickets) {
+		b.PrevBlockVerificationTickets = pb.VerificationTickets
 	}
 }
 
@@ -343,8 +341,7 @@ func (mc *Chain) updatePriorBlock(ctx context.Context, r *round.Round, b *block.
 func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.Block, vt *block.VerificationTicket) {
 	notarized := mc.IsBlockNotarized(ctx, b)
 	//NOTE: We keep collecting verification tickets even if a block is notarized.
-	// This is useful since Dfinity suggest broadcasting the previous notarized block when verifying the current block
-	// If we know how many verifications already exists for a block, we only need to broadcast to the rest. Hence collecting any prior block verifications is OK.
+	// Knowing who all know about a block can be used to optimize other parts of the protocol
 	if !mc.AddVerificationTicket(ctx, b, vt) {
 		return
 	}
@@ -352,26 +349,32 @@ func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.B
 		return
 	}
 	if mc.IsBlockNotarized(ctx, b) {
-		b.SetBlockState(block.StateNotarized)
-		r.Block = b
-		mc.CancelRoundVerification(ctx, r)
-		mc.AddNotarizedBlock(ctx, r.Round, b)
-		go mc.SendNotarization(ctx, b)
+		if mc.AddNotarizedBlock(ctx, r, b) {
+			Logger.Info("process verified ticket - block notarized", zap.Int64("round", b.Round), zap.String("block", b.Hash))
+			go mc.SendNotarization(ctx, b)
+		}
 	}
 }
 
 /*AddNotarizedBlock - add a notarized block for a given round */
-func (mc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI, b *block.Block) bool {
-	if r.AddNotarizedBlock(b) != b {
+func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *Round, b *block.Block) bool {
+	if _, ok := r.AddNotarizedBlock(b); !ok {
 		return false
 	}
-	mc.UpdateNodeState(b)
+	b.SetBlockState(block.StateNotarized)
+	if !r.IsVerificationComplete() {
+		r.CancelVerification()
+		if r.Block == nil || r.Block.RoundRank > b.RoundRank {
+			r.Block = b
+		}
+	}
 	pr := mc.GetMinerRound(r.GetRoundNumber() - 1)
 	if pr != nil {
 		pr.CancelVerification()
 		go mc.FinalizeRound(ctx, pr.Round, mc)
 	}
 	mc.startNextRound(r)
+	mc.UpdateNodeState(b)
 	return true
 }
 
@@ -405,4 +408,40 @@ func (mc *Chain) BroadcastNotarizedBlocks(ctx context.Context, pr *Round, r *Rou
 		Logger.Info("sending notarized block", zap.Int64("round", pr.Number), zap.String("block", nb.Hash))
 		go mc.SendNotarizedBlockToMiners(ctx, nb)
 	}
+}
+
+/*GetLatestFinalizedBlockFromSharder - request for latest finalized block from all the sharders */
+func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*block.Block {
+	m2s := mc.Sharders
+	finalizedBlocks := make([]*block.Block, 0, 1)
+	fbMutex := &sync.Mutex{}
+	//Params are nil? Do we need to send any params like sending the miner ID ?
+	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+		fb, ok := entity.(*block.Block)
+		if !ok {
+			return nil, common.NewError("invalid_entity", "Invalid entity")
+		}
+		Logger.Info("bc-1 lfb received", zap.Int64("lfb_round", fb.Round))
+		err := fb.Validate(ctx)
+		if err != nil {
+			Logger.Error("bc-1 lfb invalid", zap.String("block_hash", fb.Hash))
+			return nil, err
+		}
+		err = mc.VerifyNotarization(ctx, fb.Hash, fb.VerificationTickets)
+		if err != nil {
+			Logger.Info("bc-1 lfb notarization failed", zap.Int64("lfb_round", fb.Round))
+			return nil, err
+		}
+		fbMutex.Lock()
+		defer fbMutex.Unlock()
+		for _, b := range finalizedBlocks {
+			if b.Hash == fb.Hash {
+				return fb, nil
+			}
+		}
+		finalizedBlocks = append(finalizedBlocks, fb)
+		return fb, nil
+	}
+	m2s.RequestEntityFromAll(ctx, MinerLatestFinalizedBlockRequestor, nil, handler)
+	return finalizedBlocks
 }

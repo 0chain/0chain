@@ -5,7 +5,10 @@ services:
     networks:
       - default
     volumes:
+      - /0chain/config/cassandra/cassandra.yaml:/etc/cassandra/cassandra.yaml
+      - /0chain/config/cassandra:/0chain/cassandra
       - /0chain/data/cassandra:/var/lib/cassandra
+      - /0chain/log/cassandra:/var/log/cassandra
       - /0chain/0chain/sql:/0chain/sql
     ports:
       - "9042:9042"
@@ -26,13 +29,9 @@ services:
       - /0chain/config/cassandra:/0chain/cassandra
       - /0chain/0chain/sql:/0chain/sql
 
-
-    #Start under user 0chain
-    user: 2000:2000
     command: bash /0chain/cassandra/cassandra-init.sh
     links:
       - cassandra:cassandra
-
     restart: on-failure:10
 
   sharder:

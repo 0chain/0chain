@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"time"
 
 	"0chain.net/common"
 	"0chain.net/datastore"
@@ -159,14 +160,21 @@ func (ps *Store) MultiWrite(ctx context.Context, entityMetadata datastore.Entity
 }
 
 func (ps *Store) multiWriteAux(ctx context.Context, entityMetadata datastore.EntityMetadata, entities []datastore.Entity) error {
-	c := GetCon(ctx)
-	sql := getJSONInsert(entityMetadata.GetName())
-	batch := c.NewBatch(gocql.LoggedBatch)
-	for _, entity := range entities {
-		batch.Query(sql, datastore.ToJSON(entity).String())
+	for i := 0; i < 3; i++ {
+		c := GetCon(ctx)
+		sql := getJSONInsert(entityMetadata.GetName())
+		batch := c.NewBatch(gocql.LoggedBatch)
+		for _, entity := range entities {
+			batch.Query(sql, datastore.ToJSON(entity).String())
+		}
+		err := c.ExecuteBatch(batch)
+		if err != nil {
+			if !ps.shouldReconnect(err) {
+				return err
+			}
+		}
 	}
-	err := c.ExecuteBatch(batch)
-	return err
+	return nil
 }
 
 /*MultiDelete - delete multiple entities from the store */
@@ -202,4 +210,14 @@ func (ps *Store) MultiDeleteFromCollection(ctx context.Context, entityMetadata d
 
 func (ps *Store) GetCollectionSize(ctx context.Context, entityMetadata datastore.EntityMetadata, collectionName string) int64 {
 	return -1
+}
+
+func (ps *Store) shouldReconnect(err error) bool {
+	switch err {
+	case gocql.ErrNoConnections:
+		Session.Close()
+		initSession(100*time.Millisecond, 10)
+		return true
+	}
+	return false
 }

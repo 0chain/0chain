@@ -3,7 +3,6 @@ package block
 import (
 	"context"
 	"fmt"
-	"sort"
 	"strconv"
 	"sync"
 
@@ -44,9 +43,9 @@ type UnverifiedBlockBody struct {
 	datastore.VersionField
 	datastore.CreationDateField
 
-	MagicBlockHash              string                `json:"magic_block_hash"`
-	PrevHash                    string                `json:"prev_hash"`
-	PrevBlockVerficationTickets []*VerificationTicket `json:"prev_verification_tickets,omitempty"`
+	MagicBlockHash               string                `json:"magic_block_hash"`
+	PrevHash                     string                `json:"prev_hash"`
+	PrevBlockVerificationTickets []*VerificationTicket `json:"prev_verification_tickets,omitempty"`
 
 	MinerID         datastore.Key `json:"miner_id"`
 	Round           int64         `json:"round"`
@@ -158,7 +157,6 @@ func (b *Block) Delete(ctx context.Context) error {
 func Provider() datastore.Entity {
 	b := &Block{}
 	b.Version = "1.0"
-	//b.PrevBlockVerficationTickets = make([]*VerificationTicket, 0)
 	b.ChainID = datastore.ToKey(config.GetServerChainID())
 	b.InitializeCreationDate()
 	b.StateMutex = &sync.Mutex{}
@@ -181,8 +179,8 @@ func (b *Block) SetPreviousBlock(prevBlock *Block) {
 	b.PrevBlock = prevBlock
 	b.PrevHash = prevBlock.Hash
 	b.Round = prevBlock.Round + 1
-	if len(b.PrevBlockVerficationTickets) == 0 {
-		b.PrevBlockVerficationTickets = prevBlock.VerificationTickets
+	if len(b.PrevBlockVerificationTickets) == 0 {
+		b.PrevBlockVerificationTickets = prevBlock.VerificationTickets
 	}
 }
 
@@ -218,47 +216,41 @@ func (b *Block) AddTransaction(t *transaction.Transaction) {
 *  - the miner of the block for example will decide if the notarization is received and send it off to others
  */
 func (b *Block) AddVerificationTicket(vt *VerificationTicket) bool {
-	if b.VerificationTickets != nil {
-		for _, ivt := range b.VerificationTickets {
-			if datastore.IsEqual(vt.VerifierID, ivt.VerifierID) {
-				return false
-			}
+	bvt := b.VerificationTickets
+	for _, t := range bvt {
+		if datastore.IsEqual(vt.VerifierID, t.VerifierID) {
+			return false
 		}
 	}
-	b.VerificationTickets = append(b.VerificationTickets, vt)
+	bvt = append(bvt, vt)
+	b.VerificationTickets = bvt
 	return true
 }
 
 /*MergeVerificationTickets - merge the verification tickets with what's already there */
 func (b *Block) MergeVerificationTickets(vts []*VerificationTicket) {
-	if len(b.VerificationTickets) == 0 {
-		b.VerificationTickets = vts
-		return
-	}
-	tickets, tickets2 := vts, b.VerificationTickets
-	if len(tickets2) > len(tickets) {
-		tickets, tickets2 = tickets2, tickets
-	}
-	sort.Slice(tickets, func(i, j int) bool { return tickets[i].VerifierID < tickets[j].VerifierID })
-	ticketsLen := len(tickets)
-	for _, ticket := range tickets2 {
-		ticketIndex := sort.Search(ticketsLen, func(i int) bool { return tickets[i].VerifierID >= ticket.VerifierID })
-		if ticketIndex < ticketsLen && ticket.VerifierID == tickets[ticketIndex].VerifierID { // present in both
-			continue
-		}
-		tickets = append(tickets, ticket)
-	}
-	if len(tickets) > len(b.VerificationTickets) {
-		b.VerificationTickets = tickets
-	}
+	b.VerificationTickets = b.unionVerificationTickets(b.VerificationTickets, vts)
 }
 
-/*GetVerificationTicketsCount - get the number of verification tickets for the block */
-func (b *Block) GetVerificationTicketsCount() int {
-	if b.VerificationTickets == nil {
-		return 0
+func (b *Block) unionVerificationTickets(tickets1 []*VerificationTicket, tickets2 []*VerificationTicket) []*VerificationTicket {
+	if len(tickets1) == 0 {
+		return tickets2
 	}
-	return len(b.VerificationTickets)
+	if len(tickets2) == 0 {
+		return tickets1
+	}
+	ticketsMap := make(map[string]*VerificationTicket, len(tickets1)+len(tickets2))
+	for _, t := range tickets1 {
+		ticketsMap[t.VerifierID] = t
+	}
+	for _, t := range tickets2 {
+		ticketsMap[t.VerifierID] = t
+	}
+	utickets := make([]*VerificationTicket, 0, len(ticketsMap))
+	for _, v := range ticketsMap {
+		utickets = append(utickets, v)
+	}
+	return utickets
 }
 
 /*GetMerkleTree - return the merkle tree of this block using the transactions as leaf nodes */

@@ -20,11 +20,14 @@ func (mc *Chain) HandleStartRound(ctx context.Context, msg *BlockMessage) {
 /*HandleVerifyBlockMessage - handles the verify block message */
 func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage) {
 	b := msg.Block
+	mr := mc.GetMinerRound(b.Round)
+	if mr != nil {
+		mr.MergeVerificationTickets(b)
+	}
 	if b.Round < mc.CurrentRound-1 {
 		Logger.Debug("verify block (round mismatch)", zap.Int64("current_round", mc.CurrentRound), zap.Int64("block_round", b.Round))
 		return
 	}
-	mr := mc.GetMinerRound(b.Round)
 	if mr == nil {
 		r := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 		r.Number = b.Round
@@ -46,33 +49,42 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 /*HandleVerificationTicketMessage - handles the verification ticket message */
 func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *BlockMessage) {
 	var err error
-	b := msg.Block // if the ticket is for own generated block, then the message contains the block
-	if b == nil {
-		b, err = mc.GetBlock(ctx, msg.BlockVerificationTicket.BlockID)
-		if err != nil {
-			if msg.ShouldRetry() {
-				Logger.Info("verification message (no block) retrying", zap.String("block", msg.BlockVerificationTicket.BlockID), zap.Int8("retry_count", msg.RetryCount), zap.Error(err))
-				msg.Retry(mc.BlockMessageChannel)
-			} else {
-				Logger.Error("verification message (no block)", zap.String("block", msg.BlockVerificationTicket.BlockID), zap.Int8("retry_count", msg.RetryCount), zap.Error(err))
-			}
-			return
-		}
-		if b.Round < mc.LatestFinalizedBlock.Round {
-			Logger.Debug("verification message (round mismatch)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("finalized_round", mc.LatestFinalizedBlock.Round))
-			return
-		}
-	}
 	r := msg.Round
+	if r == nil {
+		r = mc.GetMinerRound(msg.BlockVerificationTicket.Round)
+	}
+	b := msg.Block // if the ticket is for own generated block, then the message contains the block
 	if msg.Sender != node.Self.Node {
-		if r == nil {
-			r = mc.GetMinerRound(b.Round)
+		if b == nil {
+			b, err = mc.GetBlock(ctx, msg.BlockVerificationTicket.BlockID)
+			if err != nil {
+				if r != nil {
+					err = mc.VerifyTicket(ctx, msg.BlockVerificationTicket.BlockID, &msg.BlockVerificationTicket.VerificationTicket)
+					if err != nil {
+						Logger.Debug("verification ticket", zap.Error(err))
+						return
+					}
+					r.AddVerificationTicket(msg.BlockVerificationTicket)
+					return
+				}
+				if msg.ShouldRetry() {
+					Logger.Info("verification message (no block) retrying", zap.String("block", msg.BlockVerificationTicket.BlockID), zap.Int8("retry_count", msg.RetryCount), zap.Error(err))
+					msg.Retry(mc.BlockMessageChannel)
+				} else {
+					Logger.Error("verification message (no block)", zap.Int64("round", msg.BlockVerificationTicket.Round), zap.String("block", msg.BlockVerificationTicket.BlockID), zap.Int8("retry_count", msg.RetryCount), zap.Error(err))
+				}
+				return
+			}
+			if b.Round < mc.LatestFinalizedBlock.Round {
+				Logger.Debug("verification message (round mismatch)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("finalized_round", mc.LatestFinalizedBlock.Round))
+				return
+			}
 		}
 		if r == nil {
 			Logger.Debug("verification message (no round)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("finalized_round", mc.LatestFinalizedBlock.Round))
 			return
 		}
-		err = mc.VerifyTicket(ctx, b.Hash, &msg.BlockVerificationTicket.VerificationTicket)
+		err := mc.VerifyTicket(ctx, b.Hash, &msg.BlockVerificationTicket.VerificationTicket)
 		if err != nil {
 			Logger.Debug("verification ticket", zap.Error(err))
 			return
@@ -117,19 +129,16 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 		return
 	}
 	b.MergeVerificationTickets(msg.Notarization.VerificationTickets)
-	if !mc.AddNotarizedBlock(ctx, r.Round, b) {
+	if !mc.AddNotarizedBlock(ctx, r, b) {
 		return
 	}
-	if !r.IsVerificationComplete() {
-		r.CancelVerification()
-		if r.Block == nil || r.Block.Weight() < b.Weight() {
-			r.Block = b
-		}
-	}
+
 	if mc.BlocksToSharder == chain.NOTARIZED {
-		//We assume those who can generate a block in a round are also responsible for sending it to the sharders
-		if mc.CanGenerateRound(r.Round, node.GetSelfNode(ctx).Node) {
-			go mc.SendNotarizedBlock(ctx, b)
+		if mc.VerificationTicketsTo == chain.Generator {
+			//We assume those who can generate a block in a round are also responsible for sending it to the sharders
+			if mc.IsRoundGenerator(r.Round, node.GetSelfNode(ctx).Node) {
+				go mc.SendNotarizedBlock(ctx, b)
+			}
 		}
 	}
 }
@@ -150,7 +159,7 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
 		}
 	}
 	r.Round.Block = nil
-	if mc.CanGenerateRound(r.Round, node.GetSelfNode(ctx).Node) {
+	if mc.IsRoundGenerator(r.Round, node.GetSelfNode(ctx).Node) {
 		go mc.GenerateRoundBlock(ctx, r)
 	}
 }
@@ -173,19 +182,6 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMess
 			}
 		}
 	}
-	b, err := mc.GetBlock(ctx, mb.Hash)
-	if err == nil {
-		b.MergeVerificationTickets(mb.VerificationTickets)
-	} else {
-		b = mb
-		mc.AddBlock(mb)
-	}
-
-	mc.AddNotarizedBlock(ctx, mr.Round, b)
-	if !mr.IsVerificationComplete() {
-		mr.CancelVerification()
-		if mr.Block == nil || mr.Block.Weight() < b.Weight() {
-			mr.Block = b
-		}
-	}
+	b := mc.AddBlock(mb)
+	mc.AddNotarizedBlock(ctx, mr, b)
 }

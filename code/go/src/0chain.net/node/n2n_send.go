@@ -148,14 +148,15 @@ func (np *Pool) sendOne(handler SendHandler, nodes []*Node) *Node {
 /*SendEntityHandler provides a client API to send an entity */
 func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 	return func(entity datastore.Entity) SendHandler {
+		timeout := 500 * time.Millisecond
+		if options.Timeout > 0 {
+			timeout = options.Timeout
+		}
+		data := getResponseData(options, entity).Bytes()
 		return func(receiver *Node) bool {
 			timer := receiver.GetTimer(uri)
-			timeout := 500 * time.Millisecond
-			if options.Timeout > 0 {
-				timeout = options.Timeout
-			}
-			buffer := getResponseData(options, entity)
 			url := receiver.GetN2NURLBase() + uri
+			buffer := bytes.NewBuffer(data)
 			req, err := http.NewRequest("POST", url, buffer)
 			if err != nil {
 				return false
@@ -305,7 +306,7 @@ func validateSendRequest(sender *Node, r *http.Request) bool {
 
 /*ToN2NReceiveEntityHandler - takes a handler that accepts an entity, processes and responds and converts it
 * into somethign suitable for Node 2 Node communication*/
-func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF) common.ReqRespHandlerf {
+func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, options *ReceiveOptions) common.ReqRespHandlerf {
 	return func(w http.ResponseWriter, r *http.Request) {
 		contentType := r.Header.Get("Content-type")
 		if !strings.HasPrefix(contentType, "application/json") {
@@ -323,13 +324,21 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF) common
 			return
 		}
 		entityName := r.Header.Get(HeaderRequestEntityName)
+		entityID := r.Header.Get(HeaderRequestEntityID)
 		entityMetadata := datastore.GetEntityMetadata(entityName)
+		if options != nil && options.MessageFilter != nil {
+			if !options.MessageFilter.Accept(entityName, entityID) {
+				defer r.Body.Close()
+				io.Copy(ioutil.Discard, r.Body)
+				N2n.Debug("message receive - reject", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.String("entity_id", entityID))
+				return
+			}
+		}
 		entity, err := getRequestEntity(r, entityMetadata)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Error reading entity: %v", err), 500)
 			return
 		}
-		entityID := r.Header.Get(HeaderRequestEntityID)
 		if entity.GetKey() != entityID {
 			N2n.Error("message received", zap.Any("from", sender.SetIndex), zap.Any("to", Self.SetIndex), zap.Any("handler", r.RequestURI), zap.String("entity_id", entityID), zap.String("entity.id", entity.GetKey()), zap.Any("error", "entity id doesn't match with signed id"))
 			return

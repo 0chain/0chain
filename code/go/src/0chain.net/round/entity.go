@@ -66,16 +66,19 @@ func (r *Round) GetRandomSeed() int64 {
 }
 
 /*AddNotarizedBlock - this will be concurrent as notarization is recognized by verifying as well as notarization message from others */
-func (r *Round) AddNotarizedBlock(b *block.Block) *block.Block {
+func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool) {
 	r.notarizedBlocksMutex.Lock()
 	defer r.notarizedBlocksMutex.Unlock()
 	for _, blk := range r.notarizedBlocks {
 		if blk.Hash == b.Hash {
-			return blk
+			if blk != b {
+				blk.MergeVerificationTickets(b.VerificationTickets)
+			}
+			return blk, false
 		}
 	}
 	r.notarizedBlocks = append(r.notarizedBlocks, b)
-	return b
+	return b, true
 }
 
 /*GetNotarizedBlocks - return all the notarized blocks associated with this round */

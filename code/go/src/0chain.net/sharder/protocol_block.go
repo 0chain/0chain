@@ -3,8 +3,10 @@ package sharder
 import (
 	"context"
 
+	"0chain.net/node"
 	"0chain.net/round"
 	"0chain.net/transaction"
+	"0chain.net/util"
 
 	"0chain.net/blockstore"
 	"0chain.net/config"
@@ -57,4 +59,30 @@ func (sc *Chain) cacheBlockTxns(hash string, txns []*transaction.Transaction) {
 		txnSummary.BlockHash = hash
 		sc.BlockTxnCache.Add(txn.Hash, txnSummary)
 	}
+}
+
+func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
+	if err := sc.VerifyNotarization(ctx, b.Hash, b.VerificationTickets); err != nil {
+		Logger.Error("notarization verification failed", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
+		return
+	}
+	if err := b.Validate(ctx); err != nil {
+		Logger.Error("block validation", zap.Any("round", b.Round), zap.Any("hash", b.Hash), zap.Error(err))
+		return
+	}
+	if sc.AddBlock(b) != b {
+		return
+	}
+	er := sc.GetRound(b.Round)
+	if er == nil {
+		r := datastore.GetEntityMetadata("round").Instance().(*round.Round)
+		r.Number = b.Round
+		r.RandomSeed = b.RoundRandomSeed
+		r.ComputeMinerRanks(sc.Miners.Size())
+		er, _ = sc.AddRound(r).(*round.Round)
+	}
+	bNode := node.GetNode(b.MinerID)
+	b.RoundRank = er.GetMinerRank(bNode)
+	Logger.Info("received block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)))
+	sc.AddNotarizedBlock(ctx, er, b)
 }

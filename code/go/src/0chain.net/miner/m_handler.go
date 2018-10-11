@@ -5,6 +5,7 @@ import (
 	"context"
 	"net/http"
 	"strconv"
+	"time"
 
 	"0chain.net/block"
 	"0chain.net/common"
@@ -28,8 +29,11 @@ var VerificationTicketSender node.EntitySendHandler
 /*BlockNotarizationSender - Send the block notarization to a node */
 var BlockNotarizationSender node.EntitySendHandler
 
-/*MinerNotarizedBlockSender - Send a notarized block to a node*/
+/*MinerNotarizedBlockSender - Send a notarized block to a node */
 var MinerNotarizedBlockSender node.EntitySendHandler
+
+/*MinerLatestFinalizedBlockRequestor - RequestHandler for latest finalized block to a node */
+var MinerLatestFinalizedBlockRequestor node.EntityRequestor
 
 /*SetupM2MSenders - setup senders for miner to miner communication */
 func SetupM2MSenders() {
@@ -51,17 +55,25 @@ func SetupM2MSenders() {
 /*SetupM2MReceivers - setup receivers for miner to miner communication */
 func SetupM2MReceivers() {
 	// TODO: This is going to abstract the random beacon for now
-	http.HandleFunc("/v1/_m2m/round/start", node.ToN2NReceiveEntityHandler(StartRoundHandler))
-
-	http.HandleFunc("/v1/_m2m/block/verify", node.ToN2NReceiveEntityHandler(memorystore.WithConnectionEntityJSONHandler(VerifyBlockHandler, datastore.GetEntityMetadata("block"))))
-	http.HandleFunc("/v1/_m2m/block/verification_ticket", node.ToN2NReceiveEntityHandler(VerificationTicketReceiptHandler))
-	http.HandleFunc("/v1/_m2m/block/notarization", node.ToN2NReceiveEntityHandler(NotarizationReceiptHandler))
-	http.HandleFunc("/v1/_m2m/block/notarized_block", node.ToN2NReceiveEntityHandler(NotarizedBlockHandler))
+	http.HandleFunc("/v1/_m2m/round/start", node.ToN2NReceiveEntityHandler(StartRoundHandler, nil))
+	http.HandleFunc("/v1/_m2m/block/verify", node.ToN2NReceiveEntityHandler(memorystore.WithConnectionEntityJSONHandler(VerifyBlockHandler, datastore.GetEntityMetadata("block")), nil))
+	http.HandleFunc("/v1/_m2m/block/verification_ticket", node.ToN2NReceiveEntityHandler(VerificationTicketReceiptHandler, nil))
+	http.HandleFunc("/v1/_m2m/block/notarization", node.ToN2NReceiveEntityHandler(NotarizationReceiptHandler, nil))
+	http.HandleFunc("/v1/_m2m/block/notarized_block", node.ToN2NReceiveEntityHandler(NotarizedBlockHandler, nil))
 }
 
 /*SetupX2MResponders - setup responders */
 func SetupX2MResponders() {
 	http.HandleFunc("/v1/_x2m/block/notarized_block/get", node.ToN2NSendEntityHandler(NotarizedBlockSendHandler))
+}
+
+/*SetupM2SRequestors - setup all requests to sharder by miner */
+func SetupM2SRequestors() {
+	//TODO should we make any changes to the options based on the requirement
+	options := &node.SendOptions{Timeout: 2 * time.Second, CODEC: node.CODEC_MSGPACK, Compress: true}
+
+	blockEntityMetadata := datastore.GetEntityMetadata("block")
+	MinerLatestFinalizedBlockRequestor = node.RequestEntityHandler("/v1/_m2s/block/latest_finalized/get", options, blockEntityMetadata)
 }
 
 /*StartRoundHandler - handles the starting of a new round */

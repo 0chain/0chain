@@ -274,9 +274,6 @@ func (c *Chain) AddGenesisBlock(b *block.Block) {
 
 /*AddBlock - adds a block to the cache */
 func (c *Chain) AddBlock(b *block.Block) *block.Block {
-	if b.Round < c.LatestFinalizedBlock.Round {
-		return nil
-	}
 	c.blocksMutex.Lock()
 	defer c.blocksMutex.Unlock()
 	return c.addBlock(b)
@@ -284,12 +281,17 @@ func (c *Chain) AddBlock(b *block.Block) *block.Block {
 
 func (c *Chain) addBlock(b *block.Block) *block.Block {
 	if eb, ok := c.blocks[b.Hash]; ok {
+		if eb != b {
+			eb.MergeVerificationTickets(b.VerificationTickets)
+		}
 		return eb
 	}
 	c.blocks[b.Hash] = b
 	if b.PrevBlock == nil {
 		if pb, ok := c.blocks[b.PrevHash]; ok {
 			b.SetPreviousBlock(pb)
+		} else {
+			go c.GetPreviousBlock(common.GetRootContext(), b)
 		}
 	}
 	return b
@@ -359,32 +361,37 @@ func (c *Chain) DeleteBlocks(blocks []*block.Block) {
 	}
 }
 
+/*PruneChain - prunes the chain */
+func (c *Chain) PruneChain(ctx context.Context, b *block.Block) {
+	c.DeleteBlocksBelowRound(b.Round - 50)
+}
+
 /*ValidateMagicBlock - validate the block for a given round has the right magic block */
 func (c *Chain) ValidateMagicBlock(ctx context.Context, b *block.Block) bool {
 	//TODO: This needs to take the round number into account and go backwards as needed to validate
 	return b.MagicBlockHash == c.CurrentMagicBlock.Hash
 }
 
-/*CanGenerateRound - checks if the miner can generate a block in the given round */
-func (c *Chain) CanGenerateRound(r round.RoundI, miner *node.Node) bool {
-	return r.GetMinerRank(miner)+1 <= c.NumGenerators
+//IsRoundGenerator - is this miner a generator for this round
+func (c *Chain) IsRoundGenerator(r round.RoundI, nd *node.Node) bool {
+	return r.GetMinerRank(nd) < c.NumGenerators
 }
 
 /*GetGenerators - get all the block generators for a given round */
 func (c *Chain) GetGenerators(r round.RoundI) []*node.Node {
 	generators := make([]*node.Node, c.NumGenerators)
 	i := 0
-	for _, node := range c.Miners.Nodes {
-		if r.GetMinerRank(node) < c.NumGenerators {
-			generators[i] = node
+	for _, nd := range c.Miners.Nodes {
+		if c.IsRoundGenerator(r, nd) {
+			generators[i] = nd
 			i++
 		}
 	}
 	return generators
 }
 
-/*CanStoreBlock - checks if the sharder can store the block in the given round */
-func (c *Chain) CanStoreBlock(r round.RoundI, b *block.Block, sharder *node.Node) bool {
+/*IsBlockSharder - checks if the sharder can store the block in the given round */
+func (c *Chain) IsBlockSharder(r round.RoundI, b *block.Block, sharder *node.Node) bool {
 	if c.NumSharders <= 0 {
 		return true
 	}
@@ -398,7 +405,7 @@ func (c *Chain) ValidGenerator(r round.RoundI, b *block.Block) bool {
 	if miner == nil {
 		return false
 	}
-	return c.CanGenerateRound(r, miner)
+	return c.IsRoundGenerator(r, miner)
 }
 
 /*GetNotarizationThresholdCount - gives the threshold count for block to be notarized*/

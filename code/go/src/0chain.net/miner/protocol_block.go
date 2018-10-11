@@ -326,6 +326,7 @@ func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) erro
 func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (*block.BlockVerificationTicket, error) {
 	var bvt = &block.BlockVerificationTicket{}
 	bvt.BlockID = b.Hash
+	bvt.Round = b.Round
 	self := node.GetSelfNode(ctx)
 	var err error
 	bvt.VerifierID = self.GetKey()
