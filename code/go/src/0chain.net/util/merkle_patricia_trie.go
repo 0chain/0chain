@@ -707,7 +707,7 @@ func (mpt *MerklePatriciaTrie) pp(w io.Writer, key Key, depth byte, initpad bool
 func (mpt *MerklePatriciaTrie) UpdateVersion(ctx context.Context, version Sequence) error {
 	ps := GetPruneStats(ctx)
 	if ps != nil {
-		ps.Origin = version
+		ps.Version = version
 	}
 	keys := make([]Key, 0, BatchSize)
 	values := make([]Node, 0, BatchSize)
@@ -738,7 +738,7 @@ func (mpt *MerklePatriciaTrie) UpdateVersion(ctx context.Context, version Sequen
 	}
 	err := mpt.Iterate(ctx, handler, NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
 	if ps != nil {
-		ps.BelowOrigin = count
+		ps.BelowVersion = count
 	}
 	if err != nil {
 		return err
