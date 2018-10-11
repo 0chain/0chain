@@ -709,6 +709,8 @@ func (mpt *MerklePatriciaTrie) UpdateVersion(ctx context.Context, version Sequen
 	if ps != nil {
 		ps.Origin = version
 	}
+	keys := make([]Key, 0, BatchSize)
+	values := make([]Node, 0, BatchSize)
 	var count int64
 	handler := func(ctx context.Context, path Path, key Key, node Node) error {
 		if node.GetVersion() >= version {
@@ -719,15 +721,33 @@ func (mpt *MerklePatriciaTrie) UpdateVersion(ctx context.Context, version Sequen
 		}
 		count++
 		node.SetVersion(version)
-		err := mpt.DB.PutNode(key, node)
-		if err != nil {
-			Logger.Error("update version - bumping up", zap.String("path", string(path)), zap.String("key", ToHex(key)), zap.Any("old_version", node.GetVersion()), zap.Any("new_version", version), zap.Error(err))
+		tkey := make([]byte, len(key))
+		copy(tkey, key)
+		keys = append(keys, tkey)
+		values = append(values, node)
+		if len(keys) == BatchSize {
+			err := mpt.DB.MultiPutNode(keys, values)
+			keys = keys[:0]
+			values = values[:0]
+			if err != nil {
+				Logger.Error("update version - multi put", zap.String("path", string(path)), zap.String("key", ToHex(key)), zap.Any("old_version", node.GetVersion()), zap.Any("new_version", version), zap.Error(err))
+			}
+			return err
 		}
-		return err
+		return nil
 	}
 	err := mpt.Iterate(ctx, handler, NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
 	if ps != nil {
 		ps.BelowOrigin = count
+	}
+	if err != nil {
+		return err
+	}
+	if len(keys) > 0 {
+		err = mpt.DB.MultiPutNode(keys, values)
+		if err != nil {
+			Logger.Error("update version - multi put - last batch", zap.Error(err))
+		}
 	}
 	return err
 }
