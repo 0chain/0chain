@@ -33,7 +33,6 @@ RUN go get -d github.com/valyala/gozstd && \
     cd $GOPATH/src/github.com/valyala/gozstd && \
     make clean libzstd.a
 RUN go get github.com/gomodule/redigo/redis
-RUN go get github.com/tecbot/gorocksdb
 RUN go get github.com/vmihailenco/msgpack
 RUN go get -u golang.org/x/crypto/...
 RUN go get go.uber.org/zap
@@ -43,3 +42,9 @@ RUN go get gopkg.in/natefinch/lumberjack.v2
 RUN go get github.com/koding/cache
 RUN go get github.com/hashicorp/golang-lru
 
+RUN mkdir -p $GOPATH/src/github.com/tecbot && \
+    cd $GOPATH/src/github.com/tecbot && \
+    curl -L -o gorocksdb.zip https://github.com/tecbot/gorocksdb/archive/214b6b7bc0f06812ab5602fdc502a3e619916f38.zip && \
+    unzip gorocksdb.zip && \
+    mv gorocksdb-* gorocksdb && \
+    rm gorocksdb.zip
