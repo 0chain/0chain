@@ -7,11 +7,11 @@ import (
 /* BLS implementation */
 
 type SimpleBLS struct {
-	t             int
-	n             int
-	msg           Message
-	sigShare      Sign
-	gpPubKey      GroupPublicKey
+	t        int
+	n        int
+	msg      Message
+	sigShare Sign
+	//gpPubKey      GroupPublicKey
 	verifications []VerificationKey
 
 	partyKeyShare AfterDKGKeyShare
@@ -20,11 +20,11 @@ type SimpleBLS struct {
 func MakeSimpleBLS(dkg *BLSSimpleDKG, mg Message) SimpleBLS {
 
 	return SimpleBLS{
-		t:             dkg.T,
-		n:             dkg.N,
-		msg:           mg,
-		sigShare:      Sign{},
-		gpPubKey:      GroupPublicKey,
+		t:        dkg.T,
+		n:        dkg.N,
+		msg:      mg,
+		sigShare: Sign{},
+		//gpPubKey:      GroupPublicKey,
 		verifications: nil,
 		partyKeyShare: AfterDKGKeyShare{},
 	}
@@ -49,14 +49,20 @@ func (bs *SimpleBLS) VerifySign(sigShare Sign) bool {
 	return true
 }
 
-func (bs *SimpleBLS) RecoverGroupSig(from []PartyId, shares []Sign) interface{} {
+func (bs *SimpleBLS) RecoverGroupSig(from []PartyId, shares []Sign) (Sign, error) {
 
 	signVec := shares
 	idVec := from
 
-	bs.sigShare.Recover(signVec, idVec)
+	var sig Sign
+	err := sig.Recover(signVec, idVec)
 
-	return bs.sigShare
+	if err != nil {
+		fmt.Println("Recover Gp Sig not done")
+		return sig, nil
+	}
+	return sig, nil
+
 }
 
 func (bs *SimpleBLS) VerifyGroupSig(GroupSig) bool {

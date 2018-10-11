@@ -17,7 +17,7 @@ type GroupSig interface{}
 type Party interface {
 	SignMsg() Sign
 	VerifySign(share Sign) bool
-	RecoverGroupSig(from []PartyId, shares []SignShare) GroupSig
+	RecoverGroupSig(from []PartyId, shares []SignShare) Sign
 	VerifyGroupSig(GroupSig) bool
 }
 
