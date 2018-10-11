@@ -484,7 +484,7 @@ func (c *Chain) getMiningStake(minerId datastore.Key) int {
 func (c *Chain) InitializeMinerPool() {
 	for _, nd := range c.Miners.Nodes {
 		ms := &MinerStats{}
-		ms.FinalizationCountByRank = make([]int64, c.NumGenerators, c.NumGenerators)
+		ms.FinalizationCountByRank = make([]int64, c.NumGenerators)
 		nd.ProtocolStats = ms
 	}
 }

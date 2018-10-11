@@ -103,7 +103,7 @@ func (bdb *BlockDB) read(dataFile io.Reader, record Record) error {
 	if err != nil {
 		return err
 	}
-	data := make([]byte, dlen, dlen)
+	data := make([]byte, dlen)
 	n, err := io.ReadFull(dataFile, data)
 	if err != nil {
 		return err
