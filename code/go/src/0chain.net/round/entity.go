@@ -77,6 +77,7 @@ func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool) {
 			return blk, false
 		}
 	}
+	b.SetBlockNotarized()
 	r.notarizedBlocks = append(r.notarizedBlocks, b)
 	return b, true
 }

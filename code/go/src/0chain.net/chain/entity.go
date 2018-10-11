@@ -280,7 +280,7 @@ func (c *Chain) AddBlock(b *block.Block) *block.Block {
 func (c *Chain) addBlock(b *block.Block) *block.Block {
 	if eb, ok := c.blocks[b.Hash]; ok {
 		if eb != b {
-			eb.MergeVerificationTickets(b.VerificationTickets)
+			c.MergeVerificationTickets(common.GetRootContext(), eb, b.VerificationTickets)
 		}
 		return eb
 	}

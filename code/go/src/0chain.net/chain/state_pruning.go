@@ -41,7 +41,11 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 	}
 	d2 := time.Since(t1)
 	ps := util.GetPruneStats(pctx)
-	Logger.Info("prune client state stats", zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.String("state_hash", util.ToHex(bs.ClientStateHash)),
+	logf := Logger.Info
+	if d1 > time.Second || d2 > time.Second {
+		logf = Logger.Error
+	}
+	logf("prune client state stats", zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.String("state_hash", util.ToHex(bs.ClientStateHash)),
 		zap.Duration("duration", time.Since(t)), zap.Duration("update", d1), zap.Duration("prune", d2), zap.Any("stats", ps))
 	/*
 		if stateOut != nil {

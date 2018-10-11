@@ -51,9 +51,16 @@ func (c *Chain) VerifyNotarization(ctx context.Context, blockHash string, bvt []
 	return nil
 }
 
-/*IsBlockNotarized - Does the given number of signatures means eligible for notarization? */
+/*IsBlockNotarized - check if the block is notarized */
 func (c *Chain) IsBlockNotarized(ctx context.Context, b *block.Block) bool {
-	return c.reachedNotarization(b.VerificationTickets)
+	if b.IsBlockNotarized() {
+		return true
+	}
+	notarized := c.reachedNotarization(b.VerificationTickets)
+	if notarized {
+		b.SetBlockNotarized()
+	}
+	return notarized
 }
 
 func (c *Chain) reachedNotarization(bvt []*block.VerificationTicket) bool {
@@ -142,6 +149,24 @@ func (c *Chain) UpdateNodeState(b *block.Block) {
 		if signer.Status != node.NodeStatusActive {
 			signer.Status = node.NodeStatusActive
 		}
+	}
+}
+
+/*AddVerificationTicket - add a verified ticket to the list of verification tickets of the block */
+func (c *Chain) AddVerificationTicket(ctx context.Context, b *block.Block, bvt *block.VerificationTicket) bool {
+	added := b.AddVerificationTicket(bvt)
+	if added {
+		c.IsBlockNotarized(ctx, b)
+	}
+	return added
+}
+
+/*MergeVerificationTickets - merge a set of verification tickets (already validated) for a given block */
+func (c *Chain) MergeVerificationTickets(ctx context.Context, b *block.Block, vts []*block.VerificationTicket) {
+	vtlen := len(b.VerificationTickets)
+	b.MergeVerificationTickets(vts)
+	if len(b.VerificationTickets) != vtlen {
+		c.IsBlockNotarized(ctx, b)
 	}
 }
 

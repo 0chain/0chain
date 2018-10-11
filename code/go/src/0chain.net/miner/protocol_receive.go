@@ -22,7 +22,7 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 	b := msg.Block
 	mr := mc.GetMinerRound(b.Round)
 	if mr != nil {
-		mr.MergeVerificationTickets(b)
+		mc.MergeVerificationTickets(ctx, b, mr.GetVerificationTickets(b.Hash))
 	}
 	if b.Round < mc.CurrentRound-1 {
 		Logger.Debug("verify block (round mismatch)", zap.Int64("current_round", mc.CurrentRound), zap.Int64("block_round", b.Round))
@@ -128,7 +128,7 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 		Logger.Error("notarization message", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
 		return
 	}
-	b.MergeVerificationTickets(msg.Notarization.VerificationTickets)
+	mc.MergeVerificationTickets(ctx, b, msg.Notarization.VerificationTickets)
 	if !mc.AddNotarizedBlock(ctx, r, b) {
 		return
 	}

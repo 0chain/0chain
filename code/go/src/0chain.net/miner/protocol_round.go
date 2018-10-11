@@ -319,7 +319,7 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r *Round, b *block.Block)
 
 func (mc *Chain) updatePriorBlock(ctx context.Context, r *round.Round, b *block.Block) {
 	pb := b.PrevBlock
-	pb.MergeVerificationTickets(b.PrevBlockVerificationTickets)
+	mc.MergeVerificationTickets(ctx, pb, b.PrevBlockVerificationTickets)
 	pr := mc.GetMinerRound(pb.Round)
 	if pr != nil {
 		mc.AddNotarizedBlock(ctx, pr, pb)
@@ -333,7 +333,7 @@ func (mc *Chain) updatePriorBlock(ctx context.Context, r *round.Round, b *block.
 
 /*ProcessVerifiedTicket - once a verified ticket is received, do further processing with it */
 func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.Block, vt *block.VerificationTicket) {
-	notarized := mc.IsBlockNotarized(ctx, b)
+	notarized := b.IsBlockNotarized()
 	//NOTE: We keep collecting verification tickets even if a block is notarized.
 	// Knowing who all know about a block can be used to optimize other parts of the protocol
 	if !mc.AddVerificationTicket(ctx, b, vt) {
@@ -342,7 +342,7 @@ func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.B
 	if notarized {
 		return
 	}
-	if mc.IsBlockNotarized(ctx, b) {
+	if b.IsBlockNotarized() {
 		if mc.AddNotarizedBlock(ctx, r, b) {
 			Logger.Info("process verified ticket - block notarized", zap.Int64("round", b.Round), zap.String("block", b.Hash))
 			go mc.SendNotarization(ctx, b)
