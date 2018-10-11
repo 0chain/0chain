@@ -3,6 +3,7 @@ package chain
 import (
 	"context"
 	"fmt"
+	"math"
 	"time"
 
 	"0chain.net/config"
@@ -34,6 +35,9 @@ var ssFTs time.Time
 //StartToFinalizeTimer - a metric that tracks the time a block is created to finalized
 var StartToFinalizeTimer metrics.Timer
 
+//StateSaveTimer - a metric that tracks the time it takes to save the state
+var StateSaveTimer metrics.Timer
+
 func init() {
 	if SteadyStateFinalizationTimer != nil {
 		metrics.Unregister("ss_finalization_time")
@@ -43,6 +47,11 @@ func init() {
 		metrics.Unregister("s2f_time")
 	}
 	StartToFinalizeTimer = metrics.GetOrRegisterTimer("s2f_time", nil)
+
+	if StateSaveTimer != nil {
+		metrics.Unregister("state_save_timer")
+	}
+	StateSaveTimer = metrics.GetOrRegisterTimer("state_save_timer", nil)
 }
 
 /*FinalizeRound - starting from the given round work backwards and identify the round that can be
@@ -150,10 +159,17 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 		if fb.ClientState != nil {
 			ts := time.Now()
 			err := fb.ClientState.SaveChanges(c.stateDB, false)
+			duration := time.Since(ts)
+			StateSaveTimer.UpdateSince(ts)
 			if err != nil {
-				Logger.Error("finalize round - save state", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.String("client_state", util.ToHex(fb.ClientStateHash)), zap.Int("changes", len(fb.ClientState.GetChangeCollector().GetChanges())), zap.Duration("time", time.Since(ts)), zap.Error(err))
+				Logger.Error("finalize round - save state", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.String("client_state", util.ToHex(fb.ClientStateHash)), zap.Int("changes", len(fb.ClientState.GetChangeCollector().GetChanges())), zap.Duration("duration", duration), zap.Error(err))
 			} else {
-				Logger.Info("finalize round - save state", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.String("client_state", util.ToHex(fb.ClientStateHash)), zap.Int("changes", len(fb.ClientState.GetChangeCollector().GetChanges())), zap.Duration("time", time.Since(ts)))
+				p95 := StateSaveTimer.Percentile(.95)
+				if StateSaveTimer.Count() > 100 && 2*p95 < float64(duration) {
+					Logger.Error("finalize round - save state slow", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.String("client_state", util.ToHex(fb.ClientStateHash)), zap.Int("changes", len(fb.ClientState.GetChangeCollector().GetChanges())), zap.Duration("duration", duration), zap.Duration("p95", time.Duration(math.Round(p95/1000000))*time.Millisecond))
+				} else {
+					Logger.Info("finalize round - save state", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.String("client_state", util.ToHex(fb.ClientStateHash)), zap.Int("changes", len(fb.ClientState.GetChangeCollector().GetChanges())), zap.Duration("duration", duration))
+				}
 			}
 			c.rebaseState(fb)
 		}

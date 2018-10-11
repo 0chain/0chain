@@ -90,6 +90,10 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	diagnostics.WriteStatistics(w, c, chain.SteadyStateFinalizationTimer, 1000000.0)
 	fmt.Fprintf(w, "<h2>Block Finalization Statistics (Start to Finish)</h2>")
 	diagnostics.WriteStatistics(w, c, chain.StartToFinalizeTimer, 1000000.0)
+	fmt.Fprintf(w, "<h2>State Save Statistics</h2>")
+	diagnostics.WriteStatistics(w, c, chain.StateSaveTimer, 1000000.0)
+	fmt.Fprintf(w, "<h2>Transactions Save Statistics</h2>")
+	diagnostics.WriteStatistics(w, c, txnSaveTimer, 1000000.0)
 }
 
 /*TransactionConfirmationHandler - given a transaction hash, confirm it's presence in a block */
