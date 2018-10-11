@@ -2,11 +2,14 @@ package sharder
 
 import (
 	"context"
+	"math"
+	"time"
 
 	"0chain.net/node"
 	"0chain.net/round"
 	"0chain.net/transaction"
 	"0chain.net/util"
+	metrics "github.com/rcrowley/go-metrics"
 
 	"0chain.net/blockstore"
 	"0chain.net/config"
@@ -16,6 +19,12 @@ import (
 	. "0chain.net/logging"
 	"go.uber.org/zap"
 )
+
+var blockSaveTimer metrics.Timer
+
+func init() {
+	blockSaveTimer = metrics.GetOrRegisterTimer("block_save_time", nil)
+}
 
 /*UpdatePendingBlock - update the pending block */
 func (sc *Chain) UpdatePendingBlock(ctx context.Context, b *block.Block, txns []datastore.Entity) {
@@ -36,7 +45,14 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	}
 	sc.BlockCache.Add(b.Hash, b)
 	sc.cacheBlockTxns(b.Hash, b.Txns)
+	ts := time.Now()
 	err := blockstore.GetStore().Write(b)
+	duration := time.Since(ts)
+	blockSaveTimer.UpdateSince(ts)
+	p95 := blockSaveTimer.Percentile(.95)
+	if blockSaveTimer.Count() > 100 && 2*p95 < float64(duration) {
+		Logger.Error("block save - slow", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Duration("duration", duration), zap.Duration("p95", time.Duration(math.Round(p95/1000000))*time.Millisecond))
+	}
 	if err != nil {
 		Logger.Error("block save", zap.Any("round", b.Round), zap.Any("hash", b.Hash), zap.Error(err))
 	}
