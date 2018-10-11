@@ -59,6 +59,12 @@ func WriteSummary(w http.ResponseWriter, c *chain.Chain) {
 	fmt.Fprintf(w, "<tr><td class='sheader' colspan='2'>Configuration</td></tr>")
 	fmt.Fprintf(w, "<tr><td>Block Size</td><td>%v</td></tr>", c.BlockSize)
 	fmt.Fprintf(w, "<tr><td>Network Latency (Delta)</td><td>%v</td></tr>", chain.DELTA)
+	proposalMode := "dynamic"
+	if c.BlockProposalWaitMode == chain.BlockProposalWaitStatic {
+		proposalMode = "static"
+	}
+	fmt.Fprintf(w, "<tr><td>Block Proposal</td><td>%v (%v)</td>", c.BlockProposalMaxWaitTime, proposalMode)
+
 	fmt.Fprintf(w, "<tr><td>Validation Batch Size</td><td>%d</td>", c.ValidationBatchSize)
 	fmt.Fprintf(w, "</table>")
 }

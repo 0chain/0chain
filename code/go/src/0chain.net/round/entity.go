@@ -184,6 +184,16 @@ func (r *Round) GetMinerRank(miner *node.Node) int {
 	return r.minerPerm[miner.SetIndex]
 }
 
+/*GetMinersByRank - get the rnaks of the miners */
+func (r *Round) GetMinersByRank(miners *node.Pool) []*node.Node {
+	nodes := miners.Nodes
+	rminers := make([]*node.Node, len(nodes))
+	for _, nd := range nodes {
+		rminers[r.minerPerm[nd.SetIndex]] = nd
+	}
+	return rminers
+}
+
 //Clear - implement interface
 func (r *Round) Clear() {
 

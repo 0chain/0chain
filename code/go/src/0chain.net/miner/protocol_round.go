@@ -2,6 +2,7 @@ package miner
 
 import (
 	"context"
+	"math"
 	"math/rand"
 	"sync"
 	"time"
@@ -209,15 +210,61 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 	vctx := mr.StartVerificationBlockCollection(ctx)
 	if vctx != nil {
 		miner := mc.Miners.GetNode(b.MinerID)
-		minerNT := time.Duration(int64(1000 * miner.LargeMessageSendTime))
-		if minerNT >= chain.DELTA {
+		waitTime := mc.GetBlockProposalWaitTime(mr.Round)
+		minerNT := time.Duration(int64(miner.LargeMessageSendTime/1000000)) * time.Millisecond
+		if minerNT >= waitTime {
 			mr.delta = time.Millisecond
 		} else {
-			mr.delta = chain.DELTA - minerNT
+			mr.delta = waitTime - minerNT
 		}
 		go mc.CollectBlocksForVerification(vctx, mr)
 	}
 	mr.AddBlockToVerify(b)
+}
+
+/*GetBlockProposalWaitTime - get the time to wait for the block proposals of the given round */
+func (mc *Chain) GetBlockProposalWaitTime(r round.RoundI) time.Duration {
+	if mc.BlockProposalWaitMode == chain.BlockProposalWaitDynamic {
+		return mc.computeBlockProposalDynamicWaitTime(r)
+	}
+	return mc.BlockProposalMaxWaitTime
+}
+
+func (mc *Chain) computeBlockProposalDynamicWaitTime(r round.RoundI) time.Duration {
+	miners := mc.Miners.GetNodesByLargeMessageTime()
+	var medianTime float32
+	var count int
+	for _, nd := range miners {
+		if nd == node.Self.Node {
+			continue
+		}
+		if !nd.IsActive() {
+			continue
+		}
+		count++
+		if count*2 >= len(miners) {
+			medianTime = nd.LargeMessageSendTime
+			break
+		}
+	}
+	generators := mc.GetGenerators(r)
+	for _, g := range generators {
+		if g.LargeMessageSendTime < medianTime {
+			return time.Duration(int64(math.Round(float64(g.LargeMessageSendTime)/1000000))) * time.Millisecond
+		}
+	}
+	/*
+		medianTimeMS := time.Duration(int64(math.Round(float64(medianTime)/1000000))) * time.Millisecond
+		if medianTimeMS > mc.BlockProposalMaxWaitTime {
+			return medianTimeMS
+		}*/
+	return mc.BlockProposalMaxWaitTime
+}
+
+//GetGenerators - get the list of generators for this round
+func (mc *Chain) GetGenerators(r round.RoundI) []*node.Node {
+	miners := r.GetMinersByRank(mc.Miners)
+	return miners[:mc.NumGenerators]
 }
 
 /*CollectBlocksForVerification - keep collecting the blocks till timeout and then start verifying */

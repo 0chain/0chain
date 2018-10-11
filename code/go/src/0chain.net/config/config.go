@@ -17,6 +17,8 @@ func SetupDefaultConfig() {
 	viper.SetDefault("server_chain.transaction.payload.max_size", 32)
 	viper.SetDefault("server_chain.state.prune_below_count", 100)
 	viper.SetDefault("server_chain.block.consensus.threshold_by_count", 60)
+	viper.SetDefault("server_chain.block.proposal.max_wait_time", 200)
+	viper.SetDefault("server_chain.block.proposal.wait_mode", "static")
 }
 
 /*SetupConfig - setup the configuration system */

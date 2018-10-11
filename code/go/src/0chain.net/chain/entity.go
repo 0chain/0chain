@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"sync"
+	"time"
 
 	"0chain.net/encryption"
 
@@ -158,6 +159,13 @@ func NewChainFromConfig() *Chain {
 		chain.VerificationTicketsTo = AllMiners
 	} else {
 		chain.VerificationTicketsTo = Generator
+	}
+	chain.BlockProposalMaxWaitTime = viper.GetDuration("server_chain.block.proposal.max_wait_time") * time.Millisecond
+	waitMode := viper.GetString("server_chain.block.proposal.wait_mode")
+	if waitMode == "static" {
+		chain.BlockProposalWaitMode = BlockProposalWaitStatic
+	} else if waitMode == "dynamic" {
+		chain.BlockProposalWaitMode = BlockProposalWaitDynamic
 	}
 	return chain
 }

@@ -51,7 +51,7 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 	if nd == nil {
 		return
 	}
-	if nd.Status == NodeStatusActive {
+	if nd.IsActive() {
 		return
 	}
 	data := r.FormValue("data")
