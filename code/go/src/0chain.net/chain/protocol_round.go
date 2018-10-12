@@ -172,7 +172,10 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 			}
 			c.rebaseState(fb)
 		}
+		start := time.Now()
 		bsh.UpdateFinalizedBlock(ctx, fb)
+		duration := time.Since(start)
+		Logger.Info("Updating finalized block", zap.Any("round", fb.Round), zap.Any("duration", duration.String()))
 		c.BlockChain.Value = fb.GetSummary()
 		c.BlockChain = c.BlockChain.Next()
 		frb := c.GetRoundBlocks(fb.Round)
