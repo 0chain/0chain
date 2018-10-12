@@ -32,6 +32,7 @@ func GetStatistics(c *chain.Chain, timer metrics.Timer, scaleBy float64) interfa
 	stats["delta"] = chain.DELTA
 	stats["block_size"] = c.BlockSize
 	stats["current_round"] = c.CurrentRound
+	stats["latest_finalized_round"] = c.LatestFinalizedBlock.Round
 	stats["count"] = timer.Count()
 	stats["min"] = scale(float64(timer.Min()))
 	stats["mean"] = scale(timer.Mean())

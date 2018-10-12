@@ -95,17 +95,28 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	diagnostics.WriteStatistics(w, c, chain.StartToFinalizeTimer, 1000000.0)
 	fmt.Fprintf(w, "</td></tr>")
 	fmt.Fprintf(w, "<tr><td>")
+
+	fmt.Fprintf(w, "<tr><td>")
+	fmt.Fprintf(w, "<h2>Transactions Save Statistics</h2>")
+	diagnostics.WriteStatistics(w, c, txnSaveTimer, 1000000.0)
+	fmt.Fprintf(w, "</td><td>")
+	fmt.Fprintf(w, "<h2>Block Save Statistics</h2>")
+	diagnostics.WriteStatistics(w, c, blockSaveTimer, 1000000.0)
+	fmt.Fprintf(w, "</td></tr>")
+	fmt.Fprintf(w, "<tr><td>")
 	fmt.Fprintf(w, "<h2>State Save Statistics</h2>")
 	diagnostics.WriteStatistics(w, c, chain.StateSaveTimer, 1000000.0)
 	fmt.Fprintf(w, "</td><td>")
-	fmt.Fprintf(w, "<h2>Transactions Save Statistics</h2>")
-	diagnostics.WriteStatistics(w, c, txnSaveTimer, 1000000.0)
 	fmt.Fprintf(w, "</td><tr>")
+
 	fmt.Fprintf(w, "<tr><td>")
-	fmt.Fprintf(w, "<h2>Block Save Statistics</h2>")
-	diagnostics.WriteStatistics(w, c, blockSaveTimer, 1000000.0)
+	fmt.Fprintf(w, "<h2>State Prune Update Statistics</h2>")
+	diagnostics.WriteStatistics(w, c, chain.StatePruneUpdateTimer, 1000000.0)
 	fmt.Fprintf(w, "</td><td>")
-	fmt.Fprintf(w, "</td><tr>")
+	fmt.Fprintf(w, "<h2>State Prune Delete Statistics</h2>")
+	diagnostics.WriteStatistics(w, c, chain.StatePruneDeleteTimer, 1000000.0)
+	fmt.Fprintf(w, "</tr>")
+
 	fmt.Fprintf(w, "</table>")
 }
 
