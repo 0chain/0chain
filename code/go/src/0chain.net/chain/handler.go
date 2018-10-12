@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"reflect"
 	"strings"
 	"time"
 
@@ -309,27 +308,12 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		return nil, fmt.Errorf("invalid request %T", entity)
 	}
 	if GetServerChain().TxnMaxPayload > 0 {
-		txnSize := getTxnPayloadSize(txn)
-		if txnSize > GetServerChain().TxnMaxPayload {
+		if len(txn.TransactionData) > GetServerChain().TxnMaxPayload {
 			s := fmt.Sprintf("transaction payload exceeds the max payload (%d)", GetServerChain().TxnMaxPayload)
 			return nil, common.NewError("txn_exceed_max_payload", s)
 		}
 	}
 	return transaction.PutTransaction(ctx, txn)
-}
-
-func getTxnPayloadSize(txn *transaction.Transaction) int {
-	var sizeInBytes int
-
-	sizeInBytes += len(txn.ClientID)
-	sizeInBytes += int(reflect.TypeOf(txn.CreationDate).Size())
-	sizeInBytes += len(txn.Hash)
-	sizeInBytes += len(txn.Signature)
-	sizeInBytes += len(txn.ToClientID)
-	sizeInBytes += len(txn.TransactionData)
-	sizeInBytes += int(reflect.TypeOf(txn.Value).Size())
-
-	return sizeInBytes
 }
 
 /*MinerStatsHandler - handler for the miner stats */
