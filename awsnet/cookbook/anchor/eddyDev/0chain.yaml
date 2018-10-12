@@ -47,6 +47,9 @@ server_chain:
       threshold_by_stake: 0
     validation:
       batch_size: 250
+    proposal:
+      max_wait_time: 180
+      wait_mode: dynamic # static or dynamic
   round_range: 10000000
   transaction:
     payload:

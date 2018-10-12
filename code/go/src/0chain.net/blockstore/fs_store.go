@@ -61,9 +61,12 @@ func (fbs *FSBlockStore) Write(b *block.Block) error {
 	}
 	duration = time.Since(ts)
 	Logger.Info("Opening file for block save", zap.Any("round", b.Round), zap.Any("duration", duration.String()))
+	ts = time.Now()
 	bf := bufio.NewWriterSize(f, 64*1024)
 	w, _ := zlib.NewWriterLevel(bf, zlib.BestCompression)
 	datastore.WriteJSON(w, b)
+	duration = time.Since(ts)
+	Logger.Info("Writing file for block save", zap.Any("round", b.Round), zap.Any("duration", duration.String()))
 	w.Close()
 	bf.Flush()
 	f.Close()
