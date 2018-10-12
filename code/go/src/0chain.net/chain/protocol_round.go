@@ -39,18 +39,8 @@ var StartToFinalizeTimer metrics.Timer
 var StateSaveTimer metrics.Timer
 
 func init() {
-	if SteadyStateFinalizationTimer != nil {
-		metrics.Unregister("ss_finalization_time")
-	}
 	SteadyStateFinalizationTimer = metrics.GetOrRegisterTimer("ss_finalization_time", nil)
-	if StartToFinalizeTimer != nil {
-		metrics.Unregister("s2f_time")
-	}
 	StartToFinalizeTimer = metrics.GetOrRegisterTimer("s2f_time", nil)
-
-	if StateSaveTimer != nil {
-		metrics.Unregister("state_save_timer")
-	}
 	StateSaveTimer = metrics.GetOrRegisterTimer("state_save_timer", nil)
 }
 
