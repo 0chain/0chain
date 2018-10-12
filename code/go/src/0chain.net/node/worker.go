@@ -61,7 +61,7 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 		resp, err := client.Get(statusURL)
 		if err != nil {
 			node.ErrorCount++
-			if node.Status == NodeStatusActive {
+			if node.IsActive() {
 				if node.ErrorCount > 5 {
 					node.Status = NodeStatusInactive
 					Logger.Error("Node inactive", zap.Any("node_type", node.GetNodeTypeName()), zap.Any("set_index", node.SetIndex), zap.Any("node_id", node.GetKey()), zap.Error(err))
@@ -69,7 +69,7 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 			}
 		} else {
 			resp.Body.Close()
-			if node.Status == NodeStatusInactive {
+			if !node.IsActive() {
 				node.ErrorCount = 0
 				node.Status = NodeStatusActive
 				Logger.Info("Node active", zap.Any("node_type", node.GetNodeTypeName()), zap.Any("set_index", node.SetIndex), zap.Any("key", node.GetKey()))

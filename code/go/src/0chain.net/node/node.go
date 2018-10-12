@@ -310,3 +310,8 @@ func (n *Node) SetID(id string) error {
 	n.idBytes = bytes
 	return nil
 }
+
+//IsActive - returns if this node is active or not
+func (n *Node) IsActive() bool {
+	return n.Status == NodeStatusActive
+}

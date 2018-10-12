@@ -1,6 +1,15 @@
 package chain
 
-import "0chain.net/datastore"
+import (
+	"time"
+
+	"0chain.net/datastore"
+)
+
+const (
+	BlockProposalWaitStatic  = 0
+	BlockProposalWaitDynamic = iota
+)
 
 //Config - chain Configuration
 type Config struct {
@@ -19,4 +28,7 @@ type Config struct {
 	RoundRange            int64         `json:"round_range"`             // blocks are stored in separate directory for each range of rounds
 	BlocksToSharder       int           `json:"blocks_to_sharder"`       // send finalized or notarized blocks to sharder
 	VerificationTicketsTo int           `json:"verification_tickets_to"` // send verification tickets to generator or all miners
+
+	BlockProposalMaxWaitTime time.Duration `json:"block_proposal_max_wait_time"` // max time to wait to receive a block proposal
+	BlockProposalWaitMode    int8          `json:"block_proposal_wait_mode"`     // wait time for the block proposal is static (0) or dynamic (1)
 }
