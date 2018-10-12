@@ -7,12 +7,15 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"0chain.net/chain"
 
 	"0chain.net/block"
 	"0chain.net/common"
 	"0chain.net/datastore"
+	. "0chain.net/logging"
+	"go.uber.org/zap"
 )
 
 /*FSBlockStore - a block store implementation using file system */
@@ -47,11 +50,17 @@ func (fbs *FSBlockStore) getFileName(hash string, round int64) string {
 func (fbs *FSBlockStore) Write(b *block.Block) error {
 	fileName := fbs.getFileName(b.Hash, b.Round)
 	dir := filepath.Dir(fileName)
+	ts := time.Now()
 	os.MkdirAll(dir, 0755)
+	duration := time.Since(ts)
+	Logger.Info("Make directory for block save", zap.Any("round", b.Round), zap.Any("duration", duration.String()))
+	ts = time.Now()
 	f, err := os.OpenFile(fileName, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		return err
 	}
+	duration = time.Since(ts)
+	Logger.Info("Opening file for block save", zap.Any("round", b.Round), zap.Any("duration", duration.String()))
 	bf := bufio.NewWriterSize(f, 64*1024)
 	w, _ := zlib.NewWriterLevel(bf, zlib.BestCompression)
 	datastore.WriteJSON(w, b)
