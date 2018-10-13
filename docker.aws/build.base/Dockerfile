@@ -17,7 +17,7 @@ RUN cd /tmp && \
 RUN cd /tmp && \
     git clone https://github.com/facebook/rocksdb.git && \
     cd rocksdb && \
-    git checkout 5.13.fb && \
+    #git checkout 5.13.fb && \
     make -j8 shared_lib && \
     mkdir -p /usr/local/rocksdb/lib && \
     mkdir /usr/local/rocksdb/include && \
