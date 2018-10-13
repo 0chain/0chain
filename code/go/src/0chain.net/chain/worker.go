@@ -15,18 +15,10 @@ func (c *Chain) SetupWorkers(ctx context.Context) {
 	go c.PruneClientStateWorker(ctx)
 }
 
-/*BlockFinalizationWorker - a worker that handles the finalized blocks */
-func (c *Chain) BlockFinalizationWorker(ctx context.Context, bsh BlockStateHandler) {
-	for r := range c.finalizedRoundsChannel {
-		nbCount := len(r.GetNotarizedBlocks())
-		if nbCount == 0 {
-			c.ZeroNotarizedBlocksCount++
-		}
-		if nbCount > 1 {
-			c.MultiNotarizedBlocksCount++
-		}
-		c.finalizeRound(ctx, r, bsh)
-		c.UpdateRoundInfo(r)
+//FinalizedBlockWorker - a worker that processes finalized blocks
+func (c *Chain) FinalizedBlockWorker(ctx context.Context, bsh BlockStateHandler) {
+	for fb := range c.finalizedBlocksChannel {
+		c.finalizeBlock(ctx, fb, bsh)
 	}
 }
 

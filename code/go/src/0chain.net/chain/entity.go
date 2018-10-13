@@ -80,7 +80,7 @@ type Chain struct {
 	Blobbers *node.Pool `json:"-"`
 
 	/* This is a cache of blocks that may include speculative blocks */
-	blocks      map[datastore.Key]*block.Block `json:"-"`
+	blocks      map[datastore.Key]*block.Block
 	blocksMutex *sync.Mutex
 
 	rounds      map[int64]round.RoundI
@@ -94,7 +94,7 @@ type Chain struct {
 	stateDB                 util.NodeDB
 	stateMutex              *sync.Mutex
 
-	finalizedRoundsChannel chan round.RoundI
+	finalizedBlocksChannel chan *block.Block
 
 	*Stats `json:"-"`
 
@@ -202,7 +202,7 @@ func (c *Chain) Initialize() {
 	c.BlocksToSharder = 1
 	c.VerificationTicketsTo = AllMiners
 	c.ValidationBatchSize = 2000
-	c.finalizedRoundsChannel = make(chan round.RoundI, 128)
+	c.finalizedBlocksChannel = make(chan *block.Block, 128)
 	c.clientStateDeserializer = &state.Deserializer{}
 	c.stateDB = stateDB
 	c.BlockChain = ring.New(10000)
@@ -538,7 +538,7 @@ func (c *Chain) DeleteRoundsBelow(ctx context.Context, roundNumber int64) {
 	defer c.roundsMutex.Unlock()
 	rounds := make([]round.RoundI, 0, 1)
 	for _, r := range c.rounds {
-		if r.GetRoundNumber() < roundNumber {
+		if r.GetRoundNumber() < roundNumber-10 {
 			rounds = append(rounds, r)
 		}
 	}
