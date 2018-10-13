@@ -3,6 +3,7 @@ package persistencestore
 import (
 	"context"
 	"os"
+	"sync"
 	"time"
 
 	"0chain.net/common"
@@ -25,6 +26,8 @@ func init() {
 	}
 }
 
+var mutex = &sync.Mutex{}
+
 // Session holds our connection to Cassandra
 var Session *gocql.Session
 
@@ -37,6 +40,8 @@ func InitSession() {
 }
 
 func initSession(delay time.Duration, maxTries int) error {
+	mutex.Lock()
+	defer mutex.Unlock()
 	var err error
 	var cluster *gocql.ClusterConfig
 	if os.Getenv("DOCKER") != "" {
@@ -101,5 +106,11 @@ func WithEntityConnection(ctx context.Context, entityMetadata datastore.EntityMe
 
 /*Close - close all the connections in the context */
 func Close(ctx context.Context) {
+	mutex.Lock()
+	defer mutex.Unlock()
+	con := GetCon(ctx)
+	if con != Session {
+		con.Close()
+	}
 	// TODO: Is this just a NOOP or anything required?
 }
