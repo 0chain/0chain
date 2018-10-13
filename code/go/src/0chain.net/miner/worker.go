@@ -12,7 +12,7 @@ import (
 func SetupWorkers(ctx context.Context) {
 	mc := GetMinerChain()
 	go mc.BlockWorker(ctx)
-	go mc.BlockFinalizationWorker(ctx, mc)
+	go mc.FinalizedBlockWorker(ctx, mc)
 }
 
 /*BlockWorker - a job that does all the work related to blocks in each round */

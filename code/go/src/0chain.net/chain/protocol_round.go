@@ -6,13 +6,12 @@ import (
 	"math"
 	"time"
 
-	"0chain.net/config"
-	"0chain.net/node"
-
 	"0chain.net/block"
 	"0chain.net/common"
+	"0chain.net/config"
 	"0chain.net/datastore"
 	. "0chain.net/logging"
+	"0chain.net/node"
 	"0chain.net/round"
 	"0chain.net/util"
 	metrics "github.com/rcrowley/go-metrics"
@@ -64,7 +63,16 @@ func (c *Chain) FinalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 		}
 	}
 	time.Sleep(FINALIZATION_TIME)
-	c.finalizedRoundsChannel <- r
+	nbCount := len(r.GetNotarizedBlocks())
+	if nbCount == 0 {
+		c.ZeroNotarizedBlocksCount++
+	}
+	if nbCount > 1 {
+		c.MultiNotarizedBlocksCount++
+	}
+	c.finalizeRound(ctx, r, bsh)
+	c.UpdateRoundInfo(r)
+	//c.finalizedRoundsChannel <- r
 }
 
 func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStateHandler) {
@@ -124,61 +132,62 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 		}
 	}
 	c.LatestFinalizedBlock = lfb
-	deadBlocks := make([]*block.Block, 0, 1)
 	for idx := range frchain {
 		fb := frchain[len(frchain)-1-idx]
-		bNode := node.GetNode(fb.MinerID)
-		ms := bNode.ProtocolStats.(*MinerStats)
-		ms.FinalizationCountByRank[fb.RoundRank]++
-		Logger.Info("finalize round", zap.Int64("round", roundNumber), zap.Int64("finalized_round", fb.Round), zap.String("hash", fb.Hash), zap.Int8("state", fb.GetBlockState()))
-		if time.Since(ssFTs) < 20*time.Second {
-			SteadyStateFinalizationTimer.UpdateSince(ssFTs)
-		}
-		StartToFinalizeTimer.UpdateSince(fb.ToTime())
-		ssFTs = time.Now()
-		c.UpdateChainInfo(fb)
-		if fb.GetStateStatus() != block.StateSuccessful {
-			err := c.ComputeState(ctx, fb)
-			if err != nil {
-				if config.DevConfiguration.State {
-					Logger.Error("finalize round state not successful", zap.Int64("round", roundNumber), zap.Int64("finalized_round", fb.Round), zap.String("hash", fb.Hash), zap.Int8("state", fb.GetBlockState()), zap.Error(err))
-					Logger.DPanic("finalize block - state not successful")
-				}
+		c.finalizedBlocksChannel <- fb
+	}
+	// Prune the chain from the oldest finalized block
+	c.PruneChain(ctx, frchain[len(frchain)-1])
+}
+
+func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockStateHandler) {
+	bNode := node.GetNode(fb.MinerID)
+	ms := bNode.ProtocolStats.(*MinerStats)
+	ms.FinalizationCountByRank[fb.RoundRank]++
+	Logger.Info("finalize round", zap.Int64("finalized_round", fb.Round), zap.String("hash", fb.Hash), zap.Int8("state", fb.GetBlockState()))
+	if time.Since(ssFTs) < 20*time.Second {
+		SteadyStateFinalizationTimer.UpdateSince(ssFTs)
+	}
+	StartToFinalizeTimer.UpdateSince(fb.ToTime())
+	ssFTs = time.Now()
+	c.UpdateChainInfo(fb)
+	if fb.GetStateStatus() != block.StateSuccessful {
+		err := c.ComputeState(ctx, fb)
+		if err != nil {
+			if config.DevConfiguration.State {
+				Logger.Error("finalize round state not successful", zap.Int64("finalized_round", fb.Round), zap.String("hash", fb.Hash), zap.Int8("state", fb.GetBlockState()), zap.Error(err))
+				Logger.DPanic("finalize block - state not successful")
 			}
 		}
-		if fb.ClientState != nil {
-			ts := time.Now()
-			err := fb.ClientState.SaveChanges(c.stateDB, false)
-			duration := time.Since(ts)
-			StateSaveTimer.UpdateSince(ts)
-			p95 := StateSaveTimer.Percentile(.95)
-			if StateSaveTimer.Count() > 100 && 2*p95 < float64(duration) {
-				Logger.Error("finalize round - save state slow", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.String("client_state", util.ToHex(fb.ClientStateHash)), zap.Int("changes", len(fb.ClientState.GetChangeCollector().GetChanges())), zap.Duration("duration", duration), zap.Duration("p95", time.Duration(math.Round(p95/1000000))*time.Millisecond))
-			} else {
-				Logger.Info("finalize round - save state", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.String("client_state", util.ToHex(fb.ClientStateHash)), zap.Int("changes", len(fb.ClientState.GetChangeCollector().GetChanges())), zap.Duration("duration", duration))
-			}
-			if err != nil {
-				Logger.Error("finalize round - save state", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.String("client_state", util.ToHex(fb.ClientStateHash)), zap.Int("changes", len(fb.ClientState.GetChangeCollector().GetChanges())), zap.Duration("duration", duration), zap.Error(err))
-			}
-			c.rebaseState(fb)
+	}
+	if fb.ClientState != nil {
+		ts := time.Now()
+		err := fb.ClientState.SaveChanges(c.stateDB, false)
+		duration := time.Since(ts)
+		StateSaveTimer.UpdateSince(ts)
+		p95 := StateSaveTimer.Percentile(.95)
+		if StateSaveTimer.Count() > 100 && 2*p95 < float64(duration) {
+			Logger.Error("finalize round - save state slow", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.String("client_state", util.ToHex(fb.ClientStateHash)), zap.Int("changes", len(fb.ClientState.GetChangeCollector().GetChanges())), zap.Duration("duration", duration), zap.Duration("p95", time.Duration(math.Round(p95/1000000))*time.Millisecond))
+		} else {
+			Logger.Info("finalize round - save state", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.String("client_state", util.ToHex(fb.ClientStateHash)), zap.Int("changes", len(fb.ClientState.GetChangeCollector().GetChanges())), zap.Duration("duration", duration))
 		}
-		start := time.Now()
-		bsh.UpdateFinalizedBlock(ctx, fb)
-		duration := time.Since(start)
-		Logger.Info("Updating finalized block", zap.Any("round", fb.Round), zap.Any("duration", duration.String()))
-		c.BlockChain.Value = fb.GetSummary()
-		c.BlockChain = c.BlockChain.Next()
-		frb := c.GetRoundBlocks(fb.Round)
-		for _, b := range frb {
-			if b.Hash != fb.Hash {
-				deadBlocks = append(deadBlocks, b)
-			}
+		if err != nil {
+			Logger.Error("finalize round - save state", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.String("client_state", util.ToHex(fb.ClientStateHash)), zap.Int("changes", len(fb.ClientState.GetChangeCollector().GetChanges())), zap.Duration("duration", duration), zap.Error(err))
+		}
+		c.rebaseState(fb)
+	}
+	go bsh.UpdateFinalizedBlock(ctx, fb)
+	c.BlockChain.Value = fb.GetSummary()
+	c.BlockChain = c.BlockChain.Next()
+	frb := c.GetRoundBlocks(fb.Round)
+	var deadBlocks []*block.Block
+	for _, b := range frb {
+		if b.Hash != fb.Hash {
+			deadBlocks = append(deadBlocks, b)
 		}
 	}
 	// Prune all the dead blocks
 	c.DeleteBlocks(deadBlocks)
-	// Prune the chain from the oldest finalized block
-	c.PruneChain(ctx, frchain[len(frchain)-1])
 }
 
 /*GetNotarizedBlockForRound - get a notarized block for a round */
