@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"0chain.net/threshold"
+	"0chain.net/threshold/bls"
 
 	_ "net/http/pprof"
 
@@ -171,7 +171,7 @@ func initEntities() {
 
 	miner.SetupNotarizationEntity()
 
-	threshold.SetupDKGEntity()
+	bls.SetupDKGEntity()
 }
 
 func initHandlers() {
@@ -216,10 +216,31 @@ func StartProtocol() {
 
 	miners := mc.Miners
 
-	dkg := &threshold.Dkg{ID : 1, 
-		Share: "testDKG"}
+	Logger.Info("Starting DKG...")
 
-	miners.SendTo(miner.DKGShareSender(dkg), miners.Nodes[1].ID)
+	//TODO : The value of k and n needs to be configurable
+
+	k := 2
+	n := 3
+	dg := bls.MakeSimpleDKG(k, n)
+	time.Sleep(5 * time.Second)
+	for i, node := range mc.Miners.Nodes {
+
+		Logger.Info("The miner ID is ", zap.String("miner ID is ", node.GetKey()))
+		forID := bls.ComputeIDdkg(i)
+
+		Logger.Info("The x is ", zap.String("x is ", forID.GetDecString()))
+		secShare, _ := dg.ComputeDKGKeyShare(forID)
+		Logger.Info("secShare for above minerID is ", zap.String("secShare for above minerID is ", secShare.GetHexString()))
+
+		dkg := &bls.Dkg{
+			Share: secShare.GetHexString()}
+		dkg.SetKey(datastore.ToKey(node.GetKey()))
+
+		miners.SendTo(miner.DKGShareSender(dkg), node.ID)
+	}
+
+	time.Sleep(5 * time.Second)
 
 	sr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 	sr.Number = 1
@@ -245,6 +266,7 @@ func StartProtocol() {
 	if config.Development() {
 		go TransactionGenerator(mc.BlockSize)
 	}
+
 	msg := miner.NewBlockMessage(miner.MessageStartRound, node.Self.Node, msr, nil)
 	msgChannel := mc.GetBlockMessageChannel()
 	if mc.CurrentRound == 0 {

@@ -2,7 +2,6 @@ package miner
 
 /*This file contains the Miner To Miner send/receive messages */
 import (
-	"0chain.net/threshold"
 	"context"
 	"net/http"
 	"strconv"
@@ -15,6 +14,7 @@ import (
 	"0chain.net/memorystore"
 	"0chain.net/node"
 	"0chain.net/round"
+	"0chain.net/threshold/bls"
 	"go.uber.org/zap"
 )
 
@@ -43,7 +43,7 @@ func SetupM2MSenders() {
 	RoundStartSender = node.SendEntityHandler("/v1/_m2m/round/start", options)
 
 	//TODO: changes options and url as per requirements
-	options = &node.SendOptions{Timeout: time.Second, MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
+	options = &node.SendOptions{Timeout: time.Second, MaxRelayLength: 0, CurrentRelayLength: 0, CODEC: node.CODEC_JSON, Compress: false}
 	DKGShareSender = node.SendEntityHandler("/v1/_m2m/dkg/share", options)
 
 	options = &node.SendOptions{Timeout: 2 * time.Second, MaxRelayLength: 0, CurrentRelayLength: 0, CODEC: node.CODEC_MSGPACK, Compress: true}
@@ -93,7 +93,7 @@ func StartRoundHandler(ctx context.Context, entity datastore.Entity) (interface{
 /*DKGShareHandler - handles the dkg share it receives from a node */
 func DKGShareHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 	//cast to required type and process further
-	dkg, ok := entity.(*threshold.Dkg)
+	dkg, ok := entity.(*bls.Dkg)
 	if !ok {
 		Logger.Error("invalid entity")
 		return false, nil

@@ -1,13 +1,12 @@
-package threshold
+package bls
 
 import (
 	"0chain.net/datastore"
 )
 
 type Dkg struct {
-	datastore.NOIDField
-	Share string
-	ID    int64 `json:"dkg_id"`
+	datastore.IDField
+	Share string `json:"share"`
 }
 
 var dkgEntityMetadata *datastore.EntityMetadataImpl

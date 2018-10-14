@@ -4,11 +4,13 @@ package bls
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/pmer/gobls"
 )
 
 type BLSSimpleDKG struct {
+	*Dkg
 	T                 int
 	N                 int
 	secKey            Key
@@ -21,6 +23,11 @@ type BLSSimpleDKG struct {
 	numReceived       int
 }
 
+func init() {
+	gobls.Init(gobls.CurveFp254BNb)
+	//os.Exit(m.Run())
+
+}
 func MakeSimpleDKG(t, n int) BLSSimpleDKG {
 
 	dkg := BLSSimpleDKG{
@@ -39,10 +46,20 @@ func MakeSimpleDKG(t, n int) BLSSimpleDKG {
 	dkg.secKey.SetByCSPRNG()
 	dkg.pubKey = *(dkg.secKey.GetPublicKey())
 	dkg.mSec = dkg.secKey.GetMasterSecretKey(t)
-	dkg.mVec = gobls.GetMasterPublicKey(dkg.mSec)
+	dkg.mVec = gobls.GetMasterPublicKey(dkg.mSec) //the public verification vector
 
 	dkg.numReceived += 1
 	return dkg
+}
+
+func ComputeIDdkg(minerID int) PartyId {
+	var forID PartyId
+	err := forID.SetDecString(strconv.Itoa(minerID))
+	if err != nil {
+		fmt.Printf("Error while computing ID %s\n", forID.GetHexString())
+	}
+
+	return forID
 }
 
 /* ComputeKeyShare - Derive the share for each miner through gobls.Set() which calls the polynomial substitution method */
@@ -56,6 +73,19 @@ func (dkg *BLSSimpleDKG) ComputeKeyShare(forIDs []PartyId) ([]Key, error) {
 			return nil, nil
 		}
 		dkg.secSharesMap[forIDs[i]] = secVec[i]
+	}
+
+	return secVec, nil
+}
+
+/* ComputeDKGKeyShare - Derive the share for each miner through gobls.Set() which calls the polynomial substitution method */
+
+func (dkg *BLSSimpleDKG) ComputeDKGKeyShare(forID PartyId) (Key, error) {
+
+	var secVec Key
+	err := secVec.Set(dkg.mSec, &forID)
+	if err != nil {
+		return Key{}, nil
 	}
 
 	return secVec, nil
