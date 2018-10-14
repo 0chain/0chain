@@ -72,11 +72,12 @@ type Block struct {
 
 	TxnsMap map[string]bool `json:"-"`
 
-	ClientState util.MerklePatriciaTrieI `json:"-"`
-	stateStatus int8
-	StateMutex  *sync.Mutex `json:"_"`
-	blockState  int8
-	isNotarized bool
+	ClientState  util.MerklePatriciaTrieI `json:"-"`
+	stateStatus  int8
+	StateMutex   *sync.Mutex `json:"_"`
+	blockState   int8
+	isNotarized  bool
+	ticketsMutex *sync.Mutex
 }
 
 var blockEntityMetadata *datastore.EntityMetadataImpl
@@ -160,6 +161,7 @@ func Provider() datastore.Entity {
 	b.ChainID = datastore.ToKey(config.GetServerChainID())
 	b.InitializeCreationDate()
 	b.StateMutex = &sync.Mutex{}
+	b.ticketsMutex = &sync.Mutex{}
 	return b
 }
 
@@ -216,6 +218,8 @@ func (b *Block) AddTransaction(t *transaction.Transaction) {
 *  - the miner of the block for example will decide if the notarization is received and send it off to others
  */
 func (b *Block) AddVerificationTicket(vt *VerificationTicket) bool {
+	b.ticketsMutex.Lock()
+	defer b.ticketsMutex.Unlock()
 	bvt := b.VerificationTickets
 	for _, t := range bvt {
 		if datastore.IsEqual(vt.VerifierID, t.VerifierID) {
@@ -229,6 +233,8 @@ func (b *Block) AddVerificationTicket(vt *VerificationTicket) bool {
 
 /*MergeVerificationTickets - merge the verification tickets with what's already there */
 func (b *Block) MergeVerificationTickets(vts []*VerificationTicket) {
+	b.ticketsMutex.Lock()
+	defer b.ticketsMutex.Unlock()
 	b.VerificationTickets = b.unionVerificationTickets(b.VerificationTickets, vts)
 }
 

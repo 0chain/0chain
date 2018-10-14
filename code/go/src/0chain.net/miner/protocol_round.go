@@ -290,11 +290,10 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 		bnb := r.GetBestNotarizedBlock()
 		if bnb == nil || bnb.RoundRank >= b.RoundRank {
 			r.Block = b
-			go mc.SendVerificationTicket(ctx, b, bvt)
-			// since block.AddVerificationTicket is not thread-safe, directly doing ProcessVerifiedTicket will not work in rare cases as incoming verification tickets get added concurrently
-			bm := NewBlockMessage(MessageVerificationTicket, node.Self.Node, r, b)
-			bm.BlockVerificationTicket = bvt
-			mc.BlockMessageChannel <- bm
+			mc.ProcessVerifiedTicket(ctx, r, b, &bvt.VerificationTicket)
+			if !b.IsBlockNotarized() {
+				go mc.SendVerificationTicket(ctx, b, bvt)
+			}
 		}
 		return true
 	}
