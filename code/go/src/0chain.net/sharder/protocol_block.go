@@ -63,8 +63,6 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 		if err != nil {
 			Logger.Error("block save", zap.Any("round", b.Round), zap.Any("hash", b.Hash), zap.Error(err))
 		}
-	} else {
-		Logger.Error("block save - not responsible", zap.Any("round", b.Round), zap.String("block", b.Hash))
 	}
 	if fr != nil {
 		fr.Finalize(b)
@@ -73,10 +71,8 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 		if err != nil {
 			Logger.Error("db error (save round)", zap.Int64("round", fr.GetRoundNumber()), zap.Error(err))
 		}
-		sc.DeleteRoundsBelow(ctx, fr.GetRoundNumber())
-	} else {
-		Logger.Debug("round - missed", zap.Int64("round", b.Round))
 	}
+	sc.DeleteRoundsBelow(ctx, b.Round)
 }
 
 func (sc *Chain) cacheBlockTxns(hash string, txns []*transaction.Transaction) {
