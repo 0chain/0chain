@@ -27,7 +27,7 @@ func (as *AState) Decode(buf []byte) error {
 }
 
 func TestMerkleTreeSaveToDB(t *testing.T) {
-	pndb, err := NewPNodeDB("/tmp/mpt")
+	pndb, err := NewPNodeDB("/tmp/mpt", "/tmp/mpt/log")
 	if err != nil {
 		panic(err)
 	}
@@ -61,7 +61,7 @@ func TestMerkleTreeSaveToDB(t *testing.T) {
 }
 
 func TestMerkeTreePruning(t *testing.T) {
-	pndb, err := NewPNodeDB("/tmp/mpt")
+	pndb, err := NewPNodeDB("/tmp/mpt", "/tmp/mpt/log")
 	if err != nil {
 		panic(err)
 	}
@@ -142,7 +142,7 @@ func TestMerkeTreePruning(t *testing.T) {
 }
 
 func TestMerkeTreeGetChanges(t *testing.T) {
-	pndb, err := NewPNodeDB("/tmp/mpt")
+	pndb, err := NewPNodeDB("/tmp/mpt", "/tmp/mpt/log")
 	if err != nil {
 		panic(err)
 	}

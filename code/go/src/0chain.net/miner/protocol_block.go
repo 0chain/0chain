@@ -353,8 +353,8 @@ func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	fr := mc.GetRound(b.Round)
 	if fr != nil {
 		fr.Finalize(b)
-		mc.DeleteRoundsBelow(ctx, fr.GetRoundNumber()-10)
 	}
+	mc.DeleteRoundsBelow(ctx, b.Round)
 }
 
 /*FinalizeBlock - finalize the transactions in the block */
