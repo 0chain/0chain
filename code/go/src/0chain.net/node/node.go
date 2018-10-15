@@ -250,6 +250,8 @@ func (n *Node) GetTimer(uri string) metrics.Timer {
 
 /*GetMaxMessageCount - get max messages count */
 func (n *Node) GetMaxMessageCount() int64 {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
 	var count int64
 	for _, timer := range n.TimersByURI {
 		c := timer.Count()

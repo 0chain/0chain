@@ -31,14 +31,12 @@ func (c *Chain) VerifyNotarization(ctx context.Context, blockHash string, bvt []
 	if bvt == nil {
 		return common.NewError("no_verification_tickets", "No verification tickets for this block")
 	}
-	signMap := make(map[string]bool, len(bvt))
+	ticketsMap := make(map[string]bool, len(bvt))
 	for _, vt := range bvt {
-		sign := vt.Signature
-		_, signExists := signMap[sign]
-		if signExists {
-			return common.NewError("duplicate_ticket_signature", "Found duplicate signature for verification ticket of the block")
+		if _, ok := ticketsMap[vt.VerifierID]; ok {
+			return common.NewError("duplicate_ticket_signature", "Found duplicate signatures in the notarization of the block")
 		}
-		signMap[sign] = true
+		ticketsMap[vt.VerifierID] = true
 	}
 	if !c.reachedNotarization(bvt) {
 		return common.NewError("block_not_notarized", "Verification tickets not sufficient to reach notarization")

@@ -397,7 +397,7 @@ func (c *Chain) GetGenerators(r round.RoundI) []*node.Node {
 }
 
 /*IsBlockSharder - checks if the sharder can store the block in the given round */
-func (c *Chain) IsBlockSharder(r round.RoundI, b *block.Block, sharder *node.Node) bool {
+func (c *Chain) IsBlockSharder(b *block.Block, sharder *node.Node) bool {
 	if c.NumSharders <= 0 {
 		return true
 	}

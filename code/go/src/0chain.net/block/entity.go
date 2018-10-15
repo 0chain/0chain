@@ -212,11 +212,7 @@ func (b *Block) AddTransaction(t *transaction.Transaction) {
 	t.OutputHash = t.ComputeOutputHash()
 }
 
-/*AddVerificationTicket - Add a verification ticket to a block
-*Assuming this is done single-threaded at least per block
-*It's the callers responsibility to decide what to do if this operation is successful
-*  - the miner of the block for example will decide if the notarization is received and send it off to others
- */
+/*AddVerificationTicket - Add a verification ticket to a block if it's not already present */
 func (b *Block) AddVerificationTicket(vt *VerificationTicket) bool {
 	b.ticketsMutex.Lock()
 	defer b.ticketsMutex.Unlock()
@@ -233,30 +229,29 @@ func (b *Block) AddVerificationTicket(vt *VerificationTicket) bool {
 
 /*MergeVerificationTickets - merge the verification tickets with what's already there */
 func (b *Block) MergeVerificationTickets(vts []*VerificationTicket) {
+	unionVerificationTickets := func(tickets1 []*VerificationTicket, tickets2 []*VerificationTicket) []*VerificationTicket {
+		if len(tickets1) == 0 {
+			return tickets2
+		}
+		if len(tickets2) == 0 {
+			return tickets1
+		}
+		ticketsMap := make(map[string]*VerificationTicket, len(tickets1)+len(tickets2))
+		for _, t := range tickets1 {
+			ticketsMap[t.VerifierID] = t
+		}
+		for _, t := range tickets2 {
+			ticketsMap[t.VerifierID] = t
+		}
+		utickets := make([]*VerificationTicket, 0, len(ticketsMap))
+		for _, v := range ticketsMap {
+			utickets = append(utickets, v)
+		}
+		return utickets
+	}
 	b.ticketsMutex.Lock()
 	defer b.ticketsMutex.Unlock()
-	b.VerificationTickets = b.unionVerificationTickets(b.VerificationTickets, vts)
-}
-
-func (b *Block) unionVerificationTickets(tickets1 []*VerificationTicket, tickets2 []*VerificationTicket) []*VerificationTicket {
-	if len(tickets1) == 0 {
-		return tickets2
-	}
-	if len(tickets2) == 0 {
-		return tickets1
-	}
-	ticketsMap := make(map[string]*VerificationTicket, len(tickets1)+len(tickets2))
-	for _, t := range tickets1 {
-		ticketsMap[t.VerifierID] = t
-	}
-	for _, t := range tickets2 {
-		ticketsMap[t.VerifierID] = t
-	}
-	utickets := make([]*VerificationTicket, 0, len(ticketsMap))
-	for _, v := range ticketsMap {
-		utickets = append(utickets, v)
-	}
-	return utickets
+	b.VerificationTickets = unionVerificationTickets(b.VerificationTickets, vts)
 }
 
 /*GetMerkleTree - return the merkle tree of this block using the transactions as leaf nodes */

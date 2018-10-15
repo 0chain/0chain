@@ -51,7 +51,7 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 		Logger.Error("db error (save block)", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
 	}
 	self := node.GetSelfNode(ctx)
-	if sc.IsBlockSharder(fr, b, self.Node) {
+	if sc.IsBlockSharder(b, self.Node) {
 		ts := time.Now()
 		err := blockstore.GetStore().Write(b)
 		duration := time.Since(ts)
