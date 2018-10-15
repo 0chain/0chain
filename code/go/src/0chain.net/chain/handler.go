@@ -158,6 +158,7 @@ func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr><td>Set Index</td><td>Node</td><td>Sent</td><td>Send Errors</td><td>Received</td><td>Last Active</td><td>Small Msg Time</td><td>Large Msg Time</td><td>Description</td></tr>")
 	r := c.GetRound(c.CurrentRound)
+	lfb := c.LatestFinalizedBlock
 	for _, nd := range nodes {
 		if nd.Status == node.NodeStatusInactive {
 			fmt.Fprintf(w, "<tr class='inactive'>")
@@ -167,6 +168,10 @@ func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 		fmt.Fprintf(w, "<td>%d", nd.SetIndex)
 		if nd.Type == node.NodeTypeMiner {
 			if r != nil && c.IsRoundGenerator(r, nd) {
+				fmt.Fprintf(w, "*")
+			}
+		} else if nd.Type == node.NodeTypeSharder {
+			if c.IsBlockSharder(lfb, nd) {
 				fmt.Fprintf(w, "*")
 			}
 		}
