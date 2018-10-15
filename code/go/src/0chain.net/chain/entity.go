@@ -223,7 +223,7 @@ var stateDB *util.PNodeDB
 
 //SetupStateDB - setup the state db
 func SetupStateDB() {
-	db, err := util.NewPNodeDB("data/rocksdb/state")
+	db, err := util.NewPNodeDB("data/rocksdb/state", "/0chain/log/rocksdb/state")
 	if err != nil {
 		panic(err)
 	}

@@ -20,7 +20,7 @@ type PNodeDB struct {
 }
 
 /*NewPNodeDB - create a new PNodeDB */
-func NewPNodeDB(dataDir string) (*PNodeDB, error) {
+func NewPNodeDB(dataDir string, logDir string) (*PNodeDB, error) {
 	opts := gorocksdb.NewDefaultOptions()
 	opts.SetCreateIfMissing(true)
 	opts.SetCompression(gorocksdb.LZ4Compression)
@@ -30,6 +30,7 @@ func NewPNodeDB(dataDir string) (*PNodeDB, error) {
 	*/
 	opts.OptimizeForPointLookup(64)
 	opts.IncreaseParallelism(2) // pruning and saving happen in parallel
+	opts.SetDbLogDir(logDir)
 	db, err := gorocksdb.OpenDb(opts, dataDir)
 	if err != nil {
 		return nil, err
