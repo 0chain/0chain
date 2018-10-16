@@ -10,7 +10,6 @@ import (
 	"0chain.net/transaction"
 
 	. "0chain.net/logging"
-	"go.uber.org/zap"
 )
 
 const Seperator = smartcontractinterface.Seperator
@@ -25,6 +24,10 @@ type StorageNode struct {
 	ID        string `json:"id"`
 	BaseURL   string `json:"url"`
 	PublicKey string `json:"-"`
+}
+
+func (sn *StorageNode) GetKey() smartcontractstate.Key {
+	return smartcontractstate.Key("blobber:" + sn.ID)
 }
 
 func (sn *StorageNode) Encode() []byte {
@@ -52,33 +55,99 @@ type StorageAllocation struct {
 	Owner        string                  `json:"owner_id"`
 }
 
+func (sn *StorageAllocation) GetKey() smartcontractstate.Key {
+	return smartcontractstate.Key("allocation:" + sn.ID)
+}
+
+func (sn *StorageAllocation) Decode(input []byte) error {
+	err := json.Unmarshal(input, sn)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 type BlobberAllocation struct {
 	ID                   string       `json:"id"`
 	Size                 int64        `json:"size"`
 	Capacity             int64        `json:"capacity"`
 	AllocationMerkleRoot string       `json:"allocation_merkle_root"`
+	LatestCloseTxn       string       `json:"latest_close_txn"`
 	RedeemedWriteCounter int64        `json:"latest_write_counter_redeemed"`
 	BlobberNode          *StorageNode `json:"storage_node"`
 }
 
+func (ba *BlobberAllocation) GetKey() smartcontractstate.Key {
+	return smartcontractstate.Key("blobber_allocation:" + ba.ID)
+}
+
+func (ba *BlobberAllocation) Encode() []byte {
+	buff, _ := json.Marshal(ba)
+	return buff
+}
+
+func (ba *BlobberAllocation) Decode(input []byte) error {
+	err := json.Unmarshal(input, ba)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 type StorageConnection struct {
-	ClientID      string `json:"client_id"`
-	BlobberID     string `json:"blobber_id"`
-	MaxSize       int64  `json:"max_size"`
-	AllocationID  string `json:"allocation_id"`
-	TransactionID string `json:"transaction_id"`
-	Status        int    `json:"status"`
+	ClientPublicKey string                     `json:"client_public_key"`
+	AllocationID    string                     `json:"allocation_id"`
+	Status          int                        `json:"status"`
+	BlobberData     []StorageConnectionBlobber `json:"blobber_data"`
+}
+
+type StorageConnectionBlobber struct {
+	BlobberID         string `json:"blobber_id"`
+	DataID            string `json:"data_id"`
+	Size              int64  `json:"size"`
+	MerkleRoot        string `json:"merkle_root"`
+	OpenConnectionTxn string `json:"open_connection_txn"`
+	AllocationID      string `json:"allocation_id"`
+}
+
+func (ba *StorageConnectionBlobber) Encode() []byte {
+	buff, _ := json.Marshal(ba)
+	return buff
+}
+
+func (ba *StorageConnectionBlobber) Decode(input []byte) error {
+	err := json.Unmarshal(input, ba)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 type StorageSmartContract struct {
 	smartcontractinterface.SmartContract
 }
 
-var allBlobbersMap = make(map[string]*StorageNode)
-var allBlobbersList = make([]string, 0)
-var allocationRequestMap = make(map[string]*StorageAllocation)
-var blobberAllocationMap = make(map[string]*BlobberAllocation)
-var allOpenConnectionsMap = make(map[string]*StorageConnection)
+type BlobberCloseConnection struct {
+	DataID      string      `json:"data_id"`
+	MerkleRoot  string      `json:"merkle_root"`
+	WriteMarker WriteMarker `json:"write_marker"`
+}
+
+type WriteMarker struct {
+	DataID              string           `json:"data_id"`
+	MerkleRoot          string           `json:"merkle_root"`
+	IntentTransactionID string           `json:"intent_tx_id"`
+	BlobberID           string           `json:"blobber_id"`
+	Timestamp           common.Timestamp `json:"timestamp"`
+	ClientID            string           `json:"client_id"`
+	Signature           string           `json:"signature"`
+}
+
+// var allBlobbersMap = make(map[string]*StorageNode)
+// var allBlobbersList = make([]string, 0)
+// var allocationRequestMap = make(map[string]*StorageAllocation)
+// var blobberAllocationMap = make(map[string]*BlobberAllocation)
+// var allOpenConnectionsMap = make(map[string]*StorageConnection)
 
 func (sc *StorageSmartContract) newAllocationReqeust(inputData []byte) *StorageAllocation {
 	var storageAllocation StorageAllocation
@@ -94,92 +163,148 @@ func generateClientBlobberKey(allocationID string, clientID string, blobberID st
 	return encryption.Hash(allocationID + Seperator + clientID + Seperator + blobberID)
 }
 
+func generateAllocationBlobberKey(allocationID string, blobberID string) string {
+	return encryption.Hash(allocationID + Seperator + blobberID)
+}
+
 func (sc *StorageSmartContract) OpenConnectionWithBlobber(t *transaction.Transaction, input []byte) (string, error) {
 	var openConnection StorageConnection
 	err := json.Unmarshal(input, &openConnection)
 	if err != nil {
 		return "", err
 	}
-	if len(openConnection.ClientID) == 0 || len(openConnection.BlobberID) == 0 || len(openConnection.AllocationID) == 0 {
+	if len(openConnection.AllocationID) == 0 {
 		return "", common.NewError("invalid_parameters", "Invalid ClientID, BlobberID or Allocation ID for opening connection.")
 	}
 
-	allocationObj, ok := allocationRequestMap[openConnection.AllocationID]
-	if !ok {
+	allocationBytes, err := sc.DB.GetNode(smartcontractstate.Key("allocation:" + openConnection.AllocationID))
+
+	// allocationObj, ok := allocationRequestMap[openConnection.AllocationID]
+	if allocationBytes == nil || err != nil {
 		return "", common.NewError("invalid_parameters", "Invalid allocation ID")
 	}
 
-	if t.ClientID != openConnection.ClientID || allocationObj.Owner != t.ClientID {
+	allocationObj := &StorageAllocation{}
+	err = allocationObj.Decode(allocationBytes)
+	if allocationBytes == nil || err != nil {
+		return "", common.NewError("invalid_parameters", "Invalid allocation ID. Failed to decode from DB")
+	}
+
+	if allocationObj.Owner != t.ClientID {
 		return "", common.NewError("invalid_parameters", "Connection has to be opened by the same client as owner of the allocation")
 	}
 
-	clientBlobberKey := generateClientBlobberKey(openConnection.AllocationID, openConnection.ClientID, openConnection.BlobberID)
-	//check for existing open connections
-	if _, ok := allOpenConnectionsMap[clientBlobberKey]; ok {
-		Logger.Error("An open connection to the blobber already exists from this client", zap.Any("clientBlobberKey", clientBlobberKey), zap.Any("openConnection", allOpenConnectionsMap[clientBlobberKey]))
-		return "", common.NewError("connection_to_blobber_exists", "An open connection to the blobber already exists from this client")
+	for _, blobberConnection := range openConnection.BlobberData {
+		blobberAllocationKey := generateAllocationBlobberKey(openConnection.AllocationID, blobberConnection.BlobberID)
+		if _, ok := allocationObj.Blobbers[blobberAllocationKey]; !ok {
+			return "", common.NewError("invalid_parameters", "Blobber is not part of the allocation")
+		}
+		blobberAllocationBytes, err := sc.DB.GetNode(smartcontractstate.Key("blobber_allocation:" + blobberAllocationKey))
+		if blobberAllocationBytes == nil || err != nil {
+			return "", common.NewError("invalid_parameters", "Blobber is not part of the allocation. Could not find blobber in the DB")
+		}
+		blobberAllocation := &BlobberAllocation{}
+		err = blobberAllocation.Decode(blobberAllocationBytes)
+		if err != nil {
+			return "", common.NewError("blobber_allocation_decode", "Blobber Allocation decode error"+err.Error())
+		}
+		if blobberAllocation.Capacity < blobberConnection.Size {
+			return "", common.NewError("insufficient_capacity", "blobber does not have enough storage capacity to handle this request")
+		}
+		blobberConnection.OpenConnectionTxn = t.Hash
+		blobberConnection.AllocationID = openConnection.AllocationID
+		sc.DB.PutNode(smartcontractstate.Key("open_connection:"+blobberConnection.DataID), blobberConnection.Encode())
 	}
-
-	//check for blobber has enough capacity for the operation
-	blobberAllocation := blobberAllocationMap[clientBlobberKey]
-	if blobberAllocation.Capacity < openConnection.MaxSize {
-		return "", common.NewError("insufficient_capacity", "The blobber does not have enough storage capacity to handle this request")
-	}
-
-	openConnection.ClientID = t.ClientID
-	openConnection.TransactionID = t.Hash
-	openConnection.Status = Active
-	allOpenConnectionsMap[clientBlobberKey] = &openConnection
+	openConnection.ClientPublicKey = t.PublicKey
 
 	buff, _ := json.Marshal(openConnection)
 	return string(buff), nil
 }
 
 func (sc *StorageSmartContract) CloseConnectionWithBlobber(t *transaction.Transaction, input []byte) (string, error) {
-	var openConnection StorageConnection
-	err := json.Unmarshal(input, &openConnection)
+	var commitConnection BlobberCloseConnection
+	err := json.Unmarshal(input, &commitConnection)
 	if err != nil {
 		return "", err
 	}
 
-	if len(openConnection.ClientID) == 0 || len(openConnection.BlobberID) == 0 || len(openConnection.AllocationID) == 0 {
-		return "", common.NewError("invalid_parameters", "Invalid ClientID, BlobberID or Allocation ID for closing connection.")
+	if commitConnection.DataID != commitConnection.WriteMarker.DataID {
+		return "", common.NewError("invalid_parameters", "Invalid Data ID for closing connection.")
 	}
 
-	clientBlobberKey := generateClientBlobberKey(openConnection.AllocationID, openConnection.ClientID, openConnection.BlobberID)
-	//check for existing open connections
-	if _, ok := allOpenConnectionsMap[clientBlobberKey]; !ok {
-		Logger.Error("An open connection to the blobber from this client could not be found", zap.Any("clientBlobberKey", clientBlobberKey), zap.Any("openConnection", allOpenConnectionsMap[clientBlobberKey]))
-		return "", common.NewError("no_connection_to_blobber_exists", "An open connection to the blobber from this client could not be found")
+	if commitConnection.WriteMarker.BlobberID != t.ClientID {
+		return "", common.NewError("invalid_parameters", "Invalid Blobber ID for closing connection. Write marker not for this blobber")
 	}
 
-	storedOpenConnection := allOpenConnectionsMap[clientBlobberKey]
-	if storedOpenConnection.Status != Active {
-		return "", common.NewError("invalid_client", "Connection is not active. So cannot close the connection")
+	blobberConnectionBytes, err := sc.DB.GetNode(smartcontractstate.Key("open_connection:" + commitConnection.DataID))
+
+	if blobberConnectionBytes == nil || err != nil {
+		return "", common.NewError("invalid_parameters", "Not valid open connection for the data ID")
+	}
+	var blobberConnection StorageConnectionBlobber
+	err = blobberConnection.Decode(blobberConnectionBytes)
+	if err != nil {
+		return "", common.NewError("invalid_parameters", "Unable to get the blobber connection object from DB")
 	}
 
-	if storedOpenConnection.BlobberID != t.ClientID {
-		return "", common.NewError("invalid_client", "Connection cannot be closed by anyone apart from the blobber")
+	if blobberConnection.BlobberID != commitConnection.WriteMarker.BlobberID {
+		return "", common.NewError("invalid_parameters", "Connection was open for a different blobber")
 	}
 
-	if storedOpenConnection.AllocationID != openConnection.AllocationID || storedOpenConnection.TransactionID != openConnection.TransactionID || storedOpenConnection.BlobberID != openConnection.BlobberID || storedOpenConnection.ClientID != openConnection.ClientID {
-		Logger.Error("An open connection to the blobber from this client could not be found", zap.Any("clientBlobberKey", clientBlobberKey), zap.Any("storedOpenConnection", storedOpenConnection), zap.Any("openConnection", openConnection))
-		return "", common.NewError("invalid_input_data", "Invalid input data to close the connection")
-	}
-	//check for blobber has accepted more data
-	if allOpenConnectionsMap[clientBlobberKey].MaxSize < openConnection.MaxSize {
-		return "", common.NewError("invalid_size_used", "Blobber has accepted more bytes than asked for by client")
+	if blobberConnection.OpenConnectionTxn != commitConnection.WriteMarker.IntentTransactionID {
+		return "", common.NewError("invalid_parameters", "Write marker is not for the same open connection")
 	}
 
-	blobberAllocation := blobberAllocationMap[clientBlobberKey]
-	blobberAllocation.Capacity = blobberAllocation.Capacity - openConnection.MaxSize
-	storedOpenConnection.Status = Closed
-	openConnection.Status = Closed
+	allocationBytes, err := sc.DB.GetNode(smartcontractstate.Key("allocation:" + blobberConnection.AllocationID))
 
-	delete(allOpenConnectionsMap, clientBlobberKey)
+	// allocationObj, ok := allocationRequestMap[openConnection.AllocationID]
+	if allocationBytes == nil || err != nil {
+		return "", common.NewError("invalid_parameters", "Invalid allocation ID")
+	}
 
-	buff, _ := json.Marshal(openConnection)
-	return string(buff), nil
+	allocationObj := &StorageAllocation{}
+	err = allocationObj.Decode(allocationBytes)
+	if allocationBytes == nil || err != nil {
+		return "", common.NewError("invalid_parameters", "Invalid allocation ID. Failed to decode from DB")
+	}
+
+	if allocationObj.Owner != commitConnection.WriteMarker.ClientID {
+		return "", common.NewError("invalid_parameters", "Write marker has to be by the same client as owner of the allocation")
+	}
+
+	blobberAllocationKey := generateAllocationBlobberKey(blobberConnection.AllocationID, blobberConnection.BlobberID)
+	blobberAllocationBytes, err := sc.DB.GetNode(smartcontractstate.Key("blobber_allocation:" + blobberAllocationKey))
+	if blobberAllocationBytes == nil || err != nil {
+		return "", common.NewError("invalid_parameters", "Blobber is not part of the allocation. Could not find blobber in the DB")
+	}
+	blobberAllocation := &BlobberAllocation{}
+	err = blobberAllocation.Decode(blobberAllocationBytes)
+	if err != nil {
+		return "", common.NewError("blobber_allocation_decode", "Blobber Allocation decode error "+err.Error())
+	}
+	blobberAllocation.LatestCloseTxn = t.Hash
+	blobberAllocation.Capacity -= blobberConnection.Size
+	buffBlobberAllocation, _ := json.Marshal(blobberAllocation)
+	sc.DB.PutNode(smartcontractstate.Key("blobber_allocation:"+blobberAllocationKey), buffBlobberAllocation)
+	buff, _ := json.Marshal(commitConnection)
+	sc.DB.PutNode(smartcontractstate.Key("close_connection:"+commitConnection.DataID), buff)
+	return string(buffBlobberAllocation), nil
+}
+
+func (sc *StorageSmartContract) getBlobbersList() ([]StorageNode, error) {
+	var allBlobbersList = make([]StorageNode, 0)
+	allBlobbersBytes, err := sc.DB.GetNode(smartcontractstate.Key("all_blobbers"))
+	if err != nil {
+		return nil, common.NewError("getBlobbersList_failed", "Failed to retrieve existing blobbers list")
+	}
+	if allBlobbersBytes == nil {
+		return allBlobbersList, nil
+	}
+	err = json.Unmarshal(allBlobbersBytes, &allBlobbersList)
+	if err != nil {
+		return nil, common.NewError("getBlobbersList_failed", "Failed to retrieve existing blobbers list")
+	}
+	return allBlobbersList, nil
 }
 
 func (sc *StorageSmartContract) Execute(t *transaction.Transaction, funcName string, input []byte) (string, error) {
@@ -200,13 +325,21 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction, funcName str
 	}
 
 	if funcName == "new_allocation_request" {
+
+		allBlobbersList, err := sc.getBlobbersList()
+		if err != nil {
+			return "", common.NewError("allocation_creation_failed", "No Blobbers registered. Failed to create a storage allocation")
+		}
+
+		if len(allBlobbersList) == 0 {
+			return "", common.NewError("allocation_creation_failed", "No Blobbers registered. Failed to create a storage allocation")
+		}
+
 		allocationRequest := sc.newAllocationReqeust(input)
 		if allocationRequest == nil {
 			return "", common.NewError("allocation_creation_failed", "Failed to create a storage allocation")
 		}
-		if len(allBlobbersList) == 0 {
-			return "", common.NewError("allocation_creation_failed", "No Blobbers registered. Failed to create a storage allocation")
-		}
+
 		if allocationRequest.NumReads > 0 && allocationRequest.NumWrites > 0 && allocationRequest.Size > 0 && allocationRequest.DataShards > 0 {
 			size := allocationRequest.DataShards + allocationRequest.ParityShards
 
@@ -214,41 +347,63 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction, funcName str
 				size = len(allBlobbersList)
 			}
 			allocatedBlobbers := make(map[string]*StorageNode)
+
+			blobberAllocationKeys := make([]smartcontractstate.Key, 0)
+			blobberAllocationValues := make([]smartcontractstate.Node, 0)
 			for i := 0; i < size; i++ {
-				blobberID := allBlobbersList[i]
-				blobberNode := allBlobbersMap[blobberID]
-				clientBlobberKey := generateClientBlobberKey(t.Hash, t.ClientID, blobberID)
+				blobberNode := allBlobbersList[i]
+
+				allocationBlobberKey := generateAllocationBlobberKey(t.Hash, blobberNode.ID)
 
 				var blobberAllocation BlobberAllocation
-				blobberAllocation.ID = clientBlobberKey
+				blobberAllocation.ID = allocationBlobberKey
 				blobberAllocation.Size = (allocationRequest.Size + int64(size-1)) / int64(size)
 				blobberAllocation.Capacity = blobberAllocation.Size
 				blobberAllocation.RedeemedWriteCounter = 0
-				blobberAllocationMap[clientBlobberKey] = &blobberAllocation
-				allocatedBlobbers[clientBlobberKey] = blobberNode
+				//blobberAllocations = append(blobberAllocations, blobberAllocation)
+				blobberAllocationKeys = append(blobberAllocationKeys, blobberAllocation.GetKey())
+				buff, _ := json.Marshal(blobberAllocation)
+				blobberAllocationValues = append(blobberAllocationValues, buff)
+				allocatedBlobbers[allocationBlobberKey] = &blobberNode
 			}
 			allocationRequest.Blobbers = allocatedBlobbers
 			allocationRequest.ID = t.Hash
 			allocationRequest.Owner = t.ClientID
 			buff, _ := json.Marshal(allocationRequest)
-			allocationRequestMap[t.Hash] = allocationRequest
+			//allocationRequestMap[t.Hash] = allocationRequest
+			err = sc.DB.MultiPutNode(blobberAllocationKeys, blobberAllocationValues)
+			if err != nil {
+				return "", common.NewError("allocation_request_failed", "Failed to store the blobber allocation stats")
+			}
+			err = sc.DB.PutNode(allocationRequest.GetKey(), buff)
+			if err != nil {
+				return "", common.NewError("allocation_request_failed", "Failed to store the allocation request")
+			}
 			return string(buff), nil
 		}
 		return "", common.NewError("invalid_allocation_request", "Failed storage allocate")
 
 	} else if funcName == "add_blobber" {
+		allBlobbersList, err := sc.getBlobbersList()
+		if err != nil {
+			return "", common.NewError("add_blobber_failed", "Failed to get blobber list"+err.Error())
+		}
 		var newBlobber StorageNode
-		err := json.Unmarshal(input, &newBlobber)
+		err = json.Unmarshal(input, &newBlobber)
 		if err != nil {
 			return "", err
 		}
 		newBlobber.ID = t.ClientID
 		newBlobber.PublicKey = t.PublicKey
-		if _, ok := allBlobbersMap[newBlobber.ID]; !ok {
-			allBlobbersMap[newBlobber.ID] = &newBlobber
-			allBlobbersList = append(allBlobbersList, newBlobber.ID)
+		blobberBytes, _ := sc.DB.GetNode(newBlobber.GetKey())
+		if blobberBytes == nil {
+			allBlobbersList = append(allBlobbersList, newBlobber)
+			allBlobbersBytes, _ := json.Marshal(allBlobbersList)
+			sc.DB.PutNode(smartcontractstate.Key("all_blobbers"), allBlobbersBytes)
+			sc.DB.PutNode(newBlobber.GetKey(), newBlobber.Encode())
+			Logger.Info("Adding blobber to known list of blobbers")
 		}
-		sc.DB.PutNode(smartcontractstate.Key(newBlobber.ID), newBlobber.Encode())
+
 		buff, _ := json.Marshal(newBlobber)
 		return string(buff), nil
 	}
