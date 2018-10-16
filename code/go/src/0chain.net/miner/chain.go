@@ -84,17 +84,6 @@ func (mc *Chain) SetLatestFinalizedBlock(ctx context.Context, b *block.Block) {
 	mc.AddNotarizedBlock(ctx, mr, b)
 }
 
-/*CancelRoundsBelow - delete rounds below */
-func (mc *Chain) CancelRoundsBelow(ctx context.Context, round int64) {
-	mc.roundsMutex.Lock()
-	defer mc.roundsMutex.Unlock()
-	for _, r := range mc.rounds {
-		if r.GetRoundNumber() < round {
-			r.CancelVerification()
-		}
-	}
-}
-
 func (mc *Chain) deleteTxns(txns []datastore.Entity) error {
 	transactionMetadataProvider := datastore.GetEntityMetadata("txn")
 	ctx := memorystore.WithEntityConnection(common.GetRootContext(), transactionMetadataProvider)

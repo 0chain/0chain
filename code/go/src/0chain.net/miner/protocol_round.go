@@ -275,9 +275,8 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 		bvt, err := mc.VerifyRoundBlock(ctx, r, b)
 		if err != nil {
 			b.SetBlockState(block.StateVerificationFailed)
-			ierr, ok := err.(*common.Error)
-			if ok {
-				if ierr.Code == RoundMismatch {
+			if cerr, ok := err.(*common.Error); ok {
+				if cerr.Code == RoundMismatch {
 					Logger.Debug("verify round block", zap.Any("round", r.Number), zap.Any("block", b.Hash), zap.Any("current_round", mc.CurrentRound))
 				} else {
 					Logger.Error("verify round block", zap.Any("round", r.Number), zap.Any("block", b.Hash), zap.Error(err))
@@ -292,6 +291,9 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 		if bnb == nil || bnb.RoundRank >= b.RoundRank {
 			r.Block = b
 			mc.ProcessVerifiedTicket(ctx, r, b, &bvt.VerificationTicket)
+			miner := mc.Miners.GetNode(b.MinerID)
+			minerStats := miner.ProtocolStats.(*chain.MinerStats)
+			minerStats.VerificationTicketsByRank[b.RoundRank]++
 			if !b.IsBlockNotarized() {
 				go mc.SendVerificationTicket(ctx, b, bvt)
 			}
@@ -320,9 +322,16 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 	for true {
 		select {
 		case <-ctx.Done():
+			bRank := -1
+			if r.Block != nil {
+				bRank = r.Block.RoundRank
+			}
 			for _, b := range blocks {
-				if b.GetBlockState() == block.StateVerificationPending || b.GetBlockState() == block.StateVerificationAccepted {
-					Logger.Info("cancel verification (failing block)", zap.Int64("round", r.Number), zap.String("block", b.Hash))
+				bs := b.GetBlockState()
+				if bRank != 0 && bRank != b.RoundRank {
+					Logger.Info("verification cancel (failing block)", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.Int("block_rank", b.RoundRank), zap.Int("best_rank", bRank), zap.Int8("block_state", bs))
+				}
+				if bs == block.StateVerificationPending || bs == block.StateVerificationAccepted {
 					b.SetBlockState(block.StateVerificationFailed)
 				}
 			}
@@ -333,6 +342,7 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			if sendVerification {
 				// Is this better than the current best block
 				if r.Block == nil || b.RoundRank < r.Block.RoundRank {
+					b.SetBlockState(block.StateVerificationPending)
 					verifyAndSend(ctx, r, b)
 				} else {
 					b.SetBlockState(block.StateVerificationRejected)
@@ -404,14 +414,14 @@ func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *Round, b *block.Block
 	}
 	b.SetBlockState(block.StateNotarized)
 	if !r.IsVerificationComplete() {
-		r.CancelVerification()
+		mc.CancelRoundVerification(ctx, r)
 		if r.Block == nil || r.Block.RoundRank > b.RoundRank {
 			r.Block = b
 		}
 	}
 	pr := mc.GetMinerRound(r.GetRoundNumber() - 1)
 	if pr != nil {
-		pr.CancelVerification()
+		mc.CancelRoundVerification(ctx, pr)
 		go mc.FinalizeRound(ctx, pr.Round, mc)
 	}
 	mc.startNextRound(r)
