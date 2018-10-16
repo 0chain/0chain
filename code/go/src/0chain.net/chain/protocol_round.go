@@ -54,13 +54,6 @@ func (c *Chain) FinalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 	if r.GetBestNotarizedBlock() == nil {
 		Logger.Error("finalize round: no notarized blocks", zap.Int64("round", r.GetRoundNumber()))
 		go c.GetNotarizedBlockForRound(r)
-	} else {
-		for _, nb := range r.GetNotarizedBlocks() {
-			if nb.PrevBlock == nil {
-				Logger.Error("finalize round: get previous block", zap.Int64("round", r.GetRoundNumber()), zap.String("block", nb.Hash), zap.String("prev_block", nb.PrevHash))
-				go c.GetPreviousBlock(ctx, nb)
-			}
-		}
 	}
 	time.Sleep(FINALIZATION_TIME)
 	nbCount := len(r.GetNotarizedBlocks())
