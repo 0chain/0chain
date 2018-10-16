@@ -160,52 +160,55 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		Logger.Info("generate block (round mismatch)", zap.Any("round", roundNumber), zap.Any("current_round", mc.CurrentRound))
 		return nil, ErrRoundMismatch
 	}
-	mc.AddToRoundVerification(ctx, r, b)
+	mc.addToRoundVerification(ctx, r, b)
 	mc.SendBlock(ctx, b)
 	return b, nil
 }
 
-/*AddToRoundVerification - Add a block to verify : WARNING: does not support concurrent access for a given round */
+/*AddToRoundVerification - Add a block to verify  */
 func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block.Block) {
-	if b.MinerID != node.GetSelfNode(ctx).GetKey() {
-		if mr.IsFinalizing() || mr.IsFinalized() {
-			b.SetBlockState(block.StateVerificationRejected)
-			Logger.Debug("add to verification", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Bool("finalizing", mr.IsFinalizing()), zap.Bool("finalized", mr.IsFinalized()))
+	if mr.IsFinalizing() || mr.IsFinalized() {
+		b.SetBlockState(block.StateVerificationRejected)
+		Logger.Debug("add to verification", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Bool("finalizing", mr.IsFinalizing()), zap.Bool("finalized", mr.IsFinalized()))
+		return
+	}
+	if !mc.ValidateMagicBlock(ctx, b) {
+		b.SetBlockState(block.StateVerificationRejected)
+		Logger.Error("invalid magic block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("magic_block", b.MagicBlockHash))
+		return
+	}
+	bNode := node.GetNode(b.MinerID)
+	if bNode == nil {
+		b.SetBlockState(block.StateVerificationRejected)
+		Logger.Error("add to round verification (invalid miner)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("miner_id", b.MinerID))
+		return
+	}
+	if b.Round > 1 {
+		if err := mc.VerifyNotarization(ctx, b.PrevHash, b.PrevBlockVerificationTickets); err != nil {
+			Logger.Error("verify round block (prior block verify notarization)", zap.Int64("round", mr.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Int("pb_v_tickets", len(b.PrevBlockVerificationTickets)), zap.Error(err))
 			return
-		}
-		if !mc.ValidateMagicBlock(ctx, b) {
-			b.SetBlockState(block.StateVerificationRejected)
-			Logger.Error("invalid magic block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("magic_block", b.MagicBlockHash))
-			return
-		}
-		bNode := node.GetNode(b.MinerID)
-		if bNode == nil {
-			b.SetBlockState(block.StateVerificationRejected)
-			Logger.Error("add to round verification (invalid miner)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("miner_id", b.MinerID))
-			return
-		}
-		if b.Round > 1 {
-			if err := mc.VerifyNotarization(ctx, b.PrevHash, b.PrevBlockVerificationTickets); err != nil {
-				Logger.Error("verify round block (prior block verify notarization)", zap.Int64("round", mr.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Int("pb_v_tickets", len(b.PrevBlockVerificationTickets)), zap.Error(err))
-				return
-			}
-		}
-		if mc.AddBlock(b) != b {
-			return
-		}
-		b.RoundRank = mr.GetMinerRank(bNode)
-		if b.PrevBlock != nil {
-			b.ComputeChainWeight()
-			mc.updatePriorBlock(ctx, mr.Round, b)
-		} else {
-			// We can establish an upper bound for chain weight at the current round, subtract 1 and add block's own weight and check if that's less than the chain weight sent
-			chainWeightUpperBound := mc.LatestFinalizedBlock.ChainWeight + float64(b.Round-mc.LatestFinalizedBlock.Round)
-			if b.ChainWeight > chainWeightUpperBound-1+b.Weight() {
-				Logger.Error("add to verification (wrong chain weight)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Float64("chain_weight", b.ChainWeight))
-				return
-			}
 		}
 	}
+	if mc.AddBlock(b) != b {
+		return
+	}
+	b.RoundRank = mr.GetMinerRank(bNode)
+	if b.PrevBlock != nil {
+		b.ComputeChainWeight()
+		mc.updatePriorBlock(ctx, mr.Round, b)
+	} else {
+		mc.AsyncFetchNotarizedPreviousBlock(b)
+		// We can establish an upper bound for chain weight at the current round, subtract 1 and add block's own weight and check if that's less than the chain weight sent
+		chainWeightUpperBound := mc.LatestFinalizedBlock.ChainWeight + float64(b.Round-mc.LatestFinalizedBlock.Round)
+		if b.ChainWeight > chainWeightUpperBound-1+b.Weight() {
+			Logger.Error("add to verification (wrong chain weight)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Float64("chain_weight", b.ChainWeight))
+			return
+		}
+	}
+	mc.addToRoundVerification(ctx, mr, b)
+}
+
+func (mc *Chain) addToRoundVerification(ctx context.Context, mr *Round, b *block.Block) {
 	Logger.Info("adding block to verify", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Float64("weight", b.Weight()), zap.Float64("chain_weight", b.ChainWeight))
 	vctx := mr.StartVerificationBlockCollection(ctx)
 	if vctx != nil {

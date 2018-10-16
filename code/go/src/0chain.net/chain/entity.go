@@ -104,6 +104,8 @@ type Chain struct {
 	stakeMutex  *sync.Mutex
 
 	nodePoolScorer node.PoolScorer
+
+	missingLinkBlocks chan *block.Block
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
@@ -207,6 +209,7 @@ func (c *Chain) Initialize() {
 	c.stateDB = stateDB
 	c.BlockChain = ring.New(10000)
 	c.minersStake = make(map[datastore.Key]int)
+	c.missingLinkBlocks = make(chan *block.Block, 128)
 }
 
 /*SetupEntity - setup the entity */
@@ -297,18 +300,26 @@ func (c *Chain) addBlock(b *block.Block) *block.Block {
 		if pb, ok := c.blocks[b.PrevHash]; ok {
 			b.SetPreviousBlock(pb)
 		} else {
-			go c.GetPreviousBlock(common.GetRootContext(), b)
+			c.AsyncFetchNotarizedPreviousBlock(b)
 		}
 	}
 	return b
+}
+
+/*AsyncFetchNotarizedPreviousBlock - async fetching of the notarized block */
+func (c *Chain) AsyncFetchNotarizedPreviousBlock(b *block.Block) {
+	c.missingLinkBlocks <- b
 }
 
 /*GetBlock - returns a known block for a given hash from the cache */
 func (c *Chain) GetBlock(ctx context.Context, hash string) (*block.Block, error) {
 	c.blocksMutex.Lock()
 	defer c.blocksMutex.Unlock()
-	b, ok := c.blocks[datastore.ToKey(hash)]
-	if ok {
+	return c.getBlock(ctx, hash)
+}
+
+func (c *Chain) getBlock(ctx context.Context, hash string) (*block.Block, error) {
+	if b, ok := c.blocks[datastore.ToKey(hash)]; ok {
 		return b, nil
 	}
 	return nil, common.NewError(datastore.EntityNotFound, fmt.Sprintf("Block with hash (%v) not found", hash))
