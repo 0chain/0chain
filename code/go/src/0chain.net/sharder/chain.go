@@ -21,11 +21,11 @@ func SetupSharderChain(c *chain.Chain) {
 	sharderChain.BlockChannel = make(chan *block.Block, 128)
 	sharderChain.RoundChannel = make(chan *round.Round, 128)
 	sharderChain.BlockCache = cache.GetLRUCacheProvider()
-	bcs := 100 //TODO determine the cache size depending on the block & transaction size
-	sharderChain.BlockCache.New(bcs)
+	blockCacheSize := 100
+	sharderChain.BlockCache.New(blockCacheSize)
 	sharderChain.BlockTxnCache = cache.GetLRUCacheProvider()
-	tcs := int(c.BlockSize) * bcs
-	sharderChain.BlockTxnCache.New(tcs)
+	transactionCacheSize := int(c.BlockSize) * blockCacheSize
+	sharderChain.BlockTxnCache.New(transactionCacheSize)
 }
 
 /*GetSharderChain - get the sharder's chain */
