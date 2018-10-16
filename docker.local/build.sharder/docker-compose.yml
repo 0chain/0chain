@@ -6,6 +6,7 @@ services:
       - "9042:9042"
     volumes:
       - ../sharder${SHARDER}/data/cassandra:/var/lib/scylla/data
+      - ../sharder${SHARDER}/config/scylla/scylla.yaml:/etc/scylla/scylla.yaml
 
   cassandra-init:
     image: cassandra:latest
