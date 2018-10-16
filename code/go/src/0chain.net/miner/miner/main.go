@@ -142,9 +142,10 @@ func main() {
 
 	initWorkers(ctx)
 	initN2NHandlers()
+
 	initServer()
 	initHandlers()
-
+	StartDKG(ctx)
 	go StartProtocol()
 	Logger.Info("Ready to listen to the requests")
 	chain.StartTime = time.Now().UTC()
@@ -210,20 +211,22 @@ func initWorkers(ctx context.Context) {
 	transaction.SetupWorkers(ctx)
 }
 
-/*StartProtocol - start the miner protocol */
-func StartProtocol() {
-	mc := miner.GetMinerChain()
-
-	miners := mc.Miners
-
-	Logger.Info("Starting DKG...")
-
-	//TODO : The value of k and n needs to be configurable
+/* StartDKG - start the DKG process */
+func StartDKG(ctx context.Context) {
 
 	k := 2
 	n := 3
+
+	mc := miner.GetMinerChain()
+	miners := mc.Miners
+	Logger.Info("Starting DKG...")
+
+	self := node.GetSelfNode(ctx)
+
+	mc.Miners.OneTimeStatusMonitor(ctx)
+
 	dg := bls.MakeSimpleDKG(k, n)
-	time.Sleep(5 * time.Second)
+
 	for i, node := range mc.Miners.Nodes {
 
 		Logger.Info("The miner ID is ", zap.String("miner ID is ", node.GetKey()))
@@ -231,16 +234,25 @@ func StartProtocol() {
 
 		Logger.Info("The x is ", zap.String("x is ", forID.GetDecString()))
 		secShare, _ := dg.ComputeDKGKeyShare(forID)
-		Logger.Info("secShare for above minerID is ", zap.String("secShare for above minerID is ", secShare.GetHexString()))
+		Logger.Info("secShare for above minerID is ", zap.String("secShare for above minerID is ", secShare.GetDecString()))
 
 		dkg := &bls.Dkg{
-			Share: secShare.GetHexString()}
-		dkg.SetKey(datastore.ToKey(node.GetKey()))
+			Share: secShare.GetDecString()}
+		dkg.SetKey(datastore.ToKey("1"))
 
-		miners.SendTo(miner.DKGShareSender(dkg), node.ID)
+		if self.ID == node.ID {
+			dg.SelfShare = secShare
+		} else {
+			miners.SendTo(miner.DKGShareSender(dkg), node.ID)
+		}
 	}
 
-	time.Sleep(5 * time.Second)
+}
+
+/*StartProtocol - start the miner protocol */
+func StartProtocol() {
+
+	mc := miner.GetMinerChain()
 
 	sr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 	sr.Number = 1

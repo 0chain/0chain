@@ -93,13 +93,16 @@ func StartRoundHandler(ctx context.Context, entity datastore.Entity) (interface{
 /*DKGShareHandler - handles the dkg share it receives from a node */
 func DKGShareHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 	//cast to required type and process further
-	dkg, ok := entity.(*bls.Dkg)
+
+	dg, ok := entity.(*bls.Dkg)
 	if !ok {
 		Logger.Error("invalid entity")
 		return false, nil
 	}
-	Logger.Info("received DKG share", zap.String("share", dkg.Share))
+	Logger.Info("received DKG share", zap.String("share", dg.Share))
+
 	return true, nil
+
 }
 
 /*VerifyBlockHandler - verify the block that is received */

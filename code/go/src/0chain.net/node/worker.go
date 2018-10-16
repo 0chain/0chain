@@ -11,6 +11,11 @@ import (
 	"go.uber.org/zap"
 )
 
+/*OneTimeStatusMonitor - checks the status of nodes only once*/
+func (np *Pool) OneTimeStatusMonitor(ctx context.Context) {
+	np.statusMonitor(ctx)
+}
+
 /*StatusMonitor - a background job that keeps checking the status of the nodes */
 func (np *Pool) StatusMonitor(ctx context.Context) {
 	np.statusMonitor(ctx)

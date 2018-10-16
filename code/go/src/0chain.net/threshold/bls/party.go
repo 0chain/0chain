@@ -7,11 +7,11 @@ import (
 /* BLS implementation */
 
 type SimpleBLS struct {
-	t        int
-	n        int
-	msg      Message
-	sigShare Sign
-	//gpPubKey      GroupPublicKey
+	t             int
+	n             int
+	msg           Message
+	sigShare      Sign
+	gpPubKey      GroupPublicKey
 	verifications []VerificationKey
 
 	partyKeyShare AfterDKGKeyShare
@@ -20,11 +20,11 @@ type SimpleBLS struct {
 func MakeSimpleBLS(dkg *BLSSimpleDKG, mg Message) SimpleBLS {
 
 	return SimpleBLS{
-		t:        dkg.T,
-		n:        dkg.N,
-		msg:      mg,
-		sigShare: Sign{},
-		//gpPubKey:      GroupPublicKey,
+		t:             dkg.T,
+		n:             dkg.N,
+		msg:           mg,
+		sigShare:      Sign{},
+		gpPubKey:      dkg.GpPubKey,
 		verifications: nil,
 		partyKeyShare: AfterDKGKeyShare{},
 	}

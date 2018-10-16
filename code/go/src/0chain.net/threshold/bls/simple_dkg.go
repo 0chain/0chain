@@ -6,48 +6,55 @@ import (
 	"fmt"
 	"strconv"
 
+	//. "0chain.net/logging"
 	"github.com/pmer/gobls"
 )
 
 type BLSSimpleDKG struct {
-	*Dkg
-	T                 int
-	N                 int
-	secKey            Key
-	pubKey            VerificationKey
-	mSec              []Key
-	mVec              []VerificationKey
-	secSharesMap      map[PartyId]Key
-	receivedSecShares []Key
-	receivedPubShares []VerificationKey
-	numReceived       int
+	T                    int
+	N                    int
+	SecKey               Key
+	pubKey               VerificationKey
+	mSec                 []Key
+	Vvec                 []VerificationKey
+	secSharesMap         map[PartyId]Key
+	receivedSecShares    []Key
+	receivedSecDKGShares []Key
+	receivedPubShares    []VerificationKey
+	numReceived          int
+	GpPubKey             GroupPublicKey
+	SecKeyShareGroup     Key
+	SelfShare            Key
 }
 
 func init() {
 	gobls.Init(gobls.CurveFp254BNb)
-	//os.Exit(m.Run())
 
 }
 func MakeSimpleDKG(t, n int) BLSSimpleDKG {
 
 	dkg := BLSSimpleDKG{
-		T:                 t,
-		N:                 n,
-		secKey:            Key{},
-		pubKey:            VerificationKey{},
-		mSec:              make([]Key, t),
-		mVec:              make([]VerificationKey, t),
-		secSharesMap:      make(map[PartyId]Key, n),
-		receivedSecShares: make([]Key, n),
-		receivedPubShares: make([]VerificationKey, n),
-		numReceived:       0,
+		T:                    t,
+		N:                    n,
+		SecKey:               Key{},
+		pubKey:               VerificationKey{},
+		mSec:                 make([]Key, t),
+		Vvec:                 make([]VerificationKey, t),
+		secSharesMap:         make(map[PartyId]Key, n),
+		receivedSecShares:    make([]Key, n),
+		receivedPubShares:    make([]VerificationKey, n),
+		numReceived:          0,
+		GpPubKey:             GroupPublicKey{},
+		SecKeyShareGroup:     Key{},
+		SelfShare:            Key{},
+		receivedSecDKGShares: make([]Key, n),
 	}
 
-	dkg.secKey.SetByCSPRNG()
-	dkg.pubKey = *(dkg.secKey.GetPublicKey())
-	dkg.mSec = dkg.secKey.GetMasterSecretKey(t)
-	dkg.mVec = gobls.GetMasterPublicKey(dkg.mSec) //the public verification vector
-
+	dkg.SecKey.SetByCSPRNG()
+	dkg.pubKey = *(dkg.SecKey.GetPublicKey())
+	dkg.mSec = dkg.SecKey.GetMasterSecretKey(t)
+	dkg.Vvec = gobls.GetMasterPublicKey(dkg.mSec)
+	dkg.GpPubKey = dkg.Vvec[0]
 	dkg.numReceived += 1
 	return dkg
 }
@@ -155,14 +162,14 @@ func (dkg *BLSSimpleDKG) IsDone() bool {
 func (dkg *BLSSimpleDKG) AggregateShares() (*AfterDKGKeyShare, error) {
 
 	for _, pri := range dkg.receivedSecShares {
-		dkg.secKey.Add(&pri)
+		dkg.SecKey.Add(&pri)
 	}
 
 	for _, pub := range dkg.receivedPubShares {
 		dkg.pubKey.Add(&pub)
 	}
 
-	aggShare := &AfterDKGKeyShare{m: dkg.secKey}
+	aggShare := &AfterDKGKeyShare{m: dkg.SecKey}
 	aggShare.v = dkg.pubKey
 	return aggShare, nil
 }
