@@ -36,8 +36,6 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 		return
 	}
 	pr := mc.GetRound(mr.GetRoundNumber() - 1)
-	//TODO: If for some reason the server is lagging behind (like network outage) we need to fetch the previous round info
-	// before proceeding
 	if pr == nil {
 		Logger.Debug("start new round (previous round not found)", zap.Int64("round", mr.GetRoundNumber()))
 		return

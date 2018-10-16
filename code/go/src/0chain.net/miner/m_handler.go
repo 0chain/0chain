@@ -5,7 +5,6 @@ import (
 	"context"
 	"net/http"
 	"strconv"
-	"time"
 
 	"0chain.net/block"
 	"0chain.net/common"
@@ -69,8 +68,7 @@ func SetupX2MResponders() {
 
 /*SetupM2SRequestors - setup all requests to sharder by miner */
 func SetupM2SRequestors() {
-	//TODO should we make any changes to the options based on the requirement
-	options := &node.SendOptions{Timeout: 2 * time.Second, CODEC: node.CODEC_MSGPACK, Compress: true}
+	options := &node.SendOptions{Timeout: node.TimeoutLargeMessage, CODEC: node.CODEC_MSGPACK, Compress: true}
 
 	blockEntityMetadata := datastore.GetEntityMetadata("block")
 	MinerLatestFinalizedBlockRequestor = node.RequestEntityHandler("/v1/_m2s/block/latest_finalized/get", options, blockEntityMetadata)
