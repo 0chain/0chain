@@ -1,6 +1,6 @@
 version: '3'
 services:
- scylla:
+  scylla:
     image: scylladb/scylla:2.3.0
     networks:
       - default
