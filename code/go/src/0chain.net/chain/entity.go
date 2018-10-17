@@ -265,6 +265,7 @@ func (c *Chain) GenerateGenesisBlock(hash string) (round.RoundI, *block.Block) {
 	gb.ClientStateHash = gb.ClientState.GetRoot()
 	gr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 	gr.Number = 0
+	c.SetRandomSeed(gr, 839695260482366273)
 	gr.Block = gb
 	gr.AddNotarizedBlock(gb)
 	return gr, gb
@@ -518,7 +519,6 @@ func (c *Chain) AddRound(r round.RoundI) round.RoundI {
 	if ok {
 		return er
 	}
-	//r.ComputeMinerRanks(c.Miners.Size())
 	c.rounds[roundNumber] = r
 	if roundNumber > c.CurrentRound {
 		c.CurrentRound = roundNumber
@@ -558,4 +558,10 @@ func (c *Chain) DeleteRoundsBelow(ctx context.Context, roundNumber int64) {
 		r.Clear()
 		delete(c.rounds, r.GetRoundNumber())
 	}
+}
+
+/*SetRandomSeed - set the random seed for the round */
+func (c *Chain) SetRandomSeed(r *round.Round, randomSeed int64) {
+	r.SetRandomSeed(randomSeed)
+	r.ComputeMinerRanks(c.Miners.Size())
 }

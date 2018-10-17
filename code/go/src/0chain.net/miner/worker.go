@@ -31,9 +31,9 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 				Logger.Debug("message", zap.Any("msg", GetMessageLookup(msg.Type)))
 			}
 			switch msg.Type {
-			case MessageStartRound:
+			case MessageVRFShare:
 				roundTimeout.Stop()
-				protocol.HandleStartRound(ctx, msg)
+				protocol.HandleVRFShare(ctx, msg)
 			case MessageVerify:
 				roundTimeout.Stop()
 				protocol.HandleVerifyBlockMessage(ctx, msg)

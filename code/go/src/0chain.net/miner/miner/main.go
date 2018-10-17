@@ -157,6 +157,7 @@ func initEntities() {
 
 	chain.SetupEntity(memoryStorage)
 	round.SetupEntity(memoryStorage)
+	round.SetupVRFShareEntity(memoryStorage)
 	block.SetupEntity(memoryStorage)
 	block.SetupBlockSummaryEntity(memoryStorage)
 
@@ -226,11 +227,8 @@ func StartProtocol(ctx context.Context) {
 		sr.RandomSeed = rand.New(rand.NewSource(lfb.RoundRandomSeed)).Int63()
 	} else {
 		sr.Number = 1
-		//TODO: For now, hardcoding a random seed for the first round
-		sr.RandomSeed = 839695260482366273
 	}
 	msr := mc.CreateRound(sr)
-
 	Logger.Info("bc-1 latest finalized Block", zap.Int64("lfb_round", mc.LatestFinalizedBlock.Round))
 
 	if !mc.CanStartNetwork() {
@@ -246,9 +244,6 @@ func StartProtocol(ctx context.Context) {
 	if config.Development() {
 		go TransactionGenerator(mc.BlockSize)
 	}
-	msg := miner.NewBlockMessage(miner.MessageStartRound, node.Self.Node, msr, nil)
-	msgChannel := mc.GetBlockMessageChannel()
 	Logger.Info("starting the blockchain ...")
-	msgChannel <- msg
-	mc.SendRoundStart(common.GetRootContext(), sr)
+	mc.StartRound(ctx, msr)
 }

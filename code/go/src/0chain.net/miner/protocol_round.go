@@ -3,7 +3,6 @@ package miner
 import (
 	"context"
 	"math"
-	"math/rand"
 	"sync"
 	"time"
 
@@ -31,10 +30,6 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 		Logger.Debug("start new round (current round higher)", zap.Int64("round", mr.GetRoundNumber()), zap.Int64("current_round", mc.CurrentRound))
 		return
 	}
-	if mc.AddRound(mr) != mr {
-		Logger.Debug("start new round (round already exists)", zap.Int64("round", mr.GetRoundNumber()))
-		return
-	}
 	pr := mc.GetRound(mr.GetRoundNumber() - 1)
 	if pr == nil {
 		Logger.Debug("start new round (previous round not found)", zap.Int64("round", mr.GetRoundNumber()))
@@ -42,7 +37,7 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 	}
 	self := node.GetSelfNode(ctx)
 	rank := mr.GetMinerRank(self.Node)
-	Logger.Info("*** starting round ***", zap.Int64("round", mr.GetRoundNumber()), zap.Int("index", self.SetIndex), zap.Int("rank", rank), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round))
+	Logger.Info("*** starting round ***", zap.Int64("round", mr.GetRoundNumber()), zap.Int("index", self.SetIndex), zap.Int("rank", rank), zap.Any("random_seed", mr.GetRandomSeed()), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round))
 	if !mc.IsRoundGenerator(mr, self.Node) {
 		return
 	}
@@ -319,9 +314,11 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 		sendVerification = true
 	}
 	var blockTimeTimer = time.NewTimer(r.delta)
+	r.SetState(round.RoundCollectingBlockProposals)
 	for true {
 		select {
 		case <-ctx.Done():
+			r.SetState(round.RoundStateVerificationTimedOut)
 			bRank := -1
 			if r.Block != nil {
 				bRank = r.Block.RoundRank
@@ -400,10 +397,12 @@ func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.B
 		return
 	}
 	if b.IsBlockNotarized() {
-		if mc.AddNotarizedBlock(ctx, r, b) {
-			Logger.Info("process verified ticket - block notarized", zap.Int64("round", b.Round), zap.String("block", b.Hash))
-			go mc.SendNotarization(ctx, b)
+		if !mc.AddNotarizedBlock(ctx, r, b) {
+			return
 		}
+		go mc.SendNotarization(ctx, b)
+		Logger.Info("process verified ticket - block notarized", zap.Int64("round", b.Round), zap.String("block", b.Hash))
+		mc.StartNextRound(ctx, r)
 	}
 }
 
@@ -412,38 +411,32 @@ func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *Round, b *block.Block
 	if _, ok := r.AddNotarizedBlock(b); !ok {
 		return false
 	}
-	b.SetBlockState(block.StateNotarized)
 	if !r.IsVerificationComplete() {
 		mc.CancelRoundVerification(ctx, r)
 		if r.Block == nil || r.Block.RoundRank > b.RoundRank {
 			r.Block = b
 		}
 	}
+	b.SetBlockState(block.StateNotarized)
+	mc.UpdateNodeState(b)
+	return true
+}
+
+/*StartNextRound - start the next round as a notarized block is discovered for the current round */
+func (mc *Chain) StartNextRound(ctx context.Context, r *Round) {
 	pr := mc.GetMinerRound(r.GetRoundNumber() - 1)
 	if pr != nil {
 		mc.CancelRoundVerification(ctx, pr)
 		go mc.FinalizeRound(ctx, pr.Round, mc)
 	}
-	mc.startNextRound(r)
-	mc.UpdateNodeState(b)
-	return true
-}
-
-func (mc *Chain) startNextRound(r round.RoundI) {
 	nrNumber := r.GetRoundNumber() + 1
 	if mc.GetRound(nrNumber) == nil {
 		nr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 		nr.Number = nrNumber
-		//TODO: We need to do VRF at which time the Sleep should be removed
-		time.Sleep(chain.DELTA)
-		nr.RandomSeed = rand.New(rand.NewSource(r.GetRandomSeed())).Int63()
-		nmr := mc.CreateRound(nr)
+		mr := mc.CreateRound(nr)
+		Logger.Debug("starting a new round", zap.Int64("round", nrNumber))
 		// Even if the context is cancelled, we want to proceed with the next round, hence start with a root context
-		Logger.Debug("starting a new round", zap.Int64("round", nr.Number))
-		ctx := common.GetRootContext()
-		go mc.startNewRound(ctx, nmr)
-		//TODO: Not required once VRF is in place
-		go mc.SendRoundStart(ctx, nr)
+		mc.StartRound(common.GetRootContext(), mr)
 	}
 }
 

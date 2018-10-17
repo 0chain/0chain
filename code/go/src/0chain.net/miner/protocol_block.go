@@ -10,6 +10,7 @@ import (
 	"0chain.net/chain"
 	"0chain.net/config"
 	"0chain.net/memorystore"
+	"0chain.net/round"
 	"0chain.net/util"
 
 	"0chain.net/block"
@@ -36,6 +37,18 @@ func init() {
 /*StartRound - start a new round */
 func (mc *Chain) StartRound(ctx context.Context, r *Round) {
 	mc.AddRound(r)
+	pr := mc.GetRound(r.GetRoundNumber() - 1)
+	if pr == nil {
+		// If we don't have the prior round, and hence the prior round's random seed, we can't provide the share
+		return
+	}
+	vrfs := &round.VRFShare{}
+	vrfs.Round = r.GetRoundNumber()
+	vrfs.Share = node.Self.Node.SetIndex
+	vrfs.SetParty(node.Self.Node)
+	if mc.AddVRFShare(ctx, r, vrfs) {
+		go mc.SendVRFShare(ctx, vrfs)
+	}
 }
 
 /*GenerateBlock - This works on generating a block

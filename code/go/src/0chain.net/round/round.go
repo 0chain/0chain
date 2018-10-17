@@ -8,6 +8,7 @@ import (
 type RoundI interface {
 	GetRoundNumber() int64
 	GetRandomSeed() int64
+	SetRandomSeed(seed int64)
 
 	GetMinerRank(miner *node.Node) int
 	GetMinersByRank(miners *node.Pool) []*node.Node
@@ -19,4 +20,9 @@ type RoundI interface {
 	SetFinalizing() bool
 	IsFinalized() bool
 	Clear()
+
+	GetState() int
+	SetState(state int)
+	AddVRFShare(share *VRFShare) bool
+	GetVRFShares() map[string]*VRFShare
 }

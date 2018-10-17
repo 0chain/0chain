@@ -100,7 +100,7 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 		r := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 		r.Number = b.Round
 		r.RandomSeed = b.RoundRandomSeed
-		r.ComputeMinerRanks(sc.Miners.Size())
+		sc.SetRandomSeed(r, b.RoundRandomSeed)
 		er, _ = sc.AddRound(r).(*round.Round)
 	}
 	bNode := node.GetNode(b.MinerID)
