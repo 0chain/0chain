@@ -112,5 +112,4 @@ func Close(ctx context.Context) {
 	if con != Session {
 		con.Close()
 	}
-	// TODO: Is this just a NOOP or anything required?
 }

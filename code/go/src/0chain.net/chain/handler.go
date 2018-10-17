@@ -327,6 +327,17 @@ func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, ".number { text-align: right; }\n")
 	fmt.Fprintf(w, "table, td, th { border: 1px solid black; }\n")
 	fmt.Fprintf(w, "</style>")
+	fmt.Fprintf(w, "<table><tr><td>")
+	c.finalizationCountStats(w)
+	fmt.Fprintf(w, "</td><td>")
+	if node.Self.Node.Type == node.NodeTypeMiner {
+		c.verificationCountStats(w)
+	}
+	fmt.Fprintf(w, "</td></tr>")
+	fmt.Fprintf(w, "</table>")
+}
+
+func (c *Chain) finalizationCountStats(w http.ResponseWriter) {
 	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr><td>Miner</td>")
 	for i := 0; i < c.NumGenerators; i++ {
@@ -340,6 +351,34 @@ func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 		for i := 0; i < c.NumGenerators; i++ {
 			fmt.Fprintf(w, "<td class='number'>%v</td>", ms.FinalizationCountByRank[i])
 			totals[i] += ms.FinalizationCountByRank[i]
+		}
+		fmt.Fprintf(w, "</tr>")
+	}
+	fmt.Fprintf(w, "<tr><td>Totals</td>")
+	var total int64
+	for i := 0; i < c.NumGenerators; i++ {
+		fmt.Fprintf(w, "<td class='number'>%v</td>", totals[i])
+		total += totals[i]
+	}
+	fmt.Fprintf(w, "</tr>")
+	fmt.Fprintf(w, "</table>")
+	fmt.Fprintf(w, "Grand total = %v", total)
+}
+
+func (c *Chain) verificationCountStats(w http.ResponseWriter) {
+	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
+	fmt.Fprintf(w, "<tr><td>Miner</td>")
+	for i := 0; i < c.NumGenerators; i++ {
+		fmt.Fprintf(w, "<td>Rank %d</td>", i)
+	}
+	fmt.Fprintf(w, "</tr>")
+	totals := make([]int64, c.NumGenerators)
+	for _, nd := range c.Miners.Nodes {
+		fmt.Fprintf(w, "<tr><td>%v</td>", fmt.Sprintf("%v%.3d", nd.GetNodeTypeName(), nd.SetIndex))
+		ms := nd.ProtocolStats.(*MinerStats)
+		for i := 0; i < c.NumGenerators; i++ {
+			fmt.Fprintf(w, "<td class='number'>%v</td>", ms.VerificationTicketsByRank[i])
+			totals[i] += ms.VerificationTicketsByRank[i]
 		}
 		fmt.Fprintf(w, "</tr>")
 	}

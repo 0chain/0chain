@@ -15,11 +15,14 @@ import (
 )
 
 const (
-	RoundGenerating               = 0
-	RoundGenerated                = 1
-	RoundCollectingBlockProposals = 2
-	RoundStateFinalizing          = 3
-	RoundStateFinalized           = 4
+	RoundShareVRF                  = 0
+	RoundVRFComplete               = iota
+	RoundGenerating                = iota
+	RoundGenerated                 = iota
+	RoundCollectingBlockProposals  = iota
+	RoundStateVerificationTimedOut = iota
+	RoundStateFinalizing           = iota
+	RoundStateFinalized            = iota
 )
 
 /*Round - data structure for the round */
@@ -39,8 +42,10 @@ type Round struct {
 	minerPerm []int
 	state     int
 
-	notarizedBlocks      []*block.Block
-	notarizedBlocksMutex *sync.Mutex
+	notarizedBlocks []*block.Block
+	Mutex           *sync.Mutex
+
+	shares map[string]*VRFShare
 }
 
 var roundEntityMetadata *datastore.EntityMetadataImpl
@@ -60,6 +65,12 @@ func (r *Round) GetRoundNumber() int64 {
 	return r.Number
 }
 
+//SetRandomSeed - set the random seed of the round
+func (r *Round) SetRandomSeed(seed int64) {
+	r.RandomSeed = seed
+	r.SetState(RoundVRFComplete)
+}
+
 //GetRandomSeed - returns the random seed of the round
 func (r *Round) GetRandomSeed() int64 {
 	return r.RandomSeed
@@ -67,8 +78,8 @@ func (r *Round) GetRandomSeed() int64 {
 
 /*AddNotarizedBlock - this will be concurrent as notarization is recognized by verifying as well as notarization message from others */
 func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool) {
-	r.notarizedBlocksMutex.Lock()
-	defer r.notarizedBlocksMutex.Unlock()
+	r.Mutex.Lock()
+	defer r.Mutex.Unlock()
 	for _, blk := range r.notarizedBlocks {
 		if blk.Hash == b.Hash {
 			if blk != b {
@@ -109,9 +120,9 @@ func (r *Round) Finalize(b *block.Block) {
 
 /*SetFinalizing - the round is being finalized */
 func (r *Round) SetFinalizing() bool {
-	r.notarizedBlocksMutex.Lock()
-	defer r.notarizedBlocksMutex.Unlock()
-	if r.IsFinalized() || r.IsFinalizing() {
+	r.Mutex.Lock()
+	defer r.Mutex.Unlock()
+	if r.isFinalized() || r.isFinalizing() {
 		return false
 	}
 	r.state = RoundStateFinalizing
@@ -120,11 +131,23 @@ func (r *Round) SetFinalizing() bool {
 
 /*IsFinalizing - is the round finalizing */
 func (r *Round) IsFinalizing() bool {
+	r.Mutex.Lock()
+	defer r.Mutex.Unlock()
+	return r.isFinalizing()
+}
+
+func (r *Round) isFinalizing() bool {
 	return r.state == RoundStateFinalizing
 }
 
 /*IsFinalized - indicates if the round is finalized */
 func (r *Round) IsFinalized() bool {
+	r.Mutex.Lock()
+	defer r.Mutex.Unlock()
+	return r.isFinalized()
+}
+
+func (r *Round) isFinalized() bool {
 	return r.state == RoundStateFinalized || r.GetRoundNumber() == 0
 }
 
@@ -132,7 +155,8 @@ func (r *Round) IsFinalized() bool {
 func Provider() datastore.Entity {
 	r := &Round{}
 	r.notarizedBlocks = make([]*block.Block, 0, 1)
-	r.notarizedBlocksMutex = &sync.Mutex{}
+	r.Mutex = &sync.Mutex{}
+	r.shares = make(map[string]*VRFShare)
 	return r
 }
 
@@ -151,15 +175,6 @@ func (r *Round) Delete(ctx context.Context) error {
 	return r.GetEntityMetadata().GetStore().Delete(ctx, r)
 }
 
-//SetupRoundSummaryDB - setup the round summary db
-func SetupRoundSummaryDB() {
-	db, err := ememorystore.CreateDB("data/rocksdb/roundsummary")
-	if err != nil {
-		panic(err)
-	}
-	ememorystore.AddPool("roundsummarydb", db)
-}
-
 /*SetupEntity - setup the entity */
 func SetupEntity(store datastore.Store) {
 	roundEntityMetadata = datastore.MetadataProvider()
@@ -169,6 +184,15 @@ func SetupEntity(store datastore.Store) {
 	roundEntityMetadata.Store = store
 	roundEntityMetadata.IDColumnName = "number"
 	datastore.RegisterEntityMetadata("round", roundEntityMetadata)
+}
+
+//SetupRoundSummaryDB - setup the round summary db
+func SetupRoundSummaryDB() {
+	db, err := ememorystore.CreateDB("data/rocksdb/roundsummary")
+	if err != nil {
+		panic(err)
+	}
+	ememorystore.AddPool("roundsummarydb", db)
 }
 
 /*ComputeMinerRanks - Compute random order of n elements given the random see of the round
@@ -197,4 +221,33 @@ func (r *Round) GetMinersByRank(miners *node.Pool) []*node.Node {
 //Clear - implement interface
 func (r *Round) Clear() {
 
+}
+
+//AddVRFShare - implement interface
+func (r *Round) AddVRFShare(share *VRFShare) bool {
+	r.Mutex.Lock()
+	defer r.Mutex.Unlock()
+	if _, ok := r.shares[share.party.GetKey()]; ok {
+		return false
+	}
+	r.SetState(RoundShareVRF)
+	r.shares[share.party.GetKey()] = share
+	return true
+}
+
+//GetVRFShares - implement interface
+func (r *Round) GetVRFShares() map[string]*VRFShare {
+	return r.shares
+}
+
+//GetState - get the state of the round
+func (r *Round) GetState() int {
+	return r.state
+}
+
+//SetState - set the state of the round
+func (r *Round) SetState(state int) {
+	if state > r.state {
+		r.state = state
+	}
 }

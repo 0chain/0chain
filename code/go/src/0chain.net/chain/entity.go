@@ -265,6 +265,7 @@ func (c *Chain) GenerateGenesisBlock(hash string) (round.RoundI, *block.Block) {
 	gb.ClientStateHash = gb.ClientState.GetRoot()
 	gr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 	gr.Number = 0
+	c.SetRandomSeed(gr, 839695260482366273)
 	gr.Block = gb
 	gr.AddNotarizedBlock(gb)
 	return gr, gb
@@ -489,14 +490,14 @@ func (c *Chain) ChainHasTransaction(ctx context.Context, b *block.Block, txn *tr
 	return false, ErrInsufficientChain
 }
 
-func (c *Chain) updateMiningStake(minerId datastore.Key, stake int) {
+func (c *Chain) updateMiningStake(minerID datastore.Key, stake int) {
 	c.stakeMutex.Lock()
 	defer c.stakeMutex.Unlock()
-	c.minersStake[minerId] = stake
+	c.minersStake[minerID] = stake
 }
 
-func (c *Chain) getMiningStake(minerId datastore.Key) int {
-	return c.minersStake[minerId]
+func (c *Chain) getMiningStake(minerID datastore.Key) int {
+	return c.minersStake[minerID]
 }
 
 //InitializeMinerPool - initialize the miners after their configuration is read
@@ -504,6 +505,7 @@ func (c *Chain) InitializeMinerPool() {
 	for _, nd := range c.Miners.Nodes {
 		ms := &MinerStats{}
 		ms.FinalizationCountByRank = make([]int64, c.NumGenerators)
+		ms.VerificationTicketsByRank = make([]int64, c.NumGenerators)
 		nd.ProtocolStats = ms
 	}
 }
@@ -517,7 +519,6 @@ func (c *Chain) AddRound(r round.RoundI) round.RoundI {
 	if ok {
 		return er
 	}
-	//r.ComputeMinerRanks(c.Miners.Size())
 	c.rounds[roundNumber] = r
 	if roundNumber > c.CurrentRound {
 		c.CurrentRound = roundNumber
@@ -557,4 +558,10 @@ func (c *Chain) DeleteRoundsBelow(ctx context.Context, roundNumber int64) {
 		r.Clear()
 		delete(c.rounds, r.GetRoundNumber())
 	}
+}
+
+/*SetRandomSeed - set the random seed for the round */
+func (c *Chain) SetRandomSeed(r *round.Round, randomSeed int64) {
+	r.SetRandomSeed(randomSeed)
+	r.ComputeMinerRanks(c.Miners.Size())
 }

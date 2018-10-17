@@ -5,7 +5,6 @@ import (
 	"context"
 	"net/http"
 	"strconv"
-	"time"
 
 	"0chain.net/block"
 	"0chain.net/common"
@@ -19,6 +18,9 @@ import (
 
 /*RoundStartSender - Start a new round */
 var RoundStartSender node.EntitySendHandler
+
+/*RoundVRFSender - Send the round vrf */
+var RoundVRFSender node.EntitySendHandler
 
 /*VerifyBlockSender - Send the block to a node */
 var VerifyBlockSender node.EntitySendHandler
@@ -39,7 +41,7 @@ var MinerLatestFinalizedBlockRequestor node.EntityRequestor
 func SetupM2MSenders() {
 
 	options := &node.SendOptions{Timeout: node.TimeoutSmallMessage, MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
-	RoundStartSender = node.SendEntityHandler("/v1/_m2m/round/start", options)
+	RoundVRFSender = node.SendEntityHandler("/v1/_m2m/round/vrf_share", options)
 
 	options = &node.SendOptions{Timeout: node.TimeoutLargeMessage, MaxRelayLength: 0, CurrentRelayLength: 0, CODEC: node.CODEC_MSGPACK, Compress: true}
 	VerifyBlockSender = node.SendEntityHandler("/v1/_m2m/block/verify", options)
@@ -54,8 +56,7 @@ func SetupM2MSenders() {
 
 /*SetupM2MReceivers - setup receivers for miner to miner communication */
 func SetupM2MReceivers() {
-	// TODO: This is going to abstract the random beacon for now
-	http.HandleFunc("/v1/_m2m/round/start", node.ToN2NReceiveEntityHandler(StartRoundHandler, nil))
+	http.HandleFunc("/v1/_m2m/round/vrf_share", node.ToN2NReceiveEntityHandler(VRFShareHandler, nil))
 	http.HandleFunc("/v1/_m2m/block/verify", node.ToN2NReceiveEntityHandler(memorystore.WithConnectionEntityJSONHandler(VerifyBlockHandler, datastore.GetEntityMetadata("block")), nil))
 	http.HandleFunc("/v1/_m2m/block/verification_ticket", node.ToN2NReceiveEntityHandler(VerificationTicketReceiptHandler, nil))
 	http.HandleFunc("/v1/_m2m/block/notarization", node.ToN2NReceiveEntityHandler(NotarizationReceiptHandler, nil))
@@ -69,25 +70,29 @@ func SetupX2MResponders() {
 
 /*SetupM2SRequestors - setup all requests to sharder by miner */
 func SetupM2SRequestors() {
-	//TODO should we make any changes to the options based on the requirement
-	options := &node.SendOptions{Timeout: 2 * time.Second, CODEC: node.CODEC_MSGPACK, Compress: true}
+	options := &node.SendOptions{Timeout: node.TimeoutLargeMessage, CODEC: node.CODEC_MSGPACK, Compress: true}
 
 	blockEntityMetadata := datastore.GetEntityMetadata("block")
 	MinerLatestFinalizedBlockRequestor = node.RequestEntityHandler("/v1/_m2s/block/latest_finalized/get", options, blockEntityMetadata)
 }
 
-/*StartRoundHandler - handles the starting of a new round */
-func StartRoundHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-	r, ok := entity.(*round.Round)
+/*VRFShareHandler - handle the vrf share */
+func VRFShareHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+	vrfs, ok := entity.(*round.VRFShare)
 	if !ok {
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
 	mc := GetMinerChain()
-	if r.GetRoundNumber() < mc.LatestFinalizedBlock.Round {
+	if vrfs.GetRoundNumber() < mc.LatestFinalizedBlock.Round {
 		return false, nil
 	}
-	mr := mc.CreateRound(r)
-	msg := NewBlockMessage(MessageStartRound, node.GetSender(ctx), mr, nil)
+	mr := mc.GetMinerRound(vrfs.GetRoundNumber())
+	if mr != nil && mr.IsVRFComplete() {
+		return true, nil
+	}
+	msg := NewBlockMessage(MessageVRFShare, node.GetSender(ctx), nil, nil)
+	vrfs.SetParty(msg.Sender)
+	msg.VRFShare = vrfs
 	mc.GetBlockMessageChannel() <- msg
 	return true, nil
 }
