@@ -6,25 +6,24 @@ import (
 	"fmt"
 	"strconv"
 
-	//. "0chain.net/logging"
+	//	. "0chain.net/logging"
 	"github.com/pmer/gobls"
 )
 
 type BLSSimpleDKG struct {
-	T                    int
-	N                    int
-	SecKey               Key
-	pubKey               VerificationKey
-	mSec                 []Key
-	Vvec                 []VerificationKey
-	secSharesMap         map[PartyId]Key
-	receivedSecShares    []Key
-	receivedSecDKGShares []Key
-	receivedPubShares    []VerificationKey
-	numReceived          int
-	GpPubKey             GroupPublicKey
-	SecKeyShareGroup     Key
-	SelfShare            Key
+	T                 int
+	N                 int
+	SecKey            Key
+	pubKey            VerificationKey
+	mSec              []Key
+	Vvec              []VerificationKey
+	secSharesMap      map[PartyId]Key
+	receivedSecShares []Key
+	receivedPubShares []VerificationKey
+	numReceived       int
+	GpPubKey          GroupPublicKey
+	SecKeyShareGroup  Key
+	SelfShare         Key
 }
 
 func init() {
@@ -34,20 +33,19 @@ func init() {
 func MakeSimpleDKG(t, n int) BLSSimpleDKG {
 
 	dkg := BLSSimpleDKG{
-		T:                    t,
-		N:                    n,
-		SecKey:               Key{},
-		pubKey:               VerificationKey{},
-		mSec:                 make([]Key, t),
-		Vvec:                 make([]VerificationKey, t),
-		secSharesMap:         make(map[PartyId]Key, n),
-		receivedSecShares:    make([]Key, n),
-		receivedPubShares:    make([]VerificationKey, n),
-		numReceived:          0,
-		GpPubKey:             GroupPublicKey{},
-		SecKeyShareGroup:     Key{},
-		SelfShare:            Key{},
-		receivedSecDKGShares: make([]Key, n),
+		T:                 t,
+		N:                 n,
+		SecKey:            Key{},
+		pubKey:            VerificationKey{},
+		mSec:              make([]Key, t),
+		Vvec:              make([]VerificationKey, t),
+		secSharesMap:      make(map[PartyId]Key, n),
+		receivedSecShares: make([]Key, n),
+		receivedPubShares: make([]VerificationKey, n),
+		numReceived:       0,
+		GpPubKey:          GroupPublicKey{},
+		SecKeyShareGroup:  Key{},
+		SelfShare:         Key{},
 	}
 
 	dkg.SecKey.SetByCSPRNG()

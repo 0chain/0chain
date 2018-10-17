@@ -28,6 +28,7 @@ func (np *Pool) StatusMonitor(ctx context.Context) {
 			np.statusMonitor(ctx)
 		}
 	}
+
 }
 
 func (np *Pool) statusMonitor(ctx context.Context) {
