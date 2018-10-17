@@ -6,7 +6,7 @@ import (
 
 	. "0chain.net/logging"
 	"0chain.net/util"
-	"github.com/tecbot/gorocksdb"
+	"github.com/0chain/gorocksdb"
 	"go.uber.org/zap"
 )
 

@@ -6,7 +6,7 @@ import (
 
 	"0chain.net/common"
 	"0chain.net/datastore"
-	"github.com/tecbot/gorocksdb"
+	"github.com/0chain/gorocksdb"
 )
 
 type dbpool struct {

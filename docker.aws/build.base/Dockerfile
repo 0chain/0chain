@@ -15,10 +15,10 @@ RUN cd /tmp && \
 
 # Install Rocksdb 
 RUN cd /tmp && \
-    git clone https://github.com/facebook/rocksdb.git && \
+    git clone https://github.com/0chain/rocksdb.git && \
     cd rocksdb && \
-    git checkout 5.13.fb && \
-    make -j8 shared_lib && \
+    #git checkout 5.13.fb && \
+    make  shared_lib && \
     mkdir -p /usr/local/rocksdb/lib && \
     mkdir /usr/local/rocksdb/include && \
     cp librocksdb.so* /usr/local/rocksdb/lib && \
@@ -33,7 +33,7 @@ RUN go get -d github.com/valyala/gozstd && \
     cd $GOPATH/src/github.com/valyala/gozstd && \
     make clean libzstd.a
 RUN go get github.com/gomodule/redigo/redis
-RUN go get github.com/tecbot/gorocksdb
+RUN go get github.com/0chain/gorocksdb
 RUN go get github.com/vmihailenco/msgpack
 RUN go get -u golang.org/x/crypto/...
 RUN go get go.uber.org/zap
@@ -42,4 +42,3 @@ RUN go get github.com/spf13/viper
 RUN go get gopkg.in/natefinch/lumberjack.v2
 RUN go get github.com/koding/cache
 RUN go get github.com/hashicorp/golang-lru
-

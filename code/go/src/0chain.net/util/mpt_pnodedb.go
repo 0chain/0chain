@@ -5,7 +5,7 @@ import (
 	"context"
 
 	. "0chain.net/logging"
-	"github.com/tecbot/gorocksdb"
+	"github.com/0chain/gorocksdb"
 	"go.uber.org/zap"
 )
 

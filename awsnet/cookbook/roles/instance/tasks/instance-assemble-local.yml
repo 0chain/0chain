@@ -61,7 +61,8 @@
     efs:
       state: present
       region: "{{regions[agent.value.region]}}"
-      performance_mode: "general_purpose"
+      #performance_mode: "general_purpose"
+      performance_mode: "max_io"
       name: "{{network_name}}.{{agent.key}}"
       tags: "{{instance_tags[agent.key]}}"
       targets:
