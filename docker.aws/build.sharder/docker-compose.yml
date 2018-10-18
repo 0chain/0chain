@@ -11,8 +11,9 @@ services:
     restart: on-failure
     user: "2000:2000"
     volumes: 
-      - "../../bin:/0chain/bin"
-      - "../../sql:/0chain/sql"
+      - "/0chain/0chain/bin:/0chain/bin"
+      - "/0chain/0chain/sql:/0chain/sql"
+      - "/0chain/config/cassandra:/0chain/cassandra"
   scylla: 
     healthcheck: 
       interval: 30s
@@ -31,6 +32,7 @@ services:
       - "/0chain/config/scylla/scylla.yaml:/etc/scylla/scylla.yaml"
       - "/0chain/config/scylla:/0chain/scylla"
       - "/0chain/data/scylla:/var/lib/scylla"
+      - "/0chain/log/scylla:/var/log/scylla"
       - "/0chain/0chain/sql:/0chain/sql"
       - "/0chain/config/scylla/scylla-server:/etc/sysconfig/scylla-server"
   sharder: 
