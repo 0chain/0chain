@@ -327,12 +327,12 @@ func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, ".number { text-align: right; }\n")
 	fmt.Fprintf(w, "table, td, th { border: 1px solid black; }\n")
 	fmt.Fprintf(w, "</style>")
-	fmt.Fprintf(w, "<table><tr><td>")
-	c.finalizationCountStats(w)
+	fmt.Fprintf(w, "<table>")
+	fmt.Fprintf(w, "<tr><th>Verification Counts</th><th>Finalization Counts</th></tr>")
+	fmt.Fprintf(w, "<tr><td>")
+	c.verificationCountStats(w)
 	fmt.Fprintf(w, "</td><td>")
-	if node.Self.Node.Type == node.NodeTypeMiner {
-		c.verificationCountStats(w)
-	}
+	c.finalizationCountStats(w)
 	fmt.Fprintf(w, "</td></tr>")
 	fmt.Fprintf(w, "</table>")
 }
