@@ -38,6 +38,8 @@ func Respond(w http.ResponseWriter, data interface{}, err error) {
 		if data != nil {
 			w.Header().Set("Content-Type", "application/json")
 			json.NewEncoder(w).Encode(data)
+		} else {
+			w.WriteHeader(http.StatusNoContent)
 		}
 	}
 }

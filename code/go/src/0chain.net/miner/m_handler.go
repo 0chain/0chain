@@ -84,17 +84,17 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (interface{},
 	}
 	mc := GetMinerChain()
 	if vrfs.GetRoundNumber() < mc.LatestFinalizedBlock.Round {
-		return false, nil
+		return nil, nil
 	}
 	mr := mc.GetMinerRound(vrfs.GetRoundNumber())
 	if mr != nil && mr.IsVRFComplete() {
-		return true, nil
+		return nil, nil
 	}
 	msg := NewBlockMessage(MessageVRFShare, node.GetSender(ctx), nil, nil)
 	vrfs.SetParty(msg.Sender)
 	msg.VRFShare = vrfs
 	mc.GetBlockMessageChannel() <- msg
-	return true, nil
+	return nil, nil
 }
 
 /*VerifyBlockHandler - verify the block that is received */
@@ -109,11 +109,11 @@ func VerifyBlockHandler(ctx context.Context, entity datastore.Entity) (interface
 	}
 	if b.Round < mc.LatestFinalizedBlock.Round {
 		Logger.Debug("verify block handler", zap.Int64("round", b.Round), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round))
-		return true, nil
+		return nil, nil
 	}
 	msg := NewBlockMessage(MessageVerify, node.GetSender(ctx), nil, b)
 	mc.GetBlockMessageChannel() <- msg
-	return true, nil
+	return nil, nil
 }
 
 /*VerificationTicketReceiptHandler - Add a verification ticket to the block */
@@ -125,7 +125,7 @@ func VerificationTicketReceiptHandler(ctx context.Context, entity datastore.Enti
 	msg := NewBlockMessage(MessageVerificationTicket, node.GetSender(ctx), nil, nil)
 	msg.BlockVerificationTicket = bvt
 	GetMinerChain().GetBlockMessageChannel() <- msg
-	return true, nil
+	return nil, nil
 }
 
 /*NotarizationReceiptHandler - handles the receipt of a notarization for a block */
@@ -137,12 +137,12 @@ func NotarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (i
 	mc := GetMinerChain()
 	if notarization.Round < mc.LatestFinalizedBlock.Round {
 		Logger.Debug("notarization receipt handler", zap.Int64("round", notarization.Round), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round))
-		return true, nil
+		return nil, nil
 	}
 	msg := NewBlockMessage(MessageNotarization, node.GetSender(ctx), nil, nil)
 	msg.Notarization = notarization
 	mc.GetBlockMessageChannel() <- msg
-	return true, nil
+	return nil, nil
 }
 
 /*NotarizedBlockHandler - handles a notarized block*/
@@ -155,14 +155,14 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 	Logger.Info("notarized block handler", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("current_round", mc.CurrentRound))
 	if b.Round < mc.CurrentRound-1 {
 		Logger.Debug("notarized block handler (round older than the current round)", zap.String("block", b.Hash), zap.Any("round", b.Round))
-		return true, nil
+		return nil, nil
 	}
 	if err := mc.VerifyNotarization(ctx, b.Hash, b.VerificationTickets); err != nil {
 		return nil, err
 	}
 	msg := &BlockMessage{Sender: node.GetSender(ctx), Type: MessageNotarizedBlock, Block: b}
 	mc.GetBlockMessageChannel() <- msg
-	return true, nil
+	return nil, nil
 }
 
 //NotarizedBlockSendHandler - handles a request for a notarized block
