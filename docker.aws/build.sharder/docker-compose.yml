@@ -71,3 +71,4 @@ volumes:
   config: ~
   data: ~
   nodes: ~
+  bin: ~
