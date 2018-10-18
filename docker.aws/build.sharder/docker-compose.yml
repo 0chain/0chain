@@ -22,7 +22,7 @@ services:
         - CMD-SHELL
         - "[ $$(nodetool statusgossip) = running ]"
       timeout: 10s
-    image: "scylladb/scylla:2.3.0"
+    image: "scylladb/scylla:latest"
     networks: 
       - default
     ports: 
