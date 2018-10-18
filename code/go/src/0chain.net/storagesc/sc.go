@@ -95,10 +95,10 @@ func (ba *BlobberAllocation) Decode(input []byte) error {
 }
 
 type StorageConnection struct {
-	ClientPublicKey string                     `json:"client_public_key"`
-	AllocationID    string                     `json:"allocation_id"`
-	Status          int                        `json:"status"`
-	BlobberData     []StorageConnectionBlobber `json:"blobber_data"`
+	ClientPublicKey string                      `json:"client_public_key"`
+	AllocationID    string                      `json:"allocation_id"`
+	Status          int                         `json:"status"`
+	BlobberData     []*StorageConnectionBlobber `json:"blobber_data"`
 }
 
 type StorageConnectionBlobber struct {
