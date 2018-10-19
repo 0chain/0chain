@@ -11,8 +11,9 @@ import (
 /*SetupWorkers - Setup the miner's workers */
 func SetupWorkers(ctx context.Context) {
 	mc := GetMinerChain()
-	go mc.BlockWorker(ctx)
-	go mc.FinalizedBlockWorker(ctx, mc)
+	go mc.BlockWorker(ctx)              // 1) receives incoming blocks from the network
+	go mc.FinalizeRoundWorker(ctx, mc)  // 2) sequentially finalize the rounds
+	go mc.FinalizedBlockWorker(ctx, mc) // 3) sequentially processes finalized blocks
 }
 
 /*BlockWorker - a job that does all the work related to blocks in each round */

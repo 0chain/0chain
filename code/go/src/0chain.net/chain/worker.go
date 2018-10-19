@@ -17,6 +17,14 @@ func (c *Chain) SetupWorkers(ctx context.Context) {
 	go c.BlockFetchWorker(ctx)
 }
 
+/*FinalizeRoundWorker - a worker that handles the finalized blocks */
+func (c *Chain) FinalizeRoundWorker(ctx context.Context, bsh BlockStateHandler) {
+	for r := range c.finalizedRoundsChannel {
+		c.finalizeRound(ctx, r, bsh)
+		c.UpdateRoundInfo(r)
+	}
+}
+
 //FinalizedBlockWorker - a worker that processes finalized blocks
 func (c *Chain) FinalizedBlockWorker(ctx context.Context, bsh BlockStateHandler) {
 	for fb := range c.finalizedBlocksChannel {

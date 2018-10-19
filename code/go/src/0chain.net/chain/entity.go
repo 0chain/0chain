@@ -94,6 +94,7 @@ type Chain struct {
 	stateDB                 util.NodeDB
 	stateMutex              *sync.Mutex
 
+	finalizedRoundsChannel chan round.RoundI
 	finalizedBlocksChannel chan *block.Block
 
 	*Stats `json:"-"`
@@ -204,6 +205,7 @@ func (c *Chain) Initialize() {
 	c.BlocksToSharder = 1
 	c.VerificationTicketsTo = AllMiners
 	c.ValidationBatchSize = 2000
+	c.finalizedRoundsChannel = make(chan round.RoundI, 128)
 	c.finalizedBlocksChannel = make(chan *block.Block, 128)
 	c.clientStateDeserializer = &state.Deserializer{}
 	c.stateDB = stateDB

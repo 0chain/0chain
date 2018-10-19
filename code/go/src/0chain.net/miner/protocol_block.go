@@ -36,7 +36,9 @@ func init() {
 
 /*StartRound - start a new round */
 func (mc *Chain) StartRound(ctx context.Context, r *Round) {
-	mc.AddRound(r)
+	if mc.AddRound(r) != r {
+		return
+	}
 	pr := mc.GetRound(r.GetRoundNumber() - 1)
 	if pr == nil {
 		// If we don't have the prior round, and hence the prior round's random seed, we can't provide the share
