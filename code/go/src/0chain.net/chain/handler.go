@@ -287,12 +287,13 @@ func (c *Chain) SendStatsWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "tr:nth-child(10n) { background-color: #f2f2f2; }\n")
 	fmt.Fprintf(w, "</style>")
 	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
-	fmt.Fprintf(w, "<tr><td>URI</td><td>Count</td><td>Min</td><td>Average</td><td>Max</td></tr>")
+	fmt.Fprintf(w, "<tr><td rowspan='2'>URI</td><td rowspan='2'>Count</td><td colspan='3'>Time</td><td colspan='3'>Size</td></tr>")
+	fmt.Fprintf(w, "<tr><td>Min</td><td>Average</td><td>Max</td><td>Min</td><td>Average</td><td>Max</td></tr>")
 	for _, n := range c.Miners.Nodes {
 		if n == node.Self.Node {
 			continue
 		}
-		fmt.Fprintf(w, "<tr><th colspan='5'>%s</th></tr>", fmt.Sprintf("%v%.3d", n.GetNodeTypeName(), n.SetIndex))
+		fmt.Fprintf(w, "<tr><th colspan='8'>%s</th></tr>", fmt.Sprintf("%v%.3d", n.GetNodeTypeName(), n.SetIndex))
 		n.PrintSendStats(w)
 	}
 
@@ -300,7 +301,7 @@ func (c *Chain) SendStatsWriter(w http.ResponseWriter, r *http.Request) {
 		if n == node.Self.Node {
 			continue
 		}
-		fmt.Fprintf(w, "<tr><th colspan='5'>%s</th></tr>", fmt.Sprintf("%v%.3d", n.GetNodeTypeName(), n.SetIndex))
+		fmt.Fprintf(w, "<tr><th colspan='8'>%s</th></tr>", fmt.Sprintf("%v%.3d", n.GetNodeTypeName(), n.SetIndex))
 		n.PrintSendStats(w)
 	}
 	fmt.Fprintf(w, "</table>")
@@ -327,12 +328,12 @@ func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, ".number { text-align: right; }\n")
 	fmt.Fprintf(w, "table, td, th { border: 1px solid black; }\n")
 	fmt.Fprintf(w, "</style>")
-	fmt.Fprintf(w, "<table><tr><td>")
-	c.finalizationCountStats(w)
+	fmt.Fprintf(w, "<table>")
+	fmt.Fprintf(w, "<tr><th>Verification Counts</th><th>Finalization Counts</th></tr>")
+	fmt.Fprintf(w, "<tr><td>")
+	c.verificationCountStats(w)
 	fmt.Fprintf(w, "</td><td>")
-	if node.Self.Node.Type == node.NodeTypeMiner {
-		c.verificationCountStats(w)
-	}
+	c.finalizationCountStats(w)
 	fmt.Fprintf(w, "</td></tr>")
 	fmt.Fprintf(w, "</table>")
 }

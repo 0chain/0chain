@@ -155,6 +155,8 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 		data := getResponseData(options, entity).Bytes()
 		return func(receiver *Node) bool {
 			timer := receiver.GetTimer(uri)
+			sizer := receiver.GetSizeMetric(uri)
+			sizer.Update(int64(len(data)))
 			url := receiver.GetN2NURLBase() + uri
 			buffer := bytes.NewBuffer(data)
 			req, err := http.NewRequest("POST", url, buffer)
