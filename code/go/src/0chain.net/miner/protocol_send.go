@@ -10,10 +10,10 @@ import (
 	"0chain.net/round"
 )
 
-/*SendRoundStart - send a new round start message */
-func (mc *Chain) SendRoundStart(ctx context.Context, r *round.Round) {
+/*SendVRFShare - send the round vrf share */
+func (mc *Chain) SendVRFShare(ctx context.Context, vrfs *round.VRFShare) {
 	m2m := mc.Miners
-	m2m.SendAll(RoundStartSender(r))
+	m2m.SendAll(RoundVRFSender(vrfs))
 }
 
 /*SendBlock - send the generated block to the network */

@@ -10,6 +10,7 @@ import (
 	"0chain.net/chain"
 	"0chain.net/config"
 	"0chain.net/memorystore"
+	"0chain.net/round"
 	"0chain.net/util"
 
 	"0chain.net/block"
@@ -35,7 +36,21 @@ func init() {
 
 /*StartRound - start a new round */
 func (mc *Chain) StartRound(ctx context.Context, r *Round) {
-	mc.AddRound(r)
+	if mc.AddRound(r) != r {
+		return
+	}
+	pr := mc.GetRound(r.GetRoundNumber() - 1)
+	if pr == nil {
+		// If we don't have the prior round, and hence the prior round's random seed, we can't provide the share
+		return
+	}
+	vrfs := &round.VRFShare{}
+	vrfs.Round = r.GetRoundNumber()
+	vrfs.Share = node.Self.Node.SetIndex
+	vrfs.SetParty(node.Self.Node)
+	if mc.AddVRFShare(ctx, r, vrfs) {
+		go mc.SendVRFShare(ctx, vrfs)
+	}
 }
 
 /*GenerateBlock - This works on generating a block
@@ -337,11 +352,6 @@ func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (*block.BlockVer
 	return bvt, nil
 }
 
-/*AddVerificationTicket - add a verified ticket to the list of verification tickets of the block */
-func (mc *Chain) AddVerificationTicket(ctx context.Context, b *block.Block, bvt *block.VerificationTicket) bool {
-	return b.AddVerificationTicket(bvt)
-}
-
 /*UpdateFinalizedBlock - update the latest finalized block */
 func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round), zap.Int64("current_round", mc.CurrentRound), zap.Float64("weight", b.Weight()), zap.Float64("chain_weight", b.ChainWeight), zap.Int("rounds_size", len(mc.rounds)))
@@ -358,8 +368,8 @@ func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	fr := mc.GetRound(b.Round)
 	if fr != nil {
 		fr.Finalize(b)
-		mc.DeleteRoundsBelow(ctx, fr.GetRoundNumber()-10)
 	}
+	mc.DeleteRoundsBelow(ctx, b.Round)
 }
 
 /*FinalizeBlock - finalize the transactions in the block */

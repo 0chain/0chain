@@ -11,10 +11,19 @@ import (
 	"go.uber.org/zap"
 )
 
-/*HandleStartRound - handles the start round message */
-func (mc *Chain) HandleStartRound(ctx context.Context, msg *BlockMessage) {
-	r := msg.Round
-	mc.startNewRound(ctx, r)
+/*HandleVRFShare - handles the vrf share */
+func (mc *Chain) HandleVRFShare(ctx context.Context, msg *BlockMessage) {
+	mr := mc.GetMinerRound(msg.VRFShare.Round)
+	if mr == nil {
+		r := datastore.GetEntityMetadata("round").Instance().(*round.Round)
+		r.Number = msg.VRFShare.Round
+		mr = mc.CreateRound(r)
+		if er := mc.AddRound(mr); mr != er {
+			mr = er.(*Round)
+		}
+		mc.StartRound(ctx, mr)
+	}
+	mc.AddVRFShare(ctx, mr, msg.VRFShare)
 }
 
 /*HandleVerifyBlockMessage - handles the verify block message */
@@ -22,7 +31,7 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 	b := msg.Block
 	mr := mc.GetMinerRound(b.Round)
 	if mr != nil {
-		mr.MergeVerificationTickets(b)
+		mc.MergeVerificationTickets(ctx, b, mr.GetVerificationTickets(b.Hash))
 	}
 	if b.Round < mc.CurrentRound-1 {
 		Logger.Debug("verify block (round mismatch)", zap.Int64("current_round", mc.CurrentRound), zap.Int64("block_round", b.Round))
@@ -31,10 +40,16 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 	if mr == nil {
 		r := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 		r.Number = b.Round
-		r.RandomSeed = b.RoundRandomSeed
 		mr = mc.CreateRound(r)
-		mc.startNewRound(ctx, mr)
-		mr = mc.GetMinerRound(b.Round) // Need this again just in case there is another round already setup and the start didn't happen
+		if mc.AddRound(mr) == mr {
+			mc.SetRandomSeed(r, b.RoundRandomSeed)
+			mc.startNewRound(ctx, mr)
+		}
+	} else {
+		if !mr.IsVRFComplete() {
+			//TODO: byzantine
+			mc.SetRandomSeed(mr.Round, b.RoundRandomSeed)
+		}
 	}
 	if mr != nil {
 		if !mc.ValidGenerator(mr.Round, b) {
@@ -128,11 +143,10 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 		Logger.Error("notarization message", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
 		return
 	}
-	b.MergeVerificationTickets(msg.Notarization.VerificationTickets)
+	mc.MergeVerificationTickets(ctx, b, msg.Notarization.VerificationTickets)
 	if !mc.AddNotarizedBlock(ctx, r, b) {
 		return
 	}
-
 	if mc.BlocksToSharder == chain.NOTARIZED {
 		if mc.VerificationTicketsTo == chain.Generator {
 			//We assume those who can generate a block in a round are also responsible for sending it to the sharders
@@ -141,6 +155,7 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 			}
 		}
 	}
+	mc.StartNextRound(ctx, r)
 }
 
 /*HandleRoundTimeout - handles the timeout of a round*/
@@ -150,7 +165,7 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
 			return
 		}
 	}
-	Logger.Info("round timeout occured", zap.Any("round", mc.CurrentRound))
+	Logger.Error("round timeout occured", zap.Any("round", mc.CurrentRound))
 	r := mc.GetMinerRound(mc.CurrentRound)
 	if r.GetRoundNumber() > 1 {
 		pr := mc.GetMinerRound(r.GetRoundNumber() - 1)
@@ -171,7 +186,7 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMess
 	if mr == nil {
 		r := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 		r.Number = mb.Round
-		r.RandomSeed = mb.RoundRandomSeed
+		mc.SetRandomSeed(r, mb.RoundRandomSeed)
 		mr = mc.CreateRound(r)
 		mc.AddRound(mr)
 	} else {
@@ -183,5 +198,8 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMess
 		}
 	}
 	b := mc.AddBlock(mb)
-	mc.AddNotarizedBlock(ctx, mr, b)
+	if !mc.AddNotarizedBlock(ctx, mr, b) {
+		return
+	}
+	mc.StartNextRound(ctx, mr)
 }

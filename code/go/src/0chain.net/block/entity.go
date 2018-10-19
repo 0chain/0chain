@@ -76,6 +76,8 @@ type Block struct {
 	stateStatus     int8
 	StateMutex      *sync.Mutex `json:"_"`
 	blockState      int8
+	isNotarized     bool
+	ticketsMutex    *sync.Mutex
 	RunningTxnCount int64 `json:"running_txn_count"`
 }
 
@@ -160,6 +162,7 @@ func Provider() datastore.Entity {
 	b.ChainID = datastore.ToKey(config.GetServerChainID())
 	b.InitializeCreationDate()
 	b.StateMutex = &sync.Mutex{}
+	b.ticketsMutex = &sync.Mutex{}
 	return b
 }
 
@@ -210,12 +213,10 @@ func (b *Block) AddTransaction(t *transaction.Transaction) {
 	t.OutputHash = t.ComputeOutputHash()
 }
 
-/*AddVerificationTicket - Add a verification ticket to a block
-*Assuming this is done single-threaded at least per block
-*It's the callers responsibility to decide what to do if this operation is successful
-*  - the miner of the block for example will decide if the notarization is received and send it off to others
- */
+/*AddVerificationTicket - Add a verification ticket to a block if it's not already present */
 func (b *Block) AddVerificationTicket(vt *VerificationTicket) bool {
+	b.ticketsMutex.Lock()
+	defer b.ticketsMutex.Unlock()
 	bvt := b.VerificationTickets
 	for _, t := range bvt {
 		if datastore.IsEqual(vt.VerifierID, t.VerifierID) {
@@ -229,28 +230,29 @@ func (b *Block) AddVerificationTicket(vt *VerificationTicket) bool {
 
 /*MergeVerificationTickets - merge the verification tickets with what's already there */
 func (b *Block) MergeVerificationTickets(vts []*VerificationTicket) {
-	b.VerificationTickets = b.unionVerificationTickets(b.VerificationTickets, vts)
-}
-
-func (b *Block) unionVerificationTickets(tickets1 []*VerificationTicket, tickets2 []*VerificationTicket) []*VerificationTicket {
-	if len(tickets1) == 0 {
-		return tickets2
+	unionVerificationTickets := func(tickets1 []*VerificationTicket, tickets2 []*VerificationTicket) []*VerificationTicket {
+		if len(tickets1) == 0 {
+			return tickets2
+		}
+		if len(tickets2) == 0 {
+			return tickets1
+		}
+		ticketsMap := make(map[string]*VerificationTicket, len(tickets1)+len(tickets2))
+		for _, t := range tickets1 {
+			ticketsMap[t.VerifierID] = t
+		}
+		for _, t := range tickets2 {
+			ticketsMap[t.VerifierID] = t
+		}
+		utickets := make([]*VerificationTicket, 0, len(ticketsMap))
+		for _, v := range ticketsMap {
+			utickets = append(utickets, v)
+		}
+		return utickets
 	}
-	if len(tickets2) == 0 {
-		return tickets1
-	}
-	ticketsMap := make(map[string]*VerificationTicket, len(tickets1)+len(tickets2))
-	for _, t := range tickets1 {
-		ticketsMap[t.VerifierID] = t
-	}
-	for _, t := range tickets2 {
-		ticketsMap[t.VerifierID] = t
-	}
-	utickets := make([]*VerificationTicket, 0, len(ticketsMap))
-	for _, v := range ticketsMap {
-		utickets = append(utickets, v)
-	}
-	return utickets
+	b.ticketsMutex.Lock()
+	defer b.ticketsMutex.Unlock()
+	b.VerificationTickets = unionVerificationTickets(b.VerificationTickets, vts)
 }
 
 /*GetMerkleTree - return the merkle tree of this block using the transactions as leaf nodes */
@@ -415,4 +417,14 @@ func (b *Block) GetTransaction(hash string) *transaction.Transaction {
 		}
 	}
 	return nil
+}
+
+//SetBlockNotarized - set the block as notarized
+func (b *Block) SetBlockNotarized() {
+	b.isNotarized = true
+}
+
+//IsBlockNotarized - is block notarized?
+func (b *Block) IsBlockNotarized() bool {
+	return b.isNotarized
 }

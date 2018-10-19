@@ -5,11 +5,23 @@ import (
 	"time"
 
 	. "0chain.net/logging"
+	metrics "github.com/rcrowley/go-metrics"
 
 	"0chain.net/block"
 	"0chain.net/util"
 	"go.uber.org/zap"
 )
+
+//StatePruneUpdateTimer - a metric that tracks the time it takes to update older nodes still referrred from the given version
+var StatePruneUpdateTimer metrics.Timer
+
+//StatePruneDeleteTimer - a metric that tracks the time it takes to delete all the obsolete nodes w.r.t a given version
+var StatePruneDeleteTimer metrics.Timer
+
+func init() {
+	StatePruneUpdateTimer = metrics.GetOrRegisterTimer("state_prune_update_timer", nil)
+	StatePruneDeleteTimer = metrics.GetOrRegisterTimer("state_prune_delete_timer", nil)
+}
 
 func (c *Chain) pruneClientState(ctx context.Context) {
 	bc := c.BlockChain
@@ -29,6 +41,7 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 	t := time.Now()
 	err := mpt.UpdateVersion(pctx, newVersion)
 	d1 := time.Since(t)
+	StatePruneUpdateTimer.Update(d1)
 	if err != nil {
 		Logger.Error("prune client state (update origin)", zap.Error(err))
 	} else {
@@ -40,8 +53,13 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 		Logger.Error("prune client state error", zap.Error(err))
 	}
 	d2 := time.Since(t1)
+	StatePruneDeleteTimer.Update(d2)
 	ps := util.GetPruneStats(pctx)
-	Logger.Info("prune client state stats", zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.String("state_hash", util.ToHex(bs.ClientStateHash)),
+	logf := Logger.Info
+	if d1 > time.Second || d2 > time.Second {
+		logf = Logger.Error
+	}
+	logf("prune client state stats", zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.String("state_hash", util.ToHex(bs.ClientStateHash)),
 		zap.Duration("duration", time.Since(t)), zap.Duration("update", d1), zap.Duration("prune", d2), zap.Any("stats", ps))
 	/*
 		if stateOut != nil {

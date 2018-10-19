@@ -84,7 +84,7 @@ func GetMPT(dbType int, version util.Sequence) util.MerklePatriciaTrieI {
 		mndb := util.NewMemoryNodeDB()
 		mpt = util.NewMerklePatriciaTrie(mndb, version)
 	case PERSIST:
-		pndb, err := util.NewPNodeDB("/tmp/mpt")
+		pndb, err := util.NewPNodeDB("/tmp/mpt", "/tmp/mpt/log")
 		if err != nil {
 			panic(err)
 		}

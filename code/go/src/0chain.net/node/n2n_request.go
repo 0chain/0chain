@@ -19,7 +19,7 @@ const (
 )
 
 //FetchStrategy - when fetching an entity, the strategy to use to select the peer nodes
-var FetchStrategy = 1
+var FetchStrategy = FetchStrategyNearest
 
 //RequestEntity - request an entity
 func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, params map[string]string, handler datastore.JSONEntityReqResponderF) *Node {

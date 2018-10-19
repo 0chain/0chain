@@ -21,7 +21,10 @@ server_chain:
     size: 100
     generators: 2
     sharders: 3
-    notarization_threshold: 60 # percentage
+    proposal:
+      max_wait_time: 180 # milliseconds
+      wait_mode: static # static or dynamic
+    notarization_threshold: 66 # percentage
     validation:
       batch_size: 1000
   round_range: 10000000
@@ -31,4 +34,4 @@ server_chain:
     relay_time: 180 # milliseconds
     max_concurrent_requests: 3
     messages:
-      verification_tickets_to: generator
+      verification_tickets_to: all_miners

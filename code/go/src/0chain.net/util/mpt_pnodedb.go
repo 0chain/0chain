@@ -5,7 +5,7 @@ import (
 	"context"
 
 	. "0chain.net/logging"
-	"github.com/tecbot/gorocksdb"
+	"github.com/0chain/gorocksdb"
 	"go.uber.org/zap"
 )
 
@@ -20,15 +20,17 @@ type PNodeDB struct {
 }
 
 /*NewPNodeDB - create a new PNodeDB */
-func NewPNodeDB(dataDir string) (*PNodeDB, error) {
+func NewPNodeDB(dataDir string, logDir string) (*PNodeDB, error) {
 	opts := gorocksdb.NewDefaultOptions()
 	opts.SetCreateIfMissing(true)
+	opts.SetCompression(gorocksdb.LZ4Compression)
 	/* SetHashSkipListRep + OptimizeForPointLookup seems to be corrupting when pruning
 	opts.SetHashSkipListRep(1000000, 4, 4)
 	opts.SetAllowConcurrentMemtableWrites(false)
 	*/
 	opts.OptimizeForPointLookup(64)
-	opts.SetCompression(gorocksdb.LZ4Compression)
+	opts.IncreaseParallelism(2) // pruning and saving happen in parallel
+	opts.SetDbLogDir(logDir)
 	db, err := gorocksdb.OpenDb(opts, dataDir)
 	if err != nil {
 		return nil, err
@@ -129,12 +131,11 @@ func (pndb *PNodeDB) Flush() {
 
 /*PruneBelowVersion - prune the state below the given origin */
 func (pndb *PNodeDB) PruneBelowVersion(ctx context.Context, version Sequence) error {
-	BatchSize := 64
 	ps := GetPruneStats(ctx)
 	var total int64
 	var count int64
 	var leaves int64
-	batch := make([]Key, BatchSize)
+	batch := make([]Key, 0, BatchSize)
 	handler := func(ctx context.Context, key Key, node Node) error {
 		total++
 		if node.GetVersion() >= version {

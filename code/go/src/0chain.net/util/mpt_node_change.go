@@ -75,8 +75,8 @@ func (cc *ChangeCollector) GetDeletes() []Node {
 
 /*UpdateChanges - update all the changes collected to a database */
 func (cc *ChangeCollector) UpdateChanges(ndb NodeDB, origin Sequence, includeDeletes bool) error {
-	keys := make([]Key, len(cc.Changes), len(cc.Changes))
-	nodes := make([]Node, len(cc.Changes), len(cc.Changes))
+	keys := make([]Key, len(cc.Changes))
+	nodes := make([]Node, len(cc.Changes))
 	idx := 0
 	for _, c := range cc.Changes {
 		c.New.SetOrigin(origin)
@@ -95,6 +95,9 @@ func (cc *ChangeCollector) UpdateChanges(ndb NodeDB, origin Sequence, includeDel
 				return err
 			}
 		}
+	}
+	if len(cc.Changes) == 0 && (!includeDeletes || len(cc.Deletes) == 0) {
+		return nil
 	}
 	if pndb, ok := ndb.(*PNodeDB); ok {
 		pndb.Flush()
