@@ -113,7 +113,9 @@ func (r *Round) GetBestNotarizedBlock() *block.Block {
 
 /*Finalize - finalize the round */
 func (r *Round) Finalize(b *block.Block) {
-	r.state = RoundStateFinalized
+	r.Mutex.Lock()
+	defer r.Mutex.Unlock()
+	r.setState(RoundStateFinalized)
 	r.Block = b
 	r.BlockHash = b.Hash
 }
@@ -125,7 +127,7 @@ func (r *Round) SetFinalizing() bool {
 	if r.isFinalized() || r.isFinalizing() {
 		return false
 	}
-	r.state = RoundStateFinalizing
+	r.setState(RoundStateFinalizing)
 	return true
 }
 
@@ -230,7 +232,7 @@ func (r *Round) AddVRFShare(share *VRFShare) bool {
 	if _, ok := r.shares[share.party.GetKey()]; ok {
 		return false
 	}
-	r.SetState(RoundShareVRF)
+	r.setState(RoundShareVRF)
 	r.shares[share.party.GetKey()] = share
 	return true
 }
@@ -247,6 +249,10 @@ func (r *Round) GetState() int {
 
 //SetState - set the state of the round
 func (r *Round) SetState(state int) {
+	r.setState(state)
+}
+
+func (r *Round) setState(state int) {
 	if state > r.state {
 		r.state = state
 	}
