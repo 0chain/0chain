@@ -190,7 +190,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 				return false
 			}
 			defer resp.Body.Close()
-			if resp.StatusCode != http.StatusOK {
+			if !(resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusNoContent) {
 				var rbuf bytes.Buffer
 				rbuf.ReadFrom(resp.Body)
 				N2n.Error("sending", zap.Any("from", Self.SetIndex), zap.Any("to", receiver.SetIndex), zap.Any("handler", uri), zap.Duration("duration", time.Since(ts)), zap.Any("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Any("status_code", resp.StatusCode), zap.Any("response", rbuf.String()))
