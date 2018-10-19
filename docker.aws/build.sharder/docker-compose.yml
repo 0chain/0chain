@@ -22,12 +22,14 @@ services:
         - CMD-SHELL
         - "[ $$(nodetool statusgossip) = running ]"
       timeout: 10s
-    image: "scylladb/scylla:latest"
+    image: "scylladb/scylla:2.3.0"
     networks: 
       - default
     ports: 
       - "9042:9042"
-    user: "2000:2000"
+    #ToDo: Scylla does not like to run as 0chain. Wants to be root. Need more investigation
+    #See ticket ODA-5
+    #user: "2000:2000"
     volumes: 
       - "/0chain/config/scylla/scylla.yaml:/etc/scylla/scylla.yaml"
       - "/0chain/config/scylla:/0chain/scylla"
