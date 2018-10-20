@@ -7,46 +7,36 @@ import (
 /* BLS implementation */
 
 type SimpleBLS struct {
-	t             int
-	n             int
-	msg           Message
-	sigShare      Sign
-	gpPubKey      GroupPublicKey
-	verifications []VerificationKey
-
-	partyKeyShare AfterDKGKeyShare
+	t                int
+	n                int
+	msg              Message
+	sigShare         Sign
+	gpPubKey         GroupPublicKey
+	verifications    []VerificationKey
+	SecKeyShareGroup Key
+	GpSign           Sign
 }
 
-func MakeSimpleBLS(dkg *BLSSimpleDKG, mg Message) SimpleBLS {
-
-	return SimpleBLS{
-		t:             dkg.T,
-		n:             dkg.N,
-		msg:           mg,
-		sigShare:      Sign{},
-		gpPubKey:      dkg.GpPubKey,
-		verifications: nil,
-		partyKeyShare: AfterDKGKeyShare{},
+func MakeSimpleBLS(dkg *BLSSimpleDKG) SimpleBLS {
+	bs := SimpleBLS{
+		t:                dkg.T,
+		n:                dkg.N,
+		msg:              " ",
+		sigShare:         Sign{},
+		gpPubKey:         dkg.GpPubKey,
+		verifications:    nil,
+		SecKeyShareGroup: dkg.SecKeyShareGroup,
+		GpSign:           Sign{},
 	}
+	return bs
 
 }
 
 func (bs *SimpleBLS) SignMsg() Sign {
 
-	priKeyShare := bs.partyKeyShare.m
-	sigShare := *priKeyShare.Sign(bs.msg)
+	aggSecKey := bs.SecKeyShareGroup
+	sigShare := *aggSecKey.Sign(bs.msg)
 	return sigShare
-}
-
-/* VerifySign - Verifies the signature share with the public key share */
-func (bs *SimpleBLS) VerifySign(sigShare Sign) bool {
-
-	pubKeyShare := bs.partyKeyShare.v
-	if !sigShare.Verify(&pubKeyShare, bs.msg) {
-		fmt.Println("Signature does not verify")
-		return false
-	}
-	return true
 }
 
 func (bs *SimpleBLS) RecoverGroupSig(from []PartyId, shares []Sign) (Sign, error) {
@@ -61,6 +51,7 @@ func (bs *SimpleBLS) RecoverGroupSig(from []PartyId, shares []Sign) (Sign, error
 		fmt.Println("Recover Gp Sig not done")
 		return sig, nil
 	}
+	bs.GpSign = sig
 	return sig, nil
 
 }

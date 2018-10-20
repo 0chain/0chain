@@ -34,6 +34,7 @@ type Round struct {
 	// Once a round is finalized, this is the finalized block of the given round
 	Block     *block.Block `json:"-"`
 	BlockHash string       `json:"block_hash"`
+	VRFOutput string       `json:"vrf_output"`
 
 	minerPerm   []int
 	sharderPerm []int

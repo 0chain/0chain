@@ -247,6 +247,7 @@ func StartProtocol() {
 	if mc.CurrentRound == 0 {
 		Logger.Info("starting the blockchain ...")
 		msgChannel <- msg
-		mc.SendRoundStart(common.GetRootContext(), sr)
+		mc.SendRoundStart(common.GetRootContext(), sr) // changed to mc.StartRound(ctx, msr) in new commit
+
 	}
 }

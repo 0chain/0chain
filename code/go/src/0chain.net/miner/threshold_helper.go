@@ -8,10 +8,16 @@ import (
 	"go.uber.org/zap"
 
 	"0chain.net/node"
+	"0chain.net/round"
 	"0chain.net/threshold/bls"
 
+	"bytes"
+	"encoding/binary"
+
 	"0chain.net/datastore"
+	"0chain.net/encryption"
 	. "0chain.net/logging"
+	"0chain.net/util"
 )
 
 //TODO: Make the values of k and n configurable
@@ -19,6 +25,7 @@ import (
 var k = 2
 var n = 3
 var dg bls.BLSSimpleDKG
+var bs bls.SimpleBLS
 var recShares []string
 
 /* StartDKG - starts the DKG process */
@@ -28,18 +35,18 @@ func StartDKG(miners *node.Pool) {
 	m2m := miners
 	Logger.Info("Starting DKG...")
 
-	//TODO : Remove sleep in future VRF
-	time.Sleep(10 * time.Second)
-
-	//TODO : Need to include check for active miners and then send the shares
+	//TODO : Need to include check for active miners and then send the shares, have to remove sleep in future
 	//mc.Miners.OneTimeStatusMonitor(ctx)
+	time.Sleep(10 * time.Second)
 
 	dg = bls.MakeSimpleDKG(k, n)
 
-	for i, node := range m2m.Nodes {
+	for _, node := range m2m.Nodes {
 
 		Logger.Info("The miner ID is ", zap.String("miner ID is ", node.GetKey()))
-		forID := bls.ComputeIDdkg(i)
+		forID := bls.ComputeIDdkg(node.SetIndex)
+		dg.ID = forID
+		Logger.Info("The miner ID vVec is ", zap.String("miner ID  vVecis ", dg.Vvec[0].GetHexString()))
 
 		Logger.Info("The x is ", zap.String("x is ", forID.GetDecString()))
 		secShare, _ := dg.ComputeDKGKeyShare(forID)
@@ -95,4 +102,52 @@ func AggregateDKGSecShares(recShares []string) error {
 	Logger.Info("the aggregated sec share", zap.String("agg share", dg.SecKeyShareGroup.GetDecString()))
 	Logger.Info("the group public key is", zap.String("gp public key", dg.GpPubKey.GetHexString()))
 	return nil
+}
+
+func StartBLS(r *round.Round) {
+
+	bs = bls.MakeSimpleBLS(&dg)
+
+	//if r.Number == 1{
+	r.VRFOutput = encryption.Hash("0chain")
+	//}
+	SignMsg(r.Number, r.VRFOutput)
+}
+
+func SignMsg(rNumber int64, prevVRF string) bls.Sign {
+
+	blsMsg := bytes.NewBuffer(nil)
+
+	binary.Write(blsMsg, binary.LittleEndian, rNumber)
+	binary.Write(blsMsg, binary.LittleEndian, prevVRF)
+	msg := util.ToHex(blsMsg.Bytes())
+
+	Logger.Info("the msg is", zap.Any("the blsMsg is ", msg))
+	aggSecKey := dg.SecKeyShareGroup
+	sigShare := *aggSecKey.Sign(msg)
+	signVerified, _ := VerifySign(sigShare, msg)
+	if signVerified {
+		Logger.Info("the sign is verified")
+
+	}
+	return sigShare
+
+}
+
+/* VerifySign - Verifies the bls signature share with the committed verification vector */
+func VerifySign(sigShare bls.Sign, msg string) (bool, error) {
+	var pub bls.VerificationKey
+	err := pub.Set(dg.Vvec, &dg.ID)
+	Logger.Info("The miner ID vVec is ", zap.String("miner ID  vVecis ", dg.Vvec[0].GetHexString()))
+
+	if err != nil {
+		return false, nil
+	}
+
+	if !sigShare.Verify(&pub, msg) {
+		//Logger.Info("the sign not verified")
+
+		return false, nil
+	}
+	return true, nil
 }

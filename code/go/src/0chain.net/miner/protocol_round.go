@@ -96,6 +96,9 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		Logger.Error("generate round block (prior round not found)", zap.Any("round", r.Number-1))
 		return nil, common.NewError("invalid_round,", "Round not available")
 	}
+
+	Logger.Info("Start BLS", zap.Int64("round", r.Number), zap.Int64("current_round", mc.CurrentRound))
+
 	pb := mc.GetBlockToExtend(ctx, pround)
 	if pb == nil {
 		Logger.Error("generate round block (prior block not found)", zap.Any("round", r.Number))
@@ -366,10 +369,13 @@ func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *round.Round, b *block
 }
 
 func (mc *Chain) startRound(r *round.Round) {
+
 	if mc.GetRound(r.Number+1) == nil {
 		nr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 		nr.Number = r.Number + 1
 		//TODO: We need to do VRF at which time the Sleep should be removed
+		Logger.Info("Starting BLS ....")
+		StartBLS(nr)
 		time.Sleep(chain.DELTA)
 		nr.RandomSeed = rand.New(rand.NewSource(r.RandomSeed)).Int63()
 		nmr := mc.CreateRound(nr)

@@ -19,11 +19,10 @@ type BLSSimpleDKG struct {
 	Vvec              []VerificationKey
 	secSharesMap      map[PartyId]Key
 	receivedSecShares []Key
-	receivedPubShares []VerificationKey
-	numReceived       int
 	GpPubKey          GroupPublicKey
 	SecKeyShareGroup  Key
 	SelfShare         Key
+	ID                PartyId
 }
 
 func init() {
@@ -41,11 +40,10 @@ func MakeSimpleDKG(t, n int) BLSSimpleDKG {
 		Vvec:              make([]VerificationKey, t),
 		secSharesMap:      make(map[PartyId]Key, n),
 		receivedSecShares: make([]Key, n),
-		receivedPubShares: make([]VerificationKey, n),
-		numReceived:       0,
 		GpPubKey:          GroupPublicKey{},
 		SecKeyShareGroup:  Key{},
 		SelfShare:         Key{},
+		ID:                PartyId{},
 	}
 
 	dkg.SecKey.SetByCSPRNG()
@@ -53,13 +51,14 @@ func MakeSimpleDKG(t, n int) BLSSimpleDKG {
 	dkg.mSec = dkg.SecKey.GetMasterSecretKey(t)
 	dkg.Vvec = gobls.GetMasterPublicKey(dkg.mSec)
 	dkg.GpPubKey = dkg.Vvec[0]
-	dkg.numReceived += 1
+
 	return dkg
 }
 
+/* threshold_helper.go calls this function to compute the ID */
 func ComputeIDdkg(minerID int) PartyId {
 	var forID PartyId
-	err := forID.SetDecString(strconv.Itoa(minerID))
+	err := forID.SetDecString(strconv.Itoa(minerID + 1))
 	if err != nil {
 		fmt.Printf("Error while computing ID %s\n", forID.GetHexString())
 	}
@@ -67,23 +66,7 @@ func ComputeIDdkg(minerID int) PartyId {
 	return forID
 }
 
-/* ComputeKeyShare - Derive the share for each miner through gobls.Set() which calls the polynomial substitution method */
-
-func (dkg *BLSSimpleDKG) ComputeKeyShare(forIDs []PartyId) ([]Key, error) {
-
-	secVec := make([]Key, dkg.N)
-	for i := 0; i < dkg.N; i++ {
-		err := secVec[i].Set(dkg.mSec, &forIDs[i])
-		if err != nil {
-			return nil, nil
-		}
-		dkg.secSharesMap[forIDs[i]] = secVec[i]
-	}
-
-	return secVec, nil
-}
-
-/* ComputeDKGKeyShare - Derive the share for each miner through gobls.Set() which calls the polynomial substitution method */
+/* ComputeDKGKeyShare - Derive the share for each miner through gobls.Set() which calls the polynomial substitution method used in threshold_helper.go */
 
 func (dkg *BLSSimpleDKG) ComputeDKGKeyShare(forID PartyId) (Key, error) {
 
@@ -92,6 +75,7 @@ func (dkg *BLSSimpleDKG) ComputeDKGKeyShare(forID PartyId) (Key, error) {
 	if err != nil {
 		return Key{}, nil
 	}
+	dkg.secSharesMap[forID] = secVec
 
 	return secVec, nil
 }
@@ -110,64 +94,13 @@ func (dkg *BLSSimpleDKG) GetKeyShareForOther(to PartyId) *DKGKeyShare {
 	return dShare
 }
 
-/* ReceiveAndValidateShare - Get the share from a specific PartyId */
-func (dkg *BLSSimpleDKG) ReceiveAndValidateShare(from PartyId, d *DKGKeyShare) error {
-
-	isValid := dkg.ValidateShare(from, d)
-	if isValid != true {
-		return fmt.Errorf("The private key share from %s which is %s is not valid\n", from.GetHexString(), d.m.GetHexString())
-
-	}
-	return nil
-}
-
-/* ValidateShare -  Validate the share received from PartyId */
-func (dkg *BLSSimpleDKG) ValidateShare(from PartyId, d *DKGKeyShare) bool {
-
-	indivShare, _ := dkg.secSharesMap[from]
-
-	pubKey := indivShare.GetPublicKey()
-	dkg.numReceived++
-	if pubKey.IsEqual(&d.v) {
-		return true
-	}
-
-	return false
-
-}
-
-/* ReceiveKeyShareFromParty - Gets the seckey share */
-func (dkg *BLSSimpleDKG) ReceiveKeyShareFromParty(d *DKGKeyShare) error {
-
-	dkg.receivedSecShares = append(dkg.receivedSecShares, d.m)
-	dkg.receivedPubShares = append(dkg.receivedPubShares, d.v)
-	dkg.numReceived++
-
-	if d == nil || dkg.receivedSecShares == nil || dkg.receivedPubShares == nil {
-		return fmt.Errorf("Error in share received")
-	}
-	return nil
-}
-
-/* IsDone - Function to check if the DKG is done */
-
-func (dkg *BLSSimpleDKG) IsDone() bool {
-	return dkg.numReceived == dkg.N
-
-}
-
 /* Each party aggregates the received shares from other party */
-func (dkg *BLSSimpleDKG) AggregateShares() (*AfterDKGKeyShare, error) {
+func (dkg *BLSSimpleDKG) AggregateShares() {
+	var sec Key
 
-	for _, pri := range dkg.receivedSecShares {
-		dkg.SecKey.Add(&pri)
+	for i := 0; i < len(dkg.receivedSecShares); i++ {
+		sec.Add(&dkg.receivedSecShares[i])
 	}
+	dkg.SecKeyShareGroup = sec
 
-	for _, pub := range dkg.receivedPubShares {
-		dkg.pubKey.Add(&pub)
-	}
-
-	aggShare := &AfterDKGKeyShare{m: dkg.SecKey}
-	aggShare.v = dkg.pubKey
-	return aggShare, nil
 }
