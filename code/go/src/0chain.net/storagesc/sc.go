@@ -8,6 +8,7 @@ import (
 	"0chain.net/smartcontractinterface"
 	"0chain.net/smartcontractstate"
 	"0chain.net/transaction"
+	"0chain.net/util"
 
 	. "0chain.net/logging"
 )
@@ -130,6 +131,7 @@ type StorageSmartContract struct {
 type BlobberCloseConnection struct {
 	DataID      string      `json:"data_id"`
 	MerkleRoot  string      `json:"merkle_root"`
+	Size        int64       `json:"size"`
 	WriteMarker WriteMarker `json:"write_marker"`
 }
 
@@ -141,6 +143,14 @@ type WriteMarker struct {
 	Timestamp           common.Timestamp `json:"timestamp"`
 	ClientID            string           `json:"client_id"`
 	Signature           string           `json:"signature"`
+}
+
+type ChallengeResponse struct {
+	Data        []byte       `json:"data_bytes"`
+	WriteMarker *WriteMarker `json:"write_marker"`
+	MerkleRoot  string       `json:"merkle_root"`
+	MerklePath  *util.MTPath `json:"merkle_path"`
+	CloseTxnID  string       `json:"close_txn_id"`
 }
 
 // var allBlobbersMap = make(map[string]*StorageNode)
@@ -165,6 +175,61 @@ func generateClientBlobberKey(allocationID string, clientID string, blobberID st
 
 func generateAllocationBlobberKey(allocationID string, blobberID string) string {
 	return encryption.Hash(allocationID + Seperator + blobberID)
+}
+
+func (sc *StorageSmartContract) VerifyChallenge(t *transaction.Transaction, input []byte) (string, error) {
+	var challengeResponse ChallengeResponse
+	err := json.Unmarshal(input, &challengeResponse)
+	if err != nil {
+		return "", err
+	}
+	if len(challengeResponse.CloseTxnID) == 0 || len(challengeResponse.Data) == 0 || challengeResponse.MerklePath == nil || len(challengeResponse.MerkleRoot) == 0 || challengeResponse.WriteMarker == nil {
+		return "", common.NewError("invalid_parameters", "Invalid parameters to challenge response")
+	}
+
+	commitConnectionDBBytes, err := sc.DB.GetNode(smartcontractstate.Key("close_connection:" + challengeResponse.WriteMarker.DataID))
+	if commitConnectionDBBytes == nil || err != nil {
+		return "", common.NewError("invalid_parameters", "Cannot find the close connection for the Data ID "+challengeResponse.WriteMarker.DataID)
+	}
+
+	var closeConnection BlobberCloseConnection
+	err = json.Unmarshal(commitConnectionDBBytes, &closeConnection)
+	if err != nil {
+		return "", common.NewError("close_connection_decode_error", "Invalid connection stored in the state. "+challengeResponse.WriteMarker.DataID)
+	}
+
+	if closeConnection.DataID != challengeResponse.WriteMarker.DataID {
+		return "", common.NewError("invalid_parameters", "Invalid Write marker / Data ID sent for the challenge")
+	}
+
+	if closeConnection.MerkleRoot != challengeResponse.MerkleRoot {
+		return "", common.NewError("invalid_parameters", "Invalid Merkle root sent for the challenge")
+	}
+
+	if closeConnection.WriteMarker.Signature != challengeResponse.WriteMarker.Signature {
+		return "", common.NewError("invalid_parameters", "Invalid Write marker sent for the challenge")
+	}
+	if t.ClientID != challengeResponse.WriteMarker.BlobberID {
+		return "", common.NewError("invalid_parameters", "Challenge response should be submitted by the same blobber as the write marker")
+	}
+
+	// var dataBytes64Encode bytes.Buffer
+	// dataBytes64EncodeWriter := bufio.NewWriter(&dataBytes64Encode)
+	// inputZlibBytes := bytes.NewBuffer(challengeResponse.Data)
+	// zlibReader, err := zlib.NewReader(inputZlibBytes)
+	// io.Copy(dataBytes64EncodeWriter, zlibReader)
+	// zlibReader.Close()
+
+	// var dataBytes bytes.Buffer
+	// dataBytesWriter := bufio.NewWriter(&dataBytes)
+	// base64Decoder := base64.NewDecoder(base64.StdEncoding, bytes.NewReader(dataBytes64Encode.Bytes()))
+	// io.Copy(dataBytesWriter, base64Decoder)
+	contentHash := encryption.Hash(challengeResponse.Data)
+	merkleVerify := util.VerifyMerklePath(contentHash, challengeResponse.MerklePath, challengeResponse.MerkleRoot)
+	if !merkleVerify {
+		return "", common.NewError("challenge_failed", "Challenge failed since we could not verify the merkle tree")
+	}
+	return "Challenge Passed by Blobber", nil
 }
 
 func (sc *StorageSmartContract) OpenConnectionWithBlobber(t *transaction.Transaction, input []byte) (string, error) {
@@ -192,6 +257,10 @@ func (sc *StorageSmartContract) OpenConnectionWithBlobber(t *transaction.Transac
 
 	if allocationObj.Owner != t.ClientID {
 		return "", common.NewError("invalid_parameters", "Connection has to be opened by the same client as owner of the allocation")
+	}
+
+	if allocationObj.Expiration < common.Now() {
+		return "", common.NewError("invalid_parameters", "Allocation is expired")
 	}
 
 	for _, blobberConnection := range openConnection.BlobberData {
@@ -236,6 +305,11 @@ func (sc *StorageSmartContract) CloseConnectionWithBlobber(t *transaction.Transa
 		return "", common.NewError("invalid_parameters", "Invalid Blobber ID for closing connection. Write marker not for this blobber")
 	}
 
+	commitConnectionDBBytes, err := sc.DB.GetNode(smartcontractstate.Key("close_connection:" + commitConnection.DataID))
+	if commitConnectionDBBytes != nil {
+		return "", common.NewError("invalid_parameters", "Connection for the data id is already closed")
+	}
+
 	blobberConnectionBytes, err := sc.DB.GetNode(smartcontractstate.Key("open_connection:" + commitConnection.DataID))
 
 	if blobberConnectionBytes == nil || err != nil {
@@ -253,6 +327,10 @@ func (sc *StorageSmartContract) CloseConnectionWithBlobber(t *transaction.Transa
 
 	if blobberConnection.OpenConnectionTxn != commitConnection.WriteMarker.IntentTransactionID {
 		return "", common.NewError("invalid_parameters", "Write marker is not for the same open connection")
+	}
+
+	if blobberConnection.Size != commitConnection.Size {
+		return "", common.NewError("invalid_parameters", "Size uploaded does not match the size on open connection")
 	}
 
 	allocationBytes, err := sc.DB.GetNode(smartcontractstate.Key("allocation:" + blobberConnection.AllocationID))
@@ -282,12 +360,14 @@ func (sc *StorageSmartContract) CloseConnectionWithBlobber(t *transaction.Transa
 	if err != nil {
 		return "", common.NewError("blobber_allocation_decode", "Blobber Allocation decode error "+err.Error())
 	}
+
 	blobberAllocation.LatestCloseTxn = t.Hash
 	blobberAllocation.Capacity -= blobberConnection.Size
 	buffBlobberAllocation, _ := json.Marshal(blobberAllocation)
 	sc.DB.PutNode(smartcontractstate.Key("blobber_allocation:"+blobberAllocationKey), buffBlobberAllocation)
 	buff, _ := json.Marshal(commitConnection)
 	sc.DB.PutNode(smartcontractstate.Key("close_connection:"+commitConnection.DataID), buff)
+	sc.addToAllClosedConnectionsList(commitConnection)
 	return string(buffBlobberAllocation), nil
 }
 
@@ -307,7 +387,35 @@ func (sc *StorageSmartContract) getBlobbersList() ([]StorageNode, error) {
 	return allBlobbersList, nil
 }
 
+func (sc *StorageSmartContract) addToAllClosedConnectionsList(closedConnection BlobberCloseConnection) error {
+	var allClosedConnectionsList = make([]BlobberCloseConnection, 0)
+	//sc.DB.PutNode()
+	closedConnectionBytes, err := sc.DB.GetNode(smartcontractstate.Key("all_closed_connections"))
+	if err != nil {
+		return common.NewError("addToAllClosedConnectionsList_failed", "Failed to add to closed connections list")
+	}
+	if closedConnectionBytes != nil {
+		err = json.Unmarshal(closedConnectionBytes, &allClosedConnectionsList)
+		if err != nil {
+			return common.NewError("addToAllClosedConnectionsList_failed", "Failed to add to closed connections list")
+		}
+	}
+	allClosedConnectionsList = append(allClosedConnectionsList, closedConnection)
+	buff, _ := json.Marshal(allClosedConnectionsList)
+	sc.DB.PutNode(smartcontractstate.Key("all_closed_connections"), buff)
+	return nil
+}
+
 func (sc *StorageSmartContract) Execute(t *transaction.Transaction, funcName string, input []byte) (string, error) {
+
+	if funcName == "challenge_response" {
+		resp, err := sc.VerifyChallenge(t, input)
+		if err != nil {
+			return "", err
+		}
+		return resp, nil
+	}
+
 	if funcName == "open_connection" {
 		resp, err := sc.OpenConnectionWithBlobber(t, input)
 		if err != nil {

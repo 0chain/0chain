@@ -11,6 +11,22 @@ type MerkleTree struct {
 	levels      int
 }
 
+func VerifyMerklePath(hash string, path *MTPath, root string) bool {
+	mthash := hash
+	pathNodes := path.Nodes
+	pl := len(pathNodes)
+	idx := path.LeafIndex
+	for i := 0; i < pl; i++ {
+		if idx&1 == 1 {
+			mthash = MHash(pathNodes[i], mthash)
+		} else {
+			mthash = MHash(mthash, pathNodes[i])
+		}
+		idx = (idx - idx&1) / 2
+	}
+	return mthash == root
+}
+
 func (mt *MerkleTree) computeSize(leaves int) (int, int) {
 	if leaves == 1 {
 		return 2, 2
@@ -95,19 +111,7 @@ func (mt *MerkleTree) GetPath(hash Hashable) *MTPath {
 /*VerifyPath - given a leaf node and the path, verify that the node is part of the tree */
 func (mt *MerkleTree) VerifyPath(hash Hashable, path *MTPath) bool {
 	hs := hash.GetHash()
-	mthash := hs
-	pathNodes := path.Nodes
-	pl := len(pathNodes)
-	idx := path.LeafIndex
-	for i := 0; i < pl; i++ {
-		if idx&1 == 1 {
-			mthash = MHash(pathNodes[i], mthash)
-		} else {
-			mthash = MHash(mthash, pathNodes[i])
-		}
-		idx = (idx - idx&1) / 2
-	}
-	return mthash == mt.GetRoot()
+	return VerifyMerklePath(hs, path, mt.GetRoot())
 }
 
 /*GetPathByIndex - get the path of a leaf node at index i */

@@ -160,7 +160,7 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 		ndb := smartcontractstate.NewPipedSCDB(mndb, b.SCStateDB, false)
 		output, err := c.ExecuteSmartContract(txn, ndb)
 		if err != nil {
-			Logger.Error("Smart contract execution returned error", zap.Any("error", err), zap.Any("transaction", txn), zap.Any("output", output))
+			Logger.Error("Smart contract execution returned error", zap.Any("error", err), zap.Any("transaction", txn.Hash))
 			return false
 		}
 		err = smartcontractstate.SaveChanges(common.GetRootContext(), mndb, b.SCStateDB)
