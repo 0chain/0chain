@@ -48,7 +48,7 @@ server_chain:
     validation:
       batch_size: 250
     proposal:
-      max_wait_time: 180
+      max_wait_time: 200
       wait_mode: dynamic # static or dynamic
   round_range: 10000000
   transaction:
