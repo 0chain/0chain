@@ -329,6 +329,9 @@ func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "table, td, th { border: 1px solid black; }\n")
 	fmt.Fprintf(w, "</style>")
 	fmt.Fprintf(w, "<table>")
+	fmt.Fprintf(w, "<tr><td colspan='2' style='text-align:center'>")
+	c.notarizedBlockCountsStats(w)
+	fmt.Fprintf(w, "</td></tr>")
 	fmt.Fprintf(w, "<tr><th>Verification Counts</th><th>Finalization Counts</th></tr>")
 	fmt.Fprintf(w, "<tr><td>")
 	c.verificationCountStats(w)
@@ -392,4 +395,19 @@ func (c *Chain) verificationCountStats(w http.ResponseWriter) {
 	fmt.Fprintf(w, "</tr>")
 	fmt.Fprintf(w, "</table>")
 	fmt.Fprintf(w, "Grand total = %v", total)
+}
+
+func (c *Chain) notarizedBlockCountsStats(w http.ResponseWriter) {
+	fmt.Fprintf(w, "<table style='border-collapse: collapse;width:100%%'>")
+	fmt.Fprintf(w, "<tr><td colspan='%v'>Rounds with notarized blocks (0 to %v)</td></tr>", c.NumGenerators+2, c.NumGenerators)
+	fmt.Fprintf(w, "<tr><td>Notarized Blocks</td>")
+	for i := 0; i <= c.NumGenerators; i++ {
+		fmt.Fprintf(w, "<td class='number'>%v</td>", i)
+	}
+	fmt.Fprintf(w, "</tr><tr><td>Rounds</td>")
+	for _, v := range NotariedBlocksCounts {
+		fmt.Fprintf(w, "<td class='number'>%v</td>", v)
+	}
+	fmt.Fprintf(w, "</tr>")
+	fmt.Fprintf(w, "</table>")
 }
