@@ -111,8 +111,13 @@ func (c *Chain) FinalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 }
 
 func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStateHandler) {
-	Logger.Info("finalize round worker", zap.Int64("round", r.GetRoundNumber()), zap.Int64("lf_round", c.LatestFinalizedBlock.Round))
 	roundNumber := r.GetRoundNumber()
+	Logger.Info("finalize round worker", zap.Int64("round", roundNumber), zap.Int64("lf_round", c.LatestFinalizedBlock.Round))
+	//This check is useful when we allow the finalizeRound route is not sequential and end up with out-of-band execution
+	if r.GetRoundNumber() <= c.LatestFinalizedBlock.Round {
+		Logger.Error("finalize round worker - round number <= latest finalized round", zap.Int64("round", r.GetRoundNumber()), zap.Int64("lf_round", c.LatestFinalizedBlock.Round))
+		return
+	}
 	notarizedBlocks := r.GetNotarizedBlocks()
 	nbCount := len(notarizedBlocks)
 	if nbCount == 0 {
@@ -121,6 +126,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 	if nbCount > 1 {
 		c.MultiNotarizedBlocksCount++
 	}
+	NotariedBlocksCounts[nbCount]++
 	lfb := c.ComputeFinalizedBlock(ctx, r)
 	if lfb == nil {
 		Logger.Debug("finalize round - no decisive block to finalize yet or don't have all the necessary blocks", zap.Int64("round", roundNumber), zap.Int("notarized_blocks", nbCount))
@@ -130,11 +136,6 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 		return
 	}
 	if lfb.Round <= c.LatestFinalizedBlock.Round {
-		//This check is useful when we allow the finalizeRound route is not sequential and end up with out-of-band execution
-		if r.GetRoundNumber() <= c.LatestFinalizedBlock.Round {
-			Logger.Error("finalize round worker - round number <= latest finalized round", zap.Int64("round", r.GetRoundNumber()), zap.Int64("lf_round", c.LatestFinalizedBlock.Round))
-			return
-		}
 		b := c.commonAncestor(ctx, c.LatestFinalizedBlock, lfb)
 		if b != nil {
 			// Recovering from incorrectly finalized block
