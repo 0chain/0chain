@@ -116,12 +116,11 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (interface{},
 func DKGShareHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 	dg, ok := entity.(*bls.Dkg)
 	if !ok {
-		Logger.Error("invalid entity")
-		return false, nil
+		return nil, common.InvalidRequest("Invalid Entity")
 	}
 	Logger.Info("received DKG share", zap.String("share", dg.Share))
 	AppendDKGSecShares(dg.Share)
-	return true, nil
+	return nil, nil
 }
 
 /*BLSSignShareHandler - handles the bls sign share it receives from a node */

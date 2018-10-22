@@ -215,7 +215,7 @@ func initWorkers(ctx context.Context) {
 func StartProtocol(ctx context.Context) {
 	mc := miner.GetMinerChain()
 
-	miner.StartDKG(mc.Miners)
+	miner.StartDKG(ctx)
 
 	mc.Sharders.OneTimeStatusMonitor(ctx)
 	lfBlocks := mc.GetLatestFinalizedBlockFromSharder(ctx)

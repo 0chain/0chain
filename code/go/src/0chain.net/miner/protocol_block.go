@@ -37,15 +37,22 @@ func init() {
 
 /*StartRound - start a new round */
 func (mc *Chain) StartRound(ctx context.Context, r *Round) {
+	Logger.Info("Start BLS in StartRound() ", zap.Int64("round", r.Number), zap.Int64("current_round", mc.CurrentRound))
+
 	if mc.AddRound(r) != r {
 		return
 	}
+	vrfs := &round.VRFShare{}
+
 	pr := mc.GetRound(r.GetRoundNumber() - 1)
 	if pr == nil {
 		// If we don't have the prior round, and hence the prior round's random seed, we can't provide the share
+
+		//vrfs.Share = encryption.Hash("0chain")
 		return
 	}
-	vrfs := &round.VRFShare{}
+	CalcMessage(r.Round, pr)
+	//	vrfs := &round.VRFShare{}
 	vrfs.Round = r.GetRoundNumber()
 	vrfs.Share = node.Self.Node.SetIndex
 	vrfs.SetParty(node.Self.Node)

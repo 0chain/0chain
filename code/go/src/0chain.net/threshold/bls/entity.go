@@ -5,13 +5,13 @@ import (
 )
 
 type Dkg struct {
-	datastore.IDField
+	datastore.NOIDField
 	Share string `json:"share"`
 }
 
 var dkgEntityMetadata *datastore.EntityMetadataImpl
 
-func (*Dkg) GetEntityMetadata() datastore.EntityMetadata {
+func (dkg *Dkg) GetEntityMetadata() datastore.EntityMetadata {
 	return dkgEntityMetadata
 }
 

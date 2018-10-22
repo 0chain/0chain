@@ -9,8 +9,8 @@ import (
 type SimpleBLS struct {
 	t                int
 	n                int
-	msg              Message
-	sigShare         Sign
+	Msg              Message
+	SigShare         Sign
 	gpPubKey         GroupPublicKey
 	verifications    []VerificationKey
 	SecKeyShareGroup Key
@@ -21,8 +21,8 @@ func MakeSimpleBLS(dkg *BLSSimpleDKG) SimpleBLS {
 	bs := SimpleBLS{
 		t:                dkg.T,
 		n:                dkg.N,
-		msg:              " ",
-		sigShare:         Sign{},
+		Msg:              " ",
+		SigShare:         Sign{},
 		gpPubKey:         dkg.GpPubKey,
 		verifications:    nil,
 		SecKeyShareGroup: dkg.SecKeyShareGroup,
@@ -35,7 +35,7 @@ func MakeSimpleBLS(dkg *BLSSimpleDKG) SimpleBLS {
 func (bs *SimpleBLS) SignMsg() Sign {
 
 	aggSecKey := bs.SecKeyShareGroup
-	sigShare := *aggSecKey.Sign(bs.msg)
+	sigShare := *aggSecKey.Sign(bs.Msg)
 	return sigShare
 }
 

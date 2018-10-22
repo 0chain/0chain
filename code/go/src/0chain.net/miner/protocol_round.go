@@ -95,7 +95,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		return nil, common.NewError("invalid_round,", "Round not available")
 	}
 
-	Logger.Info("Start BLS", zap.Int64("round", r.Number), zap.Int64("current_round", mc.CurrentRound))
+	//Logger.Info("Start BLS", zap.Int64("round", r.Number), zap.Int64("current_round", mc.CurrentRound))
 
 	pb := mc.GetBlockToExtend(ctx, pround)
 	if pb == nil {

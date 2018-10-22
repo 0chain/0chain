@@ -3,21 +3,19 @@
 package miner
 
 import (
+	"context"
+	"encoding/binary"
 	"time"
 
 	"go.uber.org/zap"
 
-	"0chain.net/node"
 	"0chain.net/round"
 	"0chain.net/threshold/bls"
+	"0chain.net/util"
 
 	"bytes"
-	"encoding/binary"
 
-	"0chain.net/datastore"
-	"0chain.net/encryption"
 	. "0chain.net/logging"
-	"0chain.net/util"
 )
 
 //TODO: Make the values of k and n configurable
@@ -30,9 +28,10 @@ var recShares []string
 
 /* StartDKG - starts the DKG process */
 
-func StartDKG(miners *node.Pool) {
+func StartDKG(ctx context.Context) {
+	mc := GetMinerChain()
 
-	m2m := miners
+	m2m := mc.Miners
 	Logger.Info("Starting DKG...")
 
 	//TODO : Need to include check for active miners and then send the shares, have to remove sleep in future
@@ -54,7 +53,6 @@ func StartDKG(miners *node.Pool) {
 
 		dkg := &bls.Dkg{
 			Share: secShare.GetDecString()}
-		dkg.SetKey(datastore.ToKey("1"))
 		m2m.SendTo(DKGShareSender(dkg), node.ID)
 
 	}
@@ -65,9 +63,9 @@ func StartDKG(miners *node.Pool) {
 	if len(recShares) == dg.N {
 		Logger.Info("All the shares are received ...")
 		AggregateDKGSecShares(recShares)
-	}
+		Logger.Info("DKG is done :) ...")
 
-	Logger.Info("DKG is done :) ...")
+	}
 
 	//Had to introduce delay to complete the DKG before the round starts
 	time.Sleep(10 * time.Second)
@@ -104,50 +102,23 @@ func AggregateDKGSecShares(recShares []string) error {
 	return nil
 }
 
-func StartBLS(r *round.Round) {
-
+func CalcMessage(mr *round.Round, pr round.RoundI) {
 	bs = bls.MakeSimpleBLS(&dg)
-
-	//if r.Number == 1{
-	r.VRFOutput = encryption.Hash("0chain")
-	//}
-	SignMsg(r.Number, r.VRFOutput)
-}
-
-func SignMsg(rNumber int64, prevVRF string) bls.Sign {
-
 	blsMsg := bytes.NewBuffer(nil)
 
-	binary.Write(blsMsg, binary.LittleEndian, rNumber)
-	binary.Write(blsMsg, binary.LittleEndian, prevVRF)
-	msg := util.ToHex(blsMsg.Bytes())
+	binary.Write(blsMsg, binary.LittleEndian, mr.GetRoundNumber())
+	binary.Write(blsMsg, binary.LittleEndian, pr.GetVRFShares())
+	bs.Msg = util.ToHex(blsMsg.Bytes())
 
-	Logger.Info("the msg is", zap.Any("the blsMsg is ", msg))
-	aggSecKey := dg.SecKeyShareGroup
-	sigShare := *aggSecKey.Sign(msg)
-	signVerified, _ := VerifySign(sigShare, msg)
-	if signVerified {
-		Logger.Info("the sign is verified")
+	//	Logger.Info("For the round is", zap.Int64("the mr.GetRoundNumber() is ", mr.GetRoundNumber()))
+	//	Logger.Info("with the prev vrf share is", zap.Any("the pr.GetVRFShares() is ", pr.GetVRFShares()))
 
-	}
-	return sigShare
+	Logger.Info("the msg is", zap.Any("the blsMsg is ", bs.Msg))
+	Logger.Info("the aggregated sec share bls", zap.String("agg share bls", bs.SecKeyShareGroup.GetDecString()))
 
-}
+	sigShare := bs.SignMsg()
 
-/* VerifySign - Verifies the bls signature share with the committed verification vector */
-func VerifySign(sigShare bls.Sign, msg string) (bool, error) {
-	var pub bls.VerificationKey
-	err := pub.Set(dg.Vvec, &dg.ID)
-	Logger.Info("The miner ID vVec is ", zap.String("miner ID  vVecis ", dg.Vvec[0].GetHexString()))
+	bs.SigShare = sigShare
+	Logger.Info("the sig share", zap.String("bls sig share", bs.SigShare.GetHexString()))
 
-	if err != nil {
-		return false, nil
-	}
-
-	if !sigShare.Verify(&pub, msg) {
-		//Logger.Info("the sign not verified")
-
-		return false, nil
-	}
-	return true, nil
 }
