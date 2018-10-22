@@ -42,4 +42,4 @@ RUN go get gopkg.in/natefinch/lumberjack.v2
 RUN go get github.com/koding/cache
 RUN go get github.com/hashicorp/golang-lru
 
-ADD VERSION .
+ADD BASE_VERSION .

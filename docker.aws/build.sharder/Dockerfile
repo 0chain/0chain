@@ -2,6 +2,8 @@
 FROM ubuntu:16.04
 RUN groupadd -r 0chain && useradd --no-log-init -r -g 0chain 0chain
 
+ADD SHARDER_VERSION .
+
 FROM zchain_base
 
 ENV SRC_DIR=/0chain

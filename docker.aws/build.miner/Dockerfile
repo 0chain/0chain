@@ -2,7 +2,9 @@
 FROM ubuntu:16.04
 RUN groupadd -r 0chain && useradd --no-log-init -r -g 0chain 0chain
 
-FROM zchain_base
+ADD MINER_VERSION .
+
+FROM 0chain/base
 
 ENV SRC_DIR=/0chain
 ENV GOPATH=$GOPATH:$SRC_DIR/go
