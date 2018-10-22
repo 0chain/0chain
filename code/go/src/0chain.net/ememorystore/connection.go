@@ -6,7 +6,7 @@ import (
 
 	"0chain.net/common"
 	"0chain.net/datastore"
-	"github.com/tecbot/gorocksdb"
+	"github.com/0chain/gorocksdb"
 )
 
 type dbpool struct {
@@ -33,6 +33,7 @@ func CreateDB(dataDir string) (*gorocksdb.TransactionDB, error) {
 	bbto := gorocksdb.NewDefaultBlockBasedTableOptions()
 	bbto.SetBlockCache(gorocksdb.NewLRUCache(3 << 30))
 	opts := gorocksdb.NewDefaultOptions()
+	opts.SetKeepLogFileNum(5)
 	opts.SetBlockBasedTableFactory(bbto)
 	opts.SetCreateIfMissing(true)
 	tdbopts := gorocksdb.NewDefaultTransactionDBOptions()

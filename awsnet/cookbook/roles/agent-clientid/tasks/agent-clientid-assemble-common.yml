@@ -15,8 +15,11 @@
 
 - debug:
    msg: "{{nodes}}"
+   verbosity: 2
 
 - set_fact:
    iprole: "{{ iprole | default({}) | combine( {item.public_ip_address: item.tags.Name})}}"
   with_items: "{{nodes}}"
+  loop_control:
+    label: "{{item.tags.Name}} ==> {{item.public_ip_address}}"
 ...

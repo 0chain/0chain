@@ -19,7 +19,7 @@ const (
 )
 
 //FetchStrategy - when fetching an entity, the strategy to use to select the peer nodes
-var FetchStrategy = 1
+var FetchStrategy = FetchStrategyNearest
 
 //RequestEntity - request an entity
 func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, params map[string]string, handler datastore.JSONEntityReqResponderF) *Node {
@@ -47,6 +47,34 @@ func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, pa
 		}
 	}
 	return nil
+}
+
+//RequestEntityFromAll - request an entity from all the nodes
+func (np *Pool) RequestEntityFromAll(ctx context.Context, requestor EntityRequestor, params map[string]string, handler datastore.JSONEntityReqResponderF) {
+	rhandler := requestor(params, handler)
+	var nodes []*Node
+	if FetchStrategy == FetchStrategyRandom {
+		nodes = np.shuffleNodes()
+	} else {
+		nodes = np.GetNodesByLargeMessageTime()
+	}
+	for _, nd := range nodes {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+		if nd.Status == NodeStatusInactive {
+			Logger.Info("node status inactive", zap.String("node Id", nd.ID))
+			continue
+		}
+		if nd == Self.Node {
+			Logger.Info("node - self)", zap.String("node Id", nd.ID))
+			continue
+		}
+		Logger.Info("node - request sent", zap.String("to node Id", nd.ID))
+		rhandler(nd)
+	}
 }
 
 /*SetRequestHeaders - sets the send request headers*/
@@ -146,7 +174,7 @@ func validateRequest(sender *Node, r *http.Request) bool {
 }
 
 /*ToN2NSendEntityHandler - takes a handler that accepts an entity, processes and responds and converts it
-* into somethign suitable for Node 2 Node communication*/
+* into something suitable for Node 2 Node communication*/
 func ToN2NSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandlerf {
 	return func(w http.ResponseWriter, r *http.Request) {
 		nodeID := r.Header.Get(HeaderNodeID)

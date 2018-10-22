@@ -79,11 +79,8 @@ func (np *Pool) computeNodesArray() {
 /*GetActiveCount - get the active count */
 func (np *Pool) GetActiveCount() int {
 	count := 0
-	for _, node := range nodes {
-		if node == Self.Node {
-			continue
-		}
-		if node.Status == NodeStatusActive {
+	for _, node := range np.Nodes {
+		if node.IsActive() {
 			count++
 		}
 	}
@@ -115,7 +112,7 @@ func (np *Pool) GetNodesByLargeMessageTime() []*Node {
 func (np *Pool) Print(w io.Writer) {
 	nodes := np.shuffleNodes()
 	for _, node := range nodes {
-		if node.Status == NodeStatusActive {
+		if node.IsActive() {
 			node.Print(w)
 		}
 	}

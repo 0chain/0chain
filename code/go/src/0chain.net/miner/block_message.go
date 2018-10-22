@@ -3,6 +3,8 @@ package miner
 import (
 	"time"
 
+	"0chain.net/round"
+
 	"0chain.net/block"
 	"0chain.net/chain"
 	"0chain.net/common"
@@ -10,11 +12,11 @@ import (
 )
 
 const (
-	MessageStartRound         = 0
-	MessageVerify             = 1
-	MessageVerificationTicket = 2
-	MessageNotarization       = 3
-	MessageNotarizedBlock     = 4
+	MessageVRFShare           = 0
+	MessageVerify             = iota
+	MessageVerificationTicket = iota
+	MessageNotarization       = iota
+	MessageNotarizedBlock     = iota
 )
 
 /*BlockMessage - Used for the various messages that need to be handled to generate a block */
@@ -27,6 +29,7 @@ type BlockMessage struct {
 	Notarization            *Notarization
 	Timestamp               time.Time
 	RetryCount              int8
+	VRFShare                *round.VRFShare
 }
 
 /*NewBlockMessage - create a new block message */
@@ -40,7 +43,7 @@ func NewBlockMessage(messageType int, sender *node.Node, round *Round, block *bl
 	return bm
 }
 
-var messageLookups = common.CreateLookups("start_round", "Start Round", "verify_block", "Verify Block", "verification_ticket", "Verification Ticket", "notarization", "Notarization", "notarized_block", "Notarized Block")
+var messageLookups = common.CreateLookups("vrf_share", "VRF Share", "verify_block", "Verify Block", "verification_ticket", "Verification Ticket", "notarization", "Notarization", "notarized_block", "Notarized Block")
 
 /*GetMessageLookup - get the message type lookup */
 func GetMessageLookup(msgType int) *common.Lookup {

@@ -10,6 +10,7 @@ import (
 	"0chain.net/chain"
 	"0chain.net/config"
 	"0chain.net/memorystore"
+	"0chain.net/round"
 	"0chain.net/util"
 
 	"0chain.net/block"
@@ -36,7 +37,21 @@ func init() {
 
 /*StartRound - start a new round */
 func (mc *Chain) StartRound(ctx context.Context, r *Round) {
-	mc.AddRound(r)
+	if mc.AddRound(r) != r {
+		return
+	}
+	pr := mc.GetRound(r.GetRoundNumber() - 1)
+	if pr == nil {
+		// If we don't have the prior round, and hence the prior round's random seed, we can't provide the share
+		return
+	}
+	vrfs := &round.VRFShare{}
+	vrfs.Round = r.GetRoundNumber()
+	vrfs.Share = node.Self.Node.SetIndex
+	vrfs.SetParty(node.Self.Node)
+	if mc.AddVRFShare(ctx, r, vrfs) {
+		go mc.SendVRFShare(ctx, vrfs)
+	}
 }
 
 /*GenerateBlock - This works on generating a block
@@ -101,17 +116,6 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		clients[txn.ClientID] = nil
 		idx++
 
-		childTxns := txn.GenerateChildTransactions(ctx)
-		if childTxns != nil {
-			for _, ctxn := range childTxns {
-				b.Txns[idx] = ctxn
-				etxns[idx] = ctxn
-				b.AddTransaction(ctxn)
-				clients[ctxn.ClientID] = nil
-				idx++
-			}
-		}
-
 		if idx >= mc.BlockSize {
 			return false
 		}
@@ -169,7 +173,6 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	Logger.Debug("generate block (assemble+update)", zap.Int64("round", b.Round), zap.Duration("time", time.Since(start)))
 
 	self := node.GetSelfNode(ctx)
-	b.MinerID = self.ID
 	b.HashBlock()
 	b.Signature, err = self.Sign(b.Hash)
 	if err != nil {
@@ -254,6 +257,12 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 				validChannel <- false
 				return
 			}
+			if txn.OutputHash == "" {
+				cancel = true
+				Logger.Error("validate transactions - no output hash", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.String("txn", datastore.ToJSON(txn).String()))
+				validChannel <- false
+				return
+			}
 			err := txn.Validate(ctx)
 			if err != nil {
 				cancel = true
@@ -333,6 +342,7 @@ func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) erro
 func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (*block.BlockVerificationTicket, error) {
 	var bvt = &block.BlockVerificationTicket{}
 	bvt.BlockID = b.Hash
+	bvt.Round = b.Round
 	self := node.GetSelfNode(ctx)
 	var err error
 	bvt.VerifierID = self.GetKey()
@@ -343,14 +353,9 @@ func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (*block.BlockVer
 	return bvt, nil
 }
 
-/*AddVerificationTicket - add a verified ticket to the list of verification tickets of the block */
-func (mc *Chain) AddVerificationTicket(ctx context.Context, b *block.Block, bvt *block.VerificationTicket) bool {
-	return b.AddVerificationTicket(bvt)
-}
-
 /*UpdateFinalizedBlock - update the latest finalized block */
 func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
-	Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round), zap.Int64("current_round", mc.CurrentRound), zap.Float64("weight", b.Weight()), zap.Float64("chain_weight", b.ChainWeight), zap.Int("blocks_size", len(mc.Blocks)), zap.Int("rounds_size", len(mc.rounds)))
+	Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round), zap.Int64("current_round", mc.CurrentRound), zap.Float64("weight", b.Weight()), zap.Float64("chain_weight", b.ChainWeight), zap.Int("rounds_size", len(mc.rounds)))
 	if config.Development() {
 		for _, t := range b.Txns {
 			if !t.DebugTxn() {
@@ -364,8 +369,8 @@ func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	fr := mc.GetRound(b.Round)
 	if fr != nil {
 		fr.Finalize(b)
-		mc.DeleteRoundsBelow(ctx, fr.Number)
 	}
+	mc.DeleteRoundsBelow(ctx, b.Round)
 }
 
 /*FinalizeBlock - finalize the transactions in the block */

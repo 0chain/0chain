@@ -3,6 +3,7 @@ package persistencestore
 import (
 	"context"
 	"os"
+	"sync"
 	"time"
 
 	"0chain.net/common"
@@ -15,39 +16,60 @@ import (
 //KeySpace - the keyspace usef for the 0chain data
 var KeySpace = "zerochain"
 
+//ClusterName - name of the cluster used for cassandra or compatible service
+var ClusterName = "cassandra"
+
+func init() {
+	cname := os.Getenv("CASSANDRA_CLUSTER")
+	if cname != "" {
+		ClusterName = cname
+	}
+}
+
+var mutex = &sync.Mutex{}
+
 // Session holds our connection to Cassandra
 var Session *gocql.Session
 
 /*InitSession - initialize a storage session */
 func InitSession() {
+	err := initSession(time.Second, 0)
+	if Session == nil {
+		panic(err)
+	}
+}
+
+func initSession(delay time.Duration, maxTries int) error {
+	mutex.Lock()
+	defer mutex.Unlock()
 	var err error
 	var cluster *gocql.ClusterConfig
 	if os.Getenv("DOCKER") != "" {
-		cluster = gocql.NewCluster("cassandra")
+		cluster = gocql.NewCluster(ClusterName)
 	} else {
 		cluster = gocql.NewCluster("127.0.0.1")
 	}
+
+	// Setting the following for now because of https://github.com/gocql/gocql/issues/1200
+	cluster.WriteCoalesceWaitTime = 0
 
 	// This reduces the time to create the session from 9+ seconds to 5 seconds when running the tests.
 	//cluster.DisableInitialHostLookup = true
 
 	cluster.Keyspace = KeySpace
-	delay := time.Second
 	// We need to keep waiting till whatever time it takes for cassandra to come up and running that includes data operations which takes longer with growing data
-	for tries := 0; true; tries++ {
+	for tries := 0; maxTries <= 0 || tries <= maxTries; tries++ {
 		start := time.Now()
 		Session, err = cluster.CreateSession()
 		Logger.Info("time to creation cassandra session", zap.Any("duration", time.Since(start)))
 		if err != nil {
-			Logger.Error("error creating session", zap.Any("retry", tries))
+			Logger.Error("error creating session", zap.Any("retry", tries), zap.Error(err))
 			time.Sleep(delay)
 		} else {
-			break
+			return nil
 		}
 	}
-	if Session == nil {
-		panic(err)
-	}
+	return err
 }
 
 /*GetConnection - returns a connection from the Pool
@@ -84,5 +106,10 @@ func WithEntityConnection(ctx context.Context, entityMetadata datastore.EntityMe
 
 /*Close - close all the connections in the context */
 func Close(ctx context.Context) {
-	// TODO: Is this just a NOOP or anything required?
+	mutex.Lock()
+	defer mutex.Unlock()
+	con := GetCon(ctx)
+	if con != Session {
+		con.Close()
+	}
 }

@@ -2,11 +2,16 @@ package wallet
 
 import (
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"testing"
 	"time"
 
+	"0chain.net/common"
+	"0chain.net/memorystore"
+	"0chain.net/node"
 	"0chain.net/state"
+	"0chain.net/transaction"
 
 	"0chain.net/util"
 )
@@ -22,59 +27,79 @@ const (
 	LEVEL   = 3
 )
 
-func TestMPTWithWalletTxns(t *testing.T) {
-	clients := 1000
-	transactions := 10000
+func init() {
 	var rs = rand.NewSource(randTime)
 	prng = rand.New(rs)
-	wallets := createWallets(clients)
-	prng = rand.New(rs)
-	fmt.Printf("using in no db\n")
-	testWithMPT(nil, wallets, transactions)
-	prng = rand.New(rs)
-	fmt.Printf("using in memory db\n")
-	testWithMPT(GetMPT(MEMORY), wallets, transactions)
-	prng = rand.New(rs)
-	fmt.Printf("using level db\n")
-	lmpt := GetMPT(LEVEL)
-	testWithMPT(lmpt, wallets, transactions)
-	pmpt := GetMPT(PERSIST)
-	ts := time.Now()
-	lmpt.GetChangeCollector().UpdateChanges(pmpt.GetNodeDB(), util.Origin(2010), false)
-	fmt.Printf("time taken to persist: %v\n", time.Since(ts))
+}
+
+func TestMPTWithWalletTxns(t *testing.T) {
+	var rs = rand.NewSource(randTime)
+	transactions := 0
+	var wallets []*Wallet
+	pmpt := GetMPT(PERSIST, util.Sequence(2010))
+	start := 10
+	end := 10
+
+	for clients := start; clients <= end; clients *= 10 {
+		//clients := 1000
+		prng = rand.New(rs)
+		wallets = createWallets(clients)
+		/*
+			prng = rand.New(rs)
+			fmt.Printf("using in no db\n")
+			generateTransactions(nil, wallets, transactions)
+		*/
+		/*
+			prng = rand.New(rs)
+			fmt.Printf("using in memory db\n")
+			generateTransactions(GetMPT(MEMORY), wallets,transactions)
+		*/
+		prng = rand.New(rs)
+		fmt.Printf("using level db\n")
+		lmpt := GetMPT(LEVEL, util.Sequence(2010))
+		saveWallets(lmpt, wallets)
+		verifyBalance(lmpt, wallets)
+		lmpt.SaveChanges(pmpt.GetNodeDB(), false)
+		(lmpt.GetNodeDB().(*util.LevelNodeDB)).RebaseCurrentDB(pmpt.GetNodeDB())
+
+		lmpt.ResetChangeCollector(nil)
+		generateTransactions(lmpt, wallets, transactions)
+		verifyBalance(lmpt, wallets)
+		ts := time.Now()
+		lmpt.SaveChanges(pmpt.GetNodeDB(), false)
+		fmt.Printf("time taken to persist: %v\n", time.Since(ts))
+	}
 	/*
 		prng = rand.New(rs)
 		fmt.Printf("using persist db\n")
-		testWithMPT(pmpt, wallets, transactions)
+		testWithMPT(pmpt, wallets, transactions,false)
 	*/
 }
 
-func GetMPT(dbType int) util.MerklePatriciaTrieI {
+func GetMPT(dbType int, version util.Sequence) util.MerklePatriciaTrieI {
 	var mpt util.MerklePatriciaTrieI
 
 	switch dbType {
 	case MEMORY:
 		mndb := util.NewMemoryNodeDB()
-		mpt = util.NewMerklePatriciaTrie(mndb)
+		mpt = util.NewMerklePatriciaTrie(mndb, version)
 	case PERSIST:
-		pndb, err := util.NewPNodeDB("/tmp/mpt")
+		pndb, err := util.NewPNodeDB("/tmp/mpt", "/tmp/mpt/log")
 		if err != nil {
 			panic(err)
 		}
-		mpt = util.NewMerklePatriciaTrie(pndb)
+		mpt = util.NewMerklePatriciaTrie(pndb, version)
 	case LEVEL:
 		mndb := util.NewMemoryNodeDB()
 		pndb := util.NewMemoryNodeDB()
 		lndb := util.NewLevelNodeDB(mndb, pndb, false)
-		mpt = util.NewMerklePatriciaTrie(lndb)
+		mpt = util.NewMerklePatriciaTrie(lndb, version)
 	}
 	return mpt
 }
 
-func testWithMPT(mpt util.MerklePatriciaTrieI, wallets []*Wallet, transactions int) {
-	if debug {
-		fmt.Printf("INFO: random source seed %d\n", randTime)
-	}
+func saveWallets(mpt util.MerklePatriciaTrieI, wallets []*Wallet) {
+	fmt.Printf("number of clients: %v\n", len(wallets))
 	if mpt != nil {
 		for idx, w := range wallets {
 			balance := state.Balance(w.Balance)
@@ -88,13 +113,12 @@ func testWithMPT(mpt util.MerklePatriciaTrieI, wallets []*Wallet, transactions i
 			}
 		}
 	}
-	if mpt != nil {
-		fmt.Printf("wallet creation - num changes: %v\n", len(mpt.GetChangeCollector().GetChanges()))
+}
+
+func generateTransactions(mpt util.MerklePatriciaTrieI, wallets []*Wallet, transactions int) {
+	if debug {
+		fmt.Printf("INFO: random source seed %d\n", randTime)
 	}
-	if transactions == 0 {
-		return
-	}
-	//mpt.ResetChangeCollector(nil)
 	ts := time.Now()
 	for count := 1; count <= transactions; count++ {
 		var wf, wt *Wallet
@@ -149,6 +173,10 @@ func testWithMPT(mpt util.MerklePatriciaTrieI, wallets []*Wallet, transactions i
 	if mpt == nil {
 		return
 	}
+}
+
+func verifyBalance(mpt util.MerklePatriciaTrieI, wallets []*Wallet) {
+	fmt.Printf("verifying balance\n")
 	zbcount := 0
 	for index := 0; index < len(wallets); index++ {
 		w := wallets[index]
@@ -189,9 +217,40 @@ func getState(mpt util.MerklePatriciaTrieI, clientID string) (*state.State, erro
 		if err != util.ErrValueNotPresent {
 			return nil, err
 		}
+		return s, err
 	} else {
 		deserializer := &state.Deserializer{}
 		s = deserializer.Deserialize(ss).(*state.State)
 	}
 	return s, nil
+}
+
+//TestGenerateCompressionTrainingData - generate the training data for compression
+func TestGenerateCompressionTrainingData(t *testing.T) {
+	common.SetupRootContext(node.GetNodeContext())
+	transaction.SetupEntity(memorystore.GetStorageProvider())
+	SetupWallet()
+	numClients := 1000
+	numTxns := 1000
+	wallets := createWallets(numClients)
+	for count := 1; count <= numTxns; count++ {
+		var wf, wt *Wallet
+		csize := len(wallets)
+		for true {
+			wf = wallets[prng.Intn(csize)]
+			if wf.Balance == 0 {
+				continue
+			}
+			wt = wallets[prng.Intn(csize)]
+			if wf != wt {
+				break
+			}
+		}
+		value := prng.Int63n(wf.Balance) + 1
+		wf.Balance -= value
+		wt.Balance += value
+		txn := wf.CreateSendTransaction(wt.ClientID, value, "")
+		data := common.ToMsgpack(txn)
+		ioutil.WriteFile(fmt.Sprintf("/tmp/txn/data/%v.json", txn.Hash), data.Bytes(), 0644)
+	}
 }

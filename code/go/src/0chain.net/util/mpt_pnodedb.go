@@ -5,7 +5,7 @@ import (
 	"context"
 
 	. "0chain.net/logging"
-	"github.com/tecbot/gorocksdb"
+	"github.com/0chain/gorocksdb"
 	"go.uber.org/zap"
 )
 
@@ -20,15 +20,17 @@ type PNodeDB struct {
 }
 
 /*NewPNodeDB - create a new PNodeDB */
-func NewPNodeDB(dataDir string) (*PNodeDB, error) {
+func NewPNodeDB(dataDir string, logDir string) (*PNodeDB, error) {
 	opts := gorocksdb.NewDefaultOptions()
 	opts.SetCreateIfMissing(true)
+	opts.SetCompression(gorocksdb.LZ4Compression)
 	/* SetHashSkipListRep + OptimizeForPointLookup seems to be corrupting when pruning
 	opts.SetHashSkipListRep(1000000, 4, 4)
 	opts.SetAllowConcurrentMemtableWrites(false)
 	*/
 	opts.OptimizeForPointLookup(64)
-	opts.SetCompression(gorocksdb.LZ4Compression)
+	opts.IncreaseParallelism(2) // pruning and saving happen in parallel
+	opts.SetDbLogDir(logDir)
 	db, err := gorocksdb.OpenDb(opts, dataDir)
 	if err != nil {
 		return nil, err
@@ -127,17 +129,16 @@ func (pndb *PNodeDB) Flush() {
 	pndb.db.Flush(pndb.fo)
 }
 
-/*PruneBelowOrigin - prune the state below the given origin */
-func (pndb *PNodeDB) PruneBelowOrigin(ctx context.Context, origin Origin) error {
-	BatchSize := 64
+/*PruneBelowVersion - prune the state below the given origin */
+func (pndb *PNodeDB) PruneBelowVersion(ctx context.Context, version Sequence) error {
 	ps := GetPruneStats(ctx)
 	var total int64
 	var count int64
 	var leaves int64
-	batch := make([]Key, BatchSize)
+	batch := make([]Key, 0, BatchSize)
 	handler := func(ctx context.Context, key Key, node Node) error {
 		total++
-		if node.GetOrigin() >= origin {
+		if node.GetVersion() >= version {
 			if _, ok := node.(*LeafNode); ok {
 				leaves++
 			}
@@ -151,7 +152,7 @@ func (pndb *PNodeDB) PruneBelowOrigin(ctx context.Context, origin Origin) error 
 			err := pndb.MultiDeleteNode(batch)
 			batch = batch[:0]
 			if err != nil {
-				Logger.Error("prune below origin - error deleting node", zap.String("key", ToHex(key)), zap.Any("old_origin", node.GetOrigin()), zap.Any("new_origin", origin), zap.Error(err))
+				Logger.Error("prune below origin - error deleting node", zap.String("key", ToHex(key)), zap.Any("old_version", node.GetVersion()), zap.Any("new_version", version), zap.Error(err))
 				return err
 			}
 		}
@@ -164,7 +165,7 @@ func (pndb *PNodeDB) PruneBelowOrigin(ctx context.Context, origin Origin) error 
 	if len(batch) > 0 {
 		err := pndb.MultiDeleteNode(batch)
 		if err != nil {
-			Logger.Error("prune below origin - error deleting node", zap.Any("new_origin", origin), zap.Error(err))
+			Logger.Error("prune below origin - error deleting node", zap.Any("new_version", version), zap.Error(err))
 			return err
 		}
 	}

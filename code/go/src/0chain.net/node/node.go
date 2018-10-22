@@ -1,6 +1,7 @@
 package node
 
 import (
+	"encoding/hex"
 	"fmt"
 	"io"
 	"math"
@@ -15,6 +16,7 @@ import (
 	"0chain.net/datastore"
 	"0chain.net/encryption"
 	metrics "github.com/rcrowley/go-metrics"
+	"github.com/spf13/viper"
 )
 
 var nodes = make(map[string]*Node)
@@ -70,11 +72,16 @@ type Node struct {
 	Received   int64 // messages received from this node
 
 	TimersByURI map[string]metrics.Timer
+	SizeByURI   map[string]metrics.Histogram
 
 	LargeMessageSendTime float32
 	SmallMessageSendTime float32
 
 	mutex *sync.Mutex
+
+	ProtocolStats interface{}
+
+	idBytes []byte
 }
 
 /*Provider - create a node object */
@@ -88,6 +95,7 @@ func Provider() *Node {
 	}
 	node.mutex = &sync.Mutex{}
 	node.TimersByURI = make(map[string]metrics.Timer, 10)
+	node.SizeByURI = make(map[string]metrics.Histogram, 10)
 	return node
 }
 
@@ -138,7 +146,7 @@ func Read(line string) (*Node, error) {
 		return nil, err
 	}
 	node.Port = int(port)
-	node.ID = fields[3]
+	node.SetID(fields[3])
 	node.PublicKey = fields[4]
 	node.Client.SetPublicKey(node.PublicKey)
 	hash := encryption.Hash(node.PublicKeyBytes)
@@ -147,7 +155,7 @@ func Read(line string) (*Node, error) {
 	}
 	node.ComputeProperties()
 	if Self.PublicKey == node.PublicKey {
-		Self.Node = node
+		setSelfNode(node)
 	}
 	return node, nil
 }
@@ -159,7 +167,7 @@ func NewNode(nc map[interface{}]interface{}) (*Node, error) {
 	node.Host = nc["public_ip"].(string)
 	node.N2NHost = nc["n2n_ip"].(string)
 	node.Port = nc["port"].(int)
-	node.ID = nc["id"].(string)
+	node.SetID(nc["id"].(string))
 	node.PublicKey = nc["public_key"].(string)
 	if description, ok := nc["description"]; ok {
 		node.Description = description.(string)
@@ -172,9 +180,14 @@ func NewNode(nc map[interface{}]interface{}) (*Node, error) {
 	}
 	node.ComputeProperties()
 	if Self.PublicKey == node.PublicKey {
-		Self.Node = node
+		setSelfNode(node)
 	}
 	return node, nil
+}
+
+func setSelfNode(n *Node) {
+	Self.Node = n
+	Self.Node.Status = NodeStatusActive
 }
 
 /*ComputeProperties - implement entity interface */
@@ -230,15 +243,31 @@ func (n *Node) GetTimer(uri string) metrics.Timer {
 	defer n.mutex.Unlock()
 	timer, ok := n.TimersByURI[uri]
 	if !ok {
-		timerID := fmt.Sprintf("%v.%v", n.ID, uri)
+		timerID := fmt.Sprintf("%v.%v.time", n.ID, uri)
 		timer = metrics.GetOrRegisterTimer(timerID, nil)
 		n.TimersByURI[uri] = timer
 	}
 	return timer
 }
 
+//GetSizeMetric - get the size metric
+func (n *Node) GetSizeMetric(uri string) metrics.Histogram {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+	metric, ok := n.SizeByURI[uri]
+	if !ok {
+		metricID := fmt.Sprintf("%v.%v.size", n.ID, uri)
+		metric = metrics.NewHistogram(metrics.NewUniformSample(256))
+		n.SizeByURI[uri] = metric
+		metrics.Register(metricID, metric)
+	}
+	return metric
+}
+
 /*GetMaxMessageCount - get max messages count */
 func (n *Node) GetMaxMessageCount() int64 {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
 	var count int64
 	for _, timer := range n.TimersByURI {
 		c := timer.Count()
@@ -280,4 +309,27 @@ func (n *Node) updateMessageTimings() {
 	}
 	n.LargeMessageSendTime = maxval
 	n.SmallMessageSendTime = minval
+}
+
+//ReadConfig - read configuration from the default config
+func ReadConfig() {
+	SetTimeoutSmallMessage(viper.GetDuration("network.timeout.small_message") * time.Millisecond)
+	SetTimeoutLargeMessage(viper.GetDuration("network.timeout.large_message") * time.Millisecond)
+	SetMaxConcurrentRequests(viper.GetInt("network.max_concurrent_requests"))
+}
+
+//SetID - set the id of the node
+func (n *Node) SetID(id string) error {
+	n.ID = id
+	bytes, err := hex.DecodeString(id)
+	if err != nil {
+		return err
+	}
+	n.idBytes = bytes
+	return nil
+}
+
+//IsActive - returns if this node is active or not
+func (n *Node) IsActive() bool {
+	return n.Status == NodeStatusActive
 }

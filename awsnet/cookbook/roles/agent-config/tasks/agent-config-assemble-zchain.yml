@@ -1,6 +1,0 @@
----
-- name: "Transport config file to the respective machines...{{aws_key_pair_file}}"
-  synchronize:
-    src: "{{zchain_config.dir.local}}/{{zchain_config.file}}"
-    dest: "{{zchain_config.dir.zchain}}/{{zchain_config.file}}"
-...

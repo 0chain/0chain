@@ -3,7 +3,6 @@ package block
 import (
 	"context"
 	"fmt"
-	"sort"
 	"strconv"
 	"sync"
 
@@ -44,9 +43,9 @@ type UnverifiedBlockBody struct {
 	datastore.VersionField
 	datastore.CreationDateField
 
-	MagicBlockHash              string                `json:"magic_block_hash"`
-	PrevHash                    string                `json:"prev_hash"`
-	PrevBlockVerficationTickets []*VerificationTicket `json:"prev_verification_tickets,omitempty"`
+	MagicBlockHash               string                `json:"magic_block_hash"`
+	PrevHash                     string                `json:"prev_hash"`
+	PrevBlockVerificationTickets []*VerificationTicket `json:"prev_verification_tickets,omitempty"`
 
 	MinerID         datastore.Key `json:"miner_id"`
 	Round           int64         `json:"round"`
@@ -73,10 +72,12 @@ type Block struct {
 
 	TxnsMap map[string]bool `json:"-"`
 
-	ClientState util.MerklePatriciaTrieI `json:"-"`
-	stateStatus int8
-	StateMutex  *sync.Mutex
-	blockState  int8
+	ClientState  util.MerklePatriciaTrieI `json:"-"`
+	stateStatus  int8
+	StateMutex   *sync.Mutex `json:"_"`
+	blockState   int8
+	isNotarized  bool
+	ticketsMutex *sync.Mutex
 }
 
 var blockEntityMetadata *datastore.EntityMetadataImpl
@@ -157,10 +158,10 @@ func (b *Block) Delete(ctx context.Context) error {
 func Provider() datastore.Entity {
 	b := &Block{}
 	b.Version = "1.0"
-	b.PrevBlockVerficationTickets = make([]*VerificationTicket, 0, 1)
 	b.ChainID = datastore.ToKey(config.GetServerChainID())
 	b.InitializeCreationDate()
 	b.StateMutex = &sync.Mutex{}
+	b.ticketsMutex = &sync.Mutex{}
 	return b
 }
 
@@ -180,8 +181,8 @@ func (b *Block) SetPreviousBlock(prevBlock *Block) {
 	b.PrevBlock = prevBlock
 	b.PrevHash = prevBlock.Hash
 	b.Round = prevBlock.Round + 1
-	if len(b.PrevBlockVerficationTickets) == 0 {
-		b.PrevBlockVerficationTickets = prevBlock.VerificationTickets
+	if len(b.PrevBlockVerificationTickets) == 0 {
+		b.PrevBlockVerificationTickets = prevBlock.VerificationTickets
 	}
 }
 
@@ -202,65 +203,55 @@ func (b *Block) SetStateDB(prevBlock *Block) {
 	Logger.Debug("prev state root", zap.Int64("round", b.Round), zap.String("prev_block", prevBlock.Hash), zap.String("root", util.ToHex(rootHash)))
 	mndb := util.NewMemoryNodeDB()
 	ndb := util.NewLevelNodeDB(mndb, pndb, false)
-	b.ClientState = util.NewMerklePatriciaTrie(ndb)
+	b.ClientState = util.NewMerklePatriciaTrie(ndb, util.Sequence(b.Round))
 	b.ClientState.SetRoot(rootHash)
 }
 
 /*AddTransaction - add a transaction to the block */
 func (b *Block) AddTransaction(t *transaction.Transaction) {
-	// For now this does nothing. May be we don't need. Txn can't influence the weight of the block,
-	// or else, everyone will try to maximize the block which is not good
+	t.OutputHash = t.ComputeOutputHash()
 }
 
-/*AddVerificationTicket - Add a verification ticket to a block
-*Assuming this is done single-threaded at least per block
-*It's the callers responsibility to decide what to do if this operation is successful
-*  - the miner of the block for example will decide if the notarization is received and send it off to others
- */
+/*AddVerificationTicket - Add a verification ticket to a block if it's not already present */
 func (b *Block) AddVerificationTicket(vt *VerificationTicket) bool {
-	if b.VerificationTickets != nil {
-		for _, ivt := range b.VerificationTickets {
-			if datastore.IsEqual(vt.VerifierID, ivt.VerifierID) {
-				return false
-			}
+	b.ticketsMutex.Lock()
+	defer b.ticketsMutex.Unlock()
+	bvt := b.VerificationTickets
+	for _, t := range bvt {
+		if datastore.IsEqual(vt.VerifierID, t.VerifierID) {
+			return false
 		}
 	}
-	if b.VerificationTickets == nil {
-		b.VerificationTickets = make([]*VerificationTicket, 0, 1)
-	}
-	b.VerificationTickets = append(b.VerificationTickets, vt)
+	bvt = append(bvt, vt)
+	b.VerificationTickets = bvt
 	return true
 }
 
 /*MergeVerificationTickets - merge the verification tickets with what's already there */
 func (b *Block) MergeVerificationTickets(vts []*VerificationTicket) {
-	if b.VerificationTickets == nil || len(b.VerificationTickets) == 0 {
-		b.VerificationTickets = vts
-		return
-	}
-	tickets, blockTickets := vts, b.VerificationTickets
-	if len(blockTickets) > len(tickets) {
-		tickets, blockTickets = blockTickets, tickets
-	}
-
-	sort.Slice(tickets, func(i, j int) bool { return tickets[i].VerifierID < tickets[j].VerifierID })
-	ticketsLen := len(tickets)
-	for _, ticket := range blockTickets {
-		ticketIndex := sort.Search(ticketsLen, func(i int) bool { return tickets[i].VerifierID >= ticket.VerifierID })
-		if ticketIndex < ticketsLen && ticket.VerifierID == tickets[ticketIndex].VerifierID { // present in both
-			continue
+	unionVerificationTickets := func(tickets1 []*VerificationTicket, tickets2 []*VerificationTicket) []*VerificationTicket {
+		if len(tickets1) == 0 {
+			return tickets2
 		}
-		tickets = append(tickets, ticket)
+		if len(tickets2) == 0 {
+			return tickets1
+		}
+		ticketsMap := make(map[string]*VerificationTicket, len(tickets1)+len(tickets2))
+		for _, t := range tickets1 {
+			ticketsMap[t.VerifierID] = t
+		}
+		for _, t := range tickets2 {
+			ticketsMap[t.VerifierID] = t
+		}
+		utickets := make([]*VerificationTicket, 0, len(ticketsMap))
+		for _, v := range ticketsMap {
+			utickets = append(utickets, v)
+		}
+		return utickets
 	}
-	b.VerificationTickets = tickets
-}
-
-/*GetVerificationTicketsCount - get the number of verification tickets for the block */
-func (b *Block) GetVerificationTicketsCount() int {
-	if b.VerificationTickets == nil {
-		return 0
-	}
-	return len(b.VerificationTickets)
+	b.ticketsMutex.Lock()
+	defer b.ticketsMutex.Unlock()
+	b.VerificationTickets = unionVerificationTickets(b.VerificationTickets, vts)
 }
 
 /*GetMerkleTree - return the merkle tree of this block using the transactions as leaf nodes */
@@ -277,7 +268,9 @@ func (b *Block) GetMerkleTree() *util.MerkleTree {
 func (b *Block) getHashData() string {
 	mt := b.GetMerkleTree()
 	merkleRoot := mt.GetRoot()
-	hashData := common.TimeToString(b.CreationDate) + ":" + strconv.FormatInt(b.Round, 10) + ":" + strconv.FormatInt(b.RoundRandomSeed, 10) + ":" + merkleRoot + ":" + b.PrevHash
+	rmt := b.GetReceiptsMerkleTree()
+	rMerkleRoot := rmt.GetRoot()
+	hashData := b.PrevHash + ":" + common.TimeToString(b.CreationDate) + ":" + strconv.FormatInt(b.Round, 10) + ":" + strconv.FormatInt(b.RoundRandomSeed, 10) + ":" + merkleRoot + ":" + rMerkleRoot
 	return hashData
 }
 
@@ -317,6 +310,7 @@ func (b *Block) GetSummary() *BlockSummary {
 	bs.CreationDate = b.CreationDate
 	bs.MerkleTreeRoot = b.GetMerkleTree().GetRoot()
 	bs.ClientStateHash = b.ClientStateHash
+	bs.ReceiptMerkleTreeRoot = b.GetReceiptsMerkleTree().GetRoot()
 	return bs
 }
 
@@ -341,11 +335,6 @@ func (b *Block) ComputeChainWeight() {
 /*Clear - clear the block */
 func (b *Block) Clear() {
 	b.PrevBlock = nil
-	b.PrevBlockVerficationTickets = nil
-	b.VerificationTickets = nil
-	b.Txns = nil
-	b.TxnsMap = nil
-	b.StateMutex = nil
 }
 
 /*SetBlockState - set the state of the block */
@@ -405,4 +394,35 @@ func (b *Block) IsStateComputed() bool {
 /*SetStateStatus - set if the client state is computed or not for the block */
 func (b *Block) SetStateStatus(status int8) {
 	b.stateStatus = status
+}
+
+/*GetReceiptsMerkleTree - return the merkle tree of this block using the transactions as leaf nodes */
+func (b *Block) GetReceiptsMerkleTree() *util.MerkleTree {
+	var hashables = make([]util.Hashable, len(b.Txns))
+	for idx, txn := range b.Txns {
+		hashables[idx] = transaction.NewTransactionReceipt(txn)
+	}
+	var mt util.MerkleTree
+	mt.ComputeTree(hashables)
+	return &mt
+}
+
+//GetTransaction - get the transaction from the block
+func (b *Block) GetTransaction(hash string) *transaction.Transaction {
+	for _, txn := range b.Txns {
+		if txn.GetKey() == hash {
+			return txn
+		}
+	}
+	return nil
+}
+
+//SetBlockNotarized - set the block as notarized
+func (b *Block) SetBlockNotarized() {
+	b.isNotarized = true
+}
+
+//IsBlockNotarized - is block notarized?
+func (b *Block) IsBlockNotarized() bool {
+	return b.isNotarized
 }

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"net"
 	"net/http"
 	"time"
 
@@ -11,13 +12,34 @@ import (
 	"0chain.net/config"
 	"0chain.net/datastore"
 	. "0chain.net/logging"
-	"github.com/golang/snappy"
 	"go.uber.org/zap"
 )
 
+var (
+	TimeoutSmallMessage = 1000 * time.Millisecond
+	TimeoutLargeMessage = 3000 * time.Millisecond
+)
+
+var compDecomp common.CompDe
+
+func init() {
+	//compDecomp = common.NewSnappyCompDe()
+	compDecomp = common.NewZStdCompDe()
+}
+
+//SetTimeoutSmallMessage - set the timeout for small message
+func SetTimeoutSmallMessage(ts time.Duration) {
+	TimeoutSmallMessage = ts
+}
+
+//SetTimeoutLargeMessage - set the timeout for large message
+func SetTimeoutLargeMessage(ts time.Duration) {
+	TimeoutLargeMessage = ts
+}
+
 /*SetupN2NHandlers - Setup all the node 2 node communiations*/
 func SetupN2NHandlers() {
-	http.HandleFunc("/v1/_n2n/entity/post", ToN2NReceiveEntityHandler(datastore.PrintEntityHandler))
+	http.HandleFunc("/v1/_n2n/entity/post", ToN2NReceiveEntityHandler(datastore.PrintEntityHandler, nil))
 }
 
 var (
@@ -58,11 +80,35 @@ type SendOptions struct {
 	CODEC              int
 }
 
+/*MessageFilterI - tells wether the given message should be processed or not
+* This will be useful since if for example a notarized block is received multiple times
+* the cost of decoding and decompressing can be avoided */
+type MessageFilterI interface {
+	Accept(entityName string, entityID string) bool
+}
+
+/*ReceiveOptions - options to tune how the messages are received within the network */
+type ReceiveOptions struct {
+	MessageFilter MessageFilterI
+}
+
 var transport *http.Transport
 var httpClient *http.Client
 
 func init() {
-	transport = &http.Transport{MaxIdleConnsPerHost: 5}
+	transport = &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+			DualStack: true,
+		}).DialContext,
+		MaxIdleConns:          1000,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		MaxIdleConnsPerHost:   5,
+	}
 	httpClient = &http.Client{Transport: transport}
 }
 
@@ -95,7 +141,7 @@ func getRequestEntity(r *http.Request, entityMetadata datastore.EntityMetadata) 
 	if r.Header.Get("Content-Encoding") == "snappy" {
 		cbuffer := new(bytes.Buffer)
 		cbuffer.ReadFrom(r.Body)
-		cbytes, err := snappy.Decode(nil, cbuffer.Bytes())
+		cbytes, err := compDecomp.Decompress(cbuffer.Bytes())
 		if err != nil {
 			N2n.Error("snappy decoding", zap.Any("error", err))
 			return nil, err
@@ -111,7 +157,7 @@ func getResponseEntity(r *http.Response, entityMetadata datastore.EntityMetadata
 	if r.Header.Get("Content-Encoding") == "snappy" {
 		cbuffer := new(bytes.Buffer)
 		cbuffer.ReadFrom(r.Body)
-		cbytes, err := snappy.Decode(nil, cbuffer.Bytes())
+		cbytes, err := compDecomp.Decompress(cbuffer.Bytes())
 		if err != nil {
 			N2n.Error("snappy decoding", zap.Any("error", err))
 			return nil, err
@@ -149,7 +195,7 @@ func getResponseData(options *SendOptions, entity datastore.Entity) *bytes.Buffe
 		buffer = datastore.ToMsgpack(entity)
 	}
 	if options.Compress {
-		cbytes := snappy.Encode(nil, buffer.Bytes())
+		cbytes := compDecomp.Compress(buffer.Bytes())
 		buffer = bytes.NewBuffer(cbytes)
 	}
 	return buffer

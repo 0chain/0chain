@@ -1,4 +1,7 @@
 ---
-- import_tasks: agent-build-assemble-zchain.yml
-  tags: ['agent-build-assemble-zchain']
+- import_tasks: agent-build-assemble-remote.yml
+  tags: ['agent-build-assemble-remote']
+
+- import_tasks: agent-build-teardown-remote.yml
+  tags: ['agent-build-teardown-remote']
 ...

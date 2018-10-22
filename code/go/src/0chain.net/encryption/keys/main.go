@@ -4,7 +4,6 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"0chain.net/common"
@@ -17,20 +16,21 @@ func main() {
 	timestamp := flag.Bool("timestamp", true, "timestamp")
 	generateKeys := flag.Bool("generate_keys", false, "generate_keys")
 	flag.Parse()
+	sigScheme := encryption.NewED25519Scheme()
 	if *generateKeys {
-		publicKey, privateKey, err := encryption.GenerateKeys()
+		err := sigScheme.GenerateKeys()
 		if err != nil {
 			panic(err)
 		}
 		if len(*keysFile) > 0 {
-			data := []byte(fmt.Sprintf("%v\n%v", publicKey, privateKey))
-			err := ioutil.WriteFile(*keysFile, data, 0600)
+			writer, err := os.OpenFile(*keysFile, os.O_RDWR|os.O_CREATE, 0644)
 			if err != nil {
 				panic(err)
 			}
+			defer writer.Close()
+			sigScheme.WriteKeys(writer)
 		} else {
-			fmt.Printf("%v\n", publicKey)
-			fmt.Printf("%v\n", privateKey)
+			sigScheme.WriteKeys(os.Stdout)
 		}
 	}
 	if len(*keysFile) == 0 {

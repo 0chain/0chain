@@ -1,21 +1,14 @@
 FROM zchain_base
 
 ENV SRC_DIR=/0chain
-ENV GOPATH=$SRC_DIR/go
+ENV GOPATH=$GOPATH:$SRC_DIR/go
 
-# Download the dependencies
-ADD ./code/go/src/0chain.net/Gopkg.toml ./code/go/src/0chain.net/Gopkg.lock $GOPATH/src/0chain.net/
-WORKDIR $GOPATH/src/0chain.net
-RUN dep ensure -vendor-only
+WORKDIR $SRC_DIR
 
-# Add the source code after installing dependencies
-ADD ./code/go/src $GOPATH/src
-
-# Ensures the code tree, manifest, lock, and vendor are in sync with each other
-RUN dep ensure
+#Add the source code
+ADD ./code/go/src $SRC_DIR/go/src
 
 # Build it:
-WORKDIR $SRC_DIR
 RUN go build 0chain.net/miner/miner
 
 FROM zchain_base

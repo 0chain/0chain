@@ -3,7 +3,6 @@ package miner
 import (
 	"context"
 	"sort"
-	"sync"
 	"time"
 
 	"0chain.net/block"
@@ -12,25 +11,25 @@ import (
 	"go.uber.org/zap"
 )
 
-var mutex = &sync.Mutex{}
-
 /*Round - a round from miner's perspective */
 type Round struct {
 	*round.Round
 	blocksToVerifyChannel chan *block.Block
-	verificationComplete  bool
 	verificationCancelf   context.CancelFunc
 	delta                 time.Duration
+	verificationTickets   map[string]*block.BlockVerificationTicket
 }
 
 /*AddBlockToVerify - adds a block to the round. Assumes non-concurrent update */
 func (r *Round) AddBlockToVerify(b *block.Block) {
-	if r.verificationComplete {
-		Logger.Debug("block proposal (verification complete)", zap.Int64("round", r.Number), zap.String("block", b.Hash))
+	r.Mutex.Lock()
+	defer r.Mutex.Unlock()
+	if r.isVerificationComplete() {
+		Logger.Debug("block proposal (verification complete)", zap.Int64("round", r.GetRoundNumber()), zap.String("block", b.Hash))
 		return
 	}
-	if r.Number != b.Round {
-		Logger.Debug("block proposal (round mismatch)", zap.Int64("round", r.Number), zap.Int64("block_round", b.Round), zap.String("block", b.Hash))
+	if r.GetRoundNumber() != b.Round {
+		Logger.Debug("block proposal (round mismatch)", zap.Int64("round", r.GetRoundNumber()), zap.Int64("block_round", b.Round), zap.String("block", b.Hash))
 		return
 	}
 	if b.RoundRandomSeed != r.RandomSeed {
@@ -38,6 +37,22 @@ func (r *Round) AddBlockToVerify(b *block.Block) {
 		return
 	}
 	r.blocksToVerifyChannel <- b
+}
+
+/*AddVerificationTicket - add a verification ticket */
+func (r *Round) AddVerificationTicket(bvt *block.BlockVerificationTicket) {
+	r.verificationTickets[bvt.Signature] = bvt
+}
+
+/*GetVerificationTickets - get verification tickets for a given block in this round */
+func (r *Round) GetVerificationTickets(blockID string) []*block.VerificationTicket {
+	var vts []*block.VerificationTicket
+	for _, bvt := range r.verificationTickets {
+		if blockID == bvt.BlockID {
+			vts = append(vts, &bvt.VerificationTicket)
+		}
+	}
+	return vts
 }
 
 /*GetBlocksByRank - return the currently stored blocks in the order of best rank for the round */
@@ -53,17 +68,23 @@ func (r *Round) GetBlocksToVerifyChannel() chan *block.Block {
 
 /*IsVerificationComplete - indicates if the verification process for the round is complete */
 func (r *Round) IsVerificationComplete() bool {
-	return r.verificationComplete
+	r.Mutex.Lock()
+	defer r.Mutex.Unlock()
+	return r.isVerificationComplete()
 }
 
-/*StartVerificationBlockCollection - WARNING: Doesn't support concurrent calling */
+func (r *Round) isVerificationComplete() bool {
+	return r.GetState() >= round.RoundStateVerificationTimedOut
+}
+
+/*StartVerificationBlockCollection - start collecting blocks for verification */
 func (r *Round) StartVerificationBlockCollection(ctx context.Context) context.Context {
-	mutex.Lock()
-	defer mutex.Unlock()
+	r.Mutex.Lock()
+	defer r.Mutex.Unlock()
 	if r.verificationCancelf != nil {
 		return nil
 	}
-	if r.verificationComplete {
+	if r.isVerificationComplete() {
 		return nil
 	}
 	lctx, cancelf := context.WithCancel(ctx)
@@ -73,13 +94,13 @@ func (r *Round) StartVerificationBlockCollection(ctx context.Context) context.Co
 
 /*CancelVerification - Cancel verification of blocks */
 func (r *Round) CancelVerification() {
-	mutex.Lock()
-	defer mutex.Unlock()
+	r.Mutex.Lock()
+	defer r.Mutex.Unlock()
 	f := r.verificationCancelf
-	if r.verificationComplete {
+	if r.isVerificationComplete() {
 		return
 	}
-	r.verificationComplete = true
+	r.SetState(round.RoundStateVerificationTimedOut)
 	if f != nil {
 		r.verificationCancelf = nil
 		f()
@@ -89,4 +110,9 @@ func (r *Round) CancelVerification() {
 /*Clear - clear any pending state before deleting this round */
 func (r *Round) Clear() {
 	r.CancelVerification()
+}
+
+//IsVRFComplete - is the VRF process complete?
+func (r *Round) IsVRFComplete() bool {
+	return r.GetState() >= round.RoundVRFComplete
 }

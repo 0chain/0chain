@@ -9,10 +9,14 @@ import (
 	"0chain.net/round"
 )
 
+//ProtocolRoundRandomBeacon - an interface for the round random beacon
+type ProtocolRoundRandomBeacon interface {
+	AddVRFShare(ctx context.Context, r *Round, vrfs *round.VRFShare) bool
+}
+
 /*ProtocolMessageSender - this is the interace to understand the messages the miner sends to the network */
 type ProtocolMessageSender interface {
-	//TODO: This is temporary till the VRF protocol is finalized
-	SendRoundStart(ctx context.Context, r *round.Round)
+	SendVRFShare(ctx context.Context, r *round.VRFShare)
 
 	SendBlock(ctx context.Context, b *block.Block)
 	SendVerificationTicket(ctx context.Context, b *block.Block, bvt *block.BlockVerificationTicket)
@@ -27,7 +31,7 @@ type ProtocolMessageSender interface {
 
 /*ProtocolMessageReceiver - this is the interface to understand teh messages the miner receives from the network */
 type ProtocolMessageReceiver interface {
-	HandleStartRound(ctx context.Context, msg *BlockMessage)
+	HandleVRFShare(ctx context.Context, msg *BlockMessage)
 	HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage)
 	HandleVerificationTicketMessage(ctx context.Context, msg *BlockMessage)
 	HandleNotarizationMessage(ctx context.Context, msg *BlockMessage)
@@ -42,7 +46,7 @@ type ProtocolRound interface {
 	CollectBlocksForVerification(ctx context.Context, r *Round)
 	CancelRoundVerification(ctx context.Context, r *Round)
 	ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.Block, vt *block.VerificationTicket)
-	FinalizeRound(ctx context.Context, r *round.Round, bsh chain.BlockStateHandler)
+	FinalizeRound(ctx context.Context, r round.RoundI, bsh chain.BlockStateHandler)
 }
 
 /*ProtocolBlock - this is the interface that deals with the block level logic of the protocol */
@@ -64,6 +68,7 @@ type Protocol interface {
 	chain.BlockStateHandler
 	ProtocolMessageSender
 	ProtocolMessageReceiver
+	ProtocolRoundRandomBeacon
 	ProtocolRound
 	ProtocolBlock
 }

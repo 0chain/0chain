@@ -42,7 +42,7 @@ func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 		if roundNumber > sc.LatestFinalizedBlock.Round {
 			return nil, common.InvalidRequest("Block not available")
 		} else {
-			r := sc.GetRound(roundNumber)
+			r := sc.GetSharderRound(roundNumber)
 			if r == nil {
 				r, err = sc.GetRoundFromStore(ctx, roundNumber)
 				if err != nil {
@@ -77,19 +77,47 @@ func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 
 /*ChainStatsHandler - a handler to provide block statistics */
 func ChainStatsHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	c := &GetSharderChain().Chain
+	c := GetSharderChain().Chain
 	return diagnostics.GetStatistics(c, chain.SteadyStateFinalizationTimer, 1000000.0), nil
 }
 
 /*ChainStatsWriter - a handler to provide block statistics */
 func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
-	c := &GetSharderChain().Chain
+	c := GetSharderChain().Chain
 	w.Header().Set("Content-Type", "text/html")
 	diagnostics.WriteStatisticsCSS(w)
+	diagnostics.WriteSummary(w, c)
+	fmt.Fprintf(w, "<table><tr><td>")
 	fmt.Fprintf(w, "<h2>Block Finalization Statistics (Steady State)</h2>")
 	diagnostics.WriteStatistics(w, c, chain.SteadyStateFinalizationTimer, 1000000.0)
+	fmt.Fprintf(w, "</td><td>")
 	fmt.Fprintf(w, "<h2>Block Finalization Statistics (Start to Finish)</h2>")
 	diagnostics.WriteStatistics(w, c, chain.StartToFinalizeTimer, 1000000.0)
+	fmt.Fprintf(w, "</td></tr>")
+	fmt.Fprintf(w, "<tr><td>")
+
+	fmt.Fprintf(w, "<tr><td>")
+	fmt.Fprintf(w, "<h2>Transactions Save Statistics</h2>")
+	diagnostics.WriteStatistics(w, c, txnSaveTimer, 1000000.0)
+	fmt.Fprintf(w, "</td><td>")
+	fmt.Fprintf(w, "<h2>Block Save Statistics</h2>")
+	diagnostics.WriteStatistics(w, c, blockSaveTimer, 1000000.0)
+	fmt.Fprintf(w, "</td></tr>")
+	fmt.Fprintf(w, "<tr><td>")
+	fmt.Fprintf(w, "<h2>State Save Statistics</h2>")
+	diagnostics.WriteStatistics(w, c, chain.StateSaveTimer, 1000000.0)
+	fmt.Fprintf(w, "</td><td>")
+	fmt.Fprintf(w, "</td><tr>")
+
+	fmt.Fprintf(w, "<tr><td>")
+	fmt.Fprintf(w, "<h2>State Prune Update Statistics</h2>")
+	diagnostics.WriteStatistics(w, c, chain.StatePruneUpdateTimer, 1000000.0)
+	fmt.Fprintf(w, "</td><td>")
+	fmt.Fprintf(w, "<h2>State Prune Delete Statistics</h2>")
+	diagnostics.WriteStatistics(w, c, chain.StatePruneDeleteTimer, 1000000.0)
+	fmt.Fprintf(w, "</tr>")
+
+	fmt.Fprintf(w, "</table>")
 }
 
 /*TransactionConfirmationHandler - given a transaction hash, confirm it's presence in a block */

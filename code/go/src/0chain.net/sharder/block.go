@@ -4,8 +4,10 @@ import (
 	"context"
 
 	"0chain.net/block"
+	"0chain.net/common"
 	"0chain.net/datastore"
 	"0chain.net/ememorystore"
+	"0chain.net/node"
 )
 
 /*GetBlockBySummary - get a block */
@@ -13,11 +15,21 @@ func (sc *Chain) GetBlockBySummary(ctx context.Context, bs *block.BlockSummary) 
 	//Try to get the block from the cache
 	b, err := sc.GetBlock(ctx, bs.Hash)
 	if err != nil {
-		//TODO: based on round random seed, check whether this sharder should have the block or not before fetching from the store
-		b, err = sc.GetBlockFromStoreBySummary(bs)
+		bi, err := GetSharderChain().BlockTxnCache.Get(bs.Hash)
 		if err != nil {
-			//We are able to send partial information
-			return nil, err
+			db := &block.Block{}
+			db.Hash = bs.Hash
+			db.Round = bs.Round
+			if sc.IsBlockSharder(db, node.Self.Node) {
+				b, err = sc.GetBlockFromStoreBySummary(bs)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				return nil, common.NewError("block_not_available", "Block not available")
+			}
+		} else {
+			b = bi.(*block.Block)
 		}
 	}
 	return b, nil
@@ -46,8 +58,8 @@ func (sc *Chain) GetBlockFromHash(ctx context.Context, hash string, roundNum int
 	return b, nil
 }
 
-/*StoreBlock - store the block to ememory/rocksdb */
-func (sc *Chain) StoreBlock(ctx context.Context, b *block.Block) error {
+/*StoreBlockSummary - store the block to ememory/rocksdb */
+func (sc *Chain) StoreBlockSummary(ctx context.Context, b *block.Block) error {
 	bs := b.GetSummary()
 	bSummaryEntityMetadata := bs.GetEntityMetadata()
 	bctx := ememorystore.WithEntityConnection(ctx, bSummaryEntityMetadata)

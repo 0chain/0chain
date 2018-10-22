@@ -14,11 +14,12 @@ type BlockSummary struct {
 	datastore.VersionField
 	datastore.CreationDateField
 	datastore.NOIDField
-	Hash            string   `json:"hash"`
-	Round           int64    `json:"round"`
-	RoundRandomSeed int64    `json:"round_random_seed"`
-	MerkleTreeRoot  string   `json:"merkle_tree_root"`
-	ClientStateHash util.Key `json:"state_hash"`
+	Hash                  string   `json:"hash"`
+	Round                 int64    `json:"round"`
+	RoundRandomSeed       int64    `json:"round_random_seed"`
+	MerkleTreeRoot        string   `json:"merkle_tree_root"`
+	ClientStateHash       util.Key `json:"state_hash"`
+	ReceiptMerkleTreeRoot string   `json:"receipt_merkle_tree_root"`
 }
 
 /*SetupBlockSummaryDB - sets up the block summary database */

@@ -5,9 +5,11 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 
@@ -57,13 +59,13 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	error, publicKey, privateKey := encryption.ReadKeys(reader)
-	if error == false {
-		Logger.Info("Public key in Keys file =%v", zap.String("publicKey", publicKey))
+
+	signatureScheme := encryption.NewED25519Scheme()
+	err = signatureScheme.ReadKeys(reader)
+	if err != nil {
 		Logger.Panic("Error reading keys file")
 	}
-
-	node.Self.SetKeys(publicKey, privateKey)
+	node.Self.SetSignatureScheme(signatureScheme)
 	reader.Close()
 	config.SetServerChainID(config.Configuration.ChainID)
 
@@ -74,11 +76,10 @@ func main() {
 	miner.SetupMinerChain(serverChain)
 	mc := miner.GetMinerChain()
 	mc.DiscoverClients = viper.GetBool("server_chain.client.discover")
-	serverChain = &miner.GetMinerChain().Chain
 	chain.SetServerChain(serverChain)
 
-	miner.SetNetworkRelayTime(viper.GetDuration("server_chain.network.relay_time") * time.Millisecond)
-	node.SetMaxConcurrentRequests(viper.GetInt("server_chain.network.max_concurrent_requests"))
+	miner.SetNetworkRelayTime(viper.GetDuration("network.relay_time") * time.Millisecond)
+	node.ReadConfig()
 
 	if *nodesFile == "" {
 		panic("Please specify --nodes_file file.txt option with a file.txt containing nodes including self")
@@ -97,9 +98,6 @@ func main() {
 		Logger.Panic("node definition for self node doesn't exist")
 	}
 
-	serverChain.Miners.ComputeProperties()
-	serverChain.Sharders.ComputeProperties()
-	serverChain.Blobbers.ComputeProperties()
 	Logger.Info("self identity", zap.Any("set_index", node.Self.Node.SetIndex), zap.Any("id", node.Self.Node.GetKey()))
 
 	if config.DevConfiguration.State {
@@ -146,7 +144,7 @@ func main() {
 	initServer()
 	initHandlers()
 
-	go StartProtocol()
+	go StartProtocol(ctx)
 	Logger.Info("Ready to listen to the requests")
 	chain.StartTime = time.Now().UTC()
 	log.Fatal(server.ListenAndServe())
@@ -162,6 +160,7 @@ func initEntities() {
 
 	chain.SetupEntity(memoryStorage)
 	round.SetupEntity(memoryStorage)
+	round.SetupVRFShareEntity(memoryStorage)
 	block.SetupEntity(memoryStorage)
 	block.SetupBlockSummaryEntity(memoryStorage)
 
@@ -199,6 +198,7 @@ func initN2NHandlers() {
 	miner.SetupM2MReceivers()
 	miner.SetupM2MSenders()
 	miner.SetupM2SSenders()
+	miner.SetupM2SRequestors()
 
 	miner.SetupX2MResponders()
 	chain.SetupX2MRequestors()
@@ -212,27 +212,37 @@ func initWorkers(ctx context.Context) {
 }
 
 /*StartProtocol - start the miner protocol */
-func StartProtocol() {
-
+func StartProtocol(ctx context.Context) {
 	mc := miner.GetMinerChain()
+
 	miner.StartDKG(mc.Miners)
 
-	sr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
-	sr.Number = 1
+	mc.Sharders.OneTimeStatusMonitor(ctx)
+	lfBlocks := mc.GetLatestFinalizedBlockFromSharder(ctx)
 
-	//TODO: For now, hardcoding a random seed for the first round
-	sr.RandomSeed = 839695260482366265
-	sr.ComputeRanks(mc.Miners.Size(), mc.Sharders.Size())
+	var lfb *block.Block
+	//Sorting as per the latest finalized blocks from all the sharders
+	sort.Slice(lfBlocks, func(i int, j int) bool { return lfBlocks[i].Round >= lfBlocks[j].Round })
+	if len(lfBlocks) > 0 {
+		lfb = lfBlocks[0]
+	}
+
+	sr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
+	if lfb != nil {
+		mc.SetLatestFinalizedBlock(ctx, lfb)
+		sr.Number = lfb.Round + 1
+		sr.RandomSeed = rand.New(rand.NewSource(lfb.RoundRandomSeed)).Int63()
+	} else {
+		sr.Number = 1
+	}
 	msr := mc.CreateRound(sr)
+	Logger.Info("bc-1 latest finalized Block", zap.Int64("lfb_round", mc.LatestFinalizedBlock.Round))
 
 	if !mc.CanStartNetwork() {
 		ticker := time.NewTicker(5 * chain.DELTA)
 		for ts := range ticker.C {
 			active := mc.Miners.GetActiveCount()
 			Logger.Info("waiting for sufficient active nodes", zap.Time("ts", ts), zap.Int("active", active))
-			if mc.CurrentRound != 0 {
-				break
-			}
 			if mc.CanStartNetwork() {
 				break
 			}
@@ -242,12 +252,6 @@ func StartProtocol() {
 		go TransactionGenerator(mc.BlockSize)
 	}
 
-	msg := miner.NewBlockMessage(miner.MessageStartRound, node.Self.Node, msr, nil)
-	msgChannel := mc.GetBlockMessageChannel()
-	if mc.CurrentRound == 0 {
-		Logger.Info("starting the blockchain ...")
-		msgChannel <- msg
-		mc.SendRoundStart(common.GetRootContext(), sr) // changed to mc.StartRound(ctx, msr) in new commit
-
-	}
+	Logger.Info("starting the blockchain ...")
+	mc.StartRound(ctx, msr)
 }

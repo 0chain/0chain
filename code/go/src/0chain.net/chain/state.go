@@ -48,32 +48,40 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 		}
 	}
 	if !pb.IsStateComputed() {
-		pbState := pb.GetBlockState()
-		Logger.Info("compute state - previous block state not ready", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Int8("prev_block_state", pbState))
+		Logger.Info("compute state - previous block state not ready", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Int8("prev_block_state", pb.GetBlockState()))
 		err := c.ComputeState(ctx, pb)
 		if err != nil {
-			Logger.Error("compute state - error computing previous state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Error(err))
+			if config.DevConfiguration.State {
+				Logger.Error("compute state - error computing previous state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Error(err))
+			}
 			return err
 		}
 	}
 	if pb.ClientState == nil {
+		if config.DevConfiguration.State {
+			Logger.Error("compute state - previous state nil", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
+		}
 		return ErrPreviousStateUnavailable
 	}
 	b.SetStateDB(pb)
-	Logger.Info("compute state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.String("prev_block", b.PrevHash), zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)))
+	Logger.Info("compute state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.String("begin_client_state", util.ToHex(b.ClientState.GetRoot())), zap.String("prev_block", b.PrevHash), zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)))
 	for _, txn := range b.Txns {
 		if datastore.IsEmpty(txn.ClientID) {
 			txn.ComputeClientID()
 		}
 		if !c.UpdateState(b, txn) {
 			b.SetStateStatus(block.StateFailed)
-			Logger.Error("compute state - update state failed", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.String("prev_block", b.PrevHash), zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)))
+			if config.DevConfiguration.State {
+				Logger.Error("compute state - update state failed", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.String("prev_block", b.PrevHash), zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)))
+			}
 			return common.NewError("state_update_error", "error updating state")
 		}
 	}
 	if bytes.Compare(b.ClientStateHash, b.ClientState.GetRoot()) != 0 {
 		b.SetStateStatus(block.StateFailed)
-		Logger.Error("validate transaction state hash error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("block_size", len(b.Txns)), zap.Int("changes", len(b.ClientState.GetChangeCollector().GetChanges())), zap.String("block_state_hash", util.ToHex(b.ClientStateHash)), zap.String("computed_state_hash", util.ToHex(b.ClientState.GetRoot())))
+		if config.DevConfiguration.State {
+			Logger.Error("validate transaction state hash error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("block_size", len(b.Txns)), zap.Int("changes", len(b.ClientState.GetChangeCollector().GetChanges())), zap.String("block_state_hash", util.ToHex(b.ClientStateHash)), zap.String("computed_state_hash", util.ToHex(b.ClientState.GetRoot())))
+		}
 		return common.NewError(StateMismatch, "computed state hash doesn't match with the state hash of the block")
 	}
 	Logger.Info("compute state successful", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("block_size", len(b.Txns)), zap.Int("changes", len(b.ClientState.GetChangeCollector().GetChanges())), zap.String("block_state_hash", util.ToHex(b.ClientStateHash)), zap.String("computed_state_hash", util.ToHex(b.ClientState.GetRoot())))
@@ -85,11 +93,11 @@ func (c *Chain) rebaseState(lfb *block.Block) {
 	c.stateMutex.Lock()
 	defer c.stateMutex.Unlock()
 	ndb := lfb.ClientState.GetNodeDB()
-	if ndb != c.StateDB {
-		lfb.ClientState.SetNodeDB(c.StateDB)
+	if ndb != c.stateDB {
+		lfb.ClientState.SetNodeDB(c.stateDB)
 		if lndb, ok := ndb.(*util.LevelNodeDB); ok {
 			Logger.Debug("finalize round - rebasing current state db", zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash), zap.String("hash", util.ToHex(lfb.ClientState.GetRoot())))
-			lndb.RebaseCurrentDB(c.StateDB)
+			lndb.RebaseCurrentDB(c.stateDB)
 			lfb.ClientState.ResetChangeCollector(nil)
 			Logger.Debug("finalize round - rebased current state db", zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash), zap.String("hash", util.ToHex(lfb.ClientState.GetRoot())))
 		}
@@ -119,9 +127,9 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 				if txn == nil {
 					break
 				}
-				fmt.Fprintf(stateOut, "update state r=%v b=%v t=%v", b.Round, b.Hash, txn)
+				fmt.Fprintf(stateOut, "update state r=%v b=%v t=%v\n", b.Round, b.Hash, txn)
 			}
-			clientState.PrettyPrint(stateOut)
+			clientState.PrettyPrint(os.Stdout)
 			Logger.DPanic(fmt.Sprintf("error getting state value: %v %v", txn.ClientID, err))
 		}
 		return false
@@ -139,7 +147,9 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 			if config.DevConfiguration.State {
 				Logger.Error("update state (to client)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
 				for _, txn := range b.Txns {
-					Logger.Info("update state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn))
+					if txn != nil {
+						Logger.Info("update state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn))
+					}
 				}
 				clientState.PrettyPrint(os.Stdout)
 				Logger.DPanic(fmt.Sprintf("error getting state value: %v %v", txn.ToClientID, err))
@@ -183,7 +193,7 @@ func (c *Chain) getState(clientState util.MerklePatriciaTrieI, clientID string) 
 			return s, err
 		}
 	} else {
-		s = c.ClientStateDeserializer.Deserialize(ss).(*state.State)
+		s = c.clientStateDeserializer.Deserialize(ss).(*state.State)
 	}
 	return s, nil
 }

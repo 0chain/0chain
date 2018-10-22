@@ -40,27 +40,31 @@ func main() {
 	keysFile := flag.String("keys_file", "config/single_node_sharder_keys.txt", "keys_file")
 	maxDelay := flag.Int("max_delay", 0, "max_delay")
 	flag.Parse()
+	config.Configuration.DeploymentMode = byte(*deploymentMode)
 	config.SetupDefaultConfig()
 	config.SetupConfig()
 
-	if *deploymentMode == 0 {
+	if config.Development() {
 		logging.InitLogging("development")
 	} else {
 		logging.InitLogging("production")
 	}
 
 	config.Configuration.ChainID = viper.GetString("server_chain.id")
-	config.Configuration.DeploymentMode = byte(*deploymentMode)
 	config.Configuration.MaxDelay = *maxDelay
 
 	reader, err := os.Open(*keysFile)
 	if err != nil {
 		panic(err)
 	}
-	_, publicKey, privateKey := encryption.ReadKeys(reader)
-	node.Self.SetKeys(publicKey, privateKey)
-	reader.Close()
 
+	signatureScheme := encryption.NewED25519Scheme()
+	err = signatureScheme.ReadKeys(reader)
+	if err != nil {
+		Logger.Panic("Error reading keys file")
+	}
+	node.Self.SetSignatureScheme(signatureScheme)
+	reader.Close()
 	config.SetServerChainID(config.Configuration.ChainID)
 
 	common.SetupRootContext(node.GetNodeContext())
@@ -70,11 +74,10 @@ func main() {
 	serverChain := chain.NewChainFromConfig()
 	sharder.SetupSharderChain(serverChain)
 	sc := sharder.GetSharderChain()
-	serverChain = &sharder.GetSharderChain().Chain
 	chain.SetServerChain(serverChain)
 
-	chain.SetNetworkRelayTime(viper.GetDuration("server_chain.network.relay_time") * time.Millisecond)
-	node.SetMaxConcurrentRequests(viper.GetInt("server_chain.network.max_concurrent_requests"))
+	chain.SetNetworkRelayTime(viper.GetDuration("network.relay_time") * time.Millisecond)
+	node.ReadConfig()
 
 	if *nodesFile == "" {
 		panic("Please specify --nodes_file file.txt option with a file.txt containing nodes including self")
@@ -94,9 +97,6 @@ func main() {
 		Logger.Panic("node definition for self node doesn't exist")
 	}
 
-	serverChain.Miners.ComputeProperties()
-	serverChain.Sharders.ComputeProperties()
-	serverChain.Blobbers.ComputeProperties()
 	Logger.Info("self identity", zap.Any("set_index", node.Self.Node.SetIndex), zap.Any("id", node.Self.Node.GetKey()))
 
 	mode := "main net"
@@ -126,8 +126,18 @@ func main() {
 		}
 	}
 	common.HandleShutdown(server)
+	blockStorageProvider := viper.GetString("server_chain.block.storage.provider")
+	if blockStorageProvider == "" || blockStorageProvider == "blockstore.FSBlockStore" {
+		blockstore.SetupStore(blockstore.NewFSBlockStore("data/blocks"))
+	} else if blockStorageProvider == "blockstore.BlockDBStore" {
+		blockstore.SetupStore(blockstore.NewBlockDBStore("data/blocksdb"))
+	} else if blockStorageProvider == "blockstore.MultiBlockstore" {
+		var bs = []blockstore.BlockStore{blockstore.NewFSBlockStore("data/blocks"), blockstore.NewBlockDBStore("data/blocksdb")}
+		blockstore.SetupStore(blockstore.NewMultiBlockStore(bs))
+	} else {
+		panic(fmt.Sprintf("uknown block store provider - %v", blockStorageProvider))
+	}
 
-	blockstore.SetupStore(blockstore.NewFSBlockStore("data/blocks"))
 	if config.DevConfiguration.State {
 		chain.SetupStateLogger("/tmp/state.txt")
 	}
@@ -187,7 +197,8 @@ func initEntities() {
 func initN2NHandlers() {
 	node.SetupN2NHandlers()
 	sharder.SetupM2SReceivers()
-
+	sharder.SetupM2SResponders()
+	
 	chain.SetupX2MRequestors()
 }
 

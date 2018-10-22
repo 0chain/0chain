@@ -1,12 +1,15 @@
 package miner
 
 import (
+	"bytes"
 	"context"
 	"flag"
 	"fmt"
 	"os"
 	"os/user"
 	"testing"
+
+	"0chain.net/encryption"
 
 	"0chain.net/block"
 	"0chain.net/blockstore"
@@ -46,7 +49,7 @@ func generateSingleBlock(ctx context.Context, prevBlock *block.Block, r *Round) 
 	if err != nil {
 		panic(err)
 	}
-	blockstore.SetupFSBlockStore(fmt.Sprintf("%v%s.0chain.net", usr.HomeDir, string(os.PathSeparator)))
+	blockstore.SetupStore(blockstore.NewFSBlockStore(fmt.Sprintf("%v%s.0chain.net", usr.HomeDir, string(os.PathSeparator))))
 	b, err = mc.GenerateRoundBlock(ctx, r)
 	if err != nil {
 		return nil, err
@@ -59,7 +62,7 @@ func generateSingleBlock(ctx context.Context, prevBlock *block.Block, r *Round) 
 func CreateRound(number int64) *Round {
 	mc := GetMinerChain()
 	r := datastore.GetEntityMetadata("round").Instance().(*round.Round)
-	r.Number = 1
+	r.Number = number
 	mr := mc.CreateRound(r)
 	mc.AddRound(mr)
 	return mr
@@ -201,7 +204,6 @@ func SetUpSingleSelf() {
 	n1.ID = "24e23c52e2e40689fdb700180cd68ac083a42ed292d90cc021119adaa4d21509"
 	node.Self = &node.SelfNode{}
 	node.Self.Node = n1
-	node.Self.SetKeys("e065fc02aaf7aaafaebe5d2dedb9c7c1d63517534644434b813cb3bdab0f94a0", "aa3e1ae2290987959dc44e43d138c81f15f93b2d56d7a06c51465f345df1a8a6e065fc02aaf7aaafaebe5d2dedb9c7c1d63517534644434b813cb3bdab0f94a0")
 	np := node.NewPool(node.NodeTypeMiner)
 	np.AddNode(n1)
 	config.SetServerChainID(config.GetMainChainID())
@@ -222,6 +224,14 @@ func SetUpSingleSelf() {
 	SetupM2MSenders()
 }
 
+func setupSelfNodeKeys() {
+	keys := "e065fc02aaf7aaafaebe5d2dedb9c7c1d63517534644434b813cb3bdab0f94a0\naa3e1ae2290987959dc44e43d138c81f15f93b2d56d7a06c51465f345df1a8a6e065fc02aaf7aaafaebe5d2dedb9c7c1d63517534644434b813cb3bdab0f94a0"
+	breader := bytes.NewBuffer([]byte(keys))
+	sigScheme := encryption.NewED25519Scheme()
+	sigScheme.ReadKeys(breader)
+	node.Self.SetSignatureScheme(sigScheme)
+}
+
 func SetupGenesisBlock() *block.Block {
 	mc := GetMinerChain()
 	mc.BlockSize = int32(numOfTransactions)
@@ -232,7 +242,7 @@ func SetupGenesisBlock() *block.Block {
 	return gb
 }
 
-func SetUpSelf() {
+func setupSelf() {
 	n1 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7071, Status: node.NodeStatusActive}
 	n1.ID = "24e23c52e2e40689fdb700180cd68ac083a42ed292d90cc021119adaa4d21509"
 	n2 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7072, Status: node.NodeStatusActive}
@@ -242,7 +252,9 @@ func SetUpSelf() {
 
 	node.Self = &node.SelfNode{}
 	node.Self.Node = n1
-	node.Self.SetKeys("", "aa3e1ae2290987959dc44e43d138c81f15f93b2d56d7a06c51465f345df1a8a6e065fc02aaf7aaafaebe5d2dedb9c7c1d63517534644434b813cb3bdab0f94a0")
+
+	setupSelfNodeKeys()
+
 	np := node.NewPool(node.NodeTypeMiner)
 	np.AddNode(n1)
 	np.AddNode(n2)
@@ -267,7 +279,7 @@ func SetUpSelf() {
 }
 
 func TestBlockGeneration(t *testing.T) {
-	SetUpSelf()
+	setupSelf()
 	ctx := common.GetRootContext()
 	ctx = memorystore.WithConnection(ctx)
 	SetupGenesisBlock()
@@ -282,7 +294,7 @@ func TestBlockGeneration(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	blockstore.SetupFSBlockStore(fmt.Sprintf("%v%s.0chain.net", usr.HomeDir, string(os.PathSeparator)))
+	blockstore.SetupStore(blockstore.NewFSBlockStore(fmt.Sprintf("%v%s.0chain.net", usr.HomeDir, string(os.PathSeparator))))
 
 	b, err = mc.GenerateRoundBlock(ctx, mr)
 

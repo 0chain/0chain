@@ -1,9 +1,6 @@
-/* BLS interface */
 package bls
 
-import (
-	"github.com/pmer/gobls"
-)
+import "github.com/pmer/gobls"
 
 type PartyId = gobls.ID
 type GroupPublicKey = gobls.PublicKey

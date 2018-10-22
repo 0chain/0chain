@@ -18,6 +18,7 @@ func SetupHandlers() {
 	http.HandleFunc("/_diagnostics/n2n_logs", logging.N2NLogWriter)
 	sc := chain.GetServerChain()
 	http.HandleFunc("/_diagnostics/n2n/info", sc.SendStatsWriter)
+	http.HandleFunc("/_diagnostics/miner_stats", sc.MinerStatsHandler)
 }
 
 /*GetStatistics - write the statistics of the given timer */
@@ -31,6 +32,7 @@ func GetStatistics(c *chain.Chain, timer metrics.Timer, scaleBy float64) interfa
 	stats["delta"] = chain.DELTA
 	stats["block_size"] = c.BlockSize
 	stats["current_round"] = c.CurrentRound
+	stats["latest_finalized_round"] = c.LatestFinalizedBlock.Round
 	stats["count"] = timer.Count()
 	stats["min"] = scale(float64(timer.Min()))
 	stats["mean"] = scale(timer.Mean())
@@ -52,6 +54,22 @@ func WriteStatisticsCSS(w http.ResponseWriter) {
 	fmt.Fprintf(w, "<style>.sheader { color: orange; font-weight: bold; }</style>")
 }
 
+/*WriteSummary - write summary information */
+func WriteSummary(w http.ResponseWriter, c *chain.Chain) {
+	fmt.Fprintf(w, "<table>")
+	fmt.Fprintf(w, "<tr><td class='sheader' colspan='2'>Configuration</td></tr>")
+	fmt.Fprintf(w, "<tr><td>Block Size</td><td>%v</td></tr>", c.BlockSize)
+	fmt.Fprintf(w, "<tr><td>Network Latency (Delta)</td><td>%v</td></tr>", chain.DELTA)
+	proposalMode := "dynamic"
+	if c.BlockProposalWaitMode == chain.BlockProposalWaitStatic {
+		proposalMode = "static"
+	}
+	fmt.Fprintf(w, "<tr><td>Block Proposal</td><td>%v (%v)</td>", c.BlockProposalMaxWaitTime, proposalMode)
+
+	fmt.Fprintf(w, "<tr><td>Validation Batch Size</td><td>%d</td>", c.ValidationBatchSize)
+	fmt.Fprintf(w, "</table>")
+}
+
 /*WriteStatistics - write the statistics of the given timer */
 func WriteStatistics(w http.ResponseWriter, c *chain.Chain, timer metrics.Timer, scaleBy float64) {
 	scale := func(n float64) float64 {
@@ -60,16 +78,12 @@ func WriteStatistics(w http.ResponseWriter, c *chain.Chain, timer metrics.Timer,
 	percentiles := []float64{0.5, 0.9, 0.95, 0.99, 0.999}
 	pvals := timer.Percentiles(percentiles)
 	fmt.Fprintf(w, "<table>")
-	fmt.Fprintf(w, "<tr><td class='sheader' colspan='2'>Configuration</td></tr>")
-	fmt.Fprintf(w, "<tr><td>Block Size</td><td>%v</td></tr>", c.BlockSize)
-	fmt.Fprintf(w, "<tr><td>Network Latency (Delta)</td><td>%v</td></tr>", chain.DELTA)
-	fmt.Fprintf(w, "<tr><td>Validation Batch Size</td><td>%d</td>", c.ValidationBatchSize)
 	fmt.Fprintf(w, "<tr><td class='sheader' colspan=2'>Metrics</td></tr>")
 	fmt.Fprintf(w, "<tr><td>Current Round</td><td>%v</td></tr>", c.CurrentRound)
 	if c.LatestFinalizedBlock != nil {
 		fmt.Fprintf(w, "<tr><td>Latest Finalized Round</td><td>%v</td></tr>", c.LatestFinalizedBlock.Round)
 	}
-	fmt.Fprintf(w, "<tr><td>Blocks Count</td><td>%v</td></tr>", timer.Count())
+	fmt.Fprintf(w, "<tr><td>Count</td><td>%v</td></tr>", timer.Count())
 	fmt.Fprintf(w, "<tr><td class='sheader' colspan='2'>Time taken</td></tr>")
 	fmt.Fprintf(w, "<tr><td>Min</td><td>%.2f ms</td></tr>", scale(float64(timer.Min())))
 	fmt.Fprintf(w, "<tr><td>Mean</td><td>%.2f &plusmn;%.2f ms</td></tr>", scale(timer.Mean()), scale(timer.StdDev()))

@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"0chain.net/config"
-
 	"0chain.net/block"
 	"0chain.net/common"
 	"0chain.net/datastore"
@@ -33,115 +31,171 @@ var ssFTs time.Time
 //StartToFinalizeTimer - a metric that tracks the time a block is created to finalized
 var StartToFinalizeTimer metrics.Timer
 
+//StateSaveTimer - a metric that tracks the time it takes to save the state
+var StateSaveTimer metrics.Timer
+
 func init() {
-	if SteadyStateFinalizationTimer != nil {
-		metrics.Unregister("ss_finalization_time")
-	}
 	SteadyStateFinalizationTimer = metrics.GetOrRegisterTimer("ss_finalization_time", nil)
-	if StartToFinalizeTimer != nil {
-		metrics.Unregister("s2f_time")
-	}
 	StartToFinalizeTimer = metrics.GetOrRegisterTimer("s2f_time", nil)
+	StateSaveTimer = metrics.GetOrRegisterTimer("state_save_timer", nil)
+}
+
+/*ComputeFinalizedBlock - compute the block that has been finalized */
+func (c *Chain) ComputeFinalizedBlock(ctx context.Context, r round.RoundI) *block.Block {
+	isIn := func(blocks []*block.Block, hash string) bool {
+		for _, b := range blocks {
+			if b.Hash == hash {
+				return true
+			}
+		}
+		return false
+	}
+	roundNumber := r.GetRoundNumber()
+	tips := r.GetNotarizedBlocks()
+	if len(tips) == 0 {
+		Logger.Error("compute finalize block: no notarized blocks", zap.Int64("round", r.GetRoundNumber()))
+		return nil
+	}
+	for true {
+		ntips := make([]*block.Block, 0, 1)
+		for _, b := range tips {
+			if b.PrevBlock == nil {
+				pb := c.GetPreviousBlock(ctx, b)
+				if pb == nil {
+					Logger.Error("compute finalized block: null prev block", zap.Int64("round", roundNumber), zap.Int64("block_round", b.Round), zap.String("block", b.Hash))
+					return nil
+				}
+			}
+			if isIn(ntips, b.PrevHash) {
+				continue
+			}
+			ntips = append(ntips, b.PrevBlock)
+		}
+		tips = ntips
+		if len(tips) == 1 {
+			break
+		}
+	}
+	if len(tips) != 1 {
+		return nil
+	}
+	fb := tips[0]
+	if fb.Round == r.GetRoundNumber() {
+		return nil
+	}
+	return fb
 }
 
 /*FinalizeRound - starting from the given round work backwards and identify the round that can be
   assumed to be finalized as only one chain has survived.
   Note: It is that round and prior that actually get finalized.
 */
-func (c *Chain) FinalizeRound(ctx context.Context, r *round.Round, bsh BlockStateHandler) {
+func (c *Chain) FinalizeRound(ctx context.Context, r round.RoundI, bsh BlockStateHandler) {
 	if !r.SetFinalizing() {
 		return
 	}
+	if r.GetBestNotarizedBlock() == nil {
+		Logger.Error("finalize round: no notarized blocks", zap.Int64("round", r.GetRoundNumber()))
+		go c.GetNotarizedBlockForRound(r)
+	}
 	time.Sleep(FINALIZATION_TIME)
-	c.FinalizedRoundsChannel <- r
+	Logger.Info("finalize round", zap.Int64("round", r.GetRoundNumber()), zap.Int64("lf_round", c.LatestFinalizedBlock.Round))
+	/*
+		Not using the channel for now. If the time to produce a block is less than the FINALIZATION_TIME, then more rounds get produced than the rounds are consumed,
+		making them go sequentially after the wait using a channel and worker is putting back pressure. Instead, by letting the FinalizeRound goroutines go in parallel
+		might result in out-of-band execution.
+		//c.finalizedRoundsChannel <- r
+	*/
+	c.finalizeRound(ctx, r, bsh)
+	c.UpdateRoundInfo(r)
 }
 
-func (c *Chain) finalizeRound(ctx context.Context, r *round.Round, bsh BlockStateHandler) {
+func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStateHandler) {
+	Logger.Info("finalize round worker", zap.Int64("round", r.GetRoundNumber()), zap.Int64("lf_round", c.LatestFinalizedBlock.Round))
+	roundNumber := r.GetRoundNumber()
+	notarizedBlocks := r.GetNotarizedBlocks()
+	nbCount := len(notarizedBlocks)
+	if nbCount == 0 {
+		c.ZeroNotarizedBlocksCount++
+	}
+	if nbCount > 1 {
+		c.MultiNotarizedBlocksCount++
+	}
 	lfb := c.ComputeFinalizedBlock(ctx, r)
 	if lfb == nil {
-		Logger.Debug("finalization - no decisive block to finalize yet or don't have all the necessary blocks", zap.Any("round", r.Number))
+		Logger.Debug("finalize round - no decisive block to finalize yet or don't have all the necessary blocks", zap.Int64("round", roundNumber), zap.Int("notarized_blocks", nbCount))
 		return
 	}
 	if lfb.Hash == c.LatestFinalizedBlock.Hash {
 		return
 	}
-	if lfb.Round < c.LatestFinalizedBlock.Round {
-		Logger.Info("finalize round - TODO: need to repair", zap.Any("lf_round", c.LatestFinalizedBlock.Round), zap.Int64("new_lf_round", lfb.Round))
-		return
-	}
-	plfb := c.LatestFinalizedBlock
-	lfbHash := plfb.Hash
-	c.LatestFinalizedBlock = lfb
-	frchain := make([]*block.Block, 0, 1)
-	for b := lfb; b != nil && b.Hash != lfbHash; b = b.PrevBlock {
-		frchain = append(frchain, b)
-	}
-	if len(frchain) == 0 {
-		return
-	}
-	fb := frchain[len(frchain)-1]
-	if fb.PrevBlock == nil {
-		Logger.Info("finalize round (missed blocks)", zap.Int64("from", plfb.Round+1), zap.Int64("to", fb.Round-1))
-		c.MissedBlocks += fb.Round - 1 - plfb.Round
-	}
-	deadBlocks := make([]*block.Block, 0, 1)
-	for idx := range frchain {
-		fb := frchain[len(frchain)-1-idx]
-		Logger.Info("finalize round", zap.Int64("round", r.Number), zap.Int64("finalized_round", fb.Round), zap.String("hash", fb.Hash), zap.Int8("state", fb.GetBlockState()))
-		if time.Since(ssFTs) < 10*time.Second {
-			SteadyStateFinalizationTimer.UpdateSince(ssFTs)
+	if lfb.Round <= c.LatestFinalizedBlock.Round {
+		//This check is useful when we allow the finalizeRound route is not sequential and end up with out-of-band execution
+		if r.GetRoundNumber() <= c.LatestFinalizedBlock.Round {
+			Logger.Error("finalize round worker - round number <= latest finalized round", zap.Int64("round", r.GetRoundNumber()), zap.Int64("lf_round", c.LatestFinalizedBlock.Round))
+			return
 		}
-		StartToFinalizeTimer.UpdateSince(fb.ToTime())
-		ssFTs = time.Now()
-		c.UpdateChainInfo(fb)
-		if fb.ClientState != nil {
-			if fb.GetStateStatus() != block.StateSuccessful {
-				err := c.ComputeState(ctx, fb)
-				if err != nil {
-					Logger.Error("finalize round state not successful", zap.Int64("round", r.Number), zap.Int64("finalized_round", fb.Round), zap.String("hash", fb.Hash), zap.Int8("state", fb.GetBlockState()), zap.Error(err))
-					if config.DevConfiguration.State {
-						Logger.DPanic("finalize block - state not successful")
+		b := c.commonAncestor(ctx, c.LatestFinalizedBlock, lfb)
+		if b != nil {
+			// Recovering from incorrectly finalized block
+			c.RollbackCount++
+			rl := c.LatestFinalizedBlock.Round - b.Round
+			if c.LongestRollbackLength < int8(rl) {
+				c.LongestRollbackLength = int8(rl)
+			}
+			Logger.Error("finalize round - rolling back finalized block", zap.Int64("round", roundNumber),
+				zap.Int64("cf_round", c.LatestFinalizedBlock.Round), zap.String("cf_block", c.LatestFinalizedBlock.Hash), zap.String("cf_prev_block", c.LatestFinalizedBlock.PrevHash),
+				zap.Int64("nf_round", lfb.Round), zap.String("nf_block", lfb.Hash), zap.Int64("caf_round", b.Round), zap.String("caf_block", b.Hash))
+			for r := roundNumber; r >= b.Round; r-- {
+				round := c.GetRound(r)
+				if round != nil {
+					for _, nb := range round.GetNotarizedBlocks() {
+						Logger.Error("finalize round - rolling back, round nb", zap.Int64("round", nb.Round), zap.Int("round_rank", nb.RoundRank), zap.String("block", nb.Hash))
 					}
 				}
 			}
-			ts := time.Now()
-			err := fb.ClientState.SaveChanges(c.StateDB, util.Origin(fb.Round), false)
-			if err != nil {
-				Logger.Error("finalize round - save state", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.String("client_state", util.ToHex(fb.ClientStateHash)), zap.Int("changes", len(fb.ClientState.GetChangeCollector().GetChanges())), zap.Duration("time", time.Since(ts)), zap.Error(err))
-			} else {
-				Logger.Info("finalize round - save state", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.String("client_state", util.ToHex(fb.ClientStateHash)), zap.Int("changes", len(fb.ClientState.GetChangeCollector().GetChanges())), zap.Duration("time", time.Since(ts)))
+			for cfb := c.LatestFinalizedBlock.PrevBlock; cfb != nil && cfb != b; cfb = cfb.PrevBlock {
+				Logger.Error("finalize round - rolling back finalized block -> ", zap.Int64("round", cfb.Round), zap.String("block", cfb.Hash))
 			}
-			c.rebaseState(fb)
-		}
-		bsh.UpdateFinalizedBlock(ctx, fb)
-		c.BlockChain.Value = fb.GetSummary()
-		c.BlockChain = c.BlockChain.Next()
-		frb := c.GetRoundBlocks(fb.Round)
-		for _, b := range frb {
-			if b.Hash != fb.Hash {
-				deadBlocks = append(deadBlocks, b)
-			}
+			c.LatestFinalizedBlock = b
+			return
+		} else {
+			Logger.Error("finalize round - missing common ancestor", zap.Int64("cf_round", c.LatestFinalizedBlock.Round), zap.String("cf_block", c.LatestFinalizedBlock.Hash), zap.Int64("nf_round", lfb.Round), zap.String("nf_block", lfb.Hash))
 		}
 	}
-	// Prune all the dead blocks
-	c.DeleteBlocks(deadBlocks)
+	plfb := c.LatestFinalizedBlock
+	plfbHash := plfb.Hash
+	frchain := make([]*block.Block, 0, 1)
+	for b := lfb; b != nil && b.Hash != plfbHash; b = b.PrevBlock {
+		frchain = append(frchain, b)
+	}
+	fb := frchain[len(frchain)-1]
+	if fb.PrevBlock == nil {
+		pb := c.GetPreviousBlock(ctx, fb)
+		if pb == nil {
+			Logger.Error("finalize round (missed blocks)", zap.Int64("from", plfb.Round+1), zap.Int64("to", fb.Round-1))
+			c.MissedBlocks += fb.Round - 1 - plfb.Round
+		}
+	}
+	c.LatestFinalizedBlock = lfb
+	Logger.Info("finalize round - latest finalized round", zap.Int64("round", c.LatestFinalizedBlock.Round), zap.String("block", c.LatestFinalizedBlock.Hash))
+	for idx := range frchain {
+		fb := frchain[len(frchain)-1-idx]
+		c.finalizedBlocksChannel <- fb
+	}
 	// Prune the chain from the oldest finalized block
 	c.PruneChain(ctx, frchain[len(frchain)-1])
 }
 
-/*PruneChain - prunes the chain */
-func (c *Chain) PruneChain(ctx context.Context, b *block.Block) {
-	c.DeleteBlocksBelowRound(b.Round - 50)
-}
-
 /*GetNotarizedBlockForRound - get a notarized block for a round */
-func (c *Chain) GetNotarizedBlockForRound(r *round.Round) *block.Block {
+func (c *Chain) GetNotarizedBlockForRound(r round.RoundI) *block.Block {
 	nbrequestor := MinerNotarizedBlockRequestor
-	params := map[string]string{"round": fmt.Sprintf("%v", r.Number)}
-	ctx, cancelf := context.WithCancel(context.TODO())
+	roundNumber := r.GetRoundNumber()
+	params := map[string]string{"round": fmt.Sprintf("%v", roundNumber)}
+	ctx, cancelf := context.WithCancel(common.GetRootContext())
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-		Logger.Info("get notarized block for round", zap.Int64("round", r.Number), zap.String("block", entity.GetKey()))
-		if r.Number+1 != c.CurrentRound {
+		Logger.Info("get notarized block for round", zap.Int64("round", roundNumber), zap.String("block", entity.GetKey()))
+		if roundNumber+1 != c.CurrentRound {
 			cancelf()
 			return nil, nil
 		}
@@ -149,62 +203,28 @@ func (c *Chain) GetNotarizedBlockForRound(r *round.Round) *block.Block {
 			cancelf()
 			return nil, nil
 		}
-		b, ok := entity.(*block.Block)
-		if !ok {
-			return nil, common.NewError("invalid_entity", "Invalid entity")
-		}
-		if b.Round != r.Number {
-			return nil, common.NewError("invalid_block", "Block not from the requested round")
-		}
-		if err := c.VerifyNotarization(ctx, b.Hash, b.VerificationTickets); err != nil {
-			Logger.Error("get notarized block for round - validate notarization", zap.Int64("round", r.Number), zap.Error(err))
-			return nil, err
-		}
-		if err := b.Validate(ctx); err != nil {
-			Logger.Error("get notarized block for round - validate", zap.Int64("round", r.Number), zap.Error(err))
-			return nil, err
-		}
-		//TODO: this may not be the best round block or the best chain weight block. Do we do that extra work?
-		c.AddBlock(b)
-		r.AddNotarizedBlock(b)
-		Logger.Info("get notarized block", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.String("state", util.ToHex(b.ClientStateHash)), zap.String("prev_block", b.PrevHash))
-		return nil, nil
-	}
-	n2n := c.Miners
-	n2n.RequestEntity(ctx, nbrequestor, params, handler)
-	return r.GetBestNotarizedBlock()
-}
-
-/*GetNotarizedBlock - get a notarized block for a round */
-func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
-	nbrequestor := MinerNotarizedBlockRequestor
-	cround := c.CurrentRound
-	params := map[string]string{"block": blockHash}
-	ctx, cancelf := context.WithCancel(context.TODO())
-	var b *block.Block
-	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-		Logger.Info("get notarized block", zap.String("block", blockHash), zap.Int64("cround", cround), zap.Int64("current_round", c.CurrentRound))
-		if cround != c.CurrentRound {
-			cancelf()
-			return nil, nil
-		}
 		nb, ok := entity.(*block.Block)
 		if !ok {
 			return nil, common.NewError("invalid_entity", "Invalid entity")
 		}
+		if nb.Round != roundNumber {
+			return nil, common.NewError("invalid_block", "Block not from the requested round")
+		}
 		if err := c.VerifyNotarization(ctx, nb.Hash, nb.VerificationTickets); err != nil {
-			Logger.Error("get notarized block - validate notarization", zap.String("block", blockHash), zap.Error(err))
+			Logger.Error("get notarized block for round - validate notarization", zap.Int64("round", roundNumber), zap.Error(err))
 			return nil, err
 		}
 		if err := nb.Validate(ctx); err != nil {
-			Logger.Error("get notarized block - validate", zap.String("block", blockHash), zap.Any("block_obj", nb), zap.Error(err))
+			Logger.Error("get notarized block for round - validate", zap.Int64("round", roundNumber), zap.Error(err))
 			return nil, err
 		}
-		b = c.AddBlock(nb)
-		Logger.Info("get notarized block", zap.Int64("round", nb.Round), zap.String("block", nb.Hash))
+		b := c.AddBlock(nb)
+		//TODO: this may not be the best round block or the best chain weight block. Do we do that extra work?
+		b, _ = r.AddNotarizedBlock(b)
+		Logger.Info("get notarized block", zap.Int64("round", roundNumber), zap.String("block", b.Hash), zap.String("state", util.ToHex(b.ClientStateHash)), zap.String("prev_block", b.PrevHash))
 		return b, nil
 	}
 	n2n := c.Miners
 	n2n.RequestEntity(ctx, nbrequestor, params, handler)
-	return b
+	return r.GetBestNotarizedBlock()
 }

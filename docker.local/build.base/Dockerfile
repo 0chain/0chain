@@ -1,6 +1,6 @@
 FROM iron/go:dev
 RUN apk add --update --no-cache build-base linux-headers git cmake bash perl
-RUN apk add --update --no-cache zlib zlib-dev bzip2 bzip2-dev snappy snappy-dev lz4 lz4-dev jemalloc jemalloc-dev
+RUN apk add --update --no-cache zlib zlib-dev bzip2 bzip2-dev snappy snappy-dev lz4 lz4-dev jemalloc jemalloc-dev zstd
 
 # Install golang dep
 RUN curl -fsSL -o /usr/local/bin/dep https://github.com/golang/dep/releases/download/v0.5.0/dep-linux-amd64 && \
@@ -20,17 +20,18 @@ RUN cd /tmp && \
 
 # Install RocksDB
 RUN cd /tmp && \
-    curl -L -o rocksdb.tar.gz https://github.com/facebook/rocksdb/archive/5.13.fb.tar.gz && \
-    tar xf rocksdb.tar.gz && \
-    cd rocksdb-* && \
-    make shared_lib -j $(nproc) && \
+    git clone https://github.com/0chain/rocksdb.git && \
+    cd rocksdb && \
+    #git checkout 5.13.fb && \
+    make  shared_lib && \
     mkdir -p /usr/local/rocksdb/lib && \
     mkdir /usr/local/rocksdb/include && \
     cp librocksdb.so* /usr/local/rocksdb/lib && \
     cp /usr/local/rocksdb/lib/librocksdb.so* /usr/lib/ && \
     cp -r include /usr/local/rocksdb/ && \
     cp -r include/* /usr/include/ && \
-    rm -R /tmp/rocksdb*
+    rm -R /tmp/rocksdb/
+
 
 # Install Mitsunari Shigeo's BLS threshold crypto lib
 # It has a homebrew build system that requires all four codebases be in the same dir.
@@ -62,3 +63,20 @@ RUN printf "#!/bin/sh\necho x86_64\n" > /usr/local/bin/arch && \
     rm -R /tmp/mcl* && \
     rm -R /tmp/xbyak* && \
     rm /usr/local/bin/arch
+
+#Download the go dependencies
+RUN go get github.com/golang/snappy
+RUN go get -d github.com/valyala/gozstd && \
+    cd $GOPATH/src/github.com/valyala/gozstd && \
+    make clean libzstd.a
+RUN go get github.com/gomodule/redigo/redis
+RUN go get github.com/0chain/gorocksdb
+RUN go get github.com/vmihailenco/msgpack
+RUN go get -u golang.org/x/crypto/...
+RUN go get go.uber.org/zap
+RUN go get github.com/rcrowley/go-metrics
+RUN go get github.com/spf13/viper
+RUN go get gopkg.in/natefinch/lumberjack.v2
+RUN go get github.com/koding/cache
+RUN go get github.com/hashicorp/golang-lru
+RUN go get github.com/pmer/gobls
