@@ -45,7 +45,7 @@ services:
       context: ${DOCKER_CONTEXT}
       dockerfile: Dockerfile
       args:
-        - zchain_codebase: ${ZCHAIN_CODEBASE}
+        zchain_codebase: ${ZCHAIN_CODEBASE}
 
     pid: "host"
 
