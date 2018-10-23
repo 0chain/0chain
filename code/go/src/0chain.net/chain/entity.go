@@ -568,3 +568,13 @@ func (c *Chain) SetRandomSeed(r *round.Round, randomSeed int64) {
 	r.SetRandomSeed(randomSeed)
 	r.ComputeMinerRanks(c.Miners.Size())
 }
+
+func (c *Chain) getBlocks() []*block.Block {
+	c.blocksMutex.Lock()
+	defer c.blocksMutex.Unlock()
+	var bl []*block.Block
+	for _, v := range c.blocks {
+		bl = append(bl, v)
+	}
+	return bl
+}

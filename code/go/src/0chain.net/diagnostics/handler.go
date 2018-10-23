@@ -19,6 +19,7 @@ func SetupHandlers() {
 	sc := chain.GetServerChain()
 	http.HandleFunc("/_diagnostics/n2n/info", sc.SendStatsWriter)
 	http.HandleFunc("/_diagnostics/miner_stats", sc.MinerStatsHandler)
+	http.HandleFunc("/_diagnostics/block_chain", sc.WIPBlockChainHandler)
 }
 
 /*GetStatistics - write the statistics of the given timer */
