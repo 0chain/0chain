@@ -346,6 +346,7 @@ func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (*block.BlockVer
 	var err error
 	bvt.VerifierID = self.GetKey()
 	bvt.Signature, err = self.Sign(b.Hash)
+	b.SetVerified(true)
 	if err != nil {
 		return nil, err
 	}

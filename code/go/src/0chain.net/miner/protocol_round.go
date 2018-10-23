@@ -408,6 +408,10 @@ func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.B
 
 /*AddNotarizedBlock - add a notarized block for a given round */
 func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *Round, b *block.Block) bool {
+	if !b.IsStateComputed() {
+		Logger.Info("add notarized block - computing state", zap.Int64("round", b.Round), zap.String("block", b.Hash))
+		go mc.ComputeState(ctx, b)
+	}
 	if _, ok := r.AddNotarizedBlock(b); !ok {
 		return false
 	}
