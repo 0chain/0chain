@@ -42,7 +42,7 @@ services:
       - redis:redis
       - redis_txns:redis_txns
     build:
-      context: ${DOCKER_CONTEXT}
+      context: ${ZCHAIN_CODEBASE}
       dockerfile: Dockerfile
       args:
         - ZCHAIN_CODEBASE
