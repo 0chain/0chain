@@ -97,14 +97,11 @@ func (r *Round) CancelVerification() {
 	r.Mutex.Lock()
 	defer r.Mutex.Unlock()
 	f := r.verificationCancelf
-	if r.isVerificationComplete() {
+	if f == nil {
 		return
 	}
-	r.SetState(round.RoundStateVerificationTimedOut)
-	if f != nil {
-		r.verificationCancelf = nil
-		f()
-	}
+	r.verificationCancelf = nil
+	f()
 }
 
 /*Clear - clear any pending state before deleting this round */
