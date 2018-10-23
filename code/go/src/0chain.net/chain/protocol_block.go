@@ -164,7 +164,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	go bsh.UpdateFinalizedBlock(ctx, fb)
 	c.BlockChain.Value = fb.GetSummary()
 	c.BlockChain = c.BlockChain.Next()
-	frb := c.GetRoundBlocks(fb.Round)
+	frb := c.GetRoundBlocks(fb.Round - 10)
 	var deadBlocks []*block.Block
 	for _, b := range frb {
 		if b.Hash != fb.Hash {

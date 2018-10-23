@@ -25,6 +25,40 @@ func SetNetworkRelayTime(delta time.Duration) {
 	chain.SetNetworkRelayTime(delta)
 }
 
+/*StartNextRound - start the next round as a notarized block is discovered for the current round */
+func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
+	pr := mc.GetMinerRound(r.GetRoundNumber() - 1)
+	if pr != nil {
+		mc.CancelRoundVerification(ctx, pr)
+		go mc.FinalizeRound(ctx, pr.Round, mc)
+	}
+	nrNumber := r.GetRoundNumber() + 1
+	nr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
+	nr.Number = nrNumber
+	mr := mc.CreateRound(nr)
+	// Even if the context is cancelled, we want to proceed with the next round, hence start with a root context
+	mc.startRound(common.GetRootContext(), r, mr)
+	return mr
+}
+
+/*StartRound - start a new round */
+func (mc *Chain) startRound(ctx context.Context, pr *Round, r *Round) {
+	if mc.AddRound(r) != r {
+		return
+	}
+	if pr == nil {
+		// If we don't have the prior round, and hence the prior round's random seed, we can't provide the share
+		return
+	}
+	vrfs := &round.VRFShare{}
+	vrfs.Round = r.GetRoundNumber()
+	vrfs.Share = node.Self.Node.SetIndex
+	vrfs.SetParty(node.Self.Node)
+	if mc.AddVRFShare(ctx, r, vrfs) {
+		go mc.SendVRFShare(ctx, vrfs)
+	}
+}
+
 func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 	if mr.GetRoundNumber() < mc.CurrentRound {
 		Logger.Debug("start new round (current round higher)", zap.Int64("round", mr.GetRoundNumber()), zap.Int64("current_round", mc.CurrentRound))
@@ -426,24 +460,6 @@ func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *Round, b *block.Block
 	return true
 }
 
-/*StartNextRound - start the next round as a notarized block is discovered for the current round */
-func (mc *Chain) StartNextRound(ctx context.Context, r *Round) {
-	nrNumber := r.GetRoundNumber() + 1
-	if mc.GetRound(nrNumber) != nil {
-		return
-	}
-	pr := mc.GetMinerRound(r.GetRoundNumber() - 1)
-	if pr != nil {
-		mc.CancelRoundVerification(ctx, pr)
-		go mc.FinalizeRound(ctx, pr.Round, mc)
-	}
-	nr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
-	nr.Number = nrNumber
-	mr := mc.CreateRound(nr)
-	// Even if the context is cancelled, we want to proceed with the next round, hence start with a root context
-	mc.StartRound(common.GetRootContext(), mr)
-}
-
 /*CancelRoundVerification - cancel verifications happening within a round */
 func (mc *Chain) CancelRoundVerification(ctx context.Context, r *Round) {
 	r.CancelVerification() // No need for further verification of any blocks
@@ -469,15 +485,15 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*bloc
 		if !ok {
 			return nil, common.NewError("invalid_entity", "Invalid entity")
 		}
-		Logger.Info("bc-1 lfb received", zap.Int64("lfb_round", fb.Round))
+		Logger.Info("lfb from sharder", zap.Int64("lfb_round", fb.Round))
 		err := fb.Validate(ctx)
 		if err != nil {
-			Logger.Error("bc-1 lfb invalid", zap.String("block_hash", fb.Hash))
+			Logger.Error("lfb from sharder - invalid", zap.Int64("round", fb.Round), zap.String("block", fb.Hash))
 			return nil, err
 		}
 		err = mc.VerifyNotarization(ctx, fb.Hash, fb.VerificationTickets)
 		if err != nil {
-			Logger.Info("bc-1 lfb notarization failed", zap.Int64("lfb_round", fb.Round))
+			Logger.Error("lfb from sharder - notarization failed", zap.Int64("round", fb.Round), zap.String("block", fb.Hash))
 			return nil, err
 		}
 		fbMutex.Lock()
