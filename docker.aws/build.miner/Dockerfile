@@ -6,6 +6,8 @@ ADD MINER_VERSION .
 
 ARG zchain_codebase
 
+RUN echo "zchain_codebase: $zchain_codebase"
+
 FROM 0chain/base
 
 ENV SOURCE_DIR=$zchain_codebase
