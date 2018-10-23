@@ -15,13 +15,11 @@ import (
 func (mc *Chain) HandleVRFShare(ctx context.Context, msg *BlockMessage) {
 	mr := mc.GetMinerRound(msg.VRFShare.Round)
 	if mr == nil {
-		r := datastore.GetEntityMetadata("round").Instance().(*round.Round)
-		r.Number = msg.VRFShare.Round
-		mr = mc.CreateRound(r)
-		if er := mc.AddRound(mr); mr != er {
-			mr = er.(*Round)
+		Logger.Debug("handle vrf share - got vrf share before starting a round", zap.Int64("round", msg.VRFShare.Round))
+		pr := mc.GetMinerRound(msg.VRFShare.Round - 1)
+		if pr != nil {
+			mr = mc.StartNextRound(ctx, pr)
 		}
-		mc.StartRound(ctx, mr)
 	}
 	mc.AddVRFShare(ctx, mr, msg.VRFShare)
 }
@@ -38,17 +36,15 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 		return
 	}
 	if mr == nil {
-		r := datastore.GetEntityMetadata("round").Instance().(*round.Round)
-		r.Number = b.Round
-		mr = mc.CreateRound(r)
-		if mc.AddRound(mr) == mr {
-			mc.SetRandomSeed(r, b.RoundRandomSeed)
-			mc.startNewRound(ctx, mr)
-		}
+		Logger.Error("handle verify block - got block proposal before starting round", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("miner", b.MinerID))
+		pr := mc.GetMinerRound(b.Round - 1)
+		mr = mc.StartNextRound(ctx, pr)
+		//TODO: byzantine
+		mc.setRandomSeed(ctx, mr, b.RoundRandomSeed)
 	} else {
 		if !mr.IsVRFComplete() {
 			//TODO: byzantine
-			mc.SetRandomSeed(mr.Round, b.RoundRandomSeed)
+			mc.setRandomSeed(ctx, mr, b.RoundRandomSeed)
 		}
 	}
 	if mr != nil {
@@ -174,6 +170,10 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
 		}
 	}
 	r.Round.Block = nil
+	if !r.IsVRFComplete() {
+		//TODO: send vrf again?
+		return
+	}
 	if mc.IsRoundGenerator(r.Round, node.GetSelfNode(ctx).Node) {
 		go mc.GenerateRoundBlock(ctx, r)
 	}
@@ -184,8 +184,10 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMess
 	mb := msg.Block
 	mr := mc.GetMinerRound(mb.Round)
 	if mr == nil {
+		Logger.Error("handle notarized block message", zap.Int64("round", mb.Round))
 		r := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 		r.Number = mb.Round
+		//TODO: byzantine
 		mc.SetRandomSeed(r, mb.RoundRandomSeed)
 		mr = mc.CreateRound(r)
 		mc.AddRound(mr)

@@ -26,7 +26,7 @@ func SetNetworkRelayTime(delta time.Duration) {
 }
 
 /*StartNextRound - start the next round as a notarized block is discovered for the current round */
-func (mc *Chain) StartNextRound(ctx context.Context, r *Round) {
+func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 	pr := mc.GetMinerRound(r.GetRoundNumber() - 1)
 	if pr != nil {
 		mc.CancelRoundVerification(ctx, pr)
@@ -37,15 +37,15 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) {
 	nr.Number = nrNumber
 	mr := mc.CreateRound(nr)
 	// Even if the context is cancelled, we want to proceed with the next round, hence start with a root context
-	mc.StartRound(common.GetRootContext(), mr)
+	mc.startRound(common.GetRootContext(), r, mr)
+	return mr
 }
 
 /*StartRound - start a new round */
-func (mc *Chain) StartRound(ctx context.Context, r *Round) {
+func (mc *Chain) startRound(ctx context.Context, pr *Round, r *Round) {
 	if mc.AddRound(r) != r {
 		return
 	}
-	pr := mc.GetRound(r.GetRoundNumber() - 1)
 	if pr == nil {
 		// If we don't have the prior round, and hence the prior round's random seed, we can't provide the share
 		return
@@ -485,15 +485,15 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*bloc
 		if !ok {
 			return nil, common.NewError("invalid_entity", "Invalid entity")
 		}
-		Logger.Info("bc-1 lfb received", zap.Int64("lfb_round", fb.Round))
+		Logger.Info("lfb from sharder", zap.Int64("lfb_round", fb.Round))
 		err := fb.Validate(ctx)
 		if err != nil {
-			Logger.Error("bc-1 lfb invalid", zap.String("block_hash", fb.Hash))
+			Logger.Error("lfb from sharder - invalid", zap.Int64("round", fb.Round), zap.String("block", fb.Hash))
 			return nil, err
 		}
 		err = mc.VerifyNotarization(ctx, fb.Hash, fb.VerificationTickets)
 		if err != nil {
-			Logger.Info("bc-1 lfb notarization failed", zap.Int64("lfb_round", fb.Round))
+			Logger.Error("lfb from sharder - notarization failed", zap.Int64("round", fb.Round), zap.String("block", fb.Hash))
 			return nil, err
 		}
 		fbMutex.Lock()
