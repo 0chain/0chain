@@ -44,8 +44,8 @@ services:
     build:
       context: ${ZCHAIN_CODEBASE}
       dockerfile: ./docker.aws/build.miner/Dockerfile
-      args:
-        - ZCHAIN_CODEBASE
+
+    image: 0chain/miner:0.1.0
 
     pid: "host"
 
