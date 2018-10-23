@@ -1,7 +1,7 @@
 version: 1.0
 #EddyZstd Config File
 network_blueprint:
-  git_tag: "smartcontract"
+  git_tag: "smartcontract_new"
 
   instance_model:
     miner: "c5.xlarge"
@@ -43,7 +43,7 @@ server_chain:
   round_range: 10000000
   transaction:
     payload:
-      max_size: 32768 # bytes
+      max_size: 96768 # bytes
   client:
     discover: true
   messages:
