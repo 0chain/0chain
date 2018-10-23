@@ -17,6 +17,7 @@ import (
 	. "0chain.net/logging"
 	"0chain.net/node"
 	"0chain.net/round"
+	"0chain.net/smartcontractstate"
 	"0chain.net/state"
 	"0chain.net/transaction"
 	"0chain.net/util"
@@ -106,6 +107,7 @@ type Chain struct {
 
 	nodePoolScorer node.PoolScorer
 
+	scStateDB smartcontractstate.SCDB
 	missingLinkBlocks chan *block.Block
 }
 
@@ -195,6 +197,7 @@ func Provider() datastore.Entity {
 	c.Sharders = node.NewPool(node.NodeTypeSharder)
 	c.Blobbers = node.NewPool(node.NodeTypeBlobber)
 	c.Stats = &Stats{}
+
 	return c
 }
 
@@ -210,6 +213,7 @@ func (c *Chain) Initialize() {
 	c.finalizedBlocksChannel = make(chan *block.Block, 128)
 	c.clientStateDeserializer = &state.Deserializer{}
 	c.stateDB = stateDB
+	c.scStateDB = scStateDB
 	c.BlockChain = ring.New(10000)
 	c.minersStake = make(map[datastore.Key]int)
 	c.missingLinkBlocks = make(chan *block.Block, 128)
@@ -223,9 +227,11 @@ func SetupEntity(store datastore.Store) {
 	chainEntityMetadata.Store = store
 	datastore.RegisterEntityMetadata("chain", chainEntityMetadata)
 	SetupStateDB()
+	SetupSCStateDB()
 }
 
 var stateDB *util.PNodeDB
+var scStateDB *smartcontractstate.PSCDB
 
 //SetupStateDB - setup the state db
 func SetupStateDB() {
@@ -234,6 +240,15 @@ func SetupStateDB() {
 		panic(err)
 	}
 	stateDB = db
+}
+
+//SetupSCStateDB - setup the state db for smartcontract
+func SetupSCStateDB() {
+	db, err := smartcontractstate.NewPSCDB("data/rocksdb/smartcontract")
+	if err != nil {
+		panic(err)
+	}
+	scStateDB = db
 }
 
 func (c *Chain) getInitialState() util.Serializable {
@@ -263,6 +278,7 @@ func (c *Chain) GenerateGenesisBlock(hash string) (round.RoundI, *block.Block) {
 	gb.Hash = hash
 	gb.Round = 0
 	gb.ClientState = c.setupInitialState()
+	gb.SCStateDB = c.scStateDB
 	gb.SetStateStatus(block.StateSuccessful)
 	gb.SetBlockState(block.StateNotarized)
 	gb.ClientStateHash = gb.ClientState.GetRoot()

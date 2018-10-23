@@ -1,87 +1,77 @@
-version: '3'
-services:
-  cassandra:
-    image: cassandra:latest
-    networks:
-      - default
-    volumes:
-      - /0chain/config/cassandra/cassandra.yaml:/etc/cassandra/cassandra.yaml
-      - /0chain/config/cassandra:/0chain/cassandra
-      - /0chain/data/cassandra:/var/lib/cassandra
-      - /0chain/log/cassandra:/var/log/cassandra
-      - /0chain/0chain/sql:/0chain/sql
-    ports:
-      - "9042:9042"
-
-    restart: on-failure:10
-
-    #Do under 0chain id.
-    user: 2000:2000
-    healthcheck:
-      test: ["CMD-SHELL", "[ $$(nodetool statusgossip) = running ]"]
+--- 
+networks: 
+  default: 
+    driver: bridge
+services: 
+  cassandra-init: 
+    command: "bash /0chain/bin/scylla-init.sh"
+    image: "cassandra:latest"
+    links: 
+      - "scylla:scylla"
+    restart: on-failure
+    user: "2000:2000"
+    volumes: 
+      - "/0chain/0chain/bin:/0chain/bin"
+      - "/0chain/0chain/sql:/0chain/sql"
+      - "/0chain/config/cassandra:/0chain/cassandra"
+  scylla: 
+    healthcheck: 
       interval: 30s
-      timeout: 10s
       retries: 5
-
-  cassandra-init:
-    image: cassandra:latest
-    volumes:
-      - /0chain/config/cassandra:/0chain/cassandra
-      - /0chain/0chain/sql:/0chain/sql
-
-    command: bash /0chain/cassandra/cassandra-init.sh
-    links:
-      - cassandra:cassandra
-    restart: on-failure:10
-
-  sharder:
-    environment:
-      - DOCKER=true
-    depends_on:
-      - cassandra-init
-    links:
-      - cassandra-init:cassandra-init
-    build:
+      test: 
+        - CMD-SHELL
+        - "[ $$(nodetool statusgossip) = running ]"
+      timeout: 10s
+    image: "scylladb/scylla:2.3.0"
+    networks: 
+      - default
+    ports: 
+      - "9042:9042"
+    #ToDo: Scylla does not like to run as 0chain. Wants to be root. Need more investigation
+    #See ticket ODA-5
+    #user: "2000:2000"
+    volumes: 
+      - "/0chain/config/scylla/scylla.yaml:/etc/scylla/scylla.yaml"
+      - "/0chain/config/scylla:/0chain/scylla"
+      - "/0chain/data/scylla:/var/lib/scylla"
+      - "/0chain/0chain/sql:/0chain/sql"
+      - "/0chain/config/scylla/scylla-server:/etc/sysconfig/scylla-server"
+  sharder: 
+    build: 
       context: /0chain/0chain
       dockerfile: /0chain/0chain/docker.aws/build.sharder/Dockerfile
-
-    pid: "host"
-
-    volumes:
-      - /0chain/config:/0chain/config
-      - /0chain/nodes:/0chain/nodes
-      - /0chain/log:/0chain/log
-      - /0chain/data:/0chain/data
-
-    #Hard and soft are required properties.
-    ulimits:
-      nofile:
+    command: "./bin/sharder --deployment_mode 0 --keys_file /0chain/config/${SHARDER}.txt --nodes_file nodes"
+    depends_on: 
+      - cassandra-init
+    environment: 
+      - DOCKER=true
+      - CASSANDRA_CLUSTER=scylla
+    links: 
+      - "cassandra-init:cassandra-init"
+    logging: 
+      driver: json-file
+      options: 
+        max-file: "10"
+        max-size: 10M
+    networks: 
+      default: ~
+    pid: host
+    ports: 
+      - "7171:7171"
+    ulimits: 
+      nofile: 
         hard: 32768
         soft: 32768
-
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10M"
-        max-file: "10"
-
-    ports:
-      - "7171:7171"
-
-    restart: on-failure:10
-
-    networks:
-      default:
-
-    #Start under user 0chain
-    user: 2000:2000
-    command: ./bin/sharder --deployment_mode 0 --keys_file /0chain/config/${SHARDER}.txt --nodes_file nodes
-
-networks:
-  default:
-    driver: bridge
-
-volumes:
-  data:
-  config:
-  nodes:
+    user: "2000:2000"
+    volumes: 
+      - "/0chain/config:/0chain/config"
+      - "/0chain/nodes:/0chain/nodes"
+      - "/0chain/log:/0chain/log"
+      - "/0chain/data/blocks:/0chain/data/blocks"
+      - "/0chain/data:/0chain/data"
+version: "3"
+volumes: 
+  config: ~
+  data: ~
+  nodes: ~
+  bin: ~
