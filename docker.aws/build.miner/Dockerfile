@@ -29,6 +29,6 @@ WORKDIR $APP_DIR/bin
 
 #RUN mkdir -p $APP_DIR/bin
 
-COPY --from=1 $SRC_DIR/miner $APP_DIR/bin
+COPY --from=1 $APP_DIR/miner $APP_DIR/bin
 
 USER 2000:2000
