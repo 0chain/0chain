@@ -8,14 +8,15 @@ ARG zchain_codebase
 
 FROM 0chain/base
 
-ENV SRC_DIR=$zchain_codebase
+ENV SOURCE_DIR=$zchain_codebase
+ENV DEST_DIR=/0chain
 
-ENV GOPATH=$GOPATH:$SRC_DIR/go
-
-WORKDIR $SRC_DIR
+#ENV GOPATH=$GOPATH:$SRDIR/go
 
 #Add the source code
-ADD ./code/go/src $SRC_DIR/go/src
+ADD $SOURCE_DIR/code/go/src $DEST_DIR/code/go/src
+
+WORKDIR $DEST_DIR/code/go/src
 
 # Build it:
 RUN go build 0chain.net/miner/miner
