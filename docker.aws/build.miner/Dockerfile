@@ -1,7 +1,5 @@
 #Store all files and run environment under 0chain userid.
 ARG ZCHAIN_CODEBASE
-RUN echo "ZCHAIN_CODEBASE: $ZCHAIN_CODEBASE"
-
 FROM ubuntu:16.04
 RUN groupadd -r 0chain && useradd --no-log-init -r -g 0chain 0chain
 
@@ -21,6 +19,8 @@ ADD ./code/go/src $SRC_DIR/go/src
 RUN go build 0chain.net/miner/miner
 
 FROM zchain_base
+RUN echo "ZCHAIN_CODEBASE: $ZCHAIN_CODEBASE"
+
 ENV APP_DIR=/0chain
 WORKDIR $APP_DIR
 RUN mkdir -p $APP_DIR/bin
