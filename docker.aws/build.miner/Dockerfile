@@ -4,6 +4,8 @@ FROM ubuntu:16.04
 RUN groupadd -r 0chain && useradd --no-log-init -r -g 0chain 0chain
 
 FROM 0chain/base
+RUN echo "ZCHAIN_CODEBASE: $ZCHAIN_CODEBASE"
+
 ADD ./docker.aws/build.miner/MINER_VERSION .
 
 ENV SRC_DIR=/0chain
@@ -18,7 +20,7 @@ ADD ./code/go/src $SRC_DIR/go/src
 # Build it:
 RUN go build 0chain.net/miner/miner
 
-FROM zchain_base
+FROM 0chain/base
 RUN echo "ZCHAIN_CODEBASE: $ZCHAIN_CODEBASE"
 
 ENV APP_DIR=/0chain
