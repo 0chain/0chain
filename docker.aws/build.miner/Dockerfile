@@ -3,11 +3,9 @@ FROM ubuntu:16.04
 RUN groupadd -r 0chain && useradd --no-log-init -r -g 0chain 0chain
 
 FROM 0chain/base
-
 ADD ./docker.aws/build.miner/MINER_VERSION .
 
 ENV SRC_DIR=/0chain
-
 ENV GOPATH=$GOPATH:$SRC_DIR/go
 
 WORKDIR $SRC_DIR
@@ -18,8 +16,8 @@ ADD ./code/go/src $SRC_DIR/go/src
 # Build it:
 RUN go build 0chain.net/miner/miner
 
+#Copy the miner executable
 WORKDIR $SRC_DIR/bin
-
 RUN cp $SRC_DIR/miner $SRC_DIR/bin
 
 USER 2000:2000
