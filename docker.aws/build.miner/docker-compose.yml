@@ -41,9 +41,9 @@ services:
     links:
       - redis:redis
       - redis_txns:redis_txns
-    build:
-      context: /0chain/0chain
-      dockerfile: /0chain/0chain/docker.aws/build.miner/Dockerfile
+#    build:
+#      context: .
+#      dockerfile: /0chain/0chain/docker.aws/build.miner/Dockerfile
 
     pid: "host"
 
