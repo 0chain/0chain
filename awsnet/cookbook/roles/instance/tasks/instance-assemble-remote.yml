@@ -1,6 +1,11 @@
 ---
 - become: yes
   block:
+
+  - set_fact:
+      long_path: "{{blueprint.lifecycle | default('nascent') == 'nascent'}}"
+  - debug: var=long_path
+
   - name: Set hostname to match EC2 Name
     hostname:
       name: "{{agent_name}}.{{network_name}}.{{network_domain}}"
@@ -82,8 +87,7 @@
       fstype: ext4
       boot: yes
 
-- become: yes
-  block:
+- block:
   - name: Get EFS facts for the instance
     local_action:
       module: efs_facts
@@ -123,7 +127,7 @@
       owner: 0chain
       group: 0chain
       mode: "u=rwX,g=rX,o=rX"
-      recurse: yes
+      recurse: "{{long_path}}"
     become: yes
   when:
     - agent_role == "sharder"
@@ -140,7 +144,7 @@
       owner: 0chain
       group: 0chain
       mode: "u=rwX,g=rX,o=rX"
-      recurse: yes
+      recurse: "{{long_path}}"
     loop: "{{agent_dirs}}"
     loop_control:
       loop_var: agent_dir

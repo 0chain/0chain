@@ -9,3 +9,5 @@ type Stats struct {
 	MultiNotarizedBlocksCount int64
 	MaxNotarizedBlocksCount   int8
 }
+
+var NotariedBlocksCounts []int64
