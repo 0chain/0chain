@@ -45,7 +45,7 @@ services:
       context: ${ZCHAIN_CODEBASE}
       dockerfile: ./docker.aws/build.sharder/Dockerfile
 
-    image: {IMAGE_NAME}:${IMAGE_TAG}
+    image: ${IMAGE_NAME}:${IMAGE_TAG}
 
     pid: "host"
 
