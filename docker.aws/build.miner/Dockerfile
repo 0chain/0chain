@@ -4,9 +4,9 @@ RUN groupadd -r 0chain && useradd --no-log-init -r -g 0chain 0chain
 
 ADD MINER_VERSION .
 
-ARG zchain_codebase
+ARG ZCHAIN_CODEBASE
 
-RUN echo "zchain_codebase: $zchain_codebase"
+RUN echo "ZCHAIN_CODEBASE: $ZCHAIN_CODEBASE"
 
 FROM 0chain/base
 
@@ -17,7 +17,7 @@ ENV GOPATH=$GOPATH:$SRC_DIR/go
 WORKDIR $SRC_DIR
 
 #Add the source code
-ADD $zchain_codebase/code/go/src $SRC_DIR/go/src
+ADD $ZCHAIN_CODEBASE/code/go/src $SRC_DIR/go/src
 
 # Build it:
 RUN go build 0chain.net/miner/miner
