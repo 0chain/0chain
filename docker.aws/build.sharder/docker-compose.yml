@@ -42,8 +42,10 @@ services:
     links:
       - cassandra-init:cassandra-init
     build:
-      context: /0chain/0chain
-      dockerfile: /0chain/0chain/docker.aws/build.sharder/Dockerfile
+      context: ${ZCHAIN_CODEBASE}
+      dockerfile: ./docker.aws/build.sharder/Dockerfile
+
+    image: {IMAGE_NAME}:${IMAGE_TAG}
 
     pid: "host"
 
