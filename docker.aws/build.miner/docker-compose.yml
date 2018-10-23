@@ -42,8 +42,10 @@ services:
       - redis:redis
       - redis_txns:redis_txns
     build:
-      context: .
+      context: ${DOCKER_CONTEXT}
       dockerfile: Dockerfile
+      args:
+        - zchain_codebase: ${ZCHAIN_CODEBASE}
 
     pid: "host"
 

@@ -4,9 +4,12 @@ RUN groupadd -r 0chain && useradd --no-log-init -r -g 0chain 0chain
 
 ADD MINER_VERSION .
 
+ARG zchain_codebase
+
 FROM 0chain/base
 
-ENV SRC_DIR=/0chain
+ENV SRC_DIR=$zchain_codebase
+
 ENV GOPATH=$GOPATH:$SRC_DIR/go
 
 WORKDIR $SRC_DIR
