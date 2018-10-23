@@ -19,9 +19,18 @@ func (mc *Chain) HandleVRFShare(ctx context.Context, msg *BlockMessage) {
 		pr := mc.GetMinerRound(msg.VRFShare.Round - 1)
 		if pr != nil {
 			mr = mc.StartNextRound(ctx, pr)
+		} else {
+			Logger.Error("handle vrf share - no prior round", zap.Int64("round", msg.VRFShare.Round))
+			// We can't really provide a VRF share as we don't know the previous round's random number but we can collect the shares
+			var r = datastore.GetEntityMetadata("round").Instance().(*round.Round)
+			r.Number = msg.VRFShare.Round
+			mr = mc.CreateRound(r)
+			mc.AddRound(mr)
 		}
 	}
-	mc.AddVRFShare(ctx, mr, msg.VRFShare)
+	if mr != nil {
+		mc.AddVRFShare(ctx, mr, msg.VRFShare)
+	}
 }
 
 /*HandleVerifyBlockMessage - handles the verify block message */
