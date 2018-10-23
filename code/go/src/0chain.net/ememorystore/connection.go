@@ -33,6 +33,7 @@ func CreateDB(dataDir string) (*gorocksdb.TransactionDB, error) {
 	bbto := gorocksdb.NewDefaultBlockBasedTableOptions()
 	bbto.SetBlockCache(gorocksdb.NewLRUCache(3 << 30))
 	opts := gorocksdb.NewDefaultOptions()
+	opts.SetKeepLogFileNum(5)
 	opts.SetBlockBasedTableFactory(bbto)
 	opts.SetCreateIfMissing(true)
 	tdbopts := gorocksdb.NewDefaultTransactionDBOptions()

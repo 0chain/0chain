@@ -10,7 +10,7 @@ import (
 )
 
 //BatchSize - for batching multiple db operations
-const BatchSize = 64
+const BatchSize = 256
 
 /*ErrNodeNotFound - error indicating that the node is not found */
 var ErrNodeNotFound = errors.New("node not found")

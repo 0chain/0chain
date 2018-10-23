@@ -37,6 +37,12 @@ func (n *Node) PrintSendStats(w io.Writer) {
 		fmt.Fprintf(w, "<td class='number'>%.2f</td>", scale(timer.Min()))
 		fmt.Fprintf(w, "<td class='number'>%.2f &plusmn;%.2f</td>", timer.Mean()/1000000., timer.StdDev()/1000000.)
 		fmt.Fprintf(w, "<td class='number'>%.2f</td>", scale(timer.Max()))
+		sizer := n.GetSizeMetric(uri)
+		if sizer != nil {
+			fmt.Fprintf(w, "<td class='number'>%d</td>", sizer.Min())
+			fmt.Fprintf(w, "<td class='number'>%.2f &plusmn;%.2f</td>", sizer.Mean(), sizer.StdDev())
+			fmt.Fprintf(w, "<td class='number'>%d</td>", sizer.Max())
+		}
 		fmt.Fprintf(w, "</tr>")
 	}
 }
@@ -51,7 +57,7 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 	if nd == nil {
 		return
 	}
-	if nd.Status == NodeStatusActive {
+	if nd.IsActive() {
 		return
 	}
 	data := r.FormValue("data")

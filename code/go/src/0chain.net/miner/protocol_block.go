@@ -33,11 +33,6 @@ func init() {
 	bvTimer = metrics.GetOrRegisterTimer("bv_time", nil)
 }
 
-/*StartRound - start a new round */
-func (mc *Chain) StartRound(ctx context.Context, r *Round) {
-	mc.AddRound(r)
-}
-
 /*GenerateBlock - This works on generating a block
 * The context should be a background context which can be used to stop this logic if there is a new
 * block published while working on this
@@ -349,6 +344,7 @@ func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (*block.BlockVer
 	var err error
 	bvt.VerifierID = self.GetKey()
 	bvt.Signature, err = self.Sign(b.Hash)
+	b.SetVerified(true)
 	if err != nil {
 		return nil, err
 	}
@@ -371,8 +367,8 @@ func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	fr := mc.GetRound(b.Round)
 	if fr != nil {
 		fr.Finalize(b)
-		mc.DeleteRoundsBelow(ctx, fr.GetRoundNumber()-10)
 	}
+	mc.DeleteRoundsBelow(ctx, b.Round)
 }
 
 /*FinalizeBlock - finalize the transactions in the block */

@@ -72,6 +72,7 @@ type Node struct {
 	Received   int64 // messages received from this node
 
 	TimersByURI map[string]metrics.Timer
+	SizeByURI   map[string]metrics.Histogram
 
 	LargeMessageSendTime float32
 	SmallMessageSendTime float32
@@ -94,6 +95,7 @@ func Provider() *Node {
 	}
 	node.mutex = &sync.Mutex{}
 	node.TimersByURI = make(map[string]metrics.Timer, 10)
+	node.SizeByURI = make(map[string]metrics.Histogram, 10)
 	return node
 }
 
@@ -241,15 +243,31 @@ func (n *Node) GetTimer(uri string) metrics.Timer {
 	defer n.mutex.Unlock()
 	timer, ok := n.TimersByURI[uri]
 	if !ok {
-		timerID := fmt.Sprintf("%v.%v", n.ID, uri)
+		timerID := fmt.Sprintf("%v.%v.time", n.ID, uri)
 		timer = metrics.GetOrRegisterTimer(timerID, nil)
 		n.TimersByURI[uri] = timer
 	}
 	return timer
 }
 
+//GetSizeMetric - get the size metric
+func (n *Node) GetSizeMetric(uri string) metrics.Histogram {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+	metric, ok := n.SizeByURI[uri]
+	if !ok {
+		metricID := fmt.Sprintf("%v.%v.size", n.ID, uri)
+		metric = metrics.NewHistogram(metrics.NewUniformSample(256))
+		n.SizeByURI[uri] = metric
+		metrics.Register(metricID, metric)
+	}
+	return metric
+}
+
 /*GetMaxMessageCount - get max messages count */
 func (n *Node) GetMaxMessageCount() int64 {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
 	var count int64
 	for _, timer := range n.TimersByURI {
 		c := timer.Count()
@@ -309,4 +327,9 @@ func (n *Node) SetID(id string) error {
 	}
 	n.idBytes = bytes
 	return nil
+}
+
+//IsActive - returns if this node is active or not
+func (n *Node) IsActive() bool {
+	return n.Status == NodeStatusActive
 }

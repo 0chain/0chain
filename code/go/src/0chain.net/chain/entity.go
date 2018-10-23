@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"sync"
+	"time"
 
 	"0chain.net/encryption"
 
@@ -80,7 +81,7 @@ type Chain struct {
 	Blobbers *node.Pool `json:"-"`
 
 	/* This is a cache of blocks that may include speculative blocks */
-	blocks      map[datastore.Key]*block.Block `json:"-"`
+	blocks      map[datastore.Key]*block.Block
 	blocksMutex *sync.Mutex
 
 	rounds      map[int64]round.RoundI
@@ -95,6 +96,7 @@ type Chain struct {
 	stateMutex              *sync.Mutex
 
 	finalizedRoundsChannel chan round.RoundI
+	finalizedBlocksChannel chan *block.Block
 
 	*Stats `json:"-"`
 
@@ -106,6 +108,7 @@ type Chain struct {
 	nodePoolScorer node.PoolScorer
 
 	scStateDB smartcontractstate.SCDB
+	missingLinkBlocks chan *block.Block
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
@@ -148,6 +151,7 @@ func NewChainFromConfig() *Chain {
 	chain.Decimals = int8(viper.GetInt("server_chain.decimals"))
 	chain.BlockSize = viper.GetInt32("server_chain.block.size")
 	chain.NumGenerators = viper.GetInt("server_chain.block.generators")
+	NotariedBlocksCounts = make([]int64, chain.NumGenerators+1)
 	chain.NumSharders = viper.GetInt("server_chain.block.sharders")
 	chain.ThresholdByCount = viper.GetInt("server_chain.block.consensus.threshold_by_count")
 	chain.ThresholdByStake = viper.GetInt("server_chain.block.consensus.threshold_by_stake")
@@ -161,6 +165,13 @@ func NewChainFromConfig() *Chain {
 		chain.VerificationTicketsTo = AllMiners
 	} else {
 		chain.VerificationTicketsTo = Generator
+	}
+	chain.BlockProposalMaxWaitTime = viper.GetDuration("server_chain.block.proposal.max_wait_time") * time.Millisecond
+	waitMode := viper.GetString("server_chain.block.proposal.wait_mode")
+	if waitMode == "static" {
+		chain.BlockProposalWaitMode = BlockProposalWaitStatic
+	} else if waitMode == "dynamic" {
+		chain.BlockProposalWaitMode = BlockProposalWaitDynamic
 	}
 	return chain
 }
@@ -199,11 +210,13 @@ func (c *Chain) Initialize() {
 	c.VerificationTicketsTo = AllMiners
 	c.ValidationBatchSize = 2000
 	c.finalizedRoundsChannel = make(chan round.RoundI, 128)
+	c.finalizedBlocksChannel = make(chan *block.Block, 128)
 	c.clientStateDeserializer = &state.Deserializer{}
 	c.stateDB = stateDB
 	c.scStateDB = scStateDB
 	c.BlockChain = ring.New(10000)
 	c.minersStake = make(map[datastore.Key]int)
+	c.missingLinkBlocks = make(chan *block.Block, 128)
 }
 
 /*SetupEntity - setup the entity */
@@ -222,7 +235,7 @@ var scStateDB *smartcontractstate.PSCDB
 
 //SetupStateDB - setup the state db
 func SetupStateDB() {
-	db, err := util.NewPNodeDB("data/rocksdb/state")
+	db, err := util.NewPNodeDB("data/rocksdb/state", "/0chain/log/rocksdb/state")
 	if err != nil {
 		panic(err)
 	}
@@ -271,6 +284,7 @@ func (c *Chain) GenerateGenesisBlock(hash string) (round.RoundI, *block.Block) {
 	gb.ClientStateHash = gb.ClientState.GetRoot()
 	gr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 	gr.Number = 0
+	c.SetRandomSeed(gr, 839695260482366273)
 	gr.Block = gb
 	gr.AddNotarizedBlock(gb)
 	return gr, gb
@@ -306,18 +320,26 @@ func (c *Chain) addBlock(b *block.Block) *block.Block {
 		if pb, ok := c.blocks[b.PrevHash]; ok {
 			b.SetPreviousBlock(pb)
 		} else {
-			go c.GetPreviousBlock(common.GetRootContext(), b)
+			c.AsyncFetchNotarizedPreviousBlock(b)
 		}
 	}
 	return b
+}
+
+/*AsyncFetchNotarizedPreviousBlock - async fetching of the notarized block */
+func (c *Chain) AsyncFetchNotarizedPreviousBlock(b *block.Block) {
+	c.missingLinkBlocks <- b
 }
 
 /*GetBlock - returns a known block for a given hash from the cache */
 func (c *Chain) GetBlock(ctx context.Context, hash string) (*block.Block, error) {
 	c.blocksMutex.Lock()
 	defer c.blocksMutex.Unlock()
-	b, ok := c.blocks[datastore.ToKey(hash)]
-	if ok {
+	return c.getBlock(ctx, hash)
+}
+
+func (c *Chain) getBlock(ctx context.Context, hash string) (*block.Block, error) {
+	if b, ok := c.blocks[datastore.ToKey(hash)]; ok {
 		return b, nil
 	}
 	return nil, common.NewError(datastore.EntityNotFound, fmt.Sprintf("Block with hash (%v) not found", hash))
@@ -406,7 +428,7 @@ func (c *Chain) GetGenerators(r round.RoundI) []*node.Node {
 }
 
 /*IsBlockSharder - checks if the sharder can store the block in the given round */
-func (c *Chain) IsBlockSharder(r round.RoundI, b *block.Block, sharder *node.Node) bool {
+func (c *Chain) IsBlockSharder(b *block.Block, sharder *node.Node) bool {
 	if c.NumSharders <= 0 {
 		return true
 	}
@@ -487,14 +509,14 @@ func (c *Chain) ChainHasTransaction(ctx context.Context, b *block.Block, txn *tr
 	return false, ErrInsufficientChain
 }
 
-func (c *Chain) updateMiningStake(minerId datastore.Key, stake int) {
+func (c *Chain) updateMiningStake(minerID datastore.Key, stake int) {
 	c.stakeMutex.Lock()
 	defer c.stakeMutex.Unlock()
-	c.minersStake[minerId] = stake
+	c.minersStake[minerID] = stake
 }
 
-func (c *Chain) getMiningStake(minerId datastore.Key) int {
-	return c.minersStake[minerId]
+func (c *Chain) getMiningStake(minerID datastore.Key) int {
+	return c.minersStake[minerID]
 }
 
 //InitializeMinerPool - initialize the miners after their configuration is read
@@ -502,6 +524,7 @@ func (c *Chain) InitializeMinerPool() {
 	for _, nd := range c.Miners.Nodes {
 		ms := &MinerStats{}
 		ms.FinalizationCountByRank = make([]int64, c.NumGenerators)
+		ms.VerificationTicketsByRank = make([]int64, c.NumGenerators)
 		nd.ProtocolStats = ms
 	}
 }
@@ -515,7 +538,6 @@ func (c *Chain) AddRound(r round.RoundI) round.RoundI {
 	if ok {
 		return er
 	}
-	//r.ComputeMinerRanks(c.Miners.Size())
 	c.rounds[roundNumber] = r
 	if roundNumber > c.CurrentRound {
 		c.CurrentRound = roundNumber
@@ -547,7 +569,7 @@ func (c *Chain) DeleteRoundsBelow(ctx context.Context, roundNumber int64) {
 	defer c.roundsMutex.Unlock()
 	rounds := make([]round.RoundI, 0, 1)
 	for _, r := range c.rounds {
-		if r.GetRoundNumber() < roundNumber {
+		if r.GetRoundNumber() < roundNumber-10 {
 			rounds = append(rounds, r)
 		}
 	}
@@ -555,4 +577,20 @@ func (c *Chain) DeleteRoundsBelow(ctx context.Context, roundNumber int64) {
 		r.Clear()
 		delete(c.rounds, r.GetRoundNumber())
 	}
+}
+
+/*SetRandomSeed - set the random seed for the round */
+func (c *Chain) SetRandomSeed(r *round.Round, randomSeed int64) {
+	r.SetRandomSeed(randomSeed)
+	r.ComputeMinerRanks(c.Miners.Size())
+}
+
+func (c *Chain) getBlocks() []*block.Block {
+	c.blocksMutex.Lock()
+	defer c.blocksMutex.Unlock()
+	var bl []*block.Block
+	for _, v := range c.blocks {
+		bl = append(bl, v)
+	}
+	return bl
 }

@@ -11,8 +11,9 @@ import (
 /*SetupWorkers - Setup the miner's workers */
 func SetupWorkers(ctx context.Context) {
 	mc := GetMinerChain()
-	go mc.BlockWorker(ctx)
-	go mc.BlockFinalizationWorker(ctx, mc)
+	go mc.BlockWorker(ctx)              // 1) receives incoming blocks from the network
+	go mc.FinalizeRoundWorker(ctx, mc)  // 2) sequentially finalize the rounds
+	go mc.FinalizedBlockWorker(ctx, mc) // 3) sequentially processes finalized blocks
 }
 
 /*BlockWorker - a job that does all the work related to blocks in each round */
@@ -31,9 +32,9 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 				Logger.Debug("message", zap.Any("msg", GetMessageLookup(msg.Type)))
 			}
 			switch msg.Type {
-			case MessageStartRound:
+			case MessageVRFShare:
 				roundTimeout.Stop()
-				protocol.HandleStartRound(ctx, msg)
+				protocol.HandleVRFShare(ctx, msg)
 			case MessageVerify:
 				roundTimeout.Stop()
 				protocol.HandleVerifyBlockMessage(ctx, msg)

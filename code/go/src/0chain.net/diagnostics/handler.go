@@ -19,6 +19,7 @@ func SetupHandlers() {
 	sc := chain.GetServerChain()
 	http.HandleFunc("/_diagnostics/n2n/info", sc.SendStatsWriter)
 	http.HandleFunc("/_diagnostics/miner_stats", sc.MinerStatsHandler)
+	http.HandleFunc("/_diagnostics/block_chain", sc.WIPBlockChainHandler)
 }
 
 /*GetStatistics - write the statistics of the given timer */
@@ -32,6 +33,7 @@ func GetStatistics(c *chain.Chain, timer metrics.Timer, scaleBy float64) interfa
 	stats["delta"] = chain.DELTA
 	stats["block_size"] = c.BlockSize
 	stats["current_round"] = c.CurrentRound
+	stats["latest_finalized_round"] = c.LatestFinalizedBlock.Round
 	stats["count"] = timer.Count()
 	stats["min"] = scale(float64(timer.Min()))
 	stats["mean"] = scale(timer.Mean())
@@ -59,6 +61,12 @@ func WriteSummary(w http.ResponseWriter, c *chain.Chain) {
 	fmt.Fprintf(w, "<tr><td class='sheader' colspan='2'>Configuration</td></tr>")
 	fmt.Fprintf(w, "<tr><td>Block Size</td><td>%v</td></tr>", c.BlockSize)
 	fmt.Fprintf(w, "<tr><td>Network Latency (Delta)</td><td>%v</td></tr>", chain.DELTA)
+	proposalMode := "dynamic"
+	if c.BlockProposalWaitMode == chain.BlockProposalWaitStatic {
+		proposalMode = "static"
+	}
+	fmt.Fprintf(w, "<tr><td>Block Proposal</td><td>%v (%v)</td>", c.BlockProposalMaxWaitTime, proposalMode)
+
 	fmt.Fprintf(w, "<tr><td>Validation Batch Size</td><td>%d</td>", c.ValidationBatchSize)
 	fmt.Fprintf(w, "</table>")
 }

@@ -65,7 +65,6 @@ func (mc *Chain) SetupGenesisBlock(hash string) *block.Block {
 /*CreateRound - create a round */
 func (mc *Chain) CreateRound(r *round.Round) *Round {
 	var mr Round
-	r.ComputeMinerRanks(mc.Miners.Size())
 	mr.Round = r
 	mr.blocksToVerifyChannel = make(chan *block.Block, mc.NumGenerators)
 	mr.verificationTickets = make(map[string]*block.BlockVerificationTicket)
@@ -82,17 +81,6 @@ func (mc *Chain) SetLatestFinalizedBlock(ctx context.Context, b *block.Block) {
 	mr := mc.CreateRound(r)
 	mc.AddRound(mr)
 	mc.AddNotarizedBlock(ctx, mr, b)
-}
-
-/*CancelRoundsBelow - delete rounds below */
-func (mc *Chain) CancelRoundsBelow(ctx context.Context, round int64) {
-	mc.roundsMutex.Lock()
-	defer mc.roundsMutex.Unlock()
-	for _, r := range mc.rounds {
-		if r.GetRoundNumber() < round {
-			r.CancelVerification()
-		}
-	}
 }
 
 func (mc *Chain) deleteTxns(txns []datastore.Entity) error {
