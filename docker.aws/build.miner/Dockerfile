@@ -10,15 +10,14 @@ RUN echo "zchain_codebase: $zchain_codebase"
 
 FROM 0chain/base
 
-ENV SOURCE_DIR=$zchain_codebase
-ENV DEST_DIR=/0chain
+ENV SRC_DIR=/0chain
 
-#ENV GOPATH=$GOPATH:$SRDIR/go
+ENV GOPATH=$GOPATH:$SRC_DIR/go
+
+WORKDIR $SRC_DIR
 
 #Add the source code
-ADD $SOURCE_DIR/code/go/src $DEST_DIR/code/go/src
-
-WORKDIR $DEST_DIR/code/go/src
+ADD $zchain_codebase/code/go/src $SRC_DIR/go/src
 
 # Build it:
 RUN go build 0chain.net/miner/miner
