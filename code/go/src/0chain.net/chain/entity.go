@@ -81,7 +81,7 @@ type Chain struct {
 
 	/* This is a cache of blocks that may include speculative blocks */
 	blocks      map[datastore.Key]*block.Block
-	blocksMutex *sync.Mutex
+	blocksMutex *sync.RWMutex
 
 	rounds      map[int64]round.RoundI
 	roundsMutex *sync.Mutex
@@ -182,7 +182,7 @@ func Provider() datastore.Entity {
 	c.Version = "1.0"
 
 	c.blocks = make(map[string]*block.Block)
-	c.blocksMutex = &sync.Mutex{}
+	c.blocksMutex = &sync.RWMutex{}
 
 	c.rounds = make(map[int64]round.RoundI)
 	c.roundsMutex = &sync.Mutex{}
@@ -317,8 +317,8 @@ func (c *Chain) AsyncFetchNotarizedPreviousBlock(b *block.Block) {
 
 /*GetBlock - returns a known block for a given hash from the cache */
 func (c *Chain) GetBlock(ctx context.Context, hash string) (*block.Block, error) {
-	c.blocksMutex.Lock()
-	defer c.blocksMutex.Unlock()
+	c.blocksMutex.RLock()
+	defer c.blocksMutex.RUnlock()
 	return c.getBlock(ctx, hash)
 }
 
@@ -342,8 +342,8 @@ func (c *Chain) DeleteBlock(ctx context.Context, b *block.Block) {
 /*GetRoundBlocks - get the blocks for a given round */
 func (c *Chain) GetRoundBlocks(round int64) []*block.Block {
 	blocks := make([]*block.Block, 0, 1)
-	c.blocksMutex.Lock()
-	defer c.blocksMutex.Unlock()
+	c.blocksMutex.RLock()
+	defer c.blocksMutex.RUnlock()
 	for _, b := range c.blocks {
 		if b.Round == round {
 			blocks = append(blocks, b)
@@ -570,8 +570,8 @@ func (c *Chain) SetRandomSeed(r *round.Round, randomSeed int64) {
 }
 
 func (c *Chain) getBlocks() []*block.Block {
-	c.blocksMutex.Lock()
-	defer c.blocksMutex.Unlock()
+	c.blocksMutex.RLock()
+	defer c.blocksMutex.RUnlock()
 	var bl []*block.Block
 	for _, v := range c.blocks {
 		bl = append(bl, v)
