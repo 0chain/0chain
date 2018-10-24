@@ -84,7 +84,7 @@ type Chain struct {
 	blocksMutex *sync.RWMutex
 
 	rounds      map[int64]round.RoundI
-	roundsMutex *sync.Mutex
+	roundsMutex *sync.RWMutex
 
 	CurrentRound         int64        `json:"-"`
 	CurrentMagicBlock    *block.Block `json:"-"`
@@ -185,7 +185,7 @@ func Provider() datastore.Entity {
 	c.blocksMutex = &sync.RWMutex{}
 
 	c.rounds = make(map[int64]round.RoundI)
-	c.roundsMutex = &sync.Mutex{}
+	c.roundsMutex = &sync.RWMutex{}
 
 	c.stateMutex = &sync.Mutex{}
 	c.stakeMutex = &sync.Mutex{}
@@ -531,8 +531,8 @@ func (c *Chain) AddRound(r round.RoundI) round.RoundI {
 
 /*GetRound - get a round */
 func (c *Chain) GetRound(roundNumber int64) round.RoundI {
-	c.roundsMutex.Lock()
-	defer c.roundsMutex.Unlock()
+	c.roundsMutex.RLock()
+	defer c.roundsMutex.RUnlock()
 	round, ok := c.rounds[roundNumber]
 	if !ok {
 		return nil
