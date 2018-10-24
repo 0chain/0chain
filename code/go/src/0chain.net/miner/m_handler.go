@@ -71,6 +71,8 @@ func SetupM2MSenders() {
 func SetupM2MReceivers() {
 
 	http.HandleFunc("/v1/_m2m/round/vrf_share", node.ToN2NReceiveEntityHandler(VRFShareHandler, nil))
+	http.HandleFunc("/v1/_m2m/dkg/share", node.ToN2NReceiveEntityHandler(DKGShareHandler, nil))
+	http.HandleFunc("/v1/_m2m/round/bls", node.ToN2NReceiveEntityHandler(BLSSignShareHandler, nil))
 	http.HandleFunc("/v1/_m2m/block/verify", node.ToN2NReceiveEntityHandler(memorystore.WithConnectionEntityJSONHandler(VerifyBlockHandler, datastore.GetEntityMetadata("block")), nil))
 	http.HandleFunc("/v1/_m2m/block/verification_ticket", node.ToN2NReceiveEntityHandler(VerificationTicketReceiptHandler, nil))
 	http.HandleFunc("/v1/_m2m/block/notarization", node.ToN2NReceiveEntityHandler(NotarizationReceiptHandler, nil))
@@ -123,10 +125,23 @@ func DKGShareHandler(ctx context.Context, entity datastore.Entity) (interface{},
 	return nil, nil
 }
 
-/*BLSSignShareHandler - handles the bls sign share it receives from a node */
+/*BLSSignShareHandler - handles the bls sign share it receives */
 func BLSSignShareHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-	//cast to the required entity and do further processing
-	return true, nil
+	bs, ok := entity.(*bls.Bls)
+	if !ok {
+		return nil, common.InvalidRequest("Invalid Entity")
+	}
+
+	Logger.Info("received BLS sign share", zap.String("BLS sign share", bs.BLSsignShare))
+	nodeID := node.GetSender(ctx).SetIndex
+	gotThreshold := AppendBLSSigShares(bs.BLSsignShare, nodeID)
+	if gotThreshold {
+		vrfOp := CheckThresholdSigns()
+		GetMinerChain().VRFShareChannel <- vrfOp
+		Logger.Info("vrfOp is : ", zap.String("vrfOp is : ", vrfOp))
+
+	}
+	return nil, nil
 }
 
 /*VerifyBlockHandler - verify the block that is received */

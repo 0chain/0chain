@@ -9,6 +9,8 @@ import (
 
 	"go.uber.org/zap"
 
+	"0chain.net/datastore"
+	"0chain.net/encryption"
 	"0chain.net/round"
 	"0chain.net/threshold/bls"
 	"0chain.net/util"
@@ -25,6 +27,8 @@ var n = 3
 var dg bls.BLSSimpleDKG
 var bs bls.SimpleBLS
 var recShares []string
+var recSig []string
+var recIDs []string
 
 /* StartDKG - starts the DKG process */
 
@@ -53,6 +57,14 @@ func StartDKG(ctx context.Context) {
 
 		dkg := &bls.Dkg{
 			Share: secShare.GetDecString()}
+		dkg.SetKey(datastore.ToKey("1"))
+
+		//TBD
+		/*	if self.ID == node.ID {
+				dg.SelfShare = secShare
+			} else {
+			miners.SendTo(miner.DKGShareSender(dkg), node.ID)
+				} */
 		m2m.SendTo(DKGShareSender(dkg), node.ID)
 
 	}
@@ -73,15 +85,25 @@ func StartDKG(ctx context.Context) {
 }
 
 /* AppendDKGSecShares - Gets the shares by other miners and append to the global array */
-
 func AppendDKGSecShares(share string) {
-
 	recShares = append(recShares, share)
-	//Logger.Info("shareArr append is ", zap.String("append share is ", share))
+}
+
+func AppendBLSSigShares(sigShare string, nodeID int) bool {
+
+	recSig = append(recSig, sigShare)
+	computeID := bls.ComputeIDdkg(nodeID)
+	recIDs = append(recIDs, computeID.GetDecString())
+
+	if len(recSig) == dg.T {
+		Logger.Info(" the k number of recSig is", zap.Any("the recSig is ", recSig))
+		Logger.Info(" the k number of recIDs is", zap.Any("the recIDs is ", recIDs))
+		return true
+	}
+	return false
 }
 
 /* AggregateDKGSecShares - Each miner adds the shares to get the secKey share for group */
-
 func AggregateDKGSecShares(recShares []string) error {
 
 	secShares := make([]bls.Key, len(recShares))
@@ -102,23 +124,104 @@ func AggregateDKGSecShares(recShares []string) error {
 	return nil
 }
 
-func CalcMessage(mr *round.Round, pr round.RoundI) {
+func CalcBLSSignShare(mr *round.Round, pr *round.Round) {
 	bs = bls.MakeSimpleBLS(&dg)
-	blsMsg := bytes.NewBuffer(nil)
+	var msg bytes.Buffer
 
-	binary.Write(blsMsg, binary.LittleEndian, mr.GetRoundNumber())
-	binary.Write(blsMsg, binary.LittleEndian, pr.GetVRFShares())
-	bs.Msg = util.ToHex(blsMsg.Bytes())
+	recSig = make([]string, 0)
+	recIDs = make([]string, 0)
+	Logger.Info("The mr.Number is", zap.Int64("mr.Number is ", mr.Number))
 
-	//	Logger.Info("For the round is", zap.Int64("the mr.GetRoundNumber() is ", mr.GetRoundNumber()))
-	//	Logger.Info("with the prev vrf share is", zap.Any("the pr.GetVRFShares() is ", pr.GetVRFShares()))
+	var vrfShares string
+	if pr.GetRoundNumber() == 1 {
+		Logger.Info("The corner case for round 1:", zap.Int64("corner case round 1 ", pr.GetRoundNumber()))
+
+		vrfShares = encryption.Hash("0chain")
+	} else {
+
+		vrfShares = <-GetMinerChain().VRFShareChannel
+		//vrfShares = bs.VrfOp
+	}
+	Logger.Info("The vrfShares is", zap.Any("the vrf share is ", vrfShares))
+
+	binary.Write(&msg, binary.LittleEndian, mr.GetRoundNumber())
+	binary.Write(&msg, binary.LittleEndian, vrfShares)
+	bs.Msg = util.ToHex(msg.Bytes())
+
+	Logger.Info("For the round is", zap.Int64("the mr.GetRoundNumber() is ", mr.GetRoundNumber()))
+	Logger.Info("with the prev vrf share is", zap.Any("vrfShares() is ", vrfShares))
 
 	Logger.Info("the msg is", zap.Any("the blsMsg is ", bs.Msg))
-	Logger.Info("the aggregated sec share bls", zap.String("agg share bls", bs.SecKeyShareGroup.GetDecString()))
+	//Logger.Info("the aggregated sec share bls", zap.String("agg share bls", bs.SecKeyShareGroup.GetDecString()))
+
+	mc := GetMinerChain()
+
+	m2m := mc.Miners
 
 	sigShare := bs.SignMsg()
 
 	bs.SigShare = sigShare
 	Logger.Info("the sig share", zap.String("bls sig share", bs.SigShare.GetHexString()))
 
+	recSig = append(recSig, bs.SigShare.GetHexString())
+	recIDs = append(recIDs, bs.ID.GetDecString())
+
+	//Logger.Info(" append self share recSig is", zap.Any("the recSig is ", recSig))
+	//	Logger.Info(" append self share recIDs is", zap.Any("the recIDs is ", recIDs))
+
+	bls := &bls.Bls{
+		BLSsignShare: sigShare.GetHexString()}
+	bls.SetKey(datastore.ToKey("1"))
+
+	m2m.SendAll(BLSSignShareSender(bls))
+
+}
+
+func CheckThresholdSigns() string {
+
+	Logger.Info("Threshold number of bls sig shares are received ...")
+	RecoverGpSignWithbls(recSig, recIDs)
+	vrfOutput := encryption.Hash(bs.GpSign.GetHexString())
+	recSig = make([]string, 0)
+	recIDs = make([]string, 0)
+	return vrfOutput
+}
+
+func RecoverGpSignWithbls(recSig []string, recIDs []string) {
+	signVec := make([]bls.Sign, len(recSig))
+	var signShare bls.Sign
+
+	for i := 0; i < len(recSig); i++ {
+		err := signShare.SetHexString(recSig[i])
+
+		if err != nil {
+			signVec = append(signVec, signShare)
+		}
+	}
+
+	idVec := make([]bls.PartyId, len(recIDs))
+	var forID bls.PartyId
+	for i := 0; i < len(recIDs); i++ {
+		err := forID.SetDecString(recIDs[i])
+		if err != nil {
+			idVec = append(idVec, forID)
+		}
+	}
+
+	RecoverGpSign(signVec, idVec)
+}
+
+func RecoverGpSign(signVec []bls.Sign, idVec []bls.PartyId) error {
+
+	var sig bls.Sign
+	err := sig.Recover(signVec, idVec)
+
+	if err != nil {
+		return nil
+	}
+	bs.GpSign = sig
+	Logger.Info("the Gp Sign is ", zap.String("Gp Sign:", bs.GpSign.GetHexString()))
+	Logger.Info("BLS is done :) ...")
+
+	return nil
 }

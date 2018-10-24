@@ -95,8 +95,6 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		return nil, common.NewError("invalid_round,", "Round not available")
 	}
 
-	//Logger.Info("Start BLS", zap.Int64("round", r.Number), zap.Int64("current_round", mc.CurrentRound))
-
 	pb := mc.GetBlockToExtend(ctx, pround)
 	if pb == nil {
 		Logger.Error("generate round block (prior block not found)", zap.Any("round", roundNumber))
@@ -428,7 +426,7 @@ func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *Round, b *block.Block
 /*StartNextRound - start the next round as a notarized block is discovered for the current round */
 func (mc *Chain) StartNextRound(ctx context.Context, r *Round) {
 	nrNumber := r.GetRoundNumber() + 1
-	//StartBLS(nrNumber)
+
 	if mc.GetRound(nrNumber) != nil {
 		return
 	}
@@ -439,7 +437,11 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) {
 	}
 	nr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 	nr.Number = nrNumber
+	Logger.Info("Starting BLS already for this round in advance... ", zap.Int64("round", nr.Number))
+
 	mr := mc.CreateRound(nr)
+	CalcBLSSignShare(mr.Round, r.Round)
+
 	// Even if the context is cancelled, we want to proceed with the next round, hence start with a root context
 	mc.StartRound(common.GetRootContext(), mr)
 }

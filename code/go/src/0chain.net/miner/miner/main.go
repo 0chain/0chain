@@ -172,6 +172,7 @@ func initEntities() {
 	miner.SetupNotarizationEntity()
 
 	bls.SetupDKGEntity()
+	bls.SetupBLSEntity()
 }
 
 func initHandlers() {

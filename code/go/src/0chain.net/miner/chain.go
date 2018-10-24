@@ -25,6 +25,7 @@ var minerChain = &Chain{}
 func SetupMinerChain(c *chain.Chain) {
 	minerChain.Chain = c
 	minerChain.BlockMessageChannel = make(chan *BlockMessage, 25)
+	minerChain.VRFShareChannel = make(chan string, 25)
 }
 
 /*GetMinerChain - get the miner's chain */
@@ -36,6 +37,7 @@ func GetMinerChain() *Chain {
 type Chain struct {
 	*chain.Chain
 	BlockMessageChannel chan *BlockMessage
+	VRFShareChannel     chan string
 	roundsMutex         *sync.Mutex
 	rounds              map[int64]*Round
 	DiscoverClients     bool
@@ -44,6 +46,10 @@ type Chain struct {
 /*GetBlockMessageChannel - get the block messages channel */
 func (mc *Chain) GetBlockMessageChannel() chan *BlockMessage {
 	return mc.BlockMessageChannel
+}
+
+func (mc *Chain) GetVRFShareChannel() chan string {
+	return mc.VRFShareChannel
 }
 
 /*SetupGenesisBlock - setup the genesis block for this chain */

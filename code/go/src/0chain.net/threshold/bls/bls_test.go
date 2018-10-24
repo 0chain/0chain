@@ -209,7 +209,7 @@ func TestRecoverGrpSignature(test *testing.T) {
 
 				binary.Write(blsMsg, binary.LittleEndian, rNumber)
 				binary.Write(blsMsg, binary.LittleEndian, prevVRF)
-				bs.msg = util.ToHex(blsMsg.Bytes())
+				bs.Msg = util.ToHex(blsMsg.Bytes())
 
 				sigShare := bs.SignMsg()
 				sigSharesID[sigShare] = dkgs[m].ID

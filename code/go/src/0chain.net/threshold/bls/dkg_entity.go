@@ -5,7 +5,7 @@ import (
 )
 
 type Dkg struct {
-	datastore.NOIDField
+	datastore.IDField
 	Share string `json:"share"`
 }
 
