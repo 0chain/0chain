@@ -92,9 +92,9 @@ func (c *Chain) FinalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 	if !r.SetFinalizing() {
 		return
 	}
-	if r.GetBestNotarizedBlock() == nil {
+	if r.GetHeaviestNotarizedBlock() == nil {
 		Logger.Error("finalize round: no notarized blocks", zap.Int64("round", r.GetRoundNumber()))
-		go c.GetNotarizedBlockForRound(r)
+		go c.GetHeaviestNotarizedBlock(r)
 	}
 	time.Sleep(FINALIZATION_TIME)
 	Logger.Info("finalize round", zap.Int64("round", r.GetRoundNumber()), zap.Int64("lf_round", c.LatestFinalizedBlock.Round))
@@ -183,8 +183,8 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 	c.PruneChain(ctx, frchain[len(frchain)-1])
 }
 
-/*GetNotarizedBlockForRound - get a notarized block for a round */
-func (c *Chain) GetNotarizedBlockForRound(r round.RoundI) *block.Block {
+/*GetHeaviestNotarizedBlock - get a notarized block for a round */
+func (c *Chain) GetHeaviestNotarizedBlock(r round.RoundI) *block.Block {
 	nbrequestor := MinerNotarizedBlockRequestor
 	roundNumber := r.GetRoundNumber()
 	params := map[string]string{"round": fmt.Sprintf("%v", roundNumber)}
@@ -195,7 +195,7 @@ func (c *Chain) GetNotarizedBlockForRound(r round.RoundI) *block.Block {
 			cancelf()
 			return nil, nil
 		}
-		if r.GetBestNotarizedBlock() != nil {
+		if r.GetHeaviestNotarizedBlock() != nil {
 			cancelf()
 			return nil, nil
 		}
@@ -222,5 +222,5 @@ func (c *Chain) GetNotarizedBlockForRound(r round.RoundI) *block.Block {
 	}
 	n2n := c.Miners
 	n2n.RequestEntity(ctx, nbrequestor, params, handler)
-	return r.GetBestNotarizedBlock()
+	return r.GetHeaviestNotarizedBlock()
 }

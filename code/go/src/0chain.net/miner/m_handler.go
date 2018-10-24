@@ -177,7 +177,7 @@ func NotarizedBlockSendHandler(ctx context.Context, r *http.Request) (interface{
 		}
 		r := mc.GetRound(roundN)
 		if r != nil {
-			b := r.GetBestNotarizedBlock()
+			b := r.GetHeaviestNotarizedBlock()
 			if b != nil {
 				return b, nil
 			}
@@ -192,7 +192,7 @@ func NotarizedBlockSendHandler(ctx context.Context, r *http.Request) (interface{
 		}
 	} else {
 		for r := mc.GetRound(mc.CurrentRound); r != nil; r = mc.GetRound(r.GetRoundNumber() - 1) {
-			b := r.GetBestNotarizedBlock()
+			b := r.GetHeaviestNotarizedBlock()
 			if b != nil {
 				return b, nil
 			}
