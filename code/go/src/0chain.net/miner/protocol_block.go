@@ -76,11 +76,18 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 			if err != nil {
 				ierr = err
 			}
+			if debugTxn {
+				Logger.Info("generate block (debug transaction) error  Not processing txn. Found Txn hash: " + txn.Hash)
+			}
 			return true
+
 		}
 		if !mc.UpdateState(b, txn) {
 			failedStateCount++
 			if config.DevConfiguration.State {
+				if debugTxn {
+					Logger.Info("generate block (debug transaction) error  Not processing txn. Failed UpdateState Txn hash: " + txn.Hash)
+				}
 				return true
 			}
 		}
@@ -90,13 +97,22 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		//Setting the score lower so the next time blocks are generated these transactions don't show up at the top
 		txn.SetCollectionScore(txn.GetCollectionScore() - 10*60)
 		b.Txns[idx] = txn
+		if debugTxn {
+			Logger.Info("generate block (debug transaction) success in processing Txn hash: " + txn.Hash + " blockHash? = " + b.Hash)
+		}
 		etxns[idx] = txn
 		b.AddTransaction(txn)
 		clients[txn.ClientID] = nil
 		idx++
 
 		if idx >= mc.BlockSize {
+			if debugTxn {
+				Logger.Info("generate block (debug transaction) error  Not processing txn. idx > blocksize Txn hash: " + txn.Hash)
+			}
 			return false
+		}
+		if debugTxn {
+			Logger.Info("generate block (debug transaction) Yes Processing txn. Returning true for Txn hash: " + txn.Hash)
 		}
 		return true
 	}
