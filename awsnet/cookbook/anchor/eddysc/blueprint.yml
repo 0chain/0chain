@@ -3,7 +3,7 @@
 #https://en.wikipedia.org/wiki/List_of_California_fourteeners
 #
 blueprint:
-  git_version: "smartcontract"
+  git_version: "smartcontract_new"
 
   aws_key_pair: "eddy"
 

@@ -62,7 +62,7 @@ services:
     logging:
       driver: "json-file"
       options:
-        max-size: "10M"
+        max-size: "100M"
         max-file: "10"
     ports:
       - "7071:7071"

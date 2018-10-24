@@ -52,7 +52,7 @@ services:
       driver: json-file
       options: 
         max-file: "10"
-        max-size: 10M
+        max-size: 100M
     networks: 
       default: ~
     pid: host
