@@ -1,9 +1,5 @@
 package bls
 
-import (
-	"fmt"
-)
-
 /* BLS implementation */
 
 type SimpleBLS struct {
@@ -41,7 +37,7 @@ func (bs *SimpleBLS) SignMsg() Sign {
 	return sigShare
 }
 
-func (bs *SimpleBLS) RecoverGroupSig(from []PartyId, shares []Sign) (Sign, error) {
+func (bs *SimpleBLS) RecoverGroupSig(from []PartyId, shares []Sign) Sign {
 
 	signVec := shares
 	idVec := from
@@ -49,12 +45,13 @@ func (bs *SimpleBLS) RecoverGroupSig(from []PartyId, shares []Sign) (Sign, error
 	var sig Sign
 	err := sig.Recover(signVec, idVec)
 
-	if err != nil {
-		fmt.Println("Recover Gp Sig not done")
-		return sig, nil
+	if err == nil {
+		bs.GpSign = sig
+		return sig
+	} else {
+		//fmt.Println("Recover Gp Sig not done")
 	}
-	bs.GpSign = sig
-	return sig, nil
+	return sig
 
 }
 

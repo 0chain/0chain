@@ -1,7 +1,5 @@
 package bls
 
-//TODO : Change to BLS
-
 import (
 	"0chain.net/datastore"
 )

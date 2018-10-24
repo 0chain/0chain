@@ -96,8 +96,6 @@ func AppendBLSSigShares(sigShare string, nodeID int) bool {
 	recIDs = append(recIDs, computeID.GetDecString())
 
 	if len(recSig) == dg.T {
-		Logger.Info(" the k number of recSig is", zap.Any("the recSig is ", recSig))
-		Logger.Info(" the k number of recIDs is", zap.Any("the recIDs is ", recIDs))
 		return true
 	}
 	return false
@@ -110,7 +108,7 @@ func AggregateDKGSecShares(recShares []string) error {
 	for i := 0; i < len(recShares); i++ {
 		err := secShares[i].SetDecString(recShares[i])
 		if err != nil {
-			return nil
+			Logger.Error("Aggregation of shares not done", zap.Error(err))
 		}
 	}
 	var sec bls.Key
@@ -142,7 +140,6 @@ func CalcBLSSignShare(mr *round.Round, pr *round.Round) {
 		vrfShares = <-GetMinerChain().VRFShareChannel
 		//vrfShares = bs.VrfOp
 	}
-	Logger.Info("The vrfShares is", zap.Any("the vrf share is ", vrfShares))
 
 	binary.Write(&msg, binary.LittleEndian, mr.GetRoundNumber())
 	binary.Write(&msg, binary.LittleEndian, vrfShares)
@@ -161,19 +158,17 @@ func CalcBLSSignShare(mr *round.Round, pr *round.Round) {
 	sigShare := bs.SignMsg()
 
 	bs.SigShare = sigShare
-	Logger.Info("the sig share", zap.String("bls sig share", bs.SigShare.GetHexString()))
+	Logger.Info("the sig share", zap.Any("bls sig share ", sigShare.GetHexString()))
 
-	recSig = append(recSig, bs.SigShare.GetHexString())
-	recIDs = append(recIDs, bs.ID.GetDecString())
+	for _, node := range m2m.Nodes {
 
-	//Logger.Info(" append self share recSig is", zap.Any("the recSig is ", recSig))
-	//	Logger.Info(" append self share recIDs is", zap.Any("the recIDs is ", recIDs))
+		bls := &bls.Bls{
+			BLSsignShare: sigShare.GetHexString()}
+		bls.SetKey(datastore.ToKey("1"))
 
-	bls := &bls.Bls{
-		BLSsignShare: sigShare.GetHexString()}
-	bls.SetKey(datastore.ToKey("1"))
+		m2m.SendTo(BLSSignShareSender(bls), node.ID)
 
-	m2m.SendAll(BLSSignShareSender(bls))
+	}
 
 }
 
@@ -188,40 +183,30 @@ func CheckThresholdSigns() string {
 }
 
 func RecoverGpSignWithbls(recSig []string, recIDs []string) {
-	signVec := make([]bls.Sign, len(recSig))
+
+	signVec := make([]bls.Sign, 0)
 	var signShare bls.Sign
 
 	for i := 0; i < len(recSig); i++ {
 		err := signShare.SetHexString(recSig[i])
 
-		if err != nil {
+		if err == nil {
 			signVec = append(signVec, signShare)
+		} else {
+			Logger.Error("signVec not computed correctly", zap.Error(err))
 		}
 	}
 
-	idVec := make([]bls.PartyId, len(recIDs))
+	idVec := make([]bls.PartyId, 0)
 	var forID bls.PartyId
 	for i := 0; i < len(recIDs); i++ {
 		err := forID.SetDecString(recIDs[i])
-		if err != nil {
+		if err == nil {
 			idVec = append(idVec, forID)
 		}
 	}
 
-	RecoverGpSign(signVec, idVec)
-}
-
-func RecoverGpSign(signVec []bls.Sign, idVec []bls.PartyId) error {
-
-	var sig bls.Sign
-	err := sig.Recover(signVec, idVec)
-
-	if err != nil {
-		return nil
-	}
-	bs.GpSign = sig
-	Logger.Info("the Gp Sign is ", zap.String("Gp Sign:", bs.GpSign.GetHexString()))
-	Logger.Info("BLS is done :) ...")
-
-	return nil
+	bs.RecoverGroupSig(idVec, signVec)
+	recSig = make([]string, 0)
+	recIDs = make([]string, 0)
 }
