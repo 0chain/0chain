@@ -2,7 +2,6 @@ package miner
 
 import (
 	"context"
-	"sync"
 
 	"0chain.net/block"
 	"0chain.net/chain"
@@ -36,8 +35,6 @@ func GetMinerChain() *Chain {
 type Chain struct {
 	*chain.Chain
 	BlockMessageChannel chan *BlockMessage
-	roundsMutex         *sync.Mutex
-	rounds              map[int64]*Round
 	DiscoverClients     bool
 }
 
