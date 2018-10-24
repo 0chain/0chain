@@ -87,9 +87,9 @@ func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) *block.Bl
 		if r.GetRoundNumber()+1 != mc.CurrentRound {
 			break
 		}
-		bnb := r.GetBestNotarizedBlock()
+		bnb := r.GetHeaviestNotarizedBlock()
 		if bnb == nil {
-			bnb = mc.GetNotarizedBlockForRound(r)
+			bnb = mc.GetHeaviestNotarizedBlock(r)
 		}
 		if bnb != nil {
 			if !bnb.IsStateComputed() {
@@ -316,17 +316,17 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			return false
 		}
 		b.SetBlockState(block.StateVerificationSuccessful)
-		bnb := r.GetBestNotarizedBlock()
-		if bnb == nil || bnb.RoundRank >= b.RoundRank {
+		bnb := r.GetBestRankedNotarizedBlock()
+		if bnb == nil {
 			r.Block = b
 			mc.ProcessVerifiedTicket(ctx, r, b, &bvt.VerificationTicket)
-			miner := mc.Miners.GetNode(b.MinerID)
-			minerStats := miner.ProtocolStats.(*chain.MinerStats)
-			minerStats.VerificationTicketsByRank[b.RoundRank]++
-			if !b.IsBlockNotarized() {
-				go mc.SendVerificationTicket(ctx, b, bvt)
-			}
 		}
+		if bnb == nil || (bnb != nil && bnb.Hash == b.Hash) {
+			go mc.SendVerificationTicket(ctx, b, bvt)
+		}
+		miner := mc.Miners.GetNode(b.MinerID)
+		minerStats := miner.ProtocolStats.(*chain.MinerStats)
+		minerStats.VerificationTicketsByRank[b.RoundRank]++
 		return true
 	}
 	var sendVerification = false
@@ -372,7 +372,7 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 		case b := <-r.GetBlocksToVerifyChannel():
 			if sendVerification {
 				// Is this better than the current best block
-				if r.Block == nil || b.RoundRank < r.Block.RoundRank {
+				if r.Block == nil || r.Block.RoundRank >= b.RoundRank {
 					b.SetBlockState(block.StateVerificationPending)
 					verifyAndSend(ctx, r, b)
 				} else {
@@ -467,7 +467,7 @@ func (mc *Chain) CancelRoundVerification(ctx context.Context, r *Round) {
 
 /*BroadcastNotarizedBlocks - send all the notarized blocks to all generating miners for a round*/
 func (mc *Chain) BroadcastNotarizedBlocks(ctx context.Context, pr *Round, r *Round) {
-	nb := pr.GetBestNotarizedBlock()
+	nb := pr.GetHeaviestNotarizedBlock()
 	if nb != nil {
 		Logger.Info("sending notarized block", zap.Int64("round", pr.Number), zap.String("block", nb.Hash))
 		go mc.SendNotarizedBlockToMiners(ctx, nb)
@@ -508,4 +508,29 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*bloc
 	}
 	m2s.RequestEntityFromAll(ctx, MinerLatestFinalizedBlockRequestor, nil, handler)
 	return finalizedBlocks
+}
+
+/*HandleRoundTimeout - handles the timeout of a round*/
+func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
+	if mc.CurrentRound <= 1 {
+		if !mc.CanStartNetwork() {
+			return
+		}
+	}
+	Logger.Error("round timeout occured", zap.Any("round", mc.CurrentRound))
+	r := mc.GetMinerRound(mc.CurrentRound)
+	if r.GetRoundNumber() > 1 {
+		pr := mc.GetMinerRound(r.GetRoundNumber() - 1)
+		if pr != nil {
+			mc.BroadcastNotarizedBlocks(ctx, pr, r)
+		}
+	}
+	r.Block = nil
+	if !r.IsVRFComplete() {
+		//TODO: send vrf again?
+		return
+	}
+	if mc.IsRoundGenerator(r.Round, node.GetSelfNode(ctx).Node) {
+		go mc.GenerateRoundBlock(ctx, r)
+	}
 }

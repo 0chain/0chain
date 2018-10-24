@@ -2,7 +2,6 @@ package miner
 
 import (
 	"context"
-	"sort"
 	"time"
 
 	"0chain.net/block"
@@ -53,12 +52,6 @@ func (r *Round) GetVerificationTickets(blockID string) []*block.VerificationTick
 		}
 	}
 	return vts
-}
-
-/*GetBlocksByRank - return the currently stored blocks in the order of best rank for the round */
-func (r *Round) GetBlocksByRank(blocks []*block.Block) []*block.Block {
-	sort.SliceStable(blocks, func(i, j int) bool { return blocks[i].RoundRank < blocks[j].RoundRank })
-	return blocks
 }
 
 /*GetBlocksToVerifyChannel - a channel where all the blocks requiring verification are put into */

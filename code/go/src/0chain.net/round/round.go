@@ -14,7 +14,8 @@ type RoundI interface {
 	GetMinersByRank(miners *node.Pool) []*node.Node
 	AddNotarizedBlock(b *block.Block) (*block.Block, bool)
 	GetNotarizedBlocks() []*block.Block
-	GetBestNotarizedBlock() *block.Block
+	GetHeaviestNotarizedBlock() *block.Block
+	GetBestRankedNotarizedBlock() *block.Block
 	Finalize(b *block.Block)
 	IsFinalizing() bool
 	SetFinalizing() bool

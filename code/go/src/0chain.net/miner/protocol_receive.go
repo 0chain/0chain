@@ -163,31 +163,6 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 	mc.StartNextRound(ctx, r)
 }
 
-/*HandleRoundTimeout - handles the timeout of a round*/
-func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
-	if mc.CurrentRound <= 1 {
-		if !mc.CanStartNetwork() {
-			return
-		}
-	}
-	Logger.Error("round timeout occured", zap.Any("round", mc.CurrentRound))
-	r := mc.GetMinerRound(mc.CurrentRound)
-	if r.GetRoundNumber() > 1 {
-		pr := mc.GetMinerRound(r.GetRoundNumber() - 1)
-		if pr != nil {
-			mc.BroadcastNotarizedBlocks(ctx, pr, r)
-		}
-	}
-	r.Round.Block = nil
-	if !r.IsVRFComplete() {
-		//TODO: send vrf again?
-		return
-	}
-	if mc.IsRoundGenerator(r.Round, node.GetSelfNode(ctx).Node) {
-		go mc.GenerateRoundBlock(ctx, r)
-	}
-}
-
 /*HandleNotarizedBlockMessage - handles a notarized block for a previous round*/
 func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMessage) {
 	mb := msg.Block
