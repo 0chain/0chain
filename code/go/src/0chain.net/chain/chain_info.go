@@ -58,9 +58,6 @@ func (c *Chain) UpdateChainInfo(b *block.Block) {
 /*UpdateRoundInfo - update the round information */
 func (c *Chain) UpdateRoundInfo(r round.RoundI) {
 	nnb := int8(len(r.GetNotarizedBlocks()))
-	if c.MaxNotarizedBlocksCount < nnb {
-		c.MaxNotarizedBlocksCount = nnb
-	}
 	ri := &round.Info{
 		Number:                    r.GetRoundNumber(),
 		NotarizedBlocksCount:      nnb,
@@ -69,7 +66,6 @@ func (c *Chain) UpdateRoundInfo(r round.RoundI) {
 		RollbackCount:             c.RollbackCount,
 		MissedBlocks:              c.MissedBlocks,
 		LongestRollbackLength:     c.LongestRollbackLength,
-		MaxNotarizedBlocksCount:   c.MaxNotarizedBlocksCount,
 	}
 	t := time.Now()
 	ri.TimeStamp = &t
