@@ -20,7 +20,7 @@ services:
       - CONFIG_VOLUME:/0chain/cassandra
       - DATA_VOLUME:/var/lib
       - LOG_VOLUME:/var/log
-      - ZCHAIN_BASE/sql:/0chain/sql
+      - ZCHAIN_BASEDISK/sql:/0chain/sql
     ports:
       - "9042:9042"
 
@@ -94,28 +94,28 @@ networks:
     driver: bridge
 
 volumes:
-  ZCHAIN_BASE:
+  ZCHAIN_BASEDISK:
     driver: local
     driver_opts:
-      device: ${ZCHAIN_BASE}/0chain
+      device: ${ZCHAIN_BASEPATH}/0chain
       o: bind
 
   CONFIG_VOLUME:
     driver: local
     driver_opts:
-      device: ${ZCHAIN_DISK}/0chain/config
+      device: ${ZCHAIN_BASEPATH}/0chain/config
       o: bind
 
   BIN_VOLUME:
     driver: local
     driver_opts:
-      device: ${ZCHAIN_DISK}/0chain/bin
+      device: ${ZCHAIN_BASEPATH}/0chain/bin
       o: bind
 
   SQL_VOLUME:
     driver: local
     driver_opts:
-      device: ${ZCHAIN_DISK}/0chain/sql
+      device: ${ZCHAIN_BASEPATH}/0chain/sql
       o: bind
 
   LOG_VOLUME:
