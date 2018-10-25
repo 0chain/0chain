@@ -2,12 +2,13 @@ version: '3'
 services:
 
   scylla:
-    image: scylladb:2.3.0
+    image: scylladb/scylla:2.3.0
+    networks:
+      - default
     ports:
       - "9042:9042"
     volumes:
       - SCYLLA_DATA:/var/lib/scylla/data
-
     restart: on-failure:10
 
   cassandra:
