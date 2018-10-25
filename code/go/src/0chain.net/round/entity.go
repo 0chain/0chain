@@ -42,6 +42,7 @@ type Round struct {
 	minerPerm []int
 	state     int
 
+	proposedBlocks  []*block.Block
 	notarizedBlocks []*block.Block
 	Mutex           *sync.RWMutex
 
@@ -80,6 +81,7 @@ func (r *Round) GetRandomSeed() int64 {
 func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool) {
 	r.Mutex.Lock()
 	defer r.Mutex.Unlock()
+	b, _ = r.addProposedBlock(b)
 	for _, blk := range r.notarizedBlocks {
 		if blk.Hash == b.Hash {
 			if blk != b {
@@ -96,6 +98,28 @@ func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool) {
 /*GetNotarizedBlocks - return all the notarized blocks associated with this round */
 func (r *Round) GetNotarizedBlocks() []*block.Block {
 	return r.notarizedBlocks
+}
+
+/*AddProposedBlock - this will be concurrent as notarization is recognized by verifying as well as notarization message from others */
+func (r *Round) AddProposedBlock(b *block.Block) (*block.Block, bool) {
+	r.Mutex.Lock()
+	defer r.Mutex.Unlock()
+	return r.addProposedBlock(b)
+}
+
+func (r *Round) addProposedBlock(b *block.Block) (*block.Block, bool) {
+	for _, blk := range r.proposedBlocks {
+		if blk.Hash == b.Hash {
+			return blk, false
+		}
+	}
+	r.proposedBlocks = append(r.proposedBlocks, b)
+	return b, true
+}
+
+/*GetProposedBlocks - return all the blocks that have been proposed for this round */
+func (r *Round) GetProposedBlocks() []*block.Block {
+	return r.proposedBlocks
 }
 
 /*GetHeaviestNotarizedBlock - get the heaviest notarized block that we have in this round */
@@ -176,6 +200,7 @@ func (r *Round) isFinalized() bool {
 func Provider() datastore.Entity {
 	r := &Round{}
 	r.notarizedBlocks = make([]*block.Block, 0, 1)
+	r.proposedBlocks = make([]*block.Block, 0, 3)
 	r.Mutex = &sync.RWMutex{}
 	r.shares = make(map[string]*VRFShare)
 	return r

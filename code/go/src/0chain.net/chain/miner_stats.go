@@ -7,4 +7,7 @@ type MinerStats struct {
 
 	// Number of times verification tickets have been requested
 	VerificationTicketsByRank []int64
+
+	// Number of times verification failed
+	VerificationFailures int64
 }

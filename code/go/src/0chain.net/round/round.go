@@ -12,6 +12,10 @@ type RoundI interface {
 
 	GetMinerRank(miner *node.Node) int
 	GetMinersByRank(miners *node.Pool) []*node.Node
+
+	AddProposedBlock(b *block.Block) (*block.Block, bool)
+	GetProposedBlocks() []*block.Block
+
 	AddNotarizedBlock(b *block.Block) (*block.Block, bool)
 	GetNotarizedBlocks() []*block.Block
 	GetHeaviestNotarizedBlock() *block.Block

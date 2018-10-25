@@ -51,6 +51,24 @@ func (c *Chain) ComputeFinalizedBlock(ctx context.Context, r round.RoundI) *bloc
 		return false
 	}
 	roundNumber := r.GetRoundNumber()
+	/*
+		pbs := r.GetProposedBlocks()
+		if len(pbs) == c.NumGenerators {
+			var pbHash string
+			var fb *block.Block
+			for _, b := range pbs {
+				if fb == nil {
+					pbHash = b.PrevHash
+					fb = b.PrevBlock
+				} else if pbHash != b.PrevHash {
+					fb = nil
+					break
+				}
+			}
+			if fb != nil {
+				return fb
+			}
+		}*/
 	tips := r.GetNotarizedBlocks()
 	if len(tips) == 0 {
 		Logger.Error("compute finalize block: no notarized blocks", zap.Int64("round", r.GetRoundNumber()))
@@ -155,9 +173,9 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 			}
 			c.LatestFinalizedBlock = b
 			return
-		} else {
-			Logger.Error("finalize round - missing common ancestor", zap.Int64("cf_round", c.LatestFinalizedBlock.Round), zap.String("cf_block", c.LatestFinalizedBlock.Hash), zap.Int64("nf_round", lfb.Round), zap.String("nf_block", lfb.Hash))
 		}
+		Logger.Error("finalize round - missing common ancestor", zap.Int64("cf_round", c.LatestFinalizedBlock.Round), zap.String("cf_block", c.LatestFinalizedBlock.Hash), zap.Int64("nf_round", lfb.Round), zap.String("nf_block", lfb.Hash))
+
 	}
 	plfb := c.LatestFinalizedBlock
 	plfbHash := plfb.Hash
@@ -191,10 +209,6 @@ func (c *Chain) GetHeaviestNotarizedBlock(r round.RoundI) *block.Block {
 	ctx, cancelf := context.WithCancel(common.GetRootContext())
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		Logger.Info("get notarized block for round", zap.Int64("round", roundNumber), zap.String("block", entity.GetKey()))
-		if roundNumber+1 != c.CurrentRound {
-			cancelf()
-			return nil, nil
-		}
 		if r.GetHeaviestNotarizedBlock() != nil {
 			cancelf()
 			return nil, nil

@@ -6,24 +6,27 @@ import (
 	"net/http"
 	"sort"
 
+	"0chain.net/block"
+
 	"0chain.net/node"
 )
 
 type bNode struct {
-	ID            string  `json:"id"`
-	PrevID        string  `json:"prev_id"`
-	Round         int64   `json:"round"`
-	Rank          int     `json:"rank"`
-	GeneratorID   int     `json:"generator_id"`
-	GeneratorName string  `json:"generator_name"`
-	ChainWeight   float64 `json:"chain_weight"`
-	Verifications int     `json:"verifications"`
-	Verified      bool    `json:"verified"`
-	Notarized     bool    `json:"notarized"`
-	Finalized     bool    `json:"finalized"`
-	X             int     `json:"x"`
-	Y             int     `json:"y"`
-	Size          int     `json:"size"`
+	ID                 string  `json:"id"`
+	PrevID             string  `json:"prev_id"`
+	Round              int64   `json:"round"`
+	Rank               int     `json:"rank"`
+	GeneratorID        int     `json:"generator_id"`
+	GeneratorName      string  `json:"generator_name"`
+	ChainWeight        float64 `json:"chain_weight"`
+	Verifications      int     `json:"verifications"`
+	Verified           bool    `json:"verified"`
+	VerificationFailed bool    `json:"verification_failed"`
+	Notarized          bool    `json:"notarized"`
+	Finalized          bool    `json:"finalized"`
+	X                  int     `json:"x"`
+	Y                  int     `json:"y"`
+	Size               int     `json:"size"`
 }
 
 //WIPBlockChainHandler - all the blocks in the memory useful to visualize and debug
@@ -69,20 +72,21 @@ func (c *Chain) WIPBlockChainHandler(w http.ResponseWriter, r *http.Request) {
 		y := miner.SetIndex
 		_, finalized := finzalizedBlocks[b.Hash]
 		bNd := &bNode{
-			ID:            b.Hash,
-			PrevID:        b.PrevHash,
-			Round:         b.Round,
-			Rank:          b.RoundRank,
-			GeneratorID:   miner.SetIndex,
-			GeneratorName: miner.Description,
-			ChainWeight:   b.ChainWeight,
-			Verifications: len(b.VerificationTickets),
-			Verified:      b.IsVerified(),
-			Notarized:     b.IsBlockNotarized(),
-			Finalized:     finalized,
-			X:             x*DXR*2 + DXR,
-			Y:             y*DYR*2 + DYR,
-			Size:          6 * (c.NumGenerators - b.RoundRank),
+			ID:                 b.Hash,
+			PrevID:             b.PrevHash,
+			Round:              b.Round,
+			Rank:               b.RoundRank,
+			GeneratorID:        miner.SetIndex,
+			GeneratorName:      miner.Description,
+			ChainWeight:        b.ChainWeight,
+			Verifications:      len(b.VerificationTickets),
+			Verified:           b.GetVerificationStatus() != block.VerificationPending,
+			VerificationFailed: b.GetVerificationStatus() == block.VerificationFailed,
+			Notarized:          b.IsBlockNotarized(),
+			Finalized:          finalized,
+			X:                  x*DXR*2 + DXR,
+			Y:                  y*DYR*2 + DYR,
+			Size:               6 * (c.NumGenerators - b.RoundRank),
 		}
 		bNodes = append(bNodes, bNd)
 	}
