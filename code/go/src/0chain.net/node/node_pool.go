@@ -16,7 +16,6 @@ var ErrNodeNotFound = common.NewError("node_not_found", "Requested node is not f
 
 /*Pool - a pool of nodes used for the same purpose */
 type Pool struct {
-	//Mutex &sync.Mutex{}
 	Type     int8
 	Nodes    []*Node
 	NodesMap map[string]*Node
