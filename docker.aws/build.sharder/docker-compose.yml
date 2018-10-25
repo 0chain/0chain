@@ -60,9 +60,6 @@ services:
       - /0chain/log:/0chain/log
       - /0chain/data/blocks:/0chain/data/blocks
       - /0chain/data:/0chain/data
-      - /0chain/data/redis/state:/0chain/data/redis/state
-      - /0chain/data/redis/transactions:/0chain/data/redis/transactions
-      - /0chain/data/rocksdb/state:/0chain/data/rocksdb/state
 
     #Hard and soft are required properties.
     ulimits:
