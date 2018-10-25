@@ -10,6 +10,7 @@ ENV SRC_DIR=/0chain
 ENV GOPATH=$GOPATH:$SRC_DIR/go
 
 WORKDIR $SRC_DIR
+COPY ./docker.aws/build.miner/MINER_VERSION $SRC_DIR
 
 #Add the source code
 ADD ./code/go/src $SRC_DIR/go/src
