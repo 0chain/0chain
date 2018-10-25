@@ -57,7 +57,7 @@ services:
 
     volumes:
       - CONFIG_VOLUME:/0chain/config
-      - LOG_VILUME:/0chain/log
+      - LOG_VOLUME:/0chain/log
       - DATA_VOLUME:/0chain/data
 
     logging:
