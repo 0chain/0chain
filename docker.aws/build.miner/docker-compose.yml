@@ -83,5 +83,19 @@ networks:
 
 volumes:
   CONFIG_VOLUME:
+    driver: local
+    driver_opts:
+      device: /disk00/config
+        o: bind
+
   LOG_VOLUME:
+    driver: local
+    driver_opts:
+      device: /disk00/log
+        o: bind
+
   DATA_VOLUME:
+    driver: local
+    driver_opts:
+      device: /disk01/data
+        o: bind
