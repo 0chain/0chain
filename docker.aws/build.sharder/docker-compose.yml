@@ -42,7 +42,7 @@ services:
 
     command: bash /0chain/bin/syclla-init.sh
     links:
-      - syclla:syclla
+      - scylla:scylla
     restart: on-failure:10
 
   sharder:
@@ -128,6 +128,12 @@ volumes:
     driver: local
     driver_opts:
       device: ${DATA_DISK}/data
+      o: bind
+
+  SCYLLA_DATA:
+    driver: local
+    driver_opts:
+      device: ${SCYLLA_DISK}/data
       o: bind
 
   BLOCK_VOLUME:
