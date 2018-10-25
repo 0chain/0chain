@@ -22,4 +22,6 @@ RUN go build 0chain.net/miner/miner
 WORKDIR $SRC_DIR/bin
 RUN cp $SRC_DIR/miner $SRC_DIR/bin
 
+#Run the miner from /0chain
+WORKDIR $SRC_DIR
 USER 2000:2000
