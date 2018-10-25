@@ -1,15 +1,25 @@
 version: '3'
 services:
+
+  scylla:
+    image: scylladb:2.3.0
+    ports:
+      - "9042:9042"
+    volumes:
+      - SCYLLA_DATA:/var/lib/scylla/data
+
+    restart: on-failure:10
+
   cassandra:
     image: cassandra:latest
     networks:
       - default
     volumes:
       - /0chain/config/cassandra/cassandra.yaml:/etc/cassandra/cassandra.yaml
-      - /0chain/config/cassandra:/0chain/cassandra
-      - /0chain/data/cassandra:/var/lib/cassandra
-      - /0chain/log/cassandra:/var/log/cassandra
-      - /0chain/0chain/sql:/0chain/sql
+      - CONFIG_VOLUME:/0chain/cassandra
+      - DATA_VOLUME:/var/lib
+      - LOG_VOLUME:/var/log
+      - ZCHAIN_BASE/sql:/0chain/sql
     ports:
       - "9042:9042"
 
@@ -26,12 +36,12 @@ services:
   cassandra-init:
     image: cassandra:latest
     volumes:
-      - /0chain/config/cassandra:/0chain/cassandra
-      - /0chain/0chain/sql:/0chain/sql
+      - BIN_VOLUME:/0chain/bin
+      - SQL_VOLUME:/0chain/sql
 
-    command: bash /0chain/cassandra/cassandra-init.sh
+    command: bash /0chain/bin/syclla-init.sh
     links:
-      - cassandra:cassandra
+      - syclla:syclla
     restart: on-failure:10
 
   sharder:
@@ -50,10 +60,9 @@ services:
     pid: "host"
 
     volumes:
-      - /0chain/config:/0chain/config
-      - /0chain/nodes:/0chain/nodes
-      - /0chain/log:/0chain/log
-      - /0chain/data:/0chain/data
+      - CONFIG_VOLUME:/0chain/config
+      - LOG_VOLUME:/0chain/log
+      - DATA_VOLUME:/0chain/data
 
     #Hard and soft are required properties.
     ulimits:
@@ -77,13 +86,51 @@ services:
 
     #Start under user 0chain
     user: 2000:2000
-    command: ./bin/sharder --deployment_mode 0 --keys_file /0chain/config/${SHARDER}.txt --nodes_file nodes
+    command: /0chain/bin/sharder --deployment_mode 0 --keys_file /0chain/config/sharder.txt --nodes_file nodes
 
 networks:
   default:
     driver: bridge
 
 volumes:
-  data:
-  config:
-  nodes:
+  ZCHAIN_BASE:
+    driver: local
+    driver_opts:
+      device: ${ZCHAIN_BASE}/0chain
+      o: bind
+
+  CONFIG_VOLUME:
+    driver: local
+    driver_opts:
+      device: ${ZCHAIN_DISK}/0chain/config
+      o: bind
+
+  BIN_VOLUME:
+    driver: local
+    driver_opts:
+      device: ${ZCHAIN_DISK}/0chain/bin
+      o: bind
+
+  SQL_VOLUME:
+    driver: local
+    driver_opts:
+      device: ${ZCHAIN_DISK}/0chain/sql
+      o: bind
+
+  LOG_VOLUME:
+    driver: local
+    driver_opts:
+      device: ${LOG_DISK}/log
+      o: bind
+
+  DATA_VOLUME:
+    driver: local
+    driver_opts:
+      device: ${DATA_DISK}/data
+      o: bind
+
+  BLOCK_VOLUME:
+    driver: local
+    driver_opts:
+      device: ${BLOCK_DISK}/blocks
+      o: bind
