@@ -108,7 +108,6 @@ func TransactionGenerator(blockSize int32) {
 		case <-ctx.Done():
 			return
 		case <-timer.C:
-			numTxns = rand.Int31n(333) + 1
 			txnCount := int32(txnMetadataProvider.GetStore().GetCollectionSize(ctx, txnMetadataProvider, collectionName))
 			if float64(txnCount) >= blocksPerMiner*float64(8*numTxns) {
 				continue
