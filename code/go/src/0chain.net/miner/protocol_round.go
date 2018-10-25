@@ -105,10 +105,11 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	b.MinerID = node.Self.GetKey()
 	mc.SetPreviousBlock(ctx, r, b, pb)
 	b.SetStateDB(pb)
-	waitTime := time.Now()
+	waitStart := time.Now()
 	waitOver := false
+	waitTime := time.Millisecond * time.Duration(mc.GenerateTimeout)
 	for true {
-		if time.Now().Sub(waitTime) > time.Millisecond*time.Duration(mc.GenerateTimeout) {
+		if time.Now().Sub(waitStart) > waitTime {
 			waitOver = true
 		}
 		if mc.CurrentRound > b.Round {
