@@ -86,16 +86,16 @@ volumes:
     driver: local
     driver_opts:
       device: ${CONFIG_DISK}/config
-        o: bind
+      o: bind
 
   LOG_VOLUME:
     driver: local
     driver_opts:
       device: ${LOG_DISK}/log
-        o: bind
+      o: bind
 
   DATA_VOLUME:
     driver: local
     driver_opts:
       device: ${DATA_DISK}/data
-        o: bind
+      o: bind
