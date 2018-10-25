@@ -3,8 +3,8 @@ services:
   redis:
     image: "redis:alpine"
     volumes:
-      - /0chain/config:/0chain/config
-      - /0chain/data:/0chain/data
+      - CONFIG_VOLUME:/0chain/config
+      - DATA_VOLUME:/0chain/data
     networks:
       default:
     sysctls:
@@ -19,8 +19,8 @@ services:
   redis_txns:
     image: "redis:alpine"
     volumes:
-      - /0chain/config:/0chain/config
-      - /0chain/data:/0chain/data
+      - CONFIG_VOLUME:/0chain/config
+      - DATA_VOLUME:/0chain/data
     networks:
       default:
     sysctls:
@@ -56,10 +56,9 @@ services:
         soft: 32768
 
     volumes:
-      - /0chain/config:/0chain/config
-      - /0chain/nodes:/0chain/nodes
-      - /0chain/data:/0chain/data
-      - /0chain/log:/0chain/log
+      - CONFIG_VOLUME:/0chain/config
+      - LOG_VILUME:/0chain/log
+      - DATA_VOLUME:/0chain/data
 
     logging:
       driver: "json-file"
@@ -76,13 +75,13 @@ services:
 
     #Start under user 0chain
     user: 2000:2000
-    command: ./bin/miner  --deployment_mode 0 --keys_file /0chain/config/${MINER}.txt --nodes_file nodes
+    command: ./bin/miner  --deployment_mode 0 --keys_file /0chain/config/miner.txt --nodes_file nodes
 
 networks:
   default:
     driver: bridge
 
 volumes:
-  data:
-  config:
-  nodes:
+  CONFIG_VOLUME:
+  LOG_VOLUME:
+  DATA_VOLUME:
