@@ -9,7 +9,6 @@ import (
 
 	"0chain.net/chain"
 	"0chain.net/config"
-	"0chain.net/memorystore"
 	"0chain.net/util"
 
 	"0chain.net/block"
@@ -289,34 +288,6 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 	return nil
 }
 
-/*SaveClients - save clients from the block */
-func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) error {
-	var err error
-	clientKeys := make([]datastore.Key, len(clients))
-	for idx, c := range clients {
-		clientKeys[idx] = c.GetKey()
-	}
-	clientEntityMetadata := datastore.GetEntityMetadata("client")
-	cEntities := datastore.AllocateEntities(len(clients), clientEntityMetadata)
-	ctx = memorystore.WithEntityConnection(common.GetRootContext(), clientEntityMetadata)
-	defer memorystore.Close(ctx)
-	err = clientEntityMetadata.GetStore().MultiRead(ctx, clientEntityMetadata, clientKeys, cEntities)
-	if err != nil {
-		return err
-	}
-	ctx = datastore.WithAsyncChannel(ctx, client.ClientEntityChannel)
-	for idx, c := range clients {
-		if !datastore.IsEmpty(cEntities[idx].GetKey()) {
-			continue
-		}
-		_, cerr := client.PutClient(ctx, c)
-		if cerr != nil {
-			err = cerr
-		}
-	}
-	return err
-}
-
 /*SignBlock - sign the block and provide the verification ticket */
 func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (*block.BlockVerificationTicket, error) {
 	var bvt = &block.BlockVerificationTicket{}
@@ -326,7 +297,7 @@ func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (*block.BlockVer
 	var err error
 	bvt.VerifierID = self.GetKey()
 	bvt.Signature, err = self.Sign(b.Hash)
-	b.SetVerified(true)
+	b.SetVerificationStatus(block.VerificationSuccessful)
 	if err != nil {
 		return nil, err
 	}

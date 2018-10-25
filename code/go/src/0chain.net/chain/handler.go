@@ -339,6 +339,13 @@ func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 	c.finalizationCountStats(w)
 	fmt.Fprintf(w, "</td></tr>")
 	fmt.Fprintf(w, "</table>")
+	fmt.Fprintf(w, "<table>")
+	fmt.Fprintf(w, "<tr><td>Miner</td><td>Verification Failures</td></tr>")
+	for _, nd := range c.Miners.Nodes {
+		ms := nd.ProtocolStats.(*MinerStats)
+		fmt.Fprintf(w, "<tr><td>%v</td><td class='number'>%v</td></tr>", fmt.Sprintf("%v%.3d", nd.GetNodeTypeName(), nd.SetIndex), ms.VerificationFailures)
+	}
+	fmt.Fprintf(w, "</table>")
 }
 
 func (c *Chain) finalizationCountStats(w http.ResponseWriter) {

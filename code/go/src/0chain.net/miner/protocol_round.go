@@ -201,6 +201,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 
 /*AddToRoundVerification - Add a block to verify  */
 func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block.Block) {
+	mr.AddProposedBlock(b)
 	if mr.IsFinalizing() || mr.IsFinalized() {
 		b.SetBlockState(block.StateVerificationRejected)
 		Logger.Debug("add to verification", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Bool("finalizing", mr.IsFinalizing()), zap.Bool("finalized", mr.IsFinalized()))
@@ -308,9 +309,12 @@ func (mc *Chain) GetGenerators(r round.RoundI) []*node.Node {
 func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 	verifyAndSend := func(ctx context.Context, r *Round, b *block.Block) bool {
 		b.SetBlockState(block.StateVerificationAccepted)
+		miner := mc.Miners.GetNode(b.MinerID)
+		minerStats := miner.ProtocolStats.(*chain.MinerStats)
 		bvt, err := mc.VerifyRoundBlock(ctx, r, b)
 		if err != nil {
 			b.SetBlockState(block.StateVerificationFailed)
+			minerStats.VerificationFailures++
 			if cerr, ok := err.(*common.Error); ok {
 				if cerr.Code == RoundMismatch {
 					Logger.Debug("verify round block", zap.Any("round", r.Number), zap.Any("block", b.Hash), zap.Any("current_round", mc.CurrentRound))
@@ -331,8 +335,6 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 		if bnb == nil || (bnb != nil && bnb.Hash == b.Hash) {
 			go mc.SendVerificationTicket(ctx, b, bvt)
 		}
-		miner := mc.Miners.GetNode(b.MinerID)
-		minerStats := miner.ProtocolStats.(*chain.MinerStats)
 		minerStats.VerificationTicketsByRank[b.RoundRank]++
 		return true
 	}
@@ -404,6 +406,7 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r *Round, b *block.Block)
 	var hasPriorBlock = b.PrevBlock != nil
 	bvt, err := mc.VerifyBlock(ctx, b)
 	if err != nil {
+		b.SetVerificationStatus(block.VerificationFailed)
 		return nil, err
 	}
 	if !hasPriorBlock && b.PrevBlock != nil {
@@ -532,6 +535,7 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
 			mc.BroadcastNotarizedBlocks(ctx, pr, r)
 		}
 	}
+	//TODO: need to clear proposed and notarized blocks as well
 	r.Block = nil
 	if !r.IsVRFComplete() {
 		//TODO: send vrf again?
