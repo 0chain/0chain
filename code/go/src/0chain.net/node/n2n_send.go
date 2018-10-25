@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/http/httptrace"
 	"strconv"
 	"strings"
 	"time"
@@ -145,6 +146,14 @@ func (np *Pool) sendOne(handler SendHandler, nodes []*Node) *Node {
 	return nil
 }
 
+var n2nTrace = &httptrace.ClientTrace{}
+
+func init() {
+	n2nTrace.GotConn = func(connInfo httptrace.GotConnInfo) {
+		fmt.Printf("GOT conn: %+v\n", connInfo)
+	}
+}
+
 /*SendEntityHandler provides a client API to send an entity */
 func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 	return func(entity datastore.Entity) SendHandler {
@@ -179,6 +188,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			receiver.Grab()
 			ts := time.Now()
 			Self.Node.LastActiveTime = ts
+			//req = req.WithContext(httptrace.WithClientTrace(req.Context(), n2nTrace))
 			resp, err := httpClient.Do(req)
 			receiver.Release()
 			timer.UpdateSince(ts)

@@ -10,7 +10,6 @@ import (
 	"0chain.net/chain"
 	"0chain.net/config"
 	"0chain.net/memorystore"
-	"0chain.net/round"
 	"0chain.net/util"
 
 	"0chain.net/block"
@@ -32,25 +31,6 @@ var bvTimer metrics.Timer
 func init() {
 	bgTimer = metrics.GetOrRegisterTimer("bg_time", nil)
 	bvTimer = metrics.GetOrRegisterTimer("bv_time", nil)
-}
-
-/*StartRound - start a new round */
-func (mc *Chain) StartRound(ctx context.Context, r *Round) {
-	if mc.AddRound(r) != r {
-		return
-	}
-	pr := mc.GetRound(r.GetRoundNumber() - 1)
-	if pr == nil {
-		// If we don't have the prior round, and hence the prior round's random seed, we can't provide the share
-		return
-	}
-	vrfs := &round.VRFShare{}
-	vrfs.Round = r.GetRoundNumber()
-	vrfs.Share = node.Self.Node.SetIndex
-	vrfs.SetParty(node.Self.Node)
-	if mc.AddVRFShare(ctx, r, vrfs) {
-		go mc.SendVRFShare(ctx, vrfs)
-	}
 }
 
 /*GenerateBlock - This works on generating a block
@@ -346,6 +326,7 @@ func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (*block.BlockVer
 	var err error
 	bvt.VerifierID = self.GetKey()
 	bvt.Signature, err = self.Sign(b.Hash)
+	b.SetVerified(true)
 	if err != nil {
 		return nil, err
 	}
@@ -354,7 +335,7 @@ func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (*block.BlockVer
 
 /*UpdateFinalizedBlock - update the latest finalized block */
 func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
-	Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round), zap.Int64("current_round", mc.CurrentRound), zap.Float64("weight", b.Weight()), zap.Float64("chain_weight", b.ChainWeight), zap.Int("rounds_size", len(mc.rounds)))
+	Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round), zap.Int64("current_round", mc.CurrentRound), zap.Float64("weight", b.Weight()), zap.Float64("chain_weight", b.ChainWeight))
 	if config.Development() {
 		for _, t := range b.Txns {
 			if !t.DebugTxn() {

@@ -78,6 +78,7 @@ type Block struct {
 	blockState      int8
 	isNotarized     bool
 	ticketsMutex    *sync.Mutex
+	verified        bool
 	RunningTxnCount int64 `json:"running_txn_count"`
 }
 
@@ -427,4 +428,14 @@ func (b *Block) SetBlockNotarized() {
 //IsBlockNotarized - is block notarized?
 func (b *Block) IsBlockNotarized() bool {
 	return b.isNotarized
+}
+
+/*SetVerified - the block is verified by this node */
+func (b *Block) SetVerified(verified bool) {
+	b.verified = true
+}
+
+/*IsVerified - is this block verified by this node */
+func (b *Block) IsVerified() bool {
+	return b.verified
 }

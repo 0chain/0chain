@@ -15,15 +15,22 @@ import (
 func (mc *Chain) HandleVRFShare(ctx context.Context, msg *BlockMessage) {
 	mr := mc.GetMinerRound(msg.VRFShare.Round)
 	if mr == nil {
-		r := datastore.GetEntityMetadata("round").Instance().(*round.Round)
-		r.Number = msg.VRFShare.Round
-		mr = mc.CreateRound(r)
-		if er := mc.AddRound(mr); mr != er {
-			mr = er.(*Round)
+		Logger.Debug("handle vrf share - got vrf share before starting a round", zap.Int64("round", msg.VRFShare.Round))
+		pr := mc.GetMinerRound(msg.VRFShare.Round - 1)
+		if pr != nil {
+			mr = mc.StartNextRound(ctx, pr)
+		} else {
+			Logger.Error("handle vrf share - no prior round", zap.Int64("round", msg.VRFShare.Round))
+			// We can't really provide a VRF share as we don't know the previous round's random number but we can collect the shares
+			var r = datastore.GetEntityMetadata("round").Instance().(*round.Round)
+			r.Number = msg.VRFShare.Round
+			mr = mc.CreateRound(r)
+			mc.AddRound(mr)
 		}
-		mc.StartRound(ctx, mr)
 	}
-	mc.AddVRFShare(ctx, mr, msg.VRFShare)
+	if mr != nil {
+		mc.AddVRFShare(ctx, mr, msg.VRFShare)
+	}
 }
 
 /*HandleVerifyBlockMessage - handles the verify block message */
@@ -38,17 +45,15 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 		return
 	}
 	if mr == nil {
-		r := datastore.GetEntityMetadata("round").Instance().(*round.Round)
-		r.Number = b.Round
-		mr = mc.CreateRound(r)
-		if mc.AddRound(mr) == mr {
-			mc.SetRandomSeed(r, b.RoundRandomSeed)
-			mc.startNewRound(ctx, mr)
-		}
+		Logger.Error("handle verify block - got block proposal before starting round", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("miner", b.MinerID))
+		pr := mc.GetMinerRound(b.Round - 1)
+		mr = mc.StartNextRound(ctx, pr)
+		//TODO: byzantine
+		mc.setRandomSeed(ctx, mr, b.RoundRandomSeed)
 	} else {
 		if !mr.IsVRFComplete() {
 			//TODO: byzantine
-			mc.SetRandomSeed(mr.Round, b.RoundRandomSeed)
+			mc.setRandomSeed(ctx, mr, b.RoundRandomSeed)
 		}
 	}
 	if mr != nil {
@@ -158,34 +163,15 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 	mc.StartNextRound(ctx, r)
 }
 
-/*HandleRoundTimeout - handles the timeout of a round*/
-func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
-	if mc.CurrentRound <= 1 {
-		if !mc.CanStartNetwork() {
-			return
-		}
-	}
-	Logger.Error("round timeout occured", zap.Any("round", mc.CurrentRound))
-	r := mc.GetMinerRound(mc.CurrentRound)
-	if r.GetRoundNumber() > 1 {
-		pr := mc.GetMinerRound(r.GetRoundNumber() - 1)
-		if pr != nil {
-			mc.BroadcastNotarizedBlocks(ctx, pr, r)
-		}
-	}
-	r.Round.Block = nil
-	if mc.IsRoundGenerator(r.Round, node.GetSelfNode(ctx).Node) {
-		go mc.GenerateRoundBlock(ctx, r)
-	}
-}
-
 /*HandleNotarizedBlockMessage - handles a notarized block for a previous round*/
 func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMessage) {
 	mb := msg.Block
 	mr := mc.GetMinerRound(mb.Round)
 	if mr == nil {
+		Logger.Error("handle notarized block message", zap.Int64("round", mb.Round))
 		r := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 		r.Number = mb.Round
+		//TODO: byzantine
 		mc.SetRandomSeed(r, mb.RoundRandomSeed)
 		mr = mc.CreateRound(r)
 		mc.AddRound(mr)

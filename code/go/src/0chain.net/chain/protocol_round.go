@@ -86,38 +86,28 @@ func (c *Chain) ComputeFinalizedBlock(ctx context.Context, r round.RoundI) *bloc
 	return fb
 }
 
-/*FinalizeRound - starting from the given round work backwards and identify the round that can be
-  assumed to be finalized as only one chain has survived.
-  Note: It is that round and prior that actually get finalized.
-*/
+/*FinalizeRound - starting from the given round work backwards and identify the round that can be assumed to be finalized as all forks after
+that extend from a single block in that round. */
 func (c *Chain) FinalizeRound(ctx context.Context, r round.RoundI, bsh BlockStateHandler) {
 	if !r.SetFinalizing() {
 		return
 	}
-	if r.GetBestNotarizedBlock() == nil {
+	if r.GetHeaviestNotarizedBlock() == nil {
 		Logger.Error("finalize round: no notarized blocks", zap.Int64("round", r.GetRoundNumber()))
-		go c.GetNotarizedBlockForRound(r)
+		go c.GetHeaviestNotarizedBlock(r)
 	}
 	time.Sleep(FINALIZATION_TIME)
 	Logger.Info("finalize round", zap.Int64("round", r.GetRoundNumber()), zap.Int64("lf_round", c.LatestFinalizedBlock.Round))
+	c.finalizedRoundsChannel <- r
 	/*
-		Not using the channel for now. If the time to produce a block is less than the FINALIZATION_TIME, then more rounds get produced than the rounds are consumed,
-		making them go sequentially after the wait using a channel and worker is putting back pressure. Instead, by letting the FinalizeRound goroutines go in parallel
-		might result in out-of-band execution.
-		//c.finalizedRoundsChannel <- r
+		c.finalizeRound(ctx, r, bsh)
+		c.UpdateRoundInfo(r)
 	*/
-	c.finalizeRound(ctx, r, bsh)
-	c.UpdateRoundInfo(r)
 }
 
 func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStateHandler) {
 	roundNumber := r.GetRoundNumber()
 	Logger.Info("finalize round worker", zap.Int64("round", roundNumber), zap.Int64("lf_round", c.LatestFinalizedBlock.Round))
-	//This check is useful when we allow the finalizeRound route is not sequential and end up with out-of-band execution
-	if r.GetRoundNumber() <= c.LatestFinalizedBlock.Round {
-		Logger.Error("finalize round worker - round number <= latest finalized round", zap.Int64("round", r.GetRoundNumber()), zap.Int64("lf_round", c.LatestFinalizedBlock.Round))
-		return
-	}
 	notarizedBlocks := r.GetNotarizedBlocks()
 	nbCount := len(notarizedBlocks)
 	if nbCount == 0 {
@@ -127,6 +117,11 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 		c.MultiNotarizedBlocksCount++
 	}
 	NotariedBlocksCounts[nbCount]++
+	//This check is useful when we allow the finalizeRound route is not sequential and end up with out-of-band execution
+	if r.GetRoundNumber() <= c.LatestFinalizedBlock.Round {
+		Logger.Error("finalize round worker - round number <= latest finalized round", zap.Int64("round", r.GetRoundNumber()), zap.Int64("lf_round", c.LatestFinalizedBlock.Round))
+		return
+	}
 	lfb := c.ComputeFinalizedBlock(ctx, r)
 	if lfb == nil {
 		Logger.Debug("finalize round - no decisive block to finalize yet or don't have all the necessary blocks", zap.Int64("round", roundNumber), zap.Int("notarized_blocks", nbCount))
@@ -188,8 +183,8 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 	c.PruneChain(ctx, frchain[len(frchain)-1])
 }
 
-/*GetNotarizedBlockForRound - get a notarized block for a round */
-func (c *Chain) GetNotarizedBlockForRound(r round.RoundI) *block.Block {
+/*GetHeaviestNotarizedBlock - get a notarized block for a round */
+func (c *Chain) GetHeaviestNotarizedBlock(r round.RoundI) *block.Block {
 	nbrequestor := MinerNotarizedBlockRequestor
 	roundNumber := r.GetRoundNumber()
 	params := map[string]string{"round": fmt.Sprintf("%v", roundNumber)}
@@ -200,7 +195,7 @@ func (c *Chain) GetNotarizedBlockForRound(r round.RoundI) *block.Block {
 			cancelf()
 			return nil, nil
 		}
-		if r.GetBestNotarizedBlock() != nil {
+		if r.GetHeaviestNotarizedBlock() != nil {
 			cancelf()
 			return nil, nil
 		}
@@ -227,5 +222,5 @@ func (c *Chain) GetNotarizedBlockForRound(r round.RoundI) *block.Block {
 	}
 	n2n := c.Miners
 	n2n.RequestEntity(ctx, nbrequestor, params, handler)
-	return r.GetBestNotarizedBlock()
+	return r.GetHeaviestNotarizedBlock()
 }

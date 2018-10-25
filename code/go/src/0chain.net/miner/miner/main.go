@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"math/rand"
 	"net/http"
 	"os"
 	"runtime"
@@ -225,13 +224,12 @@ func StartProtocol(ctx context.Context) {
 	sr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 	if lfb != nil {
 		mc.SetLatestFinalizedBlock(ctx, lfb)
-		sr.Number = lfb.Round + 1
-		sr.RandomSeed = rand.New(rand.NewSource(lfb.RoundRandomSeed)).Int63()
+		sr.Number = lfb.Round
+		mc.SetRandomSeed(sr, lfb.RoundRandomSeed)
 	} else {
-		sr.Number = 1
+		sr.Number = 0
 	}
-	msr := mc.CreateRound(sr)
-	Logger.Info("bc-1 latest finalized Block", zap.Int64("lfb_round", mc.LatestFinalizedBlock.Round))
+	mr := mc.CreateRound(sr)
 
 	if !mc.CanStartNetwork() {
 		ticker := time.NewTicker(5 * chain.DELTA)
@@ -246,6 +244,6 @@ func StartProtocol(ctx context.Context) {
 	if config.Development() {
 		go TransactionGenerator(mc.BlockSize)
 	}
-	Logger.Info("starting the blockchain ...")
-	mc.StartRound(ctx, msr)
+	Logger.Info("starting the blockchain ...", zap.Int64("round", mr.GetRoundNumber()))
+	mc.StartNextRound(ctx, mr)
 }

@@ -24,13 +24,16 @@ func (mc *Chain) computeVRF(ctx context.Context, mr *Round) {
 	if len(shares)*3 >= 2*mc.Miners.Size() {
 		pr := mc.GetRound(mr.GetRoundNumber() - 1)
 		if pr != nil {
-			mc.ComputeRoundRandomSeed(pr, mr.Round)
-			mc.startNewRound(ctx, mr)
+			mc.computeRoundRandomSeed(ctx, pr, mr)
 		}
 	}
 }
 
-/*ComputeRoundRandomSeed - compute the random seed for the round */
-func (mc *Chain) ComputeRoundRandomSeed(pr round.RoundI, r *round.Round) {
-	mc.SetRandomSeed(r, rand.New(rand.NewSource(pr.GetRandomSeed())).Int63())
+func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r *Round) {
+	mc.setRandomSeed(ctx, r, rand.New(rand.NewSource(pr.GetRandomSeed())).Int63())
+}
+
+func (mc *Chain) setRandomSeed(ctx context.Context, r *Round, seed int64) {
+	mc.SetRandomSeed(r.Round, seed)
+	mc.startNewRound(ctx, r)
 }
