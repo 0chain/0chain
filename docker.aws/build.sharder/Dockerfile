@@ -24,4 +24,3 @@ RUN cp $SRC_DIR/sharder $SRC_DIR/bin
 #Run the sharder from the /0chain
 WORKDIR $SRC_DIR
 USER 2000:2000
-
