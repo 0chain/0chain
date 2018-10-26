@@ -149,7 +149,7 @@ func NewChainFromConfig() *Chain {
 	chain.Decimals = int8(viper.GetInt("server_chain.decimals"))
 	chain.BlockSize = viper.GetInt32("server_chain.block.size")
 	chain.NumGenerators = viper.GetInt("server_chain.block.generators")
-	NotariedBlocksCounts = make([]int64, chain.NumGenerators+1)
+	chain.NotariedBlocksCounts = make([]int64, chain.NumGenerators+1)
 	chain.NumSharders = viper.GetInt("server_chain.block.sharders")
 	chain.ThresholdByCount = viper.GetInt("server_chain.block.consensus.threshold_by_count")
 	chain.ThresholdByStake = viper.GetInt("server_chain.block.consensus.threshold_by_stake")
