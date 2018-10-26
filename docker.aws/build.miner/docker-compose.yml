@@ -91,13 +91,13 @@ volumes:
   CONFIG_VOLUME:
     driver: local
     driver_opts:
-      device: ${ZCHAIN_DISK}/0chain/config
+      device: ${CONFIG_DISK}/config
       o: bind
 
   BIN_VOLUME:
     driver: local
     driver_opts:
-      device: ${ZCHAIN_DISK}/0chain/bin
+      device: ${BIN_DISK}/bin
       o: bind
 
   SQL_VOLUME:

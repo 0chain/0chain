@@ -2,40 +2,36 @@ version: '3'
 services:
 
   scylla:
-    image: scylladb/scylla:2.3.0
+    image: scylladb/scylla
     networks:
       - default
     ports:
       - "9042:9042"
     volumes:
-      - SCYLLA_DATA:/var/lib/scylla/data
-    restart: on-failure:10
 
-  cassandra:
-    image: cassandra:latest
-    networks:
-      - default
-    volumes:
-      - /0chain/config/cassandra/cassandra.yaml:/etc/cassandra/cassandra.yaml
-      - CONFIG_VOLUME:/0chain/cassandra
-      - DATA_VOLUME:/var/lib
-      - LOG_VOLUME:/var/log
-      - ZCHAIN_BASEDISK/sql:/0chain/sql
-    ports:
-      - "9042:9042"
+      - ${CONFIG_DISK}/config/scylla/scylla.yaml:/etc/scylla/scylla.yaml
+
+      - ${CONFIG_DISK}/config/scylla/scylla-server:/etc/sysconfig/scylla-server
+
+      #Store the scylla volume
+      - SCYLLA_VOLUME:/var/lib/scylla
+
+      #Create the directory to store the data and commitlog
+      - /var/lib/scylla/data
+      - /var/lib/scylla/commitlog
 
     restart: on-failure:10
 
-    #Do under 0chain id.
     user: 2000:2000
+
     healthcheck:
       test: ["CMD-SHELL", "[ $$(nodetool statusgossip) = running ]"]
       interval: 30s
       timeout: 10s
       retries: 5
 
-  cassandra-init:
-    image: cassandra:latest
+  scylla-init:
+    image: scylladb:scylla
     volumes:
       - BIN_VOLUME:/0chain/bin
       - SQL_VOLUME:/0chain/sql
@@ -61,9 +57,17 @@ services:
     pid: "host"
 
     volumes:
+
       - CONFIG_VOLUME:/0chain/config
+
       - LOG_VOLUME:/0chain/log
+
+      #Create the data volume
       - DATA_VOLUME:/0chain/data
+      - /0chain/data/rocksdb
+
+      #Use the blocks volume
+      - BLOCKS_VOLUME:/0chain/data/blocks
 
     #Hard and soft are required properties.
     ulimits:
@@ -94,28 +98,22 @@ networks:
     driver: bridge
 
 volumes:
-  ZCHAIN_BASEDISK:
-    driver: local
-    driver_opts:
-      device: ${ZCHAIN_BASEPATH}/0chain
-      o: bind
-
   CONFIG_VOLUME:
     driver: local
     driver_opts:
-      device: ${ZCHAIN_BASEPATH}/0chain/config
+      device: ${CONFIG_DISK}/config
       o: bind
 
   BIN_VOLUME:
     driver: local
     driver_opts:
-      device: ${ZCHAIN_BASEPATH}/0chain/bin
+      device: ${BIN_DISK}/bin
       o: bind
 
   SQL_VOLUME:
     driver: local
     driver_opts:
-      device: ${ZCHAIN_BASEPATH}/0chain/sql
+      device: ${SQL_DISK}/sql
       o: bind
 
   LOG_VOLUME:
@@ -130,14 +128,14 @@ volumes:
       device: ${DATA_DISK}/data
       o: bind
 
-  SCYLLA_DATA:
+  SCYLLA_VOLUME:
     driver: local
     driver_opts:
-      device: ${SCYLLA_DISK}/data
+      device: ${SCYLLA_DISK}/data/scylla
       o: bind
 
-  BLOCK_VOLUME:
+  BLOCKS_VOLUME:
     driver: local
     driver_opts:
-      device: ${BLOCK_DISK}/blocks
+      device: ${BLOCKS_DISK}/data/blocks
       o: bind
