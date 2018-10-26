@@ -523,9 +523,6 @@ func (c *Chain) AddRound(r round.RoundI) round.RoundI {
 		return er
 	}
 	c.rounds[roundNumber] = r
-	if roundNumber > c.CurrentRound {
-		c.CurrentRound = roundNumber
-	}
 	return r
 }
 
@@ -567,6 +564,10 @@ func (c *Chain) DeleteRoundsBelow(ctx context.Context, roundNumber int64) {
 func (c *Chain) SetRandomSeed(r *round.Round, randomSeed int64) {
 	r.SetRandomSeed(randomSeed)
 	r.ComputeMinerRanks(c.Miners.Size())
+	roundNumber := r.GetRoundNumber()
+	if roundNumber > c.CurrentRound {
+		c.CurrentRound = roundNumber
+	}
 }
 
 func (c *Chain) getBlocks() []*block.Block {
