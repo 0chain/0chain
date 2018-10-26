@@ -45,9 +45,10 @@ services:
     environment:
       - DOCKER=true
     depends_on:
-      - cassandra-init
+      - scylla-init
     links:
-      - cassandra-init:cassandra-init
+      - scylla-init:scylla-init
+
     build:
       context: ${ZCHAIN_CODEBASE}
       dockerfile: ./docker.aws/build.sharder/Dockerfile
