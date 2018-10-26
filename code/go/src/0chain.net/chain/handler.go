@@ -346,6 +346,7 @@ func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "<tr><td>%v</td><td class='number'>%v</td></tr>", fmt.Sprintf("%v%.3d", nd.GetNodeTypeName(), nd.SetIndex), ms.VerificationFailures)
 	}
 	fmt.Fprintf(w, "</table>")
+	fmt.Fprintf(w, "Round timeouts = %v", c.RoundTimeoutsCount)
 }
 
 func (c *Chain) finalizationCountStats(w http.ResponseWriter) {
@@ -412,7 +413,7 @@ func (c *Chain) notarizedBlockCountsStats(w http.ResponseWriter) {
 		fmt.Fprintf(w, "<td class='number'>%v</td>", i)
 	}
 	fmt.Fprintf(w, "</tr><tr><td>Rounds</td>")
-	for _, v := range NotariedBlocksCounts {
+	for _, v := range c.NotariedBlocksCounts {
 		fmt.Fprintf(w, "<td class='number'>%v</td>", v)
 	}
 	fmt.Fprintf(w, "</tr>")

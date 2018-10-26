@@ -134,7 +134,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 	if nbCount > 1 {
 		c.MultiNotarizedBlocksCount++
 	}
-	NotariedBlocksCounts[nbCount]++
+	c.NotariedBlocksCounts[nbCount]++
 	//This check is useful when we allow the finalizeRound route is not sequential and end up with out-of-band execution
 	if r.GetRoundNumber() <= c.LatestFinalizedBlock.Round {
 		Logger.Error("finalize round worker - round number <= latest finalized round", zap.Int64("round", r.GetRoundNumber()), zap.Int64("lf_round", c.LatestFinalizedBlock.Round))
@@ -175,7 +175,6 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 			return
 		}
 		Logger.Error("finalize round - missing common ancestor", zap.Int64("cf_round", c.LatestFinalizedBlock.Round), zap.String("cf_block", c.LatestFinalizedBlock.Hash), zap.Int64("nf_round", lfb.Round), zap.String("nf_block", lfb.Hash))
-
 	}
 	plfb := c.LatestFinalizedBlock
 	plfbHash := plfb.Hash

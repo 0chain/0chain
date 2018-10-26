@@ -521,6 +521,7 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
 		}
 	}
 	Logger.Error("round timeout occured", zap.Any("round", mc.CurrentRound))
+	mc.RoundTimeoutsCount++
 	r := mc.GetMinerRound(mc.CurrentRound)
 	if r.GetRoundNumber() > 1 {
 		pr := mc.GetMinerRound(r.GetRoundNumber() - 1)
