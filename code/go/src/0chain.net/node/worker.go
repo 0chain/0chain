@@ -77,6 +77,7 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 			node.LastActiveTime = ts
 		}
 	}
+	np.ComputeNetworkStats()
 }
 
 /*DownloadNodeData - downloads the node definition data for the given pool type from the given node */

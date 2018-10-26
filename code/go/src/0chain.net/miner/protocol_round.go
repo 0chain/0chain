@@ -262,22 +262,7 @@ func (mc *Chain) GetBlockProposalWaitTime(r round.RoundI) time.Duration {
 }
 
 func (mc *Chain) computeBlockProposalDynamicWaitTime(r round.RoundI) time.Duration {
-	miners := mc.Miners.GetNodesByLargeMessageTime()
-	var medianTime float32
-	var count int
-	for _, nd := range miners {
-		if nd == node.Self.Node {
-			continue
-		}
-		if !nd.IsActive() {
-			continue
-		}
-		count++
-		if count*2 >= len(miners) {
-			medianTime = nd.LargeMessageSendTime
-			break
-		}
-	}
+	medianTime := mc.Miners.GetMedianNetworkTime()
 	generators := mc.GetGenerators(r)
 	for _, g := range generators {
 		if g.LargeMessageSendTime < medianTime {
