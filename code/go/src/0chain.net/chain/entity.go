@@ -483,7 +483,7 @@ func (c *Chain) ChainHasTransaction(ctx context.Context, b *block.Block, txn *tr
 		if cb.HasTransaction(txn.Hash) {
 			return true, nil
 		}
-		if cb.CreationDate < txn.CreationDate {
+		if cb.CreationDate < txn.CreationDate-transaction.TXN_TIME_TOLERANCE {
 			return false, nil
 		}
 	}

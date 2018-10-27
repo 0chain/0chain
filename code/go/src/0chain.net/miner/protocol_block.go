@@ -64,7 +64,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		if debugTxn {
 			Logger.Info("generate block (debug transaction)", zap.String("txn", txn.Hash), zap.String("txn_object", datastore.ToJSON(txn).String()))
 		}
-		if !mc.validateTransaction(txn) {
+		if !mc.validateTransaction(b, txn) {
 			invalidTxns = append(invalidTxns, qe)
 			if debugTxn {
 				Logger.Info("generate block (debug transaction) error - txn creation not within tolerance", zap.String("txn", txn.Hash), zap.Any("now", common.Now()))
@@ -165,8 +165,8 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	return nil
 }
 
-func (mc *Chain) validateTransaction(txn *transaction.Transaction) bool {
-	if !common.Within(int64(txn.CreationDate), transaction.TXN_TIME_TOLERANCE-1) {
+func (mc *Chain) validateTransaction(b *block.Block, txn *transaction.Transaction) bool {
+	if !common.WithinTime(int64(b.CreationDate), int64(txn.CreationDate), transaction.TXN_TIME_TOLERANCE) {
 		return false
 	}
 	return true

@@ -24,10 +24,14 @@ func TimeToString(ts Timestamp) string {
 	return strconv.FormatInt(int64(ts), 10)
 }
 
-/*Within ensures a given timestamp is within certain number of seconds */
+/*Within ensures a given timestamp is within (+/- inclusive) certain number of seconds w.r.t current time */
 func Within(ts int64, seconds int64) bool {
-	now := time.Now().Unix()
-	return now > ts-seconds && now < ts+seconds
+	return WithinTime(time.Now().Unix(), ts, seconds)
+}
+
+/*WithinTime ensures a given timestamp is within (+/- inclusive) certain number of seconds w.r.t to the reference time */
+func WithinTime(o int64, ts int64, seconds int64) bool {
+	return ts >= o-seconds && ts <= o+seconds
 }
 
 var randGenerator = rand.New(rand.NewSource(time.Now().UnixNano()))
