@@ -107,7 +107,9 @@ artifact:
       - { canonical: "/0chain/config" }
       - { canonical: "/0chain/nodes" }
       - { canonical: "/0chain/log", location:  "/0chain_root/log" }
-      - { canonical: "/0chain/data" }
+      - { canonical: "/0chain/data/redis/state" }
+      - { canonical: "/0chain/data/redis/transactions" }
+      - { canonical: "/0chain/data/rocksdb/state" }
 
 
       'sharder':
@@ -115,7 +117,11 @@ artifact:
       - { canonical: "/0chain/config" }
       - { canonical: "/0chain/nodes" }
       - { canonical: "/0chain/log", location:  "/0chain_root/log" }
-      - { canonical: "/0chain/data"}
+      - { canonical: "/0chain/data/scylla"}
+      - { canonical: "/0chain/data/blocks"}
+      - { canonical: "/0chain/data/rocksdb/blocksummary" }
+      - { canonical: "/0chain/data/rocksdb/roundsummary" }
+      - { canonical: "/0chain/data/rocksdb/state" }
 
 nodefiles:
   file: "nodes.yaml"
