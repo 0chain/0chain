@@ -3,9 +3,9 @@
 package miner
 
 import (
+	"time"
 	"context"
 	"encoding/binary"
-	"time"
 
 	"go.uber.org/zap"
 
@@ -38,10 +38,6 @@ func StartDKG(ctx context.Context) {
 	m2m := mc.Miners
 	Logger.Info("Starting DKG...")
 
-	//TODO : Need to include check for active miners and then send the shares, have to remove sleep in future
-	//mc.Miners.OneTimeStatusMonitor(ctx)
-	time.Sleep(10 * time.Second)
-
 	dg = bls.MakeSimpleDKG(k, n)
 
 	for _, node := range m2m.Nodes {
@@ -66,22 +62,18 @@ func StartDKG(ctx context.Context) {
 			miners.SendTo(miner.DKGShareSender(dkg), node.ID)
 				} */
 		m2m.SendTo(DKGShareSender(dkg), node.ID)
-
 	}
 
-	//Had to introduce delay for the time when shares are received by other miners
-	time.Sleep(10 * time.Second)
-
-	if len(recShares) == dg.N {
-		Logger.Info("All the shares are received ...")
-		AggregateDKGSecShares(recShares)
-		Logger.Info("DKG is done :) ...")
-
+	for {
+		if len(recShares) == dg.N {
+			break
+		}
+		time.Sleep(time.Millisecond)
 	}
 
-	//Had to introduce delay to complete the DKG before the round starts
-	time.Sleep(10 * time.Second)
-
+	Logger.Info("All the shares are received ...")
+	AggregateDKGSecShares(recShares)
+	Logger.Info("DKG is done :) ...")
 }
 
 /* AppendDKGSecShares - Gets the shares by other miners and append to the global array */
@@ -160,16 +152,11 @@ func CalcBLSSignShare(mr *round.Round, pr *round.Round) {
 	bs.SigShare = sigShare
 	Logger.Info("the sig share", zap.Any("bls sig share ", sigShare.GetHexString()))
 
-	for _, node := range m2m.Nodes {
+	bls := &bls.Bls{
+		BLSsignShare: sigShare.GetHexString()}
+	bls.SetKey(datastore.ToKey("1"))
 
-		bls := &bls.Bls{
-			BLSsignShare: sigShare.GetHexString()}
-		bls.SetKey(datastore.ToKey("1"))
-
-		m2m.SendTo(BLSSignShareSender(bls), node.ID)
-
-	}
-
+	m2m.SendAll(BLSSignShareSender(bls))
 }
 
 func CheckThresholdSigns() string {

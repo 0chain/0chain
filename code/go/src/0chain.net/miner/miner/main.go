@@ -216,6 +216,17 @@ func initWorkers(ctx context.Context) {
 func StartProtocol(ctx context.Context) {
 	mc := miner.GetMinerChain()
 
+	if !mc.CanStartNetwork() {
+		ticker := time.NewTicker(5 * chain.DELTA)
+		for ts := range ticker.C {
+			active := mc.Miners.GetActiveCount()
+			Logger.Info("waiting for sufficient active nodes", zap.Time("ts", ts), zap.Int("active", active))
+			if mc.CanStartNetwork() {
+				break
+			}
+		}
+	}
+
 	miner.StartDKG(ctx)
 
 	mc.Sharders.OneTimeStatusMonitor(ctx)
@@ -239,16 +250,6 @@ func StartProtocol(ctx context.Context) {
 	msr := mc.CreateRound(sr)
 	Logger.Info("bc-1 latest finalized Block", zap.Int64("lfb_round", mc.LatestFinalizedBlock.Round))
 
-	if !mc.CanStartNetwork() {
-		ticker := time.NewTicker(5 * chain.DELTA)
-		for ts := range ticker.C {
-			active := mc.Miners.GetActiveCount()
-			Logger.Info("waiting for sufficient active nodes", zap.Time("ts", ts), zap.Int("active", active))
-			if mc.CanStartNetwork() {
-				break
-			}
-		}
-	}
 	if config.Development() {
 		go TransactionGenerator(mc.BlockSize)
 	}

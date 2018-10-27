@@ -139,7 +139,6 @@ func BLSSignShareHandler(ctx context.Context, entity datastore.Entity) (interfac
 		vrfOp := CheckThresholdSigns()
 		GetMinerChain().VRFShareChannel <- vrfOp
 		Logger.Info("vrfOp is : ", zap.String("vrfOp is : ", vrfOp))
-
 	}
 	return nil, nil
 }
