@@ -47,7 +47,14 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 	if mr == nil {
 		Logger.Error("handle verify block - got block proposal before starting round", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("miner", b.MinerID))
 		pr := mc.GetMinerRound(b.Round - 1)
-		mr = mc.StartNextRound(ctx, pr)
+		if pr != nil {
+			mr = mc.StartNextRound(ctx, pr)
+		} else {
+			var r = datastore.GetEntityMetadata("round").Instance().(*round.Round)
+			mr = mc.CreateRound(r)
+			ri := mc.AddRound(mr)
+			mr = ri.(*Round)
+		}
 		//TODO: byzantine
 		mc.setRandomSeed(ctx, mr, b.RoundRandomSeed)
 	} else {

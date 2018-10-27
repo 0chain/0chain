@@ -164,10 +164,19 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	go bsh.UpdateFinalizedBlock(ctx, fb)
 	c.BlockChain.Value = fb.GetSummary()
 	c.BlockChain = c.BlockChain.Next()
-	frb := c.GetRoundBlocks(fb.Round - 10)
+
+	// Deleting dead blocks from a couple of rounds before (helpful for visualizer and potential rollback scenrio)
+	pfb := fb
+	for idx := 0; idx < 10 && pfb != nil; pfb = pfb.PrevBlock {
+
+	}
+	if pfb == nil {
+		return
+	}
+	frb := c.GetRoundBlocks(pfb.Round)
 	var deadBlocks []*block.Block
 	for _, b := range frb {
-		if b.Hash != fb.Hash {
+		if b.Hash != pfb.Hash {
 			deadBlocks = append(deadBlocks, b)
 		}
 	}
