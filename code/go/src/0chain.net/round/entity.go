@@ -91,6 +91,9 @@ func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool) {
 		}
 	}
 	b.SetBlockNotarized()
+	if r.Block == nil || r.Block.RoundRank > b.RoundRank {
+		r.Block = b
+	}
 	r.notarizedBlocks = append(r.notarizedBlocks, b)
 	return b, true
 }

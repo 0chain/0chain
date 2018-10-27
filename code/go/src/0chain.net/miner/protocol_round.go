@@ -418,14 +418,20 @@ func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.B
 	if notarized {
 		return
 	}
+	mc.checkBlockNotarization(ctx, r, b)
+}
+
+func (mc *Chain) checkBlockNotarization(ctx context.Context, r *Round, b *block.Block) bool {
 	if b.IsBlockNotarized() {
 		if !mc.AddNotarizedBlock(ctx, r, b) {
-			return
+			return true
 		}
 		go mc.SendNotarization(ctx, b)
 		Logger.Info("process verified ticket - block notarized", zap.Int64("round", b.Round), zap.String("block", b.Hash))
 		mc.StartNextRound(ctx, r)
+		return true
 	}
+	return false
 }
 
 /*AddNotarizedBlock - add a notarized block for a given round */
