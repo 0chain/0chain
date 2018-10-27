@@ -167,7 +167,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 
 	// Deleting dead blocks from a couple of rounds before (helpful for visualizer and potential rollback scenrio)
 	pfb := fb
-	for idx := 0; idx < 10 && pfb != nil; pfb = pfb.PrevBlock {
+	for idx := 0; idx < 10 && pfb != nil; idx, pfb = idx+1, pfb.PrevBlock {
 
 	}
 	if pfb == nil {
