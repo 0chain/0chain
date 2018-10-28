@@ -70,14 +70,14 @@ func (mc *Chain) CreateRound(r *round.Round) *Round {
 
 /*SetLatestFinalizedBlock - Set latest finalized block */
 func (mc *Chain) SetLatestFinalizedBlock(ctx context.Context, b *block.Block) {
-	mc.AddBlock(b)
-	mc.LatestFinalizedBlock = b
 	var r = datastore.GetEntityMetadata("round").Instance().(*round.Round)
 	r.Number = b.Round
 	mc.SetRandomSeed(r, b.RoundRandomSeed)
+	mc.AddRoundBlock(r, b)
 	mr := mc.CreateRound(r)
 	mc.AddRound(mr)
 	mc.AddNotarizedBlock(ctx, mr, b)
+	mc.LatestFinalizedBlock = b
 }
 
 func (mc *Chain) deleteTxns(txns []datastore.Entity) error {

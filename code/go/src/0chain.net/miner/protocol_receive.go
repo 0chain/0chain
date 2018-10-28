@@ -185,7 +185,7 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMess
 		//TODO: byzantine
 		mc.SetRandomSeed(r, mb.RoundRandomSeed)
 		mr = mc.CreateRound(r)
-		mc.AddRound(mr)
+		mr, _ = mc.AddRound(mr).(*Round)
 	} else {
 		nb := mr.GetNotarizedBlocks()
 		for _, blk := range nb {
@@ -194,7 +194,7 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMess
 			}
 		}
 	}
-	b := mc.AddBlock(mb)
+	b := mc.AddRoundBlock(mr, mb)
 	if !mc.AddNotarizedBlock(ctx, mr, b) {
 		return
 	}

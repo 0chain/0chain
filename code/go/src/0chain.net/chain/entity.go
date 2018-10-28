@@ -292,6 +292,22 @@ func (c *Chain) AddBlock(b *block.Block) *block.Block {
 	return c.addBlock(b)
 }
 
+/*AddRoundBlock - add a block for a given round to the cache */
+func (c *Chain) AddRoundBlock(r round.RoundI, b *block.Block) *block.Block {
+	c.blocksMutex.Lock()
+	defer c.blocksMutex.Unlock()
+	b2 := c.addBlock(b)
+	if b2 != b {
+		return b2
+	}
+	b.RoundRandomSeed = r.GetRandomSeed()
+	c.SetRoundRank(r, b)
+	if b.PrevBlock != nil {
+		b.ComputeChainWeight()
+	}
+	return b
+}
+
 func (c *Chain) addBlock(b *block.Block) *block.Block {
 	if eb, ok := c.blocks[b.Hash]; ok {
 		if eb != b {
