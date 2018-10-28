@@ -59,7 +59,7 @@ func (c *Chain) BlockFetchWorker(ctx context.Context) {
 		if b.PrevBlock != nil {
 			continue
 		}
-		pb, err := c.getBlock(ctx, b.PrevHash)
+		pb, err := c.GetBlock(ctx, b.PrevHash)
 		if err == nil {
 			b.SetPreviousBlock(pb)
 			continue
