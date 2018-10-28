@@ -554,9 +554,9 @@ func (c *Chain) DeleteRoundsBelow(ctx context.Context, roundNumber int64) {
 }
 
 /*SetRandomSeed - set the random seed for the round */
-func (c *Chain) SetRandomSeed(r *round.Round, randomSeed int64) {
+func (c *Chain) SetRandomSeed(r round.RoundI, randomSeed int64) {
 	r.SetRandomSeed(randomSeed)
-	r.ComputeMinerRanks(c.Miners.Size())
+	r.ComputeMinerRanks(c.Miners)
 	roundNumber := r.GetRoundNumber()
 	if roundNumber > c.CurrentRound {
 		c.CurrentRound = roundNumber
@@ -571,4 +571,10 @@ func (c *Chain) getBlocks() []*block.Block {
 		bl = append(bl, v)
 	}
 	return bl
+}
+
+//SetRoundRank - set the round rank of the block
+func (c *Chain) SetRoundRank(r round.RoundI, b *block.Block) {
+	bNode := node.GetNode(b.MinerID)
+	b.RoundRank = r.GetMinerRank(bNode)
 }

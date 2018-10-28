@@ -9,7 +9,6 @@ import (
 	"0chain.net/common"
 	"0chain.net/datastore"
 	"0chain.net/memorystore"
-	"0chain.net/node"
 	"0chain.net/round"
 )
 
@@ -92,8 +91,7 @@ func (mc *Chain) deleteTxns(txns []datastore.Entity) error {
 func (mc *Chain) SetPreviousBlock(ctx context.Context, r round.RoundI, b *block.Block, pb *block.Block) {
 	b.SetPreviousBlock(pb)
 	b.RoundRandomSeed = r.GetRandomSeed()
-	bNode := node.GetNode(b.MinerID)
-	b.RoundRank = r.GetMinerRank(bNode)
+	mc.SetRoundRank(r, b)
 	b.ComputeChainWeight()
 }
 
