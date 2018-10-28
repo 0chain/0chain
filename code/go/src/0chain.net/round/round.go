@@ -5,11 +5,14 @@ import (
 	"0chain.net/node"
 )
 
+//RoundI - an interface that represents a blockchain round
 type RoundI interface {
 	GetRoundNumber() int64
+
 	GetRandomSeed() int64
 	SetRandomSeed(seed int64)
 
+	ComputeMinerRanks(miners *node.Pool)
 	GetMinerRank(miner *node.Node) int
 	GetMinersByRank(miners *node.Pool) []*node.Node
 

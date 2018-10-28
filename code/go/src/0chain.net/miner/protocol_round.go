@@ -220,7 +220,7 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 	if mc.AddBlock(b) != b {
 		return
 	}
-	b.RoundRank = mr.GetMinerRank(bNode)
+	mc.SetRoundRank(mr, b)
 	if b.PrevBlock != nil {
 		b.ComputeChainWeight()
 		mc.updatePriorBlock(ctx, mr.Round, b)
@@ -275,12 +275,6 @@ func (mc *Chain) computeBlockProposalDynamicWaitTime(r round.RoundI) time.Durati
 			return medianTimeMS
 		}*/
 	return mc.BlockProposalMaxWaitTime
-}
-
-//GetGenerators - get the list of generators for this round
-func (mc *Chain) GetGenerators(r round.RoundI) []*node.Node {
-	miners := r.GetMinersByRank(mc.Miners)
-	return miners[:mc.NumGenerators]
 }
 
 /*CollectBlocksForVerification - keep collecting the blocks till timeout and then start verifying */

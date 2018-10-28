@@ -103,8 +103,7 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 		sc.SetRandomSeed(r, b.RoundRandomSeed)
 		er, _ = sc.AddRound(r).(*round.Round)
 	}
-	bNode := node.GetNode(b.MinerID)
-	b.RoundRank = er.GetMinerRank(bNode)
+	sc.SetRoundRank(er, b)
 	Logger.Info("received block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)))
 	sc.AddNotarizedBlock(ctx, er, b)
 }

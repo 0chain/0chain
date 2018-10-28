@@ -44,7 +44,7 @@ type Round struct {
 
 	proposedBlocks  []*block.Block
 	notarizedBlocks []*block.Block
-	Mutex           *sync.RWMutex
+	Mutex           sync.RWMutex
 
 	shares map[string]*VRFShare
 }
@@ -204,7 +204,6 @@ func Provider() datastore.Entity {
 	r := &Round{}
 	r.notarizedBlocks = make([]*block.Block, 0, 1)
 	r.proposedBlocks = make([]*block.Block, 0, 3)
-	r.Mutex = &sync.RWMutex{}
 	r.shares = make(map[string]*VRFShare)
 	return r
 }
@@ -248,17 +247,23 @@ func SetupRoundSummaryDB() {
 NOTE: The permutation is deterministic using a PRNG that uses a starting seed. The starting seed itself
       is crytgraphically generated random number and is not known till the threshold signature is reached.
 */
-func (r *Round) ComputeMinerRanks(m int) {
-	r.minerPerm = rand.New(rand.NewSource(r.RandomSeed)).Perm(m)
+func (r *Round) ComputeMinerRanks(miners *node.Pool) {
+	r.Mutex.Lock()
+	defer r.Mutex.Unlock()
+	r.minerPerm = rand.New(rand.NewSource(r.RandomSeed)).Perm(miners.Size())
 }
 
 /*GetMinerRank - get the rank of element at the elementIdx position based on the permutation of the round */
 func (r *Round) GetMinerRank(miner *node.Node) int {
+	r.Mutex.RLock()
+	defer r.Mutex.RUnlock()
 	return r.minerPerm[miner.SetIndex]
 }
 
 /*GetMinersByRank - get the rnaks of the miners */
 func (r *Round) GetMinersByRank(miners *node.Pool) []*node.Node {
+	r.Mutex.RLock()
+	defer r.Mutex.RUnlock()
 	nodes := miners.Nodes
 	rminers := make([]*node.Node, len(nodes))
 	for _, nd := range nodes {

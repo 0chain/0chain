@@ -36,20 +36,11 @@ func (mc *Chain) HandleVRFShare(ctx context.Context, msg *BlockMessage) {
 /*HandleVerifyBlockMessage - handles the verify block message */
 func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage) {
 	b := msg.Block
-	mr := mc.GetMinerRound(b.Round)
-	if mr != nil {
-		vts := mr.GetVerificationTickets(b.Hash)
-		if len(vts) > 0 {
-			mc.MergeVerificationTickets(ctx, b, vts)
-			if mc.checkBlockNotarization(ctx, mr, b) {
-				return
-			}
-		}
-	}
 	if b.Round < mc.CurrentRound-1 {
 		Logger.Debug("verify block (round mismatch)", zap.Int64("current_round", mc.CurrentRound), zap.Int64("block_round", b.Round))
 		return
 	}
+	mr := mc.GetMinerRound(b.Round)
 	if mr == nil {
 		Logger.Error("handle verify block - got block proposal before starting round", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("miner", b.MinerID))
 		pr := mc.GetMinerRound(b.Round - 1)
@@ -67,6 +58,13 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 		if !mr.IsVRFComplete() {
 			//TODO: byzantine
 			mc.setRandomSeed(ctx, mr, b.RoundRandomSeed)
+		}
+		vts := mr.GetVerificationTickets(b.Hash)
+		if len(vts) > 0 {
+			mc.MergeVerificationTickets(ctx, b, vts)
+			if mc.checkBlockNotarization(ctx, mr, b) {
+				return
+			}
 		}
 	}
 	if mr != nil {
