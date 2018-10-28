@@ -445,9 +445,6 @@ func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *Round, b *block.Block
 	}
 	if !r.IsVerificationComplete() {
 		mc.CancelRoundVerification(ctx, r)
-		if r.Block == nil || r.Block.RoundRank > b.RoundRank {
-			r.Block = b
-		}
 	}
 	b.SetBlockState(block.StateNotarized)
 	mc.UpdateNodeState(b)
