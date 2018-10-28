@@ -241,7 +241,7 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 				validChannel <- false
 				return
 			}
-			err := txn.Validate(ctx)
+			err := txn.ValidateWrtTime(ctx, b.CreationDate)
 			if err != nil {
 				cancel = true
 				Logger.Error("validate transactions", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.String("txn", datastore.ToJSON(txn).String()), zap.Error(err))

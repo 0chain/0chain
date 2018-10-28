@@ -36,7 +36,7 @@ func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r 
 	if mpr := pr.(*Round); mpr.IsVRFComplete() {
 		mc.setRandomSeed(ctx, r, rand.New(rand.NewSource(pr.GetRandomSeed())).Int63())
 	} else {
-		Logger.Error("comput round random seed - no prior value", zap.Int64("round", r.GetRoundNumber()), zap.Int("blocks", len(pr.GetProposedBlocks())))
+		Logger.Error("compute round random seed - no prior value", zap.Int64("round", r.GetRoundNumber()), zap.Int("blocks", len(pr.GetProposedBlocks())))
 	}
 }
 
