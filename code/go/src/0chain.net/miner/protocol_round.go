@@ -180,7 +180,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 			Logger.Error("generate block", zap.Error(err))
 			return nil, err
 		}
-		mc.AddBlock(b)
+		mc.AddRoundBlock(r, b)
 		break
 	}
 	if mc.CurrentRound > b.Round {
@@ -217,10 +217,9 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 			return
 		}
 	}
-	if mc.AddBlock(b) != b {
+	if mc.AddRoundBlock(mr, b) != b {
 		return
 	}
-	mc.SetRoundRank(mr, b)
 	if b.PrevBlock != nil {
 		b.ComputeChainWeight()
 		mc.updatePriorBlock(ctx, mr.Round, b)
