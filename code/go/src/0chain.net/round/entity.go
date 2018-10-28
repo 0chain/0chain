@@ -249,16 +249,22 @@ NOTE: The permutation is deterministic using a PRNG that uses a starting seed. T
       is crytgraphically generated random number and is not known till the threshold signature is reached.
 */
 func (r *Round) ComputeMinerRanks(m int) {
+	r.Mutex.Lock()
+	defer r.Mutex.Unlock()
 	r.minerPerm = rand.New(rand.NewSource(r.RandomSeed)).Perm(m)
 }
 
 /*GetMinerRank - get the rank of element at the elementIdx position based on the permutation of the round */
 func (r *Round) GetMinerRank(miner *node.Node) int {
+	r.Mutex.RLock()
+	defer r.Mutex.RUnlock()
 	return r.minerPerm[miner.SetIndex]
 }
 
 /*GetMinersByRank - get the rnaks of the miners */
 func (r *Round) GetMinersByRank(miners *node.Pool) []*node.Node {
+	r.Mutex.RLock()
+	defer r.Mutex.RUnlock()
 	nodes := miners.Nodes
 	rminers := make([]*node.Node, len(nodes))
 	for _, nd := range nodes {
