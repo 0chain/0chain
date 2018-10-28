@@ -205,7 +205,7 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 			Logger.Error("get notarized block - validate", zap.String("block", blockHash), zap.Any("block_obj", nb), zap.Error(err))
 			return nil, err
 		}
-		r := c.GetRound(nb.Round)
+		r := c.GetRound(b.Round)
 		if r == nil {
 			Logger.Error("get notarized block - no round (TODO)", zap.String("block", blockHash), zap.Int64("round", b.Round), zap.Int64("cround", cround), zap.Int64("current_round", c.CurrentRound))
 		} else {
