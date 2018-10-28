@@ -400,15 +400,8 @@ func (c *Chain) IsRoundGenerator(r round.RoundI, nd *node.Node) bool {
 
 /*GetGenerators - get all the block generators for a given round */
 func (c *Chain) GetGenerators(r round.RoundI) []*node.Node {
-	generators := make([]*node.Node, c.NumGenerators)
-	i := 0
-	for _, nd := range c.Miners.Nodes {
-		if c.IsRoundGenerator(r, nd) {
-			generators[i] = nd
-			i++
-		}
-	}
-	return generators
+	miners := r.GetMinersByRank(c.Miners)
+	return miners[:c.NumGenerators]
 }
 
 /*IsBlockSharder - checks if the sharder can store the block in the given round */

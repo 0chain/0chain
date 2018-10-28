@@ -277,12 +277,6 @@ func (mc *Chain) computeBlockProposalDynamicWaitTime(r round.RoundI) time.Durati
 	return mc.BlockProposalMaxWaitTime
 }
 
-//GetGenerators - get the list of generators for this round
-func (mc *Chain) GetGenerators(r round.RoundI) []*node.Node {
-	miners := r.GetMinersByRank(mc.Miners)
-	return miners[:mc.NumGenerators]
-}
-
 /*CollectBlocksForVerification - keep collecting the blocks till timeout and then start verifying */
 func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 	verifyAndSend := func(ctx context.Context, r *Round, b *block.Block) bool {
