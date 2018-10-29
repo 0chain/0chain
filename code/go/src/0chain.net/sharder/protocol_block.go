@@ -94,11 +94,9 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 	}
 	er := sc.GetRound(b.Round)
 	if er == nil {
-		r := datastore.GetEntityMetadata("round").Instance().(*round.Round)
-		r.Number = b.Round
-		r.RandomSeed = b.RoundRandomSeed
-		sc.SetRandomSeed(r, b.RoundRandomSeed)
+		var r = round.NewRound(b.Round)
 		er, _ = sc.AddRound(r).(*round.Round)
+		sc.SetRandomSeed(er, b.RoundRandomSeed)
 	}
 	if sc.AddRoundBlock(er, b) != b {
 		return

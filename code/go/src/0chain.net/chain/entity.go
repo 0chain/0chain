@@ -266,8 +266,7 @@ func (c *Chain) GenerateGenesisBlock(hash string) (round.RoundI, *block.Block) {
 	gb.SetStateStatus(block.StateSuccessful)
 	gb.SetBlockState(block.StateNotarized)
 	gb.ClientStateHash = gb.ClientState.GetRoot()
-	gr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
-	gr.Number = 0
+	gr := round.NewRound(0)
 	c.SetRandomSeed(gr, 839695260482366273)
 	gr.Block = gb
 	gr.AddNotarizedBlock(gb)
