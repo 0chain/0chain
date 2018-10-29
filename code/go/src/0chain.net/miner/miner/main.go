@@ -5,11 +5,9 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"math/rand"
 	"net/http"
 	"os"
 	"runtime"
-	"sort"
 	"strings"
 	"time"
 
@@ -23,7 +21,6 @@ import (
 	"0chain.net/client"
 	"0chain.net/common"
 	"0chain.net/config"
-	"0chain.net/datastore"
 	"0chain.net/diagnostics"
 	"0chain.net/encryption"
 	"0chain.net/logging"
@@ -144,7 +141,10 @@ func main() {
 	initServer()
 	initHandlers()
 
-	go StartProtocol(ctx)
+	miner.StartDKG(ctx)
+	if config.Development() {
+		go TransactionGenerator(mc.BlockSize)
+	}
 	Logger.Info("Ready to listen to the requests")
 	chain.StartTime = time.Now().UTC()
 	log.Fatal(server.ListenAndServe())
@@ -212,10 +212,11 @@ func initWorkers(ctx context.Context) {
 	transaction.SetupWorkers(ctx)
 }
 
-/*StartProtocol - start the miner protocol */
-func StartProtocol(ctx context.Context) {
-	mc := miner.GetMinerChain()
+/*WaitForMinerQuorum --This function waits FOREVER for enough #miners to become active */
+func WaitForMinerQuorum() bool {
 
+	mc := miner.GetMinerChain()
+	//Todo: Add a configurable wait time.
 	if !mc.CanStartNetwork() {
 		ticker := time.NewTicker(5 * chain.DELTA)
 		for ts := range ticker.C {
@@ -227,33 +228,6 @@ func StartProtocol(ctx context.Context) {
 		}
 	}
 
-	miner.StartDKG(ctx)
+	return true
 
-	mc.Sharders.OneTimeStatusMonitor(ctx)
-	lfBlocks := mc.GetLatestFinalizedBlockFromSharder(ctx)
-
-	var lfb *block.Block
-	//Sorting as per the latest finalized blocks from all the sharders
-	sort.Slice(lfBlocks, func(i int, j int) bool { return lfBlocks[i].Round >= lfBlocks[j].Round })
-	if len(lfBlocks) > 0 {
-		lfb = lfBlocks[0]
-	}
-
-	sr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
-	if lfb != nil {
-		mc.SetLatestFinalizedBlock(ctx, lfb)
-		sr.Number = lfb.Round + 1
-		sr.RandomSeed = rand.New(rand.NewSource(lfb.RoundRandomSeed)).Int63()
-	} else {
-		sr.Number = 1
-	}
-	msr := mc.CreateRound(sr)
-	Logger.Info("bc-1 latest finalized Block", zap.Int64("lfb_round", mc.LatestFinalizedBlock.Round))
-
-	if config.Development() {
-		go TransactionGenerator(mc.BlockSize)
-	}
-
-	Logger.Info("starting the blockchain ...")
-	mc.StartRound(ctx, msr)
 }

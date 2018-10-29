@@ -474,7 +474,7 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*bloc
 		Logger.Info("bc-1 lfb received", zap.Int64("lfb_round", fb.Round))
 		err := fb.Validate(ctx)
 		if err != nil {
-			Logger.Error("bc-1 lfb invalid", zap.String("block_hash", fb.Hash))
+			Logger.Error("bc-1 lfb invalid", zap.String("block_hash", fb.Hash), zap.Error(err))
 			return nil, err
 		}
 		err = mc.VerifyNotarization(ctx, fb.Hash, fb.VerificationTickets)

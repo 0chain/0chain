@@ -122,6 +122,7 @@ func DKGShareHandler(ctx context.Context, entity datastore.Entity) (interface{},
 	}
 	Logger.Info("received DKG share", zap.String("share", dg.Share))
 	AppendDKGSecShares(dg.Share)
+
 	return nil, nil
 }
 

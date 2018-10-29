@@ -3,11 +3,12 @@
 package miner
 
 import (
-	"time"
 	"context"
 	"encoding/binary"
 
 	"go.uber.org/zap"
+
+	"bytes"
 
 	"0chain.net/datastore"
 	"0chain.net/encryption"
@@ -15,13 +16,13 @@ import (
 	"0chain.net/threshold/bls"
 	"0chain.net/util"
 
-	"bytes"
-
 	. "0chain.net/logging"
 )
 
-//TODO: Make the values of k and n configurable
-
+/*
+TODO: Make the values of k and n configurable.
+This should be using CanNetworkStart logic not hard coded.
+*/
 var k = 2
 var n = 3
 var dg bls.BLSSimpleDKG
@@ -30,8 +31,7 @@ var recShares []string
 var recSig []string
 var recIDs []string
 
-/* StartDKG - starts the DKG process */
-
+/*StartDKG - starts the DKG process */
 func StartDKG(ctx context.Context) {
 	mc := GetMinerChain()
 
@@ -64,21 +64,17 @@ func StartDKG(ctx context.Context) {
 		m2m.SendTo(DKGShareSender(dkg), node.ID)
 	}
 
-	for {
-		if len(recShares) == dg.N {
-			break
-		}
-		time.Sleep(time.Millisecond)
-	}
-
-	Logger.Info("All the shares are received ...")
-	AggregateDKGSecShares(recShares)
-	Logger.Info("DKG is done :) ...")
 }
 
 /* AppendDKGSecShares - Gets the shares by other miners and append to the global array */
 func AppendDKGSecShares(share string) {
 	recShares = append(recShares, share)
+	if len(recShares) == dg.N {
+		Logger.Info("All the shares are received ...")
+		AggregateDKGSecShares(recShares)
+		Logger.Info("DKG is done :) ...")
+	}
+	go StartProtocol()
 }
 
 func AppendBLSSigShares(sigShare string, nodeID int) bool {
