@@ -47,6 +47,8 @@ server_chain:
       threshold_by_stake: 0
     validation:
       batch_size: 250
+    storage:
+      provider: blockstore.FSBlockStore # blockstore.FSBlockStore or blockstore.BlockDBStore
     proposal:
       max_wait_time: 200
       wait_mode: dynamic # static or dynamic
