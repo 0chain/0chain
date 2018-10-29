@@ -12,6 +12,7 @@ import (
 
 	"0chain.net/datastore"
 	"0chain.net/encryption"
+	"0chain.net/node"
 	"0chain.net/round"
 	"0chain.net/threshold/bls"
 	"0chain.net/util"
@@ -39,7 +40,7 @@ func StartDKG(ctx context.Context) {
 	Logger.Info("Starting DKG...")
 
 	dg = bls.MakeSimpleDKG(k, n)
-
+	self := node.GetSelfNode(ctx)
 	for _, node := range m2m.Nodes {
 
 		Logger.Info("The miner ID is ", zap.String("miner ID is ", node.GetKey()))
@@ -55,13 +56,12 @@ func StartDKG(ctx context.Context) {
 			Share: secShare.GetDecString()}
 		dkg.SetKey(datastore.ToKey("1"))
 
-		//TBD
-		/*	if self.ID == node.ID {
-				dg.SelfShare = secShare
-			} else {
-			miners.SendTo(miner.DKGShareSender(dkg), node.ID)
-				} */
-		m2m.SendTo(DKGShareSender(dkg), node.ID)
+		if self.SetIndex == node.SetIndex {
+			recShares = append(recShares, secShare.GetDecString())
+		} else {
+			m2m.SendTo(DKGShareSender(dkg), node.ID)
+		}
+
 	}
 
 }
@@ -69,12 +69,14 @@ func StartDKG(ctx context.Context) {
 /* AppendDKGSecShares - Gets the shares by other miners and append to the global array */
 func AppendDKGSecShares(share string) {
 	recShares = append(recShares, share)
+	//ToDo: We cannot expect everyone to be ready to start. Should we use K?
 	if len(recShares) == dg.N {
 		Logger.Info("All the shares are received ...")
 		AggregateDKGSecShares(recShares)
 		Logger.Info("DKG is done :) ...")
+		go StartProtocol()
 	}
-	go StartProtocol()
+
 }
 
 func AppendBLSSigShares(sigShare string, nodeID int) bool {
