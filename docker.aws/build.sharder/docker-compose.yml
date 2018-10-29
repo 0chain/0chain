@@ -22,21 +22,24 @@ services:
 
     restart: on-failure:10
 
-    user: 2000:2000
-
     healthcheck:
       test: ["CMD-SHELL", "[ $$(nodetool statusgossip) = running ]"]
       interval: 30s
       timeout: 10s
       retries: 5
 
+    command: ["--developer-mode", "0", "--cpuset", "3" ]
+
+    privileged: true
+
   scylla-init:
-    image: scylladb/scylla
+    #The service depends upon several cassandra utilities.
+    image: cassandra:latest
     volumes:
       - BIN_VOLUME:/0chain/bin
       - SQL_VOLUME:/0chain/sql
-
-    command: bash /0chain/bin/syclla-init.sh
+    entrypoint: bash /0chain/bin/scylla-init.sh
+    #command: bash
     links:
       - scylla:scylla
     restart: on-failure:10
@@ -44,6 +47,7 @@ services:
   sharder:
     environment:
       - DOCKER=true
+      - CASSANDRA_CLUSTER=scylla
     depends_on:
       - scylla-init
     links:
@@ -66,6 +70,7 @@ services:
       #Create the data volume
       - DATA_VOLUME:/0chain/data
       - /0chain/data/rocksdb
+      - /0chain/data/rocksdb/state
 
       #Use the blocks volume
       - BLOCKS_VOLUME:/0chain/data/blocks
@@ -91,7 +96,7 @@ services:
       default:
 
     #Start under user 0chain
-    user: 2000:2000
+    user: ${ZCHAIN_USER}:${ZCHAIN_USER}
     command: /0chain/bin/sharder --deployment_mode 0 --keys_file /0chain/config/sharder.txt --nodes_file nodes
 
 networks:
