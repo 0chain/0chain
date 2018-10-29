@@ -34,10 +34,15 @@ var StartToFinalizeTimer metrics.Timer
 //StateSaveTimer - a metric that tracks the time it takes to save the state
 var StateSaveTimer metrics.Timer
 
+//FinalizationLagMetric - a metric that tracks how much is the lag between current round and finalization round
+var FinalizationLagMetric metrics.Histogram
+
 func init() {
 	SteadyStateFinalizationTimer = metrics.GetOrRegisterTimer("ss_finalization_time", nil)
 	StartToFinalizeTimer = metrics.GetOrRegisterTimer("s2f_time", nil)
 	StateSaveTimer = metrics.GetOrRegisterTimer("state_save_timer", nil)
+	FinalizationLagMetric = metrics.NewHistogram(metrics.NewUniformSample(1024))
+	metrics.Register("finalization_lag", FinalizationLagMetric)
 }
 
 /*ComputeFinalizedBlock - compute the block that has been finalized */
@@ -51,24 +56,6 @@ func (c *Chain) ComputeFinalizedBlock(ctx context.Context, r round.RoundI) *bloc
 		return false
 	}
 	roundNumber := r.GetRoundNumber()
-	/*
-		pbs := r.GetProposedBlocks()
-		if len(pbs) == c.NumGenerators {
-			var pbHash string
-			var fb *block.Block
-			for _, b := range pbs {
-				if fb == nil {
-					pbHash = b.PrevHash
-					fb = b.PrevBlock
-				} else if pbHash != b.PrevHash {
-					fb = nil
-					break
-				}
-			}
-			if fb != nil {
-				return fb
-			}
-		}*/
 	tips := r.GetNotarizedBlocks()
 	if len(tips) == 0 {
 		Logger.Error("compute finalize block: no notarized blocks", zap.Int64("round", r.GetRoundNumber()))
@@ -176,6 +163,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 		}
 		Logger.Error("finalize round - missing common ancestor", zap.Int64("cf_round", c.LatestFinalizedBlock.Round), zap.String("cf_block", c.LatestFinalizedBlock.Hash), zap.Int64("nf_round", lfb.Round), zap.String("nf_block", lfb.Hash))
 	}
+	FinalizationLagMetric.Update(int64(c.CurrentRound - c.LatestFinalizedBlock.Round))
 	plfb := c.LatestFinalizedBlock
 	plfbHash := plfb.Hash
 	frchain := make([]*block.Block, 0, 1)
