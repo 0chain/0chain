@@ -49,6 +49,13 @@ type Round struct {
 	shares map[string]*VRFShare
 }
 
+//NewRound - Create a new round object
+func NewRound(round int64) *Round {
+	r := datastore.GetEntityMetadata("round").Instance().(*Round)
+	r.Number = round
+	return r
+}
+
 var roundEntityMetadata *datastore.EntityMetadataImpl
 
 /*GetEntityMetadata - implementing the interface */

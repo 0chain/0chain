@@ -32,9 +32,7 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 		mc.CancelRoundVerification(ctx, pr)
 		go mc.FinalizeRound(ctx, pr.Round, mc)
 	}
-	nrNumber := r.GetRoundNumber() + 1
-	nr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
-	nr.Number = nrNumber
+	var nr = round.NewRound(r.GetRoundNumber() + 1)
 	mr := mc.CreateRound(nr)
 	// Even if the context is cancelled, we want to proceed with the next round, hence start with a root context
 	mc.startRound(common.GetRootContext(), r, mr)
