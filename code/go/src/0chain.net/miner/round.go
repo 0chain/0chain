@@ -24,7 +24,7 @@ func (r *Round) AddBlockToVerify(b *block.Block) {
 	r.Mutex.Lock()
 	defer r.Mutex.Unlock()
 	if r.isVerificationComplete() {
-		Logger.Error("block proposal (verification complete)", zap.Int64("round", r.GetRoundNumber()), zap.String("block", b.Hash))
+		Logger.Debug("block proposal (verification complete)", zap.Int64("round", r.GetRoundNumber()), zap.String("block", b.Hash))
 		return
 	}
 	if r.GetRoundNumber() != b.Round {
