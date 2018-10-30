@@ -182,8 +182,12 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		break
 	}
 	if mc.CurrentRound > b.Round {
-		Logger.Info("generate block (round mismatch)", zap.Any("round", roundNumber), zap.Any("current_round", mc.CurrentRound))
+		Logger.Error("generate block (round mismatch)", zap.Any("round", roundNumber), zap.Any("current_round", mc.CurrentRound))
 		return nil, ErrRoundMismatch
+	}
+	if r.IsVerificationComplete() {
+		Logger.Error("generate block (verification complete)", zap.Any("round", roundNumber), zap.Any("notarized", len(r.GetNotarizedBlocks())))
+		return nil, nil
 	}
 	mc.addToRoundVerification(ctx, r, b)
 	mc.SendBlock(ctx, b)
