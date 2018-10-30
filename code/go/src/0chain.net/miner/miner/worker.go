@@ -88,6 +88,7 @@ func TransactionGenerator(blockSize int32) {
 	}
 
 	for true {
+		numTxns = rand.Int31n(333)
 		numGenerators := sc.NumGenerators
 		numMiners := sc.Miners.Size()
 		blockRate := chain.SteadyStateFinalizationTimer.Rate1()
