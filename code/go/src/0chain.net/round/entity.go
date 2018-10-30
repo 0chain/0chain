@@ -101,7 +101,9 @@ func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool) {
 	if r.Block == nil || r.Block.RoundRank > b.RoundRank {
 		r.Block = b
 	}
-	r.notarizedBlocks = append(r.notarizedBlocks, b)
+	rnb := append(r.notarizedBlocks, b)
+	sort.Slice(rnb, func(i int, j int) bool { return rnb[i].ChainWeight > rnb[j].ChainWeight })
+	r.notarizedBlocks = rnb
 	return b, true
 }
 
@@ -134,14 +136,12 @@ func (r *Round) GetProposedBlocks() []*block.Block {
 
 /*GetHeaviestNotarizedBlock - get the heaviest notarized block that we have in this round */
 func (r *Round) GetHeaviestNotarizedBlock() *block.Block {
+	r.Mutex.RLock()
+	defer r.Mutex.RUnlock()
 	rnb := r.notarizedBlocks
 	if len(rnb) == 0 {
 		return nil
 	}
-	if len(rnb) == 1 {
-		return rnb[0]
-	}
-	sort.Slice(rnb, func(i int, j int) bool { return rnb[i].ChainWeight > rnb[j].ChainWeight })
 	return rnb[0]
 }
 
@@ -153,6 +153,8 @@ func (r *Round) GetBlocksByRank(blocks []*block.Block) []*block.Block {
 
 /*GetBestRankedNotarizedBlock - get the best ranked notarized block for this round */
 func (r *Round) GetBestRankedNotarizedBlock() *block.Block {
+	r.Mutex.RLock()
+	defer r.Mutex.RUnlock()
 	rnb := r.notarizedBlocks
 	if len(rnb) == 0 {
 		return nil

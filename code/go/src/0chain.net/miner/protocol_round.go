@@ -79,37 +79,21 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 
 /*GetBlockToExtend - Get the block to extend from the given round */
 func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) *block.Block {
-	count := 0
-	sleepTime := 10 * time.Millisecond
-	for true { // Need to do this for timing issues where a start round might come before a notarization and there is no notarized block to extend from
-		if r.GetRoundNumber()+1 != mc.CurrentRound {
-			break
-		}
-		bnb := r.GetHeaviestNotarizedBlock()
-		if bnb == nil {
-			bnb = mc.GetHeaviestNotarizedBlock(r)
-		}
-		if bnb != nil {
-			if !bnb.IsStateComputed() {
-				err := mc.ComputeState(ctx, bnb)
-				if err != nil {
-					if config.DevConfiguration.State {
-						Logger.Error("get block to extend (best nb compute state)", zap.Any("round", r.GetRoundNumber()), zap.Any("block", bnb.Hash), zap.Error(err))
-					}
+	bnb := r.GetHeaviestNotarizedBlock()
+	if bnb == nil {
+		Logger.Error("get block to extend - no notarized block", zap.Int64("round", r.GetRoundNumber()))
+		bnb = mc.GetHeaviestNotarizedBlock(r)
+	}
+	if bnb != nil {
+		if !bnb.IsStateComputed() {
+			err := mc.ComputeState(ctx, bnb)
+			if err != nil {
+				if config.DevConfiguration.State {
+					Logger.Error("get block to extend (best nb compute state)", zap.Any("round", r.GetRoundNumber()), zap.Any("block", bnb.Hash), zap.Error(err))
 				}
 			}
-			return bnb
 		}
-		Logger.Error("block to extend - no notarized block yet", zap.Int64("round", r.GetRoundNumber()))
-		count++
-		if count == 10 {
-			count = 0
-			sleepTime *= 2
-			if sleepTime > time.Second {
-				sleepTime = time.Second
-			}
-		}
-		time.Sleep(sleepTime)
+		return bnb
 	}
 	Logger.Debug("no block to extend", zap.Int64("round", r.GetRoundNumber()), zap.Int64("current_round", mc.CurrentRound))
 	return nil
@@ -301,12 +285,12 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 		}
 		b.SetBlockState(block.StateVerificationSuccessful)
 		bnb := r.GetBestRankedNotarizedBlock()
+		if bnb == nil || (bnb != nil && bnb.Hash == b.Hash) {
+			go mc.SendVerificationTicket(ctx, b, bvt)
+		}
 		if bnb == nil {
 			r.Block = b
 			mc.ProcessVerifiedTicket(ctx, r, b, &bvt.VerificationTicket)
-		}
-		if bnb == nil || (bnb != nil && bnb.Hash == b.Hash) {
-			go mc.SendVerificationTicket(ctx, b, bvt)
 		}
 		minerStats.VerificationTicketsByRank[b.RoundRank]++
 		return true
@@ -422,7 +406,7 @@ func (mc *Chain) checkBlockNotarization(ctx context.Context, r *Round, b *block.
 			return true
 		}
 		go mc.SendNotarization(ctx, b)
-		Logger.Info("process verified ticket - block notarized", zap.Int64("round", b.Round), zap.String("block", b.Hash))
+		Logger.Info("check block notarization - block notarized", zap.Int64("round", b.Round), zap.String("block", b.Hash))
 		mc.StartNextRound(ctx, r)
 		return true
 	}
