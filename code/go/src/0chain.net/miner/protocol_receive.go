@@ -91,21 +91,18 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *Block
 			}
 		}
 	}
-	b := msg.Block // if the ticket is for own generated block, then the message contains the block
-	if b == nil {
-		b, err = mc.GetBlock(ctx, msg.BlockVerificationTicket.BlockID)
-		if err != nil {
-			if mr != nil {
-				err = mc.VerifyTicket(ctx, msg.BlockVerificationTicket.BlockID, &msg.BlockVerificationTicket.VerificationTicket)
-				if err != nil {
-					Logger.Debug("verification ticket", zap.Error(err))
-					return
-				}
-				mr.AddVerificationTicket(msg.BlockVerificationTicket)
+	b, err := mc.GetBlock(ctx, msg.BlockVerificationTicket.BlockID)
+	if err != nil {
+		if mr != nil {
+			err = mc.VerifyTicket(ctx, msg.BlockVerificationTicket.BlockID, &msg.BlockVerificationTicket.VerificationTicket)
+			if err != nil {
+				Logger.Debug("verification ticket", zap.Error(err))
 				return
 			}
+			mr.AddVerificationTicket(msg.BlockVerificationTicket)
 			return
 		}
+		return
 	}
 	if b.Round < mc.LatestFinalizedBlock.Round {
 		Logger.Debug("verification message (round mismatch)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("finalized_round", mc.LatestFinalizedBlock.Round))

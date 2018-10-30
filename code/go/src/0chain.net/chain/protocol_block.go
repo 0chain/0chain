@@ -208,14 +208,11 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 		r := c.GetRound(nb.Round)
 		if r == nil {
 			Logger.Error("get notarized block - no round (TODO)", zap.String("block", blockHash), zap.Int64("round", nb.Round), zap.Int64("cround", cround), zap.Int64("current_round", c.CurrentRound))
+			b = c.AddBlock(nb)
 		} else {
 			c.SetRandomSeed(r, nb.RoundRandomSeed)
-		}
-		if r != nil {
 			b = c.AddRoundBlock(r, nb)
 			b, _ = r.AddNotarizedBlock(b)
-		} else {
-			b = c.AddBlock(nb)
 		}
 		Logger.Info("get notarized block", zap.Int64("round", b.Round), zap.String("block", b.Hash))
 		return b, nil
