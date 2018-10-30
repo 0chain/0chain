@@ -67,7 +67,7 @@
 
   - name: "Install file-system for {{agent_name}} on {{ebs_device_name}}"
     filesystem:
-      fstype: ext4
+      fstype: xfs
       dev: "{{ebs_device_name}}"
       force: no
 
@@ -84,7 +84,7 @@
       path: "{{ebs_mount_point}}"
       src: "{{ebs_device_name}}"
       state: mounted
-      fstype: ext4
+      fstype: xfs
       boot: yes
 
 # - block:

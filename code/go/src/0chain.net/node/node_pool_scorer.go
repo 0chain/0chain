@@ -68,5 +68,5 @@ func (n *Node) IsInTop(nodeScores []*Score, topN int) bool {
 			}
 		}
 	}
-	return false
+	return true
 }
