@@ -32,9 +32,7 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 		mc.CancelRoundVerification(ctx, pr)
 		go mc.FinalizeRound(ctx, pr.Round, mc)
 	}
-	nrNumber := r.GetRoundNumber() + 1
-	nr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
-	nr.Number = nrNumber
+	var nr = round.NewRound(r.GetRoundNumber() + 1)
 	mr := mc.CreateRound(nr)
 	// Even if the context is cancelled, we want to proceed with the next round, hence start with a root context
 	mc.startRound(common.GetRootContext(), r, mr)
@@ -187,7 +185,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 			return nil, err
 		}
 		b.RunningTxnCount = pb.RunningTxnCount + int64(len(b.Txns))
-		mc.AddBlock(b)
+		mc.AddRoundBlock(r, b)
 		break
 	}
 	if mc.CurrentRound > b.Round {
@@ -224,10 +222,9 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 			return
 		}
 	}
-	if mc.AddBlock(b) != b {
+	if mc.AddRoundBlock(mr, b) != b {
 		return
 	}
-	b.RoundRank = mr.GetMinerRank(bNode)
 	if b.PrevBlock != nil {
 		b.ComputeChainWeight()
 		mc.updatePriorBlock(ctx, mr.Round, b)
@@ -282,12 +279,6 @@ func (mc *Chain) computeBlockProposalDynamicWaitTime(r round.RoundI) time.Durati
 			return medianTimeMS
 		}*/
 	return mc.BlockProposalMaxWaitTime
-}
-
-//GetGenerators - get the list of generators for this round
-func (mc *Chain) GetGenerators(r round.RoundI) []*node.Node {
-	miners := r.GetMinersByRank(mc.Miners)
-	return miners[:mc.NumGenerators]
 }
 
 /*CollectBlocksForVerification - keep collecting the blocks till timeout and then start verifying */
@@ -425,14 +416,20 @@ func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.B
 	if notarized {
 		return
 	}
+	mc.checkBlockNotarization(ctx, r, b)
+}
+
+func (mc *Chain) checkBlockNotarization(ctx context.Context, r *Round, b *block.Block) bool {
 	if b.IsBlockNotarized() {
 		if !mc.AddNotarizedBlock(ctx, r, b) {
-			return
+			return true
 		}
 		go mc.SendNotarization(ctx, b)
 		Logger.Info("process verified ticket - block notarized", zap.Int64("round", b.Round), zap.String("block", b.Hash))
 		mc.StartNextRound(ctx, r)
+		return true
 	}
+	return false
 }
 
 /*AddNotarizedBlock - add a notarized block for a given round */
@@ -446,9 +443,6 @@ func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *Round, b *block.Block
 	}
 	if !r.IsVerificationComplete() {
 		mc.CancelRoundVerification(ctx, r)
-		if r.Block == nil || r.Block.RoundRank > b.RoundRank {
-			r.Block = b
-		}
 	}
 	b.SetBlockState(block.StateNotarized)
 	mc.UpdateNodeState(b)

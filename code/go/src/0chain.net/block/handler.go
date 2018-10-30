@@ -18,7 +18,7 @@ func GetBlock(ctx context.Context, r *http.Request) (interface{}, error) {
 	return datastore.GetEntityHandler(ctx, r, blockEntityMetadata, "hash")
 }
 
-/*BLOCK_TIME_TOLERANCE - the txn creation date should be within 5 seconds before/after of current time */
+/*BLOCK_TIME_TOLERANCE - the block creation date should be within these many seconds before/after of current time */
 const BLOCK_TIME_TOLERANCE = 5
 
 /*PutBlock - Given a block data, it stores it */

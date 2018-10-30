@@ -267,8 +267,7 @@ func (c *Chain) GenerateGenesisBlock(hash string) (round.RoundI, *block.Block) {
 	gb.SetStateStatus(block.StateSuccessful)
 	gb.SetBlockState(block.StateNotarized)
 	gb.ClientStateHash = gb.ClientState.GetRoot()
-	gr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
-	gr.Number = 0
+	gr := round.NewRound(0)
 	c.SetRandomSeed(gr, 839695260482366273)
 	gr.Block = gb
 	gr.AddNotarizedBlock(gb)
@@ -291,6 +290,22 @@ func (c *Chain) AddBlock(b *block.Block) *block.Block {
 	c.blocksMutex.Lock()
 	defer c.blocksMutex.Unlock()
 	return c.addBlock(b)
+}
+
+/*AddRoundBlock - add a block for a given round to the cache */
+func (c *Chain) AddRoundBlock(r round.RoundI, b *block.Block) *block.Block {
+	c.blocksMutex.Lock()
+	defer c.blocksMutex.Unlock()
+	b2 := c.addBlock(b)
+	if b2 != b {
+		return b2
+	}
+	b.RoundRandomSeed = r.GetRandomSeed()
+	c.SetRoundRank(r, b)
+	if b.PrevBlock != nil {
+		b.ComputeChainWeight()
+	}
+	return b
 }
 
 func (c *Chain) addBlock(b *block.Block) *block.Block {
@@ -401,15 +416,8 @@ func (c *Chain) IsRoundGenerator(r round.RoundI, nd *node.Node) bool {
 
 /*GetGenerators - get all the block generators for a given round */
 func (c *Chain) GetGenerators(r round.RoundI) []*node.Node {
-	generators := make([]*node.Node, c.NumGenerators)
-	i := 0
-	for _, nd := range c.Miners.Nodes {
-		if c.IsRoundGenerator(r, nd) {
-			generators[i] = nd
-			i++
-		}
-	}
-	return generators
+	miners := r.GetMinersByRank(c.Miners)
+	return miners[:c.NumGenerators]
 }
 
 /*IsBlockSharder - checks if the sharder can store the block in the given round */
@@ -484,7 +492,7 @@ func (c *Chain) ChainHasTransaction(ctx context.Context, b *block.Block, txn *tr
 		if cb.HasTransaction(txn.Hash) {
 			return true, nil
 		}
-		if cb.CreationDate < txn.CreationDate {
+		if cb.CreationDate < txn.CreationDate-transaction.TXN_TIME_TOLERANCE {
 			return false, nil
 		}
 	}
@@ -562,9 +570,9 @@ func (c *Chain) DeleteRoundsBelow(ctx context.Context, roundNumber int64) {
 }
 
 /*SetRandomSeed - set the random seed for the round */
-func (c *Chain) SetRandomSeed(r *round.Round, randomSeed int64) {
+func (c *Chain) SetRandomSeed(r round.RoundI, randomSeed int64) {
 	r.SetRandomSeed(randomSeed)
-	r.ComputeMinerRanks(c.Miners.Size())
+	r.ComputeMinerRanks(c.Miners)
 	roundNumber := r.GetRoundNumber()
 	if roundNumber > c.CurrentRound {
 		c.CurrentRound = roundNumber
@@ -579,4 +587,10 @@ func (c *Chain) getBlocks() []*block.Block {
 		bl = append(bl, v)
 	}
 	return bl
+}
+
+//SetRoundRank - set the round rank of the block
+func (c *Chain) SetRoundRank(r round.RoundI, b *block.Block) {
+	bNode := node.GetNode(b.MinerID)
+	b.RoundRank = r.GetMinerRank(bNode)
 }

@@ -9,7 +9,6 @@ import (
 	"0chain.net/common"
 	"0chain.net/datastore"
 	"0chain.net/memorystore"
-	"0chain.net/node"
 	"0chain.net/round"
 )
 
@@ -71,14 +70,13 @@ func (mc *Chain) CreateRound(r *round.Round) *Round {
 
 /*SetLatestFinalizedBlock - Set latest finalized block */
 func (mc *Chain) SetLatestFinalizedBlock(ctx context.Context, b *block.Block) {
-	mc.AddBlock(b)
-	mc.LatestFinalizedBlock = b
-	var r = datastore.GetEntityMetadata("round").Instance().(*round.Round)
-	r.Number = b.Round
-	r.RandomSeed = b.RoundRandomSeed
+	var r = round.NewRound(b.Round)
 	mr := mc.CreateRound(r)
-	mc.AddRound(mr)
+	mr = mc.AddRound(mr).(*Round)
+	mc.SetRandomSeed(mr, b.RoundRandomSeed)
+	mc.AddRoundBlock(mr, b)
 	mc.AddNotarizedBlock(ctx, mr, b)
+	mc.LatestFinalizedBlock = b
 }
 
 func (mc *Chain) deleteTxns(txns []datastore.Entity) error {
@@ -90,21 +88,9 @@ func (mc *Chain) deleteTxns(txns []datastore.Entity) error {
 
 /*SetPreviousBlock - set the previous block */
 func (mc *Chain) SetPreviousBlock(ctx context.Context, r round.RoundI, b *block.Block, pb *block.Block) {
-	if r == nil {
-		mr := mc.GetRound(b.Round)
-		if mr != nil {
-			r = mr
-		} else {
-			nr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
-			nr.Number = b.Round
-			nr.RandomSeed = b.RoundRandomSeed
-			r = nr
-		}
-	}
 	b.SetPreviousBlock(pb)
 	b.RoundRandomSeed = r.GetRandomSeed()
-	bNode := node.GetNode(b.MinerID)
-	b.RoundRank = r.GetMinerRank(bNode)
+	mc.SetRoundRank(r, b)
 	b.ComputeChainWeight()
 }
 
