@@ -196,9 +196,9 @@ func (c *Chain) GetHeaviestNotarizedBlock(r round.RoundI) *block.Block {
 	ctx, cancelf := context.WithCancel(common.GetRootContext())
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		Logger.Info("get notarized block for round", zap.Int64("round", roundNumber), zap.String("block", entity.GetKey()))
-		if r.GetHeaviestNotarizedBlock() != nil {
+		if b := r.GetHeaviestNotarizedBlock(); b != nil {
 			cancelf()
-			return nil, nil
+			return b, nil
 		}
 		nb, ok := entity.(*block.Block)
 		if !ok {
