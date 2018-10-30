@@ -60,6 +60,7 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 		if len(vts) > 0 {
 			mc.MergeVerificationTickets(ctx, b, vts)
 			if mc.checkBlockNotarization(ctx, mr, b) {
+				mc.AddBlock(b)
 				return
 			}
 		}
@@ -125,7 +126,7 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 	r := mc.GetMinerRound(msg.Notarization.Round)
 	if r == nil {
 		if msg.ShouldRetry() {
-			Logger.Info("notarization receipt handler (round not started yet) retrying", zap.String("block", msg.Notarization.BlockID), zap.Int8("retry_count", msg.RetryCount))
+			Logger.Error("notarization receipt handler (round not started yet) retrying", zap.String("block", msg.Notarization.BlockID), zap.Int8("retry_count", msg.RetryCount))
 			msg.Retry(mc.BlockMessageChannel)
 		} else {
 			Logger.Error("notarization receipt handler (round not started yet)", zap.String("block", msg.Notarization.BlockID), zap.Int8("retry_count", msg.RetryCount))
@@ -136,7 +137,7 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 	b, err := mc.GetBlock(ctx, msg.Notarization.BlockID)
 	if err != nil {
 		if msg.ShouldRetry() {
-			Logger.Info("notarization receipt handler (block not found) retrying", zap.Any("block", msg.Notarization.BlockID), zap.Int8("retry_count", msg.RetryCount), zap.Error(err))
+			Logger.Error("notarization receipt handler (block not found) retrying", zap.Any("block", msg.Notarization.BlockID), zap.Int8("retry_count", msg.RetryCount), zap.Error(err))
 			if msg.RetryCount > 2 {
 				go mc.GetNotarizedBlock(msg.Notarization.BlockID) // Let's try to download the block proactively
 			} else {
