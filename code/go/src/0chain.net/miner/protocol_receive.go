@@ -60,7 +60,7 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 		if len(vts) > 0 {
 			mc.MergeVerificationTickets(ctx, b, vts)
 			if mc.checkBlockNotarization(ctx, mr, b) {
-				mc.AddBlock(b)
+				mc.AddRoundBlock(mr, b)
 				return
 			}
 		}
