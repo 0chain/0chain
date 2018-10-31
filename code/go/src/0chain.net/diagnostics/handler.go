@@ -55,8 +55,8 @@ func WriteStatisticsCSS(w http.ResponseWriter) {
 	fmt.Fprintf(w, "<style>.sheader { color: orange; font-weight: bold; }</style>")
 }
 
-/*WriteSummary - write summary information */
-func WriteSummary(w http.ResponseWriter, c *chain.Chain) {
+/*WriteConfiguration - write summary information */
+func WriteConfiguration(w http.ResponseWriter, c *chain.Chain) {
 	fmt.Fprintf(w, "<table>")
 	fmt.Fprintf(w, "<tr><td class='sheader' colspan='2'>Configuration</td></tr>")
 	fmt.Fprintf(w, "<tr><td>Block Size</td><td>%v</td></tr>", c.BlockSize)

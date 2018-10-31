@@ -83,10 +83,14 @@ func ChainStatsHandler(ctx context.Context, r *http.Request) (interface{}, error
 
 /*ChainStatsWriter - a handler to provide block statistics */
 func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
-	c := GetSharderChain().Chain
+	sc := GetSharderChain()
+	c := sc.Chain
 	w.Header().Set("Content-Type", "text/html")
 	diagnostics.WriteStatisticsCSS(w)
-	diagnostics.WriteSummary(w, c)
+	diagnostics.WriteConfiguration(w, c)
+	fmt.Fprintf(w, "<table><tr><td colspan='2'><h2>Summary</h2></td></tr>")
+	fmt.Fprintf(w, "<tr><td>Sharded Blocks</td><td class='number'>%v</td>", sc.SharderStats.ShardedBlocksCount)
+	fmt.Fprintf(w, "</table>")
 	fmt.Fprintf(w, "<table><tr><td>")
 	fmt.Fprintf(w, "<h2>Block Finalization Statistics (Steady State)</h2>")
 	diagnostics.WriteTimerStatistics(w, c, chain.SteadyStateFinalizationTimer, 1000000.0)

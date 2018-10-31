@@ -101,9 +101,6 @@ func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) *block.Bl
 
 /*GenerateRoundBlock - given a round number generates a block*/
 func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block, error) {
-	txnEntityMetadata := datastore.GetEntityMetadata("txn")
-	ctx = memorystore.WithEntityConnection(ctx, txnEntityMetadata)
-	defer memorystore.Close(ctx)
 	roundNumber := r.GetRoundNumber()
 	pround := mc.GetMinerRound(roundNumber - 1)
 	if pround == nil {
@@ -115,8 +112,10 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		Logger.Error("generate round block (prior block not found)", zap.Any("round", roundNumber))
 		return nil, common.NewError("block_gen_no_block_to_extend", "Do not have the block to extend this round")
 	}
-	b := datastore.GetEntityMetadata("block").Instance().(*block.Block)
-	b.ChainID = mc.ID
+	txnEntityMetadata := datastore.GetEntityMetadata("txn")
+	ctx = memorystore.WithEntityConnection(ctx, txnEntityMetadata)
+	defer memorystore.Close(ctx)
+	b := block.NewBlock(mc.GetKey(), r.GetRoundNumber())
 	b.MagicBlockHash = mc.CurrentMagicBlock.Hash
 	b.MinerID = node.Self.GetKey()
 	mc.SetPreviousBlock(ctx, r, b, pb)
@@ -164,10 +163,6 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		}
 		mc.AddRoundBlock(r, b)
 		break
-	}
-	if mc.CurrentRound > b.Round {
-		Logger.Error("generate block (round mismatch)", zap.Any("round", roundNumber), zap.Any("current_round", mc.CurrentRound))
-		return nil, ErrRoundMismatch
 	}
 	if r.IsVerificationComplete() {
 		Logger.Error("generate block (verification complete)", zap.Any("round", roundNumber), zap.Any("notarized", len(r.GetNotarizedBlocks())))
