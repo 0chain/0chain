@@ -87,6 +87,13 @@ type Block struct {
 	verificationStatus int
 }
 
+//NewBlock - create a new empty block
+func NewBlock(chainID datastore.Key, round int64) *Block {
+	b := datastore.GetEntityMetadata("block").Instance().(*Block)
+	b.Round = round
+	return b
+}
+
 var blockEntityMetadata *datastore.EntityMetadataImpl
 
 /*GetEntityMetadata - implementing the interface */

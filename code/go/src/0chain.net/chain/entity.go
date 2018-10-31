@@ -259,9 +259,8 @@ func (c *Chain) setupInitialState() util.MerklePatriciaTrieI {
 /*GenerateGenesisBlock - Create the genesis block for the chain */
 func (c *Chain) GenerateGenesisBlock(hash string) (round.RoundI, *block.Block) {
 	c.GenesisBlockHash = hash
-	gb := datastore.GetEntityMetadata("block").Instance().(*block.Block)
+	gb := block.NewBlock(c.GetKey(), 0)
 	gb.Hash = hash
-	gb.Round = 0
 	gb.ClientState = c.setupInitialState()
 	gb.SetStateStatus(block.StateSuccessful)
 	gb.SetBlockState(block.StateNotarized)
