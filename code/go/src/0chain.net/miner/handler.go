@@ -18,7 +18,7 @@ func ChainStatsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 	c := GetMinerChain().Chain
 	diagnostics.WriteStatisticsCSS(w)
-	diagnostics.WriteSummary(w, c)
+	diagnostics.WriteConfiguration(w, c)
 	fmt.Fprintf(w, "<table>")
 	fmt.Fprintf(w, "<tr><td>")
 	fmt.Fprintf(w, "<h2>Block Finalization Statistics (Steady state)</h2>")

@@ -52,6 +52,7 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	}
 	self := node.GetSelfNode(ctx)
 	if sc.IsBlockSharder(b, self.Node) {
+		sc.SharderStats.ShardedBlocksCount++
 		ts := time.Now()
 		err := blockstore.GetStore().Write(b)
 		duration := time.Since(ts)
