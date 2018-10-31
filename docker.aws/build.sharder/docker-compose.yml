@@ -66,7 +66,7 @@ services:
       - CONFIG_VOLUME:/0chain/config
 
       #SHARDER_LOG_VOLUME
-      - SHARDER_LOG_VOLUME:/0chain/log
+      - LOG_VOLUME:/0chain/log
 
       #ROCKSDB_VOLUME
       - ROCKSDB_VOLUME:/0chain/data/rocksdb
@@ -134,10 +134,10 @@ volumes:
       device: ${SCYLLA_DISK}/data/scylla
       o: bind
 
-  SHARDER_LOG_VOLUME:
+  LOG_VOLUME:
     driver: local
     driver_opts:
-      device: ${SHARDER_LOG_DISK}/log/sharder
+      device: ${LOG_DISK}/log
       o: bind
 
   SQL_VOLUME:

@@ -71,7 +71,7 @@ services:
       - CONFIG_VOLUME:/0chain/config
 
       #LOG_VOLUME
-      - MINER_LOG_VOLUME:/0chain/log
+      - LOG_VOLUME:/0chain/log
 
       #ROCKSDB_VOLUME
       - ROCKSDB_VOLUME:/0chain/data/rocksdb
@@ -113,10 +113,10 @@ volumes:
       device: ${CONFIG_DISK}/config
       o: bind
 
-  MINER_LOG_VOLUME:
+  LOG_VOLUME:
     driver: local
     driver_opts:
-      device: ${LOG_DISK}/log/miner
+      device: ${LOG_DISK}/log
       o: bind
 
   REDIS_VOLUME:
