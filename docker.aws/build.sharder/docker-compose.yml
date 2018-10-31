@@ -14,11 +14,11 @@ services:
       - ${CONFIG_DISK}/config/scylla/scylla-server:/etc/sysconfig/scylla-server
 
       #Store the scylla volume
-      - SCYLLA_VOLUME:/var/lib/scylla
+      - SCYLLA_VOLUME:/0chain/data/scylla
 
       #Create the directory to store the data and commitlog
-      - /var/lib/scylla/data
-      - /var/lib/scylla/commitlog
+      - /0chain/data/scylla/data
+      - /0chain/data/scylla/commitlog
 
     restart: on-failure:10
 
@@ -62,13 +62,14 @@ services:
     pid: "host"
 
     volumes:
-
+      #CONFIG_VOLUME
       - CONFIG_VOLUME:/0chain/config
 
-      - LOG_VOLUME:/0chain/log
+      #SHARDER_LOG_VOLUME
+      - SHARDER_LOG_VOLUME:/0chain/log
 
-      #Create the data volume
-      - DATA_VOLUME:/0chain/data
+      #ROCKSDB_VOLUME
+      - ROCKSDB_VOLUME:/0chain/data/rocksdb
       - /0chain/data/rocksdb
       - /0chain/data/rocksdb/state
 
@@ -104,35 +105,28 @@ networks:
     driver: bridge
 
 volumes:
-  CONFIG_VOLUME:
-    driver: local
-    driver_opts:
-      device: ${CONFIG_DISK}/config
-      o: bind
-
   BIN_VOLUME:
     driver: local
     driver_opts:
       device: ${BIN_DISK}/bin
       o: bind
 
-  SQL_VOLUME:
+  BLOCKS_VOLUME:
     driver: local
     driver_opts:
-      device: ${SQL_DISK}/sql
+      device: ${BLOCKS_DISK}/data/blocks
       o: bind
 
-  LOG_VOLUME:
+  CONFIG_VOLUME:
     driver: local
     driver_opts:
-      device: ${LOG_DISK}/log
+      device: ${CONFIG_DISK}/config
       o: bind
 
-  DATA_VOLUME:
+  ROCKSDB_VOLUME:
     driver: local
     driver_opts:
-      device: ${DATA_DISK}/data
-      o: bind
+      device: ${ROCKSDB_DISK}/data/rocksdb
 
   SCYLLA_VOLUME:
     driver: local
@@ -140,8 +134,14 @@ volumes:
       device: ${SCYLLA_DISK}/data/scylla
       o: bind
 
-  BLOCKS_VOLUME:
+  SHARDER_LOG_VOLUME:
     driver: local
     driver_opts:
-      device: ${BLOCKS_DISK}/data/blocks
+      device: ${SHARDER_LOG_DISK}/log/sharder
+      o: bind
+
+  SQL_VOLUME:
+    driver: local
+    driver_opts:
+      device: ${SQL_DISK}/sql
       o: bind
