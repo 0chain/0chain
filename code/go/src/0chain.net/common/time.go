@@ -24,6 +24,11 @@ func TimeToString(ts Timestamp) string {
 	return strconv.FormatInt(int64(ts), 10)
 }
 
+//ToTime - converts the common.Timestamp to time.Time
+func ToTime(ts Timestamp) time.Time {
+	return time.Unix(int64(ts), 0)
+}
+
 /*Within ensures a given timestamp is within (+/- inclusive) certain number of seconds w.r.t current time */
 func Within(ts int64, seconds int64) bool {
 	return WithinTime(time.Now().Unix(), ts, seconds)
