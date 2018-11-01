@@ -161,6 +161,12 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		}
 		c.rebaseState(fb)
 	}
+	if config.Development() {
+		ts := time.Now()
+		for _, txn := range fb.Txns {
+			StartToFinalizeTxnTimer.Update(ts.Sub(common.ToTime(txn.CreationDate)))
+		}
+	}
 	go bsh.UpdateFinalizedBlock(ctx, fb)
 	c.BlockChain.Value = fb.GetSummary()
 	c.BlockChain = c.BlockChain.Next()
