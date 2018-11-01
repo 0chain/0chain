@@ -96,7 +96,7 @@ services:
       default:
 
     #Start under user 0chain
-    user: ${ZCHAIN_USER}:${ZCHAIN_USER}
+    user: ${ZCHAIN_USER}:${ZCHAIN_GROUP}
     command: /0chain/bin/sharder --deployment_mode 0 --keys_file /0chain/config/sharder.txt --nodes_file nodes
 
 networks:
