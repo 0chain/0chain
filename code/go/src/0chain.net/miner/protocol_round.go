@@ -123,7 +123,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	b.SetStateDB(pb)
 	waitStart := time.Now()
 	waitOver := false
-	waitTime := time.Millisecond * time.Duration(mc.GenerateTimeout)
+	waitTime := time.Millisecond * time.Duration(mc.GetGenerationTimeout())
 	for true {
 		if time.Now().Sub(waitStart) > waitTime {
 			waitOver = true

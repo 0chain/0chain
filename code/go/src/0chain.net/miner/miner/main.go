@@ -73,7 +73,7 @@ func main() {
 	miner.SetupMinerChain(serverChain)
 	mc := miner.GetMinerChain()
 	mc.DiscoverClients = viper.GetBool("server_chain.client.discover")
-	mc.GenerateTimeout = viper.GetInt("server_chain.generate_timeout")
+	mc.SetGenerationTimeout(viper.GetInt("server_chain.generate_timeout"))
 	chain.SetServerChain(serverChain)
 
 	miner.SetNetworkRelayTime(viper.GetDuration("network.relay_time") * time.Millisecond)
@@ -183,6 +183,7 @@ func initHandlers() {
 	miner.SetupHandlers()
 	diagnostics.SetupHandlers()
 	chain.SetupStateHandlers()
+	SetupHandlers()
 
 	serverChain := chain.GetServerChain()
 	serverChain.SetupNodeHandlers()

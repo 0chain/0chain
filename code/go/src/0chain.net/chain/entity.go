@@ -107,6 +107,7 @@ type Chain struct {
 	nodePoolScorer node.PoolScorer
 
 	GenerateTimeout   int `json:"-"`
+	genTimeoutMutex   *sync.Mutex
 	missingLinkBlocks chan *block.Block
 }
 
@@ -188,6 +189,7 @@ func Provider() datastore.Entity {
 	c.rounds = make(map[int64]round.RoundI)
 	c.roundsMutex = &sync.RWMutex{}
 
+	c.genTimeoutMutex = &sync.Mutex{}
 	c.stateMutex = &sync.Mutex{}
 	c.stakeMutex = &sync.Mutex{}
 	c.InitializeCreationDate()
@@ -492,7 +494,7 @@ func (c *Chain) ChainHasTransaction(ctx context.Context, b *block.Block, txn *tr
 		if cb.HasTransaction(txn.Hash) {
 			return true, nil
 		}
-		if cb.CreationDate < txn.CreationDate-common.Timestamp(transaction.TXN_TIME_TOLERANCE) {
+		if cb.CreationDate < txn.CreationDate-common.Timestamp(transaction.GetTxnTimeout()) {
 			return false, nil
 		}
 	}
@@ -593,4 +595,16 @@ func (c *Chain) getBlocks() []*block.Block {
 func (c *Chain) SetRoundRank(r round.RoundI, b *block.Block) {
 	bNode := node.GetNode(b.MinerID)
 	b.RoundRank = r.GetMinerRank(bNode)
+}
+
+func (c *Chain) SetGenerationTimeout(newTimeout int) {
+	c.genTimeoutMutex.Lock()
+	defer c.genTimeoutMutex.Unlock()
+	c.GenerateTimeout = newTimeout
+}
+
+func (c *Chain) GetGenerationTimeout() int {
+	c.genTimeoutMutex.Lock()
+	defer c.genTimeoutMutex.Unlock()
+	return c.GenerateTimeout
 }
