@@ -9,12 +9,12 @@ services:
       - "9042:9042"
     volumes:
 
-      - ${CONFIG_DISK}/config/scylla/scylla.yaml:/etc/scylla/scylla.yaml
+      - /0chain/config/scylla/scylla.yaml:/etc/scylla/scylla.yaml
 
-      - ${CONFIG_DISK}/config/scylla/scylla-server:/etc/sysconfig/scylla-server
+      - /0chain/config/scylla/scylla-server:/etc/sysconfig/scylla-server
 
       #Store the scylla volume
-      - SCYLLA_VOLUME:/0chain/data/scylla
+      - /0chain/data/scylla:/0chain/data/scylla
 
       #Create the directory to store the data and commitlog
       - /0chain/data/scylla/data
@@ -36,8 +36,8 @@ services:
     #The service depends upon several cassandra utilities.
     image: cassandra:latest
     volumes:
-      - BIN_VOLUME:/0chain/bin
-      - SQL_VOLUME:/0chain/sql
+      - /0chain/bin:/0chain/bin
+      - /0chain/sql:/0chain/sql
     entrypoint: bash /0chain/bin/scylla-init.sh
     #command: bash
     links:
@@ -63,18 +63,17 @@ services:
 
     volumes:
       #CONFIG_VOLUME
-      - CONFIG_VOLUME:/0chain/config
+      - /0chain/config:/0chain/config
 
       #SHARDER_LOG_VOLUME
-      - LOG_VOLUME:/0chain/log
+      - /0chain/log:/0chain/log
 
       #ROCKSDB_VOLUME
-      - ROCKSDB_VOLUME:/0chain/data/rocksdb
-      - /0chain/data/rocksdb
+      - /0chain/data/rocksdb:/0chain/data/rocksdb
       - /0chain/data/rocksdb/state
 
       #Use the blocks volume
-      - BLOCKS_VOLUME:/0chain/data/blocks
+      - /0chain/data/blocks:/0chain/data/blocks
 
     #Hard and soft are required properties.
     ulimits:
