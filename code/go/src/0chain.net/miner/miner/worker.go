@@ -23,7 +23,7 @@ import (
 )
 
 var wallets []*wallet.Wallet
-var txn_generation_rate int64
+var txn_generation_rate int32
 var txn_gen_mutex *sync.Mutex
 
 func init() {
@@ -95,7 +95,7 @@ func TransactionGenerator(blockSize int32) {
 	}
 
 	for true {
-		numTxns = rand.Int31n(333)
+		numTxns = GetTxnGenRate()
 		numGenerators := sc.NumGenerators
 		numMiners := sc.Miners.Size()
 		blockRate := chain.SteadyStateFinalizationTimer.Rate1()
@@ -215,13 +215,13 @@ func GenerateClients(numClients int32) {
 	Logger.Info("generation of wallets complete", zap.Int("wallets", len(wallets)))
 }
 
-func SetTxnGenRate(newRate int64) {
+func SetTxnGenRate(newRate int32) {
 	txn_gen_mutex.Lock()
 	defer txn_gen_mutex.Unlock()
 	txn_generation_rate = newRate
 }
 
-func GetTxnGenRate() int64 {
+func GetTxnGenRate() int32 {
 	txn_gen_mutex.Lock()
 	defer txn_gen_mutex.Unlock()
 	return txn_generation_rate

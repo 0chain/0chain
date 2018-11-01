@@ -27,10 +27,10 @@ func UpdateConfig(w http.ResponseWriter, r *http.Request) {
 		transaction.SetTxnTimeout(newTxnTimeout)
 		viper.Set("server_chain.txn_timeout", newTxnTimeout)
 	}
-	newGenTxnRate, _ := strconv.ParseInt(r.FormValue("generate_txn"), 10, 64)
+	newGenTxnRate, _ := strconv.ParseInt(r.FormValue("generate_txn"), 10, 32)
 	if newGenTxnRate > 0 {
-		SetTxnGenRate(newGenTxnRate)
-		viper.Set("server_chain.generate_txn", int(newGenTxnRate))
+		SetTxnGenRate(int32(newGenTxnRate))
+		viper.Set("server_chain.generate_txn", newGenTxnRate)
 	}
 	w.Header().Set("Content-Type", "text/html;charset=UTF-8")
 	fmt.Fprintf(w, "<form action='/v1/miner/updateConfig' method='post'>")
