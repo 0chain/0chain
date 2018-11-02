@@ -17,8 +17,8 @@ services:
       - /0chain/data/scylla:/0chain/data/scylla
 
       #Create the directory to store the data and commitlog
-      - /0chain/data/scylla/data
-      - /0chain/data/scylla/commitlog
+      - /0chain/data/scylla/data:/var/lib/scylla/data
+      - /0chain/data/scylla/commitlog:/var/lib/scylla/commitlog
 
     restart: on-failure:10
 
@@ -28,8 +28,9 @@ services:
       timeout: 10s
       retries: 5
 
-    command: ["--developer-mode", "0", "--cpuset", "3" ]
+    command: ["--developer-mode", "0"]
 
+    #Start under user 0chain
     privileged: true
 
   scylla-init:
@@ -43,6 +44,9 @@ services:
     links:
       - scylla:scylla
     restart: on-failure:10
+
+    user: ${ZCHAIN_USER}:${ZCHAIN_GROUP}
+    privileged: false
 
   sharder:
     environment:
@@ -70,7 +74,7 @@ services:
 
       #ROCKSDB_VOLUME
       - /0chain/data/rocksdb:/0chain/data/rocksdb
-      - /0chain/data/rocksdb/state
+      - /0chain/data/rocksdb/state:/0chain/data/rocksdb/state
 
       #Use the blocks volume
       - /0chain/data/blocks:/0chain/data/blocks
@@ -102,45 +106,3 @@ services:
 networks:
   default:
     driver: bridge
-
-volumes:
-  BIN_VOLUME:
-    driver: local
-    driver_opts:
-      device: ${BIN_DISK}/bin
-      o: bind
-
-  BLOCKS_VOLUME:
-    driver: local
-    driver_opts:
-      device: ${BLOCKS_DISK}/data/blocks
-      o: bind
-
-  CONFIG_VOLUME:
-    driver: local
-    driver_opts:
-      device: ${CONFIG_DISK}/config
-      o: bind
-
-  ROCKSDB_VOLUME:
-    driver: local
-    driver_opts:
-      device: ${ROCKSDB_DISK}/data/rocksdb
-
-  SCYLLA_VOLUME:
-    driver: local
-    driver_opts:
-      device: ${SCYLLA_DISK}/data/scylla
-      o: bind
-
-  LOG_VOLUME:
-    driver: local
-    driver_opts:
-      device: ${LOG_DISK}/log
-      o: bind
-
-  SQL_VOLUME:
-    driver: local
-    driver_opts:
-      device: ${SQL_DISK}/sql
-      o: bind
