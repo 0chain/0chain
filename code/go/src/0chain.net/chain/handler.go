@@ -158,6 +158,7 @@ func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr><td>Set Index</td><td>Node</td><td>Sent</td><td>Send Errors</td><td>Received</td><td>Last Active</td><td>Small Msg Time</td><td>Large Msg Time</td><td>Description</td></tr>")
 	r := c.GetRound(c.CurrentRound)
+	hasRanks := r != nil && r.GetRandomSeed() != 0
 	lfb := c.LatestFinalizedBlock
 	for _, nd := range nodes {
 		if nd.Status == node.NodeStatusInactive {
@@ -167,7 +168,7 @@ func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 		}
 		fmt.Fprintf(w, "<td>%d", nd.SetIndex)
 		if nd.Type == node.NodeTypeMiner {
-			if r != nil && c.IsRoundGenerator(r, nd) {
+			if hasRanks && c.IsRoundGenerator(r, nd) {
 				fmt.Fprintf(w, "*")
 			}
 		} else if nd.Type == node.NodeTypeSharder {
@@ -255,7 +256,7 @@ func InfoWriter(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "<th>Time</th>")
 	}
 	fmt.Fprintf(w, "<th>Round</th>")
-	fmt.Fprintf(w, "<th>Notarized Blocks</th><th>Max Notarized Blocks</th><th>Multi Block Rounds</th><th>Zero Block Rounds</th><th>Missed Blocks</th><th>Rollbacks</th><th>Max Rollback Length</th></tr>")
+	fmt.Fprintf(w, "<th>Notarized Blocks</th><th>Multi Block Rounds</th><th>Zero Block Rounds</th><th>Missed Blocks</th><th>Rollbacks</th><th>Max Rollback Length</th></tr>")
 	roundInfo := roundMetrics.GetAll()
 	for idx := 0; idx < len(roundInfo); idx++ {
 		rf := roundInfo[idx].(*round.Info)
@@ -268,7 +269,6 @@ func InfoWriter(w http.ResponseWriter, r *http.Request) {
 		}
 		fmt.Fprintf(w, "<td class='number'>%d</td>", rf.GetKey())
 		fmt.Fprintf(w, "<td class='number'>%d</td>", rf.NotarizedBlocksCount)
-		fmt.Fprintf(w, "<td class='number'>%d</td>", rf.MaxNotarizedBlocksCount)
 		fmt.Fprintf(w, "<td class='number'>%d</td>", rf.MultiNotarizedBlocksCount)
 		fmt.Fprintf(w, "<td class='number'>%6d</td>", rf.ZeroNotarizedBlocksCount)
 		fmt.Fprintf(w, "<td class='number'>%6d</td>", rf.MissedBlocks)
@@ -339,6 +339,14 @@ func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 	c.finalizationCountStats(w)
 	fmt.Fprintf(w, "</td></tr>")
 	fmt.Fprintf(w, "</table>")
+	fmt.Fprintf(w, "<table>")
+	fmt.Fprintf(w, "<tr><td>Miner</td><td>Verification Failures</td></tr>")
+	for _, nd := range c.Miners.Nodes {
+		ms := nd.ProtocolStats.(*MinerStats)
+		fmt.Fprintf(w, "<tr><td>%v</td><td class='number'>%v</td></tr>", fmt.Sprintf("%v%.3d", nd.GetNodeTypeName(), nd.SetIndex), ms.VerificationFailures)
+	}
+	fmt.Fprintf(w, "</table>")
+	fmt.Fprintf(w, "Round timeouts = %v", c.RoundTimeoutsCount)
 }
 
 func (c *Chain) finalizationCountStats(w http.ResponseWriter) {
@@ -405,7 +413,7 @@ func (c *Chain) notarizedBlockCountsStats(w http.ResponseWriter) {
 		fmt.Fprintf(w, "<td class='number'>%v</td>", i)
 	}
 	fmt.Fprintf(w, "</tr><tr><td>Rounds</td>")
-	for _, v := range NotariedBlocksCounts {
+	for _, v := range c.NotariedBlocksCounts {
 		fmt.Fprintf(w, "<td class='number'>%v</td>", v)
 	}
 	fmt.Fprintf(w, "</tr>")

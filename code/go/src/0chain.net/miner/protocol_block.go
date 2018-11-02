@@ -9,8 +9,6 @@ import (
 
 	"0chain.net/chain"
 	"0chain.net/config"
-	"0chain.net/memorystore"
-	"0chain.net/round"
 	"0chain.net/util"
 
 	"0chain.net/block"
@@ -32,25 +30,6 @@ var bvTimer metrics.Timer
 func init() {
 	bgTimer = metrics.GetOrRegisterTimer("bg_time", nil)
 	bvTimer = metrics.GetOrRegisterTimer("bv_time", nil)
-}
-
-/*StartRound - start a new round */
-func (mc *Chain) StartRound(ctx context.Context, r *Round) {
-	if mc.AddRound(r) != r {
-		return
-	}
-	pr := mc.GetRound(r.GetRoundNumber() - 1)
-	if pr == nil {
-		// If we don't have the prior round, and hence the prior round's random seed, we can't provide the share
-		return
-	}
-	vrfs := &round.VRFShare{}
-	vrfs.Round = r.GetRoundNumber()
-	vrfs.Share = node.Self.Node.SetIndex
-	vrfs.SetParty(node.Self.Node)
-	if mc.AddVRFShare(ctx, r, vrfs) {
-		go mc.SendVRFShare(ctx, vrfs)
-	}
 }
 
 /*GenerateBlock - This works on generating a block
@@ -85,7 +64,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		if debugTxn {
 			Logger.Info("generate block (debug transaction)", zap.String("txn", txn.Hash), zap.String("txn_object", datastore.ToJSON(txn).String()))
 		}
-		if !mc.validateTransaction(txn) {
+		if !mc.validateTransaction(b, txn) {
 			invalidTxns = append(invalidTxns, qe)
 			if debugTxn {
 				Logger.Info("generate block (debug transaction) error - txn creation not within tolerance", zap.String("txn", txn.Hash), zap.Any("now", common.Now()))
@@ -186,8 +165,8 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	return nil
 }
 
-func (mc *Chain) validateTransaction(txn *transaction.Transaction) bool {
-	if !common.Within(int64(txn.CreationDate), transaction.TXN_TIME_TOLERANCE-1) {
+func (mc *Chain) validateTransaction(b *block.Block, txn *transaction.Transaction) bool {
+	if !common.WithinTime(int64(b.CreationDate), int64(txn.CreationDate), transaction.TXN_TIME_TOLERANCE) {
 		return false
 	}
 	return true
@@ -262,7 +241,7 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 				validChannel <- false
 				return
 			}
-			err := txn.Validate(ctx)
+			err := txn.ValidateWrtTime(ctx, b.CreationDate)
 			if err != nil {
 				cancel = true
 				Logger.Error("validate transactions", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.String("txn", datastore.ToJSON(txn).String()), zap.Error(err))
@@ -309,34 +288,6 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 	return nil
 }
 
-/*SaveClients - save clients from the block */
-func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) error {
-	var err error
-	clientKeys := make([]datastore.Key, len(clients))
-	for idx, c := range clients {
-		clientKeys[idx] = c.GetKey()
-	}
-	clientEntityMetadata := datastore.GetEntityMetadata("client")
-	cEntities := datastore.AllocateEntities(len(clients), clientEntityMetadata)
-	ctx = memorystore.WithEntityConnection(common.GetRootContext(), clientEntityMetadata)
-	defer memorystore.Close(ctx)
-	err = clientEntityMetadata.GetStore().MultiRead(ctx, clientEntityMetadata, clientKeys, cEntities)
-	if err != nil {
-		return err
-	}
-	ctx = datastore.WithAsyncChannel(ctx, client.ClientEntityChannel)
-	for idx, c := range clients {
-		if !datastore.IsEmpty(cEntities[idx].GetKey()) {
-			continue
-		}
-		_, cerr := client.PutClient(ctx, c)
-		if cerr != nil {
-			err = cerr
-		}
-	}
-	return err
-}
-
 /*SignBlock - sign the block and provide the verification ticket */
 func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (*block.BlockVerificationTicket, error) {
 	var bvt = &block.BlockVerificationTicket{}
@@ -346,6 +297,7 @@ func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (*block.BlockVer
 	var err error
 	bvt.VerifierID = self.GetKey()
 	bvt.Signature, err = self.Sign(b.Hash)
+	b.SetVerificationStatus(block.VerificationSuccessful)
 	if err != nil {
 		return nil, err
 	}
@@ -354,7 +306,7 @@ func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (*block.BlockVer
 
 /*UpdateFinalizedBlock - update the latest finalized block */
 func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
-	Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round), zap.Int64("current_round", mc.CurrentRound), zap.Float64("weight", b.Weight()), zap.Float64("chain_weight", b.ChainWeight), zap.Int("rounds_size", len(mc.rounds)))
+	Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round), zap.Int64("current_round", mc.CurrentRound), zap.Float64("weight", b.Weight()), zap.Float64("chain_weight", b.ChainWeight))
 	if config.Development() {
 		for _, t := range b.Txns {
 			if !t.DebugTxn() {

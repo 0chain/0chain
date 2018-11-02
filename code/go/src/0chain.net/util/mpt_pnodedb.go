@@ -19,16 +19,27 @@ type PNodeDB struct {
 	fo      *gorocksdb.FlushOptions
 }
 
+const (
+	SSTTypeBlockBasedTable = 0
+	SSTTypePlainTable      = 1
+)
+
+var sstType = SSTTypeBlockBasedTable
+
 /*NewPNodeDB - create a new PNodeDB */
 func NewPNodeDB(dataDir string, logDir string) (*PNodeDB, error) {
 	opts := gorocksdb.NewDefaultOptions()
 	opts.SetCreateIfMissing(true)
 	opts.SetCompression(gorocksdb.LZ4Compression)
-	/* SetHashSkipListRep + OptimizeForPointLookup seems to be corrupting when pruning
-	opts.SetHashSkipListRep(1000000, 4, 4)
-	opts.SetAllowConcurrentMemtableWrites(false)
-	*/
-	opts.OptimizeForPointLookup(64)
+	if sstType == SSTTypePlainTable {
+		opts.SetAllowMmapReads(true)
+		opts.SetPrefixExtractor(gorocksdb.NewFixedPrefixTransform(6))
+		opts.SetPlainTableFactory(32, 10, 0.75, 16)
+	} else {
+		opts.OptimizeForPointLookup(64)
+		opts.SetAllowMmapReads(true)
+		opts.SetPrefixExtractor(gorocksdb.NewFixedPrefixTransform(6))
+	}
 	opts.IncreaseParallelism(2) // pruning and saving happen in parallel
 	opts.SetDbLogDir(logDir)
 	db, err := gorocksdb.OpenDb(opts, dataDir)

@@ -81,10 +81,10 @@ type Chain struct {
 
 	/* This is a cache of blocks that may include speculative blocks */
 	blocks      map[datastore.Key]*block.Block
-	blocksMutex *sync.Mutex
+	blocksMutex *sync.RWMutex
 
 	rounds      map[int64]round.RoundI
-	roundsMutex *sync.Mutex
+	roundsMutex *sync.RWMutex
 
 	CurrentRound         int64        `json:"-"`
 	CurrentMagicBlock    *block.Block `json:"-"`
@@ -149,7 +149,7 @@ func NewChainFromConfig() *Chain {
 	chain.Decimals = int8(viper.GetInt("server_chain.decimals"))
 	chain.BlockSize = viper.GetInt32("server_chain.block.size")
 	chain.NumGenerators = viper.GetInt("server_chain.block.generators")
-	NotariedBlocksCounts = make([]int64, chain.NumGenerators+1)
+	chain.NotariedBlocksCounts = make([]int64, chain.NumGenerators+1)
 	chain.NumSharders = viper.GetInt("server_chain.block.sharders")
 	chain.ThresholdByCount = viper.GetInt("server_chain.block.consensus.threshold_by_count")
 	chain.ThresholdByStake = viper.GetInt("server_chain.block.consensus.threshold_by_stake")
@@ -182,10 +182,10 @@ func Provider() datastore.Entity {
 	c.Version = "1.0"
 
 	c.blocks = make(map[string]*block.Block)
-	c.blocksMutex = &sync.Mutex{}
+	c.blocksMutex = &sync.RWMutex{}
 
 	c.rounds = make(map[int64]round.RoundI)
-	c.roundsMutex = &sync.Mutex{}
+	c.roundsMutex = &sync.RWMutex{}
 
 	c.stateMutex = &sync.Mutex{}
 	c.stakeMutex = &sync.Mutex{}
@@ -259,15 +259,13 @@ func (c *Chain) setupInitialState() util.MerklePatriciaTrieI {
 /*GenerateGenesisBlock - Create the genesis block for the chain */
 func (c *Chain) GenerateGenesisBlock(hash string) (round.RoundI, *block.Block) {
 	c.GenesisBlockHash = hash
-	gb := datastore.GetEntityMetadata("block").Instance().(*block.Block)
+	gb := block.NewBlock(c.GetKey(), 0)
 	gb.Hash = hash
-	gb.Round = 0
 	gb.ClientState = c.setupInitialState()
 	gb.SetStateStatus(block.StateSuccessful)
 	gb.SetBlockState(block.StateNotarized)
 	gb.ClientStateHash = gb.ClientState.GetRoot()
-	gr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
-	gr.Number = 0
+	gr := round.NewRound(0)
 	c.SetRandomSeed(gr, 839695260482366273)
 	gr.Block = gb
 	gr.AddNotarizedBlock(gb)
@@ -290,6 +288,22 @@ func (c *Chain) AddBlock(b *block.Block) *block.Block {
 	c.blocksMutex.Lock()
 	defer c.blocksMutex.Unlock()
 	return c.addBlock(b)
+}
+
+/*AddRoundBlock - add a block for a given round to the cache */
+func (c *Chain) AddRoundBlock(r round.RoundI, b *block.Block) *block.Block {
+	c.blocksMutex.Lock()
+	defer c.blocksMutex.Unlock()
+	b2 := c.addBlock(b)
+	if b2 != b {
+		return b2
+	}
+	b.RoundRandomSeed = r.GetRandomSeed()
+	c.SetRoundRank(r, b)
+	if b.PrevBlock != nil {
+		b.ComputeChainWeight()
+	}
+	return b
 }
 
 func (c *Chain) addBlock(b *block.Block) *block.Block {
@@ -317,8 +331,8 @@ func (c *Chain) AsyncFetchNotarizedPreviousBlock(b *block.Block) {
 
 /*GetBlock - returns a known block for a given hash from the cache */
 func (c *Chain) GetBlock(ctx context.Context, hash string) (*block.Block, error) {
-	c.blocksMutex.Lock()
-	defer c.blocksMutex.Unlock()
+	c.blocksMutex.RLock()
+	defer c.blocksMutex.RUnlock()
 	return c.getBlock(ctx, hash)
 }
 
@@ -342,8 +356,8 @@ func (c *Chain) DeleteBlock(ctx context.Context, b *block.Block) {
 /*GetRoundBlocks - get the blocks for a given round */
 func (c *Chain) GetRoundBlocks(round int64) []*block.Block {
 	blocks := make([]*block.Block, 0, 1)
-	c.blocksMutex.Lock()
-	defer c.blocksMutex.Unlock()
+	c.blocksMutex.RLock()
+	defer c.blocksMutex.RUnlock()
 	for _, b := range c.blocks {
 		if b.Round == round {
 			blocks = append(blocks, b)
@@ -400,15 +414,8 @@ func (c *Chain) IsRoundGenerator(r round.RoundI, nd *node.Node) bool {
 
 /*GetGenerators - get all the block generators for a given round */
 func (c *Chain) GetGenerators(r round.RoundI) []*node.Node {
-	generators := make([]*node.Node, c.NumGenerators)
-	i := 0
-	for _, nd := range c.Miners.Nodes {
-		if c.IsRoundGenerator(r, nd) {
-			generators[i] = nd
-			i++
-		}
-	}
-	return generators
+	miners := r.GetMinersByRank(c.Miners)
+	return miners[:c.NumGenerators]
 }
 
 /*IsBlockSharder - checks if the sharder can store the block in the given round */
@@ -483,7 +490,7 @@ func (c *Chain) ChainHasTransaction(ctx context.Context, b *block.Block, txn *tr
 		if cb.HasTransaction(txn.Hash) {
 			return true, nil
 		}
-		if cb.CreationDate < txn.CreationDate {
+		if cb.CreationDate < txn.CreationDate-transaction.TXN_TIME_TOLERANCE {
 			return false, nil
 		}
 	}
@@ -523,16 +530,13 @@ func (c *Chain) AddRound(r round.RoundI) round.RoundI {
 		return er
 	}
 	c.rounds[roundNumber] = r
-	if roundNumber > c.CurrentRound {
-		c.CurrentRound = roundNumber
-	}
 	return r
 }
 
 /*GetRound - get a round */
 func (c *Chain) GetRound(roundNumber int64) round.RoundI {
-	c.roundsMutex.Lock()
-	defer c.roundsMutex.Unlock()
+	c.roundsMutex.RLock()
+	defer c.roundsMutex.RUnlock()
 	round, ok := c.rounds[roundNumber]
 	if !ok {
 		return nil
@@ -564,7 +568,27 @@ func (c *Chain) DeleteRoundsBelow(ctx context.Context, roundNumber int64) {
 }
 
 /*SetRandomSeed - set the random seed for the round */
-func (c *Chain) SetRandomSeed(r *round.Round, randomSeed int64) {
+func (c *Chain) SetRandomSeed(r round.RoundI, randomSeed int64) {
 	r.SetRandomSeed(randomSeed)
-	r.ComputeMinerRanks(c.Miners.Size())
+	r.ComputeMinerRanks(c.Miners)
+	roundNumber := r.GetRoundNumber()
+	if roundNumber > c.CurrentRound {
+		c.CurrentRound = roundNumber
+	}
+}
+
+func (c *Chain) getBlocks() []*block.Block {
+	c.blocksMutex.RLock()
+	defer c.blocksMutex.RUnlock()
+	var bl []*block.Block
+	for _, v := range c.blocks {
+		bl = append(bl, v)
+	}
+	return bl
+}
+
+//SetRoundRank - set the round rank of the block
+func (c *Chain) SetRoundRank(r round.RoundI, b *block.Block) {
+	bNode := node.GetNode(b.MinerID)
+	b.RoundRank = r.GetMinerRank(bNode)
 }

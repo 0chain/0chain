@@ -18,7 +18,7 @@ import (
 	"go.uber.org/zap"
 )
 
-/*TXN_TIME_TOLERANCE - the txn creation date should be within 5 seconds before/after of current time */
+/*TXN_TIME_TOLERANCE - the txn creation date should be within these many seconds before/after of current time */
 const TXN_TIME_TOLERANCE = 10
 
 var TransactionCount = 0
@@ -81,8 +81,8 @@ func (t *Transaction) ComputeClientID() {
 	}
 }
 
-/*Validate - Entity implementation */
-func (t *Transaction) Validate(ctx context.Context) error {
+/*ValidateWrtTime - validate entityt w.r.t given time (as now) */
+func (t *Transaction) ValidateWrtTime(ctx context.Context, ts common.Timestamp) error {
 	if t.Value < 0 {
 		return common.InvalidRequest("value must be greater than or equal to zero")
 	}
@@ -93,8 +93,8 @@ func (t *Transaction) Validate(ctx context.Context) error {
 	if t.Hash == "" {
 		return common.InvalidRequest("hash required for transaction")
 	}
-	if !common.Within(int64(t.CreationDate), TXN_TIME_TOLERANCE) {
-		return common.InvalidRequest(fmt.Sprintf("Transaction creation time not within tolerance: now=%v txn.creation_date=%v", time.Now().Unix(), t.CreationDate))
+	if !common.WithinTime(int64(ts), int64(t.CreationDate), TXN_TIME_TOLERANCE) {
+		return common.InvalidRequest(fmt.Sprintf("Transaction creation time not within tolerance: ts=%v txn.creation_date=%v", ts, t.CreationDate))
 	}
 	err = t.VerifyHash(ctx)
 	if err != nil {
@@ -111,6 +111,11 @@ func (t *Transaction) Validate(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+/*Validate - Entity implementation */
+func (t *Transaction) Validate(ctx context.Context) error {
+	return t.ValidateWrtTime(ctx, common.Now())
 }
 
 /*Read - store read */

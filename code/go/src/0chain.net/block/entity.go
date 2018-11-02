@@ -36,6 +36,12 @@ const (
 	StateSuccessful = 30
 )
 
+const (
+	VerificationPending    = 0
+	VerificationSuccessful = iota
+	VerificationFailed     = iota
+)
+
 /*UnverifiedBlockBody - used to compute the signature
 * This is what is used to verify the correctness of the block & the associated signature
  */
@@ -72,12 +78,20 @@ type Block struct {
 
 	TxnsMap map[string]bool `json:"-"`
 
-	ClientState  util.MerklePatriciaTrieI `json:"-"`
-	stateStatus  int8
-	StateMutex   *sync.Mutex `json:"_"`
-	blockState   int8
-	isNotarized  bool
-	ticketsMutex *sync.Mutex
+	ClientState        util.MerklePatriciaTrieI `json:"-"`
+	stateStatus        int8
+	StateMutex         *sync.Mutex `json:"_"`
+	blockState         int8
+	isNotarized        bool
+	ticketsMutex       *sync.Mutex
+	verificationStatus int
+}
+
+//NewBlock - create a new empty block
+func NewBlock(chainID datastore.Key, round int64) *Block {
+	b := datastore.GetEntityMetadata("block").Instance().(*Block)
+	b.Round = round
+	return b
 }
 
 var blockEntityMetadata *datastore.EntityMetadataImpl
@@ -425,4 +439,14 @@ func (b *Block) SetBlockNotarized() {
 //IsBlockNotarized - is block notarized?
 func (b *Block) IsBlockNotarized() bool {
 	return b.isNotarized
+}
+
+/*SetVerificationStatus - set the verification status of the block by this node */
+func (b *Block) SetVerificationStatus(status int) {
+	b.verificationStatus = status
+}
+
+/*GetVerificationStatus - get the verification status of the block */
+func (b *Block) GetVerificationStatus() int {
+	return b.verificationStatus
 }
