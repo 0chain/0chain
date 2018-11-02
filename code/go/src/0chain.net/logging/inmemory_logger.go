@@ -35,13 +35,19 @@ type MemLogger struct {
 
 /*NewMemLogger - create a new memory logger */
 func NewMemLogger(enc zapcore.Encoder, enab zapcore.LevelEnabler) *MemLogger {
-	return &MemLogger{
+	logger := &MemLogger{
 		core: &MemCore{
 			LevelEnabler: enab,
 			enc:          enc,
 			r:            ring.New(BufferSize),
 		},
 	}
+	mc := logger.core
+	for r := mc.r; r.Value == nil; r = r.Next() {
+		entry := &observer.LoggedEntry{}
+		r.Value = entry
+	}
+	return logger
 }
 
 /*GetCore - get the core associted with this logger */
