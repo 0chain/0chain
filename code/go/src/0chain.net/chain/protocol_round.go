@@ -31,6 +31,9 @@ var ssFTs time.Time
 //StartToFinalizeTimer - a metric that tracks the time a block is created to finalized
 var StartToFinalizeTimer metrics.Timer
 
+//StartToFinalizeTxnTimer - a metric that trakcs the time a txn is created to finalized
+var StartToFinalizeTxnTimer metrics.Timer
+
 //StateSaveTimer - a metric that tracks the time it takes to save the state
 var StateSaveTimer metrics.Timer
 
@@ -40,6 +43,7 @@ var FinalizationLagMetric metrics.Histogram
 func init() {
 	SteadyStateFinalizationTimer = metrics.GetOrRegisterTimer("ss_finalization_time", nil)
 	StartToFinalizeTimer = metrics.GetOrRegisterTimer("s2f_time", nil)
+	StartToFinalizeTxnTimer = metrics.GetOrRegisterTimer("s2ft_time", nil)
 	StateSaveTimer = metrics.GetOrRegisterTimer("state_save_timer", nil)
 	FinalizationLagMetric = metrics.NewHistogram(metrics.NewUniformSample(1024))
 	metrics.Register("finalization_lag", FinalizationLagMetric)

@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"0chain.net/chain"
+	"0chain.net/config"
 	"0chain.net/diagnostics"
 )
 
@@ -18,7 +19,7 @@ func ChainStatsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 	c := GetMinerChain().Chain
 	diagnostics.WriteStatisticsCSS(w)
-	diagnostics.WriteSummary(w, c)
+	diagnostics.WriteConfiguration(w, c)
 	fmt.Fprintf(w, "<table>")
 	fmt.Fprintf(w, "<tr><td>")
 	fmt.Fprintf(w, "<h2>Block Finalization Statistics (Steady state)</h2>")
@@ -32,6 +33,13 @@ func ChainStatsHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</td></tr>")
 
 	fmt.Fprintf(w, "<tr><td>")
+	fmt.Fprintf(w, "<h2>Txn Finalization Statistics (Start to Finish)</h2>")
+	if config.Development() {
+		diagnostics.WriteTimerStatistics(w, c, chain.StartToFinalizeTxnTimer, 1000000.0)
+	} else {
+		fmt.Fprintf(w, "Available only in development mode")
+	}
+	fmt.Fprintf(w, "</td><td valign='top'>")
 	fmt.Fprintf(w, "<h2>Finalization Lag Statistics</h2>")
 	diagnostics.WriteHistogramStatistics(w, c, chain.FinalizationLagMetric)
 	fmt.Fprintf(w, "</td><td></td></tr>")

@@ -40,6 +40,7 @@ func TransactionGenerator(blockSize int32) {
 	GenerateClients(numClients)
 	numWorkers := 1
 	numTxns := blockSize
+	SetTxnGenRate(numTxns)
 	switch {
 	case blockSize <= 10:
 		numWorkers = 1

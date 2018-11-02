@@ -88,6 +88,13 @@ type Block struct {
 	RunningTxnCount    int64 `json:"running_txn_count"`
 }
 
+//NewBlock - create a new empty block
+func NewBlock(chainID datastore.Key, round int64) *Block {
+	b := datastore.GetEntityMetadata("block").Instance().(*Block)
+	b.Round = round
+	return b
+}
+
 var blockEntityMetadata *datastore.EntityMetadataImpl
 
 /*GetEntityMetadata - implementing the interface */

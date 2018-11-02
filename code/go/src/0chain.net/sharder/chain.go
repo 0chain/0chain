@@ -40,6 +40,7 @@ type Chain struct {
 	RoundChannel  chan *round.Round
 	BlockCache    cache.Cache
 	BlockTxnCache cache.Cache
+	SharderStats  Stats
 }
 
 /*GetBlockChannel - get the block channel where the incoming blocks from the network are put into for further processing */
