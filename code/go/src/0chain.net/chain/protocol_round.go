@@ -167,7 +167,6 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 		}
 		Logger.Error("finalize round - missing common ancestor", zap.Int64("cf_round", c.LatestFinalizedBlock.Round), zap.String("cf_block", c.LatestFinalizedBlock.Hash), zap.Int64("nf_round", lfb.Round), zap.String("nf_block", lfb.Hash))
 	}
-	FinalizationLagMetric.Update(int64(c.CurrentRound - c.LatestFinalizedBlock.Round))
 	plfb := c.LatestFinalizedBlock
 	plfbHash := plfb.Hash
 	frchain := make([]*block.Block, 0, 1)
@@ -183,6 +182,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 		}
 	}
 	c.LatestFinalizedBlock = lfb
+	FinalizationLagMetric.Update(int64(c.CurrentRound - c.LatestFinalizedBlock.Round))
 	Logger.Info("finalize round - latest finalized round", zap.Int64("round", c.LatestFinalizedBlock.Round), zap.String("block", c.LatestFinalizedBlock.Hash))
 	for idx := range frchain {
 		fb := frchain[len(frchain)-1-idx]
