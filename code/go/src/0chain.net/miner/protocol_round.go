@@ -159,13 +159,15 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 					Logger.Info("generate block", zap.Error(err))
 					continue
 				}
+			} else {
+				Logger.Error("generate block", zap.Error(err))
+				return nil, err
 			}
-			Logger.Error("generate block", zap.Error(err))
-			return nil, err
+		} else {
+			b.RunningTxnCount = pb.RunningTxnCount + int64(len(b.Txns))
+			mc.AddRoundBlock(r, b)
+			break
 		}
-		b.RunningTxnCount = pb.RunningTxnCount + int64(len(b.Txns))
-		mc.AddRoundBlock(r, b)
-		break
 	}
 	if r.IsVerificationComplete() {
 		Logger.Error("generate block (verification complete)", zap.Any("round", roundNumber), zap.Any("notarized", len(r.GetNotarizedBlocks())))
