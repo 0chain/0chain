@@ -120,11 +120,11 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	b.MinerID = node.Self.GetKey()
 	mc.SetPreviousBlock(ctx, r, b, pb)
 	b.SetStateDB(pb)
-	waitStart := time.Now()
-	waitOver := false
-	waitTime := time.Millisecond * time.Duration(mc.GetGenerationTimeout())
+	waitStart := time.Now()                                                 // time the wait starts
+	waitOver := false                                                       // wait is not over
+	waitTime := time.Millisecond * time.Duration(mc.GetGenerationTimeout()) //time to wait for more transactions to fill the block
 	for true {
-		if time.Now().Sub(waitStart) > waitTime {
+		if time.Now().Sub(waitStart) > waitTime { // if the time now is more than the wait time from the start time, the wait is over
 			waitOver = true
 		}
 		if mc.CurrentRound > b.Round {
@@ -142,15 +142,15 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 					if !config.MainNet() {
 						Logger.Error("generate block", zap.Error(err))
 					}
-					delay := 13 * time.Millisecond
-					for true {
-						time.Sleep(delay)
+					for true { // infinite loop unless the miner recieves more transactions OR there is a new round
+						delay := mc.GetTxnWaitTime()
+						time.Sleep(time.Duration(delay) * time.Millisecond)
 						Logger.Debug("generate block", zap.Any("round", roundNumber), zap.Any("delay", delay), zap.Any("txn_count", txnCount), zap.Any("t.txn_count", transaction.TransactionCount))
-						if mc.CurrentRound > b.Round {
+						if mc.CurrentRound > b.Round { //if there is a new round return the error
 							Logger.Debug("generate block (round mismatch)", zap.Any("round", roundNumber), zap.Any("current_round", mc.CurrentRound))
 							return nil, ErrRoundMismatch
 						}
-						if txnCount != transaction.TransactionCount {
+						if txnCount != transaction.TransactionCount || time.Now().Sub(waitStart) > waitTime { // if the wait is over or there is a new transaction try to generate another block
 							break
 						}
 					}

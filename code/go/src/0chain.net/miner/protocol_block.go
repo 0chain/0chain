@@ -121,12 +121,13 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		return err
 	}
 	blockSize := idx
-	if blockSize != mc.BlockSize {
-		if blockSize == 0 || !waitOver {
+	if blockSize != mc.BlockSize { //if block size isn't equal to the max blocksize allowed
+		if blockSize == 0 || !waitOver { // if block size is 0 OR the wait is not over return an error
 			b.Txns = nil
 			Logger.Debug("generate block (insufficient txns)", zap.Int64("round", b.Round), zap.Int32("iteration_count", count), zap.Int32("block_size", blockSize))
 			return common.NewError(InsufficientTxns, fmt.Sprintf("not sufficient txns to make a block yet for round %v (iterated %v,block_size %v,state failure %v, invalid %v)", b.Round, count, blockSize, failedStateCount, len(invalidTxns)))
 		}
+		//if the wait is over AND the block size doesn't equal 0, the block is made from whatever transactions the miner has
 		b.Txns = b.Txns[:blockSize]
 		etxns = etxns[:blockSize]
 	}

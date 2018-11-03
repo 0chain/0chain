@@ -19,6 +19,7 @@ func SetupDefaultConfig() {
 	viper.SetDefault("server_chain.block.consensus.threshold_by_count", 60)
 	viper.SetDefault("server_chain.generate_timeout", 100)
 	viper.SetDefault("server_chain.txn_timeout", 10)
+	viper.SetDefault("server_chain.txn_wait_time", 5)
 	viper.SetDefault("server_chain.block.proposal.max_wait_time", 200)
 	viper.SetDefault("server_chain.block.proposal.wait_mode", "static")
 }
