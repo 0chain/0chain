@@ -53,8 +53,7 @@ func (c *Chain) PruneClientStateWorker(ctx context.Context) {
 
 /*BlockFetchWorker - a worker that fetches the prior missing blocks */
 func (c *Chain) BlockFetchWorker(ctx context.Context) {
-	fblocks := cache.GetLRUCacheProvider()
-	fblocks.New(100)
+	fblocks := cache.NewLRUCache(100)
 	for b := range c.missingLinkBlocks {
 		if b.PrevBlock != nil {
 			continue
