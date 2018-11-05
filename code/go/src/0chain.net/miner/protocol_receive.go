@@ -137,16 +137,7 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 	msg.Round = r
 	b, err := mc.GetBlock(ctx, msg.Notarization.BlockID)
 	if err != nil {
-		if msg.ShouldRetry() {
-			Logger.Error("notarization receipt handler (block not found) retrying", zap.Any("block", msg.Notarization.BlockID), zap.Int8("retry_count", msg.RetryCount), zap.Error(err))
-			if msg.RetryCount > 2 {
-				go mc.GetNotarizedBlock(msg.Notarization.BlockID) // Let's try to download the block proactively
-			} else {
-				msg.Retry(mc.BlockMessageChannel)
-			}
-		} else {
-			Logger.Error("notarization receipt handler (block not found)", zap.Any("block", msg.Notarization.BlockID), zap.Int8("retry_count", msg.RetryCount), zap.Error(err))
-		}
+		mc.AsyncFetchNotarizedBlock(msg.Notarization.BlockID)
 		return
 	}
 	if err := mc.VerifyNotarization(ctx, b.Hash, msg.Notarization.VerificationTickets); err != nil {
