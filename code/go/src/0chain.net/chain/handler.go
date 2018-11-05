@@ -138,6 +138,7 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<li><a href='/_diagnostics/n2n/info'>/_diagnostics/n2n/info</a></li>")
 	fmt.Fprintf(w, "<li>/_diagnostics/logs [Level <a href='/_diagnostics/logs?detail=1'>1</a>, <a href='/_diagnostics/logs?detail=2'>2</a>, <a href='/_diagnostics/logs?detail=3'>3</a>]</li>")
 	fmt.Fprintf(w, "<li>/_diagnostics/n2n_logs [Level <a href='/_diagnostics/n2n_logs?detail=1'>1</a>, <a href='/_diagnostics/n2n_logs?detail=2'>2</a>, <a href='/_diagnostics/n2n_logs?detail=3'>3</a>]</li>")
+	fmt.Fprintf(w, "<li>/_diagnostics/mem_usage_logs [Level <a href='/_diagnostics/mem_usage_logs?detail=1'>1</a>, <a href='/_diagnostics/mem_usage_logs?detail=2'>2</a>, <a href='/_diagnostics/mem_usage_logs?detail=3'>3</a>]</li>")
 	fmt.Fprintf(w, "<li><a href='/debug/pprof/'>/debug/pprof/</a></li>")
 	fmt.Fprintf(w, "</ul>")
 	fmt.Fprintf(w, "<div><div>Miners (%v)</div>", sc.Miners.Size())

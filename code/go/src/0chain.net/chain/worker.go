@@ -6,6 +6,7 @@ import (
 
 	"0chain.net/cache"
 	. "0chain.net/logging"
+	"0chain.net/node"
 )
 
 /*SetupWorkers - setup a blockworker for a chain */
@@ -15,6 +16,7 @@ func (c *Chain) SetupWorkers(ctx context.Context) {
 	go c.Blobbers.StatusMonitor(ctx)
 	go c.PruneClientStateWorker(ctx)
 	go c.BlockFetchWorker(ctx)
+	go node.Self.MemoryUsage()
 }
 
 /*FinalizeRoundWorker - a worker that handles the finalized blocks */

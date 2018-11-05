@@ -11,20 +11,24 @@ import (
 )
 
 var (
-	Logger *zap.Logger
-	N2n    *zap.Logger
+	Logger   *zap.Logger
+	N2n      *zap.Logger
+	MemUsage *zap.Logger
 
 	MLogger    *MemLogger
 	N2NMLogger *MemLogger
+	MMLogger   *MemLogger
 )
 
 //InitLogging - initialize the logging submodule
 func InitLogging(mode string) {
 	var logName = "log/0chain.log"
 	var n2nLogName = "log/n2n.log"
+	var memLogName = "log/memUsage.log"
 
 	var logWriter = getWriteSyncer(logName)
 	var n2nLogWriter = getWriteSyncer(n2nLogName)
+	var memLogWriter = getWriteSyncer(memLogName)
 
 	var cfg zap.Config
 	if mode != "development" {
@@ -40,6 +44,7 @@ func InitLogging(mode string) {
 		if viper.GetBool("logging.console") {
 			logWriter = zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout), logWriter)
 			n2nLogWriter = zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout), n2nLogWriter)
+			memLogWriter = zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout), memLogWriter)
 		}
 	}
 	cfg.Level.UnmarshalText([]byte(viper.GetString("logging.level")))
@@ -65,8 +70,18 @@ func InitLogging(mode string) {
 		panic(err)
 	}
 
+	mucfg := zap.NewProductionConfig()
+	mucfg.Level.SetLevel(zapcore.InfoLevel)
+	MMLogger = createMemLogger(mucfg)
+	option = createOptionFromCores(createZapCore(memLogWriter, cfg), MMLogger.GetCore())
+	lu, err := cfg.Build(option)
+	if err != nil {
+		panic(err)
+	}
+
 	Logger = l
 	N2n = ls
+	MemUsage = lu
 }
 
 func createZapCore(ws zapcore.WriteSyncer, conf zap.Config) zapcore.Core {
