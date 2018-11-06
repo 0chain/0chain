@@ -50,7 +50,7 @@ func main() {
 
 	config.Configuration.ChainID = viper.GetString("server_chain.id")
 	config.Configuration.MaxDelay = *maxDelay
-	transaction.SetTxnTimeout(int64(viper.GetInt("server_chain.txn_timeout")))
+	transaction.SetTxnTimeout(int64(viper.GetInt("server_chain.transaction.timeout")))
 
 	reader, err := os.Open(*keysFile)
 	if err != nil {
@@ -73,8 +73,8 @@ func main() {
 	miner.SetupMinerChain(serverChain)
 	mc := miner.GetMinerChain()
 	mc.DiscoverClients = viper.GetBool("server_chain.client.discover")
-	mc.SetGenerationTimeout(viper.GetInt("server_chain.generate_timeout"))
-	mc.SetTxnWaitTime(viper.GetInt("server_chain.txn_wait_time"))
+	mc.SetGenerationTimeout(viper.GetInt("server_chain.block.generation.timeout"))
+	mc.SetTxnWaitTime(viper.GetInt("server_chain.block.generation.transaction_wait_time"))
 	chain.SetServerChain(serverChain)
 
 	miner.SetNetworkRelayTime(viper.GetDuration("network.relay_time") * time.Millisecond)

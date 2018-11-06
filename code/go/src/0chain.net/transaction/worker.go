@@ -35,7 +35,7 @@ func CleanupWorker(ctx context.Context) {
 			qe.Delete(ctx)
 			return true
 		}
-		if !common.Within(int64(txn.CreationDate), GetTxnTimeout()-1) {
+		if !common.Within(int64(txn.CreationDate), TXN_TIME_TOLERANCE-1) {
 			invalidTxns = append(invalidTxns, txn)
 			return true
 		}
