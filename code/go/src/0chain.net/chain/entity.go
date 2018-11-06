@@ -105,8 +105,7 @@ type Chain struct {
 	stakeMutex  *sync.Mutex
 
 	nodePoolScorer node.PoolScorer
-
-	missingLinkBlocks chan *block.Block
+	blockFetcher   *BlockFetcher
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
@@ -195,6 +194,7 @@ func Provider() datastore.Entity {
 	c.Sharders = node.NewPool(node.NodeTypeSharder)
 	c.Blobbers = node.NewPool(node.NodeTypeBlobber)
 	c.Stats = &Stats{}
+	c.blockFetcher = NewBlockFetcher()
 	return c
 }
 
@@ -212,7 +212,6 @@ func (c *Chain) Initialize() {
 	c.stateDB = stateDB
 	c.BlockChain = ring.New(10000)
 	c.minersStake = make(map[datastore.Key]int)
-	c.missingLinkBlocks = make(chan *block.Block, 128)
 }
 
 /*SetupEntity - setup the entity */
@@ -324,9 +323,14 @@ func (c *Chain) addBlock(b *block.Block) *block.Block {
 	return b
 }
 
-/*AsyncFetchNotarizedPreviousBlock - async fetching of the notarized block */
+/*AsyncFetchNotarizedPreviousBlock - async fetching of the previous notarized block */
 func (c *Chain) AsyncFetchNotarizedPreviousBlock(b *block.Block) {
-	c.missingLinkBlocks <- b
+	c.blockFetcher.AsyncFetchPreviousBlock(b)
+}
+
+/*AsyncFetchNotarizedBlock - async fetching of a notarized block */
+func (c *Chain) AsyncFetchNotarizedBlock(hash string) {
+	c.blockFetcher.AsyncFetchBlock(hash)
 }
 
 /*GetBlock - returns a known block for a given hash from the cache */

@@ -205,7 +205,6 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 		b.ComputeChainWeight()
 		mc.updatePriorBlock(ctx, mr.Round, b)
 	} else {
-		mc.AsyncFetchNotarizedPreviousBlock(b)
 		// We can establish an upper bound for chain weight at the current round, subtract 1 and add block's own weight and check if that's less than the chain weight sent
 		chainWeightUpperBound := mc.LatestFinalizedBlock.ChainWeight + float64(b.Round-mc.LatestFinalizedBlock.Round)
 		if b.ChainWeight > chainWeightUpperBound-1+b.Weight() {
@@ -410,12 +409,12 @@ func (mc *Chain) checkBlockNotarization(ctx context.Context, r *Round, b *block.
 
 /*AddNotarizedBlock - add a notarized block for a given round */
 func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *Round, b *block.Block) bool {
+	if _, ok := r.AddNotarizedBlock(b); !ok {
+		return false
+	}
 	if !b.IsStateComputed() {
 		Logger.Info("add notarized block - computing state", zap.Int64("round", b.Round), zap.String("block", b.Hash))
 		go mc.ComputeState(ctx, b)
-	}
-	if _, ok := r.AddNotarizedBlock(b); !ok {
-		return false
 	}
 	if !r.IsVerificationComplete() {
 		mc.CancelRoundVerification(ctx, r)
@@ -477,13 +476,14 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*bloc
 
 /*HandleRoundTimeout - handles the timeout of a round*/
 func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
-	if mc.CurrentRound <= 1 {
-		if !mc.CanStartNetwork() {
-			return
-		}
+	if mc.CurrentRound == 0 {
+		return
 	}
 	Logger.Error("round timeout occured", zap.Any("round", mc.CurrentRound))
 	mc.RoundTimeoutsCount++
+	if !mc.CanStartNetwork() {
+		return
+	}
 	r := mc.GetMinerRound(mc.CurrentRound)
 	if r.GetRoundNumber() > 1 {
 		pr := mc.GetMinerRound(r.GetRoundNumber() - 1)
