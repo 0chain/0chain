@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"0chain.net/common"
+	"0chain.net/logging"
 	. "0chain.net/logging"
 	"go.uber.org/zap"
 )
@@ -103,4 +104,14 @@ func (np *Pool) DownloadNodeData(node *Node) bool {
 		np.ComputeProperties()
 	}
 	return true
+}
+
+func (n *Node) MemoryUsage() {
+	ticker := time.NewTicker(5 * time.Minute)
+	for true {
+		select {
+		case <-ticker.C:
+			common.LogRuntime(logging.MemUsage, zap.Any(n.Description, n.SetIndex))
+		}
+	}
 }
