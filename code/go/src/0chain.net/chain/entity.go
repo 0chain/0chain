@@ -503,7 +503,7 @@ func (c *Chain) ChainHasTransaction(ctx context.Context, b *block.Block, txn *tr
 		if cb.HasTransaction(txn.Hash) {
 			return true, nil
 		}
-		if cb.CreationDate < txn.CreationDate-common.Timestamp(transaction.GetTxnTimeout()) {
+		if cb.CreationDate < txn.CreationDate-common.Timestamp(transaction.TXN_TIME_TOLERANCE) {
 			return false, nil
 		}
 	}

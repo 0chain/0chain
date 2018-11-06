@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"0chain.net/client"
@@ -21,13 +20,8 @@ import (
 
 /*TXN_TIME_TOLERANCE - the txn creation date should be within 5 seconds before/after of current time */
 var TXN_TIME_TOLERANCE int64
-var txn_time_mut *sync.Mutex
 
 var TransactionCount = 0
-
-func init() {
-	txn_time_mut = &sync.Mutex{}
-}
 
 func SetupTransactionDB() {
 	memorystore.AddPool("txndb", memorystore.NewPool("redis_txns", 6479))
@@ -99,7 +93,7 @@ func (t *Transaction) ValidateWrtTime(ctx context.Context, ts common.Timestamp) 
 	if t.Hash == "" {
 		return common.InvalidRequest("hash required for transaction")
 	}
-	if !common.WithinTime(int64(ts), int64(t.CreationDate), GetTxnTimeout()) {
+	if !common.WithinTime(int64(ts), int64(t.CreationDate), TXN_TIME_TOLERANCE) {
 		return common.InvalidRequest(fmt.Sprintf("Transaction creation time not within tolerance: ts=%v txn.creation_date=%v", ts, t.CreationDate))
 	}
 	err = t.VerifyHash(ctx)
@@ -292,13 +286,5 @@ func (t *Transaction) VerifyOutputHash(ctx context.Context) error {
 }
 
 func SetTxnTimeout(timeout int64) {
-	txn_time_mut.Lock()
-	defer txn_time_mut.Unlock()
 	TXN_TIME_TOLERANCE = timeout
-}
-
-func GetTxnTimeout() int64 {
-	txn_time_mut.Lock()
-	defer txn_time_mut.Unlock()
-	return TXN_TIME_TOLERANCE
 }

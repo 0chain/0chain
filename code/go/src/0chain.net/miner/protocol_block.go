@@ -167,7 +167,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 }
 
 func (mc *Chain) validateTransaction(b *block.Block, txn *transaction.Transaction) bool {
-	if !common.WithinTime(int64(b.CreationDate), int64(txn.CreationDate), transaction.GetTxnTimeout()) {
+	if !common.WithinTime(int64(b.CreationDate), int64(txn.CreationDate), transaction.TXN_TIME_TOLERANCE) {
 		return false
 	}
 	return true
