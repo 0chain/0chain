@@ -2,24 +2,25 @@ package bls
 
 import "github.com/pmer/gobls"
 
-type PartyId = gobls.ID
+/*PartyID - Is of type gobls.ID*/
+type PartyID = gobls.ID
+
+/*GroupPublicKey - Is of type gobls.PublicKey*/
 type GroupPublicKey = gobls.PublicKey
+
+/*Message - Is of type string*/
 type Message = string
+
+/*Sign - Is of type gobls.Sign*/
 type Sign = gobls.Sign
 
-type SignShare interface{}
-
+/*GroupSig - For the Gp Sign*/
 type GroupSig interface{}
 
+/*Party - Interface for BLS*/
 type Party interface {
 	SignMsg() Sign
 	VerifySign(share Sign) bool
-	RecoverGroupSig(from []PartyId, shares []SignShare) Sign
+	RecoverGroupSig(from []PartyID, shares []Sign) Sign
 	VerifyGroupSig(GroupSig) bool
-}
-
-/* AfterDKGKeyShare - Denotes the share of each party after DKG, ie, after aggregating the shares */
-type AfterDKGKeyShare struct {
-	m Key
-	v VerificationKey
 }

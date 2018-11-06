@@ -11,10 +11,10 @@ import (
 
 const CurveFp254BNb = 0
 
-type DKGs []BLSSimpleDKG
+type DKGs []SimpleDKG
 
 func newDKGs(t, n int) DKGs {
-	dkgs := make([]BLSSimpleDKG, n)
+	dkgs := make([]SimpleDKG, n)
 	for i := range dkgs {
 		dkgs[i] = MakeSimpleDKG(t, n)
 		dkgs[i].ID = ComputeIDdkg(i)
@@ -26,7 +26,7 @@ func newDKGs(t, n int) DKGs {
 	return dkgs
 }
 
-/* Tests to check whether SecKey - secret key, mSec - master secret key and mVec - verification key are set
+/*TestMakeSimpleDKG - Test to check whether SecKey - secret key, mSec - master secret key and mVec - verification key are set
 Here mSec[0] is the secretKey */
 func TestMakeSimpleDKG(test *testing.T) {
 
@@ -47,7 +47,7 @@ func TestMakeSimpleDKG(test *testing.T) {
 
 }
 
-/* Test to check creation of multiple DKGs works */
+/*TestMakeSimpleMultipleDKGs - Test to check creation of multiple DKGs works */
 func TestMakeSimpleMultipleDKGs(test *testing.T) {
 
 	variation := func(t, n int) {
@@ -71,14 +71,14 @@ func TestMakeSimpleMultipleDKGs(test *testing.T) {
 
 }
 
-/* Tests to check the secret key is recovered back from the shares */
+/*TestRecoverSecretKey - Tests to check the secret key is recovered back from the shares */
 func TestRecoverSecretKey(test *testing.T) {
 
 	variation := func(t, n int) {
 
 		dkgs := newDKGs(t, n)
 		secSharesFromMap := make([]Key, n)
-		partyIdsFromMap := make([]PartyId, n)
+		partyIdsFromMap := make([]PartyID, n)
 
 		for i := 0; i < n; i++ {
 			j := 0
@@ -119,22 +119,22 @@ func TestDKGAggShare(test *testing.T) {
 
 	variation := func(t, n int) {
 		dkgs := newDKGs(t, n)
-		partyIdsFromMap := make([]PartyId, n)
+		partyIdsFromMap := make([]PartyID, n)
 
 		j := 0
-		hmap := dkgs[0].secSharesMap // to get the PartyIds
-		for k, _ := range hmap {
+		hmap := dkgs[0].secSharesMap // to get the PartyIDs
+		for k := range hmap {
 			partyIdsFromMap[j] = k
 			j++
 		}
 
 		for i := 0; i < n; i++ {
 
-			for id_iter := 0; id_iter < n; id_iter++ {
+			for idIter := 0; idIter < n; idIter++ {
 
-				gotShare := dkgs[id_iter].GetKeyShareForOther(partyIdsFromMap[i])
+				gotShare := dkgs[idIter].GetKeyShareForOther(partyIdsFromMap[i])
 
-				dkgs[i].receivedSecShares[id_iter] = gotShare.m
+				dkgs[i].receivedSecShares[idIter] = gotShare.m
 
 			}
 
@@ -157,22 +157,22 @@ func TestRecoverGrpSignature(test *testing.T) {
 
 	variation := func(t, n int) {
 		dkgs := newDKGs(t, n)
-		partyIdsFromMap := make([]PartyId, n)
+		partyIdsFromMap := make([]PartyID, n)
 
 		j := 0
-		hmap := dkgs[0].secSharesMap // to get the PartyIds
-		for key, _ := range hmap {
+		hmap := dkgs[0].secSharesMap // to get the PartyIDs
+		for key := range hmap {
 			partyIdsFromMap[j] = key
 			j++
 		}
 
 		for i := 0; i < n; i++ {
 
-			for id_iter := 0; id_iter < n; id_iter++ {
+			for idIter := 0; idIter < n; idIter++ {
 
-				gotShare := dkgs[id_iter].GetKeyShareForOther(partyIdsFromMap[i])
+				gotShare := dkgs[idIter].GetKeyShareForOther(partyIdsFromMap[i])
 
-				dkgs[i].receivedSecShares[id_iter] = gotShare.m
+				dkgs[i].receivedSecShares[idIter] = gotShare.m
 
 			}
 
@@ -181,15 +181,15 @@ func TestRecoverGrpSignature(test *testing.T) {
 			}
 		}
 
-		var rNumber int64 = 0
+		var rNumber int64
 		var prevVRF string
 		VRFop := encryption.Hash("0chain")
 
 		collectSigShares := make([]Sign, n)
-		sigSharesID := make(map[Sign]PartyId, n)
+		sigSharesID := make(map[Sign]PartyID, n)
 
 		ksigShares := make([]Sign, t)
-		kPartyIDs := make([]PartyId, t)
+		kpartyIDs := make([]PartyID, t)
 
 		var thresholdCount = 1
 		var bs SimpleBLS
@@ -224,17 +224,17 @@ func TestRecoverGrpSignature(test *testing.T) {
 				getShares := collectSigShares[ind]
 
 				ksigShares[j] = getShares
-				kPartyIDs[j] = sigSharesID[getShares]
+				kpartyIDs[j] = sigSharesID[getShares]
 				thresholdCount++
 				j++
 				ind++
 			}
 
-			bs.RecoverGroupSig(kPartyIDs, ksigShares)
+			bs.RecoverGroupSig(kpartyIDs, ksigShares)
 			thresholdCount = 1
 			j = 0
 			ind = 0
-			bs.RecoverGroupSig(kPartyIDs, ksigShares)
+			bs.RecoverGroupSig(kpartyIDs, ksigShares)
 			VRF1 = bs.GpSign
 
 			//test.Errorf("The VRF1 is %s", VRF1.GetHexString())
@@ -247,12 +247,12 @@ func TestRecoverGrpSignature(test *testing.T) {
 				getShares := collectSigShares[ind]
 
 				ksigShares[j] = getShares
-				kPartyIDs[j] = sigSharesID[getShares]
+				kpartyIDs[j] = sigSharesID[getShares]
 				thresholdCount++
 				j++
 				ind++
 			}
-			bs.RecoverGroupSig(kPartyIDs, ksigShares)
+			bs.RecoverGroupSig(kpartyIDs, ksigShares)
 			VRF2 = bs.GpSign
 
 			//test.Errorf("The VRF2 is %s", VRF2.GetHexString())

@@ -44,9 +44,9 @@ func (mc *Chain) StartRound(ctx context.Context, r *Round) {
 	pr := mc.GetRound(r.GetRoundNumber() - 1)
 	if pr == nil {
 		// If we don't have the prior round, and hence the prior round's random seed, we can't provide the share
-
 		return
 	}
+
 	vrfs := &round.VRFShare{}
 	vrfs.Round = r.GetRoundNumber()
 	vrfs.Share = node.Self.Node.SetIndex

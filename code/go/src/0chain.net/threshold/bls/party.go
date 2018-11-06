@@ -1,7 +1,10 @@
 package bls
 
-/* BLS implementation */
+import (
+	. "0chain.net/logging"
+)
 
+/*SimpleBLS - to manage BLS process */
 type SimpleBLS struct {
 	T                int
 	N                int
@@ -11,10 +14,11 @@ type SimpleBLS struct {
 	verifications    []VerificationKey
 	SecKeyShareGroup Key
 	GpSign           Sign
-	ID               PartyId
+	ID               PartyID
 }
 
-func MakeSimpleBLS(dkg *BLSSimpleDKG) SimpleBLS {
+/*MakeSimpleBLS - to create bls object */
+func MakeSimpleBLS(dkg *SimpleDKG) SimpleBLS {
 	bs := SimpleBLS{
 		T:                dkg.T,
 		N:                dkg.N,
@@ -30,6 +34,7 @@ func MakeSimpleBLS(dkg *BLSSimpleDKG) SimpleBLS {
 
 }
 
+/*SignMsg - Bls sign share is computed by signing the message r||RBO(r-1) with secret key share of group of that party */
 func (bs *SimpleBLS) SignMsg() Sign {
 
 	aggSecKey := bs.SecKeyShareGroup
@@ -37,7 +42,8 @@ func (bs *SimpleBLS) SignMsg() Sign {
 	return sigShare
 }
 
-func (bs *SimpleBLS) RecoverGroupSig(from []PartyId, shares []Sign) Sign {
+/*RecoverGroupSig - To compute the Gp sign with any k number of BLS sig shares */
+func (bs *SimpleBLS) RecoverGroupSig(from []PartyID, shares []Sign) Sign {
 
 	signVec := shares
 	idVec := from
@@ -48,14 +54,22 @@ func (bs *SimpleBLS) RecoverGroupSig(from []PartyId, shares []Sign) Sign {
 	if err == nil {
 		bs.GpSign = sig
 		return sig
-	} else {
-		//fmt.Println("Recover Gp Sig not done")
 	}
+
+	Logger.Info("Recover Gp Sig not done, check party.go")
+
 	return sig
 
 }
 
+/*VerifyGroupSig - Verify the Gp sign with gp public key */
 func (bs *SimpleBLS) VerifyGroupSig(GroupSig) bool {
+	//TODO
+	return true
+}
+
+/*VerifySign - Verify the BLS sign */
+func (bs *SimpleBLS) VerifySign(share Sign) bool {
 	//TODO
 	return true
 }

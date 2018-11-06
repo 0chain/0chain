@@ -122,7 +122,6 @@ func DKGShareHandler(ctx context.Context, entity datastore.Entity) (interface{},
 	}
 	Logger.Info("received DKG share", zap.String("share", dg.Share))
 	AppendDKGSecShares(dg.Share)
-
 	return nil, nil
 }
 
@@ -132,15 +131,8 @@ func BLSSignShareHandler(ctx context.Context, entity datastore.Entity) (interfac
 	if !ok {
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
-
-	Logger.Info("received BLS sign share", zap.String("BLS sign share", bs.BLSsignShare))
 	nodeID := node.GetSender(ctx).SetIndex
-	gotThreshold := AppendBLSSigShares(bs.BLSsignShare, nodeID)
-	if gotThreshold {
-		vrfOp := CheckThresholdSigns()
-		GetMinerChain().VRFShareChannel <- vrfOp
-		Logger.Info("vrfOp is : ", zap.String("vrfOp is : ", vrfOp))
-	}
+	BlsShareReceived(ctx, bs.BLSRound, bs.BLSsignShare, nodeID)
 	return nil, nil
 }
 

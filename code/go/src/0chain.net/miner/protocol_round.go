@@ -35,6 +35,10 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 		Logger.Debug("start new round (previous round not found)", zap.Int64("round", mr.GetRoundNumber()))
 		return
 	}
+	if mr.GetRoundNumber() == 1 {
+		Logger.Info("Do BLS for round 1", zap.Int64("round", mr.GetRoundNumber()))
+		StartBls(ctx, mr.Round)
+	}
 	self := node.GetSelfNode(ctx)
 	rank := mr.GetMinerRank(self.Node)
 	Logger.Info("*** starting round ***", zap.Int64("round", mr.GetRoundNumber()), zap.Int("index", self.SetIndex), zap.Int("rank", rank), zap.Any("random_seed", mr.GetRandomSeed()), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round))
@@ -437,10 +441,10 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) {
 	}
 	nr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 	nr.Number = nrNumber
-	Logger.Info("Starting BLS already for this round in advance... ", zap.Int64("round", nr.Number))
 
 	mr := mc.CreateRound(nr)
-	CalcBLSSignShare(mr.Round, r.Round)
+	Logger.Info("Starting BLS ... ", zap.Int64("round", mr.Number))
+	StartBls(ctx, mr.Round)
 
 	// Even if the context is cancelled, we want to proceed with the next round, hence start with a root context
 	mc.StartRound(common.GetRootContext(), mr)

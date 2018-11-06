@@ -7,6 +7,7 @@ import (
 type Bls struct {
 	datastore.IDField
 	BLSsignShare string `json:"share"`
+	BLSRound     int64  `json:"round"`
 }
 
 var blsEntityMetadata *datastore.EntityMetadataImpl

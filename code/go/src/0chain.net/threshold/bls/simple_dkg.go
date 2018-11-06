@@ -6,44 +6,45 @@ import (
 	"fmt"
 	"strconv"
 
-	//	. "0chain.net/logging"
 	"github.com/pmer/gobls"
 )
 
-type BLSSimpleDKG struct {
+/*SimpleDKG - to manage DKG process */
+type SimpleDKG struct {
 	T                 int
 	N                 int
 	SecKey            Key
 	pubKey            VerificationKey
 	mSec              []Key
 	Vvec              []VerificationKey
-	secSharesMap      map[PartyId]Key
+	secSharesMap      map[PartyID]Key
 	receivedSecShares []Key
 	GpPubKey          GroupPublicKey
 	SecKeyShareGroup  Key
-	SelfShare         Key
-	ID                PartyId
+	ID                PartyID
 }
 
+/* init -  To initialize a point on the curve */
 func init() {
 	gobls.Init(gobls.CurveFp254BNb)
 
 }
-func MakeSimpleDKG(t, n int) BLSSimpleDKG {
 
-	dkg := BLSSimpleDKG{
+/*MakeSimpleDKG - to create a dkg object */
+func MakeSimpleDKG(t, n int) SimpleDKG {
+
+	dkg := SimpleDKG{
 		T:                 t,
 		N:                 n,
 		SecKey:            Key{},
 		pubKey:            VerificationKey{},
 		mSec:              make([]Key, t),
 		Vvec:              make([]VerificationKey, t),
-		secSharesMap:      make(map[PartyId]Key, n),
+		secSharesMap:      make(map[PartyID]Key, n),
 		receivedSecShares: make([]Key, n),
 		GpPubKey:          GroupPublicKey{},
 		SecKeyShareGroup:  Key{},
-		SelfShare:         Key{},
-		ID:                PartyId{},
+		ID:                PartyID{},
 	}
 
 	dkg.SecKey.SetByCSPRNG()
@@ -55,9 +56,9 @@ func MakeSimpleDKG(t, n int) BLSSimpleDKG {
 	return dkg
 }
 
-/* threshold_helper.go calls this function to compute the ID */
-func ComputeIDdkg(minerID int) PartyId {
-	var forID PartyId
+/*ComputeIDdkg - to create an ID of party of type PartyID */
+func ComputeIDdkg(minerID int) PartyID {
+	var forID PartyID
 	err := forID.SetDecString(strconv.Itoa(minerID + 1))
 	if err != nil {
 		fmt.Printf("Error while computing ID %s\n", forID.GetHexString())
@@ -66,9 +67,8 @@ func ComputeIDdkg(minerID int) PartyId {
 	return forID
 }
 
-/* ComputeDKGKeyShare - Derive the share for each miner through gobls.Set() which calls the polynomial substitution method used in threshold_helper.go */
-
-func (dkg *BLSSimpleDKG) ComputeDKGKeyShare(forID PartyId) (Key, error) {
+/*ComputeDKGKeyShare - Derive the share for each miner through polynomial substitution method */
+func (dkg *SimpleDKG) ComputeDKGKeyShare(forID PartyID) (Key, error) {
 
 	var secVec Key
 	err := secVec.Set(dkg.mSec, &forID)
@@ -80,8 +80,8 @@ func (dkg *BLSSimpleDKG) ComputeDKGKeyShare(forID PartyId) (Key, error) {
 	return secVec, nil
 }
 
-/* GetKeyShareForOther - Get the DKGKeyShare for this Miner specified by the PartyId */
-func (dkg *BLSSimpleDKG) GetKeyShareForOther(to PartyId) *DKGKeyShare {
+/*GetKeyShareForOther - Get the DKGKeyShare for this Miner specified by the PartyID */
+func (dkg *SimpleDKG) GetKeyShareForOther(to PartyID) *DKGKeyShare {
 
 	indivShare, ok := dkg.secSharesMap[to]
 	if !ok {
@@ -94,8 +94,8 @@ func (dkg *BLSSimpleDKG) GetKeyShareForOther(to PartyId) *DKGKeyShare {
 	return dShare
 }
 
-/* Each party aggregates the received shares from other party */
-func (dkg *BLSSimpleDKG) AggregateShares() {
+/*AggregateShares - Each party aggregates the received shares from other party which is calculated for that party */
+func (dkg *SimpleDKG) AggregateShares() {
 	var sec Key
 
 	for i := 0; i < len(dkg.receivedSecShares); i++ {
