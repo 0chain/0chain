@@ -476,13 +476,14 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*bloc
 
 /*HandleRoundTimeout - handles the timeout of a round*/
 func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
-	if mc.CurrentRound <= 1 {
-		if !mc.CanStartNetwork() {
-			return
-		}
+	if mc.CurrentRound == 0 {
+		return
 	}
 	Logger.Error("round timeout occured", zap.Any("round", mc.CurrentRound))
 	mc.RoundTimeoutsCount++
+	if !mc.CanStartNetwork() {
+		return
+	}
 	r := mc.GetMinerRound(mc.CurrentRound)
 	if r.GetRoundNumber() > 1 {
 		pr := mc.GetMinerRound(r.GetRoundNumber() - 1)
