@@ -81,6 +81,6 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 	nd.LastActiveTime = time.Now().UTC()
 	if nd.Status == NodeStatusInactive {
 		nd.Status = NodeStatusActive
-		Logger.Info("Node active", zap.Any("node_type", nd.GetNodeTypeName()), zap.Any("set_index", nd.SetIndex), zap.Any("key", nd.GetKey()))
+		Logger.Info("Node active", zap.String("node_type", nd.GetNodeTypeName()), zap.Int("set_index", nd.SetIndex), zap.Any("key", nd.GetKey()))
 	}
 }
