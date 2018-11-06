@@ -13,6 +13,7 @@ import (
 type CompDe interface {
 	Compress([]byte) []byte
 	Decompress([]byte) ([]byte, error)
+	Encoding() string
 }
 
 //SnappyCompDe - a CompDe baseed on Snappy
@@ -32,6 +33,11 @@ func (scd *SnappyCompDe) Compress(data []byte) []byte {
 //Decompress - implement interface
 func (scd *SnappyCompDe) Decompress(data []byte) ([]byte, error) {
 	return snappy.Decode(nil, data)
+}
+
+//Encoding - implement interface
+func (scd *SnappyCompDe) Encoding() string {
+	return "snappy"
 }
 
 //ZStdCompDe - a CompDe based on zstandard
@@ -61,6 +67,11 @@ func (zstd *ZStdCompDe) Compress(data []byte) []byte {
 //Decompress - implement interface
 func (zstd *ZStdCompDe) Decompress(data []byte) ([]byte, error) {
 	return gozstd.Decompress(nil, data)
+}
+
+//Encoding - implement interface
+func (zstd *ZStdCompDe) Encoding() string {
+	return "zstd"
 }
 
 //ZStdDictCompDe - a CompDe using dictionary based on zstandard
@@ -95,6 +106,11 @@ func (zstd *ZStdDictCompDe) Decompress(data []byte) ([]byte, error) {
 	return gozstd.DecompressDict(nil, data, zstd.ddict)
 }
 
+//Encoding - implement interface
+func (zstd *ZStdDictCompDe) Encoding() string {
+	return "zstddict"
+}
+
 //ZLibCompDe - a CompDe based on zlib
 type ZLibCompDe struct {
 }
@@ -124,4 +140,9 @@ func (zlibcd *ZLibCompDe) Decompress(data []byte) ([]byte, error) {
 	bf := bytes.NewBuffer(nil)
 	io.Copy(bf, r)
 	return bf.Bytes(), nil
+}
+
+//Encoding - implement interface
+func (zlibcd *ZLibCompDe) Encoding() string {
+	return "zlib"
 }

@@ -12,6 +12,7 @@ func SetupDefaultConfig() {
 	viper.SetDefault("network.relay_time", 200)
 	viper.SetDefault("network.timeout.small_message", 500)
 	viper.SetDefault("network.timeout.large_message", 1000)
+	viper.SetDefault("network.large_message_th_size", 10240)
 	viper.SetDefault("server_chain.messages.verification_tickets_to", "generator")
 	viper.SetDefault("server_chain.round_range", 10000000)
 	viper.SetDefault("server_chain.transaction.payload.max_size", 32)

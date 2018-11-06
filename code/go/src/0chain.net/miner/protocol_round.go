@@ -81,7 +81,7 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) *block.Block {
 	bnb := r.GetHeaviestNotarizedBlock()
 	if bnb == nil {
-		Logger.Error("get block to extend - no notarized block", zap.Int64("round", r.GetRoundNumber()))
+		Logger.Error("get block to extend - no notarized block", zap.Int64("round", r.GetRoundNumber()), zap.Int("proposed_blocks", len(r.GetProposedBlocks())))
 		bnb = mc.GetHeaviestNotarizedBlock(r)
 	}
 	if bnb != nil {
@@ -245,11 +245,11 @@ func (mc *Chain) computeBlockProposalDynamicWaitTime(r round.RoundI) time.Durati
 	generators := mc.GetGenerators(r)
 	for _, g := range generators {
 		if g.LargeMessageSendTime < medianTime {
-			return time.Duration(int64(math.Round(float64(g.LargeMessageSendTime)/1000000))) * time.Millisecond
+			return time.Duration(int64(math.Round(g.LargeMessageSendTime)/1000000)) * time.Millisecond
 		}
 	}
 	/*
-		medianTimeMS := time.Duration(int64(math.Round(float64(medianTime)/1000000))) * time.Millisecond
+		medianTimeMS := time.Duration(int64(math.Round(medianTime)/1000000)) * time.Millisecond
 		if medianTimeMS > mc.BlockProposalMaxWaitTime {
 			return medianTimeMS
 		}*/
