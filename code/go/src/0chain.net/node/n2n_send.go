@@ -271,19 +271,21 @@ func SetSendHeaders(req *http.Request, entity datastore.Entity, options *SendOpt
 }
 
 func validateSendRequest(sender *Node, r *http.Request) bool {
+	entityName := r.Header.Get(HeaderRequestEntityName)
+	entityID := r.Header.Get(HeaderRequestEntityID)
+	N2n.Debug("message received", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI), zap.String("entity", entityName))
 	if !validateChain(sender, r) {
+		N2n.Error("message received - invalid chain", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI), zap.String("entity", entityName))
 		return false
 	}
 	if !validateEntityMetadata(sender, r) {
+		N2n.Error("message received - invalid entity metadata", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI), zap.String("entity", entityName))
 		return false
 	}
-	entityName := r.Header.Get(HeaderRequestEntityName)
-	entityID := r.Header.Get(HeaderRequestEntityID)
 	if entityID == "" {
 		N2n.Error("message received - entity id blank", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI))
 		return false
 	}
-	N2n.Debug("message received", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI), zap.String("entity", entityName))
 	reqTS := r.Header.Get(HeaderRequestTimeStamp)
 	if reqTS == "" {
 		N2n.Error("message received - no timestamp for the message", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI), zap.String("entity", entityName), zap.Any("id", entityID))
@@ -310,6 +312,7 @@ func validateSendRequest(sender *Node, r *http.Request) bool {
 	}
 	reqSignature := r.Header.Get(HeaderNodeRequestSignature)
 	if ok, _ := sender.Verify(reqSignature, reqHash); !ok {
+		N2n.Error("message received - invalid signature", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI), zap.String("hash", reqHash), zap.String("hashdata", reqHashdata), zap.String("signature", reqSignature))
 		return false
 	}
 
