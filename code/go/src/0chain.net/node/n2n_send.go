@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"math"
 	"net/http"
 	"net/http/httptrace"
 	"strconv"
@@ -179,7 +178,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			if toPull {
 				pushTime := timer.Mean()
 				pullTimer := receiver.GetTimer(serveMetricKey(uri))
-				pullTime := math.MaxFloat64
+				pullTime := receiver.SmallMessageSendTime
 				if pullTimer != nil {
 					pullTime = pullTimer.Mean()
 				}
