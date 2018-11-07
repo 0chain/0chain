@@ -496,16 +496,9 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
 			mc.BroadcastNotarizedBlocks(ctx, pr, r)
 		}
 	}
-	//TODO: need to clear proposed and notarized blocks as well
-	r.Block = nil
-	if !r.IsVRFComplete() {
-		if r.vrfShare != nil {
-			//TODO: send same vrf again?
-			go mc.SendVRFShare(ctx, r.vrfShare)
-		}
-		return
-	}
-	if mc.IsRoundGenerator(r.Round, node.GetSelfNode(ctx).Node) {
-		go mc.GenerateRoundBlock(ctx, r)
+	r.Restart()
+	if r.vrfShare != nil {
+		//TODO: send same vrf again?
+		go mc.SendVRFShare(ctx, r.vrfShare)
 	}
 }
