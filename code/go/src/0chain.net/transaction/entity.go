@@ -70,7 +70,7 @@ func (t *Transaction) ComputeClientID() {
 		if t.ClientID == "" {
 			// Doing this is OK because the transaction signature has ClientID
 			// that won't pass verification if some other client's public is put in
-			co := &client.Client{}
+			co := client.NewClient()
 			co.SetPublicKey(t.PublicKey)
 			t.ClientID = co.ID
 		}
@@ -152,8 +152,7 @@ func (t *Transaction) GetHashBytes() []byte {
 
 /*GetClient - get the Client object associated with the transaction */
 func (t *Transaction) GetClient(ctx context.Context) (*client.Client, error) {
-	co := &client.Client{}
-	err := co.GetClient(ctx, t.ClientID)
+	co, err := client.GetClient(ctx, t.ClientID)
 	if err != nil {
 		return nil, err
 	}
@@ -183,7 +182,7 @@ func (t *Transaction) VerifyHash(ctx context.Context) error {
 /*VerifySignature - verify the transaction hash */
 func (t *Transaction) VerifySignature(ctx context.Context) error {
 	var err error
-	co := datastore.GetEntityMetadata("client").Instance().(*client.Client)
+	co := client.NewClient()
 	if t.PublicKey == "" {
 		co, err = t.GetClient(ctx)
 		if err != nil {

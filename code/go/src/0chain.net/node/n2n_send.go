@@ -436,9 +436,9 @@ func pullEntityHandler(ctx context.Context, nd *Node, uri string, handler datast
 	params := make(map[string]string)
 	params["_puri"] = uri
 	params["id"] = datastore.ToString(entityID)
-	N2n.Info("message pull", zap.String("uri", uri), zap.String("entity", entityName), zap.String("id", entityID))
 	rhandler := pullDataRequestor(params, phandler)
-	rhandler(nd)
+	result := rhandler(nd)
+	N2n.Info("message pull", zap.String("uri", uri), zap.String("entity", entityName), zap.String("id", entityID), zap.Bool("result", result))
 }
 
 var pullDataRequestor EntityRequestor
