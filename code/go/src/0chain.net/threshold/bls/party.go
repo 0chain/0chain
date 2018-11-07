@@ -56,7 +56,7 @@ func (bs *SimpleBLS) RecoverGroupSig(from []PartyID, shares []Sign) Sign {
 		return sig
 	}
 
-	Logger.Info("Recover Gp Sig not done, check party.go")
+	Logger.Debug("Recover Gp Sig not done, check party.go")
 
 	return sig
 

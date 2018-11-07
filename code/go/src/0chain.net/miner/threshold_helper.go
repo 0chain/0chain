@@ -1,4 +1,4 @@
-/* dkg_helper.go has all the glue DKG code */
+/* threshold_helper.go has all the glue DKG and BLS code */
 
 package miner
 
@@ -21,10 +21,6 @@ import (
 	. "0chain.net/logging"
 )
 
-//TODO: Make the values of k and n configurable
-
-var k = 2
-var n = 3
 var dg bls.SimpleDKG
 var bs bls.SimpleBLS
 var recShares []string
@@ -35,9 +31,14 @@ var blsDone bool
 
 // StartDKG - starts the DKG process
 func StartDKG(ctx context.Context) {
+
 	mc := GetMinerChain()
 
 	m2m := mc.Miners
+
+	k := (2 * mc.Miners.Size()) / 3
+	n := mc.Miners.Size()
+
 	Logger.Info("Starting DKG...")
 
 	//TODO : Need to include check for active miners and then send the shares, have to remove sleep in future
@@ -93,76 +94,59 @@ func VerifySigShares() bool {
 
 // CleanupHashMap - Clean up the hash map once the Random Beacon is done for the round
 func CleanupHashMap() {
-	for k := range roundMap {
-		if k <= currRound {
-			Logger.Debug("Remove details for round from roundMap since BLSDone is", zap.Any(":", k))
-			delete(roundMap, k)
+	for key := range roundMap {
+		if key <= currRound {
+			Logger.Debug("Remove details for round from roundMap since BLS is done for the round", zap.Any(":", key))
+			delete(roundMap, key)
 		}
 	}
 }
 
-// StoreBlsShares - Insert the sig shares to hashmap for sync of BLS sig shares if received from future rounds
+// StoreBlsShares - Insert the sig shares to hashmap for sync of BLS sig shares if received for future rounds
 func StoreBlsShares(receivedRound int64, sigShare string, party int) {
 
 	if (receivedRound <= currRound) && blsDone {
-		Logger.Info("blsDone set to true")
-		Logger.Info("Received BLS sign share after blsDone set to true", zap.String("BLS sign share", sigShare))
-		Logger.Info("Received BLS share in the round after blsDone set to true", zap.Int64("BLS round", receivedRound))
-		Logger.Info("Received from party after blsDone set to true", zap.Int(" ", party))
+		Logger.Debug("Received Bls sign share after blsDone set to true", zap.Int64("round", receivedRound), zap.String("sig_share", sigShare), zap.Int("from_party", party))
 		return
 	}
-	Logger.Info("Got the bls sig share for the round XX", zap.Int64(":", receivedRound))
-	Logger.Info("Where the currRound XX", zap.Int64(":", currRound))
-	partyMap, roundExists := roundMap[receivedRound]
+	nodeMap, roundExists := roundMap[receivedRound]
 
 	if !roundExists {
-		partyMap = make(map[int]string)
-		roundMap[receivedRound] = partyMap
+		nodeMap = make(map[int]string)
+		roundMap[receivedRound] = nodeMap
 	}
-
-	_, partyExists := partyMap[party]
+	_, partyExists := nodeMap[party]
 
 	if partyExists {
-		Logger.Info("BLS sign share already exists", zap.String(":", sigShare))
-		Logger.Debug("In the round", zap.Int64(":", receivedRound))
-		Logger.Debug("Where the current round", zap.Int64(":", currRound))
-		Logger.Debug("Sig Share received from party already exists", zap.Int(":", party))
+		Logger.Debug("Bls sign share already exists", zap.Int64("round", receivedRound), zap.String("sig_share", sigShare), zap.Int("from_party", party))
 		return
 	}
 
-	partyMap[party] = sigShare
-	Logger.Info("Inserting BLS sign share", zap.String("BLS sign share", sigShare))
-	Logger.Info("Inserting BLS sign share for the round", zap.Int64("BLS round", receivedRound))
-	Logger.Info("Inserting from party", zap.Int(" ", party))
-
-	Logger.Info("Added in partyMap : and the contents are, ")
-
-	for key, value := range roundMap {
-
-		Logger.Info("The round key is", zap.Int64(":", key))
-		Logger.Info("The value sigshare is", zap.Any(":", value))
-
-	}
-
+	nodeMap[party] = sigShare
 }
 
 // BlsShareReceived - The function used to get the Random Beacon output for the round
 func BlsShareReceived(ctx context.Context, receivedRound int64, sigShare string, party int) {
 
 	if !(currRound == receivedRound || currRound == receivedRound-1) {
-		Logger.Debug(" The receivedRound is ", zap.Int64(":", receivedRound))
-		Logger.Debug(" The currRound is ", zap.Int64(":", currRound))
+		Logger.Debug("Got the bls sign share", zap.Int64("round", receivedRound), zap.Int64("curr_round", currRound))
 		return
 	}
 	StoreBlsShares(receivedRound, sigShare, party)
 
 	recBlsSig, recBlsFrom, gotThreshold := ThresholdNumSigReceived(receivedRound, sigShare, party)
 
+	if blsDone {
+		Logger.Debug("Printing blsDone since rbOutput is done for round check XXX", zap.Any(":", blsDone))
+		return
+	}
+
 	if gotThreshold {
-		vrfOp := CalcRandomBeacon(recBlsSig, recBlsFrom)
-		GetMinerChain().VRFShareChannel <- vrfOp
-		Logger.Info("vrfOp pushed to channel is : ", zap.String("vrfOp is : ", vrfOp), zap.Int64("currRound", currRound))
-		Logger.Info("Printing blsDone since vrfOp is done ", zap.Any(":", blsDone))
+		rbOutput := CalcRandomBeacon(recBlsSig, recBlsFrom)
+		blsDone = true
+		GetMinerChain().VRFShareChannel <- rbOutput
+		Logger.Info("rbOutput pushed to channel is : ", zap.String("rbOutput: ", rbOutput), zap.Int64("curr_Round", currRound))
+		Logger.Debug("Printing blsDone since rbOutput is done ", zap.Any(":", blsDone))
 		CleanupHashMap()
 	}
 }
@@ -170,6 +154,9 @@ func BlsShareReceived(ctx context.Context, receivedRound int64, sigShare string,
 //ThresholdNumSigReceived - Insert BLS sig shares to an array to pass to Gp Sign to compute the Random Beacon Output
 func ThresholdNumSigReceived(receivedRound int64, sigShare string, party int) ([]string, []string, bool) {
 
+	if blsDone && (receivedRound == currRound) {
+		return nil, nil, false
+	}
 	hmap, ok := roundMap[receivedRound]
 
 	recSig := make([]string, 0)
@@ -183,8 +170,6 @@ func ThresholdNumSigReceived(receivedRound int64, sigShare string, party int) ([
 				recFrom = append(recFrom, computeID.GetDecString())
 			}
 			if len(recSig) == dg.T {
-				blsDone = true
-				Logger.Debug("Is the blsDone set to true ??, once k num received", zap.Any(":", blsDone))
 				return recSig, recFrom, true
 			}
 		}
@@ -201,7 +186,7 @@ func AggregateDKGSecShares(recShares []string) error {
 	for i := 0; i < len(recShares); i++ {
 		err := secShares[i].SetDecString(recShares[i])
 		if err != nil {
-			Logger.Error("Aggregation of shares not done", zap.Error(err))
+			Logger.Error("Aggregation of DKG shares not done", zap.Error(err))
 		}
 	}
 	var sec bls.Key
@@ -210,12 +195,12 @@ func AggregateDKGSecShares(recShares []string) error {
 		sec.Add(&secShares[i])
 	}
 	dg.SecKeyShareGroup = sec
-	Logger.Info("the aggregated sec share", zap.String("agg share", dg.SecKeyShareGroup.GetDecString()))
-	Logger.Info("the group public key is", zap.String("gp public key", dg.GpPubKey.GetHexString()))
+	Logger.Info("the aggregated sec share", zap.String("sec_key_share_grp", dg.SecKeyShareGroup.GetDecString()))
+	Logger.Info("the group public key is", zap.String("gp_public_key", dg.GpPubKey.GetHexString()))
 	return nil
 }
 
-// StartBls - Start the BLS process including calculating the BLS signature share
+// StartBls - Start the BLS process
 func StartBls(ctx context.Context, r *round.Round) {
 	self := node.GetSelfNode(ctx)
 	blsDone = false
@@ -223,25 +208,19 @@ func StartBls(ctx context.Context, r *round.Round) {
 	var msg bytes.Buffer
 
 	currRound = r.Number
-	var vrfShares string
+	var rbOutput string
 	if r.GetRoundNumber()-1 == 0 {
 
-		Logger.Info("The corner case for round 1 when pr is nil :", zap.Int64("corner case round 1 ", r.GetRoundNumber()))
-		vrfShares = encryption.Hash("0chain")
+		Logger.Info("The corner case for round 1 when pr is nil :", zap.Int64("round", r.GetRoundNumber()))
+		rbOutput = encryption.Hash("0chain")
 	} else {
-
-		vrfShares = <-GetMinerChain().VRFShareChannel
+		rbOutput = <-GetMinerChain().VRFShareChannel
 	}
 
 	binary.Write(&msg, binary.LittleEndian, r.GetRoundNumber())
-	binary.Write(&msg, binary.LittleEndian, vrfShares)
+	binary.Write(&msg, binary.LittleEndian, rbOutput)
 	bs.Msg = util.ToHex(msg.Bytes())
-
-	Logger.Info("For the round is", zap.Int64("the r.GetRoundNumber() is ", r.GetRoundNumber()))
-	Logger.Info("with the prev vrf share is", zap.Any(":", vrfShares))
-
-	Logger.Info("the msg is", zap.Any("the blsMsg is ", bs.Msg))
-	Logger.Info("the aggregated sec share bls", zap.String("agg share bls", bs.SecKeyShareGroup.GetDecString()))
+	Logger.Info("Bls sign share calculated for ", zap.Int64("round", r.GetRoundNumber()), zap.String("rbo_previous_round", rbOutput), zap.Any("bls_msg", bs.Msg), zap.String("sec_key_share_gp", bs.SecKeyShareGroup.GetDecString()))
 
 	mc := GetMinerChain()
 
@@ -250,35 +229,18 @@ func StartBls(ctx context.Context, r *round.Round) {
 	sigShare := bs.SignMsg()
 
 	bs.SigShare = sigShare
-	Logger.Info("the sig share", zap.Any("bls sig share ", sigShare.GetHexString()))
-
 	currRound = r.Number
-	Logger.Info("The currRound is ", zap.Int64("", currRound))
 
 	_, roundExists := roundMap[currRound]
 
 	if !roundExists {
-		Logger.Info(" The RoundID does not exist when the BLS starts, so adding self share ")
-		partyMap := make(map[int]string)
-		partyMap[self.SetIndex] = sigShare.GetHexString()
-		roundMap[currRound] = partyMap
+		Logger.Debug("No entry found for round when the BLS starts, adding self share")
+		nodeMap := make(map[int]string)
+		nodeMap[self.SetIndex] = sigShare.GetHexString()
+		roundMap[currRound] = nodeMap
 	}
 
-	Logger.Info("Added in roundMap the initial self share ")
-
-	for key, value := range roundMap {
-
-		Logger.Info("The round key is for self share", zap.Int64(":", key))
-		Logger.Info("The value sigshare is for self share", zap.Any(":", value))
-
-	}
-
-	bls := &bls.Bls{
-		BLSsignShare: sigShare.GetHexString(),
-		BLSRound:     currRound}
-	bls.SetKey(datastore.ToKey("1"))
-	m2m.SendAll(BLSSignShareSender(bls))
-
+	BroadCastSig(sigShare.GetHexString(), currRound, m2m)
 	RebroadCastSig(sigShare.GetHexString(), currRound, m2m)
 }
 
@@ -293,12 +255,23 @@ func RebroadCastSig(sig string, curRound int64, m2m *node.Pool) {
 
 }
 
-// CalcRandomBeacon - The function calls the function which calculates the Gp Sign
+// BroadCastSig - Broadcast the bls sign share
+func BroadCastSig(sig string, curRound int64, m2m *node.Pool) {
+
+	bls := &bls.Bls{
+		BLSsignShare: sig,
+		BLSRound:     curRound}
+	bls.SetKey(datastore.ToKey("1"))
+	m2m.SendAll(BLSSignShareSender(bls))
+
+}
+
+// CalcRandomBeacon - Calculates the random beacon output
 func CalcRandomBeacon(recSig []string, recIDs []string) string {
 	Logger.Info("Threshold number of bls sig shares are received ...")
 	CalBlsGpSign(recSig, recIDs)
-	vrfOutput := encryption.Hash(bs.GpSign.GetHexString())
-	return vrfOutput
+	rboOutput := encryption.Hash(bs.GpSign.GetHexString())
+	return rboOutput
 }
 
 // CalBlsGpSign - The function calls the RecoverGroupSig function which calculates the Gp Sign
@@ -325,14 +298,14 @@ func CalBlsGpSign(recSig []string, recIDs []string) {
 			idVec = append(idVec, forID)
 		}
 	}
-	Logger.Info("Printing bls shares and respective party IDs used for computing the Gp Sign")
+	Logger.Info("Printing bls shares and respective party IDs who sent used for computing the Gp Sign")
 
-	for _, element := range signVec {
-		Logger.Info(" Printing bls shares", zap.Any(":", element.GetHexString()))
+	for _, sig := range signVec {
+		Logger.Info(" Printing bls shares", zap.Any("sig_shares", sig.GetHexString()))
 
 	}
-	for _, element1 := range idVec {
-		Logger.Info(" Printing party IDs", zap.Any(":", element1.GetHexString()))
+	for _, fromParty := range idVec {
+		Logger.Info(" Printing party IDs", zap.Any("from_party", fromParty.GetHexString()))
 
 	}
 	bs.RecoverGroupSig(idVec, signVec)

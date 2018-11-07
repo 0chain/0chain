@@ -13,7 +13,7 @@ import (
 type SimpleDKG struct {
 	T                 int
 	N                 int
-	SecKey            Key
+	secKey            Key
 	pubKey            VerificationKey
 	mSec              []Key
 	Vvec              []VerificationKey
@@ -36,7 +36,7 @@ func MakeSimpleDKG(t, n int) SimpleDKG {
 	dkg := SimpleDKG{
 		T:                 t,
 		N:                 n,
-		SecKey:            Key{},
+		secKey:            Key{},
 		pubKey:            VerificationKey{},
 		mSec:              make([]Key, t),
 		Vvec:              make([]VerificationKey, t),
@@ -47,9 +47,9 @@ func MakeSimpleDKG(t, n int) SimpleDKG {
 		ID:                PartyID{},
 	}
 
-	dkg.SecKey.SetByCSPRNG()
-	dkg.pubKey = *(dkg.SecKey.GetPublicKey())
-	dkg.mSec = dkg.SecKey.GetMasterSecretKey(t)
+	dkg.secKey.SetByCSPRNG()
+	dkg.pubKey = *(dkg.secKey.GetPublicKey())
+	dkg.mSec = dkg.secKey.GetMasterSecretKey(t)
 	dkg.Vvec = gobls.GetMasterPublicKey(dkg.mSec)
 	dkg.GpPubKey = dkg.Vvec[0]
 

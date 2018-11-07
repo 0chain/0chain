@@ -17,8 +17,8 @@ type Sign = gobls.Sign
 /*GroupSig - For the Gp Sign*/
 type GroupSig interface{}
 
-/*Party - Interface for BLS*/
-type Party interface {
+/*PartyI - Interface for BLS*/
+type PartyI interface {
 	SignMsg() Sign
 	VerifySign(share Sign) bool
 	RecoverGroupSig(from []PartyID, shares []Sign) Sign
