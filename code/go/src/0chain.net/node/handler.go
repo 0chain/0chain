@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"time"
 
 	. "0chain.net/logging"
@@ -28,9 +29,15 @@ func scale(val int64) float64 {
 	return float64(val) / 1000000.0
 }
 
-//PrintSendStats - print the send statistics to this node
+//PrintSendStats - print the n2n statistics to this node
 func (n *Node) PrintSendStats(w io.Writer) {
-	for uri, timer := range n.TimersByURI {
+	uris := make([]string, 0, len(n.TimersByURI))
+	for uri := range n.TimersByURI {
+		uris = append(uris, uri)
+	}
+	sort.SliceStable(uris, func(i, j int) bool { return uris[i] < uris[j] })
+	for _, uri := range uris {
+		timer := n.TimersByURI[uri]
 		fmt.Fprintf(w, "<tr>")
 		fmt.Fprintf(w, "<td>%v</td>", uri)
 		fmt.Fprintf(w, "<td class='number'>%9d</td>", timer.Count())

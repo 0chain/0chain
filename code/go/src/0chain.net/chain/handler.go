@@ -284,8 +284,8 @@ func InfoWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</table>")
 }
 
-//SendStatsWriter - writes the send stats of all the nodes
-func (c *Chain) SendStatsWriter(w http.ResponseWriter, r *http.Request) {
+//N2NStatsWriter - writes the n2n stats of all the nodes
+func (c *Chain) N2NStatsWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<style>\n")
 	fmt.Fprintf(w, ".number { text-align: right; }\n")
 	fmt.Fprintf(w, "table, td, th { border: 1px solid black; }\n")
