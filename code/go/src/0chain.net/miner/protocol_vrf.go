@@ -4,7 +4,9 @@ import (
 	"context"
 	"math/rand"
 
+	. "0chain.net/logging"
 	"0chain.net/round"
+	"go.uber.org/zap"
 )
 
 //AddVRFShare - implement the interface for the RoundRandomBeacon protocol
@@ -30,7 +32,12 @@ func (mc *Chain) computeVRF(ctx context.Context, mr *Round) {
 }
 
 func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r *Round) {
-	mc.setRandomSeed(ctx, r, rand.New(rand.NewSource(pr.GetRandomSeed())).Int63())
+	//TODO: once the actual VRF comes in, there is no need to rely on the prior value to compute the new value from the shares
+	if mpr := pr.(*Round); mpr.IsVRFComplete() {
+		mc.setRandomSeed(ctx, r, rand.New(rand.NewSource(pr.GetRandomSeed())).Int63())
+	} else {
+		Logger.Error("compute round random seed - no prior value", zap.Int64("round", r.GetRoundNumber()), zap.Int("blocks", len(pr.GetProposedBlocks())))
+	}
 }
 
 func (mc *Chain) setRandomSeed(ctx context.Context, r *Round, seed int64) {

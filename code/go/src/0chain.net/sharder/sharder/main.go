@@ -198,7 +198,6 @@ func initN2NHandlers() {
 	node.SetupN2NHandlers()
 	sharder.SetupM2SReceivers()
 	sharder.SetupM2SResponders()
-	
 	chain.SetupX2MRequestors()
 }
 
@@ -206,11 +205,4 @@ func initWorkers(ctx context.Context) {
 	serverChain := chain.GetServerChain()
 	serverChain.SetupWorkers(ctx)
 	sharder.SetupWorkers(ctx)
-}
-
-/*StartChainHandler - start the chain (for now just clears the state) */
-func StartChainHandler(w http.ResponseWriter, r *http.Request) {
-	sc := sharder.GetSharderChain()
-	sc.Initialize()
-	sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"))
 }

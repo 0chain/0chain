@@ -2,14 +2,13 @@ package miner
 
 import (
 	"context"
-	"sync"
 
 	"0chain.net/block"
 	"0chain.net/chain"
+	"0chain.net/client"
 	"0chain.net/common"
 	"0chain.net/datastore"
 	"0chain.net/memorystore"
-	"0chain.net/node"
 	"0chain.net/round"
 )
 
@@ -36,8 +35,6 @@ func GetMinerChain() *Chain {
 type Chain struct {
 	*chain.Chain
 	BlockMessageChannel chan *BlockMessage
-	roundsMutex         *sync.Mutex
-	rounds              map[int64]*Round
 	DiscoverClients     bool
 }
 
@@ -73,14 +70,13 @@ func (mc *Chain) CreateRound(r *round.Round) *Round {
 
 /*SetLatestFinalizedBlock - Set latest finalized block */
 func (mc *Chain) SetLatestFinalizedBlock(ctx context.Context, b *block.Block) {
-	mc.AddBlock(b)
-	mc.LatestFinalizedBlock = b
-	var r = datastore.GetEntityMetadata("round").Instance().(*round.Round)
-	r.Number = b.Round
-	r.RandomSeed = b.RoundRandomSeed
+	var r = round.NewRound(b.Round)
 	mr := mc.CreateRound(r)
-	mc.AddRound(mr)
+	mr = mc.AddRound(mr).(*Round)
+	mc.SetRandomSeed(mr, b.RoundRandomSeed)
+	mc.AddRoundBlock(mr, b)
 	mc.AddNotarizedBlock(ctx, mr, b)
+	mc.LatestFinalizedBlock = b
 }
 
 func (mc *Chain) deleteTxns(txns []datastore.Entity) error {
@@ -92,21 +88,9 @@ func (mc *Chain) deleteTxns(txns []datastore.Entity) error {
 
 /*SetPreviousBlock - set the previous block */
 func (mc *Chain) SetPreviousBlock(ctx context.Context, r round.RoundI, b *block.Block, pb *block.Block) {
-	if r == nil {
-		mr := mc.GetRound(b.Round)
-		if mr != nil {
-			r = mr
-		} else {
-			nr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
-			nr.Number = b.Round
-			nr.RandomSeed = b.RoundRandomSeed
-			r = nr
-		}
-	}
 	b.SetPreviousBlock(pb)
 	b.RoundRandomSeed = r.GetRandomSeed()
-	bNode := node.GetNode(b.MinerID)
-	b.RoundRank = r.GetMinerRank(bNode)
+	mc.SetRoundRank(r, b)
 	b.ComputeChainWeight()
 }
 
@@ -121,4 +105,32 @@ func (mc *Chain) GetMinerRound(roundNumber int64) *Round {
 		return nil
 	}
 	return mr
+}
+
+/*SaveClients - save clients from the block */
+func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) error {
+	var err error
+	clientKeys := make([]datastore.Key, len(clients))
+	for idx, c := range clients {
+		clientKeys[idx] = c.GetKey()
+	}
+	clientEntityMetadata := datastore.GetEntityMetadata("client")
+	cEntities := datastore.AllocateEntities(len(clients), clientEntityMetadata)
+	ctx = memorystore.WithEntityConnection(common.GetRootContext(), clientEntityMetadata)
+	defer memorystore.Close(ctx)
+	err = clientEntityMetadata.GetStore().MultiRead(ctx, clientEntityMetadata, clientKeys, cEntities)
+	if err != nil {
+		return err
+	}
+	ctx = datastore.WithAsyncChannel(ctx, client.ClientEntityChannel)
+	for idx, c := range clients {
+		if !datastore.IsEmpty(cEntities[idx].GetKey()) {
+			continue
+		}
+		_, cerr := client.PutClient(ctx, c)
+		if cerr != nil {
+			err = cerr
+		}
+	}
+	return err
 }

@@ -20,8 +20,9 @@ func SetupWorkers(ctx context.Context) {
 func (mc *Chain) BlockWorker(ctx context.Context) {
 	var RoundTimeout = 10 * time.Second
 	var protocol Protocol = mc
+	var cround = mc.CurrentRound
+	var roundTimeout = time.NewTicker(RoundTimeout)
 	for true {
-		var roundTimeout = time.NewTimer(RoundTimeout)
 		select {
 		case <-ctx.Done():
 			return
@@ -33,16 +34,12 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 			}
 			switch msg.Type {
 			case MessageVRFShare:
-				roundTimeout.Stop()
 				protocol.HandleVRFShare(ctx, msg)
 			case MessageVerify:
-				roundTimeout.Stop()
 				protocol.HandleVerifyBlockMessage(ctx, msg)
 			case MessageVerificationTicket:
-				roundTimeout.Stop()
 				protocol.HandleVerificationTicketMessage(ctx, msg)
 			case MessageNotarization:
-				roundTimeout.Stop()
 				protocol.HandleNotarizationMessage(ctx, msg)
 			case MessageNotarizedBlock:
 				protocol.HandleNotarizedBlockMessage(ctx, msg)
@@ -53,7 +50,11 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 				Logger.Debug("message (done)", zap.Any("msg", GetMessageLookup(msg.Type)))
 			}
 		case <-roundTimeout.C:
-			protocol.HandleRoundTimeout(ctx)
+			if cround == mc.CurrentRound {
+				protocol.HandleRoundTimeout(ctx)
+			} else {
+				cround = mc.CurrentRound
+			}
 		}
 	}
 }

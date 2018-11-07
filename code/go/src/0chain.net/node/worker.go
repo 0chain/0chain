@@ -64,7 +64,7 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 			if node.IsActive() {
 				if node.ErrorCount > 5 {
 					node.Status = NodeStatusInactive
-					Logger.Error("Node inactive", zap.Any("node_type", node.GetNodeTypeName()), zap.Any("set_index", node.SetIndex), zap.Any("node_id", node.GetKey()), zap.Error(err))
+					Logger.Error("Node inactive", zap.String("node_type", node.GetNodeTypeName()), zap.Int("set_index", node.SetIndex), zap.Any("node_id", node.GetKey()), zap.Error(err))
 				}
 			}
 		} else {
@@ -72,11 +72,12 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 			if !node.IsActive() {
 				node.ErrorCount = 0
 				node.Status = NodeStatusActive
-				Logger.Info("Node active", zap.Any("node_type", node.GetNodeTypeName()), zap.Any("set_index", node.SetIndex), zap.Any("key", node.GetKey()))
+				Logger.Info("Node active", zap.String("node_type", node.GetNodeTypeName()), zap.Int("set_index", node.SetIndex), zap.Any("key", node.GetKey()))
 			}
 			node.LastActiveTime = ts
 		}
 	}
+	np.ComputeNetworkStats()
 }
 
 /*DownloadNodeData - downloads the node definition data for the given pool type from the given node */

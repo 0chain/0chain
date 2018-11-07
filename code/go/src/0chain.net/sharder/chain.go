@@ -20,12 +20,10 @@ func SetupSharderChain(c *chain.Chain) {
 	sharderChain.Chain = c
 	sharderChain.BlockChannel = make(chan *block.Block, 128)
 	sharderChain.RoundChannel = make(chan *round.Round, 128)
-	sharderChain.BlockCache = cache.GetLRUCacheProvider()
 	blockCacheSize := 100
-	sharderChain.BlockCache.New(blockCacheSize)
-	sharderChain.BlockTxnCache = cache.GetLRUCacheProvider()
+	sharderChain.BlockCache = cache.NewLRUCache(blockCacheSize)
 	transactionCacheSize := int(c.BlockSize) * blockCacheSize
-	sharderChain.BlockTxnCache.New(transactionCacheSize)
+	sharderChain.BlockTxnCache = cache.NewLRUCache(transactionCacheSize)
 }
 
 /*GetSharderChain - get the sharder's chain */
@@ -40,6 +38,7 @@ type Chain struct {
 	RoundChannel  chan *round.Round
 	BlockCache    cache.Cache
 	BlockTxnCache cache.Cache
+	SharderStats  Stats
 }
 
 /*GetBlockChannel - get the block channel where the incoming blocks from the network are put into for further processing */

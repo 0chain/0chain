@@ -52,6 +52,7 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	}
 	self := node.GetSelfNode(ctx)
 	if sc.IsBlockSharder(b, self.Node) {
+		sc.SharderStats.ShardedBlocksCount++
 		ts := time.Now()
 		err := blockstore.GetStore().Write(b)
 		duration := time.Since(ts)
@@ -92,19 +93,16 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 		Logger.Error("block validation", zap.Any("round", b.Round), zap.Any("hash", b.Hash), zap.Error(err))
 		return
 	}
-	if sc.AddBlock(b) != b {
-		return
-	}
 	er := sc.GetRound(b.Round)
 	if er == nil {
-		r := datastore.GetEntityMetadata("round").Instance().(*round.Round)
-		r.Number = b.Round
-		r.RandomSeed = b.RoundRandomSeed
-		sc.SetRandomSeed(r, b.RoundRandomSeed)
+		var r = round.NewRound(b.Round)
 		er, _ = sc.AddRound(r).(*round.Round)
+		sc.SetRandomSeed(er, b.RoundRandomSeed)
 	}
-	bNode := node.GetNode(b.MinerID)
-	b.RoundRank = er.GetMinerRank(bNode)
+	if sc.AddRoundBlock(er, b) != b {
+		return
+	}
+	sc.SetRoundRank(er, b)
 	Logger.Info("received block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)))
 	sc.AddNotarizedBlock(ctx, er, b)
 }

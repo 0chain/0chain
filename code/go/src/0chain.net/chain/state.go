@@ -226,9 +226,8 @@ func (c *Chain) getState(clientState util.MerklePatriciaTrieI, clientID string) 
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return nil, err
-		} else {
-			return s, err
 		}
+		return s, err
 	} else {
 		s = c.clientStateDeserializer.Deserialize(ss).(*state.State)
 	}

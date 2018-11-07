@@ -16,10 +16,10 @@ var ErrNodeNotFound = common.NewError("node_not_found", "Requested node is not f
 
 /*Pool - a pool of nodes used for the same purpose */
 type Pool struct {
-	//Mutex &sync.Mutex{}
-	Type     int8
-	Nodes    []*Node
-	NodesMap map[string]*Node
+	Type              int8
+	Nodes             []*Node
+	NodesMap          map[string]*Node
+	medianNetworkTime float64
 }
 
 /*NewPool - create a new node pool of given type */
@@ -169,4 +169,30 @@ func (np *Pool) ComputeProperties() {
 	for _, node := range np.Nodes {
 		RegisterNode(node)
 	}
+}
+
+/*ComputeNetworkStats - compute the median time it takes for sending a large message to everyone in the network pool */
+func (np *Pool) ComputeNetworkStats() {
+	nodes := np.GetNodesByLargeMessageTime()
+	var medianTime float64
+	var count int
+	for _, nd := range nodes {
+		if nd == Self.Node {
+			continue
+		}
+		if !nd.IsActive() {
+			continue
+		}
+		count++
+		if count*2 >= len(nodes) {
+			medianTime = nd.LargeMessageSendTime
+			break
+		}
+	}
+	np.medianNetworkTime = medianTime
+}
+
+/*GetMedianNetworkTime - get the median network time for this pool */
+func (np *Pool) GetMedianNetworkTime() float64 {
+	return np.medianNetworkTime
 }

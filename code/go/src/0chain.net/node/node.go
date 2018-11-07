@@ -74,8 +74,8 @@ type Node struct {
 	TimersByURI map[string]metrics.Timer
 	SizeByURI   map[string]metrics.Histogram
 
-	LargeMessageSendTime float32
-	SmallMessageSendTime float32
+	LargeMessageSendTime float64
+	SmallMessageSendTime float64
 
 	mutex *sync.Mutex
 
@@ -279,24 +279,24 @@ func (n *Node) GetMaxMessageCount() int64 {
 }
 
 //GetLargeMessageSendTime - get the time it takes to send a large message to this node
-func (n *Node) GetLargeMessageSendTime() float32 {
+func (n *Node) GetLargeMessageSendTime() float64 {
 	return n.LargeMessageSendTime / 1000000
 }
 
 //GetSmallMessageSendTime - get the time it takes to send a small message to this node
-func (n *Node) GetSmallMessageSendTime() float32 {
+func (n *Node) GetSmallMessageSendTime() float64 {
 	return n.SmallMessageSendTime / 1000000
 }
 
 func (n *Node) updateMessageTimings() {
 	maxcount := n.GetMaxMessageCount()
-	var minval float32 = math.MaxFloat32
-	var maxval float32
+	var minval = math.MaxFloat64
+	var maxval float64
 	for _, timer := range n.TimersByURI {
 		if timer.Count()*10 < maxcount {
 			continue
 		}
-		v := float32(timer.Mean())
+		v := timer.Mean()
 		if v > maxval {
 			maxval = v
 		}
@@ -316,6 +316,7 @@ func ReadConfig() {
 	SetTimeoutSmallMessage(viper.GetDuration("network.timeout.small_message") * time.Millisecond)
 	SetTimeoutLargeMessage(viper.GetDuration("network.timeout.large_message") * time.Millisecond)
 	SetMaxConcurrentRequests(viper.GetInt("network.max_concurrent_requests"))
+	SetLargeMessageThresholdSize(viper.GetInt("network.large_message_th_size"))
 }
 
 //SetID - set the id of the node

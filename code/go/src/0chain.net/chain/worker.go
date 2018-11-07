@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"0chain.net/cache"
 	. "0chain.net/logging"
 )
 
@@ -53,20 +52,24 @@ func (c *Chain) PruneClientStateWorker(ctx context.Context) {
 
 /*BlockFetchWorker - a worker that fetches the prior missing blocks */
 func (c *Chain) BlockFetchWorker(ctx context.Context) {
-	fblocks := cache.GetLRUCacheProvider()
-	fblocks.New(100)
-	for b := range c.missingLinkBlocks {
-		if b.PrevBlock != nil {
-			continue
-		}
-		pb, err := c.getBlock(ctx, b.PrevHash)
-		if err == nil {
-			b.SetPreviousBlock(pb)
-			continue
-		}
-		if _, err := fblocks.Get(b.PrevHash); err != nil {
-			fblocks.Add(b.PrevHash, true)
-			go c.GetPreviousBlock(ctx, b)
+	for true {
+		select {
+		case b := <-c.blockFetcher.missingLinkBlocks:
+			if b.PrevBlock != nil {
+				continue
+			}
+			pb, err := c.GetBlock(ctx, b.PrevHash)
+			if err == nil {
+				b.SetPreviousBlock(pb)
+				continue
+			}
+			c.blockFetcher.FetchPreviousBlock(ctx, c, b)
+		case bHash := <-c.blockFetcher.missingBlocks:
+			_, err := c.GetBlock(ctx, bHash)
+			if err == nil {
+				continue
+			}
+			c.blockFetcher.FetchBlock(ctx, c, bHash)
 		}
 	}
 }

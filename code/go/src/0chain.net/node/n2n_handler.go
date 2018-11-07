@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"0chain.net/cache"
 	"0chain.net/common"
 	"0chain.net/config"
 	"0chain.net/datastore"
@@ -16,8 +17,9 @@ import (
 )
 
 var (
-	TimeoutSmallMessage = 1000 * time.Millisecond
-	TimeoutLargeMessage = 3000 * time.Millisecond
+	TimeoutSmallMessage   = 1000 * time.Millisecond
+	TimeoutLargeMessage   = 3000 * time.Millisecond
+	LargeMessageThreshold = 10 * 1024
 )
 
 var compDecomp common.CompDe
@@ -35,6 +37,11 @@ func SetTimeoutSmallMessage(ts time.Duration) {
 //SetTimeoutLargeMessage - set the timeout for large message
 func SetTimeoutLargeMessage(ts time.Duration) {
 	TimeoutLargeMessage = ts
+}
+
+//SetLargeMessageThresholdSize - set the size above which it is considered as a large message
+func SetLargeMessageThresholdSize(size int) {
+	LargeMessageThreshold = size
 }
 
 /*SetupN2NHandlers - Setup all the node 2 node communiations*/
@@ -135,15 +142,21 @@ func getHashData(clientID datastore.Key, ts common.Timestamp, key datastore.Key)
 	return clientID + ":" + common.TimeToString(ts) + ":" + key
 }
 
+var NoDataErr = common.NewError("no_data", "No data")
+
 func getRequestEntity(r *http.Request, entityMetadata datastore.EntityMetadata) (datastore.Entity, error) {
 	defer r.Body.Close()
 	var buffer io.Reader = r.Body
-	if r.Header.Get("Content-Encoding") == "snappy" {
+	if r.Header.Get("Content-Encoding") == compDecomp.Encoding() {
 		cbuffer := new(bytes.Buffer)
 		cbuffer.ReadFrom(r.Body)
-		cbytes, err := compDecomp.Decompress(cbuffer.Bytes())
+		cbytes := cbuffer.Bytes()
+		if len(cbytes) == 0 {
+			return nil, NoDataErr
+		}
+		cbytes, err := compDecomp.Decompress(cbytes)
 		if err != nil {
-			N2n.Error("snappy decoding", zap.Any("error", err))
+			N2n.Error("decoding", zap.String("encoding", compDecomp.Encoding()), zap.Error(err))
 			return nil, err
 		}
 		buffer = bytes.NewReader(cbytes)
@@ -151,20 +164,20 @@ func getRequestEntity(r *http.Request, entityMetadata datastore.EntityMetadata) 
 	return getEntity(r.Header.Get(HeaderRequestCODEC), buffer, entityMetadata)
 }
 
-func getResponseEntity(r *http.Response, entityMetadata datastore.EntityMetadata) (datastore.Entity, error) {
-	defer r.Body.Close()
-	var buffer io.Reader = r.Body
-	if r.Header.Get("Content-Encoding") == "snappy" {
+func getResponseEntity(resp *http.Response, entityMetadata datastore.EntityMetadata) (datastore.Entity, error) {
+	defer resp.Body.Close()
+	var buffer io.Reader = resp.Body
+	if resp.Header.Get("Content-Encoding") == compDecomp.Encoding() {
 		cbuffer := new(bytes.Buffer)
-		cbuffer.ReadFrom(r.Body)
+		cbuffer.ReadFrom(resp.Body)
 		cbytes, err := compDecomp.Decompress(cbuffer.Bytes())
 		if err != nil {
-			N2n.Error("snappy decoding", zap.Any("error", err))
+			N2n.Error("decoding", zap.String("encoding", compDecomp.Encoding()), zap.Error(err))
 			return nil, err
 		}
 		buffer = bytes.NewReader(cbytes)
 	}
-	return getEntity(r.Header.Get(HeaderRequestCODEC), buffer, entityMetadata)
+	return getEntity(resp.Header.Get(HeaderRequestCODEC), buffer, entityMetadata)
 }
 
 func getEntity(codec string, reader io.Reader, entityMetadata datastore.EntityMetadata) (datastore.Entity, error) {
@@ -172,13 +185,13 @@ func getEntity(codec string, reader io.Reader, entityMetadata datastore.EntityMe
 	switch codec {
 	case CodecMsgpack:
 		if err := datastore.FromMsgpack(reader, entity.(datastore.Entity)); err != nil {
-			N2n.Error("msgpack decoding", zap.Any("error", err))
+			N2n.Error("msgpack decoding", zap.Error(err))
 			return nil, err
 		}
 		return entity, nil
 	case CodecJSON:
 		if err := datastore.FromJSON(reader, entity.(datastore.Entity)); err != nil {
-			N2n.Error("json decoding", zap.Any("error", err))
+			N2n.Error("json decoding", zap.Error(err))
 			return nil, err
 		}
 		return entity, nil
@@ -199,4 +212,38 @@ func getResponseData(options *SendOptions, entity datastore.Entity) *bytes.Buffe
 		buffer = bytes.NewBuffer(cbytes)
 	}
 	return buffer
+}
+
+func validateChain(sender *Node, r *http.Request) bool {
+	chainID := r.Header.Get(HeaderRequestChainID)
+	if config.GetServerChainID() != chainID {
+		return false
+	}
+	return true
+}
+
+func validateEntityMetadata(sender *Node, r *http.Request) bool {
+	if r.URL.Path == "/v1/n2n/entity_pull/get" {
+		return true
+	}
+	entityName := r.Header.Get(HeaderRequestEntityName)
+	if entityName == "" {
+		N2n.Error("message received - entity name blank", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI))
+		return false
+	}
+	entityMetadata := datastore.GetEntityMetadata(entityName)
+	if entityMetadata == nil {
+		N2n.Error("message received - unknown entity", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI), zap.String("entity", entityName))
+		return false
+	}
+	return true
+}
+
+var pushDataCache = cache.NewLRUCache(100)
+
+//PushDataCacheEntry - cached push data
+type PushDataCacheEntry struct {
+	Options    SendOptions
+	Data       []byte
+	EntityName string
 }
