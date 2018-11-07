@@ -48,12 +48,17 @@ func (mc *Chain) startRound(ctx context.Context, pr *Round, r *Round) {
 		// If we don't have the prior round, and hence the prior round's random seed, we can't provide the share
 		return
 	}
+	mc.addMyVRFShare(ctx, pr, r)
+}
+
+func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
 	vrfs := &round.VRFShare{}
 	vrfs.Round = r.GetRoundNumber()
 	vrfs.Share = node.Self.Node.SetIndex
 	vrfs.SetParty(node.Self.Node)
-	if mc.AddVRFShare(ctx, r, vrfs) {
-		go mc.SendVRFShare(ctx, vrfs)
+	r.vrfShare = vrfs
+	if mc.AddVRFShare(ctx, r, r.vrfShare) {
+		go mc.SendVRFShare(ctx, r.vrfShare)
 	}
 }
 
@@ -494,7 +499,10 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
 	//TODO: need to clear proposed and notarized blocks as well
 	r.Block = nil
 	if !r.IsVRFComplete() {
-		//TODO: send vrf again?
+		if r.vrfShare != nil {
+			//TODO: send same vrf again?
+			go mc.SendVRFShare(ctx, r.vrfShare)
+		}
 		return
 	}
 	if mc.IsRoundGenerator(r.Round, node.GetSelfNode(ctx).Node) {

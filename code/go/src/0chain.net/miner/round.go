@@ -17,6 +17,7 @@ type Round struct {
 	verificationCancelf   context.CancelFunc
 	delta                 time.Duration
 	verificationTickets   map[string]*block.BlockVerificationTicket
+	vrfShare              *round.VRFShare
 }
 
 /*AddBlockToVerify - adds a block to the round. Assumes non-concurrent update */
