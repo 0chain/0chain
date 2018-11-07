@@ -107,7 +107,7 @@ type Chain struct {
 
 	nodePoolScorer node.PoolScorer
 	blockFetcher   *BlockFetcher
-	scStateDB smartcontractstate.SCDB
+	scStateDB      smartcontractstate.SCDB
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
@@ -196,11 +196,7 @@ func Provider() datastore.Entity {
 	c.Sharders = node.NewPool(node.NodeTypeSharder)
 	c.Blobbers = node.NewPool(node.NodeTypeBlobber)
 	c.Stats = &Stats{}
-<<<<<<< HEAD
-
-=======
 	c.blockFetcher = NewBlockFetcher()
->>>>>>> origin/master
 	return c
 }
 
