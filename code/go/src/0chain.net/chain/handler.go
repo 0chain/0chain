@@ -153,7 +153,8 @@ func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 	fmt.Fprintf(w, "<style>\n")
 	fmt.Fprintf(w, ".number { text-align: right; }\n")
 	fmt.Fprintf(w, "table, td, th { border: 1px solid black; }\n")
-	fmt.Fprintf(w, ".inactive { background-color: #eecccc; }\n")
+	fmt.Fprintf(w, ".inactive { background-color: #F44336; }\n")
+	fmt.Fprintf(w, ".warning { background-color: #FFEB3B; }\n")
 	fmt.Fprintf(w, "</style>")
 	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr><td>Set Index</td><td>Node</td><td>Sent</td><td>Send Errors</td><td>Received</td><td>Last Active</td><td>Small Msg Time</td><td>Large Msg Time</td><td>Description</td></tr>")
@@ -164,7 +165,11 @@ func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 		if nd.Status == node.NodeStatusInactive {
 			fmt.Fprintf(w, "<tr class='inactive'>")
 		} else {
-			fmt.Fprintf(w, "<tr>")
+			if c.CurrentRound > c.LatestFinalizedBlock.Round+10 {
+				fmt.Fprintf(w, "<tr class='warning'>")
+			} else {
+				fmt.Fprintf(w, "<tr>")
+			}
 		}
 		fmt.Fprintf(w, "<td>%d", nd.SetIndex)
 		if nd.Type == node.NodeTypeMiner {
@@ -279,8 +284,8 @@ func InfoWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</table>")
 }
 
-//SendStatsWriter - writes the send stats of all the nodes
-func (c *Chain) SendStatsWriter(w http.ResponseWriter, r *http.Request) {
+//N2NStatsWriter - writes the n2n stats of all the nodes
+func (c *Chain) N2NStatsWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<style>\n")
 	fmt.Fprintf(w, ".number { text-align: right; }\n")
 	fmt.Fprintf(w, "table, td, th { border: 1px solid black; }\n")

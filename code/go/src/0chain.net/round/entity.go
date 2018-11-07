@@ -211,10 +211,14 @@ func (r *Round) isFinalized() bool {
 /*Provider - entity provider for client object */
 func Provider() datastore.Entity {
 	r := &Round{}
+	r.initialize()
+	return r
+}
+
+func (r *Round) initialize() {
 	r.notarizedBlocks = make([]*block.Block, 0, 1)
 	r.proposedBlocks = make([]*block.Block, 0, 3)
 	r.shares = make(map[string]*VRFShare)
-	return r
 }
 
 /*Read - read round entity from store */
@@ -283,7 +287,13 @@ func (r *Round) GetMinersByRank(miners *node.Pool) []*node.Node {
 
 //Clear - implement interface
 func (r *Round) Clear() {
+}
 
+//Restart - restart the round
+func (r *Round) Restart() {
+	r.initialize()
+	r.Block = nil
+	r.SetState(RoundShareVRF)
 }
 
 //AddVRFShare - implement interface

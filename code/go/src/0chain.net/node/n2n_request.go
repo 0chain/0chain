@@ -164,7 +164,7 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 				N2n.Error("requesting", zap.Int("from", Self.SetIndex), zap.Int("to", receiver.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName), zap.Any("params", params), zap.Error(err))
 				return false
 			}
-			N2n.Info("requesting", zap.Int("from", Self.SetIndex), zap.Int("to", receiver.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName), zap.Any("id", entity.GetKey()), zap.Any("params", params))
+			N2n.Info("requesting", zap.Int("from", Self.SetIndex), zap.Int("to", receiver.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName), zap.Any("id", entity.GetKey()), zap.Any("params", params), zap.String("codec", resp.Header.Get(HeaderRequestCODEC)))
 
 			entity.ComputeProperties()
 			ctx = context.TODO()
@@ -236,7 +236,6 @@ func ToN2NSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 				w.Header().Set(HeaderRequestCODEC, CodecMsgpack)
 			}
 			w.Header().Set(HeaderRequestEntityName, v.EntityName)
-			N2n.Info("serving cached entity", zap.String("entity", v.EntityName), zap.Int("data", len(v.Data)))
 			buffer = bytes.NewBuffer(v.Data)
 			uri = r.FormValue("_puri")
 		}
@@ -258,7 +257,7 @@ func ToN2NSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 		timer.UpdateSince(ts)
 		sizer := sender.GetSizeMetric(mkey)
 		sizer.Update(int64(len(sdata)))
-		N2n.Info("message received", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI), zap.Duration("duration", time.Since(ts)))
+		N2n.Info("message received", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI), zap.Duration("duration", time.Since(ts)), zap.Int("codec", options.CODEC))
 	}
 }
 

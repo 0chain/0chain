@@ -170,8 +170,6 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 		}
 		return func(receiver *Node) bool {
 			timer := receiver.GetTimer(uri)
-			sizer := receiver.GetSizeMetric(uri)
-			sizer.Update(int64(len(data)))
 			url := receiver.GetN2NURLBase() + uri
 			var buffer *bytes.Buffer
 			push := true
@@ -216,6 +214,8 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			receiver.Release()
 			if push {
 				timer.UpdateSince(ts)
+				sizer := receiver.GetSizeMetric(uri)
+				sizer.Update(int64(len(data)))
 			}
 			N2n.Info("sending", zap.Int("from", Self.SetIndex), zap.Int("to", receiver.SetIndex), zap.String("handler", uri), zap.Duration("duration", time.Since(ts)), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()))
 
@@ -436,9 +436,9 @@ func pullEntityHandler(ctx context.Context, nd *Node, uri string, handler datast
 	params := make(map[string]string)
 	params["_puri"] = uri
 	params["id"] = datastore.ToString(entityID)
-	N2n.Info("message pull", zap.String("uri", uri), zap.String("entity", entityName), zap.String("id", entityID))
 	rhandler := pullDataRequestor(params, phandler)
-	rhandler(nd)
+	result := rhandler(nd)
+	N2n.Info("message pull", zap.String("uri", uri), zap.String("entity", entityName), zap.String("id", entityID), zap.Bool("result", result))
 }
 
 var pullDataRequestor EntityRequestor
