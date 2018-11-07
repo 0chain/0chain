@@ -164,12 +164,12 @@ func getRequestEntity(r *http.Request, entityMetadata datastore.EntityMetadata) 
 	return getEntity(r.Header.Get(HeaderRequestCODEC), buffer, entityMetadata)
 }
 
-func getResponseEntity(r *http.Response, entityMetadata datastore.EntityMetadata) (datastore.Entity, error) {
-	defer r.Body.Close()
-	var buffer io.Reader = r.Body
-	if r.Header.Get("Content-Encoding") == compDecomp.Encoding() {
+func getResponseEntity(resp *http.Response, entityMetadata datastore.EntityMetadata) (datastore.Entity, error) {
+	defer resp.Body.Close()
+	var buffer io.Reader = resp.Body
+	if resp.Header.Get("Content-Encoding") == compDecomp.Encoding() {
 		cbuffer := new(bytes.Buffer)
-		cbuffer.ReadFrom(r.Body)
+		cbuffer.ReadFrom(resp.Body)
 		cbytes, err := compDecomp.Decompress(cbuffer.Bytes())
 		if err != nil {
 			N2n.Error("decoding", zap.String("encoding", compDecomp.Encoding()), zap.Error(err))
@@ -177,7 +177,7 @@ func getResponseEntity(r *http.Response, entityMetadata datastore.EntityMetadata
 		}
 		buffer = bytes.NewReader(cbytes)
 	}
-	return getEntity(r.Header.Get(HeaderRequestCODEC), buffer, entityMetadata)
+	return getEntity(resp.Header.Get(HeaderRequestCODEC), buffer, entityMetadata)
 }
 
 func getEntity(codec string, reader io.Reader, entityMetadata datastore.EntityMetadata) (datastore.Entity, error) {
