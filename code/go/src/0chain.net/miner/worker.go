@@ -51,7 +51,6 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 			}
 		case <-roundTimeout.C:
 			if cround == mc.CurrentRound {
-				Logger.Error("block worker - round timeout", zap.Int64("round", mc.CurrentRound))
 				protocol.HandleRoundTimeout(ctx)
 			} else {
 				cround = mc.CurrentRound

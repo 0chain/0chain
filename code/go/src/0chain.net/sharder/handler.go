@@ -9,6 +9,7 @@ import (
 
 	"0chain.net/config"
 	"0chain.net/datastore"
+	"0chain.net/node"
 	"0chain.net/persistencestore"
 
 	"0chain.net/block"
@@ -88,6 +89,10 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	c := sc.Chain
 	w.Header().Set("Content-Type", "text/html")
 	diagnostics.WriteStatisticsCSS(w)
+
+	self := node.Self.Node
+	fmt.Fprintf(w, "<div>%v - %v</div>", self.GetPseudoName(), self.Description)
+
 	diagnostics.WriteConfiguration(w, c)
 	fmt.Fprintf(w, "<table><tr><td colspan='2'><h2>Summary</h2></td></tr>")
 	fmt.Fprintf(w, "<tr><td>Sharded Blocks</td><td class='number'>%v</td>", sc.SharderStats.ShardedBlocksCount)

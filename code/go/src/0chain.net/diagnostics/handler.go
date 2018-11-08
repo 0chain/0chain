@@ -18,7 +18,7 @@ func SetupHandlers() {
 	http.HandleFunc("/_diagnostics/n2n_logs", logging.N2NLogWriter)
 	http.HandleFunc("/_diagnostics/mem_usage_logs", logging.MemLogWriter)
 	sc := chain.GetServerChain()
-	http.HandleFunc("/_diagnostics/n2n/info", sc.SendStatsWriter)
+	http.HandleFunc("/_diagnostics/n2n/info", sc.N2NStatsWriter)
 	http.HandleFunc("/_diagnostics/miner_stats", sc.MinerStatsHandler)
 	http.HandleFunc("/_diagnostics/block_chain", sc.WIPBlockChainHandler)
 }

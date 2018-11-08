@@ -365,7 +365,6 @@ func (b *Block) GetBlockState() int8 {
 
 /*GetClients - get all the clients of this block */
 func (b *Block) GetClients() []*client.Client {
-	clientMetadataProvider := datastore.GetEntityMetadata("client")
 	cmap := make(map[string]*client.Client)
 	for _, t := range b.Txns {
 		if t.PublicKey == "" {
@@ -374,7 +373,7 @@ func (b *Block) GetClients() []*client.Client {
 		if _, ok := cmap[t.PublicKey]; ok {
 			continue
 		}
-		c := clientMetadataProvider.Instance().(*client.Client)
+		c := client.NewClient()
 		c.SetPublicKey(t.PublicKey)
 		cmap[t.PublicKey] = c
 		t.PublicKey = ""

@@ -19,7 +19,7 @@ type Pool struct {
 	Type              int8
 	Nodes             []*Node
 	NodesMap          map[string]*Node
-	medianNetworkTime float32
+	medianNetworkTime float64
 }
 
 /*NewPool - create a new node pool of given type */
@@ -174,7 +174,7 @@ func (np *Pool) ComputeProperties() {
 /*ComputeNetworkStats - compute the median time it takes for sending a large message to everyone in the network pool */
 func (np *Pool) ComputeNetworkStats() {
 	nodes := np.GetNodesByLargeMessageTime()
-	var medianTime float32
+	var medianTime float64
 	var count int
 	for _, nd := range nodes {
 		if nd == Self.Node {
@@ -193,6 +193,6 @@ func (np *Pool) ComputeNetworkStats() {
 }
 
 /*GetMedianNetworkTime - get the median network time for this pool */
-func (np *Pool) GetMedianNetworkTime() float32 {
+func (np *Pool) GetMedianNetworkTime() float64 {
 	return np.medianNetworkTime
 }

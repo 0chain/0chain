@@ -48,12 +48,17 @@ func (mc *Chain) startRound(ctx context.Context, pr *Round, r *Round) {
 		// If we don't have the prior round, and hence the prior round's random seed, we can't provide the share
 		return
 	}
+	mc.addMyVRFShare(ctx, pr, r)
+}
+
+func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
 	vrfs := &round.VRFShare{}
 	vrfs.Round = r.GetRoundNumber()
 	vrfs.Share = node.Self.Node.SetIndex
 	vrfs.SetParty(node.Self.Node)
-	if mc.AddVRFShare(ctx, r, vrfs) {
-		go mc.SendVRFShare(ctx, vrfs)
+	r.vrfShare = vrfs
+	if mc.AddVRFShare(ctx, r, r.vrfShare) {
+		go mc.SendVRFShare(ctx, r.vrfShare)
 	}
 }
 
@@ -81,7 +86,7 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) *block.Block {
 	bnb := r.GetHeaviestNotarizedBlock()
 	if bnb == nil {
-		Logger.Error("get block to extend - no notarized block", zap.Int64("round", r.GetRoundNumber()))
+		Logger.Error("get block to extend - no notarized block", zap.Int64("round", r.GetRoundNumber()), zap.Int("proposed_blocks", len(r.GetProposedBlocks())))
 		bnb = mc.GetHeaviestNotarizedBlock(r)
 	}
 	if bnb != nil {
@@ -246,11 +251,11 @@ func (mc *Chain) computeBlockProposalDynamicWaitTime(r round.RoundI) time.Durati
 	generators := mc.GetGenerators(r)
 	for _, g := range generators {
 		if g.LargeMessageSendTime < medianTime {
-			return time.Duration(int64(math.Round(float64(g.LargeMessageSendTime)/1000000))) * time.Millisecond
+			return time.Duration(int64(math.Round(g.LargeMessageSendTime)/1000000)) * time.Millisecond
 		}
 	}
 	/*
-		medianTimeMS := time.Duration(int64(math.Round(float64(medianTime)/1000000))) * time.Millisecond
+		medianTimeMS := time.Duration(int64(math.Round(medianTime)/1000000)) * time.Millisecond
 		if medianTimeMS > mc.BlockProposalMaxWaitTime {
 			return medianTimeMS
 		}*/
@@ -477,13 +482,14 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*bloc
 
 /*HandleRoundTimeout - handles the timeout of a round*/
 func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
-	if mc.CurrentRound <= 1 {
-		if !mc.CanStartNetwork() {
-			return
-		}
+	if mc.CurrentRound == 0 {
+		return
 	}
 	Logger.Error("round timeout occured", zap.Any("round", mc.CurrentRound))
 	mc.RoundTimeoutsCount++
+	if !mc.CanStartNetwork() {
+		return
+	}
 	r := mc.GetMinerRound(mc.CurrentRound)
 	if r.GetRoundNumber() > 1 {
 		pr := mc.GetMinerRound(r.GetRoundNumber() - 1)
@@ -491,13 +497,9 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
 			mc.BroadcastNotarizedBlocks(ctx, pr, r)
 		}
 	}
-	//TODO: need to clear proposed and notarized blocks as well
-	r.Block = nil
-	if !r.IsVRFComplete() {
-		//TODO: send vrf again?
-		return
-	}
-	if mc.IsRoundGenerator(r.Round, node.GetSelfNode(ctx).Node) {
-		go mc.GenerateRoundBlock(ctx, r)
+	r.Restart()
+	if r.vrfShare != nil {
+		//TODO: send same vrf again?
+		go mc.SendVRFShare(ctx, r.vrfShare)
 	}
 }
