@@ -423,7 +423,6 @@ func pullEntityHandler(ctx context.Context, nd *Node, uri string, handler datast
 			return entity, nil
 		}
 		start := time.Now()
-		handler(ctx, entity)
 		_, err := handler(ctx, entity)
 		duration := time.Since(start)
 		if err != nil {
