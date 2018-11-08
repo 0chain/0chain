@@ -345,3 +345,8 @@ func serveMetricKey(uri string) string {
 func isPullRequest(uri string) bool {
 	return strings.HasPrefix(uri, "p?")
 }
+
+//GetPseudoName - create a pseudo name that is unique in the current active set
+func (n *Node) GetPseudoName() string {
+	return fmt.Sprintf("%v%.3d", n.GetNodeTypeName(), n.SetIndex)
+}

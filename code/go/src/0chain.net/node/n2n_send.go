@@ -7,7 +7,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"net/http/httptrace"
 	"strconv"
 	"strings"
 	"time"
@@ -144,14 +143,6 @@ func (np *Pool) sendOne(handler SendHandler, nodes []*Node) *Node {
 		}
 	}
 	return nil
-}
-
-var n2nTrace = &httptrace.ClientTrace{}
-
-func init() {
-	n2nTrace.GotConn = func(connInfo httptrace.GotConnInfo) {
-		fmt.Printf("GOT conn: %+v\n", connInfo)
-	}
 }
 
 func shouldPush(receiver *Node, uri string, entity datastore.Entity, timer metrics.Timer) bool {
