@@ -292,7 +292,10 @@ func (n *Node) updateMessageTimings() {
 	maxcount := n.GetMaxMessageCount()
 	var minval = math.MaxFloat64
 	var maxval float64
-	for _, timer := range n.TimersByURI {
+	for uri, timer := range n.TimersByURI {
+		if isPullRequest(uri) {
+			continue
+		}
 		if timer.Count()*10 < maxcount {
 			continue
 		}
@@ -333,4 +336,12 @@ func (n *Node) SetID(id string) error {
 //IsActive - returns if this node is active or not
 func (n *Node) IsActive() bool {
 	return n.Status == NodeStatusActive
+}
+
+func serveMetricKey(uri string) string {
+	return "p?" + uri
+}
+
+func isPullRequest(uri string) bool {
+	return strings.HasPrefix(uri, "p?")
 }
