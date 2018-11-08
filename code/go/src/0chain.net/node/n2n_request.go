@@ -165,12 +165,10 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 				return false
 			}
 			N2n.Info("requesting", zap.Int("from", Self.SetIndex), zap.Int("to", receiver.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName), zap.Any("id", entity.GetKey()), zap.Any("params", params), zap.String("codec", resp.Header.Get(HeaderRequestCODEC)))
-
-			entity.ComputeProperties()
-			ctx = context.TODO()
 			if delay > 0 {
 				N2n.Debug("response received", zap.Int("from", receiver.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", uri), zap.String("entity", eName), zap.Any("params", params), zap.Any("delay", delay))
 			}
+			ctx = context.TODO()
 			_, err = handler(ctx, entity)
 			if err != nil {
 				N2n.Error("requesting", zap.Int("from", Self.SetIndex), zap.Int("to", receiver.SetIndex), zap.Duration("duration", time.Since(ts)), zap.String("handler", uri), zap.String("entity", entityMetadata.GetName()), zap.Any("params", params), zap.Error(err))
