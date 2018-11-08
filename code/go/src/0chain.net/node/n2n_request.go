@@ -260,7 +260,3 @@ func ToN2NSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 		N2n.Info("message received", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI), zap.Duration("duration", time.Since(ts)), zap.Int("codec", options.CODEC))
 	}
 }
-
-func serveMetricKey(uri string) string {
-	return "p?" + uri
-}
