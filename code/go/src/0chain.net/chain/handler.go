@@ -298,7 +298,7 @@ func (c *Chain) N2NStatsWriter(w http.ResponseWriter, r *http.Request) {
 		if n == node.Self.Node {
 			continue
 		}
-		fmt.Fprintf(w, "<tr><th colspan='8'>%s</th></tr>", fmt.Sprintf("%v%.3d", n.GetNodeTypeName(), n.SetIndex))
+		fmt.Fprintf(w, "<tr><th colspan='8'>%s - %s</th></tr>", fmt.Sprintf("%v%.3d", n.GetNodeTypeName(), n.SetIndex), n.Description)
 		n.PrintSendStats(w)
 	}
 
@@ -306,7 +306,7 @@ func (c *Chain) N2NStatsWriter(w http.ResponseWriter, r *http.Request) {
 		if n == node.Self.Node {
 			continue
 		}
-		fmt.Fprintf(w, "<tr><th colspan='8'>%s</th></tr>", fmt.Sprintf("%v%.3d", n.GetNodeTypeName(), n.SetIndex))
+		fmt.Fprintf(w, "<tr><th colspan='8'>%s - %s</th></tr>", fmt.Sprintf("%v%.3d", n.GetNodeTypeName(), n.SetIndex), n.Description)
 		n.PrintSendStats(w)
 	}
 	fmt.Fprintf(w, "</table>")
