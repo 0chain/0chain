@@ -4,9 +4,11 @@ package miner
 
 import (
 	"context"
-	"encoding/binary"
+	"math"
+	"strconv"
 	"time"
 
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 
 	"0chain.net/datastore"
@@ -14,9 +16,6 @@ import (
 	"0chain.net/node"
 	"0chain.net/round"
 	"0chain.net/threshold/bls"
-	"0chain.net/util"
-
-	"bytes"
 
 	. "0chain.net/logging"
 )
@@ -36,7 +35,9 @@ func StartDKG(ctx context.Context) {
 
 	m2m := mc.Miners
 
-	k := (2 * mc.Miners.Size()) / 3
+	thresholdByCount := viper.GetInt("server_chain.block.consensus.threshold_by_count")
+	k := int(math.Ceil((float64(thresholdByCount) / 100) * float64(mc.Miners.Size())))
+
 	n := mc.Miners.Size()
 
 	Logger.Info("Starting DKG...")
@@ -145,7 +146,7 @@ func BlsShareReceived(ctx context.Context, receivedRound int64, sigShare string,
 		rbOutput := CalcRandomBeacon(recBlsSig, recBlsFrom)
 		blsDone = true
 		GetMinerChain().VRFShareChannel <- rbOutput
-		Logger.Info("rbOutput pushed to channel is : ", zap.String("rbOutput: ", rbOutput), zap.Int64("curr_Round", currRound))
+		Logger.Debug("rbOutput pushed to channel is : ", zap.String("rbOutput: ", rbOutput), zap.Int64("curr_Round", currRound))
 		Logger.Debug("Printing blsDone since rbOutput is done ", zap.Any(":", blsDone))
 		CleanupHashMap()
 	}
@@ -205,7 +206,6 @@ func StartBls(ctx context.Context, r *round.Round) {
 	self := node.GetSelfNode(ctx)
 	blsDone = false
 	bs = bls.MakeSimpleBLS(&dg)
-	var msg bytes.Buffer
 
 	currRound = r.Number
 	var rbOutput string
@@ -217,9 +217,8 @@ func StartBls(ctx context.Context, r *round.Round) {
 		rbOutput = <-GetMinerChain().VRFShareChannel
 	}
 
-	binary.Write(&msg, binary.LittleEndian, r.GetRoundNumber())
-	binary.Write(&msg, binary.LittleEndian, rbOutput)
-	bs.Msg = util.ToHex(msg.Bytes())
+	bs.Msg = strconv.FormatInt(r.GetRoundNumber(), 10) + rbOutput
+
 	Logger.Info("Bls sign share calculated for ", zap.Int64("round", r.GetRoundNumber()), zap.String("rbo_previous_round", rbOutput), zap.Any("bls_msg", bs.Msg), zap.String("sec_key_share_gp", bs.SecKeyShareGroup.GetDecString()))
 
 	mc := GetMinerChain()
