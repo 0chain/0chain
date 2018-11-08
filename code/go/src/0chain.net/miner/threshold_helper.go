@@ -146,7 +146,7 @@ func BlsShareReceived(ctx context.Context, receivedRound int64, sigShare string,
 		rbOutput := CalcRandomBeacon(recBlsSig, recBlsFrom)
 		blsDone = true
 		GetMinerChain().VRFShareChannel <- rbOutput
-		Logger.Debug("rbOutput pushed to channel is : ", zap.String("rbOutput: ", rbOutput), zap.Int64("curr_Round", currRound))
+		Logger.Info("Random Beacon Output", zap.String("rbOutput: ", rbOutput), zap.Int64("curr_Round", currRound))
 		Logger.Debug("Printing blsDone since rbOutput is done ", zap.Any(":", blsDone))
 		CleanupHashMap()
 	}
