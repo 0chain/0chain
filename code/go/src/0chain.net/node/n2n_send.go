@@ -384,7 +384,6 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 			N2n.Error("message received - entity id doesn't match with signed id", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI), zap.String("entity_id", entityID), zap.String("entity.id", entity.GetKey()))
 			return
 		}
-		entity.ComputeProperties()
 		delay := common.InduceDelay()
 		if delay > 0 {
 			N2n.Debug("message received", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI), zap.String("entity", entityName), zap.Any("id", entityID), zap.Any("delay", delay))
