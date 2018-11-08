@@ -16,6 +16,7 @@ import (
 	"0chain.net/datastore"
 	"0chain.net/encryption"
 	. "0chain.net/logging"
+	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
 
@@ -153,6 +154,32 @@ func init() {
 	}
 }
 
+func shouldPush(receiver *Node, uri string, entity datastore.Entity, timer metrics.Timer) bool {
+	if timer.Count() < 50 {
+		return true
+	}
+	pushTime := timer.Mean()
+	pullSendTimer := receiver.GetTimer(serveMetricKey(uri))
+	pullSendTime := receiver.SmallMessageSendTime
+	if pullSendTimer != nil {
+		pullSendTime = pullSendTimer.Mean()
+	}
+	pullRequestTimer := receiver.GetTimer(pullURL)
+	pullRequestTime := 0.0
+	if pullRequestTimer != nil {
+		pullRequestTime = pullRequestTimer.Mean()
+	}
+	pullTime := pullRequestTime
+	if pullTime < pullSendTime {
+		pullTime = pullSendTime
+	}
+	if pushTime > pullTime+2*receiver.SmallMessageSendTime {
+		N2n.Info("sending - push to pull", zap.Int("from", Self.SetIndex), zap.Int("to", receiver.SetIndex), zap.String("handler", uri), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.String("id", entity.GetKey()))
+		return false
+	}
+	return true
+}
+
 /*SendEntityHandler provides a client API to send an entity */
 func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 	timeout := 500 * time.Millisecond
@@ -172,23 +199,13 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			timer := receiver.GetTimer(uri)
 			url := receiver.GetN2NURLBase() + uri
 			var buffer *bytes.Buffer
-			push := true
-			if toPull {
-				pushTime := timer.Mean()
-				pullTimer := receiver.GetTimer(serveMetricKey(uri))
-				pullTime := receiver.SmallMessageSendTime
-				if pullTimer != nil {
-					pullTime = pullTimer.Mean()
-				}
-				if pushTime > pullTime+2*receiver.SmallMessageSendTime {
-					N2n.Info("sending - push to pull", zap.Int("from", Self.SetIndex), zap.Int("to", receiver.SetIndex), zap.String("handler", uri), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.String("id", entity.GetKey()))
-					buffer = bytes.NewBuffer(nil)
-					push = false
-				}
-			}
+			push := !toPull || shouldPush(receiver, uri, entity, timer)
 			if push {
 				buffer = bytes.NewBuffer(data)
+			} else {
+				buffer = bytes.NewBuffer(nil)
 			}
+
 			req, err := http.NewRequest("POST", url, buffer)
 			if err != nil {
 				return false
@@ -442,9 +459,10 @@ func pullEntityHandler(ctx context.Context, nd *Node, uri string, handler datast
 
 var pullDataRequestor EntityRequestor
 
-func init() {
-	http.HandleFunc("/v1/n2n/entity_pull/get", ToN2NSendEntityHandler(PushToPullHandler))
+var pullURL = "/v1/n2n/entity_pull/get"
 
+func init() {
+	http.HandleFunc(pullURL, ToN2NSendEntityHandler(PushToPullHandler))
 	options := &SendOptions{Timeout: TimeoutLargeMessage, CODEC: CODEC_MSGPACK, Compress: true}
-	pullDataRequestor = RequestEntityHandler("/v1/n2n/entity_pull/get", options, nil)
+	pullDataRequestor = RequestEntityHandler(pullURL, options, nil)
 }
