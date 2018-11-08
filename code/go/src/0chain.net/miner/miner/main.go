@@ -74,7 +74,7 @@ func main() {
 	mc := miner.GetMinerChain()
 	mc.DiscoverClients = viper.GetBool("server_chain.client.discover")
 	mc.SetGenerationTimeout(viper.GetInt("server_chain.block.generation.timeout"))
-	mc.SetTxnWaitTime(viper.GetInt("server_chain.block.generation.transaction_wait_time"))
+	mc.SetRetryWaitTime(viper.GetInt("server_chain.block.generation.retry_wait_time"))
 	chain.SetServerChain(serverChain)
 
 	miner.SetNetworkRelayTime(viper.GetDuration("network.relay_time") * time.Millisecond)

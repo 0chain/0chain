@@ -109,8 +109,8 @@ type Chain struct {
 	GenerateTimeout int `json:"-"`
 	genTimeoutMutex *sync.Mutex
 
-	txn_wait_time  int
-	txn_wait_mutex *sync.Mutex
+	retry_wait_time  int
+	retry_wait_mutex *sync.Mutex
 
 	blockFetcher *BlockFetcher
 }
@@ -193,7 +193,7 @@ func Provider() datastore.Entity {
 	c.rounds = make(map[int64]round.RoundI)
 	c.roundsMutex = &sync.RWMutex{}
 
-	c.txn_wait_mutex = &sync.Mutex{}
+	c.retry_wait_mutex = &sync.Mutex{}
 	c.genTimeoutMutex = &sync.Mutex{}
 	c.stateMutex = &sync.Mutex{}
 	c.stakeMutex = &sync.Mutex{}
@@ -618,14 +618,14 @@ func (c *Chain) GetGenerationTimeout() int {
 	return c.GenerateTimeout
 }
 
-func (c *Chain) GetTxnWaitTime() int {
-	c.txn_wait_mutex.Lock()
-	defer c.txn_wait_mutex.Unlock()
-	return c.txn_wait_time
+func (c *Chain) GetRetryWaitTime() int {
+	c.retry_wait_mutex.Lock()
+	defer c.retry_wait_mutex.Unlock()
+	return c.retry_wait_time
 }
 
-func (c *Chain) SetTxnWaitTime(newWaitTime int) {
-	c.txn_wait_mutex.Lock()
-	defer c.txn_wait_mutex.Unlock()
-	c.txn_wait_time = newWaitTime
+func (c *Chain) SetRetryWaitTime(newWaitTime int) {
+	c.retry_wait_mutex.Lock()
+	defer c.retry_wait_mutex.Unlock()
+	c.retry_wait_time = newWaitTime
 }
