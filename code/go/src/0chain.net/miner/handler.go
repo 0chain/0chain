@@ -7,6 +7,7 @@ import (
 	"0chain.net/chain"
 	"0chain.net/config"
 	"0chain.net/diagnostics"
+	"0chain.net/node"
 )
 
 /*SetupHandlers - setup miner handlers */
@@ -19,6 +20,10 @@ func ChainStatsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 	c := GetMinerChain().Chain
 	diagnostics.WriteStatisticsCSS(w)
+
+	self := node.Self.Node
+	fmt.Fprintf(w, "<div>%v - %v</div>", self.GetPseudoName(), self.Description)
+
 	diagnostics.WriteConfiguration(w, c)
 	fmt.Fprintf(w, "<table>")
 	fmt.Fprintf(w, "<tr><td>")

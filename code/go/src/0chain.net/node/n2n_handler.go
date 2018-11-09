@@ -3,9 +3,11 @@ package node
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
+	"net/http/httptrace"
 	"time"
 
 	"0chain.net/cache"
@@ -99,10 +101,12 @@ type ReceiveOptions struct {
 	MessageFilter MessageFilterI
 }
 
-var transport *http.Transport
 var httpClient *http.Client
 
+var n2nTrace = &httptrace.ClientTrace{}
+
 func init() {
+	var transport *http.Transport
 	transport = &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 		DialContext: (&net.Dialer{
@@ -117,6 +121,10 @@ func init() {
 		MaxIdleConnsPerHost:   5,
 	}
 	httpClient = &http.Client{Transport: transport}
+
+	n2nTrace.GotConn = func(connInfo httptrace.GotConnInfo) {
+		fmt.Printf("GOT conn: %+v\n", connInfo)
+	}
 }
 
 /*SENDER - key used to get the connection object from the context */

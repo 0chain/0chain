@@ -7,7 +7,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"net/http/httptrace"
 	"strconv"
 	"strings"
 	"time"
@@ -16,6 +15,7 @@ import (
 	"0chain.net/datastore"
 	"0chain.net/encryption"
 	. "0chain.net/logging"
+	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
 
@@ -145,12 +145,30 @@ func (np *Pool) sendOne(handler SendHandler, nodes []*Node) *Node {
 	return nil
 }
 
-var n2nTrace = &httptrace.ClientTrace{}
-
-func init() {
-	n2nTrace.GotConn = func(connInfo httptrace.GotConnInfo) {
-		fmt.Printf("GOT conn: %+v\n", connInfo)
+func shouldPush(receiver *Node, uri string, entity datastore.Entity, timer metrics.Timer) bool {
+	if timer.Count() < 50 {
+		return true
 	}
+	pushTime := timer.Mean()
+	pullSendTimer := receiver.GetTimer(serveMetricKey(uri))
+	pullSendTime := receiver.SmallMessageSendTime
+	if pullSendTimer != nil && pullSendTimer.Count() >= 50 {
+		pullSendTime = pullSendTimer.Mean()
+	}
+	pullRequestTimer := receiver.GetTimer(pullURL)
+	pullRequestTime := receiver.SmallMessageSendTime
+	if pullRequestTimer != nil && pullRequestTimer.Count() >= 50 {
+		pullRequestTime = pullRequestTimer.Mean()
+	}
+	pullTime := pullRequestTime
+	if pullTime < pullSendTime {
+		pullTime = pullSendTime
+	}
+	if pushTime > pullTime+2*receiver.SmallMessageSendTime {
+		N2n.Info("sending - push to pull", zap.Int("from", Self.SetIndex), zap.Int("to", receiver.SetIndex), zap.String("handler", uri), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.String("id", entity.GetKey()))
+		return false
+	}
+	return true
 }
 
 /*SendEntityHandler provides a client API to send an entity */
@@ -172,23 +190,13 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			timer := receiver.GetTimer(uri)
 			url := receiver.GetN2NURLBase() + uri
 			var buffer *bytes.Buffer
-			push := true
-			if toPull {
-				pushTime := timer.Mean()
-				pullTimer := receiver.GetTimer(serveMetricKey(uri))
-				pullTime := receiver.SmallMessageSendTime
-				if pullTimer != nil {
-					pullTime = pullTimer.Mean()
-				}
-				if pushTime > pullTime+2*receiver.SmallMessageSendTime {
-					N2n.Info("sending - push to pull", zap.Int("from", Self.SetIndex), zap.Int("to", receiver.SetIndex), zap.String("handler", uri), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.String("id", entity.GetKey()))
-					buffer = bytes.NewBuffer(nil)
-					push = false
-				}
-			}
+			push := !toPull || shouldPush(receiver, uri, entity, timer)
 			if push {
 				buffer = bytes.NewBuffer(data)
+			} else {
+				buffer = bytes.NewBuffer(nil)
 			}
+
 			req, err := http.NewRequest("POST", url, buffer)
 			if err != nil {
 				return false
@@ -376,7 +384,6 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 			N2n.Error("message received - entity id doesn't match with signed id", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI), zap.String("entity_id", entityID), zap.String("entity.id", entity.GetKey()))
 			return
 		}
-		entity.ComputeProperties()
 		delay := common.InduceDelay()
 		if delay > 0 {
 			N2n.Debug("message received", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI), zap.String("entity", entityName), zap.Any("id", entityID), zap.Any("delay", delay))
@@ -442,9 +449,10 @@ func pullEntityHandler(ctx context.Context, nd *Node, uri string, handler datast
 
 var pullDataRequestor EntityRequestor
 
-func init() {
-	http.HandleFunc("/v1/n2n/entity_pull/get", ToN2NSendEntityHandler(PushToPullHandler))
+var pullURL = "/v1/n2n/entity_pull/get"
 
+func init() {
+	http.HandleFunc(pullURL, ToN2NSendEntityHandler(PushToPullHandler))
 	options := &SendOptions{Timeout: TimeoutLargeMessage, CODEC: CODEC_MSGPACK, Compress: true}
-	pullDataRequestor = RequestEntityHandler("/v1/n2n/entity_pull/get", options, nil)
+	pullDataRequestor = RequestEntityHandler(pullURL, options, nil)
 }
