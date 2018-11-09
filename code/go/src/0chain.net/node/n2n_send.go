@@ -152,12 +152,12 @@ func shouldPush(receiver *Node, uri string, entity datastore.Entity, timer metri
 	pushTime := timer.Mean()
 	pullSendTimer := receiver.GetTimer(serveMetricKey(uri))
 	pullSendTime := receiver.SmallMessageSendTime
-	if pullSendTimer != nil {
+	if pullSendTimer != nil && pullSendTimer.Count() >= 50 {
 		pullSendTime = pullSendTimer.Mean()
 	}
 	pullRequestTimer := receiver.GetTimer(pullURL)
-	pullRequestTime := 0.0
-	if pullRequestTimer != nil {
+	pullRequestTime := receiver.SmallMessageSendTime
+	if pullRequestTimer != nil && pullRequestTimer.Count() >= 50 {
 		pullRequestTime = pullRequestTimer.Mean()
 	}
 	pullTime := pullRequestTime

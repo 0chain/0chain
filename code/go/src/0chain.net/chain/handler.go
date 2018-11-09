@@ -140,7 +140,14 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<li>/_diagnostics/n2n_logs [Level <a href='/_diagnostics/n2n_logs?detail=1'>1</a>, <a href='/_diagnostics/n2n_logs?detail=2'>2</a>, <a href='/_diagnostics/n2n_logs?detail=3'>3</a>]</li>")
 	fmt.Fprintf(w, "<li><a href='/debug/pprof/'>/debug/pprof/</a></li>")
 	fmt.Fprintf(w, "</ul>")
-	fmt.Fprintf(w, "<div><div>Miners (%v)</div>", sc.Miners.Size())
+	fmt.Fprintf(w, "<style>\n")
+	fmt.Fprintf(w, ".number { text-align: right; }\n")
+	fmt.Fprintf(w, "table, td, th { border: 1px solid black; }\n")
+	fmt.Fprintf(w, ".inactive { background-color: #F44336; }\n")
+	fmt.Fprintf(w, ".warning { background-color: #FFEB3B; }\n")
+	fmt.Fprintf(w, ".optimal { background-color: #C8E6C9; }\n")
+	fmt.Fprintf(w, "</style>")
+	fmt.Fprintf(w, "<div><div>Miners (%v) - median network time %.2f</div>", sc.Miners.Size(), sc.Miners.GetMedianNetworkTime()/1000000.)
 	sc.printNodePool(w, sc.Miners)
 	fmt.Fprintf(w, "</div>")
 	fmt.Fprintf(w, "<div><div>Sharders (%v)</div>", sc.Sharders.Size())
@@ -150,14 +157,8 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 
 func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 	nodes := np.Nodes
-	fmt.Fprintf(w, "<style>\n")
-	fmt.Fprintf(w, ".number { text-align: right; }\n")
-	fmt.Fprintf(w, "table, td, th { border: 1px solid black; }\n")
-	fmt.Fprintf(w, ".inactive { background-color: #F44336; }\n")
-	fmt.Fprintf(w, ".warning { background-color: #FFEB3B; }\n")
-	fmt.Fprintf(w, "</style>")
 	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
-	fmt.Fprintf(w, "<tr><td>Set Index</td><td>Node</td><td>Sent</td><td>Send Errors</td><td>Received</td><td>Last Active</td><td>Small Msg Time</td><td>Large Msg Time</td><td>Description</td></tr>")
+	fmt.Fprintf(w, "<tr><td>Set Index</td><td>Node</td><td>Sent</td><td>Send Errors</td><td>Received</td><td>Last Active</td><td>Small Msg Time</td><td>Large Msg Time</td><td>Optimal Large Msg Time</td><td>Description</td></tr>")
 	r := c.GetRound(c.CurrentRound)
 	hasRanks := r != nil && r.GetRandomSeed() != 0
 	lfb := c.LatestFinalizedBlock
@@ -191,8 +192,16 @@ func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 		fmt.Fprintf(w, "<td class='number'>%d</td>", nd.SendErrors)
 		fmt.Fprintf(w, "<td class='number'>%d</td>", nd.Received)
 		fmt.Fprintf(w, "<td>%v</td>", nd.LastActiveTime.Format(common.DateTimeFormat))
-		fmt.Fprintf(w, "<td>%.2f</td>", nd.GetSmallMessageSendTime())
-		fmt.Fprintf(w, "<td>%.2f</td>", nd.GetLargeMessageSendTime())
+		fmt.Fprintf(w, "<td class='number'>%.2f</td>", nd.GetSmallMessageSendTime())
+		lmt := nd.GetLargeMessageSendTime()
+		fmt.Fprintf(w, "<td class='number'>%.2f</td>", lmt)
+		olmt := nd.GetOptimalLargeMessageSendTime()
+		if olmt < lmt {
+			fmt.Fprintf(w, "<td class='number optimal'>%.2f</td>", olmt)
+
+		} else {
+			fmt.Fprintf(w, "<td class='number'>%.2f</td>", olmt)
+		}
 		fmt.Fprintf(w, "<td>%s</td>", nd.Description)
 		fmt.Fprintf(w, "</tr>")
 	}
