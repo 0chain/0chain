@@ -267,38 +267,6 @@ func (n *Node) GetSizeMetric(uri string) metrics.Histogram {
 	return metric
 }
 
-func (n *Node) getMaxSendMessageCount() int64 {
-	n.mutex.Lock()
-	defer n.mutex.Unlock()
-	var count int64
-	for uri, timer := range n.TimersByURI {
-		if isPullRequest(uri) {
-			continue
-		}
-		c := timer.Count()
-		if c > count {
-			count = c
-		}
-	}
-	return count
-}
-
-func (n *Node) getMaxPullServeMessageCount() int64 {
-	n.mutex.Lock()
-	defer n.mutex.Unlock()
-	var count int64
-	for uri, timer := range n.TimersByURI {
-		if !isPullRequest(uri) {
-			continue
-		}
-		c := timer.Count()
-		if c > count {
-			count = c
-		}
-	}
-	return count
-}
-
 //GetLargeMessageSendTime - get the time it takes to send a large message to this node
 func (n *Node) GetLargeMessageSendTime() float64 {
 	return n.LargeMessageSendTime / 1000000
@@ -328,8 +296,11 @@ func (n *Node) updateSendMessageTimings() {
 		if isPullRequest(uri) {
 			continue
 		}
-		v := timer.Mean()
 		if sizer, ok := n.SizeByURI[uri]; ok {
+			if sizer.Mean() == 0 {
+				continue
+			}
+			v := timer.Mean()
 			if sizer.Mean() > maxSize {
 				maxSize = sizer.Mean()
 				if v > maxval {
@@ -367,6 +338,9 @@ func (n *Node) updateRequestMessageTimings() {
 		}
 		v := timer.Mean()
 		if sizer, ok := n.SizeByURI[uri]; ok {
+			if sizer.Mean() == 0 {
+				continue
+			}
 			if sizer.Mean() > maxSize {
 				maxSize = sizer.Mean()
 				if v > maxval {

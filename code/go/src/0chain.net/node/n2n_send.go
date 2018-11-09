@@ -440,6 +440,7 @@ func pullEntityHandler(ctx context.Context, nd *Node, uri string, handler datast
 		return entity, nil
 	}
 	params := make(map[string]string)
+	params["__push2pull"] = "true"
 	params["_puri"] = uri
 	params["id"] = datastore.ToString(entityID)
 	rhandler := pullDataRequestor(params, phandler)

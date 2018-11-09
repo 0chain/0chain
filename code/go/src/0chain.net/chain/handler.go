@@ -305,25 +305,47 @@ func (c *Chain) N2NStatsWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, ".number { text-align: right; }\n")
 	fmt.Fprintf(w, "table, td, th { border: 1px solid black; }\n")
 	fmt.Fprintf(w, "tr:nth-child(10n) { background-color: #f2f2f2; }\n")
+	fmt.Fprintf(w, ".optimal { background-color: #C8E6C9; }\n")
+	fmt.Fprintf(w, ".slow { color: #BF360C; }\n")
 	fmt.Fprintf(w, "</style>")
 	self := node.Self.Node
 	fmt.Fprintf(w, "<div>%v - %v</div>", self.GetPseudoName(), self.Description)
 	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr><td rowspan='2'>URI</td><td rowspan='2'>Count</td><td colspan='3'>Time</td><td colspan='3'>Size</td></tr>")
 	fmt.Fprintf(w, "<tr><td>Min</td><td>Average</td><td>Max</td><td>Min</td><td>Average</td><td>Max</td></tr>")
+	fmt.Fprintf(w, "<tr><td colspan='8'>Miners (%v/%v) - median network time = %.2f", c.Miners.GetActiveCount(), c.Miners.Size(), c.Miners.GetMedianNetworkTime()/1000000)
 	for _, n := range c.Miners.Nodes {
 		if n == node.Self.Node {
 			continue
 		}
-		fmt.Fprintf(w, "<tr><th colspan='8'>%s - %s</th></tr>", n.GetPseudoName(), n.Description)
+		lmt := n.GetLargeMessageSendTime()
+		olmt := n.GetOptimalLargeMessageSendTime()
+		cls := ""
+		if olmt < lmt {
+			cls = "optimal"
+		}
+		if olmt > c.Miners.GetMedianNetworkTime() {
+			cls = cls + " slow"
+		}
+		fmt.Fprintf(w, "<tr class='%s'><td colspan='8'><b>%s</b> (%.2f/%.2f) - %s</td></tr>", cls, n.GetPseudoName(), olmt, lmt, n.Description)
 		n.PrintSendStats(w)
 	}
 
+	fmt.Fprintf(w, "<tr><td colspan='8'>Sharders (%v/%v) - median network time = %.2f", c.Sharders.GetActiveCount(), c.Sharders.Size(), c.Sharders.GetMedianNetworkTime()/1000000)
 	for _, n := range c.Sharders.Nodes {
 		if n == node.Self.Node {
 			continue
 		}
-		fmt.Fprintf(w, "<tr><th colspan='8'>%s - %s</th></tr>", n.GetPseudoName(), n.Description)
+		lmt := n.GetLargeMessageSendTime()
+		olmt := n.GetOptimalLargeMessageSendTime()
+		cls := ""
+		if olmt < lmt {
+			cls = "optimal"
+		}
+		if olmt > c.Sharders.GetMedianNetworkTime() {
+			cls = cls + " slow"
+		}
+		fmt.Fprintf(w, "<tr class='%s'><td colspan='8'><b>%s</b> (%.2f/%.2f) - %s </td></tr>", cls, n.GetPseudoName(), olmt, lmt, n.Description)
 		n.PrintSendStats(w)
 	}
 	fmt.Fprintf(w, "</table>")
