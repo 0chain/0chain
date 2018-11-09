@@ -51,7 +51,7 @@ func (mc *Chain) SetupGenesisBlock(hash string) *block.Block {
 	}
 	rr, ok := gr.(*round.Round)
 	if !ok {
-		return nil
+		panic("Genesis round cannot convert to *round.Round")
 	}
 	mgr := mc.CreateRound(rr)
 	mc.AddRound(mgr)
