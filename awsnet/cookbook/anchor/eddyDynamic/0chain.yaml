@@ -1,12 +1,29 @@
 version: 1.0
+#EddyDynamic Config File
+network_blueprint:
+  git_tag: "dynamic-block-size"
+
+  instance_model:
+    miner: "c5.xlarge"
+    sharder: "c5.xlarge"
+
+  agent_zones:
+    "s00,m00" : california
+    "s01,m01" : ohio
+    "s02,m02" : sydney
+    "s03,m03" : oregon
+    "s04,m04" : seoul
+    "s05,m05" : singapore
+    "s06,m06" : ireland
+    "s07,m07" : frankfurt
+    "s08,m08" : tokyo
 
 logging:
+  console: "false"
   level: "info"
-  console: false # printing log to console is only supported in development mode
-  goroutines: false
 
 development:
-  state: false
+  state: true
 
 zerochain:
   id: "0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe"
@@ -22,21 +39,21 @@ server_chain:
   genesis_block:
     id: "ed79cae70d439c11258236da1dfa6fc550f7cc569768304623e8fbd7d70efae4"
   block:
-    size: 100
-    generators: 2
+    size: 1000
+    generators: 9
     sharders: 3
-    generation:
-      timeout: 15
-      transactions: 10
-      transaction_wait_time: 5 #milliseconds
     proposal:
-      max_wait_time: 180 # milliseconds
-      wait_mode: static # static or dynamic
+      max_wait_time: 200 # milliseconds
+      wait_mode: dynamic # static or dynamic
+    generation:
+      timeout: 5
+      transactions: 1000
+      transaction_wait_time: 1 #milliseconds
     consensus:
       threshold_by_count: 66 # percentage
-      threshold_by_stake: 0 # percent
+      threshold_by_stake: 0
     validation:
-      batch_size: 1000
+      batch_size: 250
     storage:
       provider: blockstore.FSBlockStore # blockstore.FSBlockStore or blockstore.BlockDBStore
   round_range: 10000000
@@ -47,13 +64,13 @@ server_chain:
   client:
     discover: true
   messages:
-    verification_tickets_to: all_miners # generator or all_miners
+    verification_tickets_to: all_miners
   state:
     prune_below_count: 100 # rounds
 
 network:
-  relay_time: 180 # milliseconds
-  max_concurrent_requests: 3
+  relay_time: 200 # milliseconds
+  max_concurrent_requests: 9
   timeout:
     small_message: 1000 # milliseconds
     large_message: 3000 # milliseconds

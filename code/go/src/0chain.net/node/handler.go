@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"sort"
+	//"strconv"
 	"time"
 
 	. "0chain.net/logging"
@@ -57,6 +58,7 @@ func (n *Node) PrintSendStats(w io.Writer) {
 /*StatusHandler - allows checking the status of the node */
 func StatusHandler(w http.ResponseWriter, r *http.Request) {
 	id := r.FormValue("id")
+	Logger.Info("Handle status", zap.Any("id", id))
 	if id == "" {
 		return
 	}
@@ -64,6 +66,7 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 	if nd == nil {
 		return
 	}
+	//nd.Goroutines, _ = strconv.Atoi(goroutines)
 	if nd.IsActive() {
 		return
 	}
