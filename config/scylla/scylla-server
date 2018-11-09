@@ -35,7 +35,7 @@ SCYLLA_HOME=/var/lib/scylla
 SCYLLA_CONF=/etc/scylla
 
 # scylla arguments
-SCYLLA_ARGS="--log-to-syslog 1 --log-to-stdout 0 --default-log-level info --network-stack posix --memory 5G --smp 3"
+SCYLLA_ARGS="--log-to-syslog 1 --log-to-stdout 0 --default-log-level info --network-stack posix"
 
 # setup as AMI instance
 AMI=no

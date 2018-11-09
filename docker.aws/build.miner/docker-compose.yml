@@ -3,8 +3,13 @@ services:
   redis:
     image: "redis:alpine"
     volumes:
-      - /0chain/config:/0chain/config
-      - /0chain/data:/0chain/data
+      #CONFIG_VOLUME
+      - /0chain/config/redis:/0chain/config/redis
+
+      #REDIS_VOLUME
+      - /0chain/data/redis:/0chain/data/redis
+      - /0chain/data/redis/state:/0chain/data/redis/state
+
     networks:
       default:
     sysctls:
@@ -20,8 +25,13 @@ services:
   redis_txns:
     image: "redis:alpine"
     volumes:
-      - /0chain/config:/0chain/config
-      - /0chain/data:/0chain/data
+      #CONFIG_VOLUME
+      - /0chain/config/redis:/0chain/config/redis
+
+      #REDIS_VOLUME
+      - /0chain/data/redis:/0chain/data/redis
+      - /0chain/data/redis/transactions:/0chain/data/redis/transactions
+
     networks:
       default:
     sysctls:
@@ -44,8 +54,10 @@ services:
       - redis:redis
       - redis_txns:redis_txns
     build:
-      context: /0chain/0chain
-      dockerfile: /0chain/0chain/docker.aws/build.miner/Dockerfile
+      context: ${ZCHAIN_CODEBASE}
+      dockerfile: ./docker.aws/build.miner/Dockerfile
+
+    image: ${IMAGE_NAME}:${IMAGE_TAG}
 
     pid: "host"
 
@@ -56,10 +68,17 @@ services:
         soft: 32768
 
     volumes:
+
+      #CONFIG_VOLUME
       - /0chain/config:/0chain/config
-      - /0chain/nodes:/0chain/nodes
-      - /0chain/data:/0chain/data
+
+      #LOG_VOLUME
       - /0chain/log:/0chain/log
+
+      #ROCKSDB_VOLUME
+      - /0chain/data/rocksdb:/0chain/data/rocksdb
+      - /0chain/data/rocksdb/state:/0chain/data/rocksdb/state
+
 
     logging:
       driver: "json-file"
@@ -77,13 +96,9 @@ services:
 
     #Start under user 0chain
     user: 2000:2000
-    command: ./bin/miner  --deployment_mode 0 --keys_file /0chain/config/${MINER}.txt --nodes_file nodes
+    command: /0chain/bin/miner  --deployment_mode 0 --keys_file /0chain/config/miner.txt --nodes_file nodes
 
 networks:
   default:
     driver: bridge
 
-volumes:
-  data:
-  config:
-  nodes:
