@@ -147,7 +147,11 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, ".warning { background-color: #FFEB3B; }\n")
 	fmt.Fprintf(w, ".optimal { background-color: #C8E6C9; }\n")
 	fmt.Fprintf(w, "</style>")
-	fmt.Fprintf(w, "<div><div>Miners (%v) - median network time %.2f</div>", sc.Miners.Size(), sc.Miners.GetMedianNetworkTime()/1000000.)
+	if node.Self.Type == node.NodeTypeMiner {
+		fmt.Fprintf(w, "<div><div>Miners (%v) - median network time %.2f</div>", sc.Miners.Size(), sc.Miners.GetMedianNetworkTime()/1000000.)
+	} else {
+		fmt.Fprintf(w, "<div><div>Miners (%v)</div>", sc.Miners.Size())
+	}
 	sc.printNodePool(w, sc.Miners)
 	fmt.Fprintf(w, "</div>")
 	fmt.Fprintf(w, "<div><div>Sharders (%v)</div>", sc.Sharders.Size())
