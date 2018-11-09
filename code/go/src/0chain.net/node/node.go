@@ -322,6 +322,9 @@ func (n *Node) updateSendMessageTimings() {
 	var minSize = math.MaxFloat64
 	var maxSize float64
 	for uri, timer := range n.TimersByURI {
+		if timer.Count() == 0 {
+			continue
+		}
 		if isPullRequest(uri) {
 			continue
 		}
@@ -356,6 +359,9 @@ func (n *Node) updateRequestMessageTimings() {
 	var minSize = math.MaxFloat64
 	var maxSize float64
 	for uri, timer := range n.TimersByURI {
+		if timer.Count() == 0 {
+			continue
+		}
 		if !isPullRequest(uri) {
 			continue
 		}
