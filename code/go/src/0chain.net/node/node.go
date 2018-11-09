@@ -315,7 +315,6 @@ func (n *Node) updateMessageTimings() {
 }
 
 func (n *Node) updateSendMessageTimings() {
-	maxcount := n.getMaxSendMessageCount()
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
 	var minval = math.MaxFloat64
@@ -324,9 +323,6 @@ func (n *Node) updateSendMessageTimings() {
 	var maxSize float64
 	for uri, timer := range n.TimersByURI {
 		if isPullRequest(uri) {
-			continue
-		}
-		if timer.Count()*10 < maxcount {
 			continue
 		}
 		v := timer.Mean()
@@ -353,7 +349,6 @@ func (n *Node) updateSendMessageTimings() {
 }
 
 func (n *Node) updateRequestMessageTimings() {
-	maxcount := n.getMaxPullServeMessageCount()
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
 	var minval = math.MaxFloat64
@@ -362,9 +357,6 @@ func (n *Node) updateRequestMessageTimings() {
 	var maxSize float64
 	for uri, timer := range n.TimersByURI {
 		if !isPullRequest(uri) {
-			continue
-		}
-		if timer.Count()*10 < maxcount {
 			continue
 		}
 		v := timer.Mean()
