@@ -310,9 +310,6 @@ func (c *Chain) AddRoundBlock(r round.RoundI, b *block.Block) *block.Block {
 func (c *Chain) addBlock(b *block.Block) *block.Block {
 	if eb, ok := c.blocks[b.Hash]; ok {
 		if eb != b {
-			if b.MinerID == node.Self.GetKey() {
-				panic(fmt.Sprintf("another block object of my block: %v %v %v %v\n", b.Hash, b.MinerID, eb.Hash, eb.MinerID))
-			}
 			c.MergeVerificationTickets(common.GetRootContext(), eb, b.VerificationTickets)
 		}
 		return eb
