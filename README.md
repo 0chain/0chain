@@ -196,7 +196,7 @@ $ ./docker.local/bin/build.base.sh
 Then run the tests.
 
 ```
-$ ./docker.local/bin/go_test.sh [<packages>]
+$ ./docker.local/bin/unit_test.sh [<packages>]
 ```
 
 The list of packages is optional, and if provided runs only the tests from those packages. If no packages are specified, all unit tests are run.

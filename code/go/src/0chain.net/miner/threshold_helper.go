@@ -113,8 +113,11 @@ func StoreBlsShares(receivedRound int64, sigShare string, party int) {
 	nodeMap, roundExists := roundMap[receivedRound]
 
 	if !roundExists {
+		Logger.Debug("If round does not exist")
 		nodeMap = make(map[int]string)
 		roundMap[receivedRound] = nodeMap
+	} else {
+		Logger.Debug("Round entry exists")
 	}
 	_, partyExists := nodeMap[party]
 
@@ -129,6 +132,11 @@ func StoreBlsShares(receivedRound int64, sigShare string, party int) {
 // BlsShareReceived - The function used to get the Random Beacon output for the round
 func BlsShareReceived(ctx context.Context, receivedRound int64, sigShare string, party int) {
 
+	if blsDone {
+		Logger.Debug("Printing blsDone since rbOutput is done for round check XXX", zap.Any(":", blsDone))
+		return
+	}
+
 	if !(currRound == receivedRound || currRound == receivedRound-1) {
 		Logger.Debug("Got the bls sign share", zap.Int64("round", receivedRound), zap.Int64("curr_round", currRound))
 		return
@@ -136,11 +144,6 @@ func BlsShareReceived(ctx context.Context, receivedRound int64, sigShare string,
 	StoreBlsShares(receivedRound, sigShare, party)
 
 	recBlsSig, recBlsFrom, gotThreshold := ThresholdNumSigReceived(receivedRound, sigShare, party)
-
-	if blsDone {
-		Logger.Debug("Printing blsDone since rbOutput is done for round check XXX", zap.Any(":", blsDone))
-		return
-	}
 
 	if gotThreshold {
 		rbOutput := CalcRandomBeacon(recBlsSig, recBlsFrom)
