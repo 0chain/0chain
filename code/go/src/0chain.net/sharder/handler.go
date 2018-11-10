@@ -7,7 +7,9 @@ import (
 	"strconv"
 	"strings"
 
+	"0chain.net/config"
 	"0chain.net/datastore"
+	"0chain.net/node"
 	"0chain.net/persistencestore"
 
 	"0chain.net/block"
@@ -83,38 +85,61 @@ func ChainStatsHandler(ctx context.Context, r *http.Request) (interface{}, error
 
 /*ChainStatsWriter - a handler to provide block statistics */
 func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
-	c := GetSharderChain().Chain
+	sc := GetSharderChain()
+	c := sc.Chain
 	w.Header().Set("Content-Type", "text/html")
 	diagnostics.WriteStatisticsCSS(w)
-	diagnostics.WriteSummary(w, c)
+
+	self := node.Self.Node
+	fmt.Fprintf(w, "<div>%v - %v</div>", self.GetPseudoName(), self.Description)
+
+	diagnostics.WriteConfiguration(w, c)
+	fmt.Fprintf(w, "<table><tr><td colspan='2'><h2>Summary</h2></td></tr>")
+	fmt.Fprintf(w, "<tr><td>Sharded Blocks</td><td class='number'>%v</td>", sc.SharderStats.ShardedBlocksCount)
+	fmt.Fprintf(w, "</table>")
 	fmt.Fprintf(w, "<table><tr><td>")
 	fmt.Fprintf(w, "<h2>Block Finalization Statistics (Steady State)</h2>")
-	diagnostics.WriteStatistics(w, c, chain.SteadyStateFinalizationTimer, 1000000.0)
+	diagnostics.WriteTimerStatistics(w, c, chain.SteadyStateFinalizationTimer, 1000000.0)
 	fmt.Fprintf(w, "</td><td>")
 	fmt.Fprintf(w, "<h2>Block Finalization Statistics (Start to Finish)</h2>")
-	diagnostics.WriteStatistics(w, c, chain.StartToFinalizeTimer, 1000000.0)
+	diagnostics.WriteTimerStatistics(w, c, chain.StartToFinalizeTimer, 1000000.0)
 	fmt.Fprintf(w, "</td></tr>")
+
+	fmt.Fprintf(w, "<tr><td col='2'>")
+	fmt.Fprintf(w, "<p>Block finalization time = block generation + block verification + network time (1*large message + 2*small message)</p>")
+	fmt.Fprintf(w, "</td></tr>")
+
 	fmt.Fprintf(w, "<tr><td>")
+	fmt.Fprintf(w, "<h2>Txn Finalization Statistics (Start to Finish)</h2>")
+	if config.Development() {
+		diagnostics.WriteTimerStatistics(w, c, chain.StartToFinalizeTxnTimer, 1000000.0)
+	} else {
+		fmt.Fprintf(w, "Available only in development mode")
+	}
+	fmt.Fprintf(w, "</td><td  valign='top'>")
+	fmt.Fprintf(w, "<h2>Finalization Lag Statistics</h2>")
+	diagnostics.WriteHistogramStatistics(w, c, chain.FinalizationLagMetric)
+	fmt.Fprintf(w, "</td><td></td></tr>")
 
 	fmt.Fprintf(w, "<tr><td>")
 	fmt.Fprintf(w, "<h2>Transactions Save Statistics</h2>")
-	diagnostics.WriteStatistics(w, c, txnSaveTimer, 1000000.0)
+	diagnostics.WriteTimerStatistics(w, c, txnSaveTimer, 1000000.0)
 	fmt.Fprintf(w, "</td><td>")
 	fmt.Fprintf(w, "<h2>Block Save Statistics</h2>")
-	diagnostics.WriteStatistics(w, c, blockSaveTimer, 1000000.0)
+	diagnostics.WriteTimerStatistics(w, c, blockSaveTimer, 1000000.0)
 	fmt.Fprintf(w, "</td></tr>")
 	fmt.Fprintf(w, "<tr><td>")
 	fmt.Fprintf(w, "<h2>State Save Statistics</h2>")
-	diagnostics.WriteStatistics(w, c, chain.StateSaveTimer, 1000000.0)
+	diagnostics.WriteTimerStatistics(w, c, chain.StateSaveTimer, 1000000.0)
 	fmt.Fprintf(w, "</td><td>")
 	fmt.Fprintf(w, "</td><tr>")
 
 	fmt.Fprintf(w, "<tr><td>")
 	fmt.Fprintf(w, "<h2>State Prune Update Statistics</h2>")
-	diagnostics.WriteStatistics(w, c, chain.StatePruneUpdateTimer, 1000000.0)
+	diagnostics.WriteTimerStatistics(w, c, chain.StatePruneUpdateTimer, 1000000.0)
 	fmt.Fprintf(w, "</td><td>")
 	fmt.Fprintf(w, "<h2>State Prune Delete Statistics</h2>")
-	diagnostics.WriteStatistics(w, c, chain.StatePruneDeleteTimer, 1000000.0)
+	diagnostics.WriteTimerStatistics(w, c, chain.StatePruneDeleteTimer, 1000000.0)
 	fmt.Fprintf(w, "</tr>")
 
 	fmt.Fprintf(w, "</table>")

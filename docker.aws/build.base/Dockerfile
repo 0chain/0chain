@@ -17,7 +17,6 @@ RUN cd /tmp && \
 RUN cd /tmp && \
     git clone https://github.com/0chain/rocksdb.git && \
     cd rocksdb && \
-    #git checkout 5.13.fb && \
     make -j8 shared_lib && \
     mkdir -p /usr/local/rocksdb/lib && \
     mkdir /usr/local/rocksdb/include && \
@@ -76,3 +75,4 @@ RUN go get github.com/koding/cache
 RUN go get github.com/hashicorp/golang-lru
 RUN go get github.com/pmer/gobls
 
+ADD BASE_VERSION .

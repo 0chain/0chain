@@ -60,6 +60,7 @@ func GetTransactionConfirmation(ctx context.Context, hash string) (*transaction.
 			return nil, err
 		}
 		confirmation.Round = bs.Round
+		confirmation.MinerID = bs.MinerID
 		confirmation.RoundRandomSeed = bs.RoundRandomSeed
 		confirmation.CreationDate = bs.CreationDate
 		confirmation.MerkleTreeRoot = bs.MerkleTreeRoot
@@ -71,6 +72,7 @@ func GetTransactionConfirmation(ctx context.Context, hash string) (*transaction.
 	} else {
 		b = bc.(*block.Block)
 		confirmation.Round = b.Round
+		confirmation.MinerID = b.MinerID
 		confirmation.RoundRandomSeed = b.RoundRandomSeed
 		confirmation.CreationDate = b.CreationDate
 	}

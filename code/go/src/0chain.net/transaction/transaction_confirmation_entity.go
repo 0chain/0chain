@@ -14,12 +14,13 @@ type Confirmation struct {
 	BlockHash   string       `json:"block_hash"`
 	Transaction *Transaction `json:"txn,omitempty"`
 	datastore.CreationDateField
-	Round                 int64        `json:"round"`
-	RoundRandomSeed       int64        `json:"round_random_seed"`
-	MerkleTreeRoot        string       `json:"merkle_tree_root"`
-	MerkleTreePath        *util.MTPath `json:"merkle_tree_path"`
-	ReceiptMerkleTreeRoot string       `json:"receipt_merkle_tree_root"`
-	ReceiptMerkleTreePath *util.MTPath `json:"receipt_merkle_tree_path"`
+	MinerID               datastore.Key `json:"miner_id"`
+	Round                 int64         `json:"round"`
+	RoundRandomSeed       int64         `json:"round_random_seed"`
+	MerkleTreeRoot        string        `json:"merkle_tree_root"`
+	MerkleTreePath        *util.MTPath  `json:"merkle_tree_path"`
+	ReceiptMerkleTreeRoot string        `json:"receipt_merkle_tree_root"`
+	ReceiptMerkleTreePath *util.MTPath  `json:"receipt_merkle_tree_path"`
 }
 
 var transactionConfirmationEntityMetadata *datastore.EntityMetadataImpl

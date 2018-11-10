@@ -1,13 +1,10 @@
 package cache
 
 import (
-	"github.com/koding/cache"
 	"sync"
-)
 
-func GetLFUCacheProvider() *LFU {
-	return &LFU{}
-}
+	"github.com/koding/cache"
+)
 
 type LFU struct {
 	Cache cache.Cache
@@ -16,16 +13,19 @@ type LFU struct {
 	lock  sync.Mutex
 }
 
-func (c *LFU) New(size int) {
+//NewLFUCache - create a new LFU cache object
+func NewLFUCache(size int) *LFU {
+	c := &LFU{}
 	c.Cache = cache.NewLFU(size)
-	c.Hit = 0
-	c.Miss = 0
+	return c
 }
 
+//Add - add a given key and value
 func (c *LFU) Add(key string, value interface{}) error {
 	return c.Cache.Set(key, value)
 }
 
+//Get - get the value associated with the key
 func (c *LFU) Get(key string) (interface{}, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()

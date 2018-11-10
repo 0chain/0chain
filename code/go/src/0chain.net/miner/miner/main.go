@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"math/rand"
 	"net/http"
 	"os"
 	"runtime"
@@ -23,7 +22,6 @@ import (
 	"0chain.net/client"
 	"0chain.net/common"
 	"0chain.net/config"
-	"0chain.net/datastore"
 	"0chain.net/diagnostics"
 	"0chain.net/encryption"
 	"0chain.net/logging"
@@ -221,24 +219,22 @@ func StartProtocol(ctx context.Context) {
 	mc.Sharders.OneTimeStatusMonitor(ctx)
 	lfBlocks := mc.GetLatestFinalizedBlockFromSharder(ctx)
 
+	var sr = round.NewRound(0)
+	var mr = mc.CreateRound(sr)
+
 	var lfb *block.Block
 	//Sorting as per the latest finalized blocks from all the sharders
 	sort.Slice(lfBlocks, func(i int, j int) bool { return lfBlocks[i].Round >= lfBlocks[j].Round })
 	if len(lfBlocks) > 0 {
 		lfb = lfBlocks[0]
 	}
-
-	sr := datastore.GetEntityMetadata("round").Instance().(*round.Round)
 	if lfb != nil {
+		sr = round.NewRound(lfb.Round)
+		mr = mc.CreateRound(sr)
+		mr, _ = mc.AddRound(mr).(*miner.Round)
+		mc.SetRandomSeed(sr, lfb.RoundRandomSeed)
 		mc.SetLatestFinalizedBlock(ctx, lfb)
-		sr.Number = lfb.Round + 1
-		sr.RandomSeed = rand.New(rand.NewSource(lfb.RoundRandomSeed)).Int63()
-	} else {
-		sr.Number = 1
 	}
-	msr := mc.CreateRound(sr)
-	Logger.Info("bc-1 latest finalized Block", zap.Int64("lfb_round", mc.LatestFinalizedBlock.Round))
-
 	if !mc.CanStartNetwork() {
 		ticker := time.NewTicker(5 * chain.DELTA)
 		for ts := range ticker.C {
@@ -252,7 +248,6 @@ func StartProtocol(ctx context.Context) {
 	if config.Development() {
 		go TransactionGenerator(mc.BlockSize)
 	}
-
-	Logger.Info("starting the blockchain ...")
-	mc.StartRound(ctx, msr)
+	Logger.Info("starting the blockchain ...", zap.Int64("round", mr.GetRoundNumber()))
+	mc.StartNextRound(ctx, mr)
 }

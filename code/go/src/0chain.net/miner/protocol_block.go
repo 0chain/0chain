@@ -9,8 +9,6 @@ import (
 
 	"0chain.net/chain"
 	"0chain.net/config"
-	"0chain.net/memorystore"
-	"0chain.net/round"
 	"0chain.net/util"
 
 	"0chain.net/block"
@@ -35,27 +33,6 @@ func init() {
 	bvTimer = metrics.GetOrRegisterTimer("bv_time", nil)
 }
 
-/*StartRound - start a new round */
-func (mc *Chain) StartRound(ctx context.Context, r *Round) {
-	if mc.AddRound(r) != r {
-		return
-	}
-
-	pr := mc.GetRound(r.GetRoundNumber() - 1)
-	if pr == nil {
-		// If we don't have the prior round, and hence the prior round's random seed, we can't provide the share
-		return
-	}
-
-	vrfs := &round.VRFShare{}
-	vrfs.Round = r.GetRoundNumber()
-	vrfs.Share = node.Self.Node.SetIndex
-	vrfs.SetParty(node.Self.Node)
-	if mc.AddVRFShare(ctx, r, vrfs) {
-		go mc.SendVRFShare(ctx, vrfs)
-	}
-}
-
 /*GenerateBlock - This works on generating a block
 * The context should be a background context which can be used to stop this logic if there is a new
 * block published while working on this
@@ -66,45 +43,38 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	//wasting this because []interface{} != []*transaction.Transaction in Go
 	etxns := make([]datastore.Entity, mc.BlockSize)
 	var invalidTxns []datastore.Entity
-	var idx int32
+	var idx int
 	var ierr error
 	var count int32
 	var roundMismatch bool
 	var hasOwnerTxn bool
 	var failedStateCount int32
-	var txnIterHandler = func(ctx context.Context, qe datastore.CollectionEntity) bool {
-		if mc.CurrentRound > b.Round {
-			roundMismatch = true
+	txnMap := make(map[datastore.Key]bool, mc.BlockSize)
+	var txnProcessor = func(ctx context.Context, txn *transaction.Transaction) bool {
+		if _, ok := txnMap[txn.GetKey()]; ok {
 			return false
 		}
-		count++
-		txn, ok := qe.(*transaction.Transaction)
-		if !ok {
-			Logger.Error("generate block (invalid entity)", zap.Any("entity", qe))
-			return true
-		}
 		var debugTxn = txn.DebugTxn()
-
 		if debugTxn {
 			Logger.Info("generate block (debug transaction)", zap.String("txn", txn.Hash), zap.String("txn_object", datastore.ToJSON(txn).String()))
 		}
-		if !mc.validateTransaction(txn) {
-			invalidTxns = append(invalidTxns, qe)
+		if !mc.validateTransaction(b, txn) {
+			invalidTxns = append(invalidTxns, txn)
 			if debugTxn {
 				Logger.Info("generate block (debug transaction) error - txn creation not within tolerance", zap.String("txn", txn.Hash), zap.Any("now", common.Now()))
 			}
-			return true
+			return false
 		}
 		if ok, err := mc.ChainHasTransaction(ctx, b.PrevBlock, txn); ok || err != nil {
 			if err != nil {
 				ierr = err
 			}
-			return true
+			return false
 		}
 		if !mc.UpdateState(b, txn) {
 			failedStateCount++
 			if config.DevConfiguration.State {
-				return true
+				return false
 			}
 		}
 		if txn.ClientID == mc.OwnerID {
@@ -112,14 +82,31 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		}
 		//Setting the score lower so the next time blocks are generated these transactions don't show up at the top
 		txn.SetCollectionScore(txn.GetCollectionScore() - 10*60)
+		txnMap[txn.GetKey()] = true
 		b.Txns[idx] = txn
 		etxns[idx] = txn
 		b.AddTransaction(txn)
-		clients[txn.ClientID] = nil
+		if txn.PublicKey == "" {
+			clients[txn.ClientID] = nil
+		}
 		idx++
-
-		if idx >= mc.BlockSize {
+		return true
+	}
+	var txnIterHandler = func(ctx context.Context, qe datastore.CollectionEntity) bool {
+		count++
+		if mc.CurrentRound > b.Round {
+			roundMismatch = true
 			return false
+		}
+		txn, ok := qe.(*transaction.Transaction)
+		if !ok {
+			Logger.Error("generate block (invalid entity)", zap.Any("entity", qe))
+			return true
+		}
+		if txnProcessor(ctx, txn) {
+			if idx >= int(mc.BlockSize) {
+				return false
+			}
 		}
 		return true
 	}
@@ -145,11 +132,32 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		return err
 	}
 	blockSize := idx
-	if blockSize != mc.BlockSize {
+	var reusedTxns int
+	if int32(blockSize) < mc.BlockSize && mc.ReuseTransactions {
+		blocks := mc.GetUnrelatedBlocks(10, b)
+		rcount := 0
+		for _, ub := range blocks {
+			for _, txn := range ub.Txns {
+				rcount++
+				if txnProcessor(ctx, mc.txnToReuse(txn)) {
+					if idx == int(mc.BlockSize) {
+						break
+					}
+				}
+			}
+			if idx == int(mc.BlockSize) {
+				break
+			}
+		}
+		reusedTxns = idx - blockSize
+		blockSize = idx
+		Logger.Info("generate block (reused txns)", zap.Int64("round", b.Round), zap.Int("ub", len(blocks)), zap.Int("reused", reusedTxns), zap.Int("rcount", rcount), zap.Int("blockSize", idx))
+	}
+	if int32(blockSize) != mc.BlockSize {
 		if blockSize == 0 || !hasOwnerTxn {
 			b.Txns = nil
-			Logger.Debug("generate block (insufficient txns)", zap.Int64("round", b.Round), zap.Int32("iteration_count", count), zap.Int32("block_size", blockSize))
-			return common.NewError(InsufficientTxns, fmt.Sprintf("not sufficient txns to make a block yet for round %v (iterated %v,block_size %v,state failure %v, invalid %v)", b.Round, count, blockSize, failedStateCount, len(invalidTxns)))
+			Logger.Debug("generate block (insufficient txns)", zap.Int64("round", b.Round), zap.Int32("iteration_count", count), zap.Int("block_size", blockSize))
+			return common.NewError(InsufficientTxns, fmt.Sprintf("not sufficient txns to make a block yet for round %v (iterated %v,block_size %v,state failure %v, invalid %v,reused %v)", b.Round, count, blockSize, failedStateCount, len(invalidTxns), reusedTxns))
 		}
 		b.Txns = b.Txns[:blockSize]
 		etxns = etxns[:blockSize]
@@ -162,6 +170,10 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 
 	bsh.UpdatePendingBlock(ctx, b, etxns)
 	for _, txn := range b.Txns {
+		if txn.PublicKey != "" {
+			txn.ClientID = datastore.EmptyKey
+			continue
+		}
 		client := clients[txn.ClientID]
 		if client == nil || client.PublicKey == "" {
 			Logger.Error("generate block (invalid client)", zap.String("client_id", txn.ClientID))
@@ -180,17 +192,23 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	if err != nil {
 		return err
 	}
-	Logger.Info("generate block (assemble+update+sign)", zap.Int64("round", b.Round), zap.Int32("block_size", blockSize), zap.Duration("time", time.Since(start)),
-		zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Int8("state_status", b.GetStateStatus()),
-		zap.Float64("p_chain_weight", b.PrevBlock.ChainWeight), zap.Int32("iteration_count", count))
 	b.SetBlockState(block.StateGenerated)
 	b.SetStateStatus(block.StateSuccessful)
+	Logger.Info("generate block (assemble+update+sign)", zap.Int64("round", b.Round), zap.Int("block_size", blockSize), zap.Int("reused_txns", reusedTxns), zap.Duration("time", time.Since(start)),
+		zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Int8("state_status", b.GetStateStatus()),
+		zap.Float64("p_chain_weight", b.PrevBlock.ChainWeight), zap.Int32("iteration_count", count))
 	go b.ComputeTxnMap()
 	return nil
 }
 
-func (mc *Chain) validateTransaction(txn *transaction.Transaction) bool {
-	if !common.Within(int64(txn.CreationDate), transaction.TXN_TIME_TOLERANCE-1) {
+func (mc *Chain) txnToReuse(txn *transaction.Transaction) *transaction.Transaction {
+	ctxn := *txn
+	ctxn.OutputHash = ""
+	return &ctxn
+}
+
+func (mc *Chain) validateTransaction(b *block.Block, txn *transaction.Transaction) bool {
+	if !common.WithinTime(int64(b.CreationDate), int64(txn.CreationDate), transaction.TXN_TIME_TOLERANCE) {
 		return false
 	}
 	return true
@@ -265,7 +283,7 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 				validChannel <- false
 				return
 			}
-			err := txn.Validate(ctx)
+			err := txn.ValidateWrtTime(ctx, b.CreationDate)
 			if err != nil {
 				cancel = true
 				Logger.Error("validate transactions", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.String("txn", datastore.ToJSON(txn).String()), zap.Error(err))
@@ -312,34 +330,6 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 	return nil
 }
 
-/*SaveClients - save clients from the block */
-func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) error {
-	var err error
-	clientKeys := make([]datastore.Key, len(clients))
-	for idx, c := range clients {
-		clientKeys[idx] = c.GetKey()
-	}
-	clientEntityMetadata := datastore.GetEntityMetadata("client")
-	cEntities := datastore.AllocateEntities(len(clients), clientEntityMetadata)
-	ctx = memorystore.WithEntityConnection(common.GetRootContext(), clientEntityMetadata)
-	defer memorystore.Close(ctx)
-	err = clientEntityMetadata.GetStore().MultiRead(ctx, clientEntityMetadata, clientKeys, cEntities)
-	if err != nil {
-		return err
-	}
-	ctx = datastore.WithAsyncChannel(ctx, client.ClientEntityChannel)
-	for idx, c := range clients {
-		if !datastore.IsEmpty(cEntities[idx].GetKey()) {
-			continue
-		}
-		_, cerr := client.PutClient(ctx, c)
-		if cerr != nil {
-			err = cerr
-		}
-	}
-	return err
-}
-
 /*SignBlock - sign the block and provide the verification ticket */
 func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (*block.BlockVerificationTicket, error) {
 	var bvt = &block.BlockVerificationTicket{}
@@ -349,6 +339,7 @@ func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (*block.BlockVer
 	var err error
 	bvt.VerifierID = self.GetKey()
 	bvt.Signature, err = self.Sign(b.Hash)
+	b.SetVerificationStatus(block.VerificationSuccessful)
 	if err != nil {
 		return nil, err
 	}
@@ -357,7 +348,7 @@ func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (*block.BlockVer
 
 /*UpdateFinalizedBlock - update the latest finalized block */
 func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
-	Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round), zap.Int64("current_round", mc.CurrentRound), zap.Float64("weight", b.Weight()), zap.Float64("chain_weight", b.ChainWeight), zap.Int("rounds_size", len(mc.rounds)))
+	Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round), zap.Int64("current_round", mc.CurrentRound), zap.Float64("weight", b.Weight()), zap.Float64("chain_weight", b.ChainWeight))
 	if config.Development() {
 		for _, t := range b.Txns {
 			if !t.DebugTxn() {

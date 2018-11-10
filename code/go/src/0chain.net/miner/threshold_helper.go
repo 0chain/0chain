@@ -148,7 +148,7 @@ func BlsShareReceived(ctx context.Context, receivedRound int64, sigShare string,
 	if gotThreshold {
 		rbOutput := CalcRandomBeacon(recBlsSig, recBlsFrom)
 		blsDone = true
-		GetMinerChain().VRFShareChannel <- rbOutput
+		GetMinerChain().RBOChannel <- rbOutput
 		Logger.Info("Random Beacon Output", zap.String("rbOutput: ", rbOutput), zap.Int64("curr_Round", currRound))
 		Logger.Debug("Printing blsDone since rbOutput is done ", zap.Any(":", blsDone))
 		CleanupHashMap()
@@ -217,7 +217,7 @@ func StartBls(ctx context.Context, r *round.Round) {
 		Logger.Info("The corner case for round 1 when pr is nil :", zap.Int64("round", r.GetRoundNumber()))
 		rbOutput = encryption.Hash("0chain")
 	} else {
-		rbOutput = <-GetMinerChain().VRFShareChannel
+		rbOutput = <-GetMinerChain().RBOChannel
 	}
 
 	bs.Msg = strconv.FormatInt(r.GetRoundNumber(), 10) + rbOutput

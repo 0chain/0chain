@@ -43,10 +43,18 @@ type Round struct {
 	minerPerm []int
 	state     int
 
+	proposedBlocks  []*block.Block
 	notarizedBlocks []*block.Block
-	Mutex           *sync.Mutex
+	Mutex           sync.RWMutex
 
 	shares map[string]*VRFShare
+}
+
+//NewRound - Create a new round object
+func NewRound(round int64) *Round {
+	r := datastore.GetEntityMetadata("round").Instance().(*Round)
+	r.Number = round
+	return r
 }
 
 var roundEntityMetadata *datastore.EntityMetadataImpl
@@ -81,6 +89,7 @@ func (r *Round) GetRandomSeed() int64 {
 func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool) {
 	r.Mutex.Lock()
 	defer r.Mutex.Unlock()
+	b, _ = r.addProposedBlock(b)
 	for _, blk := range r.notarizedBlocks {
 		if blk.Hash == b.Hash {
 			if blk != b {
@@ -90,7 +99,12 @@ func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool) {
 		}
 	}
 	b.SetBlockNotarized()
-	r.notarizedBlocks = append(r.notarizedBlocks, b)
+	if r.Block == nil || r.Block.RoundRank > b.RoundRank {
+		r.Block = b
+	}
+	rnb := append(r.notarizedBlocks, b)
+	sort.Slice(rnb, func(i int, j int) bool { return rnb[i].ChainWeight > rnb[j].ChainWeight })
+	r.notarizedBlocks = rnb
 	return b, true
 }
 
@@ -99,8 +113,49 @@ func (r *Round) GetNotarizedBlocks() []*block.Block {
 	return r.notarizedBlocks
 }
 
-/*GetBestNotarizedBlock - get the best notarized block that we have */
-func (r *Round) GetBestNotarizedBlock() *block.Block {
+/*AddProposedBlock - this will be concurrent as notarization is recognized by verifying as well as notarization message from others */
+func (r *Round) AddProposedBlock(b *block.Block) (*block.Block, bool) {
+	r.Mutex.Lock()
+	defer r.Mutex.Unlock()
+	return r.addProposedBlock(b)
+}
+
+func (r *Round) addProposedBlock(b *block.Block) (*block.Block, bool) {
+	for _, blk := range r.proposedBlocks {
+		if blk.Hash == b.Hash {
+			return blk, false
+		}
+	}
+	r.proposedBlocks = append(r.proposedBlocks, b)
+	return b, true
+}
+
+/*GetProposedBlocks - return all the blocks that have been proposed for this round */
+func (r *Round) GetProposedBlocks() []*block.Block {
+	return r.proposedBlocks
+}
+
+/*GetHeaviestNotarizedBlock - get the heaviest notarized block that we have in this round */
+func (r *Round) GetHeaviestNotarizedBlock() *block.Block {
+	r.Mutex.RLock()
+	defer r.Mutex.RUnlock()
+	rnb := r.notarizedBlocks
+	if len(rnb) == 0 {
+		return nil
+	}
+	return rnb[0]
+}
+
+/*GetBlocksByRank - return the currently stored blocks in the order of best rank for the round */
+func (r *Round) GetBlocksByRank(blocks []*block.Block) []*block.Block {
+	sort.SliceStable(blocks, func(i, j int) bool { return blocks[i].RoundRank < blocks[j].RoundRank })
+	return blocks
+}
+
+/*GetBestRankedNotarizedBlock - get the best ranked notarized block for this round */
+func (r *Round) GetBestRankedNotarizedBlock() *block.Block {
+	r.Mutex.RLock()
+	defer r.Mutex.RUnlock()
 	rnb := r.notarizedBlocks
 	if len(rnb) == 0 {
 		return nil
@@ -108,7 +163,7 @@ func (r *Round) GetBestNotarizedBlock() *block.Block {
 	if len(rnb) == 1 {
 		return rnb[0]
 	}
-	sort.Slice(rnb, func(i int, j int) bool { return rnb[i].ChainWeight > rnb[j].ChainWeight })
+	rnb = r.GetBlocksByRank(rnb)
 	return rnb[0]
 }
 
@@ -134,8 +189,8 @@ func (r *Round) SetFinalizing() bool {
 
 /*IsFinalizing - is the round finalizing */
 func (r *Round) IsFinalizing() bool {
-	r.Mutex.Lock()
-	defer r.Mutex.Unlock()
+	r.Mutex.RLock()
+	defer r.Mutex.RUnlock()
 	return r.isFinalizing()
 }
 
@@ -145,8 +200,8 @@ func (r *Round) isFinalizing() bool {
 
 /*IsFinalized - indicates if the round is finalized */
 func (r *Round) IsFinalized() bool {
-	r.Mutex.Lock()
-	defer r.Mutex.Unlock()
+	r.Mutex.RLock()
+	defer r.Mutex.RUnlock()
 	return r.isFinalized()
 }
 
@@ -157,10 +212,14 @@ func (r *Round) isFinalized() bool {
 /*Provider - entity provider for client object */
 func Provider() datastore.Entity {
 	r := &Round{}
-	r.notarizedBlocks = make([]*block.Block, 0, 1)
-	r.Mutex = &sync.Mutex{}
-	r.shares = make(map[string]*VRFShare)
+	r.initialize()
 	return r
+}
+
+func (r *Round) initialize() {
+	r.notarizedBlocks = make([]*block.Block, 0, 1)
+	r.proposedBlocks = make([]*block.Block, 0, 3)
+	r.shares = make(map[string]*VRFShare)
 }
 
 /*Read - read round entity from store */
@@ -202,17 +261,23 @@ func SetupRoundSummaryDB() {
 NOTE: The permutation is deterministic using a PRNG that uses a starting seed. The starting seed itself
       is crytgraphically generated random number and is not known till the threshold signature is reached.
 */
-func (r *Round) ComputeMinerRanks(m int) {
-	r.minerPerm = rand.New(rand.NewSource(r.RandomSeed)).Perm(m)
+func (r *Round) ComputeMinerRanks(miners *node.Pool) {
+	r.Mutex.Lock()
+	defer r.Mutex.Unlock()
+	r.minerPerm = rand.New(rand.NewSource(r.RandomSeed)).Perm(miners.Size())
 }
 
 /*GetMinerRank - get the rank of element at the elementIdx position based on the permutation of the round */
 func (r *Round) GetMinerRank(miner *node.Node) int {
+	r.Mutex.RLock()
+	defer r.Mutex.RUnlock()
 	return r.minerPerm[miner.SetIndex]
 }
 
 /*GetMinersByRank - get the rnaks of the miners */
 func (r *Round) GetMinersByRank(miners *node.Pool) []*node.Node {
+	r.Mutex.RLock()
+	defer r.Mutex.RUnlock()
 	nodes := miners.Nodes
 	rminers := make([]*node.Node, len(nodes))
 	for _, nd := range nodes {
@@ -223,7 +288,13 @@ func (r *Round) GetMinersByRank(miners *node.Pool) []*node.Node {
 
 //Clear - implement interface
 func (r *Round) Clear() {
+}
 
+//Restart - restart the round
+func (r *Round) Restart() {
+	r.initialize()
+	r.Block = nil
+	r.SetState(RoundShareVRF)
 }
 
 //AddVRFShare - implement interface

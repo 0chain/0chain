@@ -36,6 +36,12 @@ const (
 	StateSuccessful = 30
 )
 
+const (
+	VerificationPending    = 0
+	VerificationSuccessful = iota
+	VerificationFailed     = iota
+)
+
 /*UnverifiedBlockBody - used to compute the signature
 * This is what is used to verify the correctness of the block & the associated signature
  */
@@ -72,12 +78,20 @@ type Block struct {
 
 	TxnsMap map[string]bool `json:"-"`
 
-	ClientState  util.MerklePatriciaTrieI `json:"-"`
-	stateStatus  int8
-	StateMutex   *sync.Mutex `json:"_"`
-	blockState   int8
-	isNotarized  bool
-	ticketsMutex *sync.Mutex
+	ClientState        util.MerklePatriciaTrieI `json:"-"`
+	stateStatus        int8
+	StateMutex         *sync.Mutex `json:"_"`
+	blockState         int8
+	isNotarized        bool
+	ticketsMutex       *sync.Mutex
+	verificationStatus int
+}
+
+//NewBlock - create a new empty block
+func NewBlock(chainID datastore.Key, round int64) *Block {
+	b := datastore.GetEntityMetadata("block").Instance().(*Block)
+	b.Round = round
+	return b
 }
 
 var blockEntityMetadata *datastore.EntityMetadataImpl
@@ -270,7 +284,7 @@ func (b *Block) getHashData() string {
 	merkleRoot := mt.GetRoot()
 	rmt := b.GetReceiptsMerkleTree()
 	rMerkleRoot := rmt.GetRoot()
-	hashData := b.PrevHash + ":" + common.TimeToString(b.CreationDate) + ":" + strconv.FormatInt(b.Round, 10) + ":" + strconv.FormatInt(b.RoundRandomSeed, 10) + ":" + merkleRoot + ":" + rMerkleRoot
+	hashData := b.PrevHash + ":" + b.MinerID + ":" + common.TimeToString(b.CreationDate) + ":" + strconv.FormatInt(b.Round, 10) + ":" + strconv.FormatInt(b.RoundRandomSeed, 10) + ":" + merkleRoot + ":" + rMerkleRoot
 	return hashData
 }
 
@@ -305,6 +319,7 @@ func (b *Block) GetSummary() *BlockSummary {
 	bs := datastore.GetEntityMetadata("block_summary").Instance().(*BlockSummary)
 	bs.Version = b.Version
 	bs.Hash = b.Hash
+	bs.MinerID = b.MinerID
 	bs.Round = b.Round
 	bs.RoundRandomSeed = b.RoundRandomSeed
 	bs.CreationDate = b.CreationDate
@@ -349,7 +364,6 @@ func (b *Block) GetBlockState() int8 {
 
 /*GetClients - get all the clients of this block */
 func (b *Block) GetClients() []*client.Client {
-	clientMetadataProvider := datastore.GetEntityMetadata("client")
 	cmap := make(map[string]*client.Client)
 	for _, t := range b.Txns {
 		if t.PublicKey == "" {
@@ -358,10 +372,9 @@ func (b *Block) GetClients() []*client.Client {
 		if _, ok := cmap[t.PublicKey]; ok {
 			continue
 		}
-		c := clientMetadataProvider.Instance().(*client.Client)
+		c := client.NewClient()
 		c.SetPublicKey(t.PublicKey)
 		cmap[t.PublicKey] = c
-		t.PublicKey = ""
 	}
 	clients := make([]*client.Client, len(cmap))
 	idx := 0
@@ -425,4 +438,14 @@ func (b *Block) SetBlockNotarized() {
 //IsBlockNotarized - is block notarized?
 func (b *Block) IsBlockNotarized() bool {
 	return b.isNotarized
+}
+
+/*SetVerificationStatus - set the verification status of the block by this node */
+func (b *Block) SetVerificationStatus(status int) {
+	b.verificationStatus = status
+}
+
+/*GetVerificationStatus - get the verification status of the block */
+func (b *Block) GetVerificationStatus() int {
+	return b.verificationStatus
 }

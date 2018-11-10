@@ -2,7 +2,6 @@ package miner
 
 import (
 	"context"
-	"sort"
 	"time"
 
 	"0chain.net/block"
@@ -18,6 +17,7 @@ type Round struct {
 	verificationCancelf   context.CancelFunc
 	delta                 time.Duration
 	verificationTickets   map[string]*block.BlockVerificationTicket
+	vrfShare              *round.VRFShare
 }
 
 /*AddBlockToVerify - adds a block to the round. Assumes non-concurrent update */
@@ -29,11 +29,11 @@ func (r *Round) AddBlockToVerify(b *block.Block) {
 		return
 	}
 	if r.GetRoundNumber() != b.Round {
-		Logger.Debug("block proposal (round mismatch)", zap.Int64("round", r.GetRoundNumber()), zap.Int64("block_round", b.Round), zap.String("block", b.Hash))
+		Logger.Error("block proposal (round mismatch)", zap.Int64("round", r.GetRoundNumber()), zap.Int64("block_round", b.Round), zap.String("block", b.Hash))
 		return
 	}
 	if b.RoundRandomSeed != r.RandomSeed {
-		Logger.Info("block proposal (incorrect round random number)", zap.Int64("block_random_seed", b.RoundRandomSeed), zap.Int64("round_random_seed", r.RandomSeed))
+		Logger.Error("block proposal (incorrect round random number)", zap.Int64("block_random_seed", b.RoundRandomSeed), zap.Int64("round_random_seed", r.RandomSeed))
 		return
 	}
 	r.blocksToVerifyChannel <- b
@@ -55,12 +55,6 @@ func (r *Round) GetVerificationTickets(blockID string) []*block.VerificationTick
 	return vts
 }
 
-/*GetBlocksByRank - return the currently stored blocks in the order of best rank for the round */
-func (r *Round) GetBlocksByRank(blocks []*block.Block) []*block.Block {
-	sort.SliceStable(blocks, func(i, j int) bool { return blocks[i].RoundRank < blocks[j].RoundRank })
-	return blocks
-}
-
 /*GetBlocksToVerifyChannel - a channel where all the blocks requiring verification are put into */
 func (r *Round) GetBlocksToVerifyChannel() chan *block.Block {
 	return r.blocksToVerifyChannel
@@ -68,8 +62,8 @@ func (r *Round) GetBlocksToVerifyChannel() chan *block.Block {
 
 /*IsVerificationComplete - indicates if the verification process for the round is complete */
 func (r *Round) IsVerificationComplete() bool {
-	r.Mutex.Lock()
-	defer r.Mutex.Unlock()
+	r.Mutex.RLock()
+	defer r.Mutex.RUnlock()
 	return r.isVerificationComplete()
 }
 
@@ -97,14 +91,11 @@ func (r *Round) CancelVerification() {
 	r.Mutex.Lock()
 	defer r.Mutex.Unlock()
 	f := r.verificationCancelf
-	if r.isVerificationComplete() {
+	if f == nil {
 		return
 	}
-	r.SetState(round.RoundStateVerificationTimedOut)
-	if f != nil {
-		r.verificationCancelf = nil
-		f()
-	}
+	r.verificationCancelf = nil
+	f()
 }
 
 /*Clear - clear any pending state before deleting this round */

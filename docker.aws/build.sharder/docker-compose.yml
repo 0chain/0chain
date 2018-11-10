@@ -1,57 +1,83 @@
 version: '3'
 services:
-  cassandra:
-    image: cassandra:latest
+
+  scylla:
+    image: scylladb/scylla
     networks:
       - default
-    volumes:
-      - /0chain/config/cassandra/cassandra.yaml:/etc/cassandra/cassandra.yaml
-      - /0chain/config/cassandra:/0chain/cassandra
-      - /0chain/data/cassandra:/var/lib/cassandra
-      - /0chain/log/cassandra:/var/log/cassandra
-      - /0chain/0chain/sql:/0chain/sql
     ports:
       - "9042:9042"
+    volumes:
+
+      - /0chain/config/scylla/scylla.yaml:/etc/scylla/scylla.yaml
+
+      - /0chain/config/scylla/scylla-server:/etc/sysconfig/scylla-server
+
+      #Store the scylla volume
+      - /0chain/data/scylla:/0chain/data/scylla
+
+      #Create the directory to store the data and commitlog
+      - /0chain/data/scylla/data:/var/lib/scylla/data
+      - /0chain/data/scylla/commitlog:/var/lib/scylla/commitlog
 
     restart: on-failure:10
 
-    #Do under 0chain id.
-    user: 2000:2000
     healthcheck:
       test: ["CMD-SHELL", "[ $$(nodetool statusgossip) = running ]"]
       interval: 30s
       timeout: 10s
       retries: 5
 
-  cassandra-init:
+    command: ["--developer-mode", "0"]
+
+    #Start under user 0chain
+    privileged: true
+
+  scylla-init:
+    #The service depends upon several cassandra utilities.
     image: cassandra:latest
     volumes:
-      - /0chain/config/cassandra:/0chain/cassandra
-      - /0chain/0chain/sql:/0chain/sql
-
-    command: bash /0chain/cassandra/cassandra-init.sh
+      - /0chain/bin:/0chain/bin
+      - /0chain/sql:/0chain/sql
+    entrypoint: bash /0chain/bin/scylla-init.sh
+    #command: bash
     links:
-      - cassandra:cassandra
+      - scylla:scylla
     restart: on-failure:10
+
+    user: ${ZCHAIN_USER}:${ZCHAIN_GROUP}
+    privileged: false
 
   sharder:
     environment:
       - DOCKER=true
+      - CASSANDRA_CLUSTER=scylla
     depends_on:
-      - cassandra-init
+      - scylla-init
     links:
-      - cassandra-init:cassandra-init
+      - scylla-init:scylla-init
+
     build:
-      context: /0chain/0chain
-      dockerfile: /0chain/0chain/docker.aws/build.sharder/Dockerfile
+      context: ${ZCHAIN_CODEBASE}
+      dockerfile: ./docker.aws/build.sharder/Dockerfile
+
+    image: ${IMAGE_NAME}:${IMAGE_TAG}
 
     pid: "host"
 
     volumes:
+      #CONFIG_VOLUME
       - /0chain/config:/0chain/config
-      - /0chain/nodes:/0chain/nodes
+
+      #SHARDER_LOG_VOLUME
       - /0chain/log:/0chain/log
-      - /0chain/data:/0chain/data
+
+      #ROCKSDB_VOLUME
+      - /0chain/data/rocksdb:/0chain/data/rocksdb
+      - /0chain/data/rocksdb/state:/0chain/data/rocksdb/state
+
+      #Use the blocks volume
+      - /0chain/data/blocks:/0chain/data/blocks
 
     #Hard and soft are required properties.
     ulimits:
@@ -74,14 +100,9 @@ services:
       default:
 
     #Start under user 0chain
-    user: 2000:2000
-    command: ./bin/sharder --deployment_mode 0 --keys_file /0chain/config/${SHARDER}.txt --nodes_file nodes
+    user: ${ZCHAIN_USER}:${ZCHAIN_GROUP}
+    command: /0chain/bin/sharder --deployment_mode 0 --keys_file /0chain/config/sharder.txt --nodes_file nodes
 
 networks:
   default:
     driver: bridge
-
-volumes:
-  data:
-  config:
-  nodes:

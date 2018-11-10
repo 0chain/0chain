@@ -143,12 +143,16 @@ func VerifyBlockHandler(ctx context.Context, entity datastore.Entity) (interface
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
 	mc := GetMinerChain()
-	if b.MinerID == mc.ID {
+	if b.MinerID == node.Self.GetKey() {
 		return nil, nil
 	}
 	if b.Round < mc.LatestFinalizedBlock.Round {
 		Logger.Debug("verify block handler", zap.Int64("round", b.Round), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round))
 		return nil, nil
+	}
+	err := b.Validate(ctx)
+	if err != nil {
+		return nil, err
 	}
 	msg := NewBlockMessage(MessageVerify, node.GetSender(ctx), nil, b)
 	mc.GetBlockMessageChannel() <- msg
@@ -216,7 +220,7 @@ func NotarizedBlockSendHandler(ctx context.Context, r *http.Request) (interface{
 		}
 		r := mc.GetRound(roundN)
 		if r != nil {
-			b := r.GetBestNotarizedBlock()
+			b := r.GetHeaviestNotarizedBlock()
 			if b != nil {
 				return b, nil
 			}
@@ -231,7 +235,7 @@ func NotarizedBlockSendHandler(ctx context.Context, r *http.Request) (interface{
 		}
 	} else {
 		for r := mc.GetRound(mc.CurrentRound); r != nil; r = mc.GetRound(r.GetRoundNumber() - 1) {
-			b := r.GetBestNotarizedBlock()
+			b := r.GetHeaviestNotarizedBlock()
 			if b != nil {
 				return b, nil
 			}
