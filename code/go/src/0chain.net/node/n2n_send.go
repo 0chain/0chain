@@ -165,7 +165,7 @@ func shouldPush(receiver *Node, uri string, entity datastore.Entity, timer metri
 		pullTime = pullSendTime
 	}
 	if pushTime > pullTime+2*receiver.SmallMessageSendTime {
-		N2n.Info("sending - push to pull", zap.Int("from", Self.SetIndex), zap.Int("to", receiver.SetIndex), zap.String("handler", uri), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.String("id", entity.GetKey()))
+		N2n.Debug("sending - push to pull", zap.Int("from", Self.SetIndex), zap.Int("to", receiver.SetIndex), zap.String("handler", uri), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.String("id", entity.GetKey()))
 		return false
 	}
 	return true
@@ -415,14 +415,13 @@ func PushToPullHandler(ctx context.Context, r *http.Request) (interface{}, error
 		N2n.Error("push to pull", zap.String("key", key), zap.Error(err))
 		return nil, common.NewError("request_data_not_found", "Requested data is not found")
 	}
-	N2n.Info("push to pull", zap.String("key", key))
+	N2n.Debug("push to pull", zap.String("key", key))
 	return pcde, nil
 }
 
 /*pullEntityHandler - pull an entity that wasn't pushed as it's large and pulling is cheaper */
 func pullEntityHandler(ctx context.Context, nd *Node, uri string, handler datastore.JSONEntityReqResponderF, entityName string, entityID datastore.Key) {
 	phandler := func(pctx context.Context, entity datastore.Entity) (interface{}, error) {
-		Logger.Info("pull entity", zap.String("entity", entityName), zap.Any("id", entityID))
 		if entity.GetEntityMetadata().GetName() != entityName {
 			return entity, nil
 		}
@@ -435,7 +434,7 @@ func pullEntityHandler(ctx context.Context, nd *Node, uri string, handler datast
 		if err != nil {
 			N2n.Error("message pull", zap.Int("from", nd.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", uri), zap.Duration("duration", duration), zap.String("entity", entityName), zap.Any("id", entity.GetKey()), zap.Error(err))
 		} else {
-			N2n.Info("message pull", zap.Int("from", nd.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", uri), zap.Duration("duration", duration), zap.String("entity", entityName), zap.Any("id", entity.GetKey()))
+			N2n.Debug("message pull", zap.Int("from", nd.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", uri), zap.Duration("duration", duration), zap.String("entity", entityName), zap.Any("id", entity.GetKey()))
 		}
 		return entity, nil
 	}
@@ -445,7 +444,7 @@ func pullEntityHandler(ctx context.Context, nd *Node, uri string, handler datast
 	params["id"] = datastore.ToString(entityID)
 	rhandler := pullDataRequestor(params, phandler)
 	result := rhandler(nd)
-	N2n.Info("message pull", zap.String("uri", uri), zap.String("entity", entityName), zap.String("id", entityID), zap.Bool("result", result))
+	N2n.Debug("message pull", zap.String("uri", uri), zap.String("entity", entityName), zap.String("id", entityID), zap.Bool("result", result))
 }
 
 var pullDataRequestor EntityRequestor
