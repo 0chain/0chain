@@ -284,7 +284,7 @@ func (b *Block) getHashData() string {
 	merkleRoot := mt.GetRoot()
 	rmt := b.GetReceiptsMerkleTree()
 	rMerkleRoot := rmt.GetRoot()
-	hashData := b.PrevHash + ":" + common.TimeToString(b.CreationDate) + ":" + strconv.FormatInt(b.Round, 10) + ":" + strconv.FormatInt(b.RoundRandomSeed, 10) + ":" + merkleRoot + ":" + rMerkleRoot
+	hashData := b.PrevHash + ":" + b.MinerID + ":" + common.TimeToString(b.CreationDate) + ":" + strconv.FormatInt(b.Round, 10) + ":" + strconv.FormatInt(b.RoundRandomSeed, 10) + ":" + merkleRoot + ":" + rMerkleRoot
 	return hashData
 }
 
@@ -319,6 +319,7 @@ func (b *Block) GetSummary() *BlockSummary {
 	bs := datastore.GetEntityMetadata("block_summary").Instance().(*BlockSummary)
 	bs.Version = b.Version
 	bs.Hash = b.Hash
+	bs.MinerID = b.MinerID
 	bs.Round = b.Round
 	bs.RoundRandomSeed = b.RoundRandomSeed
 	bs.CreationDate = b.CreationDate
