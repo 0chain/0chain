@@ -375,7 +375,6 @@ func (b *Block) GetClients() []*client.Client {
 		c := client.NewClient()
 		c.SetPublicKey(t.PublicKey)
 		cmap[t.PublicKey] = c
-		t.PublicKey = ""
 	}
 	clients := make([]*client.Client, len(cmap))
 	idx := 0

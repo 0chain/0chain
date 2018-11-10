@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"sort"
 	"sync"
 	"time"
 
@@ -170,6 +171,7 @@ func NewChainFromConfig() *Chain {
 	} else if waitMode == "dynamic" {
 		chain.BlockProposalWaitMode = BlockProposalWaitDynamic
 	}
+	chain.ReuseTransactions = viper.GetBool("server_chain.block.reuse_txns")
 	return chain
 }
 
@@ -308,6 +310,9 @@ func (c *Chain) AddRoundBlock(r round.RoundI, b *block.Block) *block.Block {
 func (c *Chain) addBlock(b *block.Block) *block.Block {
 	if eb, ok := c.blocks[b.Hash]; ok {
 		if eb != b {
+			if b.MinerID == node.Self.GetKey() {
+				panic(fmt.Sprintf("another block object of my block: %v %v %v %v\n", b.Hash, b.MinerID, eb.Hash, eb.MinerID))
+			}
 			c.MergeVerificationTickets(common.GetRootContext(), eb, b.VerificationTickets)
 		}
 		return eb
@@ -595,4 +600,29 @@ func (c *Chain) getBlocks() []*block.Block {
 func (c *Chain) SetRoundRank(r round.RoundI, b *block.Block) {
 	bNode := node.GetNode(b.MinerID)
 	b.RoundRank = r.GetMinerRank(bNode)
+}
+
+/*GetUnrelatedBlocks - get blocks that are not related to the chain of the given block */
+func (c *Chain) GetUnrelatedBlocks(maxBlocks int, b *block.Block) []*block.Block {
+	c.blocksMutex.Lock()
+	defer c.blocksMutex.Unlock()
+	var blocks []*block.Block
+	var chain = make(map[datastore.Key]*block.Block)
+	var prevRound = b.Round
+	for pb := b.PrevBlock; pb != nil; pb = pb.PrevBlock {
+		prevRound = pb.Round
+		chain[pb.Hash] = pb
+	}
+	for _, rb := range c.blocks {
+		if rb.Round >= prevRound && rb.Round < b.Round && common.WithinTime(int64(b.CreationDate), int64(rb.CreationDate), transaction.TXN_TIME_TOLERANCE) {
+			if _, ok := chain[rb.Hash]; !ok {
+				blocks = append(blocks, rb)
+			}
+			if len(blocks) >= maxBlocks {
+				break
+			}
+		}
+	}
+	sort.SliceStable(blocks, func(i, j int) bool { return blocks[i].Round > blocks[j].Round })
+	return blocks
 }
