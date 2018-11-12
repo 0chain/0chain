@@ -1,12 +1,10 @@
 package bls
 
 import (
-	"bytes"
-	"encoding/binary"
+	"strconv"
 	"testing"
 
 	"0chain.net/encryption"
-	"0chain.net/util"
 )
 
 const CurveFp254BNb = 0
@@ -71,7 +69,7 @@ func TestMakeSimpleMultipleDKGs(test *testing.T) {
 
 }
 
-/*TestRecoverSecretKey - Tests to check the secret key is recovered back from the shares */
+/*TestRecoverSecretKey - Tests to check the secret key of a miner during the DKG process can be recovered back. Checking for poly sub method.*/
 func TestRecoverSecretKey(test *testing.T) {
 
 	variation := func(t, n int) {
@@ -114,7 +112,7 @@ func TestRecoverSecretKey(test *testing.T) {
 
 }
 
-/* TestDKGAggShare - Test to aggregate the shares */
+/* TestDKGAggShare - Test to aggregate the DKG shares received by a party */
 func TestDKGAggShare(test *testing.T) {
 
 	variation := func(t, n int) {
@@ -152,124 +150,129 @@ func TestDKGAggShare(test *testing.T) {
 
 }
 
-/* TestRecoverGrpSignature - The test used to recover the grp signature */
+/* TestRecoverGrpSignature - The test used to check (n = 3, k = 2) running DKG and check whether the grp signature produced is the same for a particular round */
 func TestRecoverGrpSignature(test *testing.T) {
 
-	variation := func(t, n int) {
-		dkgs := newDKGs(t, n)
-		partyIdsFromMap := make([]PartyID, n)
+	t := 2
+	n := 3
 
-		j := 0
-		hmap := dkgs[0].secSharesMap // to get the PartyIDs
-		for key := range hmap {
-			partyIdsFromMap[j] = key
-			j++
-		}
+	dkgs := newDKGs(t, n)
+	partyIdsFromMap := make([]PartyID, n)
 
-		for i := 0; i < n; i++ {
-
-			for idIter := 0; idIter < n; idIter++ {
-
-				gotShare := dkgs[idIter].GetKeyShareForOther(partyIdsFromMap[i])
-
-				dkgs[i].receivedSecShares[idIter] = gotShare.m
-
-			}
-
-			if len(dkgs[i].receivedSecShares) == n {
-				dkgs[i].AggregateShares()
-			}
-		}
-
-		var rNumber int64
-		var prevVRF string
-		VRFop := encryption.Hash("0chain")
-
-		collectSigShares := make([]Sign, n)
-		sigSharesID := make(map[Sign]PartyID, n)
-
-		ksigShares := make([]Sign, t)
-		kpartyIDs := make([]PartyID, t)
-
-		var thresholdCount = 1
-		var bs SimpleBLS
-		var VRF1 Sign
-		var VRF2 Sign
-		var ind = 0
-
-		for rNumber < 50 {
-
-			thresholdCount = 1
-			ind = 0
-
-			prevVRF = VRFop
-			for m := 0; m < n; m++ {
-				bs = MakeSimpleBLS(&dkgs[m])
-				blsMsg := bytes.NewBuffer(nil)
-
-				binary.Write(blsMsg, binary.LittleEndian, rNumber)
-				binary.Write(blsMsg, binary.LittleEndian, prevVRF)
-				bs.Msg = util.ToHex(blsMsg.Bytes())
-
-				sigShare := bs.SignMsg()
-				sigSharesID[sigShare] = dkgs[m].ID
-				collectSigShares[m] = sigShare
-			}
-
-			bs = MakeSimpleBLS(&dkgs[1])
-			j = 0
-
-			for thresholdCount <= t {
-
-				getShares := collectSigShares[ind]
-
-				ksigShares[j] = getShares
-				kpartyIDs[j] = sigSharesID[getShares]
-				thresholdCount++
-				j++
-				ind++
-			}
-
-			bs.RecoverGroupSig(kpartyIDs, ksigShares)
-			thresholdCount = 1
-			j = 0
-			ind = 0
-			bs.RecoverGroupSig(kpartyIDs, ksigShares)
-			VRF1 = bs.GpSign
-
-			//test.Errorf("The VRF1 is %s", VRF1.GetHexString())
-
-			bs = MakeSimpleBLS(&dkgs[0])
-			j = 0
-
-			for thresholdCount <= t {
-
-				getShares := collectSigShares[ind]
-
-				ksigShares[j] = getShares
-				kpartyIDs[j] = sigSharesID[getShares]
-				thresholdCount++
-				j++
-				ind++
-			}
-			bs.RecoverGroupSig(kpartyIDs, ksigShares)
-			VRF2 = bs.GpSign
-
-			//test.Errorf("The VRF2 is %s", VRF2.GetHexString())
-			if !VRF1.IsEqual(&VRF2) {
-				//test.Errorf("The VRF output produced by 2 parties are different party1 has %s, party2 has %s", VRF1.GetHexString(), VRF2.GetHexString())
-			}
-
-			VRFop = encryption.Hash(VRF1.GetHexString())
-			//test.Errorf("The VRFop is %s for rNumber %v", VRFop, rNumber)
-
-			rNumber++
-		}
-
+	j := 0
+	hmap := dkgs[0].secSharesMap
+	for key := range hmap {
+		partyIdsFromMap[j] = key
+		j++
 	}
 
-	variation(2, 2)
-	variation(2, 3)
-	variation(2, 4)
+	for i := 0; i < n; i++ {
+
+		for idIter := 0; idIter < n; idIter++ {
+
+			gotShare := dkgs[idIter].GetKeyShareForOther(partyIdsFromMap[i])
+
+			dkgs[i].receivedSecShares[idIter] = gotShare.m
+
+		}
+
+		if len(dkgs[i].receivedSecShares) == n {
+			dkgs[i].AggregateShares()
+		}
+	}
+
+	var rNumber int64 = 1
+	var prevRBO string
+	var blsMessage string
+	rbOutput := encryption.Hash("0chain")
+
+	collectSigShares := make([]Sign, n)
+	sigSharesID := make(map[Sign]PartyID, n)
+
+	thresholdBlsSig := make([]Sign, t)
+	thresholdPartyIDs := make([]PartyID, t)
+
+	var thresholdCount int
+	var bs SimpleBLS
+	var rbOutput1 Sign
+	var rbOutput2 Sign
+	var rbOutput3 Sign
+
+	for rNumber < 1000 {
+
+		prevRBO = rbOutput
+		for m := 0; m < n; m++ {
+			bs = MakeSimpleBLS(&dkgs[m])
+			bs.Msg = strconv.FormatInt(rNumber, 10) + prevRBO
+			blsMessage = strconv.FormatInt(rNumber, 10) + prevRBO
+
+			sigShare := bs.SignMsg()
+			sigSharesID[sigShare] = dkgs[m].ID
+			collectSigShares[m] = sigShare
+		}
+
+		//Compute Gp Sign by dkgs[0], ie, party 1
+		bs = MakeSimpleBLS(&dkgs[0])
+		thresholdCount = 1
+		j = 0
+		for thresholdCount <= t {
+
+			getShares := collectSigShares[j]
+
+			thresholdBlsSig[j] = getShares
+			thresholdPartyIDs[j] = sigSharesID[getShares]
+			thresholdCount++
+			j++
+
+		}
+
+		bs.RecoverGroupSig(thresholdPartyIDs, thresholdBlsSig)
+		rbOutput1 = bs.GpSign
+
+		//Compute Gp Sign by dkgs[1], ie, party 2
+		bs = MakeSimpleBLS(&dkgs[1])
+		thresholdCount = 1
+		j = 0
+
+		for thresholdCount <= t {
+
+			getShares := collectSigShares[j]
+
+			thresholdBlsSig[j] = getShares
+			thresholdPartyIDs[j] = sigSharesID[getShares]
+			thresholdCount++
+			j++
+
+		}
+		bs.RecoverGroupSig(thresholdPartyIDs, thresholdBlsSig)
+		rbOutput2 = bs.GpSign
+
+		//Compute Gp Sign by dkgs[2], ie, party 3
+		bs = MakeSimpleBLS(&dkgs[2])
+		thresholdCount = 1
+		j = 0
+
+		for thresholdCount <= t {
+
+			getShares := collectSigShares[j]
+			thresholdBlsSig[j] = getShares
+			thresholdPartyIDs[j] = sigSharesID[getShares]
+			thresholdCount++
+			j++
+
+		}
+		bs.RecoverGroupSig(thresholdPartyIDs, thresholdBlsSig)
+		rbOutput3 = bs.GpSign
+
+		if !rbOutput1.IsEqual(&rbOutput2) || !rbOutput1.IsEqual(&rbOutput3) || !rbOutput2.IsEqual(&rbOutput3) {
+			test.Errorf("The RBO produced by 3 parties are different party1 has %s, party2 has %s, party3 has %s", rbOutput1.GetHexString(), rbOutput2.GetHexString(), rbOutput3.GetHexString())
+			test.Errorf("The rbOutput is %s for rNumber %v and the message %s", rbOutput, rNumber, blsMessage)
+
+		}
+
+		rbOutput = encryption.Hash(rbOutput1.GetHexString())
+		rNumber++
+
+	}
 
 }
