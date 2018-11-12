@@ -170,7 +170,7 @@ func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 		if nd.Status == node.NodeStatusInactive {
 			fmt.Fprintf(w, "<tr class='inactive'>")
 		} else {
-			if c.CurrentRound > c.LatestFinalizedBlock.Round+10 {
+			if nd == node.Self.Node && c.CurrentRound > c.LatestFinalizedBlock.Round+10 {
 				fmt.Fprintf(w, "<tr class='warning'>")
 			} else {
 				fmt.Fprintf(w, "<tr>")
