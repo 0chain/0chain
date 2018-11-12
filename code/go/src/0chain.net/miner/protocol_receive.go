@@ -10,6 +10,9 @@ import (
 	"go.uber.org/zap"
 )
 
+/*
+	Jay: Note: This is where the BLS Sigshare is received.
+*/
 /*HandleVRFShare - handles the vrf share */
 func (mc *Chain) HandleVRFShare(ctx context.Context, msg *BlockMessage) {
 	mr := mc.GetMinerRound(msg.VRFShare.Round)

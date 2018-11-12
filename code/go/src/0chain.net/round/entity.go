@@ -297,13 +297,18 @@ func (r *Round) Restart() {
 	r.SetState(RoundShareVRF)
 }
 
+/*
+  Jay: Note: this is where recevied shares are added
+*/
 //AddVRFShare - implement interface
 func (r *Round) AddVRFShare(share *VRFShare) bool {
+
 	r.Mutex.Lock()
 	defer r.Mutex.Unlock()
 	if _, ok := r.shares[share.party.GetKey()]; ok {
 		return false
 	}
+
 	r.setState(RoundShareVRF)
 	r.shares[share.party.GetKey()] = share
 	return true

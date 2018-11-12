@@ -12,12 +12,14 @@ import (
 //AddVRFShare - implement the interface for the RoundRandomBeacon protocol
 func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShare) bool {
 	if mr.AddVRFShare(vrfs) {
+
 		mc.computeVRF(ctx, mr)
 		return true
 	}
 	return false
 }
 
+//Jay: Check if K shares are received
 func (mc *Chain) computeVRF(ctx context.Context, mr *Round) {
 	if mr.IsVRFComplete() {
 		return
@@ -31,6 +33,7 @@ func (mc *Chain) computeVRF(ctx context.Context, mr *Round) {
 	}
 }
 
+//Jay: Note: This is where real RBO is calculated.
 func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r *Round) {
 	//TODO: once the actual VRF comes in, there is no need to rely on the prior value to compute the new value from the shares
 	if mpr := pr.(*Round); mpr.IsVRFComplete() {

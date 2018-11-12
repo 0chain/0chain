@@ -48,9 +48,16 @@ func (mc *Chain) startRound(ctx context.Context, pr *Round, r *Round) {
 		// If we don't have the prior round, and hence the prior round's random seed, we can't provide the share
 		return
 	}
+
 	mc.addMyVRFShare(ctx, pr, r)
 }
 
+/*
+	Jay: Note Send GroupSignature Share
+	Do equivalent of
+	GroupSignature Share = StartBLS() //Change it to return the share
+	Then Call SendVRFShare with the SigShare.GetHexShareString
+*/
 func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
 	vrfs := &round.VRFShare{}
 	vrfs.Round = r.GetRoundNumber()

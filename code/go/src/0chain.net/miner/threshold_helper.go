@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 
+	"0chain.net/chain"
 	"0chain.net/datastore"
 	"0chain.net/encryption"
 	"0chain.net/node"
@@ -23,6 +24,8 @@ import (
 var dg bls.SimpleDKG
 var bs bls.SimpleBLS
 var recShares []string
+var recSharesMap map[int]string
+var minerShares map[string]bls.Key
 var currRound int64
 
 var roundMap = make(map[int64]map[int]string)
@@ -39,14 +42,13 @@ func StartDKG(ctx context.Context) {
 	k := int(math.Ceil((float64(thresholdByCount) / 100) * float64(mc.Miners.Size())))
 
 	n := mc.Miners.Size()
-
+	minerShares = make(map[string]bls.Key, len(m2m.Nodes))
 	Logger.Info("Starting DKG...")
 
 	//TODO : Need to include check for active miners and then send the shares, have to remove sleep in future
-	//mc.Miners.OneTimeStatusMonitor(ctx)
-	time.Sleep(10 * time.Second)
 
 	dg = bls.MakeSimpleDKG(k, n)
+	self := node.GetSelfNode(ctx)
 
 	for _, node := range m2m.Nodes {
 
@@ -59,32 +61,114 @@ func StartDKG(ctx context.Context) {
 		secShare, _ := dg.ComputeDKGKeyShare(forID)
 		Logger.Info("secShare for above minerID is ", zap.String("secShare for above minerID is ", secShare.GetDecString()))
 
-		dkg := &bls.Dkg{
-			Share: secShare.GetDecString()}
-		dkg.SetKey(datastore.ToKey("1"))
-
-		m2m.SendTo(DKGShareSender(dkg), node.ID)
-
-	}
-
-	//Had to introduce delay for the time when shares are received by other miners
-	time.Sleep(10 * time.Second)
-
-	if len(recShares) == dg.N {
-		Logger.Info("All the shares are received ...")
-		AggregateDKGSecShares(recShares)
-		Logger.Info("DKG is done :) ...")
+		Logger.Info("secShare ", zap.String("secShare for minerID is ", secShare.GetDecString()), zap.Int("miner index", node.SetIndex))
+		minerShares[node.GetKey()] = secShare
+		if self.SetIndex == node.SetIndex {
+			recShares = append(recShares, secShare.GetDecString())
+			addToRecSharesMap(self.SetIndex, secShare.GetDecString())
+		}
 
 	}
+	go WaitForDKGShares()
 
-	//Had to introduce delay to complete the DKG before the round starts
-	time.Sleep(10 * time.Second)
+}
+func sendDKG() {
+	mc := GetMinerChain()
+
+	m2m := mc.Miners
+
+	for _, n := range m2m.Nodes {
+
+		if n != nil {
+			//ToDo: Optimization Instead of sending, asking for DKG share is better.
+			err := SendDKGShare(n)
+			if err != nil {
+				Logger.Info("DKG-1 Failed sending DKG share", zap.Int("idx", n.SetIndex), zap.Error(err))
+			} else {
+				Logger.Info("DKG-1 Success sending DKG share", zap.Int("idx", n.SetIndex))
+			}
+		} else {
+			Logger.Info("DKG-1 Error in getting node for ", zap.Int("idx", n.SetIndex))
+		}
+	}
 
 }
 
-// AppendDKGSecShares - Gets the shares by other miners and append to the global array
-func AppendDKGSecShares(share string) {
+/*SendDKGShare sends the generated secShare to the given node */
+func SendDKGShare(n *node.Node) error {
+	mc := GetMinerChain()
+	m2m := mc.Miners
+
+	secShare := minerShares[n.GetKey()]
+	dkg := &bls.Dkg{
+		Share: secShare.GetDecString()}
+	dkg.SetKey(datastore.ToKey("1"))
+	Logger.Info("@sending DKG share", zap.Int("idx", n.SetIndex), zap.Any("share", dkg.Share))
+	_, err := m2m.SendTo(DKGShareSender(dkg), n.GetKey())
+	return err
+}
+
+/*WaitForDKGShares --This function waits FOREVER for enough #miners to send DKG shares */
+func WaitForDKGShares() bool {
+
+	//Todo: Add a configurable wait time.
+	if !HasAllDKGSharesReceived() {
+		ticker := time.NewTicker(5 * chain.DELTA)
+		defer ticker.Stop()
+		for ts := range ticker.C {
+			sendDKG()
+			Logger.Info("waiting for sufficient DKG Shares", zap.Time("ts", ts))
+			if HasAllDKGSharesReceived() {
+				Logger.Info("Received sufficient DKG Shares. Sending DKG one moretime and going quiet", zap.Time("ts", ts))
+				sendDKG()
+				break
+			}
+		}
+	}
+
+	return true
+
+}
+
+/*HasAllDKGSharesReceived returns true if all shares are received */
+func HasAllDKGSharesReceived() bool {
+	//ToDo: Need parameterization
+	if len(recSharesMap) >= dg.N {
+		return true
+	}
+	return false
+}
+
+func addToRecSharesMap(nodeID int, share string) {
+	if recSharesMap == nil {
+		mc := GetMinerChain()
+
+		m2m := mc.Miners
+		recSharesMap = make(map[int]string, len(m2m.Nodes))
+	}
+	recSharesMap[nodeID] = share
+}
+
+/*AppendDKGSecShares - Gets the shares by other miners and append to the global array */
+func AppendDKGSecShares(nodeID int, share string) {
+	Logger.Info("DKG-2 Share received", zap.Int("NodeId: ", nodeID), zap.String("Share: ", share))
+
+	if recSharesMap != nil {
+		if _, ok := recSharesMap[nodeID]; ok {
+			Logger.Info("DKG-2 Ignoring Share recived again from node : ", zap.Int("Node Id", nodeID))
+			return
+		}
+	}
 	recShares = append(recShares, share)
+	addToRecSharesMap(nodeID, share)
+	//ToDo: We cannot expect everyone to be ready to start. Should we use K?
+	if HasAllDKGSharesReceived() {
+		Logger.Info("All the shares are received ...")
+		AggregateDKGSecShares(recShares)
+		Logger.Info("DKG-X  is done :) ...")
+		go StartProtocol()
+	}
+
 }
 
 // VerifySigShares - Verify the bls sig share is correct

@@ -110,6 +110,7 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (interface{},
 	msg := NewBlockMessage(MessageVRFShare, node.GetSender(ctx), nil, nil)
 	vrfs.SetParty(msg.Sender)
 	msg.VRFShare = vrfs
+	Logger.Debug("DKG-X Here VRFShareHandler Sending msg to BlockMessageChannel")
 	mc.GetBlockMessageChannel() <- msg
 	return nil, nil
 }
@@ -120,8 +121,11 @@ func DKGShareHandler(ctx context.Context, entity datastore.Entity) (interface{},
 	if !ok {
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
-	Logger.Info("received DKG share", zap.String("share", dg.Share))
-	AppendDKGSecShares(dg.Share)
+	//ToDo: Need to make sure SENDER is not byzantine
+	nodeID := node.GetSender(ctx).SetIndex
+	Logger.Debug("received DKG share", zap.String("share", dg.Share), zap.Int("Node Id", nodeID))
+	AppendDKGSecShares(nodeID, dg.Share)
+
 	return nil, nil
 }
 
@@ -155,6 +159,7 @@ func VerifyBlockHandler(ctx context.Context, entity datastore.Entity) (interface
 		return nil, err
 	}
 	msg := NewBlockMessage(MessageVerify, node.GetSender(ctx), nil, b)
+	Logger.Debug("DKG-X Here VerifyBlockHandler Sending msg to BlockMessageChannel")
 	mc.GetBlockMessageChannel() <- msg
 	return nil, nil
 }
@@ -167,6 +172,7 @@ func VerificationTicketReceiptHandler(ctx context.Context, entity datastore.Enti
 	}
 	msg := NewBlockMessage(MessageVerificationTicket, node.GetSender(ctx), nil, nil)
 	msg.BlockVerificationTicket = bvt
+	Logger.Debug("DKG-X Here VerificationTicketReceipt Sending msg to BlockMessageChannel")
 	GetMinerChain().GetBlockMessageChannel() <- msg
 	return nil, nil
 }
@@ -184,6 +190,7 @@ func NotarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (i
 	}
 	msg := NewBlockMessage(MessageNotarization, node.GetSender(ctx), nil, nil)
 	msg.Notarization = notarization
+	Logger.Debug("DKG-X Here NotarizationReceipt Sending msg to BlockMessageChannel")
 	mc.GetBlockMessageChannel() <- msg
 	return nil, nil
 }
@@ -204,6 +211,7 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 		return nil, err
 	}
 	msg := &BlockMessage{Sender: node.GetSender(ctx), Type: MessageNotarizedBlock, Block: b}
+	Logger.Debug("DKG-X Here NotarizedBlock Sending msg to BlockMessageChannel")
 	mc.GetBlockMessageChannel() <- msg
 	return nil, nil
 }
