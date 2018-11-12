@@ -248,13 +248,15 @@ func ToN2NSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 			http.Error(w, err.Error(), 400)
 			return
 		}
-		mkey := serveMetricKey(uri)
 		sdata := buffer.Bytes()
 		w.Write(sdata)
-		timer := sender.GetTimer(mkey)
-		timer.UpdateSince(ts)
-		sizer := sender.GetSizeMetric(mkey)
-		sizer.Update(int64(len(sdata)))
+		if r.FormValue("__push2pull") == "true" {
+			mkey := serveMetricKey(uri)
+			timer := sender.GetTimer(mkey)
+			timer.UpdateSince(ts)
+			sizer := sender.GetSizeMetric(mkey)
+			sizer.Update(int64(len(sdata)))
+		}
 		N2n.Info("message received", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI), zap.Duration("duration", time.Since(ts)), zap.Int("codec", options.CODEC))
 	}
 }

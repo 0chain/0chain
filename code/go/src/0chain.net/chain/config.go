@@ -31,4 +31,6 @@ type Config struct {
 
 	BlockProposalMaxWaitTime time.Duration `json:"block_proposal_max_wait_time"` // max time to wait to receive a block proposal
 	BlockProposalWaitMode    int8          `json:"block_proposal_wait_mode"`     // wait time for the block proposal is static (0) or dynamic (1)
+
+	ReuseTransactions bool `json:"reuse_txns"` // indicates if transactions from unrelated blocks can be reused
 }
