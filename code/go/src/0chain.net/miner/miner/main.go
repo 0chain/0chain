@@ -94,13 +94,9 @@ func main() {
 		Logger.Panic("node definition for self node doesn't exist")
 	}
 
-	Logger.Info("self identity", zap.Any("set_index", node.Self.Node.SetIndex), zap.Any("id", node.Self.Node.GetKey()))
-
 	if config.DevConfiguration.State {
 		chain.SetupStateLogger("/tmp/state.txt")
 	}
-
-	mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"))
 
 	mode := "main net"
 	if config.Development() {
@@ -110,7 +106,10 @@ func main() {
 	}
 
 	address := fmt.Sprintf(":%v", node.Self.Port)
-	Logger.Info("Starting miner", zap.Int("available_cpus", runtime.NumCPU()), zap.String("port", address), zap.String("chain_id", config.GetServerChainID()), zap.String("mode", mode))
+
+	Logger.Info("Starting miner", zap.String("go_version", runtime.Version()), zap.Int("available_cpus", runtime.NumCPU()), zap.String("port", address))
+	Logger.Info("Chain info", zap.String("chain_id", config.GetServerChainID()), zap.String("mode", mode))
+	Logger.Info("Self identity", zap.Any("set_index", node.Self.Node.SetIndex), zap.Any("id", node.Self.Node.GetKey()))
 
 	//TODO - get stake of miner from biding (currently hard coded)
 	//serverChain.updateMiningStake(node.Self.Node.GetKey(), 100)  we do not want to expose this feature at this point.
@@ -133,6 +132,8 @@ func main() {
 	}
 	common.HandleShutdown(server)
 	memorystore.GetInfo()
+
+	mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"))
 
 	initWorkers(ctx)
 	initN2NHandlers()
