@@ -56,12 +56,13 @@ func (mc *Chain) startRound(ctx context.Context, pr *Round, r *Round) {
 	Jay: Note Send GroupSignature Share
 	Do equivalent of
 	GroupSignature Share = StartBLS() //Change it to return the share
-	Then Call SendVRFShare with the SigShare.GetHexShareString
+	Then Call SendVRFShare with the SigShare.GetHexShareString to send to all the miners
 */
 func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
 	vrfs := &round.VRFShare{}
 	vrfs.Round = r.GetRoundNumber()
-	vrfs.Share = node.Self.Node.SetIndex
+	//vrfs.Share = node.Self.Node.SetIndex
+	vrfs.Share = getBlsShare(ctx, r.Round)
 	vrfs.SetParty(node.Self.Node)
 	r.vrfShare = vrfs
 	if mc.AddVRFShare(ctx, r, r.vrfShare) {

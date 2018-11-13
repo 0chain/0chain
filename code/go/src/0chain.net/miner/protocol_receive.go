@@ -15,6 +15,8 @@ import (
 */
 /*HandleVRFShare - handles the vrf share */
 func (mc *Chain) HandleVRFShare(ctx context.Context, msg *BlockMessage) {
+	Logger.Info("DKG-X Here in HandleVRFShare from Miner ", zap.Any("sender_index", msg.Sender.SetIndex))
+
 	mr := mc.GetMinerRound(msg.VRFShare.Round)
 	if mr == nil {
 		Logger.Debug("handle vrf share - got vrf share before starting a round", zap.Int64("round", msg.VRFShare.Round))

@@ -289,6 +289,53 @@ func AggregateDKGSecShares(recShares []string) error {
 }
 
 // StartBls - Start the BLS process
+func getBlsShare(ctx context.Context, r *round.Round) string {
+	Logger.Info("DKG-X getBlsShare ", zap.Int64("Round Number", r.Number))
+	self := node.GetSelfNode(ctx)
+	blsDone = false
+	bs = bls.MakeSimpleBLS(&dg)
+
+	currRound = r.Number
+	var rbOutput string
+	if r.GetRoundNumber()-1 == 0 {
+
+		Logger.Info("The corner case for round 1 when pr is nil :", zap.Int64("round", r.GetRoundNumber()))
+		rbOutput = encryption.Hash("0chain")
+	} else {
+		rbOutput = <-GetMinerChain().RBOChannel
+	}
+
+	bs.Msg = strconv.FormatInt(r.GetRoundNumber(), 10) + rbOutput
+
+	Logger.Info("Bls sign share calculated for ", zap.Int64("round", r.GetRoundNumber()), zap.String("rbo_previous_round", rbOutput), zap.Any("bls_msg", bs.Msg), zap.String("sec_key_share_gp", bs.SecKeyShareGroup.GetDecString()))
+
+	//mc := GetMinerChain()
+
+	//m2m := mc.Miners
+
+	sigShare := bs.SignMsg()
+
+	bs.SigShare = sigShare
+	currRound = r.Number
+
+	_, roundExists := roundMap[currRound]
+
+	if !roundExists {
+		Logger.Debug("No entry found for round when the BLS starts, adding self share")
+		nodeMap := make(map[int]string)
+		nodeMap[self.SetIndex] = sigShare.GetHexString()
+		roundMap[currRound] = nodeMap
+	}
+
+	return sigShare.GetHexString()
+
+	/*
+		BroadCastSig(sigShare.GetHexString(), currRound, m2m)
+		RebroadCastSig(sigShare.GetHexString(), currRound, m2m)
+	*/
+}
+
+// StartBls - Start the BLS process
 func StartBls(ctx context.Context, r *round.Round) {
 	self := node.GetSelfNode(ctx)
 	blsDone = false

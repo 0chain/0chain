@@ -11,6 +11,7 @@ import (
 
 //AddVRFShare - implement the interface for the RoundRandomBeacon protocol
 func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShare) bool {
+	Logger.Info("DKG-X AddVRFShare")
 	if mr.AddVRFShare(vrfs) {
 
 		mc.computeVRF(ctx, mr)
@@ -21,6 +22,7 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 
 //Jay: Check if K shares are received
 func (mc *Chain) computeVRF(ctx context.Context, mr *Round) {
+	Logger.Info("DKG-X computeVRF")
 	if mr.IsVRFComplete() {
 		return
 	}
