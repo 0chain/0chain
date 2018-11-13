@@ -481,9 +481,9 @@ func (mpt *MerklePatriciaTrie) deleteAtNode(node Node, path Path) (Node, Key, er
 						if onodeImpl.Path != nil {
 							npath = append(npath, onodeImpl.Path...)
 						}
-						lnode := ochild.Clone().(*ExtensionNode)
-						lnode.Path = npath
-						nnode = lnode
+						enode := ochild.Clone().(*ExtensionNode)
+						enode.Path = npath
+						nnode = enode
 					default:
 						panic(fmt.Sprintf("uknown node type: %T %v", ochild, ochild))
 					}
@@ -508,11 +508,17 @@ func (mpt *MerklePatriciaTrie) deleteAtNode(node Node, path Path) (Node, Key, er
 		if err != nil {
 			return nil, nil, err
 		}
-		if lnode, ok := cnode.(*LeafNode); ok { // if extension child changes from full node to leaf, convert the extension into a leaf node
+		switch cnodeImpl := cnode.(type) {
+		case *LeafNode: // if extension child changes from full node to leaf, convert the extension into a leaf node
 			nnode := cnode.Clone().(*LeafNode)
 			nnode.SetOrigin(mpt.Version)
-			nnode.Path = append(nodeImpl.Path, lnode.Path...)
-			nnode.SetValue(lnode.GetValue())
+			nnode.Path = append(nodeImpl.Path, cnodeImpl.Path...)
+			nnode.SetValue(cnodeImpl.GetValue())
+			return mpt.insertNode(cnode, nnode)
+		case *ExtensionNode: // if extension child changes from full node to extension node, merge the extensions
+			nnode := nodeImpl.Clone().(*ExtensionNode)
+			nnode.Path = append(nnode.Path, cnodeImpl.Path...)
+			nnode.NodeKey = cnodeImpl.NodeKey
 			return mpt.insertNode(cnode, nnode)
 		}
 		nnode := nodeImpl.Clone().(*ExtensionNode)
