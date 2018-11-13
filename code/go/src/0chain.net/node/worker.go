@@ -64,7 +64,7 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 			if node.IsActive() {
 				if node.ErrorCount > 5 {
 					node.Status = NodeStatusInactive
-					Logger.Error("Node inactive", zap.String("node_type", node.GetNodeTypeName()), zap.Int("set_index", node.SetIndex), zap.Any("node_id", node.GetKey()), zap.Error(err))
+					N2n.Error("Node inactive", zap.String("node_type", node.GetNodeTypeName()), zap.Int("set_index", node.SetIndex), zap.Any("node_id", node.GetKey()), zap.Error(err))
 				}
 			}
 		} else {
@@ -72,7 +72,7 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 			if !node.IsActive() {
 				node.ErrorCount = 0
 				node.Status = NodeStatusActive
-				Logger.Info("Node active", zap.String("node_type", node.GetNodeTypeName()), zap.Int("set_index", node.SetIndex), zap.Any("key", node.GetKey()))
+				N2n.Info("Node active", zap.String("node_type", node.GetNodeTypeName()), zap.Int("set_index", node.SetIndex), zap.Any("key", node.GetKey()))
 			}
 			node.LastActiveTime = ts
 		}
