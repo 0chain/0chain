@@ -167,7 +167,7 @@ func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 	hasRanks := r != nil && r.GetRandomSeed() != 0
 	lfb := c.LatestFinalizedBlock
 	for _, nd := range nodes {
-		if nd.Status == node.NodeStatusInactive {
+		if nd.GetStatus() == node.NodeStatusInactive {
 			fmt.Fprintf(w, "<tr class='inactive'>")
 		} else {
 			if nd == node.Self.Node && c.CurrentRound > c.LatestFinalizedBlock.Round+10 {
@@ -195,7 +195,7 @@ func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 		fmt.Fprintf(w, "<td class='number'>%d</td>", nd.Sent)
 		fmt.Fprintf(w, "<td class='number'>%d</td>", nd.SendErrors)
 		fmt.Fprintf(w, "<td class='number'>%d</td>", nd.Received)
-		fmt.Fprintf(w, "<td>%v</td>", nd.LastActiveTime.Format(common.DateTimeFormat))
+		fmt.Fprintf(w, "<td>%v</td>", nd.GetLastActiveTime().Format(common.DateTimeFormat))
 		fmt.Fprintf(w, "<td class='number'>%.2f</td>", nd.GetSmallMessageSendTime())
 		lmt := nd.GetLargeMessageSendTime()
 		fmt.Fprintf(w, "<td class='number'>%.2f</td>", lmt)

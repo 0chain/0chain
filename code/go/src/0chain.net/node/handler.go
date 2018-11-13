@@ -85,9 +85,9 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 	if !ok || err != nil {
 		return
 	}
-	nd.LastActiveTime = time.Now().UTC()
-	if nd.Status == NodeStatusInactive {
-		nd.Status = NodeStatusActive
+	nd.SetLastActiveTime(time.Now().UTC())
+	if nd.GetStatus() == NodeStatusInactive {
+		nd.SetStatus(NodeStatusActive)
 		N2n.Info("Node active", zap.String("node_type", nd.GetNodeTypeName()), zap.Int("set_index", nd.SetIndex), zap.Any("key", nd.GetKey()))
 	}
 }

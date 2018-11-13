@@ -13,6 +13,7 @@ import (
 /*SelfNode -- self node type*/
 type SelfNode struct {
 	*Node
+	ActiveNodes     map[string]*Node
 	signatureScheme encryption.SignatureScheme
 }
 
@@ -60,4 +61,5 @@ var Self *SelfNode
 func init() {
 	Self = &SelfNode{}
 	Self.Node = &Node{}
+	Self.ActiveNodes = make(map[string]*Node, 0)
 }

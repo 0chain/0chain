@@ -5,6 +5,7 @@ import (
 	"time"
 
 	. "0chain.net/logging"
+	"0chain.net/node"
 	"go.uber.org/zap"
 )
 
@@ -14,6 +15,7 @@ func SetupWorkers(ctx context.Context) {
 	go mc.BlockWorker(ctx)              // 1) receives incoming blocks from the network
 	go mc.FinalizeRoundWorker(ctx, mc)  // 2) sequentially finalize the rounds
 	go mc.FinalizedBlockWorker(ctx, mc) // 3) sequentially processes finalized blocks
+	go mc.NodeStatusWorker(ctx)
 }
 
 /*BlockWorker - a job that does all the work related to blocks in each round */
@@ -55,6 +57,23 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 			} else {
 				cround = mc.CurrentRound
 			}
+		}
+	}
+}
+
+func (mc *Chain) NodeStatusWorker(ctx context.Context) {
+	for true {
+		select {
+		case <-ctx.Done():
+			return
+		case n := <-node.Self.NodeStatusChannel:
+			node.Self.ActiveNodes[n.ID] = n
+			/* if n.Type == node.NodeTypeMiner {
+				Logger.Info("New Active Miner @Index", zap.Int("idx", n.SetIndex))
+
+			} else if n.Type == node.NodeTypeSharder {
+				Logger.Info("New Active Sharder @Index", zap.Int("idx", n.SetIndex))
+			} */
 		}
 	}
 }

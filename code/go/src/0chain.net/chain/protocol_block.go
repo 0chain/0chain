@@ -101,8 +101,8 @@ func (c *Chain) UpdateNodeState(b *block.Block) {
 			Logger.Error("this should not happen!")
 			continue
 		}
-		if signer.Status != node.NodeStatusActive {
-			signer.Status = node.NodeStatusActive
+		if signer.GetStatus() != node.NodeStatusActive {
+			signer.SetStatus(node.NodeStatusActive)
 		}
 	}
 }

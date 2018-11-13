@@ -55,17 +55,17 @@ var NodeTypeNames = common.CreateLookups("m", "Miner", "s", "Sharder", "b", "Blo
 /*Node - a struct holding the node information */
 type Node struct {
 	client.Client
-	N2NHost        string
-	Host           string
-	Port           int
-	Type           int8
-	Description    string
-	SetIndex       int
-	Status         int
-	LastActiveTime time.Time
-	ErrorCount     int
-	CommChannel    chan bool
-
+	N2NHost           string
+	Host              string
+	Port              int
+	Type              int8
+	Description       string
+	SetIndex          int
+	status            int
+	lastActiveTime    time.Time
+	ErrorCount        int
+	CommChannel       chan bool
+	NodeStatusChannel chan *Node
 	//These are approximiate as we are not going to lock to update
 	Sent       int64 // messages sent to this node
 	SendErrors int64 // failed message sent to this node
@@ -93,6 +93,7 @@ func Provider() *Node {
 	// queue up at most these many messages to a node
 	// because of this, we don't want the status monitoring to use this communication layer
 	node.CommChannel = make(chan bool, 5)
+	node.NodeStatusChannel = make(chan *Node, 100)
 	for i := 0; i < cap(node.CommChannel); i++ {
 		node.CommChannel <- true
 	}
@@ -190,7 +191,7 @@ func NewNode(nc map[interface{}]interface{}) (*Node, error) {
 
 func setSelfNode(n *Node) {
 	Self.Node = n
-	Self.Node.Status = NodeStatusActive
+	Self.Node.status = NodeStatusActive
 }
 
 /*ComputeProperties - implement entity interface */
@@ -381,9 +382,38 @@ func (n *Node) SetID(id string) error {
 	return nil
 }
 
+//SetStatus - sets the status of the node
+func (n *Node) SetStatus(nodeStatus int) {
+	if (n.status == NodeStatusInactive) && (nodeStatus == NodeStatusActive) {
+		Self.NodeStatusChannel <- n
+	}
+	n.status = nodeStatus
+}
+
+//SetStatusWithTime - sets the status and active time of the node
+func (n *Node) SetStatusWithTime(nodeStatus int, activeTime time.Time) {
+	n.SetStatus(nodeStatus)
+	n.lastActiveTime = activeTime
+}
+
+//setLastActiveTime - sets the last active time of the node
+func (n *Node) SetLastActiveTime(activeTime time.Time) {
+	n.lastActiveTime = activeTime
+}
+
+//GetStatus - returns the current status of the node
+func (n *Node) GetStatus() int {
+	return n.status
+}
+
+//GetLastActiveTime - returns the last active time of the node
+func (n *Node) GetLastActiveTime() time.Time {
+	return n.lastActiveTime
+}
+
 //IsActive - returns if this node is active or not
 func (n *Node) IsActive() bool {
-	return n.Status == NodeStatusActive
+	return n.status == NodeStatusActive
 }
 
 func serveMetricKey(uri string) string {

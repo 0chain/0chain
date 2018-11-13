@@ -35,7 +35,7 @@ func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, pa
 			return nil
 		default:
 		}
-		if nd.Status == NodeStatusInactive {
+		if nd.GetStatus() == NodeStatusInactive {
 			continue
 		}
 		if nd == Self.Node {
@@ -63,7 +63,7 @@ func (np *Pool) RequestEntityFromAll(ctx context.Context, requestor EntityReques
 			return
 		default:
 		}
-		if nd.Status == NodeStatusInactive {
+		if nd.GetStatus() == NodeStatusInactive {
 			continue
 		}
 		if nd == Self.Node {
@@ -126,7 +126,7 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 			provider.Grab()
 			time.AfterFunc(timeout, cancel)
 			ts := time.Now()
-			Self.Node.LastActiveTime = ts
+			Self.Node.SetLastActiveTime(ts)
 			resp, err := httpClient.Do(req)
 			provider.Release()
 			timer.UpdateSince(ts)
@@ -153,8 +153,7 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 					return false
 				}
 			}
-			provider.Status = NodeStatusActive
-			provider.LastActiveTime = time.Now()
+			provider.SetStatusWithTime(NodeStatusActive, time.Now())
 			entity, err := getResponseEntity(resp, entityMetadata)
 			if err != nil {
 				N2n.Error("requesting", zap.Int("from", Self.SetIndex), zap.Int("to", provider.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName), zap.Any("params", params), zap.Error(err))

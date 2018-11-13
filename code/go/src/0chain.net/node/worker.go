@@ -47,7 +47,7 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 		if node == Self.Node {
 			continue
 		}
-		if common.Within(node.LastActiveTime.Unix(), 10) {
+		if common.Within(node.GetLastActiveTime().Unix(), 10) {
 			node.updateMessageTimings()
 			continue
 		}
@@ -63,7 +63,7 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 			node.ErrorCount++
 			if node.IsActive() {
 				if node.ErrorCount > 5 {
-					node.Status = NodeStatusInactive
+					node.SetStatus(NodeStatusInactive)
 					N2n.Error("Node inactive", zap.String("node_type", node.GetNodeTypeName()), zap.Int("set_index", node.SetIndex), zap.Any("node_id", node.GetKey()), zap.Error(err))
 				}
 			}
@@ -71,10 +71,10 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 			resp.Body.Close()
 			if !node.IsActive() {
 				node.ErrorCount = 0
-				node.Status = NodeStatusActive
+				node.SetStatus(NodeStatusActive)
 				N2n.Info("Node active", zap.String("node_type", node.GetNodeTypeName()), zap.Int("set_index", node.SetIndex), zap.Any("key", node.GetKey()))
 			}
-			node.LastActiveTime = ts
+			node.SetLastActiveTime(ts)
 		}
 	}
 	np.ComputeNetworkStats()
@@ -94,7 +94,7 @@ func (np *Pool) DownloadNodeData(node *Node) bool {
 	var changed = false
 	for _, node := range dnp.Nodes {
 		if _, ok := np.NodesMap[node.GetKey()]; !ok {
-			node.Status = NodeStatusActive
+			node.SetStatus(NodeStatusActive)
 			np.AddNode(node)
 			changed = true
 		}
