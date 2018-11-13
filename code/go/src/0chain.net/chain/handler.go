@@ -142,7 +142,18 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<li>/_diagnostics/mem_usage_logs [Level <a href='/_diagnostics/mem_usage_logs?detail=1'>1</a>, <a href='/_diagnostics/mem_usage_logs?detail=2'>2</a>, <a href='/_diagnostics/mem_usage_logs?detail=3'>3</a>]</li>")
 	fmt.Fprintf(w, "<li><a href='/debug/pprof/'>/debug/pprof/</a></li>")
 	fmt.Fprintf(w, "</ul>")
-	fmt.Fprintf(w, "<div><div>Miners (%v)</div>", sc.Miners.Size())
+	fmt.Fprintf(w, "<style>\n")
+	fmt.Fprintf(w, ".number { text-align: right; }\n")
+	fmt.Fprintf(w, "table, td, th { border: 1px solid black; }\n")
+	fmt.Fprintf(w, ".inactive { background-color: #F44336; }\n")
+	fmt.Fprintf(w, ".warning { background-color: #FFEB3B; }\n")
+	fmt.Fprintf(w, ".optimal { color: #1B5E20; }\n")
+	fmt.Fprintf(w, "</style>")
+	if node.Self.Type == node.NodeTypeMiner {
+		fmt.Fprintf(w, "<div><div>Miners (%v) - median network time %.2f</div>", sc.Miners.Size(), sc.Miners.GetMedianNetworkTime()/1000000.)
+	} else {
+		fmt.Fprintf(w, "<div><div>Miners (%v)</div>", sc.Miners.Size())
+	}
 	sc.printNodePool(w, sc.Miners)
 	fmt.Fprintf(w, "</div>")
 	fmt.Fprintf(w, "<div><div>Sharders (%v)</div>", sc.Sharders.Size())
@@ -152,14 +163,8 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 
 func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 	nodes := np.Nodes
-	fmt.Fprintf(w, "<style>\n")
-	fmt.Fprintf(w, ".number { text-align: right; }\n")
-	fmt.Fprintf(w, "table, td, th { border: 1px solid black; }\n")
-	fmt.Fprintf(w, ".inactive { background-color: #F44336; }\n")
-	fmt.Fprintf(w, ".warning { background-color: #FFEB3B; }\n")
-	fmt.Fprintf(w, "</style>")
 	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
-	fmt.Fprintf(w, "<tr><td>Set Index</td><td>Node</td><td>Sent</td><td>Send Errors</td><td>Received</td><td>Last Active</td><td>Small Msg Time</td><td>Large Msg Time</td><td>Description</td></tr>")
+	fmt.Fprintf(w, "<tr><td>Set Index</td><td>Node</td><td>Sent</td><td>Send Errors</td><td>Received</td><td>Last Active</td><td>Small Msg Time</td><td>Large Msg Time</td><td>Optimal Large Msg Time</td><td>Description</td></tr>")
 	r := c.GetRound(c.CurrentRound)
 	hasRanks := r != nil && r.GetRandomSeed() != 0
 	lfb := c.LatestFinalizedBlock
@@ -167,7 +172,7 @@ func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 		if nd.Status == node.NodeStatusInactive {
 			fmt.Fprintf(w, "<tr class='inactive'>")
 		} else {
-			if c.CurrentRound > c.LatestFinalizedBlock.Round+10 {
+			if nd == node.Self.Node && c.CurrentRound > c.LatestFinalizedBlock.Round+10 {
 				fmt.Fprintf(w, "<tr class='warning'>")
 			} else {
 				fmt.Fprintf(w, "<tr>")
@@ -193,8 +198,16 @@ func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 		fmt.Fprintf(w, "<td class='number'>%d</td>", nd.SendErrors)
 		fmt.Fprintf(w, "<td class='number'>%d</td>", nd.Received)
 		fmt.Fprintf(w, "<td>%v</td>", nd.LastActiveTime.Format(common.DateTimeFormat))
-		fmt.Fprintf(w, "<td>%.2f</td>", nd.GetSmallMessageSendTime())
-		fmt.Fprintf(w, "<td>%.2f</td>", nd.GetLargeMessageSendTime())
+		fmt.Fprintf(w, "<td class='number'>%.2f</td>", nd.GetSmallMessageSendTime())
+		lmt := nd.GetLargeMessageSendTime()
+		fmt.Fprintf(w, "<td class='number'>%.2f</td>", lmt)
+		olmt := nd.GetOptimalLargeMessageSendTime()
+		if olmt < lmt {
+			fmt.Fprintf(w, "<td class='number optimal'>%.2f</td>", olmt)
+
+		} else {
+			fmt.Fprintf(w, "<td class='number'>%.2f</td>", olmt)
+		}
 		fmt.Fprintf(w, "<td>%s</td>", nd.Description)
 		fmt.Fprintf(w, "</tr>")
 	}
@@ -293,27 +306,55 @@ func (c *Chain) N2NStatsWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<style>\n")
 	fmt.Fprintf(w, ".number { text-align: right; }\n")
 	fmt.Fprintf(w, "table, td, th { border: 1px solid black; }\n")
-	fmt.Fprintf(w, "tr:nth-child(10n) { background-color: #f2f2f2; }\n")
+	fmt.Fprintf(w, ".inactive { background-color: #F44336; }\n")
+	fmt.Fprintf(w, ".optimal { color: #1B5E20; }\n")
+	fmt.Fprintf(w, ".slow { font-style: italic; }\n")
 	fmt.Fprintf(w, "</style>")
 	self := node.Self.Node
 	fmt.Fprintf(w, "<div>%v - %v</div>", self.GetPseudoName(), self.Description)
 	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr><td rowspan='2'>URI</td><td rowspan='2'>Count</td><td colspan='3'>Time</td><td colspan='3'>Size</td></tr>")
 	fmt.Fprintf(w, "<tr><td>Min</td><td>Average</td><td>Max</td><td>Min</td><td>Average</td><td>Max</td></tr>")
-	for _, n := range c.Miners.Nodes {
-		if n == node.Self.Node {
+	fmt.Fprintf(w, "<tr><td colspan='8'>Miners (%v/%v) - median network time = %.2f", c.Miners.GetActiveCount(), c.Miners.Size(), c.Miners.GetMedianNetworkTime()/1000000)
+	for _, nd := range c.Miners.Nodes {
+		if nd == node.Self.Node {
 			continue
 		}
-		fmt.Fprintf(w, "<tr><th colspan='8'>%s - %s</th></tr>", n.GetPseudoName(), n.Description)
-		n.PrintSendStats(w)
+		lmt := nd.GetLargeMessageSendTime()
+		olmt := nd.GetOptimalLargeMessageSendTime()
+		cls := ""
+		if !nd.IsActive() {
+			cls = "inactive"
+		}
+		if olmt < lmt {
+			cls = cls + " optimal"
+		}
+		if olmt >= c.Miners.GetMedianNetworkTime() {
+			cls = cls + " slow"
+		}
+		fmt.Fprintf(w, "<tr class='%s'><td colspan='8'><b>%s</b> (%.2f/%.2f) - %s</td></tr>", cls, nd.GetPseudoName(), olmt, lmt, nd.Description)
+		nd.PrintSendStats(w)
 	}
 
-	for _, n := range c.Sharders.Nodes {
-		if n == node.Self.Node {
+	fmt.Fprintf(w, "<tr><td colspan='8'>Sharders (%v/%v) - median network time = %.2f", c.Sharders.GetActiveCount(), c.Sharders.Size(), c.Sharders.GetMedianNetworkTime()/1000000)
+	for _, nd := range c.Sharders.Nodes {
+		if nd == node.Self.Node {
 			continue
 		}
-		fmt.Fprintf(w, "<tr><th colspan='8'>%s - %s</th></tr>", n.GetPseudoName(), n.Description)
-		n.PrintSendStats(w)
+		lmt := nd.GetLargeMessageSendTime()
+		olmt := nd.GetOptimalLargeMessageSendTime()
+		cls := ""
+		if !nd.IsActive() {
+			cls = "inactive"
+		}
+		if olmt < lmt {
+			cls = cls + " optimal"
+		}
+		if olmt >= c.Sharders.GetMedianNetworkTime() {
+			cls = cls + " slow"
+		}
+		fmt.Fprintf(w, "<tr class='%s'><td colspan='8'><b>%s</b> (%.2f/%.2f) - %s </td></tr>", cls, nd.GetPseudoName(), olmt, lmt, nd.Description)
+		nd.PrintSendStats(w)
 	}
 	fmt.Fprintf(w, "</table>")
 }

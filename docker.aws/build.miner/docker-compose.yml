@@ -54,7 +54,7 @@ services:
       - redis:redis
       - redis_txns:redis_txns
     build:
-      context: ${ZCHAIN_CODEBASE}
+      context: ${DOCKER_CODEBASE}
       dockerfile: ./docker.aws/build.miner/Dockerfile
 
     image: ${IMAGE_NAME}:${IMAGE_TAG}

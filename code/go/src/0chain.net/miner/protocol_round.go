@@ -406,7 +406,7 @@ func (mc *Chain) checkBlockNotarization(ctx context.Context, r *Round, b *block.
 			return true
 		}
 		go mc.SendNotarization(ctx, b)
-		Logger.Info("check block notarization - block notarized", zap.Int64("round", b.Round), zap.String("block", b.Hash))
+		Logger.Debug("check block notarization - block notarized", zap.Int64("round", b.Round), zap.String("block", b.Hash))
 		mc.StartNextRound(ctx, r)
 		return true
 	}
@@ -435,7 +435,7 @@ func (mc *Chain) CancelRoundVerification(ctx context.Context, r *Round) {
 	r.CancelVerification() // No need for further verification of any blocks
 }
 
-/*BroadcastNotarizedBlocks - send all the notarized blocks to all generating miners for a round*/
+/*BroadcastNotarizedBlocks - send the heaviest notarized block to all the miners */
 func (mc *Chain) BroadcastNotarizedBlocks(ctx context.Context, pr *Round, r *Round) {
 	nb := pr.GetHeaviestNotarizedBlock()
 	if nb != nil {

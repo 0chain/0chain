@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"sort"
 	"sync"
 	"time"
 
@@ -177,6 +178,7 @@ func NewChainFromConfig() *Chain {
 	} else if waitMode == "dynamic" {
 		chain.BlockProposalWaitMode = BlockProposalWaitDynamic
 	}
+	chain.ReuseTransactions = viper.GetBool("server_chain.block.reuse_txns")
 	return chain
 }
 
@@ -628,4 +630,29 @@ func (c *Chain) SetRetryWaitTime(newWaitTime int) {
 	c.retry_wait_mutex.Lock()
 	defer c.retry_wait_mutex.Unlock()
 	c.retry_wait_time = newWaitTime
+}
+
+/*GetUnrelatedBlocks - get blocks that are not related to the chain of the given block */
+func (c *Chain) GetUnrelatedBlocks(maxBlocks int, b *block.Block) []*block.Block {
+	c.blocksMutex.Lock()
+	defer c.blocksMutex.Unlock()
+	var blocks []*block.Block
+	var chain = make(map[datastore.Key]*block.Block)
+	var prevRound = b.Round
+	for pb := b.PrevBlock; pb != nil; pb = pb.PrevBlock {
+		prevRound = pb.Round
+		chain[pb.Hash] = pb
+	}
+	for _, rb := range c.blocks {
+		if rb.Round >= prevRound && rb.Round < b.Round && common.WithinTime(int64(b.CreationDate), int64(rb.CreationDate), transaction.TXN_TIME_TOLERANCE) {
+			if _, ok := chain[rb.Hash]; !ok {
+				blocks = append(blocks, rb)
+			}
+			if len(blocks) >= maxBlocks {
+				break
+			}
+		}
+	}
+	sort.SliceStable(blocks, func(i, j int) bool { return blocks[i].Round > blocks[j].Round })
+	return blocks
 }

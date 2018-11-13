@@ -23,6 +23,7 @@ func SetupDefaultConfig() {
 	viper.SetDefault("server_chain.block.generation.retry_wait_time", 5)
 	viper.SetDefault("server_chain.block.proposal.max_wait_time", 200)
 	viper.SetDefault("server_chain.block.proposal.wait_mode", "static")
+	viper.SetDefault("server_chain.block.reuse_txns", true)
 }
 
 /*SetupConfig - setup the configuration system */

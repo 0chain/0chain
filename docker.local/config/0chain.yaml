@@ -37,6 +37,7 @@ server_chain:
       threshold_by_stake: 0 # percent
     validation:
       batch_size: 1000
+    reuse_txns: false
     storage:
       provider: blockstore.FSBlockStore # blockstore.FSBlockStore or blockstore.BlockDBStore
   round_range: 10000000
@@ -57,3 +58,4 @@ network:
   timeout:
     small_message: 1000 # milliseconds
     large_message: 3000 # milliseconds
+  large_message_th_size: 10240 # anything greater than this size in bytes
