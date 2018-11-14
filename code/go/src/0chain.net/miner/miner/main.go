@@ -174,6 +174,7 @@ func initHandlers() {
 	if config.Development() {
 		http.HandleFunc("/_hash", encryption.HashHandler)
 		http.HandleFunc("/_sign", common.ToJSONResponse(encryption.SignHandler))
+		SetupHandlers()
 	}
 	config.SetupHandlers()
 	node.SetupHandlers()
@@ -184,7 +185,6 @@ func initHandlers() {
 	miner.SetupHandlers()
 	diagnostics.SetupHandlers()
 	chain.SetupStateHandlers()
-	SetupHandlers()
 
 	serverChain := chain.GetServerChain()
 	serverChain.SetupNodeHandlers()
