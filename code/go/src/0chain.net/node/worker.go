@@ -4,11 +4,9 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	//"runtime"
 	"time"
 
 	"0chain.net/common"
-	"0chain.net/logging"
 	. "0chain.net/logging"
 	"go.uber.org/zap"
 )
@@ -59,9 +57,7 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 		if err != nil {
 			panic(err)
 		}
-		//statusURL = fmt.Sprintf("%v?id=%v&data=%v&hash=%v&signature=%v&goroutines=%v", statusURL, Self.Node.GetKey(), data, hash, signature, runtime.NumGoroutine())
 		statusURL = fmt.Sprintf("%v?id=%v&data=%v&hash=%v&signature=%v", statusURL, Self.Node.GetKey(), data, hash, signature)
-		Logger.Info("StatusURL", zap.Any("status", statusURL))
 		resp, err := client.Get(statusURL)
 		if err != nil {
 			node.ErrorCount++

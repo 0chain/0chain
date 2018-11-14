@@ -16,6 +16,7 @@ import (
 
 	"0chain.net/block"
 	"0chain.net/common"
+	"0chain.net/config"
 	"0chain.net/datastore"
 	"0chain.net/memorystore"
 )
@@ -133,7 +134,7 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<ul>")
 	fmt.Fprintf(w, "<li><a href='/v1/config/get'>/v1/config/get</a></li>")
 	fmt.Fprintf(w, "<li><a href='/_chain_stats'>/_chain_stats</a></li>")
-	if node.Self.Type == node.NodeTypeMiner {
+	if node.Self.Type == node.NodeTypeMiner && config.Development() {
 		fmt.Fprintf(w, "<li><a href='/v1/miner/updateConfig'>/v1/miner/updateConfig</a></li>")
 		fmt.Fprintf(w, "<li><a href='/v1/miner/updateConfigAll'>/v1/miner/updateConfigAll</a></li>")
 	}
