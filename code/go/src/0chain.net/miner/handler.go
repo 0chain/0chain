@@ -33,7 +33,7 @@ func ChainStatsHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<h2>Block Finalization Statistics (Start to Finish)</h2>")
 	diagnostics.WriteTimerStatistics(w, c, chain.StartToFinalizeTimer, 1000000.0)
 	fmt.Fprintf(w, "</td></tr>")
-	fmt.Fprintf(w, "<tr><td col='2'>")
+	fmt.Fprintf(w, "<tr><td colspan='2'>")
 	fmt.Fprintf(w, "<p>Block finalization time = block generation + block verification + network time (1*large message + 2*small message)</p>")
 	fmt.Fprintf(w, "</td></tr>")
 
