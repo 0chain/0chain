@@ -16,7 +16,7 @@ func SetupHandlers() {
 	http.HandleFunc("/v1/diagnostics/get/info", common.ToJSONResponse(chain.InfoHandler))
 	http.HandleFunc("/_diagnostics/logs", logging.LogWriter)
 	http.HandleFunc("/_diagnostics/n2n_logs", logging.N2NLogWriter)
-	http.HandleFunc("/_diagnostics/mem_usage_logs", logging.MemLogWriter)
+	http.HandleFunc("/_diagnostics/mem_logs", logging.MemLogWriter)
 	sc := chain.GetServerChain()
 	http.HandleFunc("/_diagnostics/n2n/info", sc.N2NStatsWriter)
 	http.HandleFunc("/_diagnostics/miner_stats", sc.MinerStatsHandler)
