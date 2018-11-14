@@ -32,7 +32,7 @@ func GetStatistics(c *chain.Chain, timer metrics.Timer, scaleBy float64) interfa
 	pvals := timer.Percentiles(percentiles)
 	stats := make(map[string]interface{})
 	stats["delta"] = chain.DELTA
-	stats["block_size"] = c.LatestFinalizedBlock.RunningTxnCount / c.LatestFinalizedBlock.Round
+	stats["block_size"] = c.BlockSize
 	stats["current_round"] = c.CurrentRound
 	stats["latest_finalized_round"] = c.LatestFinalizedBlock.Round
 	stats["count"] = timer.Count()
@@ -61,7 +61,7 @@ func WriteStatisticsCSS(w http.ResponseWriter) {
 func WriteConfiguration(w http.ResponseWriter, c *chain.Chain) {
 	fmt.Fprintf(w, "<table>")
 	fmt.Fprintf(w, "<tr><td class='sheader' colspan='2'>Configuration</td></tr>")
-	fmt.Fprintf(w, "<tr><td>Block Size</td><td>%v</td></tr>", c.LatestFinalizedBlock.RunningTxnCount/c.LatestFinalizedBlock.Round)
+	fmt.Fprintf(w, "<tr><td>Block Size</td><td>%v</td></tr>", c.BlockSize)
 	fmt.Fprintf(w, "<tr><td>Network Latency (Delta)</td><td>%v</td></tr>", chain.DELTA)
 	proposalMode := "dynamic"
 	if c.BlockProposalWaitMode == chain.BlockProposalWaitStatic {
