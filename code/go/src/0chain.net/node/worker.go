@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"0chain.net/common"
+	"0chain.net/logging"
 	. "0chain.net/logging"
 	"go.uber.org/zap"
 )
