@@ -12,22 +12,22 @@ import (
 	"go.uber.org/zap"
 )
 
-const updateConfigURL = "/v1/miner/updateConfig"
-const updateConfigAllURL = "/v1/miner/updateConfigAll"
+const updateConfigURL = "/v1/config/update"
+const updateConfigAllURL = "/v1/config/update_all"
 
 /*SetupHandlers - setup update config related handlers */
 func SetupHandlers() {
-	http.HandleFunc(updateConfigURL, UpdateConfig)
-	http.HandleFunc(updateConfigAllURL, UpdateConfigAll)
+	http.HandleFunc(updateConfigURL, ConfigUpdateHandler)
+	http.HandleFunc(updateConfigAllURL, ConfigUpdateAllHandler)
 }
 
-/*UpdateConfig - update this miner's configuration */
-func UpdateConfig(w http.ResponseWriter, r *http.Request) {
+/*ConfigUpdateHandler - update this miner's configuration */
+func ConfigUpdateHandler(w http.ResponseWriter, r *http.Request) {
 	updateConfig(w, r, updateConfigURL)
 }
 
-/*UpdateConfigAll - update all miners' configuration */
-func UpdateConfigAll(w http.ResponseWriter, r *http.Request) {
+/*ConfigUpdateAllHandler - update all miners' configuration */
+func ConfigUpdateAllHandler(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
 		Logger.Error("failed to parse update config form", zap.Any("error", err))
