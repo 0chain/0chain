@@ -65,7 +65,6 @@ type Node struct {
 	LastActiveTime time.Time
 	ErrorCount     int
 	CommChannel    chan bool
-	Goroutines     int
 
 	//These are approximiate as we are not going to lock to update
 	Sent       int64 // messages sent to this node

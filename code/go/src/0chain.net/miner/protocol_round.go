@@ -125,12 +125,12 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	b.MinerID = node.Self.GetKey()
 	mc.SetPreviousBlock(ctx, r, b, pb)
 	b.SetStateDB(pb)
-	start := time.Now()                                                              // time the wait starts
-	makeBlock := false                                                               // wait is not over
-	generationTimeout := time.Millisecond * time.Duration(mc.GetGenerationTimeout()) //time to wait for more transactions to fill the block
+	start := time.Now()
+	makeBlock := false
+	generationTimeout := time.Millisecond * time.Duration(mc.GetGenerationTimeout())
 	for true {
 		if mc.CurrentRound > b.Round {
-			Logger.Debug("generate block (round mismatch)", zap.Any("round", r.Number), zap.Any("current_round", mc.CurrentRound))
+			Logger.Debug("generate block (round mismatch)", zap.Any("round", roundNumber), zap.Any("current_round", mc.CurrentRound))
 			return nil, ErrRoundMismatch
 		}
 		txnCount := transaction.TransactionCount
@@ -144,15 +144,15 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 					if !config.MainNet() {
 						Logger.Error("generate block", zap.Error(err))
 					}
-					for true { // infinite loop unless the miner recieves more transactions OR there is a new round
+					for true {
 						delay := mc.GetRetryWaitTime()
 						time.Sleep(time.Duration(delay) * time.Millisecond)
 						Logger.Debug("generate block", zap.Any("round", roundNumber), zap.Any("delay", delay), zap.Any("txn_count", txnCount), zap.Any("t.txn_count", transaction.TransactionCount))
-						if mc.CurrentRound > b.Round { //if there is a new round return the error
+						if mc.CurrentRound > b.Round {
 							Logger.Debug("generate block (round mismatch)", zap.Any("round", roundNumber), zap.Any("current_round", mc.CurrentRound))
 							return nil, ErrRoundMismatch
 						}
-						if txnCount != transaction.TransactionCount || time.Now().Sub(start) > generationTimeout { // if the wait is over or there is a new transaction try to generate another block
+						if txnCount != transaction.TransactionCount || time.Now().Sub(start) > generationTimeout {
 							makeBlock = true
 							break
 						}
