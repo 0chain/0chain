@@ -1,10 +1,12 @@
 package bls
 
 import (
+	"fmt"
+	"math/rand"
 	"strconv"
 	"testing"
 
-	"0chain.net/encryption"
+	"github.com/pmer/gobls"
 )
 
 const CurveFp254BNb = 0
@@ -12,6 +14,15 @@ const CurveFp254BNb = 0
 type DKGs []SimpleDKG
 
 func newDKGs(t, n int) DKGs {
+
+	if t > n {
+		fmt.Println("Check the values of t and n")
+		return nil
+	}
+	if t == 1 {
+		fmt.Println("Library does not support t = 1, err mclBn_FrEvaluatePolynomial. Check the value of t")
+		return nil
+	}
 	dkgs := make([]SimpleDKG, n)
 	for i := range dkgs {
 		dkgs[i] = MakeSimpleDKG(t, n)
@@ -112,8 +123,8 @@ func TestRecoverSecretKey(test *testing.T) {
 
 }
 
-/* TestDKGAggShare - Test to aggregate the DKG shares received by a party */
-func TestDKGAggShare(test *testing.T) {
+/* TestDKGSteps - Test for the DKG flow */
+func TestDKGSteps(test *testing.T) {
 
 	variation := func(t, n int) {
 		dkgs := newDKGs(t, n)
@@ -127,13 +138,9 @@ func TestDKGAggShare(test *testing.T) {
 		}
 
 		for i := 0; i < n; i++ {
-
 			for idIter := 0; idIter < n; idIter++ {
-
 				gotShare := dkgs[idIter].GetKeyShareForOther(partyIdsFromMap[i])
-
 				dkgs[i].receivedSecShares[idIter] = gotShare.m
-
 			}
 
 			if len(dkgs[i].receivedSecShares) == n {
@@ -150,129 +157,104 @@ func TestDKGAggShare(test *testing.T) {
 
 }
 
-/* TestRecoverGrpSignature - The test used to check (n = 3, k = 2) running DKG and check whether the grp signature produced is the same for a particular round */
-func TestRecoverGrpSignature(test *testing.T) {
+/* TestRecoverGrpSignature - The test used to check the grp signature produced is the same for all miners*/
+/* In the test, DKG is run for n miners to get the GroupPrivateKeyShare(GPSK). A party signs with
+GPSK to form the Bls sign share. The array selectRandIDs is to keep track of party IDs to get k number of sig shares randomly for Recover GpSign*/
 
-	t := 2
-	n := 3
+func testRecoverGrpSignature(t int, n int, test *testing.T) {
 
 	dkgs := newDKGs(t, n)
-	partyIdsFromMap := make([]PartyID, n)
 
-	j := 0
-	hmap := dkgs[0].secSharesMap
-	for key := range hmap {
-		partyIdsFromMap[j] = key
-		j++
+	for i := 0; i < n; i++ {
+		aggDkg(i, dkgs, n)
 	}
+
+	selectRandIDs := make([]PartyID, 0)
+	var rbOutput string
+	var prevRBO = "noRBO"
+	sigSharesID := make(map[PartyID]Sign, n)
 
 	for i := 0; i < n; i++ {
 
-		for idIter := 0; idIter < n; idIter++ {
+		bs := MakeSimpleBLS(&dkgs[i])
+		bs.Msg = "RBO Tests"
+		sigShare := bs.SignMsg()
+		sigSharesID[dkgs[i].ID] = sigShare
 
-			gotShare := dkgs[idIter].GetKeyShareForOther(partyIdsFromMap[i])
-
-			dkgs[i].receivedSecShares[idIter] = gotShare.m
-
-		}
-
-		if len(dkgs[i].receivedSecShares) == n {
-			dkgs[i].AggregateShares()
-		}
 	}
+	for i := 0; i < n; i++ {
+		bs := MakeSimpleBLS(&dkgs[i])
+		selectRandIDs = addToSelectRandIDs(dkgs, n)
+		threshParty, threshSigs := calcRbo(selectRandIDs, t, sigSharesID)
+		bs.RecoverGroupSig(threshParty, threshSigs)
 
-	var rNumber int64 = 1
-	var prevRBO string
-	var blsMessage string
-	rbOutput := encryption.Hash("0chain")
-
-	collectSigShares := make([]Sign, n)
-	sigSharesID := make(map[Sign]PartyID, n)
-
-	thresholdBlsSig := make([]Sign, t)
-	thresholdPartyIDs := make([]PartyID, t)
-
-	var thresholdCount int
-	var bs SimpleBLS
-	var rbOutput1 Sign
-	var rbOutput2 Sign
-	var rbOutput3 Sign
-
-	for rNumber < 1000 {
-
+		rbOutput = bs.GpSign.GetHexString()
+		if prevRBO != "noRBO" && prevRBO != rbOutput {
+			test.Errorf("The rbOutput %v in %v is different for miner\n", i, rbOutput)
+		}
 		prevRBO = rbOutput
-		for m := 0; m < n; m++ {
-			bs = MakeSimpleBLS(&dkgs[m])
-			bs.Msg = strconv.FormatInt(rNumber, 10) + prevRBO
-			blsMessage = strconv.FormatInt(rNumber, 10) + prevRBO
+	}
+}
+func TestRecGrpSign(test *testing.T) { testRecoverGrpSignature(2, 3, test) }
 
-			sigShare := bs.SignMsg()
-			sigSharesID[sigShare] = dkgs[m].ID
-			collectSigShares[m] = sigShare
-		}
+/*aggDkg - Aggregate the DKG shares to form the GroupPrivateKeyShare */
+func aggDkg(i int, dkgs DKGs, n int) {
 
-		//Compute Gp Sign by dkgs[0], ie, party 1
-		bs = MakeSimpleBLS(&dkgs[0])
-		thresholdCount = 1
-		j = 0
-		for thresholdCount <= t {
-
-			getShares := collectSigShares[j]
-
-			thresholdBlsSig[j] = getShares
-			thresholdPartyIDs[j] = sigSharesID[getShares]
-			thresholdCount++
-			j++
-
-		}
-
-		bs.RecoverGroupSig(thresholdPartyIDs, thresholdBlsSig)
-		rbOutput1 = bs.GpSign
-
-		//Compute Gp Sign by dkgs[1], ie, party 2
-		bs = MakeSimpleBLS(&dkgs[1])
-		thresholdCount = 1
-		j = 0
-
-		for thresholdCount <= t {
-
-			getShares := collectSigShares[j]
-
-			thresholdBlsSig[j] = getShares
-			thresholdPartyIDs[j] = sigSharesID[getShares]
-			thresholdCount++
-			j++
-
-		}
-		bs.RecoverGroupSig(thresholdPartyIDs, thresholdBlsSig)
-		rbOutput2 = bs.GpSign
-
-		//Compute Gp Sign by dkgs[2], ie, party 3
-		bs = MakeSimpleBLS(&dkgs[2])
-		thresholdCount = 1
-		j = 0
-
-		for thresholdCount <= t {
-
-			getShares := collectSigShares[j]
-			thresholdBlsSig[j] = getShares
-			thresholdPartyIDs[j] = sigSharesID[getShares]
-			thresholdCount++
-			j++
-
-		}
-		bs.RecoverGroupSig(thresholdPartyIDs, thresholdBlsSig)
-		rbOutput3 = bs.GpSign
-
-		if !rbOutput1.IsEqual(&rbOutput2) || !rbOutput1.IsEqual(&rbOutput3) || !rbOutput2.IsEqual(&rbOutput3) {
-			test.Errorf("The RBO produced by 3 parties are different party1 has %s, party2 has %s, party3 has %s", rbOutput1.GetHexString(), rbOutput2.GetHexString(), rbOutput3.GetHexString())
-			test.Errorf("The rbOutput is %s for rNumber %v and the message %s", rbOutput, rNumber, blsMessage)
-
-		}
-
-		rbOutput = encryption.Hash(rbOutput1.GetHexString())
-		rNumber++
-
+	for j := 0; j < n; j++ {
+		dkgs[i].receivedSecShares[j] = dkgs[j].secSharesMap[dkgs[i].ID]
 	}
 
+	if len(dkgs[i].receivedSecShares) == n {
+		dkgs[i].AggregateShares()
+	}
+
+}
+
+/*calcRbo - To calculate the Gp Sign with any k number of Party IDs and its Bls signature share*/
+func calcRbo(selectRandIDs []PartyID, t int, sigSharesID map[PartyID]Sign) (thresholdPartyIDs []PartyID, thresholdBlsSig []Sign) {
+
+	thresholdCount := 1
+	thresholdBlsSig = make([]Sign, 0)
+	thresholdPartyIDs = make([]PartyID, 0)
+
+	for thresholdCount <= t {
+
+		randIndex := rand.Intn(len(selectRandIDs))
+
+		thresholdPartyIDs = append(thresholdPartyIDs, selectRandIDs[randIndex])
+		thresholdBlsSig = append(thresholdBlsSig, sigSharesID[selectRandIDs[randIndex]])
+
+		selectRandIDs[randIndex] = selectRandIDs[len(selectRandIDs)-1]
+		selectRandIDs = selectRandIDs[:len(selectRandIDs)-1]
+		thresholdCount++
+
+	}
+	return thresholdPartyIDs, thresholdBlsSig
+}
+
+/*addToSelectRandIDs - The array selectRandIDs to select k number party IDs randomly */
+func addToSelectRandIDs(dkgs DKGs, n int) []PartyID {
+	selectRandIDs := make([]PartyID, 0)
+	for j := 0; j < n; j++ {
+		selectRandIDs = append(selectRandIDs, dkgs[j].ID)
+	}
+	return selectRandIDs
+}
+
+func BenchmarkBlsSigning(b *testing.B) {
+	b.StopTimer()
+
+	err := gobls.Init(gobls.CurveFp254BNb)
+	if err != nil {
+		b.Errorf("Curve not initialized")
+	}
+	var sec Key
+	for n := 0; n < b.N; n++ {
+		sec.SetByCSPRNG()
+		b.StartTimer()
+
+		sec.Sign(strconv.Itoa(n))
+		b.StopTimer()
+
+	}
 }
