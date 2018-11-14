@@ -157,7 +157,7 @@ func TestDKGSteps(test *testing.T) {
 
 }
 
-/* TestRecoverGrpSignature - The test used to check the grp signature produced is the same for all miners*/
+/* testRecoverGrpSignature - The test used to check the grp signature produced is the same for all miners*/
 /* In the test, DKG is run for n miners to get the GroupPrivateKeyShare(GPSK). A party signs with
 GPSK to form the Bls sign share. The array selectRandIDs is to keep track of party IDs to get k number of sig shares randomly for Recover GpSign*/
 
@@ -195,6 +195,8 @@ func testRecoverGrpSignature(t int, n int, test *testing.T) {
 		prevRBO = rbOutput
 	}
 }
+
+/* TestRecGrpSign - The test calls testRecoverGrpSignature(t, n, test) which has the test for Gp Sign*/
 func TestRecGrpSign(test *testing.T) { testRecoverGrpSignature(2, 3, test) }
 
 /*aggDkg - Aggregate the DKG shares to form the GroupPrivateKeyShare */
@@ -240,6 +242,32 @@ func addToSelectRandIDs(dkgs DKGs, n int) []PartyID {
 	}
 	return selectRandIDs
 }
+
+/* testVerifyGrpSignShares - Test to verify the Grp Signature Share which a miner computes by signing a message with GroupPrivateKeyShare(GPKS) is valid*/
+func testVerifyGrpSignShares(t int, n int, test *testing.T) {
+
+	dkgs := newDKGs(t, n)
+
+	for i := 0; i < n; i++ {
+		aggDkg(i, dkgs, n)
+	}
+
+	for i := 0; i < n; i++ {
+
+		bs := MakeSimpleBLS(&dkgs[i])
+		bs.Msg = "VerifyGrpSignShare" + strconv.Itoa(i)
+		sigShare := bs.SignMsg()
+		grpSignShareVerified := bs.VerifyGroupSignShare(sigShare)
+
+		if !grpSignShareVerified {
+			test.Errorf("The grp signature share %v is not valid, which is computed by the party %v\n", sigShare.GetHexString(), bs.ID.GetDecString())
+		}
+
+	}
+}
+
+/* TestVerifyGrpSignShares - The test calls testVerifyGrpSignShares(t, n, test) which has the test for Grp Sign Share*/
+func TestVerifyGrpSignShares(test *testing.T) { testVerifyGrpSignShares(2, 3, test) }
 
 func BenchmarkBlsSigning(b *testing.B) {
 	b.StopTimer()

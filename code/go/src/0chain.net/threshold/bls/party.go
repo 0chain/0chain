@@ -68,8 +68,13 @@ func (bs *SimpleBLS) VerifyGroupSig(GroupSig) bool {
 	return true
 }
 
-/*VerifySign - Verify the BLS sign */
-func (bs *SimpleBLS) VerifySign(share Sign) bool {
-	//TODO
+/*VerifyGroupSignShare - Verify the BLS sign, ie the Grp Sign Share */
+func (bs *SimpleBLS) VerifyGroupSignShare(grpSignShare Sign) bool {
+
+	var pubVec VerificationKey
+	pubVec = *bs.SecKeyShareGroup.GetPublicKey()
+	if !grpSignShare.Verify(&pubVec, bs.Msg) {
+		return false
+	}
 	return true
 }
