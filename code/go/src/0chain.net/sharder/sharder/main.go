@@ -97,9 +97,10 @@ func main() {
 		Logger.Panic("node definition for self node doesn't exist")
 	}
 
-	if config.DevConfiguration.State {
-		chain.SetupStateLogger("/tmp/state.txt")
-	}
+	/*
+		if config.DevConfiguration.State {
+			chain.SetupStateLogger("/tmp/state.txt")
+		}*/
 
 	mode := "main net"
 	if config.Development() {
