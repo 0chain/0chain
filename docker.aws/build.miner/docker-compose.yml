@@ -15,8 +15,7 @@ services:
     sysctls:
       net.core.somaxconn: '511'
 
-    #uncomment line below for automatic restart
-    #restart: on-failure:10
+    restart: on-failure:10
 
     #Start under user 0chain
     user: 2000:2000
@@ -37,8 +36,7 @@ services:
     sysctls:
       net.core.somaxconn: '511'
 
-    #uncomment line below for automatic restart
-    #restart: on-failure:10
+    restart: on-failure:10
 
     #Start under user 0chain
     user: 2000:2000
@@ -88,8 +86,7 @@ services:
     ports:
       - "7071:7071"
 
-    #uncomment line below for automatic restart
-    #restart: on-failure:10
+    restart: on-failure:10
 
     networks:
       default:

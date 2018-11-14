@@ -23,7 +23,7 @@ server_chain:
     sharders: 3
     proposal:
       max_wait_time: 180
-      wait_mode: dynamic # static or dynamic
+      wait_mode: static # static or dynamic
     consensus:
       threshold_by_count: 67 # percentage
       threshold_by_stake: 0

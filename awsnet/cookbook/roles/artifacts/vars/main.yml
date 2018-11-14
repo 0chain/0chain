@@ -119,7 +119,7 @@ artifact:
       - { canonical: "/0chain/log", location:  "/0chain_root/log" }
       - { canonical: "/0chain/log/cassandra", location:  "/0chain_root/log/cassandra" }
       - { canonical: "/0chain/data", location:  "/0chain_efs/data" }
-      - { canonical: "/0chain/data/blocks", location:  "/0chain_efs/data/blocks" }
+      - { canonical: "/0chain_efs/data/blocks" }
       - { canonical: "/0chain_efs/data/cassandra"}
       - { canonical: "/0chain_efs/data/rocksdb/blocksummary" }
       - { canonical: "/0chain_efs/data/rocksdb/roundsummary" }
