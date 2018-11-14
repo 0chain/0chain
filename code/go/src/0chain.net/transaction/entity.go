@@ -18,7 +18,7 @@ import (
 	"go.uber.org/zap"
 )
 
-/*TXN_TIME_TOLERANCE - the txn creation date should be within 5 seconds before/after of current time */
+/*TXN_TIME_TOLERANCE - the txn creation date should be within these many seconds before/after of current time */
 var TXN_TIME_TOLERANCE int64
 
 var TransactionCount = 0

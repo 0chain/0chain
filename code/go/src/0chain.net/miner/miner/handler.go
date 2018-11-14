@@ -15,16 +15,18 @@ import (
 const updateConfigURL = "/v1/miner/updateConfig"
 const updateConfigAllURL = "/v1/miner/updateConfigAll"
 
-/*SetupHandlers - setup config related handlers */
+/*SetupHandlers - setup update config related handlers */
 func SetupHandlers() {
 	http.HandleFunc(updateConfigURL, UpdateConfig)
 	http.HandleFunc(updateConfigAllURL, UpdateConfigAll)
 }
 
+/*UpdateConfig - update this miner's configuration */
 func UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	updateConfig(w, r, updateConfigURL)
 }
 
+/*UpdateConfigAll - update all miners' configuration */
 func UpdateConfigAll(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
@@ -47,7 +49,7 @@ func UpdateConfigAll(w http.ResponseWriter, r *http.Request) {
 	updateConfig(w, r, updateConfigAllURL)
 }
 
-/*SetConfig*/
+/*updateConfig - updates the configuation for a particular miner and returns the user to the same page */
 func updateConfig(w http.ResponseWriter, r *http.Request, updateUrl string) {
 	newGenTimeout, _ := strconv.Atoi(r.FormValue("generate_timeout"))
 	if newGenTimeout > 0 {
