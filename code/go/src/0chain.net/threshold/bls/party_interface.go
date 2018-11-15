@@ -20,7 +20,7 @@ type GroupSig interface{}
 /*PartyI - Interface for BLS*/
 type PartyI interface {
 	SignMsg() Sign
-	VerifySign(share Sign) bool
+	VerifyGroupSignShare(grpSignShare Sign) bool
 	RecoverGroupSig(from []PartyID, shares []Sign) Sign
 	VerifyGroupSig(GroupSig) bool
 }
