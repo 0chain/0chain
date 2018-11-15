@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"0chain.net/ememorystore"
+	. "0chain.net/logging"
 	"0chain.net/node"
 
 	"0chain.net/block"
@@ -39,7 +40,7 @@ type Round struct {
 	Block     *block.Block `json:"-"`
 	BlockHash string       `json:"block_hash"`
 	VRFOutput string       `json:"vrf_output"`
-
+	//VRFOutput == rbooutput?
 	minerPerm []int
 	state     int
 
@@ -309,6 +310,7 @@ func (r *Round) AddVRFShare(share *VRFShare) bool {
 		return false
 	}
 
+	Logger.Info("Adding Shares from minerId: " + share.party.GetKey())
 	r.setState(RoundShareVRF)
 	r.shares[share.party.GetKey()] = share
 	return true

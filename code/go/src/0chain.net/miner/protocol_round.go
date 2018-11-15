@@ -62,12 +62,15 @@ func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
 	vrfs := &round.VRFShare{}
 	vrfs.Round = r.GetRoundNumber()
 	//vrfs.Share = node.Self.Node.SetIndex
-	vrfs.Share = getBlsShare(ctx, r.Round)
+	vrfs.Share = GetBlsShare(ctx, r.Round, pr.Round)
 	vrfs.SetParty(node.Self.Node)
 	r.vrfShare = vrfs
+
+	// do we need to check if AddVRFShare is success or not?
 	if mc.AddVRFShare(ctx, r, r.vrfShare) {
 		go mc.SendVRFShare(ctx, r.vrfShare)
 	}
+
 }
 
 func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {

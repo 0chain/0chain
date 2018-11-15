@@ -58,6 +58,8 @@ func MakeSimpleDKG(t, n int) SimpleDKG {
 
 /*ComputeIDdkg - to create an ID of party of type PartyID */
 func ComputeIDdkg(minerID int) PartyID {
+
+	//TODO: minerID here is the index. Change it to miner ID. Neha has fix for this
 	var forID PartyID
 	err := forID.SetDecString(strconv.Itoa(minerID + 1))
 	if err != nil {
