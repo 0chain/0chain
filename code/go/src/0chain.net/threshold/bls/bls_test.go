@@ -5,6 +5,7 @@ import (
 	"math/rand"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/pmer/gobls"
 )
@@ -123,45 +124,39 @@ func TestRecoverSecretKey(test *testing.T) {
 
 }
 
-/* TestDKGSteps - Test for the DKG flow */
-func TestDKGSteps(test *testing.T) {
+/* testDKGProcess - Test for the DKG flow */
+func testDKGProcess(t int, n int, test *testing.T) {
 
-	variation := func(t, n int) {
-		dkgs := newDKGs(t, n)
-		partyIdsFromMap := make([]PartyID, n)
+	start := time.Now()
+	dkgs := newDKGs(t, n)
+	for i := 0; i < n; i++ {
+		aggDkg(i, dkgs, n)
+	}
+	fmt.Printf("Time for the DKG process: %v for n : %v\n", time.Since(start), n)
+}
 
-		j := 0
-		hmap := dkgs[0].secSharesMap // to get the PartyIDs
-		for k := range hmap {
-			partyIdsFromMap[j] = k
-			j++
-		}
+/* TestDKGProcess - calls the test, testDKGProcess*/
+func TestDKGProcess(test *testing.T) { testDKGProcess(2, 3, test) }
 
-		for i := 0; i < n; i++ {
-			for idIter := 0; idIter < n; idIter++ {
-				gotShare := dkgs[idIter].GetKeyShareForOther(partyIdsFromMap[i])
-				dkgs[i].receivedSecShares[idIter] = gotShare.m
-			}
+/*aggDkg - Aggregate the DKG shares to form the GroupPrivateKeyShare */
+func aggDkg(i int, dkgs DKGs, n int) {
 
-			if len(dkgs[i].receivedSecShares) == n {
-				dkgs[i].AggregateShares()
-				bs := MakeSimpleBLS(&dkgs[i])
-				bs.SignMsg()
-			}
-		}
+	for j := 0; j < n; j++ {
+		dkgs[i].receivedSecShares[j] = dkgs[j].secSharesMap[dkgs[i].ID]
 	}
 
-	variation(2, 2)
-	variation(2, 3)
-	variation(2, 4)
+	if len(dkgs[i].receivedSecShares) == n {
+		dkgs[i].AggregateShares()
+	}
 
 }
 
 /* testRecoverGrpSignature - The test used to check the grp signature produced is the same for all miners*/
-/* In the test, DKG is run for n miners to get the GroupPrivateKeyShare(GPSK). A party signs with
-GPSK to form the Bls sign share. The array selectRandIDs is to keep track of party IDs to get k number of sig shares randomly for Recover GpSign*/
+/* In the test, DKG is run for n miners to get the GroupPrivateKeyShare(GPKS). A party signs with
+GPKS to form the Bls sign share. The array selectRandIDs is to keep track of party IDs to get k number of sig shares randomly for Recover GpSign*/
 
 func testRecoverGrpSignature(t int, n int, test *testing.T) {
+	start := time.Now()
 
 	dkgs := newDKGs(t, n)
 
@@ -194,23 +189,12 @@ func testRecoverGrpSignature(t int, n int, test *testing.T) {
 		}
 		prevRBO = rbOutput
 	}
+	fmt.Printf("Time for the RecoverGrpSignature: %v, for t : %v and n : %v\n", time.Since(start), t, n)
+
 }
 
 /* TestRecGrpSign - The test calls testRecoverGrpSignature(t, n, test) which has the test for Gp Sign*/
 func TestRecGrpSign(test *testing.T) { testRecoverGrpSignature(2, 3, test) }
-
-/*aggDkg - Aggregate the DKG shares to form the GroupPrivateKeyShare */
-func aggDkg(i int, dkgs DKGs, n int) {
-
-	for j := 0; j < n; j++ {
-		dkgs[i].receivedSecShares[j] = dkgs[j].secSharesMap[dkgs[i].ID]
-	}
-
-	if len(dkgs[i].receivedSecShares) == n {
-		dkgs[i].AggregateShares()
-	}
-
-}
 
 /*calcRbo - To calculate the Gp Sign with any k number of Party IDs and its Bls signature share*/
 func calcRbo(selectRandIDs []PartyID, t int, sigSharesID map[PartyID]Sign) (thresholdPartyIDs []PartyID, thresholdBlsSig []Sign) {
@@ -245,7 +229,6 @@ func addToSelectRandIDs(dkgs DKGs, n int) []PartyID {
 
 /* testVerifyGrpSignShares - Test to verify the Grp Signature Share which a miner computes by signing a message with GroupPrivateKeyShare(GPKS) is valid*/
 func testVerifyGrpSignShares(t int, n int, test *testing.T) {
-
 	dkgs := newDKGs(t, n)
 
 	for i := 0; i < n; i++ {
@@ -269,7 +252,35 @@ func testVerifyGrpSignShares(t int, n int, test *testing.T) {
 /* TestVerifyGrpSignShares - The test calls testVerifyGrpSignShares(t, n, test) which has the test for Grp Sign Share*/
 func TestVerifyGrpSignShares(test *testing.T) { testVerifyGrpSignShares(2, 3, test) }
 
-func BenchmarkBlsSigning(b *testing.B) {
+/* testVerifyWrongGrpSignShares - Test to verify whether an invalid Grp Signature share verifies to false */
+func testVerifyWrongGrpSignShares(t int, n int, test *testing.T) {
+	dkgs := newDKGs(t, n)
+
+	for i := 0; i < n; i++ {
+		aggDkg(i, dkgs, n)
+	}
+
+	var wrongSigShare Sign
+
+	for i := 0; i < n; i++ {
+
+		bs := MakeSimpleBLS(&dkgs[i])
+		bs.Msg = "VerifyGrpSignShare" + strconv.Itoa(i)
+		wrongSigShare.SetHexString("BOGUSVALUE")
+		grpSignShareVerified := bs.VerifyGroupSignShare(wrongSigShare)
+
+		if grpSignShareVerified {
+			test.Errorf("The bogus grp signature share %v cannot valid, which is computed by the party %v\n", wrongSigShare.GetHexString(), bs.ID.GetDecString())
+		}
+
+	}
+}
+
+/* TestVerifyWrongGrpSignShares - The test calls testVerifyWrongGrpSignShares(t, n, test) which has the test for Grp Sign Share*/
+func TestVerifyWrongGrpSignShares(test *testing.T) { testVerifyWrongGrpSignShares(2, 3, test) }
+
+/* BenchmarkDeriveGpSignShare - Benchmark for deriving the Gp Sign Share*/
+func BenchmarkDeriveGpSignShare(b *testing.B) {
 	b.StopTimer()
 
 	err := gobls.Init(gobls.CurveFp254BNb)
@@ -280,9 +291,97 @@ func BenchmarkBlsSigning(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		sec.SetByCSPRNG()
 		b.StartTimer()
-
-		sec.Sign(strconv.Itoa(n))
+		m := "GpSignShareMsg" + strconv.Itoa(n)
+		sec.Sign(m)
 		b.StopTimer()
 
 	}
 }
+
+/* BenchmarkVerifyGpSignShare - Benchmark for verifying the Gp Sign Share*/
+func BenchmarkVerifyGpSignShare(b *testing.B) {
+	b.StopTimer()
+	err := gobls.Init(gobls.CurveFp254BNb)
+	if err != nil {
+		b.Errorf("Curve not initialized")
+	}
+	var sec Key
+	for n := 0; n < b.N; n++ {
+		sec.SetByCSPRNG()
+		pub := sec.GetPublicKey()
+		m := "GpSignShareVerifyMsg" + strconv.Itoa(n)
+		sig := sec.Sign(m)
+		b.StartTimer()
+		sig.Verify(pub, m)
+		b.StopTimer()
+	}
+}
+
+/* benchmarkDeriveDkgShare - Benchmark for polynomial substitution method used in deriving the DKG shares for a party*/
+func benchmarkDeriveDkgShare(t int, b *testing.B) {
+	b.StopTimer()
+	err := gobls.Init(gobls.CurveFp254BNb)
+	if err != nil {
+		b.Errorf("Curve not initialized")
+	}
+	var sec Key
+	sec.SetByCSPRNG()
+	msk := sec.GetMasterSecretKey(t)
+	var forID PartyID
+	for n := 0; n < b.N; n++ {
+		err = forID.SetDecString(strconv.Itoa(n + 1))
+		if err != nil {
+			b.Error(err)
+		}
+		b.StartTimer()
+		err := sec.Set(msk, &forID)
+		b.StopTimer()
+		if err != nil {
+			b.Error(err)
+		}
+	}
+}
+
+/* BenchmarkDeriveDkgShare - calls the benchmark test benchmarkDeriveDkgShare which tests deriving the DKG shares for a party*/
+func BenchmarkDeriveDkgShare(b *testing.B) { benchmarkDeriveDkgShare(1000, b) }
+
+/* benchmarkRecoverSignature - Benchmark for Recover Grp Sign which is used to compute the Grp Signature */
+func benchmarkRecoverSignature(k int, b *testing.B) {
+	b.StopTimer()
+	err := gobls.Init(gobls.CurveFp254BNb)
+	if err != nil {
+		b.Errorf("Curve not initialized")
+	}
+	var sec Key
+	sec.SetByCSPRNG()
+	msk := sec.GetMasterSecretKey(k)
+
+	n := k
+	idVec := make([]PartyID, n)
+	secVec := make([]Key, n)
+	signVec := make([]Sign, n)
+	for i := 0; i < n; i++ {
+		err := idVec[i].SetLittleEndian([]byte{1, 2, 3, 4, 5, byte(i)})
+		if err != nil {
+			b.Error(err)
+		}
+		err = secVec[i].Set(msk, &idVec[i])
+		if err != nil {
+			b.Error(err)
+		}
+		signVec[i] = *secVec[i].Sign("test message")
+	}
+
+	// recover signature
+	var sig Sign
+	b.StartTimer()
+	for n := 0; n < b.N; n++ {
+		err := sig.Recover(signVec, idVec)
+		if err != nil {
+			b.Error(err)
+		}
+	}
+}
+
+/* BenchmarkRecoverSignature - Calls the function benchmarkRecoverSignature */
+func BenchmarkRecoverSignature(b *testing.B) { benchmarkRecoverSignature(200, b) }
