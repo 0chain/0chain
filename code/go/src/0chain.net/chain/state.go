@@ -43,7 +43,13 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 		pb = b.PrevBlock
 		if pb == nil {
 			b.SetStateStatus(block.StateFailed)
-			Logger.Error("compute state - previous block not available", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
+			if state.DebugState {
+				Logger.Error("compute state - previous block not available", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
+			} else {
+				if config.DevConfiguration.State {
+					Logger.Info("compute state - previous block not available", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
+				}
+			}
 			return ErrPreviousBlockUnavailable
 		}
 	}
@@ -52,8 +58,12 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 		err := c.ComputeState(ctx, pb)
 		if err != nil {
 			pb.SetStateStatus(block.StateFailed)
-			if config.DevConfiguration.State {
+			if state.DebugState {
 				Logger.Error("compute state - error computing previous state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Error(err))
+			} else {
+				if config.DevConfiguration.State {
+					Logger.Info("compute state - error computing previous state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Error(err))
+				}
 			}
 			return err
 		}
