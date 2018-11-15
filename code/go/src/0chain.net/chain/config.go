@@ -18,7 +18,7 @@ type Config struct {
 	GenesisBlockHash      string        `json:"genesis_block_hash"`
 	Decimals              int8          `json:"decimals"`                // Number of decimals allowed for the token on this chain
 	BlockSize             int32         `json:"block_size"`              // Number of transactions in a block
-	LowerBoundSize        int32         `json:"lower_bound_size"`        // Number of transactions a block needs to have
+	MinBlockSize          int32         `json:"min_block_size"`          // Number of transactions a block needs to have
 	MaxByteSize           int64         `json:"max_byte_size"`           // Max number of bytes a block can have
 	NumGenerators         int           `json:"num_generators"`          // Number of block generators
 	NumSharders           int           `json:"num_sharders"`            // Number of sharders that can store the block
