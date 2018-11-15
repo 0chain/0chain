@@ -163,6 +163,7 @@ func initEntities() {
 	round.SetupVRFShareEntity(memoryStorage)
 	block.SetupEntity(memoryStorage)
 	block.SetupBlockSummaryEntity(memoryStorage)
+	block.SetupStateChange(memoryStorage)
 
 	client.SetupEntity(memoryStorage)
 

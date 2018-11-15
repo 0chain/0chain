@@ -1,6 +1,7 @@
 package miner
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"time"
@@ -9,6 +10,7 @@ import (
 
 	"0chain.net/chain"
 	"0chain.net/config"
+	"0chain.net/state"
 	"0chain.net/util"
 
 	"0chain.net/block"
@@ -193,6 +195,19 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	if err != nil {
 		return err
 	}
+
+	if state.DebugState == true {
+		changes := block.NewBlockStateChange(b)
+		mndb := changes.NewNodeDB()
+		stateRoot := mndb.ComputeRoot()
+		if stateRoot == nil {
+			Logger.DPanic("generate block - state root is null", zap.Int64("round", b.Round), zap.String("block", b.Hash))
+		}
+		if bytes.Compare(stateRoot.GetHashBytes(), b.ClientStateHash) != 0 {
+			Logger.Error("generate block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("state", b.ClientStateHash), zap.Any("computed_state", stateRoot.GetHashBytes()))
+		}
+	}
+
 	b.SetBlockState(block.StateGenerated)
 	b.SetStateStatus(block.StateSuccessful)
 	Logger.Info("generate block (assemble+update+sign)", zap.Int64("round", b.Round), zap.Int32("block_size", blockSize), zap.Int32("reused_txns", reusedTxns), zap.Duration("time", time.Since(start)),
