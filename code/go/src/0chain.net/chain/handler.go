@@ -136,7 +136,7 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<div>Current Round: %v Latest Finalized Round: %v</div>\n", sc.CurrentRound, sc.LatestFinalizedBlock.Round)
 
 	fmt.Fprintf(w, "<table class='menu' style='border-collapse: collapse;'>")
-	fmt.Fprintf(w, "<tr class='header'><td>Config</td><td>Stats</td><td>Logs</td><td>Debug</td></tr>")
+	fmt.Fprintf(w, "<tr class='header'><td>Config</td><td>Stats</td><td>Info</td><td>Debug</td></tr>")
 	fmt.Fprintf(w, "<tr>")
 	fmt.Fprintf(w, "<td valign='top'>")
 	fmt.Fprintf(w, "<li><a href='/v1/config/get'>/v1/config/get</a></li>")
