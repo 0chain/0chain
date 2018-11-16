@@ -327,7 +327,7 @@ func (mpt *MerklePatriciaTrie) insertAtNode(value Serializable, node Node, path 
 			}
 			cnode.PutChild(path[plen], gckey1)
 			cnode.SetValue(nodeImpl.GetValue())
-		} else { // existing leaf path and the given path have a prefix (or or more) and separate suffixes (node.Path = "hello world", path = "hello earth")
+		} else { // existing leaf path and the given path have a prefix (one or more) and separate suffixes (node.Path = "hello world", path = "hello earth")
 			// a full node that would contain children with indexes "w" and "e" , an extension node with path "hello "
 			gcnode1 := NewLeafNode(path[plen+1:], mpt.Version, value)
 			_, gckey1, err := mpt.insertNode(nil, gcnode1)
@@ -342,20 +342,20 @@ func (mpt *MerklePatriciaTrie) insertAtNode(value Serializable, node Node, path 
 			cnode.PutChild(path[plen], gckey1)
 			cnode.PutChild(nodeImpl.Path[plen], gckey2)
 		}
-		var prevNode Node
 		if plen == 0 { // node.Path = "world" and path = "earth" => old leaf node is replaced with new branch node
-			prevNode = node
-		}
-		_, ckey, err := mpt.insertNode(prevNode, cnode)
-		if err != nil {
-			return nil, nil, err
-		}
-		if plen == 0 {
+			_, ckey, err := mpt.insertNode(node, cnode)
+			if err != nil {
+				return nil, nil, err
+			}
 			return cnode, ckey, nil
 		}
 		// if there is a matching prefix, it becomes an extension node
 		// node.Path == "hello world", path = "hello earth", enode.Path = "hello " and replaces the old node.
 		// enode.NodeKey points to ckey which is a new branch node that contains "world" and "earth" paths
+		_, ckey, err := mpt.insertNode(nil, cnode)
+		if err != nil {
+			return nil, nil, err
+		}
 		enode := NewExtensionNode(prefix, ckey)
 		return mpt.insertNode(node, enode)
 	case *ExtensionNode:

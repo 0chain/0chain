@@ -29,6 +29,7 @@ import (
 	"0chain.net/persistencestore"
 	"0chain.net/round"
 	"0chain.net/sharder"
+	"0chain.net/state"
 	"0chain.net/transaction"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -97,10 +98,9 @@ func main() {
 		Logger.Panic("node definition for self node doesn't exist")
 	}
 
-	/*
-		if config.DevConfiguration.State {
-			chain.SetupStateLogger("/tmp/state.txt")
-		}*/
+	if state.DebugState {
+		chain.SetupStateLogger("/tmp/state.txt")
+	}
 
 	mode := "main net"
 	if config.Development() {
