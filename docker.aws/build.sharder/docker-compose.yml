@@ -20,12 +20,8 @@ services:
     - /0chain/data/scylla/data:/var/lib/scylla/data
     - /0chain/data/scylla/commitlog:/var/lib/scylla/commitlog
 
-    deploy:
-      restart_policy:
-        condition: on-failure
-        delay: 20s
-        max_attempts: 3
-        window: 120s
+    #Services are expected to be started correctly
+    restart: no
 
     healthcheck:
       test: ["CMD-SHELL", "[ $$(nodetool statusgossip) = running ]"]
@@ -49,9 +45,8 @@ services:
     links:
     - scylla:scylla
 
-    deploy:
-      restart_policy:
-        condition: none
+    #Services are expected to be started correctly
+    restart: no
 
     user: ${ZCHAIN_USER}:${ZCHAIN_GROUP}
     privileged: false
@@ -103,12 +98,7 @@ services:
     ports:
     - "7171:7171"
 
-    deploy:
-      restart_policy:
-        condition: on-failure
-        delay: 20s
-        max_attempts: ${MAX_RETRY_ATTEMPTS}
-        window: 120s
+    restart: on-failure:${MAX_RETRY_ATTEMPTS}
 
     networks:
       default:

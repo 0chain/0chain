@@ -15,11 +15,8 @@ services:
     sysctls:
       net.core.somaxconn: '511'
 
-    restart_policy:
-      condition: on-failure
-      delay: 20s
-      max_attempts: 3
-      window: 120s
+    #It is expected that the services should start correctly.
+    restart: no
 
     #Start under user 0chain
     user: 2000:2000
@@ -40,11 +37,8 @@ services:
     sysctls:
       net.core.somaxconn: '511'
 
-    restart_policy:
-      condition: on-failure
-      delay: 20s
-      max_attempts: 3
-      window: 120s
+    #It is expected that the services should start correctly.
+    restart: no
 
     #Start under user 0chain
     user: 2000:2000
@@ -94,11 +88,7 @@ services:
     ports:
       - "7071:7071"
 
-    restart_policy:
-      condition: on-failure
-      delay: 20s
-      max_attempts: ${MAX_RETRY_ATTEMPTS}
-      window: 120s
+    restart: on-failure:${MAX_RETRY_ATTEMPTS}
 
     networks:
       default:
