@@ -129,7 +129,6 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 			Self.Node.LastActiveTime = ts
 			resp, err := httpClient.Do(req)
 			provider.Release()
-			timer.UpdateSince(ts)
 			duration := time.Since(ts)
 
 			if err != nil {
@@ -160,6 +159,8 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 				N2n.Error("requesting", zap.Int("from", Self.SetIndex), zap.Int("to", provider.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName), zap.Any("params", params), zap.Error(err))
 				return false
 			}
+			duration = time.Since(ts)
+			timer.UpdateSince(ts)
 			N2n.Info("requesting", zap.Int("from", Self.SetIndex), zap.Int("to", provider.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName), zap.Any("id", entity.GetKey()), zap.Any("params", params), zap.String("codec", resp.Header.Get(HeaderRequestCODEC)))
 			if delay > 0 {
 				N2n.Debug("response received", zap.Int("from", provider.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", uri), zap.String("entity", eName), zap.Any("params", params), zap.Any("delay", delay))

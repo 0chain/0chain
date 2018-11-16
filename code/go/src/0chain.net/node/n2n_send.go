@@ -442,8 +442,6 @@ func pullEntityHandler(ctx context.Context, nd *Node, uri string, handler datast
 
 var pullDataRequestor EntityRequestor
 
-var pullURL = "/v1/n2n/entity_pull/get"
-
 func init() {
 	http.HandleFunc(pullURL, ToN2NSendEntityHandler(PushToPullHandler))
 	options := &SendOptions{Timeout: TimeoutLargeMessage, CODEC: CODEC_MSGPACK, Compress: true}
