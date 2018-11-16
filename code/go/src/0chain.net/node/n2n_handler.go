@@ -237,7 +237,7 @@ func validateChain(sender *Node, r *http.Request) bool {
 }
 
 func validateEntityMetadata(sender *Node, r *http.Request) bool {
-	if r.URL.Path == "/v1/n2n/entity_pull/get" {
+	if r.URL.Path == pullURL {
 		return true
 	}
 	entityName := r.Header.Get(HeaderRequestEntityName)
@@ -253,6 +253,7 @@ func validateEntityMetadata(sender *Node, r *http.Request) bool {
 	return true
 }
 
+var pullURL = "/v1/n2n/entity_pull/get"
 var pushDataCache = cache.NewLRUCache(100)
 
 //PushDataCacheEntry - cached push data

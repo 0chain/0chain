@@ -398,6 +398,7 @@ func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 	c.finalizationCountStats(w)
 	fmt.Fprintf(w, "</td></tr>")
 	fmt.Fprintf(w, "</table>")
+	fmt.Fprintf(w, "<br>")
 	fmt.Fprintf(w, "<table>")
 	fmt.Fprintf(w, "<tr><td>Miner</td><td>Verification Failures</td></tr>")
 	for _, nd := range c.Miners.Nodes {

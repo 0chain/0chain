@@ -196,15 +196,20 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		return err
 	}
 
-	if state.DebugState == true {
-		changes := block.NewBlockStateChange(b)
-		mndb := changes.NewNodeDB()
-		stateRoot := mndb.ComputeRoot()
-		if stateRoot == nil {
-			Logger.DPanic("generate block - state root is null", zap.Int64("round", b.Round), zap.String("block", b.Hash))
-		}
-		if bytes.Compare(stateRoot.GetHashBytes(), b.ClientStateHash) != 0 {
-			Logger.Error("generate block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("state", b.ClientStateHash), zap.Any("computed_state", stateRoot.GetHashBytes()))
+	if state.DebugState {
+		if len(b.ClientState.GetChangeCollector().GetChanges()) > 0 {
+			changes := block.NewBlockStateChange(b)
+			stateRoot := changes.GetRoot()
+			if stateRoot == nil {
+				Logger.DPanic("generate block - state root is null", zap.Int64("round", b.Round), zap.String("block", b.Hash))
+			}
+			if bytes.Compare(stateRoot.GetHashBytes(), b.ClientStateHash) != 0 {
+				Logger.Error("generate block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("state", b.ClientStateHash), zap.Any("computed_state", stateRoot.GetHashBytes()))
+			}
+			err := changes.Validate(ctx)
+			if err != nil {
+				Logger.DPanic("generate block - state change validation", zap.Error(err))
+			}
 		}
 	}
 
