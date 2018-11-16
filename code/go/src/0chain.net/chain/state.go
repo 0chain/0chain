@@ -81,11 +81,13 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 			txn.ComputeClientID()
 		}
 		if !c.UpdateState(b, txn) {
-			b.SetStateStatus(block.StateFailed)
 			if config.DevConfiguration.State {
-				Logger.Error("compute state - update state failed", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.String("prev_block", b.PrevHash), zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)))
+				b.SetStateStatus(block.StateFailed)
+				if config.DevConfiguration.State {
+					Logger.Error("compute state - update state failed", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.String("prev_block", b.PrevHash), zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)))
+				}
+				return common.NewError("state_update_error", "error updating state")
 			}
-			return common.NewError("state_update_error", "error updating state")
 		}
 	}
 	if bytes.Compare(b.ClientStateHash, b.ClientState.GetRoot()) != 0 {
