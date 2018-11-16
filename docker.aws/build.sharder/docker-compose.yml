@@ -20,8 +20,6 @@ services:
     - /0chain/data/scylla/data:/var/lib/scylla/data
     - /0chain/data/scylla/commitlog:/var/lib/scylla/commitlog
 
-    restart: on-failure:10
-
     healthcheck:
       test: ["CMD-SHELL", "[ $$(nodetool statusgossip) = running ]"]
       interval: 30s
@@ -43,7 +41,8 @@ services:
     #command: bash
     links:
     - scylla:scylla
-    restart: on-failure:10
+
+    #Services are expected to be started correctly
 
     user: ${ZCHAIN_USER}:${ZCHAIN_GROUP}
     privileged: false
@@ -54,6 +53,7 @@ services:
     - CASSANDRA_CLUSTER=scylla
     depends_on:
     - scylla-init
+
     links:
     - scylla-init:scylla-init
 
