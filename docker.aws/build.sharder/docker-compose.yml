@@ -20,9 +20,6 @@ services:
     - /0chain/data/scylla/data:/var/lib/scylla/data
     - /0chain/data/scylla/commitlog:/var/lib/scylla/commitlog
 
-    #Services are expected to be started correctly
-    restart: no
-
     healthcheck:
       test: ["CMD-SHELL", "[ $$(nodetool statusgossip) = running ]"]
       interval: 30s
@@ -46,7 +43,6 @@ services:
     - scylla:scylla
 
     #Services are expected to be started correctly
-    restart: no
 
     user: ${ZCHAIN_USER}:${ZCHAIN_GROUP}
     privileged: false
