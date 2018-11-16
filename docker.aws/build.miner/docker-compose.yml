@@ -15,9 +15,6 @@ services:
     sysctls:
       net.core.somaxconn: '511'
 
-    #It is expected that the services should start correctly.
-    restart: no
-
     #Start under user 0chain
     user: 2000:2000
     command: redis-server /0chain/config/redis/state.redis.conf
@@ -36,9 +33,6 @@ services:
       default:
     sysctls:
       net.core.somaxconn: '511'
-
-    #It is expected that the services should start correctly.
-    restart: no
 
     #Start under user 0chain
     user: 2000:2000
