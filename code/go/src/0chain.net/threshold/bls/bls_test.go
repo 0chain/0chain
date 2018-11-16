@@ -5,9 +5,10 @@ import (
 	"math/rand"
 	"strconv"
 	"testing"
-	"time"
 
+	"0chain.net/encryption"
 	"github.com/pmer/gobls"
+	"github.com/stretchr/testify/assert"
 )
 
 const CurveFp254BNb = 0
@@ -127,12 +128,11 @@ func TestRecoverSecretKey(test *testing.T) {
 /* testDKGProcess - Test for the DKG flow */
 func testDKGProcess(t int, n int, test *testing.T) {
 
-	start := time.Now()
 	dkgs := newDKGs(t, n)
 	for i := 0; i < n; i++ {
 		aggDkg(i, dkgs, n)
+		assert.NotNil(test, dkgs[i].SecKeyShareGroup)
 	}
-	fmt.Printf("Time for the DKG process: %v for n : %v\n", time.Since(start), n)
 }
 
 /* TestDKGProcess - calls the test, testDKGProcess*/
@@ -153,78 +153,96 @@ func aggDkg(i int, dkgs DKGs, n int) {
 
 /* testRecoverGrpSignature - The test used to check the grp signature produced is the same for all miners*/
 /* In the test, DKG is run for n miners to get the GroupPrivateKeyShare(GPKS). A party signs with
-GPKS to form the Bls sign share. The array selectRandIDs is to keep track of party IDs to get k number of sig shares randomly for Recover GpSign*/
+GPKS to form the Grp sign share. The array allPartyIDs is to keep track of party IDs to get it's unique k number of sig shares randomly for Recover GpSign*/
 
 func testRecoverGrpSignature(t int, n int, test *testing.T) {
-	start := time.Now()
-
 	dkgs := newDKGs(t, n)
-
 	for i := 0; i < n; i++ {
 		aggDkg(i, dkgs, n)
 	}
 
-	selectRandIDs := make([]PartyID, 0)
+	var rNumber int64 = 1
+	var gpSign string
 	var rbOutput string
-	var prevRBO = "noRBO"
-	sigSharesID := make(map[PartyID]Sign, n)
+	var prevRBO = encryption.Hash("0chain")
+	var prevMinerRBO = "noRBO"
 
-	for i := 0; i < n; i++ {
+	//partyMap has the partyID and its corresponding Grp sign share
+	partyMap := make(map[PartyID]Sign, n)
 
-		bs := MakeSimpleBLS(&dkgs[i])
-		bs.Msg = "RBO Tests"
-		sigShare := bs.SignMsg()
-		sigSharesID[dkgs[i].ID] = sigShare
+	for rNumber < 100 {
+		fmt.Printf("Starting round %v\n", rNumber)
+		for i := 0; i < n; i++ {
 
-	}
-	for i := 0; i < n; i++ {
-		bs := MakeSimpleBLS(&dkgs[i])
-		selectRandIDs = addToSelectRandIDs(dkgs, n)
-		threshParty, threshSigs := calcRbo(selectRandIDs, t, sigSharesID)
-		bs.RecoverGroupSig(threshParty, threshSigs)
+			bs := MakeSimpleBLS(&dkgs[i])
+			bs.Msg = strconv.FormatInt(rNumber, 10) + prevRBO //msg = r || RBO(r-1), r -> round
+			fmt.Printf("The message : %v signed by miner %v\n", bs.Msg, bs.ID.GetDecString())
 
-		rbOutput = bs.GpSign.GetHexString()
-		if prevRBO != "noRBO" && prevRBO != rbOutput {
-			test.Errorf("The rbOutput %v in %v is different for miner\n", i, rbOutput)
+			sigShare := bs.SignMsg()
+			partyMap[dkgs[i].ID] = sigShare
+
 		}
-		prevRBO = rbOutput
-	}
-	fmt.Printf("Time for the RecoverGrpSignature: %v, for t : %v and n : %v\n", time.Since(start), t, n)
 
+		for i := 0; i < n; i++ {
+			bs := MakeSimpleBLS(&dkgs[i])
+			allPartyIDs := selectAllPartyIDs(dkgs, n)
+			threshParty, threshSigs := calcRbo(allPartyIDs, t, partyMap)
+			bs.RecoverGroupSig(threshParty, threshSigs)
+
+			gpSign = bs.GpSign.GetHexString()
+			fmt.Printf("The Group Signature : %v for the miner %v\n", gpSign, bs.ID.GetDecString())
+			rbOutput = encryption.Hash(gpSign)
+			fmt.Printf("The rbOutput : %v for the miner %v\n", rbOutput, bs.ID.GetDecString())
+
+			if prevMinerRBO != "noRBO" && prevMinerRBO != rbOutput {
+				assert.Equal(test, prevMinerRBO, rbOutput)
+				test.Errorf("The rbOutput %v is different for miner %v\n", rbOutput, bs.ID.GetDecString())
+			}
+			prevMinerRBO = rbOutput
+		}
+		fmt.Printf("The RBO %v is same for all miners for the round %v\n", rbOutput, rNumber)
+		prevRBO = rbOutput
+		prevMinerRBO = "noRBO"
+		rNumber++
+		fmt.Println("----------------------------------------------------------------------------------------------------------------------")
+	}
 }
 
 /* TestRecGrpSign - The test calls testRecoverGrpSignature(t, n, test) which has the test for Gp Sign*/
 func TestRecGrpSign(test *testing.T) { testRecoverGrpSignature(2, 3, test) }
 
-/*calcRbo - To calculate the Gp Sign with any k number of Party IDs and its Bls signature share*/
-func calcRbo(selectRandIDs []PartyID, t int, sigSharesID map[PartyID]Sign) (thresholdPartyIDs []PartyID, thresholdBlsSig []Sign) {
+/*calcRbo - To calculate the Gp Sign with any k number of unique Party IDs and its Bls signature share*/
+func calcRbo(allPartyIDs []PartyID, t int, partyMap map[PartyID]Sign) (threshPartys []PartyID, threshSigs []Sign) {
 
-	thresholdCount := 1
-	thresholdBlsSig = make([]Sign, 0)
-	thresholdPartyIDs = make([]PartyID, 0)
+	var thresholdCount = 1
+	threshSigs = make([]Sign, 0)
+	threshPartys = make([]PartyID, 0)
 
 	for thresholdCount <= t {
 
-		randIndex := rand.Intn(len(selectRandIDs))
+		randIndex := rand.Intn(len(allPartyIDs))
 
-		thresholdPartyIDs = append(thresholdPartyIDs, selectRandIDs[randIndex])
-		thresholdBlsSig = append(thresholdBlsSig, sigSharesID[selectRandIDs[randIndex]])
+		//selecting a party's Grp Sign share randomly
+		threshPartys = append(threshPartys, allPartyIDs[randIndex])
+		threshSigs = append(threshSigs, partyMap[allPartyIDs[randIndex]])
 
-		selectRandIDs[randIndex] = selectRandIDs[len(selectRandIDs)-1]
-		selectRandIDs = selectRandIDs[:len(selectRandIDs)-1]
+		//removing that party's ID from the array allPartyIDs, to avoid duplicates to compute Grp Sign
+		allPartyIDs[randIndex] = allPartyIDs[len(allPartyIDs)-1]
+		allPartyIDs = allPartyIDs[:len(allPartyIDs)-1]
+
 		thresholdCount++
 
 	}
-	return thresholdPartyIDs, thresholdBlsSig
+	return threshPartys, threshSigs
 }
 
-/*addToSelectRandIDs - The array selectRandIDs to select k number party IDs randomly */
-func addToSelectRandIDs(dkgs DKGs, n int) []PartyID {
-	selectRandIDs := make([]PartyID, 0)
+/*selectAllPartyIDs - The array allPartyIDs has all the party IDs. This array will be used later on to select k random sig shares to derive grp sign */
+func selectAllPartyIDs(dkgs DKGs, n int) []PartyID {
+	allPartyIDs := make([]PartyID, 0)
 	for j := 0; j < n; j++ {
-		selectRandIDs = append(selectRandIDs, dkgs[j].ID)
+		allPartyIDs = append(allPartyIDs, dkgs[j].ID)
 	}
-	return selectRandIDs
+	return allPartyIDs
 }
 
 /* testVerifyGrpSignShares - Test to verify the Grp Signature Share which a miner computes by signing a message with GroupPrivateKeyShare(GPKS) is valid*/
@@ -270,7 +288,7 @@ func testVerifyWrongGrpSignShares(t int, n int, test *testing.T) {
 		grpSignShareVerified := bs.VerifyGroupSignShare(wrongSigShare)
 
 		if grpSignShareVerified {
-			test.Errorf("The bogus grp signature share %v cannot valid, which is computed by the party %v\n", wrongSigShare.GetHexString(), bs.ID.GetDecString())
+			test.Errorf("The bogus grp signature share %v cannot be valid, which is computed by the party %v\n", wrongSigShare.GetHexString(), bs.ID.GetDecString())
 		}
 
 	}
