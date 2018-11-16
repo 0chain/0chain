@@ -49,8 +49,9 @@ services:
     links:
     - scylla:scylla
 
-    restart_policy:
-      condition: none
+    deploy:
+      restart_policy:
+        condition: none
 
     user: ${ZCHAIN_USER}:${ZCHAIN_GROUP}
     privileged: false
@@ -102,11 +103,12 @@ services:
     ports:
     - "7171:7171"
 
-    restart_policy:
-      condition: on-failure
-      delay: 20s
-      max_attempts: ${MAX_RETRY_ATTEMPTS}
-      window: 120s
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 20s
+        max_attempts: ${MAX_RETRY_ATTEMPTS}
+        window: 120s
 
     networks:
       default:
