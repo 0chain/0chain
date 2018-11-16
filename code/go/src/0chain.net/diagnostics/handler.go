@@ -16,6 +16,7 @@ func SetupHandlers() {
 	http.HandleFunc("/v1/diagnostics/get/info", common.ToJSONResponse(chain.InfoHandler))
 	http.HandleFunc("/_diagnostics/logs", logging.LogWriter)
 	http.HandleFunc("/_diagnostics/n2n_logs", logging.N2NLogWriter)
+	http.HandleFunc("/_diagnostics/mem_logs", logging.MemLogWriter)
 	sc := chain.GetServerChain()
 	http.HandleFunc("/_diagnostics/n2n/info", sc.N2NStatsWriter)
 	http.HandleFunc("/_diagnostics/miner_stats", sc.MinerStatsHandler)
@@ -39,6 +40,7 @@ func GetStatistics(c *chain.Chain, timer metrics.Timer, scaleBy float64) interfa
 	stats["mean"] = scale(timer.Mean())
 	stats["std_dev"] = scale(timer.StdDev())
 	stats["max"] = scale(float64(timer.Max()))
+	stats["total_txns"] = c.LatestFinalizedBlock.RunningTxnCount
 
 	for idx, p := range percentiles {
 		stats[fmt.Sprintf("percentile_%v", 100*p)] = scale(pvals[idx])

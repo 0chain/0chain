@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
@@ -105,7 +103,7 @@ func (np *Pool) sendTo(numNodes int, nodes []*Node, handler SendHandler) []*Node
 		activeCount++
 	}
 	if activeCount == 0 {
-		Logger.Debug("send message (no active nodes)")
+		N2n.Debug("send message (no active nodes)")
 		close(sendBucket)
 		return sentTo
 	}
@@ -226,22 +224,18 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 				sizer.Update(int64(len(data)))
 			}
 			N2n.Info("sending", zap.Int("from", Self.SetIndex), zap.Int("to", receiver.SetIndex), zap.String("handler", uri), zap.Duration("duration", time.Since(ts)), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()))
-
 			if err != nil {
 				receiver.SendErrors++
 				N2n.Error("sending", zap.Int("from", Self.SetIndex), zap.Int("to", receiver.SetIndex), zap.String("handler", uri), zap.Duration("duration", time.Since(ts)), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Error(err))
 				return false
 			}
-			defer resp.Body.Close()
+			readAndClose(resp.Body)
 			if !(resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusNoContent) {
-				var rbuf bytes.Buffer
-				rbuf.ReadFrom(resp.Body)
-				N2n.Error("sending", zap.Int("from", Self.SetIndex), zap.Int("to", receiver.SetIndex), zap.String("handler", uri), zap.Duration("duration", time.Since(ts)), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Any("status_code", resp.StatusCode), zap.String("response", rbuf.String()))
+				N2n.Error("sending", zap.Int("from", Self.SetIndex), zap.Int("to", receiver.SetIndex), zap.String("handler", uri), zap.Duration("duration", time.Since(ts)), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Any("status_code", resp.StatusCode))
 				return false
 			}
 			receiver.Status = NodeStatusActive
 			receiver.LastActiveTime = time.Now()
-			io.Copy(ioutil.Discard, resp.Body)
 			return true
 		}
 	}
@@ -353,8 +347,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 		entityMetadata := datastore.GetEntityMetadata(entityName)
 		if options != nil && options.MessageFilter != nil {
 			if !options.MessageFilter.Accept(entityName, entityID) {
-				defer r.Body.Close()
-				io.Copy(ioutil.Discard, r.Body)
+				readAndClose(r.Body)
 				N2n.Debug("message receive - reject", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI), zap.String("entity_id", entityID))
 				return
 			}
@@ -448,8 +441,6 @@ func pullEntityHandler(ctx context.Context, nd *Node, uri string, handler datast
 }
 
 var pullDataRequestor EntityRequestor
-
-var pullURL = "/v1/n2n/entity_pull/get"
 
 func init() {
 	http.HandleFunc(pullURL, ToN2NSendEntityHandler(PushToPullHandler))

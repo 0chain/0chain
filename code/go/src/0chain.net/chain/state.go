@@ -43,16 +43,27 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 		pb = b.PrevBlock
 		if pb == nil {
 			b.SetStateStatus(block.StateFailed)
-			Logger.Error("compute state - previous block not available", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
+			if state.DebugState {
+				Logger.Error("compute state - previous block not available", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
+			} else {
+				if config.DevConfiguration.State {
+					Logger.Info("compute state - previous block not available", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
+				}
+			}
 			return ErrPreviousBlockUnavailable
 		}
 	}
 	if !pb.IsStateComputed() {
-		Logger.Info("compute state - previous block state not ready", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Int8("prev_block_state", pb.GetBlockState()))
+		Logger.Info("compute state - previous block state not ready", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Int8("prev_block_state", pb.GetBlockState()), zap.Int8("prev_block_state_status", pb.GetStateStatus()))
 		err := c.ComputeState(ctx, pb)
 		if err != nil {
-			if config.DevConfiguration.State {
+			pb.SetStateStatus(block.StateFailed)
+			if state.DebugState {
 				Logger.Error("compute state - error computing previous state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Error(err))
+			} else {
+				if config.DevConfiguration.State {
+					Logger.Info("compute state - error computing previous state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Error(err))
+				}
 			}
 			return err
 		}
@@ -70,17 +81,19 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 			txn.ComputeClientID()
 		}
 		if !c.UpdateState(b, txn) {
-			b.SetStateStatus(block.StateFailed)
 			if config.DevConfiguration.State {
-				Logger.Error("compute state - update state failed", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.String("prev_block", b.PrevHash), zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)))
+				b.SetStateStatus(block.StateFailed)
+				if config.DevConfiguration.State {
+					Logger.Error("compute state - update state failed", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.String("prev_block", b.PrevHash), zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)))
+				}
+				return common.NewError("state_update_error", "error updating state")
 			}
-			return common.NewError("state_update_error", "error updating state")
 		}
 	}
 	if bytes.Compare(b.ClientStateHash, b.ClientState.GetRoot()) != 0 {
 		b.SetStateStatus(block.StateFailed)
 		if config.DevConfiguration.State {
-			Logger.Error("validate transaction state hash error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("block_size", len(b.Txns)), zap.Int("changes", len(b.ClientState.GetChangeCollector().GetChanges())), zap.String("block_state_hash", util.ToHex(b.ClientStateHash)), zap.String("computed_state_hash", util.ToHex(b.ClientState.GetRoot())))
+			Logger.Error("compute state - state hash mismatch", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("block_size", len(b.Txns)), zap.Int("changes", len(b.ClientState.GetChangeCollector().GetChanges())), zap.String("block_state_hash", util.ToHex(b.ClientStateHash)), zap.String("computed_state_hash", util.ToHex(b.ClientState.GetRoot())))
 		}
 		return common.NewError(StateMismatch, "computed state hash doesn't match with the state hash of the block")
 	}
@@ -172,6 +185,12 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 		_, err = clientState.Insert(util.Path(txn.ToClientID), ts)
 		if err != nil {
 			Logger.Error("update state - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
+		}
+		if state.DebugState {
+			os, err := c.getState(clientState, c.OwnerID)
+			if err != nil || os == nil || os.Balance == 0 {
+				Logger.DPanic("update state - owner account", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Any("os", os), zap.Error(err))
+			}
 		}
 		return true
 	default:

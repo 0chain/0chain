@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httptrace"
@@ -152,6 +153,11 @@ func getHashData(clientID datastore.Key, ts common.Timestamp, key datastore.Key)
 
 var NoDataErr = common.NewError("no_data", "No data")
 
+func readAndClose(reader io.ReadCloser) {
+	io.Copy(ioutil.Discard, reader)
+	reader.Close()
+}
+
 func getRequestEntity(r *http.Request, entityMetadata datastore.EntityMetadata) (datastore.Entity, error) {
 	defer r.Body.Close()
 	var buffer io.Reader = r.Body
@@ -204,7 +210,7 @@ func getEntity(codec string, reader io.Reader, entityMetadata datastore.EntityMe
 		}
 		return entity, nil
 	}
-	Logger.Error("uknown_encoding", zap.String("encoding", codec))
+	N2n.Error("uknown_encoding", zap.String("encoding", codec))
 	return nil, common.NewError("unkown_encoding", "unknown encoding")
 }
 
@@ -231,7 +237,7 @@ func validateChain(sender *Node, r *http.Request) bool {
 }
 
 func validateEntityMetadata(sender *Node, r *http.Request) bool {
-	if r.URL.Path == "/v1/n2n/entity_pull/get" {
+	if r.URL.Path == pullURL {
 		return true
 	}
 	entityName := r.Header.Get(HeaderRequestEntityName)
@@ -247,6 +253,7 @@ func validateEntityMetadata(sender *Node, r *http.Request) bool {
 	return true
 }
 
+var pullURL = "/v1/n2n/entity_pull/get"
 var pushDataCache = cache.NewLRUCache(100)
 
 //PushDataCacheEntry - cached push data

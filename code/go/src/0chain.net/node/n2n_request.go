@@ -64,14 +64,11 @@ func (np *Pool) RequestEntityFromAll(ctx context.Context, requestor EntityReques
 		default:
 		}
 		if nd.Status == NodeStatusInactive {
-			Logger.Info("node status inactive", zap.String("node Id", nd.ID))
 			continue
 		}
 		if nd == Self.Node {
-			Logger.Info("node - self)", zap.String("node Id", nd.ID))
 			continue
 		}
-		Logger.Info("node - request sent", zap.String("to node Id", nd.ID))
 		rhandler(nd)
 	}
 }
@@ -97,13 +94,13 @@ func SetRequestHeaders(req *http.Request, options *SendOptions, entityMetadata d
 //RequestEntityHandler - a handler that requests an entity and uses it
 func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datastore.EntityMetadata) EntityRequestor {
 	return func(params map[string]string, handler datastore.JSONEntityReqResponderF) SendHandler {
-		return func(receiver *Node) bool {
-			timer := receiver.GetTimer(uri)
+		return func(provider *Node) bool {
+			timer := provider.GetTimer(uri)
 			timeout := 500 * time.Millisecond
 			if options.Timeout > 0 {
 				timeout = options.Timeout
 			}
-			url := receiver.GetN2NURLBase() + uri
+			url := provider.GetN2NURLBase() + uri
 			req, err := http.NewRequest("GET", url, nil)
 			if err != nil {
 				return false
@@ -121,57 +118,57 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 			if entityMetadata != nil {
 				eName = entityMetadata.GetName()
 			}
-			N2n.Debug("requesting", zap.Int("from", Self.SetIndex), zap.Int("to", receiver.SetIndex), zap.String("handler", uri), zap.String("entity", eName), zap.Any("params", params), zap.Any("delay", delay))
+			N2n.Debug("requesting", zap.Int("from", Self.SetIndex), zap.Int("to", provider.SetIndex), zap.String("handler", uri), zap.String("entity", eName), zap.Any("params", params), zap.Any("delay", delay))
 			SetRequestHeaders(req, options, entityMetadata)
 			ctx, cancel := context.WithCancel(context.TODO())
 			req = req.WithContext(ctx)
 			// Keep the number of messages to a node bounded
-			receiver.Grab()
+			provider.Grab()
 			time.AfterFunc(timeout, cancel)
 			ts := time.Now()
 			Self.Node.LastActiveTime = ts
 			resp, err := httpClient.Do(req)
-			receiver.Release()
-			timer.UpdateSince(ts)
+			provider.Release()
 			duration := time.Since(ts)
 
 			if err != nil {
-				N2n.Error("requesting", zap.Int("from", Self.SetIndex), zap.Int("to", receiver.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName), zap.Any("params", params), zap.Error(err))
+				N2n.Error("requesting", zap.Int("from", Self.SetIndex), zap.Int("to", provider.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName), zap.Any("params", params), zap.Error(err))
 				return false
 			}
 			if resp.StatusCode != http.StatusOK {
-				var rbuf bytes.Buffer
-				rbuf.ReadFrom(resp.Body)
-				resp.Body.Close()
-				N2n.Error("requesting", zap.Int("from", Self.SetIndex), zap.Int("to", receiver.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName), zap.Any("params", params), zap.Any("status_code", resp.StatusCode), zap.String("response", rbuf.String()))
+				readAndClose(resp.Body)
+				N2n.Error("requesting", zap.Int("from", Self.SetIndex), zap.Int("to", provider.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName), zap.Any("params", params), zap.Any("status_code", resp.StatusCode))
 				return false
 			}
 			if entityMetadata == nil {
 				eName = resp.Header.Get(HeaderRequestEntityName)
 				if eName == "" {
-					N2n.Error("requesting - no entity name in header", zap.Int("from", Self.SetIndex), zap.Int("to", receiver.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri))
+					N2n.Error("requesting - no entity name in header", zap.Int("from", Self.SetIndex), zap.Int("to", provider.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri))
 				}
 				entityMetadata = datastore.GetEntityMetadata(eName)
 				if entityMetadata == nil {
-					N2n.Error("requesting - unknown entity", zap.Int("from", Self.SetIndex), zap.Int("to", receiver.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName))
+					readAndClose(resp.Body)
+					N2n.Error("requesting - unknown entity", zap.Int("from", Self.SetIndex), zap.Int("to", provider.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName))
 					return false
 				}
 			}
-			receiver.Status = NodeStatusActive
-			receiver.LastActiveTime = time.Now()
+			provider.Status = NodeStatusActive
+			provider.LastActiveTime = time.Now()
 			entity, err := getResponseEntity(resp, entityMetadata)
 			if err != nil {
-				N2n.Error("requesting", zap.Int("from", Self.SetIndex), zap.Int("to", receiver.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName), zap.Any("params", params), zap.Error(err))
+				N2n.Error("requesting", zap.Int("from", Self.SetIndex), zap.Int("to", provider.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName), zap.Any("params", params), zap.Error(err))
 				return false
 			}
-			N2n.Info("requesting", zap.Int("from", Self.SetIndex), zap.Int("to", receiver.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName), zap.Any("id", entity.GetKey()), zap.Any("params", params), zap.String("codec", resp.Header.Get(HeaderRequestCODEC)))
+			duration = time.Since(ts)
+			timer.UpdateSince(ts)
+			N2n.Info("requesting", zap.Int("from", Self.SetIndex), zap.Int("to", provider.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName), zap.Any("id", entity.GetKey()), zap.Any("params", params), zap.String("codec", resp.Header.Get(HeaderRequestCODEC)))
 			if delay > 0 {
-				N2n.Debug("response received", zap.Int("from", receiver.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", uri), zap.String("entity", eName), zap.Any("params", params), zap.Any("delay", delay))
+				N2n.Debug("response received", zap.Int("from", provider.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", uri), zap.String("entity", eName), zap.Any("params", params), zap.Any("delay", delay))
 			}
 			ctx = context.TODO()
 			_, err = handler(ctx, entity)
 			if err != nil {
-				N2n.Error("requesting", zap.Int("from", Self.SetIndex), zap.Int("to", receiver.SetIndex), zap.Duration("duration", time.Since(ts)), zap.String("handler", uri), zap.String("entity", entityMetadata.GetName()), zap.Any("params", params), zap.Error(err))
+				N2n.Error("requesting", zap.Int("from", Self.SetIndex), zap.Int("to", provider.SetIndex), zap.Duration("duration", time.Since(ts)), zap.String("handler", uri), zap.String("entity", entityMetadata.GetName()), zap.Any("params", params), zap.Error(err))
 				return false
 			}
 			return true

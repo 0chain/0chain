@@ -17,7 +17,7 @@ RUN cd /tmp && \
 RUN cd /tmp && \
     git clone https://github.com/0chain/rocksdb.git && \
     cd rocksdb && \
-    make -j8 shared_lib && \
+    make -j4 shared_lib && \
     mkdir -p /usr/local/rocksdb/lib && \
     mkdir /usr/local/rocksdb/include && \
     cp librocksdb.so* /usr/local/rocksdb/lib && \

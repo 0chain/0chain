@@ -85,6 +85,7 @@ type Block struct {
 	isNotarized        bool
 	ticketsMutex       *sync.Mutex
 	verificationStatus int
+	RunningTxnCount    int64 `json:"running_txn_count"`
 }
 
 //NewBlock - create a new empty block
@@ -326,6 +327,7 @@ func (b *Block) GetSummary() *BlockSummary {
 	bs.MerkleTreeRoot = b.GetMerkleTree().GetRoot()
 	bs.ClientStateHash = b.ClientStateHash
 	bs.ReceiptMerkleTreeRoot = b.GetReceiptsMerkleTree().GetRoot()
+	bs.NumTxns = len(b.Txns)
 	return bs
 }
 

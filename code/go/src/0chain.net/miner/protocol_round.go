@@ -144,6 +144,9 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	b.MinerID = node.Self.GetKey()
 	mc.SetPreviousBlock(ctx, r, b, pb)
 	b.SetStateDB(pb)
+	start := time.Now()
+	makeBlock := false
+	generationTimeout := time.Millisecond * time.Duration(mc.GetGenerationTimeout())
 	for true {
 		if mc.CurrentRound > b.Round {
 			Logger.Debug("generate block (round mismatch)", zap.Any("round", roundNumber), zap.Any("current_round", mc.CurrentRound))
@@ -151,7 +154,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		}
 		txnCount := transaction.TransactionCount
 		b.ClientState.ResetChangeCollector(b.PrevBlock.ClientStateHash)
-		err := mc.GenerateBlock(ctx, b, mc)
+		err := mc.GenerateBlock(ctx, b, mc, makeBlock)
 		if err != nil {
 			cerr, ok := err.(*common.Error)
 			if ok {
@@ -160,20 +163,17 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 					if !config.MainNet() {
 						Logger.Error("generate block", zap.Error(err))
 					}
-					delay := 128 * time.Millisecond
 					for true {
-						time.Sleep(delay)
+						delay := mc.GetRetryWaitTime()
+						time.Sleep(time.Duration(delay) * time.Millisecond)
 						Logger.Debug("generate block", zap.Any("round", roundNumber), zap.Any("delay", delay), zap.Any("txn_count", txnCount), zap.Any("t.txn_count", transaction.TransactionCount))
 						if mc.CurrentRound > b.Round {
 							Logger.Debug("generate block (round mismatch)", zap.Any("round", roundNumber), zap.Any("current_round", mc.CurrentRound))
 							return nil, ErrRoundMismatch
 						}
-						if txnCount != transaction.TransactionCount {
+						if txnCount != transaction.TransactionCount || time.Now().Sub(start) > generationTimeout {
+							makeBlock = true
 							break
-						}
-						delay = 2 * delay
-						if delay > time.Second {
-							delay = time.Second
 						}
 					}
 					continue
@@ -185,6 +185,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 			Logger.Error("generate block", zap.Error(err))
 			return nil, err
 		}
+		b.RunningTxnCount = pb.RunningTxnCount + int64(len(b.Txns))
 		mc.AddRoundBlock(r, b)
 		break
 	}

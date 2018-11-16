@@ -1,4 +1,5 @@
-FROM zchain_base
+#FROM zchain_base
+FROM 0chain/base
 
 RUN go get github.com/gocql/gocql
 RUN go get github.com/stretchr/testify/assert

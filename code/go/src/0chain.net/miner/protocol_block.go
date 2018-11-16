@@ -1,6 +1,7 @@
 package miner
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"time"
@@ -9,6 +10,7 @@ import (
 
 	"0chain.net/chain"
 	"0chain.net/config"
+	"0chain.net/state"
 	"0chain.net/util"
 
 	"0chain.net/block"
@@ -37,18 +39,19 @@ func init() {
 * The context should be a background context which can be used to stop this logic if there is a new
 * block published while working on this
  */
-func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.BlockStateHandler) error {
+func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.BlockStateHandler, waitOver bool) error {
 	clients := make(map[string]*client.Client)
 	b.Txns = make([]*transaction.Transaction, mc.BlockSize)
 	//wasting this because []interface{} != []*transaction.Transaction in Go
 	etxns := make([]datastore.Entity, mc.BlockSize)
 	var invalidTxns []datastore.Entity
-	var idx int
+	var idx int32
 	var ierr error
 	var count int32
 	var roundMismatch bool
 	var hasOwnerTxn bool
 	var failedStateCount int32
+	var byteSize int64
 	txnMap := make(map[datastore.Key]bool, mc.BlockSize)
 	var txnProcessor = func(ctx context.Context, txn *transaction.Transaction) bool {
 		if _, ok := txnMap[txn.GetKey()]; ok {
@@ -86,6 +89,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		b.Txns[idx] = txn
 		etxns[idx] = txn
 		b.AddTransaction(txn)
+		byteSize += int64(len(txn.TransactionData))
 		if txn.PublicKey == "" {
 			clients[txn.ClientID] = nil
 		}
@@ -104,7 +108,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 			return true
 		}
 		if txnProcessor(ctx, txn) {
-			if idx >= int(mc.BlockSize) {
+			if idx >= mc.BlockSize || byteSize >= mc.MaxByteSize {
 				return false
 			}
 		}
@@ -132,31 +136,31 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		return err
 	}
 	blockSize := idx
-	var reusedTxns int
-	if int32(blockSize) < mc.BlockSize && mc.ReuseTransactions {
+	var reusedTxns int32
+	if blockSize < mc.BlockSize && byteSize < mc.MaxByteSize && mc.ReuseTransactions {
 		blocks := mc.GetUnrelatedBlocks(10, b)
 		rcount := 0
 		for _, ub := range blocks {
 			for _, txn := range ub.Txns {
 				rcount++
 				if txnProcessor(ctx, mc.txnToReuse(txn)) {
-					if idx == int(mc.BlockSize) {
+					if idx == mc.BlockSize || byteSize >= mc.MaxByteSize {
 						break
 					}
 				}
 			}
-			if idx == int(mc.BlockSize) {
+			if idx == mc.BlockSize || byteSize >= mc.MaxByteSize {
 				break
 			}
 		}
 		reusedTxns = idx - blockSize
 		blockSize = idx
-		Logger.Info("generate block (reused txns)", zap.Int64("round", b.Round), zap.Int("ub", len(blocks)), zap.Int("reused", reusedTxns), zap.Int("rcount", rcount), zap.Int("blockSize", idx))
+		Logger.Info("generate block (reused txns)", zap.Int64("round", b.Round), zap.Int("ub", len(blocks)), zap.Int32("reused", reusedTxns), zap.Int("rcount", rcount), zap.Int32("blockSize", idx))
 	}
-	if int32(blockSize) != mc.BlockSize {
-		if blockSize == 0 || !hasOwnerTxn {
+	if blockSize != mc.BlockSize && byteSize < mc.MaxByteSize {
+		if !waitOver || blockSize < mc.MinBlockSize {
 			b.Txns = nil
-			Logger.Debug("generate block (insufficient txns)", zap.Int64("round", b.Round), zap.Int32("iteration_count", count), zap.Int("block_size", blockSize))
+			Logger.Debug("generate block (insufficient txns)", zap.Int64("round", b.Round), zap.Int32("iteration_count", count), zap.Int32("block_size", blockSize))
 			return common.NewError(InsufficientTxns, fmt.Sprintf("not sufficient txns to make a block yet for round %v (iterated %v,block_size %v,state failure %v, invalid %v,reused %v)", b.Round, count, blockSize, failedStateCount, len(invalidTxns), reusedTxns))
 		}
 		b.Txns = b.Txns[:blockSize]
@@ -192,9 +196,27 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	if err != nil {
 		return err
 	}
+
+	if state.DebugState {
+		if len(b.ClientState.GetChangeCollector().GetChanges()) > 0 {
+			changes := block.NewBlockStateChange(b)
+			stateRoot := changes.GetRoot()
+			if stateRoot == nil {
+				Logger.DPanic("generate block - state root is null", zap.Int64("round", b.Round), zap.String("block", b.Hash))
+			}
+			if bytes.Compare(stateRoot.GetHashBytes(), b.ClientStateHash) != 0 {
+				Logger.Error("generate block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("state", b.ClientStateHash), zap.Any("computed_state", stateRoot.GetHashBytes()))
+			}
+			err := changes.Validate(ctx)
+			if err != nil {
+				Logger.DPanic("generate block - state change validation", zap.Error(err))
+			}
+		}
+	}
+
 	b.SetBlockState(block.StateGenerated)
 	b.SetStateStatus(block.StateSuccessful)
-	Logger.Info("generate block (assemble+update+sign)", zap.Int64("round", b.Round), zap.Int("block_size", blockSize), zap.Int("reused_txns", reusedTxns), zap.Duration("time", time.Since(start)),
+	Logger.Info("generate block (assemble+update+sign)", zap.Int64("round", b.Round), zap.Int32("block_size", blockSize), zap.Int32("reused_txns", reusedTxns), zap.Duration("time", time.Since(start)),
 		zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Int8("state_status", b.GetStateStatus()),
 		zap.Float64("p_chain_weight", b.PrevBlock.ChainWeight), zap.Int32("iteration_count", count))
 	go b.ComputeTxnMap()

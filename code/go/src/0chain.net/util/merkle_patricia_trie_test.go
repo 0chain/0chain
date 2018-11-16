@@ -298,3 +298,41 @@ func printChanges(cc ChangeCollectorI) {
 		fmt.Printf("d: %T %v\n", change, string(change.GetHashBytes()))
 	}
 }
+
+/*
+  merge extensions : delete L from P(E(F(L,E))) and ensure P(E(F(E))) becomes P(E)
+*/
+func TestCasePEFLEdeleteL(t *testing.T) {
+	cc := NewChangeCollector()
+	mndb := NewMemoryNodeDB()
+	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
+	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.DB, false)
+	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
+
+	doStrValInsert("setup data", mpt2, "223456789", "mercury", false)
+	doStrValInsert("setup data", mpt2, "1235", "venus", false)
+	doStrValInsert("setup data", mpt2, "123458970", "earth", false)
+	doStrValInsert("setup data", mpt2, "123459012", "mars", false)
+	doStrValInsert("setup data", mpt2, "123459013", "jupiter", false)
+	doStrValInsert("setup data", mpt2, "123459023", "saturn", false)
+	doStrValInsert("setup data", mpt2, "123459024", "uranus", true)
+
+	doDelete("delete a leaf node and merge the extension node", mpt2, "1235", true)
+
+	doStrValInsert("reinsert data", mpt2, "1235", "venus", true)
+
+	doDelete("delete a leaf node and merge the extension node", mpt2, "1235", true)
+
+	doStrValInsert("update after delete", mpt2, "12345903", "neptune", true)
+
+	mpt2.Iterate(context.TODO(), iterHandler, NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
+
+	printChanges(cc)
+
+	v, err := mpt2.GetNodeValue(Path("123458970"))
+	if err != nil {
+		fmt.Printf("%v\n", err)
+	} else {
+		fmt.Printf("%+v\n", v)
+	}
+}
