@@ -20,7 +20,11 @@ services:
     - /0chain/data/scylla/data:/var/lib/scylla/data
     - /0chain/data/scylla/commitlog:/var/lib/scylla/commitlog
 
-    restart: on-failure:10
+    restart_policy:
+      condition: on-failure
+      delay: 20s
+      max_attempts: 3
+      window: 120s
 
     healthcheck:
       test: ["CMD-SHELL", "[ $$(nodetool statusgossip) = running ]"]
@@ -43,7 +47,9 @@ services:
     #command: bash
     links:
     - scylla:scylla
-    restart: on-failure:10
+
+    restart_policy:
+      condition: none
 
     user: ${ZCHAIN_USER}:${ZCHAIN_GROUP}
     privileged: false
@@ -54,6 +60,7 @@ services:
     - CASSANDRA_CLUSTER=scylla
     depends_on:
     - scylla-init
+
     links:
     - scylla-init:scylla-init
 
@@ -94,7 +101,11 @@ services:
     ports:
     - "7171:7171"
 
-    restart: on-failure:10
+    restart_policy:
+      condition: on-failure
+      delay: 20s
+      max_attempts: ${MAX_RETRY_ATTEMPTS}
+      window: 120s
 
     networks:
       default:
