@@ -94,7 +94,7 @@ services:
     ports:
     - "7171:7171"
 
-    restart: on-failure:10
+    restart: on-failure:${MAX_RETRY_ATTEMPTS}
 
     networks:
       default:
