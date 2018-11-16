@@ -82,40 +82,37 @@ func TestMakeSimpleMultipleDKGs(test *testing.T) {
 
 }
 
-/*TestRecoverSecretKey - Tests to check the secret key of a miner during the DKG process can be recovered back. Checking for poly sub method.*/
-func TestRecoverSecretKey(test *testing.T) {
+/*TestDkgSecretKey - Tests to check whether the polynomial substn method derives dkg shares from the secret of a party during the DKG process*/
+func TestDkgSecretKey(test *testing.T) {
 
 	variation := func(t, n int) {
 
 		dkgs := newDKGs(t, n)
-		secSharesFromMap := make([]Key, n)
-		partyIdsFromMap := make([]PartyID, n)
+		allPartyIDs := make([]PartyID, 0)
+		dkgSharesCalcByParty := make([]Key, 0)
 
 		for i := 0; i < n; i++ {
-			j := 0
-			hmap := dkgs[i].secSharesMap
-			for k, v := range hmap {
-				secSharesFromMap[j] = v
-				partyIdsFromMap[j] = k
-				j++
+			allPartyIDs = append(allPartyIDs, dkgs[i].ID)
+		}
+
+		for i := 0; i < n; i++ {
+			for j := 0; j < n; j++ {
+				dkgSharesCalcByParty = append(dkgSharesCalcByParty, dkgs[i].secSharesMap[dkgs[j].ID])
 			}
 
-			if secSharesFromMap == nil {
-				test.Errorf("Shares are not derived correctly %v\n", secSharesFromMap)
-			}
-			if partyIdsFromMap == nil {
-				test.Errorf("PartyIds are not derived correctly %v\n", partyIdsFromMap)
-			}
+			assert.NotNil(test, allPartyIDs)
+			assert.NotNil(test, dkgSharesCalcByParty)
 
 			var sec2 Key
-			err := sec2.Recover(secSharesFromMap, partyIdsFromMap)
+			err := sec2.Recover(dkgSharesCalcByParty, allPartyIDs)
 			if err != nil {
-				test.Errorf("Recover shares Lagrange Interpolation error secSharesFromMap : %v\n ,Recover sec : %s\n, forIDs : %v\n", secSharesFromMap, sec2.GetHexString(), partyIdsFromMap)
+				test.Errorf("Recover shares Lagrange Interpolation error for party")
 				test.Error(err)
 			}
 			if !dkgs[i].mSec[0].IsEqual(&sec2) {
 				test.Errorf("Mismatch in recovered secret key:\n  %s\n  %s.", dkgs[i].mSec[0].GetHexString(), sec2.GetHexString())
 			}
+			dkgSharesCalcByParty = dkgSharesCalcByParty[:0]
 
 		}
 	}
@@ -170,8 +167,8 @@ func testRecoverGrpSignature(t int, n int, test *testing.T) {
 	//partyMap has the partyID and its corresponding Grp sign share
 	partyMap := make(map[PartyID]Sign, n)
 
-	for rNumber < 100 {
-		fmt.Printf("Starting round %v\n", rNumber)
+	for rNumber <= 1000 {
+		fmt.Printf("*Starting round %v)\n", rNumber)
 		for i := 0; i < n; i++ {
 
 			bs := MakeSimpleBLS(&dkgs[i])
