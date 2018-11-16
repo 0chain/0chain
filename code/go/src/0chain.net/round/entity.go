@@ -86,6 +86,16 @@ func (r *Round) GetRandomSeed() int64 {
 	return r.RandomSeed
 }
 
+// SetVRFOutput --sets the VRFOutput
+func (r *Round) SetVRFOutput(rboutput string) {
+	r.VRFOutput = rboutput
+}
+
+// GetVRFOutput --gets the VRFOutput
+func (r *Round) GetVRFOutput() string {
+	return r.VRFOutput
+}
+
 /*AddNotarizedBlock - this will be concurrent as notarization is recognized by verifying as well as notarization message from others */
 func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool) {
 	r.Mutex.Lock()

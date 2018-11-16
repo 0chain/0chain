@@ -313,6 +313,8 @@ func GetBlsShare(ctx context.Context, r, pr *round.Round) string {
 		rbOutput = encryption.Hash("0chain")
 	} else {
 		rbOutput = pr.VRFOutput
+		Logger.Info("DKG-X Using older VRFOutput :", zap.Int64("round", r.GetRoundNumber()))
+
 	}
 
 	bs.Msg = strconv.FormatInt(r.GetRoundNumber(), 10) + rbOutput

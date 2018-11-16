@@ -88,7 +88,7 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 		StartBls(ctx, mr.Round)
 	}*/
 	Logger.Info("Starting BLS ... ", zap.Int64("round", mr.GetRoundNumber()))
-	StartBls(ctx, mr.Round)
+	//StartBls(ctx, mr.Round)
 
 	self := node.GetSelfNode(ctx)
 	rank := mr.GetMinerRank(self.Node)

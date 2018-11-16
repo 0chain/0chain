@@ -3,7 +3,7 @@ package miner
 import (
 	"context"
 	"fmt"
-	"math/rand"
+	"strconv"
 
 	. "0chain.net/logging"
 	"0chain.net/round"
@@ -51,34 +51,51 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round) {
 
 		//mc.setRandomSeed(ctx, mr, rbOutput)
 		//Jay: ßReplace this with threshold computeRBO.
-		mc.computeVRF(ctx, mr)
+		mc.computeVRF(ctx, mr, rbOutput)
 	}
 }
 
 //Jay: Check if K shares are received
-func (mc *Chain) computeVRF(ctx context.Context, mr *Round) {
+func (mc *Chain) computeVRF(ctx context.Context, mr *Round, rbo string) {
 	Logger.Info("DKG-X computeVRF")
 	if mr.IsVRFComplete() {
 		Logger.Error("DKG-X computeVRF VRF is already completed why are we here?")
 		return
 	}
-	shares := mr.GetVRFShares()
-	if len(shares)*3 >= 2*mc.Miners.Size() {
-		pr := mc.GetRound(mr.GetRoundNumber() - 1)
-		if pr != nil {
-			mc.computeRoundRandomSeed(ctx, pr, mr)
-		}
-	}
-}
 
-//Jay: Note: This is where real RBO is calculated.
-func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r *Round) {
+	pr := mc.GetRound(mr.GetRoundNumber() - 1)
+	if pr != nil {
+		mc.computeRoundRandomSeed(ctx, pr, mr, rbo)
+	}
+
+}
+func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r *Round, rbo string) {
 	//TODO: once the actual VRF comes in, there is no need to rely on the prior value to compute the new value from the shares
 	if mpr := pr.(*Round); mpr.IsVRFComplete() {
-		mc.setRandomSeed(ctx, r, rand.New(rand.NewSource(pr.GetRandomSeed())).Int63())
+		//ToDo: use 16 bytes instead.
+		seed, err := strconv.ParseInt(rbo[0:15], 16, 64)
+
+		if err != nil {
+			panic(err)
+		}
+		Logger.Info("DKG-X Calcualted RRS from rbo = ", zap.Int64("RRS = ", seed))
+		r.Round.SetVRFOutput(rbo)
+		mc.setRandomSeed(ctx, r, seed)
 	} else {
 		Logger.Error("compute round random seed - no prior value", zap.Int64("round", r.GetRoundNumber()), zap.Int("blocks", len(pr.GetProposedBlocks())))
 	}
+}
+
+func (mc *Chain) setRandomBeaconOutput(ctx context.Context, r *Round, rbOutput string) {
+	//ToDo: use 16 bytes instead.
+	seed, err := strconv.ParseInt(rbOutput[0:15], 16, 64)
+
+	if err != nil {
+		panic(err)
+	}
+	mc.SetRandomSeed(r.Round, seed)
+	r.Round.SetVRFOutput(rbOutput)
+	mc.startNewRound(ctx, r)
 }
 
 func (mc *Chain) setRandomSeed(ctx context.Context, r *Round, seed int64) {

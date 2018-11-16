@@ -85,7 +85,7 @@ func getLatestBlockFromSharders(ctx context.Context) *block.Block {
 func StartProtocol() {
 
 	ctx := common.GetRootContext()
-	SetupWorkers(ctx)
+
 	mc := GetMinerChain()
 
 	lfb := getLatestBlockFromSharders(ctx)
@@ -101,7 +101,7 @@ func StartProtocol() {
 		sr := round.NewRound(0)
 		mr = mc.CreateRound(sr)
 	}
-
+	SetupWorkers(ctx)
 	Logger.Info("DKG-X starting the blockchain ...", zap.Int64("round", mr.GetRoundNumber()))
 	mc.StartNextRound(ctx, mr)
 }
