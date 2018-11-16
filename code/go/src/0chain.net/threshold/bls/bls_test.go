@@ -173,12 +173,15 @@ func testRecoverGrpSignature(t int, n int, test *testing.T) {
 
 			bs := MakeSimpleBLS(&dkgs[i])
 			bs.Msg = strconv.FormatInt(rNumber, 10) + prevRBO //msg = r || RBO(r-1), r -> round
-			fmt.Printf("The message : %v signed by miner %v\n", bs.Msg, bs.ID.GetDecString())
+			fmt.Printf("round %v) The message : %v signed by miner %v\n", rNumber, bs.Msg, bs.ID.GetDecString())
 
 			sigShare := bs.SignMsg()
+			grpSignShareVerified := bs.VerifyGroupSignShare(sigShare)
+			assert.True(test, grpSignShareVerified)
 			partyMap[dkgs[i].ID] = sigShare
 
 		}
+		fmt.Printf("round %v) Group Sign share asserted to be true for all miners\n", rNumber)
 
 		for i := 0; i < n; i++ {
 			bs := MakeSimpleBLS(&dkgs[i])
@@ -187,17 +190,17 @@ func testRecoverGrpSignature(t int, n int, test *testing.T) {
 			bs.RecoverGroupSig(threshParty, threshSigs)
 
 			gpSign = bs.GpSign.GetHexString()
-			fmt.Printf("The Group Signature : %v for the miner %v\n", gpSign, bs.ID.GetDecString())
+			fmt.Printf("round %v) The Group Signature : %v for the miner %v\n", rNumber, gpSign, bs.ID.GetDecString())
 			rbOutput = encryption.Hash(gpSign)
-			fmt.Printf("The rbOutput : %v for the miner %v\n", rbOutput, bs.ID.GetDecString())
+			fmt.Printf("round %v) The rbOutput : %v for the miner %v\n", rNumber, rbOutput, bs.ID.GetDecString())
 
 			if prevMinerRBO != "noRBO" && prevMinerRBO != rbOutput {
 				assert.Equal(test, prevMinerRBO, rbOutput)
-				test.Errorf("The rbOutput %v is different for miner %v\n", rbOutput, bs.ID.GetDecString())
+				test.Errorf("round %v) The rbOutput %v is different for miner %v\n", rNumber, rbOutput, bs.ID.GetDecString())
 			}
 			prevMinerRBO = rbOutput
 		}
-		fmt.Printf("The RBO %v is same for all miners for the round %v\n", rbOutput, rNumber)
+		fmt.Printf("round %v) The RBO %v is same for all miners for the round %v\n", rNumber, rbOutput, rNumber)
 		prevRBO = rbOutput
 		prevMinerRBO = "noRBO"
 		rNumber++
