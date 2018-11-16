@@ -20,11 +20,12 @@ services:
     - /0chain/data/scylla/data:/var/lib/scylla/data
     - /0chain/data/scylla/commitlog:/var/lib/scylla/commitlog
 
-    restart_policy:
-      condition: on-failure
-      delay: 20s
-      max_attempts: 3
-      window: 120s
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 20s
+        max_attempts: 3
+        window: 120s
 
     healthcheck:
       test: ["CMD-SHELL", "[ $$(nodetool statusgossip) = running ]"]
