@@ -248,6 +248,9 @@ func ToN2NSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 		sdata := buffer.Bytes()
 		w.Write(sdata)
 		if r.FormValue("__push2pull") == "true" {
+			if flusher, ok := w.(http.Flusher); ok {
+				flusher.Flush()
+			}
 			mkey := serveMetricKey(uri)
 			timer := sender.GetTimer(mkey)
 			timer.UpdateSince(ts)
