@@ -178,12 +178,18 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 			_, err = clientState.Insert(util.Path(txn.ClientID), fs)
 		}
 		if err != nil {
+			if state.DebugState {
+				Logger.DPanic("update state - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
+			}
 			Logger.Error("update state - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
 		}
 		ts.SetRound(b.Round)
 		ts.Balance += tbalance
 		_, err = clientState.Insert(util.Path(txn.ToClientID), ts)
 		if err != nil {
+			if state.DebugState {
+				Logger.DPanic("update state - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
+			}
 			Logger.Error("update state - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
 		}
 		if state.DebugState {
