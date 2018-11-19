@@ -148,6 +148,12 @@ func main() {
 	initServer()
 	initHandlers()
 
+	round, err := sc.GetMostRecentRoundFromDB(ctx)
+	if err == nil {
+		Logger.Info("**!most recent round info", zap.Int64("roundNumber", round.Number))
+	} else {
+		Logger.Error("**!error reading round data from db", zap.Error(err))
+	}
 	Logger.Info("Ready to listen to the requests")
 	chain.StartTime = time.Now().UTC()
 	log.Fatal(server.ListenAndServe())

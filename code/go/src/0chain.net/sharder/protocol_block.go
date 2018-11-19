@@ -69,6 +69,7 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 		fr.Finalize(b)
 		frImpl, _ := fr.(*round.Round)
 		err := sc.StoreRound(ctx, frImpl)
+		Logger.Info("**!round stored in db", zap.Int64("round", fr.GetRoundNumber()))
 		if err != nil {
 			Logger.Error("db error (save round)", zap.Int64("round", fr.GetRoundNumber()), zap.Error(err))
 		}
