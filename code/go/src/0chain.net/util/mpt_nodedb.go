@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"0chain.net/common"
 	"0chain.net/config"
 	. "0chain.net/logging"
 	"go.uber.org/zap"
@@ -184,6 +185,45 @@ func (mndb *MemoryNodeDB) ComputeRoot() Node {
 	}
 	mndb.Iterate(nil, handler)
 	return root
+}
+
+/*Validate - validate this MemoryNodeDB w.r.t the given root
+  It should not contain any node that can't be reachable from the root.
+  Note: The root itself can reach nodes not present in this db
+*/
+func (mndb *MemoryNodeDB) Validate(root Node) error {
+	nodes := make(map[StrKey]Node)
+	var iterater func(node Node)
+	iterate := func(node Node) {
+		switch nodeImpl := node.(type) {
+		case *FullNode:
+			for _, ckey := range nodeImpl.Children {
+				if ckey != nil {
+					cnode, err := mndb.GetNode(ckey)
+					if err == nil {
+						nodes[StrKey(ckey)] = cnode
+						iterater(cnode)
+					}
+				}
+			}
+		case *ExtensionNode:
+			ckey := nodeImpl.NodeKey
+			cnode, err := mndb.GetNode(ckey)
+			if err == nil {
+				nodes[StrKey(ckey)] = cnode
+				iterater(cnode)
+			}
+		}
+	}
+	iterater = iterate
+	nodes[StrKey(root.GetHashBytes())] = root
+	iterate(root)
+	for _, nd := range mndb.Nodes {
+		if _, ok := nodes[StrKey(nd.GetHashBytes())]; !ok {
+			return common.NewError("nodes_outside_tree", "not all nodes are from the root")
+		}
+	}
+	return nil
 }
 
 /*LevelNodeDB - a multi-level node db. It has a current node db and a previous node db. This is useful to update without changing the previous db. */

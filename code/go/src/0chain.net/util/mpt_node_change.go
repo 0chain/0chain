@@ -55,6 +55,10 @@ func (cc *ChangeCollector) AddChange(oldNode Node, newNode Node) {
 /*DeleteChange - implement interface */
 func (cc *ChangeCollector) DeleteChange(oldNode Node) {
 	cc.Deletes = append(cc.Deletes, oldNode)
+	ohash := oldNode.GetHash()
+	if _, ok := cc.Changes[ohash]; ok {
+		delete(cc.Changes, ohash)
+	}
 }
 
 /*GetChanges - implement interface */

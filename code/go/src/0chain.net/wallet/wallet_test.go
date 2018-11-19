@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/rand"
+	"os"
 	"testing"
 	"time"
 
@@ -34,7 +35,7 @@ func init() {
 
 func TestMPTWithWalletTxns(t *testing.T) {
 	var rs = rand.NewSource(randTime)
-	transactions := 10000
+	transactions := 100
 	var wallets []*Wallet
 	pmpt := GetMPT(PERSIST, util.Sequence(2010))
 	start := 10
@@ -75,6 +76,55 @@ func TestMPTWithWalletTxns(t *testing.T) {
 		fmt.Printf("using persist db\n")
 		testWithMPT(pmpt, wallets, transactions,false)
 	*/
+}
+
+func TestMPTChangeCollector(t *testing.T) {
+	randTime = 1542655524072085000
+	var rs = rand.NewSource(randTime)
+	transactions := 100000
+	var wallets []*Wallet
+	var clients = 1000
+	fmt.Printf("randtime: %v\n", randTime)
+	for i := 0; i < 1; i++ {
+		prng = rand.New(rs)
+		wallets = createWallets(clients)
+		mpt := GetMPT(MEMORY, util.Sequence(2010))
+		saveWallets(mpt, wallets)
+		verifyBalance(mpt, wallets)
+
+		lmpt := GetMPT(LEVEL, util.Sequence(2011))
+		lndb := lmpt.GetNodeDB().(*util.LevelNodeDB)
+		lndb.P = mpt.GetNodeDB()
+		lmpt.SetRoot(mpt.GetRoot())
+		mndb := lndb.C.(*util.MemoryNodeDB)
+
+		lmpt.PrettyPrint(os.Stdout)
+		fmt.Printf("\n")
+
+		generateTransactions(lmpt, wallets, transactions)
+
+		lmpt.PrettyPrint(os.Stdout)
+		fmt.Printf("\n")
+
+		rootKey := lmpt.GetRoot()
+		root, err := mndb.GetNode(rootKey)
+		if err != nil {
+			fmt.Printf("randtime: %v %v\n", i, randTime)
+			fmt.Printf("%v\n", err)
+			panic(err)
+		}
+		cmndb := util.NewMemoryNodeDB()
+		changes := lmpt.GetChangeCollector().GetChanges()
+		for _, change := range changes {
+			cmndb.PutNode(change.New.GetHashBytes(), change.New)
+		}
+		err = cmndb.Validate(root)
+		if err != nil {
+			fmt.Printf("randtime: %v %v\n", i, randTime)
+			fmt.Printf("%v\n", err)
+			panic(err)
+		}
+	}
 }
 
 func GetMPT(dbType int, version util.Sequence) util.MerklePatriciaTrieI {
@@ -166,6 +216,10 @@ func generateTransactions(mpt util.MerklePatriciaTrieI, wallets []*Wallet, trans
 			}
 			s.Balance += state.Balance(value)
 			mpt.Insert(util.Path(wt.ClientID), s)
+		}
+		if debug {
+			mpt.PrettyPrint(os.Stdout)
+			fmt.Printf("\n")
 		}
 	}
 	if mpt != nil {
