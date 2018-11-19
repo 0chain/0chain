@@ -34,40 +34,41 @@ func init() {
 
 func TestMPTWithWalletTxns(t *testing.T) {
 	var rs = rand.NewSource(randTime)
-	transactions := 0
+	transactions := 10000
 	var wallets []*Wallet
 	pmpt := GetMPT(PERSIST, util.Sequence(2010))
 	start := 10
 	end := 10
 
-	for clients := start; clients <= end; clients *= 10 {
-		//clients := 1000
-		prng = rand.New(rs)
-		wallets = createWallets(clients)
-		/*
+	for true {
+		for clients := start; clients <= end; clients *= 10 {
 			prng = rand.New(rs)
-			fmt.Printf("using in no db\n")
-			generateTransactions(nil, wallets, transactions)
-		*/
-		/*
+			wallets = createWallets(clients)
+			/*
+				prng = rand.New(rs)
+				fmt.Printf("using in no db\n")
+				generateTransactions(nil, wallets, transactions)
+			*/
+			/*
+				prng = rand.New(rs)
+				fmt.Printf("using in memory db\n")
+				generateTransactions(GetMPT(MEMORY), wallets,transactions)
+			*/
 			prng = rand.New(rs)
-			fmt.Printf("using in memory db\n")
-			generateTransactions(GetMPT(MEMORY), wallets,transactions)
-		*/
-		prng = rand.New(rs)
-		fmt.Printf("using level db\n")
-		lmpt := GetMPT(LEVEL, util.Sequence(2010))
-		saveWallets(lmpt, wallets)
-		verifyBalance(lmpt, wallets)
-		lmpt.SaveChanges(pmpt.GetNodeDB(), false)
-		(lmpt.GetNodeDB().(*util.LevelNodeDB)).RebaseCurrentDB(pmpt.GetNodeDB())
+			fmt.Printf("using level db\n")
+			lmpt := GetMPT(LEVEL, util.Sequence(2010))
+			saveWallets(lmpt, wallets)
+			verifyBalance(lmpt, wallets)
+			lmpt.SaveChanges(pmpt.GetNodeDB(), false)
+			(lmpt.GetNodeDB().(*util.LevelNodeDB)).RebaseCurrentDB(pmpt.GetNodeDB())
 
-		lmpt.ResetChangeCollector(nil)
-		generateTransactions(lmpt, wallets, transactions)
-		verifyBalance(lmpt, wallets)
-		ts := time.Now()
-		lmpt.SaveChanges(pmpt.GetNodeDB(), false)
-		fmt.Printf("time taken to persist: %v\n", time.Since(ts))
+			lmpt.ResetChangeCollector(nil)
+			generateTransactions(lmpt, wallets, transactions)
+			verifyBalance(lmpt, wallets)
+			ts := time.Now()
+			lmpt.SaveChanges(pmpt.GetNodeDB(), false)
+			fmt.Printf("time taken to persist: %v\n", time.Since(ts))
+		}
 	}
 	/*
 		prng = rand.New(rs)
@@ -138,9 +139,9 @@ func generateTransactions(mpt util.MerklePatriciaTrieI, wallets []*Wallet, trans
 		wf.Balance -= value
 		wt.Balance += value
 		if wf.Balance == 0 {
-			if debug {
-				fmt.Printf("INFO: deleting wallet of %v as balance is zero\n", wf.ClientID)
-			}
+			//if debug {
+			fmt.Printf("INFO: deleting wallet of %v as balance is zero\n", wf.ClientID)
+			//}
 			if mpt != nil {
 				mpt.Delete(util.Path(wf.ClientID))
 			}
@@ -159,7 +160,8 @@ func generateTransactions(mpt util.MerklePatriciaTrieI, wallets []*Wallet, trans
 		}
 		if mpt != nil {
 			s, err := getState(mpt, wt.ClientID)
-			if err != nil {
+			if err != nil && err != util.ErrValueNotPresent {
+				fmt.Printf("wt balance: %v %v\n", wt.ClientID, wt.Balance)
 				panic(err)
 			}
 			s.Balance += state.Balance(value)

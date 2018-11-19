@@ -27,6 +27,11 @@ type Client struct {
 	PublicKeyBytes encryption.HashBytes `json:"-"`
 }
 
+//NewClient - create a new client object
+func NewClient() *Client {
+	return datastore.GetEntityMetadata("client").Instance().(*Client)
+}
+
 var clientEntityMetadata *datastore.EntityMetadataImpl
 
 /*GetEntityMetadata - implementing the interface */
@@ -41,28 +46,6 @@ func (c *Client) Validate(ctx context.Context) error {
 	}
 	if !datastore.IsEqual(c.ID, datastore.ToKey(encryption.Hash(c.PublicKeyBytes))) {
 		return common.InvalidRequest("client id is not a SHA3-256 hash of the public key")
-	}
-	return nil
-}
-
-/*GetClient - gets client from either cache or database*/
-func (c *Client) GetClient(ctx context.Context, key datastore.Key) error {
-	var ok bool
-	var co *Client
-	ico, cerr := cacher.Get(key)
-	if cerr == nil {
-		co, ok = ico.(*Client)
-	}
-	if !ok {
-		err := c.Read(ctx, key)
-		if err == nil {
-			cacher.Add(key, c)
-		}
-		return err
-	} else {
-		c.ID = co.ID
-		c.PublicKey = co.PublicKey
-		c.SetPublicKey(c.PublicKey)
 	}
 	return nil
 }
@@ -104,11 +87,11 @@ func Provider() datastore.Entity {
 
 /*ComputeProperties - implement interface */
 func (c *Client) ComputeProperties() {
-	c.computePublicKeyBytes(c.PublicKey)
+	c.computePublicKeyBytes()
 }
 
-func (c *Client) computePublicKeyBytes(key string) {
-	b, _ := hex.DecodeString(key)
+func (c *Client) computePublicKeyBytes() {
+	b, _ := hex.DecodeString(c.PublicKey)
 	if len(b) > len(c.PublicKeyBytes) {
 		b = b[len(b)-encryption.HASH_LENGTH:]
 	}
@@ -118,7 +101,7 @@ func (c *Client) computePublicKeyBytes(key string) {
 /*SetPublicKey - set the public key */
 func (c *Client) SetPublicKey(key string) {
 	c.PublicKey = key
-	c.computePublicKeyBytes(key)
+	c.computePublicKeyBytes()
 	c.ID = encryption.Hash(c.PublicKeyBytes)
 }
 
@@ -167,4 +150,32 @@ func GetClients(ctx context.Context, clients map[string]*Client) {
 			clients[clientIDs[i]] = cEntities[j].(*Client)
 		}
 	}
+}
+
+/*GetClient - gets client from either cache or database*/
+func GetClient(ctx context.Context, key datastore.Key) (*Client, error) {
+	if co, cerr := cacher.Get(key); cerr == nil {
+		return co.(*Client), nil
+	}
+	co := NewClient()
+	err := co.Read(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+	cacher.Add(key, co)
+	return nil, err
+}
+
+/*PutClient - Given a client data, it stores it */
+func PutClient(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+	co, ok := entity.(*Client)
+	if !ok {
+		return nil, common.NewError("entity_invalid_type", "Invald entity type")
+	}
+	response, err := datastore.PutEntityHandler(ctx, entity)
+	if err != nil {
+		return nil, err
+	}
+	cacher.Add(co.GetKey(), co)
+	return response, nil
 }

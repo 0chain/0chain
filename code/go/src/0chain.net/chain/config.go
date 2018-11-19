@@ -18,6 +18,8 @@ type Config struct {
 	GenesisBlockHash      string        `json:"genesis_block_hash"`
 	Decimals              int8          `json:"decimals"`                // Number of decimals allowed for the token on this chain
 	BlockSize             int32         `json:"block_size"`              // Number of transactions in a block
+	MinBlockSize          int32         `json:"min_block_size"`          // Number of transactions a block needs to have
+	MaxByteSize           int64         `json:"max_byte_size"`           // Max number of bytes a block can have
 	NumGenerators         int           `json:"num_generators"`          // Number of block generators
 	NumSharders           int           `json:"num_sharders"`            // Number of sharders that can store the block
 	ThresholdByCount      int           `json:"threshold_by_count"`      // Threshold count for a block to be notarized
@@ -31,4 +33,6 @@ type Config struct {
 
 	BlockProposalMaxWaitTime time.Duration `json:"block_proposal_max_wait_time"` // max time to wait to receive a block proposal
 	BlockProposalWaitMode    int8          `json:"block_proposal_wait_mode"`     // wait time for the block proposal is static (0) or dynamic (1)
+
+	ReuseTransactions bool `json:"reuse_txns"` // indicates if transactions from unrelated blocks can be reused
 }

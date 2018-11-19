@@ -3,9 +3,12 @@ package node
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
+	"net/http/httptrace"
 	"time"
 
 	"0chain.net/cache"
@@ -99,10 +102,12 @@ type ReceiveOptions struct {
 	MessageFilter MessageFilterI
 }
 
-var transport *http.Transport
 var httpClient *http.Client
 
+var n2nTrace = &httptrace.ClientTrace{}
+
 func init() {
+	var transport *http.Transport
 	transport = &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 		DialContext: (&net.Dialer{
@@ -117,6 +122,10 @@ func init() {
 		MaxIdleConnsPerHost:   5,
 	}
 	httpClient = &http.Client{Transport: transport}
+
+	n2nTrace.GotConn = func(connInfo httptrace.GotConnInfo) {
+		fmt.Printf("GOT conn: %+v\n", connInfo)
+	}
 }
 
 /*SENDER - key used to get the connection object from the context */
@@ -143,6 +152,11 @@ func getHashData(clientID datastore.Key, ts common.Timestamp, key datastore.Key)
 }
 
 var NoDataErr = common.NewError("no_data", "No data")
+
+func readAndClose(reader io.ReadCloser) {
+	io.Copy(ioutil.Discard, reader)
+	reader.Close()
+}
 
 func getRequestEntity(r *http.Request, entityMetadata datastore.EntityMetadata) (datastore.Entity, error) {
 	defer r.Body.Close()
@@ -196,7 +210,7 @@ func getEntity(codec string, reader io.Reader, entityMetadata datastore.EntityMe
 		}
 		return entity, nil
 	}
-	Logger.Error("uknown_encoding", zap.String("encoding", codec))
+	N2n.Error("uknown_encoding", zap.String("encoding", codec))
 	return nil, common.NewError("unkown_encoding", "unknown encoding")
 }
 
@@ -223,7 +237,7 @@ func validateChain(sender *Node, r *http.Request) bool {
 }
 
 func validateEntityMetadata(sender *Node, r *http.Request) bool {
-	if r.URL.Path == "/v1/n2n/entity_pull/get" {
+	if r.URL.Path == pullURL {
 		return true
 	}
 	entityName := r.Header.Get(HeaderRequestEntityName)
@@ -246,4 +260,16 @@ type PushDataCacheEntry struct {
 	Options    SendOptions
 	Data       []byte
 	EntityName string
+}
+
+var pullURL = "/v1/n2n/entity_pull/get"
+
+func getPushToPullTime(n *Node) float64 {
+	var pullRequestTime float64
+	if pullRequestTimer := n.GetTimer(pullURL); pullRequestTimer != nil && pullRequestTimer.Count() >= 50 {
+		pullRequestTime = pullRequestTimer.Mean()
+	} else {
+		pullRequestTime = 2 * n.SmallMessageSendTime
+	}
+	return pullRequestTime + n.SmallMessageSendTime
 }

@@ -41,7 +41,7 @@ type Node interface {
 
 //OriginTrackerNode - a node that implements origin tracking
 type OriginTrackerNode struct {
-	OriginTracker OriginTrackerI
+	OriginTracker OriginTrackerI `json:"o,omitempty"`
 }
 
 //NewOriginTrackerNode - create a new origin tracker node
@@ -101,8 +101,8 @@ func (otn *OriginTrackerNode) GetOriginTracker() OriginTrackerI {
 
 /*ValueNode - any node that holds a value should implement this */
 type ValueNode struct {
-	Value Serializable
-	*OriginTrackerNode
+	Value              Serializable `json:"v"`
+	*OriginTrackerNode `json:"o,omitempty"`
 }
 
 //NewValueNode - create a new value node
@@ -183,9 +183,9 @@ func (vn *ValueNode) Decode(buf []byte) error {
 
 /*LeafNode - a node that represents the leaf that contains a value and an optional path */
 type LeafNode struct {
-	Path  Path
-	Value *ValueNode
-	*OriginTrackerNode
+	Path               Path       `json:"p,omitempty"`
+	Value              *ValueNode `json:"v"`
+	*OriginTrackerNode `json:"o"`
 }
 
 /*NewLeafNode - create a new leaf node */
@@ -284,9 +284,9 @@ func (ln *LeafNode) SetValue(value Serializable) {
 
 /*FullNode - a branch node that can contain 16 children and a value */
 type FullNode struct {
-	Children [16][]byte
-	Value    *ValueNode // This may not be needed as our path is fixed in size
-	*OriginTrackerNode
+	Children           [16][]byte `json:"c"`
+	Value              *ValueNode `json:"v,omitempty"` // This may not be needed as our path is fixed in size
+	*OriginTrackerNode `json:"o,omitempty"`
 }
 
 /*NewFullNode - create a new full node */
@@ -436,9 +436,9 @@ func (fn *FullNode) SetValue(value Serializable) {
 
 /*ExtensionNode - a multi-char length path along which there are no branches, at the end of this path there should be full node */
 type ExtensionNode struct {
-	Path    Path
-	NodeKey Key
-	*OriginTrackerNode
+	Path               Path `json:"p"`
+	NodeKey            Key  `json:"k"`
+	*OriginTrackerNode `json:"o,omitempty"`
 }
 
 /*NewExtensionNode - create a new extension node */

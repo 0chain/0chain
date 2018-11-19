@@ -34,6 +34,7 @@ services:
     build:
       context: ../..
       dockerfile: ./docker.local/build.miner/Dockerfile
+
     volumes:
       - ../config:/0chain/config
       - ../miner${MINER}/data:/0chain/data

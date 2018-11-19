@@ -38,6 +38,9 @@ func (n *Node) PrintSendStats(w io.Writer) {
 	sort.SliceStable(uris, func(i, j int) bool { return uris[i] < uris[j] })
 	for _, uri := range uris {
 		timer := n.TimersByURI[uri]
+		if timer.Count() == 0 {
+			continue
+		}
 		fmt.Fprintf(w, "<tr>")
 		fmt.Fprintf(w, "<td>%v</td>", uri)
 		fmt.Fprintf(w, "<td class='number'>%9d</td>", timer.Count())
@@ -88,6 +91,6 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 	nd.LastActiveTime = time.Now().UTC()
 	if nd.Status == NodeStatusInactive {
 		nd.Status = NodeStatusActive
-		Logger.Info("Node active", zap.String("node_type", nd.GetNodeTypeName()), zap.Int("set_index", nd.SetIndex), zap.Any("key", nd.GetKey()))
+		N2n.Info("Node active", zap.String("node_type", nd.GetNodeTypeName()), zap.Int("set_index", nd.SetIndex), zap.Any("key", nd.GetKey()))
 	}
 }

@@ -18,3 +18,9 @@ func N2NLogWriter(w http.ResponseWriter, r *http.Request) {
 	detailLevel, _ := strconv.Atoi(queryValues.Get("detail"))
 	N2NMLogger.WriteLogs(w, detailLevel)
 }
+
+func MemLogWriter(w http.ResponseWriter, r *http.Request) {
+	queryValues := r.URL.Query()
+	detailLevel, _ := strconv.Atoi(queryValues.Get("detail"))
+	MMLogger.WriteLogs(w, detailLevel)
+}

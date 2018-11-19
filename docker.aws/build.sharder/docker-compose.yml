@@ -1,77 +1,108 @@
---- 
-networks: 
-  default: 
-    driver: bridge
-services: 
-  cassandra-init: 
-    command: "bash /0chain/bin/scylla-init.sh"
-    image: "cassandra:latest"
-    links: 
-      - "scylla:scylla"
-    restart: on-failure
-    user: "2000:2000"
-    volumes: 
-      - "/0chain/0chain/bin:/0chain/bin"
-      - "/0chain/0chain/sql:/0chain/sql"
-      - "/0chain/config/cassandra:/0chain/cassandra"
-  scylla: 
-    healthcheck: 
+version: '3'
+services:
+
+  scylla:
+    image: scylladb/scylla
+    networks:
+    - default
+    ports:
+    - "9042:9042"
+    volumes:
+
+    - /0chain/config/scylla/scylla.yaml:/etc/scylla/scylla.yaml
+
+    - /0chain/config/scylla/scylla-server:/etc/sysconfig/scylla-server
+
+    #Store the scylla volume
+    - /0chain/data/scylla:/0chain/data/scylla
+
+    #Create the directory to store the data and commitlog
+    - /0chain/data/scylla/data:/var/lib/scylla/data
+    - /0chain/data/scylla/commitlog:/var/lib/scylla/commitlog
+
+    healthcheck:
+      test: ["CMD-SHELL", "[ $$(nodetool statusgossip) = running ]"]
       interval: 30s
-      retries: 5
-      test: 
-        - CMD-SHELL
-        - "[ $$(nodetool statusgossip) = running ]"
       timeout: 10s
-    image: "scylladb/scylla:2.3.0"
-    networks: 
-      - default
-    ports: 
-      - "9042:9042"
-    #ToDo: Scylla does not like to run as 0chain. Wants to be root. Need more investigation
-    #See ticket ODA-5
-    #user: "2000:2000"
-    volumes: 
-      - "/0chain/config/scylla/scylla.yaml:/etc/scylla/scylla.yaml"
-      - "/0chain/config/scylla:/0chain/scylla"
-      - "/0chain/data/scylla:/var/lib/scylla"
-      - "/0chain/0chain/sql:/0chain/sql"
-      - "/0chain/config/scylla/scylla-server:/etc/sysconfig/scylla-server"
-  sharder: 
-    build: 
-      context: /0chain/0chain
-      dockerfile: /0chain/0chain/docker.aws/build.sharder/Dockerfile
-    command: "./bin/sharder --deployment_mode 0 --keys_file /0chain/config/${SHARDER}.txt --nodes_file nodes"
-    depends_on: 
-      - cassandra-init
-    environment: 
-      - DOCKER=true
-      - CASSANDRA_CLUSTER=scylla
-    links: 
-      - "cassandra-init:cassandra-init"
-    logging: 
-      driver: json-file
-      options: 
-        max-file: "10"
-        max-size: 100M
-    networks: 
-      default: ~
-    pid: host
-    ports: 
-      - "7171:7171"
-    ulimits: 
-      nofile: 
+      retries: 5
+
+    command: ["--developer-mode", "0"]
+
+    #Start under user 0chain
+    privileged: true
+
+  scylla-init:
+    #The service depends upon several cassandra utilities.
+    image: cassandra:latest
+    volumes:
+    - /0chain/bin:/0chain/bin
+    - /0chain/sql:/0chain/sql
+    entrypoint: bash /0chain/bin/scylla-init.sh
+    #command: bash
+    links:
+    - scylla:scylla
+
+    #Services are expected to be started correctly
+
+    user: ${ZCHAIN_USER}:${ZCHAIN_GROUP}
+    privileged: false
+
+  sharder:
+    environment:
+    - DOCKER=true
+    - CASSANDRA_CLUSTER=scylla
+    depends_on:
+    - scylla-init
+
+    links:
+    - scylla-init:scylla-init
+
+    build:
+      context: ${DOCKER_CODEBASE}
+      dockerfile: ./docker.aws/build.sharder/Dockerfile
+
+    image: ${IMAGE_NAME}:${IMAGE_TAG}
+
+    pid: "host"
+
+    volumes:
+    #CONFIG_VOLUME
+    - /0chain/config:/0chain/config
+
+    #SHARDER_LOG_VOLUME
+    - /0chain/log:/0chain/log
+
+    #ROCKSDB_VOLUME
+    - /0chain/data/rocksdb:/0chain/data/rocksdb
+    - /0chain/data/rocksdb/state:/0chain/data/rocksdb/state
+
+    #Use the blocks volume
+    - /0chain/data/blocks:/0chain/data/blocks
+
+    #Hard and soft are required properties.
+    ulimits:
+      nofile:
         hard: 32768
         soft: 32768
-    user: "2000:2000"
-    volumes: 
-      - "/0chain/config:/0chain/config"
-      - "/0chain/nodes:/0chain/nodes"
-      - "/0chain/log:/0chain/log"
-      - "/0chain/data/blocks:/0chain/data/blocks"
-      - "/0chain/data:/0chain/data"
-version: "3"
-volumes: 
-  config: ~
-  data: ~
-  nodes: ~
-  bin: ~
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10M"
+        max-file: "10"
+
+    ports:
+    - "7171:7171"
+
+    restart: on-failure:${MAX_RETRY_ATTEMPTS}
+
+    networks:
+      default:
+
+    #Start under user 0chain
+    user: ${ZCHAIN_USER}:${ZCHAIN_GROUP}
+    command: /0chain/bin/sharder --deployment_mode 0 --keys_file /0chain/config/sharder.txt --nodes_file nodes
+
+networks:
+  default:
+    driver: bridge

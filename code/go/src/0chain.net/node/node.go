@@ -77,6 +77,9 @@ type Node struct {
 	LargeMessageSendTime float64
 	SmallMessageSendTime float64
 
+	LargeMessagePullServeTime float64
+	SmallMessagePullServeTime float64
+
 	mutex *sync.Mutex
 
 	ProtocolStats interface{}
@@ -264,20 +267,6 @@ func (n *Node) GetSizeMetric(uri string) metrics.Histogram {
 	return metric
 }
 
-/*GetMaxMessageCount - get max messages count */
-func (n *Node) GetMaxMessageCount() int64 {
-	n.mutex.Lock()
-	defer n.mutex.Unlock()
-	var count int64
-	for _, timer := range n.TimersByURI {
-		c := timer.Count()
-		if c > count {
-			count = c
-		}
-	}
-	return count
-}
-
 //GetLargeMessageSendTime - get the time it takes to send a large message to this node
 func (n *Node) GetLargeMessageSendTime() float64 {
 	return n.LargeMessageSendTime / 1000000
@@ -289,19 +278,41 @@ func (n *Node) GetSmallMessageSendTime() float64 {
 }
 
 func (n *Node) updateMessageTimings() {
-	maxcount := n.GetMaxMessageCount()
+	n.updateSendMessageTimings()
+	n.updateRequestMessageTimings()
+}
+
+func (n *Node) updateSendMessageTimings() {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
 	var minval = math.MaxFloat64
 	var maxval float64
-	for _, timer := range n.TimersByURI {
-		if timer.Count()*10 < maxcount {
+	var minSize = math.MaxFloat64
+	var maxSize float64
+	for uri, timer := range n.TimersByURI {
+		if timer.Count() == 0 {
 			continue
 		}
-		v := timer.Mean()
-		if v > maxval {
-			maxval = v
+		if isPullRequest(uri) {
+			continue
 		}
-		if v < minval {
-			minval = v
+		if sizer, ok := n.SizeByURI[uri]; ok {
+			if sizer.Mean() == 0 {
+				continue
+			}
+			v := timer.Mean()
+			if sizer.Mean() > maxSize {
+				maxSize = sizer.Mean()
+				if v > maxval {
+					maxval = v
+				}
+			}
+			if sizer.Mean() < minSize {
+				minSize = sizer.Mean()
+				if v < minval {
+					minval = v
+				}
+			}
 		}
 	}
 	if minval > maxval {
@@ -309,6 +320,46 @@ func (n *Node) updateMessageTimings() {
 	}
 	n.LargeMessageSendTime = maxval
 	n.SmallMessageSendTime = minval
+}
+
+func (n *Node) updateRequestMessageTimings() {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+	var minval = math.MaxFloat64
+	var maxval float64
+	var minSize = math.MaxFloat64
+	var maxSize float64
+	for uri, timer := range n.TimersByURI {
+		if timer.Count() == 0 {
+			continue
+		}
+		if !isPullRequest(uri) {
+			continue
+		}
+		v := timer.Mean()
+		if sizer, ok := n.SizeByURI[uri]; ok {
+			if sizer.Mean() == 0 {
+				continue
+			}
+			if sizer.Mean() > maxSize {
+				maxSize = sizer.Mean()
+				if v > maxval {
+					maxval = v
+				}
+			}
+			if sizer.Mean() < minSize {
+				minSize = sizer.Mean()
+				if v < minval {
+					minval = v
+				}
+			}
+		}
+	}
+	if minval > maxval {
+		minval = maxval
+	}
+	n.LargeMessagePullServeTime = maxval
+	n.SmallMessagePullServeTime = minval
 }
 
 //ReadConfig - read configuration from the default config
@@ -333,4 +384,30 @@ func (n *Node) SetID(id string) error {
 //IsActive - returns if this node is active or not
 func (n *Node) IsActive() bool {
 	return n.Status == NodeStatusActive
+}
+
+func serveMetricKey(uri string) string {
+	return "p?" + uri
+}
+
+func isPullRequest(uri string) bool {
+	return strings.HasPrefix(uri, "p?")
+}
+
+//GetPseudoName - create a pseudo name that is unique in the current active set
+func (n *Node) GetPseudoName() string {
+	return fmt.Sprintf("%v%.3d", n.GetNodeTypeName(), n.SetIndex)
+}
+
+//GetOptimalLargeMessageSendTime - get the push or pull based optimal large message send time
+func (n *Node) GetOptimalLargeMessageSendTime() float64 {
+	return n.getOptimalLargeMessageSendTime() / 1000000
+}
+
+func (n *Node) getOptimalLargeMessageSendTime() float64 {
+	p2ptime := getPushToPullTime(n)
+	if p2ptime < n.LargeMessageSendTime {
+		return p2ptime
+	}
+	return n.LargeMessageSendTime
 }

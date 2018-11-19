@@ -21,14 +21,14 @@
 # that this node will store. You probably want all nodes to have the same number
 # of tokens assuming they have equal hardware capability.
 #
-# If you already have a cluster with 1 token per node, and wish to migrate to 
+# If you already have a cluster with 1 token per node, and wish to migrate to
 # multiple tokens per node, see http://wiki.apache.org/cassandra/Operations
 num_tokens: 256
 
 # Directory where Scylla should store data on disk.
 # If not set, the default directory is $CASSANDRA_HOME/data/data.
 data_file_directories:
-    - /var/lib/scylla/data
+- /var/lib/scylla/data
 
 # commit log.  when running on magnetic HDD, this should be a
 # separate spindle than the data directories.
@@ -67,15 +67,15 @@ commitlog_segment_size_in_mb: 32
 # seed_provider class_name is saved for future use.
 # seeds address are mandatory!
 seed_provider:
-    # Addresses of hosts that are deemed contact points. 
-    # Scylla nodes use this list of hosts to find each other and learn
-    # the topology of the ring.  You must change this if you are running
-    # multiple nodes!
-    - class_name: org.apache.cassandra.locator.SimpleSeedProvider
-      parameters:
-          # seeds is actually a comma-delimited list of addresses.
-          # Ex: "<ip1>,<ip2>,<ip3>"
-          - seeds: "127.0.0.1"
+# Addresses of hosts that are deemed contact points.
+# Scylla nodes use this list of hosts to find each other and learn
+# the topology of the ring.  You must change this if you are running
+# multiple nodes!
+- class_name: org.apache.cassandra.locator.SimpleSeedProvider
+  parameters:
+  # seeds is actually a comma-delimited list of addresses.
+  # Ex: "<ip1>,<ip2>,<ip3>"
+  - seeds: "127.0.0.1"
 
 # Address or interface to bind to and tell other Scylla nodes to connect to.
 # You _must_ change this if you want multiple nodes to be able to communicate!
@@ -226,8 +226,8 @@ batch_size_fail_threshold_in_kb: 50
 # authorizer: AllowAllAuthorizer
 
 # initial_token allows you to specify tokens manually.  While you can use # it with
-# vnodes (num_tokens > 1, above) -- in which case you should provide a 
-# comma-separated list -- it's primarily used when adding nodes # to legacy clusters 
+# vnodes (num_tokens > 1, above) -- in which case you should provide a
+# comma-separated list -- it's primarily used when adding nodes # to legacy clusters
 # that do not have vnodes enabled.
 # initial_token:
 
@@ -379,7 +379,7 @@ partitioner: org.apache.cassandra.dht.Murmur3Partitioner
 # well as caches.  Experiments show that JEMAlloc saves some memory
 # than the native GCC allocator (i.e., JEMalloc is more
 # fragmentation-resistant).
-# 
+#
 # Supported values are: NativeAllocator, JEMallocAllocator
 #
 # If you intend to use JEMallocAllocator you have to install JEMalloc as library and
@@ -556,7 +556,7 @@ commitlog_total_space_in_mb: -1
 # snapshot_before_compaction: false
 
 # Whether or not a snapshot is taken of the data before keyspace truncation
-# or dropping of column families. The STRONGLY advised default of true 
+# or dropping of column families. The STRONGLY advised default of true
 # should be used to provide data safety. If you set this flag to false, you will
 # lose data on truncation or drop.
 # auto_snapshot: true
@@ -596,7 +596,7 @@ commitlog_total_space_in_mb: -1
 #
 # concurrent_compactors defaults to the smaller of (number of disks,
 # number of cores), with a minimum of 2 and a maximum of 8.
-# 
+#
 # If your data directories are backed by SSD, you should increase this
 # to the number of cores.
 #concurrent_compactors: 1
@@ -614,7 +614,7 @@ commitlog_total_space_in_mb: -1
 
 # When compacting, the replacement sstable(s) can be opened before they
 # are completely written, and used in place of the prior sstables for
-# any range that has been written. This helps to smoothly transfer reads 
+# any range that has been written. This helps to smoothly transfer reads
 # between the sstables, reducing page cache churn and keeping hot rows hot
 # sstable_preemptive_open_interval_in_mb: 50
 
@@ -641,7 +641,7 @@ commitlog_total_space_in_mb: -1
 # Enable operation timeout information exchange between nodes to accurately
 # measure request timeouts.  If disabled, replicas will assume that requests
 # were forwarded to them instantly by the coordinator, which means that
-# under overload conditions we will waste that much extra time processing 
+# under overload conditions we will waste that much extra time processing
 # already-timed-out requests.
 #
 # Warning: before enabling this property make sure to ntp is installed
@@ -657,7 +657,7 @@ commitlog_total_space_in_mb: -1
 
 # controls how often to perform the more expensive part of host score
 # calculation
-# dynamic_snitch_update_interval_in_ms: 100 
+# dynamic_snitch_update_interval_in_ms: 100
 
 # controls how often to reset all host scores, allowing a bad host to
 # possibly recover
@@ -689,7 +689,7 @@ commitlog_total_space_in_mb: -1
 # NoScheduler - Has no options
 # RoundRobin
 #  - throttle_limit -- The throttle_limit is the number of in-flight
-#                      requests per client.  Requests beyond 
+#                      requests per client.  Requests beyond
 #                      that limit are queued up until
 #                      running requests can complete.
 #                      The value of 80 here is twice the number of
@@ -712,8 +712,8 @@ commitlog_total_space_in_mb: -1
 # the request scheduling. Currently the only valid option is keyspace.
 # request_scheduler_id: keyspace
 
-# Enable or disable inter-node encryption. 
-# You must also generate keys and provide the appropriate key and trust store locations and passwords. 
+# Enable or disable inter-node encryption.
+# You must also generate keys and provide the appropriate key and trust store locations and passwords.
 # No custom encryption options are currently enabled. The available options are:
 #
 # The available internode options are : all, none, dc, rack
@@ -762,7 +762,7 @@ commitlog_total_space_in_mb: -1
 # false: strict environment checks are in place; do not start if they are not met.
 # true: relaxed environment checks; performance and reliability may degraade.
 #
-developer_mode: true
+# developer_mode: false
 
 
 # Idle-time background processing

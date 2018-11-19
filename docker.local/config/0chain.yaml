@@ -3,6 +3,7 @@ version: 1.0
 logging:
   level: "info"
   console: false # printing log to console is only supported in development mode
+  goroutines: false
 
 development:
   state: true
@@ -21,9 +22,15 @@ server_chain:
   genesis_block:
     id: "ed79cae70d439c11258236da1dfa6fc550f7cc569768304623e8fbd7d70efae4"
   block:
-    size: 100
+    min_block_size: 10
+    max_block_size: 100
+    max_byte_size: 163840
     generators: 2
     sharders: 3
+    generation:
+      timeout: 15
+      transactions: 10
+      transaction_wait_time: 5 #milliseconds
     proposal:
       max_wait_time: 180 # milliseconds
       wait_mode: static # static or dynamic
@@ -32,12 +39,14 @@ server_chain:
       threshold_by_stake: 0 # percent
     validation:
       batch_size: 1000
+    reuse_txns: false
     storage:
       provider: blockstore.FSBlockStore # blockstore.FSBlockStore or blockstore.BlockDBStore
   round_range: 10000000
   transaction:
     payload:
       max_size: 32768 # bytes
+    timeout: 10 # seconds
   client:
     discover: true
   messages:
@@ -51,3 +60,4 @@ network:
   timeout:
     small_message: 1000 # milliseconds
     large_message: 3000 # milliseconds
+  large_message_th_size: 10240 # anything greater than this size in bytes

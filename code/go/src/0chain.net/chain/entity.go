@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"sort"
 	"sync"
 	"time"
 
@@ -106,8 +107,15 @@ type Chain struct {
 	stakeMutex  *sync.Mutex
 
 	nodePoolScorer node.PoolScorer
-	blockFetcher   *BlockFetcher
 	scStateDB      smartcontractstate.SCDB
+
+	GenerateTimeout int `json:"-"`
+	genTimeoutMutex *sync.Mutex
+
+	retry_wait_time  int
+	retry_wait_mutex *sync.Mutex
+
+	blockFetcher *BlockFetcher
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
@@ -148,7 +156,9 @@ func NewChainFromConfig() *Chain {
 	chain := Provider().(*Chain)
 	chain.ID = datastore.ToKey(config.Configuration.ChainID)
 	chain.Decimals = int8(viper.GetInt("server_chain.decimals"))
-	chain.BlockSize = viper.GetInt32("server_chain.block.size")
+	chain.BlockSize = viper.GetInt32("server_chain.block.max_block_size")
+	chain.MinBlockSize = viper.GetInt32("server_chain.block.min_block_size")
+	chain.MaxByteSize = viper.GetInt64("server_chain.block.max_byte_size")
 	chain.NumGenerators = viper.GetInt("server_chain.block.generators")
 	chain.NotariedBlocksCounts = make([]int64, chain.NumGenerators+1)
 	chain.NumSharders = viper.GetInt("server_chain.block.sharders")
@@ -172,6 +182,7 @@ func NewChainFromConfig() *Chain {
 	} else if waitMode == "dynamic" {
 		chain.BlockProposalWaitMode = BlockProposalWaitDynamic
 	}
+	chain.ReuseTransactions = viper.GetBool("server_chain.block.reuse_txns")
 	return chain
 }
 
@@ -188,6 +199,8 @@ func Provider() datastore.Entity {
 	c.rounds = make(map[int64]round.RoundI)
 	c.roundsMutex = &sync.RWMutex{}
 
+	c.retry_wait_mutex = &sync.Mutex{}
+	c.genTimeoutMutex = &sync.Mutex{}
 	c.stateMutex = &sync.Mutex{}
 	c.stakeMutex = &sync.Mutex{}
 	c.InitializeCreationDate()
@@ -509,7 +522,7 @@ func (c *Chain) ChainHasTransaction(ctx context.Context, b *block.Block, txn *tr
 		if cb.HasTransaction(txn.Hash) {
 			return true, nil
 		}
-		if cb.CreationDate < txn.CreationDate-transaction.TXN_TIME_TOLERANCE {
+		if cb.CreationDate < txn.CreationDate-common.Timestamp(transaction.TXN_TIME_TOLERANCE) {
 			return false, nil
 		}
 	}
@@ -610,4 +623,53 @@ func (c *Chain) getBlocks() []*block.Block {
 func (c *Chain) SetRoundRank(r round.RoundI, b *block.Block) {
 	bNode := node.GetNode(b.MinerID)
 	b.RoundRank = r.GetMinerRank(bNode)
+}
+
+func (c *Chain) SetGenerationTimeout(newTimeout int) {
+	c.genTimeoutMutex.Lock()
+	defer c.genTimeoutMutex.Unlock()
+	c.GenerateTimeout = newTimeout
+}
+
+func (c *Chain) GetGenerationTimeout() int {
+	c.genTimeoutMutex.Lock()
+	defer c.genTimeoutMutex.Unlock()
+	return c.GenerateTimeout
+}
+
+func (c *Chain) GetRetryWaitTime() int {
+	c.retry_wait_mutex.Lock()
+	defer c.retry_wait_mutex.Unlock()
+	return c.retry_wait_time
+}
+
+func (c *Chain) SetRetryWaitTime(newWaitTime int) {
+	c.retry_wait_mutex.Lock()
+	defer c.retry_wait_mutex.Unlock()
+	c.retry_wait_time = newWaitTime
+}
+
+/*GetUnrelatedBlocks - get blocks that are not related to the chain of the given block */
+func (c *Chain) GetUnrelatedBlocks(maxBlocks int, b *block.Block) []*block.Block {
+	c.blocksMutex.Lock()
+	defer c.blocksMutex.Unlock()
+	var blocks []*block.Block
+	var chain = make(map[datastore.Key]*block.Block)
+	var prevRound = b.Round
+	for pb := b.PrevBlock; pb != nil; pb = pb.PrevBlock {
+		prevRound = pb.Round
+		chain[pb.Hash] = pb
+	}
+	for _, rb := range c.blocks {
+		if rb.Round >= prevRound && rb.Round < b.Round && common.WithinTime(int64(b.CreationDate), int64(rb.CreationDate), transaction.TXN_TIME_TOLERANCE) {
+			if _, ok := chain[rb.Hash]; !ok {
+				blocks = append(blocks, rb)
+			}
+			if len(blocks) >= maxBlocks {
+				break
+			}
+		}
+	}
+	sort.SliceStable(blocks, func(i, j int) bool { return blocks[i].Round > blocks[j].Round })
+	return blocks
 }

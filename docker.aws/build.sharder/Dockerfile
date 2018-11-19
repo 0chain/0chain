@@ -2,7 +2,8 @@
 FROM ubuntu:16.04
 RUN groupadd -r 0chain && useradd --no-log-init -r -g 0chain 0chain
 
-FROM zchain_base
+FROM 0chain/base
+ADD ./docker.aws/build.sharder/SHARDER_VERSION .
 
 ENV SRC_DIR=/0chain
 ENV GOPATH=$GOPATH:$SRC_DIR/go
@@ -17,9 +18,9 @@ ADD ./code/go/src $SRC_DIR/go/src
 # Build it:
 RUN go build 0chain.net/sharder/sharder
 
-FROM zchain_base
-ENV APP_DIR=/0chain
-WORKDIR $APP_DIR
-RUN mkdir -p $APP_DIR/bin
-COPY --from=1 $APP_DIR/sharder $APP_DIR/bin
+WORKDIR $SRC_DIR/bin
+RUN cp $SRC_DIR/sharder $SRC_DIR/bin
+
+#Run the sharder from the /0chain
+WORKDIR $SRC_DIR
 USER 2000:2000

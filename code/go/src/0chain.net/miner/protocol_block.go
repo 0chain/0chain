@@ -1,6 +1,7 @@
 package miner
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"time"
@@ -9,6 +10,7 @@ import (
 
 	"0chain.net/chain"
 	"0chain.net/config"
+	"0chain.net/state"
 	"0chain.net/util"
 
 	"0chain.net/block"
@@ -36,7 +38,7 @@ func init() {
 * The context should be a background context which can be used to stop this logic if there is a new
 * block published while working on this
  */
-func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.BlockStateHandler) error {
+func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.BlockStateHandler, waitOver bool) error {
 	clients := make(map[string]*client.Client)
 	b.Txns = make([]*transaction.Transaction, mc.BlockSize)
 	//wasting this because []interface{} != []*transaction.Transaction in Go
@@ -48,46 +50,33 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	var roundMismatch bool
 	var hasOwnerTxn bool
 	var failedStateCount int32
-	var txnIterHandler = func(ctx context.Context, qe datastore.CollectionEntity) bool {
-		if mc.CurrentRound > b.Round {
-			roundMismatch = true
+	var byteSize int64
+	txnMap := make(map[datastore.Key]bool, mc.BlockSize)
+	var txnProcessor = func(ctx context.Context, txn *transaction.Transaction) bool {
+		if _, ok := txnMap[txn.GetKey()]; ok {
 			return false
 		}
-		count++
-		txn, ok := qe.(*transaction.Transaction)
-		if !ok {
-			Logger.Error("generate block (invalid entity)", zap.Any("entity", qe))
-			return true
-		}
 		var debugTxn = txn.DebugTxn()
-
 		if debugTxn {
 			Logger.Info("generate block (debug transaction)", zap.String("txn", txn.Hash), zap.String("txn_object", datastore.ToJSON(txn).String()))
 		}
 		if !mc.validateTransaction(b, txn) {
-			invalidTxns = append(invalidTxns, qe)
+			invalidTxns = append(invalidTxns, txn)
 			if debugTxn {
 				Logger.Info("generate block (debug transaction) error - txn creation not within tolerance", zap.String("txn", txn.Hash), zap.Any("now", common.Now()))
 			}
-			return true
+			return false
 		}
 		if ok, err := mc.ChainHasTransaction(ctx, b.PrevBlock, txn); ok || err != nil {
 			if err != nil {
 				ierr = err
 			}
-			if debugTxn {
-				Logger.Info("generate block (debug transaction) error  Not processing txn. Found Txn hash: " + txn.Hash)
-			}
-			return true
-
+			return false
 		}
 		if !mc.UpdateState(b, txn) {
 			failedStateCount++
 			if config.DevConfiguration.State {
-				if debugTxn {
-					Logger.Info("generate block (debug transaction) error  Not processing txn. Failed UpdateState Txn hash: " + txn.Hash)
-				}
-				return true
+				return false
 			}
 		}
 		if txn.ClientID == mc.OwnerID {
@@ -95,23 +84,35 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		}
 		//Setting the score lower so the next time blocks are generated these transactions don't show up at the top
 		txn.SetCollectionScore(txn.GetCollectionScore() - 10*60)
+		txnMap[txn.GetKey()] = true
 		b.Txns[idx] = txn
 		if debugTxn {
 			Logger.Info("generate block (debug transaction) success in processing Txn hash: " + txn.Hash + " blockHash? = " + b.Hash)
 		}
 		etxns[idx] = txn
 		b.AddTransaction(txn)
-		clients[txn.ClientID] = nil
+		byteSize += int64(len(txn.TransactionData))
+		if txn.PublicKey == "" {
+			clients[txn.ClientID] = nil
+		}
 		idx++
-
-		if idx >= mc.BlockSize {
-			if debugTxn {
-				Logger.Info("generate block (debug transaction) error  Not processing txn. idx > blocksize Txn hash: " + txn.Hash)
-			}
+		return true
+	}
+	var txnIterHandler = func(ctx context.Context, qe datastore.CollectionEntity) bool {
+		count++
+		if mc.CurrentRound > b.Round {
+			roundMismatch = true
 			return false
 		}
-		if debugTxn {
-			Logger.Info("generate block (debug transaction) Yes Processing txn. Returning true for Txn hash: " + txn.Hash)
+		txn, ok := qe.(*transaction.Transaction)
+		if !ok {
+			Logger.Error("generate block (invalid entity)", zap.Any("entity", qe))
+			return true
+		}
+		if txnProcessor(ctx, txn) {
+			if idx >= mc.BlockSize || byteSize >= mc.MaxByteSize {
+				return false
+			}
 		}
 		return true
 	}
@@ -137,11 +138,32 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		return err
 	}
 	blockSize := idx
-	if blockSize != mc.BlockSize {
-		if blockSize == 0 || !hasOwnerTxn {
+	var reusedTxns int32
+	if blockSize < mc.BlockSize && byteSize < mc.MaxByteSize && mc.ReuseTransactions {
+		blocks := mc.GetUnrelatedBlocks(10, b)
+		rcount := 0
+		for _, ub := range blocks {
+			for _, txn := range ub.Txns {
+				rcount++
+				if txnProcessor(ctx, mc.txnToReuse(txn)) {
+					if idx == mc.BlockSize || byteSize >= mc.MaxByteSize {
+						break
+					}
+				}
+			}
+			if idx == mc.BlockSize || byteSize >= mc.MaxByteSize {
+				break
+			}
+		}
+		reusedTxns = idx - blockSize
+		blockSize = idx
+		Logger.Info("generate block (reused txns)", zap.Int64("round", b.Round), zap.Int("ub", len(blocks)), zap.Int32("reused", reusedTxns), zap.Int("rcount", rcount), zap.Int32("blockSize", idx))
+	}
+	if blockSize != mc.BlockSize && byteSize < mc.MaxByteSize {
+		if !waitOver || blockSize < mc.MinBlockSize {
 			b.Txns = nil
 			Logger.Debug("generate block (insufficient txns)", zap.Int64("round", b.Round), zap.Int32("iteration_count", count), zap.Int32("block_size", blockSize))
-			return common.NewError(InsufficientTxns, fmt.Sprintf("not sufficient txns to make a block yet for round %v (iterated %v,block_size %v,state failure %v, invalid %v)", b.Round, count, blockSize, failedStateCount, len(invalidTxns)))
+			return common.NewError(InsufficientTxns, fmt.Sprintf("not sufficient txns to make a block yet for round %v (iterated %v,block_size %v,state failure %v, invalid %v,reused %v)", b.Round, count, blockSize, failedStateCount, len(invalidTxns), reusedTxns))
 		}
 		b.Txns = b.Txns[:blockSize]
 		etxns = etxns[:blockSize]
@@ -154,6 +176,10 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 
 	bsh.UpdatePendingBlock(ctx, b, etxns)
 	for _, txn := range b.Txns {
+		if txn.PublicKey != "" {
+			txn.ClientID = datastore.EmptyKey
+			continue
+		}
 		client := clients[txn.ClientID]
 		if client == nil || client.PublicKey == "" {
 			Logger.Error("generate block (invalid client)", zap.String("client_id", txn.ClientID))
@@ -172,13 +198,37 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	if err != nil {
 		return err
 	}
-	Logger.Info("generate block (assemble+update+sign)", zap.Int64("round", b.Round), zap.Int32("block_size", blockSize), zap.Duration("time", time.Since(start)),
-		zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Int8("state_status", b.GetStateStatus()),
-		zap.Float64("p_chain_weight", b.PrevBlock.ChainWeight), zap.Int32("iteration_count", count))
+
+	if state.DebugState {
+		if len(b.ClientState.GetChangeCollector().GetChanges()) > 0 {
+			changes := block.NewBlockStateChange(b)
+			stateRoot := changes.GetRoot()
+			if stateRoot == nil {
+				Logger.DPanic("generate block - state root is null", zap.Int64("round", b.Round), zap.String("block", b.Hash))
+			}
+			if bytes.Compare(stateRoot.GetHashBytes(), b.ClientStateHash) != 0 {
+				Logger.Error("generate block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("state", b.ClientStateHash), zap.Any("computed_state", stateRoot.GetHashBytes()))
+			}
+			err := changes.Validate(ctx)
+			if err != nil {
+				Logger.DPanic("generate block - state change validation", zap.Error(err))
+			}
+		}
+	}
+
 	b.SetBlockState(block.StateGenerated)
 	b.SetStateStatus(block.StateSuccessful)
+	Logger.Info("generate block (assemble+update+sign)", zap.Int64("round", b.Round), zap.Int32("block_size", blockSize), zap.Int32("reused_txns", reusedTxns), zap.Duration("time", time.Since(start)),
+		zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Int8("state_status", b.GetStateStatus()),
+		zap.Float64("p_chain_weight", b.PrevBlock.ChainWeight), zap.Int32("iteration_count", count))
 	go b.ComputeTxnMap()
 	return nil
+}
+
+func (mc *Chain) txnToReuse(txn *transaction.Transaction) *transaction.Transaction {
+	ctxn := *txn
+	ctxn.OutputHash = ""
+	return &ctxn
 }
 
 func (mc *Chain) validateTransaction(b *block.Block, txn *transaction.Transaction) bool {

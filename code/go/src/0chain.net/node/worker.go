@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"0chain.net/common"
+	"0chain.net/logging"
 	. "0chain.net/logging"
 	"go.uber.org/zap"
 )
@@ -64,7 +65,7 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 			if node.IsActive() {
 				if node.ErrorCount > 5 {
 					node.Status = NodeStatusInactive
-					Logger.Error("Node inactive", zap.String("node_type", node.GetNodeTypeName()), zap.Int("set_index", node.SetIndex), zap.Any("node_id", node.GetKey()), zap.Error(err))
+					N2n.Error("Node inactive", zap.String("node_type", node.GetNodeTypeName()), zap.Int("set_index", node.SetIndex), zap.Any("node_id", node.GetKey()), zap.Error(err))
 				}
 			}
 		} else {
@@ -72,7 +73,7 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 			if !node.IsActive() {
 				node.ErrorCount = 0
 				node.Status = NodeStatusActive
-				Logger.Info("Node active", zap.String("node_type", node.GetNodeTypeName()), zap.Int("set_index", node.SetIndex), zap.Any("key", node.GetKey()))
+				N2n.Info("Node active", zap.String("node_type", node.GetNodeTypeName()), zap.Int("set_index", node.SetIndex), zap.Any("key", node.GetKey()))
 			}
 			node.LastActiveTime = ts
 		}
@@ -103,4 +104,14 @@ func (np *Pool) DownloadNodeData(node *Node) bool {
 		np.ComputeProperties()
 	}
 	return true
+}
+
+func (n *Node) MemoryUsage() {
+	ticker := time.NewTicker(5 * time.Minute)
+	for true {
+		select {
+		case <-ticker.C:
+			common.LogRuntime(logging.MemUsage, zap.Any(n.Description, n.SetIndex))
+		}
+	}
 }
