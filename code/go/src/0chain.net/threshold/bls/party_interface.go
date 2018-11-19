@@ -14,13 +14,9 @@ type Message = string
 /*Sign - Is of type gobls.Sign*/
 type Sign = gobls.Sign
 
-/*GroupSig - For the Gp Sign*/
-type GroupSig interface{}
-
 /*PartyI - Interface for BLS*/
 type PartyI interface {
 	SignMsg() Sign
-	VerifyGroupSignShare(grpSignShare Sign) bool
+	VerifyGroupSignShare(grpSignShare Sign, fromID PartyID) bool
 	RecoverGroupSig(from []PartyID, shares []Sign) Sign
-	VerifyGroupSig(GroupSig) bool
 }

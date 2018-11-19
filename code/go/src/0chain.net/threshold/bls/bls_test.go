@@ -82,7 +82,7 @@ func TestMakeSimpleMultipleDKGs(test *testing.T) {
 
 }
 
-/*TestDkgSecretKey - Tests to check whether the polynomial substn method derives dkg shares from the secret of a party during the DKG process*/
+/*TestDkgSecretKey - Tests to check whether the polynomial substn method derives GSKSS from the secret of a party*/
 func TestDkgSecretKey(test *testing.T) {
 
 	variation := func(t, n int) {
@@ -122,6 +122,41 @@ func TestDkgSecretKey(test *testing.T) {
 
 }
 
+/*testVerifyGSKSS - Tests to verify the received GSKSS from a party. */
+/*Consider two parties Mj and Mi.
+  Mj sends Mi's GSKSS which Mj calculated to Mi and Mi verifies it by calling polynomial sub method with Mj's Vvec and Mi's ID which gives computedPubFromVvec
+  The public key on the received GSKSS from Mj should be equal to computedPubFromVvec
+*/
+func testVerifyGSKSS(t int, n int, test *testing.T) {
+	dkgs := newDKGs(t, n)
+	for i := 0; i < n; i++ {
+		aggDkg(i, dkgs, n)
+		assert.NotNil(test, dkgs[i].SecKeyShareGroup)
+	}
+
+	for i := 0; i < n; i++ {
+		for j := 0; j < n; j++ {
+
+			computedPubFromVvec, err := dkgs[i].ComputeGpPublicKeyShareShares(dkgs[j].Vvec, dkgs[i].ID)
+			var recGSKSS Key
+
+			if err == nil {
+				recGSKSS = dkgs[j].secSharesMap[dkgs[i].ID]
+			}
+			assert.True(test, computedPubFromVvec.IsEqual(recGSKSS.GetPublicKey()))
+
+			if !computedPubFromVvec.IsEqual(recGSKSS.GetPublicKey()) {
+				test.Errorf("Mismatch in received GSKSS with vVec, so computedPubFromVvec is %v and recGSKSS pub is %v\n", computedPubFromVvec.GetHexString(), recGSKSS.GetPublicKey().GetHexString())
+			}
+		}
+
+	}
+
+}
+
+/*TestVerifyGSKSS - Tests to verify the received GSKSS from a party*/
+func TestVerifyGSKSS(test *testing.T) { testVerifyGSKSS(2, 3, test) }
+
 /* testDKGProcess - Test for the DKG flow */
 func testDKGProcess(t int, n int, test *testing.T) {
 
@@ -148,16 +183,64 @@ func aggDkg(i int, dkgs DKGs, n int) {
 
 }
 
+/*testDKGGpPublicKey - Tests for the grp public key*/
+/* In the test, DKG process is done and the committed verification vectors are added to compute the GroupsVvec
+   GroupsVvec[0] is the groupPublicKey */
+
+func testDkgGpPublicKey(t int, n int, test *testing.T) {
+	dkgs := newDKGs(t, n)
+	for i := 0; i < n; i++ {
+		aggDkg(i, dkgs, n)
+		assert.NotNil(test, dkgs[i].Vvec)
+	}
+
+	for i := 0; i < n; i++ {
+
+		for j := 0; j < n; j++ {
+			assert.NotNil(test, dkgs[j].Vvec)
+			dkgs[i].CalcGroupsVvec(dkgs[j].Vvec)
+		}
+
+	}
+	for i := 0; i < n; i++ {
+
+		assert.NotNil(test, dkgs[i].GroupsVvec)
+		dkgs[i].groupPublicKey = dkgs[i].GroupsVvec[0]
+		assert.NotNil(test, dkgs[i].groupPublicKey)
+
+	}
+}
+
+/*TestDKGGpPublicKey - Tests for the grp public key*/
+func TestDkgGpPublicKey(test *testing.T) { testDkgGpPublicKey(2, 3, test) }
+
 /* testRecoverGrpSignature - The test used to check the grp signature produced is the same for all miners*/
 /* In the test, DKG is run for n miners to get the GroupPrivateKeyShare(GPKS). A party signs with
 GPKS to form the Grp sign share. The array allPartyIDs is to keep track of party IDs to get it's unique k number of sig shares randomly for Recover GpSign*/
 
 func testRecoverGrpSignature(t int, n int, test *testing.T) {
+
 	dkgs := newDKGs(t, n)
 	for i := 0; i < n; i++ {
 		aggDkg(i, dkgs, n)
+		assert.NotNil(test, dkgs[i].Vvec)
 	}
 
+	for i := 0; i < n; i++ {
+
+		for j := 0; j < n; j++ {
+			assert.NotNil(test, dkgs[j].Vvec)
+			dkgs[i].CalcGroupsVvec(dkgs[j].Vvec)
+		}
+
+	}
+	for i := 0; i < n; i++ {
+
+		assert.NotNil(test, dkgs[i].GroupsVvec)
+		dkgs[i].groupPublicKey = dkgs[i].GroupsVvec[0]
+		assert.NotNil(test, dkgs[i].groupPublicKey)
+
+	}
 	var rNumber int64 = 1
 	var gpSign string
 	var rbOutput string
@@ -176,7 +259,7 @@ func testRecoverGrpSignature(t int, n int, test *testing.T) {
 			fmt.Printf("round %v) The message : %v signed by miner %v\n", rNumber, bs.Msg, bs.ID.GetDecString())
 
 			sigShare := bs.SignMsg()
-			grpSignShareVerified := bs.VerifyGroupSignShare(sigShare)
+			grpSignShareVerified := bs.VerifyGroupSignShare(sigShare, bs.ID)
 			assert.True(test, grpSignShareVerified)
 			partyMap[dkgs[i].ID] = sigShare
 
@@ -245,12 +328,29 @@ func selectAllPartyIDs(dkgs DKGs, n int) []PartyID {
 	return allPartyIDs
 }
 
-/* testVerifyGrpSignShares - Test to verify the Grp Signature Share which a miner computes by signing a message with GroupPrivateKeyShare(GPKS) is valid*/
+/* testVerifyGrpSignShares - Test to verify the Grp Signature Share which a miner computes (GSS) by signing a message with GSKS is valid*/
 func testVerifyGrpSignShares(t int, n int, test *testing.T) {
-	dkgs := newDKGs(t, n)
 
+	dkgs := newDKGs(t, n)
 	for i := 0; i < n; i++ {
 		aggDkg(i, dkgs, n)
+		assert.NotNil(test, dkgs[i].Vvec)
+	}
+
+	for i := 0; i < n; i++ {
+
+		for j := 0; j < n; j++ {
+			assert.NotNil(test, dkgs[j].Vvec)
+			dkgs[i].CalcGroupsVvec(dkgs[j].Vvec)
+		}
+
+	}
+	for i := 0; i < n; i++ {
+
+		assert.NotNil(test, dkgs[i].GroupsVvec)
+		dkgs[i].groupPublicKey = dkgs[i].GroupsVvec[0]
+		assert.NotNil(test, dkgs[i].groupPublicKey)
+
 	}
 
 	for i := 0; i < n; i++ {
@@ -258,7 +358,12 @@ func testVerifyGrpSignShares(t int, n int, test *testing.T) {
 		bs := MakeSimpleBLS(&dkgs[i])
 		bs.Msg = "VerifyGrpSignShare" + strconv.Itoa(i)
 		sigShare := bs.SignMsg()
-		grpSignShareVerified := bs.VerifyGroupSignShare(sigShare)
+		grpSignShareVerified := bs.VerifyGroupSignShare(sigShare, bs.ID)
+
+		assert.True(test, grpSignShareVerified)
+
+		//optional double - check
+		assert.True(test, sigShare.Verify(&(*bs.SecKeyShareGroup.GetPublicKey()), bs.Msg))
 
 		if !grpSignShareVerified {
 			test.Errorf("The grp signature share %v is not valid, which is computed by the party %v\n", sigShare.GetHexString(), bs.ID.GetDecString())
@@ -272,10 +377,27 @@ func TestVerifyGrpSignShares(test *testing.T) { testVerifyGrpSignShares(2, 3, te
 
 /* testVerifyWrongGrpSignShares - Test to verify whether an invalid Grp Signature share verifies to false */
 func testVerifyWrongGrpSignShares(t int, n int, test *testing.T) {
-	dkgs := newDKGs(t, n)
 
+	dkgs := newDKGs(t, n)
 	for i := 0; i < n; i++ {
 		aggDkg(i, dkgs, n)
+		assert.NotNil(test, dkgs[i].Vvec)
+	}
+
+	for i := 0; i < n; i++ {
+
+		for j := 0; j < n; j++ {
+			assert.NotNil(test, dkgs[j].Vvec)
+			dkgs[i].CalcGroupsVvec(dkgs[j].Vvec)
+		}
+
+	}
+	for i := 0; i < n; i++ {
+
+		assert.NotNil(test, dkgs[i].GroupsVvec)
+		dkgs[i].groupPublicKey = dkgs[i].GroupsVvec[0]
+		assert.NotNil(test, dkgs[i].groupPublicKey)
+
 	}
 
 	var wrongSigShare Sign
@@ -285,7 +407,8 @@ func testVerifyWrongGrpSignShares(t int, n int, test *testing.T) {
 		bs := MakeSimpleBLS(&dkgs[i])
 		bs.Msg = "VerifyGrpSignShare" + strconv.Itoa(i)
 		wrongSigShare.SetHexString("BOGUSVALUE")
-		grpSignShareVerified := bs.VerifyGroupSignShare(wrongSigShare)
+		grpSignShareVerified := bs.VerifyGroupSignShare(wrongSigShare, bs.ID)
+		assert.False(test, grpSignShareVerified)
 
 		if grpSignShareVerified {
 			test.Errorf("The bogus grp signature share %v cannot be valid, which is computed by the party %v\n", wrongSigShare.GetHexString(), bs.ID.GetDecString())
