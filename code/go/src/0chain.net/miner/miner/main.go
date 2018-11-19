@@ -174,11 +174,7 @@ func initEntities() {
 }
 
 func initHandlers() {
-	if config.Development() {
-		http.HandleFunc("/_hash", encryption.HashHandler)
-		http.HandleFunc("/_sign", common.ToJSONResponse(encryption.SignHandler))
-		SetupHandlers()
-	}
+	SetupHandlers()
 	config.SetupHandlers()
 	node.SetupHandlers()
 	chain.SetupHandlers()

@@ -6,6 +6,9 @@ import (
 	"strconv"
 
 	"0chain.net/chain"
+	"0chain.net/common"
+	"0chain.net/config"
+	"0chain.net/encryption"
 	. "0chain.net/logging"
 	"0chain.net/node"
 	"github.com/spf13/viper"
@@ -17,8 +20,12 @@ const updateConfigAllURL = "/v1/config/update_all"
 
 /*SetupHandlers - setup update config related handlers */
 func SetupHandlers() {
-	http.HandleFunc(updateConfigURL, ConfigUpdateHandler)
-	http.HandleFunc(updateConfigAllURL, ConfigUpdateAllHandler)
+	if config.Development() {
+		http.HandleFunc("/_hash", encryption.HashHandler)
+		http.HandleFunc("/_sign", common.ToJSONResponse(encryption.SignHandler))
+		http.HandleFunc(updateConfigURL, ConfigUpdateHandler)
+		http.HandleFunc(updateConfigAllURL, ConfigUpdateAllHandler)
+	}
 }
 
 /*ConfigUpdateHandler - update this miner's configuration */
