@@ -38,9 +38,6 @@ var MinerNotarizedBlockSender node.EntitySendHandler
 /*DKGShareSender - Send dkg share to a node*/
 var DKGShareSender node.EntitySendHandler
 
-/*BLSSignShareSender - Send bls sign share to a node*/
-var BLSSignShareSender node.EntitySendHandler
-
 /*MinerLatestFinalizedBlockRequestor - RequestHandler for latest finalized block to a node */
 var MinerLatestFinalizedBlockRequestor node.EntityRequestor
 
@@ -53,7 +50,6 @@ func SetupM2MSenders() {
 	//TODO: changes options and url as per requirements
 	options = &node.SendOptions{Timeout: node.TimeoutSmallMessage, MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
 	DKGShareSender = node.SendEntityHandler("/v1/_m2m/dkg/share", options)
-	BLSSignShareSender = node.SendEntityHandler("/v1/_m2m/round/bls", options)
 
 	options = &node.SendOptions{Timeout: node.TimeoutLargeMessage, MaxRelayLength: 0, CurrentRelayLength: 0, CODEC: node.CODEC_MSGPACK, Compress: true}
 	VerifyBlockSender = node.SendEntityHandler("/v1/_m2m/block/verify", options)
@@ -72,7 +68,6 @@ func SetupM2MReceivers() {
 
 	http.HandleFunc("/v1/_m2m/round/vrf_share", node.ToN2NReceiveEntityHandler(VRFShareHandler, nil))
 	http.HandleFunc("/v1/_m2m/dkg/share", node.ToN2NReceiveEntityHandler(DKGShareHandler, nil))
-	http.HandleFunc("/v1/_m2m/round/bls", node.ToN2NReceiveEntityHandler(BLSSignShareHandler, nil))
 	http.HandleFunc("/v1/_m2m/block/verify", node.ToN2NReceiveEntityHandler(memorystore.WithConnectionEntityJSONHandler(VerifyBlockHandler, datastore.GetEntityMetadata("block")), nil))
 	http.HandleFunc("/v1/_m2m/block/verification_ticket", node.ToN2NReceiveEntityHandler(VerificationTicketReceiptHandler, nil))
 	http.HandleFunc("/v1/_m2m/block/notarization", node.ToN2NReceiveEntityHandler(NotarizationReceiptHandler, nil))
@@ -126,17 +121,6 @@ func DKGShareHandler(ctx context.Context, entity datastore.Entity) (interface{},
 	Logger.Debug("received DKG share", zap.String("share", dg.Share), zap.Int("Node Id", nodeID))
 	AppendDKGSecShares(nodeID, dg.Share)
 
-	return nil, nil
-}
-
-/*BLSSignShareHandler - handles the bls sign share it receives */
-func BLSSignShareHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-	bs, ok := entity.(*bls.Bls)
-	if !ok {
-		return nil, common.InvalidRequest("Invalid Entity")
-	}
-	nodeID := node.GetSender(ctx).SetIndex
-	BlsShareReceived(ctx, bs.BLSRound, bs.BLSsignShare, nodeID)
 	return nil, nil
 }
 
