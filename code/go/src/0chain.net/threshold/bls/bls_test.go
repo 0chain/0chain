@@ -13,7 +13,7 @@ import (
 
 const CurveFp254BNb = 0
 
-type DKGs []SimpleDKG
+type DKGs []DKG
 
 func newDKGs(t, n int) DKGs {
 
@@ -25,7 +25,7 @@ func newDKGs(t, n int) DKGs {
 		fmt.Println("Library does not support t = 1, err mclBn_FrEvaluatePolynomial. Check the value of t")
 		return nil
 	}
-	dkgs := make([]SimpleDKG, n)
+	dkgs := make([]DKG, n)
 	for i := range dkgs {
 		dkgs[i] = MakeSimpleDKG(t, n)
 		dkgs[i].ID = ComputeIDdkg(i)

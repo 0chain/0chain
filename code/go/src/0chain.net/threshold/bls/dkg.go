@@ -9,21 +9,19 @@ import (
 	"github.com/pmer/gobls"
 )
 
-/*SimpleDKG - to manage DKG process */
-type SimpleDKG struct {
-	T                 int
-	N                 int
-	secKey            Key
-	pubKey            VerificationKey
-	mSec              []Key
-	Vvec              []VerificationKey
+/*DKG - to manage DKG process */
+type DKG struct {
+	T      int
+	N      int
+	secKey Key
+	mSec   []Key
+
 	secSharesMap      map[PartyID]Key
 	receivedSecShares []Key
 	GpPubKey          GroupPublicKey
-	groupPublicKey    VerificationKey
-	SecKeyShareGroup  Key
-	ID                PartyID
-	GroupsVvec        []VerificationKey
+
+	SecKeyShareGroup Key
+	ID               PartyID
 }
 
 /* init -  To initialize a point on the curve */
@@ -32,30 +30,24 @@ func init() {
 
 }
 
-/*MakeSimpleDKG - to create a dkg object */
-func MakeSimpleDKG(t, n int) SimpleDKG {
+/*MakeDKG - to create a dkg object */
+func MakeDKG(t, n int) DKG {
 
-	dkg := SimpleDKG{
+	dkg := DKG{
 		T:                 t,
 		N:                 n,
 		secKey:            Key{},
-		pubKey:            VerificationKey{},
 		mSec:              make([]Key, t),
-		Vvec:              make([]VerificationKey, t),
 		secSharesMap:      make(map[PartyID]Key, n),
 		receivedSecShares: make([]Key, n),
 		GpPubKey:          GroupPublicKey{},
-		groupPublicKey:    VerificationKey{},
 		SecKeyShareGroup:  Key{},
 		ID:                PartyID{},
-		GroupsVvec:        make([]VerificationKey, t),
 	}
 
 	dkg.secKey.SetByCSPRNG()
-	dkg.pubKey = *(dkg.secKey.GetPublicKey())
+
 	dkg.mSec = dkg.secKey.GetMasterSecretKey(t)
-	dkg.Vvec = gobls.GetMasterPublicKey(dkg.mSec)
-	dkg.GpPubKey = dkg.Vvec[0]
 
 	return dkg
 }
@@ -74,7 +66,7 @@ func ComputeIDdkg(minerID int) PartyID {
 }
 
 /*ComputeDKGKeyShare - Derive the share for each miner through polynomial substitution method */
-func (dkg *SimpleDKG) ComputeDKGKeyShare(forID PartyID) (Key, error) {
+func (dkg *DKG) ComputeDKGKeyShare(forID PartyID) (Key, error) {
 
 	var secVec Key
 	err := secVec.Set(dkg.mSec, &forID)
@@ -86,19 +78,8 @@ func (dkg *SimpleDKG) ComputeDKGKeyShare(forID PartyID) (Key, error) {
 	return secVec, nil
 }
 
-/*ComputeGpPublicKeyShareShares - Derive the correpndg pubVec of the received GSKSS through polynomial substitution method with Vvec of sender and ID of receiver*/
-func (dkg *SimpleDKG) ComputeGpPublicKeyShareShares(recVvec []VerificationKey, fromID PartyID) (VerificationKey, error) {
-
-	var pubVec VerificationKey
-	err := pubVec.Set(recVvec, &fromID)
-	if err != nil {
-		return VerificationKey{}, nil
-	}
-	return pubVec, nil
-}
-
 /*GetKeyShareForOther - Get the DKGKeyShare for this Miner specified by the PartyID */
-func (dkg *SimpleDKG) GetKeyShareForOther(to PartyID) *DKGKeyShare {
+func (dkg *DKG) GetKeyShareForOther(to PartyID) *DKGKeyShare {
 
 	indivShare, ok := dkg.secSharesMap[to]
 	if !ok {
@@ -106,30 +87,17 @@ func (dkg *SimpleDKG) GetKeyShareForOther(to PartyID) *DKGKeyShare {
 	}
 
 	dShare := &DKGKeyShare{m: indivShare}
-	pubShare := indivShare.GetPublicKey()
-	dShare.v = *pubShare
+
 	return dShare
 }
 
 /*AggregateShares - Each party aggregates the received shares from other party which is calculated for that party */
-func (dkg *SimpleDKG) AggregateShares() {
+func (dkg *DKG) AggregateShares() {
 	var sec Key
 
 	for i := 0; i < len(dkg.receivedSecShares); i++ {
 		sec.Add(&dkg.receivedSecShares[i])
 	}
 	dkg.SecKeyShareGroup = sec
-
-}
-
-/*CalcGroupsVvec - Aggregates the committed verification vectors by all partys to get the Groups Vvec */
-func (dkg *SimpleDKG) CalcGroupsVvec(vVec []VerificationKey) {
-
-	for i := 0; i < len(vVec); i++ {
-		pubK2 := vVec[i]
-		pubK1 := dkg.GroupsVvec[i]
-		pubK1.Add(&pubK2)
-		dkg.GroupsVvec[i] = pubK1
-	}
 
 }

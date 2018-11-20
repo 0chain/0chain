@@ -4,6 +4,7 @@ import (
 	"0chain.net/datastore"
 )
 
+/* Todo: Change "Bls" to group_sig to be in sync with lingo */
 type Bls struct {
 	datastore.IDField
 	BLSsignShare string `json:"share"`

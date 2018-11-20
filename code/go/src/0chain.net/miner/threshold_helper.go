@@ -21,7 +21,7 @@ import (
 	. "0chain.net/logging"
 )
 
-var dg bls.SimpleDKG
+var dg bls.DKG
 var bs bls.SimpleBLS
 var recShares []string
 var recSharesMap map[int]string
@@ -29,7 +29,6 @@ var minerShares map[string]bls.Key
 var currRound int64
 
 var roundMap = make(map[int64]map[int]string)
-var blsDone bool
 
 // StartDKG - starts the DKG process
 func StartDKG(ctx context.Context) {
@@ -45,9 +44,9 @@ func StartDKG(ctx context.Context) {
 	minerShares = make(map[string]bls.Key, len(m2m.Nodes))
 	Logger.Info("Starting DKG...")
 
-	//TODO : Need to include check for active miners and then send the shares, have to remove sleep in future
+	//TODO : Need to include check for active miners and then send the shares
 
-	dg = bls.MakeSimpleDKG(k, n)
+	dg = bls.MakeDKG(k, n)
 	self := node.GetSelfNode(ctx)
 
 	for _, node := range m2m.Nodes {
@@ -55,7 +54,6 @@ func StartDKG(ctx context.Context) {
 		Logger.Info("The miner ID is ", zap.String("miner ID is ", node.GetKey()))
 		forID := bls.ComputeIDdkg(node.SetIndex)
 		dg.ID = forID
-		Logger.Info("The miner ID vVec is ", zap.String("miner ID  vVecis ", dg.Vvec[0].GetHexString()))
 
 		Logger.Info("The x is ", zap.String("x is ", forID.GetDecString()))
 		secShare, _ := dg.ComputeDKGKeyShare(forID)
@@ -211,6 +209,7 @@ func AggregateDKGSecShares(recShares []string) error {
 
 // GetBlsShare - Start the BLS process
 func GetBlsShare(ctx context.Context, r, pr *round.Round) string {
+	//Move this to group_sig.go --May Be
 	Logger.Info("DKG-X getBlsShare ", zap.Int64("Round Number", r.Number))
 
 	bs = bls.MakeSimpleBLS(&dg)
@@ -238,6 +237,7 @@ func GetBlsShare(ctx context.Context, r, pr *round.Round) string {
 
 // CalcRandomBeacon - Calculates the random beacon output
 func CalcRandomBeacon(recSig []string, recIDs []string) string {
+	//Move this to group_sig.go
 	Logger.Info("Threshold number of bls sig shares are received ...")
 	CalBlsGpSign(recSig, recIDs)
 	rboOutput := encryption.Hash(bs.GpSign.GetHexString())
@@ -246,7 +246,7 @@ func CalcRandomBeacon(recSig []string, recIDs []string) string {
 
 // CalBlsGpSign - The function calls the RecoverGroupSig function which calculates the Gp Sign
 func CalBlsGpSign(recSig []string, recIDs []string) {
-
+	//Move this to group_sig.go
 	signVec := make([]bls.Sign, 0)
 	var signShare bls.Sign
 

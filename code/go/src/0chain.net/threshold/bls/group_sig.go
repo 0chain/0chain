@@ -11,28 +11,23 @@ type SimpleBLS struct {
 	Msg              Message
 	SigShare         Sign
 	gpPubKey         GroupPublicKey
-	groupPublicKey   VerificationKey
-	verifications    []VerificationKey
 	SecKeyShareGroup Key
 	GpSign           Sign
 	ID               PartyID
-	GroupsVvec       []VerificationKey
 }
 
 /*MakeSimpleBLS - to create bls object */
-func MakeSimpleBLS(dkg *SimpleDKG) SimpleBLS {
+func MakeSimpleBLS(dkg *DKG) SimpleBLS {
 	bs := SimpleBLS{
-		T:                dkg.T,
-		N:                dkg.N,
-		Msg:              " ",
-		SigShare:         Sign{},
-		gpPubKey:         dkg.GpPubKey,
-		groupPublicKey:   dkg.groupPublicKey,
-		verifications:    nil,
+		T:        dkg.T,
+		N:        dkg.N,
+		Msg:      " ",
+		SigShare: Sign{},
+		gpPubKey: dkg.GpPubKey,
+
 		SecKeyShareGroup: dkg.SecKeyShareGroup,
 		GpSign:           Sign{},
 		ID:               dkg.ID,
-		GroupsVvec:       dkg.GroupsVvec,
 	}
 	return bs
 
@@ -63,22 +58,5 @@ func (bs *SimpleBLS) RecoverGroupSig(from []PartyID, shares []Sign) Sign {
 	Logger.Debug("Recover Gp Sig not done, check party.go")
 
 	return sig
-
-}
-
-/*VerifyGroupSignShare - To verify the Gp sign share (GSS) */
-/* GSS is verified by calling polynomial substitution method with the Groups Vvec and the party ID which computed it*/
-func (bs *SimpleBLS) VerifyGroupSignShare(grpSignShare Sign, fromID PartyID) bool {
-
-	var pubVec VerificationKey
-	err := pubVec.Set(bs.GroupsVvec, &fromID)
-	if err != nil {
-		return false
-	}
-
-	if !grpSignShare.Verify(&pubVec, bs.Msg) {
-		return false
-	}
-	return true
 
 }
