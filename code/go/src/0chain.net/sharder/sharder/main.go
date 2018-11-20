@@ -98,7 +98,7 @@ func main() {
 		Logger.Panic("node definition for self node doesn't exist")
 	}
 
-	if state.DebugState {
+	if state.Debug() {
 		chain.SetupStateLogger("/tmp/state.txt")
 	}
 

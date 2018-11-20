@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 
-	"0chain.net/config"
 	. "0chain.net/logging"
 	"go.uber.org/zap"
 )
@@ -136,9 +135,6 @@ func (mpt *MerklePatriciaTrie) getPathNodes(key Key, path Path) ([]Node, error) 
 		}
 		npath, err := mpt.getPathNodes(ckey, path[1:])
 		if err != nil {
-			if config.DevConfiguration.State {
-				Logger.Error("getPathNodes(fn) - node not found", zap.String("root", ToHex(mpt.GetRoot())), zap.String("key", ToHex(ckey)), zap.Error(err))
-			}
 			return nil, err
 		}
 		npath = append(npath, node)
@@ -151,9 +147,6 @@ func (mpt *MerklePatriciaTrie) getPathNodes(key Key, path Path) ([]Node, error) 
 		if bytes.Compare(nodeImpl.Path, prefix) == 0 {
 			npath, err := mpt.getPathNodes(nodeImpl.NodeKey, path[len(prefix):])
 			if err != nil {
-				if config.DevConfiguration.State {
-					Logger.Error("getPathNodes(en) - node not found", zap.String("root", ToHex(mpt.GetRoot())), zap.String("key", ToHex(nodeImpl.NodeKey)), zap.Error(err))
-				}
 				return nil, err
 			}
 			npath = append(npath, node)
@@ -219,9 +212,6 @@ func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node) (Serializable,
 		}
 		nnode, err := mpt.DB.GetNode(ckey)
 		if err != nil || nnode == nil {
-			if config.DevConfiguration.State {
-				Logger.Error("getNodeValue(fn) - node not found", zap.String("root", ToHex(mpt.GetRoot())), zap.String("key", ToHex(ckey)), zap.Error(err))
-			}
 			return nil, ErrNodeNotFound
 		}
 		return mpt.getNodeValue(path[1:], nnode)
@@ -233,9 +223,6 @@ func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node) (Serializable,
 		if bytes.Compare(nodeImpl.Path, prefix) == 0 {
 			nnode, err := mpt.DB.GetNode(nodeImpl.NodeKey)
 			if err != nil || nnode == nil {
-				if config.DevConfiguration.State {
-					Logger.Error("getNodeValue(en) - node not found", zap.String("root", ToHex(mpt.GetRoot())), zap.String("key", ToHex(nodeImpl.NodeKey)), zap.Error(err))
-				}
 				return nil, ErrNodeNotFound
 			}
 			return mpt.getNodeValue(path[len(prefix):], nnode)
@@ -720,9 +707,6 @@ func (mpt *MerklePatriciaTrie) UpdateVersion(ctx context.Context, version Sequen
 	handler := func(ctx context.Context, path Path, key Key, node Node) error {
 		if node.GetVersion() >= version {
 			return nil
-		}
-		if config.DevConfiguration.State {
-			Logger.Debug("update version - bumping up", zap.String("path", string(path)), zap.String("key", ToHex(key)), zap.Any("old_version", node.GetVersion()), zap.Any("new_version", version))
 		}
 		count++
 		node.SetVersion(version)

@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"0chain.net/common"
-	"0chain.net/config"
 	. "0chain.net/logging"
 	"go.uber.org/zap"
 )
@@ -272,11 +271,6 @@ func (lndb *LevelNodeDB) GetNode(key Key) (Node, error) {
 	node, err := c.GetNode(key)
 	if err != nil && p != c {
 		node, err = p.GetNode(key)
-		if err != nil {
-			if config.DevConfiguration.State {
-				Logger.Error("get node", zap.String("key", ToHex(key)), zap.Error(err))
-			}
-		}
 		return node, err
 	}
 	return node, nil

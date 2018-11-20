@@ -43,7 +43,7 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 		pb = b.PrevBlock
 		if pb == nil {
 			b.SetStateStatus(block.StateFailed)
-			if state.DebugState {
+			if state.DebugBlock() {
 				Logger.Error("compute state - previous block not available", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
 			} else {
 				if config.DevConfiguration.State {
@@ -58,7 +58,7 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 		err := c.ComputeState(ctx, pb)
 		if err != nil {
 			pb.SetStateStatus(block.StateFailed)
-			if state.DebugState {
+			if state.DebugBlock() {
 				Logger.Error("compute state - error computing previous state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Error(err))
 			} else {
 				if config.DevConfiguration.State {
@@ -83,9 +83,7 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 		if !c.UpdateState(b, txn) {
 			if config.DevConfiguration.State {
 				b.SetStateStatus(block.StateFailed)
-				if config.DevConfiguration.State {
-					Logger.Error("compute state - update state failed", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.String("prev_block", b.PrevHash), zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)))
-				}
+				Logger.Error("compute state - update state failed", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.String("prev_block", b.PrevHash), zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)))
 				return common.NewError("state_update_error", "error updating state")
 			}
 		}
@@ -129,22 +127,18 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 	prevRoot := startRoot
 	fs, err := c.getState(clientState, txn.ClientID)
 	if !isValid(err) {
-		if b.Hash != "" || config.DevConfiguration.State {
-			prevState := ""
-			if b.PrevBlock != nil {
-				prevState = util.ToHex(b.PrevBlock.ClientState.GetRoot())
-			}
-			Logger.Debug("update state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.String("prev_client_state", prevState), zap.Any("txn", txn), zap.Error(err))
+		if config.DevConfiguration.State {
+			Logger.Error("update state - client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
 		}
-
-		if config.DevConfiguration.State && stateOut != nil {
+		if state.Debug() {
 			for _, txn := range b.Txns {
 				if txn == nil {
 					break
 				}
-				fmt.Fprintf(stateOut, "update state r=%v b=%v t=%v\n", b.Round, b.Hash, txn)
+				fmt.Fprintf(stateOut, "update state r=%v b=%v t=%+v\n", b.Round, b.Hash, txn)
 			}
-			clientState.PrettyPrint(os.Stdout)
+			fmt.Fprintf(stateOut, "error getting state value: %v %+v %v\n", txn.ClientID, txn, err)
+			clientState.PrettyPrint(stateOut)
 			Logger.DPanic(fmt.Sprintf("error getting state value: %v %v", txn.ClientID, err))
 		}
 		return false
@@ -159,13 +153,17 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 		ts, err := c.getState(clientState, txn.ToClientID)
 		if !isValid(err) {
 			if config.DevConfiguration.State {
-				Logger.Error("update state (to client)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
+				Logger.Error("update state - to_client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
+			}
+			if state.Debug() {
 				for _, txn := range b.Txns {
-					if txn != nil {
-						Logger.Info("update state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn))
+					if txn == nil {
+						break
 					}
+					fmt.Fprintf(stateOut, "update state r=%v b=%v t=%+v\n", b.Round, b.Hash, txn)
 				}
-				clientState.PrettyPrint(os.Stdout)
+				fmt.Fprintf(stateOut, "error getting state value: %v %+v %v\n", txn.ToClientID, txn, err)
+				clientState.PrettyPrint(stateOut)
 				Logger.DPanic(fmt.Sprintf("error getting state value: %v %v", txn.ToClientID, err))
 			}
 			return false
@@ -179,12 +177,14 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 			_, err = clientState.Insert(util.Path(txn.ClientID), fs)
 		}
 		if err != nil {
-			if state.DebugState {
+			if config.DevConfiguration.State {
 				Logger.DPanic("update state - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
 			}
-			Logger.Error("update state - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
+			if state.Debug() {
+				Logger.Error("update state - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
+			}
 		}
-		if state.DebugState {
+		if state.DebugTxn() {
 			if err := c.ValidateState(context.TODO(), b); err != nil {
 				clientState.SetRoot(prevRoot)
 				if stateOut != nil {
@@ -200,12 +200,14 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 		ts.Balance += tbalance
 		_, err = clientState.Insert(util.Path(txn.ToClientID), ts)
 		if err != nil {
-			if state.DebugState {
+			if config.DevConfiguration.State {
 				Logger.DPanic("update state - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
 			}
-			Logger.Error("update state - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
+			if state.Debug() {
+				Logger.Error("update state - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
+			}
 		}
-		if state.DebugState {
+		if state.DebugTxn() {
 			if err := c.ValidateState(context.TODO(), b); err != nil {
 				clientState.SetRoot(prevRoot)
 				if stateOut != nil {
@@ -217,7 +219,7 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 			}
 		}
 	}
-	if state.DebugState {
+	if state.DebugTxn() {
 		os, err := c.getState(clientState, c.OwnerID)
 		if err != nil || os == nil || os.Balance == 0 {
 			Logger.DPanic("update state - owner account", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Any("os", os), zap.Error(err))
@@ -280,7 +282,7 @@ func (c *Chain) ValidateState(ctx context.Context, b *block.Block) error {
 			if stateOut != nil {
 				b.ClientState.PrettyPrint(stateOut)
 			}
-			if state.DebugState {
+			if state.DebugBlock() {
 				Logger.DPanic("validate state - state root is null", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("changes", len(changes.Nodes)))
 			} else {
 				Logger.Error("validate state - state root is null", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("changes", len(changes.Nodes)))
@@ -292,7 +294,7 @@ func (c *Chain) ValidateState(ctx context.Context, b *block.Block) error {
 				b.ClientState.GetChangeCollector().PrintChanges(stateOut)
 				b.ClientState.PrettyPrint(stateOut)
 			}
-			if state.DebugState {
+			if state.DebugBlock() {
 				Logger.DPanic("validate state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("state", util.ToHex(b.ClientState.GetRoot())), zap.String("computed_state", stateRoot.GetHash()), zap.String("computed_root", root.GetHash()), zap.Int("changes", len(changes.Nodes)))
 			} else {
 				Logger.Error("validate state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("state", util.ToHex(b.ClientState.GetRoot())), zap.String("computed_state", stateRoot.GetHash()), zap.String("computed_root", root.GetHash()), zap.Int("changes", len(changes.Nodes)))
@@ -300,7 +302,7 @@ func (c *Chain) ValidateState(ctx context.Context, b *block.Block) error {
 		}
 		err := changes.Validate(ctx)
 		if err != nil {
-			if state.DebugState && stateOut != nil {
+			if state.Debug() && stateOut != nil {
 				b.ClientState.PrettyPrint(stateOut)
 			}
 		}
