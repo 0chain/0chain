@@ -4,6 +4,7 @@ logging:
   level: "info"
   console: false # printing log to console is only supported in development mode
   goroutines: false
+  memlog: true
 
 development:
   state: false
