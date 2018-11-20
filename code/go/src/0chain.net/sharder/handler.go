@@ -88,12 +88,14 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	sc := GetSharderChain()
 	c := sc.Chain
 	w.Header().Set("Content-Type", "text/html")
+	chain.PrintCSS(w)
 	diagnostics.WriteStatisticsCSS(w)
 
 	self := node.Self.Node
 	fmt.Fprintf(w, "<div>%v - %v</div>", self.GetPseudoName(), self.Description)
 
 	diagnostics.WriteConfiguration(w, c)
+	fmt.Fprintf(w, "<br>")
 	fmt.Fprintf(w, "<table><tr><td colspan='2'><h2>Summary</h2></td></tr>")
 	fmt.Fprintf(w, "<tr><td>Sharded Blocks</td><td class='number'>%v</td>", sc.SharderStats.ShardedBlocksCount)
 	fmt.Fprintf(w, "</table>")
@@ -119,7 +121,7 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</td><td  valign='top'>")
 	fmt.Fprintf(w, "<h2>Finalization Lag Statistics</h2>")
 	diagnostics.WriteHistogramStatistics(w, c, chain.FinalizationLagMetric)
-	fmt.Fprintf(w, "</td><td></td></tr>")
+	fmt.Fprintf(w, "</td></tr>")
 
 	fmt.Fprintf(w, "<tr><td>")
 	fmt.Fprintf(w, "<h2>Transactions Save Statistics</h2>")

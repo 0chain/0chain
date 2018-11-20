@@ -80,7 +80,7 @@ func WriteTimerStatistics(w http.ResponseWriter, c *chain.Chain, timer metrics.T
 	}
 	percentiles := []float64{0.5, 0.9, 0.95, 0.99, 0.999}
 	pvals := timer.Percentiles(percentiles)
-	fmt.Fprintf(w, "<table>")
+	fmt.Fprintf(w, "<table width='100%%'>")
 	fmt.Fprintf(w, "<tr><td class='sheader' colspan=2'>Metrics</td></tr>")
 	fmt.Fprintf(w, "<tr><td>Current Round</td><td>%v</td></tr>", c.CurrentRound)
 	if c.LatestFinalizedBlock != nil {
@@ -106,7 +106,7 @@ func WriteTimerStatistics(w http.ResponseWriter, c *chain.Chain, timer metrics.T
 func WriteHistogramStatistics(w http.ResponseWriter, c *chain.Chain, metric metrics.Histogram) {
 	percentiles := []float64{0.5, 0.9, 0.95, 0.99, 0.999}
 	pvals := metric.Percentiles(percentiles)
-	fmt.Fprintf(w, "<table>")
+	fmt.Fprintf(w, "<table width='100%%'>")
 	fmt.Fprintf(w, "<tr><td class='sheader' colspan=2'>Metrics</td></tr>")
 	fmt.Fprintf(w, "<tr><td>Current Round</td><td>%v</td></tr>", c.CurrentRound)
 	if c.LatestFinalizedBlock != nil {
