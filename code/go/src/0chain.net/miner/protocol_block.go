@@ -198,6 +198,9 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		if err := mc.ValidateState(ctx, b); err != nil {
 			Logger.DPanic("generate block - state change validation", zap.Error(err))
 		}
+		if err := b.ClientState.Validate(); err != nil {
+			Logger.DPanic("generate block - state change validation", zap.Error(err))
+		}
 	}
 	b.SetBlockState(block.StateGenerated)
 	b.SetStateStatus(block.StateSuccessful)

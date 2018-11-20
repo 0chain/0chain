@@ -41,6 +41,8 @@ type MerklePatriciaTrieI interface {
 
 	// only for testing and debugging
 	PrettyPrint(w io.Writer) error
+
+	Validate() error
 }
 
 //ContextKey - a type for context key

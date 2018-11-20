@@ -19,6 +19,9 @@ var ErrNodeNotFound = errors.New("node not found")
 /*ErrValueNotPresent - error indicating given path is not present in the db */
 var ErrValueNotPresent = errors.New("value not present")
 
+/*ErrIntermediateNodeExists - error indicating deleted intermediate node still exists */
+var ErrIntermediateNodeExists = errors.New("removed intermediate node still present")
+
 /*NodeDBIteratorHandler is a nodedb iteration handler function type */
 type NodeDBIteratorHandler func(ctx context.Context, key Key, node Node) error
 

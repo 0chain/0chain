@@ -773,3 +773,24 @@ func GetChanges(ctx context.Context, ndb NodeDB, start Sequence, end Sequence) (
 	}
 	return mpts, nil
 }
+
+func (mpt *MerklePatriciaTrie) Validate() error {
+	changes := mpt.GetChangeCollector().GetChanges()
+	db := mpt.GetNodeDB()
+	switch dbImpl := db.(type) {
+	case *MemoryNodeDB:
+	case *LevelNodeDB:
+		db = dbImpl.C
+	case *PNodeDB:
+		return nil
+	}
+	for _, c := range changes {
+		if c.Old == nil {
+			continue
+		}
+		if _, err := db.GetNode(c.Old.GetHashBytes()); err == nil {
+			return ErrIntermediateNodeExists
+		}
+	}
+	return nil
+}
