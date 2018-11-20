@@ -3,6 +3,7 @@ package util
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"0chain.net/common"
 	"0chain.net/config"
@@ -123,15 +124,16 @@ func (mndb *MemoryNodeDB) PruneBelowVersion(ctx context.Context, version Sequenc
 	return nil
 }
 
-func (mndb *MemoryNodeDB) reachable(node Node, node2 Node) (bool, error) {
+// is node2 reachable from node using only nodes stored on this db
+func (mndb *MemoryNodeDB) reachable(node Node, node2 Node) bool {
 	switch nodeImpl := node.(type) {
 	case *ExtensionNode:
 		fn, _ := mndb.GetNode(nodeImpl.NodeKey)
 		if fn == nil {
-			return false, ErrNodeNotFound
+			return false
 		}
 		if node2 == fn {
-			return true, nil
+			return true
 		}
 		return mndb.reachable(fn, node2)
 	case *FullNode:
@@ -145,40 +147,56 @@ func (mndb *MemoryNodeDB) reachable(node Node, node2 Node) (bool, error) {
 				continue
 			}
 			if node2 == childNode {
-				return true, nil
+				return true
 			}
-			ok, err := mndb.reachable(childNode, node2)
+			ok := mndb.reachable(childNode, node2)
 			if ok {
-				return ok, nil
+				return true
 			}
 		}
 	}
-	return false, nil
+	return false
 }
 
 /*ComputeRoot - compute root from partial set of nodes in this db */
 func (mndb *MemoryNodeDB) ComputeRoot() Node {
 	var root Node
 	handler := func(ctx context.Context, key Key, node Node) error {
-		if !IncludesNodeType(NodeTypeFullNode|NodeTypeExtensionNode, node.GetNodeType()) {
-			return nil
-		}
 		if root == nil {
 			root = node
 			return nil
 		}
-		ok, err := mndb.reachable(root, node)
-		if err != nil {
-			return err
-		}
-		if ok {
+		if !IncludesNodeType(NodeTypeFullNode|NodeTypeExtensionNode, node.GetNodeType()) {
 			return nil
 		}
-		ok, err = mndb.reachable(node, root)
-		if err != nil {
-			return err
+		if mndb.reachable(root, node) {
+			return nil
 		}
-		if ok {
+		if mndb.reachable(node, root) {
+			root = node
+		}
+		return nil
+	}
+	mndb.Iterate(nil, handler)
+	return root
+}
+
+/*ComputeRootDebug - compute root from partial set of nodes in this db */
+func (mndb *MemoryNodeDB) ComputeRootDebug() Node {
+	var root Node
+	handler := func(ctx context.Context, key Key, node Node) error {
+		if root == nil {
+			root = node
+			return nil
+		}
+		if !IncludesNodeType(NodeTypeFullNode|NodeTypeExtensionNode, node.GetNodeType()) {
+			return nil
+		}
+		fmt.Printf("reachable: %v %v\n", root.GetHash(), node.GetHash())
+		if mndb.reachable(root, node) {
+			return nil
+		}
+		if mndb.reachable(node, root) {
 			root = node
 		}
 		return nil
@@ -220,6 +238,7 @@ func (mndb *MemoryNodeDB) Validate(root Node) error {
 	iterate(root)
 	for _, nd := range mndb.Nodes {
 		if _, ok := nodes[StrKey(nd.GetHashBytes())]; !ok {
+			Logger.Error("mndb validate", zap.String("node_type", fmt.Sprintf("%T", nd)), zap.String("node_key", nd.GetHash()))
 			return common.NewError("nodes_outside_tree", "not all nodes are from the root")
 		}
 	}

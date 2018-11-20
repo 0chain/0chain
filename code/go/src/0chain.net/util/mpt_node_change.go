@@ -1,5 +1,10 @@
 package util
 
+import (
+	"fmt"
+	"io"
+)
+
 /*NodeChange - track a change to the node */
 type NodeChange struct {
 	Old Node
@@ -14,6 +19,8 @@ type ChangeCollectorI interface {
 	GetDeletes() []Node
 
 	UpdateChanges(ndb NodeDB, origin Sequence, includeDeletes bool) error
+
+	PrintChanges(w io.Writer)
 }
 
 /*ChangeCollector - node change collector interface implementation */
@@ -107,4 +114,15 @@ func (cc *ChangeCollector) UpdateChanges(ndb NodeDB, origin Sequence, includeDel
 		pndb.Flush()
 	}
 	return nil
+}
+
+//PrintChanges - implement interface
+func (cc *ChangeCollector) PrintChanges(w io.Writer) {
+	for idx, c := range cc.Changes {
+		if c.Old != nil {
+			fmt.Fprintf(w, "cc(%v): nn=%v on=%v\n", idx, c.New.GetHash(), c.Old.GetHash())
+		} else {
+			fmt.Fprintf(w, "cc(%v): nn=%v\n", idx, c.New.GetHash())
+		}
+	}
 }

@@ -125,6 +125,8 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 	c.stateMutex.Lock()
 	defer c.stateMutex.Unlock()
 	clientState := b.ClientState
+	startRoot := clientState.GetRoot()
+	prevRoot := startRoot
 	fs, err := c.getState(clientState, txn.ClientID)
 	if !isValid(err) {
 		if b.Hash != "" || config.DevConfiguration.State {
@@ -150,7 +152,6 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 	tbalance := state.Balance(txn.Value)
 	switch txn.TransactionType {
 	case transaction.TxnTypeData:
-		return true
 	case transaction.TxnTypeSend:
 		if fs.Balance < tbalance {
 			return false
@@ -183,6 +184,18 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 			}
 			Logger.Error("update state - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
 		}
+		if state.DebugState {
+			if err := c.ValidateState(context.TODO(), b); err != nil {
+				clientState.SetRoot(prevRoot)
+				if stateOut != nil {
+					fmt.Fprintf(stateOut, "prior state\n")
+					clientState.PrettyPrint(stateOut)
+					stateOut.Sync()
+				}
+				Logger.DPanic("state validation failure", zap.Any("txn", txn), zap.Error(err))
+			}
+		}
+		prevRoot = clientState.GetRoot()
 		ts.SetRound(b.Round)
 		ts.Balance += tbalance
 		_, err = clientState.Insert(util.Path(txn.ToClientID), ts)
@@ -193,15 +206,24 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 			Logger.Error("update state - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
 		}
 		if state.DebugState {
-			os, err := c.getState(clientState, c.OwnerID)
-			if err != nil || os == nil || os.Balance == 0 {
-				Logger.DPanic("update state - owner account", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Any("os", os), zap.Error(err))
+			if err := c.ValidateState(context.TODO(), b); err != nil {
+				clientState.SetRoot(prevRoot)
+				if stateOut != nil {
+					fmt.Fprintf(stateOut, "prior state\n")
+					clientState.PrettyPrint(stateOut)
+					stateOut.Sync()
+				}
+				Logger.DPanic("state validation failure", zap.Any("txn", txn), zap.Error(err))
 			}
 		}
-		return true
-	default:
-		return true // TODO: This should eventually return false by default for all unkown cases
 	}
+	if state.DebugState {
+		os, err := c.getState(clientState, c.OwnerID)
+		if err != nil || os == nil || os.Balance == 0 {
+			Logger.DPanic("update state - owner account", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Any("os", os), zap.Error(err))
+		}
+	}
+	return true
 }
 
 func (c *Chain) getState(clientState util.MerklePatriciaTrieI, clientID string) (*state.State, error) {
@@ -247,4 +269,42 @@ func SetupStateLogger(file string) {
 	}
 	stateOut = out
 	fmt.Fprintf(stateOut, "starting state log ...\n")
+}
+
+//ValidateState - validates the state of a block
+func (c *Chain) ValidateState(ctx context.Context, b *block.Block) error {
+	if len(b.ClientState.GetChangeCollector().GetChanges()) > 0 {
+		changes := block.NewBlockStateChange(b)
+		stateRoot := changes.GetRoot()
+		if stateRoot == nil {
+			if stateOut != nil {
+				b.ClientState.PrettyPrint(stateOut)
+			}
+			if state.DebugState {
+				Logger.DPanic("validate state - state root is null", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("changes", len(changes.Nodes)))
+			} else {
+				Logger.Error("validate state - state root is null", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("changes", len(changes.Nodes)))
+			}
+		}
+		if bytes.Compare(stateRoot.GetHashBytes(), b.ClientState.GetRoot()) != 0 {
+			root := changes.ComputeRootDebug()
+			if stateOut != nil {
+				b.ClientState.GetChangeCollector().PrintChanges(stateOut)
+				b.ClientState.PrettyPrint(stateOut)
+			}
+			if state.DebugState {
+				Logger.DPanic("validate state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("state", util.ToHex(b.ClientState.GetRoot())), zap.String("computed_state", stateRoot.GetHash()), zap.String("computed_root", root.GetHash()), zap.Int("changes", len(changes.Nodes)))
+			} else {
+				Logger.Error("validate state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("state", util.ToHex(b.ClientState.GetRoot())), zap.String("computed_state", stateRoot.GetHash()), zap.String("computed_root", root.GetHash()), zap.Int("changes", len(changes.Nodes)))
+			}
+		}
+		err := changes.Validate(ctx)
+		if err != nil {
+			if state.DebugState && stateOut != nil {
+				b.ClientState.PrettyPrint(stateOut)
+			}
+		}
+		return err
+	}
+	return nil
 }
