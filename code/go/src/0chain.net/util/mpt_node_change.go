@@ -4,9 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-
-	. "0chain.net/logging"
-	"go.uber.org/zap"
 )
 
 /*NodeChange - track a change to the node */
@@ -45,7 +42,6 @@ func NewChangeCollector() ChangeCollectorI {
 func (cc *ChangeCollector) AddChange(oldNode Node, newNode Node) {
 	nhash := newNode.GetHash()
 	if _, ok := cc.Deletes[nhash]; ok {
-		Logger.Debug("delete change", zap.String("nnode", nhash))
 		delete(cc.Deletes, nhash)
 	}
 	if oldNode == nil {
@@ -75,7 +71,6 @@ func (cc *ChangeCollector) AddChange(oldNode Node, newNode Node) {
 /*DeleteChange - implement interface */
 func (cc *ChangeCollector) DeleteChange(oldNode Node) {
 	ohash := oldNode.GetHash()
-	Logger.Debug("delete change", zap.String("onode", ohash))
 	if _, ok := cc.Changes[ohash]; ok {
 		delete(cc.Changes, ohash)
 	} else {

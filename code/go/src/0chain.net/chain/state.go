@@ -325,15 +325,14 @@ func (c *Chain) ValidateState(ctx context.Context, b *block.Block, priorRoot uti
 			}
 		}
 		if bytes.Compare(stateRoot.GetHashBytes(), b.ClientState.GetRoot()) != 0 {
-			root := changes.ComputeRootDebug()
 			if stateOut != nil {
 				b.ClientState.GetChangeCollector().PrintChanges(stateOut)
 				b.ClientState.PrettyPrint(stateOut)
 			}
 			if state.DebugBlock() {
-				Logger.DPanic("validate state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("state", util.ToHex(b.ClientState.GetRoot())), zap.String("computed_state", stateRoot.GetHash()), zap.String("computed_root", root.GetHash()), zap.Int("changes", len(changes.Nodes)))
+				Logger.DPanic("validate state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("state", util.ToHex(b.ClientState.GetRoot())), zap.String("computed_state", stateRoot.GetHash()), zap.Int("changes", len(changes.Nodes)))
 			} else {
-				Logger.Error("validate state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("state", util.ToHex(b.ClientState.GetRoot())), zap.String("computed_state", stateRoot.GetHash()), zap.String("computed_root", root.GetHash()), zap.Int("changes", len(changes.Nodes)))
+				Logger.Error("validate state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("state", util.ToHex(b.ClientState.GetRoot())), zap.String("computed_state", stateRoot.GetHash()), zap.Int("changes", len(changes.Nodes)))
 			}
 		}
 		if priorRoot == nil {

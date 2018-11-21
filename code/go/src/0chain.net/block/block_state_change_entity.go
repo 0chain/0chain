@@ -72,11 +72,6 @@ func (sc *StateChange) ComputeProperties() {
 	}
 }
 
-//ComputeRootDebug - for debugging purpose only
-func (sc *StateChange) ComputeRootDebug() util.Node {
-	return sc.mndb.ComputeRootDebug()
-}
-
 //Validate - implement interface
 func (sc *StateChange) Validate(ctx context.Context) error {
 	return sc.mndb.Validate(sc.root)

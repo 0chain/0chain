@@ -183,30 +183,6 @@ func (mndb *MemoryNodeDB) ComputeRoot() Node {
 	return root
 }
 
-/*ComputeRootDebug - compute root from partial set of nodes in this db */
-func (mndb *MemoryNodeDB) ComputeRootDebug() Node {
-	var root Node
-	handler := func(ctx context.Context, key Key, node Node) error {
-		if root == nil {
-			root = node
-			return nil
-		}
-		if !IncludesNodeType(NodeTypeFullNode|NodeTypeExtensionNode, node.GetNodeType()) {
-			return nil
-		}
-		fmt.Printf("reachable: %v %v\n", root.GetHash(), node.GetHash())
-		if mndb.reachable(root, node) {
-			return nil
-		}
-		if mndb.reachable(node, root) {
-			root = node
-		}
-		return nil
-	}
-	mndb.Iterate(nil, handler)
-	return root
-}
-
 /*Validate - validate this MemoryNodeDB w.r.t the given root
   It should not contain any node that can't be reachable from the root.
   Note: The root itself can reach nodes not present in this db
