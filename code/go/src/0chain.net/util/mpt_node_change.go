@@ -1,8 +1,12 @@
 package util
 
 import (
+	"bytes"
 	"fmt"
 	"io"
+
+	. "0chain.net/logging"
+	"go.uber.org/zap"
 )
 
 /*NodeChange - track a change to the node */
@@ -26,19 +30,24 @@ type ChangeCollectorI interface {
 /*ChangeCollector - node change collector interface implementation */
 type ChangeCollector struct {
 	Changes map[string]*NodeChange
-	Deletes []Node
+	Deletes map[string]Node
 }
 
 /*NewChangeCollector - a constructor to create a change collector */
 func NewChangeCollector() ChangeCollectorI {
 	cc := &ChangeCollector{}
 	cc.Changes = make(map[string]*NodeChange)
+	cc.Deletes = make(map[string]Node)
 	return cc
 }
 
 /*AddChange - implement interface */
 func (cc *ChangeCollector) AddChange(oldNode Node, newNode Node) {
 	nhash := newNode.GetHash()
+	if _, ok := cc.Deletes[nhash]; ok {
+		Logger.Debug("delete change", zap.String("nnode", nhash))
+		delete(cc.Deletes, nhash)
+	}
 	if oldNode == nil {
 		change := &NodeChange{}
 		change.New = newNode
@@ -49,6 +58,9 @@ func (cc *ChangeCollector) AddChange(oldNode Node, newNode Node) {
 	prevChange, ok := cc.Changes[ohash]
 	if ok {
 		delete(cc.Changes, ohash)
+		if prevChange.Old != nil && bytes.Compare(newNode.GetHashBytes(), prevChange.Old.GetHashBytes()) == 0 { // AddChange (a,b) -> (b,a) -> (a,b)
+			prevChange.Old = nil
+		}
 		prevChange.New = newNode
 		cc.Changes[nhash] = prevChange
 	} else {
@@ -56,15 +68,18 @@ func (cc *ChangeCollector) AddChange(oldNode Node, newNode Node) {
 		change.New = newNode
 		change.Old = oldNode
 		cc.Changes[nhash] = change
+		cc.DeleteChange(oldNode)
 	}
 }
 
 /*DeleteChange - implement interface */
 func (cc *ChangeCollector) DeleteChange(oldNode Node) {
-	cc.Deletes = append(cc.Deletes, oldNode)
 	ohash := oldNode.GetHash()
+	Logger.Debug("delete change", zap.String("onode", ohash))
 	if _, ok := cc.Changes[ohash]; ok {
 		delete(cc.Changes, ohash)
+	} else {
+		cc.Deletes[ohash] = oldNode
 	}
 }
 
@@ -81,7 +96,13 @@ func (cc *ChangeCollector) GetChanges() []*NodeChange {
 
 /*GetDeletes - implement interface */
 func (cc *ChangeCollector) GetDeletes() []Node {
-	return cc.Deletes
+	deletes := make([]Node, len(cc.Deletes))
+	idx := 0
+	for _, v := range cc.Deletes {
+		deletes[idx] = v
+		idx++
+	}
+	return deletes
 }
 
 /*UpdateChanges - update all the changes collected to a database */

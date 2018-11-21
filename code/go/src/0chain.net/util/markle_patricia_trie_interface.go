@@ -19,6 +19,7 @@ type MerklePatriciaTrieI interface {
 	SetNodeDB(ndb NodeDB)
 	GetNodeDB() NodeDB
 	SetVersion(version Sequence)
+	GetVersion() Sequence
 
 	GetRoot() Key
 	SetRoot(root Key)

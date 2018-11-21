@@ -26,6 +26,13 @@ func NewMerklePatriciaTrie(db NodeDB, version Sequence) *MerklePatriciaTrie {
 	return mpt
 }
 
+//CloneMPT - clone an existing MPT so it can go off of a different root
+func CloneMPT(mpt MerklePatriciaTrieI) *MerklePatriciaTrie {
+	clone := NewMerklePatriciaTrie(mpt.GetNodeDB(), mpt.GetVersion())
+	clone.SetRoot(mpt.GetRoot())
+	return clone
+}
+
 /*SetNodeDB - implement interface */
 func (mpt *MerklePatriciaTrie) SetNodeDB(ndb NodeDB) {
 	mpt.DB = ndb
@@ -40,6 +47,11 @@ func (mpt *MerklePatriciaTrie) GetNodeDB() NodeDB {
 //SetVersion - implement interface
 func (mpt *MerklePatriciaTrie) SetVersion(version Sequence) {
 	mpt.Version = version
+}
+
+//GetVersion - implement interface
+func (mpt *MerklePatriciaTrie) GetVersion() Sequence {
+	return mpt.Version
 }
 
 /*SetRoot - implement interface */
@@ -774,6 +786,7 @@ func GetChanges(ctx context.Context, ndb NodeDB, start Sequence, end Sequence) (
 	return mpts, nil
 }
 
+//Validate - implement interface - any sort of validations that can tell if the MPT is in a sane state
 func (mpt *MerklePatriciaTrie) Validate() error {
 	changes := mpt.GetChangeCollector().GetChanges()
 	db := mpt.GetNodeDB()
@@ -789,7 +802,7 @@ func (mpt *MerklePatriciaTrie) Validate() error {
 			continue
 		}
 		if _, err := db.GetNode(c.Old.GetHashBytes()); err == nil {
-			return ErrIntermediateNodeExists
+			return fmt.Errorf(ErrIntermediateNodeExists.Error(), c.Old.GetHash())
 		}
 	}
 	return nil

@@ -13,6 +13,7 @@ const (
 	DebugLevelChain = iota
 	DebugLevelBlock = iota
 	DebugLevelTxn   = iota
+	DebugLevelNode  = iota
 )
 
 var debugState = DebugLevelNone
@@ -35,6 +36,11 @@ func DebugBlock() bool {
 //DebugTxn - indicates whether state debugging level is txn or more granular
 func DebugTxn() bool {
 	return debugState >= DebugLevelTxn
+}
+
+//DebugNode - indicates whether state debugging level is mpt node or more granular
+func DebugNode() bool {
+	return debugState >= DebugLevelNode
 }
 
 //Balance - any quantity that is represented as an integer in the lowest denomination
