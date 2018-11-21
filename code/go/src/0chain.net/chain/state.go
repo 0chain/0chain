@@ -22,6 +22,8 @@ var ErrPreviousStateUnavailable = common.NewError("prev_state_unavailable", "Pre
 //StateMismatch - indicate if there is a mismatch between computed state and received state of a block
 const StateMismatch = "state_mismatch"
 
+var ErrStateMismatch = common.NewError(StateMismatch, "computed state hash doesn't match with the state hash of the block")
+
 /*ComputeState - compute the state for the block */
 func (c *Chain) ComputeState(ctx context.Context, b *block.Block) error {
 	lock := b.StateMutex
@@ -93,19 +95,28 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 		if config.DevConfiguration.State {
 			Logger.Error("compute state - state hash mismatch", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("block_size", len(b.Txns)), zap.Int("changes", len(b.ClientState.GetChangeCollector().GetChanges())), zap.String("block_state_hash", util.ToHex(b.ClientStateHash)), zap.String("computed_state_hash", util.ToHex(b.ClientState.GetRoot())))
 		}
-		return common.NewError(StateMismatch, "computed state hash doesn't match with the state hash of the block")
+		return ErrStateMismatch
 	}
-	if state.DebugBlock() {
-		if err := c.ValidateState(ctx, b, b.PrevBlock.ClientState.GetRoot()); err != nil {
-			Logger.DPanic("compute state - state change validation", zap.Error(err))
-		}
-		if err := b.ClientState.Validate(); err != nil {
-			Logger.DPanic("compute state - state change validation", zap.Error(err))
-		}
-	}
+	c.StateSanityCheck(ctx, b)
 	Logger.Info("compute state successful", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("block_size", len(b.Txns)), zap.Int("changes", len(b.ClientState.GetChangeCollector().GetChanges())), zap.String("block_state_hash", util.ToHex(b.ClientStateHash)), zap.String("computed_state_hash", util.ToHex(b.ClientState.GetRoot())))
 	b.SetStateStatus(block.StateSuccessful)
 	return nil
+}
+
+//StateSanityCheck - after generating a block or verification of a block, this can be called to run some state sanity checks
+func (c *Chain) StateSanityCheck(ctx context.Context, b *block.Block) {
+	if !state.DebugBlock() {
+		return
+	}
+	if err := c.ValidateState(ctx, b, b.PrevBlock.ClientState.GetRoot()); err != nil {
+		Logger.DPanic("generate block - state change validation", zap.Error(err))
+	}
+	if err := b.ClientState.Validate(); err != nil {
+		Logger.DPanic("generate block - state change validation", zap.Error(err))
+	}
+	if err := c.ValidateStateChangesRoot(b); err != nil {
+		Logger.DPanic("generate block - state changes root validation", zap.Error(err))
+	}
 }
 
 func (c *Chain) rebaseState(lfb *block.Block) {
@@ -154,6 +165,9 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 	switch txn.TransactionType {
 	case transaction.TxnTypeData:
 	case transaction.TxnTypeSend:
+		if tbalance == 0 {
+			return false
+		}
 		if fs.Balance < tbalance {
 			return false
 		}
@@ -359,6 +373,20 @@ func (c *Chain) ValidateState(ctx context.Context, b *block.Block, priorRoot uti
 				}*/
 			return err
 		}
+	}
+	return nil
+}
+
+//ValidateStateChangesRoot - validates that root computed from changes matches with the state root
+func (c *Chain) ValidateStateChangesRoot(b *block.Block) error {
+	bsc := block.NewBlockStateChange(b)
+	if b.ClientStateHash != nil && (bsc.GetRoot() == nil || bytes.Compare(bsc.GetRoot().GetHashBytes(), b.ClientStateHash) != 0) {
+		computedRoot := ""
+		if bsc.GetRoot() != nil {
+			computedRoot = bsc.GetRoot().GetHash()
+		}
+		Logger.Error("new block state change - root mismatch", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("state_root", util.ToHex(b.ClientStateHash)), zap.Any("computed_root", computedRoot))
+		return ErrStateMismatch
 	}
 	return nil
 }

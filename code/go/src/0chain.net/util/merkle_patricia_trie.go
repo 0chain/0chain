@@ -648,17 +648,14 @@ func (mpt *MerklePatriciaTrie) iterate(ctx context.Context, path Path, key Key, 
 }
 
 func (mpt *MerklePatriciaTrie) insertNode(oldNode Node, newNode Node) (Node, Key, error) {
-	mpt.ChangeCollector.AddChange(oldNode, newNode)
-	/*
-		if oldNode == nil {
-			fmt.Printf("debug: nn=%v\n", newNode.GetHash())
-		} else {
-			fmt.Printf("debug: nn=%v on=%v\n", newNode.GetHash(), oldNode.GetHash())
-		} */
 	ckey := newNode.GetHashBytes()
 	err := mpt.DB.PutNode(ckey, newNode)
 	if err != nil {
 		return nil, nil, err
+	}
+	//If same node is inserted by client, don't add them into change collector
+	if oldNode == nil || bytes.Compare(oldNode.GetHashBytes(), ckey) != 0 {
+		mpt.ChangeCollector.AddChange(oldNode, newNode)
 	}
 	return newNode, ckey, nil
 }
@@ -802,7 +799,7 @@ func (mpt *MerklePatriciaTrie) Validate() error {
 			continue
 		}
 		if _, err := db.GetNode(c.Old.GetHashBytes()); err == nil {
-			return fmt.Errorf(ErrIntermediateNodeExists.Error(), c.Old.GetHash())
+			return fmt.Errorf(ErrIntermediateNodeExists.Error(), c.Old, c.Old.GetHash())
 		}
 	}
 	return nil

@@ -54,8 +54,8 @@ func (cc *ChangeCollector) AddChange(oldNode Node, newNode Node) {
 	prevChange, ok := cc.Changes[ohash]
 	if ok {
 		delete(cc.Changes, ohash)
-		if prevChange.Old != nil && bytes.Compare(newNode.GetHashBytes(), prevChange.Old.GetHashBytes()) == 0 { // AddChange (a,b) -> (b,a) -> (a,b)
-			prevChange.Old = nil
+		if prevChange.Old != nil && bytes.Compare(newNode.GetHashBytes(), prevChange.Old.GetHashBytes()) == 0 {
+			return
 		}
 		prevChange.New = newNode
 		cc.Changes[nhash] = prevChange
@@ -64,7 +64,7 @@ func (cc *ChangeCollector) AddChange(oldNode Node, newNode Node) {
 		change.New = newNode
 		change.Old = oldNode
 		cc.Changes[nhash] = change
-		cc.DeleteChange(oldNode)
+		cc.Deletes[ohash] = oldNode
 	}
 }
 
