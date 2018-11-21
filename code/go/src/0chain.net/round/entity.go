@@ -308,9 +308,6 @@ func (r *Round) Restart() {
 	r.SetState(RoundShareVRF)
 }
 
-/*
-  Jay: Note: this is where recevied shares are added
-*/
 //AddVRFShare - implement interface
 func (r *Round) AddVRFShare(share *VRFShare) bool {
 

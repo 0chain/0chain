@@ -105,7 +105,7 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (interface{},
 	msg := NewBlockMessage(MessageVRFShare, node.GetSender(ctx), nil, nil)
 	vrfs.SetParty(msg.Sender)
 	msg.VRFShare = vrfs
-	Logger.Debug("DKG-X Here VRFShareHandler Sending msg to BlockMessageChannel")
+	Logger.Debug("DKG Here VRFShareHandler Sending msg to BlockMessageChannel")
 	mc.GetBlockMessageChannel() <- msg
 	return nil, nil
 }
@@ -143,7 +143,6 @@ func VerifyBlockHandler(ctx context.Context, entity datastore.Entity) (interface
 		return nil, err
 	}
 	msg := NewBlockMessage(MessageVerify, node.GetSender(ctx), nil, b)
-	Logger.Debug("DKG-X Here VerifyBlockHandler Sending msg to BlockMessageChannel")
 	mc.GetBlockMessageChannel() <- msg
 	return nil, nil
 }
@@ -156,7 +155,7 @@ func VerificationTicketReceiptHandler(ctx context.Context, entity datastore.Enti
 	}
 	msg := NewBlockMessage(MessageVerificationTicket, node.GetSender(ctx), nil, nil)
 	msg.BlockVerificationTicket = bvt
-	Logger.Debug("DKG-X Here VerificationTicketReceipt Sending msg to BlockMessageChannel")
+	Logger.Debug(" Here VerificationTicketReceipt Sending msg to BlockMessageChannel")
 	GetMinerChain().GetBlockMessageChannel() <- msg
 	return nil, nil
 }
@@ -174,7 +173,6 @@ func NotarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (i
 	}
 	msg := NewBlockMessage(MessageNotarization, node.GetSender(ctx), nil, nil)
 	msg.Notarization = notarization
-	Logger.Debug("DKG-X Here NotarizationReceipt Sending msg to BlockMessageChannel")
 	mc.GetBlockMessageChannel() <- msg
 	return nil, nil
 }
@@ -195,7 +193,7 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 		return nil, err
 	}
 	msg := &BlockMessage{Sender: node.GetSender(ctx), Type: MessageNotarizedBlock, Block: b}
-	Logger.Debug("DKG-X Here NotarizedBlock Sending msg to BlockMessageChannel")
+	Logger.Debug("Here NotarizedBlock Sending msg to BlockMessageChannel")
 	mc.GetBlockMessageChannel() <- msg
 	return nil, nil
 }

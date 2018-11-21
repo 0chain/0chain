@@ -1,7 +1,9 @@
 package bls
 
 import (
+	"0chain.net/encryption"
 	. "0chain.net/logging"
+	"go.uber.org/zap"
 )
 
 /*SimpleBLS - to manage BLS process */
@@ -58,5 +60,52 @@ func (bs *SimpleBLS) RecoverGroupSig(from []PartyID, shares []Sign) Sign {
 	Logger.Debug("Recover Gp Sig not done, check party.go")
 
 	return sig
+
+}
+
+// CalcRandomBeacon - Calculates the random beacon output
+func (bs *SimpleBLS) CalcRandomBeacon(recSig []string, recIDs []string) string {
+
+	Logger.Info("Threshold number of bls sig shares are received ...")
+	bs.CalBlsGpSign(recSig, recIDs)
+	rboOutput := encryption.Hash(bs.GpSign.GetHexString())
+	return rboOutput
+}
+
+// CalBlsGpSign - The function calls the RecoverGroupSig function which calculates the Gp Sign
+func (bs *SimpleBLS) CalBlsGpSign(recSig []string, recIDs []string) {
+	//Move this to group_sig.go
+	signVec := make([]Sign, 0)
+	var signShare Sign
+
+	for i := 0; i < len(recSig); i++ {
+		err := signShare.SetHexString(recSig[i])
+
+		if err == nil {
+			signVec = append(signVec, signShare)
+		} else {
+			Logger.Error("signVec not computed correctly", zap.Error(err))
+		}
+	}
+
+	idVec := make([]PartyID, 0)
+	var forID PartyID
+	for i := 0; i < len(recIDs); i++ {
+		err := forID.SetDecString(recIDs[i])
+		if err == nil {
+			idVec = append(idVec, forID)
+		}
+	}
+	Logger.Info("Printing bls shares and respective party IDs who sent used for computing the Gp Sign")
+
+	for _, sig := range signVec {
+		Logger.Info(" Printing bls shares", zap.Any("sig_shares", sig.GetHexString()))
+
+	}
+	for _, fromParty := range idVec {
+		Logger.Info(" Printing party IDs", zap.Any("from_party", fromParty.GetHexString()))
+
+	}
+	bs.RecoverGroupSig(idVec, signVec)
 
 }
