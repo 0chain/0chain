@@ -40,7 +40,7 @@ func newDKGs(t, n int) DKGs {
 	return dkgs
 }
 
-/*TestMakeMultipleDKGs - Test to check creation of multiple DKGs works */
+/*TestMakeMultipleDKGs - Test to check creation of multiple BLS-DKGs works */
 func TestMakeMultipleDKGs(test *testing.T) {
 
 	variation := func(t, n int) {
@@ -141,32 +141,44 @@ func testVerifyGSKSS(t int, n int, test *testing.T) {
 /*TestVerifyGSKSS - Tests to verify the received GSKSS from a party*/
 func TestVerifyGSKSS(test *testing.T) { testVerifyGSKSS(2, 3, test) }
 
-/*computeGpPublicKeyShareShares - Derive the correpndg pubVec of the received GSKSS through polynomial substitution method with Vvec of sender and ID of receiver*/
+/*computeGpPublicKeyShareShares - Derive the correpndg pubKey of the received GSKSS through polynomial substitution method with Vvec of sender and ID of receiver*/
 func computeGpPublicKeyShareShares(recVvec []VerificationKey, fromID PartyID) (VerificationKey, error) {
 
-	var pubVec VerificationKey
-	err := pubVec.Set(recVvec, &fromID)
+	var pubKey VerificationKey
+	err := pubKey.Set(recVvec, &fromID)
 	if err != nil {
 		return VerificationKey{}, nil
 	}
-	return pubVec, nil
+	return pubKey, nil
 }
 
-/*aggDkg - Aggregate the DKG shares to form the GroupPrivateKeyShare */
+/*aggDkg - Aggregate the received GSKSS to form the GroupSecretKeyShare (GSKS) */
 func aggDkg(i int, dkgs DKGs, n int) {
+	recGSKSS := make([]Key, n)
 
 	for j := 0; j < n; j++ {
-		dkgs[i].receivedSecShares[j] = dkgs[j].secSharesMap[dkgs[i].ID]
+		recGSKSS[j] = dkgs[j].secSharesMap[dkgs[i].ID]
 	}
 
-	if len(dkgs[i].receivedSecShares) == n {
-		dkgs[i].AggregateShares()
+	if len(recGSKSS) == n {
+		computedGSKS := aggRecGSKSS(recGSKSS)
+		dkgs[i].SecKeyShareGroup = computedGSKS
 	}
 
+}
+
+/*aggRecGSKSS - Each party aggregates the received GSKSS */
+func aggRecGSKSS(recGSKSS []Key) Key {
+	var sec Key
+
+	for i := 0; i < len(recGSKSS); i++ {
+		sec.Add(&recGSKSS[i])
+	}
+	return sec
 }
 
 /*testDKGGpPublicKey - Tests for the grp public key*/
-/* In the test, DKG process is done and the committed verification vectors are added to compute the GroupsVvec
+/* In the test, BLS-DKG process is done and the committed verification vectors are added to compute the GroupsVvec
    GroupsVvec[0] is the groupPublicKey */
 
 func testDkgGpPublicKey(t int, n int, test *testing.T) {
@@ -194,6 +206,7 @@ func testDkgGpPublicKey(t int, n int, test *testing.T) {
 	}
 	groupsVvec := calcGroupsVvec(Vvecs, t, n)
 	assert.NotNil(test, groupsVvec)
+	assert.True(test, (len(groupsVvec) == t))
 
 	groupPublicKey := groupsVvec[0]
 	assert.NotNil(test, groupPublicKey)
@@ -252,6 +265,7 @@ func testRecoverGrpSignature(t int, n int, test *testing.T) {
 
 	groupsVvec := calcGroupsVvec(Vvecs, t, n)
 	assert.NotNil(test, groupsVvec)
+	assert.True(test, (len(groupsVvec) == t))
 
 	groupPublicKey := groupsVvec[0]
 	assert.NotNil(test, groupPublicKey)
@@ -381,6 +395,7 @@ func testVerifyGrpSignShares(t int, n int, test *testing.T) {
 	}
 	groupsVvec := calcGroupsVvec(Vvecs, t, n)
 	assert.NotNil(test, groupsVvec)
+	assert.True(test, (len(groupsVvec) == t))
 
 	groupPublicKey := groupsVvec[0]
 	assert.NotNil(test, groupPublicKey)
@@ -410,13 +425,13 @@ func TestVerifyGrpSignShares(test *testing.T) { testVerifyGrpSignShares(2, 3, te
 /* GSS is verified by calling polynomial substitution method with the Groups Vvec and the party ID which computed it*/
 func verifyGroupSignShare(grpSignShare Sign, fromID PartyID, groupsVvec []VerificationKey, msg Message) bool {
 
-	var pubVec VerificationKey
-	err := pubVec.Set(groupsVvec, &fromID)
+	var pubK VerificationKey
+	err := pubK.Set(groupsVvec, &fromID)
 	if err != nil {
 		return false
 	}
 
-	if !grpSignShare.Verify(&pubVec, msg) {
+	if !grpSignShare.Verify(&pubK, msg) {
 		return false
 	}
 	return true
@@ -463,6 +478,7 @@ func testVerifyWrongGrpSignShares(t int, n int, test *testing.T) {
 
 	groupsVvec := calcGroupsVvec(Vvecs, t, n)
 	assert.NotNil(test, groupsVvec)
+	assert.True(test, (len(groupsVvec) == t))
 
 	groupPublicKey := groupsVvec[0]
 	assert.NotNil(test, groupPublicKey)
@@ -565,26 +581,26 @@ func benchmarkRecoverSignature(k int, b *testing.B) {
 	msk := sec.GetMasterSecretKey(k)
 
 	n := k
-	idVec := make([]PartyID, n)
-	secVec := make([]Key, n)
-	signVec := make([]Sign, n)
+	ids := make([]PartyID, n)
+	secKy := make([]Key, n)
+	signs := make([]Sign, n)
 	for i := 0; i < n; i++ {
-		err := idVec[i].SetLittleEndian([]byte{1, 2, 3, 4, 5, byte(i)})
+		err = ids[i].SetDecString(strconv.Itoa(i + 1))
 		if err != nil {
 			b.Error(err)
 		}
-		err = secVec[i].Set(msk, &idVec[i])
+		err = secKy[i].Set(msk, &ids[i])
 		if err != nil {
 			b.Error(err)
 		}
-		signVec[i] = *secVec[i].Sign("test message")
+		signs[i] = *secKy[i].Sign("test message")
 	}
 
-	// recover signature
+	// recover from all k signatures
 	var sig Sign
 	b.StartTimer()
 	for n := 0; n < b.N; n++ {
-		err := sig.Recover(signVec, idVec)
+		err := sig.Recover(signs, ids)
 		if err != nil {
 			b.Error(err)
 		}
