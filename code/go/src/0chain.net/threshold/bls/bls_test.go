@@ -46,9 +46,13 @@ func TestMakeMultipleDKGs(test *testing.T) {
 	variation := func(t, n int) {
 		dkgs := newDKGs(t, n)
 		for i := 0; i < n; i++ {
+
+			assert.NotNil(test, dkgs[i].mSec)
 			if dkgs[i].mSec == nil {
 				test.Errorf("The master secret key not set")
 			}
+
+			assert.NotNil(test, dkgs[i].secSharesMap)
 			if dkgs[i].secSharesMap == nil {
 				test.Errorf("For PartyID %s The secShares not set %v", dkgs[i].ID.GetDecString(), dkgs[i].secSharesMap)
 			}
@@ -179,11 +183,11 @@ func testDkgGpPublicKey(t int, n int, test *testing.T) {
 		assert.NotNil(test, Vvec)
 
 		Vvecs[i] = make([]VerificationKey, t)
-		row := make([]VerificationKey, t)
+		eachVvec := make([]VerificationKey, t)
 		for j := range Vvecs[i] {
 
-			row[j] = Vvec[j]
-			Vvecs[i][j] = row[j]
+			eachVvec[j] = Vvec[j]
+			Vvecs[i][j] = eachVvec[j]
 
 		}
 
@@ -208,10 +212,10 @@ func calcGroupsVvec(Vvecs [][]VerificationKey, t int, n int) []VerificationKey {
 
 		for j := range Vvecs[i] {
 
-			pubK2 := Vvecs[i][j]
-			pubK1 := groupsVvec[j]
-			pubK1.Add(&pubK2)
-			groupsVvec[j] = pubK1
+			pub2 := Vvecs[i][j]
+			pub1 := groupsVvec[j]
+			pub1.Add(&pub2)
+			groupsVvec[j] = pub1
 		}
 	}
 	return groupsVvec
@@ -236,11 +240,11 @@ func testRecoverGrpSignature(t int, n int, test *testing.T) {
 		assert.NotNil(test, Vvec)
 
 		Vvecs[i] = make([]VerificationKey, t)
-		row := make([]VerificationKey, t)
+		eachVvec := make([]VerificationKey, t)
 		for j := range Vvecs[i] {
 
-			row[j] = Vvec[j]
-			Vvecs[i][j] = row[j]
+			eachVvec[j] = Vvec[j]
+			Vvecs[i][j] = eachVvec[j]
 
 		}
 
@@ -294,7 +298,6 @@ func testRecoverGrpSignature(t int, n int, test *testing.T) {
 			//verify the grp sign with the groupPublicKey
 			grpSignVerified := verifyGroupSign(bs.GpSign, groupPublicKey, msg)
 			assert.True(test, grpSignVerified)
-
 			fmt.Printf("round %v) Group Sign asserted to be true for all miners\n", rNumber)
 
 			rbOutput = encryption.Hash(gpSign)
@@ -367,11 +370,11 @@ func testVerifyGrpSignShares(t int, n int, test *testing.T) {
 		assert.NotNil(test, Vvec)
 
 		Vvecs[i] = make([]VerificationKey, t)
-		row := make([]VerificationKey, t)
+		eachVvec := make([]VerificationKey, t)
 		for j := range Vvecs[i] {
 
-			row[j] = Vvec[j]
-			Vvecs[i][j] = row[j]
+			eachVvec[j] = Vvec[j]
+			Vvecs[i][j] = eachVvec[j]
 
 		}
 
@@ -448,11 +451,11 @@ func testVerifyWrongGrpSignShares(t int, n int, test *testing.T) {
 		assert.NotNil(test, Vvec)
 
 		Vvecs[i] = make([]VerificationKey, t)
-		row := make([]VerificationKey, t)
+		eachVvec := make([]VerificationKey, t)
 		for j := range Vvecs[i] {
 
-			row[j] = Vvec[j]
-			Vvecs[i][j] = row[j]
+			eachVvec[j] = Vvec[j]
+			Vvecs[i][j] = eachVvec[j]
 
 		}
 
