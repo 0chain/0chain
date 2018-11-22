@@ -148,9 +148,10 @@ func main() {
 	initServer()
 	initHandlers()
 
-	round, err := sc.GetMostRecentRoundFromDB(ctx)
+	r, err := sc.GetMostRecentRoundFromDB(ctx)
+
 	if err == nil {
-		Logger.Info("**!most recent round info", zap.Int64("roundNumber", round.Number))
+		Logger.Info("**!most recent round info", zap.Int64("roundNumber", r.Number), zap.String("blockHash", r.BlockHash))
 	} else {
 		Logger.Error("**!error reading round data from db", zap.Error(err))
 	}

@@ -2,7 +2,6 @@ package sharder
 
 import (
 	"context"
-	"strconv"
 
 	"0chain.net/datastore"
 	"0chain.net/ememorystore"
@@ -35,13 +34,8 @@ func (sc *Chain) GetMostRecentRoundFromDB(ctx context.Context) (*round.Round, er
 	iterator := c.Conn.NewIterator(c.ReadOptions)
 	defer iterator.Close()
 	iterator.SeekToLast()
-	if !iterator.Valid() {
-		roundNum, err := strconv.ParseInt(string(iterator.Key().Data()), 10, 64)
-		if err == nil {
-			r.Number = roundNum
-			return r, nil
-		}
-		return r, err
+	if iterator.Valid() {
+		datastore.FromJSON(iterator.Value().Data(), r)
 	}
 	return r, iterator.Err()
 }
