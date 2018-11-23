@@ -1,7 +1,6 @@
 package miner
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"time"
@@ -10,7 +9,6 @@ import (
 
 	"0chain.net/chain"
 	"0chain.net/config"
-	"0chain.net/state"
 	"0chain.net/util"
 
 	"0chain.net/block"
@@ -196,29 +194,12 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	if err != nil {
 		return err
 	}
-
-	if state.DebugState {
-		if len(b.ClientState.GetChangeCollector().GetChanges()) > 0 {
-			changes := block.NewBlockStateChange(b)
-			stateRoot := changes.GetRoot()
-			if stateRoot == nil {
-				Logger.DPanic("generate block - state root is null", zap.Int64("round", b.Round), zap.String("block", b.Hash))
-			}
-			if bytes.Compare(stateRoot.GetHashBytes(), b.ClientStateHash) != 0 {
-				Logger.Error("generate block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("state", b.ClientStateHash), zap.Any("computed_state", stateRoot.GetHashBytes()))
-			}
-			err := changes.Validate(ctx)
-			if err != nil {
-				Logger.DPanic("generate block - state change validation", zap.Error(err))
-			}
-		}
-	}
-
 	b.SetBlockState(block.StateGenerated)
 	b.SetStateStatus(block.StateSuccessful)
 	Logger.Info("generate block (assemble+update+sign)", zap.Int64("round", b.Round), zap.Int32("block_size", blockSize), zap.Int32("reused_txns", reusedTxns), zap.Duration("time", time.Since(start)),
 		zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Int8("state_status", b.GetStateStatus()),
 		zap.Float64("p_chain_weight", b.PrevBlock.ChainWeight), zap.Int32("iteration_count", count))
+	mc.StateSanityCheck(ctx, b)
 	go b.ComputeTxnMap()
 	return nil
 }

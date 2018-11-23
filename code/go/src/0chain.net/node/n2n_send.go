@@ -147,22 +147,12 @@ func shouldPush(receiver *Node, uri string, entity datastore.Entity, timer metri
 	if timer.Count() < 50 {
 		return true
 	}
+	if pullSendTimer := receiver.GetTimer(serveMetricKey(uri)); pullSendTimer != nil && pullSendTimer.Count() < 50 {
+		return false
+	}
 	pushTime := timer.Mean()
-	pullSendTimer := receiver.GetTimer(serveMetricKey(uri))
-	pullSendTime := receiver.SmallMessageSendTime
-	if pullSendTimer != nil && pullSendTimer.Count() >= 50 {
-		pullSendTime = pullSendTimer.Mean()
-	}
-	pullRequestTimer := receiver.GetTimer(pullURL)
-	pullRequestTime := receiver.SmallMessageSendTime
-	if pullRequestTimer != nil && pullRequestTimer.Count() >= 50 {
-		pullRequestTime = pullRequestTimer.Mean()
-	}
-	pullTime := pullRequestTime
-	if pullTime < pullSendTime {
-		pullTime = pullSendTime
-	}
-	if pushTime > pullTime+2*receiver.SmallMessageSendTime {
+	push2pullTime := getPushToPullTime(receiver)
+	if pushTime > push2pullTime {
 		N2n.Debug("sending - push to pull", zap.Int("from", Self.SetIndex), zap.Int("to", receiver.SetIndex), zap.String("handler", uri), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.String("id", entity.GetKey()))
 		return false
 	}
@@ -218,11 +208,6 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			//req = req.WithContext(httptrace.WithClientTrace(req.Context(), n2nTrace))
 			resp, err := httpClient.Do(req)
 			receiver.Release()
-			if push {
-				timer.UpdateSince(ts)
-				sizer := receiver.GetSizeMetric(uri)
-				sizer.Update(int64(len(data)))
-			}
 			N2n.Info("sending", zap.Int("from", Self.SetIndex), zap.Int("to", receiver.SetIndex), zap.String("handler", uri), zap.Duration("duration", time.Since(ts)), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()))
 			if err != nil {
 				receiver.SendErrors++
@@ -230,6 +215,11 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 				return false
 			}
 			readAndClose(resp.Body)
+			if push {
+				timer.UpdateSince(ts)
+				sizer := receiver.GetSizeMetric(uri)
+				sizer.Update(int64(len(data)))
+			}
 			if !(resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusNoContent) {
 				N2n.Error("sending", zap.Int("from", Self.SetIndex), zap.Int("to", receiver.SetIndex), zap.String("handler", uri), zap.Duration("duration", time.Since(ts)), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Any("status_code", resp.StatusCode))
 				return false

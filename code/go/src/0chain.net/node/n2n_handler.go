@@ -253,7 +253,6 @@ func validateEntityMetadata(sender *Node, r *http.Request) bool {
 	return true
 }
 
-var pullURL = "/v1/n2n/entity_pull/get"
 var pushDataCache = cache.NewLRUCache(100)
 
 //PushDataCacheEntry - cached push data
@@ -261,4 +260,16 @@ type PushDataCacheEntry struct {
 	Options    SendOptions
 	Data       []byte
 	EntityName string
+}
+
+var pullURL = "/v1/n2n/entity_pull/get"
+
+func getPushToPullTime(n *Node) float64 {
+	var pullRequestTime float64
+	if pullRequestTimer := n.GetTimer(pullURL); pullRequestTimer != nil && pullRequestTimer.Count() >= 50 {
+		pullRequestTime = pullRequestTimer.Mean()
+	} else {
+		pullRequestTime = 2 * n.SmallMessageSendTime
+	}
+	return pullRequestTime + n.SmallMessageSendTime
 }

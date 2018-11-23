@@ -138,11 +138,14 @@ func (r *Round) addProposedBlock(b *block.Block) (*block.Block, bool) {
 		}
 	}
 	r.proposedBlocks = append(r.proposedBlocks, b)
+	sort.SliceStable(r.proposedBlocks, func(i, j int) bool { return r.proposedBlocks[i].RoundRank < r.proposedBlocks[j].RoundRank })
 	return b, true
 }
 
 /*GetProposedBlocks - return all the blocks that have been proposed for this round */
 func (r *Round) GetProposedBlocks() []*block.Block {
+	r.Mutex.Lock()
+	defer r.Mutex.Unlock()
 	return r.proposedBlocks
 }
 

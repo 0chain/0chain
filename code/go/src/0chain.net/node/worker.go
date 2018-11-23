@@ -1,14 +1,17 @@
 package node
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net/http"
+	"runtime/pprof"
 	"time"
 
 	"0chain.net/common"
 	"0chain.net/logging"
 	. "0chain.net/logging"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
@@ -113,6 +116,14 @@ func (n *Node) MemoryUsage() {
 		select {
 		case <-ticker.C:
 			common.LogRuntime(logging.MemUsage, zap.Any(n.Description, n.SetIndex))
+
+			// Average time duration to add go routine logs to 0chain.log file => 618.184µs
+			// Average increase in file size for each update => 10 kB
+			if viper.GetBool("logging.memlog") {
+				buf := new(bytes.Buffer)
+				pprof.Lookup("goroutine").WriteTo(buf, 1)
+				logging.Logger.Info("runtime", zap.String("Go routine output", buf.String()))
+			}
 		}
 	}
 }

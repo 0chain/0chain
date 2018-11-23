@@ -19,6 +19,7 @@ type MerklePatriciaTrieI interface {
 	SetNodeDB(ndb NodeDB)
 	GetNodeDB() NodeDB
 	SetVersion(version Sequence)
+	GetVersion() Sequence
 
 	GetRoot() Key
 	SetRoot(root Key)
@@ -41,6 +42,8 @@ type MerklePatriciaTrieI interface {
 
 	// only for testing and debugging
 	PrettyPrint(w io.Writer) error
+
+	Validate() error
 }
 
 //ContextKey - a type for context key

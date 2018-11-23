@@ -22,6 +22,8 @@ var ErrPreviousStateUnavailable = common.NewError("prev_state_unavailable", "Pre
 //StateMismatch - indicate if there is a mismatch between computed state and received state of a block
 const StateMismatch = "state_mismatch"
 
+var ErrStateMismatch = common.NewError(StateMismatch, "computed state hash doesn't match with the state hash of the block")
+
 /*ComputeState - compute the state for the block */
 func (c *Chain) ComputeState(ctx context.Context, b *block.Block) error {
 	lock := b.StateMutex
@@ -43,7 +45,7 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 		pb = b.PrevBlock
 		if pb == nil {
 			b.SetStateStatus(block.StateFailed)
-			if state.DebugState {
+			if state.DebugBlock() {
 				Logger.Error("compute state - previous block not available", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
 			} else {
 				if config.DevConfiguration.State {
@@ -58,7 +60,7 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 		err := c.ComputeState(ctx, pb)
 		if err != nil {
 			pb.SetStateStatus(block.StateFailed)
-			if state.DebugState {
+			if state.DebugBlock() {
 				Logger.Error("compute state - error computing previous state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Error(err))
 			} else {
 				if config.DevConfiguration.State {
@@ -83,9 +85,7 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 		if !c.UpdateState(b, txn) {
 			if config.DevConfiguration.State {
 				b.SetStateStatus(block.StateFailed)
-				if config.DevConfiguration.State {
-					Logger.Error("compute state - update state failed", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.String("prev_block", b.PrevHash), zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)))
-				}
+				Logger.Error("compute state - update state failed", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.String("prev_block", b.PrevHash), zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)))
 				return common.NewError("state_update_error", "error updating state")
 			}
 		}
@@ -95,11 +95,28 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 		if config.DevConfiguration.State {
 			Logger.Error("compute state - state hash mismatch", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("block_size", len(b.Txns)), zap.Int("changes", len(b.ClientState.GetChangeCollector().GetChanges())), zap.String("block_state_hash", util.ToHex(b.ClientStateHash)), zap.String("computed_state_hash", util.ToHex(b.ClientState.GetRoot())))
 		}
-		return common.NewError(StateMismatch, "computed state hash doesn't match with the state hash of the block")
+		return ErrStateMismatch
 	}
+	c.StateSanityCheck(ctx, b)
 	Logger.Info("compute state successful", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("block_size", len(b.Txns)), zap.Int("changes", len(b.ClientState.GetChangeCollector().GetChanges())), zap.String("block_state_hash", util.ToHex(b.ClientStateHash)), zap.String("computed_state_hash", util.ToHex(b.ClientState.GetRoot())))
 	b.SetStateStatus(block.StateSuccessful)
 	return nil
+}
+
+//StateSanityCheck - after generating a block or verification of a block, this can be called to run some state sanity checks
+func (c *Chain) StateSanityCheck(ctx context.Context, b *block.Block) {
+	if !state.DebugBlock() {
+		return
+	}
+	if err := c.ValidateState(ctx, b, b.PrevBlock.ClientState.GetRoot()); err != nil {
+		Logger.DPanic("generate block - state change validation", zap.Error(err))
+	}
+	if err := b.ClientState.Validate(); err != nil {
+		Logger.DPanic("generate block - state change validation", zap.Error(err))
+	}
+	if err := c.ValidateStateChangesRoot(b); err != nil {
+		Logger.DPanic("generate block - state changes root validation", zap.Error(err))
+	}
 }
 
 func (c *Chain) rebaseState(lfb *block.Block) {
@@ -124,48 +141,51 @@ func (c *Chain) rebaseState(lfb *block.Block) {
 func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 	c.stateMutex.Lock()
 	defer c.stateMutex.Unlock()
-	clientState := b.ClientState
+	clientState := createTxnMPT(b.ClientState)
+	startRoot := clientState.GetRoot()
 	fs, err := c.getState(clientState, txn.ClientID)
 	if !isValid(err) {
-		if b.Hash != "" || config.DevConfiguration.State {
-			prevState := ""
-			if b.PrevBlock != nil {
-				prevState = util.ToHex(b.PrevBlock.ClientState.GetRoot())
-			}
-			Logger.Debug("update state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.String("prev_client_state", prevState), zap.Any("txn", txn), zap.Error(err))
+		if config.DevConfiguration.State {
+			Logger.Error("update state - client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
 		}
-
-		if config.DevConfiguration.State && stateOut != nil {
+		if state.Debug() {
 			for _, txn := range b.Txns {
 				if txn == nil {
 					break
 				}
-				fmt.Fprintf(stateOut, "update state r=%v b=%v t=%v\n", b.Round, b.Hash, txn)
+				fmt.Fprintf(stateOut, "update state r=%v b=%v t=%+v\n", b.Round, b.Hash, txn)
 			}
-			clientState.PrettyPrint(os.Stdout)
-			Logger.DPanic(fmt.Sprintf("error getting state value: %v %v", txn.ClientID, err))
+			fmt.Fprintf(stateOut, "update state - error getting state value: %v %+v %v\n", txn.ClientID, txn, err)
+			printStates(clientState, b.ClientState)
+			Logger.DPanic(fmt.Sprintf("update state - error getting state value: %v %v", txn.ClientID, err))
 		}
 		return false
 	}
 	tbalance := state.Balance(txn.Value)
 	switch txn.TransactionType {
 	case transaction.TxnTypeData:
-		return true
 	case transaction.TxnTypeSend:
+		if tbalance == 0 {
+			return false
+		}
 		if fs.Balance < tbalance {
 			return false
 		}
 		ts, err := c.getState(clientState, txn.ToClientID)
 		if !isValid(err) {
 			if config.DevConfiguration.State {
-				Logger.Error("update state (to client)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
+				Logger.Error("update state - to_client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
+			}
+			if state.Debug() {
 				for _, txn := range b.Txns {
-					if txn != nil {
-						Logger.Info("update state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn))
+					if txn == nil {
+						break
 					}
+					fmt.Fprintf(stateOut, "update state r=%v b=%v t=%+v\n", b.Round, b.Hash, txn)
 				}
-				clientState.PrettyPrint(os.Stdout)
-				Logger.DPanic(fmt.Sprintf("error getting state value: %v %v", txn.ToClientID, err))
+				fmt.Fprintf(stateOut, "update state - error getting state value: %v %+v %v\n", txn.ToClientID, txn, err)
+				printStates(clientState, b.ClientState)
+				Logger.DPanic(fmt.Sprintf("update state - error getting state value: %v %v", txn.ToClientID, err))
 			}
 			return false
 		}
@@ -178,24 +198,84 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 			_, err = clientState.Insert(util.Path(txn.ClientID), fs)
 		}
 		if err != nil {
-			Logger.Error("update state - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
+			if config.DevConfiguration.State {
+				Logger.DPanic("update state - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
+			}
+			if state.Debug() {
+				Logger.Error("update state - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
+			}
 		}
 		ts.SetRound(b.Round)
 		ts.Balance += tbalance
 		_, err = clientState.Insert(util.Path(txn.ToClientID), ts)
 		if err != nil {
-			Logger.Error("update state - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
-		}
-		if state.DebugState {
-			os, err := c.getState(clientState, c.OwnerID)
-			if err != nil || os == nil || os.Balance == 0 {
-				Logger.DPanic("update state - owner account", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Any("os", os), zap.Error(err))
+			if config.DevConfiguration.State {
+				Logger.DPanic("update state - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
+			}
+			if state.Debug() {
+				Logger.Error("update state - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
 			}
 		}
-		return true
-	default:
-		return true // TODO: This should eventually return false by default for all unkown cases
 	}
+	err = mergeMPT(b.ClientState, clientState)
+	if err != nil {
+		Logger.DPanic("update state - merge mpt error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
+	}
+	if state.DebugTxn() {
+		if err := c.ValidateState(context.TODO(), b, startRoot); err != nil {
+			Logger.DPanic("update state - state validation failure", zap.Any("txn", txn), zap.Error(err))
+		}
+		os, err := c.getState(b.ClientState, c.OwnerID)
+		if err != nil || os == nil || os.Balance == 0 {
+			Logger.DPanic("update state - owner account", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Any("os", os), zap.Error(err))
+		}
+	}
+	return true
+}
+
+func createTxnMPT(mpt util.MerklePatriciaTrieI) util.MerklePatriciaTrieI {
+	tdb := util.NewLevelNodeDB(util.NewMemoryNodeDB(), mpt.GetNodeDB(), false)
+	tmpt := util.NewMerklePatriciaTrie(tdb, mpt.GetVersion())
+	tmpt.SetRoot(mpt.GetRoot())
+	return tmpt
+}
+
+func mergeMPT(mpt util.MerklePatriciaTrieI, mpt2 util.MerklePatriciaTrieI) error {
+	cc := mpt.GetChangeCollector()
+	changes := mpt2.GetChangeCollector().GetChanges()
+	db := mpt.GetNodeDB()
+	if state.DebugNode() {
+		Logger.Info("merge_mpt begin")
+	}
+	for _, c := range changes {
+		if state.DebugNode() {
+			oldHash := ""
+			if c.Old != nil {
+				oldHash = c.Old.GetHash()
+			}
+			Logger.Info("merge_mpt", zap.String("new_node", c.New.GetHash()), zap.String("old_node", oldHash))
+		}
+		cc.AddChange(c.Old, c.New)
+		err := db.PutNode(c.New.GetHashBytes(), c.New)
+		if err != nil {
+			return err
+		}
+	}
+	deletes := mpt2.GetChangeCollector().GetDeletes()
+	for _, d := range deletes {
+		if state.DebugNode() {
+			Logger.Info("merge_mpt", zap.String("del_node", d.GetHash()))
+		}
+		cc.DeleteChange(d)
+	}
+	if state.DebugNode() {
+		Logger.Info("merge_mpt end")
+	}
+	if state.DebugTxn() {
+		Logger.Debug("merge mpt", zap.String("mpt_root", util.ToHex(mpt.GetRoot())), zap.String("mpt2_root", util.ToHex(mpt2.GetRoot())), zap.Int("changes", len(changes)))
+	}
+	mpt.SetRoot(mpt2.GetRoot())
+	return nil
 }
 
 func (c *Chain) getState(clientState util.MerklePatriciaTrieI, clientID string) (*state.State, error) {
@@ -241,4 +321,81 @@ func SetupStateLogger(file string) {
 	}
 	stateOut = out
 	fmt.Fprintf(stateOut, "starting state log ...\n")
+}
+
+//ValidateState - validates the state of a block
+func (c *Chain) ValidateState(ctx context.Context, b *block.Block, priorRoot util.Key) error {
+	if len(b.ClientState.GetChangeCollector().GetChanges()) > 0 {
+		changes := block.NewBlockStateChange(b)
+		stateRoot := changes.GetRoot()
+		if stateRoot == nil {
+			if stateOut != nil {
+				b.ClientState.PrettyPrint(stateOut)
+			}
+			if state.DebugBlock() {
+				Logger.DPanic("validate state - state root is null", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("changes", len(changes.Nodes)))
+			} else {
+				Logger.Error("validate state - state root is null", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("changes", len(changes.Nodes)))
+			}
+		}
+		if bytes.Compare(stateRoot.GetHashBytes(), b.ClientState.GetRoot()) != 0 {
+			if stateOut != nil {
+				b.ClientState.GetChangeCollector().PrintChanges(stateOut)
+				b.ClientState.PrettyPrint(stateOut)
+			}
+			if state.DebugBlock() {
+				Logger.DPanic("validate state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("state", util.ToHex(b.ClientState.GetRoot())), zap.String("computed_state", stateRoot.GetHash()), zap.Int("changes", len(changes.Nodes)))
+			} else {
+				Logger.Error("validate state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("state", util.ToHex(b.ClientState.GetRoot())), zap.String("computed_state", stateRoot.GetHash()), zap.Int("changes", len(changes.Nodes)))
+			}
+		}
+		if priorRoot == nil {
+			priorRoot = b.PrevBlock.ClientState.GetRoot()
+		}
+		err := changes.Validate(ctx)
+		if err != nil {
+			pstate := util.CloneMPT(b.ClientState)
+			pstate.SetRoot(priorRoot)
+			printStates(b.ClientState, pstate)
+			return err
+		}
+		err = b.ClientState.Validate()
+		if err != nil {
+			pstate := util.CloneMPT(b.ClientState)
+			pstate.SetRoot(priorRoot)
+			printStates(b.ClientState, pstate)
+			/*
+				if state.Debug() && stateOut != nil {
+					fmt.Fprintf(stateOut, "previous block\n")
+					if bytes.Compare(b.PrevBlock.ClientState.GetRoot(), priorRoot) != 0 {
+						b.PrevBlock.ClientState.PrettyPrint(stateOut)
+					}
+				}*/
+			return err
+		}
+	}
+	return nil
+}
+
+//ValidateStateChangesRoot - validates that root computed from changes matches with the state root
+func (c *Chain) ValidateStateChangesRoot(b *block.Block) error {
+	bsc := block.NewBlockStateChange(b)
+	if b.ClientStateHash != nil && (bsc.GetRoot() == nil || bytes.Compare(bsc.GetRoot().GetHashBytes(), b.ClientStateHash) != 0) {
+		computedRoot := ""
+		if bsc.GetRoot() != nil {
+			computedRoot = bsc.GetRoot().GetHash()
+		}
+		Logger.Error("new block state change - root mismatch", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("state_root", util.ToHex(b.ClientStateHash)), zap.Any("computed_root", computedRoot))
+		return ErrStateMismatch
+	}
+	return nil
+}
+
+func printStates(cstate util.MerklePatriciaTrieI, pstate util.MerklePatriciaTrieI) {
+	if !state.Debug() || stateOut == nil {
+		return
+	}
+	cstate.PrettyPrint(stateOut)
+	fmt.Fprintf(stateOut, "previous state\n")
+	pstate.PrettyPrint(stateOut)
 }

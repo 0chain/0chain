@@ -99,7 +99,7 @@ func main() {
 		Logger.Panic("node definition for self node doesn't exist")
 	}
 
-	if state.DebugState {
+	if state.Debug() {
 		chain.SetupStateLogger("/tmp/state.txt")
 	}
 
@@ -185,11 +185,7 @@ func initEntities() {
 }
 
 func initHandlers() {
-	if config.Development() {
-		http.HandleFunc("/_hash", encryption.HashHandler)
-		http.HandleFunc("/_sign", common.ToJSONResponse(encryption.SignHandler))
-		SetupHandlers()
-	}
+	SetupHandlers()
 	config.SetupHandlers()
 	node.SetupHandlers()
 	chain.SetupHandlers()

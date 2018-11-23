@@ -128,7 +128,7 @@ func HomePageHandler(w http.ResponseWriter, r *http.Request) {
 func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	sc := GetServerChain()
 	w.Header().Set("Content-Type", "text/html;charset=UTF-8")
-	printCSS(w)
+	PrintCSS(w)
 
 	fmt.Fprintf(w, "<div>Running since %v (%v) ...\n", StartTime.Format(common.DateTimeFormat), time.Since(StartTime))
 	fmt.Fprintf(w, "<div>Working on the chain: %v</div>\n", sc.GetKey())
@@ -253,7 +253,7 @@ func InfoHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 
 /*InfoWriter - a handler to get the information of the chain */
 func InfoWriter(w http.ResponseWriter, r *http.Request) {
-	printCSS(w)
+	PrintCSS(w)
 	showTs := r.FormValue("ts") != ""
 	fmt.Fprintf(w, "<style>\n")
 	fmt.Fprintf(w, "tr:nth-child(10n + 3) { background-color: #abb2b9; }\n")
@@ -317,7 +317,7 @@ func InfoWriter(w http.ResponseWriter, r *http.Request) {
 
 //N2NStatsWriter - writes the n2n stats of all the nodes
 func (c *Chain) N2NStatsWriter(w http.ResponseWriter, r *http.Request) {
-	printCSS(w)
+	PrintCSS(w)
 	self := node.Self.Node
 	fmt.Fprintf(w, "<div>%v - %v</div>", self.GetPseudoName(), self.Description)
 	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
@@ -384,7 +384,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 
 /*MinerStatsHandler - handler for the miner stats */
 func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
-	printCSS(w)
+	PrintCSS(w)
 	self := node.Self.Node
 	fmt.Fprintf(w, "<div>%v - %v</div>", self.GetPseudoName(), self.Description)
 	fmt.Fprintf(w, "<table>")
@@ -480,11 +480,12 @@ func (c *Chain) notarizedBlockCountsStats(w http.ResponseWriter) {
 	fmt.Fprintf(w, "</table>")
 }
 
-func printCSS(w http.ResponseWriter) {
+//PrintCSS - print the common css elements
+func PrintCSS(w http.ResponseWriter) {
 	fmt.Fprintf(w, "<style>\n")
 	fmt.Fprintf(w, ".number { text-align: right; }\n")
 	fmt.Fprintf(w, ".menu li { list-style-type: none; }\n")
-	fmt.Fprintf(w, "table, td, th { border: 1px solid black;  border-collapse: collapse; }\n")
+	fmt.Fprintf(w, "table, td, th { border: 1px solid black;  border-collapse: collapse;}\n")
 	fmt.Fprintf(w, "tr.header { background-color: #E0E0E0;  }\n")
 	fmt.Fprintf(w, ".inactive { background-color: #F44336; }\n")
 	fmt.Fprintf(w, ".warning { background-color: #FFEB3B; }\n")
