@@ -38,6 +38,7 @@ func StartDKG(ctx context.Context) {
 	thresholdByCount := viper.GetInt("server_chain.block.consensus.threshold_by_count")
 	k := int(math.Ceil((float64(thresholdByCount) / 100) * float64(mc.Miners.Size())))
 
+	Logger.Info("The threshold", zap.Int("K", k))
 	n := mc.Miners.Size()
 	minerShares = make(map[string]bls.Key, len(m2m.Nodes))
 	Logger.Info("Starting DKG...")
@@ -226,7 +227,7 @@ func GetBlsShare(ctx context.Context, r, pr *round.Round) string {
 
 //AddVRFShare - implement the interface for the RoundRandomBeacon protocol
 func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShare) bool {
-	Logger.Info("DKG AddVRFShare")
+	Logger.Info("DKG AddVRFShare", zap.Int64("Round", mr.GetRoundNumber()), zap.Int("Sender", vrfs.GetParty().SetIndex))
 	if mr.AddVRFShare(vrfs) {
 		mc.ThresholdNumBLSSigReceived(ctx, mr)
 		return true
@@ -237,9 +238,9 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 /*ThresholdNumBLSSigReceived do we've sufficient BLSshares? */
 func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round) {
 
-	Logger.Debug("DKG ThresholdNumSigReceived")
 	if mr.IsVRFComplete() {
-		Logger.Error("DKG ThresholdNumSigReceived VRF is already completed.")
+		//BLS has completed already for this round, But, received a BLS message from a node now
+		Logger.Debug("DKG ThresholdNumSigReceived VRF is already completed.", zap.Int64("round", mr.GetRoundNumber()))
 		return
 	}
 

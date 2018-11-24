@@ -57,7 +57,7 @@ func (bs *SimpleBLS) RecoverGroupSig(from []PartyID, shares []Sign) Sign {
 		return sig
 	}
 
-	Logger.Debug("Recover Gp Sig not done, check party.go")
+	Logger.Error("Recover Gp Sig not done", zap.Error(err))
 
 	return sig
 
@@ -66,7 +66,7 @@ func (bs *SimpleBLS) RecoverGroupSig(from []PartyID, shares []Sign) Sign {
 // CalcRandomBeacon - Calculates the random beacon output
 func (bs *SimpleBLS) CalcRandomBeacon(recSig []string, recIDs []string) string {
 
-	Logger.Info("Threshold number of bls sig shares are received ...")
+	Logger.Debug("Threshold number of bls sig shares are received ...")
 	bs.CalBlsGpSign(recSig, recIDs)
 	rboOutput := encryption.Hash(bs.GpSign.GetHexString())
 	return rboOutput
@@ -96,16 +96,18 @@ func (bs *SimpleBLS) CalBlsGpSign(recSig []string, recIDs []string) {
 			idVec = append(idVec, forID)
 		}
 	}
-	Logger.Info("Printing bls shares and respective party IDs who sent used for computing the Gp Sign")
+	/*
+		Logger.Debug("Printing bls shares and respective party IDs who sent used for computing the Gp Sign")
 
-	for _, sig := range signVec {
-		Logger.Info(" Printing bls shares", zap.Any("sig_shares", sig.GetHexString()))
+		for _, sig := range signVec {
+			Logger.Debug(" Printing bls shares", zap.Any("sig_shares", sig.GetHexString()))
 
-	}
-	for _, fromParty := range idVec {
-		Logger.Info(" Printing party IDs", zap.Any("from_party", fromParty.GetHexString()))
+		}
+		for _, fromParty := range idVec {
+			Logger.Debug(" Printing party IDs", zap.Any("from_party", fromParty.GetHexString()))
 
-	}
+		}
+	*/
 	bs.RecoverGroupSig(idVec, signVec)
 
 }
