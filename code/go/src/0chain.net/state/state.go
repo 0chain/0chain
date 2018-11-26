@@ -43,6 +43,14 @@ func DebugNode() bool {
 	return debugState >= DebugLevelNode
 }
 
+//SetDebugLevel - set the state debug level
+func SetDebugLevel(level int) {
+	debugState = level
+	if DebugNode() {
+		util.DebugMPTNode = true
+	}
+}
+
 //Balance - any quantity that is represented as an integer in the lowest denomination
 type Balance int64
 

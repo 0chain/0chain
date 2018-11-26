@@ -10,6 +10,8 @@ import (
 	"go.uber.org/zap"
 )
 
+var DebugMPTNode = false
+
 /*MerklePatriciaTrie - it's a merkle tree and a patricia trie */
 type MerklePatriciaTrie struct {
 	Root            Key
@@ -476,7 +478,7 @@ func (mpt *MerklePatriciaTrie) deleteAtNode(node Node, path Path) (Node, Key, er
 						lnode.SetOrigin(mpt.Version)
 						lnode.Path = npath
 						nnode = lnode
-						mpt.ChangeCollector.DeleteChange(ochild)
+						mpt.deleteNode(ochild)
 					case *ExtensionNode:
 						if onodeImpl.Path != nil {
 							npath = append(npath, onodeImpl.Path...)
@@ -484,7 +486,7 @@ func (mpt *MerklePatriciaTrie) deleteAtNode(node Node, path Path) (Node, Key, er
 						enode := ochild.Clone().(*ExtensionNode)
 						enode.Path = npath
 						nnode = enode
-						mpt.ChangeCollector.DeleteChange(ochild)
+						mpt.deleteNode(ochild)
 					default:
 						panic(fmt.Sprintf("uknown node type: %T %v", ochild, ochild))
 					}
@@ -515,13 +517,13 @@ func (mpt *MerklePatriciaTrie) deleteAtNode(node Node, path Path) (Node, Key, er
 			nnode.SetOrigin(mpt.Version)
 			nnode.Path = append(nodeImpl.Path, cnodeImpl.Path...)
 			nnode.SetValue(cnodeImpl.GetValue())
-			mpt.ChangeCollector.DeleteChange(cnode)
+			mpt.deleteNode(cnode)
 			return mpt.insertNode(node, nnode)
 		case *ExtensionNode: // if extension child changes from full node to extension node, merge the extensions
 			nnode := nodeImpl.Clone().(*ExtensionNode)
 			nnode.Path = append(nnode.Path, cnodeImpl.Path...)
 			nnode.NodeKey = cnodeImpl.NodeKey
-			mpt.ChangeCollector.DeleteChange(cnode)
+			mpt.deleteNode(cnode)
 			return mpt.insertNode(node, nnode)
 		}
 		nnode := nodeImpl.Clone().(*ExtensionNode)
@@ -585,7 +587,7 @@ func (mpt *MerklePatriciaTrie) deleteAfterPathTraversal(node Node) (Node, Key, e
 		if nodeImpl.HasValue() {
 			mpt.ChangeCollector.DeleteChange(nodeImpl.Value)
 		}
-		mpt.ChangeCollector.DeleteChange(node)
+		mpt.deleteNode(node)
 		return nil, nil, nil
 	case *ExtensionNode:
 		panic("this should not happen!")
@@ -648,6 +650,13 @@ func (mpt *MerklePatriciaTrie) iterate(ctx context.Context, path Path, key Key, 
 }
 
 func (mpt *MerklePatriciaTrie) insertNode(oldNode Node, newNode Node) (Node, Key, error) {
+	if DebugMPTNode && Logger != nil {
+		ohash := ""
+		if oldNode != nil {
+			ohash = oldNode.GetHash()
+		}
+		Logger.Info("insert node", zap.String("nn", newNode.GetHash()), zap.String("on", ohash))
+	}
 	ckey := newNode.GetHashBytes()
 	err := mpt.DB.PutNode(ckey, newNode)
 	if err != nil {
@@ -656,8 +665,19 @@ func (mpt *MerklePatriciaTrie) insertNode(oldNode Node, newNode Node) (Node, Key
 	//If same node is inserted by client, don't add them into change collector
 	if oldNode == nil || bytes.Compare(oldNode.GetHashBytes(), ckey) != 0 {
 		mpt.ChangeCollector.AddChange(oldNode, newNode)
+	} else {
+		//NOTE: since leveldb is initiaized with propagate deletes as false, only newly created nodes will get deleted
+		mpt.DB.DeleteNode(oldNode.GetHashBytes())
 	}
 	return newNode, ckey, nil
+}
+
+func (mpt *MerklePatriciaTrie) deleteNode(node Node) error {
+	if DebugMPTNode && Logger != nil {
+		Logger.Info("delete node", zap.String("dn", node.GetHash()))
+	}
+	mpt.ChangeCollector.DeleteChange(node)
+	return mpt.DB.DeleteNode(node.GetHashBytes())
 }
 
 func (mpt *MerklePatriciaTrie) matchingPrefix(p1 Path, p2 Path) Path {
@@ -802,5 +822,25 @@ func (mpt *MerklePatriciaTrie) Validate() error {
 			return fmt.Errorf(ErrIntermediateNodeExists.Error(), c.Old, c.Old.GetHash())
 		}
 	}
+	return nil
+}
+
+//MergeMPT - implement interface
+func (mpt *MerklePatriciaTrie) MergeMPT(mpt2 MerklePatriciaTrieI) error {
+	changes := mpt2.GetChangeCollector().GetChanges()
+	for _, c := range changes {
+		_, _, err := mpt.insertNode(c.Old, c.New)
+		if err != nil {
+			return err
+		}
+	}
+	deletes := mpt2.GetChangeCollector().GetDeletes()
+	for _, d := range deletes {
+		err := mpt.deleteNode(d)
+		if err != nil {
+			return err
+		}
+	}
+	mpt.SetRoot(mpt2.GetRoot())
 	return nil
 }

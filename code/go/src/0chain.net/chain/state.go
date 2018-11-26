@@ -225,41 +225,10 @@ func createTxnMPT(mpt util.MerklePatriciaTrieI) util.MerklePatriciaTrieI {
 }
 
 func mergeMPT(mpt util.MerklePatriciaTrieI, mpt2 util.MerklePatriciaTrieI) error {
-	cc := mpt.GetChangeCollector()
-	changes := mpt2.GetChangeCollector().GetChanges()
-	db := mpt.GetNodeDB()
-	if state.DebugNode() {
-		Logger.Info("merge_mpt begin")
-	}
-	for _, c := range changes {
-		if state.DebugNode() {
-			oldHash := ""
-			if c.Old != nil {
-				oldHash = c.Old.GetHash()
-			}
-			Logger.Info("merge_mpt", zap.String("new_node", c.New.GetHash()), zap.String("old_node", oldHash))
-		}
-		cc.AddChange(c.Old, c.New)
-		err := db.PutNode(c.New.GetHashBytes(), c.New)
-		if err != nil {
-			return err
-		}
-	}
-	deletes := mpt2.GetChangeCollector().GetDeletes()
-	for _, d := range deletes {
-		if state.DebugNode() {
-			Logger.Info("merge_mpt", zap.String("del_node", d.GetHash()))
-		}
-		cc.DeleteChange(d)
-	}
-	if state.DebugNode() {
-		Logger.Info("merge_mpt end")
-	}
 	if state.DebugTxn() {
-		Logger.Debug("merge mpt", zap.String("mpt_root", util.ToHex(mpt.GetRoot())), zap.String("mpt2_root", util.ToHex(mpt2.GetRoot())), zap.Int("changes", len(changes)))
+		Logger.Debug("merge mpt", zap.String("mpt_root", util.ToHex(mpt.GetRoot())), zap.String("mpt2_root", util.ToHex(mpt2.GetRoot())))
 	}
-	mpt.SetRoot(mpt2.GetRoot())
-	return nil
+	return mpt.MergeMPT(mpt2)
 }
 
 func (c *Chain) getState(clientState util.MerklePatriciaTrieI, clientID string) (*state.State, error) {
@@ -313,13 +282,10 @@ func (c *Chain) StateSanityCheck(ctx context.Context, b *block.Block) {
 		return
 	}
 	if err := c.ValidateState(ctx, b, b.PrevBlock.ClientState.GetRoot()); err != nil {
-		Logger.DPanic("generate block - state change validation", zap.Error(err))
-	}
-	if err := b.ClientState.Validate(); err != nil {
-		Logger.DPanic("generate block - state change validation", zap.Error(err))
+		Logger.DPanic("state sanity check - state change validation", zap.Error(err))
 	}
 	if err := c.ValidateStateChangesRoot(b); err != nil {
-		Logger.DPanic("generate block - state changes root validation", zap.Error(err))
+		Logger.DPanic("state sanity check - state changes root validation", zap.Error(err))
 	}
 }
 
@@ -354,7 +320,7 @@ func (c *Chain) ValidateState(ctx context.Context, b *block.Block, priorRoot uti
 		}
 		err := changes.Validate(ctx)
 		if err != nil {
-			Logger.Error("validate satte - changes validate failure", zap.Error(err))
+			Logger.Error("validate state - changes validate failure", zap.Error(err))
 			pstate := util.CloneMPT(b.ClientState)
 			pstate.SetRoot(priorRoot)
 			printStates(b.ClientState, pstate)
@@ -362,7 +328,7 @@ func (c *Chain) ValidateState(ctx context.Context, b *block.Block, priorRoot uti
 		}
 		err = b.ClientState.Validate()
 		if err != nil {
-			Logger.Error("validate satte - client state validate failure", zap.Error(err))
+			Logger.Error("validate state - client state validate failure", zap.Error(err))
 			pstate := util.CloneMPT(b.ClientState)
 			pstate.SetRoot(priorRoot)
 			printStates(b.ClientState, pstate)
@@ -376,6 +342,10 @@ func (c *Chain) ValidateState(ctx context.Context, b *block.Block, priorRoot uti
 			return err
 		}
 	}
+	/*
+		if b.Round > 15 {
+			state.SetDebugLevel(state.DebugLevelNode)
+		}*/
 	return nil
 }
 

@@ -44,6 +44,8 @@ type MerklePatriciaTrieI interface {
 	PrettyPrint(w io.Writer) error
 
 	Validate() error
+
+	MergeMPT(mpt2 MerklePatriciaTrieI) error
 }
 
 //ContextKey - a type for context key
