@@ -58,10 +58,15 @@ func ChainStatsHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<h2>Block Verification Statistics</h2>")
 	diagnostics.WriteTimerStatistics(w, c, bvTimer, 1000000.0)
 	fmt.Fprintf(w, "</td></tr>")
+
 	fmt.Fprintf(w, "<tr><td>")
 	fmt.Fprintf(w, "<h2>State Save Statistics</h2>")
 	diagnostics.WriteTimerStatistics(w, c, chain.StateSaveTimer, 1000000.0)
-	fmt.Fprintf(w, "</td><td></td></tr>")
+	fmt.Fprintf(w, "</td><td valign='top'>")
+	fmt.Fprintf(w, "<h2>State Change Statistics</h2>")
+	diagnostics.WriteHistogramStatistics(w, c, chain.StateChangeSizeMetric)
+	fmt.Fprintf(w, "</td></tr>")
+
 	fmt.Fprintf(w, "<tr><td>")
 	fmt.Fprintf(w, "<h2>State Prune Update Statistics</h2>")
 	diagnostics.WriteTimerStatistics(w, c, chain.StatePruneUpdateTimer, 1000000.0)

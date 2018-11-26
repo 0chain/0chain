@@ -40,12 +40,16 @@ var StateSaveTimer metrics.Timer
 //FinalizationLagMetric - a metric that tracks how much is the lag between current round and finalization round
 var FinalizationLagMetric metrics.Histogram
 
+//StateChangeSizeMetric - a metri  that tracks how many state nodes are changing with each block
+var StateChangeSizeMetric metrics.Histogram
+
 func init() {
 	SteadyStateFinalizationTimer = metrics.GetOrRegisterTimer("ss_finalization_time", nil)
 	StartToFinalizeTimer = metrics.GetOrRegisterTimer("s2f_time", nil)
 	StartToFinalizeTxnTimer = metrics.GetOrRegisterTimer("s2ft_time", nil)
 	StateSaveTimer = metrics.GetOrRegisterTimer("state_save_timer", nil)
 	FinalizationLagMetric = metrics.NewHistogram(metrics.NewUniformSample(1024))
+	StateChangeSizeMetric = metrics.NewHistogram(metrics.NewUniformSample(1024))
 	metrics.Register("finalization_lag", FinalizationLagMetric)
 }
 
