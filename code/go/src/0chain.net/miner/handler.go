@@ -27,6 +27,8 @@ func ChainStatsHandler(w http.ResponseWriter, r *http.Request) {
 
 	diagnostics.WriteConfiguration(w, c)
 	fmt.Fprintf(w, "<br>")
+	diagnostics.WriteCurrentStatus(w, c)
+	fmt.Fprintf(w, "<br>")
 	fmt.Fprintf(w, "<table>")
 	fmt.Fprintf(w, "<tr><td>")
 	fmt.Fprintf(w, "<h2>Block Finalization Statistics (Steady state)</h2>")

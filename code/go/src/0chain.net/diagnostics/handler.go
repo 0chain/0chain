@@ -60,14 +60,15 @@ func WriteStatisticsCSS(w http.ResponseWriter) {
 /*WriteConfiguration - write summary information */
 func WriteConfiguration(w http.ResponseWriter, c *chain.Chain) {
 	fmt.Fprintf(w, "<table>")
-	fmt.Fprintf(w, "<tr><td class='sheader' colspan='2'>Configuration</td></tr>")
-	fmt.Fprintf(w, "<tr><td>Block Size</td><td>%v</td></tr>", c.BlockSize)
+	fmt.Fprintf(w, "<tr><td>Round Generators/Sharders</td><td>%d/%d</td></tr>", c.NumGenerators, c.NumGenerators)
+	fmt.Fprintf(w, "<tr><td class='sheader' colspan='2'>Configuration <a href='v1/config/get'>...</a></td></tr>")
+	fmt.Fprintf(w, "<tr><td>Block Size</td><td>%v - %v</td></tr>", c.MinBlockSize, c.BlockSize)
 	fmt.Fprintf(w, "<tr><td>Network Latency (Delta)</td><td>%v</td></tr>", chain.DELTA)
 	proposalMode := "dynamic"
 	if c.BlockProposalWaitMode == chain.BlockProposalWaitStatic {
 		proposalMode = "static"
 	}
-	fmt.Fprintf(w, "<tr><td>Block Proposal</td><td>%v (%v)</td>", c.BlockProposalMaxWaitTime, proposalMode)
+	fmt.Fprintf(w, "<tr><td>Block Proposal Wait Time</td><td>%v (%v)</td>", c.BlockProposalMaxWaitTime, proposalMode)
 
 	fmt.Fprintf(w, "<tr><td>Validation Batch Size</td><td>%d</td>", c.ValidationBatchSize)
 	fmt.Fprintf(w, "</table>")
@@ -82,10 +83,6 @@ func WriteTimerStatistics(w http.ResponseWriter, c *chain.Chain, timer metrics.T
 	pvals := timer.Percentiles(percentiles)
 	fmt.Fprintf(w, "<table width='100%%'>")
 	fmt.Fprintf(w, "<tr><td class='sheader' colspan=2'>Metrics</td></tr>")
-	fmt.Fprintf(w, "<tr><td>Current Round</td><td>%v</td></tr>", c.CurrentRound)
-	if c.LatestFinalizedBlock != nil {
-		fmt.Fprintf(w, "<tr><td>Latest Finalized Round</td><td>%v</td></tr>", c.LatestFinalizedBlock.Round)
-	}
 	fmt.Fprintf(w, "<tr><td>Count</td><td>%v</td></tr>", timer.Count())
 	fmt.Fprintf(w, "<tr><td class='sheader' colspan='2'>Time taken</td></tr>")
 	fmt.Fprintf(w, "<tr><td>Min</td><td>%.2f ms</td></tr>", scale(float64(timer.Min())))
@@ -108,10 +105,6 @@ func WriteHistogramStatistics(w http.ResponseWriter, c *chain.Chain, metric metr
 	pvals := metric.Percentiles(percentiles)
 	fmt.Fprintf(w, "<table width='100%%'>")
 	fmt.Fprintf(w, "<tr><td class='sheader' colspan=2'>Metrics</td></tr>")
-	fmt.Fprintf(w, "<tr><td>Current Round</td><td>%v</td></tr>", c.CurrentRound)
-	if c.LatestFinalizedBlock != nil {
-		fmt.Fprintf(w, "<tr><td>Latest Finalized Round</td><td>%v</td></tr>", c.LatestFinalizedBlock.Round)
-	}
 	fmt.Fprintf(w, "<tr><td>Count</td><td>%v</td></tr>", metric.Count())
 	fmt.Fprintf(w, "<tr><td class='sheader' colspan='2'>Metric Value</td></tr>")
 	fmt.Fprintf(w, "<tr><td>Min</td><td>%.2f</td></tr>", float64(metric.Min()))
@@ -119,6 +112,17 @@ func WriteHistogramStatistics(w http.ResponseWriter, c *chain.Chain, metric metr
 	fmt.Fprintf(w, "<tr><td>Max</td><td>%.2f</td></tr>", float64(metric.Max()))
 	for idx, p := range percentiles {
 		fmt.Fprintf(w, "<tr><td>%.2f%%</td><td>%.2f</td></tr>", 100*p, pvals[idx])
+	}
+	fmt.Fprintf(w, "</table>")
+}
+
+/*WriteCurrentStatus - write the current status of the chain */
+func WriteCurrentStatus(w http.ResponseWriter, c *chain.Chain) {
+	fmt.Fprintf(w, "<table>")
+	fmt.Fprintf(w, "<tr><th class='sheader' colspan='2'>Current Status</th></tr>")
+	fmt.Fprintf(w, "<tr><td>Current Round</td><td>%v</td></tr>", c.CurrentRound)
+	if c.LatestFinalizedBlock != nil {
+		fmt.Fprintf(w, "<tr><td>Latest Finalized Round</td><td>%v</td></tr>", c.LatestFinalizedBlock.Round)
 	}
 	fmt.Fprintf(w, "</table>")
 }

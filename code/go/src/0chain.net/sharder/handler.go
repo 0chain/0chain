@@ -96,6 +96,8 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 
 	diagnostics.WriteConfiguration(w, c)
 	fmt.Fprintf(w, "<br>")
+	diagnostics.WriteCurrentStatus(w, c)
+	fmt.Fprintf(w, "<br>")
 	fmt.Fprintf(w, "<table><tr><td colspan='2'><h2>Summary</h2></td></tr>")
 	fmt.Fprintf(w, "<tr><td>Sharded Blocks</td><td class='number'>%v</td>", sc.SharderStats.ShardedBlocksCount)
 	fmt.Fprintf(w, "</table>")
