@@ -103,22 +103,6 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 	return nil
 }
 
-//StateSanityCheck - after generating a block or verification of a block, this can be called to run some state sanity checks
-func (c *Chain) StateSanityCheck(ctx context.Context, b *block.Block) {
-	if !state.DebugBlock() {
-		return
-	}
-	if err := c.ValidateState(ctx, b, b.PrevBlock.ClientState.GetRoot()); err != nil {
-		Logger.DPanic("generate block - state change validation", zap.Error(err))
-	}
-	if err := b.ClientState.Validate(); err != nil {
-		Logger.DPanic("generate block - state change validation", zap.Error(err))
-	}
-	if err := c.ValidateStateChangesRoot(b); err != nil {
-		Logger.DPanic("generate block - state changes root validation", zap.Error(err))
-	}
-}
-
 func (c *Chain) rebaseState(lfb *block.Block) {
 	c.stateMutex.Lock()
 	defer c.stateMutex.Unlock()
@@ -323,6 +307,22 @@ func SetupStateLogger(file string) {
 	fmt.Fprintf(stateOut, "starting state log ...\n")
 }
 
+//StateSanityCheck - after generating a block or verification of a block, this can be called to run some state sanity checks
+func (c *Chain) StateSanityCheck(ctx context.Context, b *block.Block) {
+	if !state.DebugBlock() {
+		return
+	}
+	if err := c.ValidateState(ctx, b, b.PrevBlock.ClientState.GetRoot()); err != nil {
+		Logger.DPanic("generate block - state change validation", zap.Error(err))
+	}
+	if err := b.ClientState.Validate(); err != nil {
+		Logger.DPanic("generate block - state change validation", zap.Error(err))
+	}
+	if err := c.ValidateStateChangesRoot(b); err != nil {
+		Logger.DPanic("generate block - state changes root validation", zap.Error(err))
+	}
+}
+
 //ValidateState - validates the state of a block
 func (c *Chain) ValidateState(ctx context.Context, b *block.Block, priorRoot util.Key) error {
 	if len(b.ClientState.GetChangeCollector().GetChanges()) > 0 {
@@ -354,6 +354,7 @@ func (c *Chain) ValidateState(ctx context.Context, b *block.Block, priorRoot uti
 		}
 		err := changes.Validate(ctx)
 		if err != nil {
+			Logger.Error("validate satte - changes validate failure", zap.Error(err))
 			pstate := util.CloneMPT(b.ClientState)
 			pstate.SetRoot(priorRoot)
 			printStates(b.ClientState, pstate)
@@ -361,6 +362,7 @@ func (c *Chain) ValidateState(ctx context.Context, b *block.Block, priorRoot uti
 		}
 		err = b.ClientState.Validate()
 		if err != nil {
+			Logger.Error("validate satte - client state validate failure", zap.Error(err))
 			pstate := util.CloneMPT(b.ClientState)
 			pstate.SetRoot(priorRoot)
 			printStates(b.ClientState, pstate)
