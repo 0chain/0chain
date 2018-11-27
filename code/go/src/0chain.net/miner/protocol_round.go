@@ -20,8 +20,6 @@ import (
 	"go.uber.org/zap"
 )
 
-var nilTime = time.Time{}
-
 //SetNetworkRelayTime - set the network relay time
 func SetNetworkRelayTime(delta time.Duration) {
 	chain.SetNetworkRelayTime(delta)
@@ -157,7 +155,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 					for true {
 						delay := mc.GetRetryWaitTime()
 						time.Sleep(time.Duration(delay) * time.Millisecond)
-						if startLogging == nilTime || time.Now().Sub(startLogging) > time.Second {
+						if startLogging.IsZero() || time.Now().Sub(startLogging) > time.Second {
 							startLogging = time.Now()
 							Logger.Debug("generate block", zap.Any("round", roundNumber), zap.Any("delay", delay), zap.Any("txn_count", txnCount), zap.Any("t.txn_count", transaction.TransactionCount))
 						}
