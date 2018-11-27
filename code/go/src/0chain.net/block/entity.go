@@ -285,7 +285,7 @@ func (b *Block) getHashData() string {
 	merkleRoot := mt.GetRoot()
 	rmt := b.GetReceiptsMerkleTree()
 	rMerkleRoot := rmt.GetRoot()
-	hashData := b.PrevHash + ":" + b.MinerID + ":" + common.TimeToString(b.CreationDate) + ":" + strconv.FormatInt(b.Round, 10) + ":" + strconv.FormatInt(b.RoundRandomSeed, 10) + ":" + merkleRoot + ":" + rMerkleRoot
+	hashData := b.MinerID + ":" + b.PrevHash + ":" + common.TimeToString(b.CreationDate) + ":" + strconv.FormatInt(b.Round, 10) + ":" + strconv.FormatInt(b.RoundRandomSeed, 10) + ":" + merkleRoot + ":" + rMerkleRoot
 	return hashData
 }
 
