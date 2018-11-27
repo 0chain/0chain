@@ -114,6 +114,8 @@ type Chain struct {
 	retry_wait_mutex *sync.Mutex
 
 	blockFetcher *BlockFetcher
+
+	crtCount int64 // Continuous/Current Round Timeout Count
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
@@ -657,4 +659,19 @@ func (c *Chain) GetUnrelatedBlocks(maxBlocks int, b *block.Block) []*block.Block
 	}
 	sort.SliceStable(blocks, func(i, j int) bool { return blocks[i].Round > blocks[j].Round })
 	return blocks
+}
+
+//ResetRoundTimeoutCount - reset the counter
+func (c *Chain) ResetRoundTimeoutCount() {
+	c.crtCount = 0
+}
+
+//IncrementRoundTimeoutCount - increment the counter
+func (c *Chain) IncrementRoundTimeoutCount() {
+	c.crtCount++
+}
+
+//GetRoundTimeoutCount - get the counter
+func (c *Chain) GetRoundTimeoutCount() int64 {
+	return c.crtCount
 }

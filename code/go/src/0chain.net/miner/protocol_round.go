@@ -492,7 +492,13 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
 	if mc.CurrentRound == 0 {
 		return
 	}
-	Logger.Error("round timeout occured", zap.Any("round", mc.CurrentRound))
+	switch crt := mc.GetRoundTimeoutCount(); {
+	case crt < 10:
+		Logger.Error("round timeout occured", zap.Any("round", mc.CurrentRound), zap.Int64("count", crt))
+	case crt == 10:
+		Logger.Error("round timeout occured (no further timeout messages will be displayed)", zap.Any("round", mc.CurrentRound), zap.Int64("count", crt))
+		//TODO: should have a means to send an email/SMS to someone or something like that
+	}
 	mc.RoundTimeoutsCount++
 	if !mc.CanStartNetwork() {
 		return
