@@ -342,9 +342,10 @@ func (c *Chain) ValidateState(ctx context.Context, b *block.Block, priorRoot uti
 			return err
 		}
 	}
-	if b.Round > 15 {
-		state.SetDebugLevel(state.DebugLevelTxn)
-	}
+	/*
+		if b.Round > 15 {
+			state.SetDebugLevel(state.DebugLevelTxn)
+		}*/
 	return nil
 }
 
