@@ -73,23 +73,6 @@ RUN go get github.com/spf13/viper
 RUN go get gopkg.in/natefinch/lumberjack.v2
 RUN go get github.com/koding/cache
 RUN go get github.com/hashicorp/golang-lru
-
-
-ARG REBUILD_VER=unknown
-
-RUN go get -d github.com/herumi/mcl/ffi/go/mcl && \
-    cd $GOPATH/src/github.com/herumi/mcl && \
-    CGO_CFLAGS='-DMCLBN_FP_UNIT_SIZE=4' make && \
-    cp $GOPATH/src/github.com/herumi/mcl/lib/lib*.so /usr/lib && \
-    go get -tags bn256 github.com/herumi/mcl/ffi/go/mcl
-
-RUN go get -d github.com/herumi/bls/ffi/go/bls && \
-    cd $GOPATH/src/github.com/herumi/bls && \
-    CFLAGS='-DMCLBN_FP_UNIT_SIZE=4' make && \
-    cp $GOPATH/src/github.com/herumi/bls/lib/lib*.so /usr/lib && \
-    sed -i 's/MCLBN_FP_UNIT_SIZE=6/MCLBN_FP_UNIT_SIZE=4/' ffi/go/bls/mcl.go && \
-    sed -i 's/MCLBN_FP_UNIT_SIZE=6/MCLBN_FP_UNIT_SIZE=4/' ffi/go/bls/bls.go && \
-    sed -i 's/-lbls384_dy/-lbls256_dy/' ffi/go/bls/bls.go && \
-    go get -tags bn256 github.com/herumi/bls/ffi/go/bls
+RUN go get github.com/pmer/gobls
 
 ADD BASE_VERSION .
