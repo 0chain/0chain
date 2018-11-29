@@ -8,6 +8,8 @@ logging:
 
 development:
   state: false
+  txn_generation:
+    transactions: 10
 
 zerochain:
   id: "0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe"
@@ -30,7 +32,6 @@ server_chain:
     sharders: 3
     generation:
       timeout: 15
-      transactions: 10
       transaction_wait_time: 5 #milliseconds
     proposal:
       max_wait_time: 180 # milliseconds
