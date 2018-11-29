@@ -110,17 +110,13 @@ func (c *Chain) FinalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 		go c.GetHeaviestNotarizedBlock(r)
 	}
 	time.Sleep(FINALIZATION_TIME)
-	Logger.Info("finalize round", zap.Int64("round", r.GetRoundNumber()), zap.Int64("lf_round", c.LatestFinalizedBlock.Round))
+	Logger.Debug("finalize round", zap.Int64("round", r.GetRoundNumber()), zap.Int64("lf_round", c.LatestFinalizedBlock.Round))
 	c.finalizedRoundsChannel <- r
-	/*
-		c.finalizeRound(ctx, r, bsh)
-		c.UpdateRoundInfo(r)
-	*/
 }
 
 func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStateHandler) {
 	roundNumber := r.GetRoundNumber()
-	Logger.Info("finalize round worker", zap.Int64("round", roundNumber), zap.Int64("lf_round", c.LatestFinalizedBlock.Round))
+	Logger.Debug("finalize round worker", zap.Int64("round", roundNumber), zap.Int64("lf_round", c.LatestFinalizedBlock.Round))
 	notarizedBlocks := r.GetNotarizedBlocks()
 	nbCount := len(notarizedBlocks)
 	if nbCount == 0 {
