@@ -87,7 +87,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		b.Txns[idx] = txn
 		etxns[idx] = txn
 		b.AddTransaction(txn)
-		byteSize += int64(len(txn.TransactionData))
+		byteSize += int64(len(txn.TransactionData)) + int64(len(txn.TransactionOutput))
 		if txn.PublicKey == "" {
 			clients[txn.ClientID] = nil
 		}
