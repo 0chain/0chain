@@ -17,6 +17,8 @@ import (
 	"go.uber.org/zap"
 )
 
+var ErrSendingToSelf = common.NewError("sending_to_self", "Message can't be sent to oneself")
+
 /*MaxConcurrentRequests - max number of concurrent requests when sending a message to the node pool */
 var MaxConcurrentRequests = 2
 
@@ -35,6 +37,9 @@ func (np *Pool) SendTo(handler SendHandler, to string) (bool, error) {
 	recepient := np.GetNode(to)
 	if recepient == nil {
 		return false, ErrNodeNotFound
+	}
+	if recepient == Self.Node {
+		return false, ErrSendingToSelf
 	}
 	return handler(recepient), nil
 }
