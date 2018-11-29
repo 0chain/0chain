@@ -25,15 +25,15 @@ func (r *Round) AddBlockToVerify(b *block.Block) {
 	r.Mutex.Lock()
 	defer r.Mutex.Unlock()
 	if r.isVerificationComplete() {
-		Logger.Debug("block proposal (verification complete)", zap.Int64("round", r.GetRoundNumber()), zap.String("block", b.Hash))
+		Logger.Debug("block proposal - verification complete", zap.Int64("round", r.GetRoundNumber()), zap.String("block", b.Hash))
 		return
 	}
 	if r.GetRoundNumber() != b.Round {
-		Logger.Error("block proposal (round mismatch)", zap.Int64("round", r.GetRoundNumber()), zap.Int64("block_round", b.Round), zap.String("block", b.Hash))
+		Logger.Error("block proposal - round mismatch", zap.Int64("round", r.GetRoundNumber()), zap.Int64("block_round", b.Round), zap.String("block", b.Hash))
 		return
 	}
 	if b.RoundRandomSeed != r.RandomSeed {
-		Logger.Error("block proposal (incorrect round random number)", zap.Int64("block_random_seed", b.RoundRandomSeed), zap.Int64("round_random_seed", r.RandomSeed))
+		Logger.Error("block proposal - incorrect round random number", zap.Int64("block_random_seed", b.RoundRandomSeed), zap.Int64("round_random_seed", r.RandomSeed))
 		return
 	}
 	r.blocksToVerifyChannel <- b
