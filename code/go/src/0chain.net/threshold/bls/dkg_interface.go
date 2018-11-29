@@ -1,11 +1,9 @@
 package bls
 
-import (
-	"github.com/pmer/gobls"
-)
+import "github.com/herumi/bls/ffi/go/bls"
 
-/*Key - Is of type gobls.SecretKey*/
-type Key = gobls.SecretKey
+/*Key - Is of type mcl.SecretKey*/
+type Key = bls.SecretKey
 
 /*DKGI - Interface for DKG*/
 type DKGI interface {
