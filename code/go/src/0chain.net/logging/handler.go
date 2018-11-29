@@ -9,7 +9,7 @@ import (
 func LogWriter(w http.ResponseWriter, r *http.Request) {
 	queryValues := r.URL.Query()
 	detailLevel, _ := strconv.Atoi(queryValues.Get("detail"))
-	mMLogger.WriteLogs(w, detailLevel)
+	mLogger.WriteLogs(w, detailLevel)
 }
 
 /*N2NLogWriter - a handler to get recent node to node logs*/
