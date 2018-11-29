@@ -135,6 +135,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	start := time.Now()
 	makeBlock := false
 	generationTimeout := time.Millisecond * time.Duration(mc.GetGenerationTimeout())
+	generationTries := 0
 	for true {
 		if mc.CurrentRound > b.Round {
 			Logger.Debug("generate block (round mismatch)", zap.Any("round", roundNumber), zap.Any("current_round", mc.CurrentRound))
@@ -142,15 +143,13 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		}
 		txnCount := transaction.TransactionCount
 		b.ClientState.ResetChangeCollector(b.PrevBlock.ClientStateHash)
+		generationTries++
 		err := mc.GenerateBlock(ctx, b, mc, makeBlock)
 		if err != nil {
 			cerr, ok := err.(*common.Error)
 			if ok {
 				switch cerr.Code {
 				case InsufficientTxns:
-					if !config.MainNet() {
-						Logger.Error("generate block", zap.Error(err))
-					}
 					var startLogging time.Time
 					for true {
 						delay := mc.GetRetryWaitTime()
@@ -160,7 +159,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 							Logger.Debug("generate block", zap.Any("round", roundNumber), zap.Any("delay", delay), zap.Any("txn_count", txnCount), zap.Any("t.txn_count", transaction.TransactionCount))
 						}
 						if mc.CurrentRound > b.Round {
-							Logger.Debug("generate block (round mismatch)", zap.Any("round", roundNumber), zap.Any("current_round", mc.CurrentRound))
+							Logger.Error("generate block (round mismatch)", zap.Any("round", roundNumber), zap.Any("current_round", mc.CurrentRound))
 							return nil, ErrRoundMismatch
 						}
 						if txnCount != transaction.TransactionCount || time.Now().Sub(start) > generationTimeout {
@@ -179,6 +178,9 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		}
 		b.RunningTxnCount = pb.RunningTxnCount + int64(len(b.Txns))
 		mc.AddRoundBlock(r, b)
+		if generationTries > 1 {
+			Logger.Error("generate block - multiple tries", zap.Int64("round", b.Round), zap.Int("tries", generationTries))
+		}
 		break
 	}
 	if r.IsVerificationComplete() {
