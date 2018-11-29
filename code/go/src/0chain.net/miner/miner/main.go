@@ -146,13 +146,15 @@ func main() {
 	initServer()
 	initHandlers()
 
-	miner.StartDKG(ctx)
-
-	if config.Development() {
-		go TransactionGenerator(mc.BlockSize)
-	}
-	Logger.Info("Ready to listen to the requests")
 	chain.StartTime = time.Now().UTC()
+	go func() {
+		miner.StartDKG(ctx)
+		if config.Development() {
+			go TransactionGenerator(mc.BlockSize)
+		}
+	}()
+
+	Logger.Info("Ready to listen to the requests")
 	log.Fatal(server.ListenAndServe())
 }
 

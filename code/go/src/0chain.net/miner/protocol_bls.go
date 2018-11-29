@@ -60,8 +60,7 @@ func StartDKG(ctx context.Context) {
 		}
 
 	}
-	go WaitForDKGShares()
-
+	WaitForDKGShares()
 }
 func sendDKG() {
 	mc := GetMinerChain()
