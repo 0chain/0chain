@@ -15,7 +15,7 @@ import (
 var cacher cache.Cache
 
 func init() {
-	cacher = cache.NewLFUCache(10 * 1024)
+	cacher = cache.NewLFUCache(1)
 }
 
 /*Client - data structure that holds the client data */
@@ -163,7 +163,7 @@ func GetClient(ctx context.Context, key datastore.Key) (*Client, error) {
 		return nil, err
 	}
 	cacher.Add(key, co)
-	return nil, err
+	return co, nil
 }
 
 /*PutClient - Given a client data, it stores it */

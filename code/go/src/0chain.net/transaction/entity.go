@@ -182,13 +182,14 @@ func (t *Transaction) VerifyHash(ctx context.Context) error {
 /*VerifySignature - verify the transaction hash */
 func (t *Transaction) VerifySignature(ctx context.Context) error {
 	var err error
-	co := client.NewClient()
+	var co *client.Client
 	if t.PublicKey == "" {
 		co, err = t.GetClient(ctx)
 		if err != nil {
 			return err
 		}
 	} else {
+		co = client.NewClient()
 		co.ID = t.ClientID
 		co.PublicKey = t.PublicKey
 		co.SetPublicKey(co.PublicKey)
