@@ -15,9 +15,9 @@ var (
 	N2n      *zap.Logger
 	MemUsage *zap.Logger
 
-	MLogger    *MemLogger
-	N2NMLogger *MemLogger
-	MMLogger   *MemLogger
+	mLogger    *MemLogger
+	mN2nLogger *MemLogger
+	mMLogger   *MemLogger
 )
 
 //InitLogging - initialize the logging submodule
@@ -54,8 +54,8 @@ func InitLogging(mode string) {
 
 	mlcfg := zap.NewProductionConfig()
 	mlcfg.Level.SetLevel(zapcore.ErrorLevel)
-	MLogger = createMemLogger(mlcfg)
-	option := createOptionFromCores(createZapCore(logWriter, cfg), MLogger.GetCore())
+	mLogger = createMemLogger(mlcfg)
+	option := createOptionFromCores(createZapCore(logWriter, cfg), mLogger.GetCore())
 	l, err := cfg.Build(option)
 	if err != nil {
 		panic(err)
@@ -63,8 +63,8 @@ func InitLogging(mode string) {
 
 	mn2ncfg := zap.NewProductionConfig()
 	mn2ncfg.Level.SetLevel(zapcore.InfoLevel)
-	N2NMLogger = createMemLogger(mn2ncfg)
-	option = createOptionFromCores(createZapCore(n2nLogWriter, cfg), N2NMLogger.GetCore())
+	mN2nLogger = createMemLogger(mn2ncfg)
+	option = createOptionFromCores(createZapCore(n2nLogWriter, cfg), mN2nLogger.GetCore())
 	ls, err := cfg.Build(option)
 	if err != nil {
 		panic(err)
@@ -72,8 +72,8 @@ func InitLogging(mode string) {
 
 	mucfg := zap.NewProductionConfig()
 	mucfg.Level.SetLevel(zapcore.InfoLevel)
-	MMLogger = createMemLogger(mucfg)
-	option = createOptionFromCores(createZapCore(memLogWriter, cfg), MMLogger.GetCore())
+	mMLogger = createMemLogger(mucfg)
+	option = createOptionFromCores(createZapCore(memLogWriter, cfg), mMLogger.GetCore())
 	lu, err := cfg.Build(option)
 	if err != nil {
 		panic(err)
