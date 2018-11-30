@@ -1,3 +1,4 @@
+#docker.aws
 FROM iron/go:dev
 RUN apk add --update --no-cache build-base linux-headers git cmake bash perl
 RUN apk add --update --no-cache zlib zlib-dev bzip2 bzip2-dev snappy snappy-dev lz4 lz4-dev jemalloc jemalloc-dev zstd
@@ -26,36 +27,6 @@ RUN cd /tmp && \
     cp -r include/* /usr/include/ && \
     rm -R /tmp/rocksdb/
 
-# Install Mitsunari Shigeo's BLS threshold crypto lib
-# It has a homebrew build system that requires all four codebases be in the same dir.
-RUN apk --update --no-cache add gmp-dev openssl-dev
-RUN printf "#!/bin/sh\necho x86_64\n" > /usr/local/bin/arch && \
-    chmod +x /usr/local/bin/arch && \
-    cd /tmp && \
-    curl -L -o mcl.tar.gz https://github.com/herumi/mcl/archive/new_deserialize_api.tar.gz && \
-    curl -L -o cybozulib.tar.gz https://github.com/herumi/cybozulib/archive/release20180830.tar.gz && \
-    curl -L -o xbyak.tar.gz https://github.com/herumi/xbyak/archive/v5.73.tar.gz && \
-    tar xf mcl.tar.gz && mv mcl-* mcl && \
-    tar xf cybozulib.tar.gz && mv cybozulib-* cybozulib && \
-    tar xf xbyak.tar.gz && mv xbyak-* xbyak && \
-    cd /tmp/mcl && \
-      CFLAGS='-DMCLBN_FP_UNIT_SIZE=4' make lib/libmcl.a && \
-      cp lib/*.a /usr/local/lib && \
-      cp -r include/mcl /usr/local/include/mcl && \
-    cd /tmp && \
-    curl -L -o bls.tar.gz https://github.com/herumi/bls/archive/new_deserialize_api.tar.gz && \
-    tar xf bls.tar.gz && mv bls-* bls && \
-    cd /tmp/bls && \
-      make UNIT=4 obj/bls.o obj/bls_c.o && \
-      ar -r lib/libbls.a obj/bls.o obj/bls_c.o && \
-      cp lib/libbls.a /usr/local/lib && \
-      mkdir /usr/local/include/bls && \
-      cp include/bls/*.h /usr/local/include/bls && \
-    rm -R /tmp/bls* && \
-    rm -R /tmp/cybozulib* && \
-    rm -R /tmp/mcl* && \
-    rm -R /tmp/xbyak* && \
-    rm /usr/local/bin/arch
 
 
 #Download the go dependencies
@@ -73,6 +44,30 @@ RUN go get github.com/spf13/viper
 RUN go get gopkg.in/natefinch/lumberjack.v2
 RUN go get github.com/koding/cache
 RUN go get github.com/hashicorp/golang-lru
-RUN go get github.com/pmer/gobls
+
+RUN cd /tmp && \
+    git clone https://github.com/herumi/xbyak.git && \
+    cd xbyak && \
+    make install
+
+RUN cd /tmp && \
+    git clone https://github.com/herumi/cybozulib.git && \
+    cd cybozulib && \
+    make install
+
+RUN go get -d github.com/herumi/mcl/ffi/go/mcl && \
+    cd $GOPATH/src/github.com/herumi/mcl && \
+    CGO_CFLAGS='-DMCLBN_FP_UNIT_SIZE=4' make && \
+    cp $GOPATH/src/github.com/herumi/mcl/lib/lib*.so /usr/lib && \
+    go get -tags bn256 github.com/herumi/mcl/ffi/go/mcl
+
+RUN go get -d github.com/herumi/bls/ffi/go/bls && \
+    cd $GOPATH/src/github.com/herumi/bls && \
+    CFLAGS='-DMCLBN_FP_UNIT_SIZE=4' make && \
+    cp $GOPATH/src/github.com/herumi/bls/lib/lib*.so /usr/lib && \
+    sed -i 's/MCLBN_FP_UNIT_SIZE=6/MCLBN_FP_UNIT_SIZE=4/' ffi/go/bls/mcl.go && \
+    sed -i 's/MCLBN_FP_UNIT_SIZE=6/MCLBN_FP_UNIT_SIZE=4/' ffi/go/bls/bls.go && \
+    sed -i 's/-lbls384_dy/-lbls256_dy/' ffi/go/bls/bls.go && \
+    go get -tags bn256 github.com/herumi/bls/ffi/go/bls
 
 ADD BASE_VERSION .
