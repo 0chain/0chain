@@ -8,7 +8,7 @@ logging:
 
 development:
   state: false
-  dkg: true
+  dkg: false 
   txn_generation:
     transactions: 10
 

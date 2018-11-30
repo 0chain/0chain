@@ -466,7 +466,7 @@ func (c *Chain) GetNotarizationThresholdCount() int {
 func (c *Chain) CanStartNetwork() bool {
 	active := c.Miners.GetActiveCount()
 	threshold := c.GetNotarizationThresholdCount()
-	if config.DevConfiguration.State || DevConfiguration.IsDkgEnabled {
+	if config.DevConfiguration.State || config.DevConfiguration.IsDkgEnabled {
 		threshold = c.Miners.Size()
 	}
 	return active >= threshold

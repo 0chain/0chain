@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"0chain.net/chain"
+	"0chain.net/config"
 	"0chain.net/datastore"
 	"0chain.net/encryption"
 	. "0chain.net/logging"
@@ -38,13 +39,14 @@ func StartDKG(ctx context.Context) {
 
 	m2m := mc.Miners
 
-	isDkgEnabled = viper.GetBool("development.dkg")
+	isDkgEnabled = config.DevConfiguration.IsDkgEnabled
 	thresholdByCount := viper.GetInt("server_chain.block.consensus.threshold_by_count")
 	k := int(math.Ceil((float64(thresholdByCount) / 100) * float64(mc.Miners.Size())))
 
 	Logger.Info("DKG Setup", zap.Int("K", k), zap.Bool("DKG Enabled", isDkgEnabled))
 	n := mc.Miners.Size()
 	self := node.GetSelfNode(ctx)
+	waitForNetworkToBeReady(ctx)
 	if isDkgEnabled {
 		minerShares = make(map[string]bls.Key, len(m2m.Nodes))
 
@@ -69,21 +71,31 @@ func StartDKG(ctx context.Context) {
 		WaitForDKGShares()
 	} else {
 		Logger.Info("DKG is not enabled. So, starting protocol")
-		SetupWorkers(ctx)
-		if !mc.CanStartNetwork() {
-			ticker := time.NewTicker(5 * chain.DELTA)
-			for ts := range ticker.C {
-				active := mc.Miners.GetActiveCount()
-				Logger.Info("waiting for sufficient active nodes", zap.Time("ts", ts), zap.Int("active", active))
-				if mc.CanStartNetwork() {
-					break
-				}
-			}
-		}
 
 		go StartProtocol()
 	}
 
+}
+
+func waitForNetworkToBeReady(ctx context.Context) {
+	SetupWorkers(ctx)
+	mc := GetMinerChain()
+
+	//m2m := mc.Miners
+	if !mc.CanStartNetwork() {
+		ticker := time.NewTicker(5 * chain.DELTA)
+		for ts := range ticker.C {
+			active := mc.Miners.GetActiveCount()
+			if !isDkgEnabled {
+				Logger.Info("waiting for sufficient active nodes", zap.Time("ts", ts), zap.Int("active", active))
+			} else {
+				Logger.Info("waiting for all nodes to be active", zap.Time("ts", ts), zap.Int("active", active))
+			}
+			if mc.CanStartNetwork() {
+				break
+			}
+		}
+	}
 }
 func sendDKG() {
 	mc := GetMinerChain()
@@ -108,7 +120,7 @@ func sendDKG() {
 /*SendDKGShare sends the generated secShare to the given node */
 func SendDKGShare(n *node.Node) error {
 	if !isDkgEnabled {
-		Logger.Info("DKG not enabled. Not sending shares")
+		Logger.Debug("DKG not enabled. Not sending shares")
 		return nil
 	}
 	mc := GetMinerChain()
@@ -118,7 +130,7 @@ func SendDKGShare(n *node.Node) error {
 	dkg := &bls.Dkg{
 		Share: secShare.GetDecString()}
 	dkg.SetKey(datastore.ToKey("1"))
-	Logger.Info("@sending DKG share", zap.Int("idx", n.SetIndex), zap.Any("share", dkg.Share))
+	Logger.Debug("@sending DKG share", zap.Int("idx", n.SetIndex), zap.Any("share", dkg.Share))
 	_, err := m2m.SendTo(DKGShareSender(dkg), n.GetKey())
 	return err
 }
@@ -227,8 +239,8 @@ func AggregateDKGSecShares(recShares []string) error {
 		sec.Add(&secShares[i])
 	}
 	dg.SecKeyShareGroup = sec
-	Logger.Info("the aggregated sec share", zap.String("sec_key_share_grp", dg.SecKeyShareGroup.GetDecString()))
-	Logger.Info("the group public key is", zap.String("gp_public_key", dg.GpPubKey.GetHexString()))
+	Logger.Debug("the aggregated sec share", zap.String("sec_key_share_grp", dg.SecKeyShareGroup.GetDecString()))
+	Logger.Debug("the group public key is", zap.String("gp_public_key", dg.GpPubKey.GetHexString()))
 	return nil
 }
 
@@ -248,7 +260,7 @@ func GetBlsShare(ctx context.Context, r, pr *round.Round) string {
 	var rbOutput string
 	if r.GetRoundNumber()-1 == 0 {
 
-		Logger.Info("The corner case for round 1 when pr is nil :", zap.Int64("round", r.GetRoundNumber()))
+		Logger.Debug("The corner case for round 1 when pr is nil :", zap.Int64("round", r.GetRoundNumber()))
 		rbOutput = encryption.Hash("0chain")
 	} else {
 		rbOutput = pr.VRFOutput
@@ -289,7 +301,7 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round) {
 		Logger.Debug("DKG Hurray we've threshold BLS shares")
 		if !isDkgEnabled {
 			//We're still waiting for threshold number of VRF shares, even though DKG is not enabled.
-			Logger.Info("DKG Disabled. PRNG RBO")
+
 			rbOutput := "" //rboutput will ignored anyway
 			mc.computeRBO(ctx, mr, rbOutput)
 
