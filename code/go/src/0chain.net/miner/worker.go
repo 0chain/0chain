@@ -57,12 +57,13 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 				Logger.Debug("message (done)", zap.Any("msg", GetMessageLookup(msg.Type)))
 			}
 		case <-roundTimeout.C:
-			Logger.Debug("Here calling roundTimeout in BlockWorker")
 			if cround == mc.CurrentRound {
+				Logger.Debug("Here calling roundTimeout in BlockWorker", zap.Int64("Round#", cround))
 				mc.IncrementRoundTimeoutCount()
 				protocol.HandleRoundTimeout(ctx)
 			} else {
 				cround = mc.CurrentRound
+				Logger.Debug("Starting timer in BlockWorker", zap.Int64("Round#", cround))
 				mc.ResetRoundTimeoutCount()
 			}
 		}
@@ -90,6 +91,7 @@ func StartProtocol() {
 
 	mc := GetMinerChain()
 
+	mc.Sharders.OneTimeStatusMonitor(ctx)
 	lfb := getLatestBlockFromSharders(ctx)
 	var mr *Round
 	if lfb != nil {
@@ -103,7 +105,9 @@ func StartProtocol() {
 		sr := round.NewRound(0)
 		mr = mc.CreateRound(sr)
 	}
-	SetupWorkers(ctx)
+	if isDkgEnabled {
+		SetupWorkers(ctx)
+	}
 	Logger.Info("starting the blockchain ...", zap.Int64("round", mr.GetRoundNumber()))
 	mc.StartNextRound(ctx, mr)
 }

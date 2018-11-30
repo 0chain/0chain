@@ -137,7 +137,7 @@ func main() {
 	}
 	common.HandleShutdown(server)
 	memorystore.GetInfo()
-	//initWorkers(ctx)
+	initWorkersx(ctx)
 
 	mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"))
 

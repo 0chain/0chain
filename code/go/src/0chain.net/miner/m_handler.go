@@ -149,6 +149,7 @@ func VerifyBlockHandler(ctx context.Context, entity datastore.Entity) (interface
 
 /*VerificationTicketReceiptHandler - Add a verification ticket to the block */
 func VerificationTicketReceiptHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+	Logger.Debug("Received Verification Ticket!")
 	bvt, ok := entity.(*block.BlockVerificationTicket)
 	if !ok {
 		return nil, common.InvalidRequest("Invalid Entity")
