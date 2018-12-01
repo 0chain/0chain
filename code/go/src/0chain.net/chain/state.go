@@ -281,10 +281,13 @@ func (c *Chain) StateSanityCheck(ctx context.Context, b *block.Block) {
 	if !state.DebugBlock() {
 		return
 	}
+	if bytes.Compare(b.ClientStateHash, b.PrevBlock.ClientStateHash) == 0 {
+		return
+	}
 	if err := c.ValidateState(ctx, b, b.PrevBlock.ClientState.GetRoot()); err != nil {
 		Logger.DPanic("state sanity check - state change validation", zap.Error(err))
 	}
-	if err := c.ValidateStateChangesRoot(b); err != nil {
+	if err := c.validateStateChangesRoot(b); err != nil {
 		Logger.DPanic("state sanity check - state changes root validation", zap.Error(err))
 	}
 }
@@ -349,15 +352,14 @@ func (c *Chain) ValidateState(ctx context.Context, b *block.Block, priorRoot uti
 	return nil
 }
 
-//ValidateStateChangesRoot - validates that root computed from changes matches with the state root
-func (c *Chain) ValidateStateChangesRoot(b *block.Block) error {
+func (c *Chain) validateStateChangesRoot(b *block.Block) error {
 	bsc := block.NewBlockStateChange(b)
 	if b.ClientStateHash != nil && (bsc.GetRoot() == nil || bytes.Compare(bsc.GetRoot().GetHashBytes(), b.ClientStateHash) != 0) {
 		computedRoot := ""
 		if bsc.GetRoot() != nil {
 			computedRoot = bsc.GetRoot().GetHash()
 		}
-		Logger.Error("new block state change - root mismatch", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("state_root", util.ToHex(b.ClientStateHash)), zap.Any("computed_root", computedRoot))
+		Logger.Error("block state change - root mismatch", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("state_root", util.ToHex(b.ClientStateHash)), zap.Any("computed_root", computedRoot))
 		return ErrStateMismatch
 	}
 	return nil
