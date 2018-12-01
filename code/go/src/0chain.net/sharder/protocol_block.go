@@ -3,6 +3,7 @@ package sharder
 import (
 	"context"
 	"math"
+	"strconv"
 	"time"
 
 	"0chain.net/node"
@@ -52,27 +53,10 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	}
 	self := node.GetSelfNode(ctx)
 	if sc.IsBlockSharder(b, self.Node) {
-		sc.SharderStats.ShardedBlocksCount++
-		ts := time.Now()
-		err := blockstore.GetStore().Write(b)
-		duration := time.Since(ts)
-		blockSaveTimer.UpdateSince(ts)
-		p95 := blockSaveTimer.Percentile(.95)
-		if blockSaveTimer.Count() > 100 && 2*p95 < float64(duration) {
-			Logger.Error("block save - slow", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Duration("duration", duration), zap.Duration("p95", time.Duration(math.Round(p95/1000000))*time.Millisecond))
-		}
-		if err != nil {
-			Logger.Error("block save", zap.Any("round", b.Round), zap.Any("hash", b.Hash), zap.Error(err))
-		}
+		sc.storeBlock(b)
 	}
 	if fr != nil {
-		fr.Finalize(b)
-		frImpl, _ := fr.(*round.Round)
-		err := sc.StoreRound(ctx, frImpl)
-		Logger.Info("**!round stored in db", zap.Int64("round", fr.GetRoundNumber()))
-		if err != nil {
-			Logger.Error("db error (save round)", zap.Int64("round", fr.GetRoundNumber()), zap.Error(err))
-		}
+		sc.storeRound(ctx, fr, b)
 	}
 	sc.DeleteRoundsBelow(ctx, b.Round)
 }
@@ -97,6 +81,9 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 	er := sc.GetRound(b.Round)
 	if er == nil {
 		var r = round.NewRound(b.Round)
+		if r.Number > sc.CurrentRound {
+			go sc.GetMissingRounds(ctx, r.Number, sc.CurrentRound)
+		}
 		er, _ = sc.AddRound(r).(*round.Round)
 		sc.SetRandomSeed(er, b.RoundRandomSeed)
 	}
@@ -106,4 +93,63 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 	sc.SetRoundRank(er, b)
 	Logger.Info("received block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)))
 	sc.AddNotarizedBlock(ctx, er, b)
+}
+
+func (sc *Chain) GetMissingRounds(ctx context.Context, r int64, currRound int64) {
+	currRound += 1
+	blocks := make([]*block.Block, 1)
+	var params map[string]string
+
+	missingRoundBlocksHandler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+		rb, ok := entity.(*block.Block)
+		if !ok {
+			return nil, nil
+		}
+		blocks = append(blocks, rb)
+		return nil, nil
+	}
+
+	for currRound != r {
+		params["round"] = strconv.FormatInt(currRound, 10)
+		r := round.NewRound(currRound)
+		sc.Sharders.RequestEntityFromAll(ctx, BlockRequestor, params, missingRoundBlocksHandler)
+		//TODO any consensus to be done?? currently taking the first block that we received
+		if len(blocks) > 0 {
+			b := blocks[0]
+			sc.storeRound(ctx, r, b)
+			self := node.GetSelfNode(ctx)
+			Logger.Info("**!missed round stored in db", zap.Int64("round", r.GetRoundNumber()))
+			if sc.IsBlockSharder(b, self.Node) {
+				sc.storeBlock(b)
+				Logger.Info("**!missed block stored in db", zap.String("block-hash", b.Hash))
+			}
+			blocks = make([]*block.Block, 1)
+		}
+		currRound += 1
+	}
+}
+
+func (sc *Chain) storeRound(ctx context.Context, r round.RoundI, b *block.Block) {
+	r.Finalize(b)
+	rImpl, _ := r.(*round.Round)
+	err := sc.StoreRound(ctx, rImpl)
+	Logger.Info("**!round stored in db", zap.Int64("round", r.GetRoundNumber()))
+	if err != nil {
+		Logger.Error("db error (save round)", zap.Int64("round", r.GetRoundNumber()), zap.Error(err))
+	}
+}
+
+func (sc *Chain) storeBlock(b *block.Block) {
+	sc.SharderStats.ShardedBlocksCount++
+	ts := time.Now()
+	err := blockstore.GetStore().Write(b)
+	duration := time.Since(ts)
+	blockSaveTimer.UpdateSince(ts)
+	p95 := blockSaveTimer.Percentile(.95)
+	if blockSaveTimer.Count() > 100 && 2*p95 < float64(duration) {
+		Logger.Error("block save - slow", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Duration("duration", duration), zap.Duration("p95", time.Duration(math.Round(p95/1000000))*time.Millisecond))
+	}
+	if err != nil {
+		Logger.Error("block save", zap.Any("round", b.Round), zap.Any("hash", b.Hash), zap.Error(err))
+	}
 }

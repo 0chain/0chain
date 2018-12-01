@@ -151,6 +151,8 @@ func main() {
 	r, err := sc.GetMostRecentRoundFromDB(ctx)
 
 	if err == nil {
+		sc.CurrentRound = r.Number
+		sc.AddRound(r)
 		Logger.Info("**!most recent round info", zap.Int64("roundNumber", r.Number), zap.String("blockHash", r.BlockHash))
 	} else {
 		Logger.Error("**!error reading round data from db", zap.Error(err))
