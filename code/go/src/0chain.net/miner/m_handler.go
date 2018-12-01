@@ -78,6 +78,7 @@ func SetupM2MReceivers() {
 /*SetupX2MResponders - setup responders */
 func SetupX2MResponders() {
 	http.HandleFunc("/v1/_x2m/block/notarized_block/get", node.ToN2NSendEntityHandler(NotarizedBlockSendHandler))
+	http.HandleFunc("/v1/_x2m/block/state_change/get", node.ToN2NSendEntityHandler(BlockStateChangeHandler))
 }
 
 /*SetupM2SRequestors - setup all requests to sharder by miner */
@@ -200,6 +201,10 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 
 //NotarizedBlockSendHandler - handles a request for a notarized block
 func NotarizedBlockSendHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	return getNotarizedBlock(ctx, r)
+}
+
+func getNotarizedBlock(ctx context.Context, r *http.Request) (*block.Block, error) {
 	mc := GetMinerChain()
 	round := r.FormValue("round")
 	hash := r.FormValue("block")
@@ -232,4 +237,14 @@ func NotarizedBlockSendHandler(ctx context.Context, r *http.Request) (interface{
 		}
 	}
 	return nil, common.NewError("block_not_available", "Requested block is not available")
+}
+
+//BlockStateChangeHandler - provide the state changes associated with a block
+func BlockStateChangeHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	b, err := getNotarizedBlock(ctx, r)
+	if err != nil {
+		return nil, err
+	}
+	bsc := block.NewBlockStateChange(b)
+	return bsc, nil
 }

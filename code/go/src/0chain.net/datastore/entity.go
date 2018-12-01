@@ -2,7 +2,11 @@ package datastore
 
 import (
 	"context"
+
+	"0chain.net/common"
 )
+
+var ErrInvalidEntity = common.NewError("invalid_entity", "Invalid entity")
 
 var (
 	/*EntityNotFound code should be used to check whether an entity is found or not */
