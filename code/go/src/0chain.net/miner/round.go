@@ -50,6 +50,8 @@ func (r *Round) AddVerificationTicket(bvt *block.BlockVerificationTicket) {
 /*GetVerificationTickets - get verification tickets for a given block in this round */
 func (r *Round) GetVerificationTickets(blockID string) []*block.VerificationTicket {
 	var vts []*block.VerificationTicket
+	r.Mutex.Lock()
+	defer r.Mutex.Unlock()
 	for _, bvt := range r.verificationTickets {
 		if blockID == bvt.BlockID {
 			vts = append(vts, &bvt.VerificationTicket)
