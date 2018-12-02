@@ -67,7 +67,6 @@ func StartDKG(ctx context.Context) {
 			}
 
 		}
-		//even if DKG is not enabled, we will go through the same flow. But, handle it inside
 		WaitForDKGShares()
 	} else {
 		Logger.Info("DKG is not enabled. So, starting protocol")

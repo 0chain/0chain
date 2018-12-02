@@ -42,6 +42,8 @@ func (r *Round) AddBlockToVerify(b *block.Block) {
 
 /*AddVerificationTicket - add a verification ticket */
 func (r *Round) AddVerificationTicket(bvt *block.BlockVerificationTicket) {
+	r.Mutex.Lock()
+	defer r.Mutex.Unlock()
 	r.verificationTickets[bvt.Signature] = bvt
 }
 

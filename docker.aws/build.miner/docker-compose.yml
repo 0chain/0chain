@@ -82,7 +82,7 @@ services:
     ports:
       - "7071:7071"
 
-    restart: on-failure:${MAX_RETRY_ATTEMPTS}
+    restart: "no"
 
     networks:
       default:

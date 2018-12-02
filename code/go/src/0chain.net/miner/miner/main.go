@@ -137,7 +137,7 @@ func main() {
 	}
 	common.HandleShutdown(server)
 	memorystore.GetInfo()
-	initWorkersx(ctx)
+	initWorkers(ctx)
 
 	mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"))
 
@@ -213,7 +213,7 @@ func initN2NHandlers() {
 	chain.SetupX2MRequestors()
 }
 
-func initWorkersx(ctx context.Context) {
+func initWorkers(ctx context.Context) {
 	serverChain := chain.GetServerChain()
 	serverChain.SetupWorkers(ctx)
 	miner.SetupWorkers(ctx)
