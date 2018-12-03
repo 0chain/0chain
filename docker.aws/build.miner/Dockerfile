@@ -1,5 +1,6 @@
 #Store all files and run environment under 0chain userid.
 ARG IMAGE_TAG
+RUN echo $IMAGE_TAG
 FROM ubuntu:16.04
 RUN groupadd -r 0chain && useradd --no-log-init -r -g 0chain 0chain
 
