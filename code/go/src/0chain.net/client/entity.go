@@ -15,7 +15,7 @@ import (
 var cacher cache.Cache
 
 func init() {
-	cacher = cache.NewLFUCache(1)
+	cacher = cache.NewLFUCache(10 * 1024)
 }
 
 /*Client - data structure that holds the client data */

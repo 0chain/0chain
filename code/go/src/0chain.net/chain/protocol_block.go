@@ -205,7 +205,7 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 		Logger.Info("get notarized block", zap.String("block", blockHash), zap.Int64("cround", cround), zap.Int64("current_round", c.CurrentRound))
 		nb, ok := entity.(*block.Block)
 		if !ok {
-			return nil, common.NewError("invalid_entity", "Invalid entity")
+			return nil, datastore.ErrInvalidEntity
 		}
 		if err := c.VerifyNotarization(ctx, nb.Hash, nb.VerificationTickets); err != nil {
 			Logger.Error("get notarized block - validate notarization", zap.String("block", blockHash), zap.Error(err))

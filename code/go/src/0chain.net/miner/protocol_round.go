@@ -469,8 +469,11 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*bloc
 	//Params are nil? Do we need to send any params like sending the miner ID ?
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		fb, ok := entity.(*block.Block)
+		if fb.Round == 0 {
+			return nil, nil
+		}
 		if !ok {
-			return nil, common.NewError("invalid_entity", "Invalid entity")
+			return nil, datastore.ErrInvalidEntity
 		}
 		Logger.Info("lfb from sharder", zap.Int64("lfb_round", fb.Round))
 		err := fb.Validate(ctx)
