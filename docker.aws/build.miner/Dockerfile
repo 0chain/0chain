@@ -1,5 +1,5 @@
 #Store all files and run environment under 0chain userid.
-ARG IMAGE_TAG
+ARG IMAGE_TAG=latest
 RUN echo $IMAGE_TAG
 
 FROM ubuntu:16.04
