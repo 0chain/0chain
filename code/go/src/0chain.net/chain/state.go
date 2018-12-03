@@ -128,15 +128,24 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 	defer c.stateMutex.Unlock()
 	clientState := createTxnMPT(b.ClientState)
 	startRoot := clientState.GetRoot()
-	sctx := state.NewStateContext(b, clientState, txn)
+	sctx := state.NewStateContext(b, clientState, c.clientStateDeserializer, txn)
+
 	switch txn.TransactionType {
 	case transaction.TxnTypeData:
 	case transaction.TxnTypeSend:
-		err := c.TransferAmount(sctx, txn.ClientID, txn.ToClientID, state.Balance(txn.Value))
+		sctx.AddTransfer(state.NewTransfer(txn.ClientID, txn.ToClientID, state.Balance(txn.Value)))
+	}
+
+	if err := sctx.Validate(); err != nil {
+		return false
+	}
+	for _, transfer := range sctx.GetTransfers() {
+		err := c.transferAmount(sctx, transfer.ClientID, transfer.ToClientID, state.Balance(transfer.Amount))
 		if err != nil {
 			return false
 		}
 	}
+
 	err := mergeMPT(b.ClientState, clientState)
 	if err != nil {
 		Logger.DPanic("update state - merge mpt error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
@@ -153,8 +162,7 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 	return true
 }
 
-//TransferAmount - transfer "amount" tokens from fromClient to toClient
-func (c *Chain) TransferAmount(sctx state.ContextI, fromClient, toClient datastore.Key, amount state.Balance) error {
+func (c *Chain) transferAmount(sctx state.ContextI, fromClient, toClient datastore.Key, amount state.Balance) error {
 	if amount == 0 {
 		return nil
 	}
@@ -261,9 +269,9 @@ func (c *Chain) getState(clientState util.MerklePatriciaTrieI, clientID string) 
 	return s, nil
 }
 
-/*GetState - Get the state of a client w.r.t a finalized block */
-func (c *Chain) GetState(fb *block.Block, clientID string) (*state.State, error) {
-	return c.getState(fb.ClientState, clientID)
+/*GetState - Get the state of a client w.r.t a block */
+func (c *Chain) GetState(b *block.Block, clientID string) (*state.State, error) {
+	return c.getState(b.ClientState, clientID)
 }
 
 func isValid(err error) bool {
