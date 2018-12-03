@@ -50,8 +50,7 @@ services:
     build:
       context: ${DOCKER_CODEBASE}
       dockerfile: ./docker.aws/build.miner/Dockerfile
-      args:
-        - IMAGE_TAG
+
     image: ${IMAGE_NAME}:${IMAGE_TAG}
 
     pid: "host"
