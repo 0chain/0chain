@@ -9,18 +9,19 @@ import (
 func LogWriter(w http.ResponseWriter, r *http.Request) {
 	queryValues := r.URL.Query()
 	detailLevel, _ := strconv.Atoi(queryValues.Get("detail"))
-	MLogger.WriteLogs(w, detailLevel)
+	mLogger.WriteLogs(w, detailLevel)
 }
 
 /*N2NLogWriter - a handler to get recent node to node logs*/
 func N2NLogWriter(w http.ResponseWriter, r *http.Request) {
 	queryValues := r.URL.Query()
 	detailLevel, _ := strconv.Atoi(queryValues.Get("detail"))
-	N2NMLogger.WriteLogs(w, detailLevel)
+	mN2nLogger.WriteLogs(w, detailLevel)
 }
 
+/*MemLogWriter - a handler to get the recent memory logs */
 func MemLogWriter(w http.ResponseWriter, r *http.Request) {
 	queryValues := r.URL.Query()
 	detailLevel, _ := strconv.Atoi(queryValues.Get("detail"))
-	MMLogger.WriteLogs(w, detailLevel)
+	mMLogger.WriteLogs(w, detailLevel)
 }

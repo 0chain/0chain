@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
-	"sync"
 	"time"
 
 	"0chain.net/chain"
@@ -24,18 +23,13 @@ import (
 
 var wallets []*wallet.Wallet
 var txn_generation_rate int32
-var txn_gen_mutex *sync.Mutex
-
-func init() {
-	txn_gen_mutex = &sync.Mutex{}
-}
 
 /*TransactionGenerator - generates a steady stream of transactions */
 func TransactionGenerator(blockSize int32) {
 	wallet.SetupWallet()
 	var numClients int32 = 1024
-	if blockSize*4 < numClients {
-		numClients = 4 * blockSize
+	if blockSize*100 < numClients {
+		numClients = 100 * blockSize
 	}
 	GenerateClients(numClients)
 	numWorkers := 1
@@ -216,14 +210,12 @@ func GenerateClients(numClients int32) {
 	Logger.Info("generation of wallets complete", zap.Int("wallets", len(wallets)))
 }
 
+//SetTxnGenRate - the txn generation rate
 func SetTxnGenRate(newRate int32) {
-	txn_gen_mutex.Lock()
-	defer txn_gen_mutex.Unlock()
 	txn_generation_rate = newRate
 }
 
+//GetTxnGenRate - the txn generation rate
 func GetTxnGenRate() int32 {
-	txn_gen_mutex.Lock()
-	defer txn_gen_mutex.Unlock()
 	return txn_generation_rate
 }

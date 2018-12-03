@@ -9,6 +9,7 @@
 - [Generating Test Transactions](#generating-test-transactions)
 - [Troubleshooting](#troubleshooting)
 - [Debugging](#debugging)
+- [Unit tests](#unittests)
 - [Miscellaneous](#miscellaneous)
 	- [Cleanup](#cleanup)
 
@@ -174,6 +175,31 @@ To get the start time of all the rounds
 $ grep 'starting round' docker.local/miner*/log/0chain.log
 ```
 This gives the start timestamps that can be used to correlate the events and their timings.
+
+## Unit tests
+
+Unit tests can be run with `go test` outside of Docker if you have the correct C++ dependencies installed on your system.
+
+```
+$ cd code/go/src/0chain.net/my-pkg
+$ go test
+```
+
+Otherwise, we have a Docker image which takes care of installing the build dependencies for you in an environment identical to our other Docker builds.
+
+First build the base image.
+
+```
+$ ./docker.local/bin/build.base.sh
+```
+
+Then run the tests.
+
+```
+$ ./docker.local/bin/unit_test.sh [<packages>]
+```
+
+The list of packages is optional, and if provided runs only the tests from those packages. If no packages are specified, all unit tests are run.
 
 ## Miscellaneous
 

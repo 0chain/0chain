@@ -6,6 +6,7 @@ import (
 	"0chain.net/block"
 	"0chain.net/chain"
 	"0chain.net/datastore"
+	. "0chain.net/logging"
 	"0chain.net/node"
 	"0chain.net/round"
 )
@@ -25,11 +26,13 @@ func (mc *Chain) SendBlock(ctx context.Context, b *block.Block) {
 /*SendVerificationTicket - send the block verification ticket */
 func (mc *Chain) SendVerificationTicket(ctx context.Context, b *block.Block, bvt *block.BlockVerificationTicket) {
 	m2m := mc.Miners
+	Logger.Debug("Send Verification Ticket")
 	if mc.VerificationTicketsTo == chain.Generator {
 		if b.MinerID != node.Self.GetKey() {
 			m2m.SendTo(VerificationTicketSender(bvt), b.MinerID)
 		}
 	} else {
+		Logger.Debug("Sending verification tickets to all miners")
 		m2m.SendAll(VerificationTicketSender(bvt))
 	}
 }

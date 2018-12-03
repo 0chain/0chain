@@ -2,9 +2,14 @@ package miner
 
 import (
 	"context"
+	"sort"
 	"time"
 
+	"0chain.net/block"
+	"0chain.net/common"
 	. "0chain.net/logging"
+
+	"0chain.net/round"
 	"go.uber.org/zap"
 )
 
@@ -18,7 +23,9 @@ func SetupWorkers(ctx context.Context) {
 
 /*BlockWorker - a job that does all the work related to blocks in each round */
 func (mc *Chain) BlockWorker(ctx context.Context) {
+	Logger.Debug("Here in BlockWorker")
 	var RoundTimeout = 10 * time.Second
+
 	var protocol Protocol = mc
 	var cround = mc.CurrentRound
 	var roundTimeout = time.NewTicker(RoundTimeout)
@@ -51,10 +58,56 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 			}
 		case <-roundTimeout.C:
 			if cround == mc.CurrentRound {
+				Logger.Debug("Here calling roundTimeout in BlockWorker", zap.Int64("Round#", cround))
+				mc.IncrementRoundTimeoutCount()
 				protocol.HandleRoundTimeout(ctx)
 			} else {
 				cround = mc.CurrentRound
+				Logger.Debug("Starting timer in BlockWorker", zap.Int64("Round#", cround))
+				mc.ResetRoundTimeoutCount()
 			}
 		}
 	}
+}
+
+func getLatestBlockFromSharders(ctx context.Context) *block.Block {
+	mc := GetMinerChain()
+	mc.Sharders.OneTimeStatusMonitor(ctx)
+	lfBlocks := mc.GetLatestFinalizedBlockFromSharder(ctx)
+	//Sorting as per the latest finalized blocks from all the sharders
+	sort.Slice(lfBlocks, func(i int, j int) bool { return lfBlocks[i].Round >= lfBlocks[j].Round })
+	if len(lfBlocks) > 0 {
+		Logger.Info("bc-1 latest finalized Block", zap.Int64("lfb_round", lfBlocks[0].Round))
+		return lfBlocks[0]
+	}
+	Logger.Info("bc-1 sharders returned no lfb.")
+	return nil
+}
+
+/*StartProtocol -- Start protocol as a worker */
+func StartProtocol() {
+
+	ctx := common.GetRootContext()
+
+	mc := GetMinerChain()
+
+	mc.Sharders.OneTimeStatusMonitor(ctx)
+	lfb := getLatestBlockFromSharders(ctx)
+	var mr *Round
+	if lfb != nil {
+		sr := round.NewRound(lfb.Round)
+		mr = mc.CreateRound(sr)
+		mr, _ = mc.AddRound(mr).(*Round)
+		mc.SetRandomSeed(sr, lfb.RoundRandomSeed)
+		mc.SetLatestFinalizedBlock(ctx, lfb)
+
+	} else {
+		sr := round.NewRound(0)
+		mr = mc.CreateRound(sr)
+	}
+	if isDkgEnabled {
+		SetupWorkers(ctx)
+	}
+	Logger.Info("starting the blockchain ...", zap.Int64("round", mr.GetRoundNumber()))
+	mc.StartNextRound(ctx, mr)
 }

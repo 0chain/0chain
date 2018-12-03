@@ -13,6 +13,7 @@ import (
 	"0chain.net/memorystore"
 	"0chain.net/node"
 	"0chain.net/round"
+	"0chain.net/threshold/bls"
 	"go.uber.org/zap"
 )
 
@@ -34,6 +35,9 @@ var BlockNotarizationSender node.EntitySendHandler
 /*MinerNotarizedBlockSender - Send a notarized block to a node */
 var MinerNotarizedBlockSender node.EntitySendHandler
 
+/*DKGShareSender - Send dkg share to a node*/
+var DKGShareSender node.EntitySendHandler
+
 /*MinerLatestFinalizedBlockRequestor - RequestHandler for latest finalized block to a node */
 var MinerLatestFinalizedBlockRequestor node.EntityRequestor
 
@@ -42,6 +46,10 @@ func SetupM2MSenders() {
 
 	options := &node.SendOptions{Timeout: node.TimeoutSmallMessage, MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
 	RoundVRFSender = node.SendEntityHandler("/v1/_m2m/round/vrf_share", options)
+
+	//TODO: changes options and url as per requirements
+	options = &node.SendOptions{Timeout: node.TimeoutSmallMessage, MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
+	DKGShareSender = node.SendEntityHandler("/v1/_m2m/dkg/share", options)
 
 	options = &node.SendOptions{Timeout: node.TimeoutLargeMessage, MaxRelayLength: 0, CurrentRelayLength: 0, CODEC: node.CODEC_MSGPACK, Compress: true}
 	VerifyBlockSender = node.SendEntityHandler("/v1/_m2m/block/verify", options)
@@ -52,20 +60,25 @@ func SetupM2MSenders() {
 
 	options = &node.SendOptions{Timeout: node.TimeoutSmallMessage, MaxRelayLength: 0, CurrentRelayLength: 0, CODEC: node.CODEC_MSGPACK, Compress: true}
 	BlockNotarizationSender = node.SendEntityHandler("/v1/_m2m/block/notarization", options)
+
 }
 
 /*SetupM2MReceivers - setup receivers for miner to miner communication */
 func SetupM2MReceivers() {
+
 	http.HandleFunc("/v1/_m2m/round/vrf_share", node.ToN2NReceiveEntityHandler(VRFShareHandler, nil))
+	http.HandleFunc("/v1/_m2m/dkg/share", node.ToN2NReceiveEntityHandler(DKGShareHandler, nil))
 	http.HandleFunc("/v1/_m2m/block/verify", node.ToN2NReceiveEntityHandler(memorystore.WithConnectionEntityJSONHandler(VerifyBlockHandler, datastore.GetEntityMetadata("block")), nil))
 	http.HandleFunc("/v1/_m2m/block/verification_ticket", node.ToN2NReceiveEntityHandler(VerificationTicketReceiptHandler, nil))
 	http.HandleFunc("/v1/_m2m/block/notarization", node.ToN2NReceiveEntityHandler(NotarizationReceiptHandler, nil))
 	http.HandleFunc("/v1/_m2m/block/notarized_block", node.ToN2NReceiveEntityHandler(NotarizedBlockHandler, nil))
+
 }
 
 /*SetupX2MResponders - setup responders */
 func SetupX2MResponders() {
 	http.HandleFunc("/v1/_x2m/block/notarized_block/get", node.ToN2NSendEntityHandler(NotarizedBlockSendHandler))
+	http.HandleFunc("/v1/_x2m/block/state_change/get", node.ToN2NSendEntityHandler(BlockStateChangeHandler))
 }
 
 /*SetupM2SRequestors - setup all requests to sharder by miner */
@@ -93,7 +106,22 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (interface{},
 	msg := NewBlockMessage(MessageVRFShare, node.GetSender(ctx), nil, nil)
 	vrfs.SetParty(msg.Sender)
 	msg.VRFShare = vrfs
+	Logger.Debug("DKG Here VRFShareHandler Sending msg to BlockMessageChannel")
 	mc.GetBlockMessageChannel() <- msg
+	return nil, nil
+}
+
+/*DKGShareHandler - handles the dkg share it receives from a node */
+func DKGShareHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+	dg, ok := entity.(*bls.Dkg)
+	if !ok {
+		return nil, common.InvalidRequest("Invalid Entity")
+	}
+	//ToDo: Need to make sure SENDER is not byzantine
+	nodeID := node.GetSender(ctx).SetIndex
+	Logger.Debug("received DKG share", zap.String("share", dg.Share), zap.Int("Node Id", nodeID))
+	AppendDKGSecShares(nodeID, dg.Share)
+
 	return nil, nil
 }
 
@@ -122,12 +150,14 @@ func VerifyBlockHandler(ctx context.Context, entity datastore.Entity) (interface
 
 /*VerificationTicketReceiptHandler - Add a verification ticket to the block */
 func VerificationTicketReceiptHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+	Logger.Debug("Received Verification Ticket!")
 	bvt, ok := entity.(*block.BlockVerificationTicket)
 	if !ok {
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
 	msg := NewBlockMessage(MessageVerificationTicket, node.GetSender(ctx), nil, nil)
 	msg.BlockVerificationTicket = bvt
+	Logger.Debug(" Here VerificationTicketReceipt Sending msg to BlockMessageChannel")
 	GetMinerChain().GetBlockMessageChannel() <- msg
 	return nil, nil
 }
@@ -165,12 +195,17 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 		return nil, err
 	}
 	msg := &BlockMessage{Sender: node.GetSender(ctx), Type: MessageNotarizedBlock, Block: b}
+	Logger.Debug("Here NotarizedBlock Sending msg to BlockMessageChannel")
 	mc.GetBlockMessageChannel() <- msg
 	return nil, nil
 }
 
 //NotarizedBlockSendHandler - handles a request for a notarized block
 func NotarizedBlockSendHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	return getNotarizedBlock(ctx, r)
+}
+
+func getNotarizedBlock(ctx context.Context, r *http.Request) (*block.Block, error) {
 	mc := GetMinerChain()
 	round := r.FormValue("round")
 	hash := r.FormValue("block")
@@ -203,4 +238,14 @@ func NotarizedBlockSendHandler(ctx context.Context, r *http.Request) (interface{
 		}
 	}
 	return nil, common.NewError("block_not_available", "Requested block is not available")
+}
+
+//BlockStateChangeHandler - provide the state changes associated with a block
+func BlockStateChangeHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	b, err := getNotarizedBlock(ctx, r)
+	if err != nil {
+		return nil, err
+	}
+	bsc := block.NewBlockStateChange(b)
+	return bsc, nil
 }

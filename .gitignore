@@ -25,13 +25,3 @@ awsnet/credentials/
 awsnet/testnet
 awsnet/cookbook/*.retry
 awsnet/cookbook/context
-
-docker.local/sharder1/config/scylla/scylla-server
-docker.local/sharder1/config/scylla/init.cql
-docker.local/sharder1/config/scylla/scylla.yaml
-docker.local/sharder2/config/scylla/init.cql
-docker.local/sharder2/config/scylla/scylla-server
-docker.local/sharder2/config/scylla/scylla.yaml
-docker.local/sharder3/config/scylla/init.cql
-docker.local/sharder3/config/scylla/scylla-server
-docker.local/sharder3/config/scylla/scylla.yaml

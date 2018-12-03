@@ -19,12 +19,16 @@ func SetupHandlers() {
 func ChainStatsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 	c := GetMinerChain().Chain
+	chain.PrintCSS(w)
 	diagnostics.WriteStatisticsCSS(w)
 
 	self := node.Self.Node
 	fmt.Fprintf(w, "<div>%v - %v</div>", self.GetPseudoName(), self.Description)
 
 	diagnostics.WriteConfiguration(w, c)
+	fmt.Fprintf(w, "<br>")
+	diagnostics.WriteCurrentStatus(w, c)
+	fmt.Fprintf(w, "<br>")
 	fmt.Fprintf(w, "<table>")
 	fmt.Fprintf(w, "<tr><td>")
 	fmt.Fprintf(w, "<h2>Block Finalization Statistics (Steady state)</h2>")
@@ -47,7 +51,7 @@ func ChainStatsHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</td><td valign='top'>")
 	fmt.Fprintf(w, "<h2>Finalization Lag Statistics</h2>")
 	diagnostics.WriteHistogramStatistics(w, c, chain.FinalizationLagMetric)
-	fmt.Fprintf(w, "</td><td></td></tr>")
+	fmt.Fprintf(w, "</td></tr>")
 
 	fmt.Fprintf(w, "<tr><td>")
 	fmt.Fprintf(w, "<h2>Block Generation Statistics</h2>")
@@ -56,10 +60,15 @@ func ChainStatsHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<h2>Block Verification Statistics</h2>")
 	diagnostics.WriteTimerStatistics(w, c, bvTimer, 1000000.0)
 	fmt.Fprintf(w, "</td></tr>")
+
 	fmt.Fprintf(w, "<tr><td>")
 	fmt.Fprintf(w, "<h2>State Save Statistics</h2>")
 	diagnostics.WriteTimerStatistics(w, c, chain.StateSaveTimer, 1000000.0)
-	fmt.Fprintf(w, "</td><td></td></tr>")
+	fmt.Fprintf(w, "</td><td valign='top'>")
+	fmt.Fprintf(w, "<h2>State Change Statistics</h2>")
+	diagnostics.WriteHistogramStatistics(w, c, chain.StateChangeSizeMetric)
+	fmt.Fprintf(w, "</td></tr>")
+
 	fmt.Fprintf(w, "<tr><td>")
 	fmt.Fprintf(w, "<h2>State Prune Update Statistics</h2>")
 	diagnostics.WriteTimerStatistics(w, c, chain.StatePruneUpdateTimer, 1000000.0)

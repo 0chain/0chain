@@ -3,7 +3,6 @@ package block
 import (
 	"context"
 
-	"0chain.net/common"
 	"0chain.net/datastore"
 	"0chain.net/util"
 )
@@ -75,38 +74,7 @@ func (sc *StateChange) ComputeProperties() {
 
 //Validate - implement interface
 func (sc *StateChange) Validate(ctx context.Context) error {
-	nodes := make(map[util.StrKey]util.Node)
-	var iterater func(node util.Node)
-	iterate := func(node util.Node) {
-		switch nodeImpl := node.(type) {
-		case *util.FullNode:
-			for _, ckey := range nodeImpl.Children {
-				if ckey != nil {
-					cnode, err := sc.mndb.GetNode(ckey)
-					if err == nil {
-						nodes[util.StrKey(ckey)] = cnode
-						iterater(cnode)
-					}
-				}
-			}
-		case *util.ExtensionNode:
-			ckey := nodeImpl.NodeKey
-			cnode, err := sc.mndb.GetNode(ckey)
-			if err == nil {
-				nodes[util.StrKey(ckey)] = cnode
-				iterater(cnode)
-			}
-		}
-	}
-	iterater = iterate
-	nodes[util.StrKey(sc.root.GetHashBytes())] = sc.root
-	iterate(sc.root)
-	for _, nd := range sc.Nodes {
-		if _, ok := nodes[util.StrKey(nd.GetHashBytes())]; !ok {
-			return common.NewError("nodes_outside_tree", "not all nodes are from the root")
-		}
-	}
-	return nil
+	return sc.mndb.Validate(sc.root)
 }
 
 /*Read - store read */

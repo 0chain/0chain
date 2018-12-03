@@ -6,6 +6,7 @@ import (
 
 	. "0chain.net/logging"
 	"0chain.net/node"
+	"go.uber.org/zap"
 )
 
 /*SetupWorkers - setup a blockworker for a chain */
@@ -29,6 +30,9 @@ func (c *Chain) FinalizeRoundWorker(ctx context.Context, bsh BlockStateHandler) 
 //FinalizedBlockWorker - a worker that processes finalized blocks
 func (c *Chain) FinalizedBlockWorker(ctx context.Context, bsh BlockStateHandler) {
 	for fb := range c.finalizedBlocksChannel {
+		if fb.Round < c.LatestFinalizedBlock.Round-5 {
+			Logger.Error("slow finalized block processing", zap.Int64("lfb", c.LatestFinalizedBlock.Round), zap.Int64("fb", fb.Round))
+		}
 		c.finalizeBlock(ctx, fb, bsh)
 	}
 }

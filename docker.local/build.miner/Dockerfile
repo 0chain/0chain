@@ -9,7 +9,8 @@ WORKDIR $SRC_DIR
 ADD ./code/go/src $SRC_DIR/go/src
 
 # Build it:
-RUN go build 0chain.net/miner/miner
+RUN go build -tags bn256 0chain.net/miner/miner
+
 
 FROM zchain_base
 ENV APP_DIR=/0chain

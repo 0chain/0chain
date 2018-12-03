@@ -8,9 +8,11 @@ import (
 	"net/http"
 	"os"
 	"runtime"
-	"sort"
 	"strings"
 	"time"
+
+	"0chain.net/miner"
+	"0chain.net/threshold/bls"
 
 	_ "net/http/pprof"
 
@@ -24,7 +26,6 @@ import (
 	"0chain.net/logging"
 	. "0chain.net/logging"
 	"0chain.net/memorystore"
-	"0chain.net/miner"
 	"0chain.net/node"
 	"0chain.net/round"
 	"0chain.net/state"
@@ -98,7 +99,7 @@ func main() {
 		Logger.Panic("node definition for self node doesn't exist")
 	}
 
-	if state.DebugState {
+	if state.Debug() {
 		chain.SetupStateLogger("/tmp/state.txt")
 	}
 
@@ -136,22 +137,31 @@ func main() {
 	}
 	common.HandleShutdown(server)
 	memorystore.GetInfo()
+	initWorkers(ctx)
 
 	mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"))
 
-	initWorkers(ctx)
 	initN2NHandlers()
+
 	initServer()
 	initHandlers()
 
-	go StartProtocol(ctx)
-	Logger.Info("Ready to listen to the requests")
 	chain.StartTime = time.Now().UTC()
+	go func() {
+		miner.StartDKG(ctx)
+		if config.Development() {
+			go TransactionGenerator(mc.BlockSize)
+		}
+	}()
+
+	Logger.Info("Ready to listen to the requests")
 	log.Fatal(server.ListenAndServe())
 }
 
 func initServer() {
-	// TODO; when a new server is brought up, it needs to first download all the state before it can start accepting requests
+	/* TODO: when a new server is brought up, it needs to first download
+	all the state before it can start accepting requests
+	*/
 	time.Sleep(time.Second)
 }
 
@@ -171,14 +181,13 @@ func initEntities() {
 	transaction.SetupEntity(memoryStorage)
 
 	miner.SetupNotarizationEntity()
+
+	bls.SetupDKGEntity()
+	bls.SetupBLSEntity()
 }
 
 func initHandlers() {
-	if config.Development() {
-		http.HandleFunc("/_hash", encryption.HashHandler)
-		http.HandleFunc("/_sign", common.ToJSONResponse(encryption.SignHandler))
-		SetupHandlers()
-	}
+	SetupHandlers()
 	config.SetupHandlers()
 	node.SetupHandlers()
 	chain.SetupHandlers()
@@ -209,44 +218,4 @@ func initWorkers(ctx context.Context) {
 	serverChain.SetupWorkers(ctx)
 	miner.SetupWorkers(ctx)
 	transaction.SetupWorkers(ctx)
-}
-
-/*StartProtocol - start the miner protocol */
-func StartProtocol(ctx context.Context) {
-	mc := miner.GetMinerChain()
-
-	mc.Sharders.OneTimeStatusMonitor(ctx)
-	lfBlocks := mc.GetLatestFinalizedBlockFromSharder(ctx)
-
-	var sr = round.NewRound(0)
-	var mr = mc.CreateRound(sr)
-
-	var lfb *block.Block
-	//Sorting as per the latest finalized blocks from all the sharders
-	sort.Slice(lfBlocks, func(i int, j int) bool { return lfBlocks[i].Round >= lfBlocks[j].Round })
-	if len(lfBlocks) > 0 {
-		lfb = lfBlocks[0]
-	}
-	if lfb != nil {
-		sr = round.NewRound(lfb.Round)
-		mr = mc.CreateRound(sr)
-		mr, _ = mc.AddRound(mr).(*miner.Round)
-		mc.SetRandomSeed(sr, lfb.RoundRandomSeed)
-		mc.SetLatestFinalizedBlock(ctx, lfb)
-	}
-	if !mc.CanStartNetwork() {
-		ticker := time.NewTicker(5 * chain.DELTA)
-		for ts := range ticker.C {
-			active := mc.Miners.GetActiveCount()
-			Logger.Info("waiting for sufficient active nodes", zap.Time("ts", ts), zap.Int("active", active))
-			if mc.CanStartNetwork() {
-				break
-			}
-		}
-	}
-	if config.Development() {
-		go TransactionGenerator(mc.BlockSize)
-	}
-	Logger.Info("starting the blockchain ...", zap.Int64("round", mr.GetRoundNumber()))
-	mc.StartNextRound(ctx, mr)
 }

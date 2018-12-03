@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math/rand"
+	"os"
 	"testing"
 	"time"
 
@@ -18,6 +19,7 @@ import (
 
 var debug = false
 var randTime = time.Now().UnixNano()
+var deletePercent = 0
 
 var prng *rand.Rand
 
@@ -34,7 +36,7 @@ func init() {
 
 func TestMPTWithWalletTxns(t *testing.T) {
 	var rs = rand.NewSource(randTime)
-	transactions := 10000
+	transactions := 100
 	var wallets []*Wallet
 	pmpt := GetMPT(PERSIST, util.Sequence(2010))
 	start := 10
@@ -75,6 +77,69 @@ func TestMPTWithWalletTxns(t *testing.T) {
 		fmt.Printf("using persist db\n")
 		testWithMPT(pmpt, wallets, transactions,false)
 	*/
+}
+
+func TestMPTChangeCollector(t *testing.T) {
+	var rs = rand.NewSource(randTime)
+	transactions := 1
+	var wallets []*Wallet
+	var clients = 10000
+	for i := 0; i < 1; i++ {
+		prng = rand.New(rs)
+		wallets = createWallets(clients)
+		mpt := GetMPT(MEMORY, util.Sequence(2010))
+		saveWallets(mpt, wallets)
+		verifyBalance(mpt, wallets)
+		lmpt := mpt
+		for j := 1; j < 10000; j++ {
+			cmpt := GetMPT(LEVEL, util.Sequence(2010+j))
+			lndb := cmpt.GetNodeDB().(*util.LevelNodeDB)
+			lndb.P = lmpt.GetNodeDB()
+			cmpt.SetRoot(lmpt.GetRoot())
+			mndb := lndb.C.(*util.MemoryNodeDB)
+			mpt = lmpt
+			lmpt = cmpt
+
+			generateTransactions(lmpt, wallets, transactions)
+
+			rootKey := lmpt.GetRoot()
+			root, err := mndb.GetNode(rootKey)
+			if err != nil {
+				fmt.Printf("randtime: %v %v\n", i, randTime)
+				fmt.Printf("%v\n", err)
+				panic(err)
+			}
+			cmndb := util.NewMemoryNodeDB()
+			changes := lmpt.GetChangeCollector().GetChanges()
+			for _, change := range changes {
+				cmndb.PutNode(change.New.GetHashBytes(), change.New)
+			}
+			err = cmndb.Validate(root)
+			if err != nil {
+				mpt.PrettyPrint(os.Stdout)
+				fmt.Printf("\n")
+
+				lmpt.PrettyPrint(os.Stdout)
+				fmt.Printf("\n")
+
+				fmt.Printf("randtime: %v %v\n", i, randTime)
+				fmt.Printf("%v\n", err)
+				panic(err)
+			}
+			err = lmpt.Validate()
+			if err != nil {
+				mpt.PrettyPrint(os.Stdout)
+				fmt.Printf("\n")
+
+				lmpt.PrettyPrint(os.Stdout)
+				fmt.Printf("\n")
+
+				fmt.Printf("randtime: %v %v\n", i, randTime)
+				fmt.Printf("%v\n", err)
+				panic(err)
+			}
+		}
+	}
 }
 
 func GetMPT(dbType int, version util.Sequence) util.MerklePatriciaTrieI {
@@ -136,6 +201,9 @@ func generateTransactions(mpt util.MerklePatriciaTrieI, wallets []*Wallet, trans
 		}
 
 		value := prng.Int63n(wf.Balance) + 1
+		if deletePercent > 0 && prng.Intn(100) < int(deletePercent) {
+			value = wf.Balance
+		}
 		wf.Balance -= value
 		wt.Balance += value
 		if wf.Balance == 0 {
@@ -167,11 +235,16 @@ func generateTransactions(mpt util.MerklePatriciaTrieI, wallets []*Wallet, trans
 			s.Balance += state.Balance(value)
 			mpt.Insert(util.Path(wt.ClientID), s)
 		}
+		if debug {
+			mpt.PrettyPrint(os.Stdout)
+			fmt.Printf("\n")
+		}
 	}
 	if mpt != nil {
-		fmt.Printf("transactions - num changes: %v\n", len(mpt.GetChangeCollector().GetChanges()))
+		fmt.Printf("transactions - num changes: %v in %v\n", len(mpt.GetChangeCollector().GetChanges()), time.Since(ts))
+	} else {
+		fmt.Printf("transactions - time taken: %v\n", time.Since(ts))
 	}
-	fmt.Printf("transactions - time taken: %v\n", time.Since(ts))
 	if mpt == nil {
 		return
 	}
@@ -220,10 +293,9 @@ func getState(mpt util.MerklePatriciaTrieI, clientID string) (*state.State, erro
 			return nil, err
 		}
 		return s, err
-	} else {
-		deserializer := &state.Deserializer{}
-		s = deserializer.Deserialize(ss).(*state.State)
 	}
+	deserializer := &state.Deserializer{}
+	s = deserializer.Deserialize(ss).(*state.State)
 	return s, nil
 }
 

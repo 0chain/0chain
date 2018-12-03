@@ -48,18 +48,22 @@ func (mc *Chain) startRound(ctx context.Context, pr *Round, r *Round) {
 		// If we don't have the prior round, and hence the prior round's random seed, we can't provide the share
 		return
 	}
+
 	mc.addMyVRFShare(ctx, pr, r)
 }
 
 func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
 	vrfs := &round.VRFShare{}
 	vrfs.Round = r.GetRoundNumber()
-	vrfs.Share = node.Self.Node.SetIndex
+	vrfs.Share = GetBlsShare(ctx, r.Round, pr.Round)
 	vrfs.SetParty(node.Self.Node)
 	r.vrfShare = vrfs
+
+	// do we need to check if AddVRFShare is success or not?
 	if mc.AddVRFShare(ctx, r, r.vrfShare) {
 		go mc.SendVRFShare(ctx, r.vrfShare)
 	}
+
 }
 
 func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
@@ -72,10 +76,12 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 		Logger.Debug("start new round (previous round not found)", zap.Int64("round", mr.GetRoundNumber()))
 		return
 	}
+
 	self := node.GetSelfNode(ctx)
 	rank := mr.GetMinerRank(self.Node)
-	Logger.Info("*** starting round ***", zap.Int64("round", mr.GetRoundNumber()), zap.Int("index", self.SetIndex), zap.Int("rank", rank), zap.Any("random_seed", mr.GetRandomSeed()), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round))
+	Logger.Info("*** starting round block generation ***", zap.Int64("round", mr.GetRoundNumber()), zap.Int("index", self.SetIndex), zap.Int("rank", rank), zap.Any("random_seed", mr.GetRandomSeed()), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round))
 	if !mc.IsRoundGenerator(mr, self.Node) {
+		Logger.Info("Not a generator :( Heading back")
 		return
 	}
 	//NOTE: If there are not enough txns, this will not advance further even though rest of the network is. That's why this is a goroutine
@@ -112,6 +118,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		Logger.Error("generate round block (prior round not found)", zap.Any("round", roundNumber-1))
 		return nil, common.NewError("invalid_round,", "Round not available")
 	}
+
 	pb := mc.GetBlockToExtend(ctx, pround)
 	if pb == nil {
 		Logger.Error("generate round block (prior block not found)", zap.Any("round", roundNumber))
@@ -128,28 +135,31 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	start := time.Now()
 	makeBlock := false
 	generationTimeout := time.Millisecond * time.Duration(mc.GetGenerationTimeout())
+	generationTries := 0
 	for true {
 		if mc.CurrentRound > b.Round {
-			Logger.Debug("generate block (round mismatch)", zap.Any("round", roundNumber), zap.Any("current_round", mc.CurrentRound))
+			Logger.Error("generate block - round mismatch", zap.Any("round", roundNumber), zap.Any("current_round", mc.CurrentRound))
 			return nil, ErrRoundMismatch
 		}
 		txnCount := transaction.TransactionCount
 		b.ClientState.ResetChangeCollector(b.PrevBlock.ClientStateHash)
+		generationTries++
 		err := mc.GenerateBlock(ctx, b, mc, makeBlock)
 		if err != nil {
 			cerr, ok := err.(*common.Error)
 			if ok {
 				switch cerr.Code {
 				case InsufficientTxns:
-					if !config.MainNet() {
-						Logger.Error("generate block", zap.Error(err))
-					}
+					var startLogging time.Time
 					for true {
 						delay := mc.GetRetryWaitTime()
 						time.Sleep(time.Duration(delay) * time.Millisecond)
-						Logger.Debug("generate block", zap.Any("round", roundNumber), zap.Any("delay", delay), zap.Any("txn_count", txnCount), zap.Any("t.txn_count", transaction.TransactionCount))
+						if startLogging.IsZero() || time.Now().Sub(startLogging) > time.Second {
+							startLogging = time.Now()
+							Logger.Debug("generate block", zap.Any("round", roundNumber), zap.Any("delay", delay), zap.Any("txn_count", txnCount), zap.Any("t.txn_count", transaction.TransactionCount))
+						}
 						if mc.CurrentRound > b.Round {
-							Logger.Debug("generate block (round mismatch)", zap.Any("round", roundNumber), zap.Any("current_round", mc.CurrentRound))
+							Logger.Error("generate block - round mismatch", zap.Any("round", roundNumber), zap.Any("current_round", mc.CurrentRound))
 							return nil, ErrRoundMismatch
 						}
 						if txnCount != transaction.TransactionCount || time.Now().Sub(start) > generationTimeout {
@@ -168,10 +178,13 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		}
 		b.RunningTxnCount = pb.RunningTxnCount + int64(len(b.Txns))
 		mc.AddRoundBlock(r, b)
+		if generationTries > 1 {
+			Logger.Error("generate block - multiple tries", zap.Int64("round", b.Round), zap.Int("tries", generationTries))
+		}
 		break
 	}
 	if r.IsVerificationComplete() {
-		Logger.Error("generate block (verification complete)", zap.Any("round", roundNumber), zap.Any("notarized", len(r.GetNotarizedBlocks())))
+		Logger.Error("generate block - verification complete", zap.Any("round", roundNumber), zap.Any("notarized", len(r.GetNotarizedBlocks())))
 		return nil, nil
 	}
 	mc.addToRoundVerification(ctx, r, b)
@@ -293,6 +306,7 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			mc.ProcessVerifiedTicket(ctx, r, b, &bvt.VerificationTicket)
 		}
 		minerStats.VerificationTicketsByRank[b.RoundRank]++
+		Logger.Debug("Sending verification ticket back")
 		return true
 	}
 	var sendVerification = false
@@ -312,6 +326,7 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			}
 		}
 		sendVerification = true
+		Logger.Debug("SendVerification Set to True")
 	}
 	var blockTimeTimer = time.NewTimer(r.delta)
 	r.SetState(round.RoundCollectingBlockProposals)
@@ -334,12 +349,14 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			}
 			return
 		case <-blockTimeTimer.C:
+			Logger.Debug("Initiating Verification")
 			initiateVerification()
 		case b := <-r.GetBlocksToVerifyChannel():
 			if sendVerification {
 				// Is this better than the current best block
 				if r.Block == nil || r.Block.RoundRank >= b.RoundRank {
 					b.SetBlockState(block.StateVerificationPending)
+					Logger.Debug("VerifyAndSending")
 					verifyAndSend(ctx, r, b)
 				} else {
 					b.SetBlockState(block.StateVerificationRejected)
@@ -452,8 +469,11 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*bloc
 	//Params are nil? Do we need to send any params like sending the miner ID ?
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		fb, ok := entity.(*block.Block)
+		if fb.Round == 0 {
+			return nil, nil
+		}
 		if !ok {
-			return nil, common.NewError("invalid_entity", "Invalid entity")
+			return nil, datastore.ErrInvalidEntity
 		}
 		Logger.Info("lfb from sharder", zap.Int64("lfb_round", fb.Round))
 		err := fb.Validate(ctx)
@@ -485,7 +505,13 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
 	if mc.CurrentRound == 0 {
 		return
 	}
-	Logger.Error("round timeout occured", zap.Any("round", mc.CurrentRound))
+	switch crt := mc.GetRoundTimeoutCount(); {
+	case crt < 10:
+		Logger.Error("round timeout occured", zap.Any("round", mc.CurrentRound), zap.Int64("count", crt))
+	case crt == 10:
+		Logger.Error("round timeout occured (no further timeout messages will be displayed)", zap.Any("round", mc.CurrentRound), zap.Int64("count", crt))
+		//TODO: should have a means to send an email/SMS to someone or something like that
+	}
 	mc.RoundTimeoutsCount++
 	if !mc.CanStartNetwork() {
 		return
