@@ -17,8 +17,11 @@ func SetupStateHandlers() {
 }
 
 func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interface{}, error) {
+	scAddress := r.FormValue("sc_address")
+	key := r.FormValue("key")
 	pdb := c.scStateDB
-	node, err := pdb.GetNode(smartcontractstate.Key(r.FormValue("key")))
+	scState := smartcontractstate.NewSCState(pdb, scAddress)
+	node, err := scState.GetNode(smartcontractstate.Key(key))
 	if err != nil {
 		return nil, err
 	}

@@ -18,7 +18,7 @@ const STORAGE_CONTRACT_ADDRESS = "6dba10422e368813802877a85039d3985d96760ed84409
 func getSmartContract(t *transaction.Transaction, ndb smartcontractstate.SCDB) sci.SmartContractInterface {
 	if t.ToClientID == STORAGE_CONTRACT_ADDRESS {
 		storageSC := &storagesc.StorageSmartContract{}
-		storageSC.DB = ndb
+		storageSC.DB = smartcontractstate.NewSCState(ndb, STORAGE_CONTRACT_ADDRESS)
 		storageSC.ID = STORAGE_CONTRACT_ADDRESS
 		return storageSC
 	}

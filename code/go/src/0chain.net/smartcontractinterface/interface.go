@@ -10,7 +10,7 @@ import (
 const Seperator = ":"
 
 type SmartContract struct {
-	DB smartcontractstate.SCDB
+	DB smartcontractstate.SCStateI
 	ID string
 }
 
