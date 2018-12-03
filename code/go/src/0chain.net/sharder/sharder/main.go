@@ -153,13 +153,17 @@ func main() {
 	if err == nil {
 		sc.CurrentRound = r.Number
 		sc.AddRound(r)
-		Logger.Info("**!most recent round info", zap.Int64("roundNumber", r.Number), zap.String("blockHash", r.BlockHash))
+		Logger.Info("bc-27 most recent round info", zap.Int64("roundNumber", r.Number), zap.String("blockHash", r.BlockHash))
 	} else {
-		Logger.Error("**!error reading round data from db", zap.Error(err))
+		Logger.Error("bc-27 error reading round data from db", zap.Error(err))
 	}
+
 	Logger.Info("Ready to listen to the requests")
 	chain.StartTime = time.Now().UTC()
 	log.Fatal(server.ListenAndServe())
+
+	//catch up with other sharders rounds
+	go CatchUpWithLatestRound(ctx, r)
 }
 
 func initServer() {
@@ -214,4 +218,12 @@ func initWorkers(ctx context.Context) {
 	serverChain := chain.GetServerChain()
 	serverChain.SetupWorkers(ctx)
 	sharder.SetupWorkers(ctx)
+}
+
+func CatchUpWithLatestRound(ctx context.Context, r *round.Round) {
+	sc := sharder.GetSharderChain()
+	lr := sc.CheckForMissingRounds(ctx, r.Number)
+	if lr != nil && lr.Number > r.Number+1 {
+		sc.GetMissingRounds(ctx, lr.Number, r.Number)
+	}
 }

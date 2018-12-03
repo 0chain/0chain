@@ -3,6 +3,7 @@ package sharder
 import (
 	"context"
 	"math"
+	"sort"
 	"strconv"
 	"time"
 
@@ -81,9 +82,6 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 	er := sc.GetRound(b.Round)
 	if er == nil {
 		var r = round.NewRound(b.Round)
-		if r.Number > sc.CurrentRound {
-			go sc.GetMissingRounds(ctx, r.Number, sc.CurrentRound)
-		}
 		er, _ = sc.AddRound(r).(*round.Round)
 		sc.SetRandomSeed(er, b.RoundRandomSeed)
 	}
@@ -93,6 +91,28 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 	sc.SetRoundRank(er, b)
 	Logger.Info("received block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)))
 	sc.AddNotarizedBlock(ctx, er, b)
+}
+
+func (sc *Chain) CheckForMissingRounds(ctx context.Context, currRound int64) *round.Round {
+	latestRounds := make([]*round.Round, 1)
+
+	latestRoundHandler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+		r, ok := entity.(*round.Round)
+		if !ok {
+			return nil, nil
+		}
+		latestRounds = append(latestRounds, r)
+		return nil, nil
+	}
+
+	sc.Sharders.RequestEntityFromAll(ctx, LatestRoundRequestor, nil, latestRoundHandler)
+	sort.Slice(latestRounds, func(i int, j int) bool { return latestRounds[i].Number >= latestRounds[j].Number })
+
+	if len(latestRounds) > 0 {
+		return latestRounds[0]
+	}
+
+	return nil
 }
 
 func (sc *Chain) GetMissingRounds(ctx context.Context, r int64, currRound int64) {
@@ -118,10 +138,10 @@ func (sc *Chain) GetMissingRounds(ctx context.Context, r int64, currRound int64)
 			b := blocks[0]
 			sc.storeRound(ctx, r, b)
 			self := node.GetSelfNode(ctx)
-			Logger.Info("**!missed round stored in db", zap.Int64("round", r.GetRoundNumber()))
+			Logger.Info("bc-27 missed round stored in db", zap.Int64("round", r.GetRoundNumber()))
 			if sc.IsBlockSharder(b, self.Node) {
 				sc.storeBlock(b)
-				Logger.Info("**!missed block stored in db", zap.String("block-hash", b.Hash))
+				Logger.Info("bc-27 missed block stored in db", zap.String("block-hash", b.Hash))
 			}
 			blocks = make([]*block.Block, 1)
 		}
