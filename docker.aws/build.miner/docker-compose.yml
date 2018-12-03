@@ -51,7 +51,7 @@ services:
       context: ${DOCKER_CODEBASE}
       dockerfile: ./docker.aws/build.miner/Dockerfile
       args:
-        - IMAGE_TAG
+        - IMAGE_TAG=${IMAGE_TAG}
 
     image: ${IMAGE_NAME}:${IMAGE_TAG}
 
