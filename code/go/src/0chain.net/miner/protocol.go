@@ -35,7 +35,6 @@ type ProtocolMessageReceiver interface {
 	HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage)
 	HandleVerificationTicketMessage(ctx context.Context, msg *BlockMessage)
 	HandleNotarizationMessage(ctx context.Context, msg *BlockMessage)
-	HandleRoundTimeout(ctx context.Context)
 	HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMessage)
 }
 
@@ -47,6 +46,8 @@ type ProtocolRound interface {
 	CancelRoundVerification(ctx context.Context, r *Round)
 	ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.Block, vt *block.VerificationTicket)
 	FinalizeRound(ctx context.Context, r round.RoundI, bsh chain.BlockStateHandler)
+
+	HandleRoundTimeout(ctx context.Context, seconds int)
 }
 
 /*ProtocolBlock - this is the interface that deals with the block level logic of the protocol */

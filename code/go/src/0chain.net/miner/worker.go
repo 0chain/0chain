@@ -16,6 +16,7 @@ import (
 /*SetupWorkers - Setup the miner's workers */
 func SetupWorkers(ctx context.Context) {
 	mc := GetMinerChain()
+	go mc.RoundWorker(ctx)
 	go mc.BlockWorker(ctx)              // 1) receives incoming blocks from the network
 	go mc.FinalizeRoundWorker(ctx, mc)  // 2) sequentially finalize the rounds
 	go mc.FinalizedBlockWorker(ctx, mc) // 3) sequentially processes finalized blocks
@@ -23,12 +24,7 @@ func SetupWorkers(ctx context.Context) {
 
 /*BlockWorker - a job that does all the work related to blocks in each round */
 func (mc *Chain) BlockWorker(ctx context.Context) {
-	Logger.Debug("Here in BlockWorker")
-	var RoundTimeout = 10 * time.Second
-
 	var protocol Protocol = mc
-	var cround = mc.CurrentRound
-	var roundTimeout = time.NewTicker(RoundTimeout)
 	for true {
 		select {
 		case <-ctx.Done():
@@ -56,15 +52,28 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 			} else {
 				Logger.Debug("message (done)", zap.Any("msg", GetMessageLookup(msg.Type)))
 			}
-		case <-roundTimeout.C:
+		}
+	}
+}
+
+//RoundWorker - a worker that monitors the round progress
+func (mc *Chain) RoundWorker(ctx context.Context) {
+	var cround = mc.CurrentRound
+	var ticker = time.NewTicker(time.Second)
+	var tickerCount = 0
+	var protocol Protocol = mc
+	for true {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
 			if cround == mc.CurrentRound {
-				Logger.Debug("Here calling roundTimeout in BlockWorker", zap.Int64("Round#", cround))
-				mc.IncrementRoundTimeoutCount()
-				protocol.HandleRoundTimeout(ctx)
+				tickerCount++
+				protocol.HandleRoundTimeout(ctx, tickerCount)
 			} else {
 				cround = mc.CurrentRound
-				Logger.Debug("Starting timer in BlockWorker", zap.Int64("Round#", cround))
 				mc.ResetRoundTimeoutCount()
+				tickerCount = 0
 			}
 		}
 	}

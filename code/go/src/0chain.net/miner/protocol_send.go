@@ -17,7 +17,7 @@ func (mc *Chain) SendVRFShare(ctx context.Context, vrfs *round.VRFShare) {
 	m2m.SendAll(RoundVRFSender(vrfs))
 }
 
-/*SendBlock - send the generated block to the network */
+/*SendBlock - send the block proposal to the network */
 func (mc *Chain) SendBlock(ctx context.Context, b *block.Block) {
 	m2m := mc.Miners
 	m2m.SendAll(VerifyBlockSender(b))
