@@ -3,6 +3,7 @@ package miner
 import (
 	"context"
 	"math"
+	"sort"
 	"sync"
 	"time"
 
@@ -92,7 +93,22 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) *block.Block {
 	bnb := r.GetHeaviestNotarizedBlock()
 	if bnb == nil {
-		Logger.Error("get block to extend - no notarized block", zap.Int64("round", r.GetRoundNumber()), zap.Int("proposed_blocks", len(r.GetProposedBlocks())))
+		type pBlock struct {
+			Block     string
+			Proposals int
+		}
+
+		proposals := r.GetProposedBlocks()
+		var pcounts []*pBlock
+		for _, pb := range proposals {
+			pcount := len(pb.VerificationTickets)
+			if pcount == 0 {
+				continue
+			}
+			pcounts = append(pcounts, &pBlock{Block: pb.Hash, Proposals: pcount})
+		}
+		sort.SliceStable(pcounts, func(i, j int) bool { return pcounts[i].Proposals > pcounts[j].Proposals })
+		Logger.Error("get block to extend - no notarized block", zap.Int64("round", r.GetRoundNumber()), zap.Int("num_proposals", len(proposals)), zap.Any("verification_tickets", pcounts))
 		bnb = mc.GetHeaviestNotarizedBlock(r)
 	}
 	if bnb != nil {
