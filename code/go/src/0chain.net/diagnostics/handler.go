@@ -122,7 +122,7 @@ func WriteCurrentStatus(w http.ResponseWriter, c *chain.Chain) {
 	fmt.Fprintf(w, "<tr><th class='sheader' colspan='2'>Current Status</th></tr>")
 	fmt.Fprintf(w, "<tr><td>Current Round</td><td>%v</td></tr>", c.CurrentRound)
 	if c.LatestFinalizedBlock != nil {
-		fmt.Fprintf(w, "<tr><td>Latest Finalized Round</td><td>%v</td></tr>", c.LatestFinalizedBlock.Round)
+		fmt.Fprintf(w, "<tr><td>Finalized Round</td><td>%v</td></tr>", c.LatestFinalizedBlock.Round)
 	}
 	fmt.Fprintf(w, "</table>")
 }
