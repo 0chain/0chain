@@ -58,12 +58,10 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 			}
 		case <-roundTimeout.C:
 			if cround == mc.CurrentRound {
-				Logger.Debug("Here calling roundTimeout in BlockWorker", zap.Int64("Round#", cround))
 				mc.IncrementRoundTimeoutCount()
 				protocol.HandleRoundTimeout(ctx)
 			} else {
 				cround = mc.CurrentRound
-				Logger.Debug("Starting timer in BlockWorker", zap.Int64("Round#", cround))
 				mc.ResetRoundTimeoutCount()
 			}
 		}

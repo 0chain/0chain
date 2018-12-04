@@ -306,7 +306,6 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			mc.ProcessVerifiedTicket(ctx, r, b, &bvt.VerificationTicket)
 		}
 		minerStats.VerificationTicketsByRank[b.RoundRank]++
-		Logger.Debug("Sending verification ticket back")
 		return true
 	}
 	var sendVerification = false
@@ -326,7 +325,6 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			}
 		}
 		sendVerification = true
-		Logger.Debug("SendVerification Set to True")
 	}
 	var blockTimeTimer = time.NewTimer(r.delta)
 	r.SetState(round.RoundCollectingBlockProposals)
@@ -349,14 +347,12 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			}
 			return
 		case <-blockTimeTimer.C:
-			Logger.Debug("Initiating Verification")
 			initiateVerification()
 		case b := <-r.GetBlocksToVerifyChannel():
 			if sendVerification {
 				// Is this better than the current best block
 				if r.Block == nil || r.Block.RoundRank >= b.RoundRank {
 					b.SetBlockState(block.StateVerificationPending)
-					Logger.Debug("VerifyAndSending")
 					verifyAndSend(ctx, r, b)
 				} else {
 					b.SetBlockState(block.StateVerificationRejected)
