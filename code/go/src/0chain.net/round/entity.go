@@ -13,7 +13,6 @@ import (
 
 	"0chain.net/block"
 	"0chain.net/datastore"
-	"go.uber.org/zap"
 )
 
 const (
@@ -117,7 +116,6 @@ func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool) {
 	rnb := append(r.notarizedBlocks, b)
 	sort.Slice(rnb, func(i int, j int) bool { return rnb[i].ChainWeight > rnb[j].ChainWeight })
 	r.notarizedBlocks = rnb
-	Logger.Info("Added to Notarized block to round", zap.Int64("Round#", b.Round))
 	return b, true
 }
 
