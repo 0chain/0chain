@@ -116,6 +116,7 @@ func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool) {
 	rnb := append(r.notarizedBlocks, b)
 	sort.Slice(rnb, func(i int, j int) bool { return rnb[i].ChainWeight > rnb[j].ChainWeight })
 	r.notarizedBlocks = rnb
+	Logger.Info("Added to Notarized block to round", zap.int64("Round#", b.GetRoundNumber()))
 	return b, true
 }
 
