@@ -31,6 +31,7 @@ var currRound int64
 var roundMap = make(map[int64]map[int]string)
 
 var isDkgEnabled bool
+var k, n int
 
 // StartDKG - starts the DKG process
 func StartDKG(ctx context.Context) {
@@ -41,10 +42,10 @@ func StartDKG(ctx context.Context) {
 
 	isDkgEnabled = config.DevConfiguration.IsDkgEnabled
 	thresholdByCount := viper.GetInt("server_chain.block.consensus.threshold_by_count")
-	k := int(math.Ceil((float64(thresholdByCount) / 100) * float64(mc.Miners.Size())))
+	k = int(math.Ceil((float64(thresholdByCount) / 100) * float64(mc.Miners.Size())))
 
 	Logger.Info("DKG Setup", zap.Int("K", k), zap.Bool("DKG Enabled", isDkgEnabled))
-	n := mc.Miners.Size()
+	n = mc.Miners.Size()
 	self := node.GetSelfNode(ctx)
 	waitForNetworkToBeReady(ctx)
 	if isDkgEnabled {
@@ -213,7 +214,8 @@ func VerifySigShares() bool {
 
 /*GetBlsThreshold Handy api for now. move this to protocol_vrf */
 func GetBlsThreshold() int {
-	return dg.T
+	//return dg.T
+	return k
 }
 
 /*ComputeBlsID Handy API to get the ID used in the library */
