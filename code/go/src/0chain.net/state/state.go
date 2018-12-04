@@ -8,49 +8,6 @@ import (
 	"0chain.net/util"
 )
 
-const (
-	DebugLevelNone  = 0
-	DebugLevelChain = iota
-	DebugLevelBlock = iota
-	DebugLevelTxn   = iota
-	DebugLevelNode  = iota
-)
-
-var debugState = DebugLevelNone
-
-//Debug - indicates whether state debugging is enabled or not
-func Debug() bool {
-	return debugState > DebugLevelNone
-}
-
-//DebugChain - indicates whether state debugging level is chain or more granular
-func DebugChain() bool {
-	return debugState >= DebugLevelChain
-}
-
-//DebugBlock - indicates whether state debugging level is block or more granular
-func DebugBlock() bool {
-	return debugState >= DebugLevelBlock
-}
-
-//DebugTxn - indicates whether state debugging level is txn or more granular
-func DebugTxn() bool {
-	return debugState >= DebugLevelTxn
-}
-
-//DebugNode - indicates whether state debugging level is mpt node or more granular
-func DebugNode() bool {
-	return debugState >= DebugLevelNode
-}
-
-//SetDebugLevel - set the state debug level
-func SetDebugLevel(level int) {
-	debugState = level
-	if DebugNode() {
-		util.DebugMPTNode = true
-	}
-}
-
 //Balance - any quantity that is represented as an integer in the lowest denomination
 type Balance int64
 
