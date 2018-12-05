@@ -8,6 +8,7 @@ import (
 
 	"0chain.net/chain"
 	"0chain.net/encryption"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 
 	"0chain.net/miner"
@@ -22,17 +23,18 @@ import (
 )
 
 var wallets []*wallet.Wallet
+var txn_generation_rate int32
 
 /*TransactionGenerator - generates a steady stream of transactions */
 func TransactionGenerator(blockSize int32) {
 	wallet.SetupWallet()
-	var numClients int32 = 1024
-	if blockSize*4 < numClients {
-		numClients = 4 * blockSize
-	}
+
+	viper.SetDefault("development.txn_generation.wallets", 1000)
+	var numClients = viper.GetInt("development.txn_generation.wallets")
 	GenerateClients(numClients)
 	numWorkers := 1
 	numTxns := blockSize
+	SetTxnGenRate(numTxns)
 	switch {
 	case blockSize <= 10:
 		numWorkers = 1
@@ -88,6 +90,7 @@ func TransactionGenerator(blockSize int32) {
 	}
 
 	for true {
+		numTxns = GetTxnGenRate()
 		numGenerators := sc.NumGenerators
 		numMiners := sc.Miners.Size()
 		blockRate := chain.SteadyStateFinalizationTimer.Rate1()
@@ -168,7 +171,7 @@ func GetOwnerWallet(keysFile string) *wallet.Wallet {
 }
 
 /*GenerateClients - generate the given number of clients */
-func GenerateClients(numClients int32) {
+func GenerateClients(numClients int) {
 	ownerWallet := GetOwnerWallet("config/owner_keys.txt")
 	rs := rand.NewSource(time.Now().UnixNano())
 	prng := rand.New(rs)
@@ -182,7 +185,7 @@ func GenerateClients(numClients int32) {
 	tctx := memorystore.WithEntityConnection(common.GetRootContext(), txnMetadataProvider)
 	tctx = datastore.WithAsyncChannel(ctx, transaction.TransactionEntityChannel)
 
-	for i := int32(0); i < numClients; i++ {
+	for i := 0; i < numClients; i++ {
 		//client side code
 		w := &wallet.Wallet{}
 		w.Initialize()
@@ -197,7 +200,7 @@ func GenerateClients(numClients int32) {
 	time.Sleep(time.Second)
 	for _, w := range wallets {
 		//generous airdrop in dev/test mode :)
-		txn := ownerWallet.CreateSendTransaction(w.ClientID, prng.Int63n(10000)*10000000000, "generous air drop! :)")
+		txn := ownerWallet.CreateSendTransaction(w.ClientID, prng.Int63n(100000)*10000000000, "generous air drop! :)")
 		_, err := transaction.PutTransaction(tctx, txn)
 		if err != nil {
 			fmt.Printf("error:%v: %v\n", time.Now(), err)
@@ -205,4 +208,14 @@ func GenerateClients(numClients int32) {
 		}
 	}
 	Logger.Info("generation of wallets complete", zap.Int("wallets", len(wallets)))
+}
+
+//SetTxnGenRate - the txn generation rate
+func SetTxnGenRate(newRate int32) {
+	txn_generation_rate = newRate
+}
+
+//GetTxnGenRate - the txn generation rate
+func GetTxnGenRate() int32 {
+	return txn_generation_rate
 }

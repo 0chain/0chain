@@ -38,6 +38,9 @@ func (n *Node) PrintSendStats(w io.Writer) {
 	sort.SliceStable(uris, func(i, j int) bool { return uris[i] < uris[j] })
 	for _, uri := range uris {
 		timer := n.TimersByURI[uri]
+		if timer.Count() == 0 {
+			continue
+		}
 		fmt.Fprintf(w, "<tr>")
 		fmt.Fprintf(w, "<td>%v</td>", uri)
 		fmt.Fprintf(w, "<td class='number'>%9d</td>", timer.Count())

@@ -18,8 +18,8 @@ type State struct {
 	having the origin (round in the blockchain) part of the state ensures that the same logical leaf has a new hash and avoid this issue. We are getting
 	parallelism without explicit locks with this approach.
 	*/
-	Round   int64   `json:"round"`
-	Balance Balance `json:"balance"`
+	Round   int64   `json:"round" msgpack:"r"`
+	Balance Balance `json:"balance" msgpack:"b"`
 }
 
 /*GetHash - implement SecureSerializableValueI interface */

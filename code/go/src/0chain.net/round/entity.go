@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"0chain.net/ememorystore"
+	. "0chain.net/logging"
 	"0chain.net/node"
 
 	"0chain.net/block"
@@ -38,7 +39,8 @@ type Round struct {
 	// Once a round is finalized, this is the finalized block of the given round
 	Block     *block.Block `json:"-"`
 	BlockHash string       `json:"block_hash"`
-
+	VRFOutput string       `json:"vrf_output"`
+	//VRFOutput == rbooutput?
 	minerPerm []int
 	state     int
 
@@ -84,6 +86,16 @@ func (r *Round) GetRandomSeed() int64 {
 	return r.RandomSeed
 }
 
+// SetVRFOutput --sets the VRFOutput
+func (r *Round) SetVRFOutput(rboutput string) {
+	r.VRFOutput = rboutput
+}
+
+// GetVRFOutput --gets the VRFOutput
+func (r *Round) GetVRFOutput() string {
+	return r.VRFOutput
+}
+
 /*AddNotarizedBlock - this will be concurrent as notarization is recognized by verifying as well as notarization message from others */
 func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool) {
 	r.Mutex.Lock()
@@ -126,11 +138,14 @@ func (r *Round) addProposedBlock(b *block.Block) (*block.Block, bool) {
 		}
 	}
 	r.proposedBlocks = append(r.proposedBlocks, b)
+	sort.SliceStable(r.proposedBlocks, func(i, j int) bool { return r.proposedBlocks[i].RoundRank < r.proposedBlocks[j].RoundRank })
 	return b, true
 }
 
 /*GetProposedBlocks - return all the blocks that have been proposed for this round */
 func (r *Round) GetProposedBlocks() []*block.Block {
+	r.Mutex.Lock()
+	defer r.Mutex.Unlock()
 	return r.proposedBlocks
 }
 
@@ -298,11 +313,14 @@ func (r *Round) Restart() {
 
 //AddVRFShare - implement interface
 func (r *Round) AddVRFShare(share *VRFShare) bool {
+
 	r.Mutex.Lock()
 	defer r.Mutex.Unlock()
 	if _, ok := r.shares[share.party.GetKey()]; ok {
 		return false
 	}
+
+	Logger.Info("Adding Shares from minerId: " + share.party.GetKey())
 	r.setState(RoundShareVRF)
 	r.shares[share.party.GetKey()] = share
 	return true

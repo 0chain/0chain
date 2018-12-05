@@ -13,6 +13,7 @@ import (
 	"0chain.net/encryption"
 	. "0chain.net/logging"
 	"0chain.net/node"
+	"0chain.net/state"
 	"0chain.net/transaction"
 	"0chain.net/util"
 	"go.uber.org/zap"
@@ -85,6 +86,7 @@ type Block struct {
 	isNotarized        bool
 	ticketsMutex       *sync.Mutex
 	verificationStatus int
+	RunningTxnCount    int64 `json:"running_txn_count"`
 }
 
 //NewBlock - create a new empty block
@@ -205,7 +207,7 @@ func (b *Block) SetStateDB(prevBlock *Block) {
 	var pndb util.NodeDB
 	var rootHash util.Key
 	if prevBlock.ClientState == nil {
-		if config.DevConfiguration.State {
+		if state.Debug() {
 			Logger.DPanic("set state db - prior state not available")
 		} else {
 			pndb = util.NewMemoryNodeDB()
@@ -284,7 +286,7 @@ func (b *Block) getHashData() string {
 	merkleRoot := mt.GetRoot()
 	rmt := b.GetReceiptsMerkleTree()
 	rMerkleRoot := rmt.GetRoot()
-	hashData := b.PrevHash + ":" + b.MinerID + ":" + common.TimeToString(b.CreationDate) + ":" + strconv.FormatInt(b.Round, 10) + ":" + strconv.FormatInt(b.RoundRandomSeed, 10) + ":" + merkleRoot + ":" + rMerkleRoot
+	hashData := b.MinerID + ":" + b.PrevHash + ":" + common.TimeToString(b.CreationDate) + ":" + strconv.FormatInt(b.Round, 10) + ":" + strconv.FormatInt(b.RoundRandomSeed, 10) + ":" + merkleRoot + ":" + rMerkleRoot
 	return hashData
 }
 
@@ -326,6 +328,7 @@ func (b *Block) GetSummary() *BlockSummary {
 	bs.MerkleTreeRoot = b.GetMerkleTree().GetRoot()
 	bs.ClientStateHash = b.ClientStateHash
 	bs.ReceiptMerkleTreeRoot = b.GetReceiptsMerkleTree().GetRoot()
+	bs.NumTxns = len(b.Txns)
 	return bs
 }
 

@@ -11,8 +11,8 @@ import (
 //VRFShare - a VRF share
 type VRFShare struct {
 	datastore.NOIDField
-	Round int64       `json:"round"`
-	Share interface{} `json:"share"`
+	Round int64  `json:"round"`
+	Share string `json:"share"`
 	party *node.Node
 }
 

@@ -1,6 +1,8 @@
+#docker.aws
 FROM iron/go:dev
 RUN apk add --update --no-cache build-base linux-headers git cmake bash perl
 RUN apk add --update --no-cache zlib zlib-dev bzip2 bzip2-dev snappy snappy-dev lz4 lz4-dev jemalloc jemalloc-dev zstd
+RUN apk add --update --no-cache gmp-dev openssl-dev
 
 # installing latest gflags 
 RUN cd /tmp && \
@@ -17,7 +19,7 @@ RUN cd /tmp && \
 RUN cd /tmp && \
     git clone https://github.com/0chain/rocksdb.git && \
     cd rocksdb && \
-    make -j8 shared_lib && \
+    make -j4 shared_lib && \
     mkdir -p /usr/local/rocksdb/lib && \
     mkdir /usr/local/rocksdb/include && \
     cp librocksdb.so* /usr/local/rocksdb/lib && \
@@ -25,6 +27,8 @@ RUN cd /tmp && \
     cp -r include /usr/local/rocksdb/ && \
     cp -r include/* /usr/include/ && \
     rm -R /tmp/rocksdb/
+
+
 
 #Download the go dependencies
 RUN go get github.com/golang/snappy
@@ -41,5 +45,30 @@ RUN go get github.com/spf13/viper
 RUN go get gopkg.in/natefinch/lumberjack.v2
 RUN go get github.com/koding/cache
 RUN go get github.com/hashicorp/golang-lru
+
+RUN cd /tmp && \
+    git clone https://github.com/herumi/xbyak.git && \
+    cd xbyak && \
+    make install
+
+RUN cd /tmp && \
+    git clone https://github.com/herumi/cybozulib.git && \
+    cd cybozulib && \
+    make install
+
+RUN go get -d github.com/herumi/mcl/ffi/go/mcl && \
+    cd $GOPATH/src/github.com/herumi/mcl && \
+    CGO_CFLAGS='-DMCLBN_FP_UNIT_SIZE=4' make && \
+    cp $GOPATH/src/github.com/herumi/mcl/lib/lib*.so /usr/lib && \
+    go get -tags bn256 github.com/herumi/mcl/ffi/go/mcl
+
+RUN go get -d github.com/herumi/bls/ffi/go/bls && \
+    cd $GOPATH/src/github.com/herumi/bls && \
+    CFLAGS='-DMCLBN_FP_UNIT_SIZE=4' make && \
+    cp $GOPATH/src/github.com/herumi/bls/lib/lib*.so /usr/lib && \
+    sed -i 's/MCLBN_FP_UNIT_SIZE=6/MCLBN_FP_UNIT_SIZE=4/' ffi/go/bls/mcl.go && \
+    sed -i 's/MCLBN_FP_UNIT_SIZE=6/MCLBN_FP_UNIT_SIZE=4/' ffi/go/bls/bls.go && \
+    sed -i 's/-lbls384_dy/-lbls256_dy/' ffi/go/bls/bls.go && \
+    go get -tags bn256 github.com/herumi/bls/ffi/go/bls
 
 ADD BASE_VERSION .

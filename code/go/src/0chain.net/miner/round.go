@@ -25,28 +25,32 @@ func (r *Round) AddBlockToVerify(b *block.Block) {
 	r.Mutex.Lock()
 	defer r.Mutex.Unlock()
 	if r.isVerificationComplete() {
-		Logger.Debug("block proposal (verification complete)", zap.Int64("round", r.GetRoundNumber()), zap.String("block", b.Hash))
+		Logger.Debug("block proposal - verification complete", zap.Int64("round", r.GetRoundNumber()), zap.String("block", b.Hash))
 		return
 	}
 	if r.GetRoundNumber() != b.Round {
-		Logger.Error("block proposal (round mismatch)", zap.Int64("round", r.GetRoundNumber()), zap.Int64("block_round", b.Round), zap.String("block", b.Hash))
+		Logger.Error("block proposal - round mismatch", zap.Int64("round", r.GetRoundNumber()), zap.Int64("block_round", b.Round), zap.String("block", b.Hash))
 		return
 	}
 	if b.RoundRandomSeed != r.RandomSeed {
-		Logger.Error("block proposal (incorrect round random number)", zap.Int64("block_random_seed", b.RoundRandomSeed), zap.Int64("round_random_seed", r.RandomSeed))
 		return
 	}
+	Logger.Debug("Adding block to verifyChannel")
 	r.blocksToVerifyChannel <- b
 }
 
 /*AddVerificationTicket - add a verification ticket */
 func (r *Round) AddVerificationTicket(bvt *block.BlockVerificationTicket) {
+	r.Mutex.Lock()
+	defer r.Mutex.Unlock()
 	r.verificationTickets[bvt.Signature] = bvt
 }
 
 /*GetVerificationTickets - get verification tickets for a given block in this round */
 func (r *Round) GetVerificationTickets(blockID string) []*block.VerificationTicket {
 	var vts []*block.VerificationTicket
+	r.Mutex.Lock()
+	defer r.Mutex.Unlock()
 	for _, bvt := range r.verificationTickets {
 		if blockID == bvt.BlockID {
 			vts = append(vts, &bvt.VerificationTicket)

@@ -237,7 +237,7 @@ func validateChain(sender *Node, r *http.Request) bool {
 }
 
 func validateEntityMetadata(sender *Node, r *http.Request) bool {
-	if r.URL.Path == "/v1/n2n/entity_pull/get" {
+	if r.URL.Path == pullURL {
 		return true
 	}
 	entityName := r.Header.Get(HeaderRequestEntityName)
@@ -260,4 +260,16 @@ type PushDataCacheEntry struct {
 	Options    SendOptions
 	Data       []byte
 	EntityName string
+}
+
+var pullURL = "/v1/n2n/entity_pull/get"
+
+func getPushToPullTime(n *Node) float64 {
+	var pullRequestTime float64
+	if pullRequestTimer := n.GetTimer(pullURL); pullRequestTimer != nil && pullRequestTimer.Count() >= 50 {
+		pullRequestTime = pullRequestTimer.Mean()
+	} else {
+		pullRequestTime = 2 * n.SmallMessageSendTime
+	}
+	return pullRequestTime + n.SmallMessageSendTime
 }

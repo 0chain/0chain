@@ -4,23 +4,21 @@ services:
   scylla:
     image: scylladb/scylla
     networks:
-      - default
+    - default
     ports:
-      - "9042:9042"
+    - "9042:9042"
     volumes:
 
-      - /0chain/config/scylla/scylla.yaml:/etc/scylla/scylla.yaml
+    - /0chain/config/scylla/scylla.yaml:/etc/scylla/scylla.yaml
 
-      - /0chain/config/scylla/scylla-server:/etc/sysconfig/scylla-server
+    - /0chain/config/scylla/scylla-server:/etc/sysconfig/scylla-server
 
-      #Store the scylla volume
-      - /0chain/data/scylla:/0chain/data/scylla
+    #Store the scylla volume
+    - /0chain/data/scylla:/0chain/data/scylla
 
-      #Create the directory to store the data and commitlog
-      - /0chain/data/scylla/data:/var/lib/scylla/data
-      - /0chain/data/scylla/commitlog:/var/lib/scylla/commitlog
-
-    restart: on-failure:10
+    #Create the directory to store the data and commitlog
+    - /0chain/data/scylla/data:/var/lib/scylla/data
+    - /0chain/data/scylla/commitlog:/var/lib/scylla/commitlog
 
     healthcheck:
       test: ["CMD-SHELL", "[ $$(nodetool statusgossip) = running ]"]
@@ -37,25 +35,27 @@ services:
     #The service depends upon several cassandra utilities.
     image: cassandra:latest
     volumes:
-      - /0chain/bin:/0chain/bin
-      - /0chain/sql:/0chain/sql
+    - /0chain/bin:/0chain/bin
+    - /0chain/sql:/0chain/sql
     entrypoint: bash /0chain/bin/scylla-init.sh
     #command: bash
     links:
-      - scylla:scylla
-    restart: on-failure:10
+    - scylla:scylla
+
+    #Services are expected to be started correctly
 
     user: ${ZCHAIN_USER}:${ZCHAIN_GROUP}
     privileged: false
 
   sharder:
     environment:
-      - DOCKER=true
-      - CASSANDRA_CLUSTER=scylla
+    - DOCKER=true
+    - CASSANDRA_CLUSTER=scylla
     depends_on:
-      - scylla-init
+    - scylla-init
+
     links:
-      - scylla-init:scylla-init
+    - scylla-init:scylla-init
 
     build:
       context: ${DOCKER_CODEBASE}
@@ -66,18 +66,18 @@ services:
     pid: "host"
 
     volumes:
-      #CONFIG_VOLUME
-      - /0chain/config:/0chain/config
+    #CONFIG_VOLUME
+    - /0chain/config:/0chain/config
 
-      #SHARDER_LOG_VOLUME
-      - /0chain/log:/0chain/log
+    #SHARDER_LOG_VOLUME
+    - /0chain/log:/0chain/log
 
-      #ROCKSDB_VOLUME
-      - /0chain/data/rocksdb:/0chain/data/rocksdb
-      - /0chain/data/rocksdb/state:/0chain/data/rocksdb/state
+    #ROCKSDB_VOLUME
+    - /0chain/data/rocksdb:/0chain/data/rocksdb
+    - /0chain/data/rocksdb/state:/0chain/data/rocksdb/state
 
-      #Use the blocks volume
-      - /0chain/data/blocks:/0chain/data/blocks
+    #Use the blocks volume
+    - /0chain/data/blocks:/0chain/data/blocks
 
     #Hard and soft are required properties.
     ulimits:
@@ -92,9 +92,9 @@ services:
         max-file: "10"
 
     ports:
-      - "7171:7171"
+    - "7171:7171"
 
-    restart: on-failure:10
+    restart: on-failure:${MAX_RETRY_ATTEMPTS}
 
     networks:
       default:

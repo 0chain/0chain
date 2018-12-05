@@ -8,9 +8,11 @@ import (
 	"net/http"
 	"os"
 	"runtime"
-	"sort"
 	"strings"
 	"time"
+
+	"0chain.net/miner"
+	"0chain.net/threshold/bls"
 
 	_ "net/http/pprof"
 
@@ -24,9 +26,9 @@ import (
 	"0chain.net/logging"
 	. "0chain.net/logging"
 	"0chain.net/memorystore"
-	"0chain.net/miner"
 	"0chain.net/node"
 	"0chain.net/round"
+	"0chain.net/state"
 	"0chain.net/transaction"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -50,6 +52,7 @@ func main() {
 
 	config.Configuration.ChainID = viper.GetString("server_chain.id")
 	config.Configuration.MaxDelay = *maxDelay
+	transaction.SetTxnTimeout(int64(viper.GetInt("server_chain.transaction.timeout")))
 
 	reader, err := os.Open(*keysFile)
 	if err != nil {
@@ -72,6 +75,8 @@ func main() {
 	miner.SetupMinerChain(serverChain)
 	mc := miner.GetMinerChain()
 	mc.DiscoverClients = viper.GetBool("server_chain.client.discover")
+	mc.SetGenerationTimeout(viper.GetInt("server_chain.block.generation.timeout"))
+	mc.SetRetryWaitTime(viper.GetInt("server_chain.block.generation.retry_wait_time"))
 	chain.SetServerChain(serverChain)
 
 	miner.SetNetworkRelayTime(viper.GetDuration("network.relay_time") * time.Millisecond)
@@ -94,13 +99,9 @@ func main() {
 		Logger.Panic("node definition for self node doesn't exist")
 	}
 
-	Logger.Info("self identity", zap.Any("set_index", node.Self.Node.SetIndex), zap.Any("id", node.Self.Node.GetKey()))
-
-	if config.DevConfiguration.State {
+	if state.Debug() {
 		chain.SetupStateLogger("/tmp/state.txt")
 	}
-
-	mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"))
 
 	mode := "main net"
 	if config.Development() {
@@ -110,7 +111,10 @@ func main() {
 	}
 
 	address := fmt.Sprintf(":%v", node.Self.Port)
-	Logger.Info("Starting miner", zap.Int("available_cpus", runtime.NumCPU()), zap.String("port", address), zap.String("chain_id", config.GetServerChainID()), zap.String("mode", mode))
+
+	Logger.Info("Starting miner", zap.String("go_version", runtime.Version()), zap.Int("available_cpus", runtime.NumCPU()), zap.String("port", address))
+	Logger.Info("Chain info", zap.String("chain_id", config.GetServerChainID()), zap.String("mode", mode))
+	Logger.Info("Self identity", zap.Any("set_index", node.Self.Node.SetIndex), zap.Any("id", node.Self.Node.GetKey()))
 
 	//TODO - get stake of miner from biding (currently hard coded)
 	//serverChain.updateMiningStake(node.Self.Node.GetKey(), 100)  we do not want to expose this feature at this point.
@@ -133,20 +137,31 @@ func main() {
 	}
 	common.HandleShutdown(server)
 	memorystore.GetInfo()
-
 	initWorkers(ctx)
+
+	mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"))
+
 	initN2NHandlers()
+
 	initServer()
 	initHandlers()
 
-	go StartProtocol(ctx)
-	Logger.Info("Ready to listen to the requests")
 	chain.StartTime = time.Now().UTC()
+	go func() {
+		miner.StartDKG(ctx)
+		if config.Development() {
+			go TransactionGenerator(mc.BlockSize)
+		}
+	}()
+
+	Logger.Info("Ready to listen to the requests")
 	log.Fatal(server.ListenAndServe())
 }
 
 func initServer() {
-	// TODO; when a new server is brought up, it needs to first download all the state before it can start accepting requests
+	/* TODO: when a new server is brought up, it needs to first download
+	all the state before it can start accepting requests
+	*/
 	time.Sleep(time.Second)
 }
 
@@ -158,6 +173,7 @@ func initEntities() {
 	round.SetupVRFShareEntity(memoryStorage)
 	block.SetupEntity(memoryStorage)
 	block.SetupBlockSummaryEntity(memoryStorage)
+	block.SetupStateChange(memoryStorage)
 
 	client.SetupEntity(memoryStorage)
 
@@ -165,13 +181,13 @@ func initEntities() {
 	transaction.SetupEntity(memoryStorage)
 
 	miner.SetupNotarizationEntity()
+
+	bls.SetupDKGEntity()
+	bls.SetupBLSEntity()
 }
 
 func initHandlers() {
-	if config.Development() {
-		http.HandleFunc("/_hash", encryption.HashHandler)
-		http.HandleFunc("/_sign", common.ToJSONResponse(encryption.SignHandler))
-	}
+	SetupHandlers()
 	config.SetupHandlers()
 	node.SetupHandlers()
 	chain.SetupHandlers()
@@ -202,44 +218,4 @@ func initWorkers(ctx context.Context) {
 	serverChain.SetupWorkers(ctx)
 	miner.SetupWorkers(ctx)
 	transaction.SetupWorkers(ctx)
-}
-
-/*StartProtocol - start the miner protocol */
-func StartProtocol(ctx context.Context) {
-	mc := miner.GetMinerChain()
-
-	mc.Sharders.OneTimeStatusMonitor(ctx)
-	lfBlocks := mc.GetLatestFinalizedBlockFromSharder(ctx)
-
-	var sr = round.NewRound(0)
-	var mr = mc.CreateRound(sr)
-
-	var lfb *block.Block
-	//Sorting as per the latest finalized blocks from all the sharders
-	sort.Slice(lfBlocks, func(i int, j int) bool { return lfBlocks[i].Round >= lfBlocks[j].Round })
-	if len(lfBlocks) > 0 {
-		lfb = lfBlocks[0]
-	}
-	if lfb != nil {
-		sr = round.NewRound(lfb.Round)
-		mr = mc.CreateRound(sr)
-		mr, _ = mc.AddRound(mr).(*miner.Round)
-		mc.SetRandomSeed(sr, lfb.RoundRandomSeed)
-		mc.SetLatestFinalizedBlock(ctx, lfb)
-	}
-	if !mc.CanStartNetwork() {
-		ticker := time.NewTicker(5 * chain.DELTA)
-		for ts := range ticker.C {
-			active := mc.Miners.GetActiveCount()
-			Logger.Info("waiting for sufficient active nodes", zap.Time("ts", ts), zap.Int("active", active))
-			if mc.CanStartNetwork() {
-				break
-			}
-		}
-	}
-	if config.Development() {
-		go TransactionGenerator(mc.BlockSize)
-	}
-	Logger.Info("starting the blockchain ...", zap.Int64("round", mr.GetRoundNumber()))
-	mc.StartNextRound(ctx, mr)
 }

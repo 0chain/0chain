@@ -12,11 +12,15 @@ import (
 
 /*HandleVRFShare - handles the vrf share */
 func (mc *Chain) HandleVRFShare(ctx context.Context, msg *BlockMessage) {
+	Logger.Info("DKG Here in HandleVRFShare from Miner ", zap.Any("sender_index", msg.Sender.SetIndex))
+
 	mr := mc.GetMinerRound(msg.VRFShare.Round)
 	if mr == nil {
 		Logger.Debug("handle vrf share - got vrf share before starting a round", zap.Int64("round", msg.VRFShare.Round))
 		pr := mc.GetMinerRound(msg.VRFShare.Round - 1)
 		if pr != nil {
+			//This can happen because other nodes are slightly ahead. It is ok.
+			Logger.Debug("HandleVRFShare: Starting a new round. Already started getting BLS message for other round", zap.Int64("my round#", pr.GetRoundNumber()), zap.Int64("msg round#", msg.VRFShare.Round))
 			mr = mc.StartNextRound(ctx, pr)
 		} else {
 			Logger.Error("handle vrf share - no prior round", zap.Int64("round", msg.VRFShare.Round))
@@ -43,6 +47,8 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 		Logger.Error("handle verify block - got block proposal before starting round", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("miner", b.MinerID))
 		pr := mc.GetMinerRound(b.Round - 1)
 		if pr != nil {
+			//If this happens, need to check
+			Logger.Info("HandleVerifyBlockMessage:  Starting a new round. Got Block Proposal already, Am I way behind?")
 			mr = mc.StartNextRound(ctx, pr)
 		} else {
 			var r = round.NewRound(b.Round)
@@ -85,6 +91,8 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *Block
 		if mr == nil {
 			pr := mc.GetMinerRound(msg.BlockVerificationTicket.Round - 1)
 			if pr != nil {
+				//This means, this node is way behind other nodes.
+				Logger.Info("HandleVerificationTicketMessage: Starting a new round. Got verification ticket already. Am I way behind?")
 				mr = mc.StartNextRound(ctx, pr)
 			} else {
 				var r = round.NewRound(msg.BlockVerificationTicket.Round)
@@ -156,6 +164,8 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 			}
 		}
 	}
+	Logger.Debug("HandleNotarizationMessage: Starting a new round in the end.")
+
 	mc.StartNextRound(ctx, r)
 }
 
@@ -182,5 +192,7 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMess
 	if !mc.AddNotarizedBlock(ctx, mr, b) {
 		return
 	}
+
+	Logger.Debug("HandleNotarizedBlockMessage Starting a new round in the end.")
 	mc.StartNextRound(ctx, mr)
 }

@@ -8,6 +8,7 @@ import (
 	"0chain.net/config"
 	"0chain.net/datastore"
 	"0chain.net/node"
+	"0chain.net/state"
 	"0chain.net/util"
 
 	"0chain.net/block"
@@ -141,7 +142,9 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		if err != nil {
 			if config.DevConfiguration.State {
 				Logger.Error("finalize block state not successful", zap.Int64("finalized_round", fb.Round), zap.String("hash", fb.Hash), zap.Int8("state", fb.GetBlockState()), zap.Error(err))
-				Logger.DPanic("finalize block - state not successful")
+				if state.Debug() {
+					Logger.DPanic("finalize block - state not successful")
+				}
 			}
 		}
 	}
@@ -151,13 +154,17 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		duration := time.Since(ts)
 		StateSaveTimer.UpdateSince(ts)
 		p95 := StateSaveTimer.Percentile(.95)
+		changes := fb.ClientState.GetChangeCollector().GetChanges()
+		if len(changes) > 0 {
+			StateChangeSizeMetric.Update(int64(len(changes)))
+		}
 		if StateSaveTimer.Count() > 100 && 2*p95 < float64(duration) {
-			Logger.Error("finalize block - save state slow", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.String("client_state", util.ToHex(fb.ClientStateHash)), zap.Int("changes", len(fb.ClientState.GetChangeCollector().GetChanges())), zap.Duration("duration", duration), zap.Duration("p95", time.Duration(math.Round(p95/1000000))*time.Millisecond))
+			Logger.Error("finalize block - save state slow", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.Int("block_size", len(fb.Txns)), zap.Int("changes", len(changes)), zap.String("client_state", util.ToHex(fb.ClientStateHash)), zap.Duration("duration", duration), zap.Duration("p95", time.Duration(math.Round(p95/1000000))*time.Millisecond))
 		} else {
-			Logger.Info("finalize block - save state", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.String("client_state", util.ToHex(fb.ClientStateHash)), zap.Int("changes", len(fb.ClientState.GetChangeCollector().GetChanges())), zap.Duration("duration", duration))
+			Logger.Debug("finalize block - save state", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.Int("block_size", len(fb.Txns)), zap.Int("changes", len(changes)), zap.String("client_state", util.ToHex(fb.ClientStateHash)), zap.Duration("duration", duration))
 		}
 		if err != nil {
-			Logger.Error("finalize block - save state", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.String("client_state", util.ToHex(fb.ClientStateHash)), zap.Int("changes", len(fb.ClientState.GetChangeCollector().GetChanges())), zap.Duration("duration", duration), zap.Error(err))
+			Logger.Error("finalize block - save state", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.Int("block_size", len(fb.Txns)), zap.Int("changes", len(changes)), zap.String("client_state", util.ToHex(fb.ClientStateHash)), zap.Duration("duration", duration), zap.Error(err))
 		}
 		c.rebaseState(fb)
 	}
@@ -201,7 +208,7 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 		Logger.Info("get notarized block", zap.String("block", blockHash), zap.Int64("cround", cround), zap.Int64("current_round", c.CurrentRound))
 		nb, ok := entity.(*block.Block)
 		if !ok {
-			return nil, common.NewError("invalid_entity", "Invalid entity")
+			return nil, datastore.ErrInvalidEntity
 		}
 		if err := c.VerifyNotarization(ctx, nb.Hash, nb.VerificationTickets); err != nil {
 			Logger.Error("get notarized block - validate notarization", zap.String("block", blockHash), zap.Error(err))

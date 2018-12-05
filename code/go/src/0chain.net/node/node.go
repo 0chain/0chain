@@ -435,11 +435,9 @@ func (n *Node) GetOptimalLargeMessageSendTime() float64 {
 }
 
 func (n *Node) getOptimalLargeMessageSendTime() float64 {
-	if n.LargeMessagePullServeTime == 0 {
-		return n.LargeMessageSendTime
-	}
-	if n.LargeMessagePullServeTime+2*n.SmallMessageSendTime < n.LargeMessageSendTime {
-		return n.LargeMessagePullServeTime + 2*n.SmallMessageSendTime
+	p2ptime := getPushToPullTime(n)
+	if p2ptime < n.LargeMessageSendTime {
+		return p2ptime
 	}
 	return n.LargeMessageSendTime
 }

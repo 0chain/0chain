@@ -29,6 +29,7 @@ import (
 	"0chain.net/persistencestore"
 	"0chain.net/round"
 	"0chain.net/sharder"
+	"0chain.net/state"
 	"0chain.net/transaction"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -97,7 +98,9 @@ func main() {
 		Logger.Panic("node definition for self node doesn't exist")
 	}
 
-	Logger.Info("self identity", zap.Any("set_index", node.Self.Node.SetIndex), zap.Any("id", node.Self.Node.GetKey()))
+	if state.Debug() {
+		chain.SetupStateLogger("/tmp/state.txt")
+	}
 
 	mode := "main net"
 	if config.Development() {
@@ -107,7 +110,10 @@ func main() {
 	}
 
 	address := fmt.Sprintf(":%v", node.Self.Port)
-	Logger.Info("Starting sharder", zap.Int("available_cpus", runtime.NumCPU()), zap.String("port", address), zap.String("chain_id", config.GetServerChainID()), zap.String("mode", mode))
+
+	Logger.Info("Starting sharder", zap.String("go_version", runtime.Version()), zap.Int("available_cpus", runtime.NumCPU()), zap.String("port", address))
+	Logger.Info("Chain info", zap.String("chain_id", config.GetServerChainID()), zap.String("mode", mode))
+	Logger.Info("Self identity", zap.Any("set_index", node.Self.Node.SetIndex), zap.Any("id", node.Self.Node.GetKey()))
 
 	var server *http.Server
 	if config.Development() {
@@ -126,22 +132,9 @@ func main() {
 		}
 	}
 	common.HandleShutdown(server)
-	blockStorageProvider := viper.GetString("server_chain.block.storage.provider")
-	if blockStorageProvider == "" || blockStorageProvider == "blockstore.FSBlockStore" {
-		blockstore.SetupStore(blockstore.NewFSBlockStore("data/blocks"))
-	} else if blockStorageProvider == "blockstore.BlockDBStore" {
-		blockstore.SetupStore(blockstore.NewBlockDBStore("data/blocksdb"))
-	} else if blockStorageProvider == "blockstore.MultiBlockstore" {
-		var bs = []blockstore.BlockStore{blockstore.NewFSBlockStore("data/blocks"), blockstore.NewBlockDBStore("data/blocksdb")}
-		blockstore.SetupStore(blockstore.NewMultiBlockStore(bs))
-	} else {
-		panic(fmt.Sprintf("uknown block store provider - %v", blockStorageProvider))
-	}
+	setupBlockStorageProvider()
 
-	if config.DevConfiguration.State {
-		chain.SetupStateLogger("/tmp/state.txt")
-	}
-	sharder.GetSharderChain().SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"))
+	sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"))
 
 	initWorkers(ctx)
 	initN2NHandlers()
@@ -225,5 +218,19 @@ func CatchUpWithLatestRound(ctx context.Context, r *round.Round) {
 	lr := sc.CheckForMissingRounds(ctx, r.Number)
 	if lr != nil && lr.Number > r.Number+1 {
 		sc.GetMissingRounds(ctx, lr.Number, r.Number)
+	}
+}
+
+func setupBlockStorageProvider() {
+	blockStorageProvider := viper.GetString("server_chain.block.storage.provider")
+	if blockStorageProvider == "" || blockStorageProvider == "blockstore.FSBlockStore" {
+		blockstore.SetupStore(blockstore.NewFSBlockStore("data/blocks"))
+	} else if blockStorageProvider == "blockstore.BlockDBStore" {
+		blockstore.SetupStore(blockstore.NewBlockDBStore("data/blocksdb"))
+	} else if blockStorageProvider == "blockstore.MultiBlockstore" {
+		var bs = []blockstore.BlockStore{blockstore.NewFSBlockStore("data/blocks"), blockstore.NewBlockDBStore("data/blocksdb")}
+		blockstore.SetupStore(blockstore.NewMultiBlockStore(bs))
+	} else {
+		panic(fmt.Sprintf("uknown block store provider - %v", blockStorageProvider))
 	}
 }

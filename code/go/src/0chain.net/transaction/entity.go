@@ -19,7 +19,7 @@ import (
 )
 
 /*TXN_TIME_TOLERANCE - the txn creation date should be within these many seconds before/after of current time */
-const TXN_TIME_TOLERANCE = 10
+var TXN_TIME_TOLERANCE int64
 
 var TransactionCount = 0
 
@@ -182,13 +182,14 @@ func (t *Transaction) VerifyHash(ctx context.Context) error {
 /*VerifySignature - verify the transaction hash */
 func (t *Transaction) VerifySignature(ctx context.Context) error {
 	var err error
-	co := client.NewClient()
+	var co *client.Client
 	if t.PublicKey == "" {
 		co, err = t.GetClient(ctx)
 		if err != nil {
 			return err
 		}
 	} else {
+		co = client.NewClient()
 		co.ID = t.ClientID
 		co.PublicKey = t.PublicKey
 		co.SetPublicKey(co.PublicKey)
@@ -282,4 +283,8 @@ func (t *Transaction) VerifyOutputHash(ctx context.Context) error {
 		return common.NewError("hash_mismatch", fmt.Sprintf("The hash of the output doesn't match with the provided hash: %v %v %v", t.Hash, t.ComputeOutputHash(), t.TransactionOutput))
 	}
 	return nil
+}
+
+func SetTxnTimeout(timeout int64) {
+	TXN_TIME_TOLERANCE = timeout
 }

@@ -163,7 +163,7 @@ func GetClient(ctx context.Context, key datastore.Key) (*Client, error) {
 		return nil, err
 	}
 	cacher.Add(key, co)
-	return nil, err
+	return co, nil
 }
 
 /*PutClient - Given a client data, it stores it */

@@ -3,8 +3,9 @@ package util
 import (
 	"context"
 	"errors"
+	"fmt"
 
-	"0chain.net/config"
+	"0chain.net/common"
 	. "0chain.net/logging"
 	"go.uber.org/zap"
 )
@@ -17,6 +18,9 @@ var ErrNodeNotFound = errors.New("node not found")
 
 /*ErrValueNotPresent - error indicating given path is not present in the db */
 var ErrValueNotPresent = errors.New("value not present")
+
+/*ErrIntermediateNodeExists - error indicating deleted intermediate node still exists */
+var ErrIntermediateNodeExists = errors.New("removed intermediate node still present (%T) %v")
 
 /*NodeDBIteratorHandler is a nodedb iteration handler function type */
 type NodeDBIteratorHandler func(ctx context.Context, key Key, node Node) error
@@ -122,15 +126,16 @@ func (mndb *MemoryNodeDB) PruneBelowVersion(ctx context.Context, version Sequenc
 	return nil
 }
 
-func (mndb *MemoryNodeDB) reachable(node Node, node2 Node) (bool, error) {
+// is node2 reachable from node using only nodes stored on this db
+func (mndb *MemoryNodeDB) reachable(node Node, node2 Node) bool {
 	switch nodeImpl := node.(type) {
 	case *ExtensionNode:
 		fn, _ := mndb.GetNode(nodeImpl.NodeKey)
 		if fn == nil {
-			return false, ErrNodeNotFound
+			return false
 		}
 		if node2 == fn {
-			return true, nil
+			return true
 		}
 		return mndb.reachable(fn, node2)
 	case *FullNode:
@@ -144,46 +149,78 @@ func (mndb *MemoryNodeDB) reachable(node Node, node2 Node) (bool, error) {
 				continue
 			}
 			if node2 == childNode {
-				return true, nil
+				return true
 			}
-			ok, err := mndb.reachable(childNode, node2)
+			ok := mndb.reachable(childNode, node2)
 			if ok {
-				return ok, nil
+				return true
 			}
 		}
 	}
-	return false, nil
+	return false
 }
 
 /*ComputeRoot - compute root from partial set of nodes in this db */
 func (mndb *MemoryNodeDB) ComputeRoot() Node {
 	var root Node
 	handler := func(ctx context.Context, key Key, node Node) error {
-		if !IncludesNodeType(NodeTypeFullNode|NodeTypeExtensionNode, node.GetNodeType()) {
-			return nil
-		}
 		if root == nil {
 			root = node
 			return nil
 		}
-		ok, err := mndb.reachable(root, node)
-		if err != nil {
-			return err
-		}
-		if ok {
+		if !IncludesNodeType(NodeTypeFullNode|NodeTypeExtensionNode, node.GetNodeType()) {
 			return nil
 		}
-		ok, err = mndb.reachable(node, root)
-		if err != nil {
-			return err
+		if mndb.reachable(root, node) {
+			return nil
 		}
-		if ok {
+		if mndb.reachable(node, root) {
 			root = node
 		}
 		return nil
 	}
 	mndb.Iterate(nil, handler)
 	return root
+}
+
+/*Validate - validate this MemoryNodeDB w.r.t the given root
+  It should not contain any node that can't be reachable from the root.
+  Note: The root itself can reach nodes not present in this db
+*/
+func (mndb *MemoryNodeDB) Validate(root Node) error {
+	nodes := make(map[StrKey]Node)
+	var iterater func(node Node)
+	iterate := func(node Node) {
+		switch nodeImpl := node.(type) {
+		case *FullNode:
+			for _, ckey := range nodeImpl.Children {
+				if ckey != nil {
+					cnode, err := mndb.GetNode(ckey)
+					if err == nil {
+						nodes[StrKey(ckey)] = cnode
+						iterater(cnode)
+					}
+				}
+			}
+		case *ExtensionNode:
+			ckey := nodeImpl.NodeKey
+			cnode, err := mndb.GetNode(ckey)
+			if err == nil {
+				nodes[StrKey(ckey)] = cnode
+				iterater(cnode)
+			}
+		}
+	}
+	iterater = iterate
+	nodes[StrKey(root.GetHashBytes())] = root
+	iterate(root)
+	for _, nd := range mndb.Nodes {
+		if _, ok := nodes[StrKey(nd.GetHashBytes())]; !ok {
+			Logger.Error("mndb validate", zap.String("node_type", fmt.Sprintf("%T", nd)), zap.String("node_key", nd.GetHash()))
+			return common.NewError("nodes_outside_tree", "not all nodes are from the root")
+		}
+	}
+	return nil
 }
 
 /*LevelNodeDB - a multi-level node db. It has a current node db and a previous node db. This is useful to update without changing the previous db. */
@@ -213,11 +250,6 @@ func (lndb *LevelNodeDB) GetNode(key Key) (Node, error) {
 	node, err := c.GetNode(key)
 	if err != nil && p != c {
 		node, err = p.GetNode(key)
-		if err != nil {
-			if config.DevConfiguration.State {
-				Logger.Error("get node", zap.String("key", ToHex(key)), zap.Error(err))
-			}
-		}
 		return node, err
 	}
 	return node, nil
