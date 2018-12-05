@@ -13,6 +13,7 @@ import (
 	"0chain.net/memorystore"
 	"0chain.net/node"
 	"0chain.net/round"
+	"0chain.net/state"
 	"0chain.net/threshold/bls"
 	"go.uber.org/zap"
 )
@@ -246,6 +247,12 @@ func BlockStateChangeHandler(ctx context.Context, r *http.Request) (interface{},
 	if err != nil {
 		return nil, err
 	}
+	if b.GetStateStatus() != block.StateSuccessful {
+		return nil, common.NewError("state_not_verified", "State is not computed and validated locally")
+	}
 	bsc := block.NewBlockStateChange(b)
+	if state.Debug() {
+		Logger.Info("block state change handler", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("state_changes", len(b.ClientState.GetChangeCollector().GetChanges())), zap.Int("sc_nodes", len(bsc.Nodes)))
+	}
 	return bsc, nil
 }
