@@ -71,12 +71,13 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 			return err
 		}
 	}
-	if pb.ClientState == nil {
-		if config.DevConfiguration.State {
-			Logger.Error("compute state - previous state nil", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
-		}
-		return ErrPreviousStateUnavailable
-	}
+	/*
+		if pb.ClientState == nil {
+			if config.DevConfiguration.State {
+				Logger.Error("compute state - previous state nil", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
+			}
+			return ErrPreviousStateUnavailable
+		}*/
 	b.SetStateDB(pb)
 	Logger.Info("compute state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.String("begin_client_state", util.ToHex(b.ClientState.GetRoot())), zap.String("prev_block", b.PrevHash), zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)))
 	for _, txn := range b.Txns {
@@ -126,9 +127,9 @@ func (c *Chain) rebaseState(lfb *block.Block) {
 func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 	c.stateMutex.Lock()
 	defer c.stateMutex.Unlock()
-	clientState := createTxnMPT(b.ClientState)
+	clientState := createTxnMPT(b.ClientState) // begin transaction
 	startRoot := clientState.GetRoot()
-	sctx := state.NewStateContext(b, clientState, c.clientStateDeserializer, txn)
+	sctx := NewStateContext(b, clientState, c.clientStateDeserializer, txn)
 
 	switch txn.TransactionType {
 	case transaction.TxnTypeData:
@@ -146,7 +147,7 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 		}
 	}
 
-	err := mergeMPT(b.ClientState, clientState)
+	err := mergeMPT(b.ClientState, clientState) // commit transaction
 	if err != nil {
 		Logger.DPanic("update state - merge mpt error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
 	}
@@ -162,7 +163,12 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 	return true
 }
 
-func (c *Chain) transferAmount(sctx state.ContextI, fromClient, toClient datastore.Key, amount state.Balance) error {
+/*
+* transferAmount - transfers balance from one account to another
+*   when there is an error getting the state of the from or to account (other than no value), the error is simply returned back
+*   when there is an error inserting/deleting the state of the from or to account, this results in fatal error when state is enabled
+ */
+func (c *Chain) transferAmount(sctx StateContextI, fromClient, toClient datastore.Key, amount state.Balance) error {
 	if amount == 0 {
 		return nil
 	}
@@ -181,7 +187,7 @@ func (c *Chain) transferAmount(sctx state.ContextI, fromClient, toClient datasto
 				}
 				fmt.Fprintf(stateOut, "transfer amount r=%v b=%v t=%+v\n", b.Round, b.Hash, txn)
 			}
-			fmt.Fprintf(stateOut, "utransfer amount - error getting state value: %v %+v %v\n", txn.ClientID, txn, err)
+			fmt.Fprintf(stateOut, "transfer amount - error getting state value: %v %+v %v\n", txn.ClientID, txn, err)
 			printStates(clientState, b.ClientState)
 			Logger.DPanic(fmt.Sprintf("transfer amount - error getting state value: %v %v", txn.ClientID, err))
 		}
