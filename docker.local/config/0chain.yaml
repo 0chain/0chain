@@ -10,6 +10,7 @@ development:
   state: true
   dkg: false 
   txn_generation:
+    wallets: 500
     transactions: 10
 
 zerochain:

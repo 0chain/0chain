@@ -3,6 +3,7 @@ package miner
 import (
 	"context"
 	"math"
+	"sort"
 	"sync"
 	"time"
 
@@ -92,7 +93,22 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) *block.Block {
 	bnb := r.GetHeaviestNotarizedBlock()
 	if bnb == nil {
-		Logger.Error("get block to extend - no notarized block", zap.Int64("round", r.GetRoundNumber()), zap.Int("proposed_blocks", len(r.GetProposedBlocks())))
+		type pBlock struct {
+			Block     string
+			Proposals int
+		}
+
+		proposals := r.GetProposedBlocks()
+		var pcounts []*pBlock
+		for _, pb := range proposals {
+			pcount := len(pb.VerificationTickets)
+			if pcount == 0 {
+				continue
+			}
+			pcounts = append(pcounts, &pBlock{Block: pb.Hash, Proposals: pcount})
+		}
+		sort.SliceStable(pcounts, func(i, j int) bool { return pcounts[i].Proposals > pcounts[j].Proposals })
+		Logger.Error("get block to extend - no notarized block", zap.Int64("round", r.GetRoundNumber()), zap.Int("num_proposals", len(proposals)), zap.Any("verification_tickets", pcounts))
 		bnb = mc.GetHeaviestNotarizedBlock(r)
 	}
 	if bnb != nil {
@@ -306,7 +322,6 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			mc.ProcessVerifiedTicket(ctx, r, b, &bvt.VerificationTicket)
 		}
 		minerStats.VerificationTicketsByRank[b.RoundRank]++
-		Logger.Debug("Sending verification ticket back")
 		return true
 	}
 	var sendVerification = false
@@ -326,7 +341,6 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			}
 		}
 		sendVerification = true
-		Logger.Debug("SendVerification Set to True")
 	}
 	var blockTimeTimer = time.NewTimer(r.delta)
 	r.SetState(round.RoundCollectingBlockProposals)
@@ -349,14 +363,12 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			}
 			return
 		case <-blockTimeTimer.C:
-			Logger.Debug("Initiating Verification")
 			initiateVerification()
 		case b := <-r.GetBlocksToVerifyChannel():
 			if sendVerification {
 				// Is this better than the current best block
 				if r.Block == nil || r.Block.RoundRank >= b.RoundRank {
 					b.SetBlockState(block.StateVerificationPending)
-					Logger.Debug("VerifyAndSending")
 					verifyAndSend(ctx, r, b)
 				} else {
 					b.SetBlockState(block.StateVerificationRejected)
@@ -501,10 +513,36 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*bloc
 }
 
 /*HandleRoundTimeout - handles the timeout of a round*/
-func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
+func (mc *Chain) HandleRoundTimeout(ctx context.Context, seconds int) {
 	if mc.CurrentRound == 0 {
 		return
 	}
+	switch true {
+	case seconds%10 == 2: // do something minor every (x mod 10 = 2 seconds)
+		mc.handleNoProgress(ctx)
+	case seconds%10 == 0: // do something major every (x mod 10 = 0 seconds)
+		mc.restartRound(ctx)
+	}
+}
+
+func (mc *Chain) handleNoProgress(ctx context.Context) {
+	r := mc.GetMinerRound(mc.CurrentRound)
+	proposals := r.GetProposedBlocks()
+	if len(proposals) > 0 { // send the best block to the network
+		b := r.Block
+		if b != nil {
+			if mc.GetRoundTimeoutCount() <= 10 {
+				Logger.Error("sending the best block to the network", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("rank", b.RoundRank))
+			}
+			mc.SendBlock(ctx, b)
+		}
+	} else {
+		// TODO: it's likely the VRF issue
+	}
+}
+
+func (mc *Chain) restartRound(ctx context.Context) {
+	mc.IncrementRoundTimeoutCount()
 	switch crt := mc.GetRoundTimeoutCount(); {
 	case crt < 10:
 		Logger.Error("round timeout occured", zap.Any("round", mc.CurrentRound), zap.Int64("count", crt))

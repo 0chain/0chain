@@ -9,6 +9,7 @@ import (
 	"0chain.net/datastore"
 	"0chain.net/node"
 	"0chain.net/smartcontractstate"
+	"0chain.net/state"
 	"0chain.net/util"
 
 	"0chain.net/block"
@@ -142,7 +143,9 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		if err != nil {
 			if config.DevConfiguration.State {
 				Logger.Error("finalize block state not successful", zap.Int64("finalized_round", fb.Round), zap.String("hash", fb.Hash), zap.Int8("state", fb.GetBlockState()), zap.Error(err))
-				Logger.DPanic("finalize block - state not successful")
+				if state.Debug() {
+					Logger.DPanic("finalize block - state not successful")
+				}
 			}
 		}
 	}

@@ -14,6 +14,7 @@ import (
 	. "0chain.net/logging"
 	"0chain.net/node"
 	"0chain.net/smartcontractstate"
+	"0chain.net/state"
 	"0chain.net/transaction"
 	"0chain.net/util"
 	"go.uber.org/zap"
@@ -87,7 +88,7 @@ type Block struct {
 	ticketsMutex       *sync.Mutex
 	verificationStatus int
 	SCStateDB          smartcontractstate.SCDB `json:"-"`
-	RunningTxnCount    int64 `json:"running_txn_count"`
+	RunningTxnCount    int64                   `json:"running_txn_count"`
 }
 
 //NewBlock - create a new empty block
@@ -227,7 +228,7 @@ func (b *Block) SetStateDB(prevBlock *Block) {
 	var pndb util.NodeDB
 	var rootHash util.Key
 	if prevBlock.ClientState == nil {
-		if config.DevConfiguration.State {
+		if state.Debug() {
 			Logger.DPanic("set state db - prior state not available")
 		} else {
 			pndb = util.NewMemoryNodeDB()
