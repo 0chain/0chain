@@ -326,7 +326,7 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round) {
 func (mc *Chain) computeRBO(ctx context.Context, mr *Round, rbo string) {
 	Logger.Debug("DKG computeRBO")
 	if mr.IsVRFComplete() {
-		Logger.Error("DKG computeRBO RBO is already completed")
+		Logger.Debug("DKG computeRBO RBO is already completed")
 		return
 	}
 

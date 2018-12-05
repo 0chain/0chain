@@ -33,7 +33,6 @@ func (r *Round) AddBlockToVerify(b *block.Block) {
 		return
 	}
 	if b.RoundRandomSeed != r.RandomSeed {
-		Logger.Error("block proposal - incorrect round random number", zap.Int64("block_random_seed", b.RoundRandomSeed), zap.Int64("round_random_seed", r.RandomSeed))
 		return
 	}
 	Logger.Debug("Adding block to verifyChannel")
