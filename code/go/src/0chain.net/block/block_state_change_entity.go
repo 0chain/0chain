@@ -106,3 +106,8 @@ func SetupStateChange(store datastore.Store) {
 func (sc *StateChange) GetRoot() util.Node {
 	return sc.root
 }
+
+/*GetNodeDB - get the node db containing all the changes */
+func (sc *StateChange) GetNodeDB() util.NodeDB {
+	return sc.mndb
+}
