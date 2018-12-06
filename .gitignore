@@ -27,3 +27,5 @@ awsnet/cookbook/*.retry
 awsnet/cookbook/context
 code/go/bin
 build
+*.code-workspace
+
