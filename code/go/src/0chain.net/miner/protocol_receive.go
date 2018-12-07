@@ -179,7 +179,7 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMess
 		//TODO: Byzantine
 		mr = mc.CreateRound(r)
 		mr = mc.AddRound(mr).(*Round)
-		mc.SetRandomSeed(mr, mb.RoundRandomSeed)
+		mc.setRandomSeed(ctx, mr, mb.RoundRandomSeed)
 	} else {
 		nb := mr.GetNotarizedBlocks()
 		for _, blk := range nb {
@@ -189,7 +189,7 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMess
 		}
 		if !mr.IsVRFComplete() {
 			//TODO: Byzantine
-			mc.SetRandomSeed(mr, mb.RoundRandomSeed)
+			mc.setRandomSeed(ctx, mr, mb.RoundRandomSeed)
 		}
 	}
 	b := mc.AddRoundBlock(mr, mb)
