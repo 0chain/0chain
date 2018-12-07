@@ -78,7 +78,7 @@ func StartDKG(ctx context.Context) {
 }
 
 func waitForNetworkToBeReady(ctx context.Context) {
-	SetupWorkers(ctx)
+
 	mc := GetMinerChain()
 
 	//m2m := mc.Miners
