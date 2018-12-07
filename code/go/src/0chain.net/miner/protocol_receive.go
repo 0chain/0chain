@@ -55,11 +55,11 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 			mr = mc.CreateRound(r)
 			mr = mc.AddRound(mr).(*Round)
 		}
-		//TODO: byzantine
+		//TODO: Byzantine
 		mc.setRandomSeed(ctx, mr, b.RoundRandomSeed)
 	} else {
 		if !mr.IsVRFComplete() {
-			//TODO: byzantine
+			//TODO: Byzantine
 			mc.setRandomSeed(ctx, mr, b.RoundRandomSeed)
 		}
 		vts := mr.GetVerificationTickets(b.Hash)
@@ -176,7 +176,7 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMess
 	if mr == nil {
 		Logger.Error("handle notarized block message", zap.Int64("round", mb.Round))
 		var r = round.NewRound(mb.Round)
-		//TODO: byzantine
+		//TODO: Byzantine
 		mr = mc.CreateRound(r)
 		mr = mc.AddRound(mr).(*Round)
 		mc.SetRandomSeed(mr, mb.RoundRandomSeed)
@@ -186,6 +186,10 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMess
 			if blk.Hash == mb.Hash {
 				return
 			}
+		}
+		if !mr.IsVRFComplete() {
+			//TODO: Byzantine
+			mc.SetRandomSeed(mr, mb.RoundRandomSeed)
 		}
 	}
 	b := mc.AddRoundBlock(mr, mb)
