@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"0chain.net/block"
+	bcstate "0chain.net/chain/state"
 	"0chain.net/common"
 	"0chain.net/config"
 	"0chain.net/datastore"
@@ -201,7 +202,7 @@ func (c *Chain) GetBlockStateChange(b *block.Block) {
 	ctx, cancelf := context.WithCancel(common.GetRootContext())
 	var bsc *block.StateChange
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-		Logger.Info("get block state change", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("bsc_id", entity.GetKey()))
+		Logger.Debug("get block state change", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("bsc_id", entity.GetKey()))
 		rsc, ok := entity.(*block.StateChange)
 		if !ok {
 			return nil, datastore.ErrInvalidEntity
@@ -287,7 +288,7 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 	defer c.stateMutex.Unlock()
 	clientState := createTxnMPT(b.ClientState) // begin transaction
 	startRoot := clientState.GetRoot()
-	sctx := NewStateContext(b, clientState, c.clientStateDeserializer, txn)
+	sctx := bcstate.NewStateContext(b, clientState, c.clientStateDeserializer, txn)
 
 	switch txn.TransactionType {
 	case transaction.TxnTypeData:
@@ -327,7 +328,7 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 *   when there is an error getting the state of the from or to account (other than no value), the error is simply returned back
 *   when there is an error inserting/deleting the state of the from or to account, this results in fatal error when state is enabled
  */
-func (c *Chain) transferAmount(sctx StateContextI, fromClient, toClient datastore.Key, amount state.Balance) error {
+func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient datastore.Key, amount state.Balance) error {
 	if amount == 0 {
 		return nil
 	}
