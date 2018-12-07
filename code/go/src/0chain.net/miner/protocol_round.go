@@ -567,3 +567,23 @@ func (mc *Chain) restartRound(ctx context.Context) {
 		go mc.SendVRFShare(ctx, r.vrfShare)
 	}
 }
+
+func startProtocol() {
+	ctx := common.GetRootContext()
+	mc := GetMinerChain()
+	mc.Sharders.OneTimeStatusMonitor(ctx)
+	lfb := getLatestBlockFromSharders(ctx)
+	var mr *Round
+	if lfb != nil {
+		sr := round.NewRound(lfb.Round)
+		mr = mc.CreateRound(sr)
+		mr, _ = mc.AddRound(mr).(*Round)
+		mc.SetRandomSeed(sr, lfb.RoundRandomSeed)
+		mc.SetLatestFinalizedBlock(ctx, lfb)
+	} else {
+		sr := round.NewRound(0)
+		mr = mc.CreateRound(sr)
+	}
+	Logger.Info("starting the blockchain ...", zap.Int64("round", mr.GetRoundNumber()))
+	mc.StartNextRound(ctx, mr)
+}

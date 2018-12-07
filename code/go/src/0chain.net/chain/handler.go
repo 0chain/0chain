@@ -120,21 +120,20 @@ var StartTime time.Time
 func HomePageHandler(w http.ResponseWriter, r *http.Request) {
 	sc := GetServerChain()
 	w.Header().Set("Content-Type", "text/html;charset=UTF-8")
-	fmt.Fprintf(w, "<div>Working on the chain: %v</div>\n", sc.GetKey())
-	fmt.Fprintf(w, "<div>I am %v <ul><li>id:%v</li><li>public_key:%v</li></ul></div>\n", node.Self.GetPseudoName(), node.Self.GetKey(), node.Self.PublicKey)
+	PrintCSS(w)
+	fmt.Fprintf(w, "<div>I am %v working on the chain %v <ul><li>id:%v</li><li>public_key:%v</li></ul></div>\n", node.Self.GetPseudoName(), sc.GetKey(), node.Self.GetKey(), node.Self.PublicKey)
+}
+
+func (c *Chain) healthSummary(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "<div>Current Round: %v Finalized Round: %v Rollbacks: %v Round Timeouts = %v</div>", c.CurrentRound, c.LatestFinalizedBlock.Round, c.RollbackCount, c.RoundTimeoutsCount)
 }
 
 /*DiagnosticsHomepageHandler - handler to display the /_diagnostics page */
 func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	sc := GetServerChain()
-	w.Header().Set("Content-Type", "text/html;charset=UTF-8")
-	PrintCSS(w)
-
+	HomePageHandler(w, r)
 	fmt.Fprintf(w, "<div>Running since %v (%v) ...\n", StartTime.Format(common.DateTimeFormat), time.Since(StartTime))
-	fmt.Fprintf(w, "<div>Working on the chain: %v</div>\n", sc.GetKey())
-	fmt.Fprintf(w, "<div>I am %v <ul><li>id:%v</li><li>public_key:%v</li></ul></div>\n", node.Self.GetPseudoName(), node.Self.GetKey(), node.Self.PublicKey)
-	fmt.Fprintf(w, "<div>Current Round: %v Finalized Round: %v Rollbacks: %v</div>\n", sc.CurrentRound, sc.LatestFinalizedBlock.Round, sc.RollbackCount)
-
+	sc.healthSummary(w, r)
 	fmt.Fprintf(w, "<table class='menu' style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr class='header'><td>Config</td><td>Stats</td><td>Info</td><td>Debug</td></tr>")
 	fmt.Fprintf(w, "<tr>")
@@ -387,6 +386,7 @@ func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 	PrintCSS(w)
 	self := node.Self.Node
 	fmt.Fprintf(w, "<div>%v - %v</div>", self.GetPseudoName(), self.Description)
+	c.healthSummary(w, r)
 	fmt.Fprintf(w, "<table>")
 	fmt.Fprintf(w, "<tr><td colspan='2' style='text-align:center'>")
 	c.notarizedBlockCountsStats(w)
@@ -398,15 +398,16 @@ func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 	c.finalizationCountStats(w)
 	fmt.Fprintf(w, "</td></tr>")
 	fmt.Fprintf(w, "</table>")
-	fmt.Fprintf(w, "<br>")
-	fmt.Fprintf(w, "<table>")
-	fmt.Fprintf(w, "<tr><td>Miner</td><td>Verification Failures</td></tr>")
-	for _, nd := range c.Miners.Nodes {
-		ms := nd.ProtocolStats.(*MinerStats)
-		fmt.Fprintf(w, "<tr><td>%v</td><td class='number'>%v</td></tr>", nd.GetPseudoName(), ms.VerificationFailures)
+	if node.Self.Type == node.NodeTypeMiner {
+		fmt.Fprintf(w, "<br>")
+		fmt.Fprintf(w, "<table>")
+		fmt.Fprintf(w, "<tr><td>Miner</td><td>Verification Failures</td></tr>")
+		for _, nd := range c.Miners.Nodes {
+			ms := nd.ProtocolStats.(*MinerStats)
+			fmt.Fprintf(w, "<tr><td>%v</td><td class='number'>%v</td></tr>", nd.GetPseudoName(), ms.VerificationFailures)
+		}
+		fmt.Fprintf(w, "</table>")
 	}
-	fmt.Fprintf(w, "</table>")
-	fmt.Fprintf(w, "Round timeouts = %v", c.RoundTimeoutsCount)
 }
 
 func (c *Chain) finalizationCountStats(w http.ResponseWriter) {
