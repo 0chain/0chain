@@ -20,22 +20,26 @@ import (
 	"go.uber.org/zap"
 )
 
+var ErrBlockHashMismatch = common.NewError("block_hash_mismatch", "Block hash mismatch")
+var ErrBlockStateHashMismatch = common.NewError("block_state_hash_mismatch", "Block state hash mismatch")
+
 const (
-	StateGenerated              = 10
-	StateVerificationPending    = 20
-	StateVerificationAccepted   = 30
-	StateVerificationRejected   = 40
-	StateVerifying              = 50
-	StateVerificationSuccessful = 60
-	StateVerificationFailed     = 70
-	StateNotarized              = 80
+	StateGenerated              = 1
+	StateVerificationPending    = iota
+	StateVerificationAccepted   = iota
+	StateVerificationRejected   = iota
+	StateVerifying              = iota
+	StateVerificationSuccessful = iota
+	StateVerificationFailed     = iota
+	StateNotarized              = iota
 )
 
 const (
 	StatePending    = 0
-	StateComputing  = 10
-	StateFailed     = 20
-	StateSuccessful = 30
+	StateComputing  = iota
+	StateFailed     = iota
+	StateSuccessful = iota
+	StateSynched    = iota
 )
 
 const (
@@ -238,11 +242,16 @@ func (b *Block) SetStateDB(prevBlock *Block) {
 	}
 	rootHash = prevBlock.ClientStateHash
 	Logger.Debug("prev state root", zap.Int64("round", b.Round), zap.String("prev_block", prevBlock.Hash), zap.String("root", util.ToHex(rootHash)))
+	b.CreateState(pndb)
+	b.ClientState.SetRoot(rootHash)
+	b.SetSCStateDB(prevBlock)
+}
+
+//CreateState - create the state from the prior state db
+func (b *Block) CreateState(pndb util.NodeDB) {
 	mndb := util.NewMemoryNodeDB()
 	ndb := util.NewLevelNodeDB(mndb, pndb, false)
 	b.ClientState = util.NewMerklePatriciaTrie(ndb, util.Sequence(b.Round))
-	b.ClientState.SetRoot(rootHash)
-	b.SetSCStateDB(prevBlock)
 }
 
 /*AddTransaction - add a transaction to the block */
@@ -417,14 +426,8 @@ func (b *Block) GetStateStatus() int8 {
 
 /*IsStateComputed - is the state of this block computed? */
 func (b *Block) IsStateComputed() bool {
-	if b.stateStatus == StateSuccessful {
+	if b.stateStatus >= StateSuccessful {
 		return true
-	}
-	if config.DevConfiguration.State {
-	} else {
-		if b.stateStatus == StateFailed {
-			return true
-		}
 	}
 	return false
 }

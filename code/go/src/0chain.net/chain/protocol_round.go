@@ -1,7 +1,6 @@
 package chain
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"time"
@@ -35,22 +34,14 @@ var StartToFinalizeTimer metrics.Timer
 //StartToFinalizeTxnTimer - a metric that trakcs the time a txn is created to finalized
 var StartToFinalizeTxnTimer metrics.Timer
 
-//StateSaveTimer - a metric that tracks the time it takes to save the state
-var StateSaveTimer metrics.Timer
-
 //FinalizationLagMetric - a metric that tracks how much is the lag between current round and finalization round
 var FinalizationLagMetric metrics.Histogram
-
-//StateChangeSizeMetric - a metri  that tracks how many state nodes are changing with each block
-var StateChangeSizeMetric metrics.Histogram
 
 func init() {
 	SteadyStateFinalizationTimer = metrics.GetOrRegisterTimer("ss_finalization_time", nil)
 	StartToFinalizeTimer = metrics.GetOrRegisterTimer("s2f_time", nil)
 	StartToFinalizeTxnTimer = metrics.GetOrRegisterTimer("s2ft_time", nil)
-	StateSaveTimer = metrics.GetOrRegisterTimer("state_save_timer", nil)
 	FinalizationLagMetric = metrics.NewHistogram(metrics.NewUniformSample(1024))
-	StateChangeSizeMetric = metrics.NewHistogram(metrics.NewUniformSample(1024))
 	metrics.Register("finalization_lag", FinalizationLagMetric)
 }
 
@@ -230,38 +221,4 @@ func (c *Chain) GetHeaviestNotarizedBlock(r round.RoundI) *block.Block {
 	n2n := c.Miners
 	n2n.RequestEntity(ctx, nbrequestor, params, handler)
 	return r.GetHeaviestNotarizedBlock()
-}
-
-//GetBlockStateChange - get the block state changes
-func (c *Chain) GetBlockStateChange(b *block.Block) {
-	bscRequestor := BlockStateChangeRequestor
-	params := map[string]string{"block": b.Hash}
-	ctx, cancelf := context.WithCancel(common.GetRootContext())
-	var bsc *block.StateChange
-	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-		Logger.Info("get block state change", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("bsc_id", entity.GetKey()))
-		rsc, ok := entity.(*block.StateChange)
-		if !ok {
-			return nil, datastore.ErrInvalidEntity
-		}
-		if rsc.Hash != b.Hash {
-			return nil, common.NewError("block_hash_mismatch", "Block hash of state change doesn't match the block requested")
-		}
-		root := rsc.GetRoot()
-		if root == nil {
-			return nil, common.NewError("state_root_error", "Block state root calculcation error")
-		}
-		if bytes.Compare(b.ClientStateHash, root.GetHashBytes()) != 0 {
-			return nil, common.NewError("block_state_hash_mismatch", "Block state hash doesn't match with what's in the block")
-		}
-		cancelf()
-		bsc = rsc
-		return rsc, nil
-	}
-	c.Miners.RequestEntity(ctx, bscRequestor, params, handler)
-	if bsc != nil {
-		Logger.Info("block state change", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Any("state_change_hash", bsc.GetRoot().GetHash()))
-	} else {
-		Logger.Error("block state chagne", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("state_hash", util.ToHex(b.ClientStateHash)))
-	}
 }

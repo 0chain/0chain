@@ -11,6 +11,8 @@ import (
 	"go.uber.org/zap"
 )
 
+var ErrInvalidData = NewError("invalid_data", "Invalid data")
+
 const (
 	CodecJSON    = 0
 	CodecMsgpack = 1

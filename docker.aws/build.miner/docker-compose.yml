@@ -82,7 +82,7 @@ services:
     ports:
       - "7071:7071"
 
-    restart: "no"
+    restart: ${RESTART_POLICY}
 
     networks:
       default:
