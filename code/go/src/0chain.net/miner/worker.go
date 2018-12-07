@@ -114,9 +114,7 @@ func StartProtocol() {
 		sr := round.NewRound(0)
 		mr = mc.CreateRound(sr)
 	}
-	if isDkgEnabled {
-		SetupWorkers(ctx)
-	}
+
 	Logger.Info("starting the blockchain ...", zap.Int64("round", mr.GetRoundNumber()))
 	mc.StartNextRound(ctx, mr)
 }

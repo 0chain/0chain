@@ -2,13 +2,11 @@ package chain
 
 import (
 	"context"
-	"math"
 	"time"
 
 	"0chain.net/config"
 	"0chain.net/datastore"
 	"0chain.net/node"
-	"0chain.net/util"
 
 	"0chain.net/block"
 	"0chain.net/common"
@@ -136,35 +134,10 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	StartToFinalizeTimer.UpdateSince(fb.ToTime())
 	ssFTs = time.Now()
 	c.UpdateChainInfo(fb)
-	if fb.GetStateStatus() != block.StateSuccessful {
-		err := c.ComputeState(ctx, fb)
-		if err != nil {
-			if config.DevConfiguration.State {
-				Logger.Error("finalize block state not successful", zap.Int64("finalized_round", fb.Round), zap.String("hash", fb.Hash), zap.Int8("state", fb.GetBlockState()), zap.Error(err))
-				Logger.DPanic("finalize block - state not successful")
-			}
-		}
-	}
-	if fb.ClientState != nil {
-		ts := time.Now()
-		err := fb.ClientState.SaveChanges(c.stateDB, false)
-		duration := time.Since(ts)
-		StateSaveTimer.UpdateSince(ts)
-		p95 := StateSaveTimer.Percentile(.95)
-		changes := fb.ClientState.GetChangeCollector().GetChanges()
-		if len(changes) > 0 {
-			StateChangeSizeMetric.Update(int64(len(changes)))
-		}
-		if StateSaveTimer.Count() > 100 && 2*p95 < float64(duration) {
-			Logger.Error("finalize block - save state slow", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.Int("block_size", len(fb.Txns)), zap.Int("changes", len(changes)), zap.String("client_state", util.ToHex(fb.ClientStateHash)), zap.Duration("duration", duration), zap.Duration("p95", time.Duration(math.Round(p95/1000000))*time.Millisecond))
-		} else {
-			Logger.Debug("finalize block - save state", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.Int("block_size", len(fb.Txns)), zap.Int("changes", len(changes)), zap.String("client_state", util.ToHex(fb.ClientStateHash)), zap.Duration("duration", duration))
-		}
-		if err != nil {
-			Logger.Error("finalize block - save state", zap.Int64("round", fb.Round), zap.String("block", fb.Hash), zap.Int("block_size", len(fb.Txns)), zap.Int("changes", len(changes)), zap.String("client_state", util.ToHex(fb.ClientStateHash)), zap.Duration("duration", duration), zap.Error(err))
-		}
-		c.rebaseState(fb)
-	}
+
+	c.SaveChanges(ctx, fb)
+	c.rebaseState(fb)
+
 	if config.Development() {
 		ts := time.Now()
 		for _, txn := range fb.Txns {
