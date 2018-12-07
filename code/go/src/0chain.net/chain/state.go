@@ -346,9 +346,9 @@ func (c *Chain) transferAmount(sctx StateContextI, fromClient, toClient datastor
 				}
 				fmt.Fprintf(stateOut, "transfer amount r=%v b=%v t=%+v\n", b.Round, b.Hash, txn)
 			}
-			fmt.Fprintf(stateOut, "transfer amount - error getting state value: %v %+v %v\n", txn.ClientID, txn, err)
+			fmt.Fprintf(stateOut, "transfer amount - error getting state value: %v %+v %v\n", fromClient, txn, err)
 			printStates(clientState, b.ClientState)
-			Logger.DPanic(fmt.Sprintf("transfer amount - error getting state value: %v %v", txn.ClientID, err))
+			Logger.DPanic(fmt.Sprintf("transfer amount - error getting state value: %v %v", fromClient, err))
 		}
 		return err
 	}
@@ -367,19 +367,19 @@ func (c *Chain) transferAmount(sctx StateContextI, fromClient, toClient datastor
 				}
 				fmt.Fprintf(stateOut, "transfer amount r=%v b=%v t=%+v\n", b.Round, b.Hash, txn)
 			}
-			fmt.Fprintf(stateOut, "transfer amount - error getting state value: %v %+v %v\n", txn.ToClientID, txn, err)
+			fmt.Fprintf(stateOut, "transfer amount - error getting state value: %v %+v %v\n", toClient, txn, err)
 			printStates(clientState, b.ClientState)
-			Logger.DPanic(fmt.Sprintf("transfer amount - error getting state value: %v %v", txn.ToClientID, err))
+			Logger.DPanic(fmt.Sprintf("transfer amount - error getting state value: %v %v", toClient, err))
 		}
 		return err
 	}
 	fs.SetRound(b.Round)
 	fs.Balance -= amount
 	if fs.Balance == 0 {
-		Logger.Info("transfer amount - remove client", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client", txn.ClientID), zap.Any("txn", txn))
-		_, err = clientState.Delete(util.Path(txn.ClientID))
+		Logger.Info("transfer amount - remove client", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client", fromClient), zap.Any("txn", txn))
+		_, err = clientState.Delete(util.Path(fromClient))
 	} else {
-		_, err = clientState.Insert(util.Path(txn.ClientID), fs)
+		_, err = clientState.Insert(util.Path(fromClient), fs)
 	}
 	if err != nil {
 		if config.DevConfiguration.State {
@@ -391,7 +391,7 @@ func (c *Chain) transferAmount(sctx StateContextI, fromClient, toClient datastor
 	}
 	ts.SetRound(b.Round)
 	ts.Balance += amount
-	_, err = clientState.Insert(util.Path(txn.ToClientID), ts)
+	_, err = clientState.Insert(util.Path(toClient), ts)
 	if err != nil {
 		if config.DevConfiguration.State {
 			Logger.DPanic("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
