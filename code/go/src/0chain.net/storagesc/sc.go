@@ -5,6 +5,7 @@ import (
 
 	"go.uber.org/zap"
 
+	c_state "0chain.net/chain/state"
 	"0chain.net/common"
 	"0chain.net/encryption"
 	"0chain.net/smartcontractinterface"
@@ -254,7 +255,7 @@ func (sc *StorageSmartContract) NewAllocationRequest(t *transaction.Transaction,
 	return "", common.NewError("invalid_allocation_request", "Failed storage allocate")
 }
 
-func (sc *StorageSmartContract) Execute(t *transaction.Transaction, funcName string, input []byte) (string, error) {
+func (sc *StorageSmartContract) Execute(t *transaction.Transaction, funcName string, input []byte, balances c_state.StateContextI) (string, error) {
 
 	// if funcName == "challenge_response" {
 	// 	resp, err := sc.VerifyChallenge(t, input)
