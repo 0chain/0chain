@@ -66,14 +66,12 @@ func SetupM2MSenders() {
 
 /*SetupM2MReceivers - setup receivers for miner to miner communication */
 func SetupM2MReceivers() {
-
-	http.HandleFunc("/v1/_m2m/round/vrf_share", node.ToN2NReceiveEntityHandler(VRFShareHandler, nil))
 	http.HandleFunc("/v1/_m2m/dkg/share", node.ToN2NReceiveEntityHandler(DKGShareHandler, nil))
+	http.HandleFunc("/v1/_m2m/round/vrf_share", node.ToN2NReceiveEntityHandler(VRFShareHandler, nil))
 	http.HandleFunc("/v1/_m2m/block/verify", node.ToN2NReceiveEntityHandler(memorystore.WithConnectionEntityJSONHandler(VerifyBlockHandler, datastore.GetEntityMetadata("block")), nil))
 	http.HandleFunc("/v1/_m2m/block/verification_ticket", node.ToN2NReceiveEntityHandler(VerificationTicketReceiptHandler, nil))
 	http.HandleFunc("/v1/_m2m/block/notarization", node.ToN2NReceiveEntityHandler(NotarizationReceiptHandler, nil))
 	http.HandleFunc("/v1/_m2m/block/notarized_block", node.ToN2NReceiveEntityHandler(NotarizedBlockHandler, nil))
-
 }
 
 /*SetupX2MResponders - setup responders */
@@ -107,7 +105,6 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (interface{},
 	msg := NewBlockMessage(MessageVRFShare, node.GetSender(ctx), nil, nil)
 	vrfs.SetParty(msg.Sender)
 	msg.VRFShare = vrfs
-	Logger.Debug("DKG Here VRFShareHandler Sending msg to BlockMessageChannel")
 	mc.GetBlockMessageChannel() <- msg
 	return nil, nil
 }
@@ -122,7 +119,6 @@ func DKGShareHandler(ctx context.Context, entity datastore.Entity) (interface{},
 	nodeID := node.GetSender(ctx).SetIndex
 	Logger.Debug("received DKG share", zap.String("share", dg.Share), zap.Int("Node Id", nodeID))
 	AppendDKGSecShares(nodeID, dg.Share)
-
 	return nil, nil
 }
 
@@ -151,14 +147,12 @@ func VerifyBlockHandler(ctx context.Context, entity datastore.Entity) (interface
 
 /*VerificationTicketReceiptHandler - Add a verification ticket to the block */
 func VerificationTicketReceiptHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-	Logger.Debug("Received Verification Ticket!")
 	bvt, ok := entity.(*block.BlockVerificationTicket)
 	if !ok {
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
 	msg := NewBlockMessage(MessageVerificationTicket, node.GetSender(ctx), nil, nil)
 	msg.BlockVerificationTicket = bvt
-	Logger.Debug(" Here VerificationTicketReceipt Sending msg to BlockMessageChannel")
 	GetMinerChain().GetBlockMessageChannel() <- msg
 	return nil, nil
 }
@@ -187,7 +181,6 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
 	mc := GetMinerChain()
-	Logger.Info("notarized block handler", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("current_round", mc.CurrentRound))
 	if b.Round < mc.CurrentRound-1 {
 		Logger.Debug("notarized block handler (round older than the current round)", zap.String("block", b.Hash), zap.Any("round", b.Round))
 		return nil, nil
@@ -196,7 +189,6 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 		return nil, err
 	}
 	msg := &BlockMessage{Sender: node.GetSender(ctx), Type: MessageNotarizedBlock, Block: b}
-	Logger.Debug("Here NotarizedBlock Sending msg to BlockMessageChannel")
 	mc.GetBlockMessageChannel() <- msg
 	return nil, nil
 }
@@ -204,6 +196,22 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 //NotarizedBlockSendHandler - handles a request for a notarized block
 func NotarizedBlockSendHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	return getNotarizedBlock(ctx, r)
+}
+
+//BlockStateChangeHandler - provide the state changes associated with a block
+func BlockStateChangeHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	b, err := getNotarizedBlock(ctx, r)
+	if err != nil {
+		return nil, err
+	}
+	if b.GetStateStatus() != block.StateSuccessful {
+		return nil, common.NewError("state_not_verified", "State is not computed and validated locally")
+	}
+	bsc := block.NewBlockStateChange(b)
+	if state.Debug() {
+		Logger.Info("block state change handler", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("state_changes", len(b.ClientState.GetChangeCollector().GetChanges())), zap.Int("sc_nodes", len(bsc.Nodes)))
+	}
+	return bsc, nil
 }
 
 func getNotarizedBlock(ctx context.Context, r *http.Request) (*block.Block, error) {
@@ -239,20 +247,4 @@ func getNotarizedBlock(ctx context.Context, r *http.Request) (*block.Block, erro
 		}
 	}
 	return nil, common.NewError("block_not_available", "Requested block is not available")
-}
-
-//BlockStateChangeHandler - provide the state changes associated with a block
-func BlockStateChangeHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	b, err := getNotarizedBlock(ctx, r)
-	if err != nil {
-		return nil, err
-	}
-	if b.GetStateStatus() != block.StateSuccessful {
-		return nil, common.NewError("state_not_verified", "State is not computed and validated locally")
-	}
-	bsc := block.NewBlockStateChange(b)
-	if state.Debug() {
-		Logger.Info("block state change handler", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("state_changes", len(b.ClientState.GetChangeCollector().GetChanges())), zap.Int("sc_nodes", len(bsc.Nodes)))
-	}
-	return bsc, nil
 }
