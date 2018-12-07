@@ -109,13 +109,12 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 			return err
 		}
 	}
-	/*
-		if pb.ClientState == nil {
-			if config.DevConfiguration.State {
-				Logger.Error("compute state - previous state nil", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
-			}
-			return ErrPreviousStateUnavailable
-		}*/
+	if pb.ClientState == nil {
+		if config.DevConfiguration.State {
+			Logger.Error("compute state - previous state nil", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
+		}
+		return ErrPreviousStateUnavailable
+	}
 	b.SetStateDB(pb)
 	Logger.Info("compute state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.String("begin_client_state", util.ToHex(b.ClientState.GetRoot())), zap.String("prev_block", b.PrevHash), zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)))
 	for _, txn := range b.Txns {
@@ -202,7 +201,7 @@ func (c *Chain) GetBlockStateChange(b *block.Block) {
 	ctx, cancelf := context.WithCancel(common.GetRootContext())
 	var bsc *block.StateChange
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-		Logger.Info("get block state change", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("bsc_id", entity.GetKey()), zap.String("bsc", common.ToJSON(bsc).String()))
+		Logger.Info("get block state change", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("bsc_id", entity.GetKey()))
 		rsc, ok := entity.(*block.StateChange)
 		if !ok {
 			return nil, datastore.ErrInvalidEntity
@@ -232,7 +231,7 @@ func (c *Chain) GetBlockStateChange(b *block.Block) {
 			Logger.Error("get block state change", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Error(err))
 		}
 	} else {
-		Logger.Error("get block state change", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("state_hash", util.ToHex(b.ClientStateHash)))
+		Logger.Error("get block state change - no bsc", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("state_hash", util.ToHex(b.ClientStateHash)))
 	}
 }
 
@@ -251,8 +250,13 @@ func (c *Chain) ApplyBlockStateChange(ctx context.Context, b *block.Block, bsc *
 	if bytes.Compare(b.ClientStateHash, root.GetHashBytes()) != 0 {
 		return block.ErrBlockStateHashMismatch
 	}
-	mpt2 := util.NewMerklePatriciaTrie(bsc.GetNodeDB(), util.Sequence(b.Round))
-	b.ClientState.MergeMPT(mpt2)
+	if b.ClientState == nil {
+		b.CreateState(bsc.GetNodeDB())
+	}
+	err := b.ClientState.MergeDB(bsc.GetNodeDB(), bsc.GetRoot().GetHashBytes())
+	if err != nil {
+		Logger.Error("apply block state change - error merging", zap.Int64("round", b.Round), zap.String("block", b.Hash))
+	}
 	b.SetStateStatus(block.StateSynched)
 	return nil
 }
@@ -269,7 +273,6 @@ func (c *Chain) rebaseState(lfb *block.Block) {
 		if lndb, ok := ndb.(*util.LevelNodeDB); ok {
 			Logger.Debug("finalize round - rebasing current state db", zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash), zap.String("hash", util.ToHex(lfb.ClientState.GetRoot())))
 			lndb.RebaseCurrentDB(c.stateDB)
-			lfb.ClientState.ResetChangeCollector(nil)
 			Logger.Debug("finalize round - rebased current state db", zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash), zap.String("hash", util.ToHex(lfb.ClientState.GetRoot())))
 		}
 	}
@@ -302,7 +305,8 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 		}
 	}
 
-	err := mergeMPT(b.ClientState, clientState) // commit transaction
+	err := b.ClientState.MergeMPTChanges(clientState) // commit transaction
+
 	if err != nil {
 		Logger.DPanic("update state - merge mpt error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
 	}
@@ -335,7 +339,7 @@ func (c *Chain) transferAmount(sctx StateContextI, fromClient, toClient datastor
 		if config.DevConfiguration.State {
 			Logger.Error("transfer amount - client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
 		}
-		if state.Debug() {
+		if state.DebugTxn() {
 			for _, txn := range b.Txns {
 				if txn == nil {
 					break
@@ -356,7 +360,7 @@ func (c *Chain) transferAmount(sctx StateContextI, fromClient, toClient datastor
 		if config.DevConfiguration.State {
 			Logger.Error("transfer amount - to_client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
 		}
-		if state.Debug() {
+		if state.DebugTxn() {
 			for _, txn := range b.Txns {
 				if txn == nil {
 					break
@@ -404,13 +408,6 @@ func createTxnMPT(mpt util.MerklePatriciaTrieI) util.MerklePatriciaTrieI {
 	tmpt := util.NewMerklePatriciaTrie(tdb, mpt.GetVersion())
 	tmpt.SetRoot(mpt.GetRoot())
 	return tmpt
-}
-
-func mergeMPT(mpt util.MerklePatriciaTrieI, mpt2 util.MerklePatriciaTrieI) error {
-	if state.DebugTxn() {
-		Logger.Debug("merge mpt", zap.String("mpt_root", util.ToHex(mpt.GetRoot())), zap.String("mpt2_root", util.ToHex(mpt2.GetRoot())))
-	}
-	return mpt.MergeMPT(mpt2)
 }
 
 func (c *Chain) getState(clientState util.MerklePatriciaTrieI, clientID string) (*state.State, error) {
