@@ -46,9 +46,6 @@ var ErrInsufficientBalance = common.NewError("insufficient_balance", "Balance no
 /*ComputeState - compute the state for the block */
 func (c *Chain) ComputeState(ctx context.Context, b *block.Block) error {
 	lock := b.StateMutex
-	if lock == nil {
-		return common.NewError("invalid_block", "Invalid block")
-	}
 	lock.Lock()
 	defer lock.Unlock()
 	return c.computeState(ctx, b)
@@ -57,19 +54,26 @@ func (c *Chain) ComputeState(ctx context.Context, b *block.Block) error {
 //ComputeOrSyncState - try to compute state and if there is an error, just sync it
 func (c *Chain) ComputeOrSyncState(ctx context.Context, b *block.Block) error {
 	lock := b.StateMutex
-	if lock == nil {
-		return common.NewError("invalid_block", "Invalid block")
-	}
 	lock.Lock()
 	defer lock.Unlock()
 	err := c.computeState(ctx, b)
 	if err != nil {
 		pb := b.PrevBlock
-		if pb != nil && bytes.Compare(b.ClientStateHash, pb.ClientStateHash) == 0 {
+		if pb == nil {
+			return ErrPreviousBlockUnavailable
+		}
+		if bytes.Compare(b.ClientStateHash, pb.ClientStateHash) == 0 {
 			b.SetStateStatus(block.StateSynched) // global state doesn't need any sync
 			return nil
 		}
-		c.GetBlockStateChange(b)
+		bsc, err := c.getBlockStateChange(b)
+		if err != nil {
+			return err
+		} else {
+			if bsc != nil {
+				c.applyBlockStateChange(b, bsc)
+			}
+		}
 		if !b.IsStateComputed() {
 			Logger.Error("compute state - state change error", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Error(err))
 			return err
@@ -99,18 +103,25 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 		}
 	}
 	if !pb.IsStateComputed() {
-		Logger.Info("compute state - previous block state not ready", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Int8("prev_block_state", pb.GetBlockState()), zap.Int8("prev_block_state_status", pb.GetStateStatus()))
-		err := c.ComputeState(ctx, pb)
-		if err != nil {
-			pb.SetStateStatus(block.StateFailed)
-			if state.DebugBlock() {
-				Logger.Error("compute state - error computing previous state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Error(err))
-			} else {
-				if config.DevConfiguration.State {
-					Logger.Info("compute state - error computing previous state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Error(err))
-				}
+		if pb.GetStateStatus() == block.StateFailed {
+			c.GetBlockStateChange(pb)
+			if !pb.IsStateComputed() {
+				return ErrPreviousStateUnavailable
 			}
-			return err
+		} else {
+			Logger.Info("compute state - previous block state not ready", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Int8("prev_block_state", pb.GetBlockState()), zap.Int8("prev_block_state_status", pb.GetStateStatus()))
+			err := c.ComputeState(ctx, pb)
+			if err != nil {
+				pb.SetStateStatus(block.StateFailed)
+				if state.DebugBlock() {
+					Logger.Error("compute state - error computing previous state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Error(err))
+				} else {
+					if config.DevConfiguration.State {
+						Logger.Info("compute state - error computing previous state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Error(err))
+					}
+				}
+				return err
+			}
 		}
 	}
 	if pb.ClientState == nil {
@@ -163,6 +174,10 @@ func (c *Chain) SaveChanges(ctx context.Context, b *block.Block) error {
 		Logger.Error("save changes - client state is null", zap.Int64("round", b.Round), zap.String("hash", b.Hash))
 		return nil
 	}
+
+	lock := b.StateMutex
+	lock.Lock()
+	defer lock.Unlock()
 	var err error
 	ts := time.Now()
 	switch b.GetStateStatus() {
@@ -201,14 +216,30 @@ func (c *Chain) SaveChanges(ctx context.Context, b *block.Block) error {
 	return err
 }
 
-//GetBlockStateChange - get the block state changes
+//GetBlockStateChange - get the state change of the block
 func (c *Chain) GetBlockStateChange(b *block.Block) {
-	if b.PrevBlock == nil {
+	bsc, err := c.getBlockStateChange(b)
+	if err != nil {
+		Logger.Error("get block state change - no bsc", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Error(err))
 		return
+	}
+	if bsc == nil {
+		return
+	}
+	Logger.Error("get block state change", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Int8("state_status", b.GetStateStatus()))
+	err = c.ApplyBlockStateChange(b, bsc)
+	if err != nil {
+		Logger.Error("get block state change", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Error(err))
+	}
+}
+
+func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) {
+	if b.PrevBlock == nil {
+		return nil, nil
 	}
 	if bytes.Compare(b.ClientStateHash, b.PrevBlock.ClientStateHash) == 0 {
 		b.SetStateStatus(block.StateSynched)
-		return
+		return nil, nil
 	}
 	bscRequestor := BlockStateChangeRequestor
 	params := map[string]string{"block": b.Hash}
@@ -238,19 +269,21 @@ func (c *Chain) GetBlockStateChange(b *block.Block) {
 		return rsc, nil
 	}
 	c.Miners.RequestEntity(ctx, bscRequestor, params, handler)
-	if bsc != nil {
-		Logger.Info("get block state change", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Any("state_change_hash", bsc.GetRoot().GetHash()))
-		err := c.ApplyBlockStateChange(ctx, b, bsc)
-		if err != nil {
-			Logger.Error("get block state change", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Error(err))
-		}
-	} else {
-		Logger.Error("get block state change - no bsc", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("state_hash", util.ToHex(b.ClientStateHash)))
+	if bsc == nil {
+		return nil, common.NewError("block_state_change_error", "Error getting the block state change")
 	}
+	return bsc, nil
 }
 
-//ApplyBlockStateChange - apply the changes from the given block state change
-func (c *Chain) ApplyBlockStateChange(ctx context.Context, b *block.Block, bsc *block.StateChange) error {
+//ApplyBlockStateChange - apply the state chagnes to the block state
+func (c *Chain) ApplyBlockStateChange(b *block.Block, bsc *block.StateChange) error {
+	lock := b.StateMutex
+	lock.Lock()
+	defer lock.Unlock()
+	return c.applyBlockStateChange(b, bsc)
+}
+
+func (c *Chain) applyBlockStateChange(b *block.Block, bsc *block.StateChange) error {
 	if b.Hash != bsc.Hash {
 		return block.ErrBlockHashMismatch
 	}

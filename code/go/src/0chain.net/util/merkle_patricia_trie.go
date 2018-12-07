@@ -487,7 +487,7 @@ func (mpt *MerklePatriciaTrie) deleteAtNode(node Node, path Path) (Node, Key, er
 						nnode = enode
 						mpt.deleteNode(ochild)
 					default:
-						panic(fmt.Sprintf("uknown node type: %T %v", ochild, ochild))
+						panic(fmt.Sprintf("uknown node type: %T %v %T", ochild, ochild, mpt.DB))
 					}
 					return mpt.insertNode(node, nnode)
 				}
