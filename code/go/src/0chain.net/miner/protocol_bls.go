@@ -72,13 +72,13 @@ func StartDKG(ctx context.Context) {
 	} else {
 		Logger.Info("DKG is not enabled. So, starting protocol")
 
-		go StartProtocol()
+		go startProtocol()
 	}
 
 }
 
 func waitForNetworkToBeReady(ctx context.Context) {
-	SetupWorkers(ctx)
+
 	mc := GetMinerChain()
 
 	//m2m := mc.Miners
@@ -201,7 +201,7 @@ func AppendDKGSecShares(nodeID int, share string) {
 		Logger.Debug("All the shares are received ...")
 		AggregateDKGSecShares(recShares)
 		Logger.Info("DKG is done :) ...")
-		go StartProtocol()
+		go startProtocol()
 	}
 
 }

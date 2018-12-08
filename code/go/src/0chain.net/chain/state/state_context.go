@@ -1,4 +1,4 @@
-package chain
+package state
 
 import (
 	"0chain.net/block"
