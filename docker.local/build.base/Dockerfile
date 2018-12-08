@@ -24,7 +24,7 @@ RUN cd /tmp && \
     git clone https://github.com/0chain/rocksdb.git && \
     cd rocksdb && \
     #git checkout 5.13.fb && \
-    make  shared_lib && \
+    make  -j $(nproc) shared_lib && \
     mkdir -p /usr/local/rocksdb/lib && \
     mkdir /usr/local/rocksdb/include && \
     cp librocksdb.so* /usr/local/rocksdb/lib && \
