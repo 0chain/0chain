@@ -151,12 +151,10 @@ func main() {
 		Logger.Error("bc-27 error reading round data from db", zap.Error(err))
 	}
 
+	go catchUpWithLatestRound(ctx, r)
 	Logger.Info("Ready to listen to the requests")
 	chain.StartTime = time.Now().UTC()
 	log.Fatal(server.ListenAndServe())
-
-	//catch up with other sharders rounds
-	go CatchUpWithLatestRound(ctx, r)
 }
 
 func initServer() {
@@ -205,6 +203,8 @@ func initN2NHandlers() {
 	sharder.SetupM2SReceivers()
 	sharder.SetupM2SResponders()
 	chain.SetupX2MRequestors()
+	sharder.SetupS2SRequestors()
+	sharder.SetupS2SResponders()
 }
 
 func initWorkers(ctx context.Context) {
@@ -213,10 +213,12 @@ func initWorkers(ctx context.Context) {
 	sharder.SetupWorkers(ctx)
 }
 
-func CatchUpWithLatestRound(ctx context.Context, r *round.Round) {
+func catchUpWithLatestRound(ctx context.Context, r *round.Round) {
+	Logger.Info("bc-27 - catch up with other sharders rounds")
 	sc := sharder.GetSharderChain()
-	lr := sc.CheckForMissingRounds(ctx, r.Number)
+	lr := sc.GetLatestRoundFromSharders(ctx, r.Number)
 	if lr != nil && lr.Number > r.Number+1 {
+		Logger.Info("bc-27 - latest round from other sharder", zap.Int64("curr_round", r.Number), zap.Int64("latest_round_from_sharders", lr.Number))
 		sc.GetMissingRounds(ctx, lr.Number, r.Number)
 	}
 }

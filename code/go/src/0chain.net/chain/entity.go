@@ -446,6 +446,15 @@ func (c *Chain) IsBlockSharder(b *block.Block, sharder *node.Node) bool {
 	return sharder.IsInTop(scores, c.NumSharders)
 }
 
+/*IsBlockSharderWithNodes - checks if the sharder can store the block with nodes that store this block*/
+func (c *Chain) IsBlockSharderWithNodes(hash string, sharder *node.Node) (bool, []*node.Node) {
+	if c.NumSharders <= 0 {
+		return true, nil
+	}
+	scores := c.nodePoolScorer.ScoreHashString(c.Sharders, hash)
+	return sharder.IsInTopWithNodes(scores, c.NumSharders)
+}
+
 /*ValidGenerator - check whether this block is from a valid generator */
 func (c *Chain) ValidGenerator(r round.RoundI, b *block.Block) bool {
 	miner := c.Miners.GetNode(b.MinerID)

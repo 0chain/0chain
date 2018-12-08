@@ -73,6 +73,18 @@ func (np *Pool) RequestEntityFromAll(ctx context.Context, requestor EntityReques
 	}
 }
 
+//RequestEntityFromNode - request an entity from a node
+func (n *Node) RequestEntityFromNode(ctx context.Context, requestor EntityRequestor, params map[string]string, handler datastore.JSONEntityReqResponderF) bool {
+	rhandler := requestor(params, handler)
+	select {
+	case <-ctx.Done():
+		return false
+	default:
+		return rhandler(n)
+	}
+	return false
+}
+
 /*SetRequestHeaders - sets the send request headers*/
 func SetRequestHeaders(req *http.Request, options *SendOptions, entityMetadata datastore.EntityMetadata) bool {
 	SetHeaders(req)

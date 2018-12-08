@@ -93,7 +93,7 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 	sc.AddNotarizedBlock(ctx, er, b)
 }
 
-func (sc *Chain) CheckForMissingRounds(ctx context.Context, currRound int64) *round.Round {
+func (sc *Chain) GetLatestRoundFromSharders(ctx context.Context, currRound int64) *round.Round {
 	latestRounds := make([]*round.Round, 1)
 
 	latestRoundHandler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
@@ -115,36 +115,64 @@ func (sc *Chain) CheckForMissingRounds(ctx context.Context, currRound int64) *ro
 	return nil
 }
 
-func (sc *Chain) GetMissingRounds(ctx context.Context, r int64, currRound int64) {
-	currRound += 1
-	blocks := make([]*block.Block, 1)
-	var params map[string]string
+func (sc *Chain) GetMissingRounds(ctx context.Context, rNum int64, currRound int64) {
+	Logger.Info("bc-27 get missing rounds")
 
-	missingRoundBlocksHandler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-		rb, ok := entity.(*block.Block)
+	var r *round.Round
+	missingRoundHandler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+		roundEntity, ok := entity.(*round.Round)
 		if !ok {
 			return nil, nil
 		}
-		blocks = append(blocks, rb)
-		return nil, nil
+		r = roundEntity
+		return r, nil
 	}
 
-	for currRound != r {
+	var b *block.Block
+	missingBlockHandler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+		blockEntity, ok := entity.(*block.Block)
+		if !ok {
+			return nil, nil
+		}
+		err := blockEntity.Validate(ctx)
+		if err == nil {
+			b = blockEntity
+			return blockEntity, nil
+		}
+		return nil, err
+	}
+
+	var params map[string]string
+	currRound += 1
+	for currRound != rNum {
 		params["round"] = strconv.FormatInt(currRound, 10)
-		r := round.NewRound(currRound)
-		sc.Sharders.RequestEntityFromAll(ctx, BlockRequestor, params, missingRoundBlocksHandler)
-		//TODO any consensus to be done?? currently taking the first block that we received
-		if len(blocks) > 0 {
-			b := blocks[0]
-			sc.storeRound(ctx, r, b)
+		sc.Sharders.RequestEntityFromAll(ctx, RoundRequestor, params, missingRoundHandler)
+		if r != nil {
 			self := node.GetSelfNode(ctx)
-			Logger.Info("bc-27 missed round stored in db", zap.Int64("round", r.GetRoundNumber()))
-			if sc.IsBlockSharder(b, self.Node) {
-				sc.storeBlock(b)
+			canStore, nodes := sc.IsBlockSharderWithNodes(r.BlockHash, self.Node)
+			if canStore {
+				var requestNode *node.Node
+				for _, n := range nodes {
+					if n != self.Node {
+						requestNode = n
+						break
+					}
+				}
+				requestNode.RequestEntityFromNode(ctx, BlockRequestor, params, missingBlockHandler)
+				if b != nil {
+					sc.storeBlock(b)
+					Logger.Info("bc-27 missed block stored in file", zap.String("block-hash", b.Hash))
+				}
+			}
+			if b != nil {
+				sc.storeRound(ctx, r, b)
+				sc.StoreBlockSummary(ctx, b)
+				Logger.Info("bc-27 missed round stored in db", zap.Int64("round", r.GetRoundNumber()))
 				Logger.Info("bc-27 missed block stored in db", zap.String("block-hash", b.Hash))
 			}
-			blocks = make([]*block.Block, 1)
 		}
+		r = nil
+		b = nil
 		currRound += 1
 	}
 }
