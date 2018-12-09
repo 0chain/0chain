@@ -240,8 +240,9 @@ func AggregateDKGSecShares(recShares []string) error {
 		sec.Add(&secShares[i])
 	}
 	dg.SecKeyShareGroup = sec
-	Logger.Debug("the aggregated sec share", zap.String("sec_key_share_grp", dg.SecKeyShareGroup.GetDecString()))
-	Logger.Debug("the group public key is", zap.String("gp_public_key", dg.GpPubKey.GetHexString()))
+	Logger.Debug("the aggregated sec share",
+		zap.String("sec_key_share_grp", dg.SecKeyShareGroup.GetDecString()),
+		zap.String("gp_public_key", dg.GpPubKey.GetHexString()))
 	return nil
 }
 
@@ -264,7 +265,7 @@ func GetBlsShare(ctx context.Context, r, pr *round.Round) string {
 		Logger.Debug("The corner case for round 1 when pr is nil :", zap.Int64("round", r.GetRoundNumber()))
 		rbOutput = encryption.Hash("0chain")
 	} else {
-		rbOutput = pr.VRFOutput
+		rbOutput = strconv.FormatInt(pr.RandomSeed, 16) //pr.VRFOutput
 	}
 
 	bs.Msg = strconv.FormatInt(r.GetRoundNumber(), 10) + rbOutput
