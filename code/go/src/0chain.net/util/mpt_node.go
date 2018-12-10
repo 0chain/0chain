@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 
-	"0chain.net/common"
 	"0chain.net/encryption"
 )
 
@@ -24,7 +24,7 @@ const (
 const Separator = ':'
 
 //ErrInvalidEncoding - error to indicate invalid encoding
-var ErrInvalidEncoding = common.NewError("invalid_node_encoding", "invalid node encoding")
+var ErrInvalidEncoding = errors.New("invalid node encoding")
 
 //PathElements - all the bytes that can be used as path elements as ascii characters
 var PathElements = []byte("0123456789abcdef")
