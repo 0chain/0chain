@@ -32,6 +32,7 @@ var roundMap = make(map[int64]map[int]string)
 
 var isDkgEnabled bool
 var k, n int
+var IsDkgDone bool = false
 
 // StartDKG - starts the DKG process
 func StartDKG(ctx context.Context) {
@@ -71,10 +72,27 @@ func StartDKG(ctx context.Context) {
 		WaitForDKGShares()
 	} else {
 		Logger.Info("DKG is not enabled. So, starting protocol")
-
+		IsDkgDone = true
 		go startProtocol()
 	}
 
+}
+
+// WaitForDkgToBeDone is a blocking function waits till DKG process is done if dkg is enabled
+func WaitForDkgToBeDone(ctx context.Context) {
+	if isDkgEnabled {
+		ticker := time.NewTicker(5 * chain.DELTA)
+		defer ticker.Stop()
+
+		for ts := range ticker.C {
+			if IsDkgDone {
+				Logger.Info("WaitForDkgToBeDone is over.")
+				break
+			} else {
+				Logger.Info("Waiting for DKG process to be over.", zap.Time("ts", ts))
+			}
+		}
+	}
 }
 
 func waitForNetworkToBeReady(ctx context.Context) {
@@ -201,6 +219,7 @@ func AppendDKGSecShares(nodeID int, share string) {
 		Logger.Debug("All the shares are received ...")
 		AggregateDKGSecShares(recShares)
 		Logger.Info("DKG is done :) ...")
+		IsDkgDone = true
 		go startProtocol()
 	}
 

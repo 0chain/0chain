@@ -150,6 +150,7 @@ func main() {
 	go func() {
 		miner.StartDKG(ctx)
 		if config.Development() {
+			miner.WaitForDkgToBeDone(ctx)
 			go TransactionGenerator(mc.BlockSize)
 		}
 	}()
