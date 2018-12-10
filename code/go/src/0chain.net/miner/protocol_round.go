@@ -97,7 +97,6 @@ func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) *block.Bl
 			Block     string
 			Proposals int
 		}
-
 		proposals := r.GetProposedBlocks()
 		var pcounts []*pBlock
 		for _, pb := range proposals {
@@ -113,16 +112,17 @@ func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) *block.Bl
 	}
 	if bnb != nil {
 		if !bnb.IsStateComputed() {
-			err := mc.ComputeState(ctx, bnb)
+			err := mc.ComputeOrSyncState(ctx, bnb)
 			if err != nil {
 				if config.DevConfiguration.State {
-					Logger.Error("get block to extend (best nb compute state)", zap.Any("round", r.GetRoundNumber()), zap.Any("block", bnb.Hash), zap.Error(err))
+					Logger.Error("get block to extend - best nb compute state", zap.Any("round", r.GetRoundNumber()), zap.Any("block", bnb.Hash), zap.Error(err))
+					return nil
 				}
 			}
 		}
 		return bnb
 	}
-	Logger.Debug("no block to extend", zap.Int64("round", r.GetRoundNumber()), zap.Int64("current_round", mc.CurrentRound))
+	Logger.Debug("get block to extend - no block", zap.Int64("round", r.GetRoundNumber()), zap.Int64("current_round", mc.CurrentRound))
 	return nil
 }
 
@@ -131,13 +131,13 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	roundNumber := r.GetRoundNumber()
 	pround := mc.GetMinerRound(roundNumber - 1)
 	if pround == nil {
-		Logger.Error("generate round block (prior round not found)", zap.Any("round", roundNumber-1))
+		Logger.Error("generate round block - no prior round", zap.Any("round", roundNumber-1))
 		return nil, common.NewError("invalid_round,", "Round not available")
 	}
 
 	pb := mc.GetBlockToExtend(ctx, pround)
 	if pb == nil {
-		Logger.Error("generate round block (prior block not found)", zap.Any("round", roundNumber))
+		Logger.Error("generate round block - no block to extend", zap.Any("round", roundNumber))
 		return nil, common.NewError("block_gen_no_block_to_extend", "Do not have the block to extend this round")
 	}
 	txnEntityMetadata := datastore.GetEntityMetadata("txn")
@@ -566,4 +566,24 @@ func (mc *Chain) restartRound(ctx context.Context) {
 		//TODO: send same vrf again?
 		go mc.SendVRFShare(ctx, r.vrfShare)
 	}
+}
+
+func startProtocol() {
+	ctx := common.GetRootContext()
+	mc := GetMinerChain()
+	mc.Sharders.OneTimeStatusMonitor(ctx)
+	lfb := getLatestBlockFromSharders(ctx)
+	var mr *Round
+	if lfb != nil {
+		sr := round.NewRound(lfb.Round)
+		mr = mc.CreateRound(sr)
+		mr, _ = mc.AddRound(mr).(*Round)
+		mc.SetRandomSeed(sr, lfb.RoundRandomSeed)
+		mc.SetLatestFinalizedBlock(ctx, lfb)
+	} else {
+		sr := round.NewRound(0)
+		mr = mc.CreateRound(sr)
+	}
+	Logger.Info("starting the blockchain ...", zap.Int64("round", mr.GetRoundNumber()))
+	mc.StartNextRound(ctx, mr)
 }

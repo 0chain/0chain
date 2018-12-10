@@ -3,6 +3,7 @@ package miner
 import (
 	"context"
 	"fmt"
+	"sort"
 	"time"
 
 	metrics "github.com/rcrowley/go-metrics"
@@ -376,4 +377,18 @@ func (mc *Chain) FinalizeBlock(ctx context.Context, b *block.Block) error {
 		modifiedTxns[idx] = txn
 	}
 	return mc.deleteTxns(modifiedTxns)
+}
+
+func getLatestBlockFromSharders(ctx context.Context) *block.Block {
+	mc := GetMinerChain()
+	mc.Sharders.OneTimeStatusMonitor(ctx)
+	lfBlocks := mc.GetLatestFinalizedBlockFromSharder(ctx)
+	//Sorting as per the latest finalized blocks from all the sharders
+	sort.Slice(lfBlocks, func(i int, j int) bool { return lfBlocks[i].Round >= lfBlocks[j].Round })
+	if len(lfBlocks) > 0 {
+		Logger.Info("bc-1 latest finalized Block", zap.Int64("lfb_round", lfBlocks[0].Round))
+		return lfBlocks[0]
+	}
+	Logger.Info("bc-1 sharders returned no lfb.")
+	return nil
 }

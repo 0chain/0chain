@@ -38,7 +38,6 @@ func CloneMPT(mpt MerklePatriciaTrieI) *MerklePatriciaTrie {
 /*SetNodeDB - implement interface */
 func (mpt *MerklePatriciaTrie) SetNodeDB(ndb NodeDB) {
 	mpt.DB = ndb
-	mpt.ResetChangeCollector(nil)
 }
 
 /*GetNodeDB - implement interface */
@@ -488,7 +487,7 @@ func (mpt *MerklePatriciaTrie) deleteAtNode(node Node, path Path) (Node, Key, er
 						nnode = enode
 						mpt.deleteNode(ochild)
 					default:
-						panic(fmt.Sprintf("uknown node type: %T %v", ochild, ochild))
+						panic(fmt.Sprintf("uknown node type: %T %v %T", ochild, ochild, mpt.DB))
 					}
 					return mpt.insertNode(node, nnode)
 				}
@@ -612,7 +611,10 @@ func (mpt *MerklePatriciaTrie) iterate(ctx context.Context, path Path, key Key, 
 		}
 		npath := append(path, nodeImpl.Path...)
 		if IncludesNodeType(visitNodeTypes, NodeTypeValueNode) && nodeImpl.HasValue() {
-			handler(ctx, npath, nil, nodeImpl.Value)
+			err := handler(ctx, npath, nil, nodeImpl.Value)
+			if err != nil {
+				return err
+			}
 		}
 	case *FullNode:
 		if IncludesNodeType(visitNodeTypes, NodeTypeFullNode) {
@@ -624,6 +626,7 @@ func (mpt *MerklePatriciaTrie) iterate(ctx context.Context, path Path, key Key, 
 		if IncludesNodeType(visitNodeTypes, NodeTypeValueNode) && nodeImpl.HasValue() {
 			handler(ctx, path, nil, nodeImpl.Value)
 		}
+		var ecount = 0
 		for i := byte(0); i < 16; i++ {
 			pe := nodeImpl.indexToByte(i)
 			child := nodeImpl.GetChild(pe)
@@ -633,8 +636,15 @@ func (mpt *MerklePatriciaTrie) iterate(ctx context.Context, path Path, key Key, 
 			npath := append(path, pe)
 			err := mpt.iterate(ctx, npath, child, handler, visitNodeTypes)
 			if err != nil {
-				return err
+				if err == ErrNodeNotFound || err == ErrIteratingChildNodes {
+					ecount++
+				} else {
+					return err
+				}
 			}
+		}
+		if ecount != 0 {
+			return ErrIteratingChildNodes
 		}
 	case *ExtensionNode:
 		if IncludesNodeType(visitNodeTypes, NodeTypeExtensionNode) {
@@ -825,8 +835,8 @@ func (mpt *MerklePatriciaTrie) Validate() error {
 	return nil
 }
 
-//MergeMPT - implement interface
-func (mpt *MerklePatriciaTrie) MergeMPT(mpt2 MerklePatriciaTrieI) error {
+//MergeMPTChanges - implement interface
+func (mpt *MerklePatriciaTrie) MergeMPTChanges(mpt2 MerklePatriciaTrieI) error {
 	changes := mpt2.GetChangeCollector().GetChanges()
 	for _, c := range changes {
 		_, _, err := mpt.insertNode(c.Old, c.New)
@@ -843,4 +853,14 @@ func (mpt *MerklePatriciaTrie) MergeMPT(mpt2 MerklePatriciaTrieI) error {
 	}
 	mpt.SetRoot(mpt2.GetRoot())
 	return nil
+}
+
+//MergeDB - implement interface
+func (mpt *MerklePatriciaTrie) MergeDB(ndb NodeDB, root Key) error {
+	handler := func(ctx context.Context, key Key, node Node) error {
+		_, _, err := mpt.insertNode(nil, node)
+		return err
+	}
+	mpt.SetRoot(root)
+	return ndb.Iterate(context.TODO(), handler)
 }

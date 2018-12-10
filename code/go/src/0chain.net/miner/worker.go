@@ -9,8 +9,8 @@ import (
 	"0chain.net/common"
 	. "0chain.net/logging"
 	"0chain.net/node"
-
 	"0chain.net/round"
+
 	"go.uber.org/zap"
 )
 
