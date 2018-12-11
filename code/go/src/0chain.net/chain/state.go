@@ -278,6 +278,10 @@ func (c *Chain) applyBlockStateChange(b *block.Block, bsc *block.StateChange) er
 	if b.ClientState == nil {
 		b.CreateState(bsc.GetNodeDB())
 	}
+
+	c.stateMutex.Lock()
+	defer c.stateMutex.Unlock()
+
 	err := b.ClientState.MergeDB(bsc.GetNodeDB(), bsc.GetRoot().GetHashBytes())
 	if err != nil {
 		Logger.Error("apply block state change - error merging", zap.Int64("round", b.Round), zap.String("block", b.Hash))
