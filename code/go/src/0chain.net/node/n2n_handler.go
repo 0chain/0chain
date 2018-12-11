@@ -88,6 +88,7 @@ type SendOptions struct {
 	Compress           bool
 	InitialNodeID      string
 	CODEC              int
+	Pull               bool
 }
 
 /*MessageFilterI - tells wether the given message should be processed or not

@@ -601,6 +601,9 @@ func (mpt *MerklePatriciaTrie) iterate(ctx context.Context, path Path, key Key, 
 		if DebugMPTNode && Logger != nil {
 			Logger.Error("iterate - get node error", zap.Error(err))
 		}
+		if herr := handler(ctx, path, key, node); herr != nil {
+			return herr
+		}
 		return err
 	}
 	switch nodeImpl := node.(type) {
@@ -745,7 +748,12 @@ func (mpt *MerklePatriciaTrie) UpdateVersion(ctx context.Context, version Sequen
 	keys := make([]Key, 0, BatchSize)
 	values := make([]Node, 0, BatchSize)
 	var count int64
+	var missingNodes int64
 	handler := func(ctx context.Context, path Path, key Key, node Node) error {
+		if node == nil {
+			missingNodes++
+			return nil
+		}
 		if node.GetVersion() >= version {
 			return nil
 		}
@@ -771,15 +779,16 @@ func (mpt *MerklePatriciaTrie) UpdateVersion(ctx context.Context, version Sequen
 	err := mpt.Iterate(ctx, handler, NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
 	if ps != nil {
 		ps.BelowVersion = count
+		ps.MissingNodes = missingNodes
 	}
-	if err != nil {
-		return err
-	}
-	if len(keys) > 0 {
-		err = mpt.DB.MultiPutNode(keys, values)
-		if err != nil {
-			if DebugMPTNode && Logger != nil {
-				Logger.Error("update version - multi put - last batch", zap.Error(err))
+	if err == nil || err == ErrNodeNotFound || err == ErrIteratingChildNodes {
+		if len(keys) > 0 {
+			err := mpt.DB.MultiPutNode(keys, values)
+			if err != nil {
+				if DebugMPTNode && Logger != nil {
+					Logger.Error("update version - multi put - last batch", zap.Error(err))
+				}
+				return err
 			}
 		}
 	}
