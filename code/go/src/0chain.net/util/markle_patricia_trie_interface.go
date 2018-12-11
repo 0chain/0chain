@@ -2,8 +2,11 @@ package util
 
 import (
 	"context"
+	"errors"
 	"io"
 )
+
+var ErrIteratingChildNodes = errors.New("Error iterating child nodes")
 
 //Path - a type for the path of the merkle patricia trie
 type Path []byte

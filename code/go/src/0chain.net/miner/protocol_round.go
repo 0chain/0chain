@@ -10,12 +10,12 @@ import (
 	"0chain.net/block"
 	"0chain.net/chain"
 	"0chain.net/common"
-	"0chain.net/config"
 	"0chain.net/datastore"
 	. "0chain.net/logging"
 	"0chain.net/memorystore"
 	"0chain.net/node"
 	"0chain.net/round"
+	"0chain.net/state"
 	"0chain.net/transaction"
 	"0chain.net/util"
 	"go.uber.org/zap"
@@ -114,7 +114,7 @@ func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) *block.Bl
 		if !bnb.IsStateComputed() {
 			err := mc.ComputeOrSyncState(ctx, bnb)
 			if err != nil {
-				if config.DevConfiguration.State {
+				if state.DebugBlock() {
 					Logger.Error("get block to extend - best nb compute state", zap.Any("round", r.GetRoundNumber()), zap.Any("block", bnb.Hash), zap.Error(err))
 					return nil
 				}

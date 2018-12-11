@@ -611,7 +611,10 @@ func (mpt *MerklePatriciaTrie) iterate(ctx context.Context, path Path, key Key, 
 		}
 		npath := append(path, nodeImpl.Path...)
 		if IncludesNodeType(visitNodeTypes, NodeTypeValueNode) && nodeImpl.HasValue() {
-			handler(ctx, npath, nil, nodeImpl.Value)
+			err := handler(ctx, npath, nil, nodeImpl.Value)
+			if err != nil {
+				return err
+			}
 		}
 	case *FullNode:
 		if IncludesNodeType(visitNodeTypes, NodeTypeFullNode) {
@@ -623,6 +626,7 @@ func (mpt *MerklePatriciaTrie) iterate(ctx context.Context, path Path, key Key, 
 		if IncludesNodeType(visitNodeTypes, NodeTypeValueNode) && nodeImpl.HasValue() {
 			handler(ctx, path, nil, nodeImpl.Value)
 		}
+		var ecount = 0
 		for i := byte(0); i < 16; i++ {
 			pe := nodeImpl.indexToByte(i)
 			child := nodeImpl.GetChild(pe)
@@ -632,8 +636,15 @@ func (mpt *MerklePatriciaTrie) iterate(ctx context.Context, path Path, key Key, 
 			npath := append(path, pe)
 			err := mpt.iterate(ctx, npath, child, handler, visitNodeTypes)
 			if err != nil {
-				return err
+				if err == ErrNodeNotFound || err == ErrIteratingChildNodes {
+					ecount++
+				} else {
+					return err
+				}
 			}
+		}
+		if ecount != 0 {
+			return ErrIteratingChildNodes
 		}
 	case *ExtensionNode:
 		if IncludesNodeType(visitNodeTypes, NodeTypeExtensionNode) {
