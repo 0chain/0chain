@@ -101,7 +101,7 @@ func (sc *Chain) GetLatestRoundFromSharders(ctx context.Context, currRound int64
 		if !ok {
 			return nil, nil
 		}
-		Logger.Info("bc-27 - received round", zap.Info("round", r.Number))
+		Logger.Info("bc-27 - received round", zap.Int64("round", r.Number))
 		latestRounds = append(latestRounds, r)
 		return r, nil
 	}
