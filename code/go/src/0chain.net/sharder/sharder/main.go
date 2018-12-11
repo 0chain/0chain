@@ -216,6 +216,7 @@ func initWorkers(ctx context.Context) {
 func catchUpWithLatestRound(ctx context.Context, r *round.Round) {
 	Logger.Info("bc-27 - catch up with other sharders rounds")
 	sc := sharder.GetSharderChain()
+	Logger.Info("bc-27 - get latest round from other sharders", zap.Int64("sharder_curr_round", r.Number))
 	lr := sc.GetLatestRoundFromSharders(ctx, r.Number)
 	if lr != nil && lr.Number > r.Number+1 {
 		Logger.Info("bc-27 - latest round from other sharder", zap.Int64("curr_round", r.Number), zap.Int64("latest_round_from_sharders", lr.Number))

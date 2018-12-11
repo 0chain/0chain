@@ -101,17 +101,19 @@ func (sc *Chain) GetLatestRoundFromSharders(ctx context.Context, currRound int64
 		if !ok {
 			return nil, nil
 		}
+		Logger.Info("bc-27 - received round", zap.Info("round", r.Number))
 		latestRounds = append(latestRounds, r)
-		return nil, nil
+		return r, nil
 	}
 
+	Logger.Info("bc-27 - requesting all the sharders for their latest rounds")
 	sc.Sharders.RequestEntityFromAll(ctx, LatestRoundRequestor, nil, latestRoundHandler)
 	sort.Slice(latestRounds, func(i int, j int) bool { return latestRounds[i].Number >= latestRounds[j].Number })
 
 	if len(latestRounds) > 0 {
 		return latestRounds[0]
 	}
-
+	Logger.Info("bc-27 - no rounds rreceived from any of the sharders")
 	return nil
 }
 
@@ -126,6 +128,7 @@ func (sc *Chain) GetMissingRounds(ctx context.Context, rNum int64, currRound int
 		params["round"] = strconv.FormatInt(currRound, 10)
 
 		var r *round.Round
+		Logger.Info("bc -27 requesting all sharders for the round", zap.Int64("round", r.Number))
 		sc.Sharders.RequestEntityFromAll(ctx, RoundRequestor, params, func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 			roundEntity, ok := entity.(*round.Round)
 			if !ok {
@@ -146,6 +149,7 @@ func (sc *Chain) GetMissingRounds(ctx context.Context, rNum int64, currRound int
 				}
 			}
 			var b *block.Block
+			Logger.Info("bc -27 requesting sharder for the block", zap.Int64("round", r.Number), zap.Int("sharder-index", requestNode.SetIndex))
 			//TODO params include round -- query using round number or block hash which would be preferable?
 			requestNode.RequestEntityFromNode(ctx, BlockRequestor, params, func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 				blockEntity, ok := entity.(*block.Block)
@@ -183,7 +187,6 @@ func (sc *Chain) storeRound(ctx context.Context, r round.RoundI, b *block.Block)
 	r.Finalize(b)
 	rImpl, _ := r.(*round.Round)
 	err := sc.StoreRound(ctx, rImpl)
-	Logger.Info("**!round stored in db", zap.Int64("round", r.GetRoundNumber()))
 	if err != nil {
 		Logger.Error("db error (save round)", zap.Int64("round", r.GetRoundNumber()), zap.Error(err))
 	}
