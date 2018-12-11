@@ -94,7 +94,7 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 }
 
 func (sc *Chain) GetLatestRoundFromSharders(ctx context.Context, currRound int64) *round.Round {
-	latestRounds := make([]*round.Round, 1)
+	latestRounds := make([]*round.Round, 0, 1)
 
 	latestRoundHandler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		r, ok := entity.(*round.Round)
@@ -108,11 +108,14 @@ func (sc *Chain) GetLatestRoundFromSharders(ctx context.Context, currRound int64
 
 	Logger.Info("bc-27 - requesting all the sharders for their latest rounds")
 	sc.Sharders.RequestEntityFromAll(ctx, LatestRoundRequestor, nil, latestRoundHandler)
-	sort.Slice(latestRounds, func(i int, j int) bool { return latestRounds[i].Number >= latestRounds[j].Number })
+	Logger.Info("bc-27 - Back from requesting all")
 
 	if len(latestRounds) > 0 {
+		sort.Slice(latestRounds, func(i int, j int) bool { return latestRounds[i].Number >= latestRounds[j].Number })
+		Logger.Info("bc-27 - rounds found the latest round", zap.Int64("round#", latestRounds[0].Number))
 		return latestRounds[0]
 	}
+
 	Logger.Info("bc-27 - no rounds rreceived from any of the sharders")
 	return nil
 }
