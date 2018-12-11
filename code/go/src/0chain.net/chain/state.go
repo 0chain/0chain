@@ -365,10 +365,8 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 	txn := sctx.GetTransaction()
 	fs, err := c.getState(clientState, fromClient)
 	if !isValid(err) {
-		if config.DevConfiguration.State {
-			Logger.Error("transfer amount - client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
-		}
 		if state.DebugTxn() {
+			Logger.Error("transfer amount - client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
 			for _, txn := range b.Txns {
 				if txn == nil {
 					break
@@ -386,10 +384,8 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 	}
 	ts, err := c.getState(clientState, toClient)
 	if !isValid(err) {
-		if config.DevConfiguration.State {
-			Logger.Error("transfer amount - to_client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
-		}
 		if state.DebugTxn() {
+			Logger.Error("transfer amount - to_client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
 			for _, txn := range b.Txns {
 				if txn == nil {
 					break
