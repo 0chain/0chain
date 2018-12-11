@@ -148,7 +148,10 @@ func (np *Pool) sendOne(handler SendHandler, nodes []*Node) *Node {
 	return nil
 }
 
-func shouldPush(receiver *Node, uri string, entity datastore.Entity, timer metrics.Timer) bool {
+func shouldPush(options *SendOptions, receiver *Node, uri string, entity datastore.Entity, timer metrics.Timer) bool {
+	if options.Pull {
+		return false
+	}
 	if timer.Count() < 50 {
 		return true
 	}
@@ -172,7 +175,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 	}
 	return func(entity datastore.Entity) SendHandler {
 		data := getResponseData(options, entity).Bytes()
-		toPull := false
+		toPull := options.Pull
 		if len(data) > LargeMessageThreshold {
 			toPull = true
 			key := p2pKey(uri, entity.GetKey())
@@ -183,7 +186,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			timer := receiver.GetTimer(uri)
 			url := receiver.GetN2NURLBase() + uri
 			var buffer *bytes.Buffer
-			push := !toPull || shouldPush(receiver, uri, entity, timer)
+			push := !toPull || shouldPush(options, receiver, uri, entity, timer)
 			if push {
 				buffer = bytes.NewBuffer(data)
 			} else {
@@ -320,7 +323,7 @@ func validateSendRequest(sender *Node, r *http.Request) bool {
 }
 
 /*ToN2NReceiveEntityHandler - takes a handler that accepts an entity, processes and responds and converts it
-* into somethign suitable for Node 2 Node communication*/
+* into something suitable for Node 2 Node communication*/
 func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, options *ReceiveOptions) common.ReqRespHandlerf {
 	return func(w http.ResponseWriter, r *http.Request) {
 		contentType := r.Header.Get("Content-type")
