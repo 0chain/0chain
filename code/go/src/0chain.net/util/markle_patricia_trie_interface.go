@@ -80,4 +80,5 @@ type PruneStats struct {
 	Leaves       int64    `json:"l"`
 	BelowVersion int64    `json:"bv"`
 	Deleted      int64    `json:"d"`
+	MissingNodes int64    `json:"mn"`
 }
