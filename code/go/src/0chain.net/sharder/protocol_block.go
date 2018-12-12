@@ -120,28 +120,34 @@ func (sc *Chain) GetLatestRoundFromSharders(ctx context.Context, currRound int64
 	return nil
 }
 
-func (sc *Chain) GetMissingRounds(ctx context.Context, rNum int64, currRound int64) {
+func (sc *Chain) GetMissingRounds(ctx context.Context, targetR int64, dbR int64) {
 	Logger.Info("bc-27 get missing rounds")
 
 	var params map[string]string
 	//get missing rounds starting from the next round of the current round
-	currRound += 1
+	dbR++
 
-	for currRound != rNum {
-		params["round"] = strconv.FormatInt(currRound, 10)
+	rounds := targetR - dbR
+
+	for i := int64(0); i < rounds; i++ {
+		loopR := dbR + i
+		params["round"] = strconv.FormatInt(loopR, 10)
 
 		var r *round.Round
-		Logger.Info("bc -27 requesting all sharders for the round", zap.Int64("round", r.Number))
+		Logger.Info("bc -27 requesting all sharders for the round", zap.Int64("round", loopR))
 		sc.Sharders.RequestEntityFromAll(ctx, RoundRequestor, params, func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 			roundEntity, ok := entity.(*round.Round)
 			if !ok {
+				Logger.Info("bc-27 Could not get the round info from others", zap.Int64("round#", loopR))
 				return nil, nil
 			}
 			r = roundEntity
+			Logger.Info("bc-27 received the round entity from others")
 			return r, nil
 		})
 
 		if r != nil {
+			Logger.Info("bc-27 check to see if block needed to be stored")
 			self := node.GetSelfNode(ctx)
 			canStore, nodes := sc.IsBlockSharderWithNodes(r.BlockHash, self.Node)
 			var requestNode *node.Node
@@ -182,7 +188,7 @@ func (sc *Chain) GetMissingRounds(ctx context.Context, rNum int64, currRound int
 				Logger.Info("bc-27 missed round stored in db", zap.Int64("round", r.GetRoundNumber()))
 			}
 		}
-		currRound += 1
+
 	}
 }
 
