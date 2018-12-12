@@ -5,8 +5,8 @@ import (
 
 	"go.uber.org/zap"
 
+	"0chain.net/client"
 	"0chain.net/common"
-	"0chain.net/encryption"
 	"0chain.net/smartcontractinterface"
 	"0chain.net/smartcontractstate"
 	"0chain.net/transaction"
@@ -202,6 +202,19 @@ func (sc *StorageSmartContract) NewAllocationRequest(t *transaction.Transaction,
 		return "", common.NewError("allocation_creation_failed", "No Blobbers registered. Failed to create a storage allocation")
 	}
 
+	if len(t.ClientID) == 0 {
+		return "", common.NewError("allocation_creation_failed", "Invalid client in the transaction. No public key found")
+	}
+
+	clientPublicKey := t.PublicKey
+	if len(t.PublicKey) == 0 {
+		ownerClient, err := client.GetClient(common.GetRootContext(), t.ClientID)
+		if err != nil || ownerClient == nil || len(ownerClient.PublicKey) == 0 {
+			return "", common.NewError("invalid_client", "Invalid Client. Not found with miner")
+		}
+		clientPublicKey = ownerClient.PublicKey
+	}
+
 	var allocationRequest StorageAllocation
 
 	err = allocationRequest.Decode(input)
@@ -225,7 +238,7 @@ func (sc *StorageSmartContract) NewAllocationRequest(t *transaction.Transaction,
 			var blobberAllocation BlobberAllocation
 			blobberAllocation.Size = (allocationRequest.Size + int64(size-1)) / int64(size)
 			blobberAllocation.UsedSize = 0
-			blobberAllocation.AllocationRoot = encryption.EmptyHash
+			blobberAllocation.AllocationRoot = ""
 			blobberAllocation.AllocationID = t.Hash
 			blobberAllocation.BlobberID = blobberNode.ID
 
@@ -238,6 +251,7 @@ func (sc *StorageSmartContract) NewAllocationRequest(t *transaction.Transaction,
 		allocationRequest.Blobbers = allocatedBlobbers
 		allocationRequest.ID = t.Hash
 		allocationRequest.Owner = t.ClientID
+		allocationRequest.OwnerPublicKey = clientPublicKey
 		buff := allocationRequest.Encode()
 		//allocationRequestMap[t.Hash] = allocationRequest
 		Logger.Info("Length of the keys and values", zap.Any("keys", len(blobberAllocationKeys)), zap.Any("values", len(blobberAllocationValues)))
