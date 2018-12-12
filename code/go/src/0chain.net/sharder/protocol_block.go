@@ -122,7 +122,7 @@ func (sc *Chain) GetLatestRoundFromSharders(ctx context.Context, currRound int64
 
 func (sc *Chain) GetMissingRounds(ctx context.Context, targetR int64, dbR int64) {
 	Logger.Info("bc-27 get missing rounds", zap.Int64("target round", targetR), zap.Int64("round from db", dbR))
-
+	roundRequestor := RoundRequestor
 	params := make(map[string]string, 1)
 	//get missing rounds starting from the next round of the current round
 	dbR++
@@ -137,7 +137,7 @@ func (sc *Chain) GetMissingRounds(ctx context.Context, targetR int64, dbR int64)
 
 		var r *round.Round
 		Logger.Info("bc -27 requesting all sharders for the round", zap.Int64("round", loopR))
-		sc.Sharders.RequestEntityFromAll(ctx, RoundRequestor, params, func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+		sc.Sharders.RequestEntityFromAll(ctx, roundRequestor, params, func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 			roundEntity, ok := entity.(*round.Round)
 			if !ok {
 				Logger.Info("bc-27 Could not get the round info from others", zap.Int64("round#", loopR))
