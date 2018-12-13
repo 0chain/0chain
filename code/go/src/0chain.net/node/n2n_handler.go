@@ -94,7 +94,7 @@ type SendOptions struct {
 * This will be useful since if for example a notarized block is received multiple times
 * the cost of decoding and decompressing can be avoided */
 type MessageFilterI interface {
-	Accept(entityName string, entityID string) bool
+	AcceptMessage(entityName string, entityID string) bool
 }
 
 /*ReceiveOptions - options to tune how the messages are received within the network */
