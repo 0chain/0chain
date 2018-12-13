@@ -117,13 +117,11 @@ artifact:
       - { canonical: "/0chain/config" }
       - { canonical: "/0chain/nodes" }
       - { canonical: "/0chain/log", location:  "/0chain_root/log" }
-      - { canonical: "/0chain/log/cassandra", location:  "/0chain_root/log/cassandra" }
-      - { canonical: "/0chain/data", location:  "/0chain_efs/data" }
-      - { canonical: "/0chain_efs/data/blocks"}
-      - { canonical: "/0chain_efs/data/cassandra"}
-      - { canonical: "/0chain_efs/data/rocksdb/blocksummary" }
-      - { canonical: "/0chain_efs/data/rocksdb/roundsummary" }
-      - { canonical: "/0chain_efs/data/rocksdb/state" }
+      - { canonical: "/0chain/data/scylla"}
+      - { canonical: "/0chain/data/blocks"}
+      - { canonical: "/0chain/data/rocksdb/blocksummary" }
+      - { canonical: "/0chain/data/rocksdb/roundsummary" }
+      - { canonical: "/0chain/data/rocksdb/state" }
 
 nodefiles:
   file: "nodes.yaml"

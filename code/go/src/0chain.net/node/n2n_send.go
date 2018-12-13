@@ -179,7 +179,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 		if len(data) > LargeMessageThreshold {
 			toPull = true
 			key := p2pKey(uri, entity.GetKey())
-			pdce := &PushDataCacheEntry{Options: *options, Data: data, EntityName: entity.GetEntityMetadata().GetName()}
+			pdce := &pushDataCacheEntry{Options: *options, Data: data, EntityName: entity.GetEntityMetadata().GetName()}
 			pushDataCache.Add(key, pdce)
 		}
 		return func(receiver *Node) bool {
@@ -390,58 +390,4 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 		}
 		sender.Received++
 	}
-}
-
-func p2pKey(uri string, id string) string {
-	return uri + ":" + id
-}
-
-//PushToPullHandler - handles a pull request of cached push entity data
-func PushToPullHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	pushURI := r.FormValue("_puri")
-	id := r.FormValue("id")
-	key := p2pKey(pushURI, id)
-	pcde, err := pushDataCache.Get(key)
-	if err != nil {
-		N2n.Error("push to pull", zap.String("key", key), zap.Error(err))
-		return nil, common.NewError("request_data_not_found", "Requested data is not found")
-	}
-	N2n.Debug("push to pull", zap.String("key", key))
-	return pcde, nil
-}
-
-/*pullEntityHandler - pull an entity that wasn't pushed as it's large and pulling is cheaper */
-func pullEntityHandler(ctx context.Context, nd *Node, uri string, handler datastore.JSONEntityReqResponderF, entityName string, entityID datastore.Key) {
-	phandler := func(pctx context.Context, entity datastore.Entity) (interface{}, error) {
-		if entity.GetEntityMetadata().GetName() != entityName {
-			return entity, nil
-		}
-		if entity.GetKey() != entityID {
-			return entity, nil
-		}
-		start := time.Now()
-		_, err := handler(ctx, entity)
-		duration := time.Since(start)
-		if err != nil {
-			N2n.Error("message pull", zap.Int("from", nd.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", uri), zap.Duration("duration", duration), zap.String("entity", entityName), zap.Any("id", entity.GetKey()), zap.Error(err))
-		} else {
-			N2n.Debug("message pull", zap.Int("from", nd.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", uri), zap.Duration("duration", duration), zap.String("entity", entityName), zap.Any("id", entity.GetKey()))
-		}
-		return entity, nil
-	}
-	params := make(map[string]string)
-	params["__push2pull"] = "true"
-	params["_puri"] = uri
-	params["id"] = datastore.ToString(entityID)
-	rhandler := pullDataRequestor(params, phandler)
-	result := rhandler(nd)
-	N2n.Debug("message pull", zap.String("uri", uri), zap.String("entity", entityName), zap.String("id", entityID), zap.Bool("result", result))
-}
-
-var pullDataRequestor EntityRequestor
-
-func init() {
-	http.HandleFunc(pullURL, ToN2NSendEntityHandler(PushToPullHandler))
-	options := &SendOptions{Timeout: TimeoutLargeMessage, CODEC: CODEC_MSGPACK, Compress: true}
-	pullDataRequestor = RequestEntityHandler(pullURL, options, nil)
 }

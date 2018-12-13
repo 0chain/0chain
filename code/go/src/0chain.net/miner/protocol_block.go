@@ -86,6 +86,9 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		txn.SetCollectionScore(txn.GetCollectionScore() - 10*60)
 		txnMap[txn.GetKey()] = true
 		b.Txns[idx] = txn
+		if debugTxn {
+			Logger.Info("generate block (debug transaction) success in processing Txn hash: " + txn.Hash + " blockHash? = " + b.Hash)
+		}
 		etxns[idx] = txn
 		b.AddTransaction(txn)
 		byteSize += int64(len(txn.TransactionData)) + int64(len(txn.TransactionOutput))
@@ -227,6 +230,19 @@ func (mc *Chain) UpdatePendingBlock(ctx context.Context, b *block.Block, txns []
 	transactionMetadataProvider.GetStore().MultiAddToCollection(ctx, transactionMetadataProvider, txns)
 }
 
+func (mc *Chain) verifySmartContracts(ctx context.Context, b *block.Block) error {
+	for _, txn := range b.Txns {
+		if txn.TransactionType == transaction.TxnTypeSmartContract {
+			err := txn.VerifyOutputHash(ctx)
+			if err != nil {
+				Logger.Error("Smart contract output verification failed", zap.Any("error", err), zap.Any("output", txn.TransactionOutput))
+				return common.NewError("txn_output_verification_failed", "Transaction output hash verification failed")
+			}
+		}
+	}
+	return nil
+}
+
 /*VerifyBlock - given a set of transaction ids within a block, validate the block */
 func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockVerificationTicket, error) {
 	start := time.Now()
@@ -248,6 +264,10 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockV
 			Logger.Error("verify block - error computing state (TODO sync)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Error(serr))
 			return nil, serr
 		}
+	}
+	err = mc.verifySmartContracts(ctx, b)
+	if err != nil {
+		return nil, err
 	}
 	bvt, err := mc.SignBlock(ctx, b)
 	if err != nil {

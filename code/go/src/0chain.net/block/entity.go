@@ -13,6 +13,7 @@ import (
 	"0chain.net/encryption"
 	. "0chain.net/logging"
 	"0chain.net/node"
+	"0chain.net/smartcontractstate"
 	"0chain.net/state"
 	"0chain.net/transaction"
 	"0chain.net/util"
@@ -90,7 +91,8 @@ type Block struct {
 	isNotarized        bool
 	ticketsMutex       *sync.Mutex
 	verificationStatus int
-	RunningTxnCount    int64 `json:"running_txn_count"`
+	SCStateDB          smartcontractstate.SCDB `json:"-"`
+	RunningTxnCount    int64                   `json:"running_txn_count"`
 }
 
 //NewBlock - create a new empty block
@@ -206,6 +208,25 @@ func (b *Block) SetPreviousBlock(prevBlock *Block) {
 	}
 }
 
+/*SetSCStateDB - set the smart contract state from the previous block */
+func (b *Block) SetSCStateDB(prevBlock *Block) {
+	var pndb smartcontractstate.SCDB
+
+	if prevBlock.SCStateDB == nil {
+		if config.DevConfiguration.State {
+			Logger.DPanic("set smart contract state db - prior state not available")
+		} else {
+			pndb = smartcontractstate.NewMemorySCDB()
+		}
+	} else {
+		pndb = prevBlock.SCStateDB
+	}
+
+	mndb := smartcontractstate.NewMemorySCDB()
+	ndb := smartcontractstate.NewPipedSCDB(mndb, pndb, false)
+	b.SCStateDB = ndb
+}
+
 /*SetStateDB - set the state from the previous block */
 func (b *Block) SetStateDB(prevBlock *Block) {
 	var pndb util.NodeDB
@@ -223,6 +244,7 @@ func (b *Block) SetStateDB(prevBlock *Block) {
 	Logger.Debug("prev state root", zap.Int64("round", b.Round), zap.String("prev_block", prevBlock.Hash), zap.String("root", util.ToHex(rootHash)))
 	b.CreateState(pndb)
 	b.ClientState.SetRoot(rootHash)
+	b.SetSCStateDB(prevBlock)
 }
 
 //CreateState - create the state from the prior state db
