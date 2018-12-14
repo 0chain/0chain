@@ -344,7 +344,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 		entityID := r.Header.Get(HeaderRequestEntityID)
 		entityMetadata := datastore.GetEntityMetadata(entityName)
 		if options != nil && options.MessageFilter != nil {
-			if !options.MessageFilter.Accept(entityName, entityID) {
+			if !options.MessageFilter.AcceptMessage(entityName, entityID) {
 				readAndClose(r.Body)
 				N2n.Debug("message receive - reject", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI), zap.String("entity_id", entityID))
 				return
