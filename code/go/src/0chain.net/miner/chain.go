@@ -23,8 +23,7 @@ var minerChain = &Chain{}
 /*SetupMinerChain - setup the miner's chain */
 func SetupMinerChain(c *chain.Chain) {
 	minerChain.Chain = c
-	minerChain.BlockMessageChannel = make(chan *BlockMessage, 25)
-
+	minerChain.BlockMessageChannel = make(chan *BlockMessage, 128)
 }
 
 /*GetMinerChain - get the miner's chain */
