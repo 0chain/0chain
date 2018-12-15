@@ -392,3 +392,18 @@ func getLatestBlockFromSharders(ctx context.Context) *block.Block {
 	Logger.Info("bc-1 sharders returned no lfb.")
 	return nil
 }
+
+//MergeNotarization - merge a notarization
+func (mc *Chain) MergeNotarization(ctx context.Context, r *Round, b *block.Block, vts []*block.VerificationTicket) {
+	for _, t := range vts {
+		if err := mc.VerifyTicket(ctx, b.Hash, t); err != nil {
+			Logger.Error("merge notarization", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
+		}
+	}
+	notarized := b.IsBlockNotarized()
+	mc.MergeVerificationTickets(ctx, b, vts)
+	if notarized {
+		return
+	}
+	mc.checkBlockNotarization(ctx, r, b)
+}

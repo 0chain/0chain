@@ -3,24 +3,18 @@ package miner
 import (
 	"context"
 
-	"0chain.net/chain"
 	. "0chain.net/logging"
-	"0chain.net/node"
 	"0chain.net/round"
 	"go.uber.org/zap"
 )
 
 /*HandleVRFShare - handles the vrf share */
 func (mc *Chain) HandleVRFShare(ctx context.Context, msg *BlockMessage) {
-	Logger.Info("DKG Here in HandleVRFShare from Miner ", zap.Any("sender_index", msg.Sender.SetIndex))
-
 	mr := mc.GetMinerRound(msg.VRFShare.Round)
 	if mr == nil {
-		Logger.Debug("handle vrf share - got vrf share before starting a round", zap.Int64("round", msg.VRFShare.Round))
 		pr := mc.GetMinerRound(msg.VRFShare.Round - 1)
 		if pr != nil {
 			//This can happen because other nodes are slightly ahead. It is ok.
-			Logger.Debug("HandleVRFShare: Starting a new round. Already started getting BLS message for other round", zap.Int64("my round#", pr.GetRoundNumber()), zap.Int64("msg round#", msg.VRFShare.Round))
 			mr = mc.StartNextRound(ctx, pr)
 		} else {
 			Logger.Error("handle vrf share - no prior round", zap.Int64("round", msg.VRFShare.Round))
@@ -48,7 +42,6 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 		pr := mc.GetMinerRound(b.Round - 1)
 		if pr != nil {
 			//If this happens, need to check
-			Logger.Info("HandleVerifyBlockMessage:  Starting a new round. Got Block Proposal already, Am I way behind?")
 			mr = mc.StartNextRound(ctx, pr)
 		} else {
 			var r = round.NewRound(b.Round)
@@ -92,7 +85,6 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *Block
 			pr := mc.GetMinerRound(msg.BlockVerificationTicket.Round - 1)
 			if pr != nil {
 				//This means, this node is way behind other nodes.
-				Logger.Info("HandleVerificationTicketMessage: Starting a new round. Got verification ticket already. Am I way behind?")
 				mr = mc.StartNextRound(ctx, pr)
 			} else {
 				var r = round.NewRound(msg.BlockVerificationTicket.Round)
@@ -148,25 +140,11 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 		mc.AsyncFetchNotarizedBlock(msg.Notarization.BlockID)
 		return
 	}
-	if err := mc.VerifyNotarization(ctx, b.Hash, msg.Notarization.VerificationTickets); err != nil {
-		Logger.Error("notarization message", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
+	vts := b.UnknownTickets(msg.Notarization.VerificationTickets)
+	if len(vts) == 0 {
 		return
 	}
-	mc.MergeVerificationTickets(ctx, b, msg.Notarization.VerificationTickets)
-	if !mc.AddNotarizedBlock(ctx, r, b) {
-		return
-	}
-	if mc.BlocksToSharder == chain.NOTARIZED {
-		if mc.VerificationTicketsTo == chain.Generator {
-			//We assume those who can generate a block in a round are also responsible for sending it to the sharders
-			if mc.IsRoundGenerator(r.Round, node.GetSelfNode(ctx).Node) {
-				go mc.SendNotarizedBlock(ctx, b)
-			}
-		}
-	}
-	Logger.Debug("HandleNotarizationMessage: Starting a new round in the end.")
-
-	mc.StartNextRound(ctx, r)
+	go mc.MergeNotarization(ctx, r, b, vts)
 }
 
 /*HandleNotarizedBlockMessage - handles a notarized block for a previous round*/
@@ -196,7 +174,5 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMess
 	if !mc.AddNotarizedBlock(ctx, mr, b) {
 		return
 	}
-
-	Logger.Debug("HandleNotarizedBlockMessage Starting a new round in the end.")
 	mc.StartNextRound(ctx, mr)
 }
