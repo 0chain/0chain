@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"os"
+	"runtime/pprof"
 	"sort"
 	"sync"
 	"time"
@@ -610,7 +612,12 @@ func (c *Chain) getBlocks() []*block.Block {
 //SetRoundRank - set the round rank of the block
 func (c *Chain) SetRoundRank(r round.RoundI, b *block.Block) {
 	bNode := node.GetNode(b.MinerID)
-	b.RoundRank = r.GetMinerRank(bNode)
+	rank := r.GetMinerRank(bNode)
+	if rank >= c.NumGenerators {
+		pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
+		Logger.DPanic(fmt.Sprintf("miner ranks greater than expected: %v %v", r.GetState(), rank))
+	}
+	b.RoundRank = rank
 }
 
 func (c *Chain) SetGenerationTimeout(newTimeout int) {
