@@ -590,6 +590,7 @@ func (c *Chain) DeleteRoundsBelow(ctx context.Context, roundNumber int64) {
 func (c *Chain) SetRandomSeed(r round.RoundI, randomSeed int64) {
 	r.SetRandomSeed(randomSeed)
 	r.ComputeMinerRanks(c.Miners)
+	r.SetState(round.RoundVRFComplete)
 	roundNumber := r.GetRoundNumber()
 	if roundNumber > c.CurrentRound {
 		c.CurrentRound = roundNumber
