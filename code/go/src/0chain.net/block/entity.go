@@ -477,3 +477,18 @@ func (b *Block) SetVerificationStatus(status int) {
 func (b *Block) GetVerificationStatus() int {
 	return b.verificationStatus
 }
+
+/*UnknownTickets - compute the list of unknown tickets from a given set of tickets */
+func (b *Block) UnknownTickets(vts []*VerificationTicket) []*VerificationTicket {
+	ticketsMap := make(map[string]*VerificationTicket, len(b.VerificationTickets))
+	for _, t := range b.VerificationTickets {
+		ticketsMap[t.VerifierID] = t
+	}
+	var newTickets []*VerificationTicket
+	for _, t := range vts {
+		if _, ok := ticketsMap[t.VerifierID]; !ok {
+			newTickets = append(newTickets, t)
+		}
+	}
+	return newTickets
+}
