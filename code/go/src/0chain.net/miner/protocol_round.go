@@ -40,7 +40,6 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 	return mr
 }
 
-/*StartRound - start a new round */
 func (mc *Chain) startRound(ctx context.Context, pr *Round, r *Round) {
 	if mc.AddRound(r) != r {
 		return
@@ -49,7 +48,6 @@ func (mc *Chain) startRound(ctx context.Context, pr *Round, r *Round) {
 		// If we don't have the prior round, and hence the prior round's random seed, we can't provide the share
 		return
 	}
-
 	mc.addMyVRFShare(ctx, pr, r)
 }
 
@@ -59,12 +57,10 @@ func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
 	vrfs.Share = GetBlsShare(ctx, r.Round, pr.Round)
 	vrfs.SetParty(node.Self.Node)
 	r.vrfShare = vrfs
-
-	// do we need to check if AddVRFShare is success or not?
+	// TODO: do we need to check if AddVRFShare is success or not?
 	if mc.AddVRFShare(ctx, r, r.vrfShare) {
 		go mc.SendVRFShare(ctx, r.vrfShare)
 	}
-
 }
 
 func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
