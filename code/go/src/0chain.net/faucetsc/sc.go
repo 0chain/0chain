@@ -87,28 +87,29 @@ func (fc *FaucetSmartContract) MaxPour(gn *GlobalNode) (string, error) {
 }
 
 func (fc *FaucetSmartContract) PersonalPeriodicLimit(t *transaction.Transaction, gn *GlobalNode) (string, error) {
-	un := fc.getUserVariables(t.ClientID, gn)
+	un := fc.getUserVariables(t, gn)
 	var resp PeriodicResponse
 	resp.Start = un.StartTime
 	resp.Used = un.Used
-	resp.Restart = (gn.Individual_reset - time.Now().Sub(un.StartTime)).String()
+	//resp.Restart = (gn.Individual_reset - time.Now().Sub(un.StartTime)).String()
+	resp.Restart = (gn.Individual_reset - common.ToTime(t.CreationDate).Sub(un.StartTime)).String()
 	resp.Allowed = gn.Periodic_limit - un.Used
 	buff, _ := json.Marshal(resp)
 	return string(buff), nil
 }
 
-func (fc *FaucetSmartContract) GlobalPerodicLimit(gn *GlobalNode) (string, error) {
+func (fc *FaucetSmartContract) GlobalPerodicLimit(t *transaction.Transaction, gn *GlobalNode) (string, error) {
 	var resp PeriodicResponse
 	resp.Start = gn.StartTime
 	resp.Used = gn.Used
-	resp.Restart = (gn.Global_reset - time.Now().Sub(gn.StartTime)).String()
+	resp.Restart = (gn.Global_reset - common.ToTime(t.CreationDate).Sub(gn.StartTime)).String()
 	resp.Allowed = gn.Global_limit - gn.Used
 	buff, _ := json.Marshal(resp)
 	return string(buff), nil
 }
 
 func (fc *FaucetSmartContract) Pour(t *transaction.Transaction, inputData []byte, balances c_state.StateContextI, gn *GlobalNode) (string, error) {
-	user := fc.getUserVariables(t.ClientID, gn)
+	user := fc.getUserVariables(t, gn)
 	ok, err := user.ValidRequest(t, balances, gn)
 	if ok {
 		transfer := state.NewTransfer(t.ToClientID, t.ClientID, state.Balance(t.Value))
@@ -139,34 +140,34 @@ func (fc *FaucetSmartContract) Refill(t *transaction.Transaction, balances c_sta
 	return err.Error(), nil
 }
 
-func (fc *FaucetSmartContract) getUserVariables(id string, gn *GlobalNode) *UserNode {
+func (fc *FaucetSmartContract) getUserVariables(t *transaction.Transaction, gn *GlobalNode) *UserNode {
 	var un UserNode
-	un.ID = id
+	un.ID = t.ClientID
 	userBytes, err := fc.DB.GetNode(un.GetKey())
 	if err == nil {
 		err = un.Decode(userBytes)
 		if err == nil {
-			if time.Now().Sub(un.StartTime) >= gn.Individual_reset || time.Now().Sub(un.StartTime) >= gn.Global_reset {
-				un.StartTime = time.Now()
+			if common.ToTime(t.CreationDate).Sub(un.StartTime) >= gn.Individual_reset || common.ToTime(t.CreationDate).Sub(un.StartTime) >= gn.Global_reset {
+				un.StartTime = common.ToTime(t.CreationDate)
 				un.Used = 0
 			}
 			return &un
 		}
 	}
-	un.StartTime = time.Now()
+	un.StartTime = common.ToTime(t.CreationDate)
 	un.Used = 0
 	return &un
 }
 
-func (fc *FaucetSmartContract) getGlobalVariables() *GlobalNode {
+func (fc *FaucetSmartContract) getGlobalVariables(t *transaction.Transaction) *GlobalNode {
 	var gn GlobalNode
 	gn.ID = fc.ID
 	globalBytes, err := fc.DB.GetNode(gn.GetKey())
 	if err == nil {
 		err = gn.Decode(globalBytes)
 		if err == nil {
-			if time.Now().Sub(gn.StartTime) >= gn.Global_reset {
-				gn.StartTime = time.Now()
+			if common.ToTime(t.CreationDate).Sub(gn.StartTime) >= gn.Global_reset {
+				gn.StartTime = common.ToTime(t.CreationDate)
 				gn.Used = 0
 			}
 			return &gn
@@ -179,12 +180,12 @@ func (fc *FaucetSmartContract) getGlobalVariables() *GlobalNode {
 	gn.Global_reset = GLOBAL_RESET
 	gn.Balance = 0
 	gn.Used = 0
-	gn.StartTime = time.Now()
+	gn.StartTime = common.ToTime(t.CreationDate)
 	return &gn
 }
 
 func (fc *FaucetSmartContract) Execute(t *transaction.Transaction, funcName string, inputData []byte, balances c_state.StateContextI) (string, error) {
-	gn := fc.getGlobalVariables()
+	gn := fc.getGlobalVariables(t)
 	switch funcName {
 	case "UpdateLimits":
 		return fc.UpdateLimit(t, inputData, gn)
@@ -195,7 +196,7 @@ func (fc *FaucetSmartContract) Execute(t *transaction.Transaction, funcName stri
 	case "PersonalPeriodicLimit":
 		return fc.PersonalPeriodicLimit(t, gn)
 	case "GlobalPerodicLimit":
-		return fc.GlobalPerodicLimit(gn)
+		return fc.GlobalPerodicLimit(t, gn)
 	case "Refill":
 		return fc.Refill(t, balances, gn)
 	default:
