@@ -431,10 +431,28 @@ func (mc *Chain) checkBlockNotarization(ctx context.Context, r *Round, b *block.
 	if !mc.AddNotarizedBlock(ctx, r, b) {
 		return true
 	}
+	if r.GetRandomSeed() != b.RoundRandomSeed {
+		mc.SetRandomSeed(r, b.RoundRandomSeed)
+	}
 	go mc.SendNotarization(ctx, b)
 	Logger.Debug("check block notarization - block notarized", zap.Int64("round", b.Round), zap.String("block", b.Hash))
 	mc.StartNextRound(ctx, r)
 	return true
+}
+
+//MergeNotarization - merge a notarization
+func (mc *Chain) MergeNotarization(ctx context.Context, r *Round, b *block.Block, vts []*block.VerificationTicket) {
+	for _, t := range vts {
+		if err := mc.VerifyTicket(ctx, b.Hash, t); err != nil {
+			Logger.Error("merge notarization", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
+		}
+	}
+	notarized := b.IsBlockNotarized()
+	mc.MergeVerificationTickets(ctx, b, vts)
+	if notarized {
+		return
+	}
+	mc.checkBlockNotarization(ctx, r, b)
 }
 
 /*AddNotarizedBlock - add a notarized block for a given round */
