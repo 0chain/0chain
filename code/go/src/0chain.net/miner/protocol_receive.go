@@ -66,6 +66,9 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 		}
 	}
 	if mr != nil {
+		if mr.IsVerificationComplete() {
+			return
+		}
 		if !mc.ValidGenerator(mr.Round, b) {
 			return
 		}
