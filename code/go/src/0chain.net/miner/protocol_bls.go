@@ -338,25 +338,20 @@ func (mc *Chain) computeRBO(ctx context.Context, mr *Round, rbo string) {
 	}
 
 }
-func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r *Round, rbo string) {
 
+func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r *Round, rbo string) {
 	if mpr := pr.(*Round); mpr.IsVRFComplete() {
 		if isDkgEnabled {
-
 			useed, err := strconv.ParseUint(rbo[0:16], 16, 64)
-
 			if err != nil {
 				panic(err)
 			}
 			seed := int64(useed)
-			Logger.Info("BLS Calcualted", zap.Int64("RRS", seed), zap.Int64("Round #", r.Number))
 			r.Round.SetVRFOutput(rbo)
 			mc.setRandomSeed(ctx, r, seed)
 		} else {
-			Logger.Info("DKG disabled. Using random number")
 			r.Round.SetVRFOutput(rbo)
 			mc.setRandomSeed(ctx, r, rand.New(rand.NewSource(pr.GetRandomSeed())).Int63())
-
 		}
 	} else {
 		Logger.Error("compute round random seed - no prior value", zap.Int64("round", r.GetRoundNumber()), zap.Int("blocks", len(pr.GetProposedBlocks())))
@@ -364,6 +359,7 @@ func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r 
 }
 
 func (mc *Chain) setRandomSeed(ctx context.Context, r *Round, seed int64) {
-	mc.SetRandomSeed(r.Round, seed)
-	mc.startNewRound(ctx, r)
+	if mc.SetRandomSeed(r.Round, seed) {
+		mc.startNewRound(ctx, r)
+	}
 }
