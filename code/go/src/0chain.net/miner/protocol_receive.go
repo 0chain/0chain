@@ -4,7 +4,6 @@ import (
 	"context"
 
 	. "0chain.net/logging"
-	"0chain.net/round"
 	"go.uber.org/zap"
 )
 
@@ -12,17 +11,7 @@ import (
 func (mc *Chain) HandleVRFShare(ctx context.Context, msg *BlockMessage) {
 	mr := mc.GetMinerRound(msg.VRFShare.Round)
 	if mr == nil {
-		pr := mc.GetMinerRound(msg.VRFShare.Round - 1)
-		if pr != nil {
-			//This can happen because other nodes are slightly ahead. It is ok.
-			mr = mc.StartNextRound(ctx, pr)
-		} else {
-			Logger.Error("handle vrf share - no prior round", zap.Int64("round", msg.VRFShare.Round))
-			// We can't really provide a VRF share as we don't know the previous round's random number but we can collect the shares
-			var r = round.NewRound(msg.VRFShare.Round)
-			mr = mc.CreateRound(r)
-			mr = mc.AddRound(mr).(*Round)
-		}
+		mr = mc.getRound(ctx, msg.VRFShare.Round)
 	}
 	if mr != nil {
 		mc.AddVRFShare(ctx, mr, msg.VRFShare)
@@ -39,21 +28,13 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 	mr := mc.GetMinerRound(b.Round)
 	if mr == nil {
 		Logger.Error("handle verify block - got block proposal before starting round", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("miner", b.MinerID))
-		pr := mc.GetMinerRound(b.Round - 1)
-		if pr != nil {
-			//If this happens, need to check
-			mr = mc.StartNextRound(ctx, pr)
-		} else {
-			var r = round.NewRound(b.Round)
-			mr = mc.CreateRound(r)
-			mr = mc.AddRound(mr).(*Round)
-		}
+		mr = mc.getRound(ctx, b.Round)
 		//TODO: Byzantine
-		mc.setRandomSeed(ctx, mr, b.RoundRandomSeed)
+		mc.startRound(ctx, mr, b.RoundRandomSeed)
 	} else {
 		if !mr.IsVRFComplete() {
 			//TODO: Byzantine
-			mc.setRandomSeed(ctx, mr, b.RoundRandomSeed)
+			mc.startRound(ctx, mr, b.RoundRandomSeed)
 		}
 		vts := mr.GetVerificationTickets(b.Hash)
 		if len(vts) > 0 {
@@ -85,15 +66,7 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *Block
 	if mr == nil {
 		mr = mc.GetMinerRound(msg.BlockVerificationTicket.Round)
 		if mr == nil {
-			pr := mc.GetMinerRound(msg.BlockVerificationTicket.Round - 1)
-			if pr != nil {
-				//This means, this node is way behind other nodes.
-				mr = mc.StartNextRound(ctx, pr)
-			} else {
-				var r = round.NewRound(msg.BlockVerificationTicket.Round)
-				mr = mc.CreateRound(r)
-				mr = mc.AddRound(mr).(*Round)
-			}
+			mr = mc.getRound(ctx, msg.BlockVerificationTicket.Round)
 		}
 	}
 	b, err := mc.GetBlock(ctx, msg.BlockVerificationTicket.BlockID)
@@ -156,11 +129,8 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMess
 	mr := mc.GetMinerRound(mb.Round)
 	if mr == nil {
 		Logger.Error("handle notarized block message", zap.Int64("round", mb.Round))
-		var r = round.NewRound(mb.Round)
-		//TODO: Byzantine
-		mr = mc.CreateRound(r)
-		mr = mc.AddRound(mr).(*Round)
-		mc.setRandomSeed(ctx, mr, mb.RoundRandomSeed)
+		mr = mc.getRound(ctx, mb.Round)
+		mc.startRound(ctx, mr, mb.RoundRandomSeed)
 	} else {
 		nb := mr.GetNotarizedBlocks()
 		for _, blk := range nb {
@@ -169,8 +139,7 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMess
 			}
 		}
 		if !mr.IsVRFComplete() {
-			//TODO: Byzantine
-			mc.setRandomSeed(ctx, mr, mb.RoundRandomSeed)
+			mc.startRound(ctx, mr, mb.RoundRandomSeed)
 		}
 	}
 	b := mc.AddRoundBlock(mr, mb)

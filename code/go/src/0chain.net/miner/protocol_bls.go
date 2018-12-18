@@ -341,25 +341,19 @@ func (mc *Chain) computeRBO(ctx context.Context, mr *Round, rbo string) {
 
 func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r *Round, rbo string) {
 	if mpr := pr.(*Round); mpr.IsVRFComplete() {
+		var seed int64
 		if isDkgEnabled {
 			useed, err := strconv.ParseUint(rbo[0:16], 16, 64)
 			if err != nil {
 				panic(err)
 			}
-			seed := int64(useed)
-			r.Round.SetVRFOutput(rbo)
-			mc.setRandomSeed(ctx, r, seed)
+			seed = int64(useed)
 		} else {
-			r.Round.SetVRFOutput(rbo)
-			mc.setRandomSeed(ctx, r, rand.New(rand.NewSource(pr.GetRandomSeed())).Int63())
+			seed = rand.New(rand.NewSource(pr.GetRandomSeed())).Int63()
 		}
+		r.Round.SetVRFOutput(rbo)
+		mc.startRound(ctx, r, seed)
 	} else {
 		Logger.Error("compute round random seed - no prior value", zap.Int64("round", r.GetRoundNumber()), zap.Int("blocks", len(pr.GetProposedBlocks())))
-	}
-}
-
-func (mc *Chain) setRandomSeed(ctx context.Context, r *Round, seed int64) {
-	if mc.SetRandomSeed(r.Round, seed) {
-		mc.startNewRound(ctx, r)
 	}
 }
