@@ -487,7 +487,7 @@ func (mpt *MerklePatriciaTrie) deleteAtNode(node Node, path Path) (Node, Key, er
 						nnode = enode
 						mpt.deleteNode(ochild)
 					default:
-						panic(fmt.Sprintf("uknown node type: %T %v", ochild, ochild))
+						panic(fmt.Sprintf("uknown node type: %T %v %T", ochild, ochild, mpt.DB))
 					}
 					return mpt.insertNode(node, nnode)
 				}
@@ -598,7 +598,12 @@ func (mpt *MerklePatriciaTrie) deleteAfterPathTraversal(node Node) (Node, Key, e
 func (mpt *MerklePatriciaTrie) iterate(ctx context.Context, path Path, key Key, handler MPTIteratorHandler, visitNodeTypes byte) error {
 	node, err := mpt.DB.GetNode(key)
 	if err != nil {
-		Logger.Error("iterate - get node error", zap.Error(err))
+		if DebugMPTNode && Logger != nil {
+			Logger.Error("iterate - get node error", zap.Error(err))
+		}
+		if herr := handler(ctx, path, key, node); herr != nil {
+			return herr
+		}
 		return err
 	}
 	switch nodeImpl := node.(type) {
@@ -611,7 +616,10 @@ func (mpt *MerklePatriciaTrie) iterate(ctx context.Context, path Path, key Key, 
 		}
 		npath := append(path, nodeImpl.Path...)
 		if IncludesNodeType(visitNodeTypes, NodeTypeValueNode) && nodeImpl.HasValue() {
-			handler(ctx, npath, nil, nodeImpl.Value)
+			err := handler(ctx, npath, nil, nodeImpl.Value)
+			if err != nil {
+				return err
+			}
 		}
 	case *FullNode:
 		if IncludesNodeType(visitNodeTypes, NodeTypeFullNode) {
@@ -623,6 +631,7 @@ func (mpt *MerklePatriciaTrie) iterate(ctx context.Context, path Path, key Key, 
 		if IncludesNodeType(visitNodeTypes, NodeTypeValueNode) && nodeImpl.HasValue() {
 			handler(ctx, path, nil, nodeImpl.Value)
 		}
+		var ecount = 0
 		for i := byte(0); i < 16; i++ {
 			pe := nodeImpl.indexToByte(i)
 			child := nodeImpl.GetChild(pe)
@@ -632,8 +641,15 @@ func (mpt *MerklePatriciaTrie) iterate(ctx context.Context, path Path, key Key, 
 			npath := append(path, pe)
 			err := mpt.iterate(ctx, npath, child, handler, visitNodeTypes)
 			if err != nil {
-				return err
+				if err == ErrNodeNotFound || err == ErrIteratingChildNodes {
+					ecount++
+				} else {
+					return err
+				}
 			}
+		}
+		if ecount != 0 {
+			return ErrIteratingChildNodes
 		}
 	case *ExtensionNode:
 		if IncludesNodeType(visitNodeTypes, NodeTypeExtensionNode) {
@@ -732,7 +748,12 @@ func (mpt *MerklePatriciaTrie) UpdateVersion(ctx context.Context, version Sequen
 	keys := make([]Key, 0, BatchSize)
 	values := make([]Node, 0, BatchSize)
 	var count int64
+	var missingNodes int64
 	handler := func(ctx context.Context, path Path, key Key, node Node) error {
+		if node == nil {
+			missingNodes++
+			return nil
+		}
 		if node.GetVersion() >= version {
 			return nil
 		}
@@ -747,7 +768,9 @@ func (mpt *MerklePatriciaTrie) UpdateVersion(ctx context.Context, version Sequen
 			keys = keys[:0]
 			values = values[:0]
 			if err != nil {
-				Logger.Error("update version - multi put", zap.String("path", string(path)), zap.String("key", ToHex(key)), zap.Any("old_version", node.GetVersion()), zap.Any("new_version", version), zap.Error(err))
+				if DebugMPTNode && Logger != nil {
+					Logger.Error("update version - multi put", zap.String("path", string(path)), zap.String("key", ToHex(key)), zap.Any("old_version", node.GetVersion()), zap.Any("new_version", version), zap.Error(err))
+				}
 			}
 			return err
 		}
@@ -756,14 +779,17 @@ func (mpt *MerklePatriciaTrie) UpdateVersion(ctx context.Context, version Sequen
 	err := mpt.Iterate(ctx, handler, NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
 	if ps != nil {
 		ps.BelowVersion = count
+		ps.MissingNodes = missingNodes
 	}
-	if err != nil {
-		return err
-	}
-	if len(keys) > 0 {
-		err = mpt.DB.MultiPutNode(keys, values)
-		if err != nil {
-			Logger.Error("update version - multi put - last batch", zap.Error(err))
+	if err == nil || err == ErrNodeNotFound || err == ErrIteratingChildNodes {
+		if len(keys) > 0 {
+			err := mpt.DB.MultiPutNode(keys, values)
+			if err != nil {
+				if DebugMPTNode && Logger != nil {
+					Logger.Error("update version - multi put - last batch", zap.Error(err))
+				}
+				return err
+			}
 		}
 	}
 	return err

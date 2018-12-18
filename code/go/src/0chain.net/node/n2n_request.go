@@ -223,7 +223,7 @@ func ToN2NSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 			}
 			w.Header().Set(HeaderRequestCODEC, codec)
 			buffer = getResponseData(options, entity)
-		case *PushDataCacheEntry:
+		case *pushDataCacheEntry:
 			options.CODEC = v.Options.CODEC
 			if options.CODEC == 0 {
 				w.Header().Set(HeaderRequestCODEC, CodecJSON)
@@ -247,15 +247,11 @@ func ToN2NSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 		}
 		sdata := buffer.Bytes()
 		w.Write(sdata)
-		if r.FormValue("__push2pull") == "true" {
+		if isPullRequest(r) {
 			if flusher, ok := w.(http.Flusher); ok {
 				flusher.Flush()
 			}
-			mkey := serveMetricKey(uri)
-			timer := sender.GetTimer(mkey)
-			timer.UpdateSince(ts)
-			sizer := sender.GetSizeMetric(mkey)
-			sizer.Update(int64(len(sdata)))
+			updatePullStats(sender, uri, len(sdata), ts)
 		}
 		N2n.Info("message received", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI), zap.Duration("duration", time.Since(ts)), zap.Int("codec", options.CODEC))
 	}

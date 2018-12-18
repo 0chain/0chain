@@ -10,12 +10,12 @@ import (
 	"0chain.net/block"
 	"0chain.net/chain"
 	"0chain.net/common"
-	"0chain.net/config"
 	"0chain.net/datastore"
 	. "0chain.net/logging"
 	"0chain.net/memorystore"
 	"0chain.net/node"
 	"0chain.net/round"
+	"0chain.net/state"
 	"0chain.net/transaction"
 	"0chain.net/util"
 	"go.uber.org/zap"
@@ -40,7 +40,6 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 	return mr
 }
 
-/*StartRound - start a new round */
 func (mc *Chain) startRound(ctx context.Context, pr *Round, r *Round) {
 	if mc.AddRound(r) != r {
 		return
@@ -49,7 +48,6 @@ func (mc *Chain) startRound(ctx context.Context, pr *Round, r *Round) {
 		// If we don't have the prior round, and hence the prior round's random seed, we can't provide the share
 		return
 	}
-
 	mc.addMyVRFShare(ctx, pr, r)
 }
 
@@ -59,12 +57,10 @@ func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
 	vrfs.Share = GetBlsShare(ctx, r.Round, pr.Round)
 	vrfs.SetParty(node.Self.Node)
 	r.vrfShare = vrfs
-
-	// do we need to check if AddVRFShare is success or not?
+	// TODO: do we need to check if AddVRFShare is success or not?
 	if mc.AddVRFShare(ctx, r, r.vrfShare) {
 		go mc.SendVRFShare(ctx, r.vrfShare)
 	}
-
 }
 
 func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
@@ -82,7 +78,6 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 	rank := mr.GetMinerRank(self.Node)
 	Logger.Info("*** starting round block generation ***", zap.Int64("round", mr.GetRoundNumber()), zap.Int("index", self.SetIndex), zap.Int("rank", rank), zap.Any("random_seed", mr.GetRandomSeed()), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round))
 	if !mc.IsRoundGenerator(mr, self.Node) {
-		Logger.Info("Not a generator :( Heading back")
 		return
 	}
 	//NOTE: If there are not enough txns, this will not advance further even though rest of the network is. That's why this is a goroutine
@@ -114,7 +109,7 @@ func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) *block.Bl
 		if !bnb.IsStateComputed() {
 			err := mc.ComputeOrSyncState(ctx, bnb)
 			if err != nil {
-				if config.DevConfiguration.State {
+				if state.DebugBlock() {
 					Logger.Error("get block to extend - best nb compute state", zap.Any("round", r.GetRoundNumber()), zap.Any("block", bnb.Hash), zap.Error(err))
 					return nil
 				}
@@ -430,16 +425,34 @@ func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.B
 }
 
 func (mc *Chain) checkBlockNotarization(ctx context.Context, r *Round, b *block.Block) bool {
-	if b.IsBlockNotarized() {
-		if !mc.AddNotarizedBlock(ctx, r, b) {
-			return true
-		}
-		go mc.SendNotarization(ctx, b)
-		Logger.Debug("check block notarization - block notarized", zap.Int64("round", b.Round), zap.String("block", b.Hash))
-		mc.StartNextRound(ctx, r)
+	if !b.IsBlockNotarized() {
+		return false
+	}
+	if !mc.AddNotarizedBlock(ctx, r, b) {
 		return true
 	}
-	return false
+	if r.GetRandomSeed() != b.RoundRandomSeed {
+		mc.SetRandomSeed(r, b.RoundRandomSeed)
+	}
+	go mc.SendNotarization(ctx, b)
+	Logger.Debug("check block notarization - block notarized", zap.Int64("round", b.Round), zap.String("block", b.Hash))
+	mc.StartNextRound(ctx, r)
+	return true
+}
+
+//MergeNotarization - merge a notarization
+func (mc *Chain) MergeNotarization(ctx context.Context, r *Round, b *block.Block, vts []*block.VerificationTicket) {
+	for _, t := range vts {
+		if err := mc.VerifyTicket(ctx, b.Hash, t); err != nil {
+			Logger.Error("merge notarization", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
+		}
+	}
+	notarized := b.IsBlockNotarized()
+	mc.MergeVerificationTickets(ctx, b, vts)
+	if notarized {
+		return
+	}
+	mc.checkBlockNotarization(ctx, r, b)
 }
 
 /*AddNotarizedBlock - add a notarized block for a given round */

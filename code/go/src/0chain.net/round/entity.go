@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"os"
+	"runtime/pprof"
 	"sort"
 	"sync"
 
@@ -39,8 +41,7 @@ type Round struct {
 	// Once a round is finalized, this is the finalized block of the given round
 	Block     *block.Block `json:"-"`
 	BlockHash string       `json:"block_hash"`
-	VRFOutput string       `json:"vrf_output"`
-	//VRFOutput == rbooutput?
+	VRFOutput string       `json:"vrf_output"` //TODO: VRFOutput == rbooutput?
 	minerPerm []int
 	state     int
 
@@ -78,7 +79,6 @@ func (r *Round) GetRoundNumber() int64 {
 //SetRandomSeed - set the random seed of the round
 func (r *Round) SetRandomSeed(seed int64) {
 	r.RandomSeed = seed
-	r.SetState(RoundVRFComplete)
 }
 
 //GetRandomSeed - returns the random seed of the round
@@ -285,6 +285,10 @@ func (r *Round) ComputeMinerRanks(miners *node.Pool) {
 func (r *Round) GetMinerRank(miner *node.Node) int {
 	r.Mutex.RLock()
 	defer r.Mutex.RUnlock()
+	if r.minerPerm == nil {
+		pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
+		Logger.DPanic(fmt.Sprintf("miner ranks not computed yet: %v", r.GetState()))
+	}
 	return r.minerPerm[miner.SetIndex]
 }
 

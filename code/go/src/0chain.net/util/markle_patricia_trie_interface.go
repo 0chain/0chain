@@ -2,8 +2,11 @@ package util
 
 import (
 	"context"
+	"errors"
 	"io"
 )
+
+var ErrIteratingChildNodes = errors.New("Error iterating child nodes")
 
 //Path - a type for the path of the merkle patricia trie
 type Path []byte
@@ -77,4 +80,5 @@ type PruneStats struct {
 	Leaves       int64    `json:"l"`
 	BelowVersion int64    `json:"bv"`
 	Deleted      int64    `json:"d"`
+	MissingNodes int64    `json:"mn"`
 }
