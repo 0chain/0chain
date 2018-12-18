@@ -604,7 +604,12 @@ func (c *Chain) DeleteRoundsBelow(ctx context.Context, roundNumber int64) {
 }
 
 /*SetRandomSeed - set the random seed for the round */
-func (c *Chain) SetRandomSeed(r round.RoundI, randomSeed int64) {
+func (c *Chain) SetRandomSeed(r round.RoundI, randomSeed int64) bool {
+	c.roundsMutex.Lock()
+	defer c.roundsMutex.Unlock()
+	if r.HasRandomSeed() && randomSeed == r.GetRandomSeed() {
+		return false
+	}
 	r.SetRandomSeed(randomSeed)
 	r.ComputeMinerRanks(c.Miners)
 	r.SetState(round.RoundVRFComplete)
@@ -612,6 +617,7 @@ func (c *Chain) SetRandomSeed(r round.RoundI, randomSeed int64) {
 	if roundNumber > c.CurrentRound {
 		c.CurrentRound = roundNumber
 	}
+	return true
 }
 
 func (c *Chain) getBlocks() []*block.Block {

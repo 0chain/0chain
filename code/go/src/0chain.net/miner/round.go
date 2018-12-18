@@ -109,5 +109,5 @@ func (r *Round) Clear() {
 
 //IsVRFComplete - is the VRF process complete?
 func (r *Round) IsVRFComplete() bool {
-	return r.GetState() >= round.RoundVRFComplete
+	return r.HasRandomSeed()
 }

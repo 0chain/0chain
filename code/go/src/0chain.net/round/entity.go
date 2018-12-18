@@ -31,8 +31,9 @@ const (
 /*Round - data structure for the round */
 type Round struct {
 	datastore.NOIDField
-	Number     int64 `json:"number"`
-	RandomSeed int64 `json:"round_random_seed"`
+	Number        int64 `json:"number"`
+	RandomSeed    int64 `json:"round_random_seed"`
+	hasRandomSeed bool
 
 	SelfRandomFunctionValue int64 `json:"-"`
 
@@ -78,7 +79,14 @@ func (r *Round) GetRoundNumber() int64 {
 
 //SetRandomSeed - set the random seed of the round
 func (r *Round) SetRandomSeed(seed int64) {
+	r.Mutex.Lock()
+	defer r.Mutex.Unlock()
+	if r.hasRandomSeed {
+		return
+	}
 	r.RandomSeed = seed
+	r.hasRandomSeed = true
+	r.minerPerm = nil
 }
 
 //GetRandomSeed - returns the random seed of the round
@@ -349,4 +357,11 @@ func (r *Round) setState(state int) {
 	if state > r.state {
 		r.state = state
 	}
+}
+
+//HasRandomSeed - implement interface
+func (r *Round) HasRandomSeed() bool {
+	r.Mutex.Lock()
+	defer r.Mutex.Unlock()
+	return r.hasRandomSeed
 }
