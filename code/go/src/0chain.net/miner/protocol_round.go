@@ -35,20 +35,26 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 	}
 	var nr = round.NewRound(r.GetRoundNumber() + 1)
 	mr := mc.CreateRound(nr)
-	// Even if the context is cancelled, we want to proceed with the next round, hence start with a root context
-	mc.startRound(common.GetRootContext(), r, mr)
+	if mc.AddRound(mr) != mr {
+		return mr
+	}
+	if r.HasRandomSeed() {
+		mc.addMyVRFShare(ctx, r, mr)
+	}
 	return mr
 }
 
-func (mc *Chain) startRound(ctx context.Context, pr *Round, r *Round) {
-	if mc.AddRound(r) != r {
-		return
+func (mc *Chain) getRound(ctx context.Context, roundNumber int64) *Round {
+	var mr *Round
+	pr := mc.GetMinerRound(roundNumber - 1)
+	if pr != nil {
+		mr = mc.StartNextRound(ctx, pr)
+	} else {
+		var r = round.NewRound(roundNumber)
+		mr = mc.CreateRound(r)
+		mr = mc.AddRound(mr).(*Round)
 	}
-	if pr == nil {
-		// If we don't have the prior round, and hence the prior round's random seed, we can't provide the share
-		return
-	}
-	mc.addMyVRFShare(ctx, pr, r)
+	return mr
 }
 
 func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
@@ -61,6 +67,13 @@ func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
 	if mc.AddVRFShare(ctx, r, r.vrfShare) {
 		go mc.SendVRFShare(ctx, r.vrfShare)
 	}
+}
+
+func (mc *Chain) startRound(ctx context.Context, r *Round, seed int64) {
+	if !mc.SetRandomSeed(r.Round, seed) {
+		return
+	}
+	mc.startNewRound(common.GetRootContext(), r)
 }
 
 func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
@@ -431,9 +444,7 @@ func (mc *Chain) checkBlockNotarization(ctx context.Context, r *Round, b *block.
 	if !mc.AddNotarizedBlock(ctx, r, b) {
 		return true
 	}
-	if r.GetRandomSeed() != b.RoundRandomSeed {
-		mc.SetRandomSeed(r, b.RoundRandomSeed)
-	}
+	mc.SetRandomSeed(r, b.RoundRandomSeed)
 	go mc.SendNotarization(ctx, b)
 	Logger.Debug("check block notarization - block notarized", zap.Int64("round", b.Round), zap.String("block", b.Hash))
 	mc.StartNextRound(ctx, r)
@@ -594,8 +605,7 @@ func startProtocol() {
 		mc.SetRandomSeed(sr, lfb.RoundRandomSeed)
 		mc.SetLatestFinalizedBlock(ctx, lfb)
 	} else {
-		sr := round.NewRound(0)
-		mr = mc.CreateRound(sr)
+		mr = mc.GetMinerRound(0)
 	}
 	Logger.Info("starting the blockchain ...", zap.Int64("round", mr.GetRoundNumber()))
 	mc.StartNextRound(ctx, mr)
