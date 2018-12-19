@@ -11,6 +11,7 @@ type RoundI interface {
 
 	GetRandomSeed() int64
 	SetRandomSeed(seed int64)
+	HasRandomSeed() bool
 
 	ComputeMinerRanks(miners *node.Pool)
 	GetMinerRank(miner *node.Node) int
