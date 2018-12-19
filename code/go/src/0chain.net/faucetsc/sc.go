@@ -195,7 +195,7 @@ func (fc *FaucetSmartContract) Execute(t *transaction.Transaction, funcName stri
 		return fc.MaxPour(gn)
 	case "PersonalPeriodicLimit":
 		return fc.PersonalPeriodicLimit(t, gn)
-	case "GlobalPerodicLimit":
+	case "GlobalPeriodicLimit":
 		return fc.GlobalPerodicLimit(t, gn)
 	case "Refill":
 		return fc.Refill(t, balances, gn)
