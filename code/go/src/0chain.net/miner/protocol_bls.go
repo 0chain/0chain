@@ -33,6 +33,7 @@ var roundMap = make(map[int64]map[int]string)
 var isDkgEnabled bool
 var k, n int
 var IsDkgDone bool = false
+var selfInd int
 
 // StartDKG - starts the DKG process
 func StartDKG(ctx context.Context) {
@@ -48,6 +49,7 @@ func StartDKG(ctx context.Context) {
 	Logger.Info("DKG Setup", zap.Int("K", k), zap.Bool("DKG Enabled", isDkgEnabled))
 	n = mc.Miners.Size()
 	self := node.GetSelfNode(ctx)
+	selfInd = self.SetIndex
 	waitForNetworkToBeReady(ctx)
 	if isDkgEnabled {
 		minerShares = make(map[string]bls.Key, len(m2m.Nodes))
@@ -123,6 +125,10 @@ func sendDKG() {
 	for _, n := range m2m.Nodes {
 
 		if n != nil {
+			if selfInd == n.SetIndex {
+				//we do not want to send message to ourselves.
+				continue
+			}
 			//ToDo: Optimization Instead of sending, asking for DKG share is better.
 			err := SendDKGShare(n)
 			if err != nil {

@@ -149,8 +149,10 @@ func main() {
 	chain.StartTime = time.Now().UTC()
 	go func() {
 		miner.StartDKG(ctx)
+		miner.WaitForDkgToBeDone(ctx)
+		miner.SetupWorkers(ctx)
 		if config.Development() {
-			miner.WaitForDkgToBeDone(ctx)
+
 			go TransactionGenerator(mc.BlockSize)
 		}
 	}()
@@ -217,6 +219,6 @@ func initN2NHandlers() {
 func initWorkers(ctx context.Context) {
 	serverChain := chain.GetServerChain()
 	serverChain.SetupWorkers(ctx)
-	miner.SetupWorkers(ctx)
+	//miner.SetupWorkers(ctx)
 	transaction.SetupWorkers(ctx)
 }
