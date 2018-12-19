@@ -1,3 +1,4 @@
+# docker.local
 FROM iron/go:dev
 RUN apk add --update --no-cache build-base linux-headers git cmake bash perl grep
 RUN apk add --update --no-cache zlib zlib-dev bzip2 bzip2-dev snappy snappy-dev lz4 lz4-dev jemalloc jemalloc-dev zstd
