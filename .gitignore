@@ -25,5 +25,6 @@ awsnet/credentials/
 awsnet/testnet
 awsnet/cookbook/*.retry
 awsnet/cookbook/context
-gorocksdb/
+code/go/bin
+build
 *.code-workspace
