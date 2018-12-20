@@ -73,7 +73,7 @@ func (mc *Chain) startRound(ctx context.Context, r *Round, seed int64) {
 	if !mc.SetRandomSeed(r.Round, seed) {
 		return
 	}
-	mc.startNewRound(common.GetRootContext(), r)
+	mc.startNewRound(ctx, r)
 }
 
 func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
@@ -447,7 +447,7 @@ func (mc *Chain) checkBlockNotarization(ctx context.Context, r *Round, b *block.
 	mc.SetRandomSeed(r, b.RoundRandomSeed)
 	go mc.SendNotarization(ctx, b)
 	Logger.Debug("check block notarization - block notarized", zap.Int64("round", b.Round), zap.String("block", b.Hash))
-	mc.StartNextRound(ctx, r)
+	mc.StartNextRound(common.GetRootContext(), r)
 	return true
 }
 
