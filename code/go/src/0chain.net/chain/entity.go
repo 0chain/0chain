@@ -452,6 +452,9 @@ func (c *Chain) IsBlockSharderWithNodes(hash string, sharder *node.Node) (bool, 
 		return true, nil
 	}
 	scores := c.nodePoolScorer.ScoreHashString(c.Sharders, hash)
+	for _, score := range scores {
+		Logger.Info("node scores", zap.Int("nodeIndex", score.Node.SetIndex), zap.Int32("scoreVal", score.Score))
+	}
 	return sharder.IsInTopWithNodes(scores, c.NumSharders)
 }
 

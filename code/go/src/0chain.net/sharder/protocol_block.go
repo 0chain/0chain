@@ -2,6 +2,7 @@ package sharder
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"sort"
 	"strconv"
@@ -122,8 +123,6 @@ func (sc *Chain) GetLatestRoundFromSharders(ctx context.Context, currRound int64
 
 func (sc *Chain) GetMissingRounds(ctx context.Context, targetR int64, dbR int64) {
 	Logger.Info("bc-27 get missing rounds", zap.Int64("target round", targetR), zap.Int64("round from db", dbR))
-	roundRequestor := RoundRequestor
-	//params := make(map[string]string, 1)
 	//get missing rounds starting from the next round of the current round
 	dbR++
 
@@ -133,65 +132,79 @@ func (sc *Chain) GetMissingRounds(ctx context.Context, targetR int64, dbR int64)
 
 	for i := int64(0); i < rounds; i++ {
 		loopR := dbR + i
-		//params["round"] = strconv.FormatInt(loopR, 10)
 		params := map[string]string{"round": strconv.FormatInt(loopR, 10)}
 		var r *round.Round
 		Logger.Info("bc-27 requesting all sharders for the round", zap.Int64("round", loopR))
-		sc.Sharders.RequestEntityFromAll(ctx, roundRequestor, params, func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+		sc.Sharders.RequestEntityFromAll(ctx, RoundRequestor, params, func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 			roundEntity, ok := entity.(*round.Round)
 			if !ok {
 				Logger.Info("bc-27 Could not get the round info from others", zap.Int64("round#", loopR))
 				return nil, nil
 			}
 			r = roundEntity
-			Logger.Info("bc-27 received the round entity from others")
+			Logger.Info("bc-27 received the round entity from others", zap.Int64("round", roundEntity.Number))
 			return r, nil
 		})
-
-		if r != nil {
-			Logger.Info("bc-27 check to see if block needed to be stored")
-			self := node.GetSelfNode(ctx)
-			canStore, nodes := sc.IsBlockSharderWithNodes(r.BlockHash, self.Node)
-			var requestNode *node.Node
-			for _, n := range nodes {
-				if n != self.Node {
-					requestNode = n
-					break
-				}
-			}
-			var b *block.Block
-			Logger.Info("bc -27 requesting sharder for the block", zap.Int64("round", r.Number), zap.Int("sharder-index", requestNode.SetIndex))
-			//TODO params include round -- query using round number or block hash which would be preferable?
-			requestNode.RequestEntityFromNode(ctx, BlockRequestor, params, func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-				blockEntity, ok := entity.(*block.Block)
-				if !ok {
-					return nil, nil
-				}
-				err := blockEntity.Validate(ctx)
-				if err == nil {
-					b = blockEntity
-					return blockEntity, nil
-				}
-				return nil, err
-			})
-			if b != nil {
-				sc.StoreTransactions(ctx, b)
-				err := sc.StoreBlockSummary(ctx, b)
-				if err != nil {
-					Logger.Error("db error (save block)", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
-				} else {
-					Logger.Info("bc-27 missed block stored in db", zap.String("block-hash", b.Hash))
-				}
-				if canStore {
-					sc.storeBlock(b)
-					Logger.Info("bc-27 missed block stored in file", zap.String("block-hash", b.Hash))
-				}
-				sc.storeRound(ctx, r, b)
-				Logger.Info("bc-27 missed round stored in db", zap.Int64("round", r.GetRoundNumber()))
-			}
+		if r == nil {
+			Logger.Info("bc-27 round is nil")
+			return
 		}
-
+		if r.BlockHash == "" {
+			Logger.Info("bc-27 round block hash is empty", zap.Int64("round", r.Number))
+			return
+		}
+		Logger.Info("bc-27 check to see if block needed to be stored")
+		sc.storeMissingRoundBlock(ctx, r)
 	}
+}
+
+func (sc *Chain) storeMissingRoundBlock(ctx context.Context, r *round.Round) {
+	params := map[string]string{"block": r.BlockHash}
+	self := node.GetSelfNode(ctx)
+	canStore, nodes := sc.IsBlockSharderWithNodes(r.BlockHash, self.Node)
+	Logger.Info(fmt.Sprintf("can Store - %b, nodes length - %d", canStore, len(nodes)))
+	var requestNode *node.Node
+	for _, n := range nodes {
+		if n != self.Node {
+			requestNode = n
+			break
+		}
+	}
+	if requestNode == nil {
+		Logger.Info("bc-27 request node is nil")
+		return
+	}
+	var b *block.Block
+	Logger.Info("bc-27 requesting sharder for the block", zap.Int64("round", r.Number), zap.Int("sharder-index", requestNode.SetIndex))
+	requestNode.RequestEntityFromNode(ctx, BlockRequestor, params, func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+		blockEntity, ok := entity.(*block.Block)
+		if !ok {
+			return nil, nil
+		}
+		err := blockEntity.Validate(ctx)
+		if err == nil {
+			b = blockEntity
+			return blockEntity, nil
+		}
+		return nil, err
+	})
+	if b == nil {
+		Logger.Info("bc-27 round block is nil", zap.Int64("round", r.Number))
+		return
+	}
+	sc.StoreTransactions(ctx, b)
+	err := sc.StoreBlockSummary(ctx, b)
+	if err != nil {
+		Logger.Error("db error (save block)", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
+	} else {
+		Logger.Info("bc-27 missed block stored in db", zap.String("block-hash", b.Hash))
+	}
+	if canStore {
+		sc.storeBlock(b)
+		Logger.Info("bc-27 missed block stored in file", zap.String("block-hash", b.Hash))
+	}
+	sc.storeRound(ctx, r, b)
+	Logger.Info("bc-27 missed round stored in db", zap.Int64("round", r.GetRoundNumber()))
 }
 
 func (sc *Chain) storeRound(ctx context.Context, r round.RoundI, b *block.Block) {

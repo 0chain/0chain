@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"0chain.net/block"
+	"0chain.net/common"
 	"0chain.net/datastore"
 	"0chain.net/node"
 	"0chain.net/round"
@@ -29,7 +31,7 @@ func SetupS2SRequestors() {
 func SetupS2SResponders() {
 	http.HandleFunc("/v1/_s2s/latest_round/get", node.ToN2NSendEntityHandler(LatestRoundRequestHandler))
 	http.HandleFunc("/v1/_s2s/round/get", node.ToN2NSendEntityHandler(RoundRequestHandler))
-	http.HandleFunc("/v1/_s2s/block/get", node.ToN2NSendEntityHandler(BlockHandler))
+	http.HandleFunc("/v1/_s2s/block/get", node.ToN2NSendEntityHandler(RoundBlockRequestHandler))
 }
 
 func LatestRoundRequestHandler(ctx context.Context, r *http.Request) (interface{}, error) {
@@ -39,7 +41,7 @@ func LatestRoundRequestHandler(ctx context.Context, r *http.Request) (interface{
 		lr := currRound.(*round.Round)
 		return lr, nil
 	}
-	return nil, nil
+	return nil, common.NewError("no_round_info", "cannot retrieve the round info")
 }
 
 func RoundRequestHandler(ctx context.Context, r *http.Request) (interface{}, error) {
@@ -52,11 +54,25 @@ func RoundRequestHandler(ctx context.Context, r *http.Request) (interface{}, err
 			var err error
 			roundEntity, err = sc.GetRoundFromStore(ctx, roundNum)
 			if err == nil {
-				return r, nil
+				return roundEntity, nil
 			}
 			return nil, err
 		}
 		return roundEntity, nil
+	}
+	return nil, err
+}
+
+func RoundBlockRequestHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	sc := GetSharderChain()
+	hash := r.FormValue("block")
+	var b *block.Block
+	if hash == "" {
+		return nil, common.InvalidRequest("block hash is required")
+	}
+	b, err := sc.GetBlock(ctx, hash)
+	if err == nil {
+		return b, nil
 	}
 	return nil, err
 }

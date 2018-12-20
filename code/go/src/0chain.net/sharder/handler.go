@@ -28,15 +28,15 @@ func SetupHandlers() {
 
 /*BlockHandler - a handler to respond to block queries */
 func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	round := r.FormValue("round")
+	roundData := r.FormValue("round")
 	hash := r.FormValue("block")
 	content := r.FormValue("content")
 	if content == "" {
 		content = "header"
 	}
 	parts := strings.Split(content, ",")
-	if round != "" {
-		roundNumber, err := strconv.ParseInt(round, 10, 64)
+	if roundData != "" {
+		roundNumber, err := strconv.ParseInt(roundData, 10, 64)
 		if err != nil {
 			return nil, err
 		}
@@ -44,14 +44,14 @@ func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 		if roundNumber > sc.LatestFinalizedBlock.Round {
 			return nil, common.InvalidRequest("Block not available")
 		} else {
-			r := sc.GetSharderRound(roundNumber)
-			if r == nil {
-				r, err = sc.GetRoundFromStore(ctx, roundNumber)
+			roundEntity := sc.GetSharderRound(roundNumber)
+			if roundEntity == nil {
+				roundEntity, err = sc.GetRoundFromStore(ctx, roundNumber)
 				if err != nil {
 					return nil, err
 				}
 			}
-			hash = r.BlockHash
+			hash = roundEntity.BlockHash
 		}
 	}
 	var err error
@@ -68,8 +68,8 @@ func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	So, as long as people query the last 10M blocks most of the time, we only end up with 1 or 2 iterations.
 	Anything older than that, there is a cost to query the database and get the round information anyway.
 	*/
-	for r := sc.LatestFinalizedBlock.Round; r > 0; r -= sc.RoundRange {
-		b, err = sc.GetBlockFromStore(hash, r)
+	for roundEntity := sc.LatestFinalizedBlock.Round; roundEntity > 0; roundEntity -= sc.RoundRange {
+		b, err = sc.GetBlockFromStore(hash, roundEntity)
 		if err != nil {
 			return nil, err
 		}
