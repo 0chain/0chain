@@ -12,6 +12,7 @@ import (
 	"0chain.net/ememorystore"
 	. "0chain.net/logging"
 	"0chain.net/node"
+	"go.uber.org/zap"
 
 	"0chain.net/block"
 	"0chain.net/datastore"
@@ -79,18 +80,19 @@ func (r *Round) GetRoundNumber() int64 {
 
 //SetRandomSeed - set the random seed of the round
 func (r *Round) SetRandomSeed(seed int64) {
-	r.Mutex.Lock()
-	defer r.Mutex.Unlock()
 	if r.hasRandomSeed {
 		return
 	}
 	r.RandomSeed = seed
+	r.setState(RoundVRFComplete)
 	r.hasRandomSeed = true
 	r.minerPerm = nil
 }
 
 //GetRandomSeed - returns the random seed of the round
 func (r *Round) GetRandomSeed() int64 {
+	r.Mutex.RLock()
+	defer r.Mutex.RUnlock()
 	return r.RandomSeed
 }
 
@@ -279,13 +281,8 @@ func SetupRoundSummaryDB() {
 	ememorystore.AddPool("roundsummarydb", db)
 }
 
-/*ComputeMinerRanks - Compute random order of n elements given the random see of the round
-NOTE: The permutation is deterministic using a PRNG that uses a starting seed. The starting seed itself
-      is crytgraphically generated random number and is not known till the threshold signature is reached.
-*/
+/*ComputeMinerRanks - Compute random order of n elements given the random seed of the round */
 func (r *Round) ComputeMinerRanks(miners *node.Pool) {
-	r.Mutex.Lock()
-	defer r.Mutex.Unlock()
 	r.minerPerm = rand.New(rand.NewSource(r.RandomSeed)).Perm(miners.Size())
 }
 
@@ -325,14 +322,12 @@ func (r *Round) Restart() {
 
 //AddVRFShare - implement interface
 func (r *Round) AddVRFShare(share *VRFShare) bool {
-
 	r.Mutex.Lock()
 	defer r.Mutex.Unlock()
 	if _, ok := r.shares[share.party.GetKey()]; ok {
 		return false
 	}
-
-	Logger.Info("Adding Shares from minerId: " + share.party.GetKey())
+	Logger.Info("add vrf share", zap.String("miner", share.party.GetPseudoName()))
 	r.setState(RoundShareVRF)
 	r.shares[share.party.GetKey()] = share
 	return true
@@ -361,7 +356,17 @@ func (r *Round) setState(state int) {
 
 //HasRandomSeed - implement interface
 func (r *Round) HasRandomSeed() bool {
-	r.Mutex.Lock()
-	defer r.Mutex.Unlock()
+	r.Mutex.RLock()
+	defer r.Mutex.RUnlock()
 	return r.hasRandomSeed
+}
+
+//Lock - implement interface
+func (r *Round) Lock() {
+	r.Mutex.Lock()
+}
+
+//Unlock - implement interface
+func (r *Round) Unlock() {
+	r.Mutex.Unlock()
 }

@@ -1,25 +1,30 @@
-#docker.aws
 FROM iron/go:dev
-RUN apk add --update --no-cache build-base linux-headers git cmake bash perl
+RUN apk add --update --no-cache build-base linux-headers git cmake bash perl grep
 RUN apk add --update --no-cache zlib zlib-dev bzip2 bzip2-dev snappy snappy-dev lz4 lz4-dev jemalloc jemalloc-dev zstd
 RUN apk add --update --no-cache gmp-dev openssl-dev
 
-# installing latest gflags 
+# Install golang dep
+RUN curl -fsSL -o /usr/local/bin/dep https://github.com/golang/dep/releases/download/v0.5.0/dep-linux-amd64 && \
+    chmod +x /usr/local/bin/dep
+
+# Install latest gflags
 RUN cd /tmp && \
-    git clone https://github.com/gflags/gflags.git && \
-    cd gflags && \
+    curl -L -o gflags.tar.gz https://github.com/gflags/gflags/archive/v2.2.1.tar.gz && \
+    tar xf gflags.tar.gz && \
+    cd gflags-* && \
     mkdir build && \
     cd build && \
     cmake -DBUILD_SHARED_LIBS=1 -DGFLAGS_INSTALL_SHARED_LIBS=1 .. && \
-    make install && \
+    make install -j $(nproc) && \
     cd /tmp && \
-    rm -R /tmp/gflags/
+    rm -R /tmp/gflags*
 
-# Install Rocksdb 
+# Install RocksDB
 RUN cd /tmp && \
     git clone https://github.com/0chain/rocksdb.git && \
     cd rocksdb && \
-    make -j4 shared_lib && \
+    #git checkout 5.13.fb && \
+    make  -j $(nproc) shared_lib && \
     mkdir -p /usr/local/rocksdb/lib && \
     mkdir /usr/local/rocksdb/include && \
     cp librocksdb.so* /usr/local/rocksdb/lib && \
@@ -46,16 +51,6 @@ RUN go get gopkg.in/natefinch/lumberjack.v2
 RUN go get github.com/koding/cache
 RUN go get github.com/hashicorp/golang-lru
 
-RUN cd /tmp && \
-    git clone https://github.com/herumi/xbyak.git && \
-    cd xbyak && \
-    make install
-
-RUN cd /tmp && \
-    git clone https://github.com/herumi/cybozulib.git && \
-    cd cybozulib && \
-    make install
-
 RUN go get -d github.com/herumi/mcl/ffi/go/mcl && \
     cd $GOPATH/src/github.com/herumi/mcl && \
     CGO_CFLAGS='-DMCLBN_FP_UNIT_SIZE=4' make && \
@@ -67,5 +62,3 @@ RUN go get -d github.com/herumi/bls/ffi/go/bls && \
     CFLAGS='-DMCLBN_FP_UNIT_SIZE=4' make && \
     cp $GOPATH/src/github.com/herumi/bls/lib/lib*.so /usr/lib && \
     go get -tags bn256 github.com/herumi/bls/ffi/go/bls
-
-ADD BASE_VERSION .
