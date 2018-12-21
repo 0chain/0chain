@@ -34,4 +34,7 @@ type RoundI interface {
 	SetState(state int)
 	AddVRFShare(share *VRFShare) bool
 	GetVRFShares() map[string]*VRFShare
+
+	Lock()
+	Unlock()
 }
