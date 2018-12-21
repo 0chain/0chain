@@ -148,6 +148,9 @@ func (sc *StorageSmartContract) CommitBlobberConnection(t *transaction.Transacti
 	buffBlobberAllocation := blobberAllocation.Encode()
 	sc.DB.PutNode(blobberAllocation.GetKey(), buffBlobberAllocation)
 
+	allocationObj.UsedSize += commitConnection.WriteMarker.Size
+	sc.DB.PutNode(allocationObj.GetKey(), allocationObj.Encode())
+
 	return string(buffBlobberAllocation), nil
 }
 
