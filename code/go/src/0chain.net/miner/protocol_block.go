@@ -142,7 +142,14 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		for _, ub := range blocks {
 			for _, txn := range ub.Txns {
 				rcount++
-				if txnProcessor(ctx, mc.txnToReuse(txn)) {
+				rtxn := mc.txnToReuse(txn)
+				needsVerification := (ub.MinerID != node.Self.GetKey() || ub.GetVerificationStatus() != block.VerificationSuccessful)
+				if needsVerification {
+					if err := rtxn.ValidateWrtTime(ctx, ub.CreationDate); err != nil {
+						continue
+					}
+				}
+				if txnProcessor(ctx, rtxn) {
 					if idx == mc.BlockSize || byteSize >= mc.MaxByteSize {
 						break
 					}
@@ -154,7 +161,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		}
 		reusedTxns = idx - blockSize
 		blockSize = idx
-		Logger.Info("generate block (reused txns)", zap.Int64("round", b.Round), zap.Int("ub", len(blocks)), zap.Int32("reused", reusedTxns), zap.Int("rcount", rcount), zap.Int32("blockSize", idx))
+		Logger.Error("generate block (reused txns)", zap.Int64("round", b.Round), zap.Int("ub", len(blocks)), zap.Int32("reused", reusedTxns), zap.Int("rcount", rcount), zap.Int32("blockSize", idx))
 	}
 	if blockSize != mc.BlockSize && byteSize < mc.MaxByteSize {
 		if !waitOver || blockSize < mc.MinBlockSize {
