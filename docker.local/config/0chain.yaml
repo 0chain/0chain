@@ -7,7 +7,7 @@ logging:
   memlog: true
 
 development:
-  state: false
+  state: true
   dkg: true
   txn_generation:
     wallets: 500

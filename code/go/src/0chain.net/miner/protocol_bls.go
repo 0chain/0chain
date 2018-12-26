@@ -167,13 +167,14 @@ func WaitForDKGShares() bool {
 		ticker := time.NewTicker(5 * chain.DELTA)
 		defer ticker.Stop()
 		for ts := range ticker.C {
-			sendDKG()
-			Logger.Info("waiting for sufficient DKG Shares", zap.Time("ts", ts))
 			if HasAllDKGSharesReceived() {
 				Logger.Debug("Received sufficient DKG Shares. Sending DKG one moretime and going quiet", zap.Time("ts", ts))
 				sendDKG()
 				break
 			}
+			Logger.Info("waiting for sufficient DKG Shares", zap.Int("Received so far", len(recSharesMap)), zap.Time("ts", ts))
+			sendDKG()
+
 		}
 	}
 
