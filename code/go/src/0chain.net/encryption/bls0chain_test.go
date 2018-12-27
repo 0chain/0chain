@@ -112,3 +112,16 @@ func BenchmarkBLS0ChainPairMessageHash(b *testing.B) {
 		sigScheme.PairMessageHash(expectedHash)
 	}
 }
+
+func BenchmarkBLS0ChainG1HashToPoint(b *testing.B) {
+	bls0chainParams := &BLS0ChainParams{Params: TestParams, SharedG: TestSharedG}
+	sigScheme := NewBLS0ChainScheme(bls0chainParams)
+	err := sigScheme.GenerateKeys()
+	if err != nil {
+		panic(err)
+	}
+	rawHash := RawHash("bls-0chain-signature-scheme")
+	for i := 0; i < b.N; i++ {
+		sigScheme.pairing.NewG1().SetFromHash(rawHash)
+	}
+}
