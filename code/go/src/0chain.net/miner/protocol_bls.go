@@ -5,6 +5,7 @@ import (
 	"math"
 	"math/rand"
 	"strconv"
+	"sync"
 	"time"
 
 	"0chain.net/chain"
@@ -35,6 +36,8 @@ var k, n int
 var IsDkgDone bool = false
 var selfInd int
 
+var mutex = &sync.RWMutex{}
+
 // StartDKG - starts the DKG process
 func StartDKG(ctx context.Context) {
 
@@ -45,18 +48,19 @@ func StartDKG(ctx context.Context) {
 	isDkgEnabled = config.DevConfiguration.IsDkgEnabled
 	thresholdByCount := viper.GetInt("server_chain.block.consensus.threshold_by_count")
 	k = int(math.Ceil((float64(thresholdByCount) / 100) * float64(mc.Miners.Size())))
-
-	Logger.Info("DKG Setup", zap.Int("K", k), zap.Bool("DKG Enabled", isDkgEnabled))
 	n = mc.Miners.Size()
+
+	Logger.Info("DKG Setup", zap.Int("K", k), zap.Int("N", n), zap.Bool("DKG Enabled", isDkgEnabled))
+
 	self := node.GetSelfNode(ctx)
 	selfInd = self.SetIndex
 	waitForNetworkToBeReady(ctx)
 	if isDkgEnabled {
-		minerShares = make(map[string]bls.Key, len(m2m.Nodes))
+		Logger.Info("Starting DKG...")
 
 		dg = bls.MakeDKG(k, n)
+		minerShares = make(map[string]bls.Key, len(m2m.Nodes))
 
-		Logger.Info("Starting DKG...")
 		for _, node := range m2m.Nodes {
 			forID := bls.ComputeIDdkg(node.SetIndex)
 			dg.ID = forID
@@ -188,14 +192,18 @@ func HasAllDKGSharesReceived() bool {
 		Logger.Info("DKG not enabled. So, giving a go ahead")
 		return true
 	}
+	mutex.RLock()
+	defer mutex.RUnlock()
 	//ToDo: Need parameterization
-	if len(recSharesMap) >= dg.N {
+	if len(recSharesMap) >= n {
 		return true
 	}
 	return false
 }
 
 func addToRecSharesMap(nodeID int, share string) {
+	mutex.Lock()
+	defer mutex.Unlock()
 	if recSharesMap == nil {
 		mc := GetMinerChain()
 
