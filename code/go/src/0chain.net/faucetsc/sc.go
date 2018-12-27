@@ -25,11 +25,13 @@ const (
 
 //default values
 var (
-	POUR_LIMIT       = 10
-	PERIODIC_LIMIT   = 50
-	GLOBAL_LIMIT     = 10000
-	INDIVIDUAL_RESET = time.Duration(time.Hour * 2)
-	GLOBAL_RESET     = time.Duration(time.Hour * 24)
+	POUR_LIMIT                = 10
+	PERIODIC_LIMIT            = 50
+	GLOBAL_LIMIT              = 10000
+	INDIVIDUAL_RESET          = time.Duration(time.Hour * 2).String()
+	GLOBAL_RESET              = time.Duration(time.Hour * 24).String()
+	INDIVIDUAL_RESET_DURATION = time.Duration(time.Hour * 2)
+	GLOBAL_RESET_DURATION     = time.Duration(time.Hour * 24)
 )
 
 func (un *UserNode) ValidRequest(t *transaction.Transaction, balances c_state.StateContextI, gn *GlobalNode) (bool, error) {
@@ -72,10 +74,10 @@ func (fc *FaucetSmartContract) UpdateLimit(t *transaction.Transaction, inputData
 		gn.Global_limit = newRequest.Global_limit
 	}
 	if newRequest.Individual_reset > 0 {
-		gn.Individual_reset = time.Duration(time.Hour * newRequest.Individual_reset)
+		gn.Individual_reset = time.Duration(time.Hour * newRequest.Individual_reset).String()
 	}
 	if newRequest.Global_rest > 0 {
-		gn.Global_reset = time.Duration(time.Hour * newRequest.Global_rest)
+		gn.Global_reset = time.Duration(time.Hour * newRequest.Global_rest).String()
 	}
 	fc.DB.PutNode(gn.GetKey(), gn.Encode())
 	buff, _ := json.Marshal(gn)
@@ -91,9 +93,17 @@ func (fc *FaucetSmartContract) PersonalPeriodicLimit(t *transaction.Transaction,
 	var resp PeriodicResponse
 	resp.Start = un.StartTime
 	resp.Used = un.Used
-	//resp.Restart = (gn.Individual_reset - time.Now().Sub(un.StartTime)).String()
-	resp.Restart = (gn.Individual_reset - common.ToTime(t.CreationDate).Sub(un.StartTime)).String()
-	resp.Allowed = gn.Periodic_limit - un.Used
+	ir, err := time.ParseDuration(gn.Individual_reset)
+	if err != nil {
+		ir = INDIVIDUAL_RESET_DURATION
+	}
+	resp.Restart = (ir - common.ToTime(t.CreationDate).Sub(un.StartTime)).String()
+	if gn.Periodic_limit > un.Used {
+		resp.Allowed = gn.Periodic_limit - un.Used
+	} else {
+		resp.Allowed = 0
+	}
+
 	buff, _ := json.Marshal(resp)
 	return string(buff), nil
 }
@@ -102,8 +112,17 @@ func (fc *FaucetSmartContract) GlobalPerodicLimit(t *transaction.Transaction, gn
 	var resp PeriodicResponse
 	resp.Start = gn.StartTime
 	resp.Used = gn.Used
-	resp.Restart = (gn.Global_reset - common.ToTime(t.CreationDate).Sub(gn.StartTime)).String()
-	resp.Allowed = gn.Global_limit - gn.Used
+	gr, err := time.ParseDuration(gn.Global_reset)
+	if err != nil {
+		gr = GLOBAL_RESET_DURATION
+	}
+	resp.Restart = (gr - common.ToTime(t.CreationDate).Sub(gn.StartTime)).String()
+	if gn.Global_limit > gn.Used {
+		resp.Allowed = gn.Global_limit - gn.Used
+	} else {
+		resp.Allowed = 0
+	}
+
 	buff, _ := json.Marshal(resp)
 	return string(buff), nil
 }
@@ -147,7 +166,15 @@ func (fc *FaucetSmartContract) getUserVariables(t *transaction.Transaction, gn *
 	if err == nil {
 		err = un.Decode(userBytes)
 		if err == nil {
-			if common.ToTime(t.CreationDate).Sub(un.StartTime) >= gn.Individual_reset || common.ToTime(t.CreationDate).Sub(un.StartTime) >= gn.Global_reset {
+			ir, ierr := time.ParseDuration(gn.Individual_reset)
+			if ierr != nil {
+				ir = INDIVIDUAL_RESET_DURATION
+			}
+			gr, gerr := time.ParseDuration(gn.Global_reset)
+			if gerr != nil {
+				gr = GLOBAL_RESET_DURATION
+			}
+			if common.ToTime(t.CreationDate).Sub(un.StartTime) >= ir || common.ToTime(t.CreationDate).Sub(un.StartTime) >= gr {
 				un.StartTime = common.ToTime(t.CreationDate)
 				un.Used = 0
 			}
@@ -166,7 +193,11 @@ func (fc *FaucetSmartContract) getGlobalVariables(t *transaction.Transaction) *G
 	if err == nil {
 		err = gn.Decode(globalBytes)
 		if err == nil {
-			if common.ToTime(t.CreationDate).Sub(gn.StartTime) >= gn.Global_reset {
+			gr, err := time.ParseDuration(gn.Global_reset)
+			if err != nil {
+				gr = GLOBAL_RESET_DURATION
+			}
+			if common.ToTime(t.CreationDate).Sub(gn.StartTime) >= gr {
 				gn.StartTime = common.ToTime(t.CreationDate)
 				gn.Used = 0
 			}
