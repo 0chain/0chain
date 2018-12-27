@@ -1,6 +1,7 @@
 package encryption
 
 import (
+	"encoding/hex"
 	"errors"
 	"io"
 )
@@ -19,4 +20,19 @@ type SignatureScheme interface {
 
 	Sign(hash interface{}) (string, error)
 	Verify(signature string, hash string) (bool, error)
+}
+
+func getRawHash(hash interface{}) ([]byte, error) {
+	switch hashImpl := hash.(type) {
+	case []byte:
+		return hashImpl, nil
+	case string:
+		decoded, err := hex.DecodeString(hashImpl)
+		if err != nil {
+			return nil, err
+		}
+		return decoded, nil
+	default:
+		panic("unknown hash type")
+	}
 }
