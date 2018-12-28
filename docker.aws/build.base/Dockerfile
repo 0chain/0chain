@@ -2,6 +2,7 @@ FROM iron/go:dev
 RUN apk add --update --no-cache build-base linux-headers git cmake bash perl grep
 RUN apk add --update --no-cache zlib zlib-dev bzip2 bzip2-dev snappy snappy-dev lz4 lz4-dev jemalloc jemalloc-dev zstd
 RUN apk add --update --no-cache gmp-dev openssl-dev
+RUN apk add --update --no-cache autoconf automake bison flex libtool
 
 # Install golang dep
 RUN curl -fsSL -o /usr/local/bin/dep https://github.com/golang/dep/releases/download/v0.5.0/dep-linux-amd64 && \
