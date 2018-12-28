@@ -343,6 +343,7 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round) {
 
 			return
 		}
+		beg := time.Now()
 		recSig := make([]string, 0)
 		recFrom := make([]string, 0)
 		for _, share := range shares {
@@ -355,6 +356,14 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round) {
 		rbOutput := bs.CalcRandomBeacon(recSig, recFrom)
 		Logger.Debug("DKG ", zap.String("rboOutput", rbOutput), zap.Int64("Round #", mr.Number))
 		mc.computeRBO(ctx, mr, rbOutput)
+		end := time.Now()
+
+		diff := end.Sub(beg)
+
+		if diff > (10 * time.Millisecond) {
+			Logger.Info("DKG RBO Calc ***SLOW****", zap.Int64("Round", mr.GetRoundNumber()), zap.Int("# of shares", len(shares)), zap.Any("Time taken", diff))
+
+		}
 	}
 }
 
@@ -369,7 +378,7 @@ func (mc *Chain) computeRBO(ctx context.Context, mr *Round, rbo string) {
 	if pr != nil {
 		mc.computeRoundRandomSeed(ctx, pr, mr, rbo)
 	} else {
-		Logger.Error("pr is null! Why? Dying?")
+		Logger.Error("pr is null! Why?")
 	}
 
 }

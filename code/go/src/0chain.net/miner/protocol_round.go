@@ -562,6 +562,7 @@ func (mc *Chain) handleNoProgress(ctx context.Context) {
 		}
 	} else {
 		// TODO: it's likely the VRF issue
+		Logger.Error("No proposed blocks. Is it VRF?")
 	}
 }
 
