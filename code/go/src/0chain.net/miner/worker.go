@@ -1,12 +1,17 @@
 package miner
 
 import (
+	"bytes"
 	"context"
+	"runtime/pprof"
 	"time"
 
+	"0chain.net/common"
+	"0chain.net/logging"
 	. "0chain.net/logging"
 	"0chain.net/node"
 
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
@@ -65,6 +70,7 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 			return
 		case <-ticker.C:
 			if cround == mc.CurrentRound {
+				round := mc.GetMinerRound(cround)
 				tickerCount++
 				n := node.Self
 				common.LogRuntime(logging.MemUsage, zap.Any(n.Description, n.SetIndex))
@@ -76,7 +82,7 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 					pprof.Lookup("goroutine").WriteTo(buf, 1)
 					logging.Logger.Info("runtime", zap.String("Go routine output", buf.String()))
 				}
-				logging.Logger.Info("Round timeout", zap.Any("Number", r.Number), zap.Any("round_random_seed", cround.RandomSeed), zap.Any("VRF_shares", cround.GetVRFShares()))
+				logging.Logger.Info("Round timeout", zap.Any("Number", round.Number), zap.Any("round_random_seed", round.RandomSeed), zap.Any("VRF_shares", round.GetVRFShares()))
 				protocol.HandleRoundTimeout(ctx, tickerCount)
 			} else {
 				cround = mc.CurrentRound
