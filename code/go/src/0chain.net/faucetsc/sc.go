@@ -25,16 +25,14 @@ const (
 
 //default values
 var (
-	POUR_LIMIT                = 10
-	PERIODIC_LIMIT            = 50
-	GLOBAL_LIMIT              = 10000
-	INDIVIDUAL_RESET          = time.Duration(time.Hour * 2).String()
-	GLOBAL_RESET              = time.Duration(time.Hour * 24).String()
-	INDIVIDUAL_RESET_DURATION = time.Duration(time.Hour * 2)
-	GLOBAL_RESET_DURATION     = time.Duration(time.Hour * 24)
+	POUR_LIMIT       = 10
+	PERIODIC_LIMIT   = 50
+	GLOBAL_LIMIT     = 10000
+	INDIVIDUAL_RESET = time.Duration(time.Hour * 2).String()
+	GLOBAL_RESET     = time.Duration(time.Hour * 24).String()
 )
 
-func (un *UserNode) ValidRequest(t *transaction.Transaction, balances c_state.StateContextI, gn *GlobalNode) (bool, error) {
+func (un *UserNode) ValidPourRequest(t *transaction.Transaction, balances c_state.StateContextI, gn *GlobalNode) (bool, error) {
 	smartContractBalance, err := balances.GetClientBalance(gn.ID)
 	if err != nil {
 		return false, err
@@ -95,15 +93,14 @@ func (fc *FaucetSmartContract) PersonalPeriodicLimit(t *transaction.Transaction,
 	resp.Used = un.Used
 	ir, err := time.ParseDuration(gn.Individual_reset)
 	if err != nil {
-		ir = INDIVIDUAL_RESET_DURATION
+		ir, _ = time.ParseDuration(INDIVIDUAL_RESET)
 	}
 	resp.Restart = (ir - common.ToTime(t.CreationDate).Sub(un.StartTime)).String()
-	if gn.Periodic_limit > un.Used {
+	if gn.Periodic_limit >= un.Used {
 		resp.Allowed = gn.Periodic_limit - un.Used
 	} else {
 		resp.Allowed = 0
 	}
-
 	buff, _ := json.Marshal(resp)
 	return string(buff), nil
 }
@@ -114,7 +111,7 @@ func (fc *FaucetSmartContract) GlobalPerodicLimit(t *transaction.Transaction, gn
 	resp.Used = gn.Used
 	gr, err := time.ParseDuration(gn.Global_reset)
 	if err != nil {
-		gr = GLOBAL_RESET_DURATION
+		gr, _ = time.ParseDuration(GLOBAL_RESET)
 	}
 	resp.Restart = (gr - common.ToTime(t.CreationDate).Sub(gn.StartTime)).String()
 	if gn.Global_limit > gn.Used {
@@ -129,7 +126,8 @@ func (fc *FaucetSmartContract) GlobalPerodicLimit(t *transaction.Transaction, gn
 
 func (fc *FaucetSmartContract) Pour(t *transaction.Transaction, inputData []byte, balances c_state.StateContextI, gn *GlobalNode) (string, error) {
 	user := fc.getUserVariables(t, gn)
-	ok, err := user.ValidRequest(t, balances, gn)
+	ok, err := user.ValidPourRequest(t, balances, gn)
+
 	if ok {
 		transfer := state.NewTransfer(t.ToClientID, t.ClientID, state.Balance(t.Value))
 		balances.AddTransfer(transfer)
@@ -168,11 +166,11 @@ func (fc *FaucetSmartContract) getUserVariables(t *transaction.Transaction, gn *
 		if err == nil {
 			ir, ierr := time.ParseDuration(gn.Individual_reset)
 			if ierr != nil {
-				ir = INDIVIDUAL_RESET_DURATION
+				ir, _ = time.ParseDuration(INDIVIDUAL_RESET)
 			}
 			gr, gerr := time.ParseDuration(gn.Global_reset)
 			if gerr != nil {
-				gr = GLOBAL_RESET_DURATION
+				gr, _ = time.ParseDuration(GLOBAL_RESET)
 			}
 			if common.ToTime(t.CreationDate).Sub(un.StartTime) >= ir || common.ToTime(t.CreationDate).Sub(un.StartTime) >= gr {
 				un.StartTime = common.ToTime(t.CreationDate)
@@ -195,7 +193,7 @@ func (fc *FaucetSmartContract) getGlobalVariables(t *transaction.Transaction) *G
 		if err == nil {
 			gr, err := time.ParseDuration(gn.Global_reset)
 			if err != nil {
-				gr = GLOBAL_RESET_DURATION
+				gr, _ = time.ParseDuration(GLOBAL_RESET)
 			}
 			if common.ToTime(t.CreationDate).Sub(gn.StartTime) >= gr {
 				gn.StartTime = common.ToTime(t.CreationDate)
