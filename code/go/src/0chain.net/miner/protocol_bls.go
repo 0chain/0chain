@@ -360,7 +360,7 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round) {
 
 		diff := end.Sub(beg)
 
-		if diff > (10 * time.Millisecond) {
+		if diff > (time.Duration(k) * time.Millisecond) {
 			Logger.Info("DKG RBO Calc ***SLOW****", zap.Int64("Round", mr.GetRoundNumber()), zap.Int("# of shares", len(shares)), zap.Any("Time taken", diff))
 
 		}
