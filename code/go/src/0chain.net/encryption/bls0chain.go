@@ -1,8 +1,10 @@
 package encryption
 
 import (
+	"bufio"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"io"
 
 	"github.com/Nik-U/pbc"
@@ -78,22 +80,47 @@ func (b0 *BLS0ChainScheme) GenerateKeys() error {
 
 //ReadKeys - implement interface
 func (b0 *BLS0ChainScheme) ReadKeys(reader io.Reader) error {
+	scanner := bufio.NewScanner(reader)
+	result := scanner.Scan()
+	if result == false {
+		return ErrKeyRead
+	}
+	publicKey := scanner.Text()
+	b0.SetPublicKey(publicKey)
+	result = scanner.Scan()
+	if result == false {
+		return ErrKeyRead
+	}
+	privateKey := scanner.Text()
+	privateKeyBytes, err := hex.DecodeString(privateKey)
+	if err != nil {
+		return err
+	}
+	b0.privateKey = b0.pairing.NewZr().SetBytes(privateKeyBytes)
 	return nil
 }
 
 //WriteKeys - implement interface
 func (b0 *BLS0ChainScheme) WriteKeys(writer io.Writer) error {
-	return nil
+	publicKey := hex.EncodeToString(b0.publicKey.Bytes())
+	privateKey := hex.EncodeToString(b0.privateKey.Bytes())
+	_, err := fmt.Fprintf(writer, "%v\n%v\n", publicKey, privateKey)
+	return err
 }
 
 //SetPublicKey - implement interface
 func (b0 *BLS0ChainScheme) SetPublicKey(publicKey string) error {
+	publicKeyBytes, err := hex.DecodeString(publicKey)
+	if err != nil {
+		return err
+	}
+	b0.publicKey = b0.pairing.NewG2().SetBytes(publicKeyBytes)
 	return nil
 }
 
 //GetPublicKey - implement interface
 func (b0 *BLS0ChainScheme) GetPublicKey() string {
-	return ""
+	return hex.EncodeToString(b0.publicKey.Bytes())
 }
 
 //Sign - implement interface

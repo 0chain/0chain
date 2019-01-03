@@ -40,11 +40,7 @@ func (ed *ED25519Scheme) ReadKeys(reader io.Reader) error {
 		return ErrKeyRead
 	}
 	publicKey := scanner.Text()
-	publicKeyBytes, err := hex.DecodeString(publicKey)
-	if err != nil {
-		return err
-	}
-	ed.publicKey = publicKeyBytes
+	ed.SetPublicKey(publicKey)
 	result = scanner.Scan()
 	if result == false {
 		return ErrKeyRead

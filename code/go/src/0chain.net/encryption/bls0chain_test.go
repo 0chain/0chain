@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"os"
 	"testing"
 )
 
@@ -38,6 +39,28 @@ func TestBLS0ChainGenerateKeys(t *testing.T) {
 	bls0chainParams := &BLS0ChainParams{Params: TestParams, SharedG: TestSharedG}
 	b0scheme := NewBLS0ChainScheme(bls0chainParams)
 	b0scheme.GenerateKeys()
+}
+
+func TestBLS0ChainWriteKeys(t *testing.T) {
+	bls0chainParams := &BLS0ChainParams{Params: TestParams, SharedG: TestSharedG}
+	sigScheme := NewBLS0ChainScheme(bls0chainParams)
+	err := sigScheme.GenerateKeys()
+	if err != nil {
+		panic(err)
+	}
+	sigScheme.WriteKeys(os.Stdout)
+}
+
+func TestBLS0ChainReadKeys(t *testing.T) {
+	str := `16ad585d7ba4920de26c82a3fcffcb76650648fb7f2f42aa3ca3f8e58f32f6d4f6dfab1169c8c2049b45a42d2b6f7e95a8b601cd02a08ae8218e41aae80a9dc14d674cfd0f6b3eec35d87d031c1f2b2020c3b02c4c2de13af94c26859edd7bb647015b484603a3e330ee02a4ba50e4a346200fbc0a28ade80592463f12d6887f
+5bb93c450e8bcb4b4b50799e70dfe10c60e7ef52`
+	reader := bytes.NewReader([]byte(str))
+	bls0chainParams := &BLS0ChainParams{Params: TestParams, SharedG: TestSharedG}
+	sigScheme := NewBLS0ChainScheme(bls0chainParams)
+	err := sigScheme.ReadKeys(reader)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func BenchmarkBLS0ChainGenerateKeys(b *testing.B) {

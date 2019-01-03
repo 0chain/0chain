@@ -3,6 +3,7 @@ package encryption
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"testing"
 )
 
@@ -14,13 +15,21 @@ func TestED25519GenerateKeys(t *testing.T) {
 	}
 }
 
-func BenchmarkED25519GenerateKeys(b *testing.B) {
+func TestED25519ChainWriteKeys(t *testing.T) {
 	sigScheme := NewED25519Scheme()
-	for i := 0; i < b.N; i++ {
-		err := sigScheme.GenerateKeys()
-		if err != nil {
-			panic(err)
-		}
+	err := sigScheme.GenerateKeys()
+	if err != nil {
+		panic(err)
+	}
+	sigScheme.WriteKeys(os.Stdout)
+}
+
+func TestED25519ReadKeys(t *testing.T) {
+	reader := bytes.NewBuffer([]byte("e065fc02aaf7aaafaebe5d2dedb9c7c1d63517534644434b813cb3bdab0f94a0\naa3e1ae2290987959dc44e43d138c81f15f93b2d56d7a06c51465f345df1a8a6e065fc02aaf7aaafaebe5d2dedb9c7c1d63517534644434b813cb3bdab0f94a0"))
+	sigScheme := NewED25519Scheme()
+	err := sigScheme.ReadKeys(reader)
+	if err != nil {
+		panic(err)
 	}
 }
 
@@ -37,6 +46,16 @@ func TestED25519SignAndVerify(t *testing.T) {
 		fmt.Printf("Verification failed\n")
 	} else {
 		fmt.Printf("Signing Verification successful\n")
+	}
+}
+
+func BenchmarkED25519GenerateKeys(b *testing.B) {
+	sigScheme := NewED25519Scheme()
+	for i := 0; i < b.N; i++ {
+		err := sigScheme.GenerateKeys()
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 
