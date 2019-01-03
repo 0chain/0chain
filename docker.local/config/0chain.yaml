@@ -8,7 +8,7 @@ logging:
 
 development:
   state: true
-  dkg: false 
+  dkg: true
   txn_generation:
     wallets: 500
     transactions: 10

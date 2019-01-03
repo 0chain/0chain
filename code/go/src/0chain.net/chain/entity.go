@@ -469,7 +469,19 @@ func (c *Chain) ValidGenerator(r round.RoundI, b *block.Block) bool {
 	if miner == nil {
 		return false
 	}
-	return c.IsRoundGenerator(r, miner)
+
+	isGen := c.IsRoundGenerator(r, miner)
+	if !isGen {
+		//This is a Byzantine condition?
+		Logger.Info("Received a block from non-generator", zap.Int("miner #", miner.SetIndex))
+		gens := c.GetGenerators(r)
+
+		Logger.Info("Generators are: ", zap.Int64("round#", r.GetRoundNumber()))
+		for _, n := range gens {
+			Logger.Info("generator", zap.Int("Node#", n.SetIndex))
+		}
+	}
+	return isGen
 }
 
 /*GetNotarizationThresholdCount - gives the threshold count for block to be notarized*/
