@@ -50,10 +50,10 @@ func (p *Pool) DrainPool(fromClientID, toClientID datastore.Key, value state.Bal
 }
 
 func (p *Pool) FillPool(txn *transaction.Transaction) {
-	p.balance += txn.Value
+	p.balance += state.Balance(txn.Value)
 }
 
 func DigPool(id datastore.Key, txn *transaction.Transaction) *Pool {
-	p := &Pool{id, txn.Value}
+	p := &Pool{id, state.Balance(txn.Value)}
 	return p
 }
