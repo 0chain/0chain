@@ -7,8 +7,8 @@ logging:
   memlog: true
 
 development:
-  state: false
-  dkg: false
+  state: true
+  dkg: true
   txn_generation:
     wallets: 500
     transactions: 10

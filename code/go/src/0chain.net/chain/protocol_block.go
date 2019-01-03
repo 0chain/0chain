@@ -66,6 +66,10 @@ func (c *Chain) reachedNotarization(bvt []*block.VerificationTicket) bool {
 	if c.ThresholdByCount > 0 {
 		numSignatures := len(bvt)
 		if numSignatures < c.GetNotarizationThresholdCount() {
+			//ToDo: Remove this comment
+			Logger.Info("not reached notarization",
+				zap.Int("Threshold", c.GetNotarizationThresholdCount()),
+				zap.Int("number of signatures", numSignatures))
 			return false
 		}
 	}

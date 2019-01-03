@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"0chain.net/logging"
 	. "0chain.net/logging"
 
 	"go.uber.org/zap"
@@ -64,7 +65,22 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 			return
 		case <-ticker.C:
 			if cround == mc.CurrentRound {
+				round := mc.GetMinerRound(cround)
 				tickerCount++
+
+				//Something bad happened.
+				/*
+					n := node.Self
+					common.LogRuntime(logging.MemUsage, zap.Any(n.Description, n.SetIndex))
+					buf := new(bytes.Buffer)
+					pprof.Lookup("goroutine").WriteTo(buf, 1)
+					logging.Logger.Info("Round timeout", zap.String("Go routine output", buf.String()))
+				*/
+
+				logging.Logger.Info("Round timeout", zap.Any("Number", round.Number),
+					zap.Int("#of VRF_shares", len(round.GetVRFShares())),
+					zap.Int("#of proposedBlocks", len(round.GetProposedBlocks())),
+					zap.Int("#of notarizedBlocks", len(round.GetNotarizedBlocks())))
 				protocol.HandleRoundTimeout(ctx, tickerCount)
 			} else {
 				cround = mc.CurrentRound

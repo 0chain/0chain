@@ -281,7 +281,7 @@ func testRecoverGrpSignature(t int, n int, test *testing.T) {
 	//partyMap has the partyID and its corresponding Grp sign share
 	partyMap := make(map[PartyID]Sign, n)
 
-	for rNumber <= 1000 {
+	for rNumber <= 100000 {
 		fmt.Printf("*Starting round %v)\n", rNumber)
 		for i := 0; i < n; i++ {
 
@@ -333,7 +333,7 @@ func testRecoverGrpSignature(t int, n int, test *testing.T) {
 }
 
 /* TestRecGrpSign - The test calls testRecoverGrpSignature(t, n, test) which has the test for Gp Sign*/
-func TestRecGrpSign(test *testing.T) { testRecoverGrpSignature(2, 3, test) }
+func TestRecGrpSign(test *testing.T) { testRecoverGrpSignature(7, 10, test) }
 
 /*calcRbo - To calculate the Gp Sign with any k number of unique Party IDs and its Bls signature share*/
 func calcRbo(allPartyIDs []PartyID, t int, partyMap map[PartyID]Sign) (threshPartys []PartyID, threshSigs []Sign) {
