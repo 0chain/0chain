@@ -82,6 +82,58 @@ type ChallengeResponse struct {
 // 	return "Challenge Passed by Blobber", nil
 // }
 
+func (sc *StorageSmartContract) CommitBlobberRead(t *transaction.Transaction, input []byte) (string, error) {
+	var commitRead ReadConnection
+	err := commitRead.Decode(input)
+	if err != nil {
+		return "", err
+	}
+
+	allocationObj := &StorageAllocation{}
+	allocationObj.ID = commitRead.ReadMarker.AllocationID
+	allocationBytes, err := sc.DB.GetNode(allocationObj.GetKey())
+
+	// allocationObj, ok := allocationRequestMap[openConnection.AllocationID]
+	if allocationBytes == nil || err != nil {
+		return "", common.NewError("invalid_parameters", "Invalid allocation ID")
+	}
+
+	err = allocationObj.Decode(allocationBytes)
+	if allocationBytes == nil || err != nil {
+		return "", common.NewError("invalid_parameters", "Invalid allocation ID. Failed to decode from DB")
+	}
+
+	blobberAllocation := &BlobberAllocation{}
+	blobberAllocation.BlobberID = t.ClientID
+	blobberAllocation.AllocationID = commitRead.ReadMarker.AllocationID
+
+	blobberAllocationBytes, err := sc.DB.GetNode(blobberAllocation.GetKey())
+	if blobberAllocationBytes == nil || err != nil {
+		return "", common.NewError("invalid_parameters", "Blobber is not part of the allocation. Could not find blobber")
+	}
+
+	err = blobberAllocation.Decode(blobberAllocationBytes)
+	if err != nil {
+		return "", common.NewError("blobber_allocation_decode", "Blobber Allocation decode error "+err.Error())
+	}
+
+	lastBlobberClientReadBytes, err := sc.DB.GetNode(commitRead.GetKey())
+	if err != nil {
+		return "", common.NewError("rm_read_error", "Error reading the read marker for the blobber and client")
+	}
+	lastCommittedRM := &ReadConnection{}
+	if lastBlobberClientReadBytes != nil {
+		lastCommittedRM.Decode(lastBlobberClientReadBytes)
+	}
+
+	ok := commitRead.ReadMarker.Verify(lastCommittedRM.ReadMarker)
+	if !ok {
+		return "", common.NewError("invalid_read_marker", "Invalid read marker.")
+	}
+	sc.DB.PutNode(commitRead.GetKey(), input)
+	return "success", nil
+}
+
 func (sc *StorageSmartContract) CommitBlobberConnection(t *transaction.Transaction, input []byte) (string, error) {
 	var commitConnection BlobberCloseConnection
 	err := json.Unmarshal(input, &commitConnection)
@@ -288,6 +340,14 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction, funcName str
 	// 	}
 	// 	return resp, nil
 	// }
+
+	if funcName == "read_redeem" {
+		resp, err := sc.CommitBlobberRead(t, input)
+		if err != nil {
+			return "", err
+		}
+		return resp, nil
+	}
 
 	if funcName == "commit_connection" {
 		resp, err := sc.CommitBlobberConnection(t, input)
