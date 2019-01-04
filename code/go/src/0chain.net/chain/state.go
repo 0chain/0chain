@@ -55,21 +55,12 @@ func (c *Chain) ComputeOrSyncState(ctx context.Context, b *block.Block) error {
 	defer lock.Unlock()
 	err := c.computeState(ctx, b)
 	if err != nil {
-		pb := b.PrevBlock
-		if pb == nil {
-			return ErrPreviousBlockUnavailable
-		}
-		if bytes.Compare(b.ClientStateHash, pb.ClientStateHash) == 0 {
-			b.SetStateStatus(block.StateSynched) // global state doesn't need any sync
-			return nil
-		}
 		bsc, err := c.getBlockStateChange(b)
 		if err != nil {
 			return err
-		} else {
-			if bsc != nil {
-				c.applyBlockStateChange(b, bsc)
-			}
+		}
+		if bsc != nil {
+			c.applyBlockStateChange(b, bsc)
 		}
 		if !b.IsStateComputed() {
 			Logger.Error("compute state - state change error", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Error(err))
@@ -93,7 +84,7 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 				Logger.Error("compute state - previous block not available", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
 			} else {
 				if config.DevConfiguration.State {
-					Logger.Info("compute state - previous block not available", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
+					Logger.Error("compute state - previous block not available", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
 				}
 			}
 			return ErrPreviousBlockUnavailable
@@ -114,7 +105,7 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 					Logger.Error("compute state - error computing previous state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Error(err))
 				} else {
 					if config.DevConfiguration.State {
-						Logger.Info("compute state - error computing previous state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Error(err))
+						Logger.Error("compute state - error computing previous state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Error(err))
 					}
 				}
 				return err
@@ -222,7 +213,7 @@ func (c *Chain) GetBlockStateChange(b *block.Block) {
 
 func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) {
 	if b.PrevBlock == nil {
-		return nil, nil
+		return nil, ErrPreviousBlockUnavailable
 	}
 	if bytes.Compare(b.ClientStateHash, b.PrevBlock.ClientStateHash) == 0 {
 		b.SetStateStatus(block.StateSynched)
@@ -287,6 +278,10 @@ func (c *Chain) applyBlockStateChange(b *block.Block, bsc *block.StateChange) er
 	if b.ClientState == nil {
 		b.CreateState(bsc.GetNodeDB())
 	}
+
+	c.stateMutex.Lock()
+	defer c.stateMutex.Unlock()
+
 	err := b.ClientState.MergeDB(bsc.GetNodeDB(), bsc.GetRoot().GetHashBytes())
 	if err != nil {
 		Logger.Error("apply block state change - error merging", zap.Int64("round", b.Round), zap.String("block", b.Hash))
@@ -370,10 +365,8 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 	txn := sctx.GetTransaction()
 	fs, err := c.getState(clientState, fromClient)
 	if !isValid(err) {
-		if config.DevConfiguration.State {
-			Logger.Error("transfer amount - client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
-		}
 		if state.DebugTxn() {
+			Logger.Error("transfer amount - client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
 			for _, txn := range b.Txns {
 				if txn == nil {
 					break
@@ -391,10 +384,8 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 	}
 	ts, err := c.getState(clientState, toClient)
 	if !isValid(err) {
-		if config.DevConfiguration.State {
-			Logger.Error("transfer amount - to_client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
-		}
 		if state.DebugTxn() {
+			Logger.Error("transfer amount - to_client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
 			for _, txn := range b.Txns {
 				if txn == nil {
 					break

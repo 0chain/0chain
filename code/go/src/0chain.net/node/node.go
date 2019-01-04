@@ -294,7 +294,7 @@ func (n *Node) updateSendMessageTimings() {
 		if timer.Count() == 0 {
 			continue
 		}
-		if isPullRequest(uri) {
+		if isPullRequestURI(uri) {
 			continue
 		}
 		if sizer, ok := n.SizeByURI[uri]; ok {
@@ -334,7 +334,7 @@ func (n *Node) updateRequestMessageTimings() {
 		if timer.Count() == 0 {
 			continue
 		}
-		if !isPullRequest(uri) {
+		if !isPullRequestURI(uri) {
 			continue
 		}
 		v := timer.Mean()
@@ -420,7 +420,7 @@ func serveMetricKey(uri string) string {
 	return "p?" + uri
 }
 
-func isPullRequest(uri string) bool {
+func isPullRequestURI(uri string) bool {
 	return strings.HasPrefix(uri, "p?")
 }
 
@@ -440,4 +440,9 @@ func (n *Node) getOptimalLargeMessageSendTime() float64 {
 		return p2ptime
 	}
 	return n.LargeMessageSendTime
+}
+
+func (n *Node) getTime(uri string) float64 {
+	pullTimer := n.GetTimer(uri)
+	return pullTimer.Mean()
 }

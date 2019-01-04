@@ -187,6 +187,7 @@ func initEntities() {
 	block.SetupBlockSummaryDB()
 	ememoryStorage := ememorystore.GetStorageProvider()
 	block.SetupBlockSummaryEntity(ememoryStorage)
+	block.SetupStateChange(memoryStorage)
 	round.SetupEntity(ememoryStorage)
 
 	client.SetupEntity(memoryStorage)

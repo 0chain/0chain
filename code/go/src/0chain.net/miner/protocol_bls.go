@@ -5,6 +5,7 @@ import (
 	"math"
 	"math/rand"
 	"strconv"
+	"sync"
 	"time"
 
 	"0chain.net/chain"
@@ -32,6 +33,10 @@ var roundMap = make(map[int64]map[int]string)
 
 var isDkgEnabled bool
 var k, n int
+var IsDkgDone bool = false
+var selfInd int
+
+var mutex = &sync.RWMutex{}
 
 // StartDKG - starts the DKG process
 func StartDKG(ctx context.Context) {
@@ -43,17 +48,19 @@ func StartDKG(ctx context.Context) {
 	isDkgEnabled = config.DevConfiguration.IsDkgEnabled
 	thresholdByCount := viper.GetInt("server_chain.block.consensus.threshold_by_count")
 	k = int(math.Ceil((float64(thresholdByCount) / 100) * float64(mc.Miners.Size())))
-
-	Logger.Info("DKG Setup", zap.Int("K", k), zap.Bool("DKG Enabled", isDkgEnabled))
 	n = mc.Miners.Size()
+
+	Logger.Info("DKG Setup", zap.Int("K", k), zap.Int("N", n), zap.Bool("DKG Enabled", isDkgEnabled))
+
 	self := node.GetSelfNode(ctx)
+	selfInd = self.SetIndex
 	waitForNetworkToBeReady(ctx)
 	if isDkgEnabled {
-		minerShares = make(map[string]bls.Key, len(m2m.Nodes))
+		Logger.Info("Starting DKG...")
 
 		dg = bls.MakeDKG(k, n)
+		minerShares = make(map[string]bls.Key, len(m2m.Nodes))
 
-		Logger.Info("Starting DKG...")
 		for _, node := range m2m.Nodes {
 			forID := bls.ComputeIDdkg(node.SetIndex)
 			dg.ID = forID
@@ -71,10 +78,27 @@ func StartDKG(ctx context.Context) {
 		WaitForDKGShares()
 	} else {
 		Logger.Info("DKG is not enabled. So, starting protocol")
-
+		IsDkgDone = true
 		go startProtocol()
 	}
 
+}
+
+// WaitForDkgToBeDone is a blocking function waits till DKG process is done if dkg is enabled
+func WaitForDkgToBeDone(ctx context.Context) {
+	if isDkgEnabled {
+		ticker := time.NewTicker(5 * chain.DELTA)
+		defer ticker.Stop()
+
+		for ts := range ticker.C {
+			if IsDkgDone {
+				Logger.Info("WaitForDkgToBeDone is over.")
+				break
+			} else {
+				Logger.Info("Waiting for DKG process to be over.", zap.Time("ts", ts))
+			}
+		}
+	}
 }
 
 func waitForNetworkToBeReady(ctx context.Context) {
@@ -105,6 +129,10 @@ func sendDKG() {
 	for _, n := range m2m.Nodes {
 
 		if n != nil {
+			if selfInd == n.SetIndex {
+				//we do not want to send message to ourselves.
+				continue
+			}
 			//ToDo: Optimization Instead of sending, asking for DKG share is better.
 			err := SendDKGShare(n)
 			if err != nil {
@@ -143,13 +171,14 @@ func WaitForDKGShares() bool {
 		ticker := time.NewTicker(5 * chain.DELTA)
 		defer ticker.Stop()
 		for ts := range ticker.C {
-			sendDKG()
-			Logger.Info("waiting for sufficient DKG Shares", zap.Time("ts", ts))
 			if HasAllDKGSharesReceived() {
 				Logger.Debug("Received sufficient DKG Shares. Sending DKG one moretime and going quiet", zap.Time("ts", ts))
 				sendDKG()
 				break
 			}
+			Logger.Info("waiting for sufficient DKG Shares", zap.Int("Received so far", len(recSharesMap)), zap.Time("ts", ts))
+			sendDKG()
+
 		}
 	}
 
@@ -163,14 +192,18 @@ func HasAllDKGSharesReceived() bool {
 		Logger.Info("DKG not enabled. So, giving a go ahead")
 		return true
 	}
+	mutex.RLock()
+	defer mutex.RUnlock()
 	//ToDo: Need parameterization
-	if len(recSharesMap) >= dg.N {
+	if len(recSharesMap) >= n {
 		return true
 	}
 	return false
 }
 
 func addToRecSharesMap(nodeID int, share string) {
+	mutex.Lock()
+	defer mutex.Unlock()
 	if recSharesMap == nil {
 		mc := GetMinerChain()
 
@@ -201,6 +234,7 @@ func AppendDKGSecShares(nodeID int, share string) {
 		Logger.Debug("All the shares are received ...")
 		AggregateDKGSecShares(recShares)
 		Logger.Info("DKG is done :) ...")
+		IsDkgDone = true
 		go startProtocol()
 	}
 
@@ -240,8 +274,9 @@ func AggregateDKGSecShares(recShares []string) error {
 		sec.Add(&secShares[i])
 	}
 	dg.SecKeyShareGroup = sec
-	Logger.Debug("the aggregated sec share", zap.String("sec_key_share_grp", dg.SecKeyShareGroup.GetDecString()))
-	Logger.Debug("the group public key is", zap.String("gp_public_key", dg.GpPubKey.GetHexString()))
+	Logger.Debug("the aggregated sec share",
+		zap.String("sec_key_share_grp", dg.SecKeyShareGroup.GetDecString()),
+		zap.String("gp_public_key", dg.GpPubKey.GetHexString()))
 	return nil
 }
 
@@ -264,7 +299,7 @@ func GetBlsShare(ctx context.Context, r, pr *round.Round) string {
 		Logger.Debug("The corner case for round 1 when pr is nil :", zap.Int64("round", r.GetRoundNumber()))
 		rbOutput = encryption.Hash("0chain")
 	} else {
-		rbOutput = pr.VRFOutput
+		rbOutput = strconv.FormatInt(pr.RandomSeed, 16) //pr.VRFOutput
 	}
 
 	bs.Msg = strconv.FormatInt(r.GetRoundNumber(), 10) + rbOutput
@@ -308,6 +343,7 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round) {
 
 			return
 		}
+		beg := time.Now()
 		recSig := make([]string, 0)
 		recFrom := make([]string, 0)
 		for _, share := range shares {
@@ -320,6 +356,14 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round) {
 		rbOutput := bs.CalcRandomBeacon(recSig, recFrom)
 		Logger.Debug("DKG ", zap.String("rboOutput", rbOutput), zap.Int64("Round #", mr.Number))
 		mc.computeRBO(ctx, mr, rbOutput)
+		end := time.Now()
+
+		diff := end.Sub(beg)
+
+		if diff > (time.Duration(k) * time.Millisecond) {
+			Logger.Info("DKG RBO Calc ***SLOW****", zap.Int64("Round", mr.GetRoundNumber()), zap.Int("# of shares", len(shares)), zap.Any("Time taken", diff))
+
+		}
 	}
 }
 
@@ -334,36 +378,26 @@ func (mc *Chain) computeRBO(ctx context.Context, mr *Round, rbo string) {
 	if pr != nil {
 		mc.computeRoundRandomSeed(ctx, pr, mr, rbo)
 	} else {
-		Logger.Error("pr is null! Why? Dying?")
+		Logger.Error("pr is null! Why?")
 	}
 
 }
+
 func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r *Round, rbo string) {
-
 	if mpr := pr.(*Round); mpr.IsVRFComplete() {
+		var seed int64
 		if isDkgEnabled {
-
 			useed, err := strconv.ParseUint(rbo[0:16], 16, 64)
-
 			if err != nil {
 				panic(err)
 			}
-			seed := int64(useed)
-			Logger.Info("BLS Calcualted", zap.Int64("RRS", seed), zap.Int64("Round #", r.Number))
-			r.Round.SetVRFOutput(rbo)
-			mc.setRandomSeed(ctx, r, seed)
+			seed = int64(useed)
 		} else {
-			Logger.Info("DKG disabled. Using random number")
-			r.Round.SetVRFOutput(rbo)
-			mc.setRandomSeed(ctx, r, rand.New(rand.NewSource(pr.GetRandomSeed())).Int63())
-
+			seed = rand.New(rand.NewSource(pr.GetRandomSeed())).Int63()
 		}
+		r.Round.SetVRFOutput(rbo)
+		mc.startRound(ctx, r, seed)
 	} else {
 		Logger.Error("compute round random seed - no prior value", zap.Int64("round", r.GetRoundNumber()), zap.Int("blocks", len(pr.GetProposedBlocks())))
 	}
-}
-
-func (mc *Chain) setRandomSeed(ctx context.Context, r *Round, seed int64) {
-	mc.SetRandomSeed(r.Round, seed)
-	mc.startNewRound(ctx, r)
 }

@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"os"
+	"runtime/pprof"
 	"sort"
 	"sync"
 
@@ -29,8 +31,9 @@ const (
 /*Round - data structure for the round */
 type Round struct {
 	datastore.NOIDField
-	Number     int64 `json:"number"`
-	RandomSeed int64 `json:"round_random_seed"`
+	Number        int64 `json:"number"`
+	RandomSeed    int64 `json:"round_random_seed"`
+	hasRandomSeed bool
 
 	SelfRandomFunctionValue int64 `json:"-"`
 
@@ -39,8 +42,7 @@ type Round struct {
 	// Once a round is finalized, this is the finalized block of the given round
 	Block     *block.Block `json:"-"`
 	BlockHash string       `json:"block_hash"`
-	VRFOutput string       `json:"vrf_output"`
-	//VRFOutput == rbooutput?
+	VRFOutput string       `json:"vrf_output"` //TODO: VRFOutput == rbooutput?
 	minerPerm []int
 	state     int
 
@@ -77,12 +79,19 @@ func (r *Round) GetRoundNumber() int64 {
 
 //SetRandomSeed - set the random seed of the round
 func (r *Round) SetRandomSeed(seed int64) {
+	if r.hasRandomSeed {
+		return
+	}
 	r.RandomSeed = seed
-	r.SetState(RoundVRFComplete)
+	r.setState(RoundVRFComplete)
+	r.hasRandomSeed = true
+	r.minerPerm = nil
 }
 
 //GetRandomSeed - returns the random seed of the round
 func (r *Round) GetRandomSeed() int64 {
+	r.Mutex.RLock()
+	defer r.Mutex.RUnlock()
 	return r.RandomSeed
 }
 
@@ -271,13 +280,8 @@ func SetupRoundSummaryDB() {
 	ememorystore.AddPool("roundsummarydb", db)
 }
 
-/*ComputeMinerRanks - Compute random order of n elements given the random see of the round
-NOTE: The permutation is deterministic using a PRNG that uses a starting seed. The starting seed itself
-      is crytgraphically generated random number and is not known till the threshold signature is reached.
-*/
+/*ComputeMinerRanks - Compute random order of n elements given the random seed of the round */
 func (r *Round) ComputeMinerRanks(miners *node.Pool) {
-	r.Mutex.Lock()
-	defer r.Mutex.Unlock()
 	r.minerPerm = rand.New(rand.NewSource(r.RandomSeed)).Perm(miners.Size())
 }
 
@@ -285,6 +289,10 @@ func (r *Round) ComputeMinerRanks(miners *node.Pool) {
 func (r *Round) GetMinerRank(miner *node.Node) int {
 	r.Mutex.RLock()
 	defer r.Mutex.RUnlock()
+	if r.minerPerm == nil {
+		pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
+		Logger.DPanic(fmt.Sprintf("miner ranks not computed yet: %v", r.GetState()))
+	}
 	return r.minerPerm[miner.SetIndex]
 }
 
@@ -313,14 +321,11 @@ func (r *Round) Restart() {
 
 //AddVRFShare - implement interface
 func (r *Round) AddVRFShare(share *VRFShare) bool {
-
 	r.Mutex.Lock()
 	defer r.Mutex.Unlock()
 	if _, ok := r.shares[share.party.GetKey()]; ok {
 		return false
 	}
-
-	Logger.Info("Adding Shares from minerId: " + share.party.GetKey())
 	r.setState(RoundShareVRF)
 	r.shares[share.party.GetKey()] = share
 	return true
@@ -345,4 +350,21 @@ func (r *Round) setState(state int) {
 	if state > r.state {
 		r.state = state
 	}
+}
+
+//HasRandomSeed - implement interface
+func (r *Round) HasRandomSeed() bool {
+	r.Mutex.RLock()
+	defer r.Mutex.RUnlock()
+	return r.hasRandomSeed
+}
+
+//Lock - implement interface
+func (r *Round) Lock() {
+	r.Mutex.Lock()
+}
+
+//Unlock - implement interface
+func (r *Round) Unlock() {
+	r.Mutex.Unlock()
 }

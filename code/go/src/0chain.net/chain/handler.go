@@ -125,7 +125,12 @@ func HomePageHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Chain) healthSummary(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "<div>Current Round: %v Finalized Round: %v Rollbacks: %v Round Timeouts = %v</div>", c.CurrentRound, c.LatestFinalizedBlock.Round, c.RollbackCount, c.RoundTimeoutsCount)
+	cr := c.GetRound(c.CurrentRound)
+	var cRandomSeed int64
+	if cr != nil {
+		cRandomSeed = cr.GetRandomSeed()
+	}
+	fmt.Fprintf(w, "<div>Current Round: %v(%v) Finalized Round: %v Rollbacks: %v Round Timeouts: %v</div>", c.CurrentRound, cRandomSeed, c.LatestFinalizedBlock.Round, c.RollbackCount, c.RoundTimeoutsCount)
 }
 
 /*DiagnosticsHomepageHandler - handler to display the /_diagnostics page */
@@ -319,6 +324,7 @@ func (c *Chain) N2NStatsWriter(w http.ResponseWriter, r *http.Request) {
 	PrintCSS(w)
 	self := node.Self.Node
 	fmt.Fprintf(w, "<div>%v - %v</div>", self.GetPseudoName(), self.Description)
+	c.healthSummary(w, r)
 	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr><td rowspan='2'>URI</td><td rowspan='2'>Count</td><td colspan='3'>Time</td><td colspan='3'>Size</td></tr>")
 	fmt.Fprintf(w, "<tr><td>Min</td><td>Average</td><td>Max</td><td>Min</td><td>Average</td><td>Max</td></tr>")

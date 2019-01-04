@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"os"
+	"runtime/pprof"
 	"sort"
 	"sync"
 	"time"
@@ -464,7 +466,19 @@ func (c *Chain) ValidGenerator(r round.RoundI, b *block.Block) bool {
 	if miner == nil {
 		return false
 	}
-	return c.IsRoundGenerator(r, miner)
+
+	isGen := c.IsRoundGenerator(r, miner)
+	if !isGen {
+		//This is a Byzantine condition?
+		Logger.Info("Received a block from non-generator", zap.Int("miner #", miner.SetIndex))
+		gens := c.GetGenerators(r)
+
+		Logger.Info("Generators are: ", zap.Int64("round#", r.GetRoundNumber()))
+		for _, n := range gens {
+			Logger.Info("generator", zap.Int("Node#", n.SetIndex))
+		}
+	}
+	return isGen
 }
 
 /*GetNotarizationThresholdCount - gives the threshold count for block to be notarized*/
@@ -599,13 +613,21 @@ func (c *Chain) DeleteRoundsBelow(ctx context.Context, roundNumber int64) {
 }
 
 /*SetRandomSeed - set the random seed for the round */
-func (c *Chain) SetRandomSeed(r round.RoundI, randomSeed int64) {
+func (c *Chain) SetRandomSeed(r round.RoundI, randomSeed int64) bool {
+	c.roundsMutex.Lock()
+	defer c.roundsMutex.Unlock()
+	if r.HasRandomSeed() && randomSeed == r.GetRandomSeed() {
+		return false
+	}
+	r.Lock()
+	defer r.Unlock()
 	r.SetRandomSeed(randomSeed)
 	r.ComputeMinerRanks(c.Miners)
 	roundNumber := r.GetRoundNumber()
 	if roundNumber > c.CurrentRound {
 		c.CurrentRound = roundNumber
 	}
+	return true
 }
 
 func (c *Chain) getBlocks() []*block.Block {
@@ -621,7 +643,12 @@ func (c *Chain) getBlocks() []*block.Block {
 //SetRoundRank - set the round rank of the block
 func (c *Chain) SetRoundRank(r round.RoundI, b *block.Block) {
 	bNode := node.GetNode(b.MinerID)
-	b.RoundRank = r.GetMinerRank(bNode)
+	rank := r.GetMinerRank(bNode)
+	if rank >= c.NumGenerators {
+		pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
+		Logger.DPanic(fmt.Sprintf("miner ranks greater than expected: %v %v", r.GetState(), rank))
+	}
+	b.RoundRank = rank
 }
 
 func (c *Chain) SetGenerationTimeout(newTimeout int) {

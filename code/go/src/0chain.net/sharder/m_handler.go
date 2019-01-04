@@ -19,8 +19,8 @@ func SetupM2SReceivers() {
 	http.HandleFunc("/v1/_m2s/block/notarized", node.ToN2NReceiveEntityHandler(NotarizedBlockHandler, options))
 }
 
-//Accept - implement the node.MessageFilterI interface
-func (sc *Chain) Accept(entityName string, entityID string) bool {
+//AcceptMessage - implement the node.MessageFilterI interface
+func (sc *Chain) AcceptMessage(entityName string, entityID string) bool {
 	switch entityName {
 	case "block":
 		_, err := sc.GetBlock(common.GetRootContext(), entityID)
