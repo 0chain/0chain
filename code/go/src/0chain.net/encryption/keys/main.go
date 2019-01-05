@@ -11,12 +11,13 @@ import (
 )
 
 func main() {
+	clientSigScheme := flag.String("signature_scheme", "", "ed25519 or bls0chain")
 	keysFile := flag.String("keys_file", "keys.txt", "keys_file")
 	data := flag.String("data", "", "data")
 	timestamp := flag.Bool("timestamp", true, "timestamp")
 	generateKeys := flag.Bool("generate_keys", false, "generate_keys")
 	flag.Parse()
-	sigScheme := encryption.NewED25519Scheme()
+	var sigScheme = encryption.GetSignatureScheme(*clientSigScheme)
 	if *generateKeys {
 		err := sigScheme.GenerateKeys()
 		if err != nil {

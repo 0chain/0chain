@@ -22,17 +22,22 @@ import (
 	"0chain.net/wallet"
 )
 
+var sigScheme encryption.SignatureScheme
+
 var wallets []*wallet.Wallet
 var txn_generation_rate int32
 
 /*TransactionGenerator - generates a steady stream of transactions */
-func TransactionGenerator(blockSize int32) {
+func TransactionGenerator(c *chain.Chain) {
+	sigScheme = c.GetSignatureScheme()
+
 	wallet.SetupWallet()
 
 	viper.SetDefault("development.txn_generation.wallets", 1000)
 	var numClients = viper.GetInt("development.txn_generation.wallets")
-	GenerateClients(numClients)
+	GenerateClients(c, numClients)
 	numWorkers := 1
+	blockSize := c.BlockSize
 	numTxns := blockSize
 	SetTxnGenRate(numTxns)
 	switch {
@@ -149,7 +154,6 @@ func GetOwnerWallet(keysFile string) *wallet.Wallet {
 	if err != nil {
 		panic(err)
 	}
-	sigScheme := encryption.NewED25519Scheme()
 	err = sigScheme.ReadKeys(reader)
 	if err != nil {
 		panic(err)
@@ -171,7 +175,7 @@ func GetOwnerWallet(keysFile string) *wallet.Wallet {
 }
 
 /*GenerateClients - generate the given number of clients */
-func GenerateClients(numClients int) {
+func GenerateClients(c *chain.Chain, numClients int) {
 	ownerWallet := GetOwnerWallet("config/owner_keys.txt")
 	rs := rand.NewSource(time.Now().UnixNano())
 	prng := rand.New(rs)
@@ -188,7 +192,7 @@ func GenerateClients(numClients int) {
 	for i := 0; i < numClients; i++ {
 		//client side code
 		w := &wallet.Wallet{}
-		w.Initialize()
+		w.Initialize(c.ClientSignatureScheme)
 		wallets = append(wallets, w)
 
 		//Server side code bypassing REST for speed

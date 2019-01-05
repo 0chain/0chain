@@ -24,6 +24,7 @@ func SetupDefaultConfig() {
 	viper.SetDefault("server_chain.block.proposal.max_wait_time", 200)
 	viper.SetDefault("server_chain.block.proposal.wait_mode", "static")
 	viper.SetDefault("server_chain.block.reuse_txns", true)
+	viper.SetDefault("server_chain.client.signature_scheme", "ed25519")
 }
 
 /*SetupConfig - setup the configuration system */

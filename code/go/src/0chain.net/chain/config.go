@@ -35,4 +35,6 @@ type Config struct {
 	BlockProposalWaitMode    int8          `json:"block_proposal_wait_mode"`     // wait time for the block proposal is static (0) or dynamic (1)
 
 	ReuseTransactions bool `json:"reuse_txns"` // indicates if transactions from unrelated blocks can be reused
+
+	ClientSignatureScheme string `json:"client_signature_scheme"` // indicates which signature scheme is being used
 }

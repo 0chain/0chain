@@ -3,78 +3,37 @@ package encryption
 import (
 	"bufio"
 	"encoding/hex"
-	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 
-	"github.com/Nik-U/pbc"
+	"github.com/herumi/bls/ffi/go/bls"
 )
 
-//BLS0ChainInitialSetup - initial setup to create parameters for the signatures
-func BLS0ChainInitialSetup() (*pbc.Params, *pbc.Element) {
-	params := pbc.GenerateA(160, 512)
-	pairing := params.NewPairing()
-	g := pairing.NewG2().Rand()
-	return params, g
-}
-
-//BLS0ChainParams - parameters associated with the BLS0Chain signature scheme
-type BLS0ChainParams struct {
-	Params  string `json:"params"`
-	SharedG []byte `json:"shared_g"`
-}
-
-//BLS0ChainSerialize signature parameters
-func BLS0ChainSerialize(params *pbc.Params, g *pbc.Element, writer io.Writer) error {
-	sigParams := &BLS0ChainParams{}
-	sigParams.Params = params.String()
-	sigParams.SharedG = g.Bytes()
-	return json.NewEncoder(writer).Encode(sigParams)
-}
-
-//BLS0ChainDeserialize - deserialize the signature parameters
-func BLS0ChainDeserialize(reader io.Reader) (*BLS0ChainParams, error) {
-	sigParams := &BLS0ChainParams{}
-	err := json.NewDecoder(reader).Decode(&sigParams)
-	if err != nil {
-		return nil, err
-	}
-	return sigParams, nil
-}
-
-//BLS0ChainSetup - given the params string and shared G from the initial setup, recreate the pairing and G
-func BLS0ChainSetup(bls0ChainParams *BLS0ChainParams) (*pbc.Pairing, *pbc.Element) {
-	params, err := pbc.NewParamsFromString(bls0ChainParams.Params)
+func init() {
+	err := bls.Init(bls.CurveFp254BNb)
 	if err != nil {
 		panic(err)
 	}
-	pairing := params.NewPairing()
-	g := pairing.NewG2()
-	g.SetBytes(bls0ChainParams.SharedG)
-	return pairing, g
 }
 
-//BLS0ChainScheme - a signature scheme based on BLS0Chain
+//BLS0ChainScheme - a signature scheme for BLS0Chain Signature
 type BLS0ChainScheme struct {
-	privateKey *pbc.Element
-	publicKey  *pbc.Element
-	pairing    *pbc.Pairing
-	sharedG    *pbc.Element
+	privateKey []byte
+	publicKey  []byte
 }
 
-//NewBLS0ChainScheme - given the bls0chain params, create the associated signature scheme object
-func NewBLS0ChainScheme(bls0chainParams *BLS0ChainParams) *BLS0ChainScheme {
-	b0 := &BLS0ChainScheme{}
-	pairing, g := BLS0ChainSetup(bls0chainParams)
-	b0.pairing = pairing
-	b0.sharedG = g
-	return b0
+//NewBLS0ChainScheme - create a BLS0ChainScheme object
+func NewBLS0ChainScheme() *BLS0ChainScheme {
+	return &BLS0ChainScheme{}
 }
 
 //GenerateKeys - implement interface
 func (b0 *BLS0ChainScheme) GenerateKeys() error {
-	b0.privateKey = b0.pairing.NewZr().Rand()
-	b0.publicKey = b0.pairing.NewG2().PowZn(b0.sharedG, b0.privateKey)
+	var skey bls.SecretKey
+	skey.SetByCSPRNG()
+	b0.privateKey = skey.GetLittleEndian()
+	b0.publicKey = skey.GetPublicKey().Serialize()
 	return nil
 }
 
@@ -96,67 +55,81 @@ func (b0 *BLS0ChainScheme) ReadKeys(reader io.Reader) error {
 	if err != nil {
 		return err
 	}
-	b0.privateKey = b0.pairing.NewZr().SetBytes(privateKeyBytes)
+	b0.privateKey = privateKeyBytes
 	return nil
 }
 
 //WriteKeys - implement interface
 func (b0 *BLS0ChainScheme) WriteKeys(writer io.Writer) error {
-	publicKey := hex.EncodeToString(b0.publicKey.Bytes())
-	privateKey := hex.EncodeToString(b0.privateKey.Bytes())
+	publicKey := hex.EncodeToString(b0.publicKey)
+	privateKey := hex.EncodeToString(b0.privateKey)
 	_, err := fmt.Fprintf(writer, "%v\n%v\n", publicKey, privateKey)
 	return err
 }
 
 //SetPublicKey - implement interface
 func (b0 *BLS0ChainScheme) SetPublicKey(publicKey string) error {
+	if len(b0.privateKey) > 0 {
+		return errors.New("cannot set public key when there is a private key")
+	}
 	publicKeyBytes, err := hex.DecodeString(publicKey)
 	if err != nil {
 		return err
 	}
-	b0.publicKey = b0.pairing.NewG2().SetBytes(publicKeyBytes)
+	b0.publicKey = publicKeyBytes
 	return nil
 }
 
 //GetPublicKey - implement interface
 func (b0 *BLS0ChainScheme) GetPublicKey() string {
-	return hex.EncodeToString(b0.publicKey.Bytes())
+	return hex.EncodeToString(b0.publicKey)
 }
 
 //Sign - implement interface
 func (b0 *BLS0ChainScheme) Sign(hash interface{}) (string, error) {
-	rawHash, err := getRawHash(hash)
-	if err != nil {
-		return "", err
-	}
-	h := b0.pairing.NewG1().SetFromHash(rawHash)
-	signature := b0.pairing.NewG2().PowZn(h, b0.privateKey)
-	return hex.EncodeToString(signature.Bytes()), nil
+	var sk bls.SecretKey
+	sk.SetLittleEndian(b0.privateKey)
+	sig := sk.Sign(fmt.Sprintf("%s", hash))
+	return sig.SerializeToHexStr(), nil
 }
 
 //Verify - implement interface
 func (b0 *BLS0ChainScheme) Verify(signature string, hash string) (bool, error) {
-	s1, err := b0.PairMessageHash(hash)
+	var sign bls.Sign
+	pk, err := b0.getPublicKey()
 	if err != nil {
 		return false, err
 	}
-	rawSignature, err := hex.DecodeString(signature)
+	err = sign.DeserializeHexStr(signature)
 	if err != nil {
 		return false, err
 	}
+	return sign.Verify(pk, hash), nil
+}
 
-	sig := b0.pairing.NewG2().SetBytes([]byte(rawSignature))
-	s2 := b0.pairing.NewGT().Pair(sig, b0.sharedG)
-	return s1.Equals(s2), nil
+func (b0 *BLS0ChainScheme) getPublicKey() (*bls.PublicKey, error) {
+	var pk = &bls.PublicKey{}
+	err := pk.Deserialize(b0.publicKey)
+	if err != nil {
+		return nil, err
+	}
+	return pk, nil
 }
 
 //PairMessageHash - Pair a given message hash
-func (b0 *BLS0ChainScheme) PairMessageHash(hash string) (*pbc.Element, error) {
+func (b0 *BLS0ChainScheme) PairMessageHash(hash string) (*bls.GT, error) {
+	g2 := &bls.G2{}
+	err := g2.Deserialize(b0.publicKey)
+	if err != nil {
+		return nil, err
+	}
+	var g1 = &bls.G1{}
 	rawHash, err := hex.DecodeString(hash)
 	if err != nil {
 		return nil, err
 	}
-	h := b0.pairing.NewG1().SetFromHash(rawHash)
-	s1 := b0.pairing.NewGT().Pair(h, b0.publicKey)
-	return s1, nil
+	g1.HashAndMapTo(rawHash)
+	var gt = &bls.GT{}
+	bls.Pairing(gt, g1, g2)
+	return gt, nil
 }

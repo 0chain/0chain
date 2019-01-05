@@ -22,7 +22,6 @@ import (
 	"0chain.net/common"
 	"0chain.net/config"
 	"0chain.net/diagnostics"
-	"0chain.net/encryption"
 	"0chain.net/logging"
 	. "0chain.net/logging"
 	"0chain.net/memorystore"
@@ -59,19 +58,19 @@ func main() {
 		panic(err)
 	}
 
-	signatureScheme := encryption.NewED25519Scheme()
+	config.SetServerChainID(config.Configuration.ChainID)
+	common.SetupRootContext(node.GetNodeContext())
+	ctx := common.GetRootContext()
+	initEntities()
+	serverChain := chain.NewChainFromConfig()
+	signatureScheme := serverChain.GetSignatureScheme()
 	err = signatureScheme.ReadKeys(reader)
 	if err != nil {
 		Logger.Panic("Error reading keys file")
 	}
 	node.Self.SetSignatureScheme(signatureScheme)
 	reader.Close()
-	config.SetServerChainID(config.Configuration.ChainID)
 
-	common.SetupRootContext(node.GetNodeContext())
-	ctx := common.GetRootContext()
-	initEntities()
-	serverChain := chain.NewChainFromConfig()
 	miner.SetupMinerChain(serverChain)
 	mc := miner.GetMinerChain()
 	mc.DiscoverClients = viper.GetBool("server_chain.client.discover")
@@ -153,7 +152,7 @@ func main() {
 		miner.SetupWorkers(ctx)
 		if config.Development() {
 
-			go TransactionGenerator(mc.BlockSize)
+			go TransactionGenerator(mc.Chain)
 		}
 	}()
 

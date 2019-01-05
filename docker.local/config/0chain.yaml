@@ -52,6 +52,7 @@ server_chain:
       max_size: 98304 # bytes
     timeout: 10 # seconds
   client:
+    signature_scheme: ed25519  # ed25519 or bls0chain
     discover: true
   messages:
     verification_tickets_to: all_miners # generator or all_miners

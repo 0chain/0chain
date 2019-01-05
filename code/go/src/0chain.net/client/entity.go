@@ -12,6 +12,13 @@ import (
 	"0chain.net/memorystore"
 )
 
+var clientSignatureScheme string
+
+//SetClientSignatureScheme - set the signature scheme to be used by the client
+func SetClientSignatureScheme(scheme string) {
+	clientSignatureScheme = scheme
+}
+
 var cacher cache.Cache
 
 func init() {
@@ -72,7 +79,7 @@ func (c *Client) Verify(signature string, hash string) (bool, error) {
 
 /*GetSignatureScheme - return the signature scheme used for this client */
 func (c *Client) GetSignatureScheme() encryption.SignatureScheme {
-	ss := encryption.NewED25519Scheme()
+	var ss = encryption.GetSignatureScheme(clientSignatureScheme)
 	ss.SetPublicKey(c.PublicKey)
 	return ss
 }

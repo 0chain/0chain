@@ -59,20 +59,19 @@ func main() {
 		panic(err)
 	}
 
-	signatureScheme := encryption.NewED25519Scheme()
+	config.SetServerChainID(config.Configuration.ChainID)
+	common.SetupRootContext(node.GetNodeContext())
+	ctx := common.GetRootContext()
+	initEntities()
+	serverChain := chain.NewChainFromConfig()
+	signatureScheme := serverChain.GetSignatureScheme()
 	err = signatureScheme.ReadKeys(reader)
 	if err != nil {
 		Logger.Panic("Error reading keys file")
 	}
 	node.Self.SetSignatureScheme(signatureScheme)
 	reader.Close()
-	config.SetServerChainID(config.Configuration.ChainID)
 
-	common.SetupRootContext(node.GetNodeContext())
-	ctx := common.GetRootContext()
-	initEntities()
-
-	serverChain := chain.NewChainFromConfig()
 	sharder.SetupSharderChain(serverChain)
 	sc := sharder.GetSharderChain()
 	chain.SetServerChain(serverChain)
