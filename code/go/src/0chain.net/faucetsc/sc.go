@@ -1,7 +1,6 @@
 package faucetsc
 
 import (
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -32,7 +31,7 @@ var (
 	GLOBAL_RESET     = time.Duration(time.Hour * 24).String()
 )
 
-func (un *UserNode) ValidPourRequest(t *transaction.Transaction, balances c_state.StateContextI, gn *GlobalNode) (bool, error) {
+func (un *UserNode) validPourRequest(t *transaction.Transaction, balances c_state.StateContextI, gn *GlobalNode) (bool, error) {
 	smartContractBalance, err := balances.GetClientBalance(gn.ID)
 	if err != nil {
 		return false, err
@@ -53,7 +52,7 @@ func (un *UserNode) ValidPourRequest(t *transaction.Transaction, balances c_stat
 	return true, nil
 }
 
-func (fc *FaucetSmartContract) UpdateLimit(t *transaction.Transaction, inputData []byte, gn *GlobalNode) (string, error) {
+func (fc *FaucetSmartContract) updateLimit(t *transaction.Transaction, inputData []byte, gn *GlobalNode) (string, error) {
 	if t.ClientID != owner {
 		return common.NewError("unauthorized_access", "only the owner can update the limits").Error(), nil
 	}
@@ -78,15 +77,14 @@ func (fc *FaucetSmartContract) UpdateLimit(t *transaction.Transaction, inputData
 		gn.Global_reset = time.Duration(time.Hour * newRequest.Global_rest).String()
 	}
 	fc.DB.PutNode(gn.GetKey(), gn.Encode())
-	buff, _ := json.Marshal(gn)
-	return string(buff), nil
+	return string(gn.Encode()), nil
 }
 
-func (fc *FaucetSmartContract) MaxPour(gn *GlobalNode) (string, error) {
+func (fc *FaucetSmartContract) maxPour(gn *GlobalNode) (string, error) {
 	return fmt.Sprintf("Max pour per request: %v", gn.Pour_limit), nil
 }
 
-func (fc *FaucetSmartContract) PersonalPeriodicLimit(t *transaction.Transaction, gn *GlobalNode) (string, error) {
+func (fc *FaucetSmartContract) personalPeriodicLimit(t *transaction.Transaction, gn *GlobalNode) (string, error) {
 	un := fc.getUserVariables(t, gn)
 	var resp PeriodicResponse
 	resp.Start = un.StartTime
@@ -101,11 +99,10 @@ func (fc *FaucetSmartContract) PersonalPeriodicLimit(t *transaction.Transaction,
 	} else {
 		resp.Allowed = 0
 	}
-	buff, _ := json.Marshal(resp)
-	return string(buff), nil
+	return string(resp.Encode()), nil
 }
 
-func (fc *FaucetSmartContract) GlobalPerodicLimit(t *transaction.Transaction, gn *GlobalNode) (string, error) {
+func (fc *FaucetSmartContract) globalPerodicLimit(t *transaction.Transaction, gn *GlobalNode) (string, error) {
 	var resp PeriodicResponse
 	resp.Start = gn.StartTime
 	resp.Used = gn.Used
@@ -119,38 +116,31 @@ func (fc *FaucetSmartContract) GlobalPerodicLimit(t *transaction.Transaction, gn
 	} else {
 		resp.Allowed = 0
 	}
-
-	buff, _ := json.Marshal(resp)
-	return string(buff), nil
+	return string(resp.Encode()), nil
 }
 
-func (fc *FaucetSmartContract) Pour(t *transaction.Transaction, inputData []byte, balances c_state.StateContextI, gn *GlobalNode) (string, error) {
+func (fc *FaucetSmartContract) pour(t *transaction.Transaction, inputData []byte, balances c_state.StateContextI, gn *GlobalNode) (string, error) {
 	user := fc.getUserVariables(t, gn)
-	ok, err := user.ValidPourRequest(t, balances, gn)
-
+	ok, err := user.validPourRequest(t, balances, gn)
 	if ok {
 		transfer := state.NewTransfer(t.ToClientID, t.ClientID, state.Balance(t.Value))
 		balances.AddTransfer(transfer)
 		user.Used += transfer.Amount
 		gn.Used += transfer.Amount
-		gn.Balance -= transfer.Amount
 		fc.DB.PutNode(user.GetKey(), user.Encode())
 		fc.DB.PutNode(gn.GetKey(), gn.Encode())
-		buff, _ := json.Marshal(transfer)
-		return string(buff), nil
+		return string(transfer.Encode()), nil
 	}
 	return err.Error(), nil
 }
 
-func (fc *FaucetSmartContract) Refill(t *transaction.Transaction, balances c_state.StateContextI, gn *GlobalNode) (string, error) {
+func (fc *FaucetSmartContract) refill(t *transaction.Transaction, balances c_state.StateContextI, gn *GlobalNode) (string, error) {
 	clientBalance, err := balances.GetClientBalance(t.ClientID)
 	if clientBalance >= state.Balance(t.Value) {
 		transfer := state.NewTransfer(t.ClientID, t.ToClientID, state.Balance(t.Value))
 		balances.AddTransfer(transfer)
-		gn.Balance += transfer.Amount
 		fc.DB.PutNode(gn.GetKey(), gn.Encode())
-		buff, _ := json.Marshal(transfer)
-		return string(buff), nil
+		return string(transfer.Encode()), nil
 	} else {
 		return common.NewError("broke", "it seems you're broke and can't transfer money").Error(), nil
 	}
@@ -207,7 +197,6 @@ func (fc *FaucetSmartContract) getGlobalVariables(t *transaction.Transaction) *G
 	gn.Global_limit = state.Balance(GLOBAL_LIMIT)
 	gn.Individual_reset = INDIVIDUAL_RESET
 	gn.Global_reset = GLOBAL_RESET
-	gn.Balance = 0
 	gn.Used = 0
 	gn.StartTime = common.ToTime(t.CreationDate)
 	return &gn
@@ -217,17 +206,17 @@ func (fc *FaucetSmartContract) Execute(t *transaction.Transaction, funcName stri
 	gn := fc.getGlobalVariables(t)
 	switch funcName {
 	case "UpdateLimits":
-		return fc.UpdateLimit(t, inputData, gn)
+		return fc.updateLimit(t, inputData, gn)
 	case "Pour":
-		return fc.Pour(t, inputData, balances, gn)
+		return fc.pour(t, inputData, balances, gn)
 	case "MaxPour":
-		return fc.MaxPour(gn)
+		return fc.maxPour(gn)
 	case "PersonalPeriodicLimit":
-		return fc.PersonalPeriodicLimit(t, gn)
+		return fc.personalPeriodicLimit(t, gn)
 	case "GlobalPeriodicLimit":
-		return fc.GlobalPerodicLimit(t, gn)
+		return fc.globalPerodicLimit(t, gn)
 	case "Refill":
-		return fc.Refill(t, balances, gn)
+		return fc.refill(t, balances, gn)
 	default:
 		return common.NewError("failed execution", "no function with that name").Error(), nil
 	}

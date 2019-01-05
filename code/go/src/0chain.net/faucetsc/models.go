@@ -33,6 +33,16 @@ type PeriodicResponse struct {
 	Allowed state.Balance `json:"tokens_allowed"`
 }
 
+func (pr *PeriodicResponse) Encode() []byte {
+	buff, _ := json.Marshal(pr)
+	return buff
+}
+
+func (pr *PeriodicResponse) Decode(input []byte) error {
+	err := json.Unmarshal(input, pr)
+	return err
+}
+
 type GlobalNode struct {
 	ID               string        `json:"id"`
 	Pour_limit       state.Balance `json:"pour_limit"`
@@ -41,7 +51,6 @@ type GlobalNode struct {
 	Individual_reset string        `json:"individual_reset"` //in hours
 	Global_reset     string        `json:"global_rest"`      //in hours
 	Used             state.Balance `json:"used"`
-	Balance          state.Balance `json:"balance"`
 	StartTime        time.Time     `json:"start_time"`
 }
 
