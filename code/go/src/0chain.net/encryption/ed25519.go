@@ -102,7 +102,7 @@ func signED25519(privateKey interface{}, hash interface{}) (string, error) {
 		}
 		pkBytes = decoded
 	}
-	rawHash, err := getRawHash(hash)
+	rawHash, err := GetRawHash(hash)
 	if err != nil {
 		return "", err
 	}

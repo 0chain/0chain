@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/client"
 	"0chain.net/encryption"
 
 	"0chain.net/block"
@@ -185,6 +186,7 @@ func NewChainFromConfig() *Chain {
 		chain.BlockProposalWaitMode = BlockProposalWaitDynamic
 	}
 	chain.ReuseTransactions = viper.GetBool("server_chain.block.reuse_txns")
+	chain.SetSignatureScheme(viper.GetString("server_chain.client.signature_scheme"))
 	return chain
 }
 
@@ -701,4 +703,15 @@ func (c *Chain) IncrementRoundTimeoutCount() {
 //GetRoundTimeoutCount - get the counter
 func (c *Chain) GetRoundTimeoutCount() int64 {
 	return c.crtCount
+}
+
+//SetSignatureScheme - set the client signature scheme to be used by this chain
+func (c *Chain) SetSignatureScheme(sigScheme string) {
+	c.ClientSignatureScheme = sigScheme
+	client.SetClientSignatureScheme(c.ClientSignatureScheme)
+}
+
+//GetSignatureScheme - get the signature scheme used by this chain
+func (c *Chain) GetSignatureScheme() encryption.SignatureScheme {
+	return encryption.GetSignatureScheme(c.ClientSignatureScheme)
 }

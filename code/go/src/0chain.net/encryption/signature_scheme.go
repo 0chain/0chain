@@ -3,6 +3,7 @@ package encryption
 import (
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io"
 )
 
@@ -22,7 +23,21 @@ type SignatureScheme interface {
 	Verify(signature string, hash string) (bool, error)
 }
 
-func getRawHash(hash interface{}) ([]byte, error) {
+//GetSignatureScheme - given the name, return a signature scheme
+func GetSignatureScheme(sigScheme string) SignatureScheme {
+	switch sigScheme {
+	case "ed25519":
+		return NewED25519Scheme()
+
+	case "bls0chain":
+		return NewBLS0ChainScheme()
+	default:
+		panic(fmt.Sprintf("unknown signature scheme: %v", sigScheme))
+	}
+}
+
+//GetRawHash - given a hash interface (raw hash, hex string), return the raw hash
+func GetRawHash(hash interface{}) ([]byte, error) {
 	switch hashImpl := hash.(type) {
 	case []byte:
 		return hashImpl, nil
