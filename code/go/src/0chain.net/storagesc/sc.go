@@ -6,8 +6,8 @@ import (
 	"go.uber.org/zap"
 
 	c_state "0chain.net/chain/state"
+	"0chain.net/client"
 	"0chain.net/common"
-	"0chain.net/encryption"
 	"0chain.net/smartcontractinterface"
 	"0chain.net/smartcontractstate"
 	"0chain.net/transaction"
@@ -83,6 +83,58 @@ type ChallengeResponse struct {
 // 	return "Challenge Passed by Blobber", nil
 // }
 
+func (sc *StorageSmartContract) CommitBlobberRead(t *transaction.Transaction, input []byte) (string, error) {
+	var commitRead ReadConnection
+	err := commitRead.Decode(input)
+	if err != nil {
+		return "", err
+	}
+
+	allocationObj := &StorageAllocation{}
+	allocationObj.ID = commitRead.ReadMarker.AllocationID
+	allocationBytes, err := sc.DB.GetNode(allocationObj.GetKey())
+
+	// allocationObj, ok := allocationRequestMap[openConnection.AllocationID]
+	if allocationBytes == nil || err != nil {
+		return "", common.NewError("invalid_parameters", "Invalid allocation ID")
+	}
+
+	err = allocationObj.Decode(allocationBytes)
+	if allocationBytes == nil || err != nil {
+		return "", common.NewError("invalid_parameters", "Invalid allocation ID. Failed to decode from DB")
+	}
+
+	blobberAllocation := &BlobberAllocation{}
+	blobberAllocation.BlobberID = t.ClientID
+	blobberAllocation.AllocationID = commitRead.ReadMarker.AllocationID
+
+	blobberAllocationBytes, err := sc.DB.GetNode(blobberAllocation.GetKey())
+	if blobberAllocationBytes == nil || err != nil {
+		return "", common.NewError("invalid_parameters", "Blobber is not part of the allocation. Could not find blobber")
+	}
+
+	err = blobberAllocation.Decode(blobberAllocationBytes)
+	if err != nil {
+		return "", common.NewError("blobber_allocation_decode", "Blobber Allocation decode error "+err.Error())
+	}
+
+	lastBlobberClientReadBytes, err := sc.DB.GetNode(commitRead.GetKey())
+	if err != nil {
+		return "", common.NewError("rm_read_error", "Error reading the read marker for the blobber and client")
+	}
+	lastCommittedRM := &ReadConnection{}
+	if lastBlobberClientReadBytes != nil {
+		lastCommittedRM.Decode(lastBlobberClientReadBytes)
+	}
+
+	ok := commitRead.ReadMarker.Verify(lastCommittedRM.ReadMarker)
+	if !ok {
+		return "", common.NewError("invalid_read_marker", "Invalid read marker.")
+	}
+	sc.DB.PutNode(commitRead.GetKey(), input)
+	return "success", nil
+}
+
 func (sc *StorageSmartContract) CommitBlobberConnection(t *transaction.Transaction, input []byte) (string, error) {
 	var commitConnection BlobberCloseConnection
 	err := json.Unmarshal(input, &commitConnection)
@@ -149,6 +201,9 @@ func (sc *StorageSmartContract) CommitBlobberConnection(t *transaction.Transacti
 	buffBlobberAllocation := blobberAllocation.Encode()
 	sc.DB.PutNode(blobberAllocation.GetKey(), buffBlobberAllocation)
 
+	allocationObj.UsedSize += commitConnection.WriteMarker.Size
+	sc.DB.PutNode(allocationObj.GetKey(), allocationObj.Encode())
+
 	return string(buffBlobberAllocation), nil
 }
 
@@ -203,6 +258,19 @@ func (sc *StorageSmartContract) NewAllocationRequest(t *transaction.Transaction,
 		return "", common.NewError("allocation_creation_failed", "No Blobbers registered. Failed to create a storage allocation")
 	}
 
+	if len(t.ClientID) == 0 {
+		return "", common.NewError("allocation_creation_failed", "Invalid client in the transaction. No public key found")
+	}
+
+	clientPublicKey := t.PublicKey
+	if len(t.PublicKey) == 0 {
+		ownerClient, err := client.GetClient(common.GetRootContext(), t.ClientID)
+		if err != nil || ownerClient == nil || len(ownerClient.PublicKey) == 0 {
+			return "", common.NewError("invalid_client", "Invalid Client. Not found with miner")
+		}
+		clientPublicKey = ownerClient.PublicKey
+	}
+
 	var allocationRequest StorageAllocation
 
 	err = allocationRequest.Decode(input)
@@ -226,7 +294,7 @@ func (sc *StorageSmartContract) NewAllocationRequest(t *transaction.Transaction,
 			var blobberAllocation BlobberAllocation
 			blobberAllocation.Size = (allocationRequest.Size + int64(size-1)) / int64(size)
 			blobberAllocation.UsedSize = 0
-			blobberAllocation.AllocationRoot = encryption.EmptyHash
+			blobberAllocation.AllocationRoot = ""
 			blobberAllocation.AllocationID = t.Hash
 			blobberAllocation.BlobberID = blobberNode.ID
 
@@ -239,6 +307,7 @@ func (sc *StorageSmartContract) NewAllocationRequest(t *transaction.Transaction,
 		allocationRequest.Blobbers = allocatedBlobbers
 		allocationRequest.ID = t.Hash
 		allocationRequest.Owner = t.ClientID
+		allocationRequest.OwnerPublicKey = clientPublicKey
 		buff := allocationRequest.Encode()
 		//allocationRequestMap[t.Hash] = allocationRequest
 		Logger.Info("Length of the keys and values", zap.Any("keys", len(blobberAllocationKeys)), zap.Any("values", len(blobberAllocationValues)))
@@ -272,6 +341,14 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction, funcName str
 	// 	}
 	// 	return resp, nil
 	// }
+
+	if funcName == "read_redeem" {
+		resp, err := sc.CommitBlobberRead(t, input)
+		if err != nil {
+			return "", err
+		}
+		return resp, nil
+	}
 
 	if funcName == "commit_connection" {
 		resp, err := sc.CommitBlobberConnection(t, input)
