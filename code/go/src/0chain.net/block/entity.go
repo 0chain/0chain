@@ -270,6 +270,10 @@ func (b *Block) MergeVerificationTickets(vts []*VerificationTicket) {
 		utickets := make([]*VerificationTicket, len(tickets1))
 		copy(utickets, tickets1)
 		for _, v := range tickets2 {
+			if v == nil {
+				Logger.Error("merge verification tickets - null ticket")
+				return tickets1
+			}
 			if _, ok := ticketsMap[v.VerifierID]; !ok {
 				utickets = append(utickets, v)
 			}
@@ -471,6 +475,10 @@ func (b *Block) UnknownTickets(vts []*VerificationTicket) []*VerificationTicket 
 	}
 	var newTickets []*VerificationTicket
 	for _, t := range vts {
+		if t == nil {
+			Logger.Error("unknown tickets - null ticket")
+			return nil
+		}
 		if _, ok := ticketsMap[t.VerifierID]; !ok {
 			newTickets = append(newTickets, t)
 		}

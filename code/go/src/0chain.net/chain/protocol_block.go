@@ -34,6 +34,10 @@ func (c *Chain) VerifyNotarization(ctx context.Context, blockHash string, bvt []
 	}
 	ticketsMap := make(map[string]bool, len(bvt))
 	for _, vt := range bvt {
+		if vt == nil {
+			Logger.Error("verify notarization - null ticket", zap.String("block", blockHash))
+			return common.NewError("null_ticket", "Verification ticket is null")
+		}
 		if _, ok := ticketsMap[vt.VerifierID]; ok {
 			return common.NewError("duplicate_ticket_signature", "Found duplicate signatures in the notarization of the block")
 		}
