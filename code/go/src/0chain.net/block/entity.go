@@ -274,7 +274,9 @@ func (b *Block) AddVerificationTicket(vt *VerificationTicket) bool {
 	return true
 }
 
-/*MergeVerificationTickets - merge the verification tickets with what's already there */
+/*MergeVerificationTickets - merge the verification tickets with what's already present
+* Only appends without modifying the order of exisitng tickets to ensure concurrent marshalling doesn't cause duplicate tickets
+ */
 func (b *Block) MergeVerificationTickets(vts []*VerificationTicket) {
 	unionVerificationTickets := func(tickets1 []*VerificationTicket, tickets2 []*VerificationTicket) []*VerificationTicket {
 		if len(tickets1) == 0 {
@@ -283,16 +285,23 @@ func (b *Block) MergeVerificationTickets(vts []*VerificationTicket) {
 		if len(tickets2) == 0 {
 			return tickets1
 		}
-		ticketsMap := make(map[string]*VerificationTicket, len(tickets1)+len(tickets2))
+		ticketsMap := make(map[string]*VerificationTicket, len(tickets1))
 		for _, t := range tickets1 {
 			ticketsMap[t.VerifierID] = t
 		}
-		for _, t := range tickets2 {
-			ticketsMap[t.VerifierID] = t
+		utickets := make([]*VerificationTicket, len(tickets1))
+		copy(utickets, tickets1)
+		for _, v := range tickets2 {
+			if v == nil {
+				Logger.Error("merge verification tickets - null ticket")
+				return tickets1
+			}
+			if _, ok := ticketsMap[v.VerifierID]; !ok {
+				utickets = append(utickets, v)
+			}
 		}
-		utickets := make([]*VerificationTicket, 0, len(ticketsMap))
-		for _, v := range ticketsMap {
-			utickets = append(utickets, v)
+		if len(utickets) == len(tickets1) {
+			return tickets1
 		}
 		return utickets
 	}
@@ -488,6 +497,10 @@ func (b *Block) UnknownTickets(vts []*VerificationTicket) []*VerificationTicket 
 	}
 	var newTickets []*VerificationTicket
 	for _, t := range vts {
+		if t == nil {
+			Logger.Error("unknown tickets - null ticket")
+			return nil
+		}
 		if _, ok := ticketsMap[t.VerifierID]; !ok {
 			newTickets = append(newTickets, t)
 		}

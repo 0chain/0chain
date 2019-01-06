@@ -34,6 +34,10 @@ func (c *Chain) VerifyNotarization(ctx context.Context, blockHash string, bvt []
 	}
 	ticketsMap := make(map[string]bool, len(bvt))
 	for _, vt := range bvt {
+		if vt == nil {
+			Logger.Error("verify notarization - null ticket", zap.String("block", blockHash))
+			return common.NewError("null_ticket", "Verification ticket is null")
+		}
 		if _, ok := ticketsMap[vt.VerifierID]; ok {
 			return common.NewError("duplicate_ticket_signature", "Found duplicate signatures in the notarization of the block")
 		}
@@ -185,16 +189,16 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 			return nil, datastore.ErrInvalidEntity
 		}
 		if err := c.VerifyNotarization(ctx, nb.Hash, nb.VerificationTickets); err != nil {
-			Logger.Error("get notarized block - validate notarization", zap.String("block", blockHash), zap.Error(err))
+			Logger.Error("get notarized block - validate notarization", zap.Int64("round", nb.Round), zap.String("block", blockHash), zap.Error(err))
 			return nil, err
 		}
 		if err := nb.Validate(ctx); err != nil {
-			Logger.Error("get notarized block - validate", zap.String("block", blockHash), zap.Any("block_obj", nb), zap.Error(err))
+			Logger.Error("get notarized block - validate", zap.Int64("round", nb.Round), zap.String("block", blockHash), zap.Any("block_obj", nb), zap.Error(err))
 			return nil, err
 		}
 		r := c.GetRound(nb.Round)
 		if r == nil {
-			Logger.Error("get notarized block - no round (TODO)", zap.String("block", blockHash), zap.Int64("round", nb.Round), zap.Int64("cround", cround), zap.Int64("current_round", c.CurrentRound))
+			Logger.Error("get notarized block - no round (TODO)", zap.Int64("round", nb.Round), zap.String("block", blockHash), zap.Int64("cround", cround), zap.Int64("current_round", c.CurrentRound))
 			b = c.AddBlock(nb)
 		} else {
 			c.SetRandomSeed(r, nb.RoundRandomSeed)
