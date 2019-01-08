@@ -176,7 +176,12 @@ func GetOwnerWallet(keysFile string) *wallet.Wallet {
 
 /*GenerateClients - generate the given number of clients */
 func GenerateClients(c *chain.Chain, numClients int) {
-	ownerWallet := GetOwnerWallet("config/owner_keys.txt")
+	var ownerWallet *wallet.Wallet
+	if c.ClientSignatureScheme == "ed25519" {
+		ownerWallet = GetOwnerWallet("config/owner_keys.txt")
+	} else {
+		ownerWallet = GetOwnerWallet("config/b0owner_keys.txt")
+	}
 	rs := rand.NewSource(time.Now().UnixNano())
 	prng := rand.New(rs)
 

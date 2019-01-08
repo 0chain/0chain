@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/spf13/viper"
 )
@@ -36,6 +37,32 @@ func SetupConfig() {
 		panic(fmt.Errorf("fatal error config file: %s", err))
 	}
 	setupDevConfig()
+}
+
+//ReadConfig - read a configuration from a file given as path/to/config/dir/config.configtype
+func ReadConfig(file string) *viper.Viper {
+	dir, fileName := filepath.Split(file)
+	ext := filepath.Ext(fileName)
+	if ext == "" {
+		ext = ".yaml"
+	} else {
+		fileName = fileName[:len(fileName)-len(ext)]
+	}
+	format := ext[1:]
+	if dir == "" {
+		dir = "."
+	} else if dir[0] != '.' {
+		dir = "." + string(filepath.Separator) + dir
+	}
+	nodeConfig := viper.New()
+	nodeConfig.AddConfigPath(dir)
+	nodeConfig.SetConfigName(fileName)
+	nodeConfig.SetConfigType(format)
+	err := nodeConfig.ReadInConfig()
+	if err != nil {
+		panic(fmt.Sprintf("error reading config file %v - %v\n", file, err))
+	}
+	return nodeConfig
 }
 
 const (

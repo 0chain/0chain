@@ -60,6 +60,7 @@ server_chain:
     prune_below_count: 100 # rounds
 
 network:
+  nodes_file: config/single_machine_3_nodes.yaml
   relay_time: 200 # milliseconds
   max_concurrent_requests: 40
   timeout:
