@@ -155,7 +155,6 @@ func main() {
 		miner.WaitForDkgToBeDone(ctx)
 		miner.SetupWorkers(ctx)
 		if config.Development() {
-
 			go TransactionGenerator(mc.Chain)
 		}
 	}()

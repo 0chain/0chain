@@ -41,11 +41,22 @@ func TestClientChunkSave(t *testing.T) {
 	fmt.Printf("Elapsed time: %v\n", time.Since(start))
 }
 
+func TestClientID(t *testing.T) {
+	publicKey := "627eb53becc3d312836bfdd97deb25a6d71f1e15bf3bcd233ab3d0c36300161990d4e2249f1d7747c0d1775ee7ffec912a61bd8ab5ed164fd6218099419c4305"
+	entity := Provider()
+	client, ok := entity.(*Client)
+	if !ok {
+		panic("it's not ok!\n")
+	}
+	client.SetPublicKey(publicKey)
+	fmt.Printf("client id: %v\n", client.ID)
+}
+
 func postClient(publicKey string, done chan<- bool) {
 	entity := Provider()
 	client, ok := entity.(*Client)
 	if !ok {
-		fmt.Printf("it's not ok!\n")
+		panic("it's not ok!\n")
 	}
 	client.SetPublicKey(publicKey)
 
