@@ -37,9 +37,9 @@ import (
 
 func main() {
 	deploymentMode := flag.Int("deployment_mode", 2, "deployment_mode")
-	nodesFile := flag.String("nodes_file", "config/single_node.txt", "nodes_file")
-	keysFile := flag.String("keys_file", "config/single_node_sharder_keys.txt", "keys_file")
-	maxDelay := flag.Int("max_delay", 0, "max_delay")
+	keysFile := flag.String("keys_file", "", "keys_file")
+	nodesFile := flag.String("nodes_file", "", "nodes_file (deprecated)")
+	maxDelay := flag.Int("max_delay", 0, "max_delay (deprecated)")
 	flag.Parse()
 	config.Configuration.DeploymentMode = byte(*deploymentMode)
 	config.SetupDefaultConfig()
@@ -79,18 +79,22 @@ func main() {
 	chain.SetNetworkRelayTime(viper.GetDuration("network.relay_time") * time.Millisecond)
 	node.ReadConfig()
 
-	if *nodesFile == "" {
+	nodesConfigFile := viper.GetString("network.nodes_file")
+	if nodesConfigFile == "" {
+		nodesConfigFile = *nodesFile
+	}
+	if nodesConfigFile == "" {
 		panic("Please specify --nodes_file file.txt option with a file.txt containing nodes including self")
 	}
-	if strings.HasSuffix(*nodesFile, "txt") {
-		reader, err = os.Open(*nodesFile)
+	if strings.HasSuffix(nodesConfigFile, "txt") {
+		reader, err = os.Open(nodesConfigFile)
 		if err != nil {
 			log.Fatalf("%v", err)
 		}
 		node.ReadNodes(reader, serverChain.Miners, serverChain.Sharders, serverChain.Blobbers)
 		reader.Close()
 	} else {
-		sc.ReadNodePools(*nodesFile)
+		sc.ReadNodePools(nodesConfigFile)
 	}
 
 	if node.Self.ID == "" {

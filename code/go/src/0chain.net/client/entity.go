@@ -30,8 +30,8 @@ type Client struct {
 	datastore.IDField
 	datastore.VersionField
 	datastore.CreationDateField
-	PublicKey      string               `json:"public_key"`
-	PublicKeyBytes encryption.HashBytes `json:"-"`
+	PublicKey      string `json:"public_key"`
+	PublicKeyBytes []byte `json:"-"`
 }
 
 //NewClient - create a new client object
@@ -99,10 +99,7 @@ func (c *Client) ComputeProperties() {
 
 func (c *Client) computePublicKeyBytes() {
 	b, _ := hex.DecodeString(c.PublicKey)
-	if len(b) > len(c.PublicKeyBytes) {
-		b = b[len(b)-encryption.HASH_LENGTH:]
-	}
-	copy(c.PublicKeyBytes[encryption.HASH_LENGTH-len(b):], b)
+	c.PublicKeyBytes = b
 }
 
 /*SetPublicKey - set the public key */

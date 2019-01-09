@@ -1,0 +1,43 @@
+miners:
+- id: 31810bd1258ae95955fb40c7ef72498a556d3587121376d9059119d280f34929
+  public_key: 255452b9f49ebb8c8b8fcec9f0bd8a4284e540be1286bd562578e7e59765e41a7aada04c9e2ad3e28f79aacb0f1be66715535a87983843fea81f23d8011e728b
+  n2n_ip: 198.18.0.71
+  public_ip: localhost
+  port: 7071
+  description: localhost.m0
+
+- id: 585732eb076d07455fbebcf3388856b6fd00449a25c47c0f72d961c7c4e7e7c2
+  public_key: 17dd0eb10c2567899e34f368e1da2744c9cd3beb2e3babaa4e3350d950bad91dd4ed03d751d49e1f6c1b25c6ec8d1cc8db4ca2da72683d2958fb23843cc6a480
+  n2n_ip: 198.18.0.72
+  public_ip: localhost
+  port: 7072
+  description: localhost.m1
+
+- id: bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8
+  public_key: aa182e7f1aa1cfcb6cad1e2cbf707db43dbc0afe3437d7d6c657e79cca732122f02a8106891a78b3ebaa2a37ebd148b7ef48f5c0b1b3311094b7f15a1bd7de12
+  n2n_ip: 198.18.0.73
+  public_ip: localhost
+  port: 7073
+  description: localhost.m2
+
+sharders:
+- id: 57b416fcda1cf82b8a7e1fc3a47c68a94e617be873b5383ea2606bda757d3ce4
+  public_key: b9b236311a623be9d1999fb6dd30eb223cbe16639a9d5502e28879c67aa41915a0b100ce8248360ec73dd2d822087d1c19a8aabc5262a475d8553a35c90dd217
+  n2n_ip: 198.18.0.81
+  public_ip: localhost
+  port: 7171
+  description: localhost.s0
+
+- id: b098d2d56b087ee910f3ee2d2df173630566babb69f0be0e2e9a0c98d63f0b0b
+  public_key: 66dd43a9e7a2c5b18e495b7480ef458d220475df74156c3428cc2965fea1dd168aa17b8c2dcf42ad01411b19a8e9482dafc79d5508d743cfaf7b80d0f95fd582
+  n2n_ip: 198.18.0.82
+  public_ip: localhost
+  port: 7172
+  description: localhost.s1
+
+- id: d9558143f8e976126367603bff34125f5eb94720df8d7acefffdd66675d134c2
+  public_key: bc6de1013884e5a2e7837aa9fe726ccfb3f98c342e3dc2c3c76d9918011ebe10d8f6ae4e1ba805bbbef996012dfa586789127662f26767b4062d66a89828ac9a
+  n2n_ip: 198.18.0.83
+  public_ip: localhost
+  port: 7173
+  description: localhost.s2

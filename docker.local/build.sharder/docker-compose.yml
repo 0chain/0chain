@@ -39,7 +39,7 @@ services:
       default:
       testnet0:
         ipv4_address: 198.18.0.8${SHARDER}
-    command: ./bin/sharder --deployment_mode 0 --keys_file config/snode${SHARDER}_keys.txt --nodes_file single_machine_3_nodes
+    command: ./bin/sharder --deployment_mode 0 --keys_file config/snode${SHARDER}_keys.txt
 
 networks:
   default:

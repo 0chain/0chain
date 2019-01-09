@@ -505,13 +505,7 @@ func (c *Chain) CanStartNetwork() bool {
 
 /*ReadNodePools - read the node pools from configuration */
 func (c *Chain) ReadNodePools(configFile string) {
-	nodeConfig := viper.New()
-	nodeConfig.AddConfigPath("./config")
-	nodeConfig.SetConfigName(configFile)
-	err := nodeConfig.ReadInConfig()
-	if err != nil {
-		panic(fmt.Errorf("fatal error config file: %s", err))
-	}
+	nodeConfig := config.ReadConfig(configFile)
 	config := nodeConfig.Get("miners")
 	if miners, ok := config.([]interface{}); ok {
 		c.Miners.AddNodes(miners)

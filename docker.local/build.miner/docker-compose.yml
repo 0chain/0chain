@@ -46,7 +46,7 @@ services:
       default:
       testnet0:
         ipv4_address: 198.18.0.7${MINER}
-    command: ./bin/miner  --deployment_mode 0 --keys_file config/mnode${MINER}_keys.txt --nodes_file single_machine_3_nodes
+    command: ./bin/miner  --deployment_mode 0 --keys_file config/mnode${MINER}_keys.txt
 
 networks:
   default:

@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"0chain.net/common"
+	"0chain.net/encryption"
 	"0chain.net/memorystore"
 	"0chain.net/node"
 	"0chain.net/state"
@@ -34,6 +36,21 @@ func init() {
 	prng = rand.New(rs)
 }
 
+var clientSignatureScheme = "bls0chain"
+
+func TestWalletSetup(t *testing.T) {
+	sigScheme := encryption.GetSignatureScheme(clientSignatureScheme)
+	err := sigScheme.GenerateKeys()
+	if err != nil {
+		panic(err)
+	}
+	sigScheme.WriteKeys(os.Stdout)
+	publicKeyBytes, err := hex.DecodeString(sigScheme.GetPublicKey())
+	if err != nil {
+		panic(err)
+	}
+	fmt.Fprintf(os.Stdout, "%v\n", encryption.Hash(publicKeyBytes))
+}
 func TestMPTWithWalletTxns(t *testing.T) {
 	var rs = rand.NewSource(randTime)
 	transactions := 100
@@ -279,7 +296,7 @@ func createWallets(num int) []*Wallet {
 	for i := 0; i < len(wallets); i++ {
 		balance := prng.Int63n(1000)
 		wallets[i] = &Wallet{Balance: balance}
-		wallets[i].Initialize()
+		wallets[i].Initialize(clientSignatureScheme)
 	}
 	return wallets
 }

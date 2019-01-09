@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"0chain.net/chain"
-	"0chain.net/encryption"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 
@@ -22,15 +21,11 @@ import (
 	"0chain.net/wallet"
 )
 
-var sigScheme encryption.SignatureScheme
-
 var wallets []*wallet.Wallet
 var txn_generation_rate int32
 
 /*TransactionGenerator - generates a steady stream of transactions */
 func TransactionGenerator(c *chain.Chain) {
-	sigScheme = c.GetSignatureScheme()
-
 	wallet.SetupWallet()
 
 	viper.SetDefault("development.txn_generation.wallets", 1000)
@@ -149,11 +144,18 @@ func createDataTransaction(prng *rand.Rand) *transaction.Transaction {
 }
 
 /*GetOwnerWallet - get the owner wallet. Used to get the initial state get going */
-func GetOwnerWallet(keysFile string) *wallet.Wallet {
+func GetOwnerWallet(c *chain.Chain) *wallet.Wallet {
+	var keysFile string
+	if c.ClientSignatureScheme == "ed25519" {
+		keysFile = "config/owner_keys.txt"
+	} else {
+		keysFile = "config/b0owner_keys.txt"
+	}
 	reader, err := os.Open(keysFile)
 	if err != nil {
 		panic(err)
 	}
+	sigScheme := c.GetSignatureScheme()
 	err = sigScheme.ReadKeys(reader)
 	if err != nil {
 		panic(err)
@@ -176,7 +178,7 @@ func GetOwnerWallet(keysFile string) *wallet.Wallet {
 
 /*GenerateClients - generate the given number of clients */
 func GenerateClients(c *chain.Chain, numClients int) {
-	ownerWallet := GetOwnerWallet("config/owner_keys.txt")
+	ownerWallet := GetOwnerWallet(c)
 	rs := rand.NewSource(time.Now().UnixNano())
 	prng := rand.New(rs)
 
@@ -201,10 +203,10 @@ func GenerateClients(c *chain.Chain, numClients int) {
 			panic(err)
 		}
 	}
-	time.Sleep(time.Second)
+	time.Sleep(1 * time.Second)
 	for _, w := range wallets {
 		//generous airdrop in dev/test mode :)
-		txn := ownerWallet.CreateSendTransaction(w.ClientID, prng.Int63n(100000)*10000000000, "generous air drop! :)")
+		txn := ownerWallet.CreateSendTransaction(w.ClientID, prng.Int63n(100000)*10000000000, "generous air drop! :) debug")
 		_, err := transaction.PutTransaction(tctx, txn)
 		if err != nil {
 			fmt.Printf("error:%v: %v\n", time.Now(), err)
