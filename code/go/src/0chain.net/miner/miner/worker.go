@@ -39,18 +39,18 @@ func TransactionGenerator(c *chain.Chain) {
 	case blockSize <= 10:
 		numWorkers = 1
 	case blockSize <= 100:
-		numWorkers = 5
+		numWorkers = 1
 	case blockSize <= 1000:
-		numWorkers = 10
+		numWorkers = 2
 		numTxns = blockSize / 2
 	case blockSize <= 10000:
-		numWorkers = 25
+		numWorkers = 4
 		numTxns = blockSize / 2
 	case blockSize <= 100000:
-		numWorkers = 50
+		numWorkers = 8
 		numTxns = blockSize / 2
 	default:
-		numWorkers = 100
+		numWorkers = 16
 	}
 	txnMetadataProvider := datastore.GetEntityMetadata("txn")
 	txnChannel := make(chan bool, numTxns)
