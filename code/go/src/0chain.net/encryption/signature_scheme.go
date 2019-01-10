@@ -8,6 +8,7 @@ import (
 )
 
 var ErrKeyRead = errors.New("error reading the keys")
+var ErrInvalidSignatureScheme = errors.New("invalid signature scheme")
 
 //SignatureScheme - an encryption scheme for signing and verifying messages
 type SignatureScheme interface {
@@ -23,6 +24,12 @@ type SignatureScheme interface {
 	Verify(signature string, hash string) (bool, error)
 }
 
+//AggregateSignatureScheme - a signature scheme that can aggregate individual signatures
+type AggregateSignatureScheme interface {
+	Aggregate(ss SignatureScheme, idx int, signature string, hash string) error
+	Verify() (bool, error)
+}
+
 //GetSignatureScheme - given the name, return a signature scheme
 func GetSignatureScheme(sigScheme string) SignatureScheme {
 	switch sigScheme {
@@ -31,6 +38,18 @@ func GetSignatureScheme(sigScheme string) SignatureScheme {
 
 	case "bls0chain":
 		return NewBLS0ChainScheme()
+	default:
+		panic(fmt.Sprintf("unknown signature scheme: %v", sigScheme))
+	}
+}
+
+//GetAggregateSignatureScheme - get an aggregate signature scheme
+func GetAggregateSignatureScheme(sigScheme string, total int, batchSize int) AggregateSignatureScheme {
+	switch sigScheme {
+	case "ed25519":
+		return nil
+	case "bls0chain":
+		return NewBLS0ChainAggregateSignature(total, batchSize)
 	default:
 		panic(fmt.Sprintf("unknown signature scheme: %v", sigScheme))
 	}

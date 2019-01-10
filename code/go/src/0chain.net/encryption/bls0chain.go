@@ -10,11 +10,25 @@ import (
 	"github.com/herumi/bls/ffi/go/bls"
 )
 
+var GenG2 *bls.G2
+
 func init() {
 	err := bls.Init(bls.CurveFp254BNb)
 	if err != nil {
 		panic(err)
 	}
+	GenG2 = &bls.G2{}
+	/* The following string is obtained by serializing the generator of G2 using temporary go binding as follows
+		func (pub1 *PublicKey) GenG2() (pub2 *PublicKey) {
+	        pub2 = new(PublicKey)
+	        C.blsGetGeneratorOfG2(pub2.getPointer())
+	        return pub2
+	} */
+	bytes, err := hex.DecodeString("28b1ce2dbb7eccc8ba6b0d29615ac81e33be4d5909602ac35d2cac774eb4cc119a0deec914a95ffcd4cdbe685608602e7f82de7651a2e95ba0c4dabb144a200f")
+	if err != nil {
+		panic(err)
+	}
+	GenG2.Deserialize(bytes)
 }
 
 //BLS0ChainScheme - a signature scheme for BLS0Chain Signature
@@ -89,22 +103,36 @@ func (b0 *BLS0ChainScheme) GetPublicKey() string {
 func (b0 *BLS0ChainScheme) Sign(hash interface{}) (string, error) {
 	var sk bls.SecretKey
 	sk.SetLittleEndian(b0.privateKey)
-	sig := sk.Sign(fmt.Sprintf("%s", hash))
+	rawHash, err := GetRawHash(hash)
+	if err != nil {
+		return "", err
+	}
+	sig := sk.Sign(string(rawHash))
 	return sig.SerializeToHexStr(), nil
 }
 
 //Verify - implement interface
 func (b0 *BLS0ChainScheme) Verify(signature string, hash string) (bool, error) {
-	var sign bls.Sign
 	pk, err := b0.getPublicKey()
 	if err != nil {
 		return false, err
 	}
-	err = sign.DeserializeHexStr(signature)
+	sign, err := b0.GetSignature(signature)
+	rawHash, err := hex.DecodeString(hash)
 	if err != nil {
 		return false, err
 	}
-	return sign.Verify(pk, hash), nil
+	return sign.Verify(pk, string(rawHash)), nil
+}
+
+//GetSignature - given a string return the signature object
+func (b0 *BLS0ChainScheme) GetSignature(signature string) (*bls.Sign, error) {
+	var sign bls.Sign
+	err := sign.DeserializeHexStr(signature)
+	if err != nil {
+		return nil, err
+	}
+	return &sign, nil
 }
 
 func (b0 *BLS0ChainScheme) getPublicKey() (*bls.PublicKey, error) {
