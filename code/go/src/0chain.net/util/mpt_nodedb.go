@@ -248,8 +248,11 @@ func (lndb *LevelNodeDB) GetNode(key Key) (Node, error) {
 	c := lndb.C
 	p := lndb.P
 	node, err := c.GetNode(key)
-	if err != nil && p != c {
-		return p.GetNode(key)
+	if err != nil {
+		if p != c {
+			return p.GetNode(key)
+		}
+		return nil, err
 	}
 	return node, nil
 }

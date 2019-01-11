@@ -487,7 +487,7 @@ func (mpt *MerklePatriciaTrie) deleteAtNode(node Node, path Path) (Node, Key, er
 						nnode = enode
 						mpt.deleteNode(ochild)
 					default:
-						panic(fmt.Sprintf("uknown node type: %T %v %T", ochild, ochild, mpt.DB))
+						panic(fmt.Sprintf("unknown node type: %T %v %T", ochild, ochild, mpt.DB))
 					}
 					return mpt.insertNode(node, nnode)
 				}
@@ -529,7 +529,7 @@ func (mpt *MerklePatriciaTrie) deleteAtNode(node Node, path Path) (Node, Key, er
 		nnode.NodeKey = ckey
 		return mpt.insertNode(node, nnode)
 	default:
-		panic(fmt.Sprintf("uknown node type: %T %v", node, node))
+		panic(fmt.Sprintf("unknown node type: %T %v", node, node))
 	}
 }
 
@@ -568,7 +568,7 @@ func (mpt *MerklePatriciaTrie) insertAfterPathTraversal(value Serializable, node
 		nnode.PutChild(nodeImpl.Path[0], ckey)
 		return mpt.insertNode(node, nnode)
 	default:
-		panic(fmt.Sprintf("uknown node type: %T %v", node, node))
+		panic(fmt.Sprintf("unknown node type: %T %v", node, node))
 	}
 }
 
@@ -591,7 +591,7 @@ func (mpt *MerklePatriciaTrie) deleteAfterPathTraversal(node Node) (Node, Key, e
 	case *ExtensionNode:
 		panic("this should not happen!")
 	default:
-		panic(fmt.Sprintf("uknown node type: %T %v", node, node))
+		panic(fmt.Sprintf("unknown node type: %T %v", node, node))
 	}
 }
 
