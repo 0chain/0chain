@@ -33,7 +33,7 @@ func TransactionGenerator(c *chain.Chain) {
 	GenerateClients(c, numClients)
 	numWorkers := 1
 	blockSize := c.BlockSize
-	viper.SetDefault("development.txn_generation.transactions", 1000)
+	viper.SetDefault("development.txn_generation.transactions", blockSize)
 	numTxns := viper.GetInt32("development.txn_generation.transactions")
 	SetTxnGenRate(numTxns)
 	switch {
