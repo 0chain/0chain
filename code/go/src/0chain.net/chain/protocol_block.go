@@ -136,6 +136,14 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	ms := bNode.ProtocolStats.(*MinerStats)
 	Logger.Info("finalize block", zap.Int64("round", fb.Round), zap.Int64("current_round", c.CurrentRound), zap.Int64("lf_round", c.LatestFinalizedBlock.Round), zap.String("hash", fb.Hash), zap.Int("round_rank", fb.RoundRank), zap.Int8("state", fb.GetBlockState()))
 	ms.FinalizationCountByRank[fb.RoundRank]++
+	fr := c.GetRound(fb.Round)
+	if fr != nil {
+		generators := c.GetGenerators(fr)
+		for idx, g := range generators {
+			ms := g.ProtocolStats.(*MinerStats)
+			ms.GenerationCountByRank[idx]++
+		}
+	}
 	if time.Since(ssFTs) < 20*time.Second {
 		SteadyStateFinalizationTimer.UpdateSince(ssFTs)
 	}

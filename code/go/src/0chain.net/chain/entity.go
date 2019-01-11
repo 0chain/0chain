@@ -543,6 +543,7 @@ func (c *Chain) getMiningStake(minerID datastore.Key) int {
 func (c *Chain) InitializeMinerPool() {
 	for _, nd := range c.Miners.Nodes {
 		ms := &MinerStats{}
+		ms.GenerationCountByRank = make([]int64, c.NumGenerators)
 		ms.FinalizationCountByRank = make([]int64, c.NumGenerators)
 		ms.VerificationTicketsByRank = make([]int64, c.NumGenerators)
 		nd.ProtocolStats = ms
