@@ -54,15 +54,16 @@ RUN go get github.com/hashicorp/golang-lru
 
 RUN go get -d github.com/herumi/mcl/ffi/go/mcl && \
     cd $GOPATH/src/github.com/herumi/mcl && \
-    CFLAGS='-DMCLBN_FP_UNIT_SIZE=4' make && \
+    CGO_CFLAGS='-DMCLBN_FP_UNIT_SIZE=4' make && \
     cp $GOPATH/src/github.com/herumi/mcl/lib/lib*.so /usr/lib && \
-    go get -tags bn256 github.com/herumi/mcl/ffi/go/mcl
-
+    CGO_CFLAGS="-I$GOPATH/src/github.com/herumi/mcl/include" CGO_LDFLAGS="-L$GOPATH/src/github.com/herumi/mcl/lib" go get -tags bn256 github.com/herumi/mcl/ffi/go/mcl
+    
 RUN go get -d github.com/herumi/bls/ffi/go/bls && \
     cd $GOPATH/src/github.com/herumi/bls && \
     CFLAGS='-DMCLBN_FP_UNIT_SIZE=4' make && \
     cp $GOPATH/src/github.com/herumi/bls/lib/lib*.so /usr/lib && \
-    go get -tags bn256 github.com/herumi/bls/ffi/go/bls
+    CGO_CFLAGS="-I$GOPATH/src/github.com/herumi/bls/include -I$GOPATH/src/github.com/herumi/mcl/include" CGO_LDFLAGS="-L$GOPATH/src/github.com/herumi/bls/lib -L$GOPATH/src/github.com/herumi/mcl/lib" go get -tags bn256 github.com/herumi/bls/ffi/go/bls
+
 
 RUN cd /tmp && \
     git clone https://github.com/blynn/pbc.git && \
