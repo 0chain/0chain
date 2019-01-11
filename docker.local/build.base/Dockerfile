@@ -61,9 +61,6 @@ RUN go get -d github.com/herumi/bls/ffi/go/bls && \
     cd $GOPATH/src/github.com/herumi/bls && \
     CFLAGS='-DMCLBN_FP_UNIT_SIZE=4' make && \
     cp $GOPATH/src/github.com/herumi/bls/lib/lib*.so /usr/lib && \
-    sed -i 's/MCLBN_FP_UNIT_SIZE=6/MCLBN_FP_UNIT_SIZE=4/' ffi/go/bls/mcl.go && \
-    sed -i 's/MCLBN_FP_UNIT_SIZE=6/MCLBN_FP_UNIT_SIZE=4/' ffi/go/bls/bls.go && \
-    sed -i 's/-lbls384/-lbls256/' ffi/go/bls/bls.go && \
     CGO_CFLAGS="-I$GOPATH/src/github.com/herumi/bls/include -I$GOPATH/src/github.com/herumi/mcl/include" CGO_LDFLAGS="-L$GOPATH/src/github.com/herumi/bls/lib -L$GOPATH/src/github.com/herumi/mcl/lib" go get -tags bn256 github.com/herumi/bls/ffi/go/bls
 
 
