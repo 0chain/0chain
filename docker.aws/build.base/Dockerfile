@@ -54,7 +54,7 @@ RUN go get github.com/hashicorp/golang-lru
 
 RUN go get -d github.com/herumi/mcl/ffi/go/mcl && \
     cd $GOPATH/src/github.com/herumi/mcl && \
-    CGO_CFLAGS='-DMCLBN_FP_UNIT_SIZE=4' make && \
+    CFLAGS='-DMCLBN_FP_UNIT_SIZE=4' make && \
     cp $GOPATH/src/github.com/herumi/mcl/lib/lib*.so /usr/lib && \
     CGO_CFLAGS="-I$GOPATH/src/github.com/herumi/mcl/include" CGO_LDFLAGS="-L$GOPATH/src/github.com/herumi/mcl/lib" go get -tags bn256 github.com/herumi/mcl/ffi/go/mcl
     
