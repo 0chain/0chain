@@ -243,6 +243,9 @@ func (r *Round) initialize() {
 	r.notarizedBlocks = make([]*block.Block, 0, 1)
 	r.proposedBlocks = make([]*block.Block, 0, 3)
 	r.shares = make(map[string]*VRFShare)
+	//when we restart a round we call this. So, explicitly, set them to default
+	r.hasRandomSeed = false
+	r.RandomSeed = 0
 }
 
 /*Read - read round entity from store */
