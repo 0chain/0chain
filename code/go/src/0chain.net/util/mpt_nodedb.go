@@ -20,7 +20,7 @@ var ErrNodeNotFound = errors.New("node not found")
 var ErrValueNotPresent = errors.New("value not present")
 
 /*ErrIntermediateNodeExists - error indicating deleted intermediate node still exists */
-var ErrIntermediateNodeExists = errors.New("removed intermediate node still present (%T) %v")
+var ErrIntermediateNodeExists = errors.New("removed intermediate node still present (%T) %v - new (%T) %v")
 
 /*NodeDBIteratorHandler is a nodedb iteration handler function type */
 type NodeDBIteratorHandler func(ctx context.Context, key Key, node Node) error
@@ -248,8 +248,11 @@ func (lndb *LevelNodeDB) GetNode(key Key) (Node, error) {
 	c := lndb.C
 	p := lndb.P
 	node, err := c.GetNode(key)
-	if err != nil && p != c {
-		return p.GetNode(key)
+	if err != nil {
+		if p != c {
+			return p.GetNode(key)
+		}
+		return nil, err
 	}
 	return node, nil
 }

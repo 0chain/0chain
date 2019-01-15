@@ -101,12 +101,20 @@ func WaitForDkgToBeDone(ctx context.Context) {
 	}
 }
 
+func isNetworkReadyForDKG() bool {
+	mc := GetMinerChain()
+	if isDkgEnabled {
+		return mc.AreAllNodesActive()
+	} else {
+		return mc.CanStartNetwork()
+	}
+}
 func waitForNetworkToBeReady(ctx context.Context) {
 
 	mc := GetMinerChain()
 
 	//m2m := mc.Miners
-	if !mc.CanStartNetwork() {
+	if !isNetworkReadyForDKG() {
 		ticker := time.NewTicker(5 * chain.DELTA)
 		for ts := range ticker.C {
 			active := mc.Miners.GetActiveCount()
@@ -115,7 +123,7 @@ func waitForNetworkToBeReady(ctx context.Context) {
 			} else {
 				Logger.Info("waiting for all nodes to be active", zap.Time("ts", ts), zap.Int("active", active))
 			}
-			if mc.CanStartNetwork() {
+			if isNetworkReadyForDKG() {
 				break
 			}
 		}

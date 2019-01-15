@@ -394,11 +394,13 @@ func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<div>%v - %v</div>", self.GetPseudoName(), self.Description)
 	c.healthSummary(w, r)
 	fmt.Fprintf(w, "<table>")
-	fmt.Fprintf(w, "<tr><td colspan='2' style='text-align:center'>")
+	fmt.Fprintf(w, "<tr><td colspan='3' style='text-align:center'>")
 	c.notarizedBlockCountsStats(w)
 	fmt.Fprintf(w, "</td></tr>")
-	fmt.Fprintf(w, "<tr><th>Verification Counts</th><th>Finalization Counts</th></tr>")
+	fmt.Fprintf(w, "<tr><th>Generation Counts</th><th>Verification Counts</th><th>Finalization Counts</th></tr>")
 	fmt.Fprintf(w, "<tr><td>")
+	c.generationCountStats(w)
+	fmt.Fprintf(w, "</td><td>")
 	c.verificationCountStats(w)
 	fmt.Fprintf(w, "</td><td>")
 	c.finalizationCountStats(w)
@@ -416,22 +418,24 @@ func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (c *Chain) finalizationCountStats(w http.ResponseWriter) {
+func (c *Chain) generationCountStats(w http.ResponseWriter) {
 	fmt.Fprintf(w, "<table>")
 	fmt.Fprintf(w, "<tr><td>Miner</td>")
 	for i := 0; i < c.NumGenerators; i++ {
 		fmt.Fprintf(w, "<td>Rank %d</td>", i)
 	}
-	fmt.Fprintf(w, "</tr>")
+	fmt.Fprintf(w, "<td>Total</td></tr>")
 	totals := make([]int64, c.NumGenerators)
 	for _, nd := range c.Miners.Nodes {
 		fmt.Fprintf(w, "<tr><td>%v</td>", nd.GetPseudoName())
 		ms := nd.ProtocolStats.(*MinerStats)
+		var total int64
 		for i := 0; i < c.NumGenerators; i++ {
-			fmt.Fprintf(w, "<td class='number'>%v</td>", ms.FinalizationCountByRank[i])
-			totals[i] += ms.FinalizationCountByRank[i]
+			fmt.Fprintf(w, "<td class='number'>%v</td>", ms.GenerationCountByRank[i])
+			totals[i] += ms.GenerationCountByRank[i]
+			total += ms.GenerationCountByRank[i]
 		}
-		fmt.Fprintf(w, "</tr>")
+		fmt.Fprintf(w, "<td class='number'>%v</td></tr>", total)
 	}
 	fmt.Fprintf(w, "<tr><td>Totals</td>")
 	var total int64
@@ -439,9 +443,8 @@ func (c *Chain) finalizationCountStats(w http.ResponseWriter) {
 		fmt.Fprintf(w, "<td class='number'>%v</td>", totals[i])
 		total += totals[i]
 	}
-	fmt.Fprintf(w, "</tr>")
+	fmt.Fprintf(w, "<td class='number'>%v</td></tr>", total)
 	fmt.Fprintf(w, "</table>")
-	fmt.Fprintf(w, "Grand total = %v", total)
 }
 
 func (c *Chain) verificationCountStats(w http.ResponseWriter) {
@@ -450,16 +453,18 @@ func (c *Chain) verificationCountStats(w http.ResponseWriter) {
 	for i := 0; i < c.NumGenerators; i++ {
 		fmt.Fprintf(w, "<td>Rank %d</td>", i)
 	}
-	fmt.Fprintf(w, "</tr>")
+	fmt.Fprintf(w, "<td>Total</td></tr>")
 	totals := make([]int64, c.NumGenerators)
 	for _, nd := range c.Miners.Nodes {
 		fmt.Fprintf(w, "<tr><td>%v</td>", nd.GetPseudoName())
 		ms := nd.ProtocolStats.(*MinerStats)
+		var total int64
 		for i := 0; i < c.NumGenerators; i++ {
 			fmt.Fprintf(w, "<td class='number'>%v</td>", ms.VerificationTicketsByRank[i])
 			totals[i] += ms.VerificationTicketsByRank[i]
+			total += ms.VerificationTicketsByRank[i]
 		}
-		fmt.Fprintf(w, "</tr>")
+		fmt.Fprintf(w, "<td class='number'>%v</td></tr>", total)
 	}
 	fmt.Fprintf(w, "<tr><td>Totals</td>")
 	var total int64
@@ -467,9 +472,37 @@ func (c *Chain) verificationCountStats(w http.ResponseWriter) {
 		fmt.Fprintf(w, "<td class='number'>%v</td>", totals[i])
 		total += totals[i]
 	}
-	fmt.Fprintf(w, "</tr>")
+	fmt.Fprintf(w, "<td class='number'>%v</td></tr>", total)
 	fmt.Fprintf(w, "</table>")
-	fmt.Fprintf(w, "Grand total = %v", total)
+}
+
+func (c *Chain) finalizationCountStats(w http.ResponseWriter) {
+	fmt.Fprintf(w, "<table>")
+	fmt.Fprintf(w, "<tr><td>Miner</td>")
+	for i := 0; i < c.NumGenerators; i++ {
+		fmt.Fprintf(w, "<td>Rank %d</td>", i)
+	}
+	fmt.Fprintf(w, "<td>Total</td></tr>")
+	totals := make([]int64, c.NumGenerators)
+	for _, nd := range c.Miners.Nodes {
+		fmt.Fprintf(w, "<tr><td>%v</td>", nd.GetPseudoName())
+		ms := nd.ProtocolStats.(*MinerStats)
+		var total int64
+		for i := 0; i < c.NumGenerators; i++ {
+			fmt.Fprintf(w, "<td class='number'>%v</td>", ms.FinalizationCountByRank[i])
+			totals[i] += ms.FinalizationCountByRank[i]
+			total += ms.FinalizationCountByRank[i]
+		}
+		fmt.Fprintf(w, "<td class='number'>%v</td></tr>", total)
+	}
+	fmt.Fprintf(w, "<tr><td>Totals</td>")
+	var total int64
+	for i := 0; i < c.NumGenerators; i++ {
+		fmt.Fprintf(w, "<td class='number'>%v</td>", totals[i])
+		total += totals[i]
+	}
+	fmt.Fprintf(w, "<td class='number'>%v</td></tr>", total)
+	fmt.Fprintf(w, "</table>")
 }
 
 func (c *Chain) notarizedBlockCountsStats(w http.ResponseWriter) {

@@ -493,11 +493,17 @@ func (c *Chain) GetNotarizationThresholdCount() int {
 	return int(math.Ceil(thresholdCount))
 }
 
+// AreAllNodesActive - use this to check if all nodes needs to be active as in DKG
+func (c *Chain) AreAllNodesActive() bool {
+	active := c.Miners.GetActiveCount()
+	return active >= c.Miners.Size()
+}
+
 /*CanStartNetwork - check whether the network can start */
 func (c *Chain) CanStartNetwork() bool {
 	active := c.Miners.GetActiveCount()
 	threshold := c.GetNotarizationThresholdCount()
-	if config.DevConfiguration.State || config.DevConfiguration.IsDkgEnabled {
+	if config.DevConfiguration.State {
 		threshold = c.Miners.Size()
 	}
 	return active >= threshold
@@ -558,6 +564,7 @@ func (c *Chain) getMiningStake(minerID datastore.Key) int {
 func (c *Chain) InitializeMinerPool() {
 	for _, nd := range c.Miners.Nodes {
 		ms := &MinerStats{}
+		ms.GenerationCountByRank = make([]int64, c.NumGenerators)
 		ms.FinalizationCountByRank = make([]int64, c.NumGenerators)
 		ms.VerificationTicketsByRank = make([]int64, c.NumGenerators)
 		nd.ProtocolStats = ms

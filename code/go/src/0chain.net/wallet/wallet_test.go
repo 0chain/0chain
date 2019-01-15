@@ -98,9 +98,9 @@ func TestMPTWithWalletTxns(t *testing.T) {
 
 func TestMPTChangeCollector(t *testing.T) {
 	var rs = rand.NewSource(randTime)
-	transactions := 1
+	transactions := 1000
 	var wallets []*Wallet
-	var clients = 10000
+	var clients = 1000
 	for i := 0; i < 1; i++ {
 		prng = rand.New(rs)
 		wallets = createWallets(clients)
@@ -116,7 +116,7 @@ func TestMPTChangeCollector(t *testing.T) {
 			mndb := lndb.C.(*util.MemoryNodeDB)
 			mpt = lmpt
 			lmpt = cmpt
-
+			fmt.Printf("Generating for %v\n", 2010+j)
 			generateTransactions(lmpt, wallets, transactions)
 
 			rootKey := lmpt.GetRoot()
@@ -141,18 +141,33 @@ func TestMPTChangeCollector(t *testing.T) {
 
 				fmt.Printf("randtime: %v %v\n", i, randTime)
 				fmt.Printf("%v\n", err)
+				for _, change := range changes {
+					oHash := ""
+					if change.Old != nil {
+						oHash = change.Old.GetHash()
+					}
+					fmt.Printf("change: %T %v : %T %v\n", change.Old, oHash, change.New, change.New.GetHash())
+				}
 				panic(err)
 			}
 			err = lmpt.Validate()
 			if err != nil {
+				fmt.Printf("initial mpt\n")
 				mpt.PrettyPrint(os.Stdout)
 				fmt.Printf("\n")
-
+				fmt.Printf("updated mpt\n")
 				lmpt.PrettyPrint(os.Stdout)
 				fmt.Printf("\n")
 
 				fmt.Printf("randtime: %v %v\n", i, randTime)
 				fmt.Printf("%v\n", err)
+				for _, change := range changes {
+					oHash := ""
+					if change.Old != nil {
+						oHash = change.Old.GetHash()
+					}
+					fmt.Printf("change: %T %v : %T %v\n", change.Old, oHash, change.New, change.New.GetHash())
+				}
 				panic(err)
 			}
 		}
