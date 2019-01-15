@@ -1,4 +1,4 @@
-package pool
+package tokenpool
 
 import (
 	"encoding/json"
@@ -9,7 +9,7 @@ import (
 	"0chain.net/transaction"
 )
 
-type PoolTransferResponse struct {
+type TokenPoolTransferResponse struct {
 	TxnHash    datastore.Key `json:"txn_hash,omitempty"`
 	FromPool   datastore.Key `json:"from_pool,omitempty"`
 	ToPool     datastore.Key `json:"to_pool,omitempty"`
@@ -18,32 +18,32 @@ type PoolTransferResponse struct {
 	ToClient   datastore.Key `json:"to_client,omitempty"`
 }
 
-func (p *PoolTransferResponse) Encode() []byte {
+func (p *TokenPoolTransferResponse) Encode() []byte {
 	buff, _ := json.Marshal(p)
 	return buff
 }
 
-func (p *PoolTransferResponse) Decode(input []byte) error {
+func (p *TokenPoolTransferResponse) Decode(input []byte) error {
 	err := json.Unmarshal(input, p)
 	return err
 }
 
-type PoolI interface {
+type TokenPoolI interface {
 	GetBalance() state.Balance
 	GetID() datastore.Key
 	DigPool(id datastore.Key, txn *transaction.Transaction) (*state.Transfer, string, error)
 	FillPool(txn *transaction.Transaction) (*state.Transfer, string, error)
-	TransferTo(op *PoolI, value state.Balance) (string, error)
+	TransferTo(op *TokenPoolI, value state.Balance) (string, error)
 	DrainPool(fromClientID, toClientID datastore.Key, value state.Balance, txn *transaction.Transaction) (*state.Transfer, string, error)
 	EmptyPool(fromClientID, toClientID datastore.Key, txn *transaction.Transaction) (*state.Transfer, string, error)
 }
 
-type Pool struct {
+type TokenPool struct {
 	ID      datastore.Key `json:"id"`
 	Balance state.Balance `json:"balance"`
 }
 
-type Lock struct {
+type TokenLock struct {
 	StartTime time.Time     `json:"start_time"`
 	Duration  time.Duration `json:"duration"`
 	Owner     datastore.Key `json:"owner"`
@@ -53,12 +53,12 @@ type Lock struct {
 	// PayoutExecutors []datastore.Key `json:"payout_executors"`
 }
 
-func (l *Lock) Encode() []byte {
+func (l *TokenLock) Encode() []byte {
 	buff, _ := json.Marshal(l)
 	return buff
 }
 
-func (l *Lock) Decode(input []byte) error {
+func (l *TokenLock) Decode(input []byte) error {
 	err := json.Unmarshal(input, l)
 	return err
 }

@@ -1,4 +1,4 @@
-package pool
+package tokenpool
 
 import (
 	"encoding/json"
@@ -12,7 +12,7 @@ import (
 
 type ZcnLockingPool struct {
 	ZcnPool
-	Lock
+	TokenLock
 }
 
 func (p *ZcnLockingPool) Encode() []byte {

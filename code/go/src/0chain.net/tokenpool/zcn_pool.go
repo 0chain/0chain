@@ -1,4 +1,4 @@
-package pool
+package tokenpool
 
 import (
 	"encoding/json"
@@ -10,7 +10,7 @@ import (
 )
 
 type ZcnPool struct {
-	Pool
+	TokenPool
 }
 
 func (p *ZcnPool) Encode() []byte {
@@ -35,11 +35,11 @@ func (p *ZcnPool) DigPool(id datastore.Key, txn *transaction.Transaction) (*stat
 	if txn.Value <= 0 {
 		return nil, "", common.NewError("digging pool failed", "insufficent funds")
 	}
-	p.Pool.ID = id
-	p.Pool.Balance = state.Balance(txn.Value)
-	pr := &PoolTransferResponse{TxnHash: txn.Hash, FromClient: txn.ClientID, ToPool: p.ID, ToClient: txn.ToClientID}
+	p.TokenPool.ID = id
+	p.TokenPool.Balance = state.Balance(txn.Value)
+	tpr := &TokenPoolTransferResponse{TxnHash: txn.Hash, FromClient: txn.ClientID, ToPool: p.ID, ToClient: txn.ToClientID}
 	transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, state.Balance(txn.Value))
-	return transfer, string(pr.Encode()), nil
+	return transfer, string(tpr.Encode()), nil
 }
 
 func (p *ZcnPool) FillPool(txn *transaction.Transaction) (*state.Transfer, string, error) {
@@ -47,9 +47,9 @@ func (p *ZcnPool) FillPool(txn *transaction.Transaction) (*state.Transfer, strin
 		return nil, "", common.NewError("filling pool failed", "insufficent funds")
 	}
 	p.Balance += state.Balance(txn.Value)
-	pr := &PoolTransferResponse{TxnHash: txn.Hash, FromClient: txn.ClientID, ToPool: p.ID, ToClient: txn.ToClientID}
+	tpr := &TokenPoolTransferResponse{TxnHash: txn.Hash, FromClient: txn.ClientID, ToPool: p.ID, ToClient: txn.ToClientID}
 	transfer := state.NewTransfer(txn.ClientID, txn.ToClientID, state.Balance(txn.Value))
-	return transfer, string(pr.Encode()), nil
+	return transfer, string(tpr.Encode()), nil
 }
 
 //ZcnPool to ZcnPool transfer
@@ -57,20 +57,20 @@ func (p *ZcnPool) TransferTo(op *ZcnPool, value state.Balance) (string, error) {
 	if value > p.Balance {
 		return "", common.NewError("pool-to-pool transfer failed", "value exceeds balance")
 	}
-	pr := &PoolTransferResponse{FromPool: p.ID, ToPool: op.ID, Value: value}
+	tpr := &TokenPoolTransferResponse{FromPool: p.ID, ToPool: op.ID, Value: value}
 	op.Balance += value
 	p.Balance -= value
-	return string(pr.Encode()), nil
+	return string(tpr.Encode()), nil
 }
 
 func (p *ZcnPool) DrainPool(fromClientID, toClientID datastore.Key, value state.Balance) (*state.Transfer, string, error) {
 	if value > p.Balance {
 		return nil, "", common.NewError("draining pool failed", "value exceeds balance")
 	}
-	pr := &PoolTransferResponse{FromClient: fromClientID, ToClient: toClientID, Value: value, FromPool: p.ID}
+	tpr := &TokenPoolTransferResponse{FromClient: fromClientID, ToClient: toClientID, Value: value, FromPool: p.ID}
 	transfer := state.NewTransfer(fromClientID, toClientID, value)
 	p.Balance -= value
-	return transfer, string(pr.Encode()), nil
+	return transfer, string(tpr.Encode()), nil
 }
 
 func (p *ZcnPool) EmptyPool(fromClientID, toClientID datastore.Key) (*state.Transfer, string, error) {
@@ -78,7 +78,7 @@ func (p *ZcnPool) EmptyPool(fromClientID, toClientID datastore.Key) (*state.Tran
 		return nil, "", common.NewError("emptying pool failed", "pool already empty")
 	}
 	transfer := state.NewTransfer(fromClientID, toClientID, p.Balance)
-	pr := &PoolTransferResponse{FromClient: fromClientID, ToClient: toClientID, Value: p.Balance, FromPool: p.ID}
+	tpr := &TokenPoolTransferResponse{FromClient: fromClientID, ToClient: toClientID, Value: p.Balance, FromPool: p.ID}
 	p.Balance = 0
-	return transfer, string(pr.Encode()), nil
+	return transfer, string(tpr.Encode()), nil
 }
