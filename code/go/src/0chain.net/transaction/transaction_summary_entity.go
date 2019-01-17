@@ -10,6 +10,7 @@ import (
 type TransactionSummary struct {
 	datastore.HashIDField
 	BlockHash string `json:"block_hash"`
+	Round     int64  `json:"round"`
 }
 
 var transactionSummaryEntityMetadata *datastore.EntityMetadataImpl

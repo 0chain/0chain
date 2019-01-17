@@ -47,10 +47,15 @@ func GetTransactionConfirmation(ctx context.Context, hash string) (*transaction.
 	}
 	confirmation := datastore.GetEntityMetadata("txn_confirmation").Instance().(*transaction.Confirmation)
 	confirmation.Hash = hash
-	confirmation.BlockHash = ts.BlockHash
+	sc := GetSharderChain()
+	hash, err = sc.GetBlockHash(ctx, ts.Round)
+	if err != nil {
+		return nil, err
+	}
+	confirmation.BlockHash = hash
 
 	var b *block.Block
-	bc, err := GetSharderChain().BlockCache.Get(ts.BlockHash)
+	bc, err := sc.BlockCache.Get(ts.BlockHash)
 	if err != nil {
 		bSummaryEntityMetadata := datastore.GetEntityMetadata("block_summary")
 		bctx := ememorystore.WithEntityConnection(ctx, bSummaryEntityMetadata)
@@ -65,7 +70,7 @@ func GetTransactionConfirmation(ctx context.Context, hash string) (*transaction.
 		confirmation.CreationDate = bs.CreationDate
 		confirmation.MerkleTreeRoot = bs.MerkleTreeRoot
 		confirmation.ReceiptMerkleTreeRoot = bs.ReceiptMerkleTreeRoot
-		b, err = GetSharderChain().GetBlockBySummary(ctx, bs)
+		b, err = sc.GetBlockBySummary(ctx, bs)
 		if err != nil {
 			return confirmation, nil
 		}
@@ -93,7 +98,9 @@ func (sc *Chain) StoreTransactions(ctx context.Context, b *block.Block) error {
 	for idx, txn := range b.Txns {
 		txnSummary := txn.GetSummary()
 		txnSummary.BlockHash = b.Hash
+		txnSummary.Round = b.Round
 		sTxns[idx] = txnSummary
+		sc.BlockTxnCache.Add(txn.Hash, txnSummary)
 	}
 	txnSummaryMetadata := datastore.GetEntityMetadata("txn_summary")
 	tctx := persistencestore.WithEntityConnection(ctx, txnSummaryMetadata)

@@ -84,6 +84,19 @@ func (sc *Chain) GetRoundFromStore(ctx context.Context, roundNum int64) (*round.
 	return r, err
 }
 
+/*GetBlockHash - get the block hash for a given round */
+func (sc *Chain) GetBlockHash(ctx context.Context, roundNumber int64) (string, error) {
+	r := sc.GetSharderRound(roundNumber)
+	if r == nil {
+		sr, err := sc.GetRoundFromStore(ctx, roundNumber)
+		if err != nil {
+			return "", err
+		}
+		r = sr
+	}
+	return r.BlockHash, nil
+}
+
 //GetSharderRound - get the sharder's version of the round
 func (sc *Chain) GetSharderRound(roundNumber int64) *round.Round {
 	r := sc.GetRound(roundNumber)
