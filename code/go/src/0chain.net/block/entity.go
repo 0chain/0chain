@@ -213,7 +213,7 @@ func (b *Block) SetSCStateDB(prevBlock *Block) {
 	var pndb smartcontractstate.SCDB
 
 	if prevBlock.SCStateDB == nil {
-		if config.DevConfiguration.State {
+		if state.Debug() {
 			Logger.DPanic("set smart contract state db - prior state not available")
 		} else {
 			pndb = smartcontractstate.NewMemorySCDB()
