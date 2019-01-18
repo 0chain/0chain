@@ -55,12 +55,12 @@ func GetTransactionConfirmation(ctx context.Context, hash string) (*transaction.
 	confirmation.BlockHash = bhash
 
 	var b *block.Block
-	bc, err := sc.BlockCache.Get(ts.BlockHash)
+	bc, err := sc.BlockCache.Get(bhash)
 	if err != nil {
 		bSummaryEntityMetadata := datastore.GetEntityMetadata("block_summary")
 		bctx := ememorystore.WithEntityConnection(ctx, bSummaryEntityMetadata)
 		defer ememorystore.Close(bctx)
-		bs, err := GetBlockSummary(bctx, ts.BlockHash)
+		bs, err := GetBlockSummary(bctx, bhash)
 		if err != nil {
 			return nil, err
 		}
@@ -97,7 +97,6 @@ func (sc *Chain) StoreTransactions(ctx context.Context, b *block.Block) error {
 	var sTxns = make([]datastore.Entity, len(b.Txns))
 	for idx, txn := range b.Txns {
 		txnSummary := txn.GetSummary()
-		txnSummary.BlockHash = b.Hash
 		txnSummary.Round = b.Round
 		sTxns[idx] = txnSummary
 		sc.BlockTxnCache.Add(txn.Hash, txnSummary)
