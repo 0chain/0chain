@@ -48,11 +48,11 @@ func GetTransactionConfirmation(ctx context.Context, hash string) (*transaction.
 	confirmation := datastore.GetEntityMetadata("txn_confirmation").Instance().(*transaction.Confirmation)
 	confirmation.Hash = hash
 	sc := GetSharderChain()
-	hash, err = sc.GetBlockHash(ctx, ts.Round)
+	bhash, err := sc.GetBlockHash(ctx, ts.Round)
 	if err != nil {
 		return nil, err
 	}
-	confirmation.BlockHash = hash
+	confirmation.BlockHash = bhash
 
 	var b *block.Block
 	bc, err := sc.BlockCache.Get(ts.BlockHash)
