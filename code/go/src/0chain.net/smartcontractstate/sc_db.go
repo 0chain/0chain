@@ -62,10 +62,13 @@ func SaveChanges(ctx context.Context, fromNodeDB SCDB, toNodeDB SCDB) error {
 	if ok {
 		fdb = fromNodeDB.(*PipedSCDB).C
 	}
-	err := fdb.Iterate(ctx, handler)
-	if err != nil {
-		return err
+	if fdb != nil {
+		err := fdb.Iterate(ctx, handler)
+		if err != nil {
+			return err
+		}
 	}
+
 	return toNodeDB.MultiPutNode(keys, nodes)
 }
 
