@@ -183,7 +183,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 						time.Sleep(time.Duration(delay) * time.Millisecond)
 						if startLogging.IsZero() || time.Now().Sub(startLogging) > time.Second {
 							startLogging = time.Now()
-							Logger.Info("generate block", zap.Any("round", roundNumber), zap.Any("delay", delay), zap.Any("txn_count", txnCount), zap.Any("t.txn_count", transaction.TransactionCount))
+							Logger.Info("generate block", zap.Any("round", roundNumber), zap.Any("delay", delay), zap.Any("txn_count", txnCount), zap.Any("t.txn_count", transaction.TransactionCount), zap.Any("error", cerr))
 						}
 						if mc.CurrentRound > b.Round {
 							Logger.Error("generate block - round mismatch", zap.Any("round", roundNumber), zap.Any("current_round", mc.CurrentRound))
