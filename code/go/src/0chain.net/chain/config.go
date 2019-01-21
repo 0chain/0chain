@@ -37,4 +37,7 @@ type Config struct {
 	ReuseTransactions bool `json:"reuse_txns"` // indicates if transactions from unrelated blocks can be reused
 
 	ClientSignatureScheme string `json:"client_signature_scheme"` // indicates which signature scheme is being used
+
+	MinActiveSharders    int `json:"min_active_sharders"`    // Minimum active sharders required to validate blocks
+	MinActiveReplicators int `json:"min_active_replicators"` // Minimum active replicators of a block that should be active to verify the block
 }

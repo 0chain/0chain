@@ -18,7 +18,7 @@ func SetupDefaultConfig() {
 	viper.SetDefault("server_chain.round_range", 10000000)
 	viper.SetDefault("server_chain.transaction.payload.max_size", 32)
 	viper.SetDefault("server_chain.state.prune_below_count", 100)
-	viper.SetDefault("server_chain.block.consensus.threshold_by_count", 60)
+	viper.SetDefault("server_chain.block.consensus.threshold_by_count", 67)
 	viper.SetDefault("server_chain.block.generation.timeout", 37)
 	viper.SetDefault("server_chain.transaction.timeout", 10)
 	viper.SetDefault("server_chain.block.generation.retry_wait_time", 5)
@@ -26,6 +26,8 @@ func SetupDefaultConfig() {
 	viper.SetDefault("server_chain.block.proposal.wait_mode", "static")
 	viper.SetDefault("server_chain.block.reuse_txns", true)
 	viper.SetDefault("server_chain.client.signature_scheme", "ed25519")
+	viper.SetDefault("server_chain.block.sharding.min_active_sharders", 100)
+	viper.SetDefault("server_chain.block.sharding.min_active_replicators", 100)
 }
 
 /*SetupConfig - setup the configuration system */

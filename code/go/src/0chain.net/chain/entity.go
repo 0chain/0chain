@@ -189,6 +189,10 @@ func NewChainFromConfig() *Chain {
 	}
 	chain.ReuseTransactions = viper.GetBool("server_chain.block.reuse_txns")
 	chain.SetSignatureScheme(viper.GetString("server_chain.client.signature_scheme"))
+
+	chain.MinActiveSharders = viper.GetInt("server_chain.block.sharding.min_active_sharders")
+	chain.MinActiveReplicators = viper.GetInt("server_chain.block.sharding.min_active_replicators")
+
 	return chain
 }
 
@@ -730,4 +734,27 @@ func (c *Chain) SetSignatureScheme(sigScheme string) {
 //GetSignatureScheme - get the signature scheme used by this chain
 func (c *Chain) GetSignatureScheme() encryption.SignatureScheme {
 	return encryption.GetSignatureScheme(c.ClientSignatureScheme)
+}
+
+//CanShardBlocks - is the network able to effectively shard the blocks?
+func (c *Chain) CanShardBlocks() bool {
+	return c.Sharders.GetActiveCount()*100 >= c.Sharders.Size()*c.MinActiveSharders
+}
+
+//CanReplicateBlock - can the given block be effectively replicated?
+func (c *Chain) CanReplicateBlock(b *block.Block) bool {
+	if c.NumReplicators <= 0 {
+		return c.CanShardBlocks()
+	}
+	scores := c.nodePoolScorer.ScoreHashString(c.Sharders, b.Hash)
+	arCount := 0
+	for i := 0; i < c.NumReplicators; i++ {
+		if scores[i].Node.IsActive() {
+			arCount++
+			if arCount*100 >= c.Sharders.Size()*c.MinActiveReplicators {
+				return true
+			}
+		}
+	}
+	return false
 }

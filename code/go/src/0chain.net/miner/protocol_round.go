@@ -398,6 +398,12 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 
 /*VerifyRoundBlock - given a block is verified for a round*/
 func (mc *Chain) VerifyRoundBlock(ctx context.Context, r *Round, b *block.Block) (*block.BlockVerificationTicket, error) {
+	if !mc.CanShardBlocks() {
+		return nil, common.NewError("fewer_active_sharders", "Number of active sharders not sufficient")
+	}
+	if !mc.CanReplicateBlock(b) {
+		return nil, common.NewError("fewer_active_replicators", "Number of active replicators not sufficient")
+	}
 	if mc.CurrentRound != r.Number {
 		return nil, ErrRoundMismatch
 	}

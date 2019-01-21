@@ -41,6 +41,9 @@ server_chain:
     consensus:
       threshold_by_count: 66 # percentage
       threshold_by_stake: 0 # percent
+    sharding:
+      min_active_sharders: 33 # percentage
+      min_active_replicators: 33 # percentage
     validation:
       batch_size: 1000
     reuse_txns: false

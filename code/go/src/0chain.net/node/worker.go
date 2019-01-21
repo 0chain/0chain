@@ -26,9 +26,9 @@ func (np *Pool) StatusMonitor(ctx context.Context) {
 		case _ = <-timer.C:
 			np.statusMonitor(ctx)
 			if np.GetActiveCount()*10 < len(np.Nodes)*8 {
-				timer = time.NewTimer(5 * time.Second)
+				timer = time.NewTimer(2 * time.Second)
 			} else {
-				timer = time.NewTimer(10 * time.Second)
+				timer = time.NewTimer(5 * time.Second)
 			}
 		}
 	}
