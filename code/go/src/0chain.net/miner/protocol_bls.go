@@ -324,6 +324,13 @@ func GetBlsShare(ctx context.Context, r, pr *round.Round) string {
 //AddVRFShare - implement the interface for the RoundRandomBeacon protocol
 func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShare) bool {
 	Logger.Info("DKG AddVRFShare", zap.Int64("Round", mr.GetRoundNumber()), zap.Int("Sender", vrfs.GetParty().SetIndex))
+
+	if len(mr.GetVRFShares()) >= GetBlsThreshold() {
+		//ignore VRF shares coming after threshold is reached to avoid loocking issues.
+		//Todo: Remove this logging
+		Logger.Info("Ignoring VRFShare. Already at threshold", zap.Int64("Round", mr.GetRoundNumber()), zap.Int("#of VRF Shares", len(mr.GetVRFShares())))
+		return false
+	}
 	if mr.AddVRFShare(vrfs) {
 		mc.ThresholdNumBLSSigReceived(ctx, mr)
 		return true
