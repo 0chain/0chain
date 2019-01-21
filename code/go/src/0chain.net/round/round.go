@@ -32,7 +32,7 @@ type RoundI interface {
 
 	GetState() int
 	SetState(state int)
-	AddVRFShare(share *VRFShare) bool
+	AddVRFShare(share *VRFShare, threshold int) bool
 	GetVRFShares() map[string]*VRFShare
 
 	Lock()

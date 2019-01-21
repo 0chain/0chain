@@ -323,9 +323,13 @@ func (r *Round) Restart() {
 }
 
 //AddVRFShare - implement interface
-func (r *Round) AddVRFShare(share *VRFShare) bool {
+func (r *Round) AddVRFShare(share *VRFShare, threshold int) bool {
 	r.Mutex.Lock()
 	defer r.Mutex.Unlock()
+	if len(r.GetVRFShares()) >= threshold {
+		//if we already have enough shares, do not add.
+		return false
+	}
 	if _, ok := r.shares[share.party.GetKey()]; ok {
 		return false
 	}
