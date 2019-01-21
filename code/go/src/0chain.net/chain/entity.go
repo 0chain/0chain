@@ -166,7 +166,7 @@ func NewChainFromConfig() *Chain {
 	chain.MaxByteSize = viper.GetInt64("server_chain.block.max_byte_size")
 	chain.NumGenerators = viper.GetInt("server_chain.block.generators")
 	chain.NotariedBlocksCounts = make([]int64, chain.NumGenerators+1)
-	chain.NumSharders = viper.GetInt("server_chain.block.sharders")
+	chain.NumReplicators = viper.GetInt("server_chain.block.replicators")
 	chain.ThresholdByCount = viper.GetInt("server_chain.block.consensus.threshold_by_count")
 	chain.ThresholdByStake = viper.GetInt("server_chain.block.consensus.threshold_by_stake")
 	chain.OwnerID = viper.GetString("server_chain.owner")
@@ -458,11 +458,11 @@ func (c *Chain) GetGenerators(r round.RoundI) []*node.Node {
 
 /*IsBlockSharder - checks if the sharder can store the block in the given round */
 func (c *Chain) IsBlockSharder(b *block.Block, sharder *node.Node) bool {
-	if c.NumSharders <= 0 {
+	if c.NumReplicators <= 0 {
 		return true
 	}
 	scores := c.nodePoolScorer.ScoreHashString(c.Sharders, b.Hash)
-	return sharder.IsInTop(scores, c.NumSharders)
+	return sharder.IsInTop(scores, c.NumReplicators)
 }
 
 /*ValidGenerator - check whether this block is from a valid generator */

@@ -21,7 +21,7 @@ type Config struct {
 	MinBlockSize          int32         `json:"min_block_size"`          // Number of transactions a block needs to have
 	MaxByteSize           int64         `json:"max_byte_size"`           // Max number of bytes a block can have
 	NumGenerators         int           `json:"num_generators"`          // Number of block generators
-	NumSharders           int           `json:"num_sharders"`            // Number of sharders that can store the block
+	NumReplicators        int           `json:"num_replicators"`         // Number of sharders that can store the block
 	ThresholdByCount      int           `json:"threshold_by_count"`      // Threshold count for a block to be notarized
 	ThresholdByStake      int           `json:"threshold_by_stake"`      // Stake threshold for a block to be notarized
 	ValidationBatchSize   int           `json:"validation_size"`         // Batch size of txns for crypto verification
