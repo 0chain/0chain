@@ -748,10 +748,14 @@ func (c *Chain) CanReplicateBlock(b *block.Block) bool {
 	}
 	scores := c.nodePoolScorer.ScoreHashString(c.Sharders, b.Hash)
 	arCount := 0
-	for i := 0; i < c.NumReplicators; i++ {
+	minScore := scores[c.NumReplicators-1].Score
+	for i := 0; i < len(scores); i++ {
+		if scores[i].Score < minScore {
+			break
+		}
 		if scores[i].Node.IsActive() {
 			arCount++
-			if arCount*100 >= c.Sharders.Size()*c.MinActiveReplicators {
+			if arCount*100 >= c.NumReplicators*c.MinActiveReplicators {
 				return true
 			}
 		}
