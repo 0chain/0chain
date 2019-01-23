@@ -411,6 +411,8 @@ func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r 
 			seed = rand.New(rand.NewSource(pr.GetRandomSeed())).Int63()
 		}
 		r.Round.SetVRFOutput(rbo)
+		//Todo: Remove this log later.
+		Logger.Info("Starting round", zap.Int64("round", r.GetRoundNumber()), zap.Int64("rseed", seed))
 		mc.startRound(ctx, r, seed)
 	} else {
 		Logger.Error("compute round random seed - no prior value", zap.Int64("round", r.GetRoundNumber()), zap.Int("blocks", len(pr.GetProposedBlocks())))
