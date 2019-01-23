@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"sync"
 	"time"
 
 	"0chain.net/chain"
@@ -54,29 +55,6 @@ func TransactionGenerator(c *chain.Chain) {
 		numWorkers = 16
 	}
 	txnMetadataProvider := datastore.GetEntityMetadata("txn")
-	txnChannel := make(chan bool, numTxns)
-	for i := 0; i < numWorkers; i++ {
-		ctx := datastore.WithAsyncChannel(common.GetRootContext(), transaction.TransactionEntityChannel)
-		go func() {
-			ctx = memorystore.WithEntityConnection(ctx, txnMetadataProvider)
-			rs := rand.NewSource(time.Now().UnixNano())
-			prng := rand.New(rs)
-			var txn *transaction.Transaction
-			for range txnChannel {
-				r := prng.Int63n(100)
-				if r < 25 {
-					txn = createSendTransaction(prng)
-				} else {
-					txn = createDataTransaction(prng)
-				}
-				_, err := transaction.PutTransaction(ctx, txn)
-				if err != nil {
-					fmt.Printf("error:%v: %v\n", time.Now(), err)
-					//panic(err)
-				}
-			}
-		}()
-	}
 	ctx := memorystore.WithEntityConnection(common.GetRootContext(), txnMetadataProvider)
 	txn := txnMetadataProvider.Instance().(*transaction.Transaction)
 	txn.ChainID = miner.GetMinerChain().ID
@@ -90,10 +68,14 @@ func TransactionGenerator(c *chain.Chain) {
 		txnCount = int32(txnMetadataProvider.GetStore().GetCollectionSize(ctx, txnMetadataProvider, collectionName))
 	}
 
+	numGenerators := sc.NumGenerators
+	numMiners := sc.Miners.Size()
 	for true {
 		numTxns = GetTxnGenRate()
-		numGenerators := sc.NumGenerators
-		numMiners := sc.Miners.Size()
+		numWorkerTxns := numTxns / int32(numWorkers)
+		if numWorkerTxns*int32(numWorkers) < numTxns {
+			numWorkerTxns++
+		}
 		blockRate := chain.SteadyStateFinalizationTimer.Rate1()
 		if chain.SteadyStateFinalizationTimer.Count() < 250 && blockRate < 2 {
 			blockRate = 2
@@ -116,9 +98,33 @@ func TransactionGenerator(c *chain.Chain) {
 			if float64(txnCount) >= blocksPerMiner*float64(8*numTxns) {
 				continue
 			}
-			for i := int32(0); i < numTxns; i++ {
-				txnChannel <- true
+			wg := sync.WaitGroup{}
+			for i := 0; i < numWorkers; i++ {
+				ctx := datastore.WithAsyncChannel(common.GetRootContext(), transaction.TransactionEntityChannel)
+				wg.Add(1)
+				go func() {
+					ctx = memorystore.WithEntityConnection(ctx, txnMetadataProvider)
+					defer memorystore.Close(ctx)
+					rs := rand.NewSource(time.Now().UnixNano())
+					prng := rand.New(rs)
+					var txn *transaction.Transaction
+					for t := int32(0); t <= numWorkerTxns; t++ {
+						r := prng.Int63n(100)
+						if r < 25 {
+							txn = createSendTransaction(prng)
+						} else {
+							txn = createDataTransaction(prng)
+						}
+						_, err := transaction.PutTransaction(ctx, txn)
+						if err != nil {
+							fmt.Printf("error:%v: %v\n", time.Now(), err)
+							//panic(err)
+						}
+					}
+					wg.Done()
+				}()
 			}
+			wg.Wait()
 		}
 	}
 }
