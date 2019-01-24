@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"0chain.net/common"
 	"0chain.net/datastore"
 	"0chain.net/state"
 	"0chain.net/transaction"
@@ -30,10 +31,11 @@ func (p *TokenPoolTransferResponse) Decode(input []byte) error {
 
 type TokenPoolI interface {
 	GetBalance() state.Balance
+	SetBalance(value state.Balance)
 	GetID() datastore.Key
 	DigPool(id datastore.Key, txn *transaction.Transaction) (*state.Transfer, string, error)
 	FillPool(txn *transaction.Transaction) (*state.Transfer, string, error)
-	TransferTo(op *TokenPoolI, value state.Balance) (string, error)
+	TransferTo(op TokenPoolI, value state.Balance, txn *transaction.Transaction) (*state.Transfer, string, error)
 	DrainPool(fromClientID, toClientID datastore.Key, value state.Balance, txn *transaction.Transaction) (*state.Transfer, string, error)
 	EmptyPool(fromClientID, toClientID datastore.Key, txn *transaction.Transaction) (*state.Transfer, string, error)
 }
@@ -44,9 +46,9 @@ type TokenPool struct {
 }
 
 type TokenLock struct {
-	StartTime time.Time     `json:"start_time"`
-	Duration  time.Duration `json:"duration"`
-	Owner     datastore.Key `json:"owner"`
+	StartTime common.Timestamp `json:"start_time"`
+	Duration  time.Duration    `json:"duration"`
+	Owner     datastore.Key    `json:"owner"`
 	// for future use
 	// Leaser          datastore.Key   `json:"leaser"`
 	// LockExecutors   []datastore.Key `json:"lock_executors"`

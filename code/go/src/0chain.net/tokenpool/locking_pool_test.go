@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/common"
 	"0chain.net/transaction"
 )
 
@@ -17,38 +18,29 @@ func TestTransferToLockPool(t *testing.T) {
 	txn := transaction.Transaction{}
 	txn.ClientID = C0
 	txn.Value = 10
+	txn.CreationDate = common.Now()
 	p0 := &ZcnLockingPool{}
 	p0.Duration = LOCKUPTIME90DAYS
-	p0.StartTime = time.Now()
-	transfer, resp, err := p0.DigPool(C0, &txn)
-	t.Logf("pool: %v\ntransfer: %v\nerror: %v\nresp: %v\n", p0, transfer, err, resp)
-	if p0.GetBalance() != 10 {
-		t.Errorf("Pool wasn't dug, balance %v", p0.GetBalance())
-	}
-	p1 := &ZcnLockingPool{}
-	p1.Duration = LOCKUPTIME90DAYS
-	p1.StartTime = time.Now()
+	p0.StartTime = common.Now()
+	p0.DigPool(C0, &txn)
+
+	p1 := &ZcnPool{}
 	txn.Value = 2
 	txn.ClientID = C1
+	txn.CreationDate = common.Now()
 	p1.DigPool(C1, &txn)
-	t.Logf("pool: %v\n", p0)
-	t.Logf("pool: %v\n", p1)
-	str, err := p0.TransferTo(p1, 9)
+
+	_, _, err := p0.TransferTo(p1, 9, &txn)
 	if err == nil {
-		t.Logf("str: %v\n", str)
-	} else {
-		t.Logf("err: %v\n", err.Error())
+		t.Errorf("transfer happened before lock expired\n\tstart time: %v\n\ttxn time: %v\n", p0.StartTime, txn.CreationDate)
 	}
-	t.Logf("pool: %v\n", p0)
-	t.Logf("pool: %v\n", p1)
 
 	time.Sleep(LOCKUPTIME90DAYS)
-	str, err = p0.TransferTo(p1, 9)
-	if err == nil {
-		t.Logf("str: %v\n", str)
-	} else {
-		t.Logf("err: %v\n", err.Error())
+	txn.CreationDate = common.Now()
+	_, _, err = p0.TransferTo(p1, 9, &txn)
+	if err != nil {
+		t.Errorf("an error occoured %v\n", err.Error())
+	} else if p1.Balance != 11 {
+		t.Errorf("pool 1 has wrong balance: %v\ntransaction time: %v\n", p1, common.ToTime(txn.CreationDate))
 	}
-	t.Logf("pool: %v\n", p0)
-	t.Logf("pool: %v\n", p1)
 }

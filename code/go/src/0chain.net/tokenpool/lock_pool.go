@@ -2,7 +2,6 @@ package tokenpool
 
 import (
 	"encoding/json"
-	"time"
 
 	"0chain.net/common"
 	"0chain.net/datastore"
@@ -29,11 +28,16 @@ func (p *ZcnLockingPool) GetBalance() state.Balance {
 	return p.Balance
 }
 
+func (p *ZcnLockingPool) SetBalance(value state.Balance) {
+	p.Balance = value
+}
+
 func (p *ZcnLockingPool) GetID() datastore.Key {
 	return p.ID
 }
 
 func (p *ZcnLockingPool) DigPool(id datastore.Key, txn *transaction.Transaction) (*state.Transfer, string, error) {
+	p.StartTime = txn.CreationDate
 	return p.ZcnPool.DigPool(id, txn)
 }
 
@@ -41,27 +45,27 @@ func (p *ZcnLockingPool) FillPool(txn *transaction.Transaction) (*state.Transfer
 	return p.ZcnPool.FillPool(txn)
 }
 
-func (p *ZcnLockingPool) TransferTo(op *ZcnLockingPool, value state.Balance) (string, error) {
-	if p.Locked() {
-		return common.NewError("pool-to-pool transfer failed", "pool is still locked").Error(), nil
+func (p *ZcnLockingPool) TransferTo(op TokenPoolI, value state.Balance, txn *transaction.Transaction) (*state.Transfer, string, error) {
+	if p.IsLocked(txn) {
+		return nil, "", common.NewError("pool-to-pool transfer failed", "pool is still locked")
 	}
-	return p.ZcnPool.TransferTo(&op.ZcnPool, value)
+	return p.ZcnPool.TransferTo(op, value, txn)
 }
 
-func (p *ZcnLockingPool) DrainPool(fromClientID, toClientID datastore.Key, value state.Balance) (*state.Transfer, string, error) {
-	if p.Locked() {
-		return nil, common.NewError("draining pool failed", "pool is still locked").Error(), nil
+func (p *ZcnLockingPool) DrainPool(fromClientID, toClientID datastore.Key, value state.Balance, txn *transaction.Transaction) (*state.Transfer, string, error) {
+	if p.IsLocked(txn) {
+		return nil, "", common.NewError("draining pool failed", "pool is still locked")
 	}
-	return p.ZcnPool.DrainPool(fromClientID, toClientID, value)
+	return p.ZcnPool.DrainPool(fromClientID, toClientID, value, txn)
 }
 
-func (p *ZcnLockingPool) EmptyPool(fromClientID, toClientID datastore.Key) (*state.Transfer, string, error) {
-	if p.Locked() {
-		return nil, common.NewError("emptying pool failed", "pool is still locked").Error(), nil
+func (p *ZcnLockingPool) EmptyPool(fromClientID, toClientID datastore.Key, txn *transaction.Transaction) (*state.Transfer, string, error) {
+	if p.IsLocked(txn) {
+		return nil, "", common.NewError("emptying pool failed", "pool is still locked")
 	}
-	return p.ZcnPool.EmptyPool(fromClientID, toClientID)
+	return p.ZcnPool.EmptyPool(fromClientID, toClientID, txn)
 }
 
-func (p *ZcnLockingPool) Locked() bool {
-	return time.Now().Sub(p.StartTime) < p.Duration
+func (p *ZcnLockingPool) IsLocked(txn *transaction.Transaction) bool {
+	return common.ToTime(txn.CreationDate).Sub(common.ToTime(p.StartTime)) < p.Duration
 }
