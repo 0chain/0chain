@@ -78,9 +78,9 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 				*/
 
 				logging.Logger.Info("Round timeout", zap.Any("Number", round.Number),
-					zap.Int("#of VRF_shares", len(round.GetVRFShares())),
-					zap.Int("#of proposedBlocks", len(round.GetProposedBlocks())),
-					zap.Int("#of notarizedBlocks", len(round.GetNotarizedBlocks())))
+					zap.Int("VRF_shares", len(round.GetVRFShares())),
+					zap.Int("proposedBlocks", len(round.GetProposedBlocks())),
+					zap.Int("notarizedBlocks", len(round.GetNotarizedBlocks())))
 				protocol.HandleRoundTimeout(ctx, tickerCount)
 			} else {
 				cround = mc.CurrentRound

@@ -479,12 +479,12 @@ func (c *Chain) ValidGenerator(r round.RoundI, b *block.Block) bool {
 	isGen := c.IsRoundGenerator(r, miner)
 	if !isGen {
 		//This is a Byzantine condition?
-		Logger.Info("Received a block from non-generator", zap.Int("miner #", miner.SetIndex), zap.Int64("RRS#", r.GetRandomSeed()))
+		Logger.Info("Received a block from non-generator", zap.Int("miner", miner.SetIndex), zap.Int64("RRS", r.GetRandomSeed()))
 		gens := c.GetGenerators(r)
 
-		Logger.Info("Generators are: ", zap.Int64("round#", r.GetRoundNumber()))
+		Logger.Info("Generators are: ", zap.Int64("round", r.GetRoundNumber()))
 		for _, n := range gens {
-			Logger.Info("generator", zap.Int("Node#", n.SetIndex))
+			Logger.Info("generator", zap.Int("Node", n.SetIndex))
 		}
 	}
 	return isGen
@@ -659,6 +659,7 @@ func (c *Chain) SetRoundRank(r round.RoundI, b *block.Block) {
 		Logger.DPanic(fmt.Sprintf("Round# %v generator miner ID %v ranks greater than expected. State= %v, rank= %v", r.GetRoundNumber(), bNode.SetIndex, r.GetState(), rank))
 	}
 	b.RoundRank = rank
+	Logger.Info(fmt.Sprintf("Round# %v generator miner ID %v ranks greater than expected. State= %v, rank= %v", r.GetRoundNumber(), bNode.SetIndex, r.GetState(), rank))
 }
 
 func (c *Chain) SetGenerationTimeout(newTimeout int) {
