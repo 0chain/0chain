@@ -605,6 +605,7 @@ func (mc *Chain) restartRound(ctx context.Context) {
 	r.Restart()
 	if r.vrfShare != nil {
 		//TODO: send same vrf again?
+		mc.AddVRFShare(ctx, r, r.vrfShare)
 		go mc.SendVRFShare(ctx, r.vrfShare)
 	}
 }
