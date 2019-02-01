@@ -70,3 +70,7 @@ network:
     small_message: 1000 # milliseconds
     large_message: 3000 # milliseconds
   large_message_th_size: 10240 # anything greater than this size in bytes
+  user_handlers:
+    rate_limit: 1 # 1 per second
+  n2n_handlers:
+    rate_limit: 10 # 10 per second

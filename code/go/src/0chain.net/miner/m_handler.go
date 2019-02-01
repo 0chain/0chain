@@ -66,18 +66,18 @@ func SetupM2MSenders() {
 
 /*SetupM2MReceivers - setup receivers for miner to miner communication */
 func SetupM2MReceivers() {
-	http.HandleFunc("/v1/_m2m/dkg/share", node.ToN2NReceiveEntityHandler(DKGShareHandler, nil))
-	http.HandleFunc("/v1/_m2m/round/vrf_share", node.ToN2NReceiveEntityHandler(VRFShareHandler, nil))
-	http.HandleFunc("/v1/_m2m/block/verify", node.ToN2NReceiveEntityHandler(memorystore.WithConnectionEntityJSONHandler(VerifyBlockHandler, datastore.GetEntityMetadata("block")), nil))
-	http.HandleFunc("/v1/_m2m/block/verification_ticket", node.ToN2NReceiveEntityHandler(VerificationTicketReceiptHandler, nil))
-	http.HandleFunc("/v1/_m2m/block/notarization", node.ToN2NReceiveEntityHandler(NotarizationReceiptHandler, nil))
-	http.HandleFunc("/v1/_m2m/block/notarized_block", node.ToN2NReceiveEntityHandler(NotarizedBlockHandler, nil))
+	http.HandleFunc("/v1/_m2m/dkg/share", common.N2NRateLimit(node.ToN2NReceiveEntityHandler(DKGShareHandler, nil)))
+	http.HandleFunc("/v1/_m2m/round/vrf_share", common.N2NRateLimit(node.ToN2NReceiveEntityHandler(VRFShareHandler, nil)))
+	http.HandleFunc("/v1/_m2m/block/verify", common.N2NRateLimit(node.ToN2NReceiveEntityHandler(memorystore.WithConnectionEntityJSONHandler(VerifyBlockHandler, datastore.GetEntityMetadata("block")), nil)))
+	http.HandleFunc("/v1/_m2m/block/verification_ticket", common.N2NRateLimit(node.ToN2NReceiveEntityHandler(VerificationTicketReceiptHandler, nil)))
+	http.HandleFunc("/v1/_m2m/block/notarization", common.N2NRateLimit(node.ToN2NReceiveEntityHandler(NotarizationReceiptHandler, nil)))
+	http.HandleFunc("/v1/_m2m/block/notarized_block", common.N2NRateLimit(node.ToN2NReceiveEntityHandler(NotarizedBlockHandler, nil)))
 }
 
 /*SetupX2MResponders - setup responders */
 func SetupX2MResponders() {
-	http.HandleFunc("/v1/_x2m/block/notarized_block/get", node.ToN2NSendEntityHandler(NotarizedBlockSendHandler))
-	http.HandleFunc("/v1/_x2m/block/state_change/get", node.ToN2NSendEntityHandler(BlockStateChangeHandler))
+	http.HandleFunc("/v1/_x2m/block/notarized_block/get", common.N2NRateLimit(node.ToN2NSendEntityHandler(NotarizedBlockSendHandler)))
+	http.HandleFunc("/v1/_x2m/block/state_change/get", common.N2NRateLimit(node.ToN2NSendEntityHandler(BlockStateChangeHandler)))
 }
 
 /*SetupM2SRequestors - setup all requests to sharder by miner */

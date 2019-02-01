@@ -64,3 +64,5 @@ RUN go get -d github.com/herumi/bls/ffi/go/bls && \
     CFLAGS='-DMCLBN_FP_UNIT_SIZE=4' make && \
     cp $GOPATH/src/github.com/herumi/bls/lib/lib*.so /usr/lib && \
     go get -tags bn256 github.com/herumi/bls/ffi/go/bls
+
+RUN go get github.com/didip/tollbooth

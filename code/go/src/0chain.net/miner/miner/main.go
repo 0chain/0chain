@@ -59,6 +59,7 @@ func main() {
 	}
 
 	config.SetServerChainID(config.Configuration.ChainID)
+
 	common.SetupRootContext(node.GetNodeContext())
 	ctx := common.GetRootContext()
 	initEntities()
@@ -73,6 +74,7 @@ func main() {
 
 	miner.SetupMinerChain(serverChain)
 	mc := miner.GetMinerChain()
+	mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"))
 	mc.DiscoverClients = viper.GetBool("server_chain.client.discover")
 	mc.SetGenerationTimeout(viper.GetInt("server_chain.block.generation.timeout"))
 	mc.SetRetryWaitTime(viper.GetInt("server_chain.block.generation.retry_wait_time"))
@@ -119,10 +121,7 @@ func main() {
 	Logger.Info("Chain info", zap.String("chain_id", config.GetServerChainID()), zap.String("mode", mode))
 	Logger.Info("Self identity", zap.Any("set_index", node.Self.Node.SetIndex), zap.Any("id", node.Self.Node.GetKey()))
 
-	//TODO - get stake of miner from biding (currently hard coded)
-	//serverChain.updateMiningStake(node.Self.Node.GetKey(), 100)  we do not want to expose this feature at this point.
 	var server *http.Server
-
 	if config.Development() {
 		// No WriteTimeout setup to enable pprof
 		server = &http.Server{
@@ -141,9 +140,7 @@ func main() {
 	common.HandleShutdown(server)
 	memorystore.GetInfo()
 	initWorkers(ctx)
-
-	mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"))
-
+	common.ConfigRateLimits()
 	initN2NHandlers()
 
 	initServer()

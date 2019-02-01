@@ -75,6 +75,7 @@ func main() {
 	sharder.SetupSharderChain(serverChain)
 	sc := sharder.GetSharderChain()
 	chain.SetServerChain(serverChain)
+	sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"))
 
 	chain.SetNetworkRelayTime(viper.GetDuration("network.relay_time") * time.Millisecond)
 	node.ReadConfig()
@@ -137,9 +138,8 @@ func main() {
 	common.HandleShutdown(server)
 	setupBlockStorageProvider()
 
-	sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"))
-
 	initWorkers(ctx)
+	common.ConfigRateLimits()
 	initN2NHandlers()
 	initServer()
 	initHandlers()

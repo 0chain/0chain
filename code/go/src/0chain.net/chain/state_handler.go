@@ -12,8 +12,8 @@ import (
 /*SetupStateHandlers - setup handlers to manage state */
 func SetupStateHandlers() {
 	c := GetServerChain()
-	http.HandleFunc("/v1/client/get/balance", common.ToJSONResponse(c.GetBalanceHandler))
-	http.HandleFunc("/v1/scstate/get", common.ToJSONResponse(c.GetNodeFromSCState))
+	http.HandleFunc("/v1/client/get/balance", common.UserRateLimit(common.ToJSONResponse(c.GetBalanceHandler)))
+	http.HandleFunc("/v1/scstate/get", common.UserRateLimit(common.ToJSONResponse(c.GetNodeFromSCState)))
 }
 
 func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interface{}, error) {

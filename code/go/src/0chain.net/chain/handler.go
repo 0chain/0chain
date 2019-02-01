@@ -34,10 +34,10 @@ func SetupHandlers() {
 	http.HandleFunc("/v1/block/get/recent_finalized", common.ToJSONResponse(RecentFinalizedBlockHandler))
 
 	http.HandleFunc("/", HomePageHandler)
-	http.HandleFunc("/_diagnostics", DiagnosticsHomepageHandler)
+	http.HandleFunc("/_diagnostics", common.UserRateLimit(DiagnosticsHomepageHandler))
 
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
-	http.HandleFunc("/v1/transaction/put", datastore.ToJSONEntityReqResponse(datastore.DoAsyncEntityJSONHandler(memorystore.WithConnectionEntityJSONHandler(PutTransaction, transactionEntityMetadata), transaction.TransactionEntityChannel), transactionEntityMetadata))
+	http.HandleFunc("/v1/transaction/put", common.UserRateLimit(datastore.ToJSONEntityReqResponse(datastore.DoAsyncEntityJSONHandler(memorystore.WithConnectionEntityJSONHandler(PutTransaction, transactionEntityMetadata), transaction.TransactionEntityChannel), transactionEntityMetadata)))
 }
 
 /*GetChainHandler - given an id returns the chain information */

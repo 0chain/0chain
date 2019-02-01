@@ -158,14 +158,6 @@ func pullEntityHandler(ctx context.Context, nd *Node, uri string, handler datast
 	}
 }
 
-var pullDataRequestor EntityRequestor
-
-func init() {
-	http.HandleFunc(pullURL, ToN2NSendEntityHandler(PushToPullHandler))
-	options := &SendOptions{Timeout: TimeoutLargeMessage, CODEC: CODEC_MSGPACK, Compress: true}
-	pullDataRequestor = RequestEntityHandler(pullURL, options, nil)
-}
-
 func isPullRequest(r *http.Request) bool {
 	return r.FormValue("__push2pull") == "true"
 }
