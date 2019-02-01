@@ -28,12 +28,12 @@ func SetupHandlers() {
 
 	// Miner can only provide recent blocks, sharders can provide any block (for content other than full) and the block they store for full
 	if node.Self.Type == node.NodeTypeMiner {
-		http.HandleFunc("/v1/block/get", common.ToJSONResponse(GetBlockHandler))
+		http.HandleFunc("/v1/block/get", common.UserRateLimit(common.ToJSONResponse(GetBlockHandler)))
 	}
-	http.HandleFunc("/v1/block/get/latest_finalized", common.ToJSONResponse(LatestFinalizedBlockHandler))
-	http.HandleFunc("/v1/block/get/recent_finalized", common.ToJSONResponse(RecentFinalizedBlockHandler))
+	http.HandleFunc("/v1/block/get/latest_finalized", common.UserRateLimit(common.ToJSONResponse(LatestFinalizedBlockHandler)))
+	http.HandleFunc("/v1/block/get/recent_finalized", common.UserRateLimit(common.ToJSONResponse(RecentFinalizedBlockHandler)))
 
-	http.HandleFunc("/", HomePageHandler)
+	http.HandleFunc("/", common.UserRateLimit(HomePageHandler))
 	http.HandleFunc("/_diagnostics", common.UserRateLimit(DiagnosticsHomepageHandler))
 
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")

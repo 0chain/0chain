@@ -7,14 +7,15 @@ import (
 	"sort"
 	"time"
 
+	"0chain.net/common"
 	. "0chain.net/logging"
 	"go.uber.org/zap"
 )
 
 //SetupHandlers - setup all the handlers
 func SetupHandlers() {
-	http.HandleFunc("/_nh/whoami", WhoAmIHandler)
-	http.HandleFunc("/_nh/status", StatusHandler)
+	http.HandleFunc("/_nh/whoami", common.UserRateLimit(WhoAmIHandler))
+	http.HandleFunc("/_nh/status", common.UserRateLimit(StatusHandler))
 }
 
 //WhoAmIHandler - who am i?

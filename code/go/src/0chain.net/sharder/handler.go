@@ -22,8 +22,8 @@ import (
 func SetupHandlers() {
 	http.HandleFunc("/v1/block/get", common.UserRateLimit(common.ToJSONResponse(BlockHandler)))
 	http.HandleFunc("/v1/transaction/get/confirmation", common.UserRateLimit(common.ToJSONResponse(TransactionConfirmationHandler)))
-	http.HandleFunc("/v1/chain/get/stats", common.ToJSONResponse(ChainStatsHandler))
-	http.HandleFunc("/_chain_stats", ChainStatsWriter)
+	http.HandleFunc("/v1/chain/get/stats", common.UserRateLimit(common.ToJSONResponse(ChainStatsHandler)))
+	http.HandleFunc("/_chain_stats", common.UserRateLimit(ChainStatsWriter))
 }
 
 /*BlockHandler - a handler to respond to block queries */

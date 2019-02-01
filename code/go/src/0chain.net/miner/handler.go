@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"0chain.net/chain"
+	"0chain.net/common"
 	"0chain.net/config"
 	"0chain.net/diagnostics"
 	"0chain.net/node"
@@ -12,7 +13,7 @@ import (
 
 /*SetupHandlers - setup miner handlers */
 func SetupHandlers() {
-	http.HandleFunc("/_chain_stats", ChainStatsHandler)
+	http.HandleFunc("/_chain_stats", common.UserRateLimit(ChainStatsHandler))
 }
 
 /*ChainStatsHandler - a handler to provide block statistics */
