@@ -8,6 +8,8 @@ import (
 	"0chain.net/util"
 )
 
+const approvedMinter = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9"
+
 /*
 * The state context is available to the smart contract logic.
 * The smart contract logic can use
@@ -25,7 +27,9 @@ type StateContextI interface {
 	GetTransaction() *transaction.Transaction
 	GetClientBalance(clientID datastore.Key) (state.Balance, error)
 	AddTransfer(t *state.Transfer) error
+	AddMint(m *state.Mint) error
 	GetTransfers() []*state.Transfer
+	GetMints() []*state.Mint
 	Validate() error
 }
 
@@ -35,6 +39,7 @@ type StateContext struct {
 	state                   util.MerklePatriciaTrieI
 	txn                     *transaction.Transaction
 	transfers               []*state.Transfer
+	mints                   []*state.Mint
 	clientStateDeserializer state.DeserializerI
 }
 
@@ -68,9 +73,23 @@ func (sc *StateContext) AddTransfer(t *state.Transfer) error {
 	return nil
 }
 
+//AddMint - add the mint
+func (sc *StateContext) AddMint(m *state.Mint) error {
+	if m.Minter != approvedMinter || sc.txn.ToClientID != approvedMinter {
+		return state.ErrInvalidMint
+	}
+	sc.mints = append(sc.mints, m)
+	return nil
+}
+
 //GetTransfers - get all the transfers
 func (sc *StateContext) GetTransfers() []*state.Transfer {
 	return sc.transfers
+}
+
+//GetMints - get all the mints and fight bad breath
+func (sc *StateContext) GetMints() []*state.Mint {
+	return sc.mints
 }
 
 //Validate - implement interface

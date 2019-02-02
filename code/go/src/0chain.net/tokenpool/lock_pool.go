@@ -10,8 +10,8 @@ import (
 )
 
 type ZcnLockingPool struct {
-	ZcnPool
-	TokenLock
+	ZcnPool            `json:"pool"`
+	TokenLockInterface `json:"lock"`
 }
 
 func (p *ZcnLockingPool) Encode() []byte {
@@ -19,7 +19,8 @@ func (p *ZcnLockingPool) Encode() []byte {
 	return buff
 }
 
-func (p *ZcnLockingPool) Decode(input []byte) error {
+func (p *ZcnLockingPool) Decode(input []byte, tokelock TokenLockInterface) error {
+	p.TokenLockInterface = tokelock
 	err := json.Unmarshal(input, p)
 	return err
 }
@@ -37,7 +38,6 @@ func (p *ZcnLockingPool) GetID() datastore.Key {
 }
 
 func (p *ZcnLockingPool) DigPool(id datastore.Key, txn *transaction.Transaction) (*state.Transfer, string, error) {
-	p.StartTime = txn.CreationDate
 	return p.ZcnPool.DigPool(id, txn)
 }
 
@@ -64,8 +64,4 @@ func (p *ZcnLockingPool) EmptyPool(fromClientID, toClientID datastore.Key, txn *
 		return nil, "", common.NewError("emptying pool failed", "pool is still locked")
 	}
 	return p.ZcnPool.EmptyPool(fromClientID, toClientID, txn)
-}
-
-func (p *ZcnLockingPool) IsLocked(txn *transaction.Transaction) bool {
-	return common.ToTime(txn.CreationDate).Sub(common.ToTime(p.StartTime)) < p.Duration
 }

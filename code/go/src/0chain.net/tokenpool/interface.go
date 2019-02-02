@@ -2,9 +2,7 @@ package tokenpool
 
 import (
 	"encoding/json"
-	"time"
 
-	"0chain.net/common"
 	"0chain.net/datastore"
 	"0chain.net/state"
 	"0chain.net/transaction"
@@ -45,22 +43,7 @@ type TokenPool struct {
 	Balance state.Balance `json:"balance"`
 }
 
-type TokenLock struct {
-	StartTime common.Timestamp `json:"start_time"`
-	Duration  time.Duration    `json:"duration"`
-	Owner     datastore.Key    `json:"owner"`
-	// for future use
-	// Leaser          datastore.Key   `json:"leaser"`
-	// LockExecutors   []datastore.Key `json:"lock_executors"`
-	// PayoutExecutors []datastore.Key `json:"payout_executors"`
-}
-
-func (l *TokenLock) Encode() []byte {
-	buff, _ := json.Marshal(l)
-	return buff
-}
-
-func (l *TokenLock) Decode(input []byte) error {
-	err := json.Unmarshal(input, l)
-	return err
+type TokenLockInterface interface {
+	IsLocked(txn *transaction.Transaction) bool
+	LockStats(txn *transaction.Transaction) []byte
 }

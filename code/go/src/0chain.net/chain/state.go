@@ -378,6 +378,12 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 			return false
 		}
 	}
+	for _, mint := range sctx.GetMints() {
+		err := c.mintAmount(sctx, mint.ToClientID, state.Balance(mint.Amount))
+		if err != nil {
+			return false
+		}
+	}
 
 	err := b.ClientState.MergeMPTChanges(clientState) // commit transaction
 
@@ -458,6 +464,43 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		if state.Debug() {
 			Logger.Error("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
 		}
+	}
+	ts.SetRound(b.Round)
+	ts.Balance += amount
+	_, err = clientState.Insert(util.Path(toClient), ts)
+	if err != nil {
+		if config.DevConfiguration.State {
+			Logger.DPanic("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
+		}
+		if state.Debug() {
+			Logger.Error("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
+		}
+	}
+	return nil
+}
+
+func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, amount state.Balance) error {
+	if amount == 0 {
+		return nil
+	}
+	b := sctx.GetBlock()
+	clientState := sctx.GetState()
+	txn := sctx.GetTransaction()
+	ts, err := c.getState(clientState, toClient)
+	if !isValid(err) {
+		if state.DebugTxn() {
+			Logger.Error("transfer amount - to_client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
+			for _, txn := range b.Txns {
+				if txn == nil {
+					break
+				}
+				fmt.Fprintf(stateOut, "transfer amount r=%v b=%v t=%+v\n", b.Round, b.Hash, txn)
+			}
+			fmt.Fprintf(stateOut, "transfer amount - error getting state value: %v %+v %v\n", toClient, txn, err)
+			printStates(clientState, b.ClientState)
+			Logger.DPanic(fmt.Sprintf("transfer amount - error getting state value: %v %v", toClient, err))
+		}
+		return err
 	}
 	ts.SetRound(b.Round)
 	ts.Balance += amount
