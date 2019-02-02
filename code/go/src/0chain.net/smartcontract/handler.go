@@ -12,12 +12,14 @@ import (
 	"0chain.net/smartcontractstate"
 	"0chain.net/storagesc"
 	"0chain.net/transaction"
+	"0chain.net/zrc20sc"
 	"go.uber.org/zap"
 )
 
 const (
 	STORAGE_CONTRACT_ADDRESS = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7"
 	FAUCET_CONTRACT_ADDRESS  = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3"
+	ZRC20_CONTRACT_ADDRESS   = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d5"
 )
 
 func getSmartContract(t *transaction.Transaction, ndb smartcontractstate.SCDB) sci.SmartContractInterface {
@@ -32,6 +34,11 @@ func getSmartContract(t *transaction.Transaction, ndb smartcontractstate.SCDB) s
 		faucetSC.DB = smartcontractstate.NewSCState(ndb, FAUCET_CONTRACT_ADDRESS)
 		faucetSC.ID = FAUCET_CONTRACT_ADDRESS
 		return faucetSC
+	case ZRC20_CONTRACT_ADDRESS:
+		zrc20SC := &zrc20sc.ZRC20SmartContract{}
+		zrc20SC.DB = smartcontractstate.NewSCState(ndb, ZRC20_CONTRACT_ADDRESS)
+		zrc20SC.ID = ZRC20_CONTRACT_ADDRESS
+		return zrc20SC
 	}
 	return nil
 }

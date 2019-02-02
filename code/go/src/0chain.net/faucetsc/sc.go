@@ -57,7 +57,7 @@ func (fc *FaucetSmartContract) updateLimits(t *transaction.Transaction, inputDat
 		return common.NewError("unauthorized_access", "only the owner can update the limits").Error(), nil
 	}
 	var newRequest limitRequest
-	err := newRequest.Decode(inputData)
+	err := newRequest.decode(inputData)
 	if err != nil {
 		return common.NewError("bad_request", "limit request not formated correctly").Error(), nil
 	}
@@ -76,8 +76,8 @@ func (fc *FaucetSmartContract) updateLimits(t *transaction.Transaction, inputDat
 	if newRequest.Global_rest > 0 {
 		gn.Global_reset = time.Duration(time.Hour * newRequest.Global_rest).String()
 	}
-	fc.DB.PutNode(gn.GetKey(), gn.Encode())
-	return string(gn.Encode()), nil
+	fc.DB.PutNode(gn.getKey(), gn.encode())
+	return string(gn.encode()), nil
 }
 
 func (fc *FaucetSmartContract) maxPour(gn *globalNode) (string, error) {
@@ -99,7 +99,7 @@ func (fc *FaucetSmartContract) personalPeriodicLimit(t *transaction.Transaction,
 	} else {
 		resp.Allowed = 0
 	}
-	return string(resp.Encode()), nil
+	return string(resp.encode()), nil
 }
 
 func (fc *FaucetSmartContract) globalPerodicLimit(t *transaction.Transaction, gn *globalNode) (string, error) {
@@ -116,7 +116,7 @@ func (fc *FaucetSmartContract) globalPerodicLimit(t *transaction.Transaction, gn
 	} else {
 		resp.Allowed = 0
 	}
-	return string(resp.Encode()), nil
+	return string(resp.encode()), nil
 }
 
 func (fc *FaucetSmartContract) pour(t *transaction.Transaction, inputData []byte, balances c_state.StateContextI, gn *globalNode) (string, error) {
@@ -127,8 +127,8 @@ func (fc *FaucetSmartContract) pour(t *transaction.Transaction, inputData []byte
 		balances.AddTransfer(transfer)
 		user.Used += transfer.Amount
 		gn.Used += transfer.Amount
-		fc.DB.PutNode(user.GetKey(), user.Encode())
-		fc.DB.PutNode(gn.GetKey(), gn.Encode())
+		fc.DB.PutNode(user.getKey(), user.encode())
+		fc.DB.PutNode(gn.getKey(), gn.encode())
 		return string(transfer.Encode()), nil
 	}
 	return err.Error(), nil
@@ -139,7 +139,7 @@ func (fc *FaucetSmartContract) refill(t *transaction.Transaction, balances c_sta
 	if clientBalance >= state.Balance(t.Value) {
 		transfer := state.NewTransfer(t.ClientID, t.ToClientID, state.Balance(t.Value))
 		balances.AddTransfer(transfer)
-		fc.DB.PutNode(gn.GetKey(), gn.Encode())
+		fc.DB.PutNode(gn.getKey(), gn.encode())
 		return string(transfer.Encode()), nil
 	} else {
 		return common.NewError("broke", "it seems you're broke and can't transfer money").Error(), nil
@@ -150,9 +150,9 @@ func (fc *FaucetSmartContract) refill(t *transaction.Transaction, balances c_sta
 func (fc *FaucetSmartContract) getUserVariables(t *transaction.Transaction, gn *globalNode) *userNode {
 	var un userNode
 	un.ID = t.ClientID
-	userBytes, err := fc.DB.GetNode(un.GetKey())
+	userBytes, err := fc.DB.GetNode(un.getKey())
 	if err == nil {
-		err = un.Decode(userBytes)
+		err = un.decode(userBytes)
 		if err == nil {
 			ir, ierr := time.ParseDuration(gn.Individual_reset)
 			if ierr != nil {
@@ -177,9 +177,9 @@ func (fc *FaucetSmartContract) getUserVariables(t *transaction.Transaction, gn *
 func (fc *FaucetSmartContract) getGlobalVariables(t *transaction.Transaction) *globalNode {
 	var gn globalNode
 	gn.ID = fc.ID
-	globalBytes, err := fc.DB.GetNode(gn.GetKey())
+	globalBytes, err := fc.DB.GetNode(gn.getKey())
 	if err == nil {
-		err = gn.Decode(globalBytes)
+		err = gn.decode(globalBytes)
 		if err == nil {
 			gr, err := time.ParseDuration(gn.Global_reset)
 			if err != nil {

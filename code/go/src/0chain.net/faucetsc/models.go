@@ -16,12 +16,12 @@ type limitRequest struct {
 	Global_rest      time.Duration `json:"global_rest"`      //in hours
 }
 
-func (lr *limitRequest) Encode() []byte {
+func (lr *limitRequest) encode() []byte {
 	buff, _ := json.Marshal(lr)
 	return buff
 }
 
-func (lr *limitRequest) Decode(input []byte) error {
+func (lr *limitRequest) decode(input []byte) error {
 	err := json.Unmarshal(input, lr)
 	return err
 }
@@ -33,12 +33,12 @@ type periodicResponse struct {
 	Allowed state.Balance `json:"tokens_allowed"`
 }
 
-func (pr *periodicResponse) Encode() []byte {
+func (pr *periodicResponse) encode() []byte {
 	buff, _ := json.Marshal(pr)
 	return buff
 }
 
-func (pr *periodicResponse) Decode(input []byte) error {
+func (pr *periodicResponse) decode(input []byte) error {
 	err := json.Unmarshal(input, pr)
 	return err
 }
@@ -54,16 +54,16 @@ type globalNode struct {
 	StartTime        time.Time     `json:"start_time"`
 }
 
-func (gn *globalNode) GetKey() smartcontractstate.Key {
+func (gn *globalNode) getKey() smartcontractstate.Key {
 	return smartcontractstate.Key("faucet_contract:" + gn.ID)
 }
 
-func (gn *globalNode) Encode() []byte {
+func (gn *globalNode) encode() []byte {
 	buff, _ := json.Marshal(gn)
 	return buff
 }
 
-func (gn *globalNode) Decode(input []byte) error {
+func (gn *globalNode) decode(input []byte) error {
 	err := json.Unmarshal(input, gn)
 	return err
 }
@@ -74,16 +74,16 @@ type userNode struct {
 	Used      state.Balance `json:"used"`
 }
 
-func (un *userNode) GetKey() smartcontractstate.Key {
+func (un *userNode) getKey() smartcontractstate.Key {
 	return smartcontractstate.Key("faucet_user:" + un.ID)
 }
 
-func (un *userNode) Encode() []byte {
+func (un *userNode) encode() []byte {
 	buff, _ := json.Marshal(un)
 	return buff
 }
 
-func (un *userNode) Decode(input []byte) error {
+func (un *userNode) decode(input []byte) error {
 	err := json.Unmarshal(input, un)
 	return err
 }
