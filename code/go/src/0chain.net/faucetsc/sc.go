@@ -24,14 +24,14 @@ const (
 
 //default values
 var (
-	POUR_LIMIT       = 10
-	PERIODIC_LIMIT   = 50
-	GLOBAL_LIMIT     = 10000
+	POUR_LIMIT       = 100
+	PERIODIC_LIMIT   = 500
+	GLOBAL_LIMIT     = 1000000
 	INDIVIDUAL_RESET = time.Duration(time.Hour * 2).String()
 	GLOBAL_RESET     = time.Duration(time.Hour * 24).String()
 )
 
-func (un *UserNode) validPourRequest(t *transaction.Transaction, balances c_state.StateContextI, gn *GlobalNode) (bool, error) {
+func (un *userNode) validPourRequest(t *transaction.Transaction, balances c_state.StateContextI, gn *globalNode) (bool, error) {
 	smartContractBalance, err := balances.GetClientBalance(gn.ID)
 	if err != nil {
 		return false, err
@@ -52,11 +52,11 @@ func (un *UserNode) validPourRequest(t *transaction.Transaction, balances c_stat
 	return true, nil
 }
 
-func (fc *FaucetSmartContract) updateLimit(t *transaction.Transaction, inputData []byte, gn *GlobalNode) (string, error) {
+func (fc *FaucetSmartContract) updateLimits(t *transaction.Transaction, inputData []byte, gn *globalNode) (string, error) {
 	if t.ClientID != owner {
 		return common.NewError("unauthorized_access", "only the owner can update the limits").Error(), nil
 	}
-	var newRequest LimitRequest
+	var newRequest limitRequest
 	err := newRequest.Decode(inputData)
 	if err != nil {
 		return common.NewError("bad_request", "limit request not formated correctly").Error(), nil
@@ -80,13 +80,13 @@ func (fc *FaucetSmartContract) updateLimit(t *transaction.Transaction, inputData
 	return string(gn.Encode()), nil
 }
 
-func (fc *FaucetSmartContract) maxPour(gn *GlobalNode) (string, error) {
+func (fc *FaucetSmartContract) maxPour(gn *globalNode) (string, error) {
 	return fmt.Sprintf("Max pour per request: %v", gn.Pour_limit), nil
 }
 
-func (fc *FaucetSmartContract) personalPeriodicLimit(t *transaction.Transaction, gn *GlobalNode) (string, error) {
+func (fc *FaucetSmartContract) personalPeriodicLimit(t *transaction.Transaction, gn *globalNode) (string, error) {
 	un := fc.getUserVariables(t, gn)
-	var resp PeriodicResponse
+	var resp periodicResponse
 	resp.Start = un.StartTime
 	resp.Used = un.Used
 	ir, err := time.ParseDuration(gn.Individual_reset)
@@ -102,8 +102,8 @@ func (fc *FaucetSmartContract) personalPeriodicLimit(t *transaction.Transaction,
 	return string(resp.Encode()), nil
 }
 
-func (fc *FaucetSmartContract) globalPerodicLimit(t *transaction.Transaction, gn *GlobalNode) (string, error) {
-	var resp PeriodicResponse
+func (fc *FaucetSmartContract) globalPerodicLimit(t *transaction.Transaction, gn *globalNode) (string, error) {
+	var resp periodicResponse
 	resp.Start = gn.StartTime
 	resp.Used = gn.Used
 	gr, err := time.ParseDuration(gn.Global_reset)
@@ -119,7 +119,7 @@ func (fc *FaucetSmartContract) globalPerodicLimit(t *transaction.Transaction, gn
 	return string(resp.Encode()), nil
 }
 
-func (fc *FaucetSmartContract) pour(t *transaction.Transaction, inputData []byte, balances c_state.StateContextI, gn *GlobalNode) (string, error) {
+func (fc *FaucetSmartContract) pour(t *transaction.Transaction, inputData []byte, balances c_state.StateContextI, gn *globalNode) (string, error) {
 	user := fc.getUserVariables(t, gn)
 	ok, err := user.validPourRequest(t, balances, gn)
 	if ok {
@@ -134,7 +134,7 @@ func (fc *FaucetSmartContract) pour(t *transaction.Transaction, inputData []byte
 	return err.Error(), nil
 }
 
-func (fc *FaucetSmartContract) refill(t *transaction.Transaction, balances c_state.StateContextI, gn *GlobalNode) (string, error) {
+func (fc *FaucetSmartContract) refill(t *transaction.Transaction, balances c_state.StateContextI, gn *globalNode) (string, error) {
 	clientBalance, err := balances.GetClientBalance(t.ClientID)
 	if clientBalance >= state.Balance(t.Value) {
 		transfer := state.NewTransfer(t.ClientID, t.ToClientID, state.Balance(t.Value))
@@ -147,8 +147,8 @@ func (fc *FaucetSmartContract) refill(t *transaction.Transaction, balances c_sta
 	return err.Error(), nil
 }
 
-func (fc *FaucetSmartContract) getUserVariables(t *transaction.Transaction, gn *GlobalNode) *UserNode {
-	var un UserNode
+func (fc *FaucetSmartContract) getUserVariables(t *transaction.Transaction, gn *globalNode) *userNode {
+	var un userNode
 	un.ID = t.ClientID
 	userBytes, err := fc.DB.GetNode(un.GetKey())
 	if err == nil {
@@ -174,8 +174,8 @@ func (fc *FaucetSmartContract) getUserVariables(t *transaction.Transaction, gn *
 	return &un
 }
 
-func (fc *FaucetSmartContract) getGlobalVariables(t *transaction.Transaction) *GlobalNode {
-	var gn GlobalNode
+func (fc *FaucetSmartContract) getGlobalVariables(t *transaction.Transaction) *globalNode {
+	var gn globalNode
 	gn.ID = fc.ID
 	globalBytes, err := fc.DB.GetNode(gn.GetKey())
 	if err == nil {
@@ -205,17 +205,17 @@ func (fc *FaucetSmartContract) getGlobalVariables(t *transaction.Transaction) *G
 func (fc *FaucetSmartContract) Execute(t *transaction.Transaction, funcName string, inputData []byte, balances c_state.StateContextI) (string, error) {
 	gn := fc.getGlobalVariables(t)
 	switch funcName {
-	case "UpdateLimits":
-		return fc.updateLimit(t, inputData, gn)
-	case "Pour":
+	case "updateLimits":
+		return fc.updateLimits(t, inputData, gn)
+	case "pour":
 		return fc.pour(t, inputData, balances, gn)
-	case "MaxPour":
+	case "maxPour":
 		return fc.maxPour(gn)
-	case "PersonalPeriodicLimit":
+	case "personalPeriodicLimit":
 		return fc.personalPeriodicLimit(t, gn)
-	case "GlobalPeriodicLimit":
+	case "globalPeriodicLimit":
 		return fc.globalPerodicLimit(t, gn)
-	case "Refill":
+	case "refill":
 		return fc.refill(t, balances, gn)
 	default:
 		return common.NewError("failed execution", "no function with that name").Error(), nil

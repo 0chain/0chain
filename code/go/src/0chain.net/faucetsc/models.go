@@ -8,7 +8,7 @@ import (
 	"0chain.net/state"
 )
 
-type LimitRequest struct {
+type limitRequest struct {
 	Pour_limit       state.Balance `json:"pour_limit"`
 	Periodic_limit   state.Balance `json:"periodic_limit"`
 	Global_limit     state.Balance `json:"global_limit"`
@@ -16,34 +16,34 @@ type LimitRequest struct {
 	Global_rest      time.Duration `json:"global_rest"`      //in hours
 }
 
-func (lr *LimitRequest) Encode() []byte {
+func (lr *limitRequest) Encode() []byte {
 	buff, _ := json.Marshal(lr)
 	return buff
 }
 
-func (lr *LimitRequest) Decode(input []byte) error {
+func (lr *limitRequest) Decode(input []byte) error {
 	err := json.Unmarshal(input, lr)
 	return err
 }
 
-type PeriodicResponse struct {
+type periodicResponse struct {
 	Used    state.Balance `json:"tokens_poured"`
 	Start   time.Time     `json:"start_time"`
 	Restart string        `json:"time_left"`
 	Allowed state.Balance `json:"tokens_allowed"`
 }
 
-func (pr *PeriodicResponse) Encode() []byte {
+func (pr *periodicResponse) Encode() []byte {
 	buff, _ := json.Marshal(pr)
 	return buff
 }
 
-func (pr *PeriodicResponse) Decode(input []byte) error {
+func (pr *periodicResponse) Decode(input []byte) error {
 	err := json.Unmarshal(input, pr)
 	return err
 }
 
-type GlobalNode struct {
+type globalNode struct {
 	ID               string        `json:"id"`
 	Pour_limit       state.Balance `json:"pour_limit"`
 	Periodic_limit   state.Balance `json:"periodic_limit"`
@@ -54,36 +54,36 @@ type GlobalNode struct {
 	StartTime        time.Time     `json:"start_time"`
 }
 
-func (gn *GlobalNode) GetKey() smartcontractstate.Key {
+func (gn *globalNode) GetKey() smartcontractstate.Key {
 	return smartcontractstate.Key("faucet_contract:" + gn.ID)
 }
 
-func (gn *GlobalNode) Encode() []byte {
+func (gn *globalNode) Encode() []byte {
 	buff, _ := json.Marshal(gn)
 	return buff
 }
 
-func (gn *GlobalNode) Decode(input []byte) error {
+func (gn *globalNode) Decode(input []byte) error {
 	err := json.Unmarshal(input, gn)
 	return err
 }
 
-type UserNode struct {
+type userNode struct {
 	ID        string        `json:"id"`
 	StartTime time.Time     `json:"start_time"`
 	Used      state.Balance `json:"used"`
 }
 
-func (un *UserNode) GetKey() smartcontractstate.Key {
+func (un *userNode) GetKey() smartcontractstate.Key {
 	return smartcontractstate.Key("faucet_user:" + un.ID)
 }
 
-func (un *UserNode) Encode() []byte {
+func (un *userNode) Encode() []byte {
 	buff, _ := json.Marshal(un)
 	return buff
 }
 
-func (un *UserNode) Decode(input []byte) error {
+func (un *userNode) Decode(input []byte) error {
 	err := json.Unmarshal(input, un)
 	return err
 }
