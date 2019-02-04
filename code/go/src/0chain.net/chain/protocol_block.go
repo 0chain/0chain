@@ -214,6 +214,9 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 			b, _ = r.AddNotarizedBlock(b)
 		}
 		Logger.Info("get notarized block", zap.Int64("round", b.Round), zap.String("block", b.Hash))
+		if b == nb {
+			go c.fetchedNotarizedBlockHandler.NotarizedBlockFetched(ctx, nb)
+		}
 		return b, nil
 	}
 	n2n := c.Miners

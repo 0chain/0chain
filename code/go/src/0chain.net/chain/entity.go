@@ -121,6 +121,8 @@ type Chain struct {
 	blockFetcher *BlockFetcher
 
 	crtCount int64 // Continuous/Current Round Timeout Count
+
+	fetchedNotarizedBlockHandler FetchedNotarizedBlockHandler
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
@@ -744,7 +746,7 @@ func (c *Chain) CanShardBlocks() bool {
 
 //CanReplicateBlock - can the given block be effectively replicated?
 func (c *Chain) CanReplicateBlock(b *block.Block) bool {
-	if c.NumReplicators <= 0 {
+	if c.NumReplicators <= 0 || c.MinActiveReplicators == 0 {
 		return c.CanShardBlocks()
 	}
 	scores := c.nodePoolScorer.ScoreHashString(c.Sharders, b.Hash)
@@ -762,4 +764,9 @@ func (c *Chain) CanReplicateBlock(b *block.Block) bool {
 		}
 	}
 	return false
+}
+
+//SetFetchedNotarizedBlockHandler - setter for FetchedNotarizedBlockHandler
+func (c *Chain) SetFetchedNotarizedBlockHandler(fnbh FetchedNotarizedBlockHandler) {
+	c.fetchedNotarizedBlockHandler = fnbh
 }

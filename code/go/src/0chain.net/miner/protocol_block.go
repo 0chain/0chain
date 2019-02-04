@@ -447,3 +447,8 @@ func getLatestBlockFromSharders(ctx context.Context) *block.Block {
 	Logger.Info("bc-1 sharders returned no lfb.")
 	return nil
 }
+
+//NotarizedBlockFetched - handler to process fetched notarized block
+func (mc *Chain) NotarizedBlockFetched(ctx context.Context, b *block.Block) {
+	mc.SendNotarization(ctx, b)
+}

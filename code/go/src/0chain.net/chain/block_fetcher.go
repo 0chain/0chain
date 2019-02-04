@@ -60,3 +60,8 @@ func (bf *BlockFetcher) FetchBlock(ctx context.Context, c *Chain, hash string) {
 		go c.GetNotarizedBlock(hash)
 	}
 }
+
+//FetchedNotarizedBlockHandler - a handler that processes a fetched notarized block
+type FetchedNotarizedBlockHandler interface {
+	NotarizedBlockFetched(ctx context.Context, b *block.Block)
+}
