@@ -42,6 +42,7 @@ func main() {
 	config.Configuration.DeploymentMode = byte(*deploymentMode)
 	config.SetupDefaultConfig()
 	config.SetupConfig()
+	config.SetupSmartContractConfig()
 
 	if config.Development() {
 		logging.InitLogging("development")

@@ -12,6 +12,10 @@ development:
   txn_generation:
     wallets: 500
     transactions: 70
+    pour_point: 100
+    pour_amount: 10000
+  faucet:
+    refill_amount: 1000000000000000
 
 zerochain:
   id: "0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe"

@@ -2,10 +2,10 @@ package faucetsc
 
 import (
 	"fmt"
-	"time"
 
 	c_state "0chain.net/chain/state"
 	"0chain.net/common"
+	"0chain.net/config"
 	. "0chain.net/logging"
 	"0chain.net/smartcontractinterface"
 	"0chain.net/state"
@@ -22,15 +22,6 @@ const (
 	owner     = "c8a5e74c2f4fae2c1bed79fb2b78d3b88f844bbb6bf1db5fc43240711f23321f"
 )
 
-//default values
-var (
-	POUR_LIMIT       = 100
-	PERIODIC_LIMIT   = 500
-	GLOBAL_LIMIT     = 1000000
-	INDIVIDUAL_RESET = time.Duration(time.Hour * 2).String()
-	GLOBAL_RESET     = time.Duration(time.Hour * 24).String()
-)
-
 func (un *userNode) validPourRequest(t *transaction.Transaction, balances c_state.StateContextI, gn *globalNode) (bool, error) {
 	smartContractBalance, err := balances.GetClientBalance(gn.ID)
 	if err != nil {
@@ -43,10 +34,10 @@ func (un *userNode) validPourRequest(t *transaction.Transaction, balances c_stat
 		return false, common.NewError("invalid_request", fmt.Sprintf("amount asked to be poured (%v) exceeds max pour limit (%v)", t.Value, gn.Pour_limit))
 	}
 	if state.Balance(t.Value)+un.Used > gn.Periodic_limit {
-		return false, common.NewError("invalid_request", fmt.Sprintf("amount asked to be poured (%v) plus previous amounts (%v) exceeds allowed periodic limit (%v/%vhr)", t.Value, un.Used, gn.Periodic_limit, gn.Individual_reset))
+		return false, common.NewError("invalid_request", fmt.Sprintf("amount asked to be poured (%v) plus previous amounts (%v) exceeds allowed periodic limit (%v/%vhr)", t.Value, un.Used, gn.Periodic_limit, gn.Individual_reset.String()))
 	}
 	if state.Balance(t.Value)+gn.Used > gn.Global_limit {
-		return false, common.NewError("invalid_request", fmt.Sprintf("amount asked to be poured (%v) plus global used amount (%v) exceeds allowed global limit (%v/%vhr)", t.Value, gn.Used, gn.Global_limit, gn.Global_reset))
+		return false, common.NewError("invalid_request", fmt.Sprintf("amount asked to be poured (%v) plus global used amount (%v) exceeds allowed global limit (%v/%vhr)", t.Value, gn.Used, gn.Global_limit, gn.Global_reset.String()))
 	}
 	Logger.Info("Valid sc request", zap.Any("contract_balance", smartContractBalance), zap.Any("txn.Value", t.Value), zap.Any("max_pour", gn.Pour_limit), zap.Any("periodic_used+t.Value", state.Balance(t.Value)+un.Used), zap.Any("periodic_limit", gn.Periodic_limit), zap.Any("global_used+txn.Value", state.Balance(t.Value)+gn.Used), zap.Any("global_limit", gn.Global_limit))
 	return true, nil
@@ -71,10 +62,10 @@ func (fc *FaucetSmartContract) updateLimits(t *transaction.Transaction, inputDat
 		gn.Global_limit = newRequest.Global_limit
 	}
 	if newRequest.Individual_reset > 0 {
-		gn.Individual_reset = time.Duration(time.Hour * newRequest.Individual_reset).String()
+		gn.Individual_reset = newRequest.Individual_reset
 	}
-	if newRequest.Global_rest > 0 {
-		gn.Global_reset = time.Duration(time.Hour * newRequest.Global_rest).String()
+	if newRequest.Global_reset > 0 {
+		gn.Global_reset = newRequest.Global_reset
 	}
 	fc.DB.PutNode(gn.getKey(), gn.encode())
 	return string(gn.encode()), nil
@@ -89,11 +80,7 @@ func (fc *FaucetSmartContract) personalPeriodicLimit(t *transaction.Transaction,
 	var resp periodicResponse
 	resp.Start = un.StartTime
 	resp.Used = un.Used
-	ir, err := time.ParseDuration(gn.Individual_reset)
-	if err != nil {
-		ir, _ = time.ParseDuration(INDIVIDUAL_RESET)
-	}
-	resp.Restart = (ir - common.ToTime(t.CreationDate).Sub(un.StartTime)).String()
+	resp.Restart = (gn.Individual_reset - common.ToTime(t.CreationDate).Sub(un.StartTime)).String()
 	if gn.Periodic_limit >= un.Used {
 		resp.Allowed = gn.Periodic_limit - un.Used
 	} else {
@@ -106,11 +93,7 @@ func (fc *FaucetSmartContract) globalPerodicLimit(t *transaction.Transaction, gn
 	var resp periodicResponse
 	resp.Start = gn.StartTime
 	resp.Used = gn.Used
-	gr, err := time.ParseDuration(gn.Global_reset)
-	if err != nil {
-		gr, _ = time.ParseDuration(GLOBAL_RESET)
-	}
-	resp.Restart = (gr - common.ToTime(t.CreationDate).Sub(gn.StartTime)).String()
+	resp.Restart = (gn.Global_reset - common.ToTime(t.CreationDate).Sub(gn.StartTime)).String()
 	if gn.Global_limit > gn.Used {
 		resp.Allowed = gn.Global_limit - gn.Used
 	} else {
@@ -154,15 +137,7 @@ func (fc *FaucetSmartContract) getUserVariables(t *transaction.Transaction, gn *
 	if err == nil {
 		err = un.decode(userBytes)
 		if err == nil {
-			ir, ierr := time.ParseDuration(gn.Individual_reset)
-			if ierr != nil {
-				ir, _ = time.ParseDuration(INDIVIDUAL_RESET)
-			}
-			gr, gerr := time.ParseDuration(gn.Global_reset)
-			if gerr != nil {
-				gr, _ = time.ParseDuration(GLOBAL_RESET)
-			}
-			if common.ToTime(t.CreationDate).Sub(un.StartTime) >= ir || common.ToTime(t.CreationDate).Sub(un.StartTime) >= gr {
+			if common.ToTime(t.CreationDate).Sub(un.StartTime) >= gn.Individual_reset || common.ToTime(t.CreationDate).Sub(un.StartTime) >= gn.Global_reset {
 				un.StartTime = common.ToTime(t.CreationDate)
 				un.Used = 0
 			}
@@ -181,22 +156,18 @@ func (fc *FaucetSmartContract) getGlobalVariables(t *transaction.Transaction) *g
 	if err == nil {
 		err = gn.decode(globalBytes)
 		if err == nil {
-			gr, err := time.ParseDuration(gn.Global_reset)
-			if err != nil {
-				gr, _ = time.ParseDuration(GLOBAL_RESET)
-			}
-			if common.ToTime(t.CreationDate).Sub(gn.StartTime) >= gr {
+			if common.ToTime(t.CreationDate).Sub(gn.StartTime) >= gn.Global_reset {
 				gn.StartTime = common.ToTime(t.CreationDate)
 				gn.Used = 0
 			}
 			return &gn
 		}
 	}
-	gn.Pour_limit = state.Balance(POUR_LIMIT)
-	gn.Periodic_limit = state.Balance(PERIODIC_LIMIT)
-	gn.Global_limit = state.Balance(GLOBAL_LIMIT)
-	gn.Individual_reset = INDIVIDUAL_RESET
-	gn.Global_reset = GLOBAL_RESET
+	gn.Pour_limit = state.Balance(config.SmartContractConfig.GetInt("smart_contracts.faucetsc.pour_limit"))
+	gn.Periodic_limit = state.Balance(config.SmartContractConfig.GetInt("smart_contracts.faucetsc.periodic_limit"))
+	gn.Global_limit = state.Balance(config.SmartContractConfig.GetInt("smart_contracts.faucetsc.global_limit"))
+	gn.Individual_reset = config.SmartContractConfig.GetDuration("smart_contracts.faucetsc.individual_reset")
+	gn.Global_reset = config.SmartContractConfig.GetDuration("smart_contracts.faucetsc.global_reset")
 	gn.Used = 0
 	gn.StartTime = common.ToTime(t.CreationDate)
 	return &gn

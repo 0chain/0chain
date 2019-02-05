@@ -7,6 +7,8 @@ import (
 	"github.com/spf13/viper"
 )
 
+var SmartContractConfig *viper.Viper
+
 //SetupDefaultConfig - setup the default config options that can be overridden via the config file
 func SetupDefaultConfig() {
 	viper.SetDefault("logging.level", "info")
@@ -39,6 +41,17 @@ func SetupConfig() {
 		panic(fmt.Errorf("fatal error config file: %s", err))
 	}
 	setupDevConfig()
+}
+
+/*SetupConfig - setup the configuration system */
+func SetupSmartContractConfig() {
+	SmartContractConfig = viper.New()
+	SmartContractConfig.SetConfigName("sc")
+	SmartContractConfig.AddConfigPath("./config")
+	err := SmartContractConfig.ReadInConfig() // Find and read the config file
+	if err != nil {                           // Handle errors reading the config file
+		panic(fmt.Errorf("fatal error config file: %s", err))
+	}
 }
 
 //ReadConfig - read a configuration from a file given as path/to/config/dir/config.configtype

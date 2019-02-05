@@ -13,7 +13,7 @@ type limitRequest struct {
 	Periodic_limit   state.Balance `json:"periodic_limit"`
 	Global_limit     state.Balance `json:"global_limit"`
 	Individual_reset time.Duration `json:"individual_reset"` //in hours
-	Global_rest      time.Duration `json:"global_rest"`      //in hours
+	Global_reset     time.Duration `json:"global_rest"`      //in hours
 }
 
 func (lr *limitRequest) encode() []byte {
@@ -48,8 +48,8 @@ type globalNode struct {
 	Pour_limit       state.Balance `json:"pour_limit"`
 	Periodic_limit   state.Balance `json:"periodic_limit"`
 	Global_limit     state.Balance `json:"global_limit"`
-	Individual_reset string        `json:"individual_reset"` //in hours
-	Global_reset     string        `json:"global_rest"`      //in hours
+	Individual_reset time.Duration `json:"individual_reset"` //in hours
+	Global_reset     time.Duration `json:"global_rest"`      //in hours
 	Used             state.Balance `json:"used"`
 	StartTime        time.Time     `json:"start_time"`
 }

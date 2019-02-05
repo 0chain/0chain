@@ -7,6 +7,7 @@ import (
 
 	"0chain.net/client"
 	"0chain.net/datastore"
+	"0chain.net/smartcontract"
 	"0chain.net/transaction"
 )
 
@@ -46,6 +47,18 @@ func (w *Wallet) CreateSendTransaction(toClient string, value int64, msg string)
 	txn.ToClientID = toClient
 	txn.Value = value
 	txn.TransactionData = msg
+	txn.Sign(w.SignatureScheme)
+	return txn
+}
+
+/*CreateSendTransaction - create a send transaction */
+func (w *Wallet) CreateFaucetPourTransaction(value int64) *transaction.Transaction {
+	txn := transactionMetadataProvider.Instance().(*transaction.Transaction)
+	txn.ClientID = w.ClientID
+	txn.ToClientID = smartcontract.FAUCET_CONTRACT_ADDRESS
+	txn.Value = value
+	txn.TransactionData = `{"name":"pour","input":{}}`
+	txn.TransactionType = transaction.TxnTypeSmartContract
 	txn.Sign(w.SignatureScheme)
 	return txn
 }
