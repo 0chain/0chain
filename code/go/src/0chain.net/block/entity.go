@@ -84,15 +84,16 @@ type Block struct {
 
 	TxnsMap map[string]bool `json:"-"`
 
-	ClientState        util.MerklePatriciaTrieI `json:"-"`
-	stateStatus        int8
-	StateMutex         *sync.Mutex `json:"_"`
-	blockState         int8
-	isNotarized        bool
-	ticketsMutex       *sync.Mutex
-	verificationStatus int
-	SCStateDB          smartcontractstate.SCDB `json:"-"`
-	RunningTxnCount    int64                   `json:"running_txn_count"`
+	ClientState           util.MerklePatriciaTrieI `json:"-"`
+	stateStatus           int8
+	StateMutex            *sync.Mutex `json:"_"`
+	blockState            int8
+	isNotarized           bool
+	ticketsMutex          *sync.Mutex
+	verificationStatus    int
+	SCStateDB             smartcontractstate.SCDB `json:"-"`
+	RunningTxnCount       int64                   `json:"running_txn_count"`
+	UniqueBlockExtensions map[string]bool         `json:"-"`
 }
 
 //NewBlock - create a new empty block
@@ -506,4 +507,12 @@ func (b *Block) UnknownTickets(vts []*VerificationTicket) []*VerificationTicket 
 		}
 	}
 	return newTickets
+}
+
+func (b *Block) AddUniqueBlockExtension(eb *Block) {
+	//TODO: We need to compare for view change and add the eb.MinerID only if he was in the view that b belongs to
+	if b.UniqueBlockExtensions == nil {
+		b.UniqueBlockExtensions = make(map[string]bool)
+	}
+	b.UniqueBlockExtensions[eb.MinerID] = true
 }

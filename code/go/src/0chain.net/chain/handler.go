@@ -130,7 +130,7 @@ func (c *Chain) healthSummary(w http.ResponseWriter, r *http.Request) {
 	if cr != nil {
 		cRandomSeed = cr.GetRandomSeed()
 	}
-	fmt.Fprintf(w, "<div>Current Round: %v(%v) Finalized Round: %v Rollbacks: %v Round Timeouts: %v</div>", c.CurrentRound, cRandomSeed, c.LatestFinalizedBlock.Round, c.RollbackCount, c.RoundTimeoutsCount)
+	fmt.Fprintf(w, "<div>Current Round: %v(%v) Finalized Round: %v (%v deterministic) Rollbacks: %v Round Timeouts: %v</div>", c.CurrentRound, cRandomSeed, c.LatestFinalizedBlock.Round, c.LatestDeterministicBlock.Round, c.RollbackCount, c.RoundTimeoutsCount)
 }
 
 /*DiagnosticsHomepageHandler - handler to display the /_diagnostics page */

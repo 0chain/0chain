@@ -124,5 +124,8 @@ func WriteCurrentStatus(w http.ResponseWriter, c *chain.Chain) {
 	if c.LatestFinalizedBlock != nil {
 		fmt.Fprintf(w, "<tr><td>Finalized Round</td><td>%v</td></tr>", c.LatestFinalizedBlock.Round)
 	}
+	if c.LatestDeterministicBlock != nil {
+		fmt.Fprintf(w, "<tr><td>Deterministic Finalized Round</td><td>%v</td></tr>", c.LatestDeterministicBlock.Round)
+	}
 	fmt.Fprintf(w, "</table>")
 }

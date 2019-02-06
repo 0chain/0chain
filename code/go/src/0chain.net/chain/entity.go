@@ -91,9 +91,10 @@ type Chain struct {
 	rounds      map[int64]round.RoundI
 	roundsMutex *sync.RWMutex
 
-	CurrentRound         int64        `json:"-"`
-	CurrentMagicBlock    *block.Block `json:"-"`
-	LatestFinalizedBlock *block.Block `json:"latest_finalized_block,omitempty"` // Latest block on the chain the program is aware of
+	CurrentRound             int64        `json:"-"`
+	CurrentMagicBlock        *block.Block `json:"-"`
+	LatestFinalizedBlock     *block.Block `json:"latest_finalized_block,omitempty"` // Latest block on the chain the program is aware of
+	LatestDeterministicBlock *block.Block `json:"latest_deterministic_block,omitempty"`
 
 	clientStateDeserializer state.DeserializerI
 	stateDB                 util.NodeDB
@@ -317,7 +318,8 @@ func (c *Chain) AddGenesisBlock(b *block.Block) {
 		return
 	}
 	c.LatestFinalizedBlock = b // Genesis block is always finalized
-	c.CurrentMagicBlock = b    // Genesis block is always a magic block
+	c.LatestDeterministicBlock = b
+	c.CurrentMagicBlock = b // Genesis block is always a magic block
 	c.blocks[b.Hash] = b
 	return
 }
@@ -358,6 +360,13 @@ func (c *Chain) addBlock(b *block.Block) *block.Block {
 			b.SetPreviousBlock(pb)
 		} else {
 			c.AsyncFetchNotarizedPreviousBlock(b)
+		}
+	}
+	for pb := b.PrevBlock; pb != nil && pb != c.LatestDeterministicBlock; pb = pb.PrevBlock {
+		pb.AddUniqueBlockExtension(b)
+		if c.IsFinalizedDeterministically(pb) {
+			c.LatestDeterministicBlock = pb
+			break
 		}
 	}
 	return b

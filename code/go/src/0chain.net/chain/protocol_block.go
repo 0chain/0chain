@@ -164,6 +164,13 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	c.BlockChain.Value = fb.GetSummary()
 	c.BlockChain = c.BlockChain.Next()
 
+	for pfb := fb; pfb != nil && pfb != c.LatestDeterministicBlock; pfb = pfb.PrevBlock {
+		if c.IsFinalizedDeterministically(pfb) {
+			c.LatestDeterministicBlock = pfb
+			break
+		}
+	}
+
 	// Deleting dead blocks from a couple of rounds before (helpful for visualizer and potential rollback scenrio)
 	pfb := fb
 	for idx := 0; idx < 10 && pfb != nil; idx, pfb = idx+1, pfb.PrevBlock {
@@ -181,6 +188,18 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	}
 	// Prune all the dead blocks
 	c.DeleteBlocks(deadBlocks)
+}
+
+//IsFinalizedDeterministically - checks if a block is finalized deterministically
+func (c *Chain) IsFinalizedDeterministically(b *block.Block) bool {
+	//TODO: The threshold count should happen w.r.t the view of the block
+	if c.LatestFinalizedBlock != nil && b.Round > c.LatestFinalizedBlock.Round {
+		return false
+	}
+	if len(b.UniqueBlockExtensions)*100 >= c.Miners.Size()*c.ThresholdByCount {
+		return true
+	}
+	return false
 }
 
 /*GetNotarizedBlock - get a notarized block for a round */
