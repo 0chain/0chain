@@ -521,7 +521,7 @@ func (c *Chain) CanStartNetwork() bool {
 	if config.DevConfiguration.State {
 		threshold = c.Miners.Size()
 	}
-	return active >= threshold
+	return active >= threshold && c.CanShardBlocks()
 }
 
 /*ReadNodePools - read the node pools from configuration */
