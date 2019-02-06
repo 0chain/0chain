@@ -226,7 +226,10 @@ func catchUpWithLatestRound(ctx context.Context, r *round.Round) {
 	lr := sc.GetLatestRoundFromSharders(ctx, r.Number)
 	if lr != nil && lr.Number > r.Number+1 {
 		Logger.Info("bc-27 - latest round from other sharder", zap.Int64("curr_round", r.Number), zap.Int64("latest_round_from_sharders", lr.Number))
+		ts := time.Now()
 		sc.GetMissingRounds(ctx, lr.Number, r.Number)
+		duration := time.Since(ts)
+		Logger.Info("bc-27 duration for catching up with all missing rounds", zap.Duration("duration", duration))
 	}
 }
 

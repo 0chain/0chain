@@ -125,6 +125,7 @@ func (sc *Chain) GetMissingRounds(ctx context.Context, targetR int64, dbR int64)
 		params := map[string]string{"round": strconv.FormatInt(loopR, 10)}
 		var r *round.Round
 		Logger.Info("bc-27 requesting all sharders for the round", zap.Int64("round", loopR))
+		ts := time.Now()
 		sc.Sharders.RequestEntityFromAll(ctx, RoundRequestor, params, func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 			roundEntity, ok := entity.(*round.Round)
 			if !ok {
@@ -145,6 +146,8 @@ func (sc *Chain) GetMissingRounds(ctx context.Context, targetR int64, dbR int64)
 		}
 		Logger.Info("bc-27 check to see if block needed to be stored")
 		sc.storeMissingRoundBlock(ctx, r)
+		duration := time.Since(ts)
+		Logger.Info("bc-27 duration to catch up with one missing round", zap.Duration("duration", duration), zap.Int64("round", r.Number))
 	}
 }
 
