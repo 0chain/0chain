@@ -101,12 +101,20 @@ func WaitForDkgToBeDone(ctx context.Context) {
 	}
 }
 
+func isNetworkReadyForDKG() bool {
+	mc := GetMinerChain()
+	if isDkgEnabled {
+		return mc.AreAllNodesActive()
+	} else {
+		return mc.CanStartNetwork()
+	}
+}
 func waitForNetworkToBeReady(ctx context.Context) {
 
 	mc := GetMinerChain()
 
 	//m2m := mc.Miners
-	if !mc.CanStartNetwork() {
+	if !isNetworkReadyForDKG() {
 		ticker := time.NewTicker(5 * chain.DELTA)
 		for ts := range ticker.C {
 			active := mc.Miners.GetActiveCount()
@@ -115,7 +123,7 @@ func waitForNetworkToBeReady(ctx context.Context) {
 			} else {
 				Logger.Info("waiting for all nodes to be active", zap.Time("ts", ts), zap.Int("active", active))
 			}
-			if mc.CanStartNetwork() {
+			if isNetworkReadyForDKG() {
 				break
 			}
 		}
@@ -316,7 +324,14 @@ func GetBlsShare(ctx context.Context, r, pr *round.Round) string {
 //AddVRFShare - implement the interface for the RoundRandomBeacon protocol
 func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShare) bool {
 	Logger.Info("DKG AddVRFShare", zap.Int64("Round", mr.GetRoundNumber()), zap.Int("Sender", vrfs.GetParty().SetIndex))
-	if mr.AddVRFShare(vrfs) {
+
+	if len(mr.GetVRFShares()) >= GetBlsThreshold() {
+		//ignore VRF shares coming after threshold is reached to avoid locking issues.
+		//Todo: Remove this logging
+		Logger.Info("Ignoring VRFShare. Already at threshold", zap.Int64("Round", mr.GetRoundNumber()), zap.Int("VRF_Shares", len(mr.GetVRFShares())))
+		return false
+	}
+	if mr.AddVRFShare(vrfs, GetBlsThreshold()) {
 		mc.ThresholdNumBLSSigReceived(ctx, mr)
 		return true
 	}
@@ -354,14 +369,14 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round) {
 			recFrom = append(recFrom, ComputeBlsID(n.SetIndex))
 		}
 		rbOutput := bs.CalcRandomBeacon(recSig, recFrom)
-		Logger.Debug("DKG ", zap.String("rboOutput", rbOutput), zap.Int64("Round #", mr.Number))
+		Logger.Debug("DKG ", zap.String("rboOutput", rbOutput), zap.Int64("Round", mr.Number))
 		mc.computeRBO(ctx, mr, rbOutput)
 		end := time.Now()
 
 		diff := end.Sub(beg)
 
 		if diff > (time.Duration(k) * time.Millisecond) {
-			Logger.Info("DKG RBO Calc ***SLOW****", zap.Int64("Round", mr.GetRoundNumber()), zap.Int("# of shares", len(shares)), zap.Any("Time taken", diff))
+			Logger.Info("DKG RBO Calc ***SLOW****", zap.Int64("Round", mr.GetRoundNumber()), zap.Int("VRF_shares", len(shares)), zap.Any("time_taken", diff))
 
 		}
 	}
@@ -396,6 +411,8 @@ func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r 
 			seed = rand.New(rand.NewSource(pr.GetRandomSeed())).Int63()
 		}
 		r.Round.SetVRFOutput(rbo)
+		//Todo: Remove this log later.
+		Logger.Info("Starting round", zap.Int64("round", r.GetRoundNumber()), zap.Int64("rseed", seed))
 		mc.startRound(ctx, r, seed)
 	} else {
 		Logger.Error("compute round random seed - no prior value", zap.Int64("round", r.GetRoundNumber()), zap.Int("blocks", len(pr.GetProposedBlocks())))

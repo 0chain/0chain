@@ -62,7 +62,7 @@
 
   - name: "Install file-system for {{agent_name}} on {{ebs_device_name}}"
     filesystem:
-      fstype: ext4
+      fstype: xfs
       dev: "{{ebs_device_name}}"
       force: no
 
@@ -79,54 +79,54 @@
       path: "{{ebs_mount_point}}"
       src: "{{ebs_device_name}}"
       state: mounted
-      fstype: ext4
+      fstype: xfs
       boot: yes
 
-- become: yes
-  block:
-  - name: Get EFS facts for the instance
-    local_action:
-      module: efs_facts
-      aws_access_key: "{{ lookup('env', 'AWS_ACCESS_KEY_ID') }}"
-      aws_secret_key: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY')}}"
-      security_token: "{{ lookup('env', 'AWS_SECURITY_TOKEN')}}"
-      region: "{{ ansible_ec2_placement_region }}"
-      tags: "{{agent_tags}}"
-    register: efs_facts_result
+# - become: yes
+#   block:
+#   - name: Get EFS facts for the instance
+#     local_action:
+#       module: efs_facts
+#       aws_access_key: "{{ lookup('env', 'AWS_ACCESS_KEY_ID') }}"
+#       aws_secret_key: "{{ lookup('env', 'AWS_SECRET_ACCESS_KEY')}}"
+#       security_token: "{{ lookup('env', 'AWS_SECURITY_TOKEN')}}"
+#       region: "{{ ansible_ec2_placement_region }}"
+#       tags: "{{agent_tags}}"
+#     register: efs_facts_result
 
-  - set_fact:
-      efs: "{{efs_facts_result.ansible_facts.efs[0]}}"
+#   - set_fact:
+#       efs: "{{efs_facts_result.ansible_facts.efs[0]}}"
 
-  - debug:
-      msg: "efs facts={{efs}}"
-      verbosity: 2
+#   - debug:
+#       msg: "efs facts={{efs}}"
+#       verbosity: 2
 
-  - set_fact:
-      efs_mount_point: "{{efs.file_system_id}}.efs.{{ansible_ec2_placement_region}}.amazonaws.com:/"
+#   - set_fact:
+#       efs_mount_point: "{{efs.file_system_id}}.efs.{{ansible_ec2_placement_region}}.amazonaws.com:/"
 
-  - debug:
-      msg: "efs_mount_point={{ansible_ec2_instance_identity_document_region}}.{{agent_name}}@{{ansible_ec2_public_ipv4}} => {{efs_mount_point}}"
-      verbosity: 0
+#   - debug:
+#       msg: "efs_mount_point={{ansible_ec2_instance_identity_document_region}}.{{agent_name}}@{{ansible_ec2_public_ipv4}} => {{efs_mount_point}}"
+#       verbosity: 0
 
-  - name: "Mount for {{agent_name}} {{efs_mount_point}} at {{zchain_volumes.efs}}"
-    mount:
-      src: "{{efs_mount_point}}"
-      path: "{{zchain_volumes.efs}}"
-      fstype: nfs4
-      opts: nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=15,retrans=2,noresvport
-      state: mounted
-    become: yes
+#   - name: "Mount for {{agent_name}} {{efs_mount_point}} at {{zchain_volumes.efs}}"
+#     mount:
+#       src: "{{efs_mount_point}}"
+#       path: "{{zchain_volumes.efs}}"
+#       fstype: nfs4
+#       opts: nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=15,retrans=2,noresvport
+#       state: mounted
+#     become: yes
 
-  - name: "Change ownership {{zchain_volumes.efs}} to 0chain user"
-    file:
-      path: "{{zchain_volumes.efs}}"
-      owner: 0chain
-      group: 0chain
-      mode: "u=rwX,g=rX,o=rX"
-      recurse: yes
-    become: yes
-  when:
-    - agent_role == "sharder"
+#   - name: "Change ownership {{zchain_volumes.efs}} to 0chain user"
+#     file:
+#       path: "{{zchain_volumes.efs}}"
+#       owner: 0chain
+#       group: 0chain
+#       mode: "u=rwX,g=rX,o=rX"
+#       recurse: yes
+#     become: yes
+#   when:
+#     - agent_role == "sharder"
 
 - become: yes
   block:

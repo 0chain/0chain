@@ -9,6 +9,7 @@ FROM 0chain/base:${image_tag}
 ADD ./docker.aws/build.miner/MINER_VERSION .
 
 ENV SRC_DIR=/0chain
+ENV THIRD_PARTY_GOPATH=$GOPATH
 ENV GOPATH=$GOPATH:$SRC_DIR/go
 
 WORKDIR $SRC_DIR
@@ -19,6 +20,7 @@ ADD ./code/go/src $SRC_DIR/go/src
 
 # Build it:
 RUN go build -tags bn256 0chain.net/miner/miner
+
 
 #Copy the miner executable
 WORKDIR $SRC_DIR/bin

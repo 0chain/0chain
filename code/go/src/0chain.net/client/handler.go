@@ -11,8 +11,8 @@ import (
 
 /*SetupHandlers sets up the necessary API end points */
 func SetupHandlers() {
-	http.HandleFunc("/v1/client/get", common.ToJSONResponse(memorystore.WithConnectionHandler(GetClientHandler)))
-	http.HandleFunc("/v1/client/put", datastore.ToJSONEntityReqResponse(datastore.DoAsyncEntityJSONHandler(PutClient, ClientEntityChannel), clientEntityMetadata))
+	http.HandleFunc("/v1/client/get", common.UserRateLimit(common.ToJSONResponse(memorystore.WithConnectionHandler(GetClientHandler))))
+	http.HandleFunc("/v1/client/put", common.UserRateLimit(datastore.ToJSONEntityReqResponse(datastore.DoAsyncEntityJSONHandler(PutClient, ClientEntityChannel), clientEntityMetadata)))
 }
 
 /*GetClientHandler - given an id returns the client information */

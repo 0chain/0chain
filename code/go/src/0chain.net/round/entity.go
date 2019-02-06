@@ -243,6 +243,9 @@ func (r *Round) initialize() {
 	r.notarizedBlocks = make([]*block.Block, 0, 1)
 	r.proposedBlocks = make([]*block.Block, 0, 3)
 	r.shares = make(map[string]*VRFShare)
+	//when we restart a round we call this. So, explicitly, set them to default
+	r.hasRandomSeed = false
+	r.RandomSeed = 0
 }
 
 /*Read - read round entity from store */
@@ -320,9 +323,13 @@ func (r *Round) Restart() {
 }
 
 //AddVRFShare - implement interface
-func (r *Round) AddVRFShare(share *VRFShare) bool {
+func (r *Round) AddVRFShare(share *VRFShare, threshold int) bool {
 	r.Mutex.Lock()
 	defer r.Mutex.Unlock()
+	if len(r.GetVRFShares()) >= threshold {
+		//if we already have enough shares, do not add.
+		return false
+	}
 	if _, ok := r.shares[share.party.GetKey()]; ok {
 		return false
 	}

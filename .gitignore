@@ -28,4 +28,5 @@ awsnet/cookbook/context
 code/go/bin
 build
 *.code-workspace
-
+gorocksdb/
+docker.local/sharder*

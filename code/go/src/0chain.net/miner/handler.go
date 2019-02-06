@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"0chain.net/chain"
+	"0chain.net/common"
 	"0chain.net/config"
 	"0chain.net/diagnostics"
 	"0chain.net/node"
@@ -12,7 +13,7 @@ import (
 
 /*SetupHandlers - setup miner handlers */
 func SetupHandlers() {
-	http.HandleFunc("/_chain_stats", ChainStatsHandler)
+	http.HandleFunc("/_chain_stats", common.UserRateLimit(ChainStatsHandler))
 }
 
 /*ChainStatsHandler - a handler to provide block statistics */
@@ -38,7 +39,7 @@ func ChainStatsHandler(w http.ResponseWriter, r *http.Request) {
 	diagnostics.WriteTimerStatistics(w, c, chain.StartToFinalizeTimer, 1000000.0)
 	fmt.Fprintf(w, "</td></tr>")
 	fmt.Fprintf(w, "<tr><td colspan='2'>")
-	fmt.Fprintf(w, "<p>Block finalization time = block generation + block verification + network time (1*large message + 2*small message)</p>")
+	fmt.Fprintf(w, "<p>Steady state block finalization time = block generation + block processing + network time (1*large message + 2*small message)</p>")
 	fmt.Fprintf(w, "</td></tr>")
 
 	fmt.Fprintf(w, "<tr><td>")
@@ -58,7 +59,13 @@ func ChainStatsHandler(w http.ResponseWriter, r *http.Request) {
 	diagnostics.WriteTimerStatistics(w, c, bgTimer, 1000000.0)
 	fmt.Fprintf(w, "</td><td>")
 	fmt.Fprintf(w, "<h2>Block Verification Statistics</h2>")
-	diagnostics.WriteTimerStatistics(w, c, bvTimer, 1000000.0)
+	diagnostics.WriteTimerStatistics(w, c, btvTimer, 1000000.0)
+	fmt.Fprintf(w, "</td></tr>")
+
+	fmt.Fprintf(w, "<tr><td>")
+	fmt.Fprintf(w, "<h2>Block Processing Statistics</h2>")
+	diagnostics.WriteTimerStatistics(w, c, bpTimer, 1000000.0)
+	fmt.Fprintf(w, "</td><td>")
 	fmt.Fprintf(w, "</td></tr>")
 
 	fmt.Fprintf(w, "<tr><td>")

@@ -10,6 +10,7 @@ import (
 
 	"0chain.net/chain"
 	"0chain.net/config"
+	"0chain.net/encryption"
 	"0chain.net/util"
 
 	"0chain.net/block"
@@ -27,11 +28,13 @@ import (
 const InsufficientTxns = "insufficient_txns"
 
 var bgTimer metrics.Timer
-var bvTimer metrics.Timer
+var bpTimer metrics.Timer
+var btvTimer metrics.Timer
 
 func init() {
 	bgTimer = metrics.GetOrRegisterTimer("bg_time", nil)
-	bvTimer = metrics.GetOrRegisterTimer("bv_time", nil)
+	bpTimer = metrics.GetOrRegisterTimer("bv_time", nil)
+	btvTimer = metrics.GetOrRegisterTimer("btv_time", nil)
 }
 
 /*GenerateBlock - This works on generating a block
@@ -57,15 +60,15 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 			return false
 		}
 		var debugTxn = txn.DebugTxn()
-		if debugTxn {
-			Logger.Info("generate block (debug transaction)", zap.String("txn", txn.Hash), zap.String("txn_object", datastore.ToJSON(txn).String()))
-		}
 		if !mc.validateTransaction(b, txn) {
 			invalidTxns = append(invalidTxns, txn)
 			if debugTxn {
-				Logger.Info("generate block (debug transaction) error - txn creation not within tolerance", zap.String("txn", txn.Hash), zap.Any("now", common.Now()))
+				Logger.Info("generate block (debug transaction) error - txn creation not within tolerance", zap.String("txn", txn.Hash), zap.Int32("idx", idx), zap.Any("now", common.Now()))
 			}
 			return false
+		}
+		if debugTxn {
+			Logger.Info("generate block (debug transaction)", zap.String("txn", txn.Hash), zap.Int32("idx", idx), zap.String("txn_object", datastore.ToJSON(txn).String()))
 		}
 		if ok, err := mc.ChainHasTransaction(ctx, b.PrevBlock, txn); ok || err != nil {
 			if err != nil {
@@ -74,6 +77,9 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 			return false
 		}
 		if !mc.UpdateState(b, txn) {
+			if debugTxn {
+				Logger.Info("generate block (debug transaction) update state", zap.String("txn", txn.Hash), zap.Int32("idx", idx), zap.String("txn_object", datastore.ToJSON(txn).String()))
+			}
 			failedStateCount++
 			if config.DevConfiguration.State {
 				return false
@@ -86,6 +92,9 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		txn.SetCollectionScore(txn.GetCollectionScore() - 10*60)
 		txnMap[txn.GetKey()] = true
 		b.Txns[idx] = txn
+		if debugTxn {
+			Logger.Info("generate block (debug transaction) success in processing Txn hash: " + txn.Hash + " blockHash? = " + b.Hash)
+		}
 		etxns[idx] = txn
 		b.AddTransaction(txn)
 		byteSize += int64(len(txn.TransactionData)) + int64(len(txn.TransactionOutput))
@@ -234,6 +243,19 @@ func (mc *Chain) UpdatePendingBlock(ctx context.Context, b *block.Block, txns []
 	transactionMetadataProvider.GetStore().MultiAddToCollection(ctx, transactionMetadataProvider, txns)
 }
 
+func (mc *Chain) verifySmartContracts(ctx context.Context, b *block.Block) error {
+	for _, txn := range b.Txns {
+		if txn.TransactionType == transaction.TxnTypeSmartContract {
+			err := txn.VerifyOutputHash(ctx)
+			if err != nil {
+				Logger.Error("Smart contract output verification failed", zap.Any("error", err), zap.Any("output", txn.TransactionOutput))
+				return common.NewError("txn_output_verification_failed", "Transaction output hash verification failed")
+			}
+		}
+	}
+	return nil
+}
+
 /*VerifyBlock - given a set of transaction ids within a block, validate the block */
 func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockVerificationTicket, error) {
 	start := time.Now()
@@ -256,11 +278,15 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockV
 			return nil, serr
 		}
 	}
+	err = mc.verifySmartContracts(ctx, b)
+	if err != nil {
+		return nil, err
+	}
 	bvt, err := mc.SignBlock(ctx, b)
 	if err != nil {
 		return nil, err
 	}
-	bvTimer.UpdateSince(start)
+	bpTimer.UpdateSince(start)
 	Logger.Info("verify block successful", zap.Any("round", b.Round), zap.Int("block_size", len(b.Txns)), zap.Any("time", time.Since(start)),
 		zap.Any("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Int8("state_status", b.GetStateStatus()),
 		zap.Float64("p_chain_weight", pb.ChainWeight), zap.Error(serr))
@@ -275,9 +301,17 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 	if numWorkers*mc.ValidationBatchSize < len(b.Txns) {
 		numWorkers++
 	}
-	validChannel := make(chan bool, len(b.Txns)/mc.ValidationBatchSize+1)
-	validate := func(ctx context.Context, txns []*transaction.Transaction) {
-		for _, txn := range txns {
+	aggregate := true
+	var aggregateSignatureScheme encryption.AggregateSignatureScheme
+	if aggregate {
+		aggregateSignatureScheme = encryption.GetAggregateSignatureScheme(mc.ClientSignatureScheme, len(b.Txns), mc.ValidationBatchSize)
+	}
+	if aggregateSignatureScheme == nil {
+		aggregate = false
+	}
+	validChannel := make(chan bool, numWorkers)
+	validate := func(ctx context.Context, txns []*transaction.Transaction, start int) {
+		for idx, txn := range txns {
 			if cancel {
 				validChannel <- false
 				return
@@ -294,12 +328,19 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 				validChannel <- false
 				return
 			}
-			err := txn.ValidateWrtTime(ctx, b.CreationDate)
+			err := txn.ValidateWrtTimeForBlock(ctx, b.CreationDate, !aggregate)
 			if err != nil {
 				cancel = true
 				Logger.Error("validate transactions", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.String("txn", datastore.ToJSON(txn).String()), zap.Error(err))
 				validChannel <- false
 				return
+			}
+			if aggregate {
+				sigScheme, err := txn.GetSignatureScheme(ctx)
+				if err != nil {
+					panic(err)
+				}
+				aggregateSignatureScheme.Aggregate(sigScheme, start+idx, txn.Signature, txn.Hash)
 			}
 			ok, err := mc.ChainHasTransaction(ctx, b.PrevBlock, txn)
 			if ok || err != nil {
@@ -313,12 +354,13 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 		}
 		validChannel <- true
 	}
+	ts := time.Now()
 	for start := 0; start < len(b.Txns); start += mc.ValidationBatchSize {
 		end := start + mc.ValidationBatchSize
 		if end > len(b.Txns) {
 			end = len(b.Txns)
 		}
-		go validate(ctx, b.Txns[start:end])
+		go validate(ctx, b.Txns[start:end], start)
 	}
 	count := 0
 	for result := range validChannel {
@@ -335,6 +377,12 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 			break
 		}
 	}
+	if aggregate {
+		if _, err := aggregateSignatureScheme.Verify(); err != nil {
+			return err
+		}
+	}
+	btvTimer.UpdateSince(ts)
 	if mc.DiscoverClients {
 		go mc.SaveClients(ctx, b.GetClients())
 	}
@@ -398,4 +446,9 @@ func getLatestBlockFromSharders(ctx context.Context) *block.Block {
 	}
 	Logger.Info("bc-1 sharders returned no lfb.")
 	return nil
+}
+
+//NotarizedBlockFetched - handler to process fetched notarized block
+func (mc *Chain) NotarizedBlockFetched(ctx context.Context, b *block.Block) {
+	mc.SendNotarization(ctx, b)
 }

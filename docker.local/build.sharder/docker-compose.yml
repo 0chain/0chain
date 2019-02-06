@@ -1,7 +1,7 @@
 version: '3'
 services:
   scylla:
-    image: scylladb/scylla:2.3.0
+    image: scylladb/scylla:2.3.1
     ports:
       - "904${SHARDER}:904${SHARDER}"
     volumes:
@@ -38,8 +38,7 @@ services:
       default:
       testnet0:
         ipv4_address: 198.18.0.8${SHARDER}
-    command: ./bin/sharder --deployment_mode 0 --keys_file config/snode${SHARDER}_keys.txt --nodes_file single_machine_3_nodes
-    #command: ./bin/sharder --deployment_mode 0 --keys_file config/snode${SHARDER}_keys.txt --nodes_file nodes
+    command: ./bin/sharder --deployment_mode 0 --keys_file config/snode${SHARDER}_keys.txt
 
 networks:
   default:

@@ -487,7 +487,7 @@ func (mpt *MerklePatriciaTrie) deleteAtNode(node Node, path Path) (Node, Key, er
 						nnode = enode
 						mpt.deleteNode(ochild)
 					default:
-						panic(fmt.Sprintf("uknown node type: %T %v %T", ochild, ochild, mpt.DB))
+						panic(fmt.Sprintf("unknown node type: %T %v %T", ochild, ochild, mpt.DB))
 					}
 					return mpt.insertNode(node, nnode)
 				}
@@ -529,7 +529,7 @@ func (mpt *MerklePatriciaTrie) deleteAtNode(node Node, path Path) (Node, Key, er
 		nnode.NodeKey = ckey
 		return mpt.insertNode(node, nnode)
 	default:
-		panic(fmt.Sprintf("uknown node type: %T %v", node, node))
+		panic(fmt.Sprintf("unknown node type: %T %v", node, node))
 	}
 }
 
@@ -568,7 +568,7 @@ func (mpt *MerklePatriciaTrie) insertAfterPathTraversal(value Serializable, node
 		nnode.PutChild(nodeImpl.Path[0], ckey)
 		return mpt.insertNode(node, nnode)
 	default:
-		panic(fmt.Sprintf("uknown node type: %T %v", node, node))
+		panic(fmt.Sprintf("unknown node type: %T %v", node, node))
 	}
 }
 
@@ -591,7 +591,7 @@ func (mpt *MerklePatriciaTrie) deleteAfterPathTraversal(node Node) (Node, Key, e
 	case *ExtensionNode:
 		panic("this should not happen!")
 	default:
-		panic(fmt.Sprintf("uknown node type: %T %v", node, node))
+		panic(fmt.Sprintf("unknown node type: %T %v", node, node))
 	}
 }
 
@@ -680,7 +680,8 @@ func (mpt *MerklePatriciaTrie) insertNode(oldNode Node, newNode Node) (Node, Key
 	//If same node is inserted by client, don't add them into change collector
 	if oldNode == nil || bytes.Compare(oldNode.GetHashBytes(), ckey) != 0 {
 		mpt.ChangeCollector.AddChange(oldNode, newNode)
-	} else {
+	}
+	if oldNode != nil {
 		//NOTE: since leveldb is initiaized with propagate deletes as false, only newly created nodes will get deleted
 		mpt.DB.DeleteNode(oldNode.GetHashBytes())
 	}
@@ -844,7 +845,7 @@ func (mpt *MerklePatriciaTrie) Validate() error {
 			continue
 		}
 		if _, err := db.GetNode(c.Old.GetHashBytes()); err == nil {
-			return fmt.Errorf(ErrIntermediateNodeExists.Error(), c.Old, c.Old.GetHash())
+			return fmt.Errorf(ErrIntermediateNodeExists.Error(), c.Old, c.Old.GetHash(), c.New, c.New.GetHash())
 		}
 	}
 	return nil

@@ -24,6 +24,7 @@ func SetupSharderChain(c *chain.Chain) {
 	sharderChain.BlockCache = cache.NewLRUCache(blockCacheSize)
 	transactionCacheSize := int(c.BlockSize) * blockCacheSize
 	sharderChain.BlockTxnCache = cache.NewLRUCache(transactionCacheSize)
+	c.SetFetchedNotarizedBlockHandler(sharderChain)
 }
 
 /*GetSharderChain - get the sharder's chain */
@@ -82,6 +83,19 @@ func (sc *Chain) GetRoundFromStore(ctx context.Context, roundNum int64) (*round.
 	defer ememorystore.Close(rctx)
 	err := r.Read(rctx, r.GetKey())
 	return r, err
+}
+
+/*GetBlockHash - get the block hash for a given round */
+func (sc *Chain) GetBlockHash(ctx context.Context, roundNumber int64) (string, error) {
+	r := sc.GetSharderRound(roundNumber)
+	if r == nil {
+		sr, err := sc.GetRoundFromStore(ctx, roundNumber)
+		if err != nil {
+			return "", err
+		}
+		r = sr
+	}
+	return r.BlockHash, nil
 }
 
 //GetSharderRound - get the sharder's version of the round

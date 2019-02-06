@@ -20,12 +20,18 @@ var publicKeys = make([]string, 0, 1000)
 
 var sigSchemes = make([]encryption.SignatureScheme, 0, 1000)
 
+var clientSignatureScheme = "bls0chain"
+
+func init() {
+	client.SetClientSignatureScheme(clientSignatureScheme)
+}
+
 func BenchmarkTransactionVerify(b *testing.B) {
 	common.SetupRootContext(node.GetNodeContext())
 	client.SetupEntity(memorystore.GetStorageProvider())
 	SetupEntity(memorystore.GetStorageProvider())
 
-	sigScheme := encryption.NewED25519Scheme()
+	sigScheme := encryption.GetSignatureScheme(clientSignatureScheme)
 	err := sigScheme.GenerateKeys()
 	if err != nil {
 		panic(err)
@@ -37,11 +43,13 @@ func BenchmarkTransactionVerify(b *testing.B) {
 
 	txnData := fmt.Sprintf("Txn: Pay %v from %s\n", 42, c.PublicKey)
 	t := datastore.GetEntityMetadata("txn").Instance().(*Transaction)
+	t.Value = 1000
 	t.ClientID = c.GetKey()
+	t.TransactionType = TxnTypeSend
 	t.TransactionData = txnData
 	t.CreationDate = common.Now()
 
-	_, err = t.Sign(c, privateKey)
+	_, err = t.Sign(sigScheme)
 	if err != nil {
 		fmt.Printf("Error signing\n")
 	}
@@ -161,7 +169,7 @@ func postTransaction(privateKey string, publicKey string, txnData string, txnCha
 	c := &client.Client{}
 	c.PublicKey = publicKey
 	c.ID = datastore.ToKey(encryption.Hash(publicKey))
-	signature, err := t.Sign(c, privateKey)
+	signature, err := t.Sign(c.GetSignatureScheme())
 	encryption.Sign(privateKey, t.Hash)
 	if err != nil {
 		fmt.Printf("error signing %v\n", err)

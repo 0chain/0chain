@@ -13,6 +13,7 @@ import (
 	"0chain.net/encryption"
 	. "0chain.net/logging"
 	"0chain.net/node"
+	"0chain.net/smartcontractstate"
 	"0chain.net/state"
 	"0chain.net/transaction"
 	"0chain.net/util"
@@ -83,14 +84,16 @@ type Block struct {
 
 	TxnsMap map[string]bool `json:"-"`
 
-	ClientState        util.MerklePatriciaTrieI `json:"-"`
-	stateStatus        int8
-	StateMutex         *sync.Mutex `json:"_"`
-	blockState         int8
-	isNotarized        bool
-	ticketsMutex       *sync.Mutex
-	verificationStatus int
-	RunningTxnCount    int64 `json:"running_txn_count"`
+	ClientState           util.MerklePatriciaTrieI `json:"-"`
+	stateStatus           int8
+	StateMutex            *sync.Mutex `json:"_"`
+	blockState            int8
+	isNotarized           bool
+	ticketsMutex          *sync.Mutex
+	verificationStatus    int
+	SCStateDB             smartcontractstate.SCDB `json:"-"`
+	RunningTxnCount       int64                   `json:"running_txn_count"`
+	UniqueBlockExtensions map[string]bool         `json:"-"`
 }
 
 //NewBlock - create a new empty block
@@ -206,6 +209,25 @@ func (b *Block) SetPreviousBlock(prevBlock *Block) {
 	}
 }
 
+/*SetSCStateDB - set the smart contract state from the previous block */
+func (b *Block) SetSCStateDB(prevBlock *Block) {
+	var pndb smartcontractstate.SCDB
+
+	if prevBlock.SCStateDB == nil {
+		if state.Debug() {
+			Logger.DPanic("set smart contract state db - prior state not available")
+		} else {
+			pndb = smartcontractstate.NewMemorySCDB()
+		}
+	} else {
+		pndb = prevBlock.SCStateDB
+	}
+
+	mndb := smartcontractstate.NewMemorySCDB()
+	ndb := smartcontractstate.NewPipedSCDB(mndb, pndb, false)
+	b.SCStateDB = ndb
+}
+
 /*SetStateDB - set the state from the previous block */
 func (b *Block) SetStateDB(prevBlock *Block) {
 	var pndb util.NodeDB
@@ -223,6 +245,7 @@ func (b *Block) SetStateDB(prevBlock *Block) {
 	Logger.Debug("prev state root", zap.Int64("round", b.Round), zap.String("prev_block", prevBlock.Hash), zap.String("root", util.ToHex(rootHash)))
 	b.CreateState(pndb)
 	b.ClientState.SetRoot(rootHash)
+	b.SetSCStateDB(prevBlock)
 }
 
 //CreateState - create the state from the prior state db
@@ -252,7 +275,9 @@ func (b *Block) AddVerificationTicket(vt *VerificationTicket) bool {
 	return true
 }
 
-/*MergeVerificationTickets - merge the verification tickets with what's already there */
+/*MergeVerificationTickets - merge the verification tickets with what's already present
+* Only appends without modifying the order of exisitng tickets to ensure concurrent marshalling doesn't cause duplicate tickets
+ */
 func (b *Block) MergeVerificationTickets(vts []*VerificationTicket) {
 	unionVerificationTickets := func(tickets1 []*VerificationTicket, tickets2 []*VerificationTicket) []*VerificationTicket {
 		if len(tickets1) == 0 {
@@ -261,16 +286,23 @@ func (b *Block) MergeVerificationTickets(vts []*VerificationTicket) {
 		if len(tickets2) == 0 {
 			return tickets1
 		}
-		ticketsMap := make(map[string]*VerificationTicket, len(tickets1)+len(tickets2))
+		ticketsMap := make(map[string]*VerificationTicket, len(tickets1))
 		for _, t := range tickets1 {
 			ticketsMap[t.VerifierID] = t
 		}
-		for _, t := range tickets2 {
-			ticketsMap[t.VerifierID] = t
+		utickets := make([]*VerificationTicket, len(tickets1))
+		copy(utickets, tickets1)
+		for _, v := range tickets2 {
+			if v == nil {
+				Logger.Error("merge verification tickets - null ticket")
+				return tickets1
+			}
+			if _, ok := ticketsMap[v.VerifierID]; !ok {
+				utickets = append(utickets, v)
+			}
 		}
-		utickets := make([]*VerificationTicket, 0, len(ticketsMap))
-		for _, v := range ticketsMap {
-			utickets = append(utickets, v)
+		if len(utickets) == len(tickets1) {
+			return tickets1
 		}
 		return utickets
 	}
@@ -466,9 +498,21 @@ func (b *Block) UnknownTickets(vts []*VerificationTicket) []*VerificationTicket 
 	}
 	var newTickets []*VerificationTicket
 	for _, t := range vts {
+		if t == nil {
+			Logger.Error("unknown tickets - null ticket")
+			return nil
+		}
 		if _, ok := ticketsMap[t.VerifierID]; !ok {
 			newTickets = append(newTickets, t)
 		}
 	}
 	return newTickets
+}
+
+func (b *Block) AddUniqueBlockExtension(eb *Block) {
+	//TODO: We need to compare for view change and add the eb.MinerID only if he was in the view that b belongs to
+	if b.UniqueBlockExtensions == nil {
+		b.UniqueBlockExtensions = make(map[string]bool)
+	}
+	b.UniqueBlockExtensions[eb.MinerID] = true
 }

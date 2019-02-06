@@ -12,15 +12,15 @@ import (
 
 /*SetupHandlers - setup diagnostics handlers */
 func SetupHandlers() {
-	http.HandleFunc("/_diagnostics/info", chain.InfoWriter)
-	http.HandleFunc("/v1/diagnostics/get/info", common.ToJSONResponse(chain.InfoHandler))
-	http.HandleFunc("/_diagnostics/logs", logging.LogWriter)
-	http.HandleFunc("/_diagnostics/n2n_logs", logging.N2NLogWriter)
-	http.HandleFunc("/_diagnostics/mem_logs", logging.MemLogWriter)
+	http.HandleFunc("/_diagnostics/info", common.UserRateLimit(chain.InfoWriter))
+	http.HandleFunc("/v1/diagnostics/get/info", common.UserRateLimit(common.ToJSONResponse(chain.InfoHandler)))
+	http.HandleFunc("/_diagnostics/logs", common.UserRateLimit(logging.LogWriter))
+	http.HandleFunc("/_diagnostics/n2n_logs", common.UserRateLimit(logging.N2NLogWriter))
+	http.HandleFunc("/_diagnostics/mem_logs", common.UserRateLimit(logging.MemLogWriter))
 	sc := chain.GetServerChain()
-	http.HandleFunc("/_diagnostics/n2n/info", sc.N2NStatsWriter)
-	http.HandleFunc("/_diagnostics/miner_stats", sc.MinerStatsHandler)
-	http.HandleFunc("/_diagnostics/block_chain", sc.WIPBlockChainHandler)
+	http.HandleFunc("/_diagnostics/n2n/info", common.UserRateLimit(sc.N2NStatsWriter))
+	http.HandleFunc("/_diagnostics/miner_stats", common.UserRateLimit(sc.MinerStatsHandler))
+	http.HandleFunc("/_diagnostics/block_chain", common.UserRateLimit(sc.WIPBlockChainHandler))
 }
 
 /*GetStatistics - write the statistics of the given timer */
@@ -60,7 +60,7 @@ func WriteStatisticsCSS(w http.ResponseWriter) {
 /*WriteConfiguration - write summary information */
 func WriteConfiguration(w http.ResponseWriter, c *chain.Chain) {
 	fmt.Fprintf(w, "<table>")
-	fmt.Fprintf(w, "<tr><td>Round Generators/Sharders</td><td>%d/%d</td></tr>", c.NumGenerators, c.NumSharders)
+	fmt.Fprintf(w, "<tr><td>Round Generators/Replicators</td><td>%d/%d</td></tr>", c.NumGenerators, c.NumReplicators)
 	fmt.Fprintf(w, "<tr><td class='sheader' colspan='2'>Configuration <a href='v1/config/get'>...</a></td></tr>")
 	fmt.Fprintf(w, "<tr><td>Block Size</td><td>%v - %v</td></tr>", c.MinBlockSize, c.BlockSize)
 	fmt.Fprintf(w, "<tr><td>Network Latency (Delta)</td><td>%v</td></tr>", chain.DELTA)
@@ -123,6 +123,9 @@ func WriteCurrentStatus(w http.ResponseWriter, c *chain.Chain) {
 	fmt.Fprintf(w, "<tr><td>Current Round</td><td>%v</td></tr>", c.CurrentRound)
 	if c.LatestFinalizedBlock != nil {
 		fmt.Fprintf(w, "<tr><td>Finalized Round</td><td>%v</td></tr>", c.LatestFinalizedBlock.Round)
+	}
+	if c.LatestDeterministicBlock != nil {
+		fmt.Fprintf(w, "<tr><td>Deterministic Finalized Round</td><td>%v</td></tr>", c.LatestDeterministicBlock.Round)
 	}
 	fmt.Fprintf(w, "</table>")
 }

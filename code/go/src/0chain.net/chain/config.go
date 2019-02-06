@@ -21,7 +21,7 @@ type Config struct {
 	MinBlockSize          int32         `json:"min_block_size"`          // Number of transactions a block needs to have
 	MaxByteSize           int64         `json:"max_byte_size"`           // Max number of bytes a block can have
 	NumGenerators         int           `json:"num_generators"`          // Number of block generators
-	NumSharders           int           `json:"num_sharders"`            // Number of sharders that can store the block
+	NumReplicators        int           `json:"num_replicators"`         // Number of sharders that can store the block
 	ThresholdByCount      int           `json:"threshold_by_count"`      // Threshold count for a block to be notarized
 	ThresholdByStake      int           `json:"threshold_by_stake"`      // Stake threshold for a block to be notarized
 	ValidationBatchSize   int           `json:"validation_size"`         // Batch size of txns for crypto verification
@@ -35,4 +35,9 @@ type Config struct {
 	BlockProposalWaitMode    int8          `json:"block_proposal_wait_mode"`     // wait time for the block proposal is static (0) or dynamic (1)
 
 	ReuseTransactions bool `json:"reuse_txns"` // indicates if transactions from unrelated blocks can be reused
+
+	ClientSignatureScheme string `json:"client_signature_scheme"` // indicates which signature scheme is being used
+
+	MinActiveSharders    int `json:"min_active_sharders"`    // Minimum active sharders required to validate blocks
+	MinActiveReplicators int `json:"min_active_replicators"` // Minimum active replicators of a block that should be active to verify the block
 }

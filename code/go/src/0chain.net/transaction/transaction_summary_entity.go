@@ -3,35 +3,34 @@ package transaction
 import (
 	"context"
 
-	"0chain.net/common"
 	"0chain.net/datastore"
 )
 
 /*TransactionSummary - the summary of the transaction */
 type TransactionSummary struct {
-	datastore.VersionField
-	datastore.CreationDateField
 	datastore.HashIDField
-	BlockHash string `json:"block_hash"`
+	Round int64 `json:"round"`
 }
 
 var transactionSummaryEntityMetadata *datastore.EntityMetadataImpl
 
+//TransactionSummaryProvider - factory method
 func TransactionSummaryProvider() datastore.Entity {
 	t := &TransactionSummary{}
-	t.Version = "1.0"
-	t.CreationDate = common.Now()
 	return t
 }
 
+//GetEntityMetadata - implement interface
 func (t *TransactionSummary) GetEntityMetadata() datastore.EntityMetadata {
 	return transactionSummaryEntityMetadata
 }
 
+//GetKey - implement interface
 func (t *TransactionSummary) GetKey() datastore.Key {
 	return datastore.ToKey(t.Hash)
 }
 
+//SetKey - implement interface
 func (t *TransactionSummary) SetKey(key datastore.Key) {
 	t.Hash = datastore.ToString(key)
 }

@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/client"
 	"0chain.net/encryption"
 
 	"0chain.net/block"
@@ -20,6 +21,7 @@ import (
 	. "0chain.net/logging"
 	"0chain.net/node"
 	"0chain.net/round"
+	"0chain.net/smartcontractstate"
 	"0chain.net/state"
 	"0chain.net/transaction"
 	"0chain.net/util"
@@ -89,9 +91,10 @@ type Chain struct {
 	rounds      map[int64]round.RoundI
 	roundsMutex *sync.RWMutex
 
-	CurrentRound         int64        `json:"-"`
-	CurrentMagicBlock    *block.Block `json:"-"`
-	LatestFinalizedBlock *block.Block `json:"latest_finalized_block,omitempty"` // Latest block on the chain the program is aware of
+	CurrentRound             int64        `json:"-"`
+	CurrentMagicBlock        *block.Block `json:"-"`
+	LatestFinalizedBlock     *block.Block `json:"latest_finalized_block,omitempty"` // Latest block on the chain the program is aware of
+	LatestDeterministicBlock *block.Block `json:"latest_deterministic_block,omitempty"`
 
 	clientStateDeserializer state.DeserializerI
 	stateDB                 util.NodeDB
@@ -108,6 +111,7 @@ type Chain struct {
 	stakeMutex  *sync.Mutex
 
 	nodePoolScorer node.PoolScorer
+	scStateDB      smartcontractstate.SCDB
 
 	GenerateTimeout int `json:"-"`
 	genTimeoutMutex *sync.Mutex
@@ -118,6 +122,8 @@ type Chain struct {
 	blockFetcher *BlockFetcher
 
 	crtCount int64 // Continuous/Current Round Timeout Count
+
+	fetchedNotarizedBlockHandler FetchedNotarizedBlockHandler
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
@@ -163,7 +169,7 @@ func NewChainFromConfig() *Chain {
 	chain.MaxByteSize = viper.GetInt64("server_chain.block.max_byte_size")
 	chain.NumGenerators = viper.GetInt("server_chain.block.generators")
 	chain.NotariedBlocksCounts = make([]int64, chain.NumGenerators+1)
-	chain.NumSharders = viper.GetInt("server_chain.block.sharders")
+	chain.NumReplicators = viper.GetInt("server_chain.block.replicators")
 	chain.ThresholdByCount = viper.GetInt("server_chain.block.consensus.threshold_by_count")
 	chain.ThresholdByStake = viper.GetInt("server_chain.block.consensus.threshold_by_stake")
 	chain.OwnerID = viper.GetString("server_chain.owner")
@@ -185,6 +191,11 @@ func NewChainFromConfig() *Chain {
 		chain.BlockProposalWaitMode = BlockProposalWaitDynamic
 	}
 	chain.ReuseTransactions = viper.GetBool("server_chain.block.reuse_txns")
+	chain.SetSignatureScheme(viper.GetString("server_chain.client.signature_scheme"))
+
+	chain.MinActiveSharders = viper.GetInt("server_chain.block.sharding.min_active_sharders")
+	chain.MinActiveReplicators = viper.GetInt("server_chain.block.sharding.min_active_replicators")
+
 	return chain
 }
 
@@ -227,6 +238,7 @@ func (c *Chain) Initialize() {
 	c.finalizedBlocksChannel = make(chan *block.Block, 128)
 	c.clientStateDeserializer = &state.Deserializer{}
 	c.stateDB = stateDB
+	c.scStateDB = scStateDB
 	c.BlockChain = ring.New(10000)
 	c.minersStake = make(map[datastore.Key]int)
 }
@@ -239,9 +251,11 @@ func SetupEntity(store datastore.Store) {
 	chainEntityMetadata.Store = store
 	datastore.RegisterEntityMetadata("chain", chainEntityMetadata)
 	SetupStateDB()
+	SetupSCStateDB()
 }
 
 var stateDB *util.PNodeDB
+var scStateDB *smartcontractstate.PSCDB
 
 //SetupStateDB - setup the state db
 func SetupStateDB() {
@@ -250,6 +264,15 @@ func SetupStateDB() {
 		panic(err)
 	}
 	stateDB = db
+}
+
+//SetupSCStateDB - setup the state db for smartcontract
+func SetupSCStateDB() {
+	db, err := smartcontractstate.NewPSCDB("data/rocksdb/smartcontract")
+	if err != nil {
+		panic(err)
+	}
+	scStateDB = db
 }
 
 func (c *Chain) getInitialState() util.Serializable {
@@ -278,6 +301,7 @@ func (c *Chain) GenerateGenesisBlock(hash string) (round.RoundI, *block.Block) {
 	gb := block.NewBlock(c.GetKey(), 0)
 	gb.Hash = hash
 	gb.ClientState = c.setupInitialState()
+	gb.SCStateDB = c.scStateDB
 	gb.SetStateStatus(block.StateSuccessful)
 	gb.SetBlockState(block.StateNotarized)
 	gb.ClientStateHash = gb.ClientState.GetRoot()
@@ -294,7 +318,8 @@ func (c *Chain) AddGenesisBlock(b *block.Block) {
 		return
 	}
 	c.LatestFinalizedBlock = b // Genesis block is always finalized
-	c.CurrentMagicBlock = b    // Genesis block is always a magic block
+	c.LatestDeterministicBlock = b
+	c.CurrentMagicBlock = b // Genesis block is always a magic block
 	c.blocks[b.Hash] = b
 	return
 }
@@ -335,6 +360,13 @@ func (c *Chain) addBlock(b *block.Block) *block.Block {
 			b.SetPreviousBlock(pb)
 		} else {
 			c.AsyncFetchNotarizedPreviousBlock(b)
+		}
+	}
+	for pb := b.PrevBlock; pb != nil && pb != c.LatestDeterministicBlock; pb = pb.PrevBlock {
+		pb.AddUniqueBlockExtension(b)
+		if c.IsFinalizedDeterministically(pb) {
+			c.LatestDeterministicBlock = pb
+			break
 		}
 	}
 	return b
@@ -441,23 +473,20 @@ func (c *Chain) GetGenerators(r round.RoundI) []*node.Node {
 
 /*IsBlockSharder - checks if the sharder can store the block in the given round */
 func (c *Chain) IsBlockSharder(b *block.Block, sharder *node.Node) bool {
-	if c.NumSharders <= 0 {
+	if c.NumReplicators <= 0 {
 		return true
 	}
 	scores := c.nodePoolScorer.ScoreHashString(c.Sharders, b.Hash)
-	return sharder.IsInTop(scores, c.NumSharders)
+	return sharder.IsInTop(scores, c.NumReplicators)
 }
 
 /*IsBlockSharderWithNodes - checks if the sharder can store the block with nodes that store this block*/
 func (c *Chain) IsBlockSharderWithNodes(hash string, sharder *node.Node) (bool, []*node.Node) {
-	if c.NumSharders <= 0 {
+	if c.NumReplicators <= 0 {
 		return true, nil
 	}
 	scores := c.nodePoolScorer.ScoreHashString(c.Sharders, hash)
-	for _, score := range scores {
-		Logger.Info("node scores", zap.Int("nodeIndex", score.Node.SetIndex), zap.Int32("scoreVal", score.Score))
-	}
-	return sharder.IsInTopWithNodes(scores, c.NumSharders)
+	return sharder.IsInTopWithNodes(scores, c.NumReplicators)
 }
 
 /*ValidGenerator - check whether this block is from a valid generator */
@@ -470,12 +499,12 @@ func (c *Chain) ValidGenerator(r round.RoundI, b *block.Block) bool {
 	isGen := c.IsRoundGenerator(r, miner)
 	if !isGen {
 		//This is a Byzantine condition?
-		Logger.Info("Received a block from non-generator", zap.Int("miner #", miner.SetIndex))
+		Logger.Info("Received a block from non-generator", zap.Int("miner", miner.SetIndex), zap.Int64("RRS", r.GetRandomSeed()))
 		gens := c.GetGenerators(r)
 
-		Logger.Info("Generators are: ", zap.Int64("round#", r.GetRoundNumber()))
+		Logger.Info("Generators are: ", zap.Int64("round", r.GetRoundNumber()))
 		for _, n := range gens {
-			Logger.Info("generator", zap.Int("Node#", n.SetIndex))
+			Logger.Info("generator", zap.Int("Node", n.SetIndex))
 		}
 	}
 	return isGen
@@ -488,25 +517,25 @@ func (c *Chain) GetNotarizationThresholdCount() int {
 	return int(math.Ceil(thresholdCount))
 }
 
+// AreAllNodesActive - use this to check if all nodes needs to be active as in DKG
+func (c *Chain) AreAllNodesActive() bool {
+	active := c.Miners.GetActiveCount()
+	return active >= c.Miners.Size()
+}
+
 /*CanStartNetwork - check whether the network can start */
 func (c *Chain) CanStartNetwork() bool {
 	active := c.Miners.GetActiveCount()
 	threshold := c.GetNotarizationThresholdCount()
-	if config.DevConfiguration.State || config.DevConfiguration.IsDkgEnabled {
+	if config.DevConfiguration.State {
 		threshold = c.Miners.Size()
 	}
-	return active >= threshold
+	return active >= threshold && c.CanShardBlocks()
 }
 
 /*ReadNodePools - read the node pools from configuration */
 func (c *Chain) ReadNodePools(configFile string) {
-	nodeConfig := viper.New()
-	nodeConfig.AddConfigPath("./config")
-	nodeConfig.SetConfigName(configFile)
-	err := nodeConfig.ReadInConfig()
-	if err != nil {
-		panic(fmt.Errorf("fatal error config file: %s", err))
-	}
+	nodeConfig := config.ReadConfig(configFile)
 	config := nodeConfig.Get("miners")
 	if miners, ok := config.([]interface{}); ok {
 		c.Miners.AddNodes(miners)
@@ -559,6 +588,7 @@ func (c *Chain) getMiningStake(minerID datastore.Key) int {
 func (c *Chain) InitializeMinerPool() {
 	for _, nd := range c.Miners.Nodes {
 		ms := &MinerStats{}
+		ms.GenerationCountByRank = make([]int64, c.NumGenerators)
 		ms.FinalizationCountByRank = make([]int64, c.NumGenerators)
 		ms.VerificationTicketsByRank = make([]int64, c.NumGenerators)
 		nd.ProtocolStats = ms
@@ -646,9 +676,10 @@ func (c *Chain) SetRoundRank(r round.RoundI, b *block.Block) {
 	rank := r.GetMinerRank(bNode)
 	if rank >= c.NumGenerators {
 		pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
-		Logger.DPanic(fmt.Sprintf("miner ranks greater than expected: %v %v", r.GetState(), rank))
+		Logger.DPanic(fmt.Sprintf("Round# %v generator miner ID %v ranks greater than expected. State= %v, rank= %v", r.GetRoundNumber(), bNode.SetIndex, r.GetState(), rank))
 	}
 	b.RoundRank = rank
+	Logger.Info(fmt.Sprintf("Round# %v generator miner ID %v ranks greater than expected. State= %v, rank= %v", r.GetRoundNumber(), bNode.SetIndex, r.GetState(), rank))
 }
 
 func (c *Chain) SetGenerationTimeout(newTimeout int) {
@@ -713,4 +744,47 @@ func (c *Chain) IncrementRoundTimeoutCount() {
 //GetRoundTimeoutCount - get the counter
 func (c *Chain) GetRoundTimeoutCount() int64 {
 	return c.crtCount
+}
+
+//SetSignatureScheme - set the client signature scheme to be used by this chain
+func (c *Chain) SetSignatureScheme(sigScheme string) {
+	c.ClientSignatureScheme = sigScheme
+	client.SetClientSignatureScheme(c.ClientSignatureScheme)
+}
+
+//GetSignatureScheme - get the signature scheme used by this chain
+func (c *Chain) GetSignatureScheme() encryption.SignatureScheme {
+	return encryption.GetSignatureScheme(c.ClientSignatureScheme)
+}
+
+//CanShardBlocks - is the network able to effectively shard the blocks?
+func (c *Chain) CanShardBlocks() bool {
+	return c.Sharders.GetActiveCount()*100 >= c.Sharders.Size()*c.MinActiveSharders
+}
+
+//CanReplicateBlock - can the given block be effectively replicated?
+func (c *Chain) CanReplicateBlock(b *block.Block) bool {
+	if c.NumReplicators <= 0 || c.MinActiveReplicators == 0 {
+		return c.CanShardBlocks()
+	}
+	scores := c.nodePoolScorer.ScoreHashString(c.Sharders, b.Hash)
+	arCount := 0
+	minScore := scores[c.NumReplicators-1].Score
+	for i := 0; i < len(scores); i++ {
+		if scores[i].Score < minScore {
+			break
+		}
+		if scores[i].Node.IsActive() {
+			arCount++
+			if arCount*100 >= c.NumReplicators*c.MinActiveReplicators {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+//SetFetchedNotarizedBlockHandler - setter for FetchedNotarizedBlockHandler
+func (c *Chain) SetFetchedNotarizedBlockHandler(fnbh FetchedNotarizedBlockHandler) {
+	c.fetchedNotarizedBlockHandler = fnbh
 }

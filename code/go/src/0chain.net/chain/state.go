@@ -7,6 +7,9 @@ import (
 	"math"
 	"time"
 
+	"0chain.net/smartcontract"
+	"0chain.net/smartcontractstate"
+
 	"0chain.net/block"
 	bcstate "0chain.net/chain/state"
 	"0chain.net/common"
@@ -191,6 +194,16 @@ func (c *Chain) SaveChanges(ctx context.Context, b *block.Block) error {
 	if err != nil {
 		Logger.Error("save state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("block_size", len(b.Txns)), zap.Int("changes", len(changes)), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.Duration("duration", duration), zap.Error(err))
 	}
+
+	if err == nil {
+		ts = time.Now()
+		err = smartcontractstate.SaveChanges(ctx, b.SCStateDB, c.scStateDB)
+		if err != nil {
+			Logger.Error("save smart contract state", zap.Int64("round", b.Round), zap.Error(err))
+		} else {
+			Logger.Info("save smart contract state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Duration("time", time.Since(ts)))
+		}
+	}
 	return err
 }
 
@@ -305,6 +318,22 @@ func (c *Chain) rebaseState(lfb *block.Block) {
 			Logger.Debug("finalize round - rebased current state db", zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash), zap.String("hash", util.ToHex(lfb.ClientState.GetRoot())))
 		}
 	}
+
+	sndb := lfb.SCStateDB
+	if sndb != c.scStateDB {
+		lfb.SCStateDB = c.scStateDB
+		if lndb, ok := sndb.(*smartcontractstate.PipedSCDB); ok {
+			Logger.Debug("finalize round - rebasing current smart contract state db", zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash))
+			lndb.RebaseCurrentDB(c.scStateDB)
+			Logger.Debug("finalize round - rebased current smart contract state db", zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash))
+		}
+	}
+}
+
+//ExecuteSmartContract - executes the smart contract for the transaction
+func (c *Chain) ExecuteSmartContract(t *transaction.Transaction, ndb smartcontractstate.SCDB, balances bcstate.StateContextI) (string, error) {
+	output, err := smartcontract.ExecuteSmartContract(common.GetRootContext(), t, ndb, balances)
+	return output, err
 }
 
 /*UpdateState - update the state of the transaction w.r.t the given block
@@ -319,6 +348,22 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 	sctx := bcstate.NewStateContext(b, clientState, c.clientStateDeserializer, txn)
 
 	switch txn.TransactionType {
+	case transaction.TxnTypeSmartContract:
+		mndb := smartcontractstate.NewMemorySCDB()
+		ndb := smartcontractstate.NewPipedSCDB(mndb, b.SCStateDB, false)
+		output, err := c.ExecuteSmartContract(txn, ndb, sctx)
+		if err != nil {
+			Logger.Error("Smart contract execution returned error", zap.Any("error", err), zap.Any("transaction", txn.Hash))
+			return false
+		}
+		err = smartcontractstate.SaveChanges(common.GetRootContext(), mndb, b.SCStateDB)
+		if err != nil {
+			Logger.Error("Error in saving the state on the block after execution", zap.Any("error", err))
+			return false
+		}
+		txn.TransactionOutput = output
+		txn.OutputHash = txn.ComputeOutputHash()
+		Logger.Info("SC executed for transaction: ", zap.String("txn", txn.Hash), zap.String("output_hash", txn.OutputHash), zap.String("txn_output", txn.TransactionOutput))
 	case transaction.TxnTypeData:
 	case transaction.TxnTypeSend:
 		sctx.AddTransfer(state.NewTransfer(txn.ClientID, txn.ToClientID, state.Balance(txn.Value)))
@@ -329,6 +374,12 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 	}
 	for _, transfer := range sctx.GetTransfers() {
 		err := c.transferAmount(sctx, transfer.ClientID, transfer.ToClientID, state.Balance(transfer.Amount))
+		if err != nil {
+			return false
+		}
+	}
+	for _, mint := range sctx.GetMints() {
+		err := c.mintAmount(sctx, mint.ToClientID, state.Balance(mint.Amount))
 		if err != nil {
 			return false
 		}
@@ -413,6 +464,43 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		if state.Debug() {
 			Logger.Error("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
 		}
+	}
+	ts.SetRound(b.Round)
+	ts.Balance += amount
+	_, err = clientState.Insert(util.Path(toClient), ts)
+	if err != nil {
+		if config.DevConfiguration.State {
+			Logger.DPanic("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
+		}
+		if state.Debug() {
+			Logger.Error("transfer amount - error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
+		}
+	}
+	return nil
+}
+
+func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, amount state.Balance) error {
+	if amount == 0 {
+		return nil
+	}
+	b := sctx.GetBlock()
+	clientState := sctx.GetState()
+	txn := sctx.GetTransaction()
+	ts, err := c.getState(clientState, toClient)
+	if !isValid(err) {
+		if state.DebugTxn() {
+			Logger.Error("transfer amount - to_client get", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Any("txn", datastore.ToJSON(txn)), zap.Error(err))
+			for _, txn := range b.Txns {
+				if txn == nil {
+					break
+				}
+				fmt.Fprintf(stateOut, "transfer amount r=%v b=%v t=%+v\n", b.Round, b.Hash, txn)
+			}
+			fmt.Fprintf(stateOut, "transfer amount - error getting state value: %v %+v %v\n", toClient, txn, err)
+			printStates(clientState, b.ClientState)
+			Logger.DPanic(fmt.Sprintf("transfer amount - error getting state value: %v %v", toClient, err))
+		}
+		return err
 	}
 	ts.SetRound(b.Round)
 	ts.Balance += amount

@@ -9,9 +9,9 @@
       #EFS volume for the agent.
       agent_ebs_disk: "{{storage[zchain.blueprint.storage_ebs[agent_role]]}}"
 
-  - set_fact:
-      agent_efs_disk: "{{storage[zchain.blueprint.storage_efs[agent_role]]}}"
-    when: agent_role == "sharder"
+  # - set_fact:
+  #     agent_efs_disk: "{{storage[zchain.blueprint.storage_efs[agent_role]]}}"
+  #   when: agent_role == "sharder"
 
   - name: "Launch {{agent_role}} => {{agent.key}} => {{agent.value.region}}"
     ec2:
@@ -52,26 +52,27 @@
   - debug:
       msg: "{{agent.key}} id={{agent_instance_id}} subnet={{agent_subnet_id}}"
 
-  - name: "Create the EFS file system....for sharder"
-    debug:
-      msg: "efs={{agent_efs_disk}}"
-    when: agent_role == "sharder"
+  # - name: "Create the EFS file system....for sharder"
+  #   debug:
+  #     msg: "efs={{agent_efs_disk}}"
+  #   when: agent_role == "sharder"
 
-  - name: "Create EFS file system {{agent_role}}:{{agent.key}}:{{agent.value.region}}"
-    efs:
-      state: present
-      region: "{{regions[agent.value.region]}}"
-      performance_mode: "general_purpose"
-      name: "{{network_name}}.{{agent.key}}"
-      tags: "{{instance_tags[agent.key]}}"
-      targets:
-          - subnet_id: "{{agent_subnet_id}}"
-    when: agent_role == "sharder"
-    register: efs_result
+  # - name: "Create EFS file system {{agent_role}}:{{agent.key}}:{{agent.value.region}}"
+  #   efs:
+  #     state: present
+  #     region: "{{regions[agent.value.region]}}"
+  #     #performance_mode: "general_purpose"
+  #     performance_mode: "max_io"
+  #     name: "{{network_name}}.{{agent.key}}"
+  #     tags: "{{instance_tags[agent.key]}}"
+  #     targets:
+  #         - subnet_id: "{{agent_subnet_id}}"
+  #   when: agent_role == "sharder"
+  #   register: efs_result
 
-  - debug:
-      msg: "efs={{agent.key}}.{{agent.value.region}}=>{{efs_result.efs.file_system_id}}"
-    when: agent_role == "sharder"
+  # - debug:
+  #     msg: "efs={{agent.key}}.{{agent.value.region}}=>{{efs_result.efs.file_system_id}}"
+  #   when: agent_role == "sharder"
 
   tags: ['instance-assemble-local']
 ...

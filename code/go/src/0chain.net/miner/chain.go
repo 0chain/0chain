@@ -24,6 +24,7 @@ var minerChain = &Chain{}
 func SetupMinerChain(c *chain.Chain) {
 	minerChain.Chain = c
 	minerChain.BlockMessageChannel = make(chan *BlockMessage, 128)
+	c.SetFetchedNotarizedBlockHandler(minerChain)
 }
 
 /*GetMinerChain - get the miner's chain */

@@ -34,6 +34,10 @@ func (c *Chain) VerifyNotarization(ctx context.Context, blockHash string, bvt []
 	}
 	ticketsMap := make(map[string]bool, len(bvt))
 	for _, vt := range bvt {
+		if vt == nil {
+			Logger.Error("verify notarization - null ticket", zap.String("block", blockHash))
+			return common.NewError("null_ticket", "Verification ticket is null")
+		}
 		if _, ok := ticketsMap[vt.VerifierID]; ok {
 			return common.NewError("duplicate_ticket_signature", "Found duplicate signatures in the notarization of the block")
 		}
@@ -132,6 +136,14 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	ms := bNode.ProtocolStats.(*MinerStats)
 	Logger.Info("finalize block", zap.Int64("round", fb.Round), zap.Int64("current_round", c.CurrentRound), zap.Int64("lf_round", c.LatestFinalizedBlock.Round), zap.String("hash", fb.Hash), zap.Int("round_rank", fb.RoundRank), zap.Int8("state", fb.GetBlockState()))
 	ms.FinalizationCountByRank[fb.RoundRank]++
+	fr := c.GetRound(fb.Round)
+	if fr != nil {
+		generators := c.GetGenerators(fr)
+		for idx, g := range generators {
+			ms := g.ProtocolStats.(*MinerStats)
+			ms.GenerationCountByRank[idx]++
+		}
+	}
 	if time.Since(ssFTs) < 20*time.Second {
 		SteadyStateFinalizationTimer.UpdateSince(ssFTs)
 	}
@@ -152,6 +164,13 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	c.BlockChain.Value = fb.GetSummary()
 	c.BlockChain = c.BlockChain.Next()
 
+	for pfb := fb; pfb != nil && pfb != c.LatestDeterministicBlock; pfb = pfb.PrevBlock {
+		if c.IsFinalizedDeterministically(pfb) {
+			c.LatestDeterministicBlock = pfb
+			break
+		}
+	}
+
 	// Deleting dead blocks from a couple of rounds before (helpful for visualizer and potential rollback scenrio)
 	pfb := fb
 	for idx := 0; idx < 10 && pfb != nil; idx, pfb = idx+1, pfb.PrevBlock {
@@ -171,6 +190,18 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	c.DeleteBlocks(deadBlocks)
 }
 
+//IsFinalizedDeterministically - checks if a block is finalized deterministically
+func (c *Chain) IsFinalizedDeterministically(b *block.Block) bool {
+	//TODO: The threshold count should happen w.r.t the view of the block
+	if c.LatestFinalizedBlock != nil && b.Round > c.LatestFinalizedBlock.Round {
+		return false
+	}
+	if len(b.UniqueBlockExtensions)*100 >= c.Miners.Size()*c.ThresholdByCount {
+		return true
+	}
+	return false
+}
+
 /*GetNotarizedBlock - get a notarized block for a round */
 func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 	nbrequestor := MinerNotarizedBlockRequestor
@@ -185,16 +216,16 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 			return nil, datastore.ErrInvalidEntity
 		}
 		if err := c.VerifyNotarization(ctx, nb.Hash, nb.VerificationTickets); err != nil {
-			Logger.Error("get notarized block - validate notarization", zap.String("block", blockHash), zap.Error(err))
+			Logger.Error("get notarized block - validate notarization", zap.Int64("round", nb.Round), zap.String("block", blockHash), zap.Error(err))
 			return nil, err
 		}
 		if err := nb.Validate(ctx); err != nil {
-			Logger.Error("get notarized block - validate", zap.String("block", blockHash), zap.Any("block_obj", nb), zap.Error(err))
+			Logger.Error("get notarized block - validate", zap.Int64("round", nb.Round), zap.String("block", blockHash), zap.Any("block_obj", nb), zap.Error(err))
 			return nil, err
 		}
 		r := c.GetRound(nb.Round)
 		if r == nil {
-			Logger.Error("get notarized block - no round (TODO)", zap.String("block", blockHash), zap.Int64("round", nb.Round), zap.Int64("cround", cround), zap.Int64("current_round", c.CurrentRound))
+			Logger.Error("get notarized block - no round (TODO)", zap.Int64("round", nb.Round), zap.String("block", blockHash), zap.Int64("cround", cround), zap.Int64("current_round", c.CurrentRound))
 			b = c.AddBlock(nb)
 		} else {
 			c.SetRandomSeed(r, nb.RoundRandomSeed)
@@ -202,6 +233,9 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 			b, _ = r.AddNotarizedBlock(b)
 		}
 		Logger.Info("get notarized block", zap.Int64("round", b.Round), zap.String("block", b.Hash))
+		if b == nb {
+			go c.fetchedNotarizedBlockHandler.NotarizedBlockFetched(ctx, nb)
+		}
 		return b, nil
 	}
 	n2n := c.Miners

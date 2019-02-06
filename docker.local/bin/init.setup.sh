@@ -13,5 +13,7 @@ do
   mkdir -p docker.local/sharder$i/data/blocks
   mkdir -p docker.local/sharder$i/data/rocksdb
   mkdir -p docker.local/sharder$i/data/cassandra
+  mkdir -p docker.local/sharder$i/config/scylla
+  cp config/scylla/* docker.local/sharder$i/config/scylla/.
   mkdir -p docker.local/sharder$i/log
 done

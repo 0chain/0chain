@@ -2,9 +2,12 @@ package config
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/spf13/viper"
 )
+
+var SmartContractConfig *viper.Viper
 
 //SetupDefaultConfig - setup the default config options that can be overridden via the config file
 func SetupDefaultConfig() {
@@ -17,13 +20,16 @@ func SetupDefaultConfig() {
 	viper.SetDefault("server_chain.round_range", 10000000)
 	viper.SetDefault("server_chain.transaction.payload.max_size", 32)
 	viper.SetDefault("server_chain.state.prune_below_count", 100)
-	viper.SetDefault("server_chain.block.consensus.threshold_by_count", 60)
+	viper.SetDefault("server_chain.block.consensus.threshold_by_count", 67)
 	viper.SetDefault("server_chain.block.generation.timeout", 37)
 	viper.SetDefault("server_chain.transaction.timeout", 10)
 	viper.SetDefault("server_chain.block.generation.retry_wait_time", 5)
 	viper.SetDefault("server_chain.block.proposal.max_wait_time", 200)
 	viper.SetDefault("server_chain.block.proposal.wait_mode", "static")
 	viper.SetDefault("server_chain.block.reuse_txns", true)
+	viper.SetDefault("server_chain.client.signature_scheme", "ed25519")
+	viper.SetDefault("server_chain.block.sharding.min_active_sharders", 100)
+	viper.SetDefault("server_chain.block.sharding.min_active_replicators", 100)
 }
 
 /*SetupConfig - setup the configuration system */
@@ -35,6 +41,43 @@ func SetupConfig() {
 		panic(fmt.Errorf("fatal error config file: %s", err))
 	}
 	setupDevConfig()
+}
+
+/*SetupConfig - setup the configuration system */
+func SetupSmartContractConfig() {
+	SmartContractConfig = viper.New()
+	SmartContractConfig.SetConfigName("sc")
+	SmartContractConfig.AddConfigPath("./config")
+	err := SmartContractConfig.ReadInConfig() // Find and read the config file
+	if err != nil {                           // Handle errors reading the config file
+		panic(fmt.Errorf("fatal error config file: %s", err))
+	}
+}
+
+//ReadConfig - read a configuration from a file given as path/to/config/dir/config.configtype
+func ReadConfig(file string) *viper.Viper {
+	dir, fileName := filepath.Split(file)
+	ext := filepath.Ext(fileName)
+	if ext == "" {
+		ext = ".yaml"
+	} else {
+		fileName = fileName[:len(fileName)-len(ext)]
+	}
+	format := ext[1:]
+	if dir == "" {
+		dir = "."
+	} else if dir[0] != '.' {
+		dir = "." + string(filepath.Separator) + dir
+	}
+	nodeConfig := viper.New()
+	nodeConfig.AddConfigPath(dir)
+	nodeConfig.SetConfigName(fileName)
+	nodeConfig.SetConfigType(format)
+	err := nodeConfig.ReadInConfig()
+	if err != nil {
+		panic(fmt.Sprintf("error reading config file %v - %v\n", file, err))
+	}
+	return nodeConfig
 }
 
 const (

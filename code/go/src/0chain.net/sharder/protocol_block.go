@@ -10,7 +10,6 @@ import (
 
 	"0chain.net/node"
 	"0chain.net/round"
-	"0chain.net/transaction"
 	"0chain.net/util"
 	metrics "github.com/rcrowley/go-metrics"
 
@@ -47,7 +46,6 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 		}
 	}
 	sc.BlockCache.Add(b.Hash, b)
-	sc.cacheBlockTxns(b.Hash, b.Txns)
 	sc.StoreTransactions(ctx, b)
 	err := sc.StoreBlockSummary(ctx, b)
 	if err != nil {
@@ -61,14 +59,6 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 		sc.storeRound(ctx, fr, b)
 	}
 	sc.DeleteRoundsBelow(ctx, b.Round)
-}
-
-func (sc *Chain) cacheBlockTxns(hash string, txns []*transaction.Transaction) {
-	for _, txn := range txns {
-		txnSummary := txn.GetSummary()
-		txnSummary.BlockHash = hash
-		sc.BlockTxnCache.Add(txn.Hash, txnSummary)
-	}
 }
 
 func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
@@ -229,4 +219,7 @@ func (sc *Chain) storeBlock(b *block.Block) {
 	if err != nil {
 		Logger.Error("block save", zap.Any("round", b.Round), zap.Any("hash", b.Hash), zap.Error(err))
 	}
+}
+func (sc *Chain) NotarizedBlockFetched(ctx context.Context, b *block.Block) {
+
 }

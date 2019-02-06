@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"0chain.net/common"
+	"0chain.net/encryption"
 	"0chain.net/memorystore"
 	"0chain.net/node"
 	"0chain.net/state"
@@ -34,6 +36,21 @@ func init() {
 	prng = rand.New(rs)
 }
 
+var clientSignatureScheme = "bls0chain"
+
+func TestWalletSetup(t *testing.T) {
+	sigScheme := encryption.GetSignatureScheme(clientSignatureScheme)
+	err := sigScheme.GenerateKeys()
+	if err != nil {
+		panic(err)
+	}
+	sigScheme.WriteKeys(os.Stdout)
+	publicKeyBytes, err := hex.DecodeString(sigScheme.GetPublicKey())
+	if err != nil {
+		panic(err)
+	}
+	fmt.Fprintf(os.Stdout, "%v\n", encryption.Hash(publicKeyBytes))
+}
 func TestMPTWithWalletTxns(t *testing.T) {
 	var rs = rand.NewSource(randTime)
 	transactions := 100
@@ -81,9 +98,9 @@ func TestMPTWithWalletTxns(t *testing.T) {
 
 func TestMPTChangeCollector(t *testing.T) {
 	var rs = rand.NewSource(randTime)
-	transactions := 1
+	transactions := 1000
 	var wallets []*Wallet
-	var clients = 10000
+	var clients = 1000
 	for i := 0; i < 1; i++ {
 		prng = rand.New(rs)
 		wallets = createWallets(clients)
@@ -99,7 +116,7 @@ func TestMPTChangeCollector(t *testing.T) {
 			mndb := lndb.C.(*util.MemoryNodeDB)
 			mpt = lmpt
 			lmpt = cmpt
-
+			fmt.Printf("Generating for %v\n", 2010+j)
 			generateTransactions(lmpt, wallets, transactions)
 
 			rootKey := lmpt.GetRoot()
@@ -124,18 +141,33 @@ func TestMPTChangeCollector(t *testing.T) {
 
 				fmt.Printf("randtime: %v %v\n", i, randTime)
 				fmt.Printf("%v\n", err)
+				for _, change := range changes {
+					oHash := ""
+					if change.Old != nil {
+						oHash = change.Old.GetHash()
+					}
+					fmt.Printf("change: %T %v : %T %v\n", change.Old, oHash, change.New, change.New.GetHash())
+				}
 				panic(err)
 			}
 			err = lmpt.Validate()
 			if err != nil {
+				fmt.Printf("initial mpt\n")
 				mpt.PrettyPrint(os.Stdout)
 				fmt.Printf("\n")
-
+				fmt.Printf("updated mpt\n")
 				lmpt.PrettyPrint(os.Stdout)
 				fmt.Printf("\n")
 
 				fmt.Printf("randtime: %v %v\n", i, randTime)
 				fmt.Printf("%v\n", err)
+				for _, change := range changes {
+					oHash := ""
+					if change.Old != nil {
+						oHash = change.Old.GetHash()
+					}
+					fmt.Printf("change: %T %v : %T %v\n", change.Old, oHash, change.New, change.New.GetHash())
+				}
 				panic(err)
 			}
 		}
@@ -279,7 +311,7 @@ func createWallets(num int) []*Wallet {
 	for i := 0; i < len(wallets); i++ {
 		balance := prng.Int63n(1000)
 		wallets[i] = &Wallet{Balance: balance}
-		wallets[i].Initialize()
+		wallets[i].Initialize(clientSignatureScheme)
 	}
 	return wallets
 }

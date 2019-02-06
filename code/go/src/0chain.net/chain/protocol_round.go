@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"time"
-
+  
 	"0chain.net/block"
 	"0chain.net/common"
 	"0chain.net/datastore"
@@ -204,11 +204,11 @@ func (c *Chain) GetHeaviestNotarizedBlock(r round.RoundI) *block.Block {
 			return nil, common.NewError("invalid_block", "Block not from the requested round")
 		}
 		if err := c.VerifyNotarization(ctx, nb.Hash, nb.VerificationTickets); err != nil {
-			Logger.Error("get notarized block for round - validate notarization", zap.Int64("round", roundNumber), zap.Error(err))
+			Logger.Error("get notarized block for round - validate notarization", zap.Int64("round", roundNumber), zap.String("block", nb.Hash), zap.Error(err))
 			return nil, err
 		}
 		if err := nb.Validate(ctx); err != nil {
-			Logger.Error("get notarized block for round - validate", zap.Int64("round", roundNumber), zap.Error(err))
+			Logger.Error("get notarized block for round - validate", zap.Int64("round", roundNumber), zap.String("block", nb.Hash), zap.Error(err))
 			return nil, err
 		}
 		c.SetRandomSeed(r, nb.RoundRandomSeed)

@@ -11,19 +11,22 @@ import (
 )
 
 func main() {
-	keysFile := flag.String("keys_file", "keys.txt", "keys_file")
+	clientSigScheme := flag.String("signature_scheme", "", "ed25519 or bls0chain")
+	keysFileName := flag.String("keys_file_name", "keys.txt", "keys_file_name")
+	path := flag.String("keys_file_path", "keys.txt", "keys_file_path")
 	data := flag.String("data", "", "data")
 	timestamp := flag.Bool("timestamp", true, "timestamp")
 	generateKeys := flag.Bool("generate_keys", false, "generate_keys")
 	flag.Parse()
-	sigScheme := encryption.NewED25519Scheme()
+	keysFile := fmt.Sprintf("%s/%s", *path, *keysFileName)
+	var sigScheme = encryption.GetSignatureScheme(*clientSigScheme)
 	if *generateKeys {
 		err := sigScheme.GenerateKeys()
 		if err != nil {
 			panic(err)
 		}
-		if len(*keysFile) > 0 {
-			writer, err := os.OpenFile(*keysFile, os.O_RDWR|os.O_CREATE, 0644)
+		if len(keysFile) > 0 {
+			writer, err := os.OpenFile(keysFile, os.O_RDWR|os.O_CREATE, 0644)
 			if err != nil {
 				panic(err)
 			}
@@ -33,14 +36,14 @@ func main() {
 			sigScheme.WriteKeys(os.Stdout)
 		}
 	}
-	if len(*keysFile) == 0 {
+	if len(keysFile) == 0 {
 		return
 	}
-	reader, err := os.Open(*keysFile)
+	reader, err := os.Open(keysFile)
 	if err != nil {
 		panic(err)
 	}
-	_, publicKey, privateKey := encryption.ReadKeys(reader)
+	_, publicKey, _ := encryption.ReadKeys(reader)
 	pubKeyBytes, err := hex.DecodeString(publicKey)
 	if err != nil {
 		panic(err)
@@ -49,7 +52,6 @@ func main() {
 	reader.Close()
 	time := common.Now()
 	fmt.Printf("data: %v\n", *data)
-	fmt.Printf("keys file: %v\n", *keysFile)
 	fmt.Printf("public_key: %v\n", publicKey)
 	fmt.Printf("timestamp: %v\n", time)
 	fmt.Printf("client_id: %v\n", clientID)
@@ -62,7 +64,7 @@ func main() {
 	fmt.Printf("hashdata: %v", hashdata)
 	hash := encryption.Hash(hashdata)
 	fmt.Printf("hash: %v\n", hash)
-	sign, err := encryption.Sign(privateKey, hash)
+	sign, err := sigScheme.Sign(hash)
 	if err != nil {
 		fmt.Printf("error: %v\n", err)
 	} else {

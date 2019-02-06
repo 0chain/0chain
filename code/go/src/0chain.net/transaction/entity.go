@@ -83,6 +83,11 @@ func (t *Transaction) ComputeClientID() {
 
 /*ValidateWrtTime - validate entityt w.r.t given time (as now) */
 func (t *Transaction) ValidateWrtTime(ctx context.Context, ts common.Timestamp) error {
+	return t.ValidateWrtTimeForBlock(ctx, ts, true)
+}
+
+/*ValidateWrtTimeForBlock - validate entityt w.r.t given time (as now) */
+func (t *Transaction) ValidateWrtTimeForBlock(ctx context.Context, ts common.Timestamp, validateSignature bool) error {
 	if t.Value < 0 {
 		return common.InvalidRequest("value must be greater than or equal to zero")
 	}
@@ -100,9 +105,11 @@ func (t *Transaction) ValidateWrtTime(ctx context.Context, ts common.Timestamp) 
 	if err != nil {
 		return err
 	}
-	err = t.VerifySignature(ctx)
-	if err != nil {
-		return err
+	if validateSignature {
+		err = t.VerifySignature(ctx)
+		if err != nil {
+			return err
+		}
 	}
 	if t.OutputHash != "" {
 		err = t.VerifyOutputHash(ctx)
@@ -181,20 +188,8 @@ func (t *Transaction) VerifyHash(ctx context.Context) error {
 
 /*VerifySignature - verify the transaction hash */
 func (t *Transaction) VerifySignature(ctx context.Context) error {
-	var err error
-	var co *client.Client
-	if t.PublicKey == "" {
-		co, err = t.GetClient(ctx)
-		if err != nil {
-			return err
-		}
-	} else {
-		co = client.NewClient()
-		co.ID = t.ClientID
-		co.PublicKey = t.PublicKey
-		co.SetPublicKey(co.PublicKey)
-	}
-	correctSignature, err := co.Verify(t.Signature, t.Hash)
+	sigScheme, err := t.GetSignatureScheme(ctx)
+	correctSignature, err := sigScheme.Verify(t.Signature, t.Hash)
 	if err != nil {
 		return err
 	}
@@ -202,6 +197,23 @@ func (t *Transaction) VerifySignature(ctx context.Context) error {
 		return common.NewError("invalid_signature", "Invalid Signature")
 	}
 	return nil
+}
+
+/*GetSignatureScheme - get the signature scheme associated with this transaction */
+func (t *Transaction) GetSignatureScheme(ctx context.Context) (encryption.SignatureScheme, error) {
+	var err error
+	var co *client.Client
+	if t.PublicKey == "" {
+		co, err = t.GetClient(ctx)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		co = client.NewClient()
+		co.ID = t.ClientID
+		co.SetPublicKey(t.PublicKey)
+	}
+	return co.GetSignatureScheme(), nil
 }
 
 /*Provider - entity provider for client object */
@@ -254,7 +266,6 @@ func (t *Transaction) Sign(signatureScheme encryption.SignatureScheme) (string, 
 func (t *Transaction) GetSummary() *TransactionSummary {
 	summary := datastore.GetEntityMetadata("txn_summary").Instance().(*TransactionSummary)
 	summary.Hash = t.Hash
-	summary.CreationDate = t.CreationDate
 	return summary
 }
 
