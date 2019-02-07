@@ -5,7 +5,7 @@ import (
 
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"
-	"0chain.net/core/config"
+	"0chain.net/chaincore/config"
 	. "0chain.net/core/logging"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"

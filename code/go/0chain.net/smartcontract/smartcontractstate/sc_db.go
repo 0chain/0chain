@@ -6,7 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 
-	"0chain.net/core/config"
+	"0chain.net/chaincore/config"
 	. "0chain.net/core/logging"
 	"0chain.net/core/util"
 	"go.uber.org/zap"

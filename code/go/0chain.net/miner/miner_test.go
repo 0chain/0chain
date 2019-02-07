@@ -16,7 +16,7 @@ import (
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/client"
 	"0chain.net/core/common"
-	"0chain.net/core/config"
+	"0chain.net/chaincore/config"
 	"0chain.net/core/datastore"
 	"0chain.net/core/memorystore"
 	"0chain.net/chaincore/node"

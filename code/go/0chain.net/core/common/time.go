@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"time"
 
-	"0chain.net/core/config"
+	"0chain.net/chaincore/config"
 )
 
 //DateTimeFormat - the format in which the date time fields should be displayed in the UI

@@ -11,7 +11,7 @@ import (
 	metrics "github.com/rcrowley/go-metrics"
 
 	"0chain.net/sharder/blockstore"
-	"0chain.net/core/config"
+	"0chain.net/chaincore/config"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/datastore"

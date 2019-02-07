@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"0chain.net/core/config"
+	"0chain.net/chaincore/config"
 	"0chain.net/core/datastore"
 	"0chain.net/chaincore/node"
 	"0chain.net/core/persistencestore"

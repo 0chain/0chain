@@ -9,7 +9,7 @@ import (
 	metrics "github.com/rcrowley/go-metrics"
 
 	"0chain.net/chaincore/chain"
-	"0chain.net/core/config"
+	"0chain.net/chaincore/config"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
 
