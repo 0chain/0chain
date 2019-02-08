@@ -104,6 +104,9 @@ func main() {
 	if node.Self.ID == "" {
 		Logger.Panic("node definition for self node doesn't exist")
 	}
+	if node.Self.Type != node.NodeTypeMiner {
+		Logger.Panic("node not configured as miner")
+	}
 
 	if state.Debug() {
 		chain.SetupStateLogger("/tmp/state.txt")

@@ -102,6 +102,9 @@ func main() {
 	if node.Self.ID == "" {
 		Logger.Panic("node definition for self node doesn't exist")
 	}
+	if node.Self.Type != node.NodeTypeSharder {
+		Logger.Panic("node not configured as sharder")
+	}
 
 	if state.Debug() {
 		chain.SetupStateLogger("/tmp/state.txt")
