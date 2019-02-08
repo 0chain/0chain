@@ -307,6 +307,7 @@ func (c *Chain) GenerateGenesisBlock(hash string) (round.RoundI, *block.Block) {
 	gb.ClientStateHash = gb.ClientState.GetRoot()
 	gr := round.NewRound(0)
 	c.SetRandomSeed(gr, 839695260482366273)
+	gr.ComputeMinerRanks(c.Miners)
 	gr.Block = gb
 	gr.AddNotarizedBlock(gb)
 	return gr, gb

@@ -75,7 +75,6 @@ func main() {
 
 	miner.SetupMinerChain(serverChain)
 	mc := miner.GetMinerChain()
-	mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"))
 	mc.DiscoverClients = viper.GetBool("server_chain.client.discover")
 	mc.SetGenerationTimeout(viper.GetInt("server_chain.block.generation.timeout"))
 	mc.SetRetryWaitTime(viper.GetInt("server_chain.block.generation.retry_wait_time"))
@@ -100,6 +99,7 @@ func main() {
 		reader.Close()
 	} else {
 		mc.ReadNodePools(nodesConfigFile)
+		Logger.Info("nodes",zap.Int("miners",mc.Miners.Size()),zap.Int("sharders",mc.Sharders.Size()))
 	}
 	if node.Self.ID == "" {
 		Logger.Panic("node definition for self node doesn't exist")
@@ -111,6 +111,7 @@ func main() {
 	if state.Debug() {
 		chain.SetupStateLogger("/tmp/state.txt")
 	}
+	mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"))
 
 	mode := "main net"
 	if config.Development() {

@@ -55,6 +55,7 @@ func (mc *Chain) SetupGenesisBlock(hash string) *block.Block {
 		panic("Genesis round cannot convert to *round.Round")
 	}
 	mgr := mc.CreateRound(rr)
+	mgr.ComputeMinerRanks(mc.Miners)
 	mc.AddRound(mgr)
 	mc.AddGenesisBlock(gb)
 	return gb

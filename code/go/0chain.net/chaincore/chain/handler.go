@@ -185,7 +185,7 @@ func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr class='header'><td>Set Index</td><td>Node</td><td>Sent</td><td>Send Errors</td><td>Received</td><td>Last Active</td><td>Small Msg Time</td><td>Large Msg Time</td><td>Optimal Large Msg Time</td><td>Description</td></tr>")
 	r := c.GetRound(c.CurrentRound)
-	hasRanks := r != nil && r.GetRandomSeed() != 0
+	hasRanks := r != nil && r.HasRandomSeed()
 	lfb := c.LatestFinalizedBlock
 	for _, nd := range nodes {
 		if nd.Status == node.NodeStatusInactive {

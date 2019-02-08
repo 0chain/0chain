@@ -76,8 +76,6 @@ func main() {
 	sharder.SetupSharderChain(serverChain)
 	sc := sharder.GetSharderChain()
 	chain.SetServerChain(serverChain)
-	sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"))
-
 	chain.SetNetworkRelayTime(viper.GetDuration("network.relay_time") * time.Millisecond)
 	node.ReadConfig()
 
@@ -97,6 +95,7 @@ func main() {
 		reader.Close()
 	} else {
 		sc.ReadNodePools(nodesConfigFile)
+		Logger.Info("nodes",zap.Int("miners",sc.Miners.Size()),zap.Int("sharders",sc.Sharders.Size()))
 	}
 
 	if node.Self.ID == "" {
@@ -109,6 +108,7 @@ func main() {
 	if state.Debug() {
 		chain.SetupStateLogger("/tmp/state.txt")
 	}
+	sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"))
 
 	mode := "main net"
 	if config.Development() {
