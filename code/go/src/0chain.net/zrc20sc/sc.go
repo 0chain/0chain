@@ -1,6 +1,7 @@
 package zrc20sc
 
 import (
+	"0chain.net/block"
 	c_state "0chain.net/chain/state"
 	"0chain.net/common"
 	"0chain.net/datastore"
@@ -229,7 +230,7 @@ func (zrc *ZRC20SmartContract) getTokenNode(tokenName string) (*tokenNode, error
 	return &token, nil
 }
 
-func (zrc *ZRC20SmartContract) Execute(t *transaction.Transaction, funcName string, inputData []byte, balances c_state.StateContextI) (string, error) {
+func (zrc *ZRC20SmartContract) Execute(t *transaction.Transaction, b *block.Block, funcName string, inputData []byte, balances c_state.StateContextI) (string, error) {
 	switch funcName {
 	case "createToken":
 		return zrc.createToken(t, inputData)

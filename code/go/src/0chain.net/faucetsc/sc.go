@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"0chain.net/block"
 	c_state "0chain.net/chain/state"
 	"0chain.net/common"
 	. "0chain.net/logging"
@@ -202,7 +203,7 @@ func (fc *FaucetSmartContract) getGlobalVariables(t *transaction.Transaction) *g
 	return &gn
 }
 
-func (fc *FaucetSmartContract) Execute(t *transaction.Transaction, funcName string, inputData []byte, balances c_state.StateContextI) (string, error) {
+func (fc *FaucetSmartContract) Execute(t *transaction.Transaction, b *block.Block, funcName string, inputData []byte, balances c_state.StateContextI) (string, error) {
 	gn := fc.getGlobalVariables(t)
 	switch funcName {
 	case "updateLimits":

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"0chain.net/block"
 	c_state "0chain.net/chain/state"
 	"0chain.net/common"
 	"0chain.net/faucetsc"
@@ -43,7 +44,7 @@ func getSmartContract(t *transaction.Transaction, ndb smartcontractstate.SCDB) s
 	return nil
 }
 
-func ExecuteSmartContract(ctx context.Context, t *transaction.Transaction, ndb smartcontractstate.SCDB, balances c_state.StateContextI) (string, error) {
+func ExecuteSmartContract(ctx context.Context, t *transaction.Transaction, b *block.Block, ndb smartcontractstate.SCDB, balances c_state.StateContextI) (string, error) {
 	contractObj := getSmartContract(t, ndb)
 	if contractObj != nil {
 		var smartContractData sci.SmartContractTransactionData
@@ -53,7 +54,7 @@ func ExecuteSmartContract(ctx context.Context, t *transaction.Transaction, ndb s
 			Logger.Error("Error while decoding the JSON from transaction", zap.Any("input", t.TransactionData), zap.Any("error", err))
 			return "", err
 		}
-		transactionOutput, err := contractObj.Execute(t, smartContractData.FunctionName, []byte(smartContractData.InputData), balances)
+		transactionOutput, err := contractObj.Execute(t, b, smartContractData.FunctionName, []byte(smartContractData.InputData), balances)
 		if err != nil {
 			return "", err
 		}

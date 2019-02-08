@@ -10,6 +10,80 @@ import (
 )
 
 var ALL_BLOBBERS_KEY = smartcontractstate.Key("all_blobbers")
+var ALL_VALIDATORS_KEY = smartcontractstate.Key("all_validators")
+var ALL_ALLOCATIONS_KEY = smartcontractstate.Key("all_allocations")
+
+type ClientAllocation struct {
+	ClientID    string   `json:"client_id"`
+	Allocations []string `json:"allocations"`
+}
+
+func (sn *ClientAllocation) GetKey() smartcontractstate.Key {
+	return smartcontractstate.Key("client:" + sn.ClientID)
+}
+
+func (sn *ClientAllocation) Encode() []byte {
+	buff, _ := json.Marshal(sn)
+	return buff
+}
+
+func (sn *ClientAllocation) Decode(input []byte) error {
+	err := json.Unmarshal(input, sn)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+type StorageChallenge struct {
+	ID             string             `json:"id"`
+	Validators     []ValidationNode   `json:"validators"`
+	RandomNumber   int64              `json:"seed"`
+	AllocationID   string             `json:"allocation_id"`
+	Blobber        *StorageNode       `json:"blobber"`
+	AllocationRoot string             `json:"allocation_root"`
+	Response       *ChallengeResponse `json:"challenge_response"`
+}
+
+func (sn *StorageChallenge) GetKey() smartcontractstate.Key {
+	return smartcontractstate.Key("challenge:" + sn.ID)
+}
+
+func (sn *StorageChallenge) Encode() []byte {
+	buff, _ := json.Marshal(sn)
+	return buff
+}
+
+func (sn *StorageChallenge) Decode(input []byte) error {
+	err := json.Unmarshal(input, sn)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+type ValidationNode struct {
+	ID        string `json:"id"`
+	BaseURL   string `json:"url"`
+	PublicKey string `json:"-"`
+}
+
+func (sn *ValidationNode) GetKey() smartcontractstate.Key {
+	return smartcontractstate.Key("validator:" + sn.ID)
+}
+
+func (sn *ValidationNode) Encode() []byte {
+	buff, _ := json.Marshal(sn)
+	return buff
+}
+
+func (sn *ValidationNode) Decode(input []byte) error {
+	err := json.Unmarshal(input, sn)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
 type StorageNode struct {
 	ID        string `json:"id"`
@@ -218,4 +292,23 @@ func (rm *ReadMarker) Verify(prevRM *ReadMarker) bool {
 	}
 
 	return rm.VerifySignature(rm.ClientPublicKey)
+}
+
+type ValidationTicket struct {
+	ChallengeID  string           `json:"challenge_id"`
+	BlobberID    string           `json:"blobber_id"`
+	ValidatorID  string           `json:"validator_id"`
+	ValidatorKey string           `json:"validator_key"`
+	Result       bool             `json:"success"`
+	Message      string           `json:"message"`
+	MessageCode  string           `json:"message_code"`
+	Timestamp    common.Timestamp `json:"timestamp"`
+	Signature    string           `json:"signature"`
+}
+
+func (vt *ValidationTicket) VerifySign() (bool, error) {
+	hashData := fmt.Sprintf("%v:%v:%v:%v:%v:%v", vt.ChallengeID, vt.BlobberID, vt.ValidatorID, vt.ValidatorKey, vt.Result, vt.Timestamp)
+	hash := encryption.Hash(hashData)
+	verified, err := encryption.Verify(vt.ValidatorKey, vt.Signature, hash)
+	return verified, err
 }
