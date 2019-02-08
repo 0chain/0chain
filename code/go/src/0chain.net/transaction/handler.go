@@ -33,9 +33,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	err := txn.Validate(ctx)
 
 	if err != nil {
-		if debugTxn {
-			Logger.Error("put transaction (debug transaction)", zap.String("txn", txn.Hash), zap.Error(err))
-		}
+		Logger.Error("put transaction error", zap.String("txn", txn.Hash), zap.Error(err))
 		return nil, err
 	}
 	if debugTxn {

@@ -73,7 +73,7 @@ func (c *Chain) reachedNotarization(bvt []*block.VerificationTicket) bool {
 			//ToDo: Remove this comment
 			Logger.Info("not reached notarization",
 				zap.Int("Threshold", c.GetNotarizationThresholdCount()),
-				zap.Int("number of signatures", numSignatures))
+				zap.Int("number of signatures", numSignatures), zap.Int64("CurrentRound", c.CurrentRound))
 			return false
 		}
 	}
@@ -86,6 +86,9 @@ func (c *Chain) reachedNotarization(bvt []*block.VerificationTicket) bool {
 			return false
 		}
 	}
+	//Todo: Remove this log
+	Logger.Info("Reached notarization!!!", zap.Int64("CurrentRound", c.CurrentRound))
+
 	return true
 }
 
