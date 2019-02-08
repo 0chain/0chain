@@ -23,6 +23,7 @@ services:
     command: redis-server /0chain/config/redis/transactions.redis.conf
 
   miner:
+    image: "miner"
     environment:
       - DOCKER=true
     depends_on:
@@ -31,15 +32,10 @@ services:
     links:
       - redis:redis
       - redis_txns:redis_txns
-    build:
-      context: ../..
-      dockerfile: ./docker.local/build.miner/Dockerfile
-
     volumes:
       - ../config:/0chain/config
       - ../miner${MINER}/data:/0chain/data
       - ../miner${MINER}/log:/0chain/log
-
     ports:
       - "707${MINER}:707${MINER}"
     networks:

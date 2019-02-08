@@ -1,4 +1,5 @@
 #!/bin/sh
+docker build -f docker.local/build.miner/Dockerfile . -t miner
 
 for i in $(seq 1 3);
 do
