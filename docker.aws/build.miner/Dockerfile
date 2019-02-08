@@ -9,22 +9,31 @@ FROM 0chain/base:${image_tag}
 ADD ./docker.aws/build.miner/MINER_VERSION .
 
 ENV SRC_DIR=/0chain
-ENV THIRD_PARTY_GOPATH=$GOPATH
-ENV GOPATH=$GOPATH:$SRC_DIR/go
+
 
 WORKDIR $SRC_DIR
 COPY ./docker.aws/build.miner/MINER_VERSION $SRC_DIR
 
 #Add the source code
-ADD ./code/go/src $SRC_DIR/go/src
+ADD ./code/go $SRC_DIR/go
+
+ENV GO111MODULE=on
+
+WORKDIR $SRC_DIR/go/0chain.net/miner/miner
+
+RUN go mod download
 
 # Build it:
-RUN go build -tags bn256 0chain.net/miner/miner
-
+RUN cd $SRC_DIR/go/0chain.net/miner/miner && \
+    go get -d && \
+    cd $GOPATH/pkg/mod/github.com/valyala/gozstd* && \
+    make clean libzstd.a && \
+    cd $SRC_DIR/go/0chain.net/miner/miner && \
+    go build -v -tags bn256
 
 #Copy the miner executable
 WORKDIR $SRC_DIR/bin
-RUN cp $SRC_DIR/miner $SRC_DIR/bin
+RUN cp $SRC_DIR/go/0chain.net/miner/miner/miner $SRC_DIR/bin
 
 #Run the miner from /0chain
 WORKDIR $SRC_DIR
