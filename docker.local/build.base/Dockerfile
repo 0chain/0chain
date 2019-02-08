@@ -5,10 +5,6 @@ RUN apk add --update --no-cache zlib zlib-dev bzip2 bzip2-dev snappy snappy-dev 
 RUN apk add --update --no-cache gmp-dev openssl-dev
 RUN apk add --update --no-cache autoconf automake bison flex libtool
 
-# Install golang dep
-RUN wget -O /usr/local/bin/dep https://github.com/golang/dep/releases/download/v0.5.0/dep-linux-amd64 && \
-    chmod +x /usr/local/bin/dep
-
 # Install latest gflags
 RUN cd /tmp && \
     wget -O gflags.tar.gz https://github.com/gflags/gflags/archive/v2.2.1.tar.gz && \
