@@ -22,7 +22,7 @@ type StorageSmartContract struct {
 }
 
 type ChallengeResponse struct {
-	ID string `json:"challenge_id"`
+	ID                string              `json:"challenge_id"`
 	ValidationTickets []*ValidationTicket `json:"validation_tickets"`
 }
 
@@ -32,7 +32,7 @@ func (sc *StorageSmartContract) VerifyChallenge(t *transaction.Transaction, inpu
 	if err != nil {
 		return "", err
 	}
-	if len(challengeResponse.ID) == 0 || len(challengeResponse.ValidationTickets) == 0  {
+	if len(challengeResponse.ID) == 0 || len(challengeResponse.ValidationTickets) == 0 {
 		return "", common.NewError("invalid_parameters", "Invalid parameters to challenge response")
 	}
 
