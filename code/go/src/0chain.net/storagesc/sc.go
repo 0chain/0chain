@@ -53,7 +53,7 @@ func (sc *StorageSmartContract) VerifyChallenge(t *transaction.Transaction, inpu
 	}
 
 	if challengeRequest.Response != nil {
-		return "", common.NewError("invalid_parameters", "Challenge already redeemed")
+		return "Challenge Already redeemed by Blobber", nil
 	}
 
 	numSuccess := 0
@@ -93,7 +93,7 @@ func (sc *StorageSmartContract) AddChallenge(t *transaction.Transaction, b *bloc
 
 	challengeBytes, err := sc.DB.GetNode(storageChallenge.GetKey())
 	if challengeBytes != nil || err != nil {
-		return "", common.NewError("invalid_parameters", "Error adding challenge. It may already exist. "+err.Error())
+		return "", common.NewError("invalid_parameters", "Error adding challenge. It may already exist. ")
 	}
 	allocationList, err := sc.getAllocationsList(t.ClientID)
 	if err != nil {
