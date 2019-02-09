@@ -189,6 +189,9 @@ func (t *Transaction) VerifyHash(ctx context.Context) error {
 /*VerifySignature - verify the transaction hash */
 func (t *Transaction) VerifySignature(ctx context.Context) error {
 	sigScheme, err := t.GetSignatureScheme(ctx)
+	if err != nil {
+		return err
+	}
 	correctSignature, err := sigScheme.Verify(t.Signature, t.Hash)
 	if err != nil {
 		return err
