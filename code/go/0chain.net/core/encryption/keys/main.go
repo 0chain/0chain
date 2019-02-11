@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"0chain.net/core/common"
-	"0chain.net/chaincore/encryption"
+	"0chain.net/core/encryption"
 )
 
 func main() {

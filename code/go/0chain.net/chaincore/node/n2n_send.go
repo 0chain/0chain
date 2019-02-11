@@ -203,7 +203,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 				req.Header.Set("Content-Encoding", compDecomp.Encoding())
 			}
 			req.Header.Set("Content-Type", "application/json; charset=utf-8")
-			delay := common.InduceDelay()
+			delay := InduceDelay()
 			N2n.Debug("sending", zap.Int("from", Self.SetIndex), zap.Int("to", receiver.SetIndex), zap.String("handler", uri), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.String("id", entity.GetKey()), zap.Any("delay", delay))
 			SetSendHeaders(req, entity, options)
 			ctx, cancel := context.WithCancel(context.TODO())
@@ -375,7 +375,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 			N2n.Error("message received - entity id doesn't match with signed id", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI), zap.String("entity_id", entityID), zap.String("entity.id", entity.GetKey()))
 			return
 		}
-		delay := common.InduceDelay()
+		delay := InduceDelay()
 		if delay > 0 {
 			N2n.Debug("message received", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI), zap.String("entity", entityName), zap.Any("id", entityID), zap.Any("delay", delay))
 		}

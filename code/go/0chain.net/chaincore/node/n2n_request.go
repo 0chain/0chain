@@ -113,7 +113,7 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 			if options.Compress {
 				req.Header.Set("Content-Encoding", compDecomp.Encoding())
 			}
-			delay := common.InduceDelay()
+			delay := InduceDelay()
 			eName := ""
 			if entityMetadata != nil {
 				eName = entityMetadata.GetName()
@@ -255,4 +255,18 @@ func ToN2NSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 		}
 		N2n.Info("message received", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI), zap.Duration("duration", time.Since(ts)), zap.Int("codec", options.CODEC))
 	}
+}
+
+var randGenerator = rand.New(rand.NewSource(time.Now().UnixNano()))
+
+/*InduceDelay - induces some random delay - useful to test resilience */
+func InduceDelay() int {
+	if config.Development() && config.MaxDelay() > 0 {
+		r := randGenerator.Intn(config.MaxDelay())
+		if r < 500 {
+			time.Sleep(time.Duration(r) * time.Millisecond)
+			return r
+		}
+	}
+	return 0
 }

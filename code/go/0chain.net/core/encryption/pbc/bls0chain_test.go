@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"0chain.net/chaincore/encryption"
+	"0chain.net/core/encryption"
 )
 
 var expectedHash = encryption.Hash("0chain.net rocks")

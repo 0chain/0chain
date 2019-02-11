@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"io"
 
-	"0chain.net/chaincore/encryption"
+	"0chain.net/core/encryption"
 	"github.com/Nik-U/pbc"
 )
 
