@@ -35,8 +35,8 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 	}
 	var nr = round.NewRound(r.GetRoundNumber() + 1)
 	mr := mc.CreateRound(nr)
-	if mc.AddRound(mr) != mr {
-		return mr
+	if er = mc.AddRound(mr); er != mr {
+		return er
 	}
 	if r.HasRandomSeed() {
 		mc.addMyVRFShare(ctx, r, mr)
