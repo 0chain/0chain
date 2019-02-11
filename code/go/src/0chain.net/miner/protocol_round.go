@@ -35,19 +35,24 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 	}
 	var nr = round.NewRound(r.GetRoundNumber() + 1)
 	mr := mc.CreateRound(nr)
-	if mc.AddRound(mr) != mr {
-		return mr
+	
+	ar := mc.AddRound(mr)
+	er, ok := ar.(*Round)
+	if !ok {
+		Logger.Info("returning nil from StartNextRound :( ")
+		return nil
 	}
 	if r.HasRandomSeed() {
-		mc.addMyVRFShare(ctx, r, mr)
+		mc.addMyVRFShare(ctx, r, er)
 	}
-	return mr
+	return er
 }
 
 func (mc *Chain) getRound(ctx context.Context, roundNumber int64) *Round {
 	var mr *Round
 	pr := mc.GetMinerRound(roundNumber - 1)
 	if pr != nil {
+		Logger.Info("Starting next round in getRound", zap.Int64("nextRoundNum", roundNumber))
 		mr = mc.StartNextRound(ctx, pr)
 	} else {
 		var r = round.NewRound(roundNumber)
