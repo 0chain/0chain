@@ -1,4 +1,6 @@
 #!/bin/sh
+set -e
+
 docker build -f docker.local/build.sharder/Dockerfile . -t sharder
 
 for i in $(seq 1 1);
