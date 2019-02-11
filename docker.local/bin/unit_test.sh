@@ -1,4 +1,6 @@
 #!/bin/sh
+set -e
+
 docker build -f docker.local/build.unit_test/Dockerfile . -t zchain_unit_test
 
 # Allocate interactive TTY to allow Ctrl-C.
