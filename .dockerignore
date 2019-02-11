@@ -1,3 +1,3 @@
 .git
-**/data
-**/log
+docker.local
+**/pkg
