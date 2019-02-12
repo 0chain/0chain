@@ -5,10 +5,6 @@ RUN apk add --update --no-cache zlib zlib-dev bzip2 bzip2-dev snappy snappy-dev 
 RUN apk add --update --no-cache gmp-dev openssl-dev
 RUN apk add --update --no-cache autoconf automake bison flex libtool
 
-# Install golang dep
-RUN wget -O /usr/local/bin/dep https://github.com/golang/dep/releases/download/v0.5.0/dep-linux-amd64 && \
-    chmod +x /usr/local/bin/dep
-
 # Install latest gflags
 RUN cd /tmp && \
     wget -O gflags.tar.gz https://github.com/gflags/gflags/archive/v2.2.1.tar.gz && \
@@ -26,29 +22,9 @@ RUN cd /tmp && \
     git clone https://github.com/0chain/rocksdb.git && \
     cd rocksdb && \
     make  -j $(nproc) shared_lib && \
-    mkdir -p /usr/local/rocksdb/lib && \
-    mkdir /usr/local/rocksdb/include && \
-    cp librocksdb.so* /usr/local/rocksdb/lib && \
-    cp /usr/local/rocksdb/lib/librocksdb.so* /usr/lib/ && \
-    cp -r include /usr/local/rocksdb/ && \
-    cp -r include/* /usr/include/ && \
+    cp -P librocksdb.so* /usr/local/lib && \
+    cp -r include/* /usr/local/include/ && \
     rm -R /tmp/rocksdb/
-
-#Download the go dependencies
-RUN go get github.com/golang/snappy
-RUN go get -d github.com/valyala/gozstd && \
-    cd $GOPATH/src/github.com/valyala/gozstd && \
-    make clean libzstd.a
-RUN go get github.com/gomodule/redigo/redis
-RUN go get github.com/0chain/gorocksdb
-RUN go get github.com/vmihailenco/msgpack
-RUN go get -u golang.org/x/crypto/...
-RUN go get go.uber.org/zap
-RUN go get github.com/rcrowley/go-metrics
-RUN go get github.com/spf13/viper
-RUN go get gopkg.in/natefinch/lumberjack.v2
-RUN go get github.com/koding/cache
-RUN go get github.com/hashicorp/golang-lru
 
 ENV CGO_CFLAGS="-I$GOPATH/src/github.com/herumi/bls/include -I$GOPATH/src/github.com/herumi/mcl/include"
 ENV CGO_LDFLAGS="-L$GOPATH/src/github.com/herumi/bls/lib -L$GOPATH/src/github.com/herumi/mcl/lib"
@@ -56,13 +32,9 @@ ENV CGO_LDFLAGS="-L$GOPATH/src/github.com/herumi/bls/lib -L$GOPATH/src/github.co
 RUN go get -d github.com/herumi/mcl/ffi/go/mcl && \
     cd $GOPATH/src/github.com/herumi/mcl && \
     CFLAGS='-DMCLBN_FP_UNIT_SIZE=4' make && \
-    cp $GOPATH/src/github.com/herumi/mcl/lib/lib*.so /usr/lib && \
-    go get -tags bn256 github.com/herumi/mcl/ffi/go/mcl
-    
+    cp $GOPATH/src/github.com/herumi/mcl/lib/lib*.so /usr/local/lib
+
 RUN go get -d github.com/herumi/bls/ffi/go/bls && \
     cd $GOPATH/src/github.com/herumi/bls && \
     CFLAGS='-DMCLBN_FP_UNIT_SIZE=4' make && \
-    cp $GOPATH/src/github.com/herumi/bls/lib/lib*.so /usr/lib && \
-    go get -tags bn256 github.com/herumi/bls/ffi/go/bls
-
-RUN go get github.com/didip/tollbooth
+    cp $GOPATH/src/github.com/herumi/bls/lib/lib*.so /usr/local/lib

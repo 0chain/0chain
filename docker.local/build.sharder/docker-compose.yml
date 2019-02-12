@@ -18,6 +18,7 @@ services:
     restart: on-failure
 
   sharder:
+    image: "sharder"
     environment:
       - DOCKER=true
       - CASSANDRA_CLUSTER=scylla
@@ -25,9 +26,6 @@ services:
       - cassandra-init
     links:
       - cassandra-init:cassandra-init
-    build:
-      context: ../..
-      dockerfile: ./docker.local/build.sharder/Dockerfile
     volumes:
       - ../config:/0chain/config
       - ../sharder${SHARDER}/log:/0chain/log

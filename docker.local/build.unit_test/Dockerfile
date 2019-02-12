@@ -8,4 +8,3 @@ WORKDIR /go/src
 
 #Add the source code
 ADD ./code/go/src .
-
