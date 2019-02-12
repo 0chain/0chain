@@ -4,14 +4,15 @@ import (
 	"context"
 	"encoding/json"
 
+	"0chain.net/chaincore/block"
 	c_state "0chain.net/chaincore/chain/state"
-	"0chain.net/core/common"
-	"0chain.net/smartcontract/faucetsc"
-	. "0chain.net/core/logging"
 	sci "0chain.net/chaincore/smartcontractinterface"
+	"0chain.net/chaincore/transaction"
+	"0chain.net/core/common"
+	. "0chain.net/core/logging"
+	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/smartcontractstate"
 	"0chain.net/smartcontract/storagesc"
-	"0chain.net/chaincore/transaction"
 	"0chain.net/smartcontract/zrc20sc"
 	"go.uber.org/zap"
 )
@@ -43,7 +44,7 @@ func getSmartContract(t *transaction.Transaction, ndb smartcontractstate.SCDB) s
 	return nil
 }
 
-func ExecuteSmartContract(ctx context.Context, t *transaction.Transaction, ndb smartcontractstate.SCDB, balances c_state.StateContextI) (string, error) {
+func ExecuteSmartContract(ctx context.Context, t *transaction.Transaction, b *block.Block, ndb smartcontractstate.SCDB, balances c_state.StateContextI) (string, error) {
 	contractObj := getSmartContract(t, ndb)
 	if contractObj != nil {
 		var smartContractData sci.SmartContractTransactionData
@@ -53,7 +54,7 @@ func ExecuteSmartContract(ctx context.Context, t *transaction.Transaction, ndb s
 			Logger.Error("Error while decoding the JSON from transaction", zap.Any("input", t.TransactionData), zap.Any("error", err))
 			return "", err
 		}
-		transactionOutput, err := contractObj.Execute(t, smartContractData.FunctionName, []byte(smartContractData.InputData), balances)
+		transactionOutput, err := contractObj.Execute(t, b, smartContractData.FunctionName, []byte(smartContractData.InputData), balances)
 		if err != nil {
 			return "", err
 		}

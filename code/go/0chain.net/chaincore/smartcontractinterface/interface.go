@@ -3,9 +3,10 @@ package smartcontractinterface
 import (
 	"encoding/json"
 
+	"0chain.net/chaincore/block"
 	c_state "0chain.net/chaincore/chain/state"
-	"0chain.net/smartcontract/smartcontractstate"
 	"0chain.net/chaincore/transaction"
+	"0chain.net/smartcontract/smartcontractstate"
 )
 
 const Seperator = ":"
@@ -21,5 +22,5 @@ type SmartContractTransactionData struct {
 }
 
 type SmartContractInterface interface {
-	Execute(t *transaction.Transaction, funcName string, input []byte, balances c_state.StateContextI) (string, error)
+	Execute(t *transaction.Transaction, b *block.Block, funcName string, input []byte, balances c_state.StateContextI) (string, error)
 }

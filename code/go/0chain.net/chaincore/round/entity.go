@@ -328,9 +328,11 @@ func (r *Round) AddVRFShare(share *VRFShare, threshold int) bool {
 	defer r.Mutex.Unlock()
 	if len(r.GetVRFShares()) >= threshold {
 		//if we already have enough shares, do not add.
+		Logger.Info("AddVRFShare Already at threshold. Returning false.")
 		return false
 	}
 	if _, ok := r.shares[share.party.GetKey()]; ok {
+		Logger.Info("AddVRFShare Share is already there. Returning false.")
 		return false
 	}
 	r.setState(RoundShareVRF)

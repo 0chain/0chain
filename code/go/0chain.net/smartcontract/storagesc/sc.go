@@ -2,16 +2,17 @@ package storagesc
 
 import (
 	"encoding/json"
+	"math/rand"
 
 	"go.uber.org/zap"
 
+	"0chain.net/chaincore/block"
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/client"
-	"0chain.net/core/common"
 	"0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/smartcontract/smartcontractstate"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/util"
+	"0chain.net/core/common"
+	"0chain.net/smartcontract/smartcontractstate"
 
 	. "0chain.net/core/logging"
 )
@@ -21,67 +22,131 @@ type StorageSmartContract struct {
 }
 
 type ChallengeResponse struct {
-	Data        []byte       `json:"data_bytes"`
-	WriteMarker *WriteMarker `json:"write_marker"`
-	MerkleRoot  string       `json:"merkle_root"`
-	MerklePath  *util.MTPath `json:"merkle_path"`
-	CloseTxnID  string       `json:"close_txn_id"`
+	ID                string              `json:"challenge_id"`
+	ValidationTickets []*ValidationTicket `json:"validation_tickets"`
 }
 
-// func (sc *StorageSmartContract) VerifyChallenge(t *transaction.Transaction, input []byte) (string, error) {
-// 	var challengeResponse ChallengeResponse
-// 	err := json.Unmarshal(input, &challengeResponse)
-// 	if err != nil {
-// 		return "", err
-// 	}
-// 	if len(challengeResponse.CloseTxnID) == 0 || len(challengeResponse.Data) == 0 || challengeResponse.MerklePath == nil || len(challengeResponse.MerkleRoot) == 0 || challengeResponse.WriteMarker == nil {
-// 		return "", common.NewError("invalid_parameters", "Invalid parameters to challenge response")
-// 	}
+func (sc *StorageSmartContract) VerifyChallenge(t *transaction.Transaction, input []byte) (string, error) {
+	var challengeResponse ChallengeResponse
+	err := json.Unmarshal(input, &challengeResponse)
+	if err != nil {
+		return "", err
+	}
+	if len(challengeResponse.ID) == 0 || len(challengeResponse.ValidationTickets) == 0 {
+		return "", common.NewError("invalid_parameters", "Invalid parameters to challenge response")
+	}
 
-// 	commitConnectionDBBytes, err := sc.DB.GetNode(smartcontractstate.Key("close_connection:" + challengeResponse.WriteMarker.DataID))
-// 	if commitConnectionDBBytes == nil || err != nil {
-// 		return "", common.NewError("invalid_parameters", "Cannot find the close connection for the Data ID "+challengeResponse.WriteMarker.DataID)
-// 	}
+	var challengeRequest StorageChallenge
+	challengeRequest.ID = challengeResponse.ID
 
-// 	var closeConnection BlobberCloseConnection
-// 	err = json.Unmarshal(commitConnectionDBBytes, &closeConnection)
-// 	if err != nil {
-// 		return "", common.NewError("close_connection_decode_error", "Invalid connection stored in the state. "+challengeResponse.WriteMarker.DataID)
-// 	}
+	challengeRequestBytes, err := sc.DB.GetNode(challengeRequest.GetKey())
+	if challengeRequestBytes == nil || err != nil {
+		return "", common.NewError("invalid_parameters", "Cannot find the challenge with ID "+challengeRequest.ID)
+	}
+	err = challengeRequest.Decode(challengeRequestBytes)
+	if err != nil {
+		return "", common.NewError("decode_error", "Error decoding the challenge request")
+	}
 
-// 	if closeConnection.DataID != challengeResponse.WriteMarker.DataID {
-// 		return "", common.NewError("invalid_parameters", "Invalid Write marker / Data ID sent for the challenge")
-// 	}
+	if challengeRequest.Blobber.ID != t.ClientID {
+		return "", common.NewError("invalid_parameters", "Challenge response should be submitted by the same blobber as the challenge request")
+	}
 
-// 	if closeConnection.MerkleRoot != challengeResponse.MerkleRoot {
-// 		return "", common.NewError("invalid_parameters", "Invalid Merkle root sent for the challenge")
-// 	}
+	if challengeRequest.Response != nil {
+		return "Challenge Already redeemed by Blobber", nil
+	}
 
-// 	if closeConnection.WriteMarker.Signature != challengeResponse.WriteMarker.Signature {
-// 		return "", common.NewError("invalid_parameters", "Invalid Write marker sent for the challenge")
-// 	}
-// 	if t.ClientID != challengeResponse.WriteMarker.BlobberID {
-// 		return "", common.NewError("invalid_parameters", "Challenge response should be submitted by the same blobber as the write marker")
-// 	}
+	numSuccess := 0
+	numFailure := 0
+	for _, vt := range challengeResponse.ValidationTickets {
+		if vt != nil {
+			ok, err := vt.VerifySign()
+			if !ok || err != nil {
+				continue
+			}
+			if vt.Result {
+				numSuccess++
+			} else {
+				numFailure++
+			}
+		}
+	}
 
-// 	// var dataBytes64Encode bytes.Buffer
-// 	// dataBytes64EncodeWriter := bufio.NewWriter(&dataBytes64Encode)
-// 	// inputZlibBytes := bytes.NewBuffer(challengeResponse.Data)
-// 	// zlibReader, err := zlib.NewReader(inputZlibBytes)
-// 	// io.Copy(dataBytes64EncodeWriter, zlibReader)
-// 	// zlibReader.Close()
+	if numSuccess > (len(challengeRequest.Validators) / 2) {
+		challengeRequest.Response = &challengeResponse
+		sc.DB.PutNode(challengeRequest.GetKey(), challengeRequest.Encode())
+		return "Challenge Passed by Blobber", nil
+	}
 
-// 	// var dataBytes bytes.Buffer
-// 	// dataBytesWriter := bufio.NewWriter(&dataBytes)
-// 	// base64Decoder := base64.NewDecoder(base64.StdEncoding, bytes.NewReader(dataBytes64Encode.Bytes()))
-// 	// io.Copy(dataBytesWriter, base64Decoder)
-// 	contentHash := encryption.Hash(challengeResponse.Data)
-// 	merkleVerify := util.VerifyMerklePath(contentHash, challengeResponse.MerklePath, challengeResponse.MerkleRoot)
-// 	if !merkleVerify {
-// 		return "", common.NewError("challenge_failed", "Challenge failed since we could not verify the merkle tree")
-// 	}
-// 	return "Challenge Passed by Blobber", nil
-// }
+	if numFailure > (len(challengeRequest.Validators) / 2) {
+		challengeRequest.Response = &challengeResponse
+		sc.DB.PutNode(challengeRequest.GetKey(), challengeRequest.Encode())
+		return "Challenge Failed by Blobber", nil
+	}
+
+	return "", common.NewError("not_enough_validations", "Not enough validations for the challenge")
+}
+
+func (sc *StorageSmartContract) AddChallenge(t *transaction.Transaction, b *block.Block, input []byte) (string, error) {
+	var storageChallenge StorageChallenge
+	storageChallenge.ID = t.Hash
+
+	challengeBytes, err := sc.DB.GetNode(storageChallenge.GetKey())
+	if challengeBytes != nil || err != nil {
+		return "", common.NewError("invalid_parameters", "Error adding challenge. It may already exist. ")
+	}
+	allocationList, err := sc.getAllocationsList(t.ClientID)
+	if err != nil {
+		return "", common.NewError("adding_challenge_error", "Error gettting the allocation list. "+err.Error())
+	}
+	if len(allocationList) == 0 {
+		return "", common.NewError("adding_challenge_error", "No allocations at this time")
+	}
+
+	rand.Seed(b.RoundRandomSeed)
+	allocationIndex := rand.Int63n(int64(len(allocationList)))
+	allocationKey := allocationList[allocationIndex]
+
+	allocationObj := &StorageAllocation{}
+	allocationObj.ID = allocationKey
+
+	allocationBytes, err := sc.DB.GetNode(allocationObj.GetKey())
+	if allocationBytes == nil || err != nil {
+		return "", common.NewError("invalid_allocation", "Client state has invalid allocations")
+	}
+
+	allocationObj.Decode(allocationBytes)
+
+	validatorList, _ := sc.getValidatorsList()
+
+	storageChallenge.Validators = validatorList
+	storageChallenge.Blobber = allocationObj.Blobbers[rand.Intn(len(allocationObj.Blobbers))]
+	storageChallenge.RandomNumber = b.RoundRandomSeed
+	storageChallenge.AllocationID = allocationObj.ID
+
+	blobberAllocation := &BlobberAllocation{}
+	blobberAllocation.BlobberID = storageChallenge.Blobber.ID
+	blobberAllocation.AllocationID = allocationObj.ID
+
+	blobberAllocationBytes, err := sc.DB.GetNode(blobberAllocation.GetKey())
+	if blobberAllocationBytes == nil || err != nil {
+		return "", common.NewError("invalid_parameters", "Blobber is not part of the allocation. Could not find blobber")
+	}
+
+	err = blobberAllocation.Decode(blobberAllocationBytes)
+	if err != nil {
+		return "", common.NewError("blobber_allocation_decode", "Blobber Allocation decode error "+err.Error())
+	}
+	if len(blobberAllocation.AllocationRoot) == 0 {
+		return "", common.NewError("blobber_no_wm", "Blobber has no write marker committed.")
+	}
+
+	storageChallenge.AllocationRoot = blobberAllocation.AllocationRoot
+	challengeBytes = storageChallenge.Encode()
+	sc.DB.PutNode(storageChallenge.GetKey(), challengeBytes)
+
+	return string(challengeBytes), nil
+}
 
 func (sc *StorageSmartContract) CommitBlobberRead(t *transaction.Transaction, input []byte) (string, error) {
 	var commitRead ReadConnection
@@ -207,6 +272,24 @@ func (sc *StorageSmartContract) CommitBlobberConnection(t *transaction.Transacti
 	return string(buffBlobberAllocation), nil
 }
 
+func (sc *StorageSmartContract) getAllocationsList(clientID string) ([]string, error) {
+	var allocationList = make([]string, 0)
+	var clientAlloc ClientAllocation
+	clientAlloc.ClientID = clientID
+	allocationListBytes, err := sc.DB.GetNode(clientAlloc.GetKey())
+	if err != nil {
+		return nil, common.NewError("getAllocationsList_failed", "Failed to retrieve existing allocations list")
+	}
+	if allocationListBytes == nil {
+		return allocationList, nil
+	}
+	err = json.Unmarshal(allocationListBytes, &clientAlloc)
+	if err != nil {
+		return nil, common.NewError("getAllocationsList_failed", "Failed to retrieve existing allocations list")
+	}
+	return clientAlloc.Allocations, nil
+}
+
 func (sc *StorageSmartContract) getBlobbersList() ([]StorageNode, error) {
 	var allBlobbersList = make([]StorageNode, 0)
 	allBlobbersBytes, err := sc.DB.GetNode(ALL_BLOBBERS_KEY)
@@ -221,6 +304,43 @@ func (sc *StorageSmartContract) getBlobbersList() ([]StorageNode, error) {
 		return nil, common.NewError("getBlobbersList_failed", "Failed to retrieve existing blobbers list")
 	}
 	return allBlobbersList, nil
+}
+
+func (sc *StorageSmartContract) getValidatorsList() ([]ValidationNode, error) {
+	var allValidatorsList = make([]ValidationNode, 0)
+	allValidatorsBytes, err := sc.DB.GetNode(ALL_VALIDATORS_KEY)
+	if err != nil {
+		return nil, common.NewError("getValidatorsList_failed", "Failed to retrieve existing validators list")
+	}
+	if allValidatorsBytes == nil {
+		return allValidatorsList, nil
+	}
+	err = json.Unmarshal(allValidatorsBytes, &allValidatorsList)
+	if err != nil {
+		return nil, common.NewError("getValidatorsList_failed", "Failed to retrieve existing validators list")
+	}
+	return allValidatorsList, nil
+}
+
+func (sc *StorageSmartContract) addAllocation(allocation *StorageAllocation) (string, error) {
+	allocationList, err := sc.getAllocationsList(allocation.Owner)
+	if err != nil {
+		return "", common.NewError("add_blobber_failed", "Failed to get blobber list"+err.Error())
+	}
+
+	allocationBytes, _ := sc.DB.GetNode(allocation.GetKey())
+	if allocationBytes == nil {
+		allocationList = append(allocationList, allocation.ID)
+		var clientAllocation ClientAllocation
+		clientAllocation.ClientID = allocation.Owner
+		clientAllocation.Allocations = allocationList
+		sc.DB.PutNode(clientAllocation.GetKey(), clientAllocation.Encode())
+		sc.DB.PutNode(allocation.GetKey(), allocation.Encode())
+		Logger.Info("Adding allocation")
+	}
+
+	buff := allocation.Encode()
+	return string(buff), nil
 }
 
 func (sc *StorageSmartContract) AddBlobber(t *transaction.Transaction, input []byte) (string, error) {
@@ -245,6 +365,31 @@ func (sc *StorageSmartContract) AddBlobber(t *transaction.Transaction, input []b
 	}
 
 	buff := newBlobber.Encode()
+	return string(buff), nil
+}
+
+func (sc *StorageSmartContract) AddValidator(t *transaction.Transaction, input []byte) (string, error) {
+	allValidatorsList, err := sc.getValidatorsList()
+	if err != nil {
+		return "", common.NewError("add_validator_failed", "Failed to get validator list."+err.Error())
+	}
+	var newValidator ValidationNode
+	err = newValidator.Decode(input) //json.Unmarshal(input, &newBlobber)
+	if err != nil {
+		return "", err
+	}
+	newValidator.ID = t.ClientID
+	newValidator.PublicKey = t.PublicKey
+	blobberBytes, _ := sc.DB.GetNode(newValidator.GetKey())
+	if blobberBytes == nil {
+		allValidatorsList = append(allValidatorsList, newValidator)
+		allValidatorsBytes, _ := json.Marshal(allValidatorsList)
+		sc.DB.PutNode(ALL_VALIDATORS_KEY, allValidatorsBytes)
+		sc.DB.PutNode(newValidator.GetKey(), newValidator.Encode())
+		Logger.Info("Adding validator to known list of validators")
+	}
+
+	buff := newValidator.Encode()
 	return string(buff), nil
 }
 
@@ -308,23 +453,23 @@ func (sc *StorageSmartContract) NewAllocationRequest(t *transaction.Transaction,
 		allocationRequest.ID = t.Hash
 		allocationRequest.Owner = t.ClientID
 		allocationRequest.OwnerPublicKey = clientPublicKey
-		buff := allocationRequest.Encode()
+
 		//allocationRequestMap[t.Hash] = allocationRequest
 		Logger.Info("Length of the keys and values", zap.Any("keys", len(blobberAllocationKeys)), zap.Any("values", len(blobberAllocationValues)))
 		err = sc.DB.MultiPutNode(blobberAllocationKeys, blobberAllocationValues)
 		if err != nil {
 			return "", common.NewError("allocation_request_failed", "Failed to store the blobber allocation stats")
 		}
-		err = sc.DB.PutNode(allocationRequest.GetKey(), buff)
+		buff, err := sc.addAllocation(&allocationRequest)
 		if err != nil {
 			return "", common.NewError("allocation_request_failed", "Failed to store the allocation request")
 		}
-		return string(buff), nil
+		return buff, nil
 	}
 	return "", common.NewError("invalid_allocation_request", "Failed storage allocate")
 }
 
-func (sc *StorageSmartContract) Execute(t *transaction.Transaction, funcName string, input []byte, balances c_state.StateContextI) (string, error) {
+func (sc *StorageSmartContract) Execute(t *transaction.Transaction, b *block.Block, funcName string, input []byte, balances c_state.StateContextI) (string, error) {
 
 	// if funcName == "challenge_response" {
 	// 	resp, err := sc.VerifyChallenge(t, input)
@@ -368,6 +513,30 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction, funcName str
 
 	if funcName == "add_blobber" {
 		resp, err := sc.AddBlobber(t, input)
+		if err != nil {
+			return "", err
+		}
+		return resp, nil
+	}
+
+	if funcName == "add_validator" {
+		resp, err := sc.AddValidator(t, input)
+		if err != nil {
+			return "", err
+		}
+		return resp, nil
+	}
+
+	if funcName == "challenge_request" {
+		resp, err := sc.AddChallenge(t, b, input)
+		if err != nil {
+			return "", err
+		}
+		return resp, nil
+	}
+
+	if funcName == "challenge_response" {
+		resp, err := sc.VerifyChallenge(t, input)
 		if err != nil {
 			return "", err
 		}

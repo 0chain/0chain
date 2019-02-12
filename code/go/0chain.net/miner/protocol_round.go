@@ -48,6 +48,7 @@ func (mc *Chain) getRound(ctx context.Context, roundNumber int64) *Round {
 	var mr *Round
 	pr := mc.GetMinerRound(roundNumber - 1)
 	if pr != nil {
+		Logger.Info("Starting next round in getRound", zap.Int64("nextRoundNum", roundNumber))
 		mr = mc.StartNextRound(ctx, pr)
 	} else {
 		var r = round.NewRound(roundNumber)

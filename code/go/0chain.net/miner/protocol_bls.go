@@ -323,7 +323,7 @@ func GetBlsShare(ctx context.Context, r, pr *round.Round) string {
 
 //AddVRFShare - implement the interface for the RoundRandomBeacon protocol
 func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShare) bool {
-	Logger.Info("DKG AddVRFShare", zap.Int64("Round", mr.GetRoundNumber()), zap.Int("Sender", vrfs.GetParty().SetIndex))
+	Logger.Info("DKG AddVRFShare", zap.Int64("Round", mr.GetRoundNumber()), zap.Int("Sender", vrfs.GetParty().SetIndex), zap.String("sender_key", vrfs.GetParty().GetKey()))
 
 	if len(mr.GetVRFShares()) >= GetBlsThreshold() {
 		//ignore VRF shares coming after threshold is reached to avoid locking issues.
@@ -334,6 +334,8 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 	if mr.AddVRFShare(vrfs, GetBlsThreshold()) {
 		mc.ThresholdNumBLSSigReceived(ctx, mr)
 		return true
+	} else {
+		Logger.Info("Could not add VRFshare", zap.Int64("Round", mr.GetRoundNumber()), zap.Int("Sender", vrfs.GetParty().SetIndex))
 	}
 	return false
 }
@@ -343,7 +345,7 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round) {
 
 	if mr.IsVRFComplete() {
 		//BLS has completed already for this round, But, received a BLS message from a node now
-		Logger.Debug("DKG ThresholdNumSigReceived VRF is already completed.", zap.Int64("round", mr.GetRoundNumber()))
+		Logger.Info("DKG ThresholdNumSigReceived VRF is already completed.", zap.Int64("round", mr.GetRoundNumber()))
 		return
 	}
 
@@ -379,13 +381,16 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round) {
 			Logger.Info("DKG RBO Calc ***SLOW****", zap.Int64("Round", mr.GetRoundNumber()), zap.Int("VRF_shares", len(shares)), zap.Any("time_taken", diff))
 
 		}
+	} else {
+		//TODO: remove this log
+		Logger.Info("Not yet reached threshold", zap.Int("vrfShares_num", len(shares)),  zap.Int("threshold", GetBlsThreshold()))
 	}
 }
 
 func (mc *Chain) computeRBO(ctx context.Context, mr *Round, rbo string) {
 	Logger.Debug("DKG computeRBO")
 	if mr.IsVRFComplete() {
-		Logger.Debug("DKG computeRBO RBO is already completed")
+		Logger.Info("DKG computeRBO RBO is already completed")
 		return
 	}
 
