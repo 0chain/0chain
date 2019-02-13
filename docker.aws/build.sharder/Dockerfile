@@ -9,20 +9,31 @@ FROM 0chain/base:${image_tag}
 ADD ./docker.aws/build.sharder/SHARDER_VERSION .
 
 ENV SRC_DIR=/0chain
-ENV GOPATH=$GOPATH:$SRC_DIR/go
 
-RUN go get github.com/gocql/gocql
-
-WORKDIR $SRC_DIR
 
 #Add the source code
-ADD ./code/go/src $SRC_DIR/go/src
+ADD ./code/go $SRC_DIR/go
+
+ENV GO111MODULE=on
+
+WORKDIR $SRC_DIR/go/0chain.net/sharder/sharder
+
+RUN go mod download
 
 # Build it:
-RUN go build 0chain.net/sharder/sharder
+RUN cd $SRC_DIR/go/0chain.net/sharder/sharder && \
+    go get -d && \
+    cd $GOPATH/pkg/mod/github.com/valyala/gozstd* && \
+    make clean libzstd.a && \
+    cd $SRC_DIR/go/0chain.net/sharder/sharder && \
+    go build -v -tags bn256
+
+# Build it:
+RUN cd $SRC_DIR/go/0chain.net/sharder/sharder && \
+    go build -v -tags bn256
 
 WORKDIR $SRC_DIR/bin
-RUN cp $SRC_DIR/sharder $SRC_DIR/bin
+RUN cp $SRC_DIR/go/0chain.net/sharder/sharder/sharder $SRC_DIR/bin
 
 #Run the sharder from the /0chain
 WORKDIR $SRC_DIR
