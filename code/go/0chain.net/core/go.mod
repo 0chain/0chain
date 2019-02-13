@@ -16,7 +16,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.0
 	github.com/herumi/bls v0.0.0-20190208054526-f3054812cb4c
 	github.com/herumi/mcl v0.0.0-20190206070149-4faf7ef2c1eb
-	github.com/koding/cache v0.0.0-20161222233018-4a3175c6b2fe // indirect
+	github.com/koding/cache v0.0.0-20161222233018-4a3175c6b2fe
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pkg/errors v0.8.1 // indirect

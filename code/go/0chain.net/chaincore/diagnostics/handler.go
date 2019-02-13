@@ -122,10 +122,22 @@ func WriteCurrentStatus(w http.ResponseWriter, c *chain.Chain) {
 	fmt.Fprintf(w, "<tr><th class='sheader' colspan='2'>Current Status</th></tr>")
 	fmt.Fprintf(w, "<tr><td>Current Round</td><td>%v</td></tr>", c.CurrentRound)
 	if c.LatestFinalizedBlock != nil {
-		fmt.Fprintf(w, "<tr><td>Finalized Round</td><td>%v</td></tr>", c.LatestFinalizedBlock.Round)
+		fmt.Fprintf(w, "<tr><td>Finalized Round</td><td>%v (%v)</td></tr>", c.LatestFinalizedBlock.Round, len(c.LatestFinalizedBlock.UniqueBlockExtensions))
 	}
 	if c.LatestDeterministicBlock != nil {
-		fmt.Fprintf(w, "<tr><td>Deterministic Finalized Round</td><td>%v</td></tr>", c.LatestDeterministicBlock.Round)
+		fmt.Fprintf(w, "<tr><td>Deterministic Finalized Round</td><td>%v (%v)</td></tr>", c.LatestDeterministicBlock.Round, len(c.LatestDeterministicBlock.UniqueBlockExtensions))
+		if c.LatestDeterministicBlock != c.LatestFinalizedBlock {
+		    var maxUBE int
+		    var maxUBERound int64
+		    for b := c.LatestFinalizedBlock; b != nil && b != c.LatestDeterministicBlock; b = b.PrevBlock {
+			    var ube = len(b.UniqueBlockExtensions)
+			    if ube > maxUBE {
+			  	    maxUBE = ube
+				    maxUBERound = b.Round
+			    }
+		    }
+		    fmt.Fprintf(w, "<tr><td>Next round to be deterministic</td><td>%v (%v)</td></tr>", maxUBERound, maxUBE)
+	    }
 	}
 	fmt.Fprintf(w, "</table>")
 }

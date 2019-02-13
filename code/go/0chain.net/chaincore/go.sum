@@ -40,6 +40,8 @@ github.com/herumi/bls v0.0.0-20190208054526-f3054812cb4c h1:1ceFNav7KMFsfFHFAPM1
 github.com/herumi/bls v0.0.0-20190208054526-f3054812cb4c/go.mod h1:i4wRNUUFF1nNmYFHM9UDl13MGoxEQkMVCLAd82qZz4s=
 github.com/herumi/mcl v0.0.0-20190206070149-4faf7ef2c1eb h1:/XEHGRLve13uJjd0lVzpAMsqVSI2o0pfckF22+CbKz4=
 github.com/herumi/mcl v0.0.0-20190206070149-4faf7ef2c1eb/go.mod h1:XegVNAXVOgj/0XnsW1j7XOe1zOopaaOfqHODIJBo+Ks=
+github.com/koding/cache v0.0.0-20161222233018-4a3175c6b2fe h1:KSZpjJED87+eyddyBzuAz9rexVW5DMSPHwEtuQko/4Q=
+github.com/koding/cache v0.0.0-20161222233018-4a3175c6b2fe/go.mod h1:sh5SGGmQVGUkWDnxevz0I2FJ4TeC18hRPRjKVBMb2kA=
 github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=
 github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
 github.com/kr/text v0.1.0/go.mod h1:4Jbv+DJW3UT/LiOwJeYQe1efqtUx/iVham/4vfdArNI=
