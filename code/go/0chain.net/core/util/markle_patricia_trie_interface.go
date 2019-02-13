@@ -33,6 +33,8 @@ type MerklePatriciaTrieI interface {
 
 	Iterate(ctx context.Context, handler MPTIteratorHandler, visitNodeTypes byte) error
 
+	IterateFrom(ctx context.Context, node Key, handler MPTIteratorHandler, visitNodeTypes byte) error
+
 	GetChangeCollector() ChangeCollectorI
 	ResetChangeCollector(root Key)
 	SaveChanges(ndb NodeDB, includeDeletes bool) error

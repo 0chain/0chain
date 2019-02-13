@@ -203,6 +203,12 @@ func (mpt *MerklePatriciaTrie) Iterate(ctx context.Context, handler MPTIteratorH
 	return mpt.iterate(ctx, Path{}, rootKey, handler, visitNodeTypes)
 }
 
+/*IterateFrom - iterate the trie from a given node */
+func (mpt *MerklePatriciaTrie) IterateFrom(ctx context.Context, node Key, handler MPTIteratorHandler, visitNodeTypes byte) error {
+	//NOTE: we don't have the path to this node. So, the handler gets the partial path starting from this node
+	return mpt.iterate(ctx, Path{}, node, handler, visitNodeTypes)
+}
+
 /*PrettyPrint - print this trie */
 func (mpt *MerklePatriciaTrie) PrettyPrint(w io.Writer) error {
 	return mpt.pp(w, Key(mpt.Root), 0, false)

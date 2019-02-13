@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"0chain.net/chaincore/smartcontractstate"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
-	"0chain.net/smartcontract/smartcontractstate"
 )
 
 var ALL_BLOBBERS_KEY = smartcontractstate.Key("all_blobbers")

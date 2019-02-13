@@ -10,9 +10,9 @@ import (
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/smartcontractinterface"
+	"0chain.net/chaincore/smartcontractstate"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/smartcontract/smartcontractstate"
 
 	. "0chain.net/core/logging"
 )
