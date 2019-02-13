@@ -3,9 +3,9 @@ package zrc20sc
 import (
 	"encoding/json"
 
+	"0chain.net/chaincore/smartcontractstate"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
-	"0chain.net/smartcontract/smartcontractstate"
 )
 
 type tokenNode struct {

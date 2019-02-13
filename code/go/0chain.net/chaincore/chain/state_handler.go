@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"0chain.net/smartcontract/smartcontractstate"
+	"0chain.net/chaincore/smartcontractstate"
 
 	"0chain.net/core/common"
 )
