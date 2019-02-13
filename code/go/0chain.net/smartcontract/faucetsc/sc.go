@@ -171,6 +171,7 @@ func (fc *FaucetSmartContract) getGlobalVariables(t *transaction.Transaction) *g
 	gn.Global_reset = config.SmartContractConfig.GetDuration("smart_contracts.faucetsc.global_reset")
 	gn.Used = 0
 	gn.StartTime = common.ToTime(t.CreationDate)
+	fc.DB.PutNode(gn.getKey(), gn.encode())
 	return &gn
 }
 
