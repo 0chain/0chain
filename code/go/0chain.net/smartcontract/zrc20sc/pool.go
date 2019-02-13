@@ -3,12 +3,12 @@ package zrc20sc
 import (
 	"encoding/json"
 
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
+	"0chain.net/chaincore/smartcontractstate"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/smartcontract/smartcontractstate"
+	"0chain.net/core/common"
+	"0chain.net/core/datastore"
 )
 
 type zrc20Pool struct {

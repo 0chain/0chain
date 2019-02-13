@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"testing"
 
-	"0chain.net/chaincore/encryption"
+	"0chain.net/core/encryption"
 
 	"github.com/herumi/bls/ffi/go/bls"
 	"github.com/stretchr/testify/assert"
