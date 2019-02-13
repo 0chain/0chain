@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"os"
@@ -202,7 +203,6 @@ func GetOwnerWallet(c *chain.Chain) *wallet.Wallet {
 
 /*GenerateClients - generate the given number of clients */
 func GenerateClients(c *chain.Chain, numClients int) {
-	ownerWallet := GetOwnerWallet(c)
 	// rs := rand.NewSource(time.Now().UnixNano())
 	// prng := rand.New(rs)
 
@@ -237,15 +237,26 @@ func GenerateClients(c *chain.Chain, numClients int) {
 	// 		//panic(err)
 	// 	}
 	// }
+	go RefillFaucet(c, tctx)
+	Logger.Info("generation of wallets complete", zap.Int("wallets", len(wallets)))
+}
+
+func RefillFaucet(c *chain.Chain, ctx context.Context) {
+	ownerWallet := GetOwnerWallet(c)
 	viper.SetDefault("development.faucet.refill_amount", 1000000000000000)
 	var refillAmount = viper.GetInt64("development.faucet.refill_amount")
-	txn := ownerWallet.CreateSendTransaction(smartcontract.FAUCET_CONTRACT_ADDRESS, refillAmount, "refilling faucet smart contract")
-	_, err := transaction.PutTransaction(tctx, txn)
-	if err != nil {
-		fmt.Printf("error:%v: %v\n", time.Now(), err)
-		//panic(err)
+	refilled := false
+	for !refilled {
+		txn := ownerWallet.CreateSendTransaction(smartcontract.FAUCET_CONTRACT_ADDRESS, refillAmount, "refilling faucet smart contract")
+		_, err := transaction.PutTransaction(ctx, txn)
+		time.Sleep(time.Second * 3)
+		if err == nil {
+			_, err := c.GetState(c.LatestFinalizedBlock, smartcontract.FAUCET_CONTRACT_ADDRESS)
+			if err == nil {
+				refilled = true
+			}
+		}
 	}
-	Logger.Info("generation of wallets complete", zap.Int("wallets", len(wallets)))
 }
 
 //SetTxnGenRate - the txn generation rate
