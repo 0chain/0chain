@@ -15,11 +15,8 @@ import (
 
 //StateChange - an entity that captures all changes to the state by a given block
 type StateChange struct {
-	Hash    string      `json:"block"`
-	Version string      `json:"version"`
-	Nodes   []util.Node `json:"_"`
-	mndb    *util.MemoryNodeDB
-	root    util.Node
+	Hash string `json:"block"`
+	PartialState
 }
 
 //NewBlockStateChange - if the block state computation is successfully completed, provide the changes
@@ -33,15 +30,6 @@ func NewBlockStateChange(b *Block) *StateChange {
 	}
 	bsc.ComputeProperties()
 	return bsc
-}
-
-//NewNodeDB - create a node db from the changes
-func (sc *StateChange) newNodeDB() *util.MemoryNodeDB {
-	mndb := util.NewMemoryNodeDB()
-	for _, n := range sc.Nodes {
-		mndb.PutNode(n.GetHashBytes(), n)
-	}
-	return mndb
 }
 
 var statChangeEntityMetadata *datastore.EntityMetadataImpl
@@ -68,21 +56,6 @@ func (sc *StateChange) SetKey(key datastore.Key) {
 	sc.Hash = datastore.ToString(key)
 }
 
-//ComputeProperties - implement interface
-func (sc *StateChange) ComputeProperties() {
-	mndb := sc.newNodeDB()
-	root := mndb.ComputeRoot()
-	if root != nil {
-		sc.mndb = mndb
-		sc.root = root
-	}
-}
-
-//Validate - implement interface
-func (sc *StateChange) Validate(ctx context.Context) error {
-	return sc.mndb.Validate(sc.root)
-}
-
 /*Read - store read */
 func (sc *StateChange) Read(ctx context.Context, key datastore.Key) error {
 	return sc.GetEntityMetadata().GetStore().Read(ctx, key, sc)
@@ -106,16 +79,6 @@ func SetupStateChange(store datastore.Store) {
 	statChangeEntityMetadata.Store = store
 	statChangeEntityMetadata.IDColumnName = "hash"
 	datastore.RegisterEntityMetadata("block_state_change", statChangeEntityMetadata)
-}
-
-/*GetRoot - get the root of this set of changes */
-func (sc *StateChange) GetRoot() util.Node {
-	return sc.root
-}
-
-/*GetNodeDB - get the node db containing all the changes */
-func (sc *StateChange) GetNodeDB() util.NodeDB {
-	return sc.mndb
 }
 
 //MarshalJSON - implement Marshaler interface
