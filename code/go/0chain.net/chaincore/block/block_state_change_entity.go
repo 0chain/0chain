@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 
+	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	. "0chain.net/core/logging"
@@ -16,7 +17,7 @@ import (
 //StateChange - an entity that captures all changes to the state by a given block
 type StateChange struct {
 	Hash string `json:"block"`
-	PartialState
+	state.PartialState
 }
 
 //NewBlockStateChange - if the block state computation is successfully completed, provide the changes
