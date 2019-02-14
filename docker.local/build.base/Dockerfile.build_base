@@ -1,0 +1,27 @@
+# docker.local
+FROM golang:1.11.4-alpine3.8
+RUN apk add bash build-base grep git
+
+# Install RocksDB
+RUN apk add linux-headers perl zlib-dev bzip2-dev lz4-dev snappy-dev zstd-libs zstd-dev jemalloc jemalloc-dev && \
+    cd /tmp && \
+    wget -O - https://github.com/facebook/rocksdb/archive/v5.17.2.tar.gz | tar xz && \
+    cd /tmp/rocksdb* && \
+    make -j $(nproc) shared_lib && \
+    cp -P librocksdb.so* /usr/local/lib && \
+    mkdir -p /usr/local/include && \
+    cp -r include/* /usr/local/include && \
+    rm -R /tmp/rocksdb* && \
+    apk del linux-headers perl
+
+# Install Herumi's cryptography
+RUN apk add gmp gmp-dev openssl-dev && \
+    cd /tmp && \
+    wget -O - https://github.com/herumi/mcl/archive/4faf7ef2c1eb.tar.gz | tar xz && \
+    wget -O - https://github.com/herumi/bls/archive/f3054812cb4c.tar.gz | tar xz && \
+    mv mcl* mcl && \
+    mv bls* bls && \
+    make -C mcl -j $(nproc) install && \
+    make -C bls -j $(nproc) install && \
+    rm -R /tmp/mcl && \
+    rm -R /tmp/bls
