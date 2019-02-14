@@ -331,8 +331,8 @@ func (c *Chain) rebaseState(lfb *block.Block) {
 }
 
 //ExecuteSmartContract - executes the smart contract for the transaction
-func (c *Chain) ExecuteSmartContract(t *transaction.Transaction, b *block.Block, ndb smartcontractstate.SCDB, balances bcstate.StateContextI) (string, error) {
-	output, err := smartcontract.ExecuteSmartContract(common.GetRootContext(), t, b, ndb, balances)
+func (c *Chain) ExecuteSmartContract(t *transaction.Transaction, ndb smartcontractstate.SCDB, balances bcstate.StateContextI) (string, error) {
+	output, err := smartcontract.ExecuteSmartContract(common.GetRootContext(), t, ndb, balances)
 	return output, err
 }
 
@@ -351,7 +351,7 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 	case transaction.TxnTypeSmartContract:
 		mndb := smartcontractstate.NewMemorySCDB()
 		ndb := smartcontractstate.NewPipedSCDB(mndb, b.SCStateDB, false)
-		output, err := c.ExecuteSmartContract(txn, b, ndb, sctx)
+		output, err := c.ExecuteSmartContract(txn, ndb, sctx)
 		if err != nil {
 			Logger.Error("Smart contract execution returned error", zap.Any("error", err), zap.Any("transaction", txn.Hash))
 			return false

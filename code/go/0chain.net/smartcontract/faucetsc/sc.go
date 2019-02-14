@@ -3,7 +3,6 @@ package faucetsc
 import (
 	"fmt"
 
-	"0chain.net/chaincore/block"
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/smartcontractinterface"
@@ -175,7 +174,7 @@ func (fc *FaucetSmartContract) getGlobalVariables(t *transaction.Transaction) *g
 	return &gn
 }
 
-func (fc *FaucetSmartContract) Execute(t *transaction.Transaction, b *block.Block, funcName string, inputData []byte, balances c_state.StateContextI) (string, error) {
+func (fc *FaucetSmartContract) Execute(t *transaction.Transaction, funcName string, inputData []byte, balances c_state.StateContextI) (string, error) {
 	gn := fc.getGlobalVariables(t)
 	switch funcName {
 	case "updateLimits":
