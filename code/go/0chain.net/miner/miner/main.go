@@ -11,24 +11,24 @@ import (
 	"strings"
 	"time"
 
-	"0chain.net/miner"
 	"0chain.net/chaincore/threshold/bls"
+	"0chain.net/miner"
 
 	_ "net/http/pprof"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/client"
-	"0chain.net/core/common"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/diagnostics"
-	"0chain.net/core/logging"
-	. "0chain.net/core/logging"
-	"0chain.net/core/memorystore"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
+	"0chain.net/core/common"
+	"0chain.net/core/logging"
+	. "0chain.net/core/logging"
+	"0chain.net/core/memorystore"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
@@ -99,7 +99,7 @@ func main() {
 		reader.Close()
 	} else {
 		mc.ReadNodePools(nodesConfigFile)
-		Logger.Info("nodes",zap.Int("miners",mc.Miners.Size()),zap.Int("sharders",mc.Sharders.Size()))
+		Logger.Info("nodes", zap.Int("miners", mc.Miners.Size()), zap.Int("sharders", mc.Sharders.Size()))
 	}
 	if node.Self.ID == "" {
 		Logger.Panic("node definition for self node doesn't exist")

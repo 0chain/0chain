@@ -624,7 +624,7 @@ func (c *Chain) DeleteRoundsBelow(ctx context.Context, roundNumber int64) {
 	defer c.roundsMutex.Unlock()
 	rounds := make([]round.RoundI, 0, 1)
 	for _, r := range c.rounds {
-		if r.GetRoundNumber() < roundNumber-10 {
+		if r.GetRoundNumber() < roundNumber-10 && r.GetRoundNumber() != 0 {
 			rounds = append(rounds, r)
 		}
 	}
