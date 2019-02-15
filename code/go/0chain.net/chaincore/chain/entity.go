@@ -427,7 +427,7 @@ func (c *Chain) DeleteBlocksBelowRound(round int64) {
 	ts := common.Now() - 60
 	blocks := make([]*block.Block, 0, 1)
 	for _, b := range c.blocks {
-		if b.Round < round && b.CreationDate < ts {
+		if b.Round < round && b.CreationDate < ts && b.Round < c.LatestDeterministicBlock.Round {
 			Logger.Debug("found block to delete", zap.Int64("round", round), zap.Int64("block_round", b.Round), zap.Int64("current_round", c.CurrentRound), zap.Int64("lf_round", c.LatestFinalizedBlock.Round))
 			blocks = append(blocks, b)
 		}

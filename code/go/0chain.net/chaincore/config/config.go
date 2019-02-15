@@ -43,6 +43,17 @@ func SetupConfig() {
 	setupDevConfig()
 }
 
+func SetupDefaultSmartContractConfig() {
+	SmartContractConfig.SetDefault("smart_contracts.faucetsc.pour_limit", 10000)
+	SmartContractConfig.SetDefault("smart_contracts.faucetsc.periodic_limit", 1000000)
+	SmartContractConfig.SetDefault("smart_contracts.faucetsc.global_limit", 100000000)
+	SmartContractConfig.SetDefault("smart_contracts.faucetsc.individual_reset", "2h")
+	SmartContractConfig.SetDefault("smart_contracts.faucetsc.global_reset", "24h")
+	SmartContractConfig.SetDefault("smart_contracts.interestpoolsc.min_lock", 100)
+	SmartContractConfig.SetDefault("smart_contracts.interestpoolsc.lock_period", "2160h")
+	SmartContractConfig.SetDefault("smart_contracts.interestpoolsc.interest_rate", 0.01)
+}
+
 /*SetupConfig - setup the configuration system */
 func SetupSmartContractConfig() {
 	SmartContractConfig = viper.New()
