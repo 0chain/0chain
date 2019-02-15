@@ -21,7 +21,8 @@ RUN apk add gmp gmp-dev openssl-dev && \
     wget -O - https://github.com/herumi/bls/archive/f3054812cb4c.tar.gz | tar xz && \
     mv mcl* mcl && \
     mv bls* bls && \
-    make -C mcl -j $(nproc) install && \
+    make -C mcl -j $(nproc) lib/libmclbn256.so install && \
+    cp mcl/lib/libmclbn256.so /usr/local/lib && \
     make -C bls -j $(nproc) install && \
     rm -R /tmp/mcl && \
     rm -R /tmp/bls

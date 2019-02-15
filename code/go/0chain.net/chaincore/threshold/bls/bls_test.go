@@ -281,7 +281,8 @@ func testRecoverGrpSignature(t int, n int, test *testing.T) {
 	//partyMap has the partyID and its corresponding Grp sign share
 	partyMap := make(map[PartyID]Sign, n)
 
-	for rNumber <= 100000 {
+	//for rNumber <= 100000 {
+	for rNumber <= 100 {
 		fmt.Printf("*Starting round %v)\n", rNumber)
 		for i := 0; i < n; i++ {
 
