@@ -194,7 +194,10 @@ func initEntities() {
 	persistenceStorage := persistencestore.GetStorageProvider()
 	transaction.SetupTxnSummaryEntity(persistenceStorage)
 	transaction.SetupTxnConfirmationEntity(persistenceStorage)
-	setupsc.SetupSmartContracts()
+
+	if config.DevConfiguration.SmartContract {
+		setupsc.SetupSmartContracts()
+	}
 }
 
 func initN2NHandlers() {

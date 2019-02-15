@@ -193,7 +193,9 @@ func initEntities() {
 	bls.SetupDKGEntity()
 	bls.SetupBLSEntity()
 
-	setupsc.SetupSmartContracts()
+	if config.DevConfiguration.SmartContract {
+		setupsc.SetupSmartContracts()
+	}
 }
 
 func initHandlers() {

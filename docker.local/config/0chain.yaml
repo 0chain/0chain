@@ -9,6 +9,7 @@ logging:
 development:
   state: true
   dkg: true
+  smart_contract: true
   txn_generation:
     wallets: 500
     transactions: 70
