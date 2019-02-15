@@ -157,6 +157,11 @@ func (ps *PartialState) UnmarshalPartialState(obj map[string]interface{}) error 
 //MarshalJSON - implement Marshaler interface
 func (ps *PartialState) MarshalJSON() ([]byte, error) {
 	var data = make(map[string]interface{})
+	return ps.MartialPartialState(data)
+}
+
+//MartialPartialState - martal the partial state
+func (ps *PartialState) MartialPartialState(data map[string]interface{}) ([]byte, error) {
 	data["root"] = ps.Hash
 	data["version"] = ps.Version
 	nodes := make([][]byte, len(ps.Nodes))

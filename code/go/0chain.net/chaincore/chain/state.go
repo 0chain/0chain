@@ -217,7 +217,7 @@ func (c *Chain) GetBlockStateChange(b *block.Block) {
 	if bsc == nil {
 		return
 	}
-	Logger.Error("get block state change", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Int8("state_status", b.GetStateStatus()))
+	Logger.Info("get block state change", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Int8("state_status", b.GetStateStatus()))
 	err = c.ApplyBlockStateChange(b, bsc)
 	if err != nil {
 		Logger.Error("get block state change", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Error(err))
@@ -242,7 +242,7 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 		if !ok {
 			return nil, datastore.ErrInvalidEntity
 		}
-		if rsc.Hash != b.Hash {
+		if rsc.Block != b.Hash {
 			Logger.Error("get block state change - hash mismatch error", zap.Int64("round", b.Round), zap.String("block", b.Hash))
 			return nil, block.ErrBlockHashMismatch
 		}
@@ -275,7 +275,7 @@ func (c *Chain) ApplyBlockStateChange(b *block.Block, bsc *block.StateChange) er
 }
 
 func (c *Chain) applyBlockStateChange(b *block.Block, bsc *block.StateChange) error {
-	if b.Hash != bsc.Hash {
+	if b.Hash != bsc.Block {
 		return block.ErrBlockHashMismatch
 	}
 	root := bsc.GetRoot()

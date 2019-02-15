@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 
 	"0chain.net/chaincore/state"
+	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	. "0chain.net/core/logging"
 	"0chain.net/core/util"
@@ -14,12 +15,14 @@ import (
 //StateChange - an entity that captures all changes to the state by a given block
 type StateChange struct {
 	state.PartialState
+	Block string `json:"block"`
 }
 
 //NewBlockStateChange - if the block state computation is successfully completed, provide the changes
 func NewBlockStateChange(b *Block) *StateChange {
 	bsc := datastore.GetEntityMetadata("block_state_change").Instance().(*StateChange)
-	bsc.Hash = b.Hash
+	bsc.Block = b.Hash
+	bsc.SetKey(string(b.ClientState.GetRoot()))
 	changes := b.ClientState.GetChangeCollector().GetChanges()
 	bsc.Nodes = make([]util.Node, len(changes))
 	for idx, change := range changes {
@@ -81,20 +84,8 @@ func SetupStateChange(store datastore.Store) {
 //MarshalJSON - implement Marshaler interface
 func (sc *StateChange) MarshalJSON() ([]byte, error) {
 	var data = make(map[string]interface{})
-	data["root"] = sc.Hash
-	data["version"] = sc.Version
-	nodes := make([][]byte, len(sc.Nodes))
-	for idx, nd := range sc.Nodes {
-		nodes[idx] = nd.Encode()
-	}
-	data["nodes"] = nodes
-	bytes, err := json.Marshal(data)
-	if err != nil {
-		Logger.Error("marshal JSON - state change", zap.String("block", sc.Hash), zap.Error(err))
-	} else {
-		Logger.Info("marshal JSON - state change", zap.String("block", sc.Hash))
-	}
-	return bytes, err
+	data["block"] = sc.Block
+	return sc.MartialPartialState(data)
 }
 
 //UnmarshalJSON - implement Unmarshaler interface
@@ -104,6 +95,15 @@ func (sc *StateChange) UnmarshalJSON(data []byte) error {
 	if err != nil {
 		Logger.Error("unmarshal json - state change", zap.Error(err))
 		return err
+	}
+	if block, ok := obj["block"]; ok {
+		if sc.Block, ok = block.(string); !ok {
+			Logger.Error("unmarshal json - invalid block hash", zap.Any("obj", obj))
+			return common.ErrInvalidData
+		}
+	} else {
+		Logger.Error("unmarshal json - invalid block hash", zap.Any("obj", obj))
+		return common.ErrInvalidData
 	}
 	return sc.UnmarshalPartialState(obj)
 }
