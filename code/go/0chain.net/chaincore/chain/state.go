@@ -7,8 +7,8 @@ import (
 	"math"
 	"time"
 
+	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/smartcontractstate"
-	"0chain.net/smartcontract/smartcontract"
 
 	"0chain.net/chaincore/block"
 	bcstate "0chain.net/chaincore/chain/state"

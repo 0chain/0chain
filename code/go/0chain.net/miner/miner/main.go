@@ -29,6 +29,7 @@ import (
 	"0chain.net/core/logging"
 	. "0chain.net/core/logging"
 	"0chain.net/core/memorystore"
+	"0chain.net/smartcontract/setupsc"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
@@ -191,6 +192,8 @@ func initEntities() {
 
 	bls.SetupDKGEntity()
 	bls.SetupBLSEntity()
+
+	setupsc.SetupSmartContracts()
 }
 
 func initHandlers() {

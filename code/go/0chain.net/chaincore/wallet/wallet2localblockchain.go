@@ -6,9 +6,9 @@ import (
 	"math/rand"
 
 	"0chain.net/chaincore/client"
-	"0chain.net/core/datastore"
-	"0chain.net/smartcontract/smartcontract"
 	"0chain.net/chaincore/transaction"
+	"0chain.net/core/datastore"
+	"0chain.net/smartcontract/faucetsc"
 )
 
 /*Register - register a wallet using the server side api */
@@ -55,7 +55,7 @@ func (w *Wallet) CreateSendTransaction(toClient string, value int64, msg string)
 func (w *Wallet) CreateFaucetPourTransaction(value int64) *transaction.Transaction {
 	txn := transactionMetadataProvider.Instance().(*transaction.Transaction)
 	txn.ClientID = w.ClientID
-	txn.ToClientID = smartcontract.FAUCET_CONTRACT_ADDRESS
+	txn.ToClientID = faucetsc.ADDRESS
 	txn.Value = value
 	txn.TransactionData = `{"name":"pour","input":{}}`
 	txn.TransactionType = transaction.TxnTypeSmartContract

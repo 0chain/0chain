@@ -9,11 +9,18 @@ import (
 	"0chain.net/core/datastore"
 )
 
+const (
+	Seperator = smartcontractinterface.Seperator
+	ADDRESS   = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d5"
+)
+
 type ZRC20SmartContract struct {
-	smartcontractinterface.SmartContract
+	*smartcontractinterface.SmartContract
 }
 
-const Seperator = smartcontractinterface.Seperator
+func (zrc *ZRC20SmartContract) SetSC(sc *smartcontractinterface.SmartContract) {
+	zrc.SmartContract = sc
+}
 
 func (zrc *ZRC20SmartContract) createToken(t *transaction.Transaction, inputData []byte) (string, error) {
 	var newRequest tokenNode

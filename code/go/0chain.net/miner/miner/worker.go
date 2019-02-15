@@ -22,7 +22,7 @@ import (
 	"0chain.net/core/datastore"
 	. "0chain.net/core/logging"
 	"0chain.net/core/memorystore"
-	"0chain.net/smartcontract/smartcontract"
+	"0chain.net/smartcontract/faucetsc"
 )
 
 var (
@@ -247,11 +247,11 @@ func RefillFaucet(c *chain.Chain, ctx context.Context) {
 	var refillAmount = viper.GetInt64("development.faucet.refill_amount")
 	refilled := false
 	for !refilled {
-		txn := ownerWallet.CreateSendTransaction(smartcontract.FAUCET_CONTRACT_ADDRESS, refillAmount, "refilling faucet smart contract")
+		txn := ownerWallet.CreateSendTransaction(faucetsc.ADDRESS, refillAmount, "refilling faucet smart contract")
 		_, err := transaction.PutTransaction(ctx, txn)
 		time.Sleep(time.Second * 3)
 		if err == nil {
-			_, err := c.GetState(c.LatestFinalizedBlock, smartcontract.FAUCET_CONTRACT_ADDRESS)
+			_, err := c.GetState(c.LatestFinalizedBlock, faucetsc.ADDRESS)
 			if err == nil {
 				refilled = true
 			}

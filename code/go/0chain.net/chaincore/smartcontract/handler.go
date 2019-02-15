@@ -3,42 +3,23 @@ package smartcontract
 import (
 	"context"
 	"encoding/json"
-	
+
 	c_state "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/smartcontractstate"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	. "0chain.net/core/logging"
-	"0chain.net/smartcontract/faucetsc"
-	"0chain.net/smartcontract/storagesc"
-	"0chain.net/smartcontract/zrc20sc"
 	"go.uber.org/zap"
 )
 
-const (
-	STORAGE_CONTRACT_ADDRESS = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7"
-	FAUCET_CONTRACT_ADDRESS  = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3"
-	ZRC20_CONTRACT_ADDRESS   = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d5"
-)
+var ContractMap = map[string]sci.SmartContractInterface{}
 
 func getSmartContract(t *transaction.Transaction, ndb smartcontractstate.SCDB) sci.SmartContractInterface {
-	switch t.ToClientID {
-	case STORAGE_CONTRACT_ADDRESS:
-		storageSC := &storagesc.StorageSmartContract{}
-		storageSC.DB = smartcontractstate.NewSCState(ndb, STORAGE_CONTRACT_ADDRESS)
-		storageSC.ID = STORAGE_CONTRACT_ADDRESS
-		return storageSC
-	case FAUCET_CONTRACT_ADDRESS:
-		faucetSC := &faucetsc.FaucetSmartContract{}
-		faucetSC.DB = smartcontractstate.NewSCState(ndb, FAUCET_CONTRACT_ADDRESS)
-		faucetSC.ID = FAUCET_CONTRACT_ADDRESS
-		return faucetSC
-	case ZRC20_CONTRACT_ADDRESS:
-		zrc20SC := &zrc20sc.ZRC20SmartContract{}
-		zrc20SC.DB = smartcontractstate.NewSCState(ndb, ZRC20_CONTRACT_ADDRESS)
-		zrc20SC.ID = ZRC20_CONTRACT_ADDRESS
-		return zrc20SC
+	contracti, ok := ContractMap[t.ToClientID]
+	if ok {
+		contracti.SetSC(sci.NewSC(smartcontractstate.NewSCState(ndb, t.ToClientID), t.ToClientID))
+		return contracti
 	}
 	return nil
 }
