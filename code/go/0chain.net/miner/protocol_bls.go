@@ -135,7 +135,7 @@ func sendDKG() {
 
 	m2m := mc.Miners
 
-	shuffledNodes := m2m.GetShuffledNodes()
+	shuffledNodes := m2m.GetRandomNodes(m2m.Size())
 
 	for _, n := range shuffledNodes {
 

@@ -54,10 +54,6 @@ func (np *Pool) GetNode(id string) *Node {
 
 var none = make([]*Node, 0)
 
-// GetShuffledNodes shuffle the nodes in the given pool 
-func (np *Pool) GetShuffledNodes() []*Node {
-	return np.shuffleNodes()
-}
 
 func (np *Pool) shuffleNodes() []*Node {
 	size := np.Size()
