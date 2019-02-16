@@ -55,6 +55,7 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 	d2 := time.Since(t1)
 	StatePruneDeleteTimer.Update(d2)
 	ps := util.GetPruneStats(pctx)
+	c.pruneStats = ps
 	logf := Logger.Info
 	if d1 > time.Second || d2 > time.Second {
 		logf = Logger.Error

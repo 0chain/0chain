@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"0chain.net/chaincore/chain"
+	"0chain.net/core/util"
 	"0chain.net/core/common"
 	"0chain.net/core/logging"
 	metrics "github.com/rcrowley/go-metrics"
@@ -140,4 +141,17 @@ func WriteCurrentStatus(w http.ResponseWriter, c *chain.Chain) {
 	    }
 	}
 	fmt.Fprintf(w, "</table>")
+}
+
+//WritePruneStats - write the last prune stats
+func WritePruneStats(w http.ResponseWriter, ps *util.PruneStats) {
+   fmt.Fprintf(w,"<table>")
+   fmt.Fprintf(w,"<tr><th class='sheader' colspan='2'>Prune Stats</th></tr>")
+   fmt.Fprintf(w,"<tr><td>Pruned Below Round</td><td class='number'>%v</td></tr>",ps.Version)
+   fmt.Fprintf(w,"<tr><td>Missing Nodes</td><td class='number'>%v</td></tr>",ps.MissingNodes)
+   fmt.Fprintf(w,"<tr><td>Total nodes</td><td class='number'>%v</td></tr>",ps.Total)
+   fmt.Fprintf(w,"<tr><td>Leaf Nodes</td><td class='number'>%v</td></tr>",ps.Leaves)
+   fmt.Fprintf(w,"<tr><td>Nodes Below Pruned Round</td><td class='number'>%v</td></tr>",ps.BelowVersion)
+   fmt.Fprintf(w,"<tr><td>Deleted Nodes</td><td class='number'>%v</td></tr>",ps.Deleted)
+   fmt.Fprintf(w,"</table>")
 }

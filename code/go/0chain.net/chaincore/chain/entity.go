@@ -124,6 +124,8 @@ type Chain struct {
 	crtCount int64 // Continuous/Current Round Timeout Count
 
 	fetchedNotarizedBlockHandler FetchedNotarizedBlockHandler
+
+	pruneStats *util.PruneStats
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
@@ -780,4 +782,8 @@ func (c *Chain) CanReplicateBlock(b *block.Block) bool {
 //SetFetchedNotarizedBlockHandler - setter for FetchedNotarizedBlockHandler
 func (c *Chain) SetFetchedNotarizedBlockHandler(fnbh FetchedNotarizedBlockHandler) {
 	c.fetchedNotarizedBlockHandler = fnbh
+}
+
+func (c *Chain) GetPruneStats() *util.PruneStats {
+	return c.pruneStats
 }

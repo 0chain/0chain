@@ -84,4 +84,9 @@ func ChainStatsHandler(w http.ResponseWriter, r *http.Request) {
 	diagnostics.WriteTimerStatistics(w, c, chain.StatePruneDeleteTimer, 1000000.0)
 	fmt.Fprintf(w, "</tr>")
 	fmt.Fprintf(w, "</table>")
+
+	fmt.Fprintf(w, "<br>")
+	if c.GetPruneStats() != nil {
+		diagnostics.WritePruneStats(w,c.GetPruneStats())
+	}
 }
