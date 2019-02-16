@@ -103,11 +103,17 @@ func TransactionGenerator(c *chain.Chain) {
 		if sc.CurrentRound%100 == 0 {
 			Logger.Info("background transactions generation", zap.Duration("frequency", waitTime), zap.Float64("blocks", blocksPerMiner))
 		}
+		var timerCount int64
 		select {
 		case <-ctx.Done():
+			Logger.Info("transaction generation", zap.Any("timer_count", timerCount))
 			return
 		case <-timer.C:
+			timerCount++
 			txnCount := int32(txnMetadataProvider.GetStore().GetCollectionSize(ctx, txnMetadataProvider, collectionName))
+			if timerCount%300 == 0 {
+				Logger.Info("transaction generation", zap.Any("txn_count", txnCount), zap.Any("blocks_per_miner", blocksPerMiner), zap.Any("num_txns", numTxns))
+			}
 			if float64(txnCount) >= blocksPerMiner*float64(8*numTxns) {
 				continue
 			}
