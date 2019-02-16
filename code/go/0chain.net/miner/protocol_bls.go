@@ -33,7 +33,8 @@ var roundMap = make(map[int64]map[int]string)
 
 var isDkgEnabled bool
 var k, n int
-var IsDkgDone bool = false
+//IsDkgDone an indicator for BC to continue with block generation
+var IsDkgDone = false
 var selfInd int
 
 var mutex = &sync.RWMutex{}
@@ -67,7 +68,7 @@ func StartDKG(ctx context.Context) {
 
 			secShare, _ := dg.ComputeDKGKeyShare(forID)
 
-			Logger.Debug("ComputeDKGKeyShare ", zap.String("secShare", secShare.GetDecString()), zap.Int("miner index", node.SetIndex))
+			//Logger.Debug("ComputeDKGKeyShare ", zap.String("secShare", secShare.GetDecString()), zap.Int("miner index", node.SetIndex))
 			minerShares[node.GetKey()] = secShare
 			if self.SetIndex == node.SetIndex {
 				recShares = append(recShares, secShare.GetDecString())
@@ -134,7 +135,9 @@ func sendDKG() {
 
 	m2m := mc.Miners
 
-	for _, n := range m2m.Nodes {
+	shuffledNodes := m2m.GetShuffledNodes()
+
+	for _, n := range shuffledNodes {
 
 		if n != nil {
 			if selfInd == n.SetIndex {
@@ -166,7 +169,7 @@ func SendDKGShare(n *node.Node) error {
 	dkg := &bls.Dkg{
 		Share: secShare.GetDecString()}
 	dkg.SetKey(datastore.ToKey("1"))
-	Logger.Debug("@sending DKG share", zap.Int("idx", n.SetIndex), zap.Any("share", dkg.Share))
+	//Logger.Debug("sending DKG share", zap.Int("idx", n.SetIndex), zap.Any("share", dkg.Share))
 	_, err := m2m.SendTo(DKGShareSender(dkg), n.GetKey())
 	return err
 }
@@ -227,7 +230,6 @@ func AppendDKGSecShares(nodeID int, share string) {
 		Logger.Error("DKG is not enabled. Why are we here?")
 		return
 	}
-	Logger.Debug("Share received", zap.Int("NodeId: ", nodeID), zap.String("Share: ", share))
 
 	if recSharesMap != nil {
 		if _, ok := recSharesMap[nodeID]; ok {
@@ -312,7 +314,7 @@ func GetBlsShare(ctx context.Context, r, pr *round.Round) string {
 
 	bs.Msg = strconv.FormatInt(r.GetRoundNumber(), 10) + rbOutput
 
-	Logger.Debug("Bls sign share calculated for ", zap.Int64("round", r.GetRoundNumber()), zap.String("rbo_output", rbOutput), zap.Any("bls_msg", bs.Msg), zap.String("sec_key_share_gp", bs.SecKeyShareGroup.GetDecString()))
+	Logger.Debug("Bls sign share calculated for ", zap.Int64("round", r.GetRoundNumber()), zap.String("rbo_output", rbOutput), zap.Any("bls_msg", bs.Msg))
 
 	sigShare := bs.SignMsg()
 	return sigShare.GetHexString()
