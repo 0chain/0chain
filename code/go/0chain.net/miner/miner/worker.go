@@ -83,6 +83,7 @@ func TransactionGenerator(c *chain.Chain) {
 
 	numGenerators := sc.NumGenerators
 	numMiners := sc.Miners.Size()
+	var timerCount int64
 	for true {
 		numTxns = GetTxnGenRate()
 		numWorkerTxns := numTxns / int32(numWorkers)
@@ -103,7 +104,6 @@ func TransactionGenerator(c *chain.Chain) {
 		if sc.CurrentRound%100 == 0 {
 			Logger.Info("background transactions generation", zap.Duration("frequency", waitTime), zap.Float64("blocks", blocksPerMiner))
 		}
-		var timerCount int64
 		select {
 		case <-ctx.Done():
 			Logger.Info("transaction generation", zap.Any("timer_count", timerCount))
