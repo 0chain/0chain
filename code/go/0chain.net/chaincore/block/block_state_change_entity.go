@@ -22,7 +22,7 @@ type StateChange struct {
 func NewBlockStateChange(b *Block) *StateChange {
 	bsc := datastore.GetEntityMetadata("block_state_change").Instance().(*StateChange)
 	bsc.Block = b.Hash
-	bsc.SetKey(string(b.ClientState.GetRoot()))
+	bsc.Hash = b.ClientState.GetRoot()
 	changes := b.ClientState.GetChangeCollector().GetChanges()
 	bsc.Nodes = make([]util.Node, len(changes))
 	for idx, change := range changes {
@@ -44,16 +44,6 @@ func StateChangeProvider() datastore.Entity {
 /*GetEntityMetadata - implement interface */
 func (sc *StateChange) GetEntityMetadata() datastore.EntityMetadata {
 	return stateChangeEntityMetadata
-}
-
-/*GetKey - implement interface */
-func (sc *StateChange) GetKey() datastore.Key {
-	return datastore.ToKey(sc.Hash)
-}
-
-/*SetKey - implement interface */
-func (sc *StateChange) SetKey(key datastore.Key) {
-	sc.Hash = datastore.ToString(key)
 }
 
 /*Read - store read */

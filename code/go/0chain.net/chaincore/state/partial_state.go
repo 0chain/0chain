@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 
 	"0chain.net/core/common"
@@ -15,7 +16,7 @@ import (
 
 //PartialState - an entity to exchange partial state
 type PartialState struct {
-	Hash    string      `json:"root"`
+	Hash    util.Key    `json:"root"`
 	Version string      `json:"version"`
 	Nodes   []util.Node `json:"_"`
 	mndb    *util.MemoryNodeDB
@@ -25,7 +26,7 @@ type PartialState struct {
 //NewPartialState - create a new partial state object with initialization
 func NewPartialState(key util.Key) *PartialState {
 	ps := datastore.GetEntityMetadata("partial_state").Instance().(*PartialState)
-	ps.Hash = string(key)
+	ps.Hash = key
 	ps.ComputeProperties()
 	return ps
 }
@@ -51,7 +52,13 @@ func (ps *PartialState) GetKey() datastore.Key {
 
 /*SetKey - implement interface */
 func (ps *PartialState) SetKey(key datastore.Key) {
-	ps.Hash = datastore.ToString(key)
+	skey := datastore.ToString(key)
+	bkey, err := hex.DecodeString(skey)
+	if err == nil {
+		ps.Hash = bkey
+	} else {
+		ps.Hash = []byte(skey)
+	}
 }
 
 /*Read - store read */
@@ -83,8 +90,14 @@ func (ps *PartialState) ComputeProperties() {
 	mndb := ps.newNodeDB()
 	root := mndb.ComputeRoot()
 	if root != nil {
-		ps.mndb = mndb
-		ps.root = root
+		if bytes.Compare(root.GetHashBytes(), ps.Hash) == 0 {
+			ps.mndb = mndb
+			ps.root = root
+		} else {
+			Logger.Error("partial state root hash mismatch", zap.Any("hash", ps.Hash), zap.Any("root", root.GetHashBytes()))
+		}
+	} else {
+		Logger.Error("partial state root is null")
 	}
 }
 
@@ -116,8 +129,15 @@ func (ps *PartialState) UnmarshalJSON(data []byte) error {
 
 //UnmarshalPartialState - unmarshal the partial state
 func (ps *PartialState) UnmarshalPartialState(obj map[string]interface{}) error {
-	if str, ok := obj["root"].(string); ok {
-		ps.Hash = str
+	if root, ok := obj["root"]; ok {
+		switch rootImpl := root.(type) {
+		case string:
+			ps.SetKey(rootImpl)
+		case []byte:
+			ps.Hash = rootImpl
+		default:
+			Logger.Error("unmarshal json - unknown type", zap.Any("obj", obj))
+		}
 	} else {
 		Logger.Error("unmarshal json - no hash", zap.Any("obj", obj))
 		return common.ErrInvalidData
@@ -162,7 +182,7 @@ func (ps *PartialState) MarshalJSON() ([]byte, error) {
 
 //MartialPartialState - martal the partial state
 func (ps *PartialState) MartialPartialState(data map[string]interface{}) ([]byte, error) {
-	data["root"] = ps.Hash
+	data["root"] = util.ToHex(ps.Hash)
 	data["version"] = ps.Version
 	nodes := make([][]byte, len(ps.Nodes))
 	for idx, nd := range ps.Nodes {
@@ -171,9 +191,9 @@ func (ps *PartialState) MartialPartialState(data map[string]interface{}) ([]byte
 	data["nodes"] = nodes
 	bytes, err := json.Marshal(data)
 	if err != nil {
-		Logger.Error("marshal JSON - state change", zap.String("block", ps.Hash), zap.Error(err))
+		Logger.Error("marshal JSON - state change", zap.Any("block", ps.Hash), zap.Error(err))
 	} else {
-		Logger.Info("marshal JSON - state change", zap.String("block", ps.Hash))
+		Logger.Info("marshal JSON - state change", zap.Any("block", ps.Hash))
 	}
 	return bytes, err
 }

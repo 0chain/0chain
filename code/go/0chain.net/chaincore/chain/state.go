@@ -246,14 +246,14 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 			Logger.Error("get block state change - hash mismatch error", zap.Int64("round", b.Round), zap.String("block", b.Hash))
 			return nil, block.ErrBlockHashMismatch
 		}
+		if bytes.Compare(b.ClientStateHash, rsc.Hash) != 0 {
+			Logger.Error("get block state change - state hash mismatch error", zap.Int64("round", b.Round), zap.String("block", b.Hash))
+			return nil, block.ErrBlockStateHashMismatch
+		}
 		root := rsc.GetRoot()
 		if root == nil {
 			Logger.Error("get block state change - state root error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("state_nodes", len(rsc.Nodes)))
 			return nil, common.NewError("state_root_error", "Block state root calculcation error")
-		}
-		if bytes.Compare(b.ClientStateHash, root.GetHashBytes()) != 0 {
-			Logger.Error("get block state change - state hash mismatch error", zap.Int64("round", b.Round), zap.String("block", b.Hash))
-			return nil, block.ErrBlockStateHashMismatch
 		}
 		cancelf()
 		bsc = rsc
@@ -278,15 +278,15 @@ func (c *Chain) applyBlockStateChange(b *block.Block, bsc *block.StateChange) er
 	if b.Hash != bsc.Block {
 		return block.ErrBlockHashMismatch
 	}
+	if bytes.Compare(b.ClientStateHash, bsc.Hash) != 0 {
+		return block.ErrBlockStateHashMismatch
+	}
 	root := bsc.GetRoot()
 	if root == nil {
 		if b.PrevBlock != nil && bytes.Compare(b.PrevBlock.ClientStateHash, b.ClientStateHash) == 0 {
 			return nil
 		}
 		return common.NewError("state_root_error", "state root not correct")
-	}
-	if bytes.Compare(b.ClientStateHash, root.GetHashBytes()) != 0 {
-		return block.ErrBlockStateHashMismatch
 	}
 	if b.ClientState == nil {
 		b.CreateState(bsc.GetNodeDB())
