@@ -336,3 +336,23 @@ func (lndb *LevelNodeDB) RebaseCurrentDB(ndb NodeDB) {
 	lndb.C = ndb
 	lndb.P = lndb.C
 }
+
+//MergeState - merge the state from another node db
+func MergeState(ctx context.Context, fndb NodeDB, tndb NodeDB) error {
+	var nodes []Node
+	var keys []Key
+	handler := func(ctx context.Context, key Key, node Node) error {
+		keys = append(keys, key)
+		nodes = append(nodes, node)
+		return nil
+	}
+	err := fndb.Iterate(ctx, handler)
+	if err != nil {
+		return err
+	}
+	err = tndb.MultiPutNode(keys, nodes)
+	if pndb, ok := tndb.(*PNodeDB); ok {
+		pndb.Flush()
+	}
+	return nil
+}

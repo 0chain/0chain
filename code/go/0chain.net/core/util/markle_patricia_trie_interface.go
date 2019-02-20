@@ -43,7 +43,7 @@ type MerklePatriciaTrieI interface {
 	GetPathNodes(path Path) ([]Node, error)
 
 	// useful for pruning the state below a certain origin number
-	UpdateVersion(ctx context.Context, version Sequence) error // mark
+	UpdateVersion(ctx context.Context, version Sequence) (*MissingNode, error) // mark
 
 	// only for testing and debugging
 	PrettyPrint(w io.Writer) error

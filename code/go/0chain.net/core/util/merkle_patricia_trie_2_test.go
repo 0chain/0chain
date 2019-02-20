@@ -116,7 +116,7 @@ func TestMerkeTreePruning(t *testing.T) {
 
 	pndb.Iterate(context.TODO(), dbIteratorHandler)
 
-	err = mpt.UpdateVersion(context.TODO(), newOrigin)
+	_, err = mpt.UpdateVersion(context.TODO(), newOrigin)
 	if err != nil {
 		fmt.Printf("error updating origin: %v\n", err)
 	}

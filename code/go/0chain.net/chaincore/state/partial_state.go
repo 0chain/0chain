@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -13,6 +14,8 @@ import (
 	"0chain.net/core/util"
 	"go.uber.org/zap"
 )
+
+var ErrHashMismatch = errors.New("Root hash mistatch")
 
 //PartialState - an entity to exchange partial state
 type PartialState struct {
@@ -31,7 +34,7 @@ func NewPartialState(key util.Key) *PartialState {
 	return ps
 }
 
-var partialStateMetadata *datastore.EntityMetadataImpl
+var partialStateEntityMetadata *datastore.EntityMetadataImpl
 
 /*PartialStateProvider - a block summary instance provider */
 func PartialStateProvider() datastore.Entity {
@@ -42,7 +45,7 @@ func PartialStateProvider() datastore.Entity {
 
 /*GetEntityMetadata - implement interface */
 func (ps *PartialState) GetEntityMetadata() datastore.EntityMetadata {
-	return partialStateMetadata
+	return partialStateEntityMetadata
 }
 
 /*GetKey - implement interface */
@@ -74,6 +77,16 @@ func (ps *PartialState) Write(ctx context.Context) error {
 /*Delete - store read */
 func (ps *PartialState) Delete(ctx context.Context) error {
 	return ps.GetEntityMetadata().GetStore().Delete(ctx, ps)
+}
+
+/*SetupPartialState - setup the block summary entity */
+func SetupPartialState(store datastore.Store) {
+	partialStateEntityMetadata = datastore.MetadataProvider()
+	partialStateEntityMetadata.Name = "partial_state"
+	partialStateEntityMetadata.Provider = PartialStateProvider
+	partialStateEntityMetadata.Store = store
+	partialStateEntityMetadata.IDColumnName = "hash"
+	datastore.RegisterEntityMetadata("partial_state", partialStateEntityMetadata)
 }
 
 //NewNodeDB - create a node db from the changes
@@ -201,5 +214,10 @@ func (ps *PartialState) MartialPartialState(data map[string]interface{}) ([]byte
 //AddNode - add node to the partial state
 func (ps *PartialState) AddNode(node util.Node) {
 	ps.Nodes = append(ps.Nodes, node)
+}
+
+//SaveState - save the partial state into another state db
+func (ps *PartialState) SaveState(ctx context.Context, stateDB util.NodeDB) error {
+	return util.MergeState(ctx, ps.mndb, stateDB)
 }
 

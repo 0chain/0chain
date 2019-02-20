@@ -207,6 +207,59 @@ func (c *Chain) SaveChanges(ctx context.Context, b *block.Block) error {
 	return err
 }
 
+//SavePartialState - save the partial state
+func (c *Chain) SavePartialState(ctx context.Context, ps *state.PartialState) error {
+	c.stateMutex.Lock()
+	defer c.stateMutex.Unlock()
+	return ps.SaveState(ctx, c.stateDB)
+}
+
+//GetPartialState - get the partial state from the network
+func (c *Chain) GetPartialState(ctx context.Context, key util.Key) {
+	ps, err := c.getPartialState(ctx, key)
+	if err != nil {
+		Logger.Error("get partial state - no ps", zap.String("key", util.ToHex(key)), zap.Error(err))
+		return
+	}
+	err = c.SavePartialState(ctx, ps)
+	if err != nil {
+		Logger.Error("get partial state - error saving", zap.String("key", util.ToHex(key)), zap.Error(err))
+	} else {
+		Logger.Info("get partial state - saving", zap.String("key", util.ToHex(key)), zap.Int("nodes",len(ps.Nodes)))
+	}
+}
+
+func (c *Chain) getPartialState(ctx context.Context, key util.Key) (*state.PartialState, error) {
+	psRequestor := PartialStateRequestor
+	params := map[string]string{"node": util.ToHex(key)}
+	ctx, cancelf := context.WithCancel(common.GetRootContext())
+	var ps *state.PartialState
+	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+		Logger.Debug("get partial state", zap.String("ps_id", entity.GetKey()))
+		rps, ok := entity.(*state.PartialState)
+		if !ok {
+			return nil, datastore.ErrInvalidEntity
+		}
+		if bytes.Compare(key, rps.Hash) != 0 {
+			Logger.Error("get partial state - state hash mismatch error", zap.String("key", util.ToHex(key)), zap.Any("hash", util.ToHex(ps.Hash)))
+			return nil, state.ErrHashMismatch
+		}
+		root := rps.GetRoot()
+		if root == nil {
+			Logger.Error("get partial state - state root error", zap.Int("state_nodes", len(ps.Nodes)))
+			return nil, common.NewError("state_root_error", "Partial state root calculcation error")
+		}
+		cancelf()
+		ps = rps
+		return rps, nil
+	}
+	c.Miners.RequestEntity(ctx, psRequestor, params, handler)
+	if ps == nil {
+		return nil, common.NewError("partial_state_change_error", "Error getting the partial state")
+	}
+	return ps, nil
+}
+
 //GetBlockStateChange - get the state change of the block
 func (c *Chain) GetBlockStateChange(b *block.Block) {
 	bsc, err := c.getBlockStateChange(b)

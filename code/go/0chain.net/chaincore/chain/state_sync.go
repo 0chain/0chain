@@ -34,5 +34,15 @@ func (c *Chain) GetStateFrom(ctx context.Context, key util.Key) (*state.PartialS
 			return nil, err
 		}
 	}
+	partialState.ComputeProperties()
 	return partialState, nil
+}
+
+//SyncPartialState - sync partial state
+func (c *Chain) SyncPartialState(ctx context.Context, ps *state.PartialState) error {
+	if ps.GetRoot() == nil {
+		return ErrNodeNull
+	}
+	c.SavePartialState(ctx, ps)
+	return nil
 }
