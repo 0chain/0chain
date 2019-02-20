@@ -51,7 +51,6 @@ func (c *Chain) PruneClientStateWorker(ctx context.Context) {
 			pruning = true
 			c.pruneClientState(ctx)
 			pruning = false
-
 		}
 	}
 }

@@ -110,7 +110,7 @@ func (ps *PartialState) ComputeProperties() {
 			Logger.Error("partial state root hash mismatch", zap.Any("hash", ps.Hash), zap.Any("root", root.GetHashBytes()))
 		}
 	} else {
-		Logger.Error("partial state root is null")
+		Logger.Error("partial state root is null",zap.Int("nodes",len(ps.Nodes)))
 	}
 }
 
