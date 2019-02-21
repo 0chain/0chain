@@ -10,6 +10,7 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	. "0chain.net/core/logging"
+	"0chain.net/core/util"
 	"go.uber.org/zap"
 )
 
@@ -29,8 +30,11 @@ func (fc *FaucetSmartContract) SetSC(sc *smartcontractinterface.SmartContract) {
 
 func (un *userNode) validPourRequest(t *transaction.Transaction, balances c_state.StateContextI, gn *globalNode) (bool, error) {
 	smartContractBalance, err := balances.GetClientBalance(gn.ID)
+	if err == util.ErrValueNotPresent {
+		return false, common.NewError("invalid_request", "faucet has no tokens and needs to be refilled")
+	}
 	if err != nil {
-		return false, err
+		return false, common.NewError("invalid_request", fmt.Sprintf("getting faucet balance resulted in an error: %v", err.Error()))
 	}
 	if t.Value > int64(smartContractBalance) {
 		return false, common.NewError("invalid_request", fmt.Sprintf("amount asked to be poured (%v) exceeds contract's wallet ballance (%v)", t.Value, smartContractBalance))
