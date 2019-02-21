@@ -38,12 +38,18 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 	mpt.SetRoot(bs.ClientStateHash)
 	Logger.Info("prune client state - new version", zap.Int64("current_round", c.CurrentRound), zap.Int64("latest_finalized_round", c.LatestFinalizedBlock.Round), zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.String("state_hash", util.ToHex(bs.ClientStateHash)))
 	pctx := util.WithPruneStats(ctx)
+	ps := util.GetPruneStats(pctx)
 	t := time.Now()
-	err := mpt.UpdateVersion(pctx, newVersion)
+	missingNode, err := mpt.UpdateVersion(pctx, newVersion)
 	d1 := time.Since(t)
 	StatePruneUpdateTimer.Update(d1)
 	if err != nil {
 		Logger.Error("prune client state (update origin)", zap.Error(err))
+		if missingNode != nil {
+			c.pruneStats = ps
+			go c.GetPartialState(ctx, missingNode.Key)
+			return
+		}
 	} else {
 		Logger.Info("prune client state (update origin)", zap.Int64("current_round", c.CurrentRound), zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.String("state_hash", util.ToHex(bs.ClientStateHash)), zap.Duration("time", d1))
 	}
@@ -54,7 +60,7 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 	}
 	d2 := time.Since(t1)
 	StatePruneDeleteTimer.Update(d2)
-	ps := util.GetPruneStats(pctx)
+	c.pruneStats = ps
 	logf := Logger.Info
 	if d1 > time.Second || d2 > time.Second {
 		logf = Logger.Error

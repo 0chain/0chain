@@ -17,8 +17,16 @@ import (
 	. "0chain.net/core/logging"
 )
 
+const (
+	ADDRESS = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7"
+)
+
 type StorageSmartContract struct {
-	smartcontractinterface.SmartContract
+	*smartcontractinterface.SmartContract
+}
+
+func (ssc *StorageSmartContract) SetSC(sc *smartcontractinterface.SmartContract) {
+	ssc.SmartContract = sc
 }
 
 type ChallengeResponse struct {
@@ -469,7 +477,7 @@ func (sc *StorageSmartContract) NewAllocationRequest(t *transaction.Transaction,
 	return "", common.NewError("invalid_allocation_request", "Failed storage allocate")
 }
 
-func (sc *StorageSmartContract) Execute(t *transaction.Transaction, b *block.Block, funcName string, input []byte, balances c_state.StateContextI) (string, error) {
+func (sc *StorageSmartContract) Execute(t *transaction.Transaction, funcName string, input []byte, balances c_state.StateContextI) (string, error) {
 
 	// if funcName == "challenge_response" {
 	// 	resp, err := sc.VerifyChallenge(t, input)
@@ -528,7 +536,7 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction, b *block.Blo
 	}
 
 	if funcName == "challenge_request" {
-		resp, err := sc.AddChallenge(t, b, input)
+		resp, err := sc.AddChallenge(t, balances.GetBlock(), input)
 		if err != nil {
 			return "", err
 		}

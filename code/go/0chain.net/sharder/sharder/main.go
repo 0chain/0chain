@@ -14,23 +14,24 @@ import (
 	_ "net/http/pprof"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/sharder/blockstore"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/client"
-	"0chain.net/core/common"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/diagnostics"
+	"0chain.net/chaincore/node"
+	"0chain.net/chaincore/round"
+	"0chain.net/chaincore/state"
+	"0chain.net/chaincore/transaction"
+	"0chain.net/core/common"
 	"0chain.net/core/ememorystore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
 	. "0chain.net/core/logging"
 	"0chain.net/core/memorystore"
-	"0chain.net/chaincore/node"
 	"0chain.net/core/persistencestore"
-	"0chain.net/chaincore/round"
 	"0chain.net/sharder"
-	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/transaction"
+	"0chain.net/sharder/blockstore"
+	"0chain.net/smartcontract/setupsc"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
@@ -95,7 +96,7 @@ func main() {
 		reader.Close()
 	} else {
 		sc.ReadNodePools(nodesConfigFile)
-		Logger.Info("nodes",zap.Int("miners",sc.Miners.Size()),zap.Int("sharders",sc.Sharders.Size()))
+		Logger.Info("nodes", zap.Int("miners", sc.Miners.Size()), zap.Int("sharders", sc.Sharders.Size()))
 	}
 
 	if node.Self.ID == "" {
@@ -184,6 +185,7 @@ func initEntities() {
 	ememoryStorage := ememorystore.GetStorageProvider()
 	block.SetupBlockSummaryEntity(ememoryStorage)
 	block.SetupStateChange(memoryStorage)
+	state.SetupPartialState(memoryStorage)
 	round.SetupEntity(ememoryStorage)
 
 	client.SetupEntity(memoryStorage)
@@ -193,6 +195,10 @@ func initEntities() {
 	persistenceStorage := persistencestore.GetStorageProvider()
 	transaction.SetupTxnSummaryEntity(persistenceStorage)
 	transaction.SetupTxnConfirmationEntity(persistenceStorage)
+
+	if config.DevConfiguration.SmartContract {
+		setupsc.SetupSmartContracts()
+	}
 }
 
 func initN2NHandlers() {

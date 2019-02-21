@@ -33,6 +33,8 @@ type MerklePatriciaTrieI interface {
 
 	Iterate(ctx context.Context, handler MPTIteratorHandler, visitNodeTypes byte) error
 
+	IterateFrom(ctx context.Context, node Key, handler MPTIteratorHandler, visitNodeTypes byte) error
+
 	GetChangeCollector() ChangeCollectorI
 	ResetChangeCollector(root Key)
 	SaveChanges(ndb NodeDB, includeDeletes bool) error
@@ -41,7 +43,7 @@ type MerklePatriciaTrieI interface {
 	GetPathNodes(path Path) ([]Node, error)
 
 	// useful for pruning the state below a certain origin number
-	UpdateVersion(ctx context.Context, version Sequence) error // mark
+	UpdateVersion(ctx context.Context, version Sequence) (*MissingNode, error) // mark
 
 	// only for testing and debugging
 	PrettyPrint(w io.Writer) error

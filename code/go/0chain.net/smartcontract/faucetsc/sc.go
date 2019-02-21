@@ -3,7 +3,6 @@ package faucetsc
 import (
 	"fmt"
 
-	"0chain.net/chaincore/block"
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/smartcontractinterface"
@@ -14,14 +13,19 @@ import (
 	"go.uber.org/zap"
 )
 
-type FaucetSmartContract struct {
-	smartcontractinterface.SmartContract
-}
-
 const (
 	Seperator = smartcontractinterface.Seperator
 	owner     = "c8a5e74c2f4fae2c1bed79fb2b78d3b88f844bbb6bf1db5fc43240711f23321f"
+	ADDRESS   = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3"
 )
+
+type FaucetSmartContract struct {
+	*smartcontractinterface.SmartContract
+}
+
+func (fc *FaucetSmartContract) SetSC(sc *smartcontractinterface.SmartContract) {
+	fc.SmartContract = sc
+}
 
 func (un *userNode) validPourRequest(t *transaction.Transaction, balances c_state.StateContextI, gn *globalNode) (bool, error) {
 	smartContractBalance, err := balances.GetClientBalance(gn.ID)
@@ -175,7 +179,7 @@ func (fc *FaucetSmartContract) getGlobalVariables(t *transaction.Transaction) *g
 	return &gn
 }
 
-func (fc *FaucetSmartContract) Execute(t *transaction.Transaction, b *block.Block, funcName string, inputData []byte, balances c_state.StateContextI) (string, error) {
+func (fc *FaucetSmartContract) Execute(t *transaction.Transaction, funcName string, inputData []byte, balances c_state.StateContextI) (string, error) {
 	gn := fc.getGlobalVariables(t)
 	switch funcName {
 	case "updateLimits":

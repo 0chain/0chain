@@ -3,18 +3,19 @@ package miner
 /*This file contains the Miner To Miner send/receive messages */
 import (
 	"context"
+	"encoding/hex"
 	"net/http"
 	"strconv"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
-	. "0chain.net/core/logging"
-	"0chain.net/core/memorystore"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/threshold/bls"
+	"0chain.net/core/common"
+	"0chain.net/core/datastore"
+	. "0chain.net/core/logging"
+	"0chain.net/core/memorystore"
 	"go.uber.org/zap"
 )
 
@@ -78,6 +79,8 @@ func SetupM2MReceivers() {
 func SetupX2MResponders() {
 	http.HandleFunc("/v1/_x2m/block/notarized_block/get", common.N2NRateLimit(node.ToN2NSendEntityHandler(NotarizedBlockSendHandler)))
 	http.HandleFunc("/v1/_x2m/block/state_change/get", common.N2NRateLimit(node.ToN2NSendEntityHandler(BlockStateChangeHandler)))
+
+	http.HandleFunc("/v1/_x2m/state/get", common.N2NRateLimit(node.ToN2NSendEntityHandler(PartialStateHandler)))
 }
 
 /*SetupM2SRequestors - setup all requests to sharder by miner */
@@ -214,10 +217,26 @@ func BlockStateChangeHandler(ctx context.Context, r *http.Request) (interface{},
 	return bsc, nil
 }
 
-func getNotarizedBlock(ctx context.Context, r *http.Request) (*block.Block, error) {
+//PartialStateHandler - return the partial state from a given root
+func PartialStateHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	node := r.FormValue("node")
 	mc := GetMinerChain()
+	nodeKey, err := hex.DecodeString(node)
+	if err != nil {
+		return nil, err
+	}
+	ps, err := mc.GetStateFrom(ctx, nodeKey)
+	if err != nil {
+		Logger.Error("partial state handler",zap.String("key",node),zap.Error(err))
+		return nil, err
+	}
+	return ps, nil
+}
+
+func getNotarizedBlock(ctx context.Context, r *http.Request) (*block.Block, error) {
 	round := r.FormValue("round")
 	hash := r.FormValue("block")
+	mc := GetMinerChain()
 	if round != "" {
 		roundN, err := strconv.ParseInt(round, 10, 63)
 		if err != nil {

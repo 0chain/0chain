@@ -52,7 +52,6 @@ func SaveChanges(ctx context.Context, fromNodeDB SCDB, toNodeDB SCDB) error {
 	var keys []Key
 	var nodes []Node
 	handler := func(ctx context.Context, key Key, node Node) error {
-		Logger.Info("Putting the keys from the transaction to the block", zap.Any("key", util.ToHex(key)), zap.Any("value", node))
 		keys = append(keys, key)
 		nodes = append(nodes, node)
 		return nil

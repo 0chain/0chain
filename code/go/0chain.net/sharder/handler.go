@@ -146,6 +146,11 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</tr>")
 
 	fmt.Fprintf(w, "</table>")
+
+	fmt.Fprintf(w, "<br>")
+	if c.GetPruneStats() != nil {
+		diagnostics.WritePruneStats(w,c.GetPruneStats())
+	}
 }
 
 /*TransactionConfirmationHandler - given a transaction hash, confirm it's presence in a block */

@@ -612,8 +612,11 @@ func (mc *Chain) restartRound(ctx context.Context) {
 }
 
 func startProtocol() {
-	ctx := common.GetRootContext()
 	mc := GetMinerChain()
+	if mc.CurrentRound > 0 {
+		return
+	}
+	ctx := common.GetRootContext()
 	mc.Sharders.OneTimeStatusMonitor(ctx)
 	lfb := getLatestBlockFromSharders(ctx)
 	var mr *Round
