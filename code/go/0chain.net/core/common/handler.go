@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 )
@@ -51,12 +52,16 @@ func getContext(r *http.Request) (context.Context, error) {
 
 var domainRE = regexp.MustCompile(`^(?:https?:\/\/)?(?:[^@\/\n]+@)?(?:www\.)?([^:\/\n]+)`)
 
-func getHost(origin string) string {
-	return domainRE.FindStringSubmatch(origin)[1]
+func getHost(origin string) (string, error) {
+	url, err := url.Parse(origin)
+	return url.Host, err
 }
 
 func validOrigin(origin string) bool {
-	host := getHost(origin)
+	host, err := getHost(origin)
+	if err != nil {
+		return false
+	}
 	if host == "localhost" || strings.HasPrefix(host, "file") {
 		return true
 	}
