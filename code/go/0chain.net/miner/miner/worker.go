@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"math/rand"
 	"os"
@@ -15,14 +14,12 @@ import (
 	"0chain.net/miner"
 
 	"0chain.net/chaincore/client"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/chaincore/wallet"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	. "0chain.net/core/logging"
 	"0chain.net/core/memorystore"
-	"0chain.net/smartcontract/smartcontract"
 )
 
 var (
@@ -158,11 +155,6 @@ func createSendTransaction(c *chain.Chain, prng *rand.Rand) *transaction.Transac
 			break
 		}
 	}
-	fs, err := c.GetState(c.LatestFinalizedBlock, wf.ClientID)
-	if err != nil || fs.Balance < state.Balance(pourPoint) {
-		txn := wf.CreateFaucetPourTransaction(pourAmount)
-		return txn
-	}
 	txn := wf.CreateRandomSendTransaction(wt.ClientID)
 	return txn
 }
@@ -209,8 +201,9 @@ func GetOwnerWallet(c *chain.Chain) *wallet.Wallet {
 
 /*GenerateClients - generate the given number of clients */
 func GenerateClients(c *chain.Chain, numClients int) {
-	// rs := rand.NewSource(time.Now().UnixNano())
-	// prng := rand.New(rs)
+	ownerWallet := GetOwnerWallet(c)
+	rs := rand.NewSource(time.Now().UnixNano())
+	prng := rand.New(rs)
 
 	clientMetadataProvider := datastore.GetEntityMetadata("client")
 	ctx := memorystore.WithEntityConnection(common.GetRootContext(), clientMetadataProvider)
@@ -234,35 +227,16 @@ func GenerateClients(c *chain.Chain, numClients int) {
 		}
 	}
 	time.Sleep(1 * time.Second)
-	// for _, w := range wallets {
-	// 	//generous airdrop in dev/test mode :)
-	// 	txn := ownerWallet.CreateSendTransaction(w.ClientID, prng.Int63n(100000)*10000000000, "generous air drop! :) debug")
-	// 	_, err := transaction.PutTransaction(tctx, txn)
-	// 	if err != nil {
-	// 		fmt.Printf("error:%v: %v\n", time.Now(), err)
-	// 		//panic(err)
-	// 	}
-	// }
-	go RefillFaucet(c, tctx)
-	Logger.Info("generation of wallets complete", zap.Int("wallets", len(wallets)))
-}
-
-func RefillFaucet(c *chain.Chain, ctx context.Context) {
-	ownerWallet := GetOwnerWallet(c)
-	viper.SetDefault("development.faucet.refill_amount", 1000000000000000)
-	var refillAmount = viper.GetInt64("development.faucet.refill_amount")
-	refilled := false
-	for !refilled {
-		txn := ownerWallet.CreateSendTransaction(smartcontract.FAUCET_CONTRACT_ADDRESS, refillAmount, "refilling faucet smart contract")
-		_, err := transaction.PutTransaction(ctx, txn)
-		time.Sleep(time.Second * 3)
-		if err == nil {
-			_, err := c.GetState(c.LatestFinalizedBlock, smartcontract.FAUCET_CONTRACT_ADDRESS)
-			if err == nil {
-				refilled = true
-			}
+	for _, w := range wallets {
+		//generous airdrop in dev/test mode :)
+		txn := ownerWallet.CreateSendTransaction(w.ClientID, prng.Int63n(100000)*10000000000, "generous air drop! :)")
+		_, err := transaction.PutTransaction(tctx, txn)
+		if err != nil {
+			fmt.Printf("error:%v: %v\n", time.Now(), err)
+			//panic(err)
 		}
 	}
+	Logger.Info("generation of wallets complete", zap.Int("wallets", len(wallets)))
 }
 
 //SetTxnGenRate - the txn generation rate

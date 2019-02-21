@@ -28,7 +28,6 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	if !ok {
 		return nil, fmt.Errorf("invalid request %T", entity)
 	}
-	Logger.Info("put transaction", zap.String("txn", txn.Hash), zap.String("txn_obj", datastore.ToJSON(txn).String()))
 	txn.ComputeProperties()
 	debugTxn := txn.DebugTxn()
 	err := txn.Validate(ctx)
@@ -42,7 +41,6 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	}
 	if datastore.DoAsync(ctx, txn) {
 		TransactionCount++
-		Logger.Info("put transaction (debug transaction)", zap.String("txn", txn.Hash), zap.String("txn_obj", datastore.ToJSON(txn).String()))
 		return txn, nil
 	}
 	err = entity.GetEntityMetadata().GetStore().Write(ctx, txn)
