@@ -228,9 +228,13 @@ func catchUpWithLatestRound(ctx context.Context, r *round.Round) {
 	Logger.Info("bc-27 - get latest round from other sharders", zap.Int64("sharder_curr_round", r.Number))
 	lr := sc.GetLatestRoundFromSharders(ctx, r.Number)
 	if lr != nil && lr.Number > r.Number+1 {
+		sc.SetState(sharder.SharderSyncing)
+		Logger.Info("#rejoin - sharder state set to syncing")
 		Logger.Info("bc-27 - latest round from other sharder", zap.Int64("curr_round", r.Number), zap.Int64("latest_round_from_sharders", lr.Number))
 		ts := time.Now()
 		sc.GetMissingRounds(ctx, lr.Number, r.Number)
+		sc.SetState(sharder.SharderSyncDone)
+		Logger.Info("#rejoin - sharder state set to sync done")
 		duration := time.Since(ts)
 		Logger.Info("bc-27 duration for catching up with all missing rounds", zap.Duration("duration", duration))
 	}

@@ -18,11 +18,26 @@ func SetupWorkers(ctx context.Context) {
 /*BlockWorker - stores the blocks */
 func (sc *Chain) BlockWorker(ctx context.Context) {
 	for true {
-		select {
-		case <-ctx.Done():
-			return
-		case b := <-sc.GetBlockChannel():
-			sc.processBlock(ctx, b)
+		if sc.AcceptIncomingBlocks() {
+			select {
+			case <-ctx.Done():
+				return
+			case b := <-sc.GetBlockChannel():
+				sc.processIncomingBlock(ctx, b)
+			default:
+				if sc.GetState() == SharderSyncDone {
+					sc.processBlocksInCache(ctx)
+				}
+			}
+		} else {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				if sc.GetState() == SharderSyncDone {
+					sc.processBlocksInCache(ctx)
+				}
+			}
 		}
 	}
 }

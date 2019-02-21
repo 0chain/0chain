@@ -1,16 +1,24 @@
 package sharder
 
 import (
+	"container/list"
 	"context"
+	"sync"
 
 	"0chain.net/core/cache"
 	"0chain.net/core/ememorystore"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/sharder/blockstore"
 	"0chain.net/chaincore/chain"
-	"0chain.net/core/datastore"
 	"0chain.net/chaincore/round"
+	"0chain.net/core/datastore"
+	"0chain.net/sharder/blockstore"
+)
+
+const (
+	SharderNormal   = 0
+	SharderSyncing  = 1
+	SharderSyncDone = 2
 )
 
 var sharderChain = &Chain{}
@@ -25,6 +33,11 @@ func SetupSharderChain(c *chain.Chain) {
 	transactionCacheSize := int(c.BlockSize) * blockCacheSize
 	sharderChain.BlockTxnCache = cache.NewLRUCache(transactionCacheSize)
 	c.SetFetchedNotarizedBlockHandler(sharderChain)
+	sharderChain.sharderState = SharderNormal
+	sharderChain.mutex = sync.RWMutex{}
+	//TODO configure acceptance tolerance value
+	sharderChain.AcceptanceTolerance = 100
+	sharderChain.IncomingBlocks = list.New()
 }
 
 /*GetSharderChain - get the sharder's chain */
@@ -35,11 +48,15 @@ func GetSharderChain() *Chain {
 /*Chain - A chain structure to manage the sharder activities */
 type Chain struct {
 	*chain.Chain
-	BlockChannel  chan *block.Block
-	RoundChannel  chan *round.Round
-	BlockCache    cache.Cache
-	BlockTxnCache cache.Cache
-	SharderStats  Stats
+	BlockChannel        chan *block.Block
+	RoundChannel        chan *round.Round
+	BlockCache          cache.Cache
+	BlockTxnCache       cache.Cache
+	SharderStats        Stats
+	IncomingBlocks      *list.List
+	sharderState        int
+	mutex               sync.RWMutex
+	AcceptanceTolerance int64
 }
 
 /*GetBlockChannel - get the block channel where the incoming blocks from the network are put into for further processing */
@@ -50,6 +67,20 @@ func (sc *Chain) GetBlockChannel() chan *block.Block {
 /*GetRoundChannel - get the round channel where the finalized rounds are put into for further processing */
 func (sc *Chain) GetRoundChannel() chan *round.Round {
 	return sc.RoundChannel
+}
+
+/*GetState - get sharder state */
+func (sc *Chain) GetState() int {
+	sc.mutex.RLock()
+	defer sc.mutex.RUnlock()
+	return sc.sharderState
+}
+
+/*SetState - set sharder state */
+func (sc *Chain) SetState(state int) {
+	sc.mutex.Lock()
+	defer sc.mutex.Unlock()
+	sc.sharderState = state
 }
 
 /*SetupGenesisBlock - setup the genesis block for this chain */
@@ -109,4 +140,19 @@ func (sc *Chain) GetSharderRound(roundNumber int64) *round.Round {
 		return nil
 	}
 	return sr
+}
+
+/*GetRoundSyncNumber - gives the number of rounds that the sharder has to catch up from latest finalized block round*/
+func (sc *Chain) GetRoundSyncNumber() int64 {
+	return sc.CurrentRound - sc.LatestFinalizedBlock.Round
+}
+
+/*AcceptIncomingBlocks - checks whether the chain should accept the incoming blocks based on sharder state*/
+func (sc *Chain) AcceptIncomingBlocks() bool {
+	if sc.GetState() != SharderNormal {
+		if sc.GetRoundSyncNumber() >= sc.AcceptanceTolerance {
+			return false
+		}
+	}
+	return true
 }

@@ -62,14 +62,6 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 }
 
 func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
-	if err := sc.VerifyNotarization(ctx, b.Hash, b.VerificationTickets); err != nil {
-		Logger.Error("notarization verification failed", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
-		return
-	}
-	if err := b.Validate(ctx); err != nil {
-		Logger.Error("block validation", zap.Any("round", b.Round), zap.Any("hash", b.Hash), zap.Error(err))
-		return
-	}
 	er := sc.GetRound(b.Round)
 	if er == nil {
 		var r = round.NewRound(b.Round)
@@ -82,6 +74,36 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 	sc.SetRoundRank(er, b)
 	Logger.Info("received block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)))
 	sc.AddNotarizedBlock(ctx, er, b)
+}
+
+func (sc *Chain) processIncomingBlock(ctx context.Context, b *block.Block) {
+	if err := sc.VerifyNotarization(ctx, b.Hash, b.VerificationTickets); err != nil {
+		Logger.Error("notarization verification failed", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
+		return
+	}
+	if err := b.Validate(ctx); err != nil {
+		Logger.Error("block validation", zap.Any("round", b.Round), zap.Any("hash", b.Hash), zap.Error(err))
+		return
+	}
+	if sc.GetState() == SharderSyncing {
+		Logger.Info("srejoin - accepting blocks and sharder is syncing with other sharder", zap.Int64("blockRound", b.Round), zap.Int64("diffRound", b.Round - sc.LatestFinalizedBlock.Round))
+		if(b.Round - sc.LatestFinalizedBlock.Round < sc.AcceptanceTolerance) {
+			sc.IncomingBlocks.PushBack(b)
+			Logger.Info("srejoin - adding incoming blocks to cache")
+		}
+	} else if sc.GetState() == SharderNormal {
+		sc.processBlock(ctx, b)
+	}
+}
+
+func (sc *Chain) processBlocksInCache(ctx context.Context) {
+	for i := 0; i < sc.IncomingBlocks.Len(); i++  {
+		b := sc.IncomingBlocks.Front().Value.(*block.Block)
+		Logger.Info("rejoin - sharder syncing with the cache", zap.Int64("blockRound", b.Round))
+		sc.processBlock(ctx, b)
+	}
+	sc.SetState(SharderNormal)
+	Logger.Info("srejoin - sharder state set to Normal")
 }
 
 func (sc *Chain) GetLatestRoundFromSharders(ctx context.Context, currRound int64) *round.Round {
