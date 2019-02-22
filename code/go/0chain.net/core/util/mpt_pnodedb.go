@@ -40,9 +40,10 @@ func NewPNodeDB(dataDir string, logDir string) (*PNodeDB, error) {
 		opts.SetAllowMmapReads(true)
 		opts.SetPrefixExtractor(gorocksdb.NewFixedPrefixTransform(6))
 	}
-	opts.IncreaseParallelism(2) // pruning and saving happen in parallel
+	opts.IncreaseParallelism(2)          // pruning and saving happen in parallel
 	opts.SetSkipLogErrorOnRecovery(true) // do sync if necessary
 	opts.SetDbLogDir(logDir)
+	opts.EnableStatistics()
 	db, err := gorocksdb.OpenDb(opts, dataDir)
 	if err != nil {
 		return nil, err
