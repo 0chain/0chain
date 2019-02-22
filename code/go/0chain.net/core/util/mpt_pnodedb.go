@@ -44,6 +44,7 @@ func NewPNodeDB(dataDir string, logDir string) (*PNodeDB, error) {
 	opts.SetSkipLogErrorOnRecovery(true) // do sync if necessary
 	opts.SetDbLogDir(logDir)
 	opts.EnableStatistics()
+	opts.OptimizeUniversalStyleCompaction(64 * 1024 * 1024)
 	db, err := gorocksdb.OpenDb(opts, dataDir)
 	if err != nil {
 		return nil, err
