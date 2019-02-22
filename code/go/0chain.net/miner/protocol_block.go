@@ -15,11 +15,11 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/client"
+	"0chain.net/chaincore/node"
+	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	. "0chain.net/core/logging"
-	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/transaction"
 
 	"go.uber.org/zap"
 )
@@ -81,9 +81,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 				Logger.Info("generate block (debug transaction) update state", zap.String("txn", txn.Hash), zap.Int32("idx", idx), zap.String("txn_object", datastore.ToJSON(txn).String()))
 			}
 			failedStateCount++
-			if config.DevConfiguration.State {
-				return false
-			}
+			return false
 		}
 		if txn.ClientID == mc.OwnerID {
 			hasOwnerTxn = true
@@ -273,10 +271,8 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockV
 	}
 	serr := mc.ComputeState(ctx, b)
 	if serr != nil {
-		if config.DevConfiguration.State {
-			Logger.Error("verify block - error computing state (TODO sync)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Error(serr))
-			return nil, serr
-		}
+		Logger.Error("verify block - error computing state (TODO sync)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Error(serr))
+		return nil, serr
 	}
 	err = mc.verifySmartContracts(ctx, b)
 	if err != nil {

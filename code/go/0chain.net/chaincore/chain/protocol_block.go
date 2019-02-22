@@ -153,7 +153,6 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	StartToFinalizeTimer.UpdateSince(fb.ToTime())
 	ssFTs = time.Now()
 	c.UpdateChainInfo(fb)
-
 	c.SaveChanges(ctx, fb)
 	c.rebaseState(fb)
 
