@@ -32,7 +32,7 @@ RUN go build -v -tags bn256
 FROM 0chain/run_base:${image_tag}
 ENV APP_DIR=/0chain
 WORKDIR $APP_DIR
-COPY --from=miner_build:${image_tag} $APP_DIR/go/0chain.net/miner/miner/miner $APP_DIR/bin/miner
+COPY --from=miner_build $APP_DIR/go/0chain.net/miner/miner/miner $APP_DIR/bin/miner
 
 RUN groupadd -r 0chain && useradd --no-log-init -r -g 0chain 0chain
 
