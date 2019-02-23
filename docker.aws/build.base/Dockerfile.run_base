@@ -1,0 +1,21 @@
+# docker.local
+FROM alpine:3.8
+RUN apk add bash shadow
+RUN apk add libbz2 lz4-libs snappy zstd-libs jemalloc  # For RocksDB
+RUN apk add gmp libcrypto1.0 libssl1.0                 # For Herumi
+
+COPY --from=zchain_build_base /usr/local/lib/librocksdb.so.*.*.* \
+                              /usr/local/lib/libmcl*.so \
+                              /usr/local/lib/libbls*.so \
+                              /usr/local/lib/
+
+# Following standard Unix convention, the file librocksdb.x.y is a symbolic link
+# to librocksdb.x.y.z. Unfortunately, the Docker COPY command reads through
+# symbolic links and copies the file to which they point. Additionally, there is
+# no glob syntax to specify that we want to COPY the .x.y file without also
+# copying the .x.y.z file. But since librocksdb is >100 MB, we can't afford to
+# duplicate it.
+#
+# Above, we copied the .x.y.z file. Now we can manually create a symbolic link
+# from .x.y to .x.y.z.
+RUN ln -s /usr/local/lib/librocksdb.so* $(ls /usr/local/lib/librocksdb.so* | cut -f1-4 -d.)
