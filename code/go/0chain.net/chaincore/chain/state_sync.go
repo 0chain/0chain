@@ -1,10 +1,12 @@
 package chain
 
 import (
-	"context"
 	"bytes"
-	"0chain.net/chaincore/state"
+	"context"
+	"net/url"
+
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	. "0chain.net/core/logging"
@@ -18,7 +20,7 @@ var ErrStopIterator = common.NewError("stop_iterator", "Stop MPT Iteration")
 
 var MaxStateNodesForSync = 10000
 
-//GetBlockStateChange - get the state change of the block
+//GetBlockStateChange - get the state change of the block from the network
 func (c *Chain) GetBlockStateChange(b *block.Block) {
 	bsc, err := c.getBlockStateChange(b)
 	if err != nil {
@@ -46,8 +48,24 @@ func (c *Chain) GetPartialState(ctx context.Context, key util.Key) {
 	if err != nil {
 		Logger.Error("get partial state - error saving", zap.String("key", util.ToHex(key)), zap.Error(err))
 	} else {
-		Logger.Info("get partial state - saving", zap.String("key", util.ToHex(key)), zap.Int("nodes",len(ps.Nodes)))
+		Logger.Info("get partial state - saving", zap.String("key", util.ToHex(key)), zap.Int("nodes", len(ps.Nodes)))
 	}
+}
+
+//GetStateNodes - get a bunch of state nodes from the network
+func (c *Chain) GetStateNodes(ctx context.Context, keys []util.Key) {
+	ns, err := c.getStateNodes(ctx, keys)
+	if err != nil {
+		Logger.Error("get state nodes", zap.Int("keys", len(keys)), zap.Error(err))
+		return
+	}
+	err = c.SaveStateNodes(ctx, ns)
+	if err != nil {
+		Logger.Error("get partial state - error saving", zap.Int("keys", len(keys)), zap.Error(err))
+	} else {
+		Logger.Error("get partial state - saving", zap.Int("keys", len(keys)), zap.Int("nodes", len(ns.Nodes)))
+	}
+	return
 }
 
 //GetStateFrom - get the state from a given node
@@ -76,6 +94,19 @@ func (c *Chain) GetStateFrom(ctx context.Context, key util.Key) (*state.PartialS
 	return nil, util.ErrNodeNotFound
 }
 
+//GetStateNodesFrom - get the state nodes from db
+func (c *Chain) GetStateNodesFrom(ctx context.Context, keys []util.Key) (*state.Nodes, error) {
+	var stateNodes = state.NewStateNodes()
+	nodes, err := c.stateDB.MultiGetNode(keys)
+	if err != nil {
+		if nodes == nil {
+			return nil, err
+		}
+	}
+	stateNodes.Nodes = nodes
+	return stateNodes, nil
+}
+
 //SyncPartialState - sync partial state
 func (c *Chain) SyncPartialState(ctx context.Context, ps *state.PartialState) error {
 	if ps.GetRoot() == nil {
@@ -92,9 +123,17 @@ func (c *Chain) SavePartialState(ctx context.Context, ps *state.PartialState) er
 	return ps.SaveState(ctx, c.stateDB)
 }
 
+//SaveStateNodes - save the state nodes
+func (c *Chain) SaveStateNodes(ctx context.Context, ns *state.Nodes) error {
+	c.stateMutex.Lock()
+	defer c.stateMutex.Unlock()
+	return ns.SaveState(ctx, c.stateDB)
+}
+
 func (c *Chain) getPartialState(ctx context.Context, key util.Key) (*state.PartialState, error) {
 	psRequestor := PartialStateRequestor
-	params := map[string]string{"node": util.ToHex(key)}
+	params := &url.Values{}
+	params.Add("node", util.ToHex(key))
 	ctx, cancelf := context.WithCancel(common.GetRootContext())
 	var ps *state.PartialState
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
@@ -103,7 +142,7 @@ func (c *Chain) getPartialState(ctx context.Context, key util.Key) (*state.Parti
 		if !ok {
 			return nil, datastore.ErrInvalidEntity
 		}
-		Logger.Info("get partial state",zap.String("key", util.ToHex(key)),zap.Int("nodes",len(rps.Nodes)))
+		Logger.Info("get partial state", zap.String("key", util.ToHex(key)), zap.Int("nodes", len(rps.Nodes)))
 		if bytes.Compare(key, rps.Hash) != 0 {
 			Logger.Error("get partial state - state hash mismatch error", zap.String("key", util.ToHex(key)), zap.Any("hash", util.ToHex(ps.Hash)))
 			return nil, state.ErrHashMismatch
@@ -124,6 +163,32 @@ func (c *Chain) getPartialState(ctx context.Context, key util.Key) (*state.Parti
 	return ps, nil
 }
 
+func (c *Chain) getStateNodes(ctx context.Context, keys []util.Key) (*state.Nodes, error) {
+	nsRequestor := StateNodesRequestor
+	params := &url.Values{}
+	for _, key := range keys {
+		params.Add("nodes", util.ToHex(key))
+	}
+	ctx, cancelf := context.WithCancel(common.GetRootContext())
+	var ns *state.Nodes
+	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+		Logger.Debug("get state nodes", zap.String("ps_id", entity.GetKey()))
+		rns, ok := entity.(*state.Nodes)
+		if !ok {
+			return nil, datastore.ErrInvalidEntity
+		}
+		Logger.Info("get state nodes", zap.Int("keys", len(keys)), zap.Int("nodes", len(rns.Nodes)))
+		cancelf()
+		ns = rns
+		return rns, nil
+	}
+	c.Miners.RequestEntity(ctx, nsRequestor, params, handler)
+	if ns == nil {
+		return nil, common.NewError("state_nodes_error", "Error getting the partial state")
+	}
+	return ns, nil
+}
+
 func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) {
 	if b.PrevBlock == nil {
 		return nil, ErrPreviousBlockUnavailable
@@ -133,7 +198,8 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 		return nil, nil
 	}
 	bscRequestor := BlockStateChangeRequestor
-	params := map[string]string{"block": b.Hash}
+	params := &url.Values{}
+	params.Add("block", b.Hash)
 	ctx, cancelf := context.WithCancel(common.GetRootContext())
 	var bsc *block.StateChange
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {

@@ -23,6 +23,9 @@ var BlockStateChangeRequestor node.EntityRequestor
 //PartialStateRequestor - request partial state from a given root
 var PartialStateRequestor node.EntityRequestor
 
+//StateNodesRequestor - request a set of state nodes given their keys
+var StateNodesRequestor node.EntityRequestor
+
 /*SetupX2MRequestors - setup requestors */
 func SetupX2MRequestors() {
 	options := &node.SendOptions{Timeout: node.TimeoutLargeMessage, CODEC: node.CODEC_MSGPACK, Compress: true}
@@ -36,4 +39,7 @@ func SetupX2MRequestors() {
 
 	partialStateEntityMetadata := datastore.GetEntityMetadata("partial_state")
 	PartialStateRequestor = node.RequestEntityHandler("/v1/_x2m/state/get", options, partialStateEntityMetadata)
+
+	stateNodesEntityMetadata := datastore.GetEntityMetadata("state_nodes")
+	StateNodesRequestor = node.RequestEntityHandler("/v1/_x2m/state/get_nodes", options, stateNodesEntityMetadata)
 }
