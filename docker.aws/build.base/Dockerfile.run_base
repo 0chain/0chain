@@ -1,10 +1,11 @@
 # docker.local
+ARG image_tag
 FROM alpine:3.8
 RUN apk add bash shadow
 RUN apk add libbz2 lz4-libs snappy zstd-libs jemalloc  # For RocksDB
 RUN apk add gmp libcrypto1.0 libssl1.0                 # For Herumi
 
-COPY --from=zchain_build_base /usr/local/lib/librocksdb.so.*.*.* \
+COPY --from=0chain/build_base:${image}  /usr/local/lib/librocksdb.so.*.*.* \
                               /usr/local/lib/libmcl*.so \
                               /usr/local/lib/libbls*.so \
                               /usr/local/lib/

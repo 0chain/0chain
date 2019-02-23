@@ -1,7 +1,7 @@
 ARG image_tag
 
 # Compile the miner in an un-tagged image so the final, tagged image can be smaller:
-FROM zchain_build_base:${image_tag} as miner_build:${image_tag}
+FROM 0chain/build_base:${image_tag} as miner_build
 ENV SRC_DIR=/0chain
 ENV GO111MODULE=on
 
@@ -29,9 +29,10 @@ COPY ./code/go/0chain.net $SRC_DIR/go/0chain.net
 RUN go build -v -tags bn256
 
 # Copy the build artifact into a minimal runtime image:
-FROM zchain_run_base:${image_tag}
+FROM 0chain/run_base:${image_tag}
 ENV APP_DIR=/0chain
 WORKDIR $APP_DIR
 COPY --from=miner_build:${image_tag} $APP_DIR/go/0chain.net/miner/miner/miner $APP_DIR/bin/miner
+
 RUN groupadd -r 0chain && useradd --no-log-init -r -g 0chain 0chain
 
