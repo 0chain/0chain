@@ -33,6 +33,13 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 		return
 	}
 	bs := bc.Value.(*block.BlockSummary)
+	for bs.Round%100 != 0 {
+		bc = bc.Prev()
+		if bc.Value == nil {
+			return
+		}
+		bs = bc.Value.(*block.BlockSummary)
+	}
 	newVersion := util.Sequence(bs.Round)
 	mpt := util.NewMerklePatriciaTrie(c.stateDB, newVersion)
 	mpt.SetRoot(bs.ClientStateHash)
