@@ -5,6 +5,8 @@ import (
 	"context"
 	"math/rand"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 
 	"0chain.net/chaincore/config"
@@ -23,7 +25,7 @@ const (
 var FetchStrategy = FetchStrategyNearest
 
 //RequestEntity - request an entity
-func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, params map[string]string, handler datastore.JSONEntityReqResponderF) *Node {
+func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF) *Node {
 	rhandler := requestor(params, handler)
 	var nodes []*Node
 	if FetchStrategy == FetchStrategyRandom {
@@ -51,7 +53,7 @@ func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, pa
 }
 
 //RequestEntityFromAll - request an entity from all the nodes
-func (np *Pool) RequestEntityFromAll(ctx context.Context, requestor EntityRequestor, params map[string]string, handler datastore.JSONEntityReqResponderF) {
+func (np *Pool) RequestEntityFromAll(ctx context.Context, requestor EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF) {
 	rhandler := requestor(params, handler)
 	var nodes []*Node
 	if FetchStrategy == FetchStrategyRandom {
@@ -95,7 +97,7 @@ func SetRequestHeaders(req *http.Request, options *SendOptions, entityMetadata d
 
 //RequestEntityHandler - a handler that requests an entity and uses it
 func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datastore.EntityMetadata) EntityRequestor {
-	return func(params map[string]string, handler datastore.JSONEntityReqResponderF) SendHandler {
+	return func(params *url.Values, handler datastore.JSONEntityReqResponderF) SendHandler {
 		return func(provider *Node) bool {
 			timer := provider.GetTimer(uri)
 			timeout := 500 * time.Millisecond
@@ -103,15 +105,18 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 				timeout = options.Timeout
 			}
 			url := provider.GetN2NURLBase() + uri
-			req, err := http.NewRequest("GET", url, nil)
+			req, err := http.NewRequest("POST", url, strings.NewReader(params.Encode()))
 			if err != nil {
 				return false
 			}
-			q := req.URL.Query()
-			for k, v := range params {
-				q.Add(k, v)
-			}
-			req.URL.RawQuery = q.Encode()
+			req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+			/*
+				q := req.URL.Query()
+				for k, v := range params {
+					q.Add(k, v)
+				}
+				req.URL.RawQuery = q.Encode()
+			*/
 			if options.Compress {
 				req.Header.Set("Content-Encoding", compDecomp.Encoding())
 			}

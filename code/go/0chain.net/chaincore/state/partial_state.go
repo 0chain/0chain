@@ -110,7 +110,7 @@ func (ps *PartialState) ComputeProperties() {
 			Logger.Error("partial state root hash mismatch", zap.Any("hash", ps.Hash), zap.Any("root", root.GetHashBytes()))
 		}
 	} else {
-		Logger.Error("partial state root is null",zap.Int("nodes",len(ps.Nodes)))
+		Logger.Error("partial state root is null", zap.Int("nodes", len(ps.Nodes)))
 	}
 }
 
@@ -220,4 +220,3 @@ func (ps *PartialState) AddNode(node util.Node) {
 func (ps *PartialState) SaveState(ctx context.Context, stateDB util.NodeDB) error {
 	return util.MergeState(ctx, ps.mndb, stateDB)
 }
-

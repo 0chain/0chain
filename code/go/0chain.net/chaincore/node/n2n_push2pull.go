@@ -3,6 +3,7 @@ package node
 import (
 	"context"
 	"net/http"
+	"net/url"
 	"sort"
 	"sync"
 	"time"
@@ -92,10 +93,10 @@ func pullEntityHandler(ctx context.Context, nd *Node, uri string, handler datast
 		N2n.Debug("message pull", zap.Int("from", nd.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", uri), zap.Duration("duration", duration), zap.String("entity", entityName), zap.Any("id", entity.GetKey()))
 		return entity, nil
 	}
-	params := make(map[string]string)
-	params["__push2pull"] = "true"
-	params["_puri"] = uri
-	params["id"] = datastore.ToString(entityID)
+	params := &url.Values{}
+	params.Add("__push2pull", "true")
+	params.Add("_puri", uri)
+	params.Add("id", datastore.ToString(entityID))
 	rhandler := pullDataRequestor(params, phandler)
 
 	addRequestNode := func(key string, requestNode *nodeRequest) *pullDataCacheEntry {

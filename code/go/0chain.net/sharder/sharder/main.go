@@ -186,6 +186,7 @@ func initEntities() {
 	block.SetupBlockSummaryEntity(ememoryStorage)
 	block.SetupStateChange(memoryStorage)
 	state.SetupPartialState(memoryStorage)
+	state.SetupStateNodes(memoryStorage)
 	round.SetupEntity(ememoryStorage)
 
 	client.SetupEntity(memoryStorage)

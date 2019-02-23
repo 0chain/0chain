@@ -183,6 +183,7 @@ func initEntities() {
 	block.SetupBlockSummaryEntity(memoryStorage)
 	block.SetupStateChange(memoryStorage)
 	state.SetupPartialState(memoryStorage)
+	state.SetupStateNodes(memoryStorage)
 	client.SetupEntity(memoryStorage)
 
 	transaction.SetupTransactionDB()

@@ -259,7 +259,6 @@ type ReadMarker struct {
 	OwnerID         string           `json:"owner_id"`
 	Timestamp       common.Timestamp `json:"timestamp"`
 	ReadCounter     int64            `json:"counter"`
-	FilePath        string           `json:"filepath"`
 	Signature       string           `json:"signature"`
 }
 
@@ -277,7 +276,7 @@ func (rm *ReadMarker) VerifySignature(clientPublicKey string) bool {
 }
 
 func (rm *ReadMarker) GetHashData() string {
-	hashData := fmt.Sprintf("%v:%v:%v:%v:%v:%v:%v:%v", rm.AllocationID, rm.BlobberID, rm.ClientID, rm.ClientPublicKey, rm.OwnerID, rm.FilePath, rm.ReadCounter, rm.Timestamp)
+	hashData := fmt.Sprintf("%v:%v:%v:%v:%v:%v:%v", rm.AllocationID, rm.BlobberID, rm.ClientID, rm.ClientPublicKey, rm.OwnerID, rm.ReadCounter, rm.Timestamp)
 	return hashData
 }
 
