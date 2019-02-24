@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"flag"
 	"fmt"
@@ -8,8 +9,10 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
+	"errors"
 
 	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/miner"
@@ -36,6 +39,8 @@ import (
 
 func main() {
 	deploymentMode := flag.Int("deployment_mode", 2, "deployment_mode")
+	nonGenesis := flag.Bool("non_genesis", false, "non_genesis")
+	discoveryIps := flag.String("discovery_ips", "", "discovery_ips")
 	keysFile := flag.String("keys_file", "", "keys_file")
 	nodesFile := flag.String("nodes_file", "", "nodes_file (deprecated)")
 	maxDelay := flag.Int("max_delay", 0, "max_delay (deprecated)")
@@ -55,11 +60,7 @@ func main() {
 	config.Configuration.MaxDelay = *maxDelay
 	transaction.SetTxnTimeout(int64(viper.GetInt("server_chain.transaction.timeout")))
 
-	reader, err := os.Open(*keysFile)
-	if err != nil {
-		panic(err)
-	}
-
+	
 	config.SetServerChainID(config.Configuration.ChainID)
 
 	common.SetupRootContext(node.GetNodeContext())
@@ -67,12 +68,28 @@ func main() {
 	initEntities()
 	serverChain := chain.NewChainFromConfig()
 	signatureScheme := serverChain.GetSignatureScheme()
+
+	Logger.Info("Owner keys file", zap.String("filename", *keysFile))
+	reader, err := os.Open(*keysFile)
+	if err != nil {
+		panic(err)
+	}
 	err = signatureScheme.ReadKeys(reader)
 	if err != nil {
 		Logger.Panic("Error reading keys file")
 	}
-	node.Self.SetSignatureScheme(signatureScheme)
 	reader.Close()
+	node.Self.SetSignatureScheme(signatureScheme)
+	if *nonGenesis {
+		hostName, portNum, err := readNonGenesisHostAndPort(keysFile) 
+		if err != nil {
+			Logger.Panic("Error reading keys file. Non-genesis miner has no host or port number", zap.Error(err))
+		}
+		Logger.Info("Inside nonGenesis", zap.String("hostname", hostName), zap.Int("port Num", portNum))
+		node.Self.Host = hostName
+		node.Self.Port = portNum
+	}
+	
 
 	miner.SetupMinerChain(serverChain)
 	mc := miner.GetMinerChain()
@@ -84,24 +101,19 @@ func main() {
 	miner.SetNetworkRelayTime(viper.GetDuration("network.relay_time") * time.Millisecond)
 	node.ReadConfig()
 
-	nodesConfigFile := viper.GetString("network.nodes_file")
-	if nodesConfigFile == "" {
-		nodesConfigFile = *nodesFile
-	}
-	if nodesConfigFile == "" {
-		panic("Please specify --nodes_file file.txt option with a file.txt containing nodes including self")
-	}
-	if strings.HasSuffix(nodesConfigFile, "txt") {
-		reader, err = os.Open(nodesConfigFile)
-		if err != nil {
-			log.Fatalf("%v", err)
-		}
-		node.ReadNodes(reader, serverChain.Miners, serverChain.Sharders, serverChain.Blobbers)
-		reader.Close()
+	if !*nonGenesis {
+		readNodesFile(nodesFile, mc, serverChain)
 	} else {
-		mc.ReadNodePools(nodesConfigFile)
-		Logger.Info("nodes", zap.Int("miners", mc.Miners.Size()), zap.Int("sharders", mc.Sharders.Size()))
+		if discoveryIps != nil {
+			Logger.Info("discovring blockchain")
+			if !miner.DiscoverPoolMembers(*discoveryIps) {
+				log.Fatal("Cannot discover pool members")
+			}
+		}
 	}
+
+	Logger.Info("Miners in main", zap.Int("size", mc.Miners.Size()))
+	
 	if node.Self.ID == "" {
 		Logger.Panic("node definition for self node doesn't exist")
 	}
@@ -153,14 +165,9 @@ func main() {
 	initHandlers()
 
 	chain.StartTime = time.Now().UTC()
-	go func() {
-		miner.StartDKG(ctx)
-		miner.WaitForDkgToBeDone(ctx)
-		miner.SetupWorkers(ctx)
-		if config.Development() {
-			go TransactionGenerator(mc.Chain)
-		}
-	}()
+	if !*nonGenesis {
+		kickoffMiner(ctx, mc)
+	}
 
 	Logger.Info("Ready to listen to the requests")
 	log.Fatal(server.ListenAndServe())
@@ -171,6 +178,65 @@ func initServer() {
 	all the state before it can start accepting requests
 	*/
 	time.Sleep(time.Second)
+}
+
+func readNonGenesisHostAndPort(keysFile *string) (string, int, error) {
+	reader, err := os.Open(*keysFile)
+	if err != nil {
+		panic(err)
+	}
+	defer reader.Close()
+	scanner := bufio.NewScanner(reader)
+	scanner.Scan() //throw away the publickey
+	scanner.Scan() //throw away the secretkey
+	result := scanner.Scan()
+	if result == false {
+		return "", 0, errors.New("error reading Host")
+	}
+
+	h := scanner.Text()
+	Logger.Info("Host inside", zap.String("host", h))
+	scanner.Scan()
+	po, err := strconv.ParseInt(scanner.Text(), 10, 32)
+	p := int(po)
+	if err != nil {
+		return "", 0, err
+	}
+	return h, p, nil
+		
+}
+func kickoffMiner(ctx context.Context, mc *miner.Chain) {
+	go func() {
+		miner.StartDKG(ctx)
+		miner.WaitForDkgToBeDone(ctx)
+		miner.SetupWorkers(ctx)
+		if config.Development() {
+			go TransactionGenerator(mc.Chain)
+		}
+	}()
+}
+
+func readNodesFile(nodesFile *string, mc *miner.Chain, serverChain *chain.Chain) {
+	
+	nodesConfigFile := viper.GetString("network.nodes_file")
+	if nodesConfigFile == "" {
+		nodesConfigFile = *nodesFile
+	}
+	if nodesConfigFile == "" {
+		panic("Please specify --nodes_file file.txt option with a file.txt containing nodes including self")
+	}
+	if strings.HasSuffix(nodesConfigFile, "txt") {
+		reader, err := os.Open(nodesConfigFile)
+		if err != nil {
+			log.Fatalf("%v", err)
+		}
+		node.ReadNodes(reader, serverChain.Miners, serverChain.Sharders, serverChain.Blobbers)
+		reader.Close()
+	} else {
+		mc.ReadNodePools(nodesConfigFile)
+		Logger.Info("nodes", zap.Int("miners", mc.Miners.Size()), zap.Int("sharders", mc.Sharders.Size()))
+	}
+	Logger.Info("Miners inside", zap.Int("size", mc.Miners.Size()))
 }
 
 func initEntities() {
