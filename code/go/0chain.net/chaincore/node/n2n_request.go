@@ -3,6 +3,7 @@ package node
 import (
 	"bytes"
 	"context"
+	"io"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -105,18 +106,15 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 				timeout = options.Timeout
 			}
 			url := provider.GetN2NURLBase() + uri
-			req, err := http.NewRequest("POST", url, strings.NewReader(params.Encode()))
+			var data io.Reader
+			if params != nil {
+				data = strings.NewReader(params.Encode())
+			}
+			req, err := http.NewRequest("POST", url, data)
 			if err != nil {
 				return false
 			}
 			req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-			/*
-				q := req.URL.Query()
-				for k, v := range params {
-					q.Add(k, v)
-				}
-				req.URL.RawQuery = q.Encode()
-			*/
 			if options.Compress {
 				req.Header.Set("Content-Encoding", compDecomp.Encoding())
 			}
