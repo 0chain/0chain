@@ -63,7 +63,7 @@ func (c *Chain) GetStateNodes(ctx context.Context, keys []util.Key) {
 	if err != nil {
 		Logger.Error("get state nodes - error saving", zap.Int("keys", len(keys)), zap.Error(err))
 	} else {
-		Logger.Error("get state nodes - saving", zap.Int("keys", len(keys)), zap.Int("nodes", len(ns.Nodes)))
+		Logger.Info("get state nodes - saving", zap.Int("keys", len(keys)), zap.Int("nodes", len(ns.Nodes)))
 	}
 	return
 }
