@@ -17,6 +17,9 @@ type Key []byte
 /*MPTIteratorHandler is a collection iteration handler function type */
 type MPTIteratorHandler func(ctx context.Context, path Path, key Key, node Node) error
 
+//MPTMissingNodeHandler - a handler for missing keys during iteration
+type MPTMissingNodeHandler func(ctx context.Context, path Path, key Key) error
+
 //MerklePatriciaTrieI - interface of the merkle patricia trie
 type MerklePatriciaTrieI interface {
 	SetNodeDB(ndb NodeDB)
@@ -43,7 +46,7 @@ type MerklePatriciaTrieI interface {
 	GetPathNodes(path Path) ([]Node, error)
 
 	// useful for pruning the state below a certain origin number
-	UpdateVersion(ctx context.Context, version Sequence) (*MissingNode, error) // mark
+	UpdateVersion(ctx context.Context, version Sequence, missingNodeHander MPTMissingNodeHandler) error // mark
 
 	// only for testing and debugging
 	PrettyPrint(w io.Writer) error

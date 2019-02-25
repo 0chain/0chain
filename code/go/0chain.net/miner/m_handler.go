@@ -244,6 +244,10 @@ func StateNodesHandler(ctx context.Context, r *http.Request) (interface{}, error
 	keys := make([]util.Key, len(nodes))
 	ns, err := mc.GetStateNodesFrom(ctx, keys)
 	if err != nil {
+		if ns != nil {
+			Logger.Error("state nodes handler", zap.Int("keys", len(nodes)), zap.Int("found_keys", len(ns.Nodes)), zap.Error(err))
+			return ns, nil
+		}
 		Logger.Error("state nodes handler", zap.Int("keys", len(nodes)), zap.Error(err))
 		return nil, err
 	}

@@ -116,7 +116,11 @@ func TestMerkeTreePruning(t *testing.T) {
 
 	pndb.Iterate(context.TODO(), dbIteratorHandler)
 
-	_, err = mpt.UpdateVersion(context.TODO(), newOrigin)
+	missingNodeHandler := func(ctx context.Context, path Path, key Key) error {
+		fmt.Printf("missing node: %v %v\n", path, key)
+		return nil
+	}
+	err = mpt.UpdateVersion(context.TODO(), newOrigin, missingNodeHandler)
 	if err != nil {
 		fmt.Printf("error updating origin: %v\n", err)
 	}

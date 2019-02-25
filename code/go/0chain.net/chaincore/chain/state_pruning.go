@@ -47,14 +47,27 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 	pctx := util.WithPruneStats(ctx)
 	ps := util.GetPruneStats(pctx)
 	t := time.Now()
-	missingNode, err := mpt.UpdateVersion(pctx, newVersion)
+	var missingKeys []util.Key
+
+	missingNodesHandler := func(ctx context.Context, path util.Path, key util.Key) error {
+		missingKeys = append(missingKeys, key)
+		if len(missingKeys) == 1000 {
+			c.GetStateNodes(ctx, missingKeys[:])
+			missingKeys = nil
+		}
+		return nil
+	}
+
+	c.pruneStats = ps
+	err := mpt.UpdateVersion(pctx, newVersion, missingNodesHandler)
 	d1 := time.Since(t)
 	StatePruneUpdateTimer.Update(d1)
 	if err != nil {
 		Logger.Error("prune client state (update origin)", zap.Error(err))
-		if missingNode != nil {
-			c.pruneStats = ps
-			go c.GetPartialState(ctx, missingNode.Key)
+		if ps.MissingNodes > 0 {
+			if len(missingKeys) > 0 {
+				c.GetStateNodes(ctx, missingKeys[:])
+			}
 			return
 		}
 	} else {
