@@ -47,10 +47,16 @@ func CleanupWorker(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			mstore.IterateCollectionAsc(cctx, transactionEntityMetadata, collectionName, handler)
+			err := mstore.IterateCollectionAsc(cctx, transactionEntityMetadata, collectionName, handler)
+			if err != nil {
+				Logger.Error("Error in IterateCollectionAsc", zap.Error(err))
+			}
 			if len(invalidTxns) > 0 {
 				Logger.Info("transactions cleanup", zap.String("collection", collectionName), zap.Int("invalid_count", len(invalidTxns)))
-				transactionEntityMetadata.GetStore().MultiDelete(cctx, transactionEntityMetadata, invalidTxns)
+				err = transactionEntityMetadata.GetStore().MultiDelete(cctx, transactionEntityMetadata, invalidTxns)
+				if err != nil {
+					Logger.Error("Error in MultiDelete", zap.Error(err))
+				}
 				invalidTxns = invalidTxns[:0]
 			}
 		}

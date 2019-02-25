@@ -76,7 +76,7 @@ func (ms *Store) iterateCollection(ctx context.Context, entityMetadata datastore
 				}
 				ce.SetCollectionScore(score)
 			} else {
-				Logger.Debug("iterator error", zap.Any("score", bkeys[2*i+1]), zap.Any("type", fmt.Sprintf("%T", bkeys[2*i+1])))
+				Logger.Info("iterator error", zap.Any("score", bkeys[2*i+1]), zap.Any("type", fmt.Sprintf("%T", bkeys[2*i+1])))
 			}
 		}
 		err = ms.MultiRead(ctx, entityMetadata, keys[:count], bucket)
