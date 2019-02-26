@@ -127,6 +127,10 @@ func (sc *StorageSmartContract) AddChallenge(t *transaction.Transaction, b *bloc
 
 	validatorList, _ := sc.getValidatorsList()
 
+	if len(validatorList) == 0 {
+		return "", common.NewError("no_validators", "Not enough validators for the challenge")
+	}
+
 	storageChallenge.Validators = validatorList
 	storageChallenge.Blobber = allocationObj.Blobbers[rand.Intn(len(allocationObj.Blobbers))]
 	storageChallenge.RandomNumber = b.RoundRandomSeed

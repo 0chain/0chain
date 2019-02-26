@@ -250,21 +250,19 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 	clientState := createTxnMPT(b.ClientState) // begin transaction
 	startRoot := clientState.GetRoot()
 	sctx := bcstate.NewStateContext(b, clientState, c.clientStateDeserializer, txn)
+	
+	//smart contract memoryDB
+	mndb := smartcontractstate.NewMemorySCDB()
 
 	switch txn.TransactionType {
 	case transaction.TxnTypeSmartContract:
-		mndb := smartcontractstate.NewMemorySCDB()
 		ndb := smartcontractstate.NewPipedSCDB(mndb, b.SCStateDB, false)
 		output, err := c.ExecuteSmartContract(txn, ndb, sctx)
 		if err != nil {
 			Logger.Error("Smart contract execution returned error", zap.Any("error", err), zap.Any("transaction", txn.Hash))
 			return false
 		}
-		err = smartcontractstate.SaveChanges(common.GetRootContext(), mndb, b.SCStateDB)
-		if err != nil {
-			Logger.Error("Error in saving the state on the block after execution", zap.Any("error", err))
-			return false
-		}
+		
 		txn.TransactionOutput = output
 		txn.OutputHash = txn.ComputeOutputHash()
 		Logger.Info("SC executed for transaction: ", zap.String("txn", txn.Hash), zap.String("output_hash", txn.OutputHash), zap.String("txn_output", txn.TransactionOutput))
@@ -285,6 +283,14 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 	for _, mint := range sctx.GetMints() {
 		err := c.mintAmount(sctx, mint.ToClientID, state.Balance(mint.Amount))
 		if err != nil {
+			return false
+		}
+	}
+
+	if txn.TransactionType == transaction.TxnTypeSmartContract {
+		err := smartcontractstate.SaveChanges(common.GetRootContext(), mndb, b.SCStateDB)
+		if err != nil {
+			Logger.Error("Error in saving the state on the block after execution", zap.Any("error", err))
 			return false
 		}
 	}
