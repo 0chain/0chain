@@ -1,6 +1,6 @@
 #docker.aws
 ARG image_tag
-FROM 0chain/build_base:${image_tag} as zchain_build_base
+FROM zchain_build_base:${image_tag} as zchain_build_base
 
 FROM alpine:3.8
 RUN apk add bash
