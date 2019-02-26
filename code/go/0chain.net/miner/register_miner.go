@@ -9,9 +9,15 @@ import (
 	"path/filepath"
 	"sort"
 
+	"0chain.net/chaincore/client"
+	"0chain.net/core/common"
+	"0chain.net/core/datastore"
+	"0chain.net/core/encryption"
 	. "0chain.net/core/logging"
+	"0chain.net/core/memorystore"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
+	"0chain.net/chaincore/wallet"
 )
 
 // PoolMembers Pool members of the blockchain
@@ -24,6 +30,7 @@ var discoverIPPath = "/_nh/getpoolmembers"
 var discoveryIps []string
 
 var members PoolMembers
+var myWallet *wallet.Wallet
 
 //DiscoverPoolMembers given the discover_ips file, reads ips from it and discovers pool members
 func DiscoverPoolMembers(discoveryFile string) bool {
@@ -109,6 +116,31 @@ func isSliceEq(a, b []string) bool {
 
 	return true
 }
+
+//RegisterClient registers client only locally
+func RegisterClient(sigScheme encryption.SignatureScheme) {
+	wallet.SetupWallet()
+	myWallet = &wallet.Wallet{}
+	err := myWallet.SetSignatureScheme(sigScheme)
+	if err != nil {
+		panic(err)
+	}
+	clientMetadataProvider := datastore.GetEntityMetadata("client")
+	ctx := memorystore.WithEntityConnection(common.GetRootContext(), clientMetadataProvider)
+	defer memorystore.Close(ctx)
+	ctx = datastore.WithAsyncChannel(ctx, client.ClientEntityChannel)
+	err = myWallet.Register(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	//Logger.Info("My Client Info", zap.Any("ClientId", myWallet.ClientID))
+	
+}
+
+
+
+////////////http related ////////////
 
 //MakeGetRequest make a generic get request. url should have complete path.
 func MakeGetRequest(url string, result interface{}) {

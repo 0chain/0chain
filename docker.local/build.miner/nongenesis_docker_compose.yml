@@ -23,6 +23,7 @@ services:
     command: redis-server /0chain/config/redis/transactions.redis.conf
 
   miner:
+    image: "miner"
     environment:
       - DOCKER=true
     depends_on:

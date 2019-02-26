@@ -88,6 +88,7 @@ func main() {
 		Logger.Info("Inside nonGenesis", zap.String("hostname", hostName), zap.Int("port Num", portNum))
 		node.Self.Host = hostName
 		node.Self.Port = portNum
+		
 	}
 	
 
@@ -103,14 +104,7 @@ func main() {
 
 	if !*nonGenesis {
 		readNodesFile(nodesFile, mc, serverChain)
-	} else {
-		if discoveryIps != nil {
-			Logger.Info("discovring blockchain")
-			if !miner.DiscoverPoolMembers(*discoveryIps) {
-				log.Fatal("Cannot discover pool members")
-			}
-		}
-	}
+	} 
 
 	Logger.Info("Miners in main", zap.Int("size", mc.Miners.Size()))
 	
@@ -167,6 +161,15 @@ func main() {
 	chain.StartTime = time.Now().UTC()
 	if !*nonGenesis {
 		kickoffMiner(ctx, mc)
+	} else {
+		if discoveryIps != nil {
+			Logger.Info("discovring blockchain")
+			if !miner.DiscoverPoolMembers(*discoveryIps) {
+				log.Fatal("Cannot discover pool members")
+			}
+			miner.RegisterClient(signatureScheme)
+			miner.RegisterWithBC()
+		}
 	}
 
 	Logger.Info("Ready to listen to the requests")
