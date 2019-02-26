@@ -34,5 +34,6 @@ ENV APP_DIR=/0chain
 WORKDIR $APP_DIR
 COPY --from=miner_build $APP_DIR/go/0chain.net/miner/miner/miner $APP_DIR/bin/miner
 
-RUN groupadd -r 0chain && useradd --no-log-init -r -g 0chain 0chain
+RUN addgroup -g 1000 -S 0chain && adduser -u 1000 -S 0chain -G 0chain
+USER 0chain:0chain
 
