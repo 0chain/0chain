@@ -1,7 +1,7 @@
 ARG image_tag
 
 # Compile the miner in an un-tagged image so the final, tagged image can be smaller:
-FROM 0chain/build_base:${image_tag} as miner_build
+FROM 0chain_build_base:${image_tag} as miner_build
 ENV SRC_DIR=/0chain
 ENV GO111MODULE=on
 
