@@ -1,6 +1,6 @@
 # Compile the sharder in an un-tagged image so the final, tagged image can be smaller:
 ARG image_tag
-FROM 0chain/build_base:${image_tag} as sharder_build
+FROM 0chain_build_base:${image_tag} as sharder_build
 ENV SRC_DIR=/0chain
 ENV GO111MODULE=on
 
@@ -29,7 +29,7 @@ COPY ./code/go/0chain.net $SRC_DIR/go/0chain.net
 RUN go build -v -tags bn256
 
 # Copy the build artifact into a minimal runtime image:
-FROM 0chain/run_base:${image_tag}
+FROM 0chain_run_base:${image_tag}
 ENV APP_DIR=/0chain
 WORKDIR $APP_DIR
 COPY --from=sharder_build $APP_DIR/go/0chain.net/sharder/sharder/sharder $APP_DIR/bin/

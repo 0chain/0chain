@@ -29,7 +29,7 @@ COPY ./code/go/0chain.net $SRC_DIR/go/0chain.net
 RUN go build -v -tags bn256
 
 # Copy the build artifact into a minimal runtime image:
-FROM 0chain/run_base:${image_tag}
+FROM 0chain_run_base:${image_tag}
 ENV APP_DIR=/0chain
 WORKDIR $APP_DIR
 COPY --from=miner_build $APP_DIR/go/0chain.net/miner/miner/miner $APP_DIR/bin/miner
