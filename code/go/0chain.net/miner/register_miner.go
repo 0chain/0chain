@@ -4,10 +4,9 @@ package miner
 import (
 	"encoding/json"
 	"fmt"
-	"log"
-	"net/http"
 	"path/filepath"
 	"sort"
+	"time"
 
 	"0chain.net/chaincore/client"
 	"0chain.net/core/common"
@@ -19,6 +18,13 @@ import (
 	"go.uber.org/zap"
 	"0chain.net/chaincore/wallet"
 )
+
+const txnSubmitURL = "v1/transaction/put"
+const txnVerifyURL = "v1/transaction/get/confirmation?hash="
+var registerClient = "/v1/client/put"
+
+//TxnConfirmationTime time to wait before checking the status
+const TxnConfirmationTime = 15
 
 // PoolMembers Pool members of the blockchain
 type PoolMembers struct {
@@ -41,7 +47,7 @@ func DiscoverPoolMembers(discoveryFile string) bool {
 	for _, ip := range discoveryIps {
 		pm = PoolMembers{}
 
-		MakeGetRequest(ip+discoverIPPath, &pm)
+		common.MakeGetRequest(ip+discoverIPPath, &pm) 
 
 		if pm.Miners != nil {
 			if len(pm.Miners) == 0 {
@@ -80,7 +86,7 @@ func DiscoverPoolMembers(discoveryFile string) bool {
 }
 
 func extractDiscoverIps(discFile string) {
-	Logger.Info("The disc file", zap.String("name", discFile))
+	//Logger.Info("The disc file", zap.String("name", discFile))
 	ipsConfig := ReadYamlConfig(discFile)
 	discIps := ipsConfig.Get("ips")
 
@@ -134,39 +140,30 @@ func RegisterClient(sigScheme encryption.SignatureScheme) {
 		panic(err)
 	}
 
+	nodeBytes, _ := json.Marshal(myWallet)
+	//Logger.Info("Post body", zap.Any("publicKey", myWallet.PublicKey), zap.String("ID", myWallet.ClientID))
+	for _, ip := range members.Miners {
+		body, err := common.SendPostRequest(ip + registerClient, nodeBytes, "", "", nil)
+		if err!= nil {
+			Logger.Error("error in register client", zap.Error(err), zap.Any("body", body) )
+		} 
+		time.Sleep(common.SleepBetweenRetries * time.Second)
+	}
 	//Logger.Info("My Client Info", zap.Any("ClientId", myWallet.ClientID))
 	
 }
 
-
-
-////////////http related ////////////
-
-//MakeGetRequest make a generic get request. url should have complete path.
-func MakeGetRequest(url string, result interface{}) {
-
-	Logger.Info(fmt.Sprintf("making GET request to %s", url))
-	//ToDo: add parameter support
-	client := http.Client{}
-	request, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	resp, err := client.Do(request)
-	if err != nil {
-		Logger.Info("Failed to run get", zap.Error(err))
-		return
-	}
-
-	if resp.Body != nil {
-		defer resp.Body.Close()
-
-		if resp.StatusCode == http.StatusOK {
-			json.NewDecoder(resp.Body).Decode(result)
+//KickoffMinerRegistration kicks off a new miner registration process
+func KickoffMinerRegistration(discoveryIps *string, signatureScheme encryption.SignatureScheme) {
+	if discoveryIps != nil {
+		Logger.Info("discovring blockchain")
+		if !DiscoverPoolMembers(*discoveryIps) {
+			Logger.Fatal("Cannot discover pool members")
 		}
+		RegisterClient(signatureScheme)
+		
 	} else {
-		Logger.Info("resp.Body is nil")
+		Logger.Fatal("Discovery URLs are nil. Cannot discovery pool members")
 	}
 }
 

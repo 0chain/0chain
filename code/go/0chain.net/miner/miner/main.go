@@ -162,14 +162,7 @@ func main() {
 	if !*nonGenesis {
 		kickoffMiner(ctx, mc)
 	} else {
-		if discoveryIps != nil {
-			Logger.Info("discovring blockchain")
-			if !miner.DiscoverPoolMembers(*discoveryIps) {
-				log.Fatal("Cannot discover pool members")
-			}
-			miner.RegisterClient(signatureScheme)
-			miner.RegisterWithBC()
-		}
+		go miner.KickoffMinerRegistration(discoveryIps, signatureScheme)
 	}
 
 	Logger.Info("Ready to listen to the requests")
