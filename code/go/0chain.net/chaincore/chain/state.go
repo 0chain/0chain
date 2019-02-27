@@ -26,7 +26,7 @@ import (
 //StateSaveTimer - a metric that tracks the time it takes to save the state
 var StateSaveTimer metrics.Timer
 
-//StateChangeSizeMetric - a metri  that tracks how many state nodes are changing with each block
+//StateChangeSizeMetric - a metric that tracks how many state nodes are changing with each block
 var StateChangeSizeMetric metrics.Histogram
 
 func init() {
