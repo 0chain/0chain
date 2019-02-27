@@ -1,6 +1,8 @@
 package state
 
 import (
+	"context"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -31,10 +33,12 @@ type StateContextI interface {
 	GetTransaction() *transaction.Transaction
 	GetClientBalance(clientID datastore.Key) (state.Balance, error)
 	AddTransfer(t *state.Transfer) error
+	AddSignedTransfer(st *state.SignedTransfer)
 	AddMint(m *state.Mint) error
 	GetTransfers() []*state.Transfer
+	GetSignedTransfers() []*state.SignedTransfer
 	GetMints() []*state.Mint
-	Validate() error
+	Validate(ctx context.Context) error
 	GetBlockSharders(b *block.Block) []string
 }
 
@@ -44,6 +48,7 @@ type StateContext struct {
 	state                   util.MerklePatriciaTrieI
 	txn                     *transaction.Transaction
 	transfers               []*state.Transfer
+	signedTransfers         []*state.SignedTransfer
 	mints                   []*state.Mint
 	clientStateDeserializer state.DeserializerI
 	getSharders             func(*block.Block) []string
@@ -79,6 +84,12 @@ func (sc *StateContext) AddTransfer(t *state.Transfer) error {
 	return nil
 }
 
+//AddSignedTransfer - add the signed transfer
+func (sc *StateContext) AddSignedTransfer(st *state.SignedTransfer) {
+	// Signature on the signed transfer will be checked on call to sc.Validate()
+	sc.signedTransfers = append(sc.signedTransfers, st)
+}
+
 //AddMint - add the mint
 func (sc *StateContext) AddMint(m *state.Mint) error {
 	if !sc.isApprovedMinter(m) {
@@ -102,13 +113,18 @@ func (sc *StateContext) GetTransfers() []*state.Transfer {
 	return sc.transfers
 }
 
+//GetTransfers - get all the transfers
+func (sc *StateContext) GetSignedTransfers() []*state.SignedTransfer {
+	return sc.signedTransfers
+}
+
 //GetMints - get all the mints and fight bad breath
 func (sc *StateContext) GetMints() []*state.Mint {
 	return sc.mints
 }
 
 //Validate - implement interface
-func (sc *StateContext) Validate() error {
+func (sc *StateContext) Validate(ctx context.Context) error {
 	var amount state.Balance
 	for _, transfer := range sc.transfers {
 		if transfer.ClientID == sc.txn.ClientID {
@@ -122,6 +138,14 @@ func (sc *StateContext) Validate() error {
 	if amount > state.Balance(sc.txn.Value+sc.txn.Fee) {
 		return state.ErrInvalidTransfer
 	}
+
+	for _, signedTransfer := range sc.signedTransfers {
+		err := signedTransfer.VerifySignature(ctx)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
