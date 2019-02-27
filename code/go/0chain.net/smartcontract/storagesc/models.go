@@ -285,7 +285,7 @@ func (rm *ReadMarker) Verify(prevRM *ReadMarker) bool {
 		return false
 	}
 	if prevRM != nil {
-		if rm.BlobberID != prevRM.BlobberID || rm.OwnerID != prevRM.OwnerID || rm.Timestamp <= prevRM.Timestamp || rm.ReadCounter <= prevRM.ReadCounter {
+		if rm.BlobberID != prevRM.BlobberID || rm.OwnerID != prevRM.OwnerID || rm.Timestamp <= prevRM.Timestamp || rm.ReadCounter < prevRM.ReadCounter {
 			return false
 		}
 	}
