@@ -271,11 +271,17 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 		sctx.AddTransfer(state.NewTransfer(txn.ClientID, txn.ToClientID, state.Balance(txn.Value)))
 	}
 
-	if err := sctx.Validate(); err != nil {
+	if err := sctx.Validate(common.GetRootContext()); err != nil {
 		return false
 	}
 	for _, transfer := range sctx.GetTransfers() {
 		err := c.transferAmount(sctx, transfer.ClientID, transfer.ToClientID, state.Balance(transfer.Amount))
+		if err != nil {
+			return false
+		}
+	}
+	for _, signedTransfer := range sctx.GetSignedTransfers() {
+		err := c.transferAmount(sctx, signedTransfer.ClientID, signedTransfer.ToClientID, state.Balance(signedTransfer.Amount))
 		if err != nil {
 			return false
 		}
