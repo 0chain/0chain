@@ -1,7 +1,9 @@
 package smartcontractinterface
 
 import (
+	"context"
 	"encoding/json"
+	"net/url"
 
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractstate"
@@ -10,13 +12,17 @@ import (
 
 const Seperator = ":"
 
+type SmartContractRestHandler func(ctx context.Context, params url.Values) (interface{}, error)
+
 type SmartContract struct {
-	DB smartcontractstate.SCStateI
-	ID string
+	DB           smartcontractstate.SCStateI
+	ID           string
+	RestHandlers map[string]SmartContractRestHandler
 }
 
 func NewSC(db smartcontractstate.SCStateI, id string) *SmartContract {
-	return &SmartContract{DB: db, ID: id}
+	restHandlers := make(map[string]SmartContractRestHandler)
+	return &SmartContract{DB: db, ID: id, RestHandlers: restHandlers}
 }
 
 type SmartContractTransactionData struct {

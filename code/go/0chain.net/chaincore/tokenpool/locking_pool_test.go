@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/core/common"
 	"0chain.net/chaincore/transaction"
+	"0chain.net/core/common"
 )
 
 const (
@@ -20,13 +20,21 @@ type tokenLock struct {
 	Duration  time.Duration    `json:"duration"`
 }
 
-func (tl tokenLock) IsLocked(txn *transaction.Transaction) bool {
-	return common.ToTime(txn.CreationDate).Sub(common.ToTime(tl.StartTime)) < tl.Duration
+func (tl tokenLock) IsLocked(entity interface{}) bool {
+	txn, ok := entity.(*transaction.Transaction)
+	if ok {
+		return common.ToTime(txn.CreationDate).Sub(common.ToTime(tl.StartTime)) < tl.Duration
+	}
+	return true
 }
 
-func (tl tokenLock) LockStats(txn *transaction.Transaction) []byte {
-	ts := &tokenStat{Locked: tl.IsLocked(txn)}
-	return ts.Encode()
+func (tl tokenLock) LockStats(entity interface{}) []byte {
+	txn, ok := entity.(*transaction.Transaction)
+	if ok {
+		ts := &tokenStat{Locked: tl.IsLocked(txn)}
+		return ts.Encode()
+	}
+	return nil
 }
 
 type tokenStat struct {

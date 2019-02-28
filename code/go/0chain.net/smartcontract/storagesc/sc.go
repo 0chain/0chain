@@ -1,8 +1,11 @@
 package storagesc
 
 import (
+	"net/url"
 	"encoding/json"
 	"math/rand"
+	"context"
+
 
 	"go.uber.org/zap"
 
@@ -25,8 +28,22 @@ type StorageSmartContract struct {
 	*smartcontractinterface.SmartContract
 }
 
+func (ssc *StorageSmartContract) AllocationStatsHandler(ctx context.Context, params url.Values) (interface{}, error){
+	allocationID := params.Get("allocation")
+	allocationObj := &StorageAllocation{}
+	allocationObj.ID = allocationID
+
+	allocationBytes, err := ssc.DB.GetNode(allocationObj.GetKey())
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(allocationBytes, allocationObj)
+	return allocationObj, err
+}
+
 func (ssc *StorageSmartContract) SetSC(sc *smartcontractinterface.SmartContract) {
 	ssc.SmartContract = sc
+	ssc.SmartContract.RestHandlers["/allocation"] = ssc.AllocationStatsHandler
 }
 
 type ChallengeResponse struct {
@@ -126,6 +143,10 @@ func (sc *StorageSmartContract) AddChallenge(t *transaction.Transaction, b *bloc
 	allocationObj.Decode(allocationBytes)
 
 	validatorList, _ := sc.getValidatorsList()
+
+	if len(validatorList) == 0 {
+		return "", common.NewError("no_validators", "Not enough validators for the challenge")
+	}
 
 	storageChallenge.Validators = validatorList
 	storageChallenge.Blobber = allocationObj.Blobbers[rand.Intn(len(allocationObj.Blobbers))]

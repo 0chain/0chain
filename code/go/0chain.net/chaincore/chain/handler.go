@@ -7,18 +7,18 @@ import (
 	"strings"
 	"time"
 
-	"0chain.net/core/metric"
-	"0chain.net/chaincore/transaction"
-
+	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
-	"0chain.net/core/util"
+	"0chain.net/chaincore/transaction"
+	"0chain.net/core/metric"
 
-	"0chain.net/chaincore/block"
+	"0chain.net/core/build"
 	"0chain.net/core/common"
-	"0chain.net/chaincore/config"
 	"0chain.net/core/datastore"
 	"0chain.net/core/memorystore"
+	"0chain.net/core/util"
 )
 
 /*SetupHandlers sets up the necessary API end points */
@@ -121,7 +121,7 @@ func HomePageHandler(w http.ResponseWriter, r *http.Request) {
 	sc := GetServerChain()
 	w.Header().Set("Content-Type", "text/html;charset=UTF-8")
 	PrintCSS(w)
-	fmt.Fprintf(w, "<div>I am %v working on the chain %v <ul><li>id:%v</li><li>public_key:%v</li></ul></div>\n", node.Self.GetPseudoName(), sc.GetKey(), node.Self.GetKey(), node.Self.PublicKey)
+	fmt.Fprintf(w, "<div>I am %v working on the chain %v <ul><li>id:%v</li><li>public_key:%v</li><li>git:%v</li></ul></div>\n", node.Self.GetPseudoName(), sc.GetKey(), node.Self.GetKey(), node.Self.PublicKey, build.GitCommit)
 }
 
 func (c *Chain) healthSummary(w http.ResponseWriter, r *http.Request) {

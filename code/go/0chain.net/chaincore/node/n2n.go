@@ -2,6 +2,7 @@ package node
 
 import (
 	"context"
+	"net/url"
 
 	"0chain.net/core/datastore"
 )
@@ -28,7 +29,7 @@ f p h n  where p is the parameters to query the entity being requested, h is the
 
 Creates the send handler closure using p and h that can be repeatedly applied to different nodes till it succeeds
 */
-type EntityRequestor func(params map[string]string, handler datastore.JSONEntityReqResponderF) SendHandler
+type EntityRequestor func(urlParams *url.Values, handler datastore.JSONEntityReqResponderF) SendHandler
 
 /*N2N interface - provides the API that are required to communicate between the nodes to implement the blockchain protocol
  */
