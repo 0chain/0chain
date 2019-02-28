@@ -1,7 +1,6 @@
 package sharder
 
 import (
-	"container/list"
 	"context"
 	"sync"
 
@@ -16,9 +15,9 @@ import (
 )
 
 const (
-	SharderNormal   = 0
-	SharderSyncing  = 1
-	SharderSyncDone = 2
+	SharderNormal  = 0
+	SharderSyncing = 1
+	SharderAccept  = 2
 )
 
 var sharderChain = &Chain{}
@@ -33,11 +32,11 @@ func SetupSharderChain(c *chain.Chain) {
 	transactionCacheSize := int(c.BlockSize) * blockCacheSize
 	sharderChain.BlockTxnCache = cache.NewLRUCache(transactionCacheSize)
 	c.SetFetchedNotarizedBlockHandler(sharderChain)
-	sharderChain.sharderState = SharderNormal
+	sharderChain.sharderStatus = SharderNormal
 	sharderChain.mutex = sync.RWMutex{}
 	//TODO configure acceptance tolerance value
-	sharderChain.AcceptanceTolerance = 100
-	sharderChain.IncomingBlocks = list.New()
+	sharderChain.AcceptanceTolerance = 65
+	sharderChain.AcceptanceRound = -1
 }
 
 /*GetSharderChain - get the sharder's chain */
@@ -53,10 +52,10 @@ type Chain struct {
 	BlockCache          cache.Cache
 	BlockTxnCache       cache.Cache
 	SharderStats        Stats
-	IncomingBlocks      *list.List
-	sharderState        int
+	sharderStatus       int
 	mutex               sync.RWMutex
 	AcceptanceTolerance int64
+	AcceptanceRound     int64
 }
 
 /*GetBlockChannel - get the block channel where the incoming blocks from the network are put into for further processing */
@@ -69,18 +68,18 @@ func (sc *Chain) GetRoundChannel() chan *round.Round {
 	return sc.RoundChannel
 }
 
-/*GetState - get sharder state */
-func (sc *Chain) GetState() int {
+/*GetStatus - get sharder status */
+func (sc *Chain) GetStatus() int {
 	sc.mutex.RLock()
 	defer sc.mutex.RUnlock()
-	return sc.sharderState
+	return sc.sharderStatus
 }
 
-/*SetState - set sharder state */
-func (sc *Chain) SetState(state int) {
+/*SetStatus - set sharder status */
+func (sc *Chain) SetStatus(status int) {
 	sc.mutex.Lock()
 	defer sc.mutex.Unlock()
-	sc.sharderState = state
+	sc.sharderStatus = status
 }
 
 /*SetupGenesisBlock - setup the genesis block for this chain */
@@ -142,17 +141,6 @@ func (sc *Chain) GetSharderRound(roundNumber int64) *round.Round {
 	return sr
 }
 
-/*GetRoundSyncNumber - gives the number of rounds that the sharder has to catch up from latest finalized block round*/
-func (sc *Chain) GetRoundSyncNumber() int64 {
-	return sc.CurrentRound - sc.LatestFinalizedBlock.Round
-}
-
-/*AcceptIncomingBlocks - checks whether the chain should accept the incoming blocks based on sharder state*/
-func (sc *Chain) AcceptIncomingBlocks() bool {
-	if sc.GetState() != SharderNormal {
-		if sc.GetRoundSyncNumber() >= sc.AcceptanceTolerance {
-			return false
-		}
-	}
-	return true
+func (sc *Chain) canAcceptBlock(b *block.Block) bool {
+	return b.Round-sc.LatestFinalizedBlock.Round < sc.AcceptanceTolerance
 }

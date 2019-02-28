@@ -154,11 +154,12 @@ func main() {
 		sc.CurrentRound = r.Number
 		sc.AddRound(r)
 		Logger.Info("bc-27 most recent round info", zap.Int64("roundNumber", r.Number), zap.String("blockHash", r.BlockHash))
-	} else {
+		} else {
 		Logger.Error("bc-27 error reading round data from db", zap.Error(err))
 	}
 
-	go catchUpWithLatestRound(ctx, r)
+	go syncUpRounds(ctx, r)
+	
 	Logger.Info("Ready to listen to the requests")
 	chain.StartTime = time.Now().UTC()
 	log.Fatal(server.ListenAndServe())
@@ -221,23 +222,23 @@ func initWorkers(ctx context.Context) {
 	sharder.SetupWorkers(ctx)
 }
 
-func catchUpWithLatestRound(ctx context.Context, r *round.Round) {
-	Logger.Info("bc-27 - catch up with other sharders rounds")
+func syncUpRounds(ctx context.Context, r *round.Round) {
 	sc := sharder.GetSharderChain()
 	sc.Sharders.OneTimeStatusMonitor(ctx)
-	Logger.Info("bc-27 - get latest round from other sharders", zap.Int64("sharder_curr_round", r.Number))
+	Logger.Info("bc-27 get latest round from other sharders", zap.Int64("sharder_curr_round", r.Number))
 	lr := sc.GetLatestRoundFromSharders(ctx, r.Number)
-	if lr != nil && lr.Number > r.Number+1 {
-		sc.SetState(sharder.SharderSyncing)
-		Logger.Info("#rejoin - sharder state set to syncing")
-		Logger.Info("bc-27 - latest round from other sharder", zap.Int64("curr_round", r.Number), zap.Int64("latest_round_from_sharders", lr.Number))
+	if lr != nil && lr.Number > r.Number + 1 {
+		sc.SetStatus(sharder.SharderSyncing)
+		Logger.Info("#rejoin sharder status set to syncing")
+		Logger.Info("bc-27 latest round from other sharder", zap.Int64("curr_round", r.Number), zap.Int64("latest_round_from_sharders", lr.Number))		
 		ts := time.Now()
 		sc.GetMissingRounds(ctx, lr.Number, r.Number)
-		sc.SetState(sharder.SharderSyncDone)
-		Logger.Info("#rejoin - sharder state set to sync done")
 		duration := time.Since(ts)
 		Logger.Info("bc-27 duration for catching up with all missing rounds", zap.Duration("duration", duration))
+		sc.SetStatus(sharder.SharderNormal)
+		Logger.Info("#rejoin sharder status set to Normal")
 	}
+	go sc.BlockWorker(ctx)
 }
 
 func setupBlockStorageProvider() {

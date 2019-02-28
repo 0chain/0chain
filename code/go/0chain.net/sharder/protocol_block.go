@@ -62,6 +62,14 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 }
 
 func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
+	if err := sc.VerifyNotarization(ctx, b.Hash, b.VerificationTickets); err != nil {
+		Logger.Error("notarization verification failed", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
+		return
+	}
+	if err := b.Validate(ctx); err != nil {
+		Logger.Error("block validation", zap.Any("round", b.Round), zap.Any("hash", b.Hash), zap.Error(err))
+		return
+	}
 	er := sc.GetRound(b.Round)
 	if er == nil {
 		var r = round.NewRound(b.Round)
@@ -74,36 +82,6 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 	sc.SetRoundRank(er, b)
 	Logger.Info("received block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)))
 	sc.AddNotarizedBlock(ctx, er, b)
-}
-
-func (sc *Chain) processIncomingBlock(ctx context.Context, b *block.Block) {
-	if err := sc.VerifyNotarization(ctx, b.Hash, b.VerificationTickets); err != nil {
-		Logger.Error("notarization verification failed", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
-		return
-	}
-	if err := b.Validate(ctx); err != nil {
-		Logger.Error("block validation", zap.Any("round", b.Round), zap.Any("hash", b.Hash), zap.Error(err))
-		return
-	}
-	if sc.GetState() == SharderSyncing {
-		Logger.Info("srejoin - accepting blocks and sharder is syncing with other sharder", zap.Int64("blockRound", b.Round), zap.Int64("diffRound", b.Round - sc.LatestFinalizedBlock.Round))
-		if(b.Round - sc.LatestFinalizedBlock.Round < sc.AcceptanceTolerance) {
-			sc.IncomingBlocks.PushBack(b)
-			Logger.Info("srejoin - adding incoming blocks to cache")
-		}
-	} else if sc.GetState() == SharderNormal {
-		sc.processBlock(ctx, b)
-	}
-}
-
-func (sc *Chain) processBlocksInCache(ctx context.Context) {
-	for i := 0; i < sc.IncomingBlocks.Len(); i++  {
-		b := sc.IncomingBlocks.Front().Value.(*block.Block)
-		Logger.Info("rejoin - sharder syncing with the cache", zap.Int64("blockRound", b.Round))
-		sc.processBlock(ctx, b)
-	}
-	sc.SetState(SharderNormal)
-	Logger.Info("srejoin - sharder state set to Normal")
 }
 
 func (sc *Chain) GetLatestRoundFromSharders(ctx context.Context, currRound int64) *round.Round {
@@ -141,9 +119,9 @@ func (sc *Chain) GetMissingRounds(ctx context.Context, targetR int64, dbR int64)
 	rounds := targetR - dbR
 
 	Logger.Info("bc-27 Synching up ", zap.Int64("rounds", rounds))
+	loopR := dbR
 
-	for i := int64(0); i < rounds; i++ {
-		loopR := dbR + i
+	for true {
 		params := map[string]string{"round": strconv.FormatInt(loopR, 10)}
 		var r *round.Round
 		Logger.Info("bc-27 requesting all sharders for the round", zap.Int64("round", loopR))
@@ -160,16 +138,24 @@ func (sc *Chain) GetMissingRounds(ctx context.Context, targetR int64, dbR int64)
 		})
 		if r == nil {
 			Logger.Info("bc-27 round is nil")
-			return
+			loopR++
+			continue
 		}
 		if r.BlockHash == "" {
 			Logger.Info("bc-27 round block hash is empty", zap.Int64("round", r.Number))
-			return
+			loopR++
+			continue
 		}
 		Logger.Info("bc-27 check to see if block needed to be stored")
 		sc.storeMissingRoundBlock(ctx, r)
 		duration := time.Since(ts)
 		Logger.Info("bc-27 duration to catch up with one missing round", zap.Duration("duration", duration), zap.Int64("round", r.Number))
+		if sc.AcceptanceRound != -1 && (sc.AcceptanceRound - 1) <= r.Number {
+			break
+		} else {
+			Logger.Info("#rejoin current sync Round", zap.Int64("sRound", r.Number), zap.Int64("accRound", sc.AcceptanceRound))
+		}
+		loopR++
 	}
 }
 
@@ -220,6 +206,8 @@ func (sc *Chain) storeMissingRoundBlock(ctx context.Context, r *round.Round) {
 	}
 	sc.storeRound(ctx, r, b)
 	Logger.Info("bc-27 missed round stored in db", zap.Int64("round", r.GetRoundNumber()))
+	sc.LatestFinalizedBlock = b
+	Logger.Info("finalize round - latest finalized round", zap.Int64("round", sc.LatestFinalizedBlock.Round), zap.String("block", b.Hash))
 }
 
 func (sc *Chain) storeRound(ctx context.Context, r round.RoundI, b *block.Block) {

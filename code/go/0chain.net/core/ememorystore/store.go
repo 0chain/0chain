@@ -8,8 +8,6 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"github.com/0chain/gorocksdb"
-	"go.uber.org/zap"
-	. "0chain.net/core/logging"
 )
 
 var storageAPI = &Store{}
@@ -54,8 +52,6 @@ func (ems *Store) Write(ctx context.Context, entity datastore.Entity) error {
 		rNumber, _ := strconv.ParseInt(datastore.ToString(entity.GetKey()), 10, 64)
 		key := make([]byte, 8)
 		binary.BigEndian.PutUint64(key, uint64(rNumber))
-		// key := fmt.Sprintf("%06s", datastore.ToString(entity.GetKey()))
-		Logger.Info("&&! round inserted ", zap.String("key", string(key)))
 		err = c.Conn.Put(key, data)
 	} else {
 		err = c.Conn.Put([]byte(datastore.ToString(entity.GetKey())), data)

@@ -5,9 +5,11 @@ import (
 	"net/http"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/node"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/chaincore/node"
+	. "0chain.net/core/logging"
+	"go.uber.org/zap"
 )
 
 /*SetupM2SReceivers - setup handlers for all the messages received from the miner */
@@ -45,11 +47,29 @@ func FinalizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 
 /*NotarizedBlockHandler - handle the notarized block */
 func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+	sc := GetSharderChain()
 	b, ok := entity.(*block.Block)
 	if !ok {
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
-	sc := GetSharderChain()
+	if(sc.GetStatus() != SharderNormal) {
+		if b.Round%100 == 0 {
+			diffRound := b.Round-sc.LatestFinalizedBlock.Round
+			Logger.Info("#rejoin catch up rounds", zap.Int64("rounds", diffRound))
+		}
+		if !sc.canAcceptBlock(b) {
+			Logger.Info("#rejoin drop block", zap.Int64("bRound", b.Round))
+			return nil, nil
+		}
+		if sc.AcceptanceRound == -1 {
+			sc.AcceptanceRound = b.Round
+			Logger.Info("#rejoin updated sharder acceptance round", zap.Int64("round", b.Round))
+			sc.SetStatus(SharderAccept)
+			Logger.Info("#rejoin sharder status updated : Accept")
+		} else {
+			Logger.Info("#rejoin inside else", zap.Int64("accept_round", sc.AcceptanceRound))
+		}
+	}
 	_, err := sc.GetBlock(ctx, b.Hash)
 	if err == nil {
 		return true, nil
