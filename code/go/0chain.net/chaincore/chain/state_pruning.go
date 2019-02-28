@@ -52,15 +52,19 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 	missingNodesHandler := func(ctx context.Context, path util.Path, key util.Key) error {
 		missingKeys = append(missingKeys, key)
 		if len(missingKeys) == 1000 {
+			stage := ps.Stage
+			ps.Stage = util.PruneStateSynch
 			c.GetStateNodes(ctx, missingKeys[:])
+			ps.Stage = stage
 			missingKeys = nil
 		}
 		return nil
 	}
-
 	c.pruneStats = ps
+	ps.Stage = util.PruneStateUpdate
 	err := mpt.UpdateVersion(pctx, newVersion, missingNodesHandler)
 	d1 := time.Since(t)
+	ps.UpdateTime = d1
 	StatePruneUpdateTimer.Update(d1)
 	if err != nil {
 		Logger.Error("prune client state (update origin)", zap.Error(err))
@@ -74,11 +78,14 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 		Logger.Info("prune client state (update origin)", zap.Int64("current_round", c.CurrentRound), zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.String("state_hash", util.ToHex(bs.ClientStateHash)), zap.Duration("time", d1))
 	}
 	t1 := time.Now()
+	ps.Stage = util.PruneStateDelete
 	err = c.stateDB.PruneBelowVersion(pctx, newVersion)
 	if err != nil {
 		Logger.Error("prune client state error", zap.Error(err))
 	}
+	ps.Stage = util.PruneStateCommplete
 	d2 := time.Since(t1)
+	ps.DeleteTime = d2
 	StatePruneDeleteTimer.Update(d2)
 	c.pruneStats = ps
 	logf := Logger.Info

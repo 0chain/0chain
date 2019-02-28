@@ -26,7 +26,7 @@ import (
 //StateSaveTimer - a metric that tracks the time it takes to save the state
 var StateSaveTimer metrics.Timer
 
-//StateChangeSizeMetric - a metri  that tracks how many state nodes are changing with each block
+//StateChangeSizeMetric - a metric that tracks how many state nodes are changing with each block
 var StateChangeSizeMetric metrics.Histogram
 
 func init() {
@@ -268,7 +268,10 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 		Logger.Info("Smart contract executed for transaction: ", zap.String("txn", txn.Hash), zap.String("output_hash", txn.OutputHash), zap.String("txn_output", txn.TransactionOutput))
 	case transaction.TxnTypeData:
 	case transaction.TxnTypeSend:
-		sctx.AddTransfer(state.NewTransfer(txn.ClientID, txn.ToClientID, state.Balance(txn.Value)))
+		err := sctx.AddTransfer(state.NewTransfer(txn.ClientID, txn.ToClientID, state.Balance(txn.Value)))
+		if err != nil {
+			return false
+		}
 	}
 
 	if err := sctx.Validate(); err != nil {

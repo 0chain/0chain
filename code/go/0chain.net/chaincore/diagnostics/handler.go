@@ -5,9 +5,9 @@ import (
 	"net/http"
 
 	"0chain.net/chaincore/chain"
-	"0chain.net/core/util"
 	"0chain.net/core/common"
 	"0chain.net/core/logging"
+	"0chain.net/core/util"
 	metrics "github.com/rcrowley/go-metrics"
 )
 
@@ -128,30 +128,33 @@ func WriteCurrentStatus(w http.ResponseWriter, c *chain.Chain) {
 	if c.LatestDeterministicBlock != nil {
 		fmt.Fprintf(w, "<tr><td>Deterministic Finalized Round</td><td>%v (%v)</td></tr>", c.LatestDeterministicBlock.Round, len(c.LatestDeterministicBlock.UniqueBlockExtensions))
 		if c.LatestDeterministicBlock != c.LatestFinalizedBlock {
-		    var maxUBE int
-		    var maxUBERound int64
-		    for b := c.LatestFinalizedBlock; b != nil && b != c.LatestDeterministicBlock; b = b.PrevBlock {
-			    var ube = len(b.UniqueBlockExtensions)
-			    if ube > maxUBE {
-			  	    maxUBE = ube
-				    maxUBERound = b.Round
-			    }
-		    }
-		    fmt.Fprintf(w, "<tr><td>Next round to be deterministic</td><td>%v (%v)</td></tr>", maxUBERound, maxUBE)
-	    }
+			var maxUBE int
+			var maxUBERound int64
+			for b := c.LatestFinalizedBlock; b != nil && b != c.LatestDeterministicBlock; b = b.PrevBlock {
+				var ube = len(b.UniqueBlockExtensions)
+				if ube > maxUBE {
+					maxUBE = ube
+					maxUBERound = b.Round
+				}
+			}
+			fmt.Fprintf(w, "<tr><td>Next round to be deterministic</td><td>%v (%v)</td></tr>", maxUBERound, maxUBE)
+		}
 	}
 	fmt.Fprintf(w, "</table>")
 }
 
 //WritePruneStats - write the last prune stats
 func WritePruneStats(w http.ResponseWriter, ps *util.PruneStats) {
-   fmt.Fprintf(w,"<table>")
-   fmt.Fprintf(w,"<tr><th class='sheader' colspan='2'>Prune Stats</th></tr>")
-   fmt.Fprintf(w,"<tr><td>Pruned Below Round</td><td class='number'>%v</td></tr>",ps.Version)
-   fmt.Fprintf(w,"<tr><td>Missing Nodes</td><td class='number'>%v</td></tr>",ps.MissingNodes)
-   fmt.Fprintf(w,"<tr><td>Total nodes</td><td class='number'>%v</td></tr>",ps.Total)
-   fmt.Fprintf(w,"<tr><td>Leaf Nodes</td><td class='number'>%v</td></tr>",ps.Leaves)
-   fmt.Fprintf(w,"<tr><td>Nodes Below Pruned Round</td><td class='number'>%v</td></tr>",ps.BelowVersion)
-   fmt.Fprintf(w,"<tr><td>Deleted Nodes</td><td class='number'>%v</td></tr>",ps.Deleted)
-   fmt.Fprintf(w,"</table>")
+	fmt.Fprintf(w, "<table>")
+	fmt.Fprintf(w, "<tr><th class='sheader' colspan='2'>Prune Stats</th></tr>")
+	fmt.Fprintf(w, "<tr><td>Stage</td><td>%v</td>", ps.Stage)
+	fmt.Fprintf(w, "<tr><td>Pruned Below Round</td><td class='number'>%v</td></tr>", ps.Version)
+	fmt.Fprintf(w, "<tr><td>Missing Nodes</td><td class='number'>%v</td></tr>", ps.MissingNodes)
+	fmt.Fprintf(w, "<tr><td>Total nodes</td><td class='number'>%v</td></tr>", ps.Total)
+	fmt.Fprintf(w, "<tr><td>Leaf Nodes</td><td class='number'>%v</td></tr>", ps.Leaves)
+	fmt.Fprintf(w, "<tr><td>Nodes Below Pruned Round</td><td class='number'>%v</td></tr>", ps.BelowVersion)
+	fmt.Fprintf(w, "<tr><td>Update Time</td><td class='number'>%v</td>", ps.UpdateTime)
+	fmt.Fprintf(w, "<tr><td>Deleted Nodes</td><td class='number'>%v</td></tr>", ps.Deleted)
+	fmt.Fprintf(w, "<tr><td>Delete Time</td><td class='number'>%v</td>", ps.DeleteTime)
+	fmt.Fprintf(w, "</table>")
 }

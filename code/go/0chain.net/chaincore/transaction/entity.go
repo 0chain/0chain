@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"0chain.net/chaincore/client"
-	"0chain.net/core/common"
 	"0chain.net/chaincore/config"
+	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	. "0chain.net/core/logging"
@@ -64,7 +64,7 @@ func (t *Transaction) ComputeProperties() {
 	t.ComputeClientID()
 }
 
-/*ComputeClientID - compute the client id if there is a public key in the tranasction */
+/*ComputeClientID - compute the client id if there is a public key in the transaction */
 func (t *Transaction) ComputeClientID() {
 	if t.PublicKey != "" {
 		if t.ClientID == "" {
