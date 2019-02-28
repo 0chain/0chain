@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/core/encryption"
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
@@ -22,6 +23,61 @@ const maxRetries = 5
 
 //SleepBetweenRetries suggested time to sleep between retries
 const SleepBetweenRetries = 5
+
+const txnSubmitURL = "v1/transaction/put"
+const txnVerifyURL = "v1/transaction/get/confirmation?hash="
+
+//RegisterClient path to RegisterClient
+var RegisterClient = "/v1/client/put"
+
+//Signer for the transaction hash
+type Signer func(h string) (string, error)
+
+//Transaction entity that encapsulates the transaction related data and meta data
+type Transaction struct {
+	Hash              string    `json:"hash,omitempty"`
+	Version           string    `json:"version,omitempty"`
+	ClientID          string    `json:"client_id,omitempty"`
+	PublicKey         string    `json:"public_key,omitempty"`
+	ToClientID        string    `json:"to_client_id,omitempty"`
+	ChainID           string    `json:"chain_id,omitempty"`
+	TransactionData   string    `json:"transaction_data,omitempty"`
+	Value             int64     `json:"transaction_value,omitempty"`
+	Signature         string    `json:"signature,omitempty"`
+	CreationDate      Timestamp `json:"creation_date,omitempty"`
+	TransactionType   int       `json:"transaction_type,omitempty"`
+	TransactionOutput string    `json:"transaction_output,omitempty"`
+	OutputHash        string    `json:"txn_output_hash"`
+}
+
+func NewTransactionEntity(ID string, chainID string, pkey string) *Transaction {
+	txn := &Transaction{}
+	txn.Version = "1.0"
+	txn.ClientID = ID //node.Self.ID
+	txn.CreationDate = Now()
+	txn.ChainID = chainID //chain.GetServerChain().ID
+	txn.PublicKey = pkey  //node.Self.PublicKey
+	return txn
+}
+
+func (t *Transaction) ComputeHashAndSign(handler Signer) error {
+	hashdata := fmt.Sprintf("%v:%v:%v:%v:%v", t.CreationDate, t.ClientID,
+		t.ToClientID, t.Value, encryption.Hash(t.TransactionData))
+	t.Hash = encryption.Hash(hashdata)
+	var err error
+	t.Signature, err = handler(t.Hash) //node.Self.Sign(t.Hash)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+/////////////// Plain Transaction ///////////
+
+type SmartContractTxnData struct {
+	Name      string      `json:"name"`
+	InputArgs interface{} `json:"input"`
+}
 
 //NewHTTPRequest to use in sending http requests
 func NewHTTPRequest(method string, url string, data []byte, ID string, pkey string) (*http.Request, context.Context, context.CancelFunc, error) {
@@ -89,6 +145,26 @@ func SendPostRequest(url string, data []byte, ID string, pkey string, wg *sync.W
 	body, _ := ioutil.ReadAll(resp.Body)
 	Logger.Info("SendPostRequest success", zap.String("url", url))
 	return body, nil
+}
+
+func SendTransaction(txn *Transaction, urls []string, ID string, pkey string) {
+	for _, url := range urls {
+		txnURL := fmt.Sprintf("%v/%v", url, txnSubmitURL)
+		go sendTransactionToURL(txnURL, txn, ID, pkey, nil)
+	}
+}
+
+func sendTransactionToURL(url string, txn *Transaction, ID string, pkey string, wg *sync.WaitGroup) ([]byte, error) {
+	if wg != nil {
+		defer wg.Done()
+	}
+	jsObj, err := json.Marshal(txn)
+	if err != nil {
+		Logger.Error("Error in serializing the transaction", zap.String("error", err.Error()), zap.Any("transaction", txn))
+		return nil, err
+	}
+
+	return SendPostRequest(url, jsObj, ID, pkey, nil)
 }
 
 //MakeGetRequest make a generic get request. url should have complete path.

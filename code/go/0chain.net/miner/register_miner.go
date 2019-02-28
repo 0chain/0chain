@@ -17,11 +17,40 @@ import (
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"0chain.net/chaincore/wallet"
+	"0chain.net/chaincore/node"
+	"0chain.net/chaincore/chain"
 )
 
-const txnSubmitURL = "v1/transaction/put"
-const txnVerifyURL = "v1/transaction/get/confirmation?hash="
-var registerClient = "/v1/client/put"
+
+
+//Note: MinerNode is originally defined in MinerSmartcontract. 
+const (
+	//MinerSCAddress address of minersc
+	MinerSCAddress = "CF9C03CD22C9C7B116EED04E4A909F95ABEC17E98FE631D6AC94D5D8420C5B20"
+)
+//MinerNode struct that holds information about the registering miner
+type MinerNode struct {
+	ID        string `json:"id"`
+	BaseURL   string `json:"url"`
+	PublicKey string `json:"-"`
+}
+
+func (mn *MinerNode) encode() []byte {
+	buff, _ := json.Marshal(mn)
+	return buff
+}
+
+func (mn *MinerNode) decode(input []byte) error {
+	err := json.Unmarshal(input, mn)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+//////////////////Plain Transaction //////////
+
+
 
 //TxnConfirmationTime time to wait before checking the status
 const TxnConfirmationTime = 15
@@ -32,7 +61,8 @@ type PoolMembers struct {
 	Sharders []string `json:"sharders"`
 }
 
-var discoverIPPath = "/_nh/getpoolmembers"
+const scNameAddMiner = "add_miner"
+const discoverIPPath = "/_nh/getpoolmembers"
 var discoveryIps []string
 
 var members PoolMembers
@@ -123,7 +153,7 @@ func isSliceEq(a, b []string) bool {
 	return true
 }
 
-//RegisterClient registers client only locally
+//RegisterClient registers client on BC
 func RegisterClient(sigScheme encryption.SignatureScheme) {
 	wallet.SetupWallet()
 	myWallet = &wallet.Wallet{}
@@ -143,7 +173,7 @@ func RegisterClient(sigScheme encryption.SignatureScheme) {
 	nodeBytes, _ := json.Marshal(myWallet)
 	//Logger.Info("Post body", zap.Any("publicKey", myWallet.PublicKey), zap.String("ID", myWallet.ClientID))
 	for _, ip := range members.Miners {
-		body, err := common.SendPostRequest(ip + registerClient, nodeBytes, "", "", nil)
+		body, err := common.SendPostRequest(ip + common.RegisterClient, nodeBytes, "", "", nil)
 		if err!= nil {
 			Logger.Error("error in register client", zap.Error(err), zap.Any("body", body) )
 		} 
@@ -151,6 +181,45 @@ func RegisterClient(sigScheme encryption.SignatureScheme) {
 	}
 	//Logger.Info("My Client Info", zap.Any("ClientId", myWallet.ClientID))
 	
+}
+
+func registerMiner() (string, error) {
+	
+	Logger.Info("Adding miner to the blockchain.")
+	
+	txn := common.NewTransactionEntity(node.Self.ID, chain.GetServerChain().ID, node.Self.PublicKey)
+
+	mn := &MinerNode{}
+	mn.ID = node.Self.GetKey()
+	mn.BaseURL = node.Self.GetURLBase()
+
+	scData := &common.SmartContractTxnData{}
+	scData.Name = scNameAddMiner
+	scData.InputArgs = mn
+
+	txn.ToClientID = MinerSCAddress
+	txn.Value = 0
+	txn.TransactionType = 1000 //TxnTypeSmartContract
+	txnBytes, err := json.Marshal(scData)
+	if err != nil {
+		return "", err
+	}
+	txn.TransactionData = string(txnBytes)
+
+	signer := func (hash string) (string, error) {
+		return node.Self.Sign(hash)
+	}
+
+	err = txn.ComputeHashAndSign(signer)
+	if err != nil {
+		Logger.Info("Signing Failed during registering miner to the mining network", zap.String("err:", err.Error()))
+		return "", err
+	}
+
+	
+	Logger.Info("Adding miner to the blockchain.", zap.String("txn", txn.Hash))
+	common.SendTransaction(txn, members.Miners, node.Self.ID, node.Self.PublicKey)
+	return txn.Hash, nil
 }
 
 //KickoffMinerRegistration kicks off a new miner registration process
@@ -161,7 +230,7 @@ func KickoffMinerRegistration(discoveryIps *string, signatureScheme encryption.S
 			Logger.Fatal("Cannot discover pool members")
 		}
 		RegisterClient(signatureScheme)
-		
+		registerMiner()
 	} else {
 		Logger.Fatal("Discovery URLs are nil. Cannot discovery pool members")
 	}
