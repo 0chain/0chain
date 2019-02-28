@@ -27,6 +27,12 @@ func (st SignedTransfer) VerifySignature(ctx context.Context) error {
 		return err
 	}
 
+	return st.VerifySignatureWithScheme(sigScheme)
+}
+
+// Verify that the signature on the transfer is correct. May be done against an
+// arbitrary public key.
+func (st SignedTransfer) VerifySignatureWithScheme(sigScheme encryption.SignatureScheme) error {
 	hash := st.computeTransferHash()
 
 	correctSignature, err := sigScheme.Verify(st.sig, hash)
