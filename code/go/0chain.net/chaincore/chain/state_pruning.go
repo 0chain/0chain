@@ -41,14 +41,16 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 		bs = bc.Value.(*block.BlockSummary)
 	}
 	newVersion := util.Sequence(bs.Round)
+
+	if c.pruneStats != nil && c.pruneStats.Version == newVersion {
+		return // already done with pruning this
+	}
 	mpt := util.NewMerklePatriciaTrie(c.stateDB, newVersion)
 	mpt.SetRoot(bs.ClientStateHash)
 	Logger.Info("prune client state - new version", zap.Int64("current_round", c.CurrentRound), zap.Int64("latest_finalized_round", c.LatestFinalizedBlock.Round), zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.String("state_hash", util.ToHex(bs.ClientStateHash)))
 	pctx := util.WithPruneStats(ctx)
 	ps := util.GetPruneStats(pctx)
-	t := time.Now()
 	var missingKeys []util.Key
-
 	missingNodesHandler := func(ctx context.Context, path util.Path, key util.Key) error {
 		missingKeys = append(missingKeys, key)
 		if len(missingKeys) == 1000 {
@@ -60,8 +62,9 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 		}
 		return nil
 	}
-	c.pruneStats = ps
 	ps.Stage = util.PruneStateUpdate
+	c.pruneStats = ps
+	t := time.Now()
 	err := mpt.UpdateVersion(pctx, newVersion, missingNodesHandler)
 	d1 := time.Since(t)
 	ps.UpdateTime = d1
@@ -87,7 +90,6 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 	d2 := time.Since(t1)
 	ps.DeleteTime = d2
 	StatePruneDeleteTimer.Update(d2)
-	c.pruneStats = ps
 	logf := Logger.Info
 	if d1 > time.Second || d2 > time.Second {
 		logf = Logger.Error
