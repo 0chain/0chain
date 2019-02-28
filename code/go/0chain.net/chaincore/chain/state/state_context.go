@@ -134,6 +134,9 @@ func (sc *StateContext) Validate(ctx context.Context) error {
 				return state.ErrInvalidTransfer
 			}
 		}
+		if transfer.Amount <= 0 {
+			return state.ErrInvalidTransfer
+		}
 	}
 	if amount > state.Balance(sc.txn.Value+sc.txn.Fee) {
 		return state.ErrInvalidTransfer
@@ -143,6 +146,9 @@ func (sc *StateContext) Validate(ctx context.Context) error {
 		err := signedTransfer.VerifySignature(ctx)
 		if err != nil {
 			return err
+		}
+		if signedTransfer.Amount <= 0 {
+			return state.ErrInvalidTransfer
 		}
 	}
 
