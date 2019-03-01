@@ -114,6 +114,18 @@ func GetThresholdSignatureScheme(sigScheme string) ThresholdSignatureScheme {
 	}
 }
 
+//GenerateThresholdKeyShares - generate T-of-N secret key shares for a key
+func GenerateThresholdKeyShares(sigScheme string, t, n int, originalKey SignatureScheme) ([]ThresholdSignatureScheme, error) {
+	switch sigScheme {
+	case "ed25519":
+		return nil, nil
+	case "bls0chain":
+		return BLS0GenerateThresholdKeyShares(t, n, originalKey)
+	default:
+		panic(fmt.Sprintf("unknown threshold signature scheme: %v", sigScheme))
+	}
+}
+
 //IsValidReconstructSignatureScheme - whether a signature reconstruction scheme exists
 func IsValidReconstructSignatureScheme(sigScheme string) bool {
 	switch sigScheme {
