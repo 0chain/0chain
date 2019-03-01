@@ -79,7 +79,7 @@ func (np *Pool) RequestEntityFromAll(ctx context.Context, requestor EntityReques
 }
 
 //RequestEntityFromNode - request an entity from a node
-func (n *Node) RequestEntityFromNode(ctx context.Context, requestor EntityRequestor, params map[string]string, handler datastore.JSONEntityReqResponderF) bool {
+func (n *Node) RequestEntityFromNode(ctx context.Context, requestor EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF) bool {
 	rhandler := requestor(params, handler)
 	select {
 	case <-ctx.Done():

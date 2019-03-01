@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strconv"
 	"time"
+	"net/url"
 
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
@@ -122,7 +123,8 @@ func (sc *Chain) GetMissingRounds(ctx context.Context, targetR int64, dbR int64)
 	loopR := dbR
 
 	for true {
-		params := map[string]string{"round": strconv.FormatInt(loopR, 10)}
+		params := &url.Values{}
+		params.Add("round", strconv.FormatInt(loopR, 10))
 		var r *round.Round
 		Logger.Info("bc-27 requesting all sharders for the round", zap.Int64("round", loopR))
 		ts := time.Now()
@@ -160,7 +162,8 @@ func (sc *Chain) GetMissingRounds(ctx context.Context, targetR int64, dbR int64)
 }
 
 func (sc *Chain) storeMissingRoundBlock(ctx context.Context, r *round.Round) {
-	params := map[string]string{"block": r.BlockHash}
+	params := &url.Values{}
+	params.Add("block", r.BlockHash)
 	self := node.GetSelfNode(ctx)
 	canStore, nodes := sc.IsBlockSharderWithNodes(r.BlockHash, self.Node)
 	Logger.Info(fmt.Sprintf("can Store - %b, nodes length - %d", canStore, len(nodes)))
