@@ -150,6 +150,7 @@ func main() {
 	initServer()
 	initHandlers()
 
+	Logger.Info("In Sharder rejoin")
 	r, err := sc.GetMostRecentRoundFromDB(ctx)
 
 	if err == nil {
