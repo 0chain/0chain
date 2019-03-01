@@ -3,6 +3,7 @@ package storagesc
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"0chain.net/chaincore/smartcontractstate"
 	"0chain.net/core/common"
@@ -109,15 +110,19 @@ func (sn *StorageNode) Decode(input []byte) error {
 }
 
 type StorageAllocation struct {
-	ID             string           `json:"id"`
-	DataShards     int              `json:"data_shards"`
-	ParityShards   int              `json:"parity_shards"`
-	Size           int64            `json:"size"`
-	UsedSize       int64            `json:"used_size"`
-	Expiration     common.Timestamp `json:"expiration_date"`
-	Blobbers       []*StorageNode   `json:"blobbers"`
-	Owner          string           `json:"owner_id"`
-	OwnerPublicKey string           `json:"owner_public_key"`
+	ID                        string           `json:"id"`
+	DataShards                int              `json:"data_shards"`
+	ParityShards              int              `json:"parity_shards"`
+	Size                      int64            `json:"size"`
+	UsedSize                  int64            `json:"used_size"`
+	Expiration                common.Timestamp `json:"expiration_date"`
+	Blobbers                  []*StorageNode   `json:"blobbers"`
+	Owner                     string           `json:"owner_id"`
+	OwnerPublicKey            string           `json:"owner_public_key"`
+	NumWrites                 int64            `json:"num_of_writes"`
+	OpenChallenges            int64            `json:"num_open_challenges"`
+	ClosedChallenges          int64            `json:"num_closed_challenges"`
+	LastestClosedChallengeTxn string           `json:"latest_closed_challenge"`
 }
 
 func (sn *StorageAllocation) GetKey() smartcontractstate.Key {
@@ -280,17 +285,21 @@ func (rm *ReadMarker) GetHashData() string {
 	return hashData
 }
 
-func (rm *ReadMarker) Verify(prevRM *ReadMarker) bool {
+func (rm *ReadMarker) Verify(prevRM *ReadMarker) error {
 	if len(rm.AllocationID) == 0 || rm.ReadCounter <= 0 || len(rm.BlobberID) == 0 || len(rm.ClientID) == 0 || rm.Timestamp == 0 || len(rm.OwnerID) == 0 {
-		return false
+
+		return common.NewError("invalid_read_marker", "length validations of fields failed")
 	}
 	if prevRM != nil {
 		if rm.BlobberID != prevRM.BlobberID || rm.OwnerID != prevRM.OwnerID || rm.Timestamp <= prevRM.Timestamp || rm.ReadCounter < prevRM.ReadCounter {
-			return false
+			return common.NewError("invalid_read_marker", "validations with previous marker failed."+"Previoud ctr = "+strconv.FormatInt(prevRM.ReadCounter, 10)+" New ctr = "+strconv.FormatInt(rm.ReadCounter, 10))
 		}
 	}
-
-	return rm.VerifySignature(rm.ClientPublicKey)
+	ok := rm.VerifySignature(rm.ClientPublicKey)
+	if ok {
+		return nil
+	}
+	return common.NewError("invalid_read_marker", "Signature verification failed for the read marker")
 }
 
 type ValidationTicket struct {
