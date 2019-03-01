@@ -3,7 +3,6 @@ package storagesc
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 
 	"0chain.net/chaincore/smartcontractstate"
 	"0chain.net/core/common"
@@ -36,31 +35,37 @@ func (sn *ClientAllocation) Decode(input []byte) error {
 	return nil
 }
 
+type BlobberChallenge struct {
+	BlobberID    string                       `json:"blobber_id"`
+	ChallengeMap map[string]*StorageChallenge `json:"challenges"`
+}
+
+func (sn *BlobberChallenge) GetKey() smartcontractstate.Key {
+	return smartcontractstate.Key("blobber_challenge:" + sn.BlobberID)
+}
+
+func (sn *BlobberChallenge) Encode() []byte {
+	buff, _ := json.Marshal(sn)
+	return buff
+}
+
+func (sn *BlobberChallenge) Decode(input []byte) error {
+	err := json.Unmarshal(input, sn)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 type StorageChallenge struct {
+	Created        common.Timestamp   `json:"created"`
 	ID             string             `json:"id"`
 	Validators     []ValidationNode   `json:"validators"`
 	RandomNumber   int64              `json:"seed"`
 	AllocationID   string             `json:"allocation_id"`
 	Blobber        *StorageNode       `json:"blobber"`
 	AllocationRoot string             `json:"allocation_root"`
-	Response       *ChallengeResponse `json:"challenge_response"`
-}
-
-func (sn *StorageChallenge) GetKey() smartcontractstate.Key {
-	return smartcontractstate.Key("challenge:" + sn.ID)
-}
-
-func (sn *StorageChallenge) Encode() []byte {
-	buff, _ := json.Marshal(sn)
-	return buff
-}
-
-func (sn *StorageChallenge) Decode(input []byte) error {
-	err := json.Unmarshal(input, sn)
-	if err != nil {
-		return err
-	}
-	return nil
+	Response       *ChallengeResponse `json:"challenge_response,omitempty"`
 }
 
 type ValidationNode struct {
@@ -286,13 +291,12 @@ func (rm *ReadMarker) GetHashData() string {
 }
 
 func (rm *ReadMarker) Verify(prevRM *ReadMarker) error {
-	if len(rm.AllocationID) == 0 || rm.ReadCounter <= 0 || len(rm.BlobberID) == 0 || len(rm.ClientID) == 0 || rm.Timestamp == 0 || len(rm.OwnerID) == 0 {
-
+	if rm.ReadCounter <= 0 || len(rm.BlobberID) == 0 || len(rm.ClientID) == 0 || rm.Timestamp == 0 {
 		return common.NewError("invalid_read_marker", "length validations of fields failed")
 	}
 	if prevRM != nil {
-		if rm.BlobberID != prevRM.BlobberID || rm.OwnerID != prevRM.OwnerID || rm.Timestamp <= prevRM.Timestamp || rm.ReadCounter < prevRM.ReadCounter {
-			return common.NewError("invalid_read_marker", "validations with previous marker failed."+"Previoud ctr = "+strconv.FormatInt(prevRM.ReadCounter, 10)+" New ctr = "+strconv.FormatInt(rm.ReadCounter, 10))
+		if rm.ClientID != prevRM.ClientID || rm.BlobberID != prevRM.BlobberID || rm.Timestamp < prevRM.Timestamp || rm.ReadCounter < prevRM.ReadCounter {
+			return common.NewError("invalid_read_marker", "validations with previous marker failed.")
 		}
 	}
 	ok := rm.VerifySignature(rm.ClientPublicKey)

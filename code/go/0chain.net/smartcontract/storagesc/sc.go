@@ -60,10 +60,29 @@ func (ssc *StorageSmartContract) LatestReadMarkerHandler (ctx context.Context, p
 
 }
 
+func (ssc *StorageSmartContract) OpenChallengeHandler (ctx context.Context, params url.Values) (interface{}, error){
+	blobberID := params.Get("blobber")
+	var blobberChallengeObj BlobberChallenge
+	blobberChallengeObj.BlobberID = blobberID
+
+	blobberChallengeBytes, err := ssc.DB.GetNode(blobberChallengeObj.GetKey())
+	if err != nil {
+		return "", common.NewError("blobber_challenge_read_err", "Error reading blobber challenge from DB. " + err.Error())
+	}
+	err = blobberChallengeObj.Decode(blobberChallengeBytes)
+	for k,v := range blobberChallengeObj.ChallengeMap {
+		if v.Response != nil {
+			delete(blobberChallengeObj.ChallengeMap, k)
+		}
+	}
+	return &blobberChallengeObj, err
+}
+
 func (ssc *StorageSmartContract) SetSC(sc *smartcontractinterface.SmartContract) {
 	ssc.SmartContract = sc
 	ssc.SmartContract.RestHandlers["/allocation"] = ssc.AllocationStatsHandler
 	ssc.SmartContract.RestHandlers["/latestreadmarker"] = ssc.LatestReadMarkerHandler
+	ssc.SmartContract.RestHandlers["/openchallenges"] = ssc.OpenChallengeHandler
 }
 
 type ChallengeResponse struct {
@@ -81,18 +100,28 @@ func (sc *StorageSmartContract) VerifyChallenge(t *transaction.Transaction, inpu
 		return "", common.NewError("invalid_parameters", "Invalid parameters to challenge response")
 	}
 
-	var challengeRequest StorageChallenge
-	challengeRequest.ID = challengeResponse.ID
+	var blobberChallengeObj BlobberChallenge
+	blobberChallengeObj.BlobberID = t.ClientID
 
-	challengeRequestBytes, err := sc.DB.GetNode(challengeRequest.GetKey())
-	if challengeRequestBytes == nil || err != nil {
-		return "", common.NewError("invalid_parameters", "Cannot find the challenge with ID "+challengeRequest.ID)
-	}
-	err = challengeRequest.Decode(challengeRequestBytes)
+	blobberChallengeBytes, err := sc.DB.GetNode(blobberChallengeObj.GetKey())
 	if err != nil {
-		return "", common.NewError("decode_error", "Error decoding the challenge request")
+		return "", common.NewError("blobber_challenge_read_err", "Error reading blobber challenge from DB")
+	}
+	if blobberChallengeBytes == nil {
+		return "", common.NewError("invalid_parameters", "Cannot find the challenge with ID "+challengeResponse.ID)
+	} 
+
+	err = blobberChallengeObj.Decode(blobberChallengeBytes)
+	if err != nil {
+		return "", common.NewError("blobber_challenge_decode_error", "Error decoding the blobber challenge")
 	}
 
+	challengeRequest:= blobberChallengeObj.ChallengeMap[challengeResponse.ID]
+	
+	if challengeRequest == nil {
+		return "", common.NewError("invalid_parameters", "Cannot find the challenge with ID "+challengeResponse.ID)
+	}
+	
 	if challengeRequest.Blobber.ID != t.ClientID {
 		return "", common.NewError("invalid_parameters", "Challenge response should be submitted by the same blobber as the challenge request")
 	}
@@ -127,19 +156,27 @@ func (sc *StorageSmartContract) VerifyChallenge(t *transaction.Transaction, inpu
 
 	allocationObj.Decode(allocationBytes)
 
-	allocationObj.LastestClosedChallengeTxn = challengeRequest.ID
-	allocationObj.ClosedChallenges++
-	defer sc.DB.PutNode(allocationObj.GetKey(), allocationObj.Encode())
+	
 
 	if numSuccess > (len(challengeRequest.Validators) / 2) {
 		challengeRequest.Response = &challengeResponse
-		sc.DB.PutNode(challengeRequest.GetKey(), challengeRequest.Encode())
+		//delete(blobberChallengeObj.ChallengeMap, challengeResponse.ID)
+		allocationObj.LastestClosedChallengeTxn = challengeRequest.ID
+		allocationObj.ClosedChallenges++
+		allocationObj.OpenChallenges--
+		defer sc.DB.PutNode(allocationObj.GetKey(), allocationObj.Encode())
+		sc.DB.PutNode(blobberChallengeObj.GetKey(), blobberChallengeObj.Encode())
 		return "Challenge Passed by Blobber", nil
 	}
 
 	if numFailure > (len(challengeRequest.Validators) / 2) {
+		//delete(blobberChallengeObj.ChallengeMap, challengeResponse.ID)
 		challengeRequest.Response = &challengeResponse
-		sc.DB.PutNode(challengeRequest.GetKey(), challengeRequest.Encode())
+		allocationObj.LastestClosedChallengeTxn = challengeRequest.ID
+		allocationObj.ClosedChallenges++
+		allocationObj.OpenChallenges--
+		defer sc.DB.PutNode(allocationObj.GetKey(), allocationObj.Encode())
+		sc.DB.PutNode(blobberChallengeObj.GetKey(), blobberChallengeObj.Encode())
 		return "Challenge Failed by Blobber", nil
 	}
 
@@ -149,11 +186,7 @@ func (sc *StorageSmartContract) VerifyChallenge(t *transaction.Transaction, inpu
 func (sc *StorageSmartContract) AddChallenge(t *transaction.Transaction, b *block.Block, input []byte) (string, error) {
 	var storageChallenge StorageChallenge
 	storageChallenge.ID = t.Hash
-
-	challengeBytes, err := sc.DB.GetNode(storageChallenge.GetKey())
-	if challengeBytes != nil || err != nil {
-		return "", common.NewError("invalid_parameters", "Error adding challenge. It may already exist. ")
-	}
+	
 	allocationList, err := sc.getAllocationsList(t.ClientID)
 	if err != nil {
 		return "", common.NewError("adding_challenge_error", "Error gettting the allocation list. "+err.Error())
@@ -205,11 +238,30 @@ func (sc *StorageSmartContract) AddChallenge(t *transaction.Transaction, b *bloc
 	}
 
 	storageChallenge.AllocationRoot = blobberAllocation.AllocationRoot
-	challengeBytes = storageChallenge.Encode()
-	sc.DB.PutNode(storageChallenge.GetKey(), challengeBytes)
+
+	var blobberChallengeObj BlobberChallenge
+	blobberChallengeObj.BlobberID = storageChallenge.Blobber.ID
+
+	blobberChallengeBytes, err := sc.DB.GetNode(blobberChallengeObj.GetKey())
+	if err != nil {
+		return "", common.NewError("blobber_challenge_read_err", "Error reading blobber challenge from DB")
+	}
+	if blobberChallengeBytes == nil {
+		blobberChallengeObj.ChallengeMap = make(map[string]*StorageChallenge)
+	} else {
+		err = blobberChallengeObj.Decode(blobberChallengeBytes)
+		if err != nil {
+			return "", common.NewError("blobber_challenge_decode_error", "Error decoding the blobber challenge")
+		}
+	}
+	storageChallenge.Created = t.CreationDate
+	blobberChallengeObj.ChallengeMap[storageChallenge.ID] = &storageChallenge
+
+	sc.DB.PutNode(blobberChallengeObj.GetKey(), blobberChallengeObj.Encode())
 	allocationObj.OpenChallenges++
 	sc.DB.PutNode(allocationObj.GetKey(), allocationObj.Encode())
-	return string(challengeBytes), nil
+	challengeBytes, err := json.Marshal(storageChallenge)
+	return string(challengeBytes), err
 }
 
 func (sc *StorageSmartContract) CommitBlobberRead(t *transaction.Transaction, input []byte) (string, error) {
