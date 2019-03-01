@@ -203,6 +203,12 @@ func (mpt *MerklePatriciaTrie) Iterate(ctx context.Context, handler MPTIteratorH
 	return mpt.iterate(ctx, Path{}, rootKey, handler, visitNodeTypes)
 }
 
+/*IterateFrom - iterate the trie from a given node */
+func (mpt *MerklePatriciaTrie) IterateFrom(ctx context.Context, node Key, handler MPTIteratorHandler, visitNodeTypes byte) error {
+	//NOTE: we don't have the path to this node. So, the handler gets the partial path starting from this node
+	return mpt.iterate(ctx, Path{}, node, handler, visitNodeTypes)
+}
+
 /*PrettyPrint - print this trie */
 func (mpt *MerklePatriciaTrie) PrettyPrint(w io.Writer) error {
 	return mpt.pp(w, Key(mpt.Root), 0, false)
@@ -741,7 +747,7 @@ func (mpt *MerklePatriciaTrie) pp(w io.Writer, key Key, depth byte, initpad bool
 }
 
 /*UpdateVersion - updates the origin of all the nodes in this tree to the given origin */
-func (mpt *MerklePatriciaTrie) UpdateVersion(ctx context.Context, version Sequence) error {
+func (mpt *MerklePatriciaTrie) UpdateVersion(ctx context.Context, version Sequence, missingNodeHander MPTMissingNodeHandler) error {
 	ps := GetPruneStats(ctx)
 	if ps != nil {
 		ps.Version = version
@@ -752,6 +758,7 @@ func (mpt *MerklePatriciaTrie) UpdateVersion(ctx context.Context, version Sequen
 	var missingNodes int64
 	handler := func(ctx context.Context, path Path, key Key, node Node) error {
 		if node == nil {
+			missingNodeHander(ctx, path, key)
 			missingNodes++
 			return nil
 		}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"time"
 )
 
 var ErrIteratingChildNodes = errors.New("Error iterating child nodes")
@@ -16,6 +17,9 @@ type Key []byte
 
 /*MPTIteratorHandler is a collection iteration handler function type */
 type MPTIteratorHandler func(ctx context.Context, path Path, key Key, node Node) error
+
+//MPTMissingNodeHandler - a handler for missing keys during iteration
+type MPTMissingNodeHandler func(ctx context.Context, path Path, key Key) error
 
 //MerklePatriciaTrieI - interface of the merkle patricia trie
 type MerklePatriciaTrieI interface {
@@ -33,6 +37,8 @@ type MerklePatriciaTrieI interface {
 
 	Iterate(ctx context.Context, handler MPTIteratorHandler, visitNodeTypes byte) error
 
+	IterateFrom(ctx context.Context, node Key, handler MPTIteratorHandler, visitNodeTypes byte) error
+
 	GetChangeCollector() ChangeCollectorI
 	ResetChangeCollector(root Key)
 	SaveChanges(ndb NodeDB, includeDeletes bool) error
@@ -41,7 +47,7 @@ type MerklePatriciaTrieI interface {
 	GetPathNodes(path Path) ([]Node, error)
 
 	// useful for pruning the state below a certain origin number
-	UpdateVersion(ctx context.Context, version Sequence) error // mark
+	UpdateVersion(ctx context.Context, version Sequence, missingNodeHander MPTMissingNodeHandler) error // mark
 
 	// only for testing and debugging
 	PrettyPrint(w io.Writer) error
@@ -60,7 +66,7 @@ const PruneStatsKey ContextKey = "prunestatskey"
 
 /*WithPruneStats - return a context with a prune stats object */
 func WithPruneStats(ctx context.Context) context.Context {
-	ps := &PruneStats{}
+	ps := &PruneStats{Stage: PruneStateStart}
 	return context.WithValue(ctx, PruneStatsKey, ps)
 }
 
@@ -73,12 +79,23 @@ func GetPruneStats(ctx context.Context) *PruneStats {
 	return v.(*PruneStats)
 }
 
+const (
+	PruneStateStart     = "started"
+	PruneStateUpdate    = "updating"
+	PruneStateSynch     = "synching"
+	PruneStateDelete    = "deleting"
+	PruneStateCommplete = "completed"
+)
+
 /*PruneStats - gathers statistics while pruning */
 type PruneStats struct {
-	Version      Sequence `json:"v"`
-	Total        int64    `json:"t"`
-	Leaves       int64    `json:"l"`
-	BelowVersion int64    `json:"bv"`
-	Deleted      int64    `json:"d"`
-	MissingNodes int64    `json:"mn"`
+	Stage        string        `json:"stg"`
+	Version      Sequence      `json:"v"`
+	Total        int64         `json:"t"`
+	Leaves       int64         `json:"l"`
+	BelowVersion int64         `json:"bv"`
+	Deleted      int64         `json:"d"`
+	MissingNodes int64         `json:"mn"`
+	UpdateTime   time.Duration `json:"ut"`
+	DeleteTime   time.Duration `json:"dt"`
 }

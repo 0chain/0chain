@@ -1,0 +1,5 @@
+package smartcontract
+
+
+func init() {
+}

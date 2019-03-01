@@ -2,11 +2,12 @@ package chain
 
 import (
 	"context"
+	"net/url"
 	"time"
 
 	"0chain.net/chaincore/config"
-	"0chain.net/core/datastore"
 	"0chain.net/chaincore/node"
+	"0chain.net/core/datastore"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/common"
@@ -153,7 +154,6 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	StartToFinalizeTimer.UpdateSince(fb.ToTime())
 	ssFTs = time.Now()
 	c.UpdateChainInfo(fb)
-
 	c.SaveChanges(ctx, fb)
 	c.rebaseState(fb)
 
@@ -209,7 +209,8 @@ func (c *Chain) IsFinalizedDeterministically(b *block.Block) bool {
 func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 	nbrequestor := MinerNotarizedBlockRequestor
 	cround := c.CurrentRound
-	params := map[string]string{"block": blockHash}
+	params := &url.Values{}
+	params.Add("block", blockHash)
 	ctx := common.GetRootContext()
 	var b *block.Block
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {

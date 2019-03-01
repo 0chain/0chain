@@ -1,8 +1,11 @@
 package storagesc
 
 import (
+	"net/url"
 	"encoding/json"
 	"math/rand"
+	"context"
+
 
 	"go.uber.org/zap"
 
@@ -10,15 +13,37 @@ import (
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/smartcontractinterface"
+	"0chain.net/chaincore/smartcontractstate"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/smartcontract/smartcontractstate"
 
 	. "0chain.net/core/logging"
 )
 
+const (
+	ADDRESS = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7"
+)
+
 type StorageSmartContract struct {
-	smartcontractinterface.SmartContract
+	*smartcontractinterface.SmartContract
+}
+
+func (ssc *StorageSmartContract) AllocationStatsHandler(ctx context.Context, params url.Values) (interface{}, error){
+	allocationID := params.Get("allocation")
+	allocationObj := &StorageAllocation{}
+	allocationObj.ID = allocationID
+
+	allocationBytes, err := ssc.DB.GetNode(allocationObj.GetKey())
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(allocationBytes, allocationObj)
+	return allocationObj, err
+}
+
+func (ssc *StorageSmartContract) SetSC(sc *smartcontractinterface.SmartContract) {
+	ssc.SmartContract = sc
+	ssc.SmartContract.RestHandlers["/allocation"] = ssc.AllocationStatsHandler
 }
 
 type ChallengeResponse struct {
@@ -118,6 +143,10 @@ func (sc *StorageSmartContract) AddChallenge(t *transaction.Transaction, b *bloc
 	allocationObj.Decode(allocationBytes)
 
 	validatorList, _ := sc.getValidatorsList()
+
+	if len(validatorList) == 0 {
+		return "", common.NewError("no_validators", "Not enough validators for the challenge")
+	}
 
 	storageChallenge.Validators = validatorList
 	storageChallenge.Blobber = allocationObj.Blobbers[rand.Intn(len(allocationObj.Blobbers))]
@@ -469,7 +498,7 @@ func (sc *StorageSmartContract) NewAllocationRequest(t *transaction.Transaction,
 	return "", common.NewError("invalid_allocation_request", "Failed storage allocate")
 }
 
-func (sc *StorageSmartContract) Execute(t *transaction.Transaction, b *block.Block, funcName string, input []byte, balances c_state.StateContextI) (string, error) {
+func (sc *StorageSmartContract) Execute(t *transaction.Transaction, funcName string, input []byte, balances c_state.StateContextI) (string, error) {
 
 	// if funcName == "challenge_response" {
 	// 	resp, err := sc.VerifyChallenge(t, input)
@@ -528,7 +557,7 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction, b *block.Blo
 	}
 
 	if funcName == "challenge_request" {
-		resp, err := sc.AddChallenge(t, b, input)
+		resp, err := sc.AddChallenge(t, balances.GetBlock(), input)
 		if err != nil {
 			return "", err
 		}

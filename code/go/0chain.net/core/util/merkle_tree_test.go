@@ -5,7 +5,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"0chain.net/encryption"
+	"0chain.net/core/encryption"
 )
 
 type Txn struct {

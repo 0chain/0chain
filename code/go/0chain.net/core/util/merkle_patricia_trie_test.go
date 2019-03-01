@@ -204,6 +204,13 @@ func TestMPTUniverse(t *testing.T) {
 	doStrValInsert("", mpt2, "1", "hello", true)
 
 	mpt2.Iterate(context.TODO(), iterHandler, NodeTypeValueNode|NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
+
+	key, err := hex.DecodeString("aabaed5911cb89fe95680df9f42e07c5bb147fc7a742bde7cb5be62419eb41bf")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("iterating from intermediate node\n")
+	mpt2.IterateFrom(context.TODO(), key, iterHandler, NodeTypeValueNode|NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
 }
 
 func TestMPTInsertEthereumExample(t *testing.T) {
@@ -257,6 +264,9 @@ func doGetStrValue(mpt MerklePatriciaTrieI, key string, value string) {
 }
 
 func iterHandler(ctx context.Context, path Path, key Key, node Node) error {
+	if node == nil {
+		return fmt.Errorf("stop")
+	}
 	vn, ok := node.(*ValueNode)
 	if ok {
 		fmt.Printf("iterate:%20s: p=%v k=%v v=%v\n", fmt.Sprintf("%T", node), hex.EncodeToString(path), hex.EncodeToString(key), string(vn.GetValue().Encode()))

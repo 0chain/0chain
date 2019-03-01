@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"0chain.net/chaincore/client"
-	"0chain.net/core/common"
 	"0chain.net/chaincore/config"
+	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	metrics "github.com/rcrowley/go-metrics"
@@ -175,6 +175,8 @@ func NewNode(nc map[interface{}]interface{}) (*Node, error) {
 	node.PublicKey = nc["public_key"].(string)
 	if description, ok := nc["description"]; ok {
 		node.Description = description.(string)
+	} else {
+		node.Description = node.GetNodeType() + node.GetKey()[:6]
 	}
 
 	node.Client.SetPublicKey(node.PublicKey)

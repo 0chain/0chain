@@ -3,8 +3,11 @@ package chain
 import (
 	"context"
 	"net/http"
+	"regexp"
 
-	"0chain.net/smartcontract/smartcontractstate"
+	"0chain.net/chaincore/smartcontract"
+
+	"0chain.net/chaincore/smartcontractstate"
 
 	"0chain.net/core/common"
 )
@@ -14,6 +17,29 @@ func SetupStateHandlers() {
 	c := GetServerChain()
 	http.HandleFunc("/v1/client/get/balance", common.UserRateLimit(common.ToJSONResponse(c.GetBalanceHandler)))
 	http.HandleFunc("/v1/scstate/get", common.UserRateLimit(common.ToJSONResponse(c.GetNodeFromSCState)))
+	http.HandleFunc("/v1/screst/", common.UserRateLimit(common.ToJSONResponse(c.GetSCRestOutput)))
+}
+
+func (c *Chain) GetSCRestOutput(ctx context.Context, r *http.Request) (interface{}, error) {
+	scRestRE := regexp.MustCompile(`/v1/screst/(.*)?/(.*)`)
+	pathParams := scRestRE.FindStringSubmatch(r.URL.Path)
+	if len(pathParams) < 3 {
+		return nil, common.NewError("invalid_path", "Invalid Rest API path")
+	}
+
+	scAddress := pathParams[1]
+	scRestPath := "/" + pathParams[2]
+
+	mndb := smartcontractstate.NewMemorySCDB()
+	ndb := smartcontractstate.NewPipedSCDB(mndb, c.scStateDB, false)
+
+	resp, err := smartcontract.ExecuteRestAPI(ctx, scAddress, scRestPath, r.URL.Query(), ndb)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
 }
 
 func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interface{}, error) {

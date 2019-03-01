@@ -15,15 +15,15 @@ import (
 	"0chain.net/core/encryption"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/core/common"
 	"0chain.net/chaincore/config"
-	"0chain.net/core/datastore"
-	. "0chain.net/core/logging"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
-	"0chain.net/smartcontract/smartcontractstate"
+	"0chain.net/chaincore/smartcontractstate"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
+	"0chain.net/core/common"
+	"0chain.net/core/datastore"
+	. "0chain.net/core/logging"
 	"0chain.net/core/util"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -124,6 +124,8 @@ type Chain struct {
 	crtCount int64 // Continuous/Current Round Timeout Count
 
 	fetchedNotarizedBlockHandler FetchedNotarizedBlockHandler
+
+	pruneStats *util.PruneStats
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
@@ -427,7 +429,7 @@ func (c *Chain) DeleteBlocksBelowRound(round int64) {
 	ts := common.Now() - 60
 	blocks := make([]*block.Block, 0, 1)
 	for _, b := range c.blocks {
-		if b.Round < round && b.CreationDate < ts {
+		if b.Round < round && b.CreationDate < ts && b.Round < c.LatestDeterministicBlock.Round {
 			Logger.Debug("found block to delete", zap.Int64("round", round), zap.Int64("block_round", b.Round), zap.Int64("current_round", c.CurrentRound), zap.Int64("lf_round", c.LatestFinalizedBlock.Round))
 			blocks = append(blocks, b)
 		}
@@ -633,7 +635,7 @@ func (c *Chain) DeleteRoundsBelow(ctx context.Context, roundNumber int64) {
 	defer c.roundsMutex.Unlock()
 	rounds := make([]round.RoundI, 0, 1)
 	for _, r := range c.rounds {
-		if r.GetRoundNumber() < roundNumber-10 {
+		if r.GetRoundNumber() < roundNumber-10 && r.GetRoundNumber() != 0 {
 			rounds = append(rounds, r)
 		}
 	}
@@ -789,4 +791,8 @@ func (c *Chain) CanReplicateBlock(b *block.Block) bool {
 //SetFetchedNotarizedBlockHandler - setter for FetchedNotarizedBlockHandler
 func (c *Chain) SetFetchedNotarizedBlockHandler(fnbh FetchedNotarizedBlockHandler) {
 	c.fetchedNotarizedBlockHandler = fnbh
+}
+
+func (c *Chain) GetPruneStats() *util.PruneStats {
+	return c.pruneStats
 }

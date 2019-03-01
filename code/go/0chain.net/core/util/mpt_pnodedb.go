@@ -40,8 +40,11 @@ func NewPNodeDB(dataDir string, logDir string) (*PNodeDB, error) {
 		opts.SetAllowMmapReads(true)
 		opts.SetPrefixExtractor(gorocksdb.NewFixedPrefixTransform(6))
 	}
-	opts.IncreaseParallelism(2) // pruning and saving happen in parallel
+	opts.IncreaseParallelism(2)          // pruning and saving happen in parallel
+	opts.SetSkipLogErrorOnRecovery(true) // do sync if necessary
 	opts.SetDbLogDir(logDir)
+	opts.EnableStatistics()
+	opts.OptimizeUniversalStyleCompaction(64 * 1024 * 1024)
 	db, err := gorocksdb.OpenDb(opts, dataDir)
 	if err != nil {
 		return nil, err
@@ -50,7 +53,7 @@ func NewPNodeDB(dataDir string, logDir string) (*PNodeDB, error) {
 	pnodedb.dataDir = dataDir
 	pnodedb.ro = gorocksdb.NewDefaultReadOptions()
 	pnodedb.wo = gorocksdb.NewDefaultWriteOptions()
-	pnodedb.wo.SetSync(true)
+	pnodedb.wo.SetSync(false)
 	pnodedb.to = gorocksdb.NewDefaultTransactionOptions()
 	pnodedb.fo = gorocksdb.NewDefaultFlushOptions()
 	return pnodedb, nil
@@ -81,6 +84,21 @@ func (pndb *PNodeDB) PutNode(key Key, node Node) error {
 func (pndb *PNodeDB) DeleteNode(key Key) error {
 	err := pndb.db.Delete(pndb.wo, key)
 	return err
+}
+
+/*MultiGetNode - get multiple nodes */
+func (pndb *PNodeDB) MultiGetNode(keys []Key) ([]Node, error) {
+	var nodes []Node
+	var err error
+	for _, key := range keys {
+		node, nerr := pndb.GetNode(key)
+		if nerr != nil {
+			err = nerr
+			continue
+		}
+		nodes = append(nodes, node)
+	}
+	return nodes, err
 }
 
 /*MultiPutNode - implement interface */

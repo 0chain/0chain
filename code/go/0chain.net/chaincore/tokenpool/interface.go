@@ -3,9 +3,9 @@ package tokenpool
 import (
 	"encoding/json"
 
-	"0chain.net/core/datastore"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
+	"0chain.net/core/datastore"
 )
 
 type TokenPoolTransferResponse struct {
@@ -44,6 +44,6 @@ type TokenPool struct {
 }
 
 type TokenLockInterface interface {
-	IsLocked(txn *transaction.Transaction) bool
-	LockStats(txn *transaction.Transaction) []byte
+	IsLocked(entity interface{}) bool
+	LockStats(entity interface{}) []byte
 }

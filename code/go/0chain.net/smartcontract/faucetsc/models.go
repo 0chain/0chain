@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"time"
 
+	"0chain.net/chaincore/smartcontractstate"
 	"0chain.net/chaincore/state"
-	"0chain.net/smartcontract/smartcontractstate"
 )
 
 type limitRequest struct {

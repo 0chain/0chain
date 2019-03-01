@@ -11,24 +11,26 @@ import (
 	"strings"
 	"time"
 
-	"0chain.net/miner"
 	"0chain.net/chaincore/threshold/bls"
+	"0chain.net/miner"
 
 	_ "net/http/pprof"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/client"
-	"0chain.net/core/common"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/diagnostics"
-	"0chain.net/core/logging"
-	. "0chain.net/core/logging"
-	"0chain.net/core/memorystore"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
+	"0chain.net/core/build"
+	"0chain.net/core/common"
+	"0chain.net/core/logging"
+	. "0chain.net/core/logging"
+	"0chain.net/core/memorystore"
+	"0chain.net/smartcontract/setupsc"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
@@ -99,7 +101,7 @@ func main() {
 		reader.Close()
 	} else {
 		mc.ReadNodePools(nodesConfigFile)
-		Logger.Info("nodes",zap.Int("miners",mc.Miners.Size()),zap.Int("sharders",mc.Sharders.Size()))
+		Logger.Info("nodes", zap.Int("miners", mc.Miners.Size()), zap.Int("sharders", mc.Sharders.Size()))
 	}
 	if node.Self.ID == "" {
 		Logger.Panic("node definition for self node doesn't exist")
@@ -122,7 +124,7 @@ func main() {
 
 	address := fmt.Sprintf(":%v", node.Self.Port)
 
-	Logger.Info("Starting miner", zap.String("go_version", runtime.Version()), zap.Int("available_cpus", runtime.NumCPU()), zap.String("port", address))
+	Logger.Info("Starting miner", zap.String("git", build.GitCommit), zap.String("go_version", runtime.Version()), zap.Int("available_cpus", runtime.NumCPU()), zap.String("port", address))
 	Logger.Info("Chain info", zap.String("chain_id", config.GetServerChainID()), zap.String("mode", mode))
 	Logger.Info("Self identity", zap.Any("set_index", node.Self.Node.SetIndex), zap.Any("id", node.Self.Node.GetKey()))
 
@@ -181,7 +183,8 @@ func initEntities() {
 	block.SetupEntity(memoryStorage)
 	block.SetupBlockSummaryEntity(memoryStorage)
 	block.SetupStateChange(memoryStorage)
-
+	state.SetupPartialState(memoryStorage)
+	state.SetupStateNodes(memoryStorage)
 	client.SetupEntity(memoryStorage)
 
 	transaction.SetupTransactionDB()
@@ -191,6 +194,10 @@ func initEntities() {
 
 	bls.SetupDKGEntity()
 	bls.SetupBLSEntity()
+
+	if config.DevConfiguration.SmartContract {
+		setupsc.SetupSmartContracts()
+	}
 }
 
 func initHandlers() {

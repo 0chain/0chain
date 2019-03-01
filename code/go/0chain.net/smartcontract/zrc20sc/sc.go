@@ -1,7 +1,6 @@
 package zrc20sc
 
 import (
-	"0chain.net/chaincore/block"
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
@@ -10,11 +9,18 @@ import (
 	"0chain.net/core/datastore"
 )
 
+const (
+	Seperator = smartcontractinterface.Seperator
+	ADDRESS   = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d5"
+)
+
 type ZRC20SmartContract struct {
-	smartcontractinterface.SmartContract
+	*smartcontractinterface.SmartContract
 }
 
-const Seperator = smartcontractinterface.Seperator
+func (zrc *ZRC20SmartContract) SetSC(sc *smartcontractinterface.SmartContract) {
+	zrc.SmartContract = sc
+}
 
 func (zrc *ZRC20SmartContract) createToken(t *transaction.Transaction, inputData []byte) (string, error) {
 	var newRequest tokenNode
@@ -230,7 +236,7 @@ func (zrc *ZRC20SmartContract) getTokenNode(tokenName string) (*tokenNode, error
 	return &token, nil
 }
 
-func (zrc *ZRC20SmartContract) Execute(t *transaction.Transaction, b *block.Block, funcName string, inputData []byte, balances c_state.StateContextI) (string, error) {
+func (zrc *ZRC20SmartContract) Execute(t *transaction.Transaction, funcName string, inputData []byte, balances c_state.StateContextI) (string, error) {
 	switch funcName {
 	case "createToken":
 		return zrc.createToken(t, inputData)

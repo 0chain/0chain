@@ -1,4 +1,4 @@
-FROM zchain_base
+FROM zchain_build_base
 
 WORKDIR /go/src
 

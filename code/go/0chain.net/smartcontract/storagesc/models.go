@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"0chain.net/chaincore/smartcontractstate"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
-	"0chain.net/smartcontract/smartcontractstate"
 )
 
 var ALL_BLOBBERS_KEY = smartcontractstate.Key("all_blobbers")
@@ -259,7 +259,6 @@ type ReadMarker struct {
 	OwnerID         string           `json:"owner_id"`
 	Timestamp       common.Timestamp `json:"timestamp"`
 	ReadCounter     int64            `json:"counter"`
-	FilePath        string           `json:"filepath"`
 	Signature       string           `json:"signature"`
 }
 
@@ -277,7 +276,7 @@ func (rm *ReadMarker) VerifySignature(clientPublicKey string) bool {
 }
 
 func (rm *ReadMarker) GetHashData() string {
-	hashData := fmt.Sprintf("%v:%v:%v:%v:%v:%v:%v:%v", rm.AllocationID, rm.BlobberID, rm.ClientID, rm.ClientPublicKey, rm.OwnerID, rm.FilePath, rm.ReadCounter, rm.Timestamp)
+	hashData := fmt.Sprintf("%v:%v:%v:%v:%v:%v:%v", rm.AllocationID, rm.BlobberID, rm.ClientID, rm.ClientPublicKey, rm.OwnerID, rm.ReadCounter, rm.Timestamp)
 	return hashData
 }
 
@@ -286,7 +285,7 @@ func (rm *ReadMarker) Verify(prevRM *ReadMarker) bool {
 		return false
 	}
 	if prevRM != nil {
-		if rm.BlobberID != prevRM.BlobberID || rm.OwnerID != prevRM.OwnerID || rm.Timestamp <= prevRM.Timestamp || rm.ReadCounter <= prevRM.ReadCounter {
+		if rm.BlobberID != prevRM.BlobberID || rm.OwnerID != prevRM.OwnerID || rm.Timestamp <= prevRM.Timestamp || rm.ReadCounter < prevRM.ReadCounter {
 			return false
 		}
 	}

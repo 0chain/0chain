@@ -33,6 +33,7 @@ type NodeDB interface {
 	Iterate(ctx context.Context, handler NodeDBIteratorHandler) error
 	Size(ctx context.Context) int64
 
+	MultiGetNode(keys []Key) ([]Node, error)
 	MultiPutNode(keys []Key, nodes []Node) error
 	MultiDeleteNode(keys []Key) error
 
@@ -76,6 +77,21 @@ func (mndb *MemoryNodeDB) DeleteNode(key Key) error {
 	skey := StrKey(key)
 	delete(mndb.Nodes, skey)
 	return nil
+}
+
+/*MultiGetNode - get multiple nodes */
+func (mndb *MemoryNodeDB) MultiGetNode(keys []Key) ([]Node, error) {
+	var nodes []Node
+	var err error
+	for _, key := range keys {
+		node, nerr := mndb.GetNode(key)
+		if nerr != nil {
+			err = nerr
+			continue
+		}
+		nodes = append(nodes, node)
+	}
+	return nodes, err
 }
 
 /*MultiPutNode - implement interface */
@@ -278,6 +294,21 @@ func (lndb *LevelNodeDB) DeleteNode(key Key) error {
 	return c.DeleteNode(key)
 }
 
+/*MultiGetNode - get multiple nodes */
+func (lndb *LevelNodeDB) MultiGetNode(keys []Key) ([]Node, error) {
+	var nodes []Node
+	var err error
+	for _, key := range keys {
+		node, nerr := lndb.GetNode(key)
+		if nerr != nil {
+			err = nerr
+			continue
+		}
+		nodes = append(nodes, node)
+	}
+	return nodes, err
+}
+
 /*MultiPutNode - implement interface */
 func (lndb *LevelNodeDB) MultiPutNode(keys []Key, nodes []Node) error {
 	for idx, key := range keys {
@@ -335,4 +366,24 @@ func (lndb *LevelNodeDB) PruneBelowVersion(ctx context.Context, version Sequence
 func (lndb *LevelNodeDB) RebaseCurrentDB(ndb NodeDB) {
 	lndb.C = ndb
 	lndb.P = lndb.C
+}
+
+//MergeState - merge the state from another node db
+func MergeState(ctx context.Context, fndb NodeDB, tndb NodeDB) error {
+	var nodes []Node
+	var keys []Key
+	handler := func(ctx context.Context, key Key, node Node) error {
+		keys = append(keys, key)
+		nodes = append(nodes, node)
+		return nil
+	}
+	err := fndb.Iterate(ctx, handler)
+	if err != nil {
+		return err
+	}
+	err = tndb.MultiPutNode(keys, nodes)
+	if pndb, ok := tndb.(*PNodeDB); ok {
+		pndb.Flush()
+	}
+	return nil
 }

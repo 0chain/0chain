@@ -3,7 +3,6 @@ package faucetsc
 import (
 	"fmt"
 
-	"0chain.net/chaincore/block"
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/smartcontractinterface"
@@ -11,22 +10,31 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	. "0chain.net/core/logging"
+	"0chain.net/core/util"
 	"go.uber.org/zap"
 )
-
-type FaucetSmartContract struct {
-	smartcontractinterface.SmartContract
-}
 
 const (
 	Seperator = smartcontractinterface.Seperator
 	owner     = "c8a5e74c2f4fae2c1bed79fb2b78d3b88f844bbb6bf1db5fc43240711f23321f"
+	ADDRESS   = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d3"
 )
+
+type FaucetSmartContract struct {
+	*smartcontractinterface.SmartContract
+}
+
+func (fc *FaucetSmartContract) SetSC(sc *smartcontractinterface.SmartContract) {
+	fc.SmartContract = sc
+}
 
 func (un *userNode) validPourRequest(t *transaction.Transaction, balances c_state.StateContextI, gn *globalNode) (bool, error) {
 	smartContractBalance, err := balances.GetClientBalance(gn.ID)
+	if err == util.ErrValueNotPresent {
+		return false, common.NewError("invalid_request", "faucet has no tokens and needs to be refilled")
+	}
 	if err != nil {
-		return false, err
+		return false, common.NewError("invalid_request", fmt.Sprintf("getting faucet balance resulted in an error: %v", err.Error()))
 	}
 	if t.Value > int64(smartContractBalance) {
 		return false, common.NewError("invalid_request", fmt.Sprintf("amount asked to be poured (%v) exceeds contract's wallet ballance (%v)", t.Value, smartContractBalance))
@@ -171,10 +179,11 @@ func (fc *FaucetSmartContract) getGlobalVariables(t *transaction.Transaction) *g
 	gn.Global_reset = config.SmartContractConfig.GetDuration("smart_contracts.faucetsc.global_reset")
 	gn.Used = 0
 	gn.StartTime = common.ToTime(t.CreationDate)
+	fc.DB.PutNode(gn.getKey(), gn.encode())
 	return &gn
 }
 
-func (fc *FaucetSmartContract) Execute(t *transaction.Transaction, b *block.Block, funcName string, inputData []byte, balances c_state.StateContextI) (string, error) {
+func (fc *FaucetSmartContract) Execute(t *transaction.Transaction, funcName string, inputData []byte, balances c_state.StateContextI) (string, error) {
 	gn := fc.getGlobalVariables(t)
 	switch funcName {
 	case "updateLimits":
