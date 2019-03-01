@@ -32,7 +32,10 @@ func CleanupWorker(ctx context.Context) {
 	var handler = func(ctx context.Context, qe datastore.CollectionEntity) bool {
 		txn, ok := qe.(*Transaction)
 		if !ok {
-			qe.Delete(ctx)
+			err := qe.Delete(ctx)
+			if err != nil {
+				Logger.Info("Error in deleting txn in redis ", zap.Error(err))
+			}
 			return true
 		}
 		if !common.Within(int64(txn.CreationDate), TXN_TIME_TOLERANCE-1) {
