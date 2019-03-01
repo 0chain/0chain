@@ -28,6 +28,9 @@ const (
 	//MinerSCAddress address of minersc
 	MinerSCAddress = "CF9C03CD22C9C7B116EED04E4A909F95ABEC17E98FE631D6AC94D5D8420C5B20"
 )
+
+const successConsesus = 33
+
 //MinerNode struct that holds information about the registering miner
 type MinerNode struct {
 	ID        string `json:"id"`
@@ -52,8 +55,9 @@ func (mn *MinerNode) decode(input []byte) error {
 
 
 
-//TxnConfirmationTime time to wait before checking the status
-const TxnConfirmationTime = 15
+
+//const numRetriesForRegMiner = 3
+const numRetriesForTxnConfirmation = 3
 
 // PoolMembers Pool members of the blockchain
 type PoolMembers struct {
@@ -199,7 +203,7 @@ func registerMiner() (string, error) {
 
 	txn.ToClientID = MinerSCAddress
 	txn.Value = 0
-	txn.TransactionType = 1000 //TxnTypeSmartContract
+	txn.TransactionType = common.TxnTypeSmartContract
 	txnBytes, err := json.Marshal(scData)
 	if err != nil {
 		return "", err
@@ -215,7 +219,7 @@ func registerMiner() (string, error) {
 		Logger.Info("Signing Failed during registering miner to the mining network", zap.String("err:", err.Error()))
 		return "", err
 	}
-
+ 
 	
 	Logger.Info("Adding miner to the blockchain.", zap.String("txn", txn.Hash))
 	common.SendTransaction(txn, members.Miners, node.Self.ID, node.Self.PublicKey)
@@ -230,7 +234,27 @@ func KickoffMinerRegistration(discoveryIps *string, signatureScheme encryption.S
 			Logger.Fatal("Cannot discover pool members")
 		}
 		RegisterClient(signatureScheme)
-		registerMiner()
+		regMinerTxn, err := registerMiner()
+		if err != nil {
+			Logger.Fatal("Error while registering", zap.Error(err))
+			
+		} else {
+			registered := false
+			for i := 0; i < numRetriesForTxnConfirmation; i++ {
+				time.Sleep(common.SleepBetweenRetries * time.Second)
+				regTxn, err := common.GetTransactionStatus(regMinerTxn, members.Sharders, successConsesus)
+				if err == nil {
+					Logger.Info("Registration success!!!", zap.String("txn", regTxn.Hash))
+					registered = true
+					break
+				} 
+				Logger.Info("Could not get confirmation for registration request. Retrying... ", zap.Error(err))
+			}
+			if registered == false {
+				Logger.Fatal("Could not verify registration")
+			}
+		}
+
 	} else {
 		Logger.Fatal("Discovery URLs are nil. Cannot discovery pool members")
 	}

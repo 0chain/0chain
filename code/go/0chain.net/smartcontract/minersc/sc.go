@@ -1,6 +1,7 @@
 package minersc
 
 import (
+	"github.com/asaskevich/govalidator"
 	"0chain.net/chaincore/smartcontractinterface"
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
@@ -8,6 +9,7 @@ import (
 	"encoding/json"
 	"go.uber.org/zap"
 	. "0chain.net/core/logging"
+	"errors"
 )
 
 const (
@@ -20,26 +22,29 @@ type MinerSmartContract struct {
 	*smartcontractinterface.SmartContract
 }
 
-//SetSC setting up smartcontract as per interface
+//SetSC setting up smartcontract. implementing the interface
 func (msc *MinerSmartContract) SetSC(sc *smartcontractinterface.SmartContract) {
 	msc.SmartContract = sc
 }
 
-func (msc *MinerSmartContract) getMinersList() ([]MinerNode, error) {
-	var allMinersList = make([]MinerNode, 0)
-	allMinersBytes, err := msc.DB.GetNode(allMinersKey)
-	if err != nil {
-		return nil, common.NewError("getMinersList_failed", "Failed to retrieve existing miners list")
+//Execute implemetning the interface
+func (msc *MinerSmartContract) Execute(t *transaction.Transaction, funcName string, input []byte, balances c_state.StateContextI) (string, error) {
+
+	switch funcName {
+
+		case "add_miner": 
+			resp, err := msc.AddMiner(t, input)
+			if err != nil {
+				return "", err
+			}
+			return resp, nil
+		
+	default:
+		return common.NewError("failed execution", "no function with that name").Error(), nil
+	
 	}
-	if allMinersBytes == nil {
-		return allMinersList, nil
-	}
-	err = json.Unmarshal(allMinersBytes, &allMinersList)
-	if err != nil {
-		return nil, common.NewError("getBlobbersList_failed", "Failed to retrieve existing blobbers list")
-	}
-	return allMinersList, nil
 }
+
 
 //AddMiner Function to handle miner register
 func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction, input []byte) (string, error) {
@@ -63,7 +68,12 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction, input []byte
 	newMiner.PublicKey = t.PublicKey
 	minerBytes, _ := msc.DB.GetNode(newMiner.getKey())
 	if minerBytes == nil {
-		//DB does not have the miner already
+		//DB does not have the miner already. Validate before adding.
+		if !isValidUrl(newMiner.BaseURL) {
+			Logger.Error (newMiner.BaseURL + "is not a valid URL. Please provide DNS name or IPV4 address")
+			return "", errors.New(newMiner.BaseURL + "is not a valid URL. Please provide DNS name or IPV4 address")
+		}
+		//ToDo: Add clientID and publicKey validation
 		allMinersList = append(allMinersList, newMiner)
 		allMinersBytes, _ := json.Marshal(allMinersList)
 		msc.DB.PutNode(allMinersKey, allMinersBytes)
@@ -78,20 +88,33 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction, input []byte
 }
 
 
-//Execute implemetning the interface
-func (msc *MinerSmartContract) Execute(t *transaction.Transaction, funcName string, input []byte, balances c_state.StateContextI) (string, error) {
 
-	switch funcName {
 
-		case "add_miner": 
-			resp, err := msc.AddMiner(t, input)
-			if err != nil {
-				return "", err
-			}
-			return resp, nil
-		
-	default:
-		return common.NewError("failed execution", "no function with that name").Error(), nil
-	
+
+//------------- local functions ---------------------
+
+func (msc *MinerSmartContract) getMinersList() ([]MinerNode, error) {
+	var allMinersList = make([]MinerNode, 0)
+	allMinersBytes, err := msc.DB.GetNode(allMinersKey)
+	if err != nil {
+		return nil, common.NewError("getMinersList_failed", "Failed to retrieve existing miners list")
 	}
+	if allMinersBytes == nil {
+		return allMinersList, nil
+	}
+	err = json.Unmarshal(allMinersBytes, &allMinersList)
+	if err != nil {
+		return nil, common.NewError("getBlobbersList_failed", "Failed to retrieve existing blobbers list")
+	}
+	return allMinersList, nil
+}
+
+func isValidUrl(u string) bool {
+	//ToDo: does rudimentary checks. Add more checks
+	
+	if govalidator.IsDNSName(u) || govalidator.IsIPv4(u) {
+		return true
+	} 
+
+	return false
 }

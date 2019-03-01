@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math"
 	"net/http"
 	"sync"
 	"time"
@@ -19,10 +20,14 @@ import (
 /*
   ToDo: This is adapted from blobber code. Need to find a way to reuse this
 */
+
 const maxRetries = 5
 
 //SleepBetweenRetries suggested time to sleep between retries
 const SleepBetweenRetries = 5
+
+//TxnConfirmationTime time to wait before checking the status
+const TxnConfirmationTime = 15
 
 const txnSubmitURL = "v1/transaction/put"
 const txnVerifyURL = "v1/transaction/get/confirmation?hash="
@@ -49,6 +54,20 @@ type Transaction struct {
 	TransactionOutput string    `json:"transaction_output,omitempty"`
 	OutputHash        string    `json:"txn_output_hash"`
 }
+
+const (
+	TxnTypeSend = 0 // A transaction to send tokens to another account, state is maintained by account
+
+	TxnTypeLockIn = 2 // A transaction to lock tokens, state is maintained on the account and the parent lock in transaction
+
+	// Any txn type that refers to a parent txn should have an odd value
+	TxnTypeStorageWrite = 101 // A transaction to write data to the blobber
+	TxnTypeStorageRead  = 103 // A transaction to read data from the blobber
+
+	TxnTypeData = 10 // A transaction to just store a piece of data on the block chain
+
+	TxnTypeSmartContract = 1000 // A smart contract transaction type
+)
 
 func NewTransactionEntity(ID string, chainID string, pkey string) *Transaction {
 	txn := &Transaction{}
@@ -107,11 +126,13 @@ func SendMultiPostRequest(urls []string, data []byte, ID string, pkey string) {
 
 //SendPostRequest function to send post requests
 func SendPostRequest(url string, data []byte, ID string, pkey string, wg *sync.WaitGroup) ([]byte, error) {
+	//ToDo: Add more error handling
 	if wg != nil {
 		defer wg.Done()
 	}
 	var resp *http.Response
 	var err error
+
 	for i := 0; i < maxRetries; i++ {
 		req, ctx, cncl, err := NewHTTPRequest(http.MethodPost, url, data, ID, pkey)
 		defer cncl()
@@ -129,6 +150,7 @@ func SendPostRequest(url string, data []byte, ID string, pkey string, wg *sync.W
 		}
 		//TODO: Handle ctx cncl
 		Logger.Error("SendPostRequest Error", zap.String("error", err.Error()), zap.String("URL", url))
+
 		time.Sleep(SleepBetweenRetries * time.Second)
 	}
 	if resp == nil || err != nil {
@@ -152,6 +174,69 @@ func SendTransaction(txn *Transaction, urls []string, ID string, pkey string) {
 		txnURL := fmt.Sprintf("%v/%v", url, txnSubmitURL)
 		go sendTransactionToURL(txnURL, txn, ID, pkey, nil)
 	}
+}
+
+//GetTransactionStatus check the status of the transaction.
+func GetTransactionStatus(txnHash string, urls []string, sf int) (*Transaction, error) {
+	//ToDo: Add more error handling
+	numSuccess := 0
+	numErrs := 0
+	var errString string
+	var retTxn *Transaction
+
+	// currently transaction information an be obtained only from sharders
+	for _, sharder := range urls {
+		url := fmt.Sprintf("%v/%v%v", sharder, txnVerifyURL, txnHash)
+
+		response, err := http.Get(url)
+		if err != nil {
+			Logger.Error("Error getting transaction confirmation", zap.Any("error", err))
+			numErrs++
+		} else {
+			if response.StatusCode != 200 {
+				continue
+			}
+			defer response.Body.Close()
+			contents, err := ioutil.ReadAll(response.Body)
+			if err != nil {
+				Logger.Error("Error reading response from transaction confirmation", zap.Any("error", err))
+				continue
+			}
+			var objmap map[string]*json.RawMessage
+			err = json.Unmarshal(contents, &objmap)
+			if err != nil {
+				Logger.Error("Error unmarshalling response", zap.Any("error", err))
+				errString = errString + url + ":" + err.Error()
+				continue
+			}
+			if *objmap["txn"] == nil {
+				e := "No transaction information. Only block summary."
+				Logger.Error(e)
+				errString = errString + url + ":" + e
+			}
+			txn := &Transaction{}
+			err = json.Unmarshal(*objmap["txn"], &txn)
+			if err != nil {
+				Logger.Error("Error unmarshalling to get transaction response", zap.Any("error", err))
+				errString = errString + url + ":" + err.Error()
+			}
+			if len(txn.Signature) > 0 {
+				retTxn = txn
+			}
+
+			numSuccess++
+		}
+	}
+
+	sr := int(math.Ceil((float64(numSuccess) * 100) / float64(numSuccess+numErrs)))
+	// We've at least one success and success rate sr is at least same as success factor sf
+	if numSuccess > 0 && sr >= sf {
+		if retTxn != nil {
+			return retTxn, nil
+		}
+		return nil, NewError("err_finding_txn_status", errString)
+	}
+	return nil, NewError("transaction_not_found", "Transaction was not found on any of the urls provided")
 }
 
 func sendTransactionToURL(url string, txn *Transaction, ID string, pkey string, wg *sync.WaitGroup) ([]byte, error) {
