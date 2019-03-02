@@ -10,6 +10,5 @@ require (
 	github.com/spf13/viper v1.3.1
 	github.com/stretchr/testify v1.2.2
 	go.uber.org/zap v1.9.1
-	golang.org/x/crypto v0.0.0-20190225124518-7f87c0fbb88b // indirect
 	gopkg.in/yaml.v2 v2.2.2
 )

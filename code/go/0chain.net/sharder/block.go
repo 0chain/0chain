@@ -1,13 +1,15 @@
 package sharder
 
 import (
+	"go.uber.org/zap"
 	"context"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/node"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
-	"0chain.net/chaincore/node"
+	. "0chain.net/core/logging"
 )
 
 /*GetBlockBySummary - get a block */
@@ -17,6 +19,9 @@ func (sc *Chain) GetBlockBySummary(ctx context.Context, bs *block.BlockSummary) 
 	if err != nil {
 		bi, err := GetSharderChain().BlockTxnCache.Get(bs.Hash)
 		if err != nil {
+			if len(bs.Hash) < 64 {
+				Logger.Error("Hash from block summary is less than 64", zap.Any("hash", bs.Hash))
+			}
 			db := &block.Block{}
 			db.Hash = bs.Hash
 			db.Round = bs.Round
