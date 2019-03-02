@@ -56,7 +56,7 @@ func (mn *MinerNode) decode(input []byte) error {
 
 
 
-//const numRetriesForRegMiner = 3
+const numRetriesForRegMiner = 3
 const numRetriesForTxnConfirmation = 3
 
 // PoolMembers Pool members of the blockchain
@@ -234,30 +234,41 @@ func KickoffMinerRegistration(discoveryIps *string, signatureScheme encryption.S
 			Logger.Fatal("Cannot discover pool members")
 		}
 		RegisterClient(signatureScheme)
-		regMinerTxn, err := registerMiner()
-		if err != nil {
-			Logger.Fatal("Error while registering", zap.Error(err))
-			
-		} else {
-			registered := false
-			for i := 0; i < numRetriesForTxnConfirmation; i++ {
-				time.Sleep(common.SleepBetweenRetries * time.Second)
-				regTxn, err := common.GetTransactionStatus(regMinerTxn, members.Sharders, successConsesus)
-				if err == nil {
+
+		for i := 0; i < numRetriesForRegMiner; i++ {
+			Logger.Info("Registering miner ", zap.Int("Attempt#", i))
+			regMinerTxn, err := registerMiner()
+			if err != nil {
+				Logger.Fatal("Error while registering", zap.Error(err))
+				
+			} else {
+				regTxn := verifyTransaction(regMinerTxn) 
+				if regTxn != nil {
 					Logger.Info("Registration success!!!", zap.String("txn", regTxn.Hash))
-					registered = true
-					break
-				} 
-				Logger.Info("Could not get confirmation for registration request. Retrying... ", zap.Error(err))
-			}
-			if registered == false {
-				Logger.Fatal("Could not verify registration")
-			}
+				
+				return
+				}
 		}
+	}
+	Logger.Fatal("Could not register/verify")
 
 	} else {
 		Logger.Fatal("Discovery URLs are nil. Cannot discovery pool members")
 	}
+}
+
+func verifyTransaction(regMinerTxn string)  *common.Transaction {
+	
+	for i := 0; i < numRetriesForTxnConfirmation; i++ {
+		time.Sleep(common.SleepBetweenRetries * time.Second)
+		regTxn, err := common.GetTransactionStatus(regMinerTxn, members.Sharders, successConsesus)
+		if err == nil {
+			return  regTxn
+		} 
+
+		Logger.Info("Could not get confirmation for registration request. Retrying... ", zap.Error(err))
+	}
+	return nil
 }
 
 //ReadYamlConfig read an yaml file

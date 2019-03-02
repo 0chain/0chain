@@ -10,6 +10,7 @@ import (
 	"go.uber.org/zap"
 	. "0chain.net/core/logging"
 	"errors"
+	"net/url"
 )
 
 const (
@@ -53,7 +54,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction, input []byte
 	allMinersList, err := msc.getMinersList()
 	if err != nil {
 		Logger.Error("Error in getting list from the DB", zap.Error(err))
-		return "", common.NewError("add_miner_failed", "Failed to get miner list"+err.Error())
+		return "", errors.New("add_miner_failed - Failed to get miner list"+err.Error())
 	}
 
 	var newMiner MinerNode
@@ -69,7 +70,9 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction, input []byte
 	minerBytes, _ := msc.DB.GetNode(newMiner.getKey())
 	if minerBytes == nil {
 		//DB does not have the miner already. Validate before adding.
-		if !isValidUrl(newMiner.BaseURL) {
+		err = isValidURL(newMiner.BaseURL) 
+		
+		if err != nil {
 			Logger.Error (newMiner.BaseURL + "is not a valid URL. Please provide DNS name or IPV4 address")
 			return "", errors.New(newMiner.BaseURL + "is not a valid URL. Please provide DNS name or IPV4 address")
 		}
@@ -97,24 +100,42 @@ func (msc *MinerSmartContract) getMinersList() ([]MinerNode, error) {
 	var allMinersList = make([]MinerNode, 0)
 	allMinersBytes, err := msc.DB.GetNode(allMinersKey)
 	if err != nil {
-		return nil, common.NewError("getMinersList_failed", "Failed to retrieve existing miners list")
+		return nil, errors.New("getMinersList_failed - Failed to retrieve existing miners list")
 	}
 	if allMinersBytes == nil {
 		return allMinersList, nil
 	}
 	err = json.Unmarshal(allMinersBytes, &allMinersList)
 	if err != nil {
-		return nil, common.NewError("getBlobbersList_failed", "Failed to retrieve existing blobbers list")
+		return nil, errors.New("getBlobbersList_failed - Failed to retrieve existing blobbers list")
 	}
 	return allMinersList, nil
 }
 
-func isValidUrl(u string) bool {
+func isValidURL(burl string) error {
 	//ToDo: does rudimentary checks. Add more checks
-	
-	if govalidator.IsDNSName(u) || govalidator.IsIPv4(u) {
-		return true
-	} 
+	u, err := url.Parse(burl)
+	if err != nil {
+		return errors.New(burl + " is not a valid url")
+	}
 
-	return false
+	if u.Scheme != "http" { //|| u.scheme == "https"  we don't support
+		return errors.New(burl + " is not a valid url. It does not have scheme http")
+	}
+
+	if u.Port() == "" {
+		return errors.New(burl + " is not a valid url. It does not have port number")
+	}
+
+	h := u.Hostname()
+	
+	if govalidator.IsDNSName(h)  {
+		return nil
+	} 
+	if govalidator.IsIPv4(h) {
+		return nil
+	}
+	Logger.Info("Both IsDNSName and IsIPV4 returned false for " + h)
+	return errors.New(burl + " is not a valid url. It not a valid IP or valid DNS name")
+
 }
