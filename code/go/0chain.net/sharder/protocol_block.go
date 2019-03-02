@@ -2,7 +2,6 @@ package sharder
 
 import (
 	"context"
-	"fmt"
 	"math"
 	"sort"
 	"strconv"
@@ -93,22 +92,22 @@ func (sc *Chain) GetLatestRoundFromSharders(ctx context.Context, currRound int64
 		if !ok {
 			return nil, nil
 		}
-		Logger.Info("bc-27 - received round", zap.Int64("round", r.Number))
+		Logger.Info("bc-27 received latest round from sharder", zap.Int64("round", r.Number))
 		latestRounds = append(latestRounds, r)
 		return r, nil
 	}
 
-	Logger.Info("bc-27 - requesting all the sharders for their latest rounds")
+	Logger.Info("bc-27 requesting all the sharders for their latest rounds")
 	sc.Sharders.RequestEntityFromAll(ctx, LatestRoundRequestor, nil, latestRoundHandler)
-	Logger.Info("bc-27 - Back from requesting all")
+	Logger.Info("bc-27 back from requesting all")
 
 	if len(latestRounds) > 0 {
 		sort.Slice(latestRounds, func(i int, j int) bool { return latestRounds[i].Number >= latestRounds[j].Number })
-		Logger.Info("bc-27 - rounds found the latest round", zap.Int64("round#", latestRounds[0].Number))
+		Logger.Info("bc-27 the latest round", zap.Int64("round", latestRounds[0].Number))
 		return latestRounds[0]
 	}
 
-	Logger.Info("bc-27 - no rounds rreceived from any of the sharders")
+	Logger.Info("bc-27 no rounds received from any of the sharders")
 	return nil
 }
 
@@ -119,7 +118,7 @@ func (sc *Chain) GetMissingRounds(ctx context.Context, targetR int64, dbR int64)
 
 	rounds := targetR - dbR
 
-	Logger.Info("bc-27 Synching up ", zap.Int64("rounds", rounds))
+	Logger.Info("bc-27 synching up ", zap.Int64("rounds#", rounds))
 	loopR := dbR
 
 	for true {
@@ -131,7 +130,7 @@ func (sc *Chain) GetMissingRounds(ctx context.Context, targetR int64, dbR int64)
 		sc.Sharders.RequestEntityFromAll(ctx, RoundRequestor, params, func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 			roundEntity, ok := entity.(*round.Round)
 			if !ok {
-				Logger.Info("bc-27 Could not get the round info from others", zap.Int64("round#", loopR))
+				Logger.Info("bc-27 could not get the round info from others", zap.Int64("round", loopR))
 				return nil, nil
 			}
 			r = roundEntity
@@ -139,23 +138,23 @@ func (sc *Chain) GetMissingRounds(ctx context.Context, targetR int64, dbR int64)
 			return r, nil
 		})
 		if r == nil {
-			Logger.Info("bc-27 round is nil")
+			Logger.Info("bc-27 requested round is nil", zap.Int64("round#", loopR))
 			loopR++
 			continue
 		}
 		if r.BlockHash == "" {
-			Logger.Info("bc-27 round block hash is empty", zap.Int64("round", r.Number))
+			Logger.Info("bc-27 requested round block hash is empty", zap.Int64("round", r.Number))
 			loopR++
 			continue
 		}
-		Logger.Info("bc-27 check to see if block needed to be stored")
+		Logger.Info("bc-27 check to see if block needed to be stored", zap.Int64("round", r.Number))
 		sc.storeMissingRoundBlock(ctx, r)
 		duration := time.Since(ts)
 		Logger.Info("bc-27 duration to catch up with one missing round", zap.Duration("duration", duration), zap.Int64("round", r.Number))
 		if sc.AcceptanceRound != -1 && (sc.AcceptanceRound - 1) <= r.Number {
 			break
 		} else {
-			Logger.Info("#rejoin current sync Round", zap.Int64("sRound", r.Number), zap.Int64("accRound", sc.AcceptanceRound))
+			Logger.Info("bc-27 current sync round", zap.Int64("sync round", r.Number), zap.Int64("accept round", sc.AcceptanceRound))
 		}
 		loopR++
 	}
@@ -163,19 +162,21 @@ func (sc *Chain) GetMissingRounds(ctx context.Context, targetR int64, dbR int64)
 
 func (sc *Chain) storeMissingRoundBlock(ctx context.Context, r *round.Round) {
 	params := &url.Values{}
+	params.Add("round", strconv.FormatInt(r.Number, 10))
 	params.Add("block", r.BlockHash)
 	self := node.GetSelfNode(ctx)
 	canStore, nodes := sc.IsBlockSharderWithNodes(r.BlockHash, self.Node)
-	Logger.Info(fmt.Sprintf("can Store - %b, nodes length - %d", canStore, len(nodes)))
+	Logger.Info("bc-27 number of request nodes", zap.Int("nodes", len(nodes)))
 	var requestNode *node.Node
 	for _, n := range nodes {
 		if n != self.Node {
 			requestNode = n
+			Logger.Info("bc-27 request node", zap.Int("node-idx", requestNode.SetIndex))
 			break
 		}
 	}
 	if requestNode == nil {
-		Logger.Info("bc-27 request node is nil")
+		Logger.Info("bc-27 request node is nil", zap.Int64("round", r.Number))
 		return
 	}
 	var b *block.Block
@@ -199,18 +200,18 @@ func (sc *Chain) storeMissingRoundBlock(ctx context.Context, r *round.Round) {
 	sc.StoreTransactions(ctx, b)
 	err := sc.StoreBlockSummary(ctx, b)
 	if err != nil {
-		Logger.Error("db error (save block)", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
+		Logger.Error("bc-27 db error (save block)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
 	} else {
-		Logger.Info("bc-27 missed block stored in db", zap.String("block-hash", b.Hash))
+		Logger.Info("bc-27 missed block stored in db", zap.Int64("round", b.Round), zap.String("block-hash", b.Hash))
 	}
 	if canStore {
 		sc.storeBlock(b)
-		Logger.Info("bc-27 missed block stored in file", zap.String("block-hash", b.Hash))
+		Logger.Info("bc-27 missed block stored in file", zap.Int64("round", b.Round), zap.String("block-hash", b.Hash))
 	}
 	sc.storeRound(ctx, r, b)
 	Logger.Info("bc-27 missed round stored in db", zap.Int64("round", r.GetRoundNumber()))
 	sc.LatestFinalizedBlock = b
-	Logger.Info("finalize round - latest finalized round", zap.Int64("round", sc.LatestFinalizedBlock.Round), zap.String("block", b.Hash))
+	Logger.Info("bc-27 finalize round - latest finalized round", zap.Int64("round", sc.LatestFinalizedBlock.Round), zap.String("block", b.Hash))
 }
 
 func (sc *Chain) storeRound(ctx context.Context, r round.RoundI, b *block.Block) {

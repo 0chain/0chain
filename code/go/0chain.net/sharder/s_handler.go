@@ -67,12 +67,20 @@ func RoundBlockRequestHandler(ctx context.Context, r *http.Request) (interface{}
 	sc := GetSharderChain()
 	hash := r.FormValue("block")
 	var b *block.Block
+	var roundNumber int64
 	if hash == "" {
 		return nil, common.InvalidRequest("block hash is required")
 	}
 	b, err := sc.GetBlock(ctx, hash)
 	if err == nil {
 		return b, nil
+	}
+	roundNumber, err = strconv.ParseInt(r.FormValue("round"), 10, 64)
+	if err == nil {
+		b, err = sc.GetBlockFromStore(hash, roundNumber)
+		if err == nil {
+			return b, nil
+		}
 	}
 	return nil, err
 }

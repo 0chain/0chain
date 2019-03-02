@@ -156,7 +156,7 @@ func main() {
 	if err == nil {
 		sc.CurrentRound = r.Number
 		sc.AddRound(r)
-		Logger.Info("bc-27 most recent round info", zap.Int64("roundNumber", r.Number), zap.String("blockHash", r.BlockHash))
+		Logger.Info("bc-27 most recent round info", zap.Int64("round", r.Number), zap.String("blockHash", r.BlockHash))
 		} else {
 		Logger.Error("bc-27 error reading round data from db", zap.Error(err))
 	}
@@ -238,14 +238,14 @@ func syncUpRounds(ctx context.Context, r *round.Round) {
 	lr := sc.GetLatestRoundFromSharders(ctx, r.Number)
 	if lr != nil && lr.Number > r.Number + 1 {
 		sc.SetStatus(sharder.SharderSyncing)
-		Logger.Info("#rejoin sharder status set to syncing")
+		Logger.Info("bc-27 sharder status set to syncing")
 		Logger.Info("bc-27 latest round from other sharder", zap.Int64("curr_round", r.Number), zap.Int64("latest_round_from_sharders", lr.Number))		
 		ts := time.Now()
 		sc.GetMissingRounds(ctx, lr.Number, r.Number)
 		duration := time.Since(ts)
 		Logger.Info("bc-27 duration for catching up with all missing rounds", zap.Duration("duration", duration))
 		sc.SetStatus(sharder.SharderNormal)
-		Logger.Info("#rejoin sharder status set to Normal")
+		Logger.Info("bc-27 sharder status set to Normal")
 	}
 	go sc.BlockWorker(ctx)
 }
