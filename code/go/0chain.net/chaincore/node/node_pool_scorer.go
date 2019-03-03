@@ -5,6 +5,8 @@ import (
 	"sort"
 
 	"0chain.net/core/encryption"
+	. "0chain.net/core/logging"
+	"go.uber.org/zap"
 )
 
 //Score - a node with a score
@@ -50,6 +52,7 @@ func (hps *HashPoolScorer) ScoreHash(np *Pool, hash []byte) []*Score {
 func (hps *HashPoolScorer) ScoreHashString(np *Pool, hash string) []*Score {
 	hBytes, err := hex.DecodeString(hash)
 	if err != nil {
+		Logger.Info("decode failed for hash", zap.String("hash", hash), zap.Error(err))
 		return nil
 	}
 	return hps.ScoreHash(np, hBytes)

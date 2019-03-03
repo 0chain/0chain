@@ -15,9 +15,9 @@ import (
 )
 
 const (
-	SharderNormal  = 0
-	SharderSyncing = 1
-	SharderAccept  = 2
+	Normal  = 0
+	Syncing = 1
+	Accept  = 2
 )
 
 var sharderChain = &Chain{}
@@ -32,11 +32,12 @@ func SetupSharderChain(c *chain.Chain) {
 	transactionCacheSize := int(c.BlockSize) * blockCacheSize
 	sharderChain.BlockTxnCache = cache.NewLRUCache(transactionCacheSize)
 	c.SetFetchedNotarizedBlockHandler(sharderChain)
-	sharderChain.sharderStatus = SharderNormal
-	sharderChain.mutex = sync.RWMutex{}
-	//TODO configure acceptance tolerance value
-	sharderChain.AcceptanceTolerance = 65
-	sharderChain.AcceptanceRound = -1
+	sharderChain.BSync = &BlockSync{
+		//TODO configure acceptance tolerance value
+		AcceptanceTolerance: 65,
+		syncStatus:          Normal,
+		mutex:               sync.RWMutex{},
+	}
 }
 
 /*GetSharderChain - get the sharder's chain */
@@ -47,15 +48,78 @@ func GetSharderChain() *Chain {
 /*Chain - A chain structure to manage the sharder activities */
 type Chain struct {
 	*chain.Chain
-	BlockChannel        chan *block.Block
-	RoundChannel        chan *round.Round
-	BlockCache          cache.Cache
-	BlockTxnCache       cache.Cache
-	SharderStats        Stats
-	sharderStatus       int
-	mutex               sync.RWMutex
+	BlockChannel  chan *block.Block
+	RoundChannel  chan *round.Round
+	BlockCache    cache.Cache
+	BlockTxnCache cache.Cache
+	SharderStats  Stats
+	BSync         *BlockSync
+}
+
+/*BlockSync - A struct to track the block sync */
+type BlockSync struct {
 	AcceptanceTolerance int64
-	AcceptanceRound     int64
+	acceptRound         int64
+	syncRound           int64
+	finalizeRound       int64
+	syncStatus          int
+	mutex               sync.RWMutex
+}
+
+/*GetStatus - get block sync status */
+func (bs *BlockSync) GetStatus() int {
+	bs.mutex.RLock()
+	defer bs.mutex.RUnlock()
+	return bs.syncStatus
+}
+
+/*SetStatus - set block sync status */
+func (bs *BlockSync) SetStatus(status int) {
+	bs.mutex.Lock()
+	defer bs.mutex.Unlock()
+	bs.syncStatus = status
+}
+
+/*GetFinalizationRound - get round to be finalized during block sync */
+func (bs *BlockSync) GetFinalizationRound() int64 {
+	bs.mutex.RLock()
+	defer bs.mutex.RUnlock()
+	return bs.finalizeRound
+}
+
+/*GetSyncingRound - get current syncing round */
+func (bs *BlockSync) GetSyncingRound() int64 {
+	bs.mutex.RLock()
+	defer bs.mutex.RUnlock()
+	return bs.syncRound
+}
+
+/*GetAcceptanceRound - get current syncing round */
+func (bs *BlockSync) GetAcceptanceRound() int64 {
+	bs.mutex.RLock()
+	defer bs.mutex.RUnlock()
+	return bs.acceptRound
+}
+
+/*SetFinalizationRound - set round to be finalized during block sync */
+func (bs *BlockSync) SetFinalizationRound(r int64) {
+	bs.mutex.Lock()
+	defer bs.mutex.Unlock()
+	bs.finalizeRound = r
+}
+
+/*SetSyncingRund - set current syncing round */
+func (bs *BlockSync) SetSyncingRound(r int64) {
+	bs.mutex.Lock()
+	defer bs.mutex.Unlock()
+	bs.syncRound = r
+}
+
+/*SetAcceptanceRound - set acceptance round during block sync */
+func (bs *BlockSync) SetAcceptanceRound(r int64) {
+	bs.mutex.Lock()
+	defer bs.mutex.Unlock()
+	bs.acceptRound = r
 }
 
 /*GetBlockChannel - get the block channel where the incoming blocks from the network are put into for further processing */
@@ -66,20 +130,6 @@ func (sc *Chain) GetBlockChannel() chan *block.Block {
 /*GetRoundChannel - get the round channel where the finalized rounds are put into for further processing */
 func (sc *Chain) GetRoundChannel() chan *round.Round {
 	return sc.RoundChannel
-}
-
-/*GetStatus - get sharder status */
-func (sc *Chain) GetStatus() int {
-	sc.mutex.RLock()
-	defer sc.mutex.RUnlock()
-	return sc.sharderStatus
-}
-
-/*SetStatus - set sharder status */
-func (sc *Chain) SetStatus(status int) {
-	sc.mutex.Lock()
-	defer sc.mutex.Unlock()
-	sc.sharderStatus = status
 }
 
 /*SetupGenesisBlock - setup the genesis block for this chain */
@@ -139,8 +189,4 @@ func (sc *Chain) GetSharderRound(roundNumber int64) *round.Round {
 		return nil
 	}
 	return sr
-}
-
-func (sc *Chain) canAcceptBlock(b *block.Block) bool {
-	return b.Round-sc.LatestFinalizedBlock.Round < sc.AcceptanceTolerance
 }

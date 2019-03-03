@@ -18,7 +18,7 @@ func SetupWorkers(ctx context.Context) {
 
 /*BlockWorker - stores the blocks */
 func (sc *Chain) BlockWorker(ctx context.Context) {
-	Logger.Info("#rejoin block worker started")
+	Logger.Info("bc-27 block worker started")
 	for true {
 		select {
 		case <-ctx.Done():

@@ -236,15 +236,17 @@ func syncUpRounds(ctx context.Context, r *round.Round) {
 	sc.Sharders.OneTimeStatusMonitor(ctx)
 	Logger.Info("bc-27 get latest round from other sharders", zap.Int64("sharder_curr_round", r.Number))
 	lr := sc.GetLatestRoundFromSharders(ctx, r.Number)
+	bs := sc.BSync
 	if lr != nil && lr.Number > r.Number + 1 {
-		sc.SetStatus(sharder.SharderSyncing)
+		bs.SetStatus(sharder.Syncing)
 		Logger.Info("bc-27 sharder status set to syncing")
 		Logger.Info("bc-27 latest round from other sharder", zap.Int64("curr_round", r.Number), zap.Int64("latest_round_from_sharders", lr.Number))		
+		bs.SetFinalizationRound(lr.Number)
 		ts := time.Now()
 		sc.GetMissingRounds(ctx, lr.Number, r.Number)
 		duration := time.Since(ts)
 		Logger.Info("bc-27 duration for catching up with all missing rounds", zap.Duration("duration", duration))
-		sc.SetStatus(sharder.SharderNormal)
+		bs.SetStatus(sharder.Normal)
 		Logger.Info("bc-27 sharder status set to Normal")
 	}
 	go sc.BlockWorker(ctx)

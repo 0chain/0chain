@@ -113,24 +113,23 @@ func (sc *Chain) GetLatestRoundFromSharders(ctx context.Context, currRound int64
 
 func (sc *Chain) GetMissingRounds(ctx context.Context, targetR int64, dbR int64) {
 	Logger.Info("bc-27 get missing rounds", zap.Int64("target round", targetR), zap.Int64("round from db", dbR))
+	
 	//get missing rounds starting from the next round of the current round
 	dbR++
-
-	rounds := targetR - dbR
-
-	Logger.Info("bc-27 synching up ", zap.Int64("rounds#", rounds))
-	loopR := dbR
-
-	for true {
+	syncRound := dbR
+	bs := sc.BSync
+	bs.SetSyncingRound(syncRound)
+	for syncRound < bs.GetFinalizationRound() {
+		Logger.Info("bc-27 sync info", zap.Int64("sync_round", syncRound), zap.Int64("accept_round", bs.GetAcceptanceRound()), zap.Int64("latest_round", bs.GetFinalizationRound()))
 		params := &url.Values{}
-		params.Add("round", strconv.FormatInt(loopR, 10))
+		params.Add("round", strconv.FormatInt(syncRound, 10))
 		var r *round.Round
-		Logger.Info("bc-27 requesting all sharders for the round", zap.Int64("round", loopR))
+		Logger.Info("bc-27 requesting all sharders for the round", zap.Int64("round", syncRound))
 		ts := time.Now()
 		sc.Sharders.RequestEntityFromAll(ctx, RoundRequestor, params, func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 			roundEntity, ok := entity.(*round.Round)
 			if !ok {
-				Logger.Info("bc-27 could not get the round info from others", zap.Int64("round", loopR))
+				Logger.Info("bc-27 could not get the round info from others", zap.Int64("round", syncRound))
 				return nil, nil
 			}
 			r = roundEntity
@@ -138,25 +137,26 @@ func (sc *Chain) GetMissingRounds(ctx context.Context, targetR int64, dbR int64)
 			return r, nil
 		})
 		if r == nil {
-			Logger.Info("bc-27 requested round is nil", zap.Int64("round#", loopR))
-			loopR++
+			Logger.Info("bc-27 requested round is nil", zap.Int64("round#", syncRound))
+			syncRound++
+			bs.SetSyncingRound(syncRound)
 			continue
 		}
 		if r.BlockHash == "" {
 			Logger.Info("bc-27 requested round block hash is empty", zap.Int64("round", r.Number))
-			loopR++
+			syncRound++
+			bs.SetSyncingRound(syncRound)
 			continue
 		}
-		Logger.Info("bc-27 check to see if block needed to be stored", zap.Int64("round", r.Number))
 		sc.storeMissingRoundBlock(ctx, r)
 		duration := time.Since(ts)
 		Logger.Info("bc-27 duration to catch up with one missing round", zap.Duration("duration", duration), zap.Int64("round", r.Number))
-		if sc.AcceptanceRound != -1 && (sc.AcceptanceRound - 1) <= r.Number {
+		acceptRound := bs.GetAcceptanceRound()
+		if acceptRound != 0 && (acceptRound - 1) <= r.Number {
 			break
-		} else {
-			Logger.Info("bc-27 current sync round", zap.Int64("sync round", r.Number), zap.Int64("accept round", sc.AcceptanceRound))
-		}
-		loopR++
+		} 
+		syncRound++
+		bs.SetSyncingRound(syncRound)
 	}
 }
 
@@ -176,6 +176,7 @@ func (sc *Chain) storeMissingRoundBlock(ctx context.Context, r *round.Round) {
 		}
 	}
 	if requestNode == nil {
+		//TODO better log message
 		Logger.Info("bc-27 request node is nil", zap.Int64("round", r.Number))
 		return
 	}
@@ -194,7 +195,7 @@ func (sc *Chain) storeMissingRoundBlock(ctx context.Context, r *round.Round) {
 		return nil, err
 	})
 	if b == nil {
-		Logger.Info("bc-27 round block is nil", zap.Int64("round", r.Number))
+		Logger.Info("bc-27 round block is nil", zap.Int64("round", r.Number), zap.String("block-hash", r.BlockHash))
 		return
 	}
 	sc.StoreTransactions(ctx, b)
@@ -202,14 +203,14 @@ func (sc *Chain) storeMissingRoundBlock(ctx context.Context, r *round.Round) {
 	if err != nil {
 		Logger.Error("bc-27 db error (save block)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
 	} else {
-		Logger.Info("bc-27 missed block stored in db", zap.Int64("round", b.Round), zap.String("block-hash", b.Hash))
+		Logger.Info("bc-27 block stored in db", zap.Int64("round", b.Round), zap.String("block-hash", b.Hash))
 	}
 	if canStore {
 		sc.storeBlock(b)
-		Logger.Info("bc-27 missed block stored in file", zap.Int64("round", b.Round), zap.String("block-hash", b.Hash))
+		Logger.Info("bc-27 block stored in file", zap.Int64("round", b.Round), zap.String("block-hash", b.Hash))
 	}
 	sc.storeRound(ctx, r, b)
-	Logger.Info("bc-27 missed round stored in db", zap.Int64("round", r.GetRoundNumber()))
+	Logger.Info("bc-27 round stored in db", zap.Int64("round", r.GetRoundNumber()))
 	sc.LatestFinalizedBlock = b
 	Logger.Info("bc-27 finalize round - latest finalized round", zap.Int64("round", sc.LatestFinalizedBlock.Round), zap.String("block", b.Hash))
 }
@@ -237,6 +238,7 @@ func (sc *Chain) storeBlock(b *block.Block) {
 		Logger.Error("block save", zap.Any("round", b.Round), zap.Any("hash", b.Hash), zap.Error(err))
 	}
 }
+
 func (sc *Chain) NotarizedBlockFetched(ctx context.Context, b *block.Block) {
 
 }
