@@ -14,14 +14,14 @@ import (
 
 /*GetBlockBySummary - get a block */
 func (sc *Chain) GetBlockBySummary(ctx context.Context, bs *block.BlockSummary) (*block.Block, error) {
+	if len(bs.Hash) < 64 {
+		Logger.Error("Hash from block summary is less than 64", zap.Any("block_summary", bs))
+	}
 	//Try to get the block from the cache
 	b, err := sc.GetBlock(ctx, bs.Hash)
 	if err != nil {
 		bi, err := GetSharderChain().BlockTxnCache.Get(bs.Hash)
 		if err != nil {
-			if len(bs.Hash) < 64 {
-				Logger.Error("Hash from block summary is less than 64", zap.Any("hash", bs.Hash))
-			}
 			db := &block.Block{}
 			db.Hash = bs.Hash
 			db.Round = bs.Round
@@ -48,6 +48,9 @@ func GetBlockSummary(ctx context.Context, hash string) (*block.BlockSummary, err
 	if err != nil {
 		return nil, err
 	}
+	if len(blockSummary.Hash) < 64 {
+		Logger.Error("Reading block summary - hash of block in summary is less than 64", zap.Any("block_summary", blockSummary))
+	}
 	return blockSummary, nil
 }
 
@@ -69,6 +72,9 @@ func (sc *Chain) StoreBlockSummary(ctx context.Context, b *block.Block) error {
 	bSummaryEntityMetadata := bs.GetEntityMetadata()
 	bctx := ememorystore.WithEntityConnection(ctx, bSummaryEntityMetadata)
 	defer ememorystore.Close(bctx)
+	if len(bs.Hash) < 64 {
+		Logger.Error("Writing block summary - block hash less than 64", zap.Any("hash", bs.Hash))
+	}
 	err := bs.Write(bctx)
 	if err != nil {
 		return err
