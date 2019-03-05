@@ -95,7 +95,13 @@ func (ms *Store) Delete(ctx context.Context, entity datastore.Entity) error {
 	c.Send("DEL", redisKey)
 	c.Flush()
 	_, err := c.Receive()
-	return err
+	if err != nil {
+		return err
+	}
+	if ce, ok := entity.(datastore.CollectionEntity); ok {
+		return ms.DeleteFromCollection(ctx, ce)
+	}
+	return nil
 }
 
 /*MultiRead - allows reading multiple entities at the same time */
