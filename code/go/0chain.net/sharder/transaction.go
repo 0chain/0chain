@@ -23,7 +23,7 @@ func init() {
 }
 
 /*GetTransactionSummary - given a transaction hash, get the transaction summary */
-func (sc *SharderChain) GetTransactionSummary(ctx context.Context, hash string) (*transaction.TransactionSummary, error) {
+func (sc *Chain) GetTransactionSummary(ctx context.Context, hash string) (*transaction.TransactionSummary, error) {
 	txnSummaryEntityMetadata := datastore.GetEntityMetadata("txn_summary")
 	txnSummary := txnSummaryEntityMetadata.Instance().(*transaction.TransactionSummary)
 	err := txnSummaryEntityMetadata.GetStore().Read(ctx, datastore.ToKey(hash), txnSummary)
@@ -34,7 +34,7 @@ func (sc *SharderChain) GetTransactionSummary(ctx context.Context, hash string) 
 }
 
 /*GetTransactionConfirmation - given a transaction return the confirmation of it's presence in the block chain */
-func (sc *SharderChain) GetTransactionConfirmation(ctx context.Context, hash string) (*transaction.Confirmation, error) {
+func (sc *Chain) GetTransactionConfirmation(ctx context.Context, hash string) (*transaction.Confirmation, error) {
 	var ts *transaction.TransactionSummary
 	t, err := sc.BlockTxnCache.Get(hash)
 	if err != nil {
