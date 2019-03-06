@@ -2,14 +2,12 @@ package sharder
 
 import (
 	"context"
-	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
-	. "0chain.net/core/logging"
 )
 
 /*GetBlockBySummary - get a block */
