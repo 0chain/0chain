@@ -35,5 +35,5 @@ WORKDIR $APP_DIR
 COPY --from=sharder_build $APP_DIR/go/0chain.net/sharder/sharder/sharder $APP_DIR/bin/
 
 #Store all files and run environment under 0chain userid.
-RUN addgroup -g 1000 -S 0chain && adduser -u 1000 -S 0chain -G 0chain
+RUN addgroup -g 2000 -S 0chain && adduser -u 2000 -S 0chain -G 0chain
 USER 0chain:0chain
