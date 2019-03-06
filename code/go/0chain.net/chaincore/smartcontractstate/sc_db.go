@@ -175,10 +175,12 @@ func (lndb *PipedSCDB) GetNode(key Key) (Node, error) {
 	node, err := c.GetNode(key)
 	if err != nil && p != c {
 		node, err = p.GetNode(key)
-		if err != nil {
+		if err != nil && err != ErrNodeNotFound {
 			if config.DevConfiguration.State {
 				Logger.Error("get node", zap.String("key", util.ToHex(key)), zap.Error(err))
 			}
+		} else if err != nil && err == ErrNodeNotFound {
+			return nil, nil
 		}
 		return node, err
 	}

@@ -16,8 +16,8 @@ import (
 //Nodes - a set of nodes for synching the state
 type Nodes struct {
 	datastore.IDField
-	Version string `json:"version"`
-	Nodes   []util.Node
+	Version string      `json:"version"`
+	Nodes   []util.Node `json:"-"`
 }
 
 //NewStateNodes - create a new partial state object with initialization
@@ -76,8 +76,14 @@ func (ns *Nodes) SaveState(ctx context.Context, stateDB util.NodeDB) error {
 	return stateDB.MultiPutNode(keys, ns.Nodes)
 }
 
-//MartialPartialState - martal the partial state
-func (ns *Nodes) MartialPartialState(data map[string]interface{}) ([]byte, error) {
+//MarshalJSON - implement Marshaler interface
+func (ns *Nodes) MarshalJSON() ([]byte, error) {
+	var data = make(map[string]interface{})
+	return ns.MartialStateNodes(data)
+}
+
+//MartialStateNodes - martal the state nodes
+func (ns *Nodes) MartialStateNodes(data map[string]interface{}) ([]byte, error) {
 	data["version"] = ns.Version
 	nodes := make([][]byte, len(ns.Nodes))
 	for idx, nd := range ns.Nodes {
@@ -88,13 +94,24 @@ func (ns *Nodes) MartialPartialState(data map[string]interface{}) ([]byte, error
 	if err != nil {
 		Logger.Error("marshal JSON - state nodes", zap.Error(err))
 	} else {
-		Logger.Info("marshal JSON - state change", zap.Int("nodes", len(ns.Nodes)))
+		Logger.Info("marshal JSON - state nodes", zap.Int("nodes", len(ns.Nodes)))
 	}
 	return bytes, err
 }
 
-//UnmarshalPartialState - unmarshal the partial state
-func (ns *Nodes) UnmarshalPartialState(obj map[string]interface{}) error {
+//UnmarshalJSON - implement Unmarshaler interface
+func (ns *Nodes) UnmarshalJSON(data []byte) error {
+	var obj map[string]interface{}
+	err := json.Unmarshal(data, &obj)
+	if err != nil {
+		Logger.Error("unmarshal json - state nodes", zap.Error(err))
+		return err
+	}
+	return ns.UnmarshalStateNodes(obj)
+}
+
+//UnmarshalStateNodes - unmarshal the partial state
+func (ns *Nodes) UnmarshalStateNodes(obj map[string]interface{}) error {
 	if str, ok := obj["version"].(string); ok {
 		ns.Version = str
 	} else {

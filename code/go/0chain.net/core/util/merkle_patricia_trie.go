@@ -747,7 +747,7 @@ func (mpt *MerklePatriciaTrie) pp(w io.Writer, key Key, depth byte, initpad bool
 }
 
 /*UpdateVersion - updates the origin of all the nodes in this tree to the given origin */
-func (mpt *MerklePatriciaTrie) UpdateVersion(ctx context.Context, version Sequence) (*MissingNode, error) {
+func (mpt *MerklePatriciaTrie) UpdateVersion(ctx context.Context, version Sequence, missingNodeHander MPTMissingNodeHandler) error {
 	ps := GetPruneStats(ctx)
 	if ps != nil {
 		ps.Version = version
@@ -756,12 +756,9 @@ func (mpt *MerklePatriciaTrie) UpdateVersion(ctx context.Context, version Sequen
 	values := make([]Node, 0, BatchSize)
 	var count int64
 	var missingNodes int64
-	var missingNode *MissingNode
 	handler := func(ctx context.Context, path Path, key Key, node Node) error {
 		if node == nil {
-			if missingNode == nil {
-				missingNode = &MissingNode{At: version, Path: path, Key: key}
-			}
+			missingNodeHander(ctx, path, key)
 			missingNodes++
 			return nil
 		}
@@ -792,9 +789,6 @@ func (mpt *MerklePatriciaTrie) UpdateVersion(ctx context.Context, version Sequen
 		ps.BelowVersion = count
 		ps.MissingNodes = missingNodes
 	}
-	if missingNode != nil {
-		return missingNode, err
-	}
 	if err == nil || err == ErrNodeNotFound || err == ErrIteratingChildNodes {
 		if len(keys) > 0 {
 			err := mpt.DB.MultiPutNode(keys, values)
@@ -802,11 +796,11 @@ func (mpt *MerklePatriciaTrie) UpdateVersion(ctx context.Context, version Sequen
 				if DebugMPTNode && Logger != nil {
 					Logger.Error("update version - multi put - last batch", zap.Error(err))
 				}
-				return nil, err
+				return err
 			}
 		}
 	}
-	return nil, err
+	return err
 }
 
 /*IsMPTValid - checks if the merkle tree is in valid state or not */

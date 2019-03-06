@@ -28,6 +28,7 @@ import (
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
+	"0chain.net/core/build"
 	"0chain.net/core/common"
 	"0chain.net/core/logging"
 	. "0chain.net/core/logging"
@@ -129,7 +130,7 @@ func main() {
 
 	address := fmt.Sprintf(":%v", node.Self.Port)
 
-	Logger.Info("Starting miner", zap.String("go_version", runtime.Version()), zap.Int("available_cpus", runtime.NumCPU()), zap.String("port", address))
+	Logger.Info("Starting miner", zap.String("git", build.GitCommit), zap.String("go_version", runtime.Version()), zap.Int("available_cpus", runtime.NumCPU()), zap.String("port", address))
 	Logger.Info("Chain info", zap.String("chain_id", config.GetServerChainID()), zap.String("mode", mode))
 	Logger.Info("Self identity", zap.Any("set_index", node.Self.Node.SetIndex), zap.Any("id", node.Self.Node.GetKey()))
 

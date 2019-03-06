@@ -61,9 +61,9 @@ func (c *Chain) GetStateNodes(ctx context.Context, keys []util.Key) {
 	}
 	err = c.SaveStateNodes(ctx, ns)
 	if err != nil {
-		Logger.Error("get partial state - error saving", zap.Int("keys", len(keys)), zap.Error(err))
+		Logger.Error("get state nodes - error saving", zap.Int("keys", len(keys)), zap.Error(err))
 	} else {
-		Logger.Error("get partial state - saving", zap.Int("keys", len(keys)), zap.Int("nodes", len(ns.Nodes)))
+		Logger.Info("get state nodes - saving", zap.Int("keys", len(keys)), zap.Int("nodes", len(ns.Nodes)))
 	}
 	return
 }
@@ -184,7 +184,7 @@ func (c *Chain) getStateNodes(ctx context.Context, keys []util.Key) (*state.Node
 	}
 	c.Miners.RequestEntity(ctx, nsRequestor, params, handler)
 	if ns == nil {
-		return nil, common.NewError("state_nodes_error", "Error getting the partial state")
+		return nil, common.NewError("state_nodes_error", "Error getting the state nodes")
 	}
 	return ns, nil
 }

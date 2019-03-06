@@ -3,6 +3,7 @@ package smartcontract
 import (
 	"context"
 	"encoding/json"
+	"net/url"
 
 	c_state "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
@@ -14,6 +15,20 @@ import (
 )
 
 var ContractMap = map[string]sci.SmartContractInterface{}
+
+func ExecuteRestAPI(ctx context.Context, scAdress string, restpath string, params url.Values, ndb smartcontractstate.SCDB) (interface{}, error) {
+	contracti, ok := ContractMap[scAdress]
+	if ok {
+		sc := sci.NewSC(smartcontractstate.NewSCState(ndb, scAdress), scAdress)
+		contracti.SetSC(sc)
+		handler, restpathok := sc.RestHandlers[restpath]
+		if !restpathok {
+			return nil, common.NewError("invalid_path", "Invalid path")
+		}
+		return handler(ctx, params)
+	}
+	return nil, common.NewError("invalid_sc", "Invalid Smart contract address")
+}
 
 func getSmartContract(t *transaction.Transaction, ndb smartcontractstate.SCDB) sci.SmartContractInterface {
 	contracti, ok := ContractMap[t.ToClientID]

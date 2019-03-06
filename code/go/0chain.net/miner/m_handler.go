@@ -242,8 +242,19 @@ func StateNodesHandler(ctx context.Context, r *http.Request) (interface{}, error
 	nodes := r.Form["nodes"]
 	mc := GetMinerChain()
 	keys := make([]util.Key, len(nodes))
+	for idx, nd := range nodes {
+		key, err := hex.DecodeString(nd)
+		if err != nil {
+			return nil, err
+		}
+		keys[idx] = key
+	}
 	ns, err := mc.GetStateNodesFrom(ctx, keys)
 	if err != nil {
+		if ns != nil {
+			Logger.Error("state nodes handler", zap.Int("keys", len(nodes)), zap.Int("found_keys", len(ns.Nodes)), zap.Error(err))
+			return ns, nil
+		}
 		Logger.Error("state nodes handler", zap.Int("keys", len(nodes)), zap.Error(err))
 		return nil, err
 	}

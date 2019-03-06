@@ -3,9 +3,9 @@ package tokenpool
 import (
 	"encoding/json"
 
-	"0chain.net/core/datastore"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
+	"0chain.net/core/datastore"
 )
 
 type TokenPoolTransferResponse struct {
@@ -33,9 +33,9 @@ type TokenPoolI interface {
 	GetID() datastore.Key
 	DigPool(id datastore.Key, txn *transaction.Transaction) (*state.Transfer, string, error)
 	FillPool(txn *transaction.Transaction) (*state.Transfer, string, error)
-	TransferTo(op TokenPoolI, value state.Balance, txn *transaction.Transaction) (*state.Transfer, string, error)
-	DrainPool(fromClientID, toClientID datastore.Key, value state.Balance, txn *transaction.Transaction) (*state.Transfer, string, error)
-	EmptyPool(fromClientID, toClientID datastore.Key, txn *transaction.Transaction) (*state.Transfer, string, error)
+	TransferTo(op TokenPoolI, value state.Balance, entity interface{}) (*state.Transfer, string, error)
+	DrainPool(fromClientID, toClientID datastore.Key, value state.Balance, entity interface{}) (*state.Transfer, string, error)
+	EmptyPool(fromClientID, toClientID datastore.Key, entity interface{}) (*state.Transfer, string, error)
 }
 
 type TokenPool struct {
@@ -44,6 +44,6 @@ type TokenPool struct {
 }
 
 type TokenLockInterface interface {
-	IsLocked(txn *transaction.Transaction) bool
-	LockStats(txn *transaction.Transaction) []byte
+	IsLocked(entity interface{}) bool
+	LockStats(entity interface{}) []byte
 }

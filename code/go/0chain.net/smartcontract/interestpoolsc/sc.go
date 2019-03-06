@@ -10,6 +10,7 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"0chain.net/core/util"
 )
 
 const (
@@ -34,6 +35,13 @@ func (ip *InterestPoolSmartContract) lockTokens(t *transaction.Transaction, un *
 	}
 	if t.Value < gn.MinLock {
 		return common.NewError("failed locking tokens", "insufficent amount to dig an interest pool").Error(), nil
+	}
+	balance, err := balances.GetClientBalance(t.ClientID)
+	if err == util.ErrValueNotPresent {
+		return common.NewError("failed locking tokens", "you have no tokens to your name").Error(), nil
+	}
+	if state.Balance(t.Value) > balance {
+		return common.NewError("failed locking tokens", "lock amount is greater than balance").Error(), nil
 	}
 	pool := newTypePool()
 	pool.Type = tp.Type

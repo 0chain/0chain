@@ -70,3 +70,12 @@ func (n *Node) IsInTop(nodeScores []*Score, topN int) bool {
 	}
 	return false
 }
+
+//GetTopNNodes - get the top n nodes from the sorted scores
+func GetTopNNodes(scores []*Score, topN int) []*Node {
+	var nodes []*Node
+	for i := 0; i < topN; i++ {
+		nodes = append(nodes, scores[i].Node)
+	}
+	return nodes
+}
