@@ -25,6 +25,7 @@ func (sc *Chain) StoreRound(ctx context.Context, r *round.Round) error {
 	return nil
 }
 
+/*GetMostRecentRoundFromDB - gives the most recent round added to db*/
 func (sc *Chain) GetMostRecentRoundFromDB(ctx context.Context) (*round.Round, error) {
 	remd := datastore.GetEntityMetadata("round")
 	rctx := ememorystore.WithEntityConnection(ctx, remd)

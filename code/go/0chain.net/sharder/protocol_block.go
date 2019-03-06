@@ -84,22 +84,21 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 	sc.AddNotarizedBlock(ctx, er, b)
 }
 
+/*GetLatestRoundFromSharders - gives the latest of rounds that the sharders are processing*/
 func (sc *Chain) GetLatestRoundFromSharders(ctx context.Context, currRound int64) *round.Round {
 	latestRounds := make([]*round.Round, 0, 1)
 
 	latestRoundHandler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		r, ok := entity.(*round.Round)
 		if !ok {
+			Logger.Error("latest round received is not valid")
 			return nil, nil
 		}
-		Logger.Info("bc-27 received latest round from sharder", zap.Int64("round", r.Number))
 		latestRounds = append(latestRounds, r)
 		return r, nil
 	}
 
-	Logger.Info("bc-27 requesting all the sharders for their latest rounds")
 	sc.Sharders.RequestEntityFromAll(ctx, LatestRoundRequestor, nil, latestRoundHandler)
-	Logger.Info("bc-27 back from requesting all")
 
 	if len(latestRounds) > 0 {
 		sort.Slice(latestRounds, func(i int, j int) bool { return latestRounds[i].Number >= latestRounds[j].Number })
@@ -107,56 +106,53 @@ func (sc *Chain) GetLatestRoundFromSharders(ctx context.Context, currRound int64
 		return latestRounds[0]
 	}
 
-	Logger.Info("bc-27 no rounds received from any of the sharders")
+	Logger.Info("bc-27 no latest rounds received from sharders")
 	return nil
 }
 
+/*GetMissingRounds - request for missed rounds and stores them*/
 func (sc *Chain) GetMissingRounds(ctx context.Context, targetR int64, dbR int64) {
-	Logger.Info("bc-27 get missing rounds", zap.Int64("target round", targetR), zap.Int64("round from db", dbR))
+	Logger.Info("bc-27 get missing rounds", zap.Int64("target round", targetR), zap.Int64("round", dbR))
 	
 	//get missing rounds starting from the next round of the current round
-	dbR++
-	syncRound := dbR
-	bs := sc.BSync
-	bs.SetSyncingRound(syncRound)
-	for syncRound < bs.GetFinalizationRound() {
-		Logger.Info("bc-27 sync info", zap.Int64("sync_round", syncRound), zap.Int64("accept_round", bs.GetAcceptanceRound()), zap.Int64("latest_round", bs.GetFinalizationRound()))
+	syncRound := dbR + 1
+	for syncRound < sc.BSync.GetFinalizationRound() {
+		sc.BSync.SetSyncingRound(syncRound)
+		Logger.Info("bc-27 sync info", zap.Int64("sync round", syncRound), zap.Int64("accept round", sc.BSync.GetAcceptanceRound()), zap.Int64("latest round", sc.BSync.GetFinalizationRound()))
 		params := &url.Values{}
 		params.Add("round", strconv.FormatInt(syncRound, 10))
+		
 		var r *round.Round
-		Logger.Info("bc-27 requesting all sharders for the round", zap.Int64("round", syncRound))
-		ts := time.Now()
 		sc.Sharders.RequestEntityFromAll(ctx, RoundRequestor, params, func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 			roundEntity, ok := entity.(*round.Round)
 			if !ok {
-				Logger.Info("bc-27 could not get the round info from others", zap.Int64("round", syncRound))
+				Logger.Info("bc-27 invalid round entity received", zap.Int64("round", syncRound))
 				return nil, nil
 			}
 			r = roundEntity
-			Logger.Info("bc-27 received the round entity from others", zap.Int64("round", roundEntity.Number))
 			return r, nil
 		})
+
 		if r == nil {
-			Logger.Info("bc-27 requested round is nil", zap.Int64("round#", syncRound))
+			Logger.Info("bc-27 requested round is nil", zap.Int64("round", syncRound))
 			syncRound++
-			bs.SetSyncingRound(syncRound)
+			sc.BSync.SetSyncingRound(syncRound)
 			continue
 		}
+
 		if r.BlockHash == "" {
 			Logger.Info("bc-27 requested round block hash is empty", zap.Int64("round", r.Number))
 			syncRound++
-			bs.SetSyncingRound(syncRound)
+			sc.BSync.SetSyncingRound(syncRound)
 			continue
 		}
+
 		sc.storeMissingRoundBlock(ctx, r)
-		duration := time.Since(ts)
-		Logger.Info("bc-27 duration to catch up with one missing round", zap.Duration("duration", duration), zap.Int64("round", r.Number))
-		acceptRound := bs.GetAcceptanceRound()
-		if acceptRound != 0 && (acceptRound - 1) <= r.Number {
+		acceptRound := sc.BSync.GetAcceptanceRound()
+		if acceptRound != 0 && syncRound >= acceptRound - 1 {
 			break
-		} 
+		}
 		syncRound++
-		bs.SetSyncingRound(syncRound)
 	}
 }
 
@@ -164,6 +160,7 @@ func (sc *Chain) storeMissingRoundBlock(ctx context.Context, r *round.Round) {
 	params := &url.Values{}
 	params.Add("round", strconv.FormatInt(r.Number, 10))
 	params.Add("block", r.BlockHash)
+
 	self := node.GetSelfNode(ctx)
 	canStore, nodes := sc.IsBlockSharderWithNodes(r.BlockHash, self.Node)
 	Logger.Info("bc-27 number of request nodes", zap.Int("nodes", len(nodes)))
@@ -171,20 +168,20 @@ func (sc *Chain) storeMissingRoundBlock(ctx context.Context, r *round.Round) {
 	for _, n := range nodes {
 		if n != self.Node {
 			requestNode = n
-			Logger.Info("bc-27 request node", zap.Int("node-idx", requestNode.SetIndex))
+			Logger.Info("bc-27 request round block info", zap.Int("node", requestNode.SetIndex), zap.Int64("round", r.Number))
 			break
 		}
 	}
 	if requestNode == nil {
-		//TODO better log message
-		Logger.Info("bc-27 request node is nil", zap.Int64("round", r.Number))
+		Logger.Info("bc-27 request node for round block not found (nil)", zap.Int64("round", r.Number))
 		return
 	}
+
 	var b *block.Block
-	Logger.Info("bc-27 requesting sharder for the block", zap.Int64("round", r.Number), zap.Int("sharder-index", requestNode.SetIndex))
 	requestNode.RequestEntityFromNode(ctx, BlockRequestor, params, func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		blockEntity, ok := entity.(*block.Block)
 		if !ok {
+			Logger.Error("bc-27 requested block is invalid", zap.Int64("round", r.Number))
 			return nil, nil
 		}
 		err := blockEntity.Validate(ctx)
@@ -195,22 +192,20 @@ func (sc *Chain) storeMissingRoundBlock(ctx context.Context, r *round.Round) {
 		return nil, err
 	})
 	if b == nil {
-		Logger.Info("bc-27 round block is nil", zap.Int64("round", r.Number), zap.String("block-hash", r.BlockHash))
+		Logger.Info("bc-27 requested round block is nil", zap.Int64("round", r.Number), zap.String("block-hash", r.BlockHash))
 		return
 	}
+
 	sc.StoreTransactions(ctx, b)
 	err := sc.StoreBlockSummary(ctx, b)
 	if err != nil {
 		Logger.Error("bc-27 db error (save block)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
-	} else {
-		Logger.Info("bc-27 block stored in db", zap.Int64("round", b.Round), zap.String("block-hash", b.Hash))
 	}
 	if canStore {
 		sc.storeBlock(b)
 		Logger.Info("bc-27 block stored in file", zap.Int64("round", b.Round), zap.String("block-hash", b.Hash))
 	}
 	sc.storeRound(ctx, r, b)
-	Logger.Info("bc-27 round stored in db", zap.Int64("round", r.GetRoundNumber()))
 	sc.LatestFinalizedBlock = b
 	Logger.Info("bc-27 finalize round - latest finalized round", zap.Int64("round", sc.LatestFinalizedBlock.Round), zap.String("block", b.Hash))
 }

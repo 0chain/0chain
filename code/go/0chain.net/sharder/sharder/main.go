@@ -150,22 +150,21 @@ func main() {
 	initServer()
 	initHandlers()
 
-	Logger.Info("In Sharder rejoin")
 	r, err := sc.GetMostRecentRoundFromDB(ctx)
 
 	if err == nil {
 		sc.CurrentRound = r.Number
 		sc.AddRound(r)
 		Logger.Info("bc-27 most recent round info", zap.Int64("round", r.Number), zap.String("blockHash", r.BlockHash))
-		} else {
+	} else {
 		Logger.Error("bc-27 error reading round data from db", zap.Error(err))
 	}
 
 	go syncUpRounds(ctx, r)
-	
+	 
 	Logger.Info("Ready to listen to the requests")
 	chain.StartTime = time.Now().UTC()
-	log.Fatal(server.ListenAndServe())
+	log.Fatal(server.ListenAndServe())	
 }
 
 func initServer() {
@@ -234,20 +233,21 @@ func initWorkers(ctx context.Context) {
 func syncUpRounds(ctx context.Context, r *round.Round) {
 	sc := sharder.GetSharderChain()
 	sc.Sharders.OneTimeStatusMonitor(ctx)
-	Logger.Info("bc-27 get latest round from other sharders", zap.Int64("sharder_curr_round", r.Number))
 	lr := sc.GetLatestRoundFromSharders(ctx, r.Number)
-	bs := sc.BSync
 	if lr != nil && lr.Number > r.Number + 1 {
-		bs.SetStatus(sharder.Syncing)
-		Logger.Info("bc-27 sharder status set to syncing")
-		Logger.Info("bc-27 latest round from other sharder", zap.Int64("curr_round", r.Number), zap.Int64("latest_round_from_sharders", lr.Number))		
-		bs.SetFinalizationRound(lr.Number)
+		Logger.Info("bc-27 latest round info", zap.Int64("lround", r.Number), zap.Int64("lrSharders", lr.Number))	
+		
+		sc.BSync.SetStatus(sharder.Syncing)
+		sc.BSync.SetFinalizationRound(lr.Number)
+		Logger.Info("bc-27 block sync status : syncing")
+		
 		ts := time.Now()
 		sc.GetMissingRounds(ctx, lr.Number, r.Number)
 		duration := time.Since(ts)
-		Logger.Info("bc-27 duration for catching up with all missing rounds", zap.Duration("duration", duration))
-		bs.SetStatus(sharder.Normal)
-		Logger.Info("bc-27 sharder status set to Normal")
+		Logger.Info("bc-27 caught up with missing rounds", zap.Duration("duration", duration))
+		
+		sc.BSync.SetStatus(sharder.Normal)
+		Logger.Info("bc-27 block sync status : normal")
 	}
 	go sc.BlockWorker(ctx)
 }

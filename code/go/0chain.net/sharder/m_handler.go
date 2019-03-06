@@ -52,17 +52,17 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 	if !ok {
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
-	bs := sc.BSync
-	if bs.GetStatus() == Syncing {
-		bs.SetFinalizationRound(b.Round)
-		diffRound := b.Round - bs.GetSyncingRound()
+
+	if sc.BSync.GetStatus() == Syncing {
+		sc.BSync.SetFinalizationRound(b.Round)
+		diffRound := b.Round - sc.BSync.GetSyncingRound()
 		if b.Round%100 == 0 {
-			Logger.Info("bc-27 number of rounds to catch up", zap.Int64("rounds", diffRound))
+			Logger.Info("bc-27 round sync info", zap.Int64("catch rounds", diffRound))
 		}
-		if diffRound <= bs.AcceptanceTolerance {
-			bs.SetAcceptanceRound(b.Round)
-			bs.SetStatus(Accept)
-			Logger.Info("bc-27 sharder status updated : Accept")
+		if diffRound <= sc.BSync.AcceptanceTolerance {
+			sc.BSync.SetAcceptanceRound(b.Round)
+			sc.BSync.SetStatus(Accept)
+			Logger.Info("bc-27 block sync status : accept")
 		} else {
 			Logger.Info("bc-27 block dropped", zap.Int64("round", b.Round))
 			return nil, nil

@@ -34,9 +34,9 @@ func SetupSharderChain(c *chain.Chain) {
 	c.SetFetchedNotarizedBlockHandler(sharderChain)
 	sharderChain.BSync = &BlockSync{
 		//TODO configure acceptance tolerance value
-		AcceptanceTolerance: 65,
-		syncStatus:          Normal,
-		mutex:               sync.RWMutex{},
+		AcceptanceTolerance	: 	65,
+		syncStatus			:   Normal,
+		mutex				:   sync.RWMutex{},
 	}
 }
 
@@ -87,20 +87,6 @@ func (bs *BlockSync) GetFinalizationRound() int64 {
 	return bs.finalizeRound
 }
 
-/*GetSyncingRound - get current syncing round */
-func (bs *BlockSync) GetSyncingRound() int64 {
-	bs.mutex.RLock()
-	defer bs.mutex.RUnlock()
-	return bs.syncRound
-}
-
-/*GetAcceptanceRound - get current syncing round */
-func (bs *BlockSync) GetAcceptanceRound() int64 {
-	bs.mutex.RLock()
-	defer bs.mutex.RUnlock()
-	return bs.acceptRound
-}
-
 /*SetFinalizationRound - set round to be finalized during block sync */
 func (bs *BlockSync) SetFinalizationRound(r int64) {
 	bs.mutex.Lock()
@@ -108,11 +94,25 @@ func (bs *BlockSync) SetFinalizationRound(r int64) {
 	bs.finalizeRound = r
 }
 
+/*GetSyncingRound - get current syncing round */
+func (bs *BlockSync) GetSyncingRound() int64 {
+	bs.mutex.RLock()
+	defer bs.mutex.RUnlock()
+	return bs.syncRound
+}
+
 /*SetSyncingRund - set current syncing round */
 func (bs *BlockSync) SetSyncingRound(r int64) {
 	bs.mutex.Lock()
 	defer bs.mutex.Unlock()
 	bs.syncRound = r
+}
+
+/*GetAcceptanceRound - get current syncing round */
+func (bs *BlockSync) GetAcceptanceRound() int64 {
+	bs.mutex.RLock()
+	defer bs.mutex.RUnlock()
+	return bs.acceptRound
 }
 
 /*SetAcceptanceRound - set acceptance round during block sync */
