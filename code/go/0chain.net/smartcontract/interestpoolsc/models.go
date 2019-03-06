@@ -263,11 +263,19 @@ type tokenLock struct {
 	// PayoutExecutors []datastore.Key `json:"payout_executors"`
 }
 
-func (tl tokenLock) IsLocked(txn *transaction.Transaction) bool {
-	return common.ToTime(txn.CreationDate).Sub(common.ToTime(tl.StartTime)) < tl.Duration
+func (tl tokenLock) IsLocked(entity interface{}) bool {
+	txn, ok := entity.(*transaction.Transaction)
+	if ok {
+		return common.ToTime(txn.CreationDate).Sub(common.ToTime(tl.StartTime)) < tl.Duration
+	}
+	return true
 }
 
-func (tl tokenLock) LockStats(txn *transaction.Transaction) []byte {
-	p := &poolStat{StartTime: common.ToTime(tl.StartTime).String(), Duartion: tl.Duration.String(), TimeLeft: (tl.Duration - common.ToTime(txn.CreationDate).Sub(common.ToTime(tl.StartTime))).String(), Locked: tl.IsLocked(txn)}
-	return p.encode()
+func (tl tokenLock) LockStats(entity interface{}) []byte {
+	txn, ok := entity.(*transaction.Transaction)
+	if ok {
+		p := &poolStat{StartTime: common.ToTime(tl.StartTime).String(), Duartion: tl.Duration.String(), TimeLeft: (tl.Duration - common.ToTime(txn.CreationDate).Sub(common.ToTime(tl.StartTime))).String(), Locked: tl.IsLocked(txn)}
+		return p.encode()
+	}
+	return nil
 }

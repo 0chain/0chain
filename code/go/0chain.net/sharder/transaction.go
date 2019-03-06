@@ -9,11 +9,11 @@ import (
 	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 
+	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
 	. "0chain.net/core/logging"
 	"0chain.net/core/persistencestore"
-	"0chain.net/chaincore/transaction"
 )
 
 var txnSaveTimer metrics.Timer
@@ -23,7 +23,7 @@ func init() {
 }
 
 /*GetTransactionSummary - given a transaction hash, get the transaction summary */
-func GetTransactionSummary(ctx context.Context, hash string) (*transaction.TransactionSummary, error) {
+func (sc *Chain) GetTransactionSummary(ctx context.Context, hash string) (*transaction.TransactionSummary, error) {
 	txnSummaryEntityMetadata := datastore.GetEntityMetadata("txn_summary")
 	txnSummary := txnSummaryEntityMetadata.Instance().(*transaction.TransactionSummary)
 	err := txnSummaryEntityMetadata.GetStore().Read(ctx, datastore.ToKey(hash), txnSummary)
@@ -34,11 +34,11 @@ func GetTransactionSummary(ctx context.Context, hash string) (*transaction.Trans
 }
 
 /*GetTransactionConfirmation - given a transaction return the confirmation of it's presence in the block chain */
-func GetTransactionConfirmation(ctx context.Context, hash string) (*transaction.Confirmation, error) {
+func (sc *Chain) GetTransactionConfirmation(ctx context.Context, hash string) (*transaction.Confirmation, error) {
 	var ts *transaction.TransactionSummary
-	t, err := GetSharderChain().BlockTxnCache.Get(hash)
+	t, err := sc.BlockTxnCache.Get(hash)
 	if err != nil {
-		ts, err = GetTransactionSummary(ctx, hash)
+		ts, err = sc.GetTransactionSummary(ctx, hash)
 		if err != nil {
 			return nil, err
 		}
@@ -47,7 +47,6 @@ func GetTransactionConfirmation(ctx context.Context, hash string) (*transaction.
 	}
 	confirmation := datastore.GetEntityMetadata("txn_confirmation").Instance().(*transaction.Confirmation)
 	confirmation.Hash = hash
-	sc := GetSharderChain()
 	bhash, err := sc.GetBlockHash(ctx, ts.Round)
 	if err != nil {
 		return nil, err
@@ -60,9 +59,12 @@ func GetTransactionConfirmation(ctx context.Context, hash string) (*transaction.
 		bSummaryEntityMetadata := datastore.GetEntityMetadata("block_summary")
 		bctx := ememorystore.WithEntityConnection(ctx, bSummaryEntityMetadata)
 		defer ememorystore.Close(bctx)
-		bs, err := GetBlockSummary(bctx, bhash)
+		bs, err := sc.GetBlockSummary(bctx, bhash)
 		if err != nil {
 			return nil, err
+		}
+		if bs.Hash != bhash {
+			Logger.Error("GetTransactionConfirmation - incorrect hash", zap.Any("bs.hash", bs.Hash), zap.Any("hash", bhash))
 		}
 		confirmation.Round = bs.Round
 		confirmation.MinerID = bs.MinerID

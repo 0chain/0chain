@@ -580,11 +580,3 @@ func writeNodePrefix(w io.Writer, node Node) error {
 	node.GetOriginTracker().Write(w)
 	return nil
 }
-
-//MissingNode - a missing node
-type MissingNode struct {
-	At   Sequence
-	Path Path
-	Key  Key
-}
-

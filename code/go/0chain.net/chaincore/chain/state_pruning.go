@@ -41,33 +41,55 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 		bs = bc.Value.(*block.BlockSummary)
 	}
 	newVersion := util.Sequence(bs.Round)
+
+	if c.pruneStats != nil && c.pruneStats.Version == newVersion {
+		return // already done with pruning this
+	}
 	mpt := util.NewMerklePatriciaTrie(c.stateDB, newVersion)
 	mpt.SetRoot(bs.ClientStateHash)
 	Logger.Info("prune client state - new version", zap.Int64("current_round", c.CurrentRound), zap.Int64("latest_finalized_round", c.LatestFinalizedBlock.Round), zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.String("state_hash", util.ToHex(bs.ClientStateHash)))
 	pctx := util.WithPruneStats(ctx)
 	ps := util.GetPruneStats(pctx)
+	var missingKeys []util.Key
+	missingNodesHandler := func(ctx context.Context, path util.Path, key util.Key) error {
+		missingKeys = append(missingKeys, key)
+		if len(missingKeys) == 1000 {
+			stage := ps.Stage
+			ps.Stage = util.PruneStateSynch
+			c.GetStateNodes(ctx, missingKeys[:])
+			ps.Stage = stage
+			missingKeys = nil
+		}
+		return nil
+	}
+	ps.Stage = util.PruneStateUpdate
+	c.pruneStats = ps
 	t := time.Now()
-	missingNode, err := mpt.UpdateVersion(pctx, newVersion)
+	err := mpt.UpdateVersion(pctx, newVersion, missingNodesHandler)
 	d1 := time.Since(t)
+	ps.UpdateTime = d1
 	StatePruneUpdateTimer.Update(d1)
 	if err != nil {
 		Logger.Error("prune client state (update origin)", zap.Error(err))
-		if missingNode != nil {
-			c.pruneStats = ps
-			go c.GetPartialState(ctx, missingNode.Key)
+		if ps.MissingNodes > 0 {
+			if len(missingKeys) > 0 {
+				c.GetStateNodes(ctx, missingKeys[:])
+			}
 			return
 		}
 	} else {
 		Logger.Info("prune client state (update origin)", zap.Int64("current_round", c.CurrentRound), zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.String("state_hash", util.ToHex(bs.ClientStateHash)), zap.Duration("time", d1))
 	}
 	t1 := time.Now()
+	ps.Stage = util.PruneStateDelete
 	err = c.stateDB.PruneBelowVersion(pctx, newVersion)
 	if err != nil {
 		Logger.Error("prune client state error", zap.Error(err))
 	}
+	ps.Stage = util.PruneStateCommplete
 	d2 := time.Since(t1)
+	ps.DeleteTime = d2
 	StatePruneDeleteTimer.Update(d2)
-	c.pruneStats = ps
 	logf := Logger.Info
 	if d1 > time.Second || d2 > time.Second {
 		logf = Logger.Error

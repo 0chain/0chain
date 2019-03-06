@@ -1,7 +1,10 @@
 #!/bin/sh
 set -e
 
-docker build -f docker.local/build.sharder/Dockerfile . -t sharder
+GIT_COMMIT=$(git rev-list -1 HEAD)
+echo $GIT_COMMIT
+
+docker build --build-arg GIT_COMMIT=$GIT_COMMIT -f docker.local/build.sharder/Dockerfile . -t sharder
 
 for i in $(seq 1 1);
 do

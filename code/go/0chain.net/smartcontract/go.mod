@@ -11,5 +11,4 @@ require (
 	0chain.net/core v0.0.0
 	github.com/0chain/gorocksdb v0.0.0-20181010114359-8752a9433481
 	go.uber.org/zap v1.9.1
-	golang.org/x/crypto v0.0.0-20190219172222-a4c6cb3142f2 // indirect
 )

@@ -2,6 +2,7 @@ package chain
 
 import (
 	"context"
+	"net/url"
 	"time"
 
 	"0chain.net/chaincore/config"
@@ -208,7 +209,8 @@ func (c *Chain) IsFinalizedDeterministically(b *block.Block) bool {
 func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 	nbrequestor := MinerNotarizedBlockRequestor
 	cround := c.CurrentRound
-	params := map[string]string{"block": blockHash}
+	params := &url.Values{}
+	params.Add("block", blockHash)
 	ctx := common.GetRootContext()
 	var b *block.Block
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {

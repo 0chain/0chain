@@ -35,31 +35,37 @@ func (sn *ClientAllocation) Decode(input []byte) error {
 	return nil
 }
 
+type BlobberChallenge struct {
+	BlobberID    string                       `json:"blobber_id"`
+	ChallengeMap map[string]*StorageChallenge `json:"challenges"`
+}
+
+func (sn *BlobberChallenge) GetKey() smartcontractstate.Key {
+	return smartcontractstate.Key("blobber_challenge:" + sn.BlobberID)
+}
+
+func (sn *BlobberChallenge) Encode() []byte {
+	buff, _ := json.Marshal(sn)
+	return buff
+}
+
+func (sn *BlobberChallenge) Decode(input []byte) error {
+	err := json.Unmarshal(input, sn)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 type StorageChallenge struct {
+	Created        common.Timestamp   `json:"created"`
 	ID             string             `json:"id"`
 	Validators     []ValidationNode   `json:"validators"`
 	RandomNumber   int64              `json:"seed"`
 	AllocationID   string             `json:"allocation_id"`
 	Blobber        *StorageNode       `json:"blobber"`
 	AllocationRoot string             `json:"allocation_root"`
-	Response       *ChallengeResponse `json:"challenge_response"`
-}
-
-func (sn *StorageChallenge) GetKey() smartcontractstate.Key {
-	return smartcontractstate.Key("challenge:" + sn.ID)
-}
-
-func (sn *StorageChallenge) Encode() []byte {
-	buff, _ := json.Marshal(sn)
-	return buff
-}
-
-func (sn *StorageChallenge) Decode(input []byte) error {
-	err := json.Unmarshal(input, sn)
-	if err != nil {
-		return err
-	}
-	return nil
+	Response       *ChallengeResponse `json:"challenge_response,omitempty"`
 }
 
 type ValidationNode struct {
@@ -109,15 +115,19 @@ func (sn *StorageNode) Decode(input []byte) error {
 }
 
 type StorageAllocation struct {
-	ID             string           `json:"id"`
-	DataShards     int              `json:"data_shards"`
-	ParityShards   int              `json:"parity_shards"`
-	Size           int64            `json:"size"`
-	UsedSize       int64            `json:"used_size"`
-	Expiration     common.Timestamp `json:"expiration_date"`
-	Blobbers       []*StorageNode   `json:"blobbers"`
-	Owner          string           `json:"owner_id"`
-	OwnerPublicKey string           `json:"owner_public_key"`
+	ID                        string           `json:"id"`
+	DataShards                int              `json:"data_shards"`
+	ParityShards              int              `json:"parity_shards"`
+	Size                      int64            `json:"size"`
+	UsedSize                  int64            `json:"used_size"`
+	Expiration                common.Timestamp `json:"expiration_date"`
+	Blobbers                  []*StorageNode   `json:"blobbers"`
+	Owner                     string           `json:"owner_id"`
+	OwnerPublicKey            string           `json:"owner_public_key"`
+	NumWrites                 int64            `json:"num_of_writes"`
+	OpenChallenges            int64            `json:"num_open_challenges"`
+	ClosedChallenges          int64            `json:"num_closed_challenges"`
+	LastestClosedChallengeTxn string           `json:"latest_closed_challenge"`
 }
 
 func (sn *StorageAllocation) GetKey() smartcontractstate.Key {
@@ -259,7 +269,6 @@ type ReadMarker struct {
 	OwnerID         string           `json:"owner_id"`
 	Timestamp       common.Timestamp `json:"timestamp"`
 	ReadCounter     int64            `json:"counter"`
-	FilePath        string           `json:"filepath"`
 	Signature       string           `json:"signature"`
 }
 
@@ -277,21 +286,24 @@ func (rm *ReadMarker) VerifySignature(clientPublicKey string) bool {
 }
 
 func (rm *ReadMarker) GetHashData() string {
-	hashData := fmt.Sprintf("%v:%v:%v:%v:%v:%v:%v:%v", rm.AllocationID, rm.BlobberID, rm.ClientID, rm.ClientPublicKey, rm.OwnerID, rm.FilePath, rm.ReadCounter, rm.Timestamp)
+	hashData := fmt.Sprintf("%v:%v:%v:%v:%v:%v:%v", rm.AllocationID, rm.BlobberID, rm.ClientID, rm.ClientPublicKey, rm.OwnerID, rm.ReadCounter, rm.Timestamp)
 	return hashData
 }
 
-func (rm *ReadMarker) Verify(prevRM *ReadMarker) bool {
-	if len(rm.AllocationID) == 0 || rm.ReadCounter <= 0 || len(rm.BlobberID) == 0 || len(rm.ClientID) == 0 || rm.Timestamp == 0 || len(rm.OwnerID) == 0 {
-		return false
+func (rm *ReadMarker) Verify(prevRM *ReadMarker) error {
+	if rm.ReadCounter <= 0 || len(rm.BlobberID) == 0 || len(rm.ClientID) == 0 || rm.Timestamp == 0 {
+		return common.NewError("invalid_read_marker", "length validations of fields failed")
 	}
 	if prevRM != nil {
-		if rm.BlobberID != prevRM.BlobberID || rm.OwnerID != prevRM.OwnerID || rm.Timestamp <= prevRM.Timestamp || rm.ReadCounter <= prevRM.ReadCounter {
-			return false
+		if rm.ClientID != prevRM.ClientID || rm.BlobberID != prevRM.BlobberID || rm.Timestamp < prevRM.Timestamp || rm.ReadCounter < prevRM.ReadCounter {
+			return common.NewError("invalid_read_marker", "validations with previous marker failed.")
 		}
 	}
-
-	return rm.VerifySignature(rm.ClientPublicKey)
+	ok := rm.VerifySignature(rm.ClientPublicKey)
+	if ok {
+		return nil
+	}
+	return common.NewError("invalid_read_marker", "Signature verification failed for the read marker")
 }
 
 type ValidationTicket struct {
