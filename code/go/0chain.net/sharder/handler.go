@@ -8,14 +8,14 @@ import (
 	"strings"
 
 	"0chain.net/chaincore/config"
-	"0chain.net/core/datastore"
 	"0chain.net/chaincore/node"
+	"0chain.net/core/datastore"
 	"0chain.net/core/persistencestore"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
-	"0chain.net/core/common"
 	"0chain.net/chaincore/diagnostics"
+	"0chain.net/core/common"
 )
 
 /*SetupHandlers sets up the necessary API end points */
@@ -149,7 +149,7 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Fprintf(w, "<br>")
 	if c.GetPruneStats() != nil {
-		diagnostics.WritePruneStats(w,c.GetPruneStats())
+		diagnostics.WritePruneStats(w, c.GetPruneStats())
 	}
 }
 
@@ -161,5 +161,6 @@ func TransactionConfirmationHandler(ctx context.Context, r *http.Request) (inter
 	}
 	transactionConfirmationEntityMetadata := datastore.GetEntityMetadata("txn_confirmation")
 	ctx = persistencestore.WithEntityConnection(ctx, transactionConfirmationEntityMetadata)
-	return GetTransactionConfirmation(ctx, hash)
+	sc := GetSharderChain()
+	return sc.GetTransactionConfirmation(ctx, hash)
 }

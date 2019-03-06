@@ -1,8 +1,8 @@
 package sharder
 
 import (
-	"go.uber.org/zap"
 	"context"
+	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
@@ -19,9 +19,6 @@ func (sc *Chain) GetBlockBySummary(ctx context.Context, bs *block.BlockSummary) 
 	if err != nil {
 		bi, err := GetSharderChain().BlockTxnCache.Get(bs.Hash)
 		if err != nil {
-			if len(bs.Hash) < 64 {
-				Logger.Error("Hash from block summary is less than 64", zap.Any("hash", bs.Hash))
-			}
 			db := &block.Block{}
 			db.Hash = bs.Hash
 			db.Round = bs.Round
@@ -41,7 +38,7 @@ func (sc *Chain) GetBlockBySummary(ctx context.Context, bs *block.BlockSummary) 
 }
 
 /*GetBlockSummary - given a block hash, get the block summary */
-func GetBlockSummary(ctx context.Context, hash string) (*block.BlockSummary, error) {
+func (sc *Chain) GetBlockSummary(ctx context.Context, hash string) (*block.BlockSummary, error) {
 	blockSummaryEntityMetadata := datastore.GetEntityMetadata("block_summary")
 	blockSummary := blockSummaryEntityMetadata.Instance().(*block.BlockSummary)
 	err := blockSummaryEntityMetadata.GetStore().Read(ctx, datastore.ToKey(hash), blockSummary)
