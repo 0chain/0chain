@@ -69,6 +69,11 @@ func (ps *PartialState) Read(ctx context.Context, key datastore.Key) error {
 	return ps.GetEntityMetadata().GetStore().Read(ctx, key, ps)
 }
 
+/*GetScore - score for write*/
+func (ps *PartialState) GetScore() int64 {
+	return 0
+}
+
 /*Write - store read */
 func (ps *PartialState) Write(ctx context.Context) error {
 	return ps.GetEntityMetadata().GetStore().Write(ctx, ps)

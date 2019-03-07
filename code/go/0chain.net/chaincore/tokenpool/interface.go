@@ -33,9 +33,9 @@ type TokenPoolI interface {
 	GetID() datastore.Key
 	DigPool(id datastore.Key, txn *transaction.Transaction) (*state.Transfer, string, error)
 	FillPool(txn *transaction.Transaction) (*state.Transfer, string, error)
-	TransferTo(op TokenPoolI, value state.Balance, txn *transaction.Transaction) (*state.Transfer, string, error)
-	DrainPool(fromClientID, toClientID datastore.Key, value state.Balance, txn *transaction.Transaction) (*state.Transfer, string, error)
-	EmptyPool(fromClientID, toClientID datastore.Key, txn *transaction.Transaction) (*state.Transfer, string, error)
+	TransferTo(op TokenPoolI, value state.Balance, entity interface{}) (*state.Transfer, string, error)
+	DrainPool(fromClientID, toClientID datastore.Key, value state.Balance, entity interface{}) (*state.Transfer, string, error)
+	EmptyPool(fromClientID, toClientID datastore.Key, entity interface{}) (*state.Transfer, string, error)
 }
 
 type TokenPool struct {

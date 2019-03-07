@@ -1,7 +1,6 @@
 package sharder
 
 import (
-	"go.uber.org/zap"
 	"context"
 
 	"0chain.net/chaincore/block"
@@ -9,7 +8,6 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
-	. "0chain.net/core/logging"
 )
 
 /*GetBlockBySummary - get a block */
@@ -41,7 +39,7 @@ func (sc *Chain) GetBlockBySummary(ctx context.Context, bs *block.BlockSummary) 
 }
 
 /*GetBlockSummary - given a block hash, get the block summary */
-func GetBlockSummary(ctx context.Context, hash string) (*block.BlockSummary, error) {
+func (sc *Chain) GetBlockSummary(ctx context.Context, hash string) (*block.BlockSummary, error) {
 	blockSummaryEntityMetadata := datastore.GetEntityMetadata("block_summary")
 	blockSummary := blockSummaryEntityMetadata.Instance().(*block.BlockSummary)
 	err := blockSummaryEntityMetadata.GetStore().Read(ctx, datastore.ToKey(hash), blockSummary)

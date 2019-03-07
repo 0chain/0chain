@@ -109,6 +109,10 @@ func main() {
 	if node.Self.Type != node.NodeTypeMiner {
 		Logger.Panic("node not configured as miner")
 	}
+	err = common.NewError("saving self as client", "client save")
+	for err != nil {
+		_, err = client.PutClient(ctx, &node.Self.Client)
+	}
 
 	if state.Debug() {
 		chain.SetupStateLogger("/tmp/state.txt")
