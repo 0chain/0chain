@@ -2,13 +2,17 @@ package state
 
 import (
 	"0chain.net/chaincore/block"
-	"0chain.net/core/datastore"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
+	"0chain.net/core/datastore"
 	"0chain.net/core/util"
 )
 
-const approvedMinter = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9"
+var (
+	approvedMinters = []string{
+		"6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9",
+		"6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d1"}
+)
 
 /*
 * The state context is available to the smart contract logic.
@@ -31,6 +35,7 @@ type StateContextI interface {
 	GetTransfers() []*state.Transfer
 	GetMints() []*state.Mint
 	Validate() error
+	GetBlockSharders(b *block.Block) []string
 }
 
 //StateContext - a context object used to manipulate global state
@@ -41,11 +46,12 @@ type StateContext struct {
 	transfers               []*state.Transfer
 	mints                   []*state.Mint
 	clientStateDeserializer state.DeserializerI
+	getSharders             func(*block.Block) []string
 }
 
 //NewStateContext - create a new state context
-func NewStateContext(b *block.Block, s util.MerklePatriciaTrieI, csd state.DeserializerI, t *transaction.Transaction) *StateContext {
-	ctx := &StateContext{block: b, state: s, clientStateDeserializer: csd, txn: t}
+func NewStateContext(b *block.Block, s util.MerklePatriciaTrieI, csd state.DeserializerI, t *transaction.Transaction, getSharderFunc func(*block.Block) []string) *StateContext {
+	ctx := &StateContext{block: b, state: s, clientStateDeserializer: csd, txn: t, getSharders: getSharderFunc}
 	return ctx
 }
 
@@ -75,11 +81,20 @@ func (sc *StateContext) AddTransfer(t *state.Transfer) error {
 
 //AddMint - add the mint
 func (sc *StateContext) AddMint(m *state.Mint) error {
-	if m.Minter != approvedMinter || sc.txn.ToClientID != approvedMinter {
+	if !sc.isApprovedMinter(m) {
 		return state.ErrInvalidMint
 	}
 	sc.mints = append(sc.mints, m)
 	return nil
+}
+
+func (sc *StateContext) isApprovedMinter(m *state.Mint) bool {
+	for _, minter := range approvedMinters {
+		if m.Minter == minter && sc.txn.ToClientID == minter {
+			return true
+		}
+	}
+	return false
 }
 
 //GetTransfers - get all the transfers
@@ -104,7 +119,7 @@ func (sc *StateContext) Validate() error {
 			}
 		}
 	}
-	if amount > state.Balance(sc.txn.Value) {
+	if amount > state.Balance(sc.txn.Value+sc.txn.Fee) {
 		return state.ErrInvalidTransfer
 	}
 	return nil
@@ -132,4 +147,8 @@ func (sc *StateContext) GetClientBalance(clientID string) (state.Balance, error)
 		return 0, err
 	}
 	return s.Balance, nil
+}
+
+func (sc *StateContext) GetBlockSharders(b *block.Block) []string {
+	return sc.getSharders(b)
 }
