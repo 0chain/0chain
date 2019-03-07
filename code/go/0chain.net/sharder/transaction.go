@@ -63,9 +63,6 @@ func (sc *Chain) GetTransactionConfirmation(ctx context.Context, hash string) (*
 		if err != nil {
 			return nil, err
 		}
-		if bs.Hash != bhash {
-			Logger.Error("GetTransactionConfirmation - incorrect hash", zap.Any("bs.hash", bs.Hash), zap.Any("hash", bhash))
-		}
 		confirmation.Round = bs.Round
 		confirmation.MinerID = bs.MinerID
 		confirmation.RoundRandomSeed = bs.RoundRandomSeed
