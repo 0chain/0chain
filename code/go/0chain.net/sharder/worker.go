@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"0chain.net/chaincore/node"
-	. "0chain.net/core/logging"
 )
 
 /*SetupWorkers - setup the background workers */
@@ -18,7 +17,6 @@ func SetupWorkers(ctx context.Context) {
 
 /*BlockWorker - stores the blocks */
 func (sc *Chain) BlockWorker(ctx context.Context) {
-	Logger.Info("bc-27 block worker started")
 	for true {
 		select {
 		case <-ctx.Done():

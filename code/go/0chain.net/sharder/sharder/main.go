@@ -155,9 +155,9 @@ func main() {
 	if err == nil {
 		sc.CurrentRound = r.Number
 		sc.AddRound(r)
-		Logger.Info("bc-27 most recent round info", zap.Int64("round", r.Number), zap.String("blockHash", r.BlockHash))
+		Logger.Info("bc-27 latest round info - from DB", zap.Int64("round", r.Number), zap.String("blockHash", r.BlockHash))
 	} else {
-		Logger.Error("bc-27 error reading round data from db", zap.Error(err))
+		Logger.Error("bc-27 reading round data from db failed", zap.Error(err))
 	}
 
 	go syncUpRounds(ctx, r)
@@ -235,7 +235,7 @@ func syncUpRounds(ctx context.Context, r *round.Round) {
 	sc.Sharders.OneTimeStatusMonitor(ctx)
 	lr := sc.GetLatestRoundFromSharders(ctx, r.Number)
 	if lr != nil && lr.Number > r.Number + 1 {
-		Logger.Info("bc-27 latest round info", zap.Int64("lround", r.Number), zap.Int64("lrSharders", lr.Number))	
+		Logger.Info("bc-27 latest round info - from sharder", zap.Int64("s_round", lr.Number), zap.Int64("round", r.Number))	
 		
 		sc.BSync.SetStatus(sharder.Syncing)
 		sc.BSync.SetFinalizationRound(lr.Number)
@@ -244,7 +244,11 @@ func syncUpRounds(ctx context.Context, r *round.Round) {
 		ts := time.Now()
 		sc.GetMissingRounds(ctx, lr.Number, r.Number)
 		duration := time.Since(ts)
-		Logger.Info("bc-27 caught up with missing rounds", zap.Duration("duration", duration))
+		targetR := sc.BSync.GetAcceptanceRound()
+		if targetR == 0 {
+			targetR = sc.BSync.GetFinalizationRound()
+		}
+		Logger.Info("bc-27 sync info - caught up missing rounds (final)", zap.Int64("rounds", targetR - r.Number - 1), zap.Duration("duration", duration))
 		
 		sc.BSync.SetStatus(sharder.Normal)
 		Logger.Info("bc-27 block sync status : normal")
