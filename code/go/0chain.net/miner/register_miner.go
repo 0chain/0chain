@@ -27,6 +27,7 @@ import (
 const (
 	//MinerSCAddress address of minersc
 	MinerSCAddress = "CF9C03CD22C9C7B116EED04E4A909F95ABEC17E98FE631D6AC94D5D8420C5B20"
+	getNodepoolInfoAPI = "/getNodepool"
 )
 
 const successConsesus = 33
@@ -226,6 +227,32 @@ func registerMiner() (string, error) {
 	return txn.Hash, nil
 }
 
+// PoolMemberInfo of pool members
+type PoolMemberInfo struct {
+	N2NHost        string `json:"n2n_host"`
+	PublicKey           string `json:"public_key"`
+	Port           string `json:"port"`
+	Type           string `json:"type"`
+}
+
+type PoolMembersInfo struct {
+	MembersInfo   []PoolMemberInfo `json:"members_info"`
+}
+
+
+func getNodepoolInfo () {
+	params := make(map[string]string)
+	params["baseurl"] = node.Self.GetURLBase()
+	params["id"] = node.Self.ID
+	var membersInfo PoolMembersInfo
+	err := common.MakeSCRestAPICall(MinerSCAddress, getNodepoolInfoAPI, params, members.Sharders, &membersInfo, successConsesus)
+	if err != nil {
+		Logger.Info("Err from MakeSCRestAPICall", zap.Error(err))
+	}
+	Logger.Info("OP from MakeSCRestAPICall", zap.Any("membersInfo", membersInfo))
+
+}
+
 //KickoffMinerRegistration kicks off a new miner registration process
 func KickoffMinerRegistration(discoveryIps *string, signatureScheme encryption.SignatureScheme) {
 	if discoveryIps != nil {
@@ -246,10 +273,11 @@ func KickoffMinerRegistration(discoveryIps *string, signatureScheme encryption.S
 				if regTxn != nil {
 					Logger.Info("Registration success!!!", zap.String("txn", regTxn.Hash))
 				
+					getNodepoolInfo()
 				return
 				}
+			}
 		}
-	}
 	Logger.Fatal("Could not register/verify")
 
 	} else {

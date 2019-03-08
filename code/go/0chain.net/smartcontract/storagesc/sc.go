@@ -78,7 +78,7 @@ func (ssc *StorageSmartContract) OpenChallengeHandler (ctx context.Context, para
 	return &blobberChallengeObj, err
 }
 
-func (ssc *StorageSmartContract) SetSC(sc *smartcontractinterface.SmartContract) {
+func (ssc *StorageSmartContract) SetSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {
 	ssc.SmartContract = sc
 	ssc.SmartContract.RestHandlers["/allocation"] = ssc.AllocationStatsHandler
 	ssc.SmartContract.RestHandlers["/latestreadmarker"] = ssc.LatestReadMarkerHandler

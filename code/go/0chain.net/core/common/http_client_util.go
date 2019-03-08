@@ -3,12 +3,16 @@ package common
 import (
 	"bytes"
 	"context"
+	"crypto/sha1"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"math"
 	"net/http"
+	"net/url"
+	"strconv"
 	"sync"
 	"time"
 
@@ -31,6 +35,7 @@ const TxnConfirmationTime = 15
 
 const txnSubmitURL = "v1/transaction/put"
 const txnVerifyURL = "v1/transaction/get/confirmation?hash="
+const scRestAPIURL = "v1/screst/"
 
 //RegisterClient path to RegisterClient
 var RegisterClient = "/v1/client/put"
@@ -56,19 +61,27 @@ type Transaction struct {
 }
 
 const (
-	TxnTypeSend = 0 // A transaction to send tokens to another account, state is maintained by account
+	//TxnTypeSend A transaction to send tokens to another account, state is maintained by account
+	TxnTypeSend = 0
 
-	TxnTypeLockIn = 2 // A transaction to lock tokens, state is maintained on the account and the parent lock in transaction
+	//TxnTypeLockIn A transaction to lock tokens, state is maintained on the account and the parent lock in transaction
+	TxnTypeLockIn = 2
 
 	// Any txn type that refers to a parent txn should have an odd value
-	TxnTypeStorageWrite = 101 // A transaction to write data to the blobber
-	TxnTypeStorageRead  = 103 // A transaction to read data from the blobber
 
-	TxnTypeData = 10 // A transaction to just store a piece of data on the block chain
+	//TxnTypeStorageWrite A transaction to write data to the blobber
+	TxnTypeStorageWrite = 101
 
-	TxnTypeSmartContract = 1000 // A smart contract transaction type
+	//TxnTypeStorageRead A transaction to read data from the blobber
+	TxnTypeStorageRead = 103
+	//TxnTypeData A transaction to just store a piece of data on the block chain
+	TxnTypeData = 10
+
+	//TxnTypeSmartContract A smart contract transaction type
+	TxnTypeSmartContract = 1000
 )
 
+//NewTransactionEntity creat a new transaction
 func NewTransactionEntity(ID string, chainID string, pkey string) *Transaction {
 	txn := &Transaction{}
 	txn.Version = "1.0"
@@ -79,6 +92,7 @@ func NewTransactionEntity(ID string, chainID string, pkey string) *Transaction {
 	return txn
 }
 
+//ComputeHashAndSign compute Hash and sign the transaction
 func (t *Transaction) ComputeHashAndSign(handler Signer) error {
 	hashdata := fmt.Sprintf("%v:%v:%v:%v:%v", t.CreationDate, t.ClientID,
 		t.ToClientID, t.Value, encryption.Hash(t.TransactionData))
@@ -92,7 +106,7 @@ func (t *Transaction) ComputeHashAndSign(handler Signer) error {
 }
 
 /////////////// Plain Transaction ///////////
-
+//SmartContractTxnData Smart Contract Txn Data
 type SmartContractTxnData struct {
 	Name      string      `json:"name"`
 	InputArgs interface{} `json:"input"`
@@ -169,6 +183,7 @@ func SendPostRequest(url string, data []byte, ID string, pkey string, wg *sync.W
 	return body, nil
 }
 
+//SendTransaction send a transaction
 func SendTransaction(txn *Transaction, urls []string, ID string, pkey string) {
 	for _, url := range urls {
 		txnURL := fmt.Sprintf("%v/%v", url, txnSubmitURL)
@@ -186,9 +201,9 @@ func GetTransactionStatus(txnHash string, urls []string, sf int) (*Transaction, 
 
 	// currently transaction information an be obtained only from sharders
 	for _, sharder := range urls {
-		url := fmt.Sprintf("%v/%v%v", sharder, txnVerifyURL, txnHash)
+		urlString := fmt.Sprintf("%v/%v%v", sharder, txnVerifyURL, txnHash)
 
-		response, err := http.Get(url)
+		response, err := http.Get(urlString)
 		if err != nil {
 			Logger.Error("Error getting transaction confirmation", zap.Any("error", err))
 			numErrs++
@@ -206,19 +221,19 @@ func GetTransactionStatus(txnHash string, urls []string, sf int) (*Transaction, 
 			err = json.Unmarshal(contents, &objmap)
 			if err != nil {
 				Logger.Error("Error unmarshalling response", zap.Any("error", err))
-				errString = errString + url + ":" + err.Error()
+				errString = errString + urlString + ":" + err.Error()
 				continue
 			}
 			if *objmap["txn"] == nil {
 				e := "No transaction information. Only block summary."
 				Logger.Error(e)
-				errString = errString + url + ":" + e
+				errString = errString + urlString + ":" + e
 			}
 			txn := &Transaction{}
 			err = json.Unmarshal(*objmap["txn"], &txn)
 			if err != nil {
 				Logger.Error("Error unmarshalling to get transaction response", zap.Any("error", err))
-				errString = errString + url + ":" + err.Error()
+				errString = errString + urlString + ":" + err.Error()
 			}
 			if len(txn.Signature) > 0 {
 				retTxn = txn
@@ -253,12 +268,12 @@ func sendTransactionToURL(url string, txn *Transaction, ID string, pkey string, 
 }
 
 //MakeGetRequest make a generic get request. url should have complete path.
-func MakeGetRequest(url string, result interface{}) {
+func MakeGetRequest(remoteUrl string, result interface{}) {
 
-	Logger.Info(fmt.Sprintf("making GET request to %s", url))
+	Logger.Info(fmt.Sprintf("making GET request to %s", remoteUrl))
 	//ToDo: add parameter support
 	client := http.Client{}
-	request, err := http.NewRequest("GET", url, nil)
+	request, err := http.NewRequest("GET", remoteUrl, nil)
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -278,4 +293,89 @@ func MakeGetRequest(url string, result interface{}) {
 	} else {
 		Logger.Info("resp.Body is nil")
 	}
+}
+
+//MakeSCRestAPICall for smart contract REST API Call
+func MakeSCRestAPICall(scAddress string, relativePath string, params map[string]string, urls []string, entity interface{}, consensus int) error {
+
+	//ToDo: This looks a lot like GetTransactionConfirmation. Need code reuse?
+	//responses := make(map[string]int)
+	var retObj interface{}
+	//maxCount := 0
+	numSuccess := 0
+	numErrs := 0
+	var errString string
+
+	//normally this goes to sharders
+	for _, sharder := range urls {
+		urlString := fmt.Sprintf("%v/%v%v%v", sharder, scRestAPIURL, scAddress, relativePath)
+		Logger.Info("Running SCRestAPI on", zap.String("urlString", urlString))
+		urlObj, _ := url.Parse(urlString)
+		q := urlObj.Query()
+		for k, v := range params {
+			q.Add(k, v)
+		}
+		urlObj.RawQuery = q.Encode()
+		h := sha1.New()
+		response, err := http.Get(urlObj.String())
+		if err != nil {
+			Logger.Error("Error getting response for sc rest api", zap.Any("error", err))
+			numErrs++
+			errString = errString + sharder + ":" + err.Error()
+		} else {
+			if response.StatusCode != 200 {
+				Logger.Error("Error getting response from", zap.String("URL", sharder), zap.Any("response Status", response.StatusCode))
+				numErrs++
+				errString = errString + sharder + ": response_code: " + strconv.Itoa(response.StatusCode)
+				continue
+			}
+			defer response.Body.Close()
+			tReader := io.TeeReader(response.Body, h)
+			d := json.NewDecoder(tReader)
+			d.UseNumber()
+			err := d.Decode(entity)
+			if err != nil {
+				Logger.Error("Error unmarshalling response", zap.Any("error", err))
+				numErrs++
+				errString = errString + sharder + ":" + err.Error()
+				continue
+			}
+			retObj = entity
+			numSuccess++
+			/*
+				Todo: Incorporate hash verification
+				hashBytes := h.Sum(nil)
+				hash := hex.EncodeToString(hashBytes)
+				responses[hash]++
+				if responses[hash] > maxCount {
+					maxCount = responses[hash]
+					retObj = entity
+				}
+			*/
+		}
+	}
+
+	if numSuccess+numErrs == 0 {
+		return NewError("req_not_run", "Could not run the request why???")
+
+	}
+	sr := int(math.Ceil((float64(numSuccess) * 100) / float64(numSuccess+numErrs)))
+	// We've at least one success and success rate sr is at least same as success factor sf
+	if numSuccess > 0 && sr >= consensus {
+		if retObj != nil {
+			return nil
+		}
+		return NewError("err_getting_resp", errString)
+	} else if numSuccess > 0 {
+		//we had some successes, but not sufficient to reach consensus
+		Logger.Error("Error Getting consensus", zap.Int("Success", numSuccess), zap.Int("Errs", numErrs), zap.Int("consensus", consensus))
+		return NewError("err_getting_consensus", errString)
+	} else if numErrs > 0 {
+		//We have received only errors
+		Logger.Error("Error running the request", zap.Int("Success", numSuccess), zap.Int("Errs", numErrs), zap.Int("consensus", consensus))
+		return NewError("err_running_req", errString)
+	}
+	//this should never happen
+	return NewError("unknown_err", "Not able to run the request. unknown reason")
+
 }

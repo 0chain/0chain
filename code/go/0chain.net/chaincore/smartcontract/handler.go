@@ -20,7 +20,8 @@ func ExecuteRestAPI(ctx context.Context, scAdress string, restpath string, param
 	contracti, ok := ContractMap[scAdress]
 	if ok {
 		sc := sci.NewSC(smartcontractstate.NewSCState(ndb, scAdress), scAdress)
-		contracti.SetSC(sc)
+		bc := &BCContext{} 
+		contracti.SetSC(sc, bc)
 		handler, restpathok := sc.RestHandlers[restpath]
 		if !restpathok {
 			return nil, common.NewError("invalid_path", "Invalid path")
@@ -33,7 +34,8 @@ func ExecuteRestAPI(ctx context.Context, scAdress string, restpath string, param
 func getSmartContract(t *transaction.Transaction, ndb smartcontractstate.SCDB) sci.SmartContractInterface {
 	contracti, ok := ContractMap[t.ToClientID]
 	if ok {
-		contracti.SetSC(sci.NewSC(smartcontractstate.NewSCState(ndb, t.ToClientID), t.ToClientID))
+		bc := &BCContext{}
+		contracti.SetSC(sci.NewSC(smartcontractstate.NewSCState(ndb, t.ToClientID), t.ToClientID), bc)
 		return contracti
 	}
 	return nil

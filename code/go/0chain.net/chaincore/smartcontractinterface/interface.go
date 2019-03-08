@@ -32,5 +32,9 @@ type SmartContractTransactionData struct {
 
 type SmartContractInterface interface {
 	Execute(t *transaction.Transaction, funcName string, input []byte, balances c_state.StateContextI) (string, error)
-	SetSC(sc *SmartContract)
+	SetSC(sc *SmartContract, bc BCContextI)
+}
+
+type BCContextI interface {
+	GetNodepoolInfo() interface{}
 }

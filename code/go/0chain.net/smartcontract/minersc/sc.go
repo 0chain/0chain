@@ -1,6 +1,8 @@
 package minersc
 
 import (
+	"context"
+
 	"github.com/asaskevich/govalidator"
 	"0chain.net/chaincore/smartcontractinterface"
 	c_state "0chain.net/chaincore/chain/state"
@@ -21,11 +23,15 @@ const (
 //MinerSmartContract Smartcontract that takes care of all miner related requests
 type MinerSmartContract struct {
 	*smartcontractinterface.SmartContract
+	bcContext smartcontractinterface.BCContextI
 }
 
 //SetSC setting up smartcontract. implementing the interface
-func (msc *MinerSmartContract) SetSC(sc *smartcontractinterface.SmartContract) {
+func (msc *MinerSmartContract) SetSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {
 	msc.SmartContract = sc
+	msc.SmartContract.RestHandlers["/getNodepool"] = msc.GetNodepoolHandler
+	msc.bcContext = bcContext
+	
 }
 
 //Execute implemetning the interface
@@ -46,11 +52,26 @@ func (msc *MinerSmartContract) Execute(t *transaction.Transaction, funcName stri
 	}
 }
 
+//REST API Handlers
+
+//GetNodepoolHandler API to provide nodepool information for registered miners
+func (msc *MinerSmartContract) GetNodepoolHandler(ctx context.Context, params url.Values) (interface{}, error){
+	
+	var regMiner MinerNode
+	err := regMiner.decodeFromValues(params)
+	if err != nil {
+		Logger.Info("Returing error from GetNodePoolHandler", zap.Error(err))
+		return nil, err	
+	}
+	//ToDo: Add validation before getting nodepool info
+	npi := msc.bcContext.GetNodepoolInfo()
+	
+	return npi, nil
+}
 
 //AddMiner Function to handle miner register
 func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction, input []byte) (string, error) {
 	
-
 	allMinersList, err := msc.getMinersList()
 	if err != nil {
 		Logger.Error("Error in getting list from the DB", zap.Error(err))

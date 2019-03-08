@@ -2,6 +2,8 @@ package minersc
 
 import (
 	"encoding/json"
+	"errors"
+	"net/url"
 
 	"0chain.net/chaincore/smartcontractstate"
 )
@@ -22,6 +24,17 @@ func (mn *MinerNode) getKey() smartcontractstate.Key {
 func (mn *MinerNode) encode() []byte {
 	buff, _ := json.Marshal(mn)
 	return buff
+}
+
+func (mn *MinerNode) decodeFromValues(params url.Values) error {
+	mn.BaseURL = params.Get("baseurl")
+	mn.ID = params.Get("id")
+
+	if mn.BaseURL == "" || mn.ID == "" {
+		return errors.New("BaseURL or ID is not specified")
+	}
+	return nil
+
 }
 
 func (mn *MinerNode) decode(input []byte) error {
