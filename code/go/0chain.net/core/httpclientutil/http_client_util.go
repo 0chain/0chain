@@ -1,4 +1,4 @@
-package common
+package httpclientutil
 
 import (
 	"bytes"
@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -43,55 +44,6 @@ var RegisterClient = "/v1/client/put"
 //Signer for the transaction hash
 type Signer func(h string) (string, error)
 
-//Transaction entity that encapsulates the transaction related data and meta data
-type Transaction struct {
-	Hash              string    `json:"hash,omitempty"`
-	Version           string    `json:"version,omitempty"`
-	ClientID          string    `json:"client_id,omitempty"`
-	PublicKey         string    `json:"public_key,omitempty"`
-	ToClientID        string    `json:"to_client_id,omitempty"`
-	ChainID           string    `json:"chain_id,omitempty"`
-	TransactionData   string    `json:"transaction_data,omitempty"`
-	Value             int64     `json:"transaction_value,omitempty"`
-	Signature         string    `json:"signature,omitempty"`
-	CreationDate      Timestamp `json:"creation_date,omitempty"`
-	TransactionType   int       `json:"transaction_type,omitempty"`
-	TransactionOutput string    `json:"transaction_output,omitempty"`
-	OutputHash        string    `json:"txn_output_hash"`
-}
-
-const (
-	//TxnTypeSend A transaction to send tokens to another account, state is maintained by account
-	TxnTypeSend = 0
-
-	//TxnTypeLockIn A transaction to lock tokens, state is maintained on the account and the parent lock in transaction
-	TxnTypeLockIn = 2
-
-	// Any txn type that refers to a parent txn should have an odd value
-
-	//TxnTypeStorageWrite A transaction to write data to the blobber
-	TxnTypeStorageWrite = 101
-
-	//TxnTypeStorageRead A transaction to read data from the blobber
-	TxnTypeStorageRead = 103
-	//TxnTypeData A transaction to just store a piece of data on the block chain
-	TxnTypeData = 10
-
-	//TxnTypeSmartContract A smart contract transaction type
-	TxnTypeSmartContract = 1000
-)
-
-//NewTransactionEntity creat a new transaction
-func NewTransactionEntity(ID string, chainID string, pkey string) *Transaction {
-	txn := &Transaction{}
-	txn.Version = "1.0"
-	txn.ClientID = ID //node.Self.ID
-	txn.CreationDate = Now()
-	txn.ChainID = chainID //chain.GetServerChain().ID
-	txn.PublicKey = pkey  //node.Self.PublicKey
-	return txn
-}
-
 //ComputeHashAndSign compute Hash and sign the transaction
 func (t *Transaction) ComputeHashAndSign(handler Signer) error {
 	hashdata := fmt.Sprintf("%v:%v:%v:%v:%v", t.CreationDate, t.ClientID,
@@ -106,11 +58,6 @@ func (t *Transaction) ComputeHashAndSign(handler Signer) error {
 }
 
 /////////////// Plain Transaction ///////////
-//SmartContractTxnData Smart Contract Txn Data
-type SmartContractTxnData struct {
-	Name      string      `json:"name"`
-	InputArgs interface{} `json:"input"`
-}
 
 //NewHTTPRequest to use in sending http requests
 func NewHTTPRequest(method string, url string, data []byte, ID string, pkey string) (*http.Request, context.Context, context.CancelFunc, error) {
@@ -160,7 +107,7 @@ func SendPostRequest(url string, data []byte, ID string, pkey string, wg *sync.W
 			if resp.Body != nil {
 				resp.Body.Close()
 			}
-			err = NewError("http_error", "Error from HTTP call. "+string(body))
+			err = common.NewError("http_error", "Error from HTTP call. "+string(body))
 		}
 		//TODO: Handle ctx cncl
 		Logger.Error("SendPostRequest Error", zap.String("error", err.Error()), zap.String("URL", url))
@@ -172,7 +119,7 @@ func SendPostRequest(url string, data []byte, ID string, pkey string, wg *sync.W
 		return nil, err
 	}
 	if resp.Body == nil {
-		return nil, NewError("empty_body", "empty body returned")
+		return nil, common.NewError("empty_body", "empty body returned")
 	}
 	if resp.Body != nil {
 		defer resp.Body.Close()
@@ -249,9 +196,9 @@ func GetTransactionStatus(txnHash string, urls []string, sf int) (*Transaction, 
 		if retTxn != nil {
 			return retTxn, nil
 		}
-		return nil, NewError("err_finding_txn_status", errString)
+		return nil, common.NewError("err_finding_txn_status", errString)
 	}
-	return nil, NewError("transaction_not_found", "Transaction was not found on any of the urls provided")
+	return nil, common.NewError("transaction_not_found", "Transaction was not found on any of the urls provided")
 }
 
 func sendTransactionToURL(url string, txn *Transaction, ID string, pkey string, wg *sync.WaitGroup) ([]byte, error) {
@@ -356,7 +303,7 @@ func MakeSCRestAPICall(scAddress string, relativePath string, params map[string]
 	}
 
 	if numSuccess+numErrs == 0 {
-		return NewError("req_not_run", "Could not run the request why???")
+		return common.NewError("req_not_run", "Could not run the request why???")
 
 	}
 	sr := int(math.Ceil((float64(numSuccess) * 100) / float64(numSuccess+numErrs)))
@@ -365,17 +312,17 @@ func MakeSCRestAPICall(scAddress string, relativePath string, params map[string]
 		if retObj != nil {
 			return nil
 		}
-		return NewError("err_getting_resp", errString)
+		return common.NewError("err_getting_resp", errString)
 	} else if numSuccess > 0 {
 		//we had some successes, but not sufficient to reach consensus
 		Logger.Error("Error Getting consensus", zap.Int("Success", numSuccess), zap.Int("Errs", numErrs), zap.Int("consensus", consensus))
-		return NewError("err_getting_consensus", errString)
+		return common.NewError("err_getting_consensus", errString)
 	} else if numErrs > 0 {
 		//We have received only errors
 		Logger.Error("Error running the request", zap.Int("Success", numSuccess), zap.Int("Errs", numErrs), zap.Int("consensus", consensus))
-		return NewError("err_running_req", errString)
+		return common.NewError("err_running_req", errString)
 	}
 	//this should never happen
-	return NewError("unknown_err", "Not able to run the request. unknown reason")
+	return common.NewError("unknown_err", "Not able to run the request. unknown reason")
 
 }

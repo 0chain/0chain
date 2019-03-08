@@ -10,6 +10,7 @@ import (
 
 	"0chain.net/chaincore/client"
 	"0chain.net/core/common"
+	"0chain.net/core/httpclientutil"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	. "0chain.net/core/logging"
@@ -22,7 +23,7 @@ import (
 )
 
 
-
+ 
 //Note: MinerNode is originally defined in MinerSmartcontract. 
 const (
 	//MinerSCAddress address of minersc
@@ -82,7 +83,7 @@ func DiscoverPoolMembers(discoveryFile string) bool {
 	for _, ip := range discoveryIps {
 		pm = PoolMembers{}
 
-		common.MakeGetRequest(ip+discoverIPPath, &pm) 
+		httpclientutil.MakeGetRequest(ip+discoverIPPath, &pm) 
 
 		if pm.Miners != nil {
 			if len(pm.Miners) == 0 {
@@ -178,11 +179,11 @@ func RegisterClient(sigScheme encryption.SignatureScheme) {
 	nodeBytes, _ := json.Marshal(myWallet)
 	//Logger.Info("Post body", zap.Any("publicKey", myWallet.PublicKey), zap.String("ID", myWallet.ClientID))
 	for _, ip := range members.Miners {
-		body, err := common.SendPostRequest(ip + common.RegisterClient, nodeBytes, "", "", nil)
+		body, err := httpclientutil.SendPostRequest(ip + httpclientutil.RegisterClient, nodeBytes, "", "", nil)
 		if err!= nil {
 			Logger.Error("error in register client", zap.Error(err), zap.Any("body", body) )
 		} 
-		time.Sleep(common.SleepBetweenRetries * time.Second)
+		time.Sleep(httpclientutil.SleepBetweenRetries * time.Second)
 	}
 	//Logger.Info("My Client Info", zap.Any("ClientId", myWallet.ClientID))
 	
@@ -192,19 +193,19 @@ func registerMiner() (string, error) {
 	
 	Logger.Info("Adding miner to the blockchain.")
 	
-	txn := common.NewTransactionEntity(node.Self.ID, chain.GetServerChain().ID, node.Self.PublicKey)
+	txn := httpclientutil.NewTransactionEntity(node.Self.ID, chain.GetServerChain().ID, node.Self.PublicKey)
 
 	mn := &MinerNode{}
 	mn.ID = node.Self.GetKey()
 	mn.BaseURL = node.Self.GetURLBase()
 
-	scData := &common.SmartContractTxnData{}
+	scData := &httpclientutil.SmartContractTxnData{}
 	scData.Name = scNameAddMiner
 	scData.InputArgs = mn
 
 	txn.ToClientID = MinerSCAddress
 	txn.Value = 0
-	txn.TransactionType = common.TxnTypeSmartContract
+	txn.TransactionType = httpclientutil.TxnTypeSmartContract
 	txnBytes, err := json.Marshal(scData)
 	if err != nil {
 		return "", err
@@ -223,7 +224,7 @@ func registerMiner() (string, error) {
  
 	
 	Logger.Info("Adding miner to the blockchain.", zap.String("txn", txn.Hash))
-	common.SendTransaction(txn, members.Miners, node.Self.ID, node.Self.PublicKey)
+	httpclientutil.SendTransaction(txn, members.Miners, node.Self.ID, node.Self.PublicKey)
 	return txn.Hash, nil
 }
 
@@ -245,7 +246,7 @@ func getNodepoolInfo () {
 	params["baseurl"] = node.Self.GetURLBase()
 	params["id"] = node.Self.ID
 	var membersInfo PoolMembersInfo
-	err := common.MakeSCRestAPICall(MinerSCAddress, getNodepoolInfoAPI, params, members.Sharders, &membersInfo, successConsesus)
+	err := httpclientutil.MakeSCRestAPICall(MinerSCAddress, getNodepoolInfoAPI, params, members.Sharders, &membersInfo, successConsesus)
 	if err != nil {
 		Logger.Info("Err from MakeSCRestAPICall", zap.Error(err))
 	}
@@ -285,11 +286,11 @@ func KickoffMinerRegistration(discoveryIps *string, signatureScheme encryption.S
 	}
 }
 
-func verifyTransaction(regMinerTxn string)  *common.Transaction {
+func verifyTransaction(regMinerTxn string)  *httpclientutil.Transaction {
 	
 	for i := 0; i < numRetriesForTxnConfirmation; i++ {
-		time.Sleep(common.SleepBetweenRetries * time.Second)
-		regTxn, err := common.GetTransactionStatus(regMinerTxn, members.Sharders, successConsesus)
+		time.Sleep(httpclientutil.SleepBetweenRetries * time.Second)
+		regTxn, err := httpclientutil.GetTransactionStatus(regMinerTxn, members.Sharders, successConsesus)
 		if err == nil {
 			return  regTxn
 		} 
