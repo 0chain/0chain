@@ -2,7 +2,7 @@ version: '3'
 services:
 
   scylla:
-    image: scylladb/scylla
+    image: scylladb/scylla:2.3.2
     networks:
     - default
     ports:
@@ -26,7 +26,17 @@ services:
       timeout: 10s
       retries: 5
 
-    command: ["--developer-mode", "0"]
+    command:
+      - "--developer-mode"
+      - ${SCYLLA_DEVELOPER_MODE}
+      - "--overprovisioned"
+      - ${SCYLLA_OVERPROVISIONED}
+      - "--memory"
+      - ${SCYLLA_MEMORY}
+      - "--cpuset"
+      - ${SCYLLA_CPUSET}
+      - "--smp"
+      - ${SCYLLA_SMP}
 
     #Start under user 0chain
     privileged: true
@@ -56,6 +66,7 @@ services:
 
     links:
     - scylla-init:scylla-init
+    - scylla:syclla
 
     build:
       context: ${DOCKER_CODEBASE}
