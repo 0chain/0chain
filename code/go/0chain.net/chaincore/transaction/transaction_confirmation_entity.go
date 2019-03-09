@@ -65,6 +65,11 @@ func (c *Confirmation) Delete(ctx context.Context) error {
 	return c.GetEntityMetadata().GetStore().Delete(ctx, c)
 }
 
+/*GetScore - score for write*/
+func (c *Confirmation) GetScore() int64 {
+	return c.Round
+}
+
 /*GetHash - hashable implementation */
 func (c *Confirmation) GetHash() string {
 	return c.Hash

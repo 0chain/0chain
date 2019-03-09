@@ -29,51 +29,54 @@ func SetupWallet() {
 }
 
 /*CreateRandomSendTransaction - create a transaction */
-func (w *Wallet) CreateRandomSendTransaction(toClient string) *transaction.Transaction {
+func (w *Wallet) CreateRandomSendTransaction(toClient string, fee int64) *transaction.Transaction {
 	// value := rand.Int63n(100) * 1000000000
 	// if value == 0 {
 	// 	value = 100000000
 	// }
 	value := rand.Int63n(31) + 1
 	msg := fmt.Sprintf("0chain zerochain zipcode Europe rightthing Oriental California honest accurate India network %v %v", rand.Int63(), value)
-	return w.CreateSendTransaction(toClient, value, msg)
+	return w.CreateSendTransaction(toClient, value, msg, fee)
 }
 
 /*CreateSendTransaction - create a send transaction */
-func (w *Wallet) CreateSendTransaction(toClient string, value int64, msg string) *transaction.Transaction {
+func (w *Wallet) CreateSendTransaction(toClient string, value int64, msg string, fee int64) *transaction.Transaction {
 	txn := transactionMetadataProvider.Instance().(*transaction.Transaction)
 	txn.ClientID = w.ClientID
 	txn.ToClientID = toClient
 	txn.Value = value
 	txn.TransactionData = msg
+	txn.Fee = fee
 	txn.Sign(w.SignatureScheme)
 	return txn
 }
 
 /*CreateSendTransaction - create a send transaction */
-func (w *Wallet) CreateSCTransaction(toClient string, value int64, msg string) *transaction.Transaction {
+func (w *Wallet) CreateSCTransaction(toClient string, value int64, msg string, fee int64) *transaction.Transaction {
 	txn := transactionMetadataProvider.Instance().(*transaction.Transaction)
 	txn.ClientID = w.ClientID
 	txn.ToClientID = toClient
 	txn.Value = value
 	txn.TransactionData = msg
+	txn.Fee = fee
 	txn.TransactionType = transaction.TxnTypeSmartContract
 	txn.Sign(w.SignatureScheme)
 	return txn
 }
 
 /*CreateRandomDataTransaction - creat a random data transaction */
-func (w *Wallet) CreateRandomDataTransaction() *transaction.Transaction {
+func (w *Wallet) CreateRandomDataTransaction(fee int64) *transaction.Transaction {
 	msg := fmt.Sprintf("storing some random data - 1234567890 abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ %v", rand.Int63())
-	return w.CreateDataTransaction(msg)
+	return w.CreateDataTransaction(msg, fee)
 }
 
 /*CreateDataTransaction - create a data transaction */
-func (w *Wallet) CreateDataTransaction(msg string) *transaction.Transaction {
+func (w *Wallet) CreateDataTransaction(msg string, fee int64) *transaction.Transaction {
 	txn := transactionMetadataProvider.Instance().(*transaction.Transaction)
 	txn.ClientID = w.ClientID
 	txn.TransactionData = msg
 	txn.TransactionType = transaction.TxnTypeData
+	txn.Fee = fee
 	txn.Sign(w.SignatureScheme)
 	return txn
 }

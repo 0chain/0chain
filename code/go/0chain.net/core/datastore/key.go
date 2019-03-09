@@ -40,6 +40,11 @@ func (k *IDField) Read(ctx context.Context, key string) error {
 	return common.NewError("abstract_read", "Calling entity.Read() requires implementing the method")
 }
 
+/*GetScore - abstract method for score when writing*/
+func (k *IDField) GetScore() int64 {
+	return 0
+}
+
 /*Write - abstract method for memory store write */
 func (k *IDField) Write(ctx context.Context) error {
 	return common.NewError("abstract_write", "Calling entity.Write() requires implementing the method")
@@ -58,6 +63,11 @@ type NOIDField struct {
 /*Read - abstract method for memory store read */
 func (nif *NOIDField) Read(ctx context.Context, key string) error {
 	return common.NewError("abstract_read", "Calling entity.Read() requires implementing the method")
+}
+
+/*GetScore - abstract method for score when writing*/
+func (nif *NOIDField) GetScore() int64 {
+	return 0
 }
 
 /*Write - abstract method for memory store write */

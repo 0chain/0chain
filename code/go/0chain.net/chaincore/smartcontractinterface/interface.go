@@ -37,4 +37,5 @@ type SmartContractInterface interface {
 
 type BCContextI interface {
 	GetNodepoolInfo() interface{}
+	GetCurrentRoundInfo() interface{}
 }

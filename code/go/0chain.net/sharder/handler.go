@@ -43,11 +43,10 @@ func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 		}
 		if roundNumber > sc.LatestFinalizedBlock.Round {
 			return nil, common.InvalidRequest("Block not available")
-		} else {
-			hash, err = sc.GetBlockHash(ctx, roundNumber)
-			if err != nil {
-				return nil, err
-			}
+		}
+		hash, err = sc.GetBlockHash(ctx, roundNumber)
+		if err != nil {
+			return nil, err
 		}
 	}
 	var err error

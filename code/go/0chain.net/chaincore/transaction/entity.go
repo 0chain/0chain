@@ -42,6 +42,7 @@ type Transaction struct {
 	Value           int64            `json:"transaction_value" msgpack:"v"` // The value associated with this transaction
 	Signature       string           `json:"signature" msgpack:"s"`
 	CreationDate    common.Timestamp `json:"creation_date" msgpack:"ts"`
+	Fee             int64            `json:"transaction_fee" msgpack:"f"`
 
 	TransactionType   int    `json:"transaction_type" msgpack:"tt"`
 	TransactionOutput string `json:"transaction_output,omitempty" msgpack:"o,omitempty"`
@@ -91,6 +92,10 @@ func (t *Transaction) ValidateWrtTimeForBlock(ctx context.Context, ts common.Tim
 	if t.Value < 0 {
 		return common.InvalidRequest("value must be greater than or equal to zero")
 	}
+	// TODO: t.Fee needs to be compared to the minimum transaction fee once governance is implemented
+	if t.Fee < 0 {
+		return common.InvalidRequest("fee must be greater than or equal to zero")
+	}
 	err := config.ValidChain(datastore.ToString(t.ChainID))
 	if err != nil {
 		return err
@@ -123,6 +128,11 @@ func (t *Transaction) ValidateWrtTimeForBlock(ctx context.Context, ts common.Tim
 /*Validate - Entity implementation */
 func (t *Transaction) Validate(ctx context.Context) error {
 	return t.ValidateWrtTime(ctx, common.Now())
+}
+
+/*GetScore - score for write*/
+func (t *Transaction) GetScore() int64 {
+	return t.Fee
 }
 
 /*Read - store read */

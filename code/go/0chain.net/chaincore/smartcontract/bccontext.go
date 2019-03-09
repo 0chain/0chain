@@ -60,3 +60,7 @@ func (bc *BCContext) GetNodepoolInfo() interface{} {
 	Logger.Info("GetNodePoolInfo returning ", zap.Int("membersInfo", len(members.MembersInfo)))
 	return members
 }
+
+func (bc *BCContext)  GetCurrentRoundInfo() interface{} {
+	return "not_yet_implemented"
+}

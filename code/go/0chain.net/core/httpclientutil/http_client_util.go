@@ -50,7 +50,7 @@ func (t *Transaction) ComputeHashAndSign(handler Signer) error {
 		t.ToClientID, t.Value, encryption.Hash(t.TransactionData))
 	t.Hash = encryption.Hash(hashdata)
 	var err error
-	t.Signature, err = handler(t.Hash) //node.Self.Sign(t.Hash)
+	t.Signature, err = handler(t.Hash)
 	if err != nil {
 		return err
 	}
@@ -303,11 +303,11 @@ func MakeSCRestAPICall(scAddress string, relativePath string, params map[string]
 	}
 
 	if numSuccess+numErrs == 0 {
-		return common.NewError("req_not_run", "Could not run the request why???")
+		return common.NewError("req_not_run", "Could not run the request") //why???
 
 	}
 	sr := int(math.Ceil((float64(numSuccess) * 100) / float64(numSuccess+numErrs)))
-	// We've at least one success and success rate sr is at least same as success factor sf
+	// We've at least one success and success rate sr is at least same as consensus
 	if numSuccess > 0 && sr >= consensus {
 		if retObj != nil {
 			return nil

@@ -167,6 +167,11 @@ func (b *Block) Read(ctx context.Context, key datastore.Key) error {
 	return b.GetEntityMetadata().GetStore().Read(ctx, key, b)
 }
 
+/*GetScore - score for write*/
+func (b *Block) GetScore() int64 {
+	return b.Round
+}
+
 /*Write - store read */
 func (b *Block) Write(ctx context.Context) error {
 	return b.GetEntityMetadata().GetStore().Write(ctx, b)
