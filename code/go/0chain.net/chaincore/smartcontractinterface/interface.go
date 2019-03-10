@@ -35,7 +35,9 @@ type SmartContractInterface interface {
 	SetSC(sc *SmartContract, bc BCContextI)
 }
 
+/*BCContextI interface for smart contracts to access blockchain. 
+These functions should not modify blockchain states in anyway. 
+*/
 type BCContextI interface {
 	GetNodepoolInfo() interface{}
-	GetCurrentRoundInfo() interface{}
 }
