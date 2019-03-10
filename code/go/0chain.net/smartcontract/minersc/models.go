@@ -17,6 +17,18 @@ type MinerNode struct {
 	PublicKey string `json:"-"`
 }
 
+type ViewchangeInfo struct {
+	ChainId         string `json:chain_id`
+	ViewchangeRound int64  `json:viewchange_round`
+	//the round when call for dkg with viewchange members and round will be announced
+	ViewchangeCFDRound int64 `json:viewchange_cfd_round`
+}
+
+func (vc *ViewchangeInfo) encode() []byte {
+	buff, _ := json.Marshal(vc)
+	return buff
+}
+
 func (mn *MinerNode) getKey() smartcontractstate.Key {
 	return smartcontractstate.Key("miner:" + mn.ID)
 }

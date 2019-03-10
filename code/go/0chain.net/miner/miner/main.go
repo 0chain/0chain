@@ -46,6 +46,7 @@ func main() {
 	nodesFile := flag.String("nodes_file", "", "nodes_file (deprecated)")
 	maxDelay := flag.Int("max_delay", 0, "max_delay (deprecated)")
 	flag.Parse()
+	genesis := !*nonGenesis
 	config.Configuration.DeploymentMode = byte(*deploymentMode)
 	config.SetupDefaultConfig()
 	config.SetupConfig()
@@ -81,7 +82,7 @@ func main() {
 	}
 	reader.Close()
 	node.Self.SetSignatureScheme(signatureScheme)
-	if *nonGenesis {
+	if !genesis {
 		hostName, portNum, err := readNonGenesisHostAndPort(keysFile) 
 		if err != nil {
 			Logger.Panic("Error reading keys file. Non-genesis miner has no host or port number", zap.Error(err))
@@ -103,7 +104,7 @@ func main() {
 	miner.SetNetworkRelayTime(viper.GetDuration("network.relay_time") * time.Millisecond)
 	node.ReadConfig()
 
-	if !*nonGenesis {
+	if genesis {
 		readNodesFile(nodesFile, mc, serverChain)
 	} 
 
@@ -164,7 +165,7 @@ func main() {
 	initHandlers()
 
 	chain.StartTime = time.Now().UTC()
-	if !*nonGenesis {
+	if genesis {
 		kickoffMiner(ctx, mc)
 	} else {
 		go miner.KickoffMinerRegistration(discoveryIps, signatureScheme)

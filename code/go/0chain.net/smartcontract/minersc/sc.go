@@ -19,6 +19,8 @@ import (
 const (
 	//ADDRESS address of minersc
 	ADDRESS = "CF9C03CD22C9C7B116EED04E4A909F95ABEC17E98FE631D6AC94D5D8420C5B20"
+	bufRounds = 5000 //ToDo: make it configurable
+	cfdBuffer = 10
 )
 
 //MinerSmartContract Smartcontract that takes care of all miner related requests
@@ -48,7 +50,7 @@ func (msc *MinerSmartContract) Execute(t *transaction.Transaction, funcName stri
 			return resp, nil
 		
 		case "viewchange_req":
-			resp, err := msc.RequestViewchange(t, input)
+			resp, err := msc.RequestViewchange(t, input, balances)
 			if err != nil {
 				return "", err
 			}
@@ -135,7 +137,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction, input []byte
 }
 
 //RequestViewchange Function to handle miner viewchange request
-func (msc *MinerSmartContract) RequestViewchange(t *transaction.Transaction, input []byte) (string, error) {
+func (msc *MinerSmartContract) RequestViewchange(t *transaction.Transaction, input []byte, statectx c_state.StateContextI) (string, error) {
 	
 	var regMiner MinerNode
 	err := regMiner.decode(input) 
@@ -151,9 +153,22 @@ func (msc *MinerSmartContract) RequestViewchange(t *transaction.Transaction, inp
 	if !msc.doesMinerExist(regMiner.getKey()) {
 		Logger.Info("Miner received does not exist", zap.String("url", regMiner.BaseURL))
 		return "", errors.New( regMiner.BaseURL + " Miner rdoes not exist",)
-	} else {
-		return "msg from requestViewchange", nil
-	}
+	} 
+
+
+	curRound := statectx.GetBlock().Round
+	vcRound := (((int64)((curRound+bufRounds)/1000)) + 1) * 1000
+	vcRoundInfo := &ViewchangeInfo{}
+
+	vcRoundInfo.ViewchangeRound = vcRound
+	vcRoundInfo.ViewchangeCFDRound = vcRound - cfdBuffer
+
+	Logger.Info("RequestViewChange", zap.Int64("cur_round", curRound), 
+					zap.Int64("vc_round", vcRoundInfo.ViewchangeRound), zap.Int64("dkg_round", vcRoundInfo.ViewchangeCFDRound))
+
+	buff := vcRoundInfo.encode()
+	return string(buff), nil
+	
 	
 }
 
