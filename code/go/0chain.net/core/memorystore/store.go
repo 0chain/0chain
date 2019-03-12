@@ -73,7 +73,11 @@ func writeAux(ctx context.Context, entity datastore.Entity, overwrite bool) erro
 		return nil
 	}
 	if ce.GetCollectionScore() == 0 {
-		ce.InitCollectionScore()
+		if entity.GetScore() != 0 {
+			ce.SetCollectionScore(entity.GetScore())
+		} else {
+			ce.InitCollectionScore()
+		}
 	}
 	err = datastore.AddToCollection(ce, ctx)
 	return err
@@ -253,7 +257,11 @@ func (ms *Store) multiAddToCollectionAux(ctx context.Context, entityMetadata dat
 		ind := offset + 2*idx
 		score := ce.GetCollectionScore()
 		if score == 0 {
-			ce.InitCollectionScore()
+			if entity.GetScore() == 0 {
+				ce.InitCollectionScore()
+			} else {
+				ce.SetCollectionScore(entity.GetScore())
+			}
 		}
 		svpair[ind] = ce.GetCollectionScore()
 		svpair[ind+1] = ce.GetKey()

@@ -20,6 +20,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	. "0chain.net/core/logging"
+	"0chain.net/smartcontract/feesc"
 
 	"go.uber.org/zap"
 )
@@ -179,6 +180,12 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		b.Txns = b.Txns[:blockSize]
 		etxns = etxns[:blockSize]
 	}
+	if config.DevConfiguration.SmartContract {
+		err = mc.processFeeTxn(ctx, b, clients)
+		if err != nil {
+			return err
+		}
+	}
 	b.RunningTxnCount = b.PrevBlock.RunningTxnCount + int64(len(b.Txns))
 	if count > 10*mc.BlockSize {
 		Logger.Info("generate block (too much iteration)", zap.Int64("round", b.Round), zap.Int32("iteration_count", count))
@@ -218,6 +225,35 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	mc.StateSanityCheck(ctx, b)
 	go b.ComputeTxnMap()
 	return nil
+}
+
+func (mc *Chain) processFeeTxn(ctx context.Context, b *block.Block, clients map[string]*client.Client) error {
+	feeTxn := mc.createFeeTxn(b)
+	clients[feeTxn.ClientID] = nil
+	if ok, err := mc.ChainHasTransaction(ctx, b.PrevBlock, feeTxn); ok || err != nil {
+		if err != nil {
+			return err
+		}
+		return common.NewError("proces fee transaction", "transaction already exists")
+	}
+	if !mc.UpdateState(b, feeTxn) {
+		return common.NewError("proces fee transaction", "update state failed")
+	}
+	b.Txns = append(b.Txns, feeTxn)
+	b.AddTransaction(feeTxn)
+	return nil
+}
+
+func (mc *Chain) createFeeTxn(b *block.Block) *transaction.Transaction {
+	feeTxn := transaction.Provider().(*transaction.Transaction)
+	feeTxn.ClientID = b.MinerID
+	feeTxn.ToClientID = feesc.ADDRESS
+	feeTxn.CreationDate = b.CreationDate
+	feeTxn.TransactionType = transaction.TxnTypeSmartContract
+	feeTxn.TransactionData = fmt.Sprintf(`{"name":"payFees","input":{"round":%v}}`, b.Round)
+	feeTxn.Fee = 0 //TODO: fee needs to be set to governance minimum fee
+	feeTxn.Sign(node.Self.GetSignatureScheme())
+	return feeTxn
 }
 
 func (mc *Chain) txnToReuse(txn *transaction.Transaction) *transaction.Transaction {

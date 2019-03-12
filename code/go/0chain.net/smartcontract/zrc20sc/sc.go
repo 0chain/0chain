@@ -18,7 +18,7 @@ type ZRC20SmartContract struct {
 	*smartcontractinterface.SmartContract
 }
 
-func (zrc *ZRC20SmartContract) SetSC(sc *smartcontractinterface.SmartContract) {
+func (zrc *ZRC20SmartContract) SetSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {
 	zrc.SmartContract = sc
 }
 

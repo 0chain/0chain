@@ -10,8 +10,8 @@ import (
 	"0chain.net/core/util"
 	metrics "github.com/rcrowley/go-metrics"
 
-	"0chain.net/sharder/blockstore"
 	"0chain.net/chaincore/config"
+	"0chain.net/sharder/blockstore"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/datastore"
@@ -43,10 +43,15 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 		}
 	}
 	sc.BlockCache.Add(b.Hash, b)
+	if fr == nil {
+		fr = round.NewRound(b.Round)
+	}
+	fr.Finalize(b)
+
 	sc.StoreTransactions(ctx, b)
 	err := sc.StoreBlockSummary(ctx, b)
 	if err != nil {
-		Logger.Error("db error (save block)", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
+		Logger.Error("db error (store block summary)", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
 	}
 	self := node.GetSelfNode(ctx)
 	if sc.IsBlockSharder(b, self.Node) {
@@ -63,9 +68,7 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 			Logger.Error("block save", zap.Any("round", b.Round), zap.Any("hash", b.Hash), zap.Error(err))
 		}
 	}
-	if fr != nil {
-		fr.Finalize(b)
-		frImpl, _ := fr.(*round.Round)
+	if frImpl, ok := fr.(*round.Round); ok {
 		err := sc.StoreRound(ctx, frImpl)
 		if err != nil {
 			Logger.Error("db error (save round)", zap.Int64("round", fr.GetRoundNumber()), zap.Error(err))

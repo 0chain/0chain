@@ -19,6 +19,7 @@ import (
 	"0chain.net/core/datastore"
 	. "0chain.net/core/logging"
 	"0chain.net/core/util"
+	"0chain.net/smartcontract/feesc"
 	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
@@ -249,8 +250,8 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 	defer c.stateMutex.Unlock()
 	clientState := createTxnMPT(b.ClientState) // begin transaction
 	startRoot := clientState.GetRoot()
-	sctx := bcstate.NewStateContext(b, clientState, c.clientStateDeserializer, txn)
-	
+	sctx := bcstate.NewStateContext(b, clientState, c.clientStateDeserializer, txn, c.GetBlockSharders)
+
 	//smart contract memoryDB
 	mndb := smartcontractstate.NewMemorySCDB()
 
@@ -262,7 +263,7 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 			Logger.Info("Smart contract execution returned error", zap.Any("error", err), zap.Any("transaction", txn.Hash))
 			return false
 		}
-		
+
 		txn.TransactionOutput = output
 		txn.OutputHash = txn.ComputeOutputHash()
 		Logger.Info("Smart contract executed for transaction: ", zap.String("txn", txn.Hash), zap.String("output_hash", txn.OutputHash), zap.String("txn_output", txn.TransactionOutput))
@@ -272,6 +273,10 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 		if err != nil {
 			return false
 		}
+	}
+	err := sctx.AddTransfer(state.NewTransfer(txn.ClientID, feesc.ADDRESS, state.Balance(txn.Fee)))
+	if err != nil {
+		return false
 	}
 
 	if err := sctx.Validate(); err != nil {
@@ -298,7 +303,7 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 		}
 	}
 
-	err := b.ClientState.MergeMPTChanges(clientState) // commit transaction
+	err = b.ClientState.MergeMPTChanges(clientState) // commit transaction
 
 	if err != nil {
 		if state.DebugTxn() {

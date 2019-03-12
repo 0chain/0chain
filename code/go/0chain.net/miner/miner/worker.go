@@ -119,7 +119,7 @@ func TransactionGenerator(c *chain.Chain) {
 				ctx := datastore.WithAsyncChannel(common.GetRootContext(), transaction.TransactionEntityChannel)
 				wg.Add(1)
 				go func() {
-					ctx = memorystore.WithEntityConnection(ctx, txnMetadataProvider)
+					ctx := memorystore.WithEntityConnection(ctx, txnMetadataProvider)
 					defer memorystore.Close(ctx)
 					rs := rand.NewSource(time.Now().UnixNano())
 					prng := rand.New(rs)
@@ -155,14 +155,14 @@ func createSendTransaction(c *chain.Chain, prng *rand.Rand) *transaction.Transac
 			break
 		}
 	}
-	txn := wf.CreateRandomSendTransaction(wt.ClientID)
+	txn := wf.CreateRandomSendTransaction(wt.ClientID, prng.Int63n(10)+1)
 	return txn
 }
 
 func createDataTransaction(prng *rand.Rand) *transaction.Transaction {
 	csize := len(wallets)
 	wf := wallets[prng.Intn(csize)]
-	txn := wf.CreateRandomDataTransaction()
+	txn := wf.CreateRandomDataTransaction(prng.Int63n(10) + 1)
 	return txn
 }
 
@@ -230,7 +230,7 @@ func GenerateClients(c *chain.Chain, numClients int) {
 	time.Sleep(1 * time.Second)
 	for _, w := range wallets {
 		//generous airdrop in dev/test mode :)
-		txn := ownerWallet.CreateSendTransaction(w.ClientID, prng.Int63n(100000)*10000000000, "generous air drop! :)")
+		txn := ownerWallet.CreateSendTransaction(w.ClientID, prng.Int63n(100000)*10000000000, "generous air drop! :)", prng.Int63n(10)+1)
 		_, err := transaction.PutTransaction(tctx, txn)
 		if err != nil {
 			fmt.Printf("error:%v: %v\n", time.Now(), err)
