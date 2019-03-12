@@ -113,7 +113,7 @@ func TransactionGenerator(c *chain.Chain) {
 				ctx := datastore.WithAsyncChannel(common.GetRootContext(), transaction.TransactionEntityChannel)
 				wg.Add(1)
 				go func() {
-					ctx = memorystore.WithEntityConnection(ctx, txnMetadataProvider)
+					ctx := memorystore.WithEntityConnection(ctx, txnMetadataProvider)
 					defer memorystore.Close(ctx)
 					rs := rand.NewSource(time.Now().UnixNano())
 					prng := rand.New(rs)
@@ -206,6 +206,7 @@ func GenerateClients(c *chain.Chain, numClients int) {
 
 	txnMetadataProvider := datastore.GetEntityMetadata("txn")
 	tctx := memorystore.WithEntityConnection(common.GetRootContext(), txnMetadataProvider)
+	defer memorystore.Close(tctx)
 	tctx = datastore.WithAsyncChannel(ctx, transaction.TransactionEntityChannel)
 
 	for i := 0; i < numClients; i++ {
