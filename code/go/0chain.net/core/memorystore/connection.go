@@ -219,10 +219,14 @@ func GetEntityCon(ctx context.Context, entityMetadata datastore.EntityMetadata) 
 func Close(ctx context.Context) {
 	c := ctx.Value(CONNECTION)
 	if c == nil {
+		Logger.Error("Connection is nil while closing")
 		return
 	}
 	cMap := c.(connections)
 	for _, con := range cMap {
-		con.Close()
+		err := con.Close()
+		if err != nil {
+			Logger.Error("Connection not closed", zap.Error(err))
+		}
 	}
 }

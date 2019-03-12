@@ -212,6 +212,7 @@ func GenerateClients(c *chain.Chain, numClients int) {
 
 	txnMetadataProvider := datastore.GetEntityMetadata("txn")
 	tctx := memorystore.WithEntityConnection(common.GetRootContext(), txnMetadataProvider)
+	defer memorystore.Close(tctx)
 	tctx = datastore.WithAsyncChannel(ctx, transaction.TransactionEntityChannel)
 
 	for i := 0; i < numClients; i++ {
