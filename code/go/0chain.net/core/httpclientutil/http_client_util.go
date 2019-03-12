@@ -62,6 +62,9 @@ func (t *Transaction) ComputeHashAndSign(handler Signer) error {
 //NewHTTPRequest to use in sending http requests
 func NewHTTPRequest(method string, url string, data []byte, ID string, pkey string) (*http.Request, context.Context, context.CancelFunc, error) {
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(data))
+	if err != nil {
+		return nil, nil, nil, err
+	}
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 	req.Header.Set("Access-Control-Allow-Origin", "*")
 	if ID != "" {
@@ -96,6 +99,11 @@ func SendPostRequest(url string, data []byte, ID string, pkey string, wg *sync.W
 
 	for i := 0; i < maxRetries; i++ {
 		req, ctx, cncl, err := NewHTTPRequest(http.MethodPost, url, data, ID, pkey)
+		if err != nil {
+			Logger.Info("SendPostRequest failure", zap.String("url", url))
+			return nil, err
+		}
+
 		defer cncl()
 		resp, err = http.DefaultClient.Do(req.WithContext(ctx))
 		if err == nil {
