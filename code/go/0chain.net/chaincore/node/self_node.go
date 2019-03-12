@@ -17,6 +17,11 @@ type SelfNode struct {
 	signatureScheme encryption.SignatureScheme
 }
 
+/*SetSignatureScheme - getter */
+func (sn *SelfNode) GetSignatureScheme() encryption.SignatureScheme {
+	return sn.signatureScheme
+}
+
 /*SetSignatureScheme - setter */
 func (sn *SelfNode) SetSignatureScheme(signatureScheme encryption.SignatureScheme) {
 	sn.signatureScheme = signatureScheme

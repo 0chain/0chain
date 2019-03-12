@@ -73,7 +73,11 @@ func writeAux(ctx context.Context, entity datastore.Entity, overwrite bool) erro
 		return nil
 	}
 	if ce.GetCollectionScore() == 0 {
-		ce.InitCollectionScore()
+		if entity.GetScore() != 0 {
+			ce.SetCollectionScore(entity.GetScore())
+		} else {
+			ce.InitCollectionScore()
+		}
 	}
 	err = datastore.AddToCollection(ce, ctx)
 	return err
@@ -95,7 +99,13 @@ func (ms *Store) Delete(ctx context.Context, entity datastore.Entity) error {
 	c.Send("DEL", redisKey)
 	c.Flush()
 	_, err := c.Receive()
-	return err
+	if err != nil {
+		return err
+	}
+	if ce, ok := entity.(datastore.CollectionEntity); ok {
+		return ms.DeleteFromCollection(ctx, ce)
+	}
+	return nil
 }
 
 /*MultiRead - allows reading multiple entities at the same time */
@@ -247,7 +257,11 @@ func (ms *Store) multiAddToCollectionAux(ctx context.Context, entityMetadata dat
 		ind := offset + 2*idx
 		score := ce.GetCollectionScore()
 		if score == 0 {
-			ce.InitCollectionScore()
+			if entity.GetScore() == 0 {
+				ce.InitCollectionScore()
+			} else {
+				ce.SetCollectionScore(entity.GetScore())
+			}
 		}
 		svpair[ind] = ce.GetCollectionScore()
 		svpair[ind+1] = ce.GetKey()

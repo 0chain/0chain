@@ -1,6 +1,7 @@
 package node
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -16,6 +17,7 @@ import (
 func SetupHandlers() {
 	http.HandleFunc("/_nh/whoami", common.UserRateLimit(WhoAmIHandler))
 	http.HandleFunc("/_nh/status", common.UserRateLimit(StatusHandler))
+	http.HandleFunc("/_nh/getpoolmembers", common.UserRateLimit(common.ToJSONResponse(GetPoolMembersHandler)))
 }
 
 //WhoAmIHandler - who am i?
@@ -94,4 +96,26 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 		nd.SetStatus(NodeStatusActive)
 		N2n.Info("Node active", zap.String("node_type", nd.GetNodeTypeName()), zap.Int("set_index", nd.SetIndex), zap.Any("key", nd.GetKey()))
 	}
+}
+
+//ToDo: Move this to MagicBlock logic
+// PoolMembers of pool
+type PoolMembers struct {
+	Miners   []string `json:"miners"`
+	Sharders []string `json:"sharders"`
+}
+
+//GetPoolMembersHandler API to get access information of all the members of the pool.
+func GetPoolMembersHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	pm := &PoolMembers{}
+
+	for _, n := range nodes {
+		if n.Type == NodeTypeMiner {
+			pm.Miners = append(pm.Miners, n.GetN2NURLBase())
+		} else if n.Type == NodeTypeSharder {
+			pm.Sharders = append(pm.Sharders, n.GetN2NURLBase())
+		}
+	}
+	//Logger.Info("returning number of ", zap.Int("miners", len(pm.Miners)), zap.Int("node", Self.SetIndex))
+	return pm, nil
 }

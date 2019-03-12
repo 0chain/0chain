@@ -34,6 +34,10 @@ func DeregisterNode(nodeID string) {
 	delete(nodes, nodeID)
 }
 
+func GetNodes() map[string]*Node {
+	return nodes
+}
+
 /*GetNode - get the node from the registery */
 func GetNode(nodeID string) *Node {
 	return nodes[nodeID]

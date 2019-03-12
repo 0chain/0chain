@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/url"
+	"sync"
 
 	c_state "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
@@ -14,13 +15,18 @@ import (
 	"go.uber.org/zap"
 )
 
+//lock used to setup smartcontract rest handlers
+var scLock = sync.Mutex{}
+
+//ContractMap - stores the map of valid smart contracts mapping from its address to its interface implementation
 var ContractMap = map[string]sci.SmartContractInterface{}
 
+
+//ExecuteRestAPI - executes the rest api on the smart contract
 func ExecuteRestAPI(ctx context.Context, scAdress string, restpath string, params url.Values, ndb smartcontractstate.SCDB) (interface{}, error) {
-	contracti, ok := ContractMap[scAdress]
-	if ok {
-		sc := sci.NewSC(smartcontractstate.NewSCState(ndb, scAdress), scAdress)
-		contracti.SetSC(sc)
+	_, sc := getSmartContract(scAdress, ndb)
+	if sc != nil {
+		//add bc context here
 		handler, restpathok := sc.RestHandlers[restpath]
 		if !restpathok {
 			return nil, common.NewError("invalid_path", "Invalid path")
@@ -30,17 +36,22 @@ func ExecuteRestAPI(ctx context.Context, scAdress string, restpath string, param
 	return nil, common.NewError("invalid_sc", "Invalid Smart contract address")
 }
 
-func getSmartContract(t *transaction.Transaction, ndb smartcontractstate.SCDB) sci.SmartContractInterface {
-	contracti, ok := ContractMap[t.ToClientID]
+func getSmartContract(scAddress string, ndb smartcontractstate.SCDB) (sci.SmartContractInterface, *sci.SmartContract) {
+	contracti, ok := ContractMap[scAddress]
 	if ok {
-		contracti.SetSC(sci.NewSC(smartcontractstate.NewSCState(ndb, t.ToClientID), t.ToClientID))
-		return contracti
+		scLock.Lock()
+		sc := sci.NewSC(smartcontractstate.NewSCState(ndb, scAddress), scAddress)
+		bc := &BCContext{} 
+		contracti.SetSC(sc, bc)
+		scLock.Unlock()
+		return contracti, sc
 	}
-	return nil
+	return nil, nil
 }
 
+//ExecuteSmartContract - executes the smart contract in the context of the given transaction
 func ExecuteSmartContract(ctx context.Context, t *transaction.Transaction, ndb smartcontractstate.SCDB, balances c_state.StateContextI) (string, error) {
-	contractObj := getSmartContract(t, ndb)
+	contractObj, _ := getSmartContract(t.ToClientID, ndb)
 	if contractObj != nil {
 		var smartContractData sci.SmartContractTransactionData
 		dataBytes := []byte(t.TransactionData)

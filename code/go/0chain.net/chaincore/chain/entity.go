@@ -492,6 +492,22 @@ func (c *Chain) IsBlockSharderWithNodes(hash string, sharder *node.Node) (bool, 
 	return sharder.IsInTopWithNodes(scores, c.NumReplicators)
 }
 
+//GetBlockSharders - get the list of sharders who would be replicating the block
+func (c *Chain) GetBlockSharders(b *block.Block) []string {
+	var sharders []string
+	//TODO: sharders list needs to get resolved per the magic block of the block
+	var sharderPool = c.Sharders
+	var sharderNodes = sharderPool.Nodes
+	if c.NumReplicators > 0 {
+		scores := c.nodePoolScorer.ScoreHashString(sharderPool, b.Hash)
+		sharderNodes = node.GetTopNNodes(scores, c.NumReplicators)
+	}
+	for _, sharder := range sharderNodes {
+		sharders = append(sharders, sharder.GetKey())
+	}
+	return sharders
+}
+
 /*ValidGenerator - check whether this block is from a valid generator */
 func (c *Chain) ValidGenerator(r round.RoundI, b *block.Block) bool {
 	miner := c.Miners.GetNode(b.MinerID)

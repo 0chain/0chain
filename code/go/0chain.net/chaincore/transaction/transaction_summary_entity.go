@@ -40,6 +40,11 @@ func (t *TransactionSummary) Read(ctx context.Context, key datastore.Key) error 
 	return t.GetEntityMetadata().GetStore().Read(ctx, key, t)
 }
 
+/*GetScore - score for write*/
+func (t *TransactionSummary) GetScore() int64 {
+	return t.Round
+}
+
 /*Write - store read */
 func (t *TransactionSummary) Write(ctx context.Context) error {
 	return t.GetEntityMetadata().GetStore().Write(ctx, t)

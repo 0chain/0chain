@@ -4,14 +4,20 @@ import (
 	"context"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/node"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
-	"0chain.net/chaincore/node"
+	."0chain.net/core/logging"
+
+	"go.uber.org/zap"
 )
 
 /*GetBlockBySummary - get a block */
 func (sc *Chain) GetBlockBySummary(ctx context.Context, bs *block.BlockSummary) (*block.Block, error) {
+	if len(bs.Hash) < 64 {
+		Logger.Error("Hash from block summary is less than 64", zap.Any("block_summary", bs))
+	}
 	//Try to get the block from the cache
 	b, err := sc.GetBlock(ctx, bs.Hash)
 	if err != nil {
@@ -36,12 +42,15 @@ func (sc *Chain) GetBlockBySummary(ctx context.Context, bs *block.BlockSummary) 
 }
 
 /*GetBlockSummary - given a block hash, get the block summary */
-func GetBlockSummary(ctx context.Context, hash string) (*block.BlockSummary, error) {
+func (sc *Chain) GetBlockSummary(ctx context.Context, hash string) (*block.BlockSummary, error) {
 	blockSummaryEntityMetadata := datastore.GetEntityMetadata("block_summary")
 	blockSummary := blockSummaryEntityMetadata.Instance().(*block.BlockSummary)
 	err := blockSummaryEntityMetadata.GetStore().Read(ctx, datastore.ToKey(hash), blockSummary)
 	if err != nil {
 		return nil, err
+	}
+	if len(blockSummary.Hash) < 64 {
+		Logger.Error("Reading block summary - hash of block in summary is less than 64", zap.Any("block_summary", blockSummary))
 	}
 	return blockSummary, nil
 }
@@ -64,6 +73,9 @@ func (sc *Chain) StoreBlockSummary(ctx context.Context, b *block.Block) error {
 	bSummaryEntityMetadata := bs.GetEntityMetadata()
 	bctx := ememorystore.WithEntityConnection(ctx, bSummaryEntityMetadata)
 	defer ememorystore.Close(bctx)
+	if len(bs.Hash) < 64 {
+		Logger.Error("Writing block summary - block hash less than 64", zap.Any("hash", bs.Hash))
+	}
 	err := bs.Write(bctx)
 	if err != nil {
 		return err
