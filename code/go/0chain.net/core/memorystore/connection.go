@@ -63,6 +63,15 @@ func AddPool(dbid string, pool *redis.Pool) {
 	pools[dbid] = dbpool
 }
 
+func GetConnectionCount(entityMetadata datastore.EntityMetadata) (int, int) {
+	dbid := entityMetadata.GetDB()
+	dbpool, ok := pools[dbid]
+	if !ok {
+		panic(fmt.Sprintf("Invalid entity metadata setup, unknown dbpool %v\n", dbid))
+	}
+	return dbpool.Pool.ActiveCount(), dbpool.Pool.IdleCount()
+}
+
 func getdbpool(entityMetadata datastore.EntityMetadata) *dbpool {
 	dbid := entityMetadata.GetDB()
 	dbpool, ok := pools[dbid]
@@ -162,6 +171,8 @@ func GetCon(ctx context.Context) redis.Conn {
 
 /*WithEntityConnection - returns a connection as per the configuration of the entity */
 func WithEntityConnection(ctx context.Context, entityMetadata datastore.EntityMetadata) context.Context {
+	open, idle := GetConnectionCount(entityMetadata)
+	Logger.Info("with entity connection", zap.Any("redis active connections", open), zap.Any("redis idle connections", idle))
 	dbpool := getdbpool(entityMetadata)
 	if dbpool.Pool == DefaultPool {
 		return WithConnection(ctx)
