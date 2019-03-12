@@ -54,8 +54,10 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 	}
 
 	if sc.BSync.GetStatus() == Syncing {
-		sc.BSync.SetFinalizationRound(b.Round)
-		diffRound := b.Round - sc.BSync.GetSyncingRound()
+		if b.Round > sc.BSync.GetFinalizationRound() {
+			sc.BSync.SetFinalizationRound(b.Round)
+		}
+		diffRound := sc.BSync.GetFinalizationRound() - sc.BSync.GetSyncingRound()
 		if b.Round%100 == 0 {
 			Logger.Info("bc-27 sync info - catch missing rounds (updated)", zap.Int64("rounds", diffRound), zap.Int64("target round", b.Round), zap.Int64("round", sc.BSync.GetSyncingRound()))
 		}
@@ -64,7 +66,7 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 			sc.BSync.SetStatus(Accept)
 			Logger.Info("bc-27 block sync status : accept")
 		} else {
-			Logger.Info("bc-27 sync info - block dropped", zap.Int64("round", b.Round))
+			Logger.Info("bc-27 incoming block info - block dropped", zap.Int64("round", b.Round))
 			return nil, nil
 		}
 	}
