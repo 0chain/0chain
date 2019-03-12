@@ -120,7 +120,7 @@ func (sc *Chain) GetLatestRoundFromSharders(ctx context.Context, currRound int64
 
 /*GetMissingRounds - requests for missed rounds and stores them*/
 func (sc *Chain) GetMissingRounds(ctx context.Context, targetR int64, dbR int64) {
-	Logger.Info("bc-27 sync info - catch missing rounds (initial)", zap.Int64("rounds", targetR - dbR), zap.Int64("target round", targetR), zap.Int64("round", dbR))
+	Logger.Info("bc-27 sync info - catch missing rounds (initial)", zap.Int64("behind by", targetR - dbR), zap.Int64("target", targetR), zap.Int64("syncing", dbR))
 	
 	//get missing rounds starting from the next round of the current round
 	syncRound := dbR + 1

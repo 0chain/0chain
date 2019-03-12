@@ -248,7 +248,8 @@ func syncUpRounds(ctx context.Context, r *round.Round) {
 		if targetR == 0 {
 			targetR = sc.BSync.GetFinalizationRound()
 		}
-		Logger.Info("bc-27 sync info - caught up missing rounds (final)", zap.Int64("rounds", targetR - r.Number - 1), zap.Duration("duration", duration))
+		syncRate := (targetR - r.Number - 1)/int64(duration.Seconds())
+		Logger.Info("bc-27 sync info - caught up missing rounds (final)", zap.Int64("total rounds", targetR - r.Number - 1), zap.Duration("duration", duration), zap.Int64("rate", syncRate))
 		
 		sc.BSync.SetStatus(sharder.Normal)
 		Logger.Info("bc-27 block sync status : normal")
