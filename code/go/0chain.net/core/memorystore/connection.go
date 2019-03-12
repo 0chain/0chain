@@ -171,8 +171,6 @@ func GetCon(ctx context.Context) redis.Conn {
 
 /*WithEntityConnection - returns a connection as per the configuration of the entity */
 func WithEntityConnection(ctx context.Context, entityMetadata datastore.EntityMetadata) context.Context {
-	open, idle := GetConnectionCount(entityMetadata)
-	Logger.Info("with entity connection", zap.Any("redis active connections", open), zap.Any("redis idle connections", idle))
 	dbpool := getdbpool(entityMetadata)
 	if dbpool.Pool == DefaultPool {
 		return WithConnection(ctx)

@@ -14,6 +14,15 @@ import (
 //SetupWorkers - setup workers */
 func SetupWorkers(ctx context.Context) {
 	go CleanupWorker(ctx)
+	go ConnectionCountWorker(ctx)
+}
+
+func ConnectionCountWorker(ctx context.Context) {
+	for true {
+		time.Sleep(time.Second * 3)
+		openConnections, idleConnections := memorystore.GetConnectionCount(transactionEntityMetadata)
+		Logger.Info("connection count for redis_txns", zap.Any("redis active connections", openConnections), zap.Any("redis idle connections", idleConnections))
+	}
 }
 
 /*CleanupWorker - a worker to delete transactiosn that are no longer valid */
