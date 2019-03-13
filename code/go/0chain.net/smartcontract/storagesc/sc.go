@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"math/rand"
 	"context"
-
+	"time"
 
 	"go.uber.org/zap"
 
@@ -482,6 +482,20 @@ func (sc *StorageSmartContract) AddValidator(t *transaction.Transaction, input [
 	return string(buff), nil
 }
 
+func shuffleStorageNodes(vals []StorageNode) {
+	r := rand.New(rand.NewSource(time.Now().Unix()))
+	// We start at the end of the slice, inserting our random
+	// values one at a time.
+	for n := len(vals); n > 0; n-- {
+	  randIndex := r.Intn(n)
+	  // We swap the value at index n-1 and the random index
+	  // to move our randomly chosen value to the end of the
+	  // slice, and to move the value that was at n-1 into our
+	  // unshuffled portion of the slice.
+	  vals[n-1], vals[randIndex] = vals[randIndex], vals[n-1]
+	}
+  }
+
 func (sc *StorageSmartContract) NewAllocationRequest(t *transaction.Transaction, input []byte) (string, error) {
 	allBlobbersList, err := sc.getBlobbersList()
 	if err != nil {
@@ -515,9 +529,10 @@ func (sc *StorageSmartContract) NewAllocationRequest(t *transaction.Transaction,
 	if allocationRequest.Size > 0 && allocationRequest.DataShards > 0 {
 		size := allocationRequest.DataShards + allocationRequest.ParityShards
 
-		if len(allBlobbersList) < allocationRequest.DataShards+allocationRequest.ParityShards {
+		if len(allBlobbersList) < size {
 			return "", common.NewError("not_enough_blobbers", "Not enough blobbers to honor the allocation")
 		}
+		shuffleStorageNodes(allBlobbersList)
 		allocatedBlobbers := make([]*StorageNode, 0)
 
 		blobberAllocationKeys := make([]smartcontractstate.Key, 0)
