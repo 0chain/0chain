@@ -516,7 +516,7 @@ func (sc *StorageSmartContract) NewAllocationRequest(t *transaction.Transaction,
 		size := allocationRequest.DataShards + allocationRequest.ParityShards
 
 		if len(allBlobbersList) < allocationRequest.DataShards+allocationRequest.ParityShards {
-			size = len(allBlobbersList)
+			return "", common.NewError("not_enough_blobbers", "Not enough blobbers to honor the allocation")
 		}
 		allocatedBlobbers := make([]*StorageNode, 0)
 
