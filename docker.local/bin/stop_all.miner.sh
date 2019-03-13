@@ -1,6 +1,6 @@
 #!/bin/sh
 
-for i in $(seq 1 3);
+for i in $(seq 1 4);
 do
   MINER_ID=$i
   echo Stopping miner$MINER_ID ...

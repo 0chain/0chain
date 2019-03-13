@@ -180,9 +180,11 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		b.Txns = b.Txns[:blockSize]
 		etxns = etxns[:blockSize]
 	}
-	err = mc.processFeeTxn(ctx, b, clients)
-	if err != nil {
-		return err
+	if config.DevConfiguration.SmartContract {
+		err = mc.processFeeTxn(ctx, b, clients)
+		if err != nil {
+			return err
+		}
 	}
 	b.RunningTxnCount = b.PrevBlock.RunningTxnCount + int64(len(b.Txns))
 	if count > 10*mc.BlockSize {

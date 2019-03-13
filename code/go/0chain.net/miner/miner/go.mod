@@ -21,5 +21,6 @@ require (
 	go.uber.org/zap v1.9.1
 	golang.org/x/net v0.0.0-20190213061140-3a22650c66bd // indirect
 	golang.org/x/sys v0.0.0-20190306171555-70f529850638 // indirect
+	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 )

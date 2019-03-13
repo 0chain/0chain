@@ -19,10 +19,12 @@ const (
 
 type FeeSmartContract struct {
 	*smartcontractinterface.SmartContract
+	bcContext smartcontractinterface.BCContextI
 }
 
-func (fsc *FeeSmartContract) SetSC(sc *smartcontractinterface.SmartContract) {
+func (fsc *FeeSmartContract) SetSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {
 	fsc.SmartContract = sc
+	fsc.bcContext = bcContext
 }
 
 func (fsc *FeeSmartContract) sumFee(b *block.Block) state.Balance {

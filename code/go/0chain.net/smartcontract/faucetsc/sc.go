@@ -24,7 +24,7 @@ type FaucetSmartContract struct {
 	*smartcontractinterface.SmartContract
 }
 
-func (fc *FaucetSmartContract) SetSC(sc *smartcontractinterface.SmartContract) {
+func (fc *FaucetSmartContract) SetSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {
 	fc.SmartContract = sc
 }
 
