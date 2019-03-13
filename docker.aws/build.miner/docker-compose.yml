@@ -89,7 +89,7 @@ services:
 
     #Start under user 0chain
     user: 2000:2000
-    command: /0chain/bin/miner  --deployment_mode 0 --keys_file /0chain/config/miner.txt --nodes_file nodes
+    command: /0chain/bin/miner  --deployment_mode 0 --keys_file /0chain/config/miner.txt --nodes_file config/nodes
 
 networks:
   default:

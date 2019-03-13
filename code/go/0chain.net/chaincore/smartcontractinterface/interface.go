@@ -32,5 +32,12 @@ type SmartContractTransactionData struct {
 
 type SmartContractInterface interface {
 	Execute(t *transaction.Transaction, funcName string, input []byte, balances c_state.StateContextI) (string, error)
-	SetSC(sc *SmartContract)
+	SetSC(sc *SmartContract, bc BCContextI)
+}
+
+/*BCContextI interface for smart contracts to access blockchain. 
+These functions should not modify blockchain states in anyway. 
+*/
+type BCContextI interface {
+	GetNodepoolInfo() interface{}
 }

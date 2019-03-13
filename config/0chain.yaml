@@ -35,17 +35,17 @@ server_chain:
     min_block_size: 10
     max_block_size: 100
     max_byte_size: 1638400
-    generators: 2
-    replicators: 3
+    consensus:
+      threshold_by_count: 66 # percentage
+      threshold_by_stake: 0
+    generators: 10
+    replicators: 4
+    proposal:
+      max_wait_time: 200
+      wait_mode: dynamic # static or dynamic
     generation:
       timeout: 15
       retry_wait_time: 5 #milliseconds
-    proposal:
-      max_wait_time: 180 # milliseconds
-      wait_mode: static # static or dynamic
-    consensus:
-      threshold_by_count: 66 # percentage
-      threshold_by_stake: 0 # percent
     sharding:
       min_active_sharders: 33 # percentage
       min_active_replicators: 33 # percentage

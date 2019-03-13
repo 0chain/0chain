@@ -63,9 +63,6 @@ func (sc *Chain) GetTransactionConfirmation(ctx context.Context, hash string) (*
 		if err != nil {
 			return nil, err
 		}
-		if bs.Hash != bhash {
-			Logger.Error("GetTransactionConfirmation - incorrect hash", zap.Any("bs.hash", bs.Hash), zap.Any("hash", bhash))
-		}
 		confirmation.Round = bs.Round
 		confirmation.MinerID = bs.MinerID
 		confirmation.RoundRandomSeed = bs.RoundRandomSeed
@@ -103,17 +100,16 @@ func (sc *Chain) StoreTransactions(ctx context.Context, b *block.Block) error {
 		sTxns[idx] = txnSummary
 		sc.BlockTxnCache.Add(txn.Hash, txnSummary)
 	}
-	txnSummaryMetadata := datastore.GetEntityMetadata("txn_summary")
-	tctx := persistencestore.WithEntityConnection(ctx, txnSummaryMetadata)
-	defer persistencestore.Close(tctx)
+
 	delay := time.Millisecond
 	ts := time.Now()
 	for tries := 1; tries <= 9; tries++ {
-		err := txnSummaryMetadata.GetStore().MultiWrite(tctx, txnSummaryMetadata, sTxns)
+		err := sc.storeTransactions(ctx, sTxns)
 		if err != nil {
 			delay = 2 * delay
 			Logger.Error("save transactions error", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Int("retry", tries), zap.Duration("delay", delay), zap.Error(err))
 			time.Sleep(delay)
+
 		} else {
 			Logger.Info("transactions saved successfully", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Int("block_size", len(b.Txns)))
 			break
@@ -126,4 +122,11 @@ func (sc *Chain) StoreTransactions(ctx context.Context, b *block.Block) error {
 		Logger.Error("save transactions - slow", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Duration("duration", duration), zap.Duration("p95", time.Duration(math.Round(p95/1000000))*time.Millisecond))
 	}
 	return nil
+}
+
+func (sc *Chain) storeTransactions(ctx context.Context, sTxns []datastore.Entity) error {
+	txnSummaryMetadata := datastore.GetEntityMetadata("txn_summary")
+	tctx := persistencestore.WithEntityConnection(ctx, txnSummaryMetadata)
+	defer persistencestore.Close(tctx)
+	return txnSummaryMetadata.GetStore().MultiWrite(tctx, txnSummaryMetadata, sTxns)
 }

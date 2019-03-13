@@ -9,9 +9,10 @@ import (
 /*Wallet - a struct representing the client's wallet */
 type Wallet struct {
 	SignatureScheme encryption.SignatureScheme
-	PublicKeyBytes  []byte
-	ClientID        string
-	Balance         int64
+	PublicKeyBytes  []byte `json:"-"`
+	PublicKey       string `json:"public_key"`
+	ClientID        string `json:"id"`
+	Balance         int64  `json:"-"`
 }
 
 /*Initialize - initialize a wallet with public/private keys */
@@ -31,6 +32,7 @@ func (w *Wallet) SetSignatureScheme(signatureScheme encryption.SignatureScheme) 
 	if err != nil {
 		return err
 	}
+	w.PublicKey = signatureScheme.GetPublicKey()
 	w.ClientID = encryption.Hash(publicKeyBytes)
 	return nil
 }

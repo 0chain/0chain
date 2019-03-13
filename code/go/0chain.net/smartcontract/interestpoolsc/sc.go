@@ -23,7 +23,7 @@ type InterestPoolSmartContract struct {
 	*smartcontractinterface.SmartContract
 }
 
-func (ipsc *InterestPoolSmartContract) SetSC(sc *smartcontractinterface.SmartContract) {
+func (ipsc *InterestPoolSmartContract) SetSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {
 	ipsc.SmartContract = sc
 }
 
