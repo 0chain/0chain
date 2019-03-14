@@ -13,9 +13,9 @@ COPY --from=zchain_build_base /usr/local/lib/librocksdb.so.*.*.* \
 # to librocksdb.x.y.z. Unfortunately, the Docker COPY command reads through
 # symbolic links and copies the file to which they point. Additionally, there is
 # no glob syntax to specify that we want to COPY the .x.y file without also
-# copying the .x.y.z file. But since librocksdb is >100 MB, we can't afford to
+# copying the .x.y.z file. But since librocksdb is 25 MB, we don't want to
 # duplicate it.
 #
-# Above, we copied the .x.y.z file. Now we can manually create a symbolic link
-# from .x.y to .x.y.z.
-RUN ln -s /usr/local/lib/librocksdb.so* $(ls /usr/local/lib/librocksdb.so* | cut -f1-4 -d.)
+# Above, we copied the .x.y.z file. Now we can manually rename it from .x.y.z
+# to .x.y.
+RUN mv /usr/local/lib/librocksdb.so* $(ls /usr/local/lib/librocksdb.so* | cut -f1-4 -d.)
