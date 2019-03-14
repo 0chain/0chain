@@ -81,7 +81,7 @@ services:
     - /0chain/sharder/config:/0chain/config
 
     #SHARDER_LOG_VOLUME
-    - /0chain/log:/0chain/log
+    - /0chain/sharder/log:/0chain/log
 
     #ROCKSDB_VOLUME
     - /0chain/sharder/data/rocksdb:/0chain/data/rocksdb
