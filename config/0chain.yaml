@@ -54,6 +54,8 @@ server_chain:
     reuse_txns: false
     storage:
       provider: blockstore.FSBlockStore # blockstore.FSBlockStore or blockstore.BlockDBStore
+    validation:
+      batch_size: 250
   round_range: 10000000
   transaction:
     payload:
