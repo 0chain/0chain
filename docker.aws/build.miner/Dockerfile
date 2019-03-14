@@ -26,7 +26,7 @@ RUN cd $GOPATH/pkg/mod/github.com/valyala/gozstd* && \
 COPY ./code/go/0chain.net $SRC_DIR/go/0chain.net
 
 # Build it:
-RUN go build -v -tags bn256
+RUN go build -v -tags bn256 -ldflags "-X 0chain.net/core/build.GitCommit=${image_tag}"
 
 # Copy the build artifact into a minimal runtime image:
 FROM 0chain_run_base:${image_tag}
