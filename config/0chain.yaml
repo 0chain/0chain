@@ -49,8 +49,6 @@ server_chain:
     sharding:
       min_active_sharders: 33 # percentage
       min_active_replicators: 33 # percentage
-    validation:
-      batch_size: 1000
     reuse_txns: false
     storage:
       provider: blockstore.FSBlockStore # blockstore.FSBlockStore or blockstore.BlockDBStore
