@@ -1,12 +1,22 @@
 version: 1.0
 
 logging:
-  console: "false"
   level: "info"
+  console: false # printing log to console is only supported in development mode
+  goroutines: false
+  memlog: true
 
 development:
-  state: false
-  dkg: false
+  state: true
+  dkg: true
+  smart_contract: true
+  txn_generation:
+    wallets: 500
+    transactions: 70
+    pour_point: 100
+    pour_amount: 10000
+  faucet:
+    refill_amount: 1000000000000000
 
 zerochain:
   id: "0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe"
@@ -22,8 +32,8 @@ server_chain:
   genesis_block:
     id: "ed79cae70d439c11258236da1dfa6fc550f7cc569768304623e8fbd7d70efae4"
   block:
-    max_block_size: 1000
-    min_block_size: 100
+    min_block_size: 10
+    max_block_size: 100
     max_byte_size: 1638400
     consensus:
       threshold_by_count: 66 # percentage
@@ -35,8 +45,10 @@ server_chain:
       wait_mode: dynamic # static or dynamic
     generation:
       timeout: 15
-      transactions: 1000
       retry_wait_time: 5 #milliseconds
+    sharding:
+      min_active_sharders: 33 # percentage
+      min_active_replicators: 33 # percentage
     reuse_txns: false
     storage:
       provider: blockstore.FSBlockStore # blockstore.FSBlockStore or blockstore.BlockDBStore
@@ -48,6 +60,7 @@ server_chain:
       max_size: 98304 # bytes
     timeout: 10 # seconds
   client:
+    signature_scheme: ed25519  # ed25519 or bls0chain
     discover: true
   messages:
     verification_tickets_to: all_miners # generator or all_miners
@@ -55,8 +68,14 @@ server_chain:
     prune_below_count: 100 # rounds
 
 network:
-  relay_time: 180 # milliseconds
-  max_concurrent_requests: 10
+  nodes_file: config/single_machine_3_nodes.yaml
+  relay_time: 200 # milliseconds
+  max_concurrent_requests: 40
   timeout:
     small_message: 1000 # milliseconds
     large_message: 3000 # milliseconds
+  large_message_th_size: 10240 # anything greater than this size in bytes
+  user_handlers:
+    rate_limit: 1 # 1 per second
+  n2n_handlers:
+    rate_limit: 10 # 10 per second

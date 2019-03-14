@@ -4,11 +4,11 @@ services:
     image: "redis:alpine"
     volumes:
       #CONFIG_VOLUME
-      - /0chain/config/redis:/0chain/config/redis
+      - /0chain/miner/config/redis:/0chain/config/redis
 
       #REDIS_VOLUME
-      - /0chain/data/redis:/0chain/data/redis
-      - /0chain/data/redis/state:/0chain/data/redis/state
+      - /0chain/miner/data/redis:/0chain/data/redis
+      - /0chain/miner/data/redis/state:/0chain/data/redis/state
 
     networks:
       default:
@@ -23,11 +23,11 @@ services:
     image: "redis:alpine"
     volumes:
       #CONFIG_VOLUME
-      - /0chain/config/redis:/0chain/config/redis
+      - /0chain/miner/config/redis:/0chain/config/redis
 
       #REDIS_VOLUME
-      - /0chain/data/redis:/0chain/data/redis
-      - /0chain/data/redis/transactions:/0chain/data/redis/transactions
+      - /0chain/miner/data/redis:/0chain/data/redis
+      - /0chain/miner/data/redis/transactions:/0chain/data/redis/transactions
 
     networks:
       default:
@@ -64,14 +64,14 @@ services:
     volumes:
 
       #CONFIG_VOLUME
-      - /0chain/config:/0chain/config
+      - /0chain/miner/config:/0chain/config
 
       #LOG_VOLUME
-      - /0chain/log:/0chain/log
+      - /0chain/miner/log:/0chain/log
 
       #ROCKSDB_VOLUME
-      - /0chain/data/rocksdb:/0chain/data/rocksdb
-      - /0chain/data/rocksdb/state:/0chain/data/rocksdb/state
+      - /0chain/miner/data/rocksdb:/0chain/data/rocksdb
+      - /0chain/miner/data/rocksdb/state:/0chain/data/rocksdb/state
 
 
     logging:
