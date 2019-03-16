@@ -2,23 +2,23 @@ version: '3'
 services:
 
   scylla:
-    image: scylladb/scylla
+    image: scylladb/scylla:2.3.2
     networks:
     - default
     ports:
     - "9042:9042"
     volumes:
 
-    - /0chain/config/scylla/scylla.yaml:/etc/scylla/scylla.yaml
+    - /0chain/sharder/config/scylla/scylla.yaml:/etc/scylla/scylla.yaml
 
-    - /0chain/config/scylla/scylla-server:/etc/sysconfig/scylla-server
+    - /0chain/sharder/config/scylla/scylla-server:/etc/sysconfig/scylla-server
 
     #Store the scylla volume
-    - /0chain/data/scylla:/0chain/data/scylla
+    - /0chain/sharder/data/scylla:/0chain/data/scylla
 
     #Create the directory to store the data and commitlog
-    - /0chain/data/scylla/data:/var/lib/scylla/data
-    - /0chain/data/scylla/commitlog:/var/lib/scylla/commitlog
+    - /0chain/sharder/data/scylla/data:/var/lib/scylla/data
+    - /0chain/sharder/data/scylla/commitlog:/var/lib/scylla/commitlog
 
     healthcheck:
       test: ["CMD-SHELL", "[ $$(nodetool statusgossip) = running ]"]
@@ -26,7 +26,17 @@ services:
       timeout: 10s
       retries: 5
 
-    command: ["--developer-mode", "0"]
+    command:
+      - "--developer-mode"
+      - ${SCYLLA_DEVELOPER_MODE}
+      - "--overprovisioned"
+      - ${SCYLLA_OVERPROVISIONED}
+      - "--memory"
+      - ${SCYLLA_MEMORY}
+      - "--cpuset"
+      - ${SCYLLA_CPUSET}
+      - "--smp"
+      - ${SCYLLA_SMP}
 
     #Start under user 0chain
     privileged: true
@@ -35,8 +45,8 @@ services:
     #The service depends upon several cassandra utilities.
     image: cassandra:latest
     volumes:
-    - /0chain/bin:/0chain/bin
-    - /0chain/sql:/0chain/sql
+    - /0chain/sharder/bin:/0chain/bin
+    - /0chain/sharder/sql:/0chain/sql
     entrypoint: bash /0chain/bin/scylla-init.sh
     #command: bash
     links:
@@ -56,6 +66,7 @@ services:
 
     links:
     - scylla-init:scylla-init
+    - scylla:syclla
 
     build:
       context: ${DOCKER_CODEBASE}
@@ -67,17 +78,17 @@ services:
 
     volumes:
     #CONFIG_VOLUME
-    - /0chain/config:/0chain/config
+    - /0chain/sharder/config:/0chain/config
 
     #SHARDER_LOG_VOLUME
-    - /0chain/log:/0chain/log
+    - /0chain/sharder/log:/0chain/log
 
     #ROCKSDB_VOLUME
-    - /0chain/data/rocksdb:/0chain/data/rocksdb
-    - /0chain/data/rocksdb/state:/0chain/data/rocksdb/state
+    - /0chain/sharder/data/rocksdb:/0chain/data/rocksdb
+    - /0chain/sharder/data/rocksdb/state:/0chain/data/rocksdb/state
 
     #Use the blocks volume
-    - /0chain/data/blocks:/0chain/data/blocks
+    - /0chain/sharder/data/blocks:/0chain/data/blocks
 
     #Hard and soft are required properties.
     ulimits:

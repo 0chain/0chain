@@ -332,6 +332,9 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 	if amount == 0 {
 		return nil
 	}
+	if fromClient == toClient {
+		return common.InvalidRequest("from and to client should be different from balance transfer")
+	}
 	b := sctx.GetBlock()
 	clientState := sctx.GetState()
 	txn := sctx.GetTransaction()
