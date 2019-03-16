@@ -48,16 +48,20 @@ func (ms *Store) iterateCollection(ctx context.Context, entityMetadata datastore
 			return ctx.Err()
 		default:
 		}
-		con.Send(selectCommand, collectionName, maxscore, minscore, "WITHSCORES", "LIMIT", offset, BATCH_SIZE)
+		err := con.Send(selectCommand, collectionName, maxscore, minscore, "WITHSCORES", "LIMIT", offset, BATCH_SIZE)
 		con.Flush()
-		data, err := con.Receive()
 		if err != nil {
 			return err
+		}
+		data, err1 := con.Receive()
+		if err1 != nil {
+			return err1
 		}
 		bkeys, ok := data.([]interface{})
 		count := len(bkeys) / 2
 		if count == 0 {
-			return common.NewError("iterate collection - failed", "count in collection is zero")
+			Logger.Error("Redis returned 0 rows after seclect")
+			return nil
 		}
 		offset += count
 		if !ok {
