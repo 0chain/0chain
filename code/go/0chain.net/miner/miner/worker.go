@@ -133,8 +133,7 @@ func TransactionGenerator(c *chain.Chain) {
 						}
 						_, err := transaction.PutTransaction(ctx, txn)
 						if err != nil {
-							fmt.Printf("error:%v: %v\n", time.Now(), err)
-							//panic(err)
+							Logger.Info("transaction generator", zap.Any("error", err))
 						}
 					}
 					wg.Done()
@@ -233,8 +232,7 @@ func GenerateClients(c *chain.Chain, numClients int) {
 		txn := ownerWallet.CreateSendTransaction(w.ClientID, prng.Int63n(100000)*10000000000, "generous air drop! :)", prng.Int63n(10)+1)
 		_, err := transaction.PutTransaction(tctx, txn)
 		if err != nil {
-			fmt.Printf("error:%v: %v\n", time.Now(), err)
-			//panic(err)
+			Logger.Info("client generator", zap.Any("error", err))
 		}
 	}
 	Logger.Info("generation of wallets complete", zap.Int("wallets", len(wallets)))

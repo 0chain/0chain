@@ -57,7 +57,7 @@ func (ms *Store) iterateCollection(ctx context.Context, entityMetadata datastore
 		bkeys, ok := data.([]interface{})
 		count := len(bkeys) / 2
 		if count == 0 {
-			return nil
+			return common.NewError("iterate collection - failed", "count in collection is zero")
 		}
 		offset += count
 		if !ok {
