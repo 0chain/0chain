@@ -23,3 +23,41 @@ RUN apk add gmp gmp-dev openssl-dev && \
     make -C bls -j $(nproc) install && \
     rm -R /tmp/mcl && \
     rm -R /tmp/bls
+
+ENV SRC_DIR=/0chain
+ENV GOPATH=$SRC_DIR/go
+ENV GO111MODULE=on
+
+# Download and install Go dependencies:
+# Will be cached if we don't change mod/sum files
+COPY ./docker.local/bin/install_deps.sh $SRC_DIR/
+
+COPY ./code/go/0chain.net/core/go.mod          ./code/go/0chain.net/core/go.sum          $SRC_DIR/go/0chain.net/core/
+RUN cd $SRC_DIR/go/0chain.net/core && \
+    go mod download
+
+# Build libzstd:
+# FIXME: Change this after https://github.com/valyala/gozstd/issues/6 is fixed.
+RUN cd $GOPATH/pkg/mod/github.com/valyala/gozstd* && \
+    chmod -R +w . && \
+    make clean libzstd.a
+
+RUN $SRC_DIR/install_deps.sh $SRC_DIR/go/0chain.net/core/go.mod
+
+COPY ./code/go/0chain.net/chaincore/go.mod     ./code/go/0chain.net/chaincore/go.sum     $SRC_DIR/go/0chain.net/chaincore/
+RUN $SRC_DIR/install_deps.sh $SRC_DIR/go/0chain.net/chaincore/go.mod
+COPY ./code/go/0chain.net/smartcontract/go.mod ./code/go/0chain.net/smartcontract/go.sum $SRC_DIR/go/0chain.net/smartcontract/
+RUN $SRC_DIR/install_deps.sh $SRC_DIR/go/0chain.net/smartcontract/go.mod
+
+COPY ./code/go/0chain.net/miner/go.mod       ./code/go/0chain.net/miner/go.sum       $SRC_DIR/go/0chain.net/miner/
+RUN $SRC_DIR/install_deps.sh $SRC_DIR/go/0chain.net/miner/go.mod
+COPY ./code/go/0chain.net/miner/miner/go.mod ./code/go/0chain.net/miner/miner/go.sum $SRC_DIR/go/0chain.net/miner/miner/
+RUN $SRC_DIR/install_deps.sh $SRC_DIR/go/0chain.net/miner/miner/go.mod
+
+COPY ./code/go/0chain.net/sharder/go.mod         ./code/go/0chain.net/sharder/go.sum         $SRC_DIR/go/0chain.net/sharder/
+RUN $SRC_DIR/install_deps.sh $SRC_DIR/go/0chain.net/sharder/go.mod
+COPY ./code/go/0chain.net/sharder/sharder/go.mod ./code/go/0chain.net/sharder/sharder/go.sum $SRC_DIR/go/0chain.net/sharder/sharder/
+RUN $SRC_DIR/install_deps.sh $SRC_DIR/go/0chain.net/sharder/sharder/go.mod
+
+COPY ./code/go/0chain.net/smartcontract/multisigsc/test/go.mod ./code/go/0chain.net/smartcontract/multisigsc/test/go.sum $SRC_DIR/go/0chain.net/smartcontract/multisigsc/test/
+RUN $SRC_DIR/install_deps.sh $SRC_DIR/go/0chain.net/smartcontract/multisigsc/test/go.mod
