@@ -118,6 +118,9 @@ func (b0 *BLS0ChainScheme) Verify(signature string, hash string) (bool, error) {
 		return false, err
 	}
 	sign, err := b0.GetSignature(signature)
+	if err != nil {
+		return false, err
+	}
 	rawHash, err := hex.DecodeString(hash)
 	if err != nil {
 		return false, err
@@ -127,6 +130,9 @@ func (b0 *BLS0ChainScheme) Verify(signature string, hash string) (bool, error) {
 
 //GetSignature - given a string return the signature object
 func (b0 *BLS0ChainScheme) GetSignature(signature string) (*bls.Sign, error) {
+	if signature == "" {
+		return nil, errors.New("empty signature")
+	}
 	var sign bls.Sign
 	err := sign.DeserializeHexStr(signature)
 	if err != nil {

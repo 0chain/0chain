@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 	. "0chain.net/core/logging"
@@ -34,12 +35,13 @@ const SleepBetweenRetries = 5
 //TxnConfirmationTime time to wait before checking the status
 const TxnConfirmationTime = 15
 
+const clientBalanceURL = "v1/client/get/balance?client_id="
 const txnSubmitURL = "v1/transaction/put"
 const txnVerifyURL = "v1/transaction/get/confirmation?hash="
 const scRestAPIURL = "v1/screst/"
 
 //RegisterClient path to RegisterClient
-var RegisterClient = "/v1/client/put"
+const RegisterClient = "/v1/client/put"
 
 //Signer for the transaction hash
 type Signer func(h string) (string, error)
@@ -108,7 +110,7 @@ func SendPostRequest(url string, data []byte, ID string, pkey string, wg *sync.W
 		resp, err = http.DefaultClient.Do(req.WithContext(ctx))
 		if err == nil {
 			if resp.StatusCode >= 200 && resp.StatusCode <= 299 {
-				Logger.Info("Post call success", zap.Any("url", url))
+				//Logger.Info("Post call success", zap.Any("url", url))
 				break
 			}
 			body, _ := ioutil.ReadAll(resp.Body)
@@ -134,7 +136,7 @@ func SendPostRequest(url string, data []byte, ID string, pkey string, wg *sync.W
 	}
 
 	body, _ := ioutil.ReadAll(resp.Body)
-	Logger.Info("SendPostRequest success", zap.String("url", url))
+	//Logger.Info("SendPostRequest success", zap.String("url", url))
 	return body, nil
 }
 
@@ -224,7 +226,6 @@ func sendTransactionToURL(url string, txn *Transaction, ID string, pkey string, 
 
 //MakeGetRequest make a generic get request. url should have complete path.
 func MakeGetRequest(remoteUrl string, result interface{}) {
-
 	Logger.Info(fmt.Sprintf("making GET request to %s", remoteUrl))
 	//ToDo: add parameter support
 	client := http.Client{}
@@ -240,14 +241,82 @@ func MakeGetRequest(remoteUrl string, result interface{}) {
 	}
 
 	if resp.Body != nil {
-		defer resp.Body.Close()
-
 		if resp.StatusCode == http.StatusOK {
 			json.NewDecoder(resp.Body).Decode(result)
 		}
+
+		resp.Body.Close()
 	} else {
 		Logger.Info("resp.Body is nil")
 	}
+}
+
+//MakeClientBalanceRequest to get a client's balance
+func MakeClientBalanceRequest(clientID string, urls []string, consensus int) (state.Balance, error) {
+	//ToDo: This looks a lot like GetTransactionConfirmation. Need code reuse?
+
+	//maxCount := 0
+	numSuccess := 0
+	numErrs := 0
+
+	var clientState state.State
+	var errString string
+
+	for _, sharder := range urls {
+		url := fmt.Sprintf("%v/%v%v", sharder, clientBalanceURL, clientID)
+
+		Logger.Info("Running GetClientBalance on", zap.String("url", url))
+
+		response, err := http.Get(url)
+		if err != nil {
+			Logger.Error("Error getting response for sc rest api", zap.Any("error", err))
+			numErrs++
+			errString = errString + sharder + ":" + err.Error()
+			continue
+		}
+
+		if response.StatusCode != 200 {
+			Logger.Error("Error getting response from", zap.String("URL", sharder), zap.Any("response Status", response.StatusCode))
+			numErrs++
+			errString = errString + sharder + ": response_code: " + strconv.Itoa(response.StatusCode)
+			continue
+		}
+
+		d := json.NewDecoder(response.Body)
+		d.UseNumber()
+		err = d.Decode(&clientState)
+		response.Body.Close()
+		if err != nil {
+			Logger.Error("Error unmarshalling response", zap.Any("error", err))
+			numErrs++
+			errString = errString + sharder + ":" + err.Error()
+			continue
+		}
+
+		numSuccess++
+	}
+
+	if numSuccess+numErrs == 0 {
+		return 0, common.NewError("req_not_run", "Could not run the request") //why???
+	}
+
+	sr := int(math.Ceil((float64(numSuccess) * 100) / float64(numSuccess+numErrs)))
+
+	// We've at least one success and success rate sr is at least same as consensus
+	if numSuccess > 0 && sr >= consensus {
+		return clientState.Balance, nil
+	} else if numSuccess > 0 {
+		//we had some successes, but not sufficient to reach consensus
+		Logger.Error("Error Getting consensus", zap.Int("Success", numSuccess), zap.Int("Errs", numErrs), zap.Int("consensus", consensus))
+		return 0, common.NewError("err_getting_consensus", errString)
+	} else if numErrs > 0 {
+		//We have received only errors
+		Logger.Error("Error running the request", zap.Int("Success", numSuccess), zap.Int("Errs", numErrs), zap.Int("consensus", consensus))
+		return 0, common.NewError("err_running_req", errString)
+	}
+
+	//this should never happen
+	return 0, common.NewError("unknown_err", "Not able to run the request. unknown reason")
 }
 
 //MakeSCRestAPICall for smart contract REST API Call

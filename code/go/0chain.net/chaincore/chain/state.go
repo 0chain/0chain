@@ -7,12 +7,11 @@ import (
 	"math"
 	"time"
 
-	"0chain.net/chaincore/smartcontract"
-	"0chain.net/chaincore/smartcontractstate"
-
 	"0chain.net/chaincore/block"
 	bcstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
+	"0chain.net/chaincore/smartcontract"
+	"0chain.net/chaincore/smartcontractstate"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -279,7 +278,7 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 		return false
 	}
 
-	if err := sctx.Validate(common.GetRootContext()); err != nil {
+	if err := sctx.Validate(); err != nil {
 		return false
 	}
 	for _, transfer := range sctx.GetTransfers() {

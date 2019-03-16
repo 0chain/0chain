@@ -1,9 +1,8 @@
 package state
 
 import (
-	"context"
+	"encoding/hex"
 
-	"0chain.net/chaincore/client"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 )
@@ -12,30 +11,47 @@ import (
 // been authorized with a signature by the sending client.
 type SignedTransfer struct {
 	Transfer
-	sig string
+	SchemeName string
+	PublicKey string
+	Sig string
 }
 
-func NewSignedTransfer(transfer Transfer, sig string) *SignedTransfer {
-	return &SignedTransfer{Transfer: transfer, sig: sig}
-}
+func (st *SignedTransfer) Sign(sigScheme encryption.SignatureScheme) error {
+	hash := st.computeTransferHash()
 
-// Verify that the signature on the transfer is correct. This is done by
-// checking the signature against the senders public key.
-func (st SignedTransfer) VerifySignature(ctx context.Context) error {
-	sigScheme, err := st.getSignatureScheme(ctx)
+	sig, err := sigScheme.Sign(hash)
 	if err != nil {
 		return err
 	}
 
-	return st.VerifySignatureWithScheme(sigScheme)
+	st.Sig = sig
+
+	return nil
 }
 
-// Verify that the signature on the transfer is correct. May be done against an
-// arbitrary public key.
-func (st SignedTransfer) VerifySignatureWithScheme(sigScheme encryption.SignatureScheme) error {
+// Verify that the signature on the transfer is correct.
+func (st SignedTransfer) VerifySignature(requireSendersSignature bool) error {
+	if !encryption.IsValidSignatureScheme(st.SchemeName) {
+		return common.NewError("invalid_signature_scheme", "invalid signature scheme")
+	}
+
+	if requireSendersSignature {
+		err := st.verifyPublicKey()
+		if err != nil {
+			return err
+		}
+	}
+
+	sigScheme := encryption.GetSignatureScheme(st.SchemeName)
+
+	err := sigScheme.SetPublicKey(st.PublicKey)
+	if err != nil {
+		return common.NewError("invalid_public_key", "invalid public key")
+	}
+
 	hash := st.computeTransferHash()
 
-	correctSignature, err := sigScheme.Verify(st.sig, hash)
+	correctSignature, err := sigScheme.Verify(st.Sig, hash)
 	if err != nil {
 		return err
 	}
@@ -46,15 +62,19 @@ func (st SignedTransfer) VerifySignatureWithScheme(sigScheme encryption.Signatur
 	return nil
 }
 
-func (st SignedTransfer) computeTransferHash() string {
-	return encryption.Hash(st.Transfer.Encode())
-}
-
-func (st SignedTransfer) getSignatureScheme(ctx context.Context) (encryption.SignatureScheme, error) {
-	co, err := client.GetClient(ctx, st.Transfer.ClientID)
+func (st SignedTransfer) verifyPublicKey() error {
+	publicKeyBytes, err := hex.DecodeString(st.PublicKey)
 	if err != nil {
-		return nil, err
+		return common.NewError("invalid_public_key", "invalid public key format")
 	}
 
-	return co.GetSignatureScheme(), nil
+	if encryption.Hash(publicKeyBytes) != st.Transfer.ClientID {
+		return common.NewError("wrong_public_key", "public key does not match client id")
+	}
+
+	return nil
+}
+
+func (st SignedTransfer) computeTransferHash() string {
+	return encryption.Hash(st.Transfer.Encode())
 }

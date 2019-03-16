@@ -8,18 +8,18 @@ import (
 	"sort"
 	"time"
 
+	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/client"
+	"0chain.net/chaincore/httpclientutil"
+	"0chain.net/chaincore/node"
+	"0chain.net/chaincore/wallet"
 	"0chain.net/core/common"
-	"0chain.net/core/httpclientutil"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	. "0chain.net/core/logging"
 	"0chain.net/core/memorystore"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
-	"0chain.net/chaincore/wallet"
-	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/chain"
 )
 
 
@@ -188,7 +188,7 @@ func RegisterClient(sigScheme encryption.SignatureScheme) {
 	nodeBytes, _ := json.Marshal(myWallet)
 	//Logger.Info("Post body", zap.Any("publicKey", myWallet.PublicKey), zap.String("ID", myWallet.ClientID))
 	for _, ip := range members.Miners {
-		body, err := httpclientutil.SendPostRequest(ip + httpclientutil.RegisterClient, nodeBytes, "", "", nil)
+		body, err := httpclientutil.SendPostRequest(ip +httpclientutil.RegisterClient, nodeBytes, "", "", nil)
 		if err!= nil {
 			Logger.Error("error in register client", zap.Error(err), zap.Any("body", body) )
 		} 

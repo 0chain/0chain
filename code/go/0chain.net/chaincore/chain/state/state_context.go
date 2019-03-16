@@ -1,8 +1,6 @@
 package state
 
 import (
-	"context"
-
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -38,7 +36,7 @@ type StateContextI interface {
 	GetTransfers() []*state.Transfer
 	GetSignedTransfers() []*state.SignedTransfer
 	GetMints() []*state.Mint
-	Validate(ctx context.Context) error
+	Validate() error
 	GetBlockSharders(b *block.Block) []string
 }
 
@@ -124,7 +122,7 @@ func (sc *StateContext) GetMints() []*state.Mint {
 }
 
 //Validate - implement interface
-func (sc *StateContext) Validate(ctx context.Context) error {
+func (sc *StateContext) Validate() error {
 	var amount state.Balance
 	for _, transfer := range sc.transfers {
 		if transfer.ClientID == sc.txn.ClientID {
@@ -143,7 +141,7 @@ func (sc *StateContext) Validate(ctx context.Context) error {
 	}
 
 	for _, signedTransfer := range sc.signedTransfers {
-		err := signedTransfer.VerifySignature(ctx)
+		err := signedTransfer.VerifySignature(true)
 		if err != nil {
 			return err
 		}
