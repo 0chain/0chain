@@ -3,9 +3,12 @@ package bls
 /* DKG implementation */
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 
+	"0chain.net/core/datastore"
+	"0chain.net/core/ememorystore"
 	"github.com/herumi/bls/ffi/go/bls"
 )
 
@@ -23,6 +26,13 @@ type DKG struct {
 	SecKeyShareGroup Key
 	ID               PartyID
 }
+
+type DKGSummary struct {
+	datastore.NOIDField
+	SecretKeyGroupStr string `json:"secret_key_group_str"`
+}
+
+var dkgSummaryMetadata *datastore.EntityMetadataImpl
 
 /* init -  To initialize a point on the curve */
 func init() {
@@ -102,4 +112,45 @@ func (dkg *DKG) AggregateShares() {
 	}
 	dkg.SecKeyShareGroup = sec
 
+}
+
+func (dkgSummary *DKGSummary) GetEntityMetadata() datastore.EntityMetadata {
+	return dkgSummaryMetadata
+}
+
+func DKGSummaryProvider() datastore.Entity {
+	dkgSummary := &DKGSummary{}
+	return dkgSummary
+}
+
+func SetupDKGSummary(store datastore.Store) {
+	dkgSummaryMetadata = datastore.MetadataProvider()
+	dkgSummaryMetadata.Name = "dkgsummary"
+	dkgSummaryMetadata.DB = "dkgsummarydb"
+	dkgSummaryMetadata.Store = store
+	dkgSummaryMetadata.Provider = DKGSummaryProvider
+	datastore.RegisterEntityMetadata("dkgsummary", dkgSummaryMetadata)
+}
+
+func SetupDKGDB() {
+	db, err := ememorystore.CreateDB("data/rocksdb/dkg")
+	if err != nil {
+		panic(err)
+	}
+	ememorystore.AddPool("dkgsummarydb", db)
+}
+
+func (dkgSummary *DKGSummary) Read(ctx context.Context, key string) error {
+	return dkgSummary.GetEntityMetadata().GetStore().Read(ctx, key, dkgSummary)
+}
+
+func (dkgSummary *DKGSummary) Write(ctx context.Context) error {
+	return dkgSummary.GetEntityMetadata().GetStore().Write(ctx, dkgSummary)
+}
+
+func (dkg *DKG) GetDKGSummary() *DKGSummary {
+	dkgSummary := &DKGSummary{
+		SecretKeyGroupStr: dkg.SecKeyShareGroup.GetHexString(),
+	}
+	return dkgSummary
 }

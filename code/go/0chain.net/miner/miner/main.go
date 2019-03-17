@@ -33,6 +33,7 @@ import (
 	"0chain.net/core/logging"
 	. "0chain.net/core/logging"
 	"0chain.net/core/memorystore"
+	"0chain.net/core/ememorystore"
 	"0chain.net/smartcontract/setupsc"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -260,6 +261,9 @@ func initEntities() {
 	miner.SetupNotarizationEntity()
 
 	bls.SetupDKGEntity()
+	ememoryStorage := ememorystore.GetStorageProvider()
+	bls.SetupDKGSummary(ememoryStorage)
+	bls.SetupDKGDB()
 	bls.SetupBLSEntity()
 
 	if config.DevConfiguration.SmartContract {

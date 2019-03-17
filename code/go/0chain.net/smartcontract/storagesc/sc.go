@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"context"
 	"time"
+	"sort"
 
 	"go.uber.org/zap"
 
@@ -108,7 +109,7 @@ func (sc *StorageSmartContract) VerifyChallenge(t *transaction.Transaction, inpu
 		return "", common.NewError("blobber_challenge_read_err", "Error reading blobber challenge from DB")
 	}
 	if blobberChallengeBytes == nil {
-		return "", common.NewError("invalid_parameters", "Cannot find the challenge with ID "+challengeResponse.ID)
+		return "", common.NewError("invalid_parameters", "Cannot find the blobber challenge entity with ID "+t.ClientID)
 	} 
 
 	err = blobberChallengeObj.Decode(blobberChallengeBytes)
@@ -184,10 +185,29 @@ func (sc *StorageSmartContract) VerifyChallenge(t *transaction.Transaction, inpu
 }
 
 func (sc *StorageSmartContract) AddChallenge(t *transaction.Transaction, b *block.Block, input []byte) (string, error) {
+	
+	validatorList, _ := sc.getValidatorsList()
+	
+	if len(validatorList) == 0 {
+		return "", common.NewError("no_validators", "Not enough validators for the challenge")
+	}
+
+	foundValidator := false
+	for _, validator := range validatorList {
+		if validator.ID == t.ClientID {
+			foundValidator = true
+			break
+		}
+	}
+	
+	if !foundValidator {
+		return "", common.NewError("invalid_challenge_request", "Challenge can be requested only by validators")
+	}
+	
 	var storageChallenge StorageChallenge
 	storageChallenge.ID = t.Hash
 	
-	allocationList, err := sc.getAllocationsList(t.ClientID)
+	allocationList, err := sc.getAllAllocationsList()
 	if err != nil {
 		return "", common.NewError("adding_challenge_error", "Error gettting the allocation list. "+err.Error())
 	}
@@ -208,13 +228,9 @@ func (sc *StorageSmartContract) AddChallenge(t *transaction.Transaction, b *bloc
 	}
 
 	allocationObj.Decode(allocationBytes)
-
-	validatorList, _ := sc.getValidatorsList()
-
-	if len(validatorList) == 0 {
-		return "", common.NewError("no_validators", "Not enough validators for the challenge")
-	}
-
+	sort.SliceStable(allocationObj.Blobbers, func(i, j int) bool {
+		return allocationObj.Blobbers[i].ID < allocationObj.Blobbers[j].ID
+	})
 	storageChallenge.Validators = validatorList
 	storageChallenge.Blobber = allocationObj.Blobbers[rand.Intn(len(allocationObj.Blobbers))]
 	storageChallenge.RandomNumber = b.RoundRandomSeed
@@ -379,6 +395,27 @@ func (sc *StorageSmartContract) getAllocationsList(clientID string) ([]string, e
 	return clientAlloc.Allocations, nil
 }
 
+func (sc *StorageSmartContract) getAllAllocationsList() ([]string, error) {
+	var allocationList = make([]string, 0)
+	
+	allocationListBytes, err := sc.DB.GetNode(ALL_ALLOCATIONS_KEY)
+	if err != nil {
+		return nil, common.NewError("getAllAllocationsList_failed", "Failed to retrieve existing allocations list")
+	}
+	if allocationListBytes == nil {
+		return allocationList, nil
+	}
+	err = json.Unmarshal(allocationListBytes, &allocationList)
+	if err != nil {
+		return nil, common.NewError("getAllAllocationsList_failed", "Failed to retrieve existing allocations list")
+	}
+	sort.SliceStable(allocationList, func(i, j int) bool {
+		return allocationList[i] < allocationList[j]
+	})
+	return allocationList, nil
+}
+
+
 func (sc *StorageSmartContract) getBlobbersList() ([]StorageNode, error) {
 	var allBlobbersList = make([]StorageNode, 0)
 	allBlobbersBytes, err := sc.DB.GetNode(ALL_BLOBBERS_KEY)
@@ -392,6 +429,9 @@ func (sc *StorageSmartContract) getBlobbersList() ([]StorageNode, error) {
 	if err != nil {
 		return nil, common.NewError("getBlobbersList_failed", "Failed to retrieve existing blobbers list")
 	}
+	sort.SliceStable(allBlobbersList, func(i, j int) bool {
+		return allBlobbersList[i].ID < allBlobbersList[j].ID
+	})
 	return allBlobbersList, nil
 }
 
@@ -414,15 +454,23 @@ func (sc *StorageSmartContract) getValidatorsList() ([]ValidationNode, error) {
 func (sc *StorageSmartContract) addAllocation(allocation *StorageAllocation) (string, error) {
 	allocationList, err := sc.getAllocationsList(allocation.Owner)
 	if err != nil {
-		return "", common.NewError("add_blobber_failed", "Failed to get blobber list"+err.Error())
+		return "", common.NewError("add_allocation_failed", "Failed to get allocation list"+err.Error())
+	}
+	allAllocationList, err := sc.getAllAllocationsList()
+	if err != nil {
+		return "", common.NewError("add_allocation_failed", "Failed to get allocation list"+err.Error())
 	}
 
 	allocationBytes, _ := sc.DB.GetNode(allocation.GetKey())
 	if allocationBytes == nil {
 		allocationList = append(allocationList, allocation.ID)
+		allAllocationList = append(allAllocationList, allocation.ID)
 		var clientAllocation ClientAllocation
 		clientAllocation.ClientID = allocation.Owner
 		clientAllocation.Allocations = allocationList
+		
+		allAllocationBytes, _ := json.Marshal(allAllocationList)
+		sc.DB.PutNode(ALL_ALLOCATIONS_KEY, allAllocationBytes)
 		sc.DB.PutNode(clientAllocation.GetKey(), clientAllocation.Encode())
 		sc.DB.PutNode(allocation.GetKey(), allocation.Encode())
 		Logger.Info("Adding allocation")
@@ -532,7 +580,7 @@ func (sc *StorageSmartContract) NewAllocationRequest(t *transaction.Transaction,
 		if len(allBlobbersList) < size {
 			return "", common.NewError("not_enough_blobbers", "Not enough blobbers to honor the allocation")
 		}
-		shuffleStorageNodes(allBlobbersList)
+		//shuffleStorageNodes(allBlobbersList)
 		allocatedBlobbers := make([]*StorageNode, 0)
 
 		blobberAllocationKeys := make([]smartcontractstate.Key, 0)
@@ -553,6 +601,9 @@ func (sc *StorageSmartContract) NewAllocationRequest(t *transaction.Transaction,
 			blobberAllocationValues = append(blobberAllocationValues, buff)
 			allocatedBlobbers = append(allocatedBlobbers, &blobberNode)
 		}
+		sort.SliceStable(allocatedBlobbers, func(i, j int) bool {
+			return allocatedBlobbers[i].ID < allocatedBlobbers[j].ID
+		})
 		allocationRequest.Blobbers = allocatedBlobbers
 		allocationRequest.ID = t.Hash
 		allocationRequest.Owner = t.ClientID

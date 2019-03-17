@@ -18,6 +18,7 @@ import (
 	"0chain.net/chaincore/threshold/bls"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
+	"0chain.net/core/ememorystore"
 )
 
 // ////////////  BLS-DKG Related stuff  /////////////////////
@@ -57,9 +58,20 @@ func StartDKG(ctx context.Context) {
 	selfInd = self.SetIndex
 	waitForNetworkToBeReady(ctx)
 	if isDkgEnabled {
+		dg = bls.MakeDKG(k, n)
+		dkgSummary, err := getDKGSummaryFromStore(ctx)
+		if dkgSummary.SecretKeyGroupStr != ""  {
+			dg.SecKeyShareGroup.SetHexString(dkgSummary.SecretKeyGroupStr)
+			IsDkgDone = true
+			Logger.Info("got dkg share from db")
+			go startProtocol()
+			return
+		} else {
+			Logger.Error("err : reading dkg from db", zap.Error(err))
+		}
+
 		Logger.Info("Starting DKG...")
 
-		dg = bls.MakeDKG(k, n)
 		minerShares = make(map[string]bls.Key, len(m2m.Nodes))
 
 		for _, node := range m2m.Nodes {
@@ -83,6 +95,31 @@ func StartDKG(ctx context.Context) {
 		go startProtocol()
 	}
 
+}
+
+func getDKGSummaryFromStore(ctx context.Context) (*bls.DKGSummary, error) {
+	dkgSummary := datastore.GetEntity("dkgsummary").(*bls.DKGSummary)
+	dkgSummaryMetadata := dkgSummary.GetEntityMetadata()
+	dctx := ememorystore.WithEntityConnection(ctx, dkgSummaryMetadata)
+	defer ememorystore.Close(dctx)
+	err := dkgSummary.Read(dctx, dkgSummary.GetKey())
+	return dkgSummary, err
+}
+
+func storeDKGSummary(ctx context.Context, dkgSummary *bls.DKGSummary) error {
+	dkgSummaryMetadata := dkgSummary.GetEntityMetadata()
+	dctx := ememorystore.WithEntityConnection(ctx, dkgSummaryMetadata)
+	defer ememorystore.Close(dctx)
+	err := dkgSummary.Write(dctx)
+	if err != nil {
+		return err
+	}
+	con := ememorystore.GetEntityCon(dctx, dkgSummaryMetadata)
+	err = con.Commit()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // WaitForDkgToBeDone is a blocking function waits till DKG process is done if dkg is enabled
@@ -225,7 +262,7 @@ func addToRecSharesMap(nodeID int, share string) {
 }
 
 /*AppendDKGSecShares - Gets the shares by other miners and append to the global array */
-func AppendDKGSecShares(nodeID int, share string) {
+func AppendDKGSecShares(ctx context.Context, nodeID int, share string) {
 	if !isDkgEnabled {
 		Logger.Error("DKG is not enabled. Why are we here?")
 		return
@@ -242,7 +279,7 @@ func AppendDKGSecShares(nodeID int, share string) {
 	//ToDo: We cannot expect everyone to be ready to start. Should we use K?
 	if HasAllDKGSharesReceived() {
 		Logger.Debug("All the shares are received ...")
-		AggregateDKGSecShares(recShares)
+		AggregateDKGSecShares(ctx, recShares)
 		Logger.Info("DKG is done :) ...")
 		IsDkgDone = true
 		go startProtocol()
@@ -269,7 +306,7 @@ func ComputeBlsID(key int) string {
 }
 
 // AggregateDKGSecShares - Each miner adds the shares to get the secKey share for group
-func AggregateDKGSecShares(recShares []string) error {
+func AggregateDKGSecShares(ctx context.Context, recShares []string) error {
 
 	secShares := make([]bls.Key, len(recShares))
 	for i := 0; i < len(recShares); i++ {
@@ -284,6 +321,7 @@ func AggregateDKGSecShares(recShares []string) error {
 		sec.Add(&secShares[i])
 	}
 	dg.SecKeyShareGroup = sec
+	storeDKGSummary(ctx, dg.GetDKGSummary())
 	Logger.Debug("the aggregated sec share",
 		zap.String("sec_key_share_grp", dg.SecKeyShareGroup.GetDecString()),
 		zap.String("gp_public_key", dg.GpPubKey.GetHexString()))
