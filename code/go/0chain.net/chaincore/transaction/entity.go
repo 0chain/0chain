@@ -106,6 +106,9 @@ func (t *Transaction) ValidateWrtTimeForBlock(ctx context.Context, ts common.Tim
 	if !common.WithinTime(int64(ts), int64(t.CreationDate), TXN_TIME_TOLERANCE) {
 		return common.InvalidRequest(fmt.Sprintf("Transaction creation time not within tolerance: ts=%v txn.creation_date=%v", ts, t.CreationDate))
 	}
+	if t.ClientID == t.ToClientID {
+		return common.InvalidRequest("from and to client should be different")
+	}
 	err = t.VerifyHash(ctx)
 	if err != nil {
 		return err
