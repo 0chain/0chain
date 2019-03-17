@@ -64,6 +64,7 @@ func StartDKG(ctx context.Context) {
 			dg.SecKeyShareGroup.SetHexString(dkgSummary.SecretKeyGroupStr)
 			IsDkgDone = true
 			Logger.Info("got dkg share from db")
+			go startProtocol()
 			return
 		} else {
 			Logger.Error("err : reading dkg from db", zap.Error(err))
