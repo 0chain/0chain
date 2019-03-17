@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"context"
 	"time"
+	"sort"
 
 	"go.uber.org/zap"
 
@@ -227,7 +228,9 @@ func (sc *StorageSmartContract) AddChallenge(t *transaction.Transaction, b *bloc
 	}
 
 	allocationObj.Decode(allocationBytes)
-
+	sort.SliceStable(allocationObj.Blobbers, func(i, j int) bool {
+		return allocationObj.Blobbers[i].ID < allocationObj.Blobbers[j].ID
+	})
 	storageChallenge.Validators = validatorList
 	storageChallenge.Blobber = allocationObj.Blobbers[rand.Intn(len(allocationObj.Blobbers))]
 	storageChallenge.RandomNumber = b.RoundRandomSeed
@@ -406,6 +409,9 @@ func (sc *StorageSmartContract) getAllAllocationsList() ([]string, error) {
 	if err != nil {
 		return nil, common.NewError("getAllAllocationsList_failed", "Failed to retrieve existing allocations list")
 	}
+	sort.SliceStable(allocationList, func(i, j int) bool {
+		return allocationList[i] < allocationList[j]
+	})
 	return allocationList, nil
 }
 
@@ -423,6 +429,9 @@ func (sc *StorageSmartContract) getBlobbersList() ([]StorageNode, error) {
 	if err != nil {
 		return nil, common.NewError("getBlobbersList_failed", "Failed to retrieve existing blobbers list")
 	}
+	sort.SliceStable(allBlobbersList, func(i, j int) bool {
+		return allBlobbersList[i].ID < allBlobbersList[j].ID
+	})
 	return allBlobbersList, nil
 }
 
@@ -571,7 +580,7 @@ func (sc *StorageSmartContract) NewAllocationRequest(t *transaction.Transaction,
 		if len(allBlobbersList) < size {
 			return "", common.NewError("not_enough_blobbers", "Not enough blobbers to honor the allocation")
 		}
-		shuffleStorageNodes(allBlobbersList)
+		//shuffleStorageNodes(allBlobbersList)
 		allocatedBlobbers := make([]*StorageNode, 0)
 
 		blobberAllocationKeys := make([]smartcontractstate.Key, 0)
@@ -592,6 +601,9 @@ func (sc *StorageSmartContract) NewAllocationRequest(t *transaction.Transaction,
 			blobberAllocationValues = append(blobberAllocationValues, buff)
 			allocatedBlobbers = append(allocatedBlobbers, &blobberNode)
 		}
+		sort.SliceStable(allocatedBlobbers, func(i, j int) bool {
+			return allocatedBlobbers[i].ID < allocatedBlobbers[j].ID
+		})
 		allocationRequest.Blobbers = allocatedBlobbers
 		allocationRequest.ID = t.Hash
 		allocationRequest.Owner = t.ClientID
