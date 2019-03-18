@@ -209,7 +209,7 @@ func ToN2NSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 		ts := time.Now()
 		data, err := handler(ctx, r)
 		if err != nil {
-			common.Respond(w, nil, err)
+			common.Respond(w, r, nil, err)
 			N2n.Error("message received", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI), zap.Error(err))
 			return
 		}
