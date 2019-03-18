@@ -581,24 +581,30 @@ func (mc *Chain) handleNoProgress(ctx context.Context) {
 		}
 	} else {
 		// TODO: it's likely the VRF issue
-		Logger.Error("No proposed blocks.")
+		switch crt := mc.GetRoundTimeoutCount(); {
+		case crt < 10:
+			Logger.Error("handleNoProgress - no proposed blocks", zap.Any("round", mc.CurrentRound), zap.Int64("count", crt), zap.Any("vrf_share", r.vrfShare))
+		case crt == 10:
+			Logger.Error("handleNoProgress - no proposed blocks (no further timeout messages will be displayed)", zap.Any("round", mc.CurrentRound), zap.Int64("count", crt), zap.Any("vrf_share", r.vrfShare))
+			//TODO: should have a means to send an email/SMS to someone or something like that
+		}
 	}
 }
 
 func (mc *Chain) restartRound(ctx context.Context) {
 	mc.IncrementRoundTimeoutCount()
+	r := mc.GetMinerRound(mc.CurrentRound)
 	switch crt := mc.GetRoundTimeoutCount(); {
 	case crt < 10:
-		Logger.Error("round timeout occured", zap.Any("round", mc.CurrentRound), zap.Int64("count", crt))
+		Logger.Error("restartRound - round timeout occured", zap.Any("round", mc.CurrentRound), zap.Int64("count", crt), zap.Any("vrf_share", r.vrfShare))
 	case crt == 10:
-		Logger.Error("round timeout occured (no further timeout messages will be displayed)", zap.Any("round", mc.CurrentRound), zap.Int64("count", crt))
+		Logger.Error("restartRound - round timeout occured (no further timeout messages will be displayed)", zap.Any("round", mc.CurrentRound), zap.Int64("count", crt), zap.Any("vrf_share", r.vrfShare))
 		//TODO: should have a means to send an email/SMS to someone or something like that
 	}
 	mc.RoundTimeoutsCount++
 	if !mc.CanStartNetwork() {
 		return
 	}
-	r := mc.GetMinerRound(mc.CurrentRound)
 	if r.GetRoundNumber() > 1 {
 		pr := mc.GetMinerRound(r.GetRoundNumber() - 1)
 		if pr != nil {
