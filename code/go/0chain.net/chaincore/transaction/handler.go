@@ -41,7 +41,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	}
 	cli, err := txn.GetClient(ctx)
 	if err != nil || cli.PublicKey == "" || cli == nil {
-		return nil, common.NewError("put transaction error", fmt.Springf("client %v doesn't exist, please register", txn.ClientID))
+		return nil, common.NewError("put transaction error", fmt.Sprintf("client %v doesn't exist, please register", txn.ClientID))
 	}
 	if datastore.DoAsync(ctx, txn) {
 		TransactionCount++
