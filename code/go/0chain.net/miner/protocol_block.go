@@ -234,10 +234,10 @@ func (mc *Chain) processFeeTxn(ctx context.Context, b *block.Block, clients map[
 		if err != nil {
 			return err
 		}
-		return common.NewError("proces fee transaction", "transaction already exists")
+		return common.NewError("process fee transaction", "transaction already exists")
 	}
 	if !mc.UpdateState(b, feeTxn) {
-		return common.NewError("proces fee transaction", "update state failed")
+		return common.NewError("process fee transaction", "update state failed")
 	}
 	b.Txns = append(b.Txns, feeTxn)
 	b.AddTransaction(feeTxn)
