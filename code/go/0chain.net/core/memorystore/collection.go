@@ -88,6 +88,9 @@ func (ms *Store) iterateCollection(ctx context.Context, entityMetadata datastore
 			return err
 		}
 		for i := 0; i < count; i++ {
+			if bucket[i].GetKey() == "" {
+				bucket[i].SetKey(keys[i])
+			}
 			if datastore.IsEmpty(bucket[i].GetKey()) {
 				continue
 			}
