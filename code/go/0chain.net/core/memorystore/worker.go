@@ -2,7 +2,6 @@ package memorystore
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"0chain.net/core/datastore"
