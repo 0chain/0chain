@@ -382,7 +382,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 		start := time.Now()
 		data, err := handler(ctx, entity)
 		duration := time.Since(start)
-		common.Respond(w, data, err)
+		common.Respond(w, r, data, err)
 		if err != nil {
 			N2n.Error("message received", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI), zap.Duration("duration", duration), zap.String("entity", entityName), zap.Any("id", entity.GetKey()), zap.Error(err))
 		} else {
