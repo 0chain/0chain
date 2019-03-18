@@ -48,15 +48,19 @@ func (ms *Store) iterateCollection(ctx context.Context, entityMetadata datastore
 			return ctx.Err()
 		default:
 		}
-		con.Send(selectCommand, collectionName, maxscore, minscore, "WITHSCORES", "LIMIT", offset, BATCH_SIZE)
+		err := con.Send(selectCommand, collectionName, maxscore, minscore, "WITHSCORES", "LIMIT", offset, BATCH_SIZE)
 		con.Flush()
-		data, err := con.Receive()
 		if err != nil {
 			return err
+		}
+		data, err1 := con.Receive()
+		if err1 != nil {
+			return err1
 		}
 		bkeys, ok := data.([]interface{})
 		count := len(bkeys) / 2
 		if count == 0 {
+			Logger.Error("Redis returned 0 rows after seclect")
 			return nil
 		}
 		offset += count
@@ -76,7 +80,7 @@ func (ms *Store) iterateCollection(ctx context.Context, entityMetadata datastore
 				}
 				ce.SetCollectionScore(score)
 			} else {
-				Logger.Debug("iterator error", zap.Any("score", bkeys[2*i+1]), zap.Any("type", fmt.Sprintf("%T", bkeys[2*i+1])))
+				Logger.Info("iterator error", zap.Any("score", bkeys[2*i+1]), zap.Any("type", fmt.Sprintf("%T", bkeys[2*i+1])))
 			}
 		}
 		err = ms.MultiRead(ctx, entityMetadata, keys[:count], bucket)
@@ -84,6 +88,9 @@ func (ms *Store) iterateCollection(ctx context.Context, entityMetadata datastore
 			return err
 		}
 		for i := 0; i < count; i++ {
+			if bucket[i].GetKey() == "" {
+				bucket[i].SetKey(keys[i])
+			}
 			if datastore.IsEmpty(bucket[i].GetKey()) {
 				continue
 			}

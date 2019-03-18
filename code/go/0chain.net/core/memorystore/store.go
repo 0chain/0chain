@@ -309,7 +309,7 @@ func (ms *Store) multiDeleteAux(ctx context.Context, entityMetadata datastore.En
 		return err
 	}
 	if hasCollectionEntity {
-		err = ms.MultiDeleteFromCollection(ctx, entityMetadata, entities)
+		return ms.MultiDeleteFromCollection(ctx, entityMetadata, entities)
 	}
 	return nil
 }
