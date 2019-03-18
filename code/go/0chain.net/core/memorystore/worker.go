@@ -2,10 +2,11 @@ package memorystore
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"0chain.net/core/datastore"
+	. "0chain.net/core/logging"
+	"go.uber.org/zap"
 )
 
 /*SetupWorkers - This setups up workers that allows aggregating and storing entities in chunks */
@@ -86,7 +87,7 @@ func (mcp *MemoryDBChunkProcessor) Process(ctx context.Context, chunk datastore.
 	store := mcp.EntityMetadata.GetStore()
 	err := store.MultiWrite(lctx, mcp.EntityMetadata, mchunk.Buffer)
 	if err != nil {
-		fmt.Printf("multiwrite error : %v\n", err)
+		Logger.Info("memorystore - memory chunk process", zap.Any("error", err))
 	}
 }
 
