@@ -171,6 +171,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 			Logger.Error("generate block - round mismatch", zap.Any("round", roundNumber), zap.Any("current_round", mc.CurrentRound))
 			return nil, ErrRoundMismatch
 		}
+		var startLogging time.Time
 		txnCount := transaction.TransactionCount
 		b.ClientState.ResetChangeCollector(b.PrevBlock.ClientStateHash)
 		generationTries++
@@ -180,7 +181,6 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 			if ok {
 				switch cerr.Code {
 				case InsufficientTxns:
-					var startLogging time.Time
 					for true {
 						delay := mc.GetRetryWaitTime()
 						time.Sleep(time.Duration(delay) * time.Millisecond)
@@ -203,7 +203,10 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 					continue
 				}
 			}
-			Logger.Error("generate block", zap.Error(err))
+			if startLogging.IsZero() || time.Now().Sub(startLogging) > time.Second {
+				startLogging = time.Now()
+				Logger.Info("generate block", zap.Any("round", roundNumber), zap.Any("txn_count", txnCount), zap.Any("t.txn_count", transaction.TransactionCount), zap.Any("error", cerr))
+			}
 			return nil, err
 		}
 		mc.AddRoundBlock(r, b)
