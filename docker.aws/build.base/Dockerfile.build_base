@@ -1,4 +1,4 @@
-# docker.local
+# docker.aws
 FROM golang:1.11.4-alpine3.8
 RUN apk add bash build-base grep git
 
