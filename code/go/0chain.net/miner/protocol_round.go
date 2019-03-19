@@ -172,13 +172,12 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 			Logger.Error("generate block - round mismatch", zap.Any("round", roundNumber), zap.Any("current_round", mc.CurrentRound))
 			return nil, ErrRoundMismatch
 		}
-		
+
 		txnCount := transaction.TransactionCount
 		b.ClientState.ResetChangeCollector(b.PrevBlock.ClientStateHash)
 		generationTries++
 		err := mc.GenerateBlock(ctx, b, mc, makeBlock)
 		if err != nil {
-			
 			cerr, ok := err.(*common.Error)
 			if ok {
 				switch cerr.Code {
@@ -203,6 +202,9 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 				case RoundMismatch:
 					Logger.Info("generate block", zap.Error(err))
 					continue
+				case RoundTimeout:
+					Logger.Error("generate block", zap.Int64("round", roundNumber), zap.Error(err))
+					return nil, err
 				}
 			}
 			if startLogging.IsZero() || time.Now().Sub(startLogging) > time.Second {

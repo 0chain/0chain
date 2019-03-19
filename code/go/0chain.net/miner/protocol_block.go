@@ -52,6 +52,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	var ierr error
 	var count int32
 	var roundMismatch bool
+	var roundTimeout bool
 	var hasOwnerTxn bool
 	var failedStateCount int32
 	var byteSize int64
@@ -103,10 +104,15 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		idx++
 		return true
 	}
+	var roundTimeoutCount = mc.GetRoundTimeoutCount()
 	var txnIterHandler = func(ctx context.Context, qe datastore.CollectionEntity) bool {
 		count++
 		if mc.CurrentRound > b.Round {
 			roundMismatch = true
+			return false
+		}
+		if roundTimeoutCount != mc.GetRoundTimeoutCount() {
+			roundTimeout = true
 			return false
 		}
 		txn, ok := qe.(*transaction.Transaction)
@@ -134,7 +140,11 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	}
 	if roundMismatch {
 		Logger.Debug("generate block (round mismatch)", zap.Any("round", b.Round), zap.Any("current_round", mc.CurrentRound))
-		return common.NewError(RoundMismatch, "current round different from generation round")
+		return ErrRoundMismatch
+	}
+	if roundTimeout {
+		Logger.Debug("generate block (round timeout)", zap.Any("round", b.Round), zap.Any("current_round", mc.CurrentRound))
+		return ErrRoundTimeout
 	}
 	if ierr != nil {
 		Logger.Error("generate block (txn reinclusion check)", zap.Any("round", b.Round), zap.Error(ierr))
