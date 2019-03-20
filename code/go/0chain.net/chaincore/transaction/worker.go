@@ -46,19 +46,16 @@ func CleanupWorker(ctx context.Context) {
 			if err != nil {
 				Logger.Error("Error in deleting txn in redis", zap.Error(err))
 			}
-			return true
 		}
 		if !common.Within(int64(txn.CreationDate), TXN_TIME_TOLERANCE-1) {
 			invalidTxns = append(invalidTxns, txn)
-			return true
 		}
 		err := transactionEntityMetadata.GetStore().Read(ctx, txn.Hash, txn)
 		cerr, ok := err.(*common.Error)
 		if ok && cerr.Code == datastore.EntityNotFound {
 			invalidHashes = append(invalidHashes, txn)
-			return true
 		}
-		return false
+		return true
 	}
 
 	for true {
