@@ -45,7 +45,7 @@ func ToJSONEntityReqResponse(handler JSONEntityReqResponderF, entityMetadata Ent
 		}
 		ctx := r.Context()
 		data, err := handler(ctx, entity)
-		common.Respond(w, data, err)
+		common.Respond(w, r, data, err)
 	}
 }
 
