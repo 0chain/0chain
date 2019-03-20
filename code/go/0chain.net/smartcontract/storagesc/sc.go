@@ -249,8 +249,8 @@ func (sc *StorageSmartContract) AddChallenge(t *transaction.Transaction, b *bloc
 	if err != nil {
 		return "", common.NewError("blobber_allocation_decode", "Blobber Allocation decode error "+err.Error())
 	}
-	if len(blobberAllocation.AllocationRoot) == 0 {
-		return "", common.NewError("blobber_no_wm", "Blobber has no write marker committed.")
+	if len(blobberAllocation.AllocationRoot) == 0 || blobberAllocation.UsedSize == 0 {
+		return "", common.NewError("blobber_no_wm", "Blobber does not have any data for the allocation. " + allocationObj.ID + " blobber: " + blobberAllocation.BlobberID)
 	}
 
 	storageChallenge.AllocationRoot = blobberAllocation.AllocationRoot
