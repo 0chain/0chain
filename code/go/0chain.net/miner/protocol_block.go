@@ -78,9 +78,9 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 			}
 			return false
 		}
-		if !mc.UpdateState(b, txn) {
+		if err := mc.UpdateState(b, txn); err != nil {
 			if debugTxn {
-				Logger.Info("generate block (debug transaction) update state", zap.String("txn", txn.Hash), zap.Int32("idx", idx), zap.String("txn_object", datastore.ToJSON(txn).String()))
+				Logger.Error("generate block (debug transaction) update state", zap.String("txn", txn.Hash), zap.Int32("idx", idx), zap.String("txn_object", datastore.ToJSON(txn).String()), zap.Error(err))
 			}
 			failedStateCount++
 			return false
@@ -246,8 +246,9 @@ func (mc *Chain) processFeeTxn(ctx context.Context, b *block.Block, clients map[
 		}
 		return common.NewError("process fee transaction", "transaction already exists")
 	}
-	if !mc.UpdateState(b, feeTxn) {
-		return common.NewError("process fee transaction", "update state failed")
+	if err := mc.UpdateState(b, feeTxn); err != nil {
+		Logger.Error("processFeeTxn", zap.String("txn", feeTxn.Hash), zap.String("txn_object", datastore.ToJSON(feeTxn).String()), zap.Error(err))
+		return err
 	}
 	b.Txns = append(b.Txns, feeTxn)
 	b.AddTransaction(feeTxn)
