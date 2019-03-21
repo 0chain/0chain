@@ -351,6 +351,14 @@ func (sc *StorageSmartContract) CommitBlobberConnection(t *transaction.Transacti
 		return "", common.NewError("blobber_allocation_decode", "Blobber Allocation decode error "+err.Error())
 	}
 
+	if !commitConnection.WriteMarker.VerifySignature(allocationObj.OwnerPublicKey) {
+		return "", common.NewError("invalid_parameters", "Invalid signature for write marker")
+	}
+
+	if blobberAllocation.AllocationRoot == commitConnection.AllocationRoot && blobberAllocation.LastWriteMarker != nil && blobberAllocation.LastWriteMarker.PreviousAllocationRoot == commitConnection.PrevAllocationRoot {
+		return string(blobberAllocationBytes), nil
+	}
+
 	if blobberAllocation.AllocationRoot != commitConnection.PrevAllocationRoot {
 		return "", common.NewError("invalid_parameters", "Previous allocation root does not match the latest allocation root")
 	}
@@ -359,9 +367,7 @@ func (sc *StorageSmartContract) CommitBlobberConnection(t *transaction.Transacti
 		return "", common.NewError("invalid_parameters", "Size for blobber allocation exceeded maximum")
 	}
 
-	if !commitConnection.WriteMarker.VerifySignature(allocationObj.OwnerPublicKey) {
-		return "", common.NewError("invalid_parameters", "Invalid signature for write marker")
-	}
+	
 
 	blobberAllocation.AllocationRoot = commitConnection.AllocationRoot
 	blobberAllocation.LastWriteMarker = commitConnection.WriteMarker
