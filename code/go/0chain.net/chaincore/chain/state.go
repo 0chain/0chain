@@ -260,22 +260,22 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 		ndb := smartcontractstate.NewPipedSCDB(mndb, b.SCStateDB, false)
 		output, err := c.ExecuteSmartContract(txn, ndb, sctx)
 		if err != nil {
-			Logger.Info("Smart contract execution returned error", zap.Any("error", err), zap.Any("transaction", txn.Hash))
+			Logger.Error("Smart contract execution returned error", zap.Any("error", err), zap.Any("transaction", txn.Hash))
 			return false
 		}
-
 		txn.TransactionOutput = output
 		txn.OutputHash = txn.ComputeOutputHash()
-		Logger.Info("Smart contract executed for transaction: ", zap.String("txn", txn.Hash), zap.String("output_hash", txn.OutputHash), zap.String("txn_output", txn.TransactionOutput))
 	case transaction.TxnTypeData:
 	case transaction.TxnTypeSend:
 		err := sctx.AddTransfer(state.NewTransfer(txn.ClientID, txn.ToClientID, state.Balance(txn.Value)))
 		if err != nil {
+			Logger.Error("send txn error", zap.Any("error", err), zap.Any("transaction", txn.Hash))
 			return false
 		}
 	}
 	err := sctx.AddTransfer(state.NewTransfer(txn.ClientID, feesc.ADDRESS, state.Balance(txn.Fee)))
 	if err != nil {
+		Logger.Error("txn fee error", zap.Any("error", err), zap.Any("transaction", txn.Hash))
 		return false
 	}
 
@@ -291,6 +291,7 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 	for _, mint := range sctx.GetMints() {
 		err := c.mintAmount(sctx, mint.ToClientID, state.Balance(mint.Amount))
 		if err != nil {
+			Logger.Error("mint error", zap.Any("error", err), zap.Any("transaction", txn.Hash))
 			return false
 		}
 	}
@@ -298,7 +299,7 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 	if txn.TransactionType == transaction.TxnTypeSmartContract {
 		err := smartcontractstate.SaveChanges(common.GetRootContext(), mndb, b.SCStateDB)
 		if err != nil {
-			Logger.Error("Error in saving the state on the block after execution", zap.Any("error", err))
+			Logger.Error("smart contract save changes", zap.Any("error", err))
 			return false
 		}
 	}
@@ -309,6 +310,7 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) bool {
 		if state.DebugTxn() {
 			Logger.DPanic("update state - merge mpt error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Error(err))
 		}
+		Logger.Error("error committing txn", zap.Any("error", err))
 		return false
 	}
 	if state.DebugTxn() {
