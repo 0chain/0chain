@@ -16,7 +16,7 @@ func (w *Wallet) Register(ctx context.Context) error {
 	c.PublicKey = w.SignatureScheme.GetPublicKey()
 	c.ID = w.ClientID
 	_, err := client.PutClient(ctx, c)
-	return err
+	return err 
 }
 
 var transactionMetadataProvider datastore.EntityMetadata
@@ -34,7 +34,7 @@ func (w *Wallet) CreateRandomSendTransaction(toClient string, fee int64) *transa
 	// if value == 0 {
 	// 	value = 100000000
 	// }
-	value := 1000000000
+	value := int64(1000000000)
 	msg := fmt.Sprintf("0chain zerochain zipcode Europe rightthing Oriental California honest accurate India network %v %v", rand.Int63(), value)
 	return w.CreateSendTransaction(toClient, value, msg, fee)
 }
