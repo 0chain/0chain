@@ -55,7 +55,6 @@ func main() {
 	}
 
 	config.Configuration.ChainID = viper.GetString("server_chain.id")
-	config.Configuration.MaxDelay = *maxDelay
 
 	reader, err := os.Open(*keysFile)
 	if err != nil {

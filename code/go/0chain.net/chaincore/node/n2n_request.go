@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	. "0chain.net/core/logging"
@@ -118,12 +117,10 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 			if options.Compress {
 				req.Header.Set("Content-Encoding", compDecomp.Encoding())
 			}
-			delay := InduceDelay()
 			eName := ""
 			if entityMetadata != nil {
 				eName = entityMetadata.GetName()
 			}
-			N2n.Debug("requesting", zap.Int("from", Self.SetIndex), zap.Int("to", provider.SetIndex), zap.String("handler", uri), zap.String("entity", eName), zap.Any("params", params), zap.Any("delay", delay))
 			SetRequestHeaders(req, options, entityMetadata)
 			ctx, cancel := context.WithCancel(context.TODO())
 			req = req.WithContext(ctx)
@@ -132,6 +129,7 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 			time.AfterFunc(timeout, cancel)
 			ts := time.Now()
 			Self.Node.LastActiveTime = ts
+			Self.Node.InduceDelay(provider)
 			resp, err := httpClient.Do(req)
 			provider.Release()
 			duration := time.Since(ts)
@@ -167,9 +165,6 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 			duration = time.Since(ts)
 			timer.UpdateSince(ts)
 			N2n.Info("requesting", zap.Int("from", Self.SetIndex), zap.Int("to", provider.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName), zap.Any("id", entity.GetKey()), zap.Any("params", params), zap.String("codec", resp.Header.Get(HeaderRequestCODEC)))
-			if delay > 0 {
-				N2n.Debug("response received", zap.Int("from", provider.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", uri), zap.String("entity", eName), zap.Any("params", params), zap.Any("delay", delay))
-			}
 			ctx = context.TODO()
 			_, err = handler(ctx, entity)
 			if err != nil {
@@ -263,15 +258,3 @@ func ToN2NSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 }
 
 var randGenerator = rand.New(rand.NewSource(time.Now().UnixNano()))
-
-/*InduceDelay - induces some random delay - useful to test resilience */
-func InduceDelay() int {
-	if config.Development() && config.MaxDelay() > 0 {
-		r := randGenerator.Intn(config.MaxDelay())
-		if r < 500 {
-			time.Sleep(time.Duration(r) * time.Millisecond)
-			return r
-		}
-	}
-	return 0
-}

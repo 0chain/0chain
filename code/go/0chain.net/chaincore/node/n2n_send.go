@@ -108,7 +108,7 @@ func (np *Pool) sendTo(numNodes int, nodes []*Node, handler SendHandler) []*Node
 		activeCount++
 	}
 	if activeCount == 0 {
-		N2n.Debug("send message (no active nodes)")
+		//N2n.Debug("send message (no active nodes)")
 		close(sendBucket)
 		return sentTo
 	}
@@ -161,7 +161,7 @@ func shouldPush(options *SendOptions, receiver *Node, uri string, entity datasto
 	pushTime := timer.Mean()
 	push2pullTime := getPushToPullTime(receiver)
 	if pushTime > push2pullTime {
-		N2n.Debug("sending - push to pull", zap.Int("from", Self.SetIndex), zap.Int("to", receiver.SetIndex), zap.String("handler", uri), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.String("id", entity.GetKey()))
+		//N2n.Debug("sending - push to pull", zap.Int("from", Self.SetIndex), zap.Int("to", receiver.SetIndex), zap.String("handler", uri), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.String("id", entity.GetKey()))
 		return false
 	}
 	return true
@@ -203,8 +203,6 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 				req.Header.Set("Content-Encoding", compDecomp.Encoding())
 			}
 			req.Header.Set("Content-Type", "application/json; charset=utf-8")
-			delay := InduceDelay()
-			N2n.Debug("sending", zap.Int("from", Self.SetIndex), zap.Int("to", receiver.SetIndex), zap.String("handler", uri), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.String("id", entity.GetKey()), zap.Any("delay", delay))
 			SetSendHeaders(req, entity, options)
 			ctx, cancel := context.WithCancel(context.TODO())
 			req = req.WithContext(ctx)
@@ -213,6 +211,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			time.AfterFunc(timeout, cancel)
 			ts := time.Now()
 			Self.Node.LastActiveTime = ts
+			Self.Node.InduceDelay(receiver)
 			//req = req.WithContext(httptrace.WithClientTrace(req.Context(), n2nTrace))
 			resp, err := httpClient.Do(req)
 			receiver.Release()
@@ -273,7 +272,7 @@ func SetSendHeaders(req *http.Request, entity datastore.Entity, options *SendOpt
 func validateSendRequest(sender *Node, r *http.Request) bool {
 	entityName := r.Header.Get(HeaderRequestEntityName)
 	entityID := r.Header.Get(HeaderRequestEntityID)
-	N2n.Debug("message received", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI), zap.String("entity", entityName))
+	//N2n.Debug("message received", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI), zap.String("entity", entityName))
 	if !validateChain(sender, r) {
 		N2n.Error("message received - invalid chain", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI), zap.String("entity", entityName))
 		return false
@@ -346,7 +345,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 		if options != nil && options.MessageFilter != nil {
 			if !options.MessageFilter.AcceptMessage(entityName, entityID) {
 				readAndClose(r.Body)
-				N2n.Debug("message receive - reject", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI), zap.String("entity_id", entityID))
+				//N2n.Debug("message receive - reject", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI), zap.String("entity_id", entityID))
 				return
 			}
 		}
@@ -374,10 +373,6 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 		if entity.GetKey() != entityID {
 			N2n.Error("message received - entity id doesn't match with signed id", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI), zap.String("entity_id", entityID), zap.String("entity.id", entity.GetKey()))
 			return
-		}
-		delay := InduceDelay()
-		if delay > 0 {
-			N2n.Debug("message received", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI), zap.String("entity", entityName), zap.Any("id", entityID), zap.Any("delay", delay))
 		}
 		start := time.Now()
 		data, err := handler(ctx, entity)
