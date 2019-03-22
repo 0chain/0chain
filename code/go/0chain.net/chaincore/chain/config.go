@@ -7,7 +7,9 @@ import (
 )
 
 const (
-	BlockProposalWaitStatic  = 0
+	//BlockProposalWaitStatic Static wait time for block proposals
+	BlockProposalWaitStatic = 0
+	//BlockProposalWaitDynamic Dyanamic wait time for block proposals
 	BlockProposalWaitDynamic = iota
 )
 

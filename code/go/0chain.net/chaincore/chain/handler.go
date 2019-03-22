@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"math"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/config"
@@ -127,10 +128,26 @@ func HomePageHandler(w http.ResponseWriter, r *http.Request) {
 func (c *Chain) healthSummary(w http.ResponseWriter, r *http.Request) {
 	cr := c.GetRound(c.CurrentRound)
 	var cRandomSeed int64
+	
+	vrfMsg := "N/A"
+
+	if node.Self.Type == node.NodeTypeMiner {
+	var shares int
+	check := "X"
 	if cr != nil {
 		cRandomSeed = cr.GetRandomSeed()
+		shares = len(cr.GetVRFShares())
 	}
-	fmt.Fprintf(w, "<div>Current Round: %v(%v) Finalized Round: %v (%v deterministic) Rollbacks: %v Round Timeouts: %v</div>", c.CurrentRound, cRandomSeed, c.LatestFinalizedBlock.Round, c.LatestDeterministicBlock.Round, c.RollbackCount, c.RoundTimeoutsCount)
+
+	thresholdByCount := config.GetThresholdCount()
+	consensus := int(math.Ceil((float64(thresholdByCount) / 100) * float64(c.Miners.Size())))
+	if shares >= consensus {
+		check = "&#x2714;"
+	}
+	vrfMsg = fmt.Sprintf( "(%v/%v)%s", shares, consensus, check)
+}
+	//ToDo: Provide a link for VRF Details
+	fmt.Fprintf(w, "<div>Current Round: %v(%v) Finalized Round: %v (%v deterministic) Rollbacks: %v Round Timeouts: %v VRFs: %v</div>", c.CurrentRound, cRandomSeed, c.LatestFinalizedBlock.Round, c.LatestDeterministicBlock.Round, c.RollbackCount, c.RoundTimeoutsCount, vrfMsg)
 }
 
 /*DiagnosticsHomepageHandler - handler to display the /_diagnostics page */
