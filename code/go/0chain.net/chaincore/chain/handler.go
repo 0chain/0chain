@@ -126,17 +126,26 @@ func HomePageHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Chain) healthSummary(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "<div>Health Summary</div>")
+	c.healthSummaryInTables(w,r)
+	fmt.Fprintf(w, "<div>&nbsp;</div>")
+}
+
+func (c *Chain) roundHealthInATable(w http.ResponseWriter, r *http.Request) {
 	cr := c.GetRound(c.CurrentRound)
-	var cRandomSeed int64
-	
+
 	vrfMsg := "N/A"
+	notarizations := 0
+	proposals := 0
 
 	if node.Self.Type == node.NodeTypeMiner {
 	var shares int
 	check := "X"
 	if cr != nil {
-		cRandomSeed = cr.GetRandomSeed()
+		
 		shares = len(cr.GetVRFShares())
+		notarizations = len(cr.GetNotarizedBlocks())
+		proposals = len (cr.GetProposedBlocks())
 	}
 
 	thresholdByCount := config.GetThresholdCount()
@@ -145,9 +154,114 @@ func (c *Chain) healthSummary(w http.ResponseWriter, r *http.Request) {
 		check = "&#x2714;"
 	}
 	vrfMsg = fmt.Sprintf( "(%v/%v)%s", shares, consensus, check)
+	}
+	fmt.Fprintf(w, "<table class='menu' style='border-collapse: collapse;'>")
+
+	fmt.Fprintf(w, "<tr class='active'>")
+	fmt.Fprintf(w, "<td valign='top'style='padding:10px'>")
+	fmt.Fprintf(w, "Current Round#")
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "<td valign='top' align='right' style='padding:10px'>")
+	fmt.Fprintf(w, "%v", c.CurrentRound)
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "</tr>")
+
+	fmt.Fprintf(w, "<tr class='active'>")
+	fmt.Fprintf(w, "<td valign='top' style='padding:10px'>")
+	fmt.Fprintf(w, "VRFs#")
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "<td valign='top' align='right' style='padding:10px'>")
+	fmt.Fprintf(w, "%v", vrfMsg)
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "</tr>")
+
+	fmt.Fprintf(w, "<tr class='active'>")
+	fmt.Fprintf(w, "<td valign='top'style='padding:10px'>")
+	fmt.Fprintf(w, "RRS")
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "<td valign='top' align='right' style='padding:10px'>")
+	fmt.Fprintf(w, "%v", cr.GetRandomSeed())
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "</tr>")
+
+	fmt.Fprintf(w, "<tr class='active'>")
+	fmt.Fprintf(w, "<td valign='top'  style='padding:10px'>")
+	fmt.Fprintf(w, "Proposals")
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "<td valign='top' align='right' style='padding:10px'>")
+	fmt.Fprintf(w, "%v", proposals)
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "</tr>")
+
+	fmt.Fprintf(w, "<tr class='active'>")
+	fmt.Fprintf(w, "<td valign='top'style='padding:10px'>")
+	fmt.Fprintf(w, "Notarizations")
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "<td valign='top' align='right' style='padding:10px'>")
+	fmt.Fprintf(w, "%v", notarizations)
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "</tr>")
+	fmt.Fprintf(w, "</table>")
 }
-	//ToDo: Provide a link for VRF Details
-	fmt.Fprintf(w, "<div>Current Round: %v(%v) Finalized Round: %v (%v deterministic) Rollbacks: %v Round Timeouts: %v VRFs: %v</div>", c.CurrentRound, cRandomSeed, c.LatestFinalizedBlock.Round, c.LatestDeterministicBlock.Round, c.RollbackCount, c.RoundTimeoutsCount, vrfMsg)
+
+func (c *Chain) chainHealthInATable(w http.ResponseWriter, r *http.Request) {
+	
+	fmt.Fprintf(w, "<table class='menu' style='border-collapse: collapse;'>")
+	fmt.Fprintf(w, "<tr class='active'>")
+	fmt.Fprintf(w, "<td valign='top' style='padding:10px'>")
+	fmt.Fprintf(w, "Finalized Round#")
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "<td valign='top' align='right' style='padding:10px'>")
+	fmt.Fprintf(w, "%v", c.LatestFinalizedBlock.Round)
+	fmt.Fprintf(w, "</td>")
+
+	fmt.Fprintf(w, "</tr>")
+	fmt.Fprintf(w, "<tr class='active'>")
+	fmt.Fprintf(w, "<td valign='top' style='padding:10px'>")
+	fmt.Fprintf(w, "Deterministic Finalized Round")
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "<td valign='top' style='padding:10px'>")
+	fmt.Fprintf(w, "%v", c.LatestDeterministicBlock.Round)
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "</tr>")
+
+	fmt.Fprintf(w, "<tr class='active'>")
+	fmt.Fprintf(w, "<td valign='top'>")
+	fmt.Fprintf(w, "#Rollbacks")
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "<td valign='top' align='right' style='padding:10px'>")
+	fmt.Fprintf(w, "%v", c.RollbackCount)
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "</tr>")
+
+	fmt.Fprintf(w, "<tr class='active'>")
+	fmt.Fprintf(w, "<td valign='top' style='padding:10px'>")
+	fmt.Fprintf(w, "#Timeouts")
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "<td valign='top'  align='right' style='padding:10px' >")
+	fmt.Fprintf(w, "%v", c.RoundTimeoutsCount)
+	fmt.Fprintf(w, "</td>")
+
+	
+	fmt.Fprintf(w, "</tr>")
+	fmt.Fprintf(w, "</table>")
+}
+
+func (c *Chain) healthSummaryInTables(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "<table class='menu' cellspacing='10' style='border-collapse: collapse;'>")
+	fmt.Fprintf(w, "<tr class='header'><td>Round Health</td><td>Chain Health</td></tr>")
+	fmt.Fprintf(w, "<tr>")
+	
+	fmt.Fprintf(w, "<td valign='top'>")
+	c.roundHealthInATable(w,r)
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "<td valign='top'>")
+	c.chainHealthInATable(w,r)
+	fmt.Fprintf(w, "</td>")
+	
+	fmt.Fprintf(w, "</tr>")
+	fmt.Fprintf(w, "</table>")
+
 }
 
 /*DiagnosticsHomepageHandler - handler to display the /_diagnostics page */
