@@ -2,6 +2,7 @@ package state
 
 import (
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
@@ -119,7 +120,11 @@ func (sc *StateContext) Validate() error {
 			}
 		}
 	}
-	if amount > state.Balance(sc.txn.Value+sc.txn.Fee) {
+	totalValue := state.Balance(sc.txn.Value)
+	if config.DevConfiguration.IsFeeEnabled {
+		totalValue += state.Balance(sc.txn.Fee)
+	}
+	if amount > totalValue {
 		return state.ErrInvalidTransfer
 	}
 	return nil

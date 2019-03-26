@@ -270,8 +270,10 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) error 
 			return err
 		}
 	}
-	if err := sctx.AddTransfer(state.NewTransfer(txn.ClientID, feesc.ADDRESS, state.Balance(txn.Fee))); err != nil {
-		return err
+	if config.DevConfiguration.IsFeeEnabled {
+		if err := sctx.AddTransfer(state.NewTransfer(txn.ClientID, feesc.ADDRESS, state.Balance(txn.Fee))); err != nil {
+			return err
+		}
 	}
 	if err := sctx.Validate(); err != nil {
 		return err

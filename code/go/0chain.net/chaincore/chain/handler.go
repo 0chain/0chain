@@ -3,10 +3,10 @@ package chain
 import (
 	"context"
 	"fmt"
+	"math"
 	"net/http"
 	"strings"
 	"time"
-	"math"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/config"
@@ -127,7 +127,7 @@ func HomePageHandler(w http.ResponseWriter, r *http.Request) {
 
 func (c *Chain) healthSummary(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<div>Health Summary</div>")
-	c.healthSummaryInTables(w,r)
+	c.healthSummaryInTables(w, r)
 	fmt.Fprintf(w, "<div>&nbsp;</div>")
 }
 
@@ -139,21 +139,21 @@ func (c *Chain) roundHealthInATable(w http.ResponseWriter, r *http.Request) {
 	proposals := 0
 
 	if node.Self.Type == node.NodeTypeMiner {
-	var shares int
-	check := "X"
-	if cr != nil {
-		
-		shares = len(cr.GetVRFShares())
-		notarizations = len(cr.GetNotarizedBlocks())
-		proposals = len (cr.GetProposedBlocks())
-	}
+		var shares int
+		check := "X"
+		if cr != nil {
 
-	thresholdByCount := config.GetThresholdCount()
-	consensus := int(math.Ceil((float64(thresholdByCount) / 100) * float64(c.Miners.Size())))
-	if shares >= consensus {
-		check = "&#x2714;"
-	}
-	vrfMsg = fmt.Sprintf( "(%v/%v)%s", shares, consensus, check)
+			shares = len(cr.GetVRFShares())
+			notarizations = len(cr.GetNotarizedBlocks())
+			proposals = len(cr.GetProposedBlocks())
+		}
+
+		thresholdByCount := config.GetThresholdCount()
+		consensus := int(math.Ceil((float64(thresholdByCount) / 100) * float64(c.Miners.Size())))
+		if shares >= consensus {
+			check = "&#x2714;"
+		}
+		vrfMsg = fmt.Sprintf("(%v/%v)%s", shares, consensus, check)
 	}
 	fmt.Fprintf(w, "<table class='menu' style='border-collapse: collapse;'>")
 
@@ -205,7 +205,7 @@ func (c *Chain) roundHealthInATable(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Chain) chainHealthInATable(w http.ResponseWriter, r *http.Request) {
-	
+
 	fmt.Fprintf(w, "<table class='menu' style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr class='active'>")
 	fmt.Fprintf(w, "<td valign='top' style='padding:10px'>")
@@ -242,7 +242,6 @@ func (c *Chain) chainHealthInATable(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%v", c.RoundTimeoutsCount)
 	fmt.Fprintf(w, "</td>")
 
-	
 	fmt.Fprintf(w, "</tr>")
 	fmt.Fprintf(w, "</table>")
 }
@@ -251,14 +250,14 @@ func (c *Chain) healthSummaryInTables(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<table class='menu' cellspacing='10' style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr class='header'><td>Round Health</td><td>Chain Health</td></tr>")
 	fmt.Fprintf(w, "<tr>")
-	
+
 	fmt.Fprintf(w, "<td valign='top'>")
-	c.roundHealthInATable(w,r)
+	c.roundHealthInATable(w, r)
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "<td valign='top'>")
-	c.chainHealthInATable(w,r)
+	c.chainHealthInATable(w, r)
 	fmt.Fprintf(w, "</td>")
-	
+
 	fmt.Fprintf(w, "</tr>")
 	fmt.Fprintf(w, "</table>")
 
@@ -283,6 +282,9 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<td valign='top'>")
 	fmt.Fprintf(w, "<li><a href='/_chain_stats'>/_chain_stats</a></li>")
 	fmt.Fprintf(w, "<li><a href='/_diagnostics/miner_stats'>/_diagnostics/miner_stats</a>")
+	if node.Self.Type == node.NodeTypeMiner && config.Development() {
+		fmt.Fprintf(w, "<li><a href='/_diagnostics/wallet_stats'>/_diagnostics/wallet_stats</a>")
+	}
 	fmt.Fprintf(w, "</td>")
 
 	fmt.Fprintf(w, "<td valign='top'>")

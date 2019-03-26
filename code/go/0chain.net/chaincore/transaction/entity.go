@@ -93,7 +93,7 @@ func (t *Transaction) ValidateWrtTimeForBlock(ctx context.Context, ts common.Tim
 		return common.InvalidRequest("value must be greater than or equal to zero")
 	}
 	// TODO: t.Fee needs to be compared to the minimum transaction fee once governance is implemented
-	if t.Fee < 0 {
+	if config.DevConfiguration.IsFeeEnabled && t.Fee < 0 {
 		return common.InvalidRequest("fee must be greater than or equal to zero")
 	}
 	err := config.ValidChain(datastore.ToString(t.ChainID))
@@ -135,7 +135,10 @@ func (t *Transaction) Validate(ctx context.Context) error {
 
 /*GetScore - score for write*/
 func (t *Transaction) GetScore() int64 {
-	return t.Fee
+	if config.DevConfiguration.IsFeeEnabled {
+		return t.Fee
+	}
+	return 0
 }
 
 /*Read - store read */

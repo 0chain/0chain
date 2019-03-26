@@ -6,6 +6,7 @@ import (
 	"math/rand"
 
 	"0chain.net/chaincore/client"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 )
@@ -16,7 +17,7 @@ func (w *Wallet) Register(ctx context.Context) error {
 	c.PublicKey = w.SignatureScheme.GetPublicKey()
 	c.ID = w.ClientID
 	_, err := client.PutClient(ctx, c)
-	return err 
+	return err
 }
 
 var transactionMetadataProvider datastore.EntityMetadata
@@ -46,7 +47,9 @@ func (w *Wallet) CreateSendTransaction(toClient string, value int64, msg string,
 	txn.ToClientID = toClient
 	txn.Value = value
 	txn.TransactionData = msg
-	txn.Fee = fee
+	if config.DevConfiguration.IsFeeEnabled {
+		txn.Fee = fee
+	}
 	txn.Sign(w.SignatureScheme)
 	return txn
 }
@@ -58,7 +61,9 @@ func (w *Wallet) CreateSCTransaction(toClient string, value int64, msg string, f
 	txn.ToClientID = toClient
 	txn.Value = value
 	txn.TransactionData = msg
-	txn.Fee = fee
+	if config.DevConfiguration.IsFeeEnabled {
+		txn.Fee = fee
+	}
 	txn.TransactionType = transaction.TxnTypeSmartContract
 	txn.Sign(w.SignatureScheme)
 	return txn
@@ -76,7 +81,9 @@ func (w *Wallet) CreateDataTransaction(msg string, fee int64) *transaction.Trans
 	txn.ClientID = w.ClientID
 	txn.TransactionData = msg
 	txn.TransactionType = transaction.TxnTypeData
-	txn.Fee = fee
+	if config.DevConfiguration.IsFeeEnabled {
+		txn.Fee = fee
+	}
 	txn.Sign(w.SignatureScheme)
 	return txn
 }
