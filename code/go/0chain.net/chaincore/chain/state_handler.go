@@ -2,6 +2,7 @@ package chain
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"regexp"
 
@@ -54,7 +55,12 @@ func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interf
 	if node == nil {
 		return nil, common.NewError("key_not_found", "key was not found")
 	}
-	return string(node), nil
+	var retObj map[string]interface{}
+	err = json.Unmarshal(node, &retObj)
+	if err != nil {
+		return nil, err
+	}
+	return retObj, nil
 }
 
 /*GetBalanceHandler - get the balance of a client */
