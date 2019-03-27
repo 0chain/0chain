@@ -28,3 +28,14 @@ sharders:
   port: 7171
   description: localhost.s0
 
+- id: 57fe3b4d898e60f3c8c9f7a356c2d0680caf17370101be119ed2cc028f42fd41
+  public_key: b3814c5118ff618d8c3af7d8096ca9557c026ddb915d867ef696b092fa742cb7
+  n2n_ip: 198.18.0.82
+  public_ip: localhost
+  port: 7172
+
+- id: 853bb6eb72dbed82f0883fe42f93214a28b199f494818752c593b0ffd3baa046
+  public_key: c423b3543aa0eae177b6e0442eeaa73b527bf346065b1f999498b9c2d78138da
+  n2n_ip: 198.18.0.83
+  public_ip: localhost
+  port: 7173 
