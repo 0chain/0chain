@@ -161,7 +161,6 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	if b.CreationDate < pb.CreationDate {
 		b.CreationDate = pb.CreationDate
 	}
-	b.SetStateDB(pb)
 	start := time.Now()
 	makeBlock := false
 	generationTimeout := time.Millisecond * time.Duration(mc.GetGenerationTimeout())
@@ -172,10 +171,8 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 			Logger.Error("generate block - round mismatch", zap.Any("round", roundNumber), zap.Any("current_round", mc.CurrentRound))
 			return nil, ErrRoundMismatch
 		}
-
 		txnCount := transaction.TransactionCount
-		b.ClientState.ResetChangeCollector(b.PrevBlock.ClientStateHash)
-		b.SetSCStateDB(pb)
+		b.SetStateDB(pb)
 		generationTries++
 		err := mc.GenerateBlock(ctx, b, mc, makeBlock)
 		if err != nil {
@@ -585,12 +582,12 @@ func (mc *Chain) handleNoProgress(ctx context.Context) {
 			mc.SendBlock(ctx, b)
 		}
 	} else {
-		
+
 		if r.vrfShare != nil {
-		go mc.SendVRFShare(ctx, r.vrfShare)
-		Logger.Info ("Sent vrf shares in handle NoProgress and no proposed blocks")
+			go mc.SendVRFShare(ctx, r.vrfShare)
+			Logger.Info("Sent vrf shares in handle NoProgress and no proposed blocks")
 		} else {
-			Logger.Info ("Did not send vrf shares as it is nil", zap.Int64("round_num", r.GetRoundNumber()))
+			Logger.Info("Did not send vrf shares as it is nil", zap.Int64("round_num", r.GetRoundNumber()))
 		}
 		switch crt := mc.GetRoundTimeoutCount(); {
 		case crt < 10:
