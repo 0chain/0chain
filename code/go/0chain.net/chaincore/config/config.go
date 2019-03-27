@@ -103,7 +103,6 @@ type Config struct {
 	Port           int
 	ChainID        string
 	DeploymentMode byte
-	MaxDelay       int
 }
 
 /*Configuration of the system */
@@ -165,7 +164,8 @@ func ValidChain(chain string) error {
 	return ErrSupportedChain
 }
 
-/*MaxDelay - indicates the amount of artificial delay to induce for testing resilience */
-func MaxDelay() int {
-	return Configuration.MaxDelay
+/*GetThresholdCount Gets the defined threshold count */
+func GetThresholdCount() int {
+	return viper.GetInt("server_chain.block.consensus.threshold_by_count")
+
 }

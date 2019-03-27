@@ -6,10 +6,10 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/client"
+	"0chain.net/chaincore/round"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/memorystore"
-	"0chain.net/chaincore/round"
 )
 
 //RoundMismatch - to indicate an error where the current round and the given round don't match
@@ -17,6 +17,12 @@ const RoundMismatch = "round_mismatch"
 
 //ErrRoundMismatch - an error object for mismatched round error
 var ErrRoundMismatch = common.NewError(RoundMismatch, "Current round number of the chain doesn't match the block generation round")
+
+//RoundTimeout - to indicate an error where the round timeout has happened
+const RoundTimeout = "round_timeout"
+
+//ErrRoundTimeout - an error object for round timeout error
+var ErrRoundTimeout = common.NewError(RoundTimeout, "round timed out")
 
 var minerChain = &Chain{}
 

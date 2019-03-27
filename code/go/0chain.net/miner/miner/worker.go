@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"math/rand"
 	"os"
 	"sync"
@@ -80,6 +79,7 @@ func TransactionGenerator(c *chain.Chain) {
 
 	numGenerators := sc.NumGenerators
 	numMiners := sc.Miners.Size()
+	var timerCount int64
 	for true {
 		numTxns = GetTxnGenRate()
 		numWorkerTxns := numTxns / int32(numWorkers)
@@ -102,9 +102,14 @@ func TransactionGenerator(c *chain.Chain) {
 		}
 		select {
 		case <-ctx.Done():
+			Logger.Info("transaction generation", zap.Any("timer_count", timerCount))
 			return
 		case <-timer.C:
+			timerCount++
 			txnCount := int32(txnMetadataProvider.GetStore().GetCollectionSize(ctx, txnMetadataProvider, collectionName))
+			if timerCount%300 == 0 {
+				Logger.Info("transaction generation", zap.Any("txn_count", txnCount), zap.Any("blocks_per_miner", blocksPerMiner), zap.Any("num_txns", numTxns))
+			}
 			if float64(txnCount) >= blocksPerMiner*float64(8*numTxns) {
 				continue
 			}
@@ -127,8 +132,7 @@ func TransactionGenerator(c *chain.Chain) {
 						}
 						_, err := transaction.PutTransaction(ctx, txn)
 						if err != nil {
-							fmt.Printf("error:%v: %v\n", time.Now(), err)
-							//panic(err)
+							Logger.Info("transaction generator", zap.Any("error", err))
 						}
 					}
 					wg.Done()
@@ -149,14 +153,14 @@ func createSendTransaction(c *chain.Chain, prng *rand.Rand) *transaction.Transac
 			break
 		}
 	}
-	txn := wf.CreateRandomSendTransaction(wt.ClientID, prng.Int63n(10)+1)
+	txn := wf.CreateRandomSendTransaction(wt.ClientID, 10000000)
 	return txn
 }
 
 func createDataTransaction(prng *rand.Rand) *transaction.Transaction {
 	csize := len(wallets)
 	wf := wallets[prng.Intn(csize)]
-	txn := wf.CreateRandomDataTransaction(prng.Int63n(10) + 1)
+	txn := wf.CreateRandomDataTransaction(10000000)
 	return txn
 }
 
@@ -206,6 +210,7 @@ func GenerateClients(c *chain.Chain, numClients int) {
 
 	txnMetadataProvider := datastore.GetEntityMetadata("txn")
 	tctx := memorystore.WithEntityConnection(common.GetRootContext(), txnMetadataProvider)
+	defer memorystore.Close(tctx)
 	tctx = datastore.WithAsyncChannel(ctx, transaction.TransactionEntityChannel)
 
 	for i := 0; i < numClients; i++ {
@@ -223,11 +228,10 @@ func GenerateClients(c *chain.Chain, numClients int) {
 	time.Sleep(1 * time.Second)
 	for _, w := range wallets {
 		//generous airdrop in dev/test mode :)
-		txn := ownerWallet.CreateSendTransaction(w.ClientID, prng.Int63n(100000)*10000000000, "generous air drop! :)", prng.Int63n(10)+1)
+		txn := ownerWallet.CreateSendTransaction(w.ClientID, prng.Int63n(100)*10000000000, "generous air drop! :)", prng.Int63n(10)+1)
 		_, err := transaction.PutTransaction(tctx, txn)
 		if err != nil {
-			fmt.Printf("error:%v: %v\n", time.Now(), err)
-			//panic(err)
+			Logger.Info("client generator", zap.Any("error", err))
 		}
 	}
 	Logger.Info("generation of wallets complete", zap.Int("wallets", len(wallets)))

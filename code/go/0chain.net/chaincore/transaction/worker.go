@@ -32,14 +32,15 @@ func CleanupWorker(ctx context.Context) {
 	var handler = func(ctx context.Context, qe datastore.CollectionEntity) bool {
 		txn, ok := qe.(*Transaction)
 		if !ok {
-			qe.Delete(ctx)
-			return true
+			err := qe.Delete(ctx)
+			if err != nil {
+				Logger.Info("Error in deleting txn in redis", zap.Error(err))
+			}
 		}
 		if !common.Within(int64(txn.CreationDate), TXN_TIME_TOLERANCE-1) {
 			invalidTxns = append(invalidTxns, txn)
-			return true
 		}
-		return false
+		return true
 	}
 
 	for true {
@@ -47,11 +48,18 @@ func CleanupWorker(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			mstore.IterateCollectionAsc(cctx, transactionEntityMetadata, collectionName, handler)
+			err := mstore.IterateCollectionAsc(cctx, transactionEntityMetadata, collectionName, handler)
+			if err != nil {
+				Logger.Error("Error in IterateCollectionAsc", zap.Error(err))
+			}
 			if len(invalidTxns) > 0 {
 				Logger.Info("transactions cleanup", zap.String("collection", collectionName), zap.Int("invalid_count", len(invalidTxns)))
-				transactionEntityMetadata.GetStore().MultiDelete(cctx, transactionEntityMetadata, invalidTxns)
-				invalidTxns = invalidTxns[:0]
+				err = transactionEntityMetadata.GetStore().MultiDelete(cctx, transactionEntityMetadata, invalidTxns)
+				if err != nil {
+					Logger.Error("Error in MultiDelete", zap.Error(err))
+				} else {
+					invalidTxns = invalidTxns[:0]
+				}
 			}
 		}
 	}

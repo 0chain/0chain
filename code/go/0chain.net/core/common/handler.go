@@ -1,6 +1,7 @@
 package common
 
 import (
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -29,7 +30,7 @@ type JSONResponderF func(ctx context.Context, r *http.Request) (interface{}, err
 type JSONReqResponderF func(ctx context.Context, json map[string]interface{}) (interface{}, error)
 
 /*Respond - respond either data or error as a response */
-func Respond(w http.ResponseWriter, data interface{}, err error) {
+func Respond(w http.ResponseWriter, r *http.Request, data interface{}, err error) {
 	if err != nil {
 		if cerr, ok := err.(*Error); ok {
 			w.Header().Set(AppErrorHeader, cerr.Code)
@@ -38,7 +39,14 @@ func Respond(w http.ResponseWriter, data interface{}, err error) {
 	} else {
 		if data != nil {
 			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(data)
+			if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+				json.NewEncoder(w).Encode(data)
+			} else {
+				w.Header().Set("Content-Encoding", "gzip")
+				gzw := gzip.NewWriter(w)
+				defer gzw.Close()
+				json.NewEncoder(gzw).Encode(data)
+			}
 		} else {
 			w.WriteHeader(http.StatusNoContent)
 		}
@@ -65,7 +73,12 @@ func validOrigin(origin string) bool {
 	if host == "localhost" || strings.HasPrefix(host, "file") {
 		return true
 	}
-	if host == "0chain.net" || strings.HasSuffix(host, ".0chain.net") || strings.HasSuffix(host, ".testnet-0chain.net") || strings.HasSuffix(host, ".devnet-0chain.net") || strings.HasSuffix(host, ".mainnet-0chain.net") {
+	if host == "0chain.net" ||
+		strings.HasSuffix(host, ".0chain.net") ||
+		strings.HasSuffix(host, ".alphanet-0chain.net") ||
+		strings.HasSuffix(host, ".testnet-0chain.net") ||
+		strings.HasSuffix(host, ".devnet-0chain.net") ||
+		strings.HasSuffix(host, ".mainnet-0chain.net") {
 		return true
 	}
 	return false
@@ -85,7 +98,7 @@ func CheckCrossOrigin(w http.ResponseWriter, r *http.Request) bool {
 
 func SetupCORSResponse(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-	w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type")
+	w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Accept-Encoding")
 }
 
 /*ToJSONResponse - An adapter that takes a handler of the form
@@ -100,7 +113,7 @@ func ToJSONResponse(handler JSONResponderF) ReqRespHandlerf {
 		}
 		ctx := r.Context()
 		data, err := handler(ctx, r)
-		Respond(w, data, err)
+		Respond(w, r, data, err)
 	}
 }
 
@@ -128,7 +141,7 @@ func ToJSONReqResponse(handler JSONReqResponderF) ReqRespHandlerf {
 		}
 		ctx := r.Context()
 		data, err := handler(ctx, jsonData)
-		Respond(w, data, err)
+		Respond(w, r, data, err)
 	}
 }
 

@@ -1,13 +1,16 @@
-# docker.local
+#docker.aws
+ARG image_tag
+FROM 0chain_build_base:${image_tag} as zchain_build_base
 FROM alpine:3.8
 RUN apk add bash
 RUN apk add libbz2 lz4-libs snappy zstd-libs jemalloc  # For RocksDB
 RUN apk add gmp libcrypto1.0 libssl1.0                 # For Herumi
 
-COPY --from=zchain_build_base /usr/local/lib/librocksdb.so.*.*.* \
-                              /usr/local/lib/libmcl*.so \
-                              /usr/local/lib/libbls*.so \
-                              /usr/local/lib/
+COPY --from=zchain_build_base \
+                    /usr/local/lib/librocksdb.so.*.*.* \
+                    /usr/local/lib/libmcl*.so \
+                    /usr/local/lib/libbls*.so \
+                    /usr/local/lib/
 
 # Following standard Unix convention, the file librocksdb.x.y is a symbolic link
 # to librocksdb.x.y.z. Unfortunately, the Docker COPY command reads through

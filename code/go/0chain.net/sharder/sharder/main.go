@@ -41,7 +41,6 @@ func main() {
 	deploymentMode := flag.Int("deployment_mode", 2, "deployment_mode")
 	keysFile := flag.String("keys_file", "", "keys_file")
 	nodesFile := flag.String("nodes_file", "", "nodes_file (deprecated)")
-	maxDelay := flag.Int("max_delay", 0, "max_delay (deprecated)")
 	flag.Parse()
 	config.Configuration.DeploymentMode = byte(*deploymentMode)
 	config.SetupDefaultConfig()
@@ -55,7 +54,6 @@ func main() {
 	}
 
 	config.Configuration.ChainID = viper.GetString("server_chain.id")
-	config.Configuration.MaxDelay = *maxDelay
 
 	reader, err := os.Open(*keysFile)
 	if err != nil {

@@ -27,6 +27,7 @@ func init() {
 
 /*Client - data structure that holds the client data */
 type Client struct {
+	datastore.CollectionMemberField
 	datastore.IDField
 	datastore.VersionField
 	datastore.CreationDateField
@@ -89,11 +90,13 @@ func Provider() datastore.Entity {
 	c := &Client{}
 	c.Version = "1.0"
 	c.InitializeCreationDate()
+	c.EntityCollection = cliEntityCollection
 	return c
 }
 
 /*ComputeProperties - implement interface */
 func (c *Client) ComputeProperties() {
+	c.EntityCollection = cliEntityCollection
 	c.computePublicKeyBytes()
 }
 
@@ -117,6 +120,7 @@ func SetupEntity(store datastore.Store) {
 	clientEntityMetadata.Store = store
 
 	datastore.RegisterEntityMetadata("client", clientEntityMetadata)
+	cliEntityCollection = &datastore.EntityCollection{CollectionName: "collection.cli", CollectionSize: 60000000000, CollectionDuration: time.Minute}
 
 	var chunkingOptions = datastore.ChunkingOptions{
 		EntityMetadata:   clientEntityMetadata,
@@ -183,3 +187,5 @@ func PutClient(ctx context.Context, entity datastore.Entity) (interface{}, error
 	cacher.Add(co.GetKey(), co)
 	return response, nil
 }
+
+var cliEntityCollection *datastore.EntityCollection

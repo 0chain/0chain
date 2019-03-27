@@ -1,19 +1,25 @@
 package miner
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
 	"0chain.net/chaincore/chain"
-	"0chain.net/core/common"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/diagnostics"
 	"0chain.net/chaincore/node"
+	"0chain.net/core/common"
+
+	"0chain.net/chaincore/client"
+	"0chain.net/core/datastore"
+	"0chain.net/core/memorystore"
 )
 
 /*SetupHandlers - setup miner handlers */
 func SetupHandlers() {
 	http.HandleFunc("/_chain_stats", common.UserRateLimit(ChainStatsHandler))
+	http.HandleFunc("/_diagnostics/wallet_stats", common.UserRateLimit(GetWalletStats))
 }
 
 /*ChainStatsHandler - a handler to provide block statistics */
@@ -87,6 +93,51 @@ func ChainStatsHandler(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Fprintf(w, "<br>")
 	if c.GetPruneStats() != nil {
-		diagnostics.WritePruneStats(w,c.GetPruneStats())
+		diagnostics.WritePruneStats(w, c.GetPruneStats())
 	}
+}
+
+func GetWalletStats(w http.ResponseWriter, r *http.Request) {
+	// clients
+	chain.PrintCSS(w)
+	c := GetMinerChain().Chain
+	entity := client.NewClient()
+	emd := entity.GetEntityMetadata()
+	ctx := memorystore.WithEntityConnection(common.GetRootContext(), emd)
+	collectionName := entity.GetCollectionName()
+	lfb := c.LatestFinalizedBlock
+	mstore, ok := emd.GetStore().(*memorystore.Store)
+	if !ok {
+		return
+	}
+	fmt.Fprintf(w, "Wallet stats as of round %v\n", lfb.Round)
+	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
+	fmt.Fprintf(w, "<tr class='header'><td>Client ID</td><td>Balance</td><td>Round</td></tr>")
+	var handler = func(ctx context.Context, qe datastore.CollectionEntity) bool {
+		cli, ok := qe.(*client.Client)
+		if !ok {
+			err := qe.Delete(ctx)
+			if err != nil {
+				fmt.Fprintf(w, "Error in deleting cli in redis: %v\n", err)
+			}
+		}
+		lfb := c.LatestFinalizedBlock
+		balance, err := c.GetState(lfb, cli.ID)
+		if balance.Balance == 0 || err != nil {
+			fmt.Fprintf(w, "<tr class='inactive'>")
+		} else if balance.Balance < 10000000000 {
+			fmt.Fprintf(w, "<tr class='warning'>")
+		} else {
+			fmt.Fprintf(w, "<tr>")
+		}
+		fmt.Fprintf(w, "<td>%v</td>", cli.ID)
+		fmt.Fprintf(w, "<td>%v</td>", balance.Balance)
+		fmt.Fprintf(w, "<td>%v</td>", balance.Round)
+		return true
+	}
+	err := mstore.IterateCollectionAsc(ctx, emd, collectionName, handler)
+	if err != nil {
+		fmt.Fprintf(w, "Error: %v\n", err)
+	}
+
 }

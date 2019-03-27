@@ -41,6 +41,7 @@ func getSmartContract(scAddress string, ndb smartcontractstate.SCDB) (sci.SmartC
 	if ok {
 		scLock.Lock()
 		sc := sci.NewSC(smartcontractstate.NewSCState(ndb, scAddress), scAddress)
+
 		bc := &BCContext{} 
 		contracti.SetSC(sc, bc)
 		scLock.Unlock()

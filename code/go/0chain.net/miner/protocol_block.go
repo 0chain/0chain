@@ -52,6 +52,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	var ierr error
 	var count int32
 	var roundMismatch bool
+	var roundTimeout bool
 	var hasOwnerTxn bool
 	var failedStateCount int32
 	var byteSize int64
@@ -77,9 +78,9 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 			}
 			return false
 		}
-		if !mc.UpdateState(b, txn) {
+		if err := mc.UpdateState(b, txn); err != nil {
 			if debugTxn {
-				Logger.Info("generate block (debug transaction) update state", zap.String("txn", txn.Hash), zap.Int32("idx", idx), zap.String("txn_object", datastore.ToJSON(txn).String()))
+				Logger.Error("generate block (debug transaction) update state", zap.String("txn", txn.Hash), zap.Int32("idx", idx), zap.String("txn_object", datastore.ToJSON(txn).String()), zap.Error(err))
 			}
 			failedStateCount++
 			return false
@@ -103,10 +104,15 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		idx++
 		return true
 	}
+	var roundTimeoutCount = mc.GetRoundTimeoutCount()
 	var txnIterHandler = func(ctx context.Context, qe datastore.CollectionEntity) bool {
 		count++
 		if mc.CurrentRound > b.Round {
 			roundMismatch = true
+			return false
+		}
+		if roundTimeoutCount != mc.GetRoundTimeoutCount() {
+			roundTimeout = true
 			return false
 		}
 		txn, ok := qe.(*transaction.Transaction)
@@ -134,7 +140,11 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	}
 	if roundMismatch {
 		Logger.Debug("generate block (round mismatch)", zap.Any("round", b.Round), zap.Any("current_round", mc.CurrentRound))
-		return common.NewError(RoundMismatch, "current round different from generation round")
+		return ErrRoundMismatch
+	}
+	if roundTimeout {
+		Logger.Debug("generate block (round timeout)", zap.Any("round", b.Round), zap.Any("current_round", mc.CurrentRound))
+		return ErrRoundTimeout
 	}
 	if ierr != nil {
 		Logger.Error("generate block (txn reinclusion check)", zap.Any("round", b.Round), zap.Error(ierr))
@@ -180,7 +190,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		b.Txns = b.Txns[:blockSize]
 		etxns = etxns[:blockSize]
 	}
-	if config.DevConfiguration.SmartContract {
+	if config.DevConfiguration.SmartContract && config.DevConfiguration.IsFeeEnabled {
 		err = mc.processFeeTxn(ctx, b, clients)
 		if err != nil {
 			return err
@@ -234,10 +244,11 @@ func (mc *Chain) processFeeTxn(ctx context.Context, b *block.Block, clients map[
 		if err != nil {
 			return err
 		}
-		return common.NewError("proces fee transaction", "transaction already exists")
+		return common.NewError("process fee transaction", "transaction already exists")
 	}
-	if !mc.UpdateState(b, feeTxn) {
-		return common.NewError("proces fee transaction", "update state failed")
+	if err := mc.UpdateState(b, feeTxn); err != nil {
+		Logger.Error("processFeeTxn", zap.String("txn", feeTxn.Hash), zap.String("txn_object", datastore.ToJSON(feeTxn).String()), zap.Error(err))
+		return err
 	}
 	b.Txns = append(b.Txns, feeTxn)
 	b.AddTransaction(feeTxn)
@@ -263,10 +274,7 @@ func (mc *Chain) txnToReuse(txn *transaction.Transaction) *transaction.Transacti
 }
 
 func (mc *Chain) validateTransaction(b *block.Block, txn *transaction.Transaction) bool {
-	if !common.WithinTime(int64(b.CreationDate), int64(txn.CreationDate), transaction.TXN_TIME_TOLERANCE) {
-		return false
-	}
-	return true
+	return common.WithinTime(int64(b.CreationDate), int64(txn.CreationDate), transaction.TXN_TIME_TOLERANCE)
 }
 
 /*UpdatePendingBlock - updates the block that is generated and pending rest of the process */

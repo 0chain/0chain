@@ -35,9 +35,16 @@ func (sn *ClientAllocation) Decode(input []byte) error {
 	return nil
 }
 
+type ChallengeResponse struct {
+	ID                string              `json:"challenge_id"`
+	ValidationTickets []*ValidationTicket `json:"validation_tickets"`
+}
+
 type BlobberChallenge struct {
-	BlobberID    string                       `json:"blobber_id"`
-	ChallengeMap map[string]*StorageChallenge `json:"challenges"`
+	BlobberID                 string                       `json:"blobber_id"`
+	Challenges                []*StorageChallenge          `json:"challenges"`
+	ChallengeMap              map[string]*StorageChallenge `json:"-"`
+	LatestCompletedChallenges []*StorageChallenge          `json:"lastest_completed_challenges"`
 }
 
 func (sn *BlobberChallenge) GetKey() smartcontractstate.Key {
@@ -54,7 +61,20 @@ func (sn *BlobberChallenge) Decode(input []byte) error {
 	if err != nil {
 		return err
 	}
+	sn.ChallengeMap = make(map[string]*StorageChallenge)
+	for _, challenge := range sn.Challenges {
+		sn.ChallengeMap[challenge.ID] = challenge
+	}
 	return nil
+}
+
+func (sn *BlobberChallenge) addChallenge(challenge *StorageChallenge) {
+	if sn.Challenges == nil {
+		sn.Challenges = make([]*StorageChallenge, 0)
+		sn.ChallengeMap = make(map[string]*StorageChallenge)
+	}
+	sn.Challenges = append(sn.Challenges, challenge)
+	sn.ChallengeMap[challenge.ID] = challenge
 }
 
 type StorageChallenge struct {
@@ -114,20 +134,38 @@ func (sn *StorageNode) Decode(input []byte) error {
 	return nil
 }
 
+type StorageAllocationStats struct {
+	UsedSize                  int64  `json:"used_size"`
+	NumWrites                 int64  `json:"num_of_writes"`
+	NumReads                  int64  `json:"num_of_reads"`
+	TotalChallenges           int64  `json:"total_challenges"`
+	OpenChallenges            int64  `json:"num_open_challenges"`
+	SuccessChallenges         int64  `json:"num_success_challenges"`
+	FailedChallenges          int64  `json:"num_failed_challenges"`
+	LastestClosedChallengeTxn string `json:"latest_closed_challenge"`
+}
+
+type BlobberAllocation struct {
+	BlobberID       string                  `json:"blobber_id"`
+	AllocationID    string                  `json:"allocation_id"`
+	Size            int64                   `json:"size"`
+	AllocationRoot  string                  `json:"allocation_root"`
+	LastWriteMarker *WriteMarker            `json:"write_marker"`
+	Stats           *StorageAllocationStats `json:"stats"`
+}
+
 type StorageAllocation struct {
-	ID                        string           `json:"id"`
-	DataShards                int              `json:"data_shards"`
-	ParityShards              int              `json:"parity_shards"`
-	Size                      int64            `json:"size"`
-	UsedSize                  int64            `json:"used_size"`
-	Expiration                common.Timestamp `json:"expiration_date"`
-	Blobbers                  []*StorageNode   `json:"blobbers"`
-	Owner                     string           `json:"owner_id"`
-	OwnerPublicKey            string           `json:"owner_public_key"`
-	NumWrites                 int64            `json:"num_of_writes"`
-	OpenChallenges            int64            `json:"num_open_challenges"`
-	ClosedChallenges          int64            `json:"num_closed_challenges"`
-	LastestClosedChallengeTxn string           `json:"latest_closed_challenge"`
+	ID             string                        `json:"id"`
+	DataShards     int                           `json:"data_shards"`
+	ParityShards   int                           `json:"parity_shards"`
+	Size           int64                         `json:"size"`
+	Expiration     common.Timestamp              `json:"expiration_date"`
+	Blobbers       []*StorageNode                `json:"blobbers"`
+	Owner          string                        `json:"owner_id"`
+	OwnerPublicKey string                        `json:"owner_public_key"`
+	Stats          *StorageAllocationStats       `json:"stats"`
+	BlobberDetails []*BlobberAllocation          `json:blobber_details`
+	BlobberMap     map[string]*BlobberAllocation `json:"-"`
 }
 
 func (sn *StorageAllocation) GetKey() smartcontractstate.Key {
@@ -139,39 +177,16 @@ func (sn *StorageAllocation) Decode(input []byte) error {
 	if err != nil {
 		return err
 	}
+	sn.BlobberMap = make(map[string]*BlobberAllocation)
+	for _, blobberAllocation := range sn.BlobberDetails {
+		sn.BlobberMap[blobberAllocation.BlobberID] = blobberAllocation
+	}
 	return nil
 }
 
 func (sn *StorageAllocation) Encode() []byte {
 	buff, _ := json.Marshal(sn)
 	return buff
-}
-
-type BlobberAllocation struct {
-	ID              string       `json:"id"`
-	AllocationID    string       `json:"allocation_id"`
-	Size            int64        `json:"size"`
-	UsedSize        int64        `json:"used_size"`
-	AllocationRoot  string       `json:"allocation_root"`
-	BlobberID       string       `json:"blobber_id"`
-	LastWriteMarker *WriteMarker `json:"write_marker"`
-}
-
-func (ba *BlobberAllocation) GetKey() smartcontractstate.Key {
-	return smartcontractstate.Key("blobber_allocation:" + encryption.Hash(ba.AllocationID+":"+ba.BlobberID))
-}
-
-func (ba *BlobberAllocation) Encode() []byte {
-	buff, _ := json.Marshal(ba)
-	return buff
-}
-
-func (ba *BlobberAllocation) Decode(input []byte) error {
-	err := json.Unmarshal(input, ba)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 type BlobberCloseConnection struct {

@@ -322,6 +322,19 @@ func (r *Round) Restart() {
 	r.SetState(RoundShareVRF)
 }
 
+//AddAdditionalVRFShare - Adding additional VRFShare received for stats persp
+func (r *Round) AddAdditionalVRFShare(share *VRFShare) bool {
+	r.Mutex.Lock()
+	defer r.Mutex.Unlock()
+	
+	if _, ok := r.shares[share.party.GetKey()]; ok {
+		Logger.Info("AddVRFShare Share is already there. Returning false.")
+		return false
+	}
+	//r.setState(RoundShareVRF)
+	r.shares[share.party.GetKey()] = share
+	return true
+}
 //AddVRFShare - implement interface
 func (r *Round) AddVRFShare(share *VRFShare, threshold int) bool {
 	r.Mutex.Lock()

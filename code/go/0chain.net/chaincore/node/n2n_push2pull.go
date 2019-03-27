@@ -68,7 +68,7 @@ func PushToPullHandler(ctx context.Context, r *http.Request) (interface{}, error
 		N2n.Error("push to pull", zap.String("key", key), zap.Error(err))
 		return nil, common.NewError("request_data_not_found", "Requested data is not found")
 	}
-	N2n.Debug("push to pull", zap.String("key", key))
+	//N2n.Debug("push to pull", zap.String("key", key))
 	return pcde, nil
 }
 
@@ -90,7 +90,7 @@ func pullEntityHandler(ctx context.Context, nd *Node, uri string, handler datast
 			N2n.Error("message pull", zap.Int("from", nd.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", uri), zap.Duration("duration", duration), zap.String("entity", entityName), zap.Any("id", entity.GetKey()), zap.Error(err))
 			return nil, err
 		}
-		N2n.Debug("message pull", zap.Int("from", nd.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", uri), zap.Duration("duration", duration), zap.String("entity", entityName), zap.Any("id", entity.GetKey()))
+		//N2n.Debug("message pull", zap.Int("from", nd.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", uri), zap.Duration("duration", duration), zap.String("entity", entityName), zap.Any("id", entity.GetKey()))
 		return entity, nil
 	}
 	params := &url.Values{}
@@ -154,7 +154,7 @@ func pullEntityHandler(ctx context.Context, nd *Node, uri string, handler datast
 			pcde.state = pullStateDone
 			break
 		} else {
-			N2n.Debug("message pull", zap.String("uri", uri), zap.String("entity", entityName), zap.String("id", entityID), zap.Bool("result", result))
+			//N2n.Debug("message pull", zap.String("uri", uri), zap.String("entity", entityName), zap.String("id", entityID), zap.Bool("result", result))
 		}
 	}
 }
