@@ -562,10 +562,18 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context, seconds int) {
 	if mc.CurrentRound == 0 {
 		return
 	}
+	sstime := int(math.Ceil(2 * chain.SteadyStateFinalizationTimer.Mean() / 1000000000))
+	if sstime == 0 {
+		sstime = 2
+	}
+	restartTime := int(math.Ceil(10 * chain.SteadyStateFinalizationTimer.Mean() / 1000000000))
+	if restartTime == 0 {
+		restartTime = 10
+	}
 	switch true {
-	case seconds%10 == 2: // do something minor every (x mod 10 = 2 seconds)
+	case seconds%restartTime == sstime: // do something minor every (x mod 10 = 2 seconds)
 		mc.handleNoProgress(ctx)
-	case seconds%10 == 0: // do something major every (x mod 10 = 0 seconds)
+	case seconds%restartTime == 0: // do something major every (x mod 10 = 0 seconds)
 		mc.restartRound(ctx)
 	}
 }
