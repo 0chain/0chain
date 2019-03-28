@@ -2,7 +2,7 @@ version: '3'
 services:
 
   scylla:
-    image: scylladb/scylla:2.3.2
+    image: scylladb/scylla:3.0.4
     networks:
     - default
     ports:
