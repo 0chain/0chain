@@ -8,6 +8,7 @@ services:
     ports:
     - "9042:9042"
     volumes:
+    - /0chain/sharder/config/cassandra/cassandra.yaml:/etc/cassandra/cassandra.yaml
     - /0chain/sharder/data/cassandra:/var/lib/cassandra
 
     healthcheck:
