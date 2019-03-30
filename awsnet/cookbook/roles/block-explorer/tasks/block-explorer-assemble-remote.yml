@@ -1,7 +1,0 @@
----
-- become: yes
-  block:
-  - name: Set hostname to match EC2 Name
-    hostname:
-      name: "{{agent_name}}.{{network_name}}.{{network_domain}}"
-...

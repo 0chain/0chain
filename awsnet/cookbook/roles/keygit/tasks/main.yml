@@ -1,7 +1,0 @@
----
-- import_tasks: keygit-assemble.yml
-  tags: keygit-assemble-local
-
-- import_tasks: keygit-teardown.yml
-  tags: keygit-teardown-local
-...

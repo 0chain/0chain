@@ -1,8 +1,0 @@
----
-- route32:
-  state: present
-  zone: 0chain.net
-  record: {{item}}.testnet.com
-  value:
-  wait: yes
-...
