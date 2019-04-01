@@ -24,6 +24,7 @@ func CleanupWorker(ctx context.Context) {
 	if !ok {
 		return
 	}
+	var invalidHashes = make([]datastore.Entity, 0, 1024)
 	var invalidTxns = make([]datastore.Entity, 0, 1024)
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
 	txn := transactionEntityMetadata.Instance().(*Transaction)
@@ -34,11 +35,16 @@ func CleanupWorker(ctx context.Context) {
 		if !ok {
 			err := qe.Delete(ctx)
 			if err != nil {
-				Logger.Info("Error in deleting txn in redis", zap.Error(err))
+				Logger.Error("Error in deleting txn in redis", zap.Error(err))
 			}
 		}
 		if !common.Within(int64(txn.CreationDate), TXN_TIME_TOLERANCE-1) {
 			invalidTxns = append(invalidTxns, txn)
+		}
+		err := transactionEntityMetadata.GetStore().Read(ctx, txn.Hash, txn)
+		cerr, ok := err.(*common.Error)
+		if ok && cerr.Code == datastore.EntityNotFound {
+			invalidHashes = append(invalidHashes, txn)
 		}
 		return true
 	}
@@ -59,6 +65,15 @@ func CleanupWorker(ctx context.Context) {
 					Logger.Error("Error in MultiDelete", zap.Error(err))
 				} else {
 					invalidTxns = invalidTxns[:0]
+				}
+			}
+			if len(invalidHashes) > 0 {
+				Logger.Info("missing transactions cleanup", zap.String("collection", collectionName), zap.Int("missing_count", len(invalidHashes)))
+				err = transactionEntityMetadata.GetStore().MultiDeleteFromCollection(cctx, transactionEntityMetadata, invalidHashes)
+				if err != nil {
+					Logger.Error("Error in MultiDeleteFromCollection", zap.Error(err))
+				} else {
+					invalidHashes = invalidHashes[:0]
 				}
 			}
 		}
