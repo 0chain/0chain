@@ -222,6 +222,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		return nil, nil
 	}
 	mc.addToRoundVerification(ctx, r, b)
+	r.AddProposedBlock(b)
 	mc.SendBlock(ctx, b)
 	return b, nil
 }

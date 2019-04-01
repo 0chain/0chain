@@ -436,31 +436,32 @@ func (mc *Chain) computeRBO(ctx context.Context, mr *Round, rbo string) {
 	}
 
 	pr := mc.GetRound(mr.GetRoundNumber() - 1)
-	if pr != nil {
-		mc.computeRoundRandomSeed(ctx, pr, mr, rbo)
-	} else {
-		Logger.Error("pr is null! Why?")
-	}
+	mc.computeRoundRandomSeed(ctx, pr, mr, rbo)
 
 }
 
 func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r *Round, rbo string) {
-	if mpr := pr.(*Round); mpr.IsVRFComplete() {
-		var seed int64
-		if isDkgEnabled {
-			useed, err := strconv.ParseUint(rbo[0:16], 16, 64)
-			if err != nil {
-				panic(err)
-			}
-			seed = int64(useed)
-		} else {
-			seed = rand.New(rand.NewSource(pr.GetRandomSeed())).Int63()
+	
+	var seed int64
+	if isDkgEnabled {
+		useed, err := strconv.ParseUint(rbo[0:16], 16, 64)
+		if err != nil {
+			panic(err)
 		}
-		r.Round.SetVRFOutput(rbo)
-		//Todo: Remove this log later.
-		Logger.Info("Starting round", zap.Int64("round", r.GetRoundNumber()), zap.Int64("rseed", seed))
-		mc.startRound(ctx, r, seed)
+		seed = int64(useed)
 	} else {
-		Logger.Error("compute round random seed - no prior value", zap.Int64("round", r.GetRoundNumber()), zap.Int("blocks", len(pr.GetProposedBlocks())))
+		if pr != nil {
+			if mpr := pr.(*Round); mpr.IsVRFComplete() {
+		        seed = rand.New(rand.NewSource(pr.GetRandomSeed())).Int63()
+			}
+		} else {
+			Logger.Error("pr is null! Let go this round...")
+			return
+		}
 	}
+	r.Round.SetVRFOutput(rbo)
+	//Todo: Remove this log later.
+	Logger.Info("Starting round", zap.Int64("round", r.GetRoundNumber()), zap.Int64("rseed", seed))
+	mc.startRound(ctx, r, seed)
+
 }

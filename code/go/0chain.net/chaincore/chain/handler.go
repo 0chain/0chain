@@ -161,7 +161,7 @@ func (c *Chain) roundHealthInATable(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Fprintf(w, "<tr class='active'>")
 	fmt.Fprintf(w, "<td valign='top'style='padding:2px'>")
-	fmt.Fprintf(w, "Current Round#")
+	fmt.Fprintf(w, "Current Round")
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "<td valign='top' align='right' style='padding:2px'>")
 	fmt.Fprintf(w, "%v", c.CurrentRound)
@@ -170,7 +170,7 @@ func (c *Chain) roundHealthInATable(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Fprintf(w, "<tr class='active'>")
 	fmt.Fprintf(w, "<td valign='top' style='padding:2px'>")
-	fmt.Fprintf(w, "VRFs#")
+	fmt.Fprintf(w, "VRFs")
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "<td valign='top' align='right' style='padding:2px'>")
 	fmt.Fprintf(w, "%v", vrfMsg)
@@ -211,7 +211,7 @@ func (c *Chain) chainHealthInATable(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<table class='menu' style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr class='active'>")
 	fmt.Fprintf(w, "<td valign='top' style='padding:2px'>")
-	fmt.Fprintf(w, "Finalized Round#")
+	fmt.Fprintf(w, "Latest Finalized Round")
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "<td valign='top' align='right' style='padding:2px'>")
 	fmt.Fprintf(w, "%v", c.LatestFinalizedBlock.Round)
@@ -229,7 +229,7 @@ func (c *Chain) chainHealthInATable(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Fprintf(w, "<tr class='active'>")
 	fmt.Fprintf(w, "<td valign='top'>")
-	fmt.Fprintf(w, "#Rollbacks")
+	fmt.Fprintf(w, "Rollbacks")
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "<td valign='top' align='right' style='padding:2px'>")
 	fmt.Fprintf(w, "%v", c.RollbackCount)
@@ -237,8 +237,8 @@ func (c *Chain) chainHealthInATable(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</tr>")
 
 	fmt.Fprintf(w, "<tr class='active'>")
-	fmt.Fprintf(w, "<td valign='top'")
-	fmt.Fprintf(w, "#Timeouts")
+	fmt.Fprintf(w, "<td valign='top'>")
+	fmt.Fprintf(w, "Timeouts")
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "<td valign='top'  align='right' style='padding:2px' >")
 	fmt.Fprintf(w, "%v", c.RoundTimeoutsCount)
