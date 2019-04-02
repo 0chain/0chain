@@ -15,6 +15,11 @@ func Hash(data interface{}) string {
 	return hex.EncodeToString(RawHash(data))
 }
 
+func IsHash(str string) bool {
+	bytes, err := hex.DecodeString(str)
+	return err == nil && len(bytes) == HASH_LENGTH
+}
+
 //EmptyHash - hash of an empty string
 var EmptyHash = Hash("")
 

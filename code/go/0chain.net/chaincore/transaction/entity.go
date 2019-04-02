@@ -92,6 +92,12 @@ func (t *Transaction) ValidateWrtTimeForBlock(ctx context.Context, ts common.Tim
 	if t.Value < 0 {
 		return common.InvalidRequest("value must be greater than or equal to zero")
 	}
+	if !encryption.IsHash(txn.ClientID) {
+		return common.InvalidRequest("client id must be a hexadecimal hash")
+	}
+	if !encryption.IsHash(txn.ToClientID) {
+		return common.InvalidRequest("to client id must be a hexadecimal hash")
+	}
 	// TODO: t.Fee needs to be compared to the minimum transaction fee once governance is implemented
 	if config.DevConfiguration.IsFeeEnabled && t.Fee < 0 {
 		return common.InvalidRequest("fee must be greater than or equal to zero")
