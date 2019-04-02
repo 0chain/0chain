@@ -92,9 +92,6 @@ func (t *Transaction) ValidateWrtTimeForBlock(ctx context.Context, ts common.Tim
 	if t.Value < 0 {
 		return common.InvalidRequest("value must be greater than or equal to zero")
 	}
-	if !encryption.IsHash(txn.ClientID) {
-		return common.InvalidRequest("client id must be a hexadecimal hash")
-	}
 	if !encryption.IsHash(t.ToClientID) && t.ToClientID != "" {
 		return common.InvalidRequest("to client id must be a hexadecimal hash")
 	}
