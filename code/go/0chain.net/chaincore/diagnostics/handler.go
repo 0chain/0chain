@@ -92,7 +92,7 @@ func WriteTimerStatistics(w http.ResponseWriter, c *chain.Chain, timer metrics.T
 	for idx, p := range percentiles {
 		fmt.Fprintf(w, "<tr><td>%.2f%%</td><td>%.2f ms</td></tr>", 100*p, scale(pvals[idx]))
 	}
-	fmt.Fprintf(w, "<tr><td class='sheader' colspan='2'>Block rate per second</td></tr>")
+	fmt.Fprintf(w, "<tr><td class='sheader' colspan='2'>Rate per second</td></tr>")
 	fmt.Fprintf(w, "<tr><td>Last 1-min rate</td><td>%.2f</td></tr>", timer.Rate1())
 	fmt.Fprintf(w, "<tr><td>Last 5-min rate</td><td>%.2f</td></tr>", timer.Rate5())
 	fmt.Fprintf(w, "<tr><td>Last 15-min rate</td><td>%.2f</td></tr>", timer.Rate15())

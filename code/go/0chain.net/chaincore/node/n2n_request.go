@@ -24,11 +24,20 @@ const (
 //FetchStrategy - when fetching an entity, the strategy to use to select the peer nodes
 var FetchStrategy = FetchStrategyNearest
 
+//GetFetchStrategy - indicate which fetch strategy to use
+func GetFetchStrategy() int {
+	if Self.Node.Type == NodeTypeSharder {
+		return FetchStrategyRandom
+	} else {
+		return FetchStrategy
+	}
+}
+
 //RequestEntity - request an entity
 func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF) *Node {
 	rhandler := requestor(params, handler)
 	var nodes []*Node
-	if FetchStrategy == FetchStrategyRandom {
+	if GetFetchStrategy() == FetchStrategyRandom {
 		nodes = np.shuffleNodes()
 	} else {
 		nodes = np.GetNodesByLargeMessageTime()
@@ -56,7 +65,7 @@ func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, pa
 func (np *Pool) RequestEntityFromAll(ctx context.Context, requestor EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF) {
 	rhandler := requestor(params, handler)
 	var nodes []*Node
-	if FetchStrategy == FetchStrategyRandom {
+	if GetFetchStrategy() == FetchStrategyRandom {
 		nodes = np.shuffleNodes()
 	} else {
 		nodes = np.GetNodesByLargeMessageTime()
