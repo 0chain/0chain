@@ -59,7 +59,7 @@ func CleanupWorker(ctx context.Context) {
 				Logger.Error("Error in IterateCollectionAsc", zap.Error(err))
 			}
 			if len(invalidTxns) > 0 {
-				Logger.Info("transactions cleanup", zap.String("collection", collectionName), zap.Int("invalid_count", len(invalidTxns)))
+				Logger.Info("transactions cleanup", zap.String("collection", collectionName), zap.Int("invalid_count", len(invalidTxns)), zap.Any("collection_size", mstore.GetCollectionSize(cctx, transactionEntityMetadata, collectionName)))
 				err = transactionEntityMetadata.GetStore().MultiDelete(cctx, transactionEntityMetadata, invalidTxns)
 				if err != nil {
 					Logger.Error("Error in MultiDelete", zap.Error(err))
