@@ -260,6 +260,7 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) error 
 		ndb := smartcontractstate.NewPipedSCDB(mndb, b.SCStateDB, false)
 		output, err := c.ExecuteSmartContract(txn, ndb, sctx)
 		if err != nil {
+			Logger.Info("Error executing the SC", zap.Any("txn", txn), zap.Error(err))
 			return err
 		}
 		txn.TransactionOutput = output
