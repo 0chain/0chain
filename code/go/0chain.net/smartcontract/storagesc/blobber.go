@@ -139,6 +139,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(t *transaction.Transacti
 	allocationObj.Stats.NumWrites++
 	sc.DB.PutNode(allocationObj.GetKey(), allocationObj.Encode())
 
-	blobberAllocationBytes, err = json.Marshal(blobberAllocation)
+	blobberAllocationBytes, err = json.Marshal(blobberAllocation.LastWriteMarker)
 	return string(blobberAllocationBytes), err
 }
