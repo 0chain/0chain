@@ -245,6 +245,26 @@ func (c *Chain) chainHealthInATable(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</td>")
 
 	fmt.Fprintf(w, "</tr>")
+	if node.Self.Type == node.NodeTypeMiner {
+		txn, ok := transaction.Provider().(*transaction.Transaction)
+		if ok {
+			transactionEntityMetadata := txn.GetEntityMetadata()
+			collectionName := txn.GetCollectionName()
+			ctx := common.GetRootContext()
+			cctx := memorystore.WithEntityConnection(ctx, transactionEntityMetadata)
+			mstore, ok := transactionEntityMetadata.GetStore().(*memorystore.Store)
+			if ok {
+				fmt.Fprintf(w, "<tr class='active'>")
+				fmt.Fprintf(w, "<td valign='top'>")
+				fmt.Fprintf(w, "Redis Collection")
+				fmt.Fprintf(w, "</td>")
+				fmt.Fprintf(w, "<td valign='top' align='right' style='padding:2px'>")
+				fmt.Fprintf(w, "%v", mstore.GetCollectionSize(cctx, transactionEntityMetadata, collectionName))
+				fmt.Fprintf(w, "</td>")
+				fmt.Fprintf(w, "</tr>")
+			}
+		}
+	}
 	fmt.Fprintf(w, "</table>")
 }
 

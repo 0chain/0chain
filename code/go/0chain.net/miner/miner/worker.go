@@ -14,6 +14,7 @@ import (
 
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
+	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/chaincore/wallet"
 	"0chain.net/core/common"
@@ -24,10 +25,9 @@ import (
 )
 
 var (
-	wallets             []*wallet.Wallet
-	txn_generation_rate int32
-	pourPoint           int64
-	pourAmount          int64
+	wallets    []*wallet.Wallet
+	pourPoint  int64
+	pourAmount int64
 )
 
 /*TransactionGenerator - generates a steady stream of transactions */
@@ -41,13 +41,12 @@ func TransactionGenerator(c *chain.Chain) {
 
 	viper.SetDefault("development.txn_generation.wallets", 1000)
 	var numClients = viper.GetInt("development.txn_generation.wallets")
+	var numTxns int32
 
 	GenerateClients(c, numClients)
 	numWorkers := 1
 	blockSize := c.BlockSize
-	viper.SetDefault("development.txn_generation.transactions", blockSize)
-	numTxns := viper.GetInt32("development.txn_generation.transactions")
-	SetTxnGenRate(numTxns)
+
 	switch {
 	case blockSize <= 10:
 		numWorkers = 1
@@ -82,8 +81,10 @@ func TransactionGenerator(c *chain.Chain) {
 	numGenerators := sc.NumGenerators
 	numMiners := sc.Miners.Size()
 	var timerCount int64
+	ts := rand.NewSource(time.Now().UnixNano())
+	trng := rand.New(ts)
 	for true {
-		numTxns = GetTxnGenRate()
+		numTxns = trng.Int31n(blockSize)
 		numWorkerTxns := numTxns / int32(numWorkers)
 		if numWorkerTxns*int32(numWorkers) < numTxns {
 			numWorkerTxns++
@@ -153,6 +154,16 @@ func createSendTransaction(c *chain.Chain, prng *rand.Rand) *transaction.Transac
 		wt = wallets[prng.Intn(csize)]
 		if wf != wt {
 			break
+		}
+	}
+	if config.DevConfiguration.SmartContract {
+		fs, err := c.GetState(c.LatestFinalizedBlock, wf.ClientID)
+		if err != nil || fs.Balance < state.Balance(pourPoint) {
+			txn := wf.CreateSCTransaction(faucetsc.ADDRESS, 0, `{"name":"pour","input":{}}`, 10000000)
+			return txn
+		} else {
+			txn := wf.CreateSCTransaction(faucetsc.ADDRESS, int64(fs.Balance)-10000000, `{"name":"refill","input":{}}`, 10000000)
+			return txn
 		}
 	}
 	txn := wf.CreateRandomSendTransaction(wt.ClientID, 10000000)
@@ -228,30 +239,22 @@ func GenerateClients(c *chain.Chain, numClients int) {
 		}
 	}
 	time.Sleep(1 * time.Second)
-	for _, w := range wallets {
-		//generous airdrop in dev/test mode :)
-		txn := ownerWallet.CreateSendTransaction(w.ClientID, prng.Int63n(100)*10000000000, "generous air drop! :)", prng.Int63n(10)+1)
-		_, err := transaction.PutTransaction(tctx, txn)
-		if err != nil {
-			Logger.Info("client generator", zap.Any("error", err))
-		}
-	}
+
 	if config.DevConfiguration.SmartContract {
 		txn := ownerWallet.CreateSCTransaction(faucetsc.ADDRESS, viper.GetInt64("development.faucet.refill_amount"), `{"name":"refill","input":{}}`, 0)
 		_, err := transaction.PutTransaction(tctx, txn)
 		if err != nil {
 			Logger.Info("client generator - faucet refill", zap.Any("error", err))
 		}
+	} else {
+		for _, w := range wallets {
+			//generous airdrop in dev/test mode :)
+			txn := ownerWallet.CreateSendTransaction(w.ClientID, prng.Int63n(100)*10000000000, "generous air drop! :)", prng.Int63n(10)+1)
+			_, err := transaction.PutTransaction(tctx, txn)
+			if err != nil {
+				Logger.Info("client generator", zap.Any("error", err))
+			}
+		}
 	}
 	Logger.Info("generation of wallets complete", zap.Int("wallets", len(wallets)))
-}
-
-//SetTxnGenRate - the txn generation rate
-func SetTxnGenRate(newRate int32) {
-	txn_generation_rate = newRate
-}
-
-//GetTxnGenRate - the txn generation rate
-func GetTxnGenRate() int32 {
-	return txn_generation_rate
 }
