@@ -30,9 +30,14 @@ var StateSaveTimer metrics.Timer
 //StateChangeSizeMetric - a metric that tracks how many state nodes are changing with each block
 var StateChangeSizeMetric metrics.Histogram
 
+//SmartContractExecutionTimer - a metric that tracks the time it takes to execute a smart contract txn
+var SmartContractExecutionTimer metrics.Timer
+
 func init() {
 	StateSaveTimer = metrics.GetOrRegisterTimer("state_save_timer", nil)
 	StateChangeSizeMetric = metrics.NewHistogram(metrics.NewUniformSample(1024))
+
+	SmartContractExecutionTimer = metrics.GetOrRegisterTimer("sc_execute_timer", nil)
 }
 
 var ErrPreviousStateUnavailable = common.NewError("prev_state_unavailable", "Previous state not available")
@@ -240,6 +245,7 @@ func (c *Chain) ExecuteSmartContract(t *transaction.Transaction, ndb smartcontra
 	done := make(chan bool, 1)
 	var output string
 	var err error
+	ts := time.Now()
 	ctx, cancelf := context.WithTimeout(common.GetRootContext(), c.SmartContractTimeout)
 	go func() {
 		output, err = smartcontract.ExecuteSmartContract(ctx, t, ndb, balances)
@@ -250,6 +256,7 @@ func (c *Chain) ExecuteSmartContract(t *transaction.Transaction, ndb smartcontra
 		cancelf()
 		return "", common.NewError("smart_contract_execution_timeout", "smart contract execution timed out")
 	case <-done:
+		SmartContractExecutionTimer.Update(time.Since(ts))
 		return output, err
 	}
 }
