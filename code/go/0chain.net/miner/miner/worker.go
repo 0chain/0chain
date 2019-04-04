@@ -159,7 +159,7 @@ func createSendTransaction(c *chain.Chain, prng *rand.Rand) *transaction.Transac
 	if config.DevConfiguration.SmartContract {
 		fs, err := c.GetState(c.LatestFinalizedBlock, wf.ClientID)
 		if err != nil || fs.Balance < state.Balance(pourPoint) {
-			txn := wf.CreateSCTransaction(faucetsc.ADDRESS, 0, `{"name":"pour","input":{}}`, 10000000)
+			txn := wf.CreateSCTransaction(faucetsc.ADDRESS, 0, `{"name":"pour","input":{}}`, 0)
 			return txn
 		} else {
 			txn := wf.CreateSCTransaction(faucetsc.ADDRESS, int64(fs.Balance)-10000000, `{"name":"refill","input":{}}`, 10000000)
