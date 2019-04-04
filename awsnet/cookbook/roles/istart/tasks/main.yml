@@ -1,5 +1,0 @@
----
-- import_tasks: istart-assemble-local.yml
-  tags: ['istart-assemble-local']
-...
-

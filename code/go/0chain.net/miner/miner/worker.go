@@ -13,12 +13,14 @@ import (
 	"0chain.net/miner"
 
 	"0chain.net/chaincore/client"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/chaincore/wallet"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	. "0chain.net/core/logging"
 	"0chain.net/core/memorystore"
+	"0chain.net/smartcontract/faucetsc"
 )
 
 var (
@@ -232,6 +234,13 @@ func GenerateClients(c *chain.Chain, numClients int) {
 		_, err := transaction.PutTransaction(tctx, txn)
 		if err != nil {
 			Logger.Info("client generator", zap.Any("error", err))
+		}
+	}
+	if config.DevConfiguration.SmartContract {
+		txn := ownerWallet.CreateSCTransaction(faucetsc.ADDRESS, viper.GetInt64("development.faucet.refill_amount"), `{"name":"refill","input":{}}`, 0)
+		_, err := transaction.PutTransaction(tctx, txn)
+		if err != nil {
+			Logger.Info("client generator - faucet refill", zap.Any("error", err))
 		}
 	}
 	Logger.Info("generation of wallets complete", zap.Int("wallets", len(wallets)))

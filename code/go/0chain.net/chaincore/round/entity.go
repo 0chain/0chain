@@ -319,7 +319,8 @@ func (r *Round) Clear() {
 func (r *Round) Restart() {
 	r.initialize()
 	r.Block = nil
-	r.SetState(RoundShareVRF)
+	r.ResetState(RoundShareVRF)
+
 }
 
 //AddAdditionalVRFShare - Adding additional VRFShare received for stats persp
@@ -363,9 +364,14 @@ func (r *Round) GetState() int {
 	return r.state
 }
 
-//SetState - set the state of the round
+//SetState - set the state of the round in a progressive order
 func (r *Round) SetState(state int) {
 	r.setState(state)
+}
+
+//ResetState resets the state to any desired state 
+func (r *Round) ResetState(state int) {
+	r.state = state
 }
 
 func (r *Round) setState(state int) {

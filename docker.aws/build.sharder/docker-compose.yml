@@ -1,24 +1,15 @@
 version: '3'
 services:
 
-  scylla:
-    image: scylladb/scylla:2.3.2
+  cassandra:
+    image: cassandra:3.11.4
     networks:
     - default
     ports:
     - "9042:9042"
     volumes:
-
-    - /0chain/sharder/config/scylla/scylla.yaml:/etc/scylla/scylla.yaml
-
-    - /0chain/sharder/config/scylla/scylla-server:/etc/sysconfig/scylla-server
-
-    #Store the scylla volume
-    - /0chain/sharder/data/scylla:/0chain/data/scylla
-
-    #Create the directory to store the data and commitlog
-    - /0chain/sharder/data/scylla/data:/var/lib/scylla/data
-    - /0chain/sharder/data/scylla/commitlog:/var/lib/scylla/commitlog
+    - /0chain/sharder/config/cassandra/cassandra.yaml:/etc/cassandra/cassandra.yaml
+    - /0chain/sharder/data/cassandra:/var/lib/cassandra
 
     healthcheck:
       test: ["CMD-SHELL", "[ $$(nodetool statusgossip) = running ]"]
@@ -26,33 +17,19 @@ services:
       timeout: 10s
       retries: 5
 
-    command:
-      - "--developer-mode"
-      - ${SCYLLA_DEVELOPER_MODE}
-      - "--overprovisioned"
-      - ${SCYLLA_OVERPROVISIONED}
-      - "--memory"
-      - ${SCYLLA_MEMORY}
-      - "--cpuset"
-      - ${SCYLLA_CPUSET}
-      - "--smp"
-      - ${SCYLLA_SMP}
-
-    #Start under user 0chain
     privileged: true
 
-  scylla-init:
+  cassandra-init:
     #The service depends upon several cassandra utilities.
     image: cassandra:latest
     volumes:
     - /0chain/sharder/bin:/0chain/bin
     - /0chain/sharder/sql:/0chain/sql
-    entrypoint: bash /0chain/bin/scylla-init.sh
-    #command: bash
-    links:
-    - scylla:scylla
 
-    #Services are expected to be started correctly
+    command: bash /0chain/bin/cassandra-init.sh
+    
+    links:
+    - cassandra:cassandra
 
     user: ${ZCHAIN_USER}:${ZCHAIN_GROUP}
     privileged: false
@@ -60,13 +37,13 @@ services:
   sharder:
     environment:
     - DOCKER=true
-    - CASSANDRA_CLUSTER=scylla
+    - CASSANDRA_CLUSTER=cassandra
     depends_on:
-    - scylla-init
+    - cassandra-init
 
     links:
-    - scylla-init:scylla-init
-    - scylla:syclla
+    - cassandra-init:cassandra-init
+    - cassandra:cassandra
 
     build:
       context: ${DOCKER_CODEBASE}

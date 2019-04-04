@@ -1,4 +1,0 @@
----
-- import_tasks: agent-config-assemble-remote.yml
-  tags: ['agent-config-assemble-remote']
-...

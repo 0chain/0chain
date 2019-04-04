@@ -1,6 +1,0 @@
----
-- block:
-  - set_fact:
-      agent_role: "{{agent.value.role}}"
-  tags: ['artifacts-teardown-remote']
-...

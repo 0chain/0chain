@@ -47,6 +47,7 @@ type Transaction struct {
 	TransactionType   int    `json:"transaction_type" msgpack:"tt"`
 	TransactionOutput string `json:"transaction_output,omitempty" msgpack:"o,omitempty"`
 	OutputHash        string `json:"txn_output_hash" msgpack:"oh"`
+	Status            int    `json:"transaction_status" msgpack:"sot"`
 }
 
 var transactionEntityMetadata *datastore.EntityMetadataImpl
@@ -91,6 +92,9 @@ func (t *Transaction) ValidateWrtTime(ctx context.Context, ts common.Timestamp) 
 func (t *Transaction) ValidateWrtTimeForBlock(ctx context.Context, ts common.Timestamp, validateSignature bool) error {
 	if t.Value < 0 {
 		return common.InvalidRequest("value must be greater than or equal to zero")
+	}
+	if !encryption.IsHash(t.ToClientID) && t.ToClientID != "" {
+		return common.InvalidRequest("to client id must be a hexadecimal hash")
 	}
 	// TODO: t.Fee needs to be compared to the minimum transaction fee once governance is implemented
 	if config.DevConfiguration.IsFeeEnabled && t.Fee < 0 {
@@ -309,8 +313,8 @@ func (t *Transaction) ComputeOutputHash() string {
 /*VerifyOutputHash - Verify the hash of the transaction */
 func (t *Transaction) VerifyOutputHash(ctx context.Context) error {
 	if t.OutputHash != t.ComputeOutputHash() {
-		Logger.Debug("verify output hash (hash mismatch)", zap.String("hash", t.OutputHash), zap.String("computed_hash", t.ComputeOutputHash()), zap.String("hash_data", t.TransactionOutput), zap.String("txn", datastore.ToJSON(t).String()))
-		return common.NewError("hash_mismatch", fmt.Sprintf("The hash of the output doesn't match with the provided hash: %v %v %v", t.Hash, t.ComputeOutputHash(), t.TransactionOutput))
+		Logger.Info("verify output hash (hash mismatch)", zap.String("hash", t.OutputHash), zap.String("computed_hash", t.ComputeOutputHash()), zap.String("hash_data", t.TransactionOutput), zap.String("txn", datastore.ToJSON(t).String()))
+		return common.NewError("hash_mismatch", fmt.Sprintf("The hash of the output doesn't match with the provided hash: %v %v %v %v", t.Hash, t.OutputHash, t.ComputeOutputHash(), t.TransactionOutput))
 	}
 	return nil
 }

@@ -1,7 +1,0 @@
-- debug: msg="{{item.key}}={{item.value}}"
-  with_dict:
-    zchain_versions: "{{zchain_versions}}"
-    network: "{{network}}"
-    zchain: "{{zchain}}"
-  tags:
-    - zchain-show

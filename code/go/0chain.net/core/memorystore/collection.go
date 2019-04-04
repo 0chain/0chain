@@ -88,6 +88,15 @@ func (ms *Store) iterateCollection(ctx context.Context, entityMetadata datastore
 			return err
 		}
 		for i := 0; i < count; i++ {
+			/*
+			* Adding key to entity instance that has hash
+			* in collection, but no corresponding entity.
+			* This allows handler to process entities that
+			* only appear in the collection.
+			 */
+			if bucket[i].GetKey() == "" {
+				bucket[i].SetKey(keys[i])
+			}
 			if datastore.IsEmpty(bucket[i].GetKey()) {
 				continue
 			}
