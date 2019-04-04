@@ -176,7 +176,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 	return func(entity datastore.Entity) SendHandler {
 		data := getResponseData(options, entity).Bytes()
 		toPull := options.Pull
-		if len(data) > LargeMessageThreshold {
+		if len(data) > LargeMessageThreshold || toPull {
 			toPull = true
 			key := p2pKey(uri, entity.GetKey())
 			pdce := &pushDataCacheEntry{Options: *options, Data: data, EntityName: entity.GetEntityMetadata().GetName()}
