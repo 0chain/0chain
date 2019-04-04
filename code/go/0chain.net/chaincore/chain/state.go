@@ -273,6 +273,7 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) error 
 		ndb := smartcontractstate.NewPipedSCDB(mndb, b.SCStateDB, false)
 		output, err := c.ExecuteSmartContract(txn, ndb, sctx)
 		if err == nil {
+			Logger.Info("SC executed with output", zap.Any("txn_output", txn.TransactionOutput), zap.Any("txn_hash", txn.Hash))
 			txn.TransactionOutput = output
 			txn.Status = transaction.TxnSuccess
 		} else {
@@ -280,8 +281,6 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) error 
 			txn.TransactionOutput = err.Error()
 			txn.Status = transaction.TxnFail
 		}
-		txn.TransactionOutput = output
-		Logger.Info("SC executed with output", zap.Any("txn_output", txn.TransactionOutput), zap.Any("txn_hash", txn.Hash))
 	case transaction.TxnTypeData:
 	case transaction.TxnTypeSend:
 		if err := sctx.AddTransfer(state.NewTransfer(txn.ClientID, txn.ToClientID, state.Balance(txn.Value))); err != nil {
