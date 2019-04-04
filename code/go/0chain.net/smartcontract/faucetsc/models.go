@@ -9,11 +9,11 @@ import (
 )
 
 type limitRequest struct {
-	Pour_limit       state.Balance `json:"pour_limit"`
-	Periodic_limit   state.Balance `json:"periodic_limit"`
-	Global_limit     state.Balance `json:"global_limit"`
-	Individual_reset time.Duration `json:"individual_reset"` //in hours
-	Global_reset     time.Duration `json:"global_rest"`      //in hours
+	PourAmount      state.Balance `json:"pour_limit"`
+	PeriodicLimit   state.Balance `json:"periodic_limit"`
+	GlobalLimit     state.Balance `json:"global_limit"`
+	IndividualReset time.Duration `json:"individual_reset"` //in hours
+	GlobalReset     time.Duration `json:"global_rest"`      //in hours
 }
 
 func (lr *limitRequest) encode() []byte {
@@ -44,14 +44,14 @@ func (pr *periodicResponse) decode(input []byte) error {
 }
 
 type globalNode struct {
-	ID               string        `json:"id"`
-	Pour_limit       state.Balance `json:"pour_limit"`
-	Periodic_limit   state.Balance `json:"periodic_limit"`
-	Global_limit     state.Balance `json:"global_limit"`
-	Individual_reset time.Duration `json:"individual_reset"` //in hours
-	Global_reset     time.Duration `json:"global_rest"`      //in hours
-	Used             state.Balance `json:"used"`
-	StartTime        time.Time     `json:"start_time"`
+	ID              string        `json:"id"`
+	PourAmount      state.Balance `json:"pour_limit"`
+	PeriodicLimit   state.Balance `json:"periodic_limit"`
+	GlobalLimit     state.Balance `json:"global_limit"`
+	IndividualReset time.Duration `json:"individual_reset"` //in hours
+	GlobalReset     time.Duration `json:"global_rest"`      //in hours
+	Used            state.Balance `json:"used"`
+	StartTime       time.Time     `json:"start_time"`
 }
 
 func (gn *globalNode) getKey() smartcontractstate.Key {

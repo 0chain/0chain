@@ -47,6 +47,7 @@ type Transaction struct {
 	TransactionType   int    `json:"transaction_type" msgpack:"tt"`
 	TransactionOutput string `json:"transaction_output,omitempty" msgpack:"o,omitempty"`
 	OutputHash        string `json:"txn_output_hash" msgpack:"oh"`
+	Status            int    `json:"transaction_status" msgpack:"sot"`
 }
 
 var transactionEntityMetadata *datastore.EntityMetadataImpl
