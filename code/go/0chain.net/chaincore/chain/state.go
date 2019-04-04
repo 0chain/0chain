@@ -237,8 +237,21 @@ func (c *Chain) rebaseState(lfb *block.Block) {
 
 //ExecuteSmartContract - executes the smart contract for the transaction
 func (c *Chain) ExecuteSmartContract(t *transaction.Transaction, ndb smartcontractstate.SCDB, balances bcstate.StateContextI) (string, error) {
-	output, err := smartcontract.ExecuteSmartContract(common.GetRootContext(), t, ndb, balances)
-	return output, err
+	done := make(chan bool, 1)
+	var output string
+	var err error
+	ctx, cancelf := context.WithTimeout(common.GetRootContext(), c.SmartContractTimeout)
+	go func() {
+		output, err = smartcontract.ExecuteSmartContract(ctx, t, ndb, balances)
+		done <- true
+	}()
+	select {
+	case <-time.After(c.SmartContractTimeout):
+		cancelf()
+		return "", common.NewError("smart_contract_execution_timeout", "smart contract execution timed out")
+	case <-done:
+		return output, err
+	}
 }
 
 /*UpdateState - update the state of the transaction w.r.t the given block
