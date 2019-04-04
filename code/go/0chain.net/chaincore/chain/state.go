@@ -241,7 +241,10 @@ func (c *Chain) rebaseState(lfb *block.Block) {
 }
 
 //ExecuteSmartContract - executes the smart contract for the transaction
-func (c *Chain) ExecuteSmartContract(t *transaction.Transaction, ndb smartcontractstate.SCDB, balances bcstate.StateContextI) (string, error) {
+func (c *Chain) ExecuteSmartContract(b *block.Block, t *transaction.Transaction, ndb smartcontractstate.SCDB, balances bcstate.StateContextI) (string, error) {
+	if b.IsBlockNotarized() {
+		return smartcontract.ExecuteSmartContract(common.GetRootContext(), t, ndb, balances)
+	}
 	done := make(chan bool, 1)
 	var output string
 	var err error
@@ -278,7 +281,7 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) error 
 	switch txn.TransactionType {
 	case transaction.TxnTypeSmartContract:
 		ndb := smartcontractstate.NewPipedSCDB(mndb, b.SCStateDB, false)
-		output, err := c.ExecuteSmartContract(txn, ndb, sctx)
+		output, err := c.ExecuteSmartContract(b, txn, ndb, sctx)
 		if err == nil {
 			Logger.Info("SC executed with output", zap.Any("txn_output", txn.TransactionOutput), zap.Any("txn_hash", txn.Hash))
 			txn.TransactionOutput = output
