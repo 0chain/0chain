@@ -81,6 +81,7 @@ func (sc *Chain) GetTransactionConfirmation(ctx context.Context, hash string) (*
 		confirmation.CreationDate = b.CreationDate
 	}
 	txn := b.GetTransaction(hash)
+	confirmation.Status = txn.Status
 	confirmation.Transaction = txn
 	mt := b.GetMerkleTree()
 	confirmation.MerkleTreeRoot = mt.GetRoot()

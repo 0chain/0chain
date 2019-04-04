@@ -237,8 +237,21 @@ func (c *Chain) rebaseState(lfb *block.Block) {
 
 //ExecuteSmartContract - executes the smart contract for the transaction
 func (c *Chain) ExecuteSmartContract(t *transaction.Transaction, ndb smartcontractstate.SCDB, balances bcstate.StateContextI) (string, error) {
-	output, err := smartcontract.ExecuteSmartContract(common.GetRootContext(), t, ndb, balances)
-	return output, err
+	done := make(chan bool, 1)
+	var output string
+	var err error
+	ctx, cancelf := context.WithTimeout(common.GetRootContext(), c.SmartContractTimeout)
+	go func() {
+		output, err = smartcontract.ExecuteSmartContract(ctx, t, ndb, balances)
+		done <- true
+	}()
+	select {
+	case <-time.After(c.SmartContractTimeout):
+		cancelf()
+		return "", common.NewError("smart_contract_execution_timeout", "smart contract execution timed out")
+	case <-done:
+		return output, err
+	}
 }
 
 /*UpdateState - update the state of the transaction w.r.t the given block
@@ -259,9 +272,13 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) error 
 	case transaction.TxnTypeSmartContract:
 		ndb := smartcontractstate.NewPipedSCDB(mndb, b.SCStateDB, false)
 		output, err := c.ExecuteSmartContract(txn, ndb, sctx)
-		if err != nil {
+		if err == nil {
+			txn.TransactionOutput = output
+			txn.Status = transaction.TxnSuccess
+		} else {
 			Logger.Info("Error executing the SC", zap.Any("txn", txn), zap.Error(err))
-			return err
+			txn.TransactionOutput = err.Error()
+			txn.Status = transaction.TxnFail
 		}
 		txn.TransactionOutput = output
 		Logger.Info("SC executed with output", zap.Any("txn_output", txn.TransactionOutput), zap.Any("txn_hash", txn.Hash))
