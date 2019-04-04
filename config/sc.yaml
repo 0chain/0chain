@@ -1,11 +1,11 @@
 smart_contracts:
   faucetsc: 
-    pour_limit: 10000
-    periodic_limit: 5000000
-    global_limit: 10000000000
+    pour_limit: 10000000000
+    periodic_limit: 1000000000000
+    global_limit: 100000000000000
     individual_reset: 3h # in hours
     global_reset: 48h # in hours
   interestpoolsc:
     min_lock: 10 
     interest_rate: 0.5
-    lock_period: 1m
+    lock_period: 30m
