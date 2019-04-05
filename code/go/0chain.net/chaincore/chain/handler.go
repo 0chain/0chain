@@ -36,6 +36,8 @@ func SetupHandlers() {
 
 	http.HandleFunc("/", common.UserRateLimit(HomePageHandler))
 	http.HandleFunc("/_diagnostics", common.UserRateLimit(DiagnosticsHomepageHandler))
+	http.HandleFunc("/_diagnostics/round_info", common.UserRateLimit(RoundInfoHandler))
+	
 
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
 	http.HandleFunc("/v1/transaction/put", common.UserRateLimit(datastore.ToJSONEntityReqResponse(datastore.DoAsyncEntityJSONHandler(memorystore.WithConnectionEntityJSONHandler(PutTransaction, transactionEntityMetadata), transaction.TransactionEntityChannel), transactionEntityMetadata)))
@@ -312,6 +314,10 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<td valign='top'>")
 	fmt.Fprintf(w, "<li><a href='/_diagnostics/info'>/_diagnostics/info</a> (with <a href='/_diagnostics/info?ts=1'>ts</a>)</li>")
 	fmt.Fprintf(w, "<li><a href='/_diagnostics/n2n/info'>/_diagnostics/n2n/info</a></li>")
+	if node.Self.Type == node.NodeTypeMiner {
+		//ToDo: For sharders show who all can store the blocks 
+		fmt.Fprintf(w, "<li><a href='/_diagnostics/round_info'>/_diagnostics/round_info</a>")
+	}
 	fmt.Fprintf(w, "</td>")
 
 	fmt.Fprintf(w, "<td valign='top'>")
@@ -542,6 +548,49 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	return transaction.PutTransaction(ctx, txn)
 }
 
+//RoundInfoHanlder collects and writes information about current round
+func  RoundInfoHandler(w http.ResponseWriter, r *http.Request) {
+	PrintCSS(w)
+	sc := GetServerChain()
+	fmt.Fprintf(w, "<div class='bold'>Current Round Number: %v</div>", sc.CurrentRound)
+	fmt.Fprintf(w, "<div>&nbsp;</div>")	
+	if node.Self.Type != node.NodeTypeMiner {
+		//ToDo: Add Sharder related round info
+		return
+	}
+	cr := sc.GetRound(sc.CurrentRound)
+	
+	
+	
+	if sc.CurrentRound > 0 && cr != nil {
+		
+		rrs := int64(0)
+		if cr.HasRandomSeed() {
+			rrs = cr.GetRandomSeed()
+		}
+		thresholdByCount := config.GetThresholdCount()
+		consensus := int(math.Ceil((float64(thresholdByCount) / 100) * float64(sc.Miners.Size())))
+		
+		fmt.Fprintf(w, "<div>Consensus: %v RRS: %v </div>", consensus, rrs)	
+		fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
+		fmt.Fprintf(w, "<tr><th>Node</th><th>VRF</th></tr>")
+
+		shares := cr.GetVRFShares()
+		for _, share := range shares {
+			n := share.GetParty()
+			fmt.Fprintf(w, "<tr>")
+			fmt.Fprintf(w, "<td valign='top' style='padding:2px'>")
+			fmt.Fprintf(w, n.GetPseudoName())
+			fmt.Fprintf(w, "</td>")
+			fmt.Fprintf(w, "<td valign='top' style='padding:2px'>")
+			fmt.Fprintf(w, "%v", share.Share)
+			fmt.Fprintf(w, "</td>")
+			fmt.Fprintf(w, "</tr>")
+		}
+		//ToDo: Add more RoundInfo 
+	}
+
+}
 /*MinerStatsHandler - handler for the miner stats */
 func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 	PrintCSS(w)
@@ -686,5 +735,6 @@ func PrintCSS(w http.ResponseWriter) {
 	fmt.Fprintf(w, ".warning { background-color: #FFEB3B; }\n")
 	fmt.Fprintf(w, ".optimal { color: #1B5E20; }\n")
 	fmt.Fprintf(w, ".slow { font-style: italic; }\n")
+	fmt.Fprintf(w, ".bold {font-weight:bold;}")
 	fmt.Fprintf(w, "</style>")
 }
