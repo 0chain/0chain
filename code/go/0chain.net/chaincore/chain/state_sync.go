@@ -194,6 +194,7 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 		return nil, ErrPreviousBlockUnavailable
 	}
 	if bytes.Compare(b.ClientStateHash, b.PrevBlock.ClientStateHash) == 0 {
+		b.SetStateDB(b.PrevBlock)
 		b.SetStateStatus(block.StateSynched)
 		return nil, nil
 	}

@@ -123,7 +123,7 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 	}
 	if pb.ClientState == nil {
 		if config.DevConfiguration.State {
-			Logger.Error("compute state - previous state nil", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
+			Logger.Error("compute state - previous state nil", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Int8("prev_block_status", b.PrevBlock.GetStateStatus()))
 		}
 		return ErrPreviousStateUnavailable
 	}
