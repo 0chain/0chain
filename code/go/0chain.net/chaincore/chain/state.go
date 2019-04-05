@@ -281,16 +281,13 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) error 
 	switch txn.TransactionType {
 	case transaction.TxnTypeSmartContract:
 		ndb := smartcontractstate.NewPipedSCDB(mndb, b.SCStateDB, false)
-		output, err := c.ExecuteSmartContract(b, txn, ndb, sctx)
-		if err == nil {
-			Logger.Info("SC executed with output", zap.Any("txn_output", txn.TransactionOutput), zap.Any("txn_hash", txn.Hash))
-			txn.TransactionOutput = output
-			txn.Status = transaction.TxnSuccess
-		} else {
+		output, err := c.ExecuteSmartContract(txn, ndb, sctx)
+		if err != nil {
 			Logger.Info("Error executing the SC", zap.Any("txn", txn), zap.Error(err))
-			txn.TransactionOutput = err.Error()
-			txn.Status = transaction.TxnFail
+			return err
 		}
+		txn.TransactionOutput = output
+		Logger.Info("SC executed with output", zap.Any("txn_output", txn.TransactionOutput), zap.Any("txn_hash", txn.Hash))
 	case transaction.TxnTypeData:
 	case transaction.TxnTypeSend:
 		if err := sctx.AddTransfer(state.NewTransfer(txn.ClientID, txn.ToClientID, state.Balance(txn.Value))); err != nil {
@@ -341,6 +338,7 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) error 
 			Logger.DPanic("update state - owner account", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("txn", txn), zap.Any("os", os), zap.Error(err))
 		}
 	}
+	txn.Status = transaction.TxnSuccess
 	return nil
 }
 
