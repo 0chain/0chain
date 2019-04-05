@@ -619,15 +619,14 @@ func (mc *Chain) restartRound(ctx context.Context) {
 		//TODO: should have a means to send an email/SMS to someone or something like that
 	}
 	mc.RoundTimeoutsCount++
-	if !mc.CanStartNetwork() {
-		return
-	}
+
 	if r.GetRoundNumber() > 1 {
 		pr := mc.GetMinerRound(r.GetRoundNumber() - 1)
 		if pr != nil {
 			mc.BroadcastNotarizedBlocks(ctx, pr, r)
 		}
 	}
+	
 	r.Restart()
 	if r.vrfShare != nil {
 		//TODO: send same vrf again?

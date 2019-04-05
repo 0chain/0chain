@@ -402,15 +402,8 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round) {
 			return
 		}
 		beg := time.Now()
-		recSig := make([]string, 0)
-		recFrom := make([]string, 0)
-		for _, share := range shares {
-			n := share.GetParty()
-			Logger.Debug("DKG Printing from shares: ", zap.Int("Miner Index = ", n.SetIndex), zap.Any("Share = ", share.Share))
-
-			recSig = append(recSig, share.Share)
-			recFrom = append(recFrom, ComputeBlsID(n.SetIndex))
-		}
+		recSig, recFrom := getVRFShareInfo(mr)
+		
 		rbOutput := bs.CalcRandomBeacon(recSig, recFrom)
 		Logger.Debug("DKG ", zap.String("rboOutput", rbOutput), zap.Int64("Round", mr.Number))
 		mc.computeRBO(ctx, mr, rbOutput)
@@ -438,6 +431,24 @@ func (mc *Chain) computeRBO(ctx context.Context, mr *Round, rbo string) {
 	pr := mc.GetRound(mr.GetRoundNumber() - 1)
 	mc.computeRoundRandomSeed(ctx, pr, mr, rbo)
 
+}
+
+func getVRFShareInfo (mr *Round) ([]string, []string) {
+	recSig := make([]string, 0)
+	recFrom := make([]string, 0)
+	mr.Mutex.Lock()
+	defer mr.Mutex.Unlock()
+
+	shares := mr.GetVRFShares()
+	for _, share := range shares {
+		n := share.GetParty()
+		Logger.Debug("DKG Printing from shares: ", zap.Int("Miner Index = ", n.SetIndex), zap.Any("Share = ", share.Share))
+
+		recSig = append(recSig, share.Share)
+		recFrom = append(recFrom, ComputeBlsID(n.SetIndex))
+	}
+
+	return recSig, recFrom
 }
 
 func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r *Round, rbo string) {
