@@ -241,8 +241,8 @@ func (c *Chain) rebaseState(lfb *block.Block) {
 }
 
 //ExecuteSmartContract - executes the smart contract for the transaction
-func (c *Chain) ExecuteSmartContract(b *block.Block, t *transaction.Transaction, ndb smartcontractstate.SCDB, balances bcstate.StateContextI) (string, error) {
-	if b.IsBlockNotarized() {
+func (c *Chain) ExecuteSmartContract(t *transaction.Transaction, ndb smartcontractstate.SCDB, balances bcstate.StateContextI) (string, error) {
+	if balances.GetBlock().IsBlockNotarized() {
 		return smartcontract.ExecuteSmartContract(common.GetRootContext(), t, ndb, balances)
 	}
 	done := make(chan bool, 1)
