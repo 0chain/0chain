@@ -14,7 +14,6 @@ import (
 
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/chaincore/wallet"
 	"0chain.net/core/common"
@@ -156,16 +155,6 @@ func createSendTransaction(c *chain.Chain, prng *rand.Rand) *transaction.Transac
 			break
 		}
 	}
-	if config.DevConfiguration.SmartContract {
-		fs, err := c.GetState(c.LatestFinalizedBlock, wf.ClientID)
-		if err != nil || fs.Balance < state.Balance(pourPoint) {
-			txn := wf.CreateSCTransaction(faucetsc.ADDRESS, 0, `{"name":"pour","input":{}}`, 0)
-			return txn
-		} else {
-			txn := wf.CreateSCTransaction(faucetsc.ADDRESS, int64(fs.Balance)-10000000, `{"name":"refill","input":{}}`, 10000000)
-			return txn
-		}
-	}
 	txn := wf.CreateRandomSendTransaction(wt.ClientID, 10000000)
 	return txn
 }
@@ -239,21 +228,19 @@ func GenerateClients(c *chain.Chain, numClients int) {
 		}
 	}
 	time.Sleep(1 * time.Second)
-
+	for _, w := range wallets {
+		//generous airdrop in dev/test mode :)
+		txn := ownerWallet.CreateSendTransaction(w.ClientID, prng.Int63n(100)*10000000000, "generous air drop! :)", prng.Int63n(10)+1)
+		_, err := transaction.PutTransaction(tctx, txn)
+		if err != nil {
+			Logger.Info("client generator", zap.Any("error", err))
+		}
+	}
 	if config.DevConfiguration.SmartContract {
 		txn := ownerWallet.CreateSCTransaction(faucetsc.ADDRESS, viper.GetInt64("development.faucet.refill_amount"), `{"name":"refill","input":{}}`, 0)
 		_, err := transaction.PutTransaction(tctx, txn)
 		if err != nil {
 			Logger.Info("client generator - faucet refill", zap.Any("error", err))
-		}
-	} else {
-		for _, w := range wallets {
-			//generous airdrop in dev/test mode :)
-			txn := ownerWallet.CreateSendTransaction(w.ClientID, prng.Int63n(100)*10000000000, "generous air drop! :)", prng.Int63n(10)+1)
-			_, err := transaction.PutTransaction(tctx, txn)
-			if err != nil {
-				Logger.Info("client generator", zap.Any("error", err))
-			}
 		}
 	}
 	Logger.Info("generation of wallets complete", zap.Int("wallets", len(wallets)))
