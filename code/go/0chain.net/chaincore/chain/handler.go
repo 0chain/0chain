@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"runtime"
 	"strings"
 	"time"
 
@@ -37,7 +38,6 @@ func SetupHandlers() {
 	http.HandleFunc("/", common.UserRateLimit(HomePageHandler))
 	http.HandleFunc("/_diagnostics", common.UserRateLimit(DiagnosticsHomepageHandler))
 	http.HandleFunc("/_diagnostics/round_info", common.UserRateLimit(RoundInfoHandler))
-	
 
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
 	http.HandleFunc("/v1/transaction/put", common.UserRateLimit(datastore.ToJSONEntityReqResponse(datastore.DoAsyncEntityJSONHandler(memorystore.WithConnectionEntityJSONHandler(PutTransaction, transactionEntityMetadata), transaction.TransactionEntityChannel), transactionEntityMetadata)))
@@ -162,46 +162,46 @@ func (c *Chain) roundHealthInATable(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<table class='menu' style='border-collapse: collapse;'>")
 
 	fmt.Fprintf(w, "<tr class='active'>")
-	fmt.Fprintf(w, "<td valign='top'style='padding:2px'>")
+	fmt.Fprintf(w, "<td>")
 	fmt.Fprintf(w, "Current Round")
 	fmt.Fprintf(w, "</td>")
-	fmt.Fprintf(w, "<td valign='top' align='right' style='padding:2px'>")
+	fmt.Fprintf(w, "<td class='number'>")
 	fmt.Fprintf(w, "%v", c.CurrentRound)
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "</tr>")
 
 	fmt.Fprintf(w, "<tr class='active'>")
-	fmt.Fprintf(w, "<td valign='top' style='padding:2px'>")
+	fmt.Fprintf(w, "<td>")
 	fmt.Fprintf(w, "VRFs")
 	fmt.Fprintf(w, "</td>")
-	fmt.Fprintf(w, "<td valign='top' align='right' style='padding:2px'>")
+	fmt.Fprintf(w, "<td class='number'>")
 	fmt.Fprintf(w, "%v", vrfMsg)
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "</tr>")
 
 	fmt.Fprintf(w, "<tr class='active'>")
-	fmt.Fprintf(w, "<td valign='top'style='padding:2px'>")
+	fmt.Fprintf(w, "<td>")
 	fmt.Fprintf(w, "RRS")
 	fmt.Fprintf(w, "</td>")
-	fmt.Fprintf(w, "<td valign='top' align='right' style='padding:2px'>")
+	fmt.Fprintf(w, "<td class='number'>")
 	fmt.Fprintf(w, "%v", rrs)
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "</tr>")
 
 	fmt.Fprintf(w, "<tr class='active'>")
-	fmt.Fprintf(w, "<td valign='top'  style='padding:2px'>")
+	fmt.Fprintf(w, "<td>")
 	fmt.Fprintf(w, "Proposals")
 	fmt.Fprintf(w, "</td>")
-	fmt.Fprintf(w, "<td valign='top' align='right' style='padding:2px'>")
+	fmt.Fprintf(w, "<td class='number'>")
 	fmt.Fprintf(w, "%v", proposals)
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "</tr>")
 
 	fmt.Fprintf(w, "<tr class='active'>")
-	fmt.Fprintf(w, "<td valign='top'style='padding:2px'>")
+	fmt.Fprintf(w, "<td>")
 	fmt.Fprintf(w, "Notarizations")
 	fmt.Fprintf(w, "</td>")
-	fmt.Fprintf(w, "<td valign='top' align='right' style='padding:2px'>")
+	fmt.Fprintf(w, "<td class='number'>")
 	fmt.Fprintf(w, "%v", notarizations)
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "</tr>")
@@ -212,41 +212,54 @@ func (c *Chain) chainHealthInATable(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Fprintf(w, "<table class='menu' style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr class='active'>")
-	fmt.Fprintf(w, "<td valign='top' style='padding:2px'>")
+	fmt.Fprintf(w, "<td>")
 	fmt.Fprintf(w, "Latest Finalized Round")
 	fmt.Fprintf(w, "</td>")
-	fmt.Fprintf(w, "<td valign='top' align='right' style='padding:2px'>")
+	fmt.Fprintf(w, "<td class='number'>")
 	fmt.Fprintf(w, "%v", c.LatestFinalizedBlock.Round)
 	fmt.Fprintf(w, "</td>")
 
 	fmt.Fprintf(w, "</tr>")
 	fmt.Fprintf(w, "<tr class='active'>")
-	fmt.Fprintf(w, "<td valign='top' style='padding:2px'>")
+	fmt.Fprintf(w, "<td class='number'>")
 	fmt.Fprintf(w, "Deterministic Finalized Round")
 	fmt.Fprintf(w, "</td>")
-	fmt.Fprintf(w, "<td valign='top' style='padding:2px'>")
+	fmt.Fprintf(w, "<td class='number'>")
 	fmt.Fprintf(w, "%v", c.LatestDeterministicBlock.Round)
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "</tr>")
 
 	fmt.Fprintf(w, "<tr class='active'>")
-	fmt.Fprintf(w, "<td valign='top'>")
+	fmt.Fprintf(w, "<td>")
 	fmt.Fprintf(w, "Rollbacks")
 	fmt.Fprintf(w, "</td>")
-	fmt.Fprintf(w, "<td valign='top' align='right' style='padding:2px'>")
+	fmt.Fprintf(w, "<td class='number'>")
 	fmt.Fprintf(w, "%v", c.RollbackCount)
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "</tr>")
 
 	fmt.Fprintf(w, "<tr class='active'>")
-	fmt.Fprintf(w, "<td valign='top'>")
+	fmt.Fprintf(w, "<td>")
 	fmt.Fprintf(w, "Timeouts")
 	fmt.Fprintf(w, "</td>")
-	fmt.Fprintf(w, "<td valign='top'  align='right' style='padding:2px' >")
+	fmt.Fprintf(w, "<td class='number'>")
 	fmt.Fprintf(w, "%v", c.RoundTimeoutsCount)
 	fmt.Fprintf(w, "</td>")
-
 	fmt.Fprintf(w, "</tr>")
+
+	fmt.Fprintf(w, "<tr class='active'>")
+	fmt.Fprintf(w, "<td>")
+	fmt.Fprintf(w, "Round Timeout Count")
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "<td class='number'>")
+	fmt.Fprintf(w, "%v", c.GetRoundTimeoutCount())
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "</tr>")
+	fmt.Fprintf(w, "</table>")
+}
+
+func (c *Chain) infraHealthInATable(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "<table class='menu' style='border-collapse: collapse;'>")
 	if node.Self.Type == node.NodeTypeMiner {
 		txn, ok := transaction.Provider().(*transaction.Transaction)
 		if ok {
@@ -257,22 +270,40 @@ func (c *Chain) chainHealthInATable(w http.ResponseWriter, r *http.Request) {
 			mstore, ok := transactionEntityMetadata.GetStore().(*memorystore.Store)
 			if ok {
 				fmt.Fprintf(w, "<tr class='active'>")
-				fmt.Fprintf(w, "<td valign='top'>")
+				fmt.Fprintf(w, "<td>")
 				fmt.Fprintf(w, "Redis Collection")
 				fmt.Fprintf(w, "</td>")
-				fmt.Fprintf(w, "<td valign='top' align='right' style='padding:2px'>")
+				fmt.Fprintf(w, "<td class='number'>")
 				fmt.Fprintf(w, "%v", mstore.GetCollectionSize(cctx, transactionEntityMetadata, collectionName))
 				fmt.Fprintf(w, "</td>")
 				fmt.Fprintf(w, "</tr>")
 			}
 		}
+		fmt.Fprintf(w, "<tr class='active'>")
+		fmt.Fprintf(w, "<td>")
+		fmt.Fprintf(w, "Go Routines")
+		fmt.Fprintf(w, "</td>")
+		fmt.Fprintf(w, "<td class='number'>")
+		fmt.Fprintf(w, "%v", runtime.NumGoroutine())
+		fmt.Fprintf(w, "</td>")
+		fmt.Fprintf(w, "</tr>")
+		var mstats runtime.MemStats
+		runtime.ReadMemStats(&mstats)
+		fmt.Fprintf(w, "<tr class='active'>")
+		fmt.Fprintf(w, "<td>")
+		fmt.Fprintf(w, "Heap Alloc")
+		fmt.Fprintf(w, "</td>")
+		fmt.Fprintf(w, "<td class='number'>")
+		fmt.Fprintf(w, "%v", mstats.HeapAlloc)
+		fmt.Fprintf(w, "</td>")
+		fmt.Fprintf(w, "</tr>")
 	}
 	fmt.Fprintf(w, "</table>")
 }
 
 func (c *Chain) healthSummaryInTables(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<table class='menu' cellspacing='10' style='border-collapse: collapse;'>")
-	fmt.Fprintf(w, "<tr class='header'><td>Round Health</td><td>Chain Health</td></tr>")
+	fmt.Fprintf(w, "<tr class='header'><td>Round Health</td><td>Chain Health</td><td>Infra Health</td></tr>")
 	fmt.Fprintf(w, "<tr>")
 
 	fmt.Fprintf(w, "<td valign='top'>")
@@ -280,6 +311,10 @@ func (c *Chain) healthSummaryInTables(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "<td valign='top'>")
 	c.chainHealthInATable(w, r)
+	fmt.Fprintf(w, "</td>")
+
+	fmt.Fprintf(w, "<td valign='top'>")
+	c.infraHealthInATable(w, r)
 	fmt.Fprintf(w, "</td>")
 
 	fmt.Fprintf(w, "</tr>")
@@ -315,7 +350,7 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<li><a href='/_diagnostics/info'>/_diagnostics/info</a> (with <a href='/_diagnostics/info?ts=1'>ts</a>)</li>")
 	fmt.Fprintf(w, "<li><a href='/_diagnostics/n2n/info'>/_diagnostics/n2n/info</a></li>")
 	if node.Self.Type == node.NodeTypeMiner {
-		//ToDo: For sharders show who all can store the blocks 
+		//ToDo: For sharders show who all can store the blocks
 		fmt.Fprintf(w, "<li><a href='/_diagnostics/round_info'>/_diagnostics/round_info</a>")
 	}
 	fmt.Fprintf(w, "</td>")
@@ -549,29 +584,27 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 }
 
 //RoundInfoHanlder collects and writes information about current round
-func  RoundInfoHandler(w http.ResponseWriter, r *http.Request) {
+func RoundInfoHandler(w http.ResponseWriter, r *http.Request) {
 	PrintCSS(w)
 	sc := GetServerChain()
 	fmt.Fprintf(w, "<div class='bold'>Current Round Number: %v</div>", sc.CurrentRound)
-	fmt.Fprintf(w, "<div>&nbsp;</div>")	
+	fmt.Fprintf(w, "<div>&nbsp;</div>")
 	if node.Self.Type != node.NodeTypeMiner {
 		//ToDo: Add Sharder related round info
 		return
 	}
 	cr := sc.GetRound(sc.CurrentRound)
-	
-	
-	
+
 	if sc.CurrentRound > 0 && cr != nil {
-		
+
 		rrs := int64(0)
 		if cr.HasRandomSeed() {
 			rrs = cr.GetRandomSeed()
 		}
 		thresholdByCount := config.GetThresholdCount()
 		consensus := int(math.Ceil((float64(thresholdByCount) / 100) * float64(sc.Miners.Size())))
-		
-		fmt.Fprintf(w, "<div>Consensus: %v RRS: %v </div>", consensus, rrs)	
+
+		fmt.Fprintf(w, "<div>Consensus: %v RRS: %v </div>", consensus, rrs)
 		fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
 		fmt.Fprintf(w, "<tr><th>Node</th><th>VRF</th></tr>")
 
@@ -587,10 +620,11 @@ func  RoundInfoHandler(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, "</td>")
 			fmt.Fprintf(w, "</tr>")
 		}
-		//ToDo: Add more RoundInfo 
+		//ToDo: Add more RoundInfo
 	}
 
 }
+
 /*MinerStatsHandler - handler for the miner stats */
 func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 	PrintCSS(w)
