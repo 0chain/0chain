@@ -260,6 +260,24 @@ func (c *Chain) chainHealthInATable(w http.ResponseWriter, r *http.Request) {
 
 func (c *Chain) infraHealthInATable(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<table class='menu' style='border-collapse: collapse;'>")
+	fmt.Fprintf(w, "<tr class='active'>")
+	fmt.Fprintf(w, "<td>")
+	fmt.Fprintf(w, "Go Routines")
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "<td class='number'>")
+	fmt.Fprintf(w, "%v", runtime.NumGoroutine())
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "</tr>")
+	var mstats runtime.MemStats
+	runtime.ReadMemStats(&mstats)
+	fmt.Fprintf(w, "<tr class='active'>")
+	fmt.Fprintf(w, "<td>")
+	fmt.Fprintf(w, "Heap Alloc")
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "<td class='number'>")
+	fmt.Fprintf(w, "%v", mstats.HeapAlloc)
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "</tr>")
 	if node.Self.Type == node.NodeTypeMiner {
 		txn, ok := transaction.Provider().(*transaction.Transaction)
 		if ok {
@@ -279,24 +297,6 @@ func (c *Chain) infraHealthInATable(w http.ResponseWriter, r *http.Request) {
 				fmt.Fprintf(w, "</tr>")
 			}
 		}
-		fmt.Fprintf(w, "<tr class='active'>")
-		fmt.Fprintf(w, "<td>")
-		fmt.Fprintf(w, "Go Routines")
-		fmt.Fprintf(w, "</td>")
-		fmt.Fprintf(w, "<td class='number'>")
-		fmt.Fprintf(w, "%v", runtime.NumGoroutine())
-		fmt.Fprintf(w, "</td>")
-		fmt.Fprintf(w, "</tr>")
-		var mstats runtime.MemStats
-		runtime.ReadMemStats(&mstats)
-		fmt.Fprintf(w, "<tr class='active'>")
-		fmt.Fprintf(w, "<td>")
-		fmt.Fprintf(w, "Heap Alloc")
-		fmt.Fprintf(w, "</td>")
-		fmt.Fprintf(w, "<td class='number'>")
-		fmt.Fprintf(w, "%v", mstats.HeapAlloc)
-		fmt.Fprintf(w, "</td>")
-		fmt.Fprintf(w, "</tr>")
 	}
 	fmt.Fprintf(w, "</table>")
 }
