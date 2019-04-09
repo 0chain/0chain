@@ -35,11 +35,18 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 	}
 	var nr = round.NewRound(r.GetRoundNumber() + 1)
 	mr := mc.CreateRound(nr)
-	if er := mc.AddRound(mr); er != mr {
+	er := mc.AddRound(mr)
+	if  er != mr {
+		Logger.Info("StartNextRound found nextround ready. No VRFs Sent", 
+			zap.Int64("er_round", er.GetRoundNumber()))
 		return er.(*Round)
 	}
 	if r.HasRandomSeed() {
 		mc.addMyVRFShare(ctx, r, mr)
+	} else {
+		Logger.Info("StartNextRound no VRFs sent -current round has no randomseed", 
+			zap.Int64("rrs", r.GetRandomSeed()), zap.Int64("r_round", r.GetRoundNumber()))
+		
 	}
 	return mr
 }
@@ -511,7 +518,7 @@ func (mc *Chain) CancelRoundVerification(ctx context.Context, r *Round) {
 }
 
 /*BroadcastNotarizedBlocks - send the heaviest notarized block to all the miners */
-func (mc *Chain) BroadcastNotarizedBlocks(ctx context.Context, pr *Round, r *Round) {
+func (mc *Chain) BroadcastNotarizedBlocks(ctx context.Context, pr *Round) {
 	nb := pr.GetHeaviestNotarizedBlock()
 	if nb != nil {
 		Logger.Info("sending notarized block", zap.Int64("round", pr.Number), zap.String("block", nb.Hash))
@@ -621,9 +628,25 @@ func (mc *Chain) restartRound(ctx context.Context) {
 	mc.RoundTimeoutsCount++
 
 	if r.GetRoundNumber() > 1 {
+		if r.GetHeaviestNotarizedBlock() != nil {
+			mc.BroadcastNotarizedBlocks(ctx, r)
+			Logger.Info("StartNextRound after sending notarized block in restartRound.", zap.Int64("current_round", r.GetRoundNumber()))
+			nr := mc.StartNextRound(ctx, r)
+			/* 
+				if the next round object already exists, StartNextRound does not send VRFs.
+				So to be sure send it.
+			*/
+			if r.HasRandomSeed() {
+				mc.addMyVRFShare(ctx, r, nr)			
+				return
+			} else {
+				Logger.Error("Has notarized block in restartRound, but no randomseed.", zap.Int64("current_round", r.GetRoundNumber()))
+			
+			}
+		}
 		pr := mc.GetMinerRound(r.GetRoundNumber() - 1)
 		if pr != nil {
-			mc.BroadcastNotarizedBlocks(ctx, pr, r)
+			mc.BroadcastNotarizedBlocks(ctx, pr)
 		}
 	}
 	

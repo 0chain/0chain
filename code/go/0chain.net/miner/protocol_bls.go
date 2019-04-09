@@ -56,7 +56,7 @@ func StartDKG(ctx context.Context) {
 
 	self := node.GetSelfNode(ctx)
 	selfInd = self.SetIndex
-	waitForNetworkToBeReady(ctx)
+	
 	if isDkgEnabled {
 		dg = bls.MakeDKG(k, n)
 		dkgSummary, err := getDKGSummaryFromStore(ctx)
@@ -70,6 +70,7 @@ func StartDKG(ctx context.Context) {
 			Logger.Error("err : reading dkg from db", zap.Error(err))
 		}
 
+		waitForNetworkToBeReady(ctx)
 		Logger.Info("Starting DKG...")
 
 		minerShares = make(map[string]bls.Key, len(m2m.Nodes))
