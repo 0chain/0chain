@@ -672,6 +672,8 @@ func startProtocol() {
 		mr = mc.CreateRound(sr)
 		mr, _ = mc.AddRound(mr).(*Round)
 		mc.SetRandomSeed(sr, lfb.RoundRandomSeed)
+		mc.AddBlock(lfb)
+		mc.InitBlockState(lfb)
 		mc.SetLatestFinalizedBlock(ctx, lfb)
 	} else {
 		mr = mc.GetMinerRound(0)
