@@ -253,6 +253,18 @@ func (b *Block) SetStateDB(prevBlock *Block) {
 	b.SetSCStateDB(prevBlock)
 }
 
+//InitStateDB - initialize the block's state from the db (assuming it's already computed)
+func (b *Block) InitStateDB(ndb util.NodeDB) error {
+	if _, err := ndb.GetNode(b.ClientStateHash); err != nil {
+		b.SetStateStatus(StateFailed)
+		return err
+	}
+	b.CreateState(ndb)
+	b.ClientState.SetRoot(b.ClientStateHash)
+	b.SetStateStatus(StateSuccessful)
+	return nil
+}
+
 //CreateState - create the state from the prior state db
 func (b *Block) CreateState(pndb util.NodeDB) {
 	mndb := util.NewMemoryNodeDB()
