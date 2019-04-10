@@ -1,0 +1,52 @@
+version: '3'
+services:
+  redis:
+    image: "redis:alpine"
+    volumes:
+      - ../config:/0chain/config
+    networks:
+      default:
+    sysctls:
+      net.core.somaxconn: '511'
+    command: redis-server /0chain/config/redis/state.redis.conf
+
+  redis_txns:
+    image: "redis:alpine"
+    volumes:
+      - ../config:/0chain/config
+    networks:
+      default:
+    sysctls:
+      net.core.somaxconn: '511'
+    command: redis-server /0chain/config/redis/transactions.redis.conf
+
+  unit_test:
+    image: "unit_test"
+    environment:
+      - DOCKER=true
+    depends_on:
+     - redis
+     - redis_txns
+    links:
+      - redis:redis
+      - redis_txns:redis_txns
+    volumes:
+      - ../config:/0chain/config
+    # ports:
+    #   - "707${MINER}:707${MINER}"
+    networks:
+      default:
+      testnet0:
+        ipv4_address: 198.18.0.81
+      command: ./bin/unit_test
+    # command: ./bin/miner  --deployment_mode 0 --keys_file config/mnode${MINER}_keys.txt
+
+networks:
+  default:
+    driver: bridge
+  testnet0:
+    external: true
+
+volumes:
+  data:
+  config:
