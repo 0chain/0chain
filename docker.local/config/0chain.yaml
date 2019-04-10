@@ -37,7 +37,7 @@ server_chain:
     max_block_size: 100
     max_byte_size: 1638400
     generators: 2
-    replicators: 0
+    replicators: 3
     generation:
       timeout: 15
       retry_wait_time: 5 #milliseconds
@@ -69,6 +69,9 @@ server_chain:
     prune_below_count: 100 # rounds
   smart_contract:
     timeout: 50 # milliseconds
+  health_check:
+    round: 1
+    batch_sync_size: 50
 
 network:
   nodes_file: config/single_machine_3_nodes.yaml

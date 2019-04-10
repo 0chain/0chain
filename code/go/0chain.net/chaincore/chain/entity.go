@@ -185,6 +185,8 @@ func NewChainFromConfig() *Chain {
 	} else {
 		chain.VerificationTicketsTo = Generator
 	}
+	chain.HealthyRound = viper.GetInt64("server_chain.health_check.round")
+	chain.BatchSyncSize = viper.GetInt("server_chain.health_check.batch_sync_size")
 	chain.BlockProposalMaxWaitTime = viper.GetDuration("server_chain.block.proposal.max_wait_time") * time.Millisecond
 	waitMode := viper.GetString("server_chain.block.proposal.wait_mode")
 	if waitMode == "static" {
@@ -483,8 +485,16 @@ func (c *Chain) IsBlockSharder(b *block.Block, sharder *node.Node) bool {
 	return sharder.IsInTop(scores, c.NumReplicators)
 }
 
-/*IsBlockSharderWithNodes - checks if the sharder can store the block with nodes that store this block*/
-func (c *Chain) IsBlockSharderWithNodes(hash string, sharder *node.Node) (bool, []*node.Node) {
+func (c *Chain) IsBlockSharderFromHash(bHash string, sharder *node.Node) bool {
+	if c.NumReplicators <= 0 {
+		return true
+	}
+	scores := c.nodePoolScorer.ScoreHashString(c.Sharders, bHash)
+	return sharder.IsInTop(scores, c.NumReplicators)
+}
+
+/*CanShardBlockWithReplicators - checks if the sharder can store the block with nodes that store this block*/
+func (c *Chain) CanShardBlockWithReplicators(hash string, sharder *node.Node) (bool, []*node.Node) {
 	if c.NumReplicators <= 0 {
 		return true, nil
 	}

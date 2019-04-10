@@ -33,9 +33,11 @@ sharders:
   n2n_ip: 198.18.0.82
   public_ip: localhost
   port: 7172
+  description: localhost.s1
 
 - id: 853bb6eb72dbed82f0883fe42f93214a28b199f494818752c593b0ffd3baa046
   public_key: c423b3543aa0eae177b6e0442eeaa73b527bf346065b1f999498b9c2d78138da
   n2n_ip: 198.18.0.83
   public_ip: localhost
   port: 7173 
+  description: localhost.s2

@@ -8,6 +8,39 @@ import (
 	"0chain.net/core/ememorystore"
 )
 
+type RoundSummaries struct {
+	datastore.IDField
+	RSummaryList []*round.Round `json:round_summaries`
+}
+
+var roundSummariesEntityMetadata *datastore.EntityMetadataImpl
+
+/*NewRoundSummaries - create a new RoundSummaries entity */
+func NewRoundSummaries() *RoundSummaries {
+	rs := datastore.GetEntityMetadata("round_summaries").Instance().(*RoundSummaries)
+	return rs
+}
+
+/*RoundSummariesProvider - a round summaries instance provider */
+func RoundSummariesProvider() datastore.Entity {
+	rs := &RoundSummaries{}
+	return rs
+}
+
+/*GetEntityMetadata - implement interface */
+func (rs *RoundSummaries) GetEntityMetadata() datastore.EntityMetadata {
+	return roundSummariesEntityMetadata
+}
+
+/*SetupRoundSummaries - setup the round summaries entity */
+func SetupRoundSummaries() {
+	roundSummariesEntityMetadata = datastore.MetadataProvider()
+	roundSummariesEntityMetadata.Name = "round_summaries"
+	roundSummariesEntityMetadata.Provider = RoundSummariesProvider
+	roundSummariesEntityMetadata.IDColumnName = "id"
+	datastore.RegisterEntityMetadata("round_summaries", roundSummariesEntityMetadata)
+}
+
 /*StoreRound - persists given round to ememory(rocksdb)*/
 func (sc *Chain) StoreRound(ctx context.Context, r *round.Round) error {
 	roundEntityMetadata := r.GetEntityMetadata()

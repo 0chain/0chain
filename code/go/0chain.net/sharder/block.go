@@ -8,10 +8,43 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
-	."0chain.net/core/logging"
+	. "0chain.net/core/logging"
 
 	"go.uber.org/zap"
 )
+
+type BlockSummaries struct {
+	datastore.IDField
+	BSummaryList []*block.BlockSummary `json:block_summaries`
+}
+
+var blockSummariesEntityMetadata *datastore.EntityMetadataImpl
+
+/*NewBlockSummaries - create a new BlockSummaries entity */
+func NewBlockSummaries() *BlockSummaries {
+	bs := datastore.GetEntityMetadata("block_summaries").Instance().(*BlockSummaries)
+	return bs
+}
+
+/*BlockSummariesProvider - a block summaries instance provider */
+func BlockSummariesProvider() datastore.Entity {
+	bs := &BlockSummaries{}
+	return bs
+}
+
+/*GetEntityMetadata - implement interface */
+func (bs *BlockSummaries) GetEntityMetadata() datastore.EntityMetadata {
+	return blockSummariesEntityMetadata
+}
+
+/*SetupBlockSummaries - setup the block summaries entity */
+func SetupBlockSummaries() {
+	blockSummariesEntityMetadata = datastore.MetadataProvider()
+	blockSummariesEntityMetadata.Name = "block_summaries"
+	blockSummariesEntityMetadata.Provider = BlockSummariesProvider
+	blockSummariesEntityMetadata.IDColumnName = "id"
+	datastore.RegisterEntityMetadata("block_summaries", blockSummariesEntityMetadata)
+}
 
 /*GetBlockBySummary - get a block */
 func (sc *Chain) GetBlockBySummary(ctx context.Context, bs *block.BlockSummary) (*block.Block, error) {
@@ -67,9 +100,29 @@ func (sc *Chain) GetBlockFromHash(ctx context.Context, hash string, roundNum int
 	return b, nil
 }
 
-/*StoreBlockSummary - store the block to ememory/rocksdb */
-func (sc *Chain) StoreBlockSummary(ctx context.Context, b *block.Block) error {
+/*StoreBlockSummaryFromBlock - gets block summary from block and stores it to ememory/rocksdb */
+func (sc *Chain) StoreBlockSummaryFromBlock(ctx context.Context, b *block.Block) error {
 	bs := b.GetSummary()
+	bSummaryEntityMetadata := bs.GetEntityMetadata()
+	bctx := ememorystore.WithEntityConnection(ctx, bSummaryEntityMetadata)
+	defer ememorystore.Close(bctx)
+	if len(bs.Hash) < 64 {
+		Logger.Error("Writing block summary - block hash less than 64", zap.Any("hash", bs.Hash))
+	}
+	err := bs.Write(bctx)
+	if err != nil {
+		return err
+	}
+	con := ememorystore.GetEntityCon(bctx, bSummaryEntityMetadata)
+	err = con.Commit()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+/*StoreBlockSummary - stores block summary to ememory/rocksdb */
+func (sc *Chain) StoreBlockSummary(ctx context.Context, bs *block.BlockSummary) error {
 	bSummaryEntityMetadata := bs.GetEntityMetadata()
 	bctx := ememorystore.WithEntityConnection(ctx, bSummaryEntityMetadata)
 	defer ememorystore.Close(bctx)
