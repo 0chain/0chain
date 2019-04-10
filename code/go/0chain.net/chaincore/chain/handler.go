@@ -344,6 +344,7 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	if node.Self.Type == node.NodeTypeMiner && config.Development() {
 		fmt.Fprintf(w, "<li><a href='/_diagnostics/wallet_stats'>/_diagnostics/wallet_stats</a>")
 	}
+	fmt.Fprintf(w, "<li><a href='/_smart_contract_stats'>/_smart_contract_stats</a></li>")
 	fmt.Fprintf(w, "</td>")
 
 	fmt.Fprintf(w, "<td valign='top'>")

@@ -5,9 +5,9 @@ import (
 	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/feesc"
 	"0chain.net/smartcontract/interestpoolsc"
+	"0chain.net/smartcontract/minersc"
 	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/zrc20sc"
-	"0chain.net/smartcontract/minersc"
 )
 
 //SetupSmartContracts initialize smartcontract addresses

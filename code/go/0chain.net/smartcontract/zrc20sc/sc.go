@@ -1,12 +1,15 @@
 package zrc20sc
 
 import (
+	"fmt"
+
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	metrics "github.com/rcrowley/go-metrics"
 )
 
 const (
@@ -20,6 +23,16 @@ type ZRC20SmartContract struct {
 
 func (zrc *ZRC20SmartContract) SetSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {
 	zrc.SmartContract = sc
+	zrc.SmartContractExecutionStats["createToken"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", zrc.ID, "createToken"), nil)
+	zrc.SmartContractExecutionStats["digPool"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", zrc.ID, "digPool"), nil)
+	zrc.SmartContractExecutionStats["fillPool"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", zrc.ID, "fillPool"), nil)
+	zrc.SmartContractExecutionStats["transferTo"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", zrc.ID, "transferTo"), nil)
+	zrc.SmartContractExecutionStats["drainPool"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", zrc.ID, "drainPool"), nil)
+	zrc.SmartContractExecutionStats["emptyPool"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", zrc.ID, "emptyPool"), nil)
+}
+
+func (zrc *ZRC20SmartContract) GetRestPoints() map[string]smartcontractinterface.SmartContractRestHandler {
+	return zrc.RestHandlers
 }
 
 func (zrc *ZRC20SmartContract) createToken(t *transaction.Transaction, inputData []byte) (string, error) {
@@ -39,32 +52,6 @@ func (zrc *ZRC20SmartContract) createToken(t *transaction.Transaction, inputData
 	newRequest.Available = newRequest.TotalSupply
 	zrc.DB.PutNode(newRequest.getKey(), newRequest.encode())
 	return string(newRequest.encode()), nil
-}
-
-func (zrc *ZRC20SmartContract) totalSupply(t *transaction.Transaction, inputData []byte) (string, error) {
-	var newRequest tokenNode
-	err := newRequest.decode(inputData)
-	if err != nil {
-		return common.NewError("bad request", "token request not formated correctly").Error(), nil
-	}
-	node, err := zrc.getTokenNode(newRequest.TokenName)
-	if err != nil {
-		return common.NewError("bad request", "token doesn't exist").Error(), nil
-	}
-	return string(node.encode()), nil
-}
-
-func (zrc *ZRC20SmartContract) balanceOf(t *transaction.Transaction, inputData []byte) (string, error) {
-	var newRequest zrc20TransferRequest
-	err := newRequest.decode(inputData)
-	if err != nil {
-		return common.NewError("bad request", "token cannot be created, request not formated correctly").Error(), nil
-	}
-	zrcPool, err := zrc.getPool(newRequest.FromToken, newRequest.FromPool)
-	if err != nil {
-		return common.NewError("bad request", "pool doesn't exist").Error(), nil
-	}
-	return string(zrcPool.encode()), nil
 }
 
 func (zrc *ZRC20SmartContract) digPool(t *transaction.Transaction, inputData []byte, balances c_state.StateContextI) (string, error) {
@@ -240,10 +227,6 @@ func (zrc *ZRC20SmartContract) Execute(t *transaction.Transaction, funcName stri
 	switch funcName {
 	case "createToken":
 		return zrc.createToken(t, inputData)
-	case "totalSupply":
-		return zrc.totalSupply(t, inputData)
-	case "balanceOf":
-		return zrc.balanceOf(t, inputData)
 	case "digPool":
 		return zrc.digPool(t, inputData, balances)
 	case "fillPool":
