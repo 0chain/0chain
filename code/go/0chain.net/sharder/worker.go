@@ -55,139 +55,150 @@ func (sc *Chain) NodeStatusWorker(ctx context.Context) {
 func (sc *Chain) HealthCheckWorker(ctx context.Context) {
 	hr := sc.HealthyRound
 	val, err := sc.readHealthRound()
-	if err == nil {
-		if val > hr {
-			hr = val
-		}
+	if err == nil && val > hr {
+		hr = val
 	}
-
-	var r *round.Round
-	var bs *block.BlockSummary
-	var b *block.Block
-	var hasEntity bool
-
 	for true {
 		select {
 		case <-ctx.Done():
 			return
 		default:
 			hr = hr + 1
-			r, hasEntity = sc.hasRoundSummary(ctx, hr)
-			if !hasEntity {
-				r = sc.syncRoundSummary(ctx, hr, sc.BatchSyncSize)
-			}
-			bs, hasEntity = sc.hasBlockSummary(ctx, r.BlockHash)
-			if !hasEntity {
-				bs = sc.syncBlockSummary(ctx, r, sc.BatchSyncSize)
-			}
-			b, hasEntity = sc.hasBlock(bs.Hash, r.Number)
-			if !hasEntity {
-				b = sc.syncBlock(ctx, r)
-			}
-			hasTxns := sc.hasBlockTransactions(ctx, b)
-			if !hasTxns {
-				sc.storeBlockTransactions(ctx, b)
-			}
+			sc.healthCheck(ctx, hr)
 			sc.writeHealthRound(hr)
-			// var b *block.Block
-			// canShard = sc.IsBlockSharderFromHash(bs.Hash, self)
-			// if canShard {
-			// 	b, hasEntity = sc.hasBlock(bs.Hash, r.Number)
-			// 	if !hasEntity {
-			// 		b = sc.syncBlock(ctx, r)
-			// 	}
-			// }
-			// //find how to check the number of transactions stored for a round
-			// hasTxns := sc.hasTransactions(ctx, r)
-			// if !hasTxns {
-			// 	if b == nil {
-			// 		b = sc.syncBlock(ctx, r)
-			// 	}
-			// 	sc.storeTransactions(ctx, b)
-			// }
-			// sc.writeHealthRound(hr)
 		}
 	}
 }
 
 /*QOSWorker - gets most recent K rounds and stores them*/
 func (sc *Chain) QOSWorker(ctx context.Context) {
-	self := node.GetSelfNode(ctx)
-	var r *round.Round
-	var b *block.Block
-	var hasEntity bool
-
 	for true {
 		select {
 		case <-ctx.Done():
 			return
 		default:
 			lr := sc.LatestFinalizedBlock.Round
-			r, hasEntity = sc.hasRoundSummary(ctx, lr)
-			if !hasEntity {
-				params := &url.Values{}
-				params.Add("round", strconv.FormatInt(lr, 10))
-				params.Add("range", strconv.Itoa(-sc.BatchSyncSize)) // we go backwards so it a minus of batch sync size
-				Logger.Info("bc-27 (QOW) Info", zap.Int64("round", lr), zap.Int("range", -sc.BatchSyncSize))
-				rs := sc.requestForRoundSummaries(ctx, params)
-				if rs != nil {
-					sc.storeRoundSummaries(ctx, rs)
-					r, _ = sc.hasRoundSummary(ctx, lr)
-				}
-			}
-			if r == nil { // if you do not have the round then continue since we do not know the blockhash
-				continue
-			}
-			_, hasEntity = sc.hasBlockSummary(ctx, r.BlockHash)
-			if !hasEntity {
-				params := &url.Values{}
-				params.Add("round", strconv.FormatInt(lr, 10))
-				params.Add("range", strconv.Itoa(-sc.BatchSyncSize)) // we go backwards so it a minus of batch sync size
-				bs := sc.requestForBlockSummaries(ctx, params)
-				if bs != nil {
-					sc.storeBlockSummaries(ctx, bs)
-				}
-			}
-			b, hasEntity = sc.hasBlock(r.BlockHash, r.Number)
-			if !hasEntity {
-				params := &url.Values{}
-				params.Add("round", strconv.FormatInt(lr, 10))
-				params.Add("hash", r.BlockHash)
-				b = sc.requestForBlock(ctx, params, r)
-				canShard := sc.IsBlockSharderFromHash(r.BlockHash, self.Node)
-				if canShard && b != nil {
-					blockstore.GetStore().Write(b)
-				}
-			}
-			if b != nil {
-				hasTxns := sc.hasBlockTransactions(ctx, b)
-				if !hasTxns {
-					sc.StoreTransactions(ctx, b)
-				}
-			}
-			// var b *block.Block
-			// canShard = sc.IsBlockSharderFromHash(bs.Hash, self)
-			// if canShard {
-			// 	b, hasEntity = sc.hasBlock(bs.Hash, r.Number)
-			// 	if !hasEntity {
-			// 		params = &url.Values{}
-			// 		params.Add("round", strconv.FormatInt(r.Number, 10))
-			// 		params.Add("hash", r.BlockHash)
-			// 		b = sc.requestForBlock(ctx, params, r)
-			// 		blockstore.GetStore().Write(b)
-			// 	}
-			// }
-			// hasTxns := sc.hasTransactions(ctx, r)
-			// if !hasTxns {
-			// 	params = &url.Values{}
-			// 	params.Add("round", strconv.FormatInt(r.Number, 10))
-			// 	params.Add("hash", r.BlockHash)
-			// 	if b == nil {
-			// 		b = sc.requestForBlock(ctx, params, r)
-			// 	}
-			// 	sc.StoreTransactions(ctx, b)
-			// }
+			sc.processLastNBlocks(ctx, lr, sc.BatchSyncSize)
 		}
+	}
+}
+
+func (sc *Chain) healthCheck(ctx context.Context, rNum int64) {
+	var r *round.Round
+	var bs *block.BlockSummary
+	var b *block.Block
+	var hasEntity bool
+
+	r, hasEntity = sc.hasRoundSummary(ctx, rNum)
+	if !hasEntity {
+		r = sc.syncRoundSummary(ctx, rNum, sc.BatchSyncSize)
+	}
+	bs, hasEntity = sc.hasBlockSummary(ctx, r.BlockHash)
+	if !hasEntity {
+		bs = sc.syncBlockSummary(ctx, r, sc.BatchSyncSize)
+	}
+	b, hasEntity = sc.hasBlock(bs.Hash, r.Number)
+	if !hasEntity {
+		b = sc.syncBlock(ctx, r)
+	}
+	hasTxns := sc.hasBlockTransactions(ctx, b)
+	if !hasTxns {
+		sc.storeBlockTransactions(ctx, b)
+	}
+	// var b *block.Block
+	// canShard = sc.IsBlockSharderFromHash(bs.Hash, self)
+	// if canShard {
+	// 	b, hasEntity = sc.hasBlock(bs.Hash, r.Number)
+	// 	if !hasEntity {
+	// 		b = sc.syncBlock(ctx, r)
+	// 	}
+	// }
+	// //find how to check the number of transactions stored for a round
+	// hasTxns := sc.hasTransactions(ctx, r)
+	// if !hasTxns {
+	// 	if b == nil {
+	// 		b = sc.syncBlock(ctx, r)
+	// 	}
+	// 	sc.storeTransactions(ctx, b)
+	// }
+	// sc.writeHealthRound(hr)
+}
+
+func (sc *Chain) processLastNBlocks(ctx context.Context, lr int64, n int) {
+	self := node.GetSelfNode(ctx)
+	var r *round.Round
+	var b *block.Block
+	var hasEntity bool
+
+	for i := 0; i < n; i++ {
+		currR := lr - int64(i)
+		if currR < 1 {
+			return
+		}
+		r, hasEntity = sc.hasRoundSummary(ctx, currR)
+		if !hasEntity {
+			params := &url.Values{}
+			params.Add("round", strconv.FormatInt(currR, 10))
+			params.Add("range", strconv.Itoa(-n)) // we go backwards so it is a minus
+			Logger.Info("bc-27 (QOW) Info", zap.Int64("round", currR), zap.Int("range", -n))
+			rs := sc.requestForRoundSummaries(ctx, params)
+			if rs != nil {
+				sc.storeRoundSummaries(ctx, rs)
+				r, _ = sc.hasRoundSummary(ctx, lr)
+			}
+		}
+		if r == nil || r.BlockHash == "" { // if we do not have the round or blockhash then continue
+			continue
+		}
+		_, hasEntity = sc.hasBlockSummary(ctx, r.BlockHash)
+		if !hasEntity {
+			params := &url.Values{}
+			params.Add("round", strconv.FormatInt(currR, 10))
+			params.Add("range", strconv.Itoa(-n))
+			bs := sc.requestForBlockSummaries(ctx, params)
+			if bs != nil {
+				sc.storeBlockSummaries(ctx, bs)
+			}
+		}
+		b, hasEntity = sc.hasBlock(r.BlockHash, r.Number)
+		if !hasEntity {
+			params := &url.Values{}
+			params.Add("round", strconv.FormatInt(currR, 10))
+			params.Add("hash", r.BlockHash)
+			b = sc.requestForBlock(ctx, params, r)
+			canShard := sc.IsBlockSharderFromHash(r.BlockHash, self.Node)
+			if canShard && b != nil {
+				blockstore.GetStore().Write(b)
+			}
+		}
+		if b != nil {
+			hasTxns := sc.hasBlockTransactions(ctx, b)
+			if !hasTxns {
+				sc.StoreTransactions(ctx, b)
+			}
+		}
+		// var b *block.Block
+		// canShard = sc.IsBlockSharderFromHash(bs.Hash, self)
+		// if canShard {
+		// 	b, hasEntity = sc.hasBlock(bs.Hash, r.Number)
+		// 	if !hasEntity {
+		// 		params = &url.Values{}
+		// 		params.Add("round", strconv.FormatInt(r.Number, 10))
+		// 		params.Add("hash", r.BlockHash)
+		// 		b = sc.requestForBlock(ctx, params, r)
+		// 		blockstore.GetStore().Write(b)
+		// 	}
+		// }
+		// hasTxns := sc.hasTransactions(ctx, r)
+		// if !hasTxns {
+		// 	params = &url.Values{}
+		// 	params.Add("round", strconv.FormatInt(r.Number, 10))
+		// 	params.Add("hash", r.BlockHash)
+		// 	if b == nil {
+		// 		b = sc.requestForBlock(ctx, params, r)
+		// 	}
+		// 	sc.StoreTransactions(ctx, b)
+		// }
 	}
 }
 

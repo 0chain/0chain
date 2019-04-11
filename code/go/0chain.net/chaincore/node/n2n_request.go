@@ -35,15 +35,6 @@ func GetFetchStrategy() int {
 
 //RequestEntity - request an entity
 func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF) *Node {
-	if params == nil {
-		Logger.Info("bug#1 params are nil")
-	}
-	if handler == nil {
-		Logger.Info("bug#1 handler is  nil")
-	}
-	if requestor == nil {
-		Logger.Info("bug#1 requestor is nil")
-	}
 	rhandler := requestor(params, handler)
 	var nodes []*Node
 	if GetFetchStrategy() == FetchStrategyRandom {

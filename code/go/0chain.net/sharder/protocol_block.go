@@ -142,10 +142,10 @@ func (sc *Chain) syncRoundSummary(ctx context.Context, syncR int64, rRange int) 
 	r, ok := sc.hasRoundSummary(ctx, syncR)
 	params.Del("range")
 	for !ok {
-		Logger.Info("bc-27 (HCW) round summary not successfully stored", zap.Int64("round", syncR))
+		Logger.Info("bc-27 (HCW) has no round summary stored for this round", zap.Int64("round", syncR))
 		time.Sleep(time.Second)
 		r = sc.requestForRound(ctx, params)
-		if r != nil {
+		if sc.isValidRound(r) {
 			sc.storeRoundSummary(ctx, r)
 		}
 		r, ok = sc.hasRoundSummary(ctx, syncR)
@@ -171,7 +171,7 @@ func (sc *Chain) syncBlockSummary(ctx context.Context, r *round.Round, rRange in
 	params.Del("range")
 	params.Add("hash", r.BlockHash)
 	for !ok {
-		Logger.Info("bc-27 (HCW) block summary not successfully stored", zap.Int64("round", r.Number))
+		Logger.Info("bc-27 (HCW) has no block summary stored for this round", zap.Int64("round", r.Number))
 		time.Sleep(time.Second)
 		blockS = sc.requestForBlockSummary(ctx, params)
 		if blockS != nil {
@@ -190,21 +190,31 @@ func (sc *Chain) syncBlock(ctx context.Context, r *round.Round) *block.Block {
 
 	var b *block.Block
 	for true {
+		time.Sleep(time.Second)
 		b = sc.requestForBlock(ctx, params, r)
-		if b == nil {
-			Logger.Info("bc-27 (HCW) requested missed block is nil", zap.Int64("round", r.Number))
-			time.Sleep(time.Second)
-			continue
+		if b != nil {
+			break
 		}
-		Logger.Info("bc-27 (HCW) received requested missed block", zap.Int64("round", r.Number), zap.String("block-hash", b.Hash))
-		break
+		Logger.Info("bc-27 (HCW) requested missed block is nil", zap.Int64("round", r.Number))
 	}
-
 	if sc.IsBlockSharder(b, node.GetSelfNode(ctx).Node) {
 		sc.storeBlock(ctx, b)
 		Logger.Info("bc-27 (HCW) block stored succesfully", zap.Int64("round", r.Number), zap.String("hash", b.Hash))
 	}
 	return b
+}
+
+func (sc *Chain) isValidRound(r *round.Round) bool {
+	if r == nil {
+		return false
+	}
+	if r.Number <= 0 {
+		return false
+	}
+	if r.BlockHash == "" {
+		return false
+	}
+	return true
 }
 
 func (sc *Chain) requestForRoundSummaries(ctx context.Context, params *url.Values) *RoundSummaries {
@@ -230,8 +240,11 @@ func (sc *Chain) requestForRound(ctx context.Context, params *url.Values) *round
 			Logger.Error("bc-27 received invalid round entity")
 			return nil, nil
 		}
-		r = roundEntity
-		return r, nil
+		if sc.isValidRound(roundEntity) {
+			r = roundEntity
+			return r, nil
+		}
+		return nil, nil
 	}
 	sc.Sharders.RequestEntity(ctx, RoundRequestor, params, handler)
 	return r
@@ -277,29 +290,29 @@ func (sc *Chain) requestForBlock(ctx context.Context, params *url.Values, r *rou
 
 	var requestNode *node.Node
 	for _, n := range nodes {
-		if n != self.Node {
-			requestNode = n
-			var b *block.Block
-			handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-				blockEntity, ok := entity.(*block.Block)
-				if !ok {
-					Logger.Error("bc-27 invalid request block", zap.Int64("round", r.Number))
-					return nil, nil
-				}
-				err := blockEntity.Validate(ctx)
-				if err == nil {
-					b = blockEntity
-					return blockEntity, nil
-				}
-				return nil, err
+		if n == self.Node {
+			continue
+		}
+		requestNode = n
+		var b *block.Block
+		handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+			blockEntity, ok := entity.(*block.Block)
+			if !ok {
+				Logger.Error("bc-27 invalid request block", zap.Int64("round", r.Number))
+				return nil, nil
 			}
-			requestNode.RequestEntityFromNode(ctx, BlockRequestor, params, handler)
-			if b == nil {
-				Logger.Info("bc-27 request round info - block is nil", zap.Int64("round", r.Number), zap.String("block-hash", r.BlockHash))
-				continue
+			err := blockEntity.Validate(ctx)
+			if err == nil {
+				b = blockEntity
+				return blockEntity, nil
 			}
+			return nil, err
+		}
+		requestNode.RequestEntityFromNode(ctx, BlockRequestor, params, handler)
+		if b != nil {
 			return b
 		}
+		Logger.Info("bc-27 request round info - block is nil", zap.Int64("round", r.Number), zap.String("block-hash", r.BlockHash))
 	}
 	return nil
 }
@@ -313,13 +326,15 @@ func (sc *Chain) storeRoundSummaries(ctx context.Context, rs *RoundSummaries) {
 			rsEntities = append(rsEntities, roundS)
 		}
 	}
+
 	if len(rsEntities) > 0 {
+		Logger.Info("bug#2 round summaries received", zap.Int("number", len(rsEntities)))
 		rsStore := roundEntityMetadata.GetStore()
 		rsctx := ememorystore.WithEntityConnection(ctx, roundEntityMetadata)
 		defer ememorystore.Close(rsctx)
 		err := rsStore.MultiWrite(rsctx, roundEntityMetadata, rsEntities)
 		if err != nil {
-			Logger.Info("bc-27 write round summaries to file failed", zap.Error(err))
+			Logger.Info("bc-27 write round summaries failed", zap.Error(err))
 		}
 		Logger.Info("bc-27 write round summaries successful")
 	}
@@ -327,12 +342,14 @@ func (sc *Chain) storeRoundSummaries(ctx context.Context, rs *RoundSummaries) {
 
 func (sc *Chain) storeBlockSummaries(ctx context.Context, bs *BlockSummaries) {
 	blockSummaryEntityMetadata := datastore.GetEntityMetadata("block_summary")
+
 	bsEntities := make([]datastore.Entity, 0, 1)
 	for _, blockS := range bs.BSummaryList {
 		if blockS != nil {
 			bsEntities = append(bsEntities, blockS)
 		}
 	}
+
 	if len(bsEntities) > 0 {
 		bsStore := blockSummaryEntityMetadata.GetStore()
 		bsctx := ememorystore.WithEntityConnection(ctx, blockSummaryEntityMetadata)
@@ -362,12 +379,11 @@ func (sc *Chain) storeBlockSummary(ctx context.Context, bs *block.BlockSummary) 
 	var err error
 	for true {
 		err = sc.StoreBlockSummary(ctx, bs)
-		if err != nil {
-			Logger.Error("bc-27 db error (save block summary)", zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.Error(err))
-			time.Sleep(time.Second)
-			continue
+		if err == nil {
+			return
 		}
-		break
+		Logger.Error("bc-27 db error (save block summary)", zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.Error(err))
+		time.Sleep(time.Second)
 	}
 }
 
@@ -376,12 +392,11 @@ func (sc *Chain) storeBlock(ctx context.Context, b *block.Block) {
 	var err error
 	for true {
 		err = blockstore.GetStore().Write(b)
-		if err != nil {
-			Logger.Error("bc-27 db error (save block)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
-			time.Sleep(time.Second)
-			continue
+		if err == nil {
+			return
 		}
-		break
+		Logger.Error("bc-27 db error (save block)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
+		time.Sleep(time.Second)
 	}
 }
 
@@ -389,12 +404,11 @@ func (sc *Chain) storeBlockTransactions(ctx context.Context, b *block.Block) {
 	var err error
 	for true {
 		err = sc.StoreTransactions(ctx, b)
-		if err != nil {
-			Logger.Error("bc-27 db error (save transaction)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
-			time.Sleep(time.Second)
-			continue
+		if err == nil {
+			return
 		}
-		break
+		Logger.Error("bc-27 db error (save transaction)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
+		time.Sleep(time.Second)
 	}
 }
 
