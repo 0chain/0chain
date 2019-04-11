@@ -287,7 +287,7 @@ func (c *Chain) infraHealthInATable(w http.ResponseWriter, r *http.Request) {
 	if ps != nil {
 		fmt.Fprintf(w, "%v", ps.MissingNodes)
 	} else {
-		fmt.Fprintf(w, "check pending")
+		fmt.Fprintf(w, "pending")
 	}
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "</tr>")
@@ -438,7 +438,11 @@ func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 		}
 		fmt.Fprintf(w, "<td>%s</td>", nd.Description)
 		fmt.Fprintf(w, "<td>%s</td>", nd.Info.BuildTag)
-		fmt.Fprintf(w, "<td class='number'>%v</td>", nd.Info.StateMissingNodes)
+		if nd.Info.StateMissingNodes < 0 {
+			fmt.Fprintf(w, "<td>pending</td>")
+		} else {
+			fmt.Fprintf(w, "<td class='number'>%v</td>", nd.Info.StateMissingNodes)
+		}
 		fmt.Fprintf(w, "</tr>")
 	}
 	fmt.Fprintf(w, "</table>")
