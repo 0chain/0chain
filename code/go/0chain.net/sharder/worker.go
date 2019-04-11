@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/url"
 	"strconv"
+	"time"
 
 	"0chain.net/sharder/roundstore"
 	"go.uber.org/zap"
@@ -58,14 +59,19 @@ func (sc *Chain) HealthCheckWorker(ctx context.Context) {
 	if err == nil && val > hr {
 		hr = val
 	}
+	sc.BSyncStats.SyncBeginR = hr + 1
 	for true {
 		select {
 		case <-ctx.Done():
 			return
 		default:
+			sc.SharderStats.HealthyRound = hr
 			hr = hr + 1
+			t := time.Now()
 			sc.healthCheck(ctx, hr)
+			duration := time.Since(t)
 			sc.writeHealthRound(hr)
+			sc.updateSyncStats(hr, duration)
 		}
 	}
 }
@@ -80,6 +86,23 @@ func (sc *Chain) QOSWorker(ctx context.Context) {
 			lr := sc.LatestFinalizedBlock.Round
 			sc.processLastNBlocks(ctx, lr, sc.BatchSyncSize)
 		}
+	}
+}
+
+func (sc *Chain) updateSyncStats(rNum int64, duration time.Duration) {
+	diff := sc.BSyncStats.SyncUntilR - sc.BSyncStats.SyncBeginR
+	if diff <= 0 {
+		sc.BSyncStats.Status = SyncDone
+	} else {
+		sc.BSyncStats.Status = Sync
+		BlockSyncTimer.Update(duration)
+	}
+
+	if sc.BSyncStats.Status == Sync {
+		sc.BSyncStats.CurrSyncR = rNum
+		sc.BSyncStats.SyncBlocksCount++
+	} else {
+		sc.BSyncStats.CurrSyncR = 0
 	}
 }
 
@@ -132,6 +155,7 @@ func (sc *Chain) processLastNBlocks(ctx context.Context, lr int64, n int) {
 
 	for i := 0; i < n; i++ {
 		currR := lr - int64(i)
+		sc.SharderStats.QOSRound = currR
 		if currR < 1 {
 			return
 		}

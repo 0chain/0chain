@@ -150,19 +150,6 @@ func main() {
 	initServer()
 	initHandlers()
 
-	// Commented the sync code (previous design)
-	// r, err := sc.GetMostRecentRoundFromDB(ctx)
-
-	// if err == nil {
-	// 	sc.CurrentRound = r.Number
-	// 	sc.AddRound(r)
-	// 	Logger.Info("bc-27 latest round info - from DB", zap.Int64("round", r.Number), zap.String("blockHash", r.BlockHash))
-	// } else {
-	// 	Logger.Error("bc-27 reading round data from db failed", zap.Error(err))
-	// }
-
-	// go syncUpRounds(ctx, r)
-
 	go sc.HealthCheckWorker(ctx) // 4) progressively checks the health for each round
 	go sc.QOSWorker(ctx)         // 5) fetches K recent rounds to serve any queries on recent blocks
 
@@ -233,33 +220,6 @@ func initWorkers(ctx context.Context) {
 	serverChain := chain.GetServerChain()
 	serverChain.SetupWorkers(ctx)
 	sharder.SetupWorkers(ctx)
-}
-
-func syncUpRounds(ctx context.Context, r *round.Round) {
-	// sc := sharder.GetSharderChain()
-	// sc.Sharders.OneTimeStatusMonitor(ctx)
-	// lr := sc.GetLatestRoundFromSharders(ctx, r.Number)
-	// if lr != nil && lr.Number > r.Number+1 {
-	// 	Logger.Info("bc-27 latest round info - from sharder", zap.Int64("s_round", lr.Number), zap.Int64("round", r.Number))
-
-	// 	sc.BSync.SetStatus(sharder.Syncing)
-	// 	sc.BSync.SetFinalizationRound(lr.Number)
-	// 	Logger.Info("bc-27 block sync status : syncing")
-
-	// 	ts := time.Now()
-	// 	sc.GetMissingRounds(ctx, lr.Number, r.Number)
-	// 	duration := time.Since(ts)
-	// 	targetR := sc.BSync.GetAcceptanceRound()
-	// 	if targetR == 0 {
-	// 		targetR = sc.BSync.GetFinalizationRound()
-	// 	}
-	// 	syncRate := (targetR - r.Number - 1) / (int64(duration.Seconds()) + 1)
-	// 	Logger.Info("bc-27 sync info - caught up missing rounds (final)", zap.Int64("total rounds", targetR-r.Number-1), zap.Duration("duration", duration), zap.Int64("rate (blocks per sec)", syncRate))
-
-	// 	sc.BSync.SetStatus(sharder.Normal)
-	// 	Logger.Info("bc-27 block sync status : normal")
-	// }
-	// go sc.BlockWorker(ctx)
 }
 
 func setupBlockStorageProvider() {

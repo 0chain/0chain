@@ -4,7 +4,6 @@ import (
 	"context"
 	"math"
 	"net/url"
-	"sort"
 	"strconv"
 	"time"
 
@@ -99,32 +98,6 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 	sc.SetRoundRank(er, b)
 	Logger.Info("received block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)))
 	sc.AddNotarizedBlock(ctx, er, b)
-}
-
-/*GetLatestRoundFromSharders - gives the latest of rounds that the sharders are processing*/
-func (sc *Chain) GetLatestRoundFromSharders(ctx context.Context, currRound int64) *round.Round {
-	latestRounds := make([]*round.Round, 0, 1)
-
-	latestRoundHandler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-		r, ok := entity.(*round.Round)
-		if !ok {
-			Logger.Error("latest round received is not valid")
-			return nil, nil
-		}
-		latestRounds = append(latestRounds, r)
-		return r, nil
-	}
-
-	sc.Sharders.RequestEntityFromAll(ctx, LatestRoundRequestor, nil, latestRoundHandler)
-
-	if len(latestRounds) > 0 {
-		sort.Slice(latestRounds, func(i int, j int) bool { return latestRounds[i].Number >= latestRounds[j].Number })
-		Logger.Info("bc-27 latest round info - received", zap.Int64("round", latestRounds[0].Number))
-		return latestRounds[0]
-	}
-
-	Logger.Info("bc-27 latest round info - no round received from sharders")
-	return nil
 }
 
 func (sc *Chain) syncRoundSummary(ctx context.Context, syncR int64, rRange int) *round.Round {

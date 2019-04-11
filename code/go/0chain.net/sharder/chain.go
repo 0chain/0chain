@@ -2,7 +2,6 @@ package sharder
 
 import (
 	"context"
-	"sync"
 
 	"0chain.net/core/cache"
 	"0chain.net/core/ememorystore"
@@ -12,12 +11,6 @@ import (
 	"0chain.net/chaincore/round"
 	"0chain.net/core/datastore"
 	"0chain.net/sharder/blockstore"
-)
-
-const (
-	Normal  = 0
-	Syncing = 1
-	Accept  = 2
 )
 
 var sharderChain = &Chain{}
@@ -32,12 +25,7 @@ func SetupSharderChain(c *chain.Chain) {
 	transactionCacheSize := int(c.BlockSize) * blockCacheSize
 	sharderChain.BlockTxnCache = cache.NewLRUCache(transactionCacheSize)
 	c.SetFetchedNotarizedBlockHandler(sharderChain)
-	sharderChain.BSync = &BlockSync{
-		//TODO configure acceptance tolerance value
-		AcceptanceTolerance	: 	65,
-		syncStatus			:   Normal,
-		mutex				:   sync.RWMutex{},
-	}
+	sharderChain.BSyncStats = &SyncStats{}
 }
 
 /*GetSharderChain - get the sharder's chain */
@@ -53,73 +41,7 @@ type Chain struct {
 	BlockCache    cache.Cache
 	BlockTxnCache cache.Cache
 	SharderStats  Stats
-	BSync         *BlockSync
-}
-
-/*BlockSync - A struct to track the block sync */
-type BlockSync struct {
-	AcceptanceTolerance int64
-	acceptRound         int64
-	syncRound           int64
-	finalizeRound       int64
-	syncStatus          int
-	mutex               sync.RWMutex
-}
-
-/*GetStatus - get block sync status */
-func (bs *BlockSync) GetStatus() int {
-	bs.mutex.RLock()
-	defer bs.mutex.RUnlock()
-	return bs.syncStatus
-}
-
-/*SetStatus - set block sync status */
-func (bs *BlockSync) SetStatus(status int) {
-	bs.mutex.Lock()
-	defer bs.mutex.Unlock()
-	bs.syncStatus = status
-}
-
-/*GetFinalizationRound - get round to be finalized during block sync */
-func (bs *BlockSync) GetFinalizationRound() int64 {
-	bs.mutex.RLock()
-	defer bs.mutex.RUnlock()
-	return bs.finalizeRound
-}
-
-/*SetFinalizationRound - set round to be finalized during block sync */
-func (bs *BlockSync) SetFinalizationRound(r int64) {
-	bs.mutex.Lock()
-	defer bs.mutex.Unlock()
-	bs.finalizeRound = r
-}
-
-/*GetSyncingRound - get current syncing round */
-func (bs *BlockSync) GetSyncingRound() int64 {
-	bs.mutex.RLock()
-	defer bs.mutex.RUnlock()
-	return bs.syncRound
-}
-
-/*SetSyncingRund - set current syncing round */
-func (bs *BlockSync) SetSyncingRound(r int64) {
-	bs.mutex.Lock()
-	defer bs.mutex.Unlock()
-	bs.syncRound = r
-}
-
-/*GetAcceptanceRound - get current syncing round */
-func (bs *BlockSync) GetAcceptanceRound() int64 {
-	bs.mutex.RLock()
-	defer bs.mutex.RUnlock()
-	return bs.acceptRound
-}
-
-/*SetAcceptanceRound - set acceptance round during block sync */
-func (bs *BlockSync) SetAcceptanceRound(r int64) {
-	bs.mutex.Lock()
-	defer bs.mutex.Unlock()
-	bs.acceptRound = r
+	BSyncStats    *SyncStats
 }
 
 /*GetBlockChannel - get the block channel where the incoming blocks from the network are put into for further processing */
