@@ -199,6 +199,7 @@ func NewNode(nc map[interface{}]interface{}) (*Node, error) {
 
 func setSelfNode(n *Node) {
 	Self.Node = n
+	Self.Node.Info.StateMissingNodes = -1
 	Self.Node.Info.BuildTag = build.BuildTag
 	Self.Node.Status = NodeStatusActive
 }

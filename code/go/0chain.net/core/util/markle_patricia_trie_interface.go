@@ -85,6 +85,7 @@ const (
 	PruneStateSynch     = "synching"
 	PruneStateDelete    = "deleting"
 	PruneStateCommplete = "completed"
+	PruneStateAbandoned = "abandoned"
 )
 
 /*PruneStats - gathers statistics while pruning */
