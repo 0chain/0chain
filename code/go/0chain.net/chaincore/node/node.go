@@ -12,6 +12,7 @@ import (
 
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
+	"0chain.net/core/build"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
@@ -89,6 +90,8 @@ type Node struct {
 	ProtocolStats interface{}
 
 	idBytes []byte
+
+	Info Info `json:"info"`
 }
 
 /*Provider - create a node object */
@@ -196,6 +199,7 @@ func NewNode(nc map[interface{}]interface{}) (*Node, error) {
 
 func setSelfNode(n *Node) {
 	Self.Node = n
+	Self.Node.Info.BuildTag = build.BuildTag
 	Self.Node.Status = NodeStatusActive
 }
 
