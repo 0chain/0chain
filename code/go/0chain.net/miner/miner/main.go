@@ -295,6 +295,7 @@ func initN2NHandlers() {
 	miner.SetupM2SRequestors()
 
 	miner.SetupX2MResponders()
+	chain.SetupX2XResponders()
 	chain.SetupX2MRequestors()
 }
 

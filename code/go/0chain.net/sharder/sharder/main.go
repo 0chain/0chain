@@ -205,6 +205,7 @@ func initN2NHandlers() {
 	node.SetupN2NHandlers()
 	sharder.SetupM2SReceivers()
 	sharder.SetupM2SResponders()
+	chain.SetupX2XResponders()
 	chain.SetupX2MRequestors()
 }
 
