@@ -38,9 +38,6 @@ func TransactionGenerator(c *chain.Chain) {
 	viper.SetDefault("development.txn_generation.pour_amount", 10000)
 	pourAmount = viper.GetInt64("development.txn_generation.pour_amount")
 
-	viper.SetDefault("development.txn_generation.start_token_txns", 10)
-	startTokenTransfers := viper.GetInt64("development.txn_generation.start_token_txns")
-
 	var numClients = viper.GetInt("development.txn_generation.wallets")
 	var numTxns int32
 
@@ -131,7 +128,7 @@ func TransactionGenerator(c *chain.Chain) {
 					var txn *transaction.Transaction
 					for t := int32(0); t <= numWorkerTxns; t++ {
 						r := prng.Int63n(100)
-						if r < 25 && c.CurrentRound > startTokenTransfers {
+						if r < 25 {
 							txn = createSendTransaction(c, prng)
 						} else {
 							txn = createDataTransaction(prng)
