@@ -68,7 +68,7 @@ server_chain:
   state:
     prune_below_count: 100 # rounds
   smart_contract:
-    timeout: 50 # milliseconds
+    timeout: 50 # milliseconds, 0 = no timeout
 
 network:
   nodes_file: config/single_machine_3_nodes.yaml
