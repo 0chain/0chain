@@ -137,11 +137,11 @@ func (sc *Chain) storeTransactions(ctx context.Context, sTxns []datastore.Entity
 var txnTableIndexed = false
 
 func getCreateIndex(table string, column string) string {
-	return fmt.Sprintf("CREATE INDEX ON %v(%v)", table, column)
+	return fmt.Sprintf("CREATE INDEX IF NOT EXISTS ON %v(%v)", table, column)
 }
 
 func getSelectCountTxn(table string, column string, value int64) string {
-	return fmt.Sprintf("SELECT COUNT(*) FROM %v where %v=?", table, column, value)
+	return fmt.Sprintf("SELECT COUNT(*) FROM %v where %v=%d", table, column, value)
 }
 
 func (sc *Chain) getTxnCountForRound(ctx context.Context, r int64) (int, error) {

@@ -170,7 +170,7 @@ func (sc *Chain) syncBlock(ctx context.Context, r *round.Round, canShard bool) *
 		}
 		Logger.Info("bc-27 (HCW) requested missed block is nil", zap.Int64("round", r.Number))
 	}
-	
+
 	if canShard {
 		sc.storeBlock(ctx, b)
 		Logger.Info("bc-27 (HCW) block stored succesfully", zap.Int64("round", r.Number), zap.String("hash", b.Hash))

@@ -90,7 +90,12 @@ func (sc *Chain) QOSWorker(ctx context.Context) {
 }
 
 func (sc *Chain) updateSyncStats(rNum int64, duration time.Duration) {
-	diff := sc.BSyncStats.SyncUntilR - sc.BSyncStats.SyncBeginR
+	var diff int64
+	if sc.BSyncStats.CurrSyncR > 0 {
+		diff = sc.BSyncStats.SyncUntilR - sc.BSyncStats.CurrSyncR
+	} else {
+		diff = sc.BSyncStats.SyncUntilR - sc.BSyncStats.SyncBeginR
+	}
 	if diff <= 0 {
 		sc.BSyncStats.Status = SyncDone
 	} else {
