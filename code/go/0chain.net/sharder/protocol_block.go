@@ -156,7 +156,7 @@ func (sc *Chain) syncBlockSummary(ctx context.Context, r *round.Round, rRange in
 	return blockS
 }
 
-func (sc *Chain) syncBlock(ctx context.Context, r *round.Round) *block.Block {
+func (sc *Chain) syncBlock(ctx context.Context, r *round.Round, canShard bool) *block.Block {
 	params := &url.Values{}
 	params.Add("round", strconv.FormatInt(r.Number, 10))
 	params.Add("hash", r.BlockHash)
@@ -170,7 +170,8 @@ func (sc *Chain) syncBlock(ctx context.Context, r *round.Round) *block.Block {
 		}
 		Logger.Info("bc-27 (HCW) requested missed block is nil", zap.Int64("round", r.Number))
 	}
-	if sc.IsBlockSharder(b, node.GetSelfNode(ctx).Node) {
+	
+	if canShard {
 		sc.storeBlock(ctx, b)
 		Logger.Info("bc-27 (HCW) block stored succesfully", zap.Int64("round", r.Number), zap.String("hash", b.Hash))
 	}

@@ -112,6 +112,8 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64) {
 	var b *block.Block
 	var hasEntity bool
 
+	self := node.GetSelfNode(ctx)
+
 	r, hasEntity = sc.hasRoundSummary(ctx, rNum)
 	if !hasEntity {
 		r = sc.syncRoundSummary(ctx, rNum, sc.BatchSyncSize)
@@ -120,37 +122,26 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64) {
 	if !hasEntity {
 		bs = sc.syncBlockSummary(ctx, r, sc.BatchSyncSize)
 	}
-	b, hasEntity = sc.hasBlock(bs.Hash, r.Number)
-	if !hasEntity {
-		b = sc.syncBlock(ctx, r)
+	canShard := sc.IsBlockSharderFromHash(bs.Hash, self.Node)
+	if canShard {
+		b, hasEntity = sc.hasBlock(bs.Hash, r.Number)
+		if !hasEntity {
+			b = sc.syncBlock(ctx, r, canShard)
+		}
 	}
-	hasTxns := sc.hasBlockTransactions(ctx, b)
+	hasTxns := sc.hasTransactions(ctx, bs)
 	if !hasTxns {
+		if b == nil {
+			b = sc.syncBlock(ctx, r, canShard)
+		}
 		sc.storeBlockTransactions(ctx, b)
 	}
-	// var b *block.Block
-	// canShard = sc.IsBlockSharderFromHash(bs.Hash, self)
-	// if canShard {
-	// 	b, hasEntity = sc.hasBlock(bs.Hash, r.Number)
-	// 	if !hasEntity {
-	// 		b = sc.syncBlock(ctx, r)
-	// 	}
-	// }
-	// //find how to check the number of transactions stored for a round
-	// hasTxns := sc.hasTransactions(ctx, r)
-	// if !hasTxns {
-	// 	if b == nil {
-	// 		b = sc.syncBlock(ctx, r)
-	// 	}
-	// 	sc.storeTransactions(ctx, b)
-	// }
-	// sc.writeHealthRound(hr)
 }
 
 func (sc *Chain) processLastNBlocks(ctx context.Context, lr int64, n int) {
 	self := node.GetSelfNode(ctx)
 	var r *round.Round
-	var b *block.Block
+	var bs *block.BlockSummary
 	var hasEntity bool
 
 	for i := 0; i < n; i++ {
@@ -174,7 +165,7 @@ func (sc *Chain) processLastNBlocks(ctx context.Context, lr int64, n int) {
 		if r == nil || r.BlockHash == "" { // if we do not have the round or blockhash then continue
 			continue
 		}
-		_, hasEntity = sc.hasBlockSummary(ctx, r.BlockHash)
+		bs, hasEntity = sc.hasBlockSummary(ctx, r.BlockHash)
 		if !hasEntity {
 			params := &url.Values{}
 			params.Add("round", strconv.FormatInt(currR, 10))
@@ -184,45 +175,30 @@ func (sc *Chain) processLastNBlocks(ctx context.Context, lr int64, n int) {
 				sc.storeBlockSummaries(ctx, bs)
 			}
 		}
-		b, hasEntity = sc.hasBlock(r.BlockHash, r.Number)
-		if !hasEntity {
+		var b *block.Block
+		canShard := sc.IsBlockSharderFromHash(bs.Hash, self.Node)
+		if canShard {
+			b, hasEntity = sc.hasBlock(bs.Hash, r.Number)
+			if !hasEntity {
+				params := &url.Values{}
+				params.Add("round", strconv.FormatInt(r.Number, 10))
+				params.Add("hash", r.BlockHash)
+				b = sc.requestForBlock(ctx, params, r)
+				if b != nil {
+					blockstore.GetStore().Write(b)
+				}
+			}
+		}
+		hasTxns := sc.hasTransactions(ctx, bs)
+		if !hasTxns {
 			params := &url.Values{}
-			params.Add("round", strconv.FormatInt(currR, 10))
+			params.Add("round", strconv.FormatInt(r.Number, 10))
 			params.Add("hash", r.BlockHash)
-			b = sc.requestForBlock(ctx, params, r)
-			canShard := sc.IsBlockSharderFromHash(r.BlockHash, self.Node)
-			if canShard && b != nil {
-				blockstore.GetStore().Write(b)
+			if b == nil {
+				b = sc.requestForBlock(ctx, params, r)
 			}
+			sc.storeBlockTransactions(ctx, b)
 		}
-		if b != nil {
-			hasTxns := sc.hasBlockTransactions(ctx, b)
-			if !hasTxns {
-				sc.StoreTransactions(ctx, b)
-			}
-		}
-		// var b *block.Block
-		// canShard = sc.IsBlockSharderFromHash(bs.Hash, self)
-		// if canShard {
-		// 	b, hasEntity = sc.hasBlock(bs.Hash, r.Number)
-		// 	if !hasEntity {
-		// 		params = &url.Values{}
-		// 		params.Add("round", strconv.FormatInt(r.Number, 10))
-		// 		params.Add("hash", r.BlockHash)
-		// 		b = sc.requestForBlock(ctx, params, r)
-		// 		blockstore.GetStore().Write(b)
-		// 	}
-		// }
-		// hasTxns := sc.hasTransactions(ctx, r)
-		// if !hasTxns {
-		// 	params = &url.Values{}
-		// 	params.Add("round", strconv.FormatInt(r.Number, 10))
-		// 	params.Add("hash", r.BlockHash)
-		// 	if b == nil {
-		// 		b = sc.requestForBlock(ctx, params, r)
-		// 	}
-		// 	sc.StoreTransactions(ctx, b)
-		// }
 	}
 }
 
@@ -281,5 +257,13 @@ func (sc *Chain) hasBlockTransactions(ctx context.Context, b *block.Block) bool 
 	return true
 }
 
-// func (sc *Chain) hasTransactions(ctx context.Context, r *round.Round) bool {
-// }
+func (sc *Chain) hasTransactions(ctx context.Context, bs *block.BlockSummary) bool {
+	if bs == nil {
+		return false
+	}
+	count, err := sc.getTxnCountForRound(ctx, bs.Round)
+	if err != nil {
+		return false
+	}
+	return count == bs.NumTxns
+}
