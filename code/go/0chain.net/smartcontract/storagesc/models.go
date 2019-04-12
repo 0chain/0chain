@@ -68,13 +68,17 @@ func (sn *BlobberChallenge) Decode(input []byte) error {
 	return nil
 }
 
-func (sn *BlobberChallenge) addChallenge(challenge *StorageChallenge) {
+func (sn *BlobberChallenge) addChallenge(challenge *StorageChallenge) bool {
 	if sn.Challenges == nil {
 		sn.Challenges = make([]*StorageChallenge, 0)
 		sn.ChallengeMap = make(map[string]*StorageChallenge)
 	}
-	sn.Challenges = append(sn.Challenges, challenge)
-	sn.ChallengeMap[challenge.ID] = challenge
+	if _, ok := sn.ChallengeMap[challenge.ID]; !ok {
+		sn.Challenges = append(sn.Challenges, challenge)
+		sn.ChallengeMap[challenge.ID] = challenge
+		return true
+	}
+	return false
 }
 
 type StorageChallenge struct {

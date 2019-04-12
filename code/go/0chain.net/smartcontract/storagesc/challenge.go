@@ -8,6 +8,7 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	. "0chain.net/core/logging"
 )
 
 func (sc *StorageSmartContract) completeChallengeForBlobber(blobberChallengeObj *BlobberChallenge, challengeCompleted *StorageChallenge, challengeResponse *ChallengeResponse) {
@@ -23,7 +24,8 @@ func (sc *StorageSmartContract) completeChallengeForBlobber(blobberChallengeObj 
 	if found && idx >= 0 && idx < len(blobberChallengeObj.Challenges) {
 		blobberChallengeObj.Challenges = append(blobberChallengeObj.Challenges[:idx], blobberChallengeObj.Challenges[idx+1:]...)
 		if len(blobberChallengeObj.LatestCompletedChallenges) >= 20 {
-			blobberChallengeObj.LatestCompletedChallenges = blobberChallengeObj.LatestCompletedChallenges[1:]
+			startIndex := (20 - len(blobberChallengeObj.LatestCompletedChallenges)) + 1
+			blobberChallengeObj.LatestCompletedChallenges = blobberChallengeObj.LatestCompletedChallenges[startIndex:]
 		}
 		challengeCompleted.Response = challengeResponse
 		blobberChallengeObj.LatestCompletedChallenges = append(blobberChallengeObj.LatestCompletedChallenges, challengeCompleted)
@@ -118,8 +120,9 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction, inpu
 		blobberAllocation.Stats.SuccessChallenges++
 		blobberAllocation.Stats.OpenChallenges--
 
-		defer sc.DB.PutNode(allocationObj.GetKey(), allocationObj.Encode())
+		sc.DB.PutNode(allocationObj.GetKey(), allocationObj.Encode())
 		sc.DB.PutNode(blobberChallengeObj.GetKey(), blobberChallengeObj.Encode())
+		//Logger.Info("Challenge passed", zap.Any("blobberChallengeObj", blobberChallengeObj), zap.Any("challenge", challengeResponse.ID))
 		return "Challenge Passed by Blobber", nil
 	}
 
@@ -135,8 +138,9 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction, inpu
 		blobberAllocation.Stats.FailedChallenges++
 		blobberAllocation.Stats.OpenChallenges--
 
-		defer sc.DB.PutNode(allocationObj.GetKey(), allocationObj.Encode())
+		sc.DB.PutNode(allocationObj.GetKey(), allocationObj.Encode())
 		sc.DB.PutNode(blobberChallengeObj.GetKey(), blobberChallengeObj.Encode())
+		//Logger.Info("Challenge failed", zap.Any("blobberChallengeObj", blobberChallengeObj), zap.Any("challenge", challengeResponse.ID))
 		return "Challenge Failed by Blobber", nil
 	}
 
@@ -223,7 +227,11 @@ func (sc *StorageSmartContract) addChallenge(t *transaction.Transaction, b *bloc
 	}
 
 	storageChallenge.Created = t.CreationDate
-	blobberChallengeObj.addChallenge(&storageChallenge)
+	addedChallege := blobberChallengeObj.addChallenge(&storageChallenge)
+	if !addedChallege {
+		challengeBytes, err := json.Marshal(storageChallenge)
+		return string(challengeBytes), err
+	}
 
 	sc.DB.PutNode(blobberChallengeObj.GetKey(), blobberChallengeObj.Encode())
 
@@ -232,7 +240,7 @@ func (sc *StorageSmartContract) addChallenge(t *transaction.Transaction, b *bloc
 	blobberAllocation.Stats.OpenChallenges++
 	blobberAllocation.Stats.TotalChallenges++
 	sc.DB.PutNode(allocationObj.GetKey(), allocationObj.Encode())
-
+	//Logger.Info("Adding a new challenge", zap.Any("blobberChallengeObj", blobberChallengeObj), zap.Any("challenge", storageChallenge.ID))
 	challengeBytes, err := json.Marshal(storageChallenge)
 	return string(challengeBytes), err
 }
