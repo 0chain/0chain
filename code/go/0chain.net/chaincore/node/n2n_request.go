@@ -247,13 +247,6 @@ func ToN2NSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 			w.Header().Set("Content-Encoding", compDecomp.Encoding())
 		}
 		w.Header().Set("Content-Type", "application/json")
-		if err != nil {
-			if cerr, ok := err.(*common.Error); ok {
-				w.Header().Set(common.AppErrorHeader, cerr.Code)
-			}
-			http.Error(w, err.Error(), 400)
-			return
-		}
 		sdata := buffer.Bytes()
 		w.Write(sdata)
 		if isPullRequest(r) {
