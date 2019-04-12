@@ -43,7 +43,7 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 	}
 	newVersion := util.Sequence(bs.Round)
 
-	if c.pruneStats != nil && c.pruneStats.Version == newVersion {
+	if c.pruneStats != nil && c.pruneStats.Version == newVersion && c.pruneStats.MissingNodes == 0 {
 		return // already done with pruning this
 	}
 	mpt := util.NewMerklePatriciaTrie(c.stateDB, newVersion)
