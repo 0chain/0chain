@@ -7,6 +7,7 @@ import (
 
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
+	"0chain.net/chaincore/round"
 	"0chain.net/core/datastore"
 
 	"0chain.net/chaincore/block"
@@ -229,13 +230,16 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 		}
 		r := c.GetRound(nb.Round)
 		if r == nil {
-			Logger.Error("get notarized block - no round (TODO)", zap.Int64("round", nb.Round), zap.String("block", blockHash), zap.Int64("cround", cround), zap.Int64("current_round", c.CurrentRound))
+			Logger.Error("get notarized block - no round... will create", zap.Int64("round", nb.Round), zap.String("block", blockHash), zap.Int64("cround", cround), zap.Int64("current_round", c.CurrentRound))
 			b = c.AddBlock(nb)
-		} else {
-			c.SetRandomSeed(r, nb.RoundRandomSeed)
-			b = c.AddRoundBlock(r, nb)
-			b, _ = r.AddNotarizedBlock(b)
+			r = round.NewRound(nb.Round)
+			c.AddRound(r)
 		}
+
+		c.SetRandomSeed(r, nb.RoundRandomSeed)
+		b = c.AddRoundBlock(r, nb)
+		b, _ = r.AddNotarizedBlock(b)
+
 		Logger.Info("get notarized block", zap.Int64("round", b.Round), zap.String("block", b.Hash))
 		if b == nb {
 			go c.fetchedNotarizedBlockHandler.NotarizedBlockFetched(ctx, nb)
