@@ -1,6 +1,7 @@
 package common
 
 import (
+	"bytes"
 	"compress/gzip"
 	"context"
 	"encoding/json"
@@ -32,10 +33,15 @@ type JSONReqResponderF func(ctx context.Context, json map[string]interface{}) (i
 /*Respond - respond either data or error as a response */
 func Respond(w http.ResponseWriter, r *http.Request, data interface{}, err error) {
 	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		data := make(map[string]interface{}, 2)
+		data["error"] = err.Error()
 		if cerr, ok := err.(*Error); ok {
-			w.Header().Set(AppErrorHeader, cerr.Code)
+			data["code"] = cerr.Code
 		}
-		http.Error(w, err.Error(), 400)
+		buf := bytes.NewBuffer(nil)
+		json.NewEncoder(buf).Encode(data)
+		http.Error(w, buf.String(), 400)
 	} else {
 		if data != nil {
 			w.Header().Set("Content-Type", "application/json")

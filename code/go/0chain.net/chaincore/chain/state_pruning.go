@@ -1,6 +1,7 @@
 package chain
 
 import (
+	"0chain.net/chaincore/node"
 	"context"
 	"time"
 
@@ -42,7 +43,7 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 	}
 	newVersion := util.Sequence(bs.Round)
 
-	if c.pruneStats != nil && c.pruneStats.Version == newVersion {
+	if c.pruneStats != nil && c.pruneStats.Version == newVersion && c.pruneStats.MissingNodes == 0 {
 		return // already done with pruning this
 	}
 	mpt := util.NewMerklePatriciaTrie(c.stateDB, newVersion)
@@ -69,12 +70,14 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 	d1 := time.Since(t)
 	ps.UpdateTime = d1
 	StatePruneUpdateTimer.Update(d1)
+	node.GetSelfNode(ctx).Info.StateMissingNodes = ps.MissingNodes
 	if err != nil {
 		Logger.Error("prune client state (update origin)", zap.Error(err))
 		if ps.MissingNodes > 0 {
 			if len(missingKeys) > 0 {
 				c.GetStateNodes(ctx, missingKeys[:])
 			}
+			ps.Stage = util.PruneStateAbandoned
 			return
 		}
 	} else {

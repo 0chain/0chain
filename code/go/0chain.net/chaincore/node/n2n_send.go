@@ -101,7 +101,7 @@ func (np *Pool) sendTo(numNodes int, nodes []*Node, handler SendHandler) []*Node
 		if node == Self.Node {
 			continue
 		}
-		if node.GetStatus() == NodeStatusInactive {
+		if node.Status == NodeStatusInactive {
 			continue
 		}
 		sendBucket <- node
@@ -137,7 +137,7 @@ func (np *Pool) sendTo(numNodes int, nodes []*Node, handler SendHandler) []*Node
 
 func (np *Pool) sendOne(handler SendHandler, nodes []*Node) *Node {
 	for _, node := range nodes {
-		if node.GetStatus() == NodeStatusInactive {
+		if node.Status == NodeStatusInactive {
 			continue
 		}
 		valid := handler(node)
@@ -176,7 +176,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 	return func(entity datastore.Entity) SendHandler {
 		data := getResponseData(options, entity).Bytes()
 		toPull := options.Pull
-		if len(data) > LargeMessageThreshold {
+		if len(data) > LargeMessageThreshold || toPull {
 			toPull = true
 			key := p2pKey(uri, entity.GetKey())
 			pdce := &pushDataCacheEntry{Options: *options, Data: data, EntityName: entity.GetEntityMetadata().GetName()}
@@ -210,7 +210,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			receiver.Grab()
 			time.AfterFunc(timeout, cancel)
 			ts := time.Now()
-			Self.Node.SetLastActiveTime(ts)
+			Self.Node.LastActiveTime = ts
 			Self.Node.InduceDelay(receiver)
 			//req = req.WithContext(httptrace.WithClientTrace(req.Context(), n2nTrace))
 			resp, err := httpClient.Do(req)
@@ -231,7 +231,8 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 				N2n.Error("sending", zap.Int("from", Self.SetIndex), zap.Int("to", receiver.SetIndex), zap.String("handler", uri), zap.Duration("duration", time.Since(ts)), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Any("status_code", resp.StatusCode))
 				return false
 			}
-			receiver.SetStatusWithTime(NodeStatusActive, time.Now())
+			receiver.Status = NodeStatusActive
+			receiver.LastActiveTime = time.Now()
 			return true
 		}
 	}
@@ -295,8 +296,9 @@ func validateSendRequest(sender *Node, r *http.Request) bool {
 		return false
 	}
 	//Logger.Info("%%~ updating sender status", zap.Int("node-idx", sender.SetIndex))
-	sender.SetStatusWithTime(NodeStatusActive, time.Unix(reqTSn, 0))
-	Self.Node.SetLastActiveTime(time.Now())
+	sender.Status = NodeStatusActive
+	sender.LastActiveTime = time.Unix(reqTSn, 0)
+	Self.Node.LastActiveTime = time.Now()
 	//Logger.Info("%%~ sender status active", zap.Int("node-idx", sender.SetIndex))
 	if !common.Within(reqTSn, N2NTimeTolerance) {
 		N2n.Error("message received - tolerance", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI), zap.String("enitty", entityName), zap.String("id", entityID), zap.Int64("ts", reqTSn), zap.Time("tstime", time.Unix(reqTSn, 0)))
@@ -314,9 +316,8 @@ func validateSendRequest(sender *Node, r *http.Request) bool {
 		N2n.Error("message received - invalid signature", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI), zap.String("hash", reqHash), zap.String("hashdata", reqHashdata), zap.String("signature", reqSignature))
 		return false
 	}
-	//Logger.Info("%%~sender status to be set as active", zap.Int("node-idx", sender.SetIndex))
-	sender.SetStatusWithTime(NodeStatusActive, time.Unix(reqTSn, 0))
-	//Logger.Info("%%~sender status active", zap.Int("node-idx", sender.SetIndex))
+	sender.Status = NodeStatusActive
+	sender.LastActiveTime = time.Unix(reqTSn, 0)
 	return true
 }
 

@@ -556,9 +556,6 @@ func (c *Chain) AreAllNodesActive() bool {
 func (c *Chain) CanStartNetwork() bool {
 	active := c.Miners.GetActiveCount()
 	threshold := c.GetNotarizationThresholdCount()
-	if config.DevConfiguration.State {
-		threshold = c.Miners.Size()
-	}
 	return active >= threshold && c.CanShardBlocks()
 }
 
@@ -819,6 +816,16 @@ func (c *Chain) SetFetchedNotarizedBlockHandler(fnbh FetchedNotarizedBlockHandle
 	c.fetchedNotarizedBlockHandler = fnbh
 }
 
+//GetPruneStats - get the current prune stats
 func (c *Chain) GetPruneStats() *util.PruneStats {
 	return c.pruneStats
+}
+
+//InitBlockState - initialize the block's state with the database state
+func (c *Chain) InitBlockState(b *block.Block) {
+	if err := b.InitStateDB(c.stateDB); err != nil {
+		Logger.Error("init block state", zap.Int64("round", b.Round), zap.String("state", util.ToHex(b.ClientStateHash)), zap.Error(err))
+	} else {
+		Logger.Info("init block state successful", zap.Int64("round", b.Round), zap.String("state", util.ToHex(b.ClientStateHash)))
+	}
 }

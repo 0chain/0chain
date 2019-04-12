@@ -41,20 +41,16 @@ func (np *Pool) OneTimeStatusMonitor(ctx context.Context) {
 }
 
 func (np *Pool) statusMonitor(ctx context.Context) {
-	tr := &http.Transport{
-		MaxIdleConns:       100,
-		IdleConnTimeout:    time.Minute,
-		DisableCompression: true,
-	}
-	client := &http.Client{Transport: tr, Timeout: TimeoutSmallMessage}
 	nodes := np.shuffleNodes()
 	for _, node := range nodes {
 		if node == Self.Node {
 			continue
 		}
-		if common.Within(node.GetLastActiveTime().Unix(), 10) {
+		if common.Within(node.LastActiveTime.Unix(), 10) {
 			node.updateMessageTimings()
-			continue
+			if time.Since(node.Info.AsOf) < 60*time.Second {
+				continue
+			}
 		}
 		statusURL := node.GetStatusURL()
 		ts := time.Now().UTC()
@@ -63,23 +59,26 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 			panic(err)
 		}
 		statusURL = fmt.Sprintf("%v?id=%v&data=%v&hash=%v&signature=%v", statusURL, Self.Node.GetKey(), data, hash, signature)
-		resp, err := client.Get(statusURL)
+		resp, err := httpClient.Get(statusURL)
 		if err != nil {
 			node.ErrorCount++
 			if node.IsActive() {
 				if node.ErrorCount > 5 {
-					node.SetStatus(NodeStatusInactive)
+					node.Status = NodeStatusInactive
 					N2n.Error("Node inactive", zap.String("node_type", node.GetNodeTypeName()), zap.Int("set_index", node.SetIndex), zap.Any("node_id", node.GetKey()), zap.Error(err))
 				}
 			}
 		} else {
+			if err := common.FromJSON(resp.Body, &node.Info); err == nil {
+				node.Info.AsOf = time.Now()
+			}
 			resp.Body.Close()
 			if !node.IsActive() {
 				node.ErrorCount = 0
-				node.SetStatus(NodeStatusActive)
+				node.Status = NodeStatusActive
 				N2n.Info("Node active", zap.String("node_type", node.GetNodeTypeName()), zap.Int("set_index", node.SetIndex), zap.Any("key", node.GetKey()))
 			}
-			node.SetLastActiveTime(ts)
+			node.LastActiveTime = ts
 		}
 	}
 	np.ComputeNetworkStats()
@@ -99,7 +98,7 @@ func (np *Pool) DownloadNodeData(node *Node) bool {
 	var changed = false
 	for _, node := range dnp.Nodes {
 		if _, ok := np.NodesMap[node.GetKey()]; !ok {
-			node.SetStatus(NodeStatusActive)
+			node.Status = NodeStatusActive
 			np.AddNode(node)
 			changed = true
 		}

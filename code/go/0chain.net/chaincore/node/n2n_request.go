@@ -48,7 +48,7 @@ func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, pa
 			return nil
 		default:
 		}
-		if nd.GetStatus() == NodeStatusInactive {
+		if nd.Status == NodeStatusInactive {
 			continue
 		}
 		if nd == Self.Node {
@@ -76,7 +76,7 @@ func (np *Pool) RequestEntityFromAll(ctx context.Context, requestor EntityReques
 			return
 		default:
 		}
-		if nd.GetStatus() == NodeStatusInactive {
+		if nd.Status == NodeStatusInactive {
 			continue
 		}
 		if nd == Self.Node {
@@ -149,7 +149,7 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 			provider.Grab()
 			time.AfterFunc(timeout, cancel)
 			ts := time.Now()
-			Self.Node.SetLastActiveTime(ts)
+			Self.Node.LastActiveTime = ts
 			Self.Node.InduceDelay(provider)
 			resp, err := httpClient.Do(req)
 			provider.Release()
@@ -176,7 +176,8 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 					return false
 				}
 			}
-			provider.SetStatusWithTime(NodeStatusActive, time.Now())
+			provider.Status = NodeStatusActive
+			provider.LastActiveTime = time.Now()
 			entity, err := getResponseEntity(resp, entityMetadata)
 			if err != nil {
 				N2n.Error("requesting", zap.Int("from", Self.SetIndex), zap.Int("to", provider.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName), zap.Any("params", params), zap.Error(err))
@@ -258,13 +259,6 @@ func ToN2NSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 			w.Header().Set("Content-Encoding", compDecomp.Encoding())
 		}
 		w.Header().Set("Content-Type", "application/json")
-		if err != nil {
-			if cerr, ok := err.(*common.Error); ok {
-				w.Header().Set(common.AppErrorHeader, cerr.Code)
-			}
-			http.Error(w, err.Error(), 400)
-			return
-		}
 		sdata := buffer.Bytes()
 		w.Write(sdata)
 		if isPullRequest(r) {

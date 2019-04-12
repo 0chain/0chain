@@ -72,6 +72,8 @@ func ChainStatsHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<h2>Block Processing Statistics</h2>")
 	diagnostics.WriteTimerStatistics(w, c, bpTimer, 1000000.0)
 	fmt.Fprintf(w, "</td><td>")
+	fmt.Fprintf(w, "<h2>Smart Contract Execution Statistics</h2>")
+	diagnostics.WriteTimerStatistics(w, c, chain.SmartContractExecutionTimer, 1000000.0)
 	fmt.Fprintf(w, "</td></tr>")
 
 	fmt.Fprintf(w, "<tr><td>")

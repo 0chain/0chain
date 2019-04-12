@@ -29,7 +29,7 @@ COPY ./code/go/0chain.net $SRC_DIR/go/0chain.net
 # The argument should be repeated because we are in a new build
 # context.
 ARG image_tag
-RUN go build -v -tags bn256 -ldflags "-X 0chain.net/core/build.GitCommit=${image_tag}"
+RUN go build -v -tags bn256 -ldflags "-X 0chain.net/core/build.BuildTag=${image_tag}"
 
 # Copy the build artifact into a minimal runtime image:
 FROM 0chain_run_base:${image_tag}

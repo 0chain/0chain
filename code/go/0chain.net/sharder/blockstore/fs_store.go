@@ -13,6 +13,7 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"0chain.net/core/encryption"
 )
 
 /*FSBlockStore - a block store implementation using file system */
@@ -72,6 +73,9 @@ func (fbs *FSBlockStore) Read(hash string) (*block.Block, error) {
 }
 
 func (fbs *FSBlockStore) read(hash string, round int64) (*block.Block, error) {
+	if len(hash) != 64 {
+		return nil, encryption.ErrInvalidHash
+	}
 	fileName := fbs.getFileName(hash, round)
 	f, err := os.Open(fileName)
 	if err != nil {

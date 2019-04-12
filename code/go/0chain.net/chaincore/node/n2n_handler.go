@@ -215,7 +215,7 @@ func getEntity(codec string, reader io.Reader, entityMetadata datastore.EntityMe
 		}
 		return entity, nil
 	}
-	N2n.Error("uknown_encoding", zap.String("encoding", codec))
+	N2n.Error("unknown_encoding", zap.String("encoding", codec))
 	return nil, common.NewError("unkown_encoding", "unknown encoding")
 }
 

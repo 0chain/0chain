@@ -55,7 +55,7 @@ func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interf
 	if node == nil {
 		return nil, common.NewError("key_not_found", "key was not found")
 	}
-	var retObj map[string]interface{}
+	var retObj interface{}
 	err = json.Unmarshal(node, &retObj)
 	if err != nil {
 		return nil, err

@@ -24,10 +24,9 @@ import (
 )
 
 var (
-	wallets             []*wallet.Wallet
-	txn_generation_rate int32
-	pourPoint           int64
-	pourAmount          int64
+	wallets    []*wallet.Wallet
+	pourPoint  int64
+	pourAmount int64
 )
 
 /*TransactionGenerator - generates a steady stream of transactions */
@@ -41,13 +40,12 @@ func TransactionGenerator(c *chain.Chain) {
 
 	viper.SetDefault("development.txn_generation.wallets", 1000)
 	var numClients = viper.GetInt("development.txn_generation.wallets")
+	var numTxns int32
 
 	GenerateClients(c, numClients)
 	numWorkers := 1
 	blockSize := c.BlockSize
-	viper.SetDefault("development.txn_generation.transactions", blockSize)
-	numTxns := viper.GetInt32("development.txn_generation.transactions")
-	SetTxnGenRate(numTxns)
+
 	switch {
 	case blockSize <= 10:
 		numWorkers = 1
@@ -82,8 +80,10 @@ func TransactionGenerator(c *chain.Chain) {
 	numGenerators := sc.NumGenerators
 	numMiners := sc.Miners.Size()
 	var timerCount int64
+	ts := rand.NewSource(time.Now().UnixNano())
+	trng := rand.New(ts)
 	for true {
-		numTxns = GetTxnGenRate()
+		numTxns = trng.Int31n(blockSize)
 		numWorkerTxns := numTxns / int32(numWorkers)
 		if numWorkerTxns*int32(numWorkers) < numTxns {
 			numWorkerTxns++
@@ -244,14 +244,4 @@ func GenerateClients(c *chain.Chain, numClients int) {
 		}
 	}
 	Logger.Info("generation of wallets complete", zap.Int("wallets", len(wallets)))
-}
-
-//SetTxnGenRate - the txn generation rate
-func SetTxnGenRate(newRate int32) {
-	txn_generation_rate = newRate
-}
-
-//GetTxnGenRate - the txn generation rate
-func GetTxnGenRate() int32 {
-	return txn_generation_rate
 }
