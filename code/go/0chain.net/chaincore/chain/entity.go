@@ -537,9 +537,6 @@ func (c *Chain) AreAllNodesActive() bool {
 func (c *Chain) CanStartNetwork() bool {
 	active := c.Miners.GetActiveCount()
 	threshold := c.GetNotarizationThresholdCount()
-	if config.DevConfiguration.State {
-		threshold = c.Miners.Size()
-	}
 	return active >= threshold && c.CanShardBlocks()
 }
 
