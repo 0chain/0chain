@@ -52,7 +52,7 @@ func (c *Chain) PruneClientStateWorker(ctx context.Context) {
 			pruning = true
 			c.pruneClientState(ctx)
 			pruning = false
-			if c.pruneStats != nil && c.pruneStats.MissingNodes > 0 {
+			if c.pruneStats == nil || c.pruneStats.MissingNodes > 0 {
 				timer = time.NewTimer(time.Second)
 			} else {
 				timer = time.NewTimer(tick)

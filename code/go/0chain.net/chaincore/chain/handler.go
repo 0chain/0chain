@@ -280,7 +280,7 @@ func (c *Chain) infraHealthInATable(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</tr>")
 	fmt.Fprintf(w, "<tr class='active'>")
 	fmt.Fprintf(w, "<td>")
-	fmt.Fprintf(w, "Global State missing nodes")
+	fmt.Fprintf(w, "State missing nodes")
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "<td class='number'>")
 	ps := c.GetPruneStats()
