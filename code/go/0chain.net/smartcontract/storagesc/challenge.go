@@ -196,8 +196,9 @@ func (sc *StorageSmartContract) addChallenge(t *transaction.Transaction, b *bloc
 		return allocationObj.Blobbers[i].ID < allocationObj.Blobbers[j].ID
 	})
 
-	randIdx := rand.Intn(len(allocationObj.Blobbers))
-	Logger.Info("Challenge blobber selected.", zap.Any("selected_blobber", allocationObj.Blobbers[randIdx]), zap.Any("blobbers", allocationObj.Blobbers), zap.Any("random_index", randIdx), zap.Any("seed", b.RoundRandomSeed))
+	rand.Seed(b.RoundRandomSeed)
+	randIdx := rand.Int63n(int64(len(allocationObj.Blobbers)))
+	Logger.Info("Challenge blobber selected.", zap.Any("challenge", t.Hash), zap.Any("selected_blobber", allocationObj.Blobbers[randIdx]), zap.Any("blobbers", allocationObj.Blobbers), zap.Any("random_index", randIdx), zap.Any("seed", b.RoundRandomSeed))
 
 	storageChallenge.Validators = validatorList
 	storageChallenge.Blobber = allocationObj.Blobbers[randIdx]
