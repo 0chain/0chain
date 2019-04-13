@@ -11,6 +11,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
+	metrics "github.com/rcrowley/go-metrics"
 )
 
 const (
@@ -23,25 +24,33 @@ type InterestPoolSmartContract struct {
 	*smartcontractinterface.SmartContract
 }
 
+func (ipsc *InterestPoolSmartContract) GetRestPoints() map[string]smartcontractinterface.SmartContractRestHandler {
+	return ipsc.RestHandlers
+}
+
 func (ipsc *InterestPoolSmartContract) SetSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {
 	ipsc.SmartContract = sc
+	ipsc.SmartContract.RestHandlers["/getPoolsStats"] = ipsc.getPoolsStats
+	ipsc.SmartContractExecutionStats["lockTokens"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ipsc.ID, "lockTokens"), nil)
+	ipsc.SmartContractExecutionStats["unlockTokens"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ipsc.ID, "unlockTokens"), nil)
+	ipsc.SmartContractExecutionStats["updateVariables"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ipsc.ID, "updateVariables"), nil)
 }
 
 func (ip *InterestPoolSmartContract) lockTokens(t *transaction.Transaction, un *userNode, gn *globalNode, inputData []byte, balances c_state.StateContextI) (string, error) {
 	tp := newTypePool()
 	err := tp.decode(inputData)
 	if err != nil {
-		return common.NewError("failed locking tokens", "request not formatted correctly").Error(), nil
+		return "", common.NewError("failed locking tokens", "request not formatted correctly")
 	}
 	if t.Value < gn.MinLock {
-		return common.NewError("failed locking tokens", "insufficent amount to dig an interest pool").Error(), nil
+		return "", common.NewError("failed locking tokens", "insufficent amount to dig an interest pool")
 	}
 	balance, err := balances.GetClientBalance(t.ClientID)
 	if err == util.ErrValueNotPresent {
-		return common.NewError("failed locking tokens", "you have no tokens to your name").Error(), nil
+		return "", common.NewError("failed locking tokens", "you have no tokens to your name")
 	}
 	if state.Balance(t.Value) > balance {
-		return common.NewError("failed locking tokens", "lock amount is greater than balance").Error(), nil
+		return "", common.NewError("failed locking tokens", "lock amount is greater than balance")
 	}
 	pool := newTypePool()
 	pool.Type = tp.Type
@@ -58,14 +67,14 @@ func (ip *InterestPoolSmartContract) lockTokens(t *transaction.Transaction, un *
 			}
 			return resp, nil
 		}
-		return err.Error(), nil
+		return "", err
 	}
-	return err.Error(), nil
+	return "", err
 }
 
 func (ip *InterestPoolSmartContract) unlockTokens(t *transaction.Transaction, un *userNode, gn *globalNode, inputData []byte, balances c_state.StateContextI) (string, error) {
 	if len(un.Pools) == 0 {
-		return fmt.Sprintf("no pools exist for user %v", un.ClientID), nil
+		return "", common.NewError("failed to unlock", fmt.Sprintf("no pools exist for user %v", un.ClientID))
 	}
 	var responses transferResponses
 	unlockCount := 0
@@ -91,43 +100,14 @@ func (ip *InterestPoolSmartContract) unlockTokens(t *transaction.Transaction, un
 	return string(responses.encode()), nil
 }
 
-func (ip *InterestPoolSmartContract) getPoolsStats(t *transaction.Transaction, un *userNode) (string, error) {
-	if len(un.Pools) == 0 {
-		return common.NewError("failed to get stats", "no pools exist").Error(), nil
-	}
-	stats := &poolStats{}
-	for _, pool := range un.Pools {
-		stat, err := ip.getPoolStats(pool, t)
-		if err != nil {
-			return "crap this shouldn't happen", nil
-		}
-		stats.addStat(stat)
-	}
-	return string(stats.encode()), nil
-}
-
-func (ip *InterestPoolSmartContract) getPoolStats(pool *typePool, t *transaction.Transaction) (*poolStat, error) {
-	stat := &poolStat{}
-	statBytes := pool.LockStats(t)
-	err := stat.decode(statBytes)
-	if err != nil {
-		return nil, err
-	}
-	stat.ID = pool.ID
-	stat.Locked = pool.IsLocked(t)
-	stat.PoolType = pool.Type
-	stat.Balance = pool.Balance
-	return stat, nil
-}
-
 func (ip *InterestPoolSmartContract) updateVariables(t *transaction.Transaction, gn *globalNode, inputData []byte) (string, error) {
 	if t.ClientID != owner {
-		return common.NewError("unauthorized_access", "only the owner can update the variables").Error(), nil
+		return "", common.NewError("failed to update variables", "unauthorized access - only the owner can update the variables")
 	}
 	newGn := &globalNode{}
 	err := newGn.decode(inputData)
 	if err != nil {
-		return "request not formatted correctly", nil
+		return "", common.NewError("failed to update variables", "request not formatted correctly")
 	}
 	if newGn.InterestRate > 0.0 {
 		gn.InterestRate = newGn.InterestRate
@@ -181,11 +161,9 @@ func (ip *InterestPoolSmartContract) Execute(t *transaction.Transaction, funcNam
 		return ip.lockTokens(t, un, gn, inputData, balances)
 	case "unlockTokens":
 		return ip.unlockTokens(t, un, gn, inputData, balances)
-	case "getPoolsStats":
-		return ip.getPoolsStats(t, un)
 	case "updateVariables":
 		return ip.updateVariables(t, gn, inputData)
 	default:
-		return common.NewError("failed execution", "no function with that name").Error(), nil
+		return "", common.NewError("failed execution", "no function with that name")
 	}
 }

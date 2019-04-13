@@ -3,8 +3,11 @@ package smartcontract
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"net/http"
 	"net/url"
 	"sync"
+	"time"
 
 	c_state "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
@@ -12,6 +15,7 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	. "0chain.net/core/logging"
+	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
 
@@ -20,7 +24,6 @@ var scLock = sync.Mutex{}
 
 //ContractMap - stores the map of valid smart contracts mapping from its address to its interface implementation
 var ContractMap = map[string]sci.SmartContractInterface{}
-
 
 //ExecuteRestAPI - executes the rest api on the smart contract
 func ExecuteRestAPI(ctx context.Context, scAdress string, restpath string, params url.Values, ndb smartcontractstate.SCDB) (interface{}, error) {
@@ -36,13 +39,23 @@ func ExecuteRestAPI(ctx context.Context, scAdress string, restpath string, param
 	return nil, common.NewError("invalid_sc", "Invalid Smart contract address")
 }
 
+func ExecuteStats(ctx context.Context, scAdress string, params url.Values, ndb smartcontractstate.SCDB, w http.ResponseWriter) {
+	_, sc := getSmartContract(scAdress, ndb)
+	if sc != nil {
+		int, _ := sc.HandlerStats(ctx, params)
+		fmt.Fprintf(w, "%v", int)
+		return
+	}
+	fmt.Fprintf(w, "invalid_sc: Invalid Smart contract address")
+}
+
 func getSmartContract(scAddress string, ndb smartcontractstate.SCDB) (sci.SmartContractInterface, *sci.SmartContract) {
 	contracti, ok := ContractMap[scAddress]
 	if ok {
 		scLock.Lock()
 		sc := sci.NewSC(smartcontractstate.NewSCState(ndb, scAddress), scAddress)
 
-		bc := &BCContext{} 
+		bc := &BCContext{}
 		contracti.SetSC(sc, bc)
 		scLock.Unlock()
 		return contracti, sc
@@ -50,9 +63,21 @@ func getSmartContract(scAddress string, ndb smartcontractstate.SCDB) (sci.SmartC
 	return nil, nil
 }
 
+func ExecuteWithStats(smcoi sci.SmartContractInterface, sc *sci.SmartContract, t *transaction.Transaction, funcName string, input []byte, balances c_state.StateContextI) (string, error) {
+	ts := time.Now()
+	inter, err := smcoi.Execute(t, funcName, input, balances)
+	if sc.SmartContractExecutionStats[funcName] != nil {
+		timer, ok := sc.SmartContractExecutionStats[funcName].(metrics.Timer)
+		if ok {
+			timer.Update(time.Since(ts))
+		}
+	}
+	return inter, err
+}
+
 //ExecuteSmartContract - executes the smart contract in the context of the given transaction
 func ExecuteSmartContract(ctx context.Context, t *transaction.Transaction, ndb smartcontractstate.SCDB, balances c_state.StateContextI) (string, error) {
-	contractObj, _ := getSmartContract(t.ToClientID, ndb)
+	contractObj, contract := getSmartContract(t.ToClientID, ndb)
 	if contractObj != nil {
 		var smartContractData sci.SmartContractTransactionData
 		dataBytes := []byte(t.TransactionData)
@@ -61,7 +86,8 @@ func ExecuteSmartContract(ctx context.Context, t *transaction.Transaction, ndb s
 			Logger.Error("Error while decoding the JSON from transaction", zap.Any("input", t.TransactionData), zap.Any("error", err))
 			return "", err
 		}
-		transactionOutput, err := contractObj.Execute(t, smartContractData.FunctionName, []byte(smartContractData.InputData), balances)
+		// transactionOutput, err := contractObj.ExecuteWithStats(t, smartContractData.FunctionName, []byte(smartContractData.InputData), balances)
+		transactionOutput, err := ExecuteWithStats(contractObj, contract, t, smartContractData.FunctionName, []byte(smartContractData.InputData), balances)
 		if err != nil {
 			return "", err
 		}

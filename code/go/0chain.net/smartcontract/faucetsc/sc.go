@@ -2,7 +2,6 @@ package faucetsc
 
 import (
 	"fmt"
-	// "time"
 
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
@@ -12,6 +11,7 @@ import (
 	"0chain.net/core/common"
 	. "0chain.net/core/logging"
 	"0chain.net/core/util"
+	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
 
@@ -25,11 +25,20 @@ type FaucetSmartContract struct {
 	*smartcontractinterface.SmartContract
 }
 
+func (fc *FaucetSmartContract) GetRestPoints() map[string]smartcontractinterface.SmartContractRestHandler {
+	return fc.SmartContract.RestHandlers
+}
+
 func (fc *FaucetSmartContract) SetSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {
 	fc.SmartContract = sc
 	fc.SmartContract.RestHandlers["/personalPeriodicLimit"] = fc.personalPeriodicLimit
 	fc.SmartContract.RestHandlers["/globalPerodicLimit"] = fc.globalPerodicLimit
 	fc.SmartContract.RestHandlers["/pourAmount"] = fc.pourAmount
+	fc.SmartContractExecutionStats["updateLimits"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", fc.ID, "updateLimits"), nil)
+	fc.SmartContractExecutionStats["pour"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", fc.ID, "pour"), nil)
+	fc.SmartContractExecutionStats["refill"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", fc.ID, "refill"), nil)
+	fc.SmartContractExecutionStats["tokens Poured"] = metrics.GetOrRegisterHistogram(fmt.Sprintf("sc:%v:func:%v", fc.ID, "tokens Poured"), nil, metrics.NewUniformSample(1024))
+	fc.SmartContractExecutionStats["token refills"] = metrics.GetOrRegisterHistogram(fmt.Sprintf("sc:%v:func:%v", fc.ID, "token refills"), nil, metrics.NewUniformSample(1024))
 }
 
 func (un *userNode) validPourRequest(t *transaction.Transaction, balances c_state.StateContextI, gn *globalNode) (bool, error) {
@@ -85,12 +94,14 @@ func (fc *FaucetSmartContract) pour(t *transaction.Transaction, inputData []byte
 	user := fc.getUserVariables(t, gn)
 	ok, err := user.validPourRequest(t, balances, gn)
 	if ok {
+		tokensPoured := fc.SmartContractExecutionStats["tokens Poured"].(metrics.Histogram)
 		transfer := state.NewTransfer(t.ToClientID, t.ClientID, gn.PourAmount)
 		balances.AddTransfer(transfer)
 		user.Used += transfer.Amount
 		gn.Used += transfer.Amount
 		fc.DB.PutNode(user.getKey(), user.encode())
 		fc.DB.PutNode(gn.getKey(), gn.encode())
+		tokensPoured.Update(int64(transfer.Amount))
 		return string(transfer.Encode()), nil
 	}
 	return "", err
@@ -102,9 +113,11 @@ func (fc *FaucetSmartContract) refill(t *transaction.Transaction, balances c_sta
 		return "", err
 	}
 	if clientBalance >= state.Balance(t.Value) {
+		tokenRefills := fc.SmartContractExecutionStats["token refills"].(metrics.Histogram)
 		transfer := state.NewTransfer(t.ClientID, t.ToClientID, state.Balance(t.Value))
 		balances.AddTransfer(transfer)
 		fc.DB.PutNode(gn.getKey(), gn.encode())
+		tokenRefills.Update(int64(transfer.Amount))
 		return string(transfer.Encode()), nil
 	}
 	return "", common.NewError("broke", "it seems you're broke and can't transfer money")

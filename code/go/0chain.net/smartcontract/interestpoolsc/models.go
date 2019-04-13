@@ -7,7 +7,7 @@ import (
 	"0chain.net/chaincore/smartcontractstate"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
-	"0chain.net/chaincore/transaction"
+	// "0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 )
@@ -264,17 +264,17 @@ type tokenLock struct {
 }
 
 func (tl tokenLock) IsLocked(entity interface{}) bool {
-	txn, ok := entity.(*transaction.Transaction)
+	tm, ok := entity.(time.Time)
 	if ok {
-		return common.ToTime(txn.CreationDate).Sub(common.ToTime(tl.StartTime)) < tl.Duration
+		return tm.Sub(common.ToTime(tl.StartTime)) < tl.Duration
 	}
 	return true
 }
 
 func (tl tokenLock) LockStats(entity interface{}) []byte {
-	txn, ok := entity.(*transaction.Transaction)
+	tm, ok := entity.(time.Time)
 	if ok {
-		p := &poolStat{StartTime: common.ToTime(tl.StartTime).String(), Duartion: tl.Duration.String(), TimeLeft: (tl.Duration - common.ToTime(txn.CreationDate).Sub(common.ToTime(tl.StartTime))).String(), Locked: tl.IsLocked(txn)}
+		p := &poolStat{StartTime: common.ToTime(tl.StartTime).String(), Duartion: tl.Duration.String(), TimeLeft: (tl.Duration - tm.Sub(common.ToTime(tl.StartTime))).String(), Locked: tl.IsLocked(tm)}
 		return p.encode()
 	}
 	return nil
