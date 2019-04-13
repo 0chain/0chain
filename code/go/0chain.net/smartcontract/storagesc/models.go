@@ -168,7 +168,7 @@ type StorageAllocation struct {
 	Owner          string                        `json:"owner_id"`
 	OwnerPublicKey string                        `json:"owner_public_key"`
 	Stats          *StorageAllocationStats       `json:"stats"`
-	BlobberDetails []*BlobberAllocation          `json:blobber_details`
+	BlobberDetails []*BlobberAllocation          `json:"blobber_details"`
 	BlobberMap     map[string]*BlobberAllocation `json:"-"`
 }
 
