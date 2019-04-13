@@ -92,9 +92,7 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 			if state.DebugBlock() {
 				Logger.Error("compute state - previous block not available", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
 			} else {
-				if config.DevConfiguration.State {
-					Logger.Error("compute state - previous block not available", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
-				}
+				Logger.Error("compute state - previous block not available", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
 			}
 			return ErrPreviousBlockUnavailable
 		}
@@ -113,18 +111,14 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 				if state.DebugBlock() {
 					Logger.Error("compute state - error computing previous state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Error(err))
 				} else {
-					if config.DevConfiguration.State {
-						Logger.Error("compute state - error computing previous state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Error(err))
-					}
+					Logger.Error("compute state - error computing previous state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Error(err))
 				}
 				return err
 			}
 		}
 	}
 	if pb.ClientState == nil {
-		if config.DevConfiguration.State {
-			Logger.Error("compute state - previous state nil", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Int8("prev_block_status", b.PrevBlock.GetStateStatus()))
-		}
+		Logger.Error("compute state - previous state nil", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.Int8("prev_block_status", b.PrevBlock.GetStateStatus()))
 		return ErrPreviousStateUnavailable
 	}
 	b.SetStateDB(pb)
@@ -134,18 +128,14 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 			txn.ComputeClientID()
 		}
 		if err := c.UpdateState(b, txn); err != nil {
-			if config.DevConfiguration.State {
-				b.SetStateStatus(block.StateFailed)
-				Logger.Error("compute state - update state failed", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.String("prev_block", b.PrevHash), zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)))
-				return common.NewError("state_update_error", "error updating state")
-			}
+			b.SetStateStatus(block.StateFailed)
+			Logger.Error("compute state - update state failed", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.String("prev_block", b.PrevHash), zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)))
+			return common.NewError("state_update_error", "error updating state")
 		}
 	}
 	if bytes.Compare(b.ClientStateHash, b.ClientState.GetRoot()) != 0 {
 		b.SetStateStatus(block.StateFailed)
-		if config.DevConfiguration.State {
-			Logger.Error("compute state - state hash mismatch", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("block_size", len(b.Txns)), zap.Int("changes", len(b.ClientState.GetChangeCollector().GetChanges())), zap.String("block_state_hash", util.ToHex(b.ClientStateHash)), zap.String("computed_state_hash", util.ToHex(b.ClientState.GetRoot())))
-		}
+		Logger.Error("compute state - state hash mismatch", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("block_size", len(b.Txns)), zap.Int("changes", len(b.ClientState.GetChangeCollector().GetChanges())), zap.String("block_state_hash", util.ToHex(b.ClientStateHash)), zap.String("computed_state_hash", util.ToHex(b.ClientState.GetRoot())))
 		return ErrStateMismatch
 	}
 	c.StateSanityCheck(ctx, b)
@@ -159,11 +149,9 @@ func (c *Chain) SaveChanges(ctx context.Context, b *block.Block) error {
 	if !b.IsStateComputed() {
 		err := c.ComputeOrSyncState(ctx, b)
 		if err != nil {
-			if config.DevConfiguration.State {
-				Logger.Error("save changes - save state not successful", zap.Int64("round", b.Round), zap.String("hash", b.Hash), zap.Int8("state", b.GetBlockState()), zap.Error(err))
-				if state.Debug() {
-					Logger.DPanic("save changes - state not successful")
-				}
+			Logger.Error("save changes - save state not successful", zap.Int64("round", b.Round), zap.String("hash", b.Hash), zap.Int8("state", b.GetBlockState()), zap.Error(err))
+			if state.Debug() {
+				Logger.DPanic("save changes - state not successful")
 			}
 		}
 	}
@@ -242,7 +230,7 @@ func (c *Chain) rebaseState(lfb *block.Block) {
 
 //ExecuteSmartContract - executes the smart contract for the transaction
 func (c *Chain) ExecuteSmartContract(t *transaction.Transaction, ndb smartcontractstate.SCDB, balances bcstate.StateContextI) (string, error) {
-	if balances.GetBlock().IsBlockNotarized() {
+	if balances.GetBlock().IsBlockNotarized() || c.SmartContractTimeout == 0 {
 		return smartcontract.ExecuteSmartContract(common.GetRootContext(), t, ndb, balances)
 	}
 	done := make(chan bool, 1)
@@ -250,13 +238,13 @@ func (c *Chain) ExecuteSmartContract(t *transaction.Transaction, ndb smartcontra
 	var err error
 	ts := time.Now()
 	ctx, cancelf := context.WithTimeout(common.GetRootContext(), c.SmartContractTimeout)
+	defer cancelf()
 	go func() {
 		output, err = smartcontract.ExecuteSmartContract(ctx, t, ndb, balances)
 		done <- true
 	}()
 	select {
 	case <-time.After(c.SmartContractTimeout):
-		cancelf()
 		return "", common.NewError("smart_contract_execution_timeout", "smart contract execution timed out")
 	case <-done:
 		SmartContractExecutionTimer.Update(time.Since(ts))
@@ -489,7 +477,7 @@ func createTxnMPT(mpt util.MerklePatriciaTrieI) util.MerklePatriciaTrieI {
 
 func (c *Chain) getState(clientState util.MerklePatriciaTrieI, clientID string) (*state.State, error) {
 	if clientState == nil {
-		return nil, common.NewError("get state", "client state does not exist")
+		return nil, common.NewError("getState", "client state does not exist")
 	}
 	s := &state.State{}
 	s.Balance = state.Balance(0)
@@ -506,7 +494,18 @@ func (c *Chain) getState(clientState util.MerklePatriciaTrieI, clientID string) 
 
 /*GetState - Get the state of a client w.r.t a block */
 func (c *Chain) GetState(b *block.Block, clientID string) (*state.State, error) {
-	return c.getState(b.ClientState, clientID)
+	state, err := c.getState(b.ClientState, clientID)
+	if err != nil {
+		if !b.IsStateComputed() {
+			return nil, common.NewError("state_not_yet_computed", "State is not yet computed")
+		}
+		ps := c.GetPruneStats()
+		if ps != nil && ps.MissingNodes > 0 {
+			return nil, common.NewError("state_not_synched", "State sync is not yet complete")
+		}
+		return nil, err
+	}
+	return state, nil
 }
 
 func isValid(err error) bool {

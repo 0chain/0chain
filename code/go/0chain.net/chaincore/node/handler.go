@@ -71,6 +71,7 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if nd.IsActive() {
+		common.Respond(w, r, Self.Node.Info, nil)
 		return
 	}
 	data := r.FormValue("data")
@@ -87,8 +88,7 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 		if nd.Host != addressParts[0] {
 			return
 		} */
-	ok, err := nd.Verify(signature, hash)
-	if !ok || err != nil {
+	if ok, err := nd.Verify(signature, hash); !ok || err != nil {
 		return
 	}
 	nd.LastActiveTime = time.Now().UTC()
@@ -96,6 +96,7 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 		nd.Status = NodeStatusActive
 		N2n.Info("Node active", zap.String("node_type", nd.GetNodeTypeName()), zap.Int("set_index", nd.SetIndex), zap.Any("key", nd.GetKey()))
 	}
+	common.Respond(w, r, Self.Node.Info, nil)
 }
 
 //ToDo: Move this to MagicBlock logic

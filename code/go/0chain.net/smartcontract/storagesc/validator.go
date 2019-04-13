@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	"encoding/json"
+	"sort"
 
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -20,6 +21,9 @@ func (sc *StorageSmartContract) getValidatorsList() ([]ValidationNode, error) {
 	if err != nil {
 		return nil, common.NewError("getValidatorsList_failed", "Failed to retrieve existing validators list")
 	}
+	sort.SliceStable(allValidatorsList, func(i, j int) bool {
+		return allValidatorsList[i].ID < allValidatorsList[j].ID
+	})
 	return allValidatorsList, nil
 }
 

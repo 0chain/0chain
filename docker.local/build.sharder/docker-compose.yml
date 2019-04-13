@@ -1,7 +1,7 @@
 version: '3'
 services:
   scylla:
-    image: scylladb/scylla:2.3.1
+    image: scylladb/scylla:2.3.4
     volumes:
       - ../sharder${SHARDER}/data/cassandra:/var/lib/scylla/data
 

@@ -1,6 +1,7 @@
 package chain
 
 import (
+	"0chain.net/chaincore/node"
 	"context"
 	"time"
 
@@ -29,27 +30,37 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 	for i := 0; i < 10 && bc.Value == nil; i++ {
 		bc = bc.Prev()
 	}
-	if bc.Value == nil {
-		return
-	}
-	bs := bc.Value.(*block.BlockSummary)
-	for bs.Round%100 != 0 {
-		bc = bc.Prev()
-		if bc.Value == nil {
+	var bs *block.BlockSummary
+	lfb := c.LatestFinalizedBlock
+	if bc.Value != nil {
+		bs = bc.Value.(*block.BlockSummary)
+		for bs.Round%100 != 0 {
+			bc = bc.Prev()
+			if bc.Value == nil {
+				break
+			}
+			bs = bc.Value.(*block.BlockSummary)
+		}
+	} else {
+		if lfb.Round == 0 {
 			return
 		}
-		bs = bc.Value.(*block.BlockSummary)
 	}
+	if bs == nil {
+		bs = &block.BlockSummary{Round: lfb.Round, ClientStateHash: lfb.ClientStateHash}
+	}
+	Logger.Info("prune client state - new version", zap.Int64("current_round", c.CurrentRound), zap.Int64("latest_finalized_round", c.LatestFinalizedBlock.Round), zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.String("state_hash", util.ToHex(bs.ClientStateHash)))
 	newVersion := util.Sequence(bs.Round)
-
-	if c.pruneStats != nil && c.pruneStats.Version == newVersion {
+	if c.pruneStats != nil && c.pruneStats.Version == newVersion && c.pruneStats.MissingNodes == 0 {
 		return // already done with pruning this
 	}
 	mpt := util.NewMerklePatriciaTrie(c.stateDB, newVersion)
 	mpt.SetRoot(bs.ClientStateHash)
-	Logger.Info("prune client state - new version", zap.Int64("current_round", c.CurrentRound), zap.Int64("latest_finalized_round", c.LatestFinalizedBlock.Round), zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.String("state_hash", util.ToHex(bs.ClientStateHash)))
 	pctx := util.WithPruneStats(ctx)
 	ps := util.GetPruneStats(pctx)
+	ps.Stage = util.PruneStateUpdate
+	c.pruneStats = ps
+	t := time.Now()
 	var missingKeys []util.Key
 	missingNodesHandler := func(ctx context.Context, path util.Path, key util.Key) error {
 		missingKeys = append(missingKeys, key)
@@ -62,23 +73,26 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 		}
 		return nil
 	}
-	ps.Stage = util.PruneStateUpdate
-	c.pruneStats = ps
-	t := time.Now()
 	err := mpt.UpdateVersion(pctx, newVersion, missingNodesHandler)
 	d1 := time.Since(t)
 	ps.UpdateTime = d1
 	StatePruneUpdateTimer.Update(d1)
+	node.GetSelfNode(ctx).Info.StateMissingNodes = ps.MissingNodes
 	if err != nil {
-		Logger.Error("prune client state (update origin)", zap.Error(err))
+		Logger.Error("prune client state (update origin)", zap.Int64("current_round", c.CurrentRound), zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.String("state_hash", util.ToHex(bs.ClientStateHash)), zap.Any("prune_stats", ps), zap.Error(err))
 		if ps.MissingNodes > 0 {
 			if len(missingKeys) > 0 {
 				c.GetStateNodes(ctx, missingKeys[:])
 			}
+			ps.Stage = util.PruneStateAbandoned
 			return
 		}
 	} else {
-		Logger.Info("prune client state (update origin)", zap.Int64("current_round", c.CurrentRound), zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.String("state_hash", util.ToHex(bs.ClientStateHash)), zap.Duration("time", d1))
+		Logger.Info("prune client state (update origin)", zap.Int64("current_round", c.CurrentRound), zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.String("state_hash", util.ToHex(bs.ClientStateHash)), zap.Any("prune_stats", ps))
+	}
+	if c.LatestFinalizedBlock.Round-int64(c.PruneStateBelowCount) < bs.Round {
+		ps.Stage = util.PruneStateAbandoned
+		return
 	}
 	t1 := time.Now()
 	ps.Stage = util.PruneStateDelete
@@ -95,7 +109,7 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 		logf = Logger.Error
 	}
 	logf("prune client state stats", zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.String("state_hash", util.ToHex(bs.ClientStateHash)),
-		zap.Duration("duration", time.Since(t)), zap.Duration("update", d1), zap.Duration("prune", d2), zap.Any("stats", ps))
+		zap.Duration("duration", time.Since(t)), zap.Any("stats", ps))
 	/*
 		if stateOut != nil {
 			if err = util.IsMPTValid(mpt); err != nil {

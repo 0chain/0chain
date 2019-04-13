@@ -56,14 +56,18 @@ func (c *Chain) GetPartialState(ctx context.Context, key util.Key) {
 func (c *Chain) GetStateNodes(ctx context.Context, keys []util.Key) {
 	ns, err := c.getStateNodes(ctx, keys)
 	if err != nil {
-		Logger.Error("get state nodes", zap.Int("keys", len(keys)), zap.Error(err))
+		skeys := make([]string, len(keys))
+		for idx, key := range keys {
+			skeys[idx] = util.ToHex(key)
+		}
+		Logger.Error("get state nodes", zap.Int("num_keys", len(keys)), zap.Any("keys", skeys), zap.Error(err))
 		return
 	}
 	err = c.SaveStateNodes(ctx, ns)
 	if err != nil {
-		Logger.Error("get state nodes - error saving", zap.Int("keys", len(keys)), zap.Error(err))
+		Logger.Error("get state nodes - error saving", zap.Int("num_keys", len(keys)), zap.Error(err))
 	} else {
-		Logger.Info("get state nodes - saving", zap.Int("keys", len(keys)), zap.Int("nodes", len(ns.Nodes)))
+		Logger.Info("get state nodes - saving", zap.Int("num_keys", len(keys)), zap.Int("nodes", len(ns.Nodes)))
 	}
 	return
 }
@@ -172,10 +176,12 @@ func (c *Chain) getStateNodes(ctx context.Context, keys []util.Key) (*state.Node
 	ctx, cancelf := context.WithCancel(common.GetRootContext())
 	var ns *state.Nodes
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-		Logger.Debug("get state nodes", zap.String("ps_id", entity.GetKey()))
 		rns, ok := entity.(*state.Nodes)
 		if !ok {
 			return nil, datastore.ErrInvalidEntity
+		}
+		if len(rns.Nodes) == 0 {
+			return nil, util.ErrNodeNotFound
 		}
 		Logger.Info("get state nodes", zap.Int("keys", len(keys)), zap.Int("nodes", len(rns.Nodes)))
 		cancelf()
@@ -183,6 +189,9 @@ func (c *Chain) getStateNodes(ctx context.Context, keys []util.Key) (*state.Node
 		return rns, nil
 	}
 	c.Miners.RequestEntity(ctx, nsRequestor, params, handler)
+	if ns == nil {
+		c.Sharders.RequestEntity(ctx, nsRequestor, params, handler)
+	}
 	if ns == nil {
 		return nil, common.NewError("state_nodes_error", "Error getting the state nodes")
 	}

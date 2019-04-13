@@ -124,7 +124,7 @@ func HomePageHandler(w http.ResponseWriter, r *http.Request) {
 	sc := GetServerChain()
 	w.Header().Set("Content-Type", "text/html;charset=UTF-8")
 	PrintCSS(w)
-	fmt.Fprintf(w, "<div>I am %v working on the chain %v <ul><li>id:%v</li><li>public_key:%v</li><li>git:%v</li></ul></div>\n", node.Self.GetPseudoName(), sc.GetKey(), node.Self.GetKey(), node.Self.PublicKey, build.GitCommit)
+	fmt.Fprintf(w, "<div>I am %v working on the chain %v <ul><li>id:%v</li><li>public_key:%v</li><li>build_tag:%v</li></ul></div>\n", node.Self.GetPseudoName(), sc.GetKey(), node.Self.GetKey(), node.Self.PublicKey, build.BuildTag)
 }
 
 func (c *Chain) healthSummary(w http.ResponseWriter, r *http.Request) {
@@ -278,6 +278,19 @@ func (c *Chain) infraHealthInATable(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%v", mstats.HeapAlloc)
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "</tr>")
+	fmt.Fprintf(w, "<tr class='active'>")
+	fmt.Fprintf(w, "<td>")
+	fmt.Fprintf(w, "State missing nodes")
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "<td class='number'>")
+	ps := c.GetPruneStats()
+	if ps != nil {
+		fmt.Fprintf(w, "%v", ps.MissingNodes)
+	} else {
+		fmt.Fprintf(w, "pending")
+	}
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "</tr>")
 	if node.Self.Type == node.NodeTypeMiner {
 		txn, ok := transaction.Provider().(*transaction.Transaction)
 		if ok {
@@ -380,7 +393,7 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 	nodes := np.Nodes
 	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
-	fmt.Fprintf(w, "<tr class='header'><td>Set Index</td><td>Node</td><td>Sent</td><td>Send Errors</td><td>Received</td><td>Last Active</td><td>Small Msg Time</td><td>Large Msg Time</td><td>Optimal Large Msg Time</td><td>Description</td></tr>")
+	fmt.Fprintf(w, "<tr class='header'><td>Set Index</td><td>Node</td><td>Sent</td><td>Send Errors</td><td>Received</td><td>Last Active</td><td>Small Msg Time</td><td>Large Msg Time</td><td>Optimal Large Msg Time</td><td>Description</td><td>Build Tag</td><td>State Health</td></tr>")
 	r := c.GetRound(c.CurrentRound)
 	hasRanks := r != nil && r.HasRandomSeed()
 	lfb := c.LatestFinalizedBlock
@@ -397,7 +410,7 @@ func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 		fmt.Fprintf(w, "<td>%d", nd.SetIndex)
 		if nd.Type == node.NodeTypeMiner {
 			if hasRanks && c.IsRoundGenerator(r, nd) {
-				fmt.Fprintf(w, "*")
+				fmt.Fprintf(w, "<sup>%v</sup>", r.GetMinerRank(nd))
 			}
 		} else if nd.Type == node.NodeTypeSharder {
 			if c.IsBlockSharder(lfb, nd) {
@@ -425,6 +438,12 @@ func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 			fmt.Fprintf(w, "<td class='number'>%.2f</td>", olmt)
 		}
 		fmt.Fprintf(w, "<td>%s</td>", nd.Description)
+		fmt.Fprintf(w, "<td>%s</td>", nd.Info.BuildTag)
+		if nd.Info.StateMissingNodes < 0 {
+			fmt.Fprintf(w, "<td>pending</td>")
+		} else {
+			fmt.Fprintf(w, "<td class='number'>%v</td>", nd.Info.StateMissingNodes)
+		}
 		fmt.Fprintf(w, "</tr>")
 	}
 	fmt.Fprintf(w, "</table>")

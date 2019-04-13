@@ -16,7 +16,6 @@ import (
 	"0chain.net/core/datastore"
 	. "0chain.net/core/logging"
 	"0chain.net/core/memorystore"
-	"0chain.net/core/util"
 	"go.uber.org/zap"
 )
 
@@ -82,8 +81,6 @@ func SetupX2MResponders() {
 	http.HandleFunc("/v1/_x2m/block/state_change/get", common.N2NRateLimit(node.ToN2NSendEntityHandler(BlockStateChangeHandler)))
 
 	http.HandleFunc("/v1/_x2m/state/get", common.N2NRateLimit(node.ToN2NSendEntityHandler(PartialStateHandler)))
-
-	http.HandleFunc("/v1/_x2m/state/get_nodes", common.N2NRateLimit(node.ToN2NSendEntityHandler(StateNodesHandler)))
 }
 
 /*SetupM2SRequestors - setup all requests to sharder by miner */
@@ -234,32 +231,6 @@ func PartialStateHandler(ctx context.Context, r *http.Request) (interface{}, err
 		return nil, err
 	}
 	return ps, nil
-}
-
-//StateNodesHandler - return a list of state nodes
-func StateNodesHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	r.ParseForm() // this is needed as we get multiple values for the same key
-	nodes := r.Form["nodes"]
-	mc := GetMinerChain()
-	keys := make([]util.Key, len(nodes))
-	for idx, nd := range nodes {
-		key, err := hex.DecodeString(nd)
-		if err != nil {
-			return nil, err
-		}
-		keys[idx] = key
-	}
-	ns, err := mc.GetStateNodesFrom(ctx, keys)
-	if err != nil {
-		if ns != nil {
-			Logger.Error("state nodes handler", zap.Int("keys", len(nodes)), zap.Int("found_keys", len(ns.Nodes)), zap.Error(err))
-			return ns, nil
-		}
-		Logger.Error("state nodes handler", zap.Int("keys", len(nodes)), zap.Error(err))
-		return nil, err
-	}
-	Logger.Info("state nodes handler", zap.Int("keys", len(keys)), zap.Int("nodes", len(ns.Nodes)))
-	return ns, nil
 }
 
 func getNotarizedBlock(ctx context.Context, r *http.Request) (*block.Block, error) {
