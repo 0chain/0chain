@@ -8,6 +8,8 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	. "0chain.net/core/logging"
+	"go.uber.org/zap"
 )
 
 func (sc *StorageSmartContract) completeChallengeForBlobber(blobberChallengeObj *BlobberChallenge, challengeCompleted *StorageChallenge, challengeResponse *ChallengeResponse) {
@@ -193,8 +195,12 @@ func (sc *StorageSmartContract) addChallenge(t *transaction.Transaction, b *bloc
 	sort.SliceStable(allocationObj.Blobbers, func(i, j int) bool {
 		return allocationObj.Blobbers[i].ID < allocationObj.Blobbers[j].ID
 	})
+
+	randIdx := rand.Intn(len(allocationObj.Blobbers))
+	Logger.Info("Challenge blobber selected.", zap.Any("selected_blobber", allocationObj.Blobbers[randIdx]), zap.Any("blobbers", allocationObj.Blobbers), zap.Any("random_index", randIdx), zap.Any("seed", b.RoundRandomSeed))
+
 	storageChallenge.Validators = validatorList
-	storageChallenge.Blobber = allocationObj.Blobbers[rand.Intn(len(allocationObj.Blobbers))]
+	storageChallenge.Blobber = allocationObj.Blobbers[randIdx]
 	storageChallenge.RandomNumber = b.RoundRandomSeed
 	storageChallenge.AllocationID = allocationObj.ID
 
