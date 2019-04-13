@@ -148,7 +148,7 @@ func GetWalletTable(latest bool) (string, int64, int64, int64, int64) {
 			}
 		}
 		balance, err := c.GetState(b, cli.ID)
-		if balance == nil || balance.Balance == 0 || err != nil {
+		if err != nil || balance.Balance == 0 {
 			walletsWithoutTokens++
 			blockTable += fmt.Sprintf("<tr class='inactive'>")
 		} else if balance.Balance < 10000000000 {
@@ -159,8 +159,13 @@ func GetWalletTable(latest bool) (string, int64, int64, int64, int64) {
 			blockTable += fmt.Sprintf("<tr>")
 		}
 		blockTable += fmt.Sprintf("<td>%v</td>", cli.ID)
-		blockTable += fmt.Sprintf("<td>%v</td>", balance.Balance)
-		blockTable += fmt.Sprintf("<td>%v</td>", balance.Round)
+		if balance != nil {
+			blockTable += fmt.Sprintf("<td>%v</td>", balance.Balance)
+			blockTable += fmt.Sprintf("<td>%v</td>", balance.Round)
+		} else {
+			blockTable += fmt.Sprintf("<td>%v</td>", 0)
+			blockTable += fmt.Sprintf("<td>%v</td>", 0)
+		}
 		totalWallets++
 		return true
 	}
