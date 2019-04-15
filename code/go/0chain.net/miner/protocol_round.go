@@ -69,7 +69,7 @@ func (mc *Chain) getRound(ctx context.Context, roundNumber int64) *Round {
 func (mc *Chain) RedoVrfShare(ctx context.Context, r *Round) bool {
 	pr := mc.GetMinerRound(r.GetRoundNumber() - 1)
 	if pr == nil {
-		Logger.Info("no pr info inside RedoVrfShare", zap.Int64("R"))
+		Logger.Info("no pr info inside RedoVrfShare", zap.Int64("Round", r.GetRoundNumber()))
 		return false
 	}
 	if pr.HasRandomSeed() {
@@ -673,7 +673,7 @@ func (mc *Chain) restartRound(ctx context.Context) {
 	redo := mc.RedoVrfShare(ctx, r)
 
 	if !redo {
-		Logger.Info ("Could not  RedoVrfShare", zap.Int64("round", r.GetRoundNumber()), zap.Int("round_timeout", r.GetTimeoutCount())))
+		Logger.Info("Could not  RedoVrfShare", zap.Int64("round", r.GetRoundNumber()), zap.Int("round_timeout", r.GetTimeoutCount()))
 		return
 	}
 }

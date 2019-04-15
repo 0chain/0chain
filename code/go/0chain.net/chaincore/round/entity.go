@@ -15,7 +15,6 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/datastore"
-	"go.uber.org/zap"
 )
 
 const (
