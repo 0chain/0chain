@@ -10,9 +10,9 @@ import (
 	"0chain.net/core/util"
 )
 
-var ALL_BLOBBERS_KEY = datastore.Key(encryption.Hash("all_blobbers"))
-var ALL_VALIDATORS_KEY = datastore.Key(encryption.Hash("all_validators"))
-var ALL_ALLOCATIONS_KEY = datastore.Key(encryption.Hash("all_allocations"))
+var ALL_BLOBBERS_KEY = datastore.Key(ADDRESS + encryption.Hash("all_blobbers"))
+var ALL_VALIDATORS_KEY = datastore.Key(ADDRESS + encryption.Hash("all_validators"))
+var ALL_ALLOCATIONS_KEY = datastore.Key(ADDRESS + encryption.Hash("all_allocations"))
 
 type ClientAllocation struct {
 	ClientID    string       `json:"client_id"`

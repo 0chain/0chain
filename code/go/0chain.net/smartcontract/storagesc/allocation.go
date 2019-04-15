@@ -15,9 +15,6 @@ func (sc *StorageSmartContract) getAllocationsList(clientID string, balances c_s
 	var clientAlloc ClientAllocation
 	clientAlloc.ClientID = clientID
 	allocationListBytes, err := balances.GetTrieNode(clientAlloc.GetKey(sc.ID))
-	if err != nil {
-		return nil, common.NewError("getAllocationsList_failed", "Failed to retrieve existing allocations list")
-	}
 	if allocationListBytes == nil {
 		return allocationList, nil
 	}
@@ -32,9 +29,6 @@ func (sc *StorageSmartContract) getAllAllocationsList(balances c_state.StateCont
 	allocationList := &Allocations{}
 
 	allocationListBytes, err := balances.GetTrieNode(ALL_ALLOCATIONS_KEY)
-	if err != nil {
-		return nil, common.NewError("getAllAllocationsList_failed", "Failed to retrieve existing allocations list")
-	}
 	if allocationListBytes == nil {
 		return allocationList, nil
 	}

@@ -19,7 +19,7 @@ func (sc *StorageSmartContract) getBlobbersList(balances c_state.StateContextI) 
 	if err != nil {
 		return nil, common.NewError("getBlobbersList_failed", "Failed to retrieve existing blobbers list")
 	}
-	sort.SliceStable(allBlobbersList, func(i, j int) bool {
+	sort.SliceStable(allBlobbersList.Nodes, func(i, j int) bool {
 		return allBlobbersList.Nodes[i].ID < allBlobbersList.Nodes[j].ID
 	})
 	return allBlobbersList, nil
@@ -87,7 +87,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(t *transaction.Transacti
 
 	allocationObj := &StorageAllocation{}
 	allocationObj.ID = commitConnection.WriteMarker.AllocationID
-	allocationBytes, _ := balances.GetTrieNode(allocationObj.GetKey(sc.ID))
+	allocationBytes, err := balances.GetTrieNode(allocationObj.GetKey(sc.ID))
 
 	if allocationBytes == nil || err != nil {
 		return "", common.NewError("invalid_parameters", "Invalid allocation ID")

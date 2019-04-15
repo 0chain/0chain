@@ -49,9 +49,6 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction, inpu
 	blobberChallengeObj.BlobberID = t.ClientID
 
 	blobberChallengeBytes, err := balances.GetTrieNode(blobberChallengeObj.GetKey(sc.ID))
-	if err != nil {
-		return "", common.NewError("blobber_challenge_read_err", "Error reading blobber challenge from DB")
-	}
 	if blobberChallengeBytes == nil {
 		return "", common.NewError("invalid_parameters", "Cannot find the blobber challenge entity with ID "+t.ClientID)
 	}
@@ -222,9 +219,6 @@ func (sc *StorageSmartContract) addChallenge(t *transaction.Transaction, b *bloc
 	blobberChallengeObj.BlobberID = storageChallenge.Blobber.ID
 
 	blobberChallengeBytes, err := balances.GetTrieNode(blobberChallengeObj.GetKey(sc.ID))
-	if err != nil {
-		return "", common.NewError("blobber_challenge_read_err", "Error reading blobber challenge from DB")
-	}
 	blobberChallengeObj.LatestCompletedChallenges = make([]*StorageChallenge, 0)
 	if blobberChallengeBytes != nil {
 		err = blobberChallengeObj.Decode(blobberChallengeBytes.Encode())

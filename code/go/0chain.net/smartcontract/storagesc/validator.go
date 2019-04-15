@@ -12,9 +12,6 @@ import (
 func (sc *StorageSmartContract) getValidatorsList(balances c_state.StateContextI) (*ValidatorNodes, error) {
 	allValidatorsList := &ValidatorNodes{}
 	allValidatorsBytes, err := balances.GetTrieNode(ALL_VALIDATORS_KEY)
-	if err != nil {
-		return nil, common.NewError("getValidatorsList_failed", "Failed to retrieve existing validators list")
-	}
 	if allValidatorsBytes == nil {
 		return allValidatorsList, nil
 	}
@@ -22,7 +19,7 @@ func (sc *StorageSmartContract) getValidatorsList(balances c_state.StateContextI
 	if err != nil {
 		return nil, common.NewError("getValidatorsList_failed", "Failed to retrieve existing validators list")
 	}
-	sort.SliceStable(allValidatorsList, func(i, j int) bool {
+	sort.SliceStable(allValidatorsList.Nodes, func(i, j int) bool {
 		return allValidatorsList.Nodes[i].ID < allValidatorsList.Nodes[j].ID
 	})
 	return allValidatorsList, nil
