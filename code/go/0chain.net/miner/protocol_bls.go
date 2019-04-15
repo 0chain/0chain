@@ -2,6 +2,7 @@ package miner
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"math/rand"
 	"strconv"
@@ -10,15 +11,15 @@ import (
 
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/config"
-	"0chain.net/core/datastore"
-	"0chain.net/core/encryption"
-	. "0chain.net/core/logging"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/threshold/bls"
+	"0chain.net/core/datastore"
+	"0chain.net/core/ememorystore"
+	"0chain.net/core/encryption"
+	. "0chain.net/core/logging"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
-	"0chain.net/core/ememorystore"
 )
 
 // ////////////  BLS-DKG Related stuff  /////////////////////
@@ -34,6 +35,7 @@ var roundMap = make(map[int64]map[int]string)
 
 var isDkgEnabled bool
 var k, n int
+
 //IsDkgDone an indicator for BC to continue with block generation
 var IsDkgDone = false
 var selfInd int
@@ -56,11 +58,11 @@ func StartDKG(ctx context.Context) {
 
 	self := node.GetSelfNode(ctx)
 	selfInd = self.SetIndex
-	
+
 	if isDkgEnabled {
 		dg = bls.MakeDKG(k, n)
 		dkgSummary, err := getDKGSummaryFromStore(ctx)
-		if dkgSummary.SecretKeyGroupStr != ""  {
+		if dkgSummary.SecretKeyGroupStr != "" {
 			dg.SecKeyShareGroup.SetHexString(dkgSummary.SecretKeyGroupStr)
 			IsDkgDone = true
 			Logger.Info("got dkg share from db")
@@ -351,9 +353,9 @@ func GetBlsShare(ctx context.Context, r, pr *round.Round) string {
 		rbOutput = strconv.FormatInt(pr.RandomSeed, 16) //pr.VRFOutput
 	}
 
-	bs.Msg = strconv.FormatInt(r.GetRoundNumber(), 10) + rbOutput
+	bs.Msg = fmt.Sprintf("%v%v%v", r.GetRoundNumber(), r.GetTimeoutCount(), rbOutput)
 
-	Logger.Debug("Bls sign share calculated for ", zap.Int64("round", r.GetRoundNumber()), zap.String("rbo_output", rbOutput), zap.Any("bls_msg", bs.Msg))
+	Logger.Info("Bls sign share calculated for ", zap.Int64("round", r.GetRoundNumber()), zap.Int("roundtimeout", r.GetTimeoutCount()), zap.String("rbo_output", rbOutput), zap.Any("bls_msg", bs.Msg))
 
 	sigShare := bs.SignMsg()
 	return sigShare.GetHexString()
@@ -364,8 +366,14 @@ func GetBlsShare(ctx context.Context, r, pr *round.Round) string {
 
 //AddVRFShare - implement the interface for the RoundRandomBeacon protocol
 func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShare) bool {
-	Logger.Info("DKG AddVRFShare", zap.Int64("Round", mr.GetRoundNumber()), zap.Int("Sender", vrfs.GetParty().SetIndex), zap.String("sender_key", vrfs.GetParty().GetKey()))
+	Logger.Info("DKG AddVRFShare", zap.Int64("Round", mr.GetRoundNumber()), zap.Int("RoundTimeoutCount", mr.GetTimeoutCount()),
+		zap.Int("Sender", vrfs.GetParty().SetIndex), zap.Int("vrf_timeoutcount", vrfs.GetRoundTimeoutCount()), zap.String("sender_key", vrfs.GetParty().GetKey()))
 
+	if vrfs.GetRoundTimeoutCount() != mr.GetTimeoutCount() {
+		//Keep VRF timeout and round timeout in sync. Same vrfs will comeback during soft timeouts
+		Logger.Info("TOC_FIX VRF Timeout > round timeout", zap.Int("vrfs_timeout", vrfs.GetRoundTimeoutCount()), zap.Int("round_timeout", mr.GetTimeoutCount()))
+		return false
+	}
 	if len(mr.GetVRFShares()) >= GetBlsThreshold() {
 		//ignore VRF shares coming after threshold is reached to avoid locking issues.
 		//Todo: Remove this logging
@@ -404,7 +412,7 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round) {
 		}
 		beg := time.Now()
 		recSig, recFrom := getVRFShareInfo(mr)
-		
+
 		rbOutput := bs.CalcRandomBeacon(recSig, recFrom)
 		Logger.Debug("DKG ", zap.String("rboOutput", rbOutput), zap.Int64("Round", mr.Number))
 		mc.computeRBO(ctx, mr, rbOutput)
@@ -418,7 +426,7 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round) {
 		}
 	} else {
 		//TODO: remove this log
-		Logger.Info("Not yet reached threshold", zap.Int("vrfShares_num", len(shares)),  zap.Int("threshold", GetBlsThreshold()))
+		Logger.Info("Not yet reached threshold", zap.Int("vrfShares_num", len(shares)), zap.Int("threshold", GetBlsThreshold()))
 	}
 }
 
@@ -434,7 +442,7 @@ func (mc *Chain) computeRBO(ctx context.Context, mr *Round, rbo string) {
 
 }
 
-func getVRFShareInfo (mr *Round) ([]string, []string) {
+func getVRFShareInfo(mr *Round) ([]string, []string) {
 	recSig := make([]string, 0)
 	recFrom := make([]string, 0)
 	mr.Mutex.Lock()
@@ -453,7 +461,7 @@ func getVRFShareInfo (mr *Round) ([]string, []string) {
 }
 
 func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r *Round, rbo string) {
-	
+
 	var seed int64
 	if isDkgEnabled {
 		useed, err := strconv.ParseUint(rbo[0:16], 16, 64)
@@ -464,7 +472,7 @@ func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r 
 	} else {
 		if pr != nil {
 			if mpr := pr.(*Round); mpr.IsVRFComplete() {
-		        seed = rand.New(rand.NewSource(pr.GetRandomSeed())).Int63()
+				seed = rand.New(rand.NewSource(pr.GetRandomSeed())).Int63()
 			}
 		} else {
 			Logger.Error("pr is null! Let go this round...")

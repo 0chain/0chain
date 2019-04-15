@@ -36,17 +36,17 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 	var nr = round.NewRound(r.GetRoundNumber() + 1)
 	mr := mc.CreateRound(nr)
 	er := mc.AddRound(mr)
-	if  er != mr {
-		Logger.Info("StartNextRound found nextround ready. No VRFs Sent", 
+	if er != mr {
+		Logger.Info("StartNextRound found nextround ready. No VRFs Sent",
 			zap.Int64("er_round", er.GetRoundNumber()))
 		return er.(*Round)
 	}
 	if r.HasRandomSeed() {
 		mc.addMyVRFShare(ctx, r, mr)
 	} else {
-		Logger.Info("StartNextRound no VRFs sent -current round has no randomseed", 
+		Logger.Info("StartNextRound no VRFs sent -current round has no randomseed",
 			zap.Int64("rrs", r.GetRandomSeed()), zap.Int64("r_round", r.GetRoundNumber()))
-		
+
 	}
 	return mr
 }
@@ -65,9 +65,27 @@ func (mc *Chain) getRound(ctx context.Context, roundNumber int64) *Round {
 	return mr
 }
 
+// RedoVrfShare re-calculateVrfShare and send
+func (mc *Chain) RedoVrfShare(ctx context.Context, r *Round) bool {
+	pr := mc.GetMinerRound(r.GetRoundNumber() - 1)
+	if pr == nil {
+		Logger.Info("no pr info inside RedoVrfShare", zap.Int64("R"))
+		return false
+	}
+	if pr.HasRandomSeed() {
+		r.vrfShare = nil
+		Logger.Info("RedoVrfShare after vrfShare is nil",
+			zap.Int64("round", r.GetRoundNumber()), zap.Int("round_timeout", r.GetTimeoutCount()))
+		mc.addMyVRFShare(ctx, pr, r)
+		return true
+	}
+	return false
+}
+
 func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
 	vrfs := &round.VRFShare{}
 	vrfs.Round = r.GetRoundNumber()
+	vrfs.RoundTimeoutCount = r.GetTimeoutCount()
 	vrfs.Share = GetBlsShare(ctx, r.Round, pr.Round)
 	vrfs.SetParty(node.Self.Node)
 	r.vrfShare = vrfs
@@ -98,10 +116,10 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 	self := node.GetSelfNode(ctx)
 	rank := mr.GetMinerRank(self.Node)
 	if !mc.IsRoundGenerator(mr, self.Node) {
-		Logger.Info("Not a generator", zap.Int64("round", mr.GetRoundNumber()), zap.Int("index", self.SetIndex), zap.Int("rank", rank), zap.Any("random_seed", mr.GetRandomSeed()))
+		Logger.Info("TOC_FIX Not a generator", zap.Int64("round", mr.GetRoundNumber()), zap.Int("index", self.SetIndex), zap.Int("rank", rank), zap.Int("timeoutcount", mr.GetTimeoutCount()), zap.Any("random_seed", mr.GetRandomSeed()))
 		return
 	}
-	Logger.Info("*** starting round block generation ***", zap.Int64("round", mr.GetRoundNumber()), zap.Int("index", self.SetIndex), zap.Int("rank", rank), zap.Any("random_seed", mr.GetRandomSeed()), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round))
+	Logger.Info("*** TOC_FIX starting round block generation ***", zap.Int64("round", mr.GetRoundNumber()), zap.Int("index", self.SetIndex), zap.Int("rank", rank), zap.Int("timeoutcount", mr.GetTimeoutCount()), zap.Any("random_seed", mr.GetRandomSeed()), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round))
 
 	//NOTE: If there are not enough txns, this will not advance further even though rest of the network is. That's why this is a goroutine
 	go mc.GenerateRoundBlock(ctx, mr)
@@ -632,16 +650,16 @@ func (mc *Chain) restartRound(ctx context.Context) {
 			mc.BroadcastNotarizedBlocks(ctx, r)
 			Logger.Info("StartNextRound after sending notarized block in restartRound.", zap.Int64("current_round", r.GetRoundNumber()))
 			nr := mc.StartNextRound(ctx, r)
-			/* 
+			/*
 				if the next round object already exists, StartNextRound does not send VRFs.
 				So to be sure send it.
 			*/
 			if r.HasRandomSeed() {
-				mc.addMyVRFShare(ctx, r, nr)			
+				mc.addMyVRFShare(ctx, r, nr)
 				return
 			} else {
 				Logger.Error("Has notarized block in restartRound, but no randomseed.", zap.Int64("current_round", r.GetRoundNumber()))
-			
+
 			}
 		}
 		pr := mc.GetMinerRound(r.GetRoundNumber() - 1)
@@ -649,12 +667,14 @@ func (mc *Chain) restartRound(ctx context.Context) {
 			mc.BroadcastNotarizedBlocks(ctx, pr)
 		}
 	}
-	
 	r.Restart()
-	if r.vrfShare != nil {
-		//TODO: send same vrf again?
-		mc.AddVRFShare(ctx, r, r.vrfShare)
-		go mc.SendVRFShare(ctx, r.vrfShare)
+	//Recalculate VRF shares and send
+	r.IncrementTimeoutCount()
+	redo := mc.RedoVrfShare(ctx, r)
+
+	if !redo {
+		Logger.Info ("Could not  RedoVrfShare", zap.Int64("round", r.GetRoundNumber()), zap.Int("round_timeout", r.GetTimeoutCount())))
+		return
 	}
 }
 

@@ -7,10 +7,10 @@ import (
 	"0chain.net/core/ememorystore"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/sharder/blockstore"
 	"0chain.net/chaincore/chain"
-	"0chain.net/core/datastore"
 	"0chain.net/chaincore/round"
+	"0chain.net/core/datastore"
+	"0chain.net/sharder/blockstore"
 )
 
 var sharderChain = &Chain{}
