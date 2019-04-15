@@ -38,7 +38,7 @@ func (ssc *StorageSmartContract) GetRestPoints() map[string]smartcontractinterfa
 
 func (sc *StorageSmartContract) Execute(t *transaction.Transaction, funcName string, input []byte, balances c_state.StateContextI) (string, error) {
 	if funcName == "read_redeem" {
-		resp, err := sc.commitBlobberRead(t, input)
+		resp, err := sc.commitBlobberRead(t, input, balances)
 		if err != nil {
 			return "", err
 		}
@@ -46,7 +46,7 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction, funcName str
 	}
 
 	if funcName == "commit_connection" {
-		resp, err := sc.commitBlobberConnection(t, input)
+		resp, err := sc.commitBlobberConnection(t, input, balances)
 		if err != nil {
 			return "", err
 		}
@@ -54,7 +54,7 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction, funcName str
 	}
 
 	if funcName == "new_allocation_request" {
-		resp, err := sc.newAllocationRequest(t, input)
+		resp, err := sc.newAllocationRequest(t, input, balances)
 		if err != nil {
 			return "", err
 		}
@@ -62,7 +62,7 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction, funcName str
 	}
 
 	if funcName == "add_blobber" {
-		resp, err := sc.addBlobber(t, input)
+		resp, err := sc.addBlobber(t, input, balances)
 		if err != nil {
 			return "", err
 		}
@@ -70,7 +70,7 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction, funcName str
 	}
 
 	if funcName == "add_validator" {
-		resp, err := sc.addValidator(t, input)
+		resp, err := sc.addValidator(t, input, balances)
 		if err != nil {
 			return "", err
 		}
@@ -78,7 +78,7 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction, funcName str
 	}
 
 	if funcName == "challenge_request" {
-		resp, err := sc.addChallenge(t, balances.GetBlock(), input)
+		resp, err := sc.addChallenge(t, balances.GetBlock(), input, balances)
 		if err != nil {
 			return "", err
 		}
@@ -86,7 +86,7 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction, funcName str
 	}
 
 	if funcName == "challenge_response" {
-		resp, err := sc.verifyChallenge(t, input)
+		resp, err := sc.verifyChallenge(t, input, balances)
 		if err != nil {
 			return "", err
 		}

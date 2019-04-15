@@ -35,9 +35,9 @@ func (zrc *ZRC20SmartContract) GetRestPoints() map[string]smartcontractinterface
 	return zrc.RestHandlers
 }
 
-func (zrc *ZRC20SmartContract) createToken(t *transaction.Transaction, inputData []byte) (string, error) {
-	var newRequest tokenNode
-	err := newRequest.decode(inputData)
+func (zrc *ZRC20SmartContract) createToken(t *transaction.Transaction, inputData []byte, balances c_state.StateContextI) (string, error) {
+	newRequest := &tokenNode{}
+	err := newRequest.Decode(inputData)
 	if err != nil {
 		return common.NewError("bad request", "token cannot be created, request not formated correctly").Error(), nil
 	}
@@ -45,23 +45,23 @@ func (zrc *ZRC20SmartContract) createToken(t *transaction.Transaction, inputData
 	if !newRequest.validate() {
 		return common.NewError("bad request", "token cannot be created, request is not filled out correctly").Error(), nil
 	}
-	token, _ := zrc.getTokenNode(newRequest.TokenName)
+	token, _ := zrc.getTokenNode(newRequest.TokenName, balances)
 	if token != nil {
 		return common.NewError("bad request", "token already exists").Error(), nil
 	}
 	newRequest.Available = newRequest.TotalSupply
-	zrc.DB.PutNode(newRequest.getKey(), newRequest.encode())
-	return string(newRequest.encode()), nil
+	balances.InsertTrieNode(newRequest.getKey(zrc.ID), newRequest)
+	return string(newRequest.Encode()), nil
 }
 
 func (zrc *ZRC20SmartContract) digPool(t *transaction.Transaction, inputData []byte, balances c_state.StateContextI) (string, error) {
 	var newRequest zrc20TransferRequest
-	var zrcPool zrc20Pool
+	zrcPool := &zrc20Pool{}
 	err := newRequest.decode(inputData)
 	if err != nil {
 		return err.Error(), nil
 	}
-	token, err := zrc.getTokenNode(newRequest.FromToken)
+	token, err := zrc.getTokenNode(newRequest.FromToken, balances)
 	if err != nil {
 		return err.Error(), nil
 	}
@@ -76,8 +76,8 @@ func (zrc *ZRC20SmartContract) digPool(t *transaction.Transaction, inputData []b
 	}
 	balances.AddTransfer(transfer)
 	token.Available -= tokensRequested
-	zrc.DB.PutNode(token.getKey(), token.encode())
-	zrc.DB.PutNode(zrcPool.getKey(), zrcPool.encode())
+	balances.InsertTrieNode(token.getKey(zrc.ID), token)
+	balances.InsertTrieNode(zrcPool.getKey(zrc.ID), zrcPool)
 	return resp, nil
 }
 
@@ -87,11 +87,11 @@ func (zrc *ZRC20SmartContract) fillPool(t *transaction.Transaction, inputData []
 	if err != nil {
 		return err.Error(), nil
 	}
-	token, err := zrc.getTokenNode(newRequest.FromToken)
+	token, err := zrc.getTokenNode(newRequest.FromToken, balances)
 	if err != nil {
 		return err.Error(), nil
 	}
-	zrcPool, err := zrc.getPool(newRequest.FromToken, newRequest.TokenPoolTransferResponse.ToPool)
+	zrcPool, err := zrc.getPool(newRequest.FromToken, newRequest.TokenPoolTransferResponse.ToPool, balances)
 	if err != nil {
 		return err.Error(), nil
 	}
@@ -105,8 +105,8 @@ func (zrc *ZRC20SmartContract) fillPool(t *transaction.Transaction, inputData []
 	}
 	balances.AddTransfer(transfer)
 	token.Available -= tokensRequested
-	zrc.DB.PutNode(token.getKey(), token.encode())
-	zrc.DB.PutNode(zrcPool.getKey(), zrcPool.encode())
+	balances.InsertTrieNode(token.getKey(zrc.ID), token)
+	balances.InsertTrieNode(zrcPool.getKey(zrc.ID), zrcPool)
 	return resp, nil
 }
 
@@ -116,11 +116,11 @@ func (zrc *ZRC20SmartContract) transferTo(t *transaction.Transaction, inputData 
 	if err != nil {
 		return err.Error(), nil
 	}
-	zrcPool, err := zrc.getPool(newRequest.FromToken, newRequest.FromPool)
+	zrcPool, err := zrc.getPool(newRequest.FromToken, newRequest.FromPool, balances)
 	if err != nil {
 		return err.Error(), nil
 	}
-	otherPool, err := zrc.getPool(newRequest.ToToken, newRequest.ToPool)
+	otherPool, err := zrc.getPool(newRequest.ToToken, newRequest.ToPool, balances)
 	if err != nil {
 		return err.Error(), nil
 	}
@@ -131,8 +131,8 @@ func (zrc *ZRC20SmartContract) transferTo(t *transaction.Transaction, inputData 
 	if transfer.Amount > 0 {
 		balances.AddTransfer(transfer)
 	}
-	zrc.DB.PutNode(zrcPool.getKey(), zrcPool.encode())
-	zrc.DB.PutNode(otherPool.getKey(), otherPool.encode())
+	balances.InsertTrieNode(zrcPool.getKey(zrc.ID), zrcPool)
+	balances.InsertTrieNode(otherPool.getKey(zrc.ID), otherPool)
 	return resp, nil
 }
 
@@ -142,11 +142,11 @@ func (zrc *ZRC20SmartContract) drainPool(t *transaction.Transaction, inputData [
 	if err != nil {
 		return common.NewError("bad request", "token cannot be created, request not formated correctly").Error(), nil
 	}
-	token, err := zrc.getTokenNode(newRequest.FromToken)
+	token, err := zrc.getTokenNode(newRequest.FromToken, balances)
 	if err != nil {
 		return err.Error(), nil
 	}
-	zrcPool, err := zrc.getPool(newRequest.FromToken, newRequest.FromPool)
+	zrcPool, err := zrc.getPool(newRequest.FromToken, newRequest.FromPool, balances)
 	if err != nil {
 		return err.Error(), nil
 	}
@@ -157,8 +157,8 @@ func (zrc *ZRC20SmartContract) drainPool(t *transaction.Transaction, inputData [
 	tokensPutBack := (transfer.Amount / token.ExchangeRate.ZCN) * token.ExchangeRate.Other
 	balances.AddTransfer(transfer)
 	token.Available += tokensPutBack
-	zrc.DB.PutNode(token.getKey(), token.encode())
-	zrc.DB.PutNode(zrcPool.getKey(), zrcPool.encode())
+	balances.InsertTrieNode(token.getKey(zrc.ID), token)
+	balances.InsertTrieNode(zrcPool.getKey(zrc.ID), zrcPool)
 	return resp, nil
 }
 
@@ -168,11 +168,11 @@ func (zrc *ZRC20SmartContract) emptyPool(t *transaction.Transaction, inputData [
 	if err != nil {
 		return common.NewError("bad request", "token cannot be created, request not formated correctly").Error(), nil
 	}
-	token, err := zrc.getTokenNode(newRequest.FromToken)
+	token, err := zrc.getTokenNode(newRequest.FromToken, balances)
 	if err != nil {
 		return err.Error(), nil
 	}
-	zrcPool, err := zrc.getPool(newRequest.FromToken, newRequest.FromPool)
+	zrcPool, err := zrc.getPool(newRequest.FromToken, newRequest.FromPool, balances)
 	if err != nil {
 		return err.Error(), nil
 	}
@@ -183,50 +183,50 @@ func (zrc *ZRC20SmartContract) emptyPool(t *transaction.Transaction, inputData [
 	tokensPutBack := (transfer.Amount / token.ExchangeRate.ZCN) * token.ExchangeRate.Other
 	balances.AddTransfer(transfer)
 	token.Available += tokensPutBack
-	zrc.DB.PutNode(token.getKey(), token.encode())
-	zrc.DB.DeleteNode(zrcPool.getKey())
+	balances.InsertTrieNode(token.getKey(zrc.ID), token)
+	balances.DeleteTrieNode(zrcPool.getKey(zrc.ID))
 	return resp, nil
 }
 
-func (zrc *ZRC20SmartContract) getPool(tokenName string, id datastore.Key) (*zrc20Pool, error) {
-	var zrcPool zrc20Pool
+func (zrc *ZRC20SmartContract) getPool(tokenName string, id datastore.Key, balances c_state.StateContextI) (*zrc20Pool, error) {
+	zrcPool := &zrc20Pool{}
 	zrcPool.ID = id
 	zrcPool.TokenName = tokenName
-	poolBytes, err := zrc.DB.GetNode(zrcPool.getKey())
+	poolBytes, err := balances.GetTrieNode(zrcPool.getKey(zrc.ID))
 	if err != nil {
 		return nil, err
 	}
 	if poolBytes == nil {
 		return nil, common.NewError("zrc20sc get pool", "pool doesn't exist")
 	}
-	err = zrcPool.decode(poolBytes)
+	err = zrcPool.Decode(poolBytes.Encode())
 	if err != nil {
 		return nil, err
 	}
-	return &zrcPool, nil
+	return zrcPool, nil
 }
 
-func (zrc *ZRC20SmartContract) getTokenNode(tokenName string) (*tokenNode, error) {
-	var token tokenNode
+func (zrc *ZRC20SmartContract) getTokenNode(tokenName string, balances c_state.StateContextI) (*tokenNode, error) {
+	token := &tokenNode{}
 	token.TokenName = tokenName
-	tokenBytes, err := zrc.DB.GetNode(token.getKey())
+	tokenBytes, err := balances.GetTrieNode(token.getKey(zrc.ID))
 	if err != nil {
 		return nil, err
 	}
 	if tokenBytes == nil {
 		return nil, common.NewError("zrc20sc get node", "token node doesn't exist")
 	}
-	err = token.decode(tokenBytes)
+	err = token.Decode(tokenBytes.Encode())
 	if err != nil {
 		return nil, err
 	}
-	return &token, nil
+	return token, nil
 }
 
 func (zrc *ZRC20SmartContract) Execute(t *transaction.Transaction, funcName string, inputData []byte, balances c_state.StateContextI) (string, error) {
 	switch funcName {
 	case "createToken":
-		return zrc.createToken(t, inputData)
+		return zrc.createToken(t, inputData, balances)
 	case "digPool":
 		return zrc.digPool(t, inputData, balances)
 	case "fillPool":

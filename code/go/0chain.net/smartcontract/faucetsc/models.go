@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"time"
 
-	"0chain.net/chaincore/smartcontractstate"
 	"0chain.net/chaincore/state"
+	"0chain.net/core/datastore"
+	"0chain.net/core/encryption"
+	"0chain.net/core/util"
 )
 
 type limitRequest struct {
@@ -43,7 +45,7 @@ func (pr *periodicResponse) decode(input []byte) error {
 	return err
 }
 
-type globalNode struct {
+type GlobalNode struct {
 	ID              string        `json:"id"`
 	PourAmount      state.Balance `json:"pour_amount"`
 	PeriodicLimit   state.Balance `json:"periodic_limit"`
@@ -54,36 +56,52 @@ type globalNode struct {
 	StartTime       time.Time     `json:"start_time"`
 }
 
-func (gn *globalNode) getKey() smartcontractstate.Key {
-	return smartcontractstate.Key("faucet_contract:" + gn.ID)
+func (gn *GlobalNode) GetKey() datastore.Key {
+	return datastore.Key(gn.ID + gn.ID)
 }
 
-func (gn *globalNode) encode() []byte {
+func (gn *GlobalNode) GetHash() string {
+	return util.ToHex(gn.GetHashBytes())
+}
+
+func (gn *GlobalNode) GetHashBytes() []byte {
+	return encryption.RawHash(gn.Encode())
+}
+
+func (gn *GlobalNode) Encode() []byte {
 	buff, _ := json.Marshal(gn)
 	return buff
 }
 
-func (gn *globalNode) decode(input []byte) error {
+func (gn *GlobalNode) Decode(input []byte) error {
 	err := json.Unmarshal(input, gn)
 	return err
 }
 
-type userNode struct {
+type UserNode struct {
 	ID        string        `json:"id"`
 	StartTime time.Time     `json:"start_time"`
 	Used      state.Balance `json:"used"`
 }
 
-func (un *userNode) getKey() smartcontractstate.Key {
-	return smartcontractstate.Key("faucet_user:" + un.ID)
+func (un *UserNode) GetKey(globalKey string) datastore.Key {
+	return datastore.Key(globalKey + un.ID)
 }
 
-func (un *userNode) encode() []byte {
+func (un *UserNode) GetHash() string {
+	return util.ToHex(un.GetHashBytes())
+}
+
+func (un *UserNode) GetHashBytes() []byte {
+	return encryption.RawHash(un.Encode())
+}
+
+func (un *UserNode) Encode() []byte {
 	buff, _ := json.Marshal(un)
 	return buff
 }
 
-func (un *userNode) decode(input []byte) error {
+func (un *UserNode) Decode(input []byte) error {
 	err := json.Unmarshal(input, un)
 	return err
 }

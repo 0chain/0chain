@@ -5,11 +5,10 @@ import (
 
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
-	"0chain.net/chaincore/smartcontractstate"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/core/datastore"
 	. "0chain.net/core/logging"
-	"encoding/json"
 	"errors"
 	"github.com/asaskevich/govalidator"
 	"go.uber.org/zap"
@@ -47,7 +46,7 @@ func (msc *MinerSmartContract) Execute(t *transaction.Transaction, funcName stri
 	switch funcName {
 
 	case "add_miner":
-		resp, err := msc.AddMiner(t, input)
+		resp, err := msc.AddMiner(t, input, balances)
 		if err != nil {
 			return "", err
 		}
@@ -69,7 +68,7 @@ func (msc *MinerSmartContract) Execute(t *transaction.Transaction, funcName stri
 //REST API Handlers
 
 //GetNodepoolHandler API to provide nodepool information for registered miners
-func (msc *MinerSmartContract) GetNodepoolHandler(ctx context.Context, params url.Values) (interface{}, error) {
+func (msc *MinerSmartContract) GetNodepoolHandler(ctx context.Context, params url.Values, statectx c_state.StateContextI) (interface{}, error) {
 
 	var regMiner MinerNode
 	err := regMiner.decodeFromValues(params)
@@ -77,7 +76,7 @@ func (msc *MinerSmartContract) GetNodepoolHandler(ctx context.Context, params ur
 		Logger.Info("Returing error from GetNodePoolHandler", zap.Error(err))
 		return nil, err
 	}
-	if !msc.doesMinerExist(regMiner.getKey()) {
+	if !msc.doesMinerExist(regMiner.getKey(msc.ID), statectx) {
 		return "", errors.New("unknown_miner" + err.Error())
 	}
 	npi := msc.bcContext.GetNodepoolInfo()
@@ -85,8 +84,8 @@ func (msc *MinerSmartContract) GetNodepoolHandler(ctx context.Context, params ur
 	return npi, nil
 }
 
-func (msc *MinerSmartContract) doesMinerExist(pkey smartcontractstate.Key) bool {
-	mbits, _ := msc.DB.GetNode(pkey)
+func (msc *MinerSmartContract) doesMinerExist(pkey datastore.Key, statectx c_state.StateContextI) bool {
+	mbits, _ := statectx.GetTrieNode(pkey)
 	if mbits != nil {
 		return true
 	}
@@ -94,16 +93,16 @@ func (msc *MinerSmartContract) doesMinerExist(pkey smartcontractstate.Key) bool 
 }
 
 //AddMiner Function to handle miner register
-func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction, input []byte) (string, error) {
+func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction, input []byte, statectx c_state.StateContextI) (string, error) {
 
-	allMinersList, err := msc.getMinersList()
+	allMinersList, err := msc.getMinersList(statectx)
 	if err != nil {
 		Logger.Error("Error in getting list from the DB", zap.Error(err))
 		return "", errors.New("add_miner_failed - Failed to get miner list" + err.Error())
 	}
 
-	var newMiner MinerNode
-	err = newMiner.decode(input)
+	newMiner := &MinerNode{}
+	err = newMiner.Decode(input)
 	if err != nil {
 		Logger.Error("Error in decoding the input", zap.Error(err))
 
@@ -113,11 +112,11 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction, input []byte
 	newMiner.ID = t.ClientID
 	newMiner.PublicKey = t.PublicKey
 
-	if msc.doesMinerExist(newMiner.getKey()) {
+	if msc.doesMinerExist(newMiner.getKey(msc.ID), statectx) {
 		Logger.Info("Miner received already exist", zap.String("url", newMiner.BaseURL))
 
 	} else {
-		minerBytes, _ := msc.DB.GetNode(newMiner.getKey())
+		minerBytes, _ := statectx.GetTrieNode(newMiner.getKey(msc.ID))
 		if minerBytes == nil {
 			//DB does not have the miner already. Validate before adding.
 			err = isValidURL(newMiner.BaseURL)
@@ -127,16 +126,15 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction, input []byte
 				return "", errors.New(newMiner.BaseURL + "is not a valid URL. Please provide DNS name or IPV4 address")
 			}
 			//ToDo: Add clientID and publicKey validation
-			allMinersList = append(allMinersList, newMiner)
-			allMinersBytes, _ := json.Marshal(allMinersList)
-			msc.DB.PutNode(allMinersKey, allMinersBytes)
-			msc.DB.PutNode(newMiner.getKey(), newMiner.encode())
+			allMinersList.Nodes = append(allMinersList.Nodes, newMiner)
+			statectx.InsertTrieNode(allMinersKey, allMinersList)
+			statectx.InsertTrieNode(newMiner.getKey(msc.ID), newMiner)
 			Logger.Info("Adding miner to known list of miners", zap.Any("url", allMinersList))
 		} else {
 			Logger.Info("Miner received already exist", zap.String("url", newMiner.BaseURL))
 		}
 	}
-	buff := newMiner.encode()
+	buff := newMiner.Encode()
 	return string(buff), nil
 }
 
@@ -144,7 +142,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction, input []byte
 func (msc *MinerSmartContract) RequestViewchange(t *transaction.Transaction, input []byte, statectx c_state.StateContextI) (string, error) {
 
 	var regMiner MinerNode
-	err := regMiner.decode(input)
+	err := regMiner.Decode(input)
 	if err != nil {
 		Logger.Error("Error in decoding the input", zap.Error(err))
 
@@ -154,7 +152,7 @@ func (msc *MinerSmartContract) RequestViewchange(t *transaction.Transaction, inp
 	regMiner.ID = t.ClientID
 	regMiner.PublicKey = t.PublicKey
 
-	if !msc.doesMinerExist(regMiner.getKey()) {
+	if !msc.doesMinerExist(regMiner.getKey(msc.ID), statectx) {
 		Logger.Info("Miner received does not exist", zap.String("url", regMiner.BaseURL))
 		return "", errors.New(regMiner.BaseURL + " Miner rdoes not exist")
 	}
@@ -176,19 +174,16 @@ func (msc *MinerSmartContract) RequestViewchange(t *transaction.Transaction, inp
 
 //------------- local functions ---------------------
 
-func (msc *MinerSmartContract) getMinersList() ([]MinerNode, error) {
-	var allMinersList = make([]MinerNode, 0)
-	allMinersBytes, err := msc.DB.GetNode(allMinersKey)
+func (msc *MinerSmartContract) getMinersList(statectx c_state.StateContextI) (*MinerNodes, error) {
+	allMinersList := &MinerNodes{}
+	allMinersBytes, err := statectx.GetTrieNode(allMinersKey)
 	if err != nil {
 		return nil, errors.New("getMinersList_failed - Failed to retrieve existing miners list")
 	}
 	if allMinersBytes == nil {
 		return allMinersList, nil
 	}
-	err = json.Unmarshal(allMinersBytes, &allMinersList)
-	if err != nil {
-		return nil, errors.New("getBlobbersList_failed - Failed to retrieve existing blobbers list")
-	}
+	allMinersList.Decode(allMinersBytes.Encode())
 	return allMinersList, nil
 }
 

@@ -3,8 +3,9 @@ package feesc
 import (
 	"encoding/json"
 
-	"0chain.net/chaincore/smartcontractstate"
 	"0chain.net/core/datastore"
+	"0chain.net/core/encryption"
+	"0chain.net/core/util"
 )
 
 type globalNode struct {
@@ -12,15 +13,23 @@ type globalNode struct {
 	LastRound int64
 }
 
-func (gn *globalNode) encode() []byte {
+func (gn *globalNode) Encode() []byte {
 	buff, _ := json.Marshal(gn)
 	return buff
 }
 
-func (gn *globalNode) decode(input []byte) error {
+func (gn *globalNode) Decode(input []byte) error {
 	return json.Unmarshal(input, gn)
 }
 
-func (gn *globalNode) getKey() smartcontractstate.Key {
-	return smartcontractstate.Key("fee_sc" + Seperator + gn.ID)
+func (gn *globalNode) GetKey() datastore.Key {
+	return datastore.Key(gn.ID + gn.ID)
+}
+
+func (gn *globalNode) GetHash() string {
+	return util.ToHex(gn.GetHashBytes())
+}
+
+func (gn *globalNode) GetHashBytes() []byte {
+	return encryption.RawHash(gn.Encode())
 }
