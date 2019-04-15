@@ -12,9 +12,6 @@ import (
 func (sc *StorageSmartContract) getBlobbersList(balances c_state.StateContextI) (*StorageNodes, error) {
 	allBlobbersList := &StorageNodes{}
 	allBlobbersBytes, err := balances.GetTrieNode(ALL_BLOBBERS_KEY)
-	if err != nil {
-		return nil, common.NewError("getBlobbersList_failed", "Failed to retrieve existing blobbers list")
-	}
 	if allBlobbersBytes == nil {
 		return allBlobbersList, nil
 	}
@@ -60,9 +57,6 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction, in
 	}
 
 	lastBlobberClientReadBytes, err := balances.GetTrieNode(commitRead.GetKey(sc.ID))
-	if err != nil {
-		return "", common.NewError("rm_read_error", "Error reading the read marker for the blobber and client")
-	}
 	lastCommittedRM := &ReadConnection{}
 	if lastBlobberClientReadBytes != nil {
 		lastCommittedRM.Decode(lastBlobberClientReadBytes.Encode())
