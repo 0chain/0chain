@@ -121,7 +121,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction, inpu
 
 		balances.InsertTrieNode(allocationObj.GetKey(sc.ID), allocationObj)
 		balances.InsertTrieNode(blobberChallengeObj.GetKey(sc.ID), blobberChallengeObj)
-		//Logger.Info("Challenge passed", zap.Any("blobberChallengeObj", blobberChallengeObj), zap.Any("challenge", challengeResponse.ID))
+		Logger.Info("Challenge passed", zap.Any("challenge", challengeResponse.ID))
 		return "Challenge Passed by Blobber", nil
 	}
 
@@ -139,7 +139,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction, inpu
 
 		balances.InsertTrieNode(allocationObj.GetKey(sc.ID), allocationObj)
 		balances.InsertTrieNode(blobberChallengeObj.GetKey(sc.ID), blobberChallengeObj)
-		//Logger.Info("Challenge failed", zap.Any("blobberChallengeObj", blobberChallengeObj), zap.Any("challenge", challengeResponse.ID))
+		Logger.Info("Challenge failed", zap.Any("challenge", challengeResponse.ID))
 		return "Challenge Failed by Blobber", nil
 	}
 
