@@ -40,16 +40,17 @@ type Round struct {
 	// For generator, this is the block the miner is generating till a notraization is received
 	// For a verifier, this is the block that is currently the best block received for verification.
 	// Once a round is finalized, this is the finalized block of the given round
-	Block           *block.Block `json:"-"`
-	BlockHash       string       `json:"block_hash"`
-	VRFOutput       string       `json:"vrf_output"` //TODO: VRFOutput == rbooutput?
-	minerPerm       []int
-	state           int
-	proposedBlocks  []*block.Block
-	notarizedBlocks []*block.Block
-	Mutex           sync.RWMutex
-	shares          map[string]*VRFShare
-	TimeoutCount    int
+	Block            *block.Block `json:"-"`
+	BlockHash        string       `json:"block_hash"`
+	VRFOutput        string       `json:"vrf_output"` //TODO: VRFOutput == rbooutput?
+	minerPerm        []int
+	state            int
+	proposedBlocks   []*block.Block
+	notarizedBlocks  []*block.Block
+	Mutex            sync.RWMutex
+	shares           map[string]*VRFShare
+	TimeoutCount     int
+	SoftTimeoutCount int
 }
 
 //NewRound - Create a new round object
@@ -329,6 +330,7 @@ func (r *Round) Restart() {
 	r.initialize()
 	r.Block = nil
 	r.ResetState(RoundShareVRF)
+	r.SoftTimeoutCount = 0
 
 }
 

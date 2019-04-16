@@ -583,19 +583,50 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*bloc
 	return finalizedBlocks
 }
 
+// GetNextRoundTimeoutTime returns time in milliseconds
+func (mc *Chain) GetNextRoundTimeoutTime(ctx context.Context) int {
+
+	mnt := int(math.Ceil(mc.Miners.GetMedianNetworkTime() / 1000000))
+	tick := mc.RoundTimeoutSofttoMin * 5
+	if tick < mc.RoundTimeoutSofttoMult*mnt {
+		tick = mc.RoundTimeoutSofttoMult * mnt
+	}
+	Logger.Info("nextTimeout", zap.Int("tick", tick))
+	return tick
+}
+
+func (mc *Chain) HandleRoundTimeouts(ctx context.Context) {
+	r := mc.GetMinerRound(mc.CurrentRound)
+
+	if r.SoftTimeoutCount == mc.RoundRestartMult {
+		Logger.Info("triggering restartRound", zap.Int64("round", r.GetRoundNumber()))
+		mc.restartRound(ctx)
+	} else {
+		Logger.Info("triggering handleNoProgress", zap.Int64("round", r.GetRoundNumber()))
+		mc.handleNoProgress(ctx)
+		r.SoftTimeoutCount++
+	}
+}
+
 /*HandleRoundTimeout - handles the timeout of a round*/
 func (mc *Chain) HandleRoundTimeout(ctx context.Context, seconds int) {
 	if mc.CurrentRound == 0 {
 		return
 	}
+
 	sstime := int(math.Ceil(2 * chain.SteadyStateFinalizationTimer.Mean() / 1000000000))
-	if sstime == 0 {
+
+	if sstime == 0 || sstime > 2 {
 		sstime = 2
 	}
-	restartTime := int(math.Ceil(10 * chain.SteadyStateFinalizationTimer.Mean() / 1000000000))
-	if restartTime == 0 {
-		restartTime = 10
+	Logger.Info("sstime is set", zap.Int("sstime", sstime))
+
+	restartTime := int(math.Ceil(4 * chain.SteadyStateFinalizationTimer.Mean() / 1000000000))
+	if restartTime == 0 || restartTime > 6 {
+		restartTime = 6 //10
 	}
+
+	Logger.Info("Timeout  set", zap.Int("restart", restartTime), zap.Int("ssTime", sstime))
 	switch true {
 	case seconds%restartTime == sstime: // do something minor every (x mod 10 = 2 seconds)
 		mc.handleNoProgress(ctx)

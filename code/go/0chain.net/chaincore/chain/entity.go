@@ -198,6 +198,10 @@ func NewChainFromConfig() *Chain {
 	chain.MinActiveSharders = viper.GetInt("server_chain.block.sharding.min_active_sharders")
 	chain.MinActiveReplicators = viper.GetInt("server_chain.block.sharding.min_active_replicators")
 	chain.SmartContractTimeout = viper.GetDuration("server_chain.smart_contract.timeout") * time.Millisecond
+	chain.RoundTimeoutSofttoMin = viper.GetInt("server_chain.round_timeouts.softto_min")
+	chain.RoundTimeoutSofttoMult = viper.GetInt("server_chain.round_timeouts.softto_mult")
+	chain.RoundRestartMult = viper.GetInt("server_chain.round_timeouts.round_restart_mult")
+
 	return chain
 }
 

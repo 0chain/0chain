@@ -43,5 +43,9 @@ type Config struct {
 	MinActiveSharders    int `json:"min_active_sharders"`    // Minimum active sharders required to validate blocks
 	MinActiveReplicators int `json:"min_active_replicators"` // Minimum active replicators of a block that should be active to verify the block
 
-	SmartContractTimeout time.Duration `json:"smart_contract_timeout"` // time after which the smart contract execution will timeout
+	SmartContractTimeout   time.Duration `json:"smart_contract_timeout"` // time after which the smart contract execution will timeout
+	RoundTimeoutSofttoMin  int           `json:"softto_min"`             // minimum time for softtimeout to kick in milliseconds
+	RoundTimeoutSofttoMult int           `json:"softto_mult"`            // multiplier of mean network time for soft timeout
+	RoundRestartMult       int           `json:"round_restart_mult"`     // multiplier of soft timeouts to restart a round
+
 }
