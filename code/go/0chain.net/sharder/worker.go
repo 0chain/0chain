@@ -44,6 +44,7 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 func (sc *Chain) HealthCheckWorker(ctx context.Context) {
 	hr := sc.HealthyRound
 	val, err := sc.readHealthRound()
+	Logger.Info("bc-27 health round from file", zap.Int64("healthy round", val))
 	if err == nil && val > hr {
 		hr = val
 	}

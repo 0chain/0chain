@@ -1,9 +1,9 @@
 package roundstore
 
 import (
+	"encoding/binary"
 	"os"
 	"path/filepath"
-	"strconv"
 )
 
 type FSRoundStore struct {
@@ -20,20 +20,21 @@ func NewFSRoundStore(rootDir string) *FSRoundStore {
 }
 
 func (frs *FSRoundStore) getFile() string {
-	return frs.RootDirectory + string(os.PathSeparator) + frs.fileName + ".txt"
+	return frs.RootDirectory + string(os.PathSeparator) + frs.fileName + ".bin"
 }
 
 func (frs *FSRoundStore) Write(roundNum int64) error {
 	file := frs.getFile()
 	dir := filepath.Dir(file)
 	os.MkdirAll(dir, 0755)
-	data := string(roundNum)
+	data := make([]byte, 8)
+	binary.LittleEndian.PutUint64(data, uint64(roundNum))
 	f, err := os.OpenFile(file, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-	frs.bytes, err = f.WriteString(data)
+	frs.bytes, err = f.Write(data)
 	if err != nil {
 		return err
 	}
@@ -47,12 +48,11 @@ func (frs *FSRoundStore) Read() (int64, error) {
 		return 0, err
 	}
 	defer f.Close()
-	data := make([]byte, frs.bytes)
+	data := make([]byte, 8)
 	_, err = f.Read(data)
 	if err != nil {
 		return 0, err
 	}
-	var value int64
-	value, err = strconv.ParseInt(string(data), 10, 64)
+	value := int64(binary.LittleEndian.Uint64(data))
 	return value, nil
 }
