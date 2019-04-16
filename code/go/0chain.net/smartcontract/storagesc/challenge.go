@@ -107,7 +107,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction, inpu
 		}
 	}
 
-	if numSuccess > (len(challengeRequest.Validators.Nodes) / 2) {
+	if numSuccess > (len(challengeRequest.Validators) / 2) {
 		//challengeRequest.Response = &challengeResponse
 		//delete(blobberChallengeObj.ChallengeMap, challengeResponse.ID)
 		sc.completeChallengeForBlobber(blobberChallengeObj, challengeRequest, &challengeResponse)
@@ -125,7 +125,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction, inpu
 		return "Challenge Passed by Blobber", nil
 	}
 
-	if numFailure > (len(challengeRequest.Validators.Nodes) / 2) {
+	if numFailure > (len(challengeRequest.Validators) / 2) {
 		sc.completeChallengeForBlobber(blobberChallengeObj, challengeRequest, &challengeResponse)
 		//delete(blobberChallengeObj.ChallengeMap, challengeResponse.ID)
 		//challengeRequest.Response = &challengeResponse
@@ -198,7 +198,7 @@ func (sc *StorageSmartContract) addChallenge(t *transaction.Transaction, b *bloc
 	randIdx := rand.Int63n(int64(len(allocationObj.Blobbers)))
 	Logger.Info("Challenge blobber selected.", zap.Any("challenge", t.Hash), zap.Any("selected_blobber", allocationObj.Blobbers[randIdx]), zap.Any("blobbers", allocationObj.Blobbers), zap.Any("random_index", randIdx), zap.Any("seed", b.RoundRandomSeed))
 
-	storageChallenge.Validators = validatorList
+	storageChallenge.Validators = validatorList.Nodes
 	storageChallenge.Blobber = allocationObj.Blobbers[randIdx]
 	storageChallenge.RandomNumber = b.RoundRandomSeed
 	storageChallenge.AllocationID = allocationObj.ID

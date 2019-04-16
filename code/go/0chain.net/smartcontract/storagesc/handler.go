@@ -45,6 +45,7 @@ func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, param
 	blobberID := params.Get("blobber")
 	blobberChallengeObj := &BlobberChallenge{}
 	blobberChallengeObj.BlobberID = blobberID
+	blobberChallengeObj.Challenges = make([]*StorageChallenge, 0)
 
 	blobberChallengeBytes, err := balances.GetTrieNode(blobberChallengeObj.GetKey(ssc.ID))
 	if err != nil {

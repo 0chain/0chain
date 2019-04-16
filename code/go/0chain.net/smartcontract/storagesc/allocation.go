@@ -32,11 +32,11 @@ func (sc *StorageSmartContract) getAllAllocationsList(balances c_state.StateCont
 	if allocationListBytes == nil {
 		return allocationList, nil
 	}
-	err = json.Unmarshal(allocationListBytes.Encode(), &allocationList)
+	err = json.Unmarshal(allocationListBytes.Encode(), allocationList)
 	if err != nil {
 		return nil, common.NewError("getAllAllocationsList_failed", "Failed to retrieve existing allocations list")
 	}
-	sort.SliceStable(allocationList, func(i, j int) bool {
+	sort.SliceStable(allocationList.List, func(i, j int) bool {
 		return allocationList.List[i] < allocationList.List[j]
 	})
 	return allocationList, nil

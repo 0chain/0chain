@@ -15,7 +15,7 @@ func (sc *StorageSmartContract) getBlobbersList(balances c_state.StateContextI) 
 	if allBlobbersBytes == nil {
 		return allBlobbersList, nil
 	}
-	err = json.Unmarshal(allBlobbersBytes.Encode(), &allBlobbersList)
+	err = json.Unmarshal(allBlobbersBytes.Encode(), allBlobbersList)
 	if err != nil {
 		return nil, common.NewError("getBlobbersList_failed", "Failed to retrieve existing blobbers list")
 	}

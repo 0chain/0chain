@@ -130,7 +130,7 @@ func (sn *BlobberChallenge) addChallenge(challenge *StorageChallenge) bool {
 type StorageChallenge struct {
 	Created        common.Timestamp   `json:"created"`
 	ID             string             `json:"id"`
-	Validators     *ValidatorNodes    `json:"validators"`
+	Validators     []*ValidationNode  `json:"validators"`
 	RandomNumber   int64              `json:"seed"`
 	AllocationID   string             `json:"allocation_id"`
 	Blobber        *StorageNode       `json:"blobber"`

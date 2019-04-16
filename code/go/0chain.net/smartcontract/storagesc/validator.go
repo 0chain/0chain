@@ -15,7 +15,7 @@ func (sc *StorageSmartContract) getValidatorsList(balances c_state.StateContextI
 	if allValidatorsBytes == nil {
 		return allValidatorsList, nil
 	}
-	err = json.Unmarshal(allValidatorsBytes.Encode(), &allValidatorsList)
+	err = json.Unmarshal(allValidatorsBytes.Encode(), allValidatorsList)
 	if err != nil {
 		return nil, common.NewError("getValidatorsList_failed", "Failed to retrieve existing validators list")
 	}
