@@ -36,17 +36,17 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 	var nr = round.NewRound(r.GetRoundNumber() + 1)
 	mr := mc.CreateRound(nr)
 	er := mc.AddRound(mr)
-	if  er != mr {
-		Logger.Info("StartNextRound found nextround ready. No VRFs Sent", 
+	if er != mr {
+		Logger.Info("StartNextRound found nextround ready. No VRFs Sent",
 			zap.Int64("er_round", er.GetRoundNumber()))
 		return er.(*Round)
 	}
 	if r.HasRandomSeed() {
 		mc.addMyVRFShare(ctx, r, mr)
 	} else {
-		Logger.Info("StartNextRound no VRFs sent -current round has no randomseed", 
+		Logger.Info("StartNextRound no VRFs sent -current round has no randomseed",
 			zap.Int64("rrs", r.GetRandomSeed()), zap.Int64("r_round", r.GetRoundNumber()))
-		
+
 	}
 	return mr
 }
@@ -632,16 +632,16 @@ func (mc *Chain) restartRound(ctx context.Context) {
 			mc.BroadcastNotarizedBlocks(ctx, r)
 			Logger.Info("StartNextRound after sending notarized block in restartRound.", zap.Int64("current_round", r.GetRoundNumber()))
 			nr := mc.StartNextRound(ctx, r)
-			/* 
+			/*
 				if the next round object already exists, StartNextRound does not send VRFs.
 				So to be sure send it.
 			*/
 			if r.HasRandomSeed() {
-				mc.addMyVRFShare(ctx, r, nr)			
+				mc.addMyVRFShare(ctx, r, nr)
 				return
 			} else {
 				Logger.Error("Has notarized block in restartRound, but no randomseed.", zap.Int64("current_round", r.GetRoundNumber()))
-			
+
 			}
 		}
 		pr := mc.GetMinerRound(r.GetRoundNumber() - 1)
@@ -649,7 +649,7 @@ func (mc *Chain) restartRound(ctx context.Context) {
 			mc.BroadcastNotarizedBlocks(ctx, pr)
 		}
 	}
-	
+
 	r.Restart()
 	if r.vrfShare != nil {
 		//TODO: send same vrf again?
@@ -664,6 +664,7 @@ func startProtocol() {
 		return
 	}
 	ctx := common.GetRootContext()
+	mc.waitForActiveSharders(ctx)
 	mc.Sharders.OneTimeStatusMonitor(ctx)
 	lfb := getLatestBlockFromSharders(ctx)
 	var mr *Round
@@ -680,4 +681,18 @@ func startProtocol() {
 	}
 	Logger.Info("starting the blockchain ...", zap.Int64("round", mr.GetRoundNumber()))
 	mc.StartNextRound(ctx, mr)
+}
+
+func (mc *Chain) waitForActiveSharders(ctx context.Context) {
+	ticker := time.NewTicker(5 * chain.DELTA)
+	defer ticker.Stop()
+
+	for ts := range ticker.C {
+		if mc.CanShardBlocks() {
+			break
+		} else {
+			Logger.Info("Waiting for Sharders.", zap.Time("ts", ts))
+		}
+	}
+
 }
