@@ -731,4 +731,6 @@ func startProtocol() {
 	}
 	Logger.Info("starting the blockchain ...", zap.Int64("round", mr.GetRoundNumber()))
 	mc.StartNextRound(ctx, mr)
+	//Just started the first round. It is time to start the timeout monitor
+	go mc.RoundWorker(ctx)
 }
