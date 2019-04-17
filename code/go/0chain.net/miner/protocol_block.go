@@ -31,11 +31,13 @@ const InsufficientTxns = "insufficient_txns"
 var bgTimer metrics.Timer
 var bpTimer metrics.Timer
 var btvTimer metrics.Timer
+var bsHistogram metrics.Histogram
 
 func init() {
 	bgTimer = metrics.GetOrRegisterTimer("bg_time", nil)
 	bpTimer = metrics.GetOrRegisterTimer("bv_time", nil)
 	btvTimer = metrics.GetOrRegisterTimer("btv_time", nil)
+	bsHistogram = metrics.GetOrRegisterHistogram("bs_histogram", nil, metrics.NewUniformSample(1024))
 }
 
 /*GenerateBlock - This works on generating a block
@@ -234,6 +236,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		zap.Float64("p_chain_weight", b.PrevBlock.ChainWeight), zap.Int32("iteration_count", count))
 	mc.StateSanityCheck(ctx, b)
 	go b.ComputeTxnMap()
+	bsHistogram.Update(int64(len(b.Txns)))
 	return nil
 }
 

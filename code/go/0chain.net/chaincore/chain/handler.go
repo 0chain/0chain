@@ -280,7 +280,7 @@ func (c *Chain) infraHealthInATable(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</tr>")
 	fmt.Fprintf(w, "<tr class='active'>")
 	fmt.Fprintf(w, "<td>")
-	fmt.Fprintf(w, "Global State missing nodes")
+	fmt.Fprintf(w, "State missing nodes")
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "<td class='number'>")
 	ps := c.GetPruneStats()
@@ -357,6 +357,7 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	if node.Self.Type == node.NodeTypeMiner && config.Development() {
 		fmt.Fprintf(w, "<li><a href='/_diagnostics/wallet_stats'>/_diagnostics/wallet_stats</a>")
 	}
+	fmt.Fprintf(w, "<li><a href='/_smart_contract_stats'>/_smart_contract_stats</a></li>")
 	fmt.Fprintf(w, "</td>")
 
 	fmt.Fprintf(w, "<td valign='top'>")

@@ -38,13 +38,14 @@ func TransactionGenerator(c *chain.Chain) {
 	viper.SetDefault("development.txn_generation.pour_amount", 10000)
 	pourAmount = viper.GetInt64("development.txn_generation.pour_amount")
 
-	viper.SetDefault("development.txn_generation.wallets", 1000)
 	var numClients = viper.GetInt("development.txn_generation.wallets")
 	var numTxns int32
 
 	GenerateClients(c, numClients)
 	numWorkers := 1
-	blockSize := c.BlockSize
+
+	viper.SetDefault("development.txn_generation.max_transactions", c.BlockSize)
+	blockSize := viper.GetInt32("development.txn_generation.max_transactions")
 
 	switch {
 	case blockSize <= 10:

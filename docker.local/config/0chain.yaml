@@ -9,10 +9,10 @@ logging:
 development:
   state: true
   dkg: true
-  smart_contract: false
+  smart_contract: true
   txn_fee: false
   txn_generation:
-    wallets: 500
+    wallets: 10
     transactions: 70
     pour_point: 100
     pour_amount: 10000

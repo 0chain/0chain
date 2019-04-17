@@ -4,22 +4,23 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"0chain.net/chaincore/smartcontractstate"
 	"0chain.net/core/common"
+	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/core/util"
 )
 
-var ALL_BLOBBERS_KEY = smartcontractstate.Key("all_blobbers")
-var ALL_VALIDATORS_KEY = smartcontractstate.Key("all_validators")
-var ALL_ALLOCATIONS_KEY = smartcontractstate.Key("all_allocations")
+var ALL_BLOBBERS_KEY = datastore.Key(ADDRESS + encryption.Hash("all_blobbers"))
+var ALL_VALIDATORS_KEY = datastore.Key(ADDRESS + encryption.Hash("all_validators"))
+var ALL_ALLOCATIONS_KEY = datastore.Key(ADDRESS + encryption.Hash("all_allocations"))
 
 type ClientAllocation struct {
-	ClientID    string   `json:"client_id"`
-	Allocations []string `json:"allocations"`
+	ClientID    string       `json:"client_id"`
+	Allocations *Allocations `json:"allocations"`
 }
 
-func (sn *ClientAllocation) GetKey() smartcontractstate.Key {
-	return smartcontractstate.Key("client:" + sn.ClientID)
+func (sn *ClientAllocation) GetKey(globalKey string) datastore.Key {
+	return datastore.Key(globalKey + sn.ClientID)
 }
 
 func (sn *ClientAllocation) Encode() []byte {
@@ -35,6 +36,43 @@ func (sn *ClientAllocation) Decode(input []byte) error {
 	return nil
 }
 
+func (sn *ClientAllocation) GetHash() string {
+	return util.ToHex(sn.GetHashBytes())
+}
+
+func (sn *ClientAllocation) GetHashBytes() []byte {
+	return encryption.RawHash(sn.Encode())
+}
+
+type Allocations struct {
+	List []string
+}
+
+// func (an *Allocations) Get(idx int) string {
+// 	return an[idx]
+// }
+
+func (an *Allocations) Encode() []byte {
+	buff, _ := json.Marshal(an)
+	return buff
+}
+
+func (an *Allocations) Decode(input []byte) error {
+	err := json.Unmarshal(input, an)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (an *Allocations) GetHash() string {
+	return util.ToHex(an.GetHashBytes())
+}
+
+func (an *Allocations) GetHashBytes() []byte {
+	return encryption.RawHash(an.Encode())
+}
+
 type ChallengeResponse struct {
 	ID                string              `json:"challenge_id"`
 	ValidationTickets []*ValidationTicket `json:"validation_tickets"`
@@ -47,13 +85,21 @@ type BlobberChallenge struct {
 	LatestCompletedChallenges []*StorageChallenge          `json:"lastest_completed_challenges"`
 }
 
-func (sn *BlobberChallenge) GetKey() smartcontractstate.Key {
-	return smartcontractstate.Key("blobber_challenge:" + sn.BlobberID)
+func (sn *BlobberChallenge) GetKey(globalKey string) datastore.Key {
+	return datastore.Key(globalKey + sn.BlobberID)
 }
 
 func (sn *BlobberChallenge) Encode() []byte {
 	buff, _ := json.Marshal(sn)
 	return buff
+}
+
+func (sn *BlobberChallenge) GetHash() string {
+	return util.ToHex(sn.GetHashBytes())
+}
+
+func (sn *BlobberChallenge) GetHashBytes() []byte {
+	return encryption.RawHash(sn.Encode())
 }
 
 func (sn *BlobberChallenge) Decode(input []byte) error {
@@ -68,19 +114,23 @@ func (sn *BlobberChallenge) Decode(input []byte) error {
 	return nil
 }
 
-func (sn *BlobberChallenge) addChallenge(challenge *StorageChallenge) {
+func (sn *BlobberChallenge) addChallenge(challenge *StorageChallenge) bool {
 	if sn.Challenges == nil {
 		sn.Challenges = make([]*StorageChallenge, 0)
 		sn.ChallengeMap = make(map[string]*StorageChallenge)
 	}
-	sn.Challenges = append(sn.Challenges, challenge)
-	sn.ChallengeMap[challenge.ID] = challenge
+	if _, ok := sn.ChallengeMap[challenge.ID]; !ok {
+		sn.Challenges = append(sn.Challenges, challenge)
+		sn.ChallengeMap[challenge.ID] = challenge
+		return true
+	}
+	return false
 }
 
 type StorageChallenge struct {
 	Created        common.Timestamp   `json:"created"`
 	ID             string             `json:"id"`
-	Validators     []ValidationNode   `json:"validators"`
+	Validators     []*ValidationNode  `json:"validators"`
 	RandomNumber   int64              `json:"seed"`
 	AllocationID   string             `json:"allocation_id"`
 	Blobber        *StorageNode       `json:"blobber"`
@@ -94,8 +144,8 @@ type ValidationNode struct {
 	PublicKey string `json:"-"`
 }
 
-func (sn *ValidationNode) GetKey() smartcontractstate.Key {
-	return smartcontractstate.Key("validator:" + sn.ID)
+func (sn *ValidationNode) GetKey(globalKey string) datastore.Key {
+	return datastore.Key(globalKey + sn.ID)
 }
 
 func (sn *ValidationNode) Encode() []byte {
@@ -111,14 +161,47 @@ func (sn *ValidationNode) Decode(input []byte) error {
 	return nil
 }
 
+func (sn *ValidationNode) GetHash() string {
+	return util.ToHex(sn.GetHashBytes())
+}
+
+func (sn *ValidationNode) GetHashBytes() []byte {
+	return encryption.RawHash(sn.Encode())
+}
+
+type ValidatorNodes struct {
+	Nodes []*ValidationNode
+}
+
+func (sn *ValidatorNodes) Encode() []byte {
+	buff, _ := json.Marshal(sn)
+	return buff
+}
+
+func (sn *ValidatorNodes) Decode(input []byte) error {
+	err := json.Unmarshal(input, sn)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (sn *ValidatorNodes) GetHash() string {
+	return util.ToHex(sn.GetHashBytes())
+}
+
+func (sn *ValidatorNodes) GetHashBytes() []byte {
+	return encryption.RawHash(sn.Encode())
+}
+
 type StorageNode struct {
 	ID        string `json:"id"`
 	BaseURL   string `json:"url"`
 	PublicKey string `json:"-"`
 }
 
-func (sn *StorageNode) GetKey() smartcontractstate.Key {
-	return smartcontractstate.Key("blobber:" + sn.ID)
+func (sn *StorageNode) GetKey(globalKey string) datastore.Key {
+	return datastore.Key(globalKey + sn.ID)
 }
 
 func (sn *StorageNode) Encode() []byte {
@@ -132,6 +215,31 @@ func (sn *StorageNode) Decode(input []byte) error {
 		return err
 	}
 	return nil
+}
+
+type StorageNodes struct {
+	Nodes []*StorageNode
+}
+
+func (sn *StorageNodes) Decode(input []byte) error {
+	err := json.Unmarshal(input, sn)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (sn *StorageNodes) Encode() []byte {
+	buff, _ := json.Marshal(sn)
+	return buff
+}
+
+func (sn *StorageNodes) GetHash() string {
+	return util.ToHex(sn.GetHashBytes())
+}
+
+func (sn *StorageNodes) GetHashBytes() []byte {
+	return encryption.RawHash(sn.Encode())
 }
 
 type StorageAllocationStats struct {
@@ -164,12 +272,12 @@ type StorageAllocation struct {
 	Owner          string                        `json:"owner_id"`
 	OwnerPublicKey string                        `json:"owner_public_key"`
 	Stats          *StorageAllocationStats       `json:"stats"`
-	BlobberDetails []*BlobberAllocation          `json:blobber_details`
+	BlobberDetails []*BlobberAllocation          `json:"blobber_details"`
 	BlobberMap     map[string]*BlobberAllocation `json:"-"`
 }
 
-func (sn *StorageAllocation) GetKey() smartcontractstate.Key {
-	return smartcontractstate.Key("allocation:" + sn.ID)
+func (sn *StorageAllocation) GetKey(globalKey string) datastore.Key {
+	return datastore.Key(globalKey + sn.ID)
 }
 
 func (sn *StorageAllocation) Decode(input []byte) error {
@@ -264,8 +372,8 @@ type ReadConnection struct {
 	ReadMarker *ReadMarker `json:"read_marker"`
 }
 
-func (rc *ReadConnection) GetKey() smartcontractstate.Key {
-	return smartcontractstate.Key("rm:" + encryption.Hash(rc.ReadMarker.BlobberID+":"+rc.ReadMarker.ClientID))
+func (rc *ReadConnection) GetKey(globalKey string) datastore.Key {
+	return datastore.Key(globalKey + encryption.Hash(rc.ReadMarker.BlobberID+":"+rc.ReadMarker.ClientID))
 }
 
 func (rc *ReadConnection) Decode(input []byte) error {
@@ -274,6 +382,19 @@ func (rc *ReadConnection) Decode(input []byte) error {
 		return err
 	}
 	return nil
+}
+
+func (rc *ReadConnection) Encode() []byte {
+	buff, _ := json.Marshal(rc)
+	return buff
+}
+
+func (rc *ReadConnection) GetHash() string {
+	return util.ToHex(rc.GetHashBytes())
+}
+
+func (rc *ReadConnection) GetHashBytes() []byte {
+	return encryption.RawHash(rc.Encode())
 }
 
 type ReadMarker struct {

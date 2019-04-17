@@ -3,9 +3,11 @@ package zrc20sc
 import (
 	"encoding/json"
 
-	"0chain.net/chaincore/smartcontractstate"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
+	"0chain.net/core/datastore"
+	"0chain.net/core/encryption"
+	"0chain.net/core/util"
 )
 
 type tokenNode struct {
@@ -14,18 +16,26 @@ type tokenNode struct {
 	Available   state.Balance `json:"available"`
 }
 
-func (tn *tokenNode) encode() []byte {
+func (tn *tokenNode) Encode() []byte {
 	buff, _ := json.Marshal(tn)
 	return buff
 }
 
-func (tn *tokenNode) decode(input []byte) error {
+func (tn *tokenNode) Decode(input []byte) error {
 	err := json.Unmarshal(input, tn)
 	return err
 }
 
-func (tn *tokenNode) getKey() smartcontractstate.Key {
-	return smartcontractstate.Key("zrc20_contract_token_info:" + tn.TokenName)
+func (tn *tokenNode) GetHash() string {
+	return util.ToHex(tn.GetHashBytes())
+}
+
+func (tn *tokenNode) GetHashBytes() []byte {
+	return encryption.RawHash(tn.Encode())
+}
+
+func (tn *tokenNode) getKey(globalKey string) datastore.Key {
+	return datastore.Key(globalKey + tn.TokenName)
 }
 
 func (tn *tokenNode) validate() bool {
