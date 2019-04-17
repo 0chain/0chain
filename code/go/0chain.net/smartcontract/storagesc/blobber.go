@@ -4,78 +4,73 @@ import (
 	"encoding/json"
 	"sort"
 
+	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 )
 
-func (sc *StorageSmartContract) getBlobbersList() ([]StorageNode, error) {
-	var allBlobbersList = make([]StorageNode, 0)
-	allBlobbersBytes, err := sc.DB.GetNode(ALL_BLOBBERS_KEY)
-	if err != nil {
-		return nil, common.NewError("getBlobbersList_failed", "Failed to retrieve existing blobbers list")
-	}
+func (sc *StorageSmartContract) getBlobbersList(balances c_state.StateContextI) (*StorageNodes, error) {
+	allBlobbersList := &StorageNodes{}
+	allBlobbersBytes, err := balances.GetTrieNode(ALL_BLOBBERS_KEY)
 	if allBlobbersBytes == nil {
 		return allBlobbersList, nil
 	}
-	err = json.Unmarshal(allBlobbersBytes, &allBlobbersList)
+	err = json.Unmarshal(allBlobbersBytes.Encode(), allBlobbersList)
 	if err != nil {
 		return nil, common.NewError("getBlobbersList_failed", "Failed to retrieve existing blobbers list")
 	}
-	sort.SliceStable(allBlobbersList, func(i, j int) bool {
-		return allBlobbersList[i].ID < allBlobbersList[j].ID
+	sort.SliceStable(allBlobbersList.Nodes, func(i, j int) bool {
+		return allBlobbersList.Nodes[i].ID < allBlobbersList.Nodes[j].ID
 	})
 	return allBlobbersList, nil
 }
 
-func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction, input []byte) (string, error) {
-	allBlobbersList, err := sc.getBlobbersList()
+func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction, input []byte, balances c_state.StateContextI) (string, error) {
+	allBlobbersList, err := sc.getBlobbersList(balances)
 	if err != nil {
 		return "", common.NewError("add_blobber_failed", "Failed to get blobber list"+err.Error())
 	}
-	var newBlobber StorageNode
+	newBlobber := &StorageNode{}
 	err = newBlobber.Decode(input) //json.Unmarshal(input, &newBlobber)
 	if err != nil {
 		return "", err
 	}
 	newBlobber.ID = t.ClientID
 	newBlobber.PublicKey = t.PublicKey
-	blobberBytes, _ := sc.DB.GetNode(newBlobber.GetKey())
+	blobberBytes, _ := balances.GetTrieNode(newBlobber.GetKey(sc.ID))
 	if blobberBytes == nil {
-		allBlobbersList = append(allBlobbersList, newBlobber)
-		allBlobbersBytes, _ := json.Marshal(allBlobbersList)
-		sc.DB.PutNode(ALL_BLOBBERS_KEY, allBlobbersBytes)
-		sc.DB.PutNode(newBlobber.GetKey(), newBlobber.Encode())
+		allBlobbersList.Nodes = append(allBlobbersList.Nodes, newBlobber)
+		// allBlobbersBytes, _ := json.Marshal(allBlobbersList)
+		balances.InsertTrieNode(ALL_BLOBBERS_KEY, allBlobbersList)
+		balances.InsertTrieNode(newBlobber.GetKey(sc.ID), newBlobber)
 	}
 
 	buff := newBlobber.Encode()
 	return string(buff), nil
 }
 
-func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction, input []byte) (string, error) {
-	var commitRead ReadConnection
+func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction, input []byte, balances c_state.StateContextI) (string, error) {
+	commitRead := &ReadConnection{}
 	err := commitRead.Decode(input)
 	if err != nil {
 		return "", err
 	}
 
-	lastBlobberClientReadBytes, err := sc.DB.GetNode(commitRead.GetKey())
-	if err != nil {
-		return "", common.NewError("rm_read_error", "Error reading the read marker for the blobber and client")
-	}
+	lastBlobberClientReadBytes, err := balances.GetTrieNode(commitRead.GetKey(sc.ID))
 	lastCommittedRM := &ReadConnection{}
 	if lastBlobberClientReadBytes != nil {
-		lastCommittedRM.Decode(lastBlobberClientReadBytes)
+		lastCommittedRM.Decode(lastBlobberClientReadBytes.Encode())
 	}
 
 	err = commitRead.ReadMarker.Verify(lastCommittedRM.ReadMarker)
 	if err != nil {
 		return "", common.NewError("invalid_read_marker", "Invalid read marker."+err.Error())
 	}
-	sc.DB.PutNode(commitRead.GetKey(), input)
+	balances.InsertTrieNode(commitRead.GetKey(sc.ID), commitRead)
 	return "success", nil
 }
 
-func (sc *StorageSmartContract) commitBlobberConnection(t *transaction.Transaction, input []byte) (string, error) {
+func (sc *StorageSmartContract) commitBlobberConnection(t *transaction.Transaction, input []byte, balances c_state.StateContextI) (string, error) {
 	var commitConnection BlobberCloseConnection
 	err := json.Unmarshal(input, &commitConnection)
 	if err != nil {
@@ -92,13 +87,13 @@ func (sc *StorageSmartContract) commitBlobberConnection(t *transaction.Transacti
 
 	allocationObj := &StorageAllocation{}
 	allocationObj.ID = commitConnection.WriteMarker.AllocationID
-	allocationBytes, err := sc.DB.GetNode(allocationObj.GetKey())
+	allocationBytes, err := balances.GetTrieNode(allocationObj.GetKey(sc.ID))
 
 	if allocationBytes == nil || err != nil {
 		return "", common.NewError("invalid_parameters", "Invalid allocation ID")
 	}
 
-	err = allocationObj.Decode(allocationBytes)
+	err = allocationObj.Decode(allocationBytes.Encode())
 	if allocationBytes == nil || err != nil {
 		return "", common.NewError("invalid_parameters", "Invalid allocation ID. Failed to decode from DB")
 	}
@@ -137,7 +132,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(t *transaction.Transacti
 
 	allocationObj.Stats.UsedSize += commitConnection.WriteMarker.Size
 	allocationObj.Stats.NumWrites++
-	sc.DB.PutNode(allocationObj.GetKey(), allocationObj.Encode())
+	balances.InsertTrieNode(allocationObj.GetKey(sc.ID), allocationObj)
 
 	blobberAllocationBytes, err = json.Marshal(blobberAllocation.LastWriteMarker)
 	return string(blobberAllocationBytes), err

@@ -9,12 +9,15 @@ import (
 	"regexp"
 	"strings"
 
+	bcstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontract"
 	sci "0chain.net/chaincore/smartcontractinterface"
 
-	"0chain.net/chaincore/smartcontractstate"
+	"0chain.net/chaincore/transaction"
+	// "0chain.net/smartcontract/faucetsc"
 
 	"0chain.net/core/common"
+	"0chain.net/core/util"
 )
 
 /*SetupStateHandlers - setup handlers to manage state */
@@ -38,10 +41,11 @@ func (c *Chain) GetSCRestOutput(ctx context.Context, r *http.Request) (interface
 	scAddress := pathParams[1]
 	scRestPath := "/" + pathParams[2]
 
-	mndb := smartcontractstate.NewMemorySCDB()
-	ndb := smartcontractstate.NewPipedSCDB(mndb, c.scStateDB, false)
-
-	resp, err := smartcontract.ExecuteRestAPI(ctx, scAddress, scRestPath, r.URL.Query(), ndb)
+	lfb := c.LatestFinalizedBlock
+	clientState := createTxnMPT(lfb.ClientState) // begin transaction
+	txn := &transaction.Transaction{}
+	sctx := bcstate.NewStateContext(lfb, clientState, c.clientStateDeserializer, txn, c.GetBlockSharders)
+	resp, err := smartcontract.ExecuteRestAPI(ctx, scAddress, scRestPath, r.URL.Query(), sctx)
 
 	if err != nil {
 		return nil, err
@@ -53,9 +57,14 @@ func (c *Chain) GetSCRestOutput(ctx context.Context, r *http.Request) (interface
 func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interface{}, error) {
 	scAddress := r.FormValue("sc_address")
 	key := r.FormValue("key")
-	pdb := c.scStateDB
-	scState := smartcontractstate.NewSCState(pdb, scAddress)
-	node, err := scState.GetNode(smartcontractstate.Key(key))
+	lfb := c.LatestFinalizedBlock
+	if lfb == nil {
+		return nil, common.NewError("failed to get sc state", "finalized block doesn't exist")
+	}
+	if lfb.ClientState == nil {
+		return nil, common.NewError("failed to get sc state", "finalized block's state doesn't exist")
+	}
+	node, err := lfb.ClientState.GetNodeValue(util.Path(scAddress + key))
 	if err != nil {
 		return nil, err
 	}
@@ -63,11 +72,12 @@ func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interf
 		return nil, common.NewError("key_not_found", "key was not found")
 	}
 	var retObj interface{}
-	err = json.Unmarshal(node, &retObj)
+	err = json.Unmarshal(node.Encode(), &retObj)
 	if err != nil {
 		return nil, err
 	}
 	return retObj, nil
+	return nil, nil
 }
 
 /*GetBalanceHandler - get the balance of a client */
@@ -94,11 +104,9 @@ func (c *Chain) GetSCStats(w http.ResponseWriter, r *http.Request) {
 	ctx := common.GetRootContext()
 	scAddress := pathParams[1]
 
-	mndb := smartcontractstate.NewMemorySCDB()
-	ndb := smartcontractstate.NewPipedSCDB(mndb, c.scStateDB, false)
 	w.Header().Set("Content-Type", "text/html")
 	PrintCSS(w)
-	smartcontract.ExecuteStats(ctx, scAddress, r.URL.Query(), ndb, w)
+	smartcontract.ExecuteStats(ctx, scAddress, r.URL.Query(), w)
 }
 
 func (c *Chain) SCStats(w http.ResponseWriter, r *http.Request) {
@@ -125,12 +133,13 @@ func (c *Chain) GetSCRestPoints(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	PrintCSS(w)
-	sc := sci.NewSC(nil, key)
+	sc := sci.NewSC(key)
 	scInt.SetSC(sc, nil)
 	fmt.Fprintf(w, `<!DOCTYPE html><html><body><table class='menu' style='border-collapse: collapse;'>`)
 	fmt.Fprintf(w, `<tr class='header'><td>Function</td><td>Link</td></tr>`)
 	for funcName := range scInt.GetRestPoints() {
 		fmt.Fprintf(w, `<tr><td>%v</td><td><li><a href='%v'>%v</a></li></td></tr>`, funcName, "/v1/screst/"+key+funcName, "/v1/screst/*"+funcName+"*")
 	}
+
 	fmt.Fprintf(w, `</table></body></html>`)
 }

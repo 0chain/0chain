@@ -78,25 +78,26 @@ func (fsc *FeeSmartContract) payFees(t *transaction.Transaction, inputData []byt
 		}
 	}
 	gn.LastRound = block.Round
-	fsc.DB.PutNode(gn.getKey(), gn.encode())
+	_, err := balances.InsertTrieNode(gn.GetKey(), gn)
+	if err != nil {
+		return "", err
+	}
 	fsc.sumFee(block, true)
 	return resp, nil
 }
 
-func (fsc *FeeSmartContract) getGlobalNode() *globalNode {
-	gn := &globalNode{ID: ADDRESS}
-	globalBytes, err := fsc.DB.GetNode(gn.getKey())
-	if err == nil {
-		err = gn.decode(globalBytes)
-		if err == nil {
-			return gn
-		}
+func (fsc *FeeSmartContract) getGlobalNode(balances c_state.StateContextI) (*globalNode, error) {
+	gn := &globalNode{ID: fsc.ID}
+	gv, err := balances.GetTrieNode(gn.GetKey())
+	if err != nil {
+		return gn, err
 	}
-	return gn
+	gn.Decode(gv.Encode())
+	return gn, err
 }
 
 func (fsc *FeeSmartContract) Execute(t *transaction.Transaction, funcName string, inputData []byte, balances c_state.StateContextI) (string, error) {
-	gn := fsc.getGlobalNode()
+	gn, _ := fsc.getGlobalNode(balances)
 	switch funcName {
 	case "payFees":
 		return fsc.payFees(t, inputData, gn, balances)

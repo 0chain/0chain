@@ -7,17 +7,18 @@ import (
 	// "encoding/json"
 	"net/url"
 
+	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"
 )
 
-func (fc *FaucetSmartContract) personalPeriodicLimit(ctx context.Context, params url.Values) (interface{}, error) {
-	un, err := fc.getUserNode(params.Get("client_id"))
-	if err != nil {
-		return nil, common.NewError("failed to get limits", "client does not exist")
-	}
-	gn, err := fc.getGlobalNode()
+func (fc *FaucetSmartContract) personalPeriodicLimit(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
+	gn, err := fc.getGlobalNode(balances)
 	if err != nil {
 		return nil, common.NewError("failed to get limits", "global node does not exist")
+	}
+	un, err := fc.getUserNode(params.Get("client_id"), gn.ID, balances)
+	if err != nil {
+		return nil, common.NewError("failed to get limits", "client does not exist")
 	}
 	var resp periodicResponse
 	resp.Start = un.StartTime
@@ -31,9 +32,9 @@ func (fc *FaucetSmartContract) personalPeriodicLimit(ctx context.Context, params
 	return string(resp.encode()), nil
 }
 
-func (fc *FaucetSmartContract) globalPerodicLimit(ctx context.Context, params url.Values) (interface{}, error) {
-	gn, err := fc.getGlobalNode()
-	if err != nil {
+func (fc *FaucetSmartContract) globalPerodicLimit(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
+	gn, err := fc.getGlobalNode(balances)
+	if err != nil || gn == nil {
 		return nil, common.NewError("failed to get limits", "global node does not exist")
 	}
 	var resp periodicResponse
@@ -48,8 +49,8 @@ func (fc *FaucetSmartContract) globalPerodicLimit(ctx context.Context, params ur
 	return string(resp.encode()), nil
 }
 
-func (fc *FaucetSmartContract) pourAmount(ctx context.Context, params url.Values) (interface{}, error) {
-	gn, err := fc.getGlobalNode()
+func (fc *FaucetSmartContract) pourAmount(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
+	gn, err := fc.getGlobalNode(balances)
 	if err != nil {
 		return nil, common.NewError("failed to get limits", "global node does not exist")
 	}

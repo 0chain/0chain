@@ -6,25 +6,23 @@ import (
 	"net/url"
 
 	c_state "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/smartcontractstate"
 	"0chain.net/chaincore/transaction"
 )
 
 const Seperator = ":"
 
-type SmartContractRestHandler func(ctx context.Context, params url.Values) (interface{}, error)
+type SmartContractRestHandler func(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error)
 
 type SmartContract struct {
-	DB                          smartcontractstate.SCStateI
 	ID                          string
 	RestHandlers                map[string]SmartContractRestHandler
 	SmartContractExecutionStats map[string]interface{}
 }
 
-func NewSC(db smartcontractstate.SCStateI, id string) *SmartContract {
+func NewSC(id string) *SmartContract {
 	restHandlers := make(map[string]SmartContractRestHandler)
 	scExecStats := make(map[string]interface{})
-	return &SmartContract{DB: db, ID: id, RestHandlers: restHandlers, SmartContractExecutionStats: scExecStats}
+	return &SmartContract{ID: id, RestHandlers: restHandlers, SmartContractExecutionStats: scExecStats}
 }
 
 type SmartContractTransactionData struct {
