@@ -595,7 +595,8 @@ func (mc *Chain) GetNextRoundTimeoutTime(ctx context.Context) int {
 	return tick
 }
 
-func (mc *Chain) HandleRoundTimeouts(ctx context.Context) {
+// HandleRoundTimeout handle timeouts appropriately
+func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
 	r := mc.GetMinerRound(mc.CurrentRound)
 
 	if r.SoftTimeoutCount == mc.RoundRestartMult {
@@ -605,33 +606,6 @@ func (mc *Chain) HandleRoundTimeouts(ctx context.Context) {
 		Logger.Info("triggering handleNoProgress", zap.Int64("round", r.GetRoundNumber()))
 		mc.handleNoProgress(ctx)
 		r.SoftTimeoutCount++
-	}
-}
-
-/*HandleRoundTimeout - handles the timeout of a round*/
-func (mc *Chain) HandleRoundTimeout(ctx context.Context, seconds int) {
-	if mc.CurrentRound == 0 {
-		return
-	}
-
-	sstime := int(math.Ceil(2 * chain.SteadyStateFinalizationTimer.Mean() / 1000000000))
-
-	if sstime == 0 || sstime > 2 {
-		sstime = 2
-	}
-	Logger.Info("sstime is set", zap.Int("sstime", sstime))
-
-	restartTime := int(math.Ceil(4 * chain.SteadyStateFinalizationTimer.Mean() / 1000000000))
-	if restartTime == 0 || restartTime > 6 {
-		restartTime = 6 //10
-	}
-
-	Logger.Info("Timeout  set", zap.Int("restart", restartTime), zap.Int("ssTime", sstime))
-	switch true {
-	case seconds%restartTime == sstime: // do something minor every (x mod 10 = 2 seconds)
-		mc.handleNoProgress(ctx)
-	case seconds%restartTime == 0: // do something major every (x mod 10 = 0 seconds)
-		mc.restartRound(ctx)
 	}
 }
 

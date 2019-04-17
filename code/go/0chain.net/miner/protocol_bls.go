@@ -69,7 +69,7 @@ func StartDKG(ctx context.Context) {
 			go startProtocol()
 			return
 		} else {
-			Logger.Error("err : reading dkg from db", zap.Error(err))
+			Logger.Info("err : reading dkg from db", zap.Error(err))
 		}
 
 		waitForNetworkToBeReady(ctx)

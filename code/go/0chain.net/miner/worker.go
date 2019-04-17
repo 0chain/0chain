@@ -57,6 +57,8 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 func (mc *Chain) RoundWorker(ctx context.Context) {
 	var timer = time.NewTimer(time.Duration(mc.GetNextRoundTimeoutTime(ctx)) * time.Millisecond)
 	var cround = mc.CurrentRound
+	var protocol Protocol = mc
+
 	for true {
 		select {
 		case <-ctx.Done():
@@ -69,7 +71,7 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 					zap.Int("VRF_shares", len(round.GetVRFShares())),
 					zap.Int("proposedBlocks", len(round.GetProposedBlocks())),
 					zap.Int("notarizedBlocks", len(round.GetNotarizedBlocks())))
-				mc.HandleRoundTimeouts(ctx)
+				protocol.HandleRoundTimeout(ctx)
 			} else {
 				cround = mc.CurrentRound
 				mc.ResetRoundTimeoutCount()
