@@ -31,6 +31,7 @@ func SetupMinerChain(c *chain.Chain) {
 	minerChain.Chain = c
 	minerChain.BlockMessageChannel = make(chan *BlockMessage, 128)
 	c.SetFetchedNotarizedBlockHandler(minerChain)
+	c.RoundF = MinerRoundFactory{}
 }
 
 /*GetMinerChain - get the miner's chain */
@@ -78,7 +79,10 @@ func (mc *Chain) CreateRound(r *round.Round) *Round {
 
 /*SetLatestFinalizedBlock - Set latest finalized block */
 func (mc *Chain) SetLatestFinalizedBlock(ctx context.Context, b *block.Block) {
-	var r = round.NewRound(b.Round)
+
+	//var r = round.NewRound(b.Round) instead create miner.Round type as below.
+	var nr = mc.RoundF.CreateRoundF(b.Round).(*Round)
+	r := nr.Round
 	mr := mc.CreateRound(r)
 	mr = mc.AddRound(mr).(*Round)
 	mc.SetRandomSeed(mr, b.RoundRandomSeed)

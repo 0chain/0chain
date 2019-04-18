@@ -124,6 +124,7 @@ type Chain struct {
 	fetchedNotarizedBlockHandler FetchedNotarizedBlockHandler
 
 	pruneStats *util.PruneStats
+	RoundF     round.RoundFactory
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl

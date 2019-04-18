@@ -53,6 +53,11 @@ type Round struct {
 	SoftTimeoutCount int
 }
 
+// RoundFactory - a factory to create a new round object specific to miner/sharder
+type RoundFactory interface {
+	CreateRoundF(roundNum int64) interface{}
+}
+
 //NewRound - Create a new round object
 func NewRound(round int64) *Round {
 	r := datastore.GetEntityMetadata("round").Instance().(*Round)

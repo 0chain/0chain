@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"0chain.net/chaincore/block"
-	. "0chain.net/core/logging"
 	"0chain.net/chaincore/round"
+	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -18,6 +18,20 @@ type Round struct {
 	delta                 time.Duration
 	verificationTickets   map[string]*block.BlockVerificationTicket
 	vrfShare              *round.VRFShare
+}
+
+// MinerRoundFactory Factory for miner rounds
+type MinerRoundFactory struct{}
+
+//CreateRoundF this returns an interface{} of type *miner.Round
+func (mrf MinerRoundFactory) CreateRoundF(roundNum int64) interface{} {
+	//Logger.Info("Here inside MinerRoundFactory")
+	r := round.NewRound(roundNum)
+	//For chain related initialization, caller has to call mc.CreateRound after this
+	var mr Round
+	mr.Round = r
+	return &mr
+
 }
 
 /*AddBlockToVerify - adds a block to the round. Assumes non-concurrent update */
