@@ -245,6 +245,7 @@ func readNodesFile(nodesFile *string, mc *miner.Chain, serverChain *chain.Chain)
 func initEntities() {
 	memoryStorage := memorystore.GetStorageProvider()
 
+	chain.SetupConfigDB()
 	chain.SetupEntity(memoryStorage)
 	round.SetupEntity(memoryStorage)
 	round.SetupVRFShareEntity(memoryStorage)
@@ -260,8 +261,8 @@ func initEntities() {
 
 	miner.SetupNotarizationEntity()
 
-	bls.SetupDKGEntity()
 	ememoryStorage := ememorystore.GetStorageProvider()
+	bls.SetupDKGEntity()
 	bls.SetupDKGSummary(ememoryStorage)
 	bls.SetupDKGDB()
 	bls.SetupBLSEntity()

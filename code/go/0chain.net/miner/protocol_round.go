@@ -665,7 +665,6 @@ func startProtocol() {
 	}
 	ctx := common.GetRootContext()
 	mc.waitForActiveSharders(ctx)
-	mc.Sharders.OneTimeStatusMonitor(ctx)
 	lfb := getLatestBlockFromSharders(ctx)
 	var mr *Round
 	if lfb != nil {

@@ -13,7 +13,13 @@ type RoundSummaries struct {
 	RSummaryList []*round.Round `json:round_summaries`
 }
 
+type HealthyRound struct {
+	datastore.IDField
+	Number int64
+}
+
 var roundSummariesEntityMetadata *datastore.EntityMetadataImpl
+var healthyRoundEntityMetadata *datastore.EntityMetadataImpl
 
 /*NewRoundSummaries - create a new RoundSummaries entity */
 func NewRoundSummaries() *RoundSummaries {
@@ -39,6 +45,38 @@ func SetupRoundSummaries() {
 	roundSummariesEntityMetadata.Provider = RoundSummariesProvider
 	roundSummariesEntityMetadata.IDColumnName = "id"
 	datastore.RegisterEntityMetadata("round_summaries", roundSummariesEntityMetadata)
+}
+
+/*NewHealthyRound - create a new HealthyRound entity */
+func NewHealthyRound() *HealthyRound {
+	hr := datastore.GetEntityMetadata("healthy_round").Instance().(*HealthyRound)
+	return hr
+}
+
+/*HealthyRoundProvider - a HealthyRoundProvider instance provider */
+func HealthyRoundProvider() datastore.Entity {
+	hr := &HealthyRound{}
+	return hr
+}
+
+/*GetEntityMetadata - implement interface */
+func (hr *HealthyRound) GetEntityMetadata() datastore.EntityMetadata {
+	return healthyRoundEntityMetadata
+}
+
+/*SetupHealthyRound - setup the healthy round entity */
+func (sc *Chain) SetupHealthyRound(store datastore.Store) {
+	healthyRoundEntityMetadata = datastore.MetadataProvider()
+	healthyRoundEntityMetadata.Name = "healthy_round"
+	healthyRoundEntityMetadata.DB = sc.ConfigDB
+	healthyRoundEntityMetadata.Provider = HealthyRoundProvider
+	healthyRoundEntityMetadata.Store = store
+	healthyRoundEntityMetadata.IDColumnName = "id"
+	datastore.RegisterEntityMetadata("healthy_round", healthyRoundEntityMetadata)
+}
+
+func (hr *HealthyRound) GetKey() datastore.Key {
+	return datastore.ToKey(hr.GetEntityMetadata().GetName())
 }
 
 /*StoreRound - persists given round to ememory(rocksdb)*/
@@ -72,4 +110,29 @@ func (sc *Chain) GetMostRecentRoundFromDB(ctx context.Context) (*round.Round, er
 		datastore.FromJSON(iterator.Value().Data(), r)
 	}
 	return r, iterator.Err()
+}
+
+func (sc *Chain) ReadHealthyRound(ctx context.Context) (*HealthyRound, error) {
+	hr := datastore.GetEntity("healthy_round").(*HealthyRound)
+	healthyRoundEntityMetadata := hr.GetEntityMetadata()
+	hrctx := ememorystore.WithEntityConnection(ctx, healthyRoundEntityMetadata)
+	defer ememorystore.Close(hrctx)
+	err := hr.Read(hrctx, hr.GetKey())
+	return hr, err
+}
+
+func (sc *Chain) WriteHealthyRound(ctx context.Context, hr *HealthyRound) error {
+	healthyRoundEntityMetadata := hr.GetEntityMetadata()
+	hrctx := ememorystore.WithEntityConnection(ctx, healthyRoundEntityMetadata)
+	defer ememorystore.Close(hrctx)
+	err := hr.Write(hrctx)
+	if err != nil {
+		return err
+	}
+	con := ememorystore.GetEntityCon(hrctx, healthyRoundEntityMetadata)
+	err = con.Commit()
+	if err != nil {
+		return err
+	}
+	return nil
 }

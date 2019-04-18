@@ -103,7 +103,7 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<br>")
 	fmt.Fprintf(w, "<table><tr><td colspan='2'><h2>Summary</h2></td></tr>")
 	fmt.Fprintf(w, "<tr><td>Sharded Blocks</td><td class='number'>%v</td></tr>", sc.SharderStats.ShardedBlocksCount)
-	fmt.Fprintf(w, "<tr><td>Healthy Round</td><td class='number'>%v</td></tr>", sc.SharderStats.HealthyRound)
+	fmt.Fprintf(w, "<tr><td>Healthy Round</td><td class='number'>%v</td></tr>", sc.SharderStats.HealthyRoundNum)
 	fmt.Fprintf(w, "<tr><td>QOS Round</td><td class='number'>%v</td></tr>", sc.SharderStats.QOSRound)
 	fmt.Fprintf(w, "</table>")
 	fmt.Fprintf(w, "<table><tr><td colspan='2'><h2>Sync Stats</h2></td></tr>")

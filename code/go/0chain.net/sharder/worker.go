@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"time"
 
-	"0chain.net/sharder/roundstore"
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
@@ -42,11 +41,11 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 
 /*HealthCheckWorker - checks the health for each round*/
 func (sc *Chain) HealthCheckWorker(ctx context.Context) {
-	hr := sc.HealthyRound
-	val, err := sc.readHealthRound()
-	Logger.Info("bc-27 health round from file", zap.Int64("healthy round", val))
-	if err == nil && val > hr {
-		hr = val
+	hr := sc.HealthyRoundNumber
+	hRound, err := sc.ReadHealthyRound(ctx)
+	Logger.Info("health round from file", zap.Int64("healthy round", hRound.Number))
+	if err == nil && hRound.Number > hr {
+		hr = hRound.Number
 	}
 	sc.BSyncStats.SyncBeginR = hr + 1
 	for true {
@@ -54,12 +53,14 @@ func (sc *Chain) HealthCheckWorker(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		default:
-			sc.SharderStats.HealthyRound = hr
+			sc.SharderStats.HealthyRoundNum = hr
 			hr = hr + 1
 			t := time.Now()
 			sc.healthCheck(ctx, hr)
 			duration := time.Since(t)
-			sc.writeHealthRound(hr)
+			hRound.Number = hr
+			err = sc.WriteHealthyRound(ctx, hRound)
+			Logger.Error("failed to write healthy round", zap.Error(err))
 			sc.updateSyncStats(hr, duration)
 		}
 	}
@@ -149,7 +150,6 @@ func (sc *Chain) processLastNBlocks(ctx context.Context, lr int64, n int) {
 			params := &url.Values{}
 			params.Add("round", strconv.FormatInt(currR, 10))
 			params.Add("range", strconv.Itoa(-n)) // we go backwards so it is a minus
-			Logger.Info("bc-27 (QOW) Info", zap.Int64("round", currR), zap.Int("range", -n))
 			rs := sc.requestForRoundSummaries(ctx, params)
 			if rs != nil {
 				sc.storeRoundSummaries(ctx, rs)
@@ -193,21 +193,6 @@ func (sc *Chain) processLastNBlocks(ctx context.Context, lr int64, n int) {
 			}
 			sc.storeBlockTransactions(ctx, b)
 		}
-	}
-}
-
-func (sc *Chain) readHealthRound() (int64, error) {
-	val, err := roundstore.GetStore().Read()
-	if err != nil {
-		Logger.Error("bc-27 (HCW) read health round failed", zap.Error(err))
-	}
-	return val, err
-}
-
-func (sc *Chain) writeHealthRound(r int64) {
-	err := roundstore.GetStore().Write(r)
-	if err != nil {
-		Logger.Error("bc-27 (HCW) write health round failed", zap.Error(err))
 	}
 }
 

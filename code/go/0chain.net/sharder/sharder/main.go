@@ -32,7 +32,6 @@ import (
 	"0chain.net/core/persistencestore"
 	"0chain.net/sharder"
 	"0chain.net/sharder/blockstore"
-	"0chain.net/sharder/roundstore"
 	"0chain.net/smartcontract/setupsc"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -142,7 +141,6 @@ func main() {
 	}
 	common.HandleShutdown(server)
 	setupBlockStorageProvider()
-	setupRoundStorage()
 
 	initWorkers(ctx)
 	common.ConfigRateLimits()
@@ -181,6 +179,8 @@ func initHandlers() {
 
 func initEntities() {
 	memoryStorage := memorystore.GetStorageProvider()
+
+	chain.SetupConfigDB()
 	chain.SetupEntity(memoryStorage)
 	block.SetupEntity(memoryStorage)
 
@@ -194,6 +194,9 @@ func initEntities() {
 	round.SetupEntity(ememoryStorage)
 	client.SetupEntity(memoryStorage)
 	transaction.SetupEntity(memoryStorage)
+
+	sc := sharder.GetSharderChain()
+	sc.SetupHealthyRound(ememoryStorage)
 
 	persistencestore.InitSession()
 	persistenceStorage := persistencestore.GetStorageProvider()
@@ -235,8 +238,4 @@ func setupBlockStorageProvider() {
 	} else {
 		panic(fmt.Sprintf("uknown block store provider - %v", blockStorageProvider))
 	}
-}
-
-func setupRoundStorage() {
-	roundstore.SetupStore(roundstore.NewFSRoundStore("data/health"))
 }

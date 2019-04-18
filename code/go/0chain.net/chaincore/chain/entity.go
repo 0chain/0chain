@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/client"
+	"0chain.net/core/ememorystore"
 	"0chain.net/core/encryption"
 
 	"0chain.net/chaincore/block"
@@ -124,6 +125,8 @@ type Chain struct {
 	fetchedNotarizedBlockHandler FetchedNotarizedBlockHandler
 
 	pruneStats *util.PruneStats
+
+	ConfigDB string
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
@@ -183,7 +186,7 @@ func NewChainFromConfig() *Chain {
 	} else {
 		chain.VerificationTicketsTo = Generator
 	}
-	chain.HealthyRound = viper.GetInt64("server_chain.health_check.round")
+	chain.HealthyRoundNumber = viper.GetInt64("server_chain.health_check.round")
 	chain.BatchSyncSize = viper.GetInt("server_chain.health_check.batch_sync_size")
 	chain.BlockProposalMaxWaitTime = viper.GetDuration("server_chain.block.proposal.max_wait_time") * time.Millisecond
 	waitMode := viper.GetString("server_chain.block.proposal.wait_mode")
@@ -242,6 +245,7 @@ func (c *Chain) Initialize() {
 	c.stateDB = stateDB
 	c.BlockChain = ring.New(10000)
 	c.minersStake = make(map[datastore.Key]int)
+	c.ConfigDB = configDB
 }
 
 /*SetupEntity - setup the entity */
@@ -255,6 +259,7 @@ func SetupEntity(store datastore.Store) {
 }
 
 var stateDB *util.PNodeDB
+var configDB string
 
 //SetupStateDB - setup the state db
 func SetupStateDB() {
@@ -263,6 +268,15 @@ func SetupStateDB() {
 		panic(err)
 	}
 	stateDB = db
+}
+
+func SetupConfigDB() {
+	db, err := ememorystore.CreateDB("data/rocksdb/config")
+	if err != nil {
+		panic(err)
+	}
+	configDB = "configdb"
+	ememorystore.AddPool(configDB, db)
 }
 
 func (c *Chain) getInitialState() util.Serializable {

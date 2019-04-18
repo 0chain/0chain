@@ -69,7 +69,7 @@ func RoundSummariesHandler(ctx context.Context, r *http.Request) (interface{}, e
 			}
 		}
 		roundS := sc.getRoundSummaries(beginR, rRange)
-		Logger.Info("bc-27 fetched round summaries", zap.Int64("beginR", beginR), zap.Int("range", rRange))
+		Logger.Info("fetched round summaries", zap.Int64("beginR", beginR), zap.Int("range", rRange))
 		rs := &RoundSummaries{}
 		rs.RSummaryList = roundS
 		return rs, nil
@@ -105,10 +105,10 @@ func BlockSummariesHandler(ctx context.Context, r *http.Request) (interface{}, e
 			}
 		}
 		bs.BSummaryList = blockS
-		Logger.Info("bc-27 fetched block summaries", zap.Int64("beginR", beginR), zap.Int("range", rRange))
+		Logger.Info("fetched block summaries", zap.Int64("beginR", beginR), zap.Int("range", rRange))
 		return bs, nil
 	}
-	Logger.Error("bc-27 failed reading/parsing the params", zap.Error(err))
+	Logger.Error("failed reading/parsing the params", zap.Error(err))
 	return nil, err
 }
 
