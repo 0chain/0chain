@@ -33,6 +33,7 @@ type StateContextI interface {
 	GetState() util.MerklePatriciaTrieI
 	GetTransaction() *transaction.Transaction
 	GetClientBalance(clientID datastore.Key) (state.Balance, error)
+	SetStateContext(st *state.State) error
 	GetTrieNode(key datastore.Key) (util.Serializable, error)
 	InsertTrieNode(key datastore.Key, node util.Serializable) (datastore.Key, error)
 	DeleteTrieNode(key datastore.Key) (datastore.Key, error)
@@ -184,4 +185,10 @@ func (sc *StateContext) DeleteTrieNode(key datastore.Key) (datastore.Key, error)
 	}
 	byteKey, err := sc.state.Delete(util.Path(key))
 	return datastore.Key(byteKey), err
+}
+
+//SetStateContext - set the state context
+func (sc *StateContext) SetStateContext(s *state.State) error {
+	s.SetRound(sc.block.Round)
+	return s.SetTxnHash(sc.txn.Hash)
 }

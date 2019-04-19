@@ -349,7 +349,7 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		}
 		return err
 	}
-	fs.SetRound(b.Round)
+	sctx.SetStateContext(fs)
 	fs.Balance -= amount
 	if fs.Balance == 0 {
 		Logger.Info("transfer amount - remove client", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client", fromClient), zap.Any("txn", txn))
@@ -368,7 +368,7 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		}
 		return err
 	}
-	ts.SetRound(b.Round)
+	sctx.SetStateContext(ts)
 	ts.Balance += amount
 	_, err = clientState.Insert(util.Path(toClient), ts)
 	if err != nil {
@@ -411,7 +411,7 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 		}
 		return err
 	}
-	ts.SetRound(b.Round)
+	sctx.SetStateContext(ts)
 	ts.Balance += amount
 	_, err = clientState.Insert(util.Path(toClient), ts)
 	if err != nil {

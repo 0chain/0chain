@@ -270,6 +270,7 @@ func SetupStateDB() {
 func (c *Chain) getInitialState() util.Serializable {
 	tokens := viper.GetInt64("server_chain.tokens")
 	balance := &state.State{}
+	balance.SetTxnHash("0000000000000000000000000000000000000000000000000000000000000000")
 	var cents int64 = 1
 	for i := int8(0); i < c.Decimals; i++ {
 		cents *= 10
