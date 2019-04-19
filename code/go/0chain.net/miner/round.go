@@ -20,20 +20,6 @@ type Round struct {
 	vrfShare              *round.VRFShare
 }
 
-// MinerRoundFactory Factory for miner rounds
-type MinerRoundFactory struct{}
-
-//CreateRoundF this returns an interface{} of type *miner.Round
-func (mrf MinerRoundFactory) CreateRoundF(roundNum int64) interface{} {
-	//Logger.Info("Here inside MinerRoundFactory")
-	r := round.NewRound(roundNum)
-	//For chain related initialization, caller has to call mc.CreateRound after this
-	var mr Round
-	mr.Round = r
-	return &mr
-
-}
-
 /*AddBlockToVerify - adds a block to the round. Assumes non-concurrent update */
 func (r *Round) AddBlockToVerify(b *block.Block) {
 	r.Mutex.Lock()

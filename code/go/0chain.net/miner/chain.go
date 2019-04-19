@@ -39,6 +39,20 @@ func GetMinerChain() *Chain {
 	return minerChain
 }
 
+type MinerRoundFactory struct{}
+
+//CreateRoundF this returns an interface{} of type *miner.Round
+func (mrf MinerRoundFactory) CreateRoundF(roundNum int64) interface{} {
+	mc := GetMinerChain()
+	//Logger.Info("Here inside MinerRoundFactory")
+	r := round.NewRound(roundNum)
+	mr := mc.CreateRound(r)
+	//Computeminer ranks?
+	mc.AddRound(mr)
+
+	return r
+}
+
 /*Chain - A miner chain to manage the miner activities */
 type Chain struct {
 	*chain.Chain
@@ -79,10 +93,7 @@ func (mc *Chain) CreateRound(r *round.Round) *Round {
 
 /*SetLatestFinalizedBlock - Set latest finalized block */
 func (mc *Chain) SetLatestFinalizedBlock(ctx context.Context, b *block.Block) {
-
-	//var r = round.NewRound(b.Round) instead create miner.Round type as below.
-	var nr = mc.RoundF.CreateRoundF(b.Round).(*Round)
-	r := nr.Round
+	var r = round.NewRound(b.Round)
 	mr := mc.CreateRound(r)
 	mr = mc.AddRound(mr).(*Round)
 	mc.SetRandomSeed(mr, b.RoundRandomSeed)

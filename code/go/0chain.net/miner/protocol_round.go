@@ -587,7 +587,7 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*bloc
 func (mc *Chain) GetNextRoundTimeoutTime(ctx context.Context) int {
 
 	mnt := int(math.Ceil(mc.Miners.GetMedianNetworkTime() / 1000000))
-	tick := mc.RoundTimeoutSofttoMin * 5
+	tick := mc.RoundTimeoutSofttoMin
 	if tick < mc.RoundTimeoutSofttoMult*mnt {
 		tick = mc.RoundTimeoutSofttoMult * mnt
 	}

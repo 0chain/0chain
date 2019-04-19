@@ -232,7 +232,9 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 		if r == nil {
 			Logger.Info("get notarized block - no round will create...", zap.Int64("round", nb.Round), zap.String("block", blockHash), zap.Int64("cround", cround), zap.Int64("current_round", c.CurrentRound))
 			b = c.AddBlock(nb)
-			r = round.NewRound(nb.Round)
+
+			//r = round.NewRound(nb.Round)
+			r = c.RoundF.CreateRoundF(nb.Round).(*round.Round)
 			c.AddRound(r)
 		}
 
