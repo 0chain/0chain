@@ -239,7 +239,9 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 		}
 
 		c.SetRandomSeed(r, nb.RoundRandomSeed)
-		b = c.AddRoundBlock(r, nb)
+		//b = c.AddRoundBlock(r, nb)
+		//This is a notarized block. So, use this method to sync round info with the notarized block.
+		b = c.AddNotarizedBlockToRound(r, nb)
 		b, _ = r.AddNotarizedBlock(b)
 
 		Logger.Info("get notarized block", zap.Int64("round", b.Round), zap.String("block", b.Hash))
