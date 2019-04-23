@@ -9,7 +9,9 @@ import (
 	"0chain.net/chaincore/round"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	. "0chain.net/core/logging"
 	"0chain.net/core/memorystore"
+	"go.uber.org/zap"
 )
 
 //RoundMismatch - to indicate an error where the current round and the given round don't match
@@ -44,7 +46,7 @@ type MinerRoundFactory struct{}
 //CreateRoundF this returns an interface{} of type *miner.Round
 func (mrf MinerRoundFactory) CreateRoundF(roundNum int64) interface{} {
 	mc := GetMinerChain()
-	//Logger.Info("Here inside MinerRoundFactory")
+	Logger.Info("Here inside MinerRoundFactory", zap.Int64("roundNum", roundNum))
 	r := round.NewRound(roundNum)
 	mr := mc.CreateRound(r)
 	//Computeminer ranks?

@@ -325,20 +325,22 @@ func (c *Chain) AddBlock(b *block.Block) *block.Block {
 }
 
 /*AddNotarizedBlockToRound - adds notarized block to cache and sync  info from notarized block to round  */
-func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) *block.Block {
+func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block.Block, round.RoundI) {
 	c.blocksMutex.Lock()
 	defer c.blocksMutex.Unlock()
 	b2 := c.addBlock(b)
-	if b2 != b {
-		Logger.Error("Already have a different block. Returning", zap.Int64("Round", r.GetRoundNumber()), zap.String("new_block", b.Hash), zap.String("existing_block", b2.Hash))
-		return b2
+	if b2.Hash != b.Hash {
+		Logger.Error("Already have a different block. Returning", zap.Int64("Round", r.GetRoundNumber()),
+			zap.String("new_block", b.Hash), zap.String("existing_block", b2.Hash),
+			zap.Int("new_block_toc", b.RoundTimeoutCount), zap.Int("existing_block_toc", b2.RoundTimeoutCount))
+		//return b2
 	}
 	if b.Round == c.CurrentRound {
 		Logger.Info("Adding a notarized block for current round", zap.Int64("Round", r.GetRoundNumber()))
 	}
 
 	//Get round data insync as it is the notarized block
-	if r.GetRandomSeed() != b.RoundRandomSeed {
+	if r.GetRandomSeed() != b.RoundRandomSeed || r.GetTimeoutCount() != b.RoundTimeoutCount {
 		Logger.Info("AddNotarizedBlockToRound round and block random seed different", zap.Int64("Round", r.GetRoundNumber()), zap.Int64("Round_rrs", r.GetRandomSeed()), zap.Int64("Block_rrs", b.RoundRandomSeed))
 		c.roundsMutex.Lock()
 		defer c.roundsMutex.Unlock()
@@ -350,11 +352,15 @@ func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) *block.
 		r.ComputeMinerRanks(c.Miners)
 	}
 
+	Logger.Info("Round and block timeoutcounts inside AddNotarizedBlockToRound is insyncx", zap.Int64("roundNum", r.GetRoundNumber()), zap.Int("round_toc", r.GetTimeoutCount()), zap.Int("block_toc", b.RoundTimeoutCount))
+
 	c.SetRoundRank(r, b)
+	//ToDo: remove this log. This log is to check if the execution is stuck above.
+	Logger.Info("Got the rank", zap.Int64("roundNum", r.GetRoundNumber()))
 	if b.PrevBlock != nil {
 		b.ComputeChainWeight()
 	}
-	return b
+	return b, r
 }
 
 /*AddRoundBlock - add a block for a given round to the cache */

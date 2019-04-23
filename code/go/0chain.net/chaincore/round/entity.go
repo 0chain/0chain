@@ -135,6 +135,11 @@ func (r *Round) GetVRFOutput() string {
 func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool) {
 	r.Mutex.Lock()
 	defer r.Mutex.Unlock()
+
+	if r.GetTimeoutCount() != b.RoundTimeoutCount {
+		Logger.Error("Round and block timeoutcounts are not insync", zap.Int64("roundNum", r.GetRoundNumber()), zap.Int("round_toc", r.GetTimeoutCount()), zap.Int("block_toc", b.RoundTimeoutCount))
+
+	}
 	b, _ = r.addProposedBlock(b)
 	for _, blk := range r.notarizedBlocks {
 		if blk.Hash == b.Hash {

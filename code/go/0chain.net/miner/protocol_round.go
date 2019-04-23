@@ -97,8 +97,11 @@ func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
 
 func (mc *Chain) startRound(ctx context.Context, r *Round, seed int64) {
 	if !mc.SetRandomSeed(r.Round, seed) {
+		Logger.Info("SetRandomSeed returned false", zap.Int64("round", r.GetRoundNumber()))
 		return
 	}
+	Logger.Info("Starting a new round", zap.Int64("round", r.GetRoundNumber()))
+
 	mc.startNewRound(ctx, r)
 }
 
@@ -706,5 +709,5 @@ func startProtocol() {
 	Logger.Info("starting the blockchain ...", zap.Int64("round", mr.GetRoundNumber()))
 	mc.StartNextRound(ctx, mr)
 	//Just started the first round. It is time to start the timeout monitor
-	go mc.RoundWorker(ctx)
+	//go mc.RoundWorker(ctx)
 }

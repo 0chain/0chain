@@ -13,7 +13,7 @@ import (
 /*SetupWorkers - Setup the miner's workers */
 func SetupWorkers(ctx context.Context) {
 	mc := GetMinerChain()
-	//go mc.RoundWorker(ctx) //we are going to start this after we are ready with the round
+	go mc.RoundWorker(ctx)              //we are going to start this after we are ready with the round
 	go mc.BlockWorker(ctx)              // 1) receives incoming blocks from the network
 	go mc.FinalizeRoundWorker(ctx, mc)  // 2) sequentially finalize the rounds
 	go mc.FinalizedBlockWorker(ctx, mc) // 3) sequentially processes finalized blocks
@@ -22,6 +22,8 @@ func SetupWorkers(ctx context.Context) {
 /*BlockWorker - a job that does all the work related to blocks in each round */
 func (mc *Chain) BlockWorker(ctx context.Context) {
 	var protocol Protocol = mc
+	Logger.Info("Started BlockWorker")
+	defer Logger.Info("done with BlockWorker")
 	for true {
 		select {
 		case <-ctx.Done():
@@ -32,6 +34,7 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 			} else {
 				Logger.Debug("message", zap.Any("msg", GetMessageLookup(msg.Type)))
 			}
+			Logger.Info("blk_message recv", zap.Any("msg", GetMessageLookup(msg.Type)))
 			switch msg.Type {
 			case MessageVRFShare:
 				protocol.HandleVRFShare(ctx, msg)
@@ -44,6 +47,8 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 			case MessageNotarizedBlock:
 				protocol.HandleNotarizedBlockMessage(ctx, msg)
 			}
+			Logger.Info("blk_message done", zap.Any("msg", GetMessageLookup(msg.Type)))
+
 			if msg.Sender != nil {
 				Logger.Debug("message (done)", zap.Any("msg", GetMessageLookup(msg.Type)), zap.Any("sender_index", msg.Sender.SetIndex), zap.Any("id", msg.Sender.GetKey()))
 			} else {
@@ -55,7 +60,7 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 
 //RoundWorker - a worker that monitors the round progress
 func (mc *Chain) RoundWorker(ctx context.Context) {
-	var timer = time.NewTimer(time.Duration(mc.GetNextRoundTimeoutTime(ctx)) * time.Millisecond)
+	var timer = time.NewTimer(time.Duration(4 * time.Second))
 	var cround = mc.CurrentRound
 	var protocol Protocol = mc
 
