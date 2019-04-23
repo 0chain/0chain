@@ -210,13 +210,15 @@ func (c *Chain) rebaseState(lfb *block.Block) {
 
 //ExecuteSmartContract - executes the smart contract for the transaction
 func (c *Chain) ExecuteSmartContract(t *transaction.Transaction, balances bcstate.StateContextI) (string, error) {
-	if balances.GetBlock().IsBlockNotarized() || c.SmartContractTimeout == 0 {
-		return smartcontract.ExecuteSmartContract(common.GetRootContext(), t, balances)
-	}
-	done := make(chan bool, 1)
 	var output string
 	var err error
 	ts := time.Now()
+	if balances.GetBlock().IsBlockNotarized() || c.SmartContractTimeout == 0 {
+		output, err = smartcontract.ExecuteSmartContract(common.GetRootContext(), t, balances)
+		SmartContractExecutionTimer.Update(time.Since(ts))
+		return output, err
+	}
+	done := make(chan bool, 1)
 	ctx, cancelf := context.WithTimeout(common.GetRootContext(), c.SmartContractTimeout)
 	defer cancelf()
 	go func() {
@@ -349,7 +351,7 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		}
 		return err
 	}
-	fs.SetRound(b.Round)
+	sctx.SetStateContext(fs)
 	fs.Balance -= amount
 	if fs.Balance == 0 {
 		Logger.Info("transfer amount - remove client", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client", fromClient), zap.Any("txn", txn))
@@ -368,7 +370,7 @@ func (c *Chain) transferAmount(sctx bcstate.StateContextI, fromClient, toClient 
 		}
 		return err
 	}
-	ts.SetRound(b.Round)
+	sctx.SetStateContext(ts)
 	ts.Balance += amount
 	_, err = clientState.Insert(util.Path(toClient), ts)
 	if err != nil {
@@ -411,7 +413,7 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 		}
 		return err
 	}
-	ts.SetRound(b.Round)
+	sctx.SetStateContext(ts)
 	ts.Balance += amount
 	_, err = clientState.Insert(util.Path(toClient), ts)
 	if err != nil {

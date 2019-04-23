@@ -9,9 +9,9 @@ import (
 	"sort"
 	"sync"
 
+	"0chain.net/chaincore/node"
 	"0chain.net/core/ememorystore"
 	. "0chain.net/core/logging"
-	"0chain.net/chaincore/node"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/datastore"
@@ -40,17 +40,17 @@ type Round struct {
 	// For generator, this is the block the miner is generating till a notraization is received
 	// For a verifier, this is the block that is currently the best block received for verification.
 	// Once a round is finalized, this is the finalized block of the given round
-	Block     *block.Block `json:"-"`
-	BlockHash string       `json:"block_hash"`
-	VRFOutput string       `json:"vrf_output"` //TODO: VRFOutput == rbooutput?
-	minerPerm []int
-	state     int
-
-	proposedBlocks  []*block.Block
-	notarizedBlocks []*block.Block
-	Mutex           sync.RWMutex
-
-	shares map[string]*VRFShare
+	Block            *block.Block `json:"-"`
+	BlockHash        string       `json:"block_hash"`
+	VRFOutput        string       `json:"vrf_output"` //TODO: VRFOutput == rbooutput?
+	minerPerm        []int
+	state            int
+	proposedBlocks   []*block.Block
+	notarizedBlocks  []*block.Block
+	Mutex            sync.RWMutex
+	shares           map[string]*VRFShare
+	TimeoutCount     int
+	SoftTimeoutCount int
 }
 
 //NewRound - Create a new round object
@@ -75,6 +75,16 @@ func (r *Round) GetKey() datastore.Key {
 //GetRoundNumber - returns the round number
 func (r *Round) GetRoundNumber() int64 {
 	return r.Number
+}
+
+// GetTimeoutCount - returns the timeout count
+func (r *Round) GetTimeoutCount() int {
+	return r.TimeoutCount
+}
+
+// IncrementTimeoutCount - Increments timeout count
+func (r *Round) IncrementTimeoutCount() {
+	r.TimeoutCount = r.TimeoutCount + 1
 }
 
 //SetRandomSeed - set the random seed of the round
@@ -320,6 +330,7 @@ func (r *Round) Restart() {
 	r.initialize()
 	r.Block = nil
 	r.ResetState(RoundShareVRF)
+	r.SoftTimeoutCount = 0
 
 }
 
@@ -327,7 +338,7 @@ func (r *Round) Restart() {
 func (r *Round) AddAdditionalVRFShare(share *VRFShare) bool {
 	r.Mutex.Lock()
 	defer r.Mutex.Unlock()
-	
+
 	if _, ok := r.shares[share.party.GetKey()]; ok {
 		Logger.Info("AddVRFShare Share is already there. Returning false.")
 		return false
@@ -336,6 +347,7 @@ func (r *Round) AddAdditionalVRFShare(share *VRFShare) bool {
 	r.shares[share.party.GetKey()] = share
 	return true
 }
+
 //AddVRFShare - implement interface
 func (r *Round) AddVRFShare(share *VRFShare, threshold int) bool {
 	r.Mutex.Lock()
@@ -369,7 +381,7 @@ func (r *Round) SetState(state int) {
 	r.setState(state)
 }
 
-//ResetState resets the state to any desired state 
+//ResetState resets the state to any desired state
 func (r *Round) ResetState(state int) {
 	r.state = state
 }

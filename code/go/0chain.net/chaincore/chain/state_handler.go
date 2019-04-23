@@ -91,6 +91,7 @@ func (c *Chain) GetBalanceHandler(ctx context.Context, r *http.Request) (interfa
 	if err != nil {
 		return nil, err
 	}
+	state.ComputeProperties()
 	return state, nil
 }
 

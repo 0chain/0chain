@@ -4,16 +4,17 @@ import (
 	"context"
 	"fmt"
 
-	"0chain.net/core/datastore"
 	"0chain.net/chaincore/node"
+	"0chain.net/core/datastore"
 )
 
 //VRFShare - a VRF share
 type VRFShare struct {
 	datastore.NOIDField
-	Round int64  `json:"round"`
-	Share string `json:"share"`
-	party *node.Node
+	Round             int64  `json:"round"`
+	Share             string `json:"share"`
+	RoundTimeoutCount int    `json:"timeoutcount"`
+	party             *node.Node
 }
 
 var vrfsEntityMetadata *datastore.EntityMetadataImpl
@@ -62,6 +63,11 @@ func SetupVRFShareEntity(store datastore.Store) {
 //GetRoundNumber - return the round associated with this vrf share
 func (vrfs *VRFShare) GetRoundNumber() int64 {
 	return vrfs.Round
+}
+
+// GetRoundTimeoutCount return timeout count for this round
+func (vrfs *VRFShare) GetRoundTimeoutCount() int {
+	return vrfs.RoundTimeoutCount
 }
 
 //SetParty - set the party contributing this vrf share

@@ -29,3 +29,4 @@ code/go/bin
 *.code-workspace
 gorocksdb/
 docker.local/sharder*
+*.log

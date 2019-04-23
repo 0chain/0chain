@@ -11,13 +11,13 @@ require (
 	github.com/facebookgo/ensure v0.0.0-20160127193407-b4ab57deab51 // indirect
 	github.com/facebookgo/stack v0.0.0-20160209184415-751773369052 // indirect
 	github.com/facebookgo/subset v0.0.0-20150612182917-8dac2c3c4870 // indirect
-	github.com/gocql/gocql v0.0.0-20190402132108-0e1d5de854df
+	github.com/gocql/gocql v0.0.0-20190423091413-b99afaf3b163
 	github.com/golang/protobuf v1.3.1 // indirect
 	github.com/golang/snappy v0.0.1
 	github.com/gomodule/redigo v2.0.0+incompatible
 	github.com/hashicorp/golang-lru v0.5.1
-	github.com/herumi/bls v0.0.0-20190401053048-f0d19299b7e9
-	github.com/herumi/mcl v0.0.0-20190329024027-61aaa8348311
+	github.com/herumi/bls v0.0.0-20190423083323-d414f74643cb
+	github.com/herumi/mcl v0.0.0-20190422075523-7f408a29acdc
 	github.com/koding/cache v0.0.0-20161222233018-4a3175c6b2fe
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/kr/pty v1.1.4 // indirect
@@ -33,10 +33,10 @@ require (
 	go.uber.org/atomic v1.3.2 // indirect
 	go.uber.org/multierr v1.1.0 // indirect
 	go.uber.org/zap v1.9.1
-	golang.org/x/crypto v0.0.0-20190411191339-88737f569e3a
-	golang.org/x/net v0.0.0-20190404232315-eb5bcb51f2a3 // indirect
-	golang.org/x/sync v0.0.0-20190227155943-e225da77a7e6 // indirect
-	golang.org/x/sys v0.0.0-20190415145633-3fd5a3612ccd // indirect
+	golang.org/x/crypto v0.0.0-20190422183909-d864b10871cd
+	golang.org/x/net v0.0.0-20190420063019-afa5a82059c6 // indirect
+	golang.org/x/sync v0.0.0-20190423024810-112230192c58 // indirect
+	golang.org/x/sys v0.0.0-20190422165155-953cdadca894 // indirect
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
 	google.golang.org/appengine v1.5.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect

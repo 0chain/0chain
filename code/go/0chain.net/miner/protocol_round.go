@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	metrics "github.com/rcrowley/go-metrics"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/node"
@@ -20,6 +22,12 @@ import (
 	"0chain.net/core/util"
 	"go.uber.org/zap"
 )
+
+var rbgTimer metrics.Timer // round block generation timer
+
+func init() {
+	rbgTimer = metrics.GetOrRegisterTimer("rbg_time", nil)
+}
 
 //SetNetworkRelayTime - set the network relay time
 func SetNetworkRelayTime(delta time.Duration) {
@@ -65,9 +73,27 @@ func (mc *Chain) getRound(ctx context.Context, roundNumber int64) *Round {
 	return mr
 }
 
+// RedoVrfShare re-calculateVrfShare and send
+func (mc *Chain) RedoVrfShare(ctx context.Context, r *Round) bool {
+	pr := mc.GetMinerRound(r.GetRoundNumber() - 1)
+	if pr == nil {
+		Logger.Info("no pr info inside RedoVrfShare", zap.Int64("Round", r.GetRoundNumber()))
+		return false
+	}
+	if pr.HasRandomSeed() {
+		r.vrfShare = nil
+		Logger.Info("RedoVrfShare after vrfShare is nil",
+			zap.Int64("round", r.GetRoundNumber()), zap.Int("round_timeout", r.GetTimeoutCount()))
+		mc.addMyVRFShare(ctx, pr, r)
+		return true
+	}
+	return false
+}
+
 func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
 	vrfs := &round.VRFShare{}
 	vrfs.Round = r.GetRoundNumber()
+	vrfs.RoundTimeoutCount = r.GetTimeoutCount()
 	vrfs.Share = GetBlsShare(ctx, r.Round, pr.Round)
 	vrfs.SetParty(node.Self.Node)
 	r.vrfShare = vrfs
@@ -98,10 +124,10 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 	self := node.GetSelfNode(ctx)
 	rank := mr.GetMinerRank(self.Node)
 	if !mc.IsRoundGenerator(mr, self.Node) {
-		Logger.Info("Not a generator", zap.Int64("round", mr.GetRoundNumber()), zap.Int("index", self.SetIndex), zap.Int("rank", rank), zap.Any("random_seed", mr.GetRandomSeed()))
+		Logger.Info("TOC_FIX Not a generator", zap.Int64("round", mr.GetRoundNumber()), zap.Int("index", self.SetIndex), zap.Int("rank", rank), zap.Int("timeoutcount", mr.GetTimeoutCount()), zap.Any("random_seed", mr.GetRandomSeed()))
 		return
 	}
-	Logger.Info("*** starting round block generation ***", zap.Int64("round", mr.GetRoundNumber()), zap.Int("index", self.SetIndex), zap.Int("rank", rank), zap.Any("random_seed", mr.GetRandomSeed()), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round))
+	Logger.Info("*** TOC_FIX starting round block generation ***", zap.Int64("round", mr.GetRoundNumber()), zap.Int("index", self.SetIndex), zap.Int("rank", rank), zap.Int("timeoutcount", mr.GetTimeoutCount()), zap.Any("random_seed", mr.GetRandomSeed()), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round))
 
 	//NOTE: If there are not enough txns, this will not advance further even though rest of the network is. That's why this is a goroutine
 	go mc.GenerateRoundBlock(ctx, mr)
@@ -146,6 +172,10 @@ func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) *block.Bl
 
 /*GenerateRoundBlock - given a round number generates a block*/
 func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block, error) {
+	ts := time.Now()
+	defer func() {
+		rbgTimer.UpdateSince(ts)
+	}()
 	roundNumber := r.GetRoundNumber()
 	pround := mc.GetMinerRound(roundNumber - 1)
 	if pround == nil {
@@ -565,24 +595,29 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*bloc
 	return finalizedBlocks
 }
 
-/*HandleRoundTimeout - handles the timeout of a round*/
-func (mc *Chain) HandleRoundTimeout(ctx context.Context, seconds int) {
-	if mc.CurrentRound == 0 {
-		return
+// GetNextRoundTimeoutTime returns time in milliseconds
+func (mc *Chain) GetNextRoundTimeoutTime(ctx context.Context) int {
+
+	mnt := int(math.Ceil(mc.Miners.GetMedianNetworkTime() / 1000000))
+	tick := mc.RoundTimeoutSofttoMin * 5
+	if tick < mc.RoundTimeoutSofttoMult*mnt {
+		tick = mc.RoundTimeoutSofttoMult * mnt
 	}
-	sstime := int(math.Ceil(2 * chain.SteadyStateFinalizationTimer.Mean() / 1000000000))
-	if sstime == 0 {
-		sstime = 2
-	}
-	restartTime := int(math.Ceil(10 * chain.SteadyStateFinalizationTimer.Mean() / 1000000000))
-	if restartTime == 0 {
-		restartTime = 10
-	}
-	switch true {
-	case seconds%restartTime == sstime: // do something minor every (x mod 10 = 2 seconds)
-		mc.handleNoProgress(ctx)
-	case seconds%restartTime == 0: // do something major every (x mod 10 = 0 seconds)
+	Logger.Info("nextTimeout", zap.Int("tick", tick))
+	return tick
+}
+
+// HandleRoundTimeout handle timeouts appropriately
+func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
+	r := mc.GetMinerRound(mc.CurrentRound)
+
+	if r.SoftTimeoutCount == mc.RoundRestartMult {
+		Logger.Info("triggering restartRound", zap.Int64("round", r.GetRoundNumber()))
 		mc.restartRound(ctx)
+	} else {
+		Logger.Info("triggering handleNoProgress", zap.Int64("round", r.GetRoundNumber()))
+		mc.handleNoProgress(ctx)
+		r.SoftTimeoutCount++
 	}
 }
 
@@ -649,12 +684,14 @@ func (mc *Chain) restartRound(ctx context.Context) {
 			mc.BroadcastNotarizedBlocks(ctx, pr)
 		}
 	}
-
 	r.Restart()
-	if r.vrfShare != nil {
-		//TODO: send same vrf again?
-		mc.AddVRFShare(ctx, r, r.vrfShare)
-		go mc.SendVRFShare(ctx, r.vrfShare)
+	//Recalculate VRF shares and send
+	r.IncrementTimeoutCount()
+	redo := mc.RedoVrfShare(ctx, r)
+
+	if !redo {
+		Logger.Info("Could not  RedoVrfShare", zap.Int64("round", r.GetRoundNumber()), zap.Int("round_timeout", r.GetTimeoutCount()))
+		return
 	}
 }
 
@@ -680,6 +717,8 @@ func startProtocol() {
 	}
 	Logger.Info("starting the blockchain ...", zap.Int64("round", mr.GetRoundNumber()))
 	mc.StartNextRound(ctx, mr)
+	//Just started the first round. It is time to start the timeout monitor
+	go mc.RoundWorker(ctx)
 }
 
 func (mc *Chain) waitForActiveSharders(ctx context.Context) {

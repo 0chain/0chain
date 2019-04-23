@@ -346,3 +346,34 @@ func TestCasePEFLEdeleteL(t *testing.T) {
 		fmt.Printf("%+v\n", v)
 	}
 }
+
+func TestAddTwiceDeleteOnce(t *testing.T) {
+	cc := NewChangeCollector()
+	mndb := NewMemoryNodeDB()
+	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
+	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.DB, false)
+	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
+
+	doStrValInsert("setup data", mpt2, "123456781", "x", false)
+	doStrValInsert("setup data", mpt2, "123456782", "y", false)
+	//doStrValInsert("setup data", mpt2, "123556782", "z", false)
+
+	doStrValInsert("setup data", mpt2, "223456781", "x", false)
+	doStrValInsert("setup data", mpt2, "223456782", "y", false)
+
+	mpt2.PrettyPrint(os.Stdout)
+
+	doStrValInsert("setup data", mpt2, "223456782", "a", false)
+	//doStrValInsert("setup data", mpt2, "223556782", "b", false)
+
+	//mpt2.Iterate(context.TODO(), iterHandler, NodeTypeLeafNode /*|NodeTypeFullNode|NodeTypeExtensionNode */)
+	mpt2.PrettyPrint(os.Stdout)
+	printChanges(cc)
+
+	//doDelete("delete a leaf node", mpt2, "123456781", true)
+	//mpt2.PrettyPrint(os.Stdout)
+
+	//doDelete("delete a leaf node", mpt2, "223556782", true)
+	mpt2.PrettyPrint(os.Stdout)
+
+}

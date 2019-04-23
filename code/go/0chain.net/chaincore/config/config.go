@@ -31,6 +31,10 @@ func SetupDefaultConfig() {
 	viper.SetDefault("server_chain.block.sharding.min_active_sharders", 100)
 	viper.SetDefault("server_chain.block.sharding.min_active_replicators", 100)
 	viper.SetDefault("server_chain.smart_contract.timeout", 50)
+	viper.SetDefault("server_chain.round_timeouts.softto_min", 300)
+	viper.SetDefault("server_chain.round_timeouts.softto_mult", 3)
+	viper.SetDefault("server_chain.round_timeouts.round_restart_mult", 2)
+
 }
 
 /*SetupConfig - setup the configuration system */

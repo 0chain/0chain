@@ -57,6 +57,10 @@ server_chain:
     storage:
       provider: blockstore.FSBlockStore # blockstore.FSBlockStore or blockstore.BlockDBStore
   round_range: 10000000
+  round_timeouts:
+    softto_min: 2000   #in miliseconds
+    softto_mult: 3    #multiples of mean network time (mnt)  softto = max{softo_min, softto_mult * mnt}
+    round_restart_mult: 2        #number of soft timeouts before round is restarted
   transaction:
     payload:
       max_size: 98304 # bytes
