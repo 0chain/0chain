@@ -190,8 +190,9 @@ func (sc *Chain) processLastNBlocks(ctx context.Context, lr int64, n int) {
 			params.Add("hash", r.BlockHash)
 			if b == nil {
 				b = sc.requestForBlock(ctx, params, r)
+			} else {
+				sc.storeBlockTransactions(ctx, b)
 			}
-			sc.storeBlockTransactions(ctx, b)
 		}
 	}
 }

@@ -65,12 +65,12 @@ func (hr *HealthyRound) GetEntityMetadata() datastore.EntityMetadata {
 }
 
 /*SetupHealthyRound - setup the healthy round entity */
-func (sc *Chain) SetupHealthyRound(store datastore.Store) {
+func (sc *Chain) SetupHealthyRound() {
 	healthyRoundEntityMetadata = datastore.MetadataProvider()
 	healthyRoundEntityMetadata.Name = "healthy_round"
-	healthyRoundEntityMetadata.DB = sc.ConfigDB
+	healthyRoundEntityMetadata.DB = sc.GetConfigInfoDB()
 	healthyRoundEntityMetadata.Provider = HealthyRoundProvider
-	healthyRoundEntityMetadata.Store = store
+	healthyRoundEntityMetadata.Store = sc.GetConfigInfoStore()
 	healthyRoundEntityMetadata.IDColumnName = "id"
 	datastore.RegisterEntityMetadata("healthy_round", healthyRoundEntityMetadata)
 }
@@ -115,17 +115,19 @@ func (sc *Chain) GetMostRecentRoundFromDB(ctx context.Context) (*round.Round, er
 func (sc *Chain) ReadHealthyRound(ctx context.Context) (*HealthyRound, error) {
 	hr := datastore.GetEntity("healthy_round").(*HealthyRound)
 	healthyRoundEntityMetadata := hr.GetEntityMetadata()
+	hrStore := healthyRoundEntityMetadata.GetStore()
 	hrctx := ememorystore.WithEntityConnection(ctx, healthyRoundEntityMetadata)
 	defer ememorystore.Close(hrctx)
-	err := hr.Read(hrctx, hr.GetKey())
+	err := hrStore.Read(hrctx, hr.GetKey(), hr)
 	return hr, err
 }
 
 func (sc *Chain) WriteHealthyRound(ctx context.Context, hr *HealthyRound) error {
 	healthyRoundEntityMetadata := hr.GetEntityMetadata()
+	hrStore := healthyRoundEntityMetadata.GetStore()
 	hrctx := ememorystore.WithEntityConnection(ctx, healthyRoundEntityMetadata)
 	defer ememorystore.Close(hrctx)
-	err := hr.Write(hrctx)
+	err := hrStore.Write(hrctx, hr)
 	if err != nil {
 		return err
 	}

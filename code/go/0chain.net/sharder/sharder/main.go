@@ -75,6 +75,7 @@ func main() {
 
 	sharder.SetupSharderChain(serverChain)
 	sc := sharder.GetSharderChain()
+	sc.SetupConfigInfoDB()
 	chain.SetServerChain(serverChain)
 	chain.SetNetworkRelayTime(viper.GetDuration("network.relay_time") * time.Millisecond)
 	node.ReadConfig()
@@ -141,7 +142,8 @@ func main() {
 	}
 	common.HandleShutdown(server)
 	setupBlockStorageProvider()
-
+	sc.SetupHealthyRound()
+	
 	initWorkers(ctx)
 	common.ConfigRateLimits()
 	initN2NHandlers()
@@ -180,7 +182,6 @@ func initHandlers() {
 func initEntities() {
 	memoryStorage := memorystore.GetStorageProvider()
 
-	chain.SetupConfigDB()
 	chain.SetupEntity(memoryStorage)
 	block.SetupEntity(memoryStorage)
 
@@ -194,9 +195,6 @@ func initEntities() {
 	round.SetupEntity(ememoryStorage)
 	client.SetupEntity(memoryStorage)
 	transaction.SetupEntity(memoryStorage)
-
-	sc := sharder.GetSharderChain()
-	sc.SetupHealthyRound(ememoryStorage)
 
 	persistencestore.InitSession()
 	persistenceStorage := persistencestore.GetStorageProvider()

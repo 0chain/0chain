@@ -126,7 +126,9 @@ type Chain struct {
 
 	pruneStats *util.PruneStats
 
-	ConfigDB string
+	configInfoDB string
+
+	configInfoStore datastore.Store
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
@@ -245,7 +247,6 @@ func (c *Chain) Initialize() {
 	c.stateDB = stateDB
 	c.BlockChain = ring.New(10000)
 	c.minersStake = make(map[datastore.Key]int)
-	c.ConfigDB = configDB
 }
 
 /*SetupEntity - setup the entity */
@@ -259,7 +260,6 @@ func SetupEntity(store datastore.Store) {
 }
 
 var stateDB *util.PNodeDB
-var configDB string
 
 //SetupStateDB - setup the state db
 func SetupStateDB() {
@@ -270,13 +270,22 @@ func SetupStateDB() {
 	stateDB = db
 }
 
-func SetupConfigDB() {
+func (c *Chain) SetupConfigInfoDB() {
+	c.configInfoDB = "configdb"
+	c.configInfoStore = ememorystore.GetStorageProvider()
 	db, err := ememorystore.CreateDB("data/rocksdb/config")
 	if err != nil {
 		panic(err)
 	}
-	configDB = "configdb"
-	ememorystore.AddPool(configDB, db)
+	ememorystore.AddPool(c.configInfoDB, db)
+}
+
+func (c *Chain) GetConfigInfoDB() string {
+	return c.configInfoDB
+}
+
+func (c *Chain) GetConfigInfoStore() datastore.Store {
+	return c.configInfoStore
 }
 
 func (c *Chain) getInitialState() util.Serializable {

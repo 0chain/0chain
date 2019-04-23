@@ -95,6 +95,7 @@ func main() {
 	mc.DiscoverClients = viper.GetBool("server_chain.client.discover")
 	mc.SetGenerationTimeout(viper.GetInt("server_chain.block.generation.timeout"))
 	mc.SetRetryWaitTime(viper.GetInt("server_chain.block.generation.retry_wait_time"))
+	mc.SetupConfigInfoDB()
 	chain.SetServerChain(serverChain)
 
 	miner.SetNetworkRelayTime(viper.GetDuration("network.relay_time") * time.Millisecond)
@@ -245,7 +246,6 @@ func readNodesFile(nodesFile *string, mc *miner.Chain, serverChain *chain.Chain)
 func initEntities() {
 	memoryStorage := memorystore.GetStorageProvider()
 
-	chain.SetupConfigDB()
 	chain.SetupEntity(memoryStorage)
 	round.SetupEntity(memoryStorage)
 	round.SetupVRFShareEntity(memoryStorage)
