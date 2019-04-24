@@ -22,8 +22,7 @@ func SetupWorkers(ctx context.Context) {
 /*BlockWorker - a job that does all the work related to blocks in each round */
 func (mc *Chain) BlockWorker(ctx context.Context) {
 	var protocol Protocol = mc
-	Logger.Info("Started BlockWorker")
-	defer Logger.Info("done with BlockWorker")
+
 	for true {
 		select {
 		case <-ctx.Done():
@@ -34,7 +33,6 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 			} else {
 				Logger.Debug("message", zap.Any("msg", GetMessageLookup(msg.Type)))
 			}
-			Logger.Info("blk_message recv", zap.Any("msg", GetMessageLookup(msg.Type)))
 			switch msg.Type {
 			case MessageVRFShare:
 				protocol.HandleVRFShare(ctx, msg)
@@ -47,8 +45,6 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 			case MessageNotarizedBlock:
 				protocol.HandleNotarizedBlockMessage(ctx, msg)
 			}
-			Logger.Info("blk_message done", zap.Any("msg", GetMessageLookup(msg.Type)))
-
 			if msg.Sender != nil {
 				Logger.Debug("message (done)", zap.Any("msg", GetMessageLookup(msg.Type)), zap.Any("sender_index", msg.Sender.SetIndex), zap.Any("id", msg.Sender.GetKey()))
 			} else {

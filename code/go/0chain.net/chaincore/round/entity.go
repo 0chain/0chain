@@ -15,7 +15,6 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/datastore"
-	"go.uber.org/zap"
 )
 
 const (
@@ -96,11 +95,19 @@ func (r *Round) IncrementTimeoutCount() {
 // SetTimeoutCount - sets the timeout count to given number if it is greater than existing and returns true. Else false.
 func (r *Round) SetTimeoutCount(tc int) bool {
 	if tc <= r.TimeoutCount {
-		Logger.Info("Rejecting timeout count change", zap.Int64("roundNum", r.GetRoundNumber()), zap.Int("roundTimeoutCount", r.GetTimeoutCount()), zap.Int("given_count", tc))
 		return false
 	}
 	r.TimeoutCount = tc
 	return true
+}
+
+//SetRandomSeed - set the random seed of the round
+func (r *Round) SetRandomSeedForNotarizedBlock(seed int64) {
+
+	r.RandomSeed = seed
+	//r.setState(RoundVRFComplete) RoundStateFinalizing??
+	r.hasRandomSeed = true
+	r.minerPerm = nil
 }
 
 //SetRandomSeed - set the random seed of the round
@@ -135,11 +142,6 @@ func (r *Round) GetVRFOutput() string {
 func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool) {
 	r.Mutex.Lock()
 	defer r.Mutex.Unlock()
-
-	if r.GetTimeoutCount() != b.RoundTimeoutCount {
-		Logger.Error("Round and block timeoutcounts are not insync", zap.Int64("roundNum", r.GetRoundNumber()), zap.Int("round_toc", r.GetTimeoutCount()), zap.Int("block_toc", b.RoundTimeoutCount))
-
-	}
 	b, _ = r.addProposedBlock(b)
 	for _, blk := range r.notarizedBlocks {
 		if blk.Hash == b.Hash {

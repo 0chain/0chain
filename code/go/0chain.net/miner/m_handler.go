@@ -189,16 +189,10 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 		return nil, nil
 	}
 	if err := mc.VerifyNotarization(ctx, b.Hash, b.VerificationTickets); err != nil {
-		Logger.Info("notarized block handler (VerifyNotarization failed)", zap.String("block", b.Hash), zap.Any("round", b.Round), zap.Error(err))
-
 		return nil, err
 	}
 	msg := &BlockMessage{Sender: node.GetSender(ctx), Type: MessageNotarizedBlock, Block: b}
-	Logger.Info("notarized block handler (Putting it on channel)", zap.String("block", b.Hash), zap.Any("round", b.Round))
-
 	mc.GetBlockMessageChannel() <- msg
-	Logger.Info("notarized block handler (Put the message on channel)", zap.String("block", b.Hash), zap.Any("round", b.Round))
-
 	return nil, nil
 }
 

@@ -97,7 +97,6 @@ func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
 
 func (mc *Chain) startRound(ctx context.Context, r *Round, seed int64) {
 	if !mc.SetRandomSeed(r.Round, seed) {
-		Logger.Info("SetRandomSeed returned false", zap.Int64("round", r.GetRoundNumber()))
 		return
 	}
 	Logger.Info("Starting a new round", zap.Int64("round", r.GetRoundNumber()))

@@ -137,18 +137,13 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMessage) {
 	mb := msg.Block
 	mr := mc.GetMinerRound(mb.Round)
-	Logger.Info("handle notarized block message", zap.Int64("round", mb.Round), zap.Int("timeoutcouunt", mb.RoundTimeoutCount))
-
 	if mr == nil {
-		Logger.Error("handle notarized block message", zap.Int64("round", mb.Round))
 		mr = mc.getRound(ctx, mb.Round)
 		mc.startRound(ctx, mr, mb.RoundRandomSeed)
 	} else {
 		nb := mr.GetNotarizedBlocks()
 		for _, blk := range nb {
 			if blk.Hash == mb.Hash {
-				Logger.Error("blk.Hash==mb.Hash -return", zap.Int64("round", mb.Round))
-
 				return
 			}
 		}
@@ -158,8 +153,6 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMess
 	}
 	b := mc.AddRoundBlock(mr, mb)
 	if !mc.AddNotarizedBlock(ctx, mr, b) {
-		Logger.Error("returned as false form AddNotarizedBlock", zap.Int64("round", mb.Round))
-
 		return
 	}
 	mc.StartNextRound(ctx, mr)

@@ -342,21 +342,12 @@ func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block
 	//Get round data insync as it is the notarized block
 	if r.GetRandomSeed() != b.RoundRandomSeed || r.GetTimeoutCount() != b.RoundTimeoutCount {
 		Logger.Info("AddNotarizedBlockToRound round and block random seed different", zap.Int64("Round", r.GetRoundNumber()), zap.Int64("Round_rrs", r.GetRandomSeed()), zap.Int64("Block_rrs", b.RoundRandomSeed))
-		c.roundsMutex.Lock()
-		defer c.roundsMutex.Unlock()
-		r.Lock()
-		defer r.Unlock()
-
-		r.SetRandomSeed(b.RoundRandomSeed)
+		r.SetRandomSeedForNotarizedBlock(b.RoundRandomSeed)
 		r.SetTimeoutCount(b.RoundTimeoutCount)
 		r.ComputeMinerRanks(c.Miners)
 	}
 
-	Logger.Info("Round and block timeoutcounts inside AddNotarizedBlockToRound is insyncx", zap.Int64("roundNum", r.GetRoundNumber()), zap.Int("round_toc", r.GetTimeoutCount()), zap.Int("block_toc", b.RoundTimeoutCount))
-
 	c.SetRoundRank(r, b)
-	//ToDo: remove this log. This log is to check if the execution is stuck above.
-	Logger.Info("Got the rank", zap.Int64("roundNum", r.GetRoundNumber()))
 	if b.PrevBlock != nil {
 		b.ComputeChainWeight()
 	}

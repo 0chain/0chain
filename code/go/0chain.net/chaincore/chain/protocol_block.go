@@ -89,7 +89,7 @@ func (c *Chain) reachedNotarization(bvt []*block.VerificationTicket) bool {
 		}
 	}
 	//Todo: Remove this log
-	Logger.Error("Reached notarization!!!", zap.Int64("CurrentRound", c.CurrentRound))
+	Logger.Info("Reached notarization!!!", zap.Int64("CurrentRound", c.CurrentRound))
 
 	return true
 }
@@ -233,7 +233,6 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 			Logger.Info("get notarized block - no round will create...", zap.Int64("round", nb.Round), zap.String("block", blockHash), zap.Int64("cround", cround), zap.Int64("current_round", c.CurrentRound))
 			b = c.AddBlock(nb)
 
-			//r = round.NewRound(nb.Round)
 			r = c.RoundF.CreateRoundF(nb.Round).(*round.Round)
 			c.AddRound(r)
 		}
@@ -242,7 +241,6 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 		//b = c.AddRoundBlock(r, nb)
 		//This is a notarized block. So, use this method to sync round info with the notarized block.
 		b, r = c.AddNotarizedBlockToRound(r, nb)
-		Logger.Info("Round and block timeoutcounts after AddNotarizedBlockToRound is insyncx", zap.Int64("roundNum", r.GetRoundNumber()), zap.Int("round_toc", r.GetTimeoutCount()), zap.Int("block_toc", nb.RoundTimeoutCount))
 
 		b, _ = r.AddNotarizedBlock(b)
 
