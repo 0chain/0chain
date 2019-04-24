@@ -2,6 +2,7 @@ package util
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 )
@@ -22,6 +23,8 @@ type ChangeCollectorI interface {
 	UpdateChanges(ndb NodeDB, origin Sequence, includeDeletes bool) error
 
 	PrintChanges(w io.Writer)
+
+	Validate() error
 }
 
 /*ChangeCollector - node change collector interface implementation */
@@ -54,8 +57,10 @@ func (cc *ChangeCollector) AddChange(oldNode Node, newNode Node) {
 	prevChange, ok := cc.Changes[ohash]
 	if ok {
 		delete(cc.Changes, ohash)
-		if prevChange.Old != nil && bytes.Compare(newNode.GetHashBytes(), prevChange.Old.GetHashBytes()) == 0 {
-			return
+		if prevChange.Old != nil {
+			if bytes.Compare(newNode.GetHashBytes(), prevChange.Old.GetHashBytes()) == 0 {
+				return
+			}
 		}
 		prevChange.New = newNode
 		cc.Changes[nhash] = prevChange
@@ -141,4 +146,14 @@ func (cc *ChangeCollector) PrintChanges(w io.Writer) {
 			fmt.Fprintf(w, "cc(%v): nn=%v\n", idx, c.New.GetHash())
 		}
 	}
+}
+
+//Validate - validate if this change collector is valid
+func (cc *ChangeCollector) Validate() error {
+	for key := range cc.Changes {
+		if _, ok := cc.Deletes[key]; ok {
+			return errors.New("key present in both add and delete")
+		}
+	}
+	return nil
 }

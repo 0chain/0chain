@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"reflect"
 	"regexp"
+	"sort"
 	"strings"
 
 	bcstate "0chain.net/chaincore/chain/state"
@@ -91,6 +92,7 @@ func (c *Chain) GetBalanceHandler(ctx context.Context, r *http.Request) (interfa
 	if err != nil {
 		return nil, err
 	}
+	state.ComputeProperties()
 	return state, nil
 }
 
@@ -113,8 +115,14 @@ func (c *Chain) SCStats(w http.ResponseWriter, r *http.Request) {
 	PrintCSS(w)
 	fmt.Fprintf(w, "<table class='menu' style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr class='header'><td>Type</td><td>ID</td><td>Link</td><td>RestAPIs</td></tr>")
-	for k, sc := range smartcontract.ContractMap {
-		re := regexp.MustCompile(`\*.*\.`)
+	re := regexp.MustCompile(`\*.*\.`)
+	keys := make([]string, 0, len(smartcontract.ContractMap))
+	for k := range smartcontract.ContractMap {
+		keys = append(keys, k)
+	}
+	sort.SliceStable(keys, func(i, j int) bool { return keys[i] < keys[j] })
+	for _, k := range keys {
+		sc := smartcontract.ContractMap[k]
 		scType := re.ReplaceAllString(reflect.TypeOf(sc).String(), "")
 		fmt.Fprintf(w, `<tr><td>%v</td><td>%v</td><td><li><a href='%v'>%v</a></li></td><td><li><a href='%v'>%v</a></li></td></tr>`, scType, strings.ToLower(k), "/v1/scstats/"+k, "/v1/scstats/"+scType, "/v1/scrests/"+k, "/v1/scrests/*key*")
 	}

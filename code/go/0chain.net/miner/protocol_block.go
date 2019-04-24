@@ -28,9 +28,9 @@ import (
 //InsufficientTxns - to indicate an error when the transactions are not sufficient to make a block
 const InsufficientTxns = "insufficient_txns"
 
-var bgTimer metrics.Timer
-var bpTimer metrics.Timer
-var btvTimer metrics.Timer
+var bgTimer metrics.Timer  // block generation timer
+var bpTimer metrics.Timer  // block processing timer (includes block verification)
+var btvTimer metrics.Timer // block verification timer
 var bsHistogram metrics.Histogram
 
 func init() {

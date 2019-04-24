@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	metrics "github.com/rcrowley/go-metrics"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/node"
@@ -20,6 +22,12 @@ import (
 	"0chain.net/core/util"
 	"go.uber.org/zap"
 )
+
+var rbgTimer metrics.Timer // round block generation timer
+
+func init() {
+	rbgTimer = metrics.GetOrRegisterTimer("rbg_time", nil)
+}
 
 //SetNetworkRelayTime - set the network relay time
 func SetNetworkRelayTime(delta time.Duration) {
@@ -166,6 +174,10 @@ func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) *block.Bl
 
 /*GenerateRoundBlock - given a round number generates a block*/
 func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block, error) {
+	ts := time.Now()
+	defer func() {
+		rbgTimer.UpdateSince(ts)
+	}()
 	roundNumber := r.GetRoundNumber()
 	pround := mc.GetMinerRound(roundNumber - 1)
 	if pround == nil {

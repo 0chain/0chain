@@ -860,6 +860,11 @@ func (mpt *MerklePatriciaTrie) Validate() error {
 
 //MergeMPTChanges - implement interface
 func (mpt *MerklePatriciaTrie) MergeMPTChanges(mpt2 MerklePatriciaTrieI) error {
+	if DebugMPTNode && Logger != nil {
+		if err := mpt2.GetChangeCollector().Validate(); err != nil {
+			Logger.Error("MergeMPTChanges - change collector validate", zap.Error(err))
+		}
+	}
 	changes := mpt2.GetChangeCollector().GetChanges()
 	for _, c := range changes {
 		_, _, err := mpt.insertNode(c.Old, c.New)
