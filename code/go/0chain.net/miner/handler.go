@@ -101,6 +101,11 @@ func ChainStatsHandler(w http.ResponseWriter, r *http.Request) {
 	diagnostics.WriteTimerStatistics(w, c, chain.StatePruneDeleteTimer, 1000000.0)
 	fmt.Fprintf(w, "</td></tr>")
 
+	fmt.Fprintf(w, "<tr><td>")
+	fmt.Fprintf(w, "<h2>RRS Generation Statistics</h2>")
+	diagnostics.WriteTimerStatistics(w, c, vrfTimer, 1000000.0)
+	fmt.Fprintf(w, "</td></tr>")
+
 	fmt.Fprintf(w, "</table>")
 
 	fmt.Fprintf(w, "<br>")
