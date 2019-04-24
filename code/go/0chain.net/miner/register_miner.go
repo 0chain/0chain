@@ -8,26 +8,24 @@ import (
 	"sort"
 	"time"
 
+	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/client"
+	"0chain.net/chaincore/httpclientutil"
+	"0chain.net/chaincore/node"
+	"0chain.net/chaincore/wallet"
 	"0chain.net/core/common"
-	"0chain.net/core/httpclientutil"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	. "0chain.net/core/logging"
 	"0chain.net/core/memorystore"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
-	"0chain.net/chaincore/wallet"
-	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/chain"
 )
 
-
- 
-//Note: MinerNode is originally defined in MinerSmartcontract. 
+//Note: MinerNode is originally defined in MinerSmartcontract.
 const (
 	//MinerSCAddress address of minersc
-	MinerSCAddress = "CF9C03CD22C9C7B116EED04E4A909F95ABEC17E98FE631D6AC94D5D8420C5B20"
+	MinerSCAddress     = "CF9C03CD22C9C7B116EED04E4A909F95ABEC17E98FE631D6AC94D5D8420C5B20"
 	getNodepoolInfoAPI = "/getNodepool"
 )
 
@@ -61,14 +59,14 @@ type PoolMembers struct {
 
 // PoolMemberInfo of pool members
 type PoolMemberInfo struct {
-	N2NHost        string `json:"n2n_host"`
-	PublicKey           string `json:"public_key"`
-	Port           string `json:"port"`
-	Type           string `json:"type"`
+	N2NHost   string `json:"n2n_host"`
+	PublicKey string `json:"public_key"`
+	Port      string `json:"port"`
+	Type      string `json:"type"`
 }
 
 type PoolMembersInfo struct {
-	MembersInfo   []PoolMemberInfo `json:"members_info"`
+	MembersInfo []PoolMemberInfo `json:"members_info"`
 }
 
 const numRetriesForTxn = 3
@@ -77,6 +75,7 @@ const scNameAddMiner = "add_miner"
 const scNameViewchangeReq = "viewchange_req"
 const scNameSyncReq = "sync_req"
 const discoverIPPath = "/_nh/getpoolmembers"
+
 var discoveryIps []string
 
 var members PoolMembers
@@ -91,7 +90,7 @@ func DiscoverPoolMembers(discoveryFile string) bool {
 	for _, ip := range discoveryIps {
 		pm = PoolMembers{}
 
-		httpclientutil.MakeGetRequest(ip+discoverIPPath, &pm) 
+		httpclientutil.MakeGetRequest(ip+discoverIPPath, &pm)
 
 		if pm.Miners != nil {
 			if len(pm.Miners) == 0 {
@@ -188,18 +187,18 @@ func RegisterClient(sigScheme encryption.SignatureScheme) {
 	nodeBytes, _ := json.Marshal(myWallet)
 	//Logger.Info("Post body", zap.Any("publicKey", myWallet.PublicKey), zap.String("ID", myWallet.ClientID))
 	for _, ip := range members.Miners {
-		body, err := httpclientutil.SendPostRequest(ip + httpclientutil.RegisterClient, nodeBytes, "", "", nil)
-		if err!= nil {
-			Logger.Error("error in register client", zap.Error(err), zap.Any("body", body) )
-		} 
+		body, err := httpclientutil.SendPostRequest(ip+httpclientutil.RegisterClient, nodeBytes, "", "", nil)
+		if err != nil {
+			Logger.Error("error in register client", zap.Error(err), zap.Any("body", body))
+		}
 		time.Sleep(httpclientutil.SleepBetweenRetries * time.Second)
 	}
 	//Logger.Info("My Client Info", zap.Any("ClientId", myWallet.ClientID))
-	
+
 }
 
 func sendRegisterMinerReq() (string, error) {
-	
+
 	txn := httpclientutil.NewTransactionEntity(node.Self.ID, chain.GetServerChain().ID, node.Self.PublicKey)
 
 	mn := &MinerNode{}
@@ -215,12 +214,12 @@ func sendRegisterMinerReq() (string, error) {
 	txn.TransactionType = httpclientutil.TxnTypeSmartContract
 	txnBytes, err := json.Marshal(scData)
 	if err != nil {
-		Logger.Error ("Returning error", zap.Error(err))
+		Logger.Error("Returning error", zap.Error(err))
 		return "", err
 	}
 	txn.TransactionData = string(txnBytes)
 
-	signer := func (hash string) (string, error) {
+	signer := func(hash string) (string, error) {
 		return node.Self.Sign(hash)
 	}
 
@@ -229,7 +228,7 @@ func sendRegisterMinerReq() (string, error) {
 		Logger.Info("Signing Failed during registering miner to the mining network", zap.Error(err))
 		return "", err
 	}
- 	Logger.Info("Adding miner to the blockchain.", zap.String("txn", txn.Hash))
+	Logger.Info("Adding miner to the blockchain.", zap.String("txn", txn.Hash))
 	httpclientutil.SendTransaction(txn, members.Miners, node.Self.ID, node.Self.PublicKey)
 	return txn.Hash, nil
 }
@@ -240,22 +239,21 @@ func registerMiner() {
 		regMinerTxn, err := sendRegisterMinerReq()
 		if err != nil {
 			Logger.Fatal("Error while registering", zap.Error(err))
-			
+
 		} else {
-			regTxn := verifyTransaction(regMinerTxn) 
+			regTxn := verifyTransaction(regMinerTxn)
 			if regTxn != nil {
 				Logger.Info("Registration success!!!", zap.String("txn", regTxn.Hash))
-			return
+				return
 			}
 		}
 	}
-Logger.Fatal("Could not register/verify")
+	Logger.Fatal("Could not register/verify")
 
 }
 
-
 func sendRequestViewchangeReq() (string, error) {
-	
+
 	txn := httpclientutil.NewTransactionEntity(node.Self.ID, chain.GetServerChain().ID, node.Self.PublicKey)
 
 	mn := &MinerNode{}
@@ -271,12 +269,12 @@ func sendRequestViewchangeReq() (string, error) {
 	txn.TransactionType = httpclientutil.TxnTypeSmartContract
 	txnBytes, err := json.Marshal(scData)
 	if err != nil {
-		Logger.Error ("Returning error", zap.Error(err))
+		Logger.Error("Returning error", zap.Error(err))
 		return "", err
 	}
 	txn.TransactionData = string(txnBytes)
 
-	signer := func (hash string) (string, error) {
+	signer := func(hash string) (string, error) {
 		return node.Self.Sign(hash)
 	}
 
@@ -285,11 +283,10 @@ func sendRequestViewchangeReq() (string, error) {
 		Logger.Info("Signing Failed during registering miner to the mining network", zap.Error(err))
 		return "", err
 	}
- 	Logger.Info("Adding miner to the blockchain.", zap.String("txn", txn.Hash))
+	Logger.Info("Adding miner to the blockchain.", zap.String("txn", txn.Hash))
 	httpclientutil.SendTransaction(txn, members.Miners, node.Self.ID, node.Self.PublicKey)
 	return txn.Hash, nil
 }
-
 
 func requestViewchange() {
 	for i := 0; i < numRetriesForTxn; i++ {
@@ -297,23 +294,21 @@ func requestViewchange() {
 		vcrTxn, err := sendRequestViewchangeReq()
 		if err != nil {
 			Logger.Fatal("Error while viewchange request", zap.Error(err))
-			
+
 		} else {
-			vcrTxnConf := verifyTransaction(vcrTxn) 
+			vcrTxnConf := verifyTransaction(vcrTxn)
 			if vcrTxnConf != nil {
 				Logger.Info("ViewChange Request success!!!", zap.String("txn", vcrTxnConf.Hash), zap.String("conf", vcrTxnConf.TransactionOutput))
-			
-				
-			return
+
+				return
 			}
 		}
 	}
-Logger.Fatal("Could not register/verify")
+	Logger.Fatal("Could not register/verify")
 
 }
 
-
-func getNodepoolInfo () {
+func getNodepoolInfo() {
 	params := make(map[string]string)
 	params["baseurl"] = node.Self.GetURLBase()
 	params["id"] = node.Self.ID
@@ -337,20 +332,20 @@ func KickoffMinerRegistration(discoveryIps *string, signatureScheme encryption.S
 		registerMiner()
 		getNodepoolInfo()
 		requestViewchange()
-		
+
 	} else {
 		Logger.Fatal("Discovery URLs are nil. Cannot discovery pool members")
 	}
 }
 
-func verifyTransaction(regMinerTxn string)  *httpclientutil.Transaction {
-	
+func verifyTransaction(regMinerTxn string) *httpclientutil.Transaction {
+
 	for i := 0; i < numRetriesForTxnConfirmation; i++ {
 		time.Sleep(httpclientutil.SleepBetweenRetries * time.Second)
 		regTxn, err := httpclientutil.GetTransactionStatus(regMinerTxn, members.Sharders, successConsesus)
 		if err == nil {
-			return  regTxn
-		} 
+			return regTxn
+		}
 
 		Logger.Info("Could not get confirmation for registration request. Retrying... ", zap.Error(err))
 	}
