@@ -13,7 +13,7 @@ import (
 /*SetupWorkers - Setup the miner's workers */
 func SetupWorkers(ctx context.Context) {
 	mc := GetMinerChain()
-	//go mc.RoundWorker(ctx) //we are going to start this after we are ready with the round
+	go mc.RoundWorker(ctx)              //we are going to start this after we are ready with the round
 	go mc.BlockWorker(ctx)              // 1) receives incoming blocks from the network
 	go mc.FinalizeRoundWorker(ctx, mc)  // 2) sequentially finalize the rounds
 	go mc.FinalizedBlockWorker(ctx, mc) // 3) sequentially processes finalized blocks
@@ -22,6 +22,7 @@ func SetupWorkers(ctx context.Context) {
 /*BlockWorker - a job that does all the work related to blocks in each round */
 func (mc *Chain) BlockWorker(ctx context.Context) {
 	var protocol Protocol = mc
+
 	for true {
 		select {
 		case <-ctx.Done():
@@ -55,7 +56,7 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 
 //RoundWorker - a worker that monitors the round progress
 func (mc *Chain) RoundWorker(ctx context.Context) {
-	var timer = time.NewTimer(time.Duration(mc.GetNextRoundTimeoutTime(ctx)) * time.Millisecond)
+	var timer = time.NewTimer(time.Duration(4 * time.Second))
 	var cround = mc.CurrentRound
 	var protocol Protocol = mc
 

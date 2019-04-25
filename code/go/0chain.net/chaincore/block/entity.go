@@ -58,9 +58,10 @@ type UnverifiedBlockBody struct {
 	PrevHash                     string                `json:"prev_hash"`
 	PrevBlockVerificationTickets []*VerificationTicket `json:"prev_verification_tickets,omitempty"`
 
-	MinerID         datastore.Key `json:"miner_id"`
-	Round           int64         `json:"round"`
-	RoundRandomSeed int64         `json:"round_random_seed"`
+	MinerID           datastore.Key `json:"miner_id"`
+	Round             int64         `json:"round"`
+	RoundRandomSeed   int64         `json:"round_random_seed"`
+	RoundTimeoutCount int           `json:"round_timeout_count"`
 
 	ClientStateHash util.Key `json:"state_hash"`
 

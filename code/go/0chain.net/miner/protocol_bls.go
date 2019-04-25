@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	metrics "github.com/rcrowley/go-metrics"
+
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
@@ -41,6 +43,12 @@ var IsDkgDone = false
 var selfInd int
 
 var mutex = &sync.RWMutex{}
+
+var vrfTimer metrics.Timer // VRF gen-to-sync timer
+
+func init() {
+	vrfTimer = metrics.GetOrRegisterTimer("vrf_time", nil)
+}
 
 // StartDKG - starts the DKG process
 func StartDKG(ctx context.Context) {
@@ -333,6 +341,7 @@ func AggregateDKGSecShares(ctx context.Context, recShares []string) error {
 
 // GetBlsShare - Start the BLS process
 func GetBlsShare(ctx context.Context, r, pr *round.Round) string {
+	r.VrfStartTime = time.Now()
 	if !isDkgEnabled {
 		Logger.Debug("returning standard string as DKG is not enabled.")
 		return encryption.Hash("0chain")
@@ -345,17 +354,19 @@ func GetBlsShare(ctx context.Context, r, pr *round.Round) string {
 
 	currRound = r.Number
 	var rbOutput string
+	prev_rseed := int64(0)
 	if r.GetRoundNumber()-1 == 0 {
 
 		Logger.Debug("The corner case for round 1 when pr is nil :", zap.Int64("round", r.GetRoundNumber()))
 		rbOutput = encryption.Hash("0chain")
 	} else {
+		prev_rseed = pr.RandomSeed
 		rbOutput = strconv.FormatInt(pr.RandomSeed, 16) //pr.VRFOutput
 	}
 
 	bs.Msg = fmt.Sprintf("%v%v%v", r.GetRoundNumber(), r.GetTimeoutCount(), rbOutput)
 
-	Logger.Info("Bls sign share calculated for ", zap.Int64("round", r.GetRoundNumber()), zap.Int("roundtimeout", r.GetTimeoutCount()), zap.String("rbo_output", rbOutput), zap.Any("bls_msg", bs.Msg))
+	Logger.Info("Bls sign share calculated for ", zap.Int64("round", r.GetRoundNumber()), zap.Int("roundtimeout", r.GetTimeoutCount()), zap.Int64("prev_rseed", prev_rseed), zap.Any("bls_msg", bs.Msg))
 
 	sigShare := bs.SignMsg()
 	return sigShare.GetHexString()
@@ -367,7 +378,8 @@ func GetBlsShare(ctx context.Context, r, pr *round.Round) string {
 //AddVRFShare - implement the interface for the RoundRandomBeacon protocol
 func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShare) bool {
 	Logger.Info("DKG AddVRFShare", zap.Int64("Round", mr.GetRoundNumber()), zap.Int("RoundTimeoutCount", mr.GetTimeoutCount()),
-		zap.Int("Sender", vrfs.GetParty().SetIndex), zap.Int("vrf_timeoutcount", vrfs.GetRoundTimeoutCount()), zap.String("sender_key", vrfs.GetParty().GetKey()))
+		zap.Int("Sender", vrfs.GetParty().SetIndex), zap.Int("vrf_timeoutcount", vrfs.GetRoundTimeoutCount()),
+		zap.String("vrf_share", vrfs.Share))
 
 	if vrfs.GetRoundTimeoutCount() != mr.GetTimeoutCount() {
 		//Keep VRF timeout and round timeout in sync. Same vrfs will comeback during soft timeouts
@@ -480,8 +492,19 @@ func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r 
 		}
 	}
 	r.Round.SetVRFOutput(rbo)
-	//Todo: Remove this log later.
-	Logger.Info("Starting round", zap.Int64("round", r.GetRoundNumber()), zap.Int64("rseed", seed))
+	if pr != nil {
+		//Todo: Remove this log later.
+		Logger.Info("Starting round insync", zap.Int64("round", r.GetRoundNumber()),
+			zap.Int("roundtimeout", r.GetTimeoutCount()),
+			zap.Int64("rseed", seed), zap.Int64("prev_round", pr.GetRoundNumber()),
+			//zap.Int("Prev_roundtimeout", pr.GetTimeoutCount()),
+			zap.Int64("Prev_rseed", pr.GetRandomSeed()))
+	}
+	if !r.VrfStartTime.IsZero() {
+		vrfTimer.UpdateSince(r.VrfStartTime)
+	} else {
+		Logger.Info("VrfStartTime is zero", zap.Int64("round", r.GetRoundNumber()))
+	}
 	mc.startRound(ctx, r, seed)
 
 }

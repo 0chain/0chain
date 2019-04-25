@@ -79,6 +79,15 @@ func (hr *HealthyRound) GetKey() datastore.Key {
 	return datastore.ToKey(hr.GetEntityMetadata().GetName())
 }
 
+// SharderRoundFactory Factory for Sharder Round
+type SharderRoundFactory struct{}
+
+// CreateRoundF the interface{} here returns generic round
+func (mrf SharderRoundFactory) CreateRoundF(roundNum int64) interface{} {
+	mr := round.NewRound(roundNum)
+	return mr
+}
+
 /*StoreRound - persists given round to ememory(rocksdb)*/
 func (sc *Chain) StoreRound(ctx context.Context, r *round.Round) error {
 	roundEntityMetadata := r.GetEntityMetadata()

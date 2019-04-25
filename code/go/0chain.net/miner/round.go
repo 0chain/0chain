@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"0chain.net/chaincore/block"
-	. "0chain.net/core/logging"
 	"0chain.net/chaincore/round"
+	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 

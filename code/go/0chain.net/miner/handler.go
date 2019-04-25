@@ -78,7 +78,7 @@ func ChainStatsHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</td></tr>")
 
 	fmt.Fprintf(w, "<tr><td>")
-	fmt.Fprintf(w, "<h2>Block Txns Statiscs</h2>")
+	fmt.Fprintf(w, "<h2>Block Txns Statistics</h2>")
 	diagnostics.WriteHistogramStatistics(w, c, bsHistogram)
 	fmt.Fprintf(w, "</td><td>")
 	fmt.Fprintf(w, "<h2>Smart Contract Execution Statistics</h2>")
@@ -99,6 +99,11 @@ func ChainStatsHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</td><td>")
 	fmt.Fprintf(w, "<h2>State Prune Delete Statistics</h2>")
 	diagnostics.WriteTimerStatistics(w, c, chain.StatePruneDeleteTimer, 1000000.0)
+	fmt.Fprintf(w, "</td></tr>")
+
+	fmt.Fprintf(w, "<tr><td>")
+	fmt.Fprintf(w, "<h2>RRS Generation Statistics</h2>")
+	diagnostics.WriteTimerStatistics(w, c, vrfTimer, 1000000.0)
 	fmt.Fprintf(w, "</td></tr>")
 
 	fmt.Fprintf(w, "</table>")

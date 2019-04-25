@@ -129,6 +129,7 @@ type Chain struct {
 	configInfoDB string
 
 	configInfoStore datastore.Store
+	RoundF          round.RoundFactory
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
@@ -349,6 +350,36 @@ func (c *Chain) AddBlock(b *block.Block) *block.Block {
 	return c.addBlock(b)
 }
 
+/*AddNotarizedBlockToRound - adds notarized block to cache and sync  info from notarized block to round  */
+func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block.Block, round.RoundI) {
+	c.blocksMutex.Lock()
+	defer c.blocksMutex.Unlock()
+
+	/*
+		Since this nb mostly from a diff node, addBlock will return local block with the same hash if exists.
+		Either way the block content is same, but we will get it from the local.
+	*/
+	b = c.addBlock(b)
+
+	if b.Round == c.CurrentRound {
+		Logger.Info("Adding a notarized block for current round", zap.Int64("Round", r.GetRoundNumber()))
+	}
+
+	//Get round data insync as it is the notarized block
+	if r.GetRandomSeed() != b.RoundRandomSeed || r.GetTimeoutCount() != b.RoundTimeoutCount {
+		Logger.Info("AddNotarizedBlockToRound round and block random seed different", zap.Int64("Round", r.GetRoundNumber()), zap.Int64("Round_rrs", r.GetRandomSeed()), zap.Int64("Block_rrs", b.RoundRandomSeed))
+		r.SetRandomSeedForNotarizedBlock(b.RoundRandomSeed)
+		r.SetTimeoutCount(b.RoundTimeoutCount)
+		r.ComputeMinerRanks(c.Miners)
+	}
+
+	c.SetRoundRank(r, b)
+	if b.PrevBlock != nil {
+		b.ComputeChainWeight()
+	}
+	return b, r
+}
+
 /*AddRoundBlock - add a block for a given round to the cache */
 func (c *Chain) AddRoundBlock(r round.RoundI, b *block.Block) *block.Block {
 	c.blocksMutex.Lock()
@@ -358,6 +389,7 @@ func (c *Chain) AddRoundBlock(r round.RoundI, b *block.Block) *block.Block {
 		return b2
 	}
 	b.RoundRandomSeed = r.GetRandomSeed()
+	b.RoundTimeoutCount = r.GetTimeoutCount()
 	c.SetRoundRank(r, b)
 	if b.PrevBlock != nil {
 		b.ComputeChainWeight()

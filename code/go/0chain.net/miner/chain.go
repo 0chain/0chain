@@ -31,11 +31,24 @@ func SetupMinerChain(c *chain.Chain) {
 	minerChain.Chain = c
 	minerChain.BlockMessageChannel = make(chan *BlockMessage, 128)
 	c.SetFetchedNotarizedBlockHandler(minerChain)
+	c.RoundF = MinerRoundFactory{}
 }
 
 /*GetMinerChain - get the miner's chain */
 func GetMinerChain() *Chain {
 	return minerChain
+}
+
+type MinerRoundFactory struct{}
+
+//CreateRoundF this returns an interface{} of type *miner.Round
+func (mrf MinerRoundFactory) CreateRoundF(roundNum int64) interface{} {
+	mc := GetMinerChain()
+	r := round.NewRound(roundNum)
+	mr := mc.CreateRound(r)
+	mc.AddRound(mr)
+
+	return r
 }
 
 /*Chain - A miner chain to manage the miner activities */
