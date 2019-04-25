@@ -210,11 +210,7 @@ func (c *Chain) GetHeaviestNotarizedBlock(r round.RoundI) *block.Block {
 		if nb.Round != roundNumber {
 			return nil, common.NewError("invalid_block", "Block not from the requested round")
 		}
-		/*
-			if nb.RoundTimeoutCount != r.GetTimeoutCount() {
-				return nil, common.NewError("invalid_block", "Block and round timeoutcount not insync."+fmt.Sprintf("  round_toc = %v, blk_toc = ", nb.RoundTimeoutCount, r.GetTimeoutCount()))
-			}
-		*/
+
 		if err := c.VerifyNotarization(ctx, nb.Hash, nb.VerificationTickets); err != nil {
 			Logger.Error("get notarized block for round - validate notarization", zap.Int64("round", roundNumber), zap.String("block", nb.Hash), zap.Error(err))
 			return nil, err
@@ -223,8 +219,16 @@ func (c *Chain) GetHeaviestNotarizedBlock(r round.RoundI) *block.Block {
 			Logger.Error("get notarized block for round - validate", zap.Int64("round", roundNumber), zap.String("block", nb.Hash), zap.Error(err))
 			return nil, err
 		}
-		c.SetRandomSeed(r, nb.RoundRandomSeed)
-		b := c.AddRoundBlock(r, nb)
+
+		if nb.RoundTimeoutCount != r.GetTimeoutCount() {
+			Logger.Info("Timeoutcount on Round and NB are out-of-sync", zap.Int64("round", roundNumber), zap.Int("nb_toc", nb.RoundTimeoutCount), zap.Int("round_toc", r.GetTimeoutCount()))
+
+		}
+
+		var b *block.Block
+		//This is a notarized block. So, use this method to sync round info with the notarized block.
+		b, r = c.AddNotarizedBlockToRound(r, nb)
+
 		//TODO: this may not be the best round block or the best chain weight block. Do we do that extra work?
 		b, _ = r.AddNotarizedBlock(b)
 		Logger.Info("get notarized block", zap.Int64("round", roundNumber), zap.String("block", b.Hash), zap.String("state", util.ToHex(b.ClientStateHash)), zap.String("prev_block", b.PrevHash))

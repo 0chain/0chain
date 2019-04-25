@@ -329,13 +329,13 @@ func (c *Chain) AddBlock(b *block.Block) *block.Block {
 func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block.Block, round.RoundI) {
 	c.blocksMutex.Lock()
 	defer c.blocksMutex.Unlock()
-	b2 := c.addBlock(b)
-	if b2.Hash != b.Hash {
-		Logger.Error("Already have a different block. Returning", zap.Int64("Round", r.GetRoundNumber()),
-			zap.String("new_block", b.Hash), zap.String("existing_block", b2.Hash),
-			zap.Int("new_block_toc", b.RoundTimeoutCount), zap.Int("existing_block_toc", b2.RoundTimeoutCount))
-		//return b2
-	}
+
+	/*
+		Since this nb mostly from a diff node, addBlock will return local block with the same hash if exists.
+		Either way the block content is same, but we will get it from the local.
+	*/
+	b = c.addBlock(b)
+
 	if b.Round == c.CurrentRound {
 		Logger.Info("Adding a notarized block for current round", zap.Int64("Round", r.GetRoundNumber()))
 	}
