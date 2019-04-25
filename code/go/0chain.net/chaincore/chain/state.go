@@ -126,7 +126,7 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 		if datastore.IsEmpty(txn.ClientID) {
 			txn.ComputeClientID()
 		}
-		if err := c.updateState(b, txn); err != nil {
+		if err := c.UpdateState(b, txn); err != nil {
 			b.SetStateStatus(block.StateFailed)
 			Logger.Error("compute state - update state failed", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)), zap.String("prev_block", b.PrevHash), zap.String("prev_client_state", util.ToHex(pb.ClientStateHash)))
 			return common.NewError("state_update_error", "error updating state")
@@ -241,7 +241,7 @@ If a state can't be updated (e.g low balance), then a false is returned so that 
 */
 func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) error {
 	c.stateMutex.Lock()
-	c.stateMutex.Unlock()
+	defer c.stateMutex.Unlock()
 	return c.updateState(b,txn)
 }
 
@@ -473,7 +473,7 @@ since block.GetStateValue uses a RLock on the StateMutex. This API is for someon
 the protocol without already holding a lock on StateMutex */
 func (c *Chain) GetState(b *block.Block, clientID string) (*state.State, error) {
 	c.stateMutex.RLock()
-	c.stateMutex.RUnlock()
+	defer c.stateMutex.RUnlock()
 	ss,err := b.ClientState.GetNodeValue(util.Path(clientID))
 	if err != nil {
 		if !b.IsStateComputed() {
