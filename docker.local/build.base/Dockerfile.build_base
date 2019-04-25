@@ -1,9 +1,9 @@
 # docker.local
-FROM golang:1.11.4-alpine3.8
+FROM golang:1.11.9-alpine3.9
 RUN apk add bash build-base grep git
 
 # Install RocksDB
-RUN apk add coreutils linux-headers perl zlib-dev bzip2-dev lz4-dev snappy-dev zstd-libs zstd-dev jemalloc jemalloc-dev && \
+RUN apk add coreutils linux-headers perl zlib-dev bzip2-dev lz4-dev snappy-dev zstd-libs zstd-dev && \
     cd /tmp && \
     wget -O - https://github.com/facebook/rocksdb/archive/v5.17.2.tar.gz | tar xz && \
     cd /tmp/rocksdb* && \

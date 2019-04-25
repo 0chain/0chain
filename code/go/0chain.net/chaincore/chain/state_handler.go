@@ -41,7 +41,8 @@ func (c *Chain) GetSCRestOutput(ctx context.Context, r *http.Request) (interface
 
 	scAddress := pathParams[1]
 	scRestPath := "/" + pathParams[2]
-
+	c.stateMutex.RLock()
+	defer c.stateMutex.RUnlock()
 	lfb := c.LatestFinalizedBlock
 	clientState := createTxnMPT(lfb.ClientState) // begin transaction
 	txn := &transaction.Transaction{}
@@ -65,6 +66,8 @@ func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interf
 	if lfb.ClientState == nil {
 		return nil, common.NewError("failed to get sc state", "finalized block's state doesn't exist")
 	}
+	c.stateMutex.RLock()
+	defer c.stateMutex.RUnlock()
 	node, err := lfb.ClientState.GetNodeValue(util.Path(scAddress + key))
 	if err != nil {
 		return nil, err

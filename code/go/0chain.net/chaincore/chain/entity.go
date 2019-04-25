@@ -98,7 +98,7 @@ type Chain struct {
 
 	clientStateDeserializer state.DeserializerI
 	stateDB                 util.NodeDB
-	stateMutex              *sync.Mutex
+	stateMutex              *sync.RWMutex
 
 	finalizedRoundsChannel chan round.RoundI
 	finalizedBlocksChannel chan *block.Block
@@ -226,7 +226,7 @@ func Provider() datastore.Entity {
 
 	c.retry_wait_mutex = &sync.Mutex{}
 	c.genTimeoutMutex = &sync.Mutex{}
-	c.stateMutex = &sync.Mutex{}
+	c.stateMutex = &sync.RWMutex{}
 	c.stakeMutex = &sync.Mutex{}
 	c.InitializeCreationDate()
 	c.nodePoolScorer = node.NewHashPoolScorer(encryption.NewXORHashScorer())
