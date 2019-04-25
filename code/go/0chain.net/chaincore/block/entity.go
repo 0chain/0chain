@@ -86,7 +86,7 @@ type Block struct {
 
 	ClientState           util.MerklePatriciaTrieI `json:"-"`
 	stateStatus           int8
-	StateMutex            *sync.Mutex `json:"_"`
+	StateMutex            *sync.RWMutex `json:"_"`
 	blockState            int8
 	isNotarized           bool
 	ticketsMutex          *sync.Mutex
@@ -187,7 +187,7 @@ func Provider() datastore.Entity {
 	b.Version = "1.0"
 	b.ChainID = datastore.ToKey(config.GetServerChainID())
 	b.InitializeCreationDate()
-	b.StateMutex = &sync.Mutex{}
+	b.StateMutex = &sync.RWMutex{}
 	b.ticketsMutex = &sync.Mutex{}
 	return b
 }
@@ -511,4 +511,11 @@ func (b *Block) AddUniqueBlockExtension(eb *Block) {
 		b.UniqueBlockExtensions = make(map[string]bool)
 	}
 	b.UniqueBlockExtensions[eb.MinerID] = true
+}
+
+//GetStateValue - read the state value from the block
+func (b *Block) GetStateValue(key string) (util.Serializable,error) {
+	b.StateMutex.RLock()
+	defer b.StateMutex.RUnlock()
+	return b.ClientState.GetNodeValue(util.Path(key))
 }
