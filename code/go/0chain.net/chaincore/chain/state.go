@@ -195,9 +195,8 @@ func (c *Chain) rebaseState(lfb *block.Block) {
 	if lfb.ClientState == nil {
 		return
 	}
-	lock := lfb.StateMutex
-	lock.Lock()
-	defer lock.Unlock()
+	c.stateMutex.Lock()
+	defer c.stateMutex.Unlock()
 	ndb := lfb.ClientState.GetNodeDB()
 	if ndb != c.stateDB {
 		lfb.ClientState.SetNodeDB(c.stateDB)
@@ -241,9 +240,8 @@ The block starts off with the state from the prior block and as transactions are
 If a state can't be updated (e.g low balance), then a false is returned so that the transaction will not make it into the block
 */
 func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) error {
-	lock := b.StateMutex
-	lock.Lock()
-	defer lock.Unlock() 
+	c.stateMutex.Lock()
+	c.stateMutex.Unlock()
 	return c.updateState(b,txn)
 }
 
@@ -474,7 +472,9 @@ func (c *Chain) getState(clientState util.MerklePatriciaTrieI, clientID string) 
 since block.GetStateValue uses a RLock on the StateMutex. This API is for someone reading the state from outside
 the protocol without already holding a lock on StateMutex */
 func (c *Chain) GetState(b *block.Block, clientID string) (*state.State, error) {
-	ss,err := b.GetStateValue(clientID)
+	c.stateMutex.RLock()
+	c.stateMutex.RUnlock()
+	ss,err := b.ClientState.GetNodeValue(util.Path(clientID))
 	if err != nil {
 		if !b.IsStateComputed() {
 			return nil, common.NewError("state_not_yet_computed", "State is not yet computed")

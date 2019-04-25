@@ -512,10 +512,3 @@ func (b *Block) AddUniqueBlockExtension(eb *Block) {
 	}
 	b.UniqueBlockExtensions[eb.MinerID] = true
 }
-
-//GetStateValue - read the state value from the block
-func (b *Block) GetStateValue(key string) (util.Serializable,error) {
-	b.StateMutex.RLock()
-	defer b.StateMutex.RUnlock()
-	return b.ClientState.GetNodeValue(util.Path(key))
-}
