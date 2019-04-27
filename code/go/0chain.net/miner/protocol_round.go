@@ -377,6 +377,7 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 		b.SetBlockState(block.StateVerificationSuccessful)
 		bnb := r.GetBestRankedNotarizedBlock()
 		if bnb == nil || (bnb != nil && bnb.Hash == b.Hash) {
+			Logger.Info("Sending verification ticket", zap.Int64("round", r.Number), zap.String("block", b.Hash))
 			go mc.SendVerificationTicket(ctx, b, bvt)
 		}
 		if bnb == nil {
@@ -492,6 +493,8 @@ func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.B
 		return
 	}
 	if notarized {
+		Logger.Info("Block is notarized", zap.Int64("round", r.Number), zap.String("block", b.Hash))
+
 		return
 	}
 	mc.checkBlockNotarization(ctx, r, b)
@@ -507,7 +510,7 @@ func (mc *Chain) checkBlockNotarization(ctx context.Context, r *Round, b *block.
 	}
 	mc.SetRandomSeed(r, b.RoundRandomSeed)
 	go mc.SendNotarization(ctx, b)
-	Logger.Debug("check block notarization - block notarized", zap.Int64("round", b.Round), zap.String("block", b.Hash))
+	Logger.Info("check block notarization - block notarized", zap.Int64("round", b.Round), zap.String("block", b.Hash))
 	mc.StartNextRound(common.GetRootContext(), r)
 	return true
 }
@@ -600,7 +603,7 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*bloc
 // GetNextRoundTimeoutTime returns time in milliseconds
 func (mc *Chain) GetNextRoundTimeoutTime(ctx context.Context) int {
 
-	mnt := int(math.Ceil(mc.Miners.GetMedianNetworkTime() / 1000000))
+	mnt := int(math.Ceil(chain.SteadyStateFinalizationTimer.Mean() / 1000000))
 	tick := mc.RoundTimeoutSofttoMin
 	if tick < mc.RoundTimeoutSofttoMult*mnt {
 		tick = mc.RoundTimeoutSofttoMult * mnt

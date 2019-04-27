@@ -69,6 +69,8 @@ func StartDKG(ctx context.Context) {
 
 	if isDkgEnabled {
 		dg = bls.MakeDKG(k, n)
+
+		waitForNetworkToBeReady(ctx)
 		dkgSummary, err := getDKGSummaryFromStore(ctx)
 		if dkgSummary.SecretKeyGroupStr != "" {
 			dg.SecKeyShareGroup.SetHexString(dkgSummary.SecretKeyGroupStr)
@@ -80,7 +82,6 @@ func StartDKG(ctx context.Context) {
 			Logger.Info("err : reading dkg from db", zap.Error(err))
 		}
 
-		waitForNetworkToBeReady(ctx)
 		Logger.Info("Starting DKG...")
 
 		minerShares = make(map[string]bls.Key, len(m2m.Nodes))
@@ -366,7 +367,7 @@ func GetBlsShare(ctx context.Context, r, pr *round.Round) string {
 
 	bs.Msg = fmt.Sprintf("%v%v%v", r.GetRoundNumber(), r.GetTimeoutCount(), rbOutput)
 
-	Logger.Info("Bls sign share calculated for ", zap.Int64("round", r.GetRoundNumber()), zap.Int("roundtimeout", r.GetTimeoutCount()), zap.Int64("prev_rseed", prev_rseed), zap.Any("bls_msg", bs.Msg))
+	Logger.Info("Bls sign vrfshare calculated for ", zap.Int64("round", r.GetRoundNumber()), zap.Int("roundtimeout", r.GetTimeoutCount()), zap.Int64("prev_rseed", prev_rseed), zap.Any("bls_msg", bs.Msg))
 
 	sigShare := bs.SignMsg()
 	return sigShare.GetHexString()
@@ -413,7 +414,7 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round) {
 
 	shares := mr.GetVRFShares()
 	if len(shares) >= GetBlsThreshold() {
-		Logger.Debug("DKG Hurray we've threshold BLS shares")
+		Logger.Debug("VRF Hurray we've threshold BLS shares")
 		if !isDkgEnabled {
 			//We're still waiting for threshold number of VRF shares, even though DKG is not enabled.
 
@@ -426,7 +427,7 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round) {
 		recSig, recFrom := getVRFShareInfo(mr)
 
 		rbOutput := bs.CalcRandomBeacon(recSig, recFrom)
-		Logger.Debug("DKG ", zap.String("rboOutput", rbOutput), zap.Int64("Round", mr.Number))
+		Logger.Debug("VRF ", zap.String("rboOutput", rbOutput), zap.Int64("Round", mr.Number))
 		mc.computeRBO(ctx, mr, rbOutput)
 		end := time.Now()
 
@@ -463,7 +464,7 @@ func getVRFShareInfo(mr *Round) ([]string, []string) {
 	shares := mr.GetVRFShares()
 	for _, share := range shares {
 		n := share.GetParty()
-		Logger.Debug("DKG Printing from shares: ", zap.Int("Miner Index = ", n.SetIndex), zap.Any("Share = ", share.Share))
+		Logger.Debug("VRF Printing from shares: ", zap.Int("Miner Index = ", n.SetIndex), zap.Any("Share = ", share.Share))
 
 		recSig = append(recSig, share.Share)
 		recFrom = append(recFrom, ComputeBlsID(n.SetIndex))
@@ -494,7 +495,7 @@ func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r 
 	r.Round.SetVRFOutput(rbo)
 	if pr != nil {
 		//Todo: Remove this log later.
-		Logger.Info("Starting round insync", zap.Int64("round", r.GetRoundNumber()),
+		Logger.Info("Starting round with vrf", zap.Int64("round", r.GetRoundNumber()),
 			zap.Int("roundtimeout", r.GetTimeoutCount()),
 			zap.Int64("rseed", seed), zap.Int64("prev_round", pr.GetRoundNumber()),
 			//zap.Int("Prev_roundtimeout", pr.GetTimeoutCount()),

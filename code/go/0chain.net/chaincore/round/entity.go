@@ -16,6 +16,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/datastore"
+	"go.uber.org/zap"
 )
 
 const (
@@ -91,6 +92,10 @@ func (r *Round) GetTimeoutCount() int {
 
 // IncrementTimeoutCount - Increments timeout count
 func (r *Round) IncrementTimeoutCount() {
+	if r.TimeoutCount >= 5 {
+		Logger.Info("Reached max timeout for this round. Waiting for others to catch up...", zap.Int64("roundNum", r.GetRoundNumber()), zap.Int("toc", r.TimeoutCount))
+		return
+	}
 	r.TimeoutCount = r.TimeoutCount + 1
 }
 

@@ -95,16 +95,23 @@ func SetupM2SRequestors() {
 func VRFShareHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 	vrfs, ok := entity.(*round.VRFShare)
 	if !ok {
+		Logger.Info("VRFShare: returning invalid Entity")
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
 	mc := GetMinerChain()
 	if vrfs.GetRoundNumber() < mc.LatestFinalizedBlock.Round {
+		Logger.Info("VRFShare: old round", zap.Int64("vrfs round_num", vrfs.GetRoundNumber()),
+			zap.Int64("vrfs round_num", mc.LatestFinalizedBlock.Round))
 		return nil, nil
 	}
-	mr := mc.GetMinerRound(vrfs.GetRoundNumber())
-	if mr != nil && mr.IsVRFComplete() {
-		return nil, nil
-	}
+	/*
+		mr := mc.GetMinerRound(vrfs.GetRoundNumber())
+		if mr != nil && mr.IsVRFComplete() {
+			Logger.Info("VRFShare: IsVRFComplete", zap.Int64("vrfs round_num", vrfs.GetRoundNumber()),
+				zap.Int64("vrfs round_num", mr.GetRoundNumber()))
+			return nil, nil
+		}
+	*/
 	msg := NewBlockMessage(MessageVRFShare, node.GetSender(ctx), nil, nil)
 	vrfs.SetParty(msg.Sender)
 	msg.VRFShare = vrfs
