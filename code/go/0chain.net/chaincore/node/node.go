@@ -419,6 +419,9 @@ func (n *Node) getOptimalLargeMessageSendTime() float64 {
 	if p2ptime < n.LargeMessageSendTime {
 		return p2ptime
 	}
+	if n.LargeMessageSendTime == 0 {
+		return p2ptime
+	}
 	return n.LargeMessageSendTime
 }
 

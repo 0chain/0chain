@@ -6,6 +6,7 @@ import (
 	"io"
 	"math/rand"
 	"sort"
+	"time"
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -53,7 +54,6 @@ func (np *Pool) GetNode(id string) *Node {
 }
 
 var none = make([]*Node, 0)
-
 
 func (np *Pool) shuffleNodes() []*Node {
 	size := np.Size()
@@ -193,6 +193,11 @@ func (np *Pool) ComputeNetworkStats() {
 		}
 	}
 	np.medianNetworkTime = medianTime
+	mt := time.Duration(medianTime/1000000.) * time.Millisecond
+	switch np.Type {
+	case NodeTypeMiner:
+		Self.Node.Info.MinersMedianNetworkTime = mt
+	}
 }
 
 /*GetMedianNetworkTime - get the median network time for this pool */
