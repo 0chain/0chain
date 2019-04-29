@@ -98,9 +98,9 @@ func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
 	vrfs.SetParty(node.Self.Node)
 	r.vrfShare = vrfs
 	// TODO: do we need to check if AddVRFShare is success or not?
-	if mc.AddVRFShare(ctx, r, r.vrfShare) {
-		go mc.SendVRFShare(ctx, r.vrfShare)
-	}
+	mc.AddVRFShare(ctx, r, r.vrfShare)
+	go mc.SendVRFShare(ctx, r.vrfShare)
+
 }
 
 func (mc *Chain) startRound(ctx context.Context, r *Round, seed int64) {
@@ -637,22 +637,22 @@ func (mc *Chain) handleNoProgress(ctx context.Context) {
 			}
 			mc.SendBlock(ctx, b)
 		}
-	} else {
-
-		if r.vrfShare != nil {
-			go mc.SendVRFShare(ctx, r.vrfShare)
-			Logger.Info("Sent vrf shares in handle NoProgress and no proposed blocks")
-		} else {
-			Logger.Info("Did not send vrf shares as it is nil", zap.Int64("round_num", r.GetRoundNumber()))
-		}
-		switch crt := mc.GetRoundTimeoutCount(); {
-		case crt < 10:
-			Logger.Error("handleNoProgress - no proposed blocks", zap.Any("round", mc.CurrentRound), zap.Int64("count", crt), zap.Any("vrf_share", r.GetVRFShares()))
-		case crt == 10:
-			Logger.Error("handleNoProgress - no proposed blocks (no further timeout messages will be displayed)", zap.Any("round", mc.CurrentRound), zap.Int64("count", crt), zap.Any("vrfs", r.GetVRFShares()))
-			//TODO: should have a means to send an email/SMS to someone or something like that
-		}
 	}
+
+	if r.vrfShare != nil {
+		go mc.SendVRFShare(ctx, r.vrfShare)
+		Logger.Info("Sent vrf shares in handle NoProgress and no proposed blocks")
+	} else {
+		Logger.Info("Did not send vrf shares as it is nil", zap.Int64("round_num", r.GetRoundNumber()))
+	}
+	switch crt := mc.GetRoundTimeoutCount(); {
+	case crt < 10:
+		Logger.Error("handleNoProgress - no proposed blocks", zap.Any("round", mc.CurrentRound), zap.Int64("count", crt), zap.Any("vrf_share", r.GetVRFShares()))
+	case crt == 10:
+		Logger.Error("handleNoProgress - no proposed blocks (no further timeout messages will be displayed)", zap.Any("round", mc.CurrentRound), zap.Int64("count", crt), zap.Any("vrfs", r.GetVRFShares()))
+		//TODO: should have a means to send an email/SMS to someone or something like that
+	}
+
 }
 
 func (mc *Chain) restartRound(ctx context.Context) {
@@ -671,13 +671,29 @@ func (mc *Chain) restartRound(ctx context.Context) {
 		if r.GetHeaviestNotarizedBlock() != nil {
 			mc.BroadcastNotarizedBlocks(ctx, r)
 			Logger.Info("StartNextRound after sending notarized block in restartRound.", zap.Int64("current_round", r.GetRoundNumber()))
+			nextR := mc.GetRound(r.GetRoundNumber())
 			nr := mc.StartNextRound(ctx, r)
 			/*
 				if the next round object already exists, StartNextRound does not send VRFs.
 				So to be sure send it.
 			*/
 			if r.HasRandomSeed() {
-				mc.addMyVRFShare(ctx, r, nr)
+				if nextR != nil {
+					Logger.Info("RedoVRFshare after sending notarized block in restartRound.", zap.Int64("round", nr.GetRoundNumber()), zap.Int("round_toc", nr.GetTimeoutCount()))
+
+					nr.Restart()
+					//Recalculate VRF shares and send
+					nr.IncrementTimeoutCount()
+					redo := mc.RedoVrfShare(ctx, nr)
+					if !redo {
+						Logger.Info("Could not  RedoVrfShare", zap.Int64("round", r.GetRoundNumber()), zap.Int("round_timeout", r.GetTimeoutCount()))
+					}
+
+				} else {
+					//StartNextRound would have sent the VRFs. No need to do that again
+					Logger.Info("after sending notarized block in restartRound NextR was nil nr is new. Would have sent VRF in startNextRound.", zap.Int64("round", nr.GetRoundNumber()), zap.Int("round_toc", nr.GetTimeoutCount()))
+
+				}
 				return
 			} else {
 				Logger.Error("Has notarized block in restartRound, but no randomseed.", zap.Int64("current_round", r.GetRoundNumber()))
@@ -687,6 +703,12 @@ func (mc *Chain) restartRound(ctx context.Context) {
 		pr := mc.GetMinerRound(r.GetRoundNumber() - 1)
 		if pr != nil {
 			mc.BroadcastNotarizedBlocks(ctx, pr)
+		}
+	}
+	proposals := r.GetProposedBlocks()
+	if len(proposals) > 0 {
+		for _, blk := range proposals {
+			Logger.Info("restartRound Will be throwing the blocks with", zap.Int64("round_num", r.GetRoundNumber()), zap.String("hash", blk.Hash), zap.Int("num_tickets", len(blk.VerificationTickets)))
 		}
 	}
 	r.Restart()
