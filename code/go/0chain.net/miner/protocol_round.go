@@ -480,7 +480,7 @@ func (mc *Chain) updatePriorBlock(ctx context.Context, r *round.Round, b *block.
 		Logger.Error("verify round - previous round not present", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
 	}
 	if len(pb.VerificationTickets) > len(b.PrevBlockVerificationTickets) {
-		b.PrevBlockVerificationTickets = pb.VerificationTickets
+		b.SetPrevBlockVerificationTickets(pb.VerificationTickets)
 	}
 }
 

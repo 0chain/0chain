@@ -89,7 +89,7 @@ type Block struct {
 	StateMutex            *sync.RWMutex `json:"_"`
 	blockState            int8
 	isNotarized           bool
-	ticketsMutex          *sync.Mutex
+	ticketsMutex          *sync.RWMutex
 	verificationStatus    int
 	RunningTxnCount       int64           `json:"running_txn_count"`
 	UniqueBlockExtensions map[string]bool `json:"-"`
@@ -188,7 +188,7 @@ func Provider() datastore.Entity {
 	b.ChainID = datastore.ToKey(config.GetServerChainID())
 	b.InitializeCreationDate()
 	b.StateMutex = &sync.RWMutex{}
-	b.ticketsMutex = &sync.Mutex{}
+	b.ticketsMutex = &sync.RWMutex{}
 	return b
 }
 
@@ -505,10 +505,28 @@ func (b *Block) UnknownTickets(vts []*VerificationTicket) []*VerificationTicket 
 	return newTickets
 }
 
+//AddUniqueBlockExtension - add unique block extensions
 func (b *Block) AddUniqueBlockExtension(eb *Block) {
 	//TODO: We need to compare for view change and add the eb.MinerID only if he was in the view that b belongs to
 	if b.UniqueBlockExtensions == nil {
 		b.UniqueBlockExtensions = make(map[string]bool)
 	}
 	b.UniqueBlockExtensions[eb.MinerID] = true
+}
+
+//DoReadLock - implement ReadLockable interface
+func (b *Block) DoReadLock() {
+	b.ticketsMutex.RLock()
+}
+
+//DoReadUnlock - implement ReadLockable interface
+func (b *Block) DoReadUnlock() {
+	b.ticketsMutex.RUnlock()
+}
+
+//SetPrevBlockVerificationTickets - set previous block verification tickets
+func (b *Block) SetPrevBlockVerificationTickets(bvt []*VerificationTicket) {
+	b.ticketsMutex.Lock()
+	defer b.ticketsMutex.Unlock()
+	b.PrevBlockVerificationTickets = bvt
 }
