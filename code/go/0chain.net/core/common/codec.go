@@ -35,6 +35,10 @@ func ToMsgpack(entity interface{}) *bytes.Buffer {
 	buffer := bytes.NewBuffer(make([]byte, 0, 256))
 	encoder := msgpack.NewEncoder(buffer)
 	encoder.UseJSONTag(true)
+	if impl, ok := entity.(ReadLockable); ok {
+		impl.DoReadLock()
+		defer impl.DoReadUnlock()
+	}
 	encoder.Encode(entity)
 	return buffer
 }

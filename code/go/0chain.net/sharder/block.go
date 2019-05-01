@@ -56,7 +56,7 @@ func (sc *Chain) GetBlockBySummary(ctx context.Context, bs *block.BlockSummary) 
 	if err != nil {
 		bi, err := GetSharderChain().BlockTxnCache.Get(bs.Hash)
 		if err != nil {
-			db := &block.Block{}
+			db := datastore.GetEntityMetadata("block").Instance().(*block.Block)
 			db.Hash = bs.Hash
 			db.Round = bs.Round
 			if sc.IsBlockSharder(db, node.Self.Node) {

@@ -12,6 +12,7 @@ type Notarization struct {
 	VerificationTickets []*block.VerificationTicket
 	BlockID             datastore.Key `json:"block_id"`
 	Round               int64
+	Block               *block.Block `json:"-"`
 }
 
 var notarizationEntityMetadata *datastore.EntityMetadataImpl
@@ -40,4 +41,14 @@ func SetupNotarizationEntity() {
 	notarizationEntityMetadata.IDColumnName = "block_id"
 
 	datastore.RegisterEntityMetadata("block_notarization", notarizationEntityMetadata)
+}
+
+//DoReadLock - implement ReadLockable interface
+func (notarization *Notarization) DoReadLock() {
+	notarization.Block.DoReadLock()
+}
+
+//DoReadUnlock - implement ReadLockable interface
+func (notarization *Notarization) DoReadUnlock() {
+	notarization.Block.DoReadUnlock()
 }

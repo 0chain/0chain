@@ -449,12 +449,8 @@ func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 		} else {
 			fmt.Fprintf(w, "<td class='number'>%v</td>", nd.Info.StateMissingNodes)
 		}
-		fmt.Fprintf(w,"<td class='number'>%v</td>",nd.Info.MinersMedianNetworkTime)
-		if nd.Type == node.NodeTypeMiner {
-			fmt.Fprintf(w,"<td class='number'>%v</td>",nd.Info.AvgBlockTxns)
-		} else {
-			fmt.Fprintf(w,"<td class='number'>N/A</td>")
-		}
+		fmt.Fprintf(w, "<td class='number'>%v</td>", nd.Info.MinersMedianNetworkTime)
+		fmt.Fprintf(w, "<td class='number'>%v</td>", nd.Info.AvgBlockTxns)
 		fmt.Fprintf(w, "</tr>")
 	}
 	fmt.Fprintf(w, "</table>")
