@@ -18,6 +18,12 @@ const RoundMismatch = "round_mismatch"
 //ErrRoundMismatch - an error object for mismatched round error
 var ErrRoundMismatch = common.NewError(RoundMismatch, "Current round number of the chain doesn't match the block generation round")
 
+//RRSMismatch -- to indicate an error when the current round RRS is different than the block that is generated. Typically happens when timeout count changes while a block is being made
+const RRSMismatch = "rrs_mismatch"
+
+//ErrRRSMismatch - and error when rrs mismatch happens
+var ErrRRSMismatch = common.NewError(RRSMismatch, "RRS for current round of the chain doesn't match the block rrs")
+
 //RoundTimeout - to indicate an error where the round timeout has happened
 const RoundTimeout = "round_timeout"
 
