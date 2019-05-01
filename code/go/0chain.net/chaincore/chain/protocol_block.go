@@ -48,6 +48,8 @@ func (c *Chain) VerifyNotarization(ctx context.Context, blockHash string, bvt []
 	if !c.reachedNotarization(bvt) {
 		return common.NewError("block_not_notarized", "Verification tickets not sufficient to reach notarization")
 	}
+	//ToDo: Remove this log. This log is to find out who is calling this.
+	Logger.Error("Just Called reachedNotarization in VerifyNotarization", zap.String("blk_hash", blockHash))
 	for _, vt := range bvt {
 		if err := c.VerifyTicket(ctx, blockHash, vt); err != nil {
 			return err
@@ -75,7 +77,7 @@ func (c *Chain) reachedNotarization(bvt []*block.VerificationTicket) bool {
 			//ToDo: Remove this comment
 			Logger.Info("not reached notarization",
 				zap.Int("Threshold", c.GetNotarizationThresholdCount()),
-				zap.Int("number of signatures", numSignatures), zap.Int64("CurrentRound", c.CurrentRound))
+				zap.Int("num_signatures", numSignatures), zap.Int64("CurrentRound", c.CurrentRound))
 			return false
 		}
 	}
@@ -89,7 +91,7 @@ func (c *Chain) reachedNotarization(bvt []*block.VerificationTicket) bool {
 		}
 	}
 	//Todo: Remove this log
-	Logger.Info("Reached notarization!!!", zap.Int64("CurrentRound", c.CurrentRound))
+	Logger.Info("Reached notarization!!!", zap.Int64("CurrentRound", c.CurrentRound), zap.Int("num_signatures", len(bvt)))
 
 	return true
 }
@@ -246,7 +248,7 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 
 		b, _ = r.AddNotarizedBlock(b)
 
-		Logger.Info("get notarized block", zap.Int64("round", b.Round), zap.String("block", b.Hash))
+		Logger.Info("get notarized block fetch?", zap.Int64("round", b.Round), zap.String("block", b.Hash))
 		if b == nb {
 			go c.fetchedNotarizedBlockHandler.NotarizedBlockFetched(ctx, nb)
 		}
@@ -254,6 +256,10 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 	}
 	n2n := c.Miners
 	n2n.RequestEntity(ctx, nbrequestor, params, handler)
+	if b == nil {
+		Logger.Info("unable to fetch notarized block", zap.String("block", blockHash))
+
+	}
 	return b
 }
 

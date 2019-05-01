@@ -69,7 +69,7 @@ func StartDKG(ctx context.Context) {
 
 	if isDkgEnabled {
 		dg = bls.MakeDKG(k, n)
-
+		waitForNetworkToBeReady(ctx)
 		dkgSummary, err := getDKGSummaryFromStore(ctx)
 		if dkgSummary.SecretKeyGroupStr != "" {
 			dg.SecKeyShareGroup.SetHexString(dkgSummary.SecretKeyGroupStr)
@@ -80,7 +80,7 @@ func StartDKG(ctx context.Context) {
 		} else {
 			Logger.Info("err : reading dkg from db", zap.Error(err))
 		}
-		waitForNetworkToBeReady(ctx)
+
 		Logger.Info("Starting DKG...")
 
 		minerShares = make(map[string]bls.Key, len(m2m.Nodes))

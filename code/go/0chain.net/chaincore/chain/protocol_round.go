@@ -231,7 +231,7 @@ func (c *Chain) GetHeaviestNotarizedBlock(r round.RoundI) *block.Block {
 
 		//TODO: this may not be the best round block or the best chain weight block. Do we do that extra work?
 		b, _ = r.AddNotarizedBlock(b)
-		Logger.Info("get notarized block", zap.Int64("round", roundNumber), zap.String("block", b.Hash), zap.String("state", util.ToHex(b.ClientStateHash)), zap.String("prev_block", b.PrevHash))
+		Logger.Info("get notarized block fetch?", zap.Int64("round", roundNumber), zap.String("block", b.Hash), zap.String("state", util.ToHex(b.ClientStateHash)), zap.String("prev_block", b.PrevHash))
 		return b, nil
 	}
 	n2n := c.Miners

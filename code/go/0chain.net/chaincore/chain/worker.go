@@ -63,23 +63,33 @@ func (c *Chain) PruneClientStateWorker(ctx context.Context) {
 
 /*BlockFetchWorker - a worker that fetches the prior missing blocks */
 func (c *Chain) BlockFetchWorker(ctx context.Context) {
+	Logger.Info("BlockFetchWorker started")
 	for true {
 		select {
 		case b := <-c.blockFetcher.missingLinkBlocks:
 			if b.PrevBlock != nil {
+				Logger.Info("missingLinkBlocks b.PreveBlock != nil. continue...", zap.String("b_Hash", b.Hash))
 				continue
 			}
 			pb, err := c.GetBlock(ctx, b.PrevHash)
 			if err == nil {
+				Logger.Info("Got PrevHash missingLinkBlocks", zap.String("b_PrevHash", b.PrevHash))
 				b.SetPreviousBlock(pb)
 				continue
 			}
+			Logger.Info("missingLinkBlocks --FetchPreviousBlock", zap.String("b_PrevHash", b.Hash))
+
 			c.blockFetcher.FetchPreviousBlock(ctx, c, b)
 		case bHash := <-c.blockFetcher.missingBlocks:
+			Logger.Info("missingBlocks --GetBlock", zap.String("bHash", bHash))
 			_, err := c.GetBlock(ctx, bHash)
 			if err == nil {
+				Logger.Info("missingBlocks --Already has it. Not fetching it", zap.String("bHash", bHash))
+
 				continue
 			}
+			Logger.Info("missingBlocks --do not have it. Fetching...", zap.String("bHash", bHash))
+
 			c.blockFetcher.FetchBlock(ctx, c, bHash)
 		}
 	}

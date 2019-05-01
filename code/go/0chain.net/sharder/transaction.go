@@ -114,7 +114,7 @@ func (sc *Chain) StoreTransactions(ctx context.Context, b *block.Block) error {
 			time.Sleep(delay)
 
 		} else {
-			Logger.Info("transactions saved successfully", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Int("block_size", len(b.Txns)))
+			Logger.Debug("transactions saved successfully", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Int("block_size", len(b.Txns)))
 			break
 		}
 	}

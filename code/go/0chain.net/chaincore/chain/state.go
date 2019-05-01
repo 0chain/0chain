@@ -100,6 +100,7 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 		if pb.GetStateStatus() == block.StateFailed {
 			c.GetBlockStateChange(pb)
 			if !pb.IsStateComputed() {
+				Logger.Info("Need to fetch block", zap.String("prev_blk_hash", pb.Hash))
 				return ErrPreviousStateUnavailable
 			}
 		} else {
@@ -242,7 +243,7 @@ If a state can't be updated (e.g low balance), then a false is returned so that 
 func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) error {
 	c.stateMutex.Lock()
 	defer c.stateMutex.Unlock()
-	return c.updateState(b,txn)
+	return c.updateState(b, txn)
 }
 
 func (c *Chain) updateState(b *block.Block, txn *transaction.Transaction) error {
@@ -474,7 +475,7 @@ the protocol without already holding a lock on StateMutex */
 func (c *Chain) GetState(b *block.Block, clientID string) (*state.State, error) {
 	c.stateMutex.RLock()
 	defer c.stateMutex.RUnlock()
-	ss,err := b.ClientState.GetNodeValue(util.Path(clientID))
+	ss, err := b.ClientState.GetNodeValue(util.Path(clientID))
 	if err != nil {
 		if !b.IsStateComputed() {
 			return nil, common.NewError("state_not_yet_computed", "State is not yet computed")
