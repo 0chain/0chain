@@ -87,12 +87,12 @@ func (fbs *FSBlockStore) read(hash string, round int64) (*block.Block, error) {
 		return nil, err
 	}
 	defer r.Close()
-	var b block.Block
-	err = datastore.ReadJSON(r, &b)
+	b := fbs.blockMetadataProvider.Instance().(*block.Block)
+	err = datastore.ReadJSON(r, b)
 	if err != nil {
 		return nil, err
 	}
-	return &b, nil
+	return b, nil
 }
 
 /*Delete - delete from the hash of the block*/
