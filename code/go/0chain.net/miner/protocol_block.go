@@ -496,6 +496,5 @@ func getLatestBlockFromSharders(ctx context.Context) *block.Block {
 
 //NotarizedBlockFetched - handler to process fetched notarized block
 func (mc *Chain) NotarizedBlockFetched(ctx context.Context, b *block.Block) {
-	Logger.Info("Inside NotarizedBlockFetched", zap.String("nb_hash", b.Hash))
 	mc.SendNotarization(ctx, b)
 }

@@ -515,7 +515,7 @@ func (mc *Chain) checkBlockNotarization(ctx context.Context, r *Round, b *block.
 	}
 	mc.SetRandomSeed(r, b.RoundRandomSeed)
 	go mc.SendNotarization(ctx, b)
-	Logger.Info("check block notarization - block notarized", zap.Int64("round", b.Round), zap.String("block", b.Hash))
+	Logger.Debug("check block notarization - block notarized", zap.Int64("round", b.Round), zap.String("block", b.Hash))
 	mc.StartNextRound(common.GetRootContext(), r)
 	return true
 }

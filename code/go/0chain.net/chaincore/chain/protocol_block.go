@@ -48,8 +48,6 @@ func (c *Chain) VerifyNotarization(ctx context.Context, blockHash string, bvt []
 	if !c.reachedNotarization(bvt) {
 		return common.NewError("block_not_notarized", "Verification tickets not sufficient to reach notarization")
 	}
-	//ToDo: Remove this log. This log is to find out who is calling this.
-	Logger.Error("Just Called reachedNotarization in VerifyNotarization", zap.String("blk_hash", blockHash))
 	for _, vt := range bvt {
 		if err := c.VerifyTicket(ctx, blockHash, vt); err != nil {
 			return err
@@ -241,14 +239,11 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 			c.AddRound(r)
 		}
 
-		//c.SetRandomSeed(r, nb.RoundRandomSeed)
-		//b = c.AddRoundBlock(r, nb)
 		//This is a notarized block. So, use this method to sync round info with the notarized block.
 		b, r = c.AddNotarizedBlockToRound(r, nb)
 
 		b, _ = r.AddNotarizedBlock(b)
 
-		Logger.Info("get notarized block fetch?", zap.Int64("round", b.Round), zap.String("block", b.Hash))
 		if b == nb {
 			go c.fetchedNotarizedBlockHandler.NotarizedBlockFetched(ctx, nb)
 		}

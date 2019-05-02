@@ -95,11 +95,7 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 		er, _ = sc.AddRound(r).(*round.Round)
 		sc.SetRandomSeed(er, b.RoundRandomSeed)
 	}
-	/*
-		if sc.AddRoundBlock(er, b) != b {
-			return
-		}
-	*/
+
 	sc.AddNotarizedBlockToRound(er, b)
 	sc.SetRoundRank(er, b)
 	Logger.Info("received block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)))

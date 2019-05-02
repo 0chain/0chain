@@ -159,11 +159,6 @@ func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool) {
 			}
 			return blk, false
 		}
-		Logger.Info("Notarized Blks so far inAddNotarizedBlock", zap.Int64("round", r.GetRoundNumber()), zap.String("hash", blk.Hash),
-			zap.Int64("blk_RRS", blk.RoundRandomSeed), zap.Int("blk_toc", blk.RoundTimeoutCount), zap.Any("blk_Sender", blk.MinerID), zap.Any("blk_rank", blk.RoundRank))
-		Logger.Info("Incoming block info inAddNotarizedBlock", zap.Int64("round", r.GetRoundNumber()), zap.String("hash", b.Hash),
-			zap.Int64("b_RRS", b.RoundRandomSeed), zap.Int("b_toc", b.RoundTimeoutCount), zap.Any("b_Sender", blk.MinerID), zap.Any("b_rank", b.RoundRank))
-
 		if blk.RoundRank == b.RoundRank {
 			found = i
 		}
@@ -171,7 +166,7 @@ func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool) {
 
 	if found > -1 {
 		fb := r.notarizedBlocks[found]
-		Logger.Info("Found the block info inAddNotarizedBlock", zap.Int64("round", r.GetRoundNumber()), zap.String("hash", fb.Hash),
+		Logger.Info("Removing the old notarized block with the same rank", zap.Int64("round", r.GetRoundNumber()), zap.String("hash", fb.Hash),
 			zap.Int64("fb_RRS", fb.RoundRandomSeed), zap.Int("fb_toc", fb.RoundTimeoutCount), zap.Any("fb_Sender", fb.MinerID))
 		//remove the old block with the same rank and add it below
 		r.notarizedBlocks = append(r.notarizedBlocks[:found], r.notarizedBlocks[found+1:]...)

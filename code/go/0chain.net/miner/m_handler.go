@@ -100,18 +100,11 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (interface{},
 	}
 	mc := GetMinerChain()
 	if vrfs.GetRoundNumber() < mc.LatestFinalizedBlock.Round {
-		Logger.Info("VRFShare: old round", zap.Int64("vrfs round_num", vrfs.GetRoundNumber()),
-			zap.Int64("vrfs round_num", mc.LatestFinalizedBlock.Round))
+		Logger.Info("Rejecting VRFShare: old round", zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()),
+			zap.Int64("lfb_round_num", mc.LatestFinalizedBlock.Round))
 		return nil, nil
 	}
-	/*
-		mr := mc.GetMinerRound(vrfs.GetRoundNumber())
-		if mr != nil && mr.IsVRFComplete() {
-			Logger.Info("VRFShare: IsVRFComplete", zap.Int64("vrfs round_num", vrfs.GetRoundNumber()),
-				zap.Int64("vrfs round_num", mr.GetRoundNumber()))
-			return nil, nil
-		}
-	*/
+
 	msg := NewBlockMessage(MessageVRFShare, node.GetSender(ctx), nil, nil)
 	vrfs.SetParty(msg.Sender)
 	msg.VRFShare = vrfs
@@ -244,8 +237,6 @@ func getNotarizedBlock(ctx context.Context, r *http.Request) (*block.Block, erro
 	round := r.FormValue("round")
 	hash := r.FormValue("block")
 
-	Logger.Info("getNotarizedBlock fetch?", zap.Any("round", round), zap.Any("hash", hash))
-
 	mc := GetMinerChain()
 	if round != "" {
 		roundN, err := strconv.ParseInt(round, 10, 63)
@@ -256,33 +247,24 @@ func getNotarizedBlock(ctx context.Context, r *http.Request) (*block.Block, erro
 		if r != nil {
 			b := r.GetHeaviestNotarizedBlock()
 			if b != nil {
-				Logger.Info("Found getNotarizedBlock fetch?", zap.Any("round", round), zap.Any("hash", hash))
-
 				return b, nil
 			}
 		}
 	} else if hash != "" {
 		b, err := mc.GetBlock(ctx, hash)
 		if err != nil {
-			Logger.Info("Error getNotarizedBlock fetch?", zap.Any("hash", hash), zap.Error(err))
 			return nil, err
 		}
 		if b.IsBlockNotarized() {
-			Logger.Info("Found getNotarizedBlock fetch?", zap.Any("round", round), zap.Any("hash", hash))
-
 			return b, nil
 		}
 	} else {
 		for r := mc.GetRound(mc.CurrentRound); r != nil; r = mc.GetRound(r.GetRoundNumber() - 1) {
 			b := r.GetHeaviestNotarizedBlock()
 			if b != nil {
-				Logger.Info("found getNotarizedBlock fetch?", zap.Any("round", round), zap.Any("hash", hash))
-
 				return b, nil
 			}
 		}
 	}
-	Logger.Info("error in getNotarizedBlock fetch?", zap.Any("round", round), zap.Any("hash", hash))
-
 	return nil, common.NewError("block_not_available", "Requested block is not available")
 }

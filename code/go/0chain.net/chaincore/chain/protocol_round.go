@@ -11,7 +11,6 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	. "0chain.net/core/logging"
-	"0chain.net/core/util"
 	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
@@ -231,7 +230,6 @@ func (c *Chain) GetHeaviestNotarizedBlock(r round.RoundI) *block.Block {
 
 		//TODO: this may not be the best round block or the best chain weight block. Do we do that extra work?
 		b, _ = r.AddNotarizedBlock(b)
-		Logger.Info("get notarized block fetch?", zap.Int64("round", roundNumber), zap.String("block", b.Hash), zap.String("state", util.ToHex(b.ClientStateHash)), zap.String("prev_block", b.PrevHash))
 		return b, nil
 	}
 	n2n := c.Miners

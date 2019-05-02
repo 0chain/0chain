@@ -100,7 +100,6 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 		if pb.GetStateStatus() == block.StateFailed {
 			c.GetBlockStateChange(pb)
 			if !pb.IsStateComputed() {
-				Logger.Info("Need to fetch block", zap.String("prev_blk_hash", pb.Hash))
 				return ErrPreviousStateUnavailable
 			}
 		} else {
