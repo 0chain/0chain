@@ -297,8 +297,7 @@ func (n *Node) updateSendMessageTimings() {
 	defer n.mutex.Unlock()
 	var minval = math.MaxFloat64
 	var maxval float64
-	var minSize = math.MaxFloat64
-	var maxSize float64
+	var maxCount int64
 	for uri, timer := range n.TimersByURI {
 		if timer.Count() == 0 {
 			continue
@@ -307,26 +306,25 @@ func (n *Node) updateSendMessageTimings() {
 			continue
 		}
 		if sizer, ok := n.SizeByURI[uri]; ok {
-			if sizer.Mean() == 0 {
-				continue
-			}
-			v := timer.Mean()
-			if sizer.Mean() > maxSize {
-				maxSize = sizer.Mean()
-				if v > maxval {
-					maxval = v
+			tv := timer.Mean()
+			sv := sizer.Mean()
+			sc := sizer.Count()
+			if int(sv) < LargeMessageThreshold {
+				if tv < minval {
+					minval = tv
 				}
-			}
-			if sizer.Mean() < minSize {
-				minSize = sizer.Mean()
-				if v < minval {
-					minval = v
+			} else {
+				if sc > maxCount {
+					maxval = tv
+					maxCount = sc
 				}
 			}
 		}
 	}
 	if minval > maxval {
 		minval = maxval
+	} else if maxval < minval {
+		maxval = minval
 	}
 	n.LargeMessageSendTime = maxval
 	n.SmallMessageSendTime = minval

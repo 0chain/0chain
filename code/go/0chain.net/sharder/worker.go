@@ -60,7 +60,9 @@ func (sc *Chain) HealthCheckWorker(ctx context.Context) {
 			duration := time.Since(t)
 			hRound.Number = hr
 			err = sc.WriteHealthyRound(ctx, hRound)
-			Logger.Error("failed to write healthy round", zap.Error(err))
+			if err != nil {
+				Logger.Error("failed to write healthy round", zap.Error(err))
+			}
 			sc.updateSyncStats(hr, duration)
 		}
 	}
