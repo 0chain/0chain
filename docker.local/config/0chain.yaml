@@ -36,7 +36,7 @@ server_chain:
     min_block_size: 10
     max_block_size: 100
     max_byte_size: 1638400
-    generators: 1
+    generators: 2
     #replicators: 3
     replicators: 0
     generation:
