@@ -73,14 +73,15 @@ func StartDKG(ctx context.Context) {
 		dkgSummary, err := getDKGSummaryFromStore(ctx)
 		if dkgSummary.SecretKeyGroupStr != "" {
 			dg.SecKeyShareGroup.SetHexString(dkgSummary.SecretKeyGroupStr)
-			IsDkgDone = true
 			Logger.Info("got dkg share from db")
+			waitForNetworkToBeReadyForBls(ctx)
+			IsDkgDone = true
 			go startProtocol()
 			return
 		} else {
 			Logger.Info("err : reading dkg from db", zap.Error(err))
 		}
-		waitForNetworkToBeReady(ctx)
+		waitForNetworkToBeReadyForDKG(ctx)
 		Logger.Info("Starting DKG...")
 
 		minerShares = make(map[string]bls.Key, len(m2m.Nodes))
@@ -158,11 +159,26 @@ func isNetworkReadyForDKG() bool {
 		return mc.CanStartNetwork()
 	}
 }
-func waitForNetworkToBeReady(ctx context.Context) {
+
+func waitForNetworkToBeReadyForBls(ctx context.Context) {
+	mc := GetMinerChain()
+
+	if !mc.CanStartNetwork() {
+		ticker := time.NewTicker(5 * chain.DELTA)
+		for ts := range ticker.C {
+			active := mc.Miners.GetActiveCount()
+			Logger.Info("waiting for sufficient active nodes", zap.Time("ts", ts), zap.Int("have", active), zap.Int("need", k))
+			if mc.CanStartNetwork() {
+				break
+			}
+		}
+	}
+}
+
+func waitForNetworkToBeReadyForDKG(ctx context.Context) {
 
 	mc := GetMinerChain()
 
-	//m2m := mc.Miners
 	if !isNetworkReadyForDKG() {
 		ticker := time.NewTicker(5 * chain.DELTA)
 		for ts := range ticker.C {
