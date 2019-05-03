@@ -19,12 +19,19 @@ import (
 
 /*SetupHandlers - setup miner handlers */
 func SetupHandlers() {
-	http.HandleFunc("/_chain_stats", common.UserRateLimit(ChainStatsHandler))
+	http.HandleFunc("/v1/chain/get/stats", common.UserRateLimit(common.ToJSONResponse(ChainStatsHandler)))
+	http.HandleFunc("/_chain_stats", common.UserRateLimit(ChainStatsWriter))
 	http.HandleFunc("/_diagnostics/wallet_stats", common.UserRateLimit(GetWalletStats))
 }
 
 /*ChainStatsHandler - a handler to provide block statistics */
-func ChainStatsHandler(w http.ResponseWriter, r *http.Request) {
+func ChainStatsHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	c := GetMinerChain().Chain
+	return diagnostics.GetStatistics(c, chain.SteadyStateFinalizationTimer, 1000000.0), nil
+}
+
+//ChainStatsWriter - display the current chain stats
+func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 	c := GetMinerChain().Chain
 	chain.PrintCSS(w)
