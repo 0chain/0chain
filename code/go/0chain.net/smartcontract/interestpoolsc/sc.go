@@ -78,7 +78,7 @@ func (ip *InterestPoolSmartContract) unlockTokens(t *transaction.Transaction, un
 	var responses transferResponses
 	unlockCount := 0
 	for _, pool := range un.Pools {
-		transfer, resp, err := pool.EmptyPool(ip.ID, t.ClientID, t)
+		transfer, resp, err := pool.EmptyPool(ip.ID, t.ClientID, common.ToTime(t.CreationDate))
 		if err == nil {
 			err := un.deletePool(pool.ID)
 			if err == nil {
