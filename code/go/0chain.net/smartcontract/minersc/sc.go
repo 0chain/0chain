@@ -2,6 +2,9 @@ package minersc
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"net/url"
 
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
@@ -9,10 +12,9 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	. "0chain.net/core/logging"
-	"errors"
 	"github.com/asaskevich/govalidator"
+	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
-	"net/url"
 )
 
 const (
@@ -20,12 +22,21 @@ const (
 	ADDRESS   = "CF9C03CD22C9C7B116EED04E4A909F95ABEC17E98FE631D6AC94D5D8420C5B20"
 	bufRounds = 5000 //ToDo: make it configurable
 	cfdBuffer = 10
+	name      = "miner"
 )
 
 //MinerSmartContract Smartcontract that takes care of all miner related requests
 type MinerSmartContract struct {
 	*smartcontractinterface.SmartContract
 	bcContext smartcontractinterface.BCContextI
+}
+
+func (msc *MinerSmartContract) GetName() string {
+	return name
+}
+
+func (msc *MinerSmartContract) GetAddress() string {
+	return ADDRESS
 }
 
 func (msc *MinerSmartContract) GetRestPoints() map[string]smartcontractinterface.SmartContractRestHandler {
@@ -37,7 +48,8 @@ func (msc *MinerSmartContract) SetSC(sc *smartcontractinterface.SmartContract, b
 	msc.SmartContract = sc
 	msc.SmartContract.RestHandlers["/getNodepool"] = msc.GetNodepoolHandler
 	msc.bcContext = bcContext
-
+	msc.SmartContractExecutionStats["add_miner"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "add_miner"), nil)
+	msc.SmartContractExecutionStats["viewchange_req"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "viewchange_req"), nil)
 }
 
 //Execute implemetning the interface

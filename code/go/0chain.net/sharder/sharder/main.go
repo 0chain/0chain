@@ -143,7 +143,7 @@ func main() {
 	common.HandleShutdown(server)
 	setupBlockStorageProvider()
 	sc.SetupHealthyRound()
-	
+
 	initWorkers(ctx)
 	common.ConfigRateLimits()
 	initN2NHandlers()
@@ -203,9 +203,7 @@ func initEntities() {
 
 	sharder.SetupBlockSummaries()
 	sharder.SetupRoundSummaries()
-	if config.DevConfiguration.SmartContract {
-		setupsc.SetupSmartContracts()
-	}
+	setupsc.SetupSmartContracts()
 }
 
 func initN2NHandlers() {

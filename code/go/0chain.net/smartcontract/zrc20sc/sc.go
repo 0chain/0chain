@@ -15,6 +15,7 @@ import (
 const (
 	Seperator = smartcontractinterface.Seperator
 	ADDRESS   = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d5"
+	name      = "zrc20"
 )
 
 type ZRC20SmartContract struct {
@@ -29,6 +30,14 @@ func (zrc *ZRC20SmartContract) SetSC(sc *smartcontractinterface.SmartContract, b
 	zrc.SmartContractExecutionStats["transferTo"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", zrc.ID, "transferTo"), nil)
 	zrc.SmartContractExecutionStats["drainPool"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", zrc.ID, "drainPool"), nil)
 	zrc.SmartContractExecutionStats["emptyPool"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", zrc.ID, "emptyPool"), nil)
+}
+
+func (zrc *ZRC20SmartContract) GetName() string {
+	return name
+}
+
+func (zrc *ZRC20SmartContract) GetAddress() string {
+	return ADDRESS
 }
 
 func (zrc *ZRC20SmartContract) GetRestPoints() map[string]smartcontractinterface.SmartContractRestHandler {

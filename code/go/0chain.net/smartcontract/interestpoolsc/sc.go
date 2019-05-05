@@ -18,10 +18,19 @@ const (
 	Seperator = smartcontractinterface.Seperator
 	owner     = "c8a5e74c2f4fae2c1bed79fb2b78d3b88f844bbb6bf1db5fc43240711f23321f"
 	ADDRESS   = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9"
+	name      = "interest"
 )
 
 type InterestPoolSmartContract struct {
 	*smartcontractinterface.SmartContract
+}
+
+func (ipsc *InterestPoolSmartContract) GetName() string {
+	return name
+}
+
+func (ipsc *InterestPoolSmartContract) GetAddress() string {
+	return ADDRESS
 }
 
 func (ipsc *InterestPoolSmartContract) GetRestPoints() map[string]smartcontractinterface.SmartContractRestHandler {

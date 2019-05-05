@@ -1,7 +1,12 @@
 package setupsc
 
 import (
+	"fmt"
+
+	"github.com/spf13/viper"
+
 	"0chain.net/chaincore/smartcontract"
+	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/feesc"
 	"0chain.net/smartcontract/interestpoolsc"
@@ -10,12 +15,17 @@ import (
 	"0chain.net/smartcontract/zrc20sc"
 )
 
+var scs = []sci.SmartContractInterface{
+	&faucetsc.FaucetSmartContract{}, &storagesc.StorageSmartContract{},
+	&zrc20sc.ZRC20SmartContract{}, &interestpoolsc.InterestPoolSmartContract{},
+	&minersc.MinerSmartContract{}, &feesc.FeeSmartContract{},
+}
+
 //SetupSmartContracts initialize smartcontract addresses
 func SetupSmartContracts() {
-	smartcontract.ContractMap[faucetsc.ADDRESS] = &faucetsc.FaucetSmartContract{}
-	smartcontract.ContractMap[storagesc.ADDRESS] = &storagesc.StorageSmartContract{}
-	smartcontract.ContractMap[zrc20sc.ADDRESS] = &zrc20sc.ZRC20SmartContract{}
-	smartcontract.ContractMap[interestpoolsc.ADDRESS] = &interestpoolsc.InterestPoolSmartContract{}
-	smartcontract.ContractMap[minersc.ADDRESS] = &minersc.MinerSmartContract{}
-	smartcontract.ContractMap[feesc.ADDRESS] = &feesc.FeeSmartContract{}
+	for _, sc := range scs {
+		if viper.GetBool(fmt.Sprintf("development.smart_contract.%v", sc.GetName())) {
+			smartcontract.ContractMap[sc.GetAddress()] = sc
+		}
+	}
 }

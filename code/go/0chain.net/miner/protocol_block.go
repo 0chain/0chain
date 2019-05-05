@@ -193,7 +193,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		b.Txns = b.Txns[:blockSize]
 		etxns = etxns[:blockSize]
 	}
-	if config.DevConfiguration.SmartContract && config.DevConfiguration.IsFeeEnabled {
+	if config.DevConfiguration.IsFeeEnabled {
 		err = mc.processFeeTxn(ctx, b, clients)
 		if err != nil {
 			return err

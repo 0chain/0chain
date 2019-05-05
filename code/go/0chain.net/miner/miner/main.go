@@ -266,10 +266,7 @@ func initEntities() {
 	bls.SetupDKGSummary(ememoryStorage)
 	bls.SetupDKGDB()
 	bls.SetupBLSEntity()
-
-	if config.DevConfiguration.SmartContract {
-		setupsc.SetupSmartContracts()
-	}
+	setupsc.SetupSmartContracts()
 }
 
 func initHandlers() {

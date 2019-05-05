@@ -12,6 +12,7 @@ import (
 
 const (
 	ADDRESS = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7"
+	name    = "storage"
 )
 
 type StorageSmartContract struct {
@@ -30,6 +31,14 @@ func (ssc *StorageSmartContract) SetSC(sc *smartcontractinterface.SmartContract,
 	ssc.SmartContractExecutionStats["add_validator"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "add_validator"), nil)
 	ssc.SmartContractExecutionStats["challenge_request"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "challenge_request"), nil)
 	ssc.SmartContractExecutionStats["challenge_response"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "challenge_response"), nil)
+}
+
+func (ssc *StorageSmartContract) GetName() string {
+	return name
+}
+
+func (ssc *StorageSmartContract) GetAddress() string {
+	return ADDRESS
 }
 
 func (ssc *StorageSmartContract) GetRestPoints() map[string]smartcontractinterface.SmartContractRestHandler {
