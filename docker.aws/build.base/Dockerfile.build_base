@@ -1,5 +1,5 @@
 # docker.aws
-FROM golang:1.11.9-alpine3.9
+FROM golang:1.12.4-alpine3.9
 RUN apk add bash build-base grep git
 
 # Install RocksDB
