@@ -1,25 +1,29 @@
 version: '3'
 services:
-  scylla:
-    image: scylladb/scylla:2.3.4
+  cassandra:
+    image: cassandra:3.11.4
+    networks:
+      default:
+    ports:
+    - "9042:9042"  
     volumes:
-      - ../sharder${SHARDER}/data/cassandra:/var/lib/scylla/data
+    - ../sharder${SHARDER}/data/cassandra:/var/lib/cassandra/data
 
   cassandra-init:
     image: cassandra:latest
     volumes:
       - ../../bin:/0chain/bin
       - ../../sql:/0chain/sql
-    command: bash /0chain/bin/scylla-init.sh
+    command: bash /0chain/bin/cassandra-init.sh
     links:
-      - scylla:scylla
+      - cassandra:cassandra
     restart: on-failure
 
   sharder:
     image: "sharder"
     environment:
       - DOCKER=true
-      - CASSANDRA_CLUSTER=scylla
+      - CASSANDRA_CLUSTER=cassandra
     depends_on:
       - cassandra-init
     links:
