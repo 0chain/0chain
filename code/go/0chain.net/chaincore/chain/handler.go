@@ -398,7 +398,8 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 	nodes := np.Nodes
 	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
-	fmt.Fprintf(w, "<tr class='header'><td>Set Index</td><td>Node</td><td>Sent</td><td>Send Errors</td><td>Received</td><td>Last Active</td><td>Small Msg Time</td><td>Large Msg Time</td><td>Optimal Large Msg Time</td><td>Description</td><td>Build Tag</td><td>State Health</td><td title='median network time'>Miners MNT</td><td>Avg Block Size</td></tr>")
+	fmt.Fprintf(w, "<tr class='header'><td rowspan='2'>Set Index</td><td rowspan='2'>Node</td><td rowspan='2'>Sent</td><td rowspan='2'>Send Errors</td><td rowspan='2'>Received</td><td rowspan='2'>Last Active</td><td colspan='3' style='text-align:center'>Message Time</td><td rowspan='2'>Description</td><td colspan='4' style='text-align:center'>Remote Data</td></tr>")
+	fmt.Fprintf(w, "<tr class='header'><td>Small</td><td>Large</td><td>Large Optimal</td><td>Build Tag</td><td>State Health</td><td title='median network time'>Miners MNT</td><td>Avg Block Size</td></tr>")
 	r := c.GetRound(c.CurrentRound)
 	hasRanks := r != nil && r.HasRandomSeed()
 	lfb := c.LatestFinalizedBlock
@@ -442,8 +443,8 @@ func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 		} else {
 			fmt.Fprintf(w, "<td class='number'>%.2f</td>", olmt)
 		}
-		fmt.Fprintf(w, "<td>%s</td>", nd.Description)
-		fmt.Fprintf(w, "<td>%s</td>", nd.Info.BuildTag)
+		fmt.Fprintf(w, "<td><div class='fixed-text' style='width:100px;' title='%s'>%s</div></td>", nd.Description, nd.Description)
+		fmt.Fprintf(w, "<td><div class='fixed-text' style='width:100px;' title='%s'>%s</div></td>", nd.Info.BuildTag, nd.Info.BuildTag)
 		if nd.Info.StateMissingNodes < 0 {
 			fmt.Fprintf(w, "<td>pending</td>")
 		} else {
@@ -610,7 +611,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	return transaction.PutTransaction(ctx, txn)
 }
 
-//RoundInfoHanlder collects and writes information about current round
+//RoundInfoHandler collects and writes information about current round
 func RoundInfoHandler(w http.ResponseWriter, r *http.Request) {
 	PrintCSS(w)
 	sc := GetServerChain()
@@ -789,6 +790,7 @@ func (c *Chain) notarizedBlockCountsStats(w http.ResponseWriter) {
 func PrintCSS(w http.ResponseWriter) {
 	fmt.Fprintf(w, "<style>\n")
 	fmt.Fprintf(w, ".number { text-align: right; }\n")
+	fmt.Fprintf(w, ".fixed-text { overflow:hidden;white-space: nowrap;word-break: break-all;word-wrap: break-word; text-overflow: ellipsis; }\n")
 	fmt.Fprintf(w, ".menu li { list-style-type: none; }\n")
 	fmt.Fprintf(w, "table, td, th { border: 1px solid black;  border-collapse: collapse;}\n")
 	fmt.Fprintf(w, "tr.header { background-color: #E0E0E0;  }\n")
