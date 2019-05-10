@@ -206,8 +206,8 @@ func (r *Round) addProposedBlock(b *block.Block) (*block.Block, bool) {
 
 /*GetProposedBlocks - return all the blocks that have been proposed for this round */
 func (r *Round) GetProposedBlocks() []*block.Block {
-	r.Mutex.Lock()
-	defer r.Mutex.Unlock()
+	r.Mutex.RLock()
+	defer r.Mutex.RUnlock()
 	return r.proposedBlocks
 }
 
