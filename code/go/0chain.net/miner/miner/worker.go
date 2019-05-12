@@ -46,7 +46,9 @@ func TransactionGenerator(c *chain.Chain) {
 
 	viper.SetDefault("development.txn_generation.max_transactions", c.BlockSize)
 	blockSize := viper.GetInt32("development.txn_generation.max_transactions")
-
+	if blockSize <= 0 {
+		return
+	}
 	switch {
 	case blockSize <= 10:
 		numWorkers = 1
