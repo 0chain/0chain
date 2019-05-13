@@ -17,8 +17,8 @@ development:
     miner: true
     fee: false
   txn_generation:
-    wallets: 10
-    transactions: 70
+    wallets: 50
+    max_transactions: 70
     pour_point: 100
     pour_amount: 10000
   faucet:
