@@ -302,7 +302,7 @@ func (n *Node) updateSendMessageTimings() {
 		if timer.Count() == 0 {
 			continue
 		}
-		if isPullRequestURI(uri) {
+		if isGetRequest(uri) {
 			continue
 		}
 		if sizer, ok := n.SizeByURI[uri]; ok {
@@ -341,7 +341,7 @@ func (n *Node) updateRequestMessageTimings() {
 		if timer.Count() == 0 {
 			continue
 		}
-		if !isPullRequestURI(uri) {
+		if !isGetRequest(uri) {
 			continue
 		}
 		v := timer.Mean()
@@ -400,6 +400,13 @@ func serveMetricKey(uri string) string {
 
 func isPullRequestURI(uri string) bool {
 	return strings.HasPrefix(uri, "p?")
+}
+
+func isGetRequest(uri string) bool {
+	if strings.HasPrefix(uri, "p?") {
+		return true
+	}
+	return strings.HasSuffix(uri, "/get")
 }
 
 //GetPseudoName - create a pseudo name that is unique in the current active set
