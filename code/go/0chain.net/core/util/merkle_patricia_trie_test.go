@@ -100,6 +100,8 @@ func TestMPTInsertExtensionNode(t *testing.T) {
 	doStrValInsert("insert a leaf to create an extension node as root node", mpt2, "12346", "12346", true)
 
 	doStrValInsert("break extension into full node at the beginning", mpt2, "2", "2", true)
+	mpt2.Iterate(context.TODO(), iterStrPathHandler, NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
+
 	doStrValInsert("break extension into full node at the middle", mpt2, "123", "123", true)
 
 	doStrValInsert("setup data", mpt2, "22345", "22345", false)
@@ -272,6 +274,22 @@ func iterHandler(ctx context.Context, path Path, key Key, node Node) error {
 		fmt.Printf("iterate:%20s: p=%v k=%v v=%v\n", fmt.Sprintf("%T", node), hex.EncodeToString(path), hex.EncodeToString(key), string(vn.GetValue().Encode()))
 	} else {
 		fmt.Printf("iterate:%20s: orig=%v ver=%v p=%v k=%v\n", fmt.Sprintf("%T", node), node.GetOrigin(), node.GetVersion(), hex.EncodeToString(path), hex.EncodeToString(key))
+	}
+	return nil
+}
+
+func iterStrPathHandler(ctx context.Context, path Path, key Key, node Node) error {
+	if node == nil {
+		return fmt.Errorf("stop")
+	}
+	if vn, ok := node.(*ValueNode); ok {
+		fmt.Printf("iterate:%20s: p=%v k=%v v=%v\n", fmt.Sprintf("%T", node), string(path), hex.EncodeToString(key), string(vn.GetValue().Encode()))
+	} else {
+		var val interface{}
+		if ln, ok := node.(*LeafNode); ok {
+			val = ln.GetValue()
+		}
+		fmt.Printf("iterate:%20s: orig=%v ver=%v p=%v k=%v v=%v\n", fmt.Sprintf("%T", node), node.GetOrigin(), node.GetVersion(), string(path), hex.EncodeToString(key), val)
 	}
 	return nil
 }
