@@ -132,6 +132,9 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	}
 	start := time.Now()
 	b.CreationDate = common.Now()
+	if b.CreationDate < b.PrevBlock.CreationDate {
+		b.CreationDate = b.PrevBlock.CreationDate
+	}
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
 	txn := transactionEntityMetadata.Instance().(*transaction.Transaction)
 	collectionName := txn.GetCollectionName()

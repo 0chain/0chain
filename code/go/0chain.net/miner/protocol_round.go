@@ -197,9 +197,6 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	b.MagicBlockHash = mc.CurrentMagicBlock.Hash
 	b.MinerID = node.Self.GetKey()
 	mc.SetPreviousBlock(ctx, r, b, pb)
-	if b.CreationDate < pb.CreationDate {
-		b.CreationDate = pb.CreationDate
-	}
 	start := time.Now()
 	makeBlock := false
 	generationTimeout := time.Millisecond * time.Duration(mc.GetGenerationTimeout())
