@@ -5,11 +5,11 @@ import (
 	"context"
 	"time"
 
-	. "0chain.net/core/logging"
-	metrics "github.com/rcrowley/go-metrics"
-
 	"0chain.net/chaincore/block"
+	. "0chain.net/core/logging"
 	"0chain.net/core/util"
+	metrics "github.com/rcrowley/go-metrics"
+	"github.com/remeh/sizedwaitgroup"
 	"go.uber.org/zap"
 )
 
@@ -62,18 +62,24 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 	c.pruneStats = ps
 	t := time.Now()
 	var missingKeys []util.Key
+	wg := sizedwaitgroup.New(2)
 	missingNodesHandler := func(ctx context.Context, path util.Path, key util.Key) error {
 		missingKeys = append(missingKeys, key)
 		if len(missingKeys) == 1000 {
-			stage := ps.Stage
 			ps.Stage = util.PruneStateSynch
-			c.GetStateNodes(ctx, missingKeys[:])
-			ps.Stage = stage
+			wg.Add()
+			go func(nodes []util.Key) {
+				c.GetStateNodes(ctx, nodes)
+				wg.Done()
+			}(missingKeys[:])
 			missingKeys = nil
 		}
 		return nil
 	}
+	var stage = ps.Stage
 	err := mpt.UpdateVersion(pctx, newVersion, missingNodesHandler)
+	wg.Wait()
+	ps.Stage = stage
 	d1 := time.Since(t)
 	ps.UpdateTime = d1
 	StatePruneUpdateTimer.Update(d1)
