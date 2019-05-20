@@ -12,8 +12,6 @@ import (
 	"0chain.net/chaincore/block"
 	bcstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/smartcontract"
-	"0chain.net/chaincore/smartcontractstate"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -283,7 +281,7 @@ func (c *Chain) updateState(b *block.Block, txn *transaction.Transaction) error 
 	for _, signedTransfer := range sctx.GetSignedTransfers() {
 		err := c.transferAmount(sctx, signedTransfer.ClientID, signedTransfer.ToClientID, state.Balance(signedTransfer.Amount))
 		if err != nil {
-			return false
+			return err
 		}
 	}
 	for _, mint := range sctx.GetMints() {

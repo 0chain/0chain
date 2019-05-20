@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/chain/state"
+	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -49,7 +50,7 @@ func (ms MultiSigSmartContract) Execute(t *transaction.Transaction, funcName str
 
 	switch funcName {
 	case RegisterFuncName:
-		return ms.register(t.ClientID, inputData)
+		return ms.register(t.ClientID, inputData, balances)
 	case VoteFuncName:
 		return ms.vote(t.Hash, t.ClientID, balances.GetBlock().CreationDate, inputData, balances)
 	default:
@@ -64,7 +65,7 @@ func printTimeTaken(start int64) {
 	Logger.Info("Multi-signature smart contract execution time", zap.Int64("µs duration", duration))
 }
 
-func (ms MultiSigSmartContract) register(registeringClientID string, inputData []byte) (string, error) {
+func (ms MultiSigSmartContract) register(registeringClientID string, inputData []byte, balances state.StateContextI) (string, error) {
 	var w Wallet
 
 	err := json.Unmarshal(inputData, &w)
@@ -80,7 +81,7 @@ func (ms MultiSigSmartContract) register(registeringClientID string, inputData [
 
 	// If you want to replace a multi-sig wallet, you have to delete the
 	// previous one first.
-	alreadyExisted, err := ms.walletExists(registeringClientID)
+	alreadyExisted, err := ms.walletExists(registeringClientID, balances)
 	if err != nil {
 		// I/O error.
 		return "", err
@@ -89,7 +90,7 @@ func (ms MultiSigSmartContract) register(registeringClientID string, inputData [
 		return "err_register_exists: multi-sig wallet already exists", nil
 	}
 
-	err = ms.putWallet(w)
+	err = ms.putWallet(w, balances)
 	if err != nil {
 		// I/O error.
 		return "", err
@@ -101,7 +102,7 @@ func (ms MultiSigSmartContract) register(registeringClientID string, inputData [
 func (ms MultiSigSmartContract) vote(currentTxnHash, signingClientID string, now common.Timestamp, inputData []byte, balances state.StateContextI) (string, error) {
 	// Garbage collection of old proposals happens incrementally with every
 	// incoming vote.
-	err := ms.pruneExpirationQueue(now)
+	err := ms.pruneExpirationQueue(now, balances)
 	if err != nil {
 		// I/O error.
 		return "", err
@@ -127,7 +128,7 @@ func (ms MultiSigSmartContract) vote(currentTxnHash, signingClientID string, now
 
 	// Every vote is associated with a proposal. If an appropriate proposal does
 	// not exist yet, create one.
-	p, err := ms.findOrCreateProposal(now, v)
+	p, err := ms.findOrCreateProposal(now, v, balances)
 	if err != nil {
 		// I/O error.
 		return "", err
@@ -144,7 +145,7 @@ func (ms MultiSigSmartContract) vote(currentTxnHash, signingClientID string, now
 	}
 
 	// Check that the multi-sig wallet is registered.
-	w, err := ms.getWallet(v.Transfer.ClientID)
+	w, err := ms.getWallet(v.Transfer.ClientID, balances)
 	if err != nil {
 		// I/O error.
 		return "", err
@@ -177,7 +178,7 @@ func (ms MultiSigSmartContract) vote(currentTxnHash, signingClientID string, now
 	p.SignerSignatures = append(p.SignerSignatures, v.Signature)
 
 	// Save the proposal.
-	err = ms.putProposal(p)
+	err = ms.putProposal(p, balances)
 	if err != nil {
 		// I/O error.
 		return "", err
@@ -208,7 +209,7 @@ func (ms MultiSigSmartContract) vote(currentTxnHash, signingClientID string, now
 	// Save the proposal again.
 	p.ExecutedInTxnHash = currentTxnHash
 
-	err = ms.putProposal(p)
+	err = ms.putProposal(p, balances)
 	if err != nil {
 		// I/O error.
 		return "", err
@@ -218,8 +219,8 @@ func (ms MultiSigSmartContract) vote(currentTxnHash, signingClientID string, now
 }
 
 // Prune the oldest proposal if it has expired.
-func (ms MultiSigSmartContract) pruneExpirationQueue(now common.Timestamp) error {
-	q, err := ms.getOrCreateExpirationQueue()
+func (ms MultiSigSmartContract) pruneExpirationQueue(now common.Timestamp, balances state.StateContextI) error {
+	q, err := ms.getOrCreateExpirationQueue(balances)
 	if err != nil {
 		return err
 	}
@@ -232,27 +233,27 @@ func (ms MultiSigSmartContract) pruneExpirationQueue(now common.Timestamp) error
 		return nil
 	}
 
-	p, err := ms.getProposal(ref)
+	p, err := ms.getProposal(ref, balances)
 	if err != nil {
 		return err
 	}
 
 	if p.isExpired(now) {
-		return ms.prune(ref)
+		return ms.prune(ref, balances)
 	}
 
 	return nil
 }
 
-func (ms MultiSigSmartContract) prune(ref proposalRef) error {
+func (ms MultiSigSmartContract) prune(ref proposalRef, balances c_state.StateContextI) error {
 	// Before we prune this proposal, fetch it one last time.
-	p, err := ms.getProposal(ref)
+	p, err := ms.getProposal(ref, balances)
 	if err != nil {
 		return err
 	}
 
 	// Update expiry queue.
-	q, err := ms.getOrCreateExpirationQueue()
+	q, err := ms.getOrCreateExpirationQueue(balances)
 	if err != nil {
 		return err
 	}
@@ -269,7 +270,7 @@ func (ms MultiSigSmartContract) prune(ref proposalRef) error {
 	}
 
 	if qChanged {
-		err = ms.putExpirationQueue(q)
+		err = ms.putExpirationQueue(q, balances)
 		if err != nil {
 			return err
 		}
@@ -277,35 +278,35 @@ func (ms MultiSigSmartContract) prune(ref proposalRef) error {
 
 	// Update links.
 	if p.Next != (proposalRef{}) {
-		next, err := ms.getProposal(p.Next)
+		next, err := ms.getProposal(p.Next, balances)
 		if err != nil {
 			return err
 		}
 
 		next.Prev = p.Prev
 
-		err = ms.putProposal(next)
+		err = ms.putProposal(next, balances)
 		if err != nil {
 			return err
 		}
 	}
 
 	if p.Prev != (proposalRef{}) {
-		prev, err := ms.getProposal(p.Prev)
+		prev, err := ms.getProposal(p.Prev, balances)
 		if err != nil {
 			return err
 		}
 
 		prev.Next = p.Next
 
-		err = ms.putProposal(prev)
+		err = ms.putProposal(prev, balances)
 		if err != nil {
 			return err
 		}
 	}
 
 	// Now we can delete the pruned proposal.
-	err = ms.DB.DeleteNode(p.getKey())
+	_, err = balances.DeleteTrieNode(p.getKey())
 	if err != nil {
 		return err
 	}
@@ -313,9 +314,9 @@ func (ms MultiSigSmartContract) prune(ref proposalRef) error {
 	return nil
 }
 
-func (ms MultiSigSmartContract) findOrCreateProposal(now common.Timestamp, v Vote) (proposal, error) {
+func (ms MultiSigSmartContract) findOrCreateProposal(now common.Timestamp, v Vote, balances state.StateContextI) (proposal, error) {
 	// Start by trying to find an existing proposal.
-	p, err := ms.getProposal(v.getProposalRef())
+	p, err := ms.getProposal(v.getProposalRef(), balances)
 	if err != nil {
 		return proposal{}, err
 	}
@@ -323,7 +324,7 @@ func (ms MultiSigSmartContract) findOrCreateProposal(now common.Timestamp, v Vot
 	// Treat expired-but-not-yet-pruned proposals identically to pruned
 	// proposals. Do this by pruning them now.
 	if !p.isEmpty() && p.isExpired(now) {
-		err = ms.prune(p.ref())
+		err = ms.prune(p.ref(), balances)
 		if err != nil {
 			return proposal{}, err
 		}
@@ -333,7 +334,7 @@ func (ms MultiSigSmartContract) findOrCreateProposal(now common.Timestamp, v Vot
 
 	// If it didn't exist or was expired, create it and update expiration queue.
 	if p.isEmpty() {
-		p, err = ms.createProposal(now, v)
+		p, err = ms.createProposal(now, v, balances)
 		if err != nil {
 			return proposal{}, err
 		}
@@ -343,8 +344,8 @@ func (ms MultiSigSmartContract) findOrCreateProposal(now common.Timestamp, v Vot
 }
 
 // Create a proposal and add it to the expiration queue. Performs I/O.
-func (ms MultiSigSmartContract) createProposal(now common.Timestamp, v Vote) (proposal, error) {
-	q, err := ms.getOrCreateExpirationQueue()
+func (ms MultiSigSmartContract) createProposal(now common.Timestamp, v Vote, balances state.StateContextI) (proposal, error) {
+	q, err := ms.getOrCreateExpirationQueue(balances)
 	if err != nil {
 		return proposal{}, err
 	}
@@ -366,21 +367,21 @@ func (ms MultiSigSmartContract) createProposal(now common.Timestamp, v Vote) (pr
 		ExecutedInTxnHash: "",
 	}
 
-	err = ms.putProposal(p)
+	err = ms.putProposal(p, balances)
 	if err != nil {
 		return proposal{}, err
 	}
 
 	// Update links.
 	if q.Tail != (proposalRef{}) {
-		prev, err := ms.getProposal(q.Tail)
+		prev, err := ms.getProposal(q.Tail, balances)
 		if err != nil {
 			return proposal{}, err
 		}
 
 		prev.Next = p.ref()
 
-		err = ms.putProposal(prev)
+		err = ms.putProposal(prev, balances)
 		if err != nil {
 			return proposal{}, err
 		}
@@ -395,7 +396,7 @@ func (ms MultiSigSmartContract) createProposal(now common.Timestamp, v Vote) (pr
 	// Enqueue.
 	q.Tail = p.ref()
 
-	err = ms.putExpirationQueue(q)
+	err = ms.putExpirationQueue(q, balances)
 	if err != nil {
 		return proposal{}, err
 	}
@@ -403,8 +404,8 @@ func (ms MultiSigSmartContract) createProposal(now common.Timestamp, v Vote) (pr
 	return p, nil
 }
 
-func (ms MultiSigSmartContract) walletExists(clientID string) (bool, error) {
-	walletBytes, err := ms.DB.GetNode(getWalletKey(clientID))
+func (ms MultiSigSmartContract) walletExists(clientID string, balances c_state.StateContextI) (bool, error) {
+	walletBytes, err := balances.GetTrieNode(getWalletKey(clientID))
 	if err != nil {
 		return false, err
 	}
@@ -412,19 +413,16 @@ func (ms MultiSigSmartContract) walletExists(clientID string) (bool, error) {
 	return walletBytes != nil, nil
 }
 
-func (ms MultiSigSmartContract) getWallet(clientID string) (Wallet, error) {
-	walletBytes, err := ms.DB.GetNode(getWalletKey(clientID))
+func (ms MultiSigSmartContract) getWallet(clientID string, balances c_state.StateContextI) (Wallet, error) {
+	walletNode, err := balances.GetTrieNode(getWalletKey(clientID))
+
 	if err != nil {
 		// I/O error.
 		return Wallet{}, err
 	}
-	if walletBytes == nil {
-		// Not found.
-		return Wallet{}, nil
-	}
 
 	w := Wallet{}
-	err = json.Unmarshal(walletBytes, &w)
+	err = w.Decode(walletNode.Encode())
 	if err != nil {
 		// Decoding error.
 		return Wallet{}, err
@@ -434,28 +432,25 @@ func (ms MultiSigSmartContract) getWallet(clientID string) (Wallet, error) {
 	return w, nil
 }
 
-func (ms MultiSigSmartContract) putWallet(w Wallet) error {
-	walletBytes, err := json.Marshal(w)
-	if err != nil {
-		return err
-	}
-
-	return ms.DB.PutNode(w.getKey(), walletBytes)
+func (ms MultiSigSmartContract) putWallet(w Wallet, balances c_state.StateContextI) error {
+	//walletBytes, err := json.Marshal(w)
+	//if err != nil {
+	//	return err
+	//}
+	_, err := balances.InsertTrieNode(w.getKey(), w)
+	return err
 }
 
-func (ms MultiSigSmartContract) getProposal(ref proposalRef) (proposal, error) {
-	proposalBytes, err := ms.DB.GetNode(getProposalKey(ref.ClientID, ref.ProposalID))
+func (ms MultiSigSmartContract) getProposal(ref proposalRef, balances c_state.StateContextI) (proposal, error) {
+	proposalNode, err := balances.GetTrieNode(getProposalKey(ref.ClientID, ref.ProposalID))
+
 	if err != nil {
 		// I/O error.
 		return proposal{}, err
 	}
-	if proposalBytes == nil {
-		// Not found.
-		return proposal{}, nil
-	}
 
 	p := proposal{}
-	err = json.Unmarshal(proposalBytes, &p)
+	err = p.Decode(proposalNode.Encode())
 	if err != nil {
 		// Decoding error.
 		return proposal{}, err
@@ -465,28 +460,26 @@ func (ms MultiSigSmartContract) getProposal(ref proposalRef) (proposal, error) {
 	return p, nil
 }
 
-func (ms MultiSigSmartContract) putProposal(p proposal) error {
-	proposalBytes, err := json.Marshal(p)
-	if err != nil {
-		return err
-	}
+func (ms MultiSigSmartContract) putProposal(p proposal, balances c_state.StateContextI) error {
+	//proposalBytes, err := json.Marshal(p)
+	//if err != nil {
+	//	return err
+	//}
 
-	return ms.DB.PutNode(p.getKey(), proposalBytes)
+	_, err := balances.InsertTrieNode(p.getKey(), p)
+	return err
 }
 
-func (ms MultiSigSmartContract) getOrCreateExpirationQueue() (expirationQueue, error) {
-	qBytes, err := ms.DB.GetNode(getExpirationQueueKey())
+func (ms MultiSigSmartContract) getOrCreateExpirationQueue(balances c_state.StateContextI) (expirationQueue, error) {
+	qNode, err := balances.GetTrieNode(getExpirationQueueKey())
+
 	if err != nil {
 		// I/O error.
 		return expirationQueue{}, err
 	}
-	if qBytes == nil {
-		// Not found.
-		return expirationQueue{}, nil
-	}
 
 	q := expirationQueue{}
-	err = json.Unmarshal(qBytes, &q)
+	err = q.Decode(qNode.Encode())
 	if err != nil {
 		// Decoding error.
 		return expirationQueue{}, err
@@ -496,11 +489,12 @@ func (ms MultiSigSmartContract) getOrCreateExpirationQueue() (expirationQueue, e
 	return q, nil
 }
 
-func (ms MultiSigSmartContract) putExpirationQueue(q expirationQueue) error {
-	qBytes, err := json.Marshal(q)
-	if err != nil {
-		return err
-	}
+func (ms MultiSigSmartContract) putExpirationQueue(q expirationQueue, balances c_state.StateContextI) error {
+	//proposalBytes, err := json.Marshal(p)
+	//if err != nil {
+	//	return err
+	//}
 
-	return ms.DB.PutNode(getExpirationQueueKey(), qBytes)
+	_, err := balances.InsertTrieNode(getExpirationQueueKey(), q)
+	return err
 }

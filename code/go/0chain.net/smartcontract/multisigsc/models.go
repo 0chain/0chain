@@ -2,10 +2,11 @@ package multisigsc
 
 import (
 	"encoding/hex"
+	"encoding/json"
 
-	"0chain.net/chaincore/smartcontractstate"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
+	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 )
 
@@ -27,16 +28,26 @@ type Wallet struct {
 	NumRequired int `json:"num_required"`
 }
 
+func (w Wallet) Encode() []byte {
+	buff, _ := json.Marshal(w)
+	return buff
+}
+
+func (w Wallet) Decode(input []byte) error {
+	err := json.Unmarshal(input, w)
+	return err
+}
+
 func (w Wallet) isEmpty() bool {
 	return w.ClientID == ""
 }
 
-func (w Wallet) getKey() smartcontractstate.Key {
+func (w Wallet) getKey() datastore.Key {
 	return getWalletKey(w.ClientID)
 }
 
-func getWalletKey(clientID string) smartcontractstate.Key {
-	return smartcontractstate.Key("wallet:" + clientID)
+func getWalletKey(clientID string) datastore.Key {
+	return datastore.Key("wallet:" + clientID)
 }
 
 func (w Wallet) valid(forClientID string) bool {
@@ -282,6 +293,16 @@ type proposalRef struct {
 	ProposalID string `json:"proposal_id"`
 }
 
+func (pr proposalRef) Encode() []byte {
+	buff, _ := json.Marshal(pr)
+	return buff
+}
+
+func (pr proposalRef) Decode(input []byte) error {
+	err := json.Unmarshal(input, pr)
+	return err
+}
+
 // Proposal to transfer tokens out of the multi-sig wallet. Built up from T
 // different votes.
 type proposal struct {
@@ -305,6 +326,16 @@ type proposal struct {
 	ExecutedInTxnHash string `json:"executed_in_txn_hash"`
 }
 
+func (p proposal) Encode() []byte {
+	buff, _ := json.Marshal(p)
+	return buff
+}
+
+func (p proposal) Decode(input []byte) error {
+	err := json.Unmarshal(input, p)
+	return err
+}
+
 func (p proposal) isEmpty() bool {
 	return p.Transfer.ClientID == ""
 }
@@ -320,12 +351,12 @@ func (p proposal) ref() proposalRef {
 	}
 }
 
-func (p proposal) getKey() smartcontractstate.Key {
+func (p proposal) getKey() datastore.Key {
 	return getProposalKey(p.Transfer.ClientID, p.ProposalID)
 }
 
-func getProposalKey(clientID, proposalID string) smartcontractstate.Key {
-	return smartcontractstate.Key("proposal:" + clientID + ":" + proposalID)
+func getProposalKey(clientID, proposalID string) datastore.Key {
+	return datastore.Key("proposal:" + clientID + ":" + proposalID)
 }
 
 // Queue of all proposals across all wallets sorted by expiration date.
@@ -334,6 +365,16 @@ type expirationQueue struct {
 	Tail proposalRef `json:"tail"`
 }
 
-func getExpirationQueueKey() smartcontractstate.Key {
-	return smartcontractstate.Key("queue")
+func (q expirationQueue) Encode() []byte {
+	buff, _ := json.Marshal(q)
+	return buff
+}
+
+func (q expirationQueue) Decode(input []byte) error {
+	err := json.Unmarshal(input, q)
+	return err
+}
+
+func getExpirationQueueKey() datastore.Key {
+	return datastore.Key("queue")
 }
