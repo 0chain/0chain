@@ -30,6 +30,11 @@ func SetupDefaultConfig() {
 	viper.SetDefault("server_chain.client.signature_scheme", "ed25519")
 	viper.SetDefault("server_chain.block.sharding.min_active_sharders", 100)
 	viper.SetDefault("server_chain.block.sharding.min_active_replicators", 100)
+	viper.SetDefault("server_chain.smart_contract.timeout", 50)
+	viper.SetDefault("server_chain.round_timeouts.softto_min", 300)
+	viper.SetDefault("server_chain.round_timeouts.softto_mult", 3)
+	viper.SetDefault("server_chain.round_timeouts.round_restart_mult", 2)
+
 }
 
 /*SetupConfig - setup the configuration system */
@@ -103,7 +108,6 @@ type Config struct {
 	Port           int
 	ChainID        string
 	DeploymentMode byte
-	MaxDelay       int
 }
 
 /*Configuration of the system */
@@ -165,7 +169,8 @@ func ValidChain(chain string) error {
 	return ErrSupportedChain
 }
 
-/*MaxDelay - indicates the amount of artificial delay to induce for testing resilience */
-func MaxDelay() int {
-	return Configuration.MaxDelay
+/*GetThresholdCount Gets the defined threshold count */
+func GetThresholdCount() int {
+	return viper.GetInt("server_chain.block.consensus.threshold_by_count")
+
 }

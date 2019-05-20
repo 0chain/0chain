@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -12,7 +13,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"errors"
 
 	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/miner"
@@ -30,6 +30,7 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/build"
 	"0chain.net/core/common"
+	"0chain.net/core/ememorystore"
 	"0chain.net/core/logging"
 	. "0chain.net/core/logging"
 	"0chain.net/core/memorystore"
@@ -44,7 +45,7 @@ func main() {
 	discoveryIps := flag.String("discovery_ips", "", "discovery_ips")
 	keysFile := flag.String("keys_file", "", "keys_file")
 	nodesFile := flag.String("nodes_file", "", "nodes_file (deprecated)")
-	maxDelay := flag.Int("max_delay", 0, "max_delay (deprecated)")
+	delayFile := flag.String("delay_file", "", "delay_file")
 	flag.Parse()
 	genesis := !*nonGenesis
 	config.Configuration.DeploymentMode = byte(*deploymentMode)
@@ -59,10 +60,8 @@ func main() {
 	}
 
 	config.Configuration.ChainID = viper.GetString("server_chain.id")
-	config.Configuration.MaxDelay = *maxDelay
 	transaction.SetTxnTimeout(int64(viper.GetInt("server_chain.transaction.timeout")))
 
-	
 	config.SetServerChainID(config.Configuration.ChainID)
 
 	common.SetupRootContext(node.GetNodeContext())
@@ -83,22 +82,20 @@ func main() {
 	reader.Close()
 	node.Self.SetSignatureScheme(signatureScheme)
 	if !genesis {
-		hostName, portNum, err := readNonGenesisHostAndPort(keysFile) 
+		hostName, portNum, err := readNonGenesisHostAndPort(keysFile)
 		if err != nil {
 			Logger.Panic("Error reading keys file. Non-genesis miner has no host or port number", zap.Error(err))
 		}
 		Logger.Info("Inside nonGenesis", zap.String("hostname", hostName), zap.Int("port Num", portNum))
 		node.Self.Host = hostName
 		node.Self.Port = portNum
-		
 	}
-	
-
 	miner.SetupMinerChain(serverChain)
 	mc := miner.GetMinerChain()
 	mc.DiscoverClients = viper.GetBool("server_chain.client.discover")
 	mc.SetGenerationTimeout(viper.GetInt("server_chain.block.generation.timeout"))
 	mc.SetRetryWaitTime(viper.GetInt("server_chain.block.generation.retry_wait_time"))
+	mc.SetupConfigInfoDB()
 	chain.SetServerChain(serverChain)
 
 	miner.SetNetworkRelayTime(viper.GetDuration("network.relay_time") * time.Millisecond)
@@ -106,10 +103,10 @@ func main() {
 
 	if genesis {
 		readNodesFile(nodesFile, mc, serverChain)
-	} 
+	}
 
 	Logger.Info("Miners in main", zap.Int("size", mc.Miners.Size()))
-	
+
 	if node.Self.ID == "" {
 		Logger.Panic("node definition for self node doesn't exist")
 	}
@@ -119,6 +116,11 @@ func main() {
 	err = common.NewError("saving self as client", "client save")
 	for err != nil {
 		_, err = client.PutClient(ctx, &node.Self.Client)
+	}
+	if config.Development() {
+		if *delayFile != "" {
+			node.ReadNetworkDelays(*delayFile)
+		}
 	}
 
 	if state.Debug() {
@@ -135,7 +137,7 @@ func main() {
 
 	address := fmt.Sprintf(":%v", node.Self.Port)
 
-	Logger.Info("Starting miner", zap.String("git", build.GitCommit), zap.String("go_version", runtime.Version()), zap.Int("available_cpus", runtime.NumCPU()), zap.String("port", address))
+	Logger.Info("Starting miner", zap.String("build_tag", build.BuildTag), zap.String("go_version", runtime.Version()), zap.Int("available_cpus", runtime.NumCPU()), zap.String("port", address))
 	Logger.Info("Chain info", zap.String("chain_id", config.GetServerChainID()), zap.String("mode", mode))
 	Logger.Info("Self identity", zap.Any("set_index", node.Self.Node.SetIndex), zap.Any("id", node.Self.Node.GetKey()))
 
@@ -205,7 +207,7 @@ func readNonGenesisHostAndPort(keysFile *string) (string, int, error) {
 		return "", 0, err
 	}
 	return h, p, nil
-		
+
 }
 func kickoffMiner(ctx context.Context, mc *miner.Chain) {
 	go func() {
@@ -219,7 +221,7 @@ func kickoffMiner(ctx context.Context, mc *miner.Chain) {
 }
 
 func readNodesFile(nodesFile *string, mc *miner.Chain, serverChain *chain.Chain) {
-	
+
 	nodesConfigFile := viper.GetString("network.nodes_file")
 	if nodesConfigFile == "" {
 		nodesConfigFile = *nodesFile
@@ -259,12 +261,12 @@ func initEntities() {
 
 	miner.SetupNotarizationEntity()
 
+	ememoryStorage := ememorystore.GetStorageProvider()
 	bls.SetupDKGEntity()
+	bls.SetupDKGSummary(ememoryStorage)
+	bls.SetupDKGDB()
 	bls.SetupBLSEntity()
-
-	if config.DevConfiguration.SmartContract {
-		setupsc.SetupSmartContracts()
-	}
+	setupsc.SetupSmartContracts()
 }
 
 func initHandlers() {
@@ -291,6 +293,7 @@ func initN2NHandlers() {
 	miner.SetupM2SRequestors()
 
 	miner.SetupX2MResponders()
+	chain.SetupX2XResponders()
 	chain.SetupX2MRequestors()
 }
 

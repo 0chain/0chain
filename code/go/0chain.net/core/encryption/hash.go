@@ -3,8 +3,12 @@ package encryption
 import (
 	"encoding/hex"
 
+	"0chain.net/core/common"
 	"golang.org/x/crypto/sha3"
 )
+
+//ErrInvalidHash - hash is invalid error
+var ErrInvalidHash = common.NewError("invalid_hash", "Invalid hash")
 
 const HASH_LENGTH = 32
 
@@ -13,6 +17,11 @@ type HashBytes [HASH_LENGTH]byte
 /*Hash - hash the given data and return the hash as hex string */
 func Hash(data interface{}) string {
 	return hex.EncodeToString(RawHash(data))
+}
+
+func IsHash(str string) bool {
+	bytes, err := hex.DecodeString(str)
+	return err == nil && len(bytes) == HASH_LENGTH
 }
 
 //EmptyHash - hash of an empty string

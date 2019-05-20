@@ -13,6 +13,7 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"0chain.net/core/encryption"
 )
 
 /*FSBlockStore - a block store implementation using file system */
@@ -72,6 +73,9 @@ func (fbs *FSBlockStore) Read(hash string) (*block.Block, error) {
 }
 
 func (fbs *FSBlockStore) read(hash string, round int64) (*block.Block, error) {
+	if len(hash) != 64 {
+		return nil, encryption.ErrInvalidHash
+	}
 	fileName := fbs.getFileName(hash, round)
 	f, err := os.Open(fileName)
 	if err != nil {
@@ -83,12 +87,12 @@ func (fbs *FSBlockStore) read(hash string, round int64) (*block.Block, error) {
 		return nil, err
 	}
 	defer r.Close()
-	var b block.Block
-	err = datastore.ReadJSON(r, &b)
+	b := fbs.blockMetadataProvider.Instance().(*block.Block)
+	err = datastore.ReadJSON(r, b)
 	if err != nil {
 		return nil, err
 	}
-	return &b, nil
+	return b, nil
 }
 
 /*Delete - delete from the hash of the block*/

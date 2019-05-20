@@ -5,6 +5,8 @@ import (
 	"sort"
 
 	"0chain.net/core/encryption"
+	. "0chain.net/core/logging"
+	"go.uber.org/zap"
 )
 
 //Score - a node with a score
@@ -50,6 +52,7 @@ func (hps *HashPoolScorer) ScoreHash(np *Pool, hash []byte) []*Score {
 func (hps *HashPoolScorer) ScoreHashString(np *Pool, hash string) []*Score {
 	hBytes, err := hex.DecodeString(hash)
 	if err != nil {
+		Logger.Info("decode failed for hash", zap.String("hash", hash), zap.Error(err))
 		return nil
 	}
 	return hps.ScoreHash(np, hBytes)
@@ -69,6 +72,27 @@ func (n *Node) IsInTop(nodeScores []*Score, topN int) bool {
 		}
 	}
 	return false
+}
+
+// IsInTopWithNodes gets all the nodes in topN
+func (n *Node) IsInTopWithNodes(nodeScores []*Score, topN int) (bool, []*Node) {
+	nodes := make([]*Node, 0, 1)
+	inTop := false
+	if topN <= len(nodeScores) {
+		minScore := nodeScores[topN-1].Score
+		//nodeScores are in descending order
+		for _, ns := range nodeScores {
+			if ns.Score < minScore {
+				//we've found all the nodes in topN
+				break
+			}
+			nodes = append(nodes, ns.Node)
+			if ns.Node == n {
+				inTop = true
+			}
+		}
+	}
+	return inTop, nodes
 }
 
 //GetTopNNodes - get the top n nodes from the sorted scores

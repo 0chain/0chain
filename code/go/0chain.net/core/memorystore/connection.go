@@ -63,6 +63,15 @@ func AddPool(dbid string, pool *redis.Pool) {
 	pools[dbid] = dbpool
 }
 
+func GetConnectionCount(entityMetadata datastore.EntityMetadata) (int, int) {
+	dbid := entityMetadata.GetDB()
+	dbpool, ok := pools[dbid]
+	if !ok {
+		panic(fmt.Sprintf("Invalid entity metadata setup, unknown dbpool %v\n", dbid))
+	}
+	return dbpool.Pool.ActiveCount(), dbpool.Pool.IdleCount()
+}
+
 func getdbpool(entityMetadata datastore.EntityMetadata) *dbpool {
 	dbid := entityMetadata.GetDB()
 	dbpool, ok := pools[dbid]
@@ -208,10 +217,14 @@ func GetEntityCon(ctx context.Context, entityMetadata datastore.EntityMetadata) 
 func Close(ctx context.Context) {
 	c := ctx.Value(CONNECTION)
 	if c == nil {
+		Logger.Error("Connection is nil while closing")
 		return
 	}
 	cMap := c.(connections)
 	for _, con := range cMap {
-		con.Close()
+		err := con.Close()
+		if err != nil {
+			Logger.Error("Connection not closed", zap.Error(err))
+		}
 	}
 }

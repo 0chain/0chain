@@ -13,7 +13,7 @@ import (
 /*SetupWorkers - Setup the miner's workers */
 func SetupWorkers(ctx context.Context) {
 	mc := GetMinerChain()
-	go mc.RoundWorker(ctx)
+	go mc.RoundWorker(ctx)              //we are going to start this after we are ready with the round
 	go mc.BlockWorker(ctx)              // 1) receives incoming blocks from the network
 	go mc.FinalizeRoundWorker(ctx, mc)  // 2) sequentially finalize the rounds
 	go mc.FinalizedBlockWorker(ctx, mc) // 3) sequentially processes finalized blocks
@@ -22,6 +22,7 @@ func SetupWorkers(ctx context.Context) {
 /*BlockWorker - a job that does all the work related to blocks in each round */
 func (mc *Chain) BlockWorker(ctx context.Context) {
 	var protocol Protocol = mc
+
 	for true {
 		select {
 		case <-ctx.Done():
@@ -55,38 +56,31 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 
 //RoundWorker - a worker that monitors the round progress
 func (mc *Chain) RoundWorker(ctx context.Context) {
+	var timer = time.NewTimer(time.Duration(4 * time.Second))
 	var cround = mc.CurrentRound
-	var ticker = time.NewTicker(time.Second)
-	var tickerCount = 0
 	var protocol Protocol = mc
+
 	for true {
 		select {
 		case <-ctx.Done():
 			return
-		case <-ticker.C:
+		case <-timer.C:
 			if cround == mc.CurrentRound {
 				round := mc.GetMinerRound(cround)
-				tickerCount++
-
-				//Something bad happened.
-				/*
-					n := node.Self
-					common.LogRuntime(logging.MemUsage, zap.Any(n.Description, n.SetIndex))
-					buf := new(bytes.Buffer)
-					pprof.Lookup("goroutine").WriteTo(buf, 1)
-					logging.Logger.Info("Round timeout", zap.String("Go routine output", buf.String()))
-				*/
 
 				logging.Logger.Info("Round timeout", zap.Any("Number", round.Number),
 					zap.Int("VRF_shares", len(round.GetVRFShares())),
 					zap.Int("proposedBlocks", len(round.GetProposedBlocks())),
 					zap.Int("notarizedBlocks", len(round.GetNotarizedBlocks())))
-				protocol.HandleRoundTimeout(ctx, tickerCount)
+				protocol.HandleRoundTimeout(ctx)
 			} else {
 				cround = mc.CurrentRound
 				mc.ResetRoundTimeoutCount()
-				tickerCount = 0
+				timer = time.NewTimer(time.Duration(mc.GetNextRoundTimeoutTime(ctx)) * time.Millisecond)
 			}
 		}
+		next := mc.GetNextRoundTimeoutTime(ctx)
+		Logger.Info("got_timeout", zap.Int("next", next))
+		timer = time.NewTimer(time.Duration(next) * time.Millisecond)
 	}
 }

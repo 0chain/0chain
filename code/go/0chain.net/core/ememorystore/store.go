@@ -2,9 +2,12 @@ package ememorystore
 
 import (
 	"context"
+	"encoding/binary"
+	"strconv"
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"github.com/0chain/gorocksdb"
 )
 
 var storageAPI = &Store{}
@@ -22,12 +25,24 @@ func (ems *Store) Read(ctx context.Context, key datastore.Key, entity datastore.
 	entity.SetKey(key)
 	emd := entity.GetEntityMetadata()
 	c := GetEntityCon(ctx, emd)
-	data, err := c.Conn.Get(c.ReadOptions, []byte(datastore.ToString(key)))
+	var data *gorocksdb.Slice
+	var err error
+	if emd.GetName() == "round" {
+		rNumber, _ := strconv.ParseInt(datastore.ToString(entity.GetKey()), 10, 64)
+		key := make([]byte, 8)
+		binary.BigEndian.PutUint64(key, uint64(rNumber))
+		data, err = c.Conn.Get(c.ReadOptions, key)
+	} else {
+		data, err = c.Conn.Get(c.ReadOptions, []byte(datastore.ToString(key)))
+	}
 	if err != nil {
 		return err
 	}
 	defer data.Free()
-	datastore.FromJSON(data.Data(), entity)
+	err = datastore.FromJSON(data.Data(), entity)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -35,7 +50,15 @@ func (ems *Store) Write(ctx context.Context, entity datastore.Entity) error {
 	emd := entity.GetEntityMetadata()
 	c := GetEntityCon(ctx, emd)
 	data := datastore.ToJSON(entity).Bytes()
-	err := c.Conn.Put([]byte(datastore.ToString(entity.GetKey())), data)
+	var err error
+	if emd.GetName() == "round" {
+		rNumber, _ := strconv.ParseInt(datastore.ToString(entity.GetKey()), 10, 64)
+		key := make([]byte, 8)
+		binary.BigEndian.PutUint64(key, uint64(rNumber))
+		err = c.Conn.Put(key, data)
+	} else {
+		err = c.Conn.Put([]byte(datastore.ToString(entity.GetKey())), data)
+	}
 	if err != nil {
 		return err
 	}

@@ -12,6 +12,9 @@ type RoundI interface {
 	GetRandomSeed() int64
 	SetRandomSeed(seed int64)
 	HasRandomSeed() bool
+	GetTimeoutCount() int
+	SetTimeoutCount(tc int) bool
+	SetRandomSeedForNotarizedBlock(seed int64)
 
 	ComputeMinerRanks(miners *node.Pool)
 	GetMinerRank(miner *node.Node) int

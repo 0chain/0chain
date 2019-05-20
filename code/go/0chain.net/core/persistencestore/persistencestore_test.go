@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/block"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 )

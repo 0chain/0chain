@@ -100,6 +100,8 @@ func TestMPTInsertExtensionNode(t *testing.T) {
 	doStrValInsert("insert a leaf to create an extension node as root node", mpt2, "12346", "12346", true)
 
 	doStrValInsert("break extension into full node at the beginning", mpt2, "2", "2", true)
+	mpt2.Iterate(context.TODO(), iterStrPathHandler, NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
+
 	doStrValInsert("break extension into full node at the middle", mpt2, "123", "123", true)
 
 	doStrValInsert("setup data", mpt2, "22345", "22345", false)
@@ -276,6 +278,22 @@ func iterHandler(ctx context.Context, path Path, key Key, node Node) error {
 	return nil
 }
 
+func iterStrPathHandler(ctx context.Context, path Path, key Key, node Node) error {
+	if node == nil {
+		return fmt.Errorf("stop")
+	}
+	if vn, ok := node.(*ValueNode); ok {
+		fmt.Printf("iterate:%20s: p=%v k=%v v=%v\n", fmt.Sprintf("%T", node), string(path), hex.EncodeToString(key), string(vn.GetValue().Encode()))
+	} else {
+		var val interface{}
+		if ln, ok := node.(*LeafNode); ok {
+			val = ln.GetValue()
+		}
+		fmt.Printf("iterate:%20s: orig=%v ver=%v p=%v k=%v v=%v\n", fmt.Sprintf("%T", node), node.GetOrigin(), node.GetVersion(), string(path), hex.EncodeToString(key), val)
+	}
+	return nil
+}
+
 func doDelete(testcase string, mpt MerklePatriciaTrieI, key string, print bool) {
 	if print {
 		fmt.Printf("test: %v [%v]\n", testcase, key)
@@ -345,4 +363,35 @@ func TestCasePEFLEdeleteL(t *testing.T) {
 	} else {
 		fmt.Printf("%+v\n", v)
 	}
+}
+
+func TestAddTwiceDeleteOnce(t *testing.T) {
+	cc := NewChangeCollector()
+	mndb := NewMemoryNodeDB()
+	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
+	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.DB, false)
+	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
+
+	doStrValInsert("setup data", mpt2, "123456781", "x", false)
+	doStrValInsert("setup data", mpt2, "123456782", "y", false)
+	//doStrValInsert("setup data", mpt2, "123556782", "z", false)
+
+	doStrValInsert("setup data", mpt2, "223456781", "x", false)
+	doStrValInsert("setup data", mpt2, "223456782", "y", false)
+
+	mpt2.PrettyPrint(os.Stdout)
+
+	doStrValInsert("setup data", mpt2, "223456782", "a", false)
+	//doStrValInsert("setup data", mpt2, "223556782", "b", false)
+
+	//mpt2.Iterate(context.TODO(), iterHandler, NodeTypeLeafNode /*|NodeTypeFullNode|NodeTypeExtensionNode */)
+	mpt2.PrettyPrint(os.Stdout)
+	printChanges(cc)
+
+	//doDelete("delete a leaf node", mpt2, "123456781", true)
+	//mpt2.PrettyPrint(os.Stdout)
+
+	//doDelete("delete a leaf node", mpt2, "223556782", true)
+	mpt2.PrettyPrint(os.Stdout)
+
 }

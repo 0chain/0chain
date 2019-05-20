@@ -2,6 +2,7 @@ package sharder
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/transaction"
+	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
 	. "0chain.net/core/logging"
@@ -81,6 +83,7 @@ func (sc *Chain) GetTransactionConfirmation(ctx context.Context, hash string) (*
 		confirmation.CreationDate = b.CreationDate
 	}
 	txn := b.GetTransaction(hash)
+	confirmation.Status = txn.Status
 	confirmation.Transaction = txn
 	mt := b.GetMerkleTree()
 	confirmation.MerkleTreeRoot = mt.GetRoot()
@@ -111,7 +114,7 @@ func (sc *Chain) StoreTransactions(ctx context.Context, b *block.Block) error {
 			time.Sleep(delay)
 
 		} else {
-			Logger.Info("transactions saved successfully", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Int("block_size", len(b.Txns)))
+			Logger.Debug("transactions saved successfully", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Int("block_size", len(b.Txns)))
 			break
 		}
 	}
@@ -129,4 +132,39 @@ func (sc *Chain) storeTransactions(ctx context.Context, sTxns []datastore.Entity
 	tctx := persistencestore.WithEntityConnection(ctx, txnSummaryMetadata)
 	defer persistencestore.Close(tctx)
 	return txnSummaryMetadata.GetStore().MultiWrite(tctx, txnSummaryMetadata, sTxns)
+}
+
+var txnTableIndexed = false
+
+func getCreateIndex(table string, column string) string {
+	return fmt.Sprintf("CREATE INDEX IF NOT EXISTS ON %v(%v)", table, column)
+}
+
+func getSelectCountTxn(table string, column string, value int64) string {
+	return fmt.Sprintf("SELECT COUNT(*) FROM %v where %v=%d", table, column, value)
+}
+
+func (sc *Chain) getTxnCountForRound(ctx context.Context, r int64) (int, error) {
+	txnSummaryEntityMetadata := datastore.GetEntityMetadata("txn_summary")
+	tctx := persistencestore.WithEntityConnection(ctx, txnSummaryEntityMetadata)
+	defer persistencestore.Close(tctx)
+	c := persistencestore.GetCon(tctx)
+	if !txnTableIndexed {
+		err := c.Query(getCreateIndex(txnSummaryEntityMetadata.GetName(), "round")).Exec()
+		if err == nil {
+			txnTableIndexed = true
+		} else {
+			return 0, err
+		}
+	}
+	iter := c.Query(getSelectCountTxn(txnSummaryEntityMetadata.GetName(), "round", r)).Iter()
+	var count int
+	valid := iter.Scan(&count)
+	if !valid {
+		return 0, common.NewError("txns_count_failed", fmt.Sprintf("txn count retreival for round = %v failed", r))
+	}
+	if err := iter.Close(); err != nil {
+		return 0, err
+	}
+	return count, nil
 }

@@ -1,3 +1,0 @@
-- name: Install docker
-  import_tasks: docker-assemble-remote.yml
-  tags: ['docker-assemble-remote']

@@ -12,6 +12,7 @@ import (
 
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
+	"0chain.net/core/build"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
@@ -69,7 +70,6 @@ type Node struct {
 	LastActiveTime time.Time
 	ErrorCount     int
 	CommChannel    chan bool
-
 	//These are approximiate as we are not going to lock to update
 	Sent       int64 // messages sent to this node
 	SendErrors int64 // failed message sent to this node
@@ -89,6 +89,8 @@ type Node struct {
 	ProtocolStats interface{}
 
 	idBytes []byte
+
+	Info Info `json:"info"`
 }
 
 /*Provider - create a node object */
@@ -196,6 +198,8 @@ func NewNode(nc map[interface{}]interface{}) (*Node, error) {
 
 func setSelfNode(n *Node) {
 	Self.Node = n
+	Self.Node.Info.StateMissingNodes = -1
+	Self.Node.Info.BuildTag = build.BuildTag
 	Self.Node.Status = NodeStatusActive
 }
 
@@ -293,36 +297,34 @@ func (n *Node) updateSendMessageTimings() {
 	defer n.mutex.Unlock()
 	var minval = math.MaxFloat64
 	var maxval float64
-	var minSize = math.MaxFloat64
-	var maxSize float64
+	var maxCount int64
 	for uri, timer := range n.TimersByURI {
 		if timer.Count() == 0 {
 			continue
 		}
-		if isPullRequestURI(uri) {
+		if isGetRequest(uri) {
 			continue
 		}
 		if sizer, ok := n.SizeByURI[uri]; ok {
-			if sizer.Mean() == 0 {
-				continue
-			}
-			v := timer.Mean()
-			if sizer.Mean() > maxSize {
-				maxSize = sizer.Mean()
-				if v > maxval {
-					maxval = v
+			tv := timer.Mean()
+			sv := sizer.Mean()
+			sc := sizer.Count()
+			if int(sv) < LargeMessageThreshold {
+				if tv < minval {
+					minval = tv
 				}
-			}
-			if sizer.Mean() < minSize {
-				minSize = sizer.Mean()
-				if v < minval {
-					minval = v
+			} else {
+				if sc > maxCount {
+					maxval = tv
+					maxCount = sc
 				}
 			}
 		}
 	}
 	if minval > maxval {
 		minval = maxval
+	} else if maxval < minval {
+		maxval = minval
 	}
 	n.LargeMessageSendTime = maxval
 	n.SmallMessageSendTime = minval
@@ -339,7 +341,7 @@ func (n *Node) updateRequestMessageTimings() {
 		if timer.Count() == 0 {
 			continue
 		}
-		if !isPullRequestURI(uri) {
+		if !isGetRequest(uri) {
 			continue
 		}
 		v := timer.Mean()
@@ -400,6 +402,13 @@ func isPullRequestURI(uri string) bool {
 	return strings.HasPrefix(uri, "p?")
 }
 
+func isGetRequest(uri string) bool {
+	if strings.HasPrefix(uri, "p?") {
+		return true
+	}
+	return strings.HasSuffix(uri, "/get")
+}
+
 //GetPseudoName - create a pseudo name that is unique in the current active set
 func (n *Node) GetPseudoName() string {
 	return fmt.Sprintf("%v%.3d", n.GetNodeTypeName(), n.SetIndex)
@@ -413,6 +422,9 @@ func (n *Node) GetOptimalLargeMessageSendTime() float64 {
 func (n *Node) getOptimalLargeMessageSendTime() float64 {
 	p2ptime := getPushToPullTime(n)
 	if p2ptime < n.LargeMessageSendTime {
+		return p2ptime
+	}
+	if n.LargeMessageSendTime == 0 {
 		return p2ptime
 	}
 	return n.LargeMessageSendTime

@@ -5,9 +5,9 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
-	"0chain.net/core/datastore"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
+	"0chain.net/core/datastore"
 )
 
 /*SendVRFShare - send the round vrf share */
@@ -40,6 +40,7 @@ func (mc *Chain) SendNotarization(ctx context.Context, b *block.Block) {
 	notarization.BlockID = b.Hash
 	notarization.Round = b.Round
 	notarization.VerificationTickets = b.VerificationTickets
+	notarization.Block = b
 	m2m := mc.Miners
 	go m2m.SendAll(BlockNotarizationSender(notarization))
 	mc.SendNotarizedBlock(ctx, b)

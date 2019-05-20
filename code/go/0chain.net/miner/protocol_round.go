@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	metrics "github.com/rcrowley/go-metrics"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/node"
@@ -20,6 +22,12 @@ import (
 	"0chain.net/core/util"
 	"go.uber.org/zap"
 )
+
+var rbgTimer metrics.Timer // round block generation timer
+
+func init() {
+	rbgTimer = metrics.GetOrRegisterTimer("rbg_time", nil)
+}
 
 //SetNetworkRelayTime - set the network relay time
 func SetNetworkRelayTime(delta time.Duration) {
@@ -35,11 +43,18 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 	}
 	var nr = round.NewRound(r.GetRoundNumber() + 1)
 	mr := mc.CreateRound(nr)
-	if er := mc.AddRound(mr); er != mr {
+	er := mc.AddRound(mr)
+	if er != mr {
+		Logger.Info("StartNextRound found nextround ready. No VRFs Sent",
+			zap.Int64("er_round", er.GetRoundNumber()))
 		return er.(*Round)
 	}
 	if r.HasRandomSeed() {
 		mc.addMyVRFShare(ctx, r, mr)
+	} else {
+		Logger.Info("StartNextRound no VRFs sent -current round has no randomseed",
+			zap.Int64("rrs", r.GetRandomSeed()), zap.Int64("r_round", r.GetRoundNumber()))
+
 	}
 	return mr
 }
@@ -58,22 +73,42 @@ func (mc *Chain) getRound(ctx context.Context, roundNumber int64) *Round {
 	return mr
 }
 
+// RedoVrfShare re-calculateVrfShare and send
+func (mc *Chain) RedoVrfShare(ctx context.Context, r *Round) bool {
+	pr := mc.GetMinerRound(r.GetRoundNumber() - 1)
+	if pr == nil {
+		Logger.Info("no pr info inside RedoVrfShare", zap.Int64("Round", r.GetRoundNumber()))
+		return false
+	}
+	if pr.HasRandomSeed() {
+		r.vrfShare = nil
+		Logger.Info("RedoVrfShare after vrfShare is nil",
+			zap.Int64("round", r.GetRoundNumber()), zap.Int("round_timeout", r.GetTimeoutCount()))
+		mc.addMyVRFShare(ctx, pr, r)
+		return true
+	}
+	return false
+}
+
 func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
 	vrfs := &round.VRFShare{}
 	vrfs.Round = r.GetRoundNumber()
+	vrfs.RoundTimeoutCount = r.GetTimeoutCount()
 	vrfs.Share = GetBlsShare(ctx, r.Round, pr.Round)
 	vrfs.SetParty(node.Self.Node)
 	r.vrfShare = vrfs
 	// TODO: do we need to check if AddVRFShare is success or not?
-	if mc.AddVRFShare(ctx, r, r.vrfShare) {
-		go mc.SendVRFShare(ctx, r.vrfShare)
-	}
+	mc.AddVRFShare(ctx, r, r.vrfShare)
+	go mc.SendVRFShare(ctx, r.vrfShare)
+
 }
 
 func (mc *Chain) startRound(ctx context.Context, r *Round, seed int64) {
 	if !mc.SetRandomSeed(r.Round, seed) {
 		return
 	}
+	Logger.Info("Starting a new round", zap.Int64("round", r.GetRoundNumber()))
+
 	mc.startNewRound(ctx, r)
 }
 
@@ -91,10 +126,10 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 	self := node.GetSelfNode(ctx)
 	rank := mr.GetMinerRank(self.Node)
 	if !mc.IsRoundGenerator(mr, self.Node) {
-		Logger.Info("Not a generator", zap.Int64("round", mr.GetRoundNumber()), zap.Int("index", self.SetIndex), zap.Int("rank", rank), zap.Any("random_seed", mr.GetRandomSeed()))
+		Logger.Info("TOC_FIX Not a generator", zap.Int64("round", mr.GetRoundNumber()), zap.Int("index", self.SetIndex), zap.Int("rank", rank), zap.Int("timeoutcount", mr.GetTimeoutCount()), zap.Any("random_seed", mr.GetRandomSeed()))
 		return
 	}
-	Logger.Info("*** starting round block generation ***", zap.Int64("round", mr.GetRoundNumber()), zap.Int("index", self.SetIndex), zap.Int("rank", rank), zap.Any("random_seed", mr.GetRandomSeed()), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round))
+	Logger.Info("*** TOC_FIX starting round block generation ***", zap.Int64("round", mr.GetRoundNumber()), zap.Int("index", self.SetIndex), zap.Int("rank", rank), zap.Int("timeoutcount", mr.GetTimeoutCount()), zap.Any("random_seed", mr.GetRandomSeed()), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round))
 
 	//NOTE: If there are not enough txns, this will not advance further even though rest of the network is. That's why this is a goroutine
 	go mc.GenerateRoundBlock(ctx, mr)
@@ -139,6 +174,10 @@ func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) *block.Bl
 
 /*GenerateRoundBlock - given a round number generates a block*/
 func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block, error) {
+	ts := time.Now()
+	defer func() {
+		rbgTimer.UpdateSince(ts)
+	}()
 	roundNumber := r.GetRoundNumber()
 	pround := mc.GetMinerRound(roundNumber - 1)
 	if pround == nil {
@@ -158,21 +197,18 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	b.MagicBlockHash = mc.CurrentMagicBlock.Hash
 	b.MinerID = node.Self.GetKey()
 	mc.SetPreviousBlock(ctx, r, b, pb)
-	if b.CreationDate < pb.CreationDate {
-		b.CreationDate = pb.CreationDate
-	}
-	b.SetStateDB(pb)
 	start := time.Now()
 	makeBlock := false
 	generationTimeout := time.Millisecond * time.Duration(mc.GetGenerationTimeout())
 	generationTries := 0
+	var startLogging time.Time
 	for true {
 		if mc.CurrentRound > b.Round {
 			Logger.Error("generate block - round mismatch", zap.Any("round", roundNumber), zap.Any("current_round", mc.CurrentRound))
 			return nil, ErrRoundMismatch
 		}
 		txnCount := transaction.TransactionCount
-		b.ClientState.ResetChangeCollector(b.PrevBlock.ClientStateHash)
+		b.SetStateDB(pb)
 		generationTries++
 		err := mc.GenerateBlock(ctx, b, mc, makeBlock)
 		if err != nil {
@@ -180,7 +216,6 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 			if ok {
 				switch cerr.Code {
 				case InsufficientTxns:
-					var startLogging time.Time
 					for true {
 						delay := mc.GetRetryWaitTime()
 						time.Sleep(time.Duration(delay) * time.Millisecond)
@@ -201,10 +236,21 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 				case RoundMismatch:
 					Logger.Info("generate block", zap.Error(err))
 					continue
+				case RoundTimeout:
+					Logger.Error("generate block", zap.Int64("round", roundNumber), zap.Error(err))
+					return nil, err
 				}
 			}
-			Logger.Error("generate block", zap.Error(err))
+			if startLogging.IsZero() || time.Now().Sub(startLogging) > time.Second {
+				startLogging = time.Now()
+				Logger.Info("generate block", zap.Any("round", roundNumber), zap.Any("txn_count", txnCount), zap.Any("t.txn_count", transaction.TransactionCount), zap.Any("error", err))
+			}
 			return nil, err
+		}
+
+		if r.GetRandomSeed() != b.RoundRandomSeed {
+			Logger.Error("round random seed mismatch", zap.Int64("round", b.Round), zap.Int64("round_rrs", r.GetRandomSeed()), zap.Int64("blk_rrs", b.RoundRandomSeed))
+			return nil, ErrRRSMismatch
 		}
 		mc.AddRoundBlock(r, b)
 		if generationTries > 1 {
@@ -217,7 +263,8 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		return nil, nil
 	}
 	mc.addToRoundVerification(ctx, r, b)
-	mc.SendBlock(ctx, b)
+	r.AddProposedBlock(b)
+	go mc.SendBlock(ctx, b)
 	return b, nil
 }
 
@@ -332,6 +379,7 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 		b.SetBlockState(block.StateVerificationSuccessful)
 		bnb := r.GetBestRankedNotarizedBlock()
 		if bnb == nil || (bnb != nil && bnb.Hash == b.Hash) {
+			Logger.Info("Sending verification ticket", zap.Int64("round", r.Number), zap.String("block", b.Hash))
 			go mc.SendVerificationTicket(ctx, b, bvt)
 		}
 		if bnb == nil {
@@ -434,7 +482,7 @@ func (mc *Chain) updatePriorBlock(ctx context.Context, r *round.Round, b *block.
 		Logger.Error("verify round - previous round not present", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
 	}
 	if len(pb.VerificationTickets) > len(b.PrevBlockVerificationTickets) {
-		b.PrevBlockVerificationTickets = pb.VerificationTickets
+		b.SetPrevBlockVerificationTickets(pb.VerificationTickets)
 	}
 }
 
@@ -447,6 +495,8 @@ func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.B
 		return
 	}
 	if notarized {
+		Logger.Info("Block is notarized", zap.Int64("round", r.Number), zap.String("block", b.Hash))
+
 		return
 	}
 	mc.checkBlockNotarization(ctx, r, b)
@@ -505,7 +555,7 @@ func (mc *Chain) CancelRoundVerification(ctx context.Context, r *Round) {
 }
 
 /*BroadcastNotarizedBlocks - send the heaviest notarized block to all the miners */
-func (mc *Chain) BroadcastNotarizedBlocks(ctx context.Context, pr *Round, r *Round) {
+func (mc *Chain) BroadcastNotarizedBlocks(ctx context.Context, pr *Round) {
 	nb := pr.GetHeaviestNotarizedBlock()
 	if nb != nil {
 		Logger.Info("sending notarized block", zap.Int64("round", pr.Number), zap.String("block", nb.Hash))
@@ -552,16 +602,29 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*bloc
 	return finalizedBlocks
 }
 
-/*HandleRoundTimeout - handles the timeout of a round*/
-func (mc *Chain) HandleRoundTimeout(ctx context.Context, seconds int) {
-	if mc.CurrentRound == 0 {
-		return
+// GetNextRoundTimeoutTime returns time in milliseconds
+func (mc *Chain) GetNextRoundTimeoutTime(ctx context.Context) int {
+
+	ssft := int(math.Ceil(chain.SteadyStateFinalizationTimer.Mean() / 1000000))
+	tick := mc.RoundTimeoutSofttoMin
+	if tick < mc.RoundTimeoutSofttoMult*ssft {
+		tick = mc.RoundTimeoutSofttoMult * ssft
 	}
-	switch true {
-	case seconds%10 == 2: // do something minor every (x mod 10 = 2 seconds)
-		mc.handleNoProgress(ctx)
-	case seconds%10 == 0: // do something major every (x mod 10 = 0 seconds)
+	Logger.Info("nextTimeout", zap.Int("tick", tick))
+	return tick
+}
+
+// HandleRoundTimeout handle timeouts appropriately
+func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
+	r := mc.GetMinerRound(mc.CurrentRound)
+
+	if r.SoftTimeoutCount == mc.RoundRestartMult {
+		Logger.Info("triggering restartRound", zap.Int64("round", r.GetRoundNumber()))
 		mc.restartRound(ctx)
+	} else {
+		Logger.Info("triggering handleNoProgress", zap.Int64("round", r.GetRoundNumber()))
+		mc.handleNoProgress(ctx)
+		r.SoftTimeoutCount++
 	}
 }
 
@@ -576,37 +639,83 @@ func (mc *Chain) handleNoProgress(ctx context.Context) {
 			}
 			mc.SendBlock(ctx, b)
 		}
-	} else {
-		// TODO: it's likely the VRF issue
-		Logger.Error("No proposed blocks.")
 	}
+
+	if r.vrfShare != nil {
+		go mc.SendVRFShare(ctx, r.vrfShare)
+		Logger.Info("Sent vrf shares in handle NoProgress")
+	} else {
+		Logger.Info("Did not send vrf shares as it is nil", zap.Int64("round_num", r.GetRoundNumber()))
+	}
+	switch crt := mc.GetRoundTimeoutCount(); {
+	case crt < 10:
+		Logger.Error("handleNoProgress", zap.Any("round", mc.CurrentRound), zap.Int64("count", crt), zap.Any("num_vrf_share", len(r.GetVRFShares())))
+	case crt == 10:
+		Logger.Error("handleNoProgress (no further timeout messages will be displayed)", zap.Any("round", mc.CurrentRound), zap.Int64("count", crt), zap.Any("num_vrf_share", len(r.GetVRFShares())))
+		//TODO: should have a means to send an email/SMS to someone or something like that
+	}
+
 }
 
 func (mc *Chain) restartRound(ctx context.Context) {
 	mc.IncrementRoundTimeoutCount()
+	r := mc.GetMinerRound(mc.CurrentRound)
 	switch crt := mc.GetRoundTimeoutCount(); {
 	case crt < 10:
-		Logger.Error("round timeout occured", zap.Any("round", mc.CurrentRound), zap.Int64("count", crt))
+		Logger.Error("restartRound - round timeout occured", zap.Any("round", mc.CurrentRound), zap.Int64("count", crt), zap.Any("num_vrf_share", len(r.GetVRFShares())))
 	case crt == 10:
-		Logger.Error("round timeout occured (no further timeout messages will be displayed)", zap.Any("round", mc.CurrentRound), zap.Int64("count", crt))
+		Logger.Error("restartRound - round timeout occured (no further timeout messages will be displayed)", zap.Any("round", mc.CurrentRound), zap.Int64("count", crt), zap.Any("num_vrf_share", len(r.GetVRFShares())))
 		//TODO: should have a means to send an email/SMS to someone or something like that
 	}
 	mc.RoundTimeoutsCount++
-	if !mc.CanStartNetwork() {
-		return
-	}
-	r := mc.GetMinerRound(mc.CurrentRound)
+
 	if r.GetRoundNumber() > 1 {
+		if r.GetHeaviestNotarizedBlock() != nil {
+			mc.BroadcastNotarizedBlocks(ctx, r)
+			Logger.Info("StartNextRound after sending notarized block in restartRound.", zap.Int64("current_round", r.GetRoundNumber()))
+			nextR := mc.GetRound(r.GetRoundNumber())
+			nr := mc.StartNextRound(ctx, r)
+			/*
+				if the next round object already exists, StartNextRound does not send VRFs.
+				So to be sure send it.
+			*/
+			if r.HasRandomSeed() {
+				if nextR != nil {
+					Logger.Info("RedoVRFshare after sending notarized block in restartRound.", zap.Int64("round", nr.GetRoundNumber()), zap.Int("round_toc", nr.GetTimeoutCount()))
+
+					nr.Restart()
+					//Recalculate VRF shares and send
+					nr.IncrementTimeoutCount()
+					redo := mc.RedoVrfShare(ctx, nr)
+					if !redo {
+						Logger.Info("Could not  RedoVrfShare", zap.Int64("round", r.GetRoundNumber()), zap.Int("round_timeout", r.GetTimeoutCount()))
+					}
+
+				} else {
+					//StartNextRound would have sent the VRFs. No need to do that again
+					Logger.Info("after sending notarized block in restartRound NextR was nil. startNextRound would have sent VRF.", zap.Int64("round", nr.GetRoundNumber()), zap.Int("round_toc", nr.GetTimeoutCount()))
+
+				}
+				return
+			} else {
+				Logger.Error("Has notarized block in restartRound, but no randomseed.", zap.Int64("current_round", r.GetRoundNumber()))
+
+			}
+		}
 		pr := mc.GetMinerRound(r.GetRoundNumber() - 1)
 		if pr != nil {
-			mc.BroadcastNotarizedBlocks(ctx, pr, r)
+			mc.BroadcastNotarizedBlocks(ctx, pr)
 		}
 	}
+
 	r.Restart()
-	if r.vrfShare != nil {
-		//TODO: send same vrf again?
-		mc.AddVRFShare(ctx, r, r.vrfShare)
-		go mc.SendVRFShare(ctx, r.vrfShare)
+	//Recalculate VRF shares and send
+	r.IncrementTimeoutCount()
+	redo := mc.RedoVrfShare(ctx, r)
+
+	if !redo {
+		Logger.Info("Could not  RedoVrfShare", zap.Int64("round", r.GetRoundNumber()), zap.Int("round_timeout", r.GetTimeoutCount()))
+		return
 	}
 }
 
@@ -616,7 +725,7 @@ func startProtocol() {
 		return
 	}
 	ctx := common.GetRootContext()
-	mc.Sharders.OneTimeStatusMonitor(ctx)
+	mc.waitForActiveSharders(ctx)
 	lfb := getLatestBlockFromSharders(ctx)
 	var mr *Round
 	if lfb != nil {
@@ -624,10 +733,28 @@ func startProtocol() {
 		mr = mc.CreateRound(sr)
 		mr, _ = mc.AddRound(mr).(*Round)
 		mc.SetRandomSeed(sr, lfb.RoundRandomSeed)
+		mc.AddBlock(lfb)
+		mc.InitBlockState(lfb)
 		mc.SetLatestFinalizedBlock(ctx, lfb)
 	} else {
 		mr = mc.GetMinerRound(0)
 	}
 	Logger.Info("starting the blockchain ...", zap.Int64("round", mr.GetRoundNumber()))
 	mc.StartNextRound(ctx, mr)
+	//Just started the first round. It is time to start the timeout monitor
+	//go mc.RoundWorker(ctx)
+}
+
+func (mc *Chain) waitForActiveSharders(ctx context.Context) {
+	ticker := time.NewTicker(5 * chain.DELTA)
+	defer ticker.Stop()
+
+	for ts := range ticker.C {
+		if mc.CanShardBlocks() {
+			break
+		} else {
+			Logger.Info("Waiting for Sharders.", zap.Time("ts", ts))
+		}
+	}
+
 }

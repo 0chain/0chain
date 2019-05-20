@@ -41,12 +41,6 @@ func (np *Pool) OneTimeStatusMonitor(ctx context.Context) {
 }
 
 func (np *Pool) statusMonitor(ctx context.Context) {
-	tr := &http.Transport{
-		MaxIdleConns:       100,
-		IdleConnTimeout:    time.Minute,
-		DisableCompression: true,
-	}
-	client := &http.Client{Transport: tr, Timeout: TimeoutSmallMessage}
 	nodes := np.shuffleNodes()
 	for _, node := range nodes {
 		if node == Self.Node {
@@ -54,7 +48,9 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 		}
 		if common.Within(node.LastActiveTime.Unix(), 10) {
 			node.updateMessageTimings()
-			continue
+			if time.Since(node.Info.AsOf) < 60*time.Second {
+				continue
+			}
 		}
 		statusURL := node.GetStatusURL()
 		ts := time.Now().UTC()
@@ -63,7 +59,7 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 			panic(err)
 		}
 		statusURL = fmt.Sprintf("%v?id=%v&data=%v&hash=%v&signature=%v", statusURL, Self.Node.GetKey(), data, hash, signature)
-		resp, err := client.Get(statusURL)
+		resp, err := httpClient.Get(statusURL)
 		if err != nil {
 			node.ErrorCount++
 			if node.IsActive() {
@@ -73,6 +69,9 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 				}
 			}
 		} else {
+			if err := common.FromJSON(resp.Body, &node.Info); err == nil {
+				node.Info.AsOf = time.Now()
+			}
 			resp.Body.Close()
 			if !node.IsActive() {
 				node.ErrorCount = 0

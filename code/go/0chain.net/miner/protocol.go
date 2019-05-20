@@ -47,7 +47,7 @@ type ProtocolRound interface {
 	ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.Block, vt *block.VerificationTicket)
 	FinalizeRound(ctx context.Context, r round.RoundI, bsh chain.BlockStateHandler)
 
-	HandleRoundTimeout(ctx context.Context, seconds int)
+	HandleRoundTimeout(ctx context.Context)
 }
 
 /*ProtocolBlock - this is the interface that deals with the block level logic of the protocol */

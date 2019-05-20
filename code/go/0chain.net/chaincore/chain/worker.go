@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	. "0chain.net/core/logging"
 	"0chain.net/chaincore/node"
+	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -39,11 +39,12 @@ func (c *Chain) FinalizedBlockWorker(ctx context.Context, bsh BlockStateHandler)
 
 /*PruneClientStateWorker - a worker that prunes the client state */
 func (c *Chain) PruneClientStateWorker(ctx context.Context) {
-	ticker := time.NewTicker(time.Duration(c.PruneStateBelowCount) * time.Second)
+	tick := time.Duration(c.PruneStateBelowCount) * time.Second
+	timer := time.NewTimer(time.Second)
 	pruning := false
 	for true {
 		select {
-		case <-ticker.C:
+		case <-timer.C:
 			if pruning {
 				Logger.Info("pruning still going on")
 				continue
@@ -51,6 +52,11 @@ func (c *Chain) PruneClientStateWorker(ctx context.Context) {
 			pruning = true
 			c.pruneClientState(ctx)
 			pruning = false
+			if c.pruneStats == nil || c.pruneStats.MissingNodes > 0 {
+				timer = time.NewTimer(time.Second)
+			} else {
+				timer = time.NewTimer(tick)
+			}
 		}
 	}
 }
@@ -68,6 +74,7 @@ func (c *Chain) BlockFetchWorker(ctx context.Context) {
 				b.SetPreviousBlock(pb)
 				continue
 			}
+
 			c.blockFetcher.FetchPreviousBlock(ctx, c, b)
 		case bHash := <-c.blockFetcher.missingBlocks:
 			_, err := c.GetBlock(ctx, bHash)

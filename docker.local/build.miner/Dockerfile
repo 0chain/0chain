@@ -8,7 +8,8 @@ COPY ./code/go/0chain.net $SRC_DIR/go/0chain.net
 WORKDIR $SRC_DIR/go/0chain.net/miner/miner
 
 ARG GIT_COMMIT
-RUN go build -v -tags bn256 -ldflags "-X 0chain.net/core/build.GitCommit=$GIT_COMMIT"
+ENV GIT_COMMIT=$GIT_COMMIT
+RUN go build -v -tags "bn256 development" -ldflags "-X 0chain.net/core/build.BuildTag=$GIT_COMMIT"
 
 # Copy the build artifact into a minimal runtime image:
 FROM zchain_run_base

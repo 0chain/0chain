@@ -11,7 +11,6 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	. "0chain.net/core/logging"
-	"0chain.net/core/util"
 	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
@@ -109,14 +108,19 @@ func (c *Chain) FinalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 
 func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStateHandler) {
 	roundNumber := r.GetRoundNumber()
-	Logger.Debug("finalize round", zap.Int64("round", roundNumber), zap.Int64("lf_round", c.LatestFinalizedBlock.Round))
 	notarizedBlocks := r.GetNotarizedBlocks()
 	nbCount := len(notarizedBlocks)
+	Logger.Info("finalize round", zap.Int64("round", roundNumber), zap.Int64("lf_round", c.LatestFinalizedBlock.Round),
+		zap.Int("num_round_notarized", nbCount), zap.Int("num_chain_notarized", len(c.NotariedBlocksCounts)))
+
 	if nbCount == 0 {
 		c.ZeroNotarizedBlocksCount++
-	}
-	if nbCount > 1 {
+	} else if nbCount > 1 {
 		c.MultiNotarizedBlocksCount++
+	} else if nbCount > c.NumGenerators {
+		for _, blk := range notarizedBlocks {
+			Logger.Info("Too many Notarized Blks", zap.Int64("round", roundNumber), zap.String("hash", blk.Hash), zap.Int64("RRS", blk.RoundRandomSeed), zap.Int("blk_toc", blk.RoundTimeoutCount))
+		}
 	}
 	c.NotariedBlocksCounts[nbCount]++
 	//This check is useful when we allow the finalizeRound route is not sequential and end up with out-of-band execution
@@ -205,6 +209,7 @@ func (c *Chain) GetHeaviestNotarizedBlock(r round.RoundI) *block.Block {
 		if nb.Round != roundNumber {
 			return nil, common.NewError("invalid_block", "Block not from the requested round")
 		}
+
 		if err := c.VerifyNotarization(ctx, nb.Hash, nb.VerificationTickets); err != nil {
 			Logger.Error("get notarized block for round - validate notarization", zap.Int64("round", roundNumber), zap.String("block", nb.Hash), zap.Error(err))
 			return nil, err
@@ -213,11 +218,18 @@ func (c *Chain) GetHeaviestNotarizedBlock(r round.RoundI) *block.Block {
 			Logger.Error("get notarized block for round - validate", zap.Int64("round", roundNumber), zap.String("block", nb.Hash), zap.Error(err))
 			return nil, err
 		}
-		c.SetRandomSeed(r, nb.RoundRandomSeed)
-		b := c.AddRoundBlock(r, nb)
+
+		if nb.RoundTimeoutCount != r.GetTimeoutCount() {
+			Logger.Info("Timeoutcount on Round and NB are out-of-sync", zap.Int64("round", roundNumber), zap.Int("nb_toc", nb.RoundTimeoutCount), zap.Int("round_toc", r.GetTimeoutCount()))
+
+		}
+
+		var b *block.Block
+		//This is a notarized block. So, use this method to sync round info with the notarized block.
+		b, r = c.AddNotarizedBlockToRound(r, nb)
+
 		//TODO: this may not be the best round block or the best chain weight block. Do we do that extra work?
 		b, _ = r.AddNotarizedBlock(b)
-		Logger.Info("get notarized block", zap.Int64("round", roundNumber), zap.String("block", b.Hash), zap.String("state", util.ToHex(b.ClientStateHash)), zap.String("prev_block", b.PrevHash))
 		return b, nil
 	}
 	n2n := c.Miners

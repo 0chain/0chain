@@ -11,7 +11,7 @@ import (
 	"net/http"
 	"time"
 
-	"0chain.net/common"
+	"0chain.net/core/common"
 	"0chain.net/encryption"
 )
 

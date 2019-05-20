@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"0chain.net/chaincore/config"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	. "0chain.net/core/logging"
@@ -25,11 +24,20 @@ const (
 //FetchStrategy - when fetching an entity, the strategy to use to select the peer nodes
 var FetchStrategy = FetchStrategyNearest
 
+//GetFetchStrategy - indicate which fetch strategy to use
+func GetFetchStrategy() int {
+	if Self.Node.Type == NodeTypeSharder {
+		return FetchStrategyRandom
+	} else {
+		return FetchStrategy
+	}
+}
+
 //RequestEntity - request an entity
 func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF) *Node {
 	rhandler := requestor(params, handler)
 	var nodes []*Node
-	if FetchStrategy == FetchStrategyRandom {
+	if GetFetchStrategy() == FetchStrategyRandom {
 		nodes = np.shuffleNodes()
 	} else {
 		nodes = np.GetNodesByLargeMessageTime()
@@ -57,7 +65,7 @@ func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, pa
 func (np *Pool) RequestEntityFromAll(ctx context.Context, requestor EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF) {
 	rhandler := requestor(params, handler)
 	var nodes []*Node
-	if FetchStrategy == FetchStrategyRandom {
+	if GetFetchStrategy() == FetchStrategyRandom {
 		nodes = np.shuffleNodes()
 	} else {
 		nodes = np.GetNodesByLargeMessageTime()
@@ -76,6 +84,18 @@ func (np *Pool) RequestEntityFromAll(ctx context.Context, requestor EntityReques
 		}
 		rhandler(nd)
 	}
+}
+
+//RequestEntityFromNode - request an entity from a node
+func (n *Node) RequestEntityFromNode(ctx context.Context, requestor EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF) bool {
+	rhandler := requestor(params, handler)
+	select {
+	case <-ctx.Done():
+		return false
+	default:
+		return rhandler(n)
+	}
+	return false
 }
 
 /*SetRequestHeaders - sets the send request headers*/
@@ -118,12 +138,10 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 			if options.Compress {
 				req.Header.Set("Content-Encoding", compDecomp.Encoding())
 			}
-			delay := InduceDelay()
 			eName := ""
 			if entityMetadata != nil {
 				eName = entityMetadata.GetName()
 			}
-			N2n.Debug("requesting", zap.Int("from", Self.SetIndex), zap.Int("to", provider.SetIndex), zap.String("handler", uri), zap.String("entity", eName), zap.Any("params", params), zap.Any("delay", delay))
 			SetRequestHeaders(req, options, entityMetadata)
 			ctx, cancel := context.WithCancel(context.TODO())
 			req = req.WithContext(ctx)
@@ -132,6 +150,7 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 			time.AfterFunc(timeout, cancel)
 			ts := time.Now()
 			Self.Node.LastActiveTime = ts
+			Self.Node.InduceDelay(provider)
 			resp, err := httpClient.Do(req)
 			provider.Release()
 			duration := time.Since(ts)
@@ -159,17 +178,16 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 			}
 			provider.Status = NodeStatusActive
 			provider.LastActiveTime = time.Now()
-			entity, err := getResponseEntity(resp, entityMetadata)
+			size,entity, err := getResponseEntity(resp, entityMetadata)
 			if err != nil {
 				N2n.Error("requesting", zap.Int("from", Self.SetIndex), zap.Int("to", provider.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName), zap.Any("params", params), zap.Error(err))
 				return false
 			}
 			duration = time.Since(ts)
 			timer.UpdateSince(ts)
+			sizer := provider.GetSizeMetric(uri)
+			sizer.Update(int64(size))
 			N2n.Info("requesting", zap.Int("from", Self.SetIndex), zap.Int("to", provider.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName), zap.Any("id", entity.GetKey()), zap.Any("params", params), zap.String("codec", resp.Header.Get(HeaderRequestCODEC)))
-			if delay > 0 {
-				N2n.Debug("response received", zap.Int("from", provider.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", uri), zap.String("entity", eName), zap.Any("params", params), zap.Any("delay", delay))
-			}
 			ctx = context.TODO()
 			_, err = handler(ctx, entity)
 			if err != nil {
@@ -209,7 +227,7 @@ func ToN2NSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 		ts := time.Now()
 		data, err := handler(ctx, r)
 		if err != nil {
-			common.Respond(w, nil, err)
+			common.Respond(w, r, nil, err)
 			N2n.Error("message received", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI), zap.Error(err))
 			return
 		}
@@ -243,13 +261,6 @@ func ToN2NSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 			w.Header().Set("Content-Encoding", compDecomp.Encoding())
 		}
 		w.Header().Set("Content-Type", "application/json")
-		if err != nil {
-			if cerr, ok := err.(*common.Error); ok {
-				w.Header().Set(common.AppErrorHeader, cerr.Code)
-			}
-			http.Error(w, err.Error(), 400)
-			return
-		}
 		sdata := buffer.Bytes()
 		w.Write(sdata)
 		if isPullRequest(r) {
@@ -263,15 +274,3 @@ func ToN2NSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 }
 
 var randGenerator = rand.New(rand.NewSource(time.Now().UnixNano()))
-
-/*InduceDelay - induces some random delay - useful to test resilience */
-func InduceDelay() int {
-	if config.Development() && config.MaxDelay() > 0 {
-		r := randGenerator.Intn(config.MaxDelay())
-		if r < 500 {
-			time.Sleep(time.Duration(r) * time.Millisecond)
-			return r
-		}
-	}
-	return 0
-}

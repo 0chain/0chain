@@ -35,6 +35,12 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 		if !mr.IsVRFComplete() {
 			Logger.Info("handle verify block - got block proposal before VRF is complete", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("miner", b.MinerID))
 
+			if mr.GetTimeoutCount() < b.RoundTimeoutCount {
+				Logger.Info("Insync ignoring handle verify block - got block proposal before VRF is complete",
+					zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("miner", b.MinerID),
+					zap.Int("round_toc", mr.GetTimeoutCount()), zap.Int("round_toc", b.RoundTimeoutCount))
+				return
+			}
 			//TODO: Byzantine
 			mc.startRound(ctx, mr, b.RoundRandomSeed)
 		}
@@ -42,7 +48,21 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 		if len(vts) > 0 {
 			mc.MergeVerificationTickets(ctx, b, vts)
 			if b.IsBlockNotarized() {
-				b = mc.AddRoundBlock(mr, b)
+				if mr.GetRandomSeed() != b.RoundRandomSeed {
+					/* Since this is a notarized block, we are accepting it.
+					   TODO: Byzantine
+					*/
+					b1, r1 := mc.AddNotarizedBlockToRound(mr, b)
+					b = b1
+					mr = r1.(*Round)
+					Logger.Info("Added a notarizedBlockToRound - got notarized block with different ",
+						zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("miner", b.MinerID),
+						zap.Int("round_toc", mr.GetTimeoutCount()), zap.Int("round_toc", b.RoundTimeoutCount))
+
+				} else {
+					b = mc.AddRoundBlock(mr, b)
+				}
+
 				mc.checkBlockNotarization(ctx, mr, b)
 				return
 			}
@@ -132,7 +152,6 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMess
 	mb := msg.Block
 	mr := mc.GetMinerRound(mb.Round)
 	if mr == nil {
-		Logger.Error("handle notarized block message", zap.Int64("round", mb.Round))
 		mr = mc.getRound(ctx, mb.Round)
 		mc.startRound(ctx, mr, mb.RoundRandomSeed)
 	} else {

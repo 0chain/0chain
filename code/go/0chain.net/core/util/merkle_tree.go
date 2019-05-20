@@ -11,6 +11,7 @@ type MerkleTree struct {
 	levels      int
 }
 
+//VerifyMerklePath - verify the given merkle path
 func VerifyMerklePath(hash string, path *MTPath, root string) bool {
 	mthash := hash
 	pathNodes := path.Nodes

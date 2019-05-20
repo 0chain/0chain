@@ -8,13 +8,15 @@ import (
 	"runtime/pprof"
 	"sort"
 	"sync"
+	"time"
 
+	"0chain.net/chaincore/node"
 	"0chain.net/core/ememorystore"
 	. "0chain.net/core/logging"
-	"0chain.net/chaincore/node"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/datastore"
+	"go.uber.org/zap"
 )
 
 const (
@@ -40,17 +42,23 @@ type Round struct {
 	// For generator, this is the block the miner is generating till a notraization is received
 	// For a verifier, this is the block that is currently the best block received for verification.
 	// Once a round is finalized, this is the finalized block of the given round
-	Block     *block.Block `json:"-"`
-	BlockHash string       `json:"block_hash"`
-	VRFOutput string       `json:"vrf_output"` //TODO: VRFOutput == rbooutput?
-	minerPerm []int
-	state     int
+	Block            *block.Block `json:"-"`
+	BlockHash        string       `json:"block_hash"`
+	VRFOutput        string       `json:"vrf_output"` //TODO: VRFOutput == rbooutput?
+	minerPerm        []int
+	state            int
+	proposedBlocks   []*block.Block
+	notarizedBlocks  []*block.Block
+	Mutex            sync.RWMutex
+	shares           map[string]*VRFShare
+	TimeoutCount     int
+	SoftTimeoutCount int
+	VrfStartTime     time.Time
+}
 
-	proposedBlocks  []*block.Block
-	notarizedBlocks []*block.Block
-	Mutex           sync.RWMutex
-
-	shares map[string]*VRFShare
+// RoundFactory - a factory to create a new round object specific to miner/sharder
+type RoundFactory interface {
+	CreateRoundF(roundNum int64) interface{}
 }
 
 //NewRound - Create a new round object
@@ -75,6 +83,38 @@ func (r *Round) GetKey() datastore.Key {
 //GetRoundNumber - returns the round number
 func (r *Round) GetRoundNumber() int64 {
 	return r.Number
+}
+
+// GetTimeoutCount - returns the timeout count
+func (r *Round) GetTimeoutCount() int {
+	return r.TimeoutCount
+}
+
+// IncrementTimeoutCount - Increments timeout count
+func (r *Round) IncrementTimeoutCount() {
+	if r.TimeoutCount >= 5 {
+		Logger.Info("Reached max timeout for this round. Waiting for others to catch up...", zap.Int64("roundNum", r.GetRoundNumber()), zap.Int("toc", r.TimeoutCount))
+		return
+	}
+	r.TimeoutCount = r.TimeoutCount + 1
+}
+
+// SetTimeoutCount - sets the timeout count to given number if it is greater than existing and returns true. Else false.
+func (r *Round) SetTimeoutCount(tc int) bool {
+	if tc <= r.TimeoutCount {
+		return false
+	}
+	r.TimeoutCount = tc
+	return true
+}
+
+//SetRandomSeed - set the random seed of the round
+func (r *Round) SetRandomSeedForNotarizedBlock(seed int64) {
+
+	r.RandomSeed = seed
+	//r.setState(RoundVRFComplete) RoundStateFinalizing??
+	r.hasRandomSeed = true
+	r.minerPerm = nil
 }
 
 //SetRandomSeed - set the random seed of the round
@@ -110,13 +150,26 @@ func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool) {
 	r.Mutex.Lock()
 	defer r.Mutex.Unlock()
 	b, _ = r.addProposedBlock(b)
-	for _, blk := range r.notarizedBlocks {
+	found := -1
+
+	for i, blk := range r.notarizedBlocks {
 		if blk.Hash == b.Hash {
 			if blk != b {
 				blk.MergeVerificationTickets(b.VerificationTickets)
 			}
 			return blk, false
 		}
+		if blk.RoundRank == b.RoundRank {
+			found = i
+		}
+	}
+
+	if found > -1 {
+		fb := r.notarizedBlocks[found]
+		Logger.Info("Removing the old notarized block with the same rank", zap.Int64("round", r.GetRoundNumber()), zap.String("hash", fb.Hash),
+			zap.Int64("fb_RRS", fb.RoundRandomSeed), zap.Int("fb_toc", fb.RoundTimeoutCount), zap.Any("fb_Sender", fb.MinerID))
+		//remove the old block with the same rank and add it below
+		r.notarizedBlocks = append(r.notarizedBlocks[:found], r.notarizedBlocks[found+1:]...)
 	}
 	b.SetBlockNotarized()
 	if r.Block == nil || r.Block.RoundRank > b.RoundRank {
@@ -153,8 +206,8 @@ func (r *Round) addProposedBlock(b *block.Block) (*block.Block, bool) {
 
 /*GetProposedBlocks - return all the blocks that have been proposed for this round */
 func (r *Round) GetProposedBlocks() []*block.Block {
-	r.Mutex.Lock()
-	defer r.Mutex.Unlock()
+	r.Mutex.RLock()
+	defer r.Mutex.RUnlock()
 	return r.proposedBlocks
 }
 
@@ -319,7 +372,23 @@ func (r *Round) Clear() {
 func (r *Round) Restart() {
 	r.initialize()
 	r.Block = nil
-	r.SetState(RoundShareVRF)
+	r.ResetState(RoundShareVRF)
+	r.SoftTimeoutCount = 0
+
+}
+
+//AddAdditionalVRFShare - Adding additional VRFShare received for stats persp
+func (r *Round) AddAdditionalVRFShare(share *VRFShare) bool {
+	r.Mutex.Lock()
+	defer r.Mutex.Unlock()
+
+	if _, ok := r.shares[share.party.GetKey()]; ok {
+		Logger.Info("AddVRFShare Share is already there. Returning false.")
+		return false
+	}
+	//r.setState(RoundShareVRF)
+	r.shares[share.party.GetKey()] = share
+	return true
 }
 
 //AddVRFShare - implement interface
@@ -350,9 +419,14 @@ func (r *Round) GetState() int {
 	return r.state
 }
 
-//SetState - set the state of the round
+//SetState - set the state of the round in a progressive order
 func (r *Round) SetState(state int) {
 	r.setState(state)
+}
+
+//ResetState resets the state to any desired state
+func (r *Round) ResetState(state int) {
+	r.state = state
 }
 
 func (r *Round) setState(state int) {

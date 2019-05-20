@@ -183,20 +183,23 @@ func getRequestEntity(r *http.Request, entityMetadata datastore.EntityMetadata) 
 	return getEntity(r.Header.Get(HeaderRequestCODEC), buffer, entityMetadata)
 }
 
-func getResponseEntity(resp *http.Response, entityMetadata datastore.EntityMetadata) (datastore.Entity, error) {
+func getResponseEntity(resp *http.Response, entityMetadata datastore.EntityMetadata) (int,datastore.Entity, error) {
 	defer resp.Body.Close()
 	var buffer io.Reader = resp.Body
+	var size int
 	if resp.Header.Get("Content-Encoding") == compDecomp.Encoding() {
 		cbuffer := new(bytes.Buffer)
 		cbuffer.ReadFrom(resp.Body)
+		size = cbuffer.Len()
 		cbytes, err := compDecomp.Decompress(cbuffer.Bytes())
 		if err != nil {
 			N2n.Error("decoding", zap.String("encoding", compDecomp.Encoding()), zap.Error(err))
-			return nil, err
+			return size,nil, err
 		}
 		buffer = bytes.NewReader(cbytes)
 	}
-	return getEntity(resp.Header.Get(HeaderRequestCODEC), buffer, entityMetadata)
+	entity,err := getEntity(resp.Header.Get(HeaderRequestCODEC), buffer, entityMetadata)
+	return size,entity,err
 }
 
 func getEntity(codec string, reader io.Reader, entityMetadata datastore.EntityMetadata) (datastore.Entity, error) {
@@ -215,7 +218,7 @@ func getEntity(codec string, reader io.Reader, entityMetadata datastore.EntityMe
 		}
 		return entity, nil
 	}
-	N2n.Error("uknown_encoding", zap.String("encoding", codec))
+	N2n.Error("unknown_encoding", zap.String("encoding", codec))
 	return nil, common.NewError("unkown_encoding", "unknown encoding")
 }
 

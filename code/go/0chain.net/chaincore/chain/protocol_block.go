@@ -7,6 +7,7 @@ import (
 
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
+	"0chain.net/chaincore/round"
 	"0chain.net/core/datastore"
 
 	"0chain.net/chaincore/block"
@@ -74,7 +75,7 @@ func (c *Chain) reachedNotarization(bvt []*block.VerificationTicket) bool {
 			//ToDo: Remove this comment
 			Logger.Info("not reached notarization",
 				zap.Int("Threshold", c.GetNotarizationThresholdCount()),
-				zap.Int("number of signatures", numSignatures), zap.Int64("CurrentRound", c.CurrentRound))
+				zap.Int("num_signatures", numSignatures), zap.Int64("CurrentRound", c.CurrentRound))
 			return false
 		}
 	}
@@ -88,7 +89,7 @@ func (c *Chain) reachedNotarization(bvt []*block.VerificationTicket) bool {
 		}
 	}
 	//Todo: Remove this log
-	Logger.Info("Reached notarization!!!", zap.Int64("CurrentRound", c.CurrentRound))
+	Logger.Info("Reached notarization!!!", zap.Int64("CurrentRound", c.CurrentRound), zap.Int("num_signatures", len(bvt)))
 
 	return true
 }
@@ -151,7 +152,9 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	if time.Since(ssFTs) < 20*time.Second {
 		SteadyStateFinalizationTimer.UpdateSince(ssFTs)
 	}
-	StartToFinalizeTimer.UpdateSince(fb.ToTime())
+	if time.Since(fb.ToTime()) < 100*time.Second {
+		StartToFinalizeTimer.UpdateSince(fb.ToTime())
+	}
 	ssFTs = time.Now()
 	c.UpdateChainInfo(fb)
 	c.SaveChanges(ctx, fb)
@@ -229,14 +232,18 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 		}
 		r := c.GetRound(nb.Round)
 		if r == nil {
-			Logger.Error("get notarized block - no round (TODO)", zap.Int64("round", nb.Round), zap.String("block", blockHash), zap.Int64("cround", cround), zap.Int64("current_round", c.CurrentRound))
+			Logger.Info("get notarized block - no round will create...", zap.Int64("round", nb.Round), zap.String("block", blockHash), zap.Int64("cround", cround), zap.Int64("current_round", c.CurrentRound))
 			b = c.AddBlock(nb)
-		} else {
-			c.SetRandomSeed(r, nb.RoundRandomSeed)
-			b = c.AddRoundBlock(r, nb)
-			b, _ = r.AddNotarizedBlock(b)
+
+			r = c.RoundF.CreateRoundF(nb.Round).(*round.Round)
+			c.AddRound(r)
 		}
-		Logger.Info("get notarized block", zap.Int64("round", b.Round), zap.String("block", b.Hash))
+
+		//This is a notarized block. So, use this method to sync round info with the notarized block.
+		b, r = c.AddNotarizedBlockToRound(r, nb)
+
+		b, _ = r.AddNotarizedBlock(b)
+
 		if b == nb {
 			go c.fetchedNotarizedBlockHandler.NotarizedBlockFetched(ctx, nb)
 		}
@@ -244,6 +251,10 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 	}
 	n2n := c.Miners
 	n2n.RequestEntity(ctx, nbrequestor, params, handler)
+	if b == nil {
+		Logger.Info("unable to fetch notarized block", zap.String("block", blockHash))
+
+	}
 	return b
 }
 

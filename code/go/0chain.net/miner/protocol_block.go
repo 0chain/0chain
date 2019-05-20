@@ -3,6 +3,7 @@ package miner
 import (
 	"context"
 	"fmt"
+	"math"
 	"sort"
 	"time"
 
@@ -28,14 +29,16 @@ import (
 //InsufficientTxns - to indicate an error when the transactions are not sufficient to make a block
 const InsufficientTxns = "insufficient_txns"
 
-var bgTimer metrics.Timer
-var bpTimer metrics.Timer
-var btvTimer metrics.Timer
+var bgTimer metrics.Timer  // block generation timer
+var bpTimer metrics.Timer  // block processing timer (includes block verification)
+var btvTimer metrics.Timer // block verification timer
+var bsHistogram metrics.Histogram
 
 func init() {
 	bgTimer = metrics.GetOrRegisterTimer("bg_time", nil)
 	bpTimer = metrics.GetOrRegisterTimer("bv_time", nil)
 	btvTimer = metrics.GetOrRegisterTimer("btv_time", nil)
+	bsHistogram = metrics.GetOrRegisterHistogram("bs_histogram", nil, metrics.NewUniformSample(1024))
 }
 
 /*GenerateBlock - This works on generating a block
@@ -52,6 +55,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	var ierr error
 	var count int32
 	var roundMismatch bool
+	var roundTimeout bool
 	var hasOwnerTxn bool
 	var failedStateCount int32
 	var byteSize int64
@@ -77,9 +81,9 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 			}
 			return false
 		}
-		if !mc.UpdateState(b, txn) {
+		if err := mc.UpdateState(b, txn); err != nil {
 			if debugTxn {
-				Logger.Info("generate block (debug transaction) update state", zap.String("txn", txn.Hash), zap.Int32("idx", idx), zap.String("txn_object", datastore.ToJSON(txn).String()))
+				Logger.Error("generate block (debug transaction) update state", zap.String("txn", txn.Hash), zap.Int32("idx", idx), zap.String("txn_object", datastore.ToJSON(txn).String()), zap.Error(err))
 			}
 			failedStateCount++
 			return false
@@ -103,10 +107,15 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		idx++
 		return true
 	}
+	var roundTimeoutCount = mc.GetRoundTimeoutCount()
 	var txnIterHandler = func(ctx context.Context, qe datastore.CollectionEntity) bool {
 		count++
 		if mc.CurrentRound > b.Round {
 			roundMismatch = true
+			return false
+		}
+		if roundTimeoutCount != mc.GetRoundTimeoutCount() {
+			roundTimeout = true
 			return false
 		}
 		txn, ok := qe.(*transaction.Transaction)
@@ -123,6 +132,9 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	}
 	start := time.Now()
 	b.CreationDate = common.Now()
+	if b.CreationDate < b.PrevBlock.CreationDate {
+		b.CreationDate = b.PrevBlock.CreationDate
+	}
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
 	txn := transactionEntityMetadata.Instance().(*transaction.Transaction)
 	collectionName := txn.GetCollectionName()
@@ -134,7 +146,11 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	}
 	if roundMismatch {
 		Logger.Debug("generate block (round mismatch)", zap.Any("round", b.Round), zap.Any("current_round", mc.CurrentRound))
-		return common.NewError(RoundMismatch, "current round different from generation round")
+		return ErrRoundMismatch
+	}
+	if roundTimeout {
+		Logger.Debug("generate block (round timeout)", zap.Any("round", b.Round), zap.Any("current_round", mc.CurrentRound))
+		return ErrRoundTimeout
 	}
 	if ierr != nil {
 		Logger.Error("generate block (txn reinclusion check)", zap.Any("round", b.Round), zap.Error(ierr))
@@ -180,7 +196,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		b.Txns = b.Txns[:blockSize]
 		etxns = etxns[:blockSize]
 	}
-	if config.DevConfiguration.SmartContract {
+	if config.DevConfiguration.IsFeeEnabled {
 		err = mc.processFeeTxn(ctx, b, clients)
 		if err != nil {
 			return err
@@ -224,6 +240,8 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		zap.Float64("p_chain_weight", b.PrevBlock.ChainWeight), zap.Int32("iteration_count", count))
 	mc.StateSanityCheck(ctx, b)
 	go b.ComputeTxnMap()
+	bsHistogram.Update(int64(len(b.Txns)))
+	node.Self.Node.Info.AvgBlockTxns = int(math.Round(bsHistogram.Mean()))
 	return nil
 }
 
@@ -234,10 +252,11 @@ func (mc *Chain) processFeeTxn(ctx context.Context, b *block.Block, clients map[
 		if err != nil {
 			return err
 		}
-		return common.NewError("proces fee transaction", "transaction already exists")
+		return common.NewError("process fee transaction", "transaction already exists")
 	}
-	if !mc.UpdateState(b, feeTxn) {
-		return common.NewError("proces fee transaction", "update state failed")
+	if err := mc.UpdateState(b, feeTxn); err != nil {
+		Logger.Error("processFeeTxn", zap.String("txn", feeTxn.Hash), zap.String("txn_object", datastore.ToJSON(feeTxn).String()), zap.Error(err))
+		return err
 	}
 	b.Txns = append(b.Txns, feeTxn)
 	b.AddTransaction(feeTxn)
@@ -263,10 +282,7 @@ func (mc *Chain) txnToReuse(txn *transaction.Transaction) *transaction.Transacti
 }
 
 func (mc *Chain) validateTransaction(b *block.Block, txn *transaction.Transaction) bool {
-	if !common.WithinTime(int64(b.CreationDate), int64(txn.CreationDate), transaction.TXN_TIME_TOLERANCE) {
-		return false
-	}
-	return true
+	return common.WithinTime(int64(b.CreationDate), int64(txn.CreationDate), transaction.TXN_TIME_TOLERANCE)
 }
 
 /*UpdatePendingBlock - updates the block that is generated and pending rest of the process */
@@ -308,7 +324,7 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockV
 	}
 	serr := mc.ComputeState(ctx, b)
 	if serr != nil {
-		Logger.Error("verify block - error computing state (TODO sync)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Error(serr))
+		Logger.Error("verify block - error computing state", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Error(serr))
 		return nil, serr
 	}
 	err = mc.verifySmartContracts(ctx, b)

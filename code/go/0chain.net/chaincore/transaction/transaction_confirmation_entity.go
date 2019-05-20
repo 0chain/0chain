@@ -16,6 +16,7 @@ type Confirmation struct {
 	datastore.CreationDateField
 	MinerID               datastore.Key `json:"miner_id"`
 	Round                 int64         `json:"round"`
+	Status                int           `json:"transaction_status" msgpack:"sot"`
 	RoundRandomSeed       int64         `json:"round_random_seed"`
 	MerkleTreeRoot        string        `json:"merkle_tree_root"`
 	MerkleTreePath        *util.MTPath  `json:"merkle_tree_path"`

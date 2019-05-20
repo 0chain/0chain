@@ -16,7 +16,6 @@ import (
 	"0chain.net/core/datastore"
 	. "0chain.net/core/logging"
 	"0chain.net/core/memorystore"
-	"0chain.net/core/util"
 	"go.uber.org/zap"
 )
 
@@ -82,8 +81,6 @@ func SetupX2MResponders() {
 	http.HandleFunc("/v1/_x2m/block/state_change/get", common.N2NRateLimit(node.ToN2NSendEntityHandler(BlockStateChangeHandler)))
 
 	http.HandleFunc("/v1/_x2m/state/get", common.N2NRateLimit(node.ToN2NSendEntityHandler(PartialStateHandler)))
-
-	http.HandleFunc("/v1/_x2m/state/get_nodes", common.N2NRateLimit(node.ToN2NSendEntityHandler(StateNodesHandler)))
 }
 
 /*SetupM2SRequestors - setup all requests to sharder by miner */
@@ -98,16 +95,16 @@ func SetupM2SRequestors() {
 func VRFShareHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 	vrfs, ok := entity.(*round.VRFShare)
 	if !ok {
+		Logger.Info("VRFShare: returning invalid Entity")
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
 	mc := GetMinerChain()
 	if vrfs.GetRoundNumber() < mc.LatestFinalizedBlock.Round {
+		Logger.Info("Rejecting VRFShare: old round", zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()),
+			zap.Int64("lfb_round_num", mc.LatestFinalizedBlock.Round))
 		return nil, nil
 	}
-	mr := mc.GetMinerRound(vrfs.GetRoundNumber())
-	if mr != nil && mr.IsVRFComplete() {
-		return nil, nil
-	}
+
 	msg := NewBlockMessage(MessageVRFShare, node.GetSender(ctx), nil, nil)
 	vrfs.SetParty(msg.Sender)
 	msg.VRFShare = vrfs
@@ -124,7 +121,7 @@ func DKGShareHandler(ctx context.Context, entity datastore.Entity) (interface{},
 	//ToDo: Need to make sure SENDER is not byzantine
 	nodeID := node.GetSender(ctx).SetIndex
 	Logger.Debug("received DKG share", zap.String("share", dg.Share), zap.Int("Node Id", nodeID))
-	AppendDKGSecShares(nodeID, dg.Share)
+	AppendDKGSecShares(ctx, nodeID, dg.Share)
 	return nil, nil
 }
 
@@ -236,35 +233,10 @@ func PartialStateHandler(ctx context.Context, r *http.Request) (interface{}, err
 	return ps, nil
 }
 
-//StateNodesHandler - return a list of state nodes
-func StateNodesHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	r.ParseForm() // this is needed as we get multiple values for the same key
-	nodes := r.Form["nodes"]
-	mc := GetMinerChain()
-	keys := make([]util.Key, len(nodes))
-	for idx, nd := range nodes {
-		key, err := hex.DecodeString(nd)
-		if err != nil {
-			return nil, err
-		}
-		keys[idx] = key
-	}
-	ns, err := mc.GetStateNodesFrom(ctx, keys)
-	if err != nil {
-		if ns != nil {
-			Logger.Error("state nodes handler", zap.Int("keys", len(nodes)), zap.Int("found_keys", len(ns.Nodes)), zap.Error(err))
-			return ns, nil
-		}
-		Logger.Error("state nodes handler", zap.Int("keys", len(nodes)), zap.Error(err))
-		return nil, err
-	}
-	Logger.Info("state nodes handler", zap.Int("keys", len(keys)), zap.Int("nodes", len(ns.Nodes)))
-	return ns, nil
-}
-
 func getNotarizedBlock(ctx context.Context, r *http.Request) (*block.Block, error) {
 	round := r.FormValue("round")
 	hash := r.FormValue("block")
+
 	mc := GetMinerChain()
 	if round != "" {
 		roundN, err := strconv.ParseInt(round, 10, 63)

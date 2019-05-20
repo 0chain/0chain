@@ -211,7 +211,7 @@ func (ps *Store) GetCollectionSize(ctx context.Context, entityMetadata datastore
 func (ps *Store) shouldReconnect(err error, enittyMetadata datastore.EntityMetadata) bool {
 	switch err {
 	case gocql.ErrNoConnections:
-		initSession(100*time.Millisecond, 10)
+		initSession(1*time.Second, 0)
 		return true
 	}
 	return false

@@ -6,10 +6,10 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/client"
+	"0chain.net/chaincore/round"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/memorystore"
-	"0chain.net/chaincore/round"
 )
 
 //RoundMismatch - to indicate an error where the current round and the given round don't match
@@ -18,6 +18,18 @@ const RoundMismatch = "round_mismatch"
 //ErrRoundMismatch - an error object for mismatched round error
 var ErrRoundMismatch = common.NewError(RoundMismatch, "Current round number of the chain doesn't match the block generation round")
 
+//RRSMismatch -- to indicate an error when the current round RRS is different than the block that is generated. Typically happens when timeout count changes while a block is being made
+const RRSMismatch = "rrs_mismatch"
+
+//ErrRRSMismatch - and error when rrs mismatch happens
+var ErrRRSMismatch = common.NewError(RRSMismatch, "RRS for current round of the chain doesn't match the block rrs")
+
+//RoundTimeout - to indicate an error where the round timeout has happened
+const RoundTimeout = "round_timeout"
+
+//ErrRoundTimeout - an error object for round timeout error
+var ErrRoundTimeout = common.NewError(RoundTimeout, "round timed out")
+
 var minerChain = &Chain{}
 
 /*SetupMinerChain - setup the miner's chain */
@@ -25,11 +37,24 @@ func SetupMinerChain(c *chain.Chain) {
 	minerChain.Chain = c
 	minerChain.BlockMessageChannel = make(chan *BlockMessage, 128)
 	c.SetFetchedNotarizedBlockHandler(minerChain)
+	c.RoundF = MinerRoundFactory{}
 }
 
 /*GetMinerChain - get the miner's chain */
 func GetMinerChain() *Chain {
 	return minerChain
+}
+
+type MinerRoundFactory struct{}
+
+//CreateRoundF this returns an interface{} of type *miner.Round
+func (mrf MinerRoundFactory) CreateRoundF(roundNum int64) interface{} {
+	mc := GetMinerChain()
+	r := round.NewRound(roundNum)
+	mr := mc.CreateRound(r)
+	mc.AddRound(mr)
+
+	return r
 }
 
 /*Chain - A miner chain to manage the miner activities */

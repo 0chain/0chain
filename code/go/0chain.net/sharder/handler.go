@@ -28,7 +28,7 @@ func SetupHandlers() {
 
 /*BlockHandler - a handler to respond to block queries */
 func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	round := r.FormValue("round")
+	roundData := r.FormValue("round")
 	hash := r.FormValue("block")
 	content := r.FormValue("content")
 	if content == "" {
@@ -36,13 +36,22 @@ func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	}
 	parts := strings.Split(content, ",")
 	sc := GetSharderChain()
-	if round != "" {
-		roundNumber, err := strconv.ParseInt(round, 10, 64)
+	if roundData != "" {
+		roundNumber, err := strconv.ParseInt(roundData, 10, 64)
 		if err != nil {
 			return nil, err
 		}
 		if roundNumber > sc.LatestFinalizedBlock.Round {
 			return nil, common.InvalidRequest("Block not available")
+		} else {
+			roundEntity := sc.GetSharderRound(roundNumber)
+			if roundEntity == nil {
+				roundEntity, err = sc.GetRoundFromStore(ctx, roundNumber)
+				if err != nil {
+					return nil, err
+				}
+			}
+			hash = roundEntity.BlockHash
 		}
 		hash, err = sc.GetBlockHash(ctx, roundNumber)
 		if err != nil {
@@ -62,8 +71,8 @@ func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	So, as long as people query the last 10M blocks most of the time, we only end up with 1 or 2 iterations.
 	Anything older than that, there is a cost to query the database and get the round information anyway.
 	*/
-	for r := sc.LatestFinalizedBlock.Round; r > 0; r -= sc.RoundRange {
-		b, err = sc.GetBlockFromStore(hash, r)
+	for roundEntity := sc.LatestFinalizedBlock.Round; roundEntity > 0; roundEntity -= sc.RoundRange {
+		b, err = sc.GetBlockFromStore(hash, roundEntity)
 		if err != nil {
 			return nil, err
 		}
@@ -94,7 +103,13 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<br>")
 	fmt.Fprintf(w, "<table><tr><td colspan='2'><h2>Summary</h2></td></tr>")
 	fmt.Fprintf(w, "<tr><td>Sharded Blocks</td><td class='number'>%v</td></tr>", sc.SharderStats.ShardedBlocksCount)
+	fmt.Fprintf(w, "<tr><td>Healthy Round</td><td class='number'>%v</td></tr>", sc.SharderStats.HealthyRoundNum)
+	fmt.Fprintf(w, "<tr><td>QOS Round</td><td class='number'>%v</td></tr>", sc.SharderStats.QOSRound)
 	fmt.Fprintf(w, "</table>")
+	fmt.Fprintf(w, "<table><tr><td colspan='2'><h2>Sync Stats</h2></td></tr>")
+	fmt.Fprintf(w, "<tr><td>Status</td><td class='string'>%s</td></tr>", sc.BSyncStats.Status)
+	sc.WriteBlockSyncStats(w)
+	fmt.Fprintf(w, "</table")
 	fmt.Fprintf(w, "<br>")
 	fmt.Fprintf(w, "<table><tr><td>")
 	fmt.Fprintf(w, "<h2>Block Finalization Statistics (Steady State)</h2>")
@@ -104,8 +119,8 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	diagnostics.WriteTimerStatistics(w, c, chain.StartToFinalizeTimer, 1000000.0)
 	fmt.Fprintf(w, "</td></tr>")
 
-	fmt.Fprintf(w, "<tr><td col='2'>")
-	fmt.Fprintf(w, "<p>Block finalization time = block generation + block verification + network time (1*large message + 2*small message)</p>")
+	fmt.Fprintf(w, "<tr><td colspan='2'>")
+	fmt.Fprintf(w, "<p>Steady state block finalization time = block generation + block processing + network time (1*large message + 2*small message)</p>")
 	fmt.Fprintf(w, "</td></tr>")
 
 	fmt.Fprintf(w, "<tr><td>")
@@ -142,6 +157,12 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</td><td>")
 	fmt.Fprintf(w, "<h2>State Prune Delete Statistics</h2>")
 	diagnostics.WriteTimerStatistics(w, c, chain.StatePruneDeleteTimer, 1000000.0)
+	fmt.Fprintf(w, "</tr>")
+
+	fmt.Fprintf(w, "<tr><td>")
+	fmt.Fprintf(w, "<h2>Block Sync Statistics</h2>")
+	diagnostics.WriteTimerStatistics(w, c, BlockSyncTimer, 1000000.0)
+	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "</tr>")
 
 	fmt.Fprintf(w, "</table>")

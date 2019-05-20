@@ -3,12 +3,12 @@ package zrc20sc
 import (
 	"encoding/json"
 
-	"0chain.net/chaincore/smartcontractstate"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"0chain.net/core/encryption"
 )
 
 type zrc20Pool struct {
@@ -16,18 +16,18 @@ type zrc20Pool struct {
 	tokenInfo
 }
 
-func (zcr *zrc20Pool) encode() []byte {
+func (zcr *zrc20Pool) Encode() []byte {
 	buff, _ := json.Marshal(zcr)
 	return buff
 }
 
-func (zcr *zrc20Pool) decode(input []byte) error {
+func (zcr *zrc20Pool) Decode(input []byte) error {
 	err := json.Unmarshal(input, zcr)
 	return err
 }
 
-func (zrc *zrc20Pool) getKey() smartcontractstate.Key {
-	return smartcontractstate.Key("zrc20_contract_pool" + Seperator + zrc.TokenName + Seperator + zrc.ID)
+func (zrc *zrc20Pool) getKey(globalKey string) datastore.Key {
+	return datastore.Key(globalKey + encryption.Hash(zrc.TokenName) + zrc.ID)
 }
 
 func (zrc *zrc20Pool) GetBalance() state.Balance {

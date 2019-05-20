@@ -9,7 +9,6 @@ import (
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/smartcontractstate"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -59,9 +58,10 @@ type UnverifiedBlockBody struct {
 	PrevHash                     string                `json:"prev_hash"`
 	PrevBlockVerificationTickets []*VerificationTicket `json:"prev_verification_tickets,omitempty"`
 
-	MinerID         datastore.Key `json:"miner_id"`
-	Round           int64         `json:"round"`
-	RoundRandomSeed int64         `json:"round_random_seed"`
+	MinerID           datastore.Key `json:"miner_id"`
+	Round             int64         `json:"round"`
+	RoundRandomSeed   int64         `json:"round_random_seed"`
+	RoundTimeoutCount int           `json:"round_timeout_count"`
 
 	ClientStateHash util.Key `json:"state_hash"`
 
@@ -86,14 +86,13 @@ type Block struct {
 
 	ClientState           util.MerklePatriciaTrieI `json:"-"`
 	stateStatus           int8
-	StateMutex            *sync.Mutex `json:"_"`
+	StateMutex            *sync.RWMutex `json:"_"`
 	blockState            int8
 	isNotarized           bool
-	ticketsMutex          *sync.Mutex
+	ticketsMutex          *sync.RWMutex
 	verificationStatus    int
-	SCStateDB             smartcontractstate.SCDB `json:"-"`
-	RunningTxnCount       int64                   `json:"running_txn_count"`
-	UniqueBlockExtensions map[string]bool         `json:"-"`
+	RunningTxnCount       int64           `json:"running_txn_count"`
+	UniqueBlockExtensions map[string]bool `json:"-"`
 }
 
 //NewBlock - create a new empty block
@@ -188,8 +187,8 @@ func Provider() datastore.Entity {
 	b.Version = "1.0"
 	b.ChainID = datastore.ToKey(config.GetServerChainID())
 	b.InitializeCreationDate()
-	b.StateMutex = &sync.Mutex{}
-	b.ticketsMutex = &sync.Mutex{}
+	b.StateMutex = &sync.RWMutex{}
+	b.ticketsMutex = &sync.RWMutex{}
 	return b
 }
 
@@ -214,25 +213,6 @@ func (b *Block) SetPreviousBlock(prevBlock *Block) {
 	}
 }
 
-/*SetSCStateDB - set the smart contract state from the previous block */
-func (b *Block) SetSCStateDB(prevBlock *Block) {
-	var pndb smartcontractstate.SCDB
-
-	if prevBlock.SCStateDB == nil {
-		if state.Debug() {
-			Logger.DPanic("set smart contract state db - prior state not available")
-		} else {
-			pndb = smartcontractstate.NewMemorySCDB()
-		}
-	} else {
-		pndb = prevBlock.SCStateDB
-	}
-
-	mndb := smartcontractstate.NewMemorySCDB()
-	ndb := smartcontractstate.NewPipedSCDB(mndb, pndb, false)
-	b.SCStateDB = ndb
-}
-
 /*SetStateDB - set the state from the previous block */
 func (b *Block) SetStateDB(prevBlock *Block) {
 	var pndb util.NodeDB
@@ -250,7 +230,18 @@ func (b *Block) SetStateDB(prevBlock *Block) {
 	Logger.Debug("prev state root", zap.Int64("round", b.Round), zap.String("prev_block", prevBlock.Hash), zap.String("root", util.ToHex(rootHash)))
 	b.CreateState(pndb)
 	b.ClientState.SetRoot(rootHash)
-	b.SetSCStateDB(prevBlock)
+}
+
+//InitStateDB - initialize the block's state from the db (assuming it's already computed)
+func (b *Block) InitStateDB(ndb util.NodeDB) error {
+	if _, err := ndb.GetNode(b.ClientStateHash); err != nil {
+		b.SetStateStatus(StateFailed)
+		return err
+	}
+	b.CreateState(ndb)
+	b.ClientState.SetRoot(b.ClientStateHash)
+	b.SetStateStatus(StateSuccessful)
+	return nil
 }
 
 //CreateState - create the state from the prior state db
@@ -514,10 +505,28 @@ func (b *Block) UnknownTickets(vts []*VerificationTicket) []*VerificationTicket 
 	return newTickets
 }
 
+//AddUniqueBlockExtension - add unique block extensions
 func (b *Block) AddUniqueBlockExtension(eb *Block) {
 	//TODO: We need to compare for view change and add the eb.MinerID only if he was in the view that b belongs to
 	if b.UniqueBlockExtensions == nil {
 		b.UniqueBlockExtensions = make(map[string]bool)
 	}
 	b.UniqueBlockExtensions[eb.MinerID] = true
+}
+
+//DoReadLock - implement ReadLockable interface
+func (b *Block) DoReadLock() {
+	b.ticketsMutex.RLock()
+}
+
+//DoReadUnlock - implement ReadLockable interface
+func (b *Block) DoReadUnlock() {
+	b.ticketsMutex.RUnlock()
+}
+
+//SetPrevBlockVerificationTickets - set previous block verification tickets
+func (b *Block) SetPrevBlockVerificationTickets(bvt []*VerificationTicket) {
+	b.ticketsMutex.Lock()
+	defer b.ticketsMutex.Unlock()
+	b.PrevBlockVerificationTickets = bvt
 }

@@ -14,15 +14,27 @@ import (
 )
 
 const (
+	name             = "multisig"
 	Address          = "27b5ef7120252b79f9dd9c05505dd28f328c80f6863ee446daede08a84d651a7"
 	RegisterFuncName = "register"
 	VoteFuncName     = "vote"
-
-	LogTimingInfo = false
+	LogTimingInfo    = false
 )
 
 type MultiSigSmartContract struct {
 	*smartcontractinterface.SmartContract
+}
+
+func (ms *MultiSigSmartContract) GetName() string {
+	return name
+}
+
+func (ms *MultiSigSmartContract) GetAddress() string {
+	return Address
+}
+
+func (ms *MultiSigSmartContract) GetRestPoints() map[string]smartcontractinterface.SmartContractRestHandler {
+	return ms.SmartContract.RestHandlers
 }
 
 func (ms *MultiSigSmartContract) SetSC(sc *smartcontractinterface.SmartContract, bc smartcontractinterface.BCContextI) {

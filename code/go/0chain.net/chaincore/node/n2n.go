@@ -48,4 +48,7 @@ type N2N interface {
 
 	//Request a message from all nodes
 	RequestEntityFromAll(ctx context.Context, requestor EntityRequestor, params map[string]string, handler datastore.JSONEntityReqResponderF)
+
+	//Request a message from a specific node
+	RequestEntityFromNode(ctx context.Context, requestor EntityRequestor, params map[string]string, handler datastore.JSONEntityReqResponderF)
 }

@@ -56,16 +56,18 @@ func initSession(delay time.Duration, maxTries int) error {
 	// This reduces the time to create the session from 9+ seconds to 5 seconds when running the tests.
 	//cluster.DisableInitialHostLookup = true
 
+	cluster.ProtoVersion = 4
 	cluster.Keyspace = KeySpace
+	start0 := time.Now()
 	// We need to keep waiting till whatever time it takes for cassandra to come up and running that includes data operations which takes longer with growing data
 	for tries := 0; maxTries <= 0 || tries <= maxTries; tries++ {
 		start := time.Now()
 		Session, err = cluster.CreateSession()
-		Logger.Info("time to creation cassandra session", zap.Any("duration", time.Since(start)))
 		if err != nil {
 			Logger.Error("error creating session", zap.Any("retry", tries), zap.Error(err))
 			time.Sleep(delay)
 		} else {
+			Logger.Info("time to create cassandra session", zap.Duration("total_duration", time.Since(start0)), zap.Any("try_duration", time.Since(start)))
 			return nil
 		}
 	}

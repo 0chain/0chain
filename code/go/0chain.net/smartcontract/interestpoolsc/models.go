@@ -4,12 +4,14 @@ import (
 	"encoding/json"
 	"time"
 
-	"0chain.net/chaincore/smartcontractstate"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
-	"0chain.net/chaincore/transaction"
+	// "0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+
+	"0chain.net/core/encryption"
+	"0chain.net/core/util"
 )
 
 const (
@@ -17,36 +19,37 @@ const (
 	STAKE    = 1
 )
 
-type simpleGlobalNode struct {
+type SimpleGlobalNode struct {
 	MinLock      int64   `json:"min_lock"`
 	InterestRate float64 `json:"interest_rate"`
 }
 
-func (sgn *simpleGlobalNode) encode() []byte {
+func (sgn *SimpleGlobalNode) Encode() []byte {
 	buff, _ := json.Marshal(sgn)
 	return buff
 }
 
-func (sgn *simpleGlobalNode) decode(input []byte) error {
+func (sgn *SimpleGlobalNode) Decode(input []byte) error {
 	err := json.Unmarshal(input, sgn)
 	return err
 }
 
-type globalNode struct {
-	*simpleGlobalNode `json:"simple_global_node"`
+type GlobalNode struct {
+	ID                datastore.Key
+	*SimpleGlobalNode `json:"simple_global_node"`
 	LockPeriod        time.Duration `json:"lock_period"`
 }
 
-func newGlobalNode() *globalNode {
-	return &globalNode{simpleGlobalNode: &simpleGlobalNode{}}
+func newGlobalNode() *GlobalNode {
+	return &GlobalNode{ID: ADDRESS, SimpleGlobalNode: &SimpleGlobalNode{}}
 }
 
-func (gn *globalNode) encode() []byte {
+func (gn *GlobalNode) Encode() []byte {
 	buff, _ := json.Marshal(gn)
 	return buff
 }
 
-func (gn *globalNode) decode(input []byte) error {
+func (gn *GlobalNode) Decode(input []byte) error {
 	var objMap map[string]*json.RawMessage
 	err := json.Unmarshal(input, &objMap)
 	if err != nil {
@@ -54,7 +57,7 @@ func (gn *globalNode) decode(input []byte) error {
 	}
 	sgn, ok := objMap["simple_global_node"]
 	if ok {
-		err = gn.simpleGlobalNode.decode(*sgn)
+		err = gn.SimpleGlobalNode.Decode(*sgn)
 		if err != nil {
 			return err
 		}
@@ -75,8 +78,16 @@ func (gn *globalNode) decode(input []byte) error {
 	return nil
 }
 
-func (gn *globalNode) getKey() smartcontractstate.Key {
-	return smartcontractstate.Key("interest_sc_global_node")
+func (gn *GlobalNode) GetHash() string {
+	return util.ToHex(gn.GetHashBytes())
+}
+
+func (gn *GlobalNode) GetHashBytes() []byte {
+	return encryption.RawHash(gn.Encode())
+}
+
+func (gn *GlobalNode) getKey() datastore.Key {
+	return datastore.Key(gn.ID + gn.ID)
 }
 
 type typePool struct {
@@ -118,23 +129,23 @@ func (tp *typePool) decode(input []byte) error {
 	return nil
 }
 
-type userNode struct {
+type UserNode struct {
 	ClientID datastore.Key               `json:"client_id"`
 	Pools    map[datastore.Key]*typePool `json:"pools"`
 }
 
-func newUserNode(clientID datastore.Key) *userNode {
-	un := &userNode{ClientID: clientID}
+func newUserNode(clientID datastore.Key) *UserNode {
+	un := &UserNode{ClientID: clientID}
 	un.Pools = make(map[datastore.Key]*typePool)
 	return un
 }
 
-func (un *userNode) encode() []byte {
+func (un *UserNode) Encode() []byte {
 	buff, _ := json.Marshal(un)
 	return buff
 }
 
-func (un *userNode) decode(input []byte) error {
+func (un *UserNode) Decode(input []byte) error {
 	var objMap map[string]*json.RawMessage
 	err := json.Unmarshal(input, &objMap)
 	if err != nil {
@@ -168,20 +179,28 @@ func (un *userNode) decode(input []byte) error {
 	return nil
 }
 
-func (un *userNode) getKey() smartcontractstate.Key {
-	return smartcontractstate.Key("interest_sc_user" + Seperator + un.ClientID)
+func (un *UserNode) GetHash() string {
+	return util.ToHex(un.GetHashBytes())
 }
 
-func (un *userNode) hasPool(poolID datastore.Key) bool {
+func (un *UserNode) GetHashBytes() []byte {
+	return encryption.RawHash(un.Encode())
+}
+
+func (un *UserNode) getKey(globalKey string) datastore.Key {
+	return datastore.Key(globalKey + un.ClientID)
+}
+
+func (un *UserNode) hasPool(poolID datastore.Key) bool {
 	pool := un.Pools[poolID]
 	return pool != nil
 }
 
-func (un *userNode) getPool(poolID datastore.Key) *typePool {
+func (un *UserNode) getPool(poolID datastore.Key) *typePool {
 	return un.Pools[poolID]
 }
 
-func (un *userNode) addPool(ip *typePool) error {
+func (un *UserNode) addPool(ip *typePool) error {
 	if un.hasPool(ip.ID) {
 		return common.NewError("can't add pool", "user node already has pool")
 	}
@@ -189,7 +208,7 @@ func (un *userNode) addPool(ip *typePool) error {
 	return nil
 }
 
-func (un *userNode) deletePool(poolID datastore.Key) error {
+func (un *UserNode) deletePool(poolID datastore.Key) error {
 	if !un.hasPool(poolID) {
 		return common.NewError("can't delete pool", "pool doesn't exist")
 	}
@@ -264,17 +283,17 @@ type tokenLock struct {
 }
 
 func (tl tokenLock) IsLocked(entity interface{}) bool {
-	txn, ok := entity.(*transaction.Transaction)
+	tm, ok := entity.(time.Time)
 	if ok {
-		return common.ToTime(txn.CreationDate).Sub(common.ToTime(tl.StartTime)) < tl.Duration
+		return tm.Sub(common.ToTime(tl.StartTime)) < tl.Duration
 	}
 	return true
 }
 
 func (tl tokenLock) LockStats(entity interface{}) []byte {
-	txn, ok := entity.(*transaction.Transaction)
+	tm, ok := entity.(time.Time)
 	if ok {
-		p := &poolStat{StartTime: common.ToTime(tl.StartTime).String(), Duartion: tl.Duration.String(), TimeLeft: (tl.Duration - common.ToTime(txn.CreationDate).Sub(common.ToTime(tl.StartTime))).String(), Locked: tl.IsLocked(txn)}
+		p := &poolStat{StartTime: common.ToTime(tl.StartTime).String(), Duartion: tl.Duration.String(), TimeLeft: (tl.Duration - tm.Sub(common.ToTime(tl.StartTime))).String(), Locked: tl.IsLocked(tm)}
 		return p.encode()
 	}
 	return nil
