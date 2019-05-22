@@ -7,5 +7,6 @@ smart_contracts:
     global_reset: 48h # in hours
   interestpoolsc:
     min_lock: 10 
-    interest_rate: 0.5
-    lock_period: 1m
+    interest_rate: 0.1
+    min_lock_period: 1m
+    max_lock_period: 10m

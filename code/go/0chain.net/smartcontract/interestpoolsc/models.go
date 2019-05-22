@@ -14,11 +14,6 @@ import (
 	"0chain.net/core/util"
 )
 
-const (
-	INTEREST = 0
-	STAKE    = 1
-)
-
 type SimpleGlobalNode struct {
 	MinLock      int64   `json:"min_lock"`
 	InterestRate float64 `json:"interest_rate"`
@@ -37,7 +32,8 @@ func (sgn *SimpleGlobalNode) Decode(input []byte) error {
 type GlobalNode struct {
 	ID                datastore.Key
 	*SimpleGlobalNode `json:"simple_global_node"`
-	LockPeriod        time.Duration `json:"lock_period"`
+	MinLockPeriod     time.Duration `json:"min_lock_period"`
+	MaxLockPeriod     time.Duration `json:"max_lock_period"`
 }
 
 func newGlobalNode() *GlobalNode {
@@ -62,18 +58,31 @@ func (gn *GlobalNode) Decode(input []byte) error {
 			return err
 		}
 	}
-	var s string
-	lp, ok := objMap["lock_period"]
+	var min string
+	minlp, ok := objMap["min_lock_period"]
 	if ok {
-		err = json.Unmarshal(*lp, &s)
+		err = json.Unmarshal(*minlp, &min)
 		if err != nil {
 			return err
 		}
-		dur, err := time.ParseDuration(s)
+		dur, err := time.ParseDuration(min)
 		if err != nil {
 			return err
 		}
-		gn.LockPeriod = dur
+		gn.MinLockPeriod = dur
+	}
+	var max string
+	maxlp, ok := objMap["max_lock_period"]
+	if ok {
+		err = json.Unmarshal(*maxlp, &max)
+		if err != nil {
+			return err
+		}
+		dur, err := time.ParseDuration(max)
+		if err != nil {
+			return err
+		}
+		gn.MaxLockPeriod = dur
 	}
 	return nil
 }
@@ -90,38 +99,79 @@ func (gn *GlobalNode) getKey() datastore.Key {
 	return datastore.Key(gn.ID + gn.ID)
 }
 
-type typePool struct {
-	*tokenpool.ZcnLockingPool `json:"pool"`
-	Type                      int `json:"pool_type"`
+type newPoolRequest struct {
+	Duration time.Duration `json:"duration"`
 }
 
-func newTypePool() *typePool {
-	return &typePool{ZcnLockingPool: &tokenpool.ZcnLockingPool{}}
-}
-
-func (tp *typePool) encode() []byte {
-	buff, _ := json.Marshal(tp)
+func (npr *newPoolRequest) encode() []byte {
+	buff, _ := json.Marshal(npr)
 	return buff
 }
 
-func (tp *typePool) decode(input []byte) error {
+func (npr *newPoolRequest) decode(input []byte) error {
 	var objMap map[string]*json.RawMessage
 	err := json.Unmarshal(input, &objMap)
 	if err != nil {
 		return err
 	}
-	pt, ok := objMap["pool_type"]
+	var d string
+	duration, ok := objMap["duration"]
 	if ok {
-		var ty int
-		err = json.Unmarshal(*pt, &ty)
+		err = json.Unmarshal(*duration, &d)
 		if err != nil {
 			return err
 		}
-		tp.Type = ty
+		dur, err := time.ParseDuration(d)
+		if err != nil {
+			return err
+		}
+		npr.Duration = dur
+	}
+	return nil
+}
+
+type interestPool struct {
+	*tokenpool.ZcnLockingPool `json:"pool"`
+	InterestRate              float64 `json:"interest_rate"`
+	InterestEarned            int64   `json:"interest_earned"`
+}
+
+func newInterestPool() *interestPool {
+	return &interestPool{ZcnLockingPool: &tokenpool.ZcnLockingPool{}}
+}
+
+func (ip *interestPool) encode() []byte {
+	buff, _ := json.Marshal(ip)
+	return buff
+}
+
+func (ip *interestPool) decode(input []byte) error {
+	var objMap map[string]*json.RawMessage
+	err := json.Unmarshal(input, &objMap)
+	if err != nil {
+		return err
+	}
+	ir, ok := objMap["interest_rate"]
+	if ok {
+		var rate float64
+		err = json.Unmarshal(*ir, &rate)
+		if err != nil {
+			return err
+		}
+		ip.InterestRate = rate
+	}
+	ie, ok := objMap["interest_earned"]
+	if ok {
+		var earned int64
+		err = json.Unmarshal(*ie, &earned)
+		if err != nil {
+			return err
+		}
+		ip.InterestEarned = earned
 	}
 	p, ok := objMap["pool"]
 	if ok {
-		err = tp.ZcnLockingPool.Decode(*p, &tokenLock{})
+		err = ip.ZcnLockingPool.Decode(*p, &tokenLock{})
 		if err != nil {
 			return err
 		}
@@ -130,13 +180,13 @@ func (tp *typePool) decode(input []byte) error {
 }
 
 type UserNode struct {
-	ClientID datastore.Key               `json:"client_id"`
-	Pools    map[datastore.Key]*typePool `json:"pools"`
+	ClientID datastore.Key                   `json:"client_id"`
+	Pools    map[datastore.Key]*interestPool `json:"pools"`
 }
 
 func newUserNode(clientID datastore.Key) *UserNode {
 	un := &UserNode{ClientID: clientID}
-	un.Pools = make(map[datastore.Key]*typePool)
+	un.Pools = make(map[datastore.Key]*interestPool)
 	return un
 }
 
@@ -168,7 +218,7 @@ func (un *UserNode) Decode(input []byte) error {
 			return err
 		}
 		for _, raw := range rawMessagesPools {
-			tempPool := newTypePool()
+			tempPool := newInterestPool()
 			err = tempPool.decode(*raw)
 			if err != nil {
 				return err
@@ -196,11 +246,11 @@ func (un *UserNode) hasPool(poolID datastore.Key) bool {
 	return pool != nil
 }
 
-func (un *UserNode) getPool(poolID datastore.Key) *typePool {
+func (un *UserNode) getPool(poolID datastore.Key) *interestPool {
 	return un.Pools[poolID]
 }
 
-func (un *UserNode) addPool(ip *typePool) error {
+func (un *UserNode) addPool(ip *interestPool) error {
 	if un.hasPool(ip.ID) {
 		return common.NewError("can't add pool", "user node already has pool")
 	}
@@ -253,13 +303,14 @@ func (ps *poolStats) addStat(p *poolStat) {
 }
 
 type poolStat struct {
-	ID        datastore.Key `json:"pool_id"`
-	StartTime string        `json:"start_time"`
-	Duartion  string        `json:duration`
-	TimeLeft  string        `json:"time_left"`
-	Locked    bool          `json:"locked"`
-	PoolType  int           `json:"pool_type"`
-	Balance   state.Balance `json:"balance"`
+	ID             datastore.Key `json:"pool_id"`
+	StartTime      string        `json:"start_time"`
+	Duartion       string        `json:"duration"`
+	TimeLeft       string        `json:"time_left"`
+	Locked         bool          `json:"locked"`
+	InterestRate   float64       `json:"interest_rate"`
+	InterestEarned int64         `json:"interest_earned"`
+	Balance        state.Balance `json:"balance"`
 }
 
 func (ps *poolStat) encode() []byte {
@@ -276,10 +327,6 @@ type tokenLock struct {
 	StartTime common.Timestamp `json:"start_time"`
 	Duration  time.Duration    `json:"duration"`
 	Owner     datastore.Key    `json:"owner"`
-	// for future use
-	// Leaser          datastore.Key   `json:"leaser"`
-	// LockExecutors   []datastore.Key `json:"lock_executors"`
-	// PayoutExecutors []datastore.Key `json:"payout_executors"`
 }
 
 func (tl tokenLock) IsLocked(entity interface{}) bool {
