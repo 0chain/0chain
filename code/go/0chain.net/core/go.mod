@@ -2,11 +2,8 @@ module 0chain.net/core
 
 require (
 	github.com/0chain/gorocksdb v0.0.0-20181010114359-8752a9433481
-	github.com/Nik-U/pbc v0.0.0-20181205041846-3e516ca0c5d6
 	github.com/bitly/go-hostpool v0.0.0-20171023180738-a3a6125de932 // indirect
 	github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 // indirect
-	github.com/coreos/etcd v3.3.12+incompatible // indirect
-	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/didip/tollbooth v4.0.0+incompatible
 	github.com/facebookgo/ensure v0.0.0-20160127193407-b4ab57deab51 // indirect
 	github.com/facebookgo/stack v0.0.0-20160209184415-751773369052 // indirect
@@ -20,14 +17,13 @@ require (
 	github.com/herumi/mcl v0.0.0-20190422075523-7f408a29acdc
 	github.com/koding/cache v0.0.0-20161222233018-4a3175c6b2fe
 	github.com/kr/pretty v0.1.0 // indirect
-	github.com/kr/pty v1.1.4 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pelletier/go-toml v1.3.0 // indirect
 	github.com/pkg/errors v0.8.1 // indirect
 	github.com/spf13/afero v1.2.2 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/viper v1.3.2
-	github.com/stretchr/objx v0.2.0 // indirect
+	github.com/stretchr/testify v1.3.0 // indirect
 	github.com/valyala/gozstd v1.4.1
 	github.com/vmihailenco/msgpack v4.0.4+incompatible
 	go.uber.org/atomic v1.3.2 // indirect
@@ -35,7 +31,6 @@ require (
 	go.uber.org/zap v1.9.1
 	golang.org/x/crypto v0.0.0-20190422183909-d864b10871cd
 	golang.org/x/net v0.0.0-20190420063019-afa5a82059c6 // indirect
-	golang.org/x/sync v0.0.0-20190423024810-112230192c58 // indirect
 	golang.org/x/sys v0.0.0-20190422165155-953cdadca894 // indirect
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
 	google.golang.org/appengine v1.5.0 // indirect
