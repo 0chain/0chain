@@ -14,8 +14,8 @@ RUN apk add coreutils linux-headers perl zlib-dev bzip2-dev lz4-dev snappy-dev z
 # Install Herumi's cryptography
 RUN apk add gmp gmp-dev openssl-dev && \
     cd /tmp && \
-    wget -O - https://github.com/herumi/mcl/archive/4faf7ef2c1eb.tar.gz | tar xz && \
-    wget -O - https://github.com/herumi/bls/archive/f3054812cb4c.tar.gz | tar xz && \
+    wget -O - https://github.com/herumi/mcl/archive/master.tar.gz | tar xz && \
+    wget -O - https://github.com/herumi/bls/archive/master.tar.gz | tar xz && \
     mv mcl* mcl && \
     mv bls* bls && \
     make -C mcl -j $(nproc) lib/libmclbn256.so install && \

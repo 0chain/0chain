@@ -591,7 +591,7 @@ func (mpt *MerklePatriciaTrie) deleteAfterPathTraversal(node Node) (Node, Key, e
 func (mpt *MerklePatriciaTrie) iterate(ctx context.Context, path Path, key Key, handler MPTIteratorHandler, visitNodeTypes byte) error {
 	node, err := mpt.DB.GetNode(key)
 	if err != nil {
-		if DebugMPTNode && Logger != nil {
+		if Logger != nil {
 			Logger.Error("iterate - get node error", zap.Error(err))
 		}
 		if herr := handler(ctx, path, key, node); herr != nil {
@@ -633,6 +633,9 @@ func (mpt *MerklePatriciaTrie) iterate(ctx context.Context, path Path, key Key, 
 				if err == ErrNodeNotFound || err == ErrIteratingChildNodes {
 					ecount++
 				} else {
+					if Logger != nil {
+						Logger.Error("iterate - child node", zap.Error(err))
+					}
 					return err
 				}
 			}
@@ -757,7 +760,7 @@ func (mpt *MerklePatriciaTrie) UpdateVersion(ctx context.Context, version Sequen
 			keys = keys[:0]
 			values = values[:0]
 			if err != nil {
-				if DebugMPTNode && Logger != nil {
+				if Logger != nil {
 					Logger.Error("update version - multi put", zap.String("path", string(path)), zap.String("key", ToHex(key)), zap.Any("old_version", node.GetVersion()), zap.Any("new_version", version), zap.Error(err))
 				}
 			}
@@ -773,7 +776,7 @@ func (mpt *MerklePatriciaTrie) UpdateVersion(ctx context.Context, version Sequen
 	if err == nil || err == ErrNodeNotFound || err == ErrIteratingChildNodes {
 		if len(keys) > 0 {
 			if err := mpt.DB.MultiPutNode(keys, values); err != nil {
-				if DebugMPTNode && Logger != nil {
+				if Logger != nil {
 					Logger.Error("update version - multi put - last batch", zap.Error(err))
 				}
 				return err
