@@ -123,6 +123,8 @@ func (sn *BlobberChallenge) addChallenge(challenge *StorageChallenge) bool {
 		if len(sn.Challenges) > 0 {
 			lastChallenge := sn.Challenges[len(sn.Challenges)-1]
 			challenge.PrevID = lastChallenge.ID
+		} else if sn.LatestCompletedChallenge != nil {
+			challenge.PrevID = sn.LatestCompletedChallenge.ID
 		}
 		sn.Challenges = append(sn.Challenges, challenge)
 		sn.ChallengeMap[challenge.ID] = challenge
