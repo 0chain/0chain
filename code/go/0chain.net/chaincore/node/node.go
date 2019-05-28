@@ -322,9 +322,11 @@ func (n *Node) updateSendMessageTimings() {
 		}
 	}
 	if minval > maxval {
-		minval = maxval
-	} else if maxval < minval {
-		maxval = minval
+		if minval != math.MaxFloat64 {
+			maxval = minval
+		} else {
+			minval = maxval
+		}
 	}
 	n.LargeMessageSendTime = maxval
 	n.SmallMessageSendTime = minval
@@ -364,7 +366,11 @@ func (n *Node) updateRequestMessageTimings() {
 		}
 	}
 	if minval > maxval {
-		minval = maxval
+		if minval != math.MaxFloat64 {
+			maxval = minval
+		} else {
+			minval = maxval
+		}
 	}
 	n.LargeMessagePullServeTime = maxval
 	n.SmallMessagePullServeTime = minval
