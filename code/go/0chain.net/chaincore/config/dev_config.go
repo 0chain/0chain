@@ -15,10 +15,10 @@ var DevConfiguration DevConfig
 
 func setupDevConfig() {
 	viper.SetDefault("development.state", false)
-	viper.SetDefault("development.smart_contract.fee", false)
+	viper.SetDefault("development.smart_contract.miner", false)
 	viper.SetDefault("development.smart_contract.faucet", false)
 	DevConfiguration.State = viper.GetBool("development.state")
 	DevConfiguration.IsDkgEnabled = viper.GetBool("development.dkg")
 	DevConfiguration.FaucetEnabled = viper.GetBool("development.smart_contract.faucet")
-	DevConfiguration.IsFeeEnabled = viper.GetBool("development.smart_contract.fee")
+	DevConfiguration.IsFeeEnabled = viper.GetBool("development.smart_contract.miner")
 }

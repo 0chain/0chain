@@ -18,7 +18,7 @@ import (
 	"0chain.net/core/datastore"
 	. "0chain.net/core/logging"
 	"0chain.net/core/util"
-	"0chain.net/smartcontract/feesc"
+	"0chain.net/smartcontract/minersc"
 	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
@@ -266,7 +266,7 @@ func (c *Chain) updateState(b *block.Block, txn *transaction.Transaction) error 
 		}
 	}
 	if config.DevConfiguration.IsFeeEnabled {
-		if err := sctx.AddTransfer(state.NewTransfer(txn.ClientID, feesc.ADDRESS, state.Balance(txn.Fee))); err != nil {
+		if err := sctx.AddTransfer(state.NewTransfer(txn.ClientID, minersc.ADDRESS, state.Balance(txn.Fee))); err != nil {
 			return err
 		}
 	}

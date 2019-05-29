@@ -91,3 +91,29 @@ func (mn *MinerNodes) GetHash() string {
 func (mn *MinerNodes) GetHashBytes() []byte {
 	return encryption.RawHash(mn.Encode())
 }
+
+type globalNode struct {
+	ID        datastore.Key
+	LastRound int64
+}
+
+func (gn *globalNode) Encode() []byte {
+	buff, _ := json.Marshal(gn)
+	return buff
+}
+
+func (gn *globalNode) Decode(input []byte) error {
+	return json.Unmarshal(input, gn)
+}
+
+func (gn *globalNode) GetKey() datastore.Key {
+	return datastore.Key(gn.ID + gn.ID)
+}
+
+func (gn *globalNode) GetHash() string {
+	return util.ToHex(gn.GetHashBytes())
+}
+
+func (gn *globalNode) GetHashBytes() []byte {
+	return encryption.RawHash(gn.Encode())
+}

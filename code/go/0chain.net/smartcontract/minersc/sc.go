@@ -6,12 +6,15 @@ import (
 	"fmt"
 	"net/url"
 
+	"0chain.net/chaincore/block"
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
+	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	. "0chain.net/core/logging"
+	"0chain.net/core/util"
 	"github.com/asaskevich/govalidator"
 	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
@@ -19,10 +22,14 @@ import (
 
 const (
 	//ADDRESS address of minersc
-	ADDRESS   = "CF9C03CD22C9C7B116EED04E4A909F95ABEC17E98FE631D6AC94D5D8420C5B20"
-	bufRounds = 5000 //ToDo: make it configurable
-	cfdBuffer = 10
-	name      = "miner"
+	ADDRESS                             = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d1"
+	owner                               = "c8a5e74c2f4fae2c1bed79fb2b78d3b88f844bbb6bf1db5fc43240711f23321f"
+	bufRounds                           = 50 //ToDo: make it configurable
+	cfdBuffer                           = 10
+	name                                = "miner"
+	sharderMintAllocation state.Balance = 200
+	minerMintAllocation   state.Balance = 100
+	charity                             = .2
 )
 
 //MinerSmartContract Smartcontract that takes care of all miner related requests
@@ -50,11 +57,14 @@ func (msc *MinerSmartContract) SetSC(sc *smartcontractinterface.SmartContract, b
 	msc.bcContext = bcContext
 	msc.SmartContractExecutionStats["add_miner"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "add_miner"), nil)
 	msc.SmartContractExecutionStats["viewchange_req"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "viewchange_req"), nil)
+	msc.SmartContractExecutionStats["payFees"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "payFees"), nil)
+	msc.SmartContractExecutionStats["feesPaid"] = metrics.GetOrRegisterHistogram(fmt.Sprintf("sc:%v:func:%v", msc.ID, "feesPaid"), nil, metrics.NewUniformSample(1024))
+	msc.SmartContractExecutionStats["mintedTokens"] = metrics.GetOrRegisterHistogram(fmt.Sprintf("sc:%v:func:%v", msc.ID, "mintedTokens"), nil, metrics.NewUniformSample(1024))
 }
 
 //Execute implemetning the interface
 func (msc *MinerSmartContract) Execute(t *transaction.Transaction, funcName string, input []byte, balances c_state.StateContextI) (string, error) {
-
+	gn, _ := msc.getGlobalNode(balances)
 	switch funcName {
 
 	case "add_miner":
@@ -71,6 +81,8 @@ func (msc *MinerSmartContract) Execute(t *transaction.Transaction, funcName stri
 		}
 		return resp, nil
 
+	case "payFees":
+		return msc.payFees(t, input, gn, balances)
 	default:
 		return common.NewError("failed execution", "no function with that name").Error(), nil
 
@@ -189,7 +201,7 @@ func (msc *MinerSmartContract) RequestViewchange(t *transaction.Transaction, inp
 func (msc *MinerSmartContract) getMinersList(statectx c_state.StateContextI) (*MinerNodes, error) {
 	allMinersList := &MinerNodes{}
 	allMinersBytes, err := statectx.GetTrieNode(allMinersKey)
-	if err != nil {
+	if err != nil && err != util.ErrValueNotPresent {
 		return nil, errors.New("getMinersList_failed - Failed to retrieve existing miners list")
 	}
 	if allMinersBytes == nil {
@@ -225,4 +237,59 @@ func isValidURL(burl string) error {
 	Logger.Info("Both IsDNSName and IsIPV4 returned false for " + h)
 	return errors.New(burl + " is not a valid url. It not a valid IP or valid DNS name")
 
+}
+
+func (msc *MinerSmartContract) getGlobalNode(balances c_state.StateContextI) (*globalNode, error) {
+	gn := &globalNode{ID: msc.ID}
+	gv, err := balances.GetTrieNode(gn.GetKey())
+	if err != nil {
+		return gn, err
+	}
+	gn.Decode(gv.Encode())
+	return gn, err
+}
+
+func (msc *MinerSmartContract) payFees(t *transaction.Transaction, inputData []byte, gn *globalNode, balances c_state.StateContextI) (string, error) {
+	block := balances.GetBlock()
+	if t.ClientID != block.MinerID {
+		return "", common.NewError("failed to pay fees", "not block generator")
+	}
+	if block.Round <= gn.LastRound {
+		return "", common.NewError("failed to pay fees", "jumped back in time?")
+	}
+	var resp string
+	fee := msc.sumFee(block, false)
+	transfer := state.NewTransfer(ADDRESS, t.ClientID, fee)
+	balances.AddTransfer(transfer)
+	resp += string(transfer.Encode())
+	sharders := balances.GetBlockSharders(block.PrevBlock)
+	for _, sharder := range sharders {
+		//TODO: the mint amount will be controlled by governance
+		mint := state.NewMint(ADDRESS, sharder, fee/state.Balance(len(sharders)))
+		mintStats := msc.SmartContractExecutionStats["mintedTokens"].(metrics.Histogram)
+		mintStats.Update(int64(mint.Amount))
+		err := balances.AddMint(mint)
+		if err != nil {
+			resp += common.NewError("failed to mint", fmt.Sprintf("errored while adding mint for sharder %v: %v", sharder, err.Error())).Error()
+		}
+	}
+	gn.LastRound = block.Round
+	_, err := balances.InsertTrieNode(gn.GetKey(), gn)
+	if err != nil {
+		return "", err
+	}
+	msc.sumFee(block, true)
+	return resp, nil
+}
+
+func (msc *MinerSmartContract) sumFee(b *block.Block, updateStats bool) state.Balance {
+	var totalMaxFee int64
+	for _, txn := range b.Txns {
+		totalMaxFee += txn.Fee
+		if updateStats {
+			feeStats := msc.SmartContractExecutionStats["feesPaid"].(metrics.Histogram)
+			feeStats.Update(txn.Fee)
+		}
+	}
+	return state.Balance(totalMaxFee)
 }
