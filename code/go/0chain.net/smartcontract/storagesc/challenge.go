@@ -13,22 +13,26 @@ import (
 	"go.uber.org/zap"
 )
 
-func (sc *StorageSmartContract) completeChallengeForBlobber(blobberChallengeObj *BlobberChallenge, challengeCompleted *StorageChallenge, challengeResponse *ChallengeResponse) bool {
+func (sc *StorageSmartContract) completeChallengeForBlobber(blobberChallengeObj *BlobberChallenge, challengeCompleted *StorageChallenge, challengeResponse *ChallengeResponse) {
 	found := false
 	idx := -1
-	if len(blobberChallengeObj.Challenges) > 0 {
-		latestOpenChallenge := blobberChallengeObj.Challenges[0]
-		if latestOpenChallenge.ID == challengeCompleted.ID {
+	for i, challenge := range blobberChallengeObj.Challenges {
+		if challenge.ID == challengeCompleted.ID {
 			found = true
+			idx = i
+			break
 		}
 	}
-	idx = 0
 	if found && idx >= 0 && idx < len(blobberChallengeObj.Challenges) {
 		blobberChallengeObj.Challenges = append(blobberChallengeObj.Challenges[:idx], blobberChallengeObj.Challenges[idx+1:]...)
+		if len(blobberChallengeObj.LatestCompletedChallenges) >= 20 {
+			startIndex := (20 - len(blobberChallengeObj.LatestCompletedChallenges)) + 1
+			blobberChallengeObj.LatestCompletedChallenges = blobberChallengeObj.LatestCompletedChallenges[startIndex:]
+		}
 		challengeCompleted.Response = challengeResponse
-		blobberChallengeObj.LatestCompletedChallenge = challengeCompleted
+		blobberChallengeObj.LatestCompletedChallenges = append(blobberChallengeObj.LatestCompletedChallenges, challengeCompleted)
 	}
-	return found
+
 }
 
 func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction, input []byte, balances c_state.StateContextI) (string, error) {
@@ -57,8 +61,10 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction, inpu
 	challengeRequest, ok := blobberChallengeObj.ChallengeMap[challengeResponse.ID]
 
 	if !ok {
-		if blobberChallengeObj.LatestCompletedChallenge != nil && challengeResponse.ID == blobberChallengeObj.LatestCompletedChallenge.ID && blobberChallengeObj.LatestCompletedChallenge.Response != nil {
-			return "Challenge Already redeemed by Blobber", nil
+		for _, completedChallenge := range blobberChallengeObj.LatestCompletedChallenges {
+			if challengeResponse.ID == completedChallenge.ID && completedChallenge.Response != nil {
+				return "Challenge Already redeemed by Blobber", nil
+			}
 		}
 		return "", common.NewError("invalid_parameters", "Cannot find the challenge with ID "+challengeResponse.ID)
 	}
@@ -104,10 +110,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction, inpu
 	if numSuccess > (len(challengeRequest.Validators) / 2) {
 		//challengeRequest.Response = &challengeResponse
 		//delete(blobberChallengeObj.ChallengeMap, challengeResponse.ID)
-		completed := sc.completeChallengeForBlobber(blobberChallengeObj, challengeRequest, &challengeResponse)
-		if !completed {
-			return "", common.NewError("challenge_out_of_order", "First challenge on the list is not same as the one attempted to redeem")
-		}
+		sc.completeChallengeForBlobber(blobberChallengeObj, challengeRequest, &challengeResponse)
 		allocationObj.Stats.LastestClosedChallengeTxn = challengeRequest.ID
 		allocationObj.Stats.SuccessChallenges++
 		allocationObj.Stats.OpenChallenges--
@@ -122,11 +125,8 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction, inpu
 		return "Challenge Passed by Blobber", nil
 	}
 
-	if numFailure > (len(challengeRequest.Validators) / 2) || (numSuccess + numFailure) == len(challengeRequest.Validators) {
-		completed := sc.completeChallengeForBlobber(blobberChallengeObj, challengeRequest, &challengeResponse)
-		if !completed {
-			return "", common.NewError("challenge_out_of_order", "First challenge on the list is not same as the one attempted to redeem")
-		}
+	if numFailure > (len(challengeRequest.Validators) / 2) {
+		sc.completeChallengeForBlobber(blobberChallengeObj, challengeRequest, &challengeResponse)
 		//delete(blobberChallengeObj.ChallengeMap, challengeResponse.ID)
 		//challengeRequest.Response = &challengeResponse
 		allocationObj.Stats.LastestClosedChallengeTxn = challengeRequest.ID
@@ -219,7 +219,7 @@ func (sc *StorageSmartContract) addChallenge(t *transaction.Transaction, b *bloc
 	blobberChallengeObj.BlobberID = storageChallenge.Blobber.ID
 
 	blobberChallengeBytes, err := balances.GetTrieNode(blobberChallengeObj.GetKey(sc.ID))
-	//blobberChallengeObj.LatestCompletedChallenges = make([]*StorageChallenge, 0)
+	blobberChallengeObj.LatestCompletedChallenges = make([]*StorageChallenge, 0)
 	if blobberChallengeBytes != nil {
 		err = blobberChallengeObj.Decode(blobberChallengeBytes.Encode())
 		if err != nil {
