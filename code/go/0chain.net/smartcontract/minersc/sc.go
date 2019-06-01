@@ -8,6 +8,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	c_state "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -22,14 +23,9 @@ import (
 
 const (
 	//ADDRESS address of minersc
-	ADDRESS                             = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d1"
-	owner                               = "c8a5e74c2f4fae2c1bed79fb2b78d3b88f844bbb6bf1db5fc43240711f23321f"
-	bufRounds                           = 50 //ToDo: make it configurable
-	cfdBuffer                           = 10
-	name                                = "miner"
-	sharderMintAllocation state.Balance = 200
-	minerMintAllocation   state.Balance = 100
-	charity                             = .2
+	ADDRESS = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d1"
+	owner   = "c8a5e74c2f4fae2c1bed79fb2b78d3b88f844bbb6bf1db5fc43240711f23321f"
+	name    = "miner"
 )
 
 //MinerSmartContract Smartcontract that takes care of all miner related requests
@@ -54,6 +50,8 @@ func (msc *MinerSmartContract) GetRestPoints() map[string]smartcontractinterface
 func (msc *MinerSmartContract) SetSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {
 	msc.SmartContract = sc
 	msc.SmartContract.RestHandlers["/getNodepool"] = msc.GetNodepoolHandler
+	msc.SmartContract.RestHandlers["/getUserPools"] = msc.GetUserPoolsHandler
+	msc.SmartContract.RestHandlers["/getPoolsStats"] = msc.GetPoolStatsHandler
 	msc.bcContext = bcContext
 	msc.SmartContractExecutionStats["add_miner"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "add_miner"), nil)
 	msc.SmartContractExecutionStats["viewchange_req"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "viewchange_req"), nil)
@@ -75,7 +73,7 @@ func (msc *MinerSmartContract) Execute(t *transaction.Transaction, funcName stri
 		return resp, nil
 
 	case "viewchange_req":
-		resp, err := msc.RequestViewchange(t, input, balances)
+		resp, err := msc.RequestViewchange(t, input, gn, balances)
 		if err != nil {
 			return "", err
 		}
@@ -83,6 +81,8 @@ func (msc *MinerSmartContract) Execute(t *transaction.Transaction, funcName stri
 
 	case "payFees":
 		return msc.payFees(t, input, gn, balances)
+	case "addToDelegatePool":
+		return msc.addToDelegatePool(t, input, gn, balances)
 	default:
 		return common.NewError("failed execution", "no function with that name").Error(), nil
 
@@ -125,7 +125,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction, input []byte
 		return "", errors.New("add_miner_failed - Failed to get miner list" + err.Error())
 	}
 
-	newMiner := &MinerNode{}
+	newMiner := NewMinerNode()
 	err = newMiner.Decode(input)
 	if err != nil {
 		Logger.Error("Error in decoding the input", zap.Error(err))
@@ -140,30 +140,31 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction, input []byte
 		Logger.Info("Miner received already exist", zap.String("url", newMiner.BaseURL))
 
 	} else {
-		minerBytes, _ := statectx.GetTrieNode(newMiner.getKey(msc.ID))
-		if minerBytes == nil {
-			//DB does not have the miner already. Validate before adding.
-			err = isValidURL(newMiner.BaseURL)
-
-			if err != nil {
-				Logger.Error(newMiner.BaseURL + "is not a valid URL. Please provide DNS name or IPV4 address")
-				return "", errors.New(newMiner.BaseURL + "is not a valid URL. Please provide DNS name or IPV4 address")
-			}
-			//ToDo: Add clientID and publicKey validation
-			allMinersList.Nodes = append(allMinersList.Nodes, newMiner)
-			statectx.InsertTrieNode(allMinersKey, allMinersList)
-			statectx.InsertTrieNode(newMiner.getKey(msc.ID), newMiner)
-			Logger.Info("Adding miner to known list of miners", zap.Any("url", allMinersList))
-		} else {
-			Logger.Info("Miner received already exist", zap.String("url", newMiner.BaseURL))
+		//DB does not have the miner already. Validate before adding.
+		err = isValidURL(newMiner.BaseURL)
+		if err != nil {
+			Logger.Error(newMiner.BaseURL + "is not a valid URL. Please provide DNS name or IPV4 address")
+			return "", errors.New(newMiner.BaseURL + "is not a valid URL. Please provide DNS name or IPV4 address")
 		}
+		pool := NewDelegatePool()
+		transfer, _, err := pool.DigPool(t.Hash, t)
+		if err != nil {
+			return "", common.NewError("failed to add miner", fmt.Sprintf("error digging delegate pool: %v", err.Error()))
+		}
+		//ToDo: Add clientID and publicKey validation
+		statectx.AddTransfer(transfer)
+		newMiner.Pending[t.Hash] = pool
+		allMinersList.Nodes = append(allMinersList.Nodes, newMiner)
+		statectx.InsertTrieNode(allMinersKey, allMinersList)
+		statectx.InsertTrieNode(newMiner.getKey(msc.ID), newMiner)
+		Logger.Info("Adding miner to known list of miners", zap.Any("url", allMinersList))
 	}
 	buff := newMiner.Encode()
 	return string(buff), nil
 }
 
 //RequestViewchange Function to handle miner viewchange request
-func (msc *MinerSmartContract) RequestViewchange(t *transaction.Transaction, input []byte, statectx c_state.StateContextI) (string, error) {
+func (msc *MinerSmartContract) RequestViewchange(t *transaction.Transaction, input []byte, gn *globalNode, statectx c_state.StateContextI) (string, error) {
 
 	var regMiner MinerNode
 	err := regMiner.Decode(input)
@@ -182,11 +183,11 @@ func (msc *MinerSmartContract) RequestViewchange(t *transaction.Transaction, inp
 	}
 
 	curRound := statectx.GetBlock().Round
-	vcRound := (((int64)((curRound + bufRounds) / 1000)) + 1) * 1000
+	vcRound := (((int64)((curRound + gn.ViewChange) / 1000)) + 1) * 1000
 	vcRoundInfo := &ViewchangeInfo{}
 
 	vcRoundInfo.ViewchangeRound = vcRound
-	vcRoundInfo.ViewchangeCFDRound = vcRound - cfdBuffer
+	vcRoundInfo.ViewchangeCFDRound = vcRound - gn.FreezeBefore
 
 	Logger.Info("RequestViewChange", zap.Int64("cur_round", curRound),
 		zap.Int64("vc_round", vcRoundInfo.ViewchangeRound), zap.Int64("dkg_round", vcRoundInfo.ViewchangeCFDRound))
@@ -239,16 +240,6 @@ func isValidURL(burl string) error {
 
 }
 
-func (msc *MinerSmartContract) getGlobalNode(balances c_state.StateContextI) (*globalNode, error) {
-	gn := &globalNode{ID: msc.ID}
-	gv, err := balances.GetTrieNode(gn.GetKey())
-	if err != nil {
-		return gn, err
-	}
-	gn.Decode(gv.Encode())
-	return gn, err
-}
-
 func (msc *MinerSmartContract) payFees(t *transaction.Transaction, inputData []byte, gn *globalNode, balances c_state.StateContextI) (string, error) {
 	block := balances.GetBlock()
 	if t.ClientID != block.MinerID {
@@ -257,11 +248,98 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction, inputData []b
 	if block.Round <= gn.LastRound {
 		return "", common.NewError("failed to pay fees", "jumped back in time?")
 	}
+	fee := msc.sumFee(block, true)
+	mn, err := msc.getMinerNode(t.ClientID, msc.ID, balances)
+	if err != nil {
+		return "", common.NewError("failed to pay fees", fmt.Sprintf("error getting miner node: %v", err.Error()))
+	}
+	resp := msc.payMiners(fee, mn, balances, t)
+	resp = msc.paySharders(fee, block, balances, resp)
+	gn.LastRound = block.Round
+	_, err = balances.InsertTrieNode(gn.GetKey(), gn)
+	if err != nil {
+		return "", err
+	}
+	_, err = balances.InsertTrieNode(mn.getKey(msc.ID), mn)
+	if err != nil {
+		return "", err
+	}
+	return resp, nil
+}
+
+func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction, inputData []byte, gn *globalNode, balances c_state.StateContextI) (string, error) {
+	mn := NewMinerNode()
+	err := mn.Decode(inputData)
+	if err != nil {
+		return "", common.NewError("failed to add to delegate pool", fmt.Sprintf("error decoding request: %v", err.Error()))
+	}
+	mn, err = msc.getMinerNode(mn.ID, msc.ID, balances)
+	if err != nil {
+		return "", common.NewError("failed to add to delegate pool", fmt.Sprintf("error getting miner node: %v", err.Error()))
+	}
+	un, err := msc.getUserNode(t.ClientID, msc.ID, balances)
+	if err != nil {
+		return "", common.NewError("failed to add to delegate pool", fmt.Sprintf("error getting user node: %v", err.Error()))
+	}
+	pool := NewDelegatePool()
+	pool.TokenLockInterface = &ViewChangeLock{Owner: t.ClientID}
+	pool.DelegateID = t.ClientID
+	pool.InterestRate = gn.InterestRate
+	transfer, response, err := pool.DigPool(t.Hash, t)
+	if err != nil {
+		return "", common.NewError("failed to add to delegate pool", fmt.Sprintf("error digging delegate pool: %v", err.Error()))
+	}
+	balances.AddTransfer(transfer)
+	un.Pools[t.Hash] = &poolInfo{MinerID: mn.ID, Balance: int64(transfer.Amount)}
+
+	mn.Active[t.Hash] = pool // needs to be Pending pool; doing this just for testing
+	// mn.Pending[t.Hash] = pool
+
+	balances.InsertTrieNode(un.GetKey(msc.ID), un)
+	balances.InsertTrieNode(mn.getKey(msc.ID), mn)
+	return response, nil
+}
+
+func (msc *MinerSmartContract) sumFee(b *block.Block, updateStats bool) state.Balance {
+	var totalMaxFee int64
+	feeStats := msc.SmartContractExecutionStats["feesPaid"].(metrics.Histogram)
+	for _, txn := range b.Txns {
+		totalMaxFee += txn.Fee
+		if updateStats {
+			feeStats.Update(txn.Fee)
+		}
+	}
+	return state.Balance(totalMaxFee)
+}
+
+func (msc *MinerSmartContract) payMiners(fee state.Balance, mn *MinerNode, balances c_state.StateContextI, t *transaction.Transaction) string {
 	var resp string
-	fee := msc.sumFee(block, false)
-	transfer := state.NewTransfer(ADDRESS, t.ClientID, fee)
+	minerFee := state.Balance(float64(fee) * mn.MinerPercentage)
+	transfer := state.NewTransfer(ADDRESS, t.ClientID, minerFee)
 	balances.AddTransfer(transfer)
 	resp += string(transfer.Encode())
+
+	restFee := fee - minerFee
+	totalStaked := mn.TotalStaked()
+	for _, pool := range mn.Active {
+		userPercent := float64(pool.Balance) / float64(totalStaked)
+		userFee := state.Balance(float64(restFee) * userPercent)
+		transfer := state.NewTransfer(ADDRESS, pool.DelegateID, userFee)
+		balances.AddTransfer(transfer)
+		pool.TotalPaid += transfer.Amount
+		pool.NumRounds++
+		if pool.High < transfer.Amount {
+			pool.High = transfer.Amount
+		}
+		if pool.Low == -1 || pool.Low > transfer.Amount {
+			pool.Low = transfer.Amount
+		}
+		resp += string(transfer.Encode())
+	}
+	return resp
+}
+
+func (msc *MinerSmartContract) paySharders(fee state.Balance, block *block.Block, balances c_state.StateContextI, resp string) string {
 	sharders := balances.GetBlockSharders(block.PrevBlock)
 	for _, sharder := range sharders {
 		//TODO: the mint amount will be controlled by governance
@@ -273,23 +351,54 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction, inputData []b
 			resp += common.NewError("failed to mint", fmt.Sprintf("errored while adding mint for sharder %v: %v", sharder, err.Error())).Error()
 		}
 	}
-	gn.LastRound = block.Round
-	_, err := balances.InsertTrieNode(gn.GetKey(), gn)
-	if err != nil {
-		return "", err
-	}
-	msc.sumFee(block, true)
-	return resp, nil
+	return resp
 }
 
-func (msc *MinerSmartContract) sumFee(b *block.Block, updateStats bool) state.Balance {
-	var totalMaxFee int64
-	for _, txn := range b.Txns {
-		totalMaxFee += txn.Fee
-		if updateStats {
-			feeStats := msc.SmartContractExecutionStats["feesPaid"].(metrics.Histogram)
-			feeStats.Update(txn.Fee)
+func (msc *MinerSmartContract) getGlobalNode(balances c_state.StateContextI) (*globalNode, error) {
+	gn := &globalNode{ID: msc.ID}
+	gv, err := balances.GetTrieNode(gn.GetKey())
+	if err == nil {
+		err := gn.Decode(gv.Encode())
+		if err == nil {
+			return gn, nil
 		}
 	}
-	return state.Balance(totalMaxFee)
+	gn.ViewChange = config.SmartContractConfig.GetInt64("smart_contracts.minersc.view_change_buff")
+	gn.FreezeBefore = config.SmartContractConfig.GetInt64("smart_contracts.minersc.freeze_buff")
+	gn.InterestRate = config.SmartContractConfig.GetFloat64("smart_contracts.minersc.interest_rate")
+	gn.MinStake = config.SmartContractConfig.GetInt64("smart_contracts.minersc.min_stake")
+	gn.MaxStake = config.SmartContractConfig.GetInt64("smart_contracts.minersc.max_stake")
+	if err == util.ErrValueNotPresent {
+		balances.InsertTrieNode(gn.GetKey(), gn)
+	}
+	return gn, err
+}
+
+func (msc *MinerSmartContract) getMinerNode(id string, globalKey string, balances c_state.StateContextI) (*MinerNode, error) {
+	mn := NewMinerNode()
+	mn.ID = id
+	ms, err := balances.GetTrieNode(mn.getKey(globalKey))
+	if err != nil && err != util.ErrValueNotPresent {
+		return mn, err
+	}
+	if err == util.ErrValueNotPresent {
+		mn.MinerPercentage = .25
+		return mn, nil
+	}
+	mn.Decode(ms.Encode())
+	return mn, err
+}
+
+func (msc *MinerSmartContract) getUserNode(id string, globalKey string, balances c_state.StateContextI) (*UserNode, error) {
+	un := NewUserNode()
+	un.ID = id
+	us, err := balances.GetTrieNode(un.GetKey(globalKey))
+	if err != nil && err != util.ErrValueNotPresent {
+		return un, err
+	}
+	if us == nil {
+		return un, nil
+	}
+	un.Decode(us.Encode())
+	return un, err
 }

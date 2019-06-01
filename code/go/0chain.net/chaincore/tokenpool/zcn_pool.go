@@ -36,7 +36,7 @@ func (p *ZcnPool) GetID() datastore.Key {
 }
 
 func (p *ZcnPool) DigPool(id datastore.Key, txn *transaction.Transaction) (*state.Transfer, string, error) {
-	if txn.Value <= 0 {
+	if txn.Value < 0 {
 		return nil, "", common.NewError("digging pool failed", "insufficent funds")
 	}
 	p.TokenPool.ID = id
