@@ -165,7 +165,7 @@ func createSendTransaction(c *chain.Chain, prng *rand.Rand) *transaction.Transac
 func createDataTransaction(prng *rand.Rand) *transaction.Transaction {
 	csize := len(wallets)
 	wf := wallets[prng.Intn(csize)]
-	txn := wf.CreateRandomDataTransaction(10000000)
+	txn := wf.CreateRandomDataTransaction(0)
 	return txn
 }
 
