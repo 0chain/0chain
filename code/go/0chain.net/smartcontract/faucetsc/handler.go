@@ -29,7 +29,7 @@ func (fc *FaucetSmartContract) personalPeriodicLimit(ctx context.Context, params
 	} else {
 		resp.Allowed = 0
 	}
-	return string(resp.encode()), nil
+	return resp, nil
 }
 
 func (fc *FaucetSmartContract) globalPerodicLimit(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
@@ -46,7 +46,7 @@ func (fc *FaucetSmartContract) globalPerodicLimit(ctx context.Context, params ur
 	} else {
 		resp.Allowed = 0
 	}
-	return string(resp.encode()), nil
+	return resp, nil
 }
 
 func (fc *FaucetSmartContract) pourAmount(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
