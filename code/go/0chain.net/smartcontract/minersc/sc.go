@@ -9,7 +9,7 @@ import (
 	"0chain.net/chaincore/block"
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/smartcontractinterface"
+	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -30,8 +30,8 @@ const (
 
 //MinerSmartContract Smartcontract that takes care of all miner related requests
 type MinerSmartContract struct {
-	*smartcontractinterface.SmartContract
-	bcContext smartcontractinterface.BCContextI
+	*sci.SmartContract
+	bcContext sci.BCContextI
 }
 
 func (msc *MinerSmartContract) GetName() string {
@@ -42,12 +42,12 @@ func (msc *MinerSmartContract) GetAddress() string {
 	return ADDRESS
 }
 
-func (msc *MinerSmartContract) GetRestPoints() map[string]smartcontractinterface.SmartContractRestHandler {
+func (msc *MinerSmartContract) GetRestPoints() map[string]sci.SmartContractRestHandler {
 	return msc.RestHandlers
 }
 
 //SetSC setting up smartcontract. implementing the interface
-func (msc *MinerSmartContract) SetSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {
+func (msc *MinerSmartContract) SetSC(sc *sci.SmartContract, bcContext sci.BCContextI) {
 	msc.SmartContract = sc
 	msc.SmartContract.RestHandlers["/getNodepool"] = msc.GetNodepoolHandler
 	msc.SmartContract.RestHandlers["/getUserPools"] = msc.GetUserPoolsHandler
@@ -146,7 +146,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction, input []byte
 			Logger.Error(newMiner.BaseURL + "is not a valid URL. Please provide DNS name or IPV4 address")
 			return "", errors.New(newMiner.BaseURL + "is not a valid URL. Please provide DNS name or IPV4 address")
 		}
-		pool := NewDelegatePool()
+		pool := sci.NewDelegatePool()
 		transfer, _, err := pool.DigPool(t.Hash, t)
 		if err != nil {
 			return "", common.NewError("failed to add miner", fmt.Sprintf("error digging delegate pool: %v", err.Error()))
@@ -281,7 +281,7 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction, inp
 	if err != nil {
 		return "", common.NewError("failed to add to delegate pool", fmt.Sprintf("error getting user node: %v", err.Error()))
 	}
-	pool := NewDelegatePool()
+	pool := sci.NewDelegatePool()
 	pool.TokenLockInterface = &ViewChangeLock{Owner: t.ClientID}
 	pool.DelegateID = t.ClientID
 	pool.InterestRate = gn.InterestRate
