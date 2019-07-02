@@ -103,7 +103,7 @@ func (mc *Chain) SetLatestFinalizedBlock(ctx context.Context, b *block.Block) {
 	mc.SetRandomSeed(mr, b.RoundRandomSeed)
 	mc.AddRoundBlock(mr, b)
 	mc.AddNotarizedBlock(ctx, mr, b)
-	mc.LatestFinalizedBlock = b
+	mc.Chain.SetLatestFinalizedBlock(b)
 }
 
 func (mc *Chain) deleteTxns(txns []datastore.Entity) error {

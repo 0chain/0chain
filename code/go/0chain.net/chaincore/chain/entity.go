@@ -91,9 +91,13 @@ type Chain struct {
 	rounds      map[int64]round.RoundI
 	roundsMutex *sync.RWMutex
 
-	CurrentRound             int64        `json:"-"`
-	CurrentMagicBlock        *block.Block `json:"-"`
-	LatestFinalizedBlock     *block.Block `json:"latest_finalized_block,omitempty"` // Latest block on the chain the program is aware of
+	CurrentRound      int64        `json:"-"`
+	CurrentMagicBlock *block.Block `json:"-"`
+
+	LatestFinalizedBlock *block.Block `json:"latest_finalized_block,omitempty"` // Latest block on the chain the program is aware of
+	lfbMutex             sync.RWMutex
+	lfbSummary           *block.BlockSummary
+
 	LatestDeterministicBlock *block.Block `json:"latest_deterministic_block,omitempty"`
 
 	clientStateDeserializer state.DeserializerI
@@ -241,7 +245,7 @@ func Provider() datastore.Entity {
 /*Initialize - intializes internal datastructures to start again */
 func (c *Chain) Initialize() {
 	c.CurrentRound = 0
-	c.LatestFinalizedBlock = nil
+	c.SetLatestFinalizedBlock(nil)
 	c.CurrentMagicBlock = nil
 	c.BlocksToSharder = 1
 	c.VerificationTicketsTo = AllMiners
@@ -336,7 +340,7 @@ func (c *Chain) AddGenesisBlock(b *block.Block) {
 	if b.Round != 0 {
 		return
 	}
-	c.LatestFinalizedBlock = b // Genesis block is always finalized
+	c.SetLatestFinalizedBlock(b)
 	c.LatestDeterministicBlock = b
 	c.CurrentMagicBlock = b // Genesis block is always a magic block
 	c.blocks[b.Hash] = b
@@ -873,4 +877,26 @@ func (c *Chain) InitBlockState(b *block.Block) {
 	} else {
 		Logger.Info("init block state successful", zap.Int64("round", b.Round), zap.String("state", util.ToHex(b.ClientStateHash)))
 	}
+}
+
+//SetLatestFinalizedBlock - set the latest finalized block
+func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
+	c.lfbMutex.Lock()
+	defer c.lfbMutex.Unlock()
+	c.LatestFinalizedBlock = b
+	if b != nil {
+		c.lfbSummary = b.GetSummary()
+	}
+}
+
+func (c *Chain) GetLatestFinalizedBlock() *block.Block {
+	c.lfbMutex.RLock()
+	defer c.lfbMutex.RUnlock()
+	return c.LatestFinalizedBlock
+}
+
+func (c *Chain) GetLatestFinalizedBlockSummary() *block.BlockSummary {
+	c.lfbMutex.RLock()
+	defer c.lfbMutex.RUnlock()
+	return c.lfbSummary
 }
