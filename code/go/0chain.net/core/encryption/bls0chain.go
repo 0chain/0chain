@@ -161,3 +161,54 @@ func (b0 *BLS0ChainScheme) PairMessageHash(hash string) (*bls.GT, error) {
 	bls.Pairing(gt, g1, g2)
 	return gt, nil
 }
+
+//GenerateSplitKeys - implement interface
+func (b0 *BLS0ChainScheme) GenerateSplitKeys(numSplits int) ([]SignatureScheme, error) {
+	var primarySk bls.Fr
+	primarySk.SetLittleEndian(b0.privateKey)
+
+	splitKeys := make([]SignatureScheme, numSplits)
+	var sk bls.SecretKey
+
+	/*key := NewBLS0ChainScheme()
+	key.GenerateKeys()
+	splitKeys[0] = key
+	sk.SetLittleEndian(key.privateKey)
+	*/
+
+	//Generate all but one split keys and add the secret keys
+	for i := 0; i < numSplits-1; i++ {
+		key := NewBLS0ChainScheme()
+		key.GenerateKeys()
+		splitKeys[i] = key
+		var sk2 bls.SecretKey
+		sk2.SetLittleEndian(key.privateKey)
+		sk.Add(&sk2)
+	}
+	var aggregateSk bls.Fr
+	aggregateSk.SetLittleEndian(sk.GetLittleEndian())
+
+	//Subtract the aggregated private key from the primary private key to derive the last split private key
+	var lastSk bls.Fr
+	bls.FrSub(&lastSk, &primarySk, &aggregateSk)
+
+	lastKey := NewBLS0ChainScheme()
+	var lastSecretKey bls.SecretKey
+	lastSecretKey.SetLittleEndian(lastSk.Serialize())
+	lastKey.privateKey = lastSecretKey.GetLittleEndian()
+	lastSecretKey.SetLittleEndian(lastKey.privateKey)
+	lastKey.publicKey = lastSecretKey.GetPublicKey().Serialize()
+	splitKeys[numSplits-1] = lastKey
+	return splitKeys, nil
+}
+
+//AggregateSignatures - implement interface
+func (b0 *BLS0ChainScheme) AggregateSignatures(signatures []string) (string, error) {
+	var aggSign bls.Sign
+	for _, signature := range signatures {
+		var sign bls.Sign
+		sign.DeserializeHexStr(signature)
+		aggSign.Add(&sign)
+	}
+	return aggSign.SerializeToHexStr(), nil
+}
