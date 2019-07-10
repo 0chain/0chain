@@ -523,7 +523,7 @@ func (mpt *MerklePatriciaTrie) deleteAtNode(node Node, path Path) (Node, Key, er
 			mpt.deleteNode(cnode)
 			return mpt.insertNode(node, nnode)
 		default:
-			panic(fmt.Sprintf("unknown node type: %T %v", node, node))
+			panic(fmt.Sprintf("unknown node type: %T %v", cnode, cnode))
 		}
 	default:
 		panic(fmt.Sprintf("unknown node type: %T %v", node, node))
