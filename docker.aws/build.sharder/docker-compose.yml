@@ -3,13 +3,18 @@ services:
 
   cassandra:
     image: cassandra:3.11.4
+    container_name: ${AGENT_CONTAINER}-cassandra
+    
     networks:
     - default
-    ports:
-    - "9042:9042"
+
+    #Sharder/Cassandra port need to be synchronized
+    #ports:
+    #- "9042:9042"
+    
     volumes:
-    - /0chain/sharder/config/cassandra/cassandra.yaml:/etc/cassandra/cassandra.yaml
-    - /0chain/sharder/data/cassandra:/var/lib/cassandra
+    - /0chain/${AGENT_DIR}/config/cassandra/cassandra.yaml:/etc/cassandra/cassandra.yaml
+    - /0chain/${AGENT_DIR}/data/cassandra:/var/lib/cassandra
 
     healthcheck:
       test: ["CMD-SHELL", "[ $$(nodetool statusgossip) = running ]"]
@@ -23,8 +28,8 @@ services:
     #The service depends upon several cassandra utilities.
     image: cassandra:latest
     volumes:
-    - /0chain/sharder/bin:/0chain/bin
-    - /0chain/sharder/sql:/0chain/sql
+    - /0chain/${AGENT_DIR}/bin:/0chain/bin
+    - /0chain/${AGENT_DIR}/sql:/0chain/sql
 
     command: bash /0chain/bin/cassandra-init.sh
     
@@ -49,23 +54,25 @@ services:
       context: ${DOCKER_CODEBASE}
       dockerfile: ./docker.aws/build.sharder/Dockerfile
 
+    container_name: ${AGENT_CONTAINER}
+    
     image: ${IMAGE_NAME}:${IMAGE_TAG}
 
     pid: "host"
 
     volumes:
     #CONFIG_VOLUME
-    - /0chain/sharder/config:/0chain/config
+    - /0chain/${AGENT_DIR}/config:/0chain/config
 
     #SHARDER_LOG_VOLUME
-    - /0chain/sharder/log:/0chain/log
+    - /0chain/${AGENT_DIR}/log:/0chain/log
 
     #ROCKSDB_VOLUME
-    - /0chain/sharder/data/rocksdb:/0chain/data/rocksdb
-    - /0chain/sharder/data/rocksdb/state:/0chain/data/rocksdb/state
+    - /0chain/${AGENT_DIR}/data/rocksdb:/0chain/data/rocksdb
+    - /0chain/${AGENT_DIR}/data/rocksdb/state:/0chain/data/rocksdb/state
 
     #Use the blocks volume
-    - /0chain/sharder/data/blocks:/0chain/data/blocks
+    - /0chain/${AGENT_DIR}/data/blocks:/0chain/data/blocks
 
     #Hard and soft are required properties.
     ulimits:
@@ -80,7 +87,7 @@ services:
         max-file: "10"
 
     ports:
-    - "7171:7171"
+    - ${AGENT_PORT}:${AGENT_PORT}
 
     restart: ${RESTART_POLICY}
 
