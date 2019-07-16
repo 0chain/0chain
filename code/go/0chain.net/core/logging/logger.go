@@ -16,8 +16,12 @@ var (
 	MemUsage *zap.Logger
 
 	mLogger    *MemLogger
+	mHCLogger *MemLogger
 	mN2nLogger *MemLogger
 	mMLogger   *MemLogger
+
+	// Health-Check logger. Currently only used for sharder.
+	HCLogger *zap.Logger
 )
 
 //InitLogging - initialize the logging submodule
@@ -25,10 +29,12 @@ func InitLogging(mode string) {
 	var logName = "log/0chain.log"
 	var n2nLogName = "log/n2n.log"
 	var memLogName = "log/memUsage.log"
+	var hcLogName = "log/hc.log"
 
 	var logWriter = getWriteSyncer(logName)
 	var n2nLogWriter = getWriteSyncer(n2nLogName)
 	var memLogWriter = getWriteSyncer(memLogName)
+	var hcWriter = getWriteSyncer(hcLogName)
 
 	var cfg zap.Config
 	if mode != "development" {
@@ -61,6 +67,7 @@ func InitLogging(mode string) {
 		panic(err)
 	}
 
+
 	mn2ncfg := zap.NewProductionConfig()
 	mn2ncfg.Level.SetLevel(zapcore.InfoLevel)
 	mN2nLogger = createMemLogger(mn2ncfg)
@@ -79,7 +86,18 @@ func InitLogging(mode string) {
 		panic(err)
 	}
 
+	// Create health-check writer.
+	mhclcfg := zap.NewProductionConfig()
+	mhclcfg.Level.SetLevel(zapcore.ErrorLevel)
+	mHCLogger = createMemLogger(mhclcfg)
+	option = createOptionFromCores(createZapCore(hcWriter, cfg), mHCLogger.GetCore())
+	hcl, err := cfg.Build(option)
+	if err != nil {
+		panic(err)
+	}
+
 	Logger = l
+	HCLogger = hcl
 	N2n = ls
 	MemUsage = lu
 }

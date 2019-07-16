@@ -43,16 +43,6 @@ func (sc *Chain) WriteHealthCheckConfiguration(w http.ResponseWriter, scan Healt
 		config.Enabled)
 	fmt.Fprintf(w, "<tr><td>Repeat Interval (mins)</td><td class='string'>%v</td></tr>",
 		config.IntervalMins)
-	fmt.Fprintf(w, "<tr><td class='sheader' colspan=2'>Invocation History</td></tr>")
-	fmt.Fprintf(w, "<tr><td>Inception</td><td class='string'>%v</td></tr>",
-		cc.inception.Format(HealthCheckDateTimeFormat))
-	fmt.Fprintf(w, "<tr><td>Repeat Interval (mins)</td><td class='string'>%v</td></tr>",
-		config.IntervalMins)
-
-	fmt.Fprintf(w, "<tr><td>Cycle Count</td><td class='string'>%v</td></tr>", cc.CycleCount)
-	fmt.Fprintf(w, "<tr><td>Invocations</td><td class='string'>%v</td></tr>", cc.Invocations)
-
-	fmt.Fprintf(w, "<tr><td class='sheader' colspan=2'>Cycle Bounds</td></tr>")
 	fmt.Fprintf(w, "<tr><td>Batch Size</td><td class='string'>%v</td></tr>", config.BatchSize)
 
 	var window string
@@ -63,6 +53,16 @@ func (sc *Chain) WriteHealthCheckConfiguration(w http.ResponseWriter, scan Healt
 	}
 
 	fmt.Fprintf(w, "<tr><td>Scan Window Size</td><td class='string'>%v</td></tr>", window)
+
+	fmt.Fprintf(w, "<tr><td class='sheader' colspan=2'>Invocation History</td></tr>")
+	fmt.Fprintf(w, "<tr><td>Inception</td><td class='string'>%v</td></tr>",
+		cc.inception.Format(HealthCheckDateTimeFormat))
+	fmt.Fprintf(w, "<tr><td>Repeat Interval (mins)</td><td class='string'>%v</td></tr>",
+		config.IntervalMins)
+
+	fmt.Fprintf(w, "<tr><td>Cycle Count</td><td class='string'>%v</td></tr>", cc.CycleCount)
+
+	fmt.Fprintf(w, "<tr><td class='sheader' colspan=2'>Cycle Bounds</td></tr>")
 
 	fmt.Fprintf(w, "<tr><td>High Limit</td><td class='string'>%v</td></tr>", bounds.highRound)
 	fmt.Fprintf(w, "<tr><td>Low Limit</td><td class='string'>%v</td></tr>", bounds.lowRound)
@@ -84,7 +84,7 @@ func (sc *Chain) WriteHealthCheckBlockSummary(w http.ResponseWriter, scan Health
 	previous := &cc.counters.previous
 	fmt.Fprintf(w, "<table width='100%%'>")
 	fmt.Fprintf(w, "<tr>" +
-		"<td class='sheader' colspan=1'>Invocation Status</td>" +
+		"<td class='sheader' colspan=1'>Invocation History</td>" +
 		"<td class='sheader' colspan=1'>Current</td>" +
 		"<td class='sheader' colspan=1'>Previous</td>" +
 		"</tr>")
@@ -138,8 +138,12 @@ func (sc *Chain) WriteHealthCheckBlockSummary(w http.ResponseWriter, scan Health
 		currentElapsed,
 		previousElapsed)
 	fmt.Fprintf(w, "<tr>" +
-		"<td class='sheader' colspan=3'>Invocations Status</td>" +
+		"<td class='sheader' colspan=3'>HealthCheck Invocation Status</td>" +
 		"</tr>")
+	fmt.Fprintf(w, "<tr><td>Invocation Count</td>" +
+		"<td class='string'>%v</td><td class='string'>%v</td></tr>",
+		current.HealthCheckInvocations, previous.HealthCheckInvocations)
+
 	fmt.Fprintf(w, "<tr><td>Success</td>" +
 		"<td class='string'>%v</td><td class='string'>%v</td></tr>",
 		current.HealthCheckSuccess, previous.HealthCheckSuccess)

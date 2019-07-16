@@ -83,8 +83,9 @@ type BlockCounters struct {
 	//TxnSummaryRepairSuccess int64
 	//TxnSummaryRepairFailure int64
 
-	HealthCheckSuccess uint64
-	HealthCheckFailure uint64
+	HealthCheckInvocations uint64
+	HealthCheckSuccess     uint64
+	HealthCheckFailure     uint64
 
 	// Entity Counters.
 	block        EntityCounters
@@ -126,7 +127,7 @@ type CycleControl struct {
 	bounds    CycleBounds
 
 	CycleCount  int64
-	Invocations int64
+	// HealthCheckInvocations int64
 
 	BlockSyncTimer metrics.Timer
 
@@ -269,9 +270,6 @@ func (sc *Chain) initSyncStats(ctx context.Context, scanMode HealthCheckScan) {
 	// Update the cycle count.
 	cc.CycleCount++
 
-	// Clear the number of invocations for this next cycle
-	cc.Invocations = 0
-
 	// Copy current to previous cycle.
 	cc.counters.transfer()
 
@@ -295,9 +293,6 @@ func (sc *Chain) updateSyncStats(ctx context.Context, current int64, duration ti
 
 	// Get cycle control
 	cc := bss.getCycleControl(scanMode)
-
-	// Update the number of invocations
-	cc.Invocations++
 
 	// Update the timer. Common for both scans.
 	cc.BlockSyncTimer.Update(duration)
@@ -389,6 +384,8 @@ func (sc *Chain) hcUpdateBlockStatus(scanMode HealthCheckScan, status *BlockHeal
 	// Get cycle control
 	cc := bss.getCycleControl(scanMode)
 	current := &cc.counters.current
+	current.HealthCheckInvocations++
+
 	switch *status {
 	case HealthCheckSuccess:
 		current.HealthCheckSuccess++
@@ -458,8 +455,7 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 	}
 
 	// Check for block presence.
-	n := sc.GetActivesetSharder(self.GNode)
-	canShard := sc.IsBlockSharderFromHash(bs.Hash, n)
+	canShard := sc.IsBlockSharderFromHash(bs.Hash, self.Node)
 
 	needTxnSummary := false
 	// Check if the sharder has txn_summary
@@ -483,7 +479,7 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 		if needTxnSummary || canShard {
 			b = sc.requestBlock(ctx, r)
 			if b == nil {
-				Logger.Info("HC-MissingObject",
+				HCLogger.Info("HC-MissingObject",
 					zap.String("mode", cc.ScanMode.String()),
 					zap.Int64("cycle", cc.CycleCount),
 					zap.String("object", "Block"),

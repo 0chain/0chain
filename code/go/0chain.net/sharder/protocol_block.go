@@ -117,7 +117,7 @@ func (sc *Chain) syncRoundSummary(ctx context.Context, roundNum int64, roundRang
 		// Received reply for roundRange of blocks starting at roundNum
 		sc.storeRoundSummaries(ctx, rs)
 	} else {
-		Logger.Info("HC-MissingObject",
+		HCLogger.Info("HC-MissingObject",
 			zap.String("mode", cc.ScanMode.String()),
 			zap.Int64("cycle", cc.CycleCount),
 			zap.String("object", "RoundSummaries"),
@@ -147,7 +147,7 @@ func (sc *Chain) syncRoundSummary(ctx context.Context, roundNum int64, roundRang
 		}
 	} else {
 		// Missing round summary. Log it.
-		Logger.Info("HC-MissingObject",
+		HCLogger.Info("HC-MissingObject",
 			zap.String("mode", cc.ScanMode.String()),
 			zap.Int64("cycle", cc.CycleCount),
 			zap.String("object", "RoundSummary"),
@@ -163,7 +163,7 @@ func (sc *Chain) syncBlockSummary(ctx context.Context, r *round.Round, roundRang
 	cc := bss.getCycleControl(scan)
 	params := &url.Values{}
 	params.Add("round", strconv.FormatInt(r.Number, 10))
-	params.Add("range", strconv.Itoa(rRange))
+	params.Add("range", strconv.Itoa(roundRange))
 
 	// Step 1: Request range of
 	bs := sc.requestForBlockSummaries(ctx, params)
@@ -187,7 +187,7 @@ func (sc *Chain) syncBlockSummary(ctx context.Context, r *round.Round, roundRang
 		// Store errors will be displayed by the function.
 			sc.storeBlockSummary(ctx, blockS)
 	} else {
-		Logger.Info("HC-MissingObject",
+		HCLogger.Info("HC-MissingObject",
 			zap.String("mode", cc.ScanMode.String()),
 			zap.Int64("cycle", cc.CycleCount),
 			zap.String("object", "BlockSummary"),
@@ -247,7 +247,7 @@ func (sc *Chain) syncBlock(ctx context.Context, r *round.Round, canShard bool) *
 	var b *block.Block
 	b = sc.requestForBlock(ctx, params, r)
 	if b == nil {
-		Logger.Info("HC-MissingObject",
+		HCLogger.Info("HC-MissingObject",
 			zap.String("mode", cc.ScanMode.String()),
 			zap.Int64("cycle", cc.CycleCount),
 			zap.String("object", "Block"),
