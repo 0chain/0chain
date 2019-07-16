@@ -179,7 +179,7 @@ func (sc *Chain) WriteHealthCheckBlockSummary(w http.ResponseWriter, scan Health
 		"<td class='string'>%v</td><td class='string'>%v</td></tr>",
 		current.blockSummary.RepairFailure, previous.blockSummary.RepairFailure)
 	fmt.Fprintf(w, "<tr>" +
-		"<td class='sheader' colspan=3'>Transcation Summary</td>" +
+		"<td class='sheader' colspan=3'>Transaction Summary</td>" +
 		"</tr>")
 	fmt.Fprintf(w, "<tr><td>Missing</td>" +
 		"<td class='string'>%v</td><td class='string'>%v</td></tr>",

@@ -473,10 +473,12 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 	// The sharder needs txn_summary. Get the block
 	b, foundBlock := sc.hasBlock(bs.Hash, r.Number)
 	if foundBlock == false {
-		// The sharder doesn't have the block.
-		current.block.Missing++
-
 		if needTxnSummary || canShard {
+			// The sharder doesn't have the block.
+			// It needs a block either to fix txnsummary or missing block
+			// that it should have sharded.
+			current.block.Missing++
+
 			b = sc.requestBlock(ctx, r)
 			if b == nil {
 				HCLogger.Info("HC-MissingObject",
