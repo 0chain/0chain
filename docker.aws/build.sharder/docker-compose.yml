@@ -24,6 +24,8 @@ services:
 
     privileged: true
 
+    environment:
+    - JVM_OPTS=${CASSANDRA_JVM_OPTS}
   cassandra-init:
     #The service depends upon several cassandra utilities.
     image: cassandra:latest

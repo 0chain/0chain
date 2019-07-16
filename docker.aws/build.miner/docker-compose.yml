@@ -52,6 +52,8 @@ services:
     build:
       context: ${DOCKER_CODEBASE}
       dockerfile: ./docker.aws/build.miner/Dockerfile
+      args:
+        image_tag: ${PRIMARY_TAG}
 
     container_name: ${AGENT_CONTAINER}
     
@@ -93,7 +95,7 @@ services:
 
     #Start under user 0chain
     user: ${ZCHAIN_USER}:${ZCHAIN_GROUP}
-    command: /0chain/bin/miner  --deployment_mode 0 --keys_file /0chain/config/miner.txt --nodes_file config/nodes
+    command: /0chain/bin/miner  --deployment_mode 0 --keys_file /0chain/config/miner.txt
 
 networks:
   default:

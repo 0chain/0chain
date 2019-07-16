@@ -13,6 +13,25 @@ const (
 	BlockProposalWaitDynamic = iota
 )
 
+type HealthCheckScan int
+const (
+	DeepScan HealthCheckScan = iota
+	ProximityScan
+)
+
+type HealthCheckCycleScan struct {
+	Enabled bool `json:"scan_enable"`
+	BatchSize int `json:"batch_size"`
+
+	Window int64 `json:"scan_window"`
+
+	Interval time.Duration `json:"scan_interval"`
+	IntervalMins int `json:"scan_interval_mins"`
+
+	ReportStatusMins int `json:report_status_mins`
+	ReportStatus time.Duration `json:report_status`
+}
+
 //Config - chain Configuration
 type Config struct {
 	OwnerID                  datastore.Key `json:"owner_id"`                  // Client who created this chain
@@ -32,8 +51,26 @@ type Config struct {
 	RoundRange               int64         `json:"round_range"`                  // blocks are stored in separate directory for each range of rounds
 	BlocksToSharder          int           `json:"blocks_to_sharder"`            // send finalized or notarized blocks to sharder
 	VerificationTicketsTo    int           `json:"verification_tickets_to"`      // send verification tickets to generator or all miners
-	HealthyRoundNumber       int64         `json:"healthy_round"`                // indicates the round number below which the chain has all blocks stored
-	BatchSyncSize            int           `json:"batch_sync_size"`              // gives the batch size for syncing
+
+	// Health Check switches
+	HC_CycleScan               [2]HealthCheckCycleScan
+
+	//HC_ScanWindow              [2]int64 `json:"health_check_scan_window"`  // indicates the cycle window
+	//HC_ScanIntervalMinutes     [2]int
+	//HC_ScanInterval            [2]time.Duration
+	//
+	//// HC_ProximityScanWindow     int64 `json:"health_partial_scan_window"` // indicates partial scan
+	//
+	//BatchSyncSize            int   `json:"batch_sync_size"`           // gives the batch size for syncing
+	//
+	//HC_CycleRepeatMinutes  int  `json:"health_check_cycle_repeat"` // Repeat entire health check in minutes
+	//HC_CycleRepeat 		   time.Duration  `json:"-"` // Repeat entire health check in time.Duration
+	//
+	//HC_CycleHiatusMinutes  int  `json:"health_check_cycle_hiatus"` // gives healthcheck hiatus in minutes
+	//HC_CycleHiatus         time.Duration  `json:"-"` // gives healthcheck hiatus in time.Duration
+
+	HealthShowCounters     bool `json:"health_show_counters"`      // display detail counters
+
 	BlockProposalMaxWaitTime time.Duration `json:"block_proposal_max_wait_time"` // max time to wait to receive a block proposal
 	BlockProposalWaitMode    int8          `json:"block_proposal_wait_mode"`     // wait time for the block proposal is static (0) or dynamic (1)
 

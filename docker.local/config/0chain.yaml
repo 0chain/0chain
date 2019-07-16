@@ -41,13 +41,13 @@ server_chain:
     max_block_size: 100
     max_byte_size: 1638400
     generators: 2
-    #replicators: 3
-    replicators: 0
+    replicators: 3
+    #replicators: 0
     generation:
       timeout: 15
       retry_wait_time: 5 #milliseconds
     proposal:
-      max_wait_time: 180 # milliseconds
+      max_wait_time: 500 # milliseconds
       wait_mode: static # static or dynamic
     consensus:
       threshold_by_count: 66 # percentage
@@ -79,8 +79,19 @@ server_chain:
   smart_contract:
     timeout: 50 # milliseconds
   health_check:
-    round: 1
-    batch_sync_size: 50
+    show_counters: true
+    deep_scan:
+      enabled: true
+      window: 0 #Full scan till round 0
+      interval_mins: 3 #minutes
+      report_status_mins: 1 #minutes
+      batch_size: 500
+    proximity_scan:
+      enabled: true
+      window: 100 #number of blocks
+      interval_mins: 1 #minutes
+      report_status_mins: 1 #minutes
+      batch_size: 20
 
 network:
   nodes_file: config/single_machine_3_nodes.yaml
@@ -93,4 +104,4 @@ network:
   user_handlers:
     rate_limit: 10 # 1 per second
   n2n_handlers:
-    rate_limit: 100 # 10 per second
+    rate_limit: 1000 # 1000 per second
