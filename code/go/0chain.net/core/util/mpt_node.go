@@ -382,7 +382,12 @@ func (fn *FullNode) index(c byte) byte {
 	if c >= 97 && c <= 102 {
 		return 10 + c - 97
 	}
-	panic("Invalid byte for index in Patricia Merkle Trie")
+
+	if c >= 65 && c <= 70 {
+		return 10 + c - 65
+	}
+
+	panic(fmt.Sprintf("Invalid byte %v for index in Patricia Merkle Trie", c))
 }
 
 func (fn *FullNode) indexToByte(idx byte) byte {
