@@ -8,8 +8,6 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	. "0chain.net/core/logging"
-	"go.uber.org/zap"
 )
 
 const (
@@ -54,13 +52,10 @@ func getWalletKey(clientID string) datastore.Key {
 
 func (w Wallet) valid(forClientID string) (bool, error) {
 	if w.ClientID != forClientID {
-		Logger.Info("MultisigWallet Client ID is not same", zap.Any("w.ClientID", w.ClientID), zap.Any("forClientId", forClientID))
 		return false, common.NewError("client_id_doesnot_match", "Multisig Wallet client ID is different than the requesting client ID")
 	}
 
 	if !isPublicKeyForClientID(w.PublicKey, w.ClientID) {
-		Logger.Info("MultisigWallet isPublicKeyForClientID failed", zap.Any("w.ClientID", w.ClientID), zap.Any("w.PublicKey", w.PublicKey))
-
 		return false, common.NewError("client_id_public_key_no_match", "the client id and the public key in the wallet do not match")
 	}
 
@@ -71,32 +66,26 @@ func (w Wallet) valid(forClientID string) (bool, error) {
 		return false, common.NewError("signers_id_and_signer_public_key_no_match", "number of signer client ids and the the signer public keys do not match")
 	}
 	if numIds > MaxSigners {
-		Logger.Info("MultisigWallet Error in Maxsigners check")
 		return false, common.NewError("num_ids_too-many", "number of signer client ids is more than the maximum number of signers")
 	}
 
 	if w.NumRequired < 2 {
-		Logger.Info("MultisigWallet Error in num required less check")
 		return false, common.NewError("signers_required_too_less", "number of signers required is less than 2")
 	}
 	if w.NumRequired > numIds {
-		Logger.Info("MultisigWallet Error in NumRequired check")
 		return false, common.NewError("too_many_signers_required", "number of signers required is less than 2")
 	}
 
 	if hasDuplicates(w.SignerThresholdIDs) {
-		Logger.Info("MultisigWallet Error in SignerThresholdIDs check")
 		return false, common.NewError("duplicate_signer_ids", "duplicate threshold ids present")
 	}
 	if hasDuplicates(w.SignerPublicKeys) {
-		Logger.Info("MultisigWallet Error in duplicate publicIds check")
 		return false, common.NewError("duplicate_signers", "duplicate signers are present")
 	}
 
 	if !encryption.IsValidSignatureScheme(w.SignatureScheme) ||
 		!encryption.IsValidThresholdSignatureScheme(w.SignatureScheme) ||
 		!encryption.IsValidReconstructSignatureScheme(w.SignatureScheme) {
-		Logger.Info("MultisigWallet Error in validscheme check", zap.String("scheme", w.SignatureScheme))
 		return false, common.NewError("signature_scheme_not_supported", "signature scheme of the wallet does not support multisig")
 	}
 
@@ -104,7 +93,6 @@ func (w Wallet) valid(forClientID string) (bool, error) {
 		scheme := encryption.GetSignatureScheme(w.SignatureScheme)
 		err := scheme.SetPublicKey(key)
 		if err != nil {
-			Logger.Info("MultisigWallet Error in checking signerPublicKeys", zap.Any("key", key))
 			return false, err
 		}
 	}
@@ -112,19 +100,15 @@ func (w Wallet) valid(forClientID string) (bool, error) {
 	if len(w.ClientID) > MaxFieldSize ||
 		len(w.SignatureScheme) > MaxFieldSize ||
 		len(w.PublicKey) > MaxFieldSize {
-		Logger.Info("MultisigWallet Error in MaxFieldSize check")
-
 		return false, common.NewError("too_many_signers", "Wallet has more than 256 ClientIDs or signature schemes or public keys")
 	}
 	for _, id := range w.SignerThresholdIDs {
 		if len(id) > MaxFieldSize {
-			Logger.Info("MultisigWallet Error in MaxFieldSize check", zap.Int("num_threshold_ids", len(id)))
 			return false, common.NewError("too_many_threshold_ids", "wallet has more than 256 threshold id fields")
 		}
 	}
 	for _, key := range w.SignerPublicKeys {
 		if len(key) > MaxFieldSize {
-			Logger.Info("MultisigWallet Error in MaxFieldSize 3 check")
 			return false, common.NewError("too_many_signer_keys", "wallet has more than 256 signer key fields")
 		}
 	}
@@ -149,7 +133,6 @@ func hasDuplicates(ss []string) bool {
 	exists := make(map[string]bool, len(ss))
 	for _, s := range ss {
 		if exists[s] {
-			Logger.Info("MultisigWallet register has duplicates", zap.String("s", s))
 			return true
 		}
 		exists[s] = true

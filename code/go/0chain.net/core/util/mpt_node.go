@@ -387,7 +387,7 @@ func (fn *FullNode) index(c byte) byte {
 		return 10 + c - 65
 	}
 
-	panic(fmt.Sprintf("Invalid byte %v for index in Patricia Merkle Trie", c))
+	panic(fmt.Sprintf("Invalid byte for index in Patricia Merkle Trie"))
 }
 
 func (fn *FullNode) indexToByte(idx byte) byte {

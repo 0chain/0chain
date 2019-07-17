@@ -79,11 +79,9 @@ func (ms MultiSigSmartContract) register(registeringClientID string, inputData [
 	isValid, err := w.valid(registeringClientID)
 
 	if err != nil {
-		Logger.Info("MultisigWallet register is not valid", zap.Error(err))
 		return "", err
 	}
 	if !isValid {
-		Logger.Info("MultisigWallet register is Not valid")
 		//if there are no errors, it should be valid
 		return "err_register_invalid: invalid request", common.NewError("err_register_invalid", "invalid request")
 	}
@@ -94,7 +92,6 @@ func (ms MultiSigSmartContract) register(registeringClientID string, inputData [
 	if err != nil {
 		// I/O error.
 		if err != util.ErrValueNotPresent && err != util.ErrNodeNotFound {
-			Logger.Info("MultisigWallet register already exists -I/O error", zap.Error(err))
 			return "", err
 		} //else means no wallet exists
 	}
@@ -105,11 +102,8 @@ func (ms MultiSigSmartContract) register(registeringClientID string, inputData [
 	err = ms.putWallet(w, balances)
 	if err != nil {
 		// I/O error.
-		Logger.Info("MultisigWallet register putWallet error", zap.Error(err))
 		return "", err
 	}
-
-	Logger.Info("MultisigWallet registered")
 
 	return "success: multi-signature wallet registered", nil
 }
@@ -156,7 +150,6 @@ func (ms MultiSigSmartContract) vote(currentTxnHash, signingClientID string, now
 
 	// Check if the proposal was already finished, making this vote unnecessary.
 	if p.ExecutedInTxnHash != "" {
-		Logger.Info("Vote success, but not necessary")
 		return "success 0: proposal previously executed in transaction hash " + p.ExecutedInTxnHash, nil
 	}
 
@@ -429,10 +422,8 @@ func (ms MultiSigSmartContract) walletExists(clientID string, balances c_state.S
 	}
 
 	if walletBytes != nil {
-		Logger.Info("MultisigWallet wallet does not exist", zap.String("ClientID", clientID), zap.String("WalletBytes", string(walletBytes.Encode())))
 		return true, nil
 	}
-	Logger.Info("MultisigWallet wallet does not exist", zap.String("ClientID", clientID))
 	return false, nil
 
 }
