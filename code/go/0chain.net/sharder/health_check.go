@@ -119,6 +119,31 @@ type CycleBounds struct {
 	highRound    int64
 }
 
+type RangeBounds struct {
+	roundLow int64
+	roundHigh int64
+	roundRange int64
+}
+
+func GetRangeBounds(roundEdge int64, roundRange int64) RangeBounds {
+	var bounds RangeBounds
+	if roundRange > 0 {
+		bounds.roundLow = roundEdge
+		bounds.roundHigh = roundEdge + roundRange
+	} else {
+		bounds.roundHigh = roundEdge
+		bounds.roundLow = roundEdge + roundRange
+	}
+	if bounds.roundHigh <= 0 {
+		bounds.roundHigh = 1
+	}
+	if bounds.roundLow <= 0 {
+		bounds.roundLow = 1
+	}
+	bounds.roundRange = bounds.roundHigh - bounds.roundLow + 1
+	return bounds
+}
+
 type CycleControl struct {
 	ScanMode HealthCheckScan
 	Status   HealthCheckStatus
@@ -166,22 +191,36 @@ func (sc *Chain) setCycleBounds(ctx context.Context, scanMode HealthCheckScan) {
 	config := &sc.HC_CycleScan[scanMode]
 	cb.window = config.Window
 
-	roundEntity, err := sc.GetMostRecentRoundFromDB(ctx)
-	if err == nil {
-		cb.highRound = roundEntity.Number
+	//roundEntity, err := sc.GetMostRecentRoundFromDB(ctx)
+	round := sc.GetLatestFinalizedBlock().Round
+	cb.highRound = round
+	if round == 0 {
+		cb.highRound = 1
+	}
 
-		// Start from the high round
-		cb.currentRound = cb.highRound
-		if cb.window == 0 || cb.window > cb.highRound {
-			// Cover entire blockchain.
-			cb.lowRound = 1
-		} else {
-			cb.lowRound = cb.highRound - cb.window + 1
-		}
+	// Start from the high round
+	cb.currentRound = cb.highRound
+	if cb.window == 0 || cb.window > cb.highRound {
+		// Cover entire blockchain.
+		cb.lowRound = 1
+	} else {
+		cb.lowRound = cb.highRound - cb.window + 1
 	}
 }
 
 /*HealthCheckWorker - checks the health for each round*/
+func (sc *Chain)HealthCheckSetup(ctx context.Context, scanMode HealthCheckScan) {
+	bss := sc.BlockSyncStats
+
+	// Get cycle control
+	cc := bss.getCycleControl(scanMode)
+
+	// Update the scan mode.
+	cc.ScanMode = scanMode
+
+	cc.BlockSyncTimer = metrics.GetOrRegisterTimer(scanMode.String(), nil)
+
+}
 
 func (sc *Chain) HealthCheckWorker(ctx context.Context, scanMode HealthCheckScan) {
 	bss := sc.BlockSyncStats
@@ -192,8 +231,11 @@ func (sc *Chain) HealthCheckWorker(ctx context.Context, scanMode HealthCheckScan
 	// Get cycle control
 	cc := bss.getCycleControl(scanMode)
 
-	// Update the scan mode.
-	cc.ScanMode = scanMode
+	// Wait for the settling period.
+	time.Sleep(config.Settle)
+
+	// Setup inception
+
 	cc.inception = time.Now()
 
 	if config.Enabled == false {
@@ -208,8 +250,6 @@ func (sc *Chain) HealthCheckWorker(ctx context.Context, scanMode HealthCheckScan
 		}
 	}
 
-	cc.BlockSyncTimer = metrics.GetOrRegisterTimer(scanMode.String(), nil)
-
 	// Set the cycle bounds
 	sc.setCycleBounds(ctx, scanMode)
 	cb := &cc.bounds
@@ -223,7 +263,7 @@ func (sc *Chain) HealthCheckWorker(ctx context.Context, scanMode HealthCheckScan
 
 	Logger.Info("HC-Init",
 		zap.String("mode", scanMode.String()),
-		zap.Int("batch-size", config.BatchSize),
+		zap.Int64("batch-size", config.BatchSize),
 		zap.Int("interval", config.IntervalMins))
 
 	// Initial setup
@@ -312,11 +352,6 @@ func (sc *Chain) waitForWork(ctx context.Context, scanMode HealthCheckScan) {
 	bounds := cc.bounds
 
 	for true {
-		if bounds.currentRound > bounds.lowRound {
-			// Not reached the round bounds.
-			break;
-		}
-
 		// Log end of the current cycle
 		bc.CycleEnd = time.Now().Truncate(time.Second)
 		bc.CycleDuration = time.Since(bc.CycleStart).Truncate(time.Second)
@@ -420,7 +455,7 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 		current.roundSummary.Missing++
 
 		// No round found. Fetch the round summary and round information.
-		r = sc.syncRoundSummary(ctx, rNum, config.BatchSize, scanMode)
+		r = sc.syncRoundSummary(ctx, rNum, -config.BatchSize, scanMode)
 		if r == nil {
 			current.roundSummary.RepairFailure++
 		} else {
@@ -440,7 +475,7 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 		current.blockSummary.Missing++
 
 		// Missing block summary. Sync the blocks
-		bs = sc.syncBlockSummary(ctx, r, config.BatchSize, scanMode)
+		bs = sc.syncBlockSummary(ctx, r, -config.BatchSize, scanMode)
 		if bs != nil {
 			current.blockSummary.RepairSuccess++
 		} else {

@@ -9,9 +9,8 @@ import (
 
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
-	"0chain.net/core/ememorystore"
 	"0chain.net/core/util"
-	metrics "github.com/rcrowley/go-metrics"
+	"github.com/rcrowley/go-metrics"
 
 	"0chain.net/chaincore/config"
 	"0chain.net/sharder/blockstore"
@@ -102,13 +101,13 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 	sc.AddNotarizedBlock(ctx, er, b)
 }
 
-func (sc *Chain) syncRoundSummary(ctx context.Context, roundNum int64, roundRange int, scan HealthCheckScan) *round.Round {
+func (sc *Chain) syncRoundSummary(ctx context.Context, roundNum int64, roundRange int64, scan HealthCheckScan) *round.Round {
 	bss := sc.BlockSyncStats
 	// Get cycle control
 	cc := bss.getCycleControl(scan)
 	params := &url.Values{}
 	params.Add("round", strconv.FormatInt(roundNum, 10))
-	params.Add("range", strconv.Itoa(roundRange))
+	params.Add("range", strconv.FormatInt(roundRange, 10))
 
 	// Send request to all sharders requesting round summary
 	rs := sc.requestForRoundSummaries(ctx, params)
@@ -122,7 +121,7 @@ func (sc *Chain) syncRoundSummary(ctx context.Context, roundNum int64, roundRang
 			zap.Int64("cycle", cc.CycleCount),
 			zap.String("object", "RoundSummaries"),
 			zap.Int64("round", roundNum),
-			zap.Int("range", roundRange))
+			zap.Int64("range", roundRange))
 		return nil
 	}
 
@@ -133,8 +132,8 @@ func (sc *Chain) syncRoundSummary(ctx context.Context, roundNum int64, roundRang
 	}
 	// Have round summary - Request for round information
 	params.Del("range")
-		r = sc.requestForRound(ctx, params)
-		if sc.isValidRound(r) {
+	r = sc.requestForRound(ctx, params)
+	if sc.isValidRound(r) {
 		err := sc.StoreRound(ctx, r)
 		if err != nil {
 			Logger.Error("HC-DSWriteFailure",
@@ -157,17 +156,16 @@ func (sc *Chain) syncRoundSummary(ctx context.Context, roundNum int64, roundRang
 	return r
 }
 
-func (sc *Chain) syncBlockSummary(ctx context.Context, r *round.Round, roundRange int, scan HealthCheckScan) *block.BlockSummary {
+func (sc *Chain) syncBlockSummary(ctx context.Context, r *round.Round, roundRange int64, scan HealthCheckScan) *block.BlockSummary {
 	bss := sc.BlockSyncStats
 	// Get cycle control
 	cc := bss.getCycleControl(scan)
 	params := &url.Values{}
 	params.Add("round", strconv.FormatInt(r.Number, 10))
-	params.Add("range", strconv.Itoa(roundRange))
+	params.Add("range", strconv.FormatInt(roundRange, 10))
 
 	// Step 1: Request range of
 	bs := sc.requestForBlockSummaries(ctx, params)
-
 	if bs != nil {
 		sc.storeBlockSummaries(ctx, bs)
 	}
@@ -182,10 +180,10 @@ func (sc *Chain) syncBlockSummary(ctx context.Context, r *round.Round, roundRang
 	params.Del("range")
 	params.Add("hash", r.BlockHash)
 
-		blockS = sc.requestForBlockSummary(ctx, params)
-		if blockS != nil {
+	blockS = sc.requestForBlockSummary(ctx, params)
+	if blockS != nil {
 		// Store errors will be displayed by the function.
-			sc.storeBlockSummary(ctx, blockS)
+		sc.storeBlockSummary(ctx, blockS)
 	} else {
 		HCLogger.Info("HC-MissingObject",
 			zap.String("mode", cc.ScanMode.String()),
@@ -204,9 +202,10 @@ func (sc *Chain) requestBlock(ctx context.Context, r *round.Round) *block.Block 
 	params.Add("hash", r.BlockHash)
 
 	var b *block.Block
-		b = sc.requestForBlock(ctx, params, r)
+	b = sc.requestForBlock(ctx, params, r)
 	return b
-		}
+}
+
 //func (sc *Chain) storeBlock(ctx context.Context, r *round.Round, canShard bool) *block.Block {
 //	bss := sc.BlockSyncStats
 //	params := &url.Values{}
@@ -384,47 +383,85 @@ func (sc *Chain) requestForBlock(ctx context.Context, params *url.Values, r *rou
 }
 
 func (sc *Chain) storeRoundSummaries(ctx context.Context, rs *RoundSummaries) {
-	roundEntityMetadata := datastore.GetEntityMetadata("round")
+	//roundEntityMetadata := datastore.GetEntityMetadata("round")
+	//
+	//rsEntities := make([]datastore.Entity, 0, 1)
+	Logger.Debug("HC-StoreRoundSummaries",
+		zap.Int("round-count", len(rs.RSummaryList)))
 
-	rsEntities := make([]datastore.Entity, 0, 1)
 	for _, roundS := range rs.RSummaryList {
 		if roundS != nil {
-			rsEntities = append(rsEntities, roundS)
+			_, present := sc.hasRoundSummary(ctx, roundS.Number)
+			// Store only rounds that are not present.
+			if present == false {
+				Logger.Debug("HC-StoreRoundSummaries",
+					zap.String("object", "RoundSummary"),
+					zap.Int64("round", roundS.Number),
+					zap.String("hash", roundS.BlockHash))
+				sc.StoreRound(ctx, roundS)
+			}
+		} else {
+			Logger.Debug("HC-StoreRoundSummaries",
+				zap.String("round", "nil"))
 		}
 	}
 
-	if len(rsEntities) > 0 {
-		rsStore := roundEntityMetadata.GetStore()
-		rsctx := ememorystore.WithEntityConnection(ctx, roundEntityMetadata)
-		defer ememorystore.Close(rsctx)
-		err := rsStore.MultiWrite(rsctx, roundEntityMetadata, rsEntities)
-		if err != nil {
-			Logger.Info("write round summaries failed", zap.Error(err))
-		}
-		Logger.Info("write round summaries successful")
-	}
+	//if len(rsEntities) > 0 {
+	//	rsStore := roundEntityMetadata.GetStore()
+	//	rsctx := ememorystore.WithEntityConnection(ctx, roundEntityMetadata)
+	//	defer ememorystore.Close(rsctx)
+	//	err := rsStore.MultiWrite(rsctx, roundEntityMetadata, rsEntities)
+	//	if err != nil {
+	//		Logger.Info("write round summaries failed", zap.Error(err))
+	//	}
+	//	Logger.Info("write round summaries successful")
+	//}
 }
 
 func (sc *Chain) storeBlockSummaries(ctx context.Context, bs *BlockSummaries) {
-	blockSummaryEntityMetadata := datastore.GetEntityMetadata("block_summary")
+	Logger.Debug("HC-StoreBlockSummaries",
+		zap.Int("round-count", len(bs.BSummaryList)))
 
-	bsEntities := make([]datastore.Entity, 0, 1)
 	for _, blockS := range bs.BSummaryList {
 		if blockS != nil {
-			bsEntities = append(bsEntities, blockS)
+			_, present := sc.hasBlockSummary(ctx, blockS.Hash)
+			if present == false {
+				Logger.Debug("HC-StoreBlockSummaries",
+					zap.String("object", "BlockSummary"),
+					zap.Int64("block", blockS.Round),
+					zap.String("hash", blockS.Hash))
+				storeError := sc.StoreBlockSummary(ctx, blockS)
+				if storeError != nil {
+					HCLogger.Error("HC-StoreBlockSummary",
+						zap.Int64("round", blockS.Round),
+						zap.String("hash", blockS.Hash),
+						zap.Error(storeError))
+				}
+			}
+		} else {
+			Logger.Debug( "HC-StoreBlockSummaries",
+			zap.String("blockSummary", "nil"))
 		}
 	}
-
-	if len(bsEntities) > 0 {
-		bsStore := blockSummaryEntityMetadata.GetStore()
-		bsctx := ememorystore.WithEntityConnection(ctx, blockSummaryEntityMetadata)
-		defer ememorystore.Close(bsctx)
-		err := bsStore.MultiWrite(bsctx, blockSummaryEntityMetadata, bsEntities)
-		if err != nil {
-			Logger.Info("write block summaries failed", zap.Error(err))
-		}
-		Logger.Info("write block summaries successful")
-	}
+	//blockSummaryEntityMetadata := datastore.GetEntityMetadata("block_summary")
+	//
+	//bsEntities := make([]datastore.Entity, 0, 1)
+	//for _, blockS := range bs.BSummaryList {
+	//	if blockS != nil {
+	//		bsEntities = append(bsEntities, blockS)
+	//	}
+	//}
+	//
+	//if len(bsEntities) > 0 {
+	//	bsStore := blockSummaryEntityMetadata.GetStore()
+	//	bsctx := ememorystore.WithEntityConnection(ctx, blockSummaryEntityMetadata)
+	//	defer ememorystore.Close(bsctx)
+	//	err := bsStore.MultiWrite(bsctx, blockSummaryEntityMetadata, bsEntities)
+	//	if err != nil {
+	//		Logger.Info("write block summaries failed", zap.Error(err))
+	//	}
+	//	Logger.Info("write block summaries successful")
+	//}
 }
 
 func (sc *Chain) storeRoundSummary(ctx context.Context, r *round.Round) {
@@ -454,12 +491,12 @@ func (sc *Chain) storeBlockSummary(ctx context.Context, bs *block.BlockSummary) 
 
 func (sc *Chain) storeBlock(ctx context.Context, b *block.Block) error {
 	var err error
-		err = blockstore.GetStore().Write(b)
-		if err == nil {
+	err = blockstore.GetStore().Write(b)
+	if err == nil {
 		sc.SharderStats.RepairBlocksCount++
 	} else {
 		sc.SharderStats.RepairBlocksFailure++
-		}
+	}
 	return err
 	//	if err == nil {
 	//		return

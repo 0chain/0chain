@@ -18,6 +18,11 @@ func SetupWorkers(ctx context.Context) {
 	go sc.BlockWorker(ctx)              // 1) receives incoming blocks from the network
 	go sc.FinalizeRoundWorker(ctx, sc)  // 2) sequentially finalize the rounds
 	go sc.FinalizedBlockWorker(ctx, sc) // 3) sequentially processes finalized blocks
+
+	// Setup the deep and proximity scan
+	go sc.HealthCheckSetup(ctx, DeepScan)
+	go sc.HealthCheckSetup(ctx, ProximityScan)
+
 }
 
 /*BlockWorker - stores the blocks */

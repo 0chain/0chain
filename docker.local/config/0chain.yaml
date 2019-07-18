@@ -1,7 +1,7 @@
 version: 1.0
 
 logging:
-  level: "info"
+  level: "debug"
   console: false # printing log to console is only supported in development mode
   goroutines: false
   memlog: false
@@ -81,17 +81,19 @@ server_chain:
   health_check:
     show_counters: true
     deep_scan:
-      enabled: true
+      enabled: false
+      settle_secs: 30
       window: 0 #Full scan till round 0
       interval_mins: 3 #minutes
       report_status_mins: 1 #minutes
-      batch_size: 500
+      batch_size: 50
     proximity_scan:
       enabled: true
+      settle_secs: 30
       window: 0 #number of blocks
       interval_mins: 1 #minutes
       report_status_mins: 1 #minutes
-      batch_size: 500
+      batch_size: 50
 
 network:
   nodes_file: config/single_machine_3_nodes.yaml

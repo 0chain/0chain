@@ -199,8 +199,11 @@ func NewChainFromConfig() *Chain {
 	config := &chain.HC_CycleScan[DeepScan]
 
 	config.Enabled = viper.GetBool("server_chain.health_check.deep_scan.enabled")
-	config.BatchSize = viper.GetInt("server_chain.health_check.deep_scan.batch_size")
+	config.BatchSize = viper.GetInt64("server_chain.health_check.deep_scan.batch_size")
 	config.Window = viper.GetInt64("server_chain.health_check.deep_scan.window")
+
+	config.SettleSecs = viper.GetInt("server_chain.health_check.deep_scan.settle_secs")
+	config.Settle = time.Duration(config.SettleSecs) * time.Second
 
 	config.IntervalMins = viper.GetInt("server_chain.health_check.deep_scan.interval_mins")
 	config.Interval = time.Duration(config.IntervalMins) * time.Minute
@@ -212,8 +215,11 @@ func NewChainFromConfig() *Chain {
 	config = &chain.HC_CycleScan[ProximityScan]
 
 	config.Enabled = viper.GetBool("server_chain.health_check.proximity_scan.enabled")
-	config.BatchSize = viper.GetInt("server_chain.health_check.proximity_scan.batch_size")
+	config.BatchSize = viper.GetInt64("server_chain.health_check.proximity_scan.batch_size")
 	config.Window = viper.GetInt64("server_chain.health_check.proximity_scan.window")
+
+	config.SettleSecs = viper.GetInt("server_chain.health_check.proximity_scan.settle_secs")
+	config.Settle = time.Duration(config.SettleSecs) * time.Second
 
 	config.IntervalMins = viper.GetInt("server_chain.health_check.proximity_scan.interval_mins")
 	config.Interval = time.Duration(config.IntervalMins) * time.Minute

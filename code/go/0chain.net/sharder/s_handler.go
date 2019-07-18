@@ -52,64 +52,86 @@ func SetupS2SResponders() {
 	http.HandleFunc("/v1/_s2s/blocksummaries/get", node.ToN2NSendEntityHandler(BlockSummariesHandler))
 }
 
+
 func RoundSummariesHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	sc := GetSharderChain()
-	roundValue := r.FormValue("round")
-	roundRange := r.FormValue("range")
-	roundNum, err := strconv.ParseInt(roundValue, 10, 64)
-	var rRange int
-	rRange, err = strconv.Atoi(roundRange)
+
+	var roundRange int64
+	var err error
+	roundEdgeValue := r.FormValue("round")
+	roundRangeValue := r.FormValue("range")
+	roundEdge, err := strconv.ParseInt(roundEdgeValue, 10, 64)
 	if err == nil {
-		beginR := roundNum
-		if rRange < 0 {
-			rRange = -rRange
-			beginR = roundNum - int64(rRange)
-			if beginR < 1 {
-				beginR = 1
-			}
-		}
-		roundS := sc.getRoundSummaries(beginR, rRange)
-		Logger.Info("fetched round summaries", zap.Int64("beginR", beginR), zap.Int("range", rRange))
+		roundRange, err = strconv.ParseInt(roundRangeValue, 10, 64)
+	}
+	if err == nil {
+		rangeBounds := GetRangeBounds(roundEdge, roundRange)
+		roundS := sc.getRoundSummaries(ctx, rangeBounds)
+		Logger.Info("RoundSummariesHandler",
+			zap.String("object", "roundSummaries"),
+			zap.Int64("low", rangeBounds.roundLow),
+			zap.Int64("high", rangeBounds.roundHigh),
+			zap.Int64("range", rangeBounds.roundRange))
 		rs := &RoundSummaries{}
 		rs.RSummaryList = roundS
 		return rs, nil
+	} else {
+		Logger.Error("RoundSummariesHandler - Parsing Param Error",
+			zap.String("round", roundEdgeValue),
+			zap.String("range", roundRangeValue),
+			zap.Error(err))
+		return nil, err
 	}
-	return nil, err
 }
 
 func BlockSummariesHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	sc := GetSharderChain()
-	roundValue := r.FormValue("round")
-	roundRange := r.FormValue("range")
-	roundNum, err := strconv.ParseInt(roundValue, 10, 64)
-	var rRange int
-	rRange, err = strconv.Atoi(roundRange)
+	var roundRange int64
+	var err error
+	roundEdgeValue := r.FormValue("round")
+	roundRangeValue := r.FormValue("range")
+	roundEdge, err := strconv.ParseInt(roundEdgeValue, 10, 64)
 	if err == nil {
-		beginR := roundNum
-		if rRange < 0 {
-			rRange = -rRange
-			beginR = roundNum - int64(rRange)
-			if beginR < 1 {
-				beginR = 1
-			}
-		}
-		rs := sc.getRoundSummaries(beginR, rRange)
+		roundRange, err = strconv.ParseInt(roundRangeValue, 10, 64)
+	}
+	if err == nil {
+		rangeBounds := GetRangeBounds(roundEdge, roundRange)
+		rs := sc.getRoundSummaries(ctx, rangeBounds)
+		Logger.Info("BlockSummariesHandler",
+			zap.String("object", "roundSummaries"),
+			zap.Int64("low", rangeBounds.roundLow),
+			zap.Int64("high", rangeBounds.roundHigh),
+			zap.Int64("range", rangeBounds.roundRange))
+
 		bs := &BlockSummaries{}
-		blockS := make([]*block.BlockSummary, rRange)
+		blockS := make([]*block.BlockSummary, len(rs))
+
+		// Get block summary connection.
+		bSummaryEntityMetadata := datastore.GetEntityMetadata("block_summary")
+		bctx := ememorystore.WithEntityConnection(ctx, bSummaryEntityMetadata)
+		defer ememorystore.Close(bctx)
+
 		for i, roundS := range rs {
 			if roundS != nil {
-				bSummaryEntityMetadata := datastore.GetEntityMetadata("block_summary")
-				bctx := ememorystore.WithEntityConnection(ctx, bSummaryEntityMetadata)
-				defer ememorystore.Close(bctx)
 				blockS[i], _ = sc.GetBlockSummary(bctx, roundS.BlockHash)
+			} else {
+				blockS[i] = nil
 			}
 		}
 		bs.BSummaryList = blockS
-		Logger.Info("fetched block summaries", zap.Int64("beginR", beginR), zap.Int("range", rRange))
+		Logger.Info("BlockSummariesHandler",
+			zap.String("object", "blockSummaries"),
+			zap.Int64("low", rangeBounds.roundLow),
+			zap.Int64("high", rangeBounds.roundHigh),
+			zap.Int64("range", rangeBounds.roundRange))
 		return bs, nil
+	} else {
+		Logger.Error("BlockSummariesHandler - Parsing Param Error",
+			zap.String("round", roundEdgeValue),
+			zap.String("range", roundRangeValue),
+			zap.Error(err))
+		return nil, err
 	}
-	Logger.Error("failed reading/parsing the params", zap.Error(err))
-	return nil, err
 }
 
 func LatestRoundRequestHandler(ctx context.Context, r *http.Request) (interface{}, error) {
@@ -127,6 +149,9 @@ func RoundRequestHandler(ctx context.Context, r *http.Request) (interface{}, err
 	roundValue := r.FormValue("round")
 	roundNum, err := strconv.ParseInt(roundValue, 10, 64)
 	if err == nil {
+		Logger.Debug("RoundRequestHandler",
+			zap.String("object", "round"),
+			zap.Int64("round", roundNum))
 		roundEntity := sc.GetSharderRound(roundNum)
 		if roundEntity == nil {
 			var err error
@@ -179,10 +204,17 @@ func RoundBlockRequestHandler(ctx context.Context, r *http.Request) (interface{}
 	return nil, err
 }
 
-func (sc *Chain) getRoundSummaries(beginR int64, rRange int) []*round.Round {
-	roundS := make([]*round.Round, rRange)
-	for loopR := 0; loopR < rRange; loopR++ {
-		roundS[loopR] = sc.GetSharderRound(beginR + int64(loopR))
+func (sc *Chain) getRoundSummaries(ctx context.Context, bounds RangeBounds) []*round.Round {
+	roundS := make([]*round.Round, bounds.roundRange + 1)
+	loop := 0
+	for  index := bounds.roundLow; index <= bounds.roundHigh; index++ {
+		roundEntity := sc.GetSharderRound(index)
+		if roundEntity == nil {
+			// Try from the store
+			roundEntity, _ = sc.GetRoundFromStore(ctx, index)
+		}
+		roundS[loop] = roundEntity
+		loop++
 	}
 	return roundS
 }

@@ -20,8 +20,11 @@ const (
 )
 
 type HealthCheckCycleScan struct {
+	Settle  time.Duration `json:"settle"`
+	SettleSecs int `json: "settle_period_secs"`
+
 	Enabled bool `json:"scan_enable"`
-	BatchSize int `json:"batch_size"`
+	BatchSize int64 `json:"batch_size"`
 
 	Window int64 `json:"scan_window"`
 
