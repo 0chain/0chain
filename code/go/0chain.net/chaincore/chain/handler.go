@@ -1,8 +1,10 @@
 package chain
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"io/ioutil"
 	"math"
 	"net/http"
 	"runtime"
@@ -41,6 +43,9 @@ func SetupHandlers() {
 
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
 	http.HandleFunc("/v1/transaction/put", common.UserRateLimit(datastore.ToJSONEntityReqResponse(datastore.DoAsyncEntityJSONHandler(memorystore.WithConnectionEntityJSONHandler(PutTransaction, transactionEntityMetadata), transaction.TransactionEntityChannel), transactionEntityMetadata)))
+
+	http.HandleFunc("/_diagnostics/state_dump", common.UserRateLimit(StateDumpHandler))
+
 }
 
 /*GetChainHandler - given an id returns the chain information */
@@ -800,4 +805,38 @@ func PrintCSS(w http.ResponseWriter) {
 	fmt.Fprintf(w, ".slow { font-style: italic; }\n")
 	fmt.Fprintf(w, ".bold {font-weight:bold;}")
 	fmt.Fprintf(w, "</style>")
+}
+
+//StateDumpHandler - a handler to dump the state
+func StateDumpHandler(w http.ResponseWriter, r *http.Request) {
+	c := GetServerChain()
+	lfb := c.LatestFinalizedBlock
+	contract := r.FormValue("smart_contract")
+	mpt := lfb.ClientState
+	if contract == "" {
+		contract = "global"
+	} else {
+		//TODO: get the smart contract as an optional parameter and pick the right state hash
+	}
+	mptRootHash := util.ToHex(mpt.GetRoot())
+	fileName := fmt.Sprintf("mpt_%v_%v_%v.txt", contract, lfb.Round, mptRootHash)
+	file, err := ioutil.TempFile("", fileName)
+	if err != nil {
+		return
+	}
+	go func() {
+		writer := bufio.NewWriter(file)
+		defer func() {
+			writer.Flush()
+			file.Close()
+		}()
+		fmt.Fprintf(writer, "round: %v\n", lfb.Round)
+		fmt.Fprintf(writer, "global state hash: %v\n", util.ToHex(lfb.ClientStateHash))
+		fmt.Fprintf(writer, "mpt state hash: %v\n", mptRootHash)
+		writer.Flush()
+		fmt.Fprintf(writer, "BEGIN {\n")
+		mpt.PrettyPrint(writer)
+		fmt.Fprintf(writer, "END }\n")
+	}()
+	fmt.Fprintf(w, "Writing to file : %v\n", file.Name())
 }

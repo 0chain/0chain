@@ -179,8 +179,25 @@ func TransactionConfirmationHandler(ctx context.Context, r *http.Request) (inter
 	if hash == "" {
 		return nil, common.InvalidRequest("transaction hash (parameter hash) is required")
 	}
+	content := r.FormValue("content")
+	if content == "" {
+		content = "confirmation"
+	}
 	transactionConfirmationEntityMetadata := datastore.GetEntityMetadata("txn_confirmation")
 	ctx = persistencestore.WithEntityConnection(ctx, transactionConfirmationEntityMetadata)
 	sc := GetSharderChain()
-	return sc.GetTransactionConfirmation(ctx, hash)
+	confirmation, err := sc.GetTransactionConfirmation(ctx, hash)
+	if content == "confirmation" {
+		return confirmation, err
+	}
+	data := make(map[string]interface{}, 2)
+	if err == nil {
+		data["confirmation"] = confirmation
+	} else {
+		data["error"] = err
+	}
+	if lfbSummary := sc.GetLatestFinalizedBlockSummary(); lfbSummary != nil {
+		data["latest_finalized_block"] = lfbSummary
+	}
+	return data, nil
 }

@@ -40,16 +40,16 @@ func (ipsc *InterestPoolSmartContract) GetRestPoints() map[string]smartcontracti
 func (ipsc *InterestPoolSmartContract) SetSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {
 	ipsc.SmartContract = sc
 	ipsc.SmartContract.RestHandlers["/getPoolsStats"] = ipsc.getPoolsStats
-	ipsc.SmartContractExecutionStats["lockTokens"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ipsc.ID, "lockTokens"), nil)
-	ipsc.SmartContractExecutionStats["unlockTokens"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ipsc.ID, "unlockTokens"), nil)
+	ipsc.SmartContractExecutionStats["lock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ipsc.ID, "lock"), nil)
+	ipsc.SmartContractExecutionStats["unlock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ipsc.ID, "unlock"), nil)
 	ipsc.SmartContractExecutionStats["updateVariables"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ipsc.ID, "updateVariables"), nil)
 }
 
-func (ip *InterestPoolSmartContract) lockTokens(t *transaction.Transaction, un *UserNode, gn *GlobalNode, inputData []byte, balances c_state.StateContextI) (string, error) {
-	tp := newTypePool()
-	err := tp.decode(inputData)
+func (ip *InterestPoolSmartContract) lock(t *transaction.Transaction, un *UserNode, gn *GlobalNode, inputData []byte, balances c_state.StateContextI) (string, error) {
+	npr := &newPoolRequest{}
+	err := npr.decode(inputData)
 	if err != nil {
-		return "", common.NewError("failed locking tokens", "request not formatted correctly")
+		return "", common.NewError("failed locking tokens", fmt.Sprintf("request not formatted correctly (%v)", err.Error()))
 	}
 	if t.Value < gn.MinLock {
 		return "", common.NewError("failed locking tokens", "insufficent amount to dig an interest pool")
@@ -61,51 +61,51 @@ func (ip *InterestPoolSmartContract) lockTokens(t *transaction.Transaction, un *
 	if state.Balance(t.Value) > balance {
 		return "", common.NewError("failed locking tokens", "lock amount is greater than balance")
 	}
-	pool := newTypePool()
-	pool.Type = tp.Type
-	pool.TokenLockInterface = &tokenLock{StartTime: t.CreationDate, Duration: gn.LockPeriod, Owner: un.ClientID}
+	if npr.Duration > gn.MaxLockPeriod {
+		return "", common.NewError("failed locking tokens", fmt.Sprintf("duration (%v) is longer than max lock period (%v)", npr.Duration.String(), gn.MaxLockPeriod.String()))
+	}
+	if npr.Duration < gn.MinLockPeriod {
+		return "", common.NewError("failed locking tokens", fmt.Sprintf("duration (%v) is shorter than min lock period (%v)", npr.Duration.String(), gn.MinLockPeriod.String()))
+	}
+	pool := newInterestPool()
+	pool.TokenLockInterface = &tokenLock{StartTime: t.CreationDate, Duration: npr.Duration, Owner: un.ClientID}
 	transfer, resp, err := pool.DigPool(t.Hash, t)
 	if err == nil {
+		balances.AddTransfer(transfer)
+		pool.InterestRate = gn.InterestRate * float64(npr.Duration) / float64(gn.MaxLockPeriod)
+		pool.InterestEarned = int64(float64(transfer.Amount) * pool.InterestRate)
+		balances.AddMint(&state.Mint{Minter: ip.ID, ToClientID: transfer.ClientID, Amount: state.Balance(pool.InterestEarned)})
 		un.addPool(pool)
-		_, err := balances.InsertTrieNode(un.getKey(gn.ID), un)
-		if err == nil {
-			balances.AddTransfer(transfer)
-			if pool.Type == INTEREST {
-				balances.AddMint(&state.Mint{Minter: ip.ID, ToClientID: transfer.ClientID, Amount: state.Balance(float64(transfer.Amount) * gn.InterestRate)})
-			}
-			return resp, nil
-		}
-		return "", err
+		balances.InsertTrieNode(un.getKey(gn.ID), un)
+		return resp, nil
 	}
 	return "", err
 }
 
-func (ip *InterestPoolSmartContract) unlockTokens(t *transaction.Transaction, un *UserNode, gn *GlobalNode, inputData []byte, balances c_state.StateContextI) (string, error) {
-	if len(un.Pools) == 0 {
-		return "", common.NewError("failed to unlock", fmt.Sprintf("no pools exist for user %v", un.ClientID))
+func (ip *InterestPoolSmartContract) unlock(t *transaction.Transaction, un *UserNode, gn *GlobalNode, inputData []byte, balances c_state.StateContextI) (string, error) {
+	var response string
+	var transfer *state.Transfer
+	ps := &poolStat{}
+	err := ps.decode(inputData)
+	if err != nil {
+		return "", common.NewError("failed to unlock tokens", fmt.Sprintf("input not formatted correctly: %v\n", err.Error()))
 	}
-	var responses transferResponses
-	unlockCount := 0
-	for _, pool := range un.Pools {
-		transfer, resp, err := pool.EmptyPool(ip.ID, t.ClientID, common.ToTime(t.CreationDate))
-		if err == nil {
-			err := un.deletePool(pool.ID)
-			if err == nil {
-				unlockCount++
-				responses.addResponse(resp)
-				balances.AddTransfer(transfer)
-				if pool.Type == STAKE {
-					balances.AddMint(&state.Mint{Minter: ip.ID, ToClientID: transfer.ToClientID, Amount: state.Balance(float64(transfer.Amount) * gn.InterestRate)})
-				}
-			}
-		} else {
-			responses.addResponse(err.Error())
+	pool, ok := un.Pools[ps.ID]
+	if ok {
+		transfer, response, err = pool.EmptyPool(ip.ID, t.ClientID, common.ToTime(t.CreationDate))
+		if err != nil {
+			return "", common.NewError("failed to unlock tokens", fmt.Sprintf("error emptying pool %v", err.Error()))
 		}
-	}
-	if unlockCount != 0 {
+		err = un.deletePool(pool.ID)
+		if err != nil {
+			return "", common.NewError("failed to unlock tokens", fmt.Sprintf("error deleting pool from user node: %v", err.Error()))
+		}
+		balances.AddTransfer(transfer)
 		balances.InsertTrieNode(un.getKey(gn.ID), un)
+	} else {
+		return "", common.NewError("failed to unlock tokens", fmt.Sprintf("pool (%v) doesn't exist", ps.ID))
 	}
-	return string(responses.encode()), nil
+	return response, nil
 }
 
 func (ip *InterestPoolSmartContract) updateVariables(t *transaction.Transaction, gn *GlobalNode, inputData []byte, balances c_state.StateContextI) (string, error) {
@@ -121,9 +121,13 @@ func (ip *InterestPoolSmartContract) updateVariables(t *transaction.Transaction,
 		gn.InterestRate = newGn.InterestRate
 		config.SmartContractConfig.Set("smart_contracts.interestpoolsc.interest_rate", gn.InterestRate)
 	}
-	if newGn.LockPeriod > 0 {
-		gn.LockPeriod = newGn.LockPeriod
-		config.SmartContractConfig.Set("smart_contracts.interestpoolsc.lock_period", gn.LockPeriod)
+	if newGn.MinLockPeriod > 0 {
+		gn.MinLockPeriod = newGn.MinLockPeriod
+		config.SmartContractConfig.Set("smart_contracts.interestpoolsc.min_lock_period", gn.MinLockPeriod)
+	}
+	if newGn.MaxLockPeriod > newGn.MinLockPeriod {
+		gn.MaxLockPeriod = newGn.MaxLockPeriod
+		config.SmartContractConfig.Set("smart_contracts.interestpoolsc.max_lock_period", gn.MaxLockPeriod)
 	}
 	if newGn.MinLock > 0 {
 		gn.MinLock = newGn.MinLock
@@ -145,29 +149,33 @@ func (ip *InterestPoolSmartContract) getUserNode(id datastore.Key, balances c_st
 	return un
 }
 
-func (ip *InterestPoolSmartContract) getGlobalNode(balances c_state.StateContextI) *GlobalNode {
+func (ip *InterestPoolSmartContract) getGlobalNode(balances c_state.StateContextI, funcName string) *GlobalNode {
 	gn := newGlobalNode()
 	globalBytes, err := balances.GetTrieNode(gn.getKey())
 	if err == nil {
-		err = gn.Decode(globalBytes.Encode())
+		err := gn.Decode(globalBytes.Encode())
 		if err == nil {
 			return gn
 		}
 	}
-	gn.LockPeriod = config.SmartContractConfig.GetDuration("smart_contracts.interestpoolsc.lock_period")
+	gn.MinLockPeriod = config.SmartContractConfig.GetDuration("smart_contracts.interestpoolsc.min_lock_period")
+	gn.MaxLockPeriod = config.SmartContractConfig.GetDuration("smart_contracts.interestpoolsc.max_lock_period")
 	gn.InterestRate = config.SmartContractConfig.GetFloat64("smart_contracts.interestpoolsc.interest_rate")
 	gn.MinLock = config.SmartContractConfig.GetInt64("smart_contracts.interestpoolsc.min_lock")
+	if err == util.ErrValueNotPresent && funcName != "updateVariables" {
+		balances.InsertTrieNode(gn.getKey(), gn)
+	}
 	return gn
 }
 
 func (ip *InterestPoolSmartContract) Execute(t *transaction.Transaction, funcName string, inputData []byte, balances c_state.StateContextI) (string, error) {
 	un := ip.getUserNode(t.ClientID, balances)
-	gn := ip.getGlobalNode(balances)
+	gn := ip.getGlobalNode(balances, funcName)
 	switch funcName {
-	case "lockTokens":
-		return ip.lockTokens(t, un, gn, inputData, balances)
-	case "unlockTokens":
-		return ip.unlockTokens(t, un, gn, inputData, balances)
+	case "lock":
+		return ip.lock(t, un, gn, inputData, balances)
+	case "unlock":
+		return ip.unlock(t, un, gn, inputData, balances)
 	case "updateVariables":
 		return ip.updateVariables(t, gn, inputData, balances)
 	default:

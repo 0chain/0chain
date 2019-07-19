@@ -239,7 +239,7 @@ func calcGroupsVvec(Vvecs [][]VerificationKey, t int, n int) []VerificationKey {
 /* In the test, DKG is run for n miners to get the GroupPrivateKeyShare(GPKS). A party signs with
 GPKS to form the Grp sign share. The array allPartyIDs is to keep track of party IDs to get it's unique k number of sig shares randomly for Recover GpSign*/
 
-func testRecoverGrpSignature(t int, n int, test *testing.T) {
+func testRecoverGrpSignature(t int, n int, num int64, test *testing.T) {
 
 	dkgs := newDKGs(t, n)
 	for i := 0; i < n; i++ {
@@ -282,7 +282,7 @@ func testRecoverGrpSignature(t int, n int, test *testing.T) {
 	partyMap := make(map[PartyID]Sign, n)
 
 	//for rNumber <= 100000 {
-	for rNumber <= 100 {
+	for rNumber <= num {
 		fmt.Printf("*Starting round %v)\n", rNumber)
 		for i := 0; i < n; i++ {
 
@@ -333,8 +333,19 @@ func testRecoverGrpSignature(t int, n int, test *testing.T) {
 	}
 }
 
+/* TestMultiDKG -- this tests creates multiple dkgs and runs multiple vrfs on them */
+func TestMultiDKG(test *testing.T) {
+	i := 0
+	for i < 100 {
+		fmt.Printf("*Starting dkg %v)\n", i)
+		testRecoverGrpSignature(7, 10, 100, test)
+		i++
+	}
+
+}
+
 /* TestRecGrpSign - The test calls testRecoverGrpSignature(t, n, test) which has the test for Gp Sign*/
-func TestRecGrpSign(test *testing.T) { testRecoverGrpSignature(7, 10, test) }
+func TestRecGrpSign(test *testing.T) { testRecoverGrpSignature(7, 10, 100, test) }
 
 /*calcRbo - To calculate the Gp Sign with any k number of unique Party IDs and its Bls signature share*/
 func calcRbo(allPartyIDs []PartyID, t int, partyMap map[PartyID]Sign) (threshPartys []PartyID, threshSigs []Sign) {

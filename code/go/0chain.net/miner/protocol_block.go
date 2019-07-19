@@ -21,7 +21,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	. "0chain.net/core/logging"
-	"0chain.net/smartcontract/feesc"
+	"0chain.net/smartcontract/minersc"
 
 	"go.uber.org/zap"
 )
@@ -266,7 +266,7 @@ func (mc *Chain) processFeeTxn(ctx context.Context, b *block.Block, clients map[
 func (mc *Chain) createFeeTxn(b *block.Block) *transaction.Transaction {
 	feeTxn := transaction.Provider().(*transaction.Transaction)
 	feeTxn.ClientID = b.MinerID
-	feeTxn.ToClientID = feesc.ADDRESS
+	feeTxn.ToClientID = minersc.ADDRESS
 	feeTxn.CreationDate = b.CreationDate
 	feeTxn.TransactionType = transaction.TxnTypeSmartContract
 	feeTxn.TransactionData = fmt.Sprintf(`{"name":"payFees","input":{"round":%v}}`, b.Round)

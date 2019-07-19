@@ -8,7 +8,6 @@ import (
 	"0chain.net/chaincore/smartcontract"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/smartcontract/faucetsc"
-	"0chain.net/smartcontract/feesc"
 	"0chain.net/smartcontract/interestpoolsc"
 	"0chain.net/smartcontract/minersc"
 	"0chain.net/smartcontract/multisigsc"
@@ -19,8 +18,8 @@ import (
 var scs = []sci.SmartContractInterface{
 	&faucetsc.FaucetSmartContract{}, &storagesc.StorageSmartContract{},
 	&zrc20sc.ZRC20SmartContract{}, &interestpoolsc.InterestPoolSmartContract{},
-	&minersc.MinerSmartContract{}, &feesc.FeeSmartContract{},
 	&multisigsc.MultiSigSmartContract{},
+	&minersc.MinerSmartContract{},
 }
 
 //SetupSmartContracts initialize smartcontract addresses

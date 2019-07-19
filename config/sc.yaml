@@ -8,4 +8,5 @@ smart_contracts:
   interestpoolsc:
     min_lock: 10 
     interest_rate: 0.5
-    lock_period: 30m
+    min_lock_period: 2190h # max units hours
+    max_lock_period: 8760h # max units hours

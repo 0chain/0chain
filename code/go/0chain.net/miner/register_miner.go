@@ -25,7 +25,7 @@ import (
 //Note: MinerNode is originally defined in MinerSmartcontract.
 const (
 	//MinerSCAddress address of minersc
-	MinerSCAddress     = "CF9C03CD22C9C7B116EED04E4A909F95ABEC17E98FE631D6AC94D5D8420C5B20"
+	MinerSCAddress     = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d1"
 	getNodepoolInfoAPI = "/getNodepool"
 )
 

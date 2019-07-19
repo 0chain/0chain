@@ -72,6 +72,12 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 		if mr.IsVerificationComplete() {
 			return
 		}
+		if mr.GetRandomSeed() != b.RoundRandomSeed {
+			Logger.Error("Got a block for verification with wrong randomseed", zap.Int64("roundNum", mr.GetRoundNumber()),
+				zap.Int("roundToc", mr.GetTimeoutCount()), zap.Int("blockToc", b.RoundTimeoutCount),
+				zap.Int64("roundrrs", mr.GetRandomSeed()), zap.Int64("blockrrs", b.RoundRandomSeed))
+			return
+		}
 		if !mc.ValidGenerator(mr.Round, b) {
 			Logger.Error("Not a valid generator. Ignoring block with hash = " + b.Hash)
 			return
