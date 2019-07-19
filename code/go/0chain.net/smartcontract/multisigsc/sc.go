@@ -114,25 +114,27 @@ func (ms MultiSigSmartContract) vote(currentTxnHash, signingClientID string, now
 	err := ms.pruneExpirationQueue(now, balances)
 	if err != nil {
 		// I/O error.
-		return "", err
+		if err != util.ErrValueNotPresent && err != util.ErrNodeNotFound {
+			return "", err
+		} //else there are no expiration queue.
 	}
 
 	var v Vote
 
 	err = json.Unmarshal(inputData, &v)
 	if err != nil {
-		return "err_vote_formatting: incorrect vote format", nil
+		return "", err
 	}
 
 	// Play nice.
 	if !v.notTooBig() {
-		return "err_vote_too_big: an input field exceeded allowable length", nil
+		return "", common.NewError("err_vote_too_big", "an input field exceeded allowable length")
 	}
 	if !v.hasValidAmount() {
-		return "err_vote_invalid_tokens: invalid number of tokens to send", nil
+		return "", common.NewError("err_vote_invalid_tokens", "invalid number of tokens to send")
 	}
 	if !v.hasSignature() {
-		return "err_vote_no_signature: must sign vote", nil
+		return "", common.NewError("err_vote_no_signature", " must sign vote")
 	}
 
 	// Every vote is associated with a proposal. If an appropriate proposal does
@@ -145,7 +147,7 @@ func (ms MultiSigSmartContract) vote(currentTxnHash, signingClientID string, now
 
 	// Ensure all voters are on the same page.
 	if !v.isCompatibleWithProposal(p) {
-		return "err_vote_not_compatible: previous votes for same proposal differed", nil
+		return "", common.NewError("err_vote_not_compatible", " previous votes for same proposal differed")
 	}
 
 	// Check if the proposal was already finished, making this vote unnecessary.
@@ -160,17 +162,17 @@ func (ms MultiSigSmartContract) vote(currentTxnHash, signingClientID string, now
 		return "", err
 	}
 	if w.isEmpty() {
-		return "err_vote_wallet_not_registered: wallet not registered", nil
+		return "", common.NewError("err_vote_wallet_not_registered", " wallet not registered")
 	}
 
 	// Check that the voter is registered on the wallet and that the signature
 	// is valid.
 	signerThresholdID := w.thresholdIdForSigner(signingClientID)
 	if signerThresholdID == "" {
-		return "err_vote_auth: authorization failure", nil
+		return "", common.NewError("err_vote_auth", " authorization failure")
 	}
 	if !w.isVoteAuthorized(signingClientID, v) {
-		return "err_vote_auth: authorization failure", nil
+		return "", common.NewError("err_vote_auth", " authorization failure")
 	}
 
 	remaining := w.NumRequired - len(p.SignerSignatures)
@@ -193,7 +195,7 @@ func (ms MultiSigSmartContract) vote(currentTxnHash, signingClientID string, now
 		return "", err
 	}
 
-	remaining -= 1
+	remaining--
 
 	// If more votes are still needed we must wait for them. Nothing more to do.
 	if remaining > 0 {
@@ -205,7 +207,7 @@ func (ms MultiSigSmartContract) vote(currentTxnHash, signingClientID string, now
 	// execute it.
 	thresholdSignature, err := w.constructTransferSignature(p)
 	if err != nil {
-		return "err_vote_recover: in signature recovery: " + err.Error(), nil
+		return "", common.NewError("err_vote_recover", " in signature recovery: "+err.Error())
 	}
 
 	p.ClientSignature = thresholdSignature
@@ -329,7 +331,7 @@ func (ms MultiSigSmartContract) findOrCreateProposal(now common.Timestamp, v Vot
 	// Start by trying to find an existing proposal.
 	p, err := ms.getProposal(v.getProposalRef(), balances)
 	if err != nil {
-		return proposal{}, err
+		//return proposal{}, nil
 	}
 
 	// Treat expired-but-not-yet-pruned proposals identically to pruned
@@ -339,8 +341,7 @@ func (ms MultiSigSmartContract) findOrCreateProposal(now common.Timestamp, v Vot
 		if err != nil {
 			return proposal{}, err
 		}
-
-		p = proposal{}
+		return proposal{}, common.NewError("proposal_expired", "proposal is expired")
 	}
 
 	// If it didn't exist or was expired, create it and update expiration queue.
@@ -358,7 +359,9 @@ func (ms MultiSigSmartContract) findOrCreateProposal(now common.Timestamp, v Vot
 func (ms MultiSigSmartContract) createProposal(now common.Timestamp, v Vote, balances state.StateContextI) (proposal, error) {
 	q, err := ms.getOrCreateExpirationQueue(balances)
 	if err != nil {
-		return proposal{}, err
+		if err != util.ErrValueNotPresent && err != util.ErrNodeNotFound {
+			return proposal{}, err
+		} //else we will create a proposal
 	}
 
 	// Create proposal.
@@ -437,7 +440,7 @@ func (ms MultiSigSmartContract) getWallet(clientID string, balances c_state.Stat
 	}
 
 	w := Wallet{}
-	err = w.Decode(walletNode.Encode())
+	err = json.Unmarshal(walletNode.Encode(), &w)
 	if err != nil {
 		// Decoding error.
 		return Wallet{}, err
@@ -461,11 +464,14 @@ func (ms MultiSigSmartContract) getProposal(ref proposalRef, balances c_state.St
 
 	if err != nil {
 		// I/O error.
-		return proposal{}, err
+		if err != util.ErrValueNotPresent && err != util.ErrNodeNotFound {
+			return proposal{}, err
+		} //else there are no propsals.
+		return proposal{}, nil
 	}
 
 	p := proposal{}
-	err = p.Decode(proposalNode.Encode())
+	err = json.Unmarshal(proposalNode.Encode(), &p)
 	if err != nil {
 		// Decoding error.
 		return proposal{}, err
@@ -490,11 +496,17 @@ func (ms MultiSigSmartContract) getOrCreateExpirationQueue(balances c_state.Stat
 
 	if err != nil {
 		// I/O error.
-		return expirationQueue{}, err
+		if err != util.ErrValueNotPresent && err != util.ErrNodeNotFound {
+			return expirationQueue{}, err
+		} //else we will create queue
+
 	}
 
 	q := expirationQueue{}
-	err = q.Decode(qNode.Encode())
+	if qNode == nil {
+		return q, nil
+	}
+	err = json.Unmarshal(qNode.Encode(), &q)
 	if err != nil {
 		// Decoding error.
 		return expirationQueue{}, err

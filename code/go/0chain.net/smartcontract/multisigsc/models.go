@@ -12,8 +12,9 @@ import (
 
 const (
 	ExpirationTime = 60 * 60 * 24 * 7 // Proposals expire after one week.
-	//ExpirationTime = 30 // Value that is more appropriate for testing.
+	//ExpirationTime = 30 // Value in seconds that is more appropriate for testing.
 	MaxSigners   = 20
+	MinSigners   = 2
 	MaxFieldSize = 256
 )
 
@@ -69,7 +70,7 @@ func (w Wallet) valid(forClientID string) (bool, error) {
 		return false, common.NewError("num_ids_too-many", "number of signer client ids is more than the maximum number of signers")
 	}
 
-	if w.NumRequired < 2 {
+	if w.NumRequired < MinSigners {
 		return false, common.NewError("signers_required_too_less", "number of signers required is less than 2")
 	}
 	if w.NumRequired > numIds {
@@ -356,7 +357,7 @@ func (p proposal) getKey() datastore.Key {
 }
 
 func getProposalKey(clientID, proposalID string) datastore.Key {
-	return datastore.Key(Address + clientID + proposalID)
+	return datastore.Key(Address + clientID + encryption.Hash(proposalID))
 }
 
 // Queue of all proposals across all wallets sorted by expiration date.
@@ -376,5 +377,5 @@ func (q expirationQueue) Decode(input []byte) error {
 }
 
 func getExpirationQueueKey() datastore.Key {
-	return datastore.Key("queue")
+	return datastore.Key(Address + encryption.Hash("queue"))
 }
