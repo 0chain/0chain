@@ -77,13 +77,13 @@ server_chain:
     deep_scan:
       enabled: true
       window: 0 #Full scan till round 0
-      interval_mins: 1440 #minutes
+      repeat_interval_mins: 1440 #minutes
       report_status_mins: 60 #minutes
       batch_size: 500
     proximity_scan:
       enabled: true
       window: 100 #number of blocks
-      interval_mins: 60 #minutes
+      repeat_interval_mins: 60 #minutes
       report_status_mins: 15 #minutes
       batch_size: 20
 

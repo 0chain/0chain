@@ -1,7 +1,7 @@
 version: 1.0
 
 logging:
-  level: "debug"
+  level: "info"
   console: false # printing log to console is only supported in development mode
   goroutines: false
   memlog: false
@@ -43,14 +43,14 @@ server_chain:
     max_block_size: 100
     max_byte_size: 1638400
     generators: 2
-    replicators: 3
-    #replicators: 0
+    #replicators: 3
+    replicators: 0
     generation:
       timeout: 15
       retry_wait_time: 5 #milliseconds
     proposal:
-      max_wait_time: 500 # milliseconds
-      wait_mode: dynamic # static or dynamic
+      max_wait_time: 180 # milliseconds
+      wait_mode: static # static or dynamic
     consensus:
       threshold_by_count: 66 # percentage
       threshold_by_stake: 0 # percent
