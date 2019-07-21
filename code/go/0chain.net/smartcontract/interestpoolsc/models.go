@@ -15,8 +15,8 @@ import (
 )
 
 type SimpleGlobalNode struct {
-	MinLock      int64   `json:"min_lock"`
-	InterestRate float64 `json:"interest_rate"`
+	MinLock int64   `json:"min_lock"`
+	APR     float64 `json:"apr"`
 }
 
 func (sgn *SimpleGlobalNode) Encode() []byte {
@@ -33,7 +33,6 @@ type GlobalNode struct {
 	ID                datastore.Key
 	*SimpleGlobalNode `json:"simple_global_node"`
 	MinLockPeriod     time.Duration `json:"min_lock_period"`
-	MaxLockPeriod     time.Duration `json:"max_lock_period"`
 }
 
 func newGlobalNode() *GlobalNode {
@@ -70,19 +69,6 @@ func (gn *GlobalNode) Decode(input []byte) error {
 			return err
 		}
 		gn.MinLockPeriod = dur
-	}
-	var max string
-	maxlp, ok := objMap["max_lock_period"]
-	if ok {
-		err = json.Unmarshal(*maxlp, &max)
-		if err != nil {
-			return err
-		}
-		dur, err := time.ParseDuration(max)
-		if err != nil {
-			return err
-		}
-		gn.MaxLockPeriod = dur
 	}
 	return nil
 }
@@ -132,8 +118,8 @@ func (npr *newPoolRequest) decode(input []byte) error {
 
 type interestPool struct {
 	*tokenpool.ZcnLockingPool `json:"pool"`
-	InterestRate              float64 `json:"interest_rate"`
-	InterestEarned            int64   `json:"interest_earned"`
+	APR                       float64 `json:"apr"`
+	TokensEarned              int64   `json:"tokens_earned"`
 }
 
 func newInterestPool() *interestPool {
@@ -151,23 +137,23 @@ func (ip *interestPool) decode(input []byte) error {
 	if err != nil {
 		return err
 	}
-	ir, ok := objMap["interest_rate"]
+	ir, ok := objMap["apr"]
 	if ok {
 		var rate float64
 		err = json.Unmarshal(*ir, &rate)
 		if err != nil {
 			return err
 		}
-		ip.InterestRate = rate
+		ip.APR = rate
 	}
-	ie, ok := objMap["interest_earned"]
+	ie, ok := objMap["tokens_earned"]
 	if ok {
 		var earned int64
 		err = json.Unmarshal(*ie, &earned)
 		if err != nil {
 			return err
 		}
-		ip.InterestEarned = earned
+		ip.TokensEarned = earned
 	}
 	p, ok := objMap["pool"]
 	if ok {
@@ -303,14 +289,14 @@ func (ps *poolStats) addStat(p *poolStat) {
 }
 
 type poolStat struct {
-	ID             datastore.Key `json:"pool_id"`
-	StartTime      string        `json:"start_time"`
-	Duartion       string        `json:"duration"`
-	TimeLeft       string        `json:"time_left"`
-	Locked         bool          `json:"locked"`
-	InterestRate   float64       `json:"interest_rate"`
-	InterestEarned int64         `json:"interest_earned"`
-	Balance        state.Balance `json:"balance"`
+	ID           datastore.Key `json:"pool_id"`
+	StartTime    string        `json:"start_time"`
+	Duartion     string        `json:"duration"`
+	TimeLeft     string        `json:"time_left"`
+	Locked       bool          `json:"locked"`
+	APR          float64       `json:"apr"`
+	TokensEarned int64         `json:"tokens_earned"`
+	Balance      state.Balance `json:"balance"`
 }
 
 func (ps *poolStat) encode() []byte {

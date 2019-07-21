@@ -278,6 +278,12 @@ func (c *Chain) updateState(b *block.Block, txn *transaction.Transaction) error 
 			return err
 		}
 	}
+	for _, signedTransfer := range sctx.GetSignedTransfers() {
+		err := c.transferAmount(sctx, signedTransfer.ClientID, signedTransfer.ToClientID, state.Balance(signedTransfer.Amount))
+		if err != nil {
+			return err
+		}
+	}
 	for _, mint := range sctx.GetMints() {
 		if err := c.mintAmount(sctx, mint.ToClientID, state.Balance(mint.Amount)); err != nil {
 			Logger.Error("mint error", zap.Any("error", err), zap.Any("transaction", txn.Hash))

@@ -38,8 +38,10 @@ type StateContextI interface {
 	InsertTrieNode(key datastore.Key, node util.Serializable) (datastore.Key, error)
 	DeleteTrieNode(key datastore.Key) (datastore.Key, error)
 	AddTransfer(t *state.Transfer) error
+	AddSignedTransfer(st *state.SignedTransfer)
 	AddMint(m *state.Mint) error
 	GetTransfers() []*state.Transfer
+	GetSignedTransfers() []*state.SignedTransfer
 	GetMints() []*state.Mint
 	Validate() error
 	GetBlockSharders(b *block.Block) []string
@@ -51,6 +53,7 @@ type StateContext struct {
 	state                   util.MerklePatriciaTrieI
 	txn                     *transaction.Transaction
 	transfers               []*state.Transfer
+	signedTransfers         []*state.SignedTransfer
 	mints                   []*state.Mint
 	clientStateDeserializer state.DeserializerI
 	getSharders             func(*block.Block) []string
@@ -86,6 +89,12 @@ func (sc *StateContext) AddTransfer(t *state.Transfer) error {
 	return nil
 }
 
+//AddSignedTransfer - add the signed transfer
+func (sc *StateContext) AddSignedTransfer(st *state.SignedTransfer) {
+	// Signature on the signed transfer will be checked on call to sc.Validate()
+	sc.signedTransfers = append(sc.signedTransfers, st)
+}
+
 //AddMint - add the mint
 func (sc *StateContext) AddMint(m *state.Mint) error {
 	if !sc.isApprovedMinter(m) {
@@ -109,6 +118,11 @@ func (sc *StateContext) GetTransfers() []*state.Transfer {
 	return sc.transfers
 }
 
+//GetTransfers - get all the transfers
+func (sc *StateContext) GetSignedTransfers() []*state.SignedTransfer {
+	return sc.signedTransfers
+}
+
 //GetMints - get all the mints and fight bad breath
 func (sc *StateContext) GetMints() []*state.Mint {
 	return sc.mints
@@ -125,6 +139,9 @@ func (sc *StateContext) Validate() error {
 				return state.ErrInvalidTransfer
 			}
 		}
+		if transfer.Amount < 0 {
+			return state.ErrInvalidTransfer
+		}
 	}
 	totalValue := state.Balance(sc.txn.Value)
 	if config.DevConfiguration.IsFeeEnabled {
@@ -133,6 +150,17 @@ func (sc *StateContext) Validate() error {
 	if amount > totalValue {
 		return state.ErrInvalidTransfer
 	}
+
+	for _, signedTransfer := range sc.signedTransfers {
+		err := signedTransfer.VerifySignature(true)
+		if err != nil {
+			return err
+		}
+		if signedTransfer.Amount <= 0 {
+			return state.ErrInvalidTransfer
+		}
+	}
+
 	return nil
 }
 

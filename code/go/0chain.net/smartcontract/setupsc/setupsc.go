@@ -10,6 +10,7 @@ import (
 	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/interestpoolsc"
 	"0chain.net/smartcontract/minersc"
+	"0chain.net/smartcontract/multisigsc"
 	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/zrc20sc"
 )
@@ -17,6 +18,7 @@ import (
 var scs = []sci.SmartContractInterface{
 	&faucetsc.FaucetSmartContract{}, &storagesc.StorageSmartContract{},
 	&zrc20sc.ZRC20SmartContract{}, &interestpoolsc.InterestPoolSmartContract{},
+	&multisigsc.MultiSigSmartContract{},
 	&minersc.MinerSmartContract{},
 }
 

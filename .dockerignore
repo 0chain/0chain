@@ -1,4 +1,5 @@
 .git
 awsnet
-docker.local
+docker.local/miner*
+docker.local/sharder*
 **/pkg

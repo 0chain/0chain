@@ -30,16 +30,51 @@ type AggregateSignatureScheme interface {
 	Verify() (bool, error)
 }
 
+type ThresholdSignatureScheme interface {
+	SignatureScheme
+
+	SetID(id string) error
+	GetID() string
+}
+
+type ReconstructSignatureScheme interface {
+	Add(tss ThresholdSignatureScheme, signature string) error
+	Reconstruct() (string, error)
+}
+
+//IsValidSignatureScheme - whether a signature scheme exists
+func IsValidSignatureScheme(sigScheme string) bool {
+	switch sigScheme {
+	case "ed25519":
+		return true
+	case "bls0chain":
+		return true
+	default:
+		return false
+	}
+}
+
 //GetSignatureScheme - given the name, return a signature scheme
 func GetSignatureScheme(sigScheme string) SignatureScheme {
 	switch sigScheme {
 	case "ed25519":
 		return NewED25519Scheme()
-
 	case "bls0chain":
 		return NewBLS0ChainScheme()
 	default:
 		panic(fmt.Sprintf("unknown signature scheme: %v", sigScheme))
+	}
+}
+
+//IsValidAggregateSignatureScheme - whether an aggregate signature scheme exists
+func IsValidAggregateSignatureScheme(sigScheme string) bool {
+	switch sigScheme {
+	case "ed25519":
+		return false
+	case "bls0chain":
+		return true
+	default:
+		return false
 	}
 }
 
@@ -52,6 +87,66 @@ func GetAggregateSignatureScheme(sigScheme string, total int, batchSize int) Agg
 		return NewBLS0ChainAggregateSignature(total, batchSize)
 	default:
 		panic(fmt.Sprintf("unknown signature scheme: %v", sigScheme))
+	}
+}
+
+//IsValidThresholdSignatureScheme - whether a threshold signature scheme exists
+func IsValidThresholdSignatureScheme(sigScheme string) bool {
+	switch sigScheme {
+	case "ed25519":
+		return false
+	case "bls0chain":
+		return true
+	default:
+		return false
+	}
+}
+
+//GetThresholdSignatureScheme - get a threshold signature scheme
+func GetThresholdSignatureScheme(sigScheme string) ThresholdSignatureScheme {
+	switch sigScheme {
+	case "ed25519":
+		return nil
+	case "bls0chain":
+		return NewBLS0ChainThresholdScheme()
+	default:
+		panic(fmt.Sprintf("unknown threshold signature scheme: %v", sigScheme))
+	}
+}
+
+//GenerateThresholdKeyShares - generate T-of-N secret key shares for a key
+func GenerateThresholdKeyShares(sigScheme string, t, n int, originalKey SignatureScheme) ([]ThresholdSignatureScheme, error) {
+	switch sigScheme {
+	case "ed25519":
+		return nil, nil
+	case "bls0chain":
+		return BLS0GenerateThresholdKeyShares(t, n, originalKey)
+	default:
+		panic(fmt.Sprintf("unknown threshold signature scheme: %v", sigScheme))
+	}
+}
+
+//IsValidReconstructSignatureScheme - whether a signature reconstruction scheme exists
+func IsValidReconstructSignatureScheme(sigScheme string) bool {
+	switch sigScheme {
+	case "ed25519":
+		return false
+	case "bls0chain":
+		return true
+	default:
+		return false
+	}
+}
+
+//GetReconstructSignatureScheme - get a signature reconstruction scheme
+func GetReconstructSignatureScheme(sigScheme string, t, n int) ReconstructSignatureScheme {
+	switch sigScheme {
+	case "ed25519":
+		return nil
+	case "bls0chain":
+		return NewBLS0ChainReconstruction(t, n)
+	default:
+		panic(fmt.Sprintf("unknown signature reconstruction scheme: %v", sigScheme))
 	}
 }
 

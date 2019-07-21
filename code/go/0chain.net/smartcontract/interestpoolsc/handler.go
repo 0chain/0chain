@@ -37,7 +37,7 @@ func (ip *InterestPoolSmartContract) getPoolStats(pool *interestPool, t time.Tim
 	stat.ID = pool.ID
 	stat.Locked = pool.IsLocked(t)
 	stat.Balance = pool.Balance
-	stat.InterestRate = pool.InterestRate
-	stat.InterestEarned = pool.InterestEarned
+	stat.APR = pool.APR
+	stat.TokensEarned = pool.TokensEarned
 	return stat, nil
 }
