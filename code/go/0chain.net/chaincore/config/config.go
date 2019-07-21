@@ -36,11 +36,6 @@ func SetupDefaultConfig() {
 	viper.SetDefault("server_chain.round_timeouts.round_restart_mult", 2)
 	// Health Check related fields
 	viper.SetDefault("server_chain.health_check.show_counters", true)
-	viper.SetDefault("server_chain.health_check.start_round", 0)
-	viper.SetDefault("server_chain.health_check.batch_sync_size", 50)
-	viper.SetDefault("server_chain.health_check.cycle_repeat", 60)
-	viper.SetDefault("server_chain.health_check.cycle_hiatus", 5)
-	viper.SetDefault("server_chain.health_check.show_counters", false)
 
 	// Set defaults for deep scan.
 	viper.SetDefault("server_chain.health_check.deep_scan.enabled", true)
@@ -49,7 +44,7 @@ func SetupDefaultConfig() {
 
 	// Repeat deep scan every day
 	viper.SetDefault("server_chain.health_check.deep_scan.settle_secs", 30)
-	viper.SetDefault("server_chain.health_check.deep_scan.interval_mins", 1440)
+	viper.SetDefault("server_chain.health_check.deep_scan.repeat_interval_mins", 1440)
 	viper.SetDefault("server_chain.health_check.deep_scan.report_status_mins", 60)
 
 
@@ -60,7 +55,7 @@ func SetupDefaultConfig() {
 
 	// Repeat proximity every hour.
 	viper.SetDefault("server_chain.health_check.proximity_scan.settle_secs", 30)
-	viper.SetDefault("server_chain.health_check.proximity_scan.interval_mins", 60)
+	viper.SetDefault("server_chain.health_check.proximity_scan.repeat_interval_mins", 60)
 	viper.SetDefault("server_chain.health_check.deep_scan.report_status_mins", 15)
 
 }

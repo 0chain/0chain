@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
+	"runtime"
 	"time"
 )
 
@@ -19,14 +20,6 @@ type BlockHealthCheckStatus int
 const (
 	HealthCheckSuccess = iota
 	HealthCheckFailure
-
-	//BlockSuccess BlockStatus = 1 + iota
-	//Block
-	//MissingRoundSummary
-	//MissingBlockSummary
-	//MissingBlock
-	//MissingTxnSummary
-	//RepairTxnSummary
 )
 
 type HealthCheckScan int
@@ -65,23 +58,6 @@ type BlockCounters struct {
 	SweepCount     int64
 	ElapsedSeconds int64
 	SweepRate      int64
-
-	//BlockSuccess        int64
-	//MissingRoundSummary int64
-	//MissingBlockSummary int64
-	//InvalidRound        int64
-	//MissingSummary      int64
-	//MissingBlock        int64
-	//
-	//BlockMissing       int64
-	//BlockRepairSuccess int64
-	//BlockRepairFailure int64
-	//
-	////MissingTxnSummary   int64
-	////RepairTxnSummary int64
-	//TxnSummaryMissing       int64
-	//TxnSummaryRepairSuccess int64
-	//TxnSummaryRepairFailure int64
 
 	HealthCheckInvocations uint64
 	HealthCheckSuccess     uint64
@@ -152,7 +128,6 @@ type CycleControl struct {
 	bounds    CycleBounds
 
 	CycleCount  int64
-	// HealthCheckInvocations int64
 
 	BlockSyncTimer metrics.Timer
 
@@ -165,21 +140,6 @@ func (bss *SyncStats) getCycleControl(scanMode HealthCheckScan) *CycleControl {
 
 type SyncStats struct {
 	cycle [2]CycleControl
-
-	//deepScan CycleStats
-	//proximityScan CycleStats
-
-	// ScanMode HealthCheckScan
-
-	// Status HealthCheckStatus
-
-	// Interval bounds to start, current and final.
-	//LowRound     int64
-	// CurrentRound int64
-	//HighRound    int64
-
-	// deepScan      CycleCounters
-	// proximityScan CycleCounters
 }
 
 func (sc *Chain) setCycleBounds(ctx context.Context, scanMode HealthCheckScan) {
@@ -264,7 +224,7 @@ func (sc *Chain) HealthCheckWorker(ctx context.Context, scanMode HealthCheckScan
 	Logger.Info("HC-Init",
 		zap.String("mode", scanMode.String()),
 		zap.Int64("batch-size", config.BatchSize),
-		zap.Int("interval", config.IntervalMins))
+		zap.Int("interval", config.RepeatIntervalMins))
 
 	// Initial setup
 	Logger.Info("HC-Init",
@@ -289,6 +249,9 @@ func (sc *Chain) HealthCheckWorker(ctx context.Context, scanMode HealthCheckScan
 
 				// Update the statistics
 				sc.updateSyncStats(ctx, cb.currentRound, duration, scanMode)
+
+				// Schedule other tasks.
+				runtime.Gosched()
 			}
 
 			// Wait for new work.
@@ -388,7 +351,7 @@ func (sc *Chain) waitForWork(ctx context.Context, scanMode HealthCheckScan) {
 		// End of the cycle. Sleep between cycles.
 		config := &sc.HC_CycleScan[scanMode]
 
-		sleepTime := config.Interval
+		sleepTime := config.RepeatInterval
 		wakeToReport := config.ReportStatus
 		if wakeToReport > sleepTime {
 			wakeToReport = sleepTime

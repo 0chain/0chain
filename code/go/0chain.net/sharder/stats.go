@@ -41,8 +41,8 @@ func (sc *Chain) WriteHealthCheckConfiguration(w http.ResponseWriter, scan Healt
 	fmt.Fprintf(w, "<tr><td class='sheader' colspan=2'>Tunables</td></tr>")
 	fmt.Fprintf(w, "<tr><td>Scan Enabled</td><td class='string'>%v</td></tr>",
 		config.Enabled)
-	fmt.Fprintf(w, "<tr><td>Repeat Interval (mins)</td><td class='string'>%v</td></tr>",
-		config.IntervalMins)
+	fmt.Fprintf(w, "<tr><td>Repeat RepeatInterval (mins)</td><td class='string'>%v</td></tr>",
+		config.RepeatIntervalMins)
 	fmt.Fprintf(w, "<tr><td>Batch Size</td><td class='string'>%v</td></tr>", config.BatchSize)
 
 	var window string
@@ -57,8 +57,8 @@ func (sc *Chain) WriteHealthCheckConfiguration(w http.ResponseWriter, scan Healt
 	fmt.Fprintf(w, "<tr><td class='sheader' colspan=2'>Invocation History</td></tr>")
 	fmt.Fprintf(w, "<tr><td>Inception</td><td class='string'>%v</td></tr>",
 		cc.inception.Format(HealthCheckDateTimeFormat))
-	fmt.Fprintf(w, "<tr><td>Repeat Interval (mins)</td><td class='string'>%v</td></tr>",
-		config.IntervalMins)
+	fmt.Fprintf(w, "<tr><td>Repeat RepeatInterval (mins)</td><td class='string'>%v</td></tr>",
+		config.RepeatIntervalMins)
 
 	fmt.Fprintf(w, "<tr><td>Cycle Count</td><td class='string'>%v</td></tr>", cc.CycleCount)
 

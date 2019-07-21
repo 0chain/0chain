@@ -205,8 +205,8 @@ func NewChainFromConfig() *Chain {
 	config.SettleSecs = viper.GetInt("server_chain.health_check.deep_scan.settle_secs")
 	config.Settle = time.Duration(config.SettleSecs) * time.Second
 
-	config.IntervalMins = viper.GetInt("server_chain.health_check.deep_scan.interval_mins")
-	config.Interval = time.Duration(config.IntervalMins) * time.Minute
+	config.RepeatIntervalMins = viper.GetInt("server_chain.health_check.deep_scan.repeat_interval_mins")
+	config.RepeatInterval = time.Duration(config.RepeatIntervalMins) * time.Minute
 
 	config.ReportStatusMins = viper.GetInt("server_chain.health_check.deep_scan.report_status_mins")
 	config.ReportStatus = time.Duration(config.ReportStatusMins) * time.Minute
@@ -221,8 +221,8 @@ func NewChainFromConfig() *Chain {
 	config.SettleSecs = viper.GetInt("server_chain.health_check.proximity_scan.settle_secs")
 	config.Settle = time.Duration(config.SettleSecs) * time.Second
 
-	config.IntervalMins = viper.GetInt("server_chain.health_check.proximity_scan.interval_mins")
-	config.Interval = time.Duration(config.IntervalMins) * time.Minute
+	config.RepeatIntervalMins = viper.GetInt("server_chain.health_check.proximity_scan.repeat_interval_mins")
+	config.RepeatInterval = time.Duration(config.RepeatIntervalMins) * time.Minute
 
 	config.ReportStatusMins = viper.GetInt("server_chain.health_check.proximity_scan.report_status_mins")
 	config.ReportStatus = time.Duration(config.ReportStatusMins) * time.Minute

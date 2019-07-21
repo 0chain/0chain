@@ -48,7 +48,7 @@ server_chain:
       retry_wait_time: 5 #milliseconds
     proposal:
       max_wait_time: 500 # milliseconds
-      wait_mode: static # static or dynamic
+      wait_mode: dynamic # static or dynamic
     consensus:
       threshold_by_count: 66 # percentage
       threshold_by_stake: 0 # percent
@@ -84,14 +84,14 @@ server_chain:
       enabled: false
       settle_secs: 30
       window: 0 #Full scan till round 0
-      interval_mins: 3 #minutes
+      repeat_interval_mins: 3 #minutes
       report_status_mins: 1 #minutes
       batch_size: 50
     proximity_scan:
       enabled: true
       settle_secs: 30
       window: 0 #number of blocks
-      interval_mins: 1 #minutes
+      repeat_interval_mins: 1 #minutes
       report_status_mins: 1 #minutes
       batch_size: 50
 
