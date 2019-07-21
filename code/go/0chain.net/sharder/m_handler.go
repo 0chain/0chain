@@ -55,9 +55,6 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 		return true, nil
 	}
 	sc.GetBlockChannel() <- b
-	if sc.BSyncStats.SyncUntilR <= 0 {
-		sc.BSyncStats.SyncUntilR = b.Round - 1
-	}
 	return true, nil
 }
 

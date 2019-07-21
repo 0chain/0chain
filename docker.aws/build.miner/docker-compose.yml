@@ -2,13 +2,14 @@ version: '3'
 services:
   redis:
     image: "redis:alpine"
+    container_name: ${AGENT_CONTAINER}-redis
     volumes:
       #CONFIG_VOLUME
-      - /0chain/miner/config/redis:/0chain/config/redis
+      - /0chain/${AGENT_DIR}/config/redis:/0chain/config/redis
 
       #REDIS_VOLUME
-      - /0chain/miner/data/redis:/0chain/data/redis
-      - /0chain/miner/data/redis/state:/0chain/data/redis/state
+      - /0chain/${AGENT_DIR}/data/redis:/0chain/data/redis
+      - /0chain/${AGENT_DIR}/data/redis/state:/0chain/data/redis/state
 
     networks:
       default:
@@ -16,18 +17,19 @@ services:
       net.core.somaxconn: '511'
 
     #Start under user 0chain
-    user: 2000:2000
+    user: ${ZCHAIN_USER}:${ZCHAIN_GROUP}
     command: redis-server /0chain/config/redis/state.redis.conf
 
   redis_txns:
     image: "redis:alpine"
+    container_name: ${AGENT_CONTAINER}-redis_txns
     volumes:
       #CONFIG_VOLUME
-      - /0chain/miner/config/redis:/0chain/config/redis
+      - /0chain/${AGENT_DIR}/config/redis:/0chain/config/redis
 
       #REDIS_VOLUME
-      - /0chain/miner/data/redis:/0chain/data/redis
-      - /0chain/miner/data/redis/transactions:/0chain/data/redis/transactions
+      - /0chain/${AGENT_DIR}/data/redis:/0chain/data/redis
+      - /0chain/${AGENT_DIR}/data/redis/transactions:/0chain/data/redis/transactions
 
     networks:
       default:
@@ -35,7 +37,7 @@ services:
       net.core.somaxconn: '511'
 
     #Start under user 0chain
-    user: 2000:2000
+    user: ${ZCHAIN_USER}:${ZCHAIN_GROUP}
     command: redis-server /0chain/config/redis/transactions.redis.conf
 
   miner:
@@ -50,7 +52,11 @@ services:
     build:
       context: ${DOCKER_CODEBASE}
       dockerfile: ./docker.aws/build.miner/Dockerfile
+      args:
+        image_tag: ${PRIMARY_TAG}
 
+    container_name: ${AGENT_CONTAINER}
+    
     image: ${IMAGE_NAME}:${IMAGE_TAG}
 
     pid: "host"
@@ -64,14 +70,14 @@ services:
     volumes:
 
       #CONFIG_VOLUME
-      - /0chain/miner/config:/0chain/config
+      - /0chain/${AGENT_DIR}/config:/0chain/config
 
       #LOG_VOLUME
-      - /0chain/miner/log:/0chain/log
+      - /0chain/${AGENT_DIR}/log:/0chain/log
 
       #ROCKSDB_VOLUME
-      - /0chain/miner/data/rocksdb:/0chain/data/rocksdb
-      - /0chain/miner/data/rocksdb/state:/0chain/data/rocksdb/state
+      - /0chain/${AGENT_DIR}/data/rocksdb:/0chain/data/rocksdb
+      - /0chain/${AGENT_DIR}/data/rocksdb/state:/0chain/data/rocksdb/state
 
 
     logging:
@@ -80,7 +86,7 @@ services:
         max-size: "10M"
         max-file: "10"
     ports:
-      - "7071:7071"
+      - ${AGENT_PORT}:${AGENT_PORT}
 
     restart: ${RESTART_POLICY}
 
@@ -88,8 +94,8 @@ services:
       default:
 
     #Start under user 0chain
-    user: 2000:2000
-    command: /0chain/bin/miner  --deployment_mode 0 --keys_file /0chain/config/miner.txt --nodes_file config/nodes
+    user: ${ZCHAIN_USER}:${ZCHAIN_GROUP}
+    command: /0chain/bin/miner  --deployment_mode 0 --keys_file /0chain/config/miner.txt
 
 networks:
   default:
