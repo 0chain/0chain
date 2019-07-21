@@ -139,7 +139,7 @@ func (sc *StateContext) Validate() error {
 				return state.ErrInvalidTransfer
 			}
 		}
-		if transfer.Amount <= 0 {
+		if transfer.Amount < 0 {
 			return state.ErrInvalidTransfer
 		}
 	}
