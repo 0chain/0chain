@@ -41,3 +41,7 @@ func (ip *InterestPoolSmartContract) getPoolStats(pool *interestPool, t time.Tim
 	stat.TokensEarned = pool.TokensEarned
 	return stat, nil
 }
+
+func (ip *InterestPoolSmartContract) getLockConfig(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
+	return ip.getGlobalNode(balances, "updateVariables"), nil
+}
