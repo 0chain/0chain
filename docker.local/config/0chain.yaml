@@ -20,8 +20,10 @@ development:
   txn_generation:
     wallets: 50
     max_transactions: 70
-    pour_point: 100
-    pour_amount: 10000
+    max_txn_fee: 10000
+    min_txn_fee: 0
+    max_txn_value: 10000000000
+    min_txn_value: 100
   faucet:
     refill_amount: 1000000000000000
 
