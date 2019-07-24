@@ -158,7 +158,7 @@ func createSendTransaction(c *chain.Chain, prng *rand.Rand) *transaction.Transac
 			break
 		}
 	}
-	txn := wf.CreateRandomSendTransaction(wt.ClientID, 10000000)
+	txn := wf.CreateRandomSendTransaction(wt.ClientID, 10000)
 	return txn
 }
 
