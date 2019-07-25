@@ -9,7 +9,13 @@ logging:
 development:
   state: true
   dkg: true
-  smart_contract: true
+  smart_contract:
+    storage: true
+    faucet: true
+    zrc20: true
+    interest: true
+    miner: true
+    fee: false
   txn_generation:
     wallets: 500
     transactions: 70
@@ -67,8 +73,20 @@ server_chain:
   state:
     prune_below_count: 100 # rounds
   health_check:
-    round: 1
-    batch_sync_size: 50
+    show_counters: true
+    deep_scan:
+      enabled: true
+      window: 0 #Full scan till round 0
+      repeat_interval_mins: 1440 #minutes
+      report_status_mins: 60 #minutes
+      batch_size: 500
+    proximity_scan:
+      enabled: true
+      window: 100 #number of blocks
+      repeat_interval_mins: 60 #minutes
+      report_status_mins: 15 #minutes
+      batch_size: 20
+
   smart_contract:
     timeout: 0 # milliseconds, 0 = no timeout
 

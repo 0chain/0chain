@@ -193,8 +193,43 @@ func NewChainFromConfig() *Chain {
 	} else {
 		chain.VerificationTicketsTo = Generator
 	}
-	chain.HealthyRoundNumber = viper.GetInt64("server_chain.health_check.round")
-	chain.BatchSyncSize = viper.GetInt("server_chain.health_check.batch_sync_size")
+
+	// Health Check related counters
+	// Work on deep scan
+	config := &chain.HC_CycleScan[DeepScan]
+
+	config.Enabled = viper.GetBool("server_chain.health_check.deep_scan.enabled")
+	config.BatchSize = viper.GetInt64("server_chain.health_check.deep_scan.batch_size")
+	config.Window = viper.GetInt64("server_chain.health_check.deep_scan.window")
+
+	config.SettleSecs = viper.GetInt("server_chain.health_check.deep_scan.settle_secs")
+	config.Settle = time.Duration(config.SettleSecs) * time.Second
+
+	config.RepeatIntervalMins = viper.GetInt("server_chain.health_check.deep_scan.repeat_interval_mins")
+	config.RepeatInterval = time.Duration(config.RepeatIntervalMins) * time.Minute
+
+	config.ReportStatusMins = viper.GetInt("server_chain.health_check.deep_scan.report_status_mins")
+	config.ReportStatus = time.Duration(config.ReportStatusMins) * time.Minute
+
+	// Work on proximity scan
+	config = &chain.HC_CycleScan[ProximityScan]
+
+	config.Enabled = viper.GetBool("server_chain.health_check.proximity_scan.enabled")
+	config.BatchSize = viper.GetInt64("server_chain.health_check.proximity_scan.batch_size")
+	config.Window = viper.GetInt64("server_chain.health_check.proximity_scan.window")
+
+	config.SettleSecs = viper.GetInt("server_chain.health_check.proximity_scan.settle_secs")
+	config.Settle = time.Duration(config.SettleSecs) * time.Second
+
+	config.RepeatIntervalMins = viper.GetInt("server_chain.health_check.proximity_scan.repeat_interval_mins")
+	config.RepeatInterval = time.Duration(config.RepeatIntervalMins) * time.Minute
+
+	config.ReportStatusMins = viper.GetInt("server_chain.health_check.proximity_scan.report_status_mins")
+	config.ReportStatus = time.Duration(config.ReportStatusMins) * time.Minute
+
+	chain.HealthShowCounters = viper.GetBool("server_chain.health_check.show_counters")
+
+
 	chain.BlockProposalMaxWaitTime = viper.GetDuration("server_chain.block.proposal.max_wait_time") * time.Millisecond
 	waitMode := viper.GetString("server_chain.block.proposal.wait_mode")
 	if waitMode == "static" {

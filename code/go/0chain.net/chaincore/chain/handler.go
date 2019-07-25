@@ -363,6 +363,10 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "<td valign='top'>")
 	fmt.Fprintf(w, "<li><a href='/_chain_stats'>/_chain_stats</a></li>")
+	if node.Self.Type == node.NodeTypeSharder {
+		fmt.Fprintf(w, "<li><a href='/_health_check'>/_health_check</a></li>")
+	}
+
 	fmt.Fprintf(w, "<li><a href='/_diagnostics/miner_stats'>/_diagnostics/miner_stats</a>")
 	if node.Self.Type == node.NodeTypeMiner && config.Development() {
 		fmt.Fprintf(w, "<li><a href='/_diagnostics/wallet_stats'>/_diagnostics/wallet_stats</a>")

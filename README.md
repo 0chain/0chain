@@ -134,13 +134,21 @@ This should display a few containers and should include containers with images m
 
 2) Confirming the servers are up and running. From a browser, visit
 
-- http://localhost:7071/
+- http://localhost:7071/_diagnostics
 
-- http://localhost:7072/
+- http://localhost:7072/_diagnostics
 
-- http://localhost:7073/
+- http://localhost:7073/_diagnostics
 
 to see the status of the miners.
+
+Similarly, following links can be used to see the status of the sharders
+
+- http://localhost:7171/_diagnostics
+
+- http://localhost:7172/_diagnostics
+
+- http://localhost:7173/_diagnostics
 
 3) Connecting to redis servers running within the containers (you are within the appropriate miner directories)
 
@@ -205,7 +213,20 @@ The list of packages is optional, and if provided runs only the tests from those
 
 ### Cleanup
 
-Get rid of old unused docker resources:
+1) If you want to restart the blockchain from the beginning
+
+```
+$ ./docker.local/bin/clean.sh
+```
+
+This cleans up the directories within docker.local/miner* and docker.local/sharder*
+
+***Note: this script can take a while if the blockchain generated a lot of blocks as the script deletes
+the databases and also all the blocks that are stored by the sharders. Since each block is stored as a 
+separate file, deleting thousands of such files will take some time.***
+
+2) If you want to get rid of old unused docker resources:
+
 ```
 $ docker system prune
 ```

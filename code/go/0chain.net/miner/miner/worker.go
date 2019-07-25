@@ -24,19 +24,25 @@ import (
 )
 
 var (
-	wallets    []*wallet.Wallet
-	pourPoint  int64
-	pourAmount int64
+	wallets  []*wallet.Wallet
+	maxFee   int64
+	minFee   int64
+	maxValue int64
+	minValue int64
 )
 
 /*TransactionGenerator - generates a steady stream of transactions */
 func TransactionGenerator(c *chain.Chain) {
 	wallet.SetupWallet()
 
-	viper.SetDefault("development.txn_generation.pour_point", 100)
-	pourPoint = viper.GetInt64("development.txn_generation.pour_point")
-	viper.SetDefault("development.txn_generation.pour_amount", 10000)
-	pourAmount = viper.GetInt64("development.txn_generation.pour_amount")
+	viper.SetDefault("development.txn_generation.max_txn_fee", 10000)
+	maxFee = viper.GetInt64("development.txn_generation.max_txn_fee")
+	viper.SetDefault("development.txn_generation.min_txn_fee", 0)
+	minFee = viper.GetInt64("development.txn_generation.min_txn_fee")
+	viper.SetDefault("development.txn_generation.max_txn_value", 10000000000)
+	maxValue = viper.GetInt64("development.txn_generation.max_txn_value")
+	viper.SetDefault("development.txn_generation.min_txn_value", 100)
+	minValue = viper.GetInt64("development.txn_generation.min_txn_value")
 
 	var numClients = viper.GetInt("development.txn_generation.wallets")
 	var numTxns int32
@@ -158,7 +164,9 @@ func createSendTransaction(c *chain.Chain, prng *rand.Rand) *transaction.Transac
 			break
 		}
 	}
-	txn := wf.CreateRandomSendTransaction(wt.ClientID, 10000000)
+	fee := prng.Int63n(maxFee-minFee) + minFee
+	value := prng.Int63n(maxValue-minValue) + minValue
+	txn := wf.CreateRandomSendTransaction(wt.ClientID, value, fee)
 	return txn
 }
 

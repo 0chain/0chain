@@ -54,6 +54,9 @@ type Round struct {
 	TimeoutCount     int
 	SoftTimeoutCount int
 	VrfStartTime     time.Time
+	TimeoutVotes     map[int]int
+	VotersVoted      map[string]bool
+	VotesMutex       sync.Mutex
 }
 
 // RoundFactory - a factory to create a new round object specific to miner/sharder
@@ -92,10 +95,17 @@ func (r *Round) GetTimeoutCount() int {
 
 // IncrementTimeoutCount - Increments timeout count
 func (r *Round) IncrementTimeoutCount() {
-	if r.TimeoutCount >= 5 {
-		Logger.Info("Reached max timeout for this round. Waiting for others to catch up...", zap.Int64("roundNum", r.GetRoundNumber()), zap.Int("toc", r.TimeoutCount))
-		return
+	r.VotesMutex.Lock()
+	defer r.VotesMutex.Unlock()
+	var mostVotes int
+	for k, v := range r.TimeoutVotes {
+		if v > mostVotes || (v == mostVotes && r.TimeoutCount > k) {
+			mostVotes = v
+			r.TimeoutCount = k
+		}
 	}
+	r.TimeoutVotes = make(map[int]int)
+	r.VotersVoted = make(map[string]bool)
 	r.TimeoutCount = r.TimeoutCount + 1
 }
 
@@ -289,6 +299,8 @@ func (r *Round) isFinalized() bool {
 func Provider() datastore.Entity {
 	r := &Round{}
 	r.initialize()
+	r.TimeoutVotes = make(map[int]int)
+	r.VotersVoted = make(map[string]bool)
 	return r
 }
 
@@ -450,4 +462,13 @@ func (r *Round) Lock() {
 //Unlock - implement interface
 func (r *Round) Unlock() {
 	r.Mutex.Unlock()
+}
+
+func (r *Round) AddTimeoutVote(num int, id string) {
+	r.VotesMutex.Lock()
+	defer r.VotesMutex.Unlock()
+	if !r.VotersVoted[id] {
+		r.TimeoutVotes[num]++
+		r.VotersVoted[id] = true
+	}
 }

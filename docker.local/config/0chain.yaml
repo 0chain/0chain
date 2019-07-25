@@ -20,8 +20,10 @@ development:
   txn_generation:
     wallets: 50
     max_transactions: 70
-    pour_point: 100
-    pour_amount: 10000
+    max_txn_fee: 10000
+    min_txn_fee: 0
+    max_txn_value: 10000000000
+    min_txn_value: 100
   faucet:
     refill_amount: 1000000000000000
 
@@ -81,8 +83,21 @@ server_chain:
   smart_contract:
     timeout: 50 # milliseconds
   health_check:
-    round: 1
-    batch_sync_size: 50
+    show_counters: true
+    deep_scan:
+      enabled: false
+      settle_secs: 30
+      window: 0 #Full scan till round 0
+      repeat_interval_mins: 3 #minutes
+      report_status_mins: 1 #minutes
+      batch_size: 50
+    proximity_scan:
+      enabled: true
+      settle_secs: 30
+      window: 0 #number of blocks
+      repeat_interval_mins: 1 #minutes
+      report_status_mins: 1 #minutes
+      batch_size: 50
 
 network:
   nodes_file: config/single_machine_3_nodes.yaml
@@ -95,4 +110,4 @@ network:
   user_handlers:
     rate_limit: 10 # 1 per second
   n2n_handlers:
-    rate_limit: 100 # 10 per second
+    rate_limit: 1000 # 1000 per second

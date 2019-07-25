@@ -24,6 +24,8 @@ func SetupHandlers() {
 	http.HandleFunc("/v1/transaction/get/confirmation", common.UserRateLimit(common.ToJSONResponse(TransactionConfirmationHandler)))
 	http.HandleFunc("/v1/chain/get/stats", common.UserRateLimit(common.ToJSONResponse(ChainStatsHandler)))
 	http.HandleFunc("/_chain_stats", common.UserRateLimit(ChainStatsWriter))
+	http.HandleFunc("/_health_check", common.UserRateLimit(HealthCheckWriter))
+
 }
 
 /*BlockHandler - a handler to respond to block queries */
@@ -103,13 +105,8 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<br>")
 	fmt.Fprintf(w, "<table><tr><td colspan='2'><h2>Summary</h2></td></tr>")
 	fmt.Fprintf(w, "<tr><td>Sharded Blocks</td><td class='number'>%v</td></tr>", sc.SharderStats.ShardedBlocksCount)
-	fmt.Fprintf(w, "<tr><td>Healthy Round</td><td class='number'>%v</td></tr>", sc.SharderStats.HealthyRoundNum)
 	fmt.Fprintf(w, "<tr><td>QOS Round</td><td class='number'>%v</td></tr>", sc.SharderStats.QOSRound)
 	fmt.Fprintf(w, "</table>")
-	fmt.Fprintf(w, "<table><tr><td colspan='2'><h2>Sync Stats</h2></td></tr>")
-	fmt.Fprintf(w, "<tr><td>Status</td><td class='string'>%s</td></tr>", sc.BSyncStats.Status)
-	sc.WriteBlockSyncStats(w)
-	fmt.Fprintf(w, "</table")
 	fmt.Fprintf(w, "<br>")
 	fmt.Fprintf(w, "<table><tr><td>")
 	fmt.Fprintf(w, "<h2>Block Finalization Statistics (Steady State)</h2>")
@@ -157,12 +154,6 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</td><td>")
 	fmt.Fprintf(w, "<h2>State Prune Delete Statistics</h2>")
 	diagnostics.WriteTimerStatistics(w, c, chain.StatePruneDeleteTimer, 1000000.0)
-	fmt.Fprintf(w, "</tr>")
-
-	fmt.Fprintf(w, "<tr><td>")
-	fmt.Fprintf(w, "<h2>Block Sync Statistics</h2>")
-	diagnostics.WriteTimerStatistics(w, c, BlockSyncTimer, 1000000.0)
-	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "</tr>")
 
 	fmt.Fprintf(w, "</table>")

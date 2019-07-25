@@ -9,6 +9,27 @@ import (
 	"0chain.net/core/common"
 )
 
+func (ssc *StorageSmartContract) GetAllocationsHandler(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
+	clientID := params.Get("client")
+	allocations, err := ssc.getAllocationsList(clientID, balances)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*StorageAllocation, 0)
+	for _, allocationID := range allocations.List {
+		allocationObj := &StorageAllocation{}
+		allocationObj.ID = allocationID
+
+		allocationBytes, err := balances.GetTrieNode(allocationObj.GetKey(ssc.ID))
+		if err != nil {
+			continue
+		}
+		allocationObj.Decode(allocationBytes.Encode())
+		result = append(result, allocationObj)
+	}
+	return result, nil
+}
+
 func (ssc *StorageSmartContract) AllocationStatsHandler(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
 	allocationID := params.Get("allocation")
 	allocationObj := &StorageAllocation{}
