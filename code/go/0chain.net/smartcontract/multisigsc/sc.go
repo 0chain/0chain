@@ -10,9 +10,7 @@ import (
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	. "0chain.net/core/logging"
 	"0chain.net/core/util"
-	"go.uber.org/zap"
 )
 
 const (
@@ -20,7 +18,6 @@ const (
 	Address          = "27b5ef7120252b79f9dd9c05505dd28f328c80f6863ee446daede08a84d651a7"
 	RegisterFuncName = "register"
 	VoteFuncName     = "vote"
-	LogTimingInfo    = false
 )
 
 type MultiSigSmartContract struct {
@@ -44,10 +41,6 @@ func (ms *MultiSigSmartContract) SetSC(sc *smartcontractinterface.SmartContract,
 }
 
 func (ms MultiSigSmartContract) Execute(t *transaction.Transaction, funcName string, inputData []byte, balances state.StateContextI) (string, error) {
-	if LogTimingInfo {
-		start := time.Now().UnixNano()
-		defer printTimeTaken(start)
-	}
 
 	switch funcName {
 	case RegisterFuncName:
@@ -57,13 +50,6 @@ func (ms MultiSigSmartContract) Execute(t *transaction.Transaction, funcName str
 	default:
 		return "err_execute_function_not_found: no function with that name: " + funcName, nil
 	}
-}
-
-func printTimeTaken(start int64) {
-	end := time.Now().UnixNano()
-	duration := (end - start) / int64(time.Microsecond)
-
-	Logger.Info("Multi-signature smart contract execution time", zap.Int64("µs duration", duration))
 }
 
 func (ms MultiSigSmartContract) register(registeringClientID string, inputData []byte, balances state.StateContextI) (string, error) {
@@ -91,6 +77,7 @@ func (ms MultiSigSmartContract) register(registeringClientID string, inputData [
 	alreadyExisted, err := ms.walletExists(registeringClientID, balances)
 	if err != nil {
 		// I/O error.
+
 		if err != util.ErrValueNotPresent && err != util.ErrNodeNotFound {
 			return "", err
 		} //else means no wallet exists
@@ -126,6 +113,16 @@ func (ms MultiSigSmartContract) vote(currentTxnHash, signingClientID string, now
 		return "", err
 	}
 
+	// Check that the multi-sig wallet is registered.
+	w, err := ms.getWallet(v.Transfer.ClientID, balances)
+	if err != nil {
+		// I/O error.
+		return "", err
+	}
+	if w.isEmpty() {
+		return "", common.NewError("err_vote_wallet_not_registered", " wallet not registered")
+	}
+
 	// Play nice.
 	if !v.notTooBig() {
 		return "", common.NewError("err_vote_too_big", "an input field exceeded allowable length")
@@ -139,7 +136,7 @@ func (ms MultiSigSmartContract) vote(currentTxnHash, signingClientID string, now
 
 	// Every vote is associated with a proposal. If an appropriate proposal does
 	// not exist yet, create one.
-	p, err := ms.findOrCreateProposal(now, v, balances)
+	p, err := ms.findOrCreateProposal(now, w.ExpTime, v, balances)
 	if err != nil {
 		// I/O error.
 		return "", err
@@ -153,16 +150,6 @@ func (ms MultiSigSmartContract) vote(currentTxnHash, signingClientID string, now
 	// Check if the proposal was already finished, making this vote unnecessary.
 	if p.ExecutedInTxnHash != "" {
 		return "success 0: proposal previously executed in transaction hash " + p.ExecutedInTxnHash, nil
-	}
-
-	// Check that the multi-sig wallet is registered.
-	w, err := ms.getWallet(v.Transfer.ClientID, balances)
-	if err != nil {
-		// I/O error.
-		return "", err
-	}
-	if w.isEmpty() {
-		return "", common.NewError("err_vote_wallet_not_registered", " wallet not registered")
 	}
 
 	// Check that the voter is registered on the wallet and that the signature
@@ -327,7 +314,7 @@ func (ms MultiSigSmartContract) prune(ref proposalRef, balances c_state.StateCon
 	return nil
 }
 
-func (ms MultiSigSmartContract) findOrCreateProposal(now common.Timestamp, v Vote, balances state.StateContextI) (proposal, error) {
+func (ms MultiSigSmartContract) findOrCreateProposal(now common.Timestamp, expTime int64, v Vote, balances state.StateContextI) (proposal, error) {
 	// Start by trying to find an existing proposal.
 	p, err := ms.getProposal(v.getProposalRef(), balances)
 	if err != nil {
@@ -346,7 +333,7 @@ func (ms MultiSigSmartContract) findOrCreateProposal(now common.Timestamp, v Vot
 
 	// If it didn't exist or was expired, create it and update expiration queue.
 	if p.isEmpty() {
-		p, err = ms.createProposal(now, v, balances)
+		p, err = ms.createProposal(now, expTime, v, balances)
 		if err != nil {
 			return proposal{}, err
 		}
@@ -356,7 +343,7 @@ func (ms MultiSigSmartContract) findOrCreateProposal(now common.Timestamp, v Vot
 }
 
 // Create a proposal and add it to the expiration queue. Performs I/O.
-func (ms MultiSigSmartContract) createProposal(now common.Timestamp, v Vote, balances state.StateContextI) (proposal, error) {
+func (ms MultiSigSmartContract) createProposal(now common.Timestamp, expTime int64, v Vote, balances state.StateContextI) (proposal, error) {
 	q, err := ms.getOrCreateExpirationQueue(balances)
 	if err != nil {
 		if err != util.ErrValueNotPresent && err != util.ErrNodeNotFound {
@@ -364,10 +351,11 @@ func (ms MultiSigSmartContract) createProposal(now common.Timestamp, v Vote, bal
 		} //else we will create a proposal
 	}
 
+	exp := common.ToTime(now).Add(time.Second * time.Duration(expTime)).Unix()
 	// Create proposal.
 	p := proposal{
 		ProposalID:     v.ProposalID,
-		ExpirationDate: now + ExpirationTime,
+		ExpirationDate: common.Timestamp(exp),
 
 		Next: proposalRef{},
 		Prev: q.Tail,

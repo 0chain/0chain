@@ -3,6 +3,7 @@ package multisigsc
 import (
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
@@ -11,22 +12,22 @@ import (
 )
 
 const (
-	ExpirationTime = 60 * 60 * 24 * 7 // Proposals expire after one week.
+	//ExpirationTime = 60 * 60 * 24 * 7 // Proposals expire after one week.
 	//ExpirationTime = 30 // Value in seconds that is more appropriate for testing.
-	MaxSigners   = 20
-	MinSigners   = 2
-	MaxFieldSize = 256
+	MaxSigners    = 20
+	MinSigners    = 2
+	MinExpiryTime = 1
+	MaxFieldSize  = 256
 )
 
 type Wallet struct {
-	ClientID        string `json:"client_id"`
-	SignatureScheme string `json:"signature_scheme"`
-	PublicKey       string `json:"public_key"`
-
+	ClientID           string   `json:"client_id"`
+	SignatureScheme    string   `json:"signature_scheme"`
+	PublicKey          string   `json:"public_key"`
 	SignerThresholdIDs []string `json:"signer_threshold_ids"`
 	SignerPublicKeys   []string `json:"signer_public_keys"`
-
-	NumRequired int `json:"num_required"`
+	NumRequired        int      `json:"num_required"`
+	ExpTime            int64    `json:"exp_time"` //proposal expiry time in seconds
 }
 
 func (w Wallet) Encode() []byte {
@@ -60,6 +61,9 @@ func (w Wallet) valid(forClientID string) (bool, error) {
 		return false, common.NewError("client_id_public_key_no_match", "the client id and the public key in the wallet do not match")
 	}
 
+	if w.ExpTime < MinExpiryTime {
+		return false, common.NewError("exp_time_lt_min", fmt.Sprintf("given expiry time %d is less than %d", w.ExpTime, MinExpiryTime))
+	}
 	numIds := len(w.SignerThresholdIDs)
 	numKeys := len(w.SignerPublicKeys)
 
