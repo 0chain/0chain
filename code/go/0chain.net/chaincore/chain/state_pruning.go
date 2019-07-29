@@ -31,7 +31,7 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 		bc = bc.Prev()
 	}
 	var bs *block.BlockSummary
-	lfb := c.LatestFinalizedBlock
+	lfb := c.GetLatestFinalizedBlock()
 	if bc.Value != nil {
 		bs = bc.Value.(*block.BlockSummary)
 		for bs.Round%100 != 0 {
@@ -49,7 +49,7 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 	if bs == nil {
 		bs = &block.BlockSummary{Round: lfb.Round, ClientStateHash: lfb.ClientStateHash}
 	}
-	Logger.Info("prune client state - new version", zap.Int64("current_round", c.CurrentRound), zap.Int64("latest_finalized_round", c.LatestFinalizedBlock.Round), zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.String("state_hash", util.ToHex(bs.ClientStateHash)))
+	Logger.Info("prune client state - new version", zap.Int64("current_round", c.CurrentRound), zap.Int64("latest_finalized_round", lfb.Round), zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.String("state_hash", util.ToHex(bs.ClientStateHash)))
 	newVersion := util.Sequence(bs.Round)
 	if c.pruneStats != nil && c.pruneStats.Version == newVersion && c.pruneStats.MissingNodes == 0 {
 		return // already done with pruning this
@@ -96,7 +96,7 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 	} else {
 		Logger.Info("prune client state (update origin)", zap.Int64("current_round", c.CurrentRound), zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.String("state_hash", util.ToHex(bs.ClientStateHash)), zap.Any("prune_stats", ps))
 	}
-	if c.LatestFinalizedBlock.Round-int64(c.PruneStateBelowCount) < bs.Round {
+	if lfb.Round-int64(c.PruneStateBelowCount) < bs.Round {
 		ps.Stage = util.PruneStateAbandoned
 		return
 	}

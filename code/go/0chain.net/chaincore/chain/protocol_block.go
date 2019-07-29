@@ -139,7 +139,7 @@ func (c *Chain) MergeVerificationTickets(ctx context.Context, b *block.Block, vt
 func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockStateHandler) {
 	bNode := node.GetNode(fb.MinerID)
 	ms := bNode.ProtocolStats.(*MinerStats)
-	Logger.Info("finalize block", zap.Int64("round", fb.Round), zap.Int64("current_round", c.CurrentRound), zap.Int64("lf_round", c.LatestFinalizedBlock.Round), zap.String("hash", fb.Hash), zap.Int("round_rank", fb.RoundRank), zap.Int8("state", fb.GetBlockState()))
+	Logger.Info("finalize block", zap.Int64("round", fb.Round), zap.Int64("current_round", c.CurrentRound), zap.Int64("lf_round", c.GetLatestFinalizedBlock().Round), zap.String("hash", fb.Hash), zap.Int("round_rank", fb.RoundRank), zap.Int8("state", fb.GetBlockState()))
 	ms.FinalizationCountByRank[fb.RoundRank]++
 	fr := c.GetRound(fb.Round)
 	if fr != nil {
@@ -199,7 +199,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 //IsFinalizedDeterministically - checks if a block is finalized deterministically
 func (c *Chain) IsFinalizedDeterministically(b *block.Block) bool {
 	//TODO: The threshold count should happen w.r.t the view of the block
-	if c.LatestFinalizedBlock != nil && b.Round > c.LatestFinalizedBlock.Round {
+	if c.GetLatestFinalizedBlock().Round < b.Round {
 		return false
 	}
 	if len(b.UniqueBlockExtensions)*100 >= c.Miners.Size()*c.ThresholdByCount {

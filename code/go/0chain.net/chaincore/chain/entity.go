@@ -229,7 +229,6 @@ func NewChainFromConfig() *Chain {
 
 	chain.HealthShowCounters = viper.GetBool("server_chain.health_check.show_counters")
 
-
 	chain.BlockProposalMaxWaitTime = viper.GetDuration("server_chain.block.proposal.max_wait_time") * time.Millisecond
 	waitMode := viper.GetString("server_chain.block.proposal.wait_mode")
 	if waitMode == "static" {
@@ -516,7 +515,7 @@ func (c *Chain) DeleteBlocksBelowRound(round int64) {
 	blocks := make([]*block.Block, 0, 1)
 	for _, b := range c.blocks {
 		if b.Round < round && b.CreationDate < ts && b.Round < c.LatestDeterministicBlock.Round {
-			Logger.Debug("found block to delete", zap.Int64("round", round), zap.Int64("block_round", b.Round), zap.Int64("current_round", c.CurrentRound), zap.Int64("lf_round", c.LatestFinalizedBlock.Round))
+			Logger.Debug("found block to delete", zap.Int64("round", round), zap.Int64("block_round", b.Round), zap.Int64("current_round", c.CurrentRound), zap.Int64("lf_round", c.GetLatestFinalizedBlock().Round))
 			blocks = append(blocks, b)
 		}
 	}
@@ -924,12 +923,14 @@ func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
 	}
 }
 
+//GetLatestFinalizedBlock - get the latest finalized block
 func (c *Chain) GetLatestFinalizedBlock() *block.Block {
 	c.lfbMutex.RLock()
 	defer c.lfbMutex.RUnlock()
 	return c.LatestFinalizedBlock
 }
 
+//GetLatestFinalizedBlockSummary - get the latest finalized block summary
 func (c *Chain) GetLatestFinalizedBlockSummary() *block.BlockSummary {
 	c.lfbMutex.RLock()
 	defer c.lfbMutex.RUnlock()

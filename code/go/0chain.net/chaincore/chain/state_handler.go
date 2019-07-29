@@ -44,7 +44,7 @@ func (c *Chain) GetSCRestOutput(ctx context.Context, r *http.Request) (interface
 	scRestPath := "/" + pathParams[2]
 	c.stateMutex.RLock()
 	defer c.stateMutex.RUnlock()
-	lfb := c.LatestFinalizedBlock
+	lfb := c.GetLatestFinalizedBlock()
 	clientState := createTxnMPT(lfb.ClientState) // begin transaction
 	txn := &transaction.Transaction{}
 	sctx := bcstate.NewStateContext(lfb, clientState, c.clientStateDeserializer, txn, c.GetBlockSharders)
@@ -60,7 +60,7 @@ func (c *Chain) GetSCRestOutput(ctx context.Context, r *http.Request) (interface
 func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interface{}, error) {
 	scAddress := r.FormValue("sc_address")
 	key := r.FormValue("key")
-	lfb := c.LatestFinalizedBlock
+	lfb := c.GetLatestFinalizedBlock()
 	if lfb == nil {
 		return nil, common.NewError("failed to get sc state", "finalized block doesn't exist")
 	}
@@ -87,7 +87,7 @@ func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interf
 /*GetBalanceHandler - get the balance of a client */
 func (c *Chain) GetBalanceHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	clientID := r.FormValue("client_id")
-	lfb := c.LatestFinalizedBlock
+	lfb := c.GetLatestFinalizedBlock()
 	if lfb == nil {
 		return nil, common.ErrTemporaryFailure
 	}

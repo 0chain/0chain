@@ -38,12 +38,13 @@ func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	}
 	parts := strings.Split(content, ",")
 	sc := GetSharderChain()
+	lfb := sc.GetLatestFinalizedBlock()
 	if roundData != "" {
 		roundNumber, err := strconv.ParseInt(roundData, 10, 64)
 		if err != nil {
 			return nil, err
 		}
-		if roundNumber > sc.LatestFinalizedBlock.Round {
+		if roundNumber > lfb.Round {
 			return nil, common.InvalidRequest("Block not available")
 		} else {
 			roundEntity := sc.GetSharderRound(roundNumber)
@@ -73,7 +74,7 @@ func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	So, as long as people query the last 10M blocks most of the time, we only end up with 1 or 2 iterations.
 	Anything older than that, there is a cost to query the database and get the round information anyway.
 	*/
-	for roundEntity := sc.LatestFinalizedBlock.Round; roundEntity > 0; roundEntity -= sc.RoundRange {
+	for roundEntity := lfb.Round; roundEntity > 0; roundEntity -= sc.RoundRange {
 		b, err = sc.GetBlockFromStore(hash, roundEntity)
 		if err != nil {
 			return nil, err

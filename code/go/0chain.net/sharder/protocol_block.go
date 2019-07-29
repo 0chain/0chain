@@ -37,7 +37,7 @@ func (sc *Chain) UpdatePendingBlock(ctx context.Context, b *block.Block, txns []
 /*UpdateFinalizedBlock - updates the finalized block */
 func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	fr := sc.GetRound(b.Round)
-	Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("lf_round", sc.LatestFinalizedBlock.Round), zap.Any("current_round", sc.CurrentRound))
+	Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Any("lf_round", sc.GetLatestFinalizedBlock().Round), zap.Any("current_round", sc.CurrentRound))
 	if config.Development() {
 		for _, t := range b.Txns {
 			if !t.DebugTxn() {
@@ -439,8 +439,7 @@ func (sc *Chain) storeBlockSummaries(ctx context.Context, bs *BlockSummaries) {
 				}
 			}
 		} else {
-			Logger.Debug( "HC-StoreBlockSummaries",
-			zap.String("blockSummary", "nil"))
+			Logger.Debug("HC-StoreBlockSummaries", zap.String("blockSummary", "nil"))
 		}
 	}
 	//blockSummaryEntityMetadata := datastore.GetEntityMetadata("block_summary")

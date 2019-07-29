@@ -147,7 +147,7 @@ func GetWalletTable(latest bool) (int64, int64, int64, int64) {
 	if latest {
 		b = c.GetRoundBlocks(c.CurrentRound - 1)[0]
 	} else {
-		b = c.LatestFinalizedBlock
+		b = c.GetLatestFinalizedBlock()
 	}
 	var walletsWithTokens, walletsWithoutTokens, totalWallets int64
 	walletsWithTokens = b.ClientState.GetNodeDB().Size(ctx)

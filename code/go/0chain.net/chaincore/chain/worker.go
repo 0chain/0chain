@@ -29,9 +29,10 @@ func (c *Chain) FinalizeRoundWorker(ctx context.Context, bsh BlockStateHandler) 
 
 //FinalizedBlockWorker - a worker that processes finalized blocks
 func (c *Chain) FinalizedBlockWorker(ctx context.Context, bsh BlockStateHandler) {
+	lfb := c.GetLatestFinalizedBlock()
 	for fb := range c.finalizedBlocksChannel {
-		if fb.Round < c.LatestFinalizedBlock.Round-5 {
-			Logger.Error("slow finalized block processing", zap.Int64("lfb", c.LatestFinalizedBlock.Round), zap.Int64("fb", fb.Round))
+		if fb.Round < lfb.Round-5 {
+			Logger.Error("slow finalized block processing", zap.Int64("lfb", lfb.Round), zap.Int64("fb", fb.Round))
 		}
 		c.finalizeBlock(ctx, fb, bsh)
 	}

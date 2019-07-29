@@ -99,9 +99,10 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (interface{},
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
 	mc := GetMinerChain()
-	if vrfs.GetRoundNumber() < mc.LatestFinalizedBlock.Round {
+	lfb := mc.GetLatestFinalizedBlock()
+	if vrfs.GetRoundNumber() < lfb.Round {
 		Logger.Info("Rejecting VRFShare: old round", zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()),
-			zap.Int64("lfb_round_num", mc.LatestFinalizedBlock.Round))
+			zap.Int64("lfb_round_num", lfb.Round))
 		return nil, nil
 	}
 
@@ -135,8 +136,9 @@ func VerifyBlockHandler(ctx context.Context, entity datastore.Entity) (interface
 	if b.MinerID == node.Self.GetKey() {
 		return nil, nil
 	}
-	if b.Round < mc.LatestFinalizedBlock.Round {
-		Logger.Debug("verify block handler", zap.Int64("round", b.Round), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round))
+	lfb := mc.GetLatestFinalizedBlock()
+	if b.Round < lfb.Round {
+		Logger.Debug("verify block handler", zap.Int64("round", b.Round), zap.Int64("lf_round", lfb.Round))
 		return nil, nil
 	}
 	err := b.Validate(ctx)
@@ -167,8 +169,9 @@ func NotarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (i
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
 	mc := GetMinerChain()
-	if notarization.Round < mc.LatestFinalizedBlock.Round {
-		Logger.Debug("notarization receipt handler", zap.Int64("round", notarization.Round), zap.Int64("lf_round", mc.LatestFinalizedBlock.Round))
+	lfb := mc.GetLatestFinalizedBlock()
+	if notarization.Round < lfb.Round {
+		Logger.Debug("notarization receipt handler", zap.Int64("round", notarization.Round), zap.Int64("lf_round", lfb.Round))
 		return nil, nil
 	}
 	msg := NewBlockMessage(MessageNotarization, node.GetSender(ctx), nil, nil)

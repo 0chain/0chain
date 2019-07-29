@@ -112,8 +112,9 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *Block
 		}
 		return
 	}
-	if b.Round < mc.LatestFinalizedBlock.Round {
-		Logger.Debug("verification message (round mismatch)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("finalized_round", mc.LatestFinalizedBlock.Round))
+	lfb := mc.GetLatestFinalizedBlock()
+	if b.Round < lfb.Round {
+		Logger.Debug("verification message (round mismatch)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("finalized_round", lfb.Round))
 		return
 	}
 	err = mc.VerifyTicket(ctx, b.Hash, &msg.BlockVerificationTicket.VerificationTicket)
@@ -126,8 +127,9 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *Block
 
 /*HandleNotarizationMessage - handles the block notarization message */
 func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessage) {
-	if msg.Notarization.Round < mc.LatestFinalizedBlock.Round {
-		Logger.Debug("notarization message", zap.Int64("round", msg.Notarization.Round), zap.Int64("finalized_round", mc.LatestFinalizedBlock.Round), zap.String("block", msg.Notarization.BlockID))
+	lfb := mc.GetLatestFinalizedBlock()
+	if msg.Notarization.Round < lfb.Round {
+		Logger.Debug("notarization message", zap.Int64("round", msg.Notarization.Round), zap.Int64("finalized_round", lfb.Round), zap.String("block", msg.Notarization.BlockID))
 		return
 	}
 	r := mc.GetMinerRound(msg.Notarization.Round)

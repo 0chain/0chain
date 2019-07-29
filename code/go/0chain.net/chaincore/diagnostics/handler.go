@@ -35,13 +35,14 @@ func GetStatistics(c *chain.Chain, timer metrics.Timer, scaleBy float64) interfa
 	stats["delta"] = chain.DELTA
 	stats["block_size"] = c.BlockSize
 	stats["current_round"] = c.CurrentRound
-	stats["latest_finalized_round"] = c.LatestFinalizedBlock.Round
+	lfb := c.GetLatestFinalizedBlock()
+	stats["latest_finalized_round"] = lfb.Round
 	stats["count"] = timer.Count()
 	stats["min"] = scale(float64(timer.Min()))
 	stats["mean"] = scale(timer.Mean())
 	stats["std_dev"] = scale(timer.StdDev())
 	stats["max"] = scale(float64(timer.Max()))
-	stats["total_txns"] = c.LatestFinalizedBlock.RunningTxnCount
+	stats["total_txns"] = lfb.RunningTxnCount
 
 	for idx, p := range percentiles {
 		stats[fmt.Sprintf("percentile_%v", 100*p)] = scale(pvals[idx])
@@ -122,15 +123,16 @@ func WriteCurrentStatus(w http.ResponseWriter, c *chain.Chain) {
 	fmt.Fprintf(w, "<table>")
 	fmt.Fprintf(w, "<tr><th class='sheader' colspan='2'>Current Status</th></tr>")
 	fmt.Fprintf(w, "<tr><td>Current Round</td><td>%v</td></tr>", c.CurrentRound)
-	if c.LatestFinalizedBlock != nil {
-		fmt.Fprintf(w, "<tr><td>Finalized Round</td><td>%v (%v)</td></tr>", c.LatestFinalizedBlock.Round, len(c.LatestFinalizedBlock.UniqueBlockExtensions))
+	lfb := c.GetLatestFinalizedBlock()
+	if lfb != nil {
+		fmt.Fprintf(w, "<tr><td>Finalized Round</td><td>%v (%v)</td></tr>", lfb.Round, len(lfb.UniqueBlockExtensions))
 	}
 	if c.LatestDeterministicBlock != nil {
 		fmt.Fprintf(w, "<tr><td>Deterministic Finalized Round</td><td>%v (%v)</td></tr>", c.LatestDeterministicBlock.Round, len(c.LatestDeterministicBlock.UniqueBlockExtensions))
-		if c.LatestDeterministicBlock != c.LatestFinalizedBlock {
+		if c.LatestDeterministicBlock != lfb {
 			var maxUBE int
 			var maxUBERound int64
-			for b := c.LatestFinalizedBlock; b != nil && b != c.LatestDeterministicBlock; b = b.PrevBlock {
+			for b := lfb; b != nil && b != c.LatestDeterministicBlock; b = b.PrevBlock {
 				var ube = len(b.UniqueBlockExtensions)
 				if ube > maxUBE {
 					maxUBE = ube

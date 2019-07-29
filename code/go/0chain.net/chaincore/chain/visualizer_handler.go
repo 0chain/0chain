@@ -55,7 +55,7 @@ func (c *Chain) WIPBlockChainHandler(w http.ResponseWriter, r *http.Request) {
 		return bl[i].Round < bl[j].Round
 	})
 	finzalizedBlocks := make(map[string]bool)
-	for fb := c.LatestFinalizedBlock; fb != nil; fb = fb.PrevBlock {
+	for fb := c.GetLatestFinalizedBlock(); fb != nil; fb = fb.PrevBlock {
 		finzalizedBlocks[fb.Hash] = true
 	}
 	bNodes := make([]*bNode, 0, len(bl))
