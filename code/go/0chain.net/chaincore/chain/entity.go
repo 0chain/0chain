@@ -784,8 +784,7 @@ func (c *Chain) SetRoundRank(r round.RoundI, b *block.Block) {
 	bNode := node.GetNode(b.MinerID)
 	rank := r.GetMinerRank(bNode)
 	if rank >= c.NumGenerators {
-		pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
-		Logger.DPanic(fmt.Sprintf("Round# %v generator miner ID %v rank is greater than num generators. State= %v, rank= %v, generators = %v", r.GetRoundNumber(), bNode.SetIndex, r.GetState(), rank, c.NumGenerators))
+		Logger.Error(fmt.Sprintf("Round# %v generator miner ID %v rank is greater than num generators. State= %v, rank= %v, generators = %v", r.GetRoundNumber(), bNode.SetIndex, r.GetState(), rank, c.NumGenerators))
 	}
 	b.RoundRank = rank
 	//TODO: Remove this log
