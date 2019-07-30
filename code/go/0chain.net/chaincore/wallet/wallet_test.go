@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"0chain.net/core/common"
-	"0chain.net/chaincore/encryption"
+	"0chain.net/core/encryption"
 	"0chain.net/core/memorystore"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
@@ -355,7 +355,7 @@ func TestGenerateCompressionTrainingData(t *testing.T) {
 		value := prng.Int63n(wf.Balance) + 1
 		wf.Balance -= value
 		wt.Balance += value
-		txn := wf.CreateSendTransaction(wt.ClientID, value, "")
+		txn := wf.CreateSendTransaction(wt.ClientID, value, "", 0)
 		data := common.ToMsgpack(txn)
 		ioutil.WriteFile(fmt.Sprintf("/tmp/txn/data/%v.json", txn.Hash), data.Bytes(), 0644)
 	}

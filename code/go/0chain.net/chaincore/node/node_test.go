@@ -9,7 +9,7 @@ import (
 	"0chain.net/chaincore/client"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/chaincore/encryption"
+	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
 )
@@ -102,7 +102,7 @@ func TestNode2NodeCommunication(t *testing.T) {
 
 	Self = &SelfNode{}
 	Self.Node = n1
-	Self.privateKey = "aa3e1ae2290987959dc44e43d138c81f15f93b2d56d7a06c51465f345df1a8a6e065fc02aaf7aaafaebe5d2dedb9c7c1d63517534644434b813cb3bdab0f94a0"
+	// Self.privateKey = "aa3e1ae2290987959dc44e43d138c81f15f93b2d56d7a06c51465f345df1a8a6e065fc02aaf7aaafaebe5d2dedb9c7c1d63517534644434b813cb3bdab0f94a0"
 	np := NewPool(NodeTypeMiner)
 	np.AddNode(n1)
 	np.AddNode(n2)

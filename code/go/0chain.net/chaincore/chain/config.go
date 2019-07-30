@@ -13,15 +13,18 @@ const (
 	BlockProposalWaitDynamic = iota
 )
 
+// HealthCheckScan - Set in 0chain.yaml
 type HealthCheckScan int
+// DeepScan -
 const (
 	DeepScan HealthCheckScan = iota
 	ProximityScan
 )
 
+// HealthCheckCycleScan - 
 type HealthCheckCycleScan struct {
 	Settle  time.Duration `json:"settle"`
-	SettleSecs int `json: "settle_period_secs"`
+	SettleSecs int `json:"settle_period_secs"`
 
 	Enabled bool `json:"scan_enable"`
 	BatchSize int64 `json:"batch_size"`
@@ -31,8 +34,8 @@ type HealthCheckCycleScan struct {
 	RepeatInterval     time.Duration `json:"repeat_interval"`
 	RepeatIntervalMins int           `json:"repeat_interval_mins"`
 
-	ReportStatusMins int `json:report_status_mins`
-	ReportStatus time.Duration `json:report_status`
+	ReportStatusMins int `json:"report_status_mins"`
+	ReportStatus time.Duration `json:"report_status"`
 }
 
 //Config - chain Configuration
@@ -57,7 +60,7 @@ type Config struct {
 
 	HealthShowCounters     bool `json:"health_show_counters"`      // display detail counters
 	// Health Check switches
-	HC_CycleScan               [2]HealthCheckCycleScan
+	HCCycleScan [2]HealthCheckCycleScan
 
 	BlockProposalMaxWaitTime time.Duration `json:"block_proposal_max_wait_time"` // max time to wait to receive a block proposal
 	BlockProposalWaitMode    int8          `json:"block_proposal_wait_mode"`     // wait time for the block proposal is static (0) or dynamic (1)

@@ -95,7 +95,6 @@ func (n *Node) RequestEntityFromNode(ctx context.Context, requestor EntityReques
 	default:
 		return rhandler(n)
 	}
-	return false
 }
 
 /*SetRequestHeaders - sets the send request headers*/

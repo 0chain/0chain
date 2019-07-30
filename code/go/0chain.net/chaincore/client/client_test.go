@@ -8,7 +8,7 @@ import (
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/chaincore/encryption"
+	"0chain.net/core/encryption"
 	"0chain.net/core/memorystore"
 )
 

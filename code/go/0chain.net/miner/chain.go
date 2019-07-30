@@ -45,6 +45,7 @@ func GetMinerChain() *Chain {
 	return minerChain
 }
 
+// MinerRoundFactory -
 type MinerRoundFactory struct{}
 
 //CreateRoundF this returns an interface{} of type *miner.Round

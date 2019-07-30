@@ -120,7 +120,7 @@ func ReadConfig(file string) *viper.Viper {
 }
 
 const (
-	DeploymentDevelopment = 0
+	DeploymentDevelopment = 00
 	DeploymentTestNet     = 1
 	DeploymentMainNet     = 2
 )

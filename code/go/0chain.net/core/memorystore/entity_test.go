@@ -19,7 +19,7 @@ type Company struct {
 	Name   string `json:"name,omitempty"`
 }
 
-var companyEntityMetadata = &datastore.EntityMetadataImpl{Name: "company", MemoryDB: "company", Store: GetStorageProvider(), Provider: CompanyProvider}
+var companyEntityMetadata = &datastore.EntityMetadataImpl{Name: "company", DB: "company", Store: GetStorageProvider(), Provider: CompanyProvider}
 
 func init() {
 	AddPool("company", DefaultPool)

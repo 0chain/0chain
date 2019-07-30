@@ -189,7 +189,7 @@ func (ms MultiSigSmartContract) vote(currentTxnHash, signingClientID string, now
 	p.SignerSignatures = append(p.SignerSignatures, v.Signature)
 
 	// Save the proposal.
-	err = ms.putProposal(p, balances)
+	err = ms.putProposal(&p, balances)
 	if err != nil {
 		// I/O error.
 		return "", err
@@ -221,7 +221,7 @@ func (ms MultiSigSmartContract) vote(currentTxnHash, signingClientID string, now
 	// Save the proposal again.
 	p.ExecutedInTxnHash = currentTxnHash
 
-	err = ms.putProposal(p, balances)
+	err = ms.putProposal(&p, balances)
 	if err != nil {
 		// I/O error.
 		return "", err
@@ -283,7 +283,7 @@ func (ms MultiSigSmartContract) prune(ref proposalRef, balances c_state.StateCon
 	}
 
 	if qChanged {
-		err = ms.putExpirationQueue(q, balances)
+		err = ms.putExpirationQueue(&q, balances)
 		if err != nil {
 			return err
 		}
@@ -298,7 +298,7 @@ func (ms MultiSigSmartContract) prune(ref proposalRef, balances c_state.StateCon
 
 		next.Prev = p.Prev
 
-		err = ms.putProposal(next, balances)
+		err = ms.putProposal(&next, balances)
 		if err != nil {
 			return err
 		}
@@ -312,7 +312,7 @@ func (ms MultiSigSmartContract) prune(ref proposalRef, balances c_state.StateCon
 
 		prev.Next = p.Next
 
-		err = ms.putProposal(prev, balances)
+		err = ms.putProposal(&prev, balances)
 		if err != nil {
 			return err
 		}
@@ -381,7 +381,7 @@ func (ms MultiSigSmartContract) createProposal(now common.Timestamp, v Vote, bal
 		ExecutedInTxnHash: "",
 	}
 
-	err = ms.putProposal(p, balances)
+	err = ms.putProposal(&p, balances)
 	if err != nil {
 		return proposal{}, err
 	}
@@ -395,7 +395,7 @@ func (ms MultiSigSmartContract) createProposal(now common.Timestamp, v Vote, bal
 
 		prev.Next = p.ref()
 
-		err = ms.putProposal(prev, balances)
+		err = ms.putProposal(&prev, balances)
 		if err != nil {
 			return proposal{}, err
 		}
@@ -410,7 +410,7 @@ func (ms MultiSigSmartContract) createProposal(now common.Timestamp, v Vote, bal
 	// Enqueue.
 	q.Tail = p.ref()
 
-	err = ms.putExpirationQueue(q, balances)
+	err = ms.putExpirationQueue(&q, balances)
 	if err != nil {
 		return proposal{}, err
 	}
@@ -481,7 +481,7 @@ func (ms MultiSigSmartContract) getProposal(ref proposalRef, balances c_state.St
 	return p, nil
 }
 
-func (ms MultiSigSmartContract) putProposal(p proposal, balances c_state.StateContextI) error {
+func (ms MultiSigSmartContract) putProposal(p *proposal, balances c_state.StateContextI) error {
 	//proposalBytes, err := json.Marshal(p)
 	//if err != nil {
 	//	return err
@@ -516,7 +516,7 @@ func (ms MultiSigSmartContract) getOrCreateExpirationQueue(balances c_state.Stat
 	return q, nil
 }
 
-func (ms MultiSigSmartContract) putExpirationQueue(q expirationQueue, balances c_state.StateContextI) error {
+func (ms MultiSigSmartContract) putExpirationQueue(q *expirationQueue, balances c_state.StateContextI) error {
 	//proposalBytes, err := json.Marshal(p)
 	//if err != nil {
 	//	return err

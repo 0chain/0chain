@@ -9,6 +9,7 @@ import (
 	"github.com/rcrowley/go-metrics"
 )
 
+// BlockSyncTimer -
 var BlockSyncTimer metrics.Timer
 
 func init() {
@@ -19,12 +20,13 @@ func init() {
 type Stats struct {
 	ShardedBlocksCount int64
 
-	QOSRound           int64
+	QOSRound int64
 	// Repair block count as part of healthcheck
-	RepairBlocksCount int64
+	RepairBlocksCount   int64
 	RepairBlocksFailure int64
 }
 
+// WriteHealthCheckConfiguration -
 func (sc *Chain) WriteHealthCheckConfiguration(w http.ResponseWriter, scan HealthCheckScan) {
 	bss := sc.BlockSyncStats
 
@@ -35,7 +37,7 @@ func (sc *Chain) WriteHealthCheckConfiguration(w http.ResponseWriter, scan Healt
 	_ = cc
 
 	// Get health check config
-	config := &sc.HC_CycleScan[scan]
+	config := &sc.HCCycleScan[scan]
 
 	fmt.Fprintf(w, "<table width='100%%'>")
 	fmt.Fprintf(w, "<tr><td class='sheader' colspan=2'>Tunables</td></tr>")
@@ -76,6 +78,7 @@ func (sc *Chain) WriteHealthCheckConfiguration(w http.ResponseWriter, scan Healt
 
 }
 
+// WriteHealthCheckBlockSummary -
 func (sc *Chain) WriteHealthCheckBlockSummary(w http.ResponseWriter, scan HealthCheckScan) {
 	bss := sc.BlockSyncStats
 	// Get cycle control
@@ -83,13 +86,13 @@ func (sc *Chain) WriteHealthCheckBlockSummary(w http.ResponseWriter, scan Health
 	current := &cc.counters.current
 	previous := &cc.counters.previous
 	fmt.Fprintf(w, "<table width='100%%'>")
-	fmt.Fprintf(w, "<tr>" +
-		"<td class='sheader' colspan=1'>Invocation History</td>" +
-		"<td class='sheader' colspan=1'>Current</td>" +
-		"<td class='sheader' colspan=1'>Previous</td>" +
+	fmt.Fprintf(w, "<tr>"+
+		"<td class='sheader' colspan=1'>Invocation History</td>"+
+		"<td class='sheader' colspan=1'>Current</td>"+
+		"<td class='sheader' colspan=1'>Previous</td>"+
 		"</tr>")
 	var previousStart, currentStart string
-	var previousElapsed, currentElapsed  string
+	var previousElapsed, currentElapsed string
 	var previousStatus, currentStatus string
 	roundUnit := time.Minute
 	if scan == ProximityScan {
@@ -119,91 +122,93 @@ func (sc *Chain) WriteHealthCheckBlockSummary(w http.ResponseWriter, scan Health
 		currentStatus = string(cc.Status)
 	}
 
-	fmt.Fprintf(w, "<tr>" +
-		"<td>Status</td>" +
-		"<td class='string'>%v</td>" +
+	fmt.Fprintf(w, "<tr>"+
+		"<td>Status</td>"+
+		"<td class='string'>%v</td>"+
 		"<td class='string'>%v</td></tr>",
 		currentStatus,
 		previousStatus)
-	fmt.Fprintf(w, "<tr>" +
-		"<td>Start</td>" +
-		"<td class='string'>%v</td>" +
+	fmt.Fprintf(w, "<tr>"+
+		"<td>Start</td>"+
+		"<td class='string'>%v</td>"+
 		"<td class='string'>%v</td></tr>",
-			currentStart,
-			previousStart)
-	fmt.Fprintf(w, "<tr>" +
-		"<td>Elapsed</td>" +
-		"<td class='string'>%v</td>" +
+		currentStart,
+		previousStart)
+	fmt.Fprintf(w, "<tr>"+
+		"<td>Elapsed</td>"+
+		"<td class='string'>%v</td>"+
 		"<td class='string'>%v</td></tr>",
 		currentElapsed,
 		previousElapsed)
-	fmt.Fprintf(w, "<tr>" +
-		"<td class='sheader' colspan=3'>HealthCheck Invocation Status</td>" +
+	fmt.Fprintf(w, "<tr>"+
+		"<td class='sheader' colspan=3'>HealthCheck Invocation Status</td>"+
 		"</tr>")
-	fmt.Fprintf(w, "<tr><td>Invocation Count</td>" +
+	fmt.Fprintf(w, "<tr><td>Invocation Count</td>"+
 		"<td class='string'>%v</td><td class='string'>%v</td></tr>",
 		current.HealthCheckInvocations, previous.HealthCheckInvocations)
 
-	fmt.Fprintf(w, "<tr><td>Success</td>" +
+	fmt.Fprintf(w, "<tr><td>Success</td>"+
 		"<td class='string'>%v</td><td class='string'>%v</td></tr>",
 		current.HealthCheckSuccess, previous.HealthCheckSuccess)
 
-	fmt.Fprintf(w, "<tr><td>Failures</td>" +
+	fmt.Fprintf(w, "<tr><td>Failures</td>"+
 		"<td class='string'>%v</td><td class='string'>%v</td></tr>",
 		current.HealthCheckFailure, previous.HealthCheckFailure)
 
 	fmt.Fprintf(w, "<tr></tr>")
 
-	fmt.Fprintf(w, "<tr>" +
-		"<td class='sheader' colspan=3'>Round Summary</td>" +
+	fmt.Fprintf(w, "<tr>"+
+		"<td class='sheader' colspan=3'>Round Summary</td>"+
 		"</tr>")
-	fmt.Fprintf(w, "<tr><td>Missing</td>" +
+	fmt.Fprintf(w, "<tr><td>Missing</td>"+
 		"<td class='string'>%v</td><td class='string'>%v</td></tr>",
 		current.roundSummary.Missing, previous.roundSummary.Missing)
-	fmt.Fprintf(w, "<tr><td>Repaired</td>" +
+	fmt.Fprintf(w, "<tr><td>Repaired</td>"+
 		"<td class='string'>%v</td><td class='string'>%v</td></tr>",
 		current.roundSummary.RepairSuccess, previous.roundSummary.RepairSuccess)
-	fmt.Fprintf(w, "<tr><td>Failed</td>" +
+	fmt.Fprintf(w, "<tr><td>Failed</td>"+
 		"<td class='string'>%v</td><td class='string'>%v</td></tr>",
 		current.roundSummary.RepairFailure, previous.roundSummary.RepairFailure)
-	fmt.Fprintf(w, "<tr>" +
-		"<td class='sheader' colspan=3'>Block Summary</td>" +
+	fmt.Fprintf(w, "<tr>"+
+		"<td class='sheader' colspan=3'>Block Summary</td>"+
 		"</tr>")
-	fmt.Fprintf(w, "<tr><td>Missing</td>" +
+	fmt.Fprintf(w, "<tr><td>Missing</td>"+
 		"<td class='string'>%v</td><td class='string'>%v</td></tr>",
 		current.blockSummary.Missing, previous.blockSummary.Missing)
-	fmt.Fprintf(w, "<tr><td>Repaired</td>" +
+	fmt.Fprintf(w, "<tr><td>Repaired</td>"+
 		"<td class='string'>%v</td><td class='string'>%v</td></tr>",
 		current.blockSummary.RepairSuccess, previous.blockSummary.RepairSuccess)
-	fmt.Fprintf(w, "<tr><td>Failed</td>" +
+	fmt.Fprintf(w, "<tr><td>Failed</td>"+
 		"<td class='string'>%v</td><td class='string'>%v</td></tr>",
 		current.blockSummary.RepairFailure, previous.blockSummary.RepairFailure)
-	fmt.Fprintf(w, "<tr>" +
-		"<td class='sheader' colspan=3'>Transaction Summary</td>" +
+	fmt.Fprintf(w, "<tr>"+
+		"<td class='sheader' colspan=3'>Transaction Summary</td>"+
 		"</tr>")
-	fmt.Fprintf(w, "<tr><td>Missing</td>" +
+	fmt.Fprintf(w, "<tr><td>Missing</td>"+
 		"<td class='string'>%v</td><td class='string'>%v</td></tr>",
 		current.txnSummary.Missing, previous.txnSummary.Missing)
-	fmt.Fprintf(w, "<tr><td>Repaired</td>" +
+	fmt.Fprintf(w, "<tr><td>Repaired</td>"+
 		"<td class='string'>%v</td><td class='string'>%v</td></tr>",
 		current.txnSummary.RepairSuccess, previous.txnSummary.RepairSuccess)
-	fmt.Fprintf(w, "<tr><td>Failed</td>" +
+	fmt.Fprintf(w, "<tr><td>Failed</td>"+
 		"<td class='string'>%v</td><td class='string'>%v</td></tr>",
 		current.txnSummary.RepairFailure, previous.txnSummary.RepairFailure)
-	fmt.Fprintf(w, "<tr>" +
-		"<td class='sheader' colspan=3'>Sharder Stored Blocks </td>" +
+	fmt.Fprintf(w, "<tr>"+
+		"<td class='sheader' colspan=3'>Sharder Stored Blocks </td>"+
 		"</tr>")
-	fmt.Fprintf(w, "<tr><td>Missing</td>" +
+	fmt.Fprintf(w, "<tr><td>Missing</td>"+
 		"<td class='string'>%v</td><td class='string'>%v</td></tr>",
 		current.block.Missing, previous.block.Missing)
-	fmt.Fprintf(w, "<tr><td>Repaired</td>" +
+	fmt.Fprintf(w, "<tr><td>Repaired</td>"+
 		"<td class='string'>%v</td><td class='string'>%v</td></tr>",
 		current.block.RepairSuccess, previous.block.RepairSuccess)
-	fmt.Fprintf(w, "<tr><td>Failed</td>" +
+	fmt.Fprintf(w, "<tr><td>Failed</td>"+
 		"<td class='string'>%v</td><td class='string'>%v</td></tr>",
 		current.block.RepairFailure, previous.block.RepairFailure)
 	fmt.Fprintf(w, "</table>")
-	}
+}
+
+// WriteBlockSyncStatistics -
 func (sc *Chain) WriteBlockSyncStatistics(w http.ResponseWriter, scan HealthCheckScan) {
 	bss := sc.BlockSyncStats
 	// Get cycle control
