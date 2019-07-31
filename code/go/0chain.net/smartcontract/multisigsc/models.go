@@ -35,7 +35,7 @@ func (w Wallet) Encode() []byte {
 }
 
 func (w Wallet) Decode(input []byte) error {
-	err := json.Unmarshal(input, w)
+	err := json.Unmarshal(input, &w)
 	return err
 }
 
@@ -294,12 +294,12 @@ type proposalRef struct {
 	ProposalID string `json:"proposal_id"`
 }
 
-func (pr proposalRef) Encode() []byte {
+func (pr *proposalRef) Encode() []byte {
 	buff, _ := json.Marshal(pr)
 	return buff
 }
 
-func (pr proposalRef) Decode(input []byte) error {
+func (pr *proposalRef) Decode(input []byte) error {
 	err := json.Unmarshal(input, pr)
 	return err
 }
@@ -327,12 +327,12 @@ type proposal struct {
 	ExecutedInTxnHash string `json:"executed_in_txn_hash"`
 }
 
-func (p proposal) Encode() []byte {
+func (p *proposal) Encode() []byte {
 	buff, _ := json.Marshal(p)
 	return buff
 }
 
-func (p proposal) Decode(input []byte) error {
+func (p *proposal) Decode(input []byte) error {
 	err := json.Unmarshal(input, p)
 	return err
 }
@@ -366,13 +366,13 @@ type expirationQueue struct {
 	Tail proposalRef `json:"tail"`
 }
 
-func (q expirationQueue) Encode() []byte {
+func (q *expirationQueue) Encode() []byte {
 	buff, _ := json.Marshal(q)
 	return buff
 }
 
-func (q expirationQueue) Decode(input []byte) error {
-	err := json.Unmarshal(input, q)
+func (q *expirationQueue) Decode(input []byte) error {
+	err := json.Unmarshal(input, &q)
 	return err
 }
 

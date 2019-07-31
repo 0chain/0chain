@@ -9,7 +9,7 @@ import (
 )
 
 
-/*ChainStatsWriter - a handler to provide block statistics */
+// HealthCheckWriter - a handler to provide block statistics
 func HealthCheckWriter(w http.ResponseWriter, r *http.Request) {
 	sc := GetSharderChain()
 	c := sc.Chain

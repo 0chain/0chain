@@ -65,6 +65,7 @@ type PoolMemberInfo struct {
 	Type      string `json:"type"`
 }
 
+// PoolMembersInfo -
 type PoolMembersInfo struct {
 	MembersInfo []PoolMemberInfo `json:"members_info"`
 }

@@ -698,10 +698,8 @@ func (mc *Chain) restartRound(ctx context.Context) {
 
 				}
 				return
-			} else {
-				Logger.Error("Has notarized block in restartRound, but no randomseed.", zap.Int64("current_round", r.GetRoundNumber()))
-
 			}
+			Logger.Error("Has notarized block in restartRound, but no randomseed.", zap.Int64("current_round", r.GetRoundNumber()))
 		}
 		pr := mc.GetMinerRound(r.GetRoundNumber() - 1)
 		if pr != nil {

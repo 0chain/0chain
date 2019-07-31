@@ -14,14 +14,25 @@ import (
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
-
+// LatestRoundRequestor -
 var LatestRoundRequestor node.EntityRequestor
+
+// RoundRequestor -
 var RoundRequestor node.EntityRequestor
+
+// RoundSummariesRequestor -
 var RoundSummariesRequestor node.EntityRequestor
+
+// BlockRequestor -
 var BlockRequestor node.EntityRequestor
+
+// BlockSummaryRequestor -
 var BlockSummaryRequestor node.EntityRequestor
+
+// BlockSummariesRequestor -
 var BlockSummariesRequestor node.EntityRequestor
 
+// SetupS2SRequestors -
 func SetupS2SRequestors() {
 	options := &node.SendOptions{Timeout: node.TimeoutLargeMessage, CODEC: node.CODEC_MSGPACK, Compress: true}
 	roundEntityMetadata := datastore.GetEntityMetadata("round")
@@ -42,7 +53,7 @@ func SetupS2SRequestors() {
 	blockSummariesEntityMetadata := datastore.GetEntityMetadata("block_summaries")
 	BlockSummariesRequestor = node.RequestEntityHandler("/v1/_s2s/blocksummaries/get", options, blockSummariesEntityMetadata)
 }
-
+// SetupS2SResponders -
 func SetupS2SResponders() {
 	http.HandleFunc("/v1/_s2s/latest_round/get", node.ToN2NSendEntityHandler(LatestRoundRequestHandler))
 	http.HandleFunc("/v1/_s2s/round/get", node.ToN2NSendEntityHandler(RoundRequestHandler))
@@ -52,7 +63,7 @@ func SetupS2SResponders() {
 	http.HandleFunc("/v1/_s2s/blocksummaries/get", node.ToN2NSendEntityHandler(BlockSummariesHandler))
 }
 
-
+// RoundSummariesHandler -
 func RoundSummariesHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	sc := GetSharderChain()
 
@@ -75,15 +86,15 @@ func RoundSummariesHandler(ctx context.Context, r *http.Request) (interface{}, e
 		rs := &RoundSummaries{}
 		rs.RSummaryList = roundS
 		return rs, nil
-	} else {
-		Logger.Error("RoundSummariesHandler - Parsing Param Error",
-			zap.String("round", roundEdgeValue),
-			zap.String("range", roundRangeValue),
-			zap.Error(err))
-		return nil, err
 	}
+	Logger.Error("RoundSummariesHandler - Parsing Param Error",
+		zap.String("round", roundEdgeValue),
+		zap.String("range", roundRangeValue),
+		zap.Error(err))
+	return nil, err
 }
 
+// BlockSummariesHandler -
 func BlockSummariesHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	sc := GetSharderChain()
 	var roundRange int64
@@ -125,15 +136,15 @@ func BlockSummariesHandler(ctx context.Context, r *http.Request) (interface{}, e
 			zap.Int64("high", rangeBounds.roundHigh),
 			zap.Int64("range", rangeBounds.roundRange))
 		return bs, nil
-	} else {
-		Logger.Error("BlockSummariesHandler - Parsing Param Error",
-			zap.String("round", roundEdgeValue),
-			zap.String("range", roundRangeValue),
-			zap.Error(err))
-		return nil, err
 	}
-}
+	Logger.Error("BlockSummariesHandler - Parsing Param Error",
+		zap.String("round", roundEdgeValue),
+		zap.String("range", roundRangeValue),
+		zap.Error(err))
+	return nil, err
 
+}
+// LatestRoundRequestHandler -
 func LatestRoundRequestHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	sc := GetSharderChain()
 	currRound := sc.GetRound(sc.CurrentRound)
@@ -144,6 +155,7 @@ func LatestRoundRequestHandler(ctx context.Context, r *http.Request) (interface{
 	return nil, common.NewError("no_round_info", "cannot retrieve the round info")
 }
 
+// RoundRequestHandler -
 func RoundRequestHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	sc := GetSharderChain()
 	roundValue := r.FormValue("round")
@@ -166,6 +178,7 @@ func RoundRequestHandler(ctx context.Context, r *http.Request) (interface{}, err
 	return nil, err
 }
 
+// BlockSummaryRequestHandler -
 func BlockSummaryRequestHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	sc := GetSharderChain()
 	bHash := r.FormValue("hash")
@@ -182,6 +195,7 @@ func BlockSummaryRequestHandler(ctx context.Context, r *http.Request) (interface
 	return nil, common.InvalidRequest("block hash is required")
 }
 
+// RoundBlockRequestHandler -
 func RoundBlockRequestHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	sc := GetSharderChain()
 	hash := r.FormValue("hash")

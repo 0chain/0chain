@@ -85,18 +85,3 @@ func (sc *Chain) hasTransactions(ctx context.Context, bs *block.BlockSummary) bo
 	}
 	return count == bs.NumTxns
 }
-
-//func (sc *Chain) hasTransactions(ctx context.Context, bs *block.BlockSummary) bool {
-//	if bs == nil || bs.NumTxns == 0 {
-//		return false
-//	} else {
-//		return true
-//	}
-//}
-func (sc *Chain) blockContainsTransactions(ctx context.Context, bs *block.BlockSummary) bool {
-	if bs == nil || bs.NumTxns == 0 {
-		return false
-	} else {
-		return true
-	}
-}

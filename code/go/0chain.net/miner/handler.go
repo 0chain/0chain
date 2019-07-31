@@ -120,6 +120,7 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetWalletStats -
 func GetWalletStats(w http.ResponseWriter, r *http.Request) {
 	// clients
 	chain.PrintCSS(w)
@@ -133,6 +134,7 @@ func GetWalletStats(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<br>")
 }
 
+// GetWalletTable -
 func GetWalletTable(latest bool) (int64, int64, int64, int64) {
 	c := GetMinerChain().Chain
 	entity := client.NewClient()

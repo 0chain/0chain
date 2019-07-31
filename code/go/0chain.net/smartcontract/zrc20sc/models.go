@@ -55,7 +55,7 @@ type tokenInfo struct {
 
 type tokenRatio struct {
 	ZCN   state.Balance `json:"zcn"`
-	Other state.Balance `json:other`
+	Other state.Balance `json:"other"`
 }
 
 func (ti *tokenInfo) validateInfo() bool {

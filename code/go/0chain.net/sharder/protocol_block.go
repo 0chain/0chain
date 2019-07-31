@@ -515,7 +515,7 @@ func (sc *Chain) storeBlockTransactions(ctx context.Context, b *block.Block) err
 	//}
 	return err
 }
-
+// NotarizedBlockFetched -
 func (sc *Chain) NotarizedBlockFetched(ctx context.Context, b *block.Block) {
 
 }

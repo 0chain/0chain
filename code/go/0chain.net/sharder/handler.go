@@ -1,5 +1,5 @@
 package sharder
-
+//
 import (
 	"context"
 	"fmt"
@@ -46,16 +46,16 @@ func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 		}
 		if roundNumber > lfb.Round {
 			return nil, common.InvalidRequest("Block not available")
-		} else {
-			roundEntity := sc.GetSharderRound(roundNumber)
-			if roundEntity == nil {
-				roundEntity, err = sc.GetRoundFromStore(ctx, roundNumber)
-				if err != nil {
-					return nil, err
-				}
-			}
-			hash = roundEntity.BlockHash
 		}
+		roundEntity := sc.GetSharderRound(roundNumber)
+		if roundEntity == nil {
+			roundEntity, err = sc.GetRoundFromStore(ctx, roundNumber)
+			if err != nil {
+				return nil, err
+			}
+		}
+		hash = roundEntity.BlockHash
+
 		hash, err = sc.GetBlockHash(ctx, roundNumber)
 		if err != nil {
 			return nil, err

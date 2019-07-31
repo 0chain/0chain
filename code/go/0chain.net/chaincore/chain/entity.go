@@ -5,8 +5,6 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"os"
-	"runtime/pprof"
 	"sort"
 	"sync"
 	"time"
@@ -196,7 +194,7 @@ func NewChainFromConfig() *Chain {
 
 	// Health Check related counters
 	// Work on deep scan
-	config := &chain.HC_CycleScan[DeepScan]
+	config := &chain.HCCycleScan[DeepScan]
 
 	config.Enabled = viper.GetBool("server_chain.health_check.deep_scan.enabled")
 	config.BatchSize = viper.GetInt64("server_chain.health_check.deep_scan.batch_size")
@@ -212,7 +210,7 @@ func NewChainFromConfig() *Chain {
 	config.ReportStatus = time.Duration(config.ReportStatusMins) * time.Minute
 
 	// Work on proximity scan
-	config = &chain.HC_CycleScan[ProximityScan]
+	config = &chain.HCCycleScan[ProximityScan]
 
 	config.Enabled = viper.GetBool("server_chain.health_check.proximity_scan.enabled")
 	config.BatchSize = viper.GetInt64("server_chain.health_check.proximity_scan.batch_size")

@@ -78,9 +78,9 @@ func StartDKG(ctx context.Context) {
 			IsDkgDone = true
 			go startProtocol()
 			return
-		} else {
-			Logger.Info("err : reading dkg from db", zap.Error(err))
 		}
+		Logger.Info("err : reading dkg from db", zap.Error(err))
+
 		waitForNetworkToBeReadyForDKG(ctx)
 		Logger.Info("Starting DKG...")
 
@@ -155,9 +155,8 @@ func isNetworkReadyForDKG() bool {
 	mc := GetMinerChain()
 	if isDkgEnabled {
 		return mc.AreAllNodesActive()
-	} else {
-		return mc.CanStartNetwork()
 	}
+	return mc.CanStartNetwork()
 }
 
 func waitForNetworkToBeReadyForBls(ctx context.Context) {
@@ -370,19 +369,19 @@ func GetBlsShare(ctx context.Context, r, pr *round.Round) string {
 
 	currRound = r.Number
 	var rbOutput string
-	prev_rseed := int64(0)
+	prevRandomSeed := int64(0)
 	if r.GetRoundNumber()-1 == 0 {
 
 		Logger.Debug("The corner case for round 1 when pr is nil :", zap.Int64("round", r.GetRoundNumber()))
 		rbOutput = encryption.Hash("0chain")
 	} else {
-		prev_rseed = pr.RandomSeed
+		prevRandomSeed = pr.RandomSeed
 		rbOutput = strconv.FormatInt(pr.RandomSeed, 16) //pr.VRFOutput
 	}
 
 	bs.Msg = fmt.Sprintf("%v%v%v", r.GetRoundNumber(), r.GetTimeoutCount(), rbOutput)
 
-	Logger.Info("Bls sign vrfshare calculated for ", zap.Int64("round", r.GetRoundNumber()), zap.Int("roundtimeout", r.GetTimeoutCount()), zap.Int64("prev_rseed", prev_rseed), zap.Any("bls_msg", bs.Msg))
+	Logger.Info("Bls sign vrfshare calculated for ", zap.Int64("round", r.GetRoundNumber()), zap.Int("roundtimeout", r.GetTimeoutCount()), zap.Int64("prevRandomSeed", prevRandomSeed), zap.Any("bls_msg", bs.Msg))
 
 	sigShare := bs.SignMsg()
 	return sigShare.GetHexString()
@@ -412,9 +411,8 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 	if mr.AddVRFShare(vrfs, GetBlsThreshold()) {
 		mc.ThresholdNumBLSSigReceived(ctx, mr)
 		return true
-	} else {
-		Logger.Info("Could not add VRFshare", zap.Int64("Round", mr.GetRoundNumber()), zap.Int("Sender", vrfs.GetParty().SetIndex))
 	}
+	Logger.Info("Could not add VRFshare", zap.Int64("Round", mr.GetRoundNumber()), zap.Int("Sender", vrfs.GetParty().SetIndex))
 	return false
 }
 

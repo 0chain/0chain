@@ -208,7 +208,6 @@ func (sc *Chain) getTxnAndCountForRound(ctx context.Context, r int64) (int, erro
 	}
 	if err := iter.Close(); err != nil {
 		return 0, err
-	} else {
-	return count, nil
 	}
+	return count, nil
 }

@@ -13,14 +13,15 @@ import (
 	"go.uber.org/zap"
 )
 
+// BlockSummaries -
 type BlockSummaries struct {
 	datastore.IDField
-	BSummaryList []*block.BlockSummary `json:block_summaries`
+	BSummaryList []*block.BlockSummary `json:"block_summaries"`
 }
 
 var blockSummariesEntityMetadata *datastore.EntityMetadataImpl
 
-/*NewBlockSummaries - create a new BlockSummaries entity */
+// NewBlockSummaries - create a new BlockSummaries entity
 func NewBlockSummaries() *BlockSummaries {
 	bs := datastore.GetEntityMetadata("block_summaries").Instance().(*BlockSummaries)
 	return bs

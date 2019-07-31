@@ -9,10 +9,9 @@ import (
 	"os/user"
 	"testing"
 
-	"0chain.net/chaincore/encryption"
+	"0chain.net/core/encryption"
 
-	"0chain.net/chaincore/chaincore/block"
-	"0chain.net/chaincore/chaincore/blockstore"
+	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/client"
 	"0chain.net/core/common"

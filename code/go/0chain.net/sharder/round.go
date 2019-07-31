@@ -8,11 +8,12 @@ import (
 	"0chain.net/core/ememorystore"
 )
 
+// RoundSummaries -
 type RoundSummaries struct {
 	datastore.IDField
-	RSummaryList []*round.Round `json:round_summaries`
+	RSummaryList []*round.Round `json:"round_summaries"`
 }
-
+// HealthyRound -
 type HealthyRound struct {
 	datastore.IDField
 	Number int64
@@ -21,7 +22,7 @@ type HealthyRound struct {
 var roundSummariesEntityMetadata *datastore.EntityMetadataImpl
 var healthyRoundEntityMetadata *datastore.EntityMetadataImpl
 
-/*NewRoundSummaries - create a new RoundSummaries entity */
+// NewRoundSummaries - create a new RoundSummaries entity
 func NewRoundSummaries() *RoundSummaries {
 	rs := datastore.GetEntityMetadata("round_summaries").Instance().(*RoundSummaries)
 	return rs
@@ -75,11 +76,12 @@ func (sc *Chain) SetupHealthyRound() {
 	datastore.RegisterEntityMetadata("healthy_round", healthyRoundEntityMetadata)
 }
 
+// GetKey -
 func (hr *HealthyRound) GetKey() datastore.Key {
 	return datastore.ToKey(hr.GetEntityMetadata().GetName())
 }
 
-// SharderRoundFactory Factory for Sharder Round
+// SharderRoundFactory Factory for Sharder Round.
 type SharderRoundFactory struct{}
 
 // CreateRoundF the interface{} here returns generic round
@@ -121,6 +123,7 @@ func (sc *Chain) GetMostRecentRoundFromDB(ctx context.Context) (*round.Round, er
 	return r, iterator.Err()
 }
 
+// ReadHealthyRound -
 func (sc *Chain) ReadHealthyRound(ctx context.Context) (*HealthyRound, error) {
 	hr := datastore.GetEntity("healthy_round").(*HealthyRound)
 	healthyRoundEntityMetadata := hr.GetEntityMetadata()
@@ -131,6 +134,7 @@ func (sc *Chain) ReadHealthyRound(ctx context.Context) (*HealthyRound, error) {
 	return hr, err
 }
 
+// WriteHealthyRound -
 func (sc *Chain) WriteHealthyRound(ctx context.Context, hr *HealthyRound) error {
 	healthyRoundEntityMetadata := hr.GetEntityMetadata()
 	hrStore := healthyRoundEntityMetadata.GetStore()

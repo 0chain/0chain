@@ -11,6 +11,7 @@ import (
 	"0chain.net/chaincore/node"
 )
 
+// MessageVRFShare -
 const (
 	MessageVRFShare           = 0
 	MessageVerify             = iota
