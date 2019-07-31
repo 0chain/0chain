@@ -26,6 +26,7 @@ services:
     image: "miner"
     environment:
       - DOCKER=true
+      #- GODEBUG=gctrace=1
     depends_on:
      - redis
      - redis_txns
@@ -42,7 +43,7 @@ services:
       default:
       testnet0:
         ipv4_address: 198.18.0.7${MINER}
-    command: ./bin/miner  --deployment_mode 0 --keys_file config/mnode${MINER}_keys.txt
+    command: ./bin/miner  --deployment_mode 0 --keys_file config/mnode${MINER}_keys.txt # --delay_file config/n2n_delay.yaml
 
 networks:
   default:
