@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	//ExpirationTime = 60 * 60 * 24 * 7 // Proposals expire after one week.
+	MaxExpiryTime = 60 * 60 * 24 * 7 * 30 // Max expiry time is 30 days.
 	//ExpirationTime = 30 // Value in seconds that is more appropriate for testing.
 	MaxSigners    = 20
 	MinSigners    = 2
@@ -63,6 +63,10 @@ func (w Wallet) valid(forClientID string) (bool, error) {
 
 	if w.ExpTime < MinExpiryTime {
 		return false, common.NewError("exp_time_lt_min", fmt.Sprintf("given expiry time %d is less than %d", w.ExpTime, MinExpiryTime))
+	}
+
+	if w.ExpTime > MaxExpiryTime {
+		return false, common.NewError("exp_time_mt_max", fmt.Sprintf("given expiry time %d is more than %d", w.ExpTime, MaxExpiryTime))
 	}
 	numIds := len(w.SignerThresholdIDs)
 	numKeys := len(w.SignerPublicKeys)
