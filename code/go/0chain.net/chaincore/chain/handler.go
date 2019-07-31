@@ -70,12 +70,6 @@ func (c *Chain) GetShardersHandler(w http.ResponseWriter, r *http.Request) {
 	c.Sharders.Print(w)
 }
 
-/*GetBlobbersHandler - get the list of known blobbers */
-func (c *Chain) GetBlobbersHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/plain;charset=UTF-8")
-	c.Blobbers.Print(w)
-}
-
 /*GetBlockHandler - get the block from local cache */
 func GetBlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	hash := r.FormValue("block")

@@ -122,7 +122,7 @@ func (np *Pool) Print(w io.Writer) {
 }
 
 /*ReadNodes - read the pool information */
-func ReadNodes(r io.Reader, minerPool *Pool, sharderPool *Pool, blobberPool *Pool) {
+func ReadNodes(r io.Reader, minerPool *Pool, sharderPool *Pool) {
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -135,8 +135,6 @@ func ReadNodes(r io.Reader, minerPool *Pool, sharderPool *Pool, blobberPool *Poo
 			minerPool.AddNode(node)
 		case NodeTypeSharder:
 			sharderPool.AddNode(node)
-		case NodeTypeBlobber:
-			blobberPool.AddNode(node)
 		default:
 			panic(fmt.Sprintf("unkown node type %v:%v\n", node.GetKey(), node.Type))
 		}

@@ -94,7 +94,7 @@ func (np *Pool) DownloadNodeData(node *Node) bool {
 	}
 	defer resp.Body.Close()
 	dnp := NewPool(NodeTypeMiner)
-	ReadNodes(resp.Body, dnp, dnp, dnp)
+	ReadNodes(resp.Body, dnp, dnp)
 	var changed = false
 	for _, node := range dnp.Nodes {
 		if _, ok := np.NodesMap[node.GetKey()]; !ok {

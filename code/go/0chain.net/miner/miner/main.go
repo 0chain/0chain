@@ -234,7 +234,7 @@ func readNodesFile(nodesFile *string, mc *miner.Chain, serverChain *chain.Chain)
 		if err != nil {
 			log.Fatalf("%v", err)
 		}
-		node.ReadNodes(reader, serverChain.Miners, serverChain.Sharders, serverChain.Blobbers)
+		node.ReadNodes(reader, serverChain.Miners, serverChain.Sharders)
 		reader.Close()
 	} else {
 		mc.ReadNodePools(nodesConfigFile)

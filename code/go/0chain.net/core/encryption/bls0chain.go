@@ -176,12 +176,6 @@ func (b0 *BLS0ChainScheme) GenerateSplitKeys(numSplits int) ([]SignatureScheme, 
 	splitKeys := make([]SignatureScheme, numSplits)
 	var sk bls.SecretKey
 
-	/*key := NewBLS0ChainScheme()
-	key.GenerateKeys()
-	splitKeys[0] = key
-	sk.SetLittleEndian(key.privateKey)
-	*/
-
 	//Generate all but one split keys and add the secret keys
 	for i := 0; i < numSplits-1; i++ {
 		key := NewBLS0ChainScheme()

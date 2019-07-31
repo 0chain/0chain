@@ -13,7 +13,6 @@ import (
 func (c *Chain) SetupWorkers(ctx context.Context) {
 	go c.Miners.StatusMonitor(ctx)
 	go c.Sharders.StatusMonitor(ctx)
-	go c.Blobbers.StatusMonitor(ctx)
 	go c.PruneClientStateWorker(ctx)
 	go c.BlockFetchWorker(ctx)
 	go node.Self.MemoryUsage()

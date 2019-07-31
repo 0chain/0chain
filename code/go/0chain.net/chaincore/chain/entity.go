@@ -79,9 +79,6 @@ type Chain struct {
 	/*Sharders - this is the pool of sharders */
 	Sharders *node.Pool `json:"-"`
 
-	/*Blobbers - this is the pool of blobbers */
-	Blobbers *node.Pool `json:"-"`
-
 	/* This is a cache of blocks that may include speculative blocks */
 	blocks      map[datastore.Key]*block.Block
 	blocksMutex *sync.RWMutex
@@ -268,7 +265,6 @@ func Provider() datastore.Entity {
 	c.nodePoolScorer = node.NewHashPoolScorer(encryption.NewXORHashScorer())
 	c.Miners = node.NewPool(node.NodeTypeMiner)
 	c.Sharders = node.NewPool(node.NodeTypeSharder)
-	c.Blobbers = node.NewPool(node.NodeTypeBlobber)
 	c.Stats = &Stats{}
 	c.blockFetcher = NewBlockFetcher()
 	return c
@@ -653,11 +649,6 @@ func (c *Chain) ReadNodePools(configFile string) {
 	if sharders, ok := config.([]interface{}); ok {
 		c.Sharders.AddNodes(sharders)
 		c.Sharders.ComputeProperties()
-	}
-	config = nodeConfig.Get("blobbers")
-	if blobbers, ok := config.([]interface{}); ok {
-		c.Blobbers.AddNodes(blobbers)
-		c.Blobbers.ComputeProperties()
 	}
 }
 
