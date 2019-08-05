@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"sort"
 
 	"0chain.net/chaincore/block"
 	c_state "0chain.net/chaincore/chain/state"
@@ -321,7 +322,13 @@ func (msc *MinerSmartContract) payMiners(fee state.Balance, mn *MinerNode, balan
 
 	restFee := fee - minerFee
 	totalStaked := mn.TotalStaked()
-	for _, pool := range mn.Active {
+	var keys []string
+	for k := range mn.Active {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		pool := mn.Active[key]
 		userPercent := float64(pool.Balance) / float64(totalStaked)
 		userFee := state.Balance(float64(restFee) * userPercent)
 		transfer := state.NewTransfer(ADDRESS, pool.DelegateID, userFee)
@@ -341,6 +348,7 @@ func (msc *MinerSmartContract) payMiners(fee state.Balance, mn *MinerNode, balan
 
 func (msc *MinerSmartContract) paySharders(fee state.Balance, block *block.Block, balances c_state.StateContextI, resp string) string {
 	sharders := balances.GetBlockSharders(block.PrevBlock)
+	sort.Strings(sharders)
 	for _, sharder := range sharders {
 		//TODO: the mint amount will be controlled by governance
 		mint := state.NewMint(ADDRESS, sharder, fee/state.Balance(len(sharders)))
