@@ -25,6 +25,7 @@ func (ssc *StorageSmartContract) SetSC(sc *smartcontractinterface.SmartContract,
 	ssc.SmartContract.RestHandlers["/allocations"] = ssc.GetAllocationsHandler
 	ssc.SmartContract.RestHandlers["/latestreadmarker"] = ssc.LatestReadMarkerHandler
 	ssc.SmartContract.RestHandlers["/openchallenges"] = ssc.OpenChallengeHandler
+	ssc.SmartContract.RestHandlers["/getchallenge"] = ssc.GetChallengeHandler
 	ssc.SmartContractExecutionStats["read_redeem"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "read_redeem"), nil)
 	ssc.SmartContractExecutionStats["commit_connection"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "commit_connection"), nil)
 	ssc.SmartContractExecutionStats["new_allocation_request"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "new_allocation_request"), nil)
@@ -52,11 +53,19 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction, funcName str
 		if err != nil {
 			return "", err
 		}
+		err = sc.generateChallenges(t, balances.GetBlock(), input, balances)
+		if err != nil {
+			return "", err
+		}
 		return resp, nil
 	}
 
 	if funcName == "commit_connection" {
 		resp, err := sc.commitBlobberConnection(t, input, balances)
+		if err != nil {
+			return "", err
+		}
+		err = sc.generateChallenges(t, balances.GetBlock(), input, balances)
 		if err != nil {
 			return "", err
 		}
@@ -87,12 +96,20 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction, funcName str
 		return resp, nil
 	}
 
-	if funcName == "challenge_request" {
-		resp, err := sc.addChallenge(t, balances.GetBlock(), input, balances)
+	// if funcName == "challenge_request" {
+	// 	resp, err := sc.addChallenge(t, balances.GetBlock(), input, balances)
+	// 	if err != nil {
+	// 		return "", err
+	// 	}
+	// 	return resp, nil
+	// }
+
+	if funcName == "generate_challenges" {
+		err := sc.generateChallenges(t, balances.GetBlock(), input, balances)
 		if err != nil {
 			return "", err
 		}
-		return resp, nil
+		return "Challenges generated", nil
 	}
 
 	if funcName == "challenge_response" {

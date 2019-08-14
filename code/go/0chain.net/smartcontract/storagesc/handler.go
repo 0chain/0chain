@@ -82,3 +82,23 @@ func (ssc *StorageSmartContract) OpenChallengeHandler(ctx context.Context, param
 
 	return &blobberChallengeObj, err
 }
+
+func (ssc *StorageSmartContract) GetChallengeHandler(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
+	blobberID := params.Get("blobber")
+	blobberChallengeObj := &BlobberChallenge{}
+	blobberChallengeObj.BlobberID = blobberID
+	blobberChallengeObj.Challenges = make([]*StorageChallenge, 0)
+
+	blobberChallengeBytes, err := balances.GetTrieNode(blobberChallengeObj.GetKey(ssc.ID))
+	if err != nil {
+		return "", common.NewError("blobber_challenge_read_err", "Error reading blobber challenge from DB. "+err.Error())
+	}
+	blobberChallengeObj.Decode(blobberChallengeBytes.Encode())
+
+	challengeID := params.Get("challenge")
+	if _, ok := blobberChallengeObj.ChallengeMap[challengeID]; !ok {
+		return nil, common.NewError("invalid_parameters", "Could not find the challenge for the blobber")
+	}
+
+	return blobberChallengeObj.ChallengeMap[challengeID], err
+}

@@ -58,8 +58,10 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction, in
 
 	lastBlobberClientReadBytes, err := balances.GetTrieNode(commitRead.GetKey(sc.ID))
 	lastCommittedRM := &ReadConnection{}
+	lastKnownCtr := int64(0)
 	if lastBlobberClientReadBytes != nil {
 		lastCommittedRM.Decode(lastBlobberClientReadBytes.Encode())
+		lastKnownCtr = lastCommittedRM.ReadMarker.ReadCounter
 	}
 
 	err = commitRead.ReadMarker.Verify(lastCommittedRM.ReadMarker)
@@ -67,6 +69,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction, in
 		return "", common.NewError("invalid_read_marker", "Invalid read marker."+err.Error())
 	}
 	balances.InsertTrieNode(commitRead.GetKey(sc.ID), commitRead)
+	sc.newRead(balances, commitRead.ReadMarker.ReadCounter-lastKnownCtr)
 	return "success", nil
 }
 
@@ -135,5 +138,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(t *transaction.Transacti
 	balances.InsertTrieNode(allocationObj.GetKey(sc.ID), allocationObj)
 
 	blobberAllocationBytes, err = json.Marshal(blobberAllocation.LastWriteMarker)
+	sc.newWrite(balances, commitConnection.WriteMarker.Size)
 	return string(blobberAllocationBytes), err
 }

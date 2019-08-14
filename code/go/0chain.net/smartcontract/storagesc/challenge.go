@@ -4,14 +4,20 @@ import (
 	"encoding/json"
 	"math/rand"
 	"sort"
+	"strconv"
+	"strings"
 
 	"0chain.net/chaincore/block"
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/core/encryption"
 	. "0chain.net/core/logging"
+
 	"go.uber.org/zap"
 )
+
+const CHALLENGE_GENERATION_RATE_MB_MIN = 1 // 1 challenge per MB per sec
 
 func (sc *StorageSmartContract) completeChallengeForBlobber(blobberChallengeObj *BlobberChallenge, challengeCompleted *StorageChallenge, challengeResponse *ChallengeResponse) bool {
 	found := false
@@ -118,11 +124,12 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction, inpu
 
 		balances.InsertTrieNode(allocationObj.GetKey(sc.ID), allocationObj)
 		balances.InsertTrieNode(blobberChallengeObj.GetKey(sc.ID), blobberChallengeObj)
-		Logger.Info("Challenge passed", zap.Any("challenge", challengeResponse.ID))
+		sc.challengeResolved(balances, true)
+		//Logger.Info("Challenge passed", zap.Any("challenge", challengeResponse.ID))
 		return "Challenge Passed by Blobber", nil
 	}
 
-	if numFailure > (len(challengeRequest.Validators) / 2) || (numSuccess + numFailure) == len(challengeRequest.Validators) {
+	if numFailure > (len(challengeRequest.Validators)/2) || (numSuccess+numFailure) == len(challengeRequest.Validators) {
 		completed := sc.completeChallengeForBlobber(blobberChallengeObj, challengeRequest, &challengeResponse)
 		if !completed {
 			return "", common.NewError("challenge_out_of_order", "First challenge on the list is not same as the one attempted to redeem")
@@ -139,6 +146,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction, inpu
 
 		balances.InsertTrieNode(allocationObj.GetKey(sc.ID), allocationObj)
 		balances.InsertTrieNode(blobberChallengeObj.GetKey(sc.ID), blobberChallengeObj)
+		sc.challengeResolved(balances, false)
 		Logger.Info("Challenge failed", zap.Any("challenge", challengeResponse.ID))
 		return "Challenge Failed by Blobber", nil
 	}
@@ -146,28 +154,67 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction, inpu
 	return "", common.NewError("not_enough_validations", "Not enough validations for the challenge")
 }
 
-func (sc *StorageSmartContract) addChallenge(t *transaction.Transaction, b *block.Block, input []byte, balances c_state.StateContextI) (string, error) {
+func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction, b *block.Block, input []byte, balances c_state.StateContextI) error {
+	stats := &StorageStats{}
+	stats.Stats = &StorageAllocationStats{}
+	statsBytes, err := balances.GetTrieNode(stats.GetKey(sc.ID))
+	if statsBytes != nil {
+		err = stats.Decode(statsBytes.Encode())
+		if err != nil {
+			Logger.Error("storage stats decode error")
+			return err
+		}
+	}
+	//Logger.Info("Stats for generating challenge", zap.Any("stats", stats))
+	lastChallengeTime := stats.LastChallengedTime
+	if lastChallengeTime == 0 {
+		lastChallengeTime = t.CreationDate
+	}
+	numMins := int64((t.CreationDate - lastChallengeTime) / 60)
+	sizeDiffMB := (stats.Stats.UsedSize - stats.LastChallengedSize) / (1024 * 1024)
+
+	if numMins == 0 && sizeDiffMB == 0 {
+		return nil
+	}
+
+	if numMins == 0 {
+		numMins = 1
+	}
+	if sizeDiffMB == 0 {
+		sizeDiffMB = 1
+	}
+	numChallenges := CHALLENGE_GENERATION_RATE_MB_MIN * numMins * sizeDiffMB
+//	Logger.Info("Generating challenges", zap.Any("mins_since_last", numMins), zap.Any("mb_size_diff", sizeDiffMB))
+	hashString := encryption.Hash(t.Hash + b.PrevHash)
+	randomSeed, err := strconv.ParseUint(hashString[0:16], 16, 64)
+	if err != nil {
+		Logger.Error("Error in creating seed for creating challenges", zap.Error(err))
+		return err
+	}
+	r := rand.New(rand.NewSource(int64(randomSeed)))
+	for i := int64(0); i < numChallenges; i++ {
+		challengeID := encryption.Hash(hashString + strconv.FormatInt(i, 10))
+		challengeSeed, err := strconv.ParseUint(challengeID[0:16], 16, 64)
+		if err != nil {
+			Logger.Error("Error in creating challenge seed", zap.Error(err), zap.Any("challengeID", challengeID))
+			continue
+		}
+		challengeString, err := sc.addChallenge(challengeID, t.CreationDate, r, int64(challengeSeed), balances)
+		if err != nil {
+			Logger.Error("Error in adding challenge", zap.Error(err), zap.Any("challengeString", challengeString))
+			continue
+		}
+	}
+	return nil
+}
+
+func (sc *StorageSmartContract) addChallenge(challengeID string, creationDate common.Timestamp, r *rand.Rand, challengeSeed int64, balances c_state.StateContextI) (string, error) {
 
 	validatorList, _ := sc.getValidatorsList(balances)
 
 	if len(validatorList.Nodes) == 0 {
 		return "", common.NewError("no_validators", "Not enough validators for the challenge")
 	}
-
-	foundValidator := false
-	for _, validator := range validatorList.Nodes {
-		if validator.ID == t.ClientID {
-			foundValidator = true
-			break
-		}
-	}
-
-	if !foundValidator {
-		return "", common.NewError("invalid_challenge_request", "Challenge can be requested only by validators")
-	}
-
-	var storageChallenge StorageChallenge
-	storageChallenge.ID = t.Hash
 
 	allocationList, err := sc.getAllAllocationsList(balances)
 	if err != nil {
@@ -177,8 +224,7 @@ func (sc *StorageSmartContract) addChallenge(t *transaction.Transaction, b *bloc
 		return "", common.NewError("adding_challenge_error", "No allocations at this time")
 	}
 
-	rand.Seed(b.RoundRandomSeed)
-	allocationIndex := rand.Int63n(int64(len(allocationList.List)))
+	allocationIndex := r.Int63n(int64(len(allocationList.List)))
 	allocationKey := allocationList.List[allocationIndex]
 
 	allocationObj := &StorageAllocation{}
@@ -194,13 +240,23 @@ func (sc *StorageSmartContract) addChallenge(t *transaction.Transaction, b *bloc
 		return allocationObj.Blobbers[i].ID < allocationObj.Blobbers[j].ID
 	})
 
-	rand.Seed(b.RoundRandomSeed)
-	randIdx := rand.Int63n(int64(len(allocationObj.Blobbers)))
-	Logger.Info("Challenge blobber selected.", zap.Any("challenge", t.Hash), zap.Any("selected_blobber", allocationObj.Blobbers[randIdx]), zap.Any("blobbers", allocationObj.Blobbers), zap.Any("random_index", randIdx), zap.Any("seed", b.RoundRandomSeed))
+	randIdx := r.Int63n(int64(len(allocationObj.Blobbers)))
+	selectedBlobberObj := allocationObj.Blobbers[randIdx]
+	selectedValidators := make([]*ValidationNode, 0)
+	for len(selectedValidators) < allocationObj.DataShards {
+		randIdx := r.Int63n(int64(len(validatorList.Nodes)))
+		if strings.Compare(validatorList.Nodes[randIdx].ID, selectedBlobberObj.ID) != 0 {
+			//Logger.Info("Validator selections for challenge", zap.Any("validator", validatorList.Nodes[randIdx].ID), zap.Any("selected_blobber", selectedBlobberObj.ID))
+			selectedValidators = append(selectedValidators, validatorList.Nodes[randIdx])
+		}
+	}
+	//Logger.Info("Challenge blobber selected.", zap.Any("challenge", challengeID), zap.Any("selected_blobber", allocationObj.Blobbers[randIdx]), zap.Any("blobbers", allocationObj.Blobbers), zap.Any("random_index", randIdx))
 
-	storageChallenge.Validators = validatorList.Nodes
-	storageChallenge.Blobber = allocationObj.Blobbers[randIdx]
-	storageChallenge.RandomNumber = b.RoundRandomSeed
+	var storageChallenge StorageChallenge
+	storageChallenge.ID = challengeID
+	storageChallenge.Validators = selectedValidators
+	storageChallenge.Blobber = selectedBlobberObj
+	storageChallenge.RandomNumber = challengeSeed
 	storageChallenge.AllocationID = allocationObj.ID
 
 	blobberAllocation, ok := allocationObj.BlobberMap[storageChallenge.Blobber.ID]
@@ -227,7 +283,7 @@ func (sc *StorageSmartContract) addChallenge(t *transaction.Transaction, b *bloc
 		}
 	}
 
-	storageChallenge.Created = t.CreationDate
+	storageChallenge.Created = creationDate
 	addedChallege := blobberChallengeObj.addChallenge(&storageChallenge)
 	if !addedChallege {
 		challengeBytes, err := json.Marshal(storageChallenge)
@@ -243,5 +299,6 @@ func (sc *StorageSmartContract) addChallenge(t *transaction.Transaction, b *bloc
 	balances.InsertTrieNode(allocationObj.GetKey(sc.ID), allocationObj)
 	//Logger.Info("Adding a new challenge", zap.Any("blobberChallengeObj", blobberChallengeObj), zap.Any("challenge", storageChallenge.ID))
 	challengeBytes, err := json.Marshal(storageChallenge)
+	sc.newChallenge(balances, storageChallenge.Created)
 	return string(challengeBytes), err
 }
