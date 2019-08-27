@@ -10,8 +10,10 @@ smart_contracts:
     apr: 0.1
     min_lock_period: 1m
   minersc:
-    view_change_buff: 50
-    freeze_buff: 10
     interest_rate: .10
     min_stake: 100
     max_stake: 10000000000
+    max_n: 100
+    min_n: 3
+    t_percent: .51
+    k_percent: .75

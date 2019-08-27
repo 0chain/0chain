@@ -21,12 +21,15 @@ import (
 )
 
 var nodes = make(map[string]*Node)
+var nodesMutex = &sync.Mutex{}
 
 /*RegisterNode - register a node to a global registery
 * We need to keep track of a global register of nodes. This is required to ensure we can verify a signed request
 * coming from a node
  */
 func RegisterNode(node *Node) {
+	nodesMutex.Lock()
+	defer nodesMutex.Unlock()
 	nodes[node.GetKey()] = node
 }
 
@@ -36,17 +39,33 @@ func DeregisterNode(nodeID string) {
 }
 
 func GetNodes() map[string]*Node {
+	nodesMutex.Lock()
+	defer nodesMutex.Unlock()
 	return nodes
+}
+
+func GetMinerNodesKeys() []string {
+	nodesMutex.Lock()
+	defer nodesMutex.Unlock()
+	var keys []string
+	for k, n := range nodes {
+		if n.Type == NodeTypeMiner {
+			keys = append(keys, k)
+		}
+	}
+	return keys
 }
 
 /*GetNode - get the node from the registery */
 func GetNode(nodeID string) *Node {
+	nodesMutex.Lock()
+	defer nodesMutex.Unlock()
 	return nodes[nodeID]
 }
 
 var (
-	NodeStatusInactive = 0
-	NodeStatusActive   = 1
+	NodeStatusActive   = 0
+	NodeStatusInactive = 1
 )
 
 var (
@@ -60,33 +79,33 @@ var NodeTypeNames = common.CreateLookups("m", "Miner", "s", "Sharder", "b", "Blo
 /*Node - a struct holding the node information */
 type Node struct {
 	client.Client
-	N2NHost        string
-	Host           string
-	Port           int
-	Type           int8
-	Description    string
-	SetIndex       int
-	Status         int
-	LastActiveTime time.Time
-	ErrorCount     int
-	CommChannel    chan bool
+	N2NHost        string    `json:"n2n_host"`
+	Host           string    `json:"host"`
+	Port           int       `json:"port"`
+	Type           int8      `json:"type"`
+	Description    string    `json:"description"`
+	SetIndex       int       `json:"set_index"`
+	Status         int       `json:"status"`
+	LastActiveTime time.Time `json:"-"`
+	ErrorCount     int64     `json:"-"`
+	CommChannel    chan bool `json:"-"`
 	//These are approximiate as we are not going to lock to update
-	Sent       int64 // messages sent to this node
-	SendErrors int64 // failed message sent to this node
-	Received   int64 // messages received from this node
+	Sent       int64 `json:"-"` // messages sent to this node
+	SendErrors int64 `json:"-"` // failed message sent to this node
+	Received   int64 `json:"-"` // messages received from this node
 
-	TimersByURI map[string]metrics.Timer
-	SizeByURI   map[string]metrics.Histogram
+	TimersByURI map[string]metrics.Timer     `json:"-"`
+	SizeByURI   map[string]metrics.Histogram `json:"-"`
 
-	LargeMessageSendTime float64
-	SmallMessageSendTime float64
+	LargeMessageSendTime float64 `json:"-"`
+	SmallMessageSendTime float64 `json:"-"`
 
-	LargeMessagePullServeTime float64
-	SmallMessagePullServeTime float64
+	LargeMessagePullServeTime float64 `json:"-"`
+	SmallMessagePullServeTime float64 `json:"-"`
 
 	mutex *sync.Mutex
 
-	ProtocolStats interface{}
+	ProtocolStats interface{} `json:"-"`
 
 	idBytes []byte
 
@@ -106,6 +125,22 @@ func Provider() *Node {
 	node.TimersByURI = make(map[string]metrics.Timer, 10)
 	node.SizeByURI = make(map[string]metrics.Histogram, 10)
 	return node
+}
+
+func Setup(node *Node) {
+	// queue up at most these many messages to a node
+	// because of this, we don't want the status monitoring to use this communication layer
+	node.CommChannel = make(chan bool, 5)
+	for i := 0; i < cap(node.CommChannel); i++ {
+		node.CommChannel <- true
+	}
+	node.mutex = &sync.Mutex{}
+	node.TimersByURI = make(map[string]metrics.Timer, 10)
+	node.SizeByURI = make(map[string]metrics.Histogram, 10)
+	node.ComputeProperties()
+	if Self.PublicKey == node.PublicKey {
+		setSelfNode(node)
+	}
 }
 
 /*Equals - if two nodes are equal. Only check by id, we don't accept configuration from anyone */

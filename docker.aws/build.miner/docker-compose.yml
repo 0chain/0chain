@@ -95,7 +95,7 @@ services:
 
     #Start under user 0chain
     user: ${ZCHAIN_USER}:${ZCHAIN_GROUP}
-    command: /0chain/bin/miner  --deployment_mode 0 --keys_file /0chain/config/miner.txt
+    command: /0chain/bin/miner  --deployment_mode 0 --keys_file /0chain/config/miner.txt --msk_file config/msk.txt # --delay_file config/n2n_delay.yaml
 
 networks:
   default:

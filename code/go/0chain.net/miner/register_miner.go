@@ -70,9 +70,19 @@ type PoolMembersInfo struct {
 	MembersInfo []PoolMemberInfo `json:"members_info"`
 }
 
+func (info *PoolMembersInfo) Encode() []byte {
+	buff, _ := json.Marshal(info)
+	return buff
+}
+
+func (info *PoolMembersInfo) Decode(input []byte) error {
+	return json.Unmarshal(input, info)
+}
+
 const numRetriesForTxn = 3
 const numRetriesForTxnConfirmation = 3
-const scNameAddMiner = "add_miner"
+
+// const scNameAddMiner = "add_miner"
 const scNameViewchangeReq = "viewchange_req"
 const scNameSyncReq = "sync_req"
 const discoverIPPath = "/_nh/getpoolmembers"

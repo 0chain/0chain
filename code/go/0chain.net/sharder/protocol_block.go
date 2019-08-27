@@ -80,6 +80,9 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 }
 
 func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
+	if b.MagicBlock != nil {
+		sc.UpdateMagicBlock(b.MagicBlock)
+	}
 	if err := sc.VerifyNotarization(ctx, b.Hash, b.VerificationTickets); err != nil {
 		Logger.Error("notarization verification failed", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
 		return
@@ -515,6 +518,7 @@ func (sc *Chain) storeBlockTransactions(ctx context.Context, b *block.Block) err
 	//}
 	return err
 }
+
 // NotarizedBlockFetched -
 func (sc *Chain) NotarizedBlockFetched(ctx context.Context, b *block.Block) {
 

@@ -45,9 +45,9 @@ func (c *Chain) GetSCRestOutput(ctx context.Context, r *http.Request) (interface
 	c.stateMutex.RLock()
 	defer c.stateMutex.RUnlock()
 	lfb := c.GetLatestFinalizedBlock()
-	clientState := createTxnMPT(lfb.ClientState) // begin transaction
+	clientState := CreateTxnMPT(lfb.ClientState) // begin transaction
 	txn := &transaction.Transaction{}
-	sctx := bcstate.NewStateContext(lfb, clientState, c.clientStateDeserializer, txn, c.GetBlockSharders)
+	sctx := bcstate.NewStateContext(lfb, clientState, c.clientStateDeserializer, txn, c.GetBlockSharders, c.GetLatestFinalizedMagicBlock)
 	resp, err := smartcontract.ExecuteRestAPI(ctx, scAddress, scRestPath, r.URL.Query(), sctx)
 
 	if err != nil {

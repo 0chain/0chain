@@ -3,6 +3,7 @@ package miner
 import (
 	"context"
 	"math"
+	"net/url"
 	"sort"
 	"sync"
 	"time"
@@ -75,7 +76,12 @@ func (mc *Chain) getRound(ctx context.Context, roundNumber int64) *Round {
 
 // RedoVrfShare re-calculateVrfShare and send
 func (mc *Chain) RedoVrfShare(ctx context.Context, r *Round) bool {
-	pr := mc.GetMinerRound(r.GetRoundNumber() - 1)
+	var pr *Round
+	if r.GetRoundNumber() > 0 {
+		pr = mc.GetMinerRound(r.GetRoundNumber() - 1)
+	} else {
+		pr = r
+	}
 	if pr == nil {
 		Logger.Info("no pr info inside RedoVrfShare", zap.Int64("Round", r.GetRoundNumber()))
 		return false
@@ -91,10 +97,14 @@ func (mc *Chain) RedoVrfShare(ctx context.Context, r *Round) bool {
 }
 
 func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
+	var err error
 	vrfs := &round.VRFShare{}
 	vrfs.Round = r.GetRoundNumber()
 	vrfs.RoundTimeoutCount = r.GetTimeoutCount()
-	vrfs.Share = GetBlsShare(ctx, r.Round, pr.Round)
+	vrfs.Share, err = mc.GetBlsShare(ctx, r.Round, pr.Round)
+	if err != nil {
+		Logger.DPanic(err.Error())
+	}
 	vrfs.SetParty(node.Self.Node)
 	r.vrfShare = vrfs
 	// TODO: do we need to check if AddVRFShare is success or not?
@@ -104,6 +114,9 @@ func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
 }
 
 func (mc *Chain) startRound(ctx context.Context, r *Round, seed int64) {
+	if mc.NextViewChange <= r.Number && ((mc.CurrentDKG != nil && mc.CurrentDKG.StartingRound < mc.NextViewChange) || mc.CurrentDKG == nil) {
+		mc.ViewChange()
+	}
 	if !mc.SetRandomSeed(r.Round, seed) {
 		return
 	}
@@ -194,7 +207,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	ctx = memorystore.WithEntityConnection(ctx, txnEntityMetadata)
 	defer memorystore.Close(ctx)
 	b := block.NewBlock(mc.GetKey(), r.GetRoundNumber())
-	b.MagicBlockHash = mc.CurrentMagicBlock.Hash
+	b.LatestFinalizedMagicBlockHash = mc.GetLatestFinalizedMagicBlock().Hash
 	b.MinerID = node.Self.GetKey()
 	mc.SetPreviousBlock(ctx, r, b, pb)
 	start := time.Now()
@@ -278,10 +291,10 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 	}
 	if !mc.ValidateMagicBlock(ctx, b) {
 		b.SetBlockState(block.StateVerificationRejected)
-		Logger.Error("add to verification (invalid magic block)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("magic_block", b.MagicBlockHash))
+		Logger.Error("add to verification (invalid magic block)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("magic_block", b.LatestFinalizedMagicBlockHash))
 		return
 	}
-	bNode := node.GetNode(b.MinerID)
+	bNode := mc.GetMiners(mr).GetNode(b.MinerID)
 	if bNode == nil {
 		b.SetBlockState(block.StateVerificationRejected)
 		Logger.Error("add to round verification (invalid miner)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("miner_id", b.MinerID))
@@ -319,7 +332,7 @@ func (mc *Chain) addToRoundVerification(ctx context.Context, mr *Round, b *block
 	Logger.Info("adding block to verify", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Float64("weight", b.Weight()), zap.Float64("chain_weight", b.ChainWeight))
 	vctx := mr.StartVerificationBlockCollection(ctx)
 	if vctx != nil {
-		miner := mc.Miners.GetNode(b.MinerID)
+		miner := mc.GetMiners(mr).GetNode(b.MinerID)
 		waitTime := mc.GetBlockProposalWaitTime(mr.Round)
 		minerNT := time.Duration(int64(miner.LargeMessageSendTime/1000000)) * time.Millisecond
 		if minerNT >= waitTime {
@@ -603,6 +616,73 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*bloc
 	return finalizedBlocks
 }
 
+/*GetLatestFinalizedBlockFromSharder - request for latest finalized block from all the sharders */
+func (mc *Chain) GetLatestFinalizedMagicBlockFromSharder(ctx context.Context) []*block.Block {
+	m2s := mc.Sharders
+	Logger.Info("get finalize magic block", zap.Any("sharders", m2s.NodesMap))
+	finalizedMagicBlocks := make([]*block.Block, 0, 1)
+	fmbMutex := &sync.Mutex{}
+	//Params are nil? Do we need to send any params like sending the miner ID ?
+	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+
+		mb, ok := entity.(*block.Block)
+		Logger.Info("request from sharder", zap.Any("lfb", mb))
+		if mb == nil {
+			return nil, nil
+		}
+		if !ok {
+			return nil, datastore.ErrInvalidEntity
+		}
+		Logger.Info("lfb from sharder", zap.Int64("lfb_round", mb.Round), zap.Any("lfb", mb))
+		fmbMutex.Lock()
+		defer fmbMutex.Unlock()
+		for _, b := range finalizedMagicBlocks {
+			if b.Hash == mb.Hash {
+				return mb, nil
+			}
+		}
+		finalizedMagicBlocks = append(finalizedMagicBlocks, mb)
+		return mb, nil
+	}
+	m2s.RequestEntityFromAll(ctx, LatestFinalizedMagicBlockRequestor, nil, handler)
+	return finalizedMagicBlocks
+}
+
+/*GetLatestFinalizedBlockFromSharder - request for latest finalized block from all the sharders */
+func (mc *Chain) GetBlockFromSharder(ctx context.Context, hash string) []*block.Block {
+	m2s := mc.Sharders
+	Logger.Info("get block", zap.Any("sharders", m2s.NodesMap))
+	blocks := make([]*block.Block, 0, 1)
+	bMutex := &sync.Mutex{}
+	params := &url.Values{}
+	params.Add("content", "full")
+	params.Add("block", hash)
+
+	Logger.Info("get block from sharder", zap.Any("hash", hash))
+	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+		newBlock, ok := entity.(*block.Block)
+		Logger.Info("request from sharder", zap.Any("block", newBlock))
+		if newBlock == nil {
+			return nil, nil
+		}
+		if !ok {
+			return nil, datastore.ErrInvalidEntity
+		}
+		Logger.Info("block from sharder", zap.Int64("block", newBlock.Round), zap.Any("lfb", newBlock))
+		bMutex.Lock()
+		defer bMutex.Unlock()
+		for _, b := range blocks {
+			if b.Hash == newBlock.Hash {
+				return newBlock, nil
+			}
+		}
+		blocks = append(blocks, newBlock)
+		return newBlock, nil
+	}
+	m2s.RequestEntityFromAll(ctx, BlockRequestor, params, handler)
+	return blocks
+}
+
 // GetNextRoundTimeoutTime returns time in milliseconds
 func (mc *Chain) GetNextRoundTimeoutTime(ctx context.Context) int {
 
@@ -618,7 +698,9 @@ func (mc *Chain) GetNextRoundTimeoutTime(ctx context.Context) int {
 // HandleRoundTimeout handle timeouts appropriately
 func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
 	r := mc.GetMinerRound(mc.CurrentRound)
-
+	if r.Number == 0 {
+		return
+	}
 	if r.SoftTimeoutCount == mc.RoundRestartMult {
 		Logger.Info("triggering restartRound", zap.Int64("round", r.GetRoundNumber()))
 		mc.restartRound(ctx)
@@ -740,8 +822,6 @@ func startProtocol() {
 	}
 	Logger.Info("starting the blockchain ...", zap.Int64("round", mr.GetRoundNumber()))
 	mc.StartNextRound(ctx, mr)
-	//Just started the first round. It is time to start the timeout monitor
-	//go mc.RoundWorker(ctx)
 }
 
 func (mc *Chain) waitForActiveSharders(ctx context.Context) {

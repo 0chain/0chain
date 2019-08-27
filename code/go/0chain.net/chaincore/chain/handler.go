@@ -8,7 +8,6 @@ import (
 	"math"
 	"net/http"
 	"runtime"
-	"strings"
 	"time"
 
 	"0chain.net/chaincore/block"
@@ -35,6 +34,8 @@ func SetupHandlers() {
 		http.HandleFunc("/v1/block/get", common.UserRateLimit(common.ToJSONResponse(GetBlockHandler)))
 	}
 	http.HandleFunc("/v1/block/get/latest_finalized", common.UserRateLimit(common.ToJSONResponse(LatestFinalizedBlockHandler)))
+	http.HandleFunc("/v1/block/get/latest_finalized_magic_block_summary", common.UserRateLimit(common.ToJSONResponse(LatestFinalizedMagicBlockSummaryHandler)))
+	http.HandleFunc("/v1/block/get/latest_finalized_magic_block", common.UserRateLimit(common.ToJSONResponse(LatestFinalizedMagicBlockHandler)))
 	http.HandleFunc("/v1/block/get/recent_finalized", common.UserRateLimit(common.ToJSONResponse(RecentFinalizedBlockHandler)))
 
 	http.HandleFunc("/", common.UserRateLimit(HomePageHandler))
@@ -77,33 +78,39 @@ func GetBlockHandler(ctx context.Context, r *http.Request) (interface{}, error) 
 	if content == "" {
 		content = "header"
 	}
-	parts := strings.Split(content, ",")
 	b, err := GetServerChain().GetBlock(ctx, hash)
 	if err != nil {
 		return nil, err
 	}
-	return GetBlockResponse(b, parts)
+	return GetBlockResponse(b, content)
 }
 
 /*GetBlockResponse - a handler to get the block */
-func GetBlockResponse(b *block.Block, contentParts []string) (interface{}, error) {
-	data := make(map[string]interface{}, len(contentParts))
-	for _, part := range contentParts {
-		switch part {
-		case "full":
-			data["block"] = b
-		case "header":
-			data["header"] = b.GetSummary()
-		case "merkle_tree":
-			data["merkle_tree"] = b.GetMerkleTree().GetTree()
-		}
+func GetBlockResponse(b *block.Block, content string) (interface{}, error) {
+	switch content {
+	case "full":
+		return b, nil
+	case "header":
+		return b.GetSummary(), nil
+	case "merkle_tree":
+		return b.GetMerkleTree().GetTree(), nil
 	}
-	return data, nil
+	return nil, common.NewError("failed to get block response", fmt.Sprintf("content is empty: %v", content))
 }
 
 /*LatestFinalizedBlockHandler - provide the latest finalized block by this miner */
 func LatestFinalizedBlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	return GetServerChain().GetLatestFinalizedBlockSummary(), nil
+}
+
+/*LatestFinalizedMagicBlockHandler - provide the latest finalized magic block by this miner */
+func LatestFinalizedMagicBlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	return GetServerChain().GetLatestFinalizedMagicBlock(), nil
+}
+
+/*LatestFinalizedMagicBlockSummaryHandler - provide the latest finalized magic block summary by this miner */
+func LatestFinalizedMagicBlockSummaryHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	return GetServerChain().GetLatestFinalizedMagicBlockSummary(), nil
 }
 
 /*RecentFinalizedBlockHandler - provide the latest finalized block by this miner */

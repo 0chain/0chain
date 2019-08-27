@@ -11,7 +11,6 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	. "0chain.net/core/logging"
@@ -38,20 +37,22 @@ var BlockNotarizationSender node.EntitySendHandler
 var MinerNotarizedBlockSender node.EntitySendHandler
 
 /*DKGShareSender - Send dkg share to a node*/
-var DKGShareSender node.EntitySendHandler
+var DKGShareSender node.EntityRequestor
 
 /*MinerLatestFinalizedBlockRequestor - RequestHandler for latest finalized block to a node */
 var MinerLatestFinalizedBlockRequestor node.EntityRequestor
+
+/*LatestFinalizedMagicBlockRequestor - RequestHandler for latest finalized magic block to a node */
+var LatestFinalizedMagicBlockRequestor node.EntityRequestor
+
+/*LatestFinalizedMagicBlockRequestor - RequestHandler for latest finalized magic block to a node */
+var BlockRequestor node.EntityRequestor
 
 /*SetupM2MSenders - setup senders for miner to miner communication */
 func SetupM2MSenders() {
 
 	options := &node.SendOptions{Timeout: node.TimeoutSmallMessage, MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
 	RoundVRFSender = node.SendEntityHandler("/v1/_m2m/round/vrf_share", options)
-
-	//TODO: changes options and url as per requirements
-	options = &node.SendOptions{Timeout: node.TimeoutSmallMessage, MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
-	DKGShareSender = node.SendEntityHandler("/v1/_m2m/dkg/share", options)
 
 	options = &node.SendOptions{Timeout: node.TimeoutLargeMessage, MaxRelayLength: 0, CurrentRelayLength: 0, CODEC: node.CODEC_MSGPACK, Compress: true}
 	VerifyBlockSender = node.SendEntityHandler("/v1/_m2m/block/verify", options)
@@ -67,7 +68,6 @@ func SetupM2MSenders() {
 
 /*SetupM2MReceivers - setup receivers for miner to miner communication */
 func SetupM2MReceivers() {
-	http.HandleFunc("/v1/_m2m/dkg/share", common.N2NRateLimit(node.ToN2NReceiveEntityHandler(DKGShareHandler, nil)))
 	http.HandleFunc("/v1/_m2m/round/vrf_share", common.N2NRateLimit(node.ToN2NReceiveEntityHandler(VRFShareHandler, nil)))
 	http.HandleFunc("/v1/_m2m/block/verify", common.N2NRateLimit(node.ToN2NReceiveEntityHandler(memorystore.WithConnectionEntityJSONHandler(VerifyBlockHandler, datastore.GetEntityMetadata("block")), nil)))
 	http.HandleFunc("/v1/_m2m/block/verification_ticket", common.N2NRateLimit(node.ToN2NReceiveEntityHandler(VerificationTicketReceiptHandler, nil)))
@@ -81,6 +81,7 @@ func SetupX2MResponders() {
 	http.HandleFunc("/v1/_x2m/block/state_change/get", common.N2NRateLimit(node.ToN2NSendEntityHandler(BlockStateChangeHandler)))
 
 	http.HandleFunc("/v1/_x2m/state/get", common.N2NRateLimit(node.ToN2NSendEntityHandler(PartialStateHandler)))
+	http.HandleFunc("/v1/_m2m/dkg/share", common.N2NRateLimit(node.ToN2NSendEntityHandler(SignShareRequestHandler)))
 }
 
 /*SetupM2SRequestors - setup all requests to sharder by miner */
@@ -89,6 +90,17 @@ func SetupM2SRequestors() {
 
 	blockEntityMetadata := datastore.GetEntityMetadata("block")
 	MinerLatestFinalizedBlockRequestor = node.RequestEntityHandler("/v1/_m2s/block/latest_finalized/get", options, blockEntityMetadata)
+
+	// blockSummaryEntityMetadata := datastore.GetEntityMetadata("block_summary")
+	options = &node.SendOptions{Timeout: node.TimeoutLargeMessage, MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
+	LatestFinalizedMagicBlockRequestor = node.RequestEntityHandler("/v1/block/get/latest_finalized_magic_block", options, blockEntityMetadata)
+
+	// blockSummaryEntityMetadata := datastore.GetEntityMetadata("block_summary")
+	BlockRequestor = node.RequestEntityHandler("/v1/block/get", options, blockEntityMetadata)
+
+	dkgShareEntityMetadata := datastore.GetEntityMetadata("dkg_share")
+	options = &node.SendOptions{Timeout: node.TimeoutSmallMessage, MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
+	DKGShareSender = node.RequestEntityHandler("/v1/_m2m/dkg/share", options, dkgShareEntityMetadata)
 }
 
 /*VRFShareHandler - handle the vrf share */
@@ -110,19 +122,6 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (interface{},
 	vrfs.SetParty(msg.Sender)
 	msg.VRFShare = vrfs
 	mc.GetBlockMessageChannel() <- msg
-	return nil, nil
-}
-
-/*DKGShareHandler - handles the dkg share it receives from a node */
-func DKGShareHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-	dg, ok := entity.(*bls.Dkg)
-	if !ok {
-		return nil, common.InvalidRequest("Invalid Entity")
-	}
-	//ToDo: Need to make sure SENDER is not byzantine
-	nodeID := node.GetSender(ctx).SetIndex
-	Logger.Debug("received DKG share", zap.String("share", dg.Share), zap.Int("Node Id", nodeID))
-	AppendDKGSecShares(ctx, nodeID, dg.Share)
 	return nil, nil
 }
 

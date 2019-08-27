@@ -9,13 +9,37 @@ import (
 	"go.uber.org/zap"
 )
 
+var UpdateNodes chan bool
+
+func init() {
+	UpdateNodes = make(chan bool, 10)
+}
+
 /*SetupWorkers - setup a blockworker for a chain */
 func (c *Chain) SetupWorkers(ctx context.Context) {
-	go c.Miners.StatusMonitor(ctx)
-	go c.Sharders.StatusMonitor(ctx)
+	go c.StatusMonitor(ctx)
 	go c.PruneClientStateWorker(ctx)
 	go c.BlockFetchWorker(ctx)
 	go node.Self.MemoryUsage()
+}
+
+/*FinalizeRoundWorker - a worker that handles the finalized blocks */
+func (c *Chain) StatusMonitor(ctx context.Context) {
+	smctx, cancel := context.WithCancel(ctx)
+	go c.Miners.StatusMonitor(smctx)
+	go c.Sharders.StatusMonitor(smctx)
+	for true {
+		select {
+		case <-ctx.Done():
+			return
+		case <-UpdateNodes:
+			cancel()
+			Logger.Info("the status monitor is dead, long live the status monitor", zap.Any("miners", c.Miners), zap.Any("sharders", c.Sharders))
+			smctx, cancel = context.WithCancel(ctx)
+			go c.Miners.StatusMonitor(smctx)
+			go c.Sharders.StatusMonitor(smctx)
+		}
+	}
 }
 
 /*FinalizeRoundWorker - a worker that handles the finalized blocks */

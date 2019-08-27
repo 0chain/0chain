@@ -246,9 +246,9 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) error 
 }
 
 func (c *Chain) updateState(b *block.Block, txn *transaction.Transaction) error {
-	clientState := createTxnMPT(b.ClientState) // begin transaction
+	clientState := CreateTxnMPT(b.ClientState) // begin transaction
 	startRoot := clientState.GetRoot()
-	sctx := bcstate.NewStateContext(b, clientState, c.clientStateDeserializer, txn, c.GetBlockSharders)
+	sctx := bcstate.NewStateContext(b, clientState, c.clientStateDeserializer, txn, c.GetBlockSharders, c.GetLatestFinalizedMagicBlock)
 
 	switch txn.TransactionType {
 	case transaction.TxnTypeSmartContract:
@@ -450,7 +450,7 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 	return nil
 }
 
-func createTxnMPT(mpt util.MerklePatriciaTrieI) util.MerklePatriciaTrieI {
+func CreateTxnMPT(mpt util.MerklePatriciaTrieI) util.MerklePatriciaTrieI {
 	tdb := util.NewLevelNodeDB(util.NewMemoryNodeDB(), mpt.GetNodeDB(), false)
 	tmpt := util.NewMerklePatriciaTrie(tdb, mpt.GetVersion())
 	tmpt.SetRoot(mpt.GetRoot())

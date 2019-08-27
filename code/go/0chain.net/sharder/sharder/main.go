@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -40,7 +41,7 @@ import (
 func main() {
 	deploymentMode := flag.Int("deployment_mode", 2, "deployment_mode")
 	keysFile := flag.String("keys_file", "", "keys_file")
-	nodesFile := flag.String("nodes_file", "", "nodes_file (deprecated)")
+	magicBlockFile := flag.String("magic_block_file", "", "magic_block_file")
 	flag.Parse()
 	config.Configuration.DeploymentMode = byte(*deploymentMode)
 	config.SetupDefaultConfig()
@@ -79,37 +80,19 @@ func main() {
 	chain.SetServerChain(serverChain)
 	chain.SetNetworkRelayTime(viper.GetDuration("network.relay_time") * time.Millisecond)
 	node.ReadConfig()
-
-	nodesConfigFile := viper.GetString("network.nodes_file")
-	if nodesConfigFile == "" {
-		nodesConfigFile = *nodesFile
+	magicBlock := readMagicBlockFile(magicBlockFile, sc, serverChain)
+	if state.Debug() {
+		chain.SetupStateLogger("/tmp/state.txt")
 	}
-	if nodesConfigFile == "" {
-		panic("Please specify --nodes_file file.txt option with a file.txt containing nodes including self")
-	}
-	if strings.HasSuffix(nodesConfigFile, "txt") {
-		reader, err = os.Open(nodesConfigFile)
-		if err != nil {
-			log.Fatalf("%v", err)
-		}
-		node.ReadNodes(reader, serverChain.Miners, serverChain.Sharders)
-		reader.Close()
-	} else {
-		sc.ReadNodePools(nodesConfigFile)
-		Logger.Info("nodes", zap.Int("miners", sc.Miners.Size()), zap.Int("sharders", sc.Sharders.Size()))
-	}
-
+	setupBlockStorageProvider()
+	sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"), magicBlock)
+	Logger.Info("sharder node", zap.Any("node", node.Self))
 	if node.Self.ID == "" {
 		Logger.Panic("node definition for self node doesn't exist")
 	}
 	if node.Self.Type != node.NodeTypeSharder {
 		Logger.Panic("node not configured as sharder")
 	}
-
-	if state.Debug() {
-		chain.SetupStateLogger("/tmp/state.txt")
-	}
-	sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"))
 
 	mode := "main net"
 	if config.Development() {
@@ -141,7 +124,7 @@ func main() {
 		}
 	}
 	common.HandleShutdown(server)
-	setupBlockStorageProvider()
+	// setupBlockStorageProvider()
 	sc.SetupHealthyRound()
 
 	initWorkers(ctx)
@@ -180,6 +163,35 @@ func initHandlers() {
 
 	serverChain := chain.GetServerChain()
 	serverChain.SetupNodeHandlers()
+}
+
+func readMagicBlockFile(magicBlockFile *string, sc *sharder.Chain, serverChain *chain.Chain) *block.MagicBlock {
+
+	magicBlockConfigFile := viper.GetString("network.magic_block_file")
+	if magicBlockConfigFile == "" {
+		magicBlockConfigFile = *magicBlockFile
+	}
+	if magicBlockConfigFile == "" {
+		panic("Please specify --nodes_file file.txt option with a file.txt containing nodes including self")
+	}
+	if strings.HasSuffix(magicBlockConfigFile, "json") {
+		mBfile, err := ioutil.ReadFile(magicBlockConfigFile)
+		if err != nil {
+			Logger.Panic(fmt.Sprintf("failed to read magic block file: %v", err))
+		}
+		mB := block.NewMagicBlock()
+		err = mB.Decode([]byte(mBfile))
+		if err != nil {
+			Logger.Panic(fmt.Sprintf("failed to decode magic block file: %v", err))
+		}
+		Logger.Info("parse magic block", zap.Any("block", mB))
+		mB.Hash = mB.GetHash()
+		Logger.Info("number of miners", zap.Any("number of miners", len(mB.Miners.Nodes)), zap.Any("number of sharders", len(mB.Sharders.Nodes)))
+		return mB
+	} else {
+		Logger.Panic(fmt.Sprintf("magic block file (%v) is in the wrong format. It should be a json", magicBlockConfigFile))
+	}
+	return nil
 }
 
 func initEntities() {

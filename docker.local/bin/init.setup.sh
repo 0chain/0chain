@@ -1,6 +1,6 @@
 #!/bin/sh
 
-for i in $(seq 1 4)
+for i in $(seq 1 5)
 do
   mkdir -p docker.local/miner$i/data/redis/state
   mkdir -p docker.local/miner$i/data/redis/transactions

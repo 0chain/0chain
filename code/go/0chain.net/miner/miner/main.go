@@ -6,10 +6,12 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -39,13 +41,15 @@ import (
 	"go.uber.org/zap"
 )
 
+var mpks map[bls.PartyID][]bls.PublicKey
+
 func main() {
 	deploymentMode := flag.Int("deployment_mode", 2, "deployment_mode")
 	nonGenesis := flag.Bool("non_genesis", false, "non_genesis")
-	discoveryIps := flag.String("discovery_ips", "", "discovery_ips")
 	keysFile := flag.String("keys_file", "", "keys_file")
-	nodesFile := flag.String("nodes_file", "", "nodes_file (deprecated)")
+	mskFile := flag.String("msk_file", "", "msk_file")
 	delayFile := flag.String("delay_file", "", "delay_file")
+	magicBlockFile := flag.String("magic_block_file", "", "magic_block_file")
 	flag.Parse()
 	genesis := !*nonGenesis
 	config.Configuration.DeploymentMode = byte(*deploymentMode)
@@ -81,13 +85,33 @@ func main() {
 	}
 	reader.Close()
 	node.Self.SetSignatureScheme(signatureScheme)
+	var msk []string
+	reader, err = os.Open(*mskFile)
+	if err != nil {
+		Logger.Error("start miner -- cant find msk file", zap.Any("file_name", *mskFile))
+	} else {
+		scanner := bufio.NewScanner(reader)
+		result := scanner.Scan()
+		if result == false {
+			Logger.Panic("Error reading keys file")
+		}
+		msk = append(msk, scanner.Text())
+		result = scanner.Scan()
+		if result == false {
+			Logger.Panic("Error reading keys file")
+		}
+		msk = append(msk, scanner.Text())
+		reader.Close()
+	}
+
 	if !genesis {
 		hostName, portNum, err := readNonGenesisHostAndPort(keysFile)
 		if err != nil {
 			Logger.Panic("Error reading keys file. Non-genesis miner has no host or port number", zap.Error(err))
 		}
 		Logger.Info("Inside nonGenesis", zap.String("hostname", hostName), zap.Int("port Num", portNum))
-		node.Self.Host = hostName
+		node.Self.Host = "localhost"
+		node.Self.N2NHost = hostName
 		node.Self.Port = portNum
 	}
 	miner.SetupMinerChain(serverChain)
@@ -101,10 +125,14 @@ func main() {
 	miner.SetNetworkRelayTime(viper.GetDuration("network.relay_time") * time.Millisecond)
 	node.ReadConfig()
 
-	if genesis {
-		readNodesFile(nodesFile, mc, serverChain)
-	}
+	var magicBlock *block.MagicBlock
 
+	magicBlock = readMagicBlockFile(magicBlockFile, mc, serverChain)
+
+	if state.Debug() {
+		chain.SetupStateLogger("/tmp/state.txt")
+	}
+	mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"), magicBlock)
 	Logger.Info("Miners in main", zap.Int("size", mc.Miners.Size()))
 
 	if node.Self.ID == "" {
@@ -122,11 +150,6 @@ func main() {
 			node.ReadNetworkDelays(*delayFile)
 		}
 	}
-
-	if state.Debug() {
-		chain.SetupStateLogger("/tmp/state.txt")
-	}
-	mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"))
 
 	mode := "main net"
 	if config.Development() {
@@ -163,16 +186,19 @@ func main() {
 	common.ConfigRateLimits()
 	initN2NHandlers()
 
+	getCurrentMagicBlock(mc)
+
 	initServer()
 	initHandlers()
 
 	chain.StartTime = time.Now().UTC()
-	if genesis {
-		kickoffMiner(ctx, mc)
-	} else {
-		go miner.KickoffMinerRegistration(discoveryIps, signatureScheme)
+	_, activeMiner := mc.Miners.NodesMap[node.Self.ID]
+	if activeMiner && magicBlock.Hash == mc.MagicBlock.Hash {
+		kickoffMiner(ctx, mc, msk, mpks)
 	}
-
+	if config.Development() {
+		go TransactionGenerator(mc.Chain)
+	}
 	Logger.Info("Ready to listen to the requests")
 	log.Fatal(server.ListenAndServe())
 }
@@ -209,38 +235,78 @@ func readNonGenesisHostAndPort(keysFile *string) (string, int, error) {
 	return h, p, nil
 
 }
-func kickoffMiner(ctx context.Context, mc *miner.Chain) {
+func kickoffMiner(ctx context.Context, mc *miner.Chain, msk []string, mpks map[bls.PartyID][]bls.PublicKey) {
 	go func() {
-		miner.StartDKG(ctx)
-		miner.WaitForDkgToBeDone(ctx)
-		miner.SetupWorkers(ctx)
-		if config.Development() {
-			go TransactionGenerator(mc.Chain)
-		}
+		miner.SetDKG(ctx, mc.MagicBlock, msk, mpks)
 	}()
 }
 
-func readNodesFile(nodesFile *string, mc *miner.Chain, serverChain *chain.Chain) {
-
-	nodesConfigFile := viper.GetString("network.nodes_file")
-	if nodesConfigFile == "" {
-		nodesConfigFile = *nodesFile
+func readMagicBlockFile(magicBlockFile *string, mc *miner.Chain, serverChain *chain.Chain) *block.MagicBlock {
+	magicBlockConfigFile := viper.GetString("network.magic_block_file")
+	if magicBlockConfigFile == "" {
+		magicBlockConfigFile = *magicBlockFile
 	}
-	if nodesConfigFile == "" {
+	if magicBlockConfigFile == "" {
 		panic("Please specify --nodes_file file.txt option with a file.txt containing nodes including self")
 	}
-	if strings.HasSuffix(nodesConfigFile, "txt") {
-		reader, err := os.Open(nodesConfigFile)
+	if strings.HasSuffix(magicBlockConfigFile, "json") {
+		mBfile, err := ioutil.ReadFile(magicBlockConfigFile)
 		if err != nil {
-			log.Fatalf("%v", err)
+			Logger.Panic(fmt.Sprintf("failed to read magic block file: %v", err))
 		}
-		node.ReadNodes(reader, serverChain.Miners, serverChain.Sharders)
-		reader.Close()
+		mB := block.NewMagicBlock()
+		err = mB.Decode([]byte(mBfile))
+		if err != nil {
+			Logger.Panic(fmt.Sprintf("failed to decode magic block file: %v", err))
+		}
+		mB.Hash = mB.GetHash()
+		mpks = make(map[bls.PartyID][]bls.PublicKey)
+		for k, v := range mB.Mpks.Mpks {
+			mpks[bls.ComputeIDdkg(k)] = bls.ConvertStringToMpk(v.Mpk)
+		}
+		return mB
 	} else {
-		mc.ReadNodePools(nodesConfigFile)
-		Logger.Info("nodes", zap.Int("miners", mc.Miners.Size()), zap.Int("sharders", mc.Sharders.Size()))
+		Logger.Panic(fmt.Sprintf("magic block file (%v) is in the wrong format. It should be a json", magicBlockConfigFile))
 	}
-	Logger.Info("Miners inside", zap.Int("size", mc.Miners.Size()))
+	return nil
+}
+
+func getCurrentMagicBlock(mc *miner.Chain) {
+	mbs := mc.GetLatestFinalizedMagicBlockFromSharder(common.GetRootContext())
+	if len(mbs) == 0 {
+		Logger.DPanic("No finalized magic block from sharder")
+	}
+	if len(mbs) > 1 {
+		sort.Slice(mbs, func(i, j int) bool {
+			return mbs[i].StartingRound < mbs[j].StartingRound
+		})
+	}
+	magicBlock := mbs[0]
+	if mc.MagicBlock.Hash != magicBlock.MagicBlock.Hash {
+		havePreviousMagicBlock := false
+		var pmbs []*block.Block
+		for !havePreviousMagicBlock {
+			pmbs = mc.GetBlockFromSharder(common.GetRootContext(), magicBlock.LatestFinalizedMagicBlockHash)
+			if len(pmbs) > 0 {
+				havePreviousMagicBlock = true
+			}
+			time.Sleep(time.Millisecond * 100)
+		}
+		if len(pmbs) > 1 {
+			sort.Slice(pmbs, func(i, j int) bool {
+				return pmbs[i].StartingRound < pmbs[j].StartingRound
+			})
+		}
+		err := mc.UpdateMagicBlock(pmbs[0].MagicBlock)
+		if err != nil {
+			Logger.DPanic(fmt.Sprintf("failed to update magic block: %v", err.Error()))
+		}
+	}
+	err := mc.UpdateMagicBlock(magicBlock.MagicBlock)
+	if err != nil {
+		Logger.DPanic(fmt.Sprintf("failed to update magic block: %v", err.Error()))
+	}
+	mc.SetLatestFinalizedMagicBlock(magicBlock)
 }
 
 func initEntities() {
@@ -265,7 +331,6 @@ func initEntities() {
 	bls.SetupDKGEntity()
 	bls.SetupDKGSummary(ememoryStorage)
 	bls.SetupDKGDB()
-	bls.SetupBLSEntity()
 	setupsc.SetupSmartContracts()
 }
 
@@ -300,6 +365,6 @@ func initN2NHandlers() {
 func initWorkers(ctx context.Context) {
 	serverChain := chain.GetServerChain()
 	serverChain.SetupWorkers(ctx)
-	//miner.SetupWorkers(ctx)
+	miner.SetupWorkers(ctx)
 	transaction.SetupWorkers(ctx)
 }

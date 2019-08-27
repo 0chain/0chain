@@ -17,9 +17,9 @@ var ErrNodeNotFound = common.NewError("node_not_found", "Requested node is not f
 
 /*Pool - a pool of nodes used for the same purpose */
 type Pool struct {
-	Type              int8
-	Nodes             []*Node
-	NodesMap          map[string]*Node
+	Type              int8             `json:"type"`
+	Nodes             []*Node          `json:"-"`
+	NodesMap          map[string]*Node `json:"nodes"`
 	medianNetworkTime float64
 }
 

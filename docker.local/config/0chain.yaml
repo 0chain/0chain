@@ -57,8 +57,8 @@ server_chain:
       threshold_by_count: 66 # percentage
       threshold_by_stake: 0 # percent
     sharding:
-      min_active_sharders: 33 # percentage
-      min_active_replicators: 33 # percentage
+      min_active_sharders: 25 # percentage
+      min_active_replicators: 25 # percentage
     validation:
       batch_size: 1000
     reuse_txns: false
@@ -67,8 +67,8 @@ server_chain:
   round_range: 10000000
   round_timeouts:
     softto_min: 3000   #in miliseconds
-    softto_mult: 3    #multiples of mean network time (mnt)  softto = max{softo_min, softto_mult * mnt}
-    round_restart_mult: 2        #number of soft timeouts before round is restarted
+    softto_mult: 4   #multiples of mean network time (mnt)  softto = max{softo_min, softto_mult * mnt}
+    round_restart_mult: 3        #number of soft timeouts before round is restarted
   transaction:
     payload:
       max_size: 98304 # bytes
@@ -100,7 +100,7 @@ server_chain:
       batch_size: 50
 
 network:
-  nodes_file: config/single_machine_3_nodes.yaml
+  magic_block_file: config/magicBlock.json
   relay_time: 200 # milliseconds
   max_concurrent_requests: 40
   timeout:

@@ -7,9 +7,13 @@ import (
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/round"
+	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/memorystore"
+
+	. "0chain.net/core/logging"
+	"go.uber.org/zap"
 )
 
 //RoundMismatch - to indicate an error where the current round and the given round don't match
@@ -63,6 +67,9 @@ type Chain struct {
 	*chain.Chain
 	BlockMessageChannel chan *BlockMessage
 	DiscoverClients     bool
+	CurrentDKG          *bls.DKG
+	ViewChangeDKG       *bls.DKG
+	NextViewChange      int64
 }
 
 /*GetBlockMessageChannel - get the block messages channel */
@@ -71,8 +78,8 @@ func (mc *Chain) GetBlockMessageChannel() chan *BlockMessage {
 }
 
 /*SetupGenesisBlock - setup the genesis block for this chain */
-func (mc *Chain) SetupGenesisBlock(hash string) *block.Block {
-	gr, gb := mc.GenerateGenesisBlock(hash)
+func (mc *Chain) SetupGenesisBlock(hash string, magicBlock *block.MagicBlock) *block.Block {
+	gr, gb := mc.GenerateGenesisBlock(hash, magicBlock)
 	if gr == nil || gb == nil {
 		panic("Genesis round/block canot be null")
 	}
@@ -81,7 +88,7 @@ func (mc *Chain) SetupGenesisBlock(hash string) *block.Block {
 		panic("Genesis round cannot convert to *round.Round")
 	}
 	mgr := mc.CreateRound(rr)
-	mgr.ComputeMinerRanks(mc.Miners)
+	mgr.ComputeMinerRanks(gb.MagicBlock.Miners)
 	mc.AddRound(mgr)
 	mc.AddGenesisBlock(gb)
 	return gb
@@ -161,4 +168,24 @@ func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) erro
 		}
 	}
 	return err
+}
+
+func (mc *Chain) UpdateDKG() {
+	Logger.Info("updated dkg", zap.Any("current_dkg", mc.CurrentDKG), zap.Any("view_change_dkg", mc.ViewChangeDKG))
+	mc.CurrentDKG = mc.ViewChangeDKG
+	mc.CurrentDKG.StartingRound = mc.NextViewChange
+}
+
+func (mc *Chain) ViewChange() {
+	Logger.Info("updated dkg", zap.Any("next_view_change", mc.NextViewChange))
+	if mc.ViewChangeMagicBlock == nil {
+		return
+	}
+	if mc.CurrentDKG == nil || mc.CurrentDKG.StartingRound <= mc.NextViewChange {
+		err := mc.UpdateMagicBlock(mc.ViewChangeMagicBlock)
+		if err != nil {
+			Logger.DPanic(err.Error())
+		}
+	}
+	mc.UpdateDKG()
 }

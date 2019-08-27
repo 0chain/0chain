@@ -177,7 +177,8 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 			}
 			provider.Status = NodeStatusActive
 			provider.LastActiveTime = time.Now()
-			size,entity, err := getResponseEntity(resp, entityMetadata)
+			provider.ErrorCount = provider.SendErrors
+			size, entity, err := getResponseEntity(resp, entityMetadata)
 			if err != nil {
 				N2n.Error("requesting", zap.Int("from", Self.SetIndex), zap.Int("to", provider.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName), zap.Any("params", params), zap.Error(err))
 				return false

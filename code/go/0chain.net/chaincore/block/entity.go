@@ -54,9 +54,9 @@ type UnverifiedBlockBody struct {
 	datastore.VersionField
 	datastore.CreationDateField
 
-	MagicBlockHash               string                `json:"magic_block_hash"`
-	PrevHash                     string                `json:"prev_hash"`
-	PrevBlockVerificationTickets []*VerificationTicket `json:"prev_verification_tickets,omitempty"`
+	LatestFinalizedMagicBlockHash string                `json:"latest_finalized_magic_block_hash"`
+	PrevHash                      string                `json:"prev_hash"`
+	PrevBlockVerificationTickets  []*VerificationTicket `json:"prev_verification_tickets,omitempty"`
 
 	MinerID           datastore.Key `json:"miner_id"`
 	Round             int64         `json:"round"`
@@ -93,6 +93,7 @@ type Block struct {
 	verificationStatus    int
 	RunningTxnCount       int64           `json:"running_txn_count"`
 	UniqueBlockExtensions map[string]bool `json:"-"`
+	*MagicBlock           `json:"magic_block,omitempty"`
 }
 
 //NewBlock - create a new empty block
@@ -366,6 +367,7 @@ func (b *Block) GetSummary() *BlockSummary {
 	bs.ClientStateHash = b.ClientStateHash
 	bs.ReceiptMerkleTreeRoot = b.GetReceiptsMerkleTree().GetRoot()
 	bs.NumTxns = len(b.Txns)
+	bs.MagicBlock = b.MagicBlock
 	return bs
 }
 

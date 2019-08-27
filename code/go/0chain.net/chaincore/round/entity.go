@@ -350,6 +350,7 @@ func SetupRoundSummaryDB() {
 
 /*ComputeMinerRanks - Compute random order of n elements given the random seed of the round */
 func (r *Round) ComputeMinerRanks(miners *node.Pool) {
+	Logger.Info("compute miner ranks", zap.Any("num_miners", miners.Size()), zap.Any("round", r.Number))
 	r.minerPerm = rand.New(rand.NewSource(r.RandomSeed)).Perm(miners.Size())
 }
 
@@ -361,6 +362,7 @@ func (r *Round) GetMinerRank(miner *node.Node) int {
 		pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
 		Logger.DPanic(fmt.Sprintf("miner ranks not computed yet: %v", r.GetState()))
 	}
+	Logger.Info("get miner rank", zap.Any("minerPerm", r.minerPerm), zap.Any("miner", miner), zap.Any("round", r.Number))
 	return r.minerPerm[miner.SetIndex]
 }
 
@@ -370,8 +372,10 @@ func (r *Round) GetMinersByRank(miners *node.Pool) []*node.Node {
 	defer r.Mutex.RUnlock()
 	nodes := miners.Nodes
 	rminers := make([]*node.Node, len(nodes))
+	Logger.Info("get miners by rank", zap.Any("num_miners", len(nodes)), zap.Any("round", r.Number), zap.Any("r.minerPerm", r.minerPerm))
 	for _, nd := range nodes {
-		rminers[r.minerPerm[nd.SetIndex]] = nd
+		idx := r.minerPerm[nd.SetIndex]
+		rminers[idx] = nd
 	}
 	return rminers
 }

@@ -233,6 +233,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			}
 			receiver.Status = NodeStatusActive
 			receiver.LastActiveTime = time.Now()
+			receiver.ErrorCount = receiver.SendErrors
 			return true
 		}
 	}

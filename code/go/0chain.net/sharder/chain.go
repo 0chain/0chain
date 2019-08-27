@@ -9,8 +9,12 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/round"
+	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/sharder/blockstore"
+
+	. "0chain.net/core/logging"
+	"go.uber.org/zap"
 )
 
 var sharderChain = &Chain{}
@@ -37,11 +41,11 @@ func GetSharderChain() *Chain {
 /*Chain - A chain structure to manage the sharder activities */
 type Chain struct {
 	*chain.Chain
-	BlockChannel  chan *block.Block
-	RoundChannel  chan *round.Round
-	BlockCache    cache.Cache
-	BlockTxnCache cache.Cache
-	SharderStats  Stats
+	BlockChannel   chan *block.Block
+	RoundChannel   chan *round.Round
+	BlockCache     cache.Cache
+	BlockTxnCache  cache.Cache
+	SharderStats   Stats
 	BlockSyncStats *SyncStats
 }
 
@@ -56,13 +60,19 @@ func (sc *Chain) GetRoundChannel() chan *round.Round {
 }
 
 /*SetupGenesisBlock - setup the genesis block for this chain */
-func (sc *Chain) SetupGenesisBlock(hash string) *block.Block {
-	gr, gb := sc.GenerateGenesisBlock(hash)
+func (sc *Chain) SetupGenesisBlock(hash string, magicBlock *block.MagicBlock) *block.Block {
+	gr, gb := sc.GenerateGenesisBlock(hash, magicBlock)
 	if gr == nil || gb == nil {
 		panic("Genesis round/block can not be null")
 	}
 	//sc.AddRound(gr)
 	sc.AddGenesisBlock(gb)
+	// Save the block
+	err := sc.storeBlock(common.GetRootContext(), gb)
+	if err != nil {
+		Logger.Error("Failed to save genesis block",
+			zap.Error(err))
+	}
 	return gb
 }
 

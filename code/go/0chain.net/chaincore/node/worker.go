@@ -18,18 +18,22 @@ import (
 /*StatusMonitor - a background job that keeps checking the status of the nodes */
 func (np *Pool) StatusMonitor(ctx context.Context) {
 	np.statusMonitor(ctx)
-	timer := time.NewTimer(time.Second)
+	updateTimer := time.NewTimer(time.Second)
+	monitorTimer := time.NewTimer(time.Second)
 	for true {
 		select {
 		case <-ctx.Done():
 			return
-		case _ = <-timer.C:
+		case _ = <-monitorTimer.C:
 			np.statusMonitor(ctx)
 			if np.GetActiveCount()*10 < len(np.Nodes)*8 {
-				timer = time.NewTimer(2 * time.Second)
+				monitorTimer = time.NewTimer(5 * time.Second)
 			} else {
-				timer = time.NewTimer(5 * time.Second)
+				monitorTimer = time.NewTimer(10 * time.Second)
 			}
+		case _ = <-updateTimer.C:
+			np.statusUpdate(ctx)
+			updateTimer = time.NewTimer(time.Second * 2)
 		}
 	}
 
@@ -38,6 +42,25 @@ func (np *Pool) StatusMonitor(ctx context.Context) {
 /*OneTimeStatusMonitor - checks the status of nodes only once*/
 func (np *Pool) OneTimeStatusMonitor(ctx context.Context) {
 	np.statusMonitor(ctx)
+}
+
+func (np *Pool) statusUpdate(ctx context.Context) {
+	nodes := np.shuffleNodes()
+	for _, node := range nodes {
+		if node == Self.Node {
+			continue
+		}
+		if common.Within(node.LastActiveTime.Unix(), 10) {
+			node.updateMessageTimings()
+			if time.Since(node.Info.AsOf) < 60*time.Second {
+				continue
+			}
+		}
+		if node.SendErrors-node.ErrorCount > 5 {
+			node.Status = NodeStatusInactive
+		}
+	}
+	np.ComputeNetworkStats()
 }
 
 func (np *Pool) statusMonitor(ctx context.Context) {
