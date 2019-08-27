@@ -143,7 +143,6 @@ func getHostnameAndPort(burl string) (string, int, error) {
 
 	Logger.Info("Both IsDNSName and IsIPV4 returned false for " + hostName)
 	return "", 0, errors.New(burl + " is not a valid url. It not a valid IP or valid DNS name")
-
 }
 
 func (msc *MinerSmartContract) getGlobalNode(balances c_state.StateContextI) (*globalNode, error) {

@@ -5,7 +5,6 @@ import (
 	"sort"
 
 	c_state "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 )
@@ -84,23 +83,14 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 		return "", common.NewError("allocation_creation_failed", "Invalid client in the transaction. No public key found")
 	}
 
-	clientPublicKey := t.PublicKey
-	if len(t.PublicKey) == 0 {
-		ownerClient, err := client.GetClient(common.GetRootContext(), t.ClientID)
-		if err != nil || ownerClient == nil || len(ownerClient.PublicKey) == 0 {
-			return "", common.NewError("invalid_client", "Invalid Client. Not found with miner")
-		}
-		clientPublicKey = ownerClient.PublicKey
-	}
-
 	var allocationRequest StorageAllocation
 
 	err = allocationRequest.Decode(input)
 	if err != nil {
 		return "", common.NewError("allocation_creation_failed", "Failed to create a storage allocation")
 	}
-
-	if allocationRequest.Size > 0 && allocationRequest.DataShards > 0 {
+	allocationRequest.Payer = t.ClientID
+	if allocationRequest.Size > 0 && allocationRequest.DataShards > 0 && len(allocationRequest.OwnerPublicKey) > 0 && len(allocationRequest.Owner) > 0 && len(allocationRequest.Payer) > 0 {
 		size := allocationRequest.DataShards + allocationRequest.ParityShards
 
 		if len(allBlobbersList.Nodes) < size {
@@ -129,8 +119,7 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 
 		allocationRequest.Blobbers = allocatedBlobbers
 		allocationRequest.ID = t.Hash
-		allocationRequest.Owner = t.ClientID
-		allocationRequest.OwnerPublicKey = clientPublicKey
+		allocationRequest.Payer = t.ClientID
 
 		buff, err := sc.addAllocation(&allocationRequest, balances)
 		if err != nil {

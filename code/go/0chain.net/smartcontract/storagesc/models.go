@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"0chain.net/chaincore/chain"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
@@ -13,6 +14,7 @@ import (
 var ALL_BLOBBERS_KEY = datastore.Key(ADDRESS + encryption.Hash("all_blobbers"))
 var ALL_VALIDATORS_KEY = datastore.Key(ADDRESS + encryption.Hash("all_validators"))
 var ALL_ALLOCATIONS_KEY = datastore.Key(ADDRESS + encryption.Hash("all_allocations"))
+var STORAGE_STATS_KEY = datastore.Key(ADDRESS + encryption.Hash("all_storage"))
 
 type ClientAllocation struct {
 	ClientID    string       `json:"client_id"`
@@ -152,7 +154,7 @@ type ValidationNode struct {
 }
 
 func (sn *ValidationNode) GetKey(globalKey string) datastore.Key {
-	return datastore.Key(globalKey + sn.ID)
+	return datastore.Key(globalKey + "validator:" + sn.ID)
 }
 
 func (sn *ValidationNode) Encode() []byte {
@@ -278,6 +280,7 @@ type StorageAllocation struct {
 	Blobbers       []*StorageNode                `json:"blobbers"`
 	Owner          string                        `json:"owner_id"`
 	OwnerPublicKey string                        `json:"owner_public_key"`
+	Payer          string                        `json:"payer_id"`
 	Stats          *StorageAllocationStats       `json:"stats"`
 	BlobberDetails []*BlobberAllocation          `json:"blobber_details"`
 	BlobberMap     map[string]*BlobberAllocation `json:"-"`
@@ -353,7 +356,9 @@ type WriteMarker struct {
 func (wm *WriteMarker) VerifySignature(clientPublicKey string) bool {
 	hashData := wm.GetHashData()
 	signatureHash := encryption.Hash(hashData)
-	sigOK, err := encryption.Verify(clientPublicKey, wm.Signature, signatureHash)
+	signatureScheme := chain.GetServerChain().GetSignatureScheme()
+	signatureScheme.SetPublicKey(clientPublicKey)
+	sigOK, err := signatureScheme.Verify(wm.Signature, signatureHash)
 	if err != nil {
 		return false
 	}
@@ -418,7 +423,9 @@ type ReadMarker struct {
 func (rm *ReadMarker) VerifySignature(clientPublicKey string) bool {
 	hashData := rm.GetHashData()
 	signatureHash := encryption.Hash(hashData)
-	sigOK, err := encryption.Verify(clientPublicKey, rm.Signature, signatureHash)
+	signatureScheme := chain.GetServerChain().GetSignatureScheme()
+	signatureScheme.SetPublicKey(clientPublicKey)
+	sigOK, err := signatureScheme.Verify(rm.Signature, signatureHash)
 	if err != nil {
 		return false
 	}
@@ -464,6 +471,31 @@ type ValidationTicket struct {
 func (vt *ValidationTicket) VerifySign() (bool, error) {
 	hashData := fmt.Sprintf("%v:%v:%v:%v:%v:%v", vt.ChallengeID, vt.BlobberID, vt.ValidatorID, vt.ValidatorKey, vt.Result, vt.Timestamp)
 	hash := encryption.Hash(hashData)
-	verified, err := encryption.Verify(vt.ValidatorKey, vt.Signature, hash)
+	signatureScheme := chain.GetServerChain().GetSignatureScheme()
+	signatureScheme.SetPublicKey(vt.ValidatorKey)
+	verified, err := signatureScheme.Verify(vt.Signature, hash)
 	return verified, err
+}
+
+type StorageStats struct {
+	Stats              *StorageAllocationStats `json:"stats"`
+	LastChallengedSize int64                   `json:"last_challenged_size"`
+	LastChallengedTime common.Timestamp        `json:"last_challenged_time"`
+}
+
+func (sn *StorageStats) GetKey(globalKey string) datastore.Key {
+	return STORAGE_STATS_KEY
+}
+
+func (sn *StorageStats) Decode(input []byte) error {
+	err := json.Unmarshal(input, sn)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (sn *StorageStats) Encode() []byte {
+	buff, _ := json.Marshal(sn)
+	return buff
 }
