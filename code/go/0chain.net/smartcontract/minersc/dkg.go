@@ -36,7 +36,13 @@ func (msc *MinerSmartContract) moveToShareOrPublish(balances c_state.StateContex
 	if err != nil {
 		return false
 	}
-	return dkgMinersList != nil && len(dkgMinersList.SimpleMinerNodes) >= dkgMinersList.K
+	mpks := block.NewMpks()
+	mpksBytes, err := balances.GetTrieNode(MinersMPKKey)
+	if err != nil {
+		return false
+	}
+	mpks.Decode(mpksBytes.Encode())
+	return mpks != nil && len(mpks.Mpks) >= dkgMinersList.K
 }
 
 func (msc *MinerSmartContract) moveToWait(balances c_state.StateContextI, pn *PhaseNode, gn *globalNode) bool {
