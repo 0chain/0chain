@@ -190,7 +190,11 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 		Logger.Debug("notarized block handler (round older than the current round)", zap.String("block", b.Hash), zap.Any("round", b.Round))
 		return nil, nil
 	}
-	if err := mc.VerifyNotarization(ctx, b.Hash, b.VerificationTickets); err != nil {
+	r := mc.GetRound(b.Round)
+	if r == nil {
+		r = mc.getRound(ctx, b.Round)
+	}
+	if err := mc.VerifyNotarization(ctx, b.Hash, b.VerificationTickets, r); err != nil {
 		return nil, err
 	}
 	msg := &BlockMessage{Sender: node.GetSender(ctx), Type: MessageNotarizedBlock, Block: b}

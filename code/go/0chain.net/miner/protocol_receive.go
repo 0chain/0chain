@@ -102,7 +102,7 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *Block
 	b, err := mc.GetBlock(ctx, msg.BlockVerificationTicket.BlockID)
 	if err != nil {
 		if mr != nil {
-			err = mc.VerifyTicket(ctx, msg.BlockVerificationTicket.BlockID, &msg.BlockVerificationTicket.VerificationTicket)
+			err = mc.VerifyTicket(ctx, msg.BlockVerificationTicket.BlockID, &msg.BlockVerificationTicket.VerificationTicket, mr)
 			if err != nil {
 				Logger.Debug("verification ticket", zap.Error(err))
 				return
@@ -117,7 +117,7 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *Block
 		Logger.Debug("verification message (round mismatch)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("finalized_round", lfb.Round))
 		return
 	}
-	err = mc.VerifyTicket(ctx, b.Hash, &msg.BlockVerificationTicket.VerificationTicket)
+	err = mc.VerifyTicket(ctx, b.Hash, &msg.BlockVerificationTicket.VerificationTicket, mr)
 	if err != nil {
 		Logger.Debug("verification ticket", zap.Error(err))
 		return

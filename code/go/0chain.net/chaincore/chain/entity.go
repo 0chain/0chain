@@ -615,7 +615,7 @@ func (c *Chain) GetBlockSharders(b *block.Block) []string {
 
 /*ValidGenerator - check whether this block is from a valid generator */
 func (c *Chain) ValidGenerator(r round.RoundI, b *block.Block) bool {
-	miner := c.Miners.GetNode(b.MinerID)
+	miner := c.GetMiners(r).GetNode(b.MinerID)
 	if miner == nil {
 		return false
 	}

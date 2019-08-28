@@ -2,6 +2,7 @@ package chain
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"time"
 
@@ -17,10 +18,10 @@ import (
 )
 
 /*VerifyTicket - verify the ticket */
-func (c *Chain) VerifyTicket(ctx context.Context, blockHash string, bvt *block.VerificationTicket) error {
-	sender := c.Miners.GetNode(bvt.VerifierID)
+func (c *Chain) VerifyTicket(ctx context.Context, blockHash string, bvt *block.VerificationTicket, r round.RoundI) error {
+	sender := c.GetMiners(r).GetNode(bvt.VerifierID)
 	if sender == nil {
-		return common.InvalidRequest("Verifier unknown or not authorized at this time")
+		return common.InvalidRequest(fmt.Sprintf("Verifier unknown or not authorized at this time: %v", bvt.VerifierID))
 	}
 
 	if ok, _ := sender.Verify(bvt.Signature, blockHash); !ok {
@@ -30,7 +31,7 @@ func (c *Chain) VerifyTicket(ctx context.Context, blockHash string, bvt *block.V
 }
 
 /*VerifyNotarization - verify that the notarization is correct */
-func (c *Chain) VerifyNotarization(ctx context.Context, blockHash string, bvt []*block.VerificationTicket) error {
+func (c *Chain) VerifyNotarization(ctx context.Context, blockHash string, bvt []*block.VerificationTicket, r round.RoundI) error {
 	if bvt == nil {
 		return common.NewError("no_verification_tickets", "No verification tickets for this block")
 	}
@@ -49,7 +50,7 @@ func (c *Chain) VerifyNotarization(ctx context.Context, blockHash string, bvt []
 		return common.NewError("block_not_notarized", "Verification tickets not sufficient to reach notarization")
 	}
 	for _, vt := range bvt {
-		if err := c.VerifyTicket(ctx, blockHash, vt); err != nil {
+		if err := c.VerifyTicket(ctx, blockHash, vt, r); err != nil {
 			return err
 		}
 	}
@@ -106,8 +107,10 @@ Simple 3 miner scenario :
     But if the prior block has b's signature (may or may not, but if it did), c can discover b is active before generating the block and so will send it to b
 */
 func (c *Chain) UpdateNodeState(b *block.Block) {
+	r := c.GetRound(b.Round)
 	for _, vt := range b.VerificationTickets {
-		signer := c.Miners.GetNode(vt.VerifierID)
+
+		signer := c.GetMiners(r).GetNode(vt.VerifierID)
 		if signer == nil {
 			Logger.Error("this should not happen!")
 			continue
@@ -226,7 +229,14 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 		if !ok {
 			return nil, datastore.ErrInvalidEntity
 		}
-		if err := c.VerifyNotarization(ctx, nb.Hash, nb.VerificationTickets); err != nil {
+		r := c.GetRound(nb.Round)
+		if r == nil {
+			Logger.Info("get notarized block - no round will create...", zap.Int64("round", nb.Round), zap.String("block", blockHash), zap.Int64("cround", cround), zap.Int64("current_round", c.CurrentRound))
+
+			r = c.RoundF.CreateRoundF(nb.Round).(*round.Round)
+			c.AddRound(r)
+		}
+		if err := c.VerifyNotarization(ctx, nb.Hash, nb.VerificationTickets, r); err != nil {
 			Logger.Error("get notarized block - validate notarization", zap.Int64("round", nb.Round), zap.String("block", blockHash), zap.Error(err))
 			return nil, err
 		}
@@ -234,15 +244,7 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 			Logger.Error("get notarized block - validate", zap.Int64("round", nb.Round), zap.String("block", blockHash), zap.Any("block_obj", nb), zap.Error(err))
 			return nil, err
 		}
-		r := c.GetRound(nb.Round)
-		if r == nil {
-			Logger.Info("get notarized block - no round will create...", zap.Int64("round", nb.Round), zap.String("block", blockHash), zap.Int64("cround", cround), zap.Int64("current_round", c.CurrentRound))
-			b = c.AddBlock(nb)
-
-			r = c.RoundF.CreateRoundF(nb.Round).(*round.Round)
-			c.AddRound(r)
-		}
-
+		b = c.AddBlock(nb)
 		//This is a notarized block. So, use this method to sync round info with the notarized block.
 		b, r = c.AddNotarizedBlockToRound(r, nb)
 
