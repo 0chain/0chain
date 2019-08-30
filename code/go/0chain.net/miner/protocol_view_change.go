@@ -46,6 +46,7 @@ const (
 	scRestAPIGetDKGMiners  = "/getDkgList"
 	scRestAPIGetMinersMPKS = "/getMpksList"
 	scRestAPIGetMagicBlock = "/getMagicBlock"
+	scRestAPIGetMinerList  = "/getMinerList"
 )
 
 type SmartContractFunctions func() (*httpclientutil.Transaction, error)
@@ -67,7 +68,7 @@ func (mc *Chain) initSetup() {
 	if !mc.IsActiveMiner(node.Self.ID, mc.CurrentRound) {
 		mc.RegisterClient()
 	}
-	var registered bool
+	registered := mc.isRegistered()
 	for !registered {
 		txn, err := mc.RegisterMiner()
 		if err == nil && mc.confirmTransaction(txn) {
@@ -524,6 +525,9 @@ func (mc *Chain) Wait() (*httpclientutil.Transaction, error) {
 		return nil, nil
 	}
 	for key, share := range magicBlock.ShareOrSigns.Shares {
+		if key == node.Self.ID {
+			continue
+		}
 		myShare, ok := share.ShareOrSigns[node.Self.ID]
 		if ok && myShare.Share != "" {
 			var share bls.Key
@@ -616,4 +620,42 @@ func (mc *Chain) RegisterClient() {
 		}
 		time.Sleep(httpclientutil.SleepBetweenRetries * time.Millisecond)
 	}
+}
+
+func (mc *Chain) isRegistered() bool {
+	allMinersList := &minersc.MinerNodes{}
+	if mc.IsActiveMiner(node.Self.ID, mc.CurrentRound) {
+		lfb := mc.GetLatestFinalizedBlock()
+		clientState := chain.CreateTxnMPT(lfb.ClientState)
+		node, err := clientState.GetNodeValue(util.Path(encryption.Hash(minersc.MagicBlockKey)))
+		if err != nil {
+			return false
+		}
+		if node == nil {
+			return false
+		}
+		err = allMinersList.Decode(node.Encode())
+		if err != nil {
+			return false
+		}
+	} else {
+		var sharders []string
+		var err error
+
+		for _, sharder := range mc.Sharders.NodesMap {
+			sharders = append(sharders, "http://"+sharder.N2NHost+":"+strconv.Itoa(sharder.Port))
+		}
+		err = httpclientutil.MakeSCRestAPICall(minersc.ADDRESS, scRestAPIGetMinerList, nil, sharders, allMinersList, 1)
+		if err != nil {
+			return false
+		}
+	}
+	var registered bool
+	for _, miner := range allMinersList.Nodes {
+		if miner.ID == node.Self.ID {
+			registered = true
+			break
+		}
+	}
+	return registered
 }

@@ -191,6 +191,13 @@ func (msc *MinerSmartContract) createMagicBlockForWait(balances c_state.StateCon
 	}
 	mpks.Decode(mpksBytes.Encode())
 
+	for key := range mpks.Mpks {
+		if _, ok := gsos.Shares[key]; !ok {
+			delete(dkgMinersList.SimpleMinerNodes, key)
+			delete(gsos.Shares, key)
+			delete(mpks.Mpks, key)
+		}
+	}
 	for key, sharesRevealed := range dkgMinersList.RevealedShares {
 		if sharesRevealed == dkgMinersList.N {
 			delete(dkgMinersList.SimpleMinerNodes, key)
