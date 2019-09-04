@@ -475,3 +475,18 @@ func (n *Node) getTime(uri string) float64 {
 	pullTimer := n.GetTimer(uri)
 	return pullTimer.Mean()
 }
+
+func (n *Node) SetNodeInfo(oldNode *Node) {
+	n.Sent = oldNode.Sent
+	n.SendErrors = oldNode.SendErrors
+	n.Received = oldNode.Received
+	n.TimersByURI = oldNode.TimersByURI
+	n.SizeByURI = oldNode.SizeByURI
+	n.LargeMessageSendTime = oldNode.LargeMessageSendTime
+	n.SmallMessageSendTime = oldNode.SmallMessageSendTime
+	n.LargeMessagePullServeTime = oldNode.LargeMessagePullServeTime
+	n.SmallMessagePullServeTime = oldNode.SmallMessagePullServeTime
+	n.ProtocolStats = oldNode.ProtocolStats
+	n.Info = oldNode.Info
+	n.Status = oldNode.Status
+}

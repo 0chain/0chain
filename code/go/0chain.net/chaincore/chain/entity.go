@@ -960,6 +960,7 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 	c.Sharders.ComputeProperties()
 	c.Miners.ComputeProperties()
 	c.InitializeMinerPool()
+	c.GetNodesPreviousInfo()
 	UpdateNodes <- true
 	return nil
 }
@@ -1002,4 +1003,17 @@ func (c *Chain) GetLatestFinalizedMagicBlockSummary() *block.BlockSummary {
 	c.lfmbMutex.RLock()
 	defer c.lfmbMutex.RUnlock()
 	return c.lfmbSummary
+}
+
+func (c *Chain) GetNodesPreviousInfo() {
+	for key, miner := range c.Miners.NodesMap {
+		if oldMiner, ok := c.PreviousMagicBlock.Miners.NodesMap[key]; ok {
+			miner.SetNodeInfo(oldMiner)
+		}
+	}
+	for key, sharder := range c.Sharders.NodesMap {
+		if oldSharder, ok := c.PreviousMagicBlock.Sharders.NodesMap[key]; ok {
+			sharder.SetNodeInfo(oldSharder)
+		}
+	}
 }
