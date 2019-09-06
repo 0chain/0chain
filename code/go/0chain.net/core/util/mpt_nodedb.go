@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 
 	"0chain.net/core/common"
 	. "0chain.net/core/logging"
@@ -46,18 +47,22 @@ type StrKey string
 /*MemoryNodeDB - an inmemory node db */
 type MemoryNodeDB struct {
 	Nodes map[StrKey]Node
+	lock  *sync.Mutex
 }
 
 /*NewMemoryNodeDB - create a memory node db */
 func NewMemoryNodeDB() *MemoryNodeDB {
 	mndb := &MemoryNodeDB{}
 	mndb.Nodes = make(map[StrKey]Node)
+	mndb.lock = &sync.Mutex{}
 	return mndb
 }
 
 /*GetNode - implement interface */
 func (mndb *MemoryNodeDB) GetNode(key Key) (Node, error) {
 	skey := StrKey(key)
+	mndb.lock.Lock()
+	defer mndb.lock.Unlock()
 	node, ok := mndb.Nodes[skey]
 	if !ok {
 		return nil, ErrNodeNotFound
@@ -68,6 +73,8 @@ func (mndb *MemoryNodeDB) GetNode(key Key) (Node, error) {
 /*PutNode - implement interface */
 func (mndb *MemoryNodeDB) PutNode(key Key, node Node) error {
 	skey := StrKey(key)
+	mndb.lock.Lock()
+	defer mndb.lock.Unlock()
 	mndb.Nodes[skey] = node
 	return nil
 }
@@ -75,6 +82,8 @@ func (mndb *MemoryNodeDB) PutNode(key Key, node Node) error {
 /*DeleteNode - implement interface */
 func (mndb *MemoryNodeDB) DeleteNode(key Key) error {
 	skey := StrKey(key)
+	mndb.lock.Lock()
+	defer mndb.lock.Unlock()
 	delete(mndb.Nodes, skey)
 	return nil
 }
