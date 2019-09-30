@@ -8,6 +8,7 @@ import (
 	"math"
 	"net/http"
 	"runtime"
+	"strings"
 	"time"
 
 	"0chain.net/chaincore/block"
@@ -78,24 +79,28 @@ func GetBlockHandler(ctx context.Context, r *http.Request) (interface{}, error) 
 	if content == "" {
 		content = "header"
 	}
+	parts := strings.Split(content, ",")
 	b, err := GetServerChain().GetBlock(ctx, hash)
 	if err != nil {
 		return nil, err
 	}
-	return GetBlockResponse(b, content)
+	return GetBlockResponse(b, parts)
 }
 
 /*GetBlockResponse - a handler to get the block */
-func GetBlockResponse(b *block.Block, content string) (interface{}, error) {
-	switch content {
-	case "full":
-		return b, nil
-	case "header":
-		return b.GetSummary(), nil
-	case "merkle_tree":
-		return b.GetMerkleTree().GetTree(), nil
+func GetBlockResponse(b *block.Block, contentParts []string) (interface{}, error) {
+	data := make(map[string]interface{}, len(contentParts))
+	for _, part := range contentParts {
+		switch part {
+			case "full":
+				data["block"] = b
+			case "header":
+				data["header"] = b.GetSummary()
+			case "merkle_tree":
+				data["merkle_tree"] = b.GetMerkleTree().GetTree()
+		}
 	}
-	return nil, common.NewError("failed to get block response", fmt.Sprintf("content is empty: %v", content))
+	return data, nil
 }
 
 /*LatestFinalizedBlockHandler - provide the latest finalized block by this miner */

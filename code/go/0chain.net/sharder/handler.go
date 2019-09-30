@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"strconv"
 
 	"0chain.net/chaincore/config"
@@ -36,6 +37,7 @@ func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	if content == "" {
 		content = "header"
 	}
+	parts := strings.Split(content, ",")
 	sc := GetSharderChain()
 	lfb := sc.GetLatestFinalizedBlock()
 	if roundData != "" {
@@ -67,7 +69,7 @@ func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	}
 	b, err = chain.GetServerChain().GetBlock(ctx, hash)
 	if err == nil {
-		return chain.GetBlockResponse(b, content)
+		return chain.GetBlockResponse(b, parts)
 	}
 	/*NOTE: We store chain.RoundRange number of blocks in the same directory and that's a large number (10M).
 	So, as long as people query the last 10M blocks most of the time, we only end up with 1 or 2 iterations.
@@ -79,7 +81,7 @@ func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 			return nil, err
 		}
 	}
-	return chain.GetBlockResponse(b, content)
+	return chain.GetBlockResponse(b, parts)
 }
 
 /*ChainStatsHandler - a handler to provide block statistics */

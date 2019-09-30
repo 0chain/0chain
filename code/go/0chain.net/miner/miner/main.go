@@ -282,26 +282,6 @@ func getCurrentMagicBlock(mc *miner.Chain) {
 		})
 	}
 	magicBlock := mbs[0]
-	if mc.MagicBlock.Hash != magicBlock.MagicBlock.Hash {
-		havePreviousMagicBlock := false
-		var pmbs []*block.Block
-		for !havePreviousMagicBlock {
-			pmbs = mc.GetBlockFromSharder(common.GetRootContext(), magicBlock.LatestFinalizedMagicBlockHash)
-			if len(pmbs) > 0 {
-				havePreviousMagicBlock = true
-			}
-			time.Sleep(time.Millisecond * 100)
-		}
-		if len(pmbs) > 1 {
-			sort.Slice(pmbs, func(i, j int) bool {
-				return pmbs[i].StartingRound < pmbs[j].StartingRound
-			})
-		}
-		err := mc.UpdateMagicBlock(pmbs[0].MagicBlock)
-		if err != nil {
-			Logger.DPanic(fmt.Sprintf("failed to update magic block: %v", err.Error()))
-		}
-	}
 	err := mc.UpdateMagicBlock(magicBlock.MagicBlock)
 	if err != nil {
 		Logger.DPanic(fmt.Sprintf("failed to update magic block: %v", err.Error()))

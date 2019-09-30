@@ -3,7 +3,6 @@ package miner
 import (
 	"context"
 	"math"
-	"net/url"
 	"sort"
 	"sync"
 	"time"
@@ -655,41 +654,6 @@ func (mc *Chain) GetLatestFinalizedMagicBlockFromSharder(ctx context.Context) []
 	}
 	m2s.RequestEntityFromAll(ctx, LatestFinalizedMagicBlockRequestor, nil, handler)
 	return finalizedMagicBlocks
-}
-
-/*GetLatestFinalizedBlockFromSharder - request for latest finalized block from all the sharders */
-func (mc *Chain) GetBlockFromSharder(ctx context.Context, hash string) []*block.Block {
-	m2s := mc.Sharders
-	Logger.Info("get block", zap.Any("sharders", m2s.NodesMap))
-	blocks := make([]*block.Block, 0, 1)
-	bMutex := &sync.Mutex{}
-	params := &url.Values{}
-	params.Add("content", "full")
-	params.Add("block", hash)
-
-	Logger.Info("get block from sharder", zap.Any("hash", hash))
-	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-		newBlock, ok := entity.(*block.Block)
-		Logger.Info("request from sharder", zap.Any("block", newBlock))
-		if newBlock == nil {
-			return nil, nil
-		}
-		if !ok {
-			return nil, datastore.ErrInvalidEntity
-		}
-		Logger.Info("block from sharder", zap.Int64("block", newBlock.Round), zap.Any("lfb", newBlock))
-		bMutex.Lock()
-		defer bMutex.Unlock()
-		for _, b := range blocks {
-			if b.Hash == newBlock.Hash {
-				return newBlock, nil
-			}
-		}
-		blocks = append(blocks, newBlock)
-		return newBlock, nil
-	}
-	m2s.RequestEntityFromAll(ctx, BlockRequestor, params, handler)
-	return blocks
 }
 
 // GetNextRoundTimeoutTime returns time in milliseconds
