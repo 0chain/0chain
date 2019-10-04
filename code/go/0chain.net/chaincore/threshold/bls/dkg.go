@@ -139,7 +139,7 @@ func (dkg *DKG) ComputeDKGKeyShare(forID PartyID) (Key, error) {
 /*GetKeyShareForOther - Get the DKGKeyShare for this Miner specified by the PartyID */
 func (dkg *DKG) GetKeyShareForOther(to PartyID) *DKGKeyShare {
 	dkg.sijMutex.Lock()
-	defer dkg.sijMutex.Lock()
+	defer dkg.sijMutex.Unlock()
 	indivShare, ok := dkg.Sij[to]
 	if !ok {
 		return nil
@@ -153,7 +153,7 @@ func (dkg *DKG) GetKeyShareForOther(to PartyID) *DKGKeyShare {
 func (dkg *DKG) AggregateSecretKeyShares() {
 	var sk Key
 	dkg.secretSharesMutex.Lock()
-	defer dkg.secretSharesMutex.Lock()
+	defer dkg.secretSharesMutex.Unlock()
 	for _, Sij := range dkg.receivedSecretShares {
 		sk.Add(&Sij)
 	}
@@ -165,7 +165,7 @@ func (dkg *DKG) AggregateSecretKeyShares() {
 func (dkg *DKG) GetSecretKeyShares() []string {
 	var shares []string
 	dkg.secretSharesMutex.Lock()
-	defer dkg.secretSharesMutex.Lock()
+	defer dkg.secretSharesMutex.Unlock()
 	for _, Sij := range dkg.receivedSecretShares {
 		shares = append(shares, Sij.GetHexString())
 	}
@@ -175,7 +175,7 @@ func (dkg *DKG) GetSecretKeyShares() []string {
 /*ComputeDKGKeyShare - Derive the share for each miner through polynomial substitution method */
 func (dkg *DKG) AddSecretShare(id PartyID, share string) error {
 	dkg.secretSharesMutex.Lock()
-	defer dkg.secretSharesMutex.Lock()
+	defer dkg.secretSharesMutex.Unlock()
 	if _, ok := dkg.receivedSecretShares[id]; !ok {
 		var secretShare Key
 		if err := secretShare.SetHexString(share); err != nil {
@@ -270,7 +270,7 @@ func (dkg *DKG) AggregatePublicKeyShares(mpks map[PartyID][]PublicKey) {
 /*CreateQualSet - Each party aggregates the received shares from other party which is calculated for that party */
 func (dkg *DKG) DeleteFromSet(nodes []string) {
 	dkg.secretSharesMutex.Lock()
-	defer dkg.secretSharesMutex.Lock()
+	defer dkg.secretSharesMutex.Unlock()
 	for _, id := range nodes {
 		delete(dkg.receivedSecretShares, ComputeIDdkg(id))
 	}
