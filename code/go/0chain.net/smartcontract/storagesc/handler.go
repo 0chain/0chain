@@ -9,6 +9,14 @@ import (
 	"0chain.net/core/common"
 )
 
+func (ssc *StorageSmartContract) GetBlobbersHandler(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
+	blobbers, err := ssc.getBlobbersList(balances)
+	if err != nil {
+		return nil, err
+	}
+	return blobbers, nil
+}
+
 func (ssc *StorageSmartContract) GetAllocationsHandler(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
 	clientID := params.Get("client")
 	allocations, err := ssc.getAllocationsList(clientID, balances)
