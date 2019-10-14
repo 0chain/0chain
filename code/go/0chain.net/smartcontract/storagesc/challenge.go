@@ -226,44 +226,57 @@ func (sc *StorageSmartContract) addChallenge(challengeID string, creationDate co
 
 	allocationObj := &StorageAllocation{}
 	allocationObj.Stats = &StorageAllocationStats{}
-
-	for allocationObj.Stats.UsedSize == 0 {
-		allocationIndex := r.Int63n(int64(len(allocationList.List)))
-		allocationKey := allocationList.List[allocationIndex]
+	
+	allocationperm := r.Perm(len(allocationList.List))
+	for _, v := range allocationperm {
+		allocationKey := allocationList.List[v]
 		allocationObj.ID = allocationKey
 
 		allocationBytes, err := balances.GetTrieNode(allocationObj.GetKey(sc.ID))
 		if allocationBytes == nil || err != nil {
-			return "", common.NewError("invalid_allocation", "Client state has invalid allocations")
+			//return "", common.NewError("invalid_allocation", "Client state has invalid allocations")
+			Logger.Error("Client state has invalid allocations", zap.Any("allocation_list", allocationList.List), zap.Any("selected_allocation", allocationKey))
 		}
 		allocationObj.Decode(allocationBytes.Encode())
 		sort.SliceStable(allocationObj.Blobbers, func(i, j int) bool {
 			return allocationObj.Blobbers[i].ID < allocationObj.Blobbers[j].ID
 		})
+		if allocationObj.Stats.NumWrites > 0 {
+			break
+		}
 	}
+
+	if allocationObj.Stats.NumWrites == 0 {
+		return "", common.NewError("no_allocation_writes", "No Allocation writes. challenge gemeration not possible")
+	} 
 
 	selectedBlobberObj := &StorageNode{}
 
 	blobberAllocation := &BlobberAllocation{}
 	blobberAllocation.Stats = &StorageAllocationStats{}
-
-	for blobberAllocation.Stats.UsedSize == 0 || len(blobberAllocation.AllocationRoot) == 0 {
-		randIdx := r.Int63n(int64(len(allocationObj.Blobbers)))
-		selectedBlobberObj = allocationObj.Blobbers[randIdx]
+	blobberperm := r.Perm(len(allocationObj.Blobbers))
+	for _,v := range blobberperm {
+		selectedBlobberObj = allocationObj.Blobbers[v]
 		_, ok := allocationObj.BlobberMap[selectedBlobberObj.ID]
 		if !ok {
+			Logger.Error("Selected blobber not found in allocation state", zap.Any("selected_blobber", selectedBlobberObj), zap.Any("blobber_map", allocationObj.BlobberMap))
 			return "", common.NewError("invalid_parameters", "Blobber is not part of the allocation. Could not find blobber")
 		}
 		blobberAllocation = allocationObj.BlobberMap[selectedBlobberObj.ID]
-	}
-	selectedValidators := make([]*ValidationNode, 0)
-	for len(selectedValidators) < allocationObj.DataShards {
-		randIdx := r.Int63n(int64(len(validatorList.Nodes)))
-		if strings.Compare(validatorList.Nodes[randIdx].ID, selectedBlobberObj.ID) != 0 {
-			//Logger.Info("Validator selections for challenge", zap.Any("validator", validatorList.Nodes[randIdx].ID), zap.Any("selected_blobber", selectedBlobberObj.ID))
-			selectedValidators = append(selectedValidators, validatorList.Nodes[randIdx])
+		if len(blobberAllocation.AllocationRoot) > 0 {
+			break
 		}
 	}
+	
+	selectedValidators := make([]*ValidationNode, allocationObj.DataShards)
+	perm := r.Perm(allocationObj.DataShards + 1)
+	for i, v := range perm {
+		if strings.Compare(validatorList.Nodes[i].ID, selectedBlobberObj.ID) != 0 {
+			selectedValidators[v] = validatorList.Nodes[i]
+		}
+		
+	}
+
 	//Logger.Info("Challenge blobber selected.", zap.Any("challenge", challengeID), zap.Any("selected_blobber", allocationObj.Blobbers[randIdx]), zap.Any("blobbers", allocationObj.Blobbers), zap.Any("random_index", randIdx))
 
 	var storageChallenge StorageChallenge
@@ -273,7 +286,7 @@ func (sc *StorageSmartContract) addChallenge(challengeID string, creationDate co
 	storageChallenge.RandomNumber = challengeSeed
 	storageChallenge.AllocationID = allocationObj.ID
 
-	if len(blobberAllocation.AllocationRoot) == 0 || blobberAllocation.Stats.UsedSize == 0 {
+	if len(blobberAllocation.AllocationRoot) == 0 {
 		return "", common.NewError("blobber_no_wm", "Blobber does not have any data for the allocation. "+allocationObj.ID+" blobber: "+blobberAllocation.BlobberID)
 	}
 
