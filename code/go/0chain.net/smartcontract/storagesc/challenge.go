@@ -226,7 +226,7 @@ func (sc *StorageSmartContract) addChallenge(challengeID string, creationDate co
 
 	allocationObj := &StorageAllocation{}
 	allocationObj.Stats = &StorageAllocationStats{}
-	
+
 	allocationperm := r.Perm(len(allocationList.List))
 	for _, v := range allocationperm {
 		allocationKey := allocationList.List[v]
@@ -234,8 +234,8 @@ func (sc *StorageSmartContract) addChallenge(challengeID string, creationDate co
 
 		allocationBytes, err := balances.GetTrieNode(allocationObj.GetKey(sc.ID))
 		if allocationBytes == nil || err != nil {
-			//return "", common.NewError("invalid_allocation", "Client state has invalid allocations")
 			Logger.Error("Client state has invalid allocations", zap.Any("allocation_list", allocationList.List), zap.Any("selected_allocation", allocationKey))
+			return "", common.NewError("invalid_allocation", "Client state has invalid allocations")
 		}
 		allocationObj.Decode(allocationBytes.Encode())
 		sort.SliceStable(allocationObj.Blobbers, func(i, j int) bool {
@@ -248,14 +248,14 @@ func (sc *StorageSmartContract) addChallenge(challengeID string, creationDate co
 
 	if allocationObj.Stats.NumWrites == 0 {
 		return "", common.NewError("no_allocation_writes", "No Allocation writes. challenge gemeration not possible")
-	} 
+	}
 
 	selectedBlobberObj := &StorageNode{}
 
 	blobberAllocation := &BlobberAllocation{}
 	blobberAllocation.Stats = &StorageAllocationStats{}
 	blobberperm := r.Perm(len(allocationObj.Blobbers))
-	for _,v := range blobberperm {
+	for _, v := range blobberperm {
 		selectedBlobberObj = allocationObj.Blobbers[v]
 		_, ok := allocationObj.BlobberMap[selectedBlobberObj.ID]
 		if !ok {
@@ -267,14 +267,14 @@ func (sc *StorageSmartContract) addChallenge(challengeID string, creationDate co
 			break
 		}
 	}
-	
+
 	selectedValidators := make([]*ValidationNode, 0)
 	perm := r.Perm(allocationObj.DataShards + 1)
 	for _, v := range perm {
 		if strings.Compare(validatorList.Nodes[v].ID, selectedBlobberObj.ID) != 0 {
 			selectedValidators = append(selectedValidators, validatorList.Nodes[v])
 		}
-		
+
 	}
 
 	//Logger.Info("Challenge blobber selected.", zap.Any("challenge", challengeID), zap.Any("selected_blobber", allocationObj.Blobbers[randIdx]), zap.Any("blobbers", allocationObj.Blobbers), zap.Any("random_index", randIdx))
