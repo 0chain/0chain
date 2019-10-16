@@ -21,6 +21,7 @@ type StorageSmartContract struct {
 
 func (ssc *StorageSmartContract) SetSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {
 	ssc.SmartContract = sc
+	ssc.SmartContract.RestHandlers["/getblobbers"] = ssc.GetBlobbersHandler
 	ssc.SmartContract.RestHandlers["/allocation"] = ssc.AllocationStatsHandler
 	ssc.SmartContract.RestHandlers["/allocations"] = ssc.GetAllocationsHandler
 	ssc.SmartContract.RestHandlers["/latestreadmarker"] = ssc.LatestReadMarkerHandler
