@@ -35,7 +35,7 @@ zerochain:
 
 server_chain:
   id: "0afc093ffb509f059c55478bc1a60351cef7b4e9c008a53a6cc8241ca8617dfe"
-  owner: "65dfe7e15ca2f689edda6eff3d5c36e8c0975792fa443c5f5413fbca27c49567"
+  owner: "edb90b850f2e7e7cbd0a1fa370fdcc5cd378ffbec95363a7bc0e5a98b8ba5759"
   decimals: 10
   tokens: 200000000
   genesis_block:
