@@ -9,10 +9,11 @@ import (
 
 /*Confirmation - a data structure that provides the confirmation that a transaction is included into the block chain */
 type Confirmation struct {
-	Version     string       `json:"version"`
-	Hash        string       `json:"hash"`
-	BlockHash   string       `json:"block_hash"`
-	Transaction *Transaction `json:"txn,omitempty"`
+	Version           string       `json:"version"`
+	Hash              string       `json:"hash"`
+	BlockHash         string       `json:"block_hash"`
+	PreviousBlockHash string       `json:"previous_block_hash"`
+	Transaction       *Transaction `json:"txn,omitempty"`
 	datastore.CreationDateField
 	MinerID               datastore.Key `json:"miner_id"`
 	Round                 int64         `json:"round"`

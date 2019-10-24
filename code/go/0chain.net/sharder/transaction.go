@@ -91,6 +91,7 @@ func (sc *Chain) GetTransactionConfirmation(ctx context.Context, hash string) (*
 	rmt := b.GetReceiptsMerkleTree()
 	confirmation.ReceiptMerkleTreeRoot = rmt.GetRoot()
 	confirmation.ReceiptMerkleTreePath = rmt.GetPath(transaction.NewTransactionReceipt(txn))
+	confirmation.PreviousBlockHash = b.PrevHash
 	return confirmation, nil
 }
 
@@ -138,10 +139,10 @@ var txnTableIndexed = false
 var txnSummaryMV = false
 var roundToHashMVTable = "round_to_hash"
 
-func txnSummaryCreateMV( targetTable string, srcTable string, ) string {
+func txnSummaryCreateMV(targetTable string, srcTable string) string {
 	return fmt.Sprintf(
 		"CREATE MATERIALIZED VIEW IF NOT EXISTS %v AS SELECT ROUND, HASH FROM %v WHERE ROUND IS NOT NULL PRIMARY KEY (ROUND, HASH)",
-		targetTable, srcTable);
+		targetTable, srcTable)
 }
 func getCreateIndex(table string, column string) string {
 	return fmt.Sprintf("CREATE INDEX IF NOT EXISTS ON %v(%v)", table, column)
@@ -204,7 +205,7 @@ func (sc *Chain) getTxnAndCountForRound(ctx context.Context, r int64) (int, erro
 	var round int
 	var count int
 	for iter.Scan(&round) {
-			count++
+		count++
 	}
 	if err := iter.Close(); err != nil {
 		return 0, err
