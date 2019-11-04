@@ -73,13 +73,13 @@ $ ./docker.local/bin/sync_clock.sh
 
 On the sharder terminal, use
 ```
-$ ../bin/start.sharder.sh
+$ ../bin/start.b0sharder.sh
 ```
 Wait till the cassandra is started and the sharder is ready to listen to requests.
 
 On the respective miner terminal, use
 ```
-$ ../bin/start.miner.sh
+$ ../bin/start.b0miner.sh
 ```
 
 
