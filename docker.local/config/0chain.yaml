@@ -99,7 +99,7 @@ server_chain:
       batch_size: 50
 
 network:
-  magic_block_file: config/magicBlock.json
+  magic_block_file: config/b0magicBlock.json
   relay_time: 200 # milliseconds
   max_concurrent_requests: 40
   timeout:
