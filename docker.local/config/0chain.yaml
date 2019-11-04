@@ -14,8 +14,7 @@ development:
     faucet: true
     zrc20: true
     interest: true
-    miner: true
-    fee: true
+    miner: false
     multisig: true
   txn_generation:
     wallets: 50
