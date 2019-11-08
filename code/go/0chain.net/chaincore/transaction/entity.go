@@ -19,10 +19,12 @@ import (
 )
 
 /*TXN_TIME_TOLERANCE - the txn creation date should be within these many seconds before/after of current time */
+
 var TXN_TIME_TOLERANCE int64
 
 var TransactionCount = 0
-
+var redis_txns string
+redis_txns = os.Getenv("REDIS_TXNS")
 func SetupTransactionDB() {
 	memorystore.AddPool("txndb", memorystore.NewPool("redis_txns", 6479))
 }
