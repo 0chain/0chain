@@ -47,7 +47,6 @@ func SetupDefaultConfig() {
 	viper.SetDefault("server_chain.health_check.deep_scan.repeat_interval_mins", 1440)
 	viper.SetDefault("server_chain.health_check.deep_scan.report_status_mins", 60)
 
-
 	//Set defaults for proximity scan.
 	viper.SetDefault("server_chain.health_check.proximity_scan.enabled", true)
 	viper.SetDefault("server_chain.health_check.proximity_scan.batch_size", 100)
@@ -80,6 +79,9 @@ func SetupDefaultSmartContractConfig() {
 	SmartContractConfig.SetDefault("smart_contracts.interestpoolsc.min_lock", 100)
 	SmartContractConfig.SetDefault("smart_contracts.interestpoolsc.lock_period", "2160h")
 	SmartContractConfig.SetDefault("smart_contracts.interestpoolsc.interest_rate", 0.01)
+
+	SmartContractConfig.SetDefault("smart_contracts.storagesc.challenge_enabled", true)
+	SmartContractConfig.SetDefault("smart_contracts.storagesc.challenge_rate_per_mb_min", 1)
 }
 
 /*SetupConfig - setup the configuration system */
