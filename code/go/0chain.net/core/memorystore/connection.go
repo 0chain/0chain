@@ -13,14 +13,12 @@ import (
 	"github.com/gomodule/redigo/redis"
 	"go.uber.org/zap"
 )
+
 /* Redis host environment variables
 
 
 /*DefaultPool - the default redis pool against a service (host) named redis */
-var RedisHost string
-RedisHost = os.Getenv("REDIS_HOST")
-var DefaultPool = NewPool( RedisHost, 6379)
-
+var DefaultPool *redis.Pool
 
 /*NewPool - create a new redis pool accessible at the given address */
 func NewPool(host string, port int) *redis.Pool {
@@ -52,6 +50,7 @@ type dbpool struct {
 var pools = make(map[string]*dbpool)
 
 func init() {
+	DefaultPool = NewPool(os.Getenv("REDIS_HOST"), 6379)
 	pools[""] = &dbpool{ID: "", CtxKey: CONNECTION, Pool: DefaultPool}
 }
 

@@ -3,6 +3,7 @@ package transaction
 import (
 	"context"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -24,9 +25,13 @@ var TXN_TIME_TOLERANCE int64
 
 var TransactionCount = 0
 var redis_txns string
-redis_txns = os.Getenv("REDIS_TXNS")
+
+func init() {
+	redis_txns = os.Getenv("REDIS_TXNS")
+}
+
 func SetupTransactionDB() {
-	memorystore.AddPool("txndb", memorystore.NewPool("redis_txns", 6479))
+	memorystore.AddPool("txndb", memorystore.NewPool(redis_txns, 6479))
 }
 
 /*Transaction type for capturing the transaction data */
