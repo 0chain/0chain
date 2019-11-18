@@ -15,3 +15,6 @@ smart_contracts:
     interest_rate: .10
     min_stake: 100
     max_stake: 10000000000
+  storagesc:
+    challenge_enabled: false
+    challenge_rate_per_mb_min: 1
