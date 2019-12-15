@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	c_state "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -54,9 +55,12 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction, funcName str
 		if err != nil {
 			return "", err
 		}
-		err = sc.generateChallenges(t, balances.GetBlock(), input, balances)
-		if err != nil {
-			return "", err
+		challengesEnabled := config.SmartContractConfig.GetBool("smart_contracts.storagesc.challenge_enabled")
+		if challengesEnabled {
+			err = sc.generateChallenges(t, balances.GetBlock(), input, balances)
+			if err != nil {
+				return "", err
+			}
 		}
 		return resp, nil
 	}
@@ -66,9 +70,12 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction, funcName str
 		if err != nil {
 			return "", err
 		}
-		err = sc.generateChallenges(t, balances.GetBlock(), input, balances)
-		if err != nil {
-			return "", err
+		challengesEnabled := config.SmartContractConfig.GetBool("smart_contracts.storagesc.challenge_enabled")
+		if challengesEnabled {
+			err = sc.generateChallenges(t, balances.GetBlock(), input, balances)
+			if err != nil {
+				return "", err
+			}
 		}
 		return resp, nil
 	}
@@ -106,9 +113,14 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction, funcName str
 	// }
 
 	if funcName == "generate_challenges" {
-		err := sc.generateChallenges(t, balances.GetBlock(), input, balances)
-		if err != nil {
-			return "", err
+		challengesEnabled := config.SmartContractConfig.GetBool("smart_contracts.storagesc.challenge_enabled")
+		if challengesEnabled {
+			err := sc.generateChallenges(t, balances.GetBlock(), input, balances)
+			if err != nil {
+				return "", err
+			}
+		} else {
+			return "Challenges disabled in the config", nil
 		}
 		return "Challenges generated", nil
 	}

@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	"encoding/json"
+	"math"
 	"math/rand"
 	"sort"
 	"strconv"
@@ -9,6 +10,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	c_state "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
@@ -16,8 +18,6 @@ import (
 
 	"go.uber.org/zap"
 )
-
-const CHALLENGE_GENERATION_RATE_MB_MIN = 1 // 1 challenge per MB per sec
 
 func (sc *StorageSmartContract) completeChallengeForBlobber(blobberChallengeObj *BlobberChallenge, challengeCompleted *StorageChallenge, challengeResponse *ChallengeResponse) bool {
 	found := false
@@ -183,7 +183,8 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction, b
 	if sizeDiffMB == 0 {
 		sizeDiffMB = 1
 	}
-	numChallenges := CHALLENGE_GENERATION_RATE_MB_MIN * numMins * sizeDiffMB
+	challengeGenerationRate := config.SmartContractConfig.GetInt64("smart_contracts.storagesc.challenge_rate_per_mb_min")
+	numChallenges := int64(math.Min(float64(challengeGenerationRate*numMins*sizeDiffMB), float64(100)))
 	//	Logger.Info("Generating challenges", zap.Any("mins_since_last", numMins), zap.Any("mb_size_diff", sizeDiffMB))
 	hashString := encryption.Hash(t.Hash + b.PrevHash)
 	randomSeed, err := strconv.ParseUint(hashString[0:16], 16, 64)

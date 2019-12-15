@@ -17,3 +17,6 @@ smart_contracts:
     min_n: 3
     t_percent: .51
     k_percent: .75
+  storagesc:
+    challenge_enabled: false
+    challenge_rate_per_mb_min: 1

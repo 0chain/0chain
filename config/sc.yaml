@@ -10,3 +10,6 @@ smart_contracts:
     interest_rate: 0.5
     min_lock_period: 2190h # max units hours
     max_lock_period: 8760h # max units hours
+  storagesc:
+    challenge_enabled: false
+    challenge_rate_per_mb_min: 1 

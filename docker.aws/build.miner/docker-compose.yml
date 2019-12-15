@@ -43,6 +43,8 @@ services:
   miner:
     environment:
       - DOCKER=true
+      - REDIS_HOST=redis
+      - REDIS_TXNS=redis_txns
     depends_on:
      - redis
      - redis_txns
