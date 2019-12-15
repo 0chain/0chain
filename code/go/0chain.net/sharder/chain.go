@@ -2,6 +2,7 @@ package sharder
 
 import (
 	"context"
+	"time"
 
 	"0chain.net/core/cache"
 	"0chain.net/core/ememorystore"
@@ -72,6 +73,17 @@ func (sc *Chain) SetupGenesisBlock(hash string, magicBlock *block.MagicBlock) *b
 	if err != nil {
 		Logger.Error("Failed to save genesis block",
 			zap.Error(err))
+	}
+	if gb.MagicBlock != nil {
+		var tries int64
+		bs := gb.GetSummary()
+		err = sc.StoreMagicBlockMapFromBlock(common.GetRootContext(), bs.GetMagicBlockMap())
+		for err != nil {
+			tries++
+			Logger.Error("setup genesis block -- failed to store magic block map", zap.Any("error", err), zap.Any("tries", tries))
+			time.Sleep(time.Millisecond * 100)
+			err = sc.StoreMagicBlockMapFromBlock(common.GetRootContext(), bs.GetMagicBlockMap())
+		}
 	}
 	return gb
 }

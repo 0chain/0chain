@@ -15,6 +15,7 @@ import (
 )
 
 var AllMinersKey = datastore.Key(ADDRESS + encryption.Hash("all_miners"))
+var AllShardersKey = datastore.Key(ADDRESS + encryption.Hash("all_sharders"))
 var DKGMinersKey = datastore.Key(ADDRESS + encryption.Hash("dkg_miners"))
 var MinersMPKKey = datastore.Key(ADDRESS + encryption.Hash("miners_mpk"))
 var MagicBlockKey = datastore.Key(ADDRESS + encryption.Hash("magic_block"))
@@ -38,10 +39,10 @@ type phaseFunctions func(balances c_state.StateContextI, gn *globalNode) error
 
 type movePhaseFunctions func(balances c_state.StateContextI, pn *PhaseNode, gn *globalNode) bool
 
-type SimpleMinerNodes = map[string]*SimpleMinerNode
+type SimpleNodes = map[string]*SimpleNode
 
-func NewSimpleMinerNodes() SimpleMinerNodes {
-	return make(map[string]*SimpleMinerNode)
+func NewSimpleNodes() SimpleNodes {
+	return make(map[string]*SimpleNode)
 }
 
 type globalNode struct {
@@ -75,14 +76,14 @@ func (gn *globalNode) GetHashBytes() []byte {
 
 //MinerNode struct that holds information about the registering miner
 type MinerNode struct {
-	*SimpleMinerNode `json:"simple_miner"`
+	*SimpleNode `json:"simple_miner"`
 	Pending          map[string]*sci.DelegatePool `json:"pending"`
 	Active           map[string]*sci.DelegatePool `json:"active"`
 	Deleting         map[string]*sci.DelegatePool `json:"deleting"`
 }
 
 func NewMinerNode() *MinerNode {
-	mn := &MinerNode{SimpleMinerNode: &SimpleMinerNode{}}
+	mn := &MinerNode{SimpleNode: &SimpleNode{}}
 	mn.Pending = make(map[string]*sci.DelegatePool)
 	mn.Active = make(map[string]*sci.DelegatePool)
 	mn.Deleting = make(map[string]*sci.DelegatePool)
@@ -117,7 +118,7 @@ func (mn *MinerNode) Decode(input []byte) error {
 	}
 	sm, ok := objMap["simple_miner"]
 	if ok {
-		err = mn.SimpleMinerNode.Decode(*sm)
+		err = mn.SimpleNode.Decode(*sm)
 		if err != nil {
 			return err
 		}
@@ -154,25 +155,25 @@ func (mn *MinerNode) GetHashBytes() []byte {
 	return encryption.RawHash(mn.Encode())
 }
 
-type SimpleMinerNode struct {
+type SimpleNode struct {
 	ID              string  `json:"id"`
 	N2NHost         string  `json:"n2n_host"`
 	Host            string  `json:"host"`
 	Port            int     `json:"port"`
 	PublicKey       string  `json:"public_key"`
 	ShortName       string  `json:"short_name"`
-	MinerPercentage float64 `json:"miner_percentage"`
+	Percentage      float64 `json:"percentage"`
 	DelegateID      string  `json:"delegate_id"`
 	BuildTag        string  `json:"build_tag"`
 	TotalStaked     int64   `json:"total_stake"`
 }
 
-func (smn *SimpleMinerNode) Encode() []byte {
+func (smn *SimpleNode) Encode() []byte {
 	buff, _ := json.Marshal(smn)
 	return buff
 }
 
-func (smn *SimpleMinerNode) Decode(input []byte) error {
+func (smn *SimpleNode) Decode(input []byte) error {
 	return json.Unmarshal(input, smn)
 }
 
@@ -369,7 +370,7 @@ func DecodeDelegatePools(pools map[string]*sci.DelegatePool, poolsBytes *json.Ra
 }
 
 type DKGMinerNodes struct {
-	SimpleMinerNodes
+	SimpleNodes
 	T              int
 	K              int
 	N              int
@@ -377,7 +378,7 @@ type DKGMinerNodes struct {
 }
 
 func NewDKGMinerNodes() *DKGMinerNodes {
-	return &DKGMinerNodes{SimpleMinerNodes: NewSimpleMinerNodes(), RevealedShares: make(map[string]int)}
+	return &DKGMinerNodes{SimpleNodes: NewSimpleNodes(), RevealedShares: make(map[string]int)}
 }
 
 func (dmn *DKGMinerNodes) Encode() []byte {

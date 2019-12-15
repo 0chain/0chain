@@ -73,6 +73,7 @@ func (msc *MinerSmartContract) SetSC(sc *sci.SmartContract, bcContext sci.BCCont
 	msc.SmartContract.RestHandlers["/getUserPools"] = msc.GetUserPoolsHandler
 	msc.SmartContract.RestHandlers["/getPoolsStats"] = msc.GetPoolStatsHandler
 	msc.SmartContract.RestHandlers["/getMinerList"] = msc.GetMinerListHandler
+	msc.SmartContract.RestHandlers["/getSharderList"] = msc.GetSharderListHandler
 	msc.SmartContract.RestHandlers["/getPhase"] = msc.GetPhaseHandler
 	msc.SmartContract.RestHandlers["/getDkgList"] = msc.GetDKGMinerListHandler
 	msc.SmartContract.RestHandlers["/getMpksList"] = msc.GetMinersMpksListHandler
@@ -80,6 +81,7 @@ func (msc *MinerSmartContract) SetSC(sc *sci.SmartContract, bcContext sci.BCCont
 	msc.SmartContract.RestHandlers["/getMagicBlock"] = msc.GetMagicBlockHandler
 	msc.bcContext = bcContext
 	msc.SmartContractExecutionStats["add_miner"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "add_miner"), nil)
+	msc.SmartContractExecutionStats["add_sharder"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "add_sharder"), nil)
 	msc.SmartContractExecutionStats["viewchange_req"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "viewchange_req"), nil)
 	msc.SmartContractExecutionStats["payFees"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "payFees"), nil)
 	msc.SmartContractExecutionStats["feesPaid"] = metrics.GetOrRegisterHistogram(fmt.Sprintf("sc:%v:func:%v", msc.ID, "feesPaid"), nil, metrics.NewUniformSample(1024))
@@ -93,6 +95,8 @@ func (msc *MinerSmartContract) Execute(t *transaction.Transaction, funcName stri
 
 	case "add_miner":
 		return msc.AddMiner(t, input, balances)
+	case "add_sharder":
+		return msc.AddSharder(t, input, balances)
 	case "payFees":
 		return msc.payFees(t, input, gn, balances)
 	case "addToDelegatePool":

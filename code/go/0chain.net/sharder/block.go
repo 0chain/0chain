@@ -9,6 +9,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
 	. "0chain.net/core/logging"
+	"0chain.net/core/persistencestore"
 
 	"go.uber.org/zap"
 )
@@ -140,4 +141,28 @@ func (sc *Chain) StoreBlockSummary(ctx context.Context, bs *block.BlockSummary) 
 		return err
 	}
 	return nil
+}
+
+/*StoreMagicBlockMapFromBlock - stores magic block number mapped to the block hash */
+func (sc *Chain) StoreMagicBlockMapFromBlock(ctx context.Context, mbm *block.MagicBlockMap) error {
+	mbMapEntityMetadata := mbm.GetEntityMetadata()
+	mctx := persistencestore.WithEntityConnection(ctx, mbMapEntityMetadata)
+	defer persistencestore.Close(mctx)
+	if len(mbm.Hash) < 64 {
+		Logger.Error("Writing block summary - block hash less than 64", zap.Any("hash", mbm.Hash), zap.Any("magic_block_number", mbm.ID))
+	}
+	return mbMapEntityMetadata.GetStore().Write(mctx, mbm)
+}
+
+/*GetMagicBlockMap - given a magic block number, get the magic block map */
+func (sc *Chain) GetMagicBlockMap(ctx context.Context, magicBlockNumber string) (*block.MagicBlockMap, error) {
+	magicBlockMapEntityMetadata := datastore.GetEntityMetadata("magic_block_map")
+	magicBlockMap := magicBlockMapEntityMetadata.Instance().(*block.MagicBlockMap)
+	mctx := persistencestore.WithEntityConnection(ctx, magicBlockMapEntityMetadata)
+	defer persistencestore.Close(mctx)
+	err := magicBlockMapEntityMetadata.GetStore().Read(mctx, datastore.ToKey(magicBlockNumber), magicBlockMap)
+	if err != nil {
+		return nil, err
+	}
+	return magicBlockMap, nil
 }

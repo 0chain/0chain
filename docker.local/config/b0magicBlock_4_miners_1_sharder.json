@@ -105,44 +105,6 @@
           "miners_median_network_time": 0,
           "avg_block_txns": 0
         }
-      },
-      "b098d2d56b087ee910f3ee2d2df173630566babb69f0be0e2e9a0c98d63f0b0b": {
-        "id": "b098d2d56b087ee910f3ee2d2df173630566babb69f0be0e2e9a0c98d63f0b0b",
-        "version": "",
-        "creation_date": 0,
-        "public_key": "66dd43a9e7a2c5b18e495b7480ef458d220475df74156c3428cc2965fea1dd168aa17b8c2dcf42ad01411b19a8e9482dafc79d5508d743cfaf7b80d0f95fd582",
-        "n2n_host": "198.18.0.82",
-        "host": "localhost",
-        "port": 7172,
-        "type": 1,
-        "description": "sb098d2",
-        "set_index": 1,
-        "status": 0,
-        "info": {
-          "build_tag": "",
-          "state_missing_nodes": 0,
-          "miners_median_network_time": 0,
-          "avg_block_txns": 0
-        }
-      },
-      "d9558143f8e976126367603bff34125f5eb94720df8d7acefffdd66675d134c2": {
-        "id": "d9558143f8e976126367603bff34125f5eb94720df8d7acefffdd66675d134c2",
-        "version": "",
-        "creation_date": 0,
-        "public_key": "bc6de1013884e5a2e7837aa9fe726ccfb3f98c342e3dc2c3c76d9918011ebe10d8f6ae4e1ba805bbbef996012dfa586789127662f26767b4062d66a89828ac9a",
-        "n2n_host": "198.18.0.83",
-        "host": "localhost",
-        "port": 7173,
-        "type": 1,
-        "description": "sd95581",
-        "set_index": 2,
-        "status": 0,
-        "info": {
-          "build_tag": "",
-          "state_missing_nodes": 0,
-          "miners_median_network_time": 0,
-          "avg_block_txns": 0
-        }
       }
     }
   },

@@ -39,11 +39,11 @@ var MinerNotarizedBlockSender node.EntitySendHandler
 /*DKGShareSender - Send dkg share to a node*/
 var DKGShareSender node.EntityRequestor
 
+/*ChainStartSender - Send whether or not to start chain*/
+var ChainStartSender node.EntityRequestor
+
 /*MinerLatestFinalizedBlockRequestor - RequestHandler for latest finalized block to a node */
 var MinerLatestFinalizedBlockRequestor node.EntityRequestor
-
-/*LatestFinalizedMagicBlockRequestor - RequestHandler for latest finalized magic block to a node */
-var LatestFinalizedMagicBlockRequestor node.EntityRequestor
 
 /*LatestFinalizedMagicBlockRequestor - RequestHandler for latest finalized magic block to a node */
 var BlockRequestor node.EntityRequestor
@@ -82,6 +82,7 @@ func SetupX2MResponders() {
 
 	http.HandleFunc("/v1/_x2m/state/get", common.N2NRateLimit(node.ToN2NSendEntityHandler(PartialStateHandler)))
 	http.HandleFunc("/v1/_m2m/dkg/share", common.N2NRateLimit(node.ToN2NSendEntityHandler(SignShareRequestHandler)))
+	http.HandleFunc("/v1/_m2m/chain/start", common.N2NRateLimit(node.ToN2NSendEntityHandler(StartChainRequestHandler)))
 }
 
 /*SetupM2SRequestors - setup all requests to sharder by miner */
@@ -90,17 +91,16 @@ func SetupM2SRequestors() {
 
 	blockEntityMetadata := datastore.GetEntityMetadata("block")
 	MinerLatestFinalizedBlockRequestor = node.RequestEntityHandler("/v1/_m2s/block/latest_finalized/get", options, blockEntityMetadata)
-
-	// blockSummaryEntityMetadata := datastore.GetEntityMetadata("block_summary")
-	options = &node.SendOptions{Timeout: node.TimeoutLargeMessage, MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
-	LatestFinalizedMagicBlockRequestor = node.RequestEntityHandler("/v1/block/get/latest_finalized_magic_block", options, blockEntityMetadata)
-
-	// blockSummaryEntityMetadata := datastore.GetEntityMetadata("block_summary")
 	BlockRequestor = node.RequestEntityHandler("/v1/block/get", options, blockEntityMetadata)
+}
 
+func SetupM2MRequestors() {
 	dkgShareEntityMetadata := datastore.GetEntityMetadata("dkg_share")
-	options = &node.SendOptions{Timeout: node.TimeoutSmallMessage, MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
+	options := &node.SendOptions{Timeout: node.TimeoutSmallMessage, MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
 	DKGShareSender = node.RequestEntityHandler("/v1/_m2m/dkg/share", options, dkgShareEntityMetadata)
+
+	chainStartEntityMetadata := datastore.GetEntityMetadata("start_chain")
+	ChainStartSender = node.RequestEntityHandler("/v1/_m2m/chain/start", options, chainStartEntityMetadata)
 }
 
 /*VRFShareHandler - handle the vrf share */

@@ -248,7 +248,7 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) error 
 func (c *Chain) updateState(b *block.Block, txn *transaction.Transaction) error {
 	clientState := CreateTxnMPT(b.ClientState) // begin transaction
 	startRoot := clientState.GetRoot()
-	sctx := bcstate.NewStateContext(b, clientState, c.clientStateDeserializer, txn, c.GetBlockSharders, c.GetLatestFinalizedMagicBlock)
+	sctx := bcstate.NewStateContext(b, clientState, c.clientStateDeserializer, txn, c.GetBlockSharders, c.GetLatestFinalizedMagicBlock, c.GetSignatureScheme)
 
 	switch txn.TransactionType {
 	case transaction.TxnTypeSmartContract:

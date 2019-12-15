@@ -31,6 +31,9 @@ var PartialStateRequestor node.EntityRequestor
 //StateNodesRequestor - request a set of state nodes given their keys
 var StateNodesRequestor node.EntityRequestor
 
+/*LatestFinalizedMagicBlockRequestor - RequestHandler for latest finalized magic block to a node */
+var LatestFinalizedMagicBlockRequestor node.EntityRequestor
+
 /*SetupX2MRequestors - setup requestors */
 func SetupX2MRequestors() {
 	options := &node.SendOptions{Timeout: node.TimeoutLargeMessage, CODEC: node.CODEC_MSGPACK, Compress: true}
@@ -47,6 +50,12 @@ func SetupX2MRequestors() {
 
 	stateNodesEntityMetadata := datastore.GetEntityMetadata("state_nodes")
 	StateNodesRequestor = node.RequestEntityHandler("/v1/_x2x/state/get_nodes", options, stateNodesEntityMetadata)
+}
+
+func SetupX2SRequestors() {
+	blockEntityMetadata := datastore.GetEntityMetadata("block")
+	options := &node.SendOptions{Timeout: node.TimeoutLargeMessage, MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
+	LatestFinalizedMagicBlockRequestor = node.RequestEntityHandler("/v1/block/get/latest_finalized_magic_block", options, blockEntityMetadata)
 }
 
 func SetupX2XResponders() {

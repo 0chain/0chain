@@ -37,6 +37,6 @@ func SetupDKGEntity() {
 	dkgsEntityMetadata = datastore.MetadataProvider()
 	dkgsEntityMetadata.Name = "dkg_share"
 	dkgsEntityMetadata.Provider = DKGProvider
-	dkgsEntityMetadata.IDColumnName = "dkg_id"
+	dkgsEntityMetadata.IDColumnName = "id"
 	datastore.RegisterEntityMetadata("dkg_share", dkgsEntityMetadata)
 }

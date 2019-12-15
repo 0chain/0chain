@@ -3,7 +3,6 @@ package miner
 import (
 	"context"
 	"fmt"
-	"math"
 	"math/rand"
 	"strconv"
 	"time"
@@ -20,7 +19,6 @@ import (
 	"0chain.net/core/ememorystore"
 	"0chain.net/core/encryption"
 	. "0chain.net/core/logging"
-	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
@@ -43,46 +41,53 @@ func init() {
 }
 
 // SetDKG - starts the DKG process
-func SetDKG(ctx context.Context, mb *block.MagicBlock, msk []string, mpks map[bls.PartyID][]bls.PublicKey) {
+func SetDKG(ctx context.Context, mb *block.MagicBlock) {
 	mc := GetMinerChain()
-	n := mc.Miners.Size()
-	thresholdByCount := viper.GetInt("server_chain.block.consensus.threshold_by_count")
-	t := int(math.Ceil((float64(thresholdByCount) / 100) * float64(n)))
-	Logger.Info("DKG Setup", zap.Int("T", t), zap.Int("N", n), zap.Bool("DKG Enabled", config.DevConfiguration.IsDkgEnabled))
 	self := node.GetSelfNode(ctx)
 	selfInd = self.SetIndex
 	if config.DevConfiguration.IsDkgEnabled {
-		dkgSummary, err := getDKGSummaryFromStore(ctx)
-		if dkgSummary.SecretKeyGroupStr != "" {
-			Logger.Info("got dkg share from db", zap.Any("dummary", dkgSummary))
-			mc.CurrentDKG = bls.MakeDKG(t, n, self.ID)
-			mc.CurrentDKG.Si.SetHexString(dkgSummary.SecretKeyGroupStr)
-			mc.CurrentDKG.Pi = mc.CurrentDKG.Si.GetPublicKey()
-			mc.CurrentDKG.AggregatePublicKeyShares(mb.Mpks.GetMpkMap())
-			IsDkgDone = true
-			return
-		} else {
-			Logger.Info("err : reading dkg from db", zap.Error(err))
+		err := mc.SetDKGSFromStore(ctx, mb)
+		if err != nil {
+			Logger.DPanic(fmt.Sprintf("error while setting dkg from store: %v", err.Error()))
 		}
-		shares := make(map[string]string)
-		id := node.Self.ID
-		for k, v := range mb.ShareOrSigns.Shares {
-			shares[k] = v.ShareOrSigns[id].Share
-		}
-		mc.CurrentDKG = bls.SetDKG(t, n, shares, msk, mpks, id)
-		Logger.Info("DKG is finished. So, starting protocol")
-		go startProtocol()
-		return
 	} else {
 		Logger.Info("DKG is not enabled. So, starting protocol")
-		IsDkgDone = true
-		go startProtocol()
 	}
-
+	IsDkgDone = true
 }
 
-func getDKGSummaryFromStore(ctx context.Context) (*bls.DKGSummary, error) {
+func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) error {
+	self := node.GetSelfNode(ctx)
+	dkgSummary, _ := GetDKGSummaryFromStore(ctx, strconv.FormatInt(mb.MagicBlockNumber, 10))
+	if dkgSummary.SecretShares != nil {
+		mc.DKGMutex.Lock()
+		defer mc.DKGMutex.Unlock()
+		mc.CurrentDKG = bls.MakeDKG(mb.T, mb.N, self.ID)
+		mc.CurrentDKG.MagicBlockNumber = mb.MagicBlockNumber
+		mc.CurrentDKG.StartingRound = mb.StartingRound
+		for k := range mb.Miners.NodesMap {
+			if savedShare, ok := dkgSummary.SecretShares[ComputeBlsID(k)]; ok {
+				mc.CurrentDKG.AddSecretShare(bls.ComputeIDdkg(k), savedShare)
+			} else if v, ok := mb.ShareOrSigns.Shares[k]; ok {
+				if share, ok := v.ShareOrSigns[node.Self.ID]; ok && share.Share != "" {
+					mc.CurrentDKG.AddSecretShare(bls.ComputeIDdkg(k), share.Share)
+				}
+			}
+		}
+		if mc.CurrentDKG.HasAllSecretShares() {
+			mc.CurrentDKG.AggregateSecretKeyShares()
+			mc.CurrentDKG.Pi = mc.CurrentDKG.Si.GetPublicKey()
+			mc.CurrentDKG.AggregatePublicKeyShares(mb.Mpks.GetMpkMap())
+			return nil
+		}
+		return common.NewError("failed to set dkg from store", "not enough secret shares for dkg")
+	}
+	return common.NewError("failed to set dkg from store", "no saved shares for dkg")
+}
+
+func GetDKGSummaryFromStore(ctx context.Context, id string) (*bls.DKGSummary, error) {
 	dkgSummary := datastore.GetEntity("dkgsummary").(*bls.DKGSummary)
+	dkgSummary.ID = id
 	dkgSummaryMetadata := dkgSummary.GetEntityMetadata()
 	dctx := ememorystore.WithEntityConnection(ctx, dkgSummaryMetadata)
 	defer ememorystore.Close(dctx)
@@ -90,7 +95,7 @@ func getDKGSummaryFromStore(ctx context.Context) (*bls.DKGSummary, error) {
 	return dkgSummary, err
 }
 
-func storeDKGSummary(ctx context.Context, dkgSummary *bls.DKGSummary) error {
+func StoreDKGSummary(ctx context.Context, dkgSummary *bls.DKGSummary) error {
 	dkgSummaryMetadata := dkgSummary.GetEntityMetadata()
 	dctx := ememorystore.WithEntityConnection(ctx, dkgSummaryMetadata)
 	defer ememorystore.Close(dctx)
@@ -166,10 +171,11 @@ func (mc *Chain) GetBlsShare(ctx context.Context, r, pr *round.Round) (string, e
 		return "", err
 	}
 	if mc.NextViewChange <= r.Number && ((mc.CurrentDKG != nil && mc.CurrentDKG.StartingRound < mc.NextViewChange) || mc.CurrentDKG == nil) {
-		mc.ViewChange()
+		mc.ViewChange(ctx)
 	}
+	mc.DKGMutex.Lock()
+	defer mc.DKGMutex.Unlock()
 	sigShare := mc.CurrentDKG.Sign(msg)
-	Logger.Info("bls sign", zap.Any("message", msg), zap.Any("share", sigShare.GetHexString()), zap.Any("id", mc.CurrentDKG.ID.GetHexString()), zap.Any("si", mc.CurrentDKG.Si.GetHexString()), zap.Any("pi", mc.CurrentDKG.Pi.GetHexString()))
 	return sigShare.GetHexString(), nil
 }
 
@@ -185,9 +191,8 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 	if err != nil {
 		return false
 	}
-	Logger.Info("checking view change", zap.Any("next_view_change", mc.NextViewChange), zap.Any("vrf_round", mr.Number))
 	if mc.NextViewChange <= mr.Number && ((mc.CurrentDKG != nil && mc.CurrentDKG.StartingRound < mc.NextViewChange) || mc.CurrentDKG == nil) {
-		mc.ViewChange()
+		mc.ViewChange(ctx)
 	}
 	var share bls.Sign
 	share.SetHexString(vrfs.Share)
@@ -195,6 +200,8 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 	if mc.CurrentDKG == nil {
 		return false
 	}
+	mc.DKGMutex.Lock()
+	defer mc.DKGMutex.Unlock()
 	if !mc.CurrentDKG.VerifySignature(&share, msg, partyID) {
 		stringID := (&partyID).GetHexString()
 		pi := mc.CurrentDKG.Gmpk[partyID]
@@ -245,7 +252,6 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round) {
 			return
 		}
 		recSig, recFrom := getVRFShareInfo(mr)
-
 		groupSignature, _ := mc.CurrentDKG.CalBlsGpSign(recSig, recFrom)
 		rbOutput := encryption.Hash(groupSignature.GetHexString())
 		Logger.Info("recieve bls sign", zap.Any("sigs", recSig), zap.Any("from", recFrom), zap.Any("group_signature", groupSignature.GetHexString()))

@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"sync"
 	"time"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -234,4 +236,34 @@ func (c *Chain) GetHeaviestNotarizedBlock(r round.RoundI) *block.Block {
 	n2n := c.Miners
 	n2n.RequestEntity(ctx, nbrequestor, params, handler)
 	return r.GetHeaviestNotarizedBlock()
+}
+
+/*GetLatestFinalizedBlockFromSharder - request for latest finalized block from all the sharders */
+func (c *Chain) GetLatestFinalizedMagicBlockFromSharder(ctx context.Context) []*block.Block {
+	n2s := c.Sharders
+	finalizedMagicBlocks := make([]*block.Block, 0, 1)
+	fmbMutex := &sync.Mutex{}
+	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+		mb, ok := entity.(*block.Block)
+		if mb == nil {
+			return nil, nil
+		}
+		if !ok {
+			return nil, datastore.ErrInvalidEntity
+		}
+		fmbMutex.Lock()
+		defer fmbMutex.Unlock()
+		for _, b := range finalizedMagicBlocks {
+			if b.Hash == mb.Hash {
+				return mb, nil
+			}
+		}
+		finalizedMagicBlocks = append(finalizedMagicBlocks, mb)
+		return mb, nil
+	}
+	n2s.RequestEntityFromAll(ctx, LatestFinalizedMagicBlockRequestor, nil, handler)
+	if _, ok := n2s.NodesMap[node.Self.ID]; ok {
+		finalizedMagicBlocks = append(finalizedMagicBlocks, c.GetLatestFinalizedMagicBlock())
+	}
+	return finalizedMagicBlocks
 }

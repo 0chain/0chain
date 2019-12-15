@@ -46,6 +46,7 @@ type StateContextI interface {
 	GetMints() []*state.Mint
 	Validate() error
 	GetBlockSharders(b *block.Block) []string
+	GetSignatureScheme() encryption.SignatureScheme
 }
 
 //StateContext - a context object used to manipulate global state
@@ -59,11 +60,12 @@ type StateContext struct {
 	clientStateDeserializer       state.DeserializerI
 	getSharders                   func(*block.Block) []string
 	getLastestFinalizedMagicBlock func() *block.Block
+	getSignature                  func() encryption.SignatureScheme
 }
 
 //NewStateContext - create a new state context
-func NewStateContext(b *block.Block, s util.MerklePatriciaTrieI, csd state.DeserializerI, t *transaction.Transaction, getSharderFunc func(*block.Block) []string, getLastestFinalizedMagicBlock func() *block.Block) *StateContext {
-	ctx := &StateContext{block: b, state: s, clientStateDeserializer: csd, txn: t, getSharders: getSharderFunc, getLastestFinalizedMagicBlock: getLastestFinalizedMagicBlock}
+func NewStateContext(b *block.Block, s util.MerklePatriciaTrieI, csd state.DeserializerI, t *transaction.Transaction, getSharderFunc func(*block.Block) []string, getLastestFinalizedMagicBlock func() *block.Block, getChainSignature func() encryption.SignatureScheme) *StateContext {
+	ctx := &StateContext{block: b, state: s, clientStateDeserializer: csd, txn: t, getSharders: getSharderFunc, getLastestFinalizedMagicBlock: getLastestFinalizedMagicBlock, getSignature: getChainSignature}
 	return ctx
 }
 
@@ -196,6 +198,10 @@ func (sc *StateContext) GetBlockSharders(b *block.Block) []string {
 
 func (sc *StateContext) GetLastestFinalizedMagicBlock() *block.Block {
 	return sc.getLastestFinalizedMagicBlock()
+}
+
+func (sc *StateContext) GetSignatureScheme() encryption.SignatureScheme {
+	return sc.getSignature()
 }
 
 func (sc *StateContext) GetTrieNode(key datastore.Key) (util.Serializable, error) {

@@ -18,6 +18,7 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
+	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	. "0chain.net/core/logging"
 	"0chain.net/core/util"
@@ -39,6 +40,7 @@ const TxnConfirmationTime = 15
 const clientBalanceURL = "v1/client/get/balance?client_id="
 const txnSubmitURL = "v1/transaction/put"
 const txnVerifyURL = "v1/transaction/get/confirmation?hash="
+const specificMagicBlockURL = "v1/block/magic/get?magic_block_number="
 const scRestAPIURL = "v1/screst/"
 const magicBlockURL = "v1/block/get/latest_finalized_magic_block"
 const finalizeBlockURL = "v1/block/get/latest_finalized"
@@ -316,7 +318,7 @@ func MakeSCRestAPICall(scAddress string, relativePath string, params map[string]
 
 	//ToDo: This looks a lot like GetTransactionConfirmation. Need code reuse?
 	//responses := make(map[string]int)
-	var retObj interface{}
+	var retObj util.Serializable
 	//maxCount := 0
 	numSuccess := 0
 	numErrs := 0
@@ -351,7 +353,7 @@ func MakeSCRestAPICall(scAddress string, relativePath string, params map[string]
 			if err != nil {
 				Logger.Error("Failed to read body response", zap.String("URL", sharder), zap.Any("error", err))
 			}
-			entity.Decode(bodyBytes)
+			err = entity.Decode(bodyBytes)
 			if err != nil {
 				Logger.Error("Error unmarshalling response", zap.Any("error", err))
 				numErrs++
@@ -472,6 +474,71 @@ func GetBlockSummaryCall(urls []string, consensus int, magicBlock bool) (*block.
 		return nil, common.NewError("err_running_req", errString)
 	}
 	//this should never happen
+	return nil, common.NewError("unknown_err", "Not able to run the request. unknown reason")
+
+}
+
+//GetMagicBlockCall for smart contract to get magic block
+func GetMagicBlockCall(urls []string, magicBlockNumber int64, consensus int) (*block.Block, error) {
+	var retObj interface{}
+	numSuccess := 0
+	numErrs := 0
+	var errString string
+	receivedBlock := datastore.GetEntityMetadata("block").Instance().(*block.Block)
+	receivedBlock.MagicBlock = block.NewMagicBlock()
+
+	for _, sharder := range urls {
+		url := fmt.Sprintf("%v/%v%v", sharder, specificMagicBlockURL, strconv.FormatInt(magicBlockNumber, 10))
+		response, err := httpClient.Get(url)
+		if err != nil {
+			Logger.Error("Error getting response for sc rest api", zap.Any("error", err))
+			numErrs++
+			errString = errString + sharder + ":" + err.Error()
+		} else {
+			if response.StatusCode != 200 {
+				Logger.Error("Error getting response from", zap.String("URL", url), zap.Any("response Status", response.StatusCode))
+				numErrs++
+				errString = errString + sharder + ": response_code: " + strconv.Itoa(response.StatusCode)
+				response.Body.Close()
+				continue
+			}
+			bodyBytes, err := ioutil.ReadAll(response.Body)
+			response.Body.Close()
+			if err != nil {
+				Logger.Error("Failed to read body response", zap.String("URL", sharder), zap.Any("error", err))
+			}
+			err = receivedBlock.Decode(bodyBytes)
+			if err != nil {
+				Logger.Error("failed to decode block", zap.Any("error", err))
+			}
+
+			if err != nil {
+				Logger.Error("Error unmarshalling response", zap.Any("error", err))
+				numErrs++
+				errString = errString + sharder + ":" + err.Error()
+				continue
+			}
+			retObj = receivedBlock
+			numSuccess++
+		}
+	}
+
+	if numSuccess+numErrs == 0 {
+		return nil, common.NewError("req_not_run", "Could not run the request")
+	}
+	sr := int(math.Ceil((float64(numSuccess) * 100) / float64(numSuccess+numErrs)))
+	if numSuccess > 0 && sr >= consensus {
+		if retObj != nil {
+			return receivedBlock, nil
+		}
+		return nil, common.NewError("err_getting_resp", errString)
+	} else if numSuccess > 0 {
+		Logger.Error("Error Getting consensus", zap.Int("Success", numSuccess), zap.Int("Errs", numErrs), zap.Int("consensus", consensus))
+		return nil, common.NewError("err_getting_consensus", errString)
+	} else if numErrs > 0 {
+		Logger.Error("Error running the request", zap.Int("Success", numSuccess), zap.Int("Errs", numErrs), zap.Int("consensus", consensus))
+		return nil, common.NewError("err_running_req", errString)
+	}
 	return nil, common.NewError("unknown_err", "Not able to run the request. unknown reason")
 
 }

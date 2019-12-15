@@ -45,13 +45,10 @@ var mpks map[bls.PartyID][]bls.PublicKey
 
 func main() {
 	deploymentMode := flag.Int("deployment_mode", 2, "deployment_mode")
-	nonGenesis := flag.Bool("non_genesis", false, "non_genesis")
 	keysFile := flag.String("keys_file", "", "keys_file")
-	mskFile := flag.String("msk_file", "", "msk_file")
 	delayFile := flag.String("delay_file", "", "delay_file")
 	magicBlockFile := flag.String("magic_block_file", "", "magic_block_file")
 	flag.Parse()
-	genesis := !*nonGenesis
 	config.Configuration.DeploymentMode = byte(*deploymentMode)
 	config.SetupDefaultConfig()
 	config.SetupConfig()
@@ -85,35 +82,7 @@ func main() {
 	}
 	reader.Close()
 	node.Self.SetSignatureScheme(signatureScheme)
-	var msk []string
-	reader, err = os.Open(*mskFile)
-	if err != nil {
-		Logger.Error("start miner -- cant find msk file", zap.Any("file_name", *mskFile))
-	} else {
-		scanner := bufio.NewScanner(reader)
-		result := scanner.Scan()
-		if result == false {
-			Logger.Panic("Error reading keys file")
-		}
-		msk = append(msk, scanner.Text())
-		result = scanner.Scan()
-		if result == false {
-			Logger.Panic("Error reading keys file")
-		}
-		msk = append(msk, scanner.Text())
-		reader.Close()
-	}
 
-	if !genesis {
-		hostName, portNum, err := readNonGenesisHostAndPort(keysFile)
-		if err != nil {
-			Logger.Panic("Error reading keys file. Non-genesis miner has no host or port number", zap.Error(err))
-		}
-		Logger.Info("Inside nonGenesis", zap.String("hostname", hostName), zap.Int("port Num", portNum))
-		node.Self.Host = "localhost"
-		node.Self.N2NHost = hostName
-		node.Self.Port = portNum
-	}
 	miner.SetupMinerChain(serverChain)
 	mc := miner.GetMinerChain()
 	mc.DiscoverClients = viper.GetBool("server_chain.client.discover")
@@ -134,6 +103,17 @@ func main() {
 	}
 	mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"), magicBlock)
 	Logger.Info("Miners in main", zap.Int("size", mc.Miners.Size()))
+
+	if !mc.IsActiveNode(node.Self.ID, 0) {
+		hostName, n2nHostName, portNum, err := readNonGenesisHostAndPort(keysFile)
+		if err != nil {
+			Logger.Panic("Error reading keys file. Non-genesis miner has no host or port number", zap.Error(err))
+		}
+		Logger.Info("Inside nonGenesis", zap.String("host_name", hostName), zap.Any("n2n_host_name", n2nHostName),zap.Int("port_num", portNum))
+		node.Self.Host = hostName
+		node.Self.N2NHost = n2nHostName
+		node.Self.Port = portNum
+	}
 
 	if node.Self.ID == "" {
 		Logger.Panic("node definition for self node doesn't exist")
@@ -186,19 +166,39 @@ func main() {
 	common.ConfigRateLimits()
 	initN2NHandlers()
 
+	if mc.StartingRound == 0 && mc.IsActiveNode(node.Self.ID, mc.StartingRound) {
+		dkgShare := &bls.DKGSummary{
+			SecretShares: make(map[string]string),
+		}
+		dkgShare.ID = strconv.FormatInt(mc.MagicBlockNumber, 10)
+		for k, v := range mc.ShareOrSigns.Shares {
+			dkgShare.SecretShares[miner.ComputeBlsID(k)] = v.ShareOrSigns[node.Self.ID].Share
+		}
+		err = miner.StoreDKGSummary(ctx, dkgShare)
+	}
 	getCurrentMagicBlock(mc)
-
 	initServer()
 	initHandlers()
 
 	chain.StartTime = time.Now().UTC()
 	_, activeMiner := mc.Miners.NodesMap[node.Self.ID]
-	if activeMiner && magicBlock.Hash == mc.MagicBlock.Hash {
-		kickoffMiner(ctx, mc, msk, mpks)
+	if activeMiner {
+		miner.SetDKG(ctx, mc.MagicBlock)
+		go func() {
+			Logger.Info("kicking off miner", zap.Any("active", activeMiner))
+			started := mc.ChainStarted(ctx)
+			Logger.Info("finised checking start chain", zap.Any("started", started))
+			if !started {
+				miner.StartProtocol()
+			}
+		}()
+		
 	}
 	if config.Development() {
 		go TransactionGenerator(mc.Chain)
 	}
+	go mc.InitSetup()
+	go mc.DKGProcess(ctx)
 	Logger.Info("Ready to listen to the requests")
 	log.Fatal(server.ListenAndServe())
 }
@@ -210,7 +210,7 @@ func initServer() {
 	time.Sleep(time.Second)
 }
 
-func readNonGenesisHostAndPort(keysFile *string) (string, int, error) {
+func readNonGenesisHostAndPort(keysFile *string) (string, string, int, error) {
 	reader, err := os.Open(*keysFile)
 	if err != nil {
 		panic(err)
@@ -221,24 +221,28 @@ func readNonGenesisHostAndPort(keysFile *string) (string, int, error) {
 	scanner.Scan() //throw away the secretkey
 	result := scanner.Scan()
 	if result == false {
-		return "", 0, errors.New("error reading Host")
+		return "", "", 0, errors.New("error reading Host")
 	}
 
 	h := scanner.Text()
 	Logger.Info("Host inside", zap.String("host", h))
+
+	result = scanner.Scan()
+	if result == false {
+		return "", "", 0, errors.New("error reading n2n host")
+	}
+
+	n2nh := scanner.Text()
+	Logger.Info("N2NHost inside", zap.String("n2n_host", n2nh))
+
 	scanner.Scan()
 	po, err := strconv.ParseInt(scanner.Text(), 10, 32)
 	p := int(po)
 	if err != nil {
-		return "", 0, err
+		return "", "", 0, err
 	}
-	return h, p, nil
+	return h, n2nh, p, nil
 
-}
-func kickoffMiner(ctx context.Context, mc *miner.Chain, msk []string, mpks map[bls.PartyID][]bls.PublicKey) {
-	go func() {
-		miner.SetDKG(ctx, mc.MagicBlock, msk, mpks)
-	}()
 }
 
 func readMagicBlockFile(magicBlockFile *string, mc *miner.Chain, serverChain *chain.Chain) *block.MagicBlock {
@@ -282,6 +286,7 @@ func getCurrentMagicBlock(mc *miner.Chain) {
 		})
 	}
 	magicBlock := mbs[0]
+	mc.VerifyChainHistory(common.GetRootContext(), magicBlock)
 	err := mc.UpdateMagicBlock(magicBlock.MagicBlock)
 	if err != nil {
 		Logger.DPanic(fmt.Sprintf("failed to update magic block: %v", err.Error()))
@@ -306,6 +311,7 @@ func initEntities() {
 	transaction.SetupEntity(memoryStorage)
 
 	miner.SetupNotarizationEntity()
+	miner.SetupStartChainEntity()
 
 	ememoryStorage := ememorystore.GetStorageProvider()
 	bls.SetupDKGEntity()
@@ -336,10 +342,12 @@ func initN2NHandlers() {
 	miner.SetupM2MSenders()
 	miner.SetupM2SSenders()
 	miner.SetupM2SRequestors()
+	miner.SetupM2MRequestors()
 
 	miner.SetupX2MResponders()
 	chain.SetupX2XResponders()
 	chain.SetupX2MRequestors()
+	chain.SetupX2SRequestors()
 }
 
 func initWorkers(ctx context.Context) {

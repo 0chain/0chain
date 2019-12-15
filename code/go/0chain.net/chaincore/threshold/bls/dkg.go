@@ -5,15 +5,13 @@ package bls
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"sync"
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
 	"github.com/herumi/bls/ffi/go/bls"
-
-	. "0chain.net/core/logging"
-	"go.uber.org/zap"
 )
 
 /*DKG - to manage DKG process */
@@ -36,13 +34,14 @@ type DKG struct {
 
 	Gmpk map[PartyID]PublicKey
 
-	StartingRound int64
+	MagicBlockNumber int64
+	StartingRound    int64
 }
 
 type DKGSummary struct {
-	datastore.NOIDField
-	StartingRound     int64  `json:"starting_round"`
-	SecretKeyGroupStr string `json:"secret_key_group_str"`
+	datastore.IDField
+	StartingRound int64             `json:"starting_round"`
+	SecretShares  map[string]string `json:"secret_shares"`
 }
 
 var dkgSummaryMetadata *datastore.EntityMetadataImpl
@@ -197,6 +196,11 @@ func (dkg *DKG) HasAllSecretShares() bool {
 	return len(dkg.receivedSecretShares) >= dkg.T
 }
 
+func (dkg *DKG) HasSecretShare(key string) bool {
+	_, ok := dkg.receivedSecretShares[ComputeIDdkg(key)]
+	return ok
+}
+
 //Sign - sign using the group secret key share
 func (dkg *DKG) Sign(msg string) *Sign {
 	return dkg.Si.Sign(msg)
@@ -205,15 +209,7 @@ func (dkg *DKG) Sign(msg string) *Sign {
 //VerifySignature - verify the signature using the group public key share
 func (dkg *DKG) VerifySignature(sig *Sign, msg string, id PartyID) bool {
 	key := dkg.Gmpk[id]
-	worked := sig.Verify(&key, msg)
-	if !worked {
-		shares := make(map[string]string)
-		for k, v := range dkg.receivedSecretShares {
-			shares[k.GetHexString()] = v.GetHexString()
-		}
-		Logger.Error("failed to verify signature", zap.Any("recieved_shares", shares))
-	}
-	return worked
+	return sig.Verify(&key, msg)
 }
 
 /*RecoverGroupSig - To compute the Gp sign with any k number of BLS sig shares */
@@ -339,10 +335,18 @@ func (dkgSummary *DKGSummary) Write(ctx context.Context) error {
 	return dkgSummary.GetEntityMetadata().GetStore().Write(ctx, dkgSummary)
 }
 
+func (dkgSummary *DKGSummary) Delete(ctx context.Context) error {
+	return dkgSummary.GetEntityMetadata().GetStore().Delete(ctx, dkgSummary)
+}
+
 func (dkg *DKG) GetDKGSummary() *DKGSummary {
 	dkgSummary := &DKGSummary{
-		SecretKeyGroupStr: dkg.Si.GetHexString(),
-		StartingRound:     dkg.StartingRound,
+		SecretShares:  make(map[string]string),
+		StartingRound: dkg.StartingRound,
 	}
+	for k, v := range dkg.receivedSecretShares {
+		dkgSummary.SecretShares[k.GetHexString()] = v.GetHexString()
+	}
+	dkgSummary.ID = strconv.FormatInt(dkg.MagicBlockNumber, 10)
 	return dkgSummary
 }

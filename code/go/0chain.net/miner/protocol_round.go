@@ -114,7 +114,7 @@ func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
 
 func (mc *Chain) startRound(ctx context.Context, r *Round, seed int64) {
 	if mc.NextViewChange <= r.Number && ((mc.CurrentDKG != nil && mc.CurrentDKG.StartingRound < mc.NextViewChange) || mc.CurrentDKG == nil) {
-		mc.ViewChange()
+		mc.ViewChange(ctx)
 	}
 	if !mc.SetRandomSeed(r.Round, seed) {
 		return
@@ -595,7 +595,6 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*bloc
 		if !ok {
 			return nil, datastore.ErrInvalidEntity
 		}
-		Logger.Info("lfb from sharder", zap.Int64("lfb_round", fb.Round))
 		err := fb.Validate(ctx)
 		if err != nil {
 			Logger.Error("lfb from sharder - invalid", zap.Int64("round", fb.Round), zap.String("block", fb.Hash))
@@ -622,38 +621,6 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*bloc
 	}
 	m2s.RequestEntityFromAll(ctx, MinerLatestFinalizedBlockRequestor, nil, handler)
 	return finalizedBlocks
-}
-
-/*GetLatestFinalizedBlockFromSharder - request for latest finalized block from all the sharders */
-func (mc *Chain) GetLatestFinalizedMagicBlockFromSharder(ctx context.Context) []*block.Block {
-	m2s := mc.Sharders
-	Logger.Info("get finalize magic block", zap.Any("sharders", m2s.NodesMap))
-	finalizedMagicBlocks := make([]*block.Block, 0, 1)
-	fmbMutex := &sync.Mutex{}
-	//Params are nil? Do we need to send any params like sending the miner ID ?
-	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-
-		mb, ok := entity.(*block.Block)
-		Logger.Info("request from sharder", zap.Any("lfb", mb))
-		if mb == nil {
-			return nil, nil
-		}
-		if !ok {
-			return nil, datastore.ErrInvalidEntity
-		}
-		Logger.Info("lfb from sharder", zap.Int64("lfb_round", mb.Round), zap.Any("lfb", mb))
-		fmbMutex.Lock()
-		defer fmbMutex.Unlock()
-		for _, b := range finalizedMagicBlocks {
-			if b.Hash == mb.Hash {
-				return mb, nil
-			}
-		}
-		finalizedMagicBlocks = append(finalizedMagicBlocks, mb)
-		return mb, nil
-	}
-	m2s.RequestEntityFromAll(ctx, LatestFinalizedMagicBlockRequestor, nil, handler)
-	return finalizedMagicBlocks
 }
 
 // GetNextRoundTimeoutTime returns time in milliseconds
@@ -773,7 +740,7 @@ func (mc *Chain) restartRound(ctx context.Context) {
 	}
 }
 
-func startProtocol() {
+func StartProtocol() {
 	mc := GetMinerChain()
 	if mc.CurrentRound > 0 {
 		return

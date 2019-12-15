@@ -2,6 +2,7 @@ package block
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"sync"
@@ -122,6 +123,11 @@ func (b *Block) ComputeProperties() {
 			b.TxnsMap[txn.Hash] = true
 		}
 	}
+}
+
+/*ComputeProperties - Entity implementation */
+func (b *Block) Decode(input []byte) error {
+	return json.Unmarshal(input, b)
 }
 
 /*Validate - implementing the interface */

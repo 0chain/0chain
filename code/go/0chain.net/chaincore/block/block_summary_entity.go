@@ -3,6 +3,7 @@ package block
 import (
 	"context"
 	"encoding/json"
+	"strconv"
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -83,6 +84,17 @@ func (b *BlockSummary) Encode() []byte {
 
 func (b *BlockSummary) Decode(input []byte) error {
 	return json.Unmarshal(input, b)
+}
+
+/*GetMagicBlockMap - get the magic block map of this block */
+func (b *BlockSummary) GetMagicBlockMap() *MagicBlockMap {
+	if b.MagicBlock != nil {
+		mbm := datastore.GetEntityMetadata("magic_block_map").Instance().(*MagicBlockMap)
+		mbm.ID = strconv.FormatInt(b.MagicBlockNumber, 10)
+		mbm.Hash = b.Hash
+		return mbm
+	}
+	return nil
 }
 
 /*SetupBlockSummaryEntity - setup the block summary entity */

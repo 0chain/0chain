@@ -58,7 +58,7 @@ func (msc *MinerSmartContract) sumFee(b *block.Block, updateStats bool) state.Ba
 
 func (msc *MinerSmartContract) payMiners(fee state.Balance, mn *MinerNode, balances c_state.StateContextI, t *transaction.Transaction) string {
 	var resp string
-	minerFee := state.Balance(float64(fee) * mn.MinerPercentage)
+	minerFee := state.Balance(float64(fee) * mn.Percentage)
 	transfer := state.NewTransfer(ADDRESS, t.ClientID, minerFee)
 	balances.AddTransfer(transfer)
 	resp += string(transfer.Encode())

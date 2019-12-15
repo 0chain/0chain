@@ -5,8 +5,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 	"strconv"
+	"strings"
 
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
@@ -22,6 +22,7 @@ import (
 /*SetupHandlers sets up the necessary API end points */
 func SetupHandlers() {
 	http.HandleFunc("/v1/block/get", common.UserRateLimit(common.ToJSONResponse(BlockHandler)))
+	http.HandleFunc("/v1/block/magic/get", common.UserRateLimit(common.ToJSONResponse(MagicBlockHandler)))
 	http.HandleFunc("/v1/transaction/get/confirmation", common.UserRateLimit(common.ToJSONResponse(TransactionConfirmationHandler)))
 	http.HandleFunc("/v1/chain/get/stats", common.UserRateLimit(common.ToJSONResponse(ChainStatsHandler)))
 	http.HandleFunc("/_chain_stats", common.UserRateLimit(ChainStatsWriter))
@@ -82,6 +83,27 @@ func BlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 		}
 	}
 	return chain.GetBlockResponse(b, parts)
+}
+
+/*MagicBlockHandler - a handler to respond to magic block queries */
+func MagicBlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	magicBlockNumber := r.FormValue("magic_block_number")
+	sc := GetSharderChain()
+	mbm, err := sc.GetMagicBlockMap(ctx, magicBlockNumber)
+	if err != nil {
+		return nil, err
+	}
+	b, err := chain.GetServerChain().GetBlock(ctx, mbm.Hash)
+	if err != nil {
+		lfb := sc.GetLatestFinalizedBlock()
+		for roundEntity := lfb.Round; roundEntity > 0; roundEntity -= sc.RoundRange {
+			b, err = sc.GetBlockFromStore(mbm.Hash, roundEntity)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	return b, nil
 }
 
 /*ChainStatsHandler - a handler to provide block statistics */

@@ -72,19 +72,23 @@ func (msc *MinerSmartContract) GetNodepoolHandler(ctx context.Context, params ur
 func (msc *MinerSmartContract) GetMinerListHandler(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
 	allMinersList, err := msc.getMinersList(balances)
 	if err != nil {
-		return "", nil
+		return "", err
 	}
-	list := NewSimpleMinerNodes()
-	for _, node := range allMinersList.Nodes {
-		list[node.ID] = &SimpleMinerNode{ID: node.ID, N2NHost: node.N2NHost, PublicKey: node.PublicKey, ShortName: node.ShortName}
+	return allMinersList, nil
+}
+
+func (msc *MinerSmartContract) GetSharderListHandler(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
+	allShardersList, err := msc.getShardersList(balances)
+	if err != nil {
+		return "", err
 	}
-	return list, nil
+	return allShardersList, nil
 }
 
 func (msc *MinerSmartContract) GetDKGMinerListHandler(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
 	dkgMinersList, err := msc.getMinersDKGList(balances)
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 	return dkgMinersList, nil
 }
@@ -97,7 +101,7 @@ func (msc *MinerSmartContract) GetMinersMpksListHandler(ctx context.Context, par
 	}
 	err = mpks.Decode(mpksBytes.Encode())
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 	return mpks, nil
 }
@@ -110,7 +114,7 @@ func (msc *MinerSmartContract) GetGroupShareOrSignsHandler(ctx context.Context, 
 	}
 	err = gsos.Decode(groupBytes.Encode())
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 	return gsos, nil
 }

@@ -131,8 +131,8 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(balances c_state.Sta
 	dkgMiners.K = int(math.Ceil(gn.KPercent * float64(n)))
 	dkgMiners.T = int(math.Ceil(gn.TPercent * float64(n)))
 	for _, node := range allminerslist.Nodes {
-		dkgMiners.SimpleMinerNodes[node.ID] = node.SimpleMinerNode
-		if len(dkgMiners.SimpleMinerNodes) == dkgMiners.N {
+		dkgMiners.SimpleNodes[node.ID] = node.SimpleNode
+		if len(dkgMiners.SimpleNodes) == dkgMiners.N {
 			break
 		}
 	}
@@ -156,9 +156,9 @@ func (msc *MinerSmartContract) widdleDKGMinersForShare(balances c_state.StateCon
 		return err
 	}
 	mpks.Decode(mpksBytes.Encode())
-	for k := range dkgMiners.SimpleMinerNodes {
+	for k := range dkgMiners.SimpleNodes {
 		if _, ok := mpks.Mpks[k]; !ok {
-			delete(dkgMiners.SimpleMinerNodes, k)
+			delete(dkgMiners.SimpleNodes, k)
 		}
 	}
 	_, err = balances.InsertTrieNode(DKGMinersKey, dkgMiners)
@@ -193,14 +193,14 @@ func (msc *MinerSmartContract) createMagicBlockForWait(balances c_state.StateCon
 
 	for key := range mpks.Mpks {
 		if _, ok := gsos.Shares[key]; !ok {
-			delete(dkgMinersList.SimpleMinerNodes, key)
+			delete(dkgMinersList.SimpleNodes, key)
 			delete(gsos.Shares, key)
 			delete(mpks.Mpks, key)
 		}
 	}
 	for key, sharesRevealed := range dkgMinersList.RevealedShares {
 		if sharesRevealed == dkgMinersList.N {
-			delete(dkgMinersList.SimpleMinerNodes, key)
+			delete(dkgMinersList.SimpleNodes, key)
 			delete(gsos.Shares, key)
 			delete(mpks.Mpks, key)
 		}
@@ -243,7 +243,7 @@ func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction, inputDa
 	if err != nil {
 		return "", err
 	}
-	if _, ok := dmn.SimpleMinerNodes[t.ClientID]; !ok {
+	if _, ok := dmn.SimpleNodes[t.ClientID]; !ok {
 		return "", common.NewError("contribute_mpk_failed", "miner not part of dkg set")
 	}
 	mpks := block.NewMpks()
@@ -304,7 +304,11 @@ func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction, in
 		return "", err
 	}
 	mpks.Decode(mpksBytes.Encode())
-	shares, ok := sos.Validate(mpks)
+	publicKeys := make(map[string]string)
+	for key, miner := range dmn.SimpleNodes {
+		publicKeys[key] = miner.PublicKey
+	}
+	shares, ok := sos.Validate(mpks, publicKeys, balances.GetSignatureScheme())
 	if !ok {
 		return "", common.NewError("failed to add share or sign", "share or signs failed validation")
 	}
@@ -344,8 +348,9 @@ func (msc *MinerSmartContract) CreateMagicBlock(balances c_state.StateContextI, 
 	magicBlock.ShareOrSigns = gsos
 	magicBlock.Mpks = mpks
 	magicBlock.T = dkgMinersList.T
+	magicBlock.K = dkgMinersList.K
 	magicBlock.N = dkgMinersList.N
-	for _, v := range dkgMinersList.SimpleMinerNodes {
+	for _, v := range dkgMinersList.SimpleNodes {
 		n := &node.Node{}
 		n.ID = v.ID
 		n.N2NHost = v.N2NHost
@@ -359,16 +364,20 @@ func (msc *MinerSmartContract) CreateMagicBlock(balances c_state.StateContextI, 
 		magicBlock.Miners.AddNode(n)
 	}
 	prevMagicBlock := balances.GetLastestFinalizedMagicBlock()
-	for _, v := range prevMagicBlock.MagicBlock.Sharders.NodesMap {
+	sharders, err := msc.getShardersList(balances)
+	if err != nil {
+		return nil, err
+	}
+	for _, v := range sharders.Nodes {
 		n := &node.Node{}
 		n.ID = v.ID
 		n.N2NHost = v.N2NHost
 		n.Host = v.Host
 		n.Port = v.Port
 		n.PublicKey = v.PublicKey
-		n.Description = v.Description
+		n.Description = v.ShortName
 		n.Type = node.NodeTypeSharder
-		n.Info.BuildTag = v.Info.BuildTag
+		n.Info.BuildTag = v.BuildTag
 		n.Status = node.NodeStatusActive
 		magicBlock.Sharders.AddNode(n)
 	}

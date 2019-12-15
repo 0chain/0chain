@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bufio"
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -9,6 +11,8 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -90,6 +94,17 @@ func main() {
 	if node.Self.ID == "" {
 		Logger.Panic("node definition for self node doesn't exist")
 	}
+	if !sc.IsActiveNode(node.Self.ID, 0) {
+		hostName, n2nHost, portNum, err := readNonGenesisHostAndPort(keysFile)
+		if err != nil {
+			Logger.Panic("Error reading keys file. Non-genesis miner has no host or port number", zap.Error(err))
+		}
+		Logger.Info("Inside nonGenesis", zap.String("hostname", hostName), zap.Int("port Num", portNum))
+		node.Self.Host = hostName
+		node.Self.N2NHost = n2nHost
+		node.Self.Port = portNum
+		node.Self.Type = node.NodeTypeSharder
+	}
 	if node.Self.Type != node.NodeTypeSharder {
 		Logger.Panic("node not configured as sharder")
 	}
@@ -130,8 +145,10 @@ func main() {
 	initWorkers(ctx)
 	common.ConfigRateLimits()
 	initN2NHandlers()
+	getCurrentMagicBlock(sc)
 	initServer()
 	initHandlers()
+	go sc.InitSetup()
 
 	// Do a deep scan from finalized block till DeepWindow
 	go sc.HealthCheckWorker(ctx, sharder.DeepScan) // 4) progressively checks the health for each round
@@ -146,6 +163,41 @@ func main() {
 
 func initServer() {
 	// TODO; when a new server is brought up, it needs to first download all the state before it can start accepting requests
+}
+
+func readNonGenesisHostAndPort(keysFile *string) (string, string, int, error) {
+	reader, err := os.Open(*keysFile)
+	if err != nil {
+		panic(err)
+	}
+	defer reader.Close()
+	scanner := bufio.NewScanner(reader)
+	scanner.Scan() //throw away the publickey
+	scanner.Scan() //throw away the secretkey
+	result := scanner.Scan()
+	if result == false {
+		return "", "", 0, errors.New("error reading Host")
+	}
+
+	h := scanner.Text()
+	Logger.Info("Host inside", zap.String("host", h))
+
+	result = scanner.Scan()
+	if result == false {
+		return "", "", 0, errors.New("error reading n2n host")
+	}
+
+	n2nh := scanner.Text()
+	Logger.Info("N2NHost inside", zap.String("n2n_host", n2nh))
+
+	scanner.Scan()
+	po, err := strconv.ParseInt(scanner.Text(), 10, 32)
+	p := int(po)
+	if err != nil {
+		return "", "", 0, err
+	}
+	return h, n2nh, p, nil
+
 }
 
 func initHandlers() {
@@ -194,6 +246,26 @@ func readMagicBlockFile(magicBlockFile *string, sc *sharder.Chain, serverChain *
 	return nil
 }
 
+func getCurrentMagicBlock(sc *sharder.Chain) {
+	mbs := sc.GetLatestFinalizedMagicBlockFromSharder(common.GetRootContext())
+	if len(mbs) == 0 {
+		Logger.DPanic("No finalized magic block from sharder")
+	}
+	if len(mbs) > 1 {
+		sort.Slice(mbs, func(i, j int) bool {
+			return mbs[i].StartingRound < mbs[j].StartingRound
+		})
+	}
+	magicBlock := mbs[0]
+	Logger.Info("get current magic block", zap.Any("magic_block", magicBlock))
+	sc.VerifyChainHistory(common.GetRootContext(), magicBlock)
+	err := sc.UpdateMagicBlock(magicBlock.MagicBlock)
+	if err != nil {
+		Logger.DPanic(fmt.Sprintf("failed to update magic block: %v", err.Error()))
+	}
+	sc.SetLatestFinalizedMagicBlock(magicBlock)
+}
+
 func initEntities() {
 	memoryStorage := memorystore.GetStorageProvider()
 
@@ -215,6 +287,7 @@ func initEntities() {
 	persistenceStorage := persistencestore.GetStorageProvider()
 	transaction.SetupTxnSummaryEntity(persistenceStorage)
 	transaction.SetupTxnConfirmationEntity(persistenceStorage)
+	block.SetupMagicBlockMapEntity(persistenceStorage)
 
 	sharder.SetupBlockSummaries()
 	sharder.SetupRoundSummaries()
@@ -227,6 +300,7 @@ func initN2NHandlers() {
 	sharder.SetupM2SResponders()
 	chain.SetupX2XResponders()
 	chain.SetupX2MRequestors()
+	chain.SetupX2SRequestors()
 	sharder.SetupS2SRequestors()
 	sharder.SetupS2SResponders()
 }

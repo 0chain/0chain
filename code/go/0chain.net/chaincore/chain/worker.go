@@ -1,9 +1,17 @@
 package chain
 
+/*
+LOOKS GOOD. NEEDS MORE TESTING BEFORE COMMITED!!!!
+*/
+
 import (
 	"context"
+	"fmt"
+	"strconv"
 	"time"
 
+	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -108,4 +116,29 @@ func (c *Chain) BlockFetchWorker(ctx context.Context) {
 			c.blockFetcher.FetchBlock(ctx, c, bHash)
 		}
 	}
+}
+
+func (c *Chain) VerifyChainHistory(ctx context.Context, latestMagicBlock *block.Block) error {
+	currentMagicBlock := c.GetLatestFinalizedMagicBlock()
+	var sharders []string
+	for _, sharder := range c.Sharders.NodesMap {
+		sharders = append(sharders, "http://"+sharder.N2NHost+":"+strconv.Itoa(sharder.Port))
+	}
+	for currentMagicBlock.Hash != latestMagicBlock.Hash {
+		magicBlock, err := httpclientutil.GetMagicBlockCall(sharders, currentMagicBlock.MagicBlockNumber+1, 1)
+		if err != nil {
+			Logger.DPanic(fmt.Sprintf("failed to get magic block(%v): %v", currentMagicBlock.MagicBlockNumber+1, err.Error()))
+		}
+		if !magicBlock.VerifyMinersSignatures(currentMagicBlock) {
+			Logger.DPanic(fmt.Sprintf("failed to verify magic block: %v", err.Error()))
+		}
+		Logger.Info("verify chain history", zap.Any("magicBlock_block", magicBlock))
+		err = c.UpdateMagicBlock(magicBlock.MagicBlock)
+		if err != nil {
+			Logger.DPanic(fmt.Sprintf("failed to update magic block: %v", err.Error()))
+		}
+		c.SetLatestFinalizedMagicBlock(magicBlock)
+		currentMagicBlock = c.GetLatestFinalizedMagicBlock()
+	}
+	return nil
 }

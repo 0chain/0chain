@@ -26,6 +26,7 @@ type MagicBlock struct {
 	ShareOrSigns           *GroupSharesOrSigns `json:"share_or_signs"`
 	Mpks                   *Mpks               `json:"mpks"`
 	T                      int                 `json:"t"`
+	K                      int                 `json:"k"`
 	N                      int                 `json:"n"`
 }
 
@@ -83,12 +84,27 @@ func (mb *MagicBlock) GetHashBytes() []byte {
 	return encryption.RawHash(data)
 }
 
-func (mb *MagicBlock) IsActiveMiner(id string, round int64) bool {
-	if mb == nil || mb.Miners == nil {
+func (mb *MagicBlock) IsActiveNode(id string, round int64) bool {
+	if mb == nil || mb.Miners == nil || mb.Sharders == nil {
 		return false
 	}
-	_, ok := mb.Miners.NodesMap[id]
-	return ok && mb.StartingRound <= round
+	_, mok := mb.Miners.NodesMap[id]
+	_, sok := mb.Sharders.NodesMap[id]
+	return (sok || mok) && mb.StartingRound <= round
+}
+
+func (mb *MagicBlock) VerifyMinersSignatures(b *Block) bool {
+	for _, bvt := range b.VerificationTickets {
+		sender := b.Miners.GetNode(bvt.VerifierID)
+		if sender == nil {
+			return false
+		}
+
+		if ok, _ := sender.Verify(bvt.Signature, b.Hash); !ok {
+			return false
+		}
+	}
+	return true
 }
 
 type GroupSharesOrSigns struct {
@@ -149,18 +165,15 @@ func (sos *ShareOrSigns) Hash() string {
 }
 
 // Validate
-func (sos *ShareOrSigns) Validate(mpks *Mpks) ([]string, bool) {
+func (sos *ShareOrSigns) Validate(mpks *Mpks, publicKeys map[string]string, scheme encryption.SignatureScheme) ([]string, bool) {
 	var shares []string
 	for key, share := range sos.ShareOrSigns {
-		Logger.Info("validate share or signs", zap.Any("id", sos.ID), zap.Any("key", key), zap.Any("share", share))
 		if share.Sign != "" {
-			var sign bls.Sign
-			var publicKey bls.PublicKey
-			id := bls.ComputeIDdkg(key)
-			publicKey.Set(bls.ConvertStringToMpk(mpks.Mpks[sos.ID].Mpk), &id)
-			sign.SetHexString(share.Sign)
-			if !sign.Verify(&publicKey, share.Message) {
-				Logger.Error("failed to validate share or sings", zap.Any("share", share), zap.Any("public key", publicKey.GetHexString()), zap.Any("id", id.GetHexString()), zap.Any("message", share.Message), zap.Any("sign", sign.GetHexString()))
+			signatureScheme := scheme
+			signatureScheme.SetPublicKey(publicKeys[key])
+			sigOK, err := signatureScheme.Verify(share.Sign, share.Message)
+			if !sigOK || err != nil {
+				Logger.Error("failed to validate share or sings", zap.Any("share", share), zap.Any("message", share.Message), zap.Any("sign", share.Sign))
 				return nil, false
 			}
 		} else {

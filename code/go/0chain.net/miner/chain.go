@@ -2,10 +2,17 @@ package miner
 
 import (
 	"context"
+	"fmt"
+	"net/http"
+	"net/url"
+	"strconv"
+	"sync"
+	"time"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/client"
+	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/core/common"
@@ -40,6 +47,7 @@ var minerChain = &Chain{}
 func SetupMinerChain(c *chain.Chain) {
 	minerChain.Chain = c
 	minerChain.BlockMessageChannel = make(chan *BlockMessage, 128)
+	minerChain.DKGMutex = &sync.Mutex{}
 	c.SetFetchedNotarizedBlockHandler(minerChain)
 	c.RoundF = MinerRoundFactory{}
 }
@@ -47,6 +55,30 @@ func SetupMinerChain(c *chain.Chain) {
 /*GetMinerChain - get the miner's chain */
 func GetMinerChain() *Chain {
 	return minerChain
+}
+
+type StartChain struct {
+	datastore.IDField
+	Start bool
+}
+
+var startChainEntityMetadata *datastore.EntityMetadataImpl
+
+func (sc *StartChain) GetEntityMetadata() datastore.EntityMetadata {
+	return startChainEntityMetadata
+}
+
+func StartChainProvider() datastore.Entity {
+	sc := &StartChain{}
+	return sc
+}
+
+func SetupStartChainEntity() {
+	startChainEntityMetadata = datastore.MetadataProvider()
+	startChainEntityMetadata.Name = "start_chain"
+	startChainEntityMetadata.Provider = StartChainProvider
+	startChainEntityMetadata.IDColumnName = "id"
+	datastore.RegisterEntityMetadata("start_chain", startChainEntityMetadata)
 }
 
 // MinerRoundFactory -
@@ -68,8 +100,10 @@ type Chain struct {
 	BlockMessageChannel chan *BlockMessage
 	DiscoverClients     bool
 	CurrentDKG          *bls.DKG
+	DKGMutex            *sync.Mutex
 	ViewChangeDKG       *bls.DKG
 	NextViewChange      int64
+	Started             bool
 }
 
 /*GetBlockMessageChannel - get the block messages channel */
@@ -170,22 +204,94 @@ func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) erro
 	return err
 }
 
-func (mc *Chain) UpdateDKG() {
-	Logger.Info("updated dkg", zap.Any("current_dkg", mc.CurrentDKG), zap.Any("view_change_dkg", mc.ViewChangeDKG))
-	mc.CurrentDKG = mc.ViewChangeDKG
-	mc.CurrentDKG.StartingRound = mc.NextViewChange
-}
-
-func (mc *Chain) ViewChange() {
-	Logger.Info("updated dkg", zap.Any("next_view_change", mc.NextViewChange))
-	if mc.ViewChangeMagicBlock == nil {
-		return
-	}
+func (mc *Chain) ViewChange(ctx context.Context) {
 	if mc.CurrentDKG == nil || mc.CurrentDKG.StartingRound <= mc.NextViewChange {
 		err := mc.UpdateMagicBlock(mc.ViewChangeMagicBlock)
 		if err != nil {
 			Logger.DPanic(err.Error())
 		}
+		mc.SetDKGSFromStore(ctx, mc.MagicBlock)
 	}
-	mc.UpdateDKG()
+}
+
+func (mc *Chain) ChainStarted(ctx context.Context) bool {
+	timer := time.NewTimer(time.Second)
+	timeoutCount := 0
+	for true {
+		select {
+		case <-ctx.Done():
+			return false
+		case <-timer.C:
+			var start int
+			var started int
+			for _, n := range mc.Miners.NodesMap {
+				mc.RequestStartChain(n, &start, &started)
+			}
+			if start >= mc.T {
+				return false
+			}
+			if started >= mc.T {
+				return true
+			}
+			if timeoutCount == 20 || mc.Started {
+				return mc.Started
+			}
+			timeoutCount++
+			timer = time.NewTimer(time.Millisecond * time.Duration(mc.RoundTimeoutSofttoMin))
+		}
+	}
+	return false
+}
+
+func StartChainRequestHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	nodeID := r.Header.Get(node.HeaderNodeID)
+	mc := GetMinerChain()
+	if _, ok := mc.Miners.NodesMap[nodeID]; !ok {
+		Logger.Error("failed to send start chain", zap.Any("id", nodeID))
+		return nil, common.NewError("failed to send start chain", "miner is not in active set")
+	}
+	round, err := strconv.Atoi(r.FormValue("round"))
+	if err != nil {
+		Logger.Error("failed to send start chain", zap.Any("error", err))
+		return nil, err
+	}
+	if mc.CurrentRound != int64(round) {
+		Logger.Error("failed to send start chain -- different rounds", zap.Any("current_round", mc.CurrentRound), zap.Any("requested_round", round))
+		return nil, common.NewError("failed to send start chain", fmt.Sprintf("differt_rounds -- current_round: %v, requested_round: %v", mc.CurrentRound, round))
+	}
+	message := datastore.GetEntityMetadata("start_chain").Instance().(*StartChain)
+	message.Start = !mc.Started
+	message.ID = r.FormValue("round")
+	return message, nil
+}
+
+/*SendDKGShare sends the generated secShare to the given node */
+func (mc *Chain) RequestStartChain(n *node.Node, start, started *int) error {
+	if node.Self.ID == n.ID {
+		if !mc.Started {
+			*start++
+		} else {
+			*started++
+		}
+		return nil
+	}
+	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+		startChain, ok := entity.(*StartChain)
+		if !ok {
+			err := common.NewError("invalid object", fmt.Sprintf("entity: %v", entity))
+			Logger.Error("failed to request start chain", zap.Any("error", err))
+			return nil, err
+		}
+		if startChain.Start {
+			*start++
+		} else {
+			*started++
+		}
+		return startChain, nil
+	}
+	params := &url.Values{}
+	params.Add("round", strconv.FormatInt(mc.CurrentRound, 10))
+	ctx := common.GetRootContext()
+	n.RequestEntityFromNode(ctx, ChainStartSender, params, handler)
+	return nil
 }

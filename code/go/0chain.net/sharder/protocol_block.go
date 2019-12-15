@@ -59,6 +59,13 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 		Logger.Error("db error (store block summary)", zap.Any("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
 	}
 	self := node.GetSelfNode(ctx)
+	if b.MagicBlock != nil {
+		bs := b.GetSummary()
+		err = sc.StoreMagicBlockMapFromBlock(ctx, bs.GetMagicBlockMap())
+		if err != nil {
+			Logger.DPanic("failed to store magic block map", zap.Any("error", err))
+		}
+	}
 	if sc.IsBlockSharder(b, self.Node) {
 		sc.SharderStats.ShardedBlocksCount++
 		ts := time.Now()
@@ -258,7 +265,7 @@ func (sc *Chain) syncBlock(ctx context.Context, r *round.Round, canShard bool) *
 		return nil
 	}
 
-	if canShard {
+	if canShard || b.MagicBlock != nil {
 		// Save the block
 		err := sc.storeBlock(ctx, b)
 		if err != nil {
@@ -499,14 +506,14 @@ func (sc *Chain) storeBlock(ctx context.Context, b *block.Block) error {
 	} else {
 		sc.SharderStats.RepairBlocksFailure++
 	}
+	if b.MagicBlock != nil {
+		bs := b.GetSummary()
+		err = sc.StoreMagicBlockMapFromBlock(ctx, bs.GetMagicBlockMap())
+		if err != nil {
+			return err
+		}
+	}
 	return err
-	//	if err == nil {
-	//		return
-	//	}
-	//	Logger.Error("db error (save block)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
-	//	time.Sleep(time.Second)
-	//}
-	//return err
 }
 
 func (sc *Chain) storeBlockTransactions(ctx context.Context, b *block.Block) error {
