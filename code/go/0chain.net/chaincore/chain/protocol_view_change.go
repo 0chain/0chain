@@ -75,9 +75,8 @@ func (mc *Chain) RegisterClient() {
 
 func (mc *Chain) isRegistered() bool {
 	allMinersList := &minersc.MinerNodes{}
-	if mc.IsActiveNode(node.Self.ID, mc.CurrentRound) {
-		lfb := mc.GetLatestFinalizedBlock()
-		clientState := CreateTxnMPT(lfb.ClientState)
+	if mc.ActiveInChain() {
+		clientState := CreateTxnMPT(mc.GetLatestFinalizedBlock().ClientState)
 		var nodeList util.Serializable
 		var err error
 		if node.Self.Type == node.NodeTypeMiner {
@@ -126,7 +125,7 @@ func (mc *Chain) isRegistered() bool {
 }
 
 func (mc *Chain) ConfirmTransaction(t *httpclientutil.Transaction) bool {
-	active := mc.IsActiveNode(node.Self.ID, mc.CurrentRound)
+	active := mc.ActiveInChain()
 	var found, pastTime bool
 	var urls []string
 	for _, sharder := range mc.Sharders.NodesMap {

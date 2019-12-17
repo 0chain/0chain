@@ -92,9 +92,8 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 
 func (mc *Chain) GetPhase() (*minersc.PhaseNode, error) {
 	pn := &minersc.PhaseNode{}
-	lfb := mc.GetLatestFinalizedBlock()
-	if mc.IsActiveNode(node.Self.ID, lfb.Round) && lfb.ClientState != nil {
-		clientState := chain.CreateTxnMPT(lfb.ClientState)
+	if mc.ActiveInChain() {
+		clientState := chain.CreateTxnMPT(mc.GetLatestFinalizedBlock().ClientState)
 		node, err := clientState.GetNodeValue(util.Path(encryption.Hash(pn.GetKey())))
 		if err != nil {
 			return nil, err
@@ -239,7 +238,7 @@ func (mc *Chain) SendSijs() (*httpclientutil.Transaction, error) {
 
 func (mc *Chain) GetDKGMiners() (*minersc.DKGMinerNodes, error) {
 	dmn := minersc.NewDKGMinerNodes()
-	if mc.IsActiveNode(node.Self.ID, mc.CurrentRound) {
+	if mc.ActiveInChain() {
 		lfb := mc.GetLatestFinalizedBlock()
 		clientState := chain.CreateTxnMPT(lfb.ClientState)
 		node, err := clientState.GetNodeValue(util.Path(encryption.Hash(minersc.DKGMinersKey)))
@@ -269,7 +268,7 @@ func (mc *Chain) GetDKGMiners() (*minersc.DKGMinerNodes, error) {
 
 func (mc *Chain) GetMinersMpks() (*block.Mpks, error) {
 	mpks := block.NewMpks()
-	if mc.IsActiveNode(node.Self.ID, mc.CurrentRound) {
+	if mc.ActiveInChain() {
 		lfb := mc.GetLatestFinalizedBlock()
 		clientState := chain.CreateTxnMPT(lfb.ClientState)
 		node, err := clientState.GetNodeValue(util.Path(encryption.Hash(minersc.MinersMPKKey)))
@@ -298,7 +297,7 @@ func (mc *Chain) GetMinersMpks() (*block.Mpks, error) {
 
 func (mc *Chain) GetFinalizedMagicBlock() (*block.MagicBlock, error) {
 	magicBlock := block.NewMagicBlock()
-	if mc.IsActiveNode(node.Self.ID, mc.CurrentRound) {
+	if mc.ActiveInChain() {
 		lfb := mc.GetLatestFinalizedBlock()
 		clientState := chain.CreateTxnMPT(lfb.ClientState)
 		node, err := clientState.GetNodeValue(util.Path(encryption.Hash(minersc.MagicBlockKey)))
@@ -331,7 +330,7 @@ func (mc *Chain) GetFinalizedMagicBlock() (*block.MagicBlock, error) {
 
 func (mc *Chain) GetMagicBlockFromSC() (*block.MagicBlock, error) {
 	magicBlock := block.NewMagicBlock()
-	if mc.IsActiveNode(node.Self.ID, mc.CurrentRound) {
+	if mc.ActiveInChain() {
 		lfb := mc.GetLatestFinalizedBlock()
 		clientState := chain.CreateTxnMPT(lfb.ClientState)
 		node, err := clientState.GetNodeValue(util.Path(encryption.Hash(minersc.MagicBlockKey)))

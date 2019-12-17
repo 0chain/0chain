@@ -943,6 +943,10 @@ func (c *Chain) GetLatestFinalizedBlockSummary() *block.BlockSummary {
 	return c.lfbSummary
 }
 
+func (c *Chain) ActiveInChain() bool {
+	return c.IsActiveNode(node.Self.ID, c.CurrentRound) && c.GetLatestFinalizedBlock().ClientState != nil
+}
+
 func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 	c.mbMutex.Lock()
 	defer c.mbMutex.Unlock()
