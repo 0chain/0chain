@@ -14,10 +14,10 @@ echo $GIT_COMMIT
 if [ -n "$TAG" ]; then
 echo " $TAG is the tage name provided"
 echo -e " Creating 0chain docker the base images..\n"
-docker build -f docker.local/build.base/Dockerfile.build_base . -t ${ZCHAIN_BUILDBASE}
-docker build -f docker.local/build.base/Dockerfile.run_base   docker.local/build.base -t ${ZCHAIN_BUILDRUN}
+sudo docker build -f docker.local/build.base/Dockerfile.build_base . -t ${ZCHAIN_BUILDBASE}
+sudo docker build -f docker.local/build.base/Dockerfile.run_base   docker.local/build.base -t ${ZCHAIN_BUILDRUN}
 
-docker system info | grep -E 'Username' 1>/dev/null
+sudo docker system info | grep -E 'Username' 1>/dev/null
 if [[ $? -ne 0 ]]; then
   docker login
 fi
