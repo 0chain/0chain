@@ -4,9 +4,10 @@ ZCS="sharder"
 read -p "Provide the docker image tag name: " TAG
 read -p "Provide the github organisation name[default:-0chaintest]: " organisation
 echo "${organisation:-0chaintest}/${ZCM}:$TAG"
+echo "${organisation:-0chaintest}/${ZCS}:$TAG"
 
 REGISTRY_MINER="${organisation:-0chaintest}/${ZCM}"
-REGISTRY_SHARDER="${organisation:-0chaintest}/${ZCM}"
+REGISTRY_SHARDER="${organisation:-0chaintest}/${ZCS}"
 ZCHAIN_BUILDBASE="zchain_build_base"
 ZCHAIN_BUILDRUN="zchain_run_base"
 GIT_COMMIT=$(git rev-list -1 HEAD)
