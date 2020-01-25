@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
@@ -27,7 +28,7 @@ func SetupHandlers() {
 	http.HandleFunc("/v1/chain/get/stats", common.UserRateLimit(common.ToJSONResponse(ChainStatsHandler)))
 	http.HandleFunc("/_chain_stats", common.UserRateLimit(ChainStatsWriter))
 	http.HandleFunc("/_health_check", common.UserRateLimit(HealthCheckWriter))
-
+	http.HandleFunc("/v1/sharder/get/stats", common.UserRateLimit(common.ToJSONResponse(SharderStatsHandler)))
 }
 
 /*BlockHandler - a handler to respond to block queries */
@@ -215,4 +216,24 @@ func TransactionConfirmationHandler(ctx context.Context, r *http.Request) (inter
 		data["latest_finalized_block"] = lfbSummary
 	}
 	return data, nil
+}
+
+func SharderStatsHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	sc := GetSharderChain()
+	bss := sc.BlockSyncStats
+	cc := bss.getCycleControl(ProximityScan)
+	previous := &cc.counters.previous
+	var previousElapsed string
+	if previous.CycleStart.IsZero() {
+		previousElapsed = "n/a"
+	} else {
+		previousElapsed = previous.CycleDuration.Round(time.Second).String()
+	}
+	return ExplorerStats{LastFinalizedRound: sc.Chain.GetLatestFinalizedBlock().Round,
+		StateHealth:            node.Self.Info.StateMissingNodes,
+		AverageBlockSize:       node.Self.Info.AvgBlockTxns,
+		PrevInvocationCount:    previous.HealthCheckInvocations,
+		PrevInvocationScanTime: previousElapsed,
+		MeanScanBlockStatsTime: cc.BlockSyncTimer.Mean() / 1000000.0,
+	}, nil
 }
