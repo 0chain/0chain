@@ -215,3 +215,12 @@ func (sc *Chain) WriteBlockSyncStatistics(w http.ResponseWriter, scan HealthChec
 	cc := bss.getCycleControl(scan)
 	diagnostics.WriteTimerStatistics(w, sc.Chain, cc.BlockSyncTimer, 1000000.0)
 }
+
+type ExplorerStats struct {
+	LastFinalizedRound     int64   `json:"last_finalized_round"`
+	StateHealth            int64   `json:"state_health"`
+	AverageBlockSize       int     `json:"average_block_size"`
+	PrevInvocationCount    uint64  `json:"pervious_invocation_count"`
+	PrevInvocationScanTime string  `json:"previous_incovcation_scan_time"`
+	MeanScanBlockStatsTime float64 `json:"mean_scan_block_stats_time"`
+}

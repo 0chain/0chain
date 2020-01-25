@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -21,6 +22,7 @@ func SetupHandlers() {
 	http.HandleFunc("/v1/chain/get/stats", common.UserRateLimit(common.ToJSONResponse(ChainStatsHandler)))
 	http.HandleFunc("/_chain_stats", common.UserRateLimit(ChainStatsWriter))
 	http.HandleFunc("/_diagnostics/wallet_stats", common.UserRateLimit(GetWalletStats))
+	http.HandleFunc("/v1/miner/get/stats", common.UserRateLimit(common.ToJSONResponse(MinerStatsHandler)))
 }
 
 /*ChainStatsHandler - a handler to provide block statistics */
@@ -156,4 +158,35 @@ func GetWalletTable(latest bool) (int64, int64, int64, int64) {
 	totalWallets = mstore.GetCollectionSize(ctx, emd, collectionName)
 	walletsWithoutTokens = totalWallets - walletsWithTokens
 	return walletsWithTokens, walletsWithoutTokens, totalWallets, b.Round
+}
+
+func MinerStatsHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	c := GetMinerChain().Chain
+	var total int64
+	ms := node.Self.ProtocolStats.(*chain.MinerStats)
+	for i := 0; i < c.NumGenerators; i++ {
+		total += ms.FinalizationCountByRank[i]
+	}
+	cr := c.GetRound(c.CurrentRound)
+	rtoc := c.GetRoundTimeoutCount()
+	if cr != nil {
+		rtoc = int64(cr.GetTimeoutCount())
+	}
+	networkTimes := make(map[string]time.Duration)
+	for k, v := range c.Miners.NodesMap {
+		networkTimes[k] = v.Info.MinersMedianNetworkTime
+	}
+	for k, v := range c.Sharders.NodesMap {
+		networkTimes[k] = v.Info.MinersMedianNetworkTime
+	}
+	return ExplorerStats{BlockFinality: chain.SteadyStateFinalizationTimer.Mean() / 1000000.0,
+		LastFinalizedRound: c.GetLatestFinalizedBlock().Round,
+		BlocksFinalized:    total,
+		StateHealth:        node.Self.Info.StateMissingNodes,
+		CurrentRound:       c.CurrentRound,
+		RoundTimeout:       rtoc,
+		Timeouts:           c.RoundTimeoutsCount,
+		AverageBlockSize:   node.Self.Info.AvgBlockTxns,
+		NetworkTime:        networkTimes,
+	}, nil
 }
