@@ -22,8 +22,8 @@ type Round struct {
 
 /*AddBlockToVerify - adds a block to the round. Assumes non-concurrent update */
 func (r *Round) AddBlockToVerify(b *block.Block) {
-	r.Mutex.Lock()
-	defer r.Mutex.Unlock()
+	r.Lock()
+	defer r.Unlock()
 	if r.isVerificationComplete() {
 		Logger.Debug("block proposal - verification complete", zap.Int64("round", r.GetRoundNumber()), zap.String("block", b.Hash))
 		return
@@ -41,16 +41,16 @@ func (r *Round) AddBlockToVerify(b *block.Block) {
 
 /*AddVerificationTicket - add a verification ticket */
 func (r *Round) AddVerificationTicket(bvt *block.BlockVerificationTicket) {
-	r.Mutex.Lock()
-	defer r.Mutex.Unlock()
+	r.Lock()
+	defer r.Unlock()
 	r.verificationTickets[bvt.Signature] = bvt
 }
 
 /*GetVerificationTickets - get verification tickets for a given block in this round */
 func (r *Round) GetVerificationTickets(blockID string) []*block.VerificationTicket {
 	var vts []*block.VerificationTicket
-	r.Mutex.Lock()
-	defer r.Mutex.Unlock()
+	r.Lock()
+	defer r.Unlock()
 	for _, bvt := range r.verificationTickets {
 		if blockID == bvt.BlockID {
 			vts = append(vts, &bvt.VerificationTicket)
@@ -66,8 +66,8 @@ func (r *Round) GetBlocksToVerifyChannel() chan *block.Block {
 
 /*IsVerificationComplete - indicates if the verification process for the round is complete */
 func (r *Round) IsVerificationComplete() bool {
-	r.Mutex.RLock()
-	defer r.Mutex.RUnlock()
+	r.RLock()
+	defer r.RUnlock()
 	return r.isVerificationComplete()
 }
 
@@ -77,8 +77,8 @@ func (r *Round) isVerificationComplete() bool {
 
 /*StartVerificationBlockCollection - start collecting blocks for verification */
 func (r *Round) StartVerificationBlockCollection(ctx context.Context) context.Context {
-	r.Mutex.Lock()
-	defer r.Mutex.Unlock()
+	r.Lock()
+	defer r.Unlock()
 	if r.verificationCancelf != nil {
 		return nil
 	}
@@ -92,8 +92,9 @@ func (r *Round) StartVerificationBlockCollection(ctx context.Context) context.Co
 
 /*CancelVerification - Cancel verification of blocks */
 func (r *Round) CancelVerification() {
-	r.Mutex.Lock()
-	defer r.Mutex.Unlock()
+	r.Lock()
+	defer r.Unlock()
+
 	f := r.verificationCancelf
 	if f == nil {
 		return

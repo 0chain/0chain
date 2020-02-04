@@ -411,7 +411,7 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 	var blocks = make([]*block.Block, 0, 8)
 	initiateVerification := func() {
 		// Sort the accumulated blocks by the rank and process them
-		blocks = r.GetBlocksByRank(blocks)
+		round.SortBlocksByRank(blocks)
 		// Keep verifying all the blocks collected so far in the best rank order till the first successul verification
 		for _, b := range blocks {
 			if verifyAndSend(ctx, r, b) {
