@@ -2,7 +2,6 @@ package chain
 
 import (
 	"encoding/json"
-	"strconv"
 	"time"
 
 	"0chain.net/chaincore/client"
@@ -59,10 +58,6 @@ func (mc *Chain) RegisterClient() {
 		for key, miner := range miners {
 			body, err := httpclientutil.SendPostRequest(miner.GetN2NURLBase()+httpclientutil.RegisterClient, nodeBytes, "", "", nil)
 			if err != nil {
-				if ne, ok := err.(net.Error); ok && ne.Timeout() {
-					Logger.Error("can't reach node %s", zap.String("key", key))
-					delete(miners, key)
-				}
 				Logger.Error("error in register client", zap.Error(err), zap.Any("body", body))
 			} else {
 				delete(miners, key)
@@ -97,7 +92,6 @@ func (mc *Chain) isRegistered() bool {
 			return false
 		}
 	} else {
-		trace.Trace("Chain.isRegistered is NOT ActiveInChain")
 		var (
 			sharders = mc.Sharders.N2NURLs()
 			err      error

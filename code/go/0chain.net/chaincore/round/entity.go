@@ -51,12 +51,15 @@ type Round struct {
 	notarizedBlocks  []*block.Block
 	Mutex            sync.RWMutex
 	shares           map[string]*VRFShare
-	TimeoutCount     int
 	SoftTimeoutCount int
 	VrfStartTime     time.Time
-	TimeoutVotes     map[int]int
-	VotersVoted      map[string]bool
-	VotesMutex       sync.Mutex
+
+	// -- protected by the votesMutex --+
+	votesMutex   sync.RWMutex    //     |
+	TimeoutCount int             //     |
+	TimeoutVotes map[int]int     //     |
+	VotersVoted  map[string]bool //     |
+	// ---------------------------------+
 }
 
 // RoundFactory - a factory to create a new round object specific to miner/sharder
@@ -90,13 +93,17 @@ func (r *Round) GetRoundNumber() int64 {
 
 // GetTimeoutCount - returns the timeout count
 func (r *Round) GetTimeoutCount() int {
+	r.votesMutex.RLock()
+	defer r.votesMutex.RUnlock()
+
 	return r.TimeoutCount
 }
 
 // IncrementTimeoutCount - Increments timeout count
 func (r *Round) IncrementTimeoutCount() {
-	r.VotesMutex.Lock()
-	defer r.VotesMutex.Unlock()
+	r.votesMutex.Lock()
+	defer r.votesMutex.Unlock()
+
 	var mostVotes int
 	for k, v := range r.TimeoutVotes {
 		if v > mostVotes || (v == mostVotes && r.TimeoutCount > k) {
@@ -111,6 +118,9 @@ func (r *Round) IncrementTimeoutCount() {
 
 // SetTimeoutCount - sets the timeout count to given number if it is greater than existing and returns true. Else false.
 func (r *Round) SetTimeoutCount(tc int) bool {
+	r.votesMutex.Lock()
+	defer r.votesMutex.Unlock()
+
 	if tc <= r.TimeoutCount {
 		return false
 	}
@@ -469,8 +479,9 @@ func (r *Round) Unlock() {
 }
 
 func (r *Round) AddTimeoutVote(num int, id string) {
-	r.VotesMutex.Lock()
-	defer r.VotesMutex.Unlock()
+	r.votesMutex.Lock()
+	defer r.votesMutex.Unlock()
+
 	if !r.VotersVoted[id] {
 		r.TimeoutVotes[num]++
 		r.VotersVoted[id] = true
