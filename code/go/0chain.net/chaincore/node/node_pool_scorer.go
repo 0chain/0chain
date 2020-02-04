@@ -33,12 +33,13 @@ func NewHashPoolScorer(hs encryption.HashScorer) *HashPoolScorer {
 
 //ScoreHash - implement interface
 func (hps *HashPoolScorer) ScoreHash(np *Pool, hash []byte) []*Score {
-	nodes := make([]*Score, np.Size())
-	for idx, nd := range np.Nodes {
-		nodes[idx] = &Score{}
-		nodes[idx].Node = nd
-		nodes[idx].Score = hps.HashScorer.Score(nd.idBytes, hash)
-	}
+	nodes := make([]*Score, 0, np.Size())
+	np.ForEachItem(func(nd *Node) {
+		nodes = append(nodes, &Score{
+			Node:  nd,
+			Score: hps.HashScorer.Score(nd.idBytes, hash),
+		})
+	})
 	sort.SliceStable(nodes, func(i, j int) bool {
 		if nodes[i].Score == nodes[j].Score {
 			return nodes[i].Node.SetIndex > nodes[j].Node.SetIndex

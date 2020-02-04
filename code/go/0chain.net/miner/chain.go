@@ -222,11 +222,15 @@ func (mc *Chain) ChainStarted(ctx context.Context) bool {
 		case <-ctx.Done():
 			return false
 		case <-timer.C:
-			var start int
-			var started int
-			for _, n := range mc.Miners.NodesMap {
+			var (
+				start   int
+				started int
+			)
+			mc.Miners.ForEach(func(n *node.Node) {
+				// NOTE (kostyarin): C like &arg is not so effective in Go
+				//                   as argument and reply
 				mc.RequestStartChain(n, &start, &started)
-			}
+			})
 			if start >= mc.T {
 				return false
 			}
@@ -246,7 +250,7 @@ func (mc *Chain) ChainStarted(ctx context.Context) bool {
 func StartChainRequestHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	nodeID := r.Header.Get(node.HeaderNodeID)
 	mc := GetMinerChain()
-	if _, ok := mc.Miners.NodesMap[nodeID]; !ok {
+	if mc.Miners.GetNode(nodeID) == nil {
 		Logger.Error("failed to send start chain", zap.Any("id", nodeID))
 		return nil, common.NewError("failed to send start chain", "miner is not in active set")
 	}

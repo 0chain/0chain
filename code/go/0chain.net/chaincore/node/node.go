@@ -20,47 +20,88 @@ import (
 	"github.com/spf13/viper"
 )
 
-var nodes = make(map[string]*Node)
-var nodesMutex = &sync.Mutex{}
+var globalRegistry = newRegistry()
+
+type registry struct {
+	sync.RWMutex
+	nodes map[string]*Node
+}
+
+func (r *registry) register(node *Node) {
+	r.Lock()
+	defer r.Unlock()
+
+	r.nodes[node.GetKey()] = node
+}
+
+func (r *registry) unregister(nodeID string) {
+	r.Lock()
+	defer r.Unlock()
+
+	delete(r.nodes, nodeID)
+}
+
+func (r *registry) minersKeys() (ids []string) {
+	r.RLock()
+	defer r.RUnlock()
+
+	ids = make([]string, 0, len(r.nodes)) // preallocate for a worst case
+
+	for k, n := range r.nodes {
+		if n.Type == NodeTypeMiner {
+			ids = append(ids, k)
+		}
+	}
+
+	return
+}
+
+func (r *registry) node(nodeID string) *Node {
+	r.RLock()
+	defer r.RUnlock()
+
+	return r.nodes[nodeID]
+}
+
+type NodesFunc func(nodes map[string]*Node)
+
+func (r *registry) viewNodes(nodesFunc NodesFunc) {
+	r.RLock()
+	defer r.RUnlock()
+
+	nodesFunc(r.nodes)
+}
+
+func newRegistry() (r *registry) {
+	r = new(registry)
+	r.nodes = make(map[string]*Node)
+	return
+}
 
 /*RegisterNode - register a node to a global registery
 * We need to keep track of a global register of nodes. This is required to ensure we can verify a signed request
 * coming from a node
  */
 func RegisterNode(node *Node) {
-	nodesMutex.Lock()
-	defer nodesMutex.Unlock()
-	nodes[node.GetKey()] = node
+	globalRegistry.register(node)
 }
 
 /*DeregisterNode - deregisters a node */
 func DeregisterNode(nodeID string) {
-	delete(nodes, nodeID)
+	globalRegistry.unregister(nodeID)
 }
 
-func GetNodes() map[string]*Node {
-	nodesMutex.Lock()
-	defer nodesMutex.Unlock()
-	return nodes
+func ViewNodes(nodesFunc NodesFunc) {
+	globalRegistry.viewNodes(nodesFunc)
 }
 
 func GetMinerNodesKeys() []string {
-	nodesMutex.Lock()
-	defer nodesMutex.Unlock()
-	var keys []string
-	for k, n := range nodes {
-		if n.Type == NodeTypeMiner {
-			keys = append(keys, k)
-		}
-	}
-	return keys
+	return globalRegistry.minersKeys()
 }
 
 /*GetNode - get the node from the registery */
 func GetNode(nodeID string) *Node {
-	nodesMutex.Lock()
-	defer nodesMutex.Unlock()
-	return nodes[nodeID]
+	return globalRegistry.node(nodeID)
 }
 
 var (
@@ -251,12 +292,12 @@ func (n *Node) ComputeProperties() {
 
 /*GetURLBase - get the end point base */
 func (n *Node) GetURLBase() string {
-	return fmt.Sprintf("http://%v:%v", n.Host, n.Port)
+	return "http://" + n.Host + ":" + strconv.Itoa(n.Port)
 }
 
 /*GetN2NURLBase - get the end point base for n2n communication */
 func (n *Node) GetN2NURLBase() string {
-	return fmt.Sprintf("http://%v:%v", n.N2NHost, n.Port)
+	return "http://" + n.N2NHost + ":" + strconv.Itoa(n.Port)
 }
 
 /*GetStatusURL - get the end point where to ping for the status */
@@ -432,6 +473,7 @@ func (n *Node) SetID(id string) error {
 
 //IsActive - returns if this node is active or not
 func (n *Node) IsActive() bool {
+	// TODO (kostyarin): async unsafe
 	return n.Status == NodeStatusActive
 }
 

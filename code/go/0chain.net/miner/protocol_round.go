@@ -214,7 +214,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	generationTimeout := time.Millisecond * time.Duration(mc.GetGenerationTimeout())
 	generationTries := 0
 	var startLogging time.Time
-	for true {
+	for {
 		if mc.CurrentRound > b.Round {
 			Logger.Error("generate block - round mismatch", zap.Any("round", roundNumber), zap.Any("current_round", mc.CurrentRound))
 			return nil, ErrRoundMismatch
@@ -228,7 +228,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 			if ok {
 				switch cerr.Code {
 				case InsufficientTxns:
-					for true {
+					for {
 						delay := mc.GetRetryWaitTime()
 						time.Sleep(time.Duration(delay) * time.Millisecond)
 						if startLogging.IsZero() || time.Now().Sub(startLogging) > time.Second {

@@ -109,7 +109,7 @@ func main() {
 		if err != nil {
 			Logger.Panic("Error reading keys file. Non-genesis miner has no host or port number", zap.Error(err))
 		}
-		Logger.Info("Inside nonGenesis", zap.String("host_name", hostName), zap.Any("n2n_host_name", n2nHostName),zap.Int("port_num", portNum))
+		Logger.Info("Inside nonGenesis", zap.String("host_name", hostName), zap.Any("n2n_host_name", n2nHostName), zap.Int("port_num", portNum))
 		node.Self.Host = hostName
 		node.Self.N2NHost = n2nHostName
 		node.Self.Port = portNum
@@ -181,7 +181,7 @@ func main() {
 	initHandlers()
 
 	chain.StartTime = time.Now().UTC()
-	_, activeMiner := mc.Miners.NodesMap[node.Self.ID]
+	activeMiner := mc.Miners.GetNode(node.Self.ID) != nil
 	if activeMiner {
 		miner.SetDKG(ctx, mc.MagicBlock)
 		go func() {
@@ -192,7 +192,7 @@ func main() {
 				miner.StartProtocol()
 			}
 		}()
-		
+
 	}
 	if config.Development() {
 		go TransactionGenerator(mc.Chain)

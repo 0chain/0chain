@@ -173,12 +173,14 @@ func MinerStatsHandler(ctx context.Context, r *http.Request) (interface{}, error
 		rtoc = int64(cr.GetTimeoutCount())
 	}
 	networkTimes := make(map[string]time.Duration)
-	for k, v := range c.Miners.NodesMap {
+	c.Miners.ForEachWithKey(func(k string, v *node.Node) {
+		// TODO (kostyarin): async access to Node.Info
 		networkTimes[k] = v.Info.MinersMedianNetworkTime
-	}
-	for k, v := range c.Sharders.NodesMap {
+	})
+	c.Sharders.ForEachWithKey(func(k string, v *node.Node) {
+		// TODO (kostyarin): async access to Node.Info
 		networkTimes[k] = v.Info.MinersMedianNetworkTime
-	}
+	})
 	return ExplorerStats{BlockFinality: chain.SteadyStateFinalizationTimer.Mean() / 1000000.0,
 		LastFinalizedRound: c.GetLatestFinalizedBlock().Round,
 		BlocksFinalized:    total,

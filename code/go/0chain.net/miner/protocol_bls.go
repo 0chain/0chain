@@ -65,7 +65,8 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) err
 		mc.CurrentDKG = bls.MakeDKG(mb.T, mb.N, self.ID)
 		mc.CurrentDKG.MagicBlockNumber = mb.MagicBlockNumber
 		mc.CurrentDKG.StartingRound = mb.StartingRound
-		for k := range mb.Miners.NodesMap {
+
+		mb.Miners.ForEachWithKey(func(k string, _ *node.Node) {
 			if savedShare, ok := dkgSummary.SecretShares[ComputeBlsID(k)]; ok {
 				mc.CurrentDKG.AddSecretShare(bls.ComputeIDdkg(k), savedShare)
 			} else if v, ok := mb.ShareOrSigns.Shares[k]; ok {
@@ -73,7 +74,8 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) err
 					mc.CurrentDKG.AddSecretShare(bls.ComputeIDdkg(k), share.Share)
 				}
 			}
-		}
+		})
+
 		if mc.CurrentDKG.HasAllSecretShares() {
 			mc.CurrentDKG.AggregateSecretKeyShares()
 			mc.CurrentDKG.Pi = mc.CurrentDKG.Si.GetPublicKey()

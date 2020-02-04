@@ -73,20 +73,15 @@ func (c *Chain) FinalizedBlockWorker(ctx context.Context, bsh BlockStateHandler)
 func (c *Chain) PruneClientStateWorker(ctx context.Context) {
 	tick := time.Duration(c.PruneStateBelowCount) * time.Second
 	timer := time.NewTimer(time.Second)
-	pruning := false
-	for true {
+	for {
 		select {
 		case <-timer.C:
-			if pruning {
-				Logger.Info("pruning still going on")
-				continue
-			}
-			pruning = true
 			c.pruneClientState(ctx)
-			pruning = false
 			if c.pruneStats == nil || c.pruneStats.MissingNodes > 0 {
+				timer.Stop()
 				timer = time.NewTimer(time.Second)
 			} else {
+				timer.Stop()
 				timer = time.NewTimer(tick)
 			}
 		}
@@ -95,7 +90,7 @@ func (c *Chain) PruneClientStateWorker(ctx context.Context) {
 
 /*BlockFetchWorker - a worker that fetches the prior missing blocks */
 func (c *Chain) BlockFetchWorker(ctx context.Context) {
-	for true {
+	for {
 		select {
 		case b := <-c.blockFetcher.missingLinkBlocks:
 			if b.PrevBlock != nil {
@@ -121,9 +116,9 @@ func (c *Chain) BlockFetchWorker(ctx context.Context) {
 func (c *Chain) VerifyChainHistory(ctx context.Context, latestMagicBlock *block.Block) error {
 	currentMagicBlock := c.GetLatestFinalizedMagicBlock()
 	var sharders []string
-	for _, sharder := range c.Sharders.NodesMap {
+	c.Sharders.ForEach(func(sharder *node.Node) {
 		sharders = append(sharders, "http://"+sharder.N2NHost+":"+strconv.Itoa(sharder.Port))
-	}
+	})
 	for currentMagicBlock.Hash != latestMagicBlock.Hash {
 		magicBlock, err := httpclientutil.GetMagicBlockCall(sharders, currentMagicBlock.MagicBlockNumber+1, 1)
 		if err != nil {

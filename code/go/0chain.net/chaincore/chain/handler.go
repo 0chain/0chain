@@ -411,14 +411,15 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
-	nodes := np.Nodes
 	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr class='header'><td rowspan='2'>Set Index</td><td rowspan='2'>Node</td><td rowspan='2'>Sent</td><td rowspan='2'>Send Errors</td><td rowspan='2'>Received</td><td rowspan='2'>Last Active</td><td colspan='3' style='text-align:center'>Message Time</td><td rowspan='2'>Description</td><td colspan='4' style='text-align:center'>Remote Data</td></tr>")
 	fmt.Fprintf(w, "<tr class='header'><td>Small</td><td>Large</td><td>Large Optimal</td><td>Build Tag</td><td>State Health</td><td title='median network time'>Miners MNT</td><td>Avg Block Size</td></tr>")
 	r := c.GetRound(c.CurrentRound)
 	hasRanks := r != nil && r.HasRandomSeed()
 	lfb := c.GetLatestFinalizedBlock()
-	for _, nd := range nodes {
+
+	np.ForEachItem(func(nd *node.Node) {
+
 		if nd.Status == node.NodeStatusInactive {
 			fmt.Fprintf(w, "<tr class='inactive'>")
 		} else {
@@ -468,7 +469,9 @@ func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 		fmt.Fprintf(w, "<td class='number'>%v</td>", nd.Info.MinersMedianNetworkTime)
 		fmt.Fprintf(w, "<td class='number'>%v</td>", nd.Info.AvgBlockTxns)
 		fmt.Fprintf(w, "</tr>")
-	}
+
+	})
+
 	fmt.Fprintf(w, "</table>")
 }
 
@@ -568,9 +571,11 @@ func (c *Chain) N2NStatsWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<tr><td rowspan='2'>URI</td><td rowspan='2'>Count</td><td colspan='3'>Time</td><td colspan='3'>Size</td></tr>")
 	fmt.Fprintf(w, "<tr><td>Min</td><td>Average</td><td>Max</td><td>Min</td><td>Average</td><td>Max</td></tr>")
 	fmt.Fprintf(w, "<tr><td colspan='8'>Miners (%v/%v) - median network time = %.2f", c.Miners.GetActiveCount(), c.Miners.Size(), c.Miners.GetMedianNetworkTime()/1000000)
-	for _, nd := range c.Miners.Nodes {
+
+	c.Miners.ForEachItem(func(nd *node.Node) {
+
 		if nd == node.Self.Node {
-			continue
+			return
 		}
 		lmt := nd.GetLargeMessageSendTime()
 		olmt := nd.GetOptimalLargeMessageSendTime()
@@ -586,12 +591,15 @@ func (c *Chain) N2NStatsWriter(w http.ResponseWriter, r *http.Request) {
 		}
 		fmt.Fprintf(w, "<tr class='%s'><td colspan='8'><b>%s</b> (%.2f/%.2f) - %s</td></tr>", cls, nd.GetPseudoName(), olmt, lmt, nd.Description)
 		nd.PrintSendStats(w)
-	}
+
+	})
 
 	fmt.Fprintf(w, "<tr><td colspan='8'>Sharders (%v/%v) - median network time = %.2f", c.Sharders.GetActiveCount(), c.Sharders.Size(), c.Sharders.GetMedianNetworkTime()/1000000)
-	for _, nd := range c.Sharders.Nodes {
+
+	c.Sharders.ForEachItem(func(nd *node.Node) {
+
 		if nd == node.Self.Node {
-			continue
+			return
 		}
 		lmt := nd.GetLargeMessageSendTime()
 		olmt := nd.GetOptimalLargeMessageSendTime()
@@ -607,7 +615,9 @@ func (c *Chain) N2NStatsWriter(w http.ResponseWriter, r *http.Request) {
 		}
 		fmt.Fprintf(w, "<tr class='%s'><td colspan='8'><b>%s</b> (%.2f/%.2f) - %s </td></tr>", cls, nd.GetPseudoName(), olmt, lmt, nd.Description)
 		nd.PrintSendStats(w)
-	}
+
+	})
+
 	fmt.Fprintf(w, "</table>")
 }
 
@@ -691,10 +701,12 @@ func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "<br>")
 		fmt.Fprintf(w, "<table>")
 		fmt.Fprintf(w, "<tr><td>Miner</td><td>Verification Failures</td></tr>")
-		for _, nd := range c.Miners.Nodes {
+
+		c.Miners.ForEachItem(func(nd *node.Node) {
 			ms := nd.ProtocolStats.(*MinerStats)
 			fmt.Fprintf(w, "<tr><td>%v</td><td class='number'>%v</td></tr>", nd.GetPseudoName(), ms.VerificationFailures)
-		}
+		})
+
 		fmt.Fprintf(w, "</table>")
 	}
 }
@@ -707,7 +719,9 @@ func (c *Chain) generationCountStats(w http.ResponseWriter) {
 	}
 	fmt.Fprintf(w, "<td>Total</td></tr>")
 	totals := make([]int64, c.NumGenerators)
-	for _, nd := range c.Miners.Nodes {
+
+	c.Miners.ForEachItem(func(nd *node.Node) {
+
 		fmt.Fprintf(w, "<tr><td>%v</td>", nd.GetPseudoName())
 		ms := nd.ProtocolStats.(*MinerStats)
 		var total int64
@@ -717,7 +731,9 @@ func (c *Chain) generationCountStats(w http.ResponseWriter) {
 			total += ms.GenerationCountByRank[i]
 		}
 		fmt.Fprintf(w, "<td class='number'>%v</td></tr>", total)
-	}
+
+	})
+
 	fmt.Fprintf(w, "<tr><td>Totals</td>")
 	var total int64
 	for i := 0; i < c.NumGenerators; i++ {
@@ -736,7 +752,9 @@ func (c *Chain) verificationCountStats(w http.ResponseWriter) {
 	}
 	fmt.Fprintf(w, "<td>Total</td></tr>")
 	totals := make([]int64, c.NumGenerators)
-	for _, nd := range c.Miners.Nodes {
+
+	c.Miners.ForEachItem(func(nd *node.Node) {
+
 		fmt.Fprintf(w, "<tr><td>%v</td>", nd.GetPseudoName())
 		ms := nd.ProtocolStats.(*MinerStats)
 		var total int64
@@ -746,7 +764,9 @@ func (c *Chain) verificationCountStats(w http.ResponseWriter) {
 			total += ms.VerificationTicketsByRank[i]
 		}
 		fmt.Fprintf(w, "<td class='number'>%v</td></tr>", total)
-	}
+
+	})
+
 	fmt.Fprintf(w, "<tr><td>Totals</td>")
 	var total int64
 	for i := 0; i < c.NumGenerators; i++ {
@@ -765,7 +785,9 @@ func (c *Chain) finalizationCountStats(w http.ResponseWriter) {
 	}
 	fmt.Fprintf(w, "<td>Total</td></tr>")
 	totals := make([]int64, c.NumGenerators)
-	for _, nd := range c.Miners.Nodes {
+
+	c.Miners.ForEachItem(func(nd *node.Node) {
+
 		fmt.Fprintf(w, "<tr><td>%v</td>", nd.GetPseudoName())
 		ms := nd.ProtocolStats.(*MinerStats)
 		var total int64
@@ -775,7 +797,9 @@ func (c *Chain) finalizationCountStats(w http.ResponseWriter) {
 			total += ms.FinalizationCountByRank[i]
 		}
 		fmt.Fprintf(w, "<td class='number'>%v</td></tr>", total)
-	}
+
+	})
+
 	fmt.Fprintf(w, "<tr><td>Totals</td>")
 	var total int64
 	for i := 0; i < c.NumGenerators; i++ {

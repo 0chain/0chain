@@ -601,11 +601,15 @@ func (c *Chain) CanShardBlockWithReplicators(hash string, sharder *node.Node) (b
 func (c *Chain) GetBlockSharders(b *block.Block) []string {
 	var sharders []string
 	//TODO: sharders list needs to get resolved per the magic block of the block
-	var sharderPool = c.Sharders
-	var sharderNodes = sharderPool.Nodes
+	var (
+		sharderPool  = c.Sharders
+		sharderNodes []*node.Node
+	)
 	if c.NumReplicators > 0 {
 		scores := c.nodePoolScorer.ScoreHashString(sharderPool, b.Hash)
 		sharderNodes = node.GetTopNNodes(scores, c.NumReplicators)
+	} else {
+		sharderNodes = sharderPool.CopyList()
 	}
 	for _, sharder := range sharderNodes {
 		sharders = append(sharders, sharder.GetKey())
@@ -702,13 +706,13 @@ func (c *Chain) getMiningStake(minerID datastore.Key) int {
 
 //InitializeMinerPool - initialize the miners after their configuration is read
 func (c *Chain) InitializeMinerPool() {
-	for _, nd := range c.Miners.Nodes {
+	c.Miners.ForEachItem(func(nd *node.Node) {
 		ms := &MinerStats{}
 		ms.GenerationCountByRank = make([]int64, c.NumGenerators)
 		ms.FinalizationCountByRank = make([]int64, c.NumGenerators)
 		ms.VerificationTicketsByRank = make([]int64, c.NumGenerators)
 		nd.ProtocolStats = ms
-	}
+	})
 }
 
 /*AddRound - Add Round to the block */
@@ -737,6 +741,10 @@ func (c *Chain) GetRound(roundNumber int64) round.RoundI {
 
 /*DeleteRound - delete a round and associated block data */
 func (c *Chain) DeleteRound(ctx context.Context, r round.RoundI) {
+
+	trace.Trace("DeleteRound ", r.GetRoundNumber())
+	// defer trace.Leave(trace.Enter("$FN round number:", r.GetRoundNumber()))
+
 	c.roundsMutex.Lock()
 	defer c.roundsMutex.Unlock()
 	delete(c.rounds, r.GetRoundNumber())
@@ -744,18 +752,25 @@ func (c *Chain) DeleteRound(ctx context.Context, r round.RoundI) {
 
 /*DeleteRoundsBelow - delete rounds below */
 func (c *Chain) DeleteRoundsBelow(ctx context.Context, roundNumber int64) {
+
+	const keep = 10
+
+	var threashold = roundNumber - keep
+	if threashold < 0 {
+		return
+	}
+
+
 	c.roundsMutex.Lock()
 	defer c.roundsMutex.Unlock()
-	rounds := make([]round.RoundI, 0, 1)
-	for _, r := range c.rounds {
-		if r.GetRoundNumber() < roundNumber-10 && r.GetRoundNumber() != 0 {
-			rounds = append(rounds, r)
+
+	for rn, r := range c.rounds {
+		if rn < threashold && rn != 0 {
+			r.Clear()
+			delete(c.rounds, rn)
 		}
 	}
-	for _, r := range rounds {
-		r.Clear()
-		delete(c.rounds, r.GetRoundNumber())
-	}
+
 }
 
 /*SetRandomSeed - set the random seed for the round */
@@ -970,14 +985,14 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 }
 
 func (c *Chain) SetupNodes() {
-	for _, miner := range c.Miners.NodesMap {
-		miner.ComputeProperties()
+	c.Miners.ForEach(func(miner *node.Node) {
+		miner.ComputeProperties() //
 		node.Setup(miner)
-	}
-	for _, sharder := range c.Sharders.NodesMap {
-		sharder.ComputeProperties()
+	})
+	c.Sharders.ForEach(func(sharder *node.Node) {
+		sharder.ComputeProperties() // <- Nodes
 		node.Setup(sharder)
-	}
+	})
 }
 
 //SetLatestFinalizedBlock - set the latest finalized block
@@ -1010,14 +1025,14 @@ func (c *Chain) GetLatestFinalizedMagicBlockSummary() *block.BlockSummary {
 }
 
 func (c *Chain) GetNodesPreviousInfo() {
-	for key, miner := range c.Miners.NodesMap {
-		if oldMiner, ok := c.PreviousMagicBlock.Miners.NodesMap[key]; ok {
-			miner.SetNodeInfo(oldMiner)
+	c.Miners.ForEachWithKey(func(key string, miner *node.Node) {
+		if old := c.PreviousMagicBlock.Miners.GetNode(key); old != nil {
+			miner.SetNodeInfo(old)
 		}
-	}
-	for key, sharder := range c.Sharders.NodesMap {
-		if oldSharder, ok := c.PreviousMagicBlock.Sharders.NodesMap[key]; ok {
-			sharder.SetNodeInfo(oldSharder)
+	})
+	c.Sharders.ForEachWithKey(func(key string, sharder *node.Node) {
+		if old := c.PreviousMagicBlock.Sharders.GetNode(key); old != nil {
+			sharder.SetNodeInfo(old)
 		}
-	}
+	})
 }

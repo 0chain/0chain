@@ -29,7 +29,7 @@ func SetMaxConcurrentRequests(maxConcurrentRequests int) {
 
 /*SendAll - send to every node */
 func (np *Pool) SendAll(handler SendHandler) []*Node {
-	return np.SendAtleast(len(np.Nodes), handler)
+	return np.SendAtleast(np.ListSize(), handler)
 }
 
 /*SendTo - send to a specific node */
@@ -113,7 +113,7 @@ func (np *Pool) sendTo(numNodes int, nodes []*Node, handler SendHandler) []*Node
 		return sentTo
 	}
 	doneCount := 0
-	for true {
+	for {
 		select {
 		case node := <-validBucket:
 			sentTo = append(sentTo, node)

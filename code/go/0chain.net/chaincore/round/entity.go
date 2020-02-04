@@ -370,7 +370,7 @@ func (r *Round) GetMinerRank(miner *node.Node) int {
 func (r *Round) GetMinersByRank(miners *node.Pool) []*node.Node {
 	r.Mutex.RLock()
 	defer r.Mutex.RUnlock()
-	nodes := miners.Nodes
+	nodes := miners.CopyList()
 	rminers := make([]*node.Node, len(nodes))
 	Logger.Info("get miners by rank", zap.Any("num_miners", len(nodes)), zap.Any("round", r.Number), zap.Any("r.minerPerm", r.minerPerm))
 	for _, nd := range nodes {

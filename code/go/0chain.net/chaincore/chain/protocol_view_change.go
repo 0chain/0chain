@@ -54,15 +54,15 @@ func (mc *Chain) RegisterClient() {
 	}
 
 	nodeBytes, _ := json.Marshal(node.Self.Client)
-	miners := make(map[string]*node.Node)
-	for key, miner := range mc.Miners.NodesMap {
-		miners[key] = miner
-	}
-	// for len(mc.Miners.NodesMap) < 2*len(miners) {
+	miners := mc.Miners.CopyMap()
 	for len(miners) > 0 {
 		for key, miner := range miners {
-			body, err := httpclientutil.SendPostRequest("http://"+miner.N2NHost+":"+strconv.Itoa(miner.Port)+httpclientutil.RegisterClient, nodeBytes, "", "", nil)
+			body, err := httpclientutil.SendPostRequest(miner.GetN2NURLBase()+httpclientutil.RegisterClient, nodeBytes, "", "", nil)
 			if err != nil {
+				if ne, ok := err.(net.Error); ok && ne.Timeout() {
+					Logger.Error("can't reach node %s", zap.String("key", key))
+					delete(miners, key)
+				}
 				Logger.Error("error in register client", zap.Error(err), zap.Any("body", body))
 			} else {
 				delete(miners, key)
@@ -97,12 +97,11 @@ func (mc *Chain) isRegistered() bool {
 			return false
 		}
 	} else {
-		var sharders []string
-		var err error
-		for _, sharder := range mc.Sharders.NodesMap {
-			sharders = append(sharders, "http://"+sharder.N2NHost+":"+strconv.Itoa(sharder.Port))
-		}
-
+		trace.Trace("Chain.isRegistered is NOT ActiveInChain")
+		var (
+			sharders = mc.Sharders.N2NURLs()
+			err      error
+		)
 		if node.Self.Type == node.NodeTypeMiner {
 			err = httpclientutil.MakeSCRestAPICall(minersc.ADDRESS, scRestAPIGetMinerList, nil, sharders, allMinersList, 1)
 		} else if node.Self.Type == node.NodeTypeSharder {
@@ -126,13 +125,15 @@ func (mc *Chain) isRegistered() bool {
 
 func (mc *Chain) ConfirmTransaction(t *httpclientutil.Transaction) bool {
 	active := mc.ActiveInChain()
-	var found, pastTime bool
-	var urls []string
-	for _, sharder := range mc.Sharders.NodesMap {
-		if !active || sharder.Status == node.NodeStatusActive {
-			urls = append(urls, "http://"+sharder.N2NHost+":"+strconv.Itoa(sharder.Port))
+	var (
+		found, pastTime bool
+		urls            []string
+	)
+	mc.Sharders.ForEach(func(sharder *node.Node) {
+		if !active || sharder.IsActive() {
+			urls = append(urls, sharder.GetN2NURLBase())
 		}
-	}
+	})
 	for !found && !pastTime {
 		txn, err := httpclientutil.GetTransactionStatus(t.Hash, urls, 1)
 		if active {
@@ -180,9 +181,9 @@ func (mc *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 	txn.ToClientID = minersc.ADDRESS
 	txn.PublicKey = node.Self.PublicKey
 	var minerUrls []string
-	for _, node := range mc.Miners.NodesMap {
+	mc.Miners.ForEach(func(node *node.Node) {
 		minerUrls = append(minerUrls, node.GetN2NURLBase())
-	}
+	})
 	err := httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls)
 	return txn, err
 }
