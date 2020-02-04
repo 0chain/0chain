@@ -24,28 +24,28 @@ var ErrBlockHashMismatch = common.NewError("block_hash_mismatch", "Block hash mi
 var ErrBlockStateHashMismatch = common.NewError("block_state_hash_mismatch", "Block state hash mismatch")
 
 const (
-	StateGenerated              = 1
-	StateVerificationPending    = iota
-	StateVerificationAccepted   = iota
-	StateVerificationRejected   = iota
-	StateVerifying              = iota
-	StateVerificationSuccessful = iota
-	StateVerificationFailed     = iota
-	StateNotarized              = iota
+	StateGenerated           = 1    // ?
+	StateVerificationPending = iota // ?
+	StateVerificationAccepted
+	StateVerificationRejected
+	StateVerifying
+	StateVerificationSuccessful
+	StateVerificationFailed
+	StateNotarized
 )
 
 const (
-	StatePending    = 0
-	StateComputing  = iota
-	StateFailed     = iota
-	StateSuccessful = iota
-	StateSynched    = iota
+	StatePending = iota
+	StateComputing
+	StateFailed
+	StateSuccessful
+	StateSynched
 )
 
 const (
-	VerificationPending    = 0
-	VerificationSuccessful = iota
-	VerificationFailed     = iota
+	VerificationPending = iota
+	VerificationSuccessful
+	VerificationFailed
 )
 
 /*UnverifiedBlockBody - used to compute the signature
