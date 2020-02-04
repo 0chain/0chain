@@ -85,11 +85,12 @@ type Block struct {
 
 	TxnsMap map[string]bool `json:"-"`
 
-	ClientState           util.MerklePatriciaTrieI `json:"-"`
-	stateStatus           int8
-	StateMutex            *sync.RWMutex `json:"_"`
-	blockState            int8
-	isNotarized           bool
+	ClientState util.MerklePatriciaTrieI `json:"-"`
+	stateStatus int8
+	StateMutex  *sync.RWMutex `json:"_"`
+	blockState  int8
+	isNotarized bool
+
 	ticketsMutex          *sync.RWMutex
 	verificationStatus    int
 	RunningTxnCount       int64           `json:"running_txn_count"`
@@ -267,6 +268,7 @@ func (b *Block) AddTransaction(t *transaction.Transaction) {
 func (b *Block) AddVerificationTicket(vt *VerificationTicket) bool {
 	b.ticketsMutex.Lock()
 	defer b.ticketsMutex.Unlock()
+
 	bvt := b.VerificationTickets
 	for _, t := range bvt {
 		if datastore.IsEqual(vt.VerifierID, t.VerifierID) {

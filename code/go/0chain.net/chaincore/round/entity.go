@@ -55,7 +55,9 @@ type Round struct {
 	VrfStartTime     time.Time
 
 	// --------------------------------
-	mutex           sync.RWMutex
+	// the RWMutext also provides Lock/Unlock method for IRound
+	// and RLock and RUnlock for external access
+	sync.RWMutex
 	RandomSeed      int64 `json:"round_random_seed"`
 	proposedBlocks  []*block.Block
 	notarizedBlocks []*block.Block
@@ -166,8 +168,8 @@ func (r *Round) SetRandomSeed(seed int64) {
 
 //GetRandomSeed - returns the random seed of the round
 func (r *Round) GetRandomSeed() int64 {
-	r.mutex.RLock()
-	defer r.mutex.RUnlock()
+	r.RLock()
+	defer r.RUnlock()
 	return r.RandomSeed
 }
 
@@ -183,8 +185,8 @@ func (r *Round) GetVRFOutput() string {
 
 /*AddNotarizedBlock - this will be concurrent as notarization is recognized by verifying as well as notarization message from others */
 func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool) {
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
+	r.Lock()
+	defer r.Unlock()
 
 	b, _ = r.addProposedBlock(b)
 	found := -1
@@ -226,8 +228,8 @@ func (r *Round) GetNotarizedBlocks() []*block.Block {
 // AddProposedBlock - this will be concurrent as notarization is recognized by
 // verifying as well as notarization message from others
 func (r *Round) AddProposedBlock(b *block.Block) (*block.Block, bool) {
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
+	r.Lock()
+	defer r.Unlock()
 
 	return r.addProposedBlock(b)
 }
@@ -248,15 +250,15 @@ func (r *Round) addProposedBlock(b *block.Block) (*block.Block, bool) {
 
 /*GetProposedBlocks - return all the blocks that have been proposed for this round */
 func (r *Round) GetProposedBlocks() []*block.Block {
-	r.mutex.RLock()
-	defer r.mutex.RUnlock()
+	r.RLock()
+	defer r.RUnlock()
 	return r.proposedBlocks
 }
 
 /*GetHeaviestNotarizedBlock - get the heaviest notarized block that we have in this round */
 func (r *Round) GetHeaviestNotarizedBlock() *block.Block {
-	r.mutex.RLock()
-	defer r.mutex.RUnlock()
+	r.RLock()
+	defer r.RUnlock()
 	rnb := r.notarizedBlocks
 	if len(rnb) == 0 {
 		return nil
@@ -266,8 +268,8 @@ func (r *Round) GetHeaviestNotarizedBlock() *block.Block {
 
 /*GetBestRankedNotarizedBlock - get the best ranked notarized block for this round */
 func (r *Round) GetBestRankedNotarizedBlock() *block.Block {
-	r.mutex.RLock()
-	defer r.mutex.RUnlock()
+	r.RLock()
+	defer r.RUnlock()
 	rnb := r.notarizedBlocks
 	if len(rnb) == 0 {
 		return nil
@@ -281,8 +283,8 @@ func (r *Round) GetBestRankedNotarizedBlock() *block.Block {
 
 /*Finalize - finalize the round */
 func (r *Round) Finalize(b *block.Block) {
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
+	r.Lock()
+	defer r.Unlock()
 	r.setState(RoundStateFinalized) // state is not protected
 	r.Block = b
 	r.BlockHash = b.Hash
@@ -290,8 +292,8 @@ func (r *Round) Finalize(b *block.Block) {
 
 /*SetFinalizing - the round is being finalized */
 func (r *Round) SetFinalizing() bool {
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
+	r.Lock()
+	defer r.Unlock()
 	if r.isFinalized() || r.isFinalizing() {
 		return false
 	}
@@ -301,8 +303,8 @@ func (r *Round) SetFinalizing() bool {
 
 /*IsFinalizing - is the round finalizing */
 func (r *Round) IsFinalizing() bool {
-	r.mutex.RLock()
-	defer r.mutex.RUnlock()
+	r.RLock()
+	defer r.RUnlock()
 	return r.isFinalizing()
 }
 
@@ -312,8 +314,8 @@ func (r *Round) isFinalizing() bool {
 
 /*IsFinalized - indicates if the round is finalized */
 func (r *Round) IsFinalized() bool {
-	r.mutex.RLock()
-	defer r.mutex.RUnlock()
+	r.RLock()
+	defer r.RUnlock()
 	return r.isFinalized()
 }
 
@@ -382,8 +384,8 @@ func (r *Round) ComputeMinerRanks(miners *node.Pool) {
 
 /*GetMinerRank - get the rank of element at the elementIdx position based on the permutation of the round */
 func (r *Round) GetMinerRank(miner *node.Node) int {
-	r.mutex.RLock()
-	defer r.mutex.RUnlock()
+	r.RLock()
+	defer r.RUnlock()
 	if r.minerPerm == nil {
 		pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
 		Logger.DPanic(fmt.Sprintf("miner ranks not computed yet: %v", r.GetState()))
@@ -394,8 +396,8 @@ func (r *Round) GetMinerRank(miner *node.Node) int {
 
 /*GetMinersByRank - get the rnaks of the miners */
 func (r *Round) GetMinersByRank(miners *node.Pool) []*node.Node {
-	r.mutex.RLock()
-	defer r.mutex.RUnlock()
+	r.RLock()
+	defer r.RUnlock()
 	nodes := miners.CopyList()
 	rminers := make([]*node.Node, len(nodes))
 	Logger.Info("get miners by rank", zap.Any("num_miners", len(nodes)), zap.Any("round", r.Number), zap.Any("r.minerPerm", r.minerPerm))
@@ -421,8 +423,8 @@ func (r *Round) Restart() {
 
 //AddAdditionalVRFShare - Adding additional VRFShare received for stats persp
 func (r *Round) AddAdditionalVRFShare(share *VRFShare) bool {
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
+	r.Lock()
+	defer r.Unlock()
 
 	if _, ok := r.shares[share.party.GetKey()]; ok {
 		Logger.Info("AddVRFShare Share is already there. Returning false.")
@@ -435,8 +437,8 @@ func (r *Round) AddAdditionalVRFShare(share *VRFShare) bool {
 
 //AddVRFShare - implement interface
 func (r *Round) AddVRFShare(share *VRFShare, threshold int) bool {
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
+	r.Lock()
+	defer r.Unlock()
 
 	if len(r.shares) >= threshold {
 		//if we already have enough shares, do not add.
@@ -454,8 +456,8 @@ func (r *Round) AddVRFShare(share *VRFShare, threshold int) bool {
 
 //GetVRFShares - implement interface
 func (r *Round) GetVRFShares() map[string]*VRFShare {
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
+	r.Lock()
+	defer r.Unlock()
 
 	return r.shares
 }
@@ -483,29 +485,9 @@ func (r *Round) setState(state int) {
 
 //HasRandomSeed - implement interface
 func (r *Round) HasRandomSeed() bool {
-	r.mutex.RLock()
-	defer r.mutex.RUnlock()
+	r.RLock()
+	defer r.RUnlock()
 	return r.hasRandomSeed
-}
-
-// Lock - implement interface
-func (r *Round) Lock() {
-	r.mutex.Lock()
-}
-
-// Unlock - implement interface
-func (r *Round) Unlock() {
-	r.mutex.Unlock()
-}
-
-// Lock - implement interface
-func (r *Round) RLock() {
-	r.mutex.RLock()
-}
-
-// Unlock - implement interface
-func (r *Round) RUnlock() {
-	r.mutex.RUnlock()
 }
 
 func (r *Round) AddTimeoutVote(num int, id string) {
