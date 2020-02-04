@@ -741,10 +741,6 @@ func (c *Chain) GetRound(roundNumber int64) round.RoundI {
 
 /*DeleteRound - delete a round and associated block data */
 func (c *Chain) DeleteRound(ctx context.Context, r round.RoundI) {
-
-	trace.Trace("DeleteRound ", r.GetRoundNumber())
-	// defer trace.Leave(trace.Enter("$FN round number:", r.GetRoundNumber()))
-
 	c.roundsMutex.Lock()
 	defer c.roundsMutex.Unlock()
 	delete(c.rounds, r.GetRoundNumber())
@@ -759,7 +755,6 @@ func (c *Chain) DeleteRoundsBelow(ctx context.Context, roundNumber int64) {
 	if threashold < 0 {
 		return
 	}
-
 
 	c.roundsMutex.Lock()
 	defer c.roundsMutex.Unlock()
