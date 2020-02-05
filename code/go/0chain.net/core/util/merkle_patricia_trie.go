@@ -844,7 +844,7 @@ func (mpt *MerklePatriciaTrie) Validate() error {
 	switch dbImpl := db.(type) {
 	case *MemoryNodeDB:
 	case *LevelNodeDB:
-		db = dbImpl.C
+		db = dbImpl.GetCurrent()
 	case *PNodeDB:
 		return nil
 	}

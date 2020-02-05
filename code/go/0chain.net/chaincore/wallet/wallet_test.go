@@ -9,12 +9,12 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/core/common"
-	"0chain.net/core/encryption"
-	"0chain.net/core/memorystore"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
+	"0chain.net/core/common"
+	"0chain.net/core/encryption"
+	"0chain.net/core/memorystore"
 
 	"0chain.net/core/util"
 )
@@ -111,9 +111,9 @@ func TestMPTChangeCollector(t *testing.T) {
 		for j := 1; j < 10000; j++ {
 			cmpt := GetMPT(LEVEL, util.Sequence(2010+j))
 			lndb := cmpt.GetNodeDB().(*util.LevelNodeDB)
-			lndb.P = lmpt.GetNodeDB()
+			lndb.SetPrev(lmpt.GetNodeDB())
 			cmpt.SetRoot(lmpt.GetRoot())
-			mndb := lndb.C.(*util.MemoryNodeDB)
+			mndb := lndb.GetCurrent().(*util.MemoryNodeDB)
 			mpt = lmpt
 			lmpt = cmpt
 			fmt.Printf("Generating for %v\n", 2010+j)
