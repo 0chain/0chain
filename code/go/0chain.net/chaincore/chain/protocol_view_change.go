@@ -2,10 +2,13 @@ package chain
 
 import (
 	"encoding/json"
+	"fmt"
+	"math"
 	"strconv"
 	"time"
 
 	"0chain.net/chaincore/client"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/transaction"
@@ -42,6 +45,7 @@ func (mc *Chain) InitSetup() {
 
 //RegisterClient registers client on BC
 func (mc *Chain) RegisterClient() {
+	thresholdByCount := config.GetThresholdCount()
 	if node.Self.Type == node.NodeTypeMiner {
 		clientMetadataProvider := datastore.GetEntityMetadata("client")
 		ctx := memorystore.WithEntityConnection(common.GetRootContext(), clientMetadataProvider)
@@ -58,14 +62,19 @@ func (mc *Chain) RegisterClient() {
 	for key, miner := range mc.Miners.NodesMap {
 		miners[key] = miner
 	}
-	// for len(mc.Miners.NodesMap) < 2*len(miners) {
-	for len(miners) > 0 {
+	registered := 0
+	consensus := int(math.Ceil((float64(thresholdByCount) / 100) * float64(len(miners))))
+	if consensus > len(miners) {
+		Logger.DPanic(fmt.Sprintf("number of miners %d is not enough relative to the threshold parameter %d%%(%d)", len(miners), thresholdByCount, consensus))
+	}
+	for registered < consensus {
 		for key, miner := range miners {
 			body, err := httpclientutil.SendPostRequest("http://"+miner.N2NHost+":"+strconv.Itoa(miner.Port)+httpclientutil.RegisterClient, nodeBytes, "", "", nil)
 			if err != nil {
 				Logger.Error("error in register client", zap.Error(err), zap.Any("body", body))
 			} else {
 				delete(miners, key)
+				registered++
 			}
 			time.Sleep(httpclientutil.SleepBetweenRetries * time.Millisecond)
 		}
