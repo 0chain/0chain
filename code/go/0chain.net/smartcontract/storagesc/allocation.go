@@ -103,10 +103,18 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 		allocationRequest.BlobberDetails = make([]*BlobberAllocation, 0)
 		allocationRequest.Stats = &StorageAllocationStats{}
 
-		// Uncomment the below line to get random blobber nodes
-		// blobberNodes := getRandomNode(allBlobbersList.Nodes, size)
-		blobberNodes := allBlobbersList.Nodes
-		for _, blobberNode := range blobberNodes {
+		var blobberNodes []*StorageNode
+		if len(allocationRequest.PreferredBlobbers) == size {
+			blobberNodes = getPreferredBlobbers(allocationRequest.PreferredBlobbers, allBlobbersList.Nodes)
+		} else {
+			// randomize blobber nodes
+			// blobberNodes = randomizeNodes(allBlobbersList.Nodes, size)
+
+			// Comment this line and uncomment above to randomize blobber nodes
+			blobberNodes = allBlobbersList.Nodes
+		}
+		for i := 0; i < size; i++ {
+			blobberNode := blobberNodes[i]
 			var blobberAllocation BlobberAllocation
 			blobberAllocation.Stats = &StorageAllocationStats{}
 			blobberAllocation.Size = (allocationRequest.Size + int64(size-1)) / int64(size)
@@ -192,7 +200,18 @@ func (sc *StorageSmartContract) updateAllocationRequest(t *transaction.Transacti
 	return string(buff), nil
 }
 
-func getRandomNode(in []*StorageNode, n int) []*StorageNode {
+func getPreferredBlobbers(preferredBlobbers []string, allBlobbers []*StorageNode) (selectedBlobbers []*StorageNode) {
+	blobberMap := make(map[string]*StorageNode)
+	for _, storageNode := range allBlobbers {
+		blobberMap[storageNode.ID] = storageNode
+	}
+	for _, ID := range preferredBlobbers {
+		selectedBlobbers = append(selectedBlobbers, blobberMap[ID])
+	}
+	return
+}
+
+func randomizeNodes(in []*StorageNode, n int) []*StorageNode {
 	out := make([]*StorageNode, 0)
 	nOut := minInt(len(in), n)
 	nOut = maxInt(1, nOut)
