@@ -88,6 +88,14 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction, funcName str
 		return resp, nil
 	}
 
+	if funcName == "update_allocation_request" {
+		resp, err := sc.updateAllocationRequest(t, input, balances)
+		if err != nil {
+			return "", err
+		}
+		return resp, nil
+	}
+
 	if funcName == "add_blobber" {
 		resp, err := sc.addBlobber(t, input, balances)
 		if err != nil {

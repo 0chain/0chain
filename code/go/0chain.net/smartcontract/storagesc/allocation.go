@@ -129,3 +129,57 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 	}
 	return "", common.NewError("invalid_allocation_request", "Failed storage allocate")
 }
+
+func (sc *StorageSmartContract) updateAllocationRequest(t *transaction.Transaction, input []byte, balances c_state.StateContextI) (string, error) {
+	allBlobbersList, err := sc.getBlobbersList(balances)
+	if err != nil {
+		return "", common.NewError("allocation_updation_failed", "No Blobbers registered. Failed to update a storage allocation")
+	}
+
+	if len(allBlobbersList.Nodes) == 0 {
+		return "", common.NewError("allocation_updation_failed", "No Blobbers registered. Failed to update a storage allocation")
+	}
+
+	if len(t.ClientID) == 0 {
+		return "", common.NewError("allocation_updation_failed", "Invalid client in the transaction. No public key found")
+	}
+
+	var updatedAllocationInput StorageAllocation
+
+	err = updatedAllocationInput.Decode(input)
+	if err != nil {
+		return "", common.NewError("allocation_updation_failed", "Failed to update a storage allocation")
+	}
+
+	oldAllocations, err := sc.getAllocationsList(t.ClientID, balances)
+	if err != nil {
+		return "", common.NewError("allocation_updation_failed", "Failed to find existing allocation")
+	}
+
+	oldAllocation := &StorageAllocation{}
+	oldAllocation.ID = oldAllocations.List[0]
+	oldAllocationBytes, err := balances.GetTrieNode(oldAllocation.GetKey(sc.ID))
+	if err != nil {
+		return "", common.NewError("allocation_updation_failed", "Failed to find existing allocation")
+	}
+
+	oldAllocation.Decode(oldAllocationBytes.Encode())
+	size := oldAllocation.DataShards + oldAllocation.ParityShards
+	updateSize := (updatedAllocationInput.Size + int64(size-1)) / int64(size)
+
+	if updateSize > 0 {
+		for _, blobberAllocation := range oldAllocation.BlobberDetails {
+			blobberAllocation.Size = blobberAllocation.Size + updateSize
+		}
+	}
+	
+	oldAllocation.Size = oldAllocation.Size + updatedAllocationInput.Size
+	oldAllocation.Expiration = oldAllocation.Expiration + updatedAllocationInput.Expiration
+	_, err = balances.InsertTrieNode(oldAllocation.GetKey(sc.ID), oldAllocation)
+	if err != nil {
+		return "", common.NewError("allocation_updation_failed", "Failed to update existing allocation")
+	}
+
+	buff := oldAllocation.Encode()
+	return string(buff), nil
+}
