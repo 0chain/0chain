@@ -20,7 +20,7 @@ func (np *Pool) StatusMonitor(ctx context.Context) {
 	np.statusMonitor(ctx)
 	updateTimer := time.NewTimer(time.Second)
 	monitorTimer := time.NewTimer(time.Second)
-	for true {
+	for {
 		select {
 		case <-ctx.Done():
 			return
@@ -47,18 +47,23 @@ func (np *Pool) OneTimeStatusMonitor(ctx context.Context) {
 func (np *Pool) statusUpdate(ctx context.Context) {
 	nodes := np.shuffleNodes()
 	for _, node := range nodes {
-		if node == Self.Node {
+		if Self.IsEq(node) {
 			continue
 		}
-		if common.Within(node.LastActiveTime.Unix(), 10) {
-			node.updateMessageTimings()
-			if time.Since(node.Info.AsOf) < 60*time.Second {
-				continue
+		func() {
+			node.mutex.Lock()
+			defer node.mutex.Unlock()
+
+			if common.Within(node.LastActiveTime.Unix(), 10) {
+				node.updateMessageTimings()
+				if time.Since(node.Info.AsOf) < 60*time.Second {
+					return
+				}
 			}
-		}
-		if node.SendErrors-node.ErrorCount > 5 {
-			node.Status = NodeStatusInactive
-		}
+			if node.SendErrors-node.ErrorCount > 5 {
+				node.Status = NodeStatusInactive
+			}
+		}()
 	}
 	np.ComputeNetworkStats()
 }
@@ -66,43 +71,61 @@ func (np *Pool) statusUpdate(ctx context.Context) {
 func (np *Pool) statusMonitor(ctx context.Context) {
 	nodes := np.shuffleNodes()
 	for _, node := range nodes {
-		if node == Self.Node {
+		if Self.IsEq(node) {
 			continue
 		}
-		if common.Within(node.LastActiveTime.Unix(), 10) {
-			node.updateMessageTimings()
-			if time.Since(node.Info.AsOf) < 60*time.Second {
-				continue
-			}
-		}
-		statusURL := node.GetStatusURL()
-		ts := time.Now().UTC()
-		data, hash, signature, err := Self.TimeStampSignature()
-		if err != nil {
-			panic(err)
-		}
-		statusURL = fmt.Sprintf("%v?id=%v&data=%v&hash=%v&signature=%v", statusURL, Self.Node.GetKey(), data, hash, signature)
-		resp, err := httpClient.Get(statusURL)
-		if err != nil {
-			node.ErrorCount++
-			if node.IsActive() {
-				if node.ErrorCount > 5 {
-					node.Status = NodeStatusInactive
-					N2n.Error("Node inactive", zap.String("node_type", node.GetNodeTypeName()), zap.Int("set_index", node.SetIndex), zap.Any("node_id", node.GetKey()), zap.Error(err))
+
+		var (
+			statusURL string
+			ts        time.Time
+		)
+		node.mutex.Lock()
+		{
+
+			if common.Within(node.LastActiveTime.Unix(), 10) {
+				node.updateMessageTimings()
+				if time.Since(node.Info.AsOf) < 60*time.Second {
+					node.mutex.Unlock()
+					continue
 				}
 			}
-		} else {
-			if err := common.FromJSON(resp.Body, &node.Info); err == nil {
-				node.Info.AsOf = time.Now()
+			statusURL = node.GetStatusURL()
+			ts = time.Now().UTC()
+			data, hash, signature, err := Self.TimeStampSignature()
+			if err != nil {
+				panic(err)
 			}
-			resp.Body.Close()
-			if !node.IsActive() {
-				node.ErrorCount = 0
-				node.Status = NodeStatusActive
-				N2n.Info("Node active", zap.String("node_type", node.GetNodeTypeName()), zap.Int("set_index", node.SetIndex), zap.Any("key", node.GetKey()))
-			}
-			node.LastActiveTime = ts
+			statusURL = fmt.Sprintf("%v?id=%v&data=%v&hash=%v&signature=%v", statusURL, Self.GetKey(), data, hash, signature)
 		}
+		node.mutex.Unlock()
+
+		resp, err := httpClient.Get(statusURL) // don't lock for request
+
+		node.mutex.Lock()
+		{
+			if err != nil {
+				node.ErrorCount++
+				if node.isActive() {
+					if node.ErrorCount > 5 {
+						node.Status = NodeStatusInactive
+						N2n.Error("Node inactive", zap.String("node_type", node.GetNodeTypeName()), zap.Int("set_index", node.SetIndex), zap.Any("node_id", node.ID), zap.Error(err))
+					}
+				}
+			} else {
+				if err := common.FromJSON(resp.Body, &node.Info); err == nil {
+					node.Info.AsOf = time.Now()
+				}
+				resp.Body.Close()
+				if !node.isActive() {
+					node.ErrorCount = 0
+					node.Status = NodeStatusActive
+					N2n.Info("Node active", zap.String("node_type", node.GetNodeTypeName()), zap.Int("set_index", node.SetIndex), zap.Any("key", node.ID))
+				}
+				node.LastActiveTime = ts
+			}
+
+		}
+		node.mutex.Unlock()
 	}
 	np.ComputeNetworkStats()
 }
@@ -124,7 +147,7 @@ func (np *Pool) DownloadNodeData(node *Node) bool {
 	var changed = false
 	for _, node := range dnp.Nodes {
 		if np.GetNode(node.GetKey()) == nil {
-			node.Status = NodeStatusActive // TODO (kostyarin): async access
+			node.Status = NodeStatusActive // TODO (sfxdx): async access
 			np.AddNode(node)
 			changed = true
 		}

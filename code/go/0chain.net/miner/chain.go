@@ -233,8 +233,8 @@ func (mc *Chain) ChainStarted(ctx context.Context) bool {
 				started int
 			)
 			mc.Miners.ForEach(func(n *node.Node) {
-				// NOTE (kostyarin): C like &arg is not so effective in Go
-				//                   as argument and reply
+				// NOTE (sfxdx): C like &arg is not so effective in Go
+				//               as argument and reply
 				mc.RequestStartChain(n, &start, &started)
 			})
 			if start >= mc.T {

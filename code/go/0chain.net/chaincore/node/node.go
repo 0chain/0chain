@@ -12,7 +12,6 @@ import (
 
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
-	"0chain.net/core/build"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
@@ -104,21 +103,23 @@ func GetNode(nodeID string) *Node {
 	return globalRegistry.node(nodeID)
 }
 
-var (
-	NodeStatusActive   = 0
-	NodeStatusInactive = 1
+const (
+	NodeStatusActive = iota
+	NodeStatusInactive
 )
 
-var (
-	NodeTypeMiner   int8 = 0
-	NodeTypeSharder int8 = 1
-	NodeTypeBlobber int8 = 2
+const (
+	NodeTypeMiner int8 = iota
+	NodeTypeSharder
+	NodeTypeBlobber
 )
 
 var NodeTypeNames = common.CreateLookups("m", "Miner", "s", "Sharder", "b", "Blobber")
 
 /*Node - a struct holding the node information */
 type Node struct {
+	mutex sync.Mutex // node fields protection
+
 	client.Client
 	N2NHost        string    `json:"n2n_host"`
 	Host           string    `json:"host"`
@@ -144,8 +145,6 @@ type Node struct {
 	LargeMessagePullServeTime float64 `json:"-"`
 	SmallMessagePullServeTime float64 `json:"-"`
 
-	mutex *sync.Mutex
-
 	ProtocolStats interface{} `json:"-"`
 
 	idBytes []byte
@@ -162,7 +161,6 @@ func Provider() *Node {
 	for i := 0; i < cap(node.CommChannel); i++ {
 		node.CommChannel <- true
 	}
-	node.mutex = &sync.Mutex{}
 	node.TimersByURI = make(map[string]metrics.Timer, 10)
 	node.SizeByURI = make(map[string]metrics.Histogram, 10)
 	return node
@@ -175,13 +173,10 @@ func Setup(node *Node) {
 	for i := 0; i < cap(node.CommChannel); i++ {
 		node.CommChannel <- true
 	}
-	node.mutex = &sync.Mutex{}
 	node.TimersByURI = make(map[string]metrics.Timer, 10)
 	node.SizeByURI = make(map[string]metrics.Histogram, 10)
 	node.ComputeProperties()
-	if Self.PublicKey == node.PublicKey {
-		setSelfNode(node)
-	}
+	Self.SetNodeIfEqKey(node)
 }
 
 /*Equals - if two nodes are equal. Only check by id, we don't accept configuration from anyone */
@@ -239,9 +234,7 @@ func Read(line string) (*Node, error) {
 		return nil, common.NewError("invalid_client_id", fmt.Sprintf("public key: %v, client_id: %v, hash: %v\n", node.PublicKey, node.ID, hash))
 	}
 	node.ComputeProperties()
-	if Self.PublicKey == node.PublicKey {
-		setSelfNode(node)
-	}
+	Self.SetNodeIfEqKey(node)
 	return node, nil
 }
 
@@ -266,17 +259,8 @@ func NewNode(nc map[interface{}]interface{}) (*Node, error) {
 		return nil, common.NewError("invalid_client_id", fmt.Sprintf("public key: %v, client_id: %v, hash: %v\n", node.PublicKey, node.ID, hash))
 	}
 	node.ComputeProperties()
-	if Self.PublicKey == node.PublicKey {
-		setSelfNode(node)
-	}
+	Self.SetNodeIfEqKey(node)
 	return node, nil
-}
-
-func setSelfNode(n *Node) {
-	Self.Node = n
-	Self.Node.Info.StateMissingNodes = -1
-	Self.Node.Info.BuildTag = build.BuildTag
-	Self.Node.Status = NodeStatusActive
 }
 
 /*ComputeProperties - implement entity interface */
@@ -369,8 +353,6 @@ func (n *Node) updateMessageTimings() {
 }
 
 func (n *Node) updateSendMessageTimings() {
-	n.mutex.Lock()
-	defer n.mutex.Unlock()
 	var minval = math.MaxFloat64
 	var maxval float64
 	var maxCount int64
@@ -409,8 +391,6 @@ func (n *Node) updateSendMessageTimings() {
 }
 
 func (n *Node) updateRequestMessageTimings() {
-	n.mutex.Lock()
-	defer n.mutex.Unlock()
 	var minval = math.MaxFloat64
 	var maxval float64
 	var minSize = math.MaxFloat64
@@ -471,8 +451,16 @@ func (n *Node) SetID(id string) error {
 	return nil
 }
 
+// without a lock
+func (n *Node) isActive() bool {
+	return n.Status == NodeStatusActive
+}
+
 //IsActive - returns if this node is active or not
 func (n *Node) IsActive() bool {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+
 	return n.Status == NodeStatusActive
 }
 
@@ -518,6 +506,9 @@ func (n *Node) getTime(uri string) float64 {
 }
 
 func (n *Node) SetNodeInfo(oldNode *Node) {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+
 	n.Sent = oldNode.Sent
 	n.SendErrors = oldNode.SendErrors
 	n.Received = oldNode.Received
@@ -530,4 +521,12 @@ func (n *Node) SetNodeInfo(oldNode *Node) {
 	n.ProtocolStats = oldNode.ProtocolStats
 	n.Info = oldNode.Info
 	n.Status = oldNode.Status
+}
+
+// OnInfo performs a work on NodeInfo of the Node asynchronous safe.
+func (n *Node) OnInfo(onInfoFunc func(info *Info)) {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+
+	onInfoFunc(&n.Info)
 }

@@ -25,7 +25,6 @@ func atomicStoreFloat64(addr *uint64, val float64) {
 	atomic.StoreUint64(addr, math.Float64bits(val))
 }
 
-
 /*Pool - a pool of nodes used for the same purpose */
 type Pool struct {
 	Type int8 `json:"type"`
@@ -196,7 +195,7 @@ func (np *Pool) computeNodePositions() {
 		return np.Nodes[i].GetKey() < np.Nodes[j].GetKey()
 	})
 	for idx, node := range np.Nodes {
-		node.SetIndex = idx // TODO (kostyarin): async unsafe ?
+		node.SetIndex = idx // TODO (sfxdx): async unsafe ?
 	}
 }
 
@@ -212,8 +211,8 @@ func (np *Pool) computeNodesArray() {
 
 /*ComputeProperties - compute properties after all the initialization of the node pool */
 func (np *Pool) ComputeProperties() {
-	np.mmx.RLock()
-	defer np.mmx.RUnlock()
+	np.mmx.Lock()
+	defer np.mmx.Unlock()
 
 	np.computeNodesArray()
 	for _, node := range np.Nodes {
@@ -236,7 +235,7 @@ func (np *Pool) ComputeNetworkStats() {
 	var medianTime float64
 	var count int
 	for _, nd := range nodes {
-		if nd == Self.Node {
+		if Self.IsEq(nd) {
 			continue
 		}
 		if !nd.IsActive() {
@@ -251,9 +250,8 @@ func (np *Pool) ComputeNetworkStats() {
 	//
 	np.setMedianNetworkTime(medianTime)
 	mt := time.Duration(medianTime/1000000.) * time.Millisecond
-	switch np.Type {
-	case NodeTypeMiner:
-		Self.Node.Info.MinersMedianNetworkTime = mt
+	if np.Type == NodeTypeMiner {
+		Self.OnInfo(func(info *Info) { info.MinersMedianNetworkTime = mt })
 	}
 }
 
@@ -269,7 +267,7 @@ func (np *Pool) Keys() (keys []string) {
 
 	keys = make([]string, 0, len(np.NodesMap))
 
-	// TODO (kostyarin): can we use ` for k := range` instead of the GetKey?
+	// TODO (sfxdx): can we use ` for k := range` instead of the GetKey?
 	for _, node := range np.NodesMap {
 		keys = append(keys, node.GetKey())
 	}
