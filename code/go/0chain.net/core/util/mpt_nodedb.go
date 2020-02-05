@@ -250,28 +250,57 @@ func (mndb *MemoryNodeDB) Validate(root Node) error {
 
 /*LevelNodeDB - a multi-level node db. It has a current node db and a previous node db. This is useful to update without changing the previous db. */
 type LevelNodeDB struct {
-	C                NodeDB
-	P                NodeDB
+	mu               *sync.RWMutex
+	current          NodeDB
+	prev             NodeDB
 	PropagateDeletes bool // Setting this to false (default) will not propagate delete to lower level db
 	DeletedNodes     map[StrKey]bool
 }
 
 /*NewLevelNodeDB - create a level node db */
 func NewLevelNodeDB(curNDB NodeDB, prevNDB NodeDB, propagateDeletes bool) *LevelNodeDB {
-	lndb := &LevelNodeDB{C: curNDB, P: prevNDB, PropagateDeletes: propagateDeletes}
+	lndb := &LevelNodeDB{
+		current:          curNDB,
+		prev:             prevNDB,
+		PropagateDeletes: propagateDeletes,
+		mu:               &sync.RWMutex{},
+	}
 	lndb.DeletedNodes = make(map[StrKey]bool)
 	return lndb
 }
 
+// GetCurrent returns current node db
+func (lndb *LevelNodeDB) GetCurrent() NodeDB {
+	lndb.mu.RLock()
+	defer lndb.mu.RUnlock()
+	return lndb.current
+}
+
+// GetPrev returns previous node db
+func (lndb *LevelNodeDB) GetPrev() NodeDB {
+	lndb.mu.RLock()
+	defer lndb.mu.RUnlock()
+	return lndb.prev
+}
+
+// SetPrev sets  previous node db
+func (lndb *LevelNodeDB) SetPrev(prevDB NodeDB) {
+	lndb.mu.Lock()
+	defer lndb.mu.Unlock()
+	lndb.prev = prevDB
+}
+
 func (lndb *LevelNodeDB) isCurrentPersistent() bool {
-	_, ok := lndb.C.(*PNodeDB)
+	_, ok := lndb.current.(*PNodeDB)
 	return ok
 }
 
 /*GetNode - implement interface */
 func (lndb *LevelNodeDB) GetNode(key Key) (Node, error) {
-	c := lndb.C
-	p := lndb.P
+	lndb.mu.RLock()
+	defer lndb.mu.RUnlock()
+	c := lndb.current
+	p := lndb.prev
 	node, err := c.GetNode(key)
 	if err != nil {
 		if p != c {
@@ -284,13 +313,18 @@ func (lndb *LevelNodeDB) GetNode(key Key) (Node, error) {
 
 /*PutNode - implement interface */
 func (lndb *LevelNodeDB) PutNode(key Key, node Node) error {
-	return lndb.C.PutNode(key, node)
+	lndb.mu.RLock()
+	defer lndb.mu.RUnlock()
+	return lndb.current.PutNode(key, node)
 }
 
 /*DeleteNode - implement interface */
 func (lndb *LevelNodeDB) DeleteNode(key Key) error {
-	c := lndb.C
-	p := lndb.P
+	lndb.mu.RLock()
+	defer lndb.mu.RUnlock()
+
+	c := lndb.current
+	p := lndb.prev
 	_, err := c.GetNode(key)
 	if err != nil {
 		if lndb.PropagateDeletes && p != c {
@@ -342,8 +376,10 @@ func (lndb *LevelNodeDB) MultiDeleteNode(keys []Key) error {
 
 /*Iterate - implement interface */
 func (lndb *LevelNodeDB) Iterate(ctx context.Context, handler NodeDBIteratorHandler) error {
-	c := lndb.C
-	p := lndb.P
+	lndb.mu.RLock()
+	defer lndb.mu.RUnlock()
+	c := lndb.current
+	p := lndb.prev
 	err := c.Iterate(ctx, handler)
 	if err != nil {
 		return err
@@ -356,8 +392,10 @@ func (lndb *LevelNodeDB) Iterate(ctx context.Context, handler NodeDBIteratorHand
 
 /*Size - implement interface */
 func (lndb *LevelNodeDB) Size(ctx context.Context) int64 {
-	c := lndb.C
-	p := lndb.P
+	lndb.mu.RLock()
+	defer lndb.mu.RUnlock()
+	c := lndb.current
+	p := lndb.prev
 	size := c.Size(ctx)
 	if p != c {
 		size += p.Size(ctx)
@@ -373,8 +411,10 @@ func (lndb *LevelNodeDB) PruneBelowVersion(ctx context.Context, version Sequence
 
 /*RebaseCurrentDB - set the current database */
 func (lndb *LevelNodeDB) RebaseCurrentDB(ndb NodeDB) {
-	lndb.C = ndb
-	lndb.P = lndb.C
+	lndb.mu.Lock()
+	defer lndb.mu.Unlock()
+	lndb.current = ndb
+	lndb.prev = lndb.current
 }
 
 //MergeState - merge the state from another node db
