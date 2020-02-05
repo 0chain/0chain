@@ -2,7 +2,9 @@ package storagesc
 
 import (
 	"encoding/json"
+	"math/rand"
 	"sort"
+	"time"
 
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
@@ -101,8 +103,10 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 		allocationRequest.BlobberDetails = make([]*BlobberAllocation, 0)
 		allocationRequest.Stats = &StorageAllocationStats{}
 
-		for i := 0; i < size; i++ {
-			blobberNode := allBlobbersList.Nodes[i]
+		// Uncomment the below line to get random blobber nodes
+		// blobberNodes := getRandomNode(allBlobbersList.Nodes, size)
+		blobberNodes := allBlobbersList.Nodes
+		for _, blobberNode := range blobberNodes {
 			var blobberAllocation BlobberAllocation
 			blobberAllocation.Stats = &StorageAllocationStats{}
 			blobberAllocation.Size = (allocationRequest.Size + int64(size-1)) / int64(size)
@@ -169,7 +173,7 @@ func (sc *StorageSmartContract) updateAllocationRequest(t *transaction.Transacti
 	var updateSize int64
 	if updatedAllocationInput.Size > 0 {
 		updateSize = (updatedAllocationInput.Size + int64(size-1)) / int64(size)
-	}else{
+	} else {
 		updateSize = (updatedAllocationInput.Size - int64(size-1)) / int64(size)
 	}
 
@@ -186,4 +190,44 @@ func (sc *StorageSmartContract) updateAllocationRequest(t *transaction.Transacti
 
 	buff := oldAllocation.Encode()
 	return string(buff), nil
+}
+
+func getRandomNode(in []*StorageNode, n int) []*StorageNode {
+	out := make([]*StorageNode, 0)
+	nOut := minInt(len(in), n)
+	nOut = maxInt(1, nOut)
+	randGen := rand.New(rand.NewSource(time.Now().UnixNano()))
+	for {
+		i := randGen.Intn(len(in))
+		if !checkExists(in[i], out) {
+			out = append(out, in[i])
+		}
+		if len(out) >= nOut {
+			break
+		}
+	}
+	return out
+}
+
+func minInt(x, y int) int {
+	if x < y {
+		return x
+	}
+	return y
+}
+
+func maxInt(x, y int) int {
+	if x > y {
+		return x
+	}
+	return y
+}
+
+func checkExists(c *StorageNode, sl []*StorageNode) bool {
+	for _, s := range sl {
+		if s.ID == c.ID {
+			return true
+		}
+	}
+	return false
 }
