@@ -46,8 +46,8 @@ var minerChain = &Chain{}
 /*SetupMinerChain - setup the miner's chain */
 func SetupMinerChain(c *chain.Chain) {
 	minerChain.Chain = c
-	minerChain.BlockMessageChannel = make(chan *BlockMessage, 128)
-	minerChain.DKGMutex = &sync.Mutex{}
+	minerChain.blockMessageChannel = make(chan *BlockMessage, 128)
+	minerChain.muDKG = &sync.Mutex{}
 	c.SetFetchedNotarizedBlockHandler(minerChain)
 	c.RoundF = MinerRoundFactory{}
 }
@@ -97,18 +97,24 @@ func (mrf MinerRoundFactory) CreateRoundF(roundNum int64) interface{} {
 /*Chain - A miner chain to manage the miner activities */
 type Chain struct {
 	*chain.Chain
-	BlockMessageChannel chan *BlockMessage
-	DiscoverClients     bool
-	CurrentDKG          *bls.DKG
-	DKGMutex            *sync.Mutex
-	ViewChangeDKG       *bls.DKG
-	NextViewChange      int64
-	Started             bool
+	blockMessageChannel chan *BlockMessage
+	muDKG               *sync.Mutex
+	currentDKG          *bls.DKG
+	viewChangeDKG       *bls.DKG
+	nextViewChange      int64
+	discoverClients     bool
+	started             bool
+	dkgSet              bool
+}
+
+// SetDiscoverClients set the discover clients parameter
+func (mc *Chain) SetDiscoverClients(b bool) {
+	mc.discoverClients = b
 }
 
 /*GetBlockMessageChannel - get the block messages channel */
 func (mc *Chain) GetBlockMessageChannel() chan *BlockMessage {
-	return mc.BlockMessageChannel
+	return mc.blockMessageChannel
 }
 
 /*SetupGenesisBlock - setup the genesis block for this chain */
@@ -205,7 +211,7 @@ func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) erro
 }
 
 func (mc *Chain) ViewChange(ctx context.Context) {
-	if mc.CurrentDKG == nil || mc.CurrentDKG.StartingRound <= mc.NextViewChange {
+	if mc.currentDKG == nil || mc.currentDKG.StartingRound <= mc.nextViewChange {
 		err := mc.UpdateMagicBlock(mc.ViewChangeMagicBlock)
 		if err != nil {
 			Logger.DPanic(err.Error())
@@ -233,8 +239,8 @@ func (mc *Chain) ChainStarted(ctx context.Context) bool {
 			if started >= mc.T {
 				return true
 			}
-			if timeoutCount == 20 || mc.Started {
-				return mc.Started
+			if timeoutCount == 20 || mc.started {
+				return mc.started
 			}
 			timeoutCount++
 			timer = time.NewTimer(time.Millisecond * time.Duration(mc.RoundTimeoutSofttoMin))
@@ -260,7 +266,7 @@ func StartChainRequestHandler(ctx context.Context, r *http.Request) (interface{}
 		return nil, common.NewError("failed to send start chain", fmt.Sprintf("differt_rounds -- current_round: %v, requested_round: %v", mc.CurrentRound, round))
 	}
 	message := datastore.GetEntityMetadata("start_chain").Instance().(*StartChain)
-	message.Start = !mc.Started
+	message.Start = !mc.started
 	message.ID = r.FormValue("round")
 	return message, nil
 }
@@ -268,7 +274,7 @@ func StartChainRequestHandler(ctx context.Context, r *http.Request) (interface{}
 /*SendDKGShare sends the generated secShare to the given node */
 func (mc *Chain) RequestStartChain(n *node.Node, start, started *int) error {
 	if node.Self.ID == n.ID {
-		if !mc.Started {
+		if !mc.started {
 			*start++
 		} else {
 			*started++

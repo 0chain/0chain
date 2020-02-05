@@ -60,24 +60,24 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) err
 	self := node.GetSelfNode(ctx)
 	dkgSummary, _ := GetDKGSummaryFromStore(ctx, strconv.FormatInt(mb.MagicBlockNumber, 10))
 	if dkgSummary.SecretShares != nil {
-		mc.DKGMutex.Lock()
-		defer mc.DKGMutex.Unlock()
-		mc.CurrentDKG = bls.MakeDKG(mb.T, mb.N, self.ID)
-		mc.CurrentDKG.MagicBlockNumber = mb.MagicBlockNumber
-		mc.CurrentDKG.StartingRound = mb.StartingRound
+		mc.muDKG.Lock()
+		defer mc.muDKG.Unlock()
+		mc.currentDKG = bls.MakeDKG(mb.T, mb.N, self.ID)
+		mc.currentDKG.MagicBlockNumber = mb.MagicBlockNumber
+		mc.currentDKG.StartingRound = mb.StartingRound
 		for k := range mb.Miners.NodesMap {
 			if savedShare, ok := dkgSummary.SecretShares[ComputeBlsID(k)]; ok {
-				mc.CurrentDKG.AddSecretShare(bls.ComputeIDdkg(k), savedShare)
+				mc.currentDKG.AddSecretShare(bls.ComputeIDdkg(k), savedShare)
 			} else if v, ok := mb.ShareOrSigns.Shares[k]; ok {
 				if share, ok := v.ShareOrSigns[node.Self.ID]; ok && share.Share != "" {
-					mc.CurrentDKG.AddSecretShare(bls.ComputeIDdkg(k), share.Share)
+					mc.currentDKG.AddSecretShare(bls.ComputeIDdkg(k), share.Share)
 				}
 			}
 		}
-		if mc.CurrentDKG.HasAllSecretShares() {
-			mc.CurrentDKG.AggregateSecretKeyShares()
-			mc.CurrentDKG.Pi = mc.CurrentDKG.Si.GetPublicKey()
-			mc.CurrentDKG.AggregatePublicKeyShares(mb.Mpks.GetMpkMap())
+		if mc.currentDKG.HasAllSecretShares() {
+			mc.currentDKG.AggregateSecretKeyShares()
+			mc.currentDKG.Pi = mc.currentDKG.Si.GetPublicKey()
+			mc.currentDKG.AggregatePublicKeyShares(mb.Mpks.GetMpkMap())
 			return nil
 		}
 		return common.NewError("failed to set dkg from store", "not enough secret shares for dkg")
@@ -119,7 +119,7 @@ func VerifySigShares() bool {
 
 /*GetBlsThreshold Handy api for now. move this to protocol_vrf */
 func (mc *Chain) GetBlsThreshold() int {
-	return mc.CurrentDKG.T
+	return mc.currentDKG.T
 }
 
 /*ComputeBlsID Handy API to get the ID used in the library */
@@ -165,17 +165,17 @@ func (mc *Chain) GetBlsShare(ctx context.Context, r, pr *round.Round) (string, e
 		Logger.Debug("returning standard string as DKG is not enabled.")
 		return encryption.Hash("0chain"), nil
 	}
-	Logger.Info("DKG getBlsShare ", zap.Int64("Round Number", r.Number), zap.Any("next_view_change", mc.NextViewChange))
+	Logger.Info("DKG getBlsShare ", zap.Int64("Round Number", r.Number), zap.Any("next_view_change", mc.nextViewChange))
 	msg, err := mc.GetBlsMessageForRound(r)
 	if err != nil {
 		return "", err
 	}
-	if mc.NextViewChange <= r.Number && ((mc.CurrentDKG != nil && mc.CurrentDKG.StartingRound < mc.NextViewChange) || mc.CurrentDKG == nil) {
+	if mc.nextViewChange <= r.Number && ((mc.currentDKG != nil && mc.currentDKG.StartingRound < mc.nextViewChange) || mc.currentDKG == nil) {
 		mc.ViewChange(ctx)
 	}
-	mc.DKGMutex.Lock()
-	defer mc.DKGMutex.Unlock()
-	sigShare := mc.CurrentDKG.Sign(msg)
+	mc.muDKG.Lock()
+	defer mc.muDKG.Unlock()
+	sigShare := mc.currentDKG.Sign(msg)
 	return sigShare.GetHexString(), nil
 }
 
@@ -191,20 +191,20 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 	if err != nil {
 		return false
 	}
-	if mc.NextViewChange <= mr.Number && ((mc.CurrentDKG != nil && mc.CurrentDKG.StartingRound < mc.NextViewChange) || mc.CurrentDKG == nil) {
+	if mc.nextViewChange <= mr.Number && ((mc.currentDKG != nil && mc.currentDKG.StartingRound < mc.nextViewChange) || mc.currentDKG == nil) {
 		mc.ViewChange(ctx)
 	}
 	var share bls.Sign
 	share.SetHexString(vrfs.Share)
 	partyID := bls.ComputeIDdkg(vrfs.GetParty().ID)
-	if mc.CurrentDKG == nil {
+	if mc.currentDKG == nil {
 		return false
 	}
-	mc.DKGMutex.Lock()
-	defer mc.DKGMutex.Unlock()
-	if !mc.CurrentDKG.VerifySignature(&share, msg, partyID) {
+	mc.muDKG.Lock()
+	defer mc.muDKG.Unlock()
+	if !mc.currentDKG.VerifySignature(&share, msg, partyID) {
 		stringID := (&partyID).GetHexString()
-		pi := mc.CurrentDKG.Gmpk[partyID]
+		pi := mc.currentDKG.Gmpk[partyID]
 		Logger.Error("failed to verify share", zap.Any("share", share.GetHexString()), zap.Any("message", msg), zap.Any("from", stringID), zap.Any("pi", pi.GetHexString()))
 		return false
 	} else {
@@ -252,7 +252,7 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round) {
 			return
 		}
 		recSig, recFrom := getVRFShareInfo(mr)
-		groupSignature, _ := mc.CurrentDKG.CalBlsGpSign(recSig, recFrom)
+		groupSignature, _ := mc.currentDKG.CalBlsGpSign(recSig, recFrom)
 		rbOutput := encryption.Hash(groupSignature.GetHexString())
 		Logger.Info("recieve bls sign", zap.Any("sigs", recSig), zap.Any("from", recFrom), zap.Any("group_signature", groupSignature.GetHexString()))
 
