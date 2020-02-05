@@ -113,7 +113,7 @@ func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
 }
 
 func (mc *Chain) startRound(ctx context.Context, r *Round, seed int64) {
-	if mc.NextViewChange <= r.Number && ((mc.CurrentDKG != nil && mc.CurrentDKG.StartingRound < mc.NextViewChange) || mc.CurrentDKG == nil) {
+	if mc.nextViewChange <= r.Number && ((mc.currentDKG != nil && mc.currentDKG.StartingRound < mc.nextViewChange) || mc.currentDKG == nil) {
 		mc.ViewChange(ctx)
 	}
 	if !mc.SetRandomSeed(r.Round, seed) {

@@ -85,7 +85,7 @@ func main() {
 
 	miner.SetupMinerChain(serverChain)
 	mc := miner.GetMinerChain()
-	mc.DiscoverClients = viper.GetBool("server_chain.client.discover")
+	mc.SetDiscoverClients(viper.GetBool("server_chain.client.discover"))
 	mc.SetGenerationTimeout(viper.GetInt("server_chain.block.generation.timeout"))
 	mc.SetRetryWaitTime(viper.GetInt("server_chain.block.generation.retry_wait_time"))
 	mc.SetupConfigInfoDB()
@@ -109,7 +109,7 @@ func main() {
 		if err != nil {
 			Logger.Panic("Error reading keys file. Non-genesis miner has no host or port number", zap.Error(err))
 		}
-		Logger.Info("Inside nonGenesis", zap.String("host_name", hostName), zap.Any("n2n_host_name", n2nHostName),zap.Int("port_num", portNum))
+		Logger.Info("Inside nonGenesis", zap.String("host_name", hostName), zap.Any("n2n_host_name", n2nHostName), zap.Int("port_num", portNum))
 		node.Self.Host = hostName
 		node.Self.N2NHost = n2nHostName
 		node.Self.Port = portNum
@@ -192,7 +192,7 @@ func main() {
 				miner.StartProtocol()
 			}
 		}()
-		
+
 	}
 	if config.Development() {
 		go TransactionGenerator(mc.Chain)

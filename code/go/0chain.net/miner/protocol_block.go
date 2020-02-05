@@ -432,7 +432,7 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 		}
 	}
 	btvTimer.UpdateSince(ts)
-	if mc.DiscoverClients {
+	if mc.discoverClients {
 		go mc.SaveClients(ctx, b.GetClients())
 	}
 	return nil
