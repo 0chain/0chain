@@ -165,14 +165,18 @@ func (sc *StorageSmartContract) updateAllocationRequest(t *transaction.Transacti
 
 	oldAllocation.Decode(oldAllocationBytes.Encode())
 	size := oldAllocation.DataShards + oldAllocation.ParityShards
-	updateSize := (updatedAllocationInput.Size + int64(size-1)) / int64(size)
 
-	if updateSize > 0 {
-		for _, blobberAllocation := range oldAllocation.BlobberDetails {
-			blobberAllocation.Size = blobberAllocation.Size + updateSize
-		}
+	var updateSize int64
+	if updatedAllocationInput.Size > 0 {
+		updateSize = (updatedAllocationInput.Size + int64(size-1)) / int64(size)
+	}else{
+		updateSize = (updatedAllocationInput.Size - int64(size-1)) / int64(size)
 	}
-	
+
+	for _, blobberAllocation := range oldAllocation.BlobberDetails {
+		blobberAllocation.Size = blobberAllocation.Size + updateSize
+	}
+
 	oldAllocation.Size = oldAllocation.Size + updatedAllocationInput.Size
 	oldAllocation.Expiration = oldAllocation.Expiration + updatedAllocationInput.Expiration
 	_, err = balances.InsertTrieNode(oldAllocation.GetKey(sc.ID), oldAllocation)
