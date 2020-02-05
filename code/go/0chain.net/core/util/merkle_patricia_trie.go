@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"sync"
 
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -15,15 +16,19 @@ var DebugMPTNode = false
 
 /*MerklePatriciaTrie - it's a merkle tree and a patricia trie */
 type MerklePatriciaTrie struct {
+	muDB            *sync.RWMutex
 	Root            Key
-	DB              NodeDB
+	db              NodeDB
 	ChangeCollector ChangeCollectorI
-	Version         Sequence
+	version         Sequence
 }
 
 /*NewMerklePatriciaTrie - create a new patricia merkle trie */
 func NewMerklePatriciaTrie(db NodeDB, version Sequence) *MerklePatriciaTrie {
-	mpt := &MerklePatriciaTrie{DB: db}
+	mpt := &MerklePatriciaTrie{
+		muDB: &sync.RWMutex{},
+		db:   db,
+	}
 	mpt.ResetChangeCollector(nil)
 	mpt.SetVersion(version)
 	return mpt
@@ -38,22 +43,26 @@ func CloneMPT(mpt MerklePatriciaTrieI) *MerklePatriciaTrie {
 
 /*SetNodeDB - implement interface */
 func (mpt *MerklePatriciaTrie) SetNodeDB(ndb NodeDB) {
-	mpt.DB = ndb
+	mpt.muDB.Lock()
+	defer mpt.muDB.Unlock()
+	mpt.db = ndb
 }
 
 /*GetNodeDB - implement interface */
 func (mpt *MerklePatriciaTrie) GetNodeDB() NodeDB {
-	return mpt.DB
+	mpt.muDB.RLock()
+	defer mpt.muDB.RUnlock()
+	return mpt.db
 }
 
 //SetVersion - implement interface
 func (mpt *MerklePatriciaTrie) SetVersion(version Sequence) {
-	mpt.Version = version
+	mpt.version = version
 }
 
 //GetVersion - implement interface
 func (mpt *MerklePatriciaTrie) GetVersion() Sequence {
-	return mpt.Version
+	return mpt.version
 }
 
 /*SetRoot - implement interface */
@@ -72,7 +81,11 @@ func (mpt *MerklePatriciaTrie) GetNodeValue(path Path) (Serializable, error) {
 	if rootKey == nil || len(rootKey) == 0 {
 		return nil, ErrValueNotPresent
 	}
-	rootNode, err := mpt.DB.GetNode(rootKey)
+
+	mpt.muDB.RLock()
+	defer mpt.muDB.RUnlock()
+
+	rootNode, err := mpt.db.GetNode(rootKey)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +151,7 @@ func (mpt *MerklePatriciaTrie) getPathNodes(key Key, path Path) ([]Node, error) 
 	if len(path) == 0 {
 		return nil, nil
 	}
-	node, err := mpt.DB.GetNode(key)
+	node, err := mpt.db.GetNode(key)
 	if err != nil {
 		return nil, err
 	}
@@ -194,7 +207,7 @@ func (mpt *MerklePatriciaTrie) ResetChangeCollector(root Key) {
 /*SaveChanges - implement interface */
 func (mpt *MerklePatriciaTrie) SaveChanges(ndb NodeDB, includeDeletes bool) error {
 	cc := mpt.ChangeCollector
-	err := cc.UpdateChanges(ndb, mpt.Version, includeDeletes)
+	err := cc.UpdateChanges(ndb, mpt.version, includeDeletes)
 	if err != nil {
 		return err
 	}
@@ -236,7 +249,7 @@ func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node) (Serializable,
 		if ckey == nil {
 			return nil, ErrValueNotPresent
 		}
-		nnode, err := mpt.DB.GetNode(ckey)
+		nnode, err := mpt.db.GetNode(ckey)
 		if err != nil || nnode == nil {
 			return nil, ErrNodeNotFound
 		}
@@ -247,7 +260,7 @@ func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node) (Serializable,
 			return nil, ErrValueNotPresent
 		}
 		if bytes.Compare(nodeImpl.Path, prefix) == 0 {
-			nnode, err := mpt.DB.GetNode(nodeImpl.NodeKey)
+			nnode, err := mpt.db.GetNode(nodeImpl.NodeKey)
 			if err != nil || nnode == nil {
 				return nil, ErrNodeNotFound
 			}
@@ -260,7 +273,7 @@ func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node) (Serializable,
 }
 
 func (mpt *MerklePatriciaTrie) insert(value Serializable, key Key, path Path) (Node, Key, error) {
-	node, err := mpt.DB.GetNode(key)
+	node, err := mpt.db.GetNode(key)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -272,7 +285,7 @@ func (mpt *MerklePatriciaTrie) insert(value Serializable, key Key, path Path) (N
 }
 
 func (mpt *MerklePatriciaTrie) insertLeaf(oldNode Node, value Serializable, path Path) (Node, Key, error) {
-	return mpt.insertNode(oldNode, NewLeafNode(path, mpt.Version, value))
+	return mpt.insertNode(oldNode, NewLeafNode(path, mpt.version, value))
 }
 
 func (mpt *MerklePatriciaTrie) insertExtension(oldNode Node, path Path, key Key) (Node, Key, error) {
@@ -280,7 +293,7 @@ func (mpt *MerklePatriciaTrie) insertExtension(oldNode Node, path Path, key Key)
 }
 
 func (mpt *MerklePatriciaTrie) delete(key Key, path Path) (Node, Key, error) {
-	node, err := mpt.DB.GetNode(key)
+	node, err := mpt.db.GetNode(key)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -454,7 +467,7 @@ func (mpt *MerklePatriciaTrie) deleteAtNode(node Node, path Path) (Node, Key, er
 							break
 						}
 					}
-					ochild, err := mpt.DB.GetNode(otherChildKey)
+					ochild, err := mpt.db.GetNode(otherChildKey)
 					if err != nil {
 						return nil, nil, err
 					}
@@ -468,7 +481,7 @@ func (mpt *MerklePatriciaTrie) deleteAtNode(node Node, path Path) (Node, Key, er
 							npath = append(npath, onodeImpl.Path...)
 						}
 						lnode := ochild.Clone().(*LeafNode)
-						lnode.SetOrigin(mpt.Version)
+						lnode.SetOrigin(mpt.version)
 						lnode.Path = npath
 						nnode = lnode
 						mpt.deleteNode(ochild)
@@ -481,7 +494,7 @@ func (mpt *MerklePatriciaTrie) deleteAtNode(node Node, path Path) (Node, Key, er
 						nnode = enode
 						mpt.deleteNode(ochild)
 					default:
-						panic(fmt.Sprintf("unknown node type: %T %v %T", ochild, ochild, mpt.DB))
+						panic(fmt.Sprintf("unknown node type: %T %v %T", ochild, ochild, mpt.db))
 					}
 					return mpt.insertNode(node, nnode)
 				}
@@ -507,7 +520,7 @@ func (mpt *MerklePatriciaTrie) deleteAtNode(node Node, path Path) (Node, Key, er
 		switch cnodeImpl := cnode.(type) {
 		case *LeafNode: // if extension child changes from full node to leaf, convert the extension into a leaf node
 			nnode := cnode.Clone().(*LeafNode)
-			nnode.SetOrigin(mpt.Version)
+			nnode.SetOrigin(mpt.version)
 			nnode.Path = append(nodeImpl.Path, cnodeImpl.Path...)
 			nnode.SetValue(cnodeImpl.GetValue())
 			mpt.deleteNode(cnode)
@@ -589,7 +602,7 @@ func (mpt *MerklePatriciaTrie) deleteAfterPathTraversal(node Node) (Node, Key, e
 }
 
 func (mpt *MerklePatriciaTrie) iterate(ctx context.Context, path Path, key Key, handler MPTIteratorHandler, visitNodeTypes byte) error {
-	node, err := mpt.DB.GetNode(key)
+	node, err := mpt.db.GetNode(key)
 	if err != nil {
 		if Logger != nil {
 			Logger.Error("iterate - get node error", zap.Error(err))
@@ -656,6 +669,9 @@ func (mpt *MerklePatriciaTrie) iterate(ctx context.Context, path Path, key Key, 
 }
 
 func (mpt *MerklePatriciaTrie) insertNode(oldNode Node, newNode Node) (Node, Key, error) {
+	mpt.muDB.RLock()
+	defer mpt.muDB.RUnlock()
+
 	if DebugMPTNode && Logger != nil {
 		ohash := ""
 		if oldNode != nil {
@@ -664,7 +680,7 @@ func (mpt *MerklePatriciaTrie) insertNode(oldNode Node, newNode Node) (Node, Key
 		Logger.Info("insert node", zap.String("nn", newNode.GetHash()), zap.String("on", ohash))
 	}
 	ckey := newNode.GetHashBytes()
-	if err := mpt.DB.PutNode(ckey, newNode); err != nil {
+	if err := mpt.db.PutNode(ckey, newNode); err != nil {
 		return nil, nil, err
 	}
 	//If same node is inserted by client, don't add them into change collector
@@ -673,7 +689,7 @@ func (mpt *MerklePatriciaTrie) insertNode(oldNode Node, newNode Node) (Node, Key
 	}
 	if oldNode != nil {
 		//NOTE: since leveldb is initiaized with propagate deletes as false, only newly created nodes will get deleted
-		mpt.DB.DeleteNode(oldNode.GetHashBytes())
+		mpt.db.DeleteNode(oldNode.GetHashBytes())
 	}
 	return newNode, ckey, nil
 }
@@ -683,7 +699,7 @@ func (mpt *MerklePatriciaTrie) deleteNode(node Node) error {
 		Logger.Info("delete node", zap.String("dn", node.GetHash()))
 	}
 	mpt.ChangeCollector.DeleteChange(node)
-	return mpt.DB.DeleteNode(node.GetHashBytes())
+	return mpt.db.DeleteNode(node.GetHashBytes())
 }
 
 func (mpt *MerklePatriciaTrie) matchingPrefix(p1 Path, p2 Path) Path {
@@ -703,7 +719,7 @@ func (mpt *MerklePatriciaTrie) pp(w io.Writer, key Key, depth byte, initpad bool
 	if initpad {
 		mpt.indent(w, depth)
 	}
-	node, err := mpt.DB.GetNode(key)
+	node, err := mpt.db.GetNode(key)
 	if err != nil {
 		fmt.Fprintf(w, "err %v %v\n", ToHex(key), err)
 		return err
@@ -732,6 +748,9 @@ func (mpt *MerklePatriciaTrie) pp(w io.Writer, key Key, depth byte, initpad bool
 
 /*UpdateVersion - updates the origin of all the nodes in this tree to the given origin */
 func (mpt *MerklePatriciaTrie) UpdateVersion(ctx context.Context, version Sequence, missingNodeHander MPTMissingNodeHandler) error {
+	mpt.muDB.RLock()
+	defer mpt.muDB.RUnlock()
+
 	ps := GetPruneStats(ctx)
 	if ps != nil {
 		ps.Version = version
@@ -756,7 +775,7 @@ func (mpt *MerklePatriciaTrie) UpdateVersion(ctx context.Context, version Sequen
 		keys = append(keys, tkey)
 		values = append(values, node)
 		if len(keys) == BatchSize {
-			err := mpt.DB.MultiPutNode(keys, values)
+			err := mpt.db.MultiPutNode(keys, values)
 			keys = keys[:0]
 			values = values[:0]
 			if err != nil {
@@ -775,7 +794,7 @@ func (mpt *MerklePatriciaTrie) UpdateVersion(ctx context.Context, version Sequen
 	}
 	if err == nil || err == ErrNodeNotFound || err == ErrIteratingChildNodes {
 		if len(keys) > 0 {
-			if err := mpt.DB.MultiPutNode(keys, values); err != nil {
+			if err := mpt.db.MultiPutNode(keys, values); err != nil {
 				if Logger != nil {
 					Logger.Error("update version - multi put - last batch", zap.Error(err))
 				}

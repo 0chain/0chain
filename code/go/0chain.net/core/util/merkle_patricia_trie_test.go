@@ -12,7 +12,7 @@ func TestMPTHexachars(t *testing.T) {
 	cc := NewChangeCollector()
 	mndb := NewMemoryNodeDB()
 	mpt := NewMerklePatriciaTrie(mndb, Sequence(2018))
-	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.DB, false)
+	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
 	var mpt2 MerklePatriciaTrieI = NewMerklePatriciaTrie(db, Sequence(2018))
 
 	doStrValInsert("insert a leaf node as root", mpt2, "1", "1", true)
@@ -26,7 +26,7 @@ func TestMPTHexachars(t *testing.T) {
 func TestMPTInsertLeafNode(t *testing.T) {
 	mndb := NewMemoryNodeDB()
 	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
-	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.DB, false)
+	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
 	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
 
 	doStrValInsert("insert a leaf node as root", mpt2, "1234", "1", true)
@@ -71,7 +71,7 @@ func TestMPTInsertLeafNode(t *testing.T) {
 func TestMPTInsertFullNode(t *testing.T) {
 	mndb := NewMemoryNodeDB()
 	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
-	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.DB, false)
+	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
 	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
 
 	doStrValInsert("insert a leaf node as root", mpt2, "1", "1", true)
@@ -93,7 +93,7 @@ func TestMPTInsertFullNode(t *testing.T) {
 func TestMPTInsertExtensionNode(t *testing.T) {
 	mndb := NewMemoryNodeDB()
 	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
-	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.DB, false)
+	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
 	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
 
 	doStrValInsert("insert a leaf node as root", mpt2, "12345", "12345", true)
@@ -122,7 +122,7 @@ func TestMPTInsertExtensionNode(t *testing.T) {
 func TestMPTDelete(t *testing.T) {
 	mndb := NewMemoryNodeDB()
 	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
-	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.DB, false)
+	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
 	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
 	doStrValInsert("insert a leaf node as root", mpt2, "12345", "12345", false)
 	doStrValInsert("insert a leaf to create a full root node", mpt2, "22345", "22345", false)
@@ -167,7 +167,7 @@ func TestMPTDelete(t *testing.T) {
 func TestMPTUniverse(t *testing.T) {
 	mndb := NewMemoryNodeDB()
 	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
-	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.DB, false)
+	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
 	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
 
 	doStrValInsert("root node with a single leaf", mpt2, "1234513", "earth", true)
@@ -219,7 +219,7 @@ func TestMPTInsertEthereumExample(t *testing.T) {
 	cc := NewChangeCollector()
 	mndb := NewMemoryNodeDB()
 	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
-	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.DB, false)
+	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
 	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
 
 	doStrValInsert("setup data", mpt2, "646f", "verb", false)
@@ -334,7 +334,7 @@ func TestCasePEFLEdeleteL(t *testing.T) {
 	cc := NewChangeCollector()
 	mndb := NewMemoryNodeDB()
 	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
-	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.DB, false)
+	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
 	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
 
 	doStrValInsert("setup data", mpt2, "223456789", "mercury", false)
@@ -369,7 +369,7 @@ func TestAddTwiceDeleteOnce(t *testing.T) {
 	cc := NewChangeCollector()
 	mndb := NewMemoryNodeDB()
 	mpt := NewMerklePatriciaTrie(mndb, Sequence(0))
-	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.DB, false)
+	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
 	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
 
 	doStrValInsert("setup data", mpt2, "123456781", "x", false)

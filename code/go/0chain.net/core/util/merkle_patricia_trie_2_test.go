@@ -34,7 +34,7 @@ func TestMerkleTreeSaveToDB(t *testing.T) {
 	defer pndb.db.Close()
 
 	mpt := NewMerklePatriciaTrie(pndb, Sequence(2016))
-	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.DB, false)
+	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
 	mpt2 := NewMerklePatriciaTrie(db, Sequence(2016))
 
 	doStateValInsert("add 100 to c1", mpt2, "0123456", 100, false)
@@ -71,7 +71,7 @@ func TestMerkeTreePruning(t *testing.T) {
 	}
 
 	mpt := NewMerklePatriciaTrie(pndb, Sequence(0))
-	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.DB, false)
+	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
 	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
 	origin := 2016
 	roots := make([]Key, 0, 10)
@@ -157,7 +157,7 @@ func TestMerkeTreeGetChanges(t *testing.T) {
 
 	mpt := NewMerklePatriciaTrie(pndb, Sequence(0))
 	var mndb = NewMemoryNodeDB()
-	db := NewLevelNodeDB(mndb, mpt.DB, false)
+	db := NewLevelNodeDB(mndb, mpt.db, false)
 	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
 	origin := 2016
 	roots := make([]Key, 0, 10)
