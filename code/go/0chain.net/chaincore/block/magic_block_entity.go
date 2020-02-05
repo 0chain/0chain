@@ -53,17 +53,13 @@ func (mb *MagicBlock) GetHashBytes() []byte {
 	data = append(data, []byte(strconv.FormatInt(mb.StartingRound, 10))...)
 	var minerKeys, sharderKeys, mpkKeys []string
 	// miner info
-	for _, node := range mb.Miners.NodesMap {
-		minerKeys = append(minerKeys, node.ID)
-	}
+	minerKeys = mb.Miners.Keys()
 	sort.Strings(minerKeys)
 	for _, v := range minerKeys {
 		data = append(data, []byte(v)...)
 	}
 	//sharder info
-	for _, node := range mb.Sharders.NodesMap {
-		sharderKeys = append(sharderKeys, node.ID)
-	}
+	sharderKeys = mb.Sharders.Keys()
 	sort.Strings(sharderKeys)
 	for _, v := range sharderKeys {
 		data = append(data, []byte(v)...)
@@ -88,8 +84,8 @@ func (mb *MagicBlock) IsActiveNode(id string, round int64) bool {
 	if mb == nil || mb.Miners == nil || mb.Sharders == nil {
 		return false
 	}
-	_, mok := mb.Miners.NodesMap[id]
-	_, sok := mb.Sharders.NodesMap[id]
+	mok := mb.Miners.GetNode(id) != nil
+	sok := mb.Sharders.GetNode(id) != nil
 	return (sok || mok) && mb.StartingRound <= round
 }
 

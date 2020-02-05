@@ -95,19 +95,28 @@ func (c *Chain) reachedNotarization(bvt []*block.VerificationTicket) bool {
 	return true
 }
 
-/*UpdateNodeState - based on the incoming valid blocks, update the nodes that notarized the block to be active
- Useful to increase the speed of node status discovery which increases the reliablity of the network
-Simple 3 miner scenario :
-
-1) a discovered b & c.
-2) b discovered a.
-3) b and c are yet to discover each other
-4) a generated a block and sent it to b & c, got it notarized and next round started
-5) c is the generator who generated the block. He will only send it to a as b is not discovered to be active.
-    But if the prior block has b's signature (may or may not, but if it did), c can discover b is active before generating the block and so will send it to b
-*/
+// UpdateNodeState - based on the incoming valid blocks, update the nodes that
+// notarized the block to be active. Useful to increase the speed of node status
+// discovery which increases the reliablity of the network.
+//
+// Simple 3 miner scenario:
+//
+//     1) a discovered b & c
+//     2) b discovered a
+//     3) b and c are yet to discover each other
+//     4) a generated a block and sent it to b & c, got it notarized and next
+//        round started
+//     5) c is the generator who generated the block. He will only send it to a
+//        as b is not discovered to be active.
+//
+// But if the prior block has b's signature (may or may not, but if it did),
+// c can discover b is active before generating the block and so will send it
+// to b.
 func (c *Chain) UpdateNodeState(b *block.Block) {
+	// defer trace.Leave(trace.Enter("$FN round %d", b.Round))
+
 	r := c.GetRound(b.Round)
+
 	for _, vt := range b.VerificationTickets {
 
 		signer := c.GetMiners(r).GetNode(vt.VerifierID)

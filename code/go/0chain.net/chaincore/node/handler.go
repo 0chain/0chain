@@ -117,13 +117,16 @@ type PoolMembers struct {
 func GetPoolMembersHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	pm := &PoolMembers{}
 
-	for _, n := range nodes {
-		if n.Type == NodeTypeMiner {
-			pm.Miners = append(pm.Miners, n.GetN2NURLBase())
-		} else if n.Type == NodeTypeSharder {
-			pm.Sharders = append(pm.Sharders, n.GetN2NURLBase())
+	globalRegistry.viewNodes(func(nodes map[string]*Node) {
+		for _, n := range nodes {
+			if n.Type == NodeTypeMiner {
+				pm.Miners = append(pm.Miners, n.GetN2NURLBase())
+			} else if n.Type == NodeTypeSharder {
+				pm.Sharders = append(pm.Sharders, n.GetN2NURLBase())
+			}
 		}
-	}
+	})
+
 	//Logger.Info("returning number of ", zap.Int("miners", len(pm.Miners)), zap.Int("node", Self.SetIndex))
 	return pm, nil
 }

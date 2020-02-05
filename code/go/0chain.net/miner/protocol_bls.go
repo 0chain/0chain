@@ -280,8 +280,8 @@ func (mc *Chain) computeRBO(ctx context.Context, mr *Round, rbo string) {
 func getVRFShareInfo(mr *Round) ([]string, []string) {
 	recSig := make([]string, 0)
 	recFrom := make([]string, 0)
-	mr.Mutex.Lock()
-	defer mr.Mutex.Unlock()
+	mr.Round.Lock()
+	defer mr.Round.Unlock()
 
 	shares := mr.GetVRFShares()
 	for _, share := range shares {

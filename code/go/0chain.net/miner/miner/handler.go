@@ -40,19 +40,20 @@ func ConfigUpdateAllHandler(w http.ResponseWriter, r *http.Request) {
 		Logger.Error("failed to parse update config form", zap.Any("error", err))
 		return
 	}
-	miners := chain.GetServerChain().Miners.Nodes
-	for _, miner := range miners {
+	chain.GetServerChain().Miners.ForEachItem(func(miner *node.Node) {
 		if node.Self.PublicKey != miner.PublicKey {
 			go func(miner *node.Node) {
 				resp, err := http.PostForm(miner.GetN2NURLBase()+updateConfigURL, r.Form)
 				if err != nil {
-					Logger.Error("failed to update other miner's config", zap.Any("miner", miner.GetKey()), zap.Any("response", resp), zap.Any("error", err))
+					Logger.Error("failed to update other miner's config",
+						zap.Any("miner", miner.GetKey()),
+						zap.Any("response", resp), zap.Any("error", err))
 					return
 				}
 				defer resp.Body.Close()
 			}(miner)
 		}
-	}
+	})
 	updateConfig(w, r, updateConfigAllURL)
 }
 

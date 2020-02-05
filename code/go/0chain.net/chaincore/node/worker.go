@@ -26,7 +26,7 @@ func (np *Pool) StatusMonitor(ctx context.Context) {
 			return
 		case _ = <-monitorTimer.C:
 			np.statusMonitor(ctx)
-			if np.GetActiveCount()*10 < len(np.Nodes)*8 {
+			if np.GetActiveCount()*10 < np.ListSize()*8 {
 				monitorTimer = time.NewTimer(5 * time.Second)
 			} else {
 				monitorTimer = time.NewTimer(10 * time.Second)
@@ -109,6 +109,9 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 
 /*DownloadNodeData - downloads the node definition data for the given pool type from the given node */
 func (np *Pool) DownloadNodeData(node *Node) bool {
+
+	// NEVER USED <-------------------------------------------------------------
+
 	url := fmt.Sprintf("%v/_nh/list/%v", node.GetN2NURLBase(), node.GetNodeType())
 	client := &http.Client{Timeout: TimeoutLargeMessage}
 	resp, err := client.Get(url)
@@ -120,14 +123,14 @@ func (np *Pool) DownloadNodeData(node *Node) bool {
 	ReadNodes(resp.Body, dnp, dnp)
 	var changed = false
 	for _, node := range dnp.Nodes {
-		if _, ok := np.NodesMap[node.GetKey()]; !ok {
-			node.Status = NodeStatusActive
+		if np.GetNode(node.GetKey()) == nil {
+			node.Status = NodeStatusActive // TODO (kostyarin): async access
 			np.AddNode(node)
 			changed = true
 		}
 	}
 	if changed {
-		np.ComputeProperties()
+		np.ComputeProperties() // add new nodes to (Pool).Nodes list
 	}
 	return true
 }

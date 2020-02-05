@@ -9,7 +9,7 @@ services:
       default:
     sysctls:
       net.core.somaxconn: '511'
-    command: redis-server /0chain/config/redis/state.redis.conf
+    command: sh -c "chown redis:redis /0chain/data/redis/state && redis-server /0chain/config/redis/state.redis.conf"
 
   redis_txns:
     image: "redis:alpine"

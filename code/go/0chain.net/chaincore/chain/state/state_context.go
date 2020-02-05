@@ -227,7 +227,7 @@ func (sc *StateContext) DeleteTrieNode(key datastore.Key) (datastore.Key, error)
 	return datastore.Key(byteKey), err
 }
 
-//SetStateContext - set the state context
+// SetStateContext - set the state context
 func (sc *StateContext) SetStateContext(s *state.State) error {
 	s.SetRound(sc.block.Round)
 	return s.SetTxnHash(sc.txn.Hash)

@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
-	"strconv"
 	"time"
 
 	"0chain.net/chaincore/block"
@@ -111,10 +110,7 @@ func (mc *Chain) GetPhase() (*minersc.PhaseNode, error) {
 			return nil, err
 		}
 	} else {
-		var sharders []string
-		for _, sharder := range mc.Sharders.NodesMap {
-			sharders = append(sharders, "http://"+sharder.N2NHost+":"+strconv.Itoa(sharder.Port))
-		}
+		var sharders = mc.Sharders.N2NURLs()
 		err := httpclientutil.MakeSCRestAPICall(minersc.ADDRESS, scRestAPIGetPhase, nil, sharders, pn, 1)
 		if err != nil {
 			return nil, err
@@ -150,9 +146,9 @@ func (mc *Chain) ContributeMpk() (*httpclientutil.Transaction, error) {
 	txn := httpclientutil.NewTransactionEntity(node.Self.ID, mc.ID, node.Self.PublicKey)
 	txn.ToClientID = minersc.ADDRESS
 	var minerUrls []string
-	for _, node := range mc.Miners.Nodes {
+	mc.Miners.ForEachItem(func(node *node.Node) {
 		minerUrls = append(minerUrls, node.GetN2NURLBase())
-	}
+	})
 	err = httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls)
 	return txn, err
 }
@@ -259,10 +255,7 @@ func (mc *Chain) GetDKGMiners() (*minersc.DKGMinerNodes, error) {
 		}
 
 	} else {
-		var sharders []string
-		for _, sharder := range mc.Sharders.NodesMap {
-			sharders = append(sharders, "http://"+sharder.N2NHost+":"+strconv.Itoa(sharder.Port))
-		}
+		var sharders = mc.Sharders.N2NURLs()
 		err := httpclientutil.MakeSCRestAPICall(minersc.ADDRESS, scRestAPIGetDKGMiners, nil, sharders, dmn, 1)
 		if err != nil {
 			return nil, err
@@ -288,10 +281,7 @@ func (mc *Chain) GetMinersMpks() (*block.Mpks, error) {
 			return nil, err
 		}
 	} else {
-		var sharders []string
-		for _, sharder := range mc.Sharders.NodesMap {
-			sharders = append(sharders, "http://"+sharder.N2NHost+":"+strconv.Itoa(sharder.Port))
-		}
+		var sharders = mc.Sharders.N2NURLs()
 		err := httpclientutil.MakeSCRestAPICall(minersc.ADDRESS, scRestAPIGetMinersMPKS, nil, sharders, mpks, 1)
 		if err != nil {
 			return nil, err
@@ -350,11 +340,10 @@ func (mc *Chain) GetMagicBlockFromSC() (*block.MagicBlock, error) {
 			return nil, err
 		}
 	} else {
-		var sharders []string
-		var err error
-		for _, sharder := range mc.Sharders.NodesMap {
-			sharders = append(sharders, "http://"+sharder.N2NHost+":"+strconv.Itoa(sharder.Port))
-		}
+		var (
+			sharders = mc.Sharders.N2NURLs()
+			err      error
+		)
 		err = httpclientutil.MakeSCRestAPICall(minersc.ADDRESS, scRestAPIGetMagicBlock, nil, sharders, magicBlock, 1)
 		if err != nil {
 			return nil, err
@@ -488,9 +477,9 @@ func (mc *Chain) PublishShareOrSigns() (*httpclientutil.Transaction, error) {
 	txn.ToClientID = minersc.ADDRESS
 
 	var minerUrls []string
-	for _, node := range mc.Miners.Nodes {
-		minerUrls = append(minerUrls, node.GetN2NURLBase())
-	}
+	mc.Miners.ForEachItem(func(n *node.Node) {
+		minerUrls = append(minerUrls, n.GetN2NURLBase())
+	})
 	err = httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls)
 	return txn, err
 }
@@ -500,7 +489,7 @@ func (mc *Chain) Wait() (*httpclientutil.Transaction, error) {
 	if err != nil {
 		return nil, err
 	}
-	if _, ok := magicBlock.Miners.NodesMap[node.Self.ID]; !ok {
+	if magicBlock.Miners.GetNode(node.Self.ID) == nil {
 		err := mc.UpdateMagicBlock(magicBlock)
 		if err != nil {
 			Logger.DPanic(fmt.Sprintf("failed to update magic block: %v", err.Error()))
