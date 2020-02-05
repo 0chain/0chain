@@ -113,7 +113,6 @@ func (c *Chain) reachedNotarization(bvt []*block.VerificationTicket) bool {
 // c can discover b is active before generating the block and so will send it
 // to b.
 func (c *Chain) UpdateNodeState(b *block.Block) {
-	// defer trace.Leave(trace.Enter("$FN round %d", b.Round))
 
 	r := c.GetRound(b.Round)
 
