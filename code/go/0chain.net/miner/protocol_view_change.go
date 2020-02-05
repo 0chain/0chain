@@ -72,20 +72,26 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			return
 		case <-timer.C:
 			pn, err := mc.GetPhase()
+			Logger.Debug("dkg process trying", zap.Any("next_phase", pn), zap.Any("phase", currentPhase), zap.Any("sc funcs", len(scFunctions)))
 			if err == nil && pn != nil && pn.Phase != currentPhase {
-				Logger.Info("dkg process", zap.Any("sc funcs", len(scFunctions)), zap.Any("phase", pn))
+				Logger.Info("dkg process start", zap.Any("next_phase", pn), zap.Any("phase", currentPhase), zap.Any("sc funcs", len(scFunctions)))
 				if scFunc, ok := scFunctions[pn.Phase]; ok {
 					txn, err := scFunc()
 					if err != nil {
-						Logger.Error("smart contract function failed", zap.Any("error", err), zap.Any("current_phase", pn))
+						Logger.Error("smart contract function failed", zap.Any("error", err), zap.Any("next_phase", pn))
 					} else {
+						Logger.Debug("dkg process move phase", zap.Any("next_phase", pn), zap.Any("phase", currentPhase), zap.Any("txn", txn))
 						if txn == nil || (txn != nil && mc.ConfirmTransaction(txn)) {
+							oldPhase := currentPhase
 							currentPhase = pn.Phase
+							Logger.Debug("dkg process moved phase", zap.Any("old_phase", oldPhase), zap.Any("phase", currentPhase))
 						}
 					}
 				}
+			} else if err != nil {
+				Logger.Error("dkg process", zap.Any("error", err), zap.Any("sc funcs", len(scFunctions)), zap.Any("phase", pn))
 			}
-			timer = time.NewTimer(time.Duration(5 * time.Second))
+			timer = time.NewTimer(5 * time.Second)
 		}
 	}
 }
@@ -465,6 +471,9 @@ func (mc *Chain) PublishShareOrSigns() (*httpclientutil.Transaction, error) {
 	dkgMiners, err := mc.GetDKGMiners()
 	if err != nil {
 		return nil, err
+	}
+	if len(dkgMiners.SimpleNodes) == 0 {
+		return nil, common.NewError("failed to publish share or signs", "no miners in DKG")
 	}
 	publicKeys := make(map[string]string)
 	for _, node := range dkgMiners.SimpleNodes {

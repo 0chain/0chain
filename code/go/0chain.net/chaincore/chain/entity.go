@@ -950,6 +950,9 @@ func (c *Chain) ActiveInChain() bool {
 func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 	c.mbMutex.Lock()
 	defer c.mbMutex.Unlock()
+	if newMagicBlock.Miners == nil || len(newMagicBlock.Miners.NodesMap) == 0 {
+		return common.NewError("failed to update magic block", "there are no miners in the magic block")
+	}
 	if newMagicBlock.IsActiveNode(node.Self.ID, c.CurrentRound) && c.GetLatestFinalizedMagicBlock() != nil && c.GetLatestFinalizedMagicBlock().MagicBlock.MagicBlockNumber == newMagicBlock.MagicBlockNumber-1 && c.GetLatestFinalizedMagicBlock().MagicBlock.Hash != newMagicBlock.PreviousMagicBlockHash {
 		Logger.Error("failed to update magic block", zap.Any("finalized_magic_block_hash", c.GetLatestFinalizedMagicBlock().MagicBlock.Hash), zap.Any("new_magic_block_previous_hash", newMagicBlock.PreviousMagicBlockHash))
 		return common.NewError("failed to update magic block", fmt.Sprintf("magic block's previous magic block hash (%v) doesn't equal latest finalized magic block id (%v)", newMagicBlock.PreviousMagicBlockHash, c.GetLatestFinalizedMagicBlock().MagicBlock.Hash))
