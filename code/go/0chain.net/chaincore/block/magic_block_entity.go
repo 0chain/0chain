@@ -170,7 +170,11 @@ func (sos *ShareOrSigns) Validate(mpks *Mpks, publicKeys map[string]string, sche
 	for key, share := range sos.ShareOrSigns {
 		if share.Sign != "" {
 			signatureScheme := scheme
-			signatureScheme.SetPublicKey(publicKeys[key])
+			pk, ok := publicKeys[key]
+			if !ok {
+				return nil, false
+			}
+			signatureScheme.SetPublicKey(pk)
 			sigOK, err := signatureScheme.Verify(share.Sign, share.Message)
 			if !sigOK || err != nil {
 				Logger.Error("failed to validate share or sings", zap.Any("share", share), zap.Any("message", share.Message), zap.Any("sign", share.Sign))
