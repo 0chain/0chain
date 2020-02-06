@@ -170,9 +170,7 @@ func (mc *Chain) GetBlsShare(ctx context.Context, r, pr *round.Round) (string, e
 	if err != nil {
 		return "", err
 	}
-	if mc.nextViewChange <= r.Number && ((mc.currentDKG != nil && mc.currentDKG.StartingRound < mc.nextViewChange) || mc.currentDKG == nil) {
-		mc.ViewChange(ctx)
-	}
+	mc.ViewChange(ctx, r.Number)
 	mc.muDKG.Lock()
 	defer mc.muDKG.Unlock()
 	sigShare := mc.currentDKG.Sign(msg)
@@ -191,9 +189,7 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 	if err != nil {
 		return false
 	}
-	if mc.nextViewChange <= mr.Number && ((mc.currentDKG != nil && mc.currentDKG.StartingRound < mc.nextViewChange) || mc.currentDKG == nil) {
-		mc.ViewChange(ctx)
-	}
+	mc.ViewChange(ctx, r.Number)
 	var share bls.Sign
 	share.SetHexString(vrfs.Share)
 	partyID := bls.ComputeIDdkg(vrfs.GetParty().ID)

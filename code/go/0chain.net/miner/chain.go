@@ -210,8 +210,8 @@ func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) erro
 	return err
 }
 
-func (mc *Chain) ViewChange(ctx context.Context) {
-	if mc.currentDKG == nil || mc.currentDKG.StartingRound <= mc.nextViewChange {
+func (mc *Chain) ViewChange(ctx context.Context, round int64) {
+	if config.DevConfiguration.ViewChange && mc.NextViewChange <= round && (mc.CurrentDKG == nil || mc.CurrentDKG.StartingRound < mc.NextViewChange) {
 		err := mc.UpdateMagicBlock(mc.ViewChangeMagicBlock)
 		if err != nil {
 			Logger.DPanic(err.Error())

@@ -198,7 +198,9 @@ func main() {
 		go TransactionGenerator(mc.Chain)
 	}
 	go mc.InitSetup()
-	go mc.DKGProcess(ctx)
+	if config.DevConfiguration.ViewChange {
+		go mc.DKGProcess(ctx)
+	}
 	Logger.Info("Ready to listen to the requests")
 	log.Fatal(server.ListenAndServe())
 }
