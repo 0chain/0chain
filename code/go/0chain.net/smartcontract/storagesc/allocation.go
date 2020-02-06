@@ -117,8 +117,7 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 		}
 
 		// randomize blobber nodes
-		blobberNodes = randomizeNodes(allBlobbersList.Nodes, blobberNodes, (size - preferredBlobbersSize), seed)
-
+		blobberNodes = randomizeNodes(allBlobbersList.Nodes, blobberNodes, size, seed)
 		for i := 0; i < size; i++ {
 			blobberNode := blobberNodes[i]
 			var blobberAllocation BlobberAllocation
