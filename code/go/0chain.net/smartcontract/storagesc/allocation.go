@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"math/rand"
 	"sort"
-	"time"
+	"strconv"
 
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
@@ -105,13 +105,18 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 
 		var blobberNodes []*StorageNode
 		if len(allocationRequest.PreferredBlobbers) == size {
-			blobberNodes = getPreferredBlobbers(allocationRequest.PreferredBlobbers, allBlobbersList.Nodes)
+			blobberNodes, err = getPreferredBlobbers(allocationRequest.PreferredBlobbers, allBlobbersList.Nodes)
+			if err != nil {
+				return "", err
+			}
 		} else {
-			// randomize blobber nodes
-			// blobberNodes = randomizeNodes(allBlobbersList.Nodes, size)
+			seed, err := strconv.ParseInt(t.Hash[0:8], 16, 64)
+			if err != nil {
+				return "", common.NewError("allocation_request_failed", "Failed to create seed for randomizeNodes")
+			}
 
-			// Comment this line and uncomment above to randomize blobber nodes
-			blobberNodes = allBlobbersList.Nodes
+			// randomize blobber nodes
+			blobberNodes = randomizeNodes(allBlobbersList.Nodes, size, seed)
 		}
 		for i := 0; i < size; i++ {
 			blobberNode := blobberNodes[i]
@@ -200,22 +205,27 @@ func (sc *StorageSmartContract) updateAllocationRequest(t *transaction.Transacti
 	return string(buff), nil
 }
 
-func getPreferredBlobbers(preferredBlobbers []string, allBlobbers []*StorageNode) (selectedBlobbers []*StorageNode) {
+func getPreferredBlobbers(preferredBlobbers []string, allBlobbers []*StorageNode) (selectedBlobbers []*StorageNode, err error) {
 	blobberMap := make(map[string]*StorageNode)
 	for _, storageNode := range allBlobbers {
 		blobberMap[storageNode.ID] = storageNode
 	}
-	for _, ID := range preferredBlobbers {
-		selectedBlobbers = append(selectedBlobbers, blobberMap[ID])
+	for _, blobberID := range preferredBlobbers {
+		selectedBlobber, ok := blobberMap[blobberID]
+		if !ok {
+			err = common.NewError("allocation_request_failed", "Invalid preferred blobber ID")
+			return
+		}
+		selectedBlobbers = append(selectedBlobbers, selectedBlobber)
 	}
 	return
 }
 
-func randomizeNodes(in []*StorageNode, n int) []*StorageNode {
+func randomizeNodes(in []*StorageNode, n int, seed int64) []*StorageNode {
 	out := make([]*StorageNode, 0)
 	nOut := minInt(len(in), n)
 	nOut = maxInt(1, nOut)
-	randGen := rand.New(rand.NewSource(time.Now().UnixNano()))
+	randGen := rand.New(rand.NewSource(seed))
 	for {
 		i := randGen.Intn(len(in))
 		if !checkExists(in[i], out) {
