@@ -104,20 +104,21 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 		allocationRequest.Stats = &StorageAllocationStats{}
 
 		var blobberNodes []*StorageNode
-		if len(allocationRequest.PreferredBlobbers) == size {
+		preferredBlobbersSize := len(allocationRequest.PreferredBlobbers)
+		if preferredBlobbersSize > 0 {
 			blobberNodes, err = getPreferredBlobbers(allocationRequest.PreferredBlobbers, allBlobbersList.Nodes)
 			if err != nil {
 				return "", err
 			}
-		} else {
-			seed, err := strconv.ParseInt(t.Hash[0:8], 16, 64)
-			if err != nil {
-				return "", common.NewError("allocation_request_failed", "Failed to create seed for randomizeNodes")
-			}
-
-			// randomize blobber nodes
-			blobberNodes = randomizeNodes(allBlobbersList.Nodes, size, seed)
 		}
+		seed, err := strconv.ParseInt(t.Hash[0:8], 16, 64)
+		if err != nil {
+			return "", common.NewError("allocation_request_failed", "Failed to create seed for randomizeNodes")
+		}
+
+		// randomize blobber nodes
+		blobberNodes = randomizeNodes(allBlobbersList.Nodes, blobberNodes, (size - preferredBlobbersSize), seed)
+
 		for i := 0; i < size; i++ {
 			blobberNode := blobberNodes[i]
 			var blobberAllocation BlobberAllocation
@@ -221,8 +222,7 @@ func getPreferredBlobbers(preferredBlobbers []string, allBlobbers []*StorageNode
 	return
 }
 
-func randomizeNodes(in []*StorageNode, n int, seed int64) []*StorageNode {
-	out := make([]*StorageNode, 0)
+func randomizeNodes(in []*StorageNode, out []*StorageNode, n int, seed int64) []*StorageNode {
 	nOut := minInt(len(in), n)
 	nOut = maxInt(1, nOut)
 	randGen := rand.New(rand.NewSource(seed))
