@@ -113,14 +113,11 @@ func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
 }
 
 func (mc *Chain) startRound(ctx context.Context, r *Round, seed int64) {
-	if mc.nextViewChange <= r.Number && ((mc.currentDKG != nil && mc.currentDKG.StartingRound < mc.nextViewChange) || mc.currentDKG == nil) {
-		mc.ViewChange(ctx)
-	}
 	if !mc.SetRandomSeed(r.Round, seed) {
 		return
 	}
 	Logger.Info("Starting a new round", zap.Int64("round", r.GetRoundNumber()))
-
+	mc.ViewChange(ctx, r.Number)
 	mc.startNewRound(ctx, r)
 }
 
