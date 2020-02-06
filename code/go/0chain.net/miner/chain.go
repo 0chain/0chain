@@ -12,6 +12,7 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/client"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/threshold/bls"
@@ -211,7 +212,7 @@ func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) erro
 }
 
 func (mc *Chain) ViewChange(ctx context.Context, round int64) {
-	if config.DevConfiguration.ViewChange && mc.NextViewChange <= round && (mc.CurrentDKG == nil || mc.CurrentDKG.StartingRound < mc.NextViewChange) {
+	if config.DevConfiguration.ViewChange && mc.nextViewChange <= round && (mc.currentDKG == nil || mc.currentDKG.StartingRound < mc.nextViewChange) {
 		err := mc.UpdateMagicBlock(mc.ViewChangeMagicBlock)
 		if err != nil {
 			Logger.DPanic(err.Error())
