@@ -189,7 +189,7 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 	if err != nil {
 		return false
 	}
-	mc.ViewChange(ctx, r.Number)
+	mc.ViewChange(ctx, mr.Number)
 	var share bls.Sign
 	share.SetHexString(vrfs.Share)
 	partyID := bls.ComputeIDdkg(vrfs.GetParty().ID)
