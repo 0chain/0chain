@@ -125,9 +125,11 @@ func (c *Chain) VerifyChainHistory(ctx context.Context, latestMagicBlock *block.
 		sharders = append(sharders, "http://"+sharder.N2NHost+":"+strconv.Itoa(sharder.Port))
 	}
 	for currentMagicBlock.Hash != latestMagicBlock.Hash {
-		magicBlock, err := httpclientutil.GetMagicBlockCall(sharders, currentMagicBlock.MagicBlockNumber+1, 1)
+		magicBlock, err := httpclientutil.GetMagicBlockCall(sharders,
+			currentMagicBlock.MagicBlockNumber+1, 1)
 		if err != nil {
-			Logger.DPanic(fmt.Sprintf("failed to get magic block(%v): %v", currentMagicBlock.MagicBlockNumber+1, err.Error()))
+			Logger.DPanic(fmt.Sprintf("failed to get magic block(%v): %v",
+				currentMagicBlock.MagicBlockNumber+1, err.Error()))
 		}
 		if !magicBlock.VerifyMinersSignatures(currentMagicBlock) {
 			Logger.DPanic(fmt.Sprintf("failed to verify magic block: %v", err.Error()))
