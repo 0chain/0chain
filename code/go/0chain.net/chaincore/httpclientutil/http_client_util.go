@@ -484,19 +484,39 @@ func GetMagicBlockCall(urls []string, magicBlockNumber int64, consensus int) (*b
 	numSuccess := 0
 	numErrs := 0
 	var errString string
+	timeoutRetry := time.Millisecond * 500
 	receivedBlock := datastore.GetEntityMetadata("block").Instance().(*block.Block)
 	receivedBlock.MagicBlock = block.NewMagicBlock()
 
 	for _, sharder := range urls {
 		url := fmt.Sprintf("%v/%v%v", sharder, specificMagicBlockURL, strconv.FormatInt(magicBlockNumber, 10))
-		response, err := httpClient.Get(url)
+
+		retried := 0
+		var response *http.Response
+		var err error
+		for {
+			response, err = httpClient.Get(url)
+			if err != nil || retried >= 4 || response.StatusCode != http.StatusTooManyRequests {
+				break
+			}
+			response.Body.Close()
+			Logger.Warn("attempt to retry the request",
+				zap.Any("response Status", response.StatusCode),
+				zap.Any("response Status text", response.Status), zap.String("URL", url),
+				zap.Any("retried", retried+1))
+			time.Sleep(timeoutRetry)
+			retried++
+		}
+
 		if err != nil {
 			Logger.Error("Error getting response for sc rest api", zap.Any("error", err))
 			numErrs++
 			errString = errString + sharder + ":" + err.Error()
 		} else {
 			if response.StatusCode != 200 {
-				Logger.Error("Error getting response from", zap.String("URL", url), zap.Any("response Status", response.StatusCode))
+				Logger.Error("Error getting response from", zap.String("URL", url),
+					zap.Any("response Status", response.StatusCode),
+					zap.Any("response Status text", response.Status))
 				numErrs++
 				errString = errString + sharder + ": response_code: " + strconv.Itoa(response.StatusCode)
 				response.Body.Close()
