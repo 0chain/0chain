@@ -65,7 +65,7 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) err
 		mc.currentDKG = bls.MakeDKG(mb.T, mb.N, self.ID)
 		mc.currentDKG.MagicBlockNumber = mb.MagicBlockNumber
 		mc.currentDKG.StartingRound = mb.StartingRound
-		for k := range mb.Miners.NodesMap {
+		for k := range mb.Miners.CopyNodesMap() {
 			if savedShare, ok := dkgSummary.SecretShares[ComputeBlsID(k)]; ok {
 				mc.currentDKG.AddSecretShare(bls.ComputeIDdkg(k), savedShare)
 			} else if v, ok := mb.ShareOrSigns.Shares[k]; ok {

@@ -33,8 +33,9 @@ func NewHashPoolScorer(hs encryption.HashScorer) *HashPoolScorer {
 
 //ScoreHash - implement interface
 func (hps *HashPoolScorer) ScoreHash(np *Pool, hash []byte) []*Score {
-	nodes := make([]*Score, np.Size())
-	for idx, nd := range np.Nodes {
+	npNodes := np.CopyNodes()
+	nodes := make([]*Score, len(npNodes))
+	for idx, nd := range npNodes {
 		nodes[idx] = &Score{}
 		nodes[idx].Node = nd
 		nodes[idx].Score = hps.HashScorer.Score(nd.idBytes, hash)

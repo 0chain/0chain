@@ -92,12 +92,12 @@ func GetBlockResponse(b *block.Block, contentParts []string) (interface{}, error
 	data := make(map[string]interface{}, len(contentParts))
 	for _, part := range contentParts {
 		switch part {
-			case "full":
-				data["block"] = b
-			case "header":
-				data["header"] = b.GetSummary()
-			case "merkle_tree":
-				data["merkle_tree"] = b.GetMerkleTree().GetTree()
+		case "full":
+			data["block"] = b
+		case "header":
+			data["header"] = b.GetSummary()
+		case "merkle_tree":
+			data["merkle_tree"] = b.GetMerkleTree().GetTree()
 		}
 	}
 	return data, nil
@@ -568,7 +568,7 @@ func (c *Chain) N2NStatsWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<tr><td rowspan='2'>URI</td><td rowspan='2'>Count</td><td colspan='3'>Time</td><td colspan='3'>Size</td></tr>")
 	fmt.Fprintf(w, "<tr><td>Min</td><td>Average</td><td>Max</td><td>Min</td><td>Average</td><td>Max</td></tr>")
 	fmt.Fprintf(w, "<tr><td colspan='8'>Miners (%v/%v) - median network time = %.2f", c.Miners.GetActiveCount(), c.Miners.Size(), c.Miners.GetMedianNetworkTime()/1000000)
-	for _, nd := range c.Miners.Nodes {
+	for _, nd := range c.Miners.CopyNodes() {
 		if nd == node.Self.Node {
 			continue
 		}
@@ -589,7 +589,7 @@ func (c *Chain) N2NStatsWriter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Fprintf(w, "<tr><td colspan='8'>Sharders (%v/%v) - median network time = %.2f", c.Sharders.GetActiveCount(), c.Sharders.Size(), c.Sharders.GetMedianNetworkTime()/1000000)
-	for _, nd := range c.Sharders.Nodes {
+	for _, nd := range c.Sharders.CopyNodes() {
 		if nd == node.Self.Node {
 			continue
 		}
@@ -691,7 +691,7 @@ func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "<br>")
 		fmt.Fprintf(w, "<table>")
 		fmt.Fprintf(w, "<tr><td>Miner</td><td>Verification Failures</td></tr>")
-		for _, nd := range c.Miners.Nodes {
+		for _, nd := range c.Miners.CopyNodes() {
 			ms := nd.ProtocolStats.(*MinerStats)
 			fmt.Fprintf(w, "<tr><td>%v</td><td class='number'>%v</td></tr>", nd.GetPseudoName(), ms.VerificationFailures)
 		}
@@ -707,7 +707,7 @@ func (c *Chain) generationCountStats(w http.ResponseWriter) {
 	}
 	fmt.Fprintf(w, "<td>Total</td></tr>")
 	totals := make([]int64, c.NumGenerators)
-	for _, nd := range c.Miners.Nodes {
+	for _, nd := range c.Miners.CopyNodes() {
 		fmt.Fprintf(w, "<tr><td>%v</td>", nd.GetPseudoName())
 		ms := nd.ProtocolStats.(*MinerStats)
 		var total int64
@@ -736,7 +736,7 @@ func (c *Chain) verificationCountStats(w http.ResponseWriter) {
 	}
 	fmt.Fprintf(w, "<td>Total</td></tr>")
 	totals := make([]int64, c.NumGenerators)
-	for _, nd := range c.Miners.Nodes {
+	for _, nd := range c.Miners.CopyNodes() {
 		fmt.Fprintf(w, "<tr><td>%v</td>", nd.GetPseudoName())
 		ms := nd.ProtocolStats.(*MinerStats)
 		var total int64
@@ -765,7 +765,7 @@ func (c *Chain) finalizationCountStats(w http.ResponseWriter) {
 	}
 	fmt.Fprintf(w, "<td>Total</td></tr>")
 	totals := make([]int64, c.NumGenerators)
-	for _, nd := range c.Miners.Nodes {
+	for _, nd := range c.Miners.CopyNodes() {
 		fmt.Fprintf(w, "<tr><td>%v</td>", nd.GetPseudoName())
 		ms := nd.ProtocolStats.(*MinerStats)
 		var total int64

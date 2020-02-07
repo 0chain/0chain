@@ -181,7 +181,7 @@ func main() {
 	initHandlers()
 
 	chain.StartTime = time.Now().UTC()
-	_, activeMiner := mc.Miners.NodesMap[node.Self.ID]
+	activeMiner := mc.Miners.HasNode(node.Self.ID)
 	if activeMiner {
 		miner.SetDKG(ctx, mc.MagicBlock)
 		go func() {

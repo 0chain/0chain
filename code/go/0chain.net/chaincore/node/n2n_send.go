@@ -29,7 +29,7 @@ func SetMaxConcurrentRequests(maxConcurrentRequests int) {
 
 /*SendAll - send to every node */
 func (np *Pool) SendAll(handler SendHandler) []*Node {
-	return np.SendAtleast(len(np.Nodes), handler)
+	return np.SendAtleast(np.Size(), handler)
 }
 
 /*SendTo - send to a specific node */
@@ -46,7 +46,7 @@ func (np *Pool) SendTo(handler SendHandler, to string) (bool, error) {
 
 /*SendOne - send message to a single node in the pool */
 func (np *Pool) SendOne(handler SendHandler) *Node {
-	nodes := np.shuffleNodes()
+	nodes := np.shuffleNodesLock()
 	return np.sendOne(handler, nodes)
 }
 
@@ -61,7 +61,7 @@ func (np *Pool) SendToMultiple(handler SendHandler, nodes []*Node) (bool, error)
 
 /*SendAtleast - It tries to communicate to at least the given number of active nodes */
 func (np *Pool) SendAtleast(numNodes int, handler SendHandler) []*Node {
-	nodes := np.shuffleNodes()
+	nodes := np.shuffleNodesLock()
 	return np.sendTo(numNodes, nodes, handler)
 }
 

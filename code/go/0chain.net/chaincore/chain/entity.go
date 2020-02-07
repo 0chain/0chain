@@ -703,7 +703,7 @@ func (c *Chain) getMiningStake(minerID datastore.Key) int {
 
 //InitializeMinerPool - initialize the miners after their configuration is read
 func (c *Chain) InitializeMinerPool() {
-	for _, nd := range c.Miners.Nodes {
+	for _, nd := range c.Miners.CopyNodes() {
 		ms := &MinerStats{}
 		ms.GenerationCountByRank = make([]int64, c.NumGenerators)
 		ms.FinalizationCountByRank = make([]int64, c.NumGenerators)
@@ -951,7 +951,7 @@ func (c *Chain) ActiveInChain() bool {
 func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 	c.mbMutex.Lock()
 	defer c.mbMutex.Unlock()
-	if newMagicBlock.Miners == nil || len(newMagicBlock.Miners.NodesMap) == 0 {
+	if newMagicBlock.Miners == nil || newMagicBlock.Miners.MapSize() == 0 {
 		return common.NewError("failed to update magic block", "there are no miners in the magic block")
 	}
 	if newMagicBlock.IsActiveNode(node.Self.ID, c.CurrentRound) && c.GetLatestFinalizedMagicBlock() != nil && c.GetLatestFinalizedMagicBlock().MagicBlock.MagicBlockNumber == newMagicBlock.MagicBlockNumber-1 && c.GetLatestFinalizedMagicBlock().MagicBlock.Hash != newMagicBlock.PreviousMagicBlockHash {
@@ -974,11 +974,11 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 }
 
 func (c *Chain) SetupNodes() {
-	for _, miner := range c.Miners.NodesMap {
+	for _, miner := range c.Miners.CopyNodesMap() {
 		miner.ComputeProperties()
 		node.Setup(miner)
 	}
-	for _, sharder := range c.Sharders.NodesMap {
+	for _, sharder := range c.Sharders.CopyNodesMap() {
 		sharder.ComputeProperties()
 		node.Setup(sharder)
 	}
@@ -1014,14 +1014,14 @@ func (c *Chain) GetLatestFinalizedMagicBlockSummary() *block.BlockSummary {
 }
 
 func (c *Chain) GetNodesPreviousInfo() {
-	for key, miner := range c.Miners.NodesMap {
-		if oldMiner, ok := c.PreviousMagicBlock.Miners.NodesMap[key]; ok {
-			miner.SetNodeInfo(oldMiner)
+	for key, miner := range c.Miners.CopyNodesMap() {
+		if old := c.PreviousMagicBlock.Miners.GetNode(key); old != nil {
+			miner.SetNodeInfo(old)
 		}
 	}
-	for key, sharder := range c.Sharders.NodesMap {
-		if oldSharder, ok := c.PreviousMagicBlock.Sharders.NodesMap[key]; ok {
-			sharder.SetNodeInfo(oldSharder)
+	for key, sharder := range c.Sharders.CopyNodesMap() {
+		if old := c.PreviousMagicBlock.Sharders.GetNode(key); old != nil {
+			sharder.SetNodeInfo(old)
 		}
 	}
 }

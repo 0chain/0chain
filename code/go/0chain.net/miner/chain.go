@@ -231,7 +231,7 @@ func (mc *Chain) ChainStarted(ctx context.Context) bool {
 		case <-timer.C:
 			var start int
 			var started int
-			for _, n := range mc.Miners.NodesMap {
+			for _, n := range mc.Miners.CopyNodesMap() {
 				mc.RequestStartChain(n, &start, &started)
 			}
 			if start >= mc.T {
@@ -253,7 +253,7 @@ func (mc *Chain) ChainStarted(ctx context.Context) bool {
 func StartChainRequestHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	nodeID := r.Header.Get(node.HeaderNodeID)
 	mc := GetMinerChain()
-	if _, ok := mc.Miners.NodesMap[nodeID]; !ok {
+	if !mc.Miners.HasNode(nodeID) {
 		Logger.Error("failed to send start chain", zap.Any("id", nodeID))
 		return nil, common.NewError("failed to send start chain", "miner is not in active set")
 	}
