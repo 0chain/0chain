@@ -21,7 +21,7 @@ import (
 )
 
 var nodes = make(map[string]*Node)
-var nodesMutex = &sync.Mutex{}
+var nodesMutex = &sync.RWMutex{}
 
 /*RegisterNode - register a node to a global registery
 * We need to keep track of a global register of nodes. This is required to ensure we can verify a signed request
@@ -42,8 +42,8 @@ func DeregisterNode(nodeID string) {
 
 // CopyNodes returns copy of all registered nodes.
 func CopyNodes() (cp map[string]*Node) {
-	nodesMutex.Lock()
-	defer nodesMutex.Unlock()
+	nodesMutex.RLock()
+	defer nodesMutex.RUnlock()
 
 	cp = make(map[string]*Node, len(nodes))
 	for k, v := range nodes {
@@ -54,8 +54,8 @@ func CopyNodes() (cp map[string]*Node) {
 }
 
 func GetMinerNodesKeys() []string {
-	nodesMutex.Lock()
-	defer nodesMutex.Unlock()
+	nodesMutex.RLock()
+	defer nodesMutex.RUnlock()
 	var keys []string
 	for k, n := range nodes {
 		if n.Type == NodeTypeMiner {
@@ -67,8 +67,8 @@ func GetMinerNodesKeys() []string {
 
 /*GetNode - get the node from the registery */
 func GetNode(nodeID string) *Node {
-	nodesMutex.Lock()
-	defer nodesMutex.Unlock()
+	nodesMutex.RLock()
+	defer nodesMutex.RUnlock()
 	return nodes[nodeID]
 }
 
