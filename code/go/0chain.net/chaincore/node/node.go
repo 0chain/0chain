@@ -40,11 +40,17 @@ func DeregisterNode(nodeID string) {
 	delete(nodes, nodeID)
 }
 
-func ViewNodes(viewNodesFunc func(nodes map[string]*Node)) {
+// CopyNodes returns copy of all registered nodes.
+func CopyNodes() (cp map[string]*Node) {
 	nodesMutex.Lock()
 	defer nodesMutex.Unlock()
 
-	viewNodesFunc(nodes)
+	cp = make(map[string]*Node, len(nodes))
+	for k, v := range nodes {
+		cp[k] = v
+	}
+
+	return
 }
 
 func GetMinerNodesKeys() []string {

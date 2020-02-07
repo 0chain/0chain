@@ -36,26 +36,26 @@ type PoolMembersInfo struct {
   Smartcontracts using this must have validated the caller.
 */
 func (bc *BCContext) GetNodepoolInfo() interface{} {
+	nodes := node.CopyNodes()
 	members := &PoolMembersInfo{}
-	node.ViewNodes(func(nodes map[string]*node.Node) {
-		members.MembersInfo = make([]PoolMemberInfo, 0, len(nodes))
-		for _, n := range nodes {
-			pm := &PoolMemberInfo{}
-			pm.N2NHost = n.N2NHost
-			pm.Port = strconv.Itoa(n.Port)
-			switch n.Type {
-			case node.NodeTypeMiner:
-				pm.Type = Miner
-			case node.NodeTypeSharder:
-				pm.Type = Sharder
-			default:
-				Logger.Info("unknown_node_type", zap.Int8("Type", n.Type))
-			}
-			pm.PublicKey = n.PublicKey
-			//Logger.Info("Adding poolmember ", zap.String("Type", pm.Type), zap.String("N2nHost", pm.N2NHost))
-			members.MembersInfo = append(members.MembersInfo, *pm)
+	members.MembersInfo = make([]PoolMemberInfo, 0, len(nodes))
+
+	for _, n := range nodes {
+		pm := &PoolMemberInfo{}
+		pm.N2NHost = n.N2NHost
+		pm.Port = strconv.Itoa(n.Port)
+		switch n.Type {
+		case node.NodeTypeMiner:
+			pm.Type = Miner
+		case node.NodeTypeSharder:
+			pm.Type = Sharder
+		default:
+			Logger.Info("unknown_node_type", zap.Int8("Type", n.Type))
 		}
-	})
+		pm.PublicKey = n.PublicKey
+		//Logger.Info("Adding poolmember ", zap.String("Type", pm.Type), zap.String("N2nHost", pm.N2NHost))
+		members.MembersInfo = append(members.MembersInfo, *pm)
+	}
 	Logger.Info("GetNodePoolInfo returning ", zap.Int("membersInfo", len(members.MembersInfo)))
 	return members
 }
