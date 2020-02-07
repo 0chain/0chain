@@ -38,7 +38,7 @@ func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, pa
 	rhandler := requestor(params, handler)
 	var nodes []*Node
 	if GetFetchStrategy() == FetchStrategyRandom {
-		nodes = np.shuffleNodes()
+		nodes = np.shuffleNodesLock()
 	} else {
 		nodes = np.GetNodesByLargeMessageTime()
 	}
@@ -66,7 +66,7 @@ func (np *Pool) RequestEntityFromAll(ctx context.Context, requestor EntityReques
 	rhandler := requestor(params, handler)
 	var nodes []*Node
 	if GetFetchStrategy() == FetchStrategyRandom {
-		nodes = np.shuffleNodes()
+		nodes = np.shuffleNodesLock()
 	} else {
 		nodes = np.GetNodesByLargeMessageTime()
 	}

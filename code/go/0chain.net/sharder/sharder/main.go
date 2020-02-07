@@ -238,7 +238,8 @@ func readMagicBlockFile(magicBlockFile *string, sc *sharder.Chain, serverChain *
 		}
 		Logger.Info("parse magic block", zap.Any("block", mB))
 		mB.Hash = mB.GetHash()
-		Logger.Info("number of miners", zap.Any("number of miners", len(mB.Miners.Nodes)), zap.Any("number of sharders", len(mB.Sharders.Nodes)))
+		Logger.Info("number of miners", zap.Any("number of miners", len(mB.Miners.Size())),
+			zap.Any("number of sharders", len(mB.Sharders.Size())))
 		return mB
 	} else {
 		Logger.Panic(fmt.Sprintf("magic block file (%v) is in the wrong format. It should be a json", magicBlockConfigFile))
