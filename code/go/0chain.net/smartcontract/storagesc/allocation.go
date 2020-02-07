@@ -111,13 +111,15 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 				return "", err
 			}
 		}
-		seed, err := strconv.ParseInt(t.Hash[0:8], 16, 64)
-		if err != nil {
-			return "", common.NewError("allocation_request_failed", "Failed to create seed for randomizeNodes")
-		}
+		if len(blobberNodes) < size {
+			seed, err := strconv.ParseInt(t.Hash[0:8], 16, 64)
+			if err != nil {
+				return "", common.NewError("allocation_request_failed", "Failed to create seed for randomizeNodes")
+			}
 
-		// randomize blobber nodes
-		blobberNodes = randomizeNodes(allBlobbersList.Nodes, blobberNodes, size, seed)
+			// randomize blobber nodes
+			blobberNodes = randomizeNodes(allBlobbersList.Nodes, blobberNodes, size, seed)
+		}
 		for i := 0; i < size; i++ {
 			blobberNode := blobberNodes[i]
 			var blobberAllocation BlobberAllocation
