@@ -127,7 +127,7 @@ func (mc *Chain) ContributeMpk() (*httpclientutil.Transaction, error) {
 	}
 	selfNode := node.Self.Underlying()
 	selfNodeKey := selfNode.GetKey()
-	mpk := &block.MPK{ID: selfNode.GetKey()}
+	mpk := &block.MPK{ID: selfNodeKey}
 	if !mc.dkgSet {
 		if dmn.N == 0 {
 			return nil, common.NewError("failed to contribute mpk", "dkg is not set yet")

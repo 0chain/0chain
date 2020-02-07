@@ -41,7 +41,7 @@ func (sn *SelfNode) GetSignatureScheme() encryption.SignatureScheme {
 /*SetSignatureScheme - setter */
 func (sn *SelfNode) SetSignatureScheme(signatureScheme encryption.SignatureScheme) {
 	sn.signatureScheme = signatureScheme
-	sn.SetPublicKey(signatureScheme.GetPublicKey())
+	sn.Underlying().SetPublicKey(signatureScheme.GetPublicKey())
 }
 
 /*Sign - sign the given hash */
@@ -51,7 +51,7 @@ func (sn *SelfNode) Sign(hash string) (string, error) {
 
 /*TimeStampSignature - get timestamp based signature */
 func (sn *SelfNode) TimeStampSignature() (string, string, string, error) {
-	data := fmt.Sprintf("%v:%v", sn.ID, common.Now())
+	data := fmt.Sprintf("%v:%v", sn.Underlying().GetKey(), common.Now())
 	hash := encryption.Hash(data)
 	signature, err := sn.Sign(hash)
 	if err != nil {
@@ -99,5 +99,5 @@ func (sn *SelfNode) SetNodeIfPublicKeyIsEqual(node *Node) {
 	sn.Node.Status = NodeStatusActive
 }
 
-/*Self represents the node of this intance */
+/*Self represents the node of this instance */
 var Self = newSelfNode()
