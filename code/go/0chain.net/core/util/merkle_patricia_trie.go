@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"sync"
+	"sync/atomic"
 
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -16,18 +17,18 @@ var DebugMPTNode = false
 
 /*MerklePatriciaTrie - it's a merkle tree and a patricia trie */
 type MerklePatriciaTrie struct {
-	muDB            *sync.RWMutex
+	mutex           *sync.RWMutex
 	Root            Key
 	db              NodeDB
 	ChangeCollector ChangeCollectorI
-	version         Sequence
+	Version         Sequence
 }
 
 /*NewMerklePatriciaTrie - create a new patricia merkle trie */
 func NewMerklePatriciaTrie(db NodeDB, version Sequence) *MerklePatriciaTrie {
 	mpt := &MerklePatriciaTrie{
-		muDB: &sync.RWMutex{},
-		db:   db,
+		mutex: &sync.RWMutex{},
+		db:    db,
 	}
 	mpt.ResetChangeCollector(nil)
 	mpt.SetVersion(version)
@@ -43,47 +44,62 @@ func CloneMPT(mpt MerklePatriciaTrieI) *MerklePatriciaTrie {
 
 /*SetNodeDB - implement interface */
 func (mpt *MerklePatriciaTrie) SetNodeDB(ndb NodeDB) {
-	mpt.muDB.Lock()
-	defer mpt.muDB.Unlock()
+	mpt.mutex.Lock()
+	defer mpt.mutex.Unlock()
 	mpt.db = ndb
 }
 
 /*GetNodeDB - implement interface */
 func (mpt *MerklePatriciaTrie) GetNodeDB() NodeDB {
-	mpt.muDB.RLock()
-	defer mpt.muDB.RUnlock()
+	mpt.mutex.RLock()
+	defer mpt.mutex.RUnlock()
+	return mpt.db
+}
+
+func (mpt *MerklePatriciaTrie) getNodeDB() NodeDB {
 	return mpt.db
 }
 
 //SetVersion - implement interface
 func (mpt *MerklePatriciaTrie) SetVersion(version Sequence) {
-	mpt.version = version
+	current := (*int64)(&mpt.Version)
+	atomic.StoreInt64(current, int64(version))
 }
 
 //GetVersion - implement interface
 func (mpt *MerklePatriciaTrie) GetVersion() Sequence {
-	return mpt.version
+	current := (*int64)(&mpt.Version)
+	return Sequence(atomic.LoadInt64(current))
 }
 
 /*SetRoot - implement interface */
 func (mpt *MerklePatriciaTrie) SetRoot(root Key) {
+	mpt.mutex.Lock()
+	defer mpt.mutex.Unlock()
+	mpt.setRoot(root)
+}
+
+/*setRoot - implement interface */
+func (mpt *MerklePatriciaTrie) setRoot(root Key) {
 	mpt.Root = root
 }
 
 /*GetRoot - implement interface */
 func (mpt *MerklePatriciaTrie) GetRoot() Key {
+	mpt.mutex.RLock()
+	defer mpt.mutex.RUnlock()
 	return mpt.Root
 }
 
 /*GetNodeValue - get the value for a given path */
 func (mpt *MerklePatriciaTrie) GetNodeValue(path Path) (Serializable, error) {
+	mpt.mutex.RLock()
+	defer mpt.mutex.RUnlock()
+
 	rootKey := []byte(mpt.Root)
 	if rootKey == nil || len(rootKey) == 0 {
 		return nil, ErrValueNotPresent
 	}
-
-	mpt.muDB.RLock()
-	defer mpt.muDB.RUnlock()
 
 	rootNode, err := mpt.db.GetNode(rootKey)
 	if err != nil {
@@ -111,6 +127,9 @@ func (mpt *MerklePatriciaTrie) Insert(path Path, value Serializable) (Key, error
 	if eval == nil || len(eval) == 0 {
 		return mpt.Delete(path)
 	}
+
+	mpt.mutex.Lock()
+	defer mpt.mutex.Unlock()
 	var err error
 	var newRootHash Key
 	if mpt.Root == nil {
@@ -121,23 +140,29 @@ func (mpt *MerklePatriciaTrie) Insert(path Path, value Serializable) (Key, error
 	if err != nil {
 		return nil, err
 	}
-	mpt.SetRoot(newRootHash)
+	mpt.setRoot(newRootHash)
 	return newRootHash, nil
 }
 
 /*Delete - delete a value from the trie */
 func (mpt *MerklePatriciaTrie) Delete(path Path) (Key, error) {
-	_, newRootHash, err := mpt.delete(Key(mpt.Root), path)
+	mpt.mutex.Lock()
+	defer mpt.mutex.Unlock()
+
+	_, newRootHash, err := mpt.delete(mpt.Root, path)
 	if err != nil {
 		return nil, err
 	}
-	mpt.SetRoot(newRootHash)
+	mpt.setRoot(newRootHash)
 	return newRootHash, nil
 }
 
 //GetPathNodes - implement interface */
 func (mpt *MerklePatriciaTrie) GetPathNodes(path Path) ([]Node, error) {
-	nodes, err := mpt.getPathNodes([]byte(mpt.Root), path)
+	mpt.mutex.RLock()
+	defer mpt.mutex.RUnlock()
+
+	nodes, err := mpt.getPathNodes(mpt.Root, path)
 	if err != nil {
 		return nil, err
 	}
@@ -193,21 +218,31 @@ func (mpt *MerklePatriciaTrie) getPathNodes(key Key, path Path) ([]Node, error) 
 
 /*GetChangeCollector - implement interface */
 func (mpt *MerklePatriciaTrie) GetChangeCollector() ChangeCollectorI {
+	mpt.mutex.RLock()
+	defer mpt.mutex.RUnlock()
+	return mpt.ChangeCollector
+}
+
+func (mpt *MerklePatriciaTrie) getChangeCollector() ChangeCollectorI {
 	return mpt.ChangeCollector
 }
 
 /*ResetChangeCollector - implement interface */
 func (mpt *MerklePatriciaTrie) ResetChangeCollector(root Key) {
+	mpt.mutex.Lock()
+	defer mpt.mutex.Unlock()
 	mpt.ChangeCollector = NewChangeCollector()
 	if root != nil {
-		mpt.SetRoot(root)
+		mpt.setRoot(root)
 	}
 }
 
 /*SaveChanges - implement interface */
 func (mpt *MerklePatriciaTrie) SaveChanges(ndb NodeDB, includeDeletes bool) error {
+	mpt.mutex.RLock()
+	defer mpt.mutex.RUnlock()
 	cc := mpt.ChangeCollector
-	err := cc.UpdateChanges(ndb, mpt.version, includeDeletes)
+	err := cc.UpdateChanges(ndb, mpt.Version, includeDeletes)
 	if err != nil {
 		return err
 	}
@@ -216,7 +251,10 @@ func (mpt *MerklePatriciaTrie) SaveChanges(ndb NodeDB, includeDeletes bool) erro
 
 /*Iterate - iterate the entire trie */
 func (mpt *MerklePatriciaTrie) Iterate(ctx context.Context, handler MPTIteratorHandler, visitNodeTypes byte) error {
-	rootKey := Key(mpt.Root)
+	mpt.mutex.RLock()
+	defer mpt.mutex.RUnlock()
+
+	rootKey := mpt.Root
 	if rootKey == nil || len(rootKey) == 0 {
 		return nil
 	}
@@ -231,6 +269,8 @@ func (mpt *MerklePatriciaTrie) IterateFrom(ctx context.Context, node Key, handle
 
 /*PrettyPrint - print this trie */
 func (mpt *MerklePatriciaTrie) PrettyPrint(w io.Writer) error {
+	mpt.mutex.RLock()
+	defer mpt.mutex.RUnlock()
 	return mpt.pp(w, Key(mpt.Root), 0, false)
 }
 
@@ -285,7 +325,7 @@ func (mpt *MerklePatriciaTrie) insert(value Serializable, key Key, path Path) (N
 }
 
 func (mpt *MerklePatriciaTrie) insertLeaf(oldNode Node, value Serializable, path Path) (Node, Key, error) {
-	return mpt.insertNode(oldNode, NewLeafNode(path, mpt.version, value))
+	return mpt.insertNode(oldNode, NewLeafNode(path, mpt.Version, value))
 }
 
 func (mpt *MerklePatriciaTrie) insertExtension(oldNode Node, path Path, key Key) (Node, Key, error) {
@@ -481,7 +521,7 @@ func (mpt *MerklePatriciaTrie) deleteAtNode(node Node, path Path) (Node, Key, er
 							npath = append(npath, onodeImpl.Path...)
 						}
 						lnode := ochild.Clone().(*LeafNode)
-						lnode.SetOrigin(mpt.version)
+						lnode.SetOrigin(mpt.Version)
 						lnode.Path = npath
 						nnode = lnode
 						mpt.deleteNode(ochild)
@@ -520,7 +560,7 @@ func (mpt *MerklePatriciaTrie) deleteAtNode(node Node, path Path) (Node, Key, er
 		switch cnodeImpl := cnode.(type) {
 		case *LeafNode: // if extension child changes from full node to leaf, convert the extension into a leaf node
 			nnode := cnode.Clone().(*LeafNode)
-			nnode.SetOrigin(mpt.version)
+			nnode.SetOrigin(mpt.Version)
 			nnode.Path = append(nodeImpl.Path, cnodeImpl.Path...)
 			nnode.SetValue(cnodeImpl.GetValue())
 			mpt.deleteNode(cnode)
@@ -669,9 +709,6 @@ func (mpt *MerklePatriciaTrie) iterate(ctx context.Context, path Path, key Key, 
 }
 
 func (mpt *MerklePatriciaTrie) insertNode(oldNode Node, newNode Node) (Node, Key, error) {
-	mpt.muDB.RLock()
-	defer mpt.muDB.RUnlock()
-
 	if DebugMPTNode && Logger != nil {
 		ohash := ""
 		if oldNode != nil {
@@ -748,8 +785,8 @@ func (mpt *MerklePatriciaTrie) pp(w io.Writer, key Key, depth byte, initpad bool
 
 /*UpdateVersion - updates the origin of all the nodes in this tree to the given origin */
 func (mpt *MerklePatriciaTrie) UpdateVersion(ctx context.Context, version Sequence, missingNodeHander MPTMissingNodeHandler) error {
-	mpt.muDB.RLock()
-	defer mpt.muDB.RUnlock()
+	mpt.mutex.RLock()
+	defer mpt.mutex.RUnlock()
 
 	ps := GetPruneStats(ctx)
 	if ps != nil {
@@ -839,8 +876,11 @@ func GetChanges(ctx context.Context, ndb NodeDB, start Sequence, end Sequence) (
 
 //Validate - implement interface - any sort of validations that can tell if the MPT is in a sane state
 func (mpt *MerklePatriciaTrie) Validate() error {
-	changes := mpt.GetChangeCollector().GetChanges()
-	db := mpt.GetNodeDB()
+	mpt.mutex.RLock()
+	defer mpt.mutex.RUnlock()
+
+	changes := mpt.getChangeCollector().GetChanges()
+	db := mpt.getNodeDB()
 	switch dbImpl := db.(type) {
 	case *MemoryNodeDB:
 	case *LevelNodeDB:
@@ -861,6 +901,9 @@ func (mpt *MerklePatriciaTrie) Validate() error {
 
 //MergeMPTChanges - implement interface
 func (mpt *MerklePatriciaTrie) MergeMPTChanges(mpt2 MerklePatriciaTrieI) error {
+	mpt.mutex.Lock()
+	defer mpt.mutex.Unlock()
+
 	if DebugMPTNode && Logger != nil {
 		if err := mpt2.GetChangeCollector().Validate(); err != nil {
 			Logger.Error("MergeMPTChanges - change collector validate", zap.Error(err))
@@ -878,14 +921,16 @@ func (mpt *MerklePatriciaTrie) MergeMPTChanges(mpt2 MerklePatriciaTrieI) error {
 			return err
 		}
 	}
-	mpt.SetRoot(mpt2.GetRoot())
+	mpt.setRoot(mpt2.GetRoot())
 	return nil
 }
 
 //MergeDB - implement interface
 func (mpt *MerklePatriciaTrie) MergeDB(ndb NodeDB, root Key) error {
 	handler := func(ctx context.Context, key Key, node Node) error {
+		mpt.mutex.Lock()
 		_, _, err := mpt.insertNode(nil, node)
+		mpt.mutex.Unlock()
 		return err
 	}
 	mpt.SetRoot(root)
