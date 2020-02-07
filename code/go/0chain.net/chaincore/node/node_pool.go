@@ -234,7 +234,7 @@ func (np *Pool) ComputeNetworkStats() {
 	var medianTime float64
 	var count int
 	for _, nd := range nodes {
-		if nd == Self.Node {
+		if Self.IsEqual(nd) {
 			continue
 		}
 		if !nd.IsActive() {
@@ -250,7 +250,7 @@ func (np *Pool) ComputeNetworkStats() {
 	mt := time.Duration(medianTime/1000000.) * time.Millisecond
 	switch np.Type {
 	case NodeTypeMiner:
-		Self.Node.Info.MinersMedianNetworkTime = mt
+		Self.Underlying().Info.MinersMedianNetworkTime = mt
 	}
 }
 

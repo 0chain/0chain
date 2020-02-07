@@ -38,7 +38,7 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	chain.PrintCSS(w)
 	diagnostics.WriteStatisticsCSS(w)
 
-	self := node.Self.Node
+	self := node.Self.Underlying()
 	fmt.Fprintf(w, "<div>%v - %v</div>", self.GetPseudoName(), self.Description)
 
 	diagnostics.WriteConfiguration(w, c)
@@ -163,7 +163,7 @@ func GetWalletTable(latest bool) (int64, int64, int64, int64) {
 func MinerStatsHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	c := GetMinerChain().Chain
 	var total int64
-	ms := node.Self.ProtocolStats.(*chain.MinerStats)
+	ms := node.Self.Underlying().ProtocolStats.(*chain.MinerStats)
 	for i := 0; i < c.NumGenerators; i++ {
 		total += ms.FinalizationCountByRank[i]
 	}
@@ -182,11 +182,11 @@ func MinerStatsHandler(ctx context.Context, r *http.Request) (interface{}, error
 	return ExplorerStats{BlockFinality: chain.SteadyStateFinalizationTimer.Mean() / 1000000.0,
 		LastFinalizedRound: c.GetLatestFinalizedBlock().Round,
 		BlocksFinalized:    total,
-		StateHealth:        node.Self.Info.StateMissingNodes,
+		StateHealth:        node.Self.Underlying().Info.StateMissingNodes,
 		CurrentRound:       c.CurrentRound,
 		RoundTimeout:       rtoc,
 		Timeouts:           c.RoundTimeoutsCount,
-		AverageBlockSize:   node.Self.Info.AvgBlockTxns,
+		AverageBlockSize:   node.Self.Underlying().Info.AvgBlockTxns,
 		NetworkTime:        networkTimes,
 	}, nil
 }

@@ -167,7 +167,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 			for _, txn := range ub.Txns {
 				rcount++
 				rtxn := mc.txnToReuse(txn)
-				needsVerification := (ub.MinerID != node.Self.GetKey() || ub.GetVerificationStatus() != block.VerificationSuccessful)
+				needsVerification := (ub.MinerID != node.Self.Underlying().GetKey() || ub.GetVerificationStatus() != block.VerificationSuccessful)
 				if needsVerification {
 					if err := rtxn.ValidateWrtTime(ctx, ub.CreationDate); err != nil {
 						continue
@@ -241,7 +241,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	mc.StateSanityCheck(ctx, b)
 	go b.ComputeTxnMap()
 	bsHistogram.Update(int64(len(b.Txns)))
-	node.Self.Node.Info.AvgBlockTxns = int(math.Round(bsHistogram.Mean()))
+	node.Self.Underlying().Info.AvgBlockTxns = int(math.Round(bsHistogram.Mean()))
 	return nil
 }
 
@@ -445,7 +445,7 @@ func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (*block.BlockVer
 	bvt.Round = b.Round
 	self := node.GetSelfNode(ctx)
 	var err error
-	bvt.VerifierID = self.GetKey()
+	bvt.VerifierID = self.Underlying().GetKey()
 	bvt.Signature, err = self.Sign(b.Hash)
 	b.SetVerificationStatus(block.VerificationSuccessful)
 	if err != nil {

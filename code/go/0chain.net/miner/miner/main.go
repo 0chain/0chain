@@ -81,6 +81,7 @@ func main() {
 		Logger.Panic("Error reading keys file")
 	}
 	reader.Close()
+	selfNode := node.Self.Underlying()
 	node.Self.SetSignatureScheme(signatureScheme)
 
 	miner.SetupMinerChain(serverChain)
@@ -104,26 +105,26 @@ func main() {
 	mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"), magicBlock)
 	Logger.Info("Miners in main", zap.Int("size", mc.Miners.Size()))
 
-	if !mc.IsActiveNode(node.Self.ID, 0) {
+	if !mc.IsActiveNode(selfNode.GetKey(), 0) {
 		hostName, n2nHostName, portNum, err := readNonGenesisHostAndPort(keysFile)
 		if err != nil {
 			Logger.Panic("Error reading keys file. Non-genesis miner has no host or port number", zap.Error(err))
 		}
 		Logger.Info("Inside nonGenesis", zap.String("host_name", hostName), zap.Any("n2n_host_name", n2nHostName), zap.Int("port_num", portNum))
-		node.Self.Host = hostName
-		node.Self.N2NHost = n2nHostName
-		node.Self.Port = portNum
+		selfNode.Host = hostName
+		selfNode.N2NHost = n2nHostName
+		selfNode.Port = portNum
 	}
 
-	if node.Self.ID == "" {
+	if selfNode.GetKey() == "" {
 		Logger.Panic("node definition for self node doesn't exist")
 	}
-	if node.Self.Type != node.NodeTypeMiner {
+	if selfNode.Type != node.NodeTypeMiner {
 		Logger.Panic("node not configured as miner")
 	}
 	err = common.NewError("saving self as client", "client save")
 	for err != nil {
-		_, err = client.PutClient(ctx, &node.Self.Client)
+		_, err = client.PutClient(ctx, &selfNode.Client)
 	}
 	if config.Development() {
 		if *delayFile != "" {
@@ -138,11 +139,11 @@ func main() {
 		mode = "test net"
 	}
 
-	address := fmt.Sprintf(":%v", node.Self.Port)
+	address := fmt.Sprintf(":%v", selfNode.Port)
 
 	Logger.Info("Starting miner", zap.String("build_tag", build.BuildTag), zap.String("go_version", runtime.Version()), zap.Int("available_cpus", runtime.NumCPU()), zap.String("port", address))
 	Logger.Info("Chain info", zap.String("chain_id", config.GetServerChainID()), zap.String("mode", mode))
-	Logger.Info("Self identity", zap.Any("set_index", node.Self.Node.SetIndex), zap.Any("id", node.Self.Node.GetKey()))
+	Logger.Info("Self identity", zap.Any("set_index", selfNode.SetIndex), zap.Any("id", selfNode.GetKey()))
 
 	var server *http.Server
 	if config.Development() {
@@ -166,13 +167,13 @@ func main() {
 	common.ConfigRateLimits()
 	initN2NHandlers()
 
-	if mc.StartingRound == 0 && mc.IsActiveNode(node.Self.ID, mc.StartingRound) {
+	if mc.StartingRound == 0 && mc.IsActiveNode(selfNode.GetKey(), mc.StartingRound) {
 		dkgShare := &bls.DKGSummary{
 			SecretShares: make(map[string]string),
 		}
 		dkgShare.ID = strconv.FormatInt(mc.MagicBlockNumber, 10)
 		for k, v := range mc.ShareOrSigns.Shares {
-			dkgShare.SecretShares[miner.ComputeBlsID(k)] = v.ShareOrSigns[node.Self.ID].Share
+			dkgShare.SecretShares[miner.ComputeBlsID(k)] = v.ShareOrSigns[selfNode.GetKey()].Share
 		}
 		err = miner.StoreDKGSummary(ctx, dkgShare)
 	}
@@ -181,7 +182,7 @@ func main() {
 	initHandlers()
 
 	chain.StartTime = time.Now().UTC()
-	activeMiner := mc.Miners.HasNode(node.Self.ID)
+	activeMiner := mc.Miners.HasNode(selfNode.GetKey())
 	if activeMiner {
 		miner.SetDKG(ctx, mc.MagicBlock)
 		go func() {

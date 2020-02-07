@@ -132,7 +132,7 @@ func VerifyBlockHandler(ctx context.Context, entity datastore.Entity) (interface
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
 	mc := GetMinerChain()
-	if b.MinerID == node.Self.GetKey() {
+	if b.MinerID == node.Self.Underlying().GetKey() {
 		return nil, nil
 	}
 	lfb := mc.GetLatestFinalizedBlock()

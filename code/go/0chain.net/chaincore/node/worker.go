@@ -47,7 +47,7 @@ func (np *Pool) OneTimeStatusMonitor(ctx context.Context) {
 func (np *Pool) statusUpdate(ctx context.Context) {
 	nodes := np.shuffleNodes()
 	for _, node := range nodes {
-		if node == Self.Node {
+		if Self.IsEqual(node) {
 			continue
 		}
 		if common.Within(node.LastActiveTime.Unix(), 10) {
@@ -66,7 +66,7 @@ func (np *Pool) statusUpdate(ctx context.Context) {
 func (np *Pool) statusMonitor(ctx context.Context) {
 	nodes := np.shuffleNodes()
 	for _, node := range nodes {
-		if node == Self.Node {
+		if Self.IsEqual(node) {
 			continue
 		}
 		if common.Within(node.LastActiveTime.Unix(), 10) {
@@ -81,7 +81,7 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 		if err != nil {
 			panic(err)
 		}
-		statusURL = fmt.Sprintf("%v?id=%v&data=%v&hash=%v&signature=%v", statusURL, Self.Node.GetKey(), data, hash, signature)
+		statusURL = fmt.Sprintf("%v?id=%v&data=%v&hash=%v&signature=%v", statusURL, Self.Underlying().GetKey(), data, hash, signature)
 		resp, err := httpClient.Get(statusURL)
 		if err != nil {
 			node.ErrorCount++

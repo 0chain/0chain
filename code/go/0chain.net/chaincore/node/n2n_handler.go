@@ -149,7 +149,7 @@ func GetSender(ctx context.Context) *Node {
 /*SetHeaders - set common request headers */
 func SetHeaders(req *http.Request) {
 	req.Header.Set(HeaderRequestChainID, config.GetServerChainID())
-	req.Header.Set(HeaderNodeID, Self.GetKey())
+	req.Header.Set(HeaderNodeID, Self.Underlying().GetKey())
 }
 
 func getHashData(clientID datastore.Key, ts common.Timestamp, key datastore.Key) string {
@@ -256,12 +256,14 @@ func validateEntityMetadata(sender *Node, r *http.Request) bool {
 	}
 	entityName := r.Header.Get(HeaderRequestEntityName)
 	if entityName == "" {
-		N2n.Error("message received - entity name blank", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI))
+		N2n.Error("message received - entity name blank", zap.Int("from", sender.SetIndex),
+			zap.Int("to", Self.Underlying().SetIndex), zap.String("handler", r.RequestURI))
 		return false
 	}
 	entityMetadata := datastore.GetEntityMetadata(entityName)
 	if entityMetadata == nil {
-		N2n.Error("message received - unknown entity", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI), zap.String("entity", entityName))
+		N2n.Error("message received - unknown entity", zap.Int("from", sender.SetIndex),
+			zap.Int("to", Self.Underlying().SetIndex), zap.String("handler", r.RequestURI), zap.String("entity", entityName))
 		return false
 	}
 	return true

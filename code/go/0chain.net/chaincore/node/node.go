@@ -12,7 +12,6 @@ import (
 
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
-	"0chain.net/core/build"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
@@ -147,9 +146,7 @@ func Setup(node *Node) {
 	node.TimersByURI = make(map[string]metrics.Timer, 10)
 	node.SizeByURI = make(map[string]metrics.Histogram, 10)
 	node.ComputeProperties()
-	if Self.PublicKey == node.PublicKey {
-		setSelfNode(node)
-	}
+	Self.SetNodeIfPublicKeyIsEqual(node)
 }
 
 /*Equals - if two nodes are equal. Only check by id, we don't accept configuration from anyone */
@@ -207,9 +204,7 @@ func Read(line string) (*Node, error) {
 		return nil, common.NewError("invalid_client_id", fmt.Sprintf("public key: %v, client_id: %v, hash: %v\n", node.PublicKey, node.ID, hash))
 	}
 	node.ComputeProperties()
-	if Self.PublicKey == node.PublicKey {
-		setSelfNode(node)
-	}
+	Self.SetNodeIfPublicKeyIsEqual(node)
 	return node, nil
 }
 
@@ -234,17 +229,8 @@ func NewNode(nc map[interface{}]interface{}) (*Node, error) {
 		return nil, common.NewError("invalid_client_id", fmt.Sprintf("public key: %v, client_id: %v, hash: %v\n", node.PublicKey, node.ID, hash))
 	}
 	node.ComputeProperties()
-	if Self.PublicKey == node.PublicKey {
-		setSelfNode(node)
-	}
+	Self.SetNodeIfPublicKeyIsEqual(node)
 	return node, nil
-}
-
-func setSelfNode(n *Node) {
-	Self.Node = n
-	Self.Node.Info.StateMissingNodes = -1
-	Self.Node.Info.BuildTag = build.BuildTag
-	Self.Node.Status = NodeStatusActive
 }
 
 /*ComputeProperties - implement entity interface */

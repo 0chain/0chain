@@ -262,7 +262,7 @@ func (c *Chain) GetLatestFinalizedMagicBlockFromSharder(ctx context.Context) []*
 		return mb, nil
 	}
 	n2s.RequestEntityFromAll(ctx, LatestFinalizedMagicBlockRequestor, nil, handler)
-	if _, ok := n2s.NodesMap[node.Self.ID]; ok {
+	if _, ok := n2s.NodesMap[node.Self.Underlying().GetKey()]; ok {
 		finalizedMagicBlocks = append(finalizedMagicBlocks, c.GetLatestFinalizedMagicBlock())
 	}
 	return finalizedMagicBlocks

@@ -49,7 +49,7 @@ type SmartContractTxnData struct {
 	InputArgs interface{} `json:"input"`
 }
 
-//NewTransactionEntity creat a new transaction
+// NewTransactionEntity creates a new transaction
 func NewTransactionEntity(ID string, chainID string, pkey string) *Transaction {
 	txn := &Transaction{}
 	txn.Version = "1.0"

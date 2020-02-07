@@ -121,7 +121,7 @@ func ChainStatsWriter(w http.ResponseWriter, r *http.Request) {
 	chain.PrintCSS(w)
 	diagnostics.WriteStatisticsCSS(w)
 
-	self := node.Self.Node
+	self := node.Self.Underlying()
 	fmt.Fprintf(w, "<div>%v - %v</div>", self.GetPseudoName(), self.Description)
 
 	diagnostics.WriteConfiguration(w, c)
@@ -229,9 +229,10 @@ func SharderStatsHandler(ctx context.Context, r *http.Request) (interface{}, err
 	} else {
 		previousElapsed = previous.CycleDuration.Round(time.Second).String()
 	}
+	selfNodeInfo := node.Self.Underlying().Info
 	return ExplorerStats{LastFinalizedRound: sc.Chain.GetLatestFinalizedBlock().Round,
-		StateHealth:            node.Self.Info.StateMissingNodes,
-		AverageBlockSize:       node.Self.Info.AvgBlockTxns,
+		StateHealth:            selfNodeInfo.StateMissingNodes,
+		AverageBlockSize:       selfNodeInfo.AvgBlockTxns,
 		PrevInvocationCount:    previous.HealthCheckInvocations,
 		PrevInvocationScanTime: previousElapsed,
 		MeanScanBlockStatsTime: cc.BlockSyncTimer.Mean() / 1000000.0,
