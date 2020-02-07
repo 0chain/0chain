@@ -47,22 +47,22 @@ type StrKey string
 /*MemoryNodeDB - an inmemory node db */
 type MemoryNodeDB struct {
 	Nodes map[StrKey]Node
-	Lock  *sync.Mutex
+	mutex *sync.RWMutex
 }
 
 /*NewMemoryNodeDB - create a memory node db */
 func NewMemoryNodeDB() *MemoryNodeDB {
 	mndb := &MemoryNodeDB{}
 	mndb.Nodes = make(map[StrKey]Node)
-	mndb.Lock = &sync.Mutex{}
+	mndb.mutex = &sync.RWMutex{}
 	return mndb
 }
 
 /*GetNode - implement interface */
 func (mndb *MemoryNodeDB) GetNode(key Key) (Node, error) {
 	skey := StrKey(key)
-	mndb.Lock.Lock()
-	defer mndb.Lock.Unlock()
+	mndb.mutex.RLock()
+	defer mndb.mutex.RUnlock()
 	node, ok := mndb.Nodes[skey]
 	if !ok {
 		return nil, ErrNodeNotFound
@@ -73,8 +73,8 @@ func (mndb *MemoryNodeDB) GetNode(key Key) (Node, error) {
 /*PutNode - implement interface */
 func (mndb *MemoryNodeDB) PutNode(key Key, node Node) error {
 	skey := StrKey(key)
-	mndb.Lock.Lock()
-	defer mndb.Lock.Unlock()
+	mndb.mutex.Lock()
+	defer mndb.mutex.Unlock()
 	mndb.Nodes[skey] = node
 	return nil
 }
@@ -82,8 +82,8 @@ func (mndb *MemoryNodeDB) PutNode(key Key, node Node) error {
 /*DeleteNode - implement interface */
 func (mndb *MemoryNodeDB) DeleteNode(key Key) error {
 	skey := StrKey(key)
-	mndb.Lock.Lock()
-	defer mndb.Lock.Unlock()
+	mndb.mutex.Lock()
+	defer mndb.mutex.Unlock()
 	delete(mndb.Nodes, skey)
 	return nil
 }

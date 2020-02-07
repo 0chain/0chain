@@ -511,10 +511,11 @@ func (c *Chain) DeleteBlocksBelowRound(round int64) {
 	c.blocksMutex.Lock()
 	defer c.blocksMutex.Unlock()
 	ts := common.Now() - 60
-	blocks := make([]*block.Block, 0, 1)
+	blocks := make([]*block.Block, 0, len(c.blocks))
+	lfb := c.GetLatestFinalizedBlock()
 	for _, b := range c.blocks {
 		if b.Round < round && b.CreationDate < ts && b.Round < c.LatestDeterministicBlock.Round {
-			Logger.Debug("found block to delete", zap.Int64("round", round), zap.Int64("block_round", b.Round), zap.Int64("current_round", c.CurrentRound), zap.Int64("lf_round", c.GetLatestFinalizedBlock().Round))
+			Logger.Debug("found block to delete", zap.Int64("round", round), zap.Int64("block_round", b.Round), zap.Int64("current_round", c.CurrentRound), zap.Int64("lf_round", lfb.Round))
 			blocks = append(blocks, b)
 		}
 	}
@@ -537,7 +538,7 @@ func (c *Chain) DeleteBlocks(blocks []*block.Block) {
 }
 
 /*PruneChain - prunes the chain */
-func (c *Chain) PruneChain(ctx context.Context, b *block.Block) {
+func (c *Chain) PruneChain(_ context.Context, b *block.Block) {
 	c.DeleteBlocksBelowRound(b.Round - 50)
 }
 
@@ -824,8 +825,8 @@ func (c *Chain) SetRetryWaitTime(newWaitTime int) {
 
 /*GetUnrelatedBlocks - get blocks that are not related to the chain of the given block */
 func (c *Chain) GetUnrelatedBlocks(maxBlocks int, b *block.Block) []*block.Block {
-	c.blocksMutex.Lock()
-	defer c.blocksMutex.Unlock()
+	c.blocksMutex.RLock()
+	defer c.blocksMutex.RUnlock()
 	var blocks []*block.Block
 	var chain = make(map[datastore.Key]*block.Block)
 	var prevRound = b.Round
