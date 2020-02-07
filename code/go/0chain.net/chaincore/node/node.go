@@ -35,13 +35,16 @@ func RegisterNode(node *Node) {
 
 /*DeregisterNode - deregisters a node */
 func DeregisterNode(nodeID string) {
+	nodesMutex.Lock()
+	defer nodesMutex.Unlock()
 	delete(nodes, nodeID)
 }
 
-func GetNodes() map[string]*Node {
+func ViewNodes(viewNodesFunc func(nodes map[string]*Node)) {
 	nodesMutex.Lock()
 	defer nodesMutex.Unlock()
-	return nodes
+
+	viewNodesFunc(nodes)
 }
 
 func GetMinerNodesKeys() []string {
