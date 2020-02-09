@@ -111,7 +111,7 @@ type Node struct {
 	LargeMessagePullServeTime float64 `json:"-"`
 	SmallMessagePullServeTime float64 `json:"-"`
 
-	mutex *sync.Mutex
+	mutex sync.RWMutex
 
 	ProtocolStats interface{} `json:"-"`
 
@@ -129,7 +129,6 @@ func Provider() *Node {
 	for i := 0; i < cap(node.CommChannel); i++ {
 		node.CommChannel <- true
 	}
-	node.mutex = &sync.Mutex{}
 	node.TimersByURI = make(map[string]metrics.Timer, 10)
 	node.SizeByURI = make(map[string]metrics.Histogram, 10)
 	return node
@@ -142,11 +141,74 @@ func Setup(node *Node) {
 	for i := 0; i < cap(node.CommChannel); i++ {
 		node.CommChannel <- true
 	}
-	node.mutex = &sync.Mutex{}
 	node.TimersByURI = make(map[string]metrics.Timer, 10)
 	node.SizeByURI = make(map[string]metrics.Histogram, 10)
 	node.ComputeProperties()
 	Self.SetNodeIfPublicKeyIsEqual(node)
+}
+
+// GetErrorCount asynchronously.
+func (n *Node) GetErrorCount() int64 {
+	n.mutex.RLock()
+	defer n.mutex.RUnlock()
+
+	return n.ErrorCount
+}
+
+// SetErrorCount asynchronously.
+func (n *Node) SetErrorCount(ec int64) {
+	n.mutex.RLock()
+	defer n.mutex.RUnlock()
+
+	n.ErrorCount = ec
+}
+
+// AddErrorCount add given value to errors count asynchronously.
+func (n *Node) AddErrorCount(ecd int64) {
+	n.mutex.RLock()
+	defer n.mutex.RUnlock()
+
+	n.ErrorCount += ecd
+}
+
+// GetInfo returns pointer to underlying Info.
+func (n *Node) GetInfo() *Info {
+	n.mutex.RLock()
+	defer n.mutex.RUnlock()
+
+	return &n.Info
+}
+
+// GetStatus asynchronously.
+func (n *Node) GetStatus() int {
+	n.mutex.RLock()
+	defer n.mutex.RUnlock()
+
+	return n.Status
+}
+
+// SetStatus asynchronously.
+func (n *Node) SetStatus(st int) {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+
+	n.Status = st
+}
+
+// GetLastActiveTime asynchronously.
+func (n *Node) GetLastActiveTime() time.Time {
+	n.mutex.RLock()
+	defer n.mutex.RUnlock()
+
+	return n.LastActiveTime
+}
+
+// SetLastActiveTime asynchronously.
+func (n *Node) SetLastActiveTime(lat time.Time) {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+
+	n.LastActiveTime = lat
 }
 
 /*Equals - if two nodes are equal. Only check by id, we don't accept configuration from anyone */
@@ -318,13 +380,14 @@ func (n *Node) GetSmallMessageSendTime() float64 {
 }
 
 func (n *Node) updateMessageTimings() {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+
 	n.updateSendMessageTimings()
 	n.updateRequestMessageTimings()
 }
 
 func (n *Node) updateSendMessageTimings() {
-	n.mutex.Lock()
-	defer n.mutex.Unlock()
 	var minval = math.MaxFloat64
 	var maxval float64
 	var maxCount int64
@@ -363,8 +426,6 @@ func (n *Node) updateSendMessageTimings() {
 }
 
 func (n *Node) updateRequestMessageTimings() {
-	n.mutex.Lock()
-	defer n.mutex.Unlock()
 	var minval = math.MaxFloat64
 	var maxval float64
 	var minSize = math.MaxFloat64
@@ -427,6 +488,9 @@ func (n *Node) SetID(id string) error {
 
 //IsActive - returns if this node is active or not
 func (n *Node) IsActive() bool {
+	n.mutex.RLock()
+	defer n.mutex.RUnlock()
+
 	return n.Status == NodeStatusActive
 }
 
@@ -472,6 +536,9 @@ func (n *Node) getTime(uri string) float64 {
 }
 
 func (n *Node) SetNodeInfo(oldNode *Node) {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+
 	n.Sent = oldNode.Sent
 	n.SendErrors = oldNode.SendErrors
 	n.Received = oldNode.Received

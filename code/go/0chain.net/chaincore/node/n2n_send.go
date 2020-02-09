@@ -101,7 +101,7 @@ func (np *Pool) sendTo(numNodes int, nodes []*Node, handler SendHandler) []*Node
 		if Self.IsEqual(node) {
 			continue
 		}
-		if node.Status == NodeStatusInactive {
+		if node.GetStatus() == NodeStatusInactive {
 			continue
 		}
 		sendBucket <- node
@@ -137,7 +137,7 @@ func (np *Pool) sendTo(numNodes int, nodes []*Node, handler SendHandler) []*Node
 
 func (np *Pool) sendOne(handler SendHandler, nodes []*Node) *Node {
 	for _, node := range nodes {
-		if node.Status == NodeStatusInactive {
+		if node.GetStatus() == NodeStatusInactive {
 			continue
 		}
 		valid := handler(node)
@@ -211,7 +211,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			time.AfterFunc(timeout, cancel)
 			ts := time.Now()
 			selfNode := Self.Underlying()
-			selfNode.LastActiveTime = ts
+			selfNode.SetLastActiveTime(ts)
 			selfNode.InduceDelay(receiver)
 			//req = req.WithContext(httptrace.WithClientTrace(req.Context(), n2nTrace))
 			resp, err := httpClient.Do(req)
@@ -232,9 +232,9 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 				N2n.Error("sending", zap.Int("from", selfNode.SetIndex), zap.Int("to", receiver.SetIndex), zap.String("handler", uri), zap.Duration("duration", time.Since(ts)), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Any("status_code", resp.StatusCode))
 				return false
 			}
-			receiver.Status = NodeStatusActive
-			receiver.LastActiveTime = time.Now()
-			receiver.ErrorCount = receiver.SendErrors
+			receiver.SetStatus(NodeStatusActive)
+			receiver.SetLastActiveTime(time.Now())
+			receiver.SetErrorCount(receiver.SendErrors)
 			return true
 		}
 	}
@@ -304,9 +304,9 @@ func validateSendRequest(sender *Node, r *http.Request) bool {
 		return false
 	}
 	//Logger.Info("%%~ updating sender status", zap.Int("node-idx", sender.SetIndex))
-	sender.Status = NodeStatusActive
-	sender.LastActiveTime = time.Unix(reqTSn, 0)
-	Self.Node.LastActiveTime = time.Now()
+	sender.SetStatus(NodeStatusActive)
+	sender.SetLastActiveTime(time.Unix(reqTSn, 0))
+	Self.Underlying().SetLastActiveTime(time.Now())
 	//Logger.Info("%%~ sender status active", zap.Int("node-idx", sender.SetIndex))
 	if !common.Within(reqTSn, N2NTimeTolerance) {
 		N2n.Error("message received - tolerance", zap.Int("from", sender.SetIndex),
@@ -327,8 +327,8 @@ func validateSendRequest(sender *Node, r *http.Request) bool {
 			zap.Int("to", selfSetIndex), zap.String("handler", r.RequestURI), zap.String("hash", reqHash), zap.String("hashdata", reqHashdata), zap.String("signature", reqSignature))
 		return false
 	}
-	sender.Status = NodeStatusActive
-	sender.LastActiveTime = time.Unix(reqTSn, 0)
+	sender.SetStatus(NodeStatusActive)
+	sender.SetLastActiveTime(time.Unix(reqTSn, 0))
 	return true
 }
 
