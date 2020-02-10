@@ -50,14 +50,14 @@ func (np *Pool) statusUpdate(ctx context.Context) {
 		if Self.IsEqual(node) {
 			continue
 		}
-		if common.Within(node.LastActiveTime.Unix(), 10) {
+		if common.Within(node.GetLastActiveTime().Unix(), 10) {
 			node.updateMessageTimings()
 			if time.Since(node.Info.AsOf) < 60*time.Second {
 				continue
 			}
 		}
-		if node.SendErrors-node.ErrorCount > 5 {
-			node.Status = NodeStatusInactive
+		if node.SendErrors-node.GetErrorCount() > 5 {
+			node.SetStatus(NodeStatusInactive)
 		}
 	}
 	np.ComputeNetworkStats()
@@ -69,7 +69,7 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 		if Self.IsEqual(node) {
 			continue
 		}
-		if common.Within(node.LastActiveTime.Unix(), 10) {
+		if common.Within(node.GetLastActiveTime().Unix(), 10) {
 			node.updateMessageTimings()
 			if time.Since(node.Info.AsOf) < 60*time.Second {
 				continue
@@ -84,10 +84,10 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 		statusURL = fmt.Sprintf("%v?id=%v&data=%v&hash=%v&signature=%v", statusURL, Self.Underlying().GetKey(), data, hash, signature)
 		resp, err := httpClient.Get(statusURL)
 		if err != nil {
-			node.ErrorCount++
+			node.AddErrorCount(1) // ++
 			if node.IsActive() {
-				if node.ErrorCount > 5 {
-					node.Status = NodeStatusInactive
+				if node.GetErrorCount() > 5 {
+					node.SetStatus(NodeStatusInactive)
 					N2n.Error("Node inactive", zap.String("node_type", node.GetNodeTypeName()), zap.Int("set_index", node.SetIndex), zap.Any("node_id", node.GetKey()), zap.Error(err))
 				}
 			}
@@ -97,8 +97,8 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 			}
 			resp.Body.Close()
 			if !node.IsActive() {
-				node.ErrorCount = 0
-				node.Status = NodeStatusActive
+				node.SetErrorCount(0)
+				node.SetStatus(NodeStatusActive)
 				N2n.Info("Node active", zap.String("node_type", node.GetNodeTypeName()), zap.Int("set_index", node.SetIndex), zap.Any("key", node.GetKey()))
 			}
 			node.LastActiveTime = ts
@@ -121,7 +121,7 @@ func (np *Pool) DownloadNodeData(node *Node) bool {
 	var changed = false
 	for _, node := range dnp.Nodes {
 		if _, ok := np.NodesMap[node.GetKey()]; !ok {
-			node.Status = NodeStatusActive
+			node.SetStatus(NodeStatusActive)
 			np.AddNode(node)
 			changed = true
 		}
