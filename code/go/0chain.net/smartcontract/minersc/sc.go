@@ -90,7 +90,10 @@ func (msc *MinerSmartContract) SetSC(sc *sci.SmartContract, bcContext sci.BCCont
 
 //Execute implemetning the interface
 func (msc *MinerSmartContract) Execute(t *transaction.Transaction, funcName string, input []byte, balances c_state.StateContextI) (string, error) {
-	gn, _ := msc.getGlobalNode(balances)
+	gn, err := msc.getGlobalNode(balances)
+	if err != nil {
+		return "", err
+	}
 	switch funcName {
 
 	case "add_miner":
@@ -111,7 +114,6 @@ func (msc *MinerSmartContract) Execute(t *transaction.Transaction, funcName stri
 		return msc.shareSignsOrShares(t, input, gn, balances)
 	default:
 		return common.NewError("failed execution", "no function with that name").Error(), nil
-
 	}
 }
 
@@ -154,9 +156,10 @@ func (msc *MinerSmartContract) getGlobalNode(balances c_state.StateContextI) (*g
 	gv, err := balances.GetTrieNode(GlobalNodeKey)
 	if err == nil {
 		err := gn.Decode(gv.Encode())
-		if err == nil {
-			return gn, nil
+		if err != nil {
+			return nil, err
 		}
+		return gn, nil
 	}
 	gn.InterestRate = config.SmartContractConfig.GetFloat64("smart_contracts.minersc.interest_rate")
 	gn.MinStake = config.SmartContractConfig.GetInt64("smart_contracts.minersc.min_stake")

@@ -15,7 +15,10 @@ import (
 )
 
 func (msc *MinerSmartContract) doesSharderExist(pkey datastore.Key, statectx c_state.StateContextI) bool {
-	mbits, _ := statectx.GetTrieNode(pkey)
+	mbits, err := statectx.GetTrieNode(pkey)
+	if err != nil {
+		Logger.Warn("unexpected error", zap.Error(err))
+	}
 	if mbits != nil {
 		return true
 	}

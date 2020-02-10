@@ -28,7 +28,10 @@ func (ems *Store) Read(ctx context.Context, key datastore.Key, entity datastore.
 	var data *gorocksdb.Slice
 	var err error
 	if emd.GetName() == "round" {
-		rNumber, _ := strconv.ParseInt(datastore.ToString(entity.GetKey()), 10, 64)
+		rNumber, err := strconv.ParseInt(datastore.ToString(entity.GetKey()), 10, 64)
+		if err != nil {
+			return err
+		}
 		key := make([]byte, 8)
 		binary.BigEndian.PutUint64(key, uint64(rNumber))
 		data, err = c.Conn.Get(c.ReadOptions, key)
@@ -52,7 +55,10 @@ func (ems *Store) Write(ctx context.Context, entity datastore.Entity) error {
 	data := datastore.ToJSON(entity).Bytes()
 	var err error
 	if emd.GetName() == "round" {
-		rNumber, _ := strconv.ParseInt(datastore.ToString(entity.GetKey()), 10, 64)
+		rNumber, err := strconv.ParseInt(datastore.ToString(entity.GetKey()), 10, 64)
+		if err != nil {
+			return err
+		}
 		key := make([]byte, 8)
 		binary.BigEndian.PutUint64(key, uint64(rNumber))
 		err = c.Conn.Put(key, data)

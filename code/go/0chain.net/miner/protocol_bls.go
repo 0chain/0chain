@@ -58,7 +58,10 @@ func SetDKG(ctx context.Context, mb *block.MagicBlock) {
 
 func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) error {
 	self := node.GetSelfNode(ctx)
-	dkgSummary, _ := GetDKGSummaryFromStore(ctx, strconv.FormatInt(mb.MagicBlockNumber, 10))
+	dkgSummary, err := GetDKGSummaryFromStore(ctx, strconv.FormatInt(mb.MagicBlockNumber, 10))
+	if err != nil {
+		return err
+	}
 	if dkgSummary.SecretShares != nil {
 		mc.muDKG.Lock()
 		defer mc.muDKG.Unlock()
@@ -248,7 +251,10 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round) {
 			return
 		}
 		recSig, recFrom := getVRFShareInfo(mr)
-		groupSignature, _ := mc.currentDKG.CalBlsGpSign(recSig, recFrom)
+		groupSignature, err := mc.currentDKG.CalBlsGpSign(recSig, recFrom)
+		if err != nil {
+			Logger.Error("calculates the Gp Sign", zap.Error(err))
+		}
 		rbOutput := encryption.Hash(groupSignature.GetHexString())
 		Logger.Info("recieve bls sign", zap.Any("sigs", recSig), zap.Any("from", recFrom), zap.Any("group_signature", groupSignature.GetHexString()))
 

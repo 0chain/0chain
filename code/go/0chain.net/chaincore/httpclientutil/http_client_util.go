@@ -129,8 +129,8 @@ func SendPostRequest(url string, data []byte, ID string, pkey string, wg *sync.W
 		return nil, err
 	}
 	defer resp.Body.Close()
-	body, _ := ioutil.ReadAll(resp.Body)
-	return body, nil
+	body, err := ioutil.ReadAll(resp.Body)
+	return body, err
 }
 
 //SendTransaction send a transaction

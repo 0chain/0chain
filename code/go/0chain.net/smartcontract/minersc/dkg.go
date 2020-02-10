@@ -206,7 +206,11 @@ func (msc *MinerSmartContract) createMagicBlockForWait(balances c_state.StateCon
 		}
 	}
 
-	magicBlock, _ := msc.CreateMagicBlock(balances, dkgMinersList, gsos, mpks, pn)
+	magicBlock, err := msc.CreateMagicBlock(balances, dkgMinersList, gsos, mpks, pn)
+	if err != nil {
+		return err
+	}
+
 	gn.ViewChange = magicBlock.StartingRound
 	mpks = block.NewMpks()
 	_, err = balances.InsertTrieNode(MinersMPKKey, mpks)

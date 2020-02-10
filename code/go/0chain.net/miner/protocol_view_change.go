@@ -2,6 +2,7 @@ package miner
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -226,7 +227,7 @@ func (mc *Chain) SendSijs() (*httpclientutil.Transaction, error) {
 			if !ok {
 				err := mc.SendDKGShare(node.GetNode(key))
 				if err != nil {
-					failedSend = append(failedSend, key)
+					failedSend = append(failedSend, fmt.Sprintf("%s(%v);", key, err))
 				}
 			}
 		}
@@ -418,9 +419,10 @@ func (mc *Chain) SendDKGShare(n *node.Node) error {
 			signatureScheme := chain.GetServerChain().GetSignatureScheme()
 			signatureScheme.SetPublicKey(n.PublicKey)
 			sigOK, err := signatureScheme.Verify(share.Sign, share.Message)
-
 			if !sigOK || err != nil {
-				Logger.Error("invalid share or sign", zap.Any("message", share.Message), zap.Any("sign", share.Sign))
+				Logger.Error("invalid share or sign",
+					zap.Error(err), zap.Any("sign_status", sigOK),
+					zap.Any("message", share.Message), zap.Any("sign", share.Sign))
 				return nil, nil
 			}
 			success = true
@@ -496,6 +498,11 @@ func (mc *Chain) Wait() (*httpclientutil.Transaction, error) {
 		}
 		return nil, nil
 	}
+
+	if mc.viewChangeDKG == nil {
+		return nil, errors.New("unexpected NIL viewChangeDKG")
+	}
+
 	for key, share := range magicBlock.ShareOrSigns.Shares {
 		if key == node.Self.ID {
 			continue

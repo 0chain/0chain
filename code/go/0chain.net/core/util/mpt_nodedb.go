@@ -155,7 +155,10 @@ func (mndb *MemoryNodeDB) PruneBelowVersion(ctx context.Context, version Sequenc
 func (mndb *MemoryNodeDB) reachable(node Node, node2 Node) bool {
 	switch nodeImpl := node.(type) {
 	case *ExtensionNode:
-		fn, _ := mndb.GetNode(nodeImpl.NodeKey)
+		fn, err := mndb.GetNode(nodeImpl.NodeKey)
+		if err != nil && err != ErrNodeNotFound {
+			panic(err)
+		}
 		if fn == nil {
 			return false
 		}

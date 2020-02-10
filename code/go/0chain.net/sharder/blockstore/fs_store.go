@@ -54,8 +54,13 @@ func (fbs *FSBlockStore) Write(b *block.Block) error {
 		return err
 	}
 	bf := bufio.NewWriterSize(f, 64*1024)
-	w, _ := zlib.NewWriterLevel(bf, zlib.BestCompression)
-	datastore.WriteJSON(w, b)
+	w, err := zlib.NewWriterLevel(bf, zlib.BestCompression)
+	if err != nil {
+		return err
+	}
+	if err = datastore.WriteJSON(w, b); err != nil {
+		return err
+	}
 	w.Close()
 	bf.Flush()
 	f.Close()
