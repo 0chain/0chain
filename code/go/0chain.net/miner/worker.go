@@ -57,7 +57,7 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 //RoundWorker - a worker that monitors the round progress
 func (mc *Chain) RoundWorker(ctx context.Context) {
 	var timer = time.NewTimer(time.Duration(4 * time.Second))
-	var cround = mc.CurrentRound
+	var cround = mc.GetCurrentRound()
 	var protocol Protocol = mc
 
 	for true {
@@ -65,7 +65,7 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-timer.C:
-			if cround == mc.CurrentRound {
+			if cround == mc.GetCurrentRound() {
 				round := mc.GetMinerRound(cround)
 
 				logging.Logger.Info("Round timeout", zap.Any("Number", round.Number),
@@ -74,7 +74,7 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 					zap.Int("notarizedBlocks", len(round.GetNotarizedBlocks())))
 				protocol.HandleRoundTimeout(ctx)
 			} else {
-				cround = mc.CurrentRound
+				cround = mc.GetCurrentRound()
 				mc.ResetRoundTimeoutCount()
 				timer = time.NewTimer(time.Duration(mc.GetNextRoundTimeoutTime(ctx)) * time.Millisecond)
 			}
