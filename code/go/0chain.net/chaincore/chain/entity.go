@@ -785,15 +785,6 @@ func (c *Chain) GetCurrentRound() int64 {
 	return c.CurrentRound
 }
 
-// TODO (sfxdx): is it used anywhere?
-// SetCurrentRound async safe.
-func (c *Chain) SetCurrentRound(cr int64) {
-	c.roundsMutex.RLock()
-	defer c.roundsMutex.RUnlock()
-
-	c.CurrentRound = cr
-}
-
 func (c *Chain) getBlocks() []*block.Block {
 	c.blocksMutex.RLock()
 	defer c.blocksMutex.RUnlock()
