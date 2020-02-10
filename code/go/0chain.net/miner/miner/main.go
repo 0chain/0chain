@@ -81,8 +81,7 @@ func main() {
 		Logger.Panic("Error reading keys file")
 	}
 	reader.Close()
-	selfNode := node.Self.Underlying()
-	_ = selfNode
+
 	node.Self.SetSignatureScheme(signatureScheme)
 
 	miner.SetupMinerChain(serverChain)

@@ -334,6 +334,10 @@ func (n *Node) GetNodeTypeName() string {
 //Grab - grab a slot to send message
 func (n *Node) Grab() {
 	<-n.CommChannel
+
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+
 	n.Sent++
 }
 
