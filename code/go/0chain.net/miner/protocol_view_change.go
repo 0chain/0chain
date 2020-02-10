@@ -58,7 +58,7 @@ func (mc *Chain) initSetup() {
 	scFunctions[minersc.Wait] = mc.Wait
 	gmpks = block.NewMpks()
 	shareOrSigns = block.NewShareOrSigns()
-	shareOrSigns.ID = node.Self.ID
+	shareOrSigns.ID = node.Self.Underlying().GetKey()
 	currentPhase = -1
 }
 
@@ -126,13 +126,15 @@ func (mc *Chain) ContributeMpk() (*httpclientutil.Transaction, error) {
 		Logger.Error("can't contribute", zap.Any("error", err))
 		return nil, err
 	}
-	mpk := &block.MPK{ID: node.Self.ID}
+	selfNode := node.Self.Underlying()
+	selfNodeKey := selfNode.GetKey()
+	mpk := &block.MPK{ID: selfNodeKey}
 	if !mc.dkgSet {
 		if dmn.N == 0 {
 			return nil, common.NewError("failed to contribute mpk", "dkg is not set yet")
 		}
-		vc := bls.MakeDKG(dmn.T, dmn.N, node.Self.ID)
-		vc.ID = bls.ComputeIDdkg(node.Self.ID)
+		vc := bls.MakeDKG(dmn.T, dmn.N, selfNodeKey)
+		vc.ID = bls.ComputeIDdkg(selfNodeKey)
 		vc.MagicBlockNumber = mc.MagicBlockNumber + 1
 		mc.viewChangeDKG = vc
 		mc.dkgSet = true
@@ -144,7 +146,7 @@ func (mc *Chain) ContributeMpk() (*httpclientutil.Transaction, error) {
 	scData.Name = scNameContributeMpk
 	scData.InputArgs = mpk
 
-	txn := httpclientutil.NewTransactionEntity(node.Self.ID, mc.ID, node.Self.PublicKey)
+	txn := httpclientutil.NewTransactionEntity(selfNodeKey, mc.ID, selfNode.PublicKey)
 	txn.ToClientID = minersc.ADDRESS
 	var minerUrls []string
 	for _, node := range mc.Miners.CopyNodes() {
@@ -193,7 +195,7 @@ func (mc *Chain) CreateSijs() error {
 			Logger.Error("can't compute secret share", zap.Any("error", err))
 			return err
 		}
-		if k == node.Self.ID {
+		if k == node.Self.Underlying().GetKey() {
 			mc.viewChangeDKG.AddSecretShare(id, share.GetHexString())
 			foundSelf = true
 		}
@@ -209,7 +211,8 @@ func (mc *Chain) SendSijs() (*httpclientutil.Transaction, error) {
 	if err != nil {
 		return nil, err
 	}
-	if _, ok := dkgMiners.SimpleNodes[node.Self.ID]; !mc.dkgSet || !ok {
+	selfNodeKey := node.Self.Underlying().GetKey()
+	if _, ok := dkgMiners.SimpleNodes[selfNodeKey]; !mc.dkgSet || !ok {
 		Logger.Error("failed to send sijs", zap.Any("dkg_set", mc.dkgSet), zap.Any("ok", ok))
 		return nil, nil
 	}
@@ -222,7 +225,7 @@ func (mc *Chain) SendSijs() (*httpclientutil.Transaction, error) {
 	var failedSend []string
 	nodes := node.GetMinerNodesKeys()
 	for _, key := range nodes {
-		if key != node.Self.ID {
+		if key != selfNodeKey {
 			_, ok := shareOrSigns.ShareOrSigns[key]
 			if !ok {
 				err := mc.SendDKGShare(node.GetNode(key))
@@ -383,7 +386,7 @@ func SignShareRequestHandler(ctx context.Context, r *http.Request) (interface{},
 			Logger.Error("failed to store dkg summary", zap.Any("error", err))
 			return nil, err
 		}
-		message.Message = node.Self.ID
+		message.Message = node.Self.Underlying().GetKey()
 		message.Sign, err = node.Self.Sign(message.Message)
 		if err != nil {
 			Logger.Error("failed to sign dkg share message", zap.Any("error", err))
@@ -400,7 +403,7 @@ func (mc *Chain) SendDKGShare(n *node.Node) error {
 	if !config.DevConfiguration.IsDkgEnabled {
 		return common.NewError("failed to send dkg share", "dkg is not enabled")
 	}
-	if node.Self.ID == n.ID {
+	if node.Self.Underlying().GetKey() == n.ID {
 		return nil
 	}
 	var success bool
@@ -443,17 +446,19 @@ func (mc *Chain) PublishShareOrSigns() (*httpclientutil.Transaction, error) {
 		Logger.Error("failed to publish share or signs", zap.Any("dkg_set", mc.dkgSet))
 		return nil, nil
 	}
-	txn := httpclientutil.NewTransactionEntity(node.Self.ID, mc.ID, node.Self.PublicKey)
+	selfNode := node.Self.Underlying()
+	selfNodeKey := selfNode.GetKey()
+	txn := httpclientutil.NewTransactionEntity(selfNodeKey, mc.ID, selfNode.PublicKey)
 
 	mpks, err := mc.GetMinersMpks()
 	if err != nil {
 		return nil, err
 	}
-	if _, ok := mpks.Mpks[node.Self.ID]; !ok {
+	if _, ok := mpks.Mpks[selfNodeKey]; !ok {
 		return nil, nil
 	}
 	for k := range mpks.Mpks {
-		if _, ok := shareOrSigns.ShareOrSigns[k]; !ok && k != node.Self.ID {
+		if _, ok := shareOrSigns.ShareOrSigns[k]; !ok && k != selfNodeKey {
 			share := mc.viewChangeDKG.Sij[bls.ComputeIDdkg(k)]
 			shareOrSigns.ShareOrSigns[k] = &bls.DKGKeyShare{Share: share.GetHexString()}
 		}
@@ -491,7 +496,7 @@ func (mc *Chain) Wait() (*httpclientutil.Transaction, error) {
 	if err != nil {
 		return nil, err
 	}
-	if !magicBlock.Miners.HasNode(node.Self.ID) {
+	if !magicBlock.Miners.HasNode(node.Self.Underlying().GetKey()) {
 		err := mc.UpdateMagicBlock(magicBlock)
 		if err != nil {
 			Logger.DPanic(fmt.Sprintf("failed to update magic block: %v", err.Error()))
@@ -504,10 +509,10 @@ func (mc *Chain) Wait() (*httpclientutil.Transaction, error) {
 	}
 
 	for key, share := range magicBlock.ShareOrSigns.Shares {
-		if key == node.Self.ID {
+		if key == node.Self.Underlying().GetKey() {
 			continue
 		}
-		myShare, ok := share.ShareOrSigns[node.Self.ID]
+		myShare, ok := share.ShareOrSigns[node.Self.Underlying().GetKey()]
 		if ok && myShare.Share != "" {
 			var share bls.Key
 			share.SetHexString(myShare.Share)
@@ -534,7 +539,7 @@ func (mc *Chain) Wait() (*httpclientutil.Transaction, error) {
 	StoreDKGSummary(common.GetRootContext(), mc.viewChangeDKG.GetDKGSummary())
 	mc.nextViewChange = magicBlock.StartingRound
 	shareOrSigns = block.NewShareOrSigns()
-	shareOrSigns.ID = node.Self.ID
+	shareOrSigns.ID = node.Self.Underlying().GetKey()
 	gmpks = block.NewMpks()
 	mc.dkgSet = false
 	return nil, nil

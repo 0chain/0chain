@@ -104,7 +104,7 @@ func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
 	if err != nil {
 		Logger.DPanic(err.Error())
 	}
-	vrfs.SetParty(node.Self.Node)
+	vrfs.SetParty(node.Self.Underlying())
 	r.vrfShare = vrfs
 	// TODO: do we need to check if AddVRFShare is success or not?
 	mc.AddVRFShare(ctx, r, r.vrfShare)
@@ -133,12 +133,12 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 	}
 
 	self := node.GetSelfNode(ctx)
-	rank := mr.GetMinerRank(self.Node)
-	if !mc.IsRoundGenerator(mr, self.Node) {
-		Logger.Info("TOC_FIX Not a generator", zap.Int64("round", mr.GetRoundNumber()), zap.Int("index", self.SetIndex), zap.Int("rank", rank), zap.Int("timeoutcount", mr.GetTimeoutCount()), zap.Any("random_seed", mr.GetRandomSeed()))
+	rank := mr.GetMinerRank(self.Underlying())
+	if !mc.IsRoundGenerator(mr, self.Underlying()) {
+		Logger.Info("TOC_FIX Not a generator", zap.Int64("round", mr.GetRoundNumber()), zap.Int("index", self.Underlying().SetIndex), zap.Int("rank", rank), zap.Int("timeoutcount", mr.GetTimeoutCount()), zap.Any("random_seed", mr.GetRandomSeed()))
 		return
 	}
-	Logger.Info("*** TOC_FIX starting round block generation ***", zap.Int64("round", mr.GetRoundNumber()), zap.Int("index", self.SetIndex), zap.Int("rank", rank), zap.Int("timeoutcount", mr.GetTimeoutCount()), zap.Any("random_seed", mr.GetRandomSeed()), zap.Int64("lf_round", mc.GetLatestFinalizedBlock().Round))
+	Logger.Info("*** TOC_FIX starting round block generation ***", zap.Int64("round", mr.GetRoundNumber()), zap.Int("index", self.Underlying().SetIndex), zap.Int("rank", rank), zap.Int("timeoutcount", mr.GetTimeoutCount()), zap.Any("random_seed", mr.GetRandomSeed()), zap.Int64("lf_round", mc.GetLatestFinalizedBlock().Round))
 
 	//NOTE: If there are not enough txns, this will not advance further even though rest of the network is. That's why this is a goroutine
 	go mc.GenerateRoundBlock(ctx, mr)
@@ -204,7 +204,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	defer memorystore.Close(ctx)
 	b := block.NewBlock(mc.GetKey(), r.GetRoundNumber())
 	b.LatestFinalizedMagicBlockHash = mc.GetLatestFinalizedMagicBlock().Hash
-	b.MinerID = node.Self.GetKey()
+	b.MinerID = node.Self.Underlying().GetKey()
 	mc.SetPreviousBlock(ctx, r, b, pb)
 	start := time.Now()
 	makeBlock := false
@@ -472,7 +472,7 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r *Round, b *block.Block)
 	if mc.CurrentRound != r.Number {
 		return nil, ErrRoundMismatch
 	}
-	if b.MinerID == node.Self.GetKey() {
+	if b.MinerID == node.Self.Underlying().GetKey() {
 		return mc.SignBlock(ctx, b)
 	}
 	var hasPriorBlock = b.PrevBlock != nil

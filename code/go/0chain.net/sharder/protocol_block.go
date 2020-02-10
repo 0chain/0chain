@@ -52,7 +52,7 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	}
 	fr.Finalize(b)
 	bsHistogram.Update(int64(len(b.Txns)))
-	node.Self.Node.Info.AvgBlockTxns = int(math.Round(bsHistogram.Mean()))
+	node.Self.Underlying().Info.AvgBlockTxns = int(math.Round(bsHistogram.Mean()))
 	sc.StoreTransactions(ctx, b)
 	err := sc.StoreBlockSummaryFromBlock(ctx, b)
 	if err != nil {
@@ -66,7 +66,7 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 			Logger.DPanic("failed to store magic block map", zap.Any("error", err))
 		}
 	}
-	if sc.IsBlockSharder(b, self.Node) {
+	if sc.IsBlockSharder(b, self.Underlying()) {
 		sc.SharderStats.ShardedBlocksCount++
 		ts := time.Now()
 		blockstore.GetStore().Write(b)
@@ -357,7 +357,7 @@ func (sc *Chain) requestForBlockSummary(ctx context.Context, params *url.Values)
 
 func (sc *Chain) requestForBlock(ctx context.Context, params *url.Values, r *round.Round) *block.Block {
 	self := node.GetSelfNode(ctx)
-	_, nodes := sc.CanShardBlockWithReplicators(r.BlockHash, self.Node)
+	_, nodes := sc.CanShardBlockWithReplicators(r.BlockHash, self.Underlying())
 
 	if len(nodes) == 0 {
 		Logger.Info("no replicators for this block (lost the block)", zap.Int64("round", r.Number))
@@ -365,7 +365,7 @@ func (sc *Chain) requestForBlock(ctx context.Context, params *url.Values, r *rou
 
 	var requestNode *node.Node
 	for _, n := range nodes {
-		if n == self.Node {
+		if self.IsEqual(n) {
 			continue
 		}
 		requestNode = n

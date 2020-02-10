@@ -40,6 +40,22 @@ func NewClient() *Client {
 	return datastore.GetEntityMetadata("client").Instance().(*Client)
 }
 
+// Copy of the Client.
+func (c *Client) Copy() (cp *Client) {
+	cp = new(Client)
+	cp.CollectionMemberField.CollectionScore = c.CollectionMemberField.CollectionScore
+	cp.CollectionMemberField.EntityCollection = c.CollectionMemberField.EntityCollection.Copy()
+	cp.IDField.ID = c.IDField.ID
+	cp.VersionField.Version = c.VersionField.Version
+	cp.CreationDateField.CreationDate = c.CreationDateField.CreationDate
+	cp.PublicKey = c.PublicKey
+	if len(c.PublicKeyBytes) > 0 {
+		cp.PublicKeyBytes = make([]byte, len(c.PublicKeyBytes))
+		copy(cp.PublicKeyBytes, c.PublicKeyBytes)
+	}
+	return
+}
+
 var clientEntityMetadata *datastore.EntityMetadataImpl
 
 /*GetEntityMetadata - implementing the interface */

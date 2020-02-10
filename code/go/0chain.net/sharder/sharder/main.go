@@ -91,21 +91,22 @@ func main() {
 	setupBlockStorageProvider()
 	sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"), magicBlock)
 	Logger.Info("sharder node", zap.Any("node", node.Self))
-	if node.Self.ID == "" {
+	selfNode := node.Self.Underlying()
+	if selfNode.GetKey() == "" {
 		Logger.Panic("node definition for self node doesn't exist")
 	}
-	if !sc.IsActiveNode(node.Self.ID, 0) {
+	if !sc.IsActiveNode(selfNode.GetKey(), 0) {
 		hostName, n2nHost, portNum, err := readNonGenesisHostAndPort(keysFile)
 		if err != nil {
 			Logger.Panic("Error reading keys file. Non-genesis miner has no host or port number", zap.Error(err))
 		}
 		Logger.Info("Inside nonGenesis", zap.String("hostname", hostName), zap.Int("port Num", portNum))
-		node.Self.Host = hostName
-		node.Self.N2NHost = n2nHost
-		node.Self.Port = portNum
-		node.Self.Type = node.NodeTypeSharder
+		selfNode.Host = hostName
+		selfNode.N2NHost = n2nHost
+		selfNode.Port = portNum
+		selfNode.Type = node.NodeTypeSharder
 	}
-	if node.Self.Type != node.NodeTypeSharder {
+	if selfNode.Type != node.NodeTypeSharder {
 		Logger.Panic("node not configured as sharder")
 	}
 
@@ -116,11 +117,11 @@ func main() {
 		mode = "test net"
 	}
 
-	address := fmt.Sprintf(":%v", node.Self.Port)
+	address := fmt.Sprintf(":%v", selfNode.Port)
 
 	Logger.Info("Starting sharder", zap.String("build_tag", build.BuildTag), zap.String("go_version", runtime.Version()), zap.Int("available_cpus", runtime.NumCPU()), zap.String("port", address))
 	Logger.Info("Chain info", zap.String("chain_id", config.GetServerChainID()), zap.String("mode", mode))
-	Logger.Info("Self identity", zap.Any("set_index", node.Self.Node.SetIndex), zap.Any("id", node.Self.Node.GetKey()))
+	Logger.Info("Self identity", zap.Any("set_index", selfNode.SetIndex), zap.Any("id", selfNode.GetKey()))
 
 	var server *http.Server
 	if config.Development() {

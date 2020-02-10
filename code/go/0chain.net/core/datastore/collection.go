@@ -34,6 +34,13 @@ type EntityCollection struct {
 	CollectionDuration time.Duration
 }
 
+// Copy of the EntityCollection.
+func (ec *EntityCollection) Copy() (cp *EntityCollection) {
+	cp = new(EntityCollection)
+	*cp = *ec
+	return
+}
+
 /*GetCollectionName - Given an partitioning key (such as parent key), returns the key for the collection */
 func (eq *EntityCollection) GetCollectionName(parent Key) string {
 	if IsEmpty(parent) {

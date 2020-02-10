@@ -10,3 +10,9 @@ type Info struct {
 	MinersMedianNetworkTime time.Duration `json:"miners_median_network_time"`
 	AvgBlockTxns            int           `json:"avg_block_txns"`
 }
+
+// Copy returns copy of the Info.
+func (i *Info) Copy() (cp Info) {
+	cp = *i
+	return
+}

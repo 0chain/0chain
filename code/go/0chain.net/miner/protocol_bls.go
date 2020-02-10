@@ -44,7 +44,7 @@ func init() {
 func SetDKG(ctx context.Context, mb *block.MagicBlock) {
 	mc := GetMinerChain()
 	self := node.GetSelfNode(ctx)
-	selfInd = self.SetIndex
+	selfInd = self.Underlying().SetIndex
 	if config.DevConfiguration.IsDkgEnabled {
 		err := mc.SetDKGSFromStore(ctx, mb)
 		if err != nil {
@@ -65,14 +65,14 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) err
 	if dkgSummary.SecretShares != nil {
 		mc.muDKG.Lock()
 		defer mc.muDKG.Unlock()
-		mc.currentDKG = bls.MakeDKG(mb.T, mb.N, self.ID)
+		mc.currentDKG = bls.MakeDKG(mb.T, mb.N, self.Underlying().GetKey())
 		mc.currentDKG.MagicBlockNumber = mb.MagicBlockNumber
 		mc.currentDKG.StartingRound = mb.StartingRound
 		for k := range mb.Miners.CopyNodesMap() {
 			if savedShare, ok := dkgSummary.SecretShares[ComputeBlsID(k)]; ok {
 				mc.currentDKG.AddSecretShare(bls.ComputeIDdkg(k), savedShare)
 			} else if v, ok := mb.ShareOrSigns.Shares[k]; ok {
-				if share, ok := v.ShareOrSigns[node.Self.ID]; ok && share.Share != "" {
+				if share, ok := v.ShareOrSigns[node.Self.Underlying().GetKey()]; ok && share.Share != "" {
 					mc.currentDKG.AddSecretShare(bls.ComputeIDdkg(k), share.Share)
 				}
 			}

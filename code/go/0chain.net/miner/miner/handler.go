@@ -42,7 +42,7 @@ func ConfigUpdateAllHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	miners := chain.GetServerChain().Miners.Nodes
 	for _, miner := range miners {
-		if node.Self.PublicKey != miner.PublicKey {
+		if node.Self.Underlying().PublicKey != miner.PublicKey {
 			go func(miner *node.Node) {
 				resp, err := http.PostForm(miner.GetN2NURLBase()+updateConfigURL, r.Form)
 				if err != nil {

@@ -27,7 +27,7 @@ func (c *Chain) SetupWorkers(ctx context.Context) {
 	go c.StatusMonitor(ctx)
 	go c.PruneClientStateWorker(ctx)
 	go c.BlockFetchWorker(ctx)
-	go node.Self.MemoryUsage()
+	go node.Self.Underlying().MemoryUsage()
 }
 
 /*FinalizeRoundWorker - a worker that handles the finalized blocks */

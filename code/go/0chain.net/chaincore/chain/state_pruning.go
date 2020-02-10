@@ -83,7 +83,7 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 	d1 := time.Since(t)
 	ps.UpdateTime = d1
 	StatePruneUpdateTimer.Update(d1)
-	node.GetSelfNode(ctx).Info.StateMissingNodes = ps.MissingNodes
+	node.GetSelfNode(ctx).Underlying().Info.StateMissingNodes = ps.MissingNodes
 	if err != nil {
 		Logger.Error("prune client state (update origin)", zap.Int64("current_round", c.CurrentRound), zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.String("state_hash", util.ToHex(bs.ClientStateHash)), zap.Any("prune_stats", ps), zap.Error(err))
 		if ps.MissingNodes > 0 {

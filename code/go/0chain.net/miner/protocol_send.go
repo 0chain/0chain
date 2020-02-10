@@ -26,7 +26,7 @@ func (mc *Chain) SendBlock(ctx context.Context, b *block.Block) {
 func (mc *Chain) SendVerificationTicket(ctx context.Context, b *block.Block, bvt *block.BlockVerificationTicket) {
 	m2m := mc.Miners
 	if mc.VerificationTicketsTo == chain.Generator {
-		if b.MinerID != node.Self.GetKey() {
+		if b.MinerID != node.Self.Underlying().GetKey() {
 			m2m.SendTo(VerificationTicketSender(bvt), b.MinerID)
 		}
 	} else {

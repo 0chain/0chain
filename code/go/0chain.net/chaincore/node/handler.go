@@ -25,7 +25,7 @@ func WhoAmIHandler(w http.ResponseWriter, r *http.Request) {
 	if Self == nil {
 		return
 	}
-	Self.Print(w)
+	Self.Underlying().Print(w)
 }
 
 func scale(val int64) float64 {
@@ -73,8 +73,9 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if nd.IsActive() {
-		N2n.Error("status handler -- sending data", zap.Any("data", Self.Node.Info))
-		common.Respond(w, r, Self.Node.Info, nil)
+		info := Self.Underlying().Info
+		N2n.Error("status handler -- sending data", zap.Any("data", info))
+		common.Respond(w, r, info, nil)
 		return
 	}
 	data := r.FormValue("data")
@@ -102,8 +103,9 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 		nd.Status = NodeStatusActive
 		N2n.Info("Node active", zap.String("node_type", nd.GetNodeTypeName()), zap.Int("set_index", nd.SetIndex), zap.Any("key", nd.GetKey()))
 	}
-	N2n.Error("status handler -- sending data", zap.Any("data", Self.Node.Info))
-	common.Respond(w, r, Self.Node.Info, nil)
+	info := Self.Underlying().Info
+	N2n.Error("status handler -- sending data", zap.Any("data", info))
+	common.Respond(w, r, info, nil)
 }
 
 //ToDo: Move this to MagicBlock logic

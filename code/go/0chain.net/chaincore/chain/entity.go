@@ -945,7 +945,7 @@ func (c *Chain) GetLatestFinalizedBlockSummary() *block.BlockSummary {
 }
 
 func (c *Chain) ActiveInChain() bool {
-	return c.IsActiveNode(node.Self.ID, c.CurrentRound) && c.GetLatestFinalizedBlock().ClientState != nil
+	return c.IsActiveNode(node.Self.Underlying().GetKey(), c.CurrentRound) && c.GetLatestFinalizedBlock().ClientState != nil
 }
 
 func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
@@ -954,7 +954,7 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 	if newMagicBlock.Miners == nil || newMagicBlock.Miners.MapSize() == 0 {
 		return common.NewError("failed to update magic block", "there are no miners in the magic block")
 	}
-	if newMagicBlock.IsActiveNode(node.Self.ID, c.CurrentRound) && c.GetLatestFinalizedMagicBlock() != nil && c.GetLatestFinalizedMagicBlock().MagicBlock.MagicBlockNumber == newMagicBlock.MagicBlockNumber-1 && c.GetLatestFinalizedMagicBlock().MagicBlock.Hash != newMagicBlock.PreviousMagicBlockHash {
+	if newMagicBlock.IsActiveNode(node.Self.Underlying().GetKey(), c.CurrentRound) && c.GetLatestFinalizedMagicBlock() != nil && c.GetLatestFinalizedMagicBlock().MagicBlock.MagicBlockNumber == newMagicBlock.MagicBlockNumber-1 && c.GetLatestFinalizedMagicBlock().MagicBlock.Hash != newMagicBlock.PreviousMagicBlockHash {
 		Logger.Error("failed to update magic block", zap.Any("finalized_magic_block_hash", c.GetLatestFinalizedMagicBlock().MagicBlock.Hash), zap.Any("new_magic_block_previous_hash", newMagicBlock.PreviousMagicBlockHash))
 		return common.NewError("failed to update magic block", fmt.Sprintf("magic block's previous magic block hash (%v) doesn't equal latest finalized magic block id (%v)", newMagicBlock.PreviousMagicBlockHash, c.GetLatestFinalizedMagicBlock().MagicBlock.Hash))
 	}

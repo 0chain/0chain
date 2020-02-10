@@ -274,7 +274,7 @@ func StartChainRequestHandler(ctx context.Context, r *http.Request) (interface{}
 
 /*SendDKGShare sends the generated secShare to the given node */
 func (mc *Chain) RequestStartChain(n *node.Node, start, started *int) error {
-	if node.Self.ID == n.ID {
+	if node.Self.Underlying().GetKey() == n.ID {
 		if !mc.started {
 			*start++
 		} else {
