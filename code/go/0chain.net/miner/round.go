@@ -66,8 +66,6 @@ func (r *Round) GetBlocksToVerifyChannel() chan *block.Block {
 
 /*IsVerificationComplete - indicates if the verification process for the round is complete */
 func (r *Round) IsVerificationComplete() bool {
-	r.Mutex.RLock()
-	defer r.Mutex.RUnlock()
 	return r.isVerificationComplete()
 }
 

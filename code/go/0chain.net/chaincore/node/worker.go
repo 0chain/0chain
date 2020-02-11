@@ -64,7 +64,7 @@ func (np *Pool) statusUpdate(ctx context.Context) {
 }
 
 func (np *Pool) statusMonitor(ctx context.Context) {
-	nodes := np.shuffleNodes()
+	nodes := np.shuffleNodesLock()
 	for _, node := range nodes {
 		if Self.IsEqual(node) {
 			continue

@@ -132,9 +132,9 @@ func (r *Round) SetRandomSeedForNotarizedBlock(seed int64) {
 	r.setRandomSeed(seed)
 	//r.setState(RoundVRFComplete) RoundStateFinalizing??
 	r.setHasRandomSeed(true)
-	//r.Mutex.Lock()
+	r.Mutex.Lock()
 	r.minerPerm = nil
-	//r.Mutex.Unlock()
+	r.Mutex.Unlock()
 }
 
 //SetRandomSeed - set the random seed of the round
@@ -146,9 +146,9 @@ func (r *Round) SetRandomSeed(seed int64) {
 	r.setState(RoundVRFComplete)
 	r.setHasRandomSeed(true)
 
-	//r.Mutex.Lock()
+	r.Mutex.Lock()
 	r.minerPerm = nil
-	//r.Mutex.Unlock()
+	r.Mutex.Unlock()
 }
 
 func (r *Round) setRandomSeed(seed int64) {
@@ -387,7 +387,9 @@ func (r *Round) GetMinerRank(miner *node.Node) int {
 		pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
 		Logger.DPanic(fmt.Sprintf("miner ranks not computed yet: %v", r.GetState()))
 	}
-	Logger.Info("get miner rank", zap.Any("minerPerm", r.minerPerm), zap.Any("miner", miner), zap.Any("round", r.Number))
+	Logger.Info("get miner rank", zap.Any("minerPerm", r.minerPerm),
+		zap.Any("miner", miner), zap.Any("round", r.Number),
+		zap.Any("miner_set_index", miner.SetIndex))
 	return r.minerPerm[miner.SetIndex]
 }
 
