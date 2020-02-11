@@ -8,6 +8,7 @@ import (
 	"runtime/pprof"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"0chain.net/chaincore/node"
@@ -42,21 +43,24 @@ type Round struct {
 	// For generator, this is the block the miner is generating till a notraization is received
 	// For a verifier, this is the block that is currently the best block received for verification.
 	// Once a round is finalized, this is the finalized block of the given round
-	Block            *block.Block `json:"-"`
-	BlockHash        string       `json:"block_hash"`
-	VRFOutput        string       `json:"vrf_output"` //TODO: VRFOutput == rbooutput?
-	minerPerm        []int
-	state            int
-	proposedBlocks   []*block.Block
-	notarizedBlocks  []*block.Block
-	Mutex            sync.RWMutex
-	shares           map[string]*VRFShare
+	Block     *block.Block `json:"-"`
+	BlockHash string       `json:"block_hash"`
+	VRFOutput string       `json:"vrf_output"` //TODO: VRFOutput == rbooutput?
+
+	minerPerm       []int
+	state           int32
+	proposedBlocks  []*block.Block
+	notarizedBlocks []*block.Block
+	Mutex           sync.RWMutex
+	shares          map[string]*VRFShare
+
 	TimeoutCount     int
 	SoftTimeoutCount int
 	VrfStartTime     time.Time
-	TimeoutVotes     map[int]int
-	VotersVoted      map[string]bool
-	VotesMutex       sync.Mutex
+
+	timeoutVotes map[int]int
+	votersVoted  map[string]bool
+	votesMutex   sync.Mutex
 }
 
 // RoundFactory - a factory to create a new round object specific to miner/sharder
@@ -95,17 +99,17 @@ func (r *Round) GetTimeoutCount() int {
 
 // IncrementTimeoutCount - Increments timeout count
 func (r *Round) IncrementTimeoutCount() {
-	r.VotesMutex.Lock()
-	defer r.VotesMutex.Unlock()
+	r.votesMutex.Lock()
+	defer r.votesMutex.Unlock()
 	var mostVotes int
-	for k, v := range r.TimeoutVotes {
+	for k, v := range r.timeoutVotes {
 		if v > mostVotes || (v == mostVotes && r.TimeoutCount > k) {
 			mostVotes = v
 			r.TimeoutCount = k
 		}
 	}
-	r.TimeoutVotes = make(map[int]int)
-	r.VotersVoted = make(map[string]bool)
+	r.timeoutVotes = make(map[int]int)
+	r.votersVoted = make(map[string]bool)
 	r.TimeoutCount = r.TimeoutCount + 1
 }
 
@@ -275,32 +279,28 @@ func (r *Round) SetFinalizing() bool {
 
 /*IsFinalizing - is the round finalizing */
 func (r *Round) IsFinalizing() bool {
-	r.Mutex.RLock()
-	defer r.Mutex.RUnlock()
 	return r.isFinalizing()
 }
 
 func (r *Round) isFinalizing() bool {
-	return r.state == RoundStateFinalizing
+	return r.getState() == RoundStateFinalizing
 }
 
 /*IsFinalized - indicates if the round is finalized */
 func (r *Round) IsFinalized() bool {
-	r.Mutex.RLock()
-	defer r.Mutex.RUnlock()
 	return r.isFinalized()
 }
 
 func (r *Round) isFinalized() bool {
-	return r.state == RoundStateFinalized || r.GetRoundNumber() == 0
+	return r.getState() == RoundStateFinalized || r.GetRoundNumber() == 0
 }
 
 /*Provider - entity provider for client object */
 func Provider() datastore.Entity {
 	r := &Round{}
 	r.initialize()
-	r.TimeoutVotes = make(map[int]int)
-	r.VotersVoted = make(map[string]bool)
+	r.timeoutVotes = make(map[int]int)
+	r.votersVoted = make(map[string]bool)
 	return r
 }
 
@@ -432,7 +432,7 @@ func (r *Round) GetVRFShares() map[string]*VRFShare {
 
 //GetState - get the state of the round
 func (r *Round) GetState() int {
-	return r.state
+	return r.getState()
 }
 
 //SetState - set the state of the round in a progressive order
@@ -442,12 +442,16 @@ func (r *Round) SetState(state int) {
 
 //ResetState resets the state to any desired state
 func (r *Round) ResetState(state int) {
-	r.state = state
+	atomic.StoreInt32(&r.state, int32(state))
+}
+
+func (r *Round) getState() int {
+	return int(atomic.LoadInt32(&r.state))
 }
 
 func (r *Round) setState(state int) {
-	if state > r.state {
-		r.state = state
+	if state > r.getState() {
+		atomic.StoreInt32(&r.state, int32(state))
 	}
 }
 
@@ -469,10 +473,10 @@ func (r *Round) Unlock() {
 }
 
 func (r *Round) AddTimeoutVote(num int, id string) {
-	r.VotesMutex.Lock()
-	defer r.VotesMutex.Unlock()
-	if !r.VotersVoted[id] {
-		r.TimeoutVotes[num]++
-		r.VotersVoted[id] = true
+	r.votesMutex.Lock()
+	defer r.votesMutex.Unlock()
+	if !r.votersVoted[id] {
+		r.timeoutVotes[num]++
+		r.votersVoted[id] = true
 	}
 }

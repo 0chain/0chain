@@ -101,7 +101,7 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 				node.SetStatus(NodeStatusActive)
 				N2n.Info("Node active", zap.String("node_type", node.GetNodeTypeName()), zap.Int("set_index", node.SetIndex), zap.Any("key", node.GetKey()))
 			}
-			node.LastActiveTime = ts
+			node.SetLastActiveTime(ts)
 		}
 	}
 	np.ComputeNetworkStats()
