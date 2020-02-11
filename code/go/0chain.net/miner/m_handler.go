@@ -186,7 +186,7 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
 	mc := GetMinerChain()
-	if b.Round < mc.CurrentRound-1 {
+	if b.Round < mc.GetCurrentRound()-1 {
 		Logger.Debug("notarized block handler (round older than the current round)", zap.String("block", b.Hash), zap.Any("round", b.Round))
 		return nil, nil
 	}
@@ -265,7 +265,7 @@ func getNotarizedBlock(ctx context.Context, r *http.Request) (*block.Block, erro
 			return b, nil
 		}
 	} else {
-		for r := mc.GetRound(mc.CurrentRound); r != nil; r = mc.GetRound(r.GetRoundNumber() - 1) {
+		for r := mc.GetRound(mc.GetCurrentRound()); r != nil; r = mc.GetRound(r.GetRoundNumber() - 1) {
 			b := r.GetHeaviestNotarizedBlock()
 			if b != nil {
 				return b, nil

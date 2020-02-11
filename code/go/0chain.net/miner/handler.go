@@ -149,7 +149,7 @@ func GetWalletTable(latest bool) (int64, int64, int64, int64) {
 		return 0, 0, 0, 0
 	}
 	if latest {
-		b = c.GetRoundBlocks(c.CurrentRound - 1)[0]
+		b = c.GetRoundBlocks(c.GetCurrentRound() - 1)[0]
 	} else {
 		b = c.GetLatestFinalizedBlock()
 	}
@@ -167,7 +167,7 @@ func MinerStatsHandler(ctx context.Context, r *http.Request) (interface{}, error
 	for i := 0; i < c.NumGenerators; i++ {
 		total += ms.FinalizationCountByRank[i]
 	}
-	cr := c.GetRound(c.CurrentRound)
+	cr := c.GetRound(c.GetCurrentRound())
 	rtoc := c.GetRoundTimeoutCount()
 	if cr != nil {
 		rtoc = int64(cr.GetTimeoutCount())
@@ -183,7 +183,7 @@ func MinerStatsHandler(ctx context.Context, r *http.Request) (interface{}, error
 		LastFinalizedRound: c.GetLatestFinalizedBlock().Round,
 		BlocksFinalized:    total,
 		StateHealth:        node.Self.Underlying().Info.StateMissingNodes,
-		CurrentRound:       c.CurrentRound,
+		CurrentRound:       c.GetCurrentRound(),
 		RoundTimeout:       rtoc,
 		Timeouts:           c.RoundTimeoutsCount,
 		AverageBlockSize:   node.Self.Underlying().Info.AvgBlockTxns,

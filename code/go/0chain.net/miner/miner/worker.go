@@ -108,7 +108,7 @@ func TransactionGenerator(c *chain.Chain) {
 		}
 		waitTime := time.Millisecond * time.Duration(1000./1.05/blocksPerMiner)
 		timer := time.NewTimer(waitTime)
-		if sc.CurrentRound%100 == 0 {
+		if sc.GetCurrentRound()%100 == 0 {
 			Logger.Info("background transactions generation", zap.Duration("frequency", waitTime), zap.Float64("blocks", blocksPerMiner))
 		}
 		select {

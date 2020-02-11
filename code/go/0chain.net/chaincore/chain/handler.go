@@ -147,7 +147,7 @@ func (c *Chain) healthSummary(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Chain) roundHealthInATable(w http.ResponseWriter, r *http.Request) {
-	cr := c.GetRound(c.CurrentRound)
+	cr := c.GetRound(c.GetCurrentRound())
 
 	vrfMsg := "N/A"
 	notarizations := 0
@@ -179,7 +179,7 @@ func (c *Chain) roundHealthInATable(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Current Round")
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "<td class='number'>")
-	fmt.Fprintf(w, "%v", c.CurrentRound)
+	fmt.Fprintf(w, "%v", c.GetCurrentRound())
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "</tr>")
 
@@ -251,7 +251,7 @@ func (c *Chain) chainHealthInATable(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "</tr>")
 
-	cr := c.GetRound(c.CurrentRound)
+	cr := c.GetRound(c.GetCurrentRound())
 	rtoc := c.GetRoundTimeoutCount()
 	if cr != nil {
 		rtoc = int64(cr.GetTimeoutCount())
@@ -418,14 +418,14 @@ func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr class='header'><td rowspan='2'>Set Index</td><td rowspan='2'>Node</td><td rowspan='2'>Sent</td><td rowspan='2'>Send Errors</td><td rowspan='2'>Received</td><td rowspan='2'>Last Active</td><td colspan='3' style='text-align:center'>Message Time</td><td rowspan='2'>Description</td><td colspan='4' style='text-align:center'>Remote Data</td></tr>")
 	fmt.Fprintf(w, "<tr class='header'><td>Small</td><td>Large</td><td>Large Optimal</td><td>Build Tag</td><td>State Health</td><td title='median network time'>Miners MNT</td><td>Avg Block Size</td></tr>")
-	r := c.GetRound(c.CurrentRound)
+	r := c.GetRound(c.GetCurrentRound())
 	hasRanks := r != nil && r.HasRandomSeed()
 	lfb := c.GetLatestFinalizedBlock()
 	for _, nd := range nodes {
 		if nd.GetStatus() == node.NodeStatusInactive {
 			fmt.Fprintf(w, "<tr class='inactive'>")
 		} else {
-			if node.Self.IsEqual(nd) && c.CurrentRound > lfb.Round+10 {
+			if node.Self.IsEqual(nd) && c.GetCurrentRound() > lfb.Round+10 {
 				fmt.Fprintf(w, "<tr class='warning'>")
 			} else {
 				fmt.Fprintf(w, "<tr>")
@@ -633,15 +633,15 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 func RoundInfoHandler(w http.ResponseWriter, r *http.Request) {
 	PrintCSS(w)
 	sc := GetServerChain()
-	fmt.Fprintf(w, "<div class='bold'>Current Round Number: %v</div>", sc.CurrentRound)
+	fmt.Fprintf(w, "<div class='bold'>Current Round Number: %v</div>", sc.GetCurrentRound())
 	fmt.Fprintf(w, "<div>&nbsp;</div>")
 	if node.Self.Underlying().Type != node.NodeTypeMiner {
 		//ToDo: Add Sharder related round info
 		return
 	}
-	cr := sc.GetRound(sc.CurrentRound)
+	cr := sc.GetRound(sc.GetCurrentRound())
 
-	if sc.CurrentRound > 0 && cr != nil {
+	if sc.GetCurrentRound() > 0 && cr != nil {
 
 		rrs := int64(0)
 		if cr.HasRandomSeed() {

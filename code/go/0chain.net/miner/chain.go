@@ -262,9 +262,9 @@ func StartChainRequestHandler(ctx context.Context, r *http.Request) (interface{}
 		Logger.Error("failed to send start chain", zap.Any("error", err))
 		return nil, err
 	}
-	if mc.CurrentRound != int64(round) {
-		Logger.Error("failed to send start chain -- different rounds", zap.Any("current_round", mc.CurrentRound), zap.Any("requested_round", round))
-		return nil, common.NewError("failed to send start chain", fmt.Sprintf("differt_rounds -- current_round: %v, requested_round: %v", mc.CurrentRound, round))
+	if mc.GetCurrentRound() != int64(round) {
+		Logger.Error("failed to send start chain -- different rounds", zap.Any("current_round", mc.GetCurrentRound()), zap.Any("requested_round", round))
+		return nil, common.NewError("failed to send start chain", fmt.Sprintf("differt_rounds -- current_round: %v, requested_round: %v", mc.GetCurrentRound(), round))
 	}
 	message := datastore.GetEntityMetadata("start_chain").Instance().(*StartChain)
 	message.Start = !mc.started
@@ -297,7 +297,7 @@ func (mc *Chain) RequestStartChain(n *node.Node, start, started *int) error {
 		return startChain, nil
 	}
 	params := &url.Values{}
-	params.Add("round", strconv.FormatInt(mc.CurrentRound, 10))
+	params.Add("round", strconv.FormatInt(mc.GetCurrentRound(), 10))
 	ctx := common.GetRootContext()
 	n.RequestEntityFromNode(ctx, ChainStartSender, params, handler)
 	return nil

@@ -34,7 +34,7 @@ func GetStatistics(c *chain.Chain, timer metrics.Timer, scaleBy float64) interfa
 	stats := make(map[string]interface{})
 	stats["delta"] = chain.DELTA
 	stats["block_size"] = c.BlockSize
-	stats["current_round"] = c.CurrentRound
+	stats["current_round"] = c.GetCurrentRound()
 	lfb := c.GetLatestFinalizedBlock()
 	stats["latest_finalized_round"] = lfb.Round
 	stats["count"] = timer.Count()
@@ -122,7 +122,7 @@ func WriteHistogramStatistics(w http.ResponseWriter, c *chain.Chain, metric metr
 func WriteCurrentStatus(w http.ResponseWriter, c *chain.Chain) {
 	fmt.Fprintf(w, "<table>")
 	fmt.Fprintf(w, "<tr><th class='sheader' colspan='2'>Current Status</th></tr>")
-	fmt.Fprintf(w, "<tr><td>Current Round</td><td>%v</td></tr>", c.CurrentRound)
+	fmt.Fprintf(w, "<tr><td>Current Round</td><td>%v</td></tr>", c.GetCurrentRound())
 	lfb := c.GetLatestFinalizedBlock()
 	if lfb != nil {
 		fmt.Fprintf(w, "<tr><td>Finalized Round</td><td>%v (%v)</td></tr>", lfb.Round, len(lfb.UniqueBlockExtensions))
