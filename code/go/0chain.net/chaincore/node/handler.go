@@ -74,7 +74,7 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if nd.IsActive() {
 		info := Self.Underlying().Info
-		N2n.Error("status handler -- sending data", zap.Any("data", info))
+		N2n.Info("status handler -- sending data", zap.Any("data", info))
 		common.Respond(w, r, info, nil)
 		return
 	}
@@ -104,7 +104,7 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 		N2n.Info("Node active", zap.String("node_type", nd.GetNodeTypeName()), zap.Int("set_index", nd.SetIndex), zap.Any("key", nd.GetKey()))
 	}
 	info := Self.Underlying().Info
-	N2n.Error("status handler -- sending data", zap.Any("data", info))
+	N2n.Info("status handler -- sending data", zap.Any("data", info))
 	common.Respond(w, r, info, nil)
 }
 
