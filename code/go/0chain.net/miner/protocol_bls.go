@@ -147,11 +147,11 @@ func (mc *Chain) GetBlsMessageForRound(r *round.Round) (string, error) {
 			return "", common.NewError("no_prev_round", "Could not find the previous round")
 		}
 
-		if pr.RandomSeed == 0 {
+		if pr.GetRandomSeed() == 0 {
 			Logger.Error("Bls sign vrfshare: error in getting prevRSeed")
 			return "", common.NewError("prev_round_rrs_zero", fmt.Sprintf("Prev round %d has randomseed of 0", pr.GetRoundNumber()))
 		}
-		prevRSeed = strconv.FormatInt(pr.RandomSeed, 16) //pr.VRFOutput
+		prevRSeed = strconv.FormatInt(pr.GetRandomSeed(), 16) //pr.VRFOutput
 	}
 	blsMsg := fmt.Sprintf("%v%v%v", r.GetRoundNumber(), r.GetTimeoutCount(), prevRSeed)
 
@@ -163,7 +163,7 @@ func (mc *Chain) GetBlsMessageForRound(r *round.Round) (string, error) {
 
 // GetBlsShare - Start the BLS process
 func (mc *Chain) GetBlsShare(ctx context.Context, r, pr *round.Round) (string, error) {
-	r.VrfStartTime = time.Now()
+	r.SetVrfStartTime(time.Now())
 	if !config.DevConfiguration.IsDkgEnabled {
 		Logger.Debug("returning standard string as DKG is not enabled.")
 		return encryption.Hash("0chain"), nil
@@ -325,8 +325,9 @@ func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r 
 			//zap.Int("Prev_roundtimeout", pr.GetTimeoutCount()),
 			zap.Int64("Prev_rseed", pr.GetRandomSeed()))
 	}
-	if !r.VrfStartTime.IsZero() {
-		vrfTimer.UpdateSince(r.VrfStartTime)
+	vrfStartTime := r.GetVrfStartTime()
+	if !vrfStartTime.IsZero() {
+		vrfTimer.UpdateSince(vrfStartTime)
 	} else {
 		Logger.Info("VrfStartTime is zero", zap.Int64("round", r.GetRoundNumber()))
 	}

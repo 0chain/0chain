@@ -1,6 +1,9 @@
 package round
 
 import (
+	"0chain.net/chaincore/node"
+	"0chain.net/core/ememorystore"
+	. "0chain.net/core/logging"
 	"context"
 	"fmt"
 	"math/rand"
@@ -11,24 +14,20 @@ import (
 	"sync/atomic"
 	"time"
 
-	"0chain.net/chaincore/node"
-	"0chain.net/core/ememorystore"
-	. "0chain.net/core/logging"
-
 	"0chain.net/chaincore/block"
 	"0chain.net/core/datastore"
 	"go.uber.org/zap"
 )
 
 const (
-	RoundShareVRF                  = 0
-	RoundVRFComplete               = iota
-	RoundGenerating                = iota
-	RoundGenerated                 = iota
-	RoundCollectingBlockProposals  = iota
-	RoundStateVerificationTimedOut = iota
-	RoundStateFinalizing           = iota
-	RoundStateFinalized            = iota
+	RoundShareVRF = iota
+	RoundVRFComplete
+	RoundGenerating
+	RoundGenerated
+	RoundCollectingBlockProposals
+	RoundStateVerificationTimedOut
+	RoundStateFinalizing
+	RoundStateFinalized
 )
 
 /*Round - data structure for the round */
@@ -36,9 +35,7 @@ type Round struct {
 	datastore.NOIDField
 	Number        int64 `json:"number"`
 	RandomSeed    int64 `json:"round_random_seed"`
-	hasRandomSeed bool
-
-	SelfRandomFunctionValue int64 `json:"-"`
+	hasRandomSeed uint32
 
 	// For generator, this is the block the miner is generating till a notraization is received
 	// For a verifier, this is the block that is currently the best block received for verification.
@@ -54,9 +51,9 @@ type Round struct {
 	Mutex           sync.RWMutex
 	shares          map[string]*VRFShare
 
-	TimeoutCount     int
-	SoftTimeoutCount int
-	VrfStartTime     time.Time
+	timeoutCount     int32
+	softTimeoutCount int32
+	vrfStartTime     atomic.Value
 
 	timeoutVotes map[int]int
 	votersVoted  map[string]bool
@@ -94,7 +91,15 @@ func (r *Round) GetRoundNumber() int64 {
 
 // GetTimeoutCount - returns the timeout count
 func (r *Round) GetTimeoutCount() int {
-	return r.TimeoutCount
+	return r.getTimeoutCount()
+}
+
+func (r *Round) getTimeoutCount() int {
+	return int(atomic.LoadInt32(&r.timeoutCount))
+}
+
+func (r *Round) setTimeoutCount(tc int) {
+	atomic.StoreInt32(&r.timeoutCount, int32(tc))
 }
 
 // IncrementTimeoutCount - Increments timeout count
@@ -103,59 +108,77 @@ func (r *Round) IncrementTimeoutCount() {
 	defer r.votesMutex.Unlock()
 	var mostVotes int
 	for k, v := range r.timeoutVotes {
-		if v > mostVotes || (v == mostVotes && r.TimeoutCount > k) {
+		if v > mostVotes || (v == mostVotes && r.getTimeoutCount() > k) {
 			mostVotes = v
-			r.TimeoutCount = k
+			r.setTimeoutCount(k)
 		}
 	}
 	r.timeoutVotes = make(map[int]int)
 	r.votersVoted = make(map[string]bool)
-	r.TimeoutCount = r.TimeoutCount + 1
+	atomic.AddInt32(&r.timeoutCount, 1)
 }
 
 // SetTimeoutCount - sets the timeout count to given number if it is greater than existing and returns true. Else false.
 func (r *Round) SetTimeoutCount(tc int) bool {
-	if tc <= r.TimeoutCount {
+	if tc <= r.getTimeoutCount() {
 		return false
 	}
-	r.TimeoutCount = tc
+	r.setTimeoutCount(tc)
 	return true
 }
 
 //SetRandomSeed - set the random seed of the round
 func (r *Round) SetRandomSeedForNotarizedBlock(seed int64) {
-
-	r.RandomSeed = seed
+	r.setRandomSeed(seed)
 	//r.setState(RoundVRFComplete) RoundStateFinalizing??
-	r.hasRandomSeed = true
+	r.setHasRandomSeed(true)
+	//r.Mutex.Lock()
 	r.minerPerm = nil
+	//r.Mutex.Unlock()
 }
 
 //SetRandomSeed - set the random seed of the round
 func (r *Round) SetRandomSeed(seed int64) {
-	if r.hasRandomSeed {
+	if atomic.LoadUint32(&r.hasRandomSeed) == 1 {
 		return
 	}
-	r.RandomSeed = seed
+	r.setRandomSeed(seed)
 	r.setState(RoundVRFComplete)
-	r.hasRandomSeed = true
+	r.setHasRandomSeed(true)
+
+	//r.Mutex.Lock()
 	r.minerPerm = nil
+	//r.Mutex.Unlock()
+}
+
+func (r *Round) setRandomSeed(seed int64) {
+	atomic.StoreInt64(&r.RandomSeed, seed)
+}
+
+func (r *Round) setHasRandomSeed(b bool) {
+	value := uint32(0)
+	if b {
+		value = 1
+	}
+	atomic.StoreUint32(&r.hasRandomSeed, value)
 }
 
 //GetRandomSeed - returns the random seed of the round
 func (r *Round) GetRandomSeed() int64 {
-	r.Mutex.RLock()
-	defer r.Mutex.RUnlock()
-	return r.RandomSeed
+	return atomic.LoadInt64(&r.RandomSeed)
 }
 
 // SetVRFOutput --sets the VRFOutput
 func (r *Round) SetVRFOutput(rboutput string) {
+	r.Mutex.Lock()
+	defer r.Mutex.Unlock()
 	r.VRFOutput = rboutput
 }
 
 // GetVRFOutput --gets the VRFOutput
 func (r *Round) GetVRFOutput() string {
+	r.Mutex.RLock()
+	defer r.Mutex.RUnlock()
 	return r.VRFOutput
 }
 
@@ -309,8 +332,8 @@ func (r *Round) initialize() {
 	r.proposedBlocks = make([]*block.Block, 0, 3)
 	r.shares = make(map[string]*VRFShare)
 	//when we restart a round we call this. So, explicitly, set them to default
-	r.hasRandomSeed = false
-	r.RandomSeed = 0
+	r.setHasRandomSeed(false)
+	r.setRandomSeed(0)
 }
 
 /*Read - read round entity from store */
@@ -351,7 +374,9 @@ func SetupRoundSummaryDB() {
 /*ComputeMinerRanks - Compute random order of n elements given the random seed of the round */
 func (r *Round) ComputeMinerRanks(miners *node.Pool) {
 	Logger.Info("compute miner ranks", zap.Any("num_miners", miners.Size()), zap.Any("round", r.Number))
-	r.minerPerm = rand.New(rand.NewSource(r.RandomSeed)).Perm(miners.Size())
+	r.Mutex.Lock()
+	r.minerPerm = rand.New(rand.NewSource(r.GetRandomSeed())).Perm(miners.Size())
+	r.Mutex.Unlock()
 }
 
 /*GetMinerRank - get the rank of element at the elementIdx position based on the permutation of the round */
@@ -386,10 +411,13 @@ func (r *Round) Clear() {
 
 //Restart - restart the round
 func (r *Round) Restart() {
+	r.Mutex.Lock()
+	defer r.Mutex.Unlock()
+
 	r.initialize()
 	r.Block = nil
 	r.ResetState(RoundShareVRF)
-	r.SoftTimeoutCount = 0
+	r.resetSoftTimeoutCount()
 
 }
 
@@ -411,7 +439,7 @@ func (r *Round) AddAdditionalVRFShare(share *VRFShare) bool {
 func (r *Round) AddVRFShare(share *VRFShare, threshold int) bool {
 	r.Mutex.Lock()
 	defer r.Mutex.Unlock()
-	if len(r.GetVRFShares()) >= threshold {
+	if len(r.getVRFShares()) >= threshold {
 		//if we already have enough shares, do not add.
 		Logger.Info("AddVRFShare Already at threshold. Returning false.")
 		return false
@@ -427,7 +455,17 @@ func (r *Round) AddVRFShare(share *VRFShare, threshold int) bool {
 
 //GetVRFShares - implement interface
 func (r *Round) GetVRFShares() map[string]*VRFShare {
-	return r.shares
+	r.Mutex.RLock()
+	defer r.Mutex.RUnlock()
+	return r.getVRFShares()
+}
+
+func (r *Round) getVRFShares() map[string]*VRFShare {
+	result := make(map[string]*VRFShare, len(r.shares))
+	for k, v := range r.shares {
+		result[k] = v
+	}
+	return result
 }
 
 //GetState - get the state of the round
@@ -457,19 +495,7 @@ func (r *Round) setState(state int) {
 
 //HasRandomSeed - implement interface
 func (r *Round) HasRandomSeed() bool {
-	r.Mutex.RLock()
-	defer r.Mutex.RUnlock()
-	return r.hasRandomSeed
-}
-
-//Lock - implement interface
-func (r *Round) Lock() {
-	r.Mutex.Lock()
-}
-
-//Unlock - implement interface
-func (r *Round) Unlock() {
-	r.Mutex.Unlock()
+	return atomic.LoadUint32(&r.hasRandomSeed) == 1
 }
 
 func (r *Round) AddTimeoutVote(num int, id string) {
@@ -479,4 +505,28 @@ func (r *Round) AddTimeoutVote(num int, id string) {
 		r.timeoutVotes[num]++
 		r.votersVoted[id] = true
 	}
+}
+
+func (r *Round) GetSoftTimeoutCount() int {
+	return int(atomic.LoadInt32(&r.softTimeoutCount))
+}
+
+func (r *Round) IncSoftTimeoutCount() {
+	atomic.AddInt32(&r.softTimeoutCount, 1)
+}
+
+func (r *Round) resetSoftTimeoutCount() {
+	atomic.StoreInt32(&r.softTimeoutCount, 0)
+}
+
+func (r *Round) SetVrfStartTime(t time.Time) {
+	r.vrfStartTime.Store(t)
+}
+
+func (r *Round) GetVrfStartTime() time.Time {
+	value := r.vrfStartTime.Load()
+	if value == nil {
+		return time.Time{}
+	}
+	return value.(time.Time)
 }

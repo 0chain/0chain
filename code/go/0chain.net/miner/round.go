@@ -32,7 +32,7 @@ func (r *Round) AddBlockToVerify(b *block.Block) {
 		Logger.Error("block proposal - round mismatch", zap.Int64("round", r.GetRoundNumber()), zap.Int64("block_round", b.Round), zap.String("block", b.Hash))
 		return
 	}
-	if b.RoundRandomSeed != r.RandomSeed {
+	if b.RoundRandomSeed != r.GetRandomSeed() {
 		return
 	}
 	Logger.Debug("Adding block to verifyChannel")

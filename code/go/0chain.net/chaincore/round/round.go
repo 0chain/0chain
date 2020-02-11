@@ -38,6 +38,4 @@ type RoundI interface {
 	AddVRFShare(share *VRFShare, threshold int) bool
 	GetVRFShares() map[string]*VRFShare
 
-	Lock()
-	Unlock()
 }

@@ -766,8 +766,6 @@ func (c *Chain) SetRandomSeed(r round.RoundI, randomSeed int64) bool {
 	if r.HasRandomSeed() && randomSeed == r.GetRandomSeed() {
 		return false
 	}
-	r.Lock()
-	defer r.Unlock()
 	r.SetRandomSeed(randomSeed)
 	r.ComputeMinerRanks(c.GetMiners(r))
 	roundNumber := r.GetRoundNumber()

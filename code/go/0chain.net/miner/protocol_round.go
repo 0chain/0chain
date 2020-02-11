@@ -638,13 +638,13 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
 	if r.Number == 0 {
 		return
 	}
-	if r.SoftTimeoutCount == mc.RoundRestartMult {
+	if r.GetSoftTimeoutCount() == mc.RoundRestartMult {
 		Logger.Info("triggering restartRound", zap.Int64("round", r.GetRoundNumber()))
 		mc.restartRound(ctx)
 	} else {
 		Logger.Info("triggering handleNoProgress", zap.Int64("round", r.GetRoundNumber()))
 		mc.handleNoProgress(ctx)
-		r.SoftTimeoutCount++
+		r.IncSoftTimeoutCount()
 	}
 }
 
