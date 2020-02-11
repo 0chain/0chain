@@ -250,7 +250,7 @@ func (np *Pool) ComputeNetworkStats() {
 	mt := time.Duration(medianTime/1000000.) * time.Millisecond
 	switch np.Type {
 	case NodeTypeMiner:
-		Self.Underlying().Info.MinersMedianNetworkTime = mt
+		Self.Underlying().GetInfo().SetMinersMedianNetworkTime(mt)
 	}
 }
 

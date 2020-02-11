@@ -132,7 +132,7 @@ func (mc *Chain) ConfirmTransaction(t *httpclientutil.Transaction) bool {
 	var found, pastTime bool
 	var urls []string
 	for _, sharder := range mc.Sharders.CopyNodesMap() {
-		if !active || sharder.Status == node.NodeStatusActive {
+		if !active || sharder.GetStatus() == node.NodeStatusActive {
 			urls = append(urls, sharder.GetN2NURLBase())
 		}
 	}

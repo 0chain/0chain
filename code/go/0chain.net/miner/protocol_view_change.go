@@ -181,7 +181,7 @@ func (mc *Chain) CreateSijs() error {
 		n.Description = v.ShortName
 		n.Type = node.NodeTypeMiner
 		n.Info.BuildTag = v.BuildTag
-		n.Status = node.NodeStatusActive
+		n.SetStatus(node.NodeStatusActive)
 		node.Setup(n)
 		node.RegisterNode(n)
 	}

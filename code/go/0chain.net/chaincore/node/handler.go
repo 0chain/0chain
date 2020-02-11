@@ -98,9 +98,9 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 		N2n.Error("status handler -- signature failed", zap.Any("error", err), zap.String("node_type", nd.GetNodeTypeName()), zap.Int("set_index", nd.SetIndex), zap.Any("key", nd.GetKey()))
 		return
 	}
-	nd.LastActiveTime = time.Now().UTC()
-	if nd.Status == NodeStatusInactive {
-		nd.Status = NodeStatusActive
+	nd.SetLastActiveTime(time.Now().UTC())
+	if nd.GetStatus() == NodeStatusInactive {
+		nd.SetStatus(NodeStatusActive)
 		N2n.Info("Node active", zap.String("node_type", nd.GetNodeTypeName()), zap.Int("set_index", nd.SetIndex), zap.Any("key", nd.GetKey()))
 	}
 	info := Self.Underlying().Info
