@@ -28,12 +28,13 @@ var pullURL = "/v1/n2n/entity_pull/get"
 
 func getPushToPullTime(n *Node) float64 {
 	var pullRequestTime float64
+	sendTime := n.GetSmallMessageSendTime()
 	if pullRequestTimer := n.GetTimer(pullURL); pullRequestTimer != nil && pullRequestTimer.Count() >= 50 {
 		pullRequestTime = pullRequestTimer.Mean()
 	} else {
-		pullRequestTime = 2 * n.SmallMessageSendTime
+		pullRequestTime = 2 * sendTime
 	}
-	return pullRequestTime + n.SmallMessageSendTime
+	return pullRequestTime + sendTime
 }
 
 var pullDataCache = cache.NewLRUCache(100)

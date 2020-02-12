@@ -448,7 +448,7 @@ func (b *Block) IsStateComputed() bool {
 
 /*SetStateStatus - set if the client state is computed or not for the block */
 func (b *Block) SetStateStatus(status int8) {
-	b.stateStatus = status
+	b.stateStatus = status //RACE
 }
 
 /*GetReceiptsMerkleTree - return the merkle tree of this block using the transactions as leaf nodes */

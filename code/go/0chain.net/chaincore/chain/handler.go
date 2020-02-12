@@ -451,8 +451,8 @@ func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 		fmt.Fprintf(w, "<td class='number'>%d</td>", nd.SendErrors)
 		fmt.Fprintf(w, "<td class='number'>%d</td>", nd.Received)
 		fmt.Fprintf(w, "<td>%v</td>", nd.GetLastActiveTime().Format(common.DateTimeFormat))
-		fmt.Fprintf(w, "<td class='number'>%.2f</td>", nd.GetSmallMessageSendTime())
-		lmt := nd.GetLargeMessageSendTime()
+		fmt.Fprintf(w, "<td class='number'>%.2f</td>", nd.GetSmallMessageSendTimeSec())
+		lmt := nd.GetLargeMessageSendTimeSec()
 		fmt.Fprintf(w, "<td class='number'>%.2f</td>", lmt)
 		olmt := nd.GetOptimalLargeMessageSendTime()
 		if olmt < lmt {
@@ -575,7 +575,7 @@ func (c *Chain) N2NStatsWriter(w http.ResponseWriter, r *http.Request) {
 		if node.Self.IsEqual(nd) {
 			continue
 		}
-		lmt := nd.GetLargeMessageSendTime()
+		lmt := nd.GetLargeMessageSendTimeSec()
 		olmt := nd.GetOptimalLargeMessageSendTime()
 		cls := ""
 		if !nd.IsActive() {
@@ -596,7 +596,7 @@ func (c *Chain) N2NStatsWriter(w http.ResponseWriter, r *http.Request) {
 		if node.Self.IsEqual(nd) {
 			continue
 		}
-		lmt := nd.GetLargeMessageSendTime()
+		lmt := nd.GetLargeMessageSendTimeSec()
 		olmt := nd.GetOptimalLargeMessageSendTime()
 		cls := ""
 		if !nd.IsActive() {

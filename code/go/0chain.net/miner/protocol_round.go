@@ -335,7 +335,7 @@ func (mc *Chain) addToRoundVerification(ctx context.Context, mr *Round, b *block
 	if vctx != nil {
 		miner := mc.GetMiners(mr).GetNode(b.MinerID)
 		waitTime := mc.GetBlockProposalWaitTime(mr.Round)
-		minerNT := time.Duration(int64(miner.LargeMessageSendTime/1000000)) * time.Millisecond
+		minerNT := time.Duration(int64(miner.GetLargeMessageSendTime()/1000000)) * time.Millisecond
 		if minerNT >= waitTime {
 			mr.delta = time.Millisecond
 		} else {
@@ -358,8 +358,9 @@ func (mc *Chain) computeBlockProposalDynamicWaitTime(r round.RoundI) time.Durati
 	medianTime := mc.Miners.GetMedianNetworkTime()
 	generators := mc.GetGenerators(r)
 	for _, g := range generators {
-		if g.LargeMessageSendTime < medianTime {
-			return time.Duration(int64(math.Round(g.LargeMessageSendTime)/1000000)) * time.Millisecond
+		sendTime := g.GetLargeMessageSendTime()
+		if sendTime < medianTime {
+			return time.Duration(int64(math.Round(sendTime)/1000000)) * time.Millisecond
 		}
 	}
 	/*

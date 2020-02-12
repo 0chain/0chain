@@ -63,7 +63,7 @@ func (np *Pool) statusUpdate(ctx context.Context) {
 	np.ComputeNetworkStats()
 }
 
-func (np *Pool) statusMonitor(ctx context.Context) {
+func (np *Pool) statusMonitor(context.Context) {
 	nodes := np.shuffleNodesLock()
 	for _, node := range nodes {
 		if Self.IsEqual(node) {
@@ -92,8 +92,10 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 				}
 			}
 		} else {
-			if err := common.FromJSON(resp.Body, &node.Info); err == nil {
-				node.Info.AsOf = time.Now()
+			info := Info{}
+			if err := common.FromJSON(resp.Body, &info); err == nil {
+				info.AsOf = time.Now()
+				node.SetInfo(info)
 			}
 			resp.Body.Close()
 			if !node.IsActive() {

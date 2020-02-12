@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"0chain.net/chaincore/client"
@@ -105,8 +106,8 @@ type Node struct {
 	TimersByURI map[string]metrics.Timer     `json:"-"`
 	SizeByURI   map[string]metrics.Histogram `json:"-"`
 
-	LargeMessageSendTime float64 `json:"-"`
-	SmallMessageSendTime float64 `json:"-"`
+	largeMessageSendTime uint64
+	smallMessageSendTime uint64
 
 	LargeMessagePullServeTime float64 `json:"-"`
 	SmallMessagePullServeTime float64 `json:"-"`
@@ -172,7 +173,7 @@ func (n *Node) AddErrorCount(ecd int64) {
 }
 
 // GetInfo returns pointer to underlying Info.
-func (n *Node) GetInfo() *Info {
+func (n *Node) GetInfoPtr() *Info {
 	n.mutex.RLock()
 	defer n.mutex.RUnlock()
 
@@ -375,12 +376,28 @@ func (n *Node) GetSizeMetric(uri string) metrics.Histogram {
 
 //GetLargeMessageSendTime - get the time it takes to send a large message to this node
 func (n *Node) GetLargeMessageSendTime() float64 {
-	return n.LargeMessageSendTime / 1000000
+	return math.Float64frombits(atomic.LoadUint64(&n.largeMessageSendTime))
+}
+
+func (n *Node) GetLargeMessageSendTimeSec() float64 {
+	return math.Float64frombits(atomic.LoadUint64(&n.largeMessageSendTime)) / 1000000
+}
+
+func (n *Node) SetLargeMessageSendTime(value float64) {
+	atomic.StoreUint64(&n.largeMessageSendTime, math.Float64bits(value))
 }
 
 //GetSmallMessageSendTime - get the time it takes to send a small message to this node
+func (n *Node) GetSmallMessageSendTimeSec() float64 {
+	return math.Float64frombits(atomic.LoadUint64(&n.smallMessageSendTime)) / 1000000
+}
+
 func (n *Node) GetSmallMessageSendTime() float64 {
-	return n.SmallMessageSendTime / 1000000
+	return math.Float64frombits(atomic.LoadUint64(&n.smallMessageSendTime))
+}
+
+func (n *Node) SetSmallMessageSendTime(value float64) {
+	atomic.StoreUint64(&n.smallMessageSendTime, math.Float64bits(value))
 }
 
 func (n *Node) updateMessageTimings() {
@@ -425,8 +442,8 @@ func (n *Node) updateSendMessageTimings() {
 			minval = maxval
 		}
 	}
-	n.LargeMessageSendTime = maxval
-	n.SmallMessageSendTime = minval
+	n.SetLargeMessageSendTime(maxval)
+	n.SetSmallMessageSendTime(minval)
 }
 
 func (n *Node) updateRequestMessageTimings() {
@@ -525,13 +542,14 @@ func (n *Node) GetOptimalLargeMessageSendTime() float64 {
 
 func (n *Node) getOptimalLargeMessageSendTime() float64 {
 	p2ptime := getPushToPullTime(n)
-	if p2ptime < n.LargeMessageSendTime {
+	sendTime := n.GetLargeMessageSendTime()
+	if p2ptime < sendTime {
 		return p2ptime
 	}
-	if n.LargeMessageSendTime == 0 {
+	if sendTime == 0 {
 		return p2ptime
 	}
-	return n.LargeMessageSendTime
+	return sendTime
 }
 
 func (n *Node) getTime(uri string) float64 {
@@ -548,11 +566,25 @@ func (n *Node) SetNodeInfo(oldNode *Node) {
 	n.Received = oldNode.Received
 	n.TimersByURI = oldNode.TimersByURI
 	n.SizeByURI = oldNode.SizeByURI
-	n.LargeMessageSendTime = oldNode.LargeMessageSendTime
-	n.SmallMessageSendTime = oldNode.SmallMessageSendTime
+	n.SetLargeMessageSendTime(oldNode.GetLargeMessageSendTime())
+	n.SetSmallMessageSendTime(oldNode.GetSmallMessageSendTime())
 	n.LargeMessagePullServeTime = oldNode.LargeMessagePullServeTime
 	n.SmallMessagePullServeTime = oldNode.SmallMessagePullServeTime
 	n.ProtocolStats = oldNode.ProtocolStats
-	n.Info = oldNode.Info
+	n.Info = oldNode.GetInfo()
 	n.Status = oldNode.Status
+}
+
+func (n *Node) SetInfo(info Info) {
+	n.mutex.Lock()
+	n.Info = info
+	n.mutex.Unlock()
+}
+
+// GetInfo returns copy Info.
+func (n *Node) GetInfo() Info {
+	n.mutex.RLock()
+	defer n.mutex.RUnlock()
+
+	return n.Info
 }
