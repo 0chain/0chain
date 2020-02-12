@@ -398,7 +398,7 @@ func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block
 	*/
 	b = c.addBlock(b)
 
-	if b.Round == c.CurrentRound {
+	if b.Round == c.GetCurrentRound() {
 		Logger.Info("Adding a notarized block for current round", zap.Int64("Round", r.GetRoundNumber()))
 	}
 
@@ -515,11 +515,11 @@ func (c *Chain) DeleteBlocksBelowRound(round int64) {
 	lfb := c.GetLatestFinalizedBlock()
 	for _, b := range c.blocks {
 		if b.Round < round && b.CreationDate < ts && b.Round < c.LatestDeterministicBlock.Round {
-			Logger.Debug("found block to delete", zap.Int64("round", round), zap.Int64("block_round", b.Round), zap.Int64("current_round", c.CurrentRound), zap.Int64("lf_round", lfb.Round))
+			Logger.Debug("found block to delete", zap.Int64("round", round), zap.Int64("block_round", b.Round), zap.Int64("current_round", c.GetCurrentRound()), zap.Int64("lf_round", lfb.Round))
 			blocks = append(blocks, b)
 		}
 	}
-	Logger.Info("delete blocks below round", zap.Int64("round", c.CurrentRound), zap.Int64("below_round", round), zap.Any("before", ts), zap.Int("total", len(c.blocks)), zap.Int("count", len(blocks)))
+	Logger.Info("delete blocks below round", zap.Int64("round", c.GetCurrentRound()), zap.Int64("below_round", round), zap.Any("before", ts), zap.Int("total", len(c.blocks)), zap.Int("count", len(blocks)))
 	for _, b := range blocks {
 		b.Clear()
 		delete(c.blocks, b.Hash)
@@ -775,6 +775,14 @@ func (c *Chain) SetRandomSeed(r round.RoundI, randomSeed int64) bool {
 	return true
 }
 
+// GetCurrentRound async safe.
+func (c *Chain) GetCurrentRound() int64 {
+	c.roundsMutex.RLock()
+	defer c.roundsMutex.RUnlock()
+
+	return c.CurrentRound
+}
+
 func (c *Chain) getBlocks() []*block.Block {
 	c.blocksMutex.RLock()
 	defer c.blocksMutex.RUnlock()
@@ -943,7 +951,7 @@ func (c *Chain) GetLatestFinalizedBlockSummary() *block.BlockSummary {
 }
 
 func (c *Chain) ActiveInChain() bool {
-	return c.IsActiveNode(node.Self.Underlying().GetKey(), c.CurrentRound) && c.GetLatestFinalizedBlock().ClientState != nil
+	return c.IsActiveNode(node.Self.Underlying().GetKey(), c.GetCurrentRound()) && c.GetLatestFinalizedBlock().ClientState != nil
 }
 
 func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
@@ -952,7 +960,7 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 	if newMagicBlock.Miners == nil || newMagicBlock.Miners.MapSize() == 0 {
 		return common.NewError("failed to update magic block", "there are no miners in the magic block")
 	}
-	if newMagicBlock.IsActiveNode(node.Self.Underlying().GetKey(), c.CurrentRound) && c.GetLatestFinalizedMagicBlock() != nil && c.GetLatestFinalizedMagicBlock().MagicBlock.MagicBlockNumber == newMagicBlock.MagicBlockNumber-1 && c.GetLatestFinalizedMagicBlock().MagicBlock.Hash != newMagicBlock.PreviousMagicBlockHash {
+	if newMagicBlock.IsActiveNode(node.Self.Underlying().GetKey(), c.GetCurrentRound()) && c.GetLatestFinalizedMagicBlock() != nil && c.GetLatestFinalizedMagicBlock().MagicBlock.MagicBlockNumber == newMagicBlock.MagicBlockNumber-1 && c.GetLatestFinalizedMagicBlock().MagicBlock.Hash != newMagicBlock.PreviousMagicBlockHash {
 		Logger.Error("failed to update magic block", zap.Any("finalized_magic_block_hash", c.GetLatestFinalizedMagicBlock().MagicBlock.Hash), zap.Any("new_magic_block_previous_hash", newMagicBlock.PreviousMagicBlockHash))
 		return common.NewError("failed to update magic block", fmt.Sprintf("magic block's previous magic block hash (%v) doesn't equal latest finalized magic block id (%v)", newMagicBlock.PreviousMagicBlockHash, c.GetLatestFinalizedMagicBlock().MagicBlock.Hash))
 	}

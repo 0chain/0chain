@@ -49,7 +49,7 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 	if bs == nil {
 		bs = &block.BlockSummary{Round: lfb.Round, ClientStateHash: lfb.ClientStateHash}
 	}
-	Logger.Info("prune client state - new version", zap.Int64("current_round", c.CurrentRound), zap.Int64("latest_finalized_round", lfb.Round), zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.String("state_hash", util.ToHex(bs.ClientStateHash)))
+	Logger.Info("prune client state - new version", zap.Int64("current_round", c.GetCurrentRound()), zap.Int64("latest_finalized_round", lfb.Round), zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.String("state_hash", util.ToHex(bs.ClientStateHash)))
 	newVersion := util.Sequence(bs.Round)
 	if c.pruneStats != nil && c.pruneStats.Version == newVersion && c.pruneStats.MissingNodes == 0 {
 		return // already done with pruning this
@@ -85,7 +85,7 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 	StatePruneUpdateTimer.Update(d1)
 	node.GetSelfNode(ctx).Underlying().Info.StateMissingNodes = ps.MissingNodes
 	if err != nil {
-		Logger.Error("prune client state (update origin)", zap.Int64("current_round", c.CurrentRound), zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.String("state_hash", util.ToHex(bs.ClientStateHash)), zap.Any("prune_stats", ps), zap.Error(err))
+		Logger.Error("prune client state (update origin)", zap.Int64("current_round", c.GetCurrentRound()), zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.String("state_hash", util.ToHex(bs.ClientStateHash)), zap.Any("prune_stats", ps), zap.Error(err))
 		if ps.MissingNodes > 0 {
 			if len(missingKeys) > 0 {
 				c.GetStateNodes(ctx, missingKeys[:])
@@ -94,7 +94,7 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 			return
 		}
 	} else {
-		Logger.Info("prune client state (update origin)", zap.Int64("current_round", c.CurrentRound), zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.String("state_hash", util.ToHex(bs.ClientStateHash)), zap.Any("prune_stats", ps))
+		Logger.Info("prune client state (update origin)", zap.Int64("current_round", c.GetCurrentRound()), zap.Int64("round", bs.Round), zap.String("block", bs.Hash), zap.String("state_hash", util.ToHex(bs.ClientStateHash)), zap.Any("prune_stats", ps))
 	}
 	if lfb.Round-int64(c.PruneStateBelowCount) < bs.Round {
 		ps.Stage = util.PruneStateAbandoned
