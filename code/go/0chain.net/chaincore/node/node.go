@@ -138,12 +138,14 @@ func Provider() *Node {
 func Setup(node *Node) {
 	// queue up at most these many messages to a node
 	// because of this, we don't want the status monitoring to use this communication layer
+	node.mutex.Lock()
 	node.CommChannel = make(chan bool, 5)
 	for i := 0; i < cap(node.CommChannel); i++ {
 		node.CommChannel <- true
 	}
 	node.TimersByURI = make(map[string]metrics.Timer, 10)
 	node.SizeByURI = make(map[string]metrics.Histogram, 10)
+	node.mutex.Unlock()
 	node.ComputeProperties()
 	Self.SetNodeIfPublicKeyIsEqual(node)
 }
@@ -158,16 +160,16 @@ func (n *Node) GetErrorCount() int64 {
 
 // SetErrorCount asynchronously.
 func (n *Node) SetErrorCount(ec int64) {
-	n.mutex.RLock()
-	defer n.mutex.RUnlock()
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
 
 	n.ErrorCount = ec
 }
 
 // AddErrorCount add given value to errors count asynchronously.
 func (n *Node) AddErrorCount(ecd int64) {
-	n.mutex.RLock()
-	defer n.mutex.RUnlock()
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
 
 	n.ErrorCount += ecd
 }

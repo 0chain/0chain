@@ -161,9 +161,10 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 				return false
 			}
 			if resp.StatusCode != http.StatusOK {
-				readAndClose(resp.Body)
+				data := string(getDataAndClose(resp.Body))
 				N2n.Error("requesting", zap.Int("from", selfNode.SetIndex),
-					zap.Int("to", provider.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName), zap.Any("params", params), zap.Any("status_code", resp.StatusCode))
+					zap.Int("to", provider.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName), zap.Any("params", params), zap.Any("status_code", resp.StatusCode),
+					zap.String("response", data))
 				return false
 			}
 			if entityMetadata == nil {
@@ -173,8 +174,9 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 				}
 				entityMetadata = datastore.GetEntityMetadata(eName)
 				if entityMetadata == nil {
-					readAndClose(resp.Body)
-					N2n.Error("requesting - unknown entity", zap.Int("from", selfNode.SetIndex), zap.Int("to", provider.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName))
+					data := string(getDataAndClose(resp.Body))
+					N2n.Error("requesting - unknown entity", zap.Int("from", selfNode.SetIndex), zap.Int("to", provider.SetIndex), zap.Duration("duration", duration), zap.String("handler", uri), zap.String("entity", eName),
+						zap.String("response", data))
 					return false
 				}
 			}

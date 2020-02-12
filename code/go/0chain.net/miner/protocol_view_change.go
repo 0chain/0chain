@@ -28,7 +28,6 @@ import (
 var (
 	scFunctions            = make(map[int]SmartContractFunctions)
 	currentPhase           int
-	gmpks                  *block.Mpks
 	shareOrSigns           *block.ShareOrSigns
 	txnConfirmationChannel = make(chan txnConfirmation)
 )
@@ -56,7 +55,7 @@ func (mc *Chain) initSetup() {
 	scFunctions[minersc.Share] = mc.SendSijs
 	scFunctions[minersc.Publish] = mc.PublishShareOrSigns
 	scFunctions[minersc.Wait] = mc.Wait
-	gmpks = block.NewMpks()
+	mc.mpks = block.NewMpks()
 	shareOrSigns = block.NewShareOrSigns()
 	shareOrSigns.ID = node.Self.Underlying().GetKey()
 	currentPhase = -1
@@ -185,10 +184,14 @@ func (mc *Chain) CreateSijs() error {
 		node.Setup(n)
 		node.RegisterNode(n)
 	}
-	gmpks = mpks
+	mc.mutexMpks.Lock()
+	defer mc.mutexMpks.Unlock()
+	mc.mpks = mpks
+
 	foundSelf := false
 	lfb := mc.GetLatestFinalizedBlock()
-	for k := range gmpks.Mpks {
+
+	for k := range mc.mpks.Mpks {
 		id := bls.ComputeIDdkg(k)
 		share, err := mc.viewChangeDKG.ComputeDKGKeyShare(id)
 		if err != nil {
@@ -363,14 +366,18 @@ func SignShareRequestHandler(ctx context.Context, r *http.Request) (interface{},
 	if !mc.dkgSet {
 		return nil, common.NewError("failed to sign share", "dkg not set")
 	}
-	if len(gmpks.Mpks) < mc.viewChangeDKG.T {
+	mpks := mc.GetMpks()
+	if len(mpks) < mc.viewChangeDKG.T {
 		return nil, common.NewError("failed to sign", "don't have mpks yet")
 	}
 	message := datastore.GetEntityMetadata("dkg_share").Instance().(*bls.DKGKeyShare)
 	var share bls.Key
-	share.SetHexString(secShare)
+	if err := share.SetHexString(secShare); err != nil {
+		Logger.Error("failed to set hex string", zap.Any("error", err))
+		return nil, err
+	}
 
-	mpk := bls.ConvertStringToMpk(gmpks.Mpks[nodeID].Mpk)
+	mpk := bls.ConvertStringToMpk(mpks[nodeID].Mpk)
 	var mpkString []string
 	for _, pk := range mpk {
 		mpkString = append(mpkString, pk.GetHexString())
@@ -508,6 +515,7 @@ func (mc *Chain) Wait() (*httpclientutil.Transaction, error) {
 		return nil, errors.New("unexpected NIL viewChangeDKG")
 	}
 
+	mpks := mc.GetMpks()
 	for key, share := range magicBlock.ShareOrSigns.Shares {
 		if key == node.Self.Underlying().GetKey() {
 			continue
@@ -516,7 +524,7 @@ func (mc *Chain) Wait() (*httpclientutil.Transaction, error) {
 		if ok && myShare.Share != "" {
 			var share bls.Key
 			share.SetHexString(myShare.Share)
-			if mc.viewChangeDKG.ValidateShare(bls.ConvertStringToMpk(gmpks.Mpks[key].Mpk), share) {
+			if mc.viewChangeDKG.ValidateShare(bls.ConvertStringToMpk(mpks[key].Mpk), share) {
 				err := mc.viewChangeDKG.AddSecretShare(bls.ComputeIDdkg(key), myShare.Share)
 				if err != nil {
 					return nil, err
@@ -524,8 +532,11 @@ func (mc *Chain) Wait() (*httpclientutil.Transaction, error) {
 			}
 		}
 	}
+
+	mc.mutexMpks.Lock()
+	defer mc.mutexMpks.Unlock()
 	var miners []string
-	for key := range gmpks.Mpks {
+	for key := range mc.mpks.Mpks {
 		if _, ok := magicBlock.Mpks.Mpks[key]; !ok {
 			miners = append(miners, key)
 		}
@@ -536,11 +547,13 @@ func (mc *Chain) Wait() (*httpclientutil.Transaction, error) {
 	mc.viewChangeDKG.AggregateSecretKeyShares()
 	mc.ViewChangeMagicBlock = magicBlock
 	mc.viewChangeDKG.StartingRound = magicBlock.StartingRound
-	StoreDKGSummary(common.GetRootContext(), mc.viewChangeDKG.GetDKGSummary())
+	if err := StoreDKGSummary(common.GetRootContext(), mc.viewChangeDKG.GetDKGSummary()); err != nil {
+		return nil, err
+	}
 	mc.nextViewChange = magicBlock.StartingRound
 	shareOrSigns = block.NewShareOrSigns()
 	shareOrSigns.ID = node.Self.Underlying().GetKey()
-	gmpks = block.NewMpks()
+	mc.mpks = block.NewMpks()
 	mc.dkgSet = false
 	return nil, nil
 }

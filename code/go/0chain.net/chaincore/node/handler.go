@@ -34,6 +34,9 @@ func scale(val int64) float64 {
 
 //PrintSendStats - print the n2n statistics to this node
 func (n *Node) PrintSendStats(w io.Writer) {
+	n.mutex.RLock()
+	defer n.mutex.RUnlock()
+
 	uris := make([]string, 0, len(n.TimersByURI))
 	for uri := range n.TimersByURI {
 		uris = append(uris, uri)

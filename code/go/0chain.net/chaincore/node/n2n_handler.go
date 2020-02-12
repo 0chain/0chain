@@ -163,6 +163,13 @@ func readAndClose(reader io.ReadCloser) {
 	reader.Close()
 }
 
+func getDataAndClose(reader io.ReadCloser) []byte {
+	buf := &bytes.Buffer{}
+	io.Copy(buf, reader)
+	reader.Close()
+	return buf.Bytes()
+}
+
 func getRequestEntity(r *http.Request, entityMetadata datastore.EntityMetadata) (datastore.Entity, error) {
 	defer r.Body.Close()
 	var buffer io.Reader = r.Body

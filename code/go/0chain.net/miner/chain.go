@@ -102,6 +102,8 @@ type Chain struct {
 	muDKG               *sync.Mutex
 	currentDKG          *bls.DKG
 	viewChangeDKG       *bls.DKG
+	mutexMpks           sync.RWMutex
+	mpks                *block.Mpks
 	nextViewChange      int64
 	discoverClients     bool
 	started             bool
@@ -248,6 +250,12 @@ func (mc *Chain) ChainStarted(ctx context.Context) bool {
 		}
 	}
 	return false
+}
+
+func (mc *Chain) GetMpks() map[string]*block.MPK {
+	mc.mutexMpks.RLock()
+	defer mc.mutexMpks.RUnlock()
+	return mc.mpks.GetMpks()
 }
 
 func StartChainRequestHandler(ctx context.Context, r *http.Request) (interface{}, error) {

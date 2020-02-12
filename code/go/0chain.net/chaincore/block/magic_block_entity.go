@@ -1,16 +1,15 @@
 package block
 
 import (
-	"encoding/hex"
-	"encoding/json"
-	"sort"
-	"strconv"
-
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
+	"encoding/hex"
+	"encoding/json"
+	"sort"
+	"strconv"
 
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -233,6 +232,14 @@ func (mpks *Mpks) GetMpkMap() map[bls.PartyID][]bls.PublicKey {
 		mpkMap[bls.ComputeIDdkg(k)] = bls.ConvertStringToMpk(v.Mpk)
 	}
 	return mpkMap
+}
+
+func (mpks *Mpks) GetMpks() map[string]*MPK {
+	result := make(map[string]*MPK, len(mpks.Mpks))
+	for k, v := range mpks.Mpks {
+		result[k] = v
+	}
+	return result
 }
 
 type MPK struct {
