@@ -53,7 +53,7 @@ func (n *Node) PrintSendStats(w io.Writer) {
 		fmt.Fprintf(w, "<td class='number'>%.2f</td>", scale(timer.Min()))
 		fmt.Fprintf(w, "<td class='number'>%.2f &plusmn;%.2f</td>", timer.Mean()/1000000., timer.StdDev()/1000000.)
 		fmt.Fprintf(w, "<td class='number'>%.2f</td>", scale(timer.Max()))
-		sizer := n.GetSizeMetric(uri)
+		sizer := n.getSizeMetric(uri)
 		if sizer != nil {
 			fmt.Fprintf(w, "<td class='number'>%d</td>", sizer.Min())
 			fmt.Fprintf(w, "<td class='number'>%.2f &plusmn;%.2f</td>", sizer.Mean(), sizer.StdDev())

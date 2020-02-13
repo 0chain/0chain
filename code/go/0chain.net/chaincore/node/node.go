@@ -362,10 +362,7 @@ func (n *Node) GetTimer(uri string) metrics.Timer {
 	return timer
 }
 
-//GetSizeMetric - get the size metric
-func (n *Node) GetSizeMetric(uri string) metrics.Histogram {
-	n.mutex.Lock()
-	defer n.mutex.Unlock()
+func (n *Node) getSizeMetrics(uri string) metrics.Histogram {
 	metric, ok := n.SizeByURI[uri]
 	if !ok {
 		metricID := fmt.Sprintf("%v.%v.size", n.ID, uri)
@@ -374,6 +371,13 @@ func (n *Node) GetSizeMetric(uri string) metrics.Histogram {
 		metrics.Register(metricID, metric)
 	}
 	return metric
+}
+
+//GetSizeMetric - get the size metric
+func (n *Node) GetSizeMetric(uri string) metrics.Histogram {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+	return n.getSizeMetrics(uri)
 }
 
 //GetLargeMessageSendTime - get the time it takes to send a large message to this node
