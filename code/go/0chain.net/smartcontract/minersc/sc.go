@@ -291,7 +291,7 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction, inp
 		return "", common.NewError("failed to add to delegate pool", fmt.Sprintf("error digging delegate pool: %v", err.Error()))
 	}
 	balances.AddTransfer(transfer)
-	un.Pools[t.Hash] = &poolInfo{MinerID: mn.ID, Balance: int64(transfer.Amount)}
+	un.Pools[t.Hash] = &poolInfo{PoolID: t.Hash, MinerID: mn.ID, Balance: int64(transfer.Amount)}
 
 	mn.Active[t.Hash] = pool // needs to be Pending pool; doing this just for testing
 	// mn.Pending[t.Hash] = pool

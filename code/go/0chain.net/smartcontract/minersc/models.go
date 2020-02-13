@@ -211,6 +211,7 @@ func (un *UserNode) GetHashBytes() []byte {
 }
 
 type poolInfo struct {
+	PoolID  string `json:"pool_id"`
 	MinerID string `json:"miner_id"`
 	Balance int64  `json:"balance"`
 }
