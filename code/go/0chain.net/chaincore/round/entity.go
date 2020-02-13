@@ -390,6 +390,12 @@ func (r *Round) GetMinerRank(miner *node.Node) int {
 	Logger.Info("get miner rank", zap.Any("minerPerm", r.minerPerm),
 		zap.Any("miner", miner), zap.Any("round", r.Number),
 		zap.Any("miner_set_index", miner.SetIndex))
+	if miner.SetIndex >= len(r.minerPerm) {
+		Logger.Warn("get miner rank -- the node index in the permutation is missing. Returns: -1.",
+			zap.Any("r.minerPerm", r.minerPerm), zap.Any("set_index", miner.SetIndex),
+			zap.Any("node", miner))
+		return -1
+	}
 	return r.minerPerm[miner.SetIndex]
 }
 
@@ -398,13 +404,26 @@ func (r *Round) GetMinersByRank(miners *node.Pool) []*node.Node {
 	r.Mutex.RLock()
 	defer r.Mutex.RUnlock()
 	nodes := miners.CopyNodes()
-	rminers := make([]*node.Node, len(nodes))
 	Logger.Info("get miners by rank", zap.Any("num_miners", len(nodes)), zap.Any("round", r.Number), zap.Any("r.minerPerm", r.minerPerm))
-	for _, nd := range nodes {
-		idx := r.minerPerm[nd.SetIndex]
-		rminers[idx] = nd
-	}
-	return rminers
+	sort.Slice(nodes, func(i, j int) bool {
+		idxi, idxj := 0, 0
+		if nodes[i].SetIndex < len(r.minerPerm) {
+			idxi = r.minerPerm[nodes[i].SetIndex]
+		} else {
+			Logger.Warn("get miner by rank -- the node index in the permutation is missing",
+				zap.Any("r.minerPerm", r.minerPerm), zap.Any("set_index", nodes[i].SetIndex),
+				zap.Any("node", nodes[i]))
+		}
+		if nodes[j].SetIndex < len(r.minerPerm) {
+			idxj = r.minerPerm[nodes[j].SetIndex]
+		} else {
+			Logger.Warn("get miner by rank -- the node index in the permutation is missing",
+				zap.Any("r.minerPerm", r.minerPerm), zap.Any("set_index", nodes[j].SetIndex),
+				zap.Any("node", nodes[j]))
+		}
+		return idxi > idxj
+	})
+	return nodes
 }
 
 //Clear - implement interface
