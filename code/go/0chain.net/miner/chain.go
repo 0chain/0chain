@@ -215,11 +215,12 @@ func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) erro
 
 func (mc *Chain) ViewChange(ctx context.Context, round int64) {
 	if config.DevConfiguration.ViewChange && mc.nextViewChange <= round &&
-		(mc.currentDKG == nil || mc.currentDKG.StartingRound < mc.nextViewChange) &&
-		mc.ViewChangeMagicBlock != nil {
-		err := mc.UpdateMagicBlock(mc.ViewChangeMagicBlock)
-		if err != nil {
-			Logger.DPanic(err.Error())
+		(mc.currentDKG == nil || mc.currentDKG.StartingRound < mc.nextViewChange) {
+		if mc.ViewChangeMagicBlock != nil {
+			err := mc.UpdateMagicBlock(mc.ViewChangeMagicBlock)
+			if err != nil {
+				Logger.DPanic(err.Error())
+			}
 		}
 		mc.SetDKGSFromStore(ctx, mc.MagicBlock)
 	}
