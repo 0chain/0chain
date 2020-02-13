@@ -561,7 +561,7 @@ func (c *Chain) GetGenerators(r round.RoundI) []*node.Node {
 	if c.NumGenerators >= len(miners) {
 		Logger.Warn("get generators -- the number of generators is greater than the number of miners",
 			zap.Any("num_generators", c.NumGenerators), zap.Any("miner_by_rank", miners),
-			zap.Any("round",r.GetRoundNumber()))
+			zap.Any("round", r.GetRoundNumber()))
 		return miners
 	}
 	return miners[:c.NumGenerators]
