@@ -53,7 +53,7 @@ func (n *Node) PrintSendStats(w io.Writer) {
 		fmt.Fprintf(w, "<td class='number'>%.2f</td>", scale(timer.Min()))
 		fmt.Fprintf(w, "<td class='number'>%.2f &plusmn;%.2f</td>", timer.Mean()/1000000., timer.StdDev()/1000000.)
 		fmt.Fprintf(w, "<td class='number'>%.2f</td>", scale(timer.Max()))
-		sizer := n.GetSizeMetric(uri)
+		sizer := n.getSizeMetric(uri)
 		if sizer != nil {
 			fmt.Fprintf(w, "<td class='number'>%d</td>", sizer.Min())
 			fmt.Fprintf(w, "<td class='number'>%.2f &plusmn;%.2f</td>", sizer.Mean(), sizer.StdDev())
@@ -88,7 +88,7 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 		N2n.Error("status handler -- missing fields", zap.Any("data", data), zap.Any("hash", hash), zap.Any("signature", signature), zap.String("node_type", nd.GetNodeTypeName()), zap.Int("set_index", nd.SetIndex), zap.Any("key", nd.GetKey()))
 		return
 	}
-	if ok, err := Self.ValidateSignatureTime(data); !ok {
+	if ok, err := ValidateSignatureTime(data); !ok {
 		N2n.Error("status handler -- validate time failed", zap.Any("error", err), zap.String("node_type", nd.GetNodeTypeName()), zap.Int("set_index", nd.SetIndex), zap.Any("key", nd.GetKey()))
 		return
 	}

@@ -162,7 +162,7 @@ func (mc *Chain) GetBlsMessageForRound(r *round.Round) (string, error) {
 }
 
 // GetBlsShare - Start the BLS process
-func (mc *Chain) GetBlsShare(ctx context.Context, r, pr *round.Round) (string, error) {
+func (mc *Chain) GetBlsShare(_ context.Context, r *round.Round) (string, error) {
 	r.SetVrfStartTime(time.Now())
 	if !config.DevConfiguration.IsDkgEnabled {
 		Logger.Debug("returning standard string as DKG is not enabled.")
@@ -173,7 +173,6 @@ func (mc *Chain) GetBlsShare(ctx context.Context, r, pr *round.Round) (string, e
 	if err != nil {
 		return "", err
 	}
-	mc.ViewChange(ctx, r.Number)
 	mc.muDKG.Lock()
 	defer mc.muDKG.Unlock()
 	sigShare := mc.currentDKG.Sign(msg)

@@ -353,6 +353,10 @@ func (n *Node) Release() {
 func (n *Node) GetTimer(uri string) metrics.Timer {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
+	return n.getTimer(uri)
+}
+
+func (n *Node) getTimer(uri string) metrics.Timer {
 	timer, ok := n.TimersByURI[uri]
 	if !ok {
 		timerID := fmt.Sprintf("%v.%v.time", n.ID, uri)
@@ -366,6 +370,11 @@ func (n *Node) GetTimer(uri string) metrics.Timer {
 func (n *Node) GetSizeMetric(uri string) metrics.Histogram {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
+	return n.getSizeMetric(uri)
+}
+
+//getSizeMetric - get the size metric
+func (n *Node) getSizeMetric(uri string) metrics.Histogram {
 	metric, ok := n.SizeByURI[uri]
 	if !ok {
 		metricID := fmt.Sprintf("%v.%v.size", n.ID, uri)
@@ -403,9 +412,6 @@ func (n *Node) SetSmallMessageSendTime(value float64) {
 }
 
 func (n *Node) updateMessageTimings() {
-	n.mutex.Lock()
-	defer n.mutex.Unlock()
-
 	n.updateSendMessageTimings()
 	n.updateRequestMessageTimings()
 }

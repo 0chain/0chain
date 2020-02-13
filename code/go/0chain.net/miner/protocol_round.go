@@ -100,7 +100,7 @@ func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
 	vrfs := &round.VRFShare{}
 	vrfs.Round = r.GetRoundNumber()
 	vrfs.RoundTimeoutCount = r.GetTimeoutCount()
-	vrfs.Share, err = mc.GetBlsShare(ctx, r.Round, pr.Round)
+	vrfs.Share, err = mc.GetBlsShare(ctx, r.Round)
 	if err != nil {
 		Logger.DPanic(err.Error())
 	}

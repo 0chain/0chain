@@ -12,6 +12,9 @@ import (
 	"0chain.net/core/encryption"
 )
 
+/*Self represents the node of this instance */
+var Self = newSelfNode()
+
 /*SelfNode -- self node type*/
 type SelfNode struct {
 	mx sync.RWMutex
@@ -19,10 +22,11 @@ type SelfNode struct {
 	signatureScheme encryption.SignatureScheme
 }
 
-func newSelfNode() (sn *SelfNode) {
-	sn = new(SelfNode)
-	sn.Node = new(Node)
-	return
+func newSelfNode() *SelfNode {
+	node := &SelfNode{
+		Node: &Node{},
+	}
+	return node
 }
 
 // Underlying returns underlying Node instance.
@@ -35,25 +39,33 @@ func (sn *SelfNode) Underlying() *Node {
 
 /*SetSignatureScheme - getter */
 func (sn *SelfNode) GetSignatureScheme() encryption.SignatureScheme {
+	sn.mx.RLock()
+	defer sn.mx.RUnlock()
 	return sn.signatureScheme
 }
 
 /*SetSignatureScheme - setter */
 func (sn *SelfNode) SetSignatureScheme(signatureScheme encryption.SignatureScheme) {
+	sn.mx.Lock()
+	defer sn.mx.Unlock()
 	sn.signatureScheme = signatureScheme
-	sn.Underlying().SetPublicKey(signatureScheme.GetPublicKey())
+	sn.Node.SetPublicKey(signatureScheme.GetPublicKey())
 }
 
 /*Sign - sign the given hash */
 func (sn *SelfNode) Sign(hash string) (string, error) {
+	sn.mx.RLock()
+	defer sn.mx.RUnlock()
 	return sn.signatureScheme.Sign(hash)
 }
 
 /*TimeStampSignature - get timestamp based signature */
 func (sn *SelfNode) TimeStampSignature() (string, string, string, error) {
-	data := fmt.Sprintf("%v:%v", sn.Underlying().GetKey(), common.Now())
+	sn.mx.RLock()
+	defer sn.mx.RUnlock()
+	data := fmt.Sprintf("%v:%v", sn.Node.GetKey(), common.Now())
 	hash := encryption.Hash(data)
-	signature, err := sn.Sign(hash)
+	signature, err := sn.signatureScheme.Sign(hash)
 	if err != nil {
 		return "", "", "", err
 	}
@@ -61,7 +73,7 @@ func (sn *SelfNode) TimeStampSignature() (string, string, string, error) {
 }
 
 /*ValidateSignatureTime - validate if the time stamp used in the signature is valid */
-func (sn *SelfNode) ValidateSignatureTime(data string) (bool, error) {
+func ValidateSignatureTime(data string) (bool, error) {
 	segs := strings.Split(data, ":")
 	if len(segs) < 2 {
 		return false, errors.New("invalid data")
@@ -98,6 +110,3 @@ func (sn *SelfNode) SetNodeIfPublicKeyIsEqual(node *Node) {
 	sn.Node.Info.BuildTag = build.BuildTag
 	sn.Node.Status = NodeStatusActive
 }
-
-/*Self represents the node of this instance */
-var Self = newSelfNode()
