@@ -8,6 +8,9 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/core/datastore"
+	. "0chain.net/core/logging"
+
+	"go.uber.org/zap"
 )
 
 /*SendVRFShare - send the round vrf share */
@@ -39,7 +42,7 @@ func (mc *Chain) SendNotarization(ctx context.Context, b *block.Block) {
 	notarization := datastore.GetEntityMetadata("block_notarization").Instance().(*Notarization)
 	notarization.BlockID = b.Hash
 	notarization.Round = b.Round
-	notarization.VerificationTickets = b.VerificationTickets
+	notarization.VerificationTickets = b.GetVerificationTickets()
 	notarization.Block = b
 	m2m := mc.Miners
 	go m2m.SendAll(BlockNotarizationSender(notarization))
@@ -50,6 +53,10 @@ func (mc *Chain) SendNotarization(ctx context.Context, b *block.Block) {
 func (mc *Chain) SendNotarizedBlock(ctx context.Context, b *block.Block) {
 	if mc.BlocksToSharder == chain.NOTARIZED {
 		m2s := mc.Sharders
+		if bvt := len(b.GetVerificationTickets()); bvt < 3 {
+			Logger.DPanic("miner: SendNotarizedBlock with < 3 verification tickets",
+				zap.Int("verification_tickets", bvt))
+		}
 		m2s.SendAll(NotarizedBlockSender(b))
 	}
 }
@@ -58,6 +65,10 @@ func (mc *Chain) SendNotarizedBlock(ctx context.Context, b *block.Block) {
 func (mc *Chain) SendFinalizedBlock(ctx context.Context, b *block.Block) {
 	if mc.BlocksToSharder == chain.FINALIZED {
 		m2s := mc.Sharders
+		if bvt := len(b.GetVerificationTickets()); bvt < 3 {
+			Logger.DPanic("miner: SendFinalizedBlock with < 3 verification tickets",
+				zap.Int("verification_tickets", bvt))
+		}
 		m2s.SendAll(FinalizedBlockSender(b))
 	}
 }

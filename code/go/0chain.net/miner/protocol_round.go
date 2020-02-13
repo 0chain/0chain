@@ -155,7 +155,7 @@ func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) *block.Bl
 		proposals := r.GetProposedBlocks()
 		var pcounts []*pBlock
 		for _, pb := range proposals {
-			pcount := len(pb.VerificationTickets)
+			pcount := len(pb.GetVerificationTickets())
 			if pcount == 0 {
 				continue
 			}
@@ -497,8 +497,8 @@ func (mc *Chain) updatePriorBlock(ctx context.Context, r *round.Round, b *block.
 	} else {
 		Logger.Error("verify round - previous round not present", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
 	}
-	if len(pb.VerificationTickets) > len(b.PrevBlockVerificationTickets) {
-		b.SetPrevBlockVerificationTickets(pb.VerificationTickets)
+	if len(pb.GetVerificationTickets()) > len(b.PrevBlockVerificationTickets) {
+		b.SetPrevBlockVerificationTickets(pb.GetVerificationTickets())
 	}
 }
 
@@ -602,7 +602,11 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*bloc
 		if r == nil {
 			r = mc.getRound(ctx, fb.Round)
 		}
-		err = mc.VerifyNotarization(ctx, fb.Hash, fb.VerificationTickets, r)
+		if fbvt := len(fb.GetVerificationTickets()); fbvt < 3 {
+			Logger.DPanic("GetLatestFinalizedBlockFromSharder: invalid number of verification tickets",
+				zap.Int("verification_tickets", fbvt))
+		}
+		err = mc.VerifyNotarization(ctx, fb.Hash, fb.GetVerificationTickets(), r)
 		if err != nil {
 			Logger.Error("lfb from sharder - notarization failed", zap.Int64("round", fb.Round), zap.String("block", fb.Hash))
 			return nil, err

@@ -437,7 +437,7 @@ func (c *Chain) AddRoundBlock(r round.RoundI, b *block.Block) *block.Block {
 func (c *Chain) addBlock(b *block.Block) *block.Block {
 	if eb, ok := c.blocks[b.Hash]; ok {
 		if eb != b {
-			c.MergeVerificationTickets(common.GetRootContext(), eb, b.VerificationTickets)
+			c.MergeVerificationTickets(common.GetRootContext(), eb, b.GetVerificationTickets())
 		}
 		return eb
 	}
