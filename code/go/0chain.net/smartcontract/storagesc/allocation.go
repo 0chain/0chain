@@ -210,12 +210,12 @@ func (sc *StorageSmartContract) updateAllocationRequest(t *transaction.Transacti
 func getPreferredBlobbers(preferredBlobbers []string, allBlobbers []*StorageNode) (selectedBlobbers []*StorageNode, err error) {
 	blobberMap := make(map[string]*StorageNode)
 	for _, storageNode := range allBlobbers {
-		blobberMap[storageNode.ID] = storageNode
+		blobberMap[storageNode.BaseURL] = storageNode
 	}
-	for _, blobberID := range preferredBlobbers {
-		selectedBlobber, ok := blobberMap[blobberID]
+	for _, blobberURL := range preferredBlobbers {
+		selectedBlobber, ok := blobberMap[blobberURL]
 		if !ok {
-			err = common.NewError("allocation_request_failed", "Invalid preferred blobber ID")
+			err = common.NewError("allocation_request_failed", "Invalid preferred blobber URL")
 			return
 		}
 		selectedBlobbers = append(selectedBlobbers, selectedBlobber)
