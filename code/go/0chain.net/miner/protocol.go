@@ -40,7 +40,7 @@ type ProtocolMessageReceiver interface {
 
 /*ProtocolRound - this is the interface that deals with the round level logic of the protocol */
 type ProtocolRound interface {
-	StartNextRound(ctx context.Context, round *Round, start bool) *Round
+	StartNextRound(ctx context.Context, round *Round) *Round
 	AddToRoundVerification(ctx context.Context, r *Round, b *block.Block)
 	CollectBlocksForVerification(ctx context.Context, r *Round)
 	CancelRoundVerification(ctx context.Context, r *Round)
