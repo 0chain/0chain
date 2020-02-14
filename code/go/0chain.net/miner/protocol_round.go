@@ -604,7 +604,8 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*bloc
 		}
 		err = mc.VerifyNotarization(ctx, fb.Hash, fb.GetVerificationTickets(), r)
 		if err != nil {
-			Logger.Error("lfb from sharder - notarization failed", zap.Int64("round", fb.Round), zap.String("block", fb.Hash))
+			Logger.DPanic("lfb from sharder - notarization failed", zap.Int64("round", fb.Round),
+				zap.String("block", fb.Hash), zap.Error(err))
 			return nil, err
 		}
 		fbMutex.Lock()
