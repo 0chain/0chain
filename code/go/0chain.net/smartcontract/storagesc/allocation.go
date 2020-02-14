@@ -175,8 +175,21 @@ func (sc *StorageSmartContract) updateAllocationRequest(t *transaction.Transacti
 		return "", common.NewError("allocation_updation_failed", "Failed to find existing allocation")
 	}
 
+	oldAllocationExists := false
 	oldAllocation := &StorageAllocation{}
-	oldAllocation.ID = oldAllocations.List[0]
+
+	for _, oldAllocationID := range oldAllocations.List {
+		if updatedAllocationInput.ID == oldAllocationID {
+			oldAllocation.ID = oldAllocationID
+			oldAllocationExists = true
+			break
+		}
+	}
+
+	if !oldAllocationExists {
+		return "", common.NewError("allocation_updation_failed", "Failed to find existing allocation")
+	}
+
 	oldAllocationBytes, err := balances.GetTrieNode(oldAllocation.GetKey(sc.ID))
 	if err != nil {
 		return "", common.NewError("allocation_updation_failed", "Failed to find existing allocation")
