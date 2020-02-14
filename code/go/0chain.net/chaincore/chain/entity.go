@@ -743,6 +743,14 @@ func (c *Chain) GetRound(roundNumber int64) round.RoundI {
 	return round
 }
 
+// IsStarted returns true if there is at least one round
+// added to the chain.
+func (c *Chain) IsStarted() bool {
+	c.roundsMutex.RLock()
+	defer c.roundsMutex.RUnlock()
+	return len(c.rounds) > 0
+}
+
 /*DeleteRound - delete a round and associated block data */
 func (c *Chain) DeleteRound(ctx context.Context, r round.RoundI) {
 	c.roundsMutex.Lock()
