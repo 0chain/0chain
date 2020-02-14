@@ -8,9 +8,6 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/core/datastore"
-	. "0chain.net/core/logging"
-
-	"go.uber.org/zap"
 )
 
 /*SendVRFShare - send the round vrf share */
