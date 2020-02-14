@@ -488,7 +488,9 @@ func getLatestBlockFromSharders(ctx context.Context) *block.Block {
 	mc.Sharders.OneTimeStatusMonitor(ctx)
 	lfBlocks := mc.GetLatestFinalizedBlockFromSharder(ctx)
 	//Sorting as per the latest finalized blocks from all the sharders
-	sort.Slice(lfBlocks, func(i int, j int) bool { return lfBlocks[i].Round >= lfBlocks[j].Round })
+	sort.Slice(lfBlocks, func(i int, j int) bool {
+		return lfBlocks[i].Round >= lfBlocks[j].Round
+	})
 	if len(lfBlocks) > 0 {
 		Logger.Info("bc-1 latest finalized Block", zap.Int64("lfb_round", lfBlocks[0].Round))
 		return lfBlocks[0]

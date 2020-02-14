@@ -62,7 +62,7 @@ func (c *Chain) IsBlockNotarized(ctx context.Context, b *block.Block) bool {
 	if b.IsBlockNotarized() {
 		return true
 	}
-	notarized := c.reachedNotarization(b.VerificationTickets)
+	notarized := c.reachedNotarization(b.GetVerificationTickets())
 	if notarized {
 		b.SetBlockNotarized()
 	}
@@ -108,7 +108,7 @@ Simple 3 miner scenario :
 */
 func (c *Chain) UpdateNodeState(b *block.Block) {
 	r := c.GetRound(b.Round)
-	for _, vt := range b.VerificationTickets {
+	for _, vt := range b.GetVerificationTickets() {
 
 		signer := c.GetMiners(r).GetNode(vt.VerifierID)
 		if signer == nil {
@@ -132,9 +132,9 @@ func (c *Chain) AddVerificationTicket(ctx context.Context, b *block.Block, bvt *
 
 /*MergeVerificationTickets - merge a set of verification tickets (already validated) for a given block */
 func (c *Chain) MergeVerificationTickets(ctx context.Context, b *block.Block, vts []*block.VerificationTicket) {
-	vtlen := len(b.VerificationTickets)
+	vtlen := b.VerificationTicketsSize()
 	b.MergeVerificationTickets(vts)
-	if len(b.VerificationTickets) != vtlen {
+	if b.VerificationTicketsSize() != vtlen {
 		c.IsBlockNotarized(ctx, b)
 	}
 }
@@ -236,7 +236,7 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 			r = c.RoundF.CreateRoundF(nb.Round).(*round.Round)
 			c.AddRound(r)
 		}
-		if err := c.VerifyNotarization(ctx, nb.Hash, nb.VerificationTickets, r); err != nil {
+		if err := c.VerifyNotarization(ctx, nb.Hash, nb.GetVerificationTickets(), r); err != nil {
 			Logger.Error("get notarized block - validate notarization", zap.Int64("round", nb.Round), zap.String("block", blockHash), zap.Error(err))
 			return nil, err
 		}
@@ -244,6 +244,7 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 			Logger.Error("get notarized block - validate", zap.Int64("round", nb.Round), zap.String("block", blockHash), zap.Any("block_obj", nb), zap.Error(err))
 			return nil, err
 		}
+		Logger.Info("got notarized block", zap.String("block", nb.Hash), zap.Int64("round", nb.Round), zap.Int("verifictation_tickers", nb.VerificationTicketsSize()))
 		b = c.AddBlock(nb)
 		//This is a notarized block. So, use this method to sync round info with the notarized block.
 		b, r = c.AddNotarizedBlockToRound(r, nb)
