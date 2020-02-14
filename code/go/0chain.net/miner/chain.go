@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"0chain.net/chaincore/block"
@@ -108,6 +109,19 @@ type Chain struct {
 	discoverClients     bool
 	started             bool
 	dkgSet              bool
+
+	// protocol has started
+	hasStarted uint32
+}
+
+// Start sets HasStarted to true
+func (c *Chain) Start() {
+	atomic.StoreUint32(&mc.hasStarted, 1)
+}
+
+// HasStarted returns true where FLB from sharder given.
+func (mc *Chain) HasStarted() bool {
+	return atomic.LoadUint32(&mc.hasStarted) > 0
 }
 
 // SetDiscoverClients set the discover clients parameter

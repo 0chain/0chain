@@ -760,6 +760,7 @@ func StartProtocol() {
 		mr = mc.GetMinerRound(0)
 	}
 	Logger.Info("starting the blockchain ...", zap.Int64("round", mr.GetRoundNumber()))
+	mc.Start()
 	mc.StartNextRound(ctx, mr)
 }
 
