@@ -64,7 +64,7 @@ func (mc *Chain) getRound(ctx context.Context, roundNumber int64) *Round {
 	pr := mc.GetMinerRound(roundNumber - 1)
 	if pr != nil {
 		Logger.Info("Starting next round in getRound", zap.Int64("nextRoundNum", roundNumber))
-		mr = mc.StartNextRound(ctx, pr, false)
+		mr = mc.StartNextRound(ctx, pr)
 	} else {
 		var r = round.NewRound(roundNumber)
 		mr = mc.CreateRound(r)
@@ -529,7 +529,7 @@ func (mc *Chain) checkBlockNotarization(ctx context.Context, r *Round, b *block.
 	mc.SetRandomSeed(r, b.RoundRandomSeed)
 	go mc.SendNotarization(ctx, b)
 	Logger.Debug("check block notarization - block notarized", zap.Int64("round", b.Round), zap.String("block", b.Hash))
-	mc.StartNextRound(common.GetRootContext(), r, false)
+	mc.StartNextRound(common.GetRootContext(), r)
 	return true
 }
 
