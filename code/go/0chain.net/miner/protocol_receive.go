@@ -11,7 +11,7 @@ import (
 func (mc *Chain) HandleVRFShare(ctx context.Context, msg *BlockMessage) {
 	if !mc.IsStarted() {
 		Logger.Debug("handle VRF share: chain is not started yet",
-			zap.Int64("vrf_round", msg.Round))
+			zap.Int64("vrf_round", msg.VRFShare.Round))
 		return
 	}
 	mr := mc.GetMinerRound(msg.VRFShare.Round)

@@ -602,10 +602,6 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*bloc
 		if r == nil {
 			r = mc.getRound(ctx, fb.Round)
 		}
-		if fbvt := len(fb.GetVerificationTickets()); fbvt < 3 {
-			Logger.DPanic("GetLatestFinalizedBlockFromSharder: invalid number of verification tickets",
-				zap.Int("verification_tickets", fbvt))
-		}
 		err = mc.VerifyNotarization(ctx, fb.Hash, fb.GetVerificationTickets(), r)
 		if err != nil {
 			Logger.Error("lfb from sharder - notarization failed", zap.Int64("round", fb.Round), zap.String("block", fb.Hash))

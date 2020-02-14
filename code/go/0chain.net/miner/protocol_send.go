@@ -53,10 +53,6 @@ func (mc *Chain) SendNotarization(ctx context.Context, b *block.Block) {
 func (mc *Chain) SendNotarizedBlock(ctx context.Context, b *block.Block) {
 	if mc.BlocksToSharder == chain.NOTARIZED {
 		m2s := mc.Sharders
-		if bvt := len(b.GetVerificationTickets()); bvt < 3 {
-			Logger.DPanic("miner: SendNotarizedBlock with < 3 verification tickets",
-				zap.Int("verification_tickets", bvt))
-		}
 		m2s.SendAll(NotarizedBlockSender(b))
 	}
 }
@@ -65,10 +61,6 @@ func (mc *Chain) SendNotarizedBlock(ctx context.Context, b *block.Block) {
 func (mc *Chain) SendFinalizedBlock(ctx context.Context, b *block.Block) {
 	if mc.BlocksToSharder == chain.FINALIZED {
 		m2s := mc.Sharders
-		if bvt := len(b.GetVerificationTickets()); bvt < 3 {
-			Logger.DPanic("miner: SendFinalizedBlock with < 3 verification tickets",
-				zap.Int("verification_tickets", bvt))
-		}
 		m2s.SendAll(FinalizedBlockSender(b))
 	}
 }
