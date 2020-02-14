@@ -35,7 +35,7 @@ func SetNetworkRelayTime(delta time.Duration) {
 }
 
 /*StartNextRound - start the next round as a notarized block is discovered for the current round */
-func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
+func (mc *Chain) StartNextRound(ctx context.Context, r *Round, start bool) *Round {
 	pr := mc.GetMinerRound(r.GetRoundNumber() - 1)
 	if pr != nil {
 		mc.CancelRoundVerification(ctx, pr)
@@ -44,6 +44,9 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 	var nr = round.NewRound(r.GetRoundNumber() + 1)
 	mr := mc.CreateRound(nr)
 	er := mc.AddRound(mr)
+	if start {
+		mc.Start() // the miner is started after the round has added
+	}
 	if er != mr {
 		Logger.Info("StartNextRound found nextround ready. No VRFs Sent",
 			zap.Int64("er_round", er.GetRoundNumber()), zap.Int64("rrs", r.GetRandomSeed()))
@@ -64,7 +67,7 @@ func (mc *Chain) getRound(ctx context.Context, roundNumber int64) *Round {
 	pr := mc.GetMinerRound(roundNumber - 1)
 	if pr != nil {
 		Logger.Info("Starting next round in getRound", zap.Int64("nextRoundNum", roundNumber))
-		mr = mc.StartNextRound(ctx, pr)
+		mr = mc.StartNextRound(ctx, pr, false)
 	} else {
 		var r = round.NewRound(roundNumber)
 		mr = mc.CreateRound(r)
@@ -529,7 +532,7 @@ func (mc *Chain) checkBlockNotarization(ctx context.Context, r *Round, b *block.
 	mc.SetRandomSeed(r, b.RoundRandomSeed)
 	go mc.SendNotarization(ctx, b)
 	Logger.Debug("check block notarization - block notarized", zap.Int64("round", b.Round), zap.String("block", b.Hash))
-	mc.StartNextRound(common.GetRootContext(), r)
+	mc.StartNextRound(common.GetRootContext(), r, false)
 	return true
 }
 
@@ -696,7 +699,7 @@ func (mc *Chain) restartRound(ctx context.Context) {
 			mc.BroadcastNotarizedBlocks(ctx, r)
 			Logger.Info("StartNextRound after sending notarized block in restartRound.", zap.Int64("current_round", r.GetRoundNumber()))
 			nextR := mc.GetRound(r.GetRoundNumber())
-			nr := mc.StartNextRound(ctx, r)
+			nr := mc.StartNextRound(ctx, r, false)
 			/*
 				if the next round object already exists, StartNextRound does not send VRFs.
 				So to be sure send it.
@@ -760,8 +763,7 @@ func StartProtocol() {
 		mr = mc.GetMinerRound(0)
 	}
 	Logger.Info("starting the blockchain ...", zap.Int64("round", mr.GetRoundNumber()))
-	mc.Start()
-	mc.StartNextRound(ctx, mr)
+	mc.StartNextRound(ctx, mr, true)
 }
 
 func (mc *Chain) waitForActiveSharders(ctx context.Context) {

@@ -115,7 +115,7 @@ type Chain struct {
 }
 
 // Start sets HasStarted to true
-func (c *Chain) Start() {
+func (mc *Chain) Start() {
 	atomic.StoreUint32(&mc.hasStarted, 1)
 }
 

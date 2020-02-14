@@ -182,5 +182,5 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMess
 	if !mc.AddNotarizedBlock(ctx, mr, b) {
 		return
 	}
-	mc.StartNextRound(ctx, mr)
+	mc.StartNextRound(ctx, mr, false)
 }
