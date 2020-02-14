@@ -173,7 +173,7 @@ func (mc *Chain) GetBlsShare(ctx context.Context, r *round.Round) (string, error
 	if err != nil {
 		return "", err
 	}
-	mc.ViewChange(ctx,r.Number)
+	mc.ViewChange(ctx, r.Number)
 	mc.muDKG.Lock()
 	defer mc.muDKG.Unlock()
 	if mc.currentDKG == nil {
@@ -193,7 +193,7 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 	mr.AddTimeoutVote(vrfs.GetRoundTimeoutCount(), vrfs.GetParty().ID)
 	msg, err := mc.GetBlsMessageForRound(mr.Round)
 	if err != nil {
-		Logger.Error("failed to get bls message", zap.Any("vrfs_share", vrfs.Share), zap.Any("round", mr.Round))
+		Logger.Warn("failed to get bls message", zap.Any("vrfs_share", vrfs.Share), zap.Any("round", mr.Round))
 		return false
 	}
 	mc.ViewChange(ctx, mr.Number)

@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"0chain.net/chaincore/block"
@@ -106,7 +107,7 @@ type Chain struct {
 	mpks                *block.Mpks
 	nextViewChange      int64
 	discoverClients     bool
-	started             bool
+	started             uint32
 	dkgSet              bool
 }
 
@@ -134,6 +135,9 @@ func (mc *Chain) SetupGenesisBlock(hash string, magicBlock *block.MagicBlock) *b
 	mgr.ComputeMinerRanks(gb.MagicBlock.Miners)
 	mc.AddRound(mgr)
 	mc.AddGenesisBlock(gb)
+	for _, sharder := range gb.Sharders.Nodes {
+		sharder.SetStatus(node.NodeStatusInactive)
+	}
 	return gb
 }
 
@@ -245,8 +249,8 @@ func (mc *Chain) ChainStarted(ctx context.Context) bool {
 			if started >= mc.T {
 				return true
 			}
-			if timeoutCount == 20 || mc.started {
-				return mc.started
+			if timeoutCount == 20 || mc.isStarted() {
+				return mc.isStarted()
 			}
 			timeoutCount++
 			timer = time.NewTimer(time.Millisecond * time.Duration(mc.RoundTimeoutSofttoMin))
@@ -278,7 +282,7 @@ func StartChainRequestHandler(ctx context.Context, r *http.Request) (interface{}
 		return nil, common.NewError("failed to send start chain", fmt.Sprintf("differt_rounds -- current_round: %v, requested_round: %v", mc.GetCurrentRound(), round))
 	}
 	message := datastore.GetEntityMetadata("start_chain").Instance().(*StartChain)
-	message.Start = !mc.started
+	message.Start = !mc.isStarted()
 	message.ID = r.FormValue("round")
 	return message, nil
 }
@@ -286,7 +290,7 @@ func StartChainRequestHandler(ctx context.Context, r *http.Request) (interface{}
 /*SendDKGShare sends the generated secShare to the given node */
 func (mc *Chain) RequestStartChain(n *node.Node, start, started *int) error {
 	if node.Self.Underlying().GetKey() == n.ID {
-		if !mc.started {
+		if !mc.isStarted() {
 			*start++
 		} else {
 			*started++
@@ -312,4 +316,14 @@ func (mc *Chain) RequestStartChain(n *node.Node, start, started *int) error {
 	ctx := common.GetRootContext()
 	n.RequestEntityFromNode(ctx, ChainStartSender, params, handler)
 	return nil
+}
+
+func (mc *Chain) setStarted() {
+	if !atomic.CompareAndSwapUint32(&mc.started, 0, 1) {
+		Logger.Warn("chain already started")
+	}
+}
+
+func (mc *Chain) isStarted() bool {
+	return atomic.LoadUint32(&mc.started) == 1
 }

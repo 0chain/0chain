@@ -177,6 +177,7 @@ func main() {
 		}
 		err = miner.StoreDKGSummary(ctx, dkgShare)
 	}
+	mc.WaitForActiveSharders(ctx)
 	getCurrentMagicBlock(mc)
 	initServer()
 	initHandlers()
@@ -185,16 +186,9 @@ func main() {
 	activeMiner := mc.Miners.HasNode(node.Self.Underlying().GetKey())
 	if activeMiner {
 		miner.SetDKG(ctx, mc.MagicBlock)
-		go func() {
-			Logger.Info("kicking off miner", zap.Any("active", activeMiner))
-			started := mc.ChainStarted(ctx)
-			Logger.Info("finised checking start chain", zap.Any("started", started))
-			if !started {
-				miner.StartProtocol()
-			}
-		}()
-
+		go miner.StartProtocol()
 	}
+
 	if config.Development() {
 		go TransactionGenerator(mc.Chain)
 	}
@@ -210,7 +204,7 @@ func initServer() {
 	/* TODO: when a new server is brought up, it needs to first download
 	all the state before it can start accepting requests
 	*/
-	time.Sleep(time.Second)
+	//time.Sleep(time.Second)
 }
 
 func readNonGenesisHostAndPort(keysFile *string) (string, string, int, error) {

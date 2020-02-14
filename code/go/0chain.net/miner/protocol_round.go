@@ -595,8 +595,7 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*bloc
 		}
 		err := fb.Validate(ctx)
 		if err != nil {
-			Logger.Error("lfb from sharder - invalid", zap.Int64("round", fb.Round), zap.String("block", fb.Hash))
-			return nil, err
+			Logger.DPanic("lfb from sharder - invalid", zap.Int64("round", fb.Round), zap.String("block", fb.Hash))
 		}
 		r := mc.GetRound(fb.Round)
 		if r == nil {
@@ -604,8 +603,7 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*bloc
 		}
 		err = mc.VerifyNotarization(ctx, fb.Hash, fb.VerificationTickets, r)
 		if err != nil {
-			Logger.Error("lfb from sharder - notarization failed", zap.Int64("round", fb.Round), zap.String("block", fb.Hash))
-			return nil, err
+			Logger.DPanic("lfb from sharder - notarization failed", zap.Int64("round", fb.Round), zap.String("block", fb.Hash))
 		}
 		fbMutex.Lock()
 		defer fbMutex.Unlock()
@@ -744,13 +742,13 @@ func StartProtocol() {
 		return
 	}
 	ctx := common.GetRootContext()
-	mc.waitForActiveSharders(ctx)
+
 	lfb := getLatestBlockFromSharders(ctx)
 	var mr *Round
 	if lfb != nil {
 		sr := round.NewRound(lfb.Round)
 		mr = mc.CreateRound(sr)
-		mr, _ = mc.AddRound(mr).(*Round)
+		mr = mc.AddRound(mr).(*Round)
 		mc.SetRandomSeed(sr, lfb.RoundRandomSeed)
 		mc.AddBlock(lfb)
 		mc.InitBlockState(lfb)
@@ -760,18 +758,25 @@ func StartProtocol() {
 	}
 	Logger.Info("starting the blockchain ...", zap.Int64("round", mr.GetRoundNumber()))
 	mc.StartNextRound(ctx, mr)
+	mc.setStarted()
 }
 
-func (mc *Chain) waitForActiveSharders(ctx context.Context) {
+func (mc *Chain) WaitForActiveSharders(ctx context.Context) error {
+	if mc.CanShardBlocks() {
+		return nil
+	}
+
 	ticker := time.NewTicker(5 * chain.DELTA)
 	defer ticker.Stop()
-
-	for ts := range ticker.C {
-		if mc.CanShardBlocks() {
-			break
-		} else {
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case ts := <-ticker.C:
+			if mc.CanShardBlocks() {
+				return nil
+			}
 			Logger.Info("Waiting for Sharders.", zap.Time("ts", ts))
 		}
 	}
-
 }

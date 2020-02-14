@@ -194,7 +194,7 @@ func GetClient(ctx context.Context, key datastore.Key) (*Client, error) {
 func PutClient(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 	co, ok := entity.(*Client)
 	if !ok {
-		return nil, common.NewError("entity_invalid_type", "Invald entity type")
+		return nil, common.NewError("entity_invalid_type", "Invalid entity type")
 	}
 	response, err := datastore.PutEntityHandler(ctx, entity)
 	if err != nil {

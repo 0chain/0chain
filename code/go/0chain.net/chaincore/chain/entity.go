@@ -807,6 +807,10 @@ func (c *Chain) SetRoundRank(r round.RoundI, b *block.Block) {
 		Logger.DPanic("set_round_rank  --  empty miners", zap.Any("round", r.GetRoundNumber()), zap.Any("block", b.Hash))
 	}
 	bNode := miners.GetNode(b.MinerID)
+	if bNode == nil {
+		Logger.DPanic("set_round_rank  --  get node by id", zap.Any("round", r.GetRoundNumber()),
+			zap.Any("block", b.Hash), zap.Any("miner_id", b.MinerID), zap.Any("miners", miners))
+	}
 	rank := r.GetMinerRank(bNode)
 	if rank >= c.NumGenerators {
 		Logger.Error(fmt.Sprintf("Round# %v generator miner ID %v rank is greater than num generators. State= %v, rank= %v, generators = %v", r.GetRoundNumber(), bNode.SetIndex, r.GetState(), rank, c.NumGenerators))
