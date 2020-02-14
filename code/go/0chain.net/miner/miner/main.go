@@ -190,7 +190,7 @@ func main() {
 		// 	started := mc.ChainStarted(ctx)
 		// 	Logger.Info("finised checking start chain", zap.Any("started", started))
 		// 	if !started {
-		miner.StartProtocol()
+		go miner.StartProtocol()
 		// 	}
 		// }()
 

@@ -173,7 +173,7 @@ func (mc *Chain) GetBlsShare(ctx context.Context, r *round.Round) (string, error
 	if err != nil {
 		return "", err
 	}
-	mc.ViewChange(ctx,r.Number)
+	mc.ViewChange(ctx, r.Number)
 	mc.muDKG.Lock()
 	defer mc.muDKG.Unlock()
 	if mc.currentDKG == nil {

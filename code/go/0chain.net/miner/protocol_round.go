@@ -46,7 +46,7 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 	er := mc.AddRound(mr)
 	if er != mr {
 		Logger.Info("StartNextRound found nextround ready. No VRFs Sent",
-			zap.Int64("er_round", er.GetRoundNumber()))
+			zap.Int64("er_round", er.GetRoundNumber()), zap.Int64("rrs", r.GetRandomSeed()))
 		return er.(*Round)
 	}
 	if r.HasRandomSeed() {

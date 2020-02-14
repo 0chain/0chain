@@ -9,6 +9,11 @@ import (
 
 /*HandleVRFShare - handles the vrf share */
 func (mc *Chain) HandleVRFShare(ctx context.Context, msg *BlockMessage) {
+	if !mc.HasRounds() {
+		Logger.Info("handle vrf share: protocol not started, ignore the share",
+			zap.Int64("vrf_share_round", msg.VRFShare.Round))
+		return
+	}
 	mr := mc.GetMinerRound(msg.VRFShare.Round)
 	if mr == nil {
 		mr = mc.getRound(ctx, msg.VRFShare.Round)

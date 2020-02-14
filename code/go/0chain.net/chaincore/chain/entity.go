@@ -719,6 +719,14 @@ func (c *Chain) InitializeMinerPool() {
 	}
 }
 
+// HasRounds returns true if at least a round has been added to the Chain.
+func (c *Chain) HasRounds() bool {
+	c.roundsMutex.RLock()
+	defer c.roundsMutex.RUnlock()
+
+	return len(c.rounds) > 0
+}
+
 /*AddRound - Add Round to the block */
 func (c *Chain) AddRound(r round.RoundI) round.RoundI {
 	c.roundsMutex.Lock()
