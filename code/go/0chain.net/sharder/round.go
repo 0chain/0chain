@@ -13,6 +13,7 @@ type RoundSummaries struct {
 	datastore.IDField
 	RSummaryList []*round.Round `json:"round_summaries"`
 }
+
 // HealthyRound -
 type HealthyRound struct {
 	datastore.IDField
