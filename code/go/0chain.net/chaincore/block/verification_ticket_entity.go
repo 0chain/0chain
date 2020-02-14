@@ -13,6 +13,13 @@ type VerificationTicket struct {
 	Signature  string        `json:"signature" msgpack:"sig"`
 }
 
+// Copy the VerificationTicket.
+func (vt *VerificationTicket) Copy() (cp *VerificationTicket) {
+	cp = new(VerificationTicket)
+	cp.VerifierID, cp.Signature = vt.VerifierID, vt.Signature
+	return
+}
+
 /*BlockVerificationTicket - verification ticket with the block id.
 * As VerificationTickets are contained in a block, it doesn't need to have a reference to a block
 * However, when the verifiers verify and send the tickets, they need to indicate what block the

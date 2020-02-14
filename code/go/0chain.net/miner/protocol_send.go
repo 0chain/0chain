@@ -39,7 +39,7 @@ func (mc *Chain) SendNotarization(ctx context.Context, b *block.Block) {
 	notarization := datastore.GetEntityMetadata("block_notarization").Instance().(*Notarization)
 	notarization.BlockID = b.Hash
 	notarization.Round = b.Round
-	notarization.VerificationTickets = b.VerificationTickets
+	notarization.VerificationTickets = b.GetVerificationTickets()
 	notarization.Block = b
 	m2m := mc.Miners
 	go m2m.SendAll(BlockNotarizationSender(notarization))

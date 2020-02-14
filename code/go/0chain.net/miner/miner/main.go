@@ -185,14 +185,14 @@ func main() {
 	activeMiner := mc.Miners.HasNode(node.Self.Underlying().GetKey())
 	if activeMiner {
 		miner.SetDKG(ctx, mc.MagicBlock)
-		go func() {
-			Logger.Info("kicking off miner", zap.Any("active", activeMiner))
-			started := mc.ChainStarted(ctx)
-			Logger.Info("finised checking start chain", zap.Any("started", started))
-			if !started {
-				miner.StartProtocol()
-			}
-		}()
+		// go func() {
+		// 	Logger.Info("kicking off miner", zap.Any("active", activeMiner))
+		// 	started := mc.ChainStarted(ctx)
+		// 	Logger.Info("finised checking start chain", zap.Any("started", started))
+		// 	if !started {
+		go miner.StartProtocol()
+		// 	}
+		// }()
 
 	}
 	if config.Development() {

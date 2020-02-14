@@ -192,7 +192,7 @@ func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool) {
 	for i, blk := range r.notarizedBlocks {
 		if blk.Hash == b.Hash {
 			if blk != b {
-				blk.MergeVerificationTickets(b.VerificationTickets)
+				blk.MergeVerificationTickets(b.GetVerificationTickets())
 			}
 			return blk, false
 		}
