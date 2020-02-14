@@ -132,9 +132,9 @@ func (c *Chain) AddVerificationTicket(ctx context.Context, b *block.Block, bvt *
 
 /*MergeVerificationTickets - merge a set of verification tickets (already validated) for a given block */
 func (c *Chain) MergeVerificationTickets(ctx context.Context, b *block.Block, vts []*block.VerificationTicket) {
-	vtlen := len(b.GetVerificationTickets())
+	vtlen := b.VerificationTicketsSize()
 	b.MergeVerificationTickets(vts)
-	if len(b.GetVerificationTickets()) != vtlen {
+	if b.VerificationTicketsSize() != vtlen {
 		c.IsBlockNotarized(ctx, b)
 	}
 }
@@ -244,7 +244,7 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 			Logger.Error("get notarized block - validate", zap.Int64("round", nb.Round), zap.String("block", blockHash), zap.Any("block_obj", nb), zap.Error(err))
 			return nil, err
 		}
-		Logger.Info("got notarized block", zap.String("block", nb.Hash), zap.Int64("round", nb.Round), zap.Int("verifictation_tickers", len(nb.VerificationTickets)))
+		Logger.Info("got notarized block", zap.String("block", nb.Hash), zap.Int64("round", nb.Round), zap.Int("verifictation_tickers", nb.VerificationTicketsSize()))
 		b = c.AddBlock(nb)
 		//This is a notarized block. So, use this method to sync round info with the notarized block.
 		b, r = c.AddNotarizedBlockToRound(r, nb)

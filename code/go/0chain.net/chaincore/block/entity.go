@@ -105,10 +105,28 @@ func NewBlock(chainID datastore.Key, round int64) *Block {
 }
 
 // GetVerificationTickets of the block async safe.
-func (b *Block) GetVerificationTickets() []*VerificationTicket {
+func (b *Block) GetVerificationTickets() (vts []*VerificationTicket) {
 	b.ticketsMutex.RLock()
 	defer b.ticketsMutex.RUnlock()
-	return b.VerificationTickets
+
+	if len(b.VerificationTickets) == 0 {
+		return // nil
+	}
+
+	vts = make([]*VerificationTicket, 0, len(b.VerificationTickets))
+	for _, tk := range b.VerificationTickets {
+		vts = append(vts, tk.Copy())
+	}
+
+	return
+}
+
+// VerificationTicketsSize returns number verification tickets of the Block.
+func (b *Block) VerificationTicketsSize() int {
+	b.ticketsMutex.RLock()
+	defer b.ticketsMutex.RUnlock()
+
+	return len(b.VerificationTickets)
 }
 
 var blockEntityMetadata *datastore.EntityMetadataImpl
@@ -219,6 +237,9 @@ func SetupEntity(store datastore.Store) {
 
 /*SetPreviousBlock - set the previous block of this block */
 func (b *Block) SetPreviousBlock(prevBlock *Block) {
+	b.ticketsMutex.Lock()
+	defer b.ticketsMutex.Unlock()
+
 	b.PrevBlock = prevBlock
 	b.PrevHash = prevBlock.Hash
 	b.Round = prevBlock.Round + 1
@@ -545,6 +566,33 @@ func (b *Block) DoReadLock() {
 //DoReadUnlock - implement ReadLockable interface
 func (b *Block) DoReadUnlock() {
 	b.ticketsMutex.RUnlock()
+}
+
+// GetPrevBlockVerificationTickets returns
+// verification tickets of previous Block.
+func (b *Block) GetPrevBlockVerificationTickets() (pbvts []*VerificationTicket) {
+	b.ticketsMutex.Lock()
+	defer b.ticketsMutex.Unlock()
+
+	if len(b.PrevBlockVerificationTickets) == 0 {
+		return // nil
+	}
+
+	pbvts = make([]*VerificationTicket, 0, len(b.PrevBlockVerificationTickets))
+	for _, tk := range b.PrevBlockVerificationTickets {
+		pbvts = append(pbvts, tk.Copy())
+	}
+
+	return
+}
+
+// PrevBlockVerificationTicketsSize returns number of
+// verification tickets of previous Block.
+func (b *Block) PrevBlockVerificationTicketsSize() int {
+	b.ticketsMutex.Lock()
+	defer b.ticketsMutex.Unlock()
+
+	return len(b.PrevBlockVerificationTickets)
 }
 
 //SetPrevBlockVerificationTickets - set previous block verification tickets
