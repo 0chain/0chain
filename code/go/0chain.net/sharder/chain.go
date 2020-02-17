@@ -177,6 +177,10 @@ func (sc *Chain) iterateRoundsLookingForLFB(ctx context.Context) (
 
 	iter.SeekToLast() // from last
 
+	if !iter.Valid() {
+		return // round 0 (genesis, initial)
+	}
+
 	// loop
 
 	for ; iter.Valid(); iter.Prev() {
@@ -212,16 +216,14 @@ func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
 		return // can't find a finalized block or has malformed rounds DB
 	}
 
+	if round.Number == 0 {
+		return // ok, genesis block
+	}
+
 	Logger.Debug("load lfb from store", zap.Int64("round", lfb.Round),
 		zap.String("hash", lfb.Hash))
 
 	// check out previous magic block hash
-
-	if lfb.Round == 0 {
-		return // genesis block
-	}
-
-	// non-genesis block
 
 	if lfb.LatestFinalizedMagicBlockHash == "" {
 		return common.NewError("load_lfb",
