@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"strconv"
 	"time"
 
 	"0chain.net/chaincore/client"
@@ -46,22 +45,19 @@ func (mc *Chain) InitSetup() {
 //RegisterClient registers client on BC
 func (mc *Chain) RegisterClient() {
 	thresholdByCount := config.GetThresholdCount()
-	if node.Self.Type == node.NodeTypeMiner {
+	if node.Self.Underlying().Type == node.NodeTypeMiner {
 		clientMetadataProvider := datastore.GetEntityMetadata("client")
 		ctx := memorystore.WithEntityConnection(common.GetRootContext(), clientMetadataProvider)
 		defer memorystore.Close(ctx)
 		ctx = datastore.WithAsyncChannel(ctx, client.ClientEntityChannel)
-		_, err := client.PutClient(ctx, &node.Self.Client)
+		_, err := client.PutClient(ctx, &node.Self.Underlying().Client)
 		if err != nil {
 			panic(err)
 		}
 	}
 
-	nodeBytes, _ := json.Marshal(node.Self.Client)
-	miners := make(map[string]*node.Node)
-	for key, miner := range mc.Miners.NodesMap {
-		miners[key] = miner
-	}
+	nodeBytes, _ := json.Marshal(node.Self.Underlying().Client)
+	miners := mc.Miners.CopyNodesMap()
 	registered := 0
 	consensus := int(math.Ceil((float64(thresholdByCount) / 100) * float64(len(miners))))
 	if consensus > len(miners) {
@@ -69,7 +65,7 @@ func (mc *Chain) RegisterClient() {
 	}
 	for registered < consensus {
 		for key, miner := range miners {
-			body, err := httpclientutil.SendPostRequest("http://"+miner.N2NHost+":"+strconv.Itoa(miner.Port)+httpclientutil.RegisterClient, nodeBytes, "", "", nil)
+			body, err := httpclientutil.SendPostRequest(miner.GetN2NURLBase()+httpclientutil.RegisterClient, nodeBytes, "", "", nil)
 			if err != nil {
 				Logger.Error("error in register client", zap.Error(err), zap.Any("body", body))
 			} else {
@@ -88,9 +84,9 @@ func (mc *Chain) isRegistered() bool {
 		clientState := CreateTxnMPT(mc.GetLatestFinalizedBlock().ClientState)
 		var nodeList util.Serializable
 		var err error
-		if node.Self.Type == node.NodeTypeMiner {
+		if typ := node.Self.Underlying().Type; typ == node.NodeTypeMiner {
 			nodeList, err = clientState.GetNodeValue(util.Path(encryption.Hash(minersc.AllMinersKey)))
-		} else if node.Self.Type == node.NodeTypeSharder {
+		} else if typ == node.NodeTypeSharder {
 			nodeList, err = clientState.GetNodeValue(util.Path(encryption.Hash(minersc.AllShardersKey)))
 		}
 		if err != nil {
@@ -106,15 +102,13 @@ func (mc *Chain) isRegistered() bool {
 			return false
 		}
 	} else {
-		var sharders []string
-		var err error
-		for _, sharder := range mc.Sharders.NodesMap {
-			sharders = append(sharders, "http://"+sharder.N2NHost+":"+strconv.Itoa(sharder.Port))
-		}
-
-		if node.Self.Type == node.NodeTypeMiner {
+		var (
+			sharders = mc.Sharders.N2NURLs()
+			err      error
+		)
+		if typ := node.Self.Underlying().Type; typ == node.NodeTypeMiner {
 			err = httpclientutil.MakeSCRestAPICall(minersc.ADDRESS, scRestAPIGetMinerList, nil, sharders, allMinersList, 1)
-		} else if node.Self.Type == node.NodeTypeSharder {
+		} else if typ == node.NodeTypeSharder {
 			err = httpclientutil.MakeSCRestAPICall(minersc.ADDRESS, scRestAPIGetSharderList, nil, sharders, allMinersList, 1)
 		}
 
@@ -125,7 +119,7 @@ func (mc *Chain) isRegistered() bool {
 	}
 	var registered bool
 	for _, miner := range allMinersList.Nodes {
-		if miner.ID == node.Self.ID {
+		if miner.ID == node.Self.Underlying().GetKey() {
 			registered = true
 			break
 		}
@@ -137,9 +131,9 @@ func (mc *Chain) ConfirmTransaction(t *httpclientutil.Transaction) bool {
 	active := mc.ActiveInChain()
 	var found, pastTime bool
 	var urls []string
-	for _, sharder := range mc.Sharders.NodesMap {
-		if !active || sharder.Status == node.NodeStatusActive {
-			urls = append(urls, "http://"+sharder.N2NHost+":"+strconv.Itoa(sharder.Port))
+	for _, sharder := range mc.Sharders.CopyNodesMap() {
+		if !active || sharder.GetStatus() == node.NodeStatusActive {
+			urls = append(urls, sharder.GetN2NURLBase())
 		}
 	}
 	for !found && !pastTime {
@@ -165,33 +159,32 @@ func (mc *Chain) ConfirmTransaction(t *httpclientutil.Transaction) bool {
 }
 
 func (mc *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
-	txn := httpclientutil.NewTransactionEntity(node.Self.ID, mc.ID, node.Self.PublicKey)
+	selfNode := node.Self.Underlying()
+	txn := httpclientutil.NewTransactionEntity(selfNode.GetKey(),
+		mc.ID, selfNode.PublicKey)
 
 	mn := minersc.NewMinerNode()
-	mn.ID = node.Self.GetKey()
-	mn.N2NHost = node.Self.N2NHost
-	mn.Host = node.Self.Host
-	mn.Port = node.Self.Port
-	mn.PublicKey = node.Self.PublicKey
-	mn.ShortName = node.Self.Description
+	mn.ID = selfNode.GetKey()
+	mn.N2NHost = selfNode.N2NHost
+	mn.Host = selfNode.Host
+	mn.Port = selfNode.Port
+	mn.PublicKey = selfNode.PublicKey
+	mn.ShortName = selfNode.Description
 	mn.Percentage = .5 // add to config
-	mn.BuildTag = node.Self.Info.BuildTag
+	mn.BuildTag = selfNode.Info.BuildTag
 
 	scData := &httpclientutil.SmartContractTxnData{}
-	if node.Self.Type == node.NodeTypeMiner {
+	if selfNode.Type == node.NodeTypeMiner {
 		scData.Name = scNameAddMiner
-	} else if node.Self.Type == node.NodeTypeSharder {
+	} else if selfNode.Type == node.NodeTypeSharder {
 		scData.Name = scNameAddSharder
 	}
 
 	scData.InputArgs = mn
 
 	txn.ToClientID = minersc.ADDRESS
-	txn.PublicKey = node.Self.PublicKey
-	var minerUrls []string
-	for _, node := range mc.Miners.NodesMap {
-		minerUrls = append(minerUrls, node.GetN2NURLBase())
-	}
+	txn.PublicKey = selfNode.PublicKey
+	var minerUrls = mc.Miners.N2NURLs()
 	err := httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls)
 	return txn, err
 }

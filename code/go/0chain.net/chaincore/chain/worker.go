@@ -7,7 +7,6 @@ LOOKS GOOD. NEEDS MORE TESTING BEFORE COMMITED!!!!
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"time"
 
 	"0chain.net/chaincore/block"
@@ -28,7 +27,7 @@ func (c *Chain) SetupWorkers(ctx context.Context) {
 	go c.StatusMonitor(ctx)
 	go c.PruneClientStateWorker(ctx)
 	go c.BlockFetchWorker(ctx)
-	go node.Self.MemoryUsage()
+	go node.Self.Underlying().MemoryUsage()
 }
 
 /*FinalizeRoundWorker - a worker that handles the finalized blocks */
@@ -120,10 +119,7 @@ func (c *Chain) BlockFetchWorker(ctx context.Context) {
 
 func (c *Chain) VerifyChainHistory(ctx context.Context, latestMagicBlock *block.Block) error {
 	currentMagicBlock := c.GetLatestFinalizedMagicBlock()
-	var sharders []string
-	for _, sharder := range c.Sharders.NodesMap {
-		sharders = append(sharders, "http://"+sharder.N2NHost+":"+strconv.Itoa(sharder.Port))
-	}
+	var sharders = c.Sharders.N2NURLs()
 	for currentMagicBlock.Hash != latestMagicBlock.Hash {
 		magicBlock, err := httpclientutil.GetMagicBlockCall(sharders,
 			currentMagicBlock.MagicBlockNumber+1, 1)

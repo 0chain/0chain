@@ -25,7 +25,7 @@ func WhoAmIHandler(w http.ResponseWriter, r *http.Request) {
 	if Self == nil {
 		return
 	}
-	Self.Print(w)
+	Self.Underlying().Print(w)
 }
 
 func scale(val int64) float64 {
@@ -34,6 +34,9 @@ func scale(val int64) float64 {
 
 //PrintSendStats - print the n2n statistics to this node
 func (n *Node) PrintSendStats(w io.Writer) {
+	n.mutex.RLock()
+	defer n.mutex.RUnlock()
+
 	uris := make([]string, 0, len(n.TimersByURI))
 	for uri := range n.TimersByURI {
 		uris = append(uris, uri)
@@ -50,7 +53,7 @@ func (n *Node) PrintSendStats(w io.Writer) {
 		fmt.Fprintf(w, "<td class='number'>%.2f</td>", scale(timer.Min()))
 		fmt.Fprintf(w, "<td class='number'>%.2f &plusmn;%.2f</td>", timer.Mean()/1000000., timer.StdDev()/1000000.)
 		fmt.Fprintf(w, "<td class='number'>%.2f</td>", scale(timer.Max()))
-		sizer := n.GetSizeMetric(uri)
+		sizer := n.getSizeMetric(uri)
 		if sizer != nil {
 			fmt.Fprintf(w, "<td class='number'>%d</td>", sizer.Min())
 			fmt.Fprintf(w, "<td class='number'>%.2f &plusmn;%.2f</td>", sizer.Mean(), sizer.StdDev())
@@ -73,8 +76,9 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if nd.IsActive() {
-		N2n.Error("status handler -- sending data", zap.Any("data", Self.Node.Info))
-		common.Respond(w, r, Self.Node.Info, nil)
+		info := Self.Underlying().Info
+		N2n.Info("status handler -- sending data", zap.Any("data", info))
+		common.Respond(w, r, info, nil)
 		return
 	}
 	data := r.FormValue("data")
@@ -84,7 +88,7 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 		N2n.Error("status handler -- missing fields", zap.Any("data", data), zap.Any("hash", hash), zap.Any("signature", signature), zap.String("node_type", nd.GetNodeTypeName()), zap.Int("set_index", nd.SetIndex), zap.Any("key", nd.GetKey()))
 		return
 	}
-	if ok, err := Self.ValidateSignatureTime(data); !ok {
+	if ok, err := ValidateSignatureTime(data); !ok {
 		N2n.Error("status handler -- validate time failed", zap.Any("error", err), zap.String("node_type", nd.GetNodeTypeName()), zap.Int("set_index", nd.SetIndex), zap.Any("key", nd.GetKey()))
 		return
 	}
@@ -97,13 +101,14 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 		N2n.Error("status handler -- signature failed", zap.Any("error", err), zap.String("node_type", nd.GetNodeTypeName()), zap.Int("set_index", nd.SetIndex), zap.Any("key", nd.GetKey()))
 		return
 	}
-	nd.LastActiveTime = time.Now().UTC()
-	if nd.Status == NodeStatusInactive {
-		nd.Status = NodeStatusActive
+	nd.SetLastActiveTime(time.Now().UTC())
+	if nd.GetStatus() == NodeStatusInactive {
+		nd.SetStatus(NodeStatusActive)
 		N2n.Info("Node active", zap.String("node_type", nd.GetNodeTypeName()), zap.Int("set_index", nd.SetIndex), zap.Any("key", nd.GetKey()))
 	}
-	N2n.Error("status handler -- sending data", zap.Any("data", Self.Node.Info))
-	common.Respond(w, r, Self.Node.Info, nil)
+	info := Self.Underlying().Info
+	N2n.Info("status handler -- sending data", zap.Any("data", info))
+	common.Respond(w, r, info, nil)
 }
 
 //ToDo: Move this to MagicBlock logic

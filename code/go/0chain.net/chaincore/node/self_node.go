@@ -5,38 +5,67 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 
+	"0chain.net/core/build"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 )
 
+/*Self represents the node of this instance */
+var Self = newSelfNode()
+
 /*SelfNode -- self node type*/
 type SelfNode struct {
+	mx sync.RWMutex
 	*Node
 	signatureScheme encryption.SignatureScheme
 }
 
+func newSelfNode() *SelfNode {
+	node := &SelfNode{
+		Node: &Node{},
+	}
+	return node
+}
+
+// Underlying returns underlying Node instance.
+func (sn *SelfNode) Underlying() *Node {
+	sn.mx.RLock()
+	defer sn.mx.RUnlock()
+
+	return sn.Node
+}
+
 /*SetSignatureScheme - getter */
 func (sn *SelfNode) GetSignatureScheme() encryption.SignatureScheme {
+	sn.mx.RLock()
+	defer sn.mx.RUnlock()
 	return sn.signatureScheme
 }
 
 /*SetSignatureScheme - setter */
 func (sn *SelfNode) SetSignatureScheme(signatureScheme encryption.SignatureScheme) {
+	sn.mx.Lock()
+	defer sn.mx.Unlock()
 	sn.signatureScheme = signatureScheme
-	sn.SetPublicKey(signatureScheme.GetPublicKey())
+	sn.Node.SetPublicKey(signatureScheme.GetPublicKey())
 }
 
 /*Sign - sign the given hash */
 func (sn *SelfNode) Sign(hash string) (string, error) {
+	sn.mx.RLock()
+	defer sn.mx.RUnlock()
 	return sn.signatureScheme.Sign(hash)
 }
 
 /*TimeStampSignature - get timestamp based signature */
 func (sn *SelfNode) TimeStampSignature() (string, string, string, error) {
-	data := fmt.Sprintf("%v:%v", sn.ID, common.Now())
+	sn.mx.RLock()
+	defer sn.mx.RUnlock()
+	data := fmt.Sprintf("%v:%v", sn.Node.GetKey(), common.Now())
 	hash := encryption.Hash(data)
-	signature, err := sn.Sign(hash)
+	signature, err := sn.signatureScheme.Sign(hash)
 	if err != nil {
 		return "", "", "", err
 	}
@@ -44,7 +73,7 @@ func (sn *SelfNode) TimeStampSignature() (string, string, string, error) {
 }
 
 /*ValidateSignatureTime - validate if the time stamp used in the signature is valid */
-func (sn *SelfNode) ValidateSignatureTime(data string) (bool, error) {
+func ValidateSignatureTime(data string) (bool, error) {
 	segs := strings.Split(data, ":")
 	if len(segs) < 2 {
 		return false, errors.New("invalid data")
@@ -59,10 +88,25 @@ func (sn *SelfNode) ValidateSignatureTime(data string) (bool, error) {
 	return true, nil
 }
 
-/*Self represents the node of this intance */
-var Self *SelfNode
+// IsEqual returns true if given node pointer is equal to
+// pointer to underlying Node.
+func (sn *SelfNode) IsEqual(node *Node) bool {
+	sn.mx.RLock()
+	defer sn.mx.RUnlock()
 
-func init() {
-	Self = &SelfNode{}
-	Self.Node = &Node{}
+	return sn.Node == node
+}
+
+func (sn *SelfNode) SetNodeIfPublicKeyIsEqual(node *Node) {
+	sn.mx.Lock()
+	defer sn.mx.Unlock()
+
+	if sn.Node.PublicKey != node.PublicKey {
+		return
+	}
+
+	sn.Node = node
+	sn.Node.Info.StateMissingNodes = -1
+	sn.Node.Info.BuildTag = build.BuildTag
+	sn.Node.Status = NodeStatusActive
 }

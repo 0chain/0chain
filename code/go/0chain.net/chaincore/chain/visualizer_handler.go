@@ -79,7 +79,7 @@ func (c *Chain) WIPBlockChainHandler(w http.ResponseWriter, r *http.Request) {
 			GeneratorID:        miner.SetIndex,
 			GeneratorName:      miner.Description,
 			ChainWeight:        b.ChainWeight,
-			Verifications:      len(b.VerificationTickets),
+			Verifications:      b.VerificationTicketsSize(),
 			Verified:           b.GetVerificationStatus() != block.VerificationPending,
 			VerificationFailed: b.GetVerificationStatus() == block.VerificationFailed,
 			Notarized:          b.IsBlockNotarized(),

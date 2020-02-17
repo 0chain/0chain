@@ -398,7 +398,7 @@ func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block
 	*/
 	b = c.addBlock(b)
 
-	if b.Round == c.CurrentRound {
+	if b.Round == c.GetCurrentRound() {
 		Logger.Info("Adding a notarized block for current round", zap.Int64("Round", r.GetRoundNumber()))
 	}
 
@@ -437,7 +437,7 @@ func (c *Chain) AddRoundBlock(r round.RoundI, b *block.Block) *block.Block {
 func (c *Chain) addBlock(b *block.Block) *block.Block {
 	if eb, ok := c.blocks[b.Hash]; ok {
 		if eb != b {
-			c.MergeVerificationTickets(common.GetRootContext(), eb, b.VerificationTickets)
+			c.MergeVerificationTickets(common.GetRootContext(), eb, b.GetVerificationTickets())
 		}
 		return eb
 	}
@@ -511,14 +511,15 @@ func (c *Chain) DeleteBlocksBelowRound(round int64) {
 	c.blocksMutex.Lock()
 	defer c.blocksMutex.Unlock()
 	ts := common.Now() - 60
-	blocks := make([]*block.Block, 0, 1)
+	blocks := make([]*block.Block, 0, len(c.blocks))
+	lfb := c.GetLatestFinalizedBlock()
 	for _, b := range c.blocks {
 		if b.Round < round && b.CreationDate < ts && b.Round < c.LatestDeterministicBlock.Round {
-			Logger.Debug("found block to delete", zap.Int64("round", round), zap.Int64("block_round", b.Round), zap.Int64("current_round", c.CurrentRound), zap.Int64("lf_round", c.GetLatestFinalizedBlock().Round))
+			Logger.Debug("found block to delete", zap.Int64("round", round), zap.Int64("block_round", b.Round), zap.Int64("current_round", c.GetCurrentRound()), zap.Int64("lf_round", lfb.Round))
 			blocks = append(blocks, b)
 		}
 	}
-	Logger.Info("delete blocks below round", zap.Int64("round", c.CurrentRound), zap.Int64("below_round", round), zap.Any("before", ts), zap.Int("total", len(c.blocks)), zap.Int("count", len(blocks)))
+	Logger.Info("delete blocks below round", zap.Int64("round", c.GetCurrentRound()), zap.Int64("below_round", round), zap.Any("before", ts), zap.Int("total", len(c.blocks)), zap.Int("count", len(blocks)))
 	for _, b := range blocks {
 		b.Clear()
 		delete(c.blocks, b.Hash)
@@ -537,7 +538,7 @@ func (c *Chain) DeleteBlocks(blocks []*block.Block) {
 }
 
 /*PruneChain - prunes the chain */
-func (c *Chain) PruneChain(ctx context.Context, b *block.Block) {
+func (c *Chain) PruneChain(_ context.Context, b *block.Block) {
 	c.DeleteBlocksBelowRound(b.Round - 50)
 }
 
@@ -549,13 +550,20 @@ func (c *Chain) ValidateMagicBlock(ctx context.Context, b *block.Block) bool {
 
 //IsRoundGenerator - is this miner a generator for this round
 func (c *Chain) IsRoundGenerator(r round.RoundI, nd *node.Node) bool {
-	return r.GetMinerRank(nd) < c.NumGenerators
+	rank := r.GetMinerRank(nd)
+	return rank != -1 && rank < c.NumGenerators
 }
 
 /*GetGenerators - get all the block generators for a given round */
 func (c *Chain) GetGenerators(r round.RoundI) []*node.Node {
 	var miners []*node.Node
 	miners = r.GetMinersByRank(c.GetMiners(r))
+	if c.NumGenerators >= len(miners) {
+		Logger.Warn("get generators -- the number of generators is greater than the number of miners",
+			zap.Any("num_generators", c.NumGenerators), zap.Any("miner_by_rank", miners),
+			zap.Any("round", r.GetRoundNumber()))
+		return miners
+	}
 	return miners[:c.NumGenerators]
 }
 
@@ -702,7 +710,7 @@ func (c *Chain) getMiningStake(minerID datastore.Key) int {
 
 //InitializeMinerPool - initialize the miners after their configuration is read
 func (c *Chain) InitializeMinerPool() {
-	for _, nd := range c.Miners.Nodes {
+	for _, nd := range c.Miners.CopyNodes() {
 		ms := &MinerStats{}
 		ms.GenerationCountByRank = make([]int64, c.NumGenerators)
 		ms.FinalizationCountByRank = make([]int64, c.NumGenerators)
@@ -765,8 +773,6 @@ func (c *Chain) SetRandomSeed(r round.RoundI, randomSeed int64) bool {
 	if r.HasRandomSeed() && randomSeed == r.GetRandomSeed() {
 		return false
 	}
-	r.Lock()
-	defer r.Unlock()
 	r.SetRandomSeed(randomSeed)
 	r.ComputeMinerRanks(c.GetMiners(r))
 	roundNumber := r.GetRoundNumber()
@@ -774,6 +780,14 @@ func (c *Chain) SetRandomSeed(r round.RoundI, randomSeed int64) bool {
 		c.CurrentRound = roundNumber
 	}
 	return true
+}
+
+// GetCurrentRound async safe.
+func (c *Chain) GetCurrentRound() int64 {
+	c.roundsMutex.RLock()
+	defer c.roundsMutex.RUnlock()
+
+	return c.CurrentRound
 }
 
 func (c *Chain) getBlocks() []*block.Block {
@@ -788,7 +802,15 @@ func (c *Chain) getBlocks() []*block.Block {
 
 //SetRoundRank - set the round rank of the block
 func (c *Chain) SetRoundRank(r round.RoundI, b *block.Block) {
-	bNode := c.GetMiners(r).GetNode(b.MinerID)
+	miners := c.GetMiners(r)
+	if miners == nil || miners.Size() == 0 {
+		Logger.DPanic("set_round_rank  --  empty miners", zap.Any("round", r.GetRoundNumber()), zap.Any("block", b.Hash))
+	}
+	bNode := miners.GetNode(b.MinerID)
+	if bNode == nil {
+		Logger.DPanic("set_round_rank  --  get node by id", zap.Any("round", r.GetRoundNumber()),
+			zap.Any("block", b.Hash), zap.Any("miner_id", b.MinerID), zap.Any("miners", miners))
+	}
 	rank := r.GetMinerRank(bNode)
 	if rank >= c.NumGenerators {
 		Logger.Error(fmt.Sprintf("Round# %v generator miner ID %v rank is greater than num generators. State= %v, rank= %v, generators = %v", r.GetRoundNumber(), bNode.SetIndex, r.GetState(), rank, c.NumGenerators))
@@ -824,8 +846,8 @@ func (c *Chain) SetRetryWaitTime(newWaitTime int) {
 
 /*GetUnrelatedBlocks - get blocks that are not related to the chain of the given block */
 func (c *Chain) GetUnrelatedBlocks(maxBlocks int, b *block.Block) []*block.Block {
-	c.blocksMutex.Lock()
-	defer c.blocksMutex.Unlock()
+	c.blocksMutex.RLock()
+	defer c.blocksMutex.RUnlock()
 	var blocks []*block.Block
 	var chain = make(map[datastore.Key]*block.Block)
 	var prevRound = b.Round
@@ -944,16 +966,16 @@ func (c *Chain) GetLatestFinalizedBlockSummary() *block.BlockSummary {
 }
 
 func (c *Chain) ActiveInChain() bool {
-	return c.IsActiveNode(node.Self.ID, c.CurrentRound) && c.GetLatestFinalizedBlock().ClientState != nil
+	return c.IsActiveNode(node.Self.Underlying().GetKey(), c.GetCurrentRound()) && c.GetLatestFinalizedBlock().ClientState != nil
 }
 
 func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 	c.mbMutex.Lock()
 	defer c.mbMutex.Unlock()
-	if newMagicBlock.Miners == nil || len(newMagicBlock.Miners.NodesMap) == 0 {
+	if newMagicBlock.Miners == nil || newMagicBlock.Miners.MapSize() == 0 {
 		return common.NewError("failed to update magic block", "there are no miners in the magic block")
 	}
-	if newMagicBlock.IsActiveNode(node.Self.ID, c.CurrentRound) && c.GetLatestFinalizedMagicBlock() != nil && c.GetLatestFinalizedMagicBlock().MagicBlock.MagicBlockNumber == newMagicBlock.MagicBlockNumber-1 && c.GetLatestFinalizedMagicBlock().MagicBlock.Hash != newMagicBlock.PreviousMagicBlockHash {
+	if newMagicBlock.IsActiveNode(node.Self.Underlying().GetKey(), c.GetCurrentRound()) && c.GetLatestFinalizedMagicBlock() != nil && c.GetLatestFinalizedMagicBlock().MagicBlock.MagicBlockNumber == newMagicBlock.MagicBlockNumber-1 && c.GetLatestFinalizedMagicBlock().MagicBlock.Hash != newMagicBlock.PreviousMagicBlockHash {
 		Logger.Error("failed to update magic block", zap.Any("finalized_magic_block_hash", c.GetLatestFinalizedMagicBlock().MagicBlock.Hash), zap.Any("new_magic_block_previous_hash", newMagicBlock.PreviousMagicBlockHash))
 		return common.NewError("failed to update magic block", fmt.Sprintf("magic block's previous magic block hash (%v) doesn't equal latest finalized magic block id (%v)", newMagicBlock.PreviousMagicBlockHash, c.GetLatestFinalizedMagicBlock().MagicBlock.Hash))
 	}
@@ -973,11 +995,11 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 }
 
 func (c *Chain) SetupNodes() {
-	for _, miner := range c.Miners.NodesMap {
+	for _, miner := range c.Miners.CopyNodesMap() {
 		miner.ComputeProperties()
 		node.Setup(miner)
 	}
-	for _, sharder := range c.Sharders.NodesMap {
+	for _, sharder := range c.Sharders.CopyNodesMap() {
 		sharder.ComputeProperties()
 		node.Setup(sharder)
 	}
@@ -1013,14 +1035,14 @@ func (c *Chain) GetLatestFinalizedMagicBlockSummary() *block.BlockSummary {
 }
 
 func (c *Chain) GetNodesPreviousInfo() {
-	for key, miner := range c.Miners.NodesMap {
-		if oldMiner, ok := c.PreviousMagicBlock.Miners.NodesMap[key]; ok {
-			miner.SetNodeInfo(oldMiner)
+	for key, miner := range c.Miners.CopyNodesMap() {
+		if old := c.PreviousMagicBlock.Miners.GetNode(key); old != nil {
+			miner.SetNodeInfo(old)
 		}
 	}
-	for key, sharder := range c.Sharders.NodesMap {
-		if oldSharder, ok := c.PreviousMagicBlock.Sharders.NodesMap[key]; ok {
-			sharder.SetNodeInfo(oldSharder)
+	for key, sharder := range c.Sharders.CopyNodesMap() {
+		if old := c.PreviousMagicBlock.Sharders.GetNode(key); old != nil {
+			sharder.SetNodeInfo(old)
 		}
 	}
 }

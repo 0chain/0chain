@@ -8,7 +8,6 @@ import (
 	"net/http"
 )
 
-
 // HealthCheckWriter - a handler to provide block statistics
 func HealthCheckWriter(w http.ResponseWriter, r *http.Request) {
 	sc := GetSharderChain()
@@ -17,7 +16,7 @@ func HealthCheckWriter(w http.ResponseWriter, r *http.Request) {
 	chain.PrintCSS(w)
 	diagnostics.WriteStatisticsCSS(w)
 
-	self := node.Self.Node
+	self := node.Self.Underlying()
 	fmt.Fprintf(w, "<div>%v - %v</div>", self.GetPseudoName(), self.Description)
 
 	diagnostics.WriteConfiguration(w, c)

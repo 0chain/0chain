@@ -63,12 +63,12 @@ func LatestFinalizedBlockHandler(ctx context.Context, r *http.Request) (interfac
 	sc := GetSharderChain()
 	var lfb *block.Block
 	roundEntity, err := sc.GetMostRecentRoundFromDB(ctx)
-	if err == nil {
-		lfb, err = sc.GetBlockFromStore(roundEntity.BlockHash, roundEntity.Number)
-		if err == nil {
-			return lfb, nil
-		}
+	if err != nil {
 		return nil, err
+	}
+	lfb, err = sc.GetBlockFromStore(roundEntity.BlockHash, roundEntity.Number)
+	if err == nil {
+		return lfb, nil
 	}
 	return nil, err
 }

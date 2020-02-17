@@ -44,7 +44,7 @@ func init() {
 func SetDKG(ctx context.Context, mb *block.MagicBlock) {
 	mc := GetMinerChain()
 	self := node.GetSelfNode(ctx)
-	selfInd = self.SetIndex
+	selfInd = self.Underlying().SetIndex
 	if config.DevConfiguration.IsDkgEnabled {
 		err := mc.SetDKGSFromStore(ctx, mb)
 		if err != nil {
@@ -58,18 +58,21 @@ func SetDKG(ctx context.Context, mb *block.MagicBlock) {
 
 func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) error {
 	self := node.GetSelfNode(ctx)
-	dkgSummary, _ := GetDKGSummaryFromStore(ctx, strconv.FormatInt(mb.MagicBlockNumber, 10))
+	dkgSummary, err := GetDKGSummaryFromStore(ctx, strconv.FormatInt(mb.MagicBlockNumber, 10))
+	if err != nil {
+		return err
+	}
 	if dkgSummary.SecretShares != nil {
 		mc.muDKG.Lock()
 		defer mc.muDKG.Unlock()
-		mc.currentDKG = bls.MakeDKG(mb.T, mb.N, self.ID)
+		mc.currentDKG = bls.MakeDKG(mb.T, mb.N, self.Underlying().GetKey())
 		mc.currentDKG.MagicBlockNumber = mb.MagicBlockNumber
 		mc.currentDKG.StartingRound = mb.StartingRound
-		for k := range mb.Miners.NodesMap {
+		for k := range mb.Miners.CopyNodesMap() {
 			if savedShare, ok := dkgSummary.SecretShares[ComputeBlsID(k)]; ok {
 				mc.currentDKG.AddSecretShare(bls.ComputeIDdkg(k), savedShare)
 			} else if v, ok := mb.ShareOrSigns.Shares[k]; ok {
-				if share, ok := v.ShareOrSigns[node.Self.ID]; ok && share.Share != "" {
+				if share, ok := v.ShareOrSigns[node.Self.Underlying().GetKey()]; ok && share.Share != "" {
 					mc.currentDKG.AddSecretShare(bls.ComputeIDdkg(k), share.Share)
 				}
 			}
@@ -144,11 +147,11 @@ func (mc *Chain) GetBlsMessageForRound(r *round.Round) (string, error) {
 			return "", common.NewError("no_prev_round", "Could not find the previous round")
 		}
 
-		if pr.RandomSeed == 0 {
+		if pr.GetRandomSeed() == 0 {
 			Logger.Error("Bls sign vrfshare: error in getting prevRSeed")
 			return "", common.NewError("prev_round_rrs_zero", fmt.Sprintf("Prev round %d has randomseed of 0", pr.GetRoundNumber()))
 		}
-		prevRSeed = strconv.FormatInt(pr.RandomSeed, 16) //pr.VRFOutput
+		prevRSeed = strconv.FormatInt(pr.GetRandomSeed(), 16) //pr.VRFOutput
 	}
 	blsMsg := fmt.Sprintf("%v%v%v", r.GetRoundNumber(), r.GetTimeoutCount(), prevRSeed)
 
@@ -159,8 +162,8 @@ func (mc *Chain) GetBlsMessageForRound(r *round.Round) (string, error) {
 }
 
 // GetBlsShare - Start the BLS process
-func (mc *Chain) GetBlsShare(ctx context.Context, r, pr *round.Round) (string, error) {
-	r.VrfStartTime = time.Now()
+func (mc *Chain) GetBlsShare(ctx context.Context, r *round.Round) (string, error) {
+	r.SetVrfStartTime(time.Now())
 	if !config.DevConfiguration.IsDkgEnabled {
 		Logger.Debug("returning standard string as DKG is not enabled.")
 		return encryption.Hash("0chain"), nil
@@ -173,6 +176,9 @@ func (mc *Chain) GetBlsShare(ctx context.Context, r, pr *round.Round) (string, e
 	mc.ViewChange(ctx, r.Number)
 	mc.muDKG.Lock()
 	defer mc.muDKG.Unlock()
+	if mc.currentDKG == nil {
+		return "", common.NewError("get_bls_share", "DKG nil")
+	}
 	sigShare := mc.currentDKG.Sign(msg)
 	return sigShare.GetHexString(), nil
 }
@@ -187,11 +193,15 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 	mr.AddTimeoutVote(vrfs.GetRoundTimeoutCount(), vrfs.GetParty().ID)
 	msg, err := mc.GetBlsMessageForRound(mr.Round)
 	if err != nil {
+		Logger.Warn("failed to get bls message", zap.Any("vrfs_share", vrfs.Share), zap.Any("round", mr.Round))
 		return false
 	}
 	mc.ViewChange(ctx, mr.Number)
 	var share bls.Sign
-	share.SetHexString(vrfs.Share)
+	if err := share.SetHexString(vrfs.Share); err != nil {
+		Logger.Error("failed to set hex share", zap.Any("vrfs_share", vrfs.Share), zap.Any("message", msg))
+		return false
+	}
 	partyID := bls.ComputeIDdkg(vrfs.GetParty().ID)
 	if mc.currentDKG == nil {
 		return false
@@ -248,7 +258,10 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round) {
 			return
 		}
 		recSig, recFrom := getVRFShareInfo(mr)
-		groupSignature, _ := mc.currentDKG.CalBlsGpSign(recSig, recFrom)
+		groupSignature, err := mc.currentDKG.CalBlsGpSign(recSig, recFrom)
+		if err != nil {
+			Logger.Error("calculates the Gp Sign", zap.Error(err))
+		}
 		rbOutput := encryption.Hash(groupSignature.GetHexString())
 		Logger.Info("recieve bls sign", zap.Any("sigs", recSig), zap.Any("from", recFrom), zap.Any("group_signature", groupSignature.GetHexString()))
 
@@ -276,8 +289,6 @@ func (mc *Chain) computeRBO(ctx context.Context, mr *Round, rbo string) {
 func getVRFShareInfo(mr *Round) ([]string, []string) {
 	recSig := make([]string, 0)
 	recFrom := make([]string, 0)
-	mr.Mutex.Lock()
-	defer mr.Mutex.Unlock()
 
 	shares := mr.GetVRFShares()
 	for _, share := range shares {
@@ -319,8 +330,9 @@ func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r 
 			//zap.Int("Prev_roundtimeout", pr.GetTimeoutCount()),
 			zap.Int64("Prev_rseed", pr.GetRandomSeed()))
 	}
-	if !r.VrfStartTime.IsZero() {
-		vrfTimer.UpdateSince(r.VrfStartTime)
+	vrfStartTime := r.GetVrfStartTime()
+	if !vrfStartTime.IsZero() {
+		vrfTimer.UpdateSince(vrfStartTime)
 	} else {
 		Logger.Info("VrfStartTime is zero", zap.Int64("round", r.GetRoundNumber()))
 	}

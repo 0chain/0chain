@@ -129,8 +129,8 @@ func SendPostRequest(url string, data []byte, ID string, pkey string, wg *sync.W
 		return nil, err
 	}
 	defer resp.Body.Close()
-	body, _ := ioutil.ReadAll(resp.Body)
-	return body, nil
+	body, err := ioutil.ReadAll(resp.Body)
+	return body, err
 }
 
 //SendTransaction send a transaction
@@ -584,6 +584,7 @@ func SendSmartContractTxn(txn *Transaction, address string, value, fee int64, sc
 		Logger.Info("Signing Failed during registering miner to the mining network", zap.Error(err))
 		return err
 	}
-	SendTransaction(txn, minerUrls, node.Self.ID, node.Self.PublicKey)
+	SendTransaction(txn, minerUrls, node.Self.Underlying().GetKey(),
+		node.Self.Underlying().PublicKey)
 	return nil
 }

@@ -41,7 +41,9 @@ func Respond(w http.ResponseWriter, r *http.Request, data interface{}, err error
 		}
 		buf := bytes.NewBuffer(nil)
 		json.NewEncoder(buf).Encode(data)
-		http.Error(w, buf.String(), 400)
+		//http.Error(w, buf.String(), 400)
+		w.WriteHeader(http.StatusBadRequest)
+		buf.WriteTo(w)
 	} else {
 		if data != nil {
 			w.Header().Set("Content-Type", "application/json")

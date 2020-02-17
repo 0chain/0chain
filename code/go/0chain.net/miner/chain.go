@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"0chain.net/chaincore/block"
@@ -102,9 +103,11 @@ type Chain struct {
 	muDKG               *sync.Mutex
 	currentDKG          *bls.DKG
 	viewChangeDKG       *bls.DKG
+	mutexMpks           sync.RWMutex
+	mpks                *block.Mpks
 	nextViewChange      int64
 	discoverClients     bool
-	started             bool
+	started             uint32
 	dkgSet              bool
 }
 
@@ -132,6 +135,9 @@ func (mc *Chain) SetupGenesisBlock(hash string, magicBlock *block.MagicBlock) *b
 	mgr.ComputeMinerRanks(gb.MagicBlock.Miners)
 	mc.AddRound(mgr)
 	mc.AddGenesisBlock(gb)
+	for _, sharder := range gb.Sharders.Nodes {
+		sharder.SetStatus(node.NodeStatusInactive)
+	}
 	return gb
 }
 
@@ -212,10 +218,13 @@ func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) erro
 }
 
 func (mc *Chain) ViewChange(ctx context.Context, round int64) {
-	if config.DevConfiguration.ViewChange && mc.nextViewChange <= round && (mc.currentDKG == nil || mc.currentDKG.StartingRound < mc.nextViewChange) {
-		err := mc.UpdateMagicBlock(mc.ViewChangeMagicBlock)
-		if err != nil {
-			Logger.DPanic(err.Error())
+	if config.DevConfiguration.ViewChange && mc.nextViewChange <= round &&
+		(mc.currentDKG == nil || mc.currentDKG.StartingRound < mc.nextViewChange) {
+		if mc.ViewChangeMagicBlock != nil {
+			err := mc.UpdateMagicBlock(mc.ViewChangeMagicBlock)
+			if err != nil {
+				Logger.DPanic(err.Error())
+			}
 		}
 		mc.SetDKGSFromStore(ctx, mc.MagicBlock)
 	}
@@ -231,7 +240,7 @@ func (mc *Chain) ChainStarted(ctx context.Context) bool {
 		case <-timer.C:
 			var start int
 			var started int
-			for _, n := range mc.Miners.NodesMap {
+			for _, n := range mc.Miners.CopyNodesMap() {
 				mc.RequestStartChain(n, &start, &started)
 			}
 			if start >= mc.T {
@@ -240,8 +249,8 @@ func (mc *Chain) ChainStarted(ctx context.Context) bool {
 			if started >= mc.T {
 				return true
 			}
-			if timeoutCount == 20 || mc.started {
-				return mc.started
+			if timeoutCount == 20 || mc.isStarted() {
+				return mc.isStarted()
 			}
 			timeoutCount++
 			timer = time.NewTimer(time.Millisecond * time.Duration(mc.RoundTimeoutSofttoMin))
@@ -250,10 +259,16 @@ func (mc *Chain) ChainStarted(ctx context.Context) bool {
 	return false
 }
 
+func (mc *Chain) GetMpks() map[string]*block.MPK {
+	mc.mutexMpks.RLock()
+	defer mc.mutexMpks.RUnlock()
+	return mc.mpks.GetMpks()
+}
+
 func StartChainRequestHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	nodeID := r.Header.Get(node.HeaderNodeID)
 	mc := GetMinerChain()
-	if _, ok := mc.Miners.NodesMap[nodeID]; !ok {
+	if !mc.Miners.HasNode(nodeID) {
 		Logger.Error("failed to send start chain", zap.Any("id", nodeID))
 		return nil, common.NewError("failed to send start chain", "miner is not in active set")
 	}
@@ -262,20 +277,20 @@ func StartChainRequestHandler(ctx context.Context, r *http.Request) (interface{}
 		Logger.Error("failed to send start chain", zap.Any("error", err))
 		return nil, err
 	}
-	if mc.CurrentRound != int64(round) {
-		Logger.Error("failed to send start chain -- different rounds", zap.Any("current_round", mc.CurrentRound), zap.Any("requested_round", round))
-		return nil, common.NewError("failed to send start chain", fmt.Sprintf("differt_rounds -- current_round: %v, requested_round: %v", mc.CurrentRound, round))
+	if mc.GetCurrentRound() != int64(round) {
+		Logger.Error("failed to send start chain -- different rounds", zap.Any("current_round", mc.GetCurrentRound()), zap.Any("requested_round", round))
+		return nil, common.NewError("failed to send start chain", fmt.Sprintf("differt_rounds -- current_round: %v, requested_round: %v", mc.GetCurrentRound(), round))
 	}
 	message := datastore.GetEntityMetadata("start_chain").Instance().(*StartChain)
-	message.Start = !mc.started
+	message.Start = !mc.isStarted()
 	message.ID = r.FormValue("round")
 	return message, nil
 }
 
 /*SendDKGShare sends the generated secShare to the given node */
 func (mc *Chain) RequestStartChain(n *node.Node, start, started *int) error {
-	if node.Self.ID == n.ID {
-		if !mc.started {
+	if node.Self.Underlying().GetKey() == n.ID {
+		if !mc.isStarted() {
 			*start++
 		} else {
 			*started++
@@ -297,8 +312,18 @@ func (mc *Chain) RequestStartChain(n *node.Node, start, started *int) error {
 		return startChain, nil
 	}
 	params := &url.Values{}
-	params.Add("round", strconv.FormatInt(mc.CurrentRound, 10))
+	params.Add("round", strconv.FormatInt(mc.GetCurrentRound(), 10))
 	ctx := common.GetRootContext()
 	n.RequestEntityFromNode(ctx, ChainStartSender, params, handler)
 	return nil
+}
+
+func (mc *Chain) setStarted() {
+	if !atomic.CompareAndSwapUint32(&mc.started, 0, 1) {
+		Logger.Warn("chain already started")
+	}
+}
+
+func (mc *Chain) isStarted() bool {
+	return atomic.LoadUint32(&mc.started) == 1
 }

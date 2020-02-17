@@ -31,7 +31,7 @@ func ReadNetworkDelays(file string) {
 				from := routeMap["from"].(string)
 				to := routeMap["to"].(string)
 				delayTime := routeMap["time"].(int)
-				if Self.Node.N2NHost == from {
+				if Self.Underlying().N2NHost == from {
 					routes[to] = &Route{To: to, Delay: time.Duration(delayTime) * time.Millisecond}
 				}
 			}

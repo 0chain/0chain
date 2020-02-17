@@ -14,6 +14,7 @@ import (
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
+
 // LatestRoundRequestor -
 var LatestRoundRequestor node.EntityRequestor
 
@@ -53,6 +54,7 @@ func SetupS2SRequestors() {
 	blockSummariesEntityMetadata := datastore.GetEntityMetadata("block_summaries")
 	BlockSummariesRequestor = node.RequestEntityHandler("/v1/_s2s/blocksummaries/get", options, blockSummariesEntityMetadata)
 }
+
 // SetupS2SResponders -
 func SetupS2SResponders() {
 	http.HandleFunc("/v1/_s2s/latest_round/get", node.ToN2NSendEntityHandler(LatestRoundRequestHandler))
@@ -144,10 +146,11 @@ func BlockSummariesHandler(ctx context.Context, r *http.Request) (interface{}, e
 	return nil, err
 
 }
+
 // LatestRoundRequestHandler -
 func LatestRoundRequestHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	sc := GetSharderChain()
-	currRound := sc.GetRound(sc.CurrentRound)
+	currRound := sc.GetRound(sc.GetCurrentRound())
 	if currRound != nil {
 		lr := currRound.(*round.Round)
 		return lr, nil
@@ -219,9 +222,9 @@ func RoundBlockRequestHandler(ctx context.Context, r *http.Request) (interface{}
 }
 
 func (sc *Chain) getRoundSummaries(ctx context.Context, bounds RangeBounds) []*round.Round {
-	roundS := make([]*round.Round, bounds.roundRange + 1)
+	roundS := make([]*round.Round, bounds.roundRange+1)
 	loop := 0
-	for  index := bounds.roundLow; index <= bounds.roundHigh; index++ {
+	for index := bounds.roundLow; index <= bounds.roundHigh; index++ {
 		roundEntity := sc.GetSharderRound(index)
 		if roundEntity == nil {
 			// Try from the store

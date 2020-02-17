@@ -62,7 +62,7 @@ func (c *Chain) IsBlockNotarized(ctx context.Context, b *block.Block) bool {
 	if b.IsBlockNotarized() {
 		return true
 	}
-	notarized := c.reachedNotarization(b.VerificationTickets)
+	notarized := c.reachedNotarization(b.GetVerificationTickets())
 	if notarized {
 		b.SetBlockNotarized()
 	}
@@ -76,7 +76,7 @@ func (c *Chain) reachedNotarization(bvt []*block.VerificationTicket) bool {
 			//ToDo: Remove this comment
 			Logger.Info("not reached notarization",
 				zap.Int("Threshold", c.GetNotarizationThresholdCount()),
-				zap.Int("num_signatures", numSignatures), zap.Int64("CurrentRound", c.CurrentRound))
+				zap.Int("num_signatures", numSignatures), zap.Int64("CurrentRound", c.GetCurrentRound()))
 			return false
 		}
 	}
@@ -90,7 +90,7 @@ func (c *Chain) reachedNotarization(bvt []*block.VerificationTicket) bool {
 		}
 	}
 	//Todo: Remove this log
-	Logger.Info("Reached notarization!!!", zap.Int64("CurrentRound", c.CurrentRound), zap.Int("num_signatures", len(bvt)))
+	Logger.Info("Reached notarization!!!", zap.Int64("CurrentRound", c.GetCurrentRound()), zap.Int("num_signatures", len(bvt)))
 
 	return true
 }
@@ -108,15 +108,15 @@ Simple 3 miner scenario :
 */
 func (c *Chain) UpdateNodeState(b *block.Block) {
 	r := c.GetRound(b.Round)
-	for _, vt := range b.VerificationTickets {
+	for _, vt := range b.GetVerificationTickets() {
 
 		signer := c.GetMiners(r).GetNode(vt.VerifierID)
 		if signer == nil {
 			Logger.Error("this should not happen!")
 			continue
 		}
-		if signer.Status != node.NodeStatusActive {
-			signer.Status = node.NodeStatusActive
+		if signer.GetStatus() != node.NodeStatusActive {
+			signer.SetStatus(node.NodeStatusActive)
 		}
 	}
 }
@@ -132,9 +132,9 @@ func (c *Chain) AddVerificationTicket(ctx context.Context, b *block.Block, bvt *
 
 /*MergeVerificationTickets - merge a set of verification tickets (already validated) for a given block */
 func (c *Chain) MergeVerificationTickets(ctx context.Context, b *block.Block, vts []*block.VerificationTicket) {
-	vtlen := len(b.VerificationTickets)
+	vtlen := b.VerificationTicketsSize()
 	b.MergeVerificationTickets(vts)
-	if len(b.VerificationTickets) != vtlen {
+	if b.VerificationTicketsSize() != vtlen {
 		c.IsBlockNotarized(ctx, b)
 	}
 }
@@ -142,7 +142,7 @@ func (c *Chain) MergeVerificationTickets(ctx context.Context, b *block.Block, vt
 func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockStateHandler) {
 	bNode := node.GetNode(fb.MinerID)
 	ms := bNode.ProtocolStats.(*MinerStats)
-	Logger.Info("finalize block", zap.Int64("round", fb.Round), zap.Int64("current_round", c.CurrentRound), zap.Int64("lf_round", c.GetLatestFinalizedBlock().Round), zap.String("hash", fb.Hash), zap.Int("round_rank", fb.RoundRank), zap.Int8("state", fb.GetBlockState()))
+	Logger.Info("finalize block", zap.Int64("round", fb.Round), zap.Int64("current_round", c.GetCurrentRound()), zap.Int64("lf_round", c.GetLatestFinalizedBlock().Round), zap.String("hash", fb.Hash), zap.Int("round_rank", fb.RoundRank), zap.Int8("state", fb.GetBlockState()))
 	ms.FinalizationCountByRank[fb.RoundRank]++
 	fr := c.GetRound(fb.Round)
 	Logger.Info("finalize block -- round", zap.Any("round", fr))
@@ -218,25 +218,25 @@ func (c *Chain) IsFinalizedDeterministically(b *block.Block) bool {
 /*GetNotarizedBlock - get a notarized block for a round */
 func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 	nbrequestor := MinerNotarizedBlockRequestor
-	cround := c.CurrentRound
+	cround := c.GetCurrentRound()
 	params := &url.Values{}
 	params.Add("block", blockHash)
 	ctx := common.GetRootContext()
 	var b *block.Block
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-		Logger.Info("get notarized block", zap.String("block", blockHash), zap.Int64("cround", cround), zap.Int64("current_round", c.CurrentRound))
+		Logger.Info("get notarized block", zap.String("block", blockHash), zap.Int64("cround", cround), zap.Int64("current_round", c.GetCurrentRound()))
 		nb, ok := entity.(*block.Block)
 		if !ok {
 			return nil, datastore.ErrInvalidEntity
 		}
 		r := c.GetRound(nb.Round)
 		if r == nil {
-			Logger.Info("get notarized block - no round will create...", zap.Int64("round", nb.Round), zap.String("block", blockHash), zap.Int64("cround", cround), zap.Int64("current_round", c.CurrentRound))
+			Logger.Info("get notarized block - no round will create...", zap.Int64("round", nb.Round), zap.String("block", blockHash), zap.Int64("cround", cround), zap.Int64("current_round", c.GetCurrentRound()))
 
 			r = c.RoundF.CreateRoundF(nb.Round).(*round.Round)
 			c.AddRound(r)
 		}
-		if err := c.VerifyNotarization(ctx, nb.Hash, nb.VerificationTickets, r); err != nil {
+		if err := c.VerifyNotarization(ctx, nb.Hash, nb.GetVerificationTickets(), r); err != nil {
 			Logger.Error("get notarized block - validate notarization", zap.Int64("round", nb.Round), zap.String("block", blockHash), zap.Error(err))
 			return nil, err
 		}
@@ -244,6 +244,7 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 			Logger.Error("get notarized block - validate", zap.Int64("round", nb.Round), zap.String("block", blockHash), zap.Any("block_obj", nb), zap.Error(err))
 			return nil, err
 		}
+		Logger.Info("got notarized block", zap.String("block", nb.Hash), zap.Int64("round", nb.Round), zap.Int("verifictation_tickers", nb.VerificationTicketsSize()))
 		b = c.AddBlock(nb)
 		//This is a notarized block. So, use this method to sync round info with the notarized block.
 		b, r = c.AddNotarizedBlockToRound(r, nb)
@@ -281,7 +282,7 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 		Logger.Error("fetching previous block", zap.Int("idx", idx), zap.Int64("cround", cb.Round), zap.String("cblock", cb.Hash), zap.String("cprev_block", cb.PrevHash))
 		nb := c.GetNotarizedBlock(cb.PrevHash)
 		if nb == nil {
-			Logger.Error("get previous block (unable to get prior blocks)", zap.Int64("current_round", c.CurrentRound), zap.Int("idx", idx), zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("cround", cb.Round), zap.String("cblock", cb.Hash), zap.String("cprev_block", cb.PrevHash))
+			Logger.Error("get previous block (unable to get prior blocks)", zap.Int64("current_round", c.GetCurrentRound()), zap.Int("idx", idx), zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("cround", cb.Round), zap.String("cblock", cb.Hash), zap.String("cprev_block", cb.PrevHash))
 			return nil
 		}
 		cb = nb

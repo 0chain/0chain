@@ -21,8 +21,8 @@ func (mc *Chain) HandleVRFShare(ctx context.Context, msg *BlockMessage) {
 /*HandleVerifyBlockMessage - handles the verify block message */
 func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage) {
 	b := msg.Block
-	if b.Round < mc.CurrentRound-1 {
-		Logger.Debug("verify block (round mismatch)", zap.Int64("current_round", mc.CurrentRound), zap.Int64("block_round", b.Round))
+	if b.Round < mc.GetCurrentRound()-1 {
+		Logger.Debug("verify block (round mismatch)", zap.Int64("current_round", mc.GetCurrentRound()), zap.Int64("block_round", b.Round))
 		return
 	}
 	mr := mc.GetMinerRound(b.Round)
@@ -85,7 +85,7 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 		Logger.Info("Added block to Round with hash = " + b.Hash)
 		mc.AddToRoundVerification(ctx, mr, b)
 	} else {
-		Logger.Error("this should not happen %v", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("cround", mc.CurrentRound))
+		Logger.Error("this should not happen %v", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("cround", mc.GetCurrentRound()))
 	}
 }
 

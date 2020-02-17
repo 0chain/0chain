@@ -28,12 +28,13 @@ var pullURL = "/v1/n2n/entity_pull/get"
 
 func getPushToPullTime(n *Node) float64 {
 	var pullRequestTime float64
+	sendTime := n.GetSmallMessageSendTime()
 	if pullRequestTimer := n.GetTimer(pullURL); pullRequestTimer != nil && pullRequestTimer.Count() >= 50 {
 		pullRequestTime = pullRequestTimer.Mean()
 	} else {
-		pullRequestTime = 2 * n.SmallMessageSendTime
+		pullRequestTime = 2 * sendTime
 	}
-	return pullRequestTime + n.SmallMessageSendTime
+	return pullRequestTime + sendTime
 }
 
 var pullDataCache = cache.NewLRUCache(100)
@@ -87,10 +88,11 @@ func pullEntityHandler(ctx context.Context, nd *Node, uri string, handler datast
 		_, err := handler(ctx, entity)
 		duration := time.Since(start)
 		if err != nil {
-			N2n.Error("message pull", zap.Int("from", nd.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", uri), zap.Duration("duration", duration), zap.String("entity", entityName), zap.Any("id", entity.GetKey()), zap.Error(err))
+			N2n.Error("message pull", zap.Int("from", nd.SetIndex),
+				zap.Int("to", Self.Underlying().SetIndex), zap.String("handler", uri), zap.Duration("duration", duration), zap.String("entity", entityName), zap.Any("id", entity.GetKey()), zap.Error(err))
 			return nil, err
 		}
-		//N2n.Debug("message pull", zap.Int("from", nd.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", uri), zap.Duration("duration", duration), zap.String("entity", entityName), zap.Any("id", entity.GetKey()))
+		//N2n.Debug("message pull", zap.Int("from", nd.SetIndex), zap.Int("to", Self.Underlying().SetIndex), zap.String("handler", uri), zap.Duration("duration", duration), zap.String("entity", entityName), zap.Any("id", entity.GetKey()))
 		return entity, nil
 	}
 	params := &url.Values{}

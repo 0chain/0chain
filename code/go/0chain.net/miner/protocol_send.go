@@ -26,7 +26,7 @@ func (mc *Chain) SendBlock(ctx context.Context, b *block.Block) {
 func (mc *Chain) SendVerificationTicket(ctx context.Context, b *block.Block, bvt *block.BlockVerificationTicket) {
 	m2m := mc.Miners
 	if mc.VerificationTicketsTo == chain.Generator {
-		if b.MinerID != node.Self.GetKey() {
+		if b.MinerID != node.Self.Underlying().GetKey() {
 			m2m.SendTo(VerificationTicketSender(bvt), b.MinerID)
 		}
 	} else {
@@ -39,7 +39,7 @@ func (mc *Chain) SendNotarization(ctx context.Context, b *block.Block) {
 	notarization := datastore.GetEntityMetadata("block_notarization").Instance().(*Notarization)
 	notarization.BlockID = b.Hash
 	notarization.Round = b.Round
-	notarization.VerificationTickets = b.VerificationTickets
+	notarization.VerificationTickets = b.GetVerificationTickets()
 	notarization.Block = b
 	m2m := mc.Miners
 	go m2m.SendAll(BlockNotarizationSender(notarization))

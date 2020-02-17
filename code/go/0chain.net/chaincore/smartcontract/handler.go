@@ -41,7 +41,10 @@ func ExecuteRestAPI(ctx context.Context, scAdress string, restpath string, param
 func ExecuteStats(ctx context.Context, scAdress string, params url.Values, w http.ResponseWriter) {
 	_, sc := getSmartContract(scAdress)
 	if sc != nil {
-		int, _ := sc.HandlerStats(ctx, params)
+		int, err := sc.HandlerStats(ctx, params)
+		if err != nil {
+			Logger.Warn("unexpected error", zap.Error(err))
+		}
 		fmt.Fprintf(w, "%v", int)
 		return
 	}

@@ -15,7 +15,11 @@ import (
 )
 
 func (msc *MinerSmartContract) doesMinerExist(pkey datastore.Key, statectx c_state.StateContextI) bool {
-	mbits, _ := statectx.GetTrieNode(pkey)
+	mbits, err := statectx.GetTrieNode(pkey)
+	if err != nil {
+		Logger.Error("GetTrieNode from state context", zap.Error(err))
+		return false
+	}
 	if mbits != nil {
 		return true
 	}

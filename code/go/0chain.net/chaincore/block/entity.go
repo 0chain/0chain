@@ -104,6 +104,31 @@ func NewBlock(chainID datastore.Key, round int64) *Block {
 	return b
 }
 
+// GetVerificationTickets of the block async safe.
+func (b *Block) GetVerificationTickets() (vts []*VerificationTicket) {
+	b.ticketsMutex.RLock()
+	defer b.ticketsMutex.RUnlock()
+
+	if len(b.VerificationTickets) == 0 {
+		return // nil
+	}
+
+	vts = make([]*VerificationTicket, 0, len(b.VerificationTickets))
+	for _, tk := range b.VerificationTickets {
+		vts = append(vts, tk.Copy())
+	}
+
+	return
+}
+
+// VerificationTicketsSize returns number verification tickets of the Block.
+func (b *Block) VerificationTicketsSize() int {
+	b.ticketsMutex.RLock()
+	defer b.ticketsMutex.RUnlock()
+
+	return len(b.VerificationTickets)
+}
+
 var blockEntityMetadata *datastore.EntityMetadataImpl
 
 /*GetEntityMetadata - implementing the interface */
@@ -212,11 +237,14 @@ func SetupEntity(store datastore.Store) {
 
 /*SetPreviousBlock - set the previous block of this block */
 func (b *Block) SetPreviousBlock(prevBlock *Block) {
+	b.ticketsMutex.Lock()
+	defer b.ticketsMutex.Unlock()
+
 	b.PrevBlock = prevBlock
 	b.PrevHash = prevBlock.Hash
 	b.Round = prevBlock.Round + 1
 	if len(b.PrevBlockVerificationTickets) == 0 {
-		b.PrevBlockVerificationTickets = prevBlock.VerificationTickets
+		b.PrevBlockVerificationTickets = prevBlock.GetVerificationTickets()
 	}
 }
 
@@ -282,32 +310,33 @@ func (b *Block) AddVerificationTicket(vt *VerificationTicket) bool {
 * Only appends without modifying the order of exisitng tickets to ensure concurrent marshalling doesn't cause duplicate tickets
  */
 func (b *Block) MergeVerificationTickets(vts []*VerificationTicket) {
-	unionVerificationTickets := func(tickets1 []*VerificationTicket, tickets2 []*VerificationTicket) []*VerificationTicket {
-		if len(tickets1) == 0 {
-			return tickets2
+	unionVerificationTickets := func(alreadyHave []*VerificationTicket, received []*VerificationTicket) []*VerificationTicket {
+		if len(alreadyHave) == 0 {
+			return received
 		}
-		if len(tickets2) == 0 {
-			return tickets1
+		if len(received) == 0 {
+			return alreadyHave
 		}
-		ticketsMap := make(map[string]*VerificationTicket, len(tickets1))
-		for _, t := range tickets1 {
-			ticketsMap[t.VerifierID] = t
+		alreadyHaveMap := make(map[string]*VerificationTicket, len(alreadyHave))
+		for _, t := range alreadyHave {
+			alreadyHaveMap[t.VerifierID] = t
 		}
-		utickets := make([]*VerificationTicket, len(tickets1))
-		copy(utickets, tickets1)
-		for _, v := range tickets2 {
-			if v == nil {
+		union := make([]*VerificationTicket, len(alreadyHave))
+		copy(union, alreadyHave)
+		for _, rec := range received {
+			if rec == nil {
 				Logger.Error("merge verification tickets - null ticket")
-				return tickets1
+				return alreadyHave
 			}
-			if _, ok := ticketsMap[v.VerifierID]; !ok {
-				utickets = append(utickets, v)
+			if _, ok := alreadyHaveMap[rec.VerifierID]; !ok {
+				union = append(union, rec)
+				alreadyHaveMap[rec.VerifierID] = rec
 			}
 		}
-		if len(utickets) == len(tickets1) {
-			return tickets1
+		if len(union) == len(alreadyHave) {
+			return alreadyHave
 		}
-		return utickets
+		return union
 	}
 	b.ticketsMutex.Lock()
 	defer b.ticketsMutex.Unlock()
@@ -448,7 +477,7 @@ func (b *Block) IsStateComputed() bool {
 
 /*SetStateStatus - set if the client state is computed or not for the block */
 func (b *Block) SetStateStatus(status int8) {
-	b.stateStatus = status
+	b.stateStatus = status //RACE
 }
 
 /*GetReceiptsMerkleTree - return the merkle tree of this block using the transactions as leaf nodes */
@@ -474,11 +503,17 @@ func (b *Block) GetTransaction(hash string) *transaction.Transaction {
 
 //SetBlockNotarized - set the block as notarized
 func (b *Block) SetBlockNotarized() {
+	b.ticketsMutex.Lock()
+	defer b.ticketsMutex.Unlock()
+
 	b.isNotarized = true
 }
 
 //IsBlockNotarized - is block notarized?
 func (b *Block) IsBlockNotarized() bool {
+	b.ticketsMutex.RLock()
+	defer b.ticketsMutex.RUnlock()
+
 	return b.isNotarized
 }
 
@@ -508,6 +543,7 @@ func (b *Block) UnknownTickets(vts []*VerificationTicket) []*VerificationTicket 
 		}
 		if _, ok := ticketsMap[t.VerifierID]; !ok {
 			newTickets = append(newTickets, t)
+			ticketsMap[t.VerifierID] = t
 		}
 	}
 	return newTickets
@@ -530,6 +566,33 @@ func (b *Block) DoReadLock() {
 //DoReadUnlock - implement ReadLockable interface
 func (b *Block) DoReadUnlock() {
 	b.ticketsMutex.RUnlock()
+}
+
+// GetPrevBlockVerificationTickets returns
+// verification tickets of previous Block.
+func (b *Block) GetPrevBlockVerificationTickets() (pbvts []*VerificationTicket) {
+	b.ticketsMutex.Lock()
+	defer b.ticketsMutex.Unlock()
+
+	if len(b.PrevBlockVerificationTickets) == 0 {
+		return // nil
+	}
+
+	pbvts = make([]*VerificationTicket, 0, len(b.PrevBlockVerificationTickets))
+	for _, tk := range b.PrevBlockVerificationTickets {
+		pbvts = append(pbvts, tk.Copy())
+	}
+
+	return
+}
+
+// PrevBlockVerificationTicketsSize returns number of
+// verification tickets of previous Block.
+func (b *Block) PrevBlockVerificationTicketsSize() int {
+	b.ticketsMutex.Lock()
+	defer b.ticketsMutex.Unlock()
+
+	return len(b.PrevBlockVerificationTickets)
 }
 
 //SetPrevBlockVerificationTickets - set previous block verification tickets

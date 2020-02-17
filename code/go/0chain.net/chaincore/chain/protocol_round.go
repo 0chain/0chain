@@ -180,7 +180,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 		}
 	}
 	c.SetLatestFinalizedBlock(lfb)
-	FinalizationLagMetric.Update(int64(c.CurrentRound - lfb.Round))
+	FinalizationLagMetric.Update(int64(c.GetCurrentRound() - lfb.Round))
 	Logger.Info("finalize round - latest finalized round", zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash))
 	for idx := range frchain {
 		fb := frchain[len(frchain)-1-idx]
@@ -211,7 +211,7 @@ func (c *Chain) GetHeaviestNotarizedBlock(r round.RoundI) *block.Block {
 			return nil, common.NewError("invalid_block", "Block not from the requested round")
 		}
 
-		if err := c.VerifyNotarization(ctx, nb.Hash, nb.VerificationTickets, r); err != nil {
+		if err := c.VerifyNotarization(ctx, nb.Hash, nb.GetVerificationTickets(), r); err != nil {
 			Logger.Error("get notarized block for round - validate notarization", zap.Int64("round", roundNumber), zap.String("block", nb.Hash), zap.Error(err))
 			return nil, err
 		}
@@ -262,7 +262,7 @@ func (c *Chain) GetLatestFinalizedMagicBlockFromSharder(ctx context.Context) []*
 		return mb, nil
 	}
 	n2s.RequestEntityFromAll(ctx, LatestFinalizedMagicBlockRequestor, nil, handler)
-	if _, ok := n2s.NodesMap[node.Self.ID]; ok {
+	if n2s.HasNode(node.Self.Underlying().GetKey()) {
 		finalizedMagicBlocks = append(finalizedMagicBlocks, c.GetLatestFinalizedMagicBlock())
 	}
 	return finalizedMagicBlocks

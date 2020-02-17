@@ -1,16 +1,15 @@
 package block
 
 import (
-	"encoding/hex"
-	"encoding/json"
-	"sort"
-	"strconv"
-
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
+	"encoding/hex"
+	"encoding/json"
+	"sort"
+	"strconv"
 
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -53,17 +52,13 @@ func (mb *MagicBlock) GetHashBytes() []byte {
 	data = append(data, []byte(strconv.FormatInt(mb.StartingRound, 10))...)
 	var minerKeys, sharderKeys, mpkKeys []string
 	// miner info
-	for _, node := range mb.Miners.NodesMap {
-		minerKeys = append(minerKeys, node.ID)
-	}
+	minerKeys = mb.Miners.Keys()
 	sort.Strings(minerKeys)
 	for _, v := range minerKeys {
 		data = append(data, []byte(v)...)
 	}
-	//sharder info
-	for _, node := range mb.Sharders.NodesMap {
-		sharderKeys = append(sharderKeys, node.ID)
-	}
+	// sharder info
+	sharderKeys = mb.Sharders.Keys()
 	sort.Strings(sharderKeys)
 	for _, v := range sharderKeys {
 		data = append(data, []byte(v)...)
@@ -88,13 +83,13 @@ func (mb *MagicBlock) IsActiveNode(id string, round int64) bool {
 	if mb == nil || mb.Miners == nil || mb.Sharders == nil {
 		return false
 	}
-	_, mok := mb.Miners.NodesMap[id]
-	_, sok := mb.Sharders.NodesMap[id]
+	mok := mb.Miners.HasNode(id)
+	sok := mb.Sharders.HasNode(id)
 	return (sok || mok) && mb.StartingRound <= round
 }
 
 func (mb *MagicBlock) VerifyMinersSignatures(b *Block) bool {
-	for _, bvt := range b.VerificationTickets {
+	for _, bvt := range b.GetVerificationTickets() {
 		sender := b.Miners.GetNode(bvt.VerifierID)
 		if sender == nil {
 			return false
@@ -237,6 +232,14 @@ func (mpks *Mpks) GetMpkMap() map[bls.PartyID][]bls.PublicKey {
 		mpkMap[bls.ComputeIDdkg(k)] = bls.ConvertStringToMpk(v.Mpk)
 	}
 	return mpkMap
+}
+
+func (mpks *Mpks) GetMpks() map[string]*MPK {
+	result := make(map[string]*MPK, len(mpks.Mpks))
+	for k, v := range mpks.Mpks {
+		result[k] = v
+	}
+	return result
 }
 
 type MPK struct {
