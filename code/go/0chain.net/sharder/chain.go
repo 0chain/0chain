@@ -135,3 +135,86 @@ func (sc *Chain) GetSharderRound(roundNumber int64) *round.Round {
 	}
 	return sr
 }
+
+// load and set FLB from store
+func (sc *Chain) loadLatestFinalizedBlockFromStore(round *round.Round) (
+	lfb *block.Block) {
+
+	var err error
+	lfb, err = sc.GetBlockFromStore(round.BlockHash, round.Number)
+	if err != nil {
+		Logger.DPanic("obtaining LFB from DB", zap.Error(err),
+			zap.Int64("round", round.Number),
+			zap.String("hash", round.BlockHash))
+	}
+	sc.SetLatestFinalizedBlock(lfb)
+
+	Logger.Info("lfb from store", zap.Int64("round", lfb.Round),
+		zap.String("hash", lfb.Hash))
+	return
+}
+
+// iterate from given round down to find block contains magic block
+func (sc *Chain) iterateDownToMagicBlock(b *block.Block, wantHash string) (
+	lfmb *block.Block) {
+
+	var err error
+
+	for b.Round >= 0 {
+		if b, err = sc.GetBlockFromStore(b.PrevHash, b.Round-1); err != nil {
+			Logger.DPanic("looking for LFMB", zap.Error(err),
+				zap.Int64("round", b.Round),
+				zap.String("hash", b.Hash))
+		}
+		if b.Hash == wantHash {
+			return b
+		}
+	}
+
+	Logger.DPanic("looking for LFMB: block not found",
+		zap.String("hash", wantHash))
+	return
+}
+
+// LoadLatestBlocksFromStore loads LFB and LFMB from store and sets them
+// to corresponding fields of the sharder's Chain.
+func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) {
+
+	var round, err = sc.GetMostRecentRoundFromDB(ctx)
+
+	if err != nil {
+		Logger.DPanic("no round from DB given")
+		return
+	}
+
+	if round.Number == 0 {
+		Logger.Debug("genesis lfb and lfmb used")
+		return
+	}
+
+	var lfb = sc.loadLatestFinalizedBlockFromStore(round)
+
+	// genesis case
+
+	if lfb.LatestFinalizedMagicBlockHash == "" {
+		Logger.DPanic("no magic block hash", zap.Int64("lfb_round", lfb.Round),
+			zap.String("lfb_hash", lfb.Hash))
+		return
+	}
+
+	// TODO: more effective way instead of the iterating down (may be)
+
+	// non-genesis case
+	var lfmb = sc.iterateDownToMagicBlock(lfb, lfb.LatestFinalizedMagicBlockHash)
+
+	if lfmb.MagicBlock == nil {
+		Logger.DPanic("obtaining LFMB from DB: missing magic block",
+			zap.Int64("round", lfmb.Round),
+			zap.String("hash", lfmb.Hash))
+	}
+
+	sc.SetLatestFinalizedMagicBlock(lfmb)
+
+	Logger.Info("lfmb from store", zap.Int64("round", lfmb.Round),
+		zap.String("hash", lfmb.Hash))
+}
