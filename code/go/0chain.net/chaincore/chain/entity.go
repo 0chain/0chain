@@ -380,6 +380,15 @@ func (c *Chain) AddGenesisBlock(b *block.Block) {
 	return
 }
 
+// AddLoadedFinalizedBlock - adds the genesis block to the chain.
+func (c *Chain) AddLoadedFinalizedBlocks(lfb, lfmb *block.Block) {
+	c.SetLatestFinalizedMagicBlock(lfmb)
+	c.SetLatestFinalizedBlock(lfb)
+	// c.LatestDeterministicBlock left as genesis
+	c.blocks[lfb.Hash] = lfb
+	return
+}
+
 /*AddBlock - adds a block to the cache */
 func (c *Chain) AddBlock(b *block.Block) *block.Block {
 	c.blocksMutex.Lock()

@@ -147,7 +147,6 @@ func (sc *Chain) loadLatestFinalizedBlockFromStore(round *round.Round) (
 			zap.Int64("round", round.Number),
 			zap.String("hash", round.BlockHash))
 	}
-	sc.SetLatestFinalizedBlock(lfb)
 
 	Logger.Info("lfb from store", zap.Int64("round", lfb.Round),
 		zap.String("hash", lfb.Hash))
@@ -174,6 +173,26 @@ func (sc *Chain) iterateDownToMagicBlock(b *block.Block, wantHash string) (
 	Logger.DPanic("looking for LFMB: block not found",
 		zap.String("hash", wantHash))
 	return
+}
+
+func (sc *Chain) setupLatestBlocks(round *round.Round, lfb, lfmb *block.Block) {
+
+	// using ClientState of genesis block
+
+	sc.InitBlockState(lfb)
+	lfb.SetStateStatus(block.StateSuccessful)
+	lfb.SetBlockState(block.StateNotarized)
+	lfb.MagicBlock = lfmb.MagicBlock // related LFMB
+
+	sc.UpdateMagicBlock(lfmb.MagicBlock)
+
+	sc.SetRandomSeed(round, round.RandomSeed)
+	round.ComputeMinerRanks(lfmb.MagicBlock.Miners)
+	round.Block = lfb
+	round.AddNotarizedBlock(lfb)
+
+	// set LFB and LFMB of the Chain, add the block to internal Chain's map
+	sc.AddLoadedFinalizedBlocks(lfb, lfmb)
 }
 
 // LoadLatestBlocksFromStore loads LFB and LFMB from store and sets them
@@ -213,8 +232,9 @@ func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) {
 			zap.String("hash", lfmb.Hash))
 	}
 
-	sc.SetLatestFinalizedMagicBlock(lfmb)
-
 	Logger.Info("lfmb from store", zap.Int64("round", lfmb.Round),
 		zap.String("hash", lfmb.Hash))
+
+	// setup all related for a non-genesis case
+	sc.setupLatestBlocks(round, lfb, lfmb)
 }
