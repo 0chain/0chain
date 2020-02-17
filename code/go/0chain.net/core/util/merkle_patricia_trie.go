@@ -721,10 +721,10 @@ func (mpt *MerklePatriciaTrie) insertNode(oldNode Node, newNode Node) (Node, Key
 		return nil, nil, err
 	}
 	//If same node is inserted by client, don't add them into change collector
-	if oldNode == nil || bytes.Compare(oldNode.GetHashBytes(), ckey) != 0 {
+	if oldNode == nil {
 		mpt.ChangeCollector.AddChange(oldNode, newNode)
-	}
-	if oldNode != nil {
+	} else if bytes.Compare(oldNode.GetHashBytes(), ckey) != 0 { //delete previous node only if it isn`t the same as new one
+		mpt.ChangeCollector.AddChange(oldNode, newNode)
 		//NOTE: since leveldb is initiaized with propagate deletes as false, only newly created nodes will get deleted
 		mpt.db.DeleteNode(oldNode.GetHashBytes())
 	}

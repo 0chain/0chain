@@ -30,7 +30,7 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 		Logger.Error("handle verify block - got block proposal before starting round", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("miner", b.MinerID))
 		mr = mc.getRound(ctx, b.Round)
 		//TODO: Byzantine
-		mc.startRound(ctx, mr, b.RoundRandomSeed)
+		mc.startRound(ctx, mr, b.GetRoundRandomSeed())
 	} else {
 		if !mr.IsVRFComplete() {
 			Logger.Info("handle verify block - got block proposal before VRF is complete", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("miner", b.MinerID))
@@ -42,13 +42,13 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 				return
 			}
 			//TODO: Byzantine
-			mc.startRound(ctx, mr, b.RoundRandomSeed)
+			mc.startRound(ctx, mr, b.GetRoundRandomSeed())
 		}
 		vts := mr.GetVerificationTickets(b.Hash)
 		if len(vts) > 0 {
 			mc.MergeVerificationTickets(ctx, b, vts)
 			if b.IsBlockNotarized() {
-				if mr.GetRandomSeed() != b.RoundRandomSeed {
+				if mr.GetRandomSeed() != b.GetRoundRandomSeed() {
 					/* Since this is a notarized block, we are accepting it.
 					   TODO: Byzantine
 					*/
@@ -72,10 +72,10 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 		if mr.IsVerificationComplete() {
 			return
 		}
-		if mr.GetRandomSeed() != b.RoundRandomSeed {
+		if mr.GetRandomSeed() != b.GetRoundRandomSeed() {
 			Logger.Error("Got a block for verification with wrong randomseed", zap.Int64("roundNum", mr.GetRoundNumber()),
 				zap.Int("roundToc", mr.GetTimeoutCount()), zap.Int("blockToc", b.RoundTimeoutCount),
-				zap.Int64("roundrrs", mr.GetRandomSeed()), zap.Int64("blockrrs", b.RoundRandomSeed))
+				zap.Int64("roundrrs", mr.GetRandomSeed()), zap.Int64("blockrrs", b.GetRoundRandomSeed()))
 			return
 		}
 		if !mc.ValidGenerator(mr.Round, b) {
@@ -161,7 +161,7 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMess
 	mr := mc.GetMinerRound(mb.Round)
 	if mr == nil {
 		mr = mc.getRound(ctx, mb.Round)
-		mc.startRound(ctx, mr, mb.RoundRandomSeed)
+		mc.startRound(ctx, mr, mb.GetRoundRandomSeed())
 	} else {
 		nb := mr.GetNotarizedBlocks()
 		for _, blk := range nb {
@@ -170,7 +170,7 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMess
 			}
 		}
 		if !mr.IsVRFComplete() {
-			mc.startRound(ctx, mr, mb.RoundRandomSeed)
+			mc.startRound(ctx, mr, mb.GetRoundRandomSeed())
 		}
 	}
 	b := mc.AddRoundBlock(mr, mb)

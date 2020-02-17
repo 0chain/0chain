@@ -36,8 +36,8 @@ func (msc *MinerSmartContract) GetPoolStatsHandler(ctx context.Context, params u
 		return nil, err
 	}
 	pool, ok := mn.Active[params.Get("pool_id")]
-	if ok {
-		return pool.PoolStats, nil
+	if !ok {
+		return nil, common.NewError("failed to get pool", "pool doesn't exist in miner pools")
 	}
 	pool, ok = mn.Pending[params.Get("pool_id")]
 	if ok {

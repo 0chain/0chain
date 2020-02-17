@@ -216,7 +216,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 			Logger.Error("generate block - round mismatch", zap.Any("round", roundNumber), zap.Any("current_round", mc.GetCurrentRound()))
 			return nil, ErrRoundMismatch
 		}
-		txnCount := transaction.TransactionCount
+		txnCount := transaction.GetTransactionCount()
 		b.SetStateDB(pb)
 		generationTries++
 		err := mc.GenerateBlock(ctx, b, mc, makeBlock)
@@ -230,13 +230,13 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 						time.Sleep(time.Duration(delay) * time.Millisecond)
 						if startLogging.IsZero() || time.Now().Sub(startLogging) > time.Second {
 							startLogging = time.Now()
-							Logger.Info("generate block", zap.Any("round", roundNumber), zap.Any("delay", delay), zap.Any("txn_count", txnCount), zap.Any("t.txn_count", transaction.TransactionCount), zap.Any("error", cerr))
+							Logger.Info("generate block", zap.Any("round", roundNumber), zap.Any("delay", delay), zap.Any("txn_count", txnCount), zap.Any("t.txn_count", transaction.GetTransactionCount()), zap.Any("error", cerr))
 						}
 						if mc.GetCurrentRound() > b.Round {
 							Logger.Error("generate block - round mismatch", zap.Any("round", roundNumber), zap.Any("current_round", mc.GetCurrentRound()))
 							return nil, ErrRoundMismatch
 						}
-						if txnCount != transaction.TransactionCount || time.Now().Sub(start) > generationTimeout {
+						if txnCount != transaction.GetTransactionCount() || time.Now().Sub(start) > generationTimeout {
 							makeBlock = true
 							break
 						}
@@ -252,13 +252,13 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 			}
 			if startLogging.IsZero() || time.Now().Sub(startLogging) > time.Second {
 				startLogging = time.Now()
-				Logger.Info("generate block", zap.Any("round", roundNumber), zap.Any("txn_count", txnCount), zap.Any("t.txn_count", transaction.TransactionCount), zap.Any("error", err))
+				Logger.Info("generate block", zap.Any("round", roundNumber), zap.Any("txn_count", txnCount), zap.Any("t.txn_count", transaction.GetTransactionCount()), zap.Any("error", err))
 			}
 			return nil, err
 		}
 
-		if r.GetRandomSeed() != b.RoundRandomSeed {
-			Logger.Error("round random seed mismatch", zap.Int64("round", b.Round), zap.Int64("round_rrs", r.GetRandomSeed()), zap.Int64("blk_rrs", b.RoundRandomSeed))
+		if r.GetRandomSeed() != b.GetRoundRandomSeed() {
+			Logger.Error("round random seed mismatch", zap.Int64("round", b.Round), zap.Int64("round_rrs", r.GetRandomSeed()), zap.Int64("blk_rrs", b.GetRoundRandomSeed()))
 			return nil, ErrRRSMismatch
 		}
 		mc.AddRoundBlock(r, b)
@@ -528,7 +528,7 @@ func (mc *Chain) checkBlockNotarization(ctx context.Context, r *Round, b *block.
 	if !mc.AddNotarizedBlock(ctx, r, b) {
 		return true
 	}
-	mc.SetRandomSeed(r, b.RoundRandomSeed)
+	mc.SetRandomSeed(r, b.GetRoundRandomSeed())
 	go mc.SendNotarization(ctx, b)
 	Logger.Debug("check block notarization - block notarized", zap.Int64("round", b.Round), zap.String("block", b.Hash))
 	mc.StartNextRound(common.GetRootContext(), r)
@@ -753,7 +753,7 @@ func StartProtocol() {
 		sr := round.NewRound(lfb.Round)
 		mr = mc.CreateRound(sr)
 		mr = mc.AddRound(mr).(*Round)
-		mc.SetRandomSeed(sr, lfb.RoundRandomSeed)
+		mc.SetRandomSeed(sr, lfb.GetRoundRandomSeed())
 		mc.AddBlock(lfb)
 		mc.InitBlockState(lfb)
 		mc.SetLatestFinalizedBlock(ctx, lfb)

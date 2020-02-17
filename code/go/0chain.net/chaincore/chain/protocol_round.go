@@ -122,7 +122,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 		c.MultiNotarizedBlocksCount++
 	} else if nbCount > c.NumGenerators {
 		for _, blk := range notarizedBlocks {
-			Logger.Info("Too many Notarized Blks", zap.Int64("round", roundNumber), zap.String("hash", blk.Hash), zap.Int64("RRS", blk.RoundRandomSeed), zap.Int("blk_toc", blk.RoundTimeoutCount))
+			Logger.Info("Too many Notarized Blks", zap.Int64("round", roundNumber), zap.String("hash", blk.Hash), zap.Int64("RRS", blk.GetRoundRandomSeed()), zap.Int("blk_toc", blk.RoundTimeoutCount))
 		}
 	}
 	c.NotariedBlocksCounts[nbCount]++

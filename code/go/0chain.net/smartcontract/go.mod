@@ -14,3 +14,5 @@ require (
 	github.com/spf13/viper v1.3.2
 	go.uber.org/zap v1.9.1
 )
+
+go 1.13
