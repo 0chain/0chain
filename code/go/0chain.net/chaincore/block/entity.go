@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"sync"
+	"sync/atomic"
 
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
@@ -359,7 +360,7 @@ func (b *Block) getHashData() string {
 	merkleRoot := mt.GetRoot()
 	rmt := b.GetReceiptsMerkleTree()
 	rMerkleRoot := rmt.GetRoot()
-	hashData := b.MinerID + ":" + b.PrevHash + ":" + common.TimeToString(b.CreationDate) + ":" + strconv.FormatInt(b.Round, 10) + ":" + strconv.FormatInt(b.RoundRandomSeed, 10) + ":" + merkleRoot + ":" + rMerkleRoot
+	hashData := b.MinerID + ":" + b.PrevHash + ":" + common.TimeToString(b.CreationDate) + ":" + strconv.FormatInt(b.Round, 10) + ":" + strconv.FormatInt(b.GetRoundRandomSeed(), 10) + ":" + merkleRoot + ":" + rMerkleRoot
 	return hashData
 }
 
@@ -396,7 +397,7 @@ func (b *Block) GetSummary() *BlockSummary {
 	bs.Hash = b.Hash
 	bs.MinerID = b.MinerID
 	bs.Round = b.Round
-	bs.RoundRandomSeed = b.RoundRandomSeed
+	bs.RoundRandomSeed = b.GetRoundRandomSeed()
 	bs.CreationDate = b.CreationDate
 	bs.MerkleTreeRoot = b.GetMerkleTree().GetRoot()
 	bs.ClientStateHash = b.ClientStateHash
@@ -595,9 +596,19 @@ func (b *Block) PrevBlockVerificationTicketsSize() int {
 	return len(b.PrevBlockVerificationTickets)
 }
 
-//SetPrevBlockVerificationTickets - set previous block verification tickets
+// SetPrevBlockVerificationTickets - set previous block verification tickets
 func (b *Block) SetPrevBlockVerificationTickets(bvt []*VerificationTicket) {
 	b.ticketsMutex.Lock()
 	defer b.ticketsMutex.Unlock()
 	b.PrevBlockVerificationTickets = bvt
+}
+
+// SetRoundRandomSeed - set the random seed
+func (u *UnverifiedBlockBody) SetRoundRandomSeed(seed int64) {
+	atomic.StoreInt64(&u.RoundRandomSeed, seed)
+}
+
+// GetRoundRandomSeed - returns the random seed of the round
+func (u *UnverifiedBlockBody) GetRoundRandomSeed() int64 {
+	return atomic.LoadInt64(&u.RoundRandomSeed)
 }

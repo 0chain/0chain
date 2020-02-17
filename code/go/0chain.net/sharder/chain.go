@@ -186,7 +186,7 @@ func (sc *Chain) setupLatestBlocks(round *round.Round, lfb, lfmb *block.Block) {
 
 	sc.UpdateMagicBlock(lfmb.MagicBlock)
 
-	sc.SetRandomSeed(round, round.RandomSeed)
+	sc.SetRandomSeed(round, round.GetRandomSeed())
 	round.ComputeMinerRanks(lfmb.MagicBlock.Miners)
 	round.Block = lfb
 	round.AddNotarizedBlock(lfb)

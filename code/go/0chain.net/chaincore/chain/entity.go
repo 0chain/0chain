@@ -412,9 +412,9 @@ func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block
 	}
 
 	//Get round data insync as it is the notarized block
-	if r.GetRandomSeed() != b.RoundRandomSeed || r.GetTimeoutCount() != b.RoundTimeoutCount {
-		Logger.Info("AddNotarizedBlockToRound round and block random seed different", zap.Int64("Round", r.GetRoundNumber()), zap.Int64("Round_rrs", r.GetRandomSeed()), zap.Int64("Block_rrs", b.RoundRandomSeed))
-		r.SetRandomSeedForNotarizedBlock(b.RoundRandomSeed)
+	if r.GetRandomSeed() != b.GetRoundRandomSeed() || r.GetTimeoutCount() != b.RoundTimeoutCount {
+		Logger.Info("AddNotarizedBlockToRound round and block random seed different", zap.Int64("Round", r.GetRoundNumber()), zap.Int64("Round_rrs", r.GetRandomSeed()), zap.Int64("Block_rrs", b.GetRoundRandomSeed()))
+		r.SetRandomSeedForNotarizedBlock(b.GetRoundRandomSeed())
 		r.SetTimeoutCount(b.RoundTimeoutCount)
 		r.ComputeMinerRanks(c.GetMiners(r))
 	}
@@ -434,7 +434,7 @@ func (c *Chain) AddRoundBlock(r round.RoundI, b *block.Block) *block.Block {
 	if b2 != b {
 		return b2
 	}
-	b.RoundRandomSeed = r.GetRandomSeed()
+	b.SetRoundRandomSeed(r.GetRandomSeed())
 	b.RoundTimeoutCount = r.GetTimeoutCount()
 	c.SetRoundRank(r, b)
 	if b.PrevBlock != nil {

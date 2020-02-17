@@ -155,7 +155,7 @@ func (mc *Chain) SetLatestFinalizedBlock(ctx context.Context, b *block.Block) {
 	var r = round.NewRound(b.Round)
 	mr := mc.CreateRound(r)
 	mr = mc.AddRound(mr).(*Round)
-	mc.SetRandomSeed(mr, b.RoundRandomSeed)
+	mc.SetRandomSeed(mr, b.GetRoundRandomSeed())
 	mc.AddRoundBlock(mr, b)
 	mc.AddNotarizedBlock(ctx, mr, b)
 	mc.Chain.SetLatestFinalizedBlock(b)
@@ -171,7 +171,7 @@ func (mc *Chain) deleteTxns(txns []datastore.Entity) error {
 /*SetPreviousBlock - set the previous block */
 func (mc *Chain) SetPreviousBlock(ctx context.Context, r round.RoundI, b *block.Block, pb *block.Block) {
 	b.SetPreviousBlock(pb)
-	b.RoundRandomSeed = r.GetRandomSeed()
+	b.SetRoundRandomSeed(r.GetRandomSeed())
 	mc.SetRoundRank(r, b)
 	b.ComputeChainWeight()
 }

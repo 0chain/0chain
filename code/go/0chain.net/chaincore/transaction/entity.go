@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"0chain.net/chaincore/client"
@@ -23,7 +24,7 @@ import (
 
 var TXN_TIME_TOLERANCE int64
 
-var TransactionCount = 0
+var transactionCount uint64 = 0
 var redis_txns string
 
 func init() {
@@ -328,4 +329,11 @@ func (t *Transaction) VerifyOutputHash(ctx context.Context) error {
 
 func SetTxnTimeout(timeout int64) {
 	TXN_TIME_TOLERANCE = timeout
+}
+
+func GetTransactionCount() uint64 {
+	return atomic.LoadUint64(&transactionCount)
+}
+func IncTransactionCount() uint64 {
+	return atomic.AddUint64(&transactionCount, 1)
 }

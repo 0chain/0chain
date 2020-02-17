@@ -94,7 +94,7 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 	if er == nil {
 		var r = round.NewRound(b.Round)
 		er, _ = sc.AddRound(r).(*round.Round)
-		sc.SetRandomSeed(er, b.RoundRandomSeed)
+		sc.SetRandomSeed(er, b.GetRoundRandomSeed())
 	}
 	if err := sc.VerifyNotarization(ctx, b.Hash, b.GetVerificationTickets(), er); err != nil {
 		Logger.Error("notarization verification failed", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
