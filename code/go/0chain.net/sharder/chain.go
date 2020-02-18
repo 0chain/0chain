@@ -136,14 +136,14 @@ func (sc *Chain) GetSharderRound(roundNumber int64) *round.Round {
 	return sr
 }
 
-func (sc *Chain) setupLatestBlocks(round *round.Round, lfb, lfmb *block.Block) {
+func (sc *Chain) setupLatestBlocks(ctx context.Context, round *round.Round,
+	lfb, lfmb *block.Block) {
 
 	// using ClientState of genesis block
 
 	sc.InitBlockState(lfb)
 	lfb.SetStateStatus(block.StateSuccessful)
 	lfb.SetBlockState(block.StateNotarized)
-	lfb.MagicBlock = lfmb.MagicBlock // related LFMB
 
 	sc.UpdateMagicBlock(lfmb.MagicBlock)
 
@@ -178,7 +178,7 @@ func (sc *Chain) iterateRoundsLookingForLFB(ctx context.Context) (
 	iter.SeekToLast() // from last
 
 	if !iter.Valid() {
-		return // round 0 (genesis, initial)
+		return nil, r, nil // round 0 (genesis, initial)
 	}
 
 	// loop
@@ -202,6 +202,43 @@ func (sc *Chain) iterateRoundsLookingForLFB(ctx context.Context) (
 	// not found
 
 	return nil, nil, common.NewError("load_lfb", "lfb not found")
+}
+
+func (sc *Chain) loadLatestFinalizedMagicBlockFromStore(ctx context.Context,
+	lfb *block.Block) (lfmb *block.Block, err error) {
+
+	if lfb.LatestFinalizedMagicBlockHash == lfb.Hash {
+
+		if lfb.MagicBlock == nil {
+			// fatal
+			return nil, common.NewError("load_lfb", "missing MagicBlock field")
+		}
+
+		return lfb, nil // the same
+	}
+
+	// load from store
+
+	Logger.Debug("load lfmb from store",
+		zap.String("block_with_magic_block_hash",
+			lfb.LatestFinalizedMagicBlockHash))
+
+	lfmb, err = blockstore.GetStore().Read(lfb.LatestFinalizedMagicBlockHash)
+	if err != nil {
+		// fatality, can't find related LFMB
+		return nil, common.NewError("load_lfb",
+			"related magic block not found: "+err.Error())
+	}
+
+	Logger.Debug("load lfmb from store", zap.Int64("round", lfmb.Round),
+		zap.String("hash", lfmb.Hash))
+
+	if lfmb.MagicBlock == nil {
+		// fatal
+		return nil, common.NewError("load_lfb", "missing MagicBlock field")
+	}
+
+	return
 }
 
 // LoadLatestBlocksFromStore loads LFB and LFMB from store and sets them
@@ -230,25 +267,13 @@ func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
 			"empty LatestFinalizedMagicBlockHash field") // fatal
 	}
 
-	Logger.Debug("load lfmb from store",
-		zap.String("block_with_magic_block_hash",
-			lfb.LatestFinalizedMagicBlockHash))
-
-	lfmb, err = blockstore.GetStore().Read(lfb.LatestFinalizedMagicBlockHash)
+	// related magic block
+	lfmb, err = sc.loadLatestFinalizedMagicBlockFromStore(ctx, lfb)
 	if err != nil {
-		// fatality, can't find related LFMB
-		return common.NewError("load_lfb",
-			"related magic block not found: "+err.Error())
-	}
-
-	Logger.Debug("load lfmb from store", zap.Int64("round", lfmb.Round),
-		zap.String("hash", lfmb.Hash))
-
-	if lfmb.MagicBlock == nil {
-		return common.NewError("load_lfb", "missing MagicBlock field") // fatal
+		return
 	}
 
 	// setup all related for a non-genesis case
-	sc.setupLatestBlocks(round, lfb, lfmb)
+	sc.setupLatestBlocks(ctx, round, lfb, lfmb)
 	return // ok
 }

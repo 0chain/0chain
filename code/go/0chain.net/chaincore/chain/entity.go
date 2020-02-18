@@ -132,6 +132,11 @@ type Chain struct {
 
 	configInfoStore datastore.Store
 	RoundF          round.RoundFactory
+
+	// the round from which a sharder starts;
+	// the startRound don't allow to receive LFB
+	// before the round
+	StartRound int64
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
