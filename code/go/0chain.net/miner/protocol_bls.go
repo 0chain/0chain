@@ -71,7 +71,7 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) err
 		for k := range mb.Miners.CopyNodesMap() {
 			if savedShare, ok := dkgSummary.SecretShares[ComputeBlsID(k)]; ok {
 				mc.currentDKG.AddSecretShare(bls.ComputeIDdkg(k), savedShare)
-			} else if v, ok := mb.ShareOrSigns.Shares[k]; ok {
+			} else if v, ok := mb.GetShareOrSigns().Get(k); ok {
 				if share, ok := v.ShareOrSigns[node.Self.Underlying().GetKey()]; ok && share.Share != "" {
 					mc.currentDKG.AddSecretShare(bls.ComputeIDdkg(k), share.Share)
 				}

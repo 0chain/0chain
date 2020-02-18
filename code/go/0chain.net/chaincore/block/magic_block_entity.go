@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"sort"
 	"strconv"
+	"sync"
 
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -17,6 +18,7 @@ import (
 
 type MagicBlock struct {
 	datastore.HashIDField
+	mutex                  sync.RWMutex
 	PreviousMagicBlockHash datastore.Key       `json:"previous_hash"`
 	MagicBlockNumber       int64               `json:"magic_block_number"`
 	StartingRound          int64               `json:"starting_round"`
@@ -31,6 +33,18 @@ type MagicBlock struct {
 
 func NewMagicBlock() *MagicBlock {
 	return &MagicBlock{Mpks: NewMpks(), ShareOrSigns: NewGroupSharesOrSigns()}
+}
+
+func (mb *MagicBlock) GetShareOrSigns() *GroupSharesOrSigns {
+	mb.mutex.RLock()
+	defer mb.mutex.RUnlock()
+	return mb.ShareOrSigns
+}
+
+func (mb *MagicBlock) SetShareOrSigns(gsos *GroupSharesOrSigns) {
+	mb.mutex.Lock()
+	defer mb.mutex.Unlock()
+	mb.ShareOrSigns = gsos
 }
 
 func (mb *MagicBlock) Encode() []byte {
@@ -64,7 +78,7 @@ func (mb *MagicBlock) GetHashBytes() []byte {
 		data = append(data, []byte(v)...)
 	}
 	// share info
-	shareBytes, _ := hex.DecodeString(mb.ShareOrSigns.GetHash())
+	shareBytes, _ := hex.DecodeString(mb.GetShareOrSigns().GetHash())
 	data = append(data, shareBytes...)
 	// mpk info
 	for k := range mb.Mpks.Mpks {
@@ -103,11 +117,29 @@ func (mb *MagicBlock) VerifyMinersSignatures(b *Block) bool {
 }
 
 type GroupSharesOrSigns struct {
+	mutex  sync.RWMutex
 	Shares map[string]*ShareOrSigns `json:"shares"`
 }
 
 func NewGroupSharesOrSigns() *GroupSharesOrSigns {
 	return &GroupSharesOrSigns{Shares: make(map[string]*ShareOrSigns)}
+}
+
+func (gsos *GroupSharesOrSigns) Get(id string) (*ShareOrSigns, bool) {
+	gsos.mutex.RLock()
+	defer gsos.mutex.RUnlock()
+	share, ok := gsos.Shares[id]
+	return share, ok
+}
+
+func (gsos *GroupSharesOrSigns) GetShares() map[string]*ShareOrSigns {
+	gsos.mutex.RLock()
+	defer gsos.mutex.RUnlock()
+	result := make(map[string]*ShareOrSigns, len(gsos.Shares))
+	for k, v := range gsos.Shares {
+		result[k] = v
+	}
+	return result
 }
 
 func (gsos *GroupSharesOrSigns) Encode() []byte {
@@ -195,6 +227,22 @@ func (sos *ShareOrSigns) Encode() []byte {
 
 func (sos *ShareOrSigns) Decode(input []byte) error {
 	return json.Unmarshal(input, sos)
+}
+
+func (sos *ShareOrSigns) Clone() *ShareOrSigns {
+	clone := &ShareOrSigns{
+		ID:           sos.ID,
+		ShareOrSigns: make(map[string]*bls.DKGKeyShare, len(sos.ShareOrSigns)),
+	}
+	for key, dkg := range sos.ShareOrSigns {
+		clone.ShareOrSigns[key] = &bls.DKGKeyShare{
+			IDField: dkg.IDField,
+			Message: dkg.Message,
+			Share:   dkg.Share,
+			Sign:    dkg.Sign,
+		}
+	}
+	return clone
 }
 
 type Mpks struct {

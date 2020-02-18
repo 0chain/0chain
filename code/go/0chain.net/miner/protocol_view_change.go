@@ -487,7 +487,7 @@ func (mc *Chain) PublishShareOrSigns() (*httpclientutil.Transaction, error) {
 	}
 	scData := &httpclientutil.SmartContractTxnData{}
 	scData.Name = scNamePublishShares
-	scData.InputArgs = shareOrSigns
+	scData.InputArgs = shareOrSigns.Clone()
 	txn.ToClientID = minersc.ADDRESS
 
 	var minerUrls []string
@@ -516,7 +516,7 @@ func (mc *Chain) Wait() (*httpclientutil.Transaction, error) {
 	}
 
 	mpks := mc.GetMpks()
-	for key, share := range magicBlock.ShareOrSigns.Shares {
+	for key, share := range magicBlock.GetShareOrSigns().GetShares() {
 		if key == node.Self.Underlying().GetKey() {
 			continue
 		}

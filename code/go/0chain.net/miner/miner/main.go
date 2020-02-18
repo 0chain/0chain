@@ -172,7 +172,7 @@ func main() {
 			SecretShares: make(map[string]string),
 		}
 		dkgShare.ID = strconv.FormatInt(mc.MagicBlockNumber, 10)
-		for k, v := range mc.ShareOrSigns.Shares {
+		for k, v := range mc.GetShareOrSigns().GetShares() {
 			dkgShare.SecretShares[miner.ComputeBlsID(k)] = v.ShareOrSigns[node.Self.Underlying().GetKey()].Share
 		}
 		err = miner.StoreDKGSummary(ctx, dkgShare)

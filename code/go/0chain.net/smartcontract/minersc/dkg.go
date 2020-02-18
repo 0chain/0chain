@@ -349,7 +349,7 @@ func (msc *MinerSmartContract) CreateMagicBlock(balances c_state.StateContextI, 
 	magicBlock := block.NewMagicBlock()
 	magicBlock.Miners = node.NewPool(node.NodeTypeMiner)
 	magicBlock.Sharders = node.NewPool(node.NodeTypeSharder)
-	magicBlock.ShareOrSigns = gsos
+	magicBlock.SetShareOrSigns(gsos)
 	magicBlock.Mpks = mpks
 	magicBlock.T = dkgMinersList.T
 	magicBlock.K = dkgMinersList.K
