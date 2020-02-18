@@ -143,7 +143,6 @@ func (sc *Chain) setupLatestBlocks(round *round.Round, lfb, lfmb *block.Block) {
 	sc.InitBlockState(lfb)
 	lfb.SetStateStatus(block.StateSuccessful)
 	lfb.SetBlockState(block.StateNotarized)
-	lfb.MagicBlock = lfmb.MagicBlock // related LFMB
 
 	sc.UpdateMagicBlock(lfmb.MagicBlock)
 

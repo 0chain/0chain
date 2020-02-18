@@ -56,7 +56,7 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 
 //RoundWorker - a worker that monitors the round progress
 func (mc *Chain) RoundWorker(ctx context.Context) {
-	var timer = time.NewTimer(time.Duration(4 * time.Second))
+	var timer = time.NewTimer(4 * time.Second)
 	var cround = mc.GetCurrentRound()
 	var protocol Protocol = mc
 
