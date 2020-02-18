@@ -59,8 +59,8 @@ func (c *Chain) FinalizeRoundWorker(ctx context.Context, bsh BlockStateHandler) 
 
 //FinalizedBlockWorker - a worker that processes finalized blocks
 func (c *Chain) FinalizedBlockWorker(ctx context.Context, bsh BlockStateHandler) {
-	lfb := c.GetLatestFinalizedBlock()
 	for fb := range c.finalizedBlocksChannel {
+		lfb := c.GetLatestFinalizedBlock()
 		if fb.Round < lfb.Round-5 {
 			Logger.Error("slow finalized block processing", zap.Int64("lfb", lfb.Round), zap.Int64("fb", fb.Round))
 		}
@@ -136,7 +136,7 @@ func (c *Chain) VerifyChainHistory(ctx context.Context, latestMagicBlock *block.
 			Logger.DPanic(fmt.Sprintf("failed to update magic block: %v", err.Error()))
 		}
 		c.SetLatestFinalizedMagicBlock(magicBlock)
-		currentMagicBlock = c.GetLatestFinalizedMagicBlock()
+		currentMagicBlock = magicBlock
 	}
 	return nil
 }

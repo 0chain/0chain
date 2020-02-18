@@ -110,7 +110,10 @@ func main() {
 		Logger.Panic("node not configured as sharder")
 	}
 
-	sc.LoadLatestBlocksFromStore(common.GetRootContext())
+	if err = sc.LoadLatestBlocksFromStore(common.GetRootContext()); err != nil {
+		Logger.DPanic("load latest blocks from store", zap.Error(err))
+		return
+	}
 
 	mode := "main net"
 	if config.Development() {
