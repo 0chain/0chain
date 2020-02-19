@@ -150,10 +150,19 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, round *round.Round,
 	sc.SetRandomSeed(round, round.GetRandomSeed())
 	round.ComputeMinerRanks(lfmb.MagicBlock.Miners)
 	round.Block = lfb
-	round.AddNotarizedBlock(lfb)
 
 	// set LFB and LFMB of the Chain, add the block to internal Chain's map
 	sc.AddLoadedFinalizedBlocks(lfb, lfmb)
+
+	// check is it notarized
+	var err = sc.VerifyNotarization(ctx, lfb.Hash, lfb.GetVerificationTickets(),
+		round)
+	if err != nil {
+		return // do nothing, if not notarized
+	}
+
+	// add as notarized
+	round.AddNotarizedBlock(lfb)
 }
 
 // iterate over rounds from latest to zero looking for LFB and ignoring
