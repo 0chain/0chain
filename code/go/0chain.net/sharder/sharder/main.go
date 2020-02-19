@@ -116,6 +116,8 @@ func main() {
 		return
 	}
 
+	startBlocksInfoLogs(sc)
+
 	mode := "main net"
 	if config.Development() {
 		mode = "development"
@@ -166,6 +168,15 @@ func main() {
 	Logger.Info("Ready to listen to the requests")
 	chain.StartTime = time.Now().UTC()
 	log.Fatal(server.ListenAndServe())
+}
+
+func startBlocksInfoLogs(sc *sharder.Chain) {
+	lfb, lfmb := sc.GetLatestFinalizedBlock(), sc.GetLatestFinalizedMagicBlock()
+	Logger.Info("start from LFB ", zap.Int64("round", lfb.Round),
+		zap.String("hash", lfb.Hash))
+	Logger.Info("start from LFMB",
+		zap.Int64("round", lfmb.MagicBlock.StartingRound),
+		zap.String("hash", lfmb.Hash)) // hash of block with the magic block
 }
 
 func initServer() {
@@ -266,8 +277,14 @@ func getCurrentMagicBlock(sc *sharder.Chain) {
 	}
 	magicBlock := mbs[0]
 	Logger.Info("get current magic block", zap.Any("magic_block", magicBlock))
-	sc.VerifyChainHistory(common.GetRootContext(), magicBlock)
-	err := sc.UpdateMagicBlock(magicBlock.MagicBlock)
+
+	var err = sc.VerifyChainHistory(common.GetRootContext(), magicBlock,
+		sc.SaveMagicBlockHandler)
+	if err != nil {
+		Logger.DPanic(fmt.Sprintf("failed to verify chain history: %v", err.Error()))
+	}
+
+	err = sc.UpdateMagicBlock(magicBlock.MagicBlock)
 	if err != nil {
 		Logger.DPanic(fmt.Sprintf("failed to update magic block: %v", err.Error()))
 	}

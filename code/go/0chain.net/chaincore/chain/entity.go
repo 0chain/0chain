@@ -942,18 +942,20 @@ func (c *Chain) GetPruneStats() *util.PruneStats {
 }
 
 //InitBlockState - initialize the block's state with the database state
-func (c *Chain) InitBlockState(b *block.Block) {
-	if err := b.InitStateDB(c.stateDB); err != nil {
+func (c *Chain) InitBlockState(b *block.Block) (err error) {
+	if err = b.InitStateDB(c.stateDB); err != nil {
 		Logger.Error("init block state", zap.Int64("round", b.Round), zap.String("state", util.ToHex(b.ClientStateHash)), zap.Error(err))
 	} else {
 		Logger.Info("init block state successful", zap.Int64("round", b.Round), zap.String("state", util.ToHex(b.ClientStateHash)))
 	}
+	return
 }
 
 //SetLatestFinalizedBlock - set the latest finalized block
 func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
 	c.lfbMutex.Lock()
 	defer c.lfbMutex.Unlock()
+
 	c.LatestFinalizedBlock = b
 	if b != nil {
 		c.lfbSummary = b.GetSummary()
@@ -978,28 +980,60 @@ func (c *Chain) ActiveInChain() bool {
 	return c.IsActiveNode(node.Self.Underlying().GetKey(), c.GetCurrentRound()) && c.GetLatestFinalizedBlock().ClientState != nil
 }
 
-func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
+// SetInitialPreviousMagicBlock used to set previous magic block loaded from
+// store on application start. After the call th UpdateMagicBlock should be
+// called with latest finalized magic block (on startup, actually).
+func (c *Chain) SetInitialPreviousMagicBlock(plfmb *block.MagicBlock) {
+
 	c.mbMutex.Lock()
 	defer c.mbMutex.Unlock()
+
+	c.PreviousMagicBlock = nil // reset it to nil for now
+	c.MagicBlock = plfmb
+	c.SetupNodes()
+	c.Sharders.ComputeProperties()
+	c.Miners.ComputeProperties()
+	c.InitializeMinerPool()
+}
+
+func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
+
+	c.mbMutex.Lock()
+	defer c.mbMutex.Unlock()
+
 	if newMagicBlock.Miners == nil || newMagicBlock.Miners.MapSize() == 0 {
 		return common.NewError("failed to update magic block", "there are no miners in the magic block")
 	}
-	if newMagicBlock.IsActiveNode(node.Self.Underlying().GetKey(), c.GetCurrentRound()) && c.GetLatestFinalizedMagicBlock() != nil && c.GetLatestFinalizedMagicBlock().MagicBlock.MagicBlockNumber == newMagicBlock.MagicBlockNumber-1 && c.GetLatestFinalizedMagicBlock().MagicBlock.Hash != newMagicBlock.PreviousMagicBlockHash {
+
+	var (
+		self = node.Self.Underlying().GetKey()
+		lfmb = c.GetLatestFinalizedMagicBlock()
+	)
+
+	if newMagicBlock.IsActiveNode(self, c.GetCurrentRound()) && lfmb != nil &&
+		lfmb.MagicBlock.MagicBlockNumber == newMagicBlock.MagicBlockNumber-1 &&
+		lfmb.MagicBlock.Hash != newMagicBlock.PreviousMagicBlockHash {
+
 		Logger.Error("failed to update magic block", zap.Any("finalized_magic_block_hash", c.GetLatestFinalizedMagicBlock().MagicBlock.Hash), zap.Any("new_magic_block_previous_hash", newMagicBlock.PreviousMagicBlockHash))
 		return common.NewError("failed to update magic block", fmt.Sprintf("magic block's previous magic block hash (%v) doesn't equal latest finalized magic block id (%v)", newMagicBlock.PreviousMagicBlockHash, c.GetLatestFinalizedMagicBlock().MagicBlock.Hash))
 	}
+
 	Logger.Info("update magic block", zap.Any("old block", c.MagicBlock), zap.Any("new block", newMagicBlock))
+
 	if c.MagicBlock != nil && c.MagicBlock.Hash == newMagicBlock.PreviousMagicBlockHash {
 		Logger.Info("update magic block -- hashes don't match ", zap.Any("latest finalized magic block previous magic block hash", c.MagicBlock.Hash), zap.Any("new magic block previous hash", newMagicBlock.PreviousMagicBlockHash))
 		c.PreviousMagicBlock = c.MagicBlock
 	}
+
 	c.MagicBlock = newMagicBlock
 	c.SetupNodes()
 	c.Sharders.ComputeProperties()
 	c.Miners.ComputeProperties()
 	c.InitializeMinerPool()
 	c.GetNodesPreviousInfo()
+
 	UpdateNodes <- true
+
 	return nil
 }
 

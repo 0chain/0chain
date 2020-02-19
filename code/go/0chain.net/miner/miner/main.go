@@ -283,7 +283,7 @@ func getCurrentMagicBlock(mc *miner.Chain) {
 		})
 	}
 	magicBlock := mbs[0]
-	mc.VerifyChainHistory(common.GetRootContext(), magicBlock)
+	mc.VerifyChainHistory(common.GetRootContext(), magicBlock, nil)
 	err := mc.UpdateMagicBlock(magicBlock.MagicBlock)
 	if err != nil {
 		Logger.DPanic(fmt.Sprintf("failed to update magic block: %v", err.Error()))

@@ -225,7 +225,10 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 		//ignore VRF shares coming after threshold is reached to avoid locking issues.
 		//Todo: Remove this logging
 		mr.AddAdditionalVRFShare(vrfs)
-		Logger.Info("Ignoring VRFShare. Already at threshold", zap.Int64("Round", mr.GetRoundNumber()), zap.Int("VRF_Shares", len(mr.GetVRFShares())))
+		Logger.Info("Ignoring VRFShare. Already at threshold",
+			zap.Int64("Round", mr.GetRoundNumber()),
+			zap.Int("VRF_Shares", len(mr.GetVRFShares())),
+			zap.Int("bls_threshold", mc.GetBlsThreshold()))
 		return false
 	}
 	if mr.AddVRFShare(vrfs, mc.GetBlsThreshold()) {
