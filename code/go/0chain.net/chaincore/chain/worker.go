@@ -64,12 +64,6 @@ func (c *Chain) FinalizedBlockWorker(ctx context.Context, bsh BlockStateHandler)
 		if fb.Round < lfb.Round-5 {
 			Logger.Error("slow finalized block processing", zap.Int64("lfb", lfb.Round), zap.Int64("fb", fb.Round))
 		}
-		if fb.Round <= c.StartRound {
-			Logger.Info("got FB before starting round: skip",
-				zap.Int64("start_round", c.StartRound),
-				zap.Int64("fb", fb.Round))
-			continue
-		}
 		c.finalizeBlock(ctx, fb, bsh)
 	}
 }

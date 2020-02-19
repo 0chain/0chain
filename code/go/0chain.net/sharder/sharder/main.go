@@ -114,8 +114,6 @@ func main() {
 	if err = sc.LoadLatestBlocksFromStore(common.GetRootContext()); err != nil {
 		Logger.DPanic("load latest blocks from store", zap.Error(err))
 	}
-	// set start round after the loading
-	sc.StartRound = sc.GetLatestFinalizedBlock().Round
 
 	Logger.Info("start position", zap.Int64("round", sc.StartRound))
 
