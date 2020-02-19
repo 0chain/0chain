@@ -115,8 +115,6 @@ func main() {
 		Logger.DPanic("load latest blocks from store", zap.Error(err))
 	}
 
-	Logger.Info("start position", zap.Int64("round", sc.StartRound))
-
 	mode := "main net"
 	if config.Development() {
 		mode = "development"
