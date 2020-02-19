@@ -2,6 +2,7 @@ package sharder
 
 import (
 	"context"
+	"strconv"
 	"time"
 
 	"0chain.net/core/cache"
@@ -137,15 +138,20 @@ func (sc *Chain) GetSharderRound(roundNumber int64) *round.Round {
 }
 
 func (sc *Chain) setupLatestBlocks(ctx context.Context, round *round.Round,
-	lfb, lfmb *block.Block) {
+	lfb, lfmb *block.Block) (err error) {
 
 	// using ClientState of genesis block
 
-	sc.InitBlockState(lfb)
+	if err = sc.InitBlockState(lfb); err != nil {
+		return common.NewError("load_lfb",
+			"can't init block state: "+err.Error()) // fatal
+	}
 	lfb.SetStateStatus(block.StateSuccessful)
-	lfb.SetBlockState(block.StateNotarized)
 
-	sc.UpdateMagicBlock(lfmb.MagicBlock)
+	if err = sc.UpdateMagicBlock(lfmb.MagicBlock); err != nil {
+		return common.NewError("load_lfb",
+			"can't update magic block: "+err.Error()) // fatal
+	}
 
 	sc.SetRandomSeed(round, round.GetRandomSeed())
 	round.ComputeMinerRanks(lfmb.MagicBlock.Miners)
@@ -155,14 +161,17 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, round *round.Round,
 	sc.AddLoadedFinalizedBlocks(lfb, lfmb)
 
 	// check is it notarized
-	var err = sc.VerifyNotarization(ctx, lfb.Hash, lfb.GetVerificationTickets(),
+	err = sc.VerifyNotarization(ctx, lfb.Hash, lfb.GetVerificationTickets(),
 		round)
 	if err != nil {
-		return // do nothing, if not notarized
+		err = nil // not a real error
+		return    // do nothing, if not notarized
 	}
 
 	// add as notarized
+	lfb.SetBlockState(block.StateNotarized)
 	round.AddNotarizedBlock(lfb)
+	return
 }
 
 // iterate over rounds from latest to zero looking for LFB and ignoring
@@ -194,7 +203,8 @@ func (sc *Chain) iterateRoundsLookingForLFB(ctx context.Context) (
 
 	for ; iter.Valid(); iter.Prev() {
 		if err = datastore.FromJSON(iter.Value().Data(), r); err != nil {
-			return // critical
+			return nil, nil, common.NewError("load_lfb",
+				"decoding round info: "+err.Error()) // critical
 		}
 
 		Logger.Debug("load lfb, got round", zap.Int64("round", r.Number),
@@ -250,6 +260,28 @@ func (sc *Chain) loadLatestFinalizedMagicBlockFromStore(ctx context.Context,
 	return
 }
 
+func itoa(n int64) string {
+	return strconv.FormatInt(n, 10)
+}
+
+func (sc *Chain) loadPreviousMagicBlock(ctx context.Context, n int64) (
+	plfmb *block.Block, err error) {
+
+	var mbm *block.MagicBlockMap
+	if mbm, err = sc.GetMagicBlockMap(ctx, itoa(n)); err != nil {
+		return nil, common.NewError("load_lfb",
+			"related previous magic block not found in map: "+err.Error())
+	}
+
+	plfmb, err = blockstore.GetStore().Read(mbm.Hash)
+	if err != nil {
+		return nil, common.NewError("load_lfb",
+			"related previous magic block not found: "+err.Error())
+	}
+
+	return
+}
+
 // LoadLatestBlocksFromStore loads LFB and LFMB from store and sets them
 // to corresponding fields of the sharder's Chain.
 func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
@@ -282,7 +314,41 @@ func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
 		return
 	}
 
+	// load and setup previous magic block if any
+	if lfmb.MagicBlock.MagicBlockNumber > 1 {
+		var plfmb *block.Block
+		plfmb, err = sc.loadPreviousMagicBlock(ctx,
+			lfmb.MagicBlock.MagicBlockNumber-1)
+		if err != nil {
+			return
+		}
+
+		if plfmb.MagicBlock == nil {
+			return common.NewError("load_lfb",
+				"missing MagicBlock field of block of previous magic block")
+
+		}
+
+		sc.SetInitialPreviousMagicBlock(plfmb.MagicBlock)
+	}
+
 	// setup all related for a non-genesis case
-	sc.setupLatestBlocks(ctx, round, lfb, lfmb)
-	return // ok
+	return sc.setupLatestBlocks(ctx, round, lfb, lfmb)
+}
+
+// SaveMagicBlockHandler used on sharder startup to save received
+// magic blocks. It's required to be able to load previous state.
+func (sc *Chain) SaveMagicBlockHandler(b *block.Block) (err error) {
+
+	Logger.Info("save received magic block verifying chain",
+		zap.Int64("round", b.Round), zap.String("hash", b.Hash),
+		zap.Int64("starting_round", b.MagicBlock.StartingRound),
+		zap.String("mb_hash", b.MagicBlock.Hash))
+
+	var ctx = common.GetRootContext()
+	if err = sc.storeBlock(ctx, b); err != nil {
+		return
+	}
+	var bs = b.GetSummary()
+	return sc.StoreMagicBlockMapFromBlock(ctx, bs.GetMagicBlockMap())
 }
