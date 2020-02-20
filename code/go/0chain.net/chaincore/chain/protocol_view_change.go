@@ -29,8 +29,7 @@ const (
 	scRestAPIGetSharderList = "/getSharderList"
 )
 
-func (mc *Chain) InitSetup() {
-	mc.RegisterClient()
+func (mc *Chain) InitSetupSC() {
 	registered := mc.isRegistered()
 	for !registered {
 		txn, err := mc.RegisterNode()

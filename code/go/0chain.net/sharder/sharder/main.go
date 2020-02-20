@@ -154,7 +154,8 @@ func main() {
 	getCurrentMagicBlock(sc)
 	initServer()
 	initHandlers()
-	go sc.InitSetup()
+	go sc.RegisterClient()
+	go sc.InitSetupSC()
 
 	// Do a deep scan from finalized block till DeepWindow
 	go sc.HealthCheckWorker(ctx, sharder.DeepScan) // 4) progressively checks the health for each round

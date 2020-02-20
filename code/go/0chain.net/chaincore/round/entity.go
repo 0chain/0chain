@@ -106,16 +106,22 @@ func (r *Round) setTimeoutCount(tc int) {
 func (r *Round) IncrementTimeoutCount() {
 	r.votesMutex.Lock()
 	defer r.votesMutex.Unlock()
-	var mostVotes int
+	var mostVotes, mostTimeout int
+	timeout := r.getTimeoutCount()
 	for k, v := range r.timeoutVotes {
-		if v > mostVotes || (v == mostVotes && r.getTimeoutCount() > k) {
+		if v > mostVotes || (v == mostVotes && timeout > k) {
 			mostVotes = v
-			r.setTimeoutCount(k)
+			mostTimeout = k
 		}
 	}
+
 	r.timeoutVotes = make(map[int]int)
 	r.votersVoted = make(map[string]bool)
-	atomic.AddInt32(&r.timeoutCount, 1)
+	if mostTimeout > 0 {
+		r.setTimeoutCount(mostTimeout)
+	} else {
+		atomic.AddInt32(&r.timeoutCount, 1)
+	}
 }
 
 // SetTimeoutCount - sets the timeout count to given number if it is greater than existing and returns true. Else false.

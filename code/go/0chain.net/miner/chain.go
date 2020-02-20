@@ -318,7 +318,7 @@ func (mc *Chain) RequestStartChain(n *node.Node, start, started *int) error {
 	return nil
 }
 
-func (mc *Chain) setStarted() {
+func (mc *Chain) SetStarted() {
 	if !atomic.CompareAndSwapUint32(&mc.started, 0, 1) {
 		Logger.Warn("chain already started")
 	}

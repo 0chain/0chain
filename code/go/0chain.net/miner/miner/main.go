@@ -182,22 +182,30 @@ func main() {
 	initServer()
 	initHandlers()
 
+	go func() {
+		Logger.Info("Ready to listen to the requests")
+		log.Fatal(server.ListenAndServe())
+	}()
+
+	mc.RegisterClient()
 	chain.StartTime = time.Now().UTC()
 	activeMiner := mc.Miners.HasNode(node.Self.Underlying().GetKey())
 	if activeMiner {
 		miner.SetDKG(ctx, mc.MagicBlock)
-		go miner.StartProtocol()
+		miner.StartProtocol(ctx)
 	}
+	mc.SetStarted()
 
 	if config.Development() {
 		go TransactionGenerator(mc.Chain)
 	}
-	go mc.InitSetup()
+	go mc.InitSetupSC()
 	if config.DevConfiguration.ViewChange {
 		go mc.DKGProcess(ctx)
 	}
-	Logger.Info("Ready to listen to the requests")
-	log.Fatal(server.ListenAndServe())
+
+	<-ctx.Done()
+	time.Sleep(time.Second*5)
 }
 
 func initServer() {

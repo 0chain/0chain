@@ -739,13 +739,8 @@ func (mc *Chain) restartRound(ctx context.Context) {
 	}
 }
 
-func StartProtocol() {
+func StartProtocol(ctx context.Context) {
 	mc := GetMinerChain()
-	if mc.GetCurrentRound() > 0 {
-		return
-	}
-	ctx := common.GetRootContext()
-
 	lfb := getLatestBlockFromSharders(ctx)
 	var mr *Round
 	if lfb != nil {
@@ -761,7 +756,6 @@ func StartProtocol() {
 	}
 	Logger.Info("starting the blockchain ...", zap.Int64("round", mr.GetRoundNumber()))
 	mc.StartNextRound(ctx, mr)
-	mc.setStarted()
 }
 
 func (mc *Chain) WaitForActiveSharders(ctx context.Context) error {
