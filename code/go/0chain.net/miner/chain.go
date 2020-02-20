@@ -234,8 +234,8 @@ func (mc *Chain) ViewChange(ctx context.Context, round int64) bool {
 		}
 	}
 	mc.SetDKGSFromStore(ctx, mc.MagicBlock)
-	cr := mc.GetRound(mc.GetCurrentRound())
-	cr.(*Round).Restart()
+	//cr := mc.GetRound(mc.GetCurrentRound())
+	//cr.(*Round).Restart()
 
 	return true
 }
