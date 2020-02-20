@@ -167,6 +167,9 @@ func main() {
 	common.ConfigRateLimits()
 	initN2NHandlers()
 
+	mc.WaitForActiveSharders(ctx)
+	getCurrentMagicBlock(mc)
+
 	if mc.StartingRound == 0 && mc.IsActiveNode(node.Self.Underlying().GetKey(), mc.StartingRound) {
 		dkgShare := &bls.DKGSummary{
 			SecretShares: make(map[string]string),
@@ -177,8 +180,7 @@ func main() {
 		}
 		err = miner.StoreDKGSummary(ctx, dkgShare)
 	}
-	mc.WaitForActiveSharders(ctx)
-	getCurrentMagicBlock(mc)
+
 	initHandlers()
 
 	go func() {
