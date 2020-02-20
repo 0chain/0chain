@@ -142,8 +142,16 @@ func (c *Chain) MergeVerificationTickets(ctx context.Context, b *block.Block, vt
 func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockStateHandler) {
 	bNode := node.GetNode(fb.MinerID)
 	ms := bNode.ProtocolStats.(*MinerStats)
-	Logger.Info("finalize block", zap.Int64("round", fb.Round), zap.Int64("current_round", c.GetCurrentRound()), zap.Int64("lf_round", c.GetLatestFinalizedBlock().Round), zap.String("hash", fb.Hash), zap.Int("round_rank", fb.RoundRank), zap.Int8("state", fb.GetBlockState()))
-	ms.FinalizationCountByRank[fb.RoundRank]++
+	Logger.Info("finalize block", zap.Int64("round", fb.Round), zap.Int64("current_round", c.GetCurrentRound()),
+		zap.Int64("lf_round", c.GetLatestFinalizedBlock().Round), zap.String("hash", fb.Hash),
+		zap.Int("round_rank", fb.RoundRank), zap.Int8("state", fb.GetBlockState()))
+	if fb.RoundRank >= c.NumGenerators {
+		Logger.Warn("FB round rank is greater then num_generators",
+			zap.Int("round_rank", fb.RoundRank),
+			zap.Int("num_generators", c.NumGenerators))
+	} else {
+		ms.FinalizationCountByRank[fb.RoundRank]++ // stat
+	}
 	fr := c.GetRound(fb.Round)
 	Logger.Info("finalize block -- round", zap.Any("round", fr))
 	if fr != nil {

@@ -410,7 +410,14 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			r.Block = b
 			mc.ProcessVerifiedTicket(ctx, r, b, &bvt.VerificationTicket)
 		}
-		minerStats.VerificationTicketsByRank[b.RoundRank]++
+		if b.RoundRank >= mc.NumGenerators {
+			Logger.Warn("round rank is greater then num_generators",
+				zap.String("hash", b.Hash), zap.Int64("round", b.Round),
+				zap.Int("round_rank", b.RoundRank),
+				zap.Int("num_generators", mc.NumGenerators))
+		} else {
+			minerStats.VerificationTicketsByRank[b.RoundRank]++
+		}
 		return true
 	}
 	var sendVerification = false
