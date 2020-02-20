@@ -117,7 +117,11 @@ func (c *Chain) BlockFetchWorker(ctx context.Context) {
 	}
 }
 
-func (c *Chain) VerifyChainHistory(ctx context.Context, latestMagicBlock *block.Block) error {
+type magicBlockSaveFucn func(*block.Block) error
+
+func (c *Chain) VerifyChainHistory(ctx context.Context,
+	latestMagicBlock *block.Block, saveHandler magicBlockSaveFucn) error {
+
 	currentMagicBlock := c.GetLatestFinalizedMagicBlock()
 	var sharders = c.Sharders.N2NURLs()
 	for currentMagicBlock.Hash != latestMagicBlock.Hash {
@@ -137,6 +141,12 @@ func (c *Chain) VerifyChainHistory(ctx context.Context, latestMagicBlock *block.
 		}
 		c.SetLatestFinalizedMagicBlock(magicBlock)
 		currentMagicBlock = magicBlock
+
+		if saveHandler != nil {
+			if err := saveHandler(magicBlock); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
