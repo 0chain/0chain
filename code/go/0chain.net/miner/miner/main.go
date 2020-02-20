@@ -102,7 +102,7 @@ func main() {
 	if state.Debug() {
 		chain.SetupStateLogger("/tmp/state.txt")
 	}
-	mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"), magicBlock)
+	gb := mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"), magicBlock)
 	Logger.Info("Miners in main", zap.Int("size", mc.Miners.Size()))
 
 	if !mc.IsActiveNode(node.Self.Underlying().GetKey(), 0) {
@@ -179,7 +179,6 @@ func main() {
 	}
 	mc.WaitForActiveSharders(ctx)
 	getCurrentMagicBlock(mc)
-	initServer()
 	initHandlers()
 
 	go func() {
@@ -192,7 +191,7 @@ func main() {
 	activeMiner := mc.Miners.HasNode(node.Self.Underlying().GetKey())
 	if activeMiner {
 		miner.SetDKG(ctx, mc.MagicBlock)
-		miner.StartProtocol(ctx)
+		miner.StartProtocol(ctx, gb)
 	}
 	mc.SetStarted()
 
@@ -205,14 +204,7 @@ func main() {
 	}
 
 	<-ctx.Done()
-	time.Sleep(time.Second*5)
-}
-
-func initServer() {
-	/* TODO: when a new server is brought up, it needs to first download
-	all the state before it can start accepting requests
-	*/
-	//time.Sleep(time.Second)
+	time.Sleep(time.Second * 5)
 }
 
 func readNonGenesisHostAndPort(keysFile *string) (string, string, int, error) {

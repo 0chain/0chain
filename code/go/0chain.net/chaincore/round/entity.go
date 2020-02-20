@@ -118,7 +118,7 @@ func (r *Round) IncrementTimeoutCount() {
 	r.timeoutVotes = make(map[int]int)
 	r.votersVoted = make(map[string]bool)
 	if mostTimeout > 0 {
-		r.setTimeoutCount(mostTimeout)
+		r.setTimeoutCount(mostTimeout + 1)
 	} else {
 		atomic.AddInt32(&r.timeoutCount, 1)
 	}

@@ -49,7 +49,7 @@ var minerChain = &Chain{}
 func SetupMinerChain(c *chain.Chain) {
 	minerChain.Chain = c
 	minerChain.blockMessageChannel = make(chan *BlockMessage, 128)
-	minerChain.muDKG = &sync.Mutex{}
+	minerChain.muDKG = &sync.RWMutex{}
 	c.SetFetchedNotarizedBlockHandler(minerChain)
 	c.RoundF = MinerRoundFactory{}
 }
@@ -100,7 +100,7 @@ func (mrf MinerRoundFactory) CreateRoundF(roundNum int64) interface{} {
 type Chain struct {
 	*chain.Chain
 	blockMessageChannel chan *BlockMessage
-	muDKG               *sync.Mutex
+	muDKG               *sync.RWMutex
 	currentDKG          *bls.DKG
 	viewChangeDKG       *bls.DKG
 	mutexMpks           sync.RWMutex
@@ -217,17 +217,27 @@ func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) erro
 	return err
 }
 
-func (mc *Chain) ViewChange(ctx context.Context, round int64) {
-	if config.DevConfiguration.ViewChange && mc.nextViewChange <= round &&
-		(mc.currentDKG == nil || mc.currentDKG.StartingRound < mc.nextViewChange) {
-		if mc.ViewChangeMagicBlock != nil {
-			err := mc.UpdateMagicBlock(mc.ViewChangeMagicBlock)
-			if err != nil {
-				Logger.DPanic(err.Error())
-			}
-		}
-		mc.SetDKGSFromStore(ctx, mc.MagicBlock)
+func (mc *Chain) ViewChange(ctx context.Context, round int64) bool {
+	mc.muDKG.RLock()
+	needViewChange := config.DevConfiguration.ViewChange &&
+		mc.nextViewChange <= round &&
+		(mc.currentDKG == nil || mc.currentDKG.StartingRound < mc.nextViewChange)
+	mc.muDKG.RUnlock()
+
+	if !needViewChange {
+		return false
 	}
+	if mc.ViewChangeMagicBlock != nil {
+		err := mc.UpdateMagicBlock(mc.ViewChangeMagicBlock)
+		if err != nil {
+			Logger.DPanic(err.Error())
+		}
+	}
+	mc.SetDKGSFromStore(ctx, mc.MagicBlock)
+	cr := mc.GetRound(mc.GetCurrentRound())
+	cr.(*Round).Restart()
+
+	return true
 }
 
 func (mc *Chain) ChainStarted(ctx context.Context) bool {

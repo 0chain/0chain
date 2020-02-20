@@ -122,6 +122,8 @@ func VerifySigShares() bool {
 
 /*GetBlsThreshold Handy api for now. move this to protocol_vrf */
 func (mc *Chain) GetBlsThreshold() int {
+	mc.muDKG.RLock()
+	defer mc.muDKG.RUnlock()
 	return mc.currentDKG.T
 }
 
@@ -134,25 +136,20 @@ func ComputeBlsID(key string) string {
 func (mc *Chain) GetBlsMessageForRound(r *round.Round) (string, error) {
 
 	prevRoundNumber := r.GetRoundNumber() - 1
-	prevRSeed := "0"
-	if prevRoundNumber == 0 {
 
-		Logger.Debug("The corner case for round 1 when pr is nil :", zap.Int64("round", r.GetRoundNumber()))
-		prevRSeed = encryption.Hash("0chain")
-	} else {
-		pr := mc.GetMinerRound(prevRoundNumber)
-		if pr == nil {
-			//This should never happen
-			Logger.Error("Bls sign vrfshare: could not find round object for non-zero round", zap.Int64("PrevRoundNum", prevRoundNumber))
-			return "", common.NewError("no_prev_round", "Could not find the previous round")
-		}
-
-		if pr.GetRandomSeed() == 0 {
-			Logger.Error("Bls sign vrfshare: error in getting prevRSeed")
-			return "", common.NewError("prev_round_rrs_zero", fmt.Sprintf("Prev round %d has randomseed of 0", pr.GetRoundNumber()))
-		}
-		prevRSeed = strconv.FormatInt(pr.GetRandomSeed(), 16) //pr.VRFOutput
+	pr := mc.GetMinerRound(prevRoundNumber)
+	if pr == nil {
+		//This should never happen
+		Logger.Error("Bls sign vrfshare: could not find round object for non-zero round", zap.Int64("PrevRoundNum", prevRoundNumber))
+		return "", common.NewError("no_prev_round", "Could not find the previous round")
 	}
+
+	if pr.GetRandomSeed() == 0 {
+		Logger.Error("Bls sign vrfshare: error in getting prevRSeed")
+		return "", common.NewError("prev_round_rrs_zero", fmt.Sprintf("Prev round %d has randomseed of 0", pr.GetRoundNumber()))
+	}
+	prevRSeed := strconv.FormatInt(pr.GetRandomSeed(), 16) //pr.VRFOutput
+
 	blsMsg := fmt.Sprintf("%v%v%v", r.GetRoundNumber(), r.GetTimeoutCount(), prevRSeed)
 
 	Logger.Info("Bls sign vrfshare calculated for ", zap.Int64("round", r.GetRoundNumber()), zap.Int("roundtimeout", r.GetTimeoutCount()),
@@ -174,12 +171,13 @@ func (mc *Chain) GetBlsShare(ctx context.Context, r *round.Round) (string, error
 		return "", err
 	}
 	mc.ViewChange(ctx, r.Number)
-	mc.muDKG.Lock()
-	defer mc.muDKG.Unlock()
-	if mc.currentDKG == nil {
+	mc.muDKG.RLock()
+	defer mc.muDKG.RUnlock()
+	currentDKG := mc.currentDKG
+	if currentDKG == nil {
 		return "", common.NewError("get_bls_share", "DKG nil")
 	}
-	sigShare := mc.currentDKG.Sign(msg)
+	sigShare := currentDKG.Sign(msg)
 	return sigShare.GetHexString(), nil
 }
 
@@ -190,49 +188,56 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 	Logger.Info("DKG AddVRFShare", zap.Int64("Round", mr.GetRoundNumber()), zap.Int("RoundTimeoutCount", mr.GetTimeoutCount()),
 		zap.Int("Sender", vrfs.GetParty().SetIndex), zap.Int("vrf_timeoutcount", vrfs.GetRoundTimeoutCount()),
 		zap.String("vrf_share", vrfs.Share))
+
+	mc.ViewChange(ctx, mr.Number)
+
 	mr.AddTimeoutVote(vrfs.GetRoundTimeoutCount(), vrfs.GetParty().ID)
 	msg, err := mc.GetBlsMessageForRound(mr.Round)
 	if err != nil {
 		Logger.Warn("failed to get bls message", zap.Any("vrfs_share", vrfs.Share), zap.Any("round", mr.Round))
 		return false
 	}
-	mc.ViewChange(ctx, mr.Number)
+
 	var share bls.Sign
 	if err := share.SetHexString(vrfs.Share); err != nil {
 		Logger.Error("failed to set hex share", zap.Any("vrfs_share", vrfs.Share), zap.Any("message", msg))
 		return false
 	}
 	partyID := bls.ComputeIDdkg(vrfs.GetParty().ID)
+
+	mc.muDKG.RLock()
+	blsThreshold := mc.currentDKG.T
 	if mc.currentDKG == nil {
+		mc.muDKG.RUnlock()
 		return false
 	}
-	mc.muDKG.Lock()
-	defer mc.muDKG.Unlock()
 	if !mc.currentDKG.VerifySignature(&share, msg, partyID) {
 		stringID := (&partyID).GetHexString()
 		pi := mc.currentDKG.Gmpk[partyID]
 		Logger.Error("failed to verify share", zap.Any("share", share.GetHexString()), zap.Any("message", msg), zap.Any("from", stringID), zap.Any("pi", pi.GetHexString()))
+		mc.muDKG.RUnlock()
 		return false
 	} else {
 		Logger.Info("verified vrf", zap.Any("share", share.GetHexString()), zap.Any("message", msg), zap.Any("from", (&partyID).GetHexString()))
 	}
+	mc.muDKG.RUnlock()
 	if vrfs.GetRoundTimeoutCount() != mr.GetTimeoutCount() {
 		//Keep VRF timeout and round timeout in sync. Same vrfs will comeback during soft timeouts
 		Logger.Info("TOC_FIX VRF Timeout > round timeout", zap.Int("vrfs_timeout", vrfs.GetRoundTimeoutCount()), zap.Int("round_timeout", mr.GetTimeoutCount()))
 		return false
 	}
-	if len(mr.GetVRFShares()) >= mc.GetBlsThreshold() {
+	if len(mr.GetVRFShares()) >= blsThreshold {
 		//ignore VRF shares coming after threshold is reached to avoid locking issues.
 		//Todo: Remove this logging
 		mr.AddAdditionalVRFShare(vrfs)
 		Logger.Info("Ignoring VRFShare. Already at threshold",
 			zap.Int64("Round", mr.GetRoundNumber()),
 			zap.Int("VRF_Shares", len(mr.GetVRFShares())),
-			zap.Int("bls_threshold", mc.GetBlsThreshold()))
+			zap.Int("bls_threshold", blsThreshold))
 		return false
 	}
-	if mr.AddVRFShare(vrfs, mc.GetBlsThreshold()) {
-		mc.ThresholdNumBLSSigReceived(ctx, mr)
+	if mr.AddVRFShare(vrfs, blsThreshold) {
+		mc.ThresholdNumBLSSigReceived(ctx, mr, blsThreshold)
 		return true
 	} else {
 		Logger.Info("Could not add VRFshare", zap.Int64("Round", mr.GetRoundNumber()), zap.Int("Sender", vrfs.GetParty().SetIndex))
@@ -241,7 +246,7 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 }
 
 /*ThresholdNumBLSSigReceived do we've sufficient BLSshares? */
-func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round) {
+func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round, blsThreshold int) {
 
 	if mr.IsVRFComplete() {
 		//BLS has completed already for this round, But, received a BLS message from a node now
@@ -250,7 +255,7 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round) {
 	}
 
 	shares := mr.GetVRFShares()
-	if len(shares) >= mc.GetBlsThreshold() {
+	if len(shares) >= blsThreshold {
 		Logger.Debug("VRF Hurray we've threshold BLS shares")
 		if !config.DevConfiguration.IsDkgEnabled {
 			//We're still waiting for threshold number of VRF shares, even though DKG is not enabled.
@@ -261,7 +266,9 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round) {
 			return
 		}
 		recSig, recFrom := getVRFShareInfo(mr)
+		mc.muDKG.RLock()
 		groupSignature, err := mc.currentDKG.CalBlsGpSign(recSig, recFrom)
+		mc.muDKG.RUnlock()
 		if err != nil {
 			Logger.Error("calculates the Gp Sign", zap.Error(err))
 		}
@@ -273,7 +280,7 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round) {
 		mc.computeRBO(ctx, mr, rbOutput)
 	} else {
 		//TODO: remove this log
-		Logger.Info("Not yet reached threshold", zap.Int("vrfShares_num", len(shares)), zap.Int("threshold", mc.GetBlsThreshold()))
+		Logger.Info("Not yet reached threshold", zap.Int("vrfShares_num", len(shares)), zap.Int("threshold", blsThreshold))
 	}
 }
 

@@ -44,7 +44,7 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 	var nr = round.NewRound(r.GetRoundNumber() + 1)
 	mr := mc.CreateRound(nr)
 	er := mc.AddRound(mr)
-	if er != mr && mc.isStarted(){
+	if er != mr && mc.isStarted() {
 		Logger.Info("StartNextRound found nextround ready. No VRFs Sent",
 			zap.Int64("er_round", er.GetRoundNumber()), zap.Int64("rrs", r.GetRandomSeed()))
 		return er.(*Round)
@@ -84,7 +84,7 @@ func (mc *Chain) RedoVrfShare(ctx context.Context, r *Round) bool {
 		Logger.Info("no pr info inside RedoVrfShare", zap.Int64("Round", r.GetRoundNumber()))
 		return false
 	}
-	if pr.HasRandomSeed() {
+	if pr.HasRandomSeed() /*|| r.vrfShare==*/ {
 		r.vrfShare = nil
 		Logger.Info("RedoVrfShare after vrfShare is nil",
 			zap.Int64("round", r.GetRoundNumber()), zap.Int("round_timeout", r.GetTimeoutCount()))
@@ -95,6 +95,13 @@ func (mc *Chain) RedoVrfShare(ctx context.Context, r *Round) bool {
 }
 
 func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
+	mc.muDKG.RLock()
+	emptyDKG := mc.currentDKG == nil
+	mc.muDKG.RUnlock()
+	if emptyDKG {
+		return
+	}
+
 	var err error
 	vrfs := &round.VRFShare{}
 	vrfs.Round = r.GetRoundNumber()
@@ -739,7 +746,7 @@ func (mc *Chain) restartRound(ctx context.Context) {
 	}
 }
 
-func StartProtocol(ctx context.Context) {
+func StartProtocol(ctx context.Context, gb *block.Block) {
 	mc := GetMinerChain()
 	lfb := getLatestBlockFromSharders(ctx)
 	var mr *Round
@@ -752,10 +759,12 @@ func StartProtocol(ctx context.Context) {
 		mc.InitBlockState(lfb)
 		mc.SetLatestFinalizedBlock(ctx, lfb)
 	} else {
-		mr = mc.GetMinerRound(0)
+		mr = mc.getRound(ctx, gb.Round)
 	}
 	Logger.Info("starting the blockchain ...", zap.Int64("round", mr.GetRoundNumber()))
-	mc.StartNextRound(ctx, mr)
+
+	cr := mc.getRound(ctx, mr.Number)
+	mc.CurrentRound = mc.StartNextRound(ctx, cr).Number
 }
 
 func (mc *Chain) WaitForActiveSharders(ctx context.Context) error {

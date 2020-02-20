@@ -28,6 +28,9 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case msg := <-mc.GetBlockMessageChannel():
+			if !mc.isStarted() {
+				break
+			}
 			if msg.Sender != nil {
 				Logger.Debug("message", zap.Any("msg", GetMessageLookup(msg.Type)), zap.Any("sender_index", msg.Sender.SetIndex), zap.Any("id", msg.Sender.GetKey()))
 			} else {
@@ -65,6 +68,9 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-timer.C:
+			if !mc.isStarted() {
+				break
+			}
 			if cround == mc.GetCurrentRound() {
 				round := mc.GetMinerRound(cround)
 
