@@ -207,12 +207,22 @@ func (sc *Chain) iterateRoundsLookingForLFB(ctx context.Context) (
 				"decoding round info: "+err.Error()) // critical
 		}
 
-		Logger.Debug("load lfb, got round", zap.Int64("round", r.Number),
+		Logger.Debug("load_lfb, got round", zap.Int64("round", r.Number),
 			zap.String("block_hash", r.BlockHash))
 
 		lfb, err = sc.GetBlockFromStore(r.BlockHash, r.Number)
 		if err != nil {
 			continue // TODO: can we use os.IsNotExist(err) or should not
+		}
+
+		// check out required corresponding state
+
+		if !sc.HasClientStateStored(lfb.ClientStateHash) {
+			Logger.Warn("load_lfb, missing corresponding state",
+				zap.Int64("round", r.Number),
+				zap.String("block_hash", r.BlockHash))
+			// we can't use this block, because of missing or malformed state
+			continue
 		}
 
 		return // got them
