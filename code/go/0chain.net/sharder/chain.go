@@ -338,14 +338,14 @@ func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
 
 // SaveMagicBlockHandler used on sharder startup to save received
 // magic blocks. It's required to be able to load previous state.
-func (sc *Chain) SaveMagicBlockHandler(b *block.Block) (err error) {
+func (sc *Chain) SaveMagicBlockHandler(ctx context.Context,
+	b *block.Block) (err error) {
 
 	Logger.Info("save received magic block verifying chain",
 		zap.Int64("round", b.Round), zap.String("hash", b.Hash),
 		zap.Int64("starting_round", b.MagicBlock.StartingRound),
 		zap.String("mb_hash", b.MagicBlock.Hash))
 
-	var ctx = common.GetRootContext()
 	if err = sc.storeBlock(ctx, b); err != nil {
 		return
 	}

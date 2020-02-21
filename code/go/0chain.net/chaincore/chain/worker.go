@@ -117,7 +117,7 @@ func (c *Chain) BlockFetchWorker(ctx context.Context) {
 	}
 }
 
-type magicBlockSaveFucn func(*block.Block) error
+type magicBlockSaveFucn func(context.Context, *block.Block) error
 
 func (c *Chain) VerifyChainHistory(ctx context.Context,
 	latestMagicBlock *block.Block, saveHandler magicBlockSaveFucn) error {
@@ -143,7 +143,7 @@ func (c *Chain) VerifyChainHistory(ctx context.Context,
 		currentMagicBlock = magicBlock
 
 		if saveHandler != nil {
-			if err := saveHandler(magicBlock); err != nil {
+			if err := saveHandler(ctx, magicBlock); err != nil {
 				return err
 			}
 		}

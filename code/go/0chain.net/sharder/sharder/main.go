@@ -112,7 +112,7 @@ func main() {
 
 	// start sharding from the LFB stored
 	if err = sc.LoadLatestBlocksFromStore(common.GetRootContext()); err != nil {
-		Logger.DPanic("load latest blocks from store", zap.Error(err))
+		Logger.DPanic("load latest blocks from store: " + err.Error())
 		return
 	}
 
