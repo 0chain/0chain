@@ -71,7 +71,7 @@ server_chain:
   transaction:
     payload:
       max_size: 98304 # bytes
-    timeout: 10 # seconds
+    timeout: 30 # seconds
   client:
     signature_scheme: bls0chain  # ed25519 or bls0chain
     discover: true
