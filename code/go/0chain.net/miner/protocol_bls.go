@@ -206,11 +206,12 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 	partyID := bls.ComputeIDdkg(vrfs.GetParty().ID)
 
 	mc.muDKG.RLock()
-	blsThreshold := mc.currentDKG.T
 	if mc.currentDKG == nil {
 		mc.muDKG.RUnlock()
 		return false
 	}
+	blsThreshold := mc.currentDKG.T
+
 	if !mc.currentDKG.VerifySignature(&share, msg, partyID) {
 		stringID := (&partyID).GetHexString()
 		pi := mc.currentDKG.Gmpk[partyID]
