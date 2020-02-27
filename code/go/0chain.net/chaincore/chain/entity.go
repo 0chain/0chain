@@ -941,6 +941,13 @@ func (c *Chain) GetPruneStats() *util.PruneStats {
 	return c.pruneStats
 }
 
+// HasClientStateStored returns true if given client state can be obtained
+// from state db of the Chain.
+func (c *Chain) HasClientStateStored(clientStateHash util.Key) bool {
+	_, err := c.stateDB.GetNode(clientStateHash)
+	return err == nil
+}
+
 //InitBlockState - initialize the block's state with the database state
 func (c *Chain) InitBlockState(b *block.Block) (err error) {
 	if err = b.InitStateDB(c.stateDB); err != nil {
