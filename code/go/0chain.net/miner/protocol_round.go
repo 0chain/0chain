@@ -651,9 +651,11 @@ func (mc *Chain) GetNextRoundTimeoutTime(ctx context.Context) int {
 // HandleRoundTimeout handle timeouts appropriately
 func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
 	r := mc.GetMinerRound(mc.GetCurrentRound())
-	if r.Number == 0 {
+	if r.Number == 0 && mc.nextViewChange == 0 {
 		return
 	}
+	mc.ViewChange(ctx, mc.CurrentRound)
+
 	if r.GetSoftTimeoutCount() == mc.RoundRestartMult {
 		Logger.Info("triggering restartRound", zap.Int64("round", r.GetRoundNumber()))
 		mc.restartRound(ctx)

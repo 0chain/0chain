@@ -261,7 +261,7 @@ func (mc *Chain) GetDKGMiners() (*minersc.DKGMinerNodes, error) {
 			return nil, err
 		}
 
-	} else {		
+	} else {
 		var sharders = mc.Sharders.N2NURLs()
 		err := httpclientutil.MakeSCRestAPICall(minersc.ADDRESS, scRestAPIGetDKGMiners, nil, sharders, dmn, 1)
 		if err != nil {
@@ -503,7 +503,7 @@ func (mc *Chain) Wait() (*httpclientutil.Transaction, error) {
 	if err != nil {
 		return nil, err
 	}
-	if !magicBlock.Miners.HasNode(node.Self.Underlying().GetKey()) {		
+	if !magicBlock.Miners.HasNode(node.Self.Underlying().GetKey()) {
 		err := mc.UpdateMagicBlock(magicBlock)
 		if err != nil {
 			Logger.DPanic(fmt.Sprintf("failed to update magic block: %v", err.Error()))
@@ -547,6 +547,7 @@ func (mc *Chain) Wait() (*httpclientutil.Transaction, error) {
 	mc.viewChangeDKG.AggregateSecretKeyShares()
 	mc.SetViewChangeMagicBlock(magicBlock)
 	mc.viewChangeDKG.StartingRound = magicBlock.StartingRound
+	mc.viewChangeDKG.MagicBlockNumber = magicBlock.MagicBlockNumber
 	if err := StoreDKGSummary(common.GetRootContext(), mc.viewChangeDKG.GetDKGSummary()); err != nil {
 		return nil, err
 	}
