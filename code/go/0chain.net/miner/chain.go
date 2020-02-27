@@ -227,15 +227,20 @@ func (mc *Chain) ViewChange(ctx context.Context, round int64) bool {
 	if !needViewChange {
 		return false
 	}
-	if mc.ViewChangeMagicBlock != nil {
-		err := mc.UpdateMagicBlock(mc.ViewChangeMagicBlock)
+	viewChangeMagicBlock := mc.GetViewChangeMagicBlock()
+	if viewChangeMagicBlock != nil {
+		err := mc.UpdateMagicBlock(viewChangeMagicBlock)
 		if err != nil {
 			Logger.DPanic(err.Error())
 		}
+		if err := mc.SetDKGSFromStore(ctx, viewChangeMagicBlock); err != nil {
+			Logger.DPanic(err.Error())
+		}
+	} else {
+		if err := mc.SetDKGSFromStore(ctx, mc.MagicBlock); err != nil {
+			Logger.DPanic(err.Error())
+		}
 	}
-	mc.SetDKGSFromStore(ctx, mc.MagicBlock)
-	//cr := mc.GetRound(mc.GetCurrentRound())
-	//cr.(*Round).Restart()
 
 	return true
 }

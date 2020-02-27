@@ -192,8 +192,9 @@ func main() {
 	chain.StartTime = time.Now().UTC()
 	activeMiner := mc.Miners.HasNode(node.Self.Underlying().GetKey())
 	if activeMiner {
-		miner.SetDKG(ctx, mc.MagicBlock)
-		miner.StartProtocol(ctx, gb)
+		if miner.SetDKG(ctx, mc.MagicBlock) {
+			miner.StartProtocol(ctx, gb)
+		}
 	}
 	mc.SetStarted()
 

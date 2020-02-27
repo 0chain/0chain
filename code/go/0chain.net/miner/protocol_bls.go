@@ -41,19 +41,21 @@ func init() {
 }
 
 // SetDKG - starts the DKG process
-func SetDKG(ctx context.Context, mb *block.MagicBlock) {
+func SetDKG(ctx context.Context, mb *block.MagicBlock) bool {
 	mc := GetMinerChain()
 	self := node.GetSelfNode(ctx)
 	selfInd = self.Underlying().SetIndex
 	if config.DevConfiguration.IsDkgEnabled {
 		err := mc.SetDKGSFromStore(ctx, mb)
 		if err != nil {
-			Logger.DPanic(fmt.Sprintf("error while setting dkg from store: %v", err.Error()))
+			Logger.Error(fmt.Sprintf("error while setting dkg from store: %v", err.Error()))
+			return false
 		}
 	} else {
 		Logger.Info("DKG is not enabled. So, starting protocol")
 	}
 	IsDkgDone = true
+	return true
 }
 
 func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) error {

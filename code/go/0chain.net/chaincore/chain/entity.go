@@ -70,13 +70,15 @@ type Chain struct {
 	datastore.VersionField
 	datastore.CreationDateField
 
+	mutexViewChangeMB sync.RWMutex
+
 	//Chain config goes into this object
 	*Config
 
 	// MagicBlock - this is the current magic block for the chain
 	*block.MagicBlock    `json:"-"`
 	PreviousMagicBlock   *block.MagicBlock `json:"-"`
-	ViewChangeMagicBlock *block.MagicBlock `json:"-"`
+	viewChangeMagicBlock *block.MagicBlock `json:"-"`
 	mbMutex              sync.RWMutex
 
 	LatestFinalizedMagicBlock *block.Block `json:"-"`
@@ -1062,8 +1064,8 @@ func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 		defer c.lfmbMutex.Unlock()
 		c.mbMutex.Lock()
 		defer c.mbMutex.Unlock()
-		lastest := c.LatestFinalizedMagicBlock
-		if lastest != nil && lastest.MagicBlock != nil && lastest.MagicBlock.MagicBlockNumber == b.MagicBlock.MagicBlockNumber-1 && lastest.MagicBlock.Hash != b.MagicBlock.PreviousMagicBlockHash {
+		latest := c.LatestFinalizedMagicBlock
+		if latest != nil && latest.MagicBlock != nil && latest.MagicBlock.MagicBlockNumber == b.MagicBlock.MagicBlockNumber-1 && latest.MagicBlock.Hash != b.MagicBlock.PreviousMagicBlockHash {
 			Logger.DPanic(fmt.Sprintf("failed to set finalized magic block -- hashes don't match up: chain's finalized block hash %v,block's magic block previous hash %v", c.LatestFinalizedMagicBlock.Hash, b.MagicBlock.PreviousMagicBlockHash))
 		}
 		c.LatestFinalizedMagicBlock = b
@@ -1095,4 +1097,18 @@ func (c *Chain) GetNodesPreviousInfo() {
 			sharder.SetNodeInfo(old)
 		}
 	}
+}
+
+// SetViewChangeMagicBlock sets the magic block after view change
+func (c *Chain) SetViewChangeMagicBlock(mb *block.MagicBlock) {
+	c.mutexViewChangeMB.Lock()
+	c.viewChangeMagicBlock = mb
+	c.mutexViewChangeMB.Unlock()
+}
+
+// GetViewChangeMagicBlock gets the magic block after view change
+func (c *Chain) GetViewChangeMagicBlock() *block.MagicBlock {
+	c.mutexViewChangeMB.RLock()
+	defer c.mutexViewChangeMB.RUnlock()
+	return c.viewChangeMagicBlock
 }
