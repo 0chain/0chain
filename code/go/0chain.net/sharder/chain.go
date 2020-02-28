@@ -162,7 +162,7 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, round *round.Round,
 
 	// check is it notarized
 	err = sc.VerifyNotarization(ctx, lfb.Hash, lfb.GetVerificationTickets(),
-		round)
+		round.GetRoundNumber())
 	if err != nil {
 		err = nil // not a real error
 		return    // do nothing, if not notarized

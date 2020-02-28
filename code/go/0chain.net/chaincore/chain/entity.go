@@ -418,7 +418,7 @@ func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block
 		Logger.Info("AddNotarizedBlockToRound round and block random seed different", zap.Int64("Round", r.GetRoundNumber()), zap.Int64("Round_rrs", r.GetRandomSeed()), zap.Int64("Block_rrs", b.GetRoundRandomSeed()))
 		r.SetRandomSeedForNotarizedBlock(b.GetRoundRandomSeed())
 		r.SetTimeoutCount(b.RoundTimeoutCount)
-		r.ComputeMinerRanks(c.GetMiners(r))
+		r.ComputeMinerRanks(c.GetMiners(r.GetRoundNumber()))
 	}
 
 	c.SetRoundRank(r, b)
@@ -568,7 +568,7 @@ func (c *Chain) IsRoundGenerator(r round.RoundI, nd *node.Node) bool {
 /*GetGenerators - get all the block generators for a given round */
 func (c *Chain) GetGenerators(r round.RoundI) []*node.Node {
 	var miners []*node.Node
-	miners = r.GetMinersByRank(c.GetMiners(r))
+	miners = r.GetMinersByRank(c.GetMiners(r.GetRoundNumber()))
 	if c.NumGenerators >= len(miners) {
 		Logger.Warn("get generators -- the number of generators is greater than the number of miners",
 			zap.Any("num_generators", c.NumGenerators), zap.Any("miner_by_rank", miners),
@@ -579,12 +579,12 @@ func (c *Chain) GetGenerators(r round.RoundI) []*node.Node {
 }
 
 /*GetMiners - get all the miners for a given round */
-func (c *Chain) GetMiners(r round.RoundI) *node.Pool {
-	if r.GetRoundNumber() >= c.MagicBlock.StartingRound || c.MagicBlock.StartingRound == 0 {
-		Logger.Info("get miners -- current magic block", zap.Any("miners", c.Miners), zap.Any("round", r.GetRoundNumber()))
+func (c *Chain) GetMiners(round int64) *node.Pool {
+	if round >= c.MagicBlock.StartingRound || c.MagicBlock.StartingRound == 0 {
+		Logger.Info("get miners -- current magic block", zap.Any("miners", c.Miners), zap.Any("round", round))
 		return c.Miners
 	} else {
-		Logger.Info("get miners -- previous magic block", zap.Any("miners", c.PreviousMagicBlock.Miners), zap.Any("round", r.GetRoundNumber()))
+		Logger.Info("get miners -- previous magic block", zap.Any("miners", c.PreviousMagicBlock.Miners), zap.Any("round", round))
 		return c.PreviousMagicBlock.Miners
 	}
 	return nil
@@ -634,7 +634,7 @@ func (c *Chain) GetBlockSharders(b *block.Block) []string {
 
 /*ValidGenerator - check whether this block is from a valid generator */
 func (c *Chain) ValidGenerator(r round.RoundI, b *block.Block) bool {
-	miner := c.GetMiners(r).GetNode(b.MinerID)
+	miner := c.GetMiners(r.GetRoundNumber()).GetNode(b.MinerID)
 	if miner == nil {
 		return false
 	}
@@ -654,9 +654,9 @@ func (c *Chain) ValidGenerator(r round.RoundI, b *block.Block) bool {
 }
 
 /*GetNotarizationThresholdCount - gives the threshold count for block to be notarized*/
-func (c *Chain) GetNotarizationThresholdCount() int {
+func (c *Chain) GetNotarizationThresholdCount(miners *node.Pool) int {
 	notarizedPercent := float64(c.ThresholdByCount) / 100
-	thresholdCount := float64(c.Miners.Size()) * notarizedPercent
+	thresholdCount := float64(miners.Size()) * notarizedPercent
 	return int(math.Ceil(thresholdCount))
 }
 
@@ -669,7 +669,7 @@ func (c *Chain) AreAllNodesActive() bool {
 /*CanStartNetwork - check whether the network can start */
 func (c *Chain) CanStartNetwork() bool {
 	active := c.Miners.GetActiveCount()
-	threshold := c.GetNotarizationThresholdCount()
+	threshold := c.GetNotarizationThresholdCount(c.Miners)
 	return active >= threshold && c.CanShardBlocks()
 }
 
@@ -785,7 +785,7 @@ func (c *Chain) SetRandomSeed(r round.RoundI, randomSeed int64) bool {
 		return false
 	}
 	r.SetRandomSeed(randomSeed)
-	r.ComputeMinerRanks(c.GetMiners(r))
+	r.ComputeMinerRanks(c.GetMiners(r.GetRoundNumber()))
 	roundNumber := r.GetRoundNumber()
 	if roundNumber > c.CurrentRound {
 		c.CurrentRound = roundNumber
@@ -813,7 +813,7 @@ func (c *Chain) getBlocks() []*block.Block {
 
 //SetRoundRank - set the round rank of the block
 func (c *Chain) SetRoundRank(r round.RoundI, b *block.Block) {
-	miners := c.GetMiners(r)
+	miners := c.GetMiners(r.GetRoundNumber())
 	if miners == nil || miners.Size() == 0 {
 		Logger.DPanic("set_round_rank  --  empty miners", zap.Any("round", r.GetRoundNumber()), zap.Any("block", b.Hash))
 	}

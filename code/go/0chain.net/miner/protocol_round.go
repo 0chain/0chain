@@ -296,7 +296,7 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 		Logger.Error("add to verification (invalid magic block)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("magic_block", b.LatestFinalizedMagicBlockHash))
 		return
 	}
-	bNode := mc.GetMiners(mr).GetNode(b.MinerID)
+	bNode := mc.GetMiners(mr.GetRoundNumber()).GetNode(b.MinerID)
 	if bNode == nil {
 		b.SetBlockState(block.StateVerificationRejected)
 		Logger.Error("add to round verification (invalid miner)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("miner_id", b.MinerID))
@@ -309,7 +309,7 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 		return
 	}
 	if b.Round > 1 {
-		if err := mc.VerifyNotarization(ctx, b.PrevHash, b.GetPrevBlockVerificationTickets(), pr); err != nil {
+		if err := mc.VerifyNotarization(ctx, b.PrevHash, b.GetPrevBlockVerificationTickets(), pr.GetRoundNumber()); err != nil {
 			Logger.Error("add to verification (prior block verify notarization)", zap.Int64("round", pr.Number),
 				zap.Any("miner_id", b.MinerID), zap.String("block", b.PrevHash), zap.Int("v_tickets", b.PrevBlockVerificationTicketsSize()), zap.Error(err))
 			return
@@ -341,7 +341,7 @@ func (mc *Chain) addToRoundVerification(ctx context.Context, mr *Round, b *block
 	Logger.Info("adding block to verify", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Float64("weight", b.Weight()), zap.Float64("chain_weight", b.ChainWeight))
 	vctx := mr.StartVerificationBlockCollection(ctx)
 	if vctx != nil {
-		miner := mc.GetMiners(mr).GetNode(b.MinerID)
+		miner := mc.GetMiners(mr.GetRoundNumber()).GetNode(b.MinerID)
 		waitTime := mc.GetBlockProposalWaitTime(mr.Round)
 		minerNT := time.Duration(int64(miner.GetLargeMessageSendTime()/1000000)) * time.Millisecond
 		if minerNT >= waitTime {
@@ -383,7 +383,7 @@ func (mc *Chain) computeBlockProposalDynamicWaitTime(r round.RoundI) time.Durati
 func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 	verifyAndSend := func(ctx context.Context, r *Round, b *block.Block) bool {
 		b.SetBlockState(block.StateVerificationAccepted)
-		miner := mc.GetMiners(r).GetNode(b.MinerID)
+		miner := mc.GetMiners(r.GetRoundNumber()).GetNode(b.MinerID)
 		minerStats := miner.ProtocolStats.(*chain.MinerStats)
 		bvt, err := mc.VerifyRoundBlock(ctx, r, b)
 		if err != nil {
@@ -551,7 +551,7 @@ func (mc *Chain) checkBlockNotarization(ctx context.Context, r *Round, b *block.
 //MergeNotarization - merge a notarization
 func (mc *Chain) MergeNotarization(ctx context.Context, r *Round, b *block.Block, vts []*block.VerificationTicket) {
 	for _, t := range vts {
-		if err := mc.VerifyTicket(ctx, b.Hash, t, r); err != nil {
+		if err := mc.VerifyTicket(ctx, b.Hash, t, r.GetRoundNumber()); err != nil {
 			Logger.Error("merge notarization", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
 		}
 	}
@@ -616,7 +616,8 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*bloc
 		if r == nil {
 			r = mc.getRound(ctx, fb.Round)
 		}
-		err = mc.VerifyNotarization(ctx, fb.Hash, fb.GetVerificationTickets(), r)
+		err = mc.VerifyNotarization(ctx, fb.Hash, fb.GetVerificationTickets(),
+			r.GetRoundNumber())
 		if err != nil {
 			Logger.DPanic("lfb from sharder - notarization failed", zap.Int64("round", fb.Round),
 				zap.String("block", fb.Hash), zap.Error(err))

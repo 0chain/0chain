@@ -194,7 +194,7 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 	if r == nil {
 		r = mc.getRound(ctx, b.Round)
 	}
-	if err := mc.VerifyNotarization(ctx, b.Hash, b.GetVerificationTickets(), r); err != nil {
+	if err := mc.VerifyNotarization(ctx, b.Hash, b.GetVerificationTickets(), r.GetRoundNumber()); err != nil {
 		return nil, err
 	}
 	msg := &BlockMessage{Sender: node.GetSender(ctx), Type: MessageNotarizedBlock, Block: b}

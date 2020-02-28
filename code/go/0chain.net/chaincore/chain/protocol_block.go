@@ -18,8 +18,8 @@ import (
 )
 
 /*VerifyTicket - verify the ticket */
-func (c *Chain) VerifyTicket(ctx context.Context, blockHash string, bvt *block.VerificationTicket, r round.RoundI) error {
-	sender := c.GetMiners(r).GetNode(bvt.VerifierID)
+func (c *Chain) VerifyTicket(ctx context.Context, blockHash string, bvt *block.VerificationTicket, round int64) error {
+	sender := c.GetMiners(round).GetNode(bvt.VerifierID)
 	if sender == nil {
 		return common.InvalidRequest(fmt.Sprintf("Verifier unknown or not authorized at this time: %v", bvt.VerifierID))
 	}
@@ -31,7 +31,7 @@ func (c *Chain) VerifyTicket(ctx context.Context, blockHash string, bvt *block.V
 }
 
 /*VerifyNotarization - verify that the notarization is correct */
-func (c *Chain) VerifyNotarization(ctx context.Context, blockHash string, bvt []*block.VerificationTicket, r round.RoundI) error {
+func (c *Chain) VerifyNotarization(ctx context.Context, blockHash string, bvt []*block.VerificationTicket, round int64) error {
 	if bvt == nil {
 		return common.NewError("no_verification_tickets", "No verification tickets for this block")
 	}
@@ -46,11 +46,11 @@ func (c *Chain) VerifyNotarization(ctx context.Context, blockHash string, bvt []
 		}
 		ticketsMap[vt.VerifierID] = true
 	}
-	if !c.reachedNotarization(bvt) {
+	if !c.reachedNotarization(round, bvt) {
 		return common.NewError("block_not_notarized", "Verification tickets not sufficient to reach notarization")
 	}
 	for _, vt := range bvt {
-		if err := c.VerifyTicket(ctx, blockHash, vt, r); err != nil {
+		if err := c.VerifyTicket(ctx, blockHash, vt, round); err != nil {
 			return err
 		}
 	}
@@ -62,20 +62,43 @@ func (c *Chain) IsBlockNotarized(ctx context.Context, b *block.Block) bool {
 	if b.IsBlockNotarized() {
 		return true
 	}
-	notarized := c.reachedNotarization(b.GetVerificationTickets())
+	notarized := c.reachedNotarization(b.Round, b.GetVerificationTickets())
 	if notarized {
 		b.SetBlockNotarized()
 	}
 	return notarized
 }
 
-func (c *Chain) reachedNotarization(bvt []*block.VerificationTicket) bool {
+func (c *Chain) roundMiners(round int64) (miners *node.Pool) {
+	if c.MagicBlock == nil {
+		return
+	}
+	if round >= c.MagicBlock.StartingRound {
+		return c.MagicBlock.Miners
+	}
+	if c.PreviousMagicBlock == nil {
+		return
+	}
+	if round >= c.PreviousMagicBlock.StartingRound {
+		return c.PreviousMagicBlock.Miners
+	}
+	return
+}
+
+func (c *Chain) reachedNotarization(round int64,
+	bvt []*block.VerificationTicket) bool {
+
+	var miners = c.GetMiners(round)
+	if miners == nil {
+		return false
+	}
+
 	if c.ThresholdByCount > 0 {
 		numSignatures := len(bvt)
-		if numSignatures < c.GetNotarizationThresholdCount() {
+		if numSignatures < c.GetNotarizationThresholdCount(miners) {
 			//ToDo: Remove this comment
 			Logger.Info("not reached notarization",
-				zap.Int("Threshold", c.GetNotarizationThresholdCount()),
+				zap.Int("Threshold", c.GetNotarizationThresholdCount(miners)),
 				zap.Int("num_signatures", numSignatures), zap.Int64("CurrentRound", c.GetCurrentRound()))
 			return false
 		}
@@ -110,7 +133,7 @@ func (c *Chain) UpdateNodeState(b *block.Block) {
 	r := c.GetRound(b.Round)
 	for _, vt := range b.GetVerificationTickets() {
 
-		signer := c.GetMiners(r).GetNode(vt.VerifierID)
+		signer := c.GetMiners(r.GetRoundNumber()).GetNode(vt.VerifierID)
 		if signer == nil {
 			Logger.Error("this should not happen!")
 			continue
@@ -244,7 +267,7 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 			r = c.RoundF.CreateRoundF(nb.Round).(*round.Round)
 			c.AddRound(r)
 		}
-		if err := c.VerifyNotarization(ctx, nb.Hash, nb.GetVerificationTickets(), r); err != nil {
+		if err := c.VerifyNotarization(ctx, nb.Hash, nb.GetVerificationTickets(), r.GetRoundNumber()); err != nil {
 			Logger.Error("get notarized block - validate notarization", zap.Int64("round", nb.Round), zap.String("block", blockHash), zap.Error(err))
 			return nil, err
 		}
