@@ -261,11 +261,8 @@ func (sc *Chain) iterateRoundsLookingForLFB(ctx context.Context) (
 		Logger.Debug("load_lfb, got round", zap.Int64("round", r.Number),
 			zap.String("block_hash", r.BlockHash))
 
-		println("TRACE load_lfb got round", r.Number)
-
 		lfb, err = sc.GetBlockFromStore(r.BlockHash, r.Number)
 		if err != nil {
-			println("TRACE load_lfb got round C (1)")
 			continue // TODO: can we use os.IsNotExist(err) or should not
 		}
 
@@ -276,7 +273,6 @@ func (sc *Chain) iterateRoundsLookingForLFB(ctx context.Context) (
 				zap.Int64("round", r.Number),
 				zap.String("block_hash", r.BlockHash))
 			// we can't use this block, because of missing or malformed state
-			println("TRACE load_lfb got round C (2)")
 			continue
 		}
 
@@ -288,14 +284,11 @@ func (sc *Chain) iterateRoundsLookingForLFB(ctx context.Context) (
 				zap.String("block_hash", r.BlockHash),
 				zap.String("lfmb_hash", lfb.LatestFinalizedMagicBlockHash))
 			// we can't skip to starting round, because we don't know it
-			println("TRACE load_lfb got round C (3)")
 			continue
 		}
 
 		return // got them
 	}
-
-	println("TRACE load_lfb got round R (4)")
 
 	if r.Number == 1 {
 		r.Number = 0
