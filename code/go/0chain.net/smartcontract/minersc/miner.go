@@ -1,9 +1,6 @@
 package minersc
 
 import (
-	"errors"
-	"fmt"
-
 	c_state "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
@@ -11,6 +8,8 @@ import (
 	"0chain.net/core/datastore"
 	. "0chain.net/core/logging"
 	"0chain.net/core/util"
+	"errors"
+	"fmt"
 	"go.uber.org/zap"
 )
 
@@ -28,6 +27,14 @@ func (msc *MinerSmartContract) doesMinerExist(pkey datastore.Key, statectx c_sta
 
 //AddMiner Function to handle miner register
 func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction, input []byte, statectx c_state.StateContextI) (string, error) {
+	ph, err := msc.getPhaseNode(statectx)
+	if err != nil {
+		return "", err
+	}
+	if ph.Phase != Start {
+		return "", common.NewError("failed to add miner", "registration must be in the 'start' phase")
+	}
+
 	Logger.Info("try to add miner", zap.Any("txn", t))
 	allMinersList, err := msc.getMinersList(statectx)
 	if err != nil {

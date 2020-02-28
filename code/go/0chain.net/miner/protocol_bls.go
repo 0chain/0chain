@@ -191,14 +191,14 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 		zap.Int("Sender", vrfs.GetParty().SetIndex), zap.Int("vrf_timeoutcount", vrfs.GetRoundTimeoutCount()),
 		zap.String("vrf_share", vrfs.Share))
 
-	mc.ViewChange(ctx, mr.Number)
-
 	mr.AddTimeoutVote(vrfs.GetRoundTimeoutCount(), vrfs.GetParty().ID)
 	msg, err := mc.GetBlsMessageForRound(mr.Round)
 	if err != nil {
 		Logger.Warn("failed to get bls message", zap.Any("vrfs_share", vrfs.Share), zap.Any("round", mr.Round))
 		return false
 	}
+
+	mc.ViewChange(ctx, mr.Number)
 
 	var share bls.Sign
 	if err := share.SetHexString(vrfs.Share); err != nil {

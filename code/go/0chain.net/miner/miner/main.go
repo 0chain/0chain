@@ -201,7 +201,9 @@ func main() {
 	if config.Development() {
 		go TransactionGenerator(mc.Chain)
 	}
+
 	go mc.InitSetupSC()
+
 	if config.DevConfiguration.ViewChange {
 		go mc.DKGProcess(ctx)
 	}

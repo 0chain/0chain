@@ -655,7 +655,6 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
 	if r.Number == 0 && mc.nextViewChange == 0 {
 		return
 	}
-	mc.ViewChange(ctx, mc.CurrentRound)
 
 	if r.GetSoftTimeoutCount() == mc.RoundRestartMult {
 		Logger.Info("triggering restartRound", zap.Int64("round", r.GetRoundNumber()))

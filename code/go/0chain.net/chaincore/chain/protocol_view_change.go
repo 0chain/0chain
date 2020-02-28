@@ -116,14 +116,13 @@ func (mc *Chain) isRegistered() bool {
 			return false
 		}
 	}
-	var registered bool
+
 	for _, miner := range allMinersList.Nodes {
 		if miner.ID == node.Self.Underlying().GetKey() {
-			registered = true
-			break
+			return true
 		}
 	}
-	return registered
+	return false
 }
 
 func (mc *Chain) ConfirmTransaction(t *httpclientutil.Transaction) bool {
