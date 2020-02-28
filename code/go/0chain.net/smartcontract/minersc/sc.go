@@ -92,7 +92,9 @@ func (msc *MinerSmartContract) SetSC(sc *sci.SmartContract, bcContext sci.BCCont
 }
 
 //Execute implemetning the interface
-func (msc *MinerSmartContract) Execute(t *transaction.Transaction, funcName string, input []byte, balances c_state.StateContextI) (string, error) {
+func (msc *MinerSmartContract) Execute(t *transaction.Transaction, funcName string,
+	input []byte, balances c_state.StateContextI) (string, error) {
+
 	gn, err := msc.getGlobalNode(balances)
 	if err != nil {
 		return "", err
