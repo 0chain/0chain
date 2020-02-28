@@ -342,3 +342,8 @@ func (mc *Chain) SetStarted() {
 func (mc *Chain) isStarted() bool {
 	return atomic.LoadUint32(&mc.started) == 1
 }
+
+// SaveMagicBlock function (nil).
+func (mc *Chain) SaveMagicBlock() chain.MagicBlockSaveFunc {
+	return nil
+}

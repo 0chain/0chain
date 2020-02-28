@@ -60,6 +60,9 @@ func GetServerChain() *Chain {
 
 /*BlockStateHandler - handles the block state changes */
 type BlockStateHandler interface {
+	// SaveMagicBlock in store if it's about LFMB next in chain. It can return
+	// nil if it don't have this ability.
+	SaveMagicBlock() MagicBlockSaveFunc
 	UpdatePendingBlock(ctx context.Context, b *block.Block, txns []datastore.Entity)
 	UpdateFinalizedBlock(ctx context.Context, b *block.Block)
 }
@@ -989,21 +992,28 @@ func (c *Chain) ActiveInChain() bool {
 	return c.IsActiveNode(node.Self.Underlying().GetKey(), c.GetCurrentRound()) && c.GetLatestFinalizedBlock().ClientState != nil
 }
 
-// SetInitialPreviousMagicBlock used to set previous magic block loaded from
-// store on application start. After the call th UpdateMagicBlock should be
-// called with latest finalized magic block (on startup, actually).
-func (c *Chain) SetInitialPreviousMagicBlock(plfmb *block.MagicBlock) {
+// -------------------------------------------------------------------------- //
+// frozen until a sharder can receive blocks, while the
+// sharder doesn't have corresponding MB
+//
 
-	c.mbMutex.Lock()
-	defer c.mbMutex.Unlock()
+// // SetInitialPreviousMagicBlock used to set previous magic block loaded from
+// // store on application start. After the call th UpdateMagicBlock should be
+// // called with latest finalized magic block (on startup, actually).
+// func (c *Chain) SetInitialPreviousMagicBlock(plfmb *block.MagicBlock) {
+//
+// 	c.mbMutex.Lock()
+// 	defer c.mbMutex.Unlock()
+//
+// 	c.PreviousMagicBlock = nil // reset it to nil for now
+// 	c.MagicBlock = plfmb
+// 	c.SetupNodes()
+// 	c.Sharders.ComputeProperties()
+// 	c.Miners.ComputeProperties()
+// 	c.InitializeMinerPool()
+// }
 
-	c.PreviousMagicBlock = nil // reset it to nil for now
-	c.MagicBlock = plfmb
-	c.SetupNodes()
-	c.Sharders.ComputeProperties()
-	c.Miners.ComputeProperties()
-	c.InitializeMinerPool()
-}
+// -------------------------------------------------------------------------- //
 
 func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 
@@ -1064,10 +1074,20 @@ func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 		defer c.lfmbMutex.Unlock()
 		c.mbMutex.Lock()
 		defer c.mbMutex.Unlock()
-		latest := c.LatestFinalizedMagicBlock
-		if latest != nil && latest.MagicBlock != nil && latest.MagicBlock.MagicBlockNumber == b.MagicBlock.MagicBlockNumber-1 && latest.MagicBlock.Hash != b.MagicBlock.PreviousMagicBlockHash {
-			Logger.DPanic(fmt.Sprintf("failed to set finalized magic block -- hashes don't match up: chain's finalized block hash %v,block's magic block previous hash %v", c.LatestFinalizedMagicBlock.Hash, b.MagicBlock.PreviousMagicBlockHash))
+
+		var latest = c.LatestFinalizedMagicBlock
+
+		if latest != nil && latest.MagicBlock != nil &&
+			latest.MagicBlock.MagicBlockNumber == b.MagicBlock.MagicBlockNumber-1 &&
+			latest.MagicBlock.Hash != b.MagicBlock.PreviousMagicBlockHash {
+
+			Logger.DPanic(fmt.Sprintf("failed to set finalized magic block -- "+
+				"hashes don't match up: chain's finalized block hash %v,block's"+
+				" magic block previous hash %v",
+				c.LatestFinalizedMagicBlock.Hash,
+				b.MagicBlock.PreviousMagicBlockHash))
 		}
+
 		c.LatestFinalizedMagicBlock = b
 		c.lfmbSummary = b.GetSummary()
 	}
