@@ -37,6 +37,7 @@ func (mc *Chain) InitSetupSC() {
 			registered = true
 		} else {
 			time.Sleep(time.Second)
+			registered = mc.isRegistered()
 		}
 	}
 }

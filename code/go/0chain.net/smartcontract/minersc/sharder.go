@@ -93,8 +93,8 @@ func (msc *MinerSmartContract) getShardersList(statectx c_state.StateContextI) (
 	allMinersList := &MinerNodes{}
 	allMinersBytes, err := statectx.GetTrieNode(AllShardersKey)
 	if err != nil && err != util.ErrValueNotPresent {
-		return nil, common.NewError("getMinersList_failed",
-			fmt.Sprintf("Failed to retrieve existing miners list: %v", err))
+		return nil, common.NewError("getShardersList_failed",
+			fmt.Sprintf("Failed to retrieve existing sharders list: %v", err))
 	}
 	if allMinersBytes == nil {
 		return allMinersList, nil
