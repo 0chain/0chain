@@ -11,9 +11,8 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/core/util"
-
 	. "0chain.net/core/logging"
+	"0chain.net/core/util"
 	"go.uber.org/zap"
 )
 
@@ -34,11 +33,13 @@ func (msc *MinerSmartContract) moveToContribute(balances c_state.StateContextI, 
 func (msc *MinerSmartContract) moveToShareOrPublish(balances c_state.StateContextI, pn *PhaseNode, gn *globalNode) bool {
 	dkgMinersList, err := msc.getMinersDKGList(balances)
 	if err != nil {
+		Logger.Error("failed to get miners DKG", zap.Any("error", err), zap.Any("phase", pn.Phase))
 		return false
 	}
 	mpks := block.NewMpks()
 	mpksBytes, err := balances.GetTrieNode(MinersMPKKey)
 	if err != nil {
+		Logger.Error("failed to get node MinersMPKKey", zap.Any("error", err), zap.Any("phase", pn.Phase))
 		return false
 	}
 	mpks.Decode(mpksBytes.Encode())
@@ -48,11 +49,13 @@ func (msc *MinerSmartContract) moveToShareOrPublish(balances c_state.StateContex
 func (msc *MinerSmartContract) moveToWait(balances c_state.StateContextI, pn *PhaseNode, gn *globalNode) bool {
 	dkgMinersList, err := msc.getMinersDKGList(balances)
 	if err != nil {
+		Logger.Error("failed to get miners DKG", zap.Any("error", err), zap.Any("phase", pn.Phase))
 		return false
 	}
 	gsos := block.NewGroupSharesOrSigns()
 	groupBytes, err := balances.GetTrieNode(GroupShareOrSignsKey)
 	if err != nil {
+		Logger.Error("failed to get node GroupShareOrSignsKey", zap.Any("error", err), zap.Any("phase", pn.Phase))
 		return false
 	}
 	gsos.Decode(groupBytes.Encode())
@@ -151,8 +154,8 @@ func (msc *MinerSmartContract) widdleDKGMinersForShare(balances c_state.StateCon
 	}
 	mpks := block.NewMpks()
 	mpksBytes, err := balances.GetTrieNode(MinersMPKKey)
-	if err != nil {
-		Logger.Error("widdle dkg miners -- failed to get miners' mpks", zap.Any("error", err))
+	if err != nil {		
+		Logger.Error("widdle dkg miners -- failed to get miners mpks", zap.Any("error", err))
 		return err
 	}
 	mpks.Decode(mpksBytes.Encode())
@@ -162,7 +165,7 @@ func (msc *MinerSmartContract) widdleDKGMinersForShare(balances c_state.StateCon
 		}
 	}
 	_, err = balances.InsertTrieNode(DKGMinersKey, dkgMiners)
-	if err != nil {
+	if err != nil {		
 		Logger.Error("widdle dkg miners -- failed to insert dkg miners", zap.Any("error", err))
 		return err
 	}
@@ -184,10 +187,14 @@ func (msc *MinerSmartContract) createMagicBlockForWait(balances c_state.StateCon
 		return err
 	}
 	gsos.Decode(groupBytes.Encode())
+
+	msc.mutexMinerMPK.Lock()
+	defer msc.mutexMinerMPK.Unlock()
+
 	mpks := block.NewMpks()
 	mpksBytes, err := balances.GetTrieNode(MinersMPKKey)
 	if err != nil {
-		return common.NewError("create_magic_block_faield", "error with miner's mpk")
+		return common.NewErrorf("create_magic_block_faield","error with miner's mpk: %v", err)
 	}
 	mpks.Decode(mpksBytes.Encode())
 
@@ -204,7 +211,7 @@ func (msc *MinerSmartContract) createMagicBlockForWait(balances c_state.StateCon
 			delete(gsos.Shares, key)
 			delete(mpks.Mpks, key)
 		}
-	}
+	}	
 
 	magicBlock, err := msc.CreateMagicBlock(balances, dkgMinersList, gsos, mpks, pn)
 	if err != nil {
@@ -235,6 +242,7 @@ func (msc *MinerSmartContract) createMagicBlockForWait(balances c_state.StateCon
 	return nil
 }
 
+
 func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction, inputData []byte, gn *globalNode, balances c_state.StateContextI) (string, error) {
 	pn, err := msc.getPhaseNode(balances)
 	if err != nil {
@@ -250,6 +258,10 @@ func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction, inputDa
 	if _, ok := dmn.SimpleNodes[t.ClientID]; !ok {
 		return "", common.NewError("contribute_mpk_failed", "miner not part of dkg set")
 	}
+
+	msc.mutexMinerMPK.Lock()
+	defer msc.mutexMinerMPK.Unlock()
+
 	mpks := block.NewMpks()
 	mpk := &block.MPK{ID: t.ClientID}
 	mpksBytes, err := balances.GetTrieNode(MinersMPKKey)
@@ -257,7 +269,7 @@ func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction, inputDa
 		mpks.Decode(mpksBytes.Encode())
 	}
 	err = mpk.Decode(inputData)
-	if err != nil {
+	if err != nil {		
 		return "", nil
 	}
 	if len(mpk.Mpk) != dmn.T {
@@ -393,6 +405,8 @@ func (msc *MinerSmartContract) CreateMagicBlock(balances c_state.StateContextI, 
 }
 
 func (msc *MinerSmartContract) RestartDKG(pn *PhaseNode, balances c_state.StateContextI) {
+	msc.mutexMinerMPK.Lock()
+	defer msc.mutexMinerMPK.Unlock()
 	mpks := block.NewMpks()
 	_, err := balances.InsertTrieNode(MinersMPKKey, mpks)
 	if err != nil {

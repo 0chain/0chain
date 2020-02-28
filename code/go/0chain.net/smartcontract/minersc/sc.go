@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"sync"
 
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
@@ -33,6 +34,8 @@ var (
 type MinerSmartContract struct {
 	*sci.SmartContract
 	bcContext sci.BCContextI
+
+	mutexMinerMPK sync.RWMutex
 }
 
 func init() {
