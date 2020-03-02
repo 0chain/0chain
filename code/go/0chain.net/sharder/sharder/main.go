@@ -279,7 +279,7 @@ func getCurrentMagicBlock(sc *sharder.Chain) {
 	magicBlock := mbs[0]
 	Logger.Info("get current magic block", zap.Any("magic_block", magicBlock))
 
-	var err = sc.VerifyChainHistory(common.GetRootContext(), magicBlock,
+	var err = sc.MustVerifyChainHistory(common.GetRootContext(), magicBlock,
 		sc.SaveMagicBlockHandler)
 	if err != nil {
 		Logger.DPanic(fmt.Sprintf("failed to verify chain history: %v", err.Error()))
