@@ -410,8 +410,8 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			r.Block = b
 			mc.ProcessVerifiedTicket(ctx, r, b, &bvt.VerificationTicket)
 		}
-		if b.RoundRank >= mc.NumGenerators {
-			Logger.Warn("round rank is greater then num_generators",
+		if b.RoundRank >= mc.NumGenerators || b.RoundRank < 0 {
+			Logger.Warn("round rank is invalid or greater then num_generators",
 				zap.String("hash", b.Hash), zap.Int64("round", b.Round),
 				zap.Int("round_rank", b.RoundRank),
 				zap.Int("num_generators", mc.NumGenerators))

@@ -168,8 +168,8 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	Logger.Info("finalize block", zap.Int64("round", fb.Round), zap.Int64("current_round", c.GetCurrentRound()),
 		zap.Int64("lf_round", c.GetLatestFinalizedBlock().Round), zap.String("hash", fb.Hash),
 		zap.Int("round_rank", fb.RoundRank), zap.Int8("state", fb.GetBlockState()))
-	if fb.RoundRank >= c.NumGenerators {
-		Logger.Warn("FB round rank is greater then num_generators",
+	if fb.RoundRank >= c.NumGenerators || fb.RoundRank < 0 {
+		Logger.Warn("FB round rank is invalid or greater then num_generators",
 			zap.Int("round_rank", fb.RoundRank),
 			zap.Int("num_generators", c.NumGenerators))
 	} else {
