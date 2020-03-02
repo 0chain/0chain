@@ -33,12 +33,12 @@ func (mc *Chain) InitSetupSC() {
 	registered := mc.isRegistered()
 	for !registered {
 		txn, err := mc.RegisterNode()
-		if err == nil && mc.ConfirmTransaction(txn) {
-			registered = true
-		} else {
+		if err != nil {
+			Logger.Warn("failed to register node in SC -- init_setup_sc", zap.Error(err))
+		} else if !mc.ConfirmTransaction(txn) {
 			time.Sleep(time.Second)
-			registered = mc.isRegistered()
 		}
+		registered = mc.isRegistered()
 	}
 }
 
