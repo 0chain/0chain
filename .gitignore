@@ -30,3 +30,5 @@ code/go/bin
 gorocksdb/
 docker.local/sharder*
 *.log
+*.sublime-project
+*.sublime-workspace
