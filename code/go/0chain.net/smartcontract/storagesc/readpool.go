@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	"encoding/json"
+	"errors"
 	"time"
 
 	chainState "0chain.net/chaincore/chain/state"
@@ -117,7 +118,7 @@ func (rps *readPools) Decode(input []byte) (err error) {
 	}
 	var cid, ok = objMap["client_id"]
 	if ok {
-		if err = json.Unmarshal(cid, &rsp.ClientID); err != nil {
+		if err = json.Unmarshal(cid, &rps.ClientID); err != nil {
 			return err
 		}
 	}
@@ -155,7 +156,7 @@ func (rps *readPools) getKey(scKey string) datastore.Key {
 }
 
 func (rps *readPools) addPool(rp *readPool) (err error) {
-	if rps.hasPool(rp.ID) {
+	if _, ok := rps.Pools[rp.ID]; ok {
 		return errors.New("user already has read pool")
 	}
 	rps.Pools[rp.ID] = rp
@@ -240,9 +241,14 @@ func (tl tokenLock) LockStats(entity interface{}) []byte {
 
 // getReadPoolsBytes of a client
 func (ssc *StorageSmartContract) getReadPoolsBytes(t *transaction.Transaction,
-	balances chainState.StateContextI) ([]byte, error) {
+	balances chainState.StateContextI) (b []byte, err error) {
 
-	return balances.GetTrieNode(readPoolsKey(ssc.ID, t.ClientID))
+	var val util.Serializable
+	val, err = balances.GetTrieNode(readPoolsKey(ssc.ID, t.ClientID))
+	if err != nil {
+		return
+	}
+	return val.Encode(), nil
 }
 
 // getReadPools of current client
@@ -273,7 +279,7 @@ func (ssc *StorageSmartContract) newReadPool(t *transaction.Transaction,
 	}
 
 	var rps = newReadPools(t.ClientID)
-	if _, err = balances.InsertTrieNode(rps.getKey(scKey), rps); err != nil {
+	if _, err = balances.InsertTrieNode(rps.getKey(ssc.ID), rps); err != nil {
 		return "", common.NewError("new_read_pool_failed", err.Error())
 	}
 
@@ -294,7 +300,7 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 	// lock request & user balance
 
 	var lr lockRequest
-	if err = lr.decode(inpu); err != nil {
+	if err = lr.decode(input); err != nil {
 		return "", common.NewError("read_pool_lock_failed", err.Error())
 	}
 	var balance state.Balance
@@ -313,7 +319,7 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 			"lock amount is greater than balance")
 	}
 
-	if lp.Duration <= 0 {
+	if lr.Duration <= 0 {
 		return "", common.NewError("read_pool_lock_failed",
 			"invalid locking period")
 	}
