@@ -23,11 +23,25 @@ const (
 	ADDRESS = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9"
 	owner   = "c8a5e74c2f4fae2c1bed79fb2b78d3b88f844bbb6bf1db5fc43240711f23321f"
 	name    = "miner"
+
+	phaseWaitingRounds = int64(50)
 )
 
 var (
 	PhaseRounds = make(map[int]int64)
 	phaseFuncs  = make(map[int]phaseFunctions)
+
+	lockPhaseFunctions = map[int]*sync.Mutex{
+		Start:      {},
+		Contribute: {},
+		Publish:    {},
+	}
+
+	lockSmartContractExecute = map[string]*sync.Mutex{
+		"add_miner":          {},
+		"contributeMpk":      {},
+		"shareSignsOrShares": {},
+	}
 )
 
 //MinerSmartContract Smartcontract that takes care of all miner related requests
@@ -39,11 +53,11 @@ type MinerSmartContract struct {
 }
 
 func init() {
-	PhaseRounds[Start] = int64(50)
-	PhaseRounds[Contribute] = int64(50)
-	PhaseRounds[Share] = int64(50)
-	PhaseRounds[Publish] = int64(50)
-	PhaseRounds[Wait] = int64(50)
+	PhaseRounds[Start] = phaseWaitingRounds
+	PhaseRounds[Contribute] = phaseWaitingRounds
+	PhaseRounds[Share] = phaseWaitingRounds
+	PhaseRounds[Publish] = phaseWaitingRounds
+	PhaseRounds[Wait] = phaseWaitingRounds
 
 	msc := &MinerSmartContract{}
 	phaseFuncs[Start] = msc.createDKGMinersForContribute
@@ -91,7 +105,7 @@ func (msc *MinerSmartContract) SetSC(sc *sci.SmartContract, bcContext sci.BCCont
 	msc.SmartContractExecutionStats["mintedTokens"] = metrics.GetOrRegisterHistogram(fmt.Sprintf("sc:%v:func:%v", msc.ID, "mintedTokens"), nil, metrics.NewUniformSample(1024))
 }
 
-//Execute implemetning the interface
+//Execute implementing the interface
 func (msc *MinerSmartContract) Execute(t *transaction.Transaction, funcName string,
 	input []byte, balances c_state.StateContextI) (string, error) {
 
@@ -99,8 +113,11 @@ func (msc *MinerSmartContract) Execute(t *transaction.Transaction, funcName stri
 	if err != nil {
 		return "", err
 	}
+	if lock, ok := lockSmartContractExecute[funcName]; ok {
+		lock.Lock()
+		defer lock.Unlock()
+	}
 	switch funcName {
-
 	case "add_miner":
 		return msc.AddMiner(t, input, balances)
 	case "add_sharder":

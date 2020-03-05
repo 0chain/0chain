@@ -148,7 +148,13 @@ func (c *Chain) GetSCRestPoints(w http.ResponseWriter, r *http.Request) {
 	scInt.SetSC(sc, nil)
 	fmt.Fprintf(w, `<!DOCTYPE html><html><body><table class='menu' style='border-collapse: collapse;'>`)
 	fmt.Fprintf(w, `<tr class='header'><td>Function</td><td>Link</td></tr>`)
-	for funcName := range scInt.GetRestPoints() {
+	restPoints := scInt.GetRestPoints()
+	names := make([]string, 0, len(restPoints))
+	for funcName := range restPoints {
+		names = append(names, funcName)
+	}
+	sort.Strings(names)
+	for _, funcName := range names {
 		fmt.Fprintf(w, `<tr><td>%v</td><td><li><a href='%v'>%v</a></li></td></tr>`, funcName, "/v1/screst/"+key+funcName, "/v1/screst/*"+funcName+"*")
 	}
 

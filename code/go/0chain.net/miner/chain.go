@@ -108,7 +108,6 @@ type Chain struct {
 	nextViewChange      int64
 	discoverClients     bool
 	started             uint32
-	dkgSet              bool
 }
 
 // SetDiscoverClients set the discover clients parameter
@@ -217,14 +216,16 @@ func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) erro
 	return err
 }
 
-func (mc *Chain) ViewChange(ctx context.Context, round int64) bool {
+func (mc *Chain) isNeedViewChange(nround int64) bool {
 	mc.muDKG.RLock()
-	needViewChange := config.DevConfiguration.ViewChange &&
-		mc.nextViewChange <= round &&
+	defer mc.muDKG.RUnlock()
+	return config.DevConfiguration.ViewChange && mc.nextViewChange == nround &&
 		(mc.currentDKG == nil || mc.currentDKG.StartingRound < mc.nextViewChange)
-	mc.muDKG.RUnlock()
 
-	if !needViewChange {
+}
+
+func (mc *Chain) ViewChange(ctx context.Context, nround int64) bool {
+	if !mc.isNeedViewChange(nround) {
 		return false
 	}
 	viewChangeMagicBlock := mc.GetViewChangeMagicBlock()
@@ -236,12 +237,12 @@ func (mc *Chain) ViewChange(ctx context.Context, round int64) bool {
 		if err := mc.SetDKGSFromStore(ctx, viewChangeMagicBlock); err != nil {
 			Logger.DPanic(err.Error())
 		}
+		mc.ensureLatestFinalizedBlocks(ctx, nround)
 	} else {
 		if err := mc.SetDKGSFromStore(ctx, mc.MagicBlock); err != nil {
 			Logger.DPanic(err.Error())
 		}
 	}
-
 	return true
 }
 

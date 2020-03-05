@@ -84,7 +84,8 @@ type Block struct {
 	RoundRank   int           `json:"-"` // rank of the block in the round it belongs to
 	PrevBlock   *Block        `json:"-"`
 
-	TxnsMap map[string]bool `json:"-"`
+	TxnsMap   map[string]bool `json:"-"`
+	mutexTxns sync.RWMutex
 
 	ClientState           util.MerklePatriciaTrieI `json:"-"`
 	stateStatus           int8
@@ -143,6 +144,8 @@ func (b *Block) ComputeProperties() {
 		b.ChainID = datastore.ToKey(config.GetServerChainID())
 	}
 	if b.Txns != nil {
+		b.mutexTxns.Lock()
+		defer b.mutexTxns.Unlock()
 		b.TxnsMap = make(map[string]bool, len(b.Txns))
 		for _, txn := range b.Txns {
 			txn.ComputeProperties()
@@ -175,11 +178,16 @@ func (b *Block) Validate(ctx context.Context) error {
 	if b.ChainWeight > float64(b.Round) {
 		return common.NewError("chain_weight_gt_round", "Chain weight can't be greater than the block round")
 	}
+
+	b.mutexTxns.RLock()
 	if b.TxnsMap != nil {
 		if len(b.Txns) != len(b.TxnsMap) {
+			b.mutexTxns.RUnlock()
 			return common.NewError("duplicate_transactions", "Block has duplicate transactions")
 		}
 	}
+	b.mutexTxns.RUnlock()
+
 	hash := b.ComputeHash()
 	if b.Hash != hash {
 		return common.NewError("incorrect_block_hash", fmt.Sprintf("computed block hash doesn't match with the hash of the block: %v: %v: %v", b.Hash, hash, b.getHashData()))
@@ -378,6 +386,8 @@ func (b *Block) HashBlock() {
 
 /*ComputeTxnMap - organize the transactions into a hashmap for check if the txn exists*/
 func (b *Block) ComputeTxnMap() {
+	b.mutexTxns.Lock()
+	defer b.mutexTxns.Unlock()
 	b.TxnsMap = make(map[string]bool, len(b.Txns))
 	for _, txn := range b.Txns {
 		b.TxnsMap[txn.Hash] = true
@@ -386,6 +396,8 @@ func (b *Block) ComputeTxnMap() {
 
 /*HasTransaction - check if the transaction exists in this block */
 func (b *Block) HasTransaction(hash string) bool {
+	b.mutexTxns.RLock()
+	defer b.mutexTxns.RUnlock()
 	_, ok := b.TxnsMap[hash]
 	return ok
 }

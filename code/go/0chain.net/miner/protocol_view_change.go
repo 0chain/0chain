@@ -83,6 +83,7 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 							oldPhase := currentPhase
 							currentPhase = pn.Phase
 							Logger.Debug("dkg process moved phase", zap.Any("old_phase", oldPhase), zap.Any("phase", currentPhase))
+
 						}
 					}
 				}
@@ -128,7 +129,7 @@ func (mc *Chain) ContributeMpk() (*httpclientutil.Transaction, error) {
 	selfNode := node.Self.Underlying()
 	selfNodeKey := selfNode.GetKey()
 	mpk := &block.MPK{ID: selfNodeKey}
-	if !mc.dkgSet {
+	if !mc.isDKGSet() {
 		if dmn.N == 0 {
 			return nil, common.NewError("failed to contribute mpk", "dkg is not set yet")
 		}
@@ -136,8 +137,8 @@ func (mc *Chain) ContributeMpk() (*httpclientutil.Transaction, error) {
 		vc.ID = bls.ComputeIDdkg(selfNodeKey)
 		vc.MagicBlockNumber = mc.MagicBlockNumber + 1
 		mc.viewChangeDKG = vc
-		mc.dkgSet = true
 	}
+
 	for _, v := range mc.viewChangeDKG.Mpk {
 		mpk.Mpk = append(mpk.Mpk, v.GetHexString())
 	}
@@ -215,8 +216,8 @@ func (mc *Chain) SendSijs() (*httpclientutil.Transaction, error) {
 		return nil, err
 	}
 	selfNodeKey := node.Self.Underlying().GetKey()
-	if _, ok := dkgMiners.SimpleNodes[selfNodeKey]; !mc.dkgSet || !ok {
-		Logger.Error("failed to send sijs", zap.Any("dkg_set", mc.dkgSet), zap.Any("ok", ok))
+	if _, ok := dkgMiners.SimpleNodes[selfNodeKey]; !mc.isDKGSet() || !ok {
+		Logger.Error("failed to send sijs", zap.Any("dkg_set", mc.isDKGSet()), zap.Any("ok", ok))
 		return nil, nil
 	}
 	if len(mc.viewChangeDKG.Sij) < mc.viewChangeDKG.T {
@@ -363,7 +364,7 @@ func SignShareRequestHandler(ctx context.Context, r *http.Request) (interface{},
 	nodeID := r.Header.Get(node.HeaderNodeID)
 	secShare := r.FormValue("secret_share")
 	mc := GetMinerChain()
-	if !mc.dkgSet {
+	if !mc.isDKGSet() {
 		return nil, common.NewError("failed to sign share", "dkg not set")
 	}
 	mpks := mc.GetMpks()
@@ -449,8 +450,8 @@ func (mc *Chain) SendDKGShare(n *node.Node) error {
 }
 
 func (mc *Chain) PublishShareOrSigns() (*httpclientutil.Transaction, error) {
-	if !mc.dkgSet {
-		Logger.Error("failed to publish share or signs", zap.Any("dkg_set", mc.dkgSet))
+	if !mc.isDKGSet() {
+		Logger.Error("failed to publish share or signs", zap.Any("dkg_set", mc.isDKGSet()))
 		return nil, nil
 	}
 	selfNode := node.Self.Underlying()
@@ -511,8 +512,8 @@ func (mc *Chain) Wait() (*httpclientutil.Transaction, error) {
 		return nil, nil
 	}
 
-	if mc.viewChangeDKG == nil {
-		return nil, errors.New("unexpected NIL viewChangeDKG")
+	if !mc.isDKGSet() {
+		return nil, errors.New("unexpected not isDKGSet")
 	}
 
 	mpks := mc.GetMpks()
@@ -545,16 +546,24 @@ func (mc *Chain) Wait() (*httpclientutil.Transaction, error) {
 	mc.viewChangeDKG.DeleteFromSet(miners)
 	mc.viewChangeDKG.AggregatePublicKeyShares(magicBlock.Mpks.GetMpkMap())
 	mc.viewChangeDKG.AggregateSecretKeyShares()
-	mc.SetViewChangeMagicBlock(magicBlock)
 	mc.viewChangeDKG.StartingRound = magicBlock.StartingRound
 	mc.viewChangeDKG.MagicBlockNumber = magicBlock.MagicBlockNumber
 	if err := StoreDKGSummary(common.GetRootContext(), mc.viewChangeDKG.GetDKGSummary()); err != nil {
 		return nil, err
 	}
+	mc.clearViewChange()
+	mc.SetViewChangeMagicBlock(magicBlock)
 	mc.nextViewChange = magicBlock.StartingRound
+	return nil, nil
+}
+
+func (mc *Chain) isDKGSet() bool {
+	return mc.viewChangeDKG != nil
+}
+
+func (mc *Chain) clearViewChange() {
 	shareOrSigns = block.NewShareOrSigns()
 	shareOrSigns.ID = node.Self.Underlying().GetKey()
 	mc.mpks = block.NewMpks()
-	mc.dkgSet = false
-	return nil, nil
+	mc.viewChangeDKG = nil
 }

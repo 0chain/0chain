@@ -70,7 +70,7 @@ func (msc *MinerSmartContract) GetNodepoolHandler(ctx context.Context, params ur
 }
 
 func (msc *MinerSmartContract) GetMinerListHandler(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
-	allMinersList, err := msc.getMinersList(balances)
+	allMinersList, err := msc.GetMinersList(balances)
 	if err != nil {
 		return "", err
 	}
@@ -94,6 +94,8 @@ func (msc *MinerSmartContract) GetDKGMinerListHandler(ctx context.Context, param
 }
 
 func (msc *MinerSmartContract) GetMinersMpksListHandler(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
+	msc.mutexMinerMPK.Lock()
+	defer msc.mutexMinerMPK.Unlock()
 	var mpks block.Mpks
 	mpksBytes, err := balances.GetTrieNode(MinersMPKKey)
 	if err != nil {

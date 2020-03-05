@@ -804,6 +804,12 @@ func (c *Chain) GetCurrentRound() int64 {
 	return c.CurrentRound
 }
 
+func (c *Chain) SetCurrentRound(round int64) {
+	c.roundsMutex.Lock()
+	defer c.roundsMutex.Unlock()
+	c.CurrentRound = round
+}
+
 func (c *Chain) getBlocks() []*block.Block {
 	c.blocksMutex.RLock()
 	defer c.blocksMutex.RUnlock()
@@ -822,8 +828,9 @@ func (c *Chain) SetRoundRank(r round.RoundI, b *block.Block) {
 	}
 	bNode := miners.GetNode(b.MinerID)
 	if bNode == nil {
-		Logger.DPanic("set_round_rank  --  get node by id", zap.Any("round", r.GetRoundNumber()),
+		Logger.Warn("set_round_rank  --  get node by id", zap.Any("round", r.GetRoundNumber()),
 			zap.Any("block", b.Hash), zap.Any("miner_id", b.MinerID), zap.Any("miners", miners))
+		return
 	}
 	rank := r.GetMinerRank(bNode)
 	if rank >= c.NumGenerators {

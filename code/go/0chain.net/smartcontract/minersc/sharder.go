@@ -72,19 +72,19 @@ func (msc *MinerSmartContract) AddSharder(t *transaction.Transaction, input []by
 
 //------------- local functions ---------------------
 func (msc *MinerSmartContract) verifySharderState(statectx c_state.StateContextI, msg string) {
-	allMinersList, err := msc.getMinersList(statectx)
+	allSharderList, err := msc.getShardersList(statectx)
 	if err != nil {
-		Logger.Info(msg + " getMinersList_failed - Failed to retrieve existing miners list")
+		Logger.Info(msg + " getShardersList_failed - Failed to retrieve existing miners list")
 		return
 	}
-	if allMinersList == nil || len(allMinersList.Nodes) == 0 {
-		Logger.Info(msg + " allminerslist is empty")
+	if allSharderList == nil || len(allSharderList.Nodes) == 0 {
+		Logger.Info(msg + " allSharderList is empty")
 		return
 	}
 
 	Logger.Info(msg)
-	for _, miner := range allMinersList.Nodes {
-		Logger.Info("allminerslist", zap.String("url", miner.N2NHost), zap.String("ID", miner.ID))
+	for _, sharder := range allSharderList.Nodes {
+		Logger.Info("allSharderList", zap.String("url", sharder.N2NHost), zap.String("ID", sharder.ID))
 	}
 
 }

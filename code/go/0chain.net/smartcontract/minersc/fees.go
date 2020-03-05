@@ -25,7 +25,8 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction, inputData []b
 	}
 	block := balances.GetBlock()
 	if block.Round == gn.ViewChange && !msc.SetMagicBlock(balances) {
-		return "", common.NewError("pay_fees_failed", "can't set magic block")
+		return "", common.NewError("pay_fees_failed",
+			fmt.Sprintf("can't set magic block round=%d viewChange=%d", block.Round, gn.ViewChange))
 	}
 
 	if t.ClientID != block.MinerID {

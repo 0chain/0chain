@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/url"
+	"sync"
 
 	c_state "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
@@ -14,21 +15,31 @@ import (
 	"0chain.net/core/util"
 )
 
-var AllMinersKey = datastore.Key(ADDRESS + encryption.Hash("all_miners"))
-var AllShardersKey = datastore.Key(ADDRESS + encryption.Hash("all_sharders"))
-var DKGMinersKey = datastore.Key(ADDRESS + encryption.Hash("dkg_miners"))
-var MinersMPKKey = datastore.Key(ADDRESS + encryption.Hash("miners_mpk"))
-var MagicBlockKey = datastore.Key(ADDRESS + encryption.Hash("magic_block"))
-var GlobalNodeKey = datastore.Key(ADDRESS + encryption.Hash("global_node"))
-var GroupShareOrSignsKey = datastore.Key(ADDRESS + encryption.Hash("group_share_or_signs"))
+var (
+	AllMinersKey         = datastore.Key(ADDRESS + encryption.Hash("all_miners"))
+	AllShardersKey       = datastore.Key(ADDRESS + encryption.Hash("all_sharders"))
+	DKGMinersKey         = datastore.Key(ADDRESS + encryption.Hash("dkg_miners"))
+	MinersMPKKey         = datastore.Key(ADDRESS + encryption.Hash("miners_mpk"))
+	MagicBlockKey        = datastore.Key(ADDRESS + encryption.Hash("magic_block"))
+	GlobalNodeKey        = datastore.Key(ADDRESS + encryption.Hash("global_node"))
+	GroupShareOrSignsKey = datastore.Key(ADDRESS + encryption.Hash("group_share_or_signs"))
+)
 
+var (
+	lockAllMiners sync.Mutex
+)
+
+// Phases
 const (
-	Start      = 0
-	Contribute = iota
-	Share      = iota
-	Publish    = iota
-	Wait       = iota
+	Start = iota
+	Contribute
+	Share
+	Publish
+	Wait
+)
 
+// Pool status
+const (
 	ACTIVE    = "ACTIVE"
 	PENDING   = "PENDING"
 	DELETING  = "DELETING"
@@ -77,9 +88,9 @@ func (gn *globalNode) GetHashBytes() []byte {
 //MinerNode struct that holds information about the registering miner
 type MinerNode struct {
 	*SimpleNode `json:"simple_miner"`
-	Pending          map[string]*sci.DelegatePool `json:"pending"`
-	Active           map[string]*sci.DelegatePool `json:"active"`
-	Deleting         map[string]*sci.DelegatePool `json:"deleting"`
+	Pending     map[string]*sci.DelegatePool `json:"pending"`
+	Active      map[string]*sci.DelegatePool `json:"active"`
+	Deleting    map[string]*sci.DelegatePool `json:"deleting"`
 }
 
 func NewMinerNode() *MinerNode {
@@ -156,16 +167,16 @@ func (mn *MinerNode) GetHashBytes() []byte {
 }
 
 type SimpleNode struct {
-	ID              string  `json:"id"`
-	N2NHost         string  `json:"n2n_host"`
-	Host            string  `json:"host"`
-	Port            int     `json:"port"`
-	PublicKey       string  `json:"public_key"`
-	ShortName       string  `json:"short_name"`
-	Percentage      float64 `json:"percentage"`
-	DelegateID      string  `json:"delegate_id"`
-	BuildTag        string  `json:"build_tag"`
-	TotalStaked     int64   `json:"total_stake"`
+	ID          string  `json:"id"`
+	N2NHost     string  `json:"n2n_host"`
+	Host        string  `json:"host"`
+	Port        int     `json:"port"`
+	PublicKey   string  `json:"public_key"`
+	ShortName   string  `json:"short_name"`
+	Percentage  float64 `json:"percentage"`
+	DelegateID  string  `json:"delegate_id"`
+	BuildTag    string  `json:"build_tag"`
+	TotalStaked int64   `json:"total_stake"`
 }
 
 func (smn *SimpleNode) Encode() []byte {

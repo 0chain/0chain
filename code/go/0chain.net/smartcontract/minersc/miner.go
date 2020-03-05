@@ -35,6 +35,9 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction, input []byte
 		return "", common.NewError("failed to add miner", "registration must be in the 'start' phase")
 	}
 
+	lockAllMiners.Lock()
+	defer lockAllMiners.Unlock()
+
 	Logger.Info("try to add miner", zap.Any("txn", t))
 	allMinersList, err := msc.getMinersList(statectx)
 	if err != nil {
@@ -47,9 +50,8 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction, input []byte
 	err = newMiner.Decode(input)
 	if err != nil {
 		Logger.Error("Error in decoding the input", zap.Error(err))
-
 		return "", err
-	}
+	}	
 	Logger.Info("The new miner info", zap.String("base URL", newMiner.N2NHost), zap.String("ID", newMiner.ID), zap.String("pkey", newMiner.PublicKey), zap.Any("mscID", msc.ID))
 	Logger.Info("MinerNode", zap.Any("node", newMiner))
 	if newMiner.PublicKey == "" || newMiner.ID == "" {
@@ -95,6 +97,12 @@ func (msc *MinerSmartContract) verifyMinerState(statectx c_state.StateContextI, 
 		Logger.Info("allminerslist", zap.String("url", miner.N2NHost), zap.String("ID", miner.ID))
 	}
 
+}
+
+func (msc *MinerSmartContract) GetMinersList(statectx c_state.StateContextI) (*MinerNodes, error) {
+	lockAllMiners.Lock()
+	defer lockAllMiners.Unlock()
+	return msc.getMinersList(statectx)
 }
 
 func (msc *MinerSmartContract) getMinersList(statectx c_state.StateContextI) (*MinerNodes, error) {
