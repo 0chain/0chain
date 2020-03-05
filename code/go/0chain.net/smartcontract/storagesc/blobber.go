@@ -3,12 +3,15 @@ package storagesc
 import (
 	"encoding/json"
 	"sort"
+	"time"
 
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/util"
 )
+
+const blobberHealthTime = 60 * 60 // 1 Hour
 
 func (sc *StorageSmartContract) getBlobbersList(balances c_state.StateContextI) (*StorageNodes, error) {
 	allBlobbersList := &StorageNodes{}
@@ -34,6 +37,45 @@ func updateBlobberInList(list []*StorageNode, update *StorageNode) (ok bool) {
 		}
 	}
 	return
+}
+
+func (sc *StorageSmartContract) filterHealthyBlobbers(blobbersList *StorageNodes) *StorageNodes {
+	healthyBlobbersList := &StorageNodes{}
+	for _, blobberNode := range blobbersList.Nodes {
+		if blobberNode.LastHealthCheck > (time.Now().Unix() - blobberHealthTime) {
+			healthyBlobbersList.Nodes = append(healthyBlobbersList.Nodes, blobberNode)
+		}
+	}
+	return healthyBlobbersList
+}
+
+func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction, input []byte, balances c_state.StateContextI) (string, error) {
+	allBlobbersList, err := sc.getBlobbersList(balances)
+	if err != nil {
+		return "", common.NewError("blobberHealthCheck_failed", "Failed to get blobber list"+err.Error())
+	}
+	existingBlobber := &StorageNode{}
+	err = existingBlobber.Decode(input) //json.Unmarshal(input, &newBlobber)
+	if err != nil {
+		return "", err
+	}
+	existingBlobber.ID = t.ClientID
+	existingBlobber.PublicKey = t.PublicKey
+	existingBlobber.LastHealthCheck = time.Now().Unix()
+	blobberBytes, _ := balances.GetTrieNode(existingBlobber.GetKey(sc.ID))
+	if blobberBytes == nil {
+		return "", common.NewError("blobberHealthCheck_failed", "Blobber doesn't exists"+err.Error())
+	}
+	for i := 0; i < len(allBlobbersList.Nodes); i++ {
+		if allBlobbersList.Nodes[i].ID == existingBlobber.ID {
+			allBlobbersList.Nodes[i].LastHealthCheck = time.Now().Unix()
+			balances.InsertTrieNode(ALL_BLOBBERS_KEY, allBlobbersList)
+			break
+		}
+	}
+	balances.InsertTrieNode(existingBlobber.GetKey(sc.ID), existingBlobber)
+	buff := existingBlobber.Encode()
+	return string(buff), nil
 }
 
 func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
