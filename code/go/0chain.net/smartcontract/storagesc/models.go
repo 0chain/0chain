@@ -2,7 +2,9 @@ package storagesc
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"time"
 
 	"0chain.net/chaincore/chain"
 	"0chain.net/core/common"
@@ -205,10 +207,67 @@ func (sn *ValidatorNodes) GetHashBytes() []byte {
 	return encryption.RawHash(sn.Encode())
 }
 
+// Terms represents Blobber terms. A Blobber can update its terms,
+// but any existing offer will use terms of offer signing time.
+type Terms struct {
+	// ReadPrice is price for reading. Token / GB.
+	ReadPrice int64 `json:"read_price"`
+	// WritePrice is price for reading. Token / GB. Also,
+	// it used to calculate min_lock_demand value.
+	WritePrice int64 `json:"write_price"`
+	// MinLockDemand in number in [0; 1] range. It represents part of
+	// allocation should be locked for the blobber rewards even if
+	// user never write something to the blobber.
+	MinLockDemand float64 `json:"min_lock_demand"`
+	// MaxOfferDuration with this prices and the demand.
+	MaxOfferDuration time.Duration `json:"max_offer_duration"`
+	// ChallengeCompletionTime is duration required to complete a challenge.
+	ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
+}
+
+// validate a received terms
+func (t *Terms) validate() (err error) {
+	if t.ReadPrice < 0 {
+		return errors.New("negative read_price")
+	}
+	if t.WritePrice < 0 {
+		return errors.New("negative write_price")
+	}
+	if t.MinLockDemand < 0.0 || t.MinLockDemand > 1.0 {
+		return errors.New("invalid min_lock_demand")
+	}
+	// TODO (sfxdx): add min offer time to configurations
+	// (temporary value used for development)
+	if t.MaxOfferDuration < 10*time.Minute {
+		return errors.New("insufficient max_offer_duration")
+	}
+	if t.ChallengeCompletionTime < 0 {
+		return errors.New("negative challenge_completion_time")
+	}
+	return // nil
+}
+
+// StorageNode represents Blobber configurations.
 type StorageNode struct {
 	ID        string `json:"id"`
 	BaseURL   string `json:"url"`
-	PublicKey string `json:"public_key"`
+	Terms     Terms  `json:"terms"`    // terms
+	Capacity  int64  `json:"capacity"` // total blobber capacity
+	CapUsed   int64  `json:"cap_used"` // allocated capacity for this time
+	PublicKey string `json:"-"`
+}
+
+// validate the blobber configurations
+func (sn *StorageNode) validate() (err error) {
+	if err = sn.Terms.validate(); err != nil {
+		return
+	}
+	// TODO (sfxdx): add min offer time to configurations
+	// (temporary value used for development, 1MB)
+	if sn.Capacity <= 1*1024*1024 {
+		return errors.New("insufficient blobber capacity")
+	}
+	return
 }
 
 func (sn *StorageNode) GetKey(globalKey string) datastore.Key {
@@ -271,8 +330,29 @@ type BlobberAllocation struct {
 	AllocationRoot  string                  `json:"allocation_root"`
 	LastWriteMarker *WriteMarker            `json:"write_marker"`
 	Stats           *StorageAllocationStats `json:"stats"`
+	// Terms of the Blobber at the time of signing the offer.
+	Terms Terms `json:"terms"`
+	// MinLockDemand for the allocation in tokens.
+	MinLockDemand int64 `json:"min_lock_demand"`
 }
 
+// PriceRange represents a price range allowed by user to filter blobbers.
+type PriceRange struct {
+	Min int64 `json:"min"`
+	Max int64 `json:"max"`
+}
+
+// isValid price range.
+func (pr *PriceRange) isValid() bool {
+	return pr.Min > 0 && pr.Max <= pr.Min
+}
+
+// isMatch given price
+func (pr *PriceRange) isMatch(price int64) bool {
+	return pr.Min <= price && price <= pr.Max
+}
+
+// StorageAllocation request and entity.
 type StorageAllocation struct {
 	ID                string                        `json:"id"`
 	DataShards        int                           `json:"data_shards"`
@@ -287,6 +367,82 @@ type StorageAllocation struct {
 	PreferredBlobbers []string                      `json:"preferred_blobbers"`
 	BlobberDetails    []*BlobberAllocation          `json:"blobber_details"`
 	BlobberMap        map[string]*BlobberAllocation `json:"-"`
+	ReadPriceRange    PriceRange                    `json:"read_price_range"`
+	WritePriceRange   PriceRange                    `json:"write_price_range"`
+	// MinLockDemand represents number of tokens required by
+	// blobbers to create physical allocation.
+	MinLockDemand int64 `json:"min_lock_demand"`
+	// ChallengeCompletionTime is max challenge completion time of
+	// all blobbers of the allocation.
+	ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
+}
+
+func (sa *StorageAllocation) validate() (err error) {
+	if !sa.ReadPriceRange.isValid() {
+		return errors.New("invalid read_price range")
+	}
+	if !sa.WritePriceRange.isValid() {
+		return errors.New("invalid write price range")
+	}
+	// TODO (sfxdx): make the min possible size configurable for sc
+	// (temporary use hardcoded stub, 1MB)
+	if sa.Size < 1*1024*1024 {
+		return errors.New("insufficient allocation size")
+	}
+	var dur = common.ToTime(sa.Expiration).Sub(time.Now())
+	// TODO (sfxdx): add min allocation duration to configurations
+	// (temporary value used for development)
+	if dur < 10*time.Minute {
+		return errors.New("insufficient allocation duration")
+	}
+
+	if sa.DataShards <= 0 {
+		return errors.New("invalid number of data shards")
+	}
+
+	if sa.OwnerPublicKey == "" {
+		return errors.New("missing owner public key")
+	}
+
+	if sa.Owner == "" {
+		return errors.New("missing owner id")
+	}
+
+	if sa.Payer == "" {
+		return errors.New("missing payer id")
+	}
+
+	return // nil
+}
+
+func (sa *StorageAllocation) filterBlobbers(list []*StorageNode, bsize int64) (
+	filtered []*StorageNode) {
+
+	var (
+		dur = common.ToTime(sa.Expiration).Sub(time.Now())
+		i   int
+	)
+	for _, b := range list {
+		// filter by max offer duration
+		if b.Terms.MaxOfferDuration < dur {
+			continue
+		}
+		// filter by read price
+		if !sa.ReadPriceRange.isMatch(b.Terms.ReadPrice) {
+			continue
+		}
+		// filter by write price
+		if !sa.WritePriceRange.isMatch(b.Terms.WritePrice) {
+			continue
+		}
+		// filter by blobber's capacity left
+		if b.Capacity-b.CapUsed < bsize {
+			continue
+		}
+		list[i] = b
+		i++
+	}
+	return list[:i]
 }
 
 func (sn *StorageAllocation) GetKey(globalKey string) datastore.Key {

@@ -2,9 +2,11 @@ package storagesc
 
 import (
 	"encoding/json"
+	"math"
 	"math/rand"
 	"sort"
 	"strconv"
+	"time"
 
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
@@ -71,85 +73,157 @@ func (sc *StorageSmartContract) addAllocation(allocation *StorageAllocation, bal
 	return string(buff), nil
 }
 
-func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction, input []byte, balances c_state.StateContextI) (string, error) {
+func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
+	input []byte, balances c_state.StateContextI) (string, error) {
+
 	allBlobbersList, err := sc.getBlobbersList(balances)
 	if err != nil {
-		return "", common.NewError("allocation_creation_failed", "No Blobbers registered. Failed to create a storage allocation")
+		return "", common.NewError("allocation_creation_failed",
+			"No Blobbers registered. Failed to create a storage allocation")
 	}
 
 	if len(allBlobbersList.Nodes) == 0 {
-		return "", common.NewError("allocation_creation_failed", "No Blobbers registered. Failed to create a storage allocation")
+		return "", common.NewError("allocation_creation_failed",
+			"No Blobbers registered. Failed to create a storage allocation")
 	}
 
 	if len(t.ClientID) == 0 {
-		return "", common.NewError("allocation_creation_failed", "Invalid client in the transaction. No public key found")
+		return "", common.NewError("allocation_creation_failed",
+			"Invalid client in the transaction. No public key found")
 	}
 
-	var allocationRequest StorageAllocation
-
-	err = allocationRequest.Decode(input)
-	if err != nil {
-		return "", common.NewError("allocation_creation_failed", "Failed to create a storage allocation")
+	var req StorageAllocation
+	if err = req.Decode(input); err != nil {
+		return "", common.NewError("allocation_creation_failed",
+			"failed to create a storage allocation")
 	}
-	allocationRequest.Payer = t.ClientID
-	if allocationRequest.Size > 0 && allocationRequest.DataShards > 0 && len(allocationRequest.OwnerPublicKey) > 0 && len(allocationRequest.Owner) > 0 && len(allocationRequest.Payer) > 0 {
-		size := allocationRequest.DataShards + allocationRequest.ParityShards
 
-		if len(allBlobbersList.Nodes) < size {
-			return "", common.NewError("not_enough_blobbers", "Not enough blobbers to honor the allocation")
-		}
+	req.Payer = t.ClientID
+	if err = req.validate(); err != nil {
+		return "", common.NewError("allocation_creation_failed",
+			"invalid request: "+err.Error())
+	}
 
-		allocatedBlobbers := make([]*StorageNode, 0)
-		allocationRequest.BlobberDetails = make([]*BlobberAllocation, 0)
-		allocationRequest.Stats = &StorageAllocationStats{}
+	var (
+		size = req.DataShards + req.ParityShards
+		// size of allocation for a blobber
+		bsize = (req.Size + int64(size-1)) / int64(size)
+		// filtered list
+		list = req.filterBlobbers(allBlobbersList.Nodes, bsize)
+	)
 
-		var blobberNodes []*StorageNode
-		preferredBlobbersSize := len(allocationRequest.PreferredBlobbers)
-		if preferredBlobbersSize > 0 {
-			blobberNodes, err = getPreferredBlobbers(allocationRequest.PreferredBlobbers, allBlobbersList.Nodes)
-			if err != nil {
-				return "", err
-			}
-		}
-		if len(blobberNodes) < size {
-			seed, err := strconv.ParseInt(t.Hash[0:8], 16, 64)
-			if err != nil {
-				return "", common.NewError("allocation_request_failed", "Failed to create seed for randomizeNodes")
-			}
+	if len(list) < size {
+		return "", common.NewError("not_enough_blobbers",
+			"Not enough blobbers to honor the allocation")
+	}
 
-			// randomize blobber nodes
-			blobberNodes = randomizeNodes(allBlobbersList.Nodes, blobberNodes, size, seed)
-		}
-		for i := 0; i < size; i++ {
-			blobberNode := blobberNodes[i]
-			var blobberAllocation BlobberAllocation
-			blobberAllocation.Stats = &StorageAllocationStats{}
-			blobberAllocation.Size = (allocationRequest.Size + int64(size-1)) / int64(size)
-			blobberAllocation.AllocationID = t.Hash
-			blobberAllocation.BlobberID = blobberNode.ID
+	allocatedBlobbers := make([]*StorageNode, 0)
+	req.BlobberDetails = make([]*BlobberAllocation, 0)
+	req.Stats = &StorageAllocationStats{}
 
-			allocationRequest.BlobberDetails = append(allocationRequest.BlobberDetails, &blobberAllocation)
-			allocatedBlobbers = append(allocatedBlobbers, blobberNode)
-		}
-
-		sort.SliceStable(allocatedBlobbers, func(i, j int) bool {
-			return allocatedBlobbers[i].ID < allocatedBlobbers[j].ID
-		})
-
-		allocationRequest.Blobbers = allocatedBlobbers
-		allocationRequest.ID = t.Hash
-		allocationRequest.Payer = t.ClientID
-
-		buff, err := sc.addAllocation(&allocationRequest, balances)
+	var blobberNodes []*StorageNode
+	preferredBlobbersSize := len(req.PreferredBlobbers)
+	if preferredBlobbersSize > 0 {
+		blobberNodes, err = getPreferredBlobbers(req.PreferredBlobbers, list)
 		if err != nil {
-			return "", common.NewError("allocation_request_failed", "Failed to store the allocation request")
+			return "", err
 		}
-		return buff, nil
 	}
-	return "", common.NewError("invalid_allocation_request", "Failed storage allocate")
+
+	// randomize blobber nodes
+	if len(blobberNodes) < size {
+		seed, err := strconv.ParseInt(t.Hash[0:8], 16, 64)
+		if err != nil {
+			return "", common.NewError("allocation_request_failed",
+				"Failed to create seed for randomizeNodes")
+		}
+		blobberNodes = randomizeNodes(list, blobberNodes, size, seed)
+	}
+
+	var (
+		demand                  int64                 // overall min lock demand
+		gbSize                  = float64(bsize) / GB // size in gigabytes
+		challengeCompletionTime time.Duration         // max
+	)
+
+	for i := 0; i < size; i++ {
+		b := blobberNodes[i]
+		var balloc BlobberAllocation
+		balloc.Stats = &StorageAllocationStats{}
+		balloc.Size = bsize
+		balloc.Terms = b.Terms
+		balloc.AllocationID = t.Hash
+		balloc.BlobberID = b.ID
+
+		req.BlobberDetails = append(req.BlobberDetails, &balloc)
+		allocatedBlobbers = append(allocatedBlobbers, b)
+
+		balloc.MinLockDemand = int64(math.Ceil(
+			float64(b.Terms.WritePrice) * gbSize * b.Terms.MinLockDemand,
+		))
+
+		// add to overall min lock demand
+		demand += balloc.MinLockDemand
+
+		if b.Terms.ChallengeCompletionTime > challengeCompletionTime {
+			challengeCompletionTime = b.Terms.ChallengeCompletionTime
+		}
+
+		// TODO (sfxdx): adjust blobbers' CapUsed
+	}
+
+	sort.SliceStable(allocatedBlobbers, func(i, j int) bool {
+		return allocatedBlobbers[i].ID < allocatedBlobbers[j].ID
+	})
+
+	req.Blobbers = allocatedBlobbers
+	req.ChallengeCompletionTime = challengeCompletionTime
+	req.MinLockDemand = demand
+	req.ID = t.Hash
+
+	// create related write_pool expires with the allocation + challenge
+	// completion time
+	wp, err := sc.newWritePool(req.GetKey(sc.ID), t.ClientID, t.CreationDate,
+		req.Expiration+
+			common.Timestamp(challengeCompletionTime.Truncate(time.Second)),
+		balances)
+	if err != nil {
+		return "", common.NewError("allocation_request_failed",
+			"can't create write pool")
+	}
+
+	// lock tokens if user provides them
+	if t.Value > 0 {
+		if _, _, err = wp.fill(t, balances); err != nil {
+			return "", common.NewError("write_pool_lock_failed",
+				"can't lock tokens in write pool: "+err.Error())
+		}
+	}
+
+	// save the write pool
+	if err = wp.save(sc.ID, req.ID, balances); err != nil {
+		return "", common.NewError("write_pool_lock_failed",
+			"can't save write pool: "+err.Error())
+	}
+
+	// TODO (sfxdx):
+	//   1. create challenge pool
+	//   2. move the min lock demand to the challenge pool?
+
+	buff, err := sc.addAllocation(&req, balances)
+	if err != nil {
+		return "", common.NewError("allocation_request_failed",
+			"failed to store the allocation request")
+	}
+
+	return buff, nil
 }
 
-func (sc *StorageSmartContract) updateAllocationRequest(t *transaction.Transaction, input []byte, balances c_state.StateContextI) (string, error) {
+func (sc *StorageSmartContract) updateAllocationRequest(t *transaction.Transaction,
+	input []byte, balances c_state.StateContextI) (string, error) {
+
+	// TODO (sfxdx): apply new changes for the update allocation
+
 	allBlobbersList, err := sc.getBlobbersList(balances)
 	if err != nil {
 		return "", common.NewError("allocation_updation_failed", "No Blobbers registered. Failed to update a storage allocation")

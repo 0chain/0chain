@@ -75,15 +75,15 @@ func writePoolKey(scKey, allocationID string) datastore.Key {
 	return datastore.Key(scKey + ":writepool:" + allocationID)
 }
 
-func (rp *writePool) Encode() (b []byte) {
+func (wp *writePool) Encode() (b []byte) {
 	var err error
-	if b, err = json.Marshal(rp); err != nil {
+	if b, err = json.Marshal(wp); err != nil {
 		panic(err) // must never happens
 	}
 	return
 }
 
-func (rp *writePool) Decode(input []byte) (err error) {
+func (wp *writePool) Decode(input []byte) (err error) {
 
 	type writePoolJSON struct {
 		Pool     json.RawMessage `json:"pool"`
@@ -99,7 +99,27 @@ func (rp *writePool) Decode(input []byte) (err error) {
 		return // no data given
 	}
 
-	err = rp.ZcnLockingPool.Decode(writePoolVal.Pool, &tokenLock{})
+	err = wp.ZcnLockingPool.Decode(writePoolVal.Pool, &tokenLock{})
+	return
+}
+
+// save the write pool
+func (wp *writePool) save(sscKey, allocationID string,
+	balances chainState.StateContextI) (err error) {
+
+	_, err = balances.InsertTrieNode(writePoolKey(sscKey, allocationID), wp)
+	return
+}
+
+// fill the pool by transaction
+func (wp *writePool) fill(t *transaction.Transaction,
+	balances chainState.StateContextI) (
+	transfer *state.Transfer, resp string, err error) {
+
+	if transfer, resp, err = wp.FillPool(t); err != nil {
+		return
+	}
+	err = balances.AddTransfer(transfer)
 	return
 }
 
@@ -155,34 +175,29 @@ func (ssc *StorageSmartContract) getWritePool(allocationID datastore.Key,
 	return
 }
 
-// newWritePool SC function creates new write pool for a client.
+// newWritePool SC function creates new write pool for a client don't saving it
 func (ssc *StorageSmartContract) newWritePool(allocationID, clientID string,
 	creationDate, expiresAt common.Timestamp,
-	balances chainState.StateContextI) (resp string, err error) {
+	balances chainState.StateContextI) (wp *writePool, err error) {
 
 	_, err = ssc.getWritePoolBytes(allocationID, balances)
 
 	if err != nil && err != util.ErrValueNotPresent {
-		return "", common.NewError("new_write_pool_failed", err.Error())
+		return nil, common.NewError("new_write_pool_failed", err.Error())
 	}
 
 	if err == nil {
-		return "", common.NewError("new_write_pool_failed", "already exist")
+		return nil, common.NewError("new_write_pool_failed", "already exist")
 	}
 
-	var wp = newWritePool(clientID)
+	wp = newWritePool(clientID)
 	wp.TokenLockInterface = &tokenLock{
 		StartTime: creationDate,
 		Duration:  common.ToTime(expiresAt).Sub(common.ToTime(creationDate)),
 		Owner:     clientID,
 	}
-
-	_, err = balances.InsertTrieNode(writePoolKey(ssc.ID, allocationID), wp)
-	if err != nil {
-		return "", common.NewError("new_write_pool_failed", err.Error())
-	}
-
-	return string(wp.Encode()), nil
+	wp.TokenPool.ID = writePoolKey(ssc.ID, allocationID)
+	return
 }
 
 // lock tokens for write pool of transaction's client
@@ -240,18 +255,12 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 
 	// lock more tokens
 
-	var transfer *state.Transfer
-	if transfer, resp, err = wp.FillPool(t); err != nil {
+	if _, resp, err = wp.fill(t, balances); err != nil {
 		return "", common.NewError("write_pool_lock_failed",
 			err.Error())
 	}
 
-	if err = balances.AddTransfer(transfer); err != nil {
-		return "", common.NewError("write_pool_lock_failed", err.Error())
-	}
-
-	_, err = balances.InsertTrieNode(writePoolKey(ssc.ID, req.AllocationID), wp)
-	if err != nil {
+	if err = wp.save(ssc.ID, req.AllocationID, balances); err != nil {
 		return "", common.NewError("write_pool_lock_failed", err.Error())
 	}
 
@@ -293,8 +302,7 @@ func (ssc *StorageSmartContract) writePoolUnlock(t *transaction.Transaction,
 	}
 
 	// save pool
-	_, err = balances.InsertTrieNode(writePoolKey(ssc.ID, req.AllocationID), wp)
-	if err != nil {
+	if err = wp.save(ssc.ID, req.AllocationID, balances); err != nil {
 		return "", common.NewError("write_pool_unlock_failed", err.Error())
 	}
 

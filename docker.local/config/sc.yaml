@@ -22,3 +22,5 @@ smart_contracts:
       min_lock: 10
       min_lock_period: 1m # 1h
       max_lock_period: 3h # 8760h
+    writepool:
+      min_lock: 10
