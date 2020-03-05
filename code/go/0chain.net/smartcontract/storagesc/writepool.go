@@ -190,6 +190,8 @@ func (ssc *StorageSmartContract) newWritePool(allocationID, clientID string,
 		return nil, common.NewError("new_write_pool_failed", "already exist")
 	}
 
+	err = nil // reset the util.ErrValueNotPresent
+
 	wp = newWritePool(clientID)
 	wp.TokenLockInterface = &tokenLock{
 		StartTime: creationDate,

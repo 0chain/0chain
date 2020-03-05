@@ -189,7 +189,7 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 		balances)
 	if err != nil {
 		return "", common.NewError("allocation_request_failed",
-			"can't create write pool")
+			"can't create write pool: "+err.Error())
 	}
 
 	// lock tokens if user provides them

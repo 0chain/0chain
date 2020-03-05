@@ -344,7 +344,7 @@ type PriceRange struct {
 
 // isValid price range.
 func (pr *PriceRange) isValid() bool {
-	return pr.Min > 0 && pr.Max <= pr.Min
+	return 0 <= pr.Min && pr.Min <= pr.Max
 }
 
 // isMatch given price
