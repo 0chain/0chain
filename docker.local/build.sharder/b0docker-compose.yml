@@ -2,6 +2,14 @@ version: '3'
 services:
   cassandra:
     image: cassandra:3.11.4
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1500M
+        reservations:
+          cpus: '0.25'
+          memory: 100M
     networks:
       default:
     #ports:
@@ -21,6 +29,14 @@ services:
 
   sharder:
     image: "sharder"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 500M
+        reservations:
+          cpus: '0.1'
+          memory: 100M
     environment:
       - DOCKER=true
       - CASSANDRA_CLUSTER=cassandra

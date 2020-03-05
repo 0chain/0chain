@@ -22,7 +22,7 @@ func SetupDefaultConfig() {
 	viper.SetDefault("server_chain.state.prune_below_count", 100)
 	viper.SetDefault("server_chain.block.consensus.threshold_by_count", 67)
 	viper.SetDefault("server_chain.block.generation.timeout", 37)
-	viper.SetDefault("server_chain.transaction.timeout", 10)
+	viper.SetDefault("server_chain.transaction.timeout", 30)
 	viper.SetDefault("server_chain.block.generation.retry_wait_time", 5)
 	viper.SetDefault("server_chain.block.proposal.max_wait_time", 200)
 	viper.SetDefault("server_chain.block.proposal.wait_mode", "static")
