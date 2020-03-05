@@ -50,6 +50,9 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction, input []b
 }
 
 func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction, input []byte, balances c_state.StateContextI) (string, error) {
+
+	// TODO (sfxdx): move token from readMarker.OwnerID read pool to the blobber
+
 	commitRead := &ReadConnection{}
 	err := commitRead.Decode(input)
 	if err != nil {

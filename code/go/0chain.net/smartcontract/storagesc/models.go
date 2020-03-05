@@ -11,10 +11,12 @@ import (
 	"0chain.net/core/util"
 )
 
-var ALL_BLOBBERS_KEY = datastore.Key(ADDRESS + encryption.Hash("all_blobbers"))
-var ALL_VALIDATORS_KEY = datastore.Key(ADDRESS + encryption.Hash("all_validators"))
-var ALL_ALLOCATIONS_KEY = datastore.Key(ADDRESS + encryption.Hash("all_allocations"))
-var STORAGE_STATS_KEY = datastore.Key(ADDRESS + encryption.Hash("all_storage"))
+var (
+	ALL_BLOBBERS_KEY    = datastore.Key(ADDRESS + encryption.Hash("all_blobbers"))
+	ALL_VALIDATORS_KEY  = datastore.Key(ADDRESS + encryption.Hash("all_validators"))
+	ALL_ALLOCATIONS_KEY = datastore.Key(ADDRESS + encryption.Hash("all_allocations"))
+	STORAGE_STATS_KEY   = datastore.Key(ADDRESS + encryption.Hash("all_storage"))
+)
 
 type ClientAllocation struct {
 	ClientID    string       `json:"client_id"`
@@ -206,7 +208,7 @@ func (sn *ValidatorNodes) GetHashBytes() []byte {
 type StorageNode struct {
 	ID        string `json:"id"`
 	BaseURL   string `json:"url"`
-	PublicKey string `json:"-"`
+	PublicKey string `json:"public_key"`
 }
 
 func (sn *StorageNode) GetKey(globalKey string) datastore.Key {

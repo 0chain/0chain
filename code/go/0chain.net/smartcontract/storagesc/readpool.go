@@ -30,20 +30,16 @@ func readPoolConfigKey(scKey string) datastore.Key {
 	return datastore.Key(scKey + ":readpool")
 }
 
-func (rpc *readPoolConfig) getKey(scKey string) datastore.Key {
-	return readPoolConfigKey(scKey)
-}
-
-func (rpc *readPoolConfig) Encode() (b []byte) {
+func (conf *readPoolConfig) Encode() (b []byte) {
 	var err error
-	if b, err = json.Marshal(rpc); err != nil {
+	if b, err = json.Marshal(conf); err != nil {
 		panic(err) // must not happens
 	}
 	return
 }
 
-func (rpc *readPoolConfig) Decode(b []byte) error {
-	return json.Unmarshal(b, rpc)
+func (conf *readPoolConfig) Decode(b []byte) error {
+	return json.Unmarshal(b, conf)
 }
 
 // lock request
@@ -123,13 +119,11 @@ func (rp *readPool) decode(input []byte) (err error) {
 
 // readPools of a user
 type readPools struct {
-	ClientID datastore.Key               `json:"client_id"`
-	Pools    map[datastore.Key]*readPool `json:"pools"`
+	Pools map[datastore.Key]*readPool `json:"pools"`
 }
 
-func newReadPools(clientID datastore.Key) (rps *readPools) {
+func newReadPools() (rps *readPools) {
 	rps = new(readPools)
-	rps.ClientID = clientID
 	rps.Pools = make(map[datastore.Key]*readPool)
 	return
 }
@@ -143,29 +137,19 @@ func (rps *readPools) Encode() (b []byte) {
 }
 
 func (rps *readPools) Decode(input []byte) (err error) {
-	var objMap map[string]json.RawMessage
-	if err = json.Unmarshal(input, &objMap); err != nil {
+	type readPoolsJSON struct {
+		Pools map[string]json.RawMessage `json:"pools"`
+	}
+	var in readPoolsJSON
+	if err = json.Unmarshal(input, &in); err != nil {
 		return
 	}
-	var cid, ok = objMap["client_id"]
-	if ok {
-		if err = json.Unmarshal(cid, &rps.ClientID); err != nil {
-			return err
-		}
-	}
-	var p json.RawMessage
-	if p, ok = objMap["pools"]; ok {
-		var rawMessagesPools map[string]json.RawMessage
-		if err = json.Unmarshal(p, &rawMessagesPools); err != nil {
+	for _, raw := range in.Pools {
+		var tempPool = newReadPool()
+		if err = tempPool.decode(raw); err != nil {
 			return
 		}
-		for _, raw := range rawMessagesPools {
-			var tempPool = newReadPool()
-			if err = tempPool.decode(raw); err != nil {
-				return
-			}
-			rps.addPool(tempPool)
-		}
+		rps.addPool(tempPool)
 	}
 	return
 }
@@ -174,13 +158,9 @@ func readPoolsKey(scKey, clientID string) datastore.Key {
 	return datastore.Key(scKey + ":readpool:" + clientID)
 }
 
-func (rps *readPools) getKey(scKey string) datastore.Key {
-	return readPoolsKey(scKey, rps.ClientID)
-}
-
 func (rps *readPools) addPool(rp *readPool) (err error) {
 	if _, ok := rps.Pools[rp.ID]; ok {
-		return errors.New("user already has read pool")
+		return errors.New("user already has this read pool")
 	}
 	rps.Pools[rp.ID] = rp
 	return
@@ -282,7 +262,7 @@ func (ssc *StorageSmartContract) getReadPools(clientID datastore.Key,
 	if poolb, err = ssc.getReadPoolsBytes(clientID, balances); err != nil {
 		return
 	}
-	rps = newReadPools(clientID)
+	rps = newReadPools()
 	err = rps.Decode(poolb)
 	return
 }
@@ -301,8 +281,9 @@ func (ssc *StorageSmartContract) newReadPool(t *transaction.Transaction,
 		return "", common.NewError("new_read_pool_failed", "already exist")
 	}
 
-	var rps = newReadPools(t.ClientID)
-	if _, err = balances.InsertTrieNode(rps.getKey(ssc.ID), rps); err != nil {
+	var rps = newReadPools()
+	_, err = balances.InsertTrieNode(readPoolsKey(ssc.ID, t.ClientID), rps)
+	if err != nil {
 		return "", common.NewError("new_read_pool_failed", err.Error())
 	}
 
@@ -392,7 +373,7 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 		return "", common.NewError("read_pool_lock_failed", err.Error())
 	}
 
-	_, err = balances.InsertTrieNode(rps.getKey(ssc.ID), rps)
+	_, err = balances.InsertTrieNode(readPoolsKey(ssc.ID, t.ClientID), rps)
 	if err != nil {
 		return "", common.NewError("read_pool_lock_failed", err.Error())
 	}
@@ -439,7 +420,8 @@ func (ssc *StorageSmartContract) readPoolUnlock(t *transaction.Transaction,
 
 	// save pools
 	rps.delPool(pool.ID)
-	if _, err = balances.InsertTrieNode(rps.getKey(ssc.ID), rps); err != nil {
+	_, err = balances.InsertTrieNode(readPoolsKey(ssc.ID, t.ClientID), rps)
+	if err != nil {
 		return "", common.NewError("read_pool_unlock_failed", err.Error())
 	}
 
@@ -450,7 +432,7 @@ func (ssc *StorageSmartContract) readPoolUnlock(t *transaction.Transaction,
 // stat
 //
 
-func (ssc *StorageSmartContract) getPoolStat(rp *readPool, tp time.Time) (
+func (ssc *StorageSmartContract) getReadPoolStat(rp *readPool, tp time.Time) (
 	stat *readPoolStat, err error) {
 
 	stat = new(readPoolStat)
@@ -489,7 +471,7 @@ func (ssc *StorageSmartContract) getReadPoolsStatsHandler(ctx context.Context,
 	)
 
 	for _, rp := range rps.Pools {
-		stat, err := ssc.getPoolStat(rp, tp)
+		stat, err := ssc.getReadPoolStat(rp, tp)
 		if err != nil {
 			return nil, common.NewError("read_pool_stats", err.Error())
 		}
@@ -527,10 +509,10 @@ func getConfiguredReadPoolConfig() (conf *readPoolConfig) {
 }
 
 func (ssc *StorageSmartContract) setupReadPoolConfig(
-	balances chainState.StateContextI) (rpc *readPoolConfig, err error) {
+	balances chainState.StateContextI) (conf *readPoolConfig, err error) {
 
-	rpc = getConfiguredReadPoolConfig()
-	_, err = balances.InsertTrieNode(readPoolConfigKey(ssc.ID), rpc)
+	conf = getConfiguredReadPoolConfig()
+	_, err = balances.InsertTrieNode(readPoolConfigKey(ssc.ID), conf)
 	if err != nil {
 		return nil, err
 	}
