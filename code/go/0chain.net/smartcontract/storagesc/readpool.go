@@ -1,19 +1,50 @@
 package storagesc
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"net/url"
 	"time"
 
 	chainState "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/encryption"
 	"0chain.net/core/util"
 )
+
+// read pool lock configs
+
+type readPoolConfig struct {
+	MinLock       int64         `json:"min_lock"`
+	MinLockPeriod time.Duration `json:"min_lock_period"`
+	MaxLockPeriod time.Duration `json:"max_lock_period"`
+}
+
+func readPoolConfigKey(scKey string) datastore.Key {
+	return datastore.Key(scKey + ":readpool")
+}
+
+func (rpc *readPoolConfig) getKey(scKey string) datastore.Key {
+	return readPoolConfigKey(scKey)
+}
+
+func (rpc *readPoolConfig) Encode() (b []byte) {
+	var err error
+	if b, err = json.Marshal(rpc); err != nil {
+		panic(err) // must not happens
+	}
+	return
+}
+
+func (rpc *readPoolConfig) Decode(b []byte) error {
+	return json.Unmarshal(b, rpc)
+}
 
 // lock request
 
@@ -139,14 +170,6 @@ func (rps *readPools) Decode(input []byte) (err error) {
 	return
 }
 
-func (rps *readPools) GetHash() string {
-	return util.ToHex(rps.GetHashBytes())
-}
-
-func (rps *readPools) GetHashBytes() []byte {
-	return encryption.RawHash(rps.Encode())
-}
-
 func readPoolsKey(scKey, clientID string) datastore.Key {
 	return datastore.Key(scKey + ":readpool:" + clientID)
 }
@@ -240,11 +263,11 @@ func (tl tokenLock) LockStats(entity interface{}) []byte {
 //
 
 // getReadPoolsBytes of a client
-func (ssc *StorageSmartContract) getReadPoolsBytes(t *transaction.Transaction,
+func (ssc *StorageSmartContract) getReadPoolsBytes(clientID datastore.Key,
 	balances chainState.StateContextI) (b []byte, err error) {
 
 	var val util.Serializable
-	val, err = balances.GetTrieNode(readPoolsKey(ssc.ID, t.ClientID))
+	val, err = balances.GetTrieNode(readPoolsKey(ssc.ID, clientID))
 	if err != nil {
 		return
 	}
@@ -252,14 +275,14 @@ func (ssc *StorageSmartContract) getReadPoolsBytes(t *transaction.Transaction,
 }
 
 // getReadPools of current client
-func (ssc *StorageSmartContract) getReadPools(t *transaction.Transaction,
+func (ssc *StorageSmartContract) getReadPools(clientID datastore.Key,
 	balances chainState.StateContextI) (rps *readPools, err error) {
 
 	var poolb []byte
-	if poolb, err = ssc.getReadPoolsBytes(t, balances); err != nil {
+	if poolb, err = ssc.getReadPoolsBytes(clientID, balances); err != nil {
 		return
 	}
-	rps = new(readPools)
+	rps = newReadPools(clientID)
 	err = rps.Decode(poolb)
 	return
 }
@@ -268,7 +291,7 @@ func (ssc *StorageSmartContract) getReadPools(t *transaction.Transaction,
 func (ssc *StorageSmartContract) newReadPool(t *transaction.Transaction,
 	input []byte, balances chainState.StateContextI) (resp string, err error) {
 
-	_, err = ssc.getReadPoolsBytes(t, balances)
+	_, err = ssc.getReadPoolsBytes(t.ClientID, balances)
 
 	if err != nil && err != util.ErrValueNotPresent {
 		return "", common.NewError("new_read_pool_failed", err.Error())
@@ -290,10 +313,18 @@ func (ssc *StorageSmartContract) newReadPool(t *transaction.Transaction,
 func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 	input []byte, balances chainState.StateContextI) (resp string, err error) {
 
+	// configs
+
+	var conf *readPoolConfig
+	if conf, err = ssc.getReadPoolConfig(balances, true); err != nil {
+		return "", common.NewError("read_pool_lock_failed",
+			"can't get configs: "+err.Error())
+	}
+
 	// user read pools
 
 	var rps *readPools
-	if rps, err = ssc.getReadPools(t, balances); err != nil {
+	if rps, err = ssc.getReadPools(t.ClientID, balances); err != nil {
 		return "", common.NewError("read_pool_lock_failed", err.Error())
 	}
 
@@ -319,9 +350,23 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 			"lock amount is greater than balance")
 	}
 
-	if lr.Duration <= 0 {
+	// filter by configs
+
+	if t.Value < conf.MinLock {
 		return "", common.NewError("read_pool_lock_failed",
-			"invalid locking period")
+			"insufficent amount to lock")
+	}
+
+	if lr.Duration < conf.MinLockPeriod {
+		return "", common.NewError("read_pool_lock_failed",
+			fmt.Sprintf("duration (%s) is shorter than min lock period (%s)",
+				lr.Duration.String(), conf.MinLockPeriod.String()))
+	}
+
+	if lr.Duration > conf.MaxLockPeriod {
+		return "", common.NewError("read_pool_lock_failed",
+			fmt.Sprintf("duration (%s) is longer than max lock period (%v)",
+				lr.Duration.String(), conf.MaxLockPeriod.String()))
 	}
 
 	// lock
@@ -362,7 +407,7 @@ func (ssc *StorageSmartContract) readPoolUnlock(t *transaction.Transaction,
 	// user read pools
 
 	var rps *readPools
-	if rps, err = ssc.getReadPools(t, balances); err != nil {
+	if rps, err = ssc.getReadPools(t.ClientID, balances); err != nil {
 		return "", common.NewError("read_pool_lock_failed", err.Error())
 	}
 
@@ -382,20 +427,196 @@ func (ssc *StorageSmartContract) readPoolUnlock(t *transaction.Transaction,
 		return "", common.NewError("read_pool_unlock_failed", "pool not found")
 	}
 
-	transfer, resp, err = pool.EmptyPool(pool.ID, t.ClientID,
+	transfer, resp, err = pool.EmptyPool(ssc.ID, t.ClientID,
 		common.ToTime(t.CreationDate))
 	if err != nil {
 		return "", common.NewError("read_pool_unlock_failed", err.Error())
 	}
-	rps.delPool(pool.ID)
+
 	if err = balances.AddTransfer(transfer); err != nil {
 		return "", common.NewError("read_pool_unlock_failed", err.Error())
 	}
 
 	// save pools
+	rps.delPool(pool.ID)
 	if _, err = balances.InsertTrieNode(rps.getKey(ssc.ID), rps); err != nil {
 		return "", common.NewError("read_pool_unlock_failed", err.Error())
 	}
 
 	return
+}
+
+//
+// stat
+//
+
+func (ssc *StorageSmartContract) getPoolStat(rp *readPool, tp time.Time) (
+	stat *readPoolStat, err error) {
+
+	stat = new(readPoolStat)
+
+	if err = stat.decode(rp.LockStats(tp)); err != nil {
+		return nil, err
+	}
+
+	stat.ID = rp.ID
+	stat.Locked = rp.IsLocked(tp)
+	stat.Balance = rp.Balance
+
+	return
+}
+
+// statistic for all locked tokens of the read pool
+func (ssc *StorageSmartContract) getReadPoolsStatsHandler(ctx context.Context,
+	params url.Values, balances chainState.StateContextI) (
+	resp interface{}, err error) {
+
+	var (
+		clientID = datastore.Key(params.Get("client_id"))
+		rps      *readPools
+	)
+	if rps, err = ssc.getReadPools(clientID, balances); err != nil {
+		return
+	}
+
+	if len(rps.Pools) == 0 {
+		return nil, common.NewError("read_pool_stats", "no pools exist")
+	}
+
+	var (
+		tp    = time.Now()
+		stats readPoolStats
+	)
+
+	for _, rp := range rps.Pools {
+		stat, err := ssc.getPoolStat(rp, tp)
+		if err != nil {
+			return nil, common.NewError("read_pool_stats", err.Error())
+		}
+		stats.addStat(stat)
+	}
+
+	return &stats, nil
+}
+
+//
+// configure the read pool
+//
+
+// getReadPoolConfigBytes of a client
+func (ssc *StorageSmartContract) getReadPoolConfigBytes(
+	balances chainState.StateContextI) (b []byte, err error) {
+
+	var val util.Serializable
+	val, err = balances.GetTrieNode(readPoolConfigKey(ssc.ID))
+	if err != nil {
+		return
+	}
+	return val.Encode(), nil
+}
+
+func getConfiguredReadPoolConfig() (conf *readPoolConfig) {
+	conf = new(readPoolConfig)
+	conf.MinLockPeriod = config.SmartContractConfig.GetDuration(
+		"smart_contracts.storagesc.readpool.min_lock_period")
+	conf.MaxLockPeriod = config.SmartContractConfig.GetDuration(
+		"smart_contracts.storagesc.readpool.max_lock_period")
+	conf.MinLock = config.SmartContractConfig.GetInt64(
+		"smart_contracts.storagesc.readpool.min_lock")
+	return
+}
+
+func (ssc *StorageSmartContract) setupReadPoolConfig(
+	balances chainState.StateContextI) (rpc *readPoolConfig, err error) {
+
+	rpc = getConfiguredReadPoolConfig()
+	_, err = balances.InsertTrieNode(readPoolConfigKey(ssc.ID), rpc)
+	if err != nil {
+		return nil, err
+	}
+	return
+}
+
+// getReadPoolConfig
+func (ssc *StorageSmartContract) getReadPoolConfig(
+	balances chainState.StateContextI, setup bool) (
+	conf *readPoolConfig, err error) {
+
+	var confb []byte
+	confb, err = ssc.getReadPoolConfigBytes(balances)
+	if err != nil && err != util.ErrValueNotPresent {
+		return
+	}
+
+	conf = new(readPoolConfig)
+
+	if err == util.ErrValueNotPresent {
+		if !setup {
+			return // value not present
+		}
+		return ssc.setupReadPoolConfig(balances)
+	}
+
+	if err = conf.Decode(confb); err != nil {
+		return nil, err
+	}
+	return
+}
+
+func (ssc *StorageSmartContract) getReadPoolsConfigHandler(ctx context.Context,
+	params url.Values, balances chainState.StateContextI) (
+	resp interface{}, err error) {
+
+	var conf *readPoolConfig
+	conf, err = ssc.getReadPoolConfig(balances, false)
+
+	if err != nil && err != util.ErrValueNotPresent {
+		return // unexpected error
+	}
+
+	// return configurations from sc.yaml not saving them
+	if err == util.ErrValueNotPresent {
+		return getConfiguredReadPoolConfig(), nil
+	}
+
+	return conf, nil // actual value
+}
+
+func (ssc *StorageSmartContract) readPoolUpdateConfig(
+	t *transaction.Transaction, input []byte,
+	balances chainState.StateContextI) (resp string, err error) {
+
+	if t.ClientID != owner {
+		return "", common.NewError("read_pool_update_config",
+			"unauthorized access - only the owner can update the variables")
+	}
+
+	var conf, update *readPoolConfig
+	if conf, err = ssc.getReadPoolConfig(balances, true); err != nil {
+		return "", common.NewError("read_pool_update_config", err.Error())
+	}
+
+	update = new(readPoolConfig)
+	if err = update.Decode(input); err != nil {
+		return "", common.NewError("read_pool_update_config", err.Error())
+	}
+
+	if update.MinLock > 0 {
+		conf.MinLock = update.MinLock
+	}
+
+	if update.MinLockPeriod > 0 {
+		conf.MinLockPeriod = update.MinLockPeriod
+	}
+
+	if update.MaxLockPeriod > 0 {
+		conf.MaxLockPeriod = update.MaxLockPeriod
+	}
+
+	_, err = balances.InsertTrieNode(readPoolConfigKey(ssc.ID), conf)
+	if err != nil {
+		return "", common.NewError("read_pool_update_config", err.Error())
+	}
+
+	return string(conf.Encode()), nil
 }

@@ -1,5 +1,0 @@
-package storagesc
-
-/*
-todo
-*/

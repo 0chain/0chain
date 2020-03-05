@@ -18,3 +18,7 @@ smart_contracts:
   storagesc:
     challenge_enabled: false
     challenge_rate_per_mb_min: 1
+    readpool:
+      min_lock: 10
+      min_lock_period: 1m # 1h
+      max_lock_period: 3h # 8760h

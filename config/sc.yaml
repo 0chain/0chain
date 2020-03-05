@@ -12,4 +12,8 @@ smart_contracts:
     max_lock_period: 8760h # max units hours
   storagesc:
     challenge_enabled: false
-    challenge_rate_per_mb_min: 1 
+    challenge_rate_per_mb_min: 1
+    readpool:
+      min_lock: 10
+      min_lock_period: 2190h
+      max_lock_period: 8760h

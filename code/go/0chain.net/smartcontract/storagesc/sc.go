@@ -2,7 +2,6 @@ package storagesc
 
 import (
 	"fmt"
-	"time"
 
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
@@ -13,9 +12,9 @@ import (
 )
 
 const (
+	owner   = "5be4e0abc645b04fa45895645568c448849ea379a938ca114b5f67a96258dbc2"
 	ADDRESS = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7"
 	name    = "storage"
-	DAY     = time.Hour * 24
 )
 
 type StorageSmartContract struct {
@@ -38,9 +37,12 @@ func (ssc *StorageSmartContract) SetSC(sc *smartcontractinterface.SmartContract,
 	ssc.SmartContractExecutionStats["challenge_request"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "challenge_request"), nil)
 	ssc.SmartContractExecutionStats["challenge_response"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "challenge_response"), nil)
 	// read pool
+	ssc.SmartContract.RestHandlers["/getReadPoolsStats"] = ssc.getReadPoolsStatsHandler
+	ssc.SmartContract.RestHandlers["/getReadPoolsConfig"] = ssc.getReadPoolsConfigHandler
 	ssc.SmartContractExecutionStats["new_read_pool"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "new_read_pool"), nil)
 	ssc.SmartContractExecutionStats["read_pool_lock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "read_pool_lock"), nil)
 	ssc.SmartContractExecutionStats["read_pool_unlock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "read_pool_unlock"), nil)
+	ssc.SmartContractExecutionStats["read_pool_update_config"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "read_pool_update_config"), nil)
 	// write pool
 
 }
@@ -111,6 +113,8 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		resp, err = sc.readPoolLock(t, input, balances)
 	case "read_pool_unlock":
 		resp, err = sc.readPoolUnlock(t, input, balances)
+	case "read_pool_update_config":
+		resp, err = sc.readPoolUpdateConfig(t, input, balances)
 
 	// case "challenge_request":
 	// 	resp, err := sc.addChallenge(t, balances.GetBlock(), input, balances)
