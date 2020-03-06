@@ -371,6 +371,9 @@ type StorageAllocation struct {
 	// ChallengeCompletionTime is max challenge completion time of
 	// all blobbers of the allocation.
 	ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
+	// StartTime is time when the allocation has been created. We will
+	// use it to check blobber's MaxOfferTime extending the allocation.
+	StartTime common.Timestamp `json:"start_time"`
 }
 
 func (sa *StorageAllocation) validate(conf *scConfig) (err error) {
@@ -407,11 +410,11 @@ func (sa *StorageAllocation) validate(conf *scConfig) (err error) {
 	return // nil
 }
 
-func (sa *StorageAllocation) filterBlobbers(list []*StorageNode, bsize int64) (
-	filtered []*StorageNode) {
+func (sa *StorageAllocation) filterBlobbers(list []*StorageNode,
+	creationDate common.Timestamp, bsize int64) (filtered []*StorageNode) {
 
 	var (
-		dur = common.ToTime(sa.Expiration).Sub(time.Now())
+		dur = common.ToTime(sa.Expiration).Sub(common.ToTime(creationDate))
 		i   int
 	)
 	for _, b := range list {

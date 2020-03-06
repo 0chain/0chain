@@ -3,6 +3,7 @@ package storagesc
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/url"
 	"time"
 
@@ -96,6 +97,21 @@ func (wp *writePool) fill(t *transaction.Transaction,
 		return
 	}
 	err = balances.AddTransfer(transfer)
+	return
+}
+
+// extend write pool expiration adding given time difference
+func (wp *writePool) extend(add common.Timestamp) (err error) {
+	if add == 0 {
+		return // as is
+	}
+	tl, ok := wp.TokenLockInterface.(*tokenLock)
+	if !ok {
+		return fmt.Errorf(
+			"invalid write pool state, invalid token lock type: %T",
+			wp.TokenLockInterface)
+	}
+	tl.Duration += time.Duration(add) * time.Second // change
 	return
 }
 
