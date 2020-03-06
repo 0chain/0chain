@@ -226,7 +226,7 @@ type Terms struct {
 }
 
 // validate a received terms
-func (t *Terms) validate() (err error) {
+func (t *Terms) validate(conf *scConfig) (err error) {
 	if t.ReadPrice < 0 {
 		return errors.New("negative read_price")
 	}
@@ -236,9 +236,7 @@ func (t *Terms) validate() (err error) {
 	if t.MinLockDemand < 0.0 || t.MinLockDemand > 1.0 {
 		return errors.New("invalid min_lock_demand")
 	}
-	// TODO (sfxdx): add min offer time to configurations
-	// (temporary value used for development)
-	if t.MaxOfferDuration < 10*time.Minute {
+	if t.MaxOfferDuration < conf.MinOfferDuration {
 		return errors.New("insufficient max_offer_duration")
 	}
 	if t.ChallengeCompletionTime < 0 {
@@ -258,13 +256,11 @@ type StorageNode struct {
 }
 
 // validate the blobber configurations
-func (sn *StorageNode) validate() (err error) {
-	if err = sn.Terms.validate(); err != nil {
+func (sn *StorageNode) validate(conf *scConfig) (err error) {
+	if err = sn.Terms.validate(conf); err != nil {
 		return
 	}
-	// TODO (sfxdx): add min offer time to configurations
-	// (temporary value used for development, 1MB)
-	if sn.Capacity <= 1*1024*1024 {
+	if sn.Capacity <= conf.MinBlobberCapacity {
 		return errors.New("insufficient blobber capacity")
 	}
 	return
@@ -377,22 +373,18 @@ type StorageAllocation struct {
 	ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
 }
 
-func (sa *StorageAllocation) validate() (err error) {
+func (sa *StorageAllocation) validate(conf *scConfig) (err error) {
 	if !sa.ReadPriceRange.isValid() {
 		return errors.New("invalid read_price range")
 	}
 	if !sa.WritePriceRange.isValid() {
 		return errors.New("invalid write price range")
 	}
-	// TODO (sfxdx): make the min possible size configurable for sc
-	// (temporary use hardcoded stub, 1MB)
-	if sa.Size < 1*1024*1024 {
+	if sa.Size < conf.MinAllocSize {
 		return errors.New("insufficient allocation size")
 	}
 	var dur = common.ToTime(sa.Expiration).Sub(time.Now())
-	// TODO (sfxdx): add min allocation duration to configurations
-	// (temporary value used for development)
-	if dur < 10*time.Minute {
+	if dur < conf.MinAllocDuration {
 		return errors.New("insufficient allocation duration")
 	}
 

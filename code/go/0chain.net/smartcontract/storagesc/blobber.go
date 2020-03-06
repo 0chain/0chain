@@ -39,6 +39,12 @@ func updateBlobberInList(list []*StorageNode, update *StorageNode) (ok bool) {
 func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	input []byte, balances c_state.StateContextI) (string, error) {
 
+	conf, err := sc.getConfig(balances, true)
+	if err != nil {
+		return "", common.NewError("add_blobber_failed",
+			"can't get config: "+err.Error())
+	}
+
 	allBlobbersList, err := sc.getBlobbersList(balances)
 	if err != nil {
 		return "", common.NewError("add_blobber_failed",
@@ -50,7 +56,7 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 			"malformed request: "+err.Error())
 	}
 
-	if err = newBlobber.validate(); err != nil {
+	if err = newBlobber.validate(conf); err != nil {
 		return "", common.NewError("add_blobber_failed",
 			"invalid values in request: "+err.Error())
 	}

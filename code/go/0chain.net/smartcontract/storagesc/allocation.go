@@ -76,6 +76,12 @@ func (sc *StorageSmartContract) addAllocation(allocation *StorageAllocation, bal
 func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 	input []byte, balances c_state.StateContextI) (string, error) {
 
+	conf, err := sc.getConfig(balances, true)
+	if err != nil {
+		return "", common.NewError("allocation_creation_failed",
+			"can't get config: "+err.Error())
+	}
+
 	allBlobbersList, err := sc.getBlobbersList(balances)
 	if err != nil {
 		return "", common.NewError("allocation_creation_failed",
@@ -99,7 +105,7 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 	}
 
 	req.Payer = t.ClientID
-	if err = req.validate(); err != nil {
+	if err = req.validate(conf); err != nil {
 		return "", common.NewError("allocation_creation_failed",
 			"invalid request: "+err.Error())
 	}

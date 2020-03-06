@@ -45,6 +45,10 @@ type scConfig struct {
 	MinAllocDuration time.Duration `json:"min_alloc_duration"`
 	// MaxChallengeCompletionTime is max time to complete a challenge.
 	MaxChallengeCompletionTime time.Duration `json:"max_challenge_completion_time"`
+	// MinOfferDuration represents lower boundary of blobber's MaxOfferDuration.
+	MinOfferDuration time.Duration `json:"min_offer_duration"`
+	// MinBlobberCapacity allowed to register in the SC.
+	MinBlobberCapacity int64 `json:"min_blobber_capacity"`
 	// ReadPool related configurations.
 	ReadPool *readPoolConfig `json:"readpool"`
 	// WritePool related configurations.
