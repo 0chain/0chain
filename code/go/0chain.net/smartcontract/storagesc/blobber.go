@@ -73,12 +73,12 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 
 	// insert or update blobber
 	if err == util.ErrValueNotPresent {
+		allBlobbersList.Nodes = append(allBlobbersList.Nodes, &newBlobber)
+	} else {
 		if !updateBlobberInList(allBlobbersList.Nodes, &newBlobber) {
 			return "", common.NewError("add_blobber_failed",
 				"blobber not found in all blobbers list")
 		}
-	} else {
-		allBlobbersList.Nodes = append(allBlobbersList.Nodes, &newBlobber)
 	}
 
 	balances.InsertTrieNode(ALL_BLOBBERS_KEY, allBlobbersList)
