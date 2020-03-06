@@ -9,7 +9,6 @@ import (
 	"time"
 
 	chainState "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
@@ -17,30 +16,6 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
 )
-
-// read pool lock configs
-
-type readPoolConfig struct {
-	MinLock       int64         `json:"min_lock"`
-	MinLockPeriod time.Duration `json:"min_lock_period"`
-	MaxLockPeriod time.Duration `json:"max_lock_period"`
-}
-
-func readPoolConfigKey(scKey string) datastore.Key {
-	return datastore.Key(scKey + ":readpool")
-}
-
-func (conf *readPoolConfig) Encode() (b []byte) {
-	var err error
-	if b, err = json.Marshal(conf); err != nil {
-		panic(err) // must not happens
-	}
-	return
-}
-
-func (conf *readPoolConfig) Decode(b []byte) error {
-	return json.Unmarshal(b, conf)
-}
 
 // lock request
 
@@ -479,126 +454,4 @@ func (ssc *StorageSmartContract) getReadPoolsStatsHandler(ctx context.Context,
 	}
 
 	return &stats, nil
-}
-
-//
-// configure the read pool
-//
-
-// getReadPoolConfigBytes of a client
-func (ssc *StorageSmartContract) getReadPoolConfigBytes(
-	balances chainState.StateContextI) (b []byte, err error) {
-
-	var val util.Serializable
-	val, err = balances.GetTrieNode(readPoolConfigKey(ssc.ID))
-	if err != nil {
-		return
-	}
-	return val.Encode(), nil
-}
-
-func getConfiguredReadPoolConfig() (conf *readPoolConfig) {
-	conf = new(readPoolConfig)
-	conf.MinLockPeriod = config.SmartContractConfig.GetDuration(
-		"smart_contracts.storagesc.readpool.min_lock_period")
-	conf.MaxLockPeriod = config.SmartContractConfig.GetDuration(
-		"smart_contracts.storagesc.readpool.max_lock_period")
-	conf.MinLock = config.SmartContractConfig.GetInt64(
-		"smart_contracts.storagesc.readpool.min_lock")
-	return
-}
-
-func (ssc *StorageSmartContract) setupReadPoolConfig(
-	balances chainState.StateContextI) (conf *readPoolConfig, err error) {
-
-	conf = getConfiguredReadPoolConfig()
-	_, err = balances.InsertTrieNode(readPoolConfigKey(ssc.ID), conf)
-	if err != nil {
-		return nil, err
-	}
-	return
-}
-
-// getReadPoolConfig
-func (ssc *StorageSmartContract) getReadPoolConfig(
-	balances chainState.StateContextI, setup bool) (
-	conf *readPoolConfig, err error) {
-
-	var confb []byte
-	confb, err = ssc.getReadPoolConfigBytes(balances)
-	if err != nil && err != util.ErrValueNotPresent {
-		return
-	}
-
-	conf = new(readPoolConfig)
-
-	if err == util.ErrValueNotPresent {
-		if !setup {
-			return // value not present
-		}
-		return ssc.setupReadPoolConfig(balances)
-	}
-
-	if err = conf.Decode(confb); err != nil {
-		return nil, err
-	}
-	return
-}
-
-func (ssc *StorageSmartContract) getReadPoolsConfigHandler(ctx context.Context,
-	params url.Values, balances chainState.StateContextI) (
-	resp interface{}, err error) {
-
-	var conf *readPoolConfig
-	conf, err = ssc.getReadPoolConfig(balances, false)
-
-	if err != nil && err != util.ErrValueNotPresent {
-		return // unexpected error
-	}
-
-	// return configurations from sc.yaml not saving them
-	if err == util.ErrValueNotPresent {
-		return getConfiguredReadPoolConfig(), nil
-	}
-
-	return conf, nil // actual value
-}
-
-func (ssc *StorageSmartContract) readPoolUpdateConfig(
-	t *transaction.Transaction, input []byte,
-	balances chainState.StateContextI) (resp string, err error) {
-
-	if t.ClientID != owner {
-		return "", common.NewError("read_pool_update_config",
-			"unauthorized access - only the owner can update the variables")
-	}
-
-	var conf, update *readPoolConfig
-	if conf, err = ssc.getReadPoolConfig(balances, true); err != nil {
-		return "", common.NewError("read_pool_update_config", err.Error())
-	}
-
-	update = new(readPoolConfig)
-	if err = update.Decode(input); err != nil {
-		return "", common.NewError("read_pool_update_config", err.Error())
-	}
-
-	if update.MinLock > 0 {
-		conf.MinLock = update.MinLock
-	}
-
-	if update.MinLockPeriod > 0 {
-		conf.MinLockPeriod = update.MinLockPeriod
-	}
-
-	if update.MaxLockPeriod > 0 {
-		conf.MaxLockPeriod = update.MaxLockPeriod
-	}
-
-	_, err = balances.InsertTrieNode(readPoolConfigKey(ssc.ID), conf)
-	if err != nil {
-		return "", common.NewError("read_pool_update_config", err.Error())
-	}
-
-	return string(conf.Encode()), nil
 }

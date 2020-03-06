@@ -12,7 +12,8 @@ import (
 )
 
 const (
-	owner   = "5be4e0abc645b04fa45895645568c448849ea379a938ca114b5f67a96258dbc2"
+	// TODO (sfxdx): what is the real owner?
+	owner   = "5be4e0abc645b04fa45895645568c448849ea379a938ca114b5f67a96258dbc2" // a random stub
 	ADDRESS = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7"
 	name    = "storage"
 
@@ -27,6 +28,10 @@ type StorageSmartContract struct {
 
 func (ssc *StorageSmartContract) SetSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {
 	ssc.SmartContract = sc
+	// sc configurations
+	ssc.SmartContract.RestHandlers["/getConfig"] = ssc.getConfigHandler
+	ssc.SmartContractExecutionStats["update_config"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "update_config"), nil)
+	// reading / writing
 	ssc.SmartContract.RestHandlers["/latestreadmarker"] = ssc.LatestReadMarkerHandler
 	ssc.SmartContractExecutionStats["read_redeem"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "read_redeem"), nil)
 	ssc.SmartContractExecutionStats["commit_connection"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "commit_connection"), nil)
@@ -48,17 +53,13 @@ func (ssc *StorageSmartContract) SetSC(sc *smartcontractinterface.SmartContract,
 	ssc.SmartContractExecutionStats["update_blobber"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "update_blobber"), nil)
 	// read pool
 	ssc.SmartContract.RestHandlers["/getReadPoolsStats"] = ssc.getReadPoolsStatsHandler
-	ssc.SmartContract.RestHandlers["/getReadPoolsConfig"] = ssc.getReadPoolsConfigHandler
 	ssc.SmartContractExecutionStats["new_read_pool"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "new_read_pool"), nil)
 	ssc.SmartContractExecutionStats["read_pool_lock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "read_pool_lock"), nil)
 	ssc.SmartContractExecutionStats["read_pool_unlock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "read_pool_unlock"), nil)
-	ssc.SmartContractExecutionStats["read_pool_update_config"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "read_pool_update_config"), nil)
 	// write pool
 	ssc.SmartContract.RestHandlers["/getWritePoolStat"] = ssc.getWritePoolStatHandler
-	ssc.SmartContract.RestHandlers["/getWritePoolConfig"] = ssc.getWritePoolConfigHandler
 	ssc.SmartContractExecutionStats["write_pool_lock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "write_pool_lock"), nil)
 	ssc.SmartContractExecutionStats["write_pool_unlock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "write_pool_unlock"), nil)
-	ssc.SmartContractExecutionStats["write_pool_update_config"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "write_pool_update_config"), nil)
 }
 
 func (ssc *StorageSmartContract) GetName() string {
@@ -127,8 +128,6 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		resp, err = sc.readPoolLock(t, input, balances)
 	case "read_pool_unlock":
 		resp, err = sc.readPoolUnlock(t, input, balances)
-	case "read_pool_update_config":
-		resp, err = sc.readPoolUpdateConfig(t, input, balances)
 
 	// write pool
 
@@ -136,8 +135,6 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		resp, err = sc.writePoolLock(t, input, balances)
 	case "write_pool_unlock":
 		resp, err = sc.writePoolUnlock(t, input, balances)
-	case "write_pool_update_config":
-		resp, err = sc.writePoolUpdateConfig(t, input, balances)
 
 	// case "challenge_request":
 	// 	resp, err := sc.addChallenge(t, balances.GetBlock(), input, balances)
@@ -161,6 +158,11 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 
 	case "challenge_response":
 		resp, err = sc.verifyChallenge(t, input, balances)
+
+	// configurations
+
+	case "update_config":
+		resp, err = sc.updateConfig(t, input, balances)
 
 	default:
 		err = common.NewError("invalid_storage_function_name",

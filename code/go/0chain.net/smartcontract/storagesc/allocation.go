@@ -222,38 +222,39 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 func (sc *StorageSmartContract) updateAllocationRequest(t *transaction.Transaction,
 	input []byte, balances c_state.StateContextI) (string, error) {
 
-	// TODO (sfxdx): apply new changes for the update allocation
-
 	allBlobbersList, err := sc.getBlobbersList(balances)
 	if err != nil {
-		return "", common.NewError("allocation_updation_failed", "No Blobbers registered. Failed to update a storage allocation")
+		return "", common.NewError("allocation_updation_failed",
+			"No Blobbers registered. Failed to update a storage allocation")
 	}
 
 	if len(allBlobbersList.Nodes) == 0 {
-		return "", common.NewError("allocation_updation_failed", "No Blobbers registered. Failed to update a storage allocation")
+		return "", common.NewError("allocation_updation_failed",
+			"No Blobbers registered. Failed to update a storage allocation")
 	}
 
 	if len(t.ClientID) == 0 {
-		return "", common.NewError("allocation_updation_failed", "Invalid client in the transaction. No public key found")
+		return "", common.NewError("allocation_updation_failed",
+			"Invalid client in the transaction. No public key found")
 	}
 
-	var updatedAllocationInput StorageAllocation
-
-	err = updatedAllocationInput.Decode(input)
-	if err != nil {
-		return "", common.NewError("allocation_updation_failed", "Failed to update a storage allocation")
+	var req StorageAllocation
+	if err = req.Decode(input); err != nil {
+		return "", common.NewError("allocation_updation_failed",
+			"Failed to update a storage allocation")
 	}
 
 	oldAllocations, err := sc.getAllocationsList(t.ClientID, balances)
 	if err != nil {
-		return "", common.NewError("allocation_updation_failed", "Failed to find existing allocation")
+		return "", common.NewError("allocation_updation_failed",
+			"Failed to find existing allocation")
 	}
 
 	oldAllocationExists := false
 	oldAllocation := &StorageAllocation{}
 
 	for _, oldAllocationID := range oldAllocations.List {
-		if updatedAllocationInput.ID == oldAllocationID {
+		if req.ID == oldAllocationID {
 			oldAllocation.ID = oldAllocationID
 			oldAllocationExists = true
 			break
@@ -261,30 +262,32 @@ func (sc *StorageSmartContract) updateAllocationRequest(t *transaction.Transacti
 	}
 
 	if !oldAllocationExists {
-		return "", common.NewError("allocation_updation_failed", "Failed to find existing allocation")
+		return "", common.NewError("allocation_updation_failed",
+			"Failed to find existing allocation")
 	}
 
 	oldAllocationBytes, err := balances.GetTrieNode(oldAllocation.GetKey(sc.ID))
 	if err != nil {
-		return "", common.NewError("allocation_updation_failed", "Failed to find existing allocation")
+		return "", common.NewError("allocation_updation_failed",
+			"Failed to find existing allocation")
 	}
 
 	oldAllocation.Decode(oldAllocationBytes.Encode())
 	size := oldAllocation.DataShards + oldAllocation.ParityShards
 
 	var updateSize int64
-	if updatedAllocationInput.Size > 0 {
-		updateSize = (updatedAllocationInput.Size + int64(size-1)) / int64(size)
+	if req.Size > 0 {
+		updateSize = (req.Size + int64(size-1)) / int64(size)
 	} else {
-		updateSize = (updatedAllocationInput.Size - int64(size-1)) / int64(size)
+		updateSize = (req.Size - int64(size-1)) / int64(size)
 	}
 
 	for _, blobberAllocation := range oldAllocation.BlobberDetails {
 		blobberAllocation.Size = blobberAllocation.Size + updateSize
 	}
 
-	oldAllocation.Size = oldAllocation.Size + updatedAllocationInput.Size
-	oldAllocation.Expiration = oldAllocation.Expiration + updatedAllocationInput.Expiration
+	oldAllocation.Size = oldAllocation.Size + req.Size
+	oldAllocation.Expiration = oldAllocation.Expiration + req.Expiration
 	_, err = balances.InsertTrieNode(oldAllocation.GetKey(sc.ID), oldAllocation)
 	if err != nil {
 		return "", common.NewError("allocation_updation_failed", "Failed to update existing allocation")

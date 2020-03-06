@@ -28,9 +28,9 @@ func (sc *StorageSmartContract) getBlobbersList(balances c_state.StateContextI) 
 
 func updateBlobberInList(list []*StorageNode, update *StorageNode) (ok bool) {
 	for i, b := range list {
-		if b.ID == t.ClientID {
-			list[i], ok = &newBlobber, true
-			break
+		if b.ID == update.ID {
+			list[i], ok = update, true
+			return
 		}
 	}
 	return
@@ -57,9 +57,10 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 
 	newBlobber.ID = t.ClientID
 	newBlobber.PublicKey = t.PublicKey
-	blobberBytes, err := balances.GetTrieNode(newBlobber.GetKey(sc.ID))
 
-	// errors handling
+	_, err = balances.GetTrieNode(newBlobber.GetKey(sc.ID))
+
+	// unexpected error
 	if err != nil && err != util.ErrValueNotPresent {
 		return "", common.NewError("add_blobber_failed", err.Error())
 	}

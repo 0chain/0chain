@@ -7,7 +7,6 @@ import (
 	"time"
 
 	chainState "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
@@ -15,29 +14,6 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/util"
 )
-
-// write pool lock configurations
-
-type writePoolConfig struct {
-	MinLock int64 `json:"min_lock"`
-	// TODO (sfxdx): interests? other configs?
-}
-
-func writePoolConfigKey(scKey string) datastore.Key {
-	return datastore.Key(scKey + ":writepool")
-}
-
-func (conf *writePoolConfig) Encode() (b []byte) {
-	var err error
-	if b, err = json.Marshal(conf); err != nil {
-		panic(err) // must not happens
-	}
-	return
-}
-
-func (conf *writePoolConfig) Decode(b []byte) error {
-	return json.Unmarshal(b, conf)
-}
 
 // write pool lock/unlock request
 
@@ -353,114 +329,4 @@ func (ssc *StorageSmartContract) getWritePoolStatHandler(ctx context.Context,
 	}
 
 	return &stat, nil
-}
-
-//
-// configure the write pool
-//
-
-// getWritePoolConfigBytes of a client
-func (ssc *StorageSmartContract) getWritePoolConfigBytes(
-	balances chainState.StateContextI) (b []byte, err error) {
-
-	var val util.Serializable
-	val, err = balances.GetTrieNode(writePoolConfigKey(ssc.ID))
-	if err != nil {
-		return
-	}
-	return val.Encode(), nil
-}
-
-func getConfiguredWritePoolConfig() (conf *writePoolConfig) {
-	conf = new(writePoolConfig)
-	conf.MinLock = config.SmartContractConfig.GetInt64(
-		"smart_contracts.storagesc.writepool.min_lock")
-	return
-}
-
-func (ssc *StorageSmartContract) setupWritePoolConfig(
-	balances chainState.StateContextI) (conf *writePoolConfig, err error) {
-
-	conf = getConfiguredWritePoolConfig()
-	_, err = balances.InsertTrieNode(writePoolConfigKey(ssc.ID), conf)
-	if err != nil {
-		return nil, err
-	}
-	return
-}
-
-// getWritePoolConfig
-func (ssc *StorageSmartContract) getWritePoolConfig(
-	balances chainState.StateContextI, setup bool) (
-	conf *writePoolConfig, err error) {
-
-	var confb []byte
-	confb, err = ssc.getWritePoolConfigBytes(balances)
-	if err != nil && err != util.ErrValueNotPresent {
-		return
-	}
-
-	conf = new(writePoolConfig)
-
-	if err == util.ErrValueNotPresent {
-		if !setup {
-			return // value not present
-		}
-		return ssc.setupWritePoolConfig(balances)
-	}
-
-	if err = conf.Decode(confb); err != nil {
-		return nil, err
-	}
-	return
-}
-
-func (ssc *StorageSmartContract) getWritePoolConfigHandler(ctx context.Context,
-	params url.Values, balances chainState.StateContextI) (
-	resp interface{}, err error) {
-
-	var conf *writePoolConfig
-	conf, err = ssc.getWritePoolConfig(balances, false)
-
-	if err != nil && err != util.ErrValueNotPresent {
-		return // unexpected error
-	}
-
-	// return configurations from sc.yaml not saving them
-	if err == util.ErrValueNotPresent {
-		return getConfiguredWritePoolConfig(), nil
-	}
-
-	return conf, nil // actual value
-}
-
-func (ssc *StorageSmartContract) writePoolUpdateConfig(
-	t *transaction.Transaction, input []byte,
-	balances chainState.StateContextI) (resp string, err error) {
-
-	if t.ClientID != owner {
-		return "", common.NewError("write_pool_update_config",
-			"unauthorized access - only the owner can update the variables")
-	}
-
-	var conf, update *writePoolConfig
-	if conf, err = ssc.getWritePoolConfig(balances, true); err != nil {
-		return "", common.NewError("write_pool_update_config", err.Error())
-	}
-
-	update = new(writePoolConfig)
-	if err = update.Decode(input); err != nil {
-		return "", common.NewError("write_pool_update_config", err.Error())
-	}
-
-	if update.MinLock > 0 {
-		conf.MinLock = update.MinLock
-	}
-
-	_, err = balances.InsertTrieNode(writePoolConfigKey(ssc.ID), conf)
-	if err != nil {
-		return "", common.NewError("write_pool_update_config", err.Error())
-	}
-
-	return string(conf.Encode()), nil
 }
