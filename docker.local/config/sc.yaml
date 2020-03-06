@@ -18,9 +18,21 @@ smart_contracts:
   storagesc:
     challenge_enabled: false
     challenge_rate_per_mb_min: 1
+    # min possible allocations size in bytes allowed by the SC
+    min_alloc_size: 1024
+    # min possible allocation duration allowed by the SC
+    min_alloc_duration: '1h'
+    # max challenge completion time of a blobber allowed by the SC
+    max_challenge_completion_time: '30m'
+    # min blobber's offer duration allowed by the SC
+    min_offer_duration: '10h'
+    # min blobber capacity allowed by the SC
+    min_blobber_capacity: 1024
+    # users' read pool related configurations
     readpool:
       min_lock: 10
-      min_lock_period: 1m # 1h
-      max_lock_period: 3h # 8760h
+      min_lock_period: 1h
+      max_lock_period: 8760h
+    # users' write pool related configurations
     writepool:
       min_lock: 10
