@@ -68,6 +68,9 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	return string(newBlobber.Encode()), nil
 }
 
+//
+// TODO (sfxdx): remove this, use addBlobber to update a blobber
+//
 // updateBlobber terms and capacity
 func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	input []byte, balances c_state.StateContextI) (string, error) {
