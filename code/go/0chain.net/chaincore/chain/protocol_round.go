@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"sort"
 	"sync"
 	"time"
 
@@ -266,4 +267,31 @@ func (c *Chain) GetLatestFinalizedMagicBlockFromSharder(ctx context.Context) []*
 		finalizedMagicBlocks = append(finalizedMagicBlocks, c.GetLatestFinalizedMagicBlock())
 	}
 	return finalizedMagicBlocks
+}
+
+// GetLatestFinalizedMagicBlockRound calculates and returns LFMB for by round number
+func (c *Chain) GetLatestFinalizedMagicBlockRound(_ context.Context, mr *round.Round) *block.Block {
+	c.lfmbMutex.RLock()
+	defer c.lfmbMutex.RUnlock()
+
+	foundLFMB := c.LatestFinalizedMagicBlock
+	roundBlock := mr.GetRoundNumber()
+	if len(c.magicBlockStartingRounds) > 0 {
+		startingRounds := make([]int64, 0, len(c.magicBlockStartingRounds))
+		for round := range c.magicBlockStartingRounds {
+			startingRounds = append(startingRounds, round)
+		}
+		sort.SliceStable(startingRounds, func(i, j int) bool {
+			return startingRounds[i] >= startingRounds[j]
+		})
+		foundRound := startingRounds[0]
+		for _, round := range startingRounds {
+			foundRound = round
+			if round<=roundBlock  {
+				break
+			}
+		}
+		foundLFMB = c.magicBlockStartingRounds[foundRound]
+	}
+	return foundLFMB
 }

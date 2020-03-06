@@ -210,7 +210,9 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	ctx = memorystore.WithEntityConnection(ctx, txnEntityMetadata)
 	defer memorystore.Close(ctx)
 	b := block.NewBlock(mc.GetKey(), r.GetRoundNumber())
-	b.LatestFinalizedMagicBlockHash = mc.GetLatestFinalizedMagicBlock().Hash
+	lfmb := mc.GetLatestFinalizedMagicBlockRound(ctx, r.Round)
+	b.LatestFinalizedMagicBlockHash = lfmb.Hash
+
 	b.MinerID = node.Self.Underlying().GetKey()
 	mc.SetPreviousBlock(ctx, r, b, pb)
 	start := time.Now()
@@ -292,7 +294,7 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 		Logger.Debug("add to verification", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Bool("finalizing", mr.IsFinalizing()), zap.Bool("finalized", mr.IsFinalized()))
 		return
 	}
-	if !mc.ValidateMagicBlock(ctx, b) {
+	if !mc.ValidateMagicBlock(ctx, mr.Round, b) {
 		b.SetBlockState(block.StateVerificationRejected)
 		Logger.Error("add to verification (invalid magic block)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("magic_block", b.LatestFinalizedMagicBlockHash))
 		return
@@ -789,7 +791,7 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context, pnround int64)
 	}
 
 	// LFMB
-	lmb := mc.GetLatestFinalizedMagicBlock()
+	lfmb := mc.GetLatestFinalizedMagicBlock()
 	var magicBlock *block.Block
 	mbs := mc.GetLatestFinalizedMagicBlockFromSharder(common.GetRootContext())
 	if len(mbs) >= 1 {
@@ -798,12 +800,8 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context, pnround int64)
 		})
 		magicBlock = mbs[0]
 	}
-
-	viewChangeMagicBlock := mc.GetViewChangeMagicBlock()
 	if magicBlock != nil &&
-		(lmb == nil || lmb.MagicBlockNumber < magicBlock.MagicBlockNumber) &&
-		(lmb == nil || viewChangeMagicBlock == nil ||
-			viewChangeMagicBlock.MagicBlockNumber < lmb.MagicBlockNumber && mc.nextViewChange > pnround) {
+		(lfmb == nil || lfmb.MagicBlockNumber < magicBlock.MagicBlockNumber) {
 		mc.MustVerifyChainHistory(ctx, magicBlock, nil)
 		err := mc.UpdateMagicBlock(magicBlock.MagicBlock)
 		if err != nil {

@@ -197,7 +197,6 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 		Logger.Warn("failed to get bls message", zap.Any("vrfs_share", vrfs.Share), zap.Any("round", mr.Round))
 		return false
 	}
-
 	mc.ViewChange(ctx, mr.Number)
 
 	var share bls.Sign

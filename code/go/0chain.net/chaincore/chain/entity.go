@@ -137,6 +137,8 @@ type Chain struct {
 
 	configInfoStore datastore.Store
 	RoundF          round.RoundFactory
+
+	magicBlockStartingRounds map[int64]*block.Block // block MB by starting round VC
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
@@ -292,6 +294,7 @@ func (c *Chain) Initialize() {
 	c.stateDB = stateDB
 	c.BlockChain = ring.New(10000)
 	c.minersStake = make(map[datastore.Key]int)
+	c.magicBlockStartingRounds = make(map[int64]*block.Block)
 }
 
 /*SetupEntity - setup the entity */
@@ -557,9 +560,9 @@ func (c *Chain) PruneChain(_ context.Context, b *block.Block) {
 }
 
 /*ValidateMagicBlock - validate the block for a given round has the right magic block */
-func (c *Chain) ValidateMagicBlock(ctx context.Context, b *block.Block) bool {
-	//TODO: This needs to take the round number into account and go backwards as needed to validate
-	return b.LatestFinalizedMagicBlockHash == c.LatestFinalizedMagicBlock.Hash
+func (c *Chain) ValidateMagicBlock(ctx context.Context, mr *round.Round, b *block.Block) bool {
+	blockMagicBlock := c.GetLatestFinalizedMagicBlockRound(ctx, mr)
+	return b.LatestFinalizedMagicBlockHash == blockMagicBlock.Hash
 }
 
 //IsRoundGenerator - is this miner a generator for this round
@@ -1096,6 +1099,7 @@ func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 		}
 
 		c.LatestFinalizedMagicBlock = b
+		c.magicBlockStartingRounds[b.MagicBlock.StartingRound] = b
 		c.lfmbSummary = b.GetSummary()
 	}
 }

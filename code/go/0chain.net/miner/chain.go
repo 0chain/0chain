@@ -216,7 +216,7 @@ func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) erro
 	return err
 }
 
-func (mc *Chain) isNeedViewChange(nround int64) bool {
+func (mc *Chain) isNeedViewChange(_ context.Context, nround int64) bool {
 	mc.muDKG.RLock()
 	defer mc.muDKG.RUnlock()
 	return config.DevConfiguration.ViewChange && mc.nextViewChange == nround &&
@@ -225,7 +225,7 @@ func (mc *Chain) isNeedViewChange(nround int64) bool {
 }
 
 func (mc *Chain) ViewChange(ctx context.Context, nround int64) bool {
-	if !mc.isNeedViewChange(nround) {
+	if !mc.isNeedViewChange(ctx, nround) {
 		return false
 	}
 	viewChangeMagicBlock := mc.GetViewChangeMagicBlock()
