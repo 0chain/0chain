@@ -26,6 +26,16 @@ func (sc *StorageSmartContract) getBlobbersList(balances c_state.StateContextI) 
 	return allBlobbersList, nil
 }
 
+func updateBlobberInList(list []*StorageNode, update *StorageNode) (ok bool) {
+	for i, b := range list {
+		if b.ID == t.ClientID {
+			list[i], ok = &newBlobber, true
+			break
+		}
+	}
+	return
+}
+
 func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	input []byte, balances c_state.StateContextI) (string, error) {
 
@@ -54,78 +64,20 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 		return "", common.NewError("add_blobber_failed", err.Error())
 	}
 
-	// already have
-	if err == nil {
-		return string(blobberBytes.Encode()), nil
+	// insert or update blobber
+	if err == util.ErrValueNotPresent {
+		if !updateBlobberInList(allBlobbersList.Nodes, &newBlobber) {
+			return "", common.NewError("add_blobber_failed",
+				"blobber not found in all blobbers list")
+		}
+	} else {
+		allBlobbersList.Nodes = append(allBlobbersList.Nodes, &newBlobber)
 	}
 
-	// create new (util.ErrValueNotPresent)
-
-	allBlobbersList.Nodes = append(allBlobbersList.Nodes, &newBlobber)
 	balances.InsertTrieNode(ALL_BLOBBERS_KEY, allBlobbersList)
 	balances.InsertTrieNode(newBlobber.GetKey(sc.ID), &newBlobber)
 
 	return string(newBlobber.Encode()), nil
-}
-
-//
-// TODO (sfxdx): remove this, use addBlobber to update a blobber
-//
-// updateBlobber terms and capacity
-func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
-	input []byte, balances c_state.StateContextI) (string, error) {
-
-	allBlobbersList, err := sc.getBlobbersList(balances)
-	if err != nil {
-		return "", common.NewError("update_blobber_failed",
-			"failed to get blobber list: "+err.Error())
-	}
-
-	var updateBlobber StorageNode
-	if err = updateBlobber.Decode(input); err != nil {
-		return "", common.NewError("update_blobber_failed",
-			"malformed request: "+err.Error())
-	}
-
-	if err = updateBlobber.validate(); err != nil {
-		return "", common.NewError("update_blobber_failed",
-			"invalid values in request: "+err.Error())
-	}
-
-	updateBlobber.ID = t.ClientID
-	updateBlobber.PublicKey = t.PublicKey
-	_, err = balances.GetTrieNode(updateBlobber.GetKey(sc.ID))
-
-	// errors handling
-	if err != nil && err != util.ErrValueNotPresent {
-		return "", common.NewError("update_blobber_failed", err.Error())
-	}
-
-	// already have
-	if err == util.ErrValueNotPresent {
-		return "", common.NewError("update_blobber_failed", "no such blobber")
-	}
-
-	// update existing blobber
-
-	var found bool
-	for i, b := range allBlobbersList.Nodes {
-		if b.ID == t.ClientID {
-			allBlobbersList.Nodes[i], found = &updateBlobber, true
-			break
-		}
-	}
-
-	if !found {
-		// invalid DB state (impossible case?)
-		return "", common.NewError("update_blobber_failed",
-			"blobber not found in all blobbers list")
-	}
-
-	balances.InsertTrieNode(ALL_BLOBBERS_KEY, allBlobbersList)
-	balances.InsertTrieNode(updateBlobber.GetKey(sc.ID), &updateBlobber)
-
-	return string(updateBlobber.Encode()), nil
 }
 
 func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction, input []byte, balances c_state.StateContextI) (string, error) {

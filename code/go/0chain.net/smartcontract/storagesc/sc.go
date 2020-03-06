@@ -115,8 +115,6 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 
 	case "add_blobber":
 		resp, err = sc.addBlobber(t, input, balances)
-	case "update_blobber":
-		resp, err = sc.updateBlobber(t, input, balances)
 
 	case "add_validator":
 		resp, err = sc.addValidator(t, input, balances)
