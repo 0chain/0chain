@@ -258,7 +258,7 @@ func (sc *StorageSmartContract) updateAllocationRequest(t *transaction.Transacti
 			"negative expiration extension value")
 	}
 
-	oldAllocations, err := sc.getAllocationsList(updatedAllocationInput.Owner, balances)
+	oldAllocations, err := sc.getAllocationsList(req.Owner, balances)
 	if err != nil {
 		return "", common.NewError("allocation_updation_failed",
 			"Failed to find existing allocation")
