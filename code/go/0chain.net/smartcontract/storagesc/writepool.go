@@ -194,6 +194,92 @@ func (ssc *StorageSmartContract) newWritePool(allocationID, clientID string,
 	return
 }
 
+// update Used field of blobbers and in all blobbers list;
+// the allocs list have the same size and order as the list
+func (ssc *StorageSmartContract) updateBlobbersUsed(allocs []*BlobberAllocation,
+	balances chainState.StateContextI) (err error) {
+
+	var all *StorageNodes
+	if all, err = ssc.getBlobbersList(balances); err != nil {
+		return fmt.Errorf("can't get all blobbers list: %v", err)
+	}
+
+	// update Used in the list
+	for _, ab := range all.Nodes {
+		for _, a := range allocs {
+			if ab.ID == a.BlobberID {
+				ab.Used += a.Size
+				//
+				break
+			}
+		}
+	}
+
+	// update Used in the list; save updates
+	for i, b := range all.Nodes {
+		b.Used += allocs[i].MinLockDemand
+		_, err = balances.InsertTrieNode(b.GetKey(sc.ID), b)
+		if err != nil {
+			return errors.New("failed to save updated blobber")
+		}
+	}
+
+	// update the Used in all blobbers list
+	for _, ab := range all.Nodes {
+		for _, b := range all {
+			if ab.ID == b {
+				ab.Used = b.Used
+				break
+			}
+		}
+	}
+	// save all blobbers list
+	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, all)
+	if err != nil {
+		return errors.New("failed to save updated list of all blobber")
+	}
+	return // nil
+}
+
+func (ssc *StorageSmartContract) writePoolLockHelper(t *transaction.Transaction,
+	conf *writePoolConfig, alloc *StorageAllocation,
+) (err error) {
+
+	if t.Value < conf.MinLock {
+		return errors.New("insufficient amount to lock")
+	}
+
+	var balance state.Balance
+	balance, err = balances.GetClientBalance(t.ClientID)
+
+	if err != nil && err != util.ErrValueNotPresent {
+		return
+	}
+
+	if err == util.ErrValueNotPresent {
+		return errors.New("no tokens to lock")
+	}
+
+	if state.Balance(t.Value) > balance {
+		return errors.New("lock amount is greater than balance")
+	}
+
+	if _, resp, err = wp.fill(t, balances); err != nil {
+		return
+	}
+
+	// conclude the allocation (got min lock demand)
+	if !alloc.IsConcluded && wp.Balance >= alloc.MinLockDemand {
+		err = ssc.updateBlobbersUsed(alloc.BlobberDetails, balances)
+		if err != nil {
+			return
+		}
+		req.IsConcluded = true
+	}
+
+	return
+}
+
 // lock tokens for write pool of transaction's client
 func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 	input []byte, balances chainState.StateContextI) (resp string, err error) {
@@ -210,7 +296,7 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 
 	if t.Value < conf.MinLock {
 		return "", common.NewError("write_pool_lock_failed",
-			"insufficent amount to lock")
+			"insufficient amount to lock")
 	}
 
 	// write lock request & user balance
@@ -238,6 +324,15 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 	if req.AllocationID == "" {
 		return "", common.NewError("write_pool_lock_failed",
 			"missing allocation_id")
+	}
+
+	// get allocation
+
+	var alloc *StorageAllocation
+	alloc, err = ssc.getAllocation(req.AllocationID, balances)
+	if err != nil {
+		return "", common.NewError("write_pool_lock_failed",
+			"can't get related allocation: "+err.Error())
 	}
 
 	// user write pools
@@ -276,11 +371,11 @@ func (ssc *StorageSmartContract) writePoolUnlock(t *transaction.Transaction,
 
 	var wp *writePool
 	if wp, err = ssc.getWritePool(req.AllocationID, balances); err != nil {
-		return "", common.NewError("write_pool_lock_failed", err.Error())
+		return "", common.NewError("write_pool_unlock_failed", err.Error())
 	}
 
 	if wp.ClientID != t.ClientID {
-		return "", common.NewError("write_pool_lock_failed",
+		return "", common.NewError("write_pool_unlock_failed",
 			"only owner can unlock the pool")
 	}
 

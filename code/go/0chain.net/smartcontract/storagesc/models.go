@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/chain"
+	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
@@ -52,6 +53,15 @@ func (sn *ClientAllocation) GetHashBytes() []byte {
 
 type Allocations struct {
 	List []string
+}
+
+func (a *Allocations) find(id string) (ok bool) {
+	for _, alloc := range a.List {
+		if alloc == id {
+			return true
+		}
+	}
+	return // false
 }
 
 // func (an *Allocations) Get(idx int) string {
@@ -251,8 +261,14 @@ type StorageNode struct {
 	BaseURL   string `json:"url"`
 	Terms     Terms  `json:"terms"`    // terms
 	Capacity  int64  `json:"capacity"` // total blobber capacity
-	CapUsed   int64  `json:"cap_used"` // allocated capacity for this time
+	Used      int64  `json:"cap_used"` // allocated capacity for this time
 	PublicKey string `json:"-"`
+	// IsActivated returns true if the blobber's stake pool have
+	// enough tokens to cover its capacity stake. The addBlobber
+	// function can reset it to false (updating the blobber) if
+	// blobber increases its capacity. Also, it can be reset to
+	// false if Terms of the blobber has changed.
+	IsActivated bool `json:"is_activated"`
 }
 
 // validate the blobber configurations
@@ -264,6 +280,12 @@ func (sn *StorageNode) validate(conf *scConfig) (err error) {
 		return errors.New("insufficient blobber capacity")
 	}
 	return
+}
+
+// stake required for the blobber with current capacity and
+// current write price (i.e. with current terms)
+func (sn *StorageNode) stake() state.Balance {
+	return state.Balance(sn.Capacity * sn.Terms.WritePrice)
 }
 
 func (sn *StorageNode) GetKey(globalKey string) datastore.Key {
@@ -374,6 +396,11 @@ type StorageAllocation struct {
 	// StartTime is time when the allocation has been created. We will
 	// use it to check blobber's MaxOfferTime extending the allocation.
 	StartTime common.Timestamp `json:"start_time"`
+	// IsActivated returns true if the allocation's write pool have
+	// enough tokens to cover overall min lock demand. Allocation
+	// updating can reset it to false, if capacity of allocation has
+	// been increased.
+	IsActivated bool `json:"is_activated"`
 }
 
 func (sa *StorageAllocation) validate(conf *scConfig) (err error) {
@@ -431,7 +458,7 @@ func (sa *StorageAllocation) filterBlobbers(list []*StorageNode,
 			continue
 		}
 		// filter by blobber's capacity left
-		if b.Capacity-b.CapUsed < bsize {
+		if b.Capacity-b.Used < bsize {
 			continue
 		}
 		list[i] = b
