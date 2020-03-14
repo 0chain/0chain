@@ -257,18 +257,13 @@ func (t *Terms) validate(conf *scConfig) (err error) {
 
 // StorageNode represents Blobber configurations.
 type StorageNode struct {
-	ID        string `json:"id"`
-	BaseURL   string `json:"url"`
-	Terms     Terms  `json:"terms"`    // terms
-	Capacity  int64  `json:"capacity"` // total blobber capacity
-	Used      int64  `json:"cap_used"` // allocated capacity for this time
-	PublicKey string `json:"-"`
-	// IsActivated returns true if the blobber's stake pool have
-	// enough tokens to cover its capacity stake. The addBlobber
-	// function can reset it to false (updating the blobber) if
-	// blobber increases its capacity. Also, it can be reset to
-	// false if Terms of the blobber has changed.
-	IsActivated bool `json:"is_activated"`
+	ID              string `json:"id"`
+	BaseURL         string `json:"url"`
+	Terms           Terms  `json:"terms"`    // terms
+	Capacity        int64  `json:"capacity"` // total blobber capacity
+	Used            int64  `json:"used"`     // allocated capacity for this time
+	LastHealthCheck int64  `json:"last_health_check"`
+	PublicKey       string `json:"-"`
 }
 
 // validate the blobber configurations
