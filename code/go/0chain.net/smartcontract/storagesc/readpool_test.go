@@ -122,29 +122,29 @@ func Test_tokenLock_LockStats(t *testing.T) {
 }
 
 func TestStorageSmartContract_getReadPoolsBytes(t *testing.T) {
-	//
+	// TODO (sfxdx): implements tests
 }
 
 func TestStorageSmartContract_getReadPools(t *testing.T) {
-	//
+	// TODO (sfxdx): implements tests
 }
 
 func TestStorageSmartContract_newReadPool(t *testing.T) {
-	//
+	// TODO (sfxdx): implements tests
 }
 
 func TestStorageSmartContract_readPoolLock(t *testing.T) {
-	//
+	// TODO (sfxdx): implements tests
 }
 
 func TestStorageSmartContract_readPoolUnlock(t *testing.T) {
-	//
+	// TODO (sfxdx): implements tests
 }
 
 func TestStorageSmartContract_getReadPoolStat(t *testing.T) {
-	//
+	// TODO (sfxdx): implements tests
 }
 
 func TestStorageSmartContract_getReadPoolsStatsHandler(t *testing.T) {
-	//
+	// TODO (sfxdx): implements tests
 }

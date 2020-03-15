@@ -115,6 +115,7 @@ type newAllocationRequest struct {
 
 // storageAllocation from the request
 func (nar *newAllocationRequest) storageAllocation() (sa *StorageAllocation) {
+	sa = new(StorageAllocation)
 	sa.DataShards = nar.DataShards
 	sa.ParityShards = nar.ParityShards
 	sa.Size = nar.Size
