@@ -358,7 +358,7 @@ func (ssc *StorageSmartContract) newStakePool(blobberID string,
 
 // unlock tokens if expired
 func (ssc *StorageSmartContract) stakePoolUnlock(t *transaction.Transaction,
-	input []byte, balances chainState.StateContextI) (resp string, err error) {
+	_ []byte, balances chainState.StateContextI) (resp string, err error) {
 
 	var blobber *StorageNode
 	if blobber, err = ssc.getBlobber(t.ClientID, balances); err != nil {

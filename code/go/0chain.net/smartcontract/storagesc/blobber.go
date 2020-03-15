@@ -148,6 +148,10 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 				t.Value, stake)
 		}
 
+		if err = sc.checkFill(t, balances); err != nil {
+			return nil, err
+		}
+
 		if _, _, err = sp.fill(t, balances); err != nil {
 			return nil, fmt.Errorf("transferring tokens to stake pool: %v", err)
 		}
@@ -184,6 +188,10 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 		if state.Balance(t.Value) < stake-sp.Locked.Balance {
 			return nil, fmt.Errorf("not enough tokens for stake: %d < %d",
 				t.Value, stake)
+		}
+		// check blobber's tokens
+		if err = sc.checkFill(t, balances); err != nil {
+			return nil, err
 		}
 		// lock tokens
 		if _, _, err = sp.fill(t, balances); err != nil {

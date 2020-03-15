@@ -265,6 +265,27 @@ func (ssc *StorageSmartContract) newReadPool(t *transaction.Transaction,
 	return string(rps.Encode()), nil
 }
 
+func (ssc *StorageSmartContract) checkFill(t *transaction.Transaction,
+	balances chainState.StateContextI) (err error) {
+
+	var balance state.Balance
+	balance, err = balances.GetClientBalance(t.ClientID)
+
+	if err != nil && err != util.ErrValueNotPresent {
+		return
+	}
+
+	if err == util.ErrValueNotPresent {
+		return errors.New("no tokens to lock")
+	}
+
+	if state.Balance(t.Value) > balance {
+		return errors.New("lock amount is greater than balance")
+	}
+
+	return
+}
+
 // lock tokens for read pool of transaction's client
 func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 	input []byte, balances chainState.StateContextI) (resp string, err error) {
@@ -290,20 +311,10 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 	if err = lr.decode(input); err != nil {
 		return "", common.NewError("read_pool_lock_failed", err.Error())
 	}
-	var balance state.Balance
-	balance, err = balances.GetClientBalance(t.ClientID)
 
-	if err != nil && err != util.ErrValueNotPresent {
+	// check client balance
+	if err = ssc.checkFill(t, balances); err != nil {
 		return "", common.NewError("read_pool_lock_failed", err.Error())
-	}
-
-	if err == util.ErrValueNotPresent {
-		return "", common.NewError("read_pool_lock_failed", "no tokens to lock")
-	}
-
-	if state.Balance(t.Value) > balance {
-		return "", common.NewError("read_pool_lock_failed",
-			"lock amount is greater than balance")
 	}
 
 	// filter by configs

@@ -556,6 +556,10 @@ func (sc *StorageSmartContract) extendAllocation(t *transaction.Transaction,
 
 	// lock tokens if this transaction provides them
 	if t.Value > 0 {
+		if err = sc.checkFill(t, balances); err != nil {
+			return "", common.NewError("allocation_extending_failed",
+				err.Error())
+		}
 		if _, _, err = wp.fill(t, balances); err != nil {
 			return "", common.NewError("allocation_extending_failed",
 				err.Error())
@@ -636,6 +640,10 @@ func (sc *StorageSmartContract) reduceAllocation(t *transaction.Transaction,
 
 	// lock tokens if this transaction provides them
 	if t.Value > 0 {
+		if err = sc.checkFill(t, balances); err != nil {
+			return "", common.NewError("allocation_reducing_failed",
+				err.Error())
+		}
 		if _, _, err = wp.fill(t, balances); err != nil {
 			return "", common.NewError("allocation_reducing_failed",
 				err.Error())
