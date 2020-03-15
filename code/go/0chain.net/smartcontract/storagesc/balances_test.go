@@ -4,7 +4,9 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
+	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"0chain.net/core/encryption"
 	"0chain.net/core/util"
 )
 
@@ -62,6 +64,11 @@ func (tb *testBalances) GetClientBalance(clientID datastore.Key) (
 
 func (tb *testBalances) GetTrieNode(key datastore.Key) (
 	node util.Serializable, err error) {
+
+	if encryption.IsHash(key) {
+		return nil, common.NewError("failed to get trie node",
+			"key is too short")
+	}
 
 	var ok bool
 	if node, ok = tb.tree[key]; !ok {

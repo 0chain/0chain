@@ -113,22 +113,7 @@ func (wp *writePool) setExpiation(set common.Timestamp) (err error) {
 			"invalid write pool state, invalid token lock type: %T",
 			wp.TokenLockInterface)
 	}
-	tl.Duration = time.Duration(set) * time.Second // set
-	return
-}
-
-// extend write pool expiration adding given time difference
-func (wp *writePool) extend(add common.Timestamp) (err error) {
-	if add == 0 {
-		return // as is
-	}
-	tl, ok := wp.TokenLockInterface.(*tokenLock)
-	if !ok {
-		return fmt.Errorf(
-			"invalid write pool state, invalid token lock type: %T",
-			wp.TokenLockInterface)
-	}
-	tl.Duration += time.Duration(add) * time.Second // change
+	tl.Duration = time.Duration(set-tl.StartTime) * time.Second
 	return
 }
 
@@ -212,13 +197,13 @@ func (ssc *StorageSmartContract) newWritePool(allocationID, clientID string,
 }
 
 // create, fill and save write pool for new allocation
-func (sc *StorageSmartContract) createWritePool(t *transaction.Transaction,
+func (ssc *StorageSmartContract) createWritePool(t *transaction.Transaction,
 	sa *StorageAllocation, balances chainState.StateContextI) (err error) {
 
 	// create related write_pool expires with the allocation + challenge
 	// completion time
 	var wp *writePool
-	wp, err = sc.newWritePool(sa.GetKey(sc.ID), t.ClientID, t.CreationDate,
+	wp, err = ssc.newWritePool(sa.GetKey(ssc.ID), t.ClientID, t.CreationDate,
 		sa.Expiration+toSeconds(sa.ChallengeCompletionTime), balances)
 	if err != nil {
 		return fmt.Errorf("can't create write pool: %v", err)
@@ -236,7 +221,7 @@ func (sc *StorageSmartContract) createWritePool(t *transaction.Transaction,
 	}
 
 	// save the write pool
-	if err = wp.save(sc.ID, sa.ID, balances); err != nil {
+	if err = wp.save(ssc.ID, sa.ID, balances); err != nil {
 		return fmt.Errorf("can't save write pool: %v", err)
 	}
 
