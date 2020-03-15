@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	"testing"
+	"time"
 
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
@@ -41,7 +42,7 @@ func Test_writePoolKey(t *testing.T) {
 }
 
 func newTestWritePool(clientID, poolID string, balance state.Balance,
-	startTime, duration common.Timestamp) (wp *writePool) {
+	startTime common.Timestamp, duration time.Duration) (wp *writePool) {
 
 	wp = newWritePool(clientID)
 	wp.ZcnLockingPool.ID = poolID
@@ -57,19 +58,20 @@ func newTestWritePool(clientID, poolID string, balance state.Balance,
 func Test_writePool_Encode_Decode(t *testing.T) {
 	const clientID, poolID, balance = "client_hex", "pool_id", 100500
 	var (
-		tp     = common.Now()
+		sp     = common.Now() // start point
+		dur    = 20 * time.Hour
 		we, wd *writePool
 		err    error
 	)
 
-	we = newTestWritePool(clientID, poolID, balance, tp, tp)
+	we = newTestWritePool(clientID, poolID, balance, sp, dur)
 	wd = newWritePool("")
 
 	if err = wd.Decode(we.Encode()); err != nil {
 		t.Fatal(err)
 	}
 	if wd.ClientID != clientID {
-		t.Fatal("wrong")
+		t.Fatal("wrong", wd.ClientID, clientID)
 	}
 	if wd.ZcnLockingPool == nil {
 		t.Fatal("nil")
@@ -87,7 +89,7 @@ func Test_writePool_Encode_Decode(t *testing.T) {
 	if !ok {
 		t.Fatalf("wrong type %T", we.ZcnLockingPool.TokenLockInterface)
 	}
-	if tl.StartTime != tp || tl.Duration != tp || tl.Owner != clientID {
+	if tl.StartTime != sp || tl.Duration != dur || tl.Owner != clientID {
 		t.Fatal("something wrong")
 	}
 }

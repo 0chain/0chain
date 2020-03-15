@@ -2,12 +2,9 @@ package storagesc
 
 import (
 	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/encryption"
 	"0chain.net/core/util"
 )
 
@@ -57,7 +54,7 @@ func (tb *testBalances) GetClientBalance(clientID datastore.Key) (
 	b state.Balance, err error) {
 
 	var ok bool
-	if b, ok = t.balances[clientID]; !ok {
+	if b, ok = tb.balances[clientID]; !ok {
 		return 0, util.ErrValueNotPresent
 	}
 	return
@@ -67,8 +64,8 @@ func (tb *testBalances) GetTrieNode(key datastore.Key) (
 	node util.Serializable, err error) {
 
 	var ok bool
-	if node, ok = t.tree[key]; !ok {
-		return 0, util.ErrValueNotPresent
+	if node, ok = tb.tree[key]; !ok {
+		return nil, util.ErrValueNotPresent
 	}
 	return
 }

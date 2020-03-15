@@ -64,7 +64,6 @@ func (wp *writePool) Decode(input []byte) (err error) {
 
 	type writePoolJSON struct {
 		Pool     json.RawMessage `json:"pool"`
-		Spent    state.Balance   `json:"spent"`
 		ClientID string          `json:"client_id"`
 	}
 
@@ -72,6 +71,8 @@ func (wp *writePool) Decode(input []byte) (err error) {
 	if err = json.Unmarshal(input, &writePoolVal); err != nil {
 		return
 	}
+
+	wp.ClientID = writePoolVal.ClientID
 
 	if len(writePoolVal.Pool) == 0 {
 		return // no data given

@@ -101,11 +101,11 @@ func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
 
 	_, err = sp.update(t.CreationDate, existingBlobber, balances)
 	if err != nil {
-		return nil, nil, fmt.Errorf("can't update related stake pool: v", err)
+		return nil, nil, fmt.Errorf("can't update related stake pool: %v", err)
 	}
 
 	if err = sp.save(sc.ID, existingBlobber.ID, balances); err != nil {
-		return nil, nil, fmt.Errorf("can't save related stake pool: v", err)
+		return nil, nil, fmt.Errorf("can't save related stake pool: %v", err)
 	}
 
 	// remove from the all list, since the blobber can't accept new allocations
@@ -171,7 +171,7 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	sp *stakePool, err error) {
 
 	if sp, err = sc.getStakePool(blobber.ID, balances); err != nil {
-		return nil, fmt.Errorf("can't get related stake pool", err)
+		return nil, fmt.Errorf("can't get related stake pool: %v", err)
 	}
 
 	var stake state.Balance
