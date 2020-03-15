@@ -60,6 +60,9 @@ func (ssc *StorageSmartContract) SetSC(sc *smartcontractinterface.SmartContract,
 	ssc.SmartContract.RestHandlers["/getWritePoolStat"] = ssc.getWritePoolStatHandler
 	ssc.SmartContractExecutionStats["write_pool_lock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "write_pool_lock"), nil)
 	ssc.SmartContractExecutionStats["write_pool_unlock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "write_pool_unlock"), nil)
+	// stake pool
+	ssc.SmartContract.RestHandlers["/getStakePoolStatHandler"] = ssc.getStakePoolStatHandler
+	ssc.SmartContractExecutionStats["stake_pool_unlock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "stake_pool_unlock"), nil)
 }
 
 func (ssc *StorageSmartContract) GetName() string {
@@ -138,6 +141,11 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		resp, err = sc.writePoolLock(t, input, balances)
 	case "write_pool_unlock":
 		resp, err = sc.writePoolUnlock(t, input, balances)
+
+	// stake pool
+
+	case "stake_pool_unlock":
+		resp, err = sc.stakePoolUnlock(t, input, balances)
 
 	// case "challenge_request":
 	// 	resp, err := sc.addChallenge(t, balances.GetBlock(), input, balances)
