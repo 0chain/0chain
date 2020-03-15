@@ -221,10 +221,10 @@ func (sn *ValidatorNodes) GetHashBytes() []byte {
 // but any existing offer will use terms of offer signing time.
 type Terms struct {
 	// ReadPrice is price for reading. Token / GB.
-	ReadPrice int64 `json:"read_price"`
+	ReadPrice state.Balance `json:"read_price"`
 	// WritePrice is price for reading. Token / GB. Also,
 	// it used to calculate min_lock_demand value.
-	WritePrice int64 `json:"write_price"`
+	WritePrice state.Balance `json:"write_price"`
 	// MinLockDemand in number in [0; 1] range. It represents part of
 	// allocation should be locked for the blobber rewards even if
 	// user never write something to the blobber.
@@ -280,7 +280,7 @@ func (sn *StorageNode) validate(conf *scConfig) (err error) {
 // stake required for the blobber with current capacity and
 // current write price (i.e. with current terms)
 func (sn *StorageNode) stake() state.Balance {
-	return state.Balance(sn.Capacity * sn.Terms.WritePrice)
+	return state.Balance(sn.Capacity) * sn.Terms.WritePrice
 }
 
 func (sn *StorageNode) GetKey(globalKey string) datastore.Key {
@@ -346,13 +346,13 @@ type BlobberAllocation struct {
 	// Terms of the Blobber at the time of signing the offer.
 	Terms Terms `json:"terms"`
 	// MinLockDemand for the allocation in tokens.
-	MinLockDemand int64 `json:"min_lock_demand"`
+	MinLockDemand state.Balance `json:"min_lock_demand"`
 }
 
 // PriceRange represents a price range allowed by user to filter blobbers.
 type PriceRange struct {
-	Min int64 `json:"min"`
-	Max int64 `json:"max"`
+	Min state.Balance `json:"min"`
+	Max state.Balance `json:"max"`
 }
 
 // isValid price range.
@@ -361,7 +361,7 @@ func (pr *PriceRange) isValid() bool {
 }
 
 // isMatch given price
-func (pr *PriceRange) isMatch(price int64) bool {
+func (pr *PriceRange) isMatch(price state.Balance) bool {
 	return pr.Min <= price && price <= pr.Max
 }
 
@@ -384,18 +384,25 @@ type StorageAllocation struct {
 	WritePriceRange   PriceRange                    `json:"write_price_range"`
 	// MinLockDemand represents number of tokens required by
 	// blobbers to create physical allocation.
-	MinLockDemand int64 `json:"min_lock_demand"`
+	MinLockDemand state.Balance `json:"min_lock_demand"`
 	// ChallengeCompletionTime is max challenge completion time of
 	// all blobbers of the allocation.
 	ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
 	// StartTime is time when the allocation has been created. We will
 	// use it to check blobber's MaxOfferTime extending the allocation.
 	StartTime common.Timestamp `json:"start_time"`
-	// IsActivated returns true if the allocation's write pool have
-	// enough tokens to cover overall min lock demand. Allocation
-	// updating can reset it to false, if capacity of allocation has
-	// been increased.
-	IsActivated bool `json:"is_activated"`
+	// Spent is number of tokens moved to a challenge pool. It used to
+	// calculate min_lock_demand left. If user spent tokens > min_lock_demand,
+	// then we shouldn't care about the min_lock_demand anymore. The Spent
+	// represents tokens sent to challenge pool. Regardless passing the
+	// challenge. If tokens moved, then it's about min_lock_demand left
+	// reducing. Real min_lock_demand left for blobbers is
+	//
+	//      MinLockDemand - Spent
+	//
+	// TODO (sfxdx): challenge pool is not implemented yet,
+	//               and the Spent for now is always zero.
+	Spent state.Balance `json:"spent"`
 }
 
 func (sa *StorageAllocation) validate(conf *scConfig) (err error) {

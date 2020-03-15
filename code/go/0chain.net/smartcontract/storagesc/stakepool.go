@@ -3,6 +3,7 @@ package storagesc
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 
@@ -113,8 +114,9 @@ func (sp *stakePool) addOffer(alloc *StorageAllocation,
 	balloc *BlobberAllocation) {
 
 	sp.Offers = append(sp.Offers, &offerPool{
-		Lock:         state.Balance(balloc.Size * balloc.Terms.WritePrice),
-		Expire:       alloc.Expiration + balloc.Terms.ChallengeCompletionTime,
+		Lock: state.Balance(balloc.Size) * balloc.Terms.WritePrice,
+		Expire: alloc.Expiration +
+			toSeconds(balloc.Terms.ChallengeCompletionTime),
 		AllocationID: alloc.ID,
 	})
 }
@@ -135,16 +137,16 @@ func (sp *stakePool) extendOffer(alloc *StorageAllocation,
 
 	var (
 		op      = sp.findOffer(alloc.ID)
-		newLock = state.Balance(balloc.Size * balloc.Terms.WritePrice)
+		newLock = state.Balance(balloc.Size) * balloc.Terms.WritePrice
 	)
 	if op == nil {
 		return errors.New("missing offer pool for " + alloc.ID)
 	}
-	// never reduce the lock
-	if newLock > op.Lock {
-		op.Lock = newLock
-	}
-	op.Expire = alloc.Expiration + balloc.Terms.ChallengeCompletionTime
+	// unlike a write pool, here we can reduce a lock
+	op.Lock = newLock
+	op.Expire = alloc.Expiration +
+		toSeconds(balloc.Terms.ChallengeCompletionTime)
+	return
 }
 
 func maxBalance(a, b state.Balance) state.Balance {
@@ -400,6 +402,27 @@ func (ssc *StorageSmartContract) stakePoolUnlock(t *transaction.Transaction,
 	return // resp, nil
 }
 
+func (ssc *StorageSmartContract) updateSakePoolOffer(ba *BlobberAllocation,
+	alloc *StorageAllocation, balances chainState.StateContextI) (err error) {
+
+	var sp *stakePool
+	if sp, err = ssc.getStakePool(ba.BlobberID, balances); err != nil {
+		return fmt.Errorf("can't get stake pool of %s: %v", ba.BlobberID,
+			err)
+	}
+	if err = sp.extendOffer(alloc, ba); err != nil {
+		return fmt.Errorf("can't change stake pool offer %s: %v", ba.BlobberID,
+			err)
+	}
+	if err = sp.save(ssc.ID, ba.BlobberID, balances); err != nil {
+		return fmt.Errorf("can't save stake pool of %s: %v", ba.BlobberID,
+			err)
+	}
+
+	return
+
+}
+
 //
 // stat
 //
@@ -413,7 +436,6 @@ func (ssc *StorageSmartContract) getStakePoolStatHandler(ctx context.Context,
 		blobberID = datastore.Key(params.Get("blobber_id"))
 		blobber   *StorageNode
 		sp        *stakePool
-		stat      *stakePoolStat
 	)
 
 	if blobber, err = ssc.getBlobber(blobberID, balances); err != nil {

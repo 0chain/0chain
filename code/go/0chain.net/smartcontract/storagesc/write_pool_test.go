@@ -126,6 +126,10 @@ func TestStorageSmartContract_newWritePool(t *testing.T) {
 	//
 }
 
+func TestStorageSmartContract_createWritePool(t *testing.T) {
+	//
+}
+
 func TestStorageSmartContract_writePoolLock(t *testing.T) {
 	//
 }
