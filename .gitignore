@@ -32,3 +32,5 @@ docker.local/sharder*
 *.log
 *.sublime-project
 *.sublime-workspace
+cover.out
+cover.html
