@@ -190,14 +190,14 @@ func (sp *stakePool) update(now common.Timestamp, blobber *StorageNode,
 	case sp.Locked.Balance > stake:
 		// move some tokens to unlocked
 
-		var transfer *state.Transfer
-		transfer, _, err = sp.Locked.TransferTo(sp.Unlocked,
+		// var transfer *state.Transfer
+		_, _, err = sp.Locked.TransferTo(sp.Unlocked,
 			sp.Locked.Balance-stake, nil)
 		if err != nil {
 			return // an error
 		}
 
-		err = balances.AddTransfer(transfer)
+		// err = balances.AddTransfer(transfer)
 
 	case stake < sp.Locked.Balance && sp.Unlocked.Balance > 0:
 		// move some tokens to locked
@@ -207,13 +207,13 @@ func (sp *stakePool) update(now common.Timestamp, blobber *StorageNode,
 			move = minBalance(lack, sp.Unlocked.Balance)
 		)
 
-		var transfer *state.Transfer
-		transfer, _, err = sp.Unlocked.TransferTo(sp.Locked, move, nil)
+		// var transfer *state.Transfer
+		_, _, err = sp.Unlocked.TransferTo(sp.Locked, move, nil)
 		if err != nil {
 			return // an error
 		}
 
-		err = balances.AddTransfer(transfer)
+		// err = balances.AddTransfer(transfer)
 
 	default:
 		// doesn't need to move something, or nothing to move
