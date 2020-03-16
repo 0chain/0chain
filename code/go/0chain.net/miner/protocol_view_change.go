@@ -121,6 +121,10 @@ func (mc *Chain) GetPhase() (*minersc.PhaseNode, error) {
 }
 
 func (mc *Chain) ContributeMpk() (*httpclientutil.Transaction, error) {
+	magicBlock := mc.MagicBlock
+	if magicBlock == nil {
+		return nil, common.NewError("contribute_mpk", "magic block empty")
+	}
 	dmn, err := mc.GetDKGMiners()
 	if err != nil {
 		Logger.Error("can't contribute", zap.Any("error", err))
@@ -131,11 +135,11 @@ func (mc *Chain) ContributeMpk() (*httpclientutil.Transaction, error) {
 	mpk := &block.MPK{ID: selfNodeKey}
 	if !mc.isDKGSet() {
 		if dmn.N == 0 {
-			return nil, common.NewError("failed to contribute mpk", "dkg is not set yet")
+			return nil, common.NewError("contribute_mpk", "failed to contribute mpk:dkg is not set yet")
 		}
 		vc := bls.MakeDKG(dmn.T, dmn.N, selfNodeKey)
 		vc.ID = bls.ComputeIDdkg(selfNodeKey)
-		vc.MagicBlockNumber = mc.MagicBlockNumber + 1
+		vc.MagicBlockNumber = magicBlock.MagicBlockNumber + 1
 		mc.viewChangeDKG = vc
 	}
 

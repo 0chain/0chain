@@ -43,7 +43,10 @@ const RoundTimeout = "round_timeout"
 //ErrRoundTimeout - an error object for round timeout error
 var ErrRoundTimeout = common.NewError(RoundTimeout, "round timed out")
 
-var minerChain = &Chain{}
+var (
+	minerChain = &Chain{}
+	vcLock     sync.Mutex
+)
 
 /*SetupMinerChain - setup the miner's chain */
 func SetupMinerChain(c *chain.Chain) {
@@ -220,11 +223,13 @@ func (mc *Chain) isNeedViewChange(_ context.Context, nround int64) bool {
 	mc.muDKG.RLock()
 	defer mc.muDKG.RUnlock()
 	return config.DevConfiguration.ViewChange && mc.nextViewChange == nround &&
-		(mc.currentDKG == nil || mc.currentDKG.StartingRound < mc.nextViewChange)
+		(mc.currentDKG == nil || mc.currentDKG.StartingRound <= mc.nextViewChange)
 
 }
 
 func (mc *Chain) ViewChange(ctx context.Context, nround int64) bool {
+	vcLock.Lock()
+	defer vcLock.Unlock()
 	if !mc.isNeedViewChange(ctx, nround) {
 		return false
 	}

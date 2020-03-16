@@ -25,14 +25,9 @@ import (
 // ////////////  BLS-DKG Related stuff  /////////////////////
 
 var (
-	currRound int64
-
 	roundMap = make(map[int64]map[int]string)
 
-	//IsDkgDone an indicator for BC to continue with block generation
-	IsDkgDone = false
-	selfInd   int
-
+	selfInd  int
 	vrfTimer metrics.Timer // VRF gen-to-sync timer
 )
 
@@ -54,7 +49,6 @@ func SetDKG(ctx context.Context, mb *block.MagicBlock) bool {
 	} else {
 		Logger.Info("DKG is not enabled. So, starting protocol")
 	}
-	IsDkgDone = true
 	return true
 }
 
@@ -215,7 +209,7 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 
 	if !mc.currentDKG.VerifySignature(&share, msg, partyID) {
 		stringID := (&partyID).GetHexString()
-		pi := mc.currentDKG.Gmpk[partyID]
+		pi := mc.currentDKG.GetPublicKeyByID(partyID)
 		Logger.Error("failed to verify share", zap.Any("share", share.GetHexString()), zap.Any("message", msg), zap.Any("from", stringID), zap.Any("pi", pi.GetHexString()))
 		mc.muDKG.RUnlock()
 		return false

@@ -25,14 +25,15 @@ type DKG struct {
 	Sij                  map[PartyID]Key
 	sijMutex             *sync.Mutex
 	receivedSecretShares map[PartyID]Key
-	secretSharesMutex    *sync.Mutex
+	secretSharesMutex    *sync.RWMutex
 
 	Si Key
 	Pi *PublicKey
 
 	Mpk []PublicKey
 
-	Gmpk map[PartyID]PublicKey
+	gmpkMutex *sync.RWMutex
+	gmpk      map[PartyID]PublicKey
 
 	MagicBlockNumber int64
 	StartingRound    int64
@@ -61,10 +62,11 @@ func MakeDKG(t, n int, id string) *DKG {
 		N:                    n,
 		Sij:                  make(map[PartyID]Key),
 		receivedSecretShares: make(map[PartyID]Key),
-		secretSharesMutex:    &sync.Mutex{},
+		secretSharesMutex:    &sync.RWMutex{},
 		sijMutex:             &sync.Mutex{},
 		Si:                   Key{},
 		ID:                   PartyID{},
+		gmpkMutex:            &sync.RWMutex{},
 	}
 	var secKey Key
 	secKey.SetByCSPRNG()
@@ -82,10 +84,11 @@ func SetDKG(t, n int, shares map[string]string, msk []string, mpks map[PartyID][
 		N:                    n,
 		Sij:                  make(map[PartyID]Key),
 		receivedSecretShares: make(map[PartyID]Key),
-		secretSharesMutex:    &sync.Mutex{},
+		secretSharesMutex:    &sync.RWMutex{},
 		sijMutex:             &sync.Mutex{},
 		Si:                   Key{},
 		ID:                   PartyID{},
+		gmpkMutex:            &sync.RWMutex{},
 	}
 	dkg.ID = ComputeIDdkg(id)
 	for _, v := range msk {
@@ -151,8 +154,8 @@ func (dkg *DKG) GetKeyShareForOther(to PartyID) *DKGKeyShare {
 /*AggregateShares - Each party aggregates the received shares from other party which is calculated for that party */
 func (dkg *DKG) AggregateSecretKeyShares() {
 	var sk Key
-	dkg.secretSharesMutex.Lock()
-	defer dkg.secretSharesMutex.Unlock()
+	dkg.secretSharesMutex.RLock()
+	defer dkg.secretSharesMutex.RUnlock()
 	for _, Sij := range dkg.receivedSecretShares {
 		sk.Add(&Sij)
 	}
@@ -163,8 +166,8 @@ func (dkg *DKG) AggregateSecretKeyShares() {
 /*AggregateShares - Each party aggregates the received shares from other party which is calculated for that party */
 func (dkg *DKG) GetSecretKeyShares() []string {
 	var shares []string
-	dkg.secretSharesMutex.Lock()
-	defer dkg.secretSharesMutex.Unlock()
+	dkg.secretSharesMutex.RLock()
+	defer dkg.secretSharesMutex.RUnlock()
 	for _, Sij := range dkg.receivedSecretShares {
 		shares = append(shares, Sij.GetHexString())
 	}
@@ -188,15 +191,21 @@ func (dkg *DKG) AddSecretShare(id PartyID, share string) error {
 
 /*ComputeDKGKeyShare - Derive the share for each miner through polynomial substitution method */
 func (dkg *DKG) GetSecretSharesSize() int {
+	dkg.secretSharesMutex.RLock()
+	defer dkg.secretSharesMutex.RUnlock()
 	return len(dkg.receivedSecretShares)
 }
 
 /*ComputeDKGKeyShare - Derive the share for each miner through polynomial substitution method */
 func (dkg *DKG) HasAllSecretShares() bool {
+	dkg.secretSharesMutex.RLock()
+	defer dkg.secretSharesMutex.RUnlock()
 	return len(dkg.receivedSecretShares) >= dkg.T
 }
 
 func (dkg *DKG) HasSecretShare(key string) bool {
+	dkg.secretSharesMutex.RLock()
+	defer dkg.secretSharesMutex.RUnlock()
 	_, ok := dkg.receivedSecretShares[ComputeIDdkg(key)]
 	return ok
 }
@@ -208,7 +217,9 @@ func (dkg *DKG) Sign(msg string) *Sign {
 
 //VerifySignature - verify the signature using the group public key share
 func (dkg *DKG) VerifySignature(sig *Sign, msg string, id PartyID) bool {
-	key := dkg.Gmpk[id]
+	dkg.gmpkMutex.RLock()
+	defer dkg.gmpkMutex.RUnlock()
+	key := dkg.gmpk[id]
 	return sig.Verify(&key, msg)
 }
 
@@ -251,7 +262,9 @@ func (dkg *DKG) CalBlsGpSign(recSig []string, recIDs []string) (Sign, error) {
 
 //AggregatePublicKeyShares - compute Sigma(Aik, i in qual)
 func (dkg *DKG) AggregatePublicKeyShares(mpks map[PartyID][]PublicKey) {
-	dkg.Gmpk = make(map[PartyID]PublicKey)
+	dkg.gmpkMutex.Lock()
+	defer dkg.gmpkMutex.Unlock()
+	dkg.gmpk = make(map[PartyID]PublicKey)
 	for k := range mpks {
 		var pk PublicKey
 		for _, mpk := range mpks {
@@ -259,8 +272,15 @@ func (dkg *DKG) AggregatePublicKeyShares(mpks map[PartyID][]PublicKey) {
 			pkj.Set(mpk, &k)
 			pk.Add(&pkj)
 		}
-		dkg.Gmpk[k] = pk
+		dkg.gmpk[k] = pk
 	}
+}
+
+// GetPublicKeyByID - returns public key by party id
+func (dkg *DKG) GetPublicKeyByID(id PartyID) PublicKey {
+	dkg.gmpkMutex.RLock()
+	defer dkg.gmpkMutex.RUnlock()
+	return dkg.gmpk[id]
 }
 
 /*CreateQualSet - Each party aggregates the received shares from other party which is calculated for that party */
@@ -344,6 +364,8 @@ func (dkg *DKG) GetDKGSummary() *DKGSummary {
 		SecretShares:  make(map[string]string),
 		StartingRound: dkg.StartingRound,
 	}
+	dkg.secretSharesMutex.RLock()
+	defer dkg.secretSharesMutex.RUnlock()
 	for k, v := range dkg.receivedSecretShares {
 		dkgSummary.SecretShares[k.GetHexString()] = v.GetHexString()
 	}
