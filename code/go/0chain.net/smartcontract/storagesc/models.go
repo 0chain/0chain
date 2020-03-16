@@ -280,7 +280,7 @@ func (sn *StorageNode) validate(conf *scConfig) (err error) {
 // stake required for the blobber with current capacity and
 // current write price (i.e. with current terms)
 func (sn *StorageNode) stake() state.Balance {
-	return state.Balance(sn.Capacity) * sn.Terms.WritePrice
+	return state.Balance(sizeInGB(sn.Capacity) * float64(sn.Terms.WritePrice))
 }
 
 func (sn *StorageNode) GetKey(globalKey string) datastore.Key {

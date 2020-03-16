@@ -114,7 +114,8 @@ func (sp *stakePool) addOffer(alloc *StorageAllocation,
 	balloc *BlobberAllocation) {
 
 	sp.Offers = append(sp.Offers, &offerPool{
-		Lock: state.Balance(balloc.Size) * balloc.Terms.WritePrice,
+		Lock: state.Balance(sizeInGB(balloc.Size) *
+			float64(balloc.Terms.WritePrice)),
 		Expire: alloc.Expiration +
 			toSeconds(balloc.Terms.ChallengeCompletionTime),
 		AllocationID: alloc.ID,
@@ -137,7 +138,8 @@ func (sp *stakePool) extendOffer(alloc *StorageAllocation,
 
 	var (
 		op      = sp.findOffer(alloc.ID)
-		newLock = state.Balance(balloc.Size) * balloc.Terms.WritePrice
+		newLock = state.Balance(sizeInGB(balloc.Size) *
+			float64(balloc.Terms.WritePrice))
 	)
 	if op == nil {
 		return errors.New("missing offer pool for " + alloc.ID)
@@ -185,12 +187,12 @@ func (sp *stakePool) update(now common.Timestamp, blobber *StorageNode,
 	case stake == sp.Locked.Balance:
 		// required stake is equal to number of locked tokens, nothing to move
 
-	case stake > sp.Locked.Balance:
+	case sp.Locked.Balance > stake:
 		// move some tokens to unlocked
 
 		var transfer *state.Transfer
 		transfer, _, err = sp.Locked.TransferTo(sp.Unlocked,
-			stake-sp.Locked.Balance, nil)
+			sp.Locked.Balance-stake, nil)
 		if err != nil {
 			return // an error
 		}
