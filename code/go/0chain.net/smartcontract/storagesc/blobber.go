@@ -184,10 +184,11 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	}
 
 	// is more tokens required
-	if sp.Locked.Balance < stake {
-		if state.Balance(t.Value) < stake-sp.Locked.Balance {
+	if stake > sp.Locked.Balance {
+		var lack = stake - sp.Locked.Balance
+		if state.Balance(t.Value) < lack {
 			return nil, fmt.Errorf("not enough tokens for stake: %d < %d",
-				t.Value, stake)
+				t.Value, lack)
 		}
 		// check blobber's tokens
 		if err = sc.checkFill(t, balances); err != nil {

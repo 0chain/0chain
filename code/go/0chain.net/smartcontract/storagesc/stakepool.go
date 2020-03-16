@@ -190,16 +190,13 @@ func (sp *stakePool) update(now common.Timestamp, blobber *StorageNode,
 	case sp.Locked.Balance > stake:
 		// move some tokens to unlocked
 
-		// var transfer *state.Transfer
 		_, _, err = sp.Locked.TransferTo(sp.Unlocked,
 			sp.Locked.Balance-stake, nil)
 		if err != nil {
 			return // an error
 		}
 
-		// err = balances.AddTransfer(transfer)
-
-	case stake < sp.Locked.Balance && sp.Unlocked.Balance > 0:
+	case sp.Locked.Balance < stake && sp.Unlocked.Balance > 0:
 		// move some tokens to locked
 
 		var (
@@ -207,13 +204,10 @@ func (sp *stakePool) update(now common.Timestamp, blobber *StorageNode,
 			move = minBalance(lack, sp.Unlocked.Balance)
 		)
 
-		// var transfer *state.Transfer
 		_, _, err = sp.Unlocked.TransferTo(sp.Locked, move, nil)
 		if err != nil {
 			return // an error
 		}
-
-		// err = balances.AddTransfer(transfer)
 
 	default:
 		// doesn't need to move something, or nothing to move
@@ -222,59 +216,27 @@ func (sp *stakePool) update(now common.Timestamp, blobber *StorageNode,
 	return
 }
 
-// update without a real transfers to get correct stat for now
-func (sp *stakePool) dryUpdate(now common.Timestamp, blobber *StorageNode) {
-
-	var (
-		offersStake   = sp.offersStake(now) // locked by offers
-		capacityStake = blobber.stake()     // capacity lock
-		stake         state.Balance         // required stake
-	)
-
-	// if a blobber reduces its capacity after some offers,
-	// the the offersStake can be greater the capacity stake;
-	// the stake is stake required for now
-
-	stake = maxBalance(offersStake, capacityStake)
-
-	// expired offers remove, and we know required stake
-
-	// dry transferring
-	switch {
-	case stake == sp.Locked.Balance:
-		// nothing to transfer
-	case stake > sp.Locked.Balance:
-		// dry unlock some tokens
-		var move = stake - sp.Locked.Balance
-		sp.Unlocked.Balance += move
-		sp.Locked.Balance -= move
-	case stake < sp.Locked.Balance && sp.Unlocked.Balance > 0:
-		// dry lock some tokens
-		var (
-			lack = stake - sp.Locked.Balance
-			move = minBalance(lack, sp.Unlocked.Balance)
-		)
-		sp.Unlocked.Balance -= move
-		sp.Locked.Balance += move
-	}
-
-	return
-}
-
 // update the pool to get the stat
-func (sp *stakePool) stat(scKey string) (stat *stakePoolStat) {
+func (sp *stakePool) stat(scKey string, now common.Timestamp,
+	blobber *StorageNode) (stat *stakePoolStat) {
+
 	stat = new(stakePoolStat)
 	stat.ID = stakePoolKey(scKey, sp.BlobberID)
+
 	stat.Locked = sp.Locked.Balance
 	stat.Unlocked = sp.Unlocked.Balance
+
 	stat.Offers = make([]offerPoolStat, 0, len(sp.Offers))
 	for _, off := range sp.Offers {
 		stat.Offers = append(stat.Offers, offerPoolStat{
 			Lock:         off.Lock,
 			Expire:       off.Expire,
 			AllocationID: off.AllocationID,
+			IsExpired:    off.Expire < now,
 		})
-		stat.OffersTotal += off.Lock
+		if off.Expire >= now {
+			stat.OffersTotal += off.Lock
+		}
 	}
 	return
 }
@@ -285,6 +247,7 @@ type offerPoolStat struct {
 	Lock         state.Balance    `json:"lock"`
 	Expire       common.Timestamp `json:"expire"`
 	AllocationID string           `json:"allocation_id"`
+	IsExpired    bool             `json:"is_expired"`
 }
 
 type stakePoolStat struct {
@@ -448,9 +411,5 @@ func (ssc *StorageSmartContract) getStakePoolStatHandler(ctx context.Context,
 		return nil, fmt.Errorf("can't get related stake pool: %v", err)
 	}
 
-	// update the stake pool just to get actual statistic, without a
-	// real locking and unlocking inside (dry updating)
-	sp.dryUpdate(common.Now(), blobber)
-
-	return sp.stat(ssc.ID), nil
+	return sp.stat(ssc.ID, common.Now(), blobber), nil
 }

@@ -26,7 +26,8 @@ There is special case where capacity is 0 -> remove blobber from SC.
 For case, where blobber doesn't provide its service anymore. Thus the
 blobber will not be selected by SC for users' requests. But the blobber
 still should provide its service for all its opened offers (allocations).
-This allocations can't be extended by size or expiration time.
+This allocations can't be extended by size or expiration time but can be
+reduced.
 
 ##### Non zero capacity
 
