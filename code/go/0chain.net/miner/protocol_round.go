@@ -85,7 +85,7 @@ func (mc *Chain) RedoVrfShare(ctx context.Context, r *Round) bool {
 		Logger.Info("no pr info inside RedoVrfShare", zap.Int64("Round", r.GetRoundNumber()))
 		return false
 	}
-	if pr.HasRandomSeed() /*|| r.vrfShare==*/ {
+	if pr.HasRandomSeed() {
 		r.vrfShare = nil
 		Logger.Info("RedoVrfShare after vrfShare is nil",
 			zap.Int64("round", r.GetRoundNumber()), zap.Int("round_timeout", r.GetTimeoutCount()))
@@ -788,6 +788,7 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context, pnround int64)
 		mc.InitBlockState(lfbs)
 		mc.SetLatestFinalizedBlock(ctx, lfbs)
 		//mc.GetPreviousBlock(ctx, lfb)
+		mc.SetRandomSeed(mr, mr.GetRandomSeed())
 	}
 
 	// LFMB
