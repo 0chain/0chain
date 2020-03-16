@@ -253,10 +253,11 @@ func (sc *StorageSmartContract) updateAllocationRequest(t *transaction.Transacti
 			"Failed to update a storage allocation")
 	}
 
-	if req.Expiration < 0 {
-		return "", common.NewError("allocation_updation_failed",
-			"negative expiration extension value")
-	}
+	// We need to allow to decrease expiration time as well
+	// if req.Expiration < 0 {
+	// 	return "", common.NewError("allocation_updation_failed",
+	// 		"negative expiration extension value")
+	// }
 
 	oldAllocations, err := sc.getAllocationsList(req.Owner, balances)
 	if err != nil {
