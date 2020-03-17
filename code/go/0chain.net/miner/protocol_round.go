@@ -96,9 +96,9 @@ func (mc *Chain) RedoVrfShare(ctx context.Context, r *Round) bool {
 }
 
 func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
-	mc.muDKG.RLock()
+	mc.muDKG.Lock()
 	emptyDKG := mc.currentDKG == nil
-	mc.muDKG.RUnlock()
+	mc.muDKG.Unlock()
 	if emptyDKG {
 		return
 	}
@@ -696,9 +696,9 @@ func (mc *Chain) handleNoProgress(ctx context.Context) {
 	}
 	switch crt := mc.GetRoundTimeoutCount(); {
 	case crt < 10:
-		Logger.Error("handleNoProgress", zap.Any("round", mc.GetCurrentRound()), zap.Int64("count", crt), zap.Any("num_vrf_share", len(r.GetVRFShares())))
+		Logger.Error("handleNoProgress", zap.Any("round", mc.GetCurrentRound()), zap.Int64("count_round_timeout", crt), zap.Any("num_vrf_share", len(r.GetVRFShares())))
 	case crt == 10:
-		Logger.Error("handleNoProgress (no further timeout messages will be displayed)", zap.Any("round", mc.GetCurrentRound()), zap.Int64("count", crt), zap.Any("num_vrf_share", len(r.GetVRFShares())))
+		Logger.Error("handleNoProgress (no further timeout messages will be displayed)", zap.Any("round", mc.GetCurrentRound()), zap.Int64("count_round_timeout", crt), zap.Any("num_vrf_share", len(r.GetVRFShares())))
 		//TODO: should have a means to send an email/SMS to someone or something like that
 	}
 
@@ -787,8 +787,9 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context, pnround int64)
 		mc.AddBlock(lfbs)
 		mc.InitBlockState(lfbs)
 		mc.SetLatestFinalizedBlock(ctx, lfbs)
-		//mc.GetPreviousBlock(ctx, lfb)
-		mc.SetRandomSeed(mr, mr.GetRandomSeed())
+		if mc.GetCurrentRound() < mr.GetRoundNumber() {
+			mc.startNewRound(ctx, mr)
+		}
 	}
 
 	// LFMB

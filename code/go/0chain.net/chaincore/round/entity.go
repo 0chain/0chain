@@ -457,7 +457,7 @@ func (r *Round) AddAdditionalVRFShare(share *VRFShare) bool {
 		Logger.Info("AddVRFShare Share is already there. Returning false.")
 		return false
 	}
-	//r.setState(RoundShareVRF)
+	r.setState(RoundShareVRF)
 	r.shares[share.party.GetKey()] = share
 	return true
 }
@@ -469,7 +469,7 @@ func (r *Round) AddVRFShare(share *VRFShare, threshold int) bool {
 	if len(r.getVRFShares()) >= threshold {
 		//if we already have enough shares, do not add.
 		Logger.Info("AddVRFShare Already at threshold. Returning false.")
-		return false
+		return true
 	}
 	if _, ok := r.shares[share.party.GetKey()]; ok {
 		Logger.Info("AddVRFShare Share is already there. Returning false.")

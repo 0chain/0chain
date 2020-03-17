@@ -67,7 +67,10 @@ func (msc *MinerSmartContract) moveToWait(balances c_state.StateContextI, pn *Ph
 		Logger.Error("failed to get node GroupShareOrSignsKey", zap.Any("error", err), zap.Any("phase", pn.Phase))
 		return false
 	}
-	gsos.Decode(groupBytes.Encode())
+	if err = gsos.Decode(groupBytes.Encode()); err != nil {
+		Logger.Error("failed to decode node GroupShareOrSignsKey", zap.Any("error", err), zap.Any("phase", pn.Phase))
+		return false
+	}
 	return len(gsos.Shares) >= dkgMinersList.K
 }
 
