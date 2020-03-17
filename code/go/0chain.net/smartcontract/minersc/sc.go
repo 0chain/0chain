@@ -23,8 +23,6 @@ const (
 	ADDRESS = "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9"
 	owner   = "c8a5e74c2f4fae2c1bed79fb2b78d3b88f844bbb6bf1db5fc43240711f23321f"
 	name    = "miner"
-
-	phaseWaitingRounds = int64(50)
 )
 
 var (
@@ -52,17 +50,17 @@ type MinerSmartContract struct {
 	mutexMinerMPK sync.RWMutex
 }
 
-func init() {
-	PhaseRounds[Start] = phaseWaitingRounds
-	PhaseRounds[Contribute] = phaseWaitingRounds
-	PhaseRounds[Share] = phaseWaitingRounds
-	PhaseRounds[Publish] = phaseWaitingRounds
-	PhaseRounds[Wait] = phaseWaitingRounds
-
-	msc := &MinerSmartContract{}
+func (msc *MinerSmartContract) InitSC() {
+	msc = &MinerSmartContract{}
 	phaseFuncs[Start] = msc.createDKGMinersForContribute
 	phaseFuncs[Contribute] = msc.widdleDKGMinersForShare
 	phaseFuncs[Publish] = msc.createMagicBlockForWait
+
+	PhaseRounds[Start] = config.SmartContractConfig.GetInt64("smart_contracts.minersc.start_rounds")
+	PhaseRounds[Contribute] = config.SmartContractConfig.GetInt64("smart_contracts.minersc.contribute_rounds")
+	PhaseRounds[Share] = config.SmartContractConfig.GetInt64("smart_contracts.minersc.share_rounds")
+	PhaseRounds[Publish] = config.SmartContractConfig.GetInt64("smart_contracts.minersc.publish_rounds")
+	PhaseRounds[Wait] = config.SmartContractConfig.GetInt64("smart_contracts.minersc.wait_rounds")
 
 	moveFunctions[Start] = msc.moveToContribute
 	moveFunctions[Contribute] = msc.moveToShareOrPublish

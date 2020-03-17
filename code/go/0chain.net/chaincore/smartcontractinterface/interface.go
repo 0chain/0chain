@@ -36,6 +36,7 @@ type SmartContractInterface interface {
 	GetRestPoints() map[string]SmartContractRestHandler
 	GetName() string
 	GetAddress() string
+	InitSC()
 }
 
 /*BCContextI interface for smart contracts to access blockchain.
