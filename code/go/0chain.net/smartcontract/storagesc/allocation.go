@@ -304,7 +304,6 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 		return allocatedBlobbers[i].ID < allocatedBlobbers[j].ID
 	})
 
-	// TODO (sfxdx): why it saves blobbers in allocation?
 	sa.Blobbers = allocatedBlobbers
 	sa.ID = t.Hash
 	sa.StartTime = t.CreationDate // offer start time
@@ -323,6 +322,12 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 		return "", common.NewError("allocation_request_failed", err.Error())
 	}
 
+	// create challenge pool
+	if err = sc.createChallengePool(t, sa, balances); err != nil {
+		return "", common.NewError("allocation_request_failed", err.Error())
+	}
+
+	// save
 	buff, err := sc.addAllocation(sa, balances)
 	if err != nil {
 		return "", common.NewError("allocation_request_failed",
@@ -428,6 +433,15 @@ func (sc *StorageSmartContract) closeAllocation(t *transaction.Transaction,
 			"can't update write pool")
 	}
 
+	// challenge pool
+
+	err = sc.updateChallengePoolExpiration(t, alloc.ID,
+		t.CreationDate+toSeconds(alloc.ChallengeCompletionTime), balances)
+	if err != nil {
+		return "", common.NewError("allocation_closing_failed",
+			"can't update challenge pool")
+	}
+
 	// stake pools (offers)
 
 	for _, ba := range alloc.BlobberDetails {
@@ -453,7 +467,6 @@ func (sc *StorageSmartContract) saveUpdatedAllocation(all *StorageNodes,
 	balances c_state.StateContextI) (err error) {
 
 	// save all
-
 	if err = updateBlobbersInAll(all, blobbers, balances); err != nil {
 		return
 	}
@@ -579,7 +592,7 @@ func (sc *StorageSmartContract) extendAllocation(t *transaction.Transaction,
 
 	// if expiration has changed we should adjust it in the write pool
 	if uar.Expiration != 0 {
-		err = wp.setExpiation(alloc.Expiration +
+		err = wp.setExpiration(alloc.Expiration +
 			toSeconds(alloc.ChallengeCompletionTime))
 		if err != nil {
 			return "", common.NewError("allocation_extending_failed",
@@ -652,7 +665,7 @@ func (sc *StorageSmartContract) reduceAllocation(t *transaction.Transaction,
 
 	// if expiration has changed we should adjust it in the write pool
 	if uar.Expiration != 0 {
-		err = wp.setExpiation(alloc.Expiration +
+		err = wp.setExpiration(alloc.Expiration +
 			toSeconds(alloc.ChallengeCompletionTime))
 		if err != nil {
 			return "", common.NewError("allocation_reducing_failed",

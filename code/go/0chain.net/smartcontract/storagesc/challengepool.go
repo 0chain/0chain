@@ -85,20 +85,23 @@ func (cp *challengePool) save(sscKey, allocationID string,
 	return
 }
 
-// fill the pool by transaction
-func (cp *challengePool) fill(t *transaction.Transaction,
-	balances chainState.StateContextI) (
-	transfer *state.Transfer, resp string, err error) {
+// transferHere moves tokens from write pool to the challenge pool
+func (cp *challengePool) transferHere(t *transaction.Transaction, wp *writePool,
+	value state.Balance, balances chainState.StateContextI) (resp string,
+	err error) {
 
-	if transfer, resp, err = cp.FillPool(t); err != nil {
-		return
+	if wp.Balance < value {
+		return "", fmt.Errorf("not enough tokens in write pool %s: %d < %d",
+			wp.ID, wp.Balance, value)
 	}
-	err = balances.AddTransfer(transfer)
+
+	// move
+	_, resp, err = wp.TransferTo(cp, value, nil)
 	return
 }
 
 // setExpiration of the locked tokens
-func (cp *challengePool) setExpiation(set common.Timestamp) (err error) {
+func (cp *challengePool) setExpiration(set common.Timestamp) (err error) {
 	if set == 0 {
 		return // as is
 	}
@@ -207,16 +210,7 @@ func (ssc *StorageSmartContract) createChallengePool(t *transaction.Transaction,
 		return fmt.Errorf("can't create challenge pool: %v", err)
 	}
 
-	// lock required number of tokens
-
-	if state.Balance(t.Value) < sa.MinLockDemand {
-		return fmt.Errorf("not enough tokens to create allocation: %v < %v",
-			t.Value, sa.MinLockDemand)
-	}
-
-	if _, _, err = cp.fill(t, balances); err != nil {
-		return fmt.Errorf("can't fill challenge pool: %v", err)
-	}
+	// don't lock anything here
 
 	// save the challenge pool
 	if err = cp.save(ssc.ID, sa.ID, balances); err != nil {
@@ -227,6 +221,7 @@ func (ssc *StorageSmartContract) createChallengePool(t *transaction.Transaction,
 }
 
 // lock tokens for challenge pool of transaction's client
+// TODO (sfxdx): remade, shouldn't be a SC function
 func (ssc *StorageSmartContract) challengePoolLock(t *transaction.Transaction,
 	input []byte, balances chainState.StateContextI) (resp string, err error) {
 
@@ -295,6 +290,7 @@ func (ssc *StorageSmartContract) challengePoolLock(t *transaction.Transaction,
 }
 
 // unlock tokens if expired
+// TODO (sfxdx): remade, shouldn't be a SC function.
 func (ssc *StorageSmartContract) challengePoolUnlock(t *transaction.Transaction,
 	input []byte, balances chainState.StateContextI) (resp string, err error) {
 
@@ -346,14 +342,7 @@ func (ssc *StorageSmartContract) updateChallengePoolExpiration(
 		return
 	}
 
-	// lock tokens if this transaction provides them
-	if t.Value > 0 {
-		if _, _, err = cp.fill(t, balances); err != nil {
-			return
-		}
-	}
-
-	if err = cp.setExpiation(expiried); err != nil {
+	if err = cp.setExpiration(expiried); err != nil {
 		return
 	}
 
