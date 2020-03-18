@@ -164,7 +164,7 @@ func (ssc *StorageSmartContract) getChallengePool(allocationID datastore.Key,
 	if err != nil {
 		return
 	}
-	cp = newChallengePool("")
+	cp = newChallengePool()
 	err = cp.Decode(poolb)
 	return
 }
@@ -220,25 +220,11 @@ func (ssc *StorageSmartContract) createChallengePool(t *transaction.Transaction,
 	return
 }
 
+/*
 // lock tokens for challenge pool of transaction's client
 // TODO (sfxdx): remade, shouldn't be a SC function
 func (ssc *StorageSmartContract) challengePoolLock(t *transaction.Transaction,
 	input []byte, balances chainState.StateContextI) (resp string, err error) {
-
-	// configurations
-
-	var conf *challengePoolConfig
-	if conf, err = ssc.getChallengePoolConfig(balances, true); err != nil {
-		return "", common.NewError("challenge_pool_lock_failed",
-			"can't get configs: "+err.Error())
-	}
-
-	// filter by configurations
-
-	if t.Value < conf.MinLock {
-		return "", common.NewError("challenge_pool_lock_failed",
-			"insufficient amount to lock")
-	}
 
 	// challenge lock request & user balance
 
@@ -277,7 +263,7 @@ func (ssc *StorageSmartContract) challengePoolLock(t *transaction.Transaction,
 
 	// lock more tokens
 
-	if _, resp, err = cp.fill(t, balances); err != nil {
+	if _, resp, err = cp.transferHere(t, balances); err != nil {
 		return "", common.NewError("challenge_pool_lock_failed",
 			err.Error())
 	}
@@ -331,6 +317,7 @@ func (ssc *StorageSmartContract) challengePoolUnlock(t *transaction.Transaction,
 
 	return
 }
+*/
 
 // update challenge pool expiration
 func (ssc *StorageSmartContract) updateChallengePoolExpiration(allocID string,
