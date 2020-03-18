@@ -430,16 +430,16 @@ func (sc *StorageSmartContract) closeAllocation(t *transaction.Transaction,
 		t.CreationDate+toSeconds(alloc.ChallengeCompletionTime), balances)
 	if err != nil {
 		return "", common.NewError("allocation_closing_failed",
-			"can't update write pool")
+			"can't update write pool: "+err.Error())
 	}
 
 	// challenge pool
 
-	err = sc.updateChallengePoolExpiration(t, alloc.ID,
+	err = sc.updateChallengePoolExpiration(alloc.ID,
 		t.CreationDate+toSeconds(alloc.ChallengeCompletionTime), balances)
 	if err != nil {
 		return "", common.NewError("allocation_closing_failed",
-			"can't update challenge pool")
+			"can't update challenge pool: "+err.Error())
 	}
 
 	// stake pools (offers)
@@ -575,7 +575,7 @@ func (sc *StorageSmartContract) extendAllocation(t *transaction.Transaction,
 		}
 		if _, _, err = wp.fill(t, balances); err != nil {
 			return "", common.NewError("allocation_extending_failed",
-				err.Error())
+				"write pool filling: "+err.Error())
 		}
 	}
 
@@ -596,7 +596,15 @@ func (sc *StorageSmartContract) extendAllocation(t *transaction.Transaction,
 			toSeconds(alloc.ChallengeCompletionTime))
 		if err != nil {
 			return "", common.NewError("allocation_extending_failed",
-				err.Error())
+				"can't update write pool expiration: "+err.Error())
+		}
+
+		// adjust challenge pool expiration
+		err = sc.updateChallengePoolExpiration(alloc.ID, alloc.Expiration+
+			toSeconds(alloc.ChallengeCompletionTime), balances)
+		if err != nil {
+			return "", common.NewError("allocation_extending_failed",
+				"can't update challenge pool expiration: "+err.Error())
 		}
 	}
 
@@ -670,6 +678,14 @@ func (sc *StorageSmartContract) reduceAllocation(t *transaction.Transaction,
 		if err != nil {
 			return "", common.NewError("allocation_reducing_failed",
 				err.Error())
+		}
+
+		// adjust challenge pool expiration
+		err = sc.updateChallengePoolExpiration(alloc.ID, alloc.Expiration+
+			toSeconds(alloc.ChallengeCompletionTime), balances)
+		if err != nil {
+			return "", common.NewError("allocation_reducing_failed",
+				"can't update challenge pool expiration: "+err.Error())
 		}
 	}
 
