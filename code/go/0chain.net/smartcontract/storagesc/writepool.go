@@ -103,7 +103,7 @@ func (wp *writePool) fill(t *transaction.Transaction,
 }
 
 // setExpiration of the locked tokens
-func (wp *writePool) setExpiation(set common.Timestamp) (err error) {
+func (wp *writePool) setExpiration(set common.Timestamp) (err error) {
 	if set == 0 {
 		return // as is
 	}
@@ -251,27 +251,14 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 			"insufficient amount to lock")
 	}
 
-	// write lock request & user balance
+	// write lock request
 
 	var req writePoolRequest
 	if err = req.decode(input); err != nil {
 		return "", common.NewError("write_pool_lock_failed", err.Error())
 	}
-	var balance state.Balance
-	balance, err = balances.GetClientBalance(t.ClientID)
 
-	if err != nil && err != util.ErrValueNotPresent {
-		return "", common.NewError("write_pool_lock_failed", err.Error())
-	}
-
-	if err == util.ErrValueNotPresent {
-		return "", common.NewError("write_pool_lock_failed", "no tokens to lock")
-	}
-
-	if state.Balance(t.Value) > balance {
-		return "", common.NewError("write_pool_lock_failed",
-			"lock amount is greater than balance")
-	}
+	// check the request
 
 	if req.AllocationID == "" {
 		return "", common.NewError("write_pool_lock_failed",
@@ -287,10 +274,16 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 
 	// lock more tokens
 
+	if err = ssc.checkFill(t, balances); err != nil {
+		return "", common.NewError("write_pool_lock_failed", err.Error())
+	}
+
 	if _, resp, err = wp.fill(t, balances); err != nil {
 		return "", common.NewError("write_pool_lock_failed",
 			err.Error())
 	}
+
+	// save
 
 	if err = wp.save(ssc.ID, req.AllocationID, balances); err != nil {
 		return "", common.NewError("write_pool_lock_failed", err.Error())
@@ -353,12 +346,15 @@ func (ssc *StorageSmartContract) updateWritePoolExpiration(
 
 	// lock tokens if this transaction provides them
 	if t.Value > 0 {
+		if err = ssc.checkFill(t, balances); err != nil {
+			return
+		}
 		if _, _, err = wp.fill(t, balances); err != nil {
 			return
 		}
 	}
 
-	if err = wp.setExpiation(expiried); err != nil {
+	if err = wp.setExpiration(expiried); err != nil {
 		return
 	}
 
