@@ -157,7 +157,7 @@ func Test_writePool_setExpiration(t *testing.T) {
 	wp.ZcnLockingPool.TokenLockInterface = &tokenLock{
 		StartTime: tp,
 	}
-	if err = wp.setExpiation(tp + toSeconds(dur)); err != nil {
+	if err = wp.setExpiration(tp + toSeconds(dur)); err != nil {
 		t.Fatal(err)
 	}
 	var tl, ok = wp.ZcnLockingPool.TokenLockInterface.(*tokenLock)
