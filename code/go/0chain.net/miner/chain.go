@@ -45,7 +45,6 @@ var ErrRoundTimeout = common.NewError(RoundTimeout, "round timed out")
 
 var (
 	minerChain = &Chain{}
-	vcLock     sync.Mutex
 )
 
 /*SetupMinerChain - setup the miner's chain */
@@ -227,10 +226,11 @@ func (mc *Chain) isNeedViewChange(_ context.Context, nround int64) bool {
 
 }
 
-func (mc *Chain) ViewChange(ctx context.Context, nround int64) bool {
-	vcLock.Lock()
-	defer vcLock.Unlock()
-	if !mc.isNeedViewChange(ctx, nround) {
+func (mc *Chain) ViewChange(ctx context.Context, nRound int64) bool {
+	viewChangeMutex.Lock()
+	defer viewChangeMutex.Unlock()
+
+	if !mc.isNeedViewChange(ctx, nRound) {
 		return false
 	}
 	viewChangeMagicBlock := mc.GetViewChangeMagicBlock()
@@ -243,7 +243,7 @@ func (mc *Chain) ViewChange(ctx context.Context, nround int64) bool {
 		if err := mc.SetDKGSFromStore(ctx, viewChangeMagicBlock); err != nil {
 			Logger.DPanic(err.Error())
 		}
-		mc.ensureLatestFinalizedBlocks(ctx, nround)
+		mc.ensureLatestFinalizedBlocks(ctx, nRound)
 	} else {
 		if err := mc.SetDKGSFromStore(ctx, mc.MagicBlock); err != nil {
 			Logger.DPanic(err.Error())

@@ -12,6 +12,7 @@
 - [Unit tests](#unittests)
 - [Miscellaneous](#miscellaneous)
 	- [Cleanup](#cleanup)
+	- [View Change](docs/viewchange.md)
 
 ## Initial Setup
 

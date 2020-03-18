@@ -31,7 +31,8 @@ var (
 
 // Phases
 const (
-	Start = iota
+	Unknown = iota - 1
+	Start
 	Contribute
 	Share
 	Publish

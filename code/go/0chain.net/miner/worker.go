@@ -74,11 +74,13 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 			if cround == mc.GetCurrentRound() {
 				round := mc.GetMinerRound(cround)
 
-				logging.Logger.Info("Round timeout", zap.Any("Number", round.Number),
-					zap.Int("VRF_shares", len(round.GetVRFShares())),
-					zap.Int("proposedBlocks", len(round.GetProposedBlocks())),
-					zap.Int("notarizedBlocks", len(round.GetNotarizedBlocks())))
-				protocol.HandleRoundTimeout(ctx)
+				if round != nil {
+					logging.Logger.Info("Round timeout", zap.Any("Number", round.Number),
+						zap.Int("VRF_shares", len(round.GetVRFShares())),
+						zap.Int("proposedBlocks", len(round.GetProposedBlocks())),
+						zap.Int("notarizedBlocks", len(round.GetNotarizedBlocks())))
+					protocol.HandleRoundTimeout(ctx)
+				}
 			} else {
 				cround = mc.GetCurrentRound()
 				mc.ResetRoundTimeoutCount()

@@ -178,15 +178,15 @@ func (dkg *DKG) GetSecretKeyShares() []string {
 func (dkg *DKG) AddSecretShare(id PartyID, share string) error {
 	dkg.secretSharesMutex.Lock()
 	defer dkg.secretSharesMutex.Unlock()
-	if _, ok := dkg.receivedSecretShares[id]; !ok {
-		var secretShare Key
-		if err := secretShare.SetHexString(share); err != nil {
-			return err
-		}
-		dkg.receivedSecretShares[id] = secretShare
-		return nil
+	if _, ok := dkg.receivedSecretShares[id]; ok {
+		return common.NewError("failed to add secret share", "share already exists for miner")
 	}
-	return common.NewError("failed to add secret share", "share already exists for miner")
+	var secretShare Key
+	if err := secretShare.SetHexString(share); err != nil {
+		return err
+	}
+	dkg.receivedSecretShares[id] = secretShare
+	return nil
 }
 
 /*ComputeDKGKeyShare - Derive the share for each miner through polynomial substitution method */
