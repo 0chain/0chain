@@ -275,7 +275,13 @@ func TestStorageSmartContract_newWritePool(t *testing.T) {
 }
 
 func TestStorageSmartContract_createWritePool(t *testing.T) {
-	const allocID, clientID, txHash = "alloc_hex", "client_hex", "tx_hash"
+	const (
+		allocID, clientID, txHash = "alloc_hex", "client_hex", "tx_hash"
+
+		errMsg1 = "not enough tokens to create allocation: 90 < 150"
+		errMsg2 = "can't fill write pool: no tokens to lock"
+		errMsg3 = "can't fill write pool: lock amount is greater than balance"
+	)
 	var (
 		ssc      = newTestStorageSC()
 		balances = newTestBalances()
@@ -295,8 +301,22 @@ func TestStorageSmartContract_createWritePool(t *testing.T) {
 	balances.txn = tx
 	if err = ssc.createWritePool(tx, sa, balances); err == nil {
 		t.Fatal("missing error")
+	} else if err.Error() != errMsg1 {
+		t.Fatal("unexpected error:", err)
 	}
 	sa.MinLockDemand = 90
+	if err = ssc.createWritePool(tx, sa, balances); err == nil {
+		t.Fatal("missing")
+	} else if err.Error() != errMsg2 {
+		t.Fatal("unexpected error:", err)
+	}
+	balances.balances[clientID] = 85
+	if err = ssc.createWritePool(tx, sa, balances); err == nil {
+		t.Fatal("missing")
+	} else if err.Error() != errMsg3 {
+		t.Fatal("unexpected error:", err)
+	}
+	balances.balances[clientID] = 120
 	if err = ssc.createWritePool(tx, sa, balances); err != nil {
 		t.Fatal(err)
 	}
@@ -305,6 +325,23 @@ func TestStorageSmartContract_createWritePool(t *testing.T) {
 	}
 	if wp == nil {
 		t.Fatal("missing")
+	}
+	if wp.Balance != 90 {
+		t.Fatal("wrong pool balance:", wp.Balance, ", expected 90")
+	}
+	// check transfer
+	if len(balances.transfers) != 1 {
+		t.Fatal("unexpected length of transfers:", len(balances.transfers))
+	}
+	var transfer = balances.transfers[0]
+	if transfer.ClientID != clientID {
+		t.Fatal("invalid transfer.ClientID:", transfer.ClientID)
+	}
+	if transfer.ToClientID != ADDRESS {
+		t.Fatal("invalid transfer.ToClientID:", transfer.ToClientID)
+	}
+	if transfer.Amount != 90 {
+		t.Fatal("invalid transfer amount:", transfer.Amount)
 	}
 }
 
