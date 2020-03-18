@@ -20,6 +20,8 @@ type StorageSmartContract struct {
 	*smartcontractinterface.SmartContract
 }
 
+func (ssc *StorageSmartContract) InitSC() {}
+
 func (ssc *StorageSmartContract) SetSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {
 	ssc.SmartContract = sc
 	ssc.SmartContract.RestHandlers["/getblobbers"] = ssc.GetBlobbersHandler

@@ -27,6 +27,8 @@ type MultiSigSmartContract struct {
 	*smartcontractinterface.SmartContract
 }
 
+func (ms *MultiSigSmartContract) InitSC() {}
+
 func (ms *MultiSigSmartContract) GetName() string {
 	return name
 }

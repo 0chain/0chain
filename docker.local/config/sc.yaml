@@ -17,6 +17,11 @@ smart_contracts:
     min_n: 3
     t_percent: .51
     k_percent: .75
+    start_rounds: 50
+    contribute_rounds: 50
+    share_rounds: 50
+    publish_rounds: 50
+    wait_rounds: 50
   storagesc:
     challenge_enabled: false
     challenge_rate_per_mb_min: 1
