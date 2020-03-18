@@ -367,7 +367,8 @@ func (mc *Chain) GetBlockProposalWaitTime(r round.RoundI) time.Duration {
 }
 
 func (mc *Chain) computeBlockProposalDynamicWaitTime(r round.RoundI) time.Duration {
-	medianTime := mc.Miners.GetMedianNetworkTime()
+	mb := mc.GetMagicBlock()
+	medianTime := mb.Miners.GetMedianNetworkTime()
 	generators := mc.GetGenerators(r)
 	for _, g := range generators {
 		sendTime := g.GetLargeMessageSendTime()
@@ -605,7 +606,8 @@ func (mc *Chain) BroadcastNotarizedBlocks(ctx context.Context, pr *Round) {
 
 /*GetLatestFinalizedBlockFromSharder - request for latest finalized block from all the sharders */
 func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*block.Block {
-	m2s := mc.Sharders
+	mb := mc.GetMagicBlock()
+	m2s := mb.Sharders
 	finalizedBlocks := make([]*block.Block, 0, 1)
 	fbMutex := &sync.Mutex{}
 	//Params are nil? Do we need to send any params like sending the miner ID ?

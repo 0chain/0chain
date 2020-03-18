@@ -79,7 +79,7 @@ type Chain struct {
 	*Config
 
 	// MagicBlock - this is the current magic block for the chain
-	*block.MagicBlock    `json:"-"`
+	mb                   *block.MagicBlock `json:"-"`
 	PreviousMagicBlock   *block.MagicBlock `json:"-"`
 	viewChangeMagicBlock *block.MagicBlock `json:"-"`
 	mbMutex              sync.RWMutex
@@ -142,6 +142,18 @@ type Chain struct {
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
+
+func (c *Chain) GetMagicBlock() *block.MagicBlock {
+	c.mbMutex.RLock()
+	defer c.mbMutex.RUnlock()
+	return c.mb
+}
+
+func (c *Chain) SetMagicBlock(mb *block.MagicBlock) {
+	c.mbMutex.Lock()
+	defer c.mbMutex.Unlock()
+	c.mb = mb
+}
 
 /*GetEntityMetadata - implementing the interface */
 func (c *Chain) GetEntityMetadata() datastore.EntityMetadata {
@@ -260,7 +272,6 @@ func Provider() datastore.Entity {
 	c.Config = &Config{}
 	c.Initialize()
 	c.Version = "1.0"
-	c.MagicBlock = block.NewMagicBlock()
 
 	c.blocks = make(map[string]*block.Block)
 	c.blocksMutex = &sync.RWMutex{}
@@ -274,8 +285,11 @@ func Provider() datastore.Entity {
 	c.stakeMutex = &sync.Mutex{}
 	c.InitializeCreationDate()
 	c.nodePoolScorer = node.NewHashPoolScorer(encryption.NewXORHashScorer())
-	c.Miners = node.NewPool(node.NodeTypeMiner)
-	c.Sharders = node.NewPool(node.NodeTypeSharder)
+
+	mb := block.NewMagicBlock()
+	mb.Miners = node.NewPool(node.NodeTypeMiner)
+	mb.Sharders = node.NewPool(node.NodeTypeSharder)
+	c.SetMagicBlock(mb)
 	c.Stats = &Stats{}
 	c.blockFetcher = NewBlockFetcher()
 	return c
@@ -586,9 +600,10 @@ func (c *Chain) GetGenerators(r round.RoundI) []*node.Node {
 
 /*GetMiners - get all the miners for a given round */
 func (c *Chain) GetMiners(round int64) *node.Pool {
-	if round >= c.MagicBlock.StartingRound || c.MagicBlock.StartingRound == 0 {
-		Logger.Info("get miners -- current magic block", zap.Any("miners", c.Miners), zap.Any("round", round))
-		return c.Miners
+	mb := c.GetMagicBlock()
+	if round >= mb.StartingRound || mb.StartingRound == 0 {
+		Logger.Info("get miners -- current magic block", zap.Any("miners", mb.Miners), zap.Any("round", round))
+		return mb.Miners
 	} else {
 		Logger.Info("get miners -- previous magic block", zap.Any("miners", c.PreviousMagicBlock.Miners), zap.Any("round", round))
 		return c.PreviousMagicBlock.Miners
@@ -601,7 +616,7 @@ func (c *Chain) IsBlockSharder(b *block.Block, sharder *node.Node) bool {
 	if c.NumReplicators <= 0 {
 		return true
 	}
-	scores := c.nodePoolScorer.ScoreHashString(c.Sharders, b.Hash)
+	scores := c.nodePoolScorer.ScoreHashString(c.GetMagicBlock().Sharders, b.Hash)
 	return sharder.IsInTop(scores, c.NumReplicators)
 }
 
@@ -609,7 +624,7 @@ func (c *Chain) IsBlockSharderFromHash(bHash string, sharder *node.Node) bool {
 	if c.NumReplicators <= 0 {
 		return true
 	}
-	scores := c.nodePoolScorer.ScoreHashString(c.Sharders, bHash)
+	scores := c.nodePoolScorer.ScoreHashString(c.GetMagicBlock().Sharders, bHash)
 	return sharder.IsInTop(scores, c.NumReplicators)
 }
 
@@ -618,7 +633,7 @@ func (c *Chain) CanShardBlockWithReplicators(hash string, sharder *node.Node) (b
 	if c.NumReplicators <= 0 {
 		return true, nil
 	}
-	scores := c.nodePoolScorer.ScoreHashString(c.Sharders, hash)
+	scores := c.nodePoolScorer.ScoreHashString(c.GetMagicBlock().Sharders, hash)
 	return sharder.IsInTopWithNodes(scores, c.NumReplicators)
 }
 
@@ -626,7 +641,7 @@ func (c *Chain) CanShardBlockWithReplicators(hash string, sharder *node.Node) (b
 func (c *Chain) GetBlockSharders(b *block.Block) []string {
 	var sharders []string
 	//TODO: sharders list needs to get resolved per the magic block of the block
-	var sharderPool = c.Sharders
+	var sharderPool = c.GetMagicBlock().Sharders
 	var sharderNodes = sharderPool.Nodes
 	if c.NumReplicators > 0 {
 		scores := c.nodePoolScorer.ScoreHashString(sharderPool, b.Hash)
@@ -668,14 +683,16 @@ func (c *Chain) GetNotarizationThresholdCount(miners *node.Pool) int {
 
 // AreAllNodesActive - use this to check if all nodes needs to be active as in DKG
 func (c *Chain) AreAllNodesActive() bool {
-	active := c.Miners.GetActiveCount()
-	return active >= c.Miners.Size()
+	mb := c.GetMagicBlock()
+	active := mb.Miners.GetActiveCount()
+	return active >= mb.Miners.Size()
 }
 
 /*CanStartNetwork - check whether the network can start */
 func (c *Chain) CanStartNetwork() bool {
-	active := c.Miners.GetActiveCount()
-	threshold := c.GetNotarizationThresholdCount(c.Miners)
+	mb := c.GetMagicBlock()
+	active := mb.Miners.GetActiveCount()
+	threshold := c.GetNotarizationThresholdCount(mb.Miners)
 	return active >= threshold && c.CanShardBlocks()
 }
 
@@ -683,15 +700,16 @@ func (c *Chain) CanStartNetwork() bool {
 func (c *Chain) ReadNodePools(configFile string) {
 	nodeConfig := config.ReadConfig(configFile)
 	config := nodeConfig.Get("miners")
+	mb := c.GetMagicBlock()
 	if miners, ok := config.([]interface{}); ok {
-		c.Miners.AddNodes(miners)
-		c.Miners.ComputeProperties()
+		mb.Miners.AddNodes(miners)
+		mb.Miners.ComputeProperties()
 		c.InitializeMinerPool()
 	}
 	config = nodeConfig.Get("sharders")
 	if sharders, ok := config.([]interface{}); ok {
-		c.Sharders.AddNodes(sharders)
-		c.Sharders.ComputeProperties()
+		mb.Sharders.AddNodes(sharders)
+		mb.Sharders.ComputeProperties()
 	}
 }
 
@@ -727,7 +745,8 @@ func (c *Chain) getMiningStake(minerID datastore.Key) int {
 
 //InitializeMinerPool - initialize the miners after their configuration is read
 func (c *Chain) InitializeMinerPool() {
-	for _, nd := range c.Miners.CopyNodes() {
+	mb := c.GetMagicBlock()
+	for _, nd := range mb.Miners.CopyNodes() {
 		ms := &MinerStats{}
 		ms.GenerationCountByRank = make([]int64, c.NumGenerators)
 		ms.FinalizationCountByRank = make([]int64, c.NumGenerators)
@@ -921,7 +940,8 @@ func (c *Chain) GetSignatureScheme() encryption.SignatureScheme {
 
 //CanShardBlocks - is the network able to effectively shard the blocks?
 func (c *Chain) CanShardBlocks() bool {
-	return c.Sharders.GetActiveCount()*100 >= c.Sharders.Size()*c.MinActiveSharders
+	mb := c.GetMagicBlock()
+	return mb.Sharders.GetActiveCount()*100 >= mb.Sharders.Size()*c.MinActiveSharders
 }
 
 //CanReplicateBlock - can the given block be effectively replicated?
@@ -929,7 +949,8 @@ func (c *Chain) CanReplicateBlock(b *block.Block) bool {
 	if c.NumReplicators <= 0 || c.MinActiveReplicators == 0 {
 		return c.CanShardBlocks()
 	}
-	scores := c.nodePoolScorer.ScoreHashString(c.Sharders, b.Hash)
+	mb := c.GetMagicBlock()
+	scores := c.nodePoolScorer.ScoreHashString(mb.Sharders, b.Hash)
 	arCount := 0
 	minScore := scores[c.NumReplicators-1].Score
 	for i := 0; i < len(scores); i++ {
@@ -999,7 +1020,8 @@ func (c *Chain) GetLatestFinalizedBlockSummary() *block.BlockSummary {
 }
 
 func (c *Chain) ActiveInChain() bool {
-	return c.IsActiveNode(node.Self.Underlying().GetKey(), c.GetCurrentRound()) && c.GetLatestFinalizedBlock().ClientState != nil
+	mb := c.GetMagicBlock()
+	return mb.IsActiveNode(node.Self.Underlying().GetKey(), c.GetCurrentRound()) && c.GetLatestFinalizedBlock().ClientState != nil
 }
 
 // -------------------------------------------------------------------------- //
@@ -1026,10 +1048,6 @@ func (c *Chain) ActiveInChain() bool {
 // -------------------------------------------------------------------------- //
 
 func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
-
-	c.mbMutex.Lock()
-	defer c.mbMutex.Unlock()
-
 	if newMagicBlock.Miners == nil || newMagicBlock.Miners.MapSize() == 0 {
 		return common.NewError("failed to update magic block", "there are no miners in the magic block")
 	}
@@ -1046,18 +1064,19 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 		Logger.Error("failed to update magic block", zap.Any("finalized_magic_block_hash", c.GetLatestFinalizedMagicBlock().MagicBlock.Hash), zap.Any("new_magic_block_previous_hash", newMagicBlock.PreviousMagicBlockHash))
 		return common.NewError("failed to update magic block", fmt.Sprintf("magic block's previous magic block hash (%v) doesn't equal latest finalized magic block id (%v)", newMagicBlock.PreviousMagicBlockHash, c.GetLatestFinalizedMagicBlock().MagicBlock.Hash))
 	}
+	mb := c.GetMagicBlock()
 
-	Logger.Info("update magic block", zap.Any("old block", c.MagicBlock), zap.Any("new block", newMagicBlock))
+	Logger.Info("update magic block", zap.Any("old block", mb), zap.Any("new block", newMagicBlock))
 
-	if c.MagicBlock != nil && c.MagicBlock.Hash == newMagicBlock.PreviousMagicBlockHash {
-		Logger.Info("update magic block -- hashes don't match ", zap.Any("latest finalized magic block previous magic block hash", c.MagicBlock.Hash), zap.Any("new magic block previous hash", newMagicBlock.PreviousMagicBlockHash))
-		c.PreviousMagicBlock = c.MagicBlock
+	if mb != nil && mb.Hash == newMagicBlock.PreviousMagicBlockHash {
+		Logger.Info("update magic block -- hashes don't match ", zap.Any("latest finalized magic block previous magic block hash", mb.Hash), zap.Any("new magic block previous hash", newMagicBlock.PreviousMagicBlockHash))
+		c.PreviousMagicBlock = mb
 	}
 
-	c.MagicBlock = newMagicBlock
+	c.SetMagicBlock(newMagicBlock)
 	c.SetupNodes()
-	c.Sharders.ComputeProperties()
-	c.Miners.ComputeProperties()
+	newMagicBlock.Sharders.ComputeProperties()
+	newMagicBlock.Miners.ComputeProperties()
 	c.InitializeMinerPool()
 	c.GetNodesPreviousInfo()
 
@@ -1067,11 +1086,12 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 }
 
 func (c *Chain) SetupNodes() {
-	for _, miner := range c.Miners.CopyNodesMap() {
+	mb := c.GetMagicBlock()
+	for _, miner := range mb.Miners.CopyNodesMap() {
 		miner.ComputeProperties()
 		node.Setup(miner)
 	}
-	for _, sharder := range c.Sharders.CopyNodesMap() {
+	for _, sharder := range mb.Sharders.CopyNodesMap() {
 		sharder.ComputeProperties()
 		node.Setup(sharder)
 	}
@@ -1082,8 +1102,6 @@ func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 	if b != nil && b.MagicBlock != nil {
 		c.lfmbMutex.Lock()
 		defer c.lfmbMutex.Unlock()
-		c.mbMutex.Lock()
-		defer c.mbMutex.Unlock()
 
 		var latest = c.LatestFinalizedMagicBlock
 
@@ -1118,12 +1136,13 @@ func (c *Chain) GetLatestFinalizedMagicBlockSummary() *block.BlockSummary {
 }
 
 func (c *Chain) GetNodesPreviousInfo() {
-	for key, miner := range c.Miners.CopyNodesMap() {
+	mb := c.GetMagicBlock()
+	for key, miner := range mb.Miners.CopyNodesMap() {
 		if old := c.PreviousMagicBlock.Miners.GetNode(key); old != nil {
 			miner.SetNodeInfo(old)
 		}
 	}
-	for key, sharder := range c.Sharders.CopyNodesMap() {
+	for key, sharder := range mb.Sharders.CopyNodesMap() {
 		if old := c.PreviousMagicBlock.Sharders.GetNode(key); old != nil {
 			sharder.SetNodeInfo(old)
 		}

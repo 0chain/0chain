@@ -95,7 +95,8 @@ func main() {
 	if selfNode.GetKey() == "" {
 		Logger.Panic("node definition for self node doesn't exist")
 	}
-	if !sc.IsActiveNode(selfNode.GetKey(), 0) {
+	mb := sc.GetMagicBlock()
+	if !mb.IsActiveNode(selfNode.GetKey(), 0) {
 		hostName, n2nHost, portNum, err := readNonGenesisHostAndPort(keysFile)
 		if err != nil {
 			Logger.Panic("Error reading keys file. Non-genesis miner has no host or port number", zap.Error(err))

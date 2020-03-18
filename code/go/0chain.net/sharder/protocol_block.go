@@ -303,7 +303,8 @@ func (sc *Chain) requestForRoundSummaries(ctx context.Context, params *url.Value
 		rs = roundSummaries
 		return rs, nil
 	}
-	sc.Sharders.RequestEntity(ctx, RoundSummariesRequestor, params, handler)
+	mb := sc.GetMagicBlock()
+	mb.Sharders.RequestEntity(ctx, RoundSummariesRequestor, params, handler)
 	return rs
 }
 
@@ -321,7 +322,8 @@ func (sc *Chain) requestForRound(ctx context.Context, params *url.Values) *round
 		}
 		return nil, nil
 	}
-	sc.Sharders.RequestEntity(ctx, RoundRequestor, params, handler)
+	mb := sc.GetMagicBlock()
+	mb.Sharders.RequestEntity(ctx, RoundRequestor, params, handler)
 	return r
 }
 
@@ -336,7 +338,8 @@ func (sc *Chain) requestForBlockSummaries(ctx context.Context, params *url.Value
 		bs = blockSummaries
 		return bs, nil
 	}
-	sc.Sharders.RequestEntity(ctx, BlockSummariesRequestor, params, handler)
+	mb := sc.GetMagicBlock()
+	mb.Sharders.RequestEntity(ctx, BlockSummariesRequestor, params, handler)
 	return bs
 }
 
@@ -351,7 +354,8 @@ func (sc *Chain) requestForBlockSummary(ctx context.Context, params *url.Values)
 		blockS = bs
 		return blockS, nil
 	}
-	sc.Sharders.RequestEntity(ctx, BlockSummaryRequestor, params, handler)
+	mb := sc.GetMagicBlock()
+	mb.Sharders.RequestEntity(ctx, BlockSummaryRequestor, params, handler)
 	return blockS
 }
 

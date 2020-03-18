@@ -87,7 +87,8 @@ func TransactionGenerator(c *chain.Chain) {
 	}
 
 	numGenerators := sc.NumGenerators
-	numMiners := sc.Miners.Size()
+	mb := sc.GetMagicBlock()
+	numMiners := mb.Miners.Size()
 	var timerCount int64
 	ts := rand.NewSource(time.Now().UnixNano())
 	trng := rand.New(ts)
