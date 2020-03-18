@@ -216,6 +216,10 @@ func (ssc *StorageSmartContract) createWritePool(t *transaction.Transaction,
 			t.Value, sa.MinLockDemand)
 	}
 
+	if err = ssc.checkFill(t, balances); err != nil {
+		return fmt.Errorf("can't fill write pool: %v", err)
+	}
+
 	if _, _, err = wp.fill(t, balances); err != nil {
 		return fmt.Errorf("can't fill write pool: %v", err)
 	}
