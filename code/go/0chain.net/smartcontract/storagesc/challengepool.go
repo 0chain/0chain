@@ -333,9 +333,8 @@ func (ssc *StorageSmartContract) challengePoolUnlock(t *transaction.Transaction,
 }
 
 // update challenge pool expiration
-func (ssc *StorageSmartContract) updateChallengePoolExpiration(
-	t *transaction.Transaction, allocID string, expiried common.Timestamp,
-	balances chainState.StateContextI) (err error) {
+func (ssc *StorageSmartContract) updateChallengePoolExpiration(allocID string,
+	expiried common.Timestamp, balances chainState.StateContextI) (err error) {
 
 	var cp *challengePool
 	if cp, err = ssc.getChallengePool(allocID, balances); err != nil {
