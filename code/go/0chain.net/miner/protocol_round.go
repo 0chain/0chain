@@ -834,7 +834,11 @@ func StartProtocol(ctx context.Context, gb *block.Block) {
 	Logger.Info("starting the blockchain ...", zap.Int64("round", mr.GetRoundNumber()))
 
 	cr := mc.getRound(ctx, mr.Number)
-	mc.SetCurrentRound(mc.StartNextRound(ctx, cr).Number)
+	number := mc.StartNextRound(ctx, cr).Number
+	if cr.Number == 0 {
+		mc.SetCurrentRound(number)
+	}
+
 }
 
 func (mc *Chain) WaitForActiveSharders(ctx context.Context) error {

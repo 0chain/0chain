@@ -84,8 +84,7 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 	}
 	pb := b.PrevBlock
 	if pb == nil {
-		c.GetPreviousBlock(ctx, b)
-		pb = b.PrevBlock
+		pb = c.GetPreviousBlock(ctx, b)
 		if pb == nil {
 			b.SetStateStatus(block.StateFailed)
 			if state.DebugBlock() {
