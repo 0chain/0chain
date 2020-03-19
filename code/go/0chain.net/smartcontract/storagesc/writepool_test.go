@@ -274,6 +274,14 @@ func TestStorageSmartContract_newWritePool(t *testing.T) {
 	}
 }
 
+func newTestWritePoolBlobberAllocation(minLockDemand state.Balance) (
+	ba *BlobberAllocation) {
+
+	ba = new(BlobberAllocation)
+	ba.MinLockDemand = minLockDemand
+	return
+}
+
 func TestStorageSmartContract_createWritePool(t *testing.T) {
 	const (
 		allocID, clientID, txHash = "alloc_hex", "client_hex", "tx_hash"
@@ -291,8 +299,12 @@ func TestStorageSmartContract_createWritePool(t *testing.T) {
 			Value:      90,
 		}
 		sa = &StorageAllocation{
-			ID:            allocID,
-			MinLockDemand: 150,
+			ID: allocID,
+			BlobberDetails: []*BlobberAllocation{
+				newTestWritePoolBlobberAllocation(50), // }
+				newTestWritePoolBlobberAllocation(50), // } 150
+				newTestWritePoolBlobberAllocation(50), // }
+			},
 		}
 		wp  *writePool
 		err error
@@ -304,7 +316,11 @@ func TestStorageSmartContract_createWritePool(t *testing.T) {
 	} else if err.Error() != errMsg1 {
 		t.Fatal("unexpected error:", err)
 	}
-	sa.MinLockDemand = 90
+	sa.BlobberDetails = []*BlobberAllocation{
+		newTestWritePoolBlobberAllocation(30), // }
+		newTestWritePoolBlobberAllocation(30), // } 90
+		newTestWritePoolBlobberAllocation(30), // }
+	}
 	if err = ssc.createWritePool(tx, sa, balances); err == nil {
 		t.Fatal("missing")
 	} else if err.Error() != errMsg2 {

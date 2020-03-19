@@ -1,150 +1,152 @@
 package storagesc
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
+
+	"0chain.net/core/common"
 )
 
-func Test_lockRequest_encode_decode(t *testing.T) {
+func mustEncode(t *testing.T, val interface{}) []byte {
+	var err error
+	b, err := json.Marshal(val)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b
+}
+
+func Test_lockRequest_decode(t *testing.T) {
 	var (
 		lre, lrd lockRequest
 		err      error
 	)
 	lre.Duration = time.Second * 60
-	if err = lrd.decode(lre.encode()); err != nil {
+	if err = lrd.decode(mustEncode(t, lre)); err != nil {
 		t.Fatal(err)
 	}
-	if lrd != lre {
+	if !isEqualStrings(lrd.Blobbers, lre.Blobbers) {
+		t.Fatal("wrong blobbers list")
+	}
+	if lrd.AllocationID != lre.AllocationID || lrd.Duration != lre.Duration {
 		t.Fatal("wrong")
 	}
 }
 
-func Test_unlockRequest_encode_decode(t *testing.T) {
-	var (
-		ure, urd unlockRequest
-		err      error
-	)
-	ure.PoolID = "pool_hex"
-	if err = urd.decode(ure.encode()); err != nil {
-		t.Fatal(err)
-	}
-	if urd != ure {
-		t.Fatal("wrong")
-	}
+func Test_lockRequest_validate(t *testing.T) {
+	// TODO (sfxdx): implement
+}
+
+func Test_readPoolLock_copy(t *testing.T) {
+	// TODO (sfxdx): implement
+}
+
+func Test_readPoolBlobbers_copy(t *testing.T) {
+	// TODO (sfxdx): implement
+}
+
+func Test_readPoolAllocs_update(t *testing.T) {
+	// TODO (sfxdx): implement
+}
+
+func Test_readPoolAllocs_copy(t *testing.T) {
+	// TODO (sfxdx): implement
 }
 
 func Test_newReadPool(t *testing.T) {
 	var rp = newReadPool()
-	if rp.ZcnLockingPool == nil {
-		t.Fatal("missing")
+	if rp.Locked == nil {
+		t.Fatal("missing locked pool")
+	}
+	if rp.Unlocked == nil {
+		t.Fatal("missing unlocked pool")
+	}
+	if rp.Locks == nil {
+		t.Fatal("map is not created")
 	}
 }
 
-func Test_readPool_encode_decode(t *testing.T) {
+func Test_readPool_Encode_Decode(t *testing.T) {
+	const allocID, dur, value = "alloc_hex", 10 * time.Second, 150
 	var (
+		now      = common.Now()
 		rpe, rpd = newReadPool(), newReadPool()
+		blobbers = []string{"b1_hex", "b2_hex", "b3_hex"}
+		lr       lockRequest
 		err      error
 	)
-	if err = rpd.decode(rpe.encode()); err != nil {
-		t.Fatal(err)
-	}
-	if string(rpe.encode()) != string(rpd.encode()) {
-		t.Fatal("wrong")
-	}
-}
 
-func Test_newReadPools(t *testing.T) {
-	var rps = newReadPools()
-	if rps.Pools == nil {
-		t.Fatal("map not created")
-	}
-}
+	lr.AllocationID = "all"
+	lr.Blobbers = blobbers
+	lr.Duration = dur
 
-func Test_readPools_Encode_Decode(t *testing.T) {
-	var (
-		rpse, rpsd = newReadPools(), newReadPools()
-		rp         = newReadPool()
-		err        error
-	)
-	if err = rpse.addPool(rp); err != nil {
+	if err = rpe.addLocks(now, value, &lr); err != nil {
 		t.Fatal(err)
 	}
-	if err = rpsd.Decode(rpse.Encode()); err != nil {
+
+	if err = rpd.Decode(rpe.Encode()); err != nil {
 		t.Fatal(err)
 	}
-	if string(rpse.Encode()) != string(rpsd.Encode()) {
+	if string(rpe.Encode()) != string(rpd.Encode()) {
 		t.Fatal("wrong")
 	}
 }
 
 func Test_readPoolsKey(t *testing.T) {
-	if readPoolsKey("scKey", "clientID") == "" {
+	if readPoolKey("scKey", "clientID") == "" {
 		t.Fatal("missing")
 	}
 }
 
-func Test_readPools_addPool_delPool(t *testing.T) {
-	var (
-		rps = newReadPools()
-		rp  = newReadPool()
-		err error
-	)
-	if err = rps.addPool(rp); err != nil {
-		t.Fatal(err)
-	}
-	if err = rps.addPool(rp); err == nil {
-		t.Fatal("missing error")
-	}
-	rps.delPool(rp.ID)
-	if len(rps.Pools) != 0 {
-		t.Fatal("not deleted")
-	}
+func Test_readPool_fill(t *testing.T) {
+	//
 }
 
-func Test_readPoolStats_encode_decode(t *testing.T) {
+func Test_readPool_addLocks(t *testing.T) {
+	//
+}
+
+func Test_readPool_update(t *testing.T) {
+	//
+}
+
+func Test_readPool_save(t *testing.T) {
+	//
+}
+
+func Test_readPool_stat(t *testing.T) {
+	//
+}
+
+func TestStorageSmartContract_getReadPoolBytes(t *testing.T) {
 	// TODO (sfxdx): implement
 }
 
-func Test_readPoolStats_addStat(t *testing.T) {
+func TestStorageSmartContract_getReadPool(t *testing.T) {
 	// TODO (sfxdx): implement
-}
-
-func Test_readPoolStat_encode_decode(t *testing.T) {
-	// TODO (sfxdx): implement
-}
-
-func Test_tokenLock_IsLocked(t *testing.T) {
-	// TODO (sfxdx): implement
-}
-
-func Test_tokenLock_LockStats(t *testing.T) {
-	// TODO (sfxdx): implement
-}
-
-func TestStorageSmartContract_getReadPoolsBytes(t *testing.T) {
-	// TODO (sfxdx): implements tests
-}
-
-func TestStorageSmartContract_getReadPools(t *testing.T) {
-	// TODO (sfxdx): implements tests
 }
 
 func TestStorageSmartContract_newReadPool(t *testing.T) {
-	// TODO (sfxdx): implements tests
+	// TODO (sfxdx): implement
+}
+
+func TestStorageSmartContract_checkFill(t *testing.T) {
+	// TODO (sfxdx): implement
 }
 
 func TestStorageSmartContract_readPoolLock(t *testing.T) {
-	// TODO (sfxdx): implements tests
+	// TODO (sfxdx): implement
 }
 
 func TestStorageSmartContract_readPoolUnlock(t *testing.T) {
-	// TODO (sfxdx): implements tests
+	// TODO (sfxdx): implement
 }
 
-func TestStorageSmartContract_getReadPoolStat(t *testing.T) {
-	// TODO (sfxdx): implements tests
+func TestStorageSmartContract_getReadPoolStatHandler(t *testing.T) {
+	// TODO (sfxdx): implement
 }
 
-func TestStorageSmartContract_getReadPoolsStatsHandler(t *testing.T) {
-	// TODO (sfxdx): implements tests
+func TestStorageSmartContract_getReadPoolBlobberHandler(t *testing.T) {
+	// TODO (sfxdx): implement
 }

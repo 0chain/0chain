@@ -211,9 +211,11 @@ func (ssc *StorageSmartContract) createWritePool(t *transaction.Transaction,
 
 	// lock required number of tokens
 
-	if state.Balance(t.Value) < sa.MinLockDemand {
+	var minLockDemand = sa.minLockDemandLeft()
+
+	if state.Balance(t.Value) < minLockDemand {
 		return fmt.Errorf("not enough tokens to create allocation: %v < %v",
-			t.Value, sa.MinLockDemand)
+			t.Value, minLockDemand)
 	}
 
 	if err = ssc.checkFill(t, balances); err != nil {

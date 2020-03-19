@@ -288,11 +288,26 @@ func (tl tokenLock) IsLocked(entity interface{}) bool {
 	return true
 }
 
+type stakePoolLockStat struct {
+	StartTime common.Timestamp `json:"start_time"`
+	Duration  time.Duration    `json:"duration"`
+	TimeLeft  time.Duration    `json:"time_left"`
+	Locked    bool             `json:"locked"`
+}
+
+func (spls *stakePoolLockStat) encode() (b []byte) {
+	var err error
+	if b, err = json.Marshal(spls); err != nil {
+		panic(err) // must never happens
+	}
+	return
+}
+
 func (tl tokenLock) LockStats(entity interface{}) []byte {
 	if tm, ok := entity.(time.Time); ok {
-		var stat readPoolStat
+		var stat stakePoolLockStat
 		stat.StartTime = tl.StartTime
-		stat.Duartion = tl.Duration
+		stat.Duration = tl.Duration
 		stat.TimeLeft = (tl.Duration - tm.Sub(common.ToTime(tl.StartTime)))
 		stat.Locked = tl.IsLocked(tm)
 		return stat.encode()
