@@ -292,9 +292,6 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 			float64(b.Terms.WritePrice) * gbSize * b.Terms.MinLockDemand,
 		))
 
-		// add to overall min lock demand
-		sa.MinLockDemand += balloc.MinLockDemand
-
 		if b.Terms.ChallengeCompletionTime > sa.ChallengeCompletionTime {
 			sa.ChallengeCompletionTime = b.Terms.ChallengeCompletionTime
 		}
