@@ -148,7 +148,7 @@ func newReadPool() *readPool {
 	}
 }
 
-func (rp *readPool) encode() (b []byte) {
+func (rp *readPool) Encode() (b []byte) {
 	var err error
 	if b, err = json.Marshal(rp); err != nil {
 		panic(err) // must never happens
@@ -156,7 +156,7 @@ func (rp *readPool) encode() (b []byte) {
 	return
 }
 
-func (rp *readPool) decode(input []byte) (err error) {
+func (rp *readPool) Decode(input []byte) (err error) {
 
 	type readPoolJSON struct {
 		Locked   json.RawMessage `json:"locked"`
@@ -277,8 +277,8 @@ func (rp *readPool) stat() (stat *readPoolStat) {
 	stat.Locked = rp.Locked.Balance
 	stat.Unlocked = rp.Unlocked.Balance
 	// dry update, dry unlock
-	stat.Locks = rp.Locks.copy()  // use copy
-	var ul = state.Locks.update() // update
+	stat.Locks = rp.Locks.copy()             // use copy
+	var ul = stat.Locks.update(common.Now()) // update
 	stat.Locked -= ul
 	stat.Unlocked += ul
 	return
@@ -300,7 +300,7 @@ func (ssc *StorageSmartContract) getReadPoolBytes(clientID datastore.Key,
 	balances chainState.StateContextI) (b []byte, err error) {
 
 	var val util.Serializable
-	val, err = balances.GetTrieNode(readPoolsKey(ssc.ID, clientID))
+	val, err = balances.GetTrieNode(readPoolKey(ssc.ID, clientID))
 	if err != nil {
 		return
 	}
@@ -309,14 +309,14 @@ func (ssc *StorageSmartContract) getReadPoolBytes(clientID datastore.Key,
 
 // getReadPool of current client
 func (ssc *StorageSmartContract) getReadPool(clientID datastore.Key,
-	balances chainState.StateContextI) (rps *readPools, err error) {
+	balances chainState.StateContextI) (rp *readPool, err error) {
 
 	var poolb []byte
 	if poolb, err = ssc.getReadPoolBytes(clientID, balances); err != nil {
 		return
 	}
-	rps = newReadPool()
-	err = rps.Decode(poolb)
+	rp = newReadPool()
+	err = rp.Decode(poolb)
 	return
 }
 
@@ -339,12 +339,12 @@ func (ssc *StorageSmartContract) newReadPool(t *transaction.Transaction,
 	rp.Locked.ID = readPoolKey(ssc.ID, t.ClientID) + ":locked"
 	rp.Unlocked.ID = readPoolKey(ssc.ID, t.ClientID) + ":unlocked"
 
-	_, err = balances.InsertTrieNode(readPoolsKey(ssc.ID, t.ClientID), rps)
+	_, err = balances.InsertTrieNode(readPoolKey(ssc.ID, t.ClientID), rp)
 	if err != nil {
 		return "", common.NewError("new_read_pool_failed", err.Error())
 	}
 
-	return string(rps.Encode()), nil
+	return string(rp.Encode()), nil
 }
 
 // service method used to check client balance before filling a pool
@@ -429,11 +429,12 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 		return "", common.NewError("read_pool_lock_failed", err.Error())
 	}
 
-	if err = rp.addLocks(t.CreationDate, t.Value, lr); err != nil {
+	err = rp.addLocks(t.CreationDate, state.Balance(t.Value), &lr)
+	if err != nil {
 		return "", common.NewError("read_pool_lock_failed", err.Error())
 	}
 
-	if err = rp.save(ssc.ID, balances); err != nil {
+	if err = rp.save(ssc.ID, t.ClientID, balances); err != nil {
 		return "", common.NewError("read_pool_lock_failed",
 			"can't save read pool: "+err.Error())
 	}
