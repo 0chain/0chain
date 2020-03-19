@@ -271,6 +271,35 @@ func (stat *stakePoolStat) decode(input []byte) error {
 }
 
 //
+// tokens lock interface
+//
+
+type tokenLock struct {
+	StartTime common.Timestamp `json:"start_time"`
+	Duration  time.Duration    `json:"duration"`
+	Owner     datastore.Key    `json:"owner"`
+}
+
+func (tl tokenLock) IsLocked(entity interface{}) bool {
+	if tm, ok := entity.(time.Time); ok {
+		return tm.Sub(common.ToTime(tl.StartTime)) < tl.Duration
+	}
+	return true
+}
+
+func (tl tokenLock) LockStats(entity interface{}) []byte {
+	if tm, ok := entity.(time.Time); ok {
+		var stat readPoolStat
+		stat.StartTime = tl.StartTime
+		stat.Duartion = tl.Duration
+		stat.TimeLeft = (tl.Duration - tm.Sub(common.ToTime(tl.StartTime)))
+		stat.Locked = tl.IsLocked(tm)
+		return stat.encode()
+	}
+	return nil
+}
+
+//
 // smart contract methods
 //
 
