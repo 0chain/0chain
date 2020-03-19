@@ -18,10 +18,11 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	. "0chain.net/core/logging"
 	"0chain.net/core/memorystore"
 	"0chain.net/core/util"
 	"go.uber.org/zap"
+
+	. "0chain.net/core/logging"
 )
 
 var rbgTimer metrics.Timer // round block generation timer
@@ -781,9 +782,8 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context, pnround int64)
 		lfbs = lfBlocks[0]
 	}
 
-	if (lfb == nil || lfb.Round == 0) &&
-		lfbs != nil &&
-		lfb.Round < lfbs.Round {
+	if lfbs != nil &&
+		(lfb == nil || lfb.Round == 0 || lfb.Round < lfbs.Round) {
 		mr := mc.getRound(ctx, lfbs.Round)
 		mc.SetRandomSeed(mr, lfbs.GetRoundRandomSeed())
 		mc.AddBlock(lfbs)

@@ -236,12 +236,11 @@ func (mc *Chain) ViewChange(ctx context.Context, nRound int64) bool {
 	viewChangeMagicBlock := mc.GetViewChangeMagicBlock()
 	mb := mc.GetMagicBlock()
 	if viewChangeMagicBlock != nil {
-		if mb != nil && mb.MagicBlockNumber == viewChangeMagicBlock.MagicBlockNumber {
-			return false
-		}
-		err := mc.UpdateMagicBlock(viewChangeMagicBlock)
-		if err != nil {
-			Logger.DPanic(err.Error())
+		if mb == nil || mb.MagicBlockNumber < viewChangeMagicBlock.MagicBlockNumber {
+			err := mc.UpdateMagicBlock(viewChangeMagicBlock)
+			if err != nil {
+				Logger.DPanic(err.Error())
+			}
 		}
 		if err := mc.SetDKGSFromStore(ctx, viewChangeMagicBlock); err != nil {
 			Logger.DPanic(err.Error())

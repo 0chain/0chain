@@ -3,7 +3,6 @@ package miner
 import (
 	"context"
 	"fmt"
-	"log"
 	"math/rand"
 	"strconv"
 	"time"
@@ -54,13 +53,6 @@ func SetDKG(ctx context.Context, mb *block.MagicBlock) bool {
 }
 
 func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (err2 error) {
-	defer func() {
-		if err2 != nil {
-			log.Println("SetDKGSFromStore error", err2)
-		} else {
-			log.Println("SetDKGSFromStore done")
-		}
-	}()
 	self := node.GetSelfNode(ctx)
 	dkgSummary, err := GetDKGSummaryFromStore(ctx, strconv.FormatInt(mb.MagicBlockNumber, 10))
 	if err != nil {
@@ -75,10 +67,10 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (er
 	newDKG.StartingRound = mb.StartingRound
 	for k := range mb.Miners.CopyNodesMap() {
 		if savedShare, ok := dkgSummary.SecretShares[ComputeBlsID(k)]; ok {
-			newDKG.AddSecretShare(bls.ComputeIDdkg(k), savedShare)
+			newDKG.AddSecretShare(bls.ComputeIDdkg(k), savedShare, false)
 		} else if v, ok := mb.GetShareOrSigns().Get(k); ok {
 			if share, ok := v.ShareOrSigns[node.Self.Underlying().GetKey()]; ok && share.Share != "" {
-				newDKG.AddSecretShare(bls.ComputeIDdkg(k), share.Share)
+				newDKG.AddSecretShare(bls.ComputeIDdkg(k), share.Share, false)
 			}
 		}
 	}
@@ -106,13 +98,6 @@ func GetDKGSummaryFromStore(ctx context.Context, id string) (*bls.DKGSummary, er
 }
 
 func StoreDKGSummary(ctx context.Context, dkgSummary *bls.DKGSummary) (err error) {
-	defer func() {
-		if err != nil {
-			log.Println("StoreDKGSummary error", err)
-		} else {
-			log.Println("StoreDKGSummary OK id=", dkgSummary.ID, " count shares", len(dkgSummary.SecretShares))
-		}
-	}()
 	dkgSummaryMetadata := dkgSummary.GetEntityMetadata()
 	dctx := ememorystore.WithEntityConnection(ctx, dkgSummaryMetadata)
 	defer ememorystore.Close(dctx)

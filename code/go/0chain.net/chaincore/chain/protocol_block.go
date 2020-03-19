@@ -132,9 +132,17 @@ Simple 3 miner scenario :
 */
 func (c *Chain) UpdateNodeState(b *block.Block) {
 	r := c.GetRound(b.Round)
+	if r == nil {
+		Logger.Error("UpdateNodeState: round unexpected nil")
+		return
+	}
 	for _, vt := range b.GetVerificationTickets() {
-
-		signer := c.GetMiners(r.GetRoundNumber()).GetNode(vt.VerifierID)
+		miners := c.GetMiners(r.GetRoundNumber())
+		if miners == nil {
+			Logger.Error("UpdateNodeState: miners unexpected nil")
+			continue
+		}
+		signer := miners.GetNode(vt.VerifierID)
 		if signer == nil {
 			Logger.Error("this should not happen!")
 			continue
