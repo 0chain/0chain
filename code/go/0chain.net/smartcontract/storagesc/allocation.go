@@ -492,23 +492,70 @@ func (sc *StorageSmartContract) saveUpdatedAllocation(all *StorageNodes,
 	return
 }
 
+// allocation period used to calculate weighted average prices
+type allocPeriod struct {
+	read   state.Balance    // read price
+	write  state.Balance    // write price
+	period common.Timestamp // period (duration)
+	size   int64            // size for period
+}
+
+func (ap *allocPeriod) weight() float64 {
+	return float64(ap.period) * float64(ap.size)
+}
+
+// returns weighted average read and write prices
+func (ap *allocPeriod) join(np *allocPeriod) (avgRead, avgWrite state.Balance) {
+	var (
+		apw, npw = ap.weight(), np.weight() // weights
+		ws       = apw + npw                // weights sum
+		rp, wp   float64                    // read sum, write sum (weighted)
+	)
+
+	rp = (float64(ap.read) * apw) + (float64(np.read) * npw)
+	wp = (float64(ap.write) * apw) + (float64(np.write) * npw)
+
+	avgRead = state.Balance(rp / ws)
+	avgWrite = state.Balance(wp / ws)
+	return
+}
+
+func weightedAverage(prev, next *Terms, tx, pexp, expDiff common.Timestamp,
+	psize, sizeDiff int64) (avg Terms) {
+
+	// allocation periods
+	var left, added allocPeriod
+	left.read, left.write = prev.ReadPrice, prev.WritePrice   // } prices
+	added.read, added.write = next.ReadPrice, next.WritePrice // }
+	left.size, added.size = psize, psize+sizeDiff             // sizes
+	left.period, added.period = pexp-tx, pexp+expDiff-tx      // periods
+	// join
+	avg.ReadPrice, avg.WritePrice = left.join(&added)
+
+	// just copy from next
+	avg.MinLockDemand = next.MinLockDemand
+	avg.MaxOfferDuration = next.MaxOfferDuration
+	avg.ChallengeCompletionTime = next.ChallengeCompletionTime
+	return
+}
+
 // extendAllocation extends size or/and expiration (one of them can be reduced);
 // here we use new terms of blobbers
 func (sc *StorageSmartContract) extendAllocation(t *transaction.Transaction,
-	all *StorageNodes, alloc *StorageAllocation,
-	blobbers []*StorageNode, uar *updateAllocationRequest,
-	balances c_state.StateContextI) (resp string, err error) {
+	all *StorageNodes, alloc *StorageAllocation, blobbers []*StorageNode,
+	uar *updateAllocationRequest, balances c_state.StateContextI) (resp string,
+	err error) {
 
 	var (
 		diff   = uar.getBlobbersSizeDiff(alloc) // size difference
 		size   = uar.getNewBlobbersSize(alloc)  // blobber size
 		gbSize = sizeInGB(size)                 // blobber size in GB
 		cct    time.Duration                    // new challenge_completion_time
-		mld    state.Balance                    // new min_lock_demand
 	)
 
 	// adjust the expiration if changed, boundaries has already checked
-	alloc.Expiration += uar.Expiration
+	var prevExpiration = alloc.Expiration
+	alloc.Expiration += uar.Expiration // new expiration
 
 	// 1. update terms
 	for i, ba := range alloc.BlobberDetails {
@@ -523,9 +570,14 @@ func (sc *StorageSmartContract) extendAllocation(t *transaction.Transaction,
 					"blobber "+b.ID+" doesn't have enough free space")
 			}
 		}
-		b.Used += diff     // new capacity used
-		ba.Terms = b.Terms // update terms
-		ba.Size = size     // new size
+
+		b.Used += diff // new capacity used
+
+		// update terms using weighted average
+		ba.Terms = weightedAverage(&ba.Terms, &b.Terms, t.CreationDate,
+			prevExpiration, alloc.Expiration, ba.Size, diff)
+
+		ba.Size = size // new size
 
 		if uar.Expiration > toSeconds(b.Terms.MaxOfferDuration) {
 			return "", common.NewError("allocation_extending_failed",
@@ -543,18 +595,11 @@ func (sc *StorageSmartContract) extendAllocation(t *transaction.Transaction,
 		if nbmld > ba.MinLockDemand {
 			ba.MinLockDemand = nbmld
 		}
-		// add to overall min lock demand
-		mld += nbmld
 		// update stake pool
 		if err = sc.updateSakePoolOffer(ba, alloc, balances); err != nil {
 			return "", common.NewError("allocation_extending_failed",
 				err.Error())
 		}
-	}
-
-	// min_lock_demand can be increased only
-	if mld > alloc.MinLockDemand {
-		alloc.MinLockDemand = mld
 	}
 
 	// update max challenge_completion_time
@@ -582,7 +627,7 @@ func (sc *StorageSmartContract) extendAllocation(t *transaction.Transaction,
 	// is it about size increasing? if so, we should make sure the write
 	// pool has enough tokens
 	if diff > 0 {
-		if mldLeft := alloc.MinLockDemand - alloc.Spent; mldLeft > 0 {
+		if mldLeft := alloc.minLockDemandLeft(); mldLeft > 0 {
 			if wp.Balance < mldLeft {
 				return "", common.NewError("allocation_extending_failed",
 					"not enough tokens in write pool to extend allocation")

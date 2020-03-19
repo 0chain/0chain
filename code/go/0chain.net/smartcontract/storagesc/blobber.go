@@ -383,8 +383,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	t *transaction.Transaction, input []byte, balances c_state.StateContextI) (
 	string, error) {
 
-	// TODO (sfxdx): move tokens: write pool to challenge pool
-
 	var commitConnection BlobberCloseConnection
 	err := json.Unmarshal(input, &commitConnection)
 	if err != nil {
@@ -460,7 +458,31 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 
 	allocationObj.Stats.UsedSize += commitConnection.WriteMarker.Size
 	allocationObj.Stats.NumWrites++
-	balances.InsertTrieNode(allocationObj.GetKey(sc.ID), allocationObj)
+
+	//
+	// move tokens from write pool to challenge pool
+	//
+
+	// check time boundaries
+	if commitConnection.WriteMarker.Timestamp < allocationObj.StartTime {
+		return "", common.NewError("invalid_parameters",
+			"write marker time is before allocation created")
+	}
+
+	if commitConnection.WriteMarker.Timestamp > allocationObj.Expiration {
+		return "", common.NewError("invalid_parameters",
+			"write marker time is after allocation expires")
+	}
+
+	// size has already checked, let's calculate tokens to move
+	// commitConnection.WriteMarker.Size
+
+	// save allocation object
+	_, err = balances.InsertTrieNode(allocationObj.GetKey(sc.ID), allocationObj)
+	if err != nil {
+		return "", common.NewError("commit_connection",
+			"saving allocation object: "+err.Error())
+	}
 
 	blobberAllocationBytes, err = json.Marshal(blobberAllocation.LastWriteMarker)
 	sc.newWrite(balances, commitConnection.WriteMarker.Size)
