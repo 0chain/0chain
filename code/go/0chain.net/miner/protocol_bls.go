@@ -52,7 +52,7 @@ func SetDKG(ctx context.Context, mb *block.MagicBlock) bool {
 	return true
 }
 
-func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) error {
+func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (err2 error) {
 	self := node.GetSelfNode(ctx)
 	dkgSummary, err := GetDKGSummaryFromStore(ctx, strconv.FormatInt(mb.MagicBlockNumber, 10))
 	if err != nil {
@@ -62,15 +62,15 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) err
 		return common.NewError("failed to set dkg from store", "no saved shares for dkg")
 	}
 
-	newDKG :=  bls.MakeDKG(mb.T, mb.N, self.Underlying().GetKey())
+	newDKG := bls.MakeDKG(mb.T, mb.N, self.Underlying().GetKey())
 	newDKG.MagicBlockNumber = mb.MagicBlockNumber
 	newDKG.StartingRound = mb.StartingRound
 	for k := range mb.Miners.CopyNodesMap() {
 		if savedShare, ok := dkgSummary.SecretShares[ComputeBlsID(k)]; ok {
-			newDKG.AddSecretShare(bls.ComputeIDdkg(k), savedShare)
+			newDKG.AddSecretShare(bls.ComputeIDdkg(k), savedShare, false)
 		} else if v, ok := mb.GetShareOrSigns().Get(k); ok {
 			if share, ok := v.ShareOrSigns[node.Self.Underlying().GetKey()]; ok && share.Share != "" {
-				newDKG.AddSecretShare(bls.ComputeIDdkg(k), share.Share)
+				newDKG.AddSecretShare(bls.ComputeIDdkg(k), share.Share, false)
 			}
 		}
 	}
@@ -97,11 +97,11 @@ func GetDKGSummaryFromStore(ctx context.Context, id string) (*bls.DKGSummary, er
 	return dkgSummary, err
 }
 
-func StoreDKGSummary(ctx context.Context, dkgSummary *bls.DKGSummary) error {
+func StoreDKGSummary(ctx context.Context, dkgSummary *bls.DKGSummary) (err error) {
 	dkgSummaryMetadata := dkgSummary.GetEntityMetadata()
 	dctx := ememorystore.WithEntityConnection(ctx, dkgSummaryMetadata)
 	defer ememorystore.Close(dctx)
-	err := dkgSummary.Write(dctx)
+	err = dkgSummary.Write(dctx)
 	if err != nil {
 		return err
 	}

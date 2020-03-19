@@ -56,8 +56,9 @@ func (mc *Chain) RegisterClient() {
 		}
 	}
 
+	mb := mc.GetMagicBlock()
 	nodeBytes, _ := json.Marshal(node.Self.Underlying().Client)
-	miners := mc.Miners.CopyNodesMap()
+	miners := mb.Miners.CopyNodesMap()
 	registered := 0
 	consensus := int(math.Ceil((float64(thresholdByCount) / 100) * float64(len(miners))))
 	if consensus > len(miners) {
@@ -102,8 +103,9 @@ func (mc *Chain) isRegistered() bool {
 			return false
 		}
 	} else {
+		mb := mc.GetMagicBlock()
 		var (
-			sharders = mc.Sharders.N2NURLs()
+			sharders = mb.Sharders.N2NURLs()
 			err      error
 		)
 		if typ := node.Self.Underlying().Type; typ == node.NodeTypeMiner {
@@ -130,7 +132,8 @@ func (mc *Chain) ConfirmTransaction(t *httpclientutil.Transaction) bool {
 	active := mc.ActiveInChain()
 	var found, pastTime bool
 	var urls []string
-	for _, sharder := range mc.Sharders.CopyNodesMap() {
+	mb := mc.GetMagicBlock()
+	for _, sharder := range mb.Sharders.CopyNodesMap() {
 		if !active || sharder.GetStatus() == node.NodeStatusActive {
 			urls = append(urls, sharder.GetN2NURLBase())
 		}
@@ -183,7 +186,8 @@ func (mc *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 
 	txn.ToClientID = minersc.ADDRESS
 	txn.PublicKey = selfNode.PublicKey
-	var minerUrls = mc.Miners.N2NURLs()
+	mb := mc.GetMagicBlock()
+	var minerUrls = mb.Miners.N2NURLs()
 	err := httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls)
 	return txn, err
 }

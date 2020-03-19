@@ -70,11 +70,12 @@ func (c *Chain) IsBlockNotarized(ctx context.Context, b *block.Block) bool {
 }
 
 func (c *Chain) roundMiners(round int64) (miners *node.Pool) {
-	if c.MagicBlock == nil {
+	mb := c.GetMagicBlock()
+	if mb == nil {
 		return
 	}
-	if round >= c.MagicBlock.StartingRound {
-		return c.MagicBlock.Miners
+	if round >= mb.StartingRound {
+		return mb.Miners
 	}
 	if c.PreviousMagicBlock == nil {
 		return
@@ -131,9 +132,17 @@ Simple 3 miner scenario :
 */
 func (c *Chain) UpdateNodeState(b *block.Block) {
 	r := c.GetRound(b.Round)
+	if r == nil {
+		Logger.Error("UpdateNodeState: round unexpected nil")
+		return
+	}
 	for _, vt := range b.GetVerificationTickets() {
-
-		signer := c.GetMiners(r.GetRoundNumber()).GetNode(vt.VerifierID)
+		miners := c.GetMiners(r.GetRoundNumber())
+		if miners == nil {
+			Logger.Error("UpdateNodeState: miners unexpected nil")
+			continue
+		}
+		signer := miners.GetNode(vt.VerifierID)
 		if signer == nil {
 			Logger.Error("this should not happen!")
 			continue
@@ -238,10 +247,11 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 //IsFinalizedDeterministically - checks if a block is finalized deterministically
 func (c *Chain) IsFinalizedDeterministically(b *block.Block) bool {
 	//TODO: The threshold count should happen w.r.t the view of the block
+	mb := c.GetMagicBlock()
 	if c.GetLatestFinalizedBlock().Round < b.Round {
 		return false
 	}
-	if len(b.UniqueBlockExtensions)*100 >= c.Miners.Size()*c.ThresholdByCount {
+	if len(b.UniqueBlockExtensions)*100 >= mb.Miners.Size()*c.ThresholdByCount {
 		return true
 	}
 	return false
@@ -254,6 +264,7 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 	params := &url.Values{}
 	params.Add("block", blockHash)
 	ctx := common.GetRootContext()
+	mb := c.GetMagicBlock()
 	var b *block.Block
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		Logger.Info("get notarized block", zap.String("block", blockHash), zap.Int64("cround", cround), zap.Int64("current_round", c.GetCurrentRound()))
@@ -288,7 +299,7 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 		}
 		return b, nil
 	}
-	n2n := c.Miners
+	n2n := mb.Miners
 	n2n.RequestEntity(ctx, nbrequestor, params, handler)
 	if b == nil {
 		Logger.Info("unable to fetch notarized block", zap.String("block", blockHash))

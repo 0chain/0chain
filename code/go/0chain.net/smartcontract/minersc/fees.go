@@ -47,10 +47,13 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction, inputData []b
 
 func (msc *MinerSmartContract) sumFee(b *block.Block, updateStats bool) state.Balance {
 	var totalMaxFee int64
-	feeStats := msc.SmartContractExecutionStats["feesPaid"].(metrics.Histogram)
+	var feeStats metrics.Histogram
+	if stat := msc.SmartContractExecutionStats["feesPaid"]; stat != nil {
+		feeStats = stat.(metrics.Histogram)
+	}
 	for _, txn := range b.Txns {
 		totalMaxFee += txn.Fee
-		if updateStats {
+		if updateStats && feeStats != nil {
 			feeStats.Update(txn.Fee)
 		}
 	}

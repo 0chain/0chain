@@ -62,7 +62,7 @@ func InitLogging(mode string) {
 	if mode != "development" {
 		mlcfg.Level.SetLevel(zapcore.ErrorLevel)
 	} else {
-		mlcfg.Level.SetLevel(zapcore.InfoLevel)
+		mlcfg.Level.SetLevel(zapcore.DebugLevel)
 	}
 	mLogger = createMemLogger(mlcfg)
 	option := createOptionFromCores(createZapCore(logWriter, cfg), mLogger.GetCore())

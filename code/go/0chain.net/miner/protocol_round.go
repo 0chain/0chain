@@ -18,10 +18,11 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	. "0chain.net/core/logging"
 	"0chain.net/core/memorystore"
 	"0chain.net/core/util"
 	"go.uber.org/zap"
+
+	. "0chain.net/core/logging"
 )
 
 var rbgTimer metrics.Timer // round block generation timer
@@ -367,7 +368,8 @@ func (mc *Chain) GetBlockProposalWaitTime(r round.RoundI) time.Duration {
 }
 
 func (mc *Chain) computeBlockProposalDynamicWaitTime(r round.RoundI) time.Duration {
-	medianTime := mc.Miners.GetMedianNetworkTime()
+	mb := mc.GetMagicBlock()
+	medianTime := mb.Miners.GetMedianNetworkTime()
 	generators := mc.GetGenerators(r)
 	for _, g := range generators {
 		sendTime := g.GetLargeMessageSendTime()
@@ -605,7 +607,8 @@ func (mc *Chain) BroadcastNotarizedBlocks(ctx context.Context, pr *Round) {
 
 /*GetLatestFinalizedBlockFromSharder - request for latest finalized block from all the sharders */
 func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*block.Block {
-	m2s := mc.Sharders
+	mb := mc.GetMagicBlock()
+	m2s := mb.Sharders
 	finalizedBlocks := make([]*block.Block, 0, 1)
 	fbMutex := &sync.Mutex{}
 	//Params are nil? Do we need to send any params like sending the miner ID ?
@@ -779,9 +782,8 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context, pnround int64)
 		lfbs = lfBlocks[0]
 	}
 
-	if (lfb == nil || lfb.Round == 0) &&
-		lfbs != nil &&
-		lfb.Round < lfbs.Round {
+	if lfbs != nil &&
+		(lfb == nil || lfb.Round == 0 || lfb.Round < lfbs.Round) {
 		mr := mc.getRound(ctx, lfbs.Round)
 		mc.SetRandomSeed(mr, lfbs.GetRoundRandomSeed())
 		mc.AddBlock(lfbs)

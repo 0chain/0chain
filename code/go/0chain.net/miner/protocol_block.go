@@ -485,7 +485,8 @@ func (mc *Chain) FinalizeBlock(ctx context.Context, b *block.Block) error {
 
 func getLatestBlockFromSharders(ctx context.Context) *block.Block {
 	mc := GetMinerChain()
-	mc.Sharders.OneTimeStatusMonitor(ctx)
+	mb := mc.GetMagicBlock()
+	mb.Sharders.OneTimeStatusMonitor(ctx)
 	lfBlocks := mc.GetLatestFinalizedBlockFromSharder(ctx)
 	//Sorting as per the latest finalized blocks from all the sharders
 	sort.Slice(lfBlocks, func(i int, j int) bool {
