@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -35,7 +36,61 @@ func Test_lockRequest_decode(t *testing.T) {
 }
 
 func Test_lockRequest_validate(t *testing.T) {
-	// TODO (sfxdx): implement
+	const (
+		allocID = "alloc_hex"
+		errMsg1 = "insufficient lock period"
+		errMsg2 = "lock duration is too big"
+		errMsg3 = "missing allocation id"
+		errMsg4 = "missing allocation blobbers"
+		errMsg5 = "doesn't belong to allocation"
+	)
+	var (
+		lr    lockRequest
+		conf  readPoolConfig
+		alloc StorageAllocation
+		err   error
+	)
+	alloc.BlobberMap = map[string]*BlobberAllocation{
+		"blob1": &BlobberAllocation{BlobberID: "blob1"},
+		"blob2": &BlobberAllocation{BlobberID: "blob2"},
+		"blob3": &BlobberAllocation{BlobberID: "blob3"},
+	}
+	conf.MinLockPeriod = 10 * time.Second
+	conf.MaxLockPeriod = 20 * time.Second
+	lr.Duration = 9 * time.Second
+	if err = lr.validate(&conf, &alloc); err == nil {
+		t.Fatal("missing error")
+	} else if err.Error() != errMsg1 {
+		t.Fatal("unexpected:", err)
+	}
+	lr.Duration = 21 * time.Second
+	if err = lr.validate(&conf, &alloc); err == nil {
+		t.Fatal("missing error")
+	} else if err.Error() != errMsg2 {
+		t.Fatal("unexpected:", err)
+	}
+	lr.Duration = 15 * time.Second
+	if err = lr.validate(&conf, &alloc); err == nil {
+		t.Fatal("missing error")
+	} else if err.Error() != errMsg3 {
+		t.Fatal("unexpected:", err)
+	}
+	lr.AllocationID = allocID
+	if err = lr.validate(&conf, &alloc); err == nil {
+		t.Fatal("missing error")
+	} else if err.Error() != errMsg4 {
+		t.Fatal("unexpected:", err)
+	}
+	lr.Blobbers = []string{"unknown"}
+	if err = lr.validate(&conf, &alloc); err == nil {
+		t.Fatal("missing error")
+	} else if !strings.Contains(err.Error(), errMsg5) {
+		t.Fatal("unexpected:", err)
+	}
+	lr.Blobbers = []string{"blob1", "blob2", "blob3"}
+	if err = lr.validate(&conf, &alloc); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func Test_readPoolLock_copy(t *testing.T) {
