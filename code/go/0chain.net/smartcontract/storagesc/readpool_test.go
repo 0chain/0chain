@@ -1,7 +1,10 @@
 package storagesc
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -557,13 +560,240 @@ func TestStorageSmartContract_readPoolLock(t *testing.T) {
 }
 
 func TestStorageSmartContract_readPoolUnlock(t *testing.T) {
-	// TODO (sfxdx): implement
+
+	const (
+		clientID = "client_hex"
+
+		errMsg1 = "read_pool_unlock_failed: can't get read pool:" +
+			" value not present"
+		errMsg2 = "read_pool_unlock_failed: no tokens to unlock"
+	)
+
+	var (
+		ssc      = newTestStorageSC()
+		balances = newTestBalances()
+		tx       = transaction.Transaction{
+			ClientID: clientID, ToClientID: ssc.ID, Value: 0,
+			CreationDate: common.Now(),
+		}
+		resp string
+		err  error
+	)
+
+	balances.txn = &tx
+
+	// 1. missing read pool
+	_, err = ssc.readPoolUnlock(&tx, nil, balances)
+	requireErrMsg(t, err, errMsg1)
+
+	var rp = newReadPool()
+	require.NoError(t, rp.save(ssc.ID, clientID, balances))
+
+	// 2. nothing to unlock
+	_, err = ssc.readPoolUnlock(&tx, nil, balances)
+	requireErrMsg(t, err, errMsg2)
+
+	// all fresh
+	rp.Locked.Balance = 100 + 50 + 73
+	rp.Locks["alloc1"] = readPoolBlobbers{
+		"blob11": []*readPoolLock{
+			&readPoolLock{
+				StartTime: tx.CreationDate + 20,
+				Duration:  75 * time.Second,
+				Value:     100,
+			},
+		},
+	}
+	// all outdated
+	rp.Locks["alloc2"] = readPoolBlobbers{
+		"blob21": []*readPoolLock{
+			&readPoolLock{
+				StartTime: tx.CreationDate - 20,
+				Duration:  10 * time.Second,
+				Value:     50,
+			},
+			&readPoolLock{
+				StartTime: tx.CreationDate - 20,
+				Duration:  10 * time.Second,
+				Value:     73,
+			},
+		},
+	}
+	// unlocked tokens
+	rp.Unlocked.Balance = 100
+	require.NoError(t, rp.save(ssc.ID, clientID, balances))
+
+	resp, err = ssc.readPoolUnlock(&tx, nil, balances)
+	require.NoError(t, err)
+	assert.Equal(t, fmt.Sprintf(`{"value":%d,"from_client":%q,"to_client":%q}`,
+		100+50+73, ssc.ID, clientID), resp)
+
+	// check saved read pool
+	rp, err = ssc.getReadPool(clientID, balances)
+	require.NoError(t, err)
+
+	assert.Equal(t, state.Balance(100), rp.Locked.Balance)
+	assert.Equal(t, state.Balance(0), rp.Unlocked.Balance)
 }
 
 func TestStorageSmartContract_getReadPoolStatHandler(t *testing.T) {
-	// TODO (sfxdx): implement
+
+	const (
+		clientID = "client_hex"
+	)
+
+	var (
+		ssc      = newTestStorageSC()
+		balances = newTestBalances()
+		params   = url.Values{"client_id": []string{clientID}}
+		ctx      = context.Background()
+		resp     interface{}
+		err      error
+	)
+
+	_, err = ssc.getReadPoolStatHandler(ctx, params, balances)
+	requireErrMsg(t, err, "value not present")
+
+	var rp = newReadPool()
+	require.NoError(t, rp.save(ssc.ID, clientID, balances))
+
+	// fresh empty read pool
+	resp, err = ssc.getReadPoolStatHandler(ctx, params, balances)
+	require.NoError(t, err)
+
+	assert.EqualValues(t, `{"locked":0,"unlocked":0,"locks":{}}`,
+		string(mustEncode(t, resp)))
+
+	// all fresh
+	var now = common.Now()
+	rp.Locked.Balance = 100 + 50 + 73
+	rp.Unlocked.Balance = 100
+	rp.Locks["alloc1"] = readPoolBlobbers{
+		"blob11": []*readPoolLock{
+			&readPoolLock{
+				StartTime: now + 20,
+				Duration:  75 * time.Second,
+				Value:     100,
+			},
+			&readPoolLock{
+				StartTime: now - 20,
+				Duration:  10 * time.Second,
+				Value:     50,
+			},
+		},
+	}
+	// all outdated
+	rp.Locks["alloc2"] = readPoolBlobbers{
+		"blob21": []*readPoolLock{
+			&readPoolLock{
+				StartTime: now - 20,
+				Duration:  10 * time.Second,
+				Value:     50,
+			},
+			&readPoolLock{
+				StartTime: now - 20,
+				Duration:  10 * time.Second,
+				Value:     73,
+			},
+		},
+	}
+
+	// should be dry updated
+
+	resp, err = ssc.getReadPoolStatHandler(ctx, params, balances)
+	require.NoError(t, err)
+
+	var (
+		got    = string(mustEncode(t, resp))
+		prefix = `{"locked":50,"unlocked":273,"locks":{"alloc1":` +
+			`{"blob11":[{"start_time":`
+		suffix = `,"duration":75000000000,"value":100}]}}}`
+	)
+	assert.True(t, strings.HasPrefix(got, prefix))
+	assert.True(t, strings.HasSuffix(got, suffix))
 }
 
 func TestStorageSmartContract_getReadPoolBlobberHandler(t *testing.T) {
-	// TODO (sfxdx): implement
+
+	const (
+		clientID = "client_hex"
+		allocID  = "alloc1"
+		blobID   = "blob1"
+	)
+
+	var (
+		ssc      = newTestStorageSC()
+		balances = newTestBalances()
+		params   = url.Values{
+			"client_id":     []string{clientID},
+			"allocation_id": []string{allocID},
+			"blobber_id":    []string{blobID},
+		}
+		ctx  = context.Background()
+		resp interface{}
+		err  error
+	)
+
+	_, err = ssc.getReadPoolBlobberHandler(ctx, params, balances)
+	requireErrMsg(t, err, "value not present")
+
+	var rp = newReadPool()
+	require.NoError(t, rp.save(ssc.ID, clientID, balances))
+
+	// no such allocation
+	_, err = ssc.getReadPoolBlobberHandler(ctx, params, balances)
+	requireErrMsg(t, err, "no such allocation")
+
+	var now = common.Now()
+	rp.Locks[allocID] = readPoolBlobbers{
+		"another": []*readPoolLock{
+			&readPoolLock{
+				StartTime: now + 20,
+				Duration:  75 * time.Second,
+				Value:     100,
+			},
+		},
+	}
+	require.NoError(t, rp.save(ssc.ID, clientID, balances))
+
+	// no such blobber
+	_, err = ssc.getReadPoolBlobberHandler(ctx, params, balances)
+	requireErrMsg(t, err, "no such blobber")
+
+	rp.Locks[allocID] = readPoolBlobbers{
+		blobID: []*readPoolLock{
+			// fresh
+			&readPoolLock{
+				StartTime: now + 20,
+				Duration:  75 * time.Second,
+				Value:     98,
+			},
+			// expired
+			&readPoolLock{
+				StartTime: 0, // now - 175,
+				Duration:  0, //75 * time.Second,
+				Value:     112,
+			},
+		},
+	}
+	require.NoError(t, rp.save(ssc.ID, clientID, balances))
+
+	// should be dry updated
+
+	resp, err = ssc.getReadPoolBlobberHandler(ctx, params, balances)
+	require.NoError(t, err)
+	require.IsType(t, []*readPoolLock{}, resp)
+	require.Len(t, resp, 1)
+
+	var rpl = resp.([]*readPoolLock)
+	assert.EqualValues(t, []*readPoolLock{
+		&readPoolLock{
+			StartTime: rpl[0].StartTime,
+			Duration:  75 * time.Second,
+			Value:     98,
+		},
+	}, resp)
+
+	// val = `[{"start_time":1584702227,"duration":75000000000,"value":100},{"start_time":1584702187,"duration":75000000000,"value":100}]`
+
 }

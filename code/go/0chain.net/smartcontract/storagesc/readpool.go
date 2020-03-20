@@ -109,9 +109,13 @@ func (rpa readPoolAllocs) update(now common.Timestamp) (
 				blob[i] = b
 				i++
 			}
-			blob = blob[:i] // remove expired locks
-			if len(blob) == 0 {
-				delete(alloc, blobID) // remove empty locks list
+			if i < len(blob) {
+				blob = blob[:i] // remove expired locks
+				if len(blob) == 0 {
+					delete(alloc, blobID) // remove empty locks list
+				} else {
+					alloc[blobID] = blob // update
+				}
 			}
 		}
 		if len(alloc) == 0 {
@@ -452,7 +456,8 @@ func (ssc *StorageSmartContract) readPoolUnlock(t *transaction.Transaction,
 
 	var rp *readPool
 	if rp, err = ssc.getReadPool(t.ClientID, balances); err != nil {
-		return "", common.NewError("read_pool_unlock_failed", err.Error())
+		return "", common.NewError("read_pool_unlock_failed",
+			"can't get read pool: "+err.Error())
 	}
 
 	// the request
@@ -522,11 +527,7 @@ func (ssc *StorageSmartContract) getReadPoolBlobberHandler(ctx context.Context,
 	if rp, err = ssc.getReadPool(clientID, balances); err != nil {
 		return
 	}
-
 	var stat = rp.stat()
-	if stat.Locks == nil {
-		return nil, errors.New("no such allocation") // no allocations at all
-	}
 	var blobbers, ok = stat.Locks[allocationID]
 	if !ok {
 		return nil, errors.New("no such allocation")
