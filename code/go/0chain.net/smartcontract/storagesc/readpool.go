@@ -204,7 +204,7 @@ func (rp *readPool) fill(t *transaction.Transaction,
 // addLocks for allocation (client balance already checked,
 // tokens already moved to Lock pool)
 func (rp *readPool) addLocks(now common.Timestamp, value state.Balance,
-	req *lockRequest, alloc *StorageAllocation) (re state.Balance, err error) {
+	req *lockRequest, alloc *StorageAllocation) (re state.Balance) {
 
 	if rp.Locks == nil {
 		rp.Locks = make(readPoolAllocs, 1)
@@ -397,7 +397,8 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 
 	var alloc *StorageAllocation
 	if alloc, err = ssc.getAllocation(lr.AllocationID, balances); err != nil {
-		return "", common.NewError("read_pool_lock_failed", err.Error())
+		return "", common.NewError("read_pool_lock_failed",
+			"can't get allocation: "+err.Error())
 	}
 
 	// validate the request
@@ -409,7 +410,8 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 
 	var rp *readPool
 	if rp, err = ssc.getReadPool(t.ClientID, balances); err != nil {
-		return "", common.NewError("read_pool_lock_failed", err.Error())
+		return "", common.NewError("read_pool_lock_failed",
+			"can't get read pool: "+err.Error())
 	}
 
 	// check client balance
@@ -423,12 +425,7 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 		return "", common.NewError("read_pool_lock_failed", err.Error())
 	}
 
-	var re state.Balance
-	re, err = rp.addLocks(t.CreationDate, state.Balance(t.Value), &lr, alloc)
-	if err != nil {
-		return "", common.NewError("read_pool_lock_failed", err.Error())
-	}
-
+	var re = rp.addLocks(t.CreationDate, state.Balance(t.Value), &lr, alloc)
 	// move the rounding error to unlocked
 	if re > 0 {
 		// move tokens
@@ -460,13 +457,12 @@ func (ssc *StorageSmartContract) readPoolUnlock(t *transaction.Transaction,
 
 	// the request
 
-	var ul state.Balance
-	if ul, err = rp.update(t.CreationDate); err != nil {
+	if _, err = rp.update(t.CreationDate); err != nil {
 		return "", common.NewError("read_pool_unlock_failed",
 			"can't update read pool: "+err.Error())
 	}
 
-	if ul == 0 {
+	if rp.Unlocked.Balance == 0 {
 		return "", common.NewError("read_pool_unlock_failed",
 			"no tokens to unlock")
 	}

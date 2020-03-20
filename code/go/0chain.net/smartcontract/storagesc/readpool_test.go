@@ -32,7 +32,7 @@ func Test_lockRequest_decode(t *testing.T) {
 func requireErrMsg(t *testing.T, err error, msg string) {
 	t.Helper()
 	require.Error(t, err, "missing error")
-	require.Equal(t, err.Error(), msg, "unexpected error")
+	require.Equal(t, msg, err.Error(), "unexpected error")
 }
 
 func Test_lockRequest_validate(t *testing.T) {
@@ -207,18 +207,14 @@ func Test_readPool_Encode_Decode(t *testing.T) {
 				},
 			},
 		}
-		lr  lockRequest
-		re  state.Balance
-		err error
+		lr lockRequest
 	)
 
 	lr.AllocationID = "all"
 	lr.Blobbers = blobbers
 	lr.Duration = dur
 
-	re, err = rpe.addLocks(now, value, &lr, &alloc)
-	require.NoError(t, err)
-	require.Zero(t, re)
+	require.Zero(t, rpe.addLocks(now, value, &lr, &alloc))
 	require.NoError(t, rpd.Decode(rpe.Encode()))
 	require.EqualValues(t, rpe, rpd)
 }
@@ -405,11 +401,159 @@ func TestStorageSmartContract_newReadPool(t *testing.T) {
 }
 
 func TestStorageSmartContract_checkFill(t *testing.T) {
-	// TODO (sfxdx): implement
+	const (
+		clientID = "client_hex"
+		errMsg1  = "no tokens to lock"
+		errMsg2  = "lock amount is greater than balance"
+		errMsg3  = "negative transaction value given"
+	)
+	var (
+		ssc      = newTestStorageSC()
+		balances = newTestBalances()
+		tx       = transaction.Transaction{ClientID: clientID, Value: 100}
+	)
+	requireErrMsg(t, ssc.checkFill(&tx, balances), errMsg1)
+	balances.balances[clientID] = 90
+	requireErrMsg(t, ssc.checkFill(&tx, balances), errMsg2)
+	tx.Value = -1
+	requireErrMsg(t, ssc.checkFill(&tx, balances), errMsg3)
 }
 
 func TestStorageSmartContract_readPoolLock(t *testing.T) {
-	// TODO (sfxdx): implement
+	const (
+		allocID, clientID = "alloc_hex", "client_hex"
+
+		errMsg1 = "read_pool_lock_failed: insufficient amount to lock"
+		errMsg2 = "read_pool_lock_failed: invalid character '}' looking for" +
+			" beginning of value"
+		errMsg3 = "read_pool_lock_failed: can't get allocation:" +
+			" value not present"
+		errMsg4 = "read_pool_lock_failed: blobber \"blob4\" doesn't belong" +
+			" to allocation \"alloc_hex\""
+		errMsg5 = "read_pool_lock_failed: can't get read pool:" +
+			" value not present"
+		errMsg6 = "read_pool_lock_failed: no tokens to lock"
+	)
+
+	var (
+		ssc      = newTestStorageSC()
+		balances = newTestBalances()
+		tx       = transaction.Transaction{
+			ClientID: clientID, ToClientID: ssc.ID, Value: 5,
+			CreationDate: common.Now(),
+		}
+		lr    lockRequest
+		alloc StorageAllocation
+		input []byte
+		conf  scConfig
+		resp  string
+		err   error
+	)
+
+	// setup SC configurations
+	conf.ReadPool = new(readPoolConfig)
+	conf.ReadPool.MinLock = 10
+	conf.ReadPool.MinLockPeriod = 10 * time.Second
+	conf.ReadPool.MaxLockPeriod = 100 * time.Second
+
+	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), &conf)
+	require.NoError(t, err)
+
+	// 1. value is less then configured min lock
+	_, err = ssc.readPoolLock(&tx, nil, balances)
+	requireErrMsg(t, err, errMsg1)
+
+	// 2. invalid request JSON
+	tx.Value = 100
+	input = []byte("}{ invalid JSON }{")
+	_, err = ssc.readPoolLock(&tx, input, balances)
+	requireErrMsg(t, err, errMsg2)
+
+	// setup request
+	lr.AllocationID = allocID
+	lr.Blobbers = []string{"blob1", "blob2", "blob3", "blob4"}
+	lr.Duration = 20 * time.Second
+
+	// 3. missing allocation
+	_, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
+	requireErrMsg(t, err, errMsg3)
+
+	// setup allocation
+	alloc.ID = allocID
+	alloc.BlobberDetails = []*BlobberAllocation{
+		&BlobberAllocation{BlobberID: "blob1", Terms: Terms{ReadPrice: 10}},
+		&BlobberAllocation{BlobberID: "blob2", Terms: Terms{ReadPrice: 20}},
+		&BlobberAllocation{BlobberID: "blob3", Terms: Terms{ReadPrice: 40}},
+	}
+	alloc.Blobbers = []*StorageNode{
+		&StorageNode{ID: "blob1"},
+		&StorageNode{ID: "blob2"},
+		&StorageNode{ID: "blob3"},
+	}
+	_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), &alloc)
+	require.NoError(t, err)
+
+	// 4. blobber not of the allocation
+	_, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
+	requireErrMsg(t, err, errMsg4)
+
+	// 5. missing read pool
+	lr.Blobbers = []string{"blob1", "blob2", "blob3"}
+	_, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
+	requireErrMsg(t, err, errMsg5)
+
+	var rp = newReadPool()
+	require.NoError(t, rp.save(ssc.ID, clientID, balances))
+
+	// 6. client has no money
+	_, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
+	requireErrMsg(t, err, errMsg6)
+
+	balances.balances[clientID] = 500
+	balances.txn = &tx
+
+	// 7. ok
+	resp, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
+	require.NoError(t, err)
+	assert.Equal(t, `{"value":100,"from_client":"`+clientID+`","to_client":`+
+		`"`+ssc.ID+`"}`,
+		resp)
+	if assert.Len(t, balances.transfers, 1) {
+		assert.EqualValues(t, &state.Transfer{
+			ClientID:   clientID,
+			ToClientID: ssc.ID,
+			Amount:     100,
+		}, balances.transfers[0])
+	}
+	rp, err = ssc.getReadPool(clientID, balances)
+	require.NoError(t, err)
+	assert.Equal(t, rp.Locked.Balance, state.Balance(99))
+	assert.Equal(t, rp.Unlocked.Balance, state.Balance(1))
+	assert.EqualValues(t, readPoolAllocs{
+		allocID: readPoolBlobbers{
+			"blob1": []*readPoolLock{
+				&readPoolLock{
+					StartTime: tx.CreationDate,
+					Duration:  lr.Duration,
+					Value:     14,
+				},
+			},
+			"blob2": []*readPoolLock{
+				&readPoolLock{
+					StartTime: tx.CreationDate,
+					Duration:  lr.Duration,
+					Value:     28,
+				},
+			},
+			"blob3": []*readPoolLock{
+				&readPoolLock{
+					StartTime: tx.CreationDate,
+					Duration:  lr.Duration,
+					Value:     57,
+				},
+			},
+		},
+	}, rp.Locks)
 }
 
 func TestStorageSmartContract_readPoolUnlock(t *testing.T) {
