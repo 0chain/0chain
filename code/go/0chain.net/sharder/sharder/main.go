@@ -222,8 +222,8 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, error) {
 
 func initHandlers() {
 	if config.Development() {
-		http.HandleFunc("/_hash", encryption.HashHandler)
-		http.HandleFunc("/_sign", common.ToJSONResponse(encryption.SignHandler))
+		http.HandleFunc("/_hash", common.Recover(encryption.HashHandler))
+		http.HandleFunc("/_sign", common.Recover(common.ToJSONResponse(encryption.SignHandler)))
 	}
 	config.SetupHandlers()
 	node.SetupHandlers()

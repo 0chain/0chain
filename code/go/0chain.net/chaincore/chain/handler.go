@@ -27,8 +27,8 @@ import (
 
 /*SetupHandlers sets up the necessary API end points */
 func SetupHandlers() {
-	http.HandleFunc("/v1/chain/get", common.ToJSONResponse(memorystore.WithConnectionHandler(GetChainHandler)))
-	http.HandleFunc("/v1/chain/put", datastore.ToJSONEntityReqResponse(memorystore.WithConnectionEntityJSONHandler(PutChainHandler, chainEntityMetadata), chainEntityMetadata))
+	http.HandleFunc("/v1/chain/get", common.Recover(common.ToJSONResponse(memorystore.WithConnectionHandler(GetChainHandler))))
+	http.HandleFunc("/v1/chain/put", common.Recover(datastore.ToJSONEntityReqResponse(memorystore.WithConnectionEntityJSONHandler(PutChainHandler, chainEntityMetadata), chainEntityMetadata)))
 
 	// Miner can only provide recent blocks, sharders can provide any block (for content other than full) and the block they store for full
 	if node.Self.Underlying().Type == node.NodeTypeMiner {

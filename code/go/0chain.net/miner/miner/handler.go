@@ -21,10 +21,10 @@ const updateConfigAllURL = "/v1/config/update_all"
 /*SetupHandlers - setup update config related handlers */
 func SetupHandlers() {
 	if config.Development() {
-		http.HandleFunc("/_hash", encryption.HashHandler)
-		http.HandleFunc("/_sign", common.ToJSONResponse(encryption.SignHandler))
-		http.HandleFunc(updateConfigURL, ConfigUpdateHandler)
-		http.HandleFunc(updateConfigAllURL, ConfigUpdateAllHandler)
+		http.HandleFunc("/_hash", common.Recover(encryption.HashHandler))
+		http.HandleFunc("/_sign", common.Recover(common.ToJSONResponse(encryption.SignHandler)))
+		http.HandleFunc(updateConfigURL, common.Recover(ConfigUpdateHandler))
+		http.HandleFunc(updateConfigAllURL, common.Recover(ConfigUpdateAllHandler))
 	}
 }
 
