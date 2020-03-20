@@ -25,7 +25,7 @@ type lockRequest struct {
 	Blobbers     []string      `json:"blobbers"`      // for blobbers
 
 	// 1. value and start time provided in transaction
-	// 2. value divided by the number of blobbers evenly
+	// 2. value divided by the number of blobbers with read price weight
 }
 
 // validate the lock request
@@ -204,7 +204,7 @@ func (rp *readPool) fill(t *transaction.Transaction,
 // addLocks for allocation (client balance already checked,
 // tokens already moved to Lock pool)
 func (rp *readPool) addLocks(now common.Timestamp, value state.Balance,
-	req *lockRequest) (err error) {
+	req *lockRequest, alloc *StorageAllocation) (re state.Balance, err error) {
 
 	if rp.Locks == nil {
 		rp.Locks = make(readPoolAllocs, 1)
@@ -216,45 +216,40 @@ func (rp *readPool) addLocks(now common.Timestamp, value state.Balance,
 		rp.Locks[req.AllocationID] = blobbers
 	}
 
-	// value for a blobber
-	var val = value / state.Balance(len(req.Blobbers))
-
-	for _, id := range req.Blobbers {
+	// divide by read price (weighted division)
+	var (
+		prices = make(map[string]float64, len(alloc.BlobberDetails))
+		rps    float64
+	)
+	// build map blobber_id -> read price
+	for _, details := range alloc.BlobberDetails {
+		prices[details.BlobberID] = float64(details.Terms.ReadPrice)
+	}
+	// calculate read_prices sum for all blobbers in request
+	for _, b := range req.Blobbers {
+		rps += prices[b]
+	}
+	// rounding (truncating) error
+	var locked state.Balance
+	// add locks for the blobbers
+	for _, b := range req.Blobbers {
 		var lock readPoolLock
 		lock.StartTime = now
 		lock.Duration = req.Duration
-		lock.Value = val
-		blobbers[id] = append(blobbers[id], &lock) // add the lock
+		lock.Value = state.Balance(float64(value) * (prices[b] / rps))
+		locked += lock.Value
+		blobbers[b] = append(blobbers[b], &lock) // add the lock
 	}
 
+	re = value - locked
 	return
 }
 
 // move all expired tokens from Lock pool to Unlock pool; returns number
 // of unlocked tokens
 func (rp *readPool) update(now common.Timestamp) (ul state.Balance, err error) {
-	for allocID, alloc := range rp.Locks {
-		for blobID, blob := range alloc {
-			var i int
-			for _, b := range blob {
-				if now > b.StartTime+toSeconds(b.Duration) {
-					ul += b.Value // unlock, expired
-					continue
-				}
-				blob[i] = b
-				i++
-			}
-			blob = blob[:i] // remove expired locks
-			if len(blob) == 0 {
-				delete(alloc, blobID) // remove empty locks list
-			}
-		}
-		if len(alloc) == 0 {
-			delete(rp.Locks, allocID) // remove empty allocation
-		}
-	}
 
-	if ul == 0 {
+	if ul = rp.Locks.update(now); ul == 0 {
 		return // nothing to move
 	}
 
@@ -320,7 +315,7 @@ func (ssc *StorageSmartContract) getReadPool(clientID datastore.Key,
 	return
 }
 
-// newReadPool SC function creates new read pool for a client.
+// newReadPool SC function creates new read pool for a client;
 // it saves the read pool
 func (ssc *StorageSmartContract) newReadPool(t *transaction.Transaction,
 	input []byte, balances chainState.StateContextI) (resp string, err error) {
@@ -339,8 +334,7 @@ func (ssc *StorageSmartContract) newReadPool(t *transaction.Transaction,
 	rp.Locked.ID = readPoolKey(ssc.ID, t.ClientID) + ":locked"
 	rp.Unlocked.ID = readPoolKey(ssc.ID, t.ClientID) + ":unlocked"
 
-	_, err = balances.InsertTrieNode(readPoolKey(ssc.ID, t.ClientID), rp)
-	if err != nil {
+	if err = rp.save(ssc.ID, t.ClientID, balances); err != nil {
 		return "", common.NewError("new_read_pool_failed", err.Error())
 	}
 
@@ -429,9 +423,20 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 		return "", common.NewError("read_pool_lock_failed", err.Error())
 	}
 
-	err = rp.addLocks(t.CreationDate, state.Balance(t.Value), &lr)
+	var re state.Balance
+	re, err = rp.addLocks(t.CreationDate, state.Balance(t.Value), &lr, alloc)
 	if err != nil {
 		return "", common.NewError("read_pool_lock_failed", err.Error())
+	}
+
+	// move the rounding error to unlocked
+	if re > 0 {
+		// move tokens
+		_, _, err = rp.Locked.TransferTo(rp.Unlocked, re, nil)
+		if err != nil {
+			return "", common.NewError("read_pool_lock_failed",
+				"unlocking rounding error: "+err.Error())
+		}
 	}
 
 	if err = rp.save(ssc.ID, t.ClientID, balances); err != nil {
