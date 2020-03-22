@@ -221,60 +221,6 @@ func (ssc *StorageSmartContract) createChallengePool(t *transaction.Transaction,
 }
 
 /*
-// lock tokens for challenge pool of transaction's client
-// TODO (sfxdx): remade, shouldn't be a SC function
-func (ssc *StorageSmartContract) challengePoolLock(t *transaction.Transaction,
-	input []byte, balances chainState.StateContextI) (resp string, err error) {
-
-	// challenge lock request & user balance
-
-	var req challengePoolRequest
-	if err = req.decode(input); err != nil {
-		return "", common.NewError("challenge_pool_lock_failed", err.Error())
-	}
-	var balance state.Balance
-	balance, err = balances.GetClientBalance(t.ClientID)
-
-	if err != nil && err != util.ErrValueNotPresent {
-		return "", common.NewError("challenge_pool_lock_failed", err.Error())
-	}
-
-	if err == util.ErrValueNotPresent {
-		return "", common.NewError("challenge_pool_lock_failed",
-			"no tokens to lock")
-	}
-
-	if state.Balance(t.Value) > balance {
-		return "", common.NewError("challenge_pool_lock_failed",
-			"lock amount is greater than balance")
-	}
-
-	if req.AllocationID == "" {
-		return "", common.NewError("challenge_pool_lock_failed",
-			"missing allocation_id")
-	}
-
-	// user challenge pools
-
-	var cp *challengePool
-	if cp, err = ssc.getChallengePool(req.AllocationID, balances); err != nil {
-		return "", common.NewError("challenge_pool_lock_failed", err.Error())
-	}
-
-	// lock more tokens
-
-	if _, resp, err = cp.transferHere(t, balances); err != nil {
-		return "", common.NewError("challenge_pool_lock_failed",
-			err.Error())
-	}
-
-	if err = cp.save(ssc.ID, req.AllocationID, balances); err != nil {
-		return "", common.NewError("challenge_pool_lock_failed", err.Error())
-	}
-
-	return
-}
-
 // unlock tokens if expired
 // TODO (sfxdx): remade, shouldn't be a SC function.
 func (ssc *StorageSmartContract) challengePoolUnlock(t *transaction.Transaction,

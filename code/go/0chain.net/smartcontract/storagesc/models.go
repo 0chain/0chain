@@ -386,7 +386,6 @@ type StorageAllocation struct {
 	Blobbers          []*StorageNode                `json:"blobbers"`
 	Owner             string                        `json:"owner_id"`
 	OwnerPublicKey    string                        `json:"owner_public_key"`
-	Payer             string                        `json:"payer_id"`
 	Stats             *StorageAllocationStats       `json:"stats"`
 	PreferredBlobbers []string                      `json:"preferred_blobbers"`
 	BlobberDetails    []*BlobberAllocation          `json:"blobber_details"`
@@ -442,10 +441,6 @@ func (sa *StorageAllocation) validate(conf *scConfig) (err error) {
 
 	if sa.Owner == "" {
 		return errors.New("missing owner id")
-	}
-
-	if sa.Payer == "" {
-		return errors.New("missing payer id")
 	}
 
 	return // nil

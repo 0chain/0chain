@@ -237,6 +237,9 @@ type tokenLock struct {
 }
 
 func (tl tokenLock) IsLocked(entity interface{}) bool {
+	if entity == nil {
+		return false // move to blobber
+	}
 	if tm, ok := entity.(time.Time); ok {
 		return tm.Sub(common.ToTime(tl.StartTime)) < tl.Duration
 	}

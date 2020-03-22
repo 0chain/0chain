@@ -138,6 +138,35 @@ func Test_writePool_setExpiration(t *testing.T) {
 	}, wp.ZcnLockingPool.TokenLockInterface)
 }
 
+func Test_writePool_moveToChallenge(t *testing.T) {
+	// moveToChallenge(cp *challengePool, value state.Balance) (err error)
+
+	const clientID = "client_id"
+	var (
+		wp = newWritePool(clientID)
+		cp = newChallengePool()
+	)
+
+	cp.TokenLockInterface = &tokenLock{
+		StartTime: common.Now(),
+		Duration:  100 * time.Second,
+	}
+	cp.TokenPool.ID = "cp_id"
+
+	wp.TokenLockInterface = &tokenLock{
+		StartTime: common.Now(),
+		Duration:  100 * time.Second,
+	}
+	wp.TokenPool.ID = "cp_id"
+
+	requireErrMsg(t, wp.moveToChallenge(cp, 90),
+		"not enough tokens in write pool")
+	wp.Balance = 120
+	require.NoError(t, wp.moveToChallenge(cp, 90))
+	assert.Equal(t, state.Balance(30), wp.Balance)
+	assert.Equal(t, state.Balance(90), cp.Balance)
+}
+
 func Test_writePoolStat_decode(t *testing.T) {
 	var state, statd writePoolStat
 

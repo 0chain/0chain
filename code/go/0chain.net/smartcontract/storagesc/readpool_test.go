@@ -8,6 +8,7 @@ import (
 	"time"
 
 	chainState "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 
@@ -81,6 +82,74 @@ func Test_readPools_addPool_delPool(t *testing.T) {
 	require.Error(t, rps.addPool(rp))
 	rps.delPool(rp.ID)
 	assert.Len(t, rps.Pools, 0, "not deleted")
+}
+
+func Test_readPools_moveToBlobber(t *testing.T) {
+
+	const (
+		blobberID = "blobber_id"
+		errMsg    = "not enough tokens in read pool"
+	)
+
+	var (
+		rps                 = newReadPools()
+		sp                  = newStakePool(blobberID)
+		now                 = common.Now()
+		value state.Balance = 90
+	)
+
+	requireErrMsg(t, rps.moveToBlobber(now, sp, value), errMsg)
+
+	// unlocked
+	var unlocked = newReadPool()
+	unlocked.ID = "unlocked_id"
+	unlocked.Balance = 150
+	unlocked.TokenLockInterface = &tokenLock{
+		StartTime: now - 100,
+		Duration:  10 * time.Second,
+	}
+
+	require.NoError(t, rps.addPool(unlocked))
+	requireErrMsg(t, rps.moveToBlobber(now, sp, value), errMsg)
+
+	// not enough tokens
+	var small = newReadPool()
+	small.ID = "small_id"
+	small.Balance = 50
+	small.TokenLockInterface = &tokenLock{
+		StartTime: now,
+		Duration:  100 * time.Second,
+	}
+
+	require.NoError(t, rps.addPool(small))
+
+	// enough tokens and should left a bit
+	var enough = newReadPool()
+	enough.ID = "enough_id"
+	enough.Balance = 50
+	enough.TokenLockInterface = &tokenLock{
+		StartTime: now,
+		Duration:  100 * time.Second,
+	}
+
+	require.NoError(t, rps.addPool(enough))
+	require.NoError(t, rps.moveToBlobber(now, sp, value))
+
+	// check pools
+	assert.Equal(t, state.Balance(90), sp.Unlocked.Balance)
+	assert.Len(t, rps.Pools, 2)
+
+	var gotIt *readPool
+	for k, v := range rps.Pools {
+		if k == unlocked.ID {
+			continue
+		}
+		gotIt = v
+	}
+
+	assert.Equal(t, state.Balance(10), gotIt.Balance)
+
+	requireErrMsg(t, rps.moveToBlobber(now, sp, value), errMsg)
 }
 
 func Test_readPoolStats_encode_decode(t *testing.T) {

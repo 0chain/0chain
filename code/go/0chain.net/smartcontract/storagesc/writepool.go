@@ -3,6 +3,7 @@ package storagesc
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"time"
@@ -106,6 +107,18 @@ func (wp *writePool) setExpiration(set common.Timestamp) (err error) {
 			wp.TokenLockInterface)
 	}
 	tl.Duration = time.Duration(set-tl.StartTime) * time.Second
+	return
+}
+
+// moveToChallenge moves given amount of token to challenge pool
+func (wp *writePool) moveToChallenge(cp *challengePool, value state.Balance) (
+	err error) {
+
+	if wp.Balance < value {
+		return errors.New("not enough tokens in write pool")
+	}
+
+	_, _, err = wp.TransferTo(cp, value, nil)
 	return
 }
 
