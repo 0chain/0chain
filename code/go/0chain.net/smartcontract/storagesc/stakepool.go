@@ -271,23 +271,6 @@ func (stat *stakePoolStat) decode(input []byte) error {
 	return json.Unmarshal(input, stat)
 }
 
-//
-// tokens lock interface
-//
-
-type tokenLock struct {
-	StartTime common.Timestamp `json:"start_time"`
-	Duration  time.Duration    `json:"duration"`
-	Owner     datastore.Key    `json:"owner"`
-}
-
-func (tl tokenLock) IsLocked(entity interface{}) bool {
-	if tm, ok := entity.(time.Time); ok {
-		return tm.Sub(common.ToTime(tl.StartTime)) < tl.Duration
-	}
-	return true
-}
-
 type stakePoolLockStat struct {
 	StartTime common.Timestamp `json:"start_time"`
 	Duration  time.Duration    `json:"duration"`
@@ -301,18 +284,6 @@ func (spls *stakePoolLockStat) encode() (b []byte) {
 		panic(err) // must never happens
 	}
 	return
-}
-
-func (tl tokenLock) LockStats(entity interface{}) []byte {
-	if tm, ok := entity.(time.Time); ok {
-		var stat stakePoolLockStat
-		stat.StartTime = tl.StartTime
-		stat.Duration = tl.Duration
-		stat.TimeLeft = (tl.Duration - tm.Sub(common.ToTime(tl.StartTime)))
-		stat.Locked = tl.IsLocked(tm)
-		return stat.encode()
-	}
-	return nil
 }
 
 //
