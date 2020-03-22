@@ -3,16 +3,13 @@ package storagesc
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/url"
-	"strings"
 	"testing"
 	"time"
 
-	"0chain.net/chaincore/state"
+	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/core/util"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -25,775 +22,428 @@ func mustEncode(t *testing.T, val interface{}) []byte {
 	return b
 }
 
-func Test_lockRequest_decode(t *testing.T) {
-	var lre, lrd lockRequest
-	lre.Duration = time.Second * 60
-	require.NoError(t, lrd.decode(mustEncode(t, lre)))
-	assert.EqualValues(t, lrd, lre)
-}
-
 func requireErrMsg(t *testing.T, err error, msg string) {
 	t.Helper()
 	require.Error(t, err, "missing error")
 	require.Equal(t, msg, err.Error(), "unexpected error")
 }
 
-func Test_lockRequest_validate(t *testing.T) {
-	const (
-		allocID = "alloc_hex"
-		errMsg1 = "insufficient lock period"
-		errMsg2 = "lock duration is too big"
-		errMsg3 = "missing allocation id"
-		errMsg4 = "missing allocation blobbers"
-		errMsg5 = "doesn't belong to allocation"
-	)
-	var (
-		lr    lockRequest
-		conf  readPoolConfig
-		alloc StorageAllocation
-		err   error
-	)
-	alloc.BlobberMap = map[string]*BlobberAllocation{
-		"blob1": &BlobberAllocation{BlobberID: "blob1"},
-		"blob2": &BlobberAllocation{BlobberID: "blob2"},
-		"blob3": &BlobberAllocation{BlobberID: "blob3"},
-	}
-	conf.MinLockPeriod = 10 * time.Second
-	conf.MaxLockPeriod = 20 * time.Second
-	lr.Duration = 9 * time.Second
-	err = lr.validate(&conf, &alloc)
-	requireErrMsg(t, err, errMsg1)
-	lr.Duration = 21 * time.Second
-	err = lr.validate(&conf, &alloc)
-	requireErrMsg(t, err, errMsg2)
-	lr.Duration = 15 * time.Second
-	err = lr.validate(&conf, &alloc)
-	requireErrMsg(t, err, errMsg3)
-	lr.AllocationID = allocID
-	err = lr.validate(&conf, &alloc)
-	requireErrMsg(t, err, errMsg4)
-	lr.Blobbers = []string{"unknown"}
-	err = lr.validate(&conf, &alloc)
-	require.Error(t, err, "missing error")
-	require.True(t, strings.Contains(err.Error(), errMsg5), "unexpected error")
-	lr.Blobbers = []string{"blob1", "blob2", "blob3"}
-	err = lr.validate(&conf, &alloc)
-	require.NoError(t, err)
+func Test_lockRequest_decode(t *testing.T) {
+	var lre, lrd lockRequest
+	lre.Duration = time.Second * 60
+	require.NoError(t, lrd.decode(mustEncode(t, &lre)))
+	assert.EqualValues(t, lre, lrd)
 }
 
-func Test_readPoolLock_copy(t *testing.T) {
-	var rpl readPoolLock
-	rpl.StartTime = common.Now()
-	rpl.Duration = 20 * time.Second
-	rpl.Value = 50
-	var cp = rpl.copy()
-	require.False(t, (*cp) != rpl)
-}
-
-func Test_readPoolBlobbers_copy(t *testing.T) {
-	var rpbs = readPoolBlobbers{
-		"blob1": []*readPoolLock{
-			&readPoolLock{StartTime: 10, Duration: 10 * time.Second, Value: 10},
-			&readPoolLock{StartTime: 20, Duration: 20 * time.Second, Value: 20},
-			&readPoolLock{StartTime: 30, Duration: 30 * time.Second, Value: 30},
-		},
-		"blob2": []*readPoolLock{
-			&readPoolLock{StartTime: 40, Duration: 40 * time.Second, Value: 40},
-			&readPoolLock{StartTime: 50, Duration: 50 * time.Second, Value: 50},
-			&readPoolLock{StartTime: 60, Duration: 60 * time.Second, Value: 60},
-		},
-	}
-	require.EqualValues(t, rpbs.copy(), rpbs)
-}
-
-func Test_readPoolAllocs_update(t *testing.T) {
-	var (
-		rpa readPoolAllocs
-		tp  = common.Now()
-	)
-	require.Zero(t, rpa.update(common.Now()))
-	rpa = make(readPoolAllocs)
-	// all fresh
-	rpa["alloc1"] = readPoolBlobbers{
-		"blob11": []*readPoolLock{
-			&readPoolLock{
-				StartTime: tp + 20,
-				Duration:  75 * time.Second,
-				Value:     100,
-			},
-		},
-	}
-	// all outdated
-	rpa["alloc2"] = readPoolBlobbers{
-		"blob21": []*readPoolLock{
-			&readPoolLock{
-				StartTime: tp - 20,
-				Duration:  10 * time.Second,
-				Value:     50,
-			},
-			&readPoolLock{
-				StartTime: tp - 20,
-				Duration:  10 * time.Second,
-				Value:     73,
-			},
-		},
-	}
-	require.True(t, rpa.update(tp) == 50+73)
-	require.EqualValues(t, readPoolAllocs{
-		"alloc1": readPoolBlobbers{
-			"blob11": []*readPoolLock{
-				&readPoolLock{
-					StartTime: tp + 20,
-					Duration:  75 * time.Second,
-					Value:     100,
-				},
-			},
-		},
-	}, rpa)
-}
-
-func Test_readPoolAllocs_copy(t *testing.T) {
-	var (
-		rpa readPoolAllocs
-		tp  = common.Now()
-	)
-	rpa = make(readPoolAllocs)
-	rpa["alloc1"] = readPoolBlobbers{
-		"blob11": []*readPoolLock{
-			&readPoolLock{
-				StartTime: tp + 20,
-				Duration:  75 * time.Second,
-				Value:     100,
-			},
-		},
-	}
-	rpa["alloc2"] = readPoolBlobbers{
-		"blob21": []*readPoolLock{
-			&readPoolLock{
-				StartTime: tp - 20,
-				Duration:  10 * time.Second,
-				Value:     50,
-			},
-			&readPoolLock{
-				StartTime: tp - 20,
-				Duration:  10 * time.Second,
-				Value:     73,
-			},
-		},
-	}
-	require.EqualValues(t, rpa, rpa.copy())
+func Test_unlockRequest_decode(t *testing.T) {
+	var ure, urd unlockRequest
+	ure.PoolID = "pool_hex"
+	require.NoError(t, urd.decode(mustEncode(t, ure)))
+	assert.EqualValues(t, ure, urd)
 }
 
 func Test_newReadPool(t *testing.T) {
 	var rp = newReadPool()
-	require.NotNil(t, rp.Locked)
-	require.NotNil(t, rp.Unlocked)
-	require.NotNil(t, rp.Locks)
+	assert.NotZero(t, rp.ZcnLockingPool, "missing")
 }
 
-func Test_readPool_Encode_Decode(t *testing.T) {
-	const allocID, dur, value = "alloc_hex", 10 * time.Second, 150
+func Test_readPool_encode_decode(t *testing.T) {
+	var rpe, rpd = newReadPool(), newReadPool()
+	require.NoError(t, rpd.decode(rpe.encode()))
+	assert.EqualValues(t, rpe, rpd)
+}
+
+func Test_newReadPools(t *testing.T) {
+	var rps = newReadPools()
+	assert.NotZero(t, rps.Pools)
+}
+
+func Test_readPools_Encode_Decode(t *testing.T) {
 	var (
-		now      = common.Now()
-		rpe, rpd = newReadPool(), newReadPool()
-		blobbers = []string{"b1_hex", "b2_hex", "b3_hex"}
-		alloc    = StorageAllocation{
-			BlobberDetails: []*BlobberAllocation{
-				&BlobberAllocation{
-					BlobberID: "b1_hex", Terms: Terms{ReadPrice: 10},
-				},
-				&BlobberAllocation{
-					BlobberID: "b2_hex", Terms: Terms{ReadPrice: 10},
-				},
-				&BlobberAllocation{
-					BlobberID: "b3_hex", Terms: Terms{ReadPrice: 10},
-				},
-			},
-		}
-		lr lockRequest
+		rpse, rpsd = newReadPools(), newReadPools()
+		rp         = newReadPool()
 	)
-
-	lr.AllocationID = "all"
-	lr.Blobbers = blobbers
-	lr.Duration = dur
-
-	require.Zero(t, rpe.addLocks(now, value, &lr, &alloc))
-	require.NoError(t, rpd.Decode(rpe.Encode()))
-	require.EqualValues(t, rpe, rpd)
+	require.NoError(t, rpse.addPool(rp))
+	require.NoError(t, rpsd.Decode(rpse.Encode()))
+	assert.EqualValues(t, rpse, rpsd)
 }
 
 func Test_readPoolsKey(t *testing.T) {
-	require.NotZero(t, readPoolKey("scKey", "clientID"))
+	assert.NotZero(t, readPoolsKey("scKey", "clientID"))
 }
 
-func Test_readPool_fill(t *testing.T) {
-	const sscKey, clientID, txHash = "ssc_hex", "client_hex", "tx_hash"
+func Test_readPools_addPool_delPool(t *testing.T) {
 	var (
-		rp       = newReadPool()
-		balances = newTestBalances()
-		tx       = &transaction.Transaction{
-			ClientID:   clientID,
-			ToClientID: sscKey,
-			Value:      90,
+		rps = newReadPools()
+		rp  = newReadPool()
+	)
+	require.NoError(t, rps.addPool(rp))
+	require.Error(t, rps.addPool(rp))
+	rps.delPool(rp.ID)
+	assert.Len(t, rps.Pools, 0, "not deleted")
+}
+
+func Test_readPoolStats_encode_decode(t *testing.T) {
+	var se, sd readPoolStats
+	se.Stats = append(se.Stats, &readPoolStat{
+		ID:        "pool_id",
+		StartTime: common.Now(),
+		Duartion:  10 * time.Second,
+		TimeLeft:  150,
+		Locked:    true,
+		Balance:   90,
+	})
+	require.NoError(t, sd.decode(se.encode()))
+	assert.EqualValues(t, se, sd)
+}
+
+func Test_readPoolStats_addStat(t *testing.T) {
+	var (
+		stats readPoolStats
+		stat  = &readPoolStat{
+			ID:        "pool_id",
+			StartTime: common.Now(),
+			Duartion:  10 * time.Second,
+			TimeLeft:  150,
+			Locked:    true,
+			Balance:   90,
 		}
 	)
-	tx.Hash = txHash
-	balances.txn = tx
-	var transfer, resp, err = rp.fill(tx, balances)
-	require.NoError(t, err)
-	require.NotZero(t, resp)
-	require.NotNil(t, transfer)
-	require.True(t, rp.Locked.Balance == 90)
+	stats.addStat(stat)
+	assert.Len(t, stats.Stats, 1)
+	stats.addStat(stat)
+	assert.Len(t, stats.Stats, 2)
 }
 
-func Test_readPool_addLocks(t *testing.T) {
-	//
+func Test_readPoolStat_encode_decode(t *testing.T) {
+	var se, sd readPoolStat
+	se.ID = "pool_id"
+	se.StartTime = common.Now()
+	se.Duartion = 10 * time.Second
+	se.TimeLeft = 150
+	se.Locked = true
+	se.Balance = 90
+	require.NoError(t, sd.decode(se.encode()))
+	assert.EqualValues(t, se, sd)
+
 }
 
-func Test_readPool_update(t *testing.T) {
+func Test_tokenLock_IsLocked(t *testing.T) {
+	var tl tokenLock
+	tl.StartTime = common.Now()
+	tl.Duration = 10 * time.Second
+	assert.True(t, tl.IsLocked(false))
+	assert.True(t, tl.IsLocked(time.Now()))
+	tl.StartTime = common.Now() - 11
+	assert.False(t, tl.IsLocked(time.Now()))
+}
+
+func Test_tokenLock_LockStats(t *testing.T) {
 	var (
-		rp = newReadPool()
-		tp = common.Now()
+		tl   tokenLock
+		stat readPoolStat
+		now  common.Timestamp = 210
 	)
-	// all fresh
-	rp.Locks["alloc1"] = readPoolBlobbers{
-		"blob11": []*readPoolLock{
-			&readPoolLock{
-				StartTime: tp + 20,
-				Duration:  75 * time.Second,
-				Value:     100,
-			},
-		},
-	}
-	// all outdated
-	rp.Locks["alloc2"] = readPoolBlobbers{
-		"blob21": []*readPoolLock{
-			&readPoolLock{
-				StartTime: tp - 20,
-				Duration:  10 * time.Second,
-				Value:     50,
-			},
-			&readPoolLock{
-				StartTime: tp - 20,
-				Duration:  10 * time.Second,
-				Value:     73,
-			},
-		},
-	}
-	rp.Locked.Balance = 100 + 50 + 73
-	var ul, err = rp.update(tp)
-	require.NoError(t, err)
-	assert.True(t, ul == 50+73)
-	assert.True(t, rp.Locked.Balance == 100)
-	assert.True(t, rp.Unlocked.Balance == 50+73)
-
-	ul, err = rp.update(tp)
-	require.NoError(t, err)
-	assert.Zero(t, ul)
+	tl.StartTime = now
+	tl.Duration = 10 * time.Second
+	tl.Owner = "client_id"
+	assert.Error(t, stat.decode(tl.LockStats(false)))
+	assert.NoError(t, stat.decode(tl.LockStats(time.Unix(215, 0))))
+	assert.Equal(t, stat, readPoolStat{
+		StartTime: now,
+		Duartion:  10 * time.Second,
+		TimeLeft:  5 * time.Second,
+		Locked:    true,
+	})
+	assert.NoError(t, stat.decode(tl.LockStats(time.Unix(225, 0))))
+	assert.Equal(t, stat, readPoolStat{
+		StartTime: now,
+		Duartion:  10 * time.Second,
+		TimeLeft:  -5 * time.Second,
+		Locked:    false,
+	})
 }
 
-func Test_readPool_save(t *testing.T) {
-	const sscID, clientID = "ssc_hex", "client_hex"
-	var (
-		rp       = newReadPool()
-		balances = newTestBalances()
-		err      = rp.save(sscID, clientID, balances)
+func TestStorageSmartContract_getReadPoolsBytes(t *testing.T) {
+	const (
+		clientID = "client_id"
+		errMsg1  = "value not present"
 	)
-	require.NoError(t, err)
-	assert.NotZero(t, balances.tree[readPoolKey(sscID, clientID)])
-}
 
-func Test_readPool_stat(t *testing.T) {
-	var (
-		rp = newReadPool()
-		tp = common.Now()
-	)
-	// all fresh
-	rp.Locks["alloc1"] = readPoolBlobbers{
-		"blob11": []*readPoolLock{
-			&readPoolLock{
-				StartTime: tp + 20,
-				Duration:  75 * time.Second,
-				Value:     100,
-			},
-		},
-	}
-	// all outdated
-	rp.Locks["alloc2"] = readPoolBlobbers{
-		"blob21": []*readPoolLock{
-			&readPoolLock{
-				StartTime: tp - 20,
-				Duration:  10 * time.Second,
-				Value:     50,
-			},
-			&readPoolLock{
-				StartTime: tp - 20,
-				Duration:  10 * time.Second,
-				Value:     73,
-			},
-		},
-	}
-	rp.Locked.Balance = 100 + 50 + 73
-	rp.Unlocked.Balance = 200
-	var stat = rp.stat()
-	assert.EqualValues(t, &readPoolStat{
-		Locked:   100,
-		Unlocked: 200 + 50 + 73,
-		Locks: readPoolAllocs{
-			"alloc1": readPoolBlobbers{
-				"blob11": []*readPoolLock{
-					&readPoolLock{
-						StartTime: tp + 20,
-						Duration:  75 * time.Second,
-						Value:     100,
-					},
-				},
-			},
-		},
-	}, stat)
-}
-
-func TestStorageSmartContract_getReadPoolBytes(t *testing.T) {
-	const clientID = "client_hex"
 	var (
 		ssc      = newTestStorageSC()
 		balances = newTestBalances()
-		b, err   = ssc.getReadPoolBytes(clientID, balances)
+
+		rps *readPools
+
+		b, err = ssc.getReadPoolsBytes(clientID, balances)
 	)
-	require.Equal(t, util.ErrValueNotPresent, err)
-	var rp = newReadPool()
-	require.NoError(t, rp.save(ssc.ID, clientID, balances))
-	b, err = ssc.getReadPoolBytes(clientID, balances)
+
+	requireErrMsg(t, err, errMsg1)
+	rps = newReadPools()
+	require.NoError(t, rps.save(ssc.ID, clientID, balances))
+	b, err = ssc.getReadPoolsBytes(clientID, balances)
 	require.NoError(t, err)
-	assert.Equal(t, b, rp.Encode())
+	assert.EqualValues(t, rps.Encode(), b)
 }
 
-func TestStorageSmartContract_getReadPool(t *testing.T) {
-	const clientID = "client_hex"
+func TestStorageSmartContract_getReadPools(t *testing.T) {
+	const (
+		clientID = "client_id"
+		errMsg1  = "value not present"
+	)
+
 	var (
 		ssc      = newTestStorageSC()
 		balances = newTestBalances()
-		rp, err  = ssc.getReadPool(clientID, balances)
+		rps, err = ssc.getReadPools(clientID, balances)
+		nrps     = newReadPools()
 	)
-	require.Equal(t, util.ErrValueNotPresent, err)
-	var nrp = newReadPool()
-	require.NoError(t, nrp.save(ssc.ID, clientID, balances))
-	rp, err = ssc.getReadPool(clientID, balances)
+
+	requireErrMsg(t, err, errMsg1)
+	nrps = newReadPools()
+	require.NoError(t, nrps.save(ssc.ID, clientID, balances))
+	rps, err = ssc.getReadPools(clientID, balances)
 	require.NoError(t, err)
-	assert.EqualValues(t, nrp, rp)
+	require.EqualValues(t, nrps, rps)
 }
 
 func TestStorageSmartContract_newReadPool(t *testing.T) {
-	const clientID = "client_hex"
-	var (
-		ssc       = newTestStorageSC()
-		balances  = newTestBalances()
-		tx        = transaction.Transaction{ClientID: clientID}
-		resp, err = ssc.newReadPool(&tx, nil, balances)
-	)
-	require.NoError(t, err)
-	assert.NotZero(t, resp)
-	var rp = newReadPool()
-	require.NoError(t, rp.Decode([]byte(resp)))
-	assert.Equal(t, readPoolKey(ssc.ID, clientID)+":locked", rp.Locked.ID)
-	assert.Equal(t, readPoolKey(ssc.ID, clientID)+":unlocked", rp.Unlocked.ID)
-	require.NotZero(t, balances.tree[readPoolKey(ssc.ID, clientID)])
-
-	_, err = ssc.newReadPool(&tx, nil, balances)
-	assert.Error(t, err)
-}
-
-func TestStorageSmartContract_checkFill(t *testing.T) {
 	const (
-		clientID = "client_hex"
-		errMsg1  = "no tokens to lock"
-		errMsg2  = "lock amount is greater than balance"
-		errMsg3  = "negative transaction value given"
-	)
-	var (
-		ssc      = newTestStorageSC()
-		balances = newTestBalances()
-		tx       = transaction.Transaction{ClientID: clientID, Value: 100}
-	)
-	requireErrMsg(t, ssc.checkFill(&tx, balances), errMsg1)
-	balances.balances[clientID] = 90
-	requireErrMsg(t, ssc.checkFill(&tx, balances), errMsg2)
-	tx.Value = -1
-	requireErrMsg(t, ssc.checkFill(&tx, balances), errMsg3)
-}
-
-func TestStorageSmartContract_readPoolLock(t *testing.T) {
-	const (
-		allocID, clientID = "alloc_hex", "client_hex"
-
-		errMsg1 = "read_pool_lock_failed: insufficient amount to lock"
-		errMsg2 = "read_pool_lock_failed: invalid character '}' looking for" +
-			" beginning of value"
-		errMsg3 = "read_pool_lock_failed: can't get allocation:" +
-			" value not present"
-		errMsg4 = "read_pool_lock_failed: blobber \"blob4\" doesn't belong" +
-			" to allocation \"alloc_hex\""
-		errMsg5 = "read_pool_lock_failed: can't get read pool:" +
-			" value not present"
-		errMsg6 = "read_pool_lock_failed: no tokens to lock"
+		clientID, txHash = "client_id", "tx_hash"
+		errMsg           = "new_read_pool_failed: already exist"
 	)
 
 	var (
 		ssc      = newTestStorageSC()
 		balances = newTestBalances()
 		tx       = transaction.Transaction{
-			ClientID: clientID, ToClientID: ssc.ID, Value: 5,
-			CreationDate: common.Now(),
-		}
-		lr    lockRequest
-		alloc StorageAllocation
-		input []byte
-		conf  scConfig
-		resp  string
-		err   error
-	)
-
-	// setup SC configurations
-	conf.ReadPool = new(readPoolConfig)
-	conf.ReadPool.MinLock = 10
-	conf.ReadPool.MinLockPeriod = 10 * time.Second
-	conf.ReadPool.MaxLockPeriod = 100 * time.Second
-
-	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), &conf)
-	require.NoError(t, err)
-
-	// 1. value is less then configured min lock
-	_, err = ssc.readPoolLock(&tx, nil, balances)
-	requireErrMsg(t, err, errMsg1)
-
-	// 2. invalid request JSON
-	tx.Value = 100
-	input = []byte("}{ invalid JSON }{")
-	_, err = ssc.readPoolLock(&tx, input, balances)
-	requireErrMsg(t, err, errMsg2)
-
-	// setup request
-	lr.AllocationID = allocID
-	lr.Blobbers = []string{"blob1", "blob2", "blob3", "blob4"}
-	lr.Duration = 20 * time.Second
-
-	// 3. missing allocation
-	_, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
-	requireErrMsg(t, err, errMsg3)
-
-	// setup allocation
-	alloc.ID = allocID
-	alloc.BlobberDetails = []*BlobberAllocation{
-		&BlobberAllocation{BlobberID: "blob1", Terms: Terms{ReadPrice: 10}},
-		&BlobberAllocation{BlobberID: "blob2", Terms: Terms{ReadPrice: 20}},
-		&BlobberAllocation{BlobberID: "blob3", Terms: Terms{ReadPrice: 40}},
-	}
-	alloc.Blobbers = []*StorageNode{
-		&StorageNode{ID: "blob1"},
-		&StorageNode{ID: "blob2"},
-		&StorageNode{ID: "blob3"},
-	}
-	_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), &alloc)
-	require.NoError(t, err)
-
-	// 4. blobber not of the allocation
-	_, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
-	requireErrMsg(t, err, errMsg4)
-
-	// 5. missing read pool
-	lr.Blobbers = []string{"blob1", "blob2", "blob3"}
-	_, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
-	requireErrMsg(t, err, errMsg5)
-
-	var rp = newReadPool()
-	require.NoError(t, rp.save(ssc.ID, clientID, balances))
-
-	// 6. client has no money
-	_, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
-	requireErrMsg(t, err, errMsg6)
-
-	balances.balances[clientID] = 500
-	balances.txn = &tx
-
-	// 7. ok
-	resp, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
-	require.NoError(t, err)
-	assert.Equal(t, `{"value":100,"from_client":"`+clientID+`","to_client":`+
-		`"`+ssc.ID+`"}`,
-		resp)
-	if assert.Len(t, balances.transfers, 1) {
-		assert.EqualValues(t, &state.Transfer{
 			ClientID:   clientID,
 			ToClientID: ssc.ID,
-			Amount:     100,
-		}, balances.transfers[0])
-	}
-	rp, err = ssc.getReadPool(clientID, balances)
-	require.NoError(t, err)
-	assert.Equal(t, rp.Locked.Balance, state.Balance(99))
-	assert.Equal(t, rp.Unlocked.Balance, state.Balance(1))
-	assert.EqualValues(t, readPoolAllocs{
-		allocID: readPoolBlobbers{
-			"blob1": []*readPoolLock{
-				&readPoolLock{
-					StartTime: tx.CreationDate,
-					Duration:  lr.Duration,
-					Value:     14,
-				},
-			},
-			"blob2": []*readPoolLock{
-				&readPoolLock{
-					StartTime: tx.CreationDate,
-					Duration:  lr.Duration,
-					Value:     28,
-				},
-			},
-			"blob3": []*readPoolLock{
-				&readPoolLock{
-					StartTime: tx.CreationDate,
-					Duration:  lr.Duration,
-					Value:     57,
-				},
-			},
-		},
-	}, rp.Locks)
-}
-
-func TestStorageSmartContract_readPoolUnlock(t *testing.T) {
-
-	const (
-		clientID = "client_hex"
-
-		errMsg1 = "read_pool_unlock_failed: can't get read pool:" +
-			" value not present"
-		errMsg2 = "read_pool_unlock_failed: no tokens to unlock"
-	)
-
-	var (
-		ssc      = newTestStorageSC()
-		balances = newTestBalances()
-		tx       = transaction.Transaction{
-			ClientID: clientID, ToClientID: ssc.ID, Value: 0,
-			CreationDate: common.Now(),
+			Value:      0,
 		}
 		resp string
 		err  error
 	)
 
 	balances.txn = &tx
+	tx.Hash = txHash
 
-	// 1. missing read pool
-	_, err = ssc.readPoolUnlock(&tx, nil, balances)
-	requireErrMsg(t, err, errMsg1)
-
-	var rp = newReadPool()
-	require.NoError(t, rp.save(ssc.ID, clientID, balances))
-
-	// 2. nothing to unlock
-	_, err = ssc.readPoolUnlock(&tx, nil, balances)
-	requireErrMsg(t, err, errMsg2)
-
-	// all fresh
-	rp.Locked.Balance = 100 + 50 + 73
-	rp.Locks["alloc1"] = readPoolBlobbers{
-		"blob11": []*readPoolLock{
-			&readPoolLock{
-				StartTime: tx.CreationDate + 20,
-				Duration:  75 * time.Second,
-				Value:     100,
-			},
-		},
-	}
-	// all outdated
-	rp.Locks["alloc2"] = readPoolBlobbers{
-		"blob21": []*readPoolLock{
-			&readPoolLock{
-				StartTime: tx.CreationDate - 20,
-				Duration:  10 * time.Second,
-				Value:     50,
-			},
-			&readPoolLock{
-				StartTime: tx.CreationDate - 20,
-				Duration:  10 * time.Second,
-				Value:     73,
-			},
-		},
-	}
-	// unlocked tokens
-	rp.Unlocked.Balance = 100
-	require.NoError(t, rp.save(ssc.ID, clientID, balances))
-
-	resp, err = ssc.readPoolUnlock(&tx, nil, balances)
+	resp, err = ssc.newReadPool(&tx, nil, balances)
 	require.NoError(t, err)
-	assert.Equal(t, fmt.Sprintf(`{"value":%d,"from_client":%q,"to_client":%q}`,
-		100+50+73, ssc.ID, clientID), resp)
+	assert.Equal(t, string(newReadPools().Encode()), resp)
 
-	// check saved read pool
-	rp, err = ssc.getReadPool(clientID, balances)
-	require.NoError(t, err)
-
-	assert.Equal(t, state.Balance(100), rp.Locked.Balance)
-	assert.Equal(t, state.Balance(0), rp.Unlocked.Balance)
+	_, err = ssc.newReadPool(&tx, nil, balances)
+	requireErrMsg(t, err, errMsg)
 }
 
-func TestStorageSmartContract_getReadPoolStatHandler(t *testing.T) {
+func testSetReadPoolConfig(t *testing.T, rpc *readPoolConfig,
+	balances chainState.StateContextI, sscID string) {
 
+	var (
+		conf scConfig
+		err  error
+	)
+	conf.ReadPool = rpc
+	_, err = balances.InsertTrieNode(scConfigKey(sscID), &conf)
+	require.NoError(t, err)
+}
+
+func TestStorageSmartContract_readPoolLock(t *testing.T) {
 	const (
-		clientID = "client_hex"
+		clientID, txHash = "client_id", "tx_hash"
+
+		errMsg1 = "read_pool_lock_failed: value not present"
+		errMsg2 = "read_pool_lock_failed: " +
+			"invalid character '}' looking for beginning of value"
+		errMsg3 = "read_pool_lock_failed: no tokens to lock"
+		errMsg4 = "read_pool_lock_failed: insufficient amount to lock"
+		errMsg5 = "read_pool_lock_failed: " +
+			"duration (5s) is shorter than min lock period (10s)"
+		errMsg6 = "read_pool_lock_failed: " +
+			"duration (2m30s) is longer than max lock period (1m40s)"
+		errMsg7 = "read_pool_lock_failed: user already has this read pool"
 	)
 
 	var (
 		ssc      = newTestStorageSC()
 		balances = newTestBalances()
-		params   = url.Values{"client_id": []string{clientID}}
-		ctx      = context.Background()
-		resp     interface{}
-		err      error
-	)
-
-	_, err = ssc.getReadPoolStatHandler(ctx, params, balances)
-	requireErrMsg(t, err, "value not present")
-
-	var rp = newReadPool()
-	require.NoError(t, rp.save(ssc.ID, clientID, balances))
-
-	// fresh empty read pool
-	resp, err = ssc.getReadPoolStatHandler(ctx, params, balances)
-	require.NoError(t, err)
-
-	assert.EqualValues(t, `{"locked":0,"unlocked":0,"locks":{}}`,
-		string(mustEncode(t, resp)))
-
-	// all fresh
-	var now = common.Now()
-	rp.Locked.Balance = 100 + 50 + 73
-	rp.Unlocked.Balance = 100
-	rp.Locks["alloc1"] = readPoolBlobbers{
-		"blob11": []*readPoolLock{
-			&readPoolLock{
-				StartTime: now + 20,
-				Duration:  75 * time.Second,
-				Value:     100,
-			},
-			&readPoolLock{
-				StartTime: now - 20,
-				Duration:  10 * time.Second,
-				Value:     50,
-			},
-		},
-	}
-	// all outdated
-	rp.Locks["alloc2"] = readPoolBlobbers{
-		"blob21": []*readPoolLock{
-			&readPoolLock{
-				StartTime: now - 20,
-				Duration:  10 * time.Second,
-				Value:     50,
-			},
-			&readPoolLock{
-				StartTime: now - 20,
-				Duration:  10 * time.Second,
-				Value:     73,
-			},
-		},
-	}
-
-	// should be dry updated
-
-	resp, err = ssc.getReadPoolStatHandler(ctx, params, balances)
-	require.NoError(t, err)
-
-	var (
-		got    = string(mustEncode(t, resp))
-		prefix = `{"locked":50,"unlocked":273,"locks":{"alloc1":` +
-			`{"blob11":[{"start_time":`
-		suffix = `,"duration":75000000000,"value":100}]}}}`
-	)
-	assert.True(t, strings.HasPrefix(got, prefix))
-	assert.True(t, strings.HasSuffix(got, suffix))
-}
-
-func TestStorageSmartContract_getReadPoolBlobberHandler(t *testing.T) {
-
-	const (
-		clientID = "client_hex"
-		allocID  = "alloc1"
-		blobID   = "blob1"
-	)
-
-	var (
-		ssc      = newTestStorageSC()
-		balances = newTestBalances()
-		params   = url.Values{
-			"client_id":     []string{clientID},
-			"allocation_id": []string{allocID},
-			"blobber_id":    []string{blobID},
+		tx       = transaction.Transaction{
+			ClientID:   clientID,
+			ToClientID: ssc.ID,
+			Value:      0,
 		}
-		ctx  = context.Background()
-		resp interface{}
+		lr   lockRequest
+		resp string
 		err  error
 	)
 
-	_, err = ssc.getReadPoolBlobberHandler(ctx, params, balances)
-	requireErrMsg(t, err, "value not present")
+	// setup transaction
 
-	var rp = newReadPool()
-	require.NoError(t, rp.save(ssc.ID, clientID, balances))
+	balances.txn = &tx
+	tx.Hash = txHash
 
-	// no such allocation
-	_, err = ssc.getReadPoolBlobberHandler(ctx, params, balances)
-	requireErrMsg(t, err, "no such allocation")
+	// setup config
 
-	var now = common.Now()
-	rp.Locks[allocID] = readPoolBlobbers{
-		"another": []*readPoolLock{
-			&readPoolLock{
-				StartTime: now + 20,
-				Duration:  75 * time.Second,
-				Value:     100,
-			},
-		},
-	}
-	require.NoError(t, rp.save(ssc.ID, clientID, balances))
+	testSetReadPoolConfig(t, &readPoolConfig{
+		MinLock:       10,
+		MinLockPeriod: 10 * time.Second,
+		MaxLockPeriod: 100 * time.Second,
+	}, balances, ssc.ID)
 
-	// no such blobber
-	_, err = ssc.getReadPoolBlobberHandler(ctx, params, balances)
-	requireErrMsg(t, err, "no such blobber")
+	// 1. no pool
+	_, err = ssc.readPoolLock(&tx, nil, balances)
+	requireErrMsg(t, err, errMsg1)
 
-	rp.Locks[allocID] = readPoolBlobbers{
-		blobID: []*readPoolLock{
-			// fresh
-			&readPoolLock{
-				StartTime: now + 20,
-				Duration:  75 * time.Second,
-				Value:     98,
-			},
-			// expired
-			&readPoolLock{
-				StartTime: 0, // now - 175,
-				Duration:  0, //75 * time.Second,
-				Value:     112,
-			},
-		},
-	}
-	require.NoError(t, rp.save(ssc.ID, clientID, balances))
-
-	// should be dry updated
-
-	resp, err = ssc.getReadPoolBlobberHandler(ctx, params, balances)
+	tx.Hash = "new_read_pool_tx_hash"
+	_, err = ssc.newReadPool(&tx, nil, balances)
 	require.NoError(t, err)
-	require.IsType(t, []*readPoolLock{}, resp)
-	require.Len(t, resp, 1)
+	tx.Hash = txHash
+	// 2. malformed request
+	_, err = ssc.readPoolLock(&tx, []byte("} malformed {"), balances)
+	requireErrMsg(t, err, errMsg2)
+	// 3. no tokens
+	tx.Value = 5
+	lr.Duration = 5 * time.Second
+	_, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
+	requireErrMsg(t, err, errMsg3)
+	// 4. min lock
+	balances.balances[clientID] = 5
+	_, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
+	requireErrMsg(t, err, errMsg4)
+	tx.Value = 15
+	balances.balances[clientID] = 15
+	// 5. min lock period
+	_, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
+	requireErrMsg(t, err, errMsg5)
+	// 6. max lock period
+	lr.Duration = 150 * time.Second
+	_, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
+	requireErrMsg(t, err, errMsg6)
+	// lock
+	lr.Duration = 15 * time.Second
+	resp, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
+	require.NoError(t, err)
+	assert.NotZero(t, resp)
+	// 7. already exists
+	_, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
+	requireErrMsg(t, err, errMsg7)
+}
 
-	var rpl = resp.([]*readPoolLock)
-	assert.EqualValues(t, []*readPoolLock{
-		&readPoolLock{
-			StartTime: rpl[0].StartTime,
-			Duration:  75 * time.Second,
-			Value:     98,
-		},
-	}, resp)
+func TestStorageSmartContract_readPoolUnlock(t *testing.T) {
+	const (
+		clientID, txHash, readPoolID = "client_id", "tx_hash", "pool_id"
 
-	// val = `[{"start_time":1584702227,"duration":75000000000,"value":100},{"start_time":1584702187,"duration":75000000000,"value":100}]`
+		errMsg1 = "read_pool_unlock_failed: value not present"
+		errMsg2 = "read_pool_unlock_failed: " +
+			"invalid character '}' looking for beginning of value"
+		errMsg3 = "read_pool_unlock_failed: pool not found"
+		errMsg4 = "read_pool_unlock_failed: " +
+			"emptying pool failed: pool is still locked"
+	)
 
+	var (
+		ssc      = newTestStorageSC()
+		balances = newTestBalances()
+		tx       = transaction.Transaction{
+			ClientID:   clientID,
+			ToClientID: ssc.ID,
+			Value:      0,
+		}
+		lr   lockRequest
+		ur   unlockRequest
+		resp string
+		err  error
+	)
+
+	balances.txn = &tx
+	tx.Hash = txHash
+
+	// 1. no read pools
+	_, err = ssc.readPoolUnlock(&tx, nil, balances)
+	requireErrMsg(t, err, errMsg1)
+
+	// create read pool
+	tx.Hash = "create_read_pool_tx"
+	_, err = ssc.newReadPool(&tx, nil, balances)
+	require.NoError(t, err)
+	tx.Hash = txHash
+
+	// 2. malformed request
+	_, err = ssc.readPoolUnlock(&tx, []byte("} malformed {"), balances)
+	requireErrMsg(t, err, errMsg2)
+
+	// 3. no read pool
+	_, err = ssc.readPoolUnlock(&tx, mustEncode(t, &ur), balances)
+	requireErrMsg(t, err, errMsg3)
+
+	// lock tokens
+	testSetReadPoolConfig(t, &readPoolConfig{
+		MinLock:       10,
+		MinLockPeriod: 10 * time.Second,
+		MaxLockPeriod: 100 * time.Second,
+	}, balances, ssc.ID)
+	tx.Hash = readPoolID
+	lr.Duration = 15 * time.Second
+	balances.balances[clientID] = 150
+	tx.Value = 150
+	_, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
+	require.NoError(t, err)
+
+	delete(balances.balances, clientID)
+	tx.Value = 0
+
+	// 4. not expired
+	ur.PoolID = readPoolID
+	_, err = ssc.readPoolUnlock(&tx, mustEncode(t, &ur), balances)
+	requireErrMsg(t, err, errMsg4)
+
+	tx.CreationDate = common.Timestamp(20 * time.Second)
+
+	// 5. unlock (ok)
+	resp, err = ssc.readPoolUnlock(&tx, mustEncode(t, &ur), balances)
+	require.NoError(t, err)
+	assert.NotZero(t, resp)
+
+}
+
+func TestStorageSmartContract_getReadPoolsStatsHandler(t *testing.T) {
+
+	const (
+		clientID = "client_id"
+
+		errMsg1 = "value not present"
+	)
+
+	var (
+		ssc      = newTestStorageSC()
+		balances = newTestBalances()
+		ctx      = context.Background()
+		params   = url.Values{
+			"client_id": []string{clientID},
+		}
+		resp, err = ssc.getReadPoolsStatsHandler(ctx, params, balances)
+	)
+
+	requireErrMsg(t, err, errMsg1)
+
+	var (
+		rps = newReadPools()
+		rp  = newReadPool()
+	)
+
+	rp.ID = "pool_id"
+	rp.TokenLockInterface = &tokenLock{
+		StartTime: 150,
+		Duration:  10 * time.Second,
+		Owner:     "owner_id",
+	}
+	rp.Balance = 150
+
+	require.NoError(t, rps.addPool(rp))
+	require.NoError(t, rps.save(ssc.ID, clientID, balances))
+
+	resp, err = ssc.getReadPoolsStatsHandler(ctx, params, balances)
+	require.NoError(t, err)
+	assert.NotZero(t, resp)
 }
