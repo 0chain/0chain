@@ -52,11 +52,11 @@ func Test_writePool_Encode_Decode(t *testing.T) {
 	const (
 		clientID, poolID = "client_hex", "pool_id"
 		balance          = state.Balance(100500)
+		dur              = 20 * time.Hour
 	)
 
 	var (
 		sp     = common.Now() // start point
-		dur    = 20 * time.Hour
 		we, wd *writePool
 	)
 
@@ -79,30 +79,22 @@ func Test_writePool_Encode_Decode(t *testing.T) {
 
 func Test_writePool_save(t *testing.T) {
 	const sscKey, allocID = "ssc_key", "alloc_hex"
+
 	var (
 		wp       = newWritePool("")
 		balances = newTestBalances()
-		err      error
 	)
-	if err = wp.save(sscKey, allocID, balances); err != nil {
-		t.Fatal(err)
-	}
-	var seri util.Serializable
-	seri, err = balances.GetTrieNode(writePoolKey(sscKey, allocID))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var got, ok = seri.(*writePool)
-	if !ok {
-		t.Fatal("wrong type")
-	}
-	if got != wp {
-		t.Fatal("wrong")
-	}
+
+	require.NoError(t, wp.save(sscKey, allocID, balances))
+	var seri, err = balances.GetTrieNode(writePoolKey(sscKey, allocID))
+	require.NoError(t, err)
+	require.IsType(t, &writePool{}, seri)
+	assert.Equal(t, seri, wp)
 }
 
 func Test_writePool_fill(t *testing.T) {
 	const sscKey, clientID, txHash = "ssc_hex", "client_hex", "tx_hash"
+
 	var (
 		wp       = newWritePool("")
 		balances = newTestBalances()
@@ -112,60 +104,52 @@ func Test_writePool_fill(t *testing.T) {
 			Value:      90,
 		}
 	)
+
 	tx.Hash = txHash
 	balances.txn = tx
+
 	var tr, resp, err = wp.fill(tx, balances)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if tr == nil || resp == "" {
-		t.Fatal("missing")
-	}
-	if wp.Balance != 90 {
-		t.Fatal("wrong")
-	}
+	require.NoError(t, err)
+	assert.NotNil(t, tr)
+	assert.NotZero(t, resp)
+	assert.Equal(t, state.Balance(90), wp.Balance)
 }
 
 func Test_writePool_setExpiration(t *testing.T) {
-	const clientID = "client_hex"
-	var (
-		tp  = common.Now()
-		dur = 60 * time.Second
-		wp  = newWritePool(clientID)
-		err error
+	const (
+		clientID = "client_hex"
+		dur      = 60 * time.Second
 	)
+
+	var (
+		tp = common.Now()
+		wp = newWritePool(clientID)
+	)
+
 	wp.ZcnLockingPool.TokenLockInterface = &tokenLock{
 		StartTime: tp,
 	}
-	if err = wp.setExpiration(tp + toSeconds(dur)); err != nil {
-		t.Fatal(err)
-	}
-	var tl, ok = wp.ZcnLockingPool.TokenLockInterface.(*tokenLock)
-	if !ok {
-		t.Fatalf("wrong type %T", wp.ZcnLockingPool.TokenLockInterface)
-	}
-	if tl.Duration != dur {
-		t.Fatal("wrong")
-	}
+
+	require.NoError(t, wp.setExpiration(tp+toSeconds(dur)))
+	require.IsType(t, &tokenLock{}, wp.ZcnLockingPool.TokenLockInterface)
+	assert.Equal(t, &tokenLock{
+		StartTime: tp,
+		Duration:  dur,
+	}, wp.ZcnLockingPool.TokenLockInterface)
 }
 
-func Test_writePoolStat_encode_decode(t *testing.T) {
-	var (
-		state, statd writePoolStat
-		err          error
-	)
+func Test_writePoolStat_decode(t *testing.T) {
+	var state, statd writePoolStat
+
 	state.ID = "pool_hex"
 	state.StartTime = common.Now()
 	state.Duartion = 60 * time.Second
 	state.TimeLeft = 90 * time.Second
 	state.Locked = true
 	state.Balance = 150
-	if err = statd.decode(state.encode()); err != nil {
-		t.Fatal(err)
-	}
-	if state != statd {
-		t.Fatal("wrong")
-	}
+
+	require.NoError(t, statd.decode(mustEncode(t, &state)))
+	assert.EqualValues(t, state, statd)
 }
 
 func newTestStorageSC() (ssc *StorageSmartContract) {
@@ -177,32 +161,25 @@ func newTestStorageSC() (ssc *StorageSmartContract) {
 
 func TestStorageSmartContract_getWritePoolBytes(t *testing.T) {
 	const allocID, clientID = "alloc_hex", "client_hex"
+
 	var (
 		ssc      = newTestStorageSC()
 		balances = newTestBalances()
 		b, err   = ssc.getWritePoolBytes(allocID, balances)
 	)
-	if err == nil {
-		t.Fatal("missing error")
-	}
-	if err != util.ErrValueNotPresent {
-		t.Fatal("wrong error:", err)
-	}
+
+	require.Equal(t, err, util.ErrValueNotPresent)
 	var wp = newWritePool(clientID)
 	_, err = balances.InsertTrieNode(writePoolKey(ssc.ID, allocID), wp)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if b, err = ssc.getWritePoolBytes(allocID, balances); err != nil {
-		t.Fatal(err)
-	}
-	if string(b) != string(wp.Encode()) {
-		t.Fatal("wrong")
-	}
+	require.NoError(t, err)
+	b, err = ssc.getWritePoolBytes(allocID, balances)
+	require.NoError(t, err)
+	assert.Equal(t, b, wp.Encode())
 }
 
 func TestStorageSmartContract_getWritePool(t *testing.T) {
 	const allocID, clientID, txHash = "alloc_hex", "client_hex", "tx_hash"
+
 	var (
 		ssc      = newTestStorageSC()
 		wp       = newWritePool(clientID)
@@ -214,44 +191,34 @@ func TestStorageSmartContract_getWritePool(t *testing.T) {
 		}
 		err error
 	)
+
 	tx.Hash = txHash
 	balances.txn = tx
-	if _, _, err = wp.fill(tx, balances); err != nil {
-		t.Fatal(err)
-	}
+
+	_, _, err = wp.fill(tx, balances)
+	require.NoError(t, err)
+
 	_, err = ssc.getWritePool(allocID, balances)
-	if err == nil {
-		t.Fatal("missing")
-	}
-	if err != util.ErrValueNotPresent {
-		t.Fatal("wrong error")
-	}
-	if err = wp.save(ssc.ID, allocID, balances); err != nil {
-		t.Fatal(err)
-	}
+	require.Equal(t, err, util.ErrValueNotPresent)
+	require.NoError(t, wp.save(ssc.ID, allocID, balances))
 	var wd *writePool
-	if wd, err = ssc.getWritePool(allocID, balances); err != nil {
-		t.Fatal(err)
-	}
-	if string(wd.Encode()) != string(wp.Encode()) {
-		t.Fatal("wrong")
-	}
+	wd, err = ssc.getWritePool(allocID, balances)
+	require.NoError(t, err)
+	assert.EqualValues(t, wd, wp)
 }
 
 func TestStorageSmartContract_newWritePool(t *testing.T) {
 	const allocID, clientID = "alloc_hex", "client_hex"
+
 	var (
 		tp       = common.Now()
 		ssc      = newTestStorageSC()
 		balances = newTestBalances()
 		wp, err  = ssc.newWritePool(allocID, clientID, tp, tp, balances)
 	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if wp.TokenPool.ID != writePoolKey(ssc.ID, allocID) {
-		t.Fatal("wrong pool key")
-	}
+
+	require.NoError(t, err)
+	assert.Equal(t, writePoolKey(ssc.ID, allocID), wp.TokenPool.ID)
 }
 
 func newTestWritePoolBlobberAllocation(minLockDemand state.Balance) (
@@ -291,54 +258,26 @@ func TestStorageSmartContract_createWritePool(t *testing.T) {
 	)
 	tx.Hash = txHash
 	balances.txn = tx
-	if err = ssc.createWritePool(tx, sa, balances); err == nil {
-		t.Fatal("missing error")
-	} else if err.Error() != errMsg1 {
-		t.Fatal("unexpected error:", err)
-	}
+	requireErrMsg(t, ssc.createWritePool(tx, sa, balances), errMsg1)
 	sa.BlobberDetails = []*BlobberAllocation{
 		newTestWritePoolBlobberAllocation(30), // }
 		newTestWritePoolBlobberAllocation(30), // } 90
 		newTestWritePoolBlobberAllocation(30), // }
 	}
-	if err = ssc.createWritePool(tx, sa, balances); err == nil {
-		t.Fatal("missing")
-	} else if err.Error() != errMsg2 {
-		t.Fatal("unexpected error:", err)
-	}
+	requireErrMsg(t, ssc.createWritePool(tx, sa, balances), errMsg2)
 	balances.balances[clientID] = 85
-	if err = ssc.createWritePool(tx, sa, balances); err == nil {
-		t.Fatal("missing")
-	} else if err.Error() != errMsg3 {
-		t.Fatal("unexpected error:", err)
-	}
+	requireErrMsg(t, ssc.createWritePool(tx, sa, balances), errMsg3)
 	balances.balances[clientID] = 120
-	if err = ssc.createWritePool(tx, sa, balances); err != nil {
-		t.Fatal(err)
-	}
-	if wp, err = ssc.getWritePool(allocID, balances); err != nil {
-		t.Fatal(err)
-	}
-	if wp == nil {
-		t.Fatal("missing")
-	}
-	if wp.Balance != 90 {
-		t.Fatal("wrong pool balance:", wp.Balance, ", expected 90")
-	}
-	// check transfer
-	if len(balances.transfers) != 1 {
-		t.Fatal("unexpected length of transfers:", len(balances.transfers))
-	}
+	require.NoError(t, ssc.createWritePool(tx, sa, balances))
+	wp, err = ssc.getWritePool(allocID, balances)
+	require.NoError(t, err)
+	require.NotNil(t, wp)
+	assert.Equal(t, wp.Balance, state.Balance(90))
+	require.Len(t, balances.transfers, 1)
 	var transfer = balances.transfers[0]
-	if transfer.ClientID != clientID {
-		t.Fatal("invalid transfer.ClientID:", transfer.ClientID)
-	}
-	if transfer.ToClientID != ADDRESS {
-		t.Fatal("invalid transfer.ToClientID:", transfer.ToClientID)
-	}
-	if transfer.Amount != 90 {
-		t.Fatal("invalid transfer amount:", transfer.Amount)
-	}
+	assert.Equal(t, clientID, transfer.ClientID)
+	assert.Equal(t, ADDRESS, transfer.ToClientID)
+	assert.Equal(t, state.Balance(90), transfer.Amount)
 }
 
 func TestStorageSmartContract_writePoolLock(t *testing.T) {
@@ -346,10 +285,6 @@ func TestStorageSmartContract_writePoolLock(t *testing.T) {
 }
 
 func TestStorageSmartContract_writePoolUnlock(t *testing.T) {
-	// TODO (sfxdx): implement tests
-}
-
-func TestStorageSmartContract_getWritePoolStat(t *testing.T) {
 	// TODO (sfxdx): implement tests
 }
 

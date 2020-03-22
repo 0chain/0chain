@@ -354,8 +354,6 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	input []byte, balances c_state.StateContextI) (string, error) {
 
-	// TODO (sfxdx): move tokens: read pool to blobber
-
 	commitRead := &ReadConnection{}
 	err := commitRead.Decode(input)
 	if err != nil {
@@ -374,8 +372,70 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	if err != nil {
 		return "", common.NewError("invalid_read_marker", "Invalid read marker."+err.Error())
 	}
+
+	// move tokens to blobber's stake pool from client's read pool
+	alloc, err := sc.getAllocation(commitRead.ReadMarker.AllocationID, balances)
+	if err != nil {
+		return "", common.NewError("invalid_read_marker",
+			"can't get related allocation: "+err.Error())
+	}
+
+	// TODO (sfxdx): Payer, Owner -- use just StorageAllocation.ClientID
+	if alloc.Payer != commitRead.ReadMarker.ClientID {
+		return "", common.NewError("invalid_read_marker",
+			"allocation doesn't belong to this client")
+	}
+
+	var details *BlobberAllocation
+	for _, d := range alloc.BlobberDetails {
+		if d.BlobberID == commitRead.ReadMarker.BlobberID {
+			details = d
+			break
+		}
+	}
+
+	if details == nil {
+		return "", common.NewError("invalid_read_marker",
+			"blobber doesn't belong to allocation")
+	}
+
+	var (
+		numReads = commitRead.ReadMarker.ReadCounter - lastKnownCtr
+		value    = details.Terms.ReadPrice * state.Balance(numReads)
+	)
+
+	// move tokens from read pool to stake pool
+	rps, err := sc.getReadPools(alloc.Payer, balances)
+	if err != nil {
+		return "", common.NewError("commit_read_failed",
+			"can't get related read pool: "+err.Error())
+	}
+	sp, err := sc.getStakePool(commitRead.ReadMarker.BlobberID, balances)
+	if err != nil {
+		return "", common.NewError("commit_read_failed",
+			"can't get related stake pool: "+err.Error())
+	}
+
+	if err = rps.moveToBlobber(t.CreationDate, sp, value); err != nil {
+		return "", common.NewError("commit_read_failed",
+			"can't transfer tokens from read pool to stake pool: "+err.Error())
+	}
+
+	// save pools
+	err = sp.save(sc.ID, commitRead.ReadMarker.BlobberID, balances)
+	if err != nil {
+		return "", common.NewError("commit_read_failed",
+			"can't save stake pool: "+err.Error())
+	}
+
+	if err = rps.save(sc.ID, alloc.Payer, balances); err != nil {
+		return "", common.NewError("commit_read_failed",
+			"can't save read pool: "+err.Error())
+	}
+
+	// save read marker
 	balances.InsertTrieNode(commitRead.GetKey(sc.ID), commitRead)
-	sc.newRead(balances, commitRead.ReadMarker.ReadCounter-lastKnownCtr)
+	sc.newRead(balances, numReads)
 	return "success", nil
 }
 

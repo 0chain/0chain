@@ -151,6 +151,42 @@ func (rps *readPools) save(sscKey, clientID string,
 	return
 }
 
+func (rps *readPools) moveToBlobber(now common.Timestamp, sp *stakePool,
+	value state.Balance) (err error) {
+
+	var tp = common.ToTime(now)
+
+	for k, rp := range rps.Pools {
+		if value == 0 {
+			break
+		}
+		if !rp.IsLocked(tp) {
+			continue
+		}
+		var move state.Balance
+		if rp.Balance < value || rp.Balance == value {
+			move = rp.Balance
+			delete(rps.Pools, k)
+		} else {
+			move = value
+		}
+		if _, _, err = rp.TransferTo(sp.Unlocked, move, nil); err != nil {
+			break
+		}
+		value -= move // decrease
+	}
+
+	if err != nil {
+		return
+	}
+
+	if value != 0 {
+		return errors.New("not enough tokens in read pool")
+	}
+
+	return
+}
+
 // stat
 
 type readPoolStats struct {

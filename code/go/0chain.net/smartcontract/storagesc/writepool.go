@@ -109,6 +109,22 @@ func (wp *writePool) setExpiration(set common.Timestamp) (err error) {
 	return
 }
 
+func (wp *writePool) stat(tp time.Time) (
+	stat *writePoolStat, err error) {
+
+	stat = new(writePoolStat)
+
+	if err = stat.decode(wp.LockStats(tp)); err != nil {
+		return nil, err
+	}
+
+	stat.ID = wp.ID
+	stat.Locked = wp.IsLocked(tp)
+	stat.Balance = wp.Balance
+
+	return
+}
+
 // stat
 
 type writePoolStat struct {
@@ -118,14 +134,6 @@ type writePoolStat struct {
 	TimeLeft  time.Duration    `json:"time_left"`
 	Locked    bool             `json:"locked"`
 	Balance   state.Balance    `json:"balance"`
-}
-
-func (stat *writePoolStat) encode() (b []byte) {
-	var err error
-	if b, err = json.Marshal(stat); err != nil {
-		panic(err) // must never happen
-	}
-	return
 }
 
 func (stat *writePoolStat) decode(input []byte) error {
@@ -363,22 +371,6 @@ func (ssc *StorageSmartContract) updateWritePoolExpiration(
 // stat
 //
 
-func (ssc *StorageSmartContract) getWritePoolStat(wp *writePool, tp time.Time) (
-	stat *writePoolStat, err error) {
-
-	stat = new(writePoolStat)
-
-	if err = stat.decode(wp.LockStats(tp)); err != nil {
-		return nil, err
-	}
-
-	stat.ID = wp.ID
-	stat.Locked = wp.IsLocked(tp)
-	stat.Balance = wp.Balance
-
-	return
-}
-
 // statistic for all locked tokens of a write pool
 func (ssc *StorageSmartContract) getWritePoolStatHandler(ctx context.Context,
 	params url.Values, balances chainState.StateContextI) (
@@ -396,7 +388,7 @@ func (ssc *StorageSmartContract) getWritePoolStatHandler(ctx context.Context,
 		tp   = time.Now()
 		stat *writePoolStat
 	)
-	if stat, err = ssc.getWritePoolStat(wp, tp); err != nil {
+	if stat, err = wp.stat(tp); err != nil {
 		return nil, common.NewError("write_pool_stats", err.Error())
 	}
 
