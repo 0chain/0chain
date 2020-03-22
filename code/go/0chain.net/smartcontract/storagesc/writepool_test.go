@@ -9,39 +9,29 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/util"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func Test_writePoolRequest_encode_decode(t *testing.T) {
+func Test_writePoolRequest_decode(t *testing.T) {
 	const allocID = "alloc_hex"
-	var (
-		wrd, wre writePoolRequest
-		err      error
-	)
-	wrd.AllocationID = allocID
-	if err = wre.decode(wrd.encode()); err != nil {
-		t.Fatal(err)
-	}
-	if wre.AllocationID != allocID {
-		t.Fatal("wrong")
-	}
+	var wrd, wre writePoolRequest
+	wre.AllocationID = allocID
+	require.NoError(t, wrd.decode(mustEncode(t, &wre)))
+	assert.EqualValues(t, wre, wrd)
 }
 
 func Test_newWritePool(t *testing.T) {
 	const clientID = "client_hex"
 	var wp = newWritePool(clientID)
-	if wp.ZcnLockingPool == nil {
-		t.Fatal("underlying pool is nil")
-	}
-	if wp.ClientID != clientID {
-		t.Fatal("wrong of missing client id")
-	}
+	assert.NotNil(t, wp.ZcnLockingPool)
+	assert.Equal(t, wp.ClientID, clientID)
 }
 
 func Test_writePoolKey(t *testing.T) {
 	const sscKey, allocID = "ssc_hex", "alloc_hex"
-	if writePoolKey(sscKey, allocID) == "" {
-		t.Fatal("missing write pool key")
-	}
+	assert.NotZero(t, writePoolKey(sscKey, allocID))
 }
 
 func newTestWritePool(clientID, poolID string, balance state.Balance,
@@ -59,42 +49,32 @@ func newTestWritePool(clientID, poolID string, balance state.Balance,
 }
 
 func Test_writePool_Encode_Decode(t *testing.T) {
-	const clientID, poolID, balance = "client_hex", "pool_id", 100500
+	const (
+		clientID, poolID = "client_hex", "pool_id"
+		balance          = state.Balance(100500)
+	)
+
 	var (
 		sp     = common.Now() // start point
 		dur    = 20 * time.Hour
 		we, wd *writePool
-		err    error
 	)
 
 	we = newTestWritePool(clientID, poolID, balance, sp, dur)
 	wd = newWritePool("")
 
-	if err = wd.Decode(we.Encode()); err != nil {
-		t.Fatal(err)
-	}
-	if wd.ClientID != clientID {
-		t.Fatal("wrong", wd.ClientID, clientID)
-	}
-	if wd.ZcnLockingPool == nil {
-		t.Fatal("nil")
-	}
-	if we.ZcnLockingPool.ID != poolID {
-		t.Fatal("wrong pool id")
-	}
-	if we.ZcnLockingPool.Balance != balance {
-		t.Fatal("wrong balance")
-	}
-	if we.ZcnLockingPool.TokenLockInterface == nil {
-		t.Fatal("missing tok. lock")
-	}
-	var tl, ok = we.ZcnLockingPool.TokenLockInterface.(*tokenLock)
-	if !ok {
-		t.Fatalf("wrong type %T", we.ZcnLockingPool.TokenLockInterface)
-	}
-	if tl.StartTime != sp || tl.Duration != dur || tl.Owner != clientID {
-		t.Fatal("something wrong")
-	}
+	require.NoError(t, wd.Decode(we.Encode()))
+	assert.Equal(t, wd.ClientID, clientID)
+	require.NotNil(t, wd.ZcnLockingPool)
+	assert.Equal(t, we.ZcnLockingPool.ID, poolID)
+	assert.Equal(t, we.ZcnLockingPool.Balance, balance)
+	assert.NotNil(t, we.ZcnLockingPool.TokenLockInterface)
+	assert.IsType(t, &tokenLock{}, we.ZcnLockingPool.TokenLockInterface)
+	assert.EqualValues(t, &tokenLock{
+		StartTime: sp,
+		Duration:  dur,
+		Owner:     clientID,
+	}, we.ZcnLockingPool.TokenLockInterface)
 }
 
 func Test_writePool_save(t *testing.T) {

@@ -22,14 +22,6 @@ type writePoolRequest struct {
 	AllocationID string `json:"allocation_id"`
 }
 
-func (req *writePoolRequest) encode() (b []byte) {
-	var err error
-	if b, err = json.Marshal(req); err != nil {
-		panic(err) // must not happen
-	}
-	return
-}
-
 func (req *writePoolRequest) decode(input []byte) error {
 	return json.Unmarshal(input, req)
 }
