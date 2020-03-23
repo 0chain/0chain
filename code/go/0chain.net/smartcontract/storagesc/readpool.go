@@ -23,14 +23,6 @@ type lockRequest struct {
 	Duration time.Duration `json:"duration"`
 }
 
-func (lr *lockRequest) encode() (b []byte) {
-	var err error
-	if b, err = json.Marshal(lr); err != nil {
-		panic(err) // must not happen
-	}
-	return
-}
-
 func (lr *lockRequest) decode(input []byte) error {
 	return json.Unmarshal(input, lr)
 }
@@ -39,14 +31,6 @@ func (lr *lockRequest) decode(input []byte) error {
 
 type unlockRequest struct {
 	PoolID datastore.Key `json:"pool_id"`
-}
-
-func (ur *unlockRequest) encode() (b []byte) {
-	var err error
-	if b, err = json.Marshal(ur); err != nil {
-		panic(err) // must not happen
-	}
-	return
 }
 
 func (ur *unlockRequest) decode(input []byte) error {
@@ -87,6 +71,21 @@ func (rp *readPool) decode(input []byte) (err error) {
 	}
 
 	err = rp.ZcnLockingPool.Decode(readPoolVal.Pool, &tokenLock{})
+	return
+}
+
+func (rp *readPool) stat(tp time.Time) (stat *readPoolStat, err error) {
+
+	stat = new(readPoolStat)
+
+	if err = stat.decode(rp.LockStats(tp)); err != nil {
+		return nil, err
+	}
+
+	stat.ID = rp.ID
+	stat.Locked = rp.IsLocked(tp)
+	stat.Balance = rp.Balance
+
 	return
 }
 
@@ -145,6 +144,49 @@ func (rps *readPools) delPool(id datastore.Key) {
 	delete(rps.Pools, id)
 }
 
+func (rps *readPools) save(sscKey, clientID string,
+	balances chainState.StateContextI) (err error) {
+
+	_, err = balances.InsertTrieNode(readPoolsKey(sscKey, clientID), rps)
+	return
+}
+
+func (rps *readPools) moveToBlobber(now common.Timestamp, sp *stakePool,
+	value state.Balance) (err error) {
+
+	var tp = common.ToTime(now)
+
+	for k, rp := range rps.Pools {
+		if value == 0 {
+			break
+		}
+		if !rp.IsLocked(tp) {
+			continue
+		}
+		var move state.Balance
+		if rp.Balance < value || rp.Balance == value {
+			move = rp.Balance
+			delete(rps.Pools, k)
+		} else {
+			move = value
+		}
+		if _, _, err = rp.TransferTo(sp.Unlocked, move, nil); err != nil {
+			break
+		}
+		value -= move // decrease
+	}
+
+	if err != nil {
+		return
+	}
+
+	if value != 0 {
+		return errors.New("not enough tokens in read pool")
+	}
+
+	return
+}
+
 // stat
 
 type readPoolStats struct {
@@ -195,6 +237,9 @@ type tokenLock struct {
 }
 
 func (tl tokenLock) IsLocked(entity interface{}) bool {
+	if entity == nil {
+		return false // move to blobber
+	}
 	if tm, ok := entity.(time.Time); ok {
 		return tm.Sub(common.ToTime(tl.StartTime)) < tl.Duration
 	}
@@ -257,8 +302,7 @@ func (ssc *StorageSmartContract) newReadPool(t *transaction.Transaction,
 	}
 
 	var rps = newReadPools()
-	_, err = balances.InsertTrieNode(readPoolsKey(ssc.ID, t.ClientID), rps)
-	if err != nil {
+	if err = rps.save(ssc.ID, t.ClientID, balances); err != nil {
 		return "", common.NewError("new_read_pool_failed", err.Error())
 	}
 
@@ -321,7 +365,7 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 
 	if t.Value < conf.MinLock {
 		return "", common.NewError("read_pool_lock_failed",
-			"insufficent amount to lock")
+			"insufficient amount to lock")
 	}
 
 	if lr.Duration < conf.MinLockPeriod {
@@ -359,8 +403,7 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 		return "", common.NewError("read_pool_lock_failed", err.Error())
 	}
 
-	_, err = balances.InsertTrieNode(readPoolsKey(ssc.ID, t.ClientID), rps)
-	if err != nil {
+	if err = rps.save(ssc.ID, t.ClientID, balances); err != nil {
 		return "", common.NewError("read_pool_lock_failed", err.Error())
 	}
 
@@ -375,7 +418,7 @@ func (ssc *StorageSmartContract) readPoolUnlock(t *transaction.Transaction,
 
 	var rps *readPools
 	if rps, err = ssc.getReadPools(t.ClientID, balances); err != nil {
-		return "", common.NewError("read_pool_lock_failed", err.Error())
+		return "", common.NewError("read_pool_unlock_failed", err.Error())
 	}
 
 	// the request
@@ -406,8 +449,7 @@ func (ssc *StorageSmartContract) readPoolUnlock(t *transaction.Transaction,
 
 	// save pools
 	rps.delPool(pool.ID)
-	_, err = balances.InsertTrieNode(readPoolsKey(ssc.ID, t.ClientID), rps)
-	if err != nil {
+	if err = rps.save(ssc.ID, t.ClientID, balances); err != nil {
 		return "", common.NewError("read_pool_unlock_failed", err.Error())
 	}
 
@@ -417,22 +459,6 @@ func (ssc *StorageSmartContract) readPoolUnlock(t *transaction.Transaction,
 //
 // stat
 //
-
-func (ssc *StorageSmartContract) getReadPoolStat(rp *readPool, tp time.Time) (
-	stat *readPoolStat, err error) {
-
-	stat = new(readPoolStat)
-
-	if err = stat.decode(rp.LockStats(tp)); err != nil {
-		return nil, err
-	}
-
-	stat.ID = rp.ID
-	stat.Locked = rp.IsLocked(tp)
-	stat.Balance = rp.Balance
-
-	return
-}
 
 // statistic for all locked tokens of the read pool
 func (ssc *StorageSmartContract) getReadPoolsStatsHandler(ctx context.Context,
@@ -457,7 +483,7 @@ func (ssc *StorageSmartContract) getReadPoolsStatsHandler(ctx context.Context,
 	)
 
 	for _, rp := range rps.Pools {
-		stat, err := ssc.getReadPoolStat(rp, tp)
+		stat, err := rp.stat(tp)
 		if err != nil {
 			return nil, common.NewError("read_pool_stats", err.Error())
 		}

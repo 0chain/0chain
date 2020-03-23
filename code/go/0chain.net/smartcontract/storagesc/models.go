@@ -343,10 +343,21 @@ type BlobberAllocation struct {
 	AllocationRoot  string                  `json:"allocation_root"`
 	LastWriteMarker *WriteMarker            `json:"write_marker"`
 	Stats           *StorageAllocationStats `json:"stats"`
-	// Terms of the Blobber at the time of signing the offer.
+	// Terms of the BlobberAllocation represents weighted average terms
+	// for the allocation. The MinLockDemand can be increased only,
+	// to prevent some attacks. If a user extends an allocation then
+	// we calculate new weighted average terms based on previous terms,
+	// size and expiration and new terms size and expiration.
 	Terms Terms `json:"terms"`
 	// MinLockDemand for the allocation in tokens.
 	MinLockDemand state.Balance `json:"min_lock_demand"`
+	// Spent is number of tokens sent from write pool to challenge pool
+	// for this blobber. It's used to calculate min lock demand left
+	// for this blobber. For a case, where a client uses > 1 parity shards
+	// and don't sends a data to one of blobbers, the blobber should
+	// receive its min_lock_demand tokens. Thus, we can't use shared
+	// (for allocation) min_lock_demand and spent.
+	Spent state.Balance `json:"spent"`
 }
 
 // PriceRange represents a price range allowed by user to filter blobbers.
@@ -375,34 +386,38 @@ type StorageAllocation struct {
 	Blobbers          []*StorageNode                `json:"blobbers"`
 	Owner             string                        `json:"owner_id"`
 	OwnerPublicKey    string                        `json:"owner_public_key"`
-	Payer             string                        `json:"payer_id"`
 	Stats             *StorageAllocationStats       `json:"stats"`
 	PreferredBlobbers []string                      `json:"preferred_blobbers"`
 	BlobberDetails    []*BlobberAllocation          `json:"blobber_details"`
 	BlobberMap        map[string]*BlobberAllocation `json:"-"`
 	ReadPriceRange    PriceRange                    `json:"read_price_range"`
 	WritePriceRange   PriceRange                    `json:"write_price_range"`
-	// MinLockDemand represents number of tokens required by
-	// blobbers to create physical allocation.
-	MinLockDemand state.Balance `json:"min_lock_demand"`
 	// ChallengeCompletionTime is max challenge completion time of
 	// all blobbers of the allocation.
 	ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
 	// StartTime is time when the allocation has been created. We will
 	// use it to check blobber's MaxOfferTime extending the allocation.
 	StartTime common.Timestamp `json:"start_time"`
-	// Spent is number of tokens moved to a challenge pool. It used to
-	// calculate min_lock_demand left. If user spent tokens > min_lock_demand,
-	// then we shouldn't care about the min_lock_demand anymore. The Spent
-	// represents tokens sent to challenge pool. Regardless passing the
-	// challenge. If tokens moved, then it's about min_lock_demand left
-	// reducing. Real min_lock_demand left for blobbers is
-	//
-	//      MinLockDemand - Spent
-	//
-	// TODO (sfxdx): challenge pool is not implemented yet,
-	//               and the Spent for now is always zero.
-	Spent state.Balance `json:"spent"`
+	// Finalized is true where allocation has been finalized.
+	Finalized bool `json:"finalized"`
+	// UsedSize used to calculate blobber reward ratio.
+	UsedSize int64 `json:"-"`
+}
+
+// minLockDemandLeft returns number of tokens required as min_lock_demand;
+// if a blobber receive write marker, then some token moves to related
+// challenge pool and 'Spent' of this blobber is increased; thus, the 'Spent'
+// reduces the min_lock_demand left of this blobber; but, if a malfunctioning
+// client doesn't send a data to a blobber (or blobbers) then this blobbers
+// don't receive tokens, their spent will be zero, and the min lock demand
+//
+func (sa *StorageAllocation) minLockDemandLeft() (left state.Balance) {
+	for _, details := range sa.BlobberDetails {
+		if details.MinLockDemand > details.Spent {
+			left += details.MinLockDemand - details.Spent
+		}
+	}
+	return
 }
 
 func (sa *StorageAllocation) validate(conf *scConfig) (err error) {
@@ -430,10 +445,6 @@ func (sa *StorageAllocation) validate(conf *scConfig) (err error) {
 
 	if sa.Owner == "" {
 		return errors.New("missing owner id")
-	}
-
-	if sa.Payer == "" {
-		return errors.New("missing payer id")
 	}
 
 	return // nil
@@ -480,6 +491,9 @@ func (sn *StorageAllocation) Decode(input []byte) error {
 	}
 	sn.BlobberMap = make(map[string]*BlobberAllocation)
 	for _, blobberAllocation := range sn.BlobberDetails {
+		if blobberAllocation.Stats != nil {
+			sn.UsedSize += blobberAllocation.Stats.UsedSize // total used
+		}
 		sn.BlobberMap[blobberAllocation.BlobberID] = blobberAllocation
 	}
 	return nil

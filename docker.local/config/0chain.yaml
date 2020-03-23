@@ -80,7 +80,7 @@ server_chain:
   state:
     prune_below_count: 100 # rounds
   smart_contract:
-    timeout: 50 # milliseconds
+    timeout: 550 # milliseconds
   health_check:
     show_counters: true
     deep_scan:

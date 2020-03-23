@@ -12,7 +12,7 @@ Provide
  - capacity                   bytes
  - min_lock_demand            [0; 1]
  - write_price                tok / GB
- - read_price                 tok / GB
+ - read_price                 tok / read
  - max_offer_duration         time.Duration
  - challenge_completion_time  time.Duration
 
@@ -213,6 +213,10 @@ done
 ```
 46ec6678df10e1808616375b4eb51317689700ecec7333ebd606fb0935081135 (allocation id for example)
 ```
+Let's export it and use in next requests
+```
+export ALLOC="46ec6678df10e1808616375b4eb51317689700ecec7333ebd606fb0935081135"
+```
 7. check out stake pools again
 ```
 ./zwallet getstakelockedtokens --blobber_id f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
@@ -220,11 +224,11 @@ done
 ```
 8. check out write pool of the allocation
 ```
-./zwallet getwritelockedtokens --allocation_id 46ec6678df10e1808616375b4eb51317689700ecec7333ebd606fb0935081135
+./zwallet getwritelockedtokens --allocation_id $ALLOC
 ```
 9. update allocation (increase size to 200MB, don't provide tokens, since we already have enough in the write pool)
 ```
-./zbox updateallocation --allocation 46ec6678df10e1808616375b4eb51317689700ecec7333ebd606fb0935081135 --size 209715200
+./zbox updateallocation --allocation $ALLOC --size 209715200
 ```
 10. check out pools and allocation
 11. if blobber reduces its capacity next registration, then some tokens becomes
@@ -246,4 +250,26 @@ blobber1.json:
 ```
 ```
 ./zwallet --wallet blobber1.json stakeunlock
+```
+12. generate a random file to upload
+```
+head -c 20M < /dev/urandom > random.bin
+```
+13. upload the file to blobbers
+```
+./zbox upload \
+    --allocation $ALLOC \
+    --commit \
+    --localpath=random.bin \
+    --remotepath=/remote/random.bin
+```
+14. check out the file
+```
+./zbox list --allocation $ALLOC --remotepath /remote/
+```
+15. wait some time and make sure tokens from challenge pool moves to
+blobber's stake pool (unlocked)
+```
+./zwallet getchallengelockedtokens --allocation_id $ALLOC
+./zwallet getstakelockedtokens --blobber_id f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
 ```

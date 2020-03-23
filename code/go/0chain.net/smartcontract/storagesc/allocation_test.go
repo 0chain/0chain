@@ -161,6 +161,18 @@ func TestStorageSmartContract_saveUpdatedAllocation(t *testing.T) {
 	// TODO (sfxdx): implements tests
 }
 
+func Test_allocPeriod_weight(t *testing.T) {
+	// TODO (sfxdx): implements tests
+}
+
+func Test_allocPeriod_join(t *testing.T) {
+	// TODO (sfxdx): implements tests
+}
+
+func Test_weightedAverage(t *testing.T) {
+	// TODO (sfxdx): implements tests
+}
+
 func TestStorageSmartContract_extendAllocation(t *testing.T) {
 	// TODO (sfxdx): implements tests
 }
