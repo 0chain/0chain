@@ -400,6 +400,8 @@ type StorageAllocation struct {
 	StartTime common.Timestamp `json:"start_time"`
 	// Finalized is true where allocation has been finalized.
 	Finalized bool `json:"finalized"`
+	// UsedSize used to calculate blobber reward ratio.
+	UsedSize int64 `json:"-"`
 }
 
 // minLockDemandLeft returns number of tokens required as min_lock_demand;
@@ -489,6 +491,9 @@ func (sn *StorageAllocation) Decode(input []byte) error {
 	}
 	sn.BlobberMap = make(map[string]*BlobberAllocation)
 	for _, blobberAllocation := range sn.BlobberDetails {
+		if blobberAllocation.Stats != nil {
+			sn.UsedSize += blobberAllocation.Stats.UsedSize // total used
+		}
 		sn.BlobberMap[blobberAllocation.BlobberID] = blobberAllocation
 	}
 	return nil

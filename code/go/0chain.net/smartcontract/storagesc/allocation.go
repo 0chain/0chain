@@ -69,35 +69,40 @@ func (sc *StorageSmartContract) getAllAllocationsList(
 	return allocationList, nil
 }
 
-func (sc *StorageSmartContract) addAllocation(allocation *StorageAllocation,
+func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 	balances c_state.StateContextI) (string, error) {
 
-	allocationList, err := sc.getAllocationsList(allocation.Owner, balances)
+	clients, err := sc.getAllocationsList(alloc.Owner, balances)
 	if err != nil {
 		return "", common.NewError("add_allocation_failed",
 			"Failed to get allocation list"+err.Error())
 	}
-	allAllocationList, err := sc.getAllAllocationsList(balances)
+	all, err := sc.getAllAllocationsList(balances)
 	if err != nil {
 		return "", common.NewError("add_allocation_failed",
 			"Failed to get allocation list"+err.Error())
 	}
 
-	allocationBytes, _ := balances.GetTrieNode(allocation.GetKey(sc.ID))
-	if allocationBytes == nil {
-		allocationList.List = append(allocationList.List, allocation.ID)
-		allAllocationList.List = append(allAllocationList.List, allocation.ID)
-		clientAllocation := &ClientAllocation{}
-		clientAllocation.ClientID = allocation.Owner
-		clientAllocation.Allocations = allocationList
-
-		// allAllocationBytes, _ := json.Marshal(allAllocationList)
-		balances.InsertTrieNode(ALL_ALLOCATIONS_KEY, allAllocationList)
-		balances.InsertTrieNode(clientAllocation.GetKey(sc.ID), clientAllocation)
-		balances.InsertTrieNode(allocation.GetKey(sc.ID), allocation)
+	if _, err = balances.GetTrieNode(alloc.GetKey(sc.ID)); err == nil {
+		return "", common.NewError("add_allocation_failed",
+			"allocation id already used in trie: "+alloc.GetKey(sc.ID))
+	}
+	if err != util.ErrValueNotPresent {
+		return "", common.NewError("add_allocation_failed",
+			"unexpected error: "+err.Error())
 	}
 
-	buff := allocation.Encode()
+	clients.List = append(clients.List, alloc.ID)
+	all.List = append(all.List, alloc.ID)
+	clientAllocation := &ClientAllocation{}
+	clientAllocation.ClientID = alloc.Owner
+	clientAllocation.Allocations = clients
+
+	balances.InsertTrieNode(ALL_ALLOCATIONS_KEY, all)
+	balances.InsertTrieNode(clientAllocation.GetKey(sc.ID), clientAllocation)
+	balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+
+	buff := alloc.Encode()
 	return string(buff), nil
 }
 
@@ -147,6 +152,7 @@ func (sc *StorageSmartContract) addBlobbersOffers(sa *StorageAllocation,
 		sp.addOffer(sa, sa.BlobberDetails[i])
 
 		// save blobber
+		println("SAVE BLOBBER:", b.ID, b.Used, "/", b.Capacity)
 		if _, err = balances.InsertTrieNode(b.GetKey(sc.ID), b); err != nil {
 			return fmt.Errorf("can't save blobber: %v", err)
 		}
@@ -154,8 +160,6 @@ func (sc *StorageSmartContract) addBlobbersOffers(sa *StorageAllocation,
 		if err = sp.save(sc.ID, b.ID, balances); err != nil {
 			return fmt.Errorf("can't save blobber's stake pool: %v", err)
 		}
-
-		// TODO (sfxdx): create challenge pool for the blobber/allocation
 	}
 
 	return

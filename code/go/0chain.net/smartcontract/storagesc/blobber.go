@@ -370,13 +370,14 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 
 	err = commitRead.ReadMarker.Verify(lastCommittedRM.ReadMarker)
 	if err != nil {
-		return "", common.NewError("invalid_read_marker", "Invalid read marker."+err.Error())
+		return "", common.NewError("commit_read_failed",
+			"Invalid read marker."+err.Error())
 	}
 
 	// move tokens to blobber's stake pool from client's read pool
 	alloc, err := sc.getAllocation(commitRead.ReadMarker.AllocationID, balances)
 	if err != nil {
-		return "", common.NewError("invalid_read_marker",
+		return "", common.NewError("commit_read_failed",
 			"can't get related allocation: "+err.Error())
 	}
 
@@ -389,7 +390,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	}
 
 	if details == nil {
-		return "", common.NewError("invalid_read_marker",
+		return "", common.NewError("commit_read_failed",
 			"blobber doesn't belong to allocation")
 	}
 
@@ -529,40 +530,41 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	var commitConnection BlobberCloseConnection
 	err := json.Unmarshal(input, &commitConnection)
 	if err != nil {
-		return "", err
+		return "", common.NewError("commit_connection_failed",
+			"malformed input: "+err.Error())
 	}
 
 	if !commitConnection.Verify() {
-		return "", common.NewError("invalid_parameters", "Invalid input")
+		return "", common.NewError("commit_connection_failed", "Invalid input")
 	}
 
 	if commitConnection.WriteMarker.BlobberID != t.ClientID {
-		return "", common.NewError("invalid_parameters",
+		return "", common.NewError("commit_connection_failed",
 			"Invalid Blobber ID for closing connection. Write marker not for this blobber")
 	}
 
 	alloc, err := sc.getAllocation(commitConnection.WriteMarker.AllocationID,
 		balances)
 	if err != nil {
-		return "", common.NewError("invalid_parameters",
+		return "", common.NewError("commit_connection_failed",
 			"can't get allocation: "+err.Error())
 	}
 
 	if alloc.Owner != commitConnection.WriteMarker.ClientID {
-		return "", common.NewError("invalid_parameters", "write marker has"+
+		return "", common.NewError("commit_connection_failed", "write marker has"+
 			" to be by the same client as owner of the allocation")
 	}
 
 	details, ok := alloc.BlobberMap[t.ClientID]
 	if !ok {
-		return "", common.NewError("invalid_parameters",
+		return "", common.NewError("commit_connection_failed",
 			"Blobber is not part of the allocation")
 	}
 
 	detailsBytes, err := json.Marshal(details)
 
 	if !commitConnection.WriteMarker.VerifySignature(alloc.OwnerPublicKey) {
-		return "", common.NewError("invalid_parameters",
+		return "", common.NewError("commit_connection_failed",
 			"Invalid signature for write marker")
 	}
 
@@ -575,14 +577,14 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	}
 
 	if details.AllocationRoot != commitConnection.PrevAllocationRoot {
-		return "", common.NewError("invalid_parameters",
+		return "", common.NewError("commit_connection_failed",
 			"Previous allocation root does not match the latest allocation root")
 	}
 
 	if details.Stats.UsedSize+commitConnection.WriteMarker.Size >
 		details.Size {
 
-		return "", common.NewError("invalid_parameters",
+		return "", common.NewError("commit_connection_failed",
 			"Size for blobber allocation exceeded maximum")
 	}
 
@@ -596,13 +598,13 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 
 	// check time boundaries
 	if commitConnection.WriteMarker.Timestamp < alloc.StartTime {
-		return "", common.NewError("invalid_parameters",
+		return "", common.NewError("commit_connection_failed",
 			"write marker time is before allocation created")
 	}
 
 	if commitConnection.WriteMarker.Timestamp > alloc.Expiration {
 
-		return "", common.NewError("invalid_parameters",
+		return "", common.NewError("commit_connection_failed",
 			"write marker time is after allocation expires")
 	}
 

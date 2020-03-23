@@ -71,7 +71,7 @@ func (sc *StorageSmartContract) getBlobberChallenge(blobberID string,
 
 // move tokens from challenge pool to blobber's stake pool (to unlocked)
 func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation,
-	prev common.Timestamp, bc *BlobberChallenge,
+	prev common.Timestamp, bc *BlobberChallenge, details *BlobberAllocation,
 	balances c_state.StateContextI) (err error) {
 
 	// time of this challenge
@@ -98,6 +98,9 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation,
 		ratio = 1 // all left (allocation closed, challenge completion time)
 	}
 
+	// blobber ratio (of all blobbers)
+	ratio *= float64(details.Stats.UsedSize) / float64(alloc.UsedSize)
+
 	var move = state.Balance(float64(cp.Balance) * ratio)
 
 	if err = cp.moveToStakePool(sp, move); err != nil {
@@ -118,7 +121,7 @@ func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation,
 
 // move tokens from challenge pool back to write pool
 func (sc *StorageSmartContract) blobberPenalty(alloc *StorageAllocation,
-	prev common.Timestamp, bc *BlobberChallenge,
+	prev common.Timestamp, bc *BlobberChallenge, details *BlobberAllocation,
 	balances c_state.StateContextI) (err error) {
 
 	// time of this challenge
@@ -144,6 +147,9 @@ func (sc *StorageSmartContract) blobberPenalty(alloc *StorageAllocation,
 	if tp > alloc.Expiration {
 		ratio = 1 // all left (allocation closed, challenge completion time)
 	}
+
+	// used size ratio
+	ratio *= float64(details.Stats.UsedSize) / float64(details.Size)
 
 	var offer = sp.findOffer(alloc.ID)
 	if offer == nil {
@@ -261,7 +267,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		//Logger.Info("Challenge passed", zap.Any("challenge", challengeResponse.ID))
 
 		err = sc.blobberReward(allocationObj, prev, blobberChallengeObj,
-			balances)
+			blobberAllocation, balances)
 		if err != nil {
 			return "", common.NewError("challenge_reward_error", err.Error())
 		}
@@ -290,7 +296,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		Logger.Info("Challenge failed", zap.Any("challenge", challengeResponse.ID))
 
 		err = sc.blobberPenalty(allocationObj, prev, blobberChallengeObj,
-			balances)
+			blobberAllocation, balances)
 		if err != nil {
 			return "", common.NewError("challenge_penalty_error", err.Error())
 		}
@@ -301,7 +307,9 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	return "", common.NewError("not_enough_validations", "Not enough validations for the challenge")
 }
 
-func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction, b *block.Block, input []byte, balances c_state.StateContextI) error {
+func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
+	b *block.Block, input []byte, balances c_state.StateContextI) error {
+
 	stats := &StorageStats{}
 	stats.Stats = &StorageAllocationStats{}
 	statsBytes, err := balances.GetTrieNode(stats.GetKey(sc.ID))

@@ -94,7 +94,6 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		challengesEnabled := config.SmartContractConfig.GetBool(
 			"smart_contracts.storagesc.challenge_enabled")
 		if challengesEnabled {
-			println("TRACE: GENERATE CHALLENGE")
 			err = sc.generateChallenges(t, balances.GetBlock(), input, balances)
 			if err != nil {
 				return "", err
@@ -110,7 +109,6 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		challengesEnabled := config.SmartContractConfig.GetBool(
 			"smart_contracts.storagesc.challenge_enabled")
 		if challengesEnabled {
-			println("TRACE: GENERATE CHALLENGE")
 			err = sc.generateChallenges(t, balances.GetBlock(), input, balances)
 			if err != nil {
 				return "", err
@@ -165,7 +163,6 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		challengesEnabled := config.SmartContractConfig.GetBool(
 			"smart_contracts.storagesc.challenge_enabled")
 		if challengesEnabled {
-			println("TRACE: GENERATE CHALLENGE")
 			err = sc.generateChallenges(t, balances.GetBlock(), input, balances)
 			if err != nil {
 				return
