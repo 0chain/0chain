@@ -53,9 +53,14 @@ func (c *Chain) StatusMonitor(ctx context.Context) {
 
 /*FinalizeRoundWorker - a worker that handles the finalized blocks */
 func (c *Chain) FinalizeRoundWorker(ctx context.Context, bsh BlockStateHandler) {
-	for r := range c.finalizedRoundsChannel {
-		c.finalizeRound(ctx, r, bsh)
-		c.UpdateRoundInfo(r)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case r := <-c.finalizedRoundsChannel:
+			c.finalizeRound(ctx, r, bsh)
+			c.UpdateRoundInfo(r)
+		}
 	}
 }
 
@@ -122,27 +127,33 @@ func (c *Chain) repairChain(ctx context.Context, newMB *block.Block,
 
 //FinalizedBlockWorker - a worker that processes finalized blocks
 func (c *Chain) FinalizedBlockWorker(ctx context.Context, bsh BlockStateHandler) {
-	for fb := range c.finalizedBlocksChannel {
-		lfb := c.GetLatestFinalizedBlock()
-		if fb.Round < lfb.Round-5 {
-			Logger.Error("slow finalized block processing", zap.Int64("lfb", lfb.Round), zap.Int64("fb", fb.Round))
-		}
+	for {
+		select {
+		case <-ctx.Done():
+			return
 
-		// make sure we have valid verified MB chain if the block contains
-		// a magic block; we already have verified and valid MB chain at this
-		// moment, let's keep it updated and verified too
-
-		if fb.MagicBlock != nil {
-			var err = c.repairChain(ctx, fb, bsh.SaveMagicBlock())
-			if err != nil {
-				Logger.Error("repairing mb chain", zap.Error(err))
-				return
+		case fb := <-c.finalizedBlocksChannel:
+			lfb := c.GetLatestFinalizedBlock()
+			if fb.Round < lfb.Round-5 {
+				Logger.Error("slow finalized block processing", zap.Int64("lfb", lfb.Round), zap.Int64("fb", fb.Round))
 			}
+
+			// make sure we have valid verified MB chain if the block contains
+			// a magic block; we already have verified and valid MB chain at this
+			// moment, let's keep it updated and verified too
+
+			if fb.MagicBlock != nil {
+				var err = c.repairChain(ctx, fb, bsh.SaveMagicBlock())
+				if err != nil {
+					Logger.Error("repairing mb chain", zap.Error(err))
+					return
+				}
+			}
+
+			// finalize
+
+			c.finalizeBlock(ctx, fb, bsh)
 		}
-
-		// finalize
-
-		c.finalizeBlock(ctx, fb, bsh)
 	}
 }
 

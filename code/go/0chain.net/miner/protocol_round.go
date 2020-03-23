@@ -827,8 +827,19 @@ func StartProtocol(ctx context.Context, gb *block.Block) {
 		mr, _ = mc.AddRound(mr).(*Round)
 		mc.SetRandomSeed(sr, lfb.RoundRandomSeed)
 		mc.AddBlock(lfb)
-		mc.InitBlockState(lfb)
+		//ugly hack: for error "node not found"
+		go func() {
+			for {
+				err := mc.InitBlockState(lfb)
+				if err == nil {
+					return
+				}
+				Logger.Error("start_protocol", zap.Error(err))
+				time.Sleep(time.Second * 1)
+			}
+		}()
 		mc.SetLatestFinalizedBlock(ctx, lfb)
+
 	} else {
 		mr = mc.getRound(ctx, gb.Round)
 	}
