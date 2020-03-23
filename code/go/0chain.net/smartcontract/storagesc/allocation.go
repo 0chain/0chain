@@ -152,7 +152,6 @@ func (sc *StorageSmartContract) addBlobbersOffers(sa *StorageAllocation,
 		sp.addOffer(sa, sa.BlobberDetails[i])
 
 		// save blobber
-		println("SAVE BLOBBER:", b.ID, b.Used, "/", b.Capacity)
 		if _, err = balances.InsertTrieNode(b.GetKey(sc.ID), b); err != nil {
 			return fmt.Errorf("can't save blobber: %v", err)
 		}

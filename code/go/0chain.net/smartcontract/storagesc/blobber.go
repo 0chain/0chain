@@ -171,8 +171,15 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 
 // update existing blobber, or reborn a deleted one
 func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
-	blobber *StorageNode, all *StorageNodes, balances c_state.StateContextI) (
-	sp *stakePool, err error) {
+	blobber *StorageNode, existingBytes util.Serializable, all *StorageNodes,
+	balances c_state.StateContextI) (sp *stakePool, err error) {
+
+	var existBlobber StorageNode
+	if err = existBlobber.Decode(existingBytes.Encode()); err != nil {
+		return nil, fmt.Errorf("can't decode existing blobber: %v", err)
+	}
+
+	blobber.Used = existBlobber.Used // copy
 
 	if sp, err = sc.getStakePool(blobber.ID, balances); err != nil {
 		return nil, fmt.Errorf("can't get related stake pool: %v", err)
@@ -320,7 +327,8 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 
 	// update blobber case
 	default:
-		sp, err = sc.updateBlobber(t, newBlobber, allBlobbersList, balances)
+		sp, err = sc.updateBlobber(t, newBlobber, existb, allBlobbersList,
+			balances)
 
 	}
 
