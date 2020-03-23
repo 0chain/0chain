@@ -398,6 +398,8 @@ type StorageAllocation struct {
 	// StartTime is time when the allocation has been created. We will
 	// use it to check blobber's MaxOfferTime extending the allocation.
 	StartTime common.Timestamp `json:"start_time"`
+	// Finalized is true where allocation has been finalized.
+	Finalized bool `json:"finalized"`
 }
 
 // minLockDemandLeft returns number of tokens required as min_lock_demand;

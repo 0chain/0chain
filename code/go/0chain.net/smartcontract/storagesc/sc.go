@@ -40,6 +40,7 @@ func (ssc *StorageSmartContract) SetSC(sc *smartcontractinterface.SmartContract,
 	ssc.SmartContract.RestHandlers["/allocations"] = ssc.GetAllocationsHandler
 	ssc.SmartContractExecutionStats["new_allocation_request"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "new_allocation_request"), nil)
 	ssc.SmartContractExecutionStats["update_allocation_request"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "update_allocation_request"), nil)
+	ssc.SmartContractExecutionStats["finalize_allocation"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "finalize_allocation"), nil)
 	// challenge
 	ssc.SmartContract.RestHandlers["/openchallenges"] = ssc.OpenChallengeHandler
 	ssc.SmartContract.RestHandlers["/getchallenge"] = ssc.GetChallengeHandler
@@ -59,7 +60,6 @@ func (ssc *StorageSmartContract) SetSC(sc *smartcontractinterface.SmartContract,
 	// write pool
 	ssc.SmartContract.RestHandlers["/getWritePoolStat"] = ssc.getWritePoolStatHandler
 	ssc.SmartContractExecutionStats["write_pool_lock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "write_pool_lock"), nil)
-	ssc.SmartContractExecutionStats["write_pool_unlock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "write_pool_unlock"), nil)
 	// stake pool
 	ssc.SmartContract.RestHandlers["/getStakePoolStat"] = ssc.getStakePoolStatHandler
 	ssc.SmartContractExecutionStats["stake_pool_unlock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "stake_pool_unlock"), nil)
@@ -85,6 +85,8 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 
 	switch funcName {
 
+	// read/write markers
+
 	case "read_redeem":
 		if resp, err = sc.commitBlobberRead(t, input, balances); err != nil {
 			return
@@ -92,6 +94,7 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		challengesEnabled := config.SmartContractConfig.GetBool(
 			"smart_contracts.storagesc.challenge_enabled")
 		if challengesEnabled {
+			println("TRACE: GENERATE CHALLENGE")
 			err = sc.generateChallenges(t, balances.GetBlock(), input, balances)
 			if err != nil {
 				return "", err
@@ -107,24 +110,28 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		challengesEnabled := config.SmartContractConfig.GetBool(
 			"smart_contracts.storagesc.challenge_enabled")
 		if challengesEnabled {
+			println("TRACE: GENERATE CHALLENGE")
 			err = sc.generateChallenges(t, balances.GetBlock(), input, balances)
 			if err != nil {
 				return "", err
 			}
 		}
 
+	// allocations
+
 	case "new_allocation_request":
 		resp, err = sc.newAllocationRequest(t, input, balances)
-
 	case "update_allocation_request":
 		resp, err = sc.updateAllocationRequest(t, input, balances)
+	case "finalize_allocation":
+		resp, err = sc.finalizeAllocation(t, input, balances)
+
+	// blobbers
 
 	case "add_blobber":
 		resp, err = sc.addBlobber(t, input, balances)
-
 	case "add_validator":
 		resp, err = sc.addValidator(t, input, balances)
-
 	case "blobber_health_check":
 		resp, err = sc.blobberHealthCheck(t, input, balances)
 
@@ -141,8 +148,6 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 
 	case "write_pool_lock":
 		resp, err = sc.writePoolLock(t, input, balances)
-	case "write_pool_unlock":
-		resp, err = sc.writePoolUnlock(t, input, balances)
 
 	// stake pool
 
@@ -160,6 +165,7 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		challengesEnabled := config.SmartContractConfig.GetBool(
 			"smart_contracts.storagesc.challenge_enabled")
 		if challengesEnabled {
+			println("TRACE: GENERATE CHALLENGE")
 			err = sc.generateChallenges(t, balances.GetBlock(), input, balances)
 			if err != nil {
 				return

@@ -122,6 +122,22 @@ func (wp *writePool) moveToChallenge(cp *challengePool, value state.Balance) (
 	return
 }
 
+// moveToStake moves given amount of token to stake pool (unlocked)
+func (wp *writePool) moveToStake(sp *stakePool, value state.Balance) (
+	err error) {
+
+	if value == 0 {
+		return // nothing to move
+	}
+
+	if wp.Balance < value {
+		return errors.New("not enough tokens in write pool")
+	}
+
+	_, _, err = wp.TransferTo(sp.Unlocked, value, nil)
+	return
+}
+
 func (wp *writePool) stat(tp time.Time) (
 	stat *writePoolStat, err error) {
 
@@ -307,48 +323,6 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 	return
 }
 
-// unlock tokens if expired
-func (ssc *StorageSmartContract) writePoolUnlock(t *transaction.Transaction,
-	input []byte, balances chainState.StateContextI) (resp string, err error) {
-
-	// the request
-
-	var req writePoolRequest
-	if err = req.decode(input); err != nil {
-		return "", common.NewError("write_pool_unlock_failed", err.Error())
-	}
-
-	// write pool
-
-	var wp *writePool
-	if wp, err = ssc.getWritePool(req.AllocationID, balances); err != nil {
-		return "", common.NewError("write_pool_unlock_failed", err.Error())
-	}
-
-	if wp.ClientID != t.ClientID {
-		return "", common.NewError("write_pool_unlock_failed",
-			"only owner can unlock the pool")
-	}
-
-	var transfer *state.Transfer
-	transfer, resp, err = wp.EmptyPool(ssc.ID, t.ClientID,
-		common.ToTime(t.CreationDate))
-	if err != nil {
-		return "", common.NewError("write_pool_unlock_failed", err.Error())
-	}
-
-	if err = balances.AddTransfer(transfer); err != nil {
-		return "", common.NewError("write_pool_unlock_failed", err.Error())
-	}
-
-	// save pool
-	if err = wp.save(ssc.ID, req.AllocationID, balances); err != nil {
-		return "", common.NewError("write_pool_unlock_failed", err.Error())
-	}
-
-	return
-}
-
 // update write pool expiration
 func (ssc *StorageSmartContract) updateWritePoolExpiration(
 	t *transaction.Transaction, allocID string, expiried common.Timestamp,
@@ -406,4 +380,143 @@ func (ssc *StorageSmartContract) getWritePoolStatHandler(ctx context.Context,
 	}
 
 	return &stat, nil
+}
+
+//
+// finalize an allocation (after expire + challenge completion time)
+//
+
+// 1. challenge pool                  -> write pool
+// 2. write pool min_lock_demand left -> blobbers
+// 3. remove offer from blobber (stake pool)
+// 4. write pool                      -> client
+func (ssc *StorageSmartContract) finalizeAllocation(t *transaction.Transaction,
+	input []byte, balances chainState.StateContextI) (resp string, err error) {
+
+	// the request
+
+	var req writePoolRequest
+	if err = req.decode(input); err != nil {
+		return "", common.NewError("fini_alloc_failed", err.Error())
+	}
+
+	// write pool
+
+	var wp *writePool
+	if wp, err = ssc.getWritePool(req.AllocationID, balances); err != nil {
+		return "", common.NewError("fini_alloc_failed", err.Error())
+	}
+
+	// allocation
+	var alloc *StorageAllocation
+	if alloc, err = ssc.getAllocation(req.AllocationID, balances); err != nil {
+		return "", common.NewError("fini_alloc_failed",
+			"can't get related allocation: "+err.Error())
+	}
+
+	if alloc.Finalized {
+		return "", common.NewError("fini_alloc_failed",
+			"allocation already finalized")
+	}
+
+	// should be expired
+	var expire = alloc.Expiration + toSeconds(alloc.ChallengeCompletionTime)
+	if expire > t.CreationDate {
+		return "", common.NewError("fini_alloc_failed",
+			"allocation is not expired yet")
+	}
+
+	// transaction initiator can be the client or a blobber of the transaction
+	var validInitiator = (t.ClientID == alloc.Owner)
+	if !validInitiator {
+		for _, d := range alloc.BlobberDetails {
+			if d.BlobberID == t.ClientID {
+				validInitiator = true
+				break
+			}
+		}
+	}
+	if !validInitiator {
+		return "", common.NewError("fini_alloc_failed", "only allocation"+
+			" owner or related blobber can finalize an allocation")
+	}
+
+	// challenge pool
+	var cp *challengePool
+	if cp, err = ssc.getChallengePool(req.AllocationID, balances); err != nil {
+		return "", common.NewError("fini_alloc_failed",
+			"can't get related challenge pool")
+	}
+
+	// 1. empty the challenge pool
+	if err = cp.moveToWritePool(wp, cp.Balance); err != nil {
+		return "", common.NewError("fini_alloc_failed",
+			"emptying challenge pool: "+err.Error())
+	}
+
+	// save the challenge pool
+	if err = cp.save(ssc.ID, alloc.ID, balances); err != nil {
+		return "", common.NewError("fini_alloc_failed",
+			"saving challenge pool: "+err.Error())
+	}
+
+	// 2. move min_lock_demands left to blobber's stake pools
+	// 3. remove blobber's offers (update)
+	for _, d := range alloc.BlobberDetails {
+		var sp *stakePool
+		if sp, err = ssc.getStakePool(d.BlobberID, balances); err != nil {
+			return "", common.NewError("fini_alloc_failed",
+				"can't get stake pool of "+d.BlobberID+": "+err.Error())
+		}
+		if d.MinLockDemand > d.Spent {
+			if err = wp.moveToStake(sp, d.MinLockDemand-d.Spent); err != nil {
+				return "", common.NewError("fini_alloc_failed", "can't send"+
+					" min lock demand left for "+d.BlobberID+": "+err.Error())
+			}
+		}
+		// get the blobber
+		var b *StorageNode
+		if b, err = ssc.getBlobber(d.BlobberID, balances); err != nil {
+			return "", common.NewError("fini_alloc_failed",
+				"can't get blobber "+d.BlobberID+": "+err.Error())
+		}
+		if _, err = sp.update(t.CreationDate, b, balances); err != nil {
+			return "", common.NewError("fini_alloc_failed",
+				"can't update stake pool of "+d.BlobberID+": "+err.Error())
+		}
+		// save the stake pool
+		if err = sp.save(ssc.ID, d.BlobberID, balances); err != nil {
+			return "", common.NewError("fini_alloc_failed",
+				"can't save stake pool of "+d.BlobberID+": "+err.Error())
+		}
+		d.Spent = d.MinLockDemand // to save
+	}
+
+	// 4. move all of the write pool to allocation owner
+	var transfer *state.Transfer
+	transfer, resp, err = wp.EmptyPool(ssc.ID, alloc.Owner,
+		common.ToTime(t.CreationDate))
+	if err != nil {
+		return "", common.NewError("fini_alloc_failed", err.Error())
+	}
+
+	if err = balances.AddTransfer(transfer); err != nil {
+		return "", common.NewError("fini_alloc_failed", err.Error())
+	}
+
+	// save pool
+	if err = wp.save(ssc.ID, req.AllocationID, balances); err != nil {
+		return "", common.NewError("fini_alloc_failed",
+			"saving write pool: "+err.Error())
+	}
+
+	// save the allocation
+	alloc.Finalized = true
+	_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
+	if err != nil {
+		return "", common.NewError("fini_alloc_failed",
+			"saving allocation: "+err.Error())
+	}
+
+	return
 }

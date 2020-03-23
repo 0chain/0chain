@@ -16,7 +16,7 @@ smart_contracts:
     min_stake: 100
     max_stake: 10000000000
   storagesc:
-    challenge_enabled: false
+    challenge_enabled: true
     challenge_rate_per_mb_min: 1
     # min possible allocations size in bytes allowed by the SC
     min_alloc_size: 1024
