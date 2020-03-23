@@ -167,9 +167,16 @@ func main() {
 	// Do a proximity scan from finalized block till ProximityWindow
 	go sc.HealthCheckWorker(ctx, sharder.ProximityScan) // 4) progressively checks the health for each round
 
+	defer done(ctx)
+
 	Logger.Info("Ready to listen to the requests")
 	chain.StartTime = time.Now().UTC()
 	log.Fatal(server.ListenAndServe())
+}
+
+func done(ctx context.Context) {
+	sc := sharder.GetSharderChain()
+	sc.Stop()
 }
 
 func startBlocksInfoLogs(sc *sharder.Chain) {

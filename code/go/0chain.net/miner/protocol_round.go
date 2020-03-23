@@ -784,7 +784,9 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context, pnround int64)
 
 	if lfbs != nil &&
 		(lfb == nil || lfb.Round == 0 || lfb.Round < lfbs.Round) {
-		mr := mc.getRound(ctx, lfbs.Round)
+		sr := round.NewRound(lfbs.Round)
+		mr := mc.CreateRound(sr)
+		mr, _ = mc.AddRound(mr).(*Round)
 		mc.SetRandomSeed(mr, lfbs.GetRoundRandomSeed())
 		mc.AddBlock(lfbs)
 		mc.InitBlockState(lfbs)
@@ -822,23 +824,18 @@ func StartProtocol(ctx context.Context, gb *block.Block) {
 	if lfb != nil {
 		sr := round.NewRound(lfb.Round)
 		mr = mc.CreateRound(sr)
-		mr = mc.AddRound(mr).(*Round)
-		mc.SetRandomSeed(sr, lfb.GetRoundRandomSeed())
+		mr, _ = mc.AddRound(mr).(*Round)
+		mc.SetRandomSeed(sr, lfb.RoundRandomSeed)
 		mc.AddBlock(lfb)
 		mc.InitBlockState(lfb)
 		mc.SetLatestFinalizedBlock(ctx, lfb)
-		mc.GetPreviousBlock(ctx, lfb)
 	} else {
 		mr = mc.getRound(ctx, gb.Round)
 	}
 	Logger.Info("starting the blockchain ...", zap.Int64("round", mr.GetRoundNumber()))
 
-	cr := mc.getRound(ctx, mr.Number)
-	number := mc.StartNextRound(ctx, cr).Number
-	if cr.Number == 0 {
-		mc.SetCurrentRound(number)
-	}
-
+	number := mc.StartNextRound(ctx, mr).Number
+	mc.SetCurrentRound(number)
 }
 
 func (mc *Chain) WaitForActiveSharders(ctx context.Context) error {

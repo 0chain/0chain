@@ -170,7 +170,7 @@ func main() {
 
 	mc.WaitForActiveSharders(ctx)
 	getCurrentMagicBlock(mc)
-
+	mb = mc.GetMagicBlock()
 	if mb.StartingRound == 0 && mb.IsActiveNode(node.Self.Underlying().GetKey(), mb.StartingRound) {
 		dkgShare := &bls.DKGSummary{
 			SecretShares: make(map[string]string),
@@ -193,11 +193,14 @@ func main() {
 	chain.StartTime = time.Now().UTC()
 	activeMiner := mb.Miners.HasNode(node.Self.Underlying().GetKey())
 	if activeMiner {
-		if miner.SetDKG(ctx, mb) {
-			miner.StartProtocol(ctx, gb)
+		if err := miner.SetDKG(ctx, mb); err != nil {
+			panic(err)
 		}
+		miner.StartProtocol(ctx, gb)
 	}
 	mc.SetStarted()
+	miner.SetupWorkers(ctx)
+
 
 	if config.Development() {
 		go TransactionGenerator(mc.Chain)
@@ -209,8 +212,14 @@ func main() {
 		go mc.DKGProcess(ctx)
 	}
 
+	defer done(ctx)
 	<-ctx.Done()
 	time.Sleep(time.Second * 5)
+}
+
+func done(ctx context.Context) {
+	mc := miner.GetMinerChain()
+	mc.Stop()
 }
 
 func readNonGenesisHostAndPort(keysFile *string) (string, string, int, error) {
@@ -356,6 +365,6 @@ func initN2NHandlers() {
 func initWorkers(ctx context.Context) {
 	serverChain := chain.GetServerChain()
 	serverChain.SetupWorkers(ctx)
-	miner.SetupWorkers(ctx)
+	//miner.SetupWorkers(ctx)
 	transaction.SetupWorkers(ctx)
 }

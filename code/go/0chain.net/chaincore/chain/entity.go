@@ -1162,3 +1162,9 @@ func (c *Chain) GetViewChangeMagicBlock() *block.MagicBlock {
 	defer c.mutexViewChangeMB.RUnlock()
 	return c.viewChangeMagicBlock
 }
+
+func (c *Chain) Stop() {
+	if stateDB != nil {
+		stateDB.Flush()
+	}
+}
