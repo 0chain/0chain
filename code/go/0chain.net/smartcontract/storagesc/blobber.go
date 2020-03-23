@@ -380,16 +380,6 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"can't get related allocation: "+err.Error())
 	}
 
-	if alloc.Owner != commitRead.ReadMarker.ClientID {
-		return "", common.NewError("invalid_read_marker",
-			"allocation doesn't belong to this client")
-	}
-
-	if alloc.OwnerPublicKey != commitRead.ReadMarker.ClientPublicKey {
-		return "", common.NewError("invalid_read_marker",
-			"invalid public key of read_marker signer")
-	}
-
 	var details *BlobberAllocation
 	for _, d := range alloc.BlobberDetails {
 		if d.BlobberID == commitRead.ReadMarker.BlobberID {
@@ -406,10 +396,11 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	var (
 		numReads = commitRead.ReadMarker.ReadCounter - lastKnownCtr
 		value    = details.Terms.ReadPrice * state.Balance(numReads)
+		userID   = commitRead.ReadMarker.ClientID
 	)
 
 	// move tokens from read pool to stake pool
-	rps, err := sc.getReadPools(alloc.Owner, balances)
+	rps, err := sc.getReadPools(userID, balances)
 	if err != nil {
 		return "", common.NewError("commit_read_failed",
 			"can't get related read pool: "+err.Error())
@@ -432,7 +423,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"can't save stake pool: "+err.Error())
 	}
 
-	if err = rps.save(sc.ID, alloc.Owner, balances); err != nil {
+	if err = rps.save(sc.ID, userID, balances); err != nil {
 		return "", common.NewError("commit_read_failed",
 			"can't save read pool: "+err.Error())
 	}
@@ -441,6 +432,94 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	balances.InsertTrieNode(commitRead.GetKey(sc.ID), commitRead)
 	sc.newRead(balances, numReads)
 	return "success", nil
+}
+
+func sizePrice(size int64, price state.Balance) float64 {
+	return sizeInGB(size) * float64(price)
+}
+
+// (expire - last_challenge_time) /  (allocation duration)
+func allocLeftRatio(start, expire, last common.Timestamp) float64 {
+	return float64(expire-last) / float64(expire-start)
+}
+
+// commitMoveTokens moves tokens on connection commit (on write marker),
+// if data deleted (size < 0) -- from challenge pool back to write pool,
+// if data written (size > 0) -- from write pool to challenge pool
+func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
+	size int64, details *BlobberAllocation, balances c_state.StateContextI) (
+	err error) {
+
+	// depending size (> 0, write, or < 0, delete)
+	// 1. move tokens from write pool to challenge pool
+	// 2. move tokens from challenge pool back to write pool
+
+	// write pool
+	wp, err := sc.getWritePool(alloc.ID, balances)
+	if err != nil {
+		return errors.New("can't get related write pool")
+	}
+
+	// challenge pool
+	cp, err := sc.getChallengePool(alloc.ID, balances)
+	if err != nil {
+		return errors.New("can't get related challenge pool")
+	}
+
+	var value state.Balance
+
+	if size > 0 {
+		// write
+		value = state.Balance(float64(details.Terms.WritePrice) *
+			sizeInGB(size))
+
+		if err = wp.moveToChallenge(cp, value); err != nil {
+			return fmt.Errorf("can't move tokens to challenge pool: %v", err)
+		}
+	} else {
+		// delete
+		var (
+			bc            *BlobberChallenge
+			lastChallenge = alloc.StartTime
+		)
+		bc, err = sc.getBlobberChallenge(details.BlobberID, balances)
+		if err != nil && err != util.ErrValueNotPresent {
+			return fmt.Errorf("error getting blobber challenge: %v", err)
+		}
+
+		// if err is util.ValueNotPresent then we use alloc.StartTime as
+		// last challenge time
+		if err == nil && bc.LatestCompletedChallenge != nil {
+			lastChallenge = bc.LatestCompletedChallenge.Created
+		}
+
+		// tokens left in challenge pool
+		var left = sizePrice(details.Stats.UsedSize, details.Terms.WritePrice) *
+			allocLeftRatio(alloc.StartTime, alloc.Expiration, lastChallenge)
+
+		value = cp.Balance - state.Balance(left)
+
+		if value < 0 {
+			return fmt.Errorf("got negative amount of tokens to return" +
+				" back to write pool on delete data")
+		}
+
+		if err = cp.moveToWritePool(wp, value); err != nil {
+			return fmt.Errorf("can't move tokens back to write pool: %v", err)
+		}
+	}
+
+	// save pools
+	if err = wp.save(sc.ID, alloc.ID, balances); err != nil {
+		return fmt.Errorf("can't save write pool: %v", err)
+	}
+	if err = cp.save(sc.ID, alloc.ID, balances); err != nil {
+		return fmt.Errorf("can't save challenge pool: %v", err)
+	}
+
+	// adjust the spent
+	details.Spent += value
+	return
 }
 
 func (sc *StorageSmartContract) commitBlobberConnection(
@@ -515,8 +594,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	alloc.Stats.UsedSize += commitConnection.WriteMarker.Size
 	alloc.Stats.NumWrites++
 
-	// move tokens from write pool to challenge pool
-
 	// check time boundaries
 	if commitConnection.WriteMarker.Timestamp < alloc.StartTime {
 		return "", common.NewError("invalid_parameters",
@@ -529,44 +606,17 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"write marker time is after allocation expires")
 	}
 
-	// write pool
-	wp, err := sc.getWritePool(alloc.ID, balances)
+	err = sc.commitMoveTokens(alloc, commitConnection.WriteMarker.Size, details,
+		balances)
 	if err != nil {
-		return "", common.NewError("close_connection_failed",
-			"can't get related write pool")
-	}
-
-	// challenge pool
-	cp, err := sc.getChallengePool(alloc.ID, balances)
-	if err != nil {
-		return "", common.NewError("close_connection_failed",
-			"can't get related challenge pool")
-	}
-
-	// size has already checked, let's calculate tokens to move
-	// commitConnection.WriteMarker.Size
-	var value = state.Balance(float64(details.Terms.WritePrice) *
-		sizeInGB(commitConnection.WriteMarker.Size))
-
-	if err = wp.moveToChallenge(cp, value); err != nil {
-		return "", common.NewError("close_connection_failed",
-			"can't move tokens to challenge pool: "+err.Error())
-	}
-
-	// save pools
-	if err = wp.save(sc.ID, alloc.ID, balances); err != nil {
-		return "", common.NewError("close_connection_failed",
-			"can't save write pool: "+err.Error())
-	}
-	if err = cp.save(sc.ID, alloc.ID, balances); err != nil {
-		return "", common.NewError("close_connection_failed",
-			"can't save challenge pool: "+err.Error())
+		return "", common.NewError("commit_connection_failed",
+			"write marker time is after allocation expires")
 	}
 
 	// save allocation object
 	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
-		return "", common.NewError("commit_connection",
+		return "", common.NewError("commit_connection_failed",
 			"saving allocation object: "+err.Error())
 	}
 

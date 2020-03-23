@@ -217,6 +217,24 @@ func (sp *stakePool) update(now common.Timestamp, blobber *StorageNode,
 	return
 }
 
+// moveToWritePool moves tokens to write pool on challenge failed
+func (sp *stakePool) moveToWritePool(wp *writePool,
+	value state.Balance) (err error) {
+
+	if value == 0 {
+		return // nothing to move
+	}
+
+	if sp.Locked.Balance < value {
+		return fmt.Errorf("not enough tokens in stake pool %s: %d < %d",
+			sp.Locked.ID, sp.Locked.Balance, value)
+	}
+
+	// move
+	_, _, err = sp.Locked.TransferTo(wp, value, nil)
+	return
+}
+
 // update the pool to get the stat
 func (sp *stakePool) stat(scKey string, now common.Timestamp,
 	blobber *StorageNode) (stat *stakePoolStat) {

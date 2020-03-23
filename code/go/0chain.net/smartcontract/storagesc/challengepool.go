@@ -16,18 +16,10 @@ import (
 	"0chain.net/core/util"
 )
 
-// challenge pool lock/unlock request
+// challenge pool unlock request
 
 type challengePoolRequest struct {
 	AllocationID string `json:"allocation_id"`
-}
-
-func (req *challengePoolRequest) encode() (b []byte) {
-	var err error
-	if b, err = json.Marshal(req); err != nil {
-		panic(err) // must not happen
-	}
-	return
 }
 
 func (req *challengePoolRequest) decode(input []byte) error {
@@ -85,18 +77,39 @@ func (cp *challengePool) save(sscKey, allocationID string,
 	return
 }
 
-// transferHere moves tokens from write pool to the challenge pool
-func (cp *challengePool) transferHere(t *transaction.Transaction, wp *writePool,
-	value state.Balance, balances chainState.StateContextI) (resp string,
-	err error) {
+// moveToWritePool moves tokens back to write pool on data deleted
+func (cp *challengePool) moveToWritePool(wp *writePool,
+	value state.Balance) (err error) {
 
-	if wp.Balance < value {
-		return "", fmt.Errorf("not enough tokens in write pool %s: %d < %d",
-			wp.ID, wp.Balance, value)
+	if value == 0 {
+		return // nothing to move
+	}
+
+	if cp.Balance < value {
+		return fmt.Errorf("not enough tokens in challenge pool %s: %d < %d",
+			cp.ID, cp.Balance, value)
 	}
 
 	// move
-	_, resp, err = wp.TransferTo(cp, value, nil)
+	_, _, err = cp.TransferTo(wp, value, nil)
+	return
+}
+
+// moveToStakePool moves tokens to stake pool on challenge passed
+func (cp *challengePool) moveToStakePool(sp *stakePool,
+	value state.Balance) (err error) {
+
+	if value == 0 {
+		return // nothing to move
+	}
+
+	if cp.Balance < value {
+		return fmt.Errorf("not enough tokens in challenge pool %s: %d < %d",
+			cp.ID, cp.Balance, value)
+	}
+
+	// move
+	_, _, err = cp.TransferTo(sp.Unlocked, value, nil)
 	return
 }
 

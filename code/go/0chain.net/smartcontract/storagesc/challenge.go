@@ -2,6 +2,8 @@ package storagesc
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"math"
 	"math/rand"
 	"sort"
@@ -11,10 +13,12 @@ import (
 	"0chain.net/chaincore/block"
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
+	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 	. "0chain.net/core/logging"
+	"0chain.net/core/util"
 
 	"go.uber.org/zap"
 )
@@ -37,7 +41,138 @@ func (sc *StorageSmartContract) completeChallengeForBlobber(blobberChallengeObj 
 	return found
 }
 
-func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction, input []byte, balances c_state.StateContextI) (string, error) {
+func (sc *StorageSmartContract) getBlobberChallengeBytes(blobberID string,
+	balances c_state.StateContextI) (b []byte, err error) {
+
+	var (
+		bc   BlobberChallenge
+		seri util.Serializable
+	)
+	bc.BlobberID = blobberID
+	if seri, err = balances.GetTrieNode(bc.GetKey(sc.ID)); err != nil {
+		return
+	}
+	return seri.Encode(), nil
+}
+
+func (sc *StorageSmartContract) getBlobberChallenge(blobberID string,
+	balances c_state.StateContextI) (bc *BlobberChallenge, err error) {
+
+	var b []byte
+	if b, err = sc.getBlobberChallengeBytes(blobberID, balances); err != nil {
+		return
+	}
+	bc = new(BlobberChallenge)
+	if err = bc.Decode(b); err != nil {
+		return nil, fmt.Errorf("decoding blobber_challenge: %v", err)
+	}
+	return
+}
+
+// move tokens from challenge pool to blobber's stake pool (to unlocked)
+func (sc *StorageSmartContract) blobberReward(alloc *StorageAllocation,
+	prev common.Timestamp, bc *BlobberChallenge,
+	balances c_state.StateContextI) (err error) {
+
+	// time of this challenge
+	var tp = bc.LatestCompletedChallenge.Created
+
+	if tp > alloc.Expiration+toSeconds(alloc.ChallengeCompletionTime) {
+		return errors.New("late challenge response")
+	}
+
+	// pools
+	var sp *stakePool
+	if sp, err = sc.getStakePool(bc.BlobberID, balances); err != nil {
+		return fmt.Errorf("can't get blobber's stake pool: %v", err)
+	}
+
+	var cp *challengePool
+	if cp, err = sc.getChallengePool(alloc.ID, balances); err != nil {
+		return fmt.Errorf("can't get allocation's challenge pool: %v", err)
+	}
+
+	var ratio = float64(tp-prev) / float64(alloc.Expiration-prev)
+
+	if tp > alloc.Expiration {
+		ratio = 1 // all left (allocation closed, challenge completion time)
+	}
+
+	var move = state.Balance(float64(cp.Balance) * ratio)
+
+	if err = cp.moveToStakePool(sp, move); err != nil {
+		return fmt.Errorf("can't move tokens to blobber: %v", err)
+	}
+
+	// save pools
+	if err = sp.save(sc.ID, bc.BlobberID, balances); err != nil {
+		return fmt.Errorf("can't save blobber's stake pool: %v", err)
+	}
+
+	if err = cp.save(sc.ID, alloc.ID, balances); err != nil {
+		return fmt.Errorf("can't save allocation's challenge pool: %v", err)
+	}
+
+	return
+}
+
+// move tokens from challenge pool back to write pool
+func (sc *StorageSmartContract) blobberPenalty(alloc *StorageAllocation,
+	prev common.Timestamp, bc *BlobberChallenge,
+	balances c_state.StateContextI) (err error) {
+
+	// time of this challenge
+	var tp = bc.LatestCompletedChallenge.Created
+
+	if tp > alloc.Expiration+toSeconds(alloc.ChallengeCompletionTime) {
+		return errors.New("late challenge response")
+	}
+
+	// pools
+	var sp *stakePool
+	if sp, err = sc.getStakePool(bc.BlobberID, balances); err != nil {
+		return fmt.Errorf("can't get blobber's stake pool: %v", err)
+	}
+
+	var wp *writePool
+	if wp, err = sc.getWritePool(alloc.ID, balances); err != nil {
+		return fmt.Errorf("can't get allocation's write pool: %v", err)
+	}
+
+	var ratio = float64(tp-prev) / float64(alloc.Expiration-prev)
+
+	if tp > alloc.Expiration {
+		ratio = 1 // all left (allocation closed, challenge completion time)
+	}
+
+	var offer = sp.findOffer(alloc.ID)
+	if offer == nil {
+		return errors.New("invalid state, can't find stake pool offer: " +
+			alloc.ID)
+	}
+
+	var move = state.Balance(float64(offer.Lock) * ratio)
+	offer.Lock -= move // subtract the offer stake
+
+	if err = sp.moveToWritePool(wp, move); err != nil {
+		return fmt.Errorf("can't move tokens to write pool: %v", err)
+	}
+
+	// save pools
+	if err = sp.save(sc.ID, bc.BlobberID, balances); err != nil {
+		return fmt.Errorf("can't save blobber's stake pool: %v", err)
+	}
+
+	if err = wp.save(sc.ID, alloc.ID, balances); err != nil {
+		return fmt.Errorf("can't save allocation's write pool: %v", err)
+	}
+
+	return
+}
+
+func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
+	input []byte, balances c_state.StateContextI) (string, error) {
+
 	var challengeResponse ChallengeResponse
 	err := json.Unmarshal(input, &challengeResponse)
 	if err != nil {
@@ -47,43 +182,34 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction, inpu
 		return "", common.NewError("invalid_parameters", "Invalid parameters to challenge response")
 	}
 
-	blobberChallengeObj := &BlobberChallenge{}
-	blobberChallengeObj.BlobberID = t.ClientID
-
-	blobberChallengeBytes, err := balances.GetTrieNode(blobberChallengeObj.GetKey(sc.ID))
-	if blobberChallengeBytes == nil {
-		return "", common.NewError("invalid_parameters", "Cannot find the blobber challenge entity with ID "+t.ClientID)
-	}
-
-	err = blobberChallengeObj.Decode(blobberChallengeBytes.Encode())
+	blobberChallengeObj, err := sc.getBlobberChallenge(t.ClientID, balances)
 	if err != nil {
-		return "", common.NewError("blobber_challenge_decode_error", "Error decoding the blobber challenge")
+		return "", common.NewError("invalid_parameters",
+			"can't get the blobber challenge "+t.ClientID+": "+err.Error())
 	}
 
 	challengeRequest, ok := blobberChallengeObj.ChallengeMap[challengeResponse.ID]
 
 	if !ok {
-		if blobberChallengeObj.LatestCompletedChallenge != nil && challengeResponse.ID == blobberChallengeObj.LatestCompletedChallenge.ID && blobberChallengeObj.LatestCompletedChallenge.Response != nil {
+		if blobberChallengeObj.LatestCompletedChallenge != nil &&
+			challengeResponse.ID == blobberChallengeObj.LatestCompletedChallenge.ID &&
+			blobberChallengeObj.LatestCompletedChallenge.Response != nil {
+
 			return "Challenge Already redeemed by Blobber", nil
 		}
 		return "", common.NewError("invalid_parameters", "Cannot find the challenge with ID "+challengeResponse.ID)
 	}
 
 	if challengeRequest.Blobber.ID != t.ClientID {
-		return "", common.NewError("invalid_parameters", "Challenge response should be submitted by the same blobber as the challenge request")
+		return "", common.NewError("invalid_parameters",
+			"Challenge response should be submitted by the same blobber as the challenge request")
 	}
 
-	allocationObj := &StorageAllocation{}
-	allocationObj.ID = challengeRequest.AllocationID
-
-	allocationBytes, err := balances.GetTrieNode(allocationObj.GetKey(sc.ID))
-	if allocationBytes == nil || err != nil {
-		return "", common.NewError("invalid_allocation", "Client state has invalid allocations")
-	}
-
-	err = allocationObj.Decode(allocationBytes.Encode())
+	allocationObj, err := sc.getAllocation(challengeRequest.AllocationID,
+		balances)
 	if err != nil {
-		return "", common.NewError("decode_error", "Error decoding the allocation")
+		return "", common.NewError("invalid_allocation",
+			"can't get related allocation: "+err.Error())
 	}
 
 	blobberAllocation, ok := allocationObj.BlobberMap[t.ClientID]
@@ -107,6 +233,13 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction, inpu
 		}
 	}
 
+	// time of previous complete challenge (not the current one)
+	// or allocation start time if no challenges
+	var prev = allocationObj.StartTime
+	if last := blobberChallengeObj.LatestCompletedChallenge; last != nil {
+		prev = last.Created
+	}
+
 	if numSuccess > (len(challengeRequest.Validators) / 2) {
 		//challengeRequest.Response = &challengeResponse
 		//delete(blobberChallengeObj.ChallengeMap, challengeResponse.ID)
@@ -126,6 +259,13 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction, inpu
 		balances.InsertTrieNode(blobberChallengeObj.GetKey(sc.ID), blobberChallengeObj)
 		sc.challengeResolved(balances, true)
 		//Logger.Info("Challenge passed", zap.Any("challenge", challengeResponse.ID))
+
+		err = sc.blobberReward(allocationObj, prev, blobberChallengeObj,
+			balances)
+		if err != nil {
+			return "", common.NewError("challenge_reward_error", err.Error())
+		}
+
 		return "Challenge Passed by Blobber", nil
 	}
 
@@ -148,6 +288,13 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction, inpu
 		balances.InsertTrieNode(blobberChallengeObj.GetKey(sc.ID), blobberChallengeObj)
 		sc.challengeResolved(balances, false)
 		Logger.Info("Challenge failed", zap.Any("challenge", challengeResponse.ID))
+
+		err = sc.blobberPenalty(allocationObj, prev, blobberChallengeObj,
+			balances)
+		if err != nil {
+			return "", common.NewError("challenge_penalty_error", err.Error())
+		}
+
 		return "Challenge Failed by Blobber", nil
 	}
 
