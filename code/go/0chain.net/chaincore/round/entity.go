@@ -107,14 +107,12 @@ func (r *Round) IncrementTimeoutCount() {
 	r.votesMutex.Lock()
 	defer r.votesMutex.Unlock()
 	var mostVotes, mostTimeout int
-	timeout := r.getTimeoutCount()
 	for k, v := range r.timeoutVotes {
-		if v > mostVotes || (v == mostVotes && timeout > k) {
+		if v > mostVotes || (v == mostVotes && k > mostTimeout) {
 			mostVotes = v
 			mostTimeout = k
 		}
 	}
-
 	r.timeoutVotes = make(map[int]int)
 	r.votersVoted = make(map[string]bool)
 	if mostTimeout > 0 {

@@ -201,7 +201,6 @@ func main() {
 	mc.SetStarted()
 	miner.SetupWorkers(ctx)
 
-
 	if config.Development() {
 		go TransactionGenerator(mc.Chain)
 	}
