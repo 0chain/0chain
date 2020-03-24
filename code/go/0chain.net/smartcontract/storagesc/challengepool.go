@@ -163,7 +163,7 @@ func (cp *challengePool) setExpiration(set common.Timestamp) (err error) {
 type challengePoolStat struct {
 	ID        datastore.Key    `json:"pool_id"`
 	StartTime common.Timestamp `json:"start_time"`
-	Duartion  time.Duration    `json:"duration"`
+	Duration  time.Duration    `json:"duration"`
 	TimeLeft  time.Duration    `json:"time_left"`
 	Locked    bool             `json:"locked"`
 	Balance   state.Balance    `json:"balance"`
@@ -262,51 +262,6 @@ func (ssc *StorageSmartContract) createChallengePool(t *transaction.Transaction,
 
 	return
 }
-
-/*
-// unlock tokens if expired
-// TODO (sfxdx): remade, shouldn't be a SC function.
-func (ssc *StorageSmartContract) challengePoolUnlock(t *transaction.Transaction,
-	input []byte, balances chainState.StateContextI) (resp string, err error) {
-
-	// the request
-
-	var req challengePoolRequest
-	if err = req.decode(input); err != nil {
-		return "", common.NewError("challenge_pool_unlock_failed", err.Error())
-	}
-
-	// challenge pool
-
-	var cp *challengePool
-	if cp, err = ssc.getChallengePool(req.AllocationID, balances); err != nil {
-		return "", common.NewError("challenge_pool_unlock_failed", err.Error())
-	}
-
-	if cp.ClientID != t.ClientID {
-		return "", common.NewError("challenge_pool_unlock_failed",
-			"only owner can unlock the pool")
-	}
-
-	var transfer *state.Transfer
-	transfer, resp, err = cp.EmptyPool(ssc.ID, t.ClientID,
-		common.ToTime(t.CreationDate))
-	if err != nil {
-		return "", common.NewError("challenge_pool_unlock_failed", err.Error())
-	}
-
-	if err = balances.AddTransfer(transfer); err != nil {
-		return "", common.NewError("challenge_pool_unlock_failed", err.Error())
-	}
-
-	// save pool
-	if err = cp.save(ssc.ID, req.AllocationID, balances); err != nil {
-		return "", common.NewError("challenge_pool_unlock_failed", err.Error())
-	}
-
-	return
-}
-*/
 
 // update challenge pool expiration
 func (ssc *StorageSmartContract) updateChallengePoolExpiration(allocID string,

@@ -159,7 +159,7 @@ func (wp *writePool) stat(tp time.Time) (
 type writePoolStat struct {
 	ID        datastore.Key    `json:"pool_id"`
 	StartTime common.Timestamp `json:"start_time"`
-	Duartion  time.Duration    `json:"duration"`
+	Duration  time.Duration    `json:"duration"`
 	TimeLeft  time.Duration    `json:"time_left"`
 	Locked    bool             `json:"locked"`
 	Balance   state.Balance    `json:"balance"`
@@ -543,6 +543,8 @@ func (ssc *StorageSmartContract) finalizeAllocation(t *transaction.Transaction,
 		return "", common.NewError("fini_alloc_failed",
 			"saving all allocations list: "+err.Error())
 	}
+
+	// TODO (sfxdx): update blobbers' used and blobbers in all
 
 	return
 }

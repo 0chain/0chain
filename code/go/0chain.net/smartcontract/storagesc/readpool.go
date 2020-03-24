@@ -212,7 +212,7 @@ func (stats *readPoolStats) addStat(stat *readPoolStat) {
 type readPoolStat struct {
 	ID        datastore.Key    `json:"pool_id"`
 	StartTime common.Timestamp `json:"start_time"`
-	Duartion  time.Duration    `json:"duration"`
+	Duration  time.Duration    `json:"duration"`
 	TimeLeft  time.Duration    `json:"time_left"`
 	Locked    bool             `json:"locked"`
 	Balance   state.Balance    `json:"balance"`
@@ -250,7 +250,7 @@ func (tl tokenLock) LockStats(entity interface{}) []byte {
 	if tm, ok := entity.(time.Time); ok {
 		var stat readPoolStat
 		stat.StartTime = tl.StartTime
-		stat.Duartion = tl.Duration
+		stat.Duration = tl.Duration
 		stat.TimeLeft = (tl.Duration - tm.Sub(common.ToTime(tl.StartTime)))
 		stat.Locked = tl.IsLocked(tm)
 		return stat.encode()
@@ -469,12 +469,9 @@ func (ssc *StorageSmartContract) getReadPoolsStatsHandler(ctx context.Context,
 		clientID = datastore.Key(params.Get("client_id"))
 		rps      *readPools
 	)
+
 	if rps, err = ssc.getReadPools(clientID, balances); err != nil {
 		return
-	}
-
-	if len(rps.Pools) == 0 {
-		return nil, common.NewError("read_pool_stats", "no pools exist")
 	}
 
 	var (

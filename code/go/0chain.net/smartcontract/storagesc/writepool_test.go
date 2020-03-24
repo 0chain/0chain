@@ -172,7 +172,7 @@ func Test_writePoolStat_decode(t *testing.T) {
 
 	state.ID = "pool_hex"
 	state.StartTime = common.Now()
-	state.Duartion = 60 * time.Second
+	state.Duration = 60 * time.Second
 	state.TimeLeft = 90 * time.Second
 	state.Locked = true
 	state.Balance = 150

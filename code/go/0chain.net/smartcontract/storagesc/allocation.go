@@ -234,7 +234,7 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 
 	var sa = request.storageAllocation()
 	sa.Owner = t.ClientID
-	if err = sa.validate(conf); err != nil {
+	if err = sa.validate(t.CreationDate, conf); err != nil {
 		return "", common.NewError("allocation_creation_failed",
 			"invalid request: "+err.Error())
 	}

@@ -245,6 +245,8 @@ func (sp *stakePool) stat(scKey string, now common.Timestamp,
 	stat.Locked = sp.Locked.Balance
 	stat.Unlocked = sp.Unlocked.Balance
 
+	stat.RequiredStake = blobber.stake()
+
 	stat.Offers = make([]offerPoolStat, 0, len(sp.Offers))
 	for _, off := range sp.Offers {
 		stat.Offers = append(stat.Offers, offerPoolStat{
@@ -270,11 +272,12 @@ type offerPoolStat struct {
 }
 
 type stakePoolStat struct {
-	ID          datastore.Key   `json:"pool_id"`
-	Locked      state.Balance   `json:"locked"`
-	Unlocked    state.Balance   `json:"unlocked"`
-	Offers      []offerPoolStat `json:"offers"`
-	OffersTotal state.Balance   `json:"offers_total"`
+	ID            datastore.Key   `json:"pool_id"`
+	Locked        state.Balance   `json:"locked"`
+	Unlocked      state.Balance   `json:"unlocked"`
+	Offers        []offerPoolStat `json:"offers"`
+	OffersTotal   state.Balance   `json:"offers_total"`
+	RequiredStake state.Balance   `json:"required_stake"`
 }
 
 func (stat *stakePoolStat) encode() (b []byte) {

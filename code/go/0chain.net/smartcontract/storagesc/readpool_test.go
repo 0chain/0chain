@@ -157,7 +157,7 @@ func Test_readPoolStats_encode_decode(t *testing.T) {
 	se.Stats = append(se.Stats, &readPoolStat{
 		ID:        "pool_id",
 		StartTime: common.Now(),
-		Duartion:  10 * time.Second,
+		Duration:  10 * time.Second,
 		TimeLeft:  150,
 		Locked:    true,
 		Balance:   90,
@@ -172,7 +172,7 @@ func Test_readPoolStats_addStat(t *testing.T) {
 		stat  = &readPoolStat{
 			ID:        "pool_id",
 			StartTime: common.Now(),
-			Duartion:  10 * time.Second,
+			Duration:  10 * time.Second,
 			TimeLeft:  150,
 			Locked:    true,
 			Balance:   90,
@@ -188,7 +188,7 @@ func Test_readPoolStat_encode_decode(t *testing.T) {
 	var se, sd readPoolStat
 	se.ID = "pool_id"
 	se.StartTime = common.Now()
-	se.Duartion = 10 * time.Second
+	se.Duration = 10 * time.Second
 	se.TimeLeft = 150
 	se.Locked = true
 	se.Balance = 90
@@ -220,14 +220,14 @@ func Test_tokenLock_LockStats(t *testing.T) {
 	assert.NoError(t, stat.decode(tl.LockStats(time.Unix(215, 0))))
 	assert.Equal(t, stat, readPoolStat{
 		StartTime: now,
-		Duartion:  10 * time.Second,
+		Duration:  10 * time.Second,
 		TimeLeft:  5 * time.Second,
 		Locked:    true,
 	})
 	assert.NoError(t, stat.decode(tl.LockStats(time.Unix(225, 0))))
 	assert.Equal(t, stat, readPoolStat{
 		StartTime: now,
-		Duartion:  10 * time.Second,
+		Duration:  10 * time.Second,
 		TimeLeft:  -5 * time.Second,
 		Locked:    false,
 	})

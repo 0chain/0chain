@@ -420,7 +420,9 @@ func (sa *StorageAllocation) minLockDemandLeft() (left state.Balance) {
 	return
 }
 
-func (sa *StorageAllocation) validate(conf *scConfig) (err error) {
+func (sa *StorageAllocation) validate(now common.Timestamp,
+	conf *scConfig) (err error) {
+
 	if !sa.ReadPriceRange.isValid() {
 		return errors.New("invalid read_price range")
 	}
@@ -430,7 +432,7 @@ func (sa *StorageAllocation) validate(conf *scConfig) (err error) {
 	if sa.Size < conf.MinAllocSize {
 		return errors.New("insufficient allocation size")
 	}
-	var dur = common.ToTime(sa.Expiration).Sub(time.Now())
+	var dur = common.ToTime(sa.Expiration).Sub(common.ToTime(now))
 	if dur < conf.MinAllocDuration {
 		return errors.New("insufficient allocation duration")
 	}
