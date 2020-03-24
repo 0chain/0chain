@@ -113,6 +113,36 @@ func (cp *challengePool) moveToStakePool(sp *stakePool,
 	return
 }
 
+func (cp *challengePool) moveToValidatos(sscID string, reward state.Balance,
+	validatos []string, balances chainState.StateContextI) (err error) {
+
+	if len(validatos) == 0 || reward == 0 {
+		return // nothing to move, or nothing to move to
+	}
+
+	var oneReward = state.Balance(float64(reward) / float64(len(validatos)))
+
+	for _, id := range validatos {
+
+		if cp.Balance < oneReward {
+			return fmt.Errorf("not enough tokens in challenge pool: %v < %v",
+				cp.Balance, oneReward)
+		}
+
+		var transfer *transfer.Transfer
+		transfer, _, err = cp.DrainPool(sscID, id, oneReward, nil)
+		if err != nil {
+			return fmt.Errorf("moving tokens to validator %s: %v", id, err)
+		}
+
+		if err = balances.AddTransfer(transfer); err != nil {
+			return fmt.Errorf("adding transfer to validator %s: %v", id, err)
+		}
+	}
+
+	return
+}
+
 // setExpiration of the locked tokens
 func (cp *challengePool) setExpiration(set common.Timestamp) (err error) {
 	if set == 0 {

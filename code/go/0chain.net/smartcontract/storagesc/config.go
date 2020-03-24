@@ -53,12 +53,12 @@ type scConfig struct {
 	ReadPool *readPoolConfig `json:"readpool"`
 	// WritePool related configurations.
 	WritePool *writePoolConfig `json:"writepool"`
-	// ValidatorReward is % (value in [0; 1] range) of blobbers' reward
-	// goes to validators. Even if a blobber doesn't pass a challenge
-	// validators receive this reward.
+	// ValidatorReward represents % (value in [0; 1] range) of blobbers' reward
+	// goes to validators. Even if a blobber doesn't pass a challenge validators
+	// receive this reward.
 	ValidatorReward float64 `json:"validator_reward"`
-	// BlobberSlash is % (value in [0; 1] range) of blobbers' stake tokens
-	// penalized on challenge not passed.
+	// BlobberSlash represents % (value in [0; 1] range) of blobbers' stake
+	// tokens penalized on challenge not passed.
 	BlobberSlash float64 `json:"blobber_slash"`
 }
 
@@ -101,6 +101,10 @@ func (conf *scConfig) Encode() (b []byte) {
 	return
 }
 
+func (conf *scConfig) isValidatorsConsensus() bool {
+	//
+}
+
 func (conf *scConfig) Decode(b []byte) error {
 	return json.Unmarshal(b, conf)
 }
@@ -136,10 +140,12 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 		prefix + "min_alloc_size")
 	conf.MinAllocDuration = config.SmartContractConfig.GetDuration(
 		prefix + "min_alloc_duration")
-	conf.ValidatorReward = config.SmartContractConfig.GetInt64(
+	conf.ValidatorReward = config.SmartContractConfig.Float64(
 		prefix + "validator_reward")
-	conf.BlobberSlash = config.SmartContractConfig.GetDuration(
+	conf.BlobberSlash = config.SmartContractConfig.Float64(
 		prefix + "blobber_slash")
+	conf.ValidatorsConsensus = config.SmartContractConfig.Float64(
+		prefix + "validators_consensus")
 	// read pool
 	conf.ReadPool = new(readPoolConfig)
 	conf.ReadPool.MinLockPeriod = config.SmartContractConfig.GetDuration(
