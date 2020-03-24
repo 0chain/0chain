@@ -3,6 +3,7 @@ package storagesc
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/url"
 	"time"
 
@@ -101,10 +102,6 @@ func (conf *scConfig) Encode() (b []byte) {
 	return
 }
 
-func (conf *scConfig) isValidatorsConsensus() bool {
-	//
-}
-
 func (conf *scConfig) Decode(b []byte) error {
 	return json.Unmarshal(b, conf)
 }
@@ -140,12 +137,10 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 		prefix + "min_alloc_size")
 	conf.MinAllocDuration = config.SmartContractConfig.GetDuration(
 		prefix + "min_alloc_duration")
-	conf.ValidatorReward = config.SmartContractConfig.Float64(
+	conf.ValidatorReward = config.SmartContractConfig.GetFloat64(
 		prefix + "validator_reward")
-	conf.BlobberSlash = config.SmartContractConfig.Float64(
+	conf.BlobberSlash = config.SmartContractConfig.GetFloat64(
 		prefix + "blobber_slash")
-	conf.ValidatorsConsensus = config.SmartContractConfig.Float64(
-		prefix + "validators_consensus")
 	// read pool
 	conf.ReadPool = new(readPoolConfig)
 	conf.ReadPool.MinLockPeriod = config.SmartContractConfig.GetDuration(

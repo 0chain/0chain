@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"sort"
-	"time"
 
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -219,10 +218,12 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	return // success
 }
 
-func (sc *StorageSmartContract) filterHealthyBlobbers(blobbersList *StorageNodes) *StorageNodes {
+func (sc *StorageSmartContract) filterHealthyBlobbers(now common.Timestamp,
+	blobbersList *StorageNodes) *StorageNodes {
+
 	healthyBlobbersList := &StorageNodes{}
 	for _, blobberNode := range blobbersList.Nodes {
-		if blobberNode.LastHealthCheck > (time.Now().Unix() - blobberHealthTime) {
+		if blobberNode.LastHealthCheck > (now - blobberHealthTime) {
 			healthyBlobbersList.Nodes = append(healthyBlobbersList.Nodes, blobberNode)
 		}
 	}
@@ -239,13 +240,12 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 	}
 
 	var existingBlobber *StorageNode
-	if existingBlobber, err = sc.getBlobber(t.CientID, balances); err != nil {
+	if existingBlobber, err = sc.getBlobber(t.ClientID, balances); err != nil {
 		return "", common.NewError("blobber_health_check_failed",
 			"can't get the blobber "+t.ClientID+": "+err.Error())
 	}
 
-	var now = common.ToTime(t.CreationDate)
-	existingBlobber.LastHealthCheck = now
+	existingBlobber.LastHealthCheck = t.CreationDate
 
 	var found *StorageNode
 	for _, b := range all.Nodes {
@@ -262,7 +262,7 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 			t.ClientID+" not found in all blobbers list: "+err.Error())
 	}
 
-	found.LastHealthCheck = now
+	found.LastHealthCheck = t.CreationDate
 	if _, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, all); err != nil {
 		return "", common.NewError("blobber_health_check_failed",
 			"can't save all blobbers list: "+err.Error())

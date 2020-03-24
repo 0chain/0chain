@@ -214,7 +214,7 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 			"No Blobbers registered. Failed to create a storage allocation")
 	}
 
-	allBlobbersList = sc.filterHealthyBlobbers(allBlobbersList)
+	allBlobbersList = sc.filterHealthyBlobbers(t.CreationDate, allBlobbersList)
 
 	if len(allBlobbersList.Nodes) == 0 {
 		return "", common.NewError("allocation_creation_failed",

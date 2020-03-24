@@ -72,13 +72,12 @@ func (sc *StorageSmartContract) getBlobberChallenge(blobberID string,
 // move tokens from challenge pool to blobber's stake pool (to unlocked)
 func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	alloc *StorageAllocation, prev common.Timestamp, bc *BlobberChallenge,
-	details *BlobberAllocation, partial float64,
+	details *BlobberAllocation, validators []string, partial float64,
 	balances c_state.StateContextI) (err error) {
 
 	var conf *scConfig
 	if conf, err = sc.getConfig(balances, true); err != nil {
-		return "", common.NewError("verify_challenge",
-			"can't get SC configurations: "+err.Error())
+		return fmt.Errorf("can't get SC configurations: %v", err.Error())
 	}
 
 	// time of this challenge
@@ -146,8 +145,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 
 	var conf *scConfig
 	if conf, err = sc.getConfig(balances, true); err != nil {
-		return "", common.NewError("verify_challenge",
-			"can't get SC configurations: "+err.Error())
+		return fmt.Errorf("can't get SC configurations: %v", err.Error())
 	}
 
 	// time of this challenge
@@ -173,8 +171,8 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 	var (
 		sizeRatio = ratio *
 			(float64(details.Stats.UsedSize) / float64(alloc.UsedSize))
-		notNove = state.Balance(float64(cp.Balance) * ratio)
-		reward  = state.Balance(conf.ValidatorReward * float64(notMove))
+		fictMove = state.Balance(float64(cp.Balance) * sizeRatio)
+		reward   = state.Balance(conf.ValidatorReward * float64(fictMove))
 	)
 	err = cp.moveToValidatos(sc.ID, reward, validators, balances)
 	if err != nil {

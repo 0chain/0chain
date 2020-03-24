@@ -129,7 +129,7 @@ func (cp *challengePool) moveToValidatos(sscID string, reward state.Balance,
 				cp.Balance, oneReward)
 		}
 
-		var transfer *transfer.Transfer
+		var transfer *state.Transfer
 		transfer, _, err = cp.DrainPool(sscID, id, oneReward, nil)
 		if err != nil {
 			return fmt.Errorf("moving tokens to validator %s: %v", id, err)
