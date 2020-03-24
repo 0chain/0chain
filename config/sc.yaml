@@ -31,3 +31,8 @@ smart_contracts:
     # users' write pool related configurations
     writepool:
       min_lock: 10
+    # validator_reward represents part of blobbers' rewards goes to validators
+    validator_reward: 0.025
+    # blobber_slash represents blobber's stake penalty when a challenge not
+    # passed
+    blobber_slash: 0.10

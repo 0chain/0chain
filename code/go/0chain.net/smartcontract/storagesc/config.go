@@ -53,6 +53,44 @@ type scConfig struct {
 	ReadPool *readPoolConfig `json:"readpool"`
 	// WritePool related configurations.
 	WritePool *writePoolConfig `json:"writepool"`
+	// ValidatorReward is % (value in [0; 1] range) of blobbers' reward
+	// goes to validators. Even if a blobber doesn't pass a challenge
+	// validators receive this reward.
+	ValidatorReward float64 `json:"validator_reward"`
+	// BlobberSlash is % (value in [0; 1] range) of blobbers' stake tokens
+	// penalized on challenge not passed.
+	BlobberSlash float64 `json:"blobber_slash"`
+}
+
+func (sc *scConfig) validate() (err error) {
+	if sc.ValidatorReward < 0.0 || 1.0 < sc.ValidatorReward {
+		return fmt.Errorf("validator_reward not in [0; 1] range: %v",
+			sc.ValidatorReward)
+	}
+	if sc.BlobberSlash < 0.0 || 1.0 < sc.BlobberSlash {
+		return fmt.Errorf("blobber_slash not in [0; 1] range: %v",
+			sc.BlobberSlash)
+	}
+	if sc.MinBlobberCapacity < 0 {
+		return fmt.Errorf("negative min_blobber_capacity: %v",
+			sc.MinBlobberCapacity)
+	}
+	if sc.MinOfferDuration < 0 {
+		return fmt.Errorf("negative min_offer_duration: %v",
+			sc.MinOfferDuration)
+	}
+	if sc.MaxChallengeCompletionTime < 0 {
+		return fmt.Errorf("negative max_challenge_completion_time: %v",
+			sc.MaxChallengeCompletionTime)
+	}
+	if sc.MinAllocDuration < 0 {
+		return fmt.Errorf("negative min_alloc_duration: %v",
+			sc.MinAllocDuration)
+	}
+	if sc.MinAllocSize < 0 {
+		return fmt.Errorf("negative min_alloc_size: %v", sc.MinAllocSize)
+	}
+	return
 }
 
 func (conf *scConfig) Encode() (b []byte) {
@@ -84,7 +122,7 @@ func (ssc *StorageSmartContract) getConfigBytes(
 }
 
 // configs from sc.yaml
-func getConfiguredConfig() (conf *scConfig) {
+func getConfiguredConfig() (conf *scConfig, err error) {
 
 	const prefix = "smart_contracts.storagesc."
 
@@ -98,6 +136,10 @@ func getConfiguredConfig() (conf *scConfig) {
 		prefix + "min_alloc_size")
 	conf.MinAllocDuration = config.SmartContractConfig.GetDuration(
 		prefix + "min_alloc_duration")
+	conf.ValidatorReward = config.SmartContractConfig.GetInt64(
+		prefix + "validator_reward")
+	conf.BlobberSlash = config.SmartContractConfig.GetDuration(
+		prefix + "blobber_slash")
 	// read pool
 	conf.ReadPool = new(readPoolConfig)
 	conf.ReadPool.MinLockPeriod = config.SmartContractConfig.GetDuration(
@@ -110,13 +152,17 @@ func getConfiguredConfig() (conf *scConfig) {
 	conf.WritePool = new(writePoolConfig)
 	conf.WritePool.MinLock = config.SmartContractConfig.GetInt64(
 		prefix + "writepool.min_lock")
+
+	err = conf.validate()
 	return
 }
 
 func (ssc *StorageSmartContract) setupConfig(
 	balances chainState.StateContextI) (conf *scConfig, err error) {
 
-	conf = getConfiguredConfig()
+	if conf, err = getConfiguredConfig(); err != nil {
+		return
+	}
 	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
 	if err != nil {
 		return nil, err
@@ -163,7 +209,7 @@ func (ssc *StorageSmartContract) getConfigHandler(ctx context.Context,
 
 	// return configurations from sc.yaml not saving them
 	if err == util.ErrValueNotPresent {
-		return getConfiguredConfig(), nil
+		return getConfiguredConfig()
 	}
 
 	return conf, nil // actual value
@@ -182,6 +228,10 @@ func (ssc *StorageSmartContract) updateConfig(t *transaction.Transaction,
 	var update scConfig
 	if err = update.Decode(input); err != nil {
 		return "", common.NewError("update_config", err.Error())
+	}
+
+	if err = update.validate(); err != nil {
+		return
 	}
 
 	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), &update)
