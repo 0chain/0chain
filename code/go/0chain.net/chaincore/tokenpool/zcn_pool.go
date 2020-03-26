@@ -37,7 +37,7 @@ func (p *ZcnPool) GetID() datastore.Key {
 
 func (p *ZcnPool) DigPool(id datastore.Key, txn *transaction.Transaction) (*state.Transfer, string, error) {
 	if txn.Value < 0 {
-		return nil, "", common.NewError("digging pool failed", "insufficent funds")
+		return nil, "", common.NewError("digging pool failed", "insufficient funds")
 	}
 	p.TokenPool.ID = id
 	p.TokenPool.Balance = state.Balance(txn.Value)
@@ -48,7 +48,7 @@ func (p *ZcnPool) DigPool(id datastore.Key, txn *transaction.Transaction) (*stat
 
 func (p *ZcnPool) FillPool(txn *transaction.Transaction) (*state.Transfer, string, error) {
 	if txn.Value <= 0 {
-		return nil, "", common.NewError("filling pool failed", "insufficent funds")
+		return nil, "", common.NewError("filling pool failed", "insufficient funds")
 	}
 	p.Balance += state.Balance(txn.Value)
 	tpr := &TokenPoolTransferResponse{TxnHash: txn.Hash, FromClient: txn.ClientID, ToPool: p.ID, ToClient: txn.ToClientID, Value: state.Balance(txn.Value)}
