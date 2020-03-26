@@ -249,7 +249,7 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 	)
 
 	if len(list) < size {
-		return "", common.NewError("not_enough_blobbers",
+		return "", common.NewError("allocation_creation_failed",
 			"Not enough blobbers to honor the allocation")
 	}
 
@@ -291,9 +291,9 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 		sa.BlobberDetails = append(sa.BlobberDetails, &balloc)
 		allocatedBlobbers = append(allocatedBlobbers, b)
 
-		balloc.MinLockDemand = state.Balance(math.Ceil(
+		balloc.MinLockDemand = state.Balance(
 			float64(b.Terms.WritePrice) * gbSize * b.Terms.MinLockDemand,
-		))
+		)
 
 		if b.Terms.ChallengeCompletionTime > sa.ChallengeCompletionTime {
 			sa.ChallengeCompletionTime = b.Terms.ChallengeCompletionTime
