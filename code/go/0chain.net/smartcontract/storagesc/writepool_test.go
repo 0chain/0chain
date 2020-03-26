@@ -1,6 +1,8 @@
 package storagesc
 
 import (
+	"context"
+	"net/url"
 	"testing"
 	"time"
 
@@ -23,10 +25,8 @@ func Test_writePoolRequest_decode(t *testing.T) {
 }
 
 func Test_newWritePool(t *testing.T) {
-	const clientID = "client_hex"
-	var wp = newWritePool(clientID)
-	assert.NotNil(t, wp.ZcnLockingPool)
-	assert.Equal(t, wp.ClientID, clientID)
+	var wp = newWritePool()
+	assert.NotNil(t, wp.ZcnPool)
 }
 
 func Test_writePoolKey(t *testing.T) {
@@ -34,54 +34,36 @@ func Test_writePoolKey(t *testing.T) {
 	assert.NotZero(t, writePoolKey(sscKey, allocID))
 }
 
-func newTestWritePool(clientID, poolID string, balance state.Balance,
-	startTime common.Timestamp, duration time.Duration) (wp *writePool) {
-
-	wp = newWritePool(clientID)
-	wp.ZcnLockingPool.ID = poolID
-	wp.ZcnLockingPool.Balance = balance
-	wp.ZcnLockingPool.TokenLockInterface = &tokenLock{
-		StartTime: startTime,
-		Duration:  duration,
-		Owner:     clientID,
-	}
+func newTestWritePool(poolID string, balance state.Balance) (wp *writePool) {
+	wp = newWritePool()
+	wp.ZcnPool.ID = poolID
+	wp.ZcnPool.Balance = balance
 	return
 }
 
 func Test_writePool_Encode_Decode(t *testing.T) {
 	const (
-		clientID, poolID = "client_hex", "pool_id"
-		balance          = state.Balance(100500)
-		dur              = 20 * time.Hour
+		poolID  = "pool_id"
+		balance = state.Balance(100500)
+		dur     = 20 * time.Hour
 	)
 
-	var (
-		sp     = common.Now() // start point
-		we, wd *writePool
-	)
+	var we, wd *writePool
 
-	we = newTestWritePool(clientID, poolID, balance, sp, dur)
-	wd = newWritePool("")
+	we = newTestWritePool(poolID, balance)
+	wd = newWritePool()
 
 	require.NoError(t, wd.Decode(we.Encode()))
-	assert.Equal(t, wd.ClientID, clientID)
-	require.NotNil(t, wd.ZcnLockingPool)
-	assert.Equal(t, we.ZcnLockingPool.ID, poolID)
-	assert.Equal(t, we.ZcnLockingPool.Balance, balance)
-	assert.NotNil(t, we.ZcnLockingPool.TokenLockInterface)
-	assert.IsType(t, &tokenLock{}, we.ZcnLockingPool.TokenLockInterface)
-	assert.EqualValues(t, &tokenLock{
-		StartTime: sp,
-		Duration:  dur,
-		Owner:     clientID,
-	}, we.ZcnLockingPool.TokenLockInterface)
+	require.NotNil(t, wd.ZcnPool)
+	assert.Equal(t, we.ZcnPool.ID, poolID)
+	assert.Equal(t, we.ZcnPool.Balance, balance)
 }
 
 func Test_writePool_save(t *testing.T) {
 	const sscKey, allocID = "ssc_key", "alloc_hex"
 
 	var (
-		wp       = newWritePool("")
+		wp       = newWritePool()
 		balances = newTestBalances()
 	)
 
@@ -96,7 +78,7 @@ func Test_writePool_fill(t *testing.T) {
 	const sscKey, clientID, txHash = "ssc_hex", "client_hex", "tx_hash"
 
 	var (
-		wp       = newWritePool("")
+		wp       = newWritePool()
 		balances = newTestBalances()
 		tx       = &transaction.Transaction{
 			ClientID:   clientID,
@@ -115,35 +97,11 @@ func Test_writePool_fill(t *testing.T) {
 	assert.Equal(t, state.Balance(90), wp.Balance)
 }
 
-func Test_writePool_setExpiration(t *testing.T) {
-	const (
-		clientID = "client_hex"
-		dur      = 60 * time.Second
-	)
-
-	var (
-		tp = common.Now()
-		wp = newWritePool(clientID)
-	)
-
-	wp.ZcnLockingPool.TokenLockInterface = &tokenLock{
-		StartTime: tp,
-	}
-
-	require.NoError(t, wp.setExpiration(tp+toSeconds(dur)))
-	require.IsType(t, &tokenLock{}, wp.ZcnLockingPool.TokenLockInterface)
-	assert.Equal(t, &tokenLock{
-		StartTime: tp,
-		Duration:  dur,
-	}, wp.ZcnLockingPool.TokenLockInterface)
-}
-
 func Test_writePool_moveToChallenge(t *testing.T) {
 	// moveToChallenge(cp *challengePool, value state.Balance) (err error)
 
-	const clientID = "client_id"
 	var (
-		wp = newWritePool(clientID)
+		wp = newWritePool()
 		cp = newChallengePool()
 	)
 
@@ -153,11 +111,7 @@ func Test_writePool_moveToChallenge(t *testing.T) {
 	}
 	cp.TokenPool.ID = "cp_id"
 
-	wp.TokenLockInterface = &tokenLock{
-		StartTime: common.Now(),
-		Duration:  100 * time.Second,
-	}
-	wp.TokenPool.ID = "cp_id"
+	wp.TokenPool.ID = "wp_id"
 
 	requireErrMsg(t, wp.moveToChallenge(cp, 90),
 		"not enough tokens in write pool")
@@ -165,20 +119,6 @@ func Test_writePool_moveToChallenge(t *testing.T) {
 	require.NoError(t, wp.moveToChallenge(cp, 90))
 	assert.Equal(t, state.Balance(30), wp.Balance)
 	assert.Equal(t, state.Balance(90), cp.Balance)
-}
-
-func Test_writePoolStat_decode(t *testing.T) {
-	var state, statd writePoolStat
-
-	state.ID = "pool_hex"
-	state.StartTime = common.Now()
-	state.Duration = 60 * time.Second
-	state.TimeLeft = 90 * time.Second
-	state.Locked = true
-	state.Balance = 150
-
-	require.NoError(t, statd.decode(mustEncode(t, &state)))
-	assert.EqualValues(t, state, statd)
 }
 
 func newTestStorageSC() (ssc *StorageSmartContract) {
@@ -189,7 +129,7 @@ func newTestStorageSC() (ssc *StorageSmartContract) {
 }
 
 func TestStorageSmartContract_getWritePoolBytes(t *testing.T) {
-	const allocID, clientID = "alloc_hex", "client_hex"
+	const allocID = "alloc_hex"
 
 	var (
 		ssc      = newTestStorageSC()
@@ -198,7 +138,7 @@ func TestStorageSmartContract_getWritePoolBytes(t *testing.T) {
 	)
 
 	require.Equal(t, err, util.ErrValueNotPresent)
-	var wp = newWritePool(clientID)
+	var wp = newWritePool()
 	_, err = balances.InsertTrieNode(writePoolKey(ssc.ID, allocID), wp)
 	require.NoError(t, err)
 	b, err = ssc.getWritePoolBytes(allocID, balances)
@@ -211,7 +151,7 @@ func TestStorageSmartContract_getWritePool(t *testing.T) {
 
 	var (
 		ssc      = newTestStorageSC()
-		wp       = newWritePool(clientID)
+		wp       = newWritePool()
 		balances = newTestBalances()
 		tx       = &transaction.Transaction{
 			ClientID:   clientID,
@@ -240,10 +180,9 @@ func TestStorageSmartContract_newWritePool(t *testing.T) {
 	const allocID, clientID = "alloc_hex", "client_hex"
 
 	var (
-		tp       = common.Now()
 		ssc      = newTestStorageSC()
 		balances = newTestBalances()
-		wp, err  = ssc.newWritePool(allocID, clientID, tp, tp, balances)
+		wp, err  = ssc.newWritePool(allocID, balances)
 	)
 
 	require.NoError(t, err)
@@ -310,13 +249,124 @@ func TestStorageSmartContract_createWritePool(t *testing.T) {
 }
 
 func TestStorageSmartContract_writePoolLock(t *testing.T) {
-	// TODO (sfxdx): implement tests
-}
 
-func TestStorageSmartContract_writePoolUnlock(t *testing.T) {
-	// TODO (sfxdx): implement tests
+	const (
+		allocTxHash, clientID, pubKey = "a5f4c3d2_tx_hex",
+			"client_hex", "pub_key_hex"
+
+		errMsg1 = "write_pool_lock_failed: insufficient amount to lock"
+		errMsg2 = "write_pool_lock_failed: " +
+			"invalid character '}' looking for beginning of value"
+		errMsg3 = "write_pool_lock_failed: missing allocation_id"
+		errMsg4 = "write_pool_lock_failed: " +
+			"can't get related allocation: value not present"
+		errMsg5 = "write_pool_lock_failed: allocation is finalized"
+		errMsg6 = "write_pool_lock_failed: only owner can fill the write pool"
+		errMsg7 = "write_pool_lock_failed: lock amount is greater than balance"
+	)
+
+	var (
+		ssc      = newTestStorageSC()
+		balances = newTestBalances()
+		wpr      writePoolRequest
+
+		tx    transaction.Transaction
+		conf  scConfig
+		alloc *StorageAllocation
+		resp  string
+		err   error
+	)
+
+	// setup write pool configurations
+	conf.WritePool = new(writePoolConfig)
+	conf.WritePool.MinLock = 10
+	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), &conf)
+	require.NoError(t, err)
+
+	// 1. less then min lock
+	_, err = ssc.writePoolLock(&tx, nil, balances)
+	requireErrMsg(t, err, errMsg1)
+	// 2. malformed request
+	tx.Value = 20
+	_, err = ssc.writePoolLock(&tx, []byte("} malformed {"), balances)
+	requireErrMsg(t, err, errMsg2)
+	// 3. missing allocation id
+	_, err = ssc.writePoolLock(&tx, mustEncode(t, &wpr), balances)
+	requireErrMsg(t, err, errMsg3)
+	// 4. no such allocation
+	wpr.AllocationID = allocTxHash
+	_, err = ssc.writePoolLock(&tx, mustEncode(t, &wpr), balances)
+	requireErrMsg(t, err, errMsg4)
+	// 5. allocation is finalized
+	createNewTestAllocation(t, ssc, allocTxHash, clientID, pubKey, balances)
+	// repair write pool configurations ---------------------------------------
+	conf.WritePool = new(writePoolConfig)
+	conf.WritePool.MinLock = 10
+	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), &conf)
+	require.NoError(t, err)
+	// ------------------------------------------------------------------------
+	alloc, err = ssc.getAllocation(allocTxHash, balances)
+	require.NoError(t, err)
+	alloc.Finalized = true
+	_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
+	require.NoError(t, err)
+	_, err = ssc.writePoolLock(&tx, mustEncode(t, &wpr), balances)
+	requireErrMsg(t, err, errMsg5)
+	// 6. not owner
+	alloc.Finalized = false
+	_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
+	require.NoError(t, err)
+	_, err = ssc.writePoolLock(&tx, mustEncode(t, &wpr), balances)
+	requireErrMsg(t, err, errMsg6)
+	// 7. no tokens (client balance)
+	tx.ClientID = clientID
+	balances.balances[clientID] = 19
+	_, err = ssc.writePoolLock(&tx, mustEncode(t, &wpr), balances)
+	requireErrMsg(t, err, errMsg7)
+	// 8. ok
+	balances.balances[clientID] = 21
+	resp, err = ssc.writePoolLock(&tx, mustEncode(t, &wpr), balances)
+	require.NoError(t, err)
+	assert.NotZero(t, resp)
+	// write pool should be saved
+	var wp *writePool
+	wp, err = ssc.getWritePool(allocTxHash, balances)
+	require.NoError(t, err)
+	assert.Equal(t, state.Balance(420), wp.Balance) // 400 by the create alloc
 }
 
 func TestStorageSmartContract_getWritePoolStatHandler(t *testing.T) {
-	// TODO (sfxdx): implement tests
+
+	const allocTxHash, clientID, pubKey = "a5f4c3d2_tx_hex",
+		"client_hex", "pub_key_hex"
+
+	var (
+		ctx      = context.Background()
+		ssc      = newTestStorageSC()
+		balances = newTestBalances()
+
+		params url.Values
+		resp   interface{}
+		err    error
+	)
+
+	resp, err = ssc.getWritePoolStatHandler(ctx, params, balances)
+	requireErrMsg(t, err, "missing allocation_id URL query parameter")
+
+	params = url.Values{"allocation_id": []string{"not_found_hex"}}
+	resp, err = ssc.getWritePoolStatHandler(ctx, params, balances)
+	requireErrMsg(t, err, "value not present")
+
+	createNewTestAllocation(t, ssc, allocTxHash, clientID, pubKey, balances)
+	params = url.Values{"allocation_id": []string{allocTxHash}}
+	resp, err = ssc.getWritePoolStatHandler(ctx, params, balances)
+	require.NoError(t, err)
+
+	assert.EqualValues(t, &writePoolStat{
+		ID:         writePoolKey(ssc.ID, allocTxHash),
+		Balance:    400,
+		StartTime:  7200,
+		Expiration: 7315,
+		Finalized:  false,
+	}, resp)
 }

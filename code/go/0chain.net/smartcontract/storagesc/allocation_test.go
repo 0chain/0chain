@@ -495,12 +495,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 
 	assert.Zero(t, cp.Balance)
 
-	// write pool expiration, challenge pool expiration
-	assert.Equal(t, &tokenLock{
-		StartTime: tx.CreationDate,
-		Duration:  time.Duration(expire-tx.CreationDate) * time.Second,
-		Owner:     tx.ClientID,
-	}, wp.TokenLockInterface)
+	// challenge pool expiration
 	assert.Equal(t, &tokenLock{
 		StartTime: tx.CreationDate,
 		Duration:  time.Duration(expire-tx.CreationDate) * time.Second,

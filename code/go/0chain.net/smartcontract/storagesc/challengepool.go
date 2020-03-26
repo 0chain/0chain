@@ -242,13 +242,13 @@ func (ssc *StorageSmartContract) newChallengePool(allocationID string,
 
 // create, fill and save challenge pool for new allocation
 func (ssc *StorageSmartContract) createChallengePool(t *transaction.Transaction,
-	sa *StorageAllocation, balances chainState.StateContextI) (err error) {
+	alloc *StorageAllocation, balances chainState.StateContextI) (err error) {
 
 	// create related challenge_pool expires with the allocation + challenge
 	// completion time
 	var cp *challengePool
-	cp, err = ssc.newChallengePool(sa.GetKey(ssc.ID), t.CreationDate,
-		sa.Expiration+toSeconds(sa.ChallengeCompletionTime), balances)
+	cp, err = ssc.newChallengePool(alloc.ID, t.CreationDate,
+		alloc.Expiration+toSeconds(alloc.ChallengeCompletionTime), balances)
 	if err != nil {
 		return fmt.Errorf("can't create challenge pool: %v", err)
 	}
@@ -256,7 +256,7 @@ func (ssc *StorageSmartContract) createChallengePool(t *transaction.Transaction,
 	// don't lock anything here
 
 	// save the challenge pool
-	if err = cp.save(ssc.ID, sa.ID, balances); err != nil {
+	if err = cp.save(ssc.ID, alloc.ID, balances); err != nil {
 		return fmt.Errorf("can't save challenge pool: %v", err)
 	}
 

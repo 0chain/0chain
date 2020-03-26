@@ -424,15 +424,6 @@ func (sc *StorageSmartContract) closeAllocation(t *transaction.Transaction,
 	// mark as expired, but it will be alive at least chellenge_competion_time
 	alloc.Expiration = t.CreationDate
 
-	// write pool
-
-	err = sc.updateWritePoolExpiration(t, alloc.ID,
-		t.CreationDate+toSeconds(alloc.ChallengeCompletionTime), balances)
-	if err != nil {
-		return "", common.NewError("allocation_closing_failed",
-			"can't update write pool: "+err.Error())
-	}
-
 	// challenge pool
 
 	err = sc.updateChallengePoolExpiration(alloc.ID,
@@ -640,13 +631,6 @@ func (sc *StorageSmartContract) extendAllocation(t *transaction.Transaction,
 
 	// if expiration has changed we should adjust it in the write pool
 	if uar.Expiration != 0 {
-		err = wp.setExpiration(alloc.Expiration +
-			toSeconds(alloc.ChallengeCompletionTime))
-		if err != nil {
-			return "", common.NewError("allocation_extending_failed",
-				"can't update write pool expiration: "+err.Error())
-		}
-
 		// adjust challenge pool expiration
 		err = sc.updateChallengePoolExpiration(alloc.ID, alloc.Expiration+
 			toSeconds(alloc.ChallengeCompletionTime), balances)
@@ -721,13 +705,6 @@ func (sc *StorageSmartContract) reduceAllocation(t *transaction.Transaction,
 
 	// if expiration has changed we should adjust it in the write pool
 	if uar.Expiration != 0 {
-		err = wp.setExpiration(alloc.Expiration +
-			toSeconds(alloc.ChallengeCompletionTime))
-		if err != nil {
-			return "", common.NewError("allocation_reducing_failed",
-				err.Error())
-		}
-
 		// adjust challenge pool expiration
 		err = sc.updateChallengePoolExpiration(alloc.ID, alloc.Expiration+
 			toSeconds(alloc.ChallengeCompletionTime), balances)
