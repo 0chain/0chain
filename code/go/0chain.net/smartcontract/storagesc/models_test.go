@@ -60,3 +60,53 @@ func TestStorageAllocation_validate(t *testing.T) {
 	alloc.Owner = "client_hex"
 	assert.NoError(t, alloc.validate(now, &conf))
 }
+
+func TestStorageAllocation_filterBlobbers(t *testing.T) {
+
+	var (
+		alloc StorageAllocation
+		list  []*StorageNode
+		now   common.Timestamp = 150
+		size  int64            = 230
+	)
+
+	list = []*StorageNode{
+		&StorageNode{Terms: Terms{MaxOfferDuration: 8 * time.Second}},
+		&StorageNode{Terms: Terms{MaxOfferDuration: 6 * time.Second}},
+	}
+
+	// 1. filter all by max offer duration
+
+	alloc.Expiration = now + 10 // one second duration
+	assert.Len(t, alloc.filterBlobbers(list, now, size), 0)
+
+	// 2. filter all by read price range
+	alloc.Expiration = now + 5
+	alloc.ReadPriceRange = PriceRange{Min: 10, Max: 40}
+
+	list[0].Terms.ReadPrice = 100
+	list[1].Terms.ReadPrice = 150
+	assert.Len(t, alloc.filterBlobbers(list, now, size), 0)
+
+	// 3. filter all by write price range
+	alloc.ReadPriceRange = PriceRange{Min: 10, Max: 200}
+
+	alloc.WritePriceRange = PriceRange{Min: 10, Max: 40}
+	list[0].Terms.WritePrice = 100
+	list[1].Terms.WritePrice = 150
+	assert.Len(t, alloc.filterBlobbers(list, now, size), 0)
+
+	// 4. filter all by size
+	alloc.WritePriceRange = PriceRange{Min: 10, Max: 200}
+	list[0].Capacity, list[0].Used = 100, 90
+	list[1].Capacity, list[1].Used = 100, 50
+	assert.Len(t, alloc.filterBlobbers(list, now, size), 0)
+
+	// accept one
+	list[0].Capacity, list[0].Used = 330, 100
+	assert.Len(t, alloc.filterBlobbers(list, now, size), 1)
+
+	// accept all
+	list[1].Capacity, list[1].Used = 330, 100
+	assert.Len(t, alloc.filterBlobbers(list, now, size), 2)
+}

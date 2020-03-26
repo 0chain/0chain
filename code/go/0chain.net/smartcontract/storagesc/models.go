@@ -459,6 +459,7 @@ func (sa *StorageAllocation) filterBlobbers(list []*StorageNode,
 		dur = common.ToTime(sa.Expiration).Sub(common.ToTime(creationDate))
 		i   int
 	)
+
 	for _, b := range list {
 		// filter by max offer duration
 		if b.Terms.MaxOfferDuration < dur {
@@ -479,6 +480,7 @@ func (sa *StorageAllocation) filterBlobbers(list []*StorageNode,
 		list[i] = b
 		i++
 	}
+
 	return list[:i]
 }
 
