@@ -131,7 +131,7 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	blobber *StorageNode, all *StorageNodes, balances c_state.StateContextI) (
 	sp *stakePool, err error) {
 
-	sp = newStakePool(blobber.ID) // create new
+	sp = newStakePool() // create new
 
 	// create stake pool
 	var stake state.Balance                                   // required stake

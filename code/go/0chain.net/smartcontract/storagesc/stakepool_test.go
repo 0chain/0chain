@@ -12,11 +12,10 @@ import (
 )
 
 func Test_newStakePool(t *testing.T) {
-	const blobID = "bid"
-	var sp = newStakePool(blobID)
+	var sp = newStakePool()
 	assert.NotNil(t, sp.Locked)
 	assert.NotNil(t, sp.Unlocked)
-	assert.Equal(t, sp.BlobberID, blobID)
+	assert.NotNil(t, sp.Offers)
 }
 
 func Test_stakePoolKey(t *testing.T) {
@@ -24,30 +23,28 @@ func Test_stakePoolKey(t *testing.T) {
 }
 
 func Test_stakePool_Encode_Decode(t *testing.T) {
-	var spe, spd = newStakePool("blobberID"), new(stakePool)
+	var spe, spd = newStakePool(), new(stakePool)
 	require.NoError(t, spd.Decode(spe.Encode()))
 	assert.EqualValues(t, spe, spd)
 }
 
 func Test_stakePool_offersStake(t *testing.T) {
-	const blobID = "blob_id"
 	var (
-		sp  = newStakePool(blobID)
+		sp  = newStakePool()
 		now = common.Now()
 	)
 	assert.Zero(t, sp.offersStake(now))
-	sp.Offers = append(sp.Offers, &offerPool{
-		Lock:         90,
-		Expire:       now,
-		AllocationID: "alloc_id",
-	})
+	sp.Offers["alloc_id"] = &offerPool{
+		Lock:   90,
+		Expire: now,
+	}
 	assert.Equal(t, state.Balance(90), sp.offersStake(now))
 }
 
 func Test_stakePool_save(t *testing.T) {
 	const blobID = "blob_id"
 	var (
-		sp       = newStakePool(blobID)
+		sp       = newStakePool()
 		balances = newTestBalances()
 	)
 	require.NoError(t, sp.save(ADDRESS, blobID, balances))
@@ -56,13 +53,12 @@ func Test_stakePool_save(t *testing.T) {
 
 func Test_stakePool_fill(t *testing.T) {
 	const (
-		blobID  = "blob_id"
 		clienID = "clien_id"
 		txHash  = "tx_hash"
 	)
 
 	var (
-		sp       = newStakePool(blobID)
+		sp       = newStakePool()
 		balances = newTestBalances()
 		tx       = transaction.Transaction{
 			ClientID:   clienID,

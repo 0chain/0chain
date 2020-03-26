@@ -138,7 +138,7 @@ func (nar *newAllocationRequest) decode(b []byte) error {
 }
 
 // (1) adjust blobber capacity used, (2) add offer (stake lock boundary),
-// (3) save updated blobber, (4) (todo) create blobber's challenge pool
+// (3) save updated blobber
 func (sc *StorageSmartContract) addBlobbersOffers(sa *StorageAllocation,
 	blobbers []*StorageNode, balances c_state.StateContextI) (err error) {
 
@@ -209,7 +209,7 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 	}
 
 	allBlobbersList, err := sc.getBlobbersList(balances)
-	if err != nil {
+	if err != nil || len(allBlobbersList.Nodes) == 0 {
 		return "", common.NewError("allocation_creation_failed",
 			"No Blobbers registered. Failed to create a storage allocation")
 	}
@@ -218,18 +218,18 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 
 	if len(allBlobbersList.Nodes) == 0 {
 		return "", common.NewError("allocation_creation_failed",
-			"No Blobbers registered. Failed to create a storage allocation")
+			"No health Blobbers registered. Failed to create an allocation")
 	}
 
-	if len(t.ClientID) == 0 {
+	if t.ClientID == "" {
 		return "", common.NewError("allocation_creation_failed",
-			"Invalid client in the transaction. No public key found")
+			"Invalid client in the transaction. No client id in transaction")
 	}
 
 	var request newAllocationRequest
 	if err = request.decode(input); err != nil {
 		return "", common.NewError("allocation_creation_failed",
-			"failed to create a storage allocation")
+			"malformed request: "+err.Error())
 	}
 
 	var sa = request.storageAllocation()
@@ -595,15 +595,18 @@ func (sc *StorageSmartContract) extendAllocation(t *transaction.Transaction,
 		if nbmld > ba.MinLockDemand {
 			ba.MinLockDemand = nbmld
 		}
-		// update stake pool
+	}
+
+	// update max challenge_completion_time
+	alloc.ChallengeCompletionTime = cct
+
+	// extend offers after alloc.challenge_completion_time is known
+	for _, ba := range alloc.BlobberDetails {
 		if err = sc.updateSakePoolOffer(ba, alloc, balances); err != nil {
 			return "", common.NewError("allocation_extending_failed",
 				err.Error())
 		}
 	}
-
-	// update max challenge_completion_time
-	alloc.ChallengeCompletionTime = cct
 
 	// get related write pool
 	var wp *writePool

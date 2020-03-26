@@ -86,14 +86,11 @@ func Test_readPools_addPool_delPool(t *testing.T) {
 
 func Test_readPools_moveToBlobber(t *testing.T) {
 
-	const (
-		blobberID = "blobber_id"
-		errMsg    = "not enough tokens in read pool"
-	)
+	const errMsg = "not enough tokens in read pool"
 
 	var (
 		rps                 = newReadPools()
-		sp                  = newStakePool(blobberID)
+		sp                  = newStakePool()
 		now                 = common.Now()
 		value state.Balance = 90
 	)

@@ -23,9 +23,8 @@ import (
 // the capacity to zero; it implemented not as a token
 // pool, but as set or values
 type offerPool struct {
-	Lock         state.Balance    `json:"lock"`          // offer stake
-	Expire       common.Timestamp `json:"expire"`        // offer expiration
-	AllocationID string           `json:"allocation_id"` // offer reference
+	Lock   state.Balance    `json:"lock"`   // offer stake
+	Expire common.Timestamp `json:"expire"` // offer expiration
 }
 
 // stake pool of a blobber
@@ -38,20 +37,18 @@ type stakePool struct {
 	// Locker tokens is blobber's capacity stake.
 	Locked *tokenpool.ZcnPool `json:"locked"`
 	// Offers represents tokens required by currently
-	// open offers of the blobber.
-	Offers []*offerPool `json:"offers"`
-	// BlobberID is pool owner.
-	BlobberID string `json:"blobber_id"`
+	// open offers of the blobber. It's allocation_id -> {lock, expire}
+	Offers map[string]*offerPool `json:"offers"`
 }
 
 // newStakePool for given blobber, use empty blobberID to
 // create a stakePool to decode, since the blobberID is
 // stored
-func newStakePool(blobberID string) *stakePool {
+func newStakePool() *stakePool {
 	return &stakePool{
-		Unlocked:  &tokenpool.ZcnPool{},
-		Locked:    &tokenpool.ZcnPool{},
-		BlobberID: blobberID,
+		Unlocked: &tokenpool.ZcnPool{},
+		Locked:   &tokenpool.ZcnPool{},
+		Offers:   make(map[string]*offerPool),
 	}
 }
 
@@ -77,16 +74,13 @@ func (sp *stakePool) Decode(input []byte) error {
 // offersStake returns stake required by currently open offers;
 // the method remove expired offers from internal offers pool
 func (sp *stakePool) offersStake(now common.Timestamp) (os state.Balance) {
-	var i int
-	for _, off := range sp.Offers {
+	for allocID, off := range sp.Offers {
 		if off.Expire < now {
-			continue // an expired offer
+			delete(sp.Offers, allocID) //remove expired
+			continue                   // an expired offer
 		}
 		os += off.Lock
-		sp.Offers[i] = off
-		i++
 	}
-	sp.Offers = sp.Offers[:i] // remove expired offers from the list
 	return
 }
 
@@ -114,23 +108,17 @@ func (sp *stakePool) fill(t *transaction.Transaction,
 func (sp *stakePool) addOffer(alloc *StorageAllocation,
 	balloc *BlobberAllocation) {
 
-	sp.Offers = append(sp.Offers, &offerPool{
-		Lock: state.Balance(sizeInGB(balloc.Size) *
-			float64(balloc.Terms.WritePrice)),
-		Expire: alloc.Expiration +
-			toSeconds(balloc.Terms.ChallengeCompletionTime),
-		AllocationID: alloc.ID,
-	})
+	sp.Offers[alloc.ID] = &offerPool{
+		Lock: state.Balance(
+			sizeInGB(balloc.Size) * float64(balloc.Terms.WritePrice),
+		),
+		Expire: alloc.Expiration + toSeconds(alloc.ChallengeCompletionTime),
+	}
 }
 
 // findOffer by allocation id or nil
 func (sp *stakePool) findOffer(allocID string) *offerPool {
-	for _, o := range sp.Offers {
-		if o.AllocationID == allocID {
-			return o
-		}
-	}
-	return nil
+	return sp.Offers[allocID]
 }
 
 // extendOffer changes offer lock and expiration on update allocations
@@ -147,8 +135,7 @@ func (sp *stakePool) extendOffer(alloc *StorageAllocation,
 	}
 	// unlike a write pool, here we can reduce a lock
 	op.Lock = newLock
-	op.Expire = alloc.Expiration +
-		toSeconds(balloc.Terms.ChallengeCompletionTime)
+	op.Expire = alloc.Expiration + toSeconds(alloc.ChallengeCompletionTime)
 	return
 }
 
@@ -240,19 +227,19 @@ func (sp *stakePool) stat(scKey string, now common.Timestamp,
 	blobber *StorageNode) (stat *stakePoolStat) {
 
 	stat = new(stakePoolStat)
-	stat.ID = stakePoolKey(scKey, sp.BlobberID)
+	stat.ID = stakePoolKey(scKey, blobber.ID)
 
 	stat.Locked = sp.Locked.Balance
 	stat.Unlocked = sp.Unlocked.Balance
 
-	stat.RequiredStake = blobber.stake()
+	stat.CapacityStake = blobber.stake()
 
 	stat.Offers = make([]offerPoolStat, 0, len(sp.Offers))
-	for _, off := range sp.Offers {
+	for allocID, off := range sp.Offers {
 		stat.Offers = append(stat.Offers, offerPoolStat{
 			Lock:         off.Lock,
 			Expire:       off.Expire,
-			AllocationID: off.AllocationID,
+			AllocationID: allocID,
 			IsExpired:    off.Expire < now,
 		})
 		if off.Expire >= now {
@@ -277,7 +264,7 @@ type stakePoolStat struct {
 	Unlocked      state.Balance   `json:"unlocked"`
 	Offers        []offerPoolStat `json:"offers"`
 	OffersTotal   state.Balance   `json:"offers_total"`
-	RequiredStake state.Balance   `json:"required_stake"`
+	CapacityStake state.Balance   `json:"capacity_stake"`
 }
 
 func (stat *stakePoolStat) encode() (b []byte) {
@@ -331,7 +318,7 @@ func (ssc *StorageSmartContract) getStakePool(blobberID datastore.Key,
 	if poolb, err = ssc.getStakePoolBytes(blobberID, balances); err != nil {
 		return
 	}
-	sp = newStakePool("")
+	sp = newStakePool()
 	err = sp.Decode(poolb)
 	return
 }
@@ -352,7 +339,7 @@ func (ssc *StorageSmartContract) newStakePool(blobberID string,
 
 	err = nil // reset the util.ErrValueNotPresent
 
-	sp = newStakePool(blobberID)
+	sp = newStakePool()
 	sp.Locked.ID = stakePoolKey(ssc.ID, blobberID) + ":locked"
 	sp.Unlocked.ID = stakePoolKey(ssc.ID, blobberID) + ":unlocked"
 	return

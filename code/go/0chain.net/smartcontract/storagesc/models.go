@@ -427,7 +427,7 @@ func (sa *StorageAllocation) validate(now common.Timestamp,
 		return errors.New("invalid read_price range")
 	}
 	if !sa.WritePriceRange.isValid() {
-		return errors.New("invalid write price range")
+		return errors.New("invalid write_price range")
 	}
 	if sa.Size < conf.MinAllocSize {
 		return errors.New("insufficient allocation size")

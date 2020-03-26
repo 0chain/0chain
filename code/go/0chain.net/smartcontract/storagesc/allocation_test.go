@@ -4,8 +4,13 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/state"
+	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/util"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 //
@@ -25,10 +30,10 @@ func TestStorageSmartContract_getAllocation(t *testing.T) {
 		err      error
 	)
 	if alloc, err = ssc.getAllocation(allocID, balances); err == nil {
-		t.Fatal("missing erorr")
+		t.Fatal("missing error")
 	}
 	if err != util.ErrValueNotPresent {
-		t.Fatal("unexpectede error:", err)
+		t.Fatal("unexpected error:", err)
 	}
 	alloc = new(StorageAllocation)
 	alloc.ID = allocID
@@ -106,15 +111,109 @@ func Test_newAllocationRequest_storageAllocation(t *testing.T) {
 }
 
 func Test_newAllocationRequest_decode(t *testing.T) {
-	// TODO (sfxdx): implements tests
+	const clientID, clientPk = "client_id_hex", "client_pk_hex"
+	var ne, nd newAllocationRequest
+	ne.DataShards = 1
+	ne.ParityShards = 1
+	ne.Size = 2 * GB
+	ne.Expiration = 1240
+	ne.Owner = clientID
+	ne.OwnerPublicKey = clientPk
+	ne.PreferredBlobbers = []string{"b1", "b2"}
+	ne.ReadPriceRange = PriceRange{1, 2}
+	ne.WritePriceRange = PriceRange{2, 3}
+	require.NoError(t, nd.decode(mustEncode(t, &ne)))
+	assert.EqualValues(t, &ne, &nd)
 }
 
 func TestStorageSmartContract_addBlobbersOffers(t *testing.T) {
-	// TODO (sfxdx): implements tests
+	const errMsg = "can't get blobber's stake pool: value not present"
+	var (
+		alloc    StorageAllocation
+		b1, b2   StorageNode
+		balances = newTestBalances()
+		ssc      = newTestStorageSC()
+
+		err error
+	)
+	// setup
+	alloc.ID, b1.ID, b2.ID = "a1", "b1", "b2"
+	alloc.ChallengeCompletionTime = 150 * time.Second
+	alloc.Expiration = 100
+	alloc.BlobberDetails = []*BlobberAllocation{
+		&BlobberAllocation{Size: 20 * 1024, Terms: Terms{WritePrice: 12000}},
+		&BlobberAllocation{Size: 20 * 1024, Terms: Terms{WritePrice: 4000}},
+	}
+	// stake pool not found
+	var blobbers = []*StorageNode{&b1, &b2}
+	requireErrMsg(t, ssc.addBlobbersOffers(&alloc, blobbers, balances), errMsg)
+	// create stake pools
+	for _, b := range blobbers {
+		var sp = newStakePool()
+		_, err = balances.InsertTrieNode(stakePoolKey(ssc.ID, b.ID), sp)
+		require.NoError(t, err)
+	}
+	// add the offers
+	require.NoError(t, ssc.addBlobbersOffers(&alloc, blobbers, balances))
+	// check out all
+	var sp1, sp2 *stakePool
+	// stake pool 1
+	sp1, err = ssc.getStakePool(b1.ID, balances)
+	require.NoError(t, err)
+	// offer 1
+	var off1 = sp1.findOffer(alloc.ID)
+	require.NotNil(t, off1)
+	assert.Equal(t, toSeconds(alloc.ChallengeCompletionTime)+alloc.Expiration,
+		off1.Expire)
+	assert.Equal(t, state.Balance(sizeInGB(20*1024)*12000.0), off1.Lock)
+	assert.Len(t, sp1.Offers, 1)
+	// stake pool 2
+	sp2, err = ssc.getStakePool(b2.ID, balances)
+	require.NoError(t, err)
+	// offer 2
+	var off2 = sp2.findOffer(alloc.ID)
+	require.NotNil(t, off1)
+	assert.Equal(t, toSeconds(alloc.ChallengeCompletionTime)+alloc.Expiration,
+		off2.Expire)
+	assert.Equal(t, state.Balance(sizeInGB(20*1024)*4000.0), off2.Lock)
+	assert.Len(t, sp2.Offers, 1)
+
 }
 
 func Test_updateBlobbersInAll(t *testing.T) {
-	// TODO (sfxdx): implements tests
+	var (
+		all        StorageNodes
+		balances   = newTestBalances()
+		b1, b2, b3 StorageNode
+		u1, u2     StorageNode
+		decode     StorageNodes
+
+		err error
+	)
+
+	b1.ID, b2.ID, b3.ID = "b1", "b2", "b3"
+	b1.Capacity, b2.Capacity, b3.Capacity = 100, 100, 100
+
+	all.Nodes = []*StorageNode{&b1, &b2, &b3}
+
+	u1.ID, u2.ID = "b1", "b2"
+	u1.Capacity, u2.Capacity = 200, 200
+
+	err = updateBlobbersInAll(&all, []*StorageNode{&u1, &u2}, balances)
+	require.NoError(t, err)
+
+	var allSeri, ok = balances.tree[ALL_BLOBBERS_KEY]
+	require.True(t, ok)
+	require.NotNil(t, allSeri)
+	require.NoError(t, decode.Decode(allSeri.Encode()))
+
+	require.Len(t, decode.Nodes, 3)
+	assert.Equal(t, "b1", decode.Nodes[0].ID)
+	assert.Equal(t, int64(200), decode.Nodes[0].Capacity)
+	assert.Equal(t, "b2", decode.Nodes[1].ID)
+	assert.Equal(t, int64(200), decode.Nodes[1].Capacity)
+	assert.Equal(t, "b3", decode.Nodes[2].ID)
+	assert.Equal(t, int64(100), decode.Nodes[2].Capacity)
 }
 
 func Test_toSeconds(t *testing.T) {
@@ -130,7 +229,84 @@ func Test_sizeInGB(t *testing.T) {
 }
 
 func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
-	// TODO (sfxdx): implements tests
+
+	const (
+		txHash, clientID, pubKey = "tx_hex", "client_hex", "pub_key_hex"
+
+		errMsg1 = "allocation_creation_failed: " +
+			"No Blobbers registered. Failed to create a storage allocation"
+		errMsg2 = "allocation_creation_failed: " +
+			"No health Blobbers registered. Failed to create an allocation"
+		errMsg3 = "allocation_creation_failed: " +
+			"Invalid client in the transaction. No client id in transaction"
+		errMsg4 = "allocation_creation_failed: malformed request: " +
+			"invalid character '}' looking for beginning of value"
+	)
+
+	var (
+		ssc      = newTestStorageSC()
+		balances = newTestBalances()
+
+		tx   transaction.Transaction
+		conf scConfig
+
+		resp string
+		err  error
+	)
+
+	tx.Hash = txHash
+	tx.Value = 100
+	tx.ClientID = clientID
+	tx.CreationDate = toSeconds(2 * time.Hour)
+
+	balances.txn = &tx
+
+	conf.MaxChallengeCompletionTime = 20 * time.Second
+	conf.MinAllocDuration = 20 * time.Second
+	conf.MinAllocSize = 20 * 1024
+
+	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), &conf)
+	require.NoError(t, err)
+
+	// 1.
+
+	_, err = ssc.newAllocationRequest(&tx, nil, balances)
+	requireErrMsg(t, err, errMsg1)
+
+	// setup unhealthy blobbers
+	var allBlobbers StorageNodes
+	allBlobbers.Nodes = []*StorageNode{
+		&StorageNode{ID: "b1", LastHealthCheck: 0},
+		&StorageNode{ID: "b2", LastHealthCheck: 0},
+	}
+	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, &allBlobbers)
+	require.NoError(t, err)
+
+	// 2.
+
+	_, err = ssc.newAllocationRequest(&tx, nil, balances)
+	requireErrMsg(t, err, errMsg2)
+
+	// make the blobbers health
+	allBlobbers.Nodes[0].LastHealthCheck = tx.CreationDate
+	allBlobbers.Nodes[1].LastHealthCheck = tx.CreationDate
+	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, &allBlobbers)
+	require.NoError(t, err)
+
+	// 3.
+
+	tx.ClientID = ""
+	_, err = ssc.newAllocationRequest(&tx, nil, balances)
+	requireErrMsg(t, err, errMsg3)
+
+	// 4.
+
+	tx.ClientID = clientID
+	_, err = ssc.newAllocationRequest(&tx, []byte("} malformed {"), balances)
+	requireErrMsg(t, err, errMsg4)
+
+	_ = resp
+
 }
 
 func Test_updateAllocationRequest_decode(t *testing.T) {
