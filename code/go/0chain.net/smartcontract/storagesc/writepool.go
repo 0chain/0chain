@@ -113,7 +113,7 @@ func (wp *writePool) moveToStake(sp *stakePool, value state.Balance) (
 		return errors.New("not enough tokens in write pool")
 	}
 
-	_, _, err = wp.TransferTo(sp.Unlocked, value, nil)
+	_, _, err = wp.TransferTo(sp, value, nil)
 	return
 }
 
@@ -442,7 +442,7 @@ func (ssc *StorageSmartContract) finalizeAllocation(t *transaction.Transaction,
 			return "", common.NewError("fini_alloc_failed",
 				"can't get blobber "+d.BlobberID+": "+err.Error())
 		}
-		if _, err = sp.update(t.CreationDate, b, balances); err != nil {
+		if _, err = sp.update(ssc.ID, t.CreationDate, b, balances); err != nil {
 			return "", common.NewError("fini_alloc_failed",
 				"can't update stake pool of "+d.BlobberID+": "+err.Error())
 		}

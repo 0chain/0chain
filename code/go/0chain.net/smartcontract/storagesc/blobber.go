@@ -98,7 +98,7 @@ func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
 		return nil, nil, fmt.Errorf("can't get related stake pool: %v", err)
 	}
 
-	_, err = sp.update(t.CreationDate, existingBlobber, balances)
+	_, err = sp.update(sc.ID, t.CreationDate, existingBlobber, balances)
 	if err != nil {
 		return nil, nil, fmt.Errorf("can't update related stake pool: %v", err)
 	}
@@ -134,11 +134,16 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	sp = newStakePool() // create new
 
 	// create stake pool
-	var stake state.Balance                                   // required stake
-	stake, err = sp.update(t.CreationDate, blobber, balances) //
+	var (
+		stake state.Balance // required stake
+		info  *stakePoolUpdateInfo
+	)
+	info, err = sp.update(sc.ID, t.CreationDate, blobber, balances) //
 	if err != nil {
 		return nil, fmt.Errorf("unexpected error: %v", err)
 	}
+
+	stake = info.stake
 
 	// lock required stake
 	if stake > 0 {
@@ -155,9 +160,9 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 			return nil, fmt.Errorf("transferring tokens to stake pool: %v", err)
 		}
 
-		// release all tokens over the required stake, moving them to
-		// unlocked pool of the stake pool
-		_, err = sp.update(t.CreationDate, blobber, balances)
+		// release all tokens over the required stake,
+		// moving them back to blobber
+		_, err = sp.update(sc.ID, t.CreationDate, blobber, balances)
 		if err != nil {
 			return nil, fmt.Errorf("unexpected error: %v", err)
 		}
@@ -184,14 +189,19 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 		return nil, fmt.Errorf("can't get related stake pool: %v", err)
 	}
 
-	var stake state.Balance
-	if stake, err = sp.update(t.CreationDate, blobber, balances); err != nil {
+	var (
+		lack state.Balance
+		info *stakePoolUpdateInfo
+	)
+	info, err = sp.update(sc.ID, t.CreationDate, blobber, balances)
+	if err != nil {
 		return nil, fmt.Errorf("updating stake of blobber: %v", err)
 	}
 
+	lack = info.lack
+
 	// is more tokens required
-	if stake > sp.Locked.Balance {
-		var lack = stake - sp.Locked.Balance
+	if lack > 0 {
 		if state.Balance(t.Value) < lack {
 			return nil, fmt.Errorf("not enough tokens for stake: %d < %d",
 				t.Value, lack)
@@ -205,7 +215,8 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 			return nil, fmt.Errorf("locking tokens in stake pool: %v", err)
 		}
 		// unlock all tokens over the required amount
-		if _, err = sp.update(t.CreationDate, blobber, balances); err != nil {
+		_, err = sp.update(sc.ID, t.CreationDate, blobber, balances)
+		if err != nil {
 			return nil, fmt.Errorf("updating stake pool: %v", err)
 		}
 	}
@@ -428,30 +439,21 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 		userID   = commitRead.ReadMarker.ClientID
 	)
 
-	// move tokens from read pool to stake pool
+	// move tokens from read pool to blobber
 	rps, err := sc.getReadPools(userID, balances)
 	if err != nil {
 		return "", common.NewError("commit_read_failed",
 			"can't get related read pool: "+err.Error())
 	}
-	sp, err := sc.getStakePool(commitRead.ReadMarker.BlobberID, balances)
+
+	err = rps.moveToBlobber(sc.ID, commitRead.ReadMarker.BlobberID,
+		t.CreationDate, value, balances)
 	if err != nil {
 		return "", common.NewError("commit_read_failed",
-			"can't get related stake pool: "+err.Error())
+			"can't transfer tokens from read pool to blobber: "+err.Error())
 	}
 
-	if err = rps.moveToBlobber(t.CreationDate, sp, value); err != nil {
-		return "", common.NewError("commit_read_failed",
-			"can't transfer tokens from read pool to stake pool: "+err.Error())
-	}
-
-	// save pools
-	err = sp.save(sc.ID, commitRead.ReadMarker.BlobberID, balances)
-	if err != nil {
-		return "", common.NewError("commit_read_failed",
-			"can't save stake pool: "+err.Error())
-	}
-
+	// save pool
 	if err = rps.save(sc.ID, userID, balances); err != nil {
 		return "", common.NewError("commit_read_failed",
 			"can't save read pool: "+err.Error())

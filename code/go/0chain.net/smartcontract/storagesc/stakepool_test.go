@@ -13,8 +13,7 @@ import (
 
 func Test_newStakePool(t *testing.T) {
 	var sp = newStakePool()
-	assert.NotNil(t, sp.Locked)
-	assert.NotNil(t, sp.Unlocked)
+	assert.NotNil(t, sp.ZcnPool)
 	assert.NotNil(t, sp.Offers)
 }
 
@@ -72,7 +71,7 @@ func Test_stakePool_fill(t *testing.T) {
 
 	_, _, err = sp.fill(&tx, balances)
 	require.NoError(t, err)
-	assert.Equal(t, state.Balance(90), sp.Locked.Balance)
+	assert.Equal(t, state.Balance(90), sp.Balance)
 }
 
 func Test_stakePool_addOffer(t *testing.T) {

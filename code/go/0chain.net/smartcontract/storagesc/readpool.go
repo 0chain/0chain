@@ -151,8 +151,8 @@ func (rps *readPools) save(sscKey, clientID string,
 	return
 }
 
-func (rps *readPools) moveToBlobber(now common.Timestamp, sp *stakePool,
-	value state.Balance) (err error) {
+func (rps *readPools) moveToBlobber(sscID, blobID string, now common.Timestamp,
+	value state.Balance, balances chainState.StateContextI) (err error) {
 
 	var tp = common.ToTime(now)
 
@@ -160,9 +160,11 @@ func (rps *readPools) moveToBlobber(now common.Timestamp, sp *stakePool,
 		if value == 0 {
 			break
 		}
+
 		if !rp.IsLocked(tp) {
-			continue
+			continue // unlocked read pool, can't use
 		}
+
 		var move state.Balance
 		if rp.Balance < value || rp.Balance == value {
 			move = rp.Balance
@@ -170,9 +172,16 @@ func (rps *readPools) moveToBlobber(now common.Timestamp, sp *stakePool,
 		} else {
 			move = value
 		}
-		if _, _, err = rp.TransferTo(sp.Unlocked, move, nil); err != nil {
-			break
+
+		var transfer *state.Transfer
+		transfer, _, err = rp.DrainPool(sscID, blobID, move, nil)
+		if err != nil {
+			return fmt.Errorf("draining read pool: %v", err)
 		}
+		if err = balances.AddTransfer(transfer); err != nil {
+			return fmt.Errorf("adding read pool to blobber transfer: %v", err)
+		}
+
 		value -= move // decrease
 	}
 

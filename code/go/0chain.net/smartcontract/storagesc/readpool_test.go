@@ -86,16 +86,25 @@ func Test_readPools_addPool_delPool(t *testing.T) {
 
 func Test_readPools_moveToBlobber(t *testing.T) {
 
-	const errMsg = "not enough tokens in read pool"
-
-	var (
-		rps                 = newReadPools()
-		sp                  = newStakePool()
-		now                 = common.Now()
-		value state.Balance = 90
+	const (
+		sscID  = ADDRESS
+		blobID = "blob_hex"
+		errMsg = "not enough tokens in read pool"
 	)
 
-	requireErrMsg(t, rps.moveToBlobber(now, sp, value), errMsg)
+	var (
+		rps                    = newReadPools()
+		now                    = common.Now()
+		balances               = newTestBalances()
+		value    state.Balance = 90
+		err      error
+	)
+
+	balances.txn = new(transaction.Transaction) // just not a nil
+	balances.txn.ToClientID = sscID
+
+	err = rps.moveToBlobber(sscID, blobID, now, value, balances)
+	requireErrMsg(t, err, errMsg)
 
 	// unlocked
 	var unlocked = newReadPool()
@@ -107,7 +116,8 @@ func Test_readPools_moveToBlobber(t *testing.T) {
 	}
 
 	require.NoError(t, rps.addPool(unlocked))
-	requireErrMsg(t, rps.moveToBlobber(now, sp, value), errMsg)
+	err = rps.moveToBlobber(sscID, blobID, now, value, balances)
+	requireErrMsg(t, err, errMsg)
 
 	// not enough tokens
 	var small = newReadPool()
@@ -130,10 +140,10 @@ func Test_readPools_moveToBlobber(t *testing.T) {
 	}
 
 	require.NoError(t, rps.addPool(enough))
-	require.NoError(t, rps.moveToBlobber(now, sp, value))
+	require.NoError(t, rps.moveToBlobber(sscID, blobID, now, value, balances))
 
 	// check pools
-	assert.Equal(t, state.Balance(90), sp.Unlocked.Balance)
+	assert.Equal(t, state.Balance(90), balances.balances[blobID])
 	assert.Len(t, rps.Pools, 2)
 
 	var gotIt *readPool
@@ -146,7 +156,8 @@ func Test_readPools_moveToBlobber(t *testing.T) {
 
 	assert.Equal(t, state.Balance(10), gotIt.Balance)
 
-	requireErrMsg(t, rps.moveToBlobber(now, sp, value), errMsg)
+	err = rps.moveToBlobber(sscID, blobID, now, value, balances)
+	requireErrMsg(t, err, errMsg)
 }
 
 func Test_readPoolStats_encode_decode(t *testing.T) {

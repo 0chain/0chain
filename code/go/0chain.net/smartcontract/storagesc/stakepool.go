@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"time"
 
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -30,12 +29,7 @@ type offerPool struct {
 // stake pool of a blobber
 
 type stakePool struct {
-	// Unlocked tokens are tokens released. When a blobber reduces
-	// its capacity some of tokens moved to the unlocked and can be
-	// released by the blobber (with regards to open offers).
-	Unlocked *tokenpool.ZcnPool `json:"unlocked"`
-	// Locker tokens is blobber's capacity stake.
-	Locked *tokenpool.ZcnPool `json:"locked"`
+	*tokenpool.ZcnPool `json:"locked"`
 	// Offers represents tokens required by currently
 	// open offers of the blobber. It's allocation_id -> {lock, expire}
 	Offers map[string]*offerPool `json:"offers"`
@@ -46,9 +40,8 @@ type stakePool struct {
 // stored
 func newStakePool() *stakePool {
 	return &stakePool{
-		Unlocked: &tokenpool.ZcnPool{},
-		Locked:   &tokenpool.ZcnPool{},
-		Offers:   make(map[string]*offerPool),
+		ZcnPool: &tokenpool.ZcnPool{},
+		Offers:  make(map[string]*offerPool),
 	}
 }
 
@@ -97,7 +90,7 @@ func (sp *stakePool) fill(t *transaction.Transaction,
 	balances chainState.StateContextI) (
 	transfer *state.Transfer, resp string, err error) {
 
-	if transfer, resp, err = sp.Locked.FillPool(t); err != nil {
+	if transfer, resp, err = sp.FillPool(t); err != nil {
 		return
 	}
 	err = balances.AddTransfer(transfer)
@@ -146,21 +139,24 @@ func maxBalance(a, b state.Balance) state.Balance {
 	return b
 }
 
-func minBalance(a, b state.Balance) state.Balance {
-	if a < b {
-		return a
-	}
-	return b
+type stakePoolUpdateInfo struct {
+	stake state.Balance // required stake
+	lack  state.Balance // lack tokens
+	resp  string        // return overfill transfer response
 }
 
-// update moves tokens between unlocked and locked pools regarding
-// offers and their expiration; all tokens left
-func (sp *stakePool) update(now common.Timestamp, blobber *StorageNode,
-	balances chainState.StateContextI) (stake state.Balance, err error) {
+// update moves all tokens over required back to blobber, removes expired
+// offers, calculates required stake size and tokens lack
+func (sp *stakePool) update(sscID string, now common.Timestamp,
+	blobber *StorageNode, balances chainState.StateContextI) (
+	info *stakePoolUpdateInfo, err error) {
 
 	var (
 		offersStake   = sp.offersStake(now) // locked by offers
 		capacityStake = blobber.stake()     // capacity lock
+
+		stake, lack state.Balance
+		resp        string
 	)
 
 	// if a blobber reduces its capacity after some offers,
@@ -172,35 +168,29 @@ func (sp *stakePool) update(now common.Timestamp, blobber *StorageNode,
 	// expired offers remove, and we know required stake
 
 	switch {
-	case stake == sp.Locked.Balance:
+	case stake == sp.Balance:
 		// required stake is equal to number of locked tokens, nothing to move
-
-	case sp.Locked.Balance > stake:
-		// move some tokens to unlocked
-
-		_, _, err = sp.Locked.TransferTo(sp.Unlocked,
-			sp.Locked.Balance-stake, nil)
-		if err != nil {
-			return // an error
-		}
-
-	case sp.Locked.Balance < stake && sp.Unlocked.Balance > 0:
-		// move some tokens to locked
-
+	case sp.Balance > stake:
+		// move tokens over the stake to blobber
 		var (
-			lack = stake - sp.Locked.Balance
-			move = minBalance(lack, sp.Unlocked.Balance)
+			move     = sp.Balance - stake
+			transfer *state.Transfer
 		)
-
-		_, _, err = sp.Unlocked.TransferTo(sp.Locked, move, nil)
+		transfer, resp, err = sp.DrainPool(sscID, blobber.ID, move, nil)
 		if err != nil {
-			return // an error
+			return
 		}
-
-	default:
-		// doesn't need to move something, or nothing to move
+		if err = balances.AddTransfer(transfer); err != nil {
+			return
+		}
+	case sp.Balance < stake:
+		lack = stake - sp.Balance
 	}
 
+	info = new(stakePoolUpdateInfo)
+	info.stake = stake
+	info.lack = lack
+	info.resp = resp
 	return
 }
 
@@ -212,13 +202,13 @@ func (sp *stakePool) moveToWritePool(wp *writePool,
 		return // nothing to move
 	}
 
-	if sp.Locked.Balance < value {
+	if sp.Balance < value {
 		return fmt.Errorf("not enough tokens in stake pool %s: %d < %d",
-			sp.Locked.ID, sp.Locked.Balance, value)
+			sp.ID, sp.Balance, value)
 	}
 
 	// move
-	_, _, err = sp.Locked.TransferTo(wp, value, nil)
+	_, _, err = sp.TransferTo(wp, value, nil)
 	return
 }
 
@@ -229,8 +219,7 @@ func (sp *stakePool) stat(scKey string, now common.Timestamp,
 	stat = new(stakePoolStat)
 	stat.ID = stakePoolKey(scKey, blobber.ID)
 
-	stat.Locked = sp.Locked.Balance
-	stat.Unlocked = sp.Unlocked.Balance
+	stat.Locked = sp.Balance
 
 	stat.CapacityStake = blobber.stake()
 
@@ -246,6 +235,16 @@ func (sp *stakePool) stat(scKey string, now common.Timestamp,
 			stat.OffersTotal += off.Lock
 		}
 	}
+
+	// lack tokens
+	var stake = maxBalance(stat.CapacityStake, stat.OffersTotal)
+
+	if sp.Balance < stake {
+		stat.Lack = stake - sp.Balance
+	} else if sp.Balance > stake {
+		stat.Overfill = sp.Balance - stake
+	}
+
 	return
 }
 
@@ -261,10 +260,11 @@ type offerPoolStat struct {
 type stakePoolStat struct {
 	ID            datastore.Key   `json:"pool_id"`
 	Locked        state.Balance   `json:"locked"`
-	Unlocked      state.Balance   `json:"unlocked"`
 	Offers        []offerPoolStat `json:"offers"`
 	OffersTotal   state.Balance   `json:"offers_total"`
 	CapacityStake state.Balance   `json:"capacity_stake"`
+	Lack          state.Balance   `json:"lack"`
+	Overfill      state.Balance   `json:"overfill"`
 }
 
 func (stat *stakePoolStat) encode() (b []byte) {
@@ -277,21 +277,6 @@ func (stat *stakePoolStat) encode() (b []byte) {
 
 func (stat *stakePoolStat) decode(input []byte) error {
 	return json.Unmarshal(input, stat)
-}
-
-type stakePoolLockStat struct {
-	StartTime common.Timestamp `json:"start_time"`
-	Duration  time.Duration    `json:"duration"`
-	TimeLeft  time.Duration    `json:"time_left"`
-	Locked    bool             `json:"locked"`
-}
-
-func (spls *stakePoolLockStat) encode() (b []byte) {
-	var err error
-	if b, err = json.Marshal(spls); err != nil {
-		panic(err) // must never happens
-	}
-	return
 }
 
 //
@@ -340,55 +325,8 @@ func (ssc *StorageSmartContract) newStakePool(blobberID string,
 	err = nil // reset the util.ErrValueNotPresent
 
 	sp = newStakePool()
-	sp.Locked.ID = stakePoolKey(ssc.ID, blobberID) + ":locked"
-	sp.Unlocked.ID = stakePoolKey(ssc.ID, blobberID) + ":unlocked"
+	sp.ZcnPool.ID = stakePoolKey(ssc.ID, blobberID)
 	return
-}
-
-// unlock tokens if expired
-func (ssc *StorageSmartContract) stakePoolUnlock(t *transaction.Transaction,
-	_ []byte, balances chainState.StateContextI) (resp string, err error) {
-
-	var blobber *StorageNode
-	if blobber, err = ssc.getBlobber(t.ClientID, balances); err != nil {
-		return "", common.NewError("stake_pool_unlock_failed",
-			"can't get releated blobber: "+err.Error())
-	}
-
-	var sp *stakePool
-	if sp, err = ssc.getStakePool(t.ClientID, balances); err != nil {
-		return "", common.NewError("stake_pool_unlock_failed",
-			"can't get related stake pool: "+err.Error())
-	}
-
-	if _, err = sp.update(t.CreationDate, blobber, balances); err != nil {
-		return "", common.NewError("stake_pool_unlock_failed",
-			"can't update stake pool: "+err.Error())
-	}
-
-	if sp.Unlocked.Balance == 0 {
-		return "", common.NewError("stake_pool_unlock_failed",
-			"no tokens to unlock")
-	}
-
-	var transfer *state.Transfer
-	transfer, resp, err = sp.Unlocked.EmptyPool(ssc.ID, t.ClientID, nil)
-	if err != nil {
-		return "", common.NewError("stake_pool_unlock_failed",
-			"can't unlock tokens: "+err.Error())
-	}
-
-	if err = balances.AddTransfer(transfer); err != nil {
-		return "", common.NewError("stake_pool_unlock_failed",
-			"transferring unlocked tokens: "+err.Error())
-	}
-
-	if err = sp.save(ssc.ID, t.ClientID, balances); err != nil {
-		return "", common.NewError("stake_pool_unlock_failed",
-			"can't save stake pool: "+err.Error())
-	}
-
-	return // resp, nil
 }
 
 func (ssc *StorageSmartContract) updateSakePoolOffer(ba *BlobberAllocation,
@@ -410,6 +348,100 @@ func (ssc *StorageSmartContract) updateSakePoolOffer(ba *BlobberAllocation,
 
 	return
 
+}
+
+// Blobber owner can lock tokens lack without addBlobber transaction.
+// All tokens over the required stake will be returned to the blobber.
+// Note, a blobber can use addBlobber transaction to fill the stake pool.
+func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
+	_ []byte, balances chainState.StateContextI) (resp string, err error) {
+
+	var (
+		blobber *StorageNode
+		sp      *stakePool
+		info    *stakePoolUpdateInfo
+	)
+
+	if blobber, err = ssc.getBlobber(t.ClientID, balances); err != nil {
+		return "", common.NewError("stake_pool_lock_failed",
+			"can't get blobber: "+err.Error())
+	}
+
+	if sp, err = ssc.getStakePool(t.ClientID, balances); err != nil {
+		return "", common.NewError("stake_pool_lock_failed",
+			"can't get related stake pool: "+err.Error())
+	}
+
+	info, err = sp.update(ssc.ID, t.CreationDate, blobber, balances)
+	if err != nil {
+		return "", common.NewError("stake_pool_lock_failed",
+			"updating stake pool: "+err.Error())
+	}
+
+	if info.lack == 0 {
+		return "", common.NewError("stake_pool_lock_failed",
+			"no tokens lack in the stake pool")
+	}
+
+	if err = ssc.checkFill(t, balances); err != nil {
+		return "", common.NewError("stake_pool_lock_failed", err.Error())
+	}
+
+	if _, resp, err = sp.fill(t, balances); err != nil {
+		return "", common.NewError("stake_pool_lock_failed",
+			"stake pool filling error: "+err.Error())
+	}
+
+	// return overfill back to client
+	_, err = sp.update(ssc.ID, t.CreationDate, blobber, balances)
+	if err != nil {
+		return "", common.NewError("stake_pool_lock_failed",
+			"updating stake pool: "+err.Error())
+	}
+
+	if err = sp.save(ssc.ID, t.ClientID, balances); err != nil {
+		return "", common.NewError("stake_pool_lock_failed",
+			"saving stake pool: "+err.Error())
+	}
+
+	return
+}
+
+// stakePoolUnlock can return overfill of the stake pool to related blobber
+// any time. Note: a blobber can use addBlobber transaction to returns an
+// overfill.
+func (ssc *StorageSmartContract) stakePoolUnlock(t *transaction.Transaction,
+	_ []byte, balances chainState.StateContextI) (resp string, err error) {
+
+	var (
+		blobber *StorageNode
+		sp      *stakePool
+		info    *stakePoolUpdateInfo
+	)
+
+	if blobber, err = ssc.getBlobber(t.ClientID, balances); err != nil {
+		return "", common.NewError("stake_pool_lock_failed",
+			"can't get blobber: "+err.Error())
+	}
+
+	if sp, err = ssc.getStakePool(t.ClientID, balances); err != nil {
+		return "", common.NewError("stake_pool_lock_failed",
+			"can't get related stake pool: "+err.Error())
+	}
+
+	// the update transfers an overfill back to blobber
+	info, err = sp.update(ssc.ID, t.CreationDate, blobber, balances)
+	if err != nil {
+		return "", common.NewError("stake_pool_lock_failed",
+			"updating stake pool: "+err.Error())
+	}
+
+	if err = sp.save(ssc.ID, t.ClientID, balances); err != nil {
+		return "", common.NewError("stake_pool_lock_failed",
+			"saving stake pool: "+err.Error())
+	}
+
+	return info.resp, nil
 }
 
 //
