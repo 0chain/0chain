@@ -424,16 +424,7 @@ func (sc *StorageSmartContract) closeAllocation(t *transaction.Transaction,
 	// mark as expired, but it will be alive at least chellenge_competion_time
 	alloc.Expiration = t.CreationDate
 
-	// challenge pool
-
-	err = sc.updateChallengePoolExpiration(alloc.ID,
-		t.CreationDate+toSeconds(alloc.ChallengeCompletionTime), balances)
-	if err != nil {
-		return "", common.NewError("allocation_closing_failed",
-			"can't update challenge pool: "+err.Error())
-	}
-
-	// stake pools (offers)
+	// stake pool (offers)
 
 	for _, ba := range alloc.BlobberDetails {
 		if err = sc.updateSakePoolOffer(ba, alloc, balances); err != nil {
@@ -629,17 +620,6 @@ func (sc *StorageSmartContract) extendAllocation(t *transaction.Transaction,
 		}
 	}
 
-	// if expiration has changed we should adjust it in the write pool
-	if uar.Expiration != 0 {
-		// adjust challenge pool expiration
-		err = sc.updateChallengePoolExpiration(alloc.ID, alloc.Expiration+
-			toSeconds(alloc.ChallengeCompletionTime), balances)
-		if err != nil {
-			return "", common.NewError("allocation_extending_failed",
-				"can't update challenge pool expiration: "+err.Error())
-		}
-	}
-
 	// save the write pool
 	if err = wp.save(sc.ID, alloc.ID, balances); err != nil {
 		return "", common.NewError("allocation_extending_failed",
@@ -700,17 +680,6 @@ func (sc *StorageSmartContract) reduceAllocation(t *transaction.Transaction,
 		if _, _, err = wp.fill(t, balances); err != nil {
 			return "", common.NewError("allocation_reducing_failed",
 				err.Error())
-		}
-	}
-
-	// if expiration has changed we should adjust it in the write pool
-	if uar.Expiration != 0 {
-		// adjust challenge pool expiration
-		err = sc.updateChallengePoolExpiration(alloc.ID, alloc.Expiration+
-			toSeconds(alloc.ChallengeCompletionTime), balances)
-		if err != nil {
-			return "", common.NewError("allocation_reducing_failed",
-				"can't update challenge pool expiration: "+err.Error())
 		}
 	}
 

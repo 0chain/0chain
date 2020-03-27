@@ -88,6 +88,8 @@ func (tb *testBalances) AddTransfer(t *state.Transfer) error {
 	if t.ClientID != tb.txn.ClientID && t.ClientID != tb.txn.ToClientID {
 		return state.ErrInvalidTransfer
 	}
+	tb.balances[t.ClientID] -= t.Amount
+	tb.balances[t.ToClientID] += t.Amount
 	tb.transfers = append(tb.transfers, t)
 	return nil
 }

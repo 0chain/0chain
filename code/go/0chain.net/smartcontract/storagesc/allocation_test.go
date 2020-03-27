@@ -494,12 +494,6 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Zero(t, cp.Balance)
-
-	// challenge pool expiration
-	assert.Equal(t, &tokenLock{
-		StartTime: tx.CreationDate,
-		Duration:  time.Duration(expire-tx.CreationDate) * time.Second,
-	}, cp.TokenLockInterface)
 }
 
 func Test_updateAllocationRequest_decode(t *testing.T) {

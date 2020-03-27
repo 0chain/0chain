@@ -392,6 +392,7 @@ func TestStorageSmartContract_readPoolLock(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotZero(t, resp)
 	// 7. already exists
+	balances.balances[clientID] = 15
 	_, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
 	requireErrMsg(t, err, errMsg7)
 }

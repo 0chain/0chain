@@ -9,7 +9,7 @@ import (
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
+	// "0chain.net/core/common"
 	"0chain.net/core/util"
 
 	"github.com/stretchr/testify/assert"
@@ -105,12 +105,7 @@ func Test_writePool_moveToChallenge(t *testing.T) {
 		cp = newChallengePool()
 	)
 
-	cp.TokenLockInterface = &tokenLock{
-		StartTime: common.Now(),
-		Duration:  100 * time.Second,
-	}
 	cp.TokenPool.ID = "cp_id"
-
 	wp.TokenPool.ID = "wp_id"
 
 	requireErrMsg(t, wp.moveToChallenge(cp, 90),

@@ -87,12 +87,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		return errors.New("late challenge response")
 	}
 
-	// pools
-	var sp *stakePool
-	if sp, err = sc.getStakePool(bc.BlobberID, balances); err != nil {
-		return fmt.Errorf("can't get blobber's stake pool: %v", err)
-	}
-
+	// pool
 	var cp *challengePool
 	if cp, err = sc.getChallengePool(alloc.ID, balances); err != nil {
 		return fmt.Errorf("can't get allocation's challenge pool: %v", err)
@@ -101,7 +96,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	var ratio = float64(tp-prev) / float64(alloc.Expiration-prev)
 
 	if tp > alloc.Expiration {
-		ratio = 1 // all left (allocation closed, challenge completion time)
+		ratio = 1 // all left (allocation expired, challenge completion time)
 	}
 
 	// blobber ratio (of all blobbers)
@@ -116,7 +111,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	// for a case of a partial verification
 	move = state.Balance(float64(move) * partial)
 
-	if err = cp.moveToStakePool(sp, move); err != nil {
+	if err = cp.moveToBlobber(sc.ID, bc.BlobberID, move, balances); err != nil {
 		return fmt.Errorf("can't move tokens to blobber: %v", err)
 	}
 
@@ -125,11 +120,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		return fmt.Errorf("rewarding validators: %v", err)
 	}
 
-	// save pools
-	if err = sp.save(sc.ID, bc.BlobberID, balances); err != nil {
-		return fmt.Errorf("can't save blobber's stake pool: %v", err)
-	}
-
+	// save the pool
 	if err = cp.save(sc.ID, alloc.ID, balances); err != nil {
 		return fmt.Errorf("can't save allocation's challenge pool: %v", err)
 	}

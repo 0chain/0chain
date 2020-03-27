@@ -4,10 +4,6 @@ import (
 	"testing"
 )
 
-func Test_challengePoolRequest_encode_decode(t *testing.T) {
-	// TODO (sfxdx): implement
-}
-
 func Test_newChallengePool(t *testing.T) {
 	// TODO (sfxdx): implement
 }
@@ -25,10 +21,6 @@ func Test_challengePool_save(t *testing.T) {
 }
 
 func Test_challengePool_transferHere(t *testing.T) {
-	// TODO (sfxdx): implement
-}
-
-func Test_challengePool_setExpiration(t *testing.T) {
 	// TODO (sfxdx): implement
 }
 
