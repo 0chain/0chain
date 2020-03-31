@@ -182,6 +182,9 @@ func main() {
 			dkgShare.SecretShares[miner.ComputeBlsID(k)] = v.ShareOrSigns[node.Self.Underlying().GetKey()].Share
 		}
 		err = miner.StoreDKGSummary(ctx, dkgShare)
+		if err!=nil {
+			panic(err)
+		}
 	}
 
 	initHandlers()
@@ -196,9 +199,10 @@ func main() {
 	activeMiner := mb.Miners.HasNode(node.Self.Underlying().GetKey())
 	if activeMiner {
 		if err := miner.SetDKG(ctx, mb); err != nil {
-			panic(err)
+			Logger.Error("failed to set DKG", zap.Error(err))
+		} else {
+			miner.StartProtocol(ctx, gb)
 		}
-		miner.StartProtocol(ctx, gb)
 	}
 	mc.SetStarted()
 	miner.SetupWorkers(ctx)
