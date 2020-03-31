@@ -110,7 +110,10 @@ func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
 	vrfs.RoundTimeoutCount = r.GetTimeoutCount()
 	vrfs.Share, err = mc.GetBlsShare(ctx, r.Round)
 	if err != nil {
-		Logger.DPanic(err.Error())
+		Logger.Error("add_my_vrf_share", zap.Any("round", vrfs.Round),
+			zap.Any("round_timeout", vrfs.RoundTimeoutCount),
+			zap.Error(err))
+		return
 	}
 	vrfs.SetParty(node.Self.Underlying())
 	r.vrfShare = vrfs
@@ -719,9 +722,9 @@ func (mc *Chain) restartRound(ctx context.Context) {
 	}
 	mc.RoundTimeoutsCount++
 
-	mc.ensureLatestFinalizedBlocks(ctx, mc.GetCurrentRound())
+	lfbUpdated := mc.ensureLatestFinalizedBlocks(ctx, mc.GetCurrentRound())
 
-	if r.GetRoundNumber() > 1 {
+	if !lfbUpdated && r.GetRoundNumber() > 1 {
 		if r.GetHeaviestNotarizedBlock() != nil {
 			mc.BroadcastNotarizedBlocks(ctx, r)
 			Logger.Info("StartNextRound after sending notarized block in restartRound.", zap.Int64("current_round", r.GetRoundNumber()))
@@ -769,7 +772,7 @@ func (mc *Chain) restartRound(ctx context.Context) {
 	}
 }
 
-func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context, pnround int64) {
+func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context, pnround int64) (result bool) {
 	// LFB
 	var lfbs *block.Block
 	lfb := mc.GetLatestFinalizedBlock()
@@ -794,6 +797,7 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context, pnround int64)
 		if mc.GetCurrentRound() < mr.GetRoundNumber() {
 			mc.startNewRound(ctx, mr)
 		}
+		result = true
 	}
 
 	// LFMB
@@ -814,7 +818,9 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context, pnround int64)
 			Logger.DPanic(fmt.Sprintf("failed to update magic block: %v", err.Error()))
 		}
 		mc.SetLatestFinalizedMagicBlock(magicBlock)
+		result = true
 	}
+	return
 }
 
 func StartProtocol(ctx context.Context, gb *block.Block) {
