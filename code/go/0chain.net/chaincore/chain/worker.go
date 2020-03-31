@@ -263,12 +263,10 @@ func (c *Chain) VerifyChainHistory(ctx context.Context,
 
 // MustVerifyChainHistory panics on error.
 func (c *Chain) MustVerifyChainHistory(ctx context.Context,
-	latestMagicBlock *block.Block, saveHandler MagicBlockSaveFunc) (err error) {
-
-	err = c.VerifyChainHistory(ctx, latestMagicBlock, saveHandler)
+	latestMagicBlock *block.Block, saveHandler MagicBlockSaveFunc) error {
+	err := c.VerifyChainHistory(ctx, latestMagicBlock, saveHandler)
 	if err != nil {
-		Logger.DPanic("verifying chain history: " + err.Error())
+		return common.NewErrorf("verify_chain_history", err.Error())
 	}
-
-	return
+	return nil
 }

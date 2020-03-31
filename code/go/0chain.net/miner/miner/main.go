@@ -169,7 +169,9 @@ func main() {
 	initN2NHandlers()
 
 	mc.WaitForActiveSharders(ctx)
-	getCurrentMagicBlock(mc)
+	if err := getCurrentMagicBlock(mc); err != nil {
+		Logger.Panic(err.Error())
+	}
 	mb = mc.GetMagicBlock()
 	if mb.StartingRound == 0 && mb.IsActiveNode(node.Self.Underlying().GetKey(), mb.StartingRound) {
 		dkgShare := &bls.DKGSummary{
@@ -286,7 +288,7 @@ func readMagicBlockFile(magicBlockFile *string, mc *miner.Chain, serverChain *ch
 	return nil
 }
 
-func getCurrentMagicBlock(mc *miner.Chain) {
+func getCurrentMagicBlock(mc *miner.Chain) error {
 	mbs := mc.GetLatestFinalizedMagicBlockFromSharder(common.GetRootContext())
 	if len(mbs) == 0 {
 		Logger.DPanic("No finalized magic block from sharder")
@@ -297,12 +299,14 @@ func getCurrentMagicBlock(mc *miner.Chain) {
 		})
 	}
 	magicBlock := mbs[0]
-	mc.MustVerifyChainHistory(common.GetRootContext(), magicBlock, nil)
-	err := mc.UpdateMagicBlock(magicBlock.MagicBlock)
-	if err != nil {
-		Logger.DPanic(fmt.Sprintf("failed to update magic block: %v", err.Error()))
+	if err := mc.MustVerifyChainHistory(common.GetRootContext(), magicBlock, nil); err != nil {
+		return err
+	}
+	if err := mc.UpdateMagicBlock(magicBlock.MagicBlock); err != nil {
+		return fmt.Errorf("failed to update magic block: %v", err.Error())
 	}
 	mc.SetLatestFinalizedMagicBlock(magicBlock)
+	return nil
 }
 
 func initEntities() {

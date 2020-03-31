@@ -2,7 +2,6 @@ package miner
 
 import (
 	"context"
-	"fmt"
 	"math"
 	"sort"
 	"sync"
@@ -722,7 +721,11 @@ func (mc *Chain) restartRound(ctx context.Context) {
 	}
 	mc.RoundTimeoutsCount++
 
-	lfbUpdated := mc.ensureLatestFinalizedBlocks(ctx, mc.GetCurrentRound())
+	lfbUpdated, err := mc.ensureLatestFinalizedBlocks(ctx, mc.GetCurrentRound())
+	if err != nil {
+		Logger.Error("restartRound - ensure lfb", zap.Error(err))
+		lfbUpdated = false
+	}
 
 	if !lfbUpdated && r.GetRoundNumber() > 1 {
 		if r.GetHeaviestNotarizedBlock() != nil {
@@ -772,7 +775,8 @@ func (mc *Chain) restartRound(ctx context.Context) {
 	}
 }
 
-func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context, pnround int64) (result bool) {
+func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context, pnround int64) (bool, error) {
+	result := false
 	// LFB
 	var lfbs *block.Block
 	lfb := mc.GetLatestFinalizedBlock()
@@ -812,15 +816,17 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context, pnround int64)
 	}
 	if magicBlock != nil &&
 		(lfmb == nil || lfmb.MagicBlockNumber < magicBlock.MagicBlockNumber) {
-		mc.MustVerifyChainHistory(ctx, magicBlock, nil)
-		err := mc.UpdateMagicBlock(magicBlock.MagicBlock)
-		if err != nil {
-			Logger.DPanic(fmt.Sprintf("failed to update magic block: %v", err.Error()))
+
+		if err := mc.MustVerifyChainHistory(ctx, magicBlock, nil); err != nil {
+			return false, err
+		}
+		if err := mc.UpdateMagicBlock(magicBlock.MagicBlock); err != nil {
+			return false, err
 		}
 		mc.SetLatestFinalizedMagicBlock(magicBlock)
 		result = true
 	}
-	return
+	return result, nil
 }
 
 func StartProtocol(ctx context.Context, gb *block.Block) {

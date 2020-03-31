@@ -245,7 +245,9 @@ func (mc *Chain) ViewChange(ctx context.Context, nRound int64) bool {
 		if err := mc.SetDKGSFromStore(ctx, viewChangeMagicBlock); err != nil {
 			Logger.DPanic(err.Error())
 		}
-		mc.ensureLatestFinalizedBlocks(ctx, nRound)
+		if _, err := mc.ensureLatestFinalizedBlocks(ctx, nRound); err != nil {
+			Logger.Warn("vc ensure lfb error", zap.Error(err))
+		}
 	} else {
 		if err := mc.SetDKGSFromStore(ctx, mb); err != nil {
 			Logger.DPanic(err.Error())

@@ -155,7 +155,9 @@ func main() {
 	initWorkers(ctx)
 	common.ConfigRateLimits()
 	initN2NHandlers()
-	getCurrentMagicBlock(sc)
+	if err := getCurrentMagicBlock(sc); err != nil {
+		Logger.Panic(err.Error())
+	}
 	initServer()
 	initHandlers()
 	go sc.RegisterClient()
@@ -274,10 +276,10 @@ func readMagicBlockFile(magicBlockFile *string, sc *sharder.Chain, serverChain *
 	return nil
 }
 
-func getCurrentMagicBlock(sc *sharder.Chain) {
+func getCurrentMagicBlock(sc *sharder.Chain) error {
 	mbs := sc.GetLatestFinalizedMagicBlockFromSharder(common.GetRootContext())
 	if len(mbs) == 0 {
-		Logger.DPanic("No finalized magic block from sharder")
+		errors.New("no finalized magic block from sharder")
 	}
 	if len(mbs) > 1 {
 		sort.Slice(mbs, func(i, j int) bool {
@@ -290,14 +292,15 @@ func getCurrentMagicBlock(sc *sharder.Chain) {
 	var err = sc.MustVerifyChainHistory(common.GetRootContext(), magicBlock,
 		sc.SaveMagicBlockHandler)
 	if err != nil {
-		Logger.DPanic(fmt.Sprintf("failed to verify chain history: %v", err.Error()))
+		return fmt.Errorf("failed to verify chain history: %v", err.Error())
 	}
 
 	err = sc.UpdateMagicBlock(magicBlock.MagicBlock)
 	if err != nil {
-		Logger.DPanic(fmt.Sprintf("failed to update magic block: %v", err.Error()))
+		return fmt.Errorf("failed to update magic block: %v", err.Error())
 	}
 	sc.SetLatestFinalizedMagicBlock(magicBlock)
+	return nil
 }
 
 func initEntities() {
