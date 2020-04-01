@@ -45,6 +45,7 @@ func (c *Chain) StatusMonitor(ctx context.Context) {
 			cancel()
 			Logger.Info("the status monitor is dead, long live the status monitor", zap.Any("miners", mb.Miners), zap.Any("sharders", mb.Sharders))
 			smctx, cancel = context.WithCancel(ctx)
+			mb := c.GetMagicBlock()
 			go mb.Miners.StatusMonitor(smctx)
 			go mb.Sharders.StatusMonitor(smctx)
 		}
