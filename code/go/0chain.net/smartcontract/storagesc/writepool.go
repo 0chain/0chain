@@ -507,20 +507,10 @@ func (ssc *StorageSmartContract) finalizeAllocation(t *transaction.Transaction,
 		return "", common.NewError("fini_alloc_failed",
 			"getting all allocations list: "+err.Error())
 	}
-	var (
-		i  int = -1
-		id string
-	)
-	for i, id = range all.List {
-		if id == alloc.ID {
-			break
-		}
-	}
-	if i < 0 {
+	if !all.List.remove(alloc.ID) {
 		return "", common.NewError("fini_alloc_failed",
 			"invalid state: allocation not found in all allocations list")
 	}
-	all.List = append(all.List[:i], all.List[i+1:]...)
 	_, err = balances.InsertTrieNode(ALL_ALLOCATIONS_KEY, all)
 	if err != nil {
 		return "", common.NewError("fini_alloc_failed",

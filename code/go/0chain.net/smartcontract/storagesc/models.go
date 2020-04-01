@@ -52,15 +52,11 @@ func (sn *ClientAllocation) GetHashBytes() []byte {
 }
 
 type Allocations struct {
-	List []string
+	List sortedList
 }
 
-func (a *Allocations) find(id string) (ok bool) {
-	for _, alloc := range a.List {
-		if alloc == id {
-			return true
-		}
-	}
+func (a *Allocations) has(id string) (ok bool) {
+	_, ok = a.List.getIndex(id)
 	return // false
 }
 

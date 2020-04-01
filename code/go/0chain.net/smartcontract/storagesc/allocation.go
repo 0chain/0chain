@@ -63,9 +63,6 @@ func (sc *StorageSmartContract) getAllAllocationsList(
 		return nil, common.NewError("getAllAllocationsList_failed",
 			"Failed to retrieve existing allocations list")
 	}
-	sort.SliceStable(allocationList.List, func(i, j int) bool {
-		return allocationList.List[i] < allocationList.List[j]
-	})
 	return allocationList, nil
 }
 
@@ -92,8 +89,9 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 			"unexpected error: "+err.Error())
 	}
 
-	clients.List = append(clients.List, alloc.ID)
-	all.List = append(all.List, alloc.ID)
+	clients.List.add(alloc.ID)
+	all.List.add(alloc.ID)
+
 	clientAllocation := &ClientAllocation{}
 	clientAllocation.ClientID = alloc.Owner
 	clientAllocation.Allocations = clients
@@ -742,7 +740,7 @@ func (sc *StorageSmartContract) updateAllocationRequest(
 			"can't get client's allocations list: "+err.Error())
 	}
 
-	if !clist.find(request.ID) {
+	if !clist.has(request.ID) {
 		return "", common.NewError("allocation_updating_failed",
 			"can't find allocation in client's allocations list")
 	}
