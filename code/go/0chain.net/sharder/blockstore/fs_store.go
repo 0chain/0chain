@@ -27,17 +27,18 @@ type FSBlockStore struct {
 	RootDirectory         string
 	blockMetadataProvider datastore.EntityMetadata
 	Minio                 *minio.Client
+	bucketName            string
 }
 
 /*NewFSBlockStore - return a new fs block store */
 func NewFSBlockStore(rootDir string) *FSBlockStore {
 	store := &FSBlockStore{RootDirectory: rootDir}
 	store.blockMetadataProvider = datastore.GetEntityMetadata("block")
-	store.Minio = intializeMinio()
+	store.intializeMinio()
 	return store
 }
 
-func intializeMinio() *minio.Client {
+func (fbs *FSBlockStore) intializeMinio() {
 	minioClient, err := minio.New(
 		viper.GetString("minio.storage_service_url"),
 		viper.GetString("minio.access_key_id"),
@@ -61,7 +62,8 @@ func intializeMinio() *minio.Client {
 	} else {
 		Logger.Info(bucketName + " bucket successfully created")
 	}
-	return minioClient
+	fbs.Minio = minioClient
+	fbs.bucketName = bucketName
 }
 
 func (fbs *FSBlockStore) getFileWithoutExtension(hash string, round int64) string {
@@ -143,4 +145,14 @@ func (fbs *FSBlockStore) DeleteBlock(b *block.Block) error {
 		return err
 	}
 	return nil
+}
+
+func (fbs *FSBlockStore) UploadToCloud(filePath string) (int64, error) {
+	fileName := filepath.Base(filePath)
+	return fbs.Minio.FPutObject(fbs.bucketName, fileName, filePath, minio.PutObjectOptions{})
+}
+
+func (fbs *FSBlockStore) DownloadFromCloud(filePath string) error {
+	fileName := filepath.Base(filePath)
+	return fbs.Minio.FGetObject(fbs.bucketName, fileName, filePath, minio.GetObjectOptions{})
 }
