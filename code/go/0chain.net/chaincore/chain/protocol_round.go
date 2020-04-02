@@ -244,6 +244,7 @@ func (c *Chain) GetHeaviestNotarizedBlock(r round.RoundI) *block.Block {
 func (c *Chain) GetLatestFinalizedMagicBlockFromSharder(ctx context.Context) []*block.Block {
 	mb := c.GetMagicBlock()
 	n2s := mb.Sharders
+
 	finalizedMagicBlocks := make([]*block.Block, 0, 1)
 	fmbMutex := &sync.Mutex{}
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {

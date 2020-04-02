@@ -45,8 +45,8 @@ func (c *Chain) GetSCRestOutput(ctx context.Context, r *http.Request) (interface
 	c.stateMutex.RLock()
 	defer c.stateMutex.RUnlock()
 	lfb := c.GetLatestFinalizedBlock()
-	if lfb == nil {
-		return nil, common.NewError("empty_lfb", "empty latest finalized block")
+	if lfb == nil || lfb.ClientState == nil {
+		return nil, common.NewError("empty_lfb", "empty latest finalized block or state")
 	}
 	clientState := CreateTxnMPT(lfb.ClientState) // begin transaction
 	txn := &transaction.Transaction{}

@@ -127,7 +127,9 @@ func (mc *Chain) startRound(ctx context.Context, r *Round, seed int64) {
 		return
 	}
 	Logger.Info("Starting a new round", zap.Int64("round", r.GetRoundNumber()))
-	mc.ViewChange(ctx, r.Number)
+	if _, err := mc.ViewChange(ctx, r.Number); err != nil {
+		return
+	}
 	mc.startNewRound(ctx, r)
 }
 
@@ -841,12 +843,14 @@ func StartProtocol(ctx context.Context, gb *block.Block) {
 		mc.AddBlock(lfb)
 		//ugly hack: for error "node not found"
 		go func() {
+			lfbCheck := lfb
 			for {
-				err := mc.InitBlockState(lfb)
+				err := mc.InitBlockState(lfbCheck)
 				if err == nil {
 					return
 				}
 				Logger.Error("start_protocol", zap.Error(err))
+				lfbCheck = mc.GetLatestFinalizedBlock()
 				time.Sleep(time.Second * 1)
 			}
 		}()

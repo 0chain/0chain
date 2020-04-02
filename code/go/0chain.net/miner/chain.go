@@ -3,6 +3,7 @@ package miner
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -218,24 +219,51 @@ func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) erro
 	return err
 }
 
-func (mc *Chain) isNeedViewChange(_ context.Context, nround int64) bool {
+func (mc *Chain) isNeedViewChange(ctx context.Context, nround int64) bool {
 	mc.muDKG.Lock()
 	defer mc.muDKG.Unlock()
-	return config.DevConfiguration.ViewChange && mc.nextViewChange == nround &&
+	result := config.DevConfiguration.ViewChange &&
+		mc.nextViewChange == nround &&
 		(mc.currentDKG == nil || mc.currentDKG.StartingRound <= mc.nextViewChange)
-
+	return result
 }
 
-func (mc *Chain) ViewChange(ctx context.Context, nRound int64) bool {
+func (mc *Chain) ViewChange(ctx context.Context, nRound int64) (bool, error) {
 	viewChangeMutex.Lock()
 	defer viewChangeMutex.Unlock()
 
 	if !mc.isNeedViewChange(ctx, nRound) {
-		return false
+		return false, nil
 	}
 	viewChangeMagicBlock := mc.GetViewChangeMagicBlock()
 	mb := mc.GetMagicBlock()
 	if viewChangeMagicBlock != nil {
+
+		if mc.GetCurrentRound() > 1 {
+			for i := nRound - 2; i < nRound; i++ {
+				cRound := mc.GetRound(i)
+				if cRound == nil {
+					log.Println("WARN ViewChange check prev: not found")
+					continue
+				}
+				cBlock := cRound.(*Round).Block
+				blockStatus := int8(-1)
+				if cBlock != nil {
+					blockStatus = cBlock.GetBlockState()
+				}
+				roundState := cRound.GetState()
+				if cBlock == nil ||
+					blockStatus == block.StateVerificationRejected ||
+					blockStatus == block.StateVerificationFailed ||
+					(roundState != round.RoundStateFinalizing &&
+						roundState != round.RoundStateFinalized) {
+					log.Println("ERR ViewChange check prev round", i, " state", roundState, "blockStatus", blockStatus)
+					return false, fmt.Errorf("vc check: block round %v is not Notarized or Verificated", i)
+				}
+			}
+		}
+		log.Println("ViewChange check prev round - OK")
+
 		if mb == nil || mb.MagicBlockNumber < viewChangeMagicBlock.MagicBlockNumber {
 			err := mc.UpdateMagicBlock(viewChangeMagicBlock)
 			if err != nil {
@@ -248,12 +276,26 @@ func (mc *Chain) ViewChange(ctx context.Context, nRound int64) bool {
 		if _, err := mc.ensureLatestFinalizedBlocks(ctx, nRound); err != nil {
 			Logger.Warn("vc ensure lfb error", zap.Error(err))
 		}
+
+		//restart rounds after nround
+		chkRoundNumber := nRound + 1
+		for {
+			log.Println("vc restart chkRoundNumber=", chkRoundNumber)
+			cRound := mc.GetMinerRound(chkRoundNumber)
+			if cRound == nil {
+				break
+			}
+			if !cRound.IsFinalized() {
+				cRound.RestartWOL()
+				log.Println("vc round restart", cRound.GetRoundNumber())
+			}
+		}
 	} else {
 		if err := mc.SetDKGSFromStore(ctx, mb); err != nil {
 			Logger.DPanic(err.Error())
 		}
 	}
-	return true
+	return true, nil
 }
 
 func (mc *Chain) ChainStarted(ctx context.Context) bool {

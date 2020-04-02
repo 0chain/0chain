@@ -168,7 +168,9 @@ func (mc *Chain) GetBlsShare(ctx context.Context, r *round.Round) (string, error
 	if err != nil {
 		return "", err
 	}
-	mc.ViewChange(ctx, r.Number)
+	if _, err := mc.ViewChange(ctx, r.Number); err != nil {
+		return "", err
+	}
 	mc.muDKG.Lock()
 	defer mc.muDKG.Unlock()
 	currentDKG := mc.currentDKG
@@ -193,7 +195,9 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 		Logger.Warn("failed to get bls message", zap.Any("vrfs_share", vrfs.Share), zap.Any("round", mr.Round))
 		return false
 	}
-	mc.ViewChange(ctx, mr.Number)
+	if _, err := mc.ViewChange(ctx, mr.Number); err != nil {
+		return false
+	}
 
 	var share bls.Sign
 	if err := share.SetHexString(vrfs.Share); err != nil {

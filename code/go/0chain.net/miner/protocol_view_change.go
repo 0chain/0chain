@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"sort"
@@ -162,7 +163,14 @@ func (mc *Chain) DKGProcessStart() (*httpclientutil.Transaction, error) {
 	return nil, nil
 }
 
-func (mc *Chain) ContributeMpk() (*httpclientutil.Transaction, error) {
+func (mc *Chain) ContributeMpk() (txn *httpclientutil.Transaction, err error) {
+	defer func() {
+		if err != nil {
+			log.Println("ContributeMpk error=", err)
+		} else {
+			log.Println("ContributeMpk txn=", txn.Hash)
+		}
+	}()
 	magicBlock := mc.GetMagicBlock()
 	if magicBlock == nil {
 		return nil, common.NewError("contribute_mpk", "magic block empty")
@@ -197,7 +205,7 @@ func (mc *Chain) ContributeMpk() (*httpclientutil.Transaction, error) {
 	scData.Name = scNameContributeMpk
 	scData.InputArgs = mpk
 
-	txn := httpclientutil.NewTransactionEntity(selfNodeKey, mc.ID, selfNode.PublicKey)
+	txn = httpclientutil.NewTransactionEntity(selfNodeKey, mc.ID, selfNode.PublicKey)
 	txn.ToClientID = minersc.ADDRESS
 	var minerUrls []string
 	for _, node := range magicBlock.Miners.CopyNodes() {
@@ -579,7 +587,10 @@ func (mc *Chain) Wait() (result *httpclientutil.Transaction, err2 error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Println("Wait -- new MB", magicBlock.MagicBlockNumber, "miners=", len(magicBlock.Miners.NodesMap),
+		"sharders=", len(magicBlock.Sharders.NodesMap))
 	if !magicBlock.Miners.HasNode(node.Self.Underlying().GetKey()) {
+		log.Println("Wait -- UpdateMagicBlock: self not exists in miners MB")
 		err := mc.UpdateMagicBlock(magicBlock)
 		if err != nil {
 			Logger.DPanic(fmt.Sprintf("failed to update magic block: %v", err.Error()))
@@ -648,4 +659,5 @@ func (mc *Chain) clearViewChange() {
 	shareOrSigns.ID = node.Self.Underlying().GetKey()
 	mc.mpks = block.NewMpks()
 	mc.viewChangeDKG = nil
+	log.Println("clearViewChange done.")
 }

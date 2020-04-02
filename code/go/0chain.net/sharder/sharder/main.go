@@ -156,7 +156,7 @@ func main() {
 	common.ConfigRateLimits()
 	initN2NHandlers()
 	if err := getCurrentMagicBlock(sc); err != nil {
-		Logger.Panic(err.Error())
+		Logger.Panic(err.Error()) //FIXME: remove panic
 	}
 	initServer()
 	initHandlers()

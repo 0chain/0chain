@@ -446,6 +446,16 @@ func (r *Round) Restart() {
 
 }
 
+
+//Restart - restart the round
+func (r *Round) RestartWOL() {
+	r.initialize()
+	r.Block = nil
+	r.ResetState(RoundShareVRF)
+	r.resetSoftTimeoutCount()
+
+}
+
 //AddAdditionalVRFShare - Adding additional VRFShare received for stats persp
 func (r *Round) AddAdditionalVRFShare(share *VRFShare) bool {
 	r.Mutex.Lock()
