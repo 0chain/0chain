@@ -168,7 +168,13 @@ func updateBlobbersInAll(all *StorageNodes, update []*StorageNode,
 
 	// update the blobbers in all blobbers list
 	for _, b := range update {
-		all.Nodes.add(b) // the add replaces existing, since the list is unique
+		var i, ok = all.Nodes.getIndex(b.ID)
+		if ok {
+			all.Nodes[i] = b // replace only it found
+		}
+		// don't replace if blobber has remove from the all blobbers list;
+		// for example, if the blobber has removed, then it shouldn't be
+		// in the all blobbers list
 	}
 
 	// save
@@ -873,6 +879,8 @@ func (sc *StorageSmartContract) cacnelAllocationRequest(
 	for _, details := range alloc.BlobberDetails {
 		details.MinLockDemand = 0 // reset
 	}
+
+	alloc.Cancelled = true
 
 	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {

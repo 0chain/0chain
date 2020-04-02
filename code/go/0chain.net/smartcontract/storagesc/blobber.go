@@ -104,21 +104,7 @@ func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
 	}
 
 	// remove from the all list, since the blobber can't accept new allocations
-	var (
-		i  int
-		ab *StorageNode
-	)
-	for i, ab = range all.Nodes {
-		if ab.ID == existingBlobber.ID {
-			break // found
-		}
-	}
-
-	// if found
-	if ab.ID == existingBlobber.ID {
-		all.Nodes = append(all.Nodes[:i], all.Nodes[i+1:]...) // remove from all
-	}
-
+	all.Nodes.remove(existingBlobber.ID)
 	return // removed, opened offers are still opened
 }
 
@@ -165,8 +151,7 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 		}
 	}
 
-	// add to all
-	all.Nodes = append(all.Nodes, blobber)
+	all.Nodes.add(blobber) // add to all
 	return
 }
 
@@ -220,10 +205,7 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	}
 
 	// update in the list, or add to the list if the blobber was removed before
-	if !updateBlobberInList(all.Nodes, blobber) {
-		all.Nodes = append(all.Nodes, blobber)
-	}
-
+	all.Nodes.add(blobber)
 	return // success
 }
 

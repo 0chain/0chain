@@ -391,7 +391,10 @@ type StorageAllocation struct {
 	// use it to check blobber's MaxOfferTime extending the allocation.
 	StartTime common.Timestamp `json:"start_time"`
 	// Finalized is true where allocation has been finalized.
-	Finalized bool `json:"finalized"`
+	Finalized bool `json:"finalized,omitempty"`
+	// Canceled set to true where allocation finalized by cancel_allocation
+	// transaction.
+	Cancelled bool `json:"canceled,omitempty"`
 	// UsedSize used to calculate blobber reward ratio.
 	UsedSize int64 `json:"-"`
 }
