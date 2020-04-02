@@ -300,3 +300,17 @@ blobber's stake pool (unlocked)
 ./zwallet getchallengelockedtokens --allocation_id $ALLOC
 ./zwallet getstakelockedtokens --blobber_id f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
 ```
+
+
+
+
+================================================================================
+                                 USING ZBOX
+================================================================================
+
+1. 
+
+
+```
+
+```

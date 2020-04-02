@@ -255,7 +255,7 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 	// transactions
 	if !ok {
 		return "", common.NewError("blobber_health_check_failed", "blobber "+
-			t.ClientID+" not found in all blobbers list: "+err.Error())
+			t.ClientID+" not found in all blobbers list")
 	}
 	var found = all.Nodes[i]
 	found.LastHealthCheck = t.CreationDate
