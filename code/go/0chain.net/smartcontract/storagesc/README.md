@@ -185,6 +185,26 @@ User can't extend size and close allocation. Such transactions are invalid.
 A size reducing doesn't reduce min_lock_demand to prevent the salvation attack.
 
 
+### Cancel allocation.
+
+If blobbers doesn't work in reality, then an allocation can't be used.
+Allocation owner can perform cancel_allocation transaction to close the
+allocation and return back all funds. In this case, blobbers doesn't
+receive their min_lock_demand.
+
+### Finalize allocation.
+
+When allocation expired, it should be finalized. Blobbers runs the finalization
+automatically. And user doesn't need to do anything. But, if blobbers doesn't
+do it, then user (allocation owner) can perform finalize_allocation transaction.
+The transaction:
+
+- makes sure all blobbers got their min_lock_demand (excluding penalty)
+- unlocks all tokens in write pool, moving them back to user
+- moves all tokens of a challenge pool to user, if any
+- marks allocation a finalized
+
+
 # Setup
 
 ## Order
@@ -196,7 +216,7 @@ A size reducing doesn't reduce min_lock_demand to prevent the salvation attack.
  5. start miners
  6. remove wallet.json and allocation.txt
  7. configure blobbers (remember capacity, write_price, id)
- 8. create new wallet (zwallet)
+ 8. create new wallet (zwallet), it creates read pool automatically
  9. add some tokens to the wallet (`./zwallet faucet --methodName pour --input “{Pay day}”`)
 10. send (capacity * write_price) tokens to blobbers to allow them register
 
@@ -214,10 +234,153 @@ A size reducing doesn't reduce min_lock_demand to prevent the salvation attack.
 
 ## Step by step
 
+Note: some commands implemented in zbox , since they belongs to storage SC. Feel
+free to use these zbox command.
+
+### Initial
+
+1. Start Sharder. Wait it. Start miners. Wait blockchain starts.
+2. Create wallet, read pool, get some tokens
+    ```
+    for run in {1..20}
+    do
+        ./zwallet faucet --methodName pour --input “{Pay day}”
+    done
+    ```
+    This command does it all.
+3. Send some tokens to blobbers to allow them to register. In the example we
+   are using blobber1 and blobber2. Export blobber identifier first to simplify
+   commands
+    ```
+    export BLOBBER1=f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
+    export BLOBBER2=7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d
+    ```
+    ```
+    ./zwallet send --to_client_id $BLOBBER1 --token 2 --desc "to register"
+    ./zwallet send --to_client_id $BLOBBER2 --token 2 --desc "to register"
+    ```
+4. Setup blobbers' and validators' wallets in `~/.zcn/` directory to use them
+    later. We will use them to check out balance. Blobber/Validator 1.
+    ```
+    cat > ~/.zcn/blobber1.json << EOF
+    {
+      "client_id": "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25",
+      "client_key": "de52c0a51872d5d2ec04dbc15a6f0696cba22657b80520e1d070e72de64c9b04e19ce3223cae3c743a20184158457582ffe9c369ca9218c04bfe83a26a62d88d",
+      "keys": [
+        {
+          "public_key": "de52c0a51872d5d2ec04dbc15a6f0696cba22657b80520e1d070e72de64c9b04e19ce3223cae3c743a20184158457582ffe9c369ca9218c04bfe83a26a62d88d",
+          "private_key": "17fa2ab0fb49249cb46dbc13e4e9e6853af8b1506e48d84c03e5e92f6348bb1d"
+        }
+      ],
+      "version": "1.0",
+      "date_created": "2020-03-16 00:47:58.247961953 +0400 +04 m=+0.015793530"
+    }
+    EOF
+    ```
+    Blobber/Validator 2.
+    ```
+    cat > ~/.zcn/blobber2.json << EOF
+    {
+      "client_id": "7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d",
+      "client_key": "e4dc5262ed8e20583e3293f358cc21aa77c2308ea773bab8913670ffeb5aa30d7e2effbce51f323b5b228ad01f71dc587b923e4aab7663a573ece5506f2e3b0e",
+      "keys": [
+        {
+          "public_key": "e4dc5262ed8e20583e3293f358cc21aa77c2308ea773bab8913670ffeb5aa30d7e2effbce51f323b5b228ad01f71dc587b923e4aab7663a573ece5506f2e3b0e",
+          "private_key": "4b6d9c5f7b0386e36b212324ea52f5ff17a9ed1338ca901d7f7fa7637159a912"
+        }
+      ],
+      "version": "1.0",
+      "date_created": "2020-03-16 00:47:58.247961953 +0400 +04 m=+0.015793530"
+    }
+    EOF
+    ```
+5. Start blobbers and validators. Wait their registration
+    ```
+    ./zbox ls-blobbers
+    ```
+6. Check out stake pools of the blobbers. They should contains required stake.
+    ```
+    ./zbox sp-info --blobber_id $BLOBBER1
+    ./zbox sp-info --blobber_id $BLOBBER2
+    ```
+7. Create and fund two new allocations.
+    ```
+    ./zbox newallocation --read_price 0.001-10 --write_price 0.01-10 --size 104857600 --lock 2 --data 1 --parity 1 --expire 48h
+    ./zbox newallocation --read_price 0.001-10 --write_price 0.01-10 --size 104857600 --lock 2 --data 1 --parity 1 --expire 48h
+    ```
+  Export their IDs to use later.
+  ```
+  export ALLOC1=<put allocation 1 ID here>
+  export ALLOC2=<put allocation 2 ID here>
+  ```
+8. Check out user's allocations list.
+    ```
+    ./zbox listallocations
+    ```
+9. Check out allocations independently.
+    ```
+    ./zbox get --allocation $ALLOC1
+    ./zbox get --allocation $ALLOC2
+    ```
+10. Check out stake pools again, that should have offers for these allocations
+    ```
+    ./zbox sp-info --blobber_id $BLOBBER1
+    ./zbox sp-info --blobber_id $BLOBBER2
+    ```
+11. Check out write pools of the allocations.
+    ```
+    ./zbox wp-info --allocation $ALLOC1
+    ./zbox wp-info --allocation $ALLOC2
+    ```
+12. Update the first allocation, increasing its size. We don't provide more
+    tokens, since related write pool already has enough tokens for the updating.
+    ```
+    ./zbox updateallocation --allocation $ALLOC1 --size 209715200
+    ```
+13. Check out its write pool again.
+    ```
+    ./zbox wp-info --allocation $ALLOC1
+    ```
+14. Check out blobbers offers again.
+    ```
+    ./zbox sp-info --blobber_id $BLOBBER1
+    ./zbox sp-info --blobber_id $BLOBBER2
+    ```
+15. Generate random file to upload
+    ```
+    head -c 20M < /dev/urandom > random.bin
+    ```
+16. Upload it to the first allocations.
+    ```
+    ./zbox upload \
+      --allocation $ALLOC1 \
+      --commit \
+      --localpath=random.bin \
+      --remotepath=/remote/random.bin
+    ```
+17. Upload it to the second allocations.
+    ```
+    ./zbox upload \
+      --allocation $ALLOC2 \
+      --commit \
+      --localpath=random.bin \
+      --remotepath=/remote/random.bin
+    ```
+18. Check out related challenge pools.
+    ```
+    ./zbox cp-info --allocation $ALLOC1
+    ./zbox cp-info --allocation $ALLOC2
+    ```
+19. Wait a challenge some time.
+
+================================================================================
+
+## Step by step
+
 1. start sharder, start miners
 2. execute
 ```bash
-for run in {1..10}
+for run in {1..20}
 do
     ./zwallet faucet --methodName pour --input “{Pay day}”
 done

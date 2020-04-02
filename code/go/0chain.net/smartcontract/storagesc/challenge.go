@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 
+	"time" // DEBUG
+
 	"0chain.net/chaincore/block"
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
@@ -407,6 +409,12 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 	b *block.Block, input []byte, balances c_state.StateContextI) error {
 
+	var tp = time.Now()
+	println("GEN CHALLENGES START")
+	defer func() {
+		println("GEN CHALLENGES END AFTER:", time.Now().Sub(tp))
+	}()
+
 	stats := &StorageStats{}
 	stats.Stats = &StorageAllocationStats{}
 	statsBytes, err := balances.GetTrieNode(stats.GetKey(sc.ID))
@@ -462,6 +470,12 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 }
 
 func (sc *StorageSmartContract) addChallenge(challengeID string, creationDate common.Timestamp, r *rand.Rand, challengeSeed int64, balances c_state.StateContextI) (string, error) {
+
+	var tp = time.Now()
+	println("ADD CHALLENGES START")
+	defer func() {
+		println("ADD CHALLENGES END AFTER:", time.Now().Sub(tp))
+	}()
 
 	validatorList, _ := sc.getValidatorsList(balances)
 

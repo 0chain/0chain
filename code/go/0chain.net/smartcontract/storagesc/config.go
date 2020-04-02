@@ -36,8 +36,8 @@ type writePoolConfig struct {
 
 // scConfig represents SC configurations ('storagesc:' from sc.yaml).
 type scConfig struct {
-	ChallengeEnabled      bool          `json:"challenge_enabled"`
-	ChallengeRatePerMBMin time.Duration `json:"challenge_rate_per_mb_min"`
+	ChallengeEnabled      bool    `json:"challenge_enabled"`
+	ChallengeRatePerMBMin float64 `json:"challenge_rate_per_mb_min"`
 	// MinAllocSize is minimum possible size (bytes)
 	// of an allocation the SC accept.
 	MinAllocSize int64 `json:"min_alloc_size"`
@@ -131,7 +131,7 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 	// sc
 	conf.ChallengeEnabled = config.SmartContractConfig.GetBool(
 		prefix + "challenge_enabled")
-	conf.ChallengeRatePerMBMin = config.SmartContractConfig.GetDuration(
+	conf.ChallengeRatePerMBMin = config.SmartContractConfig.GetFloat64(
 		prefix + "challenge_rate_per_mb_min")
 	conf.MinAllocSize = config.SmartContractConfig.GetInt64(
 		prefix + "min_alloc_size")

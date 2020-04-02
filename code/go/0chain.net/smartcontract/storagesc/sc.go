@@ -110,11 +110,14 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		challengesEnabled := config.SmartContractConfig.GetBool(
 			"smart_contracts.storagesc.challenge_enabled")
 		if challengesEnabled {
+			println("GEN CHALLENEGES")
 			err = sc.generateChallenges(t, balances.GetBlock(), input, balances)
 			if err != nil {
 				return "", err
 			}
 		}
+
+		println("SC FUNC commit_connection IS DONE")
 
 	// allocations
 
@@ -163,6 +166,7 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 	// 	return resp, nil
 
 	case "generate_challenges":
+		println("GOT generate_challenges SC REQUEST")
 		challengesEnabled := config.SmartContractConfig.GetBool(
 			"smart_contracts.storagesc.challenge_enabled")
 		if challengesEnabled {
