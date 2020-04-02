@@ -19,7 +19,6 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"github.com/minio/minio-go"
 )
 
 /*FSBlockStore - a block store implementation using file system */
@@ -56,7 +55,7 @@ func (fbs *FSBlockStore) intializeMinio() {
 		if errBucketExists == nil && exists {
 			Logger.Info("We already own ", zap.Any("bucket_name", bucketName))
 		} else {
-			Logger.Panic("Minio bucket error", zap.Error(err))
+			Logger.Panic("Minio bucket error", zap.Error(err), zap.Any("bucket_name", bucketName))
 			panic(err)
 		}
 	} else {
@@ -116,7 +115,19 @@ func (fbs *FSBlockStore) read(hash string, round int64) (*block.Block, error) {
 	fileName := fbs.getFileName(hash, round)
 	f, err := os.Open(fileName)
 	if err != nil {
-		return nil, err
+		if os.IsNotExist(err) {
+			err = fbs.DownloadFromCloud(hash, round)
+			if err != nil {
+				return nil, err
+			}
+			f, err = os.Open(fileName)
+			if err != nil {
+				return nil, err
+
+			}
+		} else {
+			return nil, err
+		}
 	}
 	defer f.Close()
 	r, err := zlib.NewReader(f)
@@ -147,12 +158,16 @@ func (fbs *FSBlockStore) DeleteBlock(b *block.Block) error {
 	return nil
 }
 
-func (fbs *FSBlockStore) UploadToCloud(filePath string) (int64, error) {
-	fileName := filepath.Base(filePath)
-	return fbs.Minio.FPutObject(fbs.bucketName, fileName, filePath, minio.PutObjectOptions{})
+func (fbs *FSBlockStore) UploadToCloud(hash string, round int64) error {
+	filePath := fbs.getFileName(hash, round)
+	_, err := fbs.Minio.FPutObject(fbs.bucketName, hash, filePath, minio.PutObjectOptions{})
+	if err != nil {
+		return err
+	}
+	return os.Remove(filePath)
 }
 
-func (fbs *FSBlockStore) DownloadFromCloud(filePath string) error {
-	fileName := filepath.Base(filePath)
-	return fbs.Minio.FGetObject(fbs.bucketName, fileName, filePath, minio.GetObjectOptions{})
+func (fbs *FSBlockStore) DownloadFromCloud(hash string, round int64) error {
+	filePath := fbs.getFileName(hash, round)
+	return fbs.Minio.FGetObject(fbs.bucketName, hash, filePath, minio.GetObjectOptions{})
 }
