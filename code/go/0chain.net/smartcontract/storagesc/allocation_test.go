@@ -250,8 +250,6 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 
 		errMsg1 = "allocation_creation_failed: " +
 			"No Blobbers registered. Failed to create a storage allocation"
-		errMsg2 = "allocation_creation_failed: " +
-			"No health Blobbers registered. Failed to create an allocation"
 		errMsg3 = "allocation_creation_failed: " +
 			"Invalid client in the transaction. No client id in transaction"
 		errMsg4 = "allocation_creation_failed: malformed request: " +
@@ -303,17 +301,6 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, allBlobbers)
 	require.NoError(t, err)
 
-	// 2.
-
-	_, err = ssc.newAllocationRequest(&tx, nil, balances)
-	requireErrMsg(t, err, errMsg2)
-
-	// make the blobbers health
-	allBlobbers.Nodes[0].LastHealthCheck = tx.CreationDate
-	allBlobbers.Nodes[1].LastHealthCheck = tx.CreationDate
-	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, allBlobbers)
-	require.NoError(t, err)
-
 	// 3.
 
 	tx.ClientID = ""
@@ -349,9 +336,20 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
 	requireErrMsg(t, err, errMsg6)
 
-	// 7. missing stake pools
+	// 6. not enough blobbers (no health blobbers)
 
 	nar.Expiration = tx.CreationDate + toSeconds(100*time.Second)
+
+	_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
+	requireErrMsg(t, err, errMsg6)
+
+	// 7. missing stake pools
+
+	// make the blobbers health
+	allBlobbers.Nodes[0].LastHealthCheck = tx.CreationDate
+	allBlobbers.Nodes[1].LastHealthCheck = tx.CreationDate
+	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, allBlobbers)
+	require.NoError(t, err)
 
 	_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
 	requireErrMsg(t, err, errMsg7)
@@ -717,39 +715,125 @@ func TestStorageSmartContract_closeAllocation(t *testing.T) {
 
 	// checking out
 
-	// TOTH (sfxdx): redo pools, remove expiration, remove locks
+	alloc, err = ssc.getAllocation(alloc.ID, balances)
+	require.NoError(t, err)
 
-	// 1. check out allocation object
-	// 2. check out write pool expiration
-	// 3. check out stake pool offer expiration
-	// 4. check out challenge pool expiration
+	require.Equal(t, tx.CreationDate, alloc.Expiration)
 
+	var expire = alloc.Expiration + toSeconds(alloc.ChallengeCompletionTime)
+
+	for _, detail := range alloc.BlobberDetails {
+		var sp *stakePool
+		sp, err = ssc.getStakePool(detail.BlobberID, balances)
+		require.NoError(t, err)
+		var offer = sp.findOffer(alloc.ID)
+		require.NotNil(t, offer)
+		assert.Equal(t, expire, offer.Expire)
+	}
 }
 
-func TestStorageSmartContract_saveUpdatedAllocation(t *testing.T) {
-	// TODO (sfxdx): implements tests
-}
-
-func Test_allocPeriod_weight(t *testing.T) {
-	// TODO (sfxdx): implements tests
-}
-
-func Test_allocPeriod_join(t *testing.T) {
-	// TODO (sfxdx): implements tests
-}
-
-func Test_weightedAverage(t *testing.T) {
-	// TODO (sfxdx): implements tests
-}
-
-func TestStorageSmartContract_extendAllocation(t *testing.T) {
-	// TODO (sfxdx): implements tests
-}
-
-func TestStorageSmartContract_reduceAllocation(t *testing.T) {
-	// TODO (sfxdx): implements tests
+func (alloc *StorageAllocation) deepCopy(t *testing.T) (cp *StorageAllocation) {
+	cp = new(StorageAllocation)
+	require.NoError(t, cp.Decode(mustEncode(t, alloc)))
+	return
 }
 
 func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
-	// TODO (sfxdx): implements tests
+	var (
+		ssc                  = newTestStorageSC()
+		balances             = newTestBalances()
+		client               = newClient(50*x10, balances)
+		tp, exp        int64 = 100, 1000
+		allocID, blobs       = addAllocation(t, ssc, client, tp, exp, balances)
+		alloc          *StorageAllocation
+		resp           string
+		err            error
+	)
+
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+
+	var cp = alloc.deepCopy(t)
+
+	// change terms
+	tp += 100
+	for _, b := range blobs {
+		var blob *StorageNode
+		blob, err = ssc.getBlobber(b.id, balances)
+		require.NoError(t, err)
+		blob.Terms.WritePrice = state.Balance(1.8 * x10)
+		blob.Terms.ReadPrice = state.Balance(0.8 * x10)
+		_, err = updateBlobber(t, blob, 0, tp, ssc, balances)
+		require.NoError(t, err)
+	}
+
+	//
+	// extend
+	//
+
+	var uar updateAllocationRequest
+	uar.ID = alloc.ID
+	uar.Expiration = alloc.Expiration * 2
+	uar.Size = alloc.Size * 2
+	tp += 100
+	resp, err = uar.callUpdateAllocReq(t, client.id, 20*x10, tp, ssc, balances)
+	require.NoError(t, err)
+
+	var deco StorageAllocation
+	require.NoError(t, deco.Decode([]byte(resp)))
+
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+
+	require.EqualValues(t, alloc, &deco)
+
+	assert.Equal(t, alloc.Size, cp.Size*3)
+	assert.Equal(t, alloc.Expiration, cp.Expiration*3)
+
+	var tbs, mld int64
+	for _, detail := range alloc.BlobberDetails {
+		tbs += detail.Size
+		mld += int64(detail.MinLockDemand)
+	}
+	var (
+		numb  = int64(alloc.DataShards + alloc.ParityShards)
+		bsize = (alloc.Size + (numb - 1)) / numb
+	)
+	assert.Equal(t, tbs, bsize*numb)
+	assert.Equal(t, int64(11938983100), mld)
+
+	//
+	// reduce
+	//
+
+	cp = alloc.deepCopy(t)
+
+	uar.ID = alloc.ID
+	uar.Expiration = -(alloc.Expiration / 2)
+	uar.Size = -(alloc.Size / 2)
+
+	tp += 100
+	resp, err = uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
+	require.NoError(t, err)
+	require.NoError(t, deco.Decode([]byte(resp)))
+
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+
+	require.EqualValues(t, alloc, &deco)
+
+	assert.Equal(t, alloc.Size, cp.Size/2)
+	assert.Equal(t, alloc.Expiration, cp.Expiration/2)
+
+	tbs, mld = 0, 0
+	for _, detail := range alloc.BlobberDetails {
+		tbs += detail.Size
+		mld += int64(detail.MinLockDemand)
+	}
+	numb = int64(alloc.DataShards + alloc.ParityShards)
+	bsize = (alloc.Size + (numb - 1)) / numb
+	assert.Equal(t, tbs, bsize*numb)
+	// MLD can't be reduced
+	assert.Equal(t, int64(11938983100), mld)
+
 }

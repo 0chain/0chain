@@ -60,10 +60,6 @@ func (a *Allocations) has(id string) (ok bool) {
 	return // false
 }
 
-// func (an *Allocations) Get(idx int) string {
-// 	return an[idx]
-// }
-
 func (an *Allocations) Encode() []byte {
 	buff, _ := json.Marshal(an)
 	return buff
@@ -98,7 +94,7 @@ type BlobberChallenge struct {
 }
 
 func (sn *BlobberChallenge) GetKey(globalKey string) datastore.Key {
-	return datastore.Key(globalKey + sn.BlobberID)
+	return datastore.Key(globalKey + ":blobberchallenge:" + sn.BlobberID)
 }
 
 func (sn *BlobberChallenge) Encode() []byte {
@@ -297,7 +293,7 @@ func (sn *StorageNode) Decode(input []byte) error {
 }
 
 type StorageNodes struct {
-	Nodes []*StorageNode
+	Nodes sortedBlobbers
 }
 
 func (sn *StorageNodes) Decode(input []byte) error {
@@ -448,14 +444,18 @@ func (sa *StorageAllocation) validate(now common.Timestamp,
 	return // nil
 }
 
+type filterBlobberFunc func(blobber *StorageNode) (kick bool)
+
 func (sa *StorageAllocation) filterBlobbers(list []*StorageNode,
-	creationDate common.Timestamp, bsize int64) (filtered []*StorageNode) {
+	creationDate common.Timestamp, bsize int64, filters ...filterBlobberFunc) (
+	filtered []*StorageNode) {
 
 	var (
 		dur = common.ToTime(sa.Expiration).Sub(common.ToTime(creationDate))
 		i   int
 	)
 
+List:
 	for _, b := range list {
 		// filter by max offer duration
 		if b.Terms.MaxOfferDuration < dur {
@@ -472,6 +472,11 @@ func (sa *StorageAllocation) filterBlobbers(list []*StorageNode,
 		// filter by blobber's capacity left
 		if b.Capacity-b.Used < bsize {
 			continue
+		}
+		for _, filter := range filters {
+			if filter(b) {
+				continue List
+			}
 		}
 		list[i] = b
 		i++
@@ -566,12 +571,15 @@ func (wm *WriteMarker) VerifySignature(clientPublicKey string) bool {
 }
 
 func (wm *WriteMarker) GetHashData() string {
-	hashData := fmt.Sprintf("%v:%v:%v:%v:%v:%v:%v", wm.AllocationRoot, wm.PreviousAllocationRoot, wm.AllocationID, wm.BlobberID, wm.ClientID, wm.Size, wm.Timestamp)
+	hashData := fmt.Sprintf("%v:%v:%v:%v:%v:%v:%v", wm.AllocationRoot,
+		wm.PreviousAllocationRoot, wm.AllocationID, wm.BlobberID, wm.ClientID,
+		wm.Size, wm.Timestamp)
 	return hashData
 }
 
 func (wm *WriteMarker) Verify() bool {
-	if len(wm.AllocationID) == 0 || len(wm.AllocationRoot) == 0 || len(wm.BlobberID) == 0 || len(wm.ClientID) == 0 || wm.Timestamp == 0 {
+	if len(wm.AllocationID) == 0 || len(wm.AllocationRoot) == 0 ||
+		len(wm.BlobberID) == 0 || len(wm.ClientID) == 0 || wm.Timestamp == 0 {
 		return false
 	}
 	return true
@@ -582,7 +590,8 @@ type ReadConnection struct {
 }
 
 func (rc *ReadConnection) GetKey(globalKey string) datastore.Key {
-	return datastore.Key(globalKey + encryption.Hash(rc.ReadMarker.BlobberID+":"+rc.ReadMarker.ClientID))
+	return datastore.Key(globalKey +
+		encryption.Hash(rc.ReadMarker.BlobberID+":"+rc.ReadMarker.ClientID))
 }
 
 func (rc *ReadConnection) Decode(input []byte) error {

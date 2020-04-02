@@ -167,14 +167,8 @@ func updateBlobbersInAll(all *StorageNodes, update []*StorageNode,
 	balances c_state.StateContextI) (err error) {
 
 	// update the blobbers in all blobbers list
-	for i, ab := range all.Nodes {
-		for j, b := range update {
-			if ab.ID == b.ID {
-				all.Nodes[i] = b                             // update
-				update = append(update[:j], update[j+1:]...) // kick
-				break
-			}
-		}
+	for _, b := range update {
+		all.Nodes.add(b) // the add replaces existing, since the list is unique
 	}
 
 	// save
@@ -212,13 +206,6 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 			"No Blobbers registered. Failed to create a storage allocation")
 	}
 
-	allBlobbersList = sc.filterHealthyBlobbers(t.CreationDate, allBlobbersList)
-
-	if len(allBlobbersList.Nodes) == 0 {
-		return "", common.NewError("allocation_creation_failed",
-			"No health Blobbers registered. Failed to create an allocation")
-	}
-
 	if t.ClientID == "" {
 		return "", common.NewError("allocation_creation_failed",
 			"Invalid client in the transaction. No client id in transaction")
@@ -243,7 +230,8 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 		// size of allocation for a blobber
 		bsize = (sa.Size + int64(size-1)) / int64(size)
 		// filtered list
-		list = sa.filterBlobbers(allBlobbersList.Nodes, t.CreationDate, bsize)
+		list = sa.filterBlobbers(allBlobbersList.Nodes, t.CreationDate, bsize,
+			filterHealthyBlobbers(t.CreationDate))
 	)
 
 	if len(list) < size {
@@ -451,11 +439,6 @@ func (sc *StorageSmartContract) saveUpdatedAllocation(all *StorageNodes,
 		return
 	}
 
-	// save all
-	if _, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, all); err != nil {
-		return
-	}
-
 	// save related blobbers
 	for _, b := range blobbers {
 		if _, err = balances.InsertTrieNode(b.GetKey(sc.ID), b); err != nil {
@@ -536,6 +519,7 @@ func (sc *StorageSmartContract) extendAllocation(t *transaction.Transaction,
 	// adjust the expiration if changed, boundaries has already checked
 	var prevExpiration = alloc.Expiration
 	alloc.Expiration += uar.Expiration // new expiration
+	alloc.Size += uar.Size             // new size
 
 	// 1. update terms
 	for i, ba := range alloc.BlobberDetails {
@@ -649,6 +633,7 @@ func (sc *StorageSmartContract) reduceAllocation(t *transaction.Transaction,
 
 	// adjust the expiration if changed, boundaries has already checked
 	alloc.Expiration += uar.Expiration
+	alloc.Size += uar.Size
 
 	// 1. update terms
 	for i, ba := range alloc.BlobberDetails {
@@ -783,6 +768,11 @@ func (sc *StorageSmartContract) updateAllocationRequest(
 
 		return "", common.NewError("allocation_updating_failed",
 			"allocation duration becomes too short")
+	}
+
+	if request.Size < 0 && alloc.Size+request.Size < conf.MinAllocSize {
+		return "", common.NewError("allocation_updating_failed",
+			"allocation size becomes too small")
 	}
 
 	// if size or expiration increased, then we use new terms

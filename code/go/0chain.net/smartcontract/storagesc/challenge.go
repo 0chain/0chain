@@ -87,13 +87,17 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		return errors.New("late challenge response")
 	}
 
+	if tp > alloc.Expiration {
+		tp = alloc.Expiration // last challenge
+	}
+
 	// pool
 	var cp *challengePool
 	if cp, err = sc.getChallengePool(alloc.ID, balances); err != nil {
 		return fmt.Errorf("can't get allocation's challenge pool: %v", err)
 	}
 
-	var ratio = float64(tp-prev) / float64(alloc.Expiration-prev)
+	var ratio = float64(tp-prev) / float64(alloc.Expiration-alloc.StartTime)
 
 	if tp > alloc.Expiration {
 		ratio = 1 // all left (allocation expired, challenge completion time)
@@ -102,7 +106,11 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	// blobber ratio (of all blobbers)
 	ratio *= float64(details.Stats.UsedSize) / float64(alloc.UsedSize)
 
-	var move = state.Balance(float64(cp.Balance) * ratio)
+	var (
+		stake = sizeInGB(details.Stats.UsedSize) *
+			float64(details.Terms.WritePrice)
+		move = state.Balance(stake * ratio)
+	)
 
 	// part of this tokens goes to related validators
 	var validatorsReward = state.Balance(conf.ValidatorReward * float64(move))
@@ -146,49 +154,61 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 		return errors.New("late challenge response")
 	}
 
+	if tp > alloc.Expiration {
+		tp = alloc.Expiration // last challenge
+	}
+
 	// pools
 	var cp *challengePool
 	if cp, err = sc.getChallengePool(alloc.ID, balances); err != nil {
 		return fmt.Errorf("can't get allocation's challenge pool: %v", err)
 	}
 
-	var ratio = float64(tp-prev) / float64(alloc.Expiration-prev)
-
-	if tp > alloc.Expiration {
-		ratio = 1 // all left (allocation closed, challenge completion time)
+	var wp *writePool
+	if wp, err = sc.getWritePool(alloc.ID, balances); err != nil {
+		return fmt.Errorf("can't get allocation's write pool: %v", err)
 	}
 
-	// rewards for validators
+	var ratio = float64(tp-prev) / float64(alloc.Expiration-alloc.StartTime)
+
+	if tp > alloc.Expiration {
+		ratio = 1 // all left (allocation expired, challenge completion time)
+	}
+
+	// blobber ratio (of all blobbers)
+	ratio *= float64(details.Stats.UsedSize) / float64(alloc.UsedSize)
+
 	var (
-		sizeRatio = ratio *
-			(float64(details.Stats.UsedSize) / float64(alloc.UsedSize))
-		fictMove = state.Balance(float64(cp.Balance) * sizeRatio)
-		reward   = state.Balance(conf.ValidatorReward * float64(fictMove))
+		stake = sizeInGB(details.Stats.UsedSize) *
+			float64(details.Terms.WritePrice)
+		move = state.Balance(stake * ratio)
 	)
-	err = cp.moveToValidatos(sc.ID, reward, validators, balances)
+
+	// part of this tokens goes to related validators
+	var validatorsReward = state.Balance(conf.ValidatorReward * float64(move))
+	move -= validatorsReward
+
+	// validators reward
+	err = cp.moveToValidatos(sc.ID, validatorsReward, validators, balances)
 	if err != nil {
 		return fmt.Errorf("rewarding validators: %v", err)
+	}
+
+	// move back to write pool
+	if err = cp.moveToWritePool(wp, move); err != nil {
+		return fmt.Errorf("moving failed challenge to write pool: %v", err)
 	}
 
 	// blobber stake penalty
 	if conf.BlobberSlash > 0 {
 
-		// load pools
-
+		// load stake pool
 		var sp *stakePool
 		if sp, err = sc.getStakePool(bc.BlobberID, balances); err != nil {
 			return fmt.Errorf("can't get blobber's stake pool: %v", err)
 		}
 
-		var wp *writePool
-		if wp, err = sc.getWritePool(alloc.ID, balances); err != nil {
-			return fmt.Errorf("can't get allocation's write pool: %v", err)
-		}
-
 		// move blobber's stake tokens to allocation's write pool
-
-		// used size ratio
-		ratio *= float64(details.Stats.UsedSize) / float64(details.Size)
 
 		var offer = sp.findOffer(alloc.ID)
 		if offer == nil {
@@ -196,26 +216,24 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 				alloc.ID)
 		}
 
-		var move = state.Balance(float64(offer.Lock) * ratio)
+		var move = state.Balance(float64(offer.Lock) * conf.BlobberSlash)
 		offer.Lock -= move // subtract the offer stake
 
 		if err = sp.moveToWritePool(wp, move); err != nil {
 			return fmt.Errorf("can't move tokens to write pool: %v", err)
 		}
 
-		// save pools
-
-		if err = wp.save(sc.ID, alloc.ID, balances); err != nil {
-			return fmt.Errorf("can't save allocation's write pool: %v", err)
-		}
-
+		// save stake pool
 		if err = sp.save(sc.ID, bc.BlobberID, balances); err != nil {
 			return fmt.Errorf("can't save blobber's stake pool: %v", err)
 		}
-
 	}
 
-	// save challenge pool
+	// save pools
+	if err = wp.save(sc.ID, alloc.ID, balances); err != nil {
+		return fmt.Errorf("can't save allocation's write pool: %v", err)
+	}
+
 	if err = cp.save(sc.ID, alloc.ID, balances); err != nil {
 		return fmt.Errorf("can't save allocation's challenge pool: %v", err)
 	}

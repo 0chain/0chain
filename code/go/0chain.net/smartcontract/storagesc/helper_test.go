@@ -1,25 +1,42 @@
 package storagesc
 
 import (
+	"fmt"
 	"math/rand"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/chain"
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/core/logging"
 	"0chain.net/core/util"
+
+	"go.uber.org/zap"
 
 	// "github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
+const x10 = 10 * 1000 * 1000 * 1000
+
+func toks(val state.Balance) string {
+	return strconv.FormatFloat(float64(val)/float64(x10), 'f', -1, 64)
+}
+
 func init() {
 	rand.Seed(time.Now().UnixNano())
+	chain.ServerChain = new(chain.Chain)
+	chain.ServerChain.Config = new(chain.Config)
+	chain.ServerChain.ClientSignatureScheme = "bls0chain"
+
+	logging.Logger = zap.NewNop()
 }
 
 func randString(n int) string {
@@ -74,6 +91,13 @@ func (c *Client) addBlobRequest(t *testing.T) []byte {
 	return mustEncode(t, &sn)
 }
 
+func (c *Client) addValidatorRequest(t *testing.T) []byte {
+	var vn ValidationNode
+	vn.ID = c.id
+	vn.BaseURL = "http://" + c.id + ":10291/api/v1"
+	return mustEncode(t, &vn)
+}
+
 func newTransaction(f, t string, val, now int64) (tx *transaction.Transaction) {
 	tx = new(transaction.Transaction)
 	tx.Hash = randString(32)
@@ -91,6 +115,27 @@ func (c *Client) callAddBlobber(t *testing.T, ssc *StorageSmartContract,
 		int64(float64(c.terms.WritePrice)*sizeInGB(c.cap)), now)
 	balances.(*testBalances).txn = tx
 	var input = c.addBlobRequest(t)
+	return ssc.addBlobber(tx, input, balances)
+}
+
+func (c *Client) callAddValidator(t *testing.T, ssc *StorageSmartContract,
+	now int64, balances chainState.StateContextI) (resp string, err error) {
+
+	var tx = newTransaction(c.id, ADDRESS, 0, now)
+	balances.(*testBalances).txn = tx
+	var input = c.addValidatorRequest(t)
+	return ssc.addValidator(tx, input, balances)
+}
+
+func updateBlobber(t *testing.T, blob *StorageNode, value, now int64,
+	ssc *StorageSmartContract, balances chainState.StateContextI) (
+	resp string, err error) {
+
+	var (
+		input = blob.Encode()
+		tx    = newTransaction(blob.ID, ADDRESS, value, now)
+	)
+	balances.(*testBalances).txn = tx
 	return ssc.addBlobber(tx, input, balances)
 }
 
@@ -118,6 +163,48 @@ func addBlobber(t *testing.T, ssc *StorageSmartContract, cap, now int64,
 	return
 }
 
+// addValidator to SC
+func addValidator(t *testing.T, ssc *StorageSmartContract, now int64,
+	balances chainState.StateContextI) (valid *Client) {
+
+	var scheme = encryption.NewBLS0ChainScheme()
+	scheme.GenerateKeys()
+
+	valid = new(Client)
+	valid.scheme = scheme
+
+	valid.pk = scheme.GetPublicKey()
+	valid.id = encryption.Hash(valid.pk)
+
+	var _, err = valid.callAddValidator(t, ssc, now, balances)
+	require.NoError(t, err)
+	return
+}
+
+func (c *Client) validTicket(t *testing.T, challID, blobID string, ok bool,
+	now int64) (vt *ValidationTicket) {
+
+	vt = new(ValidationTicket)
+	vt.ChallengeID = challID
+	vt.BlobberID = blobID
+	vt.ValidatorID = c.id
+	vt.ValidatorKey = c.pk
+	vt.Result = ok
+	vt.Message = ""
+	vt.MessageCode = ""
+	vt.Timestamp = common.Timestamp(now)
+
+	var data = fmt.Sprintf("%v:%v:%v:%v:%v:%v", vt.ChallengeID, vt.BlobberID,
+		vt.ValidatorID, vt.ValidatorKey, vt.Result, vt.Timestamp)
+	var (
+		hash = encryption.Hash(data)
+		err  error
+	)
+	vt.Signature, err = c.scheme.Sign(hash)
+	require.NoError(t, err)
+	return
+}
+
 func (nar *newAllocationRequest) callNewAllocReq(t *testing.T, clientID string,
 	value int64, ssc *StorageSmartContract, now int64,
 	balances chainState.StateContextI) (resp string, err error) {
@@ -131,22 +218,23 @@ func (nar *newAllocationRequest) callNewAllocReq(t *testing.T, clientID string,
 }
 
 func (uar *updateAllocationRequest) callUpdateAllocReq(t *testing.T,
-	clientID string, value int64, ssc *StorageSmartContract,
+	clientID string, value, now int64, ssc *StorageSmartContract,
 	balances chainState.StateContextI) (resp string, err error) {
 
-	var input = mustEncode(t, uar)
-
-	var tx transaction.Transaction
-	tx.Hash = randString(32)
-	tx.ClientID = clientID
-	tx.ToClientID = ADDRESS
-	tx.Value = value
-
-	return ssc.newAllocationRequest(&tx, input, balances)
+	var (
+		input = mustEncode(t, uar)
+		tx    = newTransaction(clientID, ADDRESS, value, now)
+	)
+	balances.(*testBalances).txn = tx
+	return ssc.updateAllocationRequest(tx, input, balances)
 }
 
 var avgTerms = Terms{
-	//
+	ReadPrice:               1 * x10,
+	WritePrice:              5 * x10,
+	MinLockDemand:           0.1,
+	MaxOfferDuration:        1 * time.Hour,
+	ChallengeCompletionTime: 10 * time.Second,
 }
 
 // add allocation and 20 blobbers
@@ -154,20 +242,31 @@ func addAllocation(t *testing.T, ssc *StorageSmartContract, client *Client,
 	now, exp int64, balances chainState.StateContextI) (allocID string,
 	blobs []*Client) {
 
-	nar = new(newAllocationRequest)
+	setConfig(t, balances)
+
+	var nar = new(newAllocationRequest)
 	nar.DataShards = 10
 	nar.ParityShards = 10
-	nar.Expiration = exp
+	nar.Expiration = common.Timestamp(exp)
 	nar.Owner = client.id
 	nar.OwnerPublicKey = client.pk
-	nar.ReadPriceRange = PriceRange{1 * 1000, 10 * 1000}
-	nar.WritePriceRange = PriceRange{20 * 1000, 200 * 1000}
-	nar.Size = 2 * GB
+	nar.ReadPriceRange = PriceRange{1 * x10, 10 * x10}
+	nar.WritePriceRange = PriceRange{2 * x10, 20 * x10}
+	nar.Size = 2 * GB // 2 GB
 
-	for i := 0; i < 20; i++ {
-		addBlobber(t, ssc, 2*GB, now, avgTerms, 50*1000, balances)
+	for i := 0; i < 30; i++ {
+		var b = addBlobber(t, ssc, 2*GB, now, avgTerms, 50*x10, balances)
+		blobs = append(blobs, b)
 	}
 
+	var resp, err = nar.callNewAllocReq(t, client.id, 15*x10, ssc, now,
+		balances)
+	require.NoError(t, err)
+
+	var deco StorageAllocation
+	require.NoError(t, deco.Decode([]byte(resp)))
+
+	return deco.ID, blobs
 }
 
 func mustSave(t *testing.T, key datastore.Key, val util.Serializable,
@@ -202,5 +301,34 @@ func setConfig(t *testing.T, balances chainState.StateContextI) (
 	}
 
 	mustSave(t, scConfigKey(ADDRESS), conf, balances)
+	return
+}
+
+func genChall(t *testing.T, ssc *StorageSmartContract,
+	blobberID string, now int64, prevID, challID string, seed int64,
+	valids []*ValidationNode, allocID string, blobber *StorageNode,
+	allocRoot string, balances chainState.StateContextI) {
+
+	var blobberChall, err = ssc.getBlobberChallenge(blobberID, balances)
+	if err != nil && err != util.ErrValueNotPresent {
+		t.Fatal("unexpected error:", err)
+	}
+	if err == util.ErrValueNotPresent {
+		blobberChall = new(BlobberChallenge)
+		blobberChall.BlobberID = blobberID
+	}
+	var storChall = new(StorageChallenge)
+	storChall.Created = common.Timestamp(now)
+	storChall.ID = challID
+	storChall.PrevID = prevID
+	storChall.Validators = valids
+	storChall.RandomNumber = seed
+	storChall.AllocationID = allocID
+	storChall.Blobber = blobber
+	storChall.AllocationRoot = allocRoot
+
+	require.True(t, blobberChall.addChallenge(storChall))
+	_, err = balances.InsertTrieNode(blobberChall.GetKey(ssc.ID), blobberChall)
+	require.NoError(t, err)
 	return
 }

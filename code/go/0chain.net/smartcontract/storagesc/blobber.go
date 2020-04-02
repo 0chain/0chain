@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"sort"
 
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -25,9 +24,6 @@ func (sc *StorageSmartContract) getBlobbersList(balances c_state.StateContextI) 
 	if err != nil {
 		return nil, common.NewError("getBlobbersList_failed", "Failed to retrieve existing blobbers list")
 	}
-	sort.SliceStable(allBlobbersList.Nodes, func(i, j int) bool {
-		return allBlobbersList.Nodes[i].ID < allBlobbersList.Nodes[j].ID
-	})
 	return allBlobbersList, nil
 }
 
@@ -132,6 +128,7 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	sp *stakePool, err error) {
 
 	sp = newStakePool() // create new
+	blobber.LastHealthCheck = t.CreationDate
 
 	// create stake pool
 	var (
@@ -183,7 +180,8 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 		return nil, fmt.Errorf("can't decode existing blobber: %v", err)
 	}
 
-	blobber.Used = existingBlobber.Used // copy
+	blobber.Used = existingBlobber.Used      // copy
+	blobber.LastHealthCheck = t.CreationDate // health
 
 	if sp, err = sc.getStakePool(blobber.ID, balances); err != nil {
 		return nil, fmt.Errorf("can't get related stake pool: %v", err)
@@ -229,16 +227,10 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	return // success
 }
 
-func (sc *StorageSmartContract) filterHealthyBlobbers(now common.Timestamp,
-	blobbersList *StorageNodes) *StorageNodes {
-
-	healthyBlobbersList := &StorageNodes{}
-	for _, blobberNode := range blobbersList.Nodes {
-		if blobberNode.LastHealthCheck > (now - blobberHealthTime) {
-			healthyBlobbersList.Nodes = append(healthyBlobbersList.Nodes, blobberNode)
-		}
-	}
-	return healthyBlobbersList
+func filterHealthyBlobbers(now common.Timestamp) filterBlobberFunc {
+	return filterBlobberFunc(func(b *StorageNode) bool {
+		return b.LastHealthCheck <= (now - blobberHealthTime)
+	})
 }
 
 func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
@@ -258,21 +250,14 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 
 	existingBlobber.LastHealthCheck = t.CreationDate
 
-	var found *StorageNode
-	for _, b := range all.Nodes {
-		if b.ID == t.ClientID {
-			found = b
-			break
-		}
-	}
-
-	// if blobber has been removed, then it shouldn't
-	// send the health check transactions
-	if found == nil {
+	var i, ok = all.Nodes.getIndex(t.ClientID)
+	// if blobber has been removed, then it shouldn't send the health check
+	// transactions
+	if !ok {
 		return "", common.NewError("blobber_health_check_failed", "blobber "+
 			t.ClientID+" not found in all blobbers list: "+err.Error())
 	}
-
+	var found = all.Nodes[i]
 	found.LastHealthCheck = t.CreationDate
 	if _, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, all); err != nil {
 		return "", common.NewError("blobber_health_check_failed",
@@ -399,6 +384,10 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 		return "", err
 	}
 
+	if commitRead.ReadMarker == nil {
+		return "", errors.New("malformed request: missing read_marker")
+	}
+
 	lastBlobberClientReadBytes, err := balances.GetTrieNode(commitRead.GetKey(sc.ID))
 	lastCommittedRM := &ReadConnection{}
 	lastKnownCtr := int64(0)
@@ -457,6 +446,14 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	if err = rps.save(sc.ID, userID, balances); err != nil {
 		return "", common.NewError("commit_read_failed",
 			"can't save read pool: "+err.Error())
+	}
+
+	details.Spent += value // reduce min lock demand left
+	// save allocation
+	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+	if err != nil {
+		return "", common.NewError("commit_read_failed",
+			"can't save allocation: "+err.Error())
 	}
 
 	// save read marker
@@ -562,6 +559,11 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	if err != nil {
 		return "", common.NewError("commit_connection_failed",
 			"malformed input: "+err.Error())
+	}
+
+	if commitConnection.WriteMarker == nil {
+		return "", common.NewError("commit_connection_failed",
+			"invalid input: missing write_marker")
 	}
 
 	if !commitConnection.Verify() {
