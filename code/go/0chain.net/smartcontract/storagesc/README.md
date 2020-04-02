@@ -1,6 +1,15 @@
 STORAGE SC
 ==========
 
+# SC testing
+
+1. Enter the SC directory (directory with this README)
+2. Execute
+    ```
+    go test -cover -coverprofile=cover.out && go tool cover -html=cover.out -o=cover.html
+    ```
+3. Open generated cover.html file to see tests coverage.
+
 # Flow
 
 ## Blobber
@@ -17,6 +26,9 @@ Provide
  - challenge_completion_time  time.Duration
 
  - number of tokens to lock
+
+
+The transaction also updates blobber's 'last health check' making it healthy.
 
 ### 2. SC: check capacity, the registration transaction handling
 
@@ -141,6 +153,21 @@ write pool (+ this extending request) doesn't have enough tokens to extend.
 Also, allocation can't be extended wide then max_offer_duration of a blobber
 from time of this extending transaction.
 
+Terms used for extended allocation calculated using existing allocation
+terms and new terms of blobbers (if related blobbers changes their terms)
+using weighted average. Where weight is `size*period`. For example
+
+1. create allocation for 2 days
+2. after 1 day, extend it for 3 days
+
+```
+|    1 day    |    2 day    |    3 day    |
+[<----create allocation---->]
+             [<-----extend allocation---->]
+```
+Thus 1st weight is (2days * size) and second weight is (1day * size). E.g.
+weight for extension is for the 3rd day only.
+
 ### Reduce allocation. Close allocation.
 
 The same terms used.
@@ -164,7 +191,7 @@ A size reducing doesn't reduce min_lock_demand to prevent the salvation attack.
 
  1. clean blockchain
  2. clean blobbers
- 3 .rebuild all applications: zboxcli, zwallet, blobbers, sharder, miners
+ 3. rebuild all applications: zboxcli, zwallet, blobbers, sharder, miners
  4. start sharder
  5. start miners
  6. remove wallet.json and allocation.txt
