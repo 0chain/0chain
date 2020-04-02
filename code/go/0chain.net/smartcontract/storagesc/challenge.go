@@ -10,8 +10,6 @@ import (
 	"strconv"
 	"strings"
 
-	"time" // DEBUG
-
 	"0chain.net/chaincore/block"
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
@@ -409,12 +407,6 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 	b *block.Block, input []byte, balances c_state.StateContextI) error {
 
-	var tp = time.Now()
-	println("GEN CHALLENGES START")
-	defer func() {
-		println("GEN CHALLENGES END AFTER:", time.Now().Sub(tp))
-	}()
-
 	stats := &StorageStats{}
 	stats.Stats = &StorageAllocationStats{}
 	statsBytes, err := balances.GetTrieNode(stats.GetKey(sc.ID))
@@ -443,8 +435,12 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 	if sizeDiffMB == 0 {
 		sizeDiffMB = 1
 	}
-	challengeGenerationRate := config.SmartContractConfig.GetInt64("smart_contracts.storagesc.challenge_rate_per_mb_min")
-	numChallenges := int64(math.Min(float64(challengeGenerationRate*numMins*sizeDiffMB), float64(100)))
+	challengeGenerationRate := config.SmartContractConfig.GetFloat64("smart_contracts.storagesc.challenge_rate_per_mb_min")
+	var rated = challengeGenerationRate * float64(numMins*sizeDiffMB)
+	if rated < 1 {
+		rated = 1
+	}
+	numChallenges := int64(math.Min(rated, float64(100)))
 	//	Logger.Info("Generating challenges", zap.Any("mins_since_last", numMins), zap.Any("mb_size_diff", sizeDiffMB))
 	hashString := encryption.Hash(t.Hash + b.PrevHash)
 	randomSeed, err := strconv.ParseUint(hashString[0:16], 16, 64)
@@ -470,12 +466,6 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 }
 
 func (sc *StorageSmartContract) addChallenge(challengeID string, creationDate common.Timestamp, r *rand.Rand, challengeSeed int64, balances c_state.StateContextI) (string, error) {
-
-	var tp = time.Now()
-	println("ADD CHALLENGES START")
-	defer func() {
-		println("ADD CHALLENGES END AFTER:", time.Now().Sub(tp))
-	}()
 
 	validatorList, _ := sc.getValidatorsList(balances)
 

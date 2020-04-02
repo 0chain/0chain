@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"time" // DEBUG
-
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -537,12 +535,6 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 func (sc *StorageSmartContract) commitBlobberConnection(
 	t *transaction.Transaction, input []byte, balances c_state.StateContextI) (
 	string, error) {
-
-	var tp = time.Now()
-	println("COMMIT CONNECTION START")
-	defer func() {
-		println("COMMIT CONNECTION END AFTER:", time.Now().Sub(tp))
-	}()
 
 	var commitConnection BlobberCloseConnection
 	err := json.Unmarshal(input, &commitConnection)
