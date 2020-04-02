@@ -838,3 +838,47 @@ func checkExists(c *StorageNode, sl []*StorageNode) bool {
 	}
 	return false
 }
+
+// If blobbers doesn't provide their services, then user can use this
+// cancel_allocation transaction to close allocation and unlock all tokens
+// of write pool back to himself. The cacnel_allocation doesn't pays min_lock
+// demand to blobbers.
+func (sc *StorageSmartContract) cacnelAllocationRequest(
+	t *transaction.Transaction, input []byte, balances c_state.StateContextI) (
+	resp string, err error) {
+
+	var req writePoolRequest
+	if err = req.decode(input); err != nil {
+		return "", common.NewError("alloc_cacnel_failed", err.Error())
+	}
+
+	var alloc *StorageAllocation
+	alloc, err = sc.getAllocation(req.AllocationID, balances)
+	if err != nil {
+		return "", common.NewError("alloc_cacnel_failed", err.Error())
+	}
+
+	if alloc.Owner != t.ClientID {
+		return "", common.NewError("alloc_cacnel_failed",
+			"only owner can cancel an allocation")
+	}
+
+	if alloc.Expiration < t.CreationDate {
+		return "", common.NewError("alloc_cacnel_failed",
+			"allocation is expired or going to expire soon")
+	}
+
+	alloc.Expiration = t.CreationDate // now
+	alloc.ChallengeCompletionTime = 0 // no challenges wait
+	for _, details := range alloc.BlobberDetails {
+		details.MinLockDemand = 0 // reset
+	}
+
+	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+	if err != nil {
+		return "", common.NewError("alloc_cacnel_failed",
+			"can't save allocation: "+err.Error())
+	}
+
+	return sc.finalizeAllocation(t, input, balances)
+}

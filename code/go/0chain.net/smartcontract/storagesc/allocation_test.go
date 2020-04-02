@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -8,6 +9,7 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/core/encryption"
 	"0chain.net/core/util"
 
 	"github.com/stretchr/testify/assert"
@@ -836,4 +838,176 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	// MLD can't be reduced
 	assert.Equal(t, int64(11938983100), mld)
 
+}
+
+// - finalize allocation
+func Test_finalize_allocation(t *testing.T) {
+
+	var (
+		ssc            = newTestStorageSC()
+		balances       = newTestBalances()
+		client         = newClient(100*x10, balances)
+		tp, exp  int64 = 0, int64(toSeconds(time.Hour))
+		err      error
+	)
+
+	setConfig(t, balances)
+
+	tp += 100
+	var allocID, blobs = addAllocation(t, ssc, client, tp, exp, balances)
+
+	// blobbers: stake 10k, balance 40k
+
+	var alloc *StorageAllocation
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+
+	var b1 *Client
+	for _, b := range blobs {
+		if b.id == alloc.BlobberDetails[0].BlobberID {
+			b1 = b
+			break
+		}
+	}
+	require.NotNil(t, b1)
+
+	// add 10 validators
+	var valids []*Client
+	tp += 100
+	for i := 0; i < 10; i++ {
+		valids = append(valids, addValidator(t, ssc, tp, balances))
+	}
+
+	// generate some challenges to fill challenge pool
+
+	const allocRoot = "alloc-root-1"
+
+	// write 100 MB
+	tp += 100
+	var cc = &BlobberCloseConnection{
+		AllocationRoot:     allocRoot,
+		PrevAllocationRoot: "",
+		WriteMarker: &WriteMarker{
+			AllocationRoot:         allocRoot,
+			PreviousAllocationRoot: "",
+			AllocationID:           allocID,
+			Size:                   10 * 1024 * 1024, // 100 MB
+			BlobberID:              b1.id,
+			Timestamp:              common.Timestamp(tp),
+			ClientID:               client.id,
+		},
+	}
+	cc.WriteMarker.Signature, err = client.scheme.Sign(
+		encryption.Hash(cc.WriteMarker.GetHashData()))
+	require.NoError(t, err)
+
+	// write
+	tp += 100
+	var tx = newTransaction(b1.id, ssc.ID, 0, tp)
+	balances.txn = tx
+	var resp string
+	resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc),
+		balances)
+	require.NoError(t, err)
+	require.NotZero(t, resp)
+
+	// until the end
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+
+	// load validators
+	var validators *ValidatorNodes
+	validators, err = ssc.getValidatorsList(balances)
+	require.NoError(t, err)
+
+	// load blobber
+	var blobber *StorageNode
+	blobber, err = ssc.getBlobber(b1.id, balances)
+	require.NoError(t, err)
+
+	//
+	var (
+		step            = (int64(alloc.Expiration) - tp) / 10
+		challID, prevID string
+	)
+
+	// expire the allocation challenging it (+ last challenge)
+	for i := int64(0); i < 2; i++ {
+		tp += step / 2
+
+		challID = fmt.Sprintf("chall-%d", i)
+		genChall(t, ssc, b1.id, tp, prevID, challID, i, validators.Nodes,
+			alloc.ID, blobber, allocRoot, balances)
+
+		var chall = new(ChallengeResponse)
+		chall.ID = challID
+
+		for _, val := range valids {
+			chall.ValidationTickets = append(chall.ValidationTickets,
+				val.validTicket(t, chall.ID, b1.id, true, tp))
+		}
+
+		tp += step / 2
+		tx = newTransaction(b1.id, ssc.ID, 0, tp)
+		balances.txn = tx
+		var resp string
+		resp, err = ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
+		require.NoError(t, err)
+		require.NotZero(t, resp)
+
+		// next stage
+		prevID = challID
+	}
+
+	// balances
+	var wp *writePool
+	wp, err = ssc.getWritePool(allocID, balances)
+	require.NoError(t, err)
+
+	var cp *challengePool
+	cp, err = ssc.getChallengePool(allocID, balances)
+	require.NoError(t, err)
+
+	var sp *stakePool
+	sp, err = ssc.getStakePool(b1.id, balances)
+	require.NoError(t, err)
+
+	require.NotNil(t, sp.findOffer(allocID))
+
+	// expire the allocation
+	tp += int64(alloc.Expiration)
+
+	// finalize it
+
+	var req writePoolRequest
+	req.AllocationID = allocID
+
+	tx = newTransaction(client.id, ssc.ID, 0, tp)
+	balances.txn = tx
+	_, err = ssc.finalizeAllocation(tx, mustEncode(t, &req), balances)
+	require.NoError(t, err)
+
+	// check out all the balances
+
+	// reload
+	wp, err = ssc.getWritePool(allocID, balances)
+	require.NoError(t, err)
+
+	cp, err = ssc.getChallengePool(allocID, balances)
+	require.NoError(t, err)
+
+	sp, err = ssc.getStakePool(b1.id, balances)
+	require.NoError(t, err)
+
+	require.Nil(t, sp.findOffer(allocID), "should be removed")
+	assert.Zero(t, cp.Balance, "should be drained")
+	assert.Zero(t, wp.Balance, "should be drained")
+
+	alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+
+	assert.True(t, alloc.Finalized)
+	assert.True(t,
+		alloc.BlobberDetails[0].MinLockDemand == alloc.BlobberDetails[0].Spent,
+		"should receive min_lock_demand")
 }
