@@ -484,8 +484,8 @@ func (sc *StorageSmartContract) addChallenge(challengeID string, creationDate co
 	allocationObj := &StorageAllocation{}
 	allocationObj.Stats = &StorageAllocationStats{}
 
-	allocationperm := r.Perm(len(allocationList.List))
-	for _, v := range allocationperm {
+	for range allocationList.List {
+		var v = r.Intn(len(allocationList.List))
 		allocationKey := allocationList.List[v]
 		allocationObj.ID = allocationKey
 
@@ -511,8 +511,9 @@ func (sc *StorageSmartContract) addChallenge(challengeID string, creationDate co
 
 	blobberAllocation := &BlobberAllocation{}
 	blobberAllocation.Stats = &StorageAllocationStats{}
-	blobberperm := r.Perm(len(allocationObj.Blobbers))
-	for _, v := range blobberperm {
+
+	for range allocationObj.Blobbers {
+		var v = r.Intn(len(allocationObj.Blobbers))
 		selectedBlobberObj = allocationObj.Blobbers[v]
 		_, ok := allocationObj.BlobberMap[selectedBlobberObj.ID]
 		if !ok {
@@ -526,7 +527,7 @@ func (sc *StorageSmartContract) addChallenge(challengeID string, creationDate co
 	}
 
 	selectedValidators := make([]*ValidationNode, 0)
-	perm := r.Perm(allocationObj.DataShards + 1)
+	perm := r.Perm(minInt(len(validatorList.Nodes), allocationObj.DataShards+1))
 	for _, v := range perm {
 		if strings.Compare(validatorList.Nodes[v].ID, selectedBlobberObj.ID) != 0 {
 			selectedValidators = append(selectedValidators, validatorList.Nodes[v])
