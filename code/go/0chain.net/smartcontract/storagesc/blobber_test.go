@@ -112,7 +112,7 @@ func Test_flow_reward(t *testing.T) {
 			AllocationID:    allocID,
 			OwnerID:         client.id,
 			Timestamp:       common.Timestamp(tp),
-			ReadCounter:     1,
+			ReadCounter:     (1 * GB) / (64 * KB),
 		}
 		rm.ReadMarker.Signature, err = client.scheme.Sign(
 			encryption.Hash(rm.ReadMarker.GetHashData()))
@@ -174,7 +174,7 @@ func Test_flow_reward(t *testing.T) {
 			AllocationID:    allocID,
 			OwnerID:         client.id,
 			Timestamp:       common.Timestamp(tp),
-			ReadCounter:     1,
+			ReadCounter:     (1 * GB) / (64 * KB),
 		}
 		rm.ReadMarker.Signature, err = reader.scheme.Sign(
 			encryption.Hash(rm.ReadMarker.GetHashData()))

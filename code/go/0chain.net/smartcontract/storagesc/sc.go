@@ -41,7 +41,7 @@ func (ssc *StorageSmartContract) SetSC(sc *smartcontractinterface.SmartContract,
 	ssc.SmartContractExecutionStats["new_allocation_request"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "new_allocation_request"), nil)
 	ssc.SmartContractExecutionStats["update_allocation_request"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "update_allocation_request"), nil)
 	ssc.SmartContractExecutionStats["finalize_allocation"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "finalize_allocation"), nil)
-	ssc.SmartContractExecutionStats["cacnel_allocation_request"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "cacnel_allocation_request"), nil)
+	ssc.SmartContractExecutionStats["cancel_allocation"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "cancel_allocation"), nil)
 	// challenge
 	ssc.SmartContract.RestHandlers["/openchallenges"] = ssc.OpenChallengeHandler
 	ssc.SmartContract.RestHandlers["/getchallenge"] = ssc.GetChallengeHandler
@@ -125,7 +125,7 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		resp, err = sc.updateAllocationRequest(t, input, balances)
 	case "finalize_allocation":
 		resp, err = sc.finalizeAllocation(t, input, balances)
-	case "cacnel_allocation_request":
+	case "cancel_allocation":
 		resp, err = sc.cacnelAllocationRequest(t, input, balances)
 
 	// blobbers

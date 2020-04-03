@@ -4,7 +4,7 @@ STORAGE SC
 # SC testing
 
 1. Enter the SC directory (directory with this README)
-2. Execute
+2. Execute unit-tests
     ```
     go test -cover -coverprofile=cover.out && go tool cover -html=cover.out -o=cover.html
     ```
@@ -294,7 +294,35 @@ free to use these zbox command.
     }
     EOF
     ```
-5. Start blobbers and validators. Wait their registration
+5. Start blobbers and validators. Wait their registration.
+    A storage SC related blobber configurations used for this examples.
+    ```yaml
+    # [configurations above]
+
+    # for testing
+    #  500 MB - 536870912
+    #    1 GB - 1073741824
+    #    2 GB - 2147483648
+    #    3 GB - 3221225472
+    capacity: 1073741824 # 1 GB bytes total blobber capacity
+    read_price: 0.01     # token / GB for reading
+    write_price: 1.00    # token / GB for writing
+    # min_lock_demand is value in [0; 1] range; it represents number of tokens the
+    # blobber earned even if a user will not read or write something
+    # to an allocation; the number of tokens will be calculated by the following
+    # formula
+    #
+    #     allocation_size * write_price * min_lock_demand
+    #
+    min_lock_demand: 0.1
+    # max_offer_duration restrict long contacts where,
+    # in the future, prices can be changed
+    max_offer_duration: 744h # 31 day
+    challenge_completion_time: 1m # 15m # duration to complete a challenge
+
+    # [configurations below]
+    ```
+    Check blobbers' registrations.
     ```
     ./zbox ls-blobbers
     ```
@@ -308,11 +336,11 @@ free to use these zbox command.
     ./zbox newallocation --read_price 0.001-10 --write_price 0.01-10 --size 104857600 --lock 2 --data 1 --parity 1 --expire 48h
     ./zbox newallocation --read_price 0.001-10 --write_price 0.01-10 --size 104857600 --lock 2 --data 1 --parity 1 --expire 48h
     ```
-  Export their IDs to use later.
-  ```
-  export ALLOC1=<put allocation 1 ID here>
-  export ALLOC2=<put allocation 2 ID here>
-  ```
+    Export their IDs to use later.
+    ```
+    export ALLOC1=<put allocation 1 ID here>
+    export ALLOC2=<put allocation 2 ID here>
+    ```
 8. Check out user's allocations list.
     ```
     ./zbox listallocations
@@ -362,10 +390,11 @@ free to use these zbox command.
     ```
     ./zbox list --allocation $ALLOC1 --remotepath /remote
     ```
-18. Check out related challenge pool after blobbers commit their write markers
-    in SC.
+18. Check out related challenge and write pools after blobbers commit their
+    write markers in SC.
     ```
     ./zbox cp-info --allocation $ALLOC1
+    ./zbox wp-info --allocation $ALLOC1
     ```
 19. Wait a challenge some time. Check challenge pool again.
 20. Check out blobbers wallets to see their rewards.
@@ -377,9 +406,10 @@ free to use these zbox command.
     ```
     ./zbox delete --allocation $ALLOC1 --remotepath /remote/random.bin
     ```
-22. Check out challenge pool again.
+22. Check out challenge and write pools again.
     ```
     ./zbox cp-info --allocation $ALLOC1
+    ./zbox wp-info --allocation $ALLOC1
     ```
 23. Generate and upload another file.
     ```
@@ -394,14 +424,15 @@ free to use these zbox command.
     ```
     ./zbox list --allocation $ALLOC1 --remotepath /remote
     ```
-25. Check out related challenge pool after blobbers commit their write markers
-    in SC.
+25. Check out related challenge and write pool after blobbers commit their
+    write markers in SC.
     ```
     ./zbox cp-info --allocation $ALLOC1
+    ./zbox wp-info --allocation $ALLOC1
     ```
 26. Commit some tokens to a read pool.
     ```
-    ./zbox rp-lock --duration 12m --tokens 1
+    ./zbox rp-lock --allocation $ALLOC1 --duration 12m --tokens 1
     ```
 27. Check out locked tokens in the read pool.
     ```
@@ -413,124 +444,40 @@ free to use these zbox command.
     ./zbox download --allocation $ALLOC1 --localpath=got.bin \
         --remotepath /remote/random.bin
     ```
-29. Check the file, check read pool
+29. Check the file, check read pool, check blobbers wallets
     ```
     diff got.bin random.bin
     ./zbox rp-info
+    ./zwallet getbalance --wallet=blobber1.json
+    ./zwallet getbalance --wallet=blobber2.json
     ```
-30. Now, download with `--commit`
+30. Make the allocation expired.
     ```
-    rm -f got.bin
-    ./zbox download --allocation $ALLOC1 --localpath=got.bin \
-        --remotepath /remote/random.bin --commit
+    ./zbox updateallocation --allocation $ALLOC1 --expiry -48h
+    ./zbox get --allocation $ALLOC1
     ```
-31. Check read pool
+    Wait 'Challenge Completion Time' from response and finalize the allocation.
+    ```
+    ./zbox alloc-fini --allocation $ALLOC1
+    ```
+    And check all related pools (excluding read pool)
+    ```
+    ./zbox cp-info --allocation $ALLOC1
+    ./zbox wp-info --allocation $ALLOC1
+    ```
+31. Cancel second allocation.
+    ```
+    ./zbox alloc-cancel --allocation $ALLOC2
+    ```
+32. Unlock read pool tokens
     ```
     ./zbox rp-info
     ```
-
-
-================================================================================
-
-## Step by step
-
-1. start sharder, start miners
-2. execute
-```bash
-for run in {1..20}
-do
-    ./zwallet faucet --methodName pour --input “{Pay day}”
-done
-./zwallet send --to_client_id f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25 --token 2 --desc "to register"
-./zwallet send --to_client_id 7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d --token 2 --desc "to register"
-```
-3. start blobbers, wait their registration
-```
-./zwallet getblobbers
-```
-4. check blobber's stake pools
-```
-./zwallet getstakelockedtokens --blobber_id f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
-./zwallet getstakelockedtokens --blobber_id 7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d
-```
-5. create new allocation
-```
-./zbox newallocation --read_price 0.001-10 --write_price 0.01-10 --size 104857600 --lock 2 --data 1 --parity 1 --expire 48h
-```
-```
-46ec6678df10e1808616375b4eb51317689700ecec7333ebd606fb0935081135 (allocation id for example)
-```
-Let's export it and use in next requests
-```
-export ALLOC="46ec6678df10e1808616375b4eb51317689700ecec7333ebd606fb0935081135"
-```
-7. check out stake pools again
-```
-./zwallet getstakelockedtokens --blobber_id f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
-./zwallet getstakelockedtokens --blobber_id 7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d
-```
-8. check out write pool of the allocation
-```
-./zwallet getwritelockedtokens --allocation_id $ALLOC
-```
-9. update allocation (increase size to 200MB, don't provide tokens, since we already have enough in the write pool)
-```
-./zbox updateallocation --allocation $ALLOC --size 209715200
-```
-10. check out pools and allocation
-11. if blobber reduces its capacity next registration, then some tokens becomes
-unlocked, and can be moved to blobber wallet by its owner; for example
-blobber1.json:
-```json
-{
-  "client_id": "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25",
-  "client_key": "de52c0a51872d5d2ec04dbc15a6f0696cba22657b80520e1d070e72de64c9b04e19ce3223cae3c743a20184158457582ffe9c369ca9218c04bfe83a26a62d88d",
-  "keys": [
-    {
-      "public_key": "de52c0a51872d5d2ec04dbc15a6f0696cba22657b80520e1d070e72de64c9b04e19ce3223cae3c743a20184158457582ffe9c369ca9218c04bfe83a26a62d88d",
-      "private_key": "17fa2ab0fb49249cb46dbc13e4e9e6853af8b1506e48d84c03e5e92f6348bb1d"
-    }
-  ],
-  "version": "1.0",
-  "date_created": "2020-03-16 00:47:58.247961953 +0400 +04 m=+0.015793530"
-}
-```
-```
-./zwallet --wallet blobber1.json stakeunlock
-```
-12. generate a random file to upload
-```
-head -c 20M < /dev/urandom > random.bin
-```
-13. upload the file to blobbers
-```
-./zbox upload \
-    --allocation $ALLOC \
-    --commit \
-    --localpath=random.bin \
-    --remotepath=/remote/random.bin
-```
-14. check out the file
-```
-./zbox list --allocation $ALLOC --remotepath /remote/
-```
-15. wait some time and make sure tokens from challenge pool moves to
-blobber's stake pool (unlocked)
-```
-./zwallet getchallengelockedtokens --allocation_id $ALLOC
-./zwallet getstakelockedtokens --blobber_id f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
-```
-
-
-
-
-================================================================================
-                                 USING ZBOX
-================================================================================
-
-1. 
-
-
-```
-
-```
+    Use pool id in next command
+    ```
+    ./zbox rp-unlock --allocation $ALLOC1 --pool_id <POOL_ID>
+    ```
+33. Check out blobbers. Should not have allocated space.
+    ```
+    ./zbox ls-blobbers
+    ```
