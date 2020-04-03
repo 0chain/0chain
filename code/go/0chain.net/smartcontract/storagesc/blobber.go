@@ -404,9 +404,11 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"blobber doesn't belong to allocation")
 	}
 
+	// one read is one 64 KB block
 	var (
 		numReads = commitRead.ReadMarker.ReadCounter - lastKnownCtr
-		value    = details.Terms.ReadPrice * state.Balance(numReads)
+		sizeRead = sizeInGB(numReads * 64 * KB)
+		value    = state.Balance(float64(details.Terms.ReadPrice) * sizeRead)
 		userID   = commitRead.ReadMarker.ClientID
 	)
 
