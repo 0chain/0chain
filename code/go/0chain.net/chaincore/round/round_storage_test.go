@@ -1,4 +1,4 @@
-package miner
+package round
 
 import (
 	"github.com/stretchr/testify/assert"

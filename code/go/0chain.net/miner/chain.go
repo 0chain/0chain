@@ -3,7 +3,6 @@ package miner
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -53,6 +52,7 @@ func SetupMinerChain(c *chain.Chain) {
 	minerChain.Chain = c
 	minerChain.blockMessageChannel = make(chan *BlockMessage, 128)
 	minerChain.muDKG = &sync.RWMutex{}
+	minerChain.roundDkg = round.NewRoundStartingStorage()
 	c.SetFetchedNotarizedBlockHandler(minerChain)
 	c.RoundF = MinerRoundFactory{}
 }
@@ -104,7 +104,7 @@ type Chain struct {
 	*chain.Chain
 	blockMessageChannel chan *BlockMessage
 	muDKG               *sync.RWMutex
-	currentDKG          *bls.DKG
+	roundDkg            round.RoundStorage
 	viewChangeDKG       *bls.DKG
 	mutexMpks           sync.RWMutex
 	mpks                *block.Mpks
@@ -238,7 +238,7 @@ func (mc *Chain) ViewChange(ctx context.Context, nRound int64) (bool, error) {
 	mb := mc.GetCurrentMagicBlock()
 	if viewChangeMagicBlock != nil {
 
-		if mc.GetCurrentRound() > 1 {
+		/*if mc.GetCurrentRound() > 1 {
 			for i := nRound - 2; i < nRound; i++ {
 				cRound := mc.GetRound(i)
 				if cRound == nil {
@@ -261,7 +261,7 @@ func (mc *Chain) ViewChange(ctx context.Context, nRound int64) (bool, error) {
 				}
 			}
 		}
-		log.Println("ViewChange check prev round - OK")
+		log.Println("ViewChange check prev round - OK")*/
 
 		if mb == nil || mb.MagicBlockNumber < viewChangeMagicBlock.MagicBlockNumber {
 			err := mc.UpdateMagicBlock(viewChangeMagicBlock)
@@ -277,7 +277,7 @@ func (mc *Chain) ViewChange(ctx context.Context, nRound int64) (bool, error) {
 		}
 
 		//restart rounds after nround
-		chkRoundNumber := nRound + 1
+		/*chkRoundNumber := nRound + 1
 		for {
 			log.Println("vc restart chkRoundNumber=", chkRoundNumber)
 			cRound := mc.GetMinerRound(chkRoundNumber)
@@ -288,7 +288,7 @@ func (mc *Chain) ViewChange(ctx context.Context, nRound int64) (bool, error) {
 				cRound.RestartWOL()
 				log.Println("vc round restart", cRound.GetRoundNumber())
 			}
-		}
+		}*/
 	} else {
 		if err := mc.SetDKGSFromStore(ctx, mb); err != nil {
 			Logger.DPanic(err.Error())
@@ -404,17 +404,19 @@ func (mc *Chain) SaveMagicBlock() chain.MagicBlockSaveFunc {
 
 // GetCurrentDKG returns DKG by round number
 func (mc *Chain) GetCurrentDKG(round int64) *bls.DKG {
-	//TODO: use round number
 	mc.muDKG.RLock()
 	defer mc.muDKG.RUnlock()
-	return mc.currentDKG
+	entity := mc.roundDkg.Get(round)
+	if entity == nil {
+		return nil
+	}
+	return entity.(*bls.DKG)
 }
 
 // SetDKG sets DKG for the start round
 func (mc *Chain) SetDKG(dkg *bls.DKG, startingRound int64) error {
 	mc.muDKG.Lock()
-	mc.currentDKG = dkg
-	//TODO: use round number
-	mc.muDKG.Unlock()
-	return nil
+	defer mc.muDKG.Unlock()
+	return mc.roundDkg.Put(dkg, startingRound)
+
 }

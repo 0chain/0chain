@@ -52,6 +52,9 @@ func SetDKG(ctx context.Context, mb *block.MagicBlock) error {
 }
 
 func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (err2 error) {
+	if mc.GetCurrentDKG(mb.StartingRound)!=nil {
+		return nil
+	}
 	self := node.GetSelfNode(ctx)
 	dkgSummary, err := GetDKGSummaryFromStore(ctx, strconv.FormatInt(mb.MagicBlockNumber, 10))
 	if err != nil {
@@ -80,8 +83,8 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (er
 	newDKG.Pi = newDKG.Si.GetPublicKey()
 	newDKG.AggregatePublicKeyShares(mb.Mpks.GetMpkMap())
 
-	if err:=mc.SetDKG(newDKG, mb.StartingRound);err!=nil {
-		return err
+	if err := mc.SetDKG(newDKG, mb.StartingRound); err != nil {
+		Logger.Error("failed to set dkg", zap.Error(err))
 	}
 	return nil
 }

@@ -1,4 +1,4 @@
-package miner
+package round
 
 import (
 	"errors"
@@ -84,9 +84,9 @@ func (s *roundStartingStorage) Put(entity RoundStorageEntity, round int64) error
 	if round > s.max {
 		s.max = round
 	}
-	if err := s.check(round); err != nil {
+	/*if err := s.check(round); err != nil {
 		return err
-	}
+	}*/
 	s.items[round] = entity
 	s.putToSlice(round)
 	return nil
