@@ -52,7 +52,7 @@ var (
 func SetupMinerChain(c *chain.Chain) {
 	minerChain.Chain = c
 	minerChain.blockMessageChannel = make(chan *BlockMessage, 128)
-	minerChain.muDKG = &sync.Mutex{}
+	minerChain.muDKG = &sync.RWMutex{}
 	c.SetFetchedNotarizedBlockHandler(minerChain)
 	c.RoundF = MinerRoundFactory{}
 }
@@ -103,7 +103,7 @@ func (mrf MinerRoundFactory) CreateRoundF(roundNum int64) interface{} {
 type Chain struct {
 	*chain.Chain
 	blockMessageChannel chan *BlockMessage
-	muDKG               *sync.Mutex
+	muDKG               *sync.RWMutex
 	currentDKG          *bls.DKG
 	viewChangeDKG       *bls.DKG
 	mutexMpks           sync.RWMutex
@@ -220,11 +220,10 @@ func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) erro
 }
 
 func (mc *Chain) isNeedViewChange(ctx context.Context, nround int64) bool {
-	mc.muDKG.Lock()
-	defer mc.muDKG.Unlock()
+	currentDKG := mc.GetCurrentDKG(nround)
 	result := config.DevConfiguration.ViewChange &&
 		mc.nextViewChange == nround &&
-		(mc.currentDKG == nil || mc.currentDKG.StartingRound <= mc.nextViewChange)
+		(currentDKG == nil || currentDKG.StartingRound <= mc.nextViewChange)
 	return result
 }
 
@@ -400,5 +399,22 @@ func (mc *Chain) isStarted() bool {
 
 // SaveMagicBlock function (nil).
 func (mc *Chain) SaveMagicBlock() chain.MagicBlockSaveFunc {
+	return nil
+}
+
+// GetCurrentDKG returns DKG by round number
+func (mc *Chain) GetCurrentDKG(round int64) *bls.DKG {
+	//TODO: use round number
+	mc.muDKG.RLock()
+	defer mc.muDKG.RUnlock()
+	return mc.currentDKG
+}
+
+// SetDKG sets DKG for the start round
+func (mc *Chain) SetDKG(dkg *bls.DKG, startingRound int64) error {
+	mc.muDKG.Lock()
+	mc.currentDKG = dkg
+	//TODO: use round number
+	mc.muDKG.Unlock()
 	return nil
 }

@@ -96,10 +96,8 @@ func (mc *Chain) RedoVrfShare(ctx context.Context, r *Round) bool {
 }
 
 func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
-	mc.muDKG.Lock()
-	emptyDKG := mc.currentDKG == nil
-	mc.muDKG.Unlock()
-	if emptyDKG {
+	currentDKG := mc.GetCurrentDKG(r.GetRoundNumber())
+	if currentDKG == nil {
 		return
 	}
 
