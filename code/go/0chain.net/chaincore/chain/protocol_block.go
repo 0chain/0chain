@@ -70,7 +70,7 @@ func (c *Chain) IsBlockNotarized(ctx context.Context, b *block.Block) bool {
 }
 
 func (c *Chain) roundMiners(round int64) (miners *node.Pool) {
-	mb := c.GetMagicBlock()
+	mb := c.GetCurrentMagicBlock()
 	if mb == nil {
 		return
 	}
@@ -247,7 +247,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 //IsFinalizedDeterministically - checks if a block is finalized deterministically
 func (c *Chain) IsFinalizedDeterministically(b *block.Block) bool {
 	//TODO: The threshold count should happen w.r.t the view of the block
-	mb := c.GetMagicBlock()
+	mb := c.GetCurrentMagicBlock()
 	if c.GetLatestFinalizedBlock().Round < b.Round {
 		return false
 	}
@@ -264,7 +264,7 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 	params := &url.Values{}
 	params.Add("block", blockHash)
 	ctx := common.GetRootContext()
-	mb := c.GetMagicBlock()
+	mb := c.GetCurrentMagicBlock()
 	var b *block.Block
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		Logger.Info("get notarized block", zap.String("block", blockHash), zap.Int64("cround", cround), zap.Int64("current_round", c.GetCurrentRound()))

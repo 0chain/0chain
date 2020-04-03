@@ -103,7 +103,7 @@ func main() {
 		chain.SetupStateLogger("/tmp/state.txt")
 	}
 	gb := mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"), magicBlock)
-	mb := mc.GetMagicBlock()
+	mb := mc.GetCurrentMagicBlock()
 	Logger.Info("Miners in main", zap.Int("size", mb.Miners.Size()))
 
 	if !mb.IsActiveNode(node.Self.Underlying().GetKey(), 0) {
@@ -172,7 +172,7 @@ func main() {
 	if err := getCurrentMagicBlock(mc); err != nil {
 		Logger.Panic(err.Error())
 	}
-	mb = mc.GetMagicBlock()
+	mb = mc.GetCurrentMagicBlock()
 	if mb.StartingRound == 0 && mb.IsActiveNode(node.Self.Underlying().GetKey(), mb.StartingRound) {
 		dkgShare := &bls.DKGSummary{
 			SecretShares: make(map[string]string),

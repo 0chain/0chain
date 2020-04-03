@@ -173,7 +173,7 @@ func MinerStatsHandler(ctx context.Context, r *http.Request) (interface{}, error
 		rtoc = int64(cr.GetTimeoutCount())
 	}
 	networkTimes := make(map[string]time.Duration)
-	mb := c.GetMagicBlock()
+	mb := c.GetCurrentMagicBlock()
 	for k, v := range mb.Miners.CopyNodesMap() {
 		networkTimes[k] = v.Info.MinersMedianNetworkTime
 	}

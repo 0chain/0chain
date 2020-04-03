@@ -34,7 +34,7 @@ func (c *Chain) SetupWorkers(ctx context.Context) {
 /*FinalizeRoundWorker - a worker that handles the finalized blocks */
 func (c *Chain) StatusMonitor(ctx context.Context) {
 	smctx, cancel := context.WithCancel(ctx)
-	mb := c.GetMagicBlock()
+	mb := c.GetCurrentMagicBlock()
 	go mb.Miners.StatusMonitor(smctx)
 	go mb.Sharders.StatusMonitor(smctx)
 	for true {
@@ -45,7 +45,7 @@ func (c *Chain) StatusMonitor(ctx context.Context) {
 			cancel()
 			Logger.Info("the status monitor is dead, long live the status monitor", zap.Any("miners", mb.Miners), zap.Any("sharders", mb.Sharders))
 			smctx, cancel = context.WithCancel(ctx)
-			mb := c.GetMagicBlock()
+			mb := c.GetCurrentMagicBlock()
 			go mb.Miners.StatusMonitor(smctx)
 			go mb.Sharders.StatusMonitor(smctx)
 		}
@@ -212,7 +212,7 @@ type MagicBlockSaveFunc func(context.Context, *block.Block) error
 // VerifyChainHistory repairs and verifies magic blocks chain.
 func (c *Chain) VerifyChainHistory(ctx context.Context,
 	latestMagicBlock *block.Block, saveHandler MagicBlockSaveFunc) (err error) {
-	mb := c.GetMagicBlock()
+	mb := c.GetCurrentMagicBlock()
 	var (
 		currentMagicBlock = c.GetLatestFinalizedMagicBlock()
 		sharders          = mb.Sharders.N2NURLs()

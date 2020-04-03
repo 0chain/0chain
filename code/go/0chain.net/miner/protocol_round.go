@@ -370,7 +370,7 @@ func (mc *Chain) GetBlockProposalWaitTime(r round.RoundI) time.Duration {
 }
 
 func (mc *Chain) computeBlockProposalDynamicWaitTime(r round.RoundI) time.Duration {
-	mb := mc.GetMagicBlock()
+	mb := mc.GetCurrentMagicBlock()
 	medianTime := mb.Miners.GetMedianNetworkTime()
 	generators := mc.GetGenerators(r)
 	for _, g := range generators {
@@ -609,7 +609,7 @@ func (mc *Chain) BroadcastNotarizedBlocks(ctx context.Context, pr *Round) {
 
 /*GetLatestFinalizedBlockFromSharder - request for latest finalized block from all the sharders */
 func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*block.Block {
-	mb := mc.GetMagicBlock()
+	mb := mc.GetCurrentMagicBlock()
 	m2s := mb.Sharders
 	finalizedBlocks := make([]*block.Block, 0, 1)
 	fbMutex := &sync.Mutex{}

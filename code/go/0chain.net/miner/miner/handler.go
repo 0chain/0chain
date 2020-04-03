@@ -40,7 +40,7 @@ func ConfigUpdateAllHandler(w http.ResponseWriter, r *http.Request) {
 		Logger.Error("failed to parse update config form", zap.Any("error", err))
 		return
 	}
-	mb := chain.GetServerChain().GetMagicBlock()
+	mb := chain.GetServerChain().GetCurrentMagicBlock()
 	miners := mb.Miners.Nodes
 	for _, miner := range miners {
 		if node.Self.Underlying().PublicKey != miner.PublicKey {

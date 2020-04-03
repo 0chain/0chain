@@ -56,7 +56,7 @@ func (mc *Chain) RegisterClient() {
 		}
 	}
 
-	mb := mc.GetMagicBlock()
+	mb := mc.GetCurrentMagicBlock()
 	nodeBytes, _ := json.Marshal(node.Self.Underlying().Client)
 	miners := mb.Miners.CopyNodesMap()
 	registered := 0
@@ -103,7 +103,7 @@ func (mc *Chain) isRegistered() bool {
 			return false
 		}
 	} else {
-		mb := mc.GetMagicBlock()
+		mb := mc.GetCurrentMagicBlock()
 		var (
 			sharders = mb.Sharders.N2NURLs()
 			err      error
@@ -132,7 +132,7 @@ func (mc *Chain) ConfirmTransaction(t *httpclientutil.Transaction) bool {
 	active := mc.ActiveInChain()
 	var found, pastTime bool
 	var urls []string
-	mb := mc.GetMagicBlock()
+	mb := mc.GetCurrentMagicBlock()
 	for _, sharder := range mb.Sharders.CopyNodesMap() {
 		if !active || sharder.GetStatus() == node.NodeStatusActive {
 			urls = append(urls, sharder.GetN2NURLBase())
@@ -186,7 +186,7 @@ func (mc *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 
 	txn.ToClientID = minersc.ADDRESS
 	txn.PublicKey = selfNode.PublicKey
-	mb := mc.GetMagicBlock()
+	mb := mc.GetCurrentMagicBlock()
 	var minerUrls = mb.Miners.N2NURLs()
 	err := httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls)
 	return txn, err

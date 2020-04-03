@@ -235,7 +235,7 @@ func (mc *Chain) ViewChange(ctx context.Context, nRound int64) (bool, error) {
 		return false, nil
 	}
 	viewChangeMagicBlock := mc.GetViewChangeMagicBlock()
-	mb := mc.GetMagicBlock()
+	mb := mc.GetCurrentMagicBlock()
 	if viewChangeMagicBlock != nil {
 
 		if mc.GetCurrentRound() > 1 {
@@ -307,7 +307,7 @@ func (mc *Chain) ChainStarted(ctx context.Context) bool {
 		case <-timer.C:
 			var start int
 			var started int
-			mb := mc.GetMagicBlock()
+			mb := mc.GetCurrentMagicBlock()
 			for _, n := range mb.Miners.CopyNodesMap() {
 				mc.RequestStartChain(n, &start, &started)
 			}
@@ -336,7 +336,7 @@ func (mc *Chain) GetMpks() map[string]*block.MPK {
 func StartChainRequestHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	nodeID := r.Header.Get(node.HeaderNodeID)
 	mc := GetMinerChain()
-	mb := mc.GetMagicBlock()
+	mb := mc.GetCurrentMagicBlock()
 	if !mb.Miners.HasNode(nodeID) {
 		Logger.Error("failed to send start chain", zap.Any("id", nodeID))
 		return nil, common.NewError("failed to send start chain", "miner is not in active set")

@@ -63,14 +63,14 @@ func PutChainHandler(ctx context.Context, entity datastore.Entity) (interface{},
 /*GetMinersHandler - get the list of known miners */
 func (c *Chain) GetMinersHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain;charset=UTF-8")
-	mb := c.GetMagicBlock()
+	mb := c.GetCurrentMagicBlock()
 	mb.Miners.Print(w)
 }
 
 /*GetShardersHandler - get the list of known sharders */
 func (c *Chain) GetShardersHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain;charset=UTF-8")
-	mb := c.GetMagicBlock()
+	mb := c.GetCurrentMagicBlock()
 	mb.Sharders.Print(w)
 }
 
@@ -156,7 +156,7 @@ func (c *Chain) roundHealthInATable(w http.ResponseWriter, r *http.Request) {
 	proposals := 0
 	rrs := int64(0)
 
-	mb := c.GetMagicBlock()
+	mb := c.GetCurrentMagicBlock()
 
 	if node.Self.Underlying().Type == node.NodeTypeMiner {
 		var shares int
@@ -405,7 +405,7 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</tr>")
 	fmt.Fprintf(w, "</table>")
 
-	mb := sc.GetMagicBlock()
+	mb := sc.GetCurrentMagicBlock()
 	if selfNodeType == node.NodeTypeMiner {
 		fmt.Fprintf(w, "<div><div>Miners (%v) - median network time %.2f</div>", mb.Miners.Size(), mb.Miners.GetMedianNetworkTime()/1000000.)
 	} else {
@@ -572,7 +572,7 @@ func (c *Chain) N2NStatsWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<div>%v - %v</div>", node.Self.Underlying().GetPseudoName(),
 		node.Self.Underlying().Description)
 	c.healthSummary(w, r)
-	mb := c.GetMagicBlock()
+	mb := c.GetCurrentMagicBlock()
 	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr><td rowspan='2'>URI</td><td rowspan='2'>Count</td><td colspan='3'>Time</td><td colspan='3'>Size</td></tr>")
 	fmt.Fprintf(w, "<tr><td>Min</td><td>Average</td><td>Max</td><td>Min</td><td>Average</td><td>Max</td></tr>")
@@ -646,7 +646,7 @@ func RoundInfoHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	cr := sc.GetRound(sc.GetCurrentRound())
-	mb := sc.GetMagicBlock()
+	mb := sc.GetCurrentMagicBlock()
 	if sc.GetCurrentRound() > 0 && cr != nil {
 
 		rrs := int64(0)
@@ -679,7 +679,7 @@ func RoundInfoHandler(w http.ResponseWriter, r *http.Request) {
 
 /*MinerStatsHandler - handler for the miner stats */
 func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
-	mb := c.GetMagicBlock()
+	mb := c.GetCurrentMagicBlock()
 	PrintCSS(w)
 	fmt.Fprintf(w, "<div>%v - %v</div>", node.Self.Underlying().GetPseudoName(),
 		node.Self.Underlying().Description)
@@ -710,7 +710,7 @@ func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Chain) generationCountStats(w http.ResponseWriter) {
-	mb := c.GetMagicBlock()
+	mb := c.GetCurrentMagicBlock()
 	fmt.Fprintf(w, "<table>")
 	fmt.Fprintf(w, "<tr><td>Miner</td>")
 	for i := 0; i < c.NumGenerators; i++ {
@@ -740,7 +740,7 @@ func (c *Chain) generationCountStats(w http.ResponseWriter) {
 }
 
 func (c *Chain) verificationCountStats(w http.ResponseWriter) {
-	mb := c.GetMagicBlock()
+	mb := c.GetCurrentMagicBlock()
 	fmt.Fprintf(w, "<table>")
 	fmt.Fprintf(w, "<tr><td>Miner</td>")
 	for i := 0; i < c.NumGenerators; i++ {
@@ -770,7 +770,7 @@ func (c *Chain) verificationCountStats(w http.ResponseWriter) {
 }
 
 func (c *Chain) finalizationCountStats(w http.ResponseWriter) {
-	mb := c.GetMagicBlock()
+	mb := c.GetCurrentMagicBlock()
 	fmt.Fprintf(w, "<table>")
 	fmt.Fprintf(w, "<tr><td>Miner</td>")
 	for i := 0; i < c.NumGenerators; i++ {
