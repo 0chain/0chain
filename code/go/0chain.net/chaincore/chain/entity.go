@@ -4,6 +4,7 @@ import (
 	"container/ring"
 	"context"
 	"fmt"
+	"log"
 	"math"
 	"sort"
 	"sync"
@@ -80,7 +81,7 @@ type Chain struct {
 
 	// MagicBlock - this is the current magic block for the chain
 	//mb                   *block.MagicBlock `json:"-"`
-	magicBlockStorage    round.RoundStorage
+	magicBlockStorage round.RoundStorage
 
 	PreviousMagicBlock   *block.MagicBlock `json:"-"`
 	viewChangeMagicBlock *block.MagicBlock `json:"-"`
@@ -617,7 +618,7 @@ func (c *Chain) GetGenerators(r round.RoundI) []*node.Node {
 
 /*GetMiners - get all the miners for a given round */
 func (c *Chain) GetMiners(round int64) *node.Pool {
-	mb := c.GetCurrentMagicBlock()
+	mb := c.GetMagicBlock(round)
 	if round >= mb.StartingRound || mb.StartingRound == 0 {
 		Logger.Info("get miners -- current magic block", zap.Any("miners", mb.Miners), zap.Any("round", round))
 		return mb.Miners
@@ -721,7 +722,7 @@ func (c *Chain) ReadNodePools(configFile string) {
 	if miners, ok := config.([]interface{}); ok {
 		mb.Miners.AddNodes(miners)
 		mb.Miners.ComputeProperties()
-		c.InitializeMinerPool()
+		c.InitializeMinerPool(mb)
 	}
 	config = nodeConfig.Get("sharders")
 	if sharders, ok := config.([]interface{}); ok {
@@ -761,8 +762,7 @@ func (c *Chain) getMiningStake(minerID datastore.Key) int {
 }
 
 //InitializeMinerPool - initialize the miners after their configuration is read
-func (c *Chain) InitializeMinerPool() {
-	mb := c.GetCurrentMagicBlock()
+func (c *Chain) InitializeMinerPool(mb *block.MagicBlock) {
 	for _, nd := range mb.Miners.CopyNodes() {
 		ms := &MinerStats{}
 		ms.GenerationCountByRank = make([]int64, c.NumGenerators)
@@ -966,7 +966,7 @@ func (c *Chain) CanReplicateBlock(b *block.Block) bool {
 	if c.NumReplicators <= 0 || c.MinActiveReplicators == 0 {
 		return c.CanShardBlocks()
 	}
-	mb := c.GetCurrentMagicBlock()
+	mb := c.GetMagicBlock(b.Round)
 	scores := c.nodePoolScorer.ScoreHashString(mb.Sharders, b.Hash)
 	arCount := 0
 	minScore := scores[c.NumReplicators-1].Score
@@ -1064,7 +1064,12 @@ func (c *Chain) ActiveInChain() bool {
 
 // -------------------------------------------------------------------------- //
 
-func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
+func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) (err2 error) {
+
+	log.Println("UpdateMagicBlock mb", newMagicBlock.MagicBlockNumber)
+	defer func() {
+		log.Println("UpdateMagicBlock mb", newMagicBlock.MagicBlockNumber, "err", err2)
+	}()
 	if newMagicBlock.Miners == nil || newMagicBlock.Miners.MapSize() == 0 {
 		return common.NewError("failed to update magic block", "there are no miners in the magic block")
 	}
@@ -1091,10 +1096,10 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 	}
 
 	c.SetMagicBlock(newMagicBlock)
-	c.SetupNodes()
+	c.SetupNodes(newMagicBlock)
 	newMagicBlock.Sharders.ComputeProperties()
 	newMagicBlock.Miners.ComputeProperties()
-	c.InitializeMinerPool()
+	c.InitializeMinerPool(newMagicBlock)
 	c.GetNodesPreviousInfo()
 
 	UpdateNodes <- true
@@ -1102,8 +1107,7 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 	return nil
 }
 
-func (c *Chain) SetupNodes() {
-	mb := c.GetCurrentMagicBlock()
+func (c *Chain) SetupNodes(mb *block.MagicBlock) {
 	for _, miner := range mb.Miners.CopyNodesMap() {
 		miner.ComputeProperties()
 		node.Setup(miner)

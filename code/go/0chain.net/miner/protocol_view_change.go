@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"0chain.net/chaincore/block"
@@ -642,9 +643,12 @@ func (mc *Chain) Wait() (result *httpclientutil.Transaction, err2 error) {
 	if err := StoreDKGSummary(common.GetRootContext(), summary); err != nil {
 		Logger.DPanic(err.Error())
 	}
+	if err := mc.SetDKG(mc.viewChangeDKG, magicBlock.StartingRound); err != nil {
+		Logger.Error("failed to set dkg", zap.Error(err))
+	}
 	mc.clearViewChange()
 	mc.SetViewChangeMagicBlock(magicBlock)
-	mc.nextViewChange = magicBlock.StartingRound
+	atomic.StoreInt64(&mc.nextViewChange, magicBlock.StartingRound)
 	return nil, nil
 }
 

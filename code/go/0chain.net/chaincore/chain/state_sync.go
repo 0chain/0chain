@@ -237,7 +237,7 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 		bsc = rsc
 		return rsc, nil
 	}
-	mb := c.GetCurrentMagicBlock()
+	mb := c.GetMagicBlock(b.Round)
 	mb.Miners.RequestEntity(ctx, bscRequestor, params, handler)
 	if bsc == nil {
 		return nil, common.NewError("block_state_change_error", "Error getting the block state change")

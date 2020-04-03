@@ -3,6 +3,7 @@ package miner
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -221,9 +222,10 @@ func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) erro
 
 func (mc *Chain) isNeedViewChange(ctx context.Context, nround int64) bool {
 	currentDKG := mc.GetCurrentDKG(nround)
+	nextVC := atomic.LoadInt64(&mc.nextViewChange)
 	result := config.DevConfiguration.ViewChange &&
-		mc.nextViewChange == nround &&
-		(currentDKG == nil || currentDKG.StartingRound <= mc.nextViewChange)
+		nextVC == nround &&
+		(currentDKG == nil || currentDKG.StartingRound <= nextVC)
 	return result
 }
 
@@ -235,9 +237,10 @@ func (mc *Chain) ViewChange(ctx context.Context, nRound int64) (bool, error) {
 		return false, nil
 	}
 	viewChangeMagicBlock := mc.GetViewChangeMagicBlock()
-	mb := mc.GetCurrentMagicBlock()
+	mb := mc.GetMagicBlock(nRound)
 	if viewChangeMagicBlock != nil {
-
+		log.Println("ViewChange vc mb", viewChangeMagicBlock.MagicBlockNumber, viewChangeMagicBlock.StartingRound,
+			"current mb", mb.MagicBlockNumber, mb.StartingRound)
 		/*if mc.GetCurrentRound() > 1 {
 			for i := nRound - 2; i < nRound; i++ {
 				cRound := mc.GetRound(i)
@@ -263,17 +266,42 @@ func (mc *Chain) ViewChange(ctx context.Context, nRound int64) (bool, error) {
 		}
 		log.Println("ViewChange check prev round - OK")*/
 
-		if mb == nil || mb.MagicBlockNumber < viewChangeMagicBlock.MagicBlockNumber {
+		if mb == nil || mb.MagicBlockNumber == viewChangeMagicBlock.MagicBlockNumber-1 {
 			err := mc.UpdateMagicBlock(viewChangeMagicBlock)
 			if err != nil {
 				Logger.DPanic(err.Error())
 			}
 		}
-		if err := mc.SetDKGSFromStore(ctx, viewChangeMagicBlock); err != nil {
+		/*if err := mc.SetDKGSFromStore(ctx, viewChangeMagicBlock); err != nil {
 			Logger.DPanic(err.Error())
-		}
+		}*/
 		if _, err := mc.ensureLatestFinalizedBlocks(ctx, nRound); err != nil {
 			Logger.Warn("vc ensure lfb error", zap.Error(err))
+		}
+		if pr := mc.GetMinerRound(nRound - 1); pr == nil {
+			log.Println("ViewChange prev round not found")
+
+			lfb := mc.GetLatestFinalizedBlock()
+			if lfb != nil {
+				log.Println("ViewChange prev round LFB=", lfb.Hash, "round", lfb.Round)
+			} else {
+				log.Println("ViewChange prev round LFB=nil")
+			}
+
+			cb := mc.GetRound(nRound).(*Round).Block
+			if cb != nil {
+				log.Println("ViewChange prev round Current Block=", cb.Hash)
+				block, err := mc.GetBlock(ctx, cb.Hash)
+				if err != nil {
+					log.Println("ViewChange prev round error", err)
+				} else {
+					mc.AsyncFetchNotarizedPreviousBlock(block)
+				}
+			} else {
+				log.Println("ViewChange prev round Current Block NIL")
+			}
+
+
 		}
 
 		//restart rounds after nround
@@ -289,6 +317,8 @@ func (mc *Chain) ViewChange(ctx context.Context, nRound int64) (bool, error) {
 				log.Println("vc round restart", cRound.GetRoundNumber())
 			}
 		}*/
+		log.Println("ViewChange done")
+		atomic.StoreInt64(&mc.nextViewChange, 0)
 	} else {
 		if err := mc.SetDKGSFromStore(ctx, mb); err != nil {
 			Logger.DPanic(err.Error())

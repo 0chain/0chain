@@ -198,7 +198,7 @@ func (c *Chain) GetHeaviestNotarizedBlock(r round.RoundI) *block.Block {
 	params := &url.Values{}
 	params.Add("round", fmt.Sprintf("%v", roundNumber))
 	ctx, cancelf := context.WithCancel(common.GetRootContext())
-	mb := c.GetCurrentMagicBlock()
+	mb := c.GetMagicBlock(roundNumber)
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		Logger.Info("get notarized block for round", zap.Int64("round", roundNumber), zap.String("block", entity.GetKey()))
 		if b := r.GetHeaviestNotarizedBlock(); b != nil {
@@ -290,7 +290,7 @@ func (c *Chain) GetLatestFinalizedMagicBlockRound(_ context.Context, mr *round.R
 		foundRound := startingRounds[0]
 		for _, round := range startingRounds {
 			foundRound = round
-			if round<=roundBlock  {
+			if round <= roundBlock {
 				break
 			}
 		}

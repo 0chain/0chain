@@ -52,9 +52,9 @@ func SetDKG(ctx context.Context, mb *block.MagicBlock) error {
 }
 
 func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (err2 error) {
-	if mc.GetCurrentDKG(mb.StartingRound)!=nil {
+	/*if mc.GetCurrentDKG(mb.StartingRound)!=nil {
 		return nil
-	}
+	}*/
 	self := node.GetSelfNode(ctx)
 	dkgSummary, err := GetDKGSummaryFromStore(ctx, strconv.FormatInt(mb.MagicBlockNumber, 10))
 	if err != nil {
@@ -164,7 +164,7 @@ func (mc *Chain) GetBlsShare(ctx context.Context, r *round.Round) (string, error
 		Logger.Debug("returning standard string as DKG is not enabled.")
 		return encryption.Hash("0chain"), nil
 	}
-	Logger.Info("DKG getBlsShare ", zap.Int64("Round Number", r.Number), zap.Any("next_view_change", mc.nextViewChange))
+	Logger.Info("DKG getBlsShare ", zap.Int64("Round Number", r.Number))
 	msg, err := mc.GetBlsMessageForRound(r)
 	if err != nil {
 		return "", err

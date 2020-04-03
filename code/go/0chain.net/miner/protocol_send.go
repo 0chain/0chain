@@ -12,21 +12,21 @@ import (
 
 /*SendVRFShare - send the round vrf share */
 func (mc *Chain) SendVRFShare(ctx context.Context, vrfs *round.VRFShare) {
-	mb := mc.GetCurrentMagicBlock()
+	mb := mc.GetMagicBlock(vrfs.Round)
 	m2m := mb.Miners
 	m2m.SendAll(RoundVRFSender(vrfs))
 }
 
 /*SendBlock - send the block proposal to the network */
 func (mc *Chain) SendBlock(ctx context.Context, b *block.Block) {
-	mb := mc.GetCurrentMagicBlock()
+	mb := mc.GetMagicBlock(b.Round)
 	m2m := mb.Miners
 	m2m.SendAll(VerifyBlockSender(b))
 }
 
 /*SendVerificationTicket - send the block verification ticket */
 func (mc *Chain) SendVerificationTicket(ctx context.Context, b *block.Block, bvt *block.BlockVerificationTicket) {
-	mb := mc.GetCurrentMagicBlock()
+	mb := mc.GetMagicBlock(b.Round)
 	m2m := mb.Miners
 	if mc.VerificationTicketsTo == chain.Generator {
 		if b.MinerID != node.Self.Underlying().GetKey() {
@@ -44,7 +44,7 @@ func (mc *Chain) SendNotarization(ctx context.Context, b *block.Block) {
 	notarization.Round = b.Round
 	notarization.VerificationTickets = b.GetVerificationTickets()
 	notarization.Block = b
-	mb := mc.GetCurrentMagicBlock()
+	mb := mc.GetMagicBlock(b.Round)
 	m2m := mb.Miners
 	go m2m.SendAll(BlockNotarizationSender(notarization))
 	mc.SendNotarizedBlock(ctx, b)
@@ -53,7 +53,7 @@ func (mc *Chain) SendNotarization(ctx context.Context, b *block.Block) {
 /*SendNotarizedBlock - send the notarized block */
 func (mc *Chain) SendNotarizedBlock(ctx context.Context, b *block.Block) {
 	if mc.BlocksToSharder == chain.NOTARIZED {
-		mb := mc.GetCurrentMagicBlock()
+		mb := mc.GetMagicBlock(b.Round)
 		m2s := mb.Sharders
 		m2s.SendAll(NotarizedBlockSender(b))
 	}
@@ -62,7 +62,7 @@ func (mc *Chain) SendNotarizedBlock(ctx context.Context, b *block.Block) {
 /*SendFinalizedBlock - send the finalized block to the sharders */
 func (mc *Chain) SendFinalizedBlock(ctx context.Context, b *block.Block) {
 	if mc.BlocksToSharder == chain.FINALIZED {
-		mb := mc.GetCurrentMagicBlock()
+		mb := mc.GetMagicBlock(b.Round)
 		m2s := mb.Sharders
 		m2s.SendAll(FinalizedBlockSender(b))
 	}
@@ -70,7 +70,7 @@ func (mc *Chain) SendFinalizedBlock(ctx context.Context, b *block.Block) {
 
 /*SendNotarizedBlockToMiners - send a notarized block to a miner */
 func (mc *Chain) SendNotarizedBlockToMiners(ctx context.Context, b *block.Block) {
-	mb := mc.GetCurrentMagicBlock()
+	mb := mc.GetMagicBlock(b.Round)
 	m2m := mb.Miners
 	m2m.SendAll(MinerNotarizedBlockSender(b))
 }

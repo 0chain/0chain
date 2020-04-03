@@ -5,6 +5,7 @@ import (
 	"math"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	metrics "github.com/rcrowley/go-metrics"
@@ -666,7 +667,7 @@ func (mc *Chain) GetNextRoundTimeoutTime(ctx context.Context) int {
 // HandleRoundTimeout handle timeouts appropriately
 func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
 	r := mc.GetMinerRound(mc.GetCurrentRound())
-	if r.Number == 0 && mc.nextViewChange == 0 {
+	if r.Number == 0 && atomic.LoadInt64(&mc.nextViewChange) == 0 {
 		return
 	}
 

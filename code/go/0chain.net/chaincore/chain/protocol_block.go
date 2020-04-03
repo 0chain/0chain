@@ -70,7 +70,7 @@ func (c *Chain) IsBlockNotarized(ctx context.Context, b *block.Block) bool {
 }
 
 func (c *Chain) roundMiners(round int64) (miners *node.Pool) {
-	mb := c.GetCurrentMagicBlock()
+	mb := c.GetMagicBlock(round)
 	if mb == nil {
 		return
 	}
@@ -172,8 +172,6 @@ func (c *Chain) MergeVerificationTickets(ctx context.Context, b *block.Block, vt
 }
 
 func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockStateHandler) {
-	bNode := node.GetNode(fb.MinerID)
-	ms := bNode.ProtocolStats.(*MinerStats)
 	Logger.Info("finalize block", zap.Int64("round", fb.Round), zap.Int64("current_round", c.GetCurrentRound()),
 		zap.Int64("lf_round", c.GetLatestFinalizedBlock().Round), zap.String("hash", fb.Hash),
 		zap.Int("round_rank", fb.RoundRank), zap.Int8("state", fb.GetBlockState()))
@@ -182,7 +180,12 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 			zap.Int("round_rank", fb.RoundRank),
 			zap.Int("num_generators", c.NumGenerators))
 	} else {
-		ms.FinalizationCountByRank[fb.RoundRank]++ // stat
+		bNode := node.GetNode(fb.MinerID)
+		if bNode.ProtocolStats !=nil {
+			//FIXME: fix node stats
+			ms := bNode.ProtocolStats.(*MinerStats)
+			ms.FinalizationCountByRank[fb.RoundRank]++ // stat
+		}
 	}
 	fr := c.GetRound(fb.Round)
 	Logger.Info("finalize block -- round", zap.Any("round", fr))
@@ -247,7 +250,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 //IsFinalizedDeterministically - checks if a block is finalized deterministically
 func (c *Chain) IsFinalizedDeterministically(b *block.Block) bool {
 	//TODO: The threshold count should happen w.r.t the view of the block
-	mb := c.GetCurrentMagicBlock()
+	mb := c.GetMagicBlock(b.Round)
 	if c.GetLatestFinalizedBlock().Round < b.Round {
 		return false
 	}

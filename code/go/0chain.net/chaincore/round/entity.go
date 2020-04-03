@@ -472,8 +472,9 @@ func (r *Round) AddAdditionalVRFShare(share *VRFShare) bool {
 
 //AddVRFShare - implement interface
 func (r *Round) AddVRFShare(share *VRFShare, threshold int) bool {
-	r.Mutex.Lock()
-	defer r.Mutex.Unlock()
+	//r.Mutex.Lock()
+	//defer r.Mutex.Unlock()
+	//FIXME: deadlock
 	if len(r.getVRFShares()) >= threshold {
 		//if we already have enough shares, do not add.
 		Logger.Info("AddVRFShare Already at threshold. Returning false.")
@@ -490,8 +491,9 @@ func (r *Round) AddVRFShare(share *VRFShare, threshold int) bool {
 
 //GetVRFShares - implement interface
 func (r *Round) GetVRFShares() map[string]*VRFShare {
-	r.Mutex.RLock()
-	defer r.Mutex.RUnlock()
+	//r.Mutex.RLock()
+	//defer r.Mutex.RUnlock()
+	//FIXME: deadlock
 	return r.getVRFShares()
 }
 
