@@ -54,6 +54,13 @@ func TestStorageSmartContract_addBlobber(t *testing.T) {
 	require.NotNil(t, ab)
 }
 
+func (rps *readPools) getFirst(allocID string) *readPool {
+	for _, x := range rps.Pools[allocID] {
+		return x
+	}
+	return nil
+}
+
 // - create allocation
 // - write
 // - read as owner
@@ -129,7 +136,8 @@ func Test_flow_reward(t *testing.T) {
 		tx = newTransaction(client.id, ssc.ID, 2*x10, tp)
 		balances.txn = tx
 		_, err = ssc.readPoolLock(tx, mustEncode(t, &lockRequest{
-			Duration: 20 * time.Minute,
+			Duration:     20 * time.Minute,
+			AllocationID: alloc.ID,
 		}), balances)
 		require.NoError(t, err)
 
@@ -147,14 +155,7 @@ func Test_flow_reward(t *testing.T) {
 		rps, err = ssc.getReadPools(client.id, balances)
 		require.NoError(t, err)
 
-		var getFirst = func(m map[string]*readPool) (rp *readPool) {
-			for _, rp = range m {
-				return
-			}
-			return
-		}
-
-		var rp = getFirst(rps.Pools)
+		var rp = rps.getFirst(alloc.ID)
 		require.EqualValues(t, x10, rp.Balance)
 
 		// min lock demand reducing
@@ -197,7 +198,8 @@ func Test_flow_reward(t *testing.T) {
 		tx = newTransaction(reader.id, ssc.ID, 2*x10, tp)
 		balances.txn = tx
 		_, err = ssc.readPoolLock(tx, mustEncode(t, &lockRequest{
-			Duration: 20 * time.Minute,
+			Duration:     20 * time.Minute,
+			AllocationID: alloc.ID,
 		}), balances)
 		require.NoError(t, err)
 
@@ -215,14 +217,7 @@ func Test_flow_reward(t *testing.T) {
 		rps, err = ssc.getReadPools(reader.id, balances)
 		require.NoError(t, err)
 
-		var getFirst = func(m map[string]*readPool) (rp *readPool) {
-			for _, rp = range m {
-				return
-			}
-			return
-		}
-
-		var rp = getFirst(rps.Pools)
+		var rp = rps.getFirst(alloc.ID)
 		require.EqualValues(t, 10000000000, rp.Balance)
 
 		// min lock demand reducing

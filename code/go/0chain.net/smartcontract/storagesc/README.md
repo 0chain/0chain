@@ -358,20 +358,77 @@ free to use these zbox command.
       --localpath=random.bin \
       --remotepath=/remote/random.bin
     ```
-17. Upload it to the second allocations.
+17. Check out uploaded list
     ```
+    ./zbox list --allocation $ALLOC1 --remotepath /remote
+    ```
+18. Check out related challenge pool after blobbers commit their write markers
+    in SC.
+    ```
+    ./zbox cp-info --allocation $ALLOC1
+    ```
+19. Wait a challenge some time. Check challenge pool again.
+20. Check out blobbers wallets to see their rewards.
+    ```
+    ./zwallet getbalance --wallet=blobber1.json
+    ./zwallet getbalance --wallet=blobber2.json
+    ```
+21. Delete the file
+    ```
+    ./zbox delete --allocation $ALLOC1 --remotepath /remote/random.bin
+    ```
+22. Check out challenge pool again.
+    ```
+    ./zbox cp-info --allocation $ALLOC1
+    ```
+23. Generate and upload another file.
+    ```
+    head -c 50M < /dev/urandom > random.bin
     ./zbox upload \
-      --allocation $ALLOC2 \
+      --allocation $ALLOC1 \
       --commit \
       --localpath=random.bin \
       --remotepath=/remote/random.bin
     ```
-18. Check out related challenge pools.
+24. Check out uploaded list
+    ```
+    ./zbox list --allocation $ALLOC1 --remotepath /remote
+    ```
+25. Check out related challenge pool after blobbers commit their write markers
+    in SC.
     ```
     ./zbox cp-info --allocation $ALLOC1
-    ./zbox cp-info --allocation $ALLOC2
     ```
-19. Wait a challenge some time.
+26. Commit some tokens to a read pool.
+    ```
+    ./zbox rp-lock --duration 12m --tokens 1
+    ```
+27. Check out locked tokens in the read pool.
+    ```
+    ./zbox rp-info
+    ```
+28. Download the file.
+    ```
+    rm -f got.bin
+    ./zbox download --allocation $ALLOC1 --localpath=got.bin \
+        --remotepath /remote/random.bin
+    ```
+29. Check the file, check read pool
+    ```
+    diff got.bin random.bin
+    ./zbox rp-info
+    ```
+30. Now, download with `--commit`
+    ```
+    rm -f got.bin
+    ./zbox download --allocation $ALLOC1 --localpath=got.bin \
+        --remotepath /remote/random.bin --commit
+    ```
+31. Check read pool
+    ```
+    ./zbox rp-info
+    ```
+
 
 ================================================================================
 

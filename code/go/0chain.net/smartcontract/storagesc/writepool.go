@@ -418,15 +418,9 @@ func (ssc *StorageSmartContract) finalizeAllocation(t *transaction.Transaction,
 		}
 	}
 
-	alloc.UsedSize = 0 // have to be reset
-
 	// 2. move min_lock_demands left to blobber's stake pools
 	// 3. remove blobber's offers (update)
 	for i, d := range alloc.BlobberDetails {
-		if d.Stats != nil {
-			alloc.UsedSize += d.Stats.UsedSize
-		}
-
 		var sp *stakePool
 		if sp, err = ssc.getStakePool(d.BlobberID, balances); err != nil {
 			return "", common.NewError("fini_alloc_failed",
