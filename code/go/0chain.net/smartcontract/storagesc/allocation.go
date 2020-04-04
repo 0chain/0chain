@@ -172,7 +172,7 @@ func updateBlobbersInAll(all *StorageNodes, update []*StorageNode,
 		if ok {
 			all.Nodes[i] = b // replace only it found
 		}
-		// don't replace if blobber has remove from the all blobbers list;
+		// don't replace if blobber has removed from the all blobbers list;
 		// for example, if the blobber has removed, then it shouldn't be
 		// in the all blobbers list
 	}
