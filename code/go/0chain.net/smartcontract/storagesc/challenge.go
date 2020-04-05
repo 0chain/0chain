@@ -103,9 +103,6 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		ratio = 1 // all left (allocation expired, challenge completion time)
 	}
 
-	// blobber ratio (of all blobbers)
-	ratio *= float64(details.Stats.UsedSize) / float64(alloc.UsedSize)
-
 	var (
 		stake = sizeInGB(details.Stats.UsedSize) *
 			float64(details.Terms.WritePrice)
@@ -174,9 +171,6 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 	if tp > alloc.Expiration {
 		ratio = 1 // all left (allocation expired, challenge completion time)
 	}
-
-	// blobber ratio (of all blobbers)
-	ratio *= float64(details.Stats.UsedSize) / float64(alloc.UsedSize)
 
 	var (
 		stake = sizeInGB(details.Stats.UsedSize) *
