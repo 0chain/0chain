@@ -10,12 +10,10 @@ import (
 	"strconv"
 	"time"
 
-	"0chain.net/chaincore/chain"
 	c_state "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	"0chain.net/core/encryption"
 	"0chain.net/core/util"
 )
 
@@ -332,60 +330,11 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 	return buff, nil
 }
 
-type updateTicket struct {
-	AllocationID string           `json:"allocation_id"`
-	BlobberID    string           `json:"blobber_id"`
-	Expire       common.Timestamp `json:"expire"`
-	Tx           string           `json:"tx"`
-
-	// signature
-	PublicKey string `json:"public_key"`
-	Sign      string `json:"sign"`
-}
-
-func (ut *updateTicket) data() []byte {
-	return []byte(fmt.Sprintf("%s:%s:%s:%d",
-		ut.AllocationID, ut.BlobberID, ut.Tx, ut.Expire))
-}
-
-func (ut *updateTicket) dataHash() string {
-	return encryption.Hash(ut.data())
-}
-
-func (ut *updateTicket) verify(now common.Timestamp,
-	alloc *StorageAllocation) (ok bool) {
-
-	if ut.AllocationID != alloc.ID {
-		return // invalid allocation id
-	}
-	if ut.Expire < now {
-		return // expired ticket
-	}
-	if ut.Tx != alloc.Tx {
-		return // invalid allocation transaction
-	}
-	var blobberID = encryption.Hash([]byte(ut.PublicKey))
-	if blobberID != ut.BlobberID {
-		return // invalid public key
-	}
-	var (
-		scheme = chain.GetServerChain().GetSignatureScheme()
-		err    error
-	)
-	scheme.SetPublicKey(ut.PublicKey)
-	ok, err = scheme.Verify(ut.Sign, ut.dataHash())
-	if err != nil || ok == false {
-		return // invalid signature
-	}
-	return true // verified
-}
-
 // update allocation request
 type updateAllocationRequest struct {
 	ID         string           `json:"id"`         // allocation id
 	Size       int64            `json:"size"`       // difference
 	Expiration common.Timestamp `json:"expiration"` // difference
-	Tickets    []*updateTicket  `json:"tickets"`    //
 }
 
 func (uar *updateAllocationRequest) decode(b []byte) error {
@@ -394,7 +343,7 @@ func (uar *updateAllocationRequest) decode(b []byte) error {
 
 // validate request
 func (uar *updateAllocationRequest) validate(conf *scConfig,
-	alloc *StorageAllocation, now common.Timestamp) (err error) {
+	alloc *StorageAllocation) (err error) {
 
 	if uar.Size == 0 && uar.Expiration == 0 {
 		return errors.New("update allocation changes nothing")
@@ -407,27 +356,6 @@ func (uar *updateAllocationRequest) validate(conf *scConfig,
 
 	if len(alloc.BlobberDetails) == 0 {
 		return errors.New("invalid allocation for updating: no blobbers")
-	}
-
-	if len(uar.Tickets) != len(alloc.BlobberDetails) {
-		return fmt.Errorf("wrong number of blobbers' tickets: %d != %d",
-			len(uar.Tickets), len(alloc.BlobberDetails))
-	}
-
-	var (
-		got = make(map[string]struct{}, len(alloc.BlobberDetails))
-		ok  bool
-	)
-	for _, tk := range uar.Tickets {
-		_, ok = alloc.BlobberMap[tk.BlobberID]
-		if !ok || !tk.verify(now, alloc) {
-			return errors.New("invalid updating ticket")
-		}
-		got[tk.BlobberID] = struct{}{}
-	}
-
-	if len(got) != len(alloc.BlobberDetails) {
-		return errors.New("wrong or missing updating tickets")
 	}
 
 	return
@@ -815,7 +743,7 @@ func (sc *StorageSmartContract) updateAllocationRequest(
 			"can't get existing allocation: "+err.Error())
 	}
 
-	if err = request.validate(conf, alloc, t.CreationDate); err != nil {
+	if err = request.validate(conf, alloc); err != nil {
 		return "", common.NewError("allocation_updating_failed", err.Error())
 	}
 

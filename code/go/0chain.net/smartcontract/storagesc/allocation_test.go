@@ -504,101 +504,32 @@ func Test_updateAllocationRequest_decode(t *testing.T) {
 	assert.EqualValues(t, ue, ud)
 }
 
-func Test_updateTicket_verify(t *testing.T) {
-	const allocID, txHash = "alloc_hex", "tx_hash"
-	var (
-		balances = newTestBalances()
-		alloc    StorageAllocation
-		b1       = newClient(0, balances)
-		tk       = b1.updateTicket(t, allocID, txHash, 150)
-	)
-	alloc.ID = allocID + "-wrong"
-	alloc.Tx = txHash + "-wrong"
-	assert.False(t, tk.verify(100, &alloc))
-	alloc.ID = allocID
-	alloc.Tx = txHash + "-wrong"
-	assert.False(t, tk.verify(100, &alloc))
-	alloc.Tx = txHash
-	assert.False(t, tk.verify(200, &alloc))
-	assert.True(t, tk.verify(100, &alloc))
-}
-
 func Test_updateAllocationRequest_validate(t *testing.T) {
-	const allocID = "allocHex"
 
 	var (
 		conf  scConfig
 		uar   updateAllocationRequest
 		alloc StorageAllocation
-
-		balances = newTestBalances()
 	)
 
-	uar.ID = allocID
-	alloc.ID = allocID
-	alloc.Tx = allocID
 	alloc.Size = 10 * GB
 
 	// 1. zero
-	assert.Error(t, uar.validate(&conf, &alloc, 100))
+	assert.Error(t, uar.validate(&conf, &alloc))
 
 	// 2. becomes to small
 	var sub = 9.01 * GB
 	uar.Size -= int64(sub)
 	conf.MinAllocSize = 1 * GB
-	assert.Error(t, uar.validate(&conf, &alloc, 100))
+	assert.Error(t, uar.validate(&conf, &alloc))
 
 	// 3. no blobbers (invalid allocation, panic check)
 	uar.Size = 1 * GB
-	assert.Error(t, uar.validate(&conf, &alloc, 100))
+	assert.Error(t, uar.validate(&conf, &alloc))
 
-	// 4. wrong number of tickets
+	// 4. ok
 	alloc.BlobberDetails = []*BlobberAllocation{&BlobberAllocation{}}
-	assert.Error(t, uar.validate(&conf, &alloc, 100))
-
-	// 5. invalid ticket (invalid allocation id)
-	var (
-		d1, d2 BlobberAllocation
-		b1, b2 = newClient(0, balances), newClient(0, balances)
-	)
-	alloc.BlobberMap = map[string]*BlobberAllocation{b1.id: &d1, b2.id: &d2}
-	alloc.BlobberDetails = []*BlobberAllocation{&d1, &d2}
-
-	var tk1, tk2 = b1.updateTicket(t, allocID, allocID, 50),
-		b2.updateTicket(t, allocID, allocID, 50)
-	tk2.AllocationID = "anotherHex"
-	uar.Tickets = []*updateTicket{tk1, tk2}
-
-	assert.Error(t, uar.validate(&conf, &alloc, 50))
-
-	// 6. invalid ticket (invalid public key)
-	var b3 = newClient(0, balances)
-	tk2.AllocationID = alloc.ID
-	tk2.PublicKey = b3.pk
-
-	assert.Error(t, uar.validate(&conf, &alloc, 50))
-
-	// 7. invalid ticket (invalid signature)
-	tk2.PublicKey = b2.pk
-	var keep = tk2.Sign
-	tk2.Sign = "wrong-sign"
-	assert.Error(t, uar.validate(&conf, &alloc, 50))
-
-	// 8. invalid tickets (missing)
-	tk2.Sign = keep
-	uar.Tickets = []*updateTicket{tk1, tk1}
-	assert.Error(t, uar.validate(&conf, &alloc, 50))
-
-	// 5. ok
-	uar.Tickets = []*updateTicket{tk1, tk2}
-	assert.NoError(t, uar.validate(&conf, &alloc, 50))
-
-	// 6. expired ticket
-	assert.Error(t, uar.validate(&conf, &alloc, 150))
-
-	// 7. wrong tx
-	alloc.Tx = "tx_hash"
-	assert.Error(t, uar.validate(&conf, &alloc, 50))
+	assert.NoError(t, uar.validate(&conf, &alloc))
 }
 
 func Test_updateAllocationRequest_getBlobbersSizeDiff(t *testing.T) {
@@ -809,18 +740,6 @@ func (alloc *StorageAllocation) deepCopy(t *testing.T) (cp *StorageAllocation) {
 	return
 }
 
-func (uar *updateAllocationRequest) updateTestTickets(t *testing.T,
-	blobs []*Client, alloc *StorageAllocation, expire int64) {
-
-	uar.Tickets = nil
-	for _, b := range blobs {
-		if _, ok := alloc.BlobberMap[b.id]; ok {
-			uar.Tickets = append(uar.Tickets,
-				b.updateTicket(t, alloc.ID, alloc.Tx, expire))
-		}
-	}
-}
-
 func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 
 	var (
@@ -859,7 +778,6 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	uar.ID = alloc.ID
 	uar.Expiration = alloc.Expiration * 2
 	uar.Size = alloc.Size * 2
-	uar.updateTestTickets(t, blobs, alloc, tp+200)
 	tp += 100
 	resp, err = uar.callUpdateAllocReq(t, client.id, 20*x10, tp, ssc, balances)
 	require.NoError(t, err)
@@ -896,7 +814,6 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	uar.ID = alloc.ID
 	uar.Expiration = -(alloc.Expiration / 2)
 	uar.Size = -(alloc.Size / 2)
-	uar.updateTestTickets(t, blobs, alloc, tp+200)
 
 	tp += 100
 	resp, err = uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
