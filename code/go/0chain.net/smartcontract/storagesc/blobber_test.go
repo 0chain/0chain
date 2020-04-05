@@ -55,7 +55,7 @@ func TestStorageSmartContract_addBlobber(t *testing.T) {
 }
 
 func (rps *readPools) getFirst(allocID string) *readPool {
-	for _, x := range rps.Pools[allocID] {
+	for _, x := range rps.Pools {
 		return x
 	}
 	return nil
@@ -136,8 +136,7 @@ func Test_flow_reward(t *testing.T) {
 		tx = newTransaction(client.id, ssc.ID, 2*x10, tp)
 		balances.txn = tx
 		_, err = ssc.readPoolLock(tx, mustEncode(t, &lockRequest{
-			Duration:     20 * time.Minute,
-			AllocationID: alloc.ID,
+			Duration: 20 * time.Minute,
 		}), balances)
 		require.NoError(t, err)
 
@@ -198,8 +197,7 @@ func Test_flow_reward(t *testing.T) {
 		tx = newTransaction(reader.id, ssc.ID, 2*x10, tp)
 		balances.txn = tx
 		_, err = ssc.readPoolLock(tx, mustEncode(t, &lockRequest{
-			Duration:     20 * time.Minute,
-			AllocationID: alloc.ID,
+			Duration: 20 * time.Minute,
 		}), balances)
 		require.NoError(t, err)
 

@@ -419,7 +419,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"can't get related read pool: "+err.Error())
 	}
 
-	err = rps.moveToBlobber(sc.ID, alloc.ID, commitRead.ReadMarker.BlobberID,
+	err = rps.moveToBlobber(sc.ID, commitRead.ReadMarker.BlobberID,
 		t.CreationDate, value, balances)
 	if err != nil {
 		return "", common.NewError("commit_read_failed",
