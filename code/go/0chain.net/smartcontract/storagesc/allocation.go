@@ -333,8 +333,10 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 }
 
 type updateTicket struct {
-	AllocationID string `json:"allocation_id"`
-	BlobberID    string `json:"blobber_id"`
+	AllocationID string           `json:"allocation_id"`
+	BlobberID    string           `json:"blobber_id"`
+	Expire       common.Timestamp `json:"expire"`
+	Tx           string           `json:"tx"`
 
 	// signature
 	PublicKey string `json:"public_key"`
@@ -342,16 +344,25 @@ type updateTicket struct {
 }
 
 func (ut *updateTicket) data() []byte {
-	return []byte(fmt.Sprintf("%s:%s", ut.AllocationID, ut.BlobberID))
+	return []byte(fmt.Sprintf("%s:%s:%s:%d",
+		ut.AllocationID, ut.BlobberID, ut.Tx, ut.Expire))
 }
 
 func (ut *updateTicket) dataHash() string {
 	return encryption.Hash(ut.data())
 }
 
-func (ut *updateTicket) verify(uar *updateAllocationRequest) (ok bool) {
-	if ut.AllocationID != uar.ID {
+func (ut *updateTicket) verify(now common.Timestamp,
+	alloc *StorageAllocation) (ok bool) {
+
+	if ut.AllocationID != alloc.ID {
 		return // invalid allocation id
+	}
+	if ut.Expire < now {
+		return // expired ticket
+	}
+	if ut.Tx != alloc.Tx {
+		return // invalid allocation transaction
 	}
 	var blobberID = encryption.Hash([]byte(ut.PublicKey))
 	if blobberID != ut.BlobberID {
@@ -383,7 +394,7 @@ func (uar *updateAllocationRequest) decode(b []byte) error {
 
 // validate request
 func (uar *updateAllocationRequest) validate(conf *scConfig,
-	alloc *StorageAllocation) (err error) {
+	alloc *StorageAllocation, now common.Timestamp) (err error) {
 
 	if uar.Size == 0 && uar.Expiration == 0 {
 		return errors.New("update allocation changes nothing")
@@ -409,7 +420,7 @@ func (uar *updateAllocationRequest) validate(conf *scConfig,
 	)
 	for _, tk := range uar.Tickets {
 		_, ok = alloc.BlobberMap[tk.BlobberID]
-		if !ok || !tk.verify(uar) {
+		if !ok || !tk.verify(now, alloc) {
 			return errors.New("invalid updating ticket")
 		}
 		got[tk.BlobberID] = struct{}{}
@@ -804,7 +815,7 @@ func (sc *StorageSmartContract) updateAllocationRequest(
 			"can't get existing allocation: "+err.Error())
 	}
 
-	if err = request.validate(conf, alloc); err != nil {
+	if err = request.validate(conf, alloc, t.CreationDate); err != nil {
 		return "", common.NewError("allocation_updating_failed", err.Error())
 	}
 

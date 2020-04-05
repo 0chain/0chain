@@ -81,10 +81,14 @@ func newClient(balance state.Balance, balances chainState.StateContextI) (
 	return
 }
 
-func (c *Client) updateTicket(t *testing.T, allocID string) (ut *updateTicket) {
+func (c *Client) updateTicket(t *testing.T, allocID, txHash string,
+	expire int64) (ut *updateTicket) {
+
 	ut = new(updateTicket)
 	ut.AllocationID = allocID
 	ut.BlobberID = c.id
+	ut.Tx = txHash
+	ut.Expire = common.Timestamp(expire)
 	ut.PublicKey = c.pk
 	var err error
 	ut.Sign, err = c.scheme.Sign(ut.dataHash())
