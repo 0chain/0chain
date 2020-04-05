@@ -504,14 +504,31 @@ func Test_updateAllocationRequest_decode(t *testing.T) {
 	assert.EqualValues(t, ue, ud)
 }
 
+func Test_updateTicket_verify(t *testing.T) {
+	const allocID = "alloc_hex"
+	var (
+		balances = newTestBalances()
+		uar      updateAllocationRequest
+		b1       = newClient(0, balances)
+		tk       = b1.updateTicket(t, allocID)
+	)
+	uar.ID = allocID
+	assert.True(t, tk.verify(&uar))
+}
+
 func Test_updateAllocationRequest_validate(t *testing.T) {
+	const allocID = "allocHex"
 
 	var (
 		conf  scConfig
 		uar   updateAllocationRequest
 		alloc StorageAllocation
+
+		balances = newTestBalances()
 	)
 
+	uar.ID = allocID
+	alloc.ID = allocID
 	alloc.Size = 10 * GB
 
 	// 1. zero
@@ -527,8 +544,44 @@ func Test_updateAllocationRequest_validate(t *testing.T) {
 	uar.Size = 1 * GB
 	assert.Error(t, uar.validate(&conf, &alloc))
 
-	// 4. ok
+	// 4. wrong number of tickets
 	alloc.BlobberDetails = []*BlobberAllocation{&BlobberAllocation{}}
+	assert.Error(t, uar.validate(&conf, &alloc))
+
+	// 5. invalid ticket (invalid allocation id)
+	var (
+		d1, d2 BlobberAllocation
+		b1, b2 = newClient(0, balances), newClient(0, balances)
+	)
+	alloc.BlobberMap = map[string]*BlobberAllocation{b1.id: &d1, b2.id: &d2}
+	alloc.BlobberDetails = []*BlobberAllocation{&d1, &d2}
+
+	var tk1, tk2 = b1.updateTicket(t, allocID), b2.updateTicket(t, allocID)
+	tk2.AllocationID = "anotherHex"
+	uar.Tickets = []*updateTicket{tk1, tk2}
+
+	assert.Error(t, uar.validate(&conf, &alloc))
+
+	// 6. invalid ticket (invalid public key)
+	var b3 = newClient(0, balances)
+	tk2.AllocationID = alloc.ID
+	tk2.PublicKey = b3.pk
+
+	assert.Error(t, uar.validate(&conf, &alloc))
+
+	// 7. invalid ticket (invalid signature)
+	tk2.PublicKey = b2.pk
+	var keep = tk2.Sign
+	tk2.Sign = "wrong-sign"
+	assert.Error(t, uar.validate(&conf, &alloc))
+
+	// 8. invalid tickets (missing)
+	tk2.Sign = keep
+	uar.Tickets = []*updateTicket{tk1, tk1}
+	assert.Error(t, uar.validate(&conf, &alloc))
+
+	// 5. ok
+	uar.Tickets = []*updateTicket{tk1, tk2}
 	assert.NoError(t, uar.validate(&conf, &alloc))
 }
 
@@ -741,6 +794,7 @@ func (alloc *StorageAllocation) deepCopy(t *testing.T) (cp *StorageAllocation) {
 }
 
 func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
+
 	var (
 		ssc                  = newTestStorageSC()
 		balances             = newTestBalances()
@@ -777,6 +831,11 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	uar.ID = alloc.ID
 	uar.Expiration = alloc.Expiration * 2
 	uar.Size = alloc.Size * 2
+	for _, b := range blobs {
+		if _, ok := alloc.BlobberMap[b.id]; ok {
+			uar.Tickets = append(uar.Tickets, b.updateTicket(t, allocID))
+		}
+	}
 	tp += 100
 	resp, err = uar.callUpdateAllocReq(t, client.id, 20*x10, tp, ssc, balances)
 	require.NoError(t, err)

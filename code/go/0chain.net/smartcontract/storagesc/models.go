@@ -370,7 +370,12 @@ func (pr *PriceRange) isMatch(price state.Balance) bool {
 
 // StorageAllocation request and entity.
 type StorageAllocation struct {
-	ID                string                        `json:"id"`
+	// ID is unique allocation ID that is equal to hash of transaction with
+	// which the allocation has created.
+	ID string `json:"id"`
+	// Tx keeps hash with which the allocation has created or updated.
+	Tx string `json:"tx"`
+
 	DataShards        int                           `json:"data_shards"`
 	ParityShards      int                           `json:"parity_shards"`
 	Size              int64                         `json:"size"`
