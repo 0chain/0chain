@@ -18,6 +18,7 @@ type RoundStorage interface {
 	Prune(round int64) error
 	Count() int
 	GetRound(i int) int64
+	FindRoundIndex(round int64) int
 	GetRounds() []int64
 }
 
@@ -51,6 +52,23 @@ func (s *roundStartingStorage) Get(round int64) RoundStorageEntity {
 		return nil
 	}
 	return entity
+}
+
+func (s *roundStartingStorage) FindRoundIndex(round int64) int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if round > s.max && s.max > 0 {
+		return len(s.rounds) - 1
+	}
+	found := -1
+	for i := 0; i < len(s.rounds); i++ {
+		if round >= s.rounds[i] {
+			found = i
+		} else {
+			break
+		}
+	}
+	return found
 }
 
 func (s *roundStartingStorage) calcNearestRound(round int64) int64 {

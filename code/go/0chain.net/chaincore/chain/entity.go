@@ -4,6 +4,7 @@ import (
 	"container/ring"
 	"context"
 	"fmt"
+	"log"
 	"math"
 	"sort"
 	"sync"
@@ -78,7 +79,7 @@ type Chain struct {
 	//Chain config goes into this object
 	*Config
 
-	MagicBlockStorage round.RoundStorage  `json:"-"`
+	MagicBlockStorage round.RoundStorage `json:"-"`
 
 	PreviousMagicBlock   *block.MagicBlock `json:"-"`
 	viewChangeMagicBlock *block.MagicBlock `json:"-"`
@@ -159,6 +160,30 @@ func (c *Chain) GetMagicBlock(round int64) *block.MagicBlock {
 		Logger.Panic("failed to get magic block from mb storage")
 	}
 	return entity.(*block.MagicBlock)
+}
+
+func (c *Chain) GetPrevMagicBlock(round int64) *block.MagicBlock {
+	c.mbMutex.RLock()
+	defer c.mbMutex.RUnlock()
+	indexMB := c.MagicBlockStorage.FindRoundIndex(round)
+	if indexMB <= 0 {
+		log.Println("Prev MB from chain, indexMB", indexMB)
+		return c.PreviousMagicBlock
+	}
+	prevRoundVC := c.MagicBlockStorage.GetRound(indexMB-1)
+	entity := c.MagicBlockStorage.Get(prevRoundVC)
+
+	log.Println("Prev MB from chain.", prevRoundVC,
+		"indexMB", indexMB, " rounds MB", c.MagicBlockStorage.GetRounds(), "round", round,
+		" found?", entity != nil)
+
+	if entity != nil {
+		log.Println("Prev MB", entity.(*block.MagicBlock).MagicBlockNumber)
+		return entity.(*block.MagicBlock)
+	}
+ //Prev MB from chain. -1 indexMB 1  rounds MB [0 101 201] round 200  found? false
+  //Prev MB from chain. 200 indexMB 3  rounds MB [0 101 201 301 401] round 400  found? tru
+	return c.PreviousMagicBlock
 }
 
 func (c *Chain) SetMagicBlock(mb *block.MagicBlock) {
@@ -616,14 +641,8 @@ func (c *Chain) GetGenerators(r round.RoundI) []*node.Node {
 /*GetMiners - get all the miners for a given round */
 func (c *Chain) GetMiners(round int64) *node.Pool {
 	mb := c.GetMagicBlock(round)
-	if round >= mb.StartingRound || mb.StartingRound == 0 {
-		Logger.Info("get miners -- current magic block", zap.Any("miners", mb.Miners), zap.Any("round", round))
-		return mb.Miners
-	} else {
-		Logger.Info("get miners -- previous magic block", zap.Any("miners", c.PreviousMagicBlock.Miners), zap.Any("round", round))
-		return c.PreviousMagicBlock.Miners
-	}
-	return nil
+	Logger.Info("get miners -- current magic block", zap.Any("miners", mb.Miners), zap.Any("round", round))
+	return mb.Miners
 }
 
 /*IsBlockSharder - checks if the sharder can store the block in the given round */
@@ -1149,14 +1168,16 @@ func (c *Chain) GetLatestFinalizedMagicBlockSummary() *block.BlockSummary {
 }
 
 func (c *Chain) GetNodesPreviousInfo() {
-	mb := c.GetCurrentMagicBlock()
+	currentRound := c.GetCurrentRound()
+	mb := c.GetMagicBlock(currentRound)
+	prevMB := c.GetPrevMagicBlock(currentRound)
 	for key, miner := range mb.Miners.CopyNodesMap() {
-		if old := c.PreviousMagicBlock.Miners.GetNode(key); old != nil {
+		if old := prevMB.Miners.GetNode(key); old != nil {
 			miner.SetNodeInfo(old)
 		}
 	}
 	for key, sharder := range mb.Sharders.CopyNodesMap() {
-		if old := c.PreviousMagicBlock.Sharders.GetNode(key); old != nil {
+		if old := prevMB.Sharders.GetNode(key); old != nil {
 			sharder.SetNodeInfo(old)
 		}
 	}

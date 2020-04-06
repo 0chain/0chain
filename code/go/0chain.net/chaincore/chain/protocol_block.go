@@ -69,23 +69,6 @@ func (c *Chain) IsBlockNotarized(ctx context.Context, b *block.Block) bool {
 	return notarized
 }
 
-func (c *Chain) roundMiners(round int64) (miners *node.Pool) {
-	mb := c.GetMagicBlock(round)
-	if mb == nil {
-		return
-	}
-	if round >= mb.StartingRound {
-		return mb.Miners
-	}
-	if c.PreviousMagicBlock == nil {
-		return
-	}
-	if round >= c.PreviousMagicBlock.StartingRound {
-		return c.PreviousMagicBlock.Miners
-	}
-	return
-}
-
 func (c *Chain) reachedNotarization(round int64,
 	bvt []*block.VerificationTicket) bool {
 
