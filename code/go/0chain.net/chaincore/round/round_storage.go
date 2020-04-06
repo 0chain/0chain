@@ -6,7 +6,6 @@ import (
 )
 
 var (
-	ErrPutRoundTwice       = errors.New("put round twice")
 	ErrRoundEntityNotFound = errors.New("round entity not found")
 )
 
@@ -84,11 +83,13 @@ func (s *roundStartingStorage) Put(entity RoundStorageEntity, round int64) error
 	if round > s.max {
 		s.max = round
 	}
-	/*if err := s.check(round); err != nil {
-		return err
-	}*/
+
+	_, found := s.items[round]
 	s.items[round] = entity
-	s.putToSlice(round)
+	if !found {
+		s.putToSlice(round)
+	}
+
 	return nil
 }
 
@@ -109,10 +110,6 @@ func (s *roundStartingStorage) putToSlice(round int64) {
 }
 
 func (s *roundStartingStorage) check(round int64) error {
-	//TODO: check twice put
-	if _, found := s.items[round]; found {
-		return ErrPutRoundTwice
-	}
 	return nil
 }
 

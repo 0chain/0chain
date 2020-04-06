@@ -78,9 +78,7 @@ type Chain struct {
 	//Chain config goes into this object
 	*Config
 
-	// MagicBlock - this is the current magic block for the chain
-	//mb                   *block.MagicBlock `json:"-"`
-	magicBlockStorage round.RoundStorage
+	MagicBlockStorage round.RoundStorage  `json:"-"`
 
 	PreviousMagicBlock   *block.MagicBlock `json:"-"`
 	viewChangeMagicBlock *block.MagicBlock `json:"-"`
@@ -153,9 +151,9 @@ func (c *Chain) GetCurrentMagicBlock() *block.MagicBlock {
 func (c *Chain) GetMagicBlock(round int64) *block.MagicBlock {
 	c.mbMutex.RLock()
 	defer c.mbMutex.RUnlock()
-	entity := c.magicBlockStorage.Get(round)
+	entity := c.MagicBlockStorage.Get(round)
 	if entity == nil {
-		entity = c.magicBlockStorage.GetLatest()
+		entity = c.MagicBlockStorage.GetLatest()
 	}
 	if entity == nil {
 		Logger.Panic("failed to get magic block from mb storage")
@@ -166,7 +164,7 @@ func (c *Chain) GetMagicBlock(round int64) *block.MagicBlock {
 func (c *Chain) SetMagicBlock(mb *block.MagicBlock) {
 	c.mbMutex.Lock()
 	defer c.mbMutex.Unlock()
-	if err := c.magicBlockStorage.Put(mb, mb.StartingRound); err != nil {
+	if err := c.MagicBlockStorage.Put(mb, mb.StartingRound); err != nil {
 		Logger.Error("failed to put magic block", zap.Error(err))
 	}
 }
@@ -325,7 +323,7 @@ func (c *Chain) Initialize() {
 	c.BlockChain = ring.New(10000)
 	c.minersStake = make(map[datastore.Key]int)
 	c.magicBlockStartingRounds = make(map[int64]*block.Block)
-	c.magicBlockStorage = round.NewRoundStartingStorage()
+	c.MagicBlockStorage = round.NewRoundStartingStorage()
 }
 
 /*SetupEntity - setup the entity */

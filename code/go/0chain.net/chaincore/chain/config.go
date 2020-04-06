@@ -24,6 +24,7 @@ const (
 // Defaults
 const (
 	DefaultRetrySendNotarizedBlockNewMiner = 5
+    DefaultCountPruneRoundStorage = 2
 )
 
 // HealthCheckCycleScan - 

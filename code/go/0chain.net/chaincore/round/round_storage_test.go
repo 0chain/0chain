@@ -26,7 +26,7 @@ func TestRoundStartingStore(t *testing.T) {
 		assert.NoError(t, err)
 
 		err = storage.Put(entity1, 5)
-		assert.EqualError(t, err, ErrPutRoundTwice.Error())
+		assert.NoError(t, err)
 
 		err = storage.Put(entity2, 151)
 		assert.NoError(t, err)
