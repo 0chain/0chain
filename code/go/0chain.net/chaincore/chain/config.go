@@ -21,6 +21,11 @@ const (
 	ProximityScan
 )
 
+// Defaults
+const (
+	DefaultRetrySendNotarizedBlockNewMiner = 5
+)
+
 // HealthCheckCycleScan - 
 type HealthCheckCycleScan struct {
 	Settle  time.Duration `json:"settle"`

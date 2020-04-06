@@ -15,6 +15,10 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	CountErrorThresholdNodeInactive = 3
+)
+
 /*StatusMonitor - a background job that keeps checking the status of the nodes */
 func (np *Pool) StatusMonitor(ctx context.Context) {
 	np.statusMonitor(ctx)
@@ -56,7 +60,7 @@ func (np *Pool) statusUpdate(ctx context.Context) {
 				continue
 			}
 		}
-		if node.SendErrors-node.GetErrorCount() > 5 {
+		if node.SendErrors-node.GetErrorCount() >= CountErrorThresholdNodeInactive {
 			node.SetStatus(NodeStatusInactive)
 		}
 	}
@@ -86,7 +90,7 @@ func (np *Pool) statusMonitor(context.Context) {
 		if err != nil {
 			node.AddErrorCount(1) // ++
 			if node.IsActive() {
-				if node.GetErrorCount() > 5 {
+				if node.GetErrorCount() >= CountErrorThresholdNodeInactive {
 					node.SetStatus(NodeStatusInactive)
 					N2n.Error("Node inactive", zap.String("node_type", node.GetNodeTypeName()), zap.Int("set_index", node.SetIndex), zap.Any("node_id", node.GetKey()), zap.Error(err))
 				}

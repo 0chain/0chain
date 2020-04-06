@@ -2,6 +2,7 @@ package miner
 
 import (
 	"context"
+	"time"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -73,4 +74,34 @@ func (mc *Chain) SendNotarizedBlockToMiners(ctx context.Context, b *block.Block)
 	mb := mc.GetMagicBlock(b.Round)
 	m2m := mb.Miners
 	m2m.SendAll(MinerNotarizedBlockSender(b))
+}
+
+/*SendNotarizedBlockToMiners - send a notarized block to a miner from pool */
+func (mc *Chain) SendNotarizedBlockToPoolNodes(ctx context.Context, b *block.Block,
+	pool *node.Pool, nodes []*node.Node, retry int) {
+	if retry <= 0 {
+		retry = 1
+	}
+	sendTo := nodes
+	for retry > 0 {
+		sentTo := pool.SendToMultipleNodes(MinerNotarizedBlockSender(b), sendTo)
+		if len(sentTo) == len(nodes) {
+			break
+		}
+		retry--
+		if len(sentTo) > 0 {
+			sentMap := make(map[string]struct{}, len(sentTo))
+			for _, sentNode := range sentTo {
+				sentMap[sentNode.ID] = struct{}{}
+			}
+			newSendNode := make([]*node.Node, 0, len(sendTo)-len(sentMap))
+			for _, sendNode := range sentTo {
+				if _, found := sentMap[sendNode.ID]; !found {
+					newSendNode = append(newSendNode, sendNode)
+				}
+			}
+			sendTo = newSendNode
+		}
+		time.Sleep(time.Second)
+	}
 }

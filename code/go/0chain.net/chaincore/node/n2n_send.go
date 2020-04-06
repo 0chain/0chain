@@ -59,6 +59,11 @@ func (np *Pool) SendToMultiple(handler SendHandler, nodes []*Node) (bool, error)
 	return false, common.NewError("send_to_given_nodes_unsuccessful", "Sending to given nodes not successful")
 }
 
+/*SendToMultipleNodes - send to multiple nodes */
+func (np *Pool) SendToMultipleNodes(handler SendHandler, nodes []*Node) []*Node {
+	return np.sendTo(len(nodes), nodes, handler)
+}
+
 /*SendAtleast - It tries to communicate to at least the given number of active nodes */
 func (np *Pool) SendAtleast(numNodes int, handler SendHandler) []*Node {
 	nodes := np.shuffleNodesLock()

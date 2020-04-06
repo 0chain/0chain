@@ -3,7 +3,6 @@ package miner
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -222,7 +221,7 @@ func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) erro
 
 func (mc *Chain) isNeedViewChange(ctx context.Context, nround int64) bool {
 	currentDKG := mc.GetCurrentDKG(nround)
-	nextVC := atomic.LoadInt64(&mc.nextViewChange)
+	nextVC := mc.GetNextViewChange()
 	result := config.DevConfiguration.ViewChange &&
 		nextVC == nround &&
 		(currentDKG == nil || currentDKG.StartingRound <= nextVC)
@@ -239,92 +238,56 @@ func (mc *Chain) ViewChange(ctx context.Context, nRound int64) (bool, error) {
 	viewChangeMagicBlock := mc.GetViewChangeMagicBlock()
 	mb := mc.GetMagicBlock(nRound)
 	if viewChangeMagicBlock != nil {
-		log.Println("ViewChange vc mb", viewChangeMagicBlock.MagicBlockNumber, viewChangeMagicBlock.StartingRound,
-			"current mb", mb.MagicBlockNumber, mb.StartingRound)
-		/*if mc.GetCurrentRound() > 1 {
-			for i := nRound - 2; i < nRound; i++ {
-				cRound := mc.GetRound(i)
-				if cRound == nil {
-					log.Println("WARN ViewChange check prev: not found")
-					continue
-				}
-				cBlock := cRound.(*Round).Block
-				blockStatus := int8(-1)
-				if cBlock != nil {
-					blockStatus = cBlock.GetBlockState()
-				}
-				roundState := cRound.GetState()
-				if cBlock == nil ||
-					blockStatus == block.StateVerificationRejected ||
-					blockStatus == block.StateVerificationFailed ||
-					(roundState != round.RoundStateFinalizing &&
-						roundState != round.RoundStateFinalized) {
-					log.Println("ERR ViewChange check prev round", i, " state", roundState, "blockStatus", blockStatus)
-					return false, fmt.Errorf("vc check: block round %v is not Notarized or Verificated", i)
-				}
-			}
-		}
-		log.Println("ViewChange check prev round - OK")*/
-
 		if mb == nil || mb.MagicBlockNumber == viewChangeMagicBlock.MagicBlockNumber-1 {
 			err := mc.UpdateMagicBlock(viewChangeMagicBlock)
 			if err != nil {
 				Logger.DPanic(err.Error())
 			}
 		}
-		/*if err := mc.SetDKGSFromStore(ctx, viewChangeMagicBlock); err != nil {
-			Logger.DPanic(err.Error())
-		}*/
 		if _, err := mc.ensureLatestFinalizedBlocks(ctx, nRound); err != nil {
 			Logger.Warn("vc ensure lfb error", zap.Error(err))
 		}
-		if pr := mc.GetMinerRound(nRound - 1); pr == nil {
-			log.Println("ViewChange prev round not found")
 
-			lfb := mc.GetLatestFinalizedBlock()
-			if lfb != nil {
-				log.Println("ViewChange prev round LFB=", lfb.Hash, "round", lfb.Round)
-			} else {
-				log.Println("ViewChange prev round LFB=nil")
-			}
-
-			cb := mc.GetRound(nRound).(*Round).Block
-			if cb != nil {
-				log.Println("ViewChange prev round Current Block=", cb.Hash)
-				block, err := mc.GetBlock(ctx, cb.Hash)
-				if err != nil {
-					log.Println("ViewChange prev round error", err)
-				} else {
-					mc.AsyncFetchNotarizedPreviousBlock(block)
-				}
-			} else {
-				log.Println("ViewChange prev round Current Block NIL")
-			}
-
-
-		}
-
-		//restart rounds after nround
-		/*chkRoundNumber := nRound + 1
-		for {
-			log.Println("vc restart chkRoundNumber=", chkRoundNumber)
-			cRound := mc.GetMinerRound(chkRoundNumber)
-			if cRound == nil {
-				break
-			}
-			if !cRound.IsFinalized() {
-				cRound.RestartWOL()
-				log.Println("vc round restart", cRound.GetRoundNumber())
-			}
-		}*/
-		log.Println("ViewChange done")
-		atomic.StoreInt64(&mc.nextViewChange, 0)
+		// Send the previous notarized block for new miners
+		mc.sendNotarizedBlockToNewMiners(ctx, nRound-1, viewChangeMagicBlock, mb)
+		mc.SetNextViewChange(0)
 	} else {
 		if err := mc.SetDKGSFromStore(ctx, mb); err != nil {
 			Logger.DPanic(err.Error())
 		}
 	}
 	return true, nil
+}
+
+// Send a notarized block for new miners
+func (mc *Chain) sendNotarizedBlockToNewMiners(ctx context.Context, nRound int64,
+	viewChangeMagicBlock, currentMagicBlock *block.MagicBlock) {
+	prevRound := mc.GetMinerRound(nRound)
+	prevMinerNodes := mc.GetMagicBlock(nRound).Miners
+	if prevRound == nil {
+		Logger.Error("round not found", zap.Any("round", nRound))
+		return
+	}
+	selfID := node.Self.Underlying().GetKey()
+	if currentMagicBlock.Miners.GetNode(selfID) == nil {
+		// A miner that was active in the previous VC can send a block
+		return
+	}
+
+	prevBlock := prevRound.Block
+	allMinersMB := make([]*node.Node, 0)
+	for _, n := range viewChangeMagicBlock.Miners.NodesMap {
+		if selfID == n.GetKey() {
+			continue
+		}
+		if prevMinerNodes.GetNode(n.GetKey()) == nil {
+			allMinersMB = append(allMinersMB, n)
+		}
+	}
+	if len(allMinersMB) != 0 {
+		go mc.SendNotarizedBlockToPoolNodes(ctx, prevBlock, viewChangeMagicBlock.Miners,
+			allMinersMB, chain.DefaultRetrySendNotarizedBlockNewMiner)
+	}
 }
 
 func (mc *Chain) ChainStarted(ctx context.Context) bool {

@@ -4,7 +4,6 @@ import (
 	"container/ring"
 	"context"
 	"fmt"
-	"log"
 	"math"
 	"sort"
 	"sync"
@@ -1064,12 +1063,7 @@ func (c *Chain) ActiveInChain() bool {
 
 // -------------------------------------------------------------------------- //
 
-func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) (err2 error) {
-
-	log.Println("UpdateMagicBlock mb", newMagicBlock.MagicBlockNumber)
-	defer func() {
-		log.Println("UpdateMagicBlock mb", newMagicBlock.MagicBlockNumber, "err", err2)
-	}()
+func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 	if newMagicBlock.Miners == nil || newMagicBlock.Miners.MapSize() == 0 {
 		return common.NewError("failed to update magic block", "there are no miners in the magic block")
 	}

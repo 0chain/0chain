@@ -648,7 +648,7 @@ func (mc *Chain) Wait() (result *httpclientutil.Transaction, err2 error) {
 	}
 	mc.clearViewChange()
 	mc.SetViewChangeMagicBlock(magicBlock)
-	atomic.StoreInt64(&mc.nextViewChange, magicBlock.StartingRound)
+	mc.SetNextViewChange(magicBlock.StartingRound)
 	return nil, nil
 }
 
@@ -664,4 +664,13 @@ func (mc *Chain) clearViewChange() {
 	mc.mpks = block.NewMpks()
 	mc.viewChangeDKG = nil
 	log.Println("clearViewChange done.")
+}
+
+
+func (mc *Chain) GetNextViewChange() int64 {
+	return atomic.LoadInt64(&mc.nextViewChange)
+}
+
+func (mc *Chain) SetNextViewChange(value int64) {
+	atomic.StoreInt64(&mc.nextViewChange, value)
 }
