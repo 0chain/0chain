@@ -4,7 +4,6 @@ import (
 	"container/ring"
 	"context"
 	"fmt"
-	"log"
 	"math"
 	"sort"
 	"sync"
@@ -167,22 +166,13 @@ func (c *Chain) GetPrevMagicBlock(round int64) *block.MagicBlock {
 	defer c.mbMutex.RUnlock()
 	indexMB := c.MagicBlockStorage.FindRoundIndex(round)
 	if indexMB <= 0 {
-		log.Println("Prev MB from chain, indexMB", indexMB)
 		return c.PreviousMagicBlock
 	}
-	prevRoundVC := c.MagicBlockStorage.GetRound(indexMB-1)
+	prevRoundVC := c.MagicBlockStorage.GetRound(indexMB - 1)
 	entity := c.MagicBlockStorage.Get(prevRoundVC)
-
-	log.Println("Prev MB from chain.", prevRoundVC,
-		"indexMB", indexMB, " rounds MB", c.MagicBlockStorage.GetRounds(), "round", round,
-		" found?", entity != nil)
-
 	if entity != nil {
-		log.Println("Prev MB", entity.(*block.MagicBlock).MagicBlockNumber)
 		return entity.(*block.MagicBlock)
 	}
- //Prev MB from chain. -1 indexMB 1  rounds MB [0 101 201] round 200  found? false
-  //Prev MB from chain. 200 indexMB 3  rounds MB [0 101 201 301 401] round 400  found? tru
 	return c.PreviousMagicBlock
 }
 
@@ -1200,5 +1190,25 @@ func (c *Chain) GetViewChangeMagicBlock() *block.MagicBlock {
 func (c *Chain) Stop() {
 	if stateDB != nil {
 		stateDB.Flush()
+	}
+}
+
+// pruning storage
+func (c *Chain) PruneRoundStorage(ctx context.Context, storages ...round.RoundStorage) {
+	const countPrune = DefaultCountPruneRoundStorage
+	for _, storage := range storages {
+		countRounds := storage.Count()
+		if countRounds > countPrune {
+			round := storage.GetRounds()[countRounds-countPrune-1]
+			if err := storage.Prune(round); err != nil {
+				Logger.Error("failed to prune storage",
+					zap.Int("count_rounds", countRounds),
+					zap.Int("count_dest_prune", countPrune),
+					zap.Int64("round", round),
+					zap.Error(err))
+			} else {
+				Logger.Debug("prune storage", zap.Int64("round", round))
+			}
+		}
 	}
 }

@@ -251,40 +251,13 @@ func (mc *Chain) ViewChange(ctx context.Context, nRound int64) (bool, error) {
 		// Send the previous notarized block for new miners
 		mc.sendNotarizedBlockToNewMiners(ctx, nRound-1, viewChangeMagicBlock, mb)
 		mc.SetNextViewChange(0)
-		go mc.pruneRoundStorage(ctx)
+		go mc.PruneRoundStorage(ctx, mc.roundDkg, mc.MagicBlockStorage)
 	} else {
 		if err := mc.SetDKGSFromStore(ctx, mb); err != nil {
 			Logger.DPanic(err.Error())
 		}
 	}
 	return true, nil
-}
-
-// pruning mb, dkg storage
-func (mc *Chain) pruneRoundStorage(ctx context.Context) {
-	storages := []round.RoundStorage{
-		mc.roundDkg,
-		mc.MagicBlockStorage,
-	}
-	names := []string{"dkg", "magic_block"}
-	const countPrune = chain.DefaultCountPruneRoundStorage
-	for i, storage := range storages {
-		countRounds := storage.Count()
-		if countRounds > countPrune {
-			round := storage.GetRounds()[countRounds-countPrune-1]
-			if err := storage.Prune(round); err != nil {
-				Logger.Error("failed to prune mb storage",
-					zap.String("storage", names[i]),
-					zap.Int("count_rounds", countRounds),
-					zap.Int("count_dest_prune", countPrune),
-					zap.Int64("round", round),
-					zap.Error(err))
-			} else {
-				Logger.Debug("prune storage", zap.String("storage", names[i]),
-					zap.Int64("round", round))
-			}
-		}
-	}
 }
 
 // Send a notarized block for new miners

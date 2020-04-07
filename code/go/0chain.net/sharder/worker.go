@@ -2,6 +2,7 @@ package sharder
 
 import (
 	"0chain.net/chaincore/block"
+	"time"
 
 	"0chain.net/chaincore/round"
 	"0chain.net/core/datastore"
@@ -21,6 +22,7 @@ func SetupWorkers(ctx context.Context) {
 	go sc.HealthCheckSetup(ctx, DeepScan)
 	go sc.HealthCheckSetup(ctx, ProximityScan)
 
+	go sc.PruneStorageWorker(ctx, time.Minute*15, sc.MagicBlockStorage)
 }
 
 /*BlockWorker - stores the blocks */

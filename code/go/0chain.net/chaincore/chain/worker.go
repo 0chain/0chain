@@ -5,6 +5,7 @@ LOOKS GOOD. NEEDS MORE TESTING BEFORE COMMITED!!!!
 */
 
 import (
+	"0chain.net/chaincore/round"
 	"context"
 	"fmt"
 	"time"
@@ -270,4 +271,17 @@ func (c *Chain) MustVerifyChainHistory(ctx context.Context,
 		return common.NewErrorf("verify_chain_history", err.Error())
 	}
 	return nil
+}
+
+// PruneStorageWorker pruning storage
+func (c *Chain) PruneStorageWorker(ctx context.Context, d time.Duration, storage ...round.RoundStorage) {
+	ticker := time.NewTicker(d)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			c.PruneRoundStorage(ctx, storage...)
+		}
+	}
 }
