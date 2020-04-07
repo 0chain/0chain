@@ -23,7 +23,6 @@ import (
 var nodes = make(map[string]*Node)
 var nodesMutex = &sync.RWMutex{}
 
-
 /*RegisterNode - register a node to a global registery
 * We need to keep track of a global register of nodes. This is required to ensure we can verify a signed request
 * coming from a node
@@ -113,7 +112,7 @@ type Node struct {
 	LargeMessagePullServeTime float64 `json:"-"`
 	SmallMessagePullServeTime float64 `json:"-"`
 
-	mutex sync.RWMutex
+	mutex     sync.RWMutex
 	mutexInfo sync.RWMutex
 
 	ProtocolStats interface{} `json:"-"`
@@ -156,7 +155,6 @@ func Setup(node *Node) {
 func (n *Node) GetErrorCount() int64 {
 	n.mutex.RLock()
 	defer n.mutex.RUnlock()
-
 	return n.ErrorCount
 }
 
@@ -172,7 +170,6 @@ func (n *Node) SetErrorCount(ec int64) {
 func (n *Node) AddErrorCount(ecd int64) {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
-
 	n.ErrorCount += ecd
 }
 

@@ -596,6 +596,7 @@ func (mc *Chain) Wait() (result *httpclientutil.Transaction, err2 error) {
 		if err != nil {
 			Logger.DPanic(fmt.Sprintf("failed to update magic block: %v", err.Error()))
 		}
+		mc.UpdateNodesFromMagicBlock(magicBlock)
 		viewChangeMutex.Lock()
 		mc.clearViewChange()
 		viewChangeMutex.Unlock()
@@ -665,7 +666,6 @@ func (mc *Chain) clearViewChange() {
 	mc.viewChangeDKG = nil
 	log.Println("clearViewChange done.")
 }
-
 
 func (mc *Chain) GetNextViewChange() int64 {
 	return atomic.LoadInt64(&mc.nextViewChange)

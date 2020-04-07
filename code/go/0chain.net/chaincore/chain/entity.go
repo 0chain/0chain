@@ -4,6 +4,7 @@ import (
 	"container/ring"
 	"context"
 	"fmt"
+	"log"
 	"math"
 	"sort"
 	"sync"
@@ -412,6 +413,7 @@ func (c *Chain) GenerateGenesisBlock(hash string, genesisMagicBlock *block.Magic
 	gb.ClientStateHash = gb.ClientState.GetRoot()
 	gb.MagicBlock = genesisMagicBlock
 	c.UpdateMagicBlock(gb.MagicBlock)
+	c.UpdateNodesFromMagicBlock(gb.MagicBlock)
 	gr := round.NewRound(0)
 	c.SetRandomSeed(gr, 839695260482366273)
 	gr.ComputeMinerRanks(gb.MagicBlock.Miners)
@@ -631,7 +633,8 @@ func (c *Chain) GetGenerators(r round.RoundI) []*node.Node {
 /*GetMiners - get all the miners for a given round */
 func (c *Chain) GetMiners(round int64) *node.Pool {
 	mb := c.GetMagicBlock(round)
-	Logger.Info("get miners -- current magic block", zap.Any("miners", mb.Miners), zap.Any("round", round))
+	Logger.Debug("get miners -- current magic block", zap.Any("miners", mb.Miners), zap.Any("round", round))
+
 	return mb.Miners
 }
 
@@ -640,24 +643,24 @@ func (c *Chain) IsBlockSharder(b *block.Block, sharder *node.Node) bool {
 	if c.NumReplicators <= 0 {
 		return true
 	}
-	scores := c.nodePoolScorer.ScoreHashString(c.GetCurrentMagicBlock().Sharders, b.Hash)
+	scores := c.nodePoolScorer.ScoreHashString(c.GetMagicBlock(b.Round).Sharders, b.Hash)
 	return sharder.IsInTop(scores, c.NumReplicators)
 }
 
-func (c *Chain) IsBlockSharderFromHash(bHash string, sharder *node.Node) bool {
+func (c *Chain) IsBlockSharderFromHash(nRound int64, bHash string, sharder *node.Node) bool {
 	if c.NumReplicators <= 0 {
 		return true
 	}
-	scores := c.nodePoolScorer.ScoreHashString(c.GetCurrentMagicBlock().Sharders, bHash)
+	scores := c.nodePoolScorer.ScoreHashString(c.GetMagicBlock(nRound).Sharders, bHash)
 	return sharder.IsInTop(scores, c.NumReplicators)
 }
 
 /*CanShardBlockWithReplicators - checks if the sharder can store the block with nodes that store this block*/
-func (c *Chain) CanShardBlockWithReplicators(hash string, sharder *node.Node) (bool, []*node.Node) {
+func (c *Chain) CanShardBlockWithReplicators(nRound int64, hash string, sharder *node.Node) (bool, []*node.Node) {
 	if c.NumReplicators <= 0 {
 		return true, nil
 	}
-	scores := c.nodePoolScorer.ScoreHashString(c.GetCurrentMagicBlock().Sharders, hash)
+	scores := c.nodePoolScorer.ScoreHashString(c.GetMagicBlock(nRound).Sharders, hash)
 	return sharder.IsInTopWithNodes(scores, c.NumReplicators)
 }
 
@@ -665,7 +668,7 @@ func (c *Chain) CanShardBlockWithReplicators(hash string, sharder *node.Node) (b
 func (c *Chain) GetBlockSharders(b *block.Block) []string {
 	var sharders []string
 	//TODO: sharders list needs to get resolved per the magic block of the block
-	var sharderPool = c.GetCurrentMagicBlock().Sharders
+	var sharderPool = c.GetMagicBlock(b.Round).Sharders
 	var sharderNodes = sharderPool.Nodes
 	if c.NumReplicators > 0 {
 		scores := c.nodePoolScorer.ScoreHashString(sharderPool, b.Hash)
@@ -717,7 +720,7 @@ func (c *Chain) CanStartNetwork() bool {
 	mb := c.GetCurrentMagicBlock()
 	active := mb.Miners.GetActiveCount()
 	threshold := c.GetNotarizationThresholdCount(mb.Miners)
-	return active >= threshold && c.CanShardBlocks()
+	return active >= threshold && c.CanShardBlocks(c.GetCurrentRound())
 }
 
 /*ReadNodePools - read the node pools from configuration */
@@ -868,7 +871,9 @@ func (c *Chain) getBlocks() []*block.Block {
 //SetRoundRank - set the round rank of the block
 func (c *Chain) SetRoundRank(r round.RoundI, b *block.Block) {
 	miners := c.GetMiners(r.GetRoundNumber())
-	if miners == nil || miners.Size() == 0 {
+	if miners == nil || miners.MapSize() == 0 {
+		log.Println("SetRoundRank NIL MB Rounds", c.MagicBlockStorage.GetRounds(),
+			"round number", r.GetRoundNumber(), "miners", miners)
 		Logger.DPanic("set_round_rank  --  empty miners", zap.Any("round", r.GetRoundNumber()), zap.Any("block", b.Hash))
 	}
 	bNode := miners.GetNode(b.MinerID)
@@ -962,15 +967,15 @@ func (c *Chain) GetSignatureScheme() encryption.SignatureScheme {
 }
 
 //CanShardBlocks - is the network able to effectively shard the blocks?
-func (c *Chain) CanShardBlocks() bool {
-	mb := c.GetCurrentMagicBlock()
+func (c *Chain) CanShardBlocks(nRound int64) bool {
+	mb := c.GetMagicBlock(nRound)
 	return mb.Sharders.GetActiveCount()*100 >= mb.Sharders.Size()*c.MinActiveSharders
 }
 
 //CanReplicateBlock - can the given block be effectively replicated?
 func (c *Chain) CanReplicateBlock(b *block.Block) bool {
 	if c.NumReplicators <= 0 || c.MinActiveReplicators == 0 {
-		return c.CanShardBlocks()
+		return c.CanShardBlocks(b.Round)
 	}
 	mb := c.GetMagicBlock(b.Round)
 	scores := c.nodePoolScorer.ScoreHashString(mb.Sharders, b.Hash)
@@ -1097,15 +1102,19 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 	}
 
 	c.SetMagicBlock(newMagicBlock)
-	c.SetupNodes(newMagicBlock)
-	newMagicBlock.Sharders.ComputeProperties()
-	newMagicBlock.Miners.ComputeProperties()
-	c.InitializeMinerPool(newMagicBlock)
-	c.GetNodesPreviousInfo()
-
-	UpdateNodes <- true
-
 	return nil
+}
+
+func (c *Chain) UpdateNodesFromMagicBlock(newMagicBlock *block.MagicBlock) {
+	currentMB := c.GetCurrentMagicBlock()
+	if newMagicBlock.MagicBlockNumber==1 || newMagicBlock.MagicBlockNumber > currentMB.MagicBlockNumber {
+		c.SetupNodes(newMagicBlock)
+		newMagicBlock.Sharders.ComputeProperties()
+		newMagicBlock.Miners.ComputeProperties()
+		c.InitializeMinerPool(newMagicBlock)
+		c.GetNodesPreviousInfo()
+		UpdateNodes <- newMagicBlock.StartingRound
+	}
 }
 
 func (c *Chain) SetupNodes(mb *block.MagicBlock) {

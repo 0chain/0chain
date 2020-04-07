@@ -378,8 +378,9 @@ func SetupRoundSummaryDB() {
 /*ComputeMinerRanks - Compute random order of n elements given the random seed of the round */
 func (r *Round) ComputeMinerRanks(miners *node.Pool) {
 	Logger.Info("compute miner ranks", zap.Any("num_miners", miners.Size()), zap.Any("round", r.Number))
+	seed := r.GetRandomSeed()
 	r.Mutex.Lock()
-	r.minerPerm = rand.New(rand.NewSource(r.GetRandomSeed())).Perm(miners.Size())
+	r.minerPerm = rand.New(rand.NewSource(seed)).Perm(miners.Size())
 	r.Mutex.Unlock()
 }
 
@@ -437,23 +438,11 @@ func (r *Round) Clear() {
 //Restart - restart the round
 func (r *Round) Restart() {
 	r.Mutex.Lock()
-	defer r.Mutex.Unlock()
-
 	r.initialize()
 	r.Block = nil
-	r.ResetState(RoundShareVRF)
+	r.Mutex.Unlock()
 	r.resetSoftTimeoutCount()
-
-}
-
-
-//Restart - restart the round
-func (r *Round) RestartWOL() {
-	r.initialize()
-	r.Block = nil
 	r.ResetState(RoundShareVRF)
-	r.resetSoftTimeoutCount()
-
 }
 
 //AddAdditionalVRFShare - Adding additional VRFShare received for stats persp

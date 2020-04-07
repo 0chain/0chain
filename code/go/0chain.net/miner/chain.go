@@ -243,14 +243,17 @@ func (mc *Chain) ViewChange(ctx context.Context, nRound int64) (bool, error) {
 			if err != nil {
 				Logger.DPanic(err.Error())
 			}
+
 		}
+		mc.SetNextViewChange(0)
+		mc.UpdateNodesFromMagicBlock(viewChangeMagicBlock)
 		if _, err := mc.ensureLatestFinalizedBlocks(ctx, nRound); err != nil {
 			Logger.Warn("vc ensure lfb error", zap.Error(err))
 		}
 
 		// Send the previous notarized block for new miners
 		mc.sendNotarizedBlockToNewMiners(ctx, nRound-1, viewChangeMagicBlock, mb)
-		mc.SetNextViewChange(0)
+
 		go mc.PruneRoundStorage(ctx, mc.roundDkg, mc.MagicBlockStorage)
 	} else {
 		if err := mc.SetDKGSFromStore(ctx, mb); err != nil {
@@ -330,16 +333,19 @@ func (mc *Chain) GetMpks() map[string]*block.MPK {
 func StartChainRequestHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	nodeID := r.Header.Get(node.HeaderNodeID)
 	mc := GetMinerChain()
-	mb := mc.GetCurrentMagicBlock()
-	if !mb.Miners.HasNode(nodeID) {
-		Logger.Error("failed to send start chain", zap.Any("id", nodeID))
-		return nil, common.NewError("failed to send start chain", "miner is not in active set")
-	}
+
 	round, err := strconv.Atoi(r.FormValue("round"))
 	if err != nil {
 		Logger.Error("failed to send start chain", zap.Any("error", err))
 		return nil, err
 	}
+
+	mb := mc.GetMagicBlock(int64(round))
+	if mb == nil || !mb.Miners.HasNode(nodeID) {
+		Logger.Error("failed to send start chain", zap.Any("id", nodeID))
+		return nil, common.NewError("failed to send start chain", "miner is not in active set")
+	}
+
 	if mc.GetCurrentRound() != int64(round) {
 		Logger.Error("failed to send start chain -- different rounds", zap.Any("current_round", mc.GetCurrentRound()), zap.Any("requested_round", round))
 		return nil, common.NewError("failed to send start chain", fmt.Sprintf("differt_rounds -- current_round: %v, requested_round: %v", mc.GetCurrentRound(), round))

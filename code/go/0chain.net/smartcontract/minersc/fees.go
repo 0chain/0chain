@@ -1,6 +1,7 @@
 package minersc
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 
@@ -12,6 +13,10 @@ import (
 	. "0chain.net/core/logging"
 	"github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
+)
+
+var (
+	ErrExecutionStatsNotFound = errors.New("SmartContractExecutionStats stat not found")
 )
 
 func (msc *MinerSmartContract) payFees(t *transaction.Transaction, inputData []byte, gn *globalNode, balances c_state.StateContextI) (string, error) {
@@ -36,7 +41,10 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction, inputData []b
 		return "", common.NewError("failed to pay fees", "jumped back in time?")
 	}
 	fee := msc.sumFee(block, true)
-	resp := msc.paySharders(fee, block, balances, "")
+	resp, err := msc.paySharders(fee, block, balances, "")
+	if err != nil {
+		return "", err
+	}
 	gn.LastRound = block.Round
 	_, err = balances.InsertTrieNode(GlobalNodeKey, gn)
 	if err != nil {
@@ -94,18 +102,22 @@ func (msc *MinerSmartContract) payMiners(fee state.Balance, mn *MinerNode, balan
 	return resp
 }
 
-func (msc *MinerSmartContract) paySharders(fee state.Balance, block *block.Block, balances c_state.StateContextI, resp string) string {
+func (msc *MinerSmartContract) paySharders(fee state.Balance, block *block.Block, balances c_state.StateContextI, resp string) (string, error) {
 	sharders := balances.GetBlockSharders(block.PrevBlock)
 	sort.Strings(sharders)
 	for _, sharder := range sharders {
 		//TODO: the mint amount will be controlled by governance
 		mint := state.NewMint(ADDRESS, sharder, fee/state.Balance(len(sharders)))
-		mintStats := msc.SmartContractExecutionStats["mintedTokens"].(metrics.Histogram)
+		mintStatsRaw, found := msc.SmartContractExecutionStats["mintedTokens"]
+		if !found {
+			return "", fmt.Errorf("%v: mintedTokens", ErrExecutionStatsNotFound)
+		}
+		mintStats := mintStatsRaw.(metrics.Histogram)
 		mintStats.Update(int64(mint.Amount))
 		err := balances.AddMint(mint)
 		if err != nil {
 			resp += common.NewError("failed to mint", fmt.Sprintf("errored while adding mint for sharder %v: %v", sharder, err.Error())).Error()
 		}
 	}
-	return resp
+	return resp, nil
 }

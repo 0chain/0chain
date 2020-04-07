@@ -309,6 +309,7 @@ func getCurrentMagicBlock(mc *miner.Chain) error {
 	if err := mc.UpdateMagicBlock(magicBlock.MagicBlock); err != nil {
 		return fmt.Errorf("failed to update magic block: %v", err.Error())
 	}
+	mc.UpdateNodesFromMagicBlock(magicBlock.MagicBlock)
 	mc.SetLatestFinalizedMagicBlock(magicBlock)
 	return nil
 }

@@ -299,6 +299,7 @@ func getCurrentMagicBlock(sc *sharder.Chain) error {
 	if err != nil {
 		return fmt.Errorf("failed to update magic block: %v", err.Error())
 	}
+	sc.UpdateNodesFromMagicBlock(magicBlock.MagicBlock)
 	sc.SetLatestFinalizedMagicBlock(magicBlock)
 	return nil
 }

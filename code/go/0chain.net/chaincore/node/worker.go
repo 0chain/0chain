@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	CountErrorThresholdNodeInactive = 3
+	CountErrorThresholdNodeInactive = 5
 )
 
 /*StatusMonitor - a background job that keeps checking the status of the nodes */
@@ -24,18 +24,18 @@ func (np *Pool) StatusMonitor(ctx context.Context) {
 	np.statusMonitor(ctx)
 	updateTimer := time.NewTimer(time.Second)
 	monitorTimer := time.NewTimer(time.Second)
-	for true {
+	for {
 		select {
 		case <-ctx.Done():
 			return
-		case _ = <-monitorTimer.C:
+		case <-monitorTimer.C:
 			np.statusMonitor(ctx)
 			if np.GetActiveCount()*10 < len(np.Nodes)*8 {
 				monitorTimer = time.NewTimer(5 * time.Second)
 			} else {
 				monitorTimer = time.NewTimer(10 * time.Second)
 			}
-		case _ = <-updateTimer.C:
+		case <-updateTimer.C:
 			np.statusUpdate(ctx)
 			updateTimer = time.NewTimer(time.Second * 2)
 		}
@@ -49,7 +49,9 @@ func (np *Pool) OneTimeStatusMonitor(ctx context.Context) {
 }
 
 func (np *Pool) statusUpdate(ctx context.Context) {
+	np.mmx.RLock()
 	nodes := np.shuffleNodes()
+	np.mmx.RUnlock()
 	for _, node := range nodes {
 		if Self.IsEqual(node) {
 			continue
@@ -60,7 +62,7 @@ func (np *Pool) statusUpdate(ctx context.Context) {
 				continue
 			}
 		}
-		if node.SendErrors-node.GetErrorCount() >= CountErrorThresholdNodeInactive {
+		if node.GetErrorCount() >= CountErrorThresholdNodeInactive {
 			node.SetStatus(NodeStatusInactive)
 		}
 	}

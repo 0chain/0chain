@@ -89,6 +89,7 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 	if b.MagicBlock != nil {
 		sc.UpdateMagicBlock(b.MagicBlock)
+		sc.UpdateNodesFromMagicBlock(b.MagicBlock)
 	}
 	er := sc.GetRound(b.Round)
 	if er == nil {
@@ -361,7 +362,7 @@ func (sc *Chain) requestForBlockSummary(ctx context.Context, params *url.Values)
 
 func (sc *Chain) requestForBlock(ctx context.Context, params *url.Values, r *round.Round) *block.Block {
 	self := node.GetSelfNode(ctx)
-	_, nodes := sc.CanShardBlockWithReplicators(r.BlockHash, self.Underlying())
+	_, nodes := sc.CanShardBlockWithReplicators(r.Number, r.BlockHash, self.Underlying())
 
 	if len(nodes) == 0 {
 		Logger.Info("no replicators for this block (lost the block)", zap.Int64("round", r.Number))

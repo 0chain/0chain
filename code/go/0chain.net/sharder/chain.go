@@ -152,6 +152,7 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, round *round.Round,
 		return common.NewError("load_lfb",
 			"can't update magic block: "+err.Error()) // fatal
 	}
+	sc.UpdateNodesFromMagicBlock(lfmb.MagicBlock)
 
 	sc.SetRandomSeed(round, round.GetRandomSeed())
 	round.ComputeMinerRanks(lfmb.MagicBlock.Miners)

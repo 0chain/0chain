@@ -8,6 +8,7 @@ import (
 	"0chain.net/chaincore/round"
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"0chain.net/chaincore/block"
@@ -18,10 +19,10 @@ import (
 	"go.uber.org/zap"
 )
 
-var UpdateNodes chan bool
+var UpdateNodes chan int64
 
 func init() {
-	UpdateNodes = make(chan bool, 10)
+	UpdateNodes = make(chan int64, 10)
 }
 
 /*SetupWorkers - setup a blockworker for a chain */
@@ -42,11 +43,12 @@ func (c *Chain) StatusMonitor(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case <-UpdateNodes:
+		case nRound := <-UpdateNodes:
+			log.Print("UpdateNodes")
 			cancel()
 			Logger.Info("the status monitor is dead, long live the status monitor", zap.Any("miners", mb.Miners), zap.Any("sharders", mb.Sharders))
 			smctx, cancel = context.WithCancel(ctx)
-			mb := c.GetCurrentMagicBlock()
+			mb := c.GetMagicBlock(nRound)
 			go mb.Miners.StatusMonitor(smctx)
 			go mb.Sharders.StatusMonitor(smctx)
 		}
@@ -245,6 +247,8 @@ func (c *Chain) VerifyChainHistory(ctx context.Context,
 			return common.NewError("get_lfmb_from_sharders",
 				fmt.Sprintf("failed to update magic block %d: %v",
 					currentMagicBlock.MagicBlockNumber+1, err))
+		} else {
+			c.UpdateNodesFromMagicBlock(magicBlock.MagicBlock)
 		}
 
 		c.SetLatestFinalizedMagicBlock(magicBlock)

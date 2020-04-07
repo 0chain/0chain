@@ -370,7 +370,7 @@ func (mc *Chain) GetBlockProposalWaitTime(r round.RoundI) time.Duration {
 }
 
 func (mc *Chain) computeBlockProposalDynamicWaitTime(r round.RoundI) time.Duration {
-	mb := mc.GetCurrentMagicBlock()
+	mb := mc.GetMagicBlock(r.GetRoundNumber())
 	medianTime := mb.Miners.GetMedianNetworkTime()
 	generators := mc.GetGenerators(r)
 	for _, g := range generators {
@@ -492,7 +492,7 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 
 /*VerifyRoundBlock - given a block is verified for a round*/
 func (mc *Chain) VerifyRoundBlock(ctx context.Context, r *Round, b *block.Block) (*block.BlockVerificationTicket, error) {
-	if !mc.CanShardBlocks() {
+	if !mc.CanShardBlocks(r.Number) {
 		return nil, common.NewError("fewer_active_sharders", "Number of active sharders not sufficient")
 	}
 	if !mc.CanReplicateBlock(b) {
@@ -823,6 +823,7 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context, pnround int64)
 		if err := mc.UpdateMagicBlock(magicBlock.MagicBlock); err != nil {
 			return false, err
 		}
+		mc.UpdateNodesFromMagicBlock(magicBlock.MagicBlock)
 		mc.SetLatestFinalizedMagicBlock(magicBlock)
 		result = true
 	}
@@ -840,20 +841,22 @@ func StartProtocol(ctx context.Context, gb *block.Block) {
 		mc.SetRandomSeed(sr, lfb.RoundRandomSeed)
 		mc.AddBlock(lfb)
 		//ugly hack: for error "node not found"
-		go func() {
-			lfbCheck := lfb
-			for {
-				err := mc.InitBlockState(lfbCheck)
-				if err == nil {
-					return
+		if err := mc.InitBlockState(lfb); err != nil {
+			go func() {
+				lfbCheck := lfb
+				for {
+					err := mc.InitBlockState(lfbCheck)
+					if err == nil {
+						return
+					}
+					Logger.Error("start_protocol", zap.Error(err))
+					lfbCheck = mc.GetLatestFinalizedBlock()
+					time.Sleep(time.Second * 1)
 				}
-				Logger.Error("start_protocol", zap.Error(err))
-				lfbCheck = mc.GetLatestFinalizedBlock()
-				time.Sleep(time.Second * 1)
-			}
-		}()
+			}()
+		}
 		mc.SetLatestFinalizedBlock(ctx, lfb)
-
+		mc.AsyncFetchNotarizedPreviousBlock(lfb)
 	} else {
 		mr = mc.getRound(ctx, gb.Round)
 	}
@@ -864,7 +867,7 @@ func StartProtocol(ctx context.Context, gb *block.Block) {
 }
 
 func (mc *Chain) WaitForActiveSharders(ctx context.Context) error {
-	if mc.CanShardBlocks() {
+	if mc.CanShardBlocks(mc.GetCurrentRound()) {
 		return nil
 	}
 
@@ -875,7 +878,7 @@ func (mc *Chain) WaitForActiveSharders(ctx context.Context) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		case ts := <-ticker.C:
-			if mc.CanShardBlocks() {
+			if mc.CanShardBlocks(mc.GetCurrentRound()) {
 				return nil
 			}
 			Logger.Info("Waiting for Sharders.", zap.Time("ts", ts))
