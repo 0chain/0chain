@@ -1106,15 +1106,12 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 }
 
 func (c *Chain) UpdateNodesFromMagicBlock(newMagicBlock *block.MagicBlock) {
-	currentMB := c.GetCurrentMagicBlock()
-	if newMagicBlock.MagicBlockNumber==1 || newMagicBlock.MagicBlockNumber > currentMB.MagicBlockNumber {
-		c.SetupNodes(newMagicBlock)
-		newMagicBlock.Sharders.ComputeProperties()
-		newMagicBlock.Miners.ComputeProperties()
-		c.InitializeMinerPool(newMagicBlock)
-		c.GetNodesPreviousInfo()
-		UpdateNodes <- newMagicBlock.StartingRound
-	}
+	c.SetupNodes(newMagicBlock)
+	newMagicBlock.Sharders.ComputeProperties()
+	newMagicBlock.Miners.ComputeProperties()
+	c.InitializeMinerPool(newMagicBlock)
+	c.GetNodesPreviousInfo()
+	UpdateNodes <- newMagicBlock.StartingRound
 }
 
 func (c *Chain) SetupNodes(mb *block.MagicBlock) {
