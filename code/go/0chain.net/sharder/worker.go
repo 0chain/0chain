@@ -30,7 +30,9 @@ func SetupWorkers(ctx context.Context) {
 	go sc.HealthCheckSetup(ctx, ProximityScan)
 
 	// Move old blocks to cloud
-	go sc.MoveOldBlocksToCloud(ctx)
+	if viper.GetBool("minio.enabled") {
+		go sc.MoveOldBlocksToCloud(ctx)
+	}
 }
 
 /*BlockWorker - stores the blocks */

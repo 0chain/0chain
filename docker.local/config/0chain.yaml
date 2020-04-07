@@ -112,6 +112,7 @@ network:
     rate_limit: 1000 # 1000 per second
 
 minio:
+  enabled: false # Do not enable with deep scan ON
   worker_frequency: 3600
   num_workers: 5
   old_block_round_range: 20000000
