@@ -23,7 +23,7 @@ import (
 var nodes = make(map[string]*Node)
 var nodesMutex = &sync.RWMutex{}
 
-/*RegisterNode - register a node to a global registery
+/*RegisterNode - register a node to a global registry
 * We need to keep track of a global register of nodes. This is required to ensure we can verify a signed request
 * coming from a node
  */
@@ -33,7 +33,7 @@ func RegisterNode(node *Node) {
 	nodes[node.GetKey()] = node
 }
 
-/*DeregisterNode - deregisters a node */
+/*DeregisterNode - deregister a node */
 func DeregisterNode(nodeID string) {
 	nodesMutex.Lock()
 	defer nodesMutex.Unlock()
@@ -571,13 +571,19 @@ func (n *Node) SetNodeInfo(oldNode *Node) {
 	n.Sent = oldNode.Sent
 	n.SendErrors = oldNode.SendErrors
 	n.Received = oldNode.Received
-	n.TimersByURI = oldNode.TimersByURI
-	n.SizeByURI = oldNode.SizeByURI
+	for k, v := range oldNode.TimersByURI {
+		n.TimersByURI[k] = v
+	}
+	for k, v := range oldNode.SizeByURI {
+		n.SizeByURI[k] = v
+	}
 	n.SetLargeMessageSendTime(oldNode.GetLargeMessageSendTime())
 	n.SetSmallMessageSendTime(oldNode.GetSmallMessageSendTime())
 	n.LargeMessagePullServeTime = oldNode.LargeMessagePullServeTime
 	n.SmallMessagePullServeTime = oldNode.SmallMessagePullServeTime
-	n.ProtocolStats = oldNode.ProtocolStats
+	if oldNode.ProtocolStats != nil {
+		n.ProtocolStats = oldNode.ProtocolStats.(interface{ Clone() interface{} }).Clone()
+	}
 	n.Info = oldNode.Info
 	n.Status = oldNode.Status
 }

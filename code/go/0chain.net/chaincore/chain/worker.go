@@ -8,7 +8,6 @@ import (
 	"0chain.net/chaincore/round"
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"0chain.net/chaincore/block"
@@ -44,7 +43,6 @@ func (c *Chain) StatusMonitor(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case nRound := <-UpdateNodes:
-			log.Print("UpdateNodes")
 			cancel()
 			Logger.Info("the status monitor is dead, long live the status monitor", zap.Any("miners", mb.Miners), zap.Any("sharders", mb.Sharders))
 			smctx, cancel = context.WithCancel(ctx)
@@ -247,9 +245,9 @@ func (c *Chain) VerifyChainHistory(ctx context.Context,
 			return common.NewError("get_lfmb_from_sharders",
 				fmt.Sprintf("failed to update magic block %d: %v",
 					currentMagicBlock.MagicBlockNumber+1, err))
-		} else {
+		} /*else {
 			c.UpdateNodesFromMagicBlock(magicBlock.MagicBlock)
-		}
+		}*/
 
 		c.SetLatestFinalizedMagicBlock(magicBlock)
 		currentMagicBlock = magicBlock

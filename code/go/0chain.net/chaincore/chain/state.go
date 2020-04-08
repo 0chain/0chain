@@ -164,9 +164,7 @@ func (c *Chain) SaveChanges(ctx context.Context, b *block.Block) error {
 	var err error
 	ts := time.Now()
 	switch b.GetStateStatus() {
-	case block.StateSynched:
-		err = b.ClientState.SaveChanges(c.stateDB, false)
-	case block.StateSuccessful:
+	case block.StateSynched,block.StateSuccessful:
 		err = b.ClientState.SaveChanges(c.stateDB, false)
 	default:
 		return common.NewError("state_save_without_success", "State can't be saved without successful computation")

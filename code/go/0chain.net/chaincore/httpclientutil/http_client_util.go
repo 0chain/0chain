@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"math"
 	"net"
 	"net/http"
@@ -225,7 +224,7 @@ func MakeGetRequest(remoteUrl string, result interface{}) {
 	client := http.Client{}
 	request, err := http.NewRequest("GET", remoteUrl, nil)
 	if err != nil {
-		log.Fatalln(err)
+		panic(err)
 	}
 
 	resp, err := client.Do(request)

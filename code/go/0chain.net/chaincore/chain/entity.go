@@ -4,7 +4,6 @@ import (
 	"container/ring"
 	"context"
 	"fmt"
-	"log"
 	"math"
 	"sort"
 	"sync"
@@ -146,7 +145,20 @@ var chainEntityMetadata *datastore.EntityMetadataImpl
 
 // GetCurrentMagicBlock returns MB for current round
 func (c *Chain) GetCurrentMagicBlock() *block.MagicBlock {
+	if c.GetCurrentRound() == 0 {
+		return c.GetLatestMagicBlock()
+	}
 	return c.GetMagicBlock(c.CurrentRound) //FIXME: race current round and deadlock
+}
+
+func (c *Chain) GetLatestMagicBlock() *block.MagicBlock {
+	c.mbMutex.RLock()
+	defer c.mbMutex.RUnlock()
+	entity := c.MagicBlockStorage.GetLatest()
+	if entity == nil {
+		Logger.Panic("failed to get magic block from mb storage")
+	}
+	return entity.(*block.MagicBlock)
 }
 
 func (c *Chain) GetMagicBlock(round int64) *block.MagicBlock {
@@ -175,6 +187,10 @@ func (c *Chain) GetPrevMagicBlock(round int64) *block.MagicBlock {
 		return entity.(*block.MagicBlock)
 	}
 	return c.PreviousMagicBlock
+}
+
+func (c *Chain) GetPrevMagicBlockFromMB(mb *block.MagicBlock) *block.MagicBlock {
+	return c.GetPrevMagicBlock(mb.StartingRound)
 }
 
 func (c *Chain) SetMagicBlock(mb *block.MagicBlock) {
@@ -872,8 +888,6 @@ func (c *Chain) getBlocks() []*block.Block {
 func (c *Chain) SetRoundRank(r round.RoundI, b *block.Block) {
 	miners := c.GetMiners(r.GetRoundNumber())
 	if miners == nil || miners.MapSize() == 0 {
-		log.Println("SetRoundRank NIL MB Rounds", c.MagicBlockStorage.GetRounds(),
-			"round number", r.GetRoundNumber(), "miners", miners)
 		Logger.DPanic("set_round_rank  --  empty miners", zap.Any("round", r.GetRoundNumber()), zap.Any("block", b.Hash))
 	}
 	bNode := miners.GetNode(b.MinerID)
@@ -1106,11 +1120,13 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 }
 
 func (c *Chain) UpdateNodesFromMagicBlock(newMagicBlock *block.MagicBlock) {
+	oldNodes := node.CopyNodes()
 	c.SetupNodes(newMagicBlock)
 	newMagicBlock.Sharders.ComputeProperties()
 	newMagicBlock.Miners.ComputeProperties()
 	c.InitializeMinerPool(newMagicBlock)
-	c.GetNodesPreviousInfo()
+	c.GetNodesPreviousInfo(newMagicBlock)
+	c.deregisterNodes(oldNodes)
 	UpdateNodes <- newMagicBlock.StartingRound
 }
 
@@ -1122,6 +1138,15 @@ func (c *Chain) SetupNodes(mb *block.MagicBlock) {
 	for _, sharder := range mb.Sharders.CopyNodesMap() {
 		sharder.ComputeProperties()
 		node.Setup(sharder)
+	}
+}
+
+func (c *Chain) deregisterNodes(oldNodes map[string]*node.Node) {
+	newNodes := node.CopyNodes()
+	for key := range oldNodes {
+		if _, found := newNodes[key]; !found {
+			node.DeregisterNode(key)
+		}
 	}
 }
 
@@ -1163,13 +1188,17 @@ func (c *Chain) GetLatestFinalizedMagicBlockSummary() *block.BlockSummary {
 	return c.lfmbSummary
 }
 
-func (c *Chain) GetNodesPreviousInfo() {
-	currentRound := c.GetCurrentRound()
-	mb := c.GetMagicBlock(currentRound)
-	prevMB := c.GetPrevMagicBlock(currentRound)
+func (c *Chain) GetNodesPreviousInfo(mb *block.MagicBlock) {
+	prevMB := c.GetPrevMagicBlockFromMB(mb)
 	for key, miner := range mb.Miners.CopyNodesMap() {
 		if old := prevMB.Miners.GetNode(key); old != nil {
 			miner.SetNodeInfo(old)
+			if miner.ProtocolStats == nil {
+				ms := &MinerStats{}
+				ms.GenerationCountByRank = make([]int64, c.NumGenerators)
+				ms.FinalizationCountByRank = make([]int64, c.NumGenerators)
+				ms.VerificationTicketsByRank = make([]int64, c.NumGenerators)
+			}
 		}
 	}
 	for key, sharder := range mb.Sharders.CopyNodesMap() {
@@ -1199,7 +1228,7 @@ func (c *Chain) Stop() {
 	}
 }
 
-// pruning storage
+// PruneRoundStorage pruning storage
 func (c *Chain) PruneRoundStorage(ctx context.Context, storages ...round.RoundStorage) {
 	const countPrune = DefaultCountPruneRoundStorage
 	for _, storage := range storages {

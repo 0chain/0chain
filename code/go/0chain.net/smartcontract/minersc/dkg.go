@@ -59,7 +59,13 @@ func (msc *MinerSmartContract) moveToShareOrPublish(balances c_state.StateContex
 		if err != nil {
 			log.Println("moveToShareOrPublish trace", trace, "error", err)
 		} else {
-			log.Println("moveToShareOrPublish result=", result)
+			l := -1
+			if mpks != nil {
+
+				l = len(mpks.Mpks)
+			}
+			log.Println("moveToShareOrPublish result=", result, "trace", trace,
+				"dkgMinersList.K", dkgMinersList.K, "len(mpks.Mpks)", l)
 		}
 	}()
 

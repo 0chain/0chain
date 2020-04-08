@@ -238,7 +238,7 @@ func (mc *Chain) ViewChange(ctx context.Context, nRound int64) (bool, error) {
 	viewChangeMagicBlock := mc.GetViewChangeMagicBlock()
 	mb := mc.GetMagicBlock(nRound)
 	if viewChangeMagicBlock != nil {
-		if mb == nil || mb.MagicBlockNumber == viewChangeMagicBlock.MagicBlockNumber-1 {
+		if mb == nil || mb.MagicBlockNumber != viewChangeMagicBlock.MagicBlockNumber {
 			err := mc.UpdateMagicBlock(viewChangeMagicBlock)
 			if err != nil {
 				Logger.DPanic(err.Error())
@@ -246,9 +246,9 @@ func (mc *Chain) ViewChange(ctx context.Context, nRound int64) (bool, error) {
 
 		}
 		mc.UpdateNodesFromMagicBlock(viewChangeMagicBlock)
-		if _, err := mc.ensureLatestFinalizedBlocks(ctx, nRound); err != nil {
+		/*if _, err := mc.ensureLatestFinalizedBlocks(ctx, nRound); err != nil {
 			Logger.Warn("vc ensure lfb error", zap.Error(err))
-		}
+		}*/
 
 		// Send the previous notarized block for new miners
 		mc.sendNotarizedBlockToNewMiners(ctx, nRound-1, viewChangeMagicBlock, mb)

@@ -95,7 +95,7 @@ func main() {
 	if selfNode.GetKey() == "" {
 		Logger.Panic("node definition for self node doesn't exist")
 	}
-	mb := sc.GetCurrentMagicBlock()
+	mb := sc.GetLatestMagicBlock()
 	if !mb.IsActiveNode(selfNode.GetKey(), 0) {
 		hostName, n2nHost, portNum, err := readNonGenesisHostAndPort(keysFile)
 		if err != nil {

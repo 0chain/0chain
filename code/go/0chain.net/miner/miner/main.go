@@ -44,6 +44,12 @@ import (
 var mpks map[bls.PartyID][]bls.PublicKey
 
 func main() {
+	defer func() {
+		r := recover()
+		if r != nil {
+			log.Println(r)
+		}
+	}()
 	deploymentMode := flag.Int("deployment_mode", 2, "deployment_mode")
 	keysFile := flag.String("keys_file", "", "keys_file")
 	delayFile := flag.String("delay_file", "", "delay_file")
@@ -103,7 +109,7 @@ func main() {
 		chain.SetupStateLogger("/tmp/state.txt")
 	}
 	gb := mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"), magicBlock)
-	mb := mc.GetCurrentMagicBlock()
+	mb := mc.GetLatestMagicBlock()
 	Logger.Info("Miners in main", zap.Int("size", mb.Miners.Size()))
 
 	if !mb.IsActiveNode(node.Self.Underlying().GetKey(), 0) {
@@ -172,7 +178,7 @@ func main() {
 	if err := getCurrentMagicBlock(mc); err != nil {
 		Logger.Panic(err.Error())
 	}
-	mb = mc.GetCurrentMagicBlock()
+	mb = mc.GetLatestMagicBlock()
 	if mb.StartingRound == 0 && mb.IsActiveNode(node.Self.Underlying().GetKey(), mb.StartingRound) {
 		dkgShare := &bls.DKGSummary{
 			SecretShares: make(map[string]string),
@@ -182,7 +188,7 @@ func main() {
 			dkgShare.SecretShares[miner.ComputeBlsID(k)] = v.ShareOrSigns[node.Self.Underlying().GetKey()].Share
 		}
 		err = miner.StoreDKGSummary(ctx, dkgShare)
-		if err!=nil {
+		if err != nil {
 			panic(err)
 		}
 	}
@@ -198,6 +204,7 @@ func main() {
 	chain.StartTime = time.Now().UTC()
 	activeMiner := mb.Miners.HasNode(node.Self.Underlying().GetKey())
 	if activeMiner {
+		mb = mc.GetLatestMagicBlock()
 		if err := miner.SetDKG(ctx, mb); err != nil {
 			Logger.Error("failed to set DKG", zap.Error(err))
 		} else {
@@ -309,8 +316,8 @@ func getCurrentMagicBlock(mc *miner.Chain) error {
 	if err := mc.UpdateMagicBlock(magicBlock.MagicBlock); err != nil {
 		return fmt.Errorf("failed to update magic block: %v", err.Error())
 	}
-	mc.UpdateNodesFromMagicBlock(magicBlock.MagicBlock)
 	mc.SetLatestFinalizedMagicBlock(magicBlock)
+	mc.UpdateNodesFromMagicBlock(magicBlock.MagicBlock)
 	return nil
 }
 

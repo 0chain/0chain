@@ -164,7 +164,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 			zap.Int("num_generators", c.NumGenerators))
 	} else {
 		bNode := node.GetNode(fb.MinerID)
-		if bNode.ProtocolStats !=nil {
+		if bNode.ProtocolStats != nil {
 			//FIXME: fix node stats
 			ms := bNode.ProtocolStats.(*MinerStats)
 			ms.FinalizationCountByRank[fb.RoundRank]++ // stat
