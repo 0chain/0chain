@@ -44,12 +44,6 @@ import (
 var mpks map[bls.PartyID][]bls.PublicKey
 
 func main() {
-	defer func() {
-		r := recover()
-		if r != nil {
-			log.Println(r)
-		}
-	}()
 	deploymentMode := flag.Int("deployment_mode", 2, "deployment_mode")
 	keysFile := flag.String("keys_file", "", "keys_file")
 	delayFile := flag.String("delay_file", "", "delay_file")

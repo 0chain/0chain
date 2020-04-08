@@ -60,8 +60,14 @@ func (np *Pool) SendToMultiple(handler SendHandler, nodes []*Node) (bool, error)
 }
 
 /*SendToMultipleNodes - send to multiple nodes */
-func (np *Pool) SendToMultipleNodes(handler SendHandler, nodes []*Node) []*Node {
-	return np.sendTo(len(nodes), nodes, handler)
+func (np *Pool) SendToMultipleNodes(handler SendHandler, nodes []*Node) (result []*Node) {
+	defer func() {
+		if r := recover(); r != nil {
+			Logger.Error("PANIC", zap.Any("error", r))
+		}
+	}()
+	result = np.sendTo(len(nodes), nodes, handler)
+	return
 }
 
 /*SendAtleast - It tries to communicate to at least the given number of active nodes */
