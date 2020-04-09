@@ -143,11 +143,11 @@ func (vsc *VestingSmartContract) getOrCreateClientPools(clientID datastore.Key,
 //
 
 func (vsc *VestingSmartContract) getClientPoolsHandler(ctx context.Context,
-	parasm url.Values, balances chainstate.StateContextI) (
+	params url.Values, balances chainstate.StateContextI) (
 	resp interface{}, err error) {
 
 	var (
-		clientID = parasm.Get("client_id")
+		clientID = params.Get("client_id")
 		cp       *clientPools
 	)
 
