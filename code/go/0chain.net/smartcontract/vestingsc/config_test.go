@@ -1,11 +1,12 @@
 package vestingsc
 
 import (
-	"strings"
+	// "strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	// "github.com/stretchr/testify/require"
 )
 
 func Test_configKey(t *testing.T) {
@@ -26,36 +27,44 @@ func assertErrMsg(t *testing.T, err error, msg string) {
 	}
 }
 
+func s(n time.Duration) time.Duration {
+	return n * time.Second
+}
+
 func Test_config_validate(t *testing.T) {
-	for _, tt := range []struct {
+	for i, tt := range []struct {
 		config config
 		err    string
 	}{
-		// duration
-		{{-1, 0, 0, 0, 0, 0},
-			"invalid min_duration (< 1s)"},
-		{{0, 0, 0, 0, 0, 0},
-			"invalid min_duration (< 1s)"},
-		{{1, 0, 0, 0, 0, 0},
+		// min lock
+		{config{-1, 0, 0, 0, 0, 0, 0}, "invalid min_lock (<= 0)"},
+		{config{0, 0, 0, 0, 0, 0, 0}, "invalid min_lock (<= 0)"},
+		// min duration
+		{config{1, s(-1), 0, 0, 0, 0, 0}, "invalid min_duration (< 1s)"},
+		{config{1, s(0), 0, 0, 0, 0, 0}, "invalid min_duration (< 1s)"},
+		// max duration
+		{config{1, s(1), s(0), 0, 0, 0, 0},
 			"invalid max_duration: less or equal to min_duration"},
-		{{1, 1, 0, 0, 0, 0},
+		{config{1, s(1), s(1), 0, 0, 0, 0},
 			"invalid max_duration: less or equal to min_duration"},
-		// friquency
-		{{1, 2, -1, 0, 0, 0},
-			"invalid min_friquency (< 1s)"},
-		{{1, 2, 0, 0, 0, 0},
-			"invalid min_friquency (< 1s)"},
-		{{1, 2, 1, 0, 0, 0},
+		// min friquency
+		{config{1, s(1), s(2), s(-1), 0, 0, 0}, "invalid min_friquency (< 1s)"},
+		{config{1, s(1), s(2), s(0), 0, 0, 0}, "invalid min_friquency (< 1s)"},
+		// max friquency
+		{config{1, s(1), s(2), s(1), s(0), 0, 0},
 			"invalid max_friquency: less or equal to min_friquency"},
-		{{1, 2, 0, 0, 0, 0},
+		{config{1, s(1), s(2), s(1), s(1), 0, 0},
 			"invalid max_friquency: less or equal to min_friquency"},
+		// max_destinations
+		{config{1, s(1), s(2), s(1), s(2), 0, 0},
+			"invalid max_destinations (< 1)"},
+		// max_description_length
+		{config{1, s(1), s(2), s(1), s(2), 1, 0},
+			"invalid max_description_length (< 1)"},
 	} {
+		t.Log(i)
 		assertErrMsg(t, tt.config.validate(), tt.err)
 	}
-
-	// MaxDestinations < 1: "invalid max_destinations (< 1)"
-	// MaxNameLength < 1: "invalid max_name_length (< 1)"
-
 }
 
 func TestVestingSmartContract_getConfigBytes(t *testing.T) {

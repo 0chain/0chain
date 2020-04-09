@@ -2,12 +2,14 @@ package vestingsc
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/url"
 	"time"
 
 	chainstate "0chain.net/chaincore/chain/state"
 	configpkg "0chain.net/chaincore/config"
+	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -15,36 +17,55 @@ import (
 )
 
 func configKey(vscKey string) datastore.Key {
-	return datastore.Key(scKey + ":configurations")
+	return datastore.Key(vscKey + ":configurations")
 }
 
 type config struct {
-	MinDuration     time.Duration `json:"min_duration"`
-	MaxDuration     time.Duration `json:"max_duration"`
-	MinFriquency    time.Duration `json:"min_friquency"`
-	MaxFriquency    time.Duration `json:"max_friquency"`
-	MaxDestinations int           `json:"max_destinations"`
-	MaxNameLength   int           `json:"max_name_length"`
+	MinLock              state.Balance `json:"min_lock"`
+	MinDuration          time.Duration `json:"min_duration"`
+	MaxDuration          time.Duration `json:"max_duration"`
+	MinFriquency         time.Duration `json:"min_friquency"`
+	MaxFriquency         time.Duration `json:"max_friquency"`
+	MaxDestinations      int           `json:"max_destinations"`
+	MaxDescriptionLength int           `json:"max_description_length"`
+}
+
+func (c *config) Encode() (p []byte) {
+	var err error
+	if p, err = json.Marshal(c); err != nil {
+		panic(err) // must not happen
+	}
+	return
+}
+
+func (c *config) Decode(p []byte) error {
+	return json.Unmarshal(p, c)
 }
 
 func (c *config) validate() (err error) {
 	switch {
+	case c.MinLock <= 0:
+		return errors.New("invalid min_lock (<= 0)")
 	case toSeconds(c.MinDuration) < 1:
 		return errors.New("invalid min_duration (< 1s)")
 	case toSeconds(c.MaxDuration) <= toSeconds(c.MinDuration):
 		return errors.New("invalid max_duration: less or equal to min_duration")
 	case toSeconds(c.MinFriquency) < 1:
 		return errors.New("invalid min_friquency (< 1s)")
-	case toSeconds(c.MaxFriquency) <= toSecond(c.MinFriquency):
+	case toSeconds(c.MaxFriquency) <= toSeconds(c.MinFriquency):
 		return errors.New("invalid max_friquency:" +
 			" less or equal to min_friquency")
 	case c.MaxDestinations < 1:
 		return errors.New("invalid max_destinations (< 1)")
-	case c.MaxNameLength < 1:
-		return errors.New("invalid max_name_length (< 1)")
+	case c.MaxDescriptionLength < 1:
+		return errors.New("invalid max_description_length (< 1)")
 	}
 	return
 }
+
+//
+// helpers
+//
 
 func (vsc *VestingSmartContract) getConfigBytes(
 	balances chainstate.StateContextI) (b []byte, err error) {
@@ -72,14 +93,14 @@ func getConfiguredConfig() (conf *config, err error) {
 	conf.MinFriquency = scconf.GetDuration(prefix + "min_friquency")
 	conf.MaxFriquency = scconf.GetDuration(prefix + "max_friquency")
 	conf.MaxDestinations = scconf.GetInt(prefix + "max_destinations")
-	conf.MaxNameLength = scconf.GetInt(prefix + "max_name_length")
+	conf.MaxDescriptionLength = scconf.GetInt(prefix + "max_description_length")
 
 	err = conf.validate()
 	return
 }
 
 func (vsc *VestingSmartContract) setupConfig(
-	balances chainState.StateContextI) (conf *config, err error) {
+	balances chainstate.StateContextI) (conf *config, err error) {
 
 	if conf, err = getConfiguredConfig(); err != nil {
 		return
@@ -90,7 +111,7 @@ func (vsc *VestingSmartContract) setupConfig(
 	return
 }
 
-func (vsc *VestingSmartContract) getConfig(balances chainState.StateContextI,
+func (vsc *VestingSmartContract) getConfig(balances chainstate.StateContextI,
 	setup bool) (conf *config, err error) {
 
 	var confb []byte
@@ -114,29 +135,12 @@ func (vsc *VestingSmartContract) getConfig(balances chainState.StateContextI,
 	return
 }
 
-func (vsc *VestingSmartContract) getConfigHandler(ctx context.Context,
-	params url.Values, balances chainState.StateContextI) (
-	resp interface{}, err error) {
+//
+// SC functions
+//
 
-	var conf *config
-	conf, err = vsc.getConfig(balances, false)
-
-	if err != nil && err != util.ErrValueNotPresent {
-		return // unexpected error
-	}
-
-	// return configurations from sc.yaml not saving them
-	if err == util.ErrValueNotPresent {
-		return getConfiguredConfig()
-	}
-
-	return conf, nil // actual value
-}
-
-// updateConfig is SC function used by SC
-// owner to update storage SC configurations
 func (vsc *VestingSmartContract) updateConfig(t *transaction.Transaction,
-	input []byte, balances chainState.StateContextI) (resp string, err error) {
+	input []byte, balances chainstate.StateContextI) (resp string, err error) {
 
 	if t.ClientID != owner {
 		return "", common.NewError("update_config",
@@ -158,4 +162,27 @@ func (vsc *VestingSmartContract) updateConfig(t *transaction.Transaction,
 	}
 
 	return string(update.Encode()), nil
+}
+
+//
+// REST-handler
+//
+
+func (vsc *VestingSmartContract) getConfigHandler(ctx context.Context,
+	params url.Values, balances chainstate.StateContextI) (
+	resp interface{}, err error) {
+
+	var conf *config
+	conf, err = vsc.getConfig(balances, false)
+
+	if err != nil && err != util.ErrValueNotPresent {
+		return // unexpected error
+	}
+
+	// return configurations from sc.yaml not saving them
+	if err == util.ErrValueNotPresent {
+		return getConfiguredConfig()
+	}
+
+	return conf, nil // actual value
 }
