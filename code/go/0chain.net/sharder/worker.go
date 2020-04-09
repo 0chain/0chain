@@ -22,7 +22,7 @@ func SetupWorkers(ctx context.Context) {
 	go sc.HealthCheckSetup(ctx, DeepScan)
 	go sc.HealthCheckSetup(ctx, ProximityScan)
 
-	go sc.PruneStorageWorker(ctx, time.Minute*15, sc.MagicBlockStorage)
+	go sc.PruneStorageWorker(ctx, time.Minute*5, sc.MagicBlockStorage)
 }
 
 /*BlockWorker - stores the blocks */

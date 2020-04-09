@@ -245,9 +245,9 @@ func (c *Chain) VerifyChainHistory(ctx context.Context,
 			return common.NewError("get_lfmb_from_sharders",
 				fmt.Sprintf("failed to update magic block %d: %v",
 					currentMagicBlock.MagicBlockNumber+1, err))
-		} /*else {
+		} else {
 			c.UpdateNodesFromMagicBlock(magicBlock.MagicBlock)
-		}*/
+		}
 
 		c.SetLatestFinalizedMagicBlock(magicBlock)
 		currentMagicBlock = magicBlock
