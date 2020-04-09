@@ -2,6 +2,7 @@ package miner
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"0chain.net/chaincore/block"
@@ -13,6 +14,7 @@ import (
 /*Round - a round from miner's perspective */
 type Round struct {
 	*round.Round
+	muVerification        sync.RWMutex
 	blocksToVerifyChannel chan *block.Block
 	verificationCancelf   context.CancelFunc
 	delta                 time.Duration
@@ -22,14 +24,13 @@ type Round struct {
 
 /*AddBlockToVerify - adds a block to the round. Assumes non-concurrent update */
 func (r *Round) AddBlockToVerify(b *block.Block) {
-	r.Mutex.Lock()
-	defer r.Mutex.Unlock()
-	if r.isVerificationComplete() {
-		Logger.Debug("block proposal - verification complete", zap.Int64("round", r.GetRoundNumber()), zap.String("block", b.Hash))
+	roundNumber := r.GetRoundNumber()
+	if r.IsVerificationComplete() {
+		Logger.Debug("block proposal - verification complete", zap.Int64("round", roundNumber), zap.String("block", b.Hash))
 		return
 	}
-	if r.GetRoundNumber() != b.Round {
-		Logger.Error("block proposal - round mismatch", zap.Int64("round", r.GetRoundNumber()), zap.Int64("block_round", b.Round), zap.String("block", b.Hash))
+	if roundNumber != b.Round {
+		Logger.Error("block proposal - round mismatch", zap.Int64("round", roundNumber), zap.Int64("block_round", b.Round), zap.String("block", b.Hash))
 		return
 	}
 	if b.GetRoundRandomSeed() != r.GetRandomSeed() {
@@ -41,16 +42,16 @@ func (r *Round) AddBlockToVerify(b *block.Block) {
 
 /*AddVerificationTicket - add a verification ticket */
 func (r *Round) AddVerificationTicket(bvt *block.BlockVerificationTicket) {
-	r.Mutex.Lock()
-	defer r.Mutex.Unlock()
+	r.muVerification.Lock()
+	defer r.muVerification.Unlock()
 	r.verificationTickets[bvt.Signature] = bvt
 }
 
 /*GetVerificationTickets - get verification tickets for a given block in this round */
 func (r *Round) GetVerificationTickets(blockID string) []*block.VerificationTicket {
 	var vts []*block.VerificationTicket
-	r.Mutex.Lock()
-	defer r.Mutex.Unlock()
+	r.muVerification.Lock()
+	defer r.muVerification.Unlock()
 	for _, bvt := range r.verificationTickets {
 		if blockID == bvt.BlockID {
 			vts = append(vts, &bvt.VerificationTicket)
@@ -75,8 +76,8 @@ func (r *Round) isVerificationComplete() bool {
 
 /*StartVerificationBlockCollection - start collecting blocks for verification */
 func (r *Round) StartVerificationBlockCollection(ctx context.Context) context.Context {
-	r.Mutex.Lock()
-	defer r.Mutex.Unlock()
+	r.muVerification.Lock()
+	defer r.muVerification.Unlock()
 	if r.verificationCancelf != nil {
 		return nil
 	}
@@ -90,8 +91,8 @@ func (r *Round) StartVerificationBlockCollection(ctx context.Context) context.Co
 
 /*CancelVerification - Cancel verification of blocks */
 func (r *Round) CancelVerification() {
-	r.Mutex.Lock()
-	defer r.Mutex.Unlock()
+	r.muVerification.Lock()
+	defer r.muVerification.Unlock()
 	f := r.verificationCancelf
 	if f == nil {
 		return

@@ -48,7 +48,7 @@ type Round struct {
 	state           int32
 	proposedBlocks  []*block.Block
 	notarizedBlocks []*block.Block
-	Mutex           sync.RWMutex
+	mutex           sync.RWMutex
 	shares          map[string]*VRFShare
 
 	timeoutCount     int32
@@ -136,9 +136,9 @@ func (r *Round) SetRandomSeedForNotarizedBlock(seed int64) {
 	r.setRandomSeed(seed)
 	//r.setState(RoundVRFComplete) RoundStateFinalizing??
 	r.setHasRandomSeed(true)
-	r.Mutex.Lock()
+	r.mutex.Lock()
 	r.minerPerm = nil
-	r.Mutex.Unlock()
+	r.mutex.Unlock()
 }
 
 //SetRandomSeed - set the random seed of the round
@@ -150,9 +150,9 @@ func (r *Round) SetRandomSeed(seed int64) {
 	r.setState(RoundVRFComplete)
 	r.setHasRandomSeed(true)
 
-	r.Mutex.Lock()
+	r.mutex.Lock()
 	r.minerPerm = nil
-	r.Mutex.Unlock()
+	r.mutex.Unlock()
 }
 
 func (r *Round) setRandomSeed(seed int64) {
@@ -174,22 +174,22 @@ func (r *Round) GetRandomSeed() int64 {
 
 // SetVRFOutput --sets the VRFOutput
 func (r *Round) SetVRFOutput(rboutput string) {
-	r.Mutex.Lock()
-	defer r.Mutex.Unlock()
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
 	r.VRFOutput = rboutput
 }
 
 // GetVRFOutput --gets the VRFOutput
 func (r *Round) GetVRFOutput() string {
-	r.Mutex.RLock()
-	defer r.Mutex.RUnlock()
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
 	return r.VRFOutput
 }
 
 /*AddNotarizedBlock - this will be concurrent as notarization is recognized by verifying as well as notarization message from others */
 func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool) {
-	r.Mutex.Lock()
-	defer r.Mutex.Unlock()
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
 	b, _ = r.addProposedBlock(b)
 	found := -1
 
@@ -229,8 +229,8 @@ func (r *Round) GetNotarizedBlocks() []*block.Block {
 
 /*AddProposedBlock - this will be concurrent as notarization is recognized by verifying as well as notarization message from others */
 func (r *Round) AddProposedBlock(b *block.Block) (*block.Block, bool) {
-	r.Mutex.Lock()
-	defer r.Mutex.Unlock()
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
 	return r.addProposedBlock(b)
 }
 
@@ -247,15 +247,15 @@ func (r *Round) addProposedBlock(b *block.Block) (*block.Block, bool) {
 
 /*GetProposedBlocks - return all the blocks that have been proposed for this round */
 func (r *Round) GetProposedBlocks() []*block.Block {
-	r.Mutex.RLock()
-	defer r.Mutex.RUnlock()
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
 	return r.proposedBlocks
 }
 
 /*GetHeaviestNotarizedBlock - get the heaviest notarized block that we have in this round */
 func (r *Round) GetHeaviestNotarizedBlock() *block.Block {
-	r.Mutex.RLock()
-	defer r.Mutex.RUnlock()
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
 	rnb := r.notarizedBlocks
 	if len(rnb) == 0 {
 		return nil
@@ -271,8 +271,8 @@ func (r *Round) GetBlocksByRank(blocks []*block.Block) []*block.Block {
 
 /*GetBestRankedNotarizedBlock - get the best ranked notarized block for this round */
 func (r *Round) GetBestRankedNotarizedBlock() *block.Block {
-	r.Mutex.RLock()
-	defer r.Mutex.RUnlock()
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
 	rnb := r.notarizedBlocks
 	if len(rnb) == 0 {
 		return nil
@@ -286,8 +286,8 @@ func (r *Round) GetBestRankedNotarizedBlock() *block.Block {
 
 /*Finalize - finalize the round */
 func (r *Round) Finalize(b *block.Block) {
-	r.Mutex.Lock()
-	defer r.Mutex.Unlock()
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
 	r.setState(RoundStateFinalized)
 	r.Block = b
 	r.BlockHash = b.Hash
@@ -295,8 +295,8 @@ func (r *Round) Finalize(b *block.Block) {
 
 /*SetFinalizing - the round is being finalized */
 func (r *Round) SetFinalizing() bool {
-	r.Mutex.Lock()
-	defer r.Mutex.Unlock()
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
 	if r.isFinalized() || r.isFinalizing() {
 		return false
 	}
@@ -379,15 +379,15 @@ func SetupRoundSummaryDB() {
 func (r *Round) ComputeMinerRanks(miners *node.Pool) {
 	Logger.Info("compute miner ranks", zap.Any("num_miners", miners.Size()), zap.Any("round", r.Number))
 	seed := r.GetRandomSeed()
-	r.Mutex.Lock()
+	r.mutex.Lock()
 	r.minerPerm = rand.New(rand.NewSource(seed)).Perm(miners.Size())
-	r.Mutex.Unlock()
+	r.mutex.Unlock()
 }
 
 /*GetMinerRank - get the rank of element at the elementIdx position based on the permutation of the round */
 func (r *Round) GetMinerRank(miner *node.Node) int {
-	r.Mutex.RLock()
-	defer r.Mutex.RUnlock()
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
 	if r.minerPerm == nil {
 		pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
 		Logger.DPanic(fmt.Sprintf("miner ranks not computed yet: %v", r.GetState()))
@@ -406,9 +406,9 @@ func (r *Round) GetMinerRank(miner *node.Node) int {
 
 /*GetMinersByRank - get the rnaks of the miners */
 func (r *Round) GetMinersByRank(miners *node.Pool) []*node.Node {
-	r.Mutex.RLock()
-	defer r.Mutex.RUnlock()
 	nodes := miners.CopyNodes()
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
 	Logger.Info("get miners by rank", zap.Any("num_miners", len(nodes)), zap.Any("round", r.Number), zap.Any("r.minerPerm", r.minerPerm))
 	sort.Slice(nodes, func(i, j int) bool {
 		idxi, idxj := 0, 0
@@ -437,18 +437,18 @@ func (r *Round) Clear() {
 
 //Restart - restart the round
 func (r *Round) Restart() {
-	r.Mutex.Lock()
+	r.mutex.Lock()
 	r.initialize()
 	r.Block = nil
-	r.Mutex.Unlock()
+	r.mutex.Unlock()
 	r.resetSoftTimeoutCount()
 	r.ResetState(RoundShareVRF)
 }
 
 //AddAdditionalVRFShare - Adding additional VRFShare received for stats persp
 func (r *Round) AddAdditionalVRFShare(share *VRFShare) bool {
-	r.Mutex.Lock()
-	defer r.Mutex.Unlock()
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
 
 	if _, ok := r.shares[share.party.GetKey()]; ok {
 		Logger.Info("AddVRFShare Share is already there. Returning false.")
@@ -461,9 +461,8 @@ func (r *Round) AddAdditionalVRFShare(share *VRFShare) bool {
 
 //AddVRFShare - implement interface
 func (r *Round) AddVRFShare(share *VRFShare, threshold int) bool {
-	//r.Mutex.Lock()
-	//defer r.Mutex.Unlock()
-	//FIXME: deadlock
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
 	if len(r.getVRFShares()) >= threshold {
 		//if we already have enough shares, do not add.
 		Logger.Info("AddVRFShare Already at threshold. Returning false.")
@@ -480,9 +479,8 @@ func (r *Round) AddVRFShare(share *VRFShare, threshold int) bool {
 
 //GetVRFShares - implement interface
 func (r *Round) GetVRFShares() map[string]*VRFShare {
-	//r.Mutex.RLock()
-	//defer r.Mutex.RUnlock()
-	//FIXME: deadlock
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
 	return r.getVRFShares()
 }
 

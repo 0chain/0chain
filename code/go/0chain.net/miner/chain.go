@@ -271,6 +271,10 @@ func (mc *Chain) sendNotarizedBlockToNewMiners(ctx context.Context, nRound int64
 		Logger.Error("round not found", zap.Any("round", nRound))
 		return
 	}
+	if prevRound.Block == nil {
+		Logger.Error("block round not found", zap.Any("round", nRound))
+		return
+	}
 	selfID := node.Self.Underlying().GetKey()
 	if currentMagicBlock.Miners.GetNode(selfID) == nil {
 		// A miner that was active in the previous VC can send a block
