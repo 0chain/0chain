@@ -47,29 +47,26 @@ func toSeconds(dur time.Duration) common.Timestamp {
 
 // validate the addRequest
 func (ar *addRequest) validate(now common.Timestamp, conf *config) (err error) {
+	if ar.StartTime == 0 {
+		ar.StartTime = now
+	}
 	switch {
 	case len(ar.Description) > conf.MaxDescriptionLength:
 		return errors.New("entry description is too long")
-	case ar.StartTime == 0:
-		ar.StartTime = now
 	case ar.StartTime < now:
 		return errors.New("vesting starts before now")
-	case ar.Duration < 0:
-		return errors.New("negative vesting duration")
 	case ar.Duration < conf.MinDuration:
 		return errors.New("vesting duration is too short")
 	case ar.Duration > conf.MaxDuration:
 		return errors.New("vesting duration is too long")
-	case ar.Friquency < 0:
-		return errors.New("negative vesting friquency")
 	case ar.Friquency < conf.MinFriquency:
 		return errors.New("vesting friquency is too low")
 	case ar.Friquency > conf.MaxFriquency:
 		return errors.New("vesting friquency is too high")
 	case len(ar.Destinations) == 0:
-		return errors.New("no vesting destinations")
+		return errors.New("no destinations")
 	case len(ar.Destinations) > conf.MaxDestinations:
-		return errors.New("amount of destinations is too big")
+		return errors.New("too many destinations")
 	}
 	return
 }
