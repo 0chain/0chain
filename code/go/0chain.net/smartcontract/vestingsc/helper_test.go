@@ -10,6 +10,7 @@ import (
 
 	"0chain.net/chaincore/chain"
 	chainstate "0chain.net/chaincore/chain/state"
+	configpkg "0chain.net/chaincore/config"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -19,9 +20,10 @@ import (
 	"0chain.net/core/logging"
 	"0chain.net/core/util"
 
-	"github.com/stretchr/testify/require"
-
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
+
+	"github.com/stretchr/testify/require"
 )
 
 const x10 = 10 * 1000 * 1000 * 1000
@@ -37,6 +39,8 @@ func init() {
 	chain.ServerChain.ClientSignatureScheme = "bls0chain"
 
 	logging.Logger = zap.NewNop()
+
+	configpkg.SmartContractConfig = viper.New()
 }
 
 func randString(n int) string {

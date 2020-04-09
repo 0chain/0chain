@@ -88,6 +88,7 @@ func getConfiguredConfig() (conf *config, err error) {
 
 	// short hand
 	var scconf = configpkg.SmartContractConfig
+	conf.MinLock = state.Balance(scconf.GetInt64(prefix + "min_lock"))
 	conf.MinDuration = scconf.GetDuration(prefix + "min_duration")
 	conf.MaxDuration = scconf.GetDuration(prefix + "max_duration")
 	conf.MinFriquency = scconf.GetDuration(prefix + "min_friquency")
