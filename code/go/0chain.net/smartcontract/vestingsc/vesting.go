@@ -265,7 +265,7 @@ func (vsc *VestingSmartContract) getPoolBytes(poolID datastore.Key,
 	balances chainstate.StateContextI) (_ []byte, err error) {
 
 	var val util.Serializable
-	if val, err = balances.GetTrieNode(poolKey(vsc.ID, poolID)); err != nil {
+	if val, err = balances.GetTrieNode(poolID); err != nil {
 		return
 	}
 
@@ -455,13 +455,13 @@ func (vsc *VestingSmartContract) lock(t *transaction.Transaction, input []byte,
 
 	if lr.PoolID == "" {
 		return "", common.NewError("lock_vesting_pool_failed",
-			"empty pool id in request")
+			"invalid request: missing pool id")
 	}
 
 	var vp *vestingPool
 	if vp, err = vsc.getPool(lr.PoolID, balances); err != nil {
 		return "", common.NewError("lock_vesting_pool_failed",
-			"can't get vesting pool: "+err.Error())
+			"can't get pool: "+err.Error())
 	}
 
 	if vp.ClientID != t.ClientID {
@@ -508,13 +508,13 @@ func (vsc *VestingSmartContract) unlock(t *transaction.Transaction,
 
 	if ur.PoolID == "" {
 		return "", common.NewError("unlock_vesting_pool_failed",
-			"empty pool id in request")
+			"invalid request: missing pool id")
 	}
 
 	var vp *vestingPool
 	if vp, err = vsc.getPool(ur.PoolID, balances); err != nil {
 		return "", common.NewError("unlock_vesting_pool_failed",
-			"can't get vesting pool: "+err.Error())
+			"can't get pool: "+err.Error())
 	}
 
 	if vp.ClientID != t.ClientID {
@@ -555,24 +555,13 @@ func (vsc *VestingSmartContract) trigger(t *transaction.Transaction,
 
 	if tr.PoolID == "" {
 		return "", common.NewError("trigger_vesting_pool_failed",
-			"empty pool id in request")
+			"invalid request: missing pool id")
 	}
 
 	var vp *vestingPool
 	if vp, err = vsc.getPool(tr.PoolID, balances); err != nil {
 		return "", common.NewError("trigger_vesting_pool_failed",
-			"can't get vesting pool: "+err.Error())
-	}
-
-	// check out bonds
-	if vp.ExpireAt < t.CreationDate {
-		return "", common.NewError("trigger_vesting_pool_failed",
-			"can't vest: expired pool")
-	}
-
-	if vp.StartTime > t.CreationDate {
-		return "", common.NewError("trigger_vesting_pool_failed",
-			"can't vest: vesting is not started yet")
+			"can't get pool: "+err.Error())
 	}
 
 	// next (this) time to vest
@@ -583,14 +572,14 @@ func (vsc *VestingSmartContract) trigger(t *transaction.Transaction,
 		next = vp.Last + toSeconds(vp.Friquency)
 	}
 
+	if next > vp.ExpireAt {
+		return "", common.NewError("trigger_vesting_pool_failed",
+			"expired pool")
+	}
+
 	if next > t.CreationDate {
 		return "", common.NewError("trigger_vesting_pool_failed",
 			"early vesting")
-	}
-
-	if next > vp.ExpireAt {
-		return "", common.NewError("trigger_vesting_pool_failed",
-			"late vesting")
 	}
 
 	// the time has come and is before the expire_at

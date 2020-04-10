@@ -48,8 +48,11 @@ func (tb *testBalances) AddSignedTransfer(st *state.SignedTransfer) {
 func (tb *testBalances) GetSignedTransfers() []*state.SignedTransfer {
 	return nil
 }
-func (tb *testBalances) DeleteTrieNode(datastore.Key) (datastore.Key, error) {
-	return "", nil
+func (tb *testBalances) DeleteTrieNode(key datastore.Key) (
+	datastore.Key, error) {
+
+	delete(tb.tree, key)
+	return key, nil
 }
 
 func (tb *testBalances) GetClientBalance(clientID datastore.Key) (
