@@ -8,7 +8,12 @@ import (
 	"os"
 	"path/filepath"
 
+	"go.uber.org/zap"
+
 	"0chain.net/chaincore/chain"
+	. "0chain.net/core/logging"
+	"github.com/minio/minio-go"
+	"github.com/spf13/viper"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/common"
@@ -20,13 +25,44 @@ import (
 type FSBlockStore struct {
 	RootDirectory         string
 	blockMetadataProvider datastore.EntityMetadata
+	Minio                 *minio.Client
+	bucketName            string
 }
 
 /*NewFSBlockStore - return a new fs block store */
 func NewFSBlockStore(rootDir string) *FSBlockStore {
 	store := &FSBlockStore{RootDirectory: rootDir}
 	store.blockMetadataProvider = datastore.GetEntityMetadata("block")
+	store.intializeMinio()
 	return store
+}
+
+func (fbs *FSBlockStore) intializeMinio() {
+	minioClient, err := minio.New(
+		viper.GetString("minio.storage_service_url"),
+		viper.GetString("minio.access_key_id"),
+		viper.GetString("minio.secret_access_key"),
+		viper.GetBool("minio.use_ssl"),
+	)
+	if err != nil {
+		Logger.Panic("Unable to initiaze minio cliet", zap.Error(err))
+		panic(err)
+	}
+	bucketName := viper.GetString("minio.bucket_name")
+	err = minioClient.MakeBucket(bucketName, viper.GetString("minio.bucket_location"))
+	if err != nil {
+		exists, errBucketExists := minioClient.BucketExists(bucketName)
+		if errBucketExists == nil && exists {
+			Logger.Info("We already own ", zap.Any("bucket_name", bucketName))
+		} else {
+			Logger.Panic("Minio bucket error", zap.Error(err), zap.Any("bucket_name", bucketName))
+			panic(err)
+		}
+	} else {
+		Logger.Info(bucketName + " bucket successfully created")
+	}
+	fbs.Minio = minioClient
+	fbs.bucketName = bucketName
 }
 
 func (fbs *FSBlockStore) getFileWithoutExtension(hash string, round int64) string {
@@ -79,7 +115,19 @@ func (fbs *FSBlockStore) read(hash string, round int64) (*block.Block, error) {
 	fileName := fbs.getFileName(hash, round)
 	f, err := os.Open(fileName)
 	if err != nil {
-		return nil, err
+		if os.IsNotExist(err) {
+			err = fbs.DownloadFromCloud(hash, round)
+			if err != nil {
+				return nil, err
+			}
+			f, err = os.Open(fileName)
+			if err != nil {
+				return nil, err
+
+			}
+		} else {
+			return nil, err
+		}
 	}
 	defer f.Close()
 	r, err := zlib.NewReader(f)
@@ -108,4 +156,18 @@ func (fbs *FSBlockStore) DeleteBlock(b *block.Block) error {
 		return err
 	}
 	return nil
+}
+
+func (fbs *FSBlockStore) UploadToCloud(hash string, round int64) error {
+	filePath := fbs.getFileName(hash, round)
+	_, err := fbs.Minio.FPutObject(fbs.bucketName, hash, filePath, minio.PutObjectOptions{})
+	if err != nil {
+		return err
+	}
+	return os.Remove(filePath)
+}
+
+func (fbs *FSBlockStore) DownloadFromCloud(hash string, round int64) error {
+	filePath := fbs.getFileName(hash, round)
+	return fbs.Minio.FGetObject(fbs.bucketName, hash, filePath, minio.GetObjectOptions{})
 }

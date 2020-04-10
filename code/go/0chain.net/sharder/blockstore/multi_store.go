@@ -1,6 +1,9 @@
 package blockstore
 
-import "0chain.net/chaincore/block"
+import (
+	"0chain.net/chaincore/block"
+	"0chain.net/core/common"
+)
 
 //MultiBlockStore - a block store backed by multiple other block stores - useful to experiment different block stores
 type MultiBlockStore struct {
@@ -70,4 +73,12 @@ func (mbs *MultiBlockStore) DeleteBlock(b *block.Block) error {
 		}
 	}
 	return nil
+}
+
+func (mbs *MultiBlockStore) UploadToCloud(hash string, round int64) error {
+	return common.NewError("interface_not_implemented", "MultiBlockStore cannote provide this interface")
+}
+
+func (mbs *MultiBlockStore) DownloadFromCloud(hash string, round int64) error {
+	return common.NewError("interface_not_implemented", "MultiBlockStore cannote provide this interface")
 }

@@ -65,15 +65,15 @@ server_chain:
       provider: blockstore.FSBlockStore # blockstore.FSBlockStore or blockstore.BlockDBStore
   round_range: 10000000
   round_timeouts:
-    softto_min: 3000   #in miliseconds
-    softto_mult: 3    #multiples of mean network time (mnt)  softto = max{softo_min, softto_mult * mnt}
-    round_restart_mult: 2        #number of soft timeouts before round is restarted
+    softto_min: 3000 #in miliseconds
+    softto_mult: 3 #multiples of mean network time (mnt)  softto = max{softo_min, softto_mult * mnt}
+    round_restart_mult: 2 #number of soft timeouts before round is restarted
   transaction:
     payload:
       max_size: 98304 # bytes
     timeout: 30 # seconds
   client:
-    signature_scheme: bls0chain  # ed25519 or bls0chain
+    signature_scheme: bls0chain # ed25519 or bls0chain
     discover: true
   messages:
     verification_tickets_to: all_miners # generator or all_miners
@@ -110,3 +110,15 @@ network:
     rate_limit: 10 # 1 per second
   n2n_handlers:
     rate_limit: 1000 # 1000 per second
+
+minio:
+  enabled: false # Do not enable with deep scan ON
+  worker_frequency: 3600
+  num_workers: 5
+  old_block_round_range: 20000000
+  storage_service_url: play.min.io
+  access_key_id: Q3AM3UQ867SPQQA43P2F
+  secret_access_key: zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG
+  use_ssl: false
+  bucket_name: mytestbucket
+  bucket_location: us-east-1
