@@ -21,13 +21,15 @@ func configKey(vscKey string) datastore.Key {
 }
 
 type config struct {
-	MinLock              state.Balance `json:"min_lock"`
-	MinDuration          time.Duration `json:"min_duration"`
-	MaxDuration          time.Duration `json:"max_duration"`
-	MinFriquency         time.Duration `json:"min_friquency"`
-	MaxFriquency         time.Duration `json:"max_friquency"`
-	MaxDestinations      int           `json:"max_destinations"`
-	MaxDescriptionLength int           `json:"max_description_length"`
+	Configurators        []datastore.Key `json:"configurators"`
+	Triggers             []datastore.Key `json:"triggers"`
+	MinLock              state.Balance   `json:"min_lock"`
+	MinDuration          time.Duration   `json:"min_duration"`
+	MaxDuration          time.Duration   `json:"max_duration"`
+	MinFriquency         time.Duration   `json:"min_friquency"`
+	MaxFriquency         time.Duration   `json:"max_friquency"`
+	MaxDestinations      int             `json:"max_destinations"`
+	MaxDescriptionLength int             `json:"max_description_length"`
 }
 
 func (c *config) Encode() (p []byte) {
@@ -44,6 +46,10 @@ func (c *config) Decode(p []byte) error {
 
 func (c *config) validate() (err error) {
 	switch {
+	case len(c.Configurators) == 0:
+		return errors.New("empty configurators list")
+	case len(c.Triggers) == 0:
+		return errors.New("empty triggers list")
 	case c.MinLock <= 0:
 		return errors.New("invalid min_lock (<= 0)")
 	case toSeconds(c.MinDuration) < 1:
@@ -59,6 +65,16 @@ func (c *config) validate() (err error) {
 		return errors.New("invalid max_destinations (< 1)")
 	case c.MaxDescriptionLength < 1:
 		return errors.New("invalid max_description_length (< 1)")
+	}
+	for _, cr := range c.Configurators {
+		if cr == "" {
+			return errors.New("empty configurator ID in list")
+		}
+	}
+	for _, tr := range c.Triggers {
+		if tr == "" {
+			return errors.New("empty trigger ID in list")
+		}
 	}
 	return
 }
@@ -88,6 +104,8 @@ func getConfiguredConfig() (conf *config, err error) {
 
 	// short hand
 	var scconf = configpkg.SmartContractConfig
+	conf.Configurators = scconf.GetStringSlice(prefix + "configurators")
+	conf.Triggers = scconf.GetStringSlice(prefix + "triggers")
 	conf.MinLock = state.Balance(scconf.GetInt64(prefix + "min_lock"))
 	conf.MinDuration = scconf.GetDuration(prefix + "min_duration")
 	conf.MaxDuration = scconf.GetDuration(prefix + "max_duration")
@@ -143,9 +161,23 @@ func (vsc *VestingSmartContract) getConfig(balances chainstate.StateContextI,
 func (vsc *VestingSmartContract) updateConfig(t *transaction.Transaction,
 	input []byte, balances chainstate.StateContextI) (resp string, err error) {
 
-	if t.ClientID != owner {
+	var conf *config
+	if conf, err = vsc.getConfig(balances, false); err != nil {
 		return "", common.NewError("update_config",
-			"unauthorized access - only the owner can update the variables")
+			"can't get current configurations")
+	}
+
+	var valid bool
+	for _, cr := range conf.Configurators {
+		if t.ClientID == cr {
+			valid = true
+			break
+		}
+	}
+
+	if !valid {
+		return "", common.NewError("update_config",
+			"unauthorized access - unknown client_id")
 	}
 
 	var update config
