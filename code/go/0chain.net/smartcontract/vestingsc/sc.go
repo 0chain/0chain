@@ -10,7 +10,10 @@ import (
 	metrics "github.com/rcrowley/go-metrics"
 )
 
-const ADDRESS = "2bba5b05949ea59c80aed3ac3474d7379d3be737e8eb5a968c52295e48333ead"
+const (
+	owner   = "c8a5e74c2f4fae2c1bed79fb2b78d3b88f844bbb6bf1db5fc43240711f23321f"
+	ADDRESS = "2bba5b05949ea59c80aed3ac3474d7379d3be737e8eb5a968c52295e48333ead"
+)
 
 type RestPoints = map[string]smartcontractinterface.SmartContractRestHandler
 

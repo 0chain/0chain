@@ -44,54 +44,47 @@ func Test_config_Encode_Decode(t *testing.T) {
 func Test_config_validate(t *testing.T) {
 
 	var (
-		invcs = []datastore.Key{"", "c"}
 		invts = []datastore.Key{"", "t"}
-
-		cs = []datastore.Key{"one-c", "two-c"}
-		tr = []datastore.Key{"one-t", "two-t"}
+		tr    = []datastore.Key{"one-t", "two-t"}
 	)
 
 	for i, tt := range []struct {
 		config config
 		err    string
 	}{
-		// configurators
-		{config{nil, nil, 0, 0, 0, 0, 0, 0, 0}, "empty configurators list"},
 		// triggers
-		{config{cs, nil, 0, 0, 0, 0, 0, 0, 0}, "empty triggers list"},
+		{config{nil, 0, 0, 0, 0, 0, 0, 0}, "empty triggers list"},
 		// min lock
-		{config{cs, tr, -1, 0, 0, 0, 0, 0, 0}, "invalid min_lock (<= 0)"},
-		{config{cs, tr, 0, 0, 0, 0, 0, 0, 0}, "invalid min_lock (<= 0)"},
+		{config{tr, -1, 0, 0, 0, 0, 0, 0}, "invalid min_lock (<= 0)"},
+		{config{tr, 0, 0, 0, 0, 0, 0, 0}, "invalid min_lock (<= 0)"},
 		// min duration
-		{config{cs, tr, 1, s(-1), 0, 0, 0, 0, 0},
+		{config{tr, 1, s(-1), 0, 0, 0, 0, 0},
 			"invalid min_duration (< 1s)"},
-		{config{cs, tr, 1, s(0), 0, 0, 0, 0, 0},
+		{config{tr, 1, s(0), 0, 0, 0, 0, 0},
 			"invalid min_duration (< 1s)"},
 		// max duration
-		{config{cs, tr, 1, s(1), s(0), 0, 0, 0, 0},
+		{config{tr, 1, s(1), s(0), 0, 0, 0, 0},
 			"invalid max_duration: less or equal to min_duration"},
-		{config{cs, tr, 1, s(1), s(1), 0, 0, 0, 0},
+		{config{tr, 1, s(1), s(1), 0, 0, 0, 0},
 			"invalid max_duration: less or equal to min_duration"},
 		// min friquency
-		{config{cs, tr, 1, s(1), s(2), s(-1), 0, 0, 0},
+		{config{tr, 1, s(1), s(2), s(-1), 0, 0, 0},
 			"invalid min_friquency (< 1s)"},
-		{config{cs, tr, 1, s(1), s(2), s(0), 0, 0, 0},
+		{config{tr, 1, s(1), s(2), s(0), 0, 0, 0},
 			"invalid min_friquency (< 1s)"},
 		// max friquency
-		{config{cs, tr, 1, s(1), s(2), s(1), s(0), 0, 0},
+		{config{tr, 1, s(1), s(2), s(1), s(0), 0, 0},
 			"invalid max_friquency: less or equal to min_friquency"},
-		{config{cs, tr, 1, s(1), s(2), s(1), s(1), 0, 0},
+		{config{tr, 1, s(1), s(2), s(1), s(1), 0, 0},
 			"invalid max_friquency: less or equal to min_friquency"},
 		// max_destinations
-		{config{cs, tr, 1, s(1), s(2), s(1), s(2), 0, 0},
+		{config{tr, 1, s(1), s(2), s(1), s(2), 0, 0},
 			"invalid max_destinations (< 1)"},
 		// max_description_length
-		{config{cs, tr, 1, s(1), s(2), s(1), s(2), 1, 0},
+		{config{tr, 1, s(1), s(2), s(1), s(2), 1, 0},
 			"invalid max_description_length (< 1)"},
-		//
-		{config{invcs, tr, 1, s(1), s(2), s(1), s(2), 1, 1},
-			"empty configurator ID in list"},
-		{config{cs, invts, 1, s(1), s(2), s(1), s(2), 1, 1},
+		// empty triggers list
+		{config{invts, 1, s(1), s(2), s(1), s(2), 1, 1},
 			"empty trigger ID in list"},
 	} {
 		t.Log(i)
@@ -118,8 +111,6 @@ func TestVestingSmartContract_getConfigBytes(t *testing.T) {
 func configureConfig() (configured *config) {
 	const pfx = "smart_contracts.vestingsc."
 
-	configpkg.SmartContractConfig.Set(pfx+"configurators",
-		[]string{"one-c", "two-c"})
 	configpkg.SmartContractConfig.Set(pfx+"triggers",
 		[]string{"one-t", "two-t"})
 	configpkg.SmartContractConfig.Set(pfx+"min_lock", 10)
@@ -131,7 +122,6 @@ func configureConfig() (configured *config) {
 	configpkg.SmartContractConfig.Set(pfx+"max_description_length", 255)
 
 	return &config{
-		[]datastore.Key{"one-c", "two-c"},
 		[]datastore.Key{"one-t", "two-t"},
 		10,
 		1 * time.Minute, 10 * time.Minute,
@@ -193,7 +183,7 @@ func TestVestingSmartContract_updateConfig(t *testing.T) {
 	_, err = vsc.updateConfig(txn, mustEncode(t, set), balances)
 	require.Error(t, err)
 
-	txn.ClientID = "one-c"
+	txn.ClientID = owner
 	set.MinLock = -1
 	_, err = vsc.updateConfig(txn, mustEncode(t, set), balances)
 	require.Error(t, err)

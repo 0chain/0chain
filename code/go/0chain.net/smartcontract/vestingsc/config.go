@@ -21,7 +21,6 @@ func configKey(vscKey string) datastore.Key {
 }
 
 type config struct {
-	Configurators        []datastore.Key `json:"configurators"`
 	Triggers             []datastore.Key `json:"triggers"`
 	MinLock              state.Balance   `json:"min_lock"`
 	MinDuration          time.Duration   `json:"min_duration"`
@@ -46,8 +45,6 @@ func (c *config) Decode(p []byte) error {
 
 func (c *config) validate() (err error) {
 	switch {
-	case len(c.Configurators) == 0:
-		return errors.New("empty configurators list")
 	case len(c.Triggers) == 0:
 		return errors.New("empty triggers list")
 	case c.MinLock <= 0:
@@ -65,11 +62,6 @@ func (c *config) validate() (err error) {
 		return errors.New("invalid max_destinations (< 1)")
 	case c.MaxDescriptionLength < 1:
 		return errors.New("invalid max_description_length (< 1)")
-	}
-	for _, cr := range c.Configurators {
-		if cr == "" {
-			return errors.New("empty configurator ID in list")
-		}
 	}
 	for _, tr := range c.Triggers {
 		if tr == "" {
@@ -104,7 +96,6 @@ func getConfiguredConfig() (conf *config, err error) {
 
 	// short hand
 	var scconf = configpkg.SmartContractConfig
-	conf.Configurators = scconf.GetStringSlice(prefix + "configurators")
 	conf.Triggers = scconf.GetStringSlice(prefix + "triggers")
 	conf.MinLock = state.Balance(scconf.GetInt64(prefix + "min_lock"))
 	conf.MinDuration = scconf.GetDuration(prefix + "min_duration")
@@ -161,23 +152,8 @@ func (vsc *VestingSmartContract) getConfig(balances chainstate.StateContextI,
 func (vsc *VestingSmartContract) updateConfig(t *transaction.Transaction,
 	input []byte, balances chainstate.StateContextI) (resp string, err error) {
 
-	var conf *config
-	if conf, err = vsc.getConfig(balances, false); err != nil {
-		return "", common.NewError("update_config",
-			"can't get current configurations")
-	}
-
-	var valid bool
-	for _, cr := range conf.Configurators {
-		if t.ClientID == cr {
-			valid = true
-			break
-		}
-	}
-
-	if !valid {
-		return "", common.NewError("update_config",
-			"unauthorized access - unknown client_id")
+	if t.ClientID != owner {
+		return "", common.NewError("update_config", "only SC owner can do that")
 	}
 
 	var update config
