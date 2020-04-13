@@ -16,6 +16,7 @@ development:
     interest: true
     miner: true
     fee: false
+    vesting: true
   txn_generation:
     wallets: 500
     transactions: 70

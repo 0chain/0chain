@@ -16,6 +16,7 @@ development:
     interest: true
     miner: false
     multisig: true
+    vesting: true
   txn_generation:
     wallets: 50
     max_transactions: 70
