@@ -543,9 +543,24 @@ func (vsc *VestingSmartContract) unlock(t *transaction.Transaction,
 func (vsc *VestingSmartContract) trigger(t *transaction.Transaction,
 	input []byte, balances chainstate.StateContextI) (resp string, err error) {
 
-	//
-	// TODO (sfxdx): filter request submitters ? (SC owner, configured?)
-	//
+	var conf *config
+	if conf, err = vsc.getConfig(balances, true); err != nil {
+		return "", common.NewError("trigger_vesting_pool_failed",
+			"can't get config: "+err.Error())
+	}
+
+	var valid bool
+	for _, tr := range conf.Triggers {
+		if t.ClientID == tr {
+			valid = true
+			break
+		}
+	}
+
+	if !valid {
+		return "", common.NewError("trigger_vesting_pool_failed",
+			"not allowed for this client")
+	}
 
 	var tr lockRequest
 	if err = tr.decode(input); err != nil {

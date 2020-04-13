@@ -434,12 +434,24 @@ func TestVestingSmartContract_trigger(t *testing.T) {
 		client   = newClient(1200, balances)
 		tp       = common.Timestamp(0)
 		tx       = newTransaction(client.id, vsc.ID, 0, tp)
+		conf     *config
 		lr       lockRequest
 		err      error
 	)
 
 	balances.txn = tx
 	setConfig(t, balances)
+
+	// 0. not allowed
+	_, err = vsc.trigger(tx, nil, balances)
+	assertErrMsg(t, err,
+		"trigger_vesting_pool_failed: not allowed for this client")
+
+	conf, err = vsc.getConfig(balances, false)
+	require.NoError(t, err)
+	conf.Triggers = append(conf.Triggers, tx.ClientID, "another_one")
+	_, err = balances.InsertTrieNode(configKey(vsc.ID), conf)
+	require.NoError(t, err)
 
 	// 1. malformed
 	_, err = vsc.trigger(tx, []byte("} malformed {"), balances)

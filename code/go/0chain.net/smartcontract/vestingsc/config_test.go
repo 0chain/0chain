@@ -123,7 +123,7 @@ func configureConfig() (configured *config) {
 
 	return &config{
 		[]datastore.Key{"one-t", "two-t"},
-		10,
+		10e10,
 		1 * time.Minute, 10 * time.Minute,
 		2 * time.Minute, 20 * time.Minute,
 		50, 255,

@@ -36,3 +36,17 @@ smart_contracts:
     # blobber_slash represents blobber's stake penalty when a challenge not
     # passed
     blobber_slash: 0.10
+  vestingsc:
+    # triggers is list of ids of clients can call 'trigger' function of the
+    # smart-contract; it can be a Vesting-server or a developer
+    triggers:
+        - '255a7f473f5b0eb4ffcd8f9af774dee477d7e82055728a8bd2fbc7639dc5295f'
+    min_lock: 0.01
+    min_duration: '2m'
+    max_duration: '2h'
+    min_friquency: '30s'
+    max_friquency: '1m'
+    # max amount of destinations
+    max_destinations: 3
+    # max length of pool description provided by client
+    max_description_length: 20
