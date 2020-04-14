@@ -986,6 +986,11 @@ func (c *Chain) CanShardBlocks(nRound int64) bool {
 	return mb.Sharders.GetActiveCount()*100 >= mb.Sharders.Size()*c.MinActiveSharders
 }
 
+//CanShardBlocksSharders - is the network able to effectively shard the blocks?
+func (c *Chain) CanShardBlocksSharders(sharders *node.Pool) bool {
+	return sharders.GetActiveCount()*100 >= sharders.Size()*c.MinActiveSharders
+}
+
 //CanReplicateBlock - can the given block be effectively replicated?
 func (c *Chain) CanReplicateBlock(b *block.Block) bool {
 	if c.NumReplicators <= 0 || c.MinActiveReplicators == 0 {
@@ -1246,4 +1251,9 @@ func (c *Chain) PruneRoundStorage(ctx context.Context, storages ...round.RoundSt
 			}
 		}
 	}
+}
+
+// ResetStatusMonitor resetting the node monitoring worker
+func ResetStatusMonitor(round int64) {
+	UpdateNodes <- round
 }

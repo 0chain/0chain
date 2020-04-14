@@ -168,8 +168,10 @@ func main() {
 	common.ConfigRateLimits()
 	initN2NHandlers()
 
-	mc.WaitForActiveSharders(ctx)
-	if err := getCurrentMagicBlock(mc); err != nil {
+	if err := mc.WaitForActiveSharders(ctx); err != nil {
+		Logger.Error("failed to wait sharders", zap.Error(err))
+	}
+	if err := getCurrentMagicBlockFromSharders(mc); err != nil {
 		Logger.Panic(err.Error())
 	}
 	mb = mc.GetLatestMagicBlock()
@@ -199,7 +201,7 @@ func main() {
 	activeMiner := mb.Miners.HasNode(node.Self.Underlying().GetKey())
 	if activeMiner {
 		mb = mc.GetLatestMagicBlock()
-		if err := miner.SetDKG(ctx, mb); err != nil {
+		if err := miner.SetDKGFromMagicBlocksChainPrev(ctx, mb); err != nil {
 			Logger.Error("failed to set DKG", zap.Error(err))
 		} else {
 			miner.StartProtocol(ctx, gb)
@@ -293,7 +295,7 @@ func readMagicBlockFile(magicBlockFile *string, mc *miner.Chain, serverChain *ch
 	return nil
 }
 
-func getCurrentMagicBlock(mc *miner.Chain) error {
+func getCurrentMagicBlockFromSharders(mc *miner.Chain) error {
 	mbs := mc.GetLatestFinalizedMagicBlockFromSharder(common.GetRootContext())
 	if len(mbs) == 0 {
 		Logger.DPanic("No finalized magic block from sharder")
@@ -339,6 +341,9 @@ func initEntities() {
 	bls.SetupDKGSummary(ememoryStorage)
 	bls.SetupDKGDB()
 	setupsc.SetupSmartContracts()
+
+	block.SetupMagicBlockData(ememoryStorage)
+	block.SetupMagicBlockDataDB()
 }
 
 func initHandlers() {

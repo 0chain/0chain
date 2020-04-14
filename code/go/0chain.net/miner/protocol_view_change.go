@@ -1,6 +1,7 @@
 package miner
 
 import (
+	"0chain.net/core/ememorystore"
 	"context"
 	"errors"
 	"fmt"
@@ -630,11 +631,16 @@ func (mc *Chain) Wait() (result *httpclientutil.Transaction, err2 error) {
 	mc.viewChangeDKG.StartingRound = magicBlock.StartingRound
 	mc.viewChangeDKG.MagicBlockNumber = magicBlock.MagicBlockNumber
 	summary := mc.viewChangeDKG.GetDKGSummary()
-	if err := StoreDKGSummary(common.GetRootContext(), summary); err != nil {
+	ctx := common.GetRootContext()
+	if err := StoreDKGSummary(ctx, summary); err != nil {
 		Logger.DPanic(err.Error())
 	}
 	if err := mc.SetDKG(mc.viewChangeDKG, magicBlock.StartingRound); err != nil {
 		Logger.Error("failed to set dkg", zap.Error(err))
+	}
+	mbData := block.NewMagicBlockData(magicBlock)
+	if err := StoreMagicBlockDataLatest(ctx, mbData); err != nil {
+		Logger.DPanic(err.Error())
 	}
 	mc.clearViewChange()
 	mc.SetViewChangeMagicBlock(magicBlock)
@@ -661,4 +667,44 @@ func (mc *Chain) GetNextViewChange() int64 {
 
 func (mc *Chain) SetNextViewChange(value int64) {
 	atomic.StoreInt64(&mc.nextViewChange, value)
+}
+
+func StoreMagicBlockDataLatest(ctx context.Context, data *block.MagicBlockData) error {
+	if err := StoreMagicBlockData(ctx, data); err != nil {
+		return err
+	}
+	// latest
+	dataLatest := block.NewMagicBlockData(data.MagicBlock)
+	dataLatest.ID = "latest"
+	if err := StoreMagicBlockData(ctx, dataLatest); err != nil {
+		return err
+	}
+	return nil
+}
+
+func StoreMagicBlockData(ctx context.Context, data *block.MagicBlockData) error {
+	magicBlockMetadata := data.GetEntityMetadata()
+	dctx := ememorystore.WithEntityConnection(ctx, magicBlockMetadata)
+	defer ememorystore.Close(dctx)
+	if err := data.Write(dctx); err != nil {
+		return err
+	}
+	connection := ememorystore.GetEntityCon(dctx, magicBlockMetadata)
+	if err := connection.Commit(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func GetMagicBlockDataFromStore(ctx context.Context, id string) (*block.MagicBlockData, error) {
+	magicBlockData := datastore.GetEntity("magicblockdata").(*block.MagicBlockData)
+	magicBlockData.ID = id
+	magicBlockDataMetadata := magicBlockData.GetEntityMetadata()
+	dctx := ememorystore.WithEntityConnection(ctx, magicBlockDataMetadata)
+	defer ememorystore.Close(dctx)
+	err := magicBlockData.Read(dctx, magicBlockData.GetKey())
+	if err != nil {
+		return nil, err
+	}
+	return magicBlockData, nil
 }

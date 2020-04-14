@@ -40,6 +40,29 @@ func TestRoundStartingStore(t *testing.T) {
 
 		assert.Equal(t, 4, storage.Count())
 		assert.EqualValues(t, []int64{5, 51, 151, 251}, storage.GetRounds())
+	})
+
+	t.Run("putCheckOrder", func(t *testing.T) {
+		storage := NewRoundStartingStorage()
+		assert.Equal(t, 0, storage.Count())
+		assert.Empty(t, storage.GetRounds())
+
+		//Check put
+		err := storage.Put(entity1, 1001)
+		assert.NoError(t, err)
+
+		err = storage.Put(entity2, 501)
+		assert.NoError(t, err)
+
+		err = storage.Put(entity3, 2001)
+		assert.NoError(t, err)
+
+
+		assert.Equal(t, 3, storage.Count())
+		assert.EqualValues(t, []int64{501, 1001, 2001}, storage.GetRounds())
+		assert.Equal(t,int64(501),storage.GetRounds()[0])
+		assert.Equal(t,int64(1001),storage.GetRounds()[1])
+		assert.Equal(t,int64(2001),storage.GetRounds()[2])
 
 	})
 

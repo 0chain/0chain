@@ -2,6 +2,7 @@ package miner
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"sort"
 	"sync"
@@ -98,9 +99,10 @@ func (mc *Chain) RedoVrfShare(ctx context.Context, r *Round) bool {
 func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
 	currentDKG := mc.GetCurrentDKG(r.GetRoundNumber())
 	if currentDKG == nil {
+		Logger.Error("add_my_vrf_share --- currentDKG is nil. My vrf share is not added",
+			zap.Any("round", r.GetRoundNumber()))
 		return
 	}
-
 	var err error
 	vrfs := &round.VRFShare{}
 	vrfs.Round = r.GetRoundNumber()
@@ -866,10 +868,27 @@ func StartProtocol(ctx context.Context, gb *block.Block) {
 }
 
 func (mc *Chain) WaitForActiveSharders(ctx context.Context) error {
-	if mc.CanShardBlocks(mc.GetCurrentRound()) {
+	oldRound := mc.GetCurrentRound()
+	defer mc.SetCurrentRound(oldRound)
+	latestMagicBlock, err := mc.getLatestMagicBlockFromStore(ctx)
+	if err != nil {
+		Logger.Error("failed to get latest magic block from store", zap.Error(err))
+		latestMagicBlock = mc.GetCurrentMagicBlock()
+	} else {
+		mc.SetCurrentRound(latestMagicBlock.StartingRound)
+		defer chain.ResetStatusMonitor(oldRound)
+	}
+	if mc.CanShardBlocksSharders(latestMagicBlock.Sharders) {
 		return nil
 	}
-
+	waitingSharders := make([]string, 0, latestMagicBlock.Sharders.MapSize())
+	for _, nodeSharder := range latestMagicBlock.Sharders.CopyNodesMap() {
+		waitingSharders = append(waitingSharders, fmt.Sprintf("id: %s; n2nhost: %s ", nodeSharder.ID, nodeSharder.N2NHost))
+	}
+	Logger.Debug("Waiting for Sharders",
+		zap.Int64("magic_block_round", latestMagicBlock.StartingRound),
+		zap.Int64("magic_block_number", latestMagicBlock.MagicBlockNumber),
+		zap.Any("sharders", waitingSharders))
 	ticker := time.NewTicker(5 * chain.DELTA)
 	defer ticker.Stop()
 	for {
@@ -877,10 +896,23 @@ func (mc *Chain) WaitForActiveSharders(ctx context.Context) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		case ts := <-ticker.C:
-			if mc.CanShardBlocks(mc.GetCurrentRound()) {
+			if mc.CanShardBlocksSharders(latestMagicBlock.Sharders) {
 				return nil
 			}
-			Logger.Info("Waiting for Sharders.", zap.Time("ts", ts))
+			Logger.Info("Waiting for Sharders.", zap.Time("ts", ts), zap.Any("sharders", waitingSharders))
 		}
 	}
+}
+
+func (mc *Chain) getLatestMagicBlockFromStore(ctx context.Context) (*block.MagicBlock, error) {
+	mbData, err := GetMagicBlockDataFromStore(ctx, "latest")
+	if err != nil {
+		return nil, err
+	}
+	latestMagicBlock := mbData.MagicBlock
+	if err := mc.UpdateMagicBlock(latestMagicBlock); err != nil {
+		return nil, fmt.Errorf("failed to update magic block: %v", err.Error())
+	}
+	mc.UpdateNodesFromMagicBlock(latestMagicBlock)
+	return latestMagicBlock, nil
 }

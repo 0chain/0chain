@@ -121,7 +121,7 @@ func (s *roundStartingStorage) putToSlice(round int64) {
 		}
 	}
 	if index == -1 {
-		s.rounds = append(s.rounds, round)
+		s.rounds = append([]int64{round}, s.rounds...)
 	} else {
 		s.rounds = append(s.rounds[:index+1], append([]int64{round}, s.rounds[index+1:]...)...)
 	}

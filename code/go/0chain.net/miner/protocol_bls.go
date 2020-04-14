@@ -51,10 +51,23 @@ func SetDKG(ctx context.Context, mb *block.MagicBlock) error {
 	return nil
 }
 
-func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (err2 error) {
-	/*if mc.GetCurrentDKG(mb.StartingRound)!=nil {
-		return nil
-	}*/
+// SetDKGFromMagicBlocksChainPrev sets DKG for all MB from the specified block
+func SetDKGFromMagicBlocksChainPrev(ctx context.Context, mb *block.MagicBlock) error {
+	mc := GetMinerChain()
+	if err := SetDKG(ctx, mb); err != nil {
+		return err
+	}
+	prevMB := mc.GetPrevMagicBlockFromMB(mb)
+	for prevMB != nil && prevMB != mb && prevMB.StartingRound != 0 {
+		if err := SetDKG(ctx, prevMB); err != nil {
+			Logger.Error("failed to set DKG", zap.Error(err))
+		}
+		prevMB = mc.GetPrevMagicBlockFromMB(prevMB)
+	}
+	return nil
+}
+
+func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) error {
 	self := node.GetSelfNode(ctx)
 	dkgSummary, err := GetDKGSummaryFromStore(ctx, strconv.FormatInt(mb.MagicBlockNumber, 10))
 	if err != nil {
