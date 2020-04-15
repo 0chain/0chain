@@ -116,7 +116,8 @@ func mustSave(t *testing.T, key datastore.Key, val util.Serializable,
 
 func avgConfig() (conf *config) {
 	conf = new(config)
-	conf.Triggers = []string{"one-t", "two-t"}
+	conf.AllowAny = false
+	conf.Triggers = []string{trOne, trTwo}
 	conf.MinLock = 100
 	conf.MinDuration = 1 * time.Second
 	conf.MaxDuration = 1 * time.Hour

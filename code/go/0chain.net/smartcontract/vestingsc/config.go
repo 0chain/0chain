@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/url"
 	"time"
 
@@ -16,11 +17,14 @@ import (
 	"0chain.net/core/util"
 )
 
+const idLength = 64
+
 func configKey(vscKey string) datastore.Key {
 	return datastore.Key(vscKey + ":configurations")
 }
 
 type config struct {
+	AllowAny             bool            `json:"allow_any"`
 	Triggers             []datastore.Key `json:"triggers"`
 	MinLock              state.Balance   `json:"min_lock"`
 	MinDuration          time.Duration   `json:"min_duration"`
@@ -45,7 +49,7 @@ func (c *config) Decode(p []byte) error {
 
 func (c *config) validate() (err error) {
 	switch {
-	case len(c.Triggers) == 0:
+	case len(c.Triggers) == 0 && !c.AllowAny:
 		return errors.New("empty triggers list")
 	case c.MinLock <= 0:
 		return errors.New("invalid min_lock (<= 0)")
@@ -64,11 +68,23 @@ func (c *config) validate() (err error) {
 		return errors.New("invalid max_description_length (< 1)")
 	}
 	for _, tr := range c.Triggers {
-		if tr == "" {
-			return errors.New("empty trigger ID in list")
+		if len(tr) != idLength {
+			return fmt.Errorf("invalid trigger ID length: %d", len(tr))
 		}
 	}
 	return
+}
+
+func (c *config) isValidTrigger(id datastore.Key) bool {
+	if c.AllowAny {
+		return true
+	}
+	for _, tr := range c.Triggers {
+		if tr == id {
+			return true
+		}
+	}
+	return false
 }
 
 //
@@ -96,6 +112,7 @@ func getConfiguredConfig() (conf *config, err error) {
 
 	// short hand
 	var scconf = configpkg.SmartContractConfig
+	conf.AllowAny = scconf.GetBool(prefix + "allow_any")
 	conf.Triggers = scconf.GetStringSlice(prefix + "triggers")
 	conf.MinLock = state.Balance(scconf.GetFloat64(prefix+"min_lock") * 1e10)
 	conf.MinDuration = scconf.GetDuration(prefix + "min_duration")

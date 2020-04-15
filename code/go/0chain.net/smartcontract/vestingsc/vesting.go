@@ -539,6 +539,19 @@ func (vsc *VestingSmartContract) unlock(t *transaction.Transaction,
 // function triggered by server
 //
 
+type triggerResp struct {
+	At      common.Timestamp `json:"at"`      // the Last
+	Vesting json.RawMessage  `json:"vesting"` //
+}
+
+func (tr *triggerResp) toJSON() string {
+	var b, err = json.Marshal(tr)
+	if err != nil {
+		panic(err)
+	}
+	return string(b)
+}
+
 // trigger next vesting and return all transfers in transaction's response
 func (vsc *VestingSmartContract) trigger(t *transaction.Transaction,
 	input []byte, balances chainstate.StateContextI) (resp string, err error) {
@@ -549,15 +562,7 @@ func (vsc *VestingSmartContract) trigger(t *transaction.Transaction,
 			"can't get config: "+err.Error())
 	}
 
-	var valid bool
-	for _, tr := range conf.Triggers {
-		if t.ClientID == tr {
-			valid = true
-			break
-		}
-	}
-
-	if !valid {
+	if !conf.isValidTrigger(t.ClientID) {
 		return "", common.NewError("trigger_vesting_pool_failed",
 			"not allowed for this client")
 	}
@@ -610,7 +615,11 @@ func (vsc *VestingSmartContract) trigger(t *transaction.Transaction,
 			"saving pool: "+err.Error())
 	}
 
-	return // resp, nil
+	var trsp triggerResp
+	trsp.At = t.CreationDate
+	trsp.Vesting = json.RawMessage(resp)
+
+	return trsp.toJSON(), nil
 }
 
 //
