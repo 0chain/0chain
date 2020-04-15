@@ -38,6 +38,10 @@ func (vsc *VestingSmartContract) SetSC(sc *smartcontractinterface.SmartContract,
 
 	vsc.SmartContract = sc
 
+	// transactions log for vesting server
+	vsc.SmartContract.RestHandlers["/getLastPart"] = vsc.getLastPartHandler
+	vsc.SmartContract.RestHandlers["/getPart"] = vsc.getPartHandler
+
 	// information (statistics) and configurations
 	vsc.SmartContract.RestHandlers["/getConfig"] = vsc.getConfigHandler
 	vsc.SmartContract.RestHandlers["/getPoolInfo"] = vsc.getPoolInfoHandler

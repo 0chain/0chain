@@ -375,6 +375,11 @@ func (vsc *VestingSmartContract) add(t *transaction.Transaction,
 			"can't save pool: "+err.Error())
 	}
 
+	if err = vsc.addTxnToVestingLog(t.Hash, balances); err != nil {
+		return "", common.NewError("trigger_vesting_pool_failed",
+			"saving transaction in log: "+err.Error())
+	}
+
 	return string(vp.Encode()), nil
 }
 
@@ -441,6 +446,11 @@ func (vsc *VestingSmartContract) delete(t *transaction.Transaction,
 			"can't delete vesting pool: "+err.Error())
 	}
 
+	if err = vsc.addTxnToVestingLog(t.Hash, balances); err != nil {
+		return "", common.NewError("trigger_vesting_pool_failed",
+			"saving transaction in log: "+err.Error())
+	}
+
 	return string(vp.Encode()), nil
 }
 
@@ -494,6 +504,11 @@ func (vsc *VestingSmartContract) lock(t *transaction.Transaction, input []byte,
 			"saving pool: "+err.Error())
 	}
 
+	if err = vsc.addTxnToVestingLog(t.Hash, balances); err != nil {
+		return "", common.NewError("trigger_vesting_pool_failed",
+			"saving transaction in log: "+err.Error())
+	}
+
 	return // resp, nil
 }
 
@@ -530,6 +545,11 @@ func (vsc *VestingSmartContract) unlock(t *transaction.Transaction,
 	if err = vp.save(balances); err != nil {
 		return "", common.NewError("unlock_vesting_pool_failed",
 			"saving pool: "+err.Error())
+	}
+
+	if err = vsc.addTxnToVestingLog(t.Hash, balances); err != nil {
+		return "", common.NewError("trigger_vesting_pool_failed",
+			"saving transaction in log: "+err.Error())
 	}
 
 	return // resp, nil
@@ -618,6 +638,11 @@ func (vsc *VestingSmartContract) trigger(t *transaction.Transaction,
 	var trsp triggerResp
 	trsp.At = t.CreationDate
 	trsp.Vesting = json.RawMessage(resp)
+
+	if err = vsc.addTxnToVestingLog(t.Hash, balances); err != nil {
+		return "", common.NewError("trigger_vesting_pool_failed",
+			"saving transaction in log: "+err.Error())
+	}
 
 	return trsp.toJSON(), nil
 }
