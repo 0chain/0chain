@@ -23,6 +23,14 @@ type lockRequest struct {
 	PoolID string `json:"pool_id"`
 }
 
+func (lr *lockRequest) encode() (b []byte) {
+	var err error
+	if b, err = json.Marshal(lr); err != nil {
+		panic(err) // must not happen
+	}
+	return
+}
+
 func (lr *lockRequest) decode(b []byte) error {
 	return json.Unmarshal(b, lr)
 }
@@ -209,7 +217,7 @@ func (vp *vestingPool) empty(t *transaction.Transaction,
 	var transfer *state.Transfer
 	transfer, resp, err = vp.EmptyPool(t.ToClientID, t.ClientID, nil)
 	if err != nil {
-		return "", fmt.Errorf("draining vesting pool: %v", err)
+		return "", fmt.Errorf("emptying vesting pool: %v", err)
 	}
 	if err = balances.AddTransfer(transfer); err != nil {
 		return "", fmt.Errorf("adding transfer vesting_pool->client: %v", err)
@@ -310,6 +318,58 @@ func (vsc *VestingSmartContract) checkFill(t *transaction.Transaction,
 }
 
 //
+// transaction outputs
+//
+
+type Out struct {
+	Function string          `json:"function"`
+	Output   json.RawMessage `json:"output"`
+}
+
+func (o *Out) toJSON() string {
+	var b, err = json.Marshal(o)
+	if err != nil {
+		panic(err)
+	}
+	return string(b)
+}
+
+func addOut(vp *vestingPool) string {
+	var o Out
+	o.Function = "add"
+	o.Output = json.RawMessage(vp.Encode())
+	return o.toJSON()
+}
+
+func delOut(dr *lockRequest) string {
+	var o Out
+	o.Function = "delete"
+	o.Output = json.RawMessage(dr.encode())
+	return o.toJSON()
+}
+
+func lockOut(resp string) string {
+	var o Out
+	o.Function = "lock"
+	o.Output = json.RawMessage(resp)
+	return o.toJSON()
+}
+
+func unlockOut(resp string) string {
+	var o Out
+	o.Function = "unlock"
+	o.Output = json.RawMessage(resp)
+	return o.toJSON()
+}
+
+func triggerOut(resp string) string {
+	var o Out
+	o.Function = "trigger"
+	o.Output = json.RawMessage(resp)
+	return o.toJSON()
+}
+
+//
 // SC functions
 //
 
@@ -376,11 +436,11 @@ func (vsc *VestingSmartContract) add(t *transaction.Transaction,
 	}
 
 	if err = vsc.addTxnToVestingLog(t.Hash, balances); err != nil {
-		return "", common.NewError("trigger_vesting_pool_failed",
+		return "", common.NewError("create_vesting_pool_failed",
 			"saving transaction in log: "+err.Error())
 	}
 
-	return string(vp.Encode()), nil
+	return addOut(vp), nil
 }
 
 func (vsc *VestingSmartContract) delete(t *transaction.Transaction,
@@ -447,11 +507,11 @@ func (vsc *VestingSmartContract) delete(t *transaction.Transaction,
 	}
 
 	if err = vsc.addTxnToVestingLog(t.Hash, balances); err != nil {
-		return "", common.NewError("trigger_vesting_pool_failed",
+		return "", common.NewError("delete_vesting_pool_failed",
 			"saving transaction in log: "+err.Error())
 	}
 
-	return string(vp.Encode()), nil
+	return delOut(&dr), nil
 }
 
 func (vsc *VestingSmartContract) lock(t *transaction.Transaction, input []byte,
@@ -504,12 +564,7 @@ func (vsc *VestingSmartContract) lock(t *transaction.Transaction, input []byte,
 			"saving pool: "+err.Error())
 	}
 
-	if err = vsc.addTxnToVestingLog(t.Hash, balances); err != nil {
-		return "", common.NewError("trigger_vesting_pool_failed",
-			"saving transaction in log: "+err.Error())
-	}
-
-	return // resp, nil
+	return lockOut(resp), nil
 }
 
 func (vsc *VestingSmartContract) unlock(t *transaction.Transaction,
@@ -547,12 +602,7 @@ func (vsc *VestingSmartContract) unlock(t *transaction.Transaction,
 			"saving pool: "+err.Error())
 	}
 
-	if err = vsc.addTxnToVestingLog(t.Hash, balances); err != nil {
-		return "", common.NewError("trigger_vesting_pool_failed",
-			"saving transaction in log: "+err.Error())
-	}
-
-	return // resp, nil
+	return unlockOut(resp), nil
 }
 
 //
@@ -560,8 +610,8 @@ func (vsc *VestingSmartContract) unlock(t *transaction.Transaction,
 //
 
 type triggerResp struct {
-	At      common.Timestamp `json:"at"`      // the Last
-	Vesting json.RawMessage  `json:"vesting"` //
+	PoolID  string          `json:"pool_id"` //
+	Vesting json.RawMessage `json:"vesting"` //
 }
 
 func (tr *triggerResp) toJSON() string {
@@ -635,16 +685,13 @@ func (vsc *VestingSmartContract) trigger(t *transaction.Transaction,
 			"saving pool: "+err.Error())
 	}
 
+	// build transaction response
+
 	var trsp triggerResp
-	trsp.At = t.CreationDate
+	trsp.PoolID = tr.PoolID
 	trsp.Vesting = json.RawMessage(resp)
 
-	if err = vsc.addTxnToVestingLog(t.Hash, balances); err != nil {
-		return "", common.NewError("trigger_vesting_pool_failed",
-			"saving transaction in log: "+err.Error())
-	}
-
-	return trsp.toJSON(), nil
+	return triggerOut(trsp.toJSON()), nil
 }
 
 //

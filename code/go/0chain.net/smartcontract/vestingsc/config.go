@@ -187,6 +187,11 @@ func (vsc *VestingSmartContract) updateConfig(t *transaction.Transaction,
 		return "", common.NewError("update_config", err.Error())
 	}
 
+	if err = vsc.addTxnToVestingLog(t.Hash, balances); err != nil {
+		return "", common.NewError("update_config",
+			"saving transaction in log: "+err.Error())
+	}
+
 	return string(update.Encode()), nil
 }
 
