@@ -3,6 +3,7 @@ package minersc
 import (
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"reflect"
 	"runtime"
@@ -113,6 +114,7 @@ func (msc *MinerSmartContract) getPhaseNode(statectx c_state.StateContextI) (*Ph
 }
 
 func (msc *MinerSmartContract) setPhaseNode(statectx c_state.StateContextI, pn *PhaseNode, gn *globalNode) error {
+	//log.Println("setPhaseNode current round", pn.CurrentRound, "startround", pn.StartRound, "phase", pn.Phase)
 	if pn.CurrentRound-pn.StartRound >= PhaseRounds[pn.Phase] {
 		currentMoveFunc := moveFunctions[pn.Phase]
 		if currentMoveFunc(statectx, pn, gn) {
@@ -139,6 +141,10 @@ func (msc *MinerSmartContract) setPhaseNode(statectx c_state.StateContextI, pn *
 					pn.Restarts = 0
 				}
 				pn.StartRound = pn.CurrentRound
+				if msc.CallbackPhase != nil {
+					log.Println("trying CallbackPhase ")
+					msc.CallbackPhase(pn.Phase)
+				}
 			}
 		} else {
 			Logger.Warn("failed to move phase", zap.Any("phase", pn.Phase),
@@ -156,6 +162,10 @@ func (msc *MinerSmartContract) setPhaseNode(statectx c_state.StateContextI, pn *
 
 func (msc *MinerSmartContract) createDKGMinersForContribute(balances c_state.StateContextI, gn *globalNode) error {
 	allminerslist, err := msc.GetMinersList(balances)
+	if err != nil {
+		Logger.Error("createDKGMinersForContribute -- failed to get miner list", zap.Any("error", err))
+		return err
+	}
 	var n int
 	if len(allminerslist.Nodes) < gn.MinN {
 		return common.NewError("failed to create dkg miners", "too few miners for dkg")
@@ -163,6 +173,7 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(balances c_state.Sta
 	if len(allminerslist.Nodes) > gn.MaxN {
 		n = gn.MaxN
 		sort.Slice(allminerslist.Nodes, func(i, j int) bool {
+			log.Println("createDKGMinersForContribute miner", allminerslist.Nodes[i].N2NHost, "stake", allminerslist.Nodes[i].TotalStaked)
 			return allminerslist.Nodes[i].TotalStaked > allminerslist.Nodes[j].TotalStaked
 		})
 	} else {
@@ -182,10 +193,24 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(balances c_state.Sta
 	if err != nil {
 		return err
 	}
+
+	//sharders
+	/*allShardersList, err := msc.getShardersList(balances, ShardersKeepKey)
+	if err != nil {
+		Logger.Error("createDKGMinersForContribute -- failed to get sharder list", zap.Any("error", err))
+		return err
+	}*/
+	allSharderKeepList := NewMinerNode()
+	_, err = balances.InsertTrieNode(ShardersKeepKey, allSharderKeepList)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
 func (msc *MinerSmartContract) widdleDKGMinersForShare(balances c_state.StateContextI, gn *globalNode) error {
+	log.Println("widdleDKGMinersForShare")
+
 	dkgMiners, err := msc.getMinersDKGList(balances)
 	if err != nil {
 		Logger.Error("widdle dkg miners -- failed to get dkgMiners", zap.Any("error", err))
@@ -262,7 +287,35 @@ func (msc *MinerSmartContract) createMagicBlockForWait(balances c_state.StateCon
 		}
 	}
 
-	magicBlock, err := msc.CreateMagicBlock(balances, dkgMinersList, gsos, mpks, pn)
+	// sharders
+	allSharderList, err := msc.getShardersList(balances, AllShardersKey)
+	if err != nil {
+		return err
+	}
+	sharders, err := msc.getShardersList(balances, ShardersKeepKey)
+	if err != nil {
+		return err
+	}
+
+	lmb := balances.GetLastestFinalizedMagicBlock()
+	activeSharders := lmb.MagicBlock.Sharders.CopyNodesMap()
+	for _, checkNode := range allSharderList.Nodes {
+		log.Println("check node", checkNode.N2NHost, checkNode.ID)
+		if sharders.FindNodeById(checkNode.ID) != nil {
+			log.Println("check node exists")
+			continue
+		}
+		if _, active := activeSharders[checkNode.ID]; !active {
+			log.Println("check node in activeSharders")
+			sharders.Nodes = append(sharders.Nodes, checkNode)
+		} else {
+			log.Println("check node in activeSharders")
+		}
+	}
+
+	log.Println("new mb with sharders", sharders, "all", allSharderList, "active", activeSharders)
+
+	magicBlock, err := msc.CreateMagicBlock(balances, sharders, dkgMinersList, gsos, mpks, pn)
 	if err != nil {
 		return err
 	}
@@ -285,6 +338,11 @@ func (msc *MinerSmartContract) createMagicBlockForWait(balances c_state.StateCon
 	}
 	dkgMinersList = NewDKGMinerNodes()
 	_, err = balances.InsertTrieNode(DKGMinersKey, dkgMinersList)
+	if err != nil {
+		return err
+	}
+	allMinersList := NewMinerNode()
+	_, err = balances.InsertTrieNode(ShardersKeepKey, allMinersList)
 	if err != nil {
 		return err
 	}
@@ -413,7 +471,7 @@ func (msc *MinerSmartContract) getMinersDKGList(statectx c_state.StateContextI) 
 	return allMinersList, nil
 }
 
-func (msc *MinerSmartContract) CreateMagicBlock(balances c_state.StateContextI, dkgMinersList *DKGMinerNodes, gsos *block.GroupSharesOrSigns, mpks *block.Mpks, pn *PhaseNode) (*block.MagicBlock, error) {
+func (msc *MinerSmartContract) CreateMagicBlock(balances c_state.StateContextI, sharderList *MinerNodes, dkgMinersList *DKGMinerNodes, gsos *block.GroupSharesOrSigns, mpks *block.Mpks, pn *PhaseNode) (*block.MagicBlock, error) {
 	magicBlock := block.NewMagicBlock()
 	magicBlock.Miners = node.NewPool(node.NodeTypeMiner)
 	magicBlock.Sharders = node.NewPool(node.NodeTypeSharder)
@@ -436,11 +494,11 @@ func (msc *MinerSmartContract) CreateMagicBlock(balances c_state.StateContextI, 
 		magicBlock.Miners.AddNode(n)
 	}
 	prevMagicBlock := balances.GetLastestFinalizedMagicBlock()
-	sharders, err := msc.getShardersList(balances)
+	/*sharders, err := msc.getShardersList(balances, AllShardersKey)
 	if err != nil {
 		return nil, err
-	}
-	for _, v := range sharders.Nodes {
+	}*/
+	for _, v := range sharderList.Nodes {
 		n := &node.Node{}
 		n.ID = v.ID
 		n.N2NHost = v.N2NHost
@@ -475,6 +533,12 @@ func (msc *MinerSmartContract) RestartDKG(pn *PhaseNode, balances c_state.StateC
 	}
 	dkgMinersList := NewDKGMinerNodes()
 	_, err = balances.InsertTrieNode(DKGMinersKey, dkgMinersList)
+	if err != nil {
+		Logger.Error("failed to restart dkg", zap.Any("error", err))
+	}
+
+	allMinersList := NewMinerNode()
+	_, err = balances.InsertTrieNode(ShardersKeepKey, allMinersList)
 	if err != nil {
 		Logger.Error("failed to restart dkg", zap.Any("error", err))
 	}

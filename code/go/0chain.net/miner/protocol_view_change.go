@@ -40,6 +40,9 @@ const (
 	scNameAddMiner         = "add_miner"
 	scNameContributeMpk    = "contributeMpk"
 	scNamePublishShares    = "shareSignsOrShares"
+)
+
+const (
 	scRestAPIGetPhase      = "/getPhase"
 	scRestAPIGetDKGMiners  = "/getDkgList"
 	scRestAPIGetMinersMPKS = "/getMpksList"

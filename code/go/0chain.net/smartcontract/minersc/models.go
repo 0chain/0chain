@@ -1,6 +1,7 @@
 package minersc
 
 import (
+	"0chain.net/chaincore/transaction"
 	"encoding/json"
 	"errors"
 	"net/url"
@@ -23,6 +24,7 @@ var (
 	MagicBlockKey        = datastore.Key(ADDRESS + encryption.Hash("magic_block"))
 	GlobalNodeKey        = datastore.Key(ADDRESS + encryption.Hash("global_node"))
 	GroupShareOrSignsKey = datastore.Key(ADDRESS + encryption.Hash("group_share_or_signs"))
+	ShardersKeepKey      = datastore.Key(ADDRESS + encryption.Hash("sharders_keep"))
 )
 
 var (
@@ -50,6 +52,8 @@ const (
 type phaseFunctions func(balances c_state.StateContextI, gn *globalNode) error
 
 type movePhaseFunctions func(balances c_state.StateContextI, pn *PhaseNode, gn *globalNode) bool
+
+type smartContractFunction func(t *transaction.Transaction, inputData []byte, gn *globalNode, balances c_state.StateContextI) (string, error)
 
 type SimpleNodes = map[string]*SimpleNode
 
@@ -89,9 +93,9 @@ func (gn *globalNode) GetHashBytes() []byte {
 //MinerNode struct that holds information about the registering miner
 type MinerNode struct {
 	*SimpleNode `json:"simple_miner"`
-	Pending     map[string]*sci.DelegatePool `json:"pending"`
-	Active      map[string]*sci.DelegatePool `json:"active"`
-	Deleting    map[string]*sci.DelegatePool `json:"deleting"`
+	Pending     map[string]*sci.DelegatePool `json:"pending,omitempty"`
+	Active      map[string]*sci.DelegatePool `json:"active,omitempty"`
+	Deleting    map[string]*sci.DelegatePool `json:"deleting,omitempty"`
 }
 
 func NewMinerNode() *MinerNode {
@@ -212,6 +216,15 @@ func (mn *MinerNodes) GetHash() string {
 
 func (mn *MinerNodes) GetHashBytes() []byte {
 	return encryption.RawHash(mn.Encode())
+}
+
+func (mn *MinerNodes) FindNodeById(id string) *MinerNode {
+	for _, minerNode := range mn.Nodes {
+		if minerNode.ID == id {
+			return minerNode
+		}
+	}
+	return nil
 }
 
 type ViewChangeLock struct {

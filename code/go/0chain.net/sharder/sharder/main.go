@@ -1,6 +1,8 @@
 package main
 
 import (
+	"0chain.net/chaincore/smartcontract"
+	"0chain.net/smartcontract/minersc"
 	"bufio"
 	"context"
 	"errors"
@@ -162,6 +164,24 @@ func main() {
 	initHandlers()
 	go sc.RegisterClient()
 	go sc.InitSetupSC()
+
+
+	scs := smartcontract.GetSmartContract(minersc.ADDRESS)
+	scs.SetCallbackPhase(func(phase int) {
+		if phase == minersc.Contribute {
+			log.Println("sharder keep")
+			txn, err := serverChain.RegisterSharderKeep()
+			if err != nil {
+				log.Println(err)
+			} else {
+				if txn == nil || serverChain.ConfirmTransaction(txn) {
+					log.Println("sharder keep confirmed!")
+				} else {
+					log.Println("sharder keep NOT confirmed")
+				}
+			}
+		}
+	})
 
 	// Do a deep scan from finalized block till DeepWindow
 	go sc.HealthCheckWorker(ctx, sharder.DeepScan) // 4) progressively checks the health for each round

@@ -26,7 +26,7 @@ func (msc *MinerSmartContract) doesMinerExist(pkey datastore.Key, statectx c_sta
 }
 
 //AddMiner Function to handle miner register
-func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction, input []byte, statectx c_state.StateContextI) (string, error) {
+func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction, input []byte, gn *globalNode, statectx c_state.StateContextI) (string, error) {
 	lockAllMiners.Lock()
 	defer lockAllMiners.Unlock()
 
@@ -43,7 +43,8 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction, input []byte
 	if err != nil {
 		Logger.Error("Error in decoding the input", zap.Error(err))
 		return "", err
-	}	
+	}
+	//log.Println(newMiner)
 	Logger.Info("The new miner info", zap.String("base URL", newMiner.N2NHost), zap.String("ID", newMiner.ID), zap.String("pkey", newMiner.PublicKey), zap.Any("mscID", msc.ID))
 	Logger.Info("MinerNode", zap.Any("node", newMiner))
 	if newMiner.PublicKey == "" || newMiner.ID == "" {

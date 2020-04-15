@@ -78,7 +78,15 @@ func (msc *MinerSmartContract) GetMinerListHandler(ctx context.Context, params u
 }
 
 func (msc *MinerSmartContract) GetSharderListHandler(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
-	allShardersList, err := msc.getShardersList(balances)
+	allShardersList, err := msc.getShardersList(balances, AllShardersKey)
+	if err != nil {
+		return "", err
+	}
+	return allShardersList, nil
+}
+
+func (msc *MinerSmartContract) GetSharderKeepListHandler(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
+	allShardersList, err := msc.getShardersList(balances, ShardersKeepKey)
 	if err != nil {
 		return "", err
 	}

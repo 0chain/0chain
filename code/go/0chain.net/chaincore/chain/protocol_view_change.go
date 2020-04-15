@@ -2,7 +2,9 @@ package chain
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"log"
 	"math"
 	"time"
 
@@ -23,10 +25,13 @@ import (
 )
 
 const (
-	scNameAddMiner          = "add_miner"
-	scRestAPIGetMinerList   = "/getMinerList"
-	scNameAddSharder        = "add_sharder"
-	scRestAPIGetSharderList = "/getSharderList"
+	scNameAddMiner    = "add_miner"
+	scNameAddSharder  = "add_sharder"
+	scNameSharderKeep = "sharder_keep"
+)
+const (
+	scRestAPIGetMinerList       = "/getMinerList"
+	scRestAPIGetSharderList     = "/getSharderList"
 )
 
 func (mc *Chain) InitSetupSC() {
@@ -182,6 +187,41 @@ func (mc *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 		scData.Name = scNameAddSharder
 	}
 
+	scData.InputArgs = mn
+
+	txn.ToClientID = minersc.ADDRESS
+	txn.PublicKey = selfNode.PublicKey
+	mb := mc.GetCurrentMagicBlock()
+	var minerUrls = mb.Miners.N2NURLs()
+	err := httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls)
+	return txn, err
+}
+
+func (mc *Chain) RegisterSharderKeep() (result *httpclientutil.Transaction, err2 error) {
+	log.Println("RegisterSharderKeep")
+	defer func() {
+		log.Println("RegisterSharderKeep done. result=", result, "error=", err2)
+
+	}()
+	selfNode := node.Self.Underlying()
+	if selfNode.Type != node.NodeTypeSharder {
+		return nil, errors.New("only sharder")
+	}
+	txn := httpclientutil.NewTransactionEntity(selfNode.GetKey(),
+		mc.ID, selfNode.PublicKey)
+
+	mn := minersc.NewMinerNode()
+	mn.ID = selfNode.GetKey()
+	mn.N2NHost = selfNode.N2NHost
+	mn.Host = selfNode.Host
+	mn.Port = selfNode.Port
+	mn.PublicKey = selfNode.PublicKey
+	mn.ShortName = selfNode.Description
+	mn.Percentage = .5 // add to config
+	mn.BuildTag = selfNode.Info.BuildTag
+
+	scData := &httpclientutil.SmartContractTxnData{}
+	scData.Name = scNameSharderKeep
 	scData.InputArgs = mn
 
 	txn.ToClientID = minersc.ADDRESS

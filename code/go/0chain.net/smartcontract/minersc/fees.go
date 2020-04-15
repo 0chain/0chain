@@ -118,6 +118,7 @@ func (msc *MinerSmartContract) paySharders(fee state.Balance, block *block.Block
 		if err != nil {
 			resp += common.NewError("failed to mint", fmt.Sprintf("errored while adding mint for sharder %v: %v", sharder, err.Error())).Error()
 		}
+		//log.Println("paySharders mint", mint, "sharder", sharder)
 	}
 	return resp, nil
 }

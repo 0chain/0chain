@@ -47,11 +47,19 @@ type MinerSmartContract struct {
 	*sci.SmartContract
 	bcContext sci.BCContextI
 
-	mutexMinerMPK sync.RWMutex
+	mutexMinerMPK          sync.RWMutex
+	smartContractFunctions map[string]smartContractFunction
+	CallbackPhase          func(phase int)
+}
+
+func (msc *MinerSmartContract) SetCallbackPhase(CallbackPhase func(phase int)) {
+	msc.CallbackPhase = CallbackPhase
 }
 
 func (msc *MinerSmartContract) InitSC() {
-	msc = &MinerSmartContract{}
+	if msc.smartContractFunctions == nil {
+		msc.smartContractFunctions = make(map[string]smartContractFunction)
+	}
 	phaseFuncs[Start] = msc.createDKGMinersForContribute
 	phaseFuncs[Contribute] = msc.widdleDKGMinersForShare
 	phaseFuncs[Publish] = msc.createMagicBlockForWait
@@ -67,6 +75,17 @@ func (msc *MinerSmartContract) InitSC() {
 	moveFunctions[Share] = msc.moveToShareOrPublish
 	moveFunctions[Publish] = msc.moveToWait
 	moveFunctions[Wait] = msc.moveToStart
+
+	msc.smartContractFunctions["add_miner"] = msc.AddMiner
+	msc.smartContractFunctions["add_sharder"] = msc.AddSharder
+	msc.smartContractFunctions["payFees"] = msc.payFees
+	msc.smartContractFunctions["addToDelegatePool"] = msc.addToDelegatePool
+	msc.smartContractFunctions["deleteFromDelegatePool"] = msc.deleteFromDelegatePool
+	msc.smartContractFunctions["releaseFromDelegatePool"] = msc.releaseFromDelegatePool
+	msc.smartContractFunctions["contributeMpk"] = msc.contributeMpk
+	msc.smartContractFunctions["shareSignsOrShares"] = msc.shareSignsOrShares
+	msc.smartContractFunctions["sharder_keep"] = msc.sharderKeep
+
 }
 
 func (msc *MinerSmartContract) GetName() string {
@@ -89,6 +108,7 @@ func (msc *MinerSmartContract) SetSC(sc *sci.SmartContract, bcContext sci.BCCont
 	msc.SmartContract.RestHandlers["/getPoolsStats"] = msc.GetPoolStatsHandler
 	msc.SmartContract.RestHandlers["/getMinerList"] = msc.GetMinerListHandler
 	msc.SmartContract.RestHandlers["/getSharderList"] = msc.GetSharderListHandler
+	msc.SmartContract.RestHandlers["/getSharderKeepList"] = msc.GetSharderKeepListHandler
 	msc.SmartContract.RestHandlers["/getPhase"] = msc.GetPhaseHandler
 	msc.SmartContract.RestHandlers["/getDkgList"] = msc.GetDKGMinerListHandler
 	msc.SmartContract.RestHandlers["/getMpksList"] = msc.GetMinersMpksListHandler
@@ -106,7 +126,6 @@ func (msc *MinerSmartContract) SetSC(sc *sci.SmartContract, bcContext sci.BCCont
 //Execute implementing the interface
 func (msc *MinerSmartContract) Execute(t *transaction.Transaction, funcName string,
 	input []byte, balances c_state.StateContextI) (string, error) {
-
 	gn, err := msc.getGlobalNode(balances)
 	if err != nil {
 		return "", err
@@ -115,26 +134,11 @@ func (msc *MinerSmartContract) Execute(t *transaction.Transaction, funcName stri
 		lock.Lock()
 		defer lock.Unlock()
 	}
-	switch funcName {
-	case "add_miner":
-		return msc.AddMiner(t, input, balances)
-	case "add_sharder":
-		return msc.AddSharder(t, input, balances)
-	case "payFees":
-		return msc.payFees(t, input, gn, balances)
-	case "addToDelegatePool":
-		return msc.addToDelegatePool(t, input, gn, balances)
-	case "deleteFromDelegatePool":
-		return msc.deleteFromDelegatePool(t, input, gn, balances)
-	case "releaseFromDelegatePool":
-		return msc.releaseFromDelegatePool(t, input, gn, balances)
-	case "contributeMpk":
-		return msc.contributeMpk(t, input, gn, balances)
-	case "shareSignsOrShares":
-		return msc.shareSignsOrShares(t, input, gn, balances)
-	default:
+	scFunc, found := msc.smartContractFunctions[funcName]
+	if !found {
 		return common.NewError("failed execution", "no function with that name").Error(), nil
 	}
+	return scFunc(t, input, gn, balances)
 }
 
 func getHostnameAndPort(burl string) (string, int, error) {

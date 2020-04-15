@@ -154,7 +154,8 @@ func (c *Chain) GetSCRestPoints(w http.ResponseWriter, r *http.Request) {
 	restPoints := scInt.GetRestPoints()
 	names := make([]string, 0, len(restPoints))
 	for funcName := range restPoints {
-		names = append(names, funcName)
+		name := strings.TrimLeft(funcName, "/")
+		names = append(names, name)
 	}
 	sort.Strings(names)
 	for _, funcName := range names {

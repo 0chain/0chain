@@ -37,6 +37,11 @@ type SmartContractInterface interface {
 	GetName() string
 	GetAddress() string
 	InitSC()
+	SetCallbackPhase(CallbackPhase func(phase int))
+}
+
+func (sc *SmartContract) SetCallbackPhase(func(int)) {
+	// nothing
 }
 
 /*BCContextI interface for smart contracts to access blockchain.
