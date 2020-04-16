@@ -125,6 +125,7 @@ func avgConfig() (conf *config) {
 	conf.MaxFriquency = 1 * time.Hour
 	conf.MaxDestinations = 2
 	conf.MaxDescriptionLength = 20
+	conf.Expiration = 10 * time.Minute
 	return
 }
 

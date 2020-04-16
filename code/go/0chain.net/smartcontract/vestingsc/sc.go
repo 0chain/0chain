@@ -11,7 +11,6 @@ import (
 )
 
 const (
-	owner   = "c8a5e74c2f4fae2c1bed79fb2b78d3b88f844bbb6bf1db5fc43240711f23321f"
 	ADDRESS = "2bba5b05949ea59c80aed3ac3474d7379d3be737e8eb5a968c52295e48333ead"
 )
 
@@ -43,11 +42,7 @@ func (vsc *VestingSmartContract) SetSC(sc *smartcontractinterface.SmartContract,
 	vsc.SmartContract.RestHandlers["/getPoolInfo"] = vsc.getPoolInfoHandler
 	vsc.SmartContract.RestHandlers["/getClientPools"] = vsc.getClientPoolsHandler
 
-	// update vesting pool config
-	vsc.SmartContractExecutionStats["update_config"] = metrics.GetOrRegisterTimer(
-		fmt.Sprintf("sc:%v:func:%v", vsc.ID, "update"), nil)
-
-	// add/delete {start,duration,friquency,amount,[destinations]}
+	// add/delete {start,duration,lock_tokens,[destinations]}
 	vsc.SmartContractExecutionStats["add"] = metrics.GetOrRegisterTimer(
 		fmt.Sprintf("sc:%v:func:%v", vsc.ID, "add"), nil)
 	vsc.SmartContractExecutionStats["delete"] = metrics.GetOrRegisterTimer(
@@ -58,6 +53,10 @@ func (vsc *VestingSmartContract) SetSC(sc *smartcontractinterface.SmartContract,
 		fmt.Sprintf("sc:%v:func:%v", vsc.ID, "lock"), nil)
 	vsc.SmartContractExecutionStats["unlock"] = metrics.GetOrRegisterTimer(
 		fmt.Sprintf("sc:%v:func:%v", vsc.ID, "unlock"), nil)
+
+	// move vested tokens to destinations by pool owner
+	vsc.SmartContractExecutionStats["trigger"] = metrics.GetOrRegisterTimer(
+		fmt.Sprintf("sc:%v:func:%v", vsc.ID, "trigger"), nil)
 }
 
 func (vsc *VestingSmartContract) Execute(t *transaction.Transaction,
@@ -78,9 +77,6 @@ func (vsc *VestingSmartContract) Execute(t *transaction.Transaction,
 		resp, err = vsc.add(t, input, balances)
 	case "delete":
 		resp, err = vsc.delete(t, input, balances)
-
-	case "update_config":
-		resp, err = vsc.updateConfig(t, input, balances)
 
 	default:
 		err = common.NewError("vesting_sc_failed",
