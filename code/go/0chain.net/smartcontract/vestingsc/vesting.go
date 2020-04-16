@@ -115,6 +115,12 @@ func (ar *addRequest) validate(now common.Timestamp, conf *config) (err error) {
 	case len(ar.Destinations) > conf.MaxDestinations:
 		return errors.New("too many destinations")
 	}
+
+	for _, d := range ar.Destinations {
+		if d.Amount < 0 {
+			return fmt.Errorf("negative amount for %q: %d", d.ID, d.Amount)
+		}
+	}
 	return
 }
 
@@ -503,33 +509,6 @@ type info struct {
 	Destinations []*destInfo      `json:"destinations"` // receivers
 	ClientID     datastore.Key    `json:"client_id"`    // owner
 }
-
-/*
-
-add ->                                                       [+]
-	- fill pool
-	- set last to start time
-lock ->                                                      [+]
-	- add tokens to pool
-unlock (owner) ->                                            [+]
-	-> calculate destinations amount
-	-> calculate pool amount left
-	-> move the left to owner
-unlock (destination) ->                                      [+]
-	-> calculate destinations amount
-	-> calculate pool amount left
-	-> move destination amount to destination wallet
-delete ->                                                    [+]
-	-> calculate destinations amount
-	-> calculate pool amount left
-	-> move destinations amount to destinations
-	-> move left to owner
-	-> delete pool
-trigger ->                                                   [+]
-	-> calculate destinations amount
-	-> calculate pool amount left
-	-> move destinations amount to destinations
-*/
 
 //
 // helpers
