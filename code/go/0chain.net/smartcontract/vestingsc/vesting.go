@@ -35,9 +35,9 @@ func (lr *poolRequest) decode(b []byte) error {
 //
 
 type destination struct {
-	ID     datastore.Key    `json:"id"`             // destination ID
-	Amount state.Balance    `json:"amount"`         // amount to vest for the destination
-	Last   common.Timestamp `json:"last,omitempty"` // last tokens transfer
+	ID     datastore.Key    `json:"id"`     // destination ID
+	Amount state.Balance    `json:"amount"` // amount to vest for the destination
+	Last   common.Timestamp `json:"last"`   // last tokens transfer
 }
 
 func (d *destination) setLast(last common.Timestamp) {
@@ -248,7 +248,7 @@ func (vp *vestingPool) earned(id datastore.Key, now common.Timestamp) (
 		now = end
 	}
 
-	var total common.Balance // total wanted
+	var total state.Balance // total wanted
 
 	for _, d := range vp.Destinations {
 		var want = d.want(now, full)
@@ -282,7 +282,7 @@ type earn struct {
 func (vp *vestingPool) earns(now common.Timestamp) (es []earn, err error) {
 
 	if vp.Balance == 0 {
-		return nil, 0, errors.New("empty pool")
+		return nil, errors.New("empty pool")
 	}
 
 	var (
@@ -294,7 +294,7 @@ func (vp *vestingPool) earns(now common.Timestamp) (es []earn, err error) {
 		now = end
 	}
 
-	var total common.Balance // total wanted
+	var total state.Balance // total wanted
 
 	es = make([]earn, 0, len(vp.Destinations))
 
@@ -321,6 +321,11 @@ func (vp *vestingPool) earns(now common.Timestamp) (es []earn, err error) {
 func (vp *vestingPool) moveToDest(vscKey datastore.Key, d *destination,
 	value state.Balance, now common.Timestamp,
 	balances chainstate.StateContextI) (resp string, err error) {
+
+	if value == 0 {
+		d.setLast(now)
+		return
+	}
 
 	var transfer *state.Transfer
 	transfer, resp, err = vp.DrainPool(vscKey, d.ID, value, nil)
@@ -357,7 +362,7 @@ func (vp *vestingPool) vest(t *transaction.Transaction,
 		now = vp.ExpireAt
 	}
 
-	return vp.moveToDest(t.ToClientID, d, earn, now, balances)
+	return vp.moveToDest(t.ToClientID, d, earned, now, balances)
 }
 
 // move tokens to destinations' wallets
@@ -377,18 +382,24 @@ func (vp *vestingPool) trigger(t *transaction.Transaction,
 	var (
 		sb   strings.Builder
 		drsp string
+		i    int
+		e    earn
 	)
 
 	sb.WriteByte('[')
-	for i, e := range es {
+	for i, e = range es {
 		drsp, err = vp.moveToDest(t.ToClientID, e.d, e.earned, now, balances)
 		if err != nil {
 			return
+		}
+		if drsp == "" {
+			continue
 		}
 		if i > 0 {
 			sb.WriteByte(',')
 		}
 		sb.WriteString(drsp)
+		i++
 	}
 	sb.WriteByte(']')
 
@@ -406,6 +417,22 @@ func (vp *vestingPool) drain(t *transaction.Transaction,
 
 	var transfer *state.Transfer
 	transfer, resp, err = vp.DrainPool(t.ToClientID, t.ClientID, left, nil)
+	if err != nil {
+		return "", fmt.Errorf("draining vesting pool: %v", err)
+	}
+	if err = balances.AddTransfer(transfer); err != nil {
+		return "", fmt.Errorf("adding transfer vesting_pool->client: %v", err)
+	}
+
+	return
+}
+
+// unlock all tokens to owner
+func (vp *vestingPool) empty(t *transaction.Transaction,
+	balances chainstate.StateContextI) (resp string, err error) {
+
+	var transfer *state.Transfer
+	transfer, resp, err = vp.EmptyPool(t.ToClientID, t.ClientID, nil)
 	if err != nil {
 		return "", fmt.Errorf("draining vesting pool: %v", err)
 	}
@@ -439,7 +466,7 @@ func (vp *vestingPool) info(now common.Timestamp) (i *info) {
 	var es, err = vp.earns(now)
 	if err != nil {
 		es = make([]earn, 0, len(vp.Destinations))
-		for _, d := range i.Destinations {
+		for _, d := range vp.Destinations {
 			es = append(es, earn{d: d})
 		}
 	}
@@ -504,136 +531,6 @@ trigger ->                                                   [+]
 	-> move destinations amount to destinations
 */
 
-/*
-
-func (d *destination) vestPeriod(now, full common.Timestamp) (
-	amount state.Balance) {
-
-	var period = now - d.Last
-	if period <= 0 {
-		return // 0
-	}
-	// this period of entire range
-	var (
-		ratio = float64(period) / float64(full)
-		part  = float64(d.Amount) * ratio
-	)
-	amount = state.Balance(part)
-	return
-}
-
-func (d *destination) setLast(now common.Timestamp) {
-	d.Last = now
-}
-
-func (d *destination) copy() (cp *destination) {
-	cp = new(destination)
-	(*cp) = (*d)
-	return
-}
-
-func (vp *vestingPool) infoDestinations(now common.Timestamp) (
-	infods []*destination) {
-
-	infods = make([]*destination, 0, len(vp.Destinations))
-	for _, d := range vp.Destinations {
-		var cp = d.copy()
-		infods = append(infods, cp)
-	}
-}
-
-//
-// vest
-//
-
-// vestTo given client given value
-func (vp *vestingPool) vestTo(vscKey string, toClientID datastore.Key,
-	value state.Balance, balances chainstate.StateContextI) (
-	resp string, err error) {
-
-	var transfer *state.Transfer
-	transfer, resp, err = vp.DrainPool(vscKey, toClientID, value, nil)
-	if err != nil {
-		return "", fmt.Errorf("draining vesting pool: %v", err)
-	}
-
-	if err = balances.AddTransfer(transfer); err != nil {
-		return "", fmt.Errorf("adding vesting pool transfer: %v", err)
-	}
-
-	return
-}
-
-func (vp *vestingPool) vestRequires(now, full common.Timestamp) (
-	amount state.Balance) {
-
-	for _, dst := range vp.Destinations {
-		amount += dst.vestPeriod(now, full)
-	}
-
-	return
-}
-
-// left returns amount of tokens can be unlocked
-func (vp *vestingPool) left(now common.Timestamp) state.Balance {
-	var (
-		full = vp.ExpireAt - vp.StartTime
-		rq   = vp.vestRequires(now, full)
-	)
-	if vp.Balance >= vp {
-		return vp.Balance - rq
-	}
-	return 0 // avoid negative
-}
-
-// vest moves configured amount of tokens to all destinations of the pool
-func (vp *vestingPool) vest(vscKey string, now common.Timestamp,
-	balances chainstate.StateContextI) (_ string, err error) {
-
-	var (
-		full  = vp.ExpireAt - vp.StartTime // full time range
-		total = vp.vestRequires(now, full)
-	)
-
-	if vp.Balance < total {
-		return "", errors.New("not enough tokens to vest")
-	}
-
-	var (
-		rb    strings.Builder
-		oresp string
-	)
-
-	rb.WriteByte('[')
-
-	for i, dest := range vp.Destinations {
-
-		// is there a vesting
-		var amount = dest.vestPeriod(now, full)
-		if amount == 0 {
-			continue
-		}
-
-		// move tokens
-		oresp, err = vp.vestTo(vscKey, dest, amount, balances)
-		if err != nil {
-			return // vesting error
-		}
-		if i > 0 {
-			rb.WriteByte(',')
-		}
-		rb.WriteString(oresp)
-
-		dest.setLast(now) // update the Last of the destination
-	}
-
-	rb.WriteByte(']')
-
-	return rb.String(), nil // success
-}
-
-
-
 //
 // helpers
 //
@@ -679,7 +576,7 @@ func (vsc *VestingSmartContract) add(t *transaction.Transaction,
 	}
 
 	var conf *config
-	if conf, err = vsc.getConfig(balances, true); err != nil {
+	if conf, err = getConfig(); err != nil {
 		return "", common.NewError("create_vesting_pool_failed",
 			"can't get SC configurations: "+err.Error())
 	}
@@ -703,10 +600,6 @@ func (vsc *VestingSmartContract) add(t *transaction.Transaction,
 		if state.Balance(t.Value) < conf.MinLock {
 			return "", common.NewError("create_vesting_pool_failed",
 				"insufficient amount to lock")
-		}
-		if err = vsc.checkFill(t, balances); err != nil {
-			return "", common.NewError("create_vesting_pool_failed",
-				"can't fill pool: "+err.Error())
 		}
 		if _, err = vp.fill(t, balances); err != nil {
 			return "", common.NewError("create_vesting_pool_failed",
@@ -737,7 +630,7 @@ func (vsc *VestingSmartContract) add(t *transaction.Transaction,
 func (vsc *VestingSmartContract) delete(t *transaction.Transaction,
 	input []byte, balances chainstate.StateContextI) (resp string, err error) {
 
-	var dr lockRequest
+	var dr poolRequest
 	if err = dr.decode(input); err != nil {
 		return "", common.NewError("delete_vesting_pool_failed",
 			"invalid request: "+err.Error())
@@ -761,13 +654,22 @@ func (vsc *VestingSmartContract) delete(t *transaction.Transaction,
 
 	if vp.ClientID != t.ClientID {
 		return "", common.NewError("delete_vesting_pool_failed",
-			"only pool owner can do that")
+			"only pool owner can delete the pool")
 	}
 
+	// move tokens to destinations
+	if vp.Balance > 0 {
+		if _, err = vp.trigger(t, balances); err != nil {
+			return "", common.NewError("delete_vesting_pool_failed",
+				"moving tokens to destinations: "+err.Error())
+		}
+	}
+
+	// move left to owner
 	if vp.Balance > 0 {
 		if _, err = vp.empty(t, balances); err != nil {
 			return "", common.NewError("delete_vesting_pool_failed",
-				"emptying pool: "+err.Error())
+				"draining pool: "+err.Error())
 		}
 	}
 
@@ -777,18 +679,20 @@ func (vsc *VestingSmartContract) delete(t *transaction.Transaction,
 			"unexpected error: "+err.Error())
 	}
 
-	cp.remove(vp.ID)
+	if len(cp.Pools) > 0 {
+		cp.remove(vp.ID)
 
-	if len(cp.Pools) == 0 {
-		_, err = balances.DeleteTrieNode(clientPoolsKey(vsc.ID, t.ClientID))
-		if err != nil {
-			return "", common.NewError("delete_vesting_pool_failed",
-				"can't delete client's pools list: "+err.Error())
-		}
-	} else {
-		if err = cp.save(vsc.ID, t.ClientID, balances); err != nil {
-			return "", common.NewError("delete_vesting_pool_failed",
-				"can't save client's pools list: "+err.Error())
+		if len(cp.Pools) == 0 {
+			_, err = balances.DeleteTrieNode(clientPoolsKey(vsc.ID, t.ClientID))
+			if err != nil {
+				return "", common.NewError("delete_vesting_pool_failed",
+					"can't delete client's pools list: "+err.Error())
+			}
+		} else {
+			if err = cp.save(vsc.ID, t.ClientID, balances); err != nil {
+				return "", common.NewError("delete_vesting_pool_failed",
+					"can't save client's pools list: "+err.Error())
+			}
 		}
 	}
 
@@ -797,13 +701,13 @@ func (vsc *VestingSmartContract) delete(t *transaction.Transaction,
 			"can't delete vesting pool: "+err.Error())
 	}
 
-	return "deleted", nil
+	return `{"pool_id":` + vp.ID + `,"action":"deleted"}`, nil
 }
 
 func (vsc *VestingSmartContract) lock(t *transaction.Transaction, input []byte,
 	balances chainstate.StateContextI) (resp string, err error) {
 
-	var lr lockRequest
+	var lr poolRequest
 	if err = lr.decode(input); err != nil {
 		return "", common.NewError("lock_vesting_pool_failed",
 			"invalid request: "+err.Error())
@@ -826,7 +730,7 @@ func (vsc *VestingSmartContract) lock(t *transaction.Transaction, input []byte,
 	}
 
 	var conf *config
-	if conf, err = vsc.getConfig(balances, true); err != nil {
+	if conf, err = getConfig(); err != nil {
 		return "", common.NewError("lock_vesting_pool_failed",
 			"can't get SC configurations: "+err.Error())
 	}
@@ -834,10 +738,6 @@ func (vsc *VestingSmartContract) lock(t *transaction.Transaction, input []byte,
 	if state.Balance(t.Value) < conf.MinLock {
 		return "", common.NewError("lock_vesting_pool_failed",
 			"insufficient amount to lock")
-	}
-
-	if err = vsc.checkFill(t, balances); err != nil {
-		return "", common.NewError("lock_vesting_pool_failed", err.Error())
 	}
 
 	if resp, err = vp.fill(t, balances); err != nil {
@@ -853,10 +753,11 @@ func (vsc *VestingSmartContract) lock(t *transaction.Transaction, input []byte,
 	return
 }
 
+// unlock by owner, unlock by a destination
 func (vsc *VestingSmartContract) unlock(t *transaction.Transaction,
 	input []byte, balances chainstate.StateContextI) (resp string, err error) {
 
-	var ur lockRequest
+	var ur poolRequest
 	if err = ur.decode(input); err != nil {
 		return "", common.NewError("unlock_vesting_pool_failed",
 			"invalid request: "+err.Error())
@@ -873,14 +774,18 @@ func (vsc *VestingSmartContract) unlock(t *transaction.Transaction,
 			"can't get pool: "+err.Error())
 	}
 
-	if vp.ClientID != t.ClientID {
-		return "", common.NewError("unlock_vesting_pool_failed",
-			"only owner can unlock tokens from the pool")
-	}
-
-	if resp, err = vp.empty(t, balances); err != nil {
-		return "", common.NewError("unlock_vesting_pool_failed",
-			"draining pool: "+err.Error())
+	if vp.ClientID == t.ClientID {
+		// owner
+		if resp, err = vp.drain(t, balances); err != nil {
+			return "", common.NewError("unlock_vesting_pool_failed",
+				"draining pool: "+err.Error())
+		}
+	} else {
+		// a destination
+		if resp, err = vp.vest(t, balances); err != nil {
+			return "", common.NewError("unlock_vesting_pool_failed",
+				"vesting pool: "+err.Error())
+		}
 	}
 
 	if err = vp.save(balances); err != nil {
@@ -899,18 +804,7 @@ func (vsc *VestingSmartContract) unlock(t *transaction.Transaction,
 func (vsc *VestingSmartContract) trigger(t *transaction.Transaction,
 	input []byte, balances chainstate.StateContextI) (resp string, err error) {
 
-	var conf *config
-	if conf, err = vsc.getConfig(balances, true); err != nil {
-		return "", common.NewError("trigger_vesting_pool_failed",
-			"can't get config: "+err.Error())
-	}
-
-	if !conf.isValidTrigger(t.ClientID) {
-		return "", common.NewError("trigger_vesting_pool_failed",
-			"not allowed for this client")
-	}
-
-	var tr lockRequest
+	var tr poolRequest
 	if err = tr.decode(input); err != nil {
 		return "", common.NewError("trigger_vesting_pool_failed",
 			"invalid request: "+err.Error())
@@ -927,35 +821,14 @@ func (vsc *VestingSmartContract) trigger(t *transaction.Transaction,
 			"can't get pool: "+err.Error())
 	}
 
-	if vp.ExpireAt > t.CreationDate+toSeconds(conf.Expiration) {
+	if vp.ClientID != t.ClientID {
 		return "", common.NewError("trigger_vesting_pool_failed",
-			"expired vesting pool")
+			"only owner can trigger the pool")
 	}
 
-	// next (this) time to vest
-	var next common.Timestamp
-	if vp.Last == 0 {
-		next = vp.StartTime + toSeconds(vp.Friquency)
-	} else {
-		next = vp.Last + toSeconds(vp.Friquency)
-	}
-
-	if next > vp.ExpireAt {
+	if resp, err = vp.trigger(t, balances); err != nil {
 		return "", common.NewError("trigger_vesting_pool_failed",
-			"expired pool")
-	}
-
-	if next > t.CreationDate {
-		return "", common.NewError("trigger_vesting_pool_failed",
-			"early vesting")
-	}
-
-	// the time has come and is before the expire_at
-
-	// vest
-	if resp, err = vp.vest(vsc.ID, next, balances); err != nil {
-		return "", common.NewError("trigger_vesting_pool_failed",
-			"vesting: "+err.Error())
+			"triggering pool: "+err.Error())
 	}
 
 	if err = vp.save(balances); err != nil {
@@ -983,7 +856,5 @@ func (vsc *VestingSmartContract) getPoolInfoHandler(ctx context.Context,
 		return
 	}
 
-	return vp.info(), nil
+	return vp.info(common.Now()), nil
 }
-
-*/
