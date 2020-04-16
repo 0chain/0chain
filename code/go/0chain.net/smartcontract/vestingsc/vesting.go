@@ -318,58 +318,6 @@ func (vsc *VestingSmartContract) checkFill(t *transaction.Transaction,
 }
 
 //
-// transaction outputs
-//
-
-type Out struct {
-	Function string          `json:"function"`
-	Output   json.RawMessage `json:"output"`
-}
-
-func (o *Out) toJSON() string {
-	var b, err = json.Marshal(o)
-	if err != nil {
-		panic(err)
-	}
-	return string(b)
-}
-
-func addOut(vp *vestingPool) string {
-	var o Out
-	o.Function = "add"
-	o.Output = json.RawMessage(vp.Encode())
-	return o.toJSON()
-}
-
-func delOut(dr *lockRequest) string {
-	var o Out
-	o.Function = "delete"
-	o.Output = json.RawMessage(dr.encode())
-	return o.toJSON()
-}
-
-func lockOut(resp string) string {
-	var o Out
-	o.Function = "lock"
-	o.Output = json.RawMessage(resp)
-	return o.toJSON()
-}
-
-func unlockOut(resp string) string {
-	var o Out
-	o.Function = "unlock"
-	o.Output = json.RawMessage(resp)
-	return o.toJSON()
-}
-
-func triggerOut(resp string) string {
-	var o Out
-	o.Function = "trigger"
-	o.Output = json.RawMessage(resp)
-	return o.toJSON()
-}
-
-//
 // SC functions
 //
 
@@ -435,12 +383,7 @@ func (vsc *VestingSmartContract) add(t *transaction.Transaction,
 			"can't save pool: "+err.Error())
 	}
 
-	if err = vsc.addTxnToVestingLog(t.Hash, balances); err != nil {
-		return "", common.NewError("create_vesting_pool_failed",
-			"saving transaction in log: "+err.Error())
-	}
-
-	return addOut(vp), nil
+	return string(vp.Encode()), nil
 }
 
 func (vsc *VestingSmartContract) delete(t *transaction.Transaction,
@@ -506,12 +449,7 @@ func (vsc *VestingSmartContract) delete(t *transaction.Transaction,
 			"can't delete vesting pool: "+err.Error())
 	}
 
-	if err = vsc.addTxnToVestingLog(t.Hash, balances); err != nil {
-		return "", common.NewError("delete_vesting_pool_failed",
-			"saving transaction in log: "+err.Error())
-	}
-
-	return delOut(&dr), nil
+	return "deleted", nil
 }
 
 func (vsc *VestingSmartContract) lock(t *transaction.Transaction, input []byte,
@@ -564,7 +502,7 @@ func (vsc *VestingSmartContract) lock(t *transaction.Transaction, input []byte,
 			"saving pool: "+err.Error())
 	}
 
-	return lockOut(resp), nil
+	return
 }
 
 func (vsc *VestingSmartContract) unlock(t *transaction.Transaction,
@@ -602,25 +540,12 @@ func (vsc *VestingSmartContract) unlock(t *transaction.Transaction,
 			"saving pool: "+err.Error())
 	}
 
-	return unlockOut(resp), nil
+	return
 }
 
 //
 // function triggered by server
 //
-
-type triggerResp struct {
-	PoolID  string          `json:"pool_id"` //
-	Vesting json.RawMessage `json:"vesting"` //
-}
-
-func (tr *triggerResp) toJSON() string {
-	var b, err = json.Marshal(tr)
-	if err != nil {
-		panic(err)
-	}
-	return string(b)
-}
 
 // trigger next vesting and return all transfers in transaction's response
 func (vsc *VestingSmartContract) trigger(t *transaction.Transaction,
@@ -685,13 +610,7 @@ func (vsc *VestingSmartContract) trigger(t *transaction.Transaction,
 			"saving pool: "+err.Error())
 	}
 
-	// build transaction response
-
-	var trsp triggerResp
-	trsp.PoolID = tr.PoolID
-	trsp.Vesting = json.RawMessage(resp)
-
-	return triggerOut(trsp.toJSON()), nil
+	return //
 }
 
 //

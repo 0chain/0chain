@@ -202,10 +202,8 @@ func TestVestingSmartContract_add(t *testing.T) {
 	var resp string
 	resp, err = vsc.add(tx, mustEncode(t, &ar), balances)
 	require.NoError(t, err)
-	var out Out
-	mustDecode(t, []byte(resp), &out)
 	var deco vestingPool
-	deco.Decode(out.Output)
+	require.NoError(t, deco.Decode([]byte(resp)))
 	assert.NotZero(t, deco.ID)
 	assert.Equal(t, client.id, deco.ClientID)
 	assert.Equal(t, state.Balance(800), deco.Balance)
@@ -265,10 +263,8 @@ func TestVestingSmartContract_delete(t *testing.T) {
 		Amount:       400,
 	}, 800, tp, balances)
 	require.NoError(t, err)
-	var out Out
-	mustDecode(t, []byte(resp), &out)
 	var set vestingPool
-	require.NoError(t, set.Decode(out.Output))
+	require.NoError(t, set.Decode([]byte(resp)))
 	dr.PoolID = set.ID
 
 	tx.ClientID = "another_one"
@@ -281,11 +277,7 @@ func TestVestingSmartContract_delete(t *testing.T) {
 	tx.ClientID = client.id
 	resp, err = vsc.delete(tx, mustEncode(t, &dr), balances)
 	require.NoError(t, err)
-	mustDecode(t, []byte(resp), &out)
-	var deco lockRequest
-	require.NoError(t, deco.decode(out.Output))
-	set.Balance = 0
-	assert.EqualValues(t, set.ID, deco.PoolID)
+	assert.EqualValues(t, "deleted", resp)
 
 	assert.Zero(t, balances.tree[set.ID])
 	assert.Zero(t, balances.tree[clientPoolsKey(vsc.ID, client.id)])
@@ -332,10 +324,8 @@ func TestVestingSmartContract_lock(t *testing.T) {
 		Amount:       400,
 	}, 800, tp, balances)
 	require.NoError(t, err)
-	var out Out
-	mustDecode(t, []byte(resp), &out)
 	var set vestingPool
-	require.NoError(t, set.Decode(out.Output))
+	require.NoError(t, set.Decode([]byte(resp)))
 	lr.PoolID = set.ID
 
 	tx.ClientID = "another_one"
@@ -411,10 +401,8 @@ func TestVestingSmartContract_unlock(t *testing.T) {
 		Amount:       400,
 	}, 800, tp, balances)
 	require.NoError(t, err)
-	var out Out
-	mustDecode(t, []byte(resp), &out)
 	var set vestingPool
-	require.NoError(t, set.Decode(out.Output))
+	require.NoError(t, set.Decode([]byte(resp)))
 	lr.PoolID = set.ID
 
 	tx.ClientID = "another_one"
@@ -488,10 +476,8 @@ func TestVestingSmartContract_trigger(t *testing.T) {
 		Amount:       4000,
 	}, 800, tp, balances)
 	require.NoError(t, err)
-	var out Out
-	mustDecode(t, []byte(resp), &out)
 	var set vestingPool
-	require.NoError(t, set.Decode(out.Output))
+	require.NoError(t, set.Decode([]byte(resp)))
 	lr.PoolID = set.ID
 
 	tx.ClientID = "another_one"
@@ -553,10 +539,8 @@ func TestVestingSmartContract_getPoolInfoHandler(t *testing.T) {
 		Amount:       4000,
 	}, 0, 0, balances)
 	require.NoError(t, err)
-	var out Out
-	mustDecode(t, []byte(set), &out)
 	var deco vestingPool
-	require.NoError(t, deco.Decode(out.Output))
+	require.NoError(t, deco.Decode([]byte(set)))
 
 	params.Set("pool_id", deco.ID)
 	resp, err = vsc.getPoolInfoHandler(ctx, params, balances)
