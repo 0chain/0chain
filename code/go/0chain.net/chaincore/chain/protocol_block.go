@@ -206,7 +206,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 
 	for pfb := fb; pfb != nil && pfb != c.LatestDeterministicBlock; pfb = pfb.PrevBlock {
 		if c.IsFinalizedDeterministically(pfb) {
-			c.LatestDeterministicBlock = pfb
+			c.SetLatestDeterministicBlock(pfb)
 			break
 		}
 	}

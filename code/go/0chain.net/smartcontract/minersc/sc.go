@@ -37,6 +37,8 @@ var (
 
 	lockSmartContractExecute = map[string]*sync.Mutex{
 		"add_miner":          {},
+		"add_sharder":        {},
+		"sharder_keep":       {},
 		"contributeMpk":      {},
 		"shareSignsOrShares": {},
 	}
@@ -49,11 +51,7 @@ type MinerSmartContract struct {
 
 	mutexMinerMPK          sync.RWMutex
 	smartContractFunctions map[string]smartContractFunction
-	CallbackPhase          func(phase int)
-}
-
-func (msc *MinerSmartContract) SetCallbackPhase(CallbackPhase func(phase int)) {
-	msc.CallbackPhase = CallbackPhase
+	callbackPhase          func(int)
 }
 
 func (msc *MinerSmartContract) InitSC() {
@@ -206,4 +204,8 @@ func (msc *MinerSmartContract) getUserNode(id string, balances c_state.StateCont
 	}
 	un.Decode(us.Encode())
 	return un, err
+}
+
+func (msc *MinerSmartContract) SetCallbackPhase(CallbackPhase func(int)) {
+	msc.callbackPhase = CallbackPhase
 }

@@ -154,12 +154,12 @@ func (c *Chain) GetSCRestPoints(w http.ResponseWriter, r *http.Request) {
 	restPoints := scInt.GetRestPoints()
 	names := make([]string, 0, len(restPoints))
 	for funcName := range restPoints {
-		name := strings.TrimLeft(funcName, "/")
-		names = append(names, name)
+		names = append(names, funcName)
 	}
 	sort.Strings(names)
 	for _, funcName := range names {
-		fmt.Fprintf(w, `<tr><td>%v</td><td><li><a href='%v'>%v</a></li></td></tr>`, funcName, "/v1/screst/"+key+funcName, "/v1/screst/*"+funcName+"*")
+		friendlyName:=strings.TrimLeft(funcName, "/")
+		fmt.Fprintf(w, `<tr><td>%v</td><td><li><a href='%v'>%v</a></li></td></tr>`, friendlyName, "/v1/screst/"+key+funcName, "/v1/screst/*"+funcName+"*")
 	}
 
 	fmt.Fprintf(w, `</table></body></html>`)

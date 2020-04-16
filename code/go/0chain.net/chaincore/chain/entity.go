@@ -445,7 +445,7 @@ func (c *Chain) AddGenesisBlock(b *block.Block) {
 	}
 	c.SetLatestFinalizedMagicBlock(b)
 	c.SetLatestFinalizedBlock(b)
-	c.LatestDeterministicBlock = b
+	c.SetLatestDeterministicBlock(b)
 	c.blocks[b.Hash] = b
 	return
 }
@@ -531,7 +531,7 @@ func (c *Chain) addBlock(b *block.Block) *block.Block {
 	for pb := b.PrevBlock; pb != nil && pb != c.LatestDeterministicBlock; pb = pb.PrevBlock {
 		pb.AddUniqueBlockExtension(b)
 		if c.IsFinalizedDeterministically(pb) {
-			c.LatestDeterministicBlock = pb
+			c.SetLatestDeterministicBlock(pb)
 			break
 		}
 	}
@@ -1256,4 +1256,11 @@ func (c *Chain) PruneRoundStorage(ctx context.Context, storages ...round.RoundSt
 // ResetStatusMonitor resetting the node monitoring worker
 func ResetStatusMonitor(round int64) {
 	UpdateNodes <- round
+}
+
+func (c *Chain) SetLatestDeterministicBlock(b *block.Block) {
+	lfb := c.LatestDeterministicBlock
+	if lfb == nil || b.Round >= lfb.Round {
+		c.LatestDeterministicBlock = b
+	}
 }

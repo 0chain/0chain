@@ -1,10 +1,6 @@
 package minersc
 
 import (
-	"errors"
-	"fmt"
-	"log"
-
 	c_state "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
@@ -12,6 +8,8 @@ import (
 	"0chain.net/core/datastore"
 	. "0chain.net/core/logging"
 	"0chain.net/core/util"
+	"errors"
+	"fmt"
 	"go.uber.org/zap"
 )
 
@@ -43,7 +41,6 @@ func (msc *MinerSmartContract) AddSharder(t *transaction.Transaction, input []by
 
 		return "", err
 	}
-	//log.Println(newSharder)
 	Logger.Info("The new sharder info", zap.String("base URL", newSharder.N2NHost), zap.String("ID", newSharder.ID), zap.String("pkey", newSharder.PublicKey), zap.Any("mscID", msc.ID))
 	Logger.Info("SharderNode", zap.Any("node", newSharder))
 	if newSharder.PublicKey == "" || newSharder.ID == "" {
@@ -62,7 +59,6 @@ func (msc *MinerSmartContract) AddSharder(t *transaction.Transaction, input []by
 		return "", common.NewError("failed to add sharder", fmt.Sprintf("error digging delegate pool: %v", err.Error()))
 	}
 	statectx.AddTransfer(transfer)
-	log.Println("AddSharder sharder", newSharder.ID, newSharder.N2NHost, "transfer", transfer)
 	newSharder.Pending[t.Hash] = pool
 	allShardersList.Nodes = append(allShardersList.Nodes, newSharder)
 	statectx.InsertTrieNode(AllShardersKey, allShardersList)
@@ -127,10 +123,13 @@ func (msc *MinerSmartContract) getSharderNode(key datastore.Key, id string, bala
 
 func (msc *MinerSmartContract) sharderKeep(t *transaction.Transaction, input []byte, gn *globalNode,
 	balances c_state.StateContextI) (result string, err2 error) {
-	log.Println("sharderKeep")
-	defer func() {
-		log.Println("sharderKeep done. result=", result, "error", err2)
-	}()
+	pn, err := msc.getPhaseNode(balances)
+	if err != nil {
+		return "", err
+	}
+	if pn.Phase != Contribute {
+		return "", common.NewError("sharder_keep_failed", "this is not the correct phase to contribute (sharder keep)")
+	}
 
 	sharderKeepList, err := msc.getShardersList(balances, ShardersKeepKey)
 	if err != nil {
@@ -172,8 +171,6 @@ func (msc *MinerSmartContract) sharderKeep(t *transaction.Transaction, input []b
 		return "", err
 	}
 	msc.verifyMinerState(balances, "Checking allsharderslist afterInsert")
-
-	log.Println("sharderKeep newSharder", newSharder)
 	buff := newSharder.Encode()
 	return string(buff), nil
 }

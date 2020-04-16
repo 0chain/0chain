@@ -1,8 +1,6 @@
 package main
 
 import (
-	"0chain.net/chaincore/smartcontract"
-	"0chain.net/smartcontract/minersc"
 	"bufio"
 	"context"
 	"errors"
@@ -160,28 +158,15 @@ func main() {
 	if err := getCurrentMagicBlock(sc); err != nil {
 		Logger.Panic(err.Error()) //FIXME: remove panic
 	}
+	if serverChain.GetCurrentMagicBlock().MagicBlockNumber < serverChain.GetLatestMagicBlock().MagicBlockNumber {
+		serverChain.SetCurrentRound(0)
+	}
+
 	initServer()
 	initHandlers()
+	sharder.SetupMinerSmartContract(sharder.GetSharderChain())
 	go sc.RegisterClient()
 	go sc.InitSetupSC()
-
-
-	scs := smartcontract.GetSmartContract(minersc.ADDRESS)
-	scs.SetCallbackPhase(func(phase int) {
-		if phase == minersc.Contribute {
-			log.Println("sharder keep")
-			txn, err := serverChain.RegisterSharderKeep()
-			if err != nil {
-				log.Println(err)
-			} else {
-				if txn == nil || serverChain.ConfirmTransaction(txn) {
-					log.Println("sharder keep confirmed!")
-				} else {
-					log.Println("sharder keep NOT confirmed")
-				}
-			}
-		}
-	})
 
 	// Do a deep scan from finalized block till DeepWindow
 	go sc.HealthCheckWorker(ctx, sharder.DeepScan) // 4) progressively checks the health for each round
@@ -299,11 +284,11 @@ func readMagicBlockFile(magicBlockFile *string, sc *sharder.Chain, serverChain *
 func getCurrentMagicBlock(sc *sharder.Chain) error {
 	mbs := sc.GetLatestFinalizedMagicBlockFromSharder(common.GetRootContext())
 	if len(mbs) == 0 {
-		errors.New("no finalized magic block from sharder")
+		return errors.New("no finalized magic block from sharder")
 	}
 	if len(mbs) > 1 {
 		sort.Slice(mbs, func(i, j int) bool {
-			return mbs[i].StartingRound < mbs[j].StartingRound
+			return mbs[i].StartingRound > mbs[j].StartingRound
 		})
 	}
 	magicBlock := mbs[0]
@@ -321,6 +306,7 @@ func getCurrentMagicBlock(sc *sharder.Chain) error {
 	}
 	sc.UpdateNodesFromMagicBlock(magicBlock.MagicBlock)
 	sc.SetLatestFinalizedMagicBlock(magicBlock)
+
 	return nil
 }
 

@@ -44,7 +44,6 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction, input []byte
 		Logger.Error("Error in decoding the input", zap.Error(err))
 		return "", err
 	}
-	//log.Println(newMiner)
 	Logger.Info("The new miner info", zap.String("base URL", newMiner.N2NHost), zap.String("ID", newMiner.ID), zap.String("pkey", newMiner.PublicKey), zap.Any("mscID", msc.ID))
 	Logger.Info("MinerNode", zap.Any("node", newMiner))
 	if newMiner.PublicKey == "" || newMiner.ID == "" {

@@ -37,9 +37,9 @@ var (
 )
 
 const (
-	scNameAddMiner         = "add_miner"
-	scNameContributeMpk    = "contributeMpk"
-	scNamePublishShares    = "shareSignsOrShares"
+	scNameAddMiner      = "add_miner"
+	scNameContributeMpk = "contributeMpk"
+	scNamePublishShares = "shareSignsOrShares"
 )
 
 const (
@@ -292,8 +292,7 @@ func (mc *Chain) SendSijs() (*httpclientutil.Transaction, error) {
 	}
 
 	var failedSend []string
-	nodes := node.GetMinerNodesKeys()
-	for _, key := range nodes {
+	for key := range dkgMiners.SimpleNodes {
 		if key != selfNodeKey {
 			_, ok := shareOrSigns.ShareOrSigns[key]
 			if !ok {

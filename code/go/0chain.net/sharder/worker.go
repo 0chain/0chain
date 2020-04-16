@@ -2,12 +2,14 @@ package sharder
 
 import (
 	"0chain.net/chaincore/block"
+	"go.uber.org/zap"
 	"time"
 
 	"0chain.net/chaincore/round"
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
 	"0chain.net/core/persistencestore"
+	. "0chain.net/core/logging"
 	"context"
 )
 
@@ -23,6 +25,7 @@ func SetupWorkers(ctx context.Context) {
 	go sc.HealthCheckSetup(ctx, ProximityScan)
 
 	go sc.PruneStorageWorker(ctx, time.Minute*5, sc.MagicBlockStorage)
+	go sc.RegisterSharderKeepWorker(ctx)
 }
 
 /*BlockWorker - stores the blocks */
@@ -86,4 +89,30 @@ func (sc *Chain) hasTransactions(ctx context.Context, bs *block.BlockSummary) bo
 		return false
 	}
 	return count == bs.NumTxns
+}
+
+func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
+	timerCheck := time.NewTicker(time.Minute)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-timerCheck.C:
+			if !sc.ActiveInChain() || !sc.IsRegisteredSharderKeep() {
+				for !sc.IsRegisteredSharderKeep() {
+					txn, err := sc.RegisterSharderKeep()
+					if err != nil {
+						Logger.Error("register_sharder_keep_worker", zap.Error(err))
+					} else {
+						if txn == nil || sc.ConfirmTransaction(txn) {
+							Logger.Info("register_sharder_keep_worker -- registered")
+						} else {
+							Logger.Debug("register_sharder_keep_worker -- failed to confirm transaction", zap.Any("txn", txn))
+						}
+					}
+					time.Sleep(time.Second)
+				}
+			}
+		}
+	}
 }

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"math"
 	"time"
 
@@ -32,6 +31,7 @@ const (
 const (
 	scRestAPIGetMinerList       = "/getMinerList"
 	scRestAPIGetSharderList     = "/getSharderList"
+	scRestAPIGetSharderKeepList = "/getSharderKeepList"
 )
 
 func (mc *Chain) InitSetupSC() {
@@ -85,16 +85,33 @@ func (mc *Chain) RegisterClient() {
 }
 
 func (mc *Chain) isRegistered() bool {
+	return mc.isRegisteredEx(
+		func(n *node.Node) util.Path {
+			if typ := n.Type; typ == node.NodeTypeMiner {
+				return util.Path(encryption.Hash(minersc.AllMinersKey))
+			} else if typ == node.NodeTypeSharder {
+				return util.Path(encryption.Hash(minersc.AllShardersKey))
+			}
+			return nil
+		},
+		func(n *node.Node) string {
+			if typ := n.Type; typ == node.NodeTypeMiner {
+				return scRestAPIGetMinerList
+			} else if typ == node.NodeTypeSharder {
+				return scRestAPIGetSharderList
+			}
+			return ""
+		})
+}
+
+func (mc *Chain) isRegisteredEx(getStatePath func(n *node.Node) util.Path,
+	getAPIPath func(n *node.Node) string) bool {
 	allMinersList := &minersc.MinerNodes{}
+	currentNode := node.Self.Underlying()
 	if mc.ActiveInChain() {
 		clientState := CreateTxnMPT(mc.GetLatestFinalizedBlock().ClientState)
-		var nodeList util.Serializable
-		var err error
-		if typ := node.Self.Underlying().Type; typ == node.NodeTypeMiner {
-			nodeList, err = clientState.GetNodeValue(util.Path(encryption.Hash(minersc.AllMinersKey)))
-		} else if typ == node.NodeTypeSharder {
-			nodeList, err = clientState.GetNodeValue(util.Path(encryption.Hash(minersc.AllShardersKey)))
-		}
+		statePath := getStatePath(currentNode)
+		nodeList, err := clientState.GetNodeValue(statePath)
 		if err != nil {
 			Logger.Error("failed to get magic block", zap.Any("error", err))
 			return false
@@ -113,12 +130,8 @@ func (mc *Chain) isRegistered() bool {
 			sharders = mb.Sharders.N2NURLs()
 			err      error
 		)
-		if typ := node.Self.Underlying().Type; typ == node.NodeTypeMiner {
-			err = httpclientutil.MakeSCRestAPICall(minersc.ADDRESS, scRestAPIGetMinerList, nil, sharders, allMinersList, 1)
-		} else if typ == node.NodeTypeSharder {
-			err = httpclientutil.MakeSCRestAPICall(minersc.ADDRESS, scRestAPIGetSharderList, nil, sharders, allMinersList, 1)
-		}
-
+		relPath := getAPIPath(currentNode)
+		err = httpclientutil.MakeSCRestAPICall(minersc.ADDRESS, relPath, nil, sharders, allMinersList, 1)
 		if err != nil {
 			Logger.Error("is registered", zap.Any("error", err))
 			return false
@@ -126,7 +139,7 @@ func (mc *Chain) isRegistered() bool {
 	}
 
 	for _, miner := range allMinersList.Nodes {
-		if miner.ID == node.Self.Underlying().GetKey() {
+		if miner.ID == currentNode.GetKey() {
 			return true
 		}
 	}
@@ -198,11 +211,6 @@ func (mc *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 }
 
 func (mc *Chain) RegisterSharderKeep() (result *httpclientutil.Transaction, err2 error) {
-	log.Println("RegisterSharderKeep")
-	defer func() {
-		log.Println("RegisterSharderKeep done. result=", result, "error=", err2)
-
-	}()
 	selfNode := node.Self.Underlying()
 	if selfNode.Type != node.NodeTypeSharder {
 		return nil, errors.New("only sharder")
@@ -230,4 +238,20 @@ func (mc *Chain) RegisterSharderKeep() (result *httpclientutil.Transaction, err2
 	var minerUrls = mb.Miners.N2NURLs()
 	err := httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls)
 	return txn, err
+}
+
+func (mc *Chain) IsRegisteredSharderKeep() bool {
+	return mc.isRegisteredEx(
+		func(n *node.Node) util.Path {
+			if typ := n.Type; typ == node.NodeTypeSharder {
+				return util.Path(encryption.Hash(minersc.ShardersKeepKey))
+			}
+			return nil
+		},
+		func(n *node.Node) string {
+			if typ := n.Type; typ == node.NodeTypeSharder {
+				return scRestAPIGetSharderKeepList
+			}
+			return ""
+		})
 }
