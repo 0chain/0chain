@@ -259,7 +259,7 @@ func (vp *vestingPool) earned(id datastore.Key, now common.Timestamp) (
 	}
 
 	if found == nil {
-		return nil, 0, fmt.Errorf("destinations %q not found in pool", id)
+		return nil, 0, fmt.Errorf("destination %q not found in pool", id)
 	}
 
 	if vp.Balance >= total {
@@ -701,7 +701,7 @@ func (vsc *VestingSmartContract) delete(t *transaction.Transaction,
 			"can't delete vesting pool: "+err.Error())
 	}
 
-	return `{"pool_id":` + vp.ID + `,"action":"deleted"}`, nil
+	return `{"pool_id":"` + vp.ID + `","action":"deleted"}`, nil
 }
 
 func (vsc *VestingSmartContract) lock(t *transaction.Transaction, input []byte,

@@ -18,7 +18,6 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/logging"
-	"0chain.net/core/util"
 
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -107,41 +106,13 @@ func newTestVestingSC() (vsc *VestingSmartContract) {
 	return
 }
 
-func mustSave(t *testing.T, key datastore.Key, val util.Serializable,
-	balances chainstate.StateContextI) {
-
-	var _, err = balances.InsertTrieNode(key, val)
-	require.NoError(t, err)
-}
-
-func avgConfig() (conf *config) {
-	conf = new(config)
-	conf.AllowAny = false
-	conf.Triggers = []string{trOne, trTwo}
-	conf.MinLock = 100
-	conf.MinDuration = 1 * time.Second
-	conf.MaxDuration = 1 * time.Hour
-	conf.MinFriquency = 1 * time.Second
-	conf.MaxFriquency = 1 * time.Hour
-	conf.MaxDestinations = 2
-	conf.MaxDescriptionLength = 20
-	conf.Expiration = 10 * time.Minute
-	return
-}
-
-func setConfig(t *testing.T, balances chainstate.StateContextI) (conf *config) {
-	conf = avgConfig()
-	mustSave(t, configKey(ADDRESS), conf, balances)
-	return
-}
-
 func (c *Client) trigger(t *testing.T, vsc *VestingSmartContract,
 	poolID datastore.Key, now common.Timestamp,
 	balances chainstate.StateContextI) (resp string, err error) {
 
 	var (
 		tx = newTransaction(c.id, ADDRESS, 0, now)
-		tr lockRequest
+		tr poolRequest
 	)
 	balances.(*testBalances).txn = tx
 	tr.PoolID = poolID
@@ -154,7 +125,7 @@ func (c *Client) lock(t *testing.T, vsc *VestingSmartContract,
 
 	var (
 		tx = newTransaction(c.id, ADDRESS, value, now)
-		lr lockRequest
+		lr poolRequest
 	)
 	balances.(*testBalances).txn = tx
 	lr.PoolID = poolID
@@ -167,7 +138,7 @@ func (c *Client) unlock(t *testing.T, vsc *VestingSmartContract,
 
 	var (
 		tx = newTransaction(c.id, ADDRESS, 0, now)
-		ur lockRequest
+		ur poolRequest
 	)
 	balances.(*testBalances).txn = tx
 	ur.PoolID = poolID
@@ -189,18 +160,9 @@ func (c *Client) delete(t *testing.T, vsc *VestingSmartContract,
 
 	var (
 		tx = newTransaction(c.id, ADDRESS, 0, now)
-		dr lockRequest
+		dr poolRequest
 	)
 	balances.(*testBalances).txn = tx
 	dr.PoolID = poolID
 	return vsc.unlock(tx, mustEncode(t, &dr), balances)
-}
-
-func (c *Client) updateConfig(t *testing.T, vsc *VestingSmartContract,
-	conf *config, now common.Timestamp, balances chainstate.StateContextI) (
-	resp string, err error) {
-
-	var tx = newTransaction(c.id, ADDRESS, 0, now)
-	balances.(*testBalances).txn = tx
-	return vsc.add(tx, mustEncode(t, conf), balances)
 }

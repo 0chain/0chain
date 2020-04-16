@@ -6,8 +6,6 @@ import (
 	"time"
 
 	configpkg "0chain.net/chaincore/config"
-	"0chain.net/core/datastore"
-	"0chain.net/core/util"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -60,16 +58,16 @@ func Test_config_validate(t *testing.T) {
 func configureConfig() (configured *config) {
 	const pfx = "smart_contracts.vestingsc."
 
-	configpkg.SmartContractConfig.Set(pfx+"min_lock", 10)
-	configpkg.SmartContractConfig.Set(pfx+"min_duration", 1*time.Minute)
-	configpkg.SmartContractConfig.Set(pfx+"max_duration", 10*time.Minute)
-	configpkg.SmartContractConfig.Set(pfx+"max_destinations", 50)
-	configpkg.SmartContractConfig.Set(pfx+"max_description_length", 255)
+	configpkg.SmartContractConfig.Set(pfx+"min_lock", 100)
+	configpkg.SmartContractConfig.Set(pfx+"min_duration", 1*time.Second)
+	configpkg.SmartContractConfig.Set(pfx+"max_duration", 10*time.Hour)
+	configpkg.SmartContractConfig.Set(pfx+"max_destinations", 2)
+	configpkg.SmartContractConfig.Set(pfx+"max_description_length", 20)
 
 	return &config{
-		10e10,
-		1 * time.Minute, 10 * time.Minute,
-		50, 255,
+		100e10,
+		1 * time.Second, 10 * time.Hour,
+		2, 20,
 	}
 }
 

@@ -20,7 +20,7 @@ func Test_toSeconds(t *testing.T) {
 }
 
 func Test_lockRequest_decode(t *testing.T) {
-	var lr lockRequest
+	var lr poolRequest
 	require.NoError(t, lr.decode([]byte(`{"pool_id":"pool_hex"}`)))
 	assert.Equal(t, "pool_hex", lr.PoolID)
 }
@@ -30,16 +30,17 @@ func Test_addRequest_decode(t *testing.T) {
 	are.Description = "for something"
 	are.StartTime = 10
 	are.Duration = 2 * time.Second
-	are.Friquency = 3 * time.Second
-	are.Destinations = []string{"one", "two"}
-	are.Amount = 400
+	are.Destinations = destinations{
+		&destination{ID: "one", Amount: 10},
+		&destination{ID: "two", Amount: 20},
+	}
 	require.NoError(t, ard.decode(mustEncode(t, &are)))
 	assert.EqualValues(t, &are, &ard)
 }
 
 func Test_addRequest_validate(t *testing.T) {
 	var (
-		conf = avgConfig()
+		conf = configureConfig()
 		ar   addRequest
 	)
 	ar.Description = "very very very long description"
@@ -51,19 +52,21 @@ func Test_addRequest_validate(t *testing.T) {
 	ar.StartTime = 20
 
 	assertErrMsg(t, ar.validate(10, conf), "vesting duration is too short")
-	ar.Duration = 2 * time.Hour
+	ar.Duration = 20 * time.Hour
 	assertErrMsg(t, ar.validate(10, conf), "vesting duration is too long")
 	ar.Duration = 1 * time.Minute
 
-	assertErrMsg(t, ar.validate(10, conf), "vesting friquency is too low")
-	ar.Friquency = 2 * time.Hour
-	assertErrMsg(t, ar.validate(10, conf), "vesting friquency is too high")
-	ar.Friquency = 1 * time.Minute
-
 	assertErrMsg(t, ar.validate(10, conf), "no destinations")
-	ar.Destinations = []string{"one", "two", "three"}
+	ar.Destinations = destinations{
+		&destination{ID: "one", Amount: 10},
+		&destination{ID: "two", Amount: 20},
+		&destination{ID: "three", Amount: 30},
+	}
 	assertErrMsg(t, ar.validate(10, conf), "too many destinations")
-	ar.Destinations = []string{"one", "two"}
+	ar.Destinations = destinations{
+		&destination{ID: "one", Amount: 10},
+		&destination{ID: "two", Amount: 20},
+	}
 
 	assert.NoError(t, ar.validate(10, conf))
 	ar.StartTime = 0
@@ -80,35 +83,33 @@ func Test_vestingPool(t *testing.T) {
 	ar.Description = "for something"
 	ar.StartTime = 10
 	ar.Duration = 2 * time.Second
-	ar.Friquency = 3 * time.Second
-	ar.Destinations = []string{"one", "two"}
-	ar.Amount = 400
+	ar.Destinations = destinations{
+		&destination{ID: "one", Amount: 10},
+		&destination{ID: "two", Amount: 20},
+	}
 	vp = newVestingPoolFromReqeust(clientID, &ar)
 	assert.NotNil(t, vp)
 	assert.NotNil(t, vp.TokenPool)
 
-	assert.Zero(t, vp.Last)
-
 	assert.Equal(t, vp.Description, ar.Description)
 	assert.Equal(t, vp.StartTime, ar.StartTime)
 	assert.Equal(t, vp.ExpireAt, ar.StartTime+toSeconds(ar.Duration))
-	assert.Equal(t, vp.Friquency, ar.Friquency)
 	assert.Equal(t, vp.Destinations, ar.Destinations)
-	assert.Equal(t, vp.Amount, ar.Amount)
 
 	var vpd = new(vestingPool)
 	require.NoError(t, vpd.Decode(vp.Encode()))
 	assert.Equal(t, vp, vpd)
 
-	var inf = vpd.info()
+	var inf = vpd.info(0)
 	assert.Equal(t, vp.Description, inf.Description)
 	assert.Equal(t, vp.StartTime, inf.StartTime)
 	assert.Equal(t, vp.ExpireAt, inf.ExpireAt)
-	assert.Equal(t, vp.Friquency, inf.Friquency)
-	assert.Equal(t, vp.Destinations, inf.Destinations)
-	assert.Equal(t, vp.Amount, inf.Amount)
+	assert.EqualValues(t, []*destInfo{
+		&destInfo{ID: "one", Wanted: 10, Earned: 0, Last: 10},
+		&destInfo{ID: "two", Wanted: 20, Earned: 0, Last: 10},
+	}, inf.Destinations) // TODO
 	assert.Equal(t, state.Balance(0), inf.Balance)
-	assert.Equal(t, common.Timestamp(0), inf.Last)
+	assert.Equal(t, state.Balance(0), inf.Left)
 }
 
 func TestVestingSmartContract_getPoolBytes_getPool(t *testing.T) {
@@ -123,12 +124,13 @@ func TestVestingSmartContract_getPoolBytes_getPool(t *testing.T) {
 	_, err = vsc.getPool(poolKey(vsc.ID, txHash), balances)
 	require.Equal(t, util.ErrValueNotPresent, err)
 	var vp = newVestingPoolFromReqeust(clientID, &addRequest{
-		Description:  "for something",
-		StartTime:    10,
-		Duration:     2 * time.Second,
-		Friquency:    3 * time.Second,
-		Destinations: []string{"one", "two"},
-		Amount:       400,
+		Description: "for something",
+		StartTime:   10,
+		Duration:    2 * time.Second,
+		Destinations: destinations{
+			&destination{ID: "one", Amount: 10},
+			&destination{ID: "two", Amount: 20},
+		},
 	})
 	vp.ID = poolKey(vsc.ID, txHash)
 	require.NoError(t, vp.save(balances))
@@ -163,13 +165,14 @@ func TestVestingSmartContract_add(t *testing.T) {
 		` invalid character '}' looking for beginning of value`)
 
 	// 2. invalid
-	setConfig(t, balances)
+	configureConfig()
 	ar.Description = "for something"
 	ar.StartTime = 10
 	ar.Duration = 0
-	ar.Friquency = 3 * time.Second
-	ar.Destinations = []string{"one", "two"}
-	ar.Amount = 400
+	ar.Destinations = destinations{
+		&destination{ID: "one", Amount: 10},
+		&destination{ID: "two", Amount: 20},
+	}
 	_, err = vsc.add(tx, mustEncode(t, &ar), balances)
 	assertErrMsg(t, err, `create_vesting_pool_failed: invalid request:`+
 		` vesting duration is too short`)
@@ -189,15 +192,15 @@ func TestVestingSmartContract_add(t *testing.T) {
 		`insufficient amount to lock`)
 
 	// 5. no tokens
-	tx = newTransaction(client.id, vsc.ID, 800, tp)
+	tx = newTransaction(client.id, vsc.ID, 800e10, tp)
 	balances.txn = tx
 	_, err = vsc.add(tx, mustEncode(t, &ar), balances)
 	assertErrMsg(t, err, `create_vesting_pool_failed: `+
 		`can't fill pool: lock amount is greater than balance`)
 
 	// 6. ok
-	balances.balances[client.id] = 1200
-	tx = newTransaction(client.id, vsc.ID, 800, tp)
+	balances.balances[client.id] = 1200e10
+	tx = newTransaction(client.id, vsc.ID, 800e10, tp)
 	balances.txn = tx
 	var resp string
 	resp, err = vsc.add(tx, mustEncode(t, &ar), balances)
@@ -206,7 +209,7 @@ func TestVestingSmartContract_add(t *testing.T) {
 	require.NoError(t, deco.Decode([]byte(resp)))
 	assert.NotZero(t, deco.ID)
 	assert.Equal(t, client.id, deco.ClientID)
-	assert.Equal(t, state.Balance(800), deco.Balance)
+	assert.Equal(t, state.Balance(800e10), deco.Balance)
 
 	// 7. client pools
 	var cp *clientPools
@@ -219,15 +222,15 @@ func TestVestingSmartContract_delete(t *testing.T) {
 	var (
 		vsc      = newTestVestingSC()
 		balances = newTestBalances()
-		client   = newClient(1200, balances)
+		client   = newClient(1200e10, balances)
 		tp       = common.Timestamp(0)
 		tx       = newTransaction(client.id, vsc.ID, 0, tp)
-		dr       lockRequest
+		dr       poolRequest
 		err      error
 	)
 
 	balances.txn = tx
-	setConfig(t, balances)
+	configureConfig()
 
 	// 1. malformed (lock, unlock)
 	_, err = vsc.delete(tx, []byte("} malformed {"), balances)
@@ -255,13 +258,14 @@ func TestVestingSmartContract_delete(t *testing.T) {
 	// 5. another client
 	var resp string
 	resp, err = client.add(t, vsc, &addRequest{
-		Description:  "for something",
-		StartTime:    10,
-		Duration:     2 * time.Second,
-		Friquency:    3 * time.Second,
-		Destinations: []string{"one", "two"},
-		Amount:       400,
-	}, 800, tp, balances)
+		Description: "for something",
+		StartTime:   10,
+		Duration:    2 * time.Second,
+		Destinations: destinations{
+			&destination{ID: "one", Amount: 10},
+			&destination{ID: "two", Amount: 20},
+		},
+	}, 800e10, tp, balances)
 	require.NoError(t, err)
 	var set vestingPool
 	require.NoError(t, set.Decode([]byte(resp)))
@@ -271,13 +275,13 @@ func TestVestingSmartContract_delete(t *testing.T) {
 	balances.txn = tx
 	_, err = vsc.delete(tx, mustEncode(t, &dr), balances)
 	assertErrMsg(t, err, "delete_vesting_pool_failed: "+
-		"only pool owner can do that")
+		"only pool owner can delete the pool")
 
 	// 6. delete
 	tx.ClientID = client.id
 	resp, err = vsc.delete(tx, mustEncode(t, &dr), balances)
 	require.NoError(t, err)
-	assert.EqualValues(t, "deleted", resp)
+	assert.EqualValues(t, `{"pool_id":"`+set.ID+`","action":"deleted"}`, resp)
 
 	assert.Zero(t, balances.tree[set.ID])
 	assert.Zero(t, balances.tree[clientPoolsKey(vsc.ID, client.id)])
@@ -287,15 +291,15 @@ func TestVestingSmartContract_lock(t *testing.T) {
 	var (
 		vsc      = newTestVestingSC()
 		balances = newTestBalances()
-		client   = newClient(1200, balances)
+		client   = newClient(1200e10, balances)
 		tp       = common.Timestamp(0)
 		tx       = newTransaction(client.id, vsc.ID, 0, tp)
-		lr       lockRequest
+		lr       poolRequest
 		err      error
 	)
 
 	balances.txn = tx
-	setConfig(t, balances)
+	configureConfig()
 
 	// 1. malformed (lock, unlock)
 	_, err = vsc.lock(tx, []byte("} malformed {"), balances)
@@ -316,13 +320,14 @@ func TestVestingSmartContract_lock(t *testing.T) {
 	// 4. another client
 	var resp string
 	resp, err = client.add(t, vsc, &addRequest{
-		Description:  "for something",
-		StartTime:    10,
-		Duration:     2 * time.Second,
-		Friquency:    3 * time.Second,
-		Destinations: []string{"one", "two"},
-		Amount:       400,
-	}, 800, tp, balances)
+		Description: "for something",
+		StartTime:   10,
+		Duration:    2 * time.Second,
+		Destinations: destinations{
+			&destination{ID: "one", Amount: 10},
+			&destination{ID: "two", Amount: 20},
+		},
+	}, 800e10, tp, balances)
 	require.NoError(t, err)
 	var set vestingPool
 	require.NoError(t, set.Decode([]byte(resp)))
@@ -342,13 +347,13 @@ func TestVestingSmartContract_lock(t *testing.T) {
 		"insufficient amount to lock")
 
 	// 7. no tokens
-	tx.Value = 2000
+	tx.Value = 2000e10
 	_, err = vsc.lock(tx, mustEncode(t, &lr), balances)
 	assertErrMsg(t, err, "lock_vesting_pool_failed: "+
-		"lock amount is greater than balance")
+		"filling pool: lock amount is greater than balance")
 
 	// 8. lock
-	balances.balances[client.id] = 4000
+	balances.balances[client.id] = 4000e10
 	resp, err = vsc.lock(tx, mustEncode(t, &lr), balances)
 	require.NoError(t, err)
 	assert.NotZero(t, resp)
@@ -356,7 +361,7 @@ func TestVestingSmartContract_lock(t *testing.T) {
 	var got *vestingPool
 	got, err = vsc.getPool(set.ID, balances)
 	require.NoError(t, err)
-	assert.Equal(t, state.Balance(2800), got.Balance)
+	assert.Equal(t, state.Balance(2800e10), got.Balance)
 
 }
 
@@ -364,15 +369,15 @@ func TestVestingSmartContract_unlock(t *testing.T) {
 	var (
 		vsc      = newTestVestingSC()
 		balances = newTestBalances()
-		client   = newClient(1200, balances)
+		client   = newClient(1200e10, balances)
 		tp       = common.Timestamp(0)
 		tx       = newTransaction(client.id, vsc.ID, 0, tp)
-		lr       lockRequest
+		lr       poolRequest
 		err      error
 	)
 
 	balances.txn = tx
-	setConfig(t, balances)
+	configureConfig()
 
 	// 1. malformed
 	_, err = vsc.unlock(tx, []byte("} malformed {"), balances)
@@ -393,13 +398,14 @@ func TestVestingSmartContract_unlock(t *testing.T) {
 	// 4. another client
 	var resp string
 	resp, err = client.add(t, vsc, &addRequest{
-		Description:  "for something",
-		StartTime:    10,
-		Duration:     2 * time.Second,
-		Friquency:    3 * time.Second,
-		Destinations: []string{"one", "two"},
-		Amount:       400,
-	}, 800, tp, balances)
+		Description: "for something",
+		StartTime:   10,
+		Duration:    2 * time.Second,
+		Destinations: destinations{
+			&destination{ID: "one", Amount: 10},
+			&destination{ID: "two", Amount: 20},
+		},
+	}, 800e10, tp, balances)
 	require.NoError(t, err)
 	var set vestingPool
 	require.NoError(t, set.Decode([]byte(resp)))
@@ -409,7 +415,7 @@ func TestVestingSmartContract_unlock(t *testing.T) {
 	balances.txn = tx
 	_, err = vsc.unlock(tx, mustEncode(t, &lr), balances)
 	assertErrMsg(t, err, "unlock_vesting_pool_failed: "+
-		"only owner can unlock tokens from the pool")
+		`vesting pool: destination "another_one" not found in pool`)
 
 	// 6. min lock
 	tx.ClientID = client.id
@@ -427,27 +433,15 @@ func TestVestingSmartContract_trigger(t *testing.T) {
 	var (
 		vsc      = newTestVestingSC()
 		balances = newTestBalances()
-		client   = newClient(1200, balances)
+		client   = newClient(1200e10, balances)
 		tp       = common.Timestamp(0)
 		tx       = newTransaction(client.id, vsc.ID, 0, tp)
-		conf     *config
-		lr       lockRequest
+		lr       poolRequest
 		err      error
 	)
 
 	balances.txn = tx
-	setConfig(t, balances)
-
-	// 0. not allowed
-	_, err = vsc.trigger(tx, nil, balances)
-	assertErrMsg(t, err,
-		"trigger_vesting_pool_failed: not allowed for this client")
-
-	conf, err = vsc.getConfig(balances, false)
-	require.NoError(t, err)
-	conf.Triggers = append(conf.Triggers, tx.ClientID, "another_one")
-	_, err = balances.InsertTrieNode(configKey(vsc.ID), conf)
-	require.NoError(t, err)
+	configureConfig()
 
 	// 1. malformed
 	_, err = vsc.trigger(tx, []byte("} malformed {"), balances)
@@ -468,13 +462,14 @@ func TestVestingSmartContract_trigger(t *testing.T) {
 	// 4. vesting is not started yet
 	var resp string
 	resp, err = client.add(t, vsc, &addRequest{
-		Description:  "for something",
-		StartTime:    10,
-		Duration:     10 * time.Second,
-		Friquency:    3 * time.Second,
-		Destinations: []string{"one", "two"},
-		Amount:       4000,
-	}, 800, tp, balances)
+		Description: "for something",
+		StartTime:   10,
+		Duration:    10 * time.Second,
+		Destinations: destinations{
+			&destination{ID: "one", Amount: 2000},
+			&destination{ID: "two", Amount: 4000},
+		},
+	}, 800e10, tp, balances)
 	require.NoError(t, err)
 	var set vestingPool
 	require.NoError(t, set.Decode([]byte(resp)))
@@ -484,15 +479,11 @@ func TestVestingSmartContract_trigger(t *testing.T) {
 	balances.txn = tx
 	_, err = vsc.trigger(tx, mustEncode(t, &lr), balances)
 	assertErrMsg(t, err, "trigger_vesting_pool_failed: "+
-		"early vesting")
+		"only owner can trigger the pool")
 
-	// 5. not enough tokens
-	tx.CreationDate = 15
-	_, err = vsc.trigger(tx, mustEncode(t, &lr), balances)
-	assertErrMsg(t, err, "trigger_vesting_pool_failed: "+
-		"vesting: not enough tokens")
-
-	// 6. vest
+	// 6. vest (trigger)
+	tx.ClientID = client.id
+	tx.CreationDate = 10 + toSeconds(5*time.Second)
 	set.Balance = 32000
 	require.NoError(t, set.save(balances))
 	resp, err = vsc.trigger(tx, mustEncode(t, &lr), balances)
@@ -502,15 +493,7 @@ func TestVestingSmartContract_trigger(t *testing.T) {
 	var got *vestingPool
 	got, err = vsc.getPool(set.ID, balances)
 	require.NoError(t, err)
-	assert.Equal(t, state.Balance(24000), got.Balance)
-
-	// 7. expired pool
-	set.Last = 19
-	require.NoError(t, set.save(balances))
-	tx.CreationDate = 21 // 10 (start_time) + 10 (duration) + 1 over
-	_, err = vsc.trigger(tx, mustEncode(t, &lr), balances)
-	assertErrMsg(t, err, "trigger_vesting_pool_failed: "+
-		"expired pool")
+	assert.Equal(t, state.Balance(29000), got.Balance)
 }
 
 func TestVestingSmartContract_getPoolInfoHandler(t *testing.T) {
@@ -523,7 +506,7 @@ func TestVestingSmartContract_getPoolInfoHandler(t *testing.T) {
 		resp     interface{}
 		err      error
 	)
-	setConfig(t, balances)
+	configureConfig()
 	params.Set("pool_id", "pool_unknown")
 
 	_, err = vsc.getPoolInfoHandler(ctx, params, balances)
@@ -531,12 +514,13 @@ func TestVestingSmartContract_getPoolInfoHandler(t *testing.T) {
 
 	var set string
 	set, err = client.add(t, vsc, &addRequest{
-		Description:  "for something",
-		StartTime:    10,
-		Duration:     10 * time.Second,
-		Friquency:    3 * time.Second,
-		Destinations: []string{"one", "two"},
-		Amount:       4000,
+		Description: "for something",
+		StartTime:   10,
+		Duration:    10 * time.Second,
+		Destinations: destinations{
+			&destination{ID: "one", Amount: 10},
+			&destination{ID: "two", Amount: 20},
+		},
 	}, 0, 0, balances)
 	require.NoError(t, err)
 	var deco vestingPool
@@ -545,5 +529,5 @@ func TestVestingSmartContract_getPoolInfoHandler(t *testing.T) {
 	params.Set("pool_id", deco.ID)
 	resp, err = vsc.getPoolInfoHandler(ctx, params, balances)
 	require.NoError(t, err)
-	assert.EqualValues(t, deco.info(), resp)
+	assert.EqualValues(t, deco.info(0), resp)
 }
