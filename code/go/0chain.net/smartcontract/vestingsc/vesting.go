@@ -708,6 +708,11 @@ func (vsc *VestingSmartContract) lock(t *transaction.Transaction, input []byte,
 			"only owner can lock more tokens to the pool")
 	}
 
+	if t.CreationDate > vp.ExpireAt {
+		return "", common.NewError("lock_vesting_pool_failed",
+			"expired pool")
+	}
+
 	var conf *config
 	if conf, err = getConfig(); err != nil {
 		return "", common.NewError("lock_vesting_pool_failed",
