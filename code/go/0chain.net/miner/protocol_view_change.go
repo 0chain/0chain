@@ -568,11 +568,14 @@ func (mc *Chain) PublishShareOrSigns() (*httpclientutil.Transaction, error) {
 	scData.InputArgs = shareOrSigns.Clone()
 	txn.ToClientID = minersc.ADDRESS
 
-	mb := mc.GetCurrentMagicBlock()
-
 	var minerUrls []string
-	for _, node := range mb.Miners.CopyNodes() {
-		minerUrls = append(minerUrls, node.GetN2NURLBase())
+	for id := range dkgMiners.SimpleNodes {
+		nodeSend := node.GetNode(id)
+		if nodeSend != nil {
+			minerUrls = append(minerUrls, nodeSend.GetN2NURLBase())
+		} else {
+			Logger.Warn("failed to get node", zap.Any("id", id))
+		}
 	}
 	err = httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls)
 	return txn, err

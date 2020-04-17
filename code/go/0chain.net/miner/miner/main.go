@@ -296,9 +296,21 @@ func readMagicBlockFile(magicBlockFile *string, mc *miner.Chain, serverChain *ch
 }
 
 func getCurrentMagicBlockFromSharders(mc *miner.Chain) error {
-	mbs := mc.GetLatestFinalizedMagicBlockFromSharder(common.GetRootContext())
-	if len(mbs) == 0 {
-		Logger.DPanic("No finalized magic block from sharder")
+	const limitAttempts = 10
+	attempt := 0
+	retryTimeout := time.Second * 5
+	var mbs []*block.Block
+	for len(mbs) == 0 {
+		mbs = mc.GetLatestFinalizedMagicBlockFromSharder(common.GetRootContext())
+		if len(mbs) == 0 {
+			attempt++
+			if attempt >= limitAttempts {
+				Logger.DPanic("No finalized magic block from sharder")
+			}
+			Logger.Warn("get_current_mb_sharder -- retry", zap.Any("attempt", attempt),
+				zap.Any("timeout", retryTimeout))
+			time.Sleep(retryTimeout)
+		}
 	}
 	if len(mbs) > 1 {
 		sort.Slice(mbs, func(i, j int) bool {
