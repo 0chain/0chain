@@ -332,9 +332,9 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 
 // update allocation request
 type updateAllocationRequest struct {
-	ID         string           `json:"id"`         // allocation id
-	Size       int64            `json:"size"`       // difference
-	Expiration common.Timestamp `json:"expiration"` // difference
+	ID         string           `json:"id"`              // allocation id
+	Size       int64            `json:"size"`            // difference
+	Expiration common.Timestamp `json:"expiration_date"` // difference
 }
 
 func (uar *updateAllocationRequest) decode(b []byte) error {
