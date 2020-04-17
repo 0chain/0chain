@@ -121,10 +121,10 @@ And check out its balance next
 10. Unlock as owner. Stop vesting.
 
 ```
-./zwallet vp-trigger --pool_id $POOL
+./zwallet vp-unlock --pool_id $POOL
 ```
 
-Check out balance.
+Check out balances.
 
 11. Lock more tokens to the pool.
 
