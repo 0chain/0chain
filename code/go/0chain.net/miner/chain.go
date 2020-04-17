@@ -246,14 +246,11 @@ func (mc *Chain) ViewChange(ctx context.Context, nRound int64) (bool, error) {
 
 		}
 		mc.UpdateNodesFromMagicBlock(viewChangeMagicBlock)
-		/*if _, err := mc.ensureLatestFinalizedBlocks(ctx, nRound); err != nil {
-			Logger.Warn("vc ensure lfb error", zap.Error(err))
-		}*/
 
 		// Send the previous notarized block for new miners
 		mc.sendNotarizedBlockToNewMiners(ctx, nRound-1, viewChangeMagicBlock, mb)
 		mc.SetNextViewChange(0)
-		go mc.PruneRoundStorage(ctx, mc.roundDkg, mc.MagicBlockStorage)
+		go mc.PruneRoundStorage(ctx, mc.getPruneCountRoundStorage(), mc.roundDkg, mc.MagicBlockStorage)
 	} else {
 		if err := mc.SetDKGSFromStore(ctx, mb); err != nil {
 			Logger.DPanic(err.Error())

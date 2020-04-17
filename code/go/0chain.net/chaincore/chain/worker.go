@@ -276,14 +276,16 @@ func (c *Chain) MustVerifyChainHistory(ctx context.Context,
 }
 
 // PruneStorageWorker pruning storage
-func (c *Chain) PruneStorageWorker(ctx context.Context, d time.Duration, storage ...round.RoundStorage) {
+func (c *Chain) PruneStorageWorker(ctx context.Context, d time.Duration,
+	getCountRoundStorage func(storage round.RoundStorage) int,
+	storage ...round.RoundStorage) {
 	ticker := time.NewTicker(d)
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			c.PruneRoundStorage(ctx, storage...)
+			c.PruneRoundStorage(ctx, getCountRoundStorage, storage...)
 		}
 	}
 }

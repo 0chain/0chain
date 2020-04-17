@@ -251,7 +251,7 @@ func (c *Chain) updateState(b *block.Block, txn *transaction.Transaction) error 
 	case transaction.TxnTypeSmartContract:
 		output, err := c.ExecuteSmartContract(txn, sctx)
 		if err != nil {
-			Logger.Info("Error executing the SC", zap.Any("txn", txn), zap.Error(err))
+			Logger.Error("Error executing the SC", zap.Any("txn", txn), zap.Error(err))
 			return err
 		}
 		txn.TransactionOutput = output

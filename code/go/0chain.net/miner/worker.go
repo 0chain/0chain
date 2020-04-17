@@ -1,7 +1,10 @@
 package miner
 
 import (
+	"0chain.net/chaincore/chain"
+	"0chain.net/chaincore/round"
 	"context"
+	"github.com/spf13/viper"
 	"time"
 
 	"0chain.net/core/logging"
@@ -18,7 +21,7 @@ func SetupWorkers(ctx context.Context) {
 	go mc.FinalizeRoundWorker(ctx, mc)  // 2) sequentially finalize the rounds
 	go mc.FinalizedBlockWorker(ctx, mc) // 3) sequentially processes finalized blocks
 
-	go mc.PruneStorageWorker(ctx, time.Minute*5, mc.MagicBlockStorage, mc.roundDkg)
+	go mc.PruneStorageWorker(ctx, time.Minute*5, mc.getPruneCountRoundStorage(), mc.MagicBlockStorage, mc.roundDkg)
 }
 
 /*BlockWorker - a job that does all the work related to blocks in each round */
@@ -92,5 +95,22 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 		next := mc.GetNextRoundTimeoutTime(ctx)
 		Logger.Info("got_timeout", zap.Int("next", next))
 		timer = time.NewTimer(time.Duration(next) * time.Millisecond)
+	}
+}
+
+func (mc *Chain) getPruneCountRoundStorage() func(storage round.RoundStorage) int {
+	viper.SetDefault("server_chain.round_magic_block_storage.prune_below_count", chain.DefaultCountPruneRoundStorage)
+	viper.SetDefault("server_chain.round_dkg_storage.prune_below_count", chain.DefaultCountPruneRoundStorage)
+	pruneBelowCountMB := viper.GetInt("server_chain.round_magic_block_storage.prune_below_count")
+	pruneBelowCountDKG := viper.GetInt("server_chain.round_dkg_storage.prune_below_count")
+	return func(storage round.RoundStorage) int {
+		switch storage {
+		case mc.roundDkg:
+			return pruneBelowCountDKG
+		case mc.MagicBlockStorage:
+			return pruneBelowCountMB
+		default:
+			return chain.DefaultCountPruneRoundStorage
+		}
 	}
 }

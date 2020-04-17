@@ -1234,16 +1234,21 @@ func (c *Chain) Stop() {
 }
 
 // PruneRoundStorage pruning storage
-func (c *Chain) PruneRoundStorage(ctx context.Context, storages ...round.RoundStorage) {
-	const countPrune = DefaultCountPruneRoundStorage
+func (c *Chain) PruneRoundStorage(_ context.Context, getTargetCount func(storage round.RoundStorage) int,
+	storages ...round.RoundStorage) {
 	for _, storage := range storages {
+		targetCount := getTargetCount(storage)
+		if targetCount == 0 {
+			Logger.Debug("prune storage -- skip. disabled")
+			continue
+		}
 		countRounds := storage.Count()
-		if countRounds > countPrune {
-			round := storage.GetRounds()[countRounds-countPrune-1]
+		if countRounds > targetCount {
+			round := storage.GetRounds()[countRounds-targetCount-1]
 			if err := storage.Prune(round); err != nil {
 				Logger.Error("failed to prune storage",
 					zap.Int("count_rounds", countRounds),
-					zap.Int("count_dest_prune", countPrune),
+					zap.Int("count_dest_prune", targetCount),
 					zap.Int64("round", round),
 					zap.Error(err))
 			} else {

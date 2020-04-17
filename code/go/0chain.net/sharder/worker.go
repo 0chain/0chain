@@ -2,14 +2,16 @@ package sharder
 
 import (
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/chain"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"time"
 
 	"0chain.net/chaincore/round"
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
-	"0chain.net/core/persistencestore"
 	. "0chain.net/core/logging"
+	"0chain.net/core/persistencestore"
 	"context"
 )
 
@@ -24,7 +26,7 @@ func SetupWorkers(ctx context.Context) {
 	go sc.HealthCheckSetup(ctx, DeepScan)
 	go sc.HealthCheckSetup(ctx, ProximityScan)
 
-	go sc.PruneStorageWorker(ctx, time.Minute*5, sc.MagicBlockStorage)
+	go sc.PruneStorageWorker(ctx, time.Minute*5, sc.getPruneCountRoundStorage(), sc.MagicBlockStorage)
 	go sc.RegisterSharderKeepWorker(ctx)
 }
 
@@ -113,6 +115,19 @@ func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
 					time.Sleep(time.Second)
 				}
 			}
+		}
+	}
+}
+
+func (sc *Chain) getPruneCountRoundStorage() func(storage round.RoundStorage) int {
+	viper.SetDefault("server_chain.round_magic_block_storage.prune_below_count", chain.DefaultCountPruneRoundStorage)
+	pruneBelowCountMB := viper.GetInt("server_chain.round_magic_block_storage.prune_below_count")
+	return func(storage round.RoundStorage) int {
+		switch storage {
+		case sc.MagicBlockStorage:
+			return pruneBelowCountMB
+		default:
+			return chain.DefaultCountPruneRoundStorage
 		}
 	}
 }
