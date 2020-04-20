@@ -26,8 +26,17 @@ type FSBlockStore struct {
 	RootDirectory         string
 	blockMetadataProvider datastore.EntityMetadata
 	Minio                 *minio.Client
-	bucketName            string
 }
+
+type MinioConfiguration struct {
+	StorageServiceURL string
+	AccessKeyID       string
+	SecretAccessKey   string
+	BucketName        string
+	BucketLocation    string
+}
+
+var MinioConfig MinioConfiguration
 
 /*NewFSBlockStore - return a new fs block store */
 func NewFSBlockStore(rootDir string) *FSBlockStore {
@@ -39,30 +48,28 @@ func NewFSBlockStore(rootDir string) *FSBlockStore {
 
 func (fbs *FSBlockStore) intializeMinio() {
 	minioClient, err := minio.New(
-		viper.GetString("minio.storage_service_url"),
-		viper.GetString("minio.access_key_id"),
-		viper.GetString("minio.secret_access_key"),
+		MinioConfig.StorageServiceURL,
+		MinioConfig.AccessKeyID,
+		MinioConfig.SecretAccessKey,
 		viper.GetBool("minio.use_ssl"),
 	)
 	if err != nil {
 		Logger.Panic("Unable to initiaze minio cliet", zap.Error(err))
 		panic(err)
 	}
-	bucketName := viper.GetString("minio.bucket_name")
-	err = minioClient.MakeBucket(bucketName, viper.GetString("minio.bucket_location"))
+	err = minioClient.MakeBucket(MinioConfig.BucketName, MinioConfig.BucketLocation)
 	if err != nil {
-		exists, errBucketExists := minioClient.BucketExists(bucketName)
+		exists, errBucketExists := minioClient.BucketExists(MinioConfig.BucketName)
 		if errBucketExists == nil && exists {
-			Logger.Info("We already own ", zap.Any("bucket_name", bucketName))
+			Logger.Info("We already own ", zap.Any("bucket_name", MinioConfig.BucketName))
 		} else {
-			Logger.Panic("Minio bucket error", zap.Error(err), zap.Any("bucket_name", bucketName))
+			Logger.Panic("Minio bucket error", zap.Error(err), zap.Any("bucket_name", MinioConfig.BucketName))
 			panic(err)
 		}
 	} else {
-		Logger.Info(bucketName + " bucket successfully created")
+		Logger.Info(MinioConfig.BucketName + " bucket successfully created")
 	}
 	fbs.Minio = minioClient
-	fbs.bucketName = bucketName
 }
 
 func (fbs *FSBlockStore) getFileWithoutExtension(hash string, round int64) string {
@@ -160,7 +167,7 @@ func (fbs *FSBlockStore) DeleteBlock(b *block.Block) error {
 
 func (fbs *FSBlockStore) UploadToCloud(hash string, round int64) error {
 	filePath := fbs.getFileName(hash, round)
-	_, err := fbs.Minio.FPutObject(fbs.bucketName, hash, filePath, minio.PutObjectOptions{})
+	_, err := fbs.Minio.FPutObject(MinioConfig.BucketName, hash, filePath, minio.PutObjectOptions{})
 	if err != nil {
 		return err
 	}
@@ -169,5 +176,5 @@ func (fbs *FSBlockStore) UploadToCloud(hash string, round int64) error {
 
 func (fbs *FSBlockStore) DownloadFromCloud(hash string, round int64) error {
 	filePath := fbs.getFileName(hash, round)
-	return fbs.Minio.FGetObject(fbs.bucketName, hash, filePath, minio.GetObjectOptions{})
+	return fbs.Minio.FGetObject(MinioConfig.BucketName, hash, filePath, minio.GetObjectOptions{})
 }
