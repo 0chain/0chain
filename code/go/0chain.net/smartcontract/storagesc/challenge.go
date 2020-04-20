@@ -116,7 +116,12 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	// for a case of a partial verification
 	move = state.Balance(float64(move) * partial)
 
-	if err = cp.moveToBlobber(sc.ID, bc.BlobberID, move, balances); err != nil {
+	var sp *stakePool
+	if sp, err = sc.getStakePool(bc.BlobberID, balances); err != nil {
+		return fmt.Errorf("can't get stake pool: %v", err)
+	}
+
+	if err = cp.moveToBlobber(sc.ID, sp, move); err != nil {
 		return fmt.Errorf("can't move tokens to blobber: %v", err)
 	}
 
@@ -125,7 +130,11 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		return fmt.Errorf("rewarding validators: %v", err)
 	}
 
-	// save the pool
+	// save the pools
+	if err = sp.save(sc.ID, bc.BlobberID, balances); err != nil {
+		return fmt.Errorf("can't save sake pool: %v", err)
+	}
+
 	if err = cp.save(sc.ID, alloc.ID, balances); err != nil {
 		return fmt.Errorf("can't save allocation's challenge pool: %v", err)
 	}
@@ -493,12 +502,13 @@ func (sc *StorageSmartContract) addChallenge(challengeID string, creationDate co
 			return allocationObj.Blobbers[i].ID < allocationObj.Blobbers[j].ID
 		})
 		if allocationObj.Stats.NumWrites > 0 {
+			selected = true
 			break
 		}
 	}
 
 	if allocationObj.Stats.NumWrites == 0 {
-		return "", common.NewError("no_allocation_writes", "No Allocation writes. challenge gemeration not possible")
+		return "", common.NewError("no_allocation_writes", "No Allocation writes. challenge generation not possible")
 	}
 
 	selectedBlobberObj := &StorageNode{}

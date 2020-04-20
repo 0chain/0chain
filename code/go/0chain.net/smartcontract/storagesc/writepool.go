@@ -82,6 +82,10 @@ func (wp *writePool) fill(t *transaction.Transaction,
 	balances chainState.StateContextI) (
 	transfer *state.Transfer, resp string, err error) {
 
+	if t.Value == 0 {
+		return
+	}
+
 	if transfer, resp, err = wp.FillPool(t); err != nil {
 		return
 	}
@@ -207,17 +211,21 @@ func (ssc *StorageSmartContract) createWritePool(t *transaction.Transaction,
 
 	var minLockDemand = alloc.minLockDemandLeft()
 
-	if state.Balance(t.Value) < minLockDemand {
-		return fmt.Errorf("not enough tokens to create allocation: %v < %v",
-			t.Value, minLockDemand)
-	}
+	if minLockDemand > 0 {
 
-	if err = ssc.checkFill(t, balances); err != nil {
-		return fmt.Errorf("can't fill write pool: %v", err)
-	}
+		if state.Balance(t.Value) < minLockDemand {
+			return fmt.Errorf("not enough tokens to create allocation: %v < %v",
+				t.Value, minLockDemand)
+		}
 
-	if _, _, err = wp.fill(t, balances); err != nil {
-		return fmt.Errorf("can't fill write pool: %v", err)
+		if err = ssc.checkFill(t, balances); err != nil {
+			return fmt.Errorf("can't fill write pool: %v", err)
+		}
+
+		if _, _, err = wp.fill(t, balances); err != nil {
+			return fmt.Errorf("can't fill write pool: %v", err)
+		}
+
 	}
 
 	// save the write pool
