@@ -95,6 +95,7 @@ func Test_readPools_moveToBlobber(t *testing.T) {
 		rps                    = newReadPools()
 		now                    = common.Now()
 		balances               = newTestBalances()
+		ssc                    = newTestStorageSC()
 		value    state.Balance = 90
 		err      error
 	)
@@ -102,7 +103,11 @@ func Test_readPools_moveToBlobber(t *testing.T) {
 	balances.txn = new(transaction.Transaction) // just not a nil
 	balances.txn.ToClientID = sscID
 
-	err = rps.moveToBlobber(sscID, blobID, now, value, balances)
+	var sp *stakePool
+	sp, err = ssc.newStakePool(blobID, balances)
+	require.NoError(t, err)
+
+	err = rps.moveToBlobber(sscID, sp, now, value)
 	requireErrMsg(t, err, errMsg)
 
 	// unlocked
@@ -115,7 +120,7 @@ func Test_readPools_moveToBlobber(t *testing.T) {
 	}
 
 	rps.addPool(unlocked)
-	err = rps.moveToBlobber(sscID, blobID, now, value, balances)
+	err = rps.moveToBlobber(sscID, sp, now, value)
 	requireErrMsg(t, err, errMsg)
 
 	// not enough tokens
@@ -139,10 +144,10 @@ func Test_readPools_moveToBlobber(t *testing.T) {
 	}
 
 	rps.addPool(enough)
-	require.NoError(t, rps.moveToBlobber(sscID, blobID, now, value, balances))
+	require.NoError(t, rps.moveToBlobber(sscID, sp, now, value))
 
 	// check pools
-	assert.Equal(t, state.Balance(90), balances.balances[blobID])
+	assert.Equal(t, state.Balance(90), sp.Balance)
 	assert.Len(t, rps.Pools, 2)
 
 	var gotIt *readPool
@@ -155,7 +160,7 @@ func Test_readPools_moveToBlobber(t *testing.T) {
 
 	assert.Equal(t, state.Balance(10), gotIt.Balance)
 
-	err = rps.moveToBlobber(sscID, blobID, now, value, balances)
+	err = rps.moveToBlobber(sscID, sp, now, value)
 	requireErrMsg(t, err, errMsg)
 }
 

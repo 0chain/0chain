@@ -170,7 +170,7 @@ func updateBlobbersInAll(all *StorageNodes, update []*StorageNode,
 	for _, b := range update {
 		var i, ok = all.Nodes.getIndex(b.ID)
 		if ok {
-			all.Nodes[i] = b // replace only it found
+			all.Nodes[i] = b // replace only if found
 		}
 		// don't replace if blobber has removed from the all blobbers list;
 		// for example, if the blobber has removed, then it shouldn't be
@@ -254,7 +254,8 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 	if preferredBlobbersSize > 0 {
 		blobberNodes, err = getPreferredBlobbers(sa.PreferredBlobbers, list)
 		if err != nil {
-			return "", err
+			return "", common.NewError("allocation_creation_failed",
+				err.Error())
 		}
 	}
 
@@ -262,7 +263,7 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 	if len(blobberNodes) < size {
 		seed, err := strconv.ParseInt(t.Hash[0:8], 16, 64)
 		if err != nil {
-			return "", common.NewError("allocation_request_failed",
+			return "", common.NewError("allocation_creation_failed",
 				"Failed to create seed for randomizeNodes")
 		}
 		blobberNodes = randomizeNodes(list, blobberNodes, size, seed)
@@ -302,28 +303,28 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 	sa.Tx = t.Hash                // keep
 
 	if err = sc.addBlobbersOffers(sa, blobberNodes, balances); err != nil {
-		return "", common.NewError("allocation_request_failed", err.Error())
+		return "", common.NewError("allocation_creation_failed", err.Error())
 	}
 
 	err = updateBlobbersInAll(allBlobbersList, blobberNodes, balances)
 	if err != nil {
-		return "", common.NewError("allocation_request_failed", err.Error())
+		return "", common.NewError("allocation_creation_failed", err.Error())
 	}
 
 	// create write pool and lock tokens
 	if err = sc.createWritePool(t, sa, balances); err != nil {
-		return "", common.NewError("allocation_request_failed", err.Error())
+		return "", common.NewError("allocation_creation_failed", err.Error())
 	}
 
 	// create challenge pool
 	if err = sc.createChallengePool(t, sa, balances); err != nil {
-		return "", common.NewError("allocation_request_failed", err.Error())
+		return "", common.NewError("allocation_creation_failed", err.Error())
 	}
 
 	// save
 	buff, err := sc.addAllocation(sa, balances)
 	if err != nil {
-		return "", common.NewError("allocation_request_failed",
+		return "", common.NewError("allocation_creation_failed",
 			"failed to store the allocation request")
 	}
 
@@ -802,7 +803,7 @@ func getPreferredBlobbers(preferredBlobbers []string, allBlobbers []*StorageNode
 	for _, blobberURL := range preferredBlobbers {
 		selectedBlobber, ok := blobberMap[blobberURL]
 		if !ok {
-			err = common.NewError("allocation_request_failed", "Invalid preferred blobber URL")
+			err = common.NewError("allocation_creation_failed", "Invalid preferred blobber URL")
 			return
 		}
 		selectedBlobbers = append(selectedBlobbers, selectedBlobber)

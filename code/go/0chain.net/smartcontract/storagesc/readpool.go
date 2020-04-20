@@ -154,8 +154,8 @@ func (rps *readPools) save(sscKey, clientID string,
 	return
 }
 
-func (rps *readPools) moveToBlobber(sscID, blobID string, now common.Timestamp,
-	value state.Balance, balances chainState.StateContextI) (err error) {
+func (rps *readPools) moveToBlobber(sscID string, sp *stakePool,
+	now common.Timestamp, value state.Balance) (err error) {
 
 	var tp = common.ToTime(now)
 
@@ -179,15 +179,10 @@ func (rps *readPools) moveToBlobber(sscID, blobID string, now common.Timestamp,
 			move = value
 		}
 
-		var transfer *state.Transfer
-		transfer, _, err = rp.DrainPool(sscID, blobID, move, nil)
+		_, _, err = rp.TransferTo(sp, move, nil)
 		if err != nil {
 			return fmt.Errorf("draining read pool: %v", err)
 		}
-		if err = balances.AddTransfer(transfer); err != nil {
-			return fmt.Errorf("adding read pool to blobber transfer: %v", err)
-		}
-
 		value -= move // decrease
 	}
 	rps.Pools = rps.Pools[:i]
@@ -335,7 +330,7 @@ func (ssc *StorageSmartContract) checkFill(t *transaction.Transaction,
 		return
 	}
 
-	if err == util.ErrValueNotPresent {
+	if t.Value > 0 && err == util.ErrValueNotPresent {
 		return errors.New("no tokens to lock")
 	}
 

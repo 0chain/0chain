@@ -86,8 +86,8 @@ func (cp *challengePool) moveToWritePool(wp *writePool,
 }
 
 // moveToBlobber moves tokens to given blobber on challenge passed
-func (cp *challengePool) moveToBlobber(sscID, blobID string,
-	value state.Balance, balances chainState.StateContextI) (err error) {
+func (cp *challengePool) moveToBlobber(sscID string, sp *stakePool,
+	value state.Balance) (err error) {
 
 	if value == 0 {
 		return // nothing to move
@@ -98,14 +98,9 @@ func (cp *challengePool) moveToBlobber(sscID, blobID string,
 			cp.ID, cp.Balance, value)
 	}
 
-	var transfer *state.Transfer
-	transfer, _, err = cp.DrainPool(sscID, blobID, value, nil)
+	_, _, err = cp.TransferTo(sp, value, nil)
 	if err != nil {
-		return fmt.Errorf("moving tokens to blobber %s: %v", blobID, err)
-	}
-
-	if err = balances.AddTransfer(transfer); err != nil {
-		return fmt.Errorf("adding transfer to blobber %s: %v", blobID, err)
+		return fmt.Errorf("moving tokens to blobber: %v", err)
 	}
 
 	return

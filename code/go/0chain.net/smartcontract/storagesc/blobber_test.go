@@ -148,7 +148,10 @@ func Test_flow_reward(t *testing.T) {
 		require.NoError(t, err)
 
 		// check out balances
-		require.EqualValues(t, 41*x10, balances.balances[b1.id])
+		var sp *stakePool
+		sp, err = ssc.getStakePool(b1.id, balances)
+		require.NoError(t, err)
+		require.EqualValues(t, 11e10, sp.Balance)
 
 		var rps *readPools
 		rps, err = ssc.getReadPools(client.id, balances)
@@ -209,7 +212,10 @@ func Test_flow_reward(t *testing.T) {
 		require.NoError(t, err)
 
 		// check out balances
-		require.EqualValues(t, 42*x10, balances.balances[b1.id])
+		var sp *stakePool
+		sp, err = ssc.getStakePool(b1.id, balances)
+		require.NoError(t, err)
+		require.EqualValues(t, 12e10, sp.Balance)
 
 		var rps *readPools
 		rps, err = ssc.getReadPools(reader.id, balances)
@@ -276,7 +282,10 @@ func Test_flow_reward(t *testing.T) {
 		require.NotZero(t, resp)
 
 		// check out
-		require.EqualValues(t, 42*x10, balances.balances[b1.id])
+		var sp *stakePool
+		sp, err = ssc.getStakePool(b1.id, balances)
+		require.NoError(t, err)
+		require.EqualValues(t, 12e10, sp.Balance)
 
 		cp, err = ssc.getChallengePool(allocID, balances)
 		require.NoError(t, err)
@@ -339,7 +348,10 @@ func Test_flow_reward(t *testing.T) {
 		require.NotZero(t, resp)
 
 		// check out
-		require.EqualValues(t, 42*x10, balances.balances[b1.id])
+		var sp *stakePool
+		sp, err = ssc.getStakePool(b1.id, balances)
+		require.NoError(t, err)
+		require.EqualValues(t, 12e10, sp.Balance)
 
 		cp, err = ssc.getChallengePool(allocID, balances)
 		require.NoError(t, err)
@@ -450,13 +462,17 @@ func Test_flow_reward(t *testing.T) {
 		blobber, err = ssc.getBlobber(b3.id, balances)
 		require.NoError(t, err)
 
+		var sp *stakePool
+		sp, err = ssc.getStakePool(b3.id, balances)
+		require.NoError(t, err)
+
 		//
 		var (
 			step            = (int64(alloc.Expiration) - tp) / 10
 			challID, prevID string
 			// last loop balances (previous balance)
 			cpl     = cpb2
-			b3l     = balances.balances[b3.id]
+			b3l     = sp.Balance
 			validsl []state.Balance
 		)
 		// validators balances
@@ -506,8 +522,10 @@ func Test_flow_reward(t *testing.T) {
 			cpl = cp.Balance
 
 			// blobber reward
-			assert.True(t, b3l < balances.balances[b3.id])
-			b3l = balances.balances[b3.id]
+			sp, err = ssc.getStakePool(b3.id, balances)
+			require.NoError(t, err)
+			assert.True(t, b3l < sp.Balance)
+			b3l = sp.Balance
 
 			// validators reward
 			for i, val := range valids {

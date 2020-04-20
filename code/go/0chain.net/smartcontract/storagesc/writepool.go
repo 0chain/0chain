@@ -82,6 +82,10 @@ func (wp *writePool) fill(t *transaction.Transaction,
 	balances chainState.StateContextI) (
 	transfer *state.Transfer, resp string, err error) {
 
+	if t.Value == 0 {
+		return
+	}
+
 	if transfer, resp, err = wp.FillPool(t); err != nil {
 		return
 	}
@@ -207,17 +211,21 @@ func (ssc *StorageSmartContract) createWritePool(t *transaction.Transaction,
 
 	var minLockDemand = alloc.minLockDemandLeft()
 
-	if state.Balance(t.Value) < minLockDemand {
-		return fmt.Errorf("not enough tokens to create allocation: %v < %v",
-			t.Value, minLockDemand)
-	}
+	if minLockDemand > 0 {
 
-	if err = ssc.checkFill(t, balances); err != nil {
-		return fmt.Errorf("can't fill write pool: %v", err)
-	}
+		if state.Balance(t.Value) < minLockDemand {
+			return fmt.Errorf("not enough tokens to create allocation: %v < %v",
+				t.Value, minLockDemand)
+		}
 
-	if _, _, err = wp.fill(t, balances); err != nil {
-		return fmt.Errorf("can't fill write pool: %v", err)
+		if err = ssc.checkFill(t, balances); err != nil {
+			return fmt.Errorf("can't fill write pool: %v", err)
+		}
+
+		if _, _, err = wp.fill(t, balances); err != nil {
+			return fmt.Errorf("can't fill write pool: %v", err)
+		}
+
 	}
 
 	// save the write pool
@@ -467,14 +475,28 @@ func (ssc *StorageSmartContract) finalizeAllocation(t *transaction.Transaction,
 			if d.Stats == nil {
 				continue // no writes
 			}
+
 			var (
 				ratio = float64(d.Stats.UsedSize) / float64(alloc.UsedSize)
 				move  = state.Balance(left * ratio)
 			)
-			err = cp.moveToBlobber(ssc.ID, d.BlobberID, move, balances)
+
+			var sp *stakePool
+			if sp, err = ssc.getStakePool(d.BlobberID, balances); err != nil {
+				return "", common.NewError("fini_alloc_failed",
+					"can't get stake pool of "+d.BlobberID+": "+err.Error())
+			}
+
+			err = cp.moveToBlobber(ssc.ID, sp, move)
 			if err != nil {
 				return "", common.NewError("fini_alloc_failed", "can't move "+
 					"tokens to blobber "+d.BlobberID+": "+err.Error())
+			}
+
+			// save the stake pool
+			if err = sp.save(ssc.ID, d.BlobberID, balances); err != nil {
+				return "", common.NewError("fini_alloc_failed",
+					"can't save stake pool of "+d.BlobberID+": "+err.Error())
 			}
 		}
 	}

@@ -432,7 +432,7 @@ free to use these zbox command.
     ```
 26. Commit some tokens to a read pool.
     ```
-    ./zbox rp-lock --allocation $ALLOC1 --duration 12m --tokens 1
+    ./zbox rp-lock --duration 12m --tokens 1
     ```
 27. Check out locked tokens in the read pool.
     ```
@@ -475,7 +475,7 @@ free to use these zbox command.
     ```
     Use pool id in next command
     ```
-    ./zbox rp-unlock --allocation $ALLOC1 --pool_id <POOL_ID>
+    ./zbox rp-unlock --pool_id <POOL_ID>
     ```
 33. Check out blobbers. Should not have allocated space.
     ```
