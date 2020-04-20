@@ -100,7 +100,7 @@ func (cp *challengePool) moveToBlobber(sscID string, sp *stakePool,
 
 	_, _, err = cp.TransferTo(sp, value, nil)
 	if err != nil {
-		return fmt.Errorf("moving tokens to blobber %s: %v", blobID, err)
+		return fmt.Errorf("moving tokens to blobber: %v", err)
 	}
 
 	return

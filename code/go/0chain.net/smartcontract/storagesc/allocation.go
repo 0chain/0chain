@@ -803,7 +803,7 @@ func getPreferredBlobbers(preferredBlobbers []string, allBlobbers []*StorageNode
 	for _, blobberURL := range preferredBlobbers {
 		selectedBlobber, ok := blobberMap[blobberURL]
 		if !ok {
-			err = common.NewError("allocation_request_failed", "Invalid preferred blobber URL")
+			err = common.NewError("allocation_creation_failed", "Invalid preferred blobber URL")
 			return
 		}
 		selectedBlobbers = append(selectedBlobbers, selectedBlobber)

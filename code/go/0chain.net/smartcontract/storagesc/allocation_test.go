@@ -260,11 +260,11 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 			"invalid request: invalid read_price range"
 		errMsg6 = "allocation_creation_failed: " +
 			"Not enough blobbers to honor the allocation"
-		errMsg7 = "allocation_request_failed: " +
+		errMsg7 = "allocation_creation_failed: " +
 			"can't get blobber's stake pool: value not present"
-		errMsg8 = "allocation_request_failed: " +
+		errMsg8 = "allocation_creation_failed: " +
 			"not enough tokens to create allocation: 0 < 325"
-		errMsg9 = "allocation_request_failed: " +
+		errMsg9 = "allocation_creation_failed: " +
 			"can't fill write pool: no tokens to lock"
 	)
 

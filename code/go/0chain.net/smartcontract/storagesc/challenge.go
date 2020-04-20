@@ -502,7 +502,6 @@ func (sc *StorageSmartContract) addChallenge(challengeID string, creationDate co
 			return allocationObj.Blobbers[i].ID < allocationObj.Blobbers[j].ID
 		})
 		if allocationObj.Stats.NumWrites > 0 {
-			selected = true
 			break
 		}
 	}
