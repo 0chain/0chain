@@ -44,11 +44,11 @@ export DST1=<client_id from two.json>
 5. Create new vesting pool.
 
 ```
-./zwallet vp-add                   \
-    --description "for testing"    \
-    --duration 5m                  \
-    --lock 5                       \
-    --d $DST1:1                    \
+./zwallet vp-add                \
+    --description "for testing" \
+    --duration 5m               \
+    --lock 5                    \
+    --d $DST1:1                 \
     --d $DST2:2
 ```
 
