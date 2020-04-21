@@ -48,9 +48,11 @@ func (vsc *VestingSmartContract) SetSC(sc *smartcontractinterface.SmartContract,
 	vsc.SmartContractExecutionStats["delete"] = metrics.GetOrRegisterTimer(
 		fmt.Sprintf("sc:%v:func:%v", vsc.ID, "delete"), nil)
 
-	// tokens lock/unlock for an existing pool
-	vsc.SmartContractExecutionStats["lock"] = metrics.GetOrRegisterTimer(
-		fmt.Sprintf("sc:%v:func:%v", vsc.ID, "lock"), nil)
+	// stop vesting for a destination, unlocking all tokens released
+	vsc.SmartContractExecutionStats["stop"] = metrics.GetOrRegisterTimer(
+		fmt.Sprintf("sc:%v:func:%v", vsc.ID, "stop"), nil)
+
+	// tokens unlock for an existing pool (as owner, as a destination)
 	vsc.SmartContractExecutionStats["unlock"] = metrics.GetOrRegisterTimer(
 		fmt.Sprintf("sc:%v:func:%v", vsc.ID, "unlock"), nil)
 
@@ -67,14 +69,13 @@ func (vsc *VestingSmartContract) Execute(t *transaction.Transaction,
 
 	case "trigger":
 		resp, err = vsc.trigger(t, input, balances)
-
-	case "lock":
-		resp, err = vsc.lock(t, input, balances)
 	case "unlock":
 		resp, err = vsc.unlock(t, input, balances)
 
 	case "add":
 		resp, err = vsc.add(t, input, balances)
+	case "stop":
+		resp, err = vsc.stop(t, input, balances)
 	case "delete":
 		resp, err = vsc.delete(t, input, balances)
 

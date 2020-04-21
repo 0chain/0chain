@@ -27,7 +27,7 @@ done
 
 ```
 cat ~/.zcn/one.json
-cat ~/.zcn.two.json
+cat ~/.zcn/two.json
 ```
 "client_id" is the wanted ID. Let's export them to use
 ```
@@ -44,11 +44,11 @@ export DST1=<client_id from two.json>
 5. Create new vesting pool.
 
 ```
-./zwallet vp-add \
-    --description "for testing"
-    --duration 5m
-    --lock 5
-    --d $DST1:1
+./zwallet vp-add                   \
+    --description "for testing"    \
+    --duration 5m                  \
+    --lock 5                       \
+    --d $DST1:1                    \
     --d $DST2:2
 ```
 
@@ -118,7 +118,7 @@ And check out its balance next
 ./zwallet --wallet one.json getbalance
 ```
 
-10. Unlock as owner. Stop vesting.
+10. Unlock as owner all over required part.
 
 ```
 ./zwallet vp-unlock --pool_id $POOL
@@ -126,13 +126,13 @@ And check out its balance next
 
 Check out balances.
 
-11. Lock more tokens to the pool.
-
-Also, it's possible to add tokens to the pool
+11. Stop vesting to a destination.
 
 ```
-./zwallet vp-lock --pool_id $POOL --lock 1.1
+./zwallet vp-stop --pool_id $POOL --d $DST2
 ```
+
+Check out with `./zwallet vp-info --pool_id $POOL`
 
 12. Delete a pool.
 

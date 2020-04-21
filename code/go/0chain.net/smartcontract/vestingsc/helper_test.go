@@ -119,17 +119,18 @@ func (c *Client) trigger(t *testing.T, vsc *VestingSmartContract,
 	return vsc.trigger(tx, mustEncode(t, &tr), balances)
 }
 
-func (c *Client) lock(t *testing.T, vsc *VestingSmartContract,
-	poolID datastore.Key, value state.Balance, now common.Timestamp,
+func (c *Client) stop(t *testing.T, vsc *VestingSmartContract,
+	poolID, dest datastore.Key, now common.Timestamp,
 	balances chainstate.StateContextI) (resp string, err error) {
 
 	var (
-		tx = newTransaction(c.id, ADDRESS, value, now)
-		lr poolRequest
+		tx = newTransaction(c.id, ADDRESS, 0, now)
+		sr stopRequest
 	)
 	balances.(*testBalances).txn = tx
-	lr.PoolID = poolID
-	return vsc.lock(tx, mustEncode(t, &lr), balances)
+	sr.PoolID = poolID
+	sr.Destination = dest
+	return vsc.stop(tx, mustEncode(t, &sr), balances)
 }
 
 func (c *Client) unlock(t *testing.T, vsc *VestingSmartContract,

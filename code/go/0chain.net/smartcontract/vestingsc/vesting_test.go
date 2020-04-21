@@ -189,7 +189,7 @@ func TestVestingSmartContract_add(t *testing.T) {
 	balances.txn = tx
 	_, err = vsc.add(tx, mustEncode(t, &ar), balances)
 	assertErrMsg(t, err, `create_vesting_pool_failed: `+
-		`insufficient amount to lock`)
+		`not enough tokens to create pool provided`)
 
 	// 5. no tokens
 	tx = newTransaction(client.id, vsc.ID, 800e10, tp)
@@ -287,35 +287,36 @@ func TestVestingSmartContract_delete(t *testing.T) {
 	assert.Zero(t, balances.tree[clientPoolsKey(vsc.ID, client.id)])
 }
 
-func TestVestingSmartContract_lock(t *testing.T) {
+func TestVestingSmartContract_stop(t *testing.T) {
 	var (
 		vsc      = newTestVestingSC()
 		balances = newTestBalances()
 		client   = newClient(1200e10, balances)
 		tp       = common.Timestamp(0)
 		tx       = newTransaction(client.id, vsc.ID, 0, tp)
-		lr       poolRequest
+		sr       stopRequest
 		err      error
 	)
 
 	balances.txn = tx
 	configureConfig()
 
-	// 1. malformed (lock, unlock)
-	_, err = vsc.lock(tx, []byte("} malformed {"), balances)
-	assertErrMsg(t, err, "lock_vesting_pool_failed: invalid request:"+
+	// 1. malformed (stop)
+	_, err = vsc.stop(tx, []byte("} malformed {"), balances)
+	assertErrMsg(t, err, "stop_vesting_failed: malformed request:"+
 		" invalid character '}' looking for beginning of value")
 
-	// 2. pool_id = ""
-	_, err = vsc.lock(tx, mustEncode(t, &lr), balances)
-	assertErrMsg(t, err, "lock_vesting_pool_failed: invalid request:"+
-		" missing pool id")
+	// 2. destination = ""
+	_, err = vsc.stop(tx, mustEncode(t, &sr), balances)
+	assertErrMsg(t, err, "stop_vesting_failed:"+
+		" missing destination to stop vesting")
 
 	// 3. not found
-	lr.PoolID = "pool_hex"
-	_, err = vsc.lock(tx, mustEncode(t, &lr), balances)
-	assertErrMsg(t, err, "lock_vesting_pool_failed: "+
-		"can't get pool: value not present")
+	sr.PoolID = "pool_hex"
+	sr.Destination = "dest_hex"
+	_, err = vsc.stop(tx, mustEncode(t, &sr), balances)
+	assertErrMsg(t, err, "stop_vesting_failed: "+
+		"can't get vesting pool: value not present")
 
 	// 4. another client
 	var resp string
@@ -331,37 +332,31 @@ func TestVestingSmartContract_lock(t *testing.T) {
 	require.NoError(t, err)
 	var set vestingPool
 	require.NoError(t, set.Decode([]byte(resp)))
-	lr.PoolID = set.ID
+	sr.PoolID = set.ID
 
 	tx.ClientID = "another_one"
 	balances.txn = tx
-	_, err = vsc.lock(tx, mustEncode(t, &lr), balances)
-	assertErrMsg(t, err, "lock_vesting_pool_failed: "+
-		"only owner can lock more tokens to the pool")
+	_, err = vsc.stop(tx, mustEncode(t, &sr), balances)
+	assertErrMsg(t, err, "stop_vesting_failed: "+
+		"only owner can stop a vesting")
 
-	// 6. min lock
+	// 6. destination not found
 	tx.Value = 1
 	tx.ClientID = client.id
-	_, err = vsc.lock(tx, mustEncode(t, &lr), balances)
-	assertErrMsg(t, err, "lock_vesting_pool_failed: "+
-		"insufficient amount to lock")
+	_, err = vsc.stop(tx, mustEncode(t, &sr), balances)
+	assertErrMsg(t, err, `stop_vesting_failed: deleting destination: `+
+		`no such destination "dest_hex" to stop vesting`)
 
-	// 7. no tokens
-	tx.Value = 2000e10
-	_, err = vsc.lock(tx, mustEncode(t, &lr), balances)
-	assertErrMsg(t, err, "lock_vesting_pool_failed: "+
-		"filling pool: lock amount is greater than balance")
-
-	// 8. lock
-	balances.balances[client.id] = 4000e10
-	resp, err = vsc.lock(tx, mustEncode(t, &lr), balances)
+	// 8. stop
+	sr.Destination = "one"
+	resp, err = vsc.stop(tx, mustEncode(t, &sr), balances)
 	require.NoError(t, err)
 	assert.NotZero(t, resp)
 
 	var got *vestingPool
 	got, err = vsc.getPool(set.ID, balances)
 	require.NoError(t, err)
-	assert.Equal(t, state.Balance(2800e10), got.Balance)
+	assert.Equal(t, state.Balance(8e12), got.Balance)
 
 }
 
@@ -426,7 +421,7 @@ func TestVestingSmartContract_unlock(t *testing.T) {
 	var got *vestingPool
 	got, err = vsc.getPool(set.ID, balances)
 	require.NoError(t, err)
-	assert.Equal(t, state.Balance(0), got.Balance)
+	assert.Equal(t, state.Balance(30), got.Balance)
 }
 
 func TestVestingSmartContract_trigger(t *testing.T) {
@@ -512,6 +507,8 @@ func TestVestingSmartContract_getPoolInfoHandler(t *testing.T) {
 	_, err = vsc.getPoolInfoHandler(ctx, params, balances)
 	require.Equal(t, util.ErrValueNotPresent, err)
 
+	balances.balances[client.id] = 200e10
+
 	var set string
 	set, err = client.add(t, vsc, &addRequest{
 		Description: "for something",
@@ -521,7 +518,7 @@ func TestVestingSmartContract_getPoolInfoHandler(t *testing.T) {
 			&destination{ID: "one", Amount: 10},
 			&destination{ID: "two", Amount: 20},
 		},
-	}, 0, 0, balances)
+	}, 100e10, 0, balances)
 	require.NoError(t, err)
 	var deco vestingPool
 	require.NoError(t, deco.Decode([]byte(set)))
@@ -529,5 +526,5 @@ func TestVestingSmartContract_getPoolInfoHandler(t *testing.T) {
 	params.Set("pool_id", deco.ID)
 	resp, err = vsc.getPoolInfoHandler(ctx, params, balances)
 	require.NoError(t, err)
-	assert.EqualValues(t, deco.info(0), resp)
+	require.IsType(t, &info{}, resp)
 }

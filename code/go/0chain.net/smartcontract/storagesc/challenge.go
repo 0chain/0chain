@@ -535,7 +535,6 @@ func (sc *StorageSmartContract) addChallenge(challengeID string, creationDate co
 		if strings.Compare(validatorList.Nodes[v].ID, selectedBlobberObj.ID) != 0 {
 			selectedValidators = append(selectedValidators, validatorList.Nodes[v])
 		}
-
 	}
 
 	//Logger.Info("Challenge blobber selected.", zap.Any("challenge", challengeID), zap.Any("selected_blobber", allocationObj.Blobbers[randIdx]), zap.Any("blobbers", allocationObj.Blobbers), zap.Any("random_index", randIdx))
