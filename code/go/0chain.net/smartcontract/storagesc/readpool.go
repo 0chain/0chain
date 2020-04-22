@@ -17,18 +17,34 @@ import (
 	"0chain.net/core/util"
 )
 
+//
+// SC / API requests
+//
+
 // lock request
 
+// request to lock tokens creating a read pool;
+// the allocation_id is required, if blobber_id provided, then
+// it locks tokens for allocation -> {blobber}, otherwise
+// all tokens divided for all blobbers of the allocation
+// automatically
 type lockRequest struct {
-	Duration time.Duration `json:"duration"`
+	Duration     time.Duration `json:"duration"`
+	AllocationID datastore.Key `json:"allocation_id"`
+	BlobberID    datastore.Key `json:"blobber_id,omitempty"`
 }
 
-func (lr *lockRequest) decode(input []byte) error {
-	return json.Unmarshal(input, lr)
+func (lr *lockRequest) decode(input []byte) (err error) {
+	if err = json.Unmarshal(input, lr); err != nil {
+		return
+	}
+	if lr.AllocationID == "" {
+		return errors.New("missing allocation_id in request")
+	}
+	return // ok
 }
 
-// unlock request
-
+// unlock request used to unlock all tokens of a read pool
 type unlockRequest struct {
 	PoolID datastore.Key `json:"pool_id"`
 }
@@ -37,260 +53,142 @@ func (ur *unlockRequest) decode(input []byte) error {
 	return json.Unmarshal(input, ur)
 }
 
-// read pool (a locked tokens for a duration)
+//
+// client read pool (consist of allocation pools)
+//
 
-type readPool struct {
-	*tokenpool.ZcnLockingPool `json:"pool"`
-}
-
-func newReadPool() *readPool {
-	return &readPool{ZcnLockingPool: &tokenpool.ZcnLockingPool{}}
-}
-
-func (rp *readPool) encode() (b []byte) {
-	var err error
-	if b, err = json.Marshal(rp); err != nil {
-		panic(err) // must never happens
-	}
-	return
-}
-
-func (rp *readPool) decode(input []byte) (err error) {
-
-	type readPoolJSON struct {
-		Pool json.RawMessage `json:"pool"`
-	}
-
-	var readPoolVal readPoolJSON
-	if err = json.Unmarshal(input, &readPoolVal); err != nil {
-		return
-	}
-
-	if len(readPoolVal.Pool) == 0 {
-		return // no data given
-	}
-
-	err = rp.ZcnLockingPool.Decode(readPoolVal.Pool, &tokenLock{})
-	return
-}
-
-func (rp *readPool) stat(tp time.Time) (stat *readPoolStat, err error) {
-
-	stat = new(readPoolStat)
-
-	if err = stat.decode(rp.LockStats(tp)); err != nil {
-		return nil, err
-	}
-
-	stat.ID = rp.ID
-	stat.Locked = rp.IsLocked(tp)
-	stat.Balance = rp.Balance
-
-	return
-}
-
-// readPools -- set of locked tokens for a duration
-
-// readPools of a user
-type readPools struct {
-	Pools []*readPool `json:"pools"`
-}
-
-func newReadPools() (rps *readPools) {
-	return new(readPools)
-}
-
-func (rps *readPools) Encode() (b []byte) {
-	var err error
-	if b, err = json.Marshal(rps); err != nil {
-		panic(err) // must never happens
-	}
-	return
-}
-
-func (rps *readPools) Decode(input []byte) (err error) {
-	type readPoolsJSON struct {
-		Pools []json.RawMessage `json:"pools"`
-	}
-	var in readPoolsJSON
-	if err = json.Unmarshal(input, &in); err != nil {
-		return
-	}
-	for _, raw := range in.Pools {
-		var tempPool = newReadPool()
-		if err = tempPool.decode(raw); err != nil {
-			return
-		}
-		rps.addPool(tempPool)
-	}
-	return
-}
-
-func readPoolsKey(scKey, clientID string) datastore.Key {
+func readPoolKey(scKey, clientID string) datastore.Key {
 	return datastore.Key(scKey + ":readpool:" + clientID)
 }
 
-func (rps *readPools) addPool(rp *readPool) {
-	rps.Pools = append(rps.Pools, rp)
+// readPool represents client's read pool consist of allocation read pools
+type readPool struct {
+	Pools allocationPools `json:"pools"`
 }
 
-func (rps *readPools) takePool(id datastore.Key) (got *readPool, ok bool) {
-	var i int
-	for _, rp := range rps.Pools {
-		if rp.ID == id {
-			got, ok = rp, true
-			continue
-		}
-		rps.Pools[i], i = rp, i+1
+func (rp *readPool) blobberCut(allocID, blobberID string, now common.Timestamp,
+) []*allocationPool {
+
+	return rp.Pools.blobberCut(allocID, blobberID, now)
+}
+
+func (rp *readPool) removeEmpty(ap []*allocationPool) {
+	rp.Pools.removeEmpty(ap)
+}
+
+// Encode implements util.Serializable interface.
+func (rp *readPool) Encode() []byte {
+	var b, err = json.Marshal(rp)
+	if err != nil {
+		panic(err) // must never happens
 	}
-	rps.Pools = rps.Pools[:i]
-	return
+	return b
 }
 
-func (rps *readPools) save(sscKey, clientID string,
+// Decode implements util.Serializable interface.
+func (rp *readPool) Decode(p []byte) error {
+	return json.Unmarshal(p, rp)
+}
+
+// save the pool in tree
+func (rp *readPool) save(sscKey, clientID string,
 	balances chainState.StateContextI) (err error) {
 
-	_, err = balances.InsertTrieNode(readPoolsKey(sscKey, clientID), rps)
+	_, err = balances.InsertTrieNode(readPoolKey(sscKey, clientID), rp)
 	return
 }
 
-func (rps *readPools) moveToBlobber(sscID string, sp *stakePool,
-	now common.Timestamp, value state.Balance) (err error) {
+func (rp *readPool) moveToBlobber(sscID, allocID, blobID string,
+	sp *stakePool, now common.Timestamp, value state.Balance) (err error) {
 
-	var tp = common.ToTime(now)
+	var cut = rp.blobberCut(allocID, blobID, now)
 
-	var i int
-	for _, rp := range rps.Pools {
-		if value == 0 {
-			break
-		}
-
-		if !rp.IsLocked(tp) {
-			rps.Pools[i], i = rp, i+1
-			continue // unlocked read pool, can't use
-		}
-
-		var move state.Balance
-		if rp.Balance < value || rp.Balance == value {
-			move = rp.Balance
-			// delete (drained pool)
-		} else {
-			rps.Pools[i], i = rp, i+1 // keep
-			move = value
-		}
-
-		_, _, err = rp.TransferTo(sp, move, nil)
-		if err != nil {
-			return fmt.Errorf("draining read pool: %v", err)
-		}
-		value -= move // decrease
+	if len(cut) == 0 {
+		return fmt.Errorf("no tokens in read pool for allocation: %s,"+
+			" blobber: %s", allocID, blobID)
 	}
-	rps.Pools = rps.Pools[:i]
 
-	if err != nil {
-		return
+	var torm []*allocationPool // to remove later (empty allocation pools)
+	for _, ap := range cut {
+		if value == 0 {
+			break // all required tokens has moved to the blobber
+		}
+		var bi, ok = ap.Blobbers.getIndex(blobID)
+		if !ok {
+			continue // impossible case, but leave the check here
+		}
+		var (
+			bp   = ap.Blobbers[bi]
+			move state.Balance
+		)
+		if value >= bp.Balance {
+			move, bp.Balance = bp.Balance, 0
+		} else {
+			move, bp.Balance = value, bp.Balance-value
+		}
+		if _, _, err = ap.TransferTo(sp, move, nil); err != nil {
+			return // transferring error
+		}
+		sp.ReadReward += move
+		value -= move
+		if bp.Balance == 0 {
+			ap.Blobbers.removeByIndex(bi)
+		}
+		if ap.Balance == 0 {
+			torm = append(torm, ap) // remove the allocation pool later
+		}
 	}
 
 	if value != 0 {
-		return errors.New("not enough tokens in read pool")
+		return fmt.Errorf("not enough tokens in read pool for allocation: %s,"+
+			" blobber: %s", allocID, blobID)
 	}
 
+	// remove empty allocation pools
+	rp.removeEmpty(torm)
 	return
 }
 
-// stat
-
-type readPoolStats struct {
-	Stats []*readPoolStat `json:"stats"`
-}
-
-func (stats *readPoolStats) encode() (b []byte) {
-	var err error
-	if b, err = json.Marshal(stats); err != nil {
-		panic(err) // must never happens
+// take read pool by ID to unlock (the take is get and remove)
+func (rp *readPool) take(poolID string) (found *allocationPool, ok bool) {
+	var i int
+	for _, ap := range rp.Pools {
+		if ap.ID == poolID {
+			found, ok = ap, true
+			continue // delete
+		}
+		rp.Pools[i], i = ap, i+1
 	}
+	rp.Pools = rp.Pools[:i]
 	return
 }
 
-func (stats *readPoolStats) decode(input []byte) error {
-	return json.Unmarshal(input, stats)
-}
-
-func (stats *readPoolStats) addStat(stat *readPoolStat) {
-	stats.Stats = append(stats.Stats, stat)
-}
-
-type readPoolStat struct {
-	ID        datastore.Key    `json:"pool_id"`
-	StartTime common.Timestamp `json:"start_time"`
-	Duration  time.Duration    `json:"duration"`
-	TimeLeft  time.Duration    `json:"time_left"`
-	Locked    bool             `json:"locked"`
-	Balance   state.Balance    `json:"balance"`
-}
-
-func (stat *readPoolStat) encode() (b []byte) {
-	var err error
-	if b, err = json.Marshal(stat); err != nil {
-		panic(err) // must never happens
-	}
-	return
-}
-
-func (stat *readPoolStat) decode(input []byte) error {
-	return json.Unmarshal(input, stat)
-}
-
-type tokenLock struct {
-	StartTime common.Timestamp `json:"start_time"`
-	Duration  time.Duration    `json:"duration"`
-	Owner     datastore.Key    `json:"owner"`
-}
-
-func (tl tokenLock) IsLocked(entity interface{}) bool {
-	if entity == nil {
-		return false // move to blobber
-	}
-	if tm, ok := entity.(time.Time); ok {
-		return tm.Sub(common.ToTime(tl.StartTime)) < tl.Duration
-	}
-	return true
-}
-
-func (tl tokenLock) LockStats(entity interface{}) []byte {
-	if tm, ok := entity.(time.Time); ok {
-		var stat readPoolStat
-		stat.StartTime = tl.StartTime
-		stat.Duration = tl.Duration
-		stat.TimeLeft = (tl.Duration - tm.Sub(common.ToTime(tl.StartTime)))
-		stat.Locked = tl.IsLocked(tm)
-		return stat.encode()
-	}
-	return nil
+func (rp *readPool) stat(now common.Timestamp) allocationPoolsStat {
+	return rp.Pools.stat(now)
 }
 
 //
 // smart contract methods
 //
 
-// getReadPoolsBytes of a client
-func (ssc *StorageSmartContract) getReadPoolsBytes(clientID datastore.Key,
+// getReadPoolBytes of a client
+func (ssc *StorageSmartContract) getReadPoolBytes(clientID datastore.Key,
 	balances chainState.StateContextI) (b []byte, err error) {
 
 	var val util.Serializable
-	val, err = balances.GetTrieNode(readPoolsKey(ssc.ID, clientID))
+	val, err = balances.GetTrieNode(readPoolKey(ssc.ID, clientID))
 	if err != nil {
 		return
 	}
 	return val.Encode(), nil
 }
 
-// getReadPools of current client
-func (ssc *StorageSmartContract) getReadPools(clientID datastore.Key,
+// getReadPool of current client
+func (ssc *StorageSmartContract) getReadPool(clientID datastore.Key,
 	balances chainState.StateContextI) (rps *readPools, err error) {
 
 	var poolb []byte
-	if poolb, err = ssc.getReadPoolsBytes(clientID, balances); err != nil {
+	if poolb, err = ssc.getReadPoolBytes(clientID, balances); err != nil {
 		return
 	}
 	rps = newReadPools()
@@ -302,7 +200,7 @@ func (ssc *StorageSmartContract) getReadPools(clientID datastore.Key,
 func (ssc *StorageSmartContract) newReadPool(t *transaction.Transaction,
 	input []byte, balances chainState.StateContextI) (resp string, err error) {
 
-	_, err = ssc.getReadPoolsBytes(t.ClientID, balances)
+	_, err = ssc.getReadPoolBytes(t.ClientID, balances)
 
 	if err != nil && err != util.ErrValueNotPresent {
 		return "", common.NewError("new_read_pool_failed", err.Error())
@@ -320,8 +218,12 @@ func (ssc *StorageSmartContract) newReadPool(t *transaction.Transaction,
 	return string(rps.Encode()), nil
 }
 
-func (ssc *StorageSmartContract) checkFill(t *transaction.Transaction,
-	balances chainState.StateContextI) (err error) {
+func checkFill(t *transaction.Transaction, balances chainState.StateContextI) (
+	err error) {
+
+	if t.Value < 0 {
+		return errors.New("negative transaction value")
+	}
 
 	var balance state.Balance
 	balance, err = balances.GetClientBalance(t.ClientID)
@@ -330,7 +232,7 @@ func (ssc *StorageSmartContract) checkFill(t *transaction.Transaction,
 		return
 	}
 
-	if t.Value > 0 && err == util.ErrValueNotPresent {
+	if err == util.ErrValueNotPresent {
 		return errors.New("no tokens to lock")
 	}
 
@@ -355,8 +257,8 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 
 	// user read pools
 
-	var rps *readPools
-	if rps, err = ssc.getReadPools(t.ClientID, balances); err != nil {
+	var rp *readPool
+	if rp, err = ssc.getReadPool(t.ClientID, balances); err != nil {
 		return "", common.NewError("read_pool_lock_failed", err.Error())
 	}
 
@@ -367,12 +269,12 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 		return "", common.NewError("read_pool_lock_failed", err.Error())
 	}
 
-	// check client balance
-	if err = ssc.checkFill(t, balances); err != nil {
-		return "", common.NewError("read_pool_lock_failed", err.Error())
-	}
+	// check
 
-	// filter by configs
+	if lr.AllocationID == "" {
+		return "", common.NewError("read_pool_lock_failed",
+			"missing allocation ID in request")
+	}
 
 	if t.Value < conf.MinLock {
 		return "", common.NewError("read_pool_lock_failed",
@@ -391,27 +293,66 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 				lr.Duration.String(), conf.MaxLockPeriod.String()))
 	}
 
-	// lock
-
-	var rp = newReadPool()
-	rp.TokenLockInterface = &tokenLock{
-		StartTime: t.CreationDate,
-		Duration:  lr.Duration,
-		Owner:     t.ClientID,
+	// check client balance
+	if err = checkFill(t, balances); err != nil {
+		return "", common.NewError("read_pool_lock_failed", err.Error())
 	}
 
-	var transfer *state.Transfer
-	if transfer, resp, err = rp.DigPool(t.Hash, t); err != nil {
+	// get the allocation object
+	var alloc *StorageAllocation
+	alloc, err = ssc.getAllocation(lr.AllocationID, balances)
+	if err != nil {
 		return "", common.NewError("read_pool_lock_failed",
-			err.Error())
+			"can't get allocation: "+err.Error())
+	}
+
+	var bps blobberPools
+
+	// lock for allocation -> blobber (particular blobber locking)
+	if lr.BlobberID != "" {
+		if _, ok := alloc.BlobberMap[lr.BlobberID]; !ok {
+			return "", common.NewError("read_pool_lock_failed",
+				fmt.Sprintf("no such blobber %d in allocation %d",
+					lr.BlobberID, lr.AllocationID))
+		}
+		bps = append(bps, blobberPool{
+			Balance:   state.Balance(t.Value),
+			BlobberID: lr.BlobberID,
+		})
+	} else {
+		// divide depending read price range for all blobbers of the
+		// allocation
+		var total float64 // total read price
+		for _, b := range alloc.BlobberDetails {
+			total += float64(b.Terms.ReadPrice)
+		}
+		// calculate (divide)
+		for _, b := range alloc.BlobberDetails {
+			var ratio = float64(b.Terms.ReadPrice) / total
+			bps = append(bps, blobberPool{
+				Balance:   state.Balance(float64(t.Value) * ratio),
+				BlobberID: lr.BlobberID,
+			})
+		}
+	}
+
+	// create and dig allocation pool
+
+	var (
+		ap       allocationPool
+		transfer *state.Transfer
+	)
+	if transfer, resp, err = ap.DigPool(t.Hash, t); err != nil {
+		return "", common.NewError("read_pool_lock_failed", err.Error())
 	}
 
 	if err = balances.AddTransfer(transfer); err != nil {
 		return "", common.NewError("read_pool_lock_failed", err.Error())
 	}
 
-	rps.addPool(rp)
+	// add and save
 
+	rp.Pools.add(ap)
 	if err = rps.save(ssc.ID, t.ClientID, balances); err != nil {
 		return "", common.NewError("read_pool_lock_failed", err.Error())
 	}
@@ -423,10 +364,10 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 func (ssc *StorageSmartContract) readPoolUnlock(t *transaction.Transaction,
 	input []byte, balances chainState.StateContextI) (resp string, err error) {
 
-	// user read pools
+	// user read pool
 
-	var rps *readPools
-	if rps, err = ssc.getReadPools(t.ClientID, balances); err != nil {
+	var rp *readPool
+	if rp, err = ssc.getReadPool(t.ClientID, balances); err != nil {
 		return "", common.NewError("read_pool_unlock_failed", err.Error())
 	}
 
@@ -441,12 +382,12 @@ func (ssc *StorageSmartContract) readPoolUnlock(t *transaction.Transaction,
 		return "", common.NewError("read_pool_unlock_failed", err.Error())
 	}
 
-	var pool, ok = rps.takePool(req.PoolID)
+	var ap, ok = rp.take(req.PoolID)
 	if !ok {
 		return "", common.NewError("read_pool_unlock_failed", "pool not found")
 	}
 
-	transfer, resp, err = pool.EmptyPool(ssc.ID, t.ClientID,
+	transfer, resp, err = rp.EmptyPool(ssc.ID, t.ClientID,
 		common.ToTime(t.CreationDate))
 	if err != nil {
 		return "", common.NewError("read_pool_unlock_failed", err.Error())
@@ -456,8 +397,8 @@ func (ssc *StorageSmartContract) readPoolUnlock(t *transaction.Transaction,
 		return "", common.NewError("read_pool_unlock_failed", err.Error())
 	}
 
-	// save pools
-	if err = rps.save(ssc.ID, t.ClientID, balances); err != nil {
+	// save read pools
+	if err = rp.save(ssc.ID, t.ClientID, balances); err != nil {
 		return "", common.NewError("read_pool_unlock_failed", err.Error())
 	}
 
@@ -468,32 +409,54 @@ func (ssc *StorageSmartContract) readPoolUnlock(t *transaction.Transaction,
 // stat
 //
 
+// statistic for an allocation/blobber (used by blobbers)
+func (ssc *StorageSmartContract) getReadPoolAllocBlobberStatsHandler(
+	ctx context.Context, params url.Values, balances chainState.StateContextI) (
+	resp interface{}, err error) {
+
+	var (
+		clientID  = params.Get("client_id")
+		allocID   = params.Get("allocation_id")
+		blobberID = params.Get("blobber_id")
+		rp        *readPool
+	)
+
+	if rp, err = ssc.getReadPool(clientID, balances); err != nil {
+		return
+	}
+
+	var (
+		cut  = rp.blobberCut(allocID, blobberID, common.Now())
+		stat []untilStat
+	)
+
+	for _, ap := range cut {
+		var bp, ok = ap.Blobbers.get(blobberID)
+		if !ok {
+			continue
+		}
+		stat = append(stat, untilStat{
+			Balance:  bp.Balance,
+			ExpireAt: ap.ExpireAt,
+		})
+	}
+
+	return &stat, nil
+}
+
 // statistic for all locked tokens of the read pool
-func (ssc *StorageSmartContract) getReadPoolsStatsHandler(ctx context.Context,
+func (ssc *StorageSmartContract) getReadPoolStatsHandler(ctx context.Context,
 	params url.Values, balances chainState.StateContextI) (
 	resp interface{}, err error) {
 
 	var (
 		clientID = datastore.Key(params.Get("client_id"))
-		rps      *readPools
+		rp       *readPool
 	)
 
-	if rps, err = ssc.getReadPools(clientID, balances); err != nil {
+	if rp, err = ssc.getReadPool(clientID, balances); err != nil {
 		return
 	}
 
-	var (
-		tp    = time.Now()
-		stats readPoolStats
-	)
-
-	for _, rp := range rps.Pools {
-		stat, err := rp.stat(tp)
-		if err != nil {
-			return nil, common.NewError("read_pool_stats", err.Error())
-		}
-		stats.addStat(stat)
-	}
-
-	return &stats, nil
+	return rp.stat(common.Now()), nil
 }

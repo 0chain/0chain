@@ -33,11 +33,16 @@ type stakePool struct {
 	// Offers represents tokens required by currently
 	// open offers of the blobber. It's allocation_id -> {lock, expire}
 	Offers map[string]*offerPool `json:"offers"`
+
+	// stat
+	ReadReward      state.Balance // read pool      -> blobber
+	BlobberReward   state.Balance // challenge pool -> blobber
+	ValidatorReward state.Balance // challenge pool -> validator
+	Penalty         state.Balance // stake pool     -> (???)
 }
 
-// newStakePool for given blobber, use empty blobberID to
-// create a stakePool to decode, since the blobberID is
-// stored
+// newStakePool for given blobber, use empty blobberID to create a stakePool to
+// decode, since the blobberID is stored
 func newStakePool() *stakePool {
 	return &stakePool{
 		ZcnPool: &tokenpool.ZcnPool{},
