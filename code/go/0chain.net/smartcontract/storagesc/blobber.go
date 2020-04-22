@@ -135,7 +135,7 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 				t.Value, stake)
 		}
 
-		if err = sc.checkFill(t, balances); err != nil {
+		if err = checkFill(t, balances); err != nil {
 			return nil, err
 		}
 
@@ -190,7 +190,7 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 				t.Value, lack)
 		}
 		// check blobber's tokens
-		if err = sc.checkFill(t, balances); err != nil {
+		if err = checkFill(t, balances); err != nil {
 			return nil, err
 		}
 		// lock tokens
@@ -413,7 +413,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	)
 
 	// move tokens from read pool to blobber
-	rps, err := sc.getReadPools(userID, balances)
+	rp, err := sc.getReadPool(userID, balances)
 	if err != nil {
 		return "", common.NewError("commit_read_failed",
 			"can't get related read pool: "+err.Error())
@@ -426,7 +426,8 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"can't get related stake pool: "+err.Error())
 	}
 
-	err = rps.moveToBlobber(sc.ID, sp, t.CreationDate, value)
+	err = rp.moveToBlobber(sc.ID, commitRead.ReadMarker.AllocationID,
+		commitRead.ReadMarker.BlobberID, sp, t.CreationDate, value)
 	if err != nil {
 		return "", common.NewError("commit_read_failed",
 			"can't transfer tokens from read pool to stake pool: "+err.Error())
@@ -439,7 +440,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"can't save stake pool: "+err.Error())
 	}
 
-	if err = rps.save(sc.ID, userID, balances); err != nil {
+	if err = rp.save(sc.ID, userID, balances); err != nil {
 		return "", common.NewError("commit_read_failed",
 			"can't save read pool: "+err.Error())
 	}

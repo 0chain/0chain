@@ -218,7 +218,7 @@ func (ssc *StorageSmartContract) createWritePool(t *transaction.Transaction,
 				t.Value, minLockDemand)
 		}
 
-		if err = ssc.checkFill(t, balances); err != nil {
+		if err = checkFill(t, balances); err != nil {
 			return fmt.Errorf("can't fill write pool: %v", err)
 		}
 
@@ -296,7 +296,7 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 
 	// lock more tokens
 
-	if err = ssc.checkFill(t, balances); err != nil {
+	if err = checkFill(t, balances); err != nil {
 		return "", common.NewError("write_pool_lock_failed", err.Error())
 	}
 

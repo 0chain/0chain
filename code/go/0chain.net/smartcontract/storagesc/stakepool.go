@@ -388,7 +388,7 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			"no tokens lack in the stake pool")
 	}
 
-	if err = ssc.checkFill(t, balances); err != nil {
+	if err = checkFill(t, balances); err != nil {
 		return "", common.NewError("stake_pool_lock_failed", err.Error())
 	}
 

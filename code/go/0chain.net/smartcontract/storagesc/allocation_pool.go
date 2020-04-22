@@ -165,7 +165,7 @@ func (aps *allocationPools) add(ap *allocationPool) {
 		return
 	}
 	// insert next after the found one
-	(*aps) = append((*aps)[:i], append([]*blobberPool{ap},
+	(*aps) = append((*aps)[:i], append(allocationPools{ap},
 		(*aps)[i:]...)...)
 	return
 }
@@ -178,10 +178,17 @@ func (aps allocationPools) allocationCut(allocID string) (
 		return // nil
 	}
 
-	for j := i + 1; j < len(aps) && aps[j].AllocationID == allocID; j++ {
+	var j = i + 1
+	for ; j < len(aps) && aps[j].AllocationID == allocID; j++ {
 	}
 
-	return aps[i:j]
+	if len(aps[i:j]) == 0 {
+		return // nil
+	}
+
+	cut = make([]*allocationPool, len(aps[i:j]))
+	copy(cut, aps[i:j])
+	return
 }
 
 func (aps allocationPools) blobberCut(allocID, blobberID string,
@@ -272,7 +279,7 @@ func (bp *blobberPool) stat() (stat blobberPoolStat) {
 // allocation read/write pool represents tokens locked for an allocation;
 type allocationPoolStat struct {
 	ID           string            `json:"id"`
-	Balance      string            `json:"balance"`
+	Balance      state.Balance     `json:"balance"`
 	ExpireAt     common.Timestamp  `json:"expire_at"`
 	AllocationID datastore.Key     `json:"allocation_id"`
 	Blobbers     []blobberPoolStat `json:"blobbers"`
@@ -289,7 +296,7 @@ func (ap *allocationPool) stat(now common.Timestamp) (stat allocationPoolStat) {
 
 	stat.Blobbers = make([]blobberPoolStat, 0, len(ap.Blobbers))
 	for _, bp := range ap.Blobbers {
-		stat.Blobber = append(stat.Blobbers, bp.stat())
+		stat.Blobbers = append(stat.Blobbers, bp.stat())
 	}
 
 	return
@@ -304,17 +311,9 @@ func (aps allocationPools) stat(now common.Timestamp) (
 
 	stat.Pools = make([]allocationPoolStat, 0, len(aps))
 	for _, ap := range aps {
-		stat.Pools = append(stat.Pools, ap.stat())
+		stat.Pools = append(stat.Pools, ap.stat(now))
 	}
 	return
-}
-
-func (aps *allocationPoolsStat) encode() (resp string) {
-	var b, err = json.Marshal(aps)
-	if err != nil {
-		panic(err) // must never happen
-	}
-	return string(b)
 }
 
 //

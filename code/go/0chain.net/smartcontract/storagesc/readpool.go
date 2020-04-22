@@ -10,7 +10,6 @@ import (
 
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -72,8 +71,8 @@ func (rp *readPool) blobberCut(allocID, blobberID string, now common.Timestamp,
 	return rp.Pools.blobberCut(allocID, blobberID, now)
 }
 
-func (rp *readPool) removeEmpty(ap []*allocationPool) {
-	rp.Pools.removeEmpty(ap)
+func (rp *readPool) removeEmpty(allocID string, ap []*allocationPool) {
+	rp.Pools.removeEmpty(allocID, ap)
 }
 
 // Encode implements util.Serializable interface.
@@ -145,7 +144,7 @@ func (rp *readPool) moveToBlobber(sscID, allocID, blobID string,
 	}
 
 	// remove empty allocation pools
-	rp.removeEmpty(torm)
+	rp.removeEmpty(allocID, torm)
 	return
 }
 
@@ -185,14 +184,14 @@ func (ssc *StorageSmartContract) getReadPoolBytes(clientID datastore.Key,
 
 // getReadPool of current client
 func (ssc *StorageSmartContract) getReadPool(clientID datastore.Key,
-	balances chainState.StateContextI) (rps *readPools, err error) {
+	balances chainState.StateContextI) (rp *readPool, err error) {
 
 	var poolb []byte
 	if poolb, err = ssc.getReadPoolBytes(clientID, balances); err != nil {
 		return
 	}
-	rps = newReadPools()
-	err = rps.Decode(poolb)
+	rp = new(readPool)
+	err = rp.Decode(poolb)
 	return
 }
 
@@ -210,12 +209,12 @@ func (ssc *StorageSmartContract) newReadPool(t *transaction.Transaction,
 		return "", common.NewError("new_read_pool_failed", "already exist")
 	}
 
-	var rps = newReadPools()
-	if err = rps.save(ssc.ID, t.ClientID, balances); err != nil {
+	var rp = new(readPool)
+	if err = rp.save(ssc.ID, t.ClientID, balances); err != nil {
 		return "", common.NewError("new_read_pool_failed", err.Error())
 	}
 
-	return string(rps.Encode()), nil
+	return string(rp.Encode()), nil
 }
 
 func checkFill(t *transaction.Transaction, balances chainState.StateContextI) (
@@ -312,10 +311,10 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 	if lr.BlobberID != "" {
 		if _, ok := alloc.BlobberMap[lr.BlobberID]; !ok {
 			return "", common.NewError("read_pool_lock_failed",
-				fmt.Sprintf("no such blobber %d in allocation %d",
+				fmt.Sprintf("no such blobber %s in allocation %s",
 					lr.BlobberID, lr.AllocationID))
 		}
-		bps = append(bps, blobberPool{
+		bps = append(bps, &blobberPool{
 			Balance:   state.Balance(t.Value),
 			BlobberID: lr.BlobberID,
 		})
@@ -329,9 +328,9 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 		// calculate (divide)
 		for _, b := range alloc.BlobberDetails {
 			var ratio = float64(b.Terms.ReadPrice) / total
-			bps = append(bps, blobberPool{
+			bps.add(&blobberPool{
 				Balance:   state.Balance(float64(t.Value) * ratio),
-				BlobberID: lr.BlobberID,
+				BlobberID: b.BlobberID,
 			})
 		}
 	}
@@ -350,10 +349,15 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 		return "", common.NewError("read_pool_lock_failed", err.Error())
 	}
 
+	// set fields
+	ap.AllocationID = lr.AllocationID
+	ap.ExpireAt = t.CreationDate + toSeconds(lr.Duration)
+	ap.Blobbers = bps
+
 	// add and save
 
-	rp.Pools.add(ap)
-	if err = rps.save(ssc.ID, t.ClientID, balances); err != nil {
+	rp.Pools.add(&ap)
+	if err = rp.save(ssc.ID, t.ClientID, balances); err != nil {
 		return "", common.NewError("read_pool_lock_failed", err.Error())
 	}
 
@@ -387,7 +391,7 @@ func (ssc *StorageSmartContract) readPoolUnlock(t *transaction.Transaction,
 		return "", common.NewError("read_pool_unlock_failed", "pool not found")
 	}
 
-	transfer, resp, err = rp.EmptyPool(ssc.ID, t.ClientID,
+	transfer, resp, err = ap.EmptyPool(ssc.ID, t.ClientID,
 		common.ToTime(t.CreationDate))
 	if err != nil {
 		return "", common.NewError("read_pool_unlock_failed", err.Error())
