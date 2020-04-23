@@ -89,19 +89,6 @@ func Test_readPoolKey(t *testing.T) {
 	assert.NotZero(t, readPoolKey("scKey", "clientID"))
 }
 
-func Test_readPools_moveToBlobber(t *testing.T) {
-
-	const (
-		sscID   = ADDRESS
-		allocID = "alloc_hex"
-		blobID  = "blob_hex"
-		errMsg  = "not enough tokens in read pool"
-	)
-
-	// TODO (sfdx): REMADE THE TEST CASE, MOTHERFUCKER
-
-}
-
 func TestStorageSmartContract_getReadPoolBytes(t *testing.T) {
 	const (
 		clientID = "client_id"
@@ -248,13 +235,9 @@ func TestStorageSmartContract_readPoolLock(t *testing.T) {
 	lr.AllocationID = allocID
 	_, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
 	requireErrMsg(t, err, errMsg4)
-	// // 4. min lock
-	// balances.balances[clientID] = 5
-	// _, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
-	// requireErrMsg(t, err, errMsg4)
+	// 5. min lock period
 	tx.Value = 15
 	balances.balances[client.id] = 15
-	// 5. min lock period
 	_, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
 	requireErrMsg(t, err, errMsg5)
 	// 6. max lock period
@@ -275,126 +258,3 @@ func TestStorageSmartContract_readPoolLock(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotZero(t, resp)
 }
-
-/*
-func TestStorageSmartContract_readPoolUnlock(t *testing.T) {
-	const (
-		allocID                      = "alloc_hex"
-		clientID, txHash, readPoolID = "client_id", "tx_hash", "pool_id"
-
-		errMsg1 = "read_pool_unlock_failed: value not present"
-		errMsg2 = "read_pool_unlock_failed: " +
-			"invalid character '}' looking for beginning of value"
-		errMsg3 = "read_pool_unlock_failed: pool not found"
-		errMsg4 = "read_pool_unlock_failed: " +
-			"emptying pool failed: pool is still locked"
-	)
-
-	var (
-		ssc      = newTestStorageSC()
-		balances = newTestBalances()
-		tx       = transaction.Transaction{
-			ClientID:   clientID,
-			ToClientID: ssc.ID,
-			Value:      0,
-		}
-		lr   lockRequest
-		ur   unlockRequest
-		resp string
-		err  error
-	)
-
-	balances.txn = &tx
-	tx.Hash = txHash
-
-	// 1. no read pools
-	_, err = ssc.readPoolUnlock(&tx, nil, balances)
-	requireErrMsg(t, err, errMsg1)
-
-	// create read pool
-	tx.Hash = "create_read_pool_tx"
-	_, err = ssc.newReadPool(&tx, nil, balances)
-	require.NoError(t, err)
-	tx.Hash = txHash
-
-	// 2. malformed request
-	_, err = ssc.readPoolUnlock(&tx, []byte("} malformed {"), balances)
-	requireErrMsg(t, err, errMsg2)
-
-	// 3. no read pool
-	_, err = ssc.readPoolUnlock(&tx, mustEncode(t, &ur), balances)
-	requireErrMsg(t, err, errMsg3)
-
-	// lock tokens
-	testSetReadPoolConfig(t, &readPoolConfig{
-		MinLock:       10,
-		MinLockPeriod: 10 * time.Second,
-		MaxLockPeriod: 100 * time.Second,
-	}, balances, ssc.ID)
-	tx.Hash = readPoolID
-	lr.Duration = 15 * time.Second
-	lr.AllocationID = allocID
-	balances.balances[clientID] = 150
-	tx.Value = 150
-	_, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)
-	require.NoError(t, err)
-
-	delete(balances.balances, clientID)
-	tx.Value = 0
-
-	// 4. not expired
-	ur.PoolID = readPoolID
-	ur.AllocationID = allocID
-	_, err = ssc.readPoolUnlock(&tx, mustEncode(t, &ur), balances)
-	requireErrMsg(t, err, errMsg4)
-
-	tx.CreationDate = common.Timestamp(20 * time.Second)
-
-	// 5. unlock (ok)
-	resp, err = ssc.readPoolUnlock(&tx, mustEncode(t, &ur), balances)
-	require.NoError(t, err)
-	assert.NotZero(t, resp)
-
-}
-
-func TestStorageSmartContract_getReadPoolStatsHandler(t *testing.T) {
-
-	const (
-		allocID  = "alloc_hex"
-		clientID = "client_id"
-		errMsg1  = "value not present"
-	)
-
-	var (
-		ssc      = newTestStorageSC()
-		balances = newTestBalances()
-		ctx      = context.Background()
-		params   = url.Values{
-			"client_id": []string{clientID},
-		}
-		resp, err = ssc.getReadPoolStatsHandler(ctx, params, balances)
-	)
-
-	requireErrMsg(t, err, errMsg1)
-
-	var (
-		rps = newReadPools()
-		rp  = newReadPool()
-	)
-
-	rp.ID = "pool_id"
-	rp.TokenLockInterface = &tokenLock{
-		StartTime: 150,
-		Duration:  10 * time.Second,
-		Owner:     "owner_id",
-	}
-	rp.Balance = 150
-
-	require.NoError(t, rps.addPool(allocID, rp))
-	require.NoError(t, rps.save(ssc.ID, clientID, balances))
-
-	resp, err = ssc.getReadPoolStatsHandler(ctx, params, balances)
-	require.NoError(t, err)
-	assert.NotZero(t, resp)
-}
-*/

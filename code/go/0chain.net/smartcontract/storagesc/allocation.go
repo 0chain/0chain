@@ -587,13 +587,15 @@ func (sc *StorageSmartContract) extendAllocation(t *transaction.Transaction,
 			"can't get write pool: "+err.Error())
 	}
 
+	var until = alloc.Expiration + toSeconds(alloc.ChallengeCompletionTime)
+
 	// lock tokens if this transaction provides them
 	if t.Value > 0 {
 		if err = checkFill(t, balances); err != nil {
 			return "", common.NewError("allocation_extending_failed",
 				err.Error())
 		}
-		if _, _, err = wp.fill(t, balances); err != nil {
+		if _, err = wp.fill(t, alloc, until, balances); err != nil {
 			return "", common.NewError("allocation_extending_failed",
 				"write pool filling: "+err.Error())
 		}
@@ -603,7 +605,7 @@ func (sc *StorageSmartContract) extendAllocation(t *transaction.Transaction,
 	// pool has enough tokens
 	if diff > 0 {
 		if mldLeft := alloc.minLockDemandLeft(); mldLeft > 0 {
-			if wp.Balance < mldLeft {
+			if wp.allocUntil(alloc.ID, until) < mldLeft {
 				return "", common.NewError("allocation_extending_failed",
 					"not enough tokens in write pool to extend allocation")
 			}
@@ -668,7 +670,8 @@ func (sc *StorageSmartContract) reduceAllocation(t *transaction.Transaction,
 			return "", common.NewError("allocation_reducing_failed",
 				err.Error())
 		}
-		if _, _, err = wp.fill(t, balances); err != nil {
+		var until = alloc.Expiration + toSeconds(alloc.ChallengeCompletionTime)
+		if _, err = wp.fill(t, alloc, until, balances); err != nil {
 			return "", common.NewError("allocation_reducing_failed",
 				err.Error())
 		}
@@ -858,7 +861,7 @@ func (sc *StorageSmartContract) cacnelAllocationRequest(
 	t *transaction.Transaction, input []byte, balances c_state.StateContextI) (
 	resp string, err error) {
 
-	var req writePoolRequest
+	var req lockRequest
 	if err = req.decode(input); err != nil {
 		return "", common.NewError("alloc_cacnel_failed", err.Error())
 	}
@@ -894,4 +897,13 @@ func (sc *StorageSmartContract) cacnelAllocationRequest(
 	}
 
 	return sc.finalizeAllocation(t, input, balances)
+}
+
+func (sc *StorageSmartContract) finalizeAllocation(
+	t *transaction.Transaction, input []byte, balances c_state.StateContextI) (
+	resp string, err error) {
+
+	//
+
+	return
 }

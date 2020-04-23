@@ -287,7 +287,7 @@ func Test_allocationPools(t *testing.T) {
 	//
 
 	cut = aps.allocationCut(a2)
-	cut = removeExpired(cut, "b1", 0)
+	cut = removeBlobberExpired(cut, "b1", 0)
 	assert.EqualValues(t, []*allocationPool{
 		&allocationPool{
 			ExpireAt:     20,
@@ -327,7 +327,7 @@ func Test_allocationPools(t *testing.T) {
 		},
 	}, cut)
 
-	cut = removeExpired(cut, "b2", 15)
+	cut = removeBlobberExpired(cut, "b2", 15)
 	assert.EqualValues(t, []*allocationPool{
 		&allocationPool{
 			ExpireAt:     20,

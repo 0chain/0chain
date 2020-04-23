@@ -10,6 +10,42 @@ import (
 )
 
 //
+// SC / API requests
+//
+
+// lock request
+
+// request to lock tokens creating a read pool;
+// the allocation_id is required, if blobber_id provided, then
+// it locks tokens for allocation -> {blobber}, otherwise
+// all tokens divided for all blobbers of the allocation
+// automatically
+type lockRequest struct {
+	Duration     time.Duration `json:"duration"`
+	AllocationID datastore.Key `json:"allocation_id"`
+	BlobberID    datastore.Key `json:"blobber_id,omitempty"`
+}
+
+func (lr *lockRequest) decode(input []byte) (err error) {
+	if err = json.Unmarshal(input, lr); err != nil {
+		return
+	}
+	if lr.AllocationID == "" {
+		return errors.New("missing allocation_id in request")
+	}
+	return // ok
+}
+
+// unlock request used to unlock all tokens of a read pool
+type unlockRequest struct {
+	PoolID datastore.Key `json:"pool_id"`
+}
+
+func (ur *unlockRequest) decode(input []byte) error {
+	return json.Unmarshal(input, ur)
+}
+
+//
 // blobber read/write pool (expire_at at level above)
 //
 
@@ -195,8 +231,19 @@ func (aps allocationPools) blobberCut(allocID, blobberID string,
 	now common.Timestamp) (cut []*allocationPool) {
 
 	cut = aps.allocationCut(allocID)
-	cut = removeExpired(cut, blobberID, now)
+	cut = removeBlobberExpired(cut, blobberID, now)
 	sortExpireAt(cut)
+	return
+}
+
+func (aps allocationPools) allocUntil(allocID string, until common.Timestamp) (
+	value state.Balance) {
+
+	var cut = aps.allocationCut(allocID)
+	cut = removeExpired(cut, until)
+	for _, ap := range cut {
+		value += ap.Balance
+	}
 	return
 }
 
@@ -234,7 +281,23 @@ Outer:
 	(*aps) = (*aps)[:i]
 }
 
-func removeExpired(cut []*allocationPool, blobberID string,
+func removeExpired(cut []*allocationPool, now common.Timestamp) (
+	clean []*allocationPool) {
+
+	var i int
+	for _, arp := range cut {
+		if arp.ExpireAt <= now {
+			continue
+		}
+		if arp.Balance == 0 {
+			continue // no tokens for this blobber
+		}
+		cut[i], i = arp, i+1
+	}
+	return cut[:i]
+}
+
+func removeBlobberExpired(cut []*allocationPool, blobberID string,
 	now common.Timestamp) (clean []*allocationPool) {
 
 	var i int
@@ -321,6 +384,7 @@ func (aps allocationPools) stat(now common.Timestamp) (
 //
 
 type untilStat struct {
+	PoolID   datastore.Key    `json:"pool_id"`
 	Balance  state.Balance    `json:"balance"`
 	ExpireAt common.Timestamp `json:"expire_at"`
 }

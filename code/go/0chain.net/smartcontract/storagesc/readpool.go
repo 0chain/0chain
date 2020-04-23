@@ -17,42 +17,6 @@ import (
 )
 
 //
-// SC / API requests
-//
-
-// lock request
-
-// request to lock tokens creating a read pool;
-// the allocation_id is required, if blobber_id provided, then
-// it locks tokens for allocation -> {blobber}, otherwise
-// all tokens divided for all blobbers of the allocation
-// automatically
-type lockRequest struct {
-	Duration     time.Duration `json:"duration"`
-	AllocationID datastore.Key `json:"allocation_id"`
-	BlobberID    datastore.Key `json:"blobber_id,omitempty"`
-}
-
-func (lr *lockRequest) decode(input []byte) (err error) {
-	if err = json.Unmarshal(input, lr); err != nil {
-		return
-	}
-	if lr.AllocationID == "" {
-		return errors.New("missing allocation_id in request")
-	}
-	return // ok
-}
-
-// unlock request used to unlock all tokens of a read pool
-type unlockRequest struct {
-	PoolID datastore.Key `json:"pool_id"`
-}
-
-func (ur *unlockRequest) decode(input []byte) error {
-	return json.Unmarshal(input, ur)
-}
-
-//
 // client read pool (consist of allocation pools)
 //
 
@@ -149,16 +113,25 @@ func (rp *readPool) moveToBlobber(sscID, allocID, blobID string,
 }
 
 // take read pool by ID to unlock (the take is get and remove)
-func (rp *readPool) take(poolID string) (found *allocationPool, ok bool) {
+func (wp *readPool) take(poolID string, now common.Timestamp) (
+	took *allocationPool, err error) {
+
 	var i int
-	for _, ap := range rp.Pools {
+	for _, ap := range wp.Pools {
 		if ap.ID == poolID {
-			found, ok = ap, true
+			if ap.ExpireAt > now {
+				return nil, errors.New("the pool is not expired yet")
+			}
+			took, ok = ap, true
 			continue // delete
 		}
-		rp.Pools[i], i = ap, i+1
+		wp.Pools[i], i = ap, i+1
 	}
-	rp.Pools = rp.Pools[:i]
+	wp.Pools = wp.Pools[:i]
+
+	if took == nil {
+		return nil, errors.New("pool not found")
+	}
 	return
 }
 
@@ -386,9 +359,9 @@ func (ssc *StorageSmartContract) readPoolUnlock(t *transaction.Transaction,
 		return "", common.NewError("read_pool_unlock_failed", err.Error())
 	}
 
-	var ap, ok = rp.take(req.PoolID)
-	if !ok {
-		return "", common.NewError("read_pool_unlock_failed", "pool not found")
+	var ap *allocationPool
+	if ap, err = rp.take(req.PoolID); err != nil {
+		return "", common.NewError("read_pool_unlock_failed", err.Error())
 	}
 
 	transfer, resp, err = ap.EmptyPool(ssc.ID, t.ClientID,
@@ -440,6 +413,7 @@ func (ssc *StorageSmartContract) getReadPoolAllocBlobberStatsHandler(
 			continue
 		}
 		stat = append(stat, untilStat{
+			PoolID:   ap.ID,
 			Balance:  bp.Balance,
 			ExpireAt: ap.ExpireAt,
 		})
