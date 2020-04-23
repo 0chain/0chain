@@ -137,9 +137,9 @@ func (bps *blobberPools) add(bp *blobberPool) (ok bool) {
 // allocation read/write pool represents tokens locked for an allocation;
 type allocationPool struct {
 	tokenpool.ZcnPool `json:"pool"`
-	ExpireAt          common.Timestamp `json:"expire_at"`
-	AllocationID      datastore.Key    `json:"allocation_id"`
-	Blobbers          blobberPools     `json:"blobbers"`
+	ExpireAt          common.Timestamp `json:"expire_at"`     // inclusive
+	AllocationID      datastore.Key    `json:"allocation_id"` //
+	Blobbers          blobberPools     `json:"blobbers"`      //
 }
 
 //
@@ -289,7 +289,7 @@ func removeExpired(cut []*allocationPool, now common.Timestamp) (
 
 	var i int
 	for _, arp := range cut {
-		if arp.ExpireAt <= now {
+		if arp.ExpireAt < now {
 			continue
 		}
 		if arp.Balance == 0 {
@@ -305,7 +305,7 @@ func removeBlobberExpired(cut []*allocationPool, blobberID string,
 
 	var i int
 	for _, arp := range cut {
-		if arp.ExpireAt <= now {
+		if arp.ExpireAt < now {
 			continue
 		}
 		var bp, ok = arp.Blobbers.get(blobberID)
@@ -358,7 +358,7 @@ func (ap *allocationPool) stat(now common.Timestamp) (stat allocationPoolStat) {
 	stat.Balance = ap.Balance
 	stat.ExpireAt = ap.ExpireAt
 	stat.AllocationID = ap.AllocationID
-	stat.Locked = ap.ExpireAt > now
+	stat.Locked = ap.ExpireAt >= now
 
 	stat.Blobbers = make([]blobberPoolStat, 0, len(ap.Blobbers))
 	for _, bp := range ap.Blobbers {

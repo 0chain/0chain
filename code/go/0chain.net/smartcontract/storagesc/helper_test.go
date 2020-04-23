@@ -10,6 +10,7 @@ import (
 
 	"0chain.net/chaincore/chain"
 	chainState "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -298,7 +299,9 @@ func setConfig(t *testing.T, balances chainState.StateContextI) (
 		MaxLockPeriod: 20 * time.Minute,
 	}
 	conf.WritePool = &writePoolConfig{
-		MinLock: 10,
+		MinLock:       10,
+		MinLockPeriod: 5 * time.Second,
+		MaxLockPeriod: 20 * time.Minute,
 	}
 
 	mustSave(t, scConfigKey(ADDRESS), conf, balances)
@@ -331,5 +334,12 @@ func genChall(t *testing.T, ssc *StorageSmartContract,
 	require.True(t, blobberChall.addChallenge(storChall))
 	_, err = balances.InsertTrieNode(blobberChall.GetKey(ssc.ID), blobberChall)
 	require.NoError(t, err)
+	return
+}
+
+func newTestStorageSC() (ssc *StorageSmartContract) {
+	ssc = new(StorageSmartContract)
+	ssc.SmartContract = new(smartcontractinterface.SmartContract)
+	ssc.ID = ADDRESS
 	return
 }

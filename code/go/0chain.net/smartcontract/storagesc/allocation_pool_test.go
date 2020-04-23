@@ -17,7 +17,7 @@ import (
 func (aps allocationPools) total(now int64) (total state.Balance) {
 
 	for _, ap := range aps {
-		if ap.ExpireAt <= common.Timestamp(now) {
+		if ap.ExpireAt < common.Timestamp(now) {
 			continue
 		}
 		total += ap.Balance
@@ -29,7 +29,7 @@ func (aps allocationPools) allocTotal(allocID string, now int64) (
 	total state.Balance) {
 
 	for _, ap := range aps {
-		if ap.ExpireAt <= common.Timestamp(now) {
+		if ap.ExpireAt < common.Timestamp(now) {
 			continue
 		}
 		if ap.AllocationID == allocID {
@@ -43,7 +43,7 @@ func (aps allocationPools) allocBlobberTotal(allocID, blobberID string,
 	now int64) (total state.Balance) {
 
 	for _, ap := range aps {
-		if ap.ExpireAt <= common.Timestamp(now) {
+		if ap.ExpireAt < common.Timestamp(now) {
 			continue
 		}
 		if ap.AllocationID != allocID {
@@ -388,6 +388,6 @@ func Test_allocationPools(t *testing.T) {
 		},
 	}, aps.blobberCut(a2, "b2", 15))
 
-	require.EqualValues(t, []*allocationPool{}, aps.blobberCut(a2, "b2", 20))
+	require.EqualValues(t, []*allocationPool{}, aps.blobberCut(a2, "b2", 21))
 
 }

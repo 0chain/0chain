@@ -582,7 +582,7 @@ func (sc *StorageSmartContract) extendAllocation(t *transaction.Transaction,
 
 	// get related write pool
 	var wp *writePool
-	if wp, err = sc.getWritePool(alloc.ID, balances); err != nil {
+	if wp, err = sc.getWritePool(t.ClientID, balances); err != nil {
 		return "", common.NewError("allocation_extending_failed",
 			"can't get write pool: "+err.Error())
 	}
@@ -613,7 +613,7 @@ func (sc *StorageSmartContract) extendAllocation(t *transaction.Transaction,
 	}
 
 	// save the write pool
-	if err = wp.save(sc.ID, alloc.ID, balances); err != nil {
+	if err = wp.save(sc.ID, t.ClientID, balances); err != nil {
 		return "", common.NewError("allocation_extending_failed",
 			err.Error())
 	}
@@ -659,7 +659,7 @@ func (sc *StorageSmartContract) reduceAllocation(t *transaction.Transaction,
 
 	// get related write pool
 	var wp *writePool
-	if wp, err = sc.getWritePool(alloc.ID, balances); err != nil {
+	if wp, err = sc.getWritePool(t.ClientID, balances); err != nil {
 		return "", common.NewError("allocation_reducing_failed",
 			"can't get write pool: "+err.Error())
 	}
@@ -678,7 +678,7 @@ func (sc *StorageSmartContract) reduceAllocation(t *transaction.Transaction,
 	}
 
 	// save the write pool
-	if err = wp.save(sc.ID, alloc.ID, balances); err != nil {
+	if err = wp.save(sc.ID, t.ClientID, balances); err != nil {
 		return "", common.NewError("allocation_reducing_failed",
 			err.Error())
 	}
@@ -919,18 +919,18 @@ func (ssc *StorageSmartContract) finalizeAllocation(
 		return "", common.NewError("fini_alloc_failed", err.Error())
 	}
 
-	// write pool
-
-	var wp *writePool
-	if wp, err = ssc.getWritePool(req.AllocationID, balances); err != nil {
-		return "", common.NewError("fini_alloc_failed", err.Error())
-	}
-
 	// allocation
 	var alloc *StorageAllocation
 	if alloc, err = ssc.getAllocation(req.AllocationID, balances); err != nil {
 		return "", common.NewError("fini_alloc_failed",
 			"can't get related allocation: "+err.Error())
+	}
+
+	// write pool
+
+	var wp *writePool
+	if wp, err = ssc.getWritePool(alloc.Owner, balances); err != nil {
+		return "", common.NewError("fini_alloc_failed", err.Error())
 	}
 
 	if alloc.Finalized {
@@ -1088,7 +1088,7 @@ func (ssc *StorageSmartContract) finalizeAllocation(
 			"saving challenge pool: "+err.Error())
 	}
 
-	if err = wp.save(ssc.ID, req.AllocationID, balances); err != nil {
+	if err = wp.save(ssc.ID, alloc.Owner, balances); err != nil {
 		return "", common.NewError("fini_alloc_failed",
 			"saving write pool: "+err.Error())
 	}

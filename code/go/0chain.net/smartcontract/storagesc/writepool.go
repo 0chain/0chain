@@ -177,7 +177,7 @@ func (wp *writePool) take(poolID string, now common.Timestamp) (
 	var i int
 	for _, ap := range wp.Pools {
 		if ap.ID == poolID {
-			if ap.ExpireAt > now {
+			if ap.ExpireAt >= now {
 				return nil, errors.New("the pool is not expired yet")
 			}
 			took = ap
@@ -345,6 +345,18 @@ func (ssc *StorageSmartContract) writePoolLock(t *transaction.Transaction,
 	if t.Value < conf.MinLock {
 		return "", common.NewError("write_pool_lock_failed",
 			"insufficient amount to lock")
+	}
+
+	if lr.Duration < conf.MinLockPeriod {
+		return "", common.NewError("write_pool_lock_failed",
+			fmt.Sprintf("duration (%s) is shorter than min lock period (%s)",
+				lr.Duration.String(), conf.MinLockPeriod.String()))
+	}
+
+	if lr.Duration > conf.MaxLockPeriod {
+		return "", common.NewError("write_pool_lock_failed",
+			fmt.Sprintf("duration (%s) is longer than max lock period (%v)",
+				lr.Duration.String(), conf.MaxLockPeriod.String()))
 	}
 
 	// check client balance

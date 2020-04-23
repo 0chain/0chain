@@ -483,7 +483,7 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 	// 2. move tokens from challenge pool back to write pool
 
 	// write pool
-	wp, err := sc.getWritePool(alloc.ID, balances)
+	wp, err := sc.getWritePool(alloc.Owner, balances)
 	if err != nil {
 		return errors.New("can't get related write pool")
 	}
@@ -542,7 +542,7 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 	}
 
 	// save pools
-	if err = wp.save(sc.ID, alloc.ID, balances); err != nil {
+	if err = wp.save(sc.ID, alloc.Owner, balances); err != nil {
 		return fmt.Errorf("can't save write pool: %v", err)
 	}
 	if err = cp.save(sc.ID, alloc.ID, balances); err != nil {

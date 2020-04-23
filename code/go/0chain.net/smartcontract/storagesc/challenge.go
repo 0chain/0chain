@@ -173,7 +173,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 	}
 
 	var wp *writePool
-	if wp, err = sc.getWritePool(alloc.ID, balances); err != nil {
+	if wp, err = sc.getWritePool(alloc.Owner, balances); err != nil {
 		return fmt.Errorf("can't get allocation's write pool: %v", err)
 	}
 
@@ -240,7 +240,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 	}
 
 	// save pools
-	if err = wp.save(sc.ID, alloc.ID, balances); err != nil {
+	if err = wp.save(sc.ID, alloc.Owner, balances); err != nil {
 		return fmt.Errorf("can't save allocation's write pool: %v", err)
 	}
 

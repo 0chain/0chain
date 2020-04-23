@@ -263,9 +263,9 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		errMsg7 = "allocation_creation_failed: " +
 			"can't get blobber's stake pool: value not present"
 		errMsg8 = "allocation_creation_failed: " +
-			"not enough tokens to create allocation: 0 < 325"
+			"not enough tokens to honor the min lock demand"
 		errMsg9 = "allocation_creation_failed: " +
-			"can't fill write pool: no tokens to lock"
+			"no tokens to lock"
 	)
 
 	var (
@@ -467,9 +467,10 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 
 	// 1. write pool
 	var wp *writePool
-	wp, err = ssc.getWritePool(aresp.ID, balances)
+	wp, err = ssc.getWritePool(clientID, balances)
 	require.NoError(t, err)
-	assert.Equal(t, state.Balance(400), wp.Balance)
+	assert.Equal(t, state.Balance(400), wp.allocUntil(aresp.ID,
+		aresp.Expiration+toSeconds(aresp.ChallengeCompletionTime)))
 
 	// 2. stake pool offers
 	var expire = aresp.Expiration + toSeconds(aresp.ChallengeCompletionTime)
@@ -962,7 +963,7 @@ func Test_finalize_allocation(t *testing.T) {
 
 	// balances
 	var wp *writePool
-	wp, err = ssc.getWritePool(allocID, balances)
+	wp, err = ssc.getWritePool(client.id, balances)
 	require.NoError(t, err)
 
 	var cp *challengePool
@@ -980,7 +981,7 @@ func Test_finalize_allocation(t *testing.T) {
 
 	// finalize it
 
-	var req writePoolRequest
+	var req lockRequest
 	req.AllocationID = allocID
 
 	tx = newTransaction(client.id, ssc.ID, 0, tp)
@@ -991,7 +992,7 @@ func Test_finalize_allocation(t *testing.T) {
 	// check out all the balances
 
 	// reload
-	wp, err = ssc.getWritePool(allocID, balances)
+	wp, err = ssc.getWritePool(client.id, balances)
 	require.NoError(t, err)
 
 	cp, err = ssc.getChallengePool(allocID, balances)
@@ -1000,9 +1001,11 @@ func Test_finalize_allocation(t *testing.T) {
 	sp, err = ssc.getStakePool(b1.id, balances)
 	require.NoError(t, err)
 
+	tp += int64(toSeconds(alloc.ChallengeCompletionTime))
 	require.Nil(t, sp.findOffer(allocID), "should be removed")
 	assert.Zero(t, cp.Balance, "should be drained")
-	assert.Zero(t, wp.Balance, "should be drained")
+	assert.Zero(t, wp.allocUntil(allocID, common.Timestamp(tp)),
+		"should be drained")
 
 	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)

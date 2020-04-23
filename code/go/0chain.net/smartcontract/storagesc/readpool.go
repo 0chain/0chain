@@ -118,7 +118,7 @@ func (wp *readPool) take(poolID string, now common.Timestamp) (
 	var i int
 	for _, ap := range wp.Pools {
 		if ap.ID == poolID {
-			if ap.ExpireAt > now {
+			if ap.ExpireAt >= now {
 				return nil, errors.New("the pool is not expired yet")
 			}
 			took = ap

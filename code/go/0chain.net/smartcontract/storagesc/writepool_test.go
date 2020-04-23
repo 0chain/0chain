@@ -35,33 +35,8 @@ func (wp *writePool) allocBlobberTotal(allocID, blobberID string,
 	return wp.Pools.allocBlobberTotal(allocID, blobberID, now)
 }
 
-func mustEncode(t *testing.T, val interface{}) []byte {
-	var err error
-	b, err := json.Marshal(val)
-	require.NoError(t, err)
-	return b
-}
-
-func requireErrMsg(t *testing.T, err error, msg string) {
-	t.Helper()
-	require.Error(t, err, "missing error")
-	require.Equal(t, msg, err.Error(), "unexpected error")
-}
-
-func Test_lockRequest_decode(t *testing.T) {
-	var lre, lrd lockRequest
-	lre.Duration = time.Second * 60
-	lre.AllocationID = "alloc_hex"
-	lre.BlobberID = "blobber_hex"
-	require.NoError(t, lrd.decode(mustEncode(t, &lre)))
-	assert.EqualValues(t, lre, lrd)
-}
-
-func Test_unlockRequest_decode(t *testing.T) {
-	var ure, urd unlockRequest
-	ure.PoolID = "pool_hex"
-	require.NoError(t, urd.decode(mustEncode(t, ure)))
-	assert.EqualValues(t, ure, urd)
+func (wp *writePool) allocationCut(allocID string) []*allocationPool {
+	return wp.Pools.allocationCut(allocID)
 }
 
 func Test_writePool_Encode_Decode(t *testing.T) {
@@ -133,36 +108,6 @@ func TestStorageSmartContract_getWritePool(t *testing.T) {
 	require.EqualValues(t, nrps, wps)
 }
 
-func TestStorageSmartContract_newWritePool(t *testing.T) {
-	const (
-		clientID, txHash = "client_id", "tx_hash"
-		errMsg           = "new_write_pool_failed: already exist"
-	)
-
-	var (
-		ssc      = newTestStorageSC()
-		balances = newTestBalances()
-		tx       = transaction.Transaction{
-			ClientID:   clientID,
-			ToClientID: ssc.ID,
-			Value:      0,
-		}
-		resp string
-		err  error
-	)
-
-	balances.txn = &tx
-	tx.Hash = txHash
-
-	resp, err = ssc.newWritePool(&tx, nil, balances)
-	require.NoError(t, err)
-	var nrp = new(writePool)
-	assert.Equal(t, string(nrp.Encode()), resp)
-
-	_, err = ssc.newWritePool(&tx, nil, balances)
-	requireErrMsg(t, err, errMsg)
-}
-
 func testSetWritePoolConfig(t *testing.T, wpc *writePoolConfig,
 	balances chainState.StateContextI, sscID string) {
 
@@ -185,9 +130,9 @@ func TestStorageSmartContract_writePoolLock(t *testing.T) {
 		errMsg3 = "write_pool_lock_failed: no tokens to lock"
 		errMsg4 = "write_pool_lock_failed: insufficient amount to lock"
 		errMsg5 = "write_pool_lock_failed: " +
-			"duration (5s) is shorter than min lock period (10s)"
+			"duration (5s) is shorter than min lock period (20s)"
 		errMsg6 = "write_pool_lock_failed: " +
-			"duration (2m30s) is longer than max lock period (1m40s)"
+			"duration (3h0m0s) is longer than max lock period (2h0m0s)"
 		errMsg7 = "write_pool_lock_failed: user already has this write pool"
 	)
 
@@ -214,18 +159,36 @@ func TestStorageSmartContract_writePoolLock(t *testing.T) {
 
 	testSetWritePoolConfig(t, &writePoolConfig{
 		MinLock:       10,
-		MinLockPeriod: 10 * time.Second,
-		MaxLockPeriod: 100 * time.Second,
+		MinLockPeriod: 20 * time.Second,
+		MaxLockPeriod: 2 * time.Hour,
 	}, balances, ssc.ID)
+
+	var alloc = StorageAllocation{
+		ID: allocID,
+		BlobberDetails: []*BlobberAllocation{
+			&BlobberAllocation{MinLockDemand: 10, Spent: 0},
+			&BlobberAllocation{MinLockDemand: 10, Spent: 0},
+			&BlobberAllocation{MinLockDemand: 10, Spent: 0},
+			&BlobberAllocation{MinLockDemand: 10, Spent: 0},
+		},
+		Expiration:              10,
+		ChallengeCompletionTime: 200 * time.Second,
+	}
+
+	var until = 210
+	_ = until
 
 	// 1. no pool
 	_, err = ssc.writePoolLock(&tx, nil, balances)
 	requireErrMsg(t, err, errMsg1)
 
 	tx.Hash = "new_write_pool_tx_hash"
-	_, err = ssc.newWritePool(&tx, nil, balances)
+	tx.Value, balances.balances[client.id] = 40, 40 // set {
+	err = ssc.createWritePool(&tx, &alloc, balances)
 	require.NoError(t, err)
 	tx.Hash = txHash
+	tx.Value, balances.balances[client.id] = 0, 0 // } reset
+
 	// 2. malformed request
 	_, err = ssc.writePoolLock(&tx, []byte("} malformed {"), balances)
 	requireErrMsg(t, err, errMsg2)
@@ -241,7 +204,7 @@ func TestStorageSmartContract_writePoolLock(t *testing.T) {
 	_, err = ssc.writePoolLock(&tx, mustEncode(t, &lr), balances)
 	requireErrMsg(t, err, errMsg5)
 	// 6. max lock period
-	lr.Duration = 150 * time.Second
+	lr.Duration = 3 * time.Hour
 	_, err = ssc.writePoolLock(&tx, mustEncode(t, &lr), balances)
 	requireErrMsg(t, err, errMsg6)
 	// 7. no such allocation

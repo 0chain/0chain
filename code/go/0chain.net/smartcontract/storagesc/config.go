@@ -30,8 +30,9 @@ type readPoolConfig struct {
 // write pool configurations
 
 type writePoolConfig struct {
-	MinLock int64 `json:"min_lock"`
-	// TODO (sfxdx): interests? other configs?
+	MinLock       int64         `json:"min_lock"`
+	MinLockPeriod time.Duration `json:"min_lock_period"`
+	MaxLockPeriod time.Duration `json:"max_lock_period"`
 }
 
 // scConfig represents SC configurations ('storagesc:' from sc.yaml).
@@ -151,6 +152,10 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 		prefix + "readpool.min_lock")
 	// write pool
 	conf.WritePool = new(writePoolConfig)
+	conf.WritePool.MinLock = config.SmartContractConfig.GetInt64(
+		prefix + "writepool.min_lock")
+	conf.WritePool.MaxLockPeriod = config.SmartContractConfig.GetDuration(
+		prefix + "writepool.max_lock_period")
 	conf.WritePool.MinLock = config.SmartContractConfig.GetInt64(
 		prefix + "writepool.min_lock")
 
