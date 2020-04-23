@@ -888,7 +888,7 @@ func (sc *StorageSmartContract) cacnelAllocationRequest(
 		details.MinLockDemand = 0 // reset
 	}
 
-	alloc.Cancelled = true
+	alloc.Canceled = true
 
 	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
@@ -975,7 +975,7 @@ func (ssc *StorageSmartContract) finalizeAllocation(
 	}
 
 	// 1. empty the challenge pool
-	if alloc.Cancelled {
+	if alloc.Canceled {
 		if err = cp.moveToWritePool(wp, cp.Balance); err != nil {
 			return "", common.NewError("fini_alloc_failed",
 				"emptying challenge pool: "+err.Error())
@@ -1031,7 +1031,7 @@ func (ssc *StorageSmartContract) finalizeAllocation(
 	}
 
 	// if the allocation is not canceled
-	if !alloc.Cancelled && cp.Balance > 0 && alloc.UsedSize > 0 {
+	if !alloc.Canceled && cp.Balance > 0 && alloc.UsedSize > 0 {
 		var left = float64(cp.Balance) // tokens left in challenge pool
 		for _, d := range alloc.BlobberDetails {
 			if d.Stats == nil {

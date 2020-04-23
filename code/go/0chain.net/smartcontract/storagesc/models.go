@@ -409,7 +409,7 @@ type StorageAllocation struct {
 	Finalized bool `json:"finalized,omitempty"`
 	// Canceled set to true where allocation finalized by cancel_allocation
 	// transaction.
-	Cancelled bool `json:"canceled,omitempty"`
+	Canceled bool `json:"canceled,omitempty"`
 	// UsedSize used to calculate blobber reward ratio.
 	UsedSize int64 `json:"-"`
 
