@@ -417,8 +417,6 @@ type StorageAllocation struct {
 
 	// MovedToChallenge is number of tokens moved to challenge pool.
 	MovedToChallenge state.Balance `json:"moved_to_challenge,omitempty"`
-	// MovedToBlobers is number of tokens moved to blobbers on finalization.
-	MovedToBlobers state.Balance `json:"moved_to_blobbers,omitempty"`
 	// MovedBack is number of tokens moved from challenge pool to
 	// related write pool (the Back) if a data has deleted.
 	MovedBack state.Balance `json:"moved_back,omitempty"`

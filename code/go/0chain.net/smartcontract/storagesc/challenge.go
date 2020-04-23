@@ -124,6 +124,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	if err = cp.moveToBlobber(sc.ID, sp, move); err != nil {
 		return fmt.Errorf("can't move tokens to blobber: %v", err)
 	}
+	sp.Reward += move
 	details.ChallengeReward += move
 
 	err = cp.moveToValidatos(sc.ID, validatorsReward, validators, balances)

@@ -252,6 +252,7 @@ func (sp *stakePool) stat(scKey string, now common.Timestamp,
 		stat.Overfill = sp.Balance - stake
 	}
 
+	stat.Reward = sp.Reward
 	return
 }
 
@@ -272,6 +273,7 @@ type stakePoolStat struct {
 	CapacityStake state.Balance   `json:"capacity_stake"`
 	Lack          state.Balance   `json:"lack"`
 	Overfill      state.Balance   `json:"overfill"`
+	Reward        state.Balance   `json:"reward"`
 }
 
 func (stat *stakePoolStat) encode() (b []byte) {

@@ -995,14 +995,15 @@ func (ssc *StorageSmartContract) finalizeAllocation(
 				"can't get stake pool of "+d.BlobberID+": "+err.Error())
 		}
 		if d.MinLockDemand > d.Spent {
-			err = wp.moveToStake(alloc.ID, d.BlobberID, sp, until,
-				d.MinLockDemand-d.Spent)
+			var move = d.MinLockDemand - d.Spent
+			err = wp.moveToStake(alloc.ID, d.BlobberID, sp, until, move)
 			if err != nil {
 				return "", common.NewError("fini_alloc_failed", "can't send"+
 					" min lock demand left for "+d.BlobberID+": "+err.Error())
 			}
-			d.FinalReward += d.MinLockDemand - d.Spent
-			alloc.MovedToBlobers += d.MinLockDemand - d.Spent
+			sp.Reward += move         //
+			d.FinalReward += move     //
+			d.Spent = d.MinLockDemand // to save
 		}
 		// get the blobber
 		var b *StorageNode
@@ -1019,7 +1020,6 @@ func (ssc *StorageSmartContract) finalizeAllocation(
 			return "", common.NewError("fini_alloc_failed",
 				"can't save stake pool of "+d.BlobberID+": "+err.Error())
 		}
-		d.Spent = d.MinLockDemand // to save
 
 		// the size has released (deallocation)
 		var blob = blobbers[i]
@@ -1056,6 +1056,7 @@ func (ssc *StorageSmartContract) finalizeAllocation(
 				return "", common.NewError("fini_alloc_failed", "can't move "+
 					"tokens to blobber "+d.BlobberID+": "+err.Error())
 			}
+			sp.Reward += move
 			d.FinalReward += move
 
 			// save the stake pool

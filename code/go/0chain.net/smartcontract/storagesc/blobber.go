@@ -434,6 +434,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 		return "", common.NewError("commit_read_failed",
 			"can't transfer tokens from read pool to stake pool: "+err.Error())
 	}
+	sp.Reward += value          //
 	details.ReadReward += value // stat
 	details.Spent += value      // reduce min lock demand left
 
