@@ -414,15 +414,15 @@ type StorageAllocation struct {
 	UsedSize int64 `json:"-"`
 
 	// MovedToChallenge is number of tokens moved to challenge pool.
-	MovedToChallenge state.Balance `json:"moved_to_challenge"`
+	MovedToChallenge state.Balance `json:"moved_to_challenge,omitempty"`
 	// MovedToBlobers is number of tokens moved to blobbers on finalization.
-	MovedToBlobers state.Balance `json:"moved_to_blobbers"`
+	MovedToBlobers state.Balance `json:"moved_to_blobbers,omitempty"`
 	// MovedBack is number of tokens moved from challenge pool to
 	// related write pool (the Back) if a data has deleted.
-	MovedBack state.Balance `json:"moved_back"`
+	MovedBack state.Balance `json:"moved_back,omitempty"`
 	// MovedToValidators is total number of tokens moved to validators
 	// of the allocation.
-	MovedToValidators state.Balance `json:"moved_to_validators"`
+	MovedToValidators state.Balance `json:"moved_to_validators,omitempty"`
 }
 
 // minLockDemandLeft returns number of tokens required as min_lock_demand;
