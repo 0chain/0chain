@@ -899,9 +899,223 @@ func (sc *StorageSmartContract) cacnelAllocationRequest(
 	return sc.finalizeAllocation(t, input, balances)
 }
 
-func (sc *StorageSmartContract) finalizeAllocation(
+//
+// finalize an allocation (after expire + challenge completion time)
+//
+
+// 1. challenge pool                  -> blobbers or write pool
+// 2. write pool min_lock_demand left -> blobbers
+// 3. remove offer from blobber (stake pool)
+// 4. update blobbers used and in all blobbers list too
+// 5. write pool                      -> client
+func (ssc *StorageSmartContract) finalizeAllocation(
 	t *transaction.Transaction, input []byte, balances c_state.StateContextI) (
 	resp string, err error) {
+
+	// the request
+
+	var req lockRequest
+	if err = req.decode(input); err != nil {
+		return "", common.NewError("fini_alloc_failed", err.Error())
+	}
+
+	// write pool
+
+	var wp *writePool
+	if wp, err = ssc.getWritePool(req.AllocationID, balances); err != nil {
+		return "", common.NewError("fini_alloc_failed", err.Error())
+	}
+
+	// allocation
+	var alloc *StorageAllocation
+	if alloc, err = ssc.getAllocation(req.AllocationID, balances); err != nil {
+		return "", common.NewError("fini_alloc_failed",
+			"can't get related allocation: "+err.Error())
+	}
+
+	if alloc.Finalized {
+		return "", common.NewError("fini_alloc_failed",
+			"allocation already finalized")
+	}
+
+	// should be expired
+	var expire = alloc.Expiration + toSeconds(alloc.ChallengeCompletionTime)
+	if expire > t.CreationDate {
+		return "", common.NewError("fini_alloc_failed",
+			"allocation is not expired yet, or waiting a challenge completion")
+	}
+
+	// transaction initiator can be the client or a blobber of the transaction
+	var validInitiator = (t.ClientID == alloc.Owner)
+	if !validInitiator {
+		for _, d := range alloc.BlobberDetails {
+			if d.BlobberID == t.ClientID {
+				validInitiator = true
+				break
+			}
+		}
+	}
+	if !validInitiator {
+		return "", common.NewError("fini_alloc_failed", "only allocation"+
+			" owner or related blobber can finalize an allocation")
+	}
+
+	// challenge pool
+	var cp *challengePool
+	if cp, err = ssc.getChallengePool(req.AllocationID, balances); err != nil {
+		return "", common.NewError("fini_alloc_failed",
+			"can't get related challenge pool")
+	}
+
+	// 4. update blobbers' used and blobbers in all
+	var blobbers []*StorageNode
+	if blobbers, err = ssc.getAllocationBlobbers(alloc, balances); err != nil {
+		return "", common.NewError("fini_alloc_failed",
+			"invalid state: can't get related blobbers: "+err.Error())
+	}
+
+	// 1. empty the challenge pool
+	if alloc.Cancelled {
+		if err = cp.moveToWritePool(wp, cp.Balance); err != nil {
+			return "", common.NewError("fini_alloc_failed",
+				"emptying challenge pool: "+err.Error())
+		}
+		alloc.MovedBack = cp.Balance
+	}
+
+	// 2. move min_lock_demands left to blobber's stake pools
+	// 3. remove blobber's offers (update)
+	var until = alloc.Expiration + toSeconds(alloc.ChallengeCompletionTime)
+	for i, d := range alloc.BlobberDetails {
+		var sp *stakePool
+		if sp, err = ssc.getStakePool(d.BlobberID, balances); err != nil {
+			return "", common.NewError("fini_alloc_failed",
+				"can't get stake pool of "+d.BlobberID+": "+err.Error())
+		}
+		if d.MinLockDemand > d.Spent {
+			err = wp.moveToStake(alloc.ID, d.BlobberID, sp, until,
+				d.MinLockDemand-d.Spent)
+			if err != nil {
+				return "", common.NewError("fini_alloc_failed", "can't send"+
+					" min lock demand left for "+d.BlobberID+": "+err.Error())
+			}
+			d.FinalReward += d.MinLockDemand - d.Spent
+			alloc.MovedToBlobers += d.MinLockDemand - d.Spent
+		}
+		// get the blobber
+		var b *StorageNode
+		if b, err = ssc.getBlobber(d.BlobberID, balances); err != nil {
+			return "", common.NewError("fini_alloc_failed",
+				"can't get blobber "+d.BlobberID+": "+err.Error())
+		}
+		if _, err = sp.update(ssc.ID, t.CreationDate, b, balances); err != nil {
+			return "", common.NewError("fini_alloc_failed",
+				"can't update stake pool of "+d.BlobberID+": "+err.Error())
+		}
+		// save the stake pool
+		if err = sp.save(ssc.ID, d.BlobberID, balances); err != nil {
+			return "", common.NewError("fini_alloc_failed",
+				"can't save stake pool of "+d.BlobberID+": "+err.Error())
+		}
+		d.Spent = d.MinLockDemand // to save
+
+		// the size has released (deallocation)
+		var blob = blobbers[i]
+		blob.Used -= d.Size
+		// save the independent blobber instance
+		_, err = balances.InsertTrieNode(blob.GetKey(ssc.ID), blob)
+		if err != nil {
+			return "", common.NewError("fini_alloc_failed",
+				"can't save blobber "+blob.ID+": "+err.Error())
+		}
+	}
+
+	// if the allocation is not canceled
+	if !alloc.Cancelled && cp.Balance > 0 && alloc.UsedSize > 0 {
+		var left = float64(cp.Balance) // tokens left in challenge pool
+		for _, d := range alloc.BlobberDetails {
+			if d.Stats == nil {
+				continue // no writes
+			}
+
+			var (
+				ratio = float64(d.Stats.UsedSize) / float64(alloc.UsedSize)
+				move  = state.Balance(left * ratio)
+			)
+
+			var sp *stakePool
+			if sp, err = ssc.getStakePool(d.BlobberID, balances); err != nil {
+				return "", common.NewError("fini_alloc_failed",
+					"can't get stake pool of "+d.BlobberID+": "+err.Error())
+			}
+
+			err = cp.moveToBlobber(ssc.ID, sp, move)
+			if err != nil {
+				return "", common.NewError("fini_alloc_failed", "can't move "+
+					"tokens to blobber "+d.BlobberID+": "+err.Error())
+			}
+			d.FinalReward += move
+
+			// save the stake pool
+			if err = sp.save(ssc.ID, d.BlobberID, balances); err != nil {
+				return "", common.NewError("fini_alloc_failed",
+					"can't save stake pool of "+d.BlobberID+": "+err.Error())
+			}
+		}
+	}
+
+	// move division error to write pool (if any)
+	if err = cp.moveToWritePool(wp, cp.Balance); err != nil {
+		return "", common.NewError("fini_alloc_failed",
+			"emptying challenge pool: "+err.Error())
+	}
+	alloc.MovedBack += cp.Balance
+
+	var allBlobbers *StorageNodes
+	if allBlobbers, err = ssc.getBlobbersList(balances); err != nil {
+		return "", common.NewError("fini_alloc_failed",
+			"can't get all blobbers list: "+err.Error())
+	}
+
+	if err = updateBlobbersInAll(allBlobbers, blobbers, balances); err != nil {
+		return "", common.NewError("fini_alloc_failed",
+			"can't save all blobbers list: "+err.Error())
+	}
+
+	// save pool
+	if err = cp.save(ssc.ID, alloc.ID, balances); err != nil {
+		return "", common.NewError("fini_alloc_failed",
+			"saving challenge pool: "+err.Error())
+	}
+
+	if err = wp.save(ssc.ID, req.AllocationID, balances); err != nil {
+		return "", common.NewError("fini_alloc_failed",
+			"saving write pool: "+err.Error())
+	}
+
+	// save the allocation
+	alloc.Finalized = true
+	_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
+	if err != nil {
+		return "", common.NewError("fini_alloc_failed",
+			"saving allocation: "+err.Error())
+	}
+
+	// remove the allocation from the all allocations list
+	var all *Allocations
+	if all, err = ssc.getAllAllocationsList(balances); err != nil {
+		return "", common.NewError("fini_alloc_failed",
+			"getting all allocations list: "+err.Error())
+	}
+	if !all.List.remove(alloc.ID) {
+		return "", common.NewError("fini_alloc_failed",
+			"invalid state: allocation not found in all allocations list")
+	}
+	_, err = balances.InsertTrieNode(ALL_ALLOCATIONS_KEY, all)
+	if err != nil {
+		return "", common.NewError("fini_alloc_failed",
+			"saving all allocations list: "+err.Error())
+	}
 
 	//
 

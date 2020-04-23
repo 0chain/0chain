@@ -350,6 +350,16 @@ type BlobberAllocation struct {
 	// receive its min_lock_demand tokens. Thus, we can't use shared
 	// (for allocation) min_lock_demand and spent.
 	Spent state.Balance `json:"spent"`
+	// Penalty o the blobber for the allocation in tokens.
+	Penalty state.Balance `json:"penalty"`
+	// ReadReward of the blobber.
+	ReadReward state.Balance `json:"read_reward"`
+	// ChallengeReward of the blobber.
+	ChallengeReward state.Balance `json:"challenge_reward"`
+	// FinalReward is number of tokens moved to the blobber on finalization.
+	// It can be greater then zero, if user didn't spent the min lock demand
+	// during the allocation.
+	FinalReward state.Balance `json:"final_reward"`
 }
 
 // PriceRange represents a price range allowed by user to filter blobbers.
@@ -402,6 +412,17 @@ type StorageAllocation struct {
 	Cancelled bool `json:"canceled,omitempty"`
 	// UsedSize used to calculate blobber reward ratio.
 	UsedSize int64 `json:"-"`
+
+	// MovedToChallenge is number of tokens moved to challenge pool.
+	MovedToChallenge state.Balance `json:"moved_to_challenge"`
+	// MovedToBlobers is number of tokens moved to blobbers on finalization.
+	MovedToBlobers state.Balance `json:"moved_to_blobbers"`
+	// MovedBack is number of tokens moved from challenge pool to
+	// related write pool (the Back) if a data has deleted.
+	MovedBack state.Balance `json:"moved_back"`
+	// MovedToValidators is total number of tokens moved to validators
+	// of the allocation.
+	MovedToValidators state.Balance `json:"moved_to_validators"`
 }
 
 // minLockDemandLeft returns number of tokens required as min_lock_demand;

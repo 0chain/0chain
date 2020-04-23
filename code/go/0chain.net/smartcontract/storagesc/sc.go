@@ -52,14 +52,14 @@ func (ssc *StorageSmartContract) SetSC(sc *smartcontractinterface.SmartContract,
 	ssc.SmartContract.RestHandlers["/getblobbers"] = ssc.GetBlobbersHandler
 	ssc.SmartContractExecutionStats["add_blobber"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "add_blobber (add/update/remove/reborn)"), nil)
 	// read pool
-	ssc.SmartContract.RestHandlers["/getReadPoolStats"] = ssc.getReadPoolStatsHandler
-	ssc.SmartContract.RestHandlers["/getReadPoolAllocBlobberStats"] = ssc.getReadPoolAllocBlobberStatsHandler
+	ssc.SmartContract.RestHandlers["/getReadPoolStat"] = ssc.getReadPoolStatHandler
+	ssc.SmartContract.RestHandlers["/getReadPoolAllocBlobberStat"] = ssc.getReadPoolAllocBlobberStatHandler
 	ssc.SmartContractExecutionStats["new_read_pool"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "new_read_pool"), nil)
 	ssc.SmartContractExecutionStats["read_pool_lock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "read_pool_lock"), nil)
 	ssc.SmartContractExecutionStats["read_pool_unlock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "read_pool_unlock"), nil)
 	// write pool
 	ssc.SmartContract.RestHandlers["/getWritePoolStat"] = ssc.getWritePoolStatHandler
-	ssc.SmartContract.RestHandlers["/getWritePoolAllocBlobberStats"] = ssc.getWritePoolAllocBlobberStatsHandler
+	ssc.SmartContract.RestHandlers["/getWritePoolAllocBlobberStat"] = ssc.getWritePoolAllocBlobberStatHandler
 	ssc.SmartContractExecutionStats["write_pool_lock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "write_pool_lock"), nil)
 	// stake pool
 	ssc.SmartContract.RestHandlers["/getStakePoolStat"] = ssc.getStakePoolStatHandler

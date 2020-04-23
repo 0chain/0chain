@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"time"
 
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
@@ -92,7 +91,7 @@ func (rp *readPool) moveToBlobber(sscID, allocID, blobID string,
 		if _, _, err = ap.TransferTo(sp, move, nil); err != nil {
 			return // transferring error
 		}
-		sp.ReadReward += move
+
 		value -= move
 		if bp.Balance == 0 {
 			ap.Blobbers.removeByIndex(bi)
@@ -122,7 +121,7 @@ func (wp *readPool) take(poolID string, now common.Timestamp) (
 			if ap.ExpireAt > now {
 				return nil, errors.New("the pool is not expired yet")
 			}
-			took, ok = ap, true
+			took = ap
 			continue // delete
 		}
 		wp.Pools[i], i = ap, i+1
@@ -360,7 +359,7 @@ func (ssc *StorageSmartContract) readPoolUnlock(t *transaction.Transaction,
 	}
 
 	var ap *allocationPool
-	if ap, err = rp.take(req.PoolID); err != nil {
+	if ap, err = rp.take(req.PoolID, t.CreationDate); err != nil {
 		return "", common.NewError("read_pool_unlock_failed", err.Error())
 	}
 
@@ -387,7 +386,7 @@ func (ssc *StorageSmartContract) readPoolUnlock(t *transaction.Transaction,
 //
 
 // statistic for an allocation/blobber (used by blobbers)
-func (ssc *StorageSmartContract) getReadPoolAllocBlobberStatsHandler(
+func (ssc *StorageSmartContract) getReadPoolAllocBlobberStatHandler(
 	ctx context.Context, params url.Values, balances chainState.StateContextI) (
 	resp interface{}, err error) {
 
@@ -423,7 +422,7 @@ func (ssc *StorageSmartContract) getReadPoolAllocBlobberStatsHandler(
 }
 
 // statistic for all locked tokens of the read pool
-func (ssc *StorageSmartContract) getReadPoolStatsHandler(ctx context.Context,
+func (ssc *StorageSmartContract) getReadPoolStatHandler(ctx context.Context,
 	params url.Values, balances chainState.StateContextI) (
 	resp interface{}, err error) {
 

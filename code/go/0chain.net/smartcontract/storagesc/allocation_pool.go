@@ -1,7 +1,10 @@
 package storagesc
 
 import (
+	"encoding/json"
+	"errors"
 	"sort"
+	"time"
 
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
@@ -365,8 +368,14 @@ func (ap *allocationPool) stat(now common.Timestamp) (stat allocationPoolStat) {
 	return
 }
 
+type backPool struct {
+	ID      string        `json:"id"`
+	Balance state.Balance `json:"balance"`
+}
+
 type allocationPoolsStat struct {
 	Pools []allocationPoolStat `json:"pools"`
+	Back  backPool             `json:"back,omitempty"`
 }
 
 func (aps allocationPools) stat(now common.Timestamp) (

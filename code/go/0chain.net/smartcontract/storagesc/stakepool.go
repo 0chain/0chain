@@ -33,12 +33,8 @@ type stakePool struct {
 	// Offers represents tokens required by currently
 	// open offers of the blobber. It's allocation_id -> {lock, expire}
 	Offers map[string]*offerPool `json:"offers"`
-
-	// stat
-	ReadReward      state.Balance // read pool      -> blobber
-	BlobberReward   state.Balance // challenge pool -> blobber
-	ValidatorReward state.Balance // challenge pool -> validator
-	Penalty         state.Balance // stake pool     -> (???)
+	// reward represents total blobber reward.
+	Reward state.Balance `json:"reward"`
 }
 
 // newStakePool for given blobber, use empty blobberID to create a stakePool to
@@ -213,7 +209,7 @@ func (sp *stakePool) moveToWritePool(wp *writePool,
 	}
 
 	// move
-	_, _, err = sp.TransferTo(wp, value, nil)
+	_, _, err = sp.TransferTo(&wp.Back, value, nil)
 	return
 }
 

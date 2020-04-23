@@ -81,7 +81,7 @@ func (cp *challengePool) moveToWritePool(wp *writePool,
 	}
 
 	// move
-	_, _, err = cp.TransferTo(wp, value, nil)
+	_, _, err = cp.TransferTo(&wp.Back, value, nil)
 	return
 }
 
@@ -136,9 +136,10 @@ func (cp *challengePool) moveToValidatos(sscID string, reward state.Balance,
 	return
 }
 
-func (cp *challengePool) stat(alloc *StorageAllocation) (stat *writePoolStat) {
+func (cp *challengePool) stat(alloc *StorageAllocation) (
+	stat *challengePoolStat) {
 
-	stat = new(writePoolStat)
+	stat = new(challengePoolStat)
 
 	stat.ID = cp.ID
 	stat.Balance = cp.Balance
@@ -148,6 +149,14 @@ func (cp *challengePool) stat(alloc *StorageAllocation) (stat *writePoolStat) {
 	stat.Finalized = alloc.Finalized
 
 	return
+}
+
+type challengePoolStat struct {
+	ID         string           `json:"id"`
+	Balance    state.Balance    `json:"balance"`
+	StartTime  common.Timestamp `json:"start_time"`
+	Expiration common.Timestamp `json:"expiration"`
+	Finalized  bool             `json:"finalized"`
 }
 
 //

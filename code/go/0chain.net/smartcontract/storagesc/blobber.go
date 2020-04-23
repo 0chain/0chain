@@ -404,10 +404,12 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"blobber doesn't belong to allocation")
 	}
 
+	const CHUNK_SIZE = 64 * KB
+
 	// one read is one 64 KB block
 	var (
 		numReads = commitRead.ReadMarker.ReadCounter - lastKnownCtr
-		sizeRead = sizeInGB(numReads * 64 * KB)
+		sizeRead = sizeInGB(numReads * CHUNK_SIZE)
 		value    = state.Balance(float64(details.Terms.ReadPrice) * sizeRead)
 		userID   = commitRead.ReadMarker.ClientID
 	)
@@ -432,6 +434,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 		return "", common.NewError("commit_read_failed",
 			"can't transfer tokens from read pool to stake pool: "+err.Error())
 	}
+	details.ReadReward += value
 
 	// save pools
 	err = sp.save(sc.ID, commitRead.ReadMarker.BlobberID, balances)
@@ -498,9 +501,12 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 		value = state.Balance(float64(details.Terms.WritePrice) *
 			sizeInGB(size))
 
-		if err = wp.moveToChallenge(cp, value); err != nil {
+		var until = alloc.Expiration + toSeconds(alloc.ChallengeCompletionTime)
+		err = wp.moveToChallenge(alloc.ID, details.BlobberID, cp, until, value)
+		if err != nil {
 			return fmt.Errorf("can't move tokens to challenge pool: %v", err)
 		}
+		alloc.MovedToChallenge += value
 	} else {
 		// delete
 		var (
@@ -532,6 +538,7 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 		if err = cp.moveToWritePool(wp, value); err != nil {
 			return fmt.Errorf("can't move tokens back to write pool: %v", err)
 		}
+		alloc.MovedBack += value
 	}
 
 	// save pools
