@@ -434,7 +434,8 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 		return "", common.NewError("commit_read_failed",
 			"can't transfer tokens from read pool to stake pool: "+err.Error())
 	}
-	details.ReadReward += value
+	details.ReadReward += value // stat
+	details.Spent += value      // reduce min lock demand left
 
 	// save pools
 	err = sp.save(sc.ID, commitRead.ReadMarker.BlobberID, balances)
@@ -448,7 +449,6 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"can't save read pool: "+err.Error())
 	}
 
-	details.Spent += value // reduce min lock demand left
 	// save allocation
 	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
@@ -507,6 +507,7 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 			return fmt.Errorf("can't move tokens to challenge pool: %v", err)
 		}
 		alloc.MovedToChallenge += value
+		details.Spent += value
 	} else {
 		// delete
 		var (
@@ -535,10 +536,13 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 				" back to write pool on delete data")
 		}
 
-		if err = cp.moveToWritePool(wp, value); err != nil {
+		var until = alloc.Expiration + toSeconds(alloc.ChallengeCompletionTime)
+
+		if err = cp.moveToWritePool(alloc.ID, until, wp, value); err != nil {
 			return fmt.Errorf("can't move tokens back to write pool: %v", err)
 		}
 		alloc.MovedBack += value
+		details.Spent -= value
 	}
 
 	// save pools
@@ -549,8 +553,6 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 		return fmt.Errorf("can't save challenge pool: %v", err)
 	}
 
-	// adjust the spent
-	details.Spent += value
 	return
 }
 

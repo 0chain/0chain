@@ -201,10 +201,12 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 	alloc.MovedToValidators += validatorsReward
 
 	// move back to write pool
-	if err = cp.moveToWritePool(wp, move); err != nil {
+	var until = alloc.Expiration + toSeconds(alloc.ChallengeCompletionTime)
+	if err = cp.moveToWritePool(alloc.ID, until, wp, move); err != nil {
 		return fmt.Errorf("moving failed challenge to write pool: %v", err)
 	}
 	alloc.MovedBack += move
+	details.Returned += move
 
 	// blobber stake penalty
 	if conf.BlobberSlash > 0 {
@@ -226,7 +228,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 		var move = state.Balance(float64(offer.Lock) * conf.BlobberSlash)
 		offer.Lock -= move // subtract the offer stake
 
-		if err = sp.moveToWritePool(wp, move); err != nil {
+		if err = sp.moveToWritePool(alloc.ID, until, wp, move); err != nil {
 			return fmt.Errorf("can't move tokens to write pool: %v", err)
 		}
 
@@ -298,9 +300,10 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 			"can't get related allocation: "+err.Error())
 	}
 
-	blobberAlloc, ok := alloc.BlobberMap[t.ClientID]
+	details, ok := alloc.BlobberMap[t.ClientID]
 	if !ok {
-		return "", common.NewError("verify_challenge", "Blobber is not part of the allocation")
+		return "", common.NewError("verify_challenge",
+			"Blobber is not part of the allocation")
 	}
 
 	var (
@@ -330,11 +333,16 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		prev = last.Created
 	}
 
-	var threshold = len(challReq.Validators) / 2
+	var (
+		threshold = len(challReq.Validators) / 2
+		pass      = success > threshold ||
+			(success > failure && success+failure < threshold)
+		cct   = toSeconds(details.Terms.ChallengeCompletionTime)
+		fresh = challReq.Created+cct >= t.CreationDate
+	)
 
 	// verification, or partial verification
-	if success > threshold ||
-		(success > failure && success+failure < threshold) {
+	if pass && fresh {
 
 		//challReq.Response = &challResp
 		//delete(blobberChall.ChallengeMap, challResp.ID)
@@ -349,9 +357,9 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		alloc.Stats.SuccessChallenges++
 		alloc.Stats.OpenChallenges--
 
-		blobberAlloc.Stats.LastestClosedChallengeTxn = challReq.ID
-		blobberAlloc.Stats.SuccessChallenges++
-		blobberAlloc.Stats.OpenChallenges--
+		details.Stats.LastestClosedChallengeTxn = challReq.ID
+		details.Stats.SuccessChallenges++
+		details.Stats.OpenChallenges--
 
 		balances.InsertTrieNode(blobberChall.GetKey(sc.ID), blobberChall)
 		sc.challengeResolved(balances, true)
@@ -362,7 +370,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 			partial = float64(success) / float64(threshold)
 		}
 
-		err = sc.blobberReward(t, alloc, prev, blobberChall, blobberAlloc,
+		err = sc.blobberReward(t, alloc, prev, blobberChall, details,
 			validators, partial, balances)
 		if err != nil {
 			return "", common.NewError("challenge_reward_error", err.Error())
@@ -381,8 +389,10 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		return "challenge passed by blobber", nil
 	}
 
-	if failure > (len(challReq.Validators)/2) ||
-		(success+failure) == len(challReq.Validators) {
+	var enoughFails = failure > (len(challReq.Validators)/2) ||
+		(success+failure) == len(challReq.Validators)
+
+	if enoughFails || (pass && !fresh) {
 
 		completed := sc.completeChallengeForBlobber(blobberChall, challReq,
 			&challResp)
@@ -397,15 +407,15 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		alloc.Stats.FailedChallenges++
 		alloc.Stats.OpenChallenges--
 
-		blobberAlloc.Stats.LastestClosedChallengeTxn = challReq.ID
-		blobberAlloc.Stats.FailedChallenges++
-		blobberAlloc.Stats.OpenChallenges--
+		details.Stats.LastestClosedChallengeTxn = challReq.ID
+		details.Stats.FailedChallenges++
+		details.Stats.OpenChallenges--
 
 		balances.InsertTrieNode(blobberChall.GetKey(sc.ID), blobberChall)
 		sc.challengeResolved(balances, false)
 		Logger.Info("Challenge failed", zap.Any("challenge", challResp.ID))
 
-		err = sc.blobberPenalty(t, alloc, prev, blobberChall, blobberAlloc,
+		err = sc.blobberPenalty(t, alloc, prev, blobberChall, details,
 			validators, balances)
 		if err != nil {
 			return "", common.NewError("challenge_penalty_error", err.Error())
@@ -415,6 +425,10 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 		if err != nil {
 			return "", common.NewError("challenge_reward_error", err.Error())
+		}
+
+		if pass && !fresh {
+			return "late challenge (failed)", nil
 		}
 
 		return "Challenge Failed by Blobber", nil
@@ -515,9 +529,9 @@ func (sc *StorageSmartContract) addChallenge(challengeID string, creationDate co
 			return "", common.NewError("invalid_allocation", "Client state has invalid allocations")
 		}
 		allocationObj.Decode(allocationBytes.Encode())
-		sort.SliceStable(allocationObj.Blobbers, func(i, j int) bool {
-			return allocationObj.Blobbers[i].ID < allocationObj.Blobbers[j].ID
-		})
+		if allocationObj.Expiration < creationDate {
+			continue
+		}
 		if allocationObj.Stats.NumWrites > 0 {
 			break
 		}
@@ -526,6 +540,10 @@ func (sc *StorageSmartContract) addChallenge(challengeID string, creationDate co
 	if allocationObj.Stats.NumWrites == 0 {
 		return "", common.NewError("no_allocation_writes", "No Allocation writes. challenge generation not possible")
 	}
+
+	sort.SliceStable(allocationObj.Blobbers, func(i, j int) bool {
+		return allocationObj.Blobbers[i].ID < allocationObj.Blobbers[j].ID
+	})
 
 	selectedBlobberObj := &StorageNode{}
 

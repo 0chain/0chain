@@ -9,11 +9,9 @@ import (
 
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/encryption"
 	"0chain.net/core/util"
 )
 
@@ -27,15 +25,7 @@ func writePoolKey(scKey, clientID string) datastore.Key {
 
 // writePool represents client's write pool consist of allocation write pools
 type writePool struct {
-	Pools allocationPools   `json:"pools"` // tokens locked for a period
-	Back  tokenpool.ZcnPool `json:"back"`  // returned from challenge pool
-}
-
-func newWritePool(clientID string) (wp *writePool) {
-	var back = encryption.Hash(clientID + ":writepool:back")
-	wp = new(writePool)
-	wp.Back.ID = back
-	return
+	Pools allocationPools `json:"pools"` // tokens locked for a period
 }
 
 func (wp *writePool) blobberCut(allocID, blobberID string, now common.Timestamp,
@@ -193,10 +183,28 @@ func (wp *writePool) take(poolID string, now common.Timestamp) (
 	return
 }
 
+func (wp *writePool) getPool(poolID string) *allocationPool {
+	for _, ap := range wp.Pools {
+		if ap.ID == poolID {
+			return ap
+		}
+	}
+	return nil
+}
+
+func (wp *writePool) allocPool(allocID string, until common.Timestamp) (
+	ap *allocationPool) {
+
+	for _, ap := range wp.Pools.allocationCut(allocID) {
+		if ap.ExpireAt == until {
+			return ap
+		}
+	}
+	return
+}
+
 func (wp *writePool) stat(now common.Timestamp) (aps allocationPoolsStat) {
 	aps = wp.Pools.stat(now)
-	aps.Back.ID = wp.Back.ID
-	aps.Back.Balance = wp.Back.Balance
 	return
 }
 
@@ -287,7 +295,7 @@ func (ssc *StorageSmartContract) createWritePool(t *transaction.Transaction,
 	}
 
 	if err == util.ErrValueNotPresent {
-		wp, err = newWritePool(t.ClientID), nil
+		wp = new(writePool)
 	}
 
 	var mld = alloc.minLockDemandLeft()
@@ -453,17 +461,37 @@ func (ssc *StorageSmartContract) writePoolUnlock(t *transaction.Transaction,
 		return "", common.NewError("write_pool_unlock_failed", err.Error())
 	}
 
-	var pool tokenpool.TokenPoolI
+	// don't unlock over min lock demand left
+	var ap = wp.getPool(req.PoolID)
+	if ap == nil {
+		return "", common.NewError("write_pool_unlock_failed",
+			"no such write pool")
+	}
 
-	if req.PoolID == wp.Back.ID {
-		pool = &wp.Back
-	} else {
-		if pool, err = wp.take(req.PoolID, t.CreationDate); err != nil {
-			return "", common.NewError("write_pool_unlock_failed", err.Error())
+	var alloc *StorageAllocation
+	alloc, err = ssc.getAllocation(ap.AllocationID, balances)
+	if err != nil {
+		return "", common.NewError("write_pool_unlock_failed",
+			"can't get related allocation: "+err.Error())
+	}
+
+	if !alloc.Finalized && !alloc.Canceled {
+		var (
+			want  = alloc.minLockDemandLeft()
+			unitl = alloc.Expiration + toSeconds(alloc.ChallengeCompletionTime)
+			leave = wp.allocUntil(ap.AllocationID, unitl) - ap.Balance
+		)
+		if leave < want && ap.ExpireAt >= unitl {
+			return "", common.NewError("write_pool_unlock_failed",
+				"can't unlock, because min lock demand is not paid yet")
 		}
 	}
 
-	transfer, resp, err = pool.EmptyPool(ssc.ID, t.ClientID,
+	if ap, err = wp.take(req.PoolID, t.CreationDate); err != nil {
+		return "", common.NewError("write_pool_unlock_failed", err.Error())
+	}
+
+	transfer, resp, err = ap.EmptyPool(ssc.ID, t.ClientID,
 		common.ToTime(t.CreationDate))
 	if err != nil {
 		return "", common.NewError("write_pool_unlock_failed", err.Error())

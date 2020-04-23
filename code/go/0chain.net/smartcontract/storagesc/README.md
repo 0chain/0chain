@@ -397,10 +397,10 @@ free to use these zbox command.
     ./zbox wp-info --allocation $ALLOC1
     ```
 19. Wait a challenge some time. Check challenge pool again.
-20. Check out blobbers wallets to see their rewards.
+20. Check out blobbers stake pools to see filling with rewards (OVERFILL column)
     ```
-    ./zwallet getbalance --wallet=blobber1.json
-    ./zwallet getbalance --wallet=blobber2.json
+    ./zbox sp-info --blobber_id $BLOBBER1
+    ./zbox sp-info --blobber_id $BLOBBER2
     ```
 21. Delete the file
     ```
@@ -432,11 +432,11 @@ free to use these zbox command.
     ```
 26. Commit some tokens to a read pool.
     ```
-    ./zbox rp-lock --duration 12m --tokens 1
+    ./zbox rp-lock --allocation $ALLOC1 --duration 40m --tokens 1
     ```
 27. Check out locked tokens in the read pool.
     ```
-    ./zbox rp-info
+    ./zbox rp-info --allocation $ALLOC1
     ```
 28. Download the file.
     ```

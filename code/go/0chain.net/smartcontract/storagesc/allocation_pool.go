@@ -375,7 +375,6 @@ type backPool struct {
 
 type allocationPoolsStat struct {
 	Pools []allocationPoolStat `json:"pools"`
-	Back  backPool             `json:"back,omitempty"`
 }
 
 func (aps allocationPools) stat(now common.Timestamp) (

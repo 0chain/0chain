@@ -366,8 +366,7 @@ func Test_flow_reward(t *testing.T) {
 		wp, err = ssc.getWritePool(client.id, balances)
 		require.NoError(t, err)
 
-		require.EqualValues(t, moved, wp.Back.Balance)
-		require.EqualValues(t, 145117187500, wpb)
+		require.EqualValues(t, int64(wpb)+moved, wp.allocTotal(allocID, until))
 
 		alloc, err = ssc.getAllocation(allocID, balances)
 		require.NoError(t, err)
@@ -403,7 +402,7 @@ func Test_flow_reward(t *testing.T) {
 		var blobb1 = balances.balances[b3.id]
 
 		var wpb1, cpb1 = wp.allocTotal(allocID, until), cp.Balance
-		require.EqualValues(t, 145117187500, wpb1)
+		require.EqualValues(t, 147558593750, wpb1)
 		require.EqualValues(t, 2441406250, cpb1)
 		require.EqualValues(t, 40*x10, blobb1)
 
@@ -448,7 +447,7 @@ func Test_flow_reward(t *testing.T) {
 		var blobb2 = balances.balances[b3.id]
 
 		var wpb2, cpb2 = wp.allocTotal(allocID, until), cp.Balance
-		require.EqualValues(t, 140234375000, wpb2)
+		require.EqualValues(t, 142675781250, wpb2)
 		require.EqualValues(t, 7324218750, cpb2)
 		require.EqualValues(t, 40*x10, blobb2)
 
@@ -662,9 +661,12 @@ func Test_flow_penalty(t *testing.T) {
 		var (
 			step            = (int64(alloc.Expiration) - tp) / 10
 			challID, prevID string
+
+			until = common.Timestamp(alloc.Expiration +
+				toSeconds(alloc.ChallengeCompletionTime))
 			// last loop balances (previous balance)
 			spl     = sp.Balance
-			wpl     = wp.Back.Balance
+			wpl     = wp.allocUntil(allocID, until)
 			opl     = offer.Lock
 			cpl     = cp.Balance
 			b4l     = balances.balances[b4.id]
@@ -708,8 +710,8 @@ func Test_flow_penalty(t *testing.T) {
 			require.NoError(t, err)
 
 			// write pool balance should grow (stake -> write_pool)
-			require.True(t, wpl < wp.Back.Balance)
-			wpl = wp.Back.Balance
+			require.True(t, wpl < wp.allocUntil(allocID, until))
+			wpl = wp.allocUntil(allocID, until)
 
 			// challenge pool should be reduced (validators reward)
 			cp, err = ssc.getChallengePool(allocID, balances)

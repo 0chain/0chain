@@ -974,9 +974,12 @@ func (ssc *StorageSmartContract) finalizeAllocation(
 			"invalid state: can't get related blobbers: "+err.Error())
 	}
 
+	var until = alloc.Expiration + toSeconds(alloc.ChallengeCompletionTime)
+
 	// 1. empty the challenge pool
 	if alloc.Canceled {
-		if err = cp.moveToWritePool(wp, cp.Balance); err != nil {
+		err = cp.moveToWritePool(alloc.ID, until, wp, cp.Balance)
+		if err != nil {
 			return "", common.NewError("fini_alloc_failed",
 				"emptying challenge pool: "+err.Error())
 		}
@@ -985,7 +988,6 @@ func (ssc *StorageSmartContract) finalizeAllocation(
 
 	// 2. move min_lock_demands left to blobber's stake pools
 	// 3. remove blobber's offers (update)
-	var until = alloc.Expiration + toSeconds(alloc.ChallengeCompletionTime)
 	for i, d := range alloc.BlobberDetails {
 		var sp *stakePool
 		if sp, err = ssc.getStakePool(d.BlobberID, balances); err != nil {
@@ -1061,11 +1063,12 @@ func (ssc *StorageSmartContract) finalizeAllocation(
 				return "", common.NewError("fini_alloc_failed",
 					"can't save stake pool of "+d.BlobberID+": "+err.Error())
 			}
+
 		}
 	}
 
 	// move division error to write pool (if any)
-	if err = cp.moveToWritePool(wp, cp.Balance); err != nil {
+	if err = cp.moveToWritePool(alloc.ID, until, wp, cp.Balance); err != nil {
 		return "", common.NewError("fini_alloc_failed",
 			"emptying challenge pool: "+err.Error())
 	}

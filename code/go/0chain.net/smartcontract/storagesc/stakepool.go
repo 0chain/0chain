@@ -196,8 +196,8 @@ func (sp *stakePool) update(sscID string, now common.Timestamp,
 }
 
 // moveToWritePool moves tokens to write pool on challenge failed
-func (sp *stakePool) moveToWritePool(wp *writePool,
-	value state.Balance) (err error) {
+func (sp *stakePool) moveToWritePool(allocID string, until common.Timestamp,
+	wp *writePool, value state.Balance) (err error) {
 
 	if value == 0 {
 		return // nothing to move
@@ -208,8 +208,14 @@ func (sp *stakePool) moveToWritePool(wp *writePool,
 			sp.ID, sp.Balance, value)
 	}
 
+	var ap = wp.allocPool(allocID, until)
+	if ap == nil {
+		return fmt.Errorf("invalid state: missing allocation pool "+
+			"to return to: %s", allocID)
+	}
+
 	// move
-	_, _, err = sp.TransferTo(&wp.Back, value, nil)
+	_, _, err = sp.TransferTo(ap, value, nil)
 	return
 }
 

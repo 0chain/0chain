@@ -236,7 +236,7 @@ var avgTerms = Terms{
 	WritePrice:              5 * x10,
 	MinLockDemand:           0.1,
 	MaxOfferDuration:        1 * time.Hour,
-	ChallengeCompletionTime: 10 * time.Second,
+	ChallengeCompletionTime: 200 * time.Second,
 }
 
 // add allocation and 20 blobbers

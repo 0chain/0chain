@@ -354,6 +354,8 @@ type BlobberAllocation struct {
 	Penalty state.Balance `json:"penalty"`
 	// ReadReward of the blobber.
 	ReadReward state.Balance `json:"read_reward"`
+	// Returned back to write pool on challenge failed.
+	Returned state.Balance `json:"returned"`
 	// ChallengeReward of the blobber.
 	ChallengeReward state.Balance `json:"challenge_reward"`
 	// FinalReward is number of tokens moved to the blobber on finalization.
