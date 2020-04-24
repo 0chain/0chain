@@ -808,6 +808,11 @@ func (vsc *VestingSmartContract) trigger(t *transaction.Transaction,
 			"only owner can trigger the pool")
 	}
 
+	if len(vp.Destinations) == 0 {
+		return "", common.NewError("trigger_vesting_pool_failed",
+			"no destinations in the pool")
+	}
+
 	if resp, err = vp.trigger(t, balances); err != nil {
 		return "", common.NewError("trigger_vesting_pool_failed",
 			"triggering pool: "+err.Error())
