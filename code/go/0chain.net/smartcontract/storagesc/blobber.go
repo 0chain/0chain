@@ -113,7 +113,12 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	blobber *StorageNode, all *StorageNodes, balances c_state.StateContextI) (
 	sp *stakePool, err error) {
 
-	sp = newStakePool() // create new
+	// the stake pool can be created by related validator
+	sp, err = sc.getOrCreateStakePool(blobber.ID, balances)
+	if err != nil {
+		return
+	}
+
 	blobber.LastHealthCheck = t.CreationDate
 
 	// create stake pool
@@ -434,7 +439,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 		return "", common.NewError("commit_read_failed",
 			"can't transfer tokens from read pool to stake pool: "+err.Error())
 	}
-	sp.Reward += value          //
+	sp.BlobberReward += value   //
 	details.ReadReward += value // stat
 	details.Spent += value      // reduce min lock demand left
 

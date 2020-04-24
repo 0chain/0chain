@@ -33,8 +33,9 @@ type stakePool struct {
 	// Offers represents tokens required by currently
 	// open offers of the blobber. It's allocation_id -> {lock, expire}
 	Offers map[string]*offerPool `json:"offers"`
-	// reward represents total blobber reward.
-	Reward state.Balance `json:"reward"`
+	// reward represents total blobber/validator rewards
+	BlobberReward   state.Balance `json:"blobber_reward"`
+	ValidatorReward state.Balance `json:"validator_reward"`
 }
 
 // newStakePool for given blobber, use empty blobberID to create a stakePool to
@@ -265,7 +266,8 @@ func (sp *stakePool) stat(scKey string, now common.Timestamp,
 		stat.Overfill = sp.Balance - stake
 	}
 
-	stat.Reward = sp.Reward
+	stat.BlobberReward = sp.BlobberReward
+	stat.ValidatorReward = sp.ValidatorReward
 	return
 }
 
@@ -286,7 +288,9 @@ type stakePoolStat struct {
 	CapacityStake state.Balance   `json:"capacity_stake"`
 	Lack          state.Balance   `json:"lack"`
 	Overfill      state.Balance   `json:"overfill"`
-	Reward        state.Balance   `json:"reward"`
+	// rewards
+	BlobberReward   state.Balance `json:"blobber_reward"`
+	ValidatorReward state.Balance `json:"validator_reward"`
 }
 
 func (stat *stakePoolStat) encode() (b []byte) {
@@ -327,6 +331,24 @@ func (ssc *StorageSmartContract) getStakePool(blobberID datastore.Key,
 	}
 	sp = newStakePool()
 	err = sp.Decode(poolb)
+	return
+}
+
+// get existing stake pool or create new one not saving it
+func (ssc *StorageSmartContract) getOrCreateStakePool(blobberID datastore.Key,
+	balances chainState.StateContextI) (sp *stakePool, err error) {
+
+	// the stake pool can be created by related validator
+	sp, err = ssc.getStakePool(blobberID, balances)
+	if err != nil && err != util.ErrValueNotPresent {
+		return nil, fmt.Errorf("unexpected error: %v", err)
+	}
+
+	if err == util.ErrValueNotPresent {
+		sp, err = newStakePool(), nil // create new, reset error
+		sp.ZcnPool.ID = stakePoolKey(ssc.ID, blobberID)
+	}
+
 	return
 }
 

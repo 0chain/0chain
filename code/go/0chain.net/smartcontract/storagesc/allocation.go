@@ -1003,7 +1003,7 @@ func (ssc *StorageSmartContract) finalizeAllocation(
 				return "", common.NewError("fini_alloc_failed", "can't send"+
 					" min lock demand left for "+d.BlobberID+": "+err.Error())
 			}
-			sp.Reward += move         //
+			sp.BlobberReward += move  //
 			d.FinalReward += move     //
 			d.Spent = d.MinLockDemand // to save
 		}
@@ -1058,7 +1058,7 @@ func (ssc *StorageSmartContract) finalizeAllocation(
 				return "", common.NewError("fini_alloc_failed", "can't move "+
 					"tokens to blobber "+d.BlobberID+": "+err.Error())
 			}
-			sp.Reward += move
+			sp.BlobberReward += move
 			d.FinalReward += move
 
 			// save the stake pool
