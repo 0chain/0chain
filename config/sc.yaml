@@ -36,6 +36,9 @@ smart_contracts:
     # blobber_slash represents blobber's stake penalty when a challenge not
     # passed
     blobber_slash: 0.10
+    # max prices for blobbers (tokens per GB)
+    max_read_price: 100.0
+    max_write_price: 100.0
   vestingsc:
     min_lock: 0.01
     min_duration: '2m'

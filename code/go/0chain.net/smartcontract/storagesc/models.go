@@ -244,6 +244,12 @@ func (t *Terms) validate(conf *scConfig) (err error) {
 	if t.ChallengeCompletionTime < 0 {
 		return errors.New("negative challenge_completion_time")
 	}
+	if t.ReadPrice > conf.MaxReadPrice {
+		return errors.New("read_price is greater then max_read_price allowed")
+	}
+	if t.WritePrice > conf.MaxWritePrice {
+		return errors.New("write_price is greater then max_write_price allowed")
+	}
 	return // nil
 }
 
@@ -520,6 +526,11 @@ List:
 	}
 
 	return list[:i]
+}
+
+// Until returns allocation expiration.
+func (sa *StorageAllocation) Until() common.Timestamp {
+	return sa.Expiration + toSeconds(sa.ChallengeCompletionTime)
 }
 
 func (sn *StorageAllocation) GetKey(globalKey string) datastore.Key {

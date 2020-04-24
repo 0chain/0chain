@@ -202,7 +202,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 	alloc.MovedToValidators += validatorsReward
 
 	// move back to write pool
-	var until = alloc.Expiration + toSeconds(alloc.ChallengeCompletionTime)
+	var until = alloc.Until()
 	err = cp.moveToWritePool(alloc.ID, details.BlobberID, until, wp, move)
 	if err != nil {
 		return fmt.Errorf("moving failed challenge to write pool: %v", err)

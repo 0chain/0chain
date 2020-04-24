@@ -239,8 +239,7 @@ func Test_flow_reward(t *testing.T) {
 	}
 	require.NotNil(t, b2)
 
-	var until = int64(alloc.Expiration +
-		toSeconds(alloc.ChallengeCompletionTime))
+	var until = int64(alloc.Until())
 
 	t.Run("write", func(t *testing.T) {
 
@@ -662,8 +661,7 @@ func Test_flow_penalty(t *testing.T) {
 			step            = (int64(alloc.Expiration) - tp) / 10
 			challID, prevID string
 
-			until = common.Timestamp(alloc.Expiration +
-				toSeconds(alloc.ChallengeCompletionTime))
+			until = alloc.Until()
 			// last loop balances (previous balance)
 			spl     = sp.Balance
 			wpl     = wp.allocUntil(allocID, until)

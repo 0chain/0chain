@@ -589,7 +589,7 @@ func (sc *StorageSmartContract) extendAllocation(t *transaction.Transaction,
 			"can't get write pool: "+err.Error())
 	}
 
-	var until = alloc.Expiration + toSeconds(alloc.ChallengeCompletionTime)
+	var until = alloc.Until()
 
 	// lock tokens if this transaction provides them
 	if t.Value > 0 {
@@ -672,7 +672,7 @@ func (sc *StorageSmartContract) reduceAllocation(t *transaction.Transaction,
 			return "", common.NewError("allocation_reducing_failed",
 				err.Error())
 		}
-		var until = alloc.Expiration + toSeconds(alloc.ChallengeCompletionTime)
+		var until = alloc.Until()
 		if _, err = wp.fill(t, alloc, until, balances); err != nil {
 			return "", common.NewError("allocation_reducing_failed",
 				err.Error())
@@ -976,7 +976,7 @@ func (ssc *StorageSmartContract) finalizeAllocation(
 			"invalid state: can't get related blobbers: "+err.Error())
 	}
 
-	var until = alloc.Expiration + toSeconds(alloc.ChallengeCompletionTime)
+	var until = alloc.Until()
 
 	// 1. empty the challenge pool
 	if alloc.Canceled {

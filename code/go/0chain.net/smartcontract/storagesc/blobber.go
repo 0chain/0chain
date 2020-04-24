@@ -500,7 +500,7 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 	}
 
 	var (
-		until = alloc.Expiration + toSeconds(alloc.ChallengeCompletionTime)
+		until = alloc.Until()
 		value state.Balance
 	)
 

@@ -21,7 +21,7 @@ Provide
  - capacity                   bytes
  - min_lock_demand            [0; 1]
  - write_price                tok / GB
- - read_price                 tok / GB
+ - read_price                 tok / GB (by 64 KB chunks)
  - max_offer_duration         time.Duration
  - challenge_completion_time  time.Duration
 

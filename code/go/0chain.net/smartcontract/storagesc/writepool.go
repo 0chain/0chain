@@ -304,7 +304,7 @@ func (ssc *StorageSmartContract) createWritePool(t *transaction.Transaction,
 	}
 
 	if t.Value > 0 {
-		var until = alloc.Expiration + toSeconds(alloc.ChallengeCompletionTime)
+		var until = alloc.Until()
 		if _, err = wp.fill(t, alloc, until, balances); err != nil {
 			return
 		}
