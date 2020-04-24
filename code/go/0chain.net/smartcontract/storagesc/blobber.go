@@ -479,6 +479,10 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 	size int64, details *BlobberAllocation, balances c_state.StateContextI) (
 	err error) {
 
+	if size == 0 {
+		return errors.New("zero size write marker given")
+	}
+
 	// depending size (> 0, write, or < 0, delete)
 	// 1. move tokens from write pool to challenge pool
 	// 2. move tokens from challenge pool back to write pool
@@ -495,14 +499,16 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 		return errors.New("can't get related challenge pool")
 	}
 
-	var value state.Balance
+	var (
+		until = alloc.Expiration + toSeconds(alloc.ChallengeCompletionTime)
+		value state.Balance
+	)
 
 	if size > 0 {
 		// write
 		value = state.Balance(float64(details.Terms.WritePrice) *
 			sizeInGB(size))
 
-		var until = alloc.Expiration + toSeconds(alloc.ChallengeCompletionTime)
 		err = wp.moveToChallenge(alloc.ID, details.BlobberID, cp, until, value)
 		if err != nil {
 			return fmt.Errorf("can't move tokens to challenge pool: %v", err)
@@ -526,24 +532,27 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 			lastChallenge = bc.LatestCompletedChallenge.Created
 		}
 
-		// tokens left in challenge pool
-		var left = sizePrice(details.Stats.UsedSize, details.Terms.WritePrice) *
-			allocLeftRatio(alloc.StartTime, alloc.Expiration, lastChallenge)
+		var (
+			full = float64(details.Terms.WritePrice) * sizeInGB(size)
+			left = allocLeftRatio(alloc.StartTime, alloc.Expiration,
+				lastChallenge)
+		)
 
-		value = cp.Balance - state.Balance(left)
+		value = state.Balance(full * left)
 
 		if value < 0 {
 			return fmt.Errorf("got negative amount of tokens to return" +
 				" back to write pool on delete data")
 		}
 
-		var until = alloc.Expiration + toSeconds(alloc.ChallengeCompletionTime)
-
-		if err = cp.moveToWritePool(alloc.ID, until, wp, value); err != nil {
-			return fmt.Errorf("can't move tokens back to write pool: %v", err)
+		if value <= cp.Balance {
+			err = cp.moveToWritePool(alloc.ID, details.BlobberID, until, wp, value)
+			if err != nil {
+				return fmt.Errorf("can't move tokens back to write pool: %v", err)
+			}
+			alloc.MovedBack += value //
+			details.Spent -= value   // returned back
 		}
-		alloc.MovedBack += value
-		details.Spent -= value
 	}
 
 	// save pools

@@ -150,16 +150,23 @@ type allocationPool struct {
 type allocationPools []*allocationPool
 
 func (aps allocationPools) getIndex(allocID string) (i int, ok bool) {
-	i = sort.Search(len(aps), func(i int) bool {
-		return aps[i].AllocationID >= allocID
-	})
-	if i == len(aps) {
-		return // not found
+	var ap *allocationPool
+	for i, ap = range aps {
+		if ap.AllocationID == allocID {
+			return i, true
+		}
 	}
-	if aps[i].AllocationID == allocID {
-		return i, true // found
-	}
-	return // not found
+	return 0, false
+	// i = sort.Search(len(aps), func(i int) bool {
+	// 	return aps[i].AllocationID >= allocID
+	// })
+	// if i == len(aps) {
+	// 	return // not found
+	// }
+	// if aps[i].AllocationID == allocID {
+	// 	return i, true // found
+	// }
+	// return // not found
 }
 
 func (aps allocationPools) get(allocID string) (

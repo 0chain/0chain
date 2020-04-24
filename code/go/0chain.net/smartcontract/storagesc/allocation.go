@@ -978,7 +978,7 @@ func (ssc *StorageSmartContract) finalizeAllocation(
 
 	// 1. empty the challenge pool
 	if alloc.Canceled {
-		err = cp.moveToWritePool(alloc.ID, until, wp, cp.Balance)
+		err = cp.moveToWritePool(alloc.ID, "", until, wp, cp.Balance)
 		if err != nil {
 			return "", common.NewError("fini_alloc_failed",
 				"emptying challenge pool: "+err.Error())
@@ -1069,7 +1069,8 @@ func (ssc *StorageSmartContract) finalizeAllocation(
 	}
 
 	// move division error to write pool (if any)
-	if err = cp.moveToWritePool(alloc.ID, until, wp, cp.Balance); err != nil {
+	err = cp.moveToWritePool(alloc.ID, "", until, wp, cp.Balance)
+	if err != nil {
 		return "", common.NewError("fini_alloc_failed",
 			"emptying challenge pool: "+err.Error())
 	}

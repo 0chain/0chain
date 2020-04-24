@@ -203,7 +203,8 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 
 	// move back to write pool
 	var until = alloc.Expiration + toSeconds(alloc.ChallengeCompletionTime)
-	if err = cp.moveToWritePool(alloc.ID, until, wp, move); err != nil {
+	err = cp.moveToWritePool(alloc.ID, details.BlobberID, until, wp, move)
+	if err != nil {
 		return fmt.Errorf("moving failed challenge to write pool: %v", err)
 	}
 	alloc.MovedBack += move
@@ -229,7 +230,8 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 		var move = state.Balance(float64(offer.Lock) * conf.BlobberSlash)
 		offer.Lock -= move // subtract the offer stake
 
-		if err = sp.moveToWritePool(alloc.ID, until, wp, move); err != nil {
+		err = sp.moveToWritePool(alloc.ID, details.BlobberID, until, wp, move)
+		if err != nil {
 			return fmt.Errorf("can't move tokens to write pool: %v", err)
 		}
 

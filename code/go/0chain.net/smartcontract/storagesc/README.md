@@ -365,7 +365,7 @@ free to use these zbox command.
     ```
     ./zbox updateallocation --allocation $ALLOC1 --size 209715200
     ```
-13. Check out its write pool again.
+13. Check out its write pool again. Shouldn't be changed.
     ```
     ./zbox wp-info --allocation $ALLOC1
     ```
@@ -443,13 +443,6 @@ free to use these zbox command.
     rm -f got.bin
     ./zbox download --allocation $ALLOC1 --localpath=got.bin \
         --remotepath /remote/random.bin
-    ```
-29. Check the file, check read pool, check blobbers wallets
-    ```
-    diff got.bin random.bin
-    ./zbox rp-info
-    ./zwallet getbalance --wallet=blobber1.json
-    ./zwallet getbalance --wallet=blobber2.json
     ```
 30. Make the allocation expired.
     ```

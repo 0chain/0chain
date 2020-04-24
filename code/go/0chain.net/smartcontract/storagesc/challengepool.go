@@ -68,8 +68,8 @@ func (cp *challengePool) save(sscKey, allocationID string,
 }
 
 // moveToWritePool moves tokens back to write pool on data deleted
-func (cp *challengePool) moveToWritePool(allocID string, until common.Timestamp,
-	wp *writePool, value state.Balance) (err error) {
+func (cp *challengePool) moveToWritePool(allocID, blobID string,
+	until common.Timestamp, wp *writePool, value state.Balance) (err error) {
 
 	if value == 0 {
 		return // nothing to move
@@ -82,11 +82,24 @@ func (cp *challengePool) moveToWritePool(allocID string, until common.Timestamp,
 
 	var ap = wp.allocPool(allocID, until)
 	if ap == nil {
-		return fmt.Errorf("invalid state: missing allocation pool "+
-			"to return to: %s", allocID)
+		ap = new(allocationPool)
+		ap.AllocationID = allocID
+		ap.ExpireAt = 0
+		wp.Pools.add(ap)
 	}
 
 	// move
+	if blobID != "" {
+		var bp, ok = ap.Blobbers.get(blobID)
+		if !ok {
+			ap.Blobbers.add(&blobberPool{
+				BlobberID: blobID,
+				Balance:   value,
+			})
+		} else {
+			bp.Balance += value
+		}
+	}
 	_, _, err = cp.TransferTo(ap, value, nil)
 	return
 }
