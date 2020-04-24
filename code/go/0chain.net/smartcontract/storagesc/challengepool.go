@@ -161,8 +161,7 @@ func (cp *challengePool) stat(alloc *StorageAllocation) (
 	stat.ID = cp.ID
 	stat.Balance = cp.Balance
 	stat.StartTime = alloc.StartTime
-	stat.Expiration = alloc.Expiration +
-		toSeconds(alloc.ChallengeCompletionTime)
+	stat.Expiration = alloc.Until()
 	stat.Finalized = alloc.Finalized
 
 	return
