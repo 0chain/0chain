@@ -105,15 +105,16 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 }
 
 type newAllocationRequest struct {
-	DataShards        int              `json:"data_shards"`
-	ParityShards      int              `json:"parity_shards"`
-	Size              int64            `json:"size"`
-	Expiration        common.Timestamp `json:"expiration_date"`
-	Owner             string           `json:"owner_id"`
-	OwnerPublicKey    string           `json:"owner_public_key"`
-	PreferredBlobbers []string         `json:"preferred_blobbers"`
-	ReadPriceRange    PriceRange       `json:"read_price_range"`
-	WritePriceRange   PriceRange       `json:"write_price_range"`
+	DataShards                 int              `json:"data_shards"`
+	ParityShards               int              `json:"parity_shards"`
+	Size                       int64            `json:"size"`
+	Expiration                 common.Timestamp `json:"expiration_date"`
+	Owner                      string           `json:"owner_id"`
+	OwnerPublicKey             string           `json:"owner_public_key"`
+	PreferredBlobbers          []string         `json:"preferred_blobbers"`
+	ReadPriceRange             PriceRange       `json:"read_price_range"`
+	WritePriceRange            PriceRange       `json:"write_price_range"`
+	MaxChallengeCompletionTime time.Duration    `json:"max_challenge_completion_time"`
 }
 
 // storageAllocation from the request
@@ -128,6 +129,7 @@ func (nar *newAllocationRequest) storageAllocation() (sa *StorageAllocation) {
 	sa.PreferredBlobbers = nar.PreferredBlobbers
 	sa.ReadPriceRange = nar.ReadPriceRange
 	sa.WritePriceRange = nar.WritePriceRange
+	sa.MaxChallengeCompletionTime = nar.MaxChallengeCompletionTime
 	return
 }
 
@@ -587,7 +589,7 @@ func (sc *StorageSmartContract) extendAllocation(t *transaction.Transaction,
 			"can't get write pool: "+err.Error())
 	}
 
-	var until = alloc.Expiration + toSeconds(alloc.ChallengeCompletionTime)
+	var until = alloc.Until()
 
 	// lock tokens if this transaction provides them
 	if t.Value > 0 {
@@ -670,7 +672,7 @@ func (sc *StorageSmartContract) reduceAllocation(t *transaction.Transaction,
 			return "", common.NewError("allocation_reducing_failed",
 				err.Error())
 		}
-		var until = alloc.Expiration + toSeconds(alloc.ChallengeCompletionTime)
+		var until = alloc.Until()
 		if _, err = wp.fill(t, alloc, until, balances); err != nil {
 			return "", common.NewError("allocation_reducing_failed",
 				err.Error())
@@ -974,7 +976,7 @@ func (ssc *StorageSmartContract) finalizeAllocation(
 			"invalid state: can't get related blobbers: "+err.Error())
 	}
 
-	var until = alloc.Expiration + toSeconds(alloc.ChallengeCompletionTime)
+	var until = alloc.Until()
 
 	// 1. empty the challenge pool
 	if alloc.Canceled {
@@ -1001,7 +1003,7 @@ func (ssc *StorageSmartContract) finalizeAllocation(
 				return "", common.NewError("fini_alloc_failed", "can't send"+
 					" min lock demand left for "+d.BlobberID+": "+err.Error())
 			}
-			sp.Reward += move         //
+			sp.BlobberReward += move  //
 			d.FinalReward += move     //
 			d.Spent = d.MinLockDemand // to save
 		}
@@ -1056,7 +1058,7 @@ func (ssc *StorageSmartContract) finalizeAllocation(
 				return "", common.NewError("fini_alloc_failed", "can't move "+
 					"tokens to blobber "+d.BlobberID+": "+err.Error())
 			}
-			sp.Reward += move
+			sp.BlobberReward += move
 			d.FinalReward += move
 
 			// save the stake pool

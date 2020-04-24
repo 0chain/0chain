@@ -9,6 +9,7 @@ import (
 
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
+	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -62,6 +63,13 @@ type scConfig struct {
 	// BlobberSlash represents % (value in [0; 1] range) of blobbers' stake
 	// tokens penalized on challenge not passed.
 	BlobberSlash float64 `json:"blobber_slash"`
+
+	// price limits for blobbers
+
+	// MaxReadPrice allowed for a blobber.
+	MaxReadPrice state.Balance `json:"max_read_price"`
+	// MaxWrtiePrice
+	MaxWritePrice state.Balance `json:"max_write_price"`
 }
 
 func (sc *scConfig) validate() (err error) {
@@ -91,6 +99,12 @@ func (sc *scConfig) validate() (err error) {
 	}
 	if sc.MinAllocSize < 0 {
 		return fmt.Errorf("negative min_alloc_size: %v", sc.MinAllocSize)
+	}
+	if sc.MaxReadPrice < 0 {
+		return fmt.Errorf("negative max_read_price: %v", sc.MaxReadPrice)
+	}
+	if sc.MaxWritePrice < 0 {
+		return fmt.Errorf("negative max_write_price: %v", sc.MaxWritePrice)
 	}
 	return
 }
@@ -142,6 +156,10 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 		prefix + "validator_reward")
 	conf.BlobberSlash = config.SmartContractConfig.GetFloat64(
 		prefix + "blobber_slash")
+	conf.MaxReadPrice = state.Balance(config.SmartContractConfig.GetFloat64(
+		prefix+"max_read_price") * 1e10)
+	conf.MaxWritePrice = state.Balance(config.SmartContractConfig.GetFloat64(
+		prefix+"max_write_price") * 1e10)
 	// read pool
 	conf.ReadPool = new(readPoolConfig)
 	conf.ReadPool.MinLockPeriod = config.SmartContractConfig.GetDuration(

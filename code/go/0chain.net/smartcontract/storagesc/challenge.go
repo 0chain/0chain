@@ -16,6 +16,7 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	. "0chain.net/core/logging"
 	"0chain.net/core/util"
@@ -124,14 +125,25 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	if err = cp.moveToBlobber(sc.ID, sp, move); err != nil {
 		return fmt.Errorf("can't move tokens to blobber: %v", err)
 	}
-	sp.Reward += move
+	sp.BlobberReward += move
 	details.ChallengeReward += move
 
-	err = cp.moveToValidatos(sc.ID, validatorsReward, validators, balances)
+	// validators' stake pools
+	var vsps []*stakePool
+	if vsps, err = sc.validatorsStakePools(validators, balances); err != nil {
+		return
+	}
+
+	err = cp.moveToValidators(validatorsReward, validators, vsps)
 	if err != nil {
 		return fmt.Errorf("rewarding validators: %v", err)
 	}
 	alloc.MovedToValidators += validatorsReward
+
+	// save validators' stake pools
+	if err = sc.saveStakePools(validators, vsps, balances); err != nil {
+		return
+	}
 
 	// save the pools
 	if err = sp.save(sc.ID, bc.BlobberID, balances); err != nil {
@@ -142,6 +154,35 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		return fmt.Errorf("can't save allocation's challenge pool: %v", err)
 	}
 
+	return
+}
+
+// obtain stake pools of given validators
+func (ssc *StorageSmartContract) validatorsStakePools(
+	validators []datastore.Key, balances c_state.StateContextI) (
+	sps []*stakePool, err error) {
+
+	sps = make([]*stakePool, 0, len(validators))
+	for _, id := range validators {
+		var sp *stakePool
+		if sp, err = ssc.getStakePool(id, balances); err != nil {
+			return nil, fmt.Errorf("can't get validator %s stake pool: %v",
+				id, err)
+		}
+		sps = append(sps, sp)
+	}
+
+	return
+}
+
+func (ssc *StorageSmartContract) saveStakePools(validators []datastore.Key,
+	sps []*stakePool, balances c_state.StateContextI) (err error) {
+
+	for i, sp := range sps {
+		if err = sp.save(ssc.ID, validators[i], balances); err != nil {
+			return fmt.Errorf("saving stake pool: %v", err)
+		}
+	}
 	return
 }
 
@@ -194,15 +235,26 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 	var validatorsReward = state.Balance(conf.ValidatorReward * float64(move))
 	move -= validatorsReward
 
+	// validators' stake pools
+	var vsps []*stakePool
+	if vsps, err = sc.validatorsStakePools(validators, balances); err != nil {
+		return
+	}
+
 	// validators reward
-	err = cp.moveToValidatos(sc.ID, validatorsReward, validators, balances)
+	err = cp.moveToValidators(validatorsReward, validators, vsps)
 	if err != nil {
 		return fmt.Errorf("rewarding validators: %v", err)
 	}
 	alloc.MovedToValidators += validatorsReward
 
+	// save validators' stake pools
+	if err = sc.saveStakePools(validators, vsps, balances); err != nil {
+		return
+	}
+
 	// move back to write pool
-	var until = alloc.Expiration + toSeconds(alloc.ChallengeCompletionTime)
+	var until = alloc.Until()
 	err = cp.moveToWritePool(alloc.ID, details.BlobberID, until, wp, move)
 	if err != nil {
 		return fmt.Errorf("moving failed challenge to write pool: %v", err)

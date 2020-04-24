@@ -255,6 +255,7 @@ func addAllocation(t *testing.T, ssc *StorageSmartContract, client *Client,
 	nar.ReadPriceRange = PriceRange{1 * x10, 10 * x10}
 	nar.WritePriceRange = PriceRange{2 * x10, 20 * x10}
 	nar.Size = 2 * GB // 2 GB
+	nar.MaxChallengeCompletionTime = 200 * time.Hour
 
 	for i := 0; i < 30; i++ {
 		var b = addBlobber(t, ssc, 2*GB, now, avgTerms, 50*x10, balances)
@@ -292,6 +293,8 @@ func setConfig(t *testing.T, balances chainState.StateContextI) (
 	conf.MinBlobberCapacity = 1 * GB
 	conf.ValidatorReward = 0.025
 	conf.BlobberSlash = 0.1
+	conf.MaxReadPrice = 100e10  // 100 tokens per GB max allowed (by 64 KB)
+	conf.MaxWritePrice = 100e10 // 100 tokens per GB max allowed
 
 	conf.ReadPool = &readPoolConfig{
 		MinLock:       10,

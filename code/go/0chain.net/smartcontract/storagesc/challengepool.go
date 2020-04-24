@@ -125,8 +125,8 @@ func (cp *challengePool) moveToBlobber(sscID string, sp *stakePool,
 	return
 }
 
-func (cp *challengePool) moveToValidatos(sscID string, reward state.Balance,
-	validatos []string, balances chainState.StateContextI) (err error) {
+func (cp *challengePool) moveToValidators(reward state.Balance,
+	validatos []datastore.Key, vsps []*stakePool) (err error) {
 
 	if len(validatos) == 0 || reward == 0 {
 		return // nothing to move, or nothing to move to
@@ -134,22 +134,20 @@ func (cp *challengePool) moveToValidatos(sscID string, reward state.Balance,
 
 	var oneReward = state.Balance(float64(reward) / float64(len(validatos)))
 
-	for _, id := range validatos {
+	for i, sp := range vsps {
 
 		if cp.Balance < oneReward {
 			return fmt.Errorf("not enough tokens in challenge pool: %v < %v",
 				cp.Balance, oneReward)
 		}
 
-		var transfer *state.Transfer
-		transfer, _, err = cp.DrainPool(sscID, id, oneReward, nil)
+		_, _, err = cp.TransferTo(sp, oneReward, nil)
 		if err != nil {
-			return fmt.Errorf("moving tokens to validator %s: %v", id, err)
+			return fmt.Errorf("moving tokens to validator %s: %v",
+				validatos[i], err)
 		}
 
-		if err = balances.AddTransfer(transfer); err != nil {
-			return fmt.Errorf("adding transfer to validator %s: %v", id, err)
-		}
+		sp.ValidatorReward += oneReward
 	}
 
 	return
@@ -163,8 +161,7 @@ func (cp *challengePool) stat(alloc *StorageAllocation) (
 	stat.ID = cp.ID
 	stat.Balance = cp.Balance
 	stat.StartTime = alloc.StartTime
-	stat.Expiration = alloc.Expiration +
-		toSeconds(alloc.ChallengeCompletionTime)
+	stat.Expiration = alloc.Until()
 	stat.Finalized = alloc.Finalized
 
 	return

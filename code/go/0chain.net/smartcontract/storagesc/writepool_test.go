@@ -175,9 +175,6 @@ func TestStorageSmartContract_writePoolLock(t *testing.T) {
 		ChallengeCompletionTime: 200 * time.Second,
 	}
 
-	var until = 210
-	_ = until
-
 	// 1. no pool
 	_, err = ssc.writePoolLock(&tx, nil, balances)
 	requireErrMsg(t, err, errMsg1)

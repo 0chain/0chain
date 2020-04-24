@@ -333,7 +333,8 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	nar.Expiration = tx.CreationDate + toSeconds(48*time.Hour)
 	nar.Owner = "" // not set
 	nar.OwnerPublicKey = pubKey
-	nar.PreferredBlobbers = nil // not set
+	nar.PreferredBlobbers = nil                      // not set
+	nar.MaxChallengeCompletionTime = 200 * time.Hour // max cct
 
 	_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
 	requireErrMsg(t, err, errMsg6)
@@ -593,7 +594,8 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 	nar.Expiration = tx.CreationDate + toSeconds(48*time.Hour)
 	nar.Owner = "" // not set
 	nar.OwnerPublicKey = pubKey
-	nar.PreferredBlobbers = nil // not set
+	nar.PreferredBlobbers = nil                      // not set
+	nar.MaxChallengeCompletionTime = 200 * time.Hour //
 
 	nar.Expiration = tx.CreationDate + toSeconds(100*time.Second)
 

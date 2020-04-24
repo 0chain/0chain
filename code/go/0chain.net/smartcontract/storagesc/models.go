@@ -244,6 +244,12 @@ func (t *Terms) validate(conf *scConfig) (err error) {
 	if t.ChallengeCompletionTime < 0 {
 		return errors.New("negative challenge_completion_time")
 	}
+	if t.ReadPrice > conf.MaxReadPrice {
+		return errors.New("read_price is greater then max_read_price allowed")
+	}
+	if t.WritePrice > conf.MaxWritePrice {
+		return errors.New("write_price is greater then max_write_price allowed")
+	}
 	return // nil
 }
 
@@ -399,8 +405,12 @@ type StorageAllocation struct {
 	PreferredBlobbers []string                      `json:"preferred_blobbers"`
 	BlobberDetails    []*BlobberAllocation          `json:"blobber_details"`
 	BlobberMap        map[string]*BlobberAllocation `json:"-"`
-	ReadPriceRange    PriceRange                    `json:"read_price_range"`
-	WritePriceRange   PriceRange                    `json:"write_price_range"`
+
+	// Requested ranges.
+	ReadPriceRange             PriceRange    `json:"read_price_range"`
+	WritePriceRange            PriceRange    `json:"write_price_range"`
+	MaxChallengeCompletionTime time.Duration `json:"max_challenge_completion_time"`
+
 	// ChallengeCompletionTime is max challenge completion time of
 	// all blobbers of the allocation.
 	ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
@@ -502,6 +512,10 @@ List:
 		if b.Capacity-b.Used < bsize {
 			continue
 		}
+		// filter by max challenge completion time
+		if b.Terms.ChallengeCompletionTime > sa.MaxChallengeCompletionTime {
+			continue
+		}
 		for _, filter := range filters {
 			if filter(b) {
 				continue List
@@ -512,6 +526,11 @@ List:
 	}
 
 	return list[:i]
+}
+
+// Until returns allocation expiration.
+func (sa *StorageAllocation) Until() common.Timestamp {
+	return sa.Expiration + toSeconds(sa.ChallengeCompletionTime)
 }
 
 func (sn *StorageAllocation) GetKey(globalKey string) datastore.Key {

@@ -239,8 +239,7 @@ func Test_flow_reward(t *testing.T) {
 	}
 	require.NotNil(t, b2)
 
-	var until = int64(alloc.Expiration +
-		toSeconds(alloc.ChallengeCompletionTime))
+	var until = int64(alloc.Until())
 
 	t.Run("write", func(t *testing.T) {
 
@@ -532,8 +531,11 @@ func Test_flow_reward(t *testing.T) {
 
 			// validators reward
 			for i, val := range valids {
-				assert.True(t, validsl[i] < balances.balances[val.id])
-				validsl[i] = balances.balances[val.id]
+				var vsp *stakePool
+				vsp, err = ssc.getStakePool(val.id, balances)
+				require.NoError(t, err)
+				assert.True(t, validsl[i] < vsp.ValidatorReward)
+				validsl[i] = vsp.ValidatorReward
 			}
 
 			// next stage
@@ -662,8 +664,7 @@ func Test_flow_penalty(t *testing.T) {
 			step            = (int64(alloc.Expiration) - tp) / 10
 			challID, prevID string
 
-			until = common.Timestamp(alloc.Expiration +
-				toSeconds(alloc.ChallengeCompletionTime))
+			until = alloc.Until()
 			// last loop balances (previous balance)
 			spl     = sp.Balance
 			wpl     = wp.allocUntil(allocID, until)
@@ -738,8 +739,11 @@ func Test_flow_penalty(t *testing.T) {
 
 			// validators reward
 			for i, val := range valids {
-				assert.True(t, validsl[i] < balances.balances[val.id])
-				validsl[i] = balances.balances[val.id]
+				var vsp *stakePool
+				vsp, err = ssc.getStakePool(val.id, balances)
+				require.NoError(t, err)
+				assert.True(t, validsl[i] < vsp.ValidatorReward)
+				validsl[i] = vsp.ValidatorReward
 			}
 
 			// next stage

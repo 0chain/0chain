@@ -45,6 +45,17 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 		balances.InsertTrieNode(newValidator.GetKey(sc.ID), newValidator)
 	}
 
+	// create stake pool for the validator to count its rewards
+	var sp *stakePool
+	if sp, err = sc.getOrCreateStakePool(t.ClientID, balances); err != nil {
+		return "", common.NewError("add_validator_failed",
+			"get or create stake pool error: "+err.Error())
+	}
+	if err = sp.save(sc.ID, t.ClientID, balances); err != nil {
+		return "", common.NewError("add_validator_failed",
+			"saving stake pool error: "+err.Error())
+	}
+
 	buff := newValidator.Encode()
 	return string(buff), nil
 }
