@@ -399,8 +399,12 @@ type StorageAllocation struct {
 	PreferredBlobbers []string                      `json:"preferred_blobbers"`
 	BlobberDetails    []*BlobberAllocation          `json:"blobber_details"`
 	BlobberMap        map[string]*BlobberAllocation `json:"-"`
-	ReadPriceRange    PriceRange                    `json:"read_price_range"`
-	WritePriceRange   PriceRange                    `json:"write_price_range"`
+
+	// Requested ranges.
+	ReadPriceRange             PriceRange    `json:"read_price_range"`
+	WritePriceRange            PriceRange    `json:"write_price_range"`
+	MaxChallengeCompletionTime time.Duration `json:"max_challenge_completion_time"`
+
 	// ChallengeCompletionTime is max challenge completion time of
 	// all blobbers of the allocation.
 	ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
@@ -500,6 +504,10 @@ List:
 		}
 		// filter by blobber's capacity left
 		if b.Capacity-b.Used < bsize {
+			continue
+		}
+		// filter by max challenge completion time
+		if b.Terms.ChallengeCompletionTime > sa.MaxChallengeCompletionTime {
 			continue
 		}
 		for _, filter := range filters {
