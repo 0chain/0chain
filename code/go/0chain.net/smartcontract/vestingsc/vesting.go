@@ -482,7 +482,7 @@ func (vp *vestingPool) info(now common.Timestamp) (i *info) {
 			ID:     d.ID,
 			Wanted: d.Amount,
 			Earned: value,
-			Vested: d.Vested + value,
+			Vested: d.Vested,
 			Last:   d.Last,
 		})
 	}
