@@ -157,9 +157,9 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 	conf.BlobberSlash = config.SmartContractConfig.GetFloat64(
 		prefix + "blobber_slash")
 	conf.MaxReadPrice = state.Balance(config.SmartContractConfig.GetFloat64(
-		prefix+"max_read_price") / 1e10)
+		prefix+"max_read_price") * 1e10)
 	conf.MaxWritePrice = state.Balance(config.SmartContractConfig.GetFloat64(
-		prefix+"max_write_price") / 1e10)
+		prefix+"max_write_price") * 1e10)
 	// read pool
 	conf.ReadPool = new(readPoolConfig)
 	conf.ReadPool.MinLockPeriod = config.SmartContractConfig.GetDuration(
