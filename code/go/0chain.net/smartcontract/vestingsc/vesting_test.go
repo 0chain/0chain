@@ -78,7 +78,6 @@ func Test_vestingPool(t *testing.T) {
 	require.NotZero(t, poolKey(ADDRESS, poolID))
 	var vp = newVestingPool()
 	assert.NotNil(t, vp)
-	assert.NotNil(t, vp.TokenPool)
 	var ar addRequest
 	ar.Description = "for something"
 	ar.StartTime = 10
@@ -95,21 +94,22 @@ func Test_vestingPool(t *testing.T) {
 	assert.Equal(t, vp.StartTime, ar.StartTime)
 	assert.Equal(t, vp.ExpireAt, ar.StartTime+toSeconds(ar.Duration))
 	assert.Equal(t, vp.Destinations, ar.Destinations)
+	vp.Balance = 40
 
 	var vpd = new(vestingPool)
 	require.NoError(t, vpd.Decode(vp.Encode()))
 	assert.Equal(t, vp, vpd)
 
-	var inf = vpd.info(0)
+	var inf = vpd.info(11)
 	assert.Equal(t, vp.Description, inf.Description)
 	assert.Equal(t, vp.StartTime, inf.StartTime)
 	assert.Equal(t, vp.ExpireAt, inf.ExpireAt)
 	assert.EqualValues(t, []*destInfo{
-		&destInfo{ID: "one", Wanted: 10, Earned: 0, Last: 10},
-		&destInfo{ID: "two", Wanted: 20, Earned: 0, Last: 10},
+		&destInfo{ID: "one", Wanted: 10, Earned: 5, Vested: 5, Last: 10},
+		&destInfo{ID: "two", Wanted: 20, Earned: 10, Vested: 10, Last: 10},
 	}, inf.Destinations) // TODO
-	assert.Equal(t, state.Balance(0), inf.Balance)
-	assert.Equal(t, state.Balance(0), inf.Left)
+	assert.Equal(t, state.Balance(40), inf.Balance)
+	assert.Equal(t, state.Balance(10), inf.Left)
 }
 
 func TestVestingSmartContract_getPoolBytes_getPool(t *testing.T) {
@@ -344,8 +344,8 @@ func TestVestingSmartContract_stop(t *testing.T) {
 	tx.Value = 1
 	tx.ClientID = client.id
 	_, err = vsc.stop(tx, mustEncode(t, &sr), balances)
-	assertErrMsg(t, err, `stop_vesting_failed: deleting destination: `+
-		`no such destination "dest_hex" to stop vesting`)
+	assertErrMsg(t, err, `stop_vesting_failed: `+
+		`destination dest_hex not found in the pool`)
 
 	// 8. stop
 	sr.Destination = "one"
@@ -410,7 +410,7 @@ func TestVestingSmartContract_unlock(t *testing.T) {
 	balances.txn = tx
 	_, err = vsc.unlock(tx, mustEncode(t, &lr), balances)
 	assertErrMsg(t, err, "unlock_vesting_pool_failed: "+
-		`vesting pool: destination "another_one" not found in pool`)
+		`vesting pool: destination another_one not found in the pool`)
 
 	// 6. min lock
 	tx.ClientID = client.id
