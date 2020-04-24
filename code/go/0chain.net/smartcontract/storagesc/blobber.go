@@ -533,7 +533,7 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 		}
 
 		var (
-			full = float64(details.Terms.WritePrice) * sizeInGB(size)
+			full = float64(details.Terms.WritePrice) * sizeInGB(-size)
 			left = allocLeftRatio(alloc.StartTime, alloc.Expiration,
 				lastChallenge)
 		)
@@ -660,7 +660,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		balances)
 	if err != nil {
 		return "", common.NewError("commit_connection_failed",
-			"write marker time is after allocation expires")
+			"moving tokens: "+err.Error())
 	}
 
 	// save allocation object
