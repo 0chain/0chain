@@ -65,10 +65,11 @@ func getSmartContract(scAddress string) (sci.SmartContractInterface, *sci.SmartC
 func ExecuteWithStats(smcoi sci.SmartContractInterface, sc *sci.SmartContract, t *transaction.Transaction, funcName string, input []byte, balances c_state.StateContextI) (string, error) {
 	ts := time.Now()
 	inter, err := smcoi.Execute(t, funcName, input, balances)
-	if sc.SmartContractExecutionStats[funcName] != nil {
-		timer, ok := sc.SmartContractExecutionStats[funcName].(metrics.Timer)
-		if ok {
-			timer.Update(time.Since(ts))
+	if err == nil {
+		if tm := sc.SmartContractExecutionStats[funcName]; tm != nil {
+			if timer, ok := tm.(metrics.Timer); ok {
+				timer.Update(time.Since(ts))
+			}
 		}
 	}
 	return inter, err

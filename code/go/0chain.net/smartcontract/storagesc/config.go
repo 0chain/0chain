@@ -162,20 +162,20 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 		prefix+"max_write_price") * 1e10)
 	// read pool
 	conf.ReadPool = new(readPoolConfig)
+	conf.ReadPool.MinLock = config.SmartContractConfig.GetInt64(
+		prefix + "readpool.min_lock")
 	conf.ReadPool.MinLockPeriod = config.SmartContractConfig.GetDuration(
 		prefix + "readpool.min_lock_period")
 	conf.ReadPool.MaxLockPeriod = config.SmartContractConfig.GetDuration(
 		prefix + "readpool.max_lock_period")
-	conf.ReadPool.MinLock = config.SmartContractConfig.GetInt64(
-		prefix + "readpool.min_lock")
 	// write pool
 	conf.WritePool = new(writePoolConfig)
 	conf.WritePool.MinLock = config.SmartContractConfig.GetInt64(
 		prefix + "writepool.min_lock")
+	conf.WritePool.MinLockPeriod = config.SmartContractConfig.GetDuration(
+		prefix + "writepool.min_lock_period")
 	conf.WritePool.MaxLockPeriod = config.SmartContractConfig.GetDuration(
 		prefix + "writepool.max_lock_period")
-	conf.WritePool.MinLock = config.SmartContractConfig.GetInt64(
-		prefix + "writepool.min_lock")
 
 	err = conf.validate()
 	return
