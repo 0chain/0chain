@@ -914,8 +914,14 @@ func (ssc *StorageSmartContract) finalizeAllocation(
 	t *transaction.Transaction, input []byte, balances c_state.StateContextI) (
 	resp string, err error) {
 
-	// the request
+	// SC configurations
+	var conf *scConfig
+	if conf, err = ssc.getConfig(balances, false); err != nil {
+		return "", common.NewError("fini_alloc_failed",
+			"can't get SC configurations: "+err.Error())
+	}
 
+	// the request
 	var req lockRequest
 	if err = req.decode(input); err != nil {
 		return "", common.NewError("fini_alloc_failed", err.Error())
@@ -929,7 +935,6 @@ func (ssc *StorageSmartContract) finalizeAllocation(
 	}
 
 	// write pool
-
 	var wp *writePool
 	if wp, err = ssc.getWritePool(alloc.Owner, balances); err != nil {
 		return "", common.NewError("fini_alloc_failed", err.Error())
@@ -942,7 +947,7 @@ func (ssc *StorageSmartContract) finalizeAllocation(
 
 	// should be expired
 	var expire = alloc.Until()
-	if expire < t.CreationDate {
+	if expire > t.CreationDate {
 		return "", common.NewError("fini_alloc_failed",
 			"allocation is not expired yet, or waiting a challenge completion")
 	}
@@ -1013,7 +1018,8 @@ func (ssc *StorageSmartContract) finalizeAllocation(
 			return "", common.NewError("fini_alloc_failed",
 				"can't get blobber "+d.BlobberID+": "+err.Error())
 		}
-		if _, err = sp.update(ssc.ID, t.CreationDate, b, balances); err != nil {
+		_, err = sp.update(conf, ssc.ID, t.CreationDate, b, balances)
+		if err != nil {
 			return "", common.NewError("fini_alloc_failed",
 				"can't update stake pool of "+d.BlobberID+": "+err.Error())
 		}

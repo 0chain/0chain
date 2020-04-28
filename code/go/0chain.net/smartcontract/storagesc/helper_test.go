@@ -307,6 +307,9 @@ func setConfig(t *testing.T, balances chainState.StateContextI) (
 		MaxLockPeriod: 20 * time.Minute,
 	}
 
+	conf.InterestRate = 0.01
+	conf.InterestInterval = 5 * time.Second
+
 	mustSave(t, scConfigKey(ADDRESS), conf, balances)
 	return
 }

@@ -89,12 +89,19 @@ func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
 
 	existingBlobber.Capacity = 0 // change it to zero for the removing
 
+	// SC configurations
+	var conf *scConfig
+	if conf, err = sc.getConfig(balances, false); err != nil {
+		return nil, nil, common.NewError("fini_alloc_failed",
+			"can't get SC configurations: "+err.Error())
+	}
+
 	// update stake pool
 	if sp, err = sc.getStakePool(existingBlobber.ID, balances); err != nil {
 		return nil, nil, fmt.Errorf("can't get related stake pool: %v", err)
 	}
 
-	_, err = sp.update(sc.ID, t.CreationDate, existingBlobber, balances)
+	_, err = sp.update(conf, sc.ID, t.CreationDate, existingBlobber, balances)
 	if err != nil {
 		return nil, nil, fmt.Errorf("can't update related stake pool: %v", err)
 	}
@@ -121,12 +128,19 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 
 	blobber.LastHealthCheck = t.CreationDate
 
+	// SC configurations
+	var conf *scConfig
+	if conf, err = sc.getConfig(balances, false); err != nil {
+		return nil, common.NewError("fini_alloc_failed",
+			"can't get SC configurations: "+err.Error())
+	}
+
 	// create stake pool
 	var (
 		stake state.Balance // required stake
 		info  *stakePoolUpdateInfo
 	)
-	info, err = sp.update(sc.ID, t.CreationDate, blobber, balances) //
+	info, err = sp.update(conf, sc.ID, t.CreationDate, blobber, balances) //
 	if err != nil {
 		return nil, fmt.Errorf("unexpected error: %v", err)
 	}
@@ -150,7 +164,7 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 
 		// release all tokens over the required stake,
 		// moving them back to blobber
-		_, err = sp.update(sc.ID, t.CreationDate, blobber, balances)
+		_, err = sp.update(conf, sc.ID, t.CreationDate, blobber, balances)
 		if err != nil {
 			return nil, fmt.Errorf("unexpected error: %v", err)
 		}
@@ -173,6 +187,13 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 	blobber.Used = existingBlobber.Used      // copy
 	blobber.LastHealthCheck = t.CreationDate // health
 
+	// SC configurations
+	var conf *scConfig
+	if conf, err = sc.getConfig(balances, false); err != nil {
+		return nil, common.NewError("fini_alloc_failed",
+			"can't get SC configurations: "+err.Error())
+	}
+
 	if sp, err = sc.getStakePool(blobber.ID, balances); err != nil {
 		return nil, fmt.Errorf("can't get related stake pool: %v", err)
 	}
@@ -181,7 +202,7 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 		lack state.Balance
 		info *stakePoolUpdateInfo
 	)
-	info, err = sp.update(sc.ID, t.CreationDate, blobber, balances)
+	info, err = sp.update(conf, sc.ID, t.CreationDate, blobber, balances)
 	if err != nil {
 		return nil, fmt.Errorf("updating stake of blobber: %v", err)
 	}
@@ -203,7 +224,7 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 			return nil, fmt.Errorf("locking tokens in stake pool: %v", err)
 		}
 		// unlock all tokens over the required amount
-		_, err = sp.update(sc.ID, t.CreationDate, blobber, balances)
+		_, err = sp.update(conf, sc.ID, t.CreationDate, blobber, balances)
 		if err != nil {
 			return nil, fmt.Errorf("updating stake pool: %v", err)
 		}

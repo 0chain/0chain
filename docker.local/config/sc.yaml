@@ -16,6 +16,11 @@ smart_contracts:
     min_stake: 100
     max_stake: 10000000000
   storagesc:
+    # interest_rate is tokens earned by a blobber for its stake
+    interest_rate: 0.1
+    # interest_interval is interval to pay interests for a stake
+    interest_interval: 1m
+    #
     challenge_enabled: true
     challenge_rate_per_mb_min: 1
     # min possible allocations size in bytes allowed by the SC

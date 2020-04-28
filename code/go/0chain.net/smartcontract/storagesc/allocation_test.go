@@ -470,11 +470,10 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	var wp *writePool
 	wp, err = ssc.getWritePool(clientID, balances)
 	require.NoError(t, err)
-	assert.Equal(t, state.Balance(400), wp.allocUntil(aresp.ID,
-		aresp.Expiration+toSeconds(aresp.ChallengeCompletionTime)))
+	assert.Equal(t, state.Balance(400), wp.allocUntil(aresp.ID, aresp.Until()))
 
 	// 2. stake pool offers
-	var expire = aresp.Expiration + toSeconds(aresp.ChallengeCompletionTime)
+	var expire = aresp.Until()
 
 	sp1, err = ssc.getStakePool("b1", balances)
 	require.NoError(t, err)
@@ -725,7 +724,7 @@ func TestStorageSmartContract_closeAllocation(t *testing.T) {
 
 	require.Equal(t, tx.CreationDate, alloc.Expiration)
 
-	var expire = alloc.Expiration + toSeconds(alloc.ChallengeCompletionTime)
+	var expire = alloc.Until()
 
 	for _, detail := range alloc.BlobberDetails {
 		var sp *stakePool
@@ -979,7 +978,7 @@ func Test_finalize_allocation(t *testing.T) {
 	require.NotNil(t, sp.findOffer(allocID))
 
 	// expire the allocation
-	tp += int64(alloc.Expiration)
+	tp += int64(alloc.Until())
 
 	// finalize it
 

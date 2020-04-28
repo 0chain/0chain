@@ -11,12 +11,17 @@ smart_contracts:
     min_lock_period: 2190h # max units hours
     max_lock_period: 8760h # max units hours
   storagesc:
+    # interest_rate is tokens earned by a blobber for its stake
+    interest_rate: 0.1
+    # interest_interval is interval to pay interests for a stake
+    interest_interval: 1m
+    #
     challenge_enabled: false
     challenge_rate_per_mb_min: 1
     # min possible allocations size in bytes allowed by the SC
     min_alloc_size: 1024
     # min possible allocation duration allowed by the SC
-    min_alloc_duration: '1h'
+    min_alloc_duration: '5m'
     # max challenge completion time of a blobber allowed by the SC
     max_challenge_completion_time: '30m'
     # min blobber's offer duration allowed by the SC

@@ -70,6 +70,12 @@ type scConfig struct {
 	MaxReadPrice state.Balance `json:"max_read_price"`
 	// MaxWrtiePrice
 	MaxWritePrice state.Balance `json:"max_write_price"`
+
+	// minting
+
+	// Interest rate of the stake pool
+	InterestRate     float64       `json:"interest_rate"`
+	InterestInterval time.Duration `json:"interest_interval"`
 }
 
 func (sc *scConfig) validate() (err error) {
@@ -105,6 +111,17 @@ func (sc *scConfig) validate() (err error) {
 	}
 	if sc.MaxWritePrice < 0 {
 		return fmt.Errorf("negative max_write_price: %v", sc.MaxWritePrice)
+	}
+	if sc.InterestRate < 0 {
+		return fmt.Errorf("negative interest_rate: %v", sc.InterestRate)
+	}
+	if sc.InterestRate > 1 {
+		return fmt.Errorf("interest_rate is greater then 1: %v",
+			sc.InterestRate)
+	}
+	if sc.InterestInterval <= 0 {
+		return fmt.Errorf("invalid interest_interval <= 0: %v",
+			sc.InterestInterval)
 	}
 	return
 }

@@ -478,7 +478,7 @@ func (ssc *StorageSmartContract) writePoolUnlock(t *transaction.Transaction,
 	if !alloc.Finalized && !alloc.Canceled {
 		var (
 			want  = alloc.minLockDemandLeft()
-			unitl = alloc.Expiration + toSeconds(alloc.ChallengeCompletionTime)
+			unitl = alloc.Until()
 			leave = wp.allocUntil(ap.AllocationID, unitl) - ap.Balance
 		)
 		if leave < want && ap.ExpireAt >= unitl {
