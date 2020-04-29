@@ -67,7 +67,9 @@ func stakePoolKey(scKey, blobberID string) datastore.Key {
 }
 
 func stakePoolID(scKey, blobberID string) datastore.Key {
-	return encryption.Hash(stakePoolKey(scKey, blobberID))
+	// return encryption.Hash(stakePoolKey(scKey, blobberID))
+	_ = encryption.Hash
+	return stakePoolKey(scKey, blobberID)
 }
 
 // Encode to []byte
@@ -208,12 +210,14 @@ func (sp *stakePool) minting(conf *scConfig, sscID string,
 	// add mints
 	err = balances.AddMint(&state.Mint{
 		Minter:     sscID, // from the storage SC
-		ToClientID: sp.ID, // to the stake pool
+		ToClientID: sscID, // to the stake pool (to the storage SC)
 		Amount:     mints, // amount of mints
 	})
 	if err != nil {
 		return fmt.Errorf("adding mints: %v", err)
 	}
+
+	sp.Balance += mints // add mints to pool balance
 
 	// update the pool
 	sp.MintedAt = at

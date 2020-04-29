@@ -193,6 +193,11 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 		prefix + "writepool.min_lock_period")
 	conf.WritePool.MaxLockPeriod = config.SmartContractConfig.GetDuration(
 		prefix + "writepool.max_lock_period")
+	// stake interests
+	conf.InterestRate = config.SmartContractConfig.GetFloat64(
+		prefix + "interest_rate")
+	conf.InterestInterval = config.SmartContractConfig.GetDuration(
+		prefix + "interest_interval")
 
 	err = conf.validate()
 	return
