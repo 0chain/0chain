@@ -1226,10 +1226,6 @@ func (sc *StorageSmartContract) finalizeAllocation(
 			return "", common.NewError("fini_alloc_failed",
 				"can't get stake pool of "+d.BlobberID+": "+err.Error())
 		}
-		if err = sp.extendOffer(alloc, d); err != nil {
-			return "", common.NewError("fini_alloc_failed",
-				"removing stake pool offer for "+d.BlobberID+": "+err.Error())
-		}
 		// challenge pool rest
 		if alloc.UsedSize > 0 && left > 0 && passRate > 0 && d.Stats != nil {
 			var (
