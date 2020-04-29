@@ -855,6 +855,14 @@ func checkExists(c *StorageNode, sl []*StorageNode) bool {
 	return false
 }
 
+func passOnes(n int) (po []float64) {
+	po = make([]float64, n)
+	for i := range po {
+		po[i] = 1.0
+	}
+	return
+}
+
 // a blobber can not send a challenge response, thus we have to check out
 // challenge requests and their expiration
 func (sc *StorageSmartContract) adjustChallenges(alloc *StorageAllocation,
@@ -863,7 +871,7 @@ func (sc *StorageSmartContract) adjustChallenges(alloc *StorageAllocation,
 
 	// are there chellenges
 	if alloc.Stats == nil || alloc.Stats.OpenChallenges == 0 {
-		return // no open challenges: (nil, nil)
+		return passOnes(len(alloc.BlobberDetails)), nil // no open challenges
 	}
 	passRates = make([]float64, 0, len(alloc.BlobberDetails))
 	// range over all related blobbers
@@ -879,7 +887,7 @@ func (sc *StorageSmartContract) adjustChallenges(alloc *StorageAllocation,
 		}
 		// no blobber challenges, no failures
 		if err == util.ErrValueNotPresent {
-			passRates, err = append(passRates, 0.0), nil
+			passRates, err = append(passRates, 1.0), nil
 			continue // no challenges for the blobber
 		}
 		if d.Stats == nil {
@@ -905,7 +913,7 @@ func (sc *StorageSmartContract) adjustChallenges(alloc *StorageAllocation,
 			alloc.Stats.OpenChallenges--
 		}
 		if success == 0 && failure == 0 {
-			passRates = append(passRates, 0.0)
+			passRates = append(passRates, 1.0)
 		}
 		// success rate for the blobber allocation
 		passRates = append(passRates, float64(success)/float64(success+failure))
