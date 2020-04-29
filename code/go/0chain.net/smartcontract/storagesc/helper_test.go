@@ -285,7 +285,9 @@ func setConfig(t *testing.T, balances chainState.StateContextI) (
 	conf = new(scConfig)
 
 	conf.ChallengeEnabled = true
-	conf.ChallengeRatePerMBMin = 1
+	conf.ChallengeGenerationRate = 1
+	conf.FailedChallengesToCancel = 100
+	conf.FailedChallengesToRevokeMinLock = 50
 	conf.MinAllocSize = 1 * GB
 	conf.MinAllocDuration = 1 * time.Minute
 	conf.MaxChallengeCompletionTime = 15 * time.Second

@@ -105,8 +105,8 @@ func (cp *challengePool) moveToWritePool(allocID, blobID string,
 }
 
 // moveToBlobber moves tokens to given blobber on challenge passed
-func (cp *challengePool) moveToBlobber(sscID string, sp *stakePool,
-	value state.Balance) (err error) {
+func (cp *challengePool) moveToBlobber(sp *stakePool, value state.Balance) (
+	err error) {
 
 	if value == 0 {
 		return // nothing to move
@@ -148,6 +148,7 @@ func (cp *challengePool) moveToValidators(reward state.Balance,
 		}
 
 		sp.ValidatorReward += oneReward
+		sp.Rewards += oneReward
 	}
 
 	return

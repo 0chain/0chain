@@ -38,8 +38,6 @@ type writePoolConfig struct {
 
 // scConfig represents SC configurations ('storagesc:' from sc.yaml).
 type scConfig struct {
-	ChallengeEnabled      bool    `json:"challenge_enabled"`
-	ChallengeRatePerMBMin float64 `json:"challenge_rate_per_mb_min"`
 	// MinAllocSize is minimum possible size (bytes)
 	// of an allocation the SC accept.
 	MinAllocSize int64 `json:"min_alloc_size"`
@@ -76,6 +74,27 @@ type scConfig struct {
 	// Interest rate of the stake pool
 	InterestRate     float64       `json:"interest_rate"`
 	InterestInterval time.Duration `json:"interest_interval"`
+
+	// allocation cancellation
+
+	// FailedChallengesToCancel is number of failed challenges of an allocation
+	// to be able to cancel an allocation.
+	FailedChallengesToCancel int `json:"failed_challenges_to_cancel"`
+	// FailedChallengesToRevokeMinLock is number of failed challenges of a
+	// blobber to revoke its min_lock demand back to user; only part not
+	// paid yet can go back.
+	FailedChallengesToRevokeMinLock int `json:"failed_challenges_to_revoke_min_lock"`
+
+	// challenges generating
+
+	// ChallengeEnabled is challenges generating pin.
+	ChallengeEnabled bool `json:"challenge_enabled"`
+	// MaxChallengesPerGeneration is max number of challenges can be generated
+	// at once for a blobber-allocation pair with size difference for the
+	// moment of the generation.
+	MaxChallengesPerGeneration int `json:"max_challenges_per_generation"`
+	// ChallengeGenerationRate is number of challenges generated for a MB/min.
+	ChallengeGenerationRate float64 `json:"challenge_rate_per_mb_min"`
 }
 
 func (sc *scConfig) validate() (err error) {
@@ -123,6 +142,22 @@ func (sc *scConfig) validate() (err error) {
 		return fmt.Errorf("invalid interest_interval <= 0: %v",
 			sc.InterestInterval)
 	}
+	if sc.FailedChallengesToCancel < 0 {
+		return fmt.Errorf("negative failed_challenges_to_cancel: %v",
+			sc.FailedChallengesToCancel)
+	}
+	if sc.FailedChallengesToRevokeMinLock < 0 {
+		return fmt.Errorf("negative failed_challenges_to_revoke_min_lock: %v",
+			sc.FailedChallengesToRevokeMinLock)
+	}
+	if sc.MaxChallengesPerGeneration <= 0 {
+		return fmt.Errorf("invalid max_challenges_per_generation <= 0: %v",
+			sc.MaxChallengesPerGeneration)
+	}
+	if sc.ChallengeGenerationRate < 0 {
+		return fmt.Errorf("negative challenge_rate_per_mb_min: %v",
+			sc.ChallengeGenerationRate)
+	}
 	return
 }
 
@@ -161,10 +196,6 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 
 	conf = new(scConfig)
 	// sc
-	conf.ChallengeEnabled = config.SmartContractConfig.GetBool(
-		prefix + "challenge_enabled")
-	conf.ChallengeRatePerMBMin = config.SmartContractConfig.GetFloat64(
-		prefix + "challenge_rate_per_mb_min")
 	conf.MinAllocSize = config.SmartContractConfig.GetInt64(
 		prefix + "min_alloc_size")
 	conf.MinAllocDuration = config.SmartContractConfig.GetDuration(
@@ -198,6 +229,18 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 		prefix + "interest_rate")
 	conf.InterestInterval = config.SmartContractConfig.GetDuration(
 		prefix + "interest_interval")
+	// allocation cancellation
+	conf.FailedChallengesToCancel = config.SmartContractConfig.GetInt(
+		prefix + "failed_challenges_to_cancel")
+	conf.FailedChallengesToRevokeMinLock = config.SmartContractConfig.GetInt(
+		prefix + "failed_challenges_to_revoke_min_lock")
+	// challenges generating
+	conf.ChallengeEnabled = config.SmartContractConfig.GetBool(
+		prefix + "challenge_enabled")
+	conf.MaxChallengesPerGeneration = config.SmartContractConfig.GetInt(
+		prefix + "max_challenges_per_generation")
+	conf.ChallengeGenerationRate = config.SmartContractConfig.GetFloat64(
+		prefix + "challenge_rate_per_mb_min")
 
 	err = conf.validate()
 	return

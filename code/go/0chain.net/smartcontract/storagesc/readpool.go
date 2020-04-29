@@ -60,7 +60,7 @@ func (rp *readPool) save(sscKey, clientID string,
 	return
 }
 
-func (rp *readPool) moveToBlobber(sscID, allocID, blobID string,
+func (rp *readPool) moveToBlobber(allocID, blobID string,
 	sp *stakePool, now common.Timestamp, value state.Balance) (err error) {
 
 	var cut = rp.blobberCut(allocID, blobID, now)

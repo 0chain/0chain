@@ -454,13 +454,14 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"can't get related stake pool: "+err.Error())
 	}
 
-	err = rp.moveToBlobber(sc.ID, commitRead.ReadMarker.AllocationID,
+	err = rp.moveToBlobber(commitRead.ReadMarker.AllocationID,
 		commitRead.ReadMarker.BlobberID, sp, t.CreationDate, value)
 	if err != nil {
 		return "", common.NewError("commit_read_failed",
 			"can't transfer tokens from read pool to stake pool: "+err.Error())
 	}
-	sp.BlobberReward += value   //
+	sp.BlobberReward += value   // rewards statistic
+	sp.Rewards += value         // blobber rewards (not a stake)
 	details.ReadReward += value // stat
 	details.Spent += value      // reduce min lock demand left
 

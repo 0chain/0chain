@@ -12,7 +12,6 @@ import (
 
 	"0chain.net/chaincore/block"
 	c_state "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -122,10 +121,11 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		return fmt.Errorf("can't get stake pool: %v", err)
 	}
 
-	if err = cp.moveToBlobber(sc.ID, sp, move); err != nil {
+	if err = cp.moveToBlobber(sp, move); err != nil {
 		return fmt.Errorf("can't move tokens to blobber: %v", err)
 	}
-	sp.BlobberReward += move
+	sp.BlobberReward += move //
+	sp.Rewards += move       //
 	details.ChallengeReward += move
 
 	// validators' stake pools
@@ -524,12 +524,20 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 	if sizeDiffMB == 0 {
 		sizeDiffMB = 1
 	}
-	challengeGenerationRate := config.SmartContractConfig.GetFloat64("smart_contracts.storagesc.challenge_rate_per_mb_min")
-	var rated = challengeGenerationRate * float64(numMins*sizeDiffMB)
+
+	// SC configurations
+	var conf *scConfig
+	if conf, err = sc.getConfig(balances, false); err != nil {
+		return common.NewError("fini_alloc_failed",
+			"can't get SC configurations: "+err.Error())
+	}
+
+	var rated = conf.ChallengeGenerationRate * float64(numMins*sizeDiffMB)
 	if rated < 1 {
 		rated = 1
 	}
-	numChallenges := int64(math.Min(rated, float64(100)))
+	numChallenges := int64(math.Min(rated,
+		float64(conf.MaxChallengesPerGeneration)))
 	//	Logger.Info("Generating challenges", zap.Any("mins_since_last", numMins), zap.Any("mb_size_diff", sizeDiffMB))
 	hashString := encryption.Hash(t.Hash + b.PrevHash)
 	randomSeed, err := strconv.ParseUint(hashString[0:16], 16, 64)
@@ -570,30 +578,60 @@ func (sc *StorageSmartContract) addChallenge(challengeID string, creationDate co
 		return "", common.NewError("adding_challenge_error", "No allocations at this time")
 	}
 
-	allocationObj := &StorageAllocation{}
-	allocationObj.Stats = &StorageAllocationStats{}
+	const LIMIT = 1000 // attempts limit
 
-	for range allocationList.List {
-		var v = r.Intn(len(allocationList.List))
-		allocationKey := allocationList.List[v]
-		allocationObj.ID = allocationKey
+	var allocationObj *StorageAllocation
 
-		allocationBytes, err := balances.GetTrieNode(allocationObj.GetKey(sc.ID))
-		if allocationBytes == nil || err != nil {
-			Logger.Error("Client state has invalid allocations", zap.Any("allocation_list", allocationList.List), zap.Any("selected_allocation", allocationKey))
-			return "", common.NewError("invalid_allocation", "Client state has invalid allocations")
+	var selectAlloc = func(i int) (alloc *StorageAllocation, ok bool, err error) {
+		alloc, err = sc.getAllocation(allocationList.List[i], balances)
+		if err != nil {
+			Logger.Error("Client state has invalid allocations",
+				zap.Any("allocation_list", allocationList.List),
+				zap.Any("selected_allocation", allocationList.List[i]))
+			return nil, false, common.NewError("invalid_allocation", "Client state has invalid allocations")
 		}
-		allocationObj.Decode(allocationBytes.Encode())
 		if allocationObj.Expiration < creationDate {
-			continue
+			return nil, false, nil
 		}
 		if allocationObj.Stats.NumWrites > 0 {
-			break
+			allocationObj.Stats = new(StorageAllocationStats)
+			return alloc, true, nil // found
+		}
+		return nil, false, nil
+	}
+
+	// looking for allocation with NumWrites > 0:
+	//
+	// range over all allocations if the SC consist of < LIMIT allocations,
+	// otherwise, range over LIMIT random allocations
+
+	var ok bool
+	if len(allocationList.List) < LIMIT {
+		for _, i := range r.Perm(len(allocationList.List)) {
+			if allocationObj, ok, err = selectAlloc(i); err != nil {
+				return "", err
+			}
+			if ok {
+				break
+			}
+		}
+	} else {
+		for i := 0; i < LIMIT; i++ {
+			allocationObj, ok, err = selectAlloc(r.Intn(len(allocationList.List)))
+			if err != nil {
+				return "", err
+			}
+			if ok {
+				break
+			}
 		}
 	}
 
-	if allocationObj.Stats.NumWrites == 0 {
-		return "", common.NewError("no_allocation_writes", "No Allocation writes. challenge generation not possible")
+	if allocationObj == nil || allocationObj.Stats == nil ||
+		allocationObj.Stats.NumWrites == 0 {
+
+		return "", common.NewError("no_allocation_writes",
+			"No Allocation writes. challenge generation not possible")
 	}
 
 	sort.SliceStable(allocationObj.Blobbers, func(i, j int) bool {

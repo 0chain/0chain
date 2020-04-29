@@ -533,6 +533,18 @@ func (sa *StorageAllocation) Until() common.Timestamp {
 	return sa.Expiration + toSeconds(sa.ChallengeCompletionTime)
 }
 
+func (sa *StorageAllocation) IsValidFinalizer(id string) bool {
+	if sa.Owner == id {
+		return true // finalizing by owner
+	}
+	for _, d := range sa.BlobberDetails {
+		if d.BlobberID == id {
+			return true // one of blobbers
+		}
+	}
+	return false // unknown
+}
+
 func (sn *StorageAllocation) GetKey(globalKey string) datastore.Key {
 	return datastore.Key(globalKey + sn.ID)
 }

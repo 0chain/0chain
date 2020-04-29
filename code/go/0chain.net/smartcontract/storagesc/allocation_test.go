@@ -843,6 +843,19 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 
 }
 
+// add empty blobber challenges
+func addBloberChallenges(t *testing.T, sscID string, alloc *StorageAllocation,
+	balances *testBalances) {
+
+	var err error
+	for _, d := range alloc.BlobberDetails {
+		var bc = new(BlobberChallenge)
+		bc.BlobberID = d.BlobberID
+		_, err = balances.InsertTrieNode(bc.GetKey(sscID), bc)
+		require.NoError(t, err)
+	}
+}
+
 // - finalize allocation
 func Test_finalize_allocation(t *testing.T) {
 
