@@ -590,11 +590,11 @@ func (sc *StorageSmartContract) addChallenge(challengeID string, creationDate co
 				zap.Any("selected_allocation", allocationList.List[i]))
 			return nil, false, common.NewError("invalid_allocation", "Client state has invalid allocations")
 		}
-		if allocationObj.Expiration < creationDate {
+		if alloc.Expiration < creationDate {
 			return nil, false, nil
 		}
-		if allocationObj.Stats.NumWrites > 0 {
-			allocationObj.Stats = new(StorageAllocationStats)
+		if alloc.Stats.NumWrites > 0 {
+			alloc.Stats = new(StorageAllocationStats)
 			return alloc, true, nil // found
 		}
 		return nil, false, nil
