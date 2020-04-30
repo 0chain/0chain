@@ -593,8 +593,10 @@ func (sc *StorageSmartContract) addChallenge(challengeID string, creationDate co
 		if alloc.Expiration < creationDate {
 			return nil, false, nil
 		}
-		if alloc.Stats.NumWrites > 0 {
+		if alloc.Stats == nil {
 			alloc.Stats = new(StorageAllocationStats)
+		}
+		if alloc.Stats.NumWrites > 0 {
 			return alloc, true, nil // found
 		}
 		return nil, false, nil
