@@ -288,7 +288,7 @@ func (ssc *StorageSmartContract) createWritePool(t *transaction.Transaction,
 	alloc *StorageAllocation, balances chainState.StateContextI) (err error) {
 
 	var wp *writePool
-	wp, err = ssc.getWritePool(t.ClientID, balances)
+	wp, err = ssc.getWritePool(alloc.Owner, balances)
 
 	if err != nil && err != util.ErrValueNotPresent {
 		return fmt.Errorf("getting client write pool: %v", err)
@@ -310,7 +310,7 @@ func (ssc *StorageSmartContract) createWritePool(t *transaction.Transaction,
 		}
 	}
 
-	if err = wp.save(ssc.ID, t.ClientID, balances); err != nil {
+	if err = wp.save(ssc.ID, alloc.Owner, balances); err != nil {
 		return fmt.Errorf("saving write pool: %v", err)
 	}
 
