@@ -118,3 +118,8 @@ minio:
   num_workers: 5
   use_ssl: false
   old_block_round_range: 20000000
+
+cassandra:
+  connection:
+    delay: 3 # in seconds
+    retries: 10
