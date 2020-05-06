@@ -3,9 +3,9 @@ package storagesc
 import (
 	"fmt"
 
-	c_state "0chain.net/chaincore/chain/state"
+	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/smartcontractinterface"
+	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	metrics "github.com/rcrowley/go-metrics"
@@ -22,10 +22,10 @@ const (
 )
 
 type StorageSmartContract struct {
-	*smartcontractinterface.SmartContract
+	*sci.SmartContract
 }
 
-func (ssc *StorageSmartContract) SetSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {
+func (ssc *StorageSmartContract) SetSC(sc *sci.SmartContract, bcContext sci.BCContextI) {
 	ssc.SmartContract = sc
 	// sc configurations
 	ssc.SmartContract.RestHandlers["/getConfig"] = ssc.getConfigHandler
@@ -79,12 +79,12 @@ func (ssc *StorageSmartContract) GetAddress() string {
 	return ADDRESS
 }
 
-func (ssc *StorageSmartContract) GetRestPoints() map[string]smartcontractinterface.SmartContractRestHandler {
+func (ssc *StorageSmartContract) GetRestPoints() map[string]sci.SmartContractRestHandler {
 	return ssc.RestHandlers
 }
 
 func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
-	funcName string, input []byte, balances c_state.StateContextI) (
+	funcName string, input []byte, balances chainstate.StateContextI) (
 	resp string, err error) {
 
 	switch funcName {

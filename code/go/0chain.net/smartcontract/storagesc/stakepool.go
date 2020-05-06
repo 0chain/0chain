@@ -30,7 +30,8 @@ type offerPool struct {
 // stake pool of a blobber
 
 type stakePool struct {
-	tokenpool.ZcnPool `json:"locked"`
+	Pools      map[string]*tokenpool.ZcnPool `json:"locked"`
+	DelegateID datastore.Key                 `json:"delegate_id"`
 
 	// mints (periodic mints, no integral mints)
 
@@ -55,9 +56,11 @@ type stakePool struct {
 
 // newStakePool for given blobber, use empty blobberID to create a stakePool to
 // decode, since the blobberID is stored
-func newStakePool() *stakePool {
+func newStakePool(delegateID datastore.Key) *stakePool {
 	return &stakePool{
-		Offers: make(map[string]*offerPool),
+		Pools:      make(map[string](tokenpool.ZcnPool)),
+		DelegateID: delegateID,
+		Offers:     make(map[string]*offerPool),
 	}
 }
 
