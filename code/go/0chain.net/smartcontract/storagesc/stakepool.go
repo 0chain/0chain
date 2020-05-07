@@ -755,7 +755,7 @@ func (ssc *StorageSmartContract) stakePoolPayInterests(
 			"saving stake pool: "+err.Error())
 	}
 
-	return
+	return "interests has payed", nil
 }
 
 // take all rewards excluding interests
