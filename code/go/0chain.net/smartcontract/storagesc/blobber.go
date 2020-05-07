@@ -500,7 +500,6 @@ func allocLeftRatio(start, expire, last common.Timestamp) float64 {
 }
 
 // commitMoveTokens moves tokens on connection commit (on write marker),
-// if data deleted (size < 0) -- from challenge pool back to write pool,
 // if data written (size > 0) -- from write pool to challenge pool
 func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 	size int64, details *BlobberAllocation, balances c_state.StateContextI) (
@@ -510,9 +509,9 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 		return errors.New("zero size write marker given")
 	}
 
-	// depending size (> 0, write, or < 0, delete)
-	// 1. move tokens from write pool to challenge pool
-	// 2. move tokens from challenge pool back to write pool
+	if size < 0 {
+		return // data has deleted, nothing to do here
+	}
 
 	// write pool
 	wp, err := sc.getWritePool(alloc.Owner, balances)
@@ -542,44 +541,6 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 		}
 		alloc.MovedToChallenge += value
 		details.Spent += value
-	} else {
-		// delete
-		var (
-			bc            *BlobberChallenge
-			lastChallenge = alloc.StartTime
-		)
-		bc, err = sc.getBlobberChallenge(details.BlobberID, balances)
-		if err != nil && err != util.ErrValueNotPresent {
-			return fmt.Errorf("error getting blobber challenge: %v", err)
-		}
-
-		// if err is util.ValueNotPresent then we use alloc.StartTime as
-		// last challenge time
-		if err == nil && bc.LatestCompletedChallenge != nil {
-			lastChallenge = bc.LatestCompletedChallenge.Created
-		}
-
-		var (
-			full = float64(details.Terms.WritePrice) * sizeInGB(-size)
-			left = allocLeftRatio(alloc.StartTime, alloc.Expiration,
-				lastChallenge)
-		)
-
-		value = state.Balance(full * left)
-
-		if value < 0 {
-			return fmt.Errorf("got negative amount of tokens to return" +
-				" back to write pool on delete data")
-		}
-
-		if value <= cp.Balance {
-			err = cp.moveToWritePool(alloc.ID, details.BlobberID, until, wp, value)
-			if err != nil {
-				return fmt.Errorf("can't move tokens back to write pool: %v", err)
-			}
-			alloc.MovedBack += value //
-			details.Spent -= value   // returned back
-		}
 	}
 
 	// save pools
