@@ -93,6 +93,12 @@ func (c *Client) addBlobRequest(t *testing.T) []byte {
 	return mustEncode(t, &sn)
 }
 
+func (c *Client) stakeLockRequest(t *testing.T) []byte {
+	var spr stakePoolRequest
+	spr.BlobberID = c.id
+	return mustEncode(t, &spr)
+}
+
 func (c *Client) addValidatorRequest(t *testing.T) []byte {
 	var vn ValidationNode
 	vn.ID = c.id
@@ -161,6 +167,13 @@ func addBlobber(t *testing.T, ssc *StorageSmartContract, cap, now int64,
 	balances.(*testBalances).balances[blob.id] = balacne
 
 	var _, err = blob.callAddBlobber(t, ssc, now, balances)
+	require.NoError(t, err)
+
+	// add stake for the blobber as blobber owner
+	var tx = newTransaction(blob.id, ADDRESS,
+		int64(float64(terms.WritePrice)*sizeInGB(cap)), now)
+	balances.(*testBalances).txn = tx
+	_, err = ssc.stakePoolLock(tx, blob.stakeLockRequest(t), balances)
 	require.NoError(t, err)
 	return
 }
@@ -309,8 +322,11 @@ func setConfig(t *testing.T, balances chainState.StateContextI) (
 		MaxLockPeriod: 20 * time.Minute,
 	}
 
-	conf.InterestRate = 0.01
-	conf.InterestInterval = 5 * time.Second
+	conf.StakePool = &stakePoolConfig{
+		MinLock:          10,
+		InterestRate:     0.01,
+		InterestInterval: 5 * time.Second,
+	}
 
 	mustSave(t, scConfigKey(ADDRESS), conf, balances)
 	return

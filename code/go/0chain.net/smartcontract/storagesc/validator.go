@@ -47,7 +47,9 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 
 	// create stake pool for the validator to count its rewards
 	var sp *stakePool
-	if sp, err = sc.getOrCreateStakePool(t.ClientID, balances); err != nil {
+	sp, err = sc.getOrCreateStakePool(t.ClientID, newValidator.DelegateWallets,
+		balances)
+	if err != nil {
 		return "", common.NewError("add_validator_failed",
 			"get or create stake pool error: "+err.Error())
 	}

@@ -88,11 +88,12 @@ func (rp *readPool) moveToBlobber(allocID, blobID string,
 		} else {
 			move, bp.Balance = value, bp.Balance-value
 		}
-		if _, _, err = ap.TransferTo(sp, move, nil); err != nil {
+		if _, _, err = ap.TransferTo(&sp.Rewards, move, nil); err != nil {
 			return // transferring error
 		}
 
 		value -= move
+		sp.Rewards.Blobber += value
 		if bp.Balance == 0 {
 			ap.Blobbers.removeByIndex(bi)
 		}

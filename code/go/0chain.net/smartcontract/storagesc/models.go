@@ -154,9 +154,10 @@ type StorageChallenge struct {
 }
 
 type ValidationNode struct {
-	ID        string `json:"id"`
-	BaseURL   string `json:"url"`
-	PublicKey string `json:"-"`
+	ID              string   `json:"id"`
+	BaseURL         string   `json:"url"`
+	PublicKey       string   `json:"-"`
+	DelegateWallets []string `json:"delegate_wallets"`
 }
 
 func (sn *ValidationNode) GetKey(globalKey string) datastore.Key {
@@ -262,6 +263,7 @@ type StorageNode struct {
 	Used            int64            `json:"used"`     // allocated capacity
 	LastHealthCheck common.Timestamp `json:"last_health_check"`
 	PublicKey       string           `json:"-"`
+	DelegateWallets []string         `json:"delegate_wallets"`
 }
 
 // validate the blobber configurations
@@ -273,12 +275,6 @@ func (sn *StorageNode) validate(conf *scConfig) (err error) {
 		return errors.New("insufficient blobber capacity")
 	}
 	return
-}
-
-// stake required for the blobber with current capacity and
-// current write price (i.e. with current terms)
-func (sn *StorageNode) stake() state.Balance {
-	return state.Balance(sizeInGB(sn.Capacity) * float64(sn.Terms.WritePrice))
 }
 
 func (sn *StorageNode) GetKey(globalKey string) datastore.Key {

@@ -138,9 +138,10 @@ func (wp *writePool) moveToStake(allocID, blobID string,
 		} else {
 			move, bp.Balance = value, bp.Balance-value
 		}
-		if _, _, err = ap.TransferTo(sp, move, nil); err != nil {
+		if _, _, err = ap.TransferTo(&sp.Rewards, move, nil); err != nil {
 			return // transferring error
 		}
+		sp.Rewards.Blobber += move
 		value -= move
 		if bp.Balance == 0 {
 			ap.Blobbers.removeByIndex(bi)

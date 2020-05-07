@@ -124,8 +124,6 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	if err = cp.moveToBlobber(sp, move); err != nil {
 		return fmt.Errorf("can't move tokens to blobber: %v", err)
 	}
-	sp.BlobberReward += move //
-	sp.Rewards += move       //
 	details.ChallengeReward += move
 
 	// validators' stake pools
@@ -134,11 +132,12 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		return
 	}
 
-	err = cp.moveToValidators(validatorsReward, validators, vsps)
+	var moved state.Balance
+	moved, err = cp.moveToValidators(validatorsReward, validators, vsps)
 	if err != nil {
 		return fmt.Errorf("rewarding validators: %v", err)
 	}
-	alloc.MovedToValidators += validatorsReward
+	alloc.MovedToValidators += moved
 
 	// save validators' stake pools
 	if err = sc.saveStakePools(validators, vsps, balances); err != nil {
@@ -242,11 +241,12 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 	}
 
 	// validators reward
-	err = cp.moveToValidators(validatorsReward, validators, vsps)
+	var moved state.Balance
+	moved, err = cp.moveToValidators(validatorsReward, validators, vsps)
 	if err != nil {
 		return fmt.Errorf("rewarding validators: %v", err)
 	}
-	alloc.MovedToValidators += validatorsReward
+	alloc.MovedToValidators += moved
 
 	// save validators' stake pools
 	if err = sc.saveStakePools(validators, vsps, balances); err != nil {
@@ -271,6 +271,13 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 			return fmt.Errorf("can't get blobber's stake pool: %v", err)
 		}
 
+		// make sure all mints not payed yet be payed before the stake
+		// pools will be slashed
+		_, err = sp.update(conf, sc.ID, t.CreationDate, balances)
+		if err != nil {
+			return fmt.Errorf("updating stake pool: %v", err)
+		}
+
 		// move blobber's stake tokens to allocation's write pool
 
 		var offer = sp.findOffer(alloc.ID)
@@ -279,16 +286,15 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 				alloc.ID)
 		}
 
-		var move = state.Balance(float64(offer.Lock) * conf.BlobberSlash)
-		offer.Lock -= move // subtract the offer stake
-
-		err = sp.moveToWritePool(alloc.ID, details.BlobberID, until, wp, move)
+		var move state.Balance
+		move, err = sp.slash(alloc.ID, details.BlobberID, until, wp, offer.Lock,
+			conf.BlobberSlash)
 		if err != nil {
 			return fmt.Errorf("can't move tokens to write pool: %v", err)
 		}
 
-		// penalty statistic
-		details.Penalty += move
+		offer.Lock -= move      // subtract the offer stake
+		details.Penalty += move // penalty statistic
 
 		// save stake pool
 		if err = sp.save(sc.ID, bc.BlobberID, balances); err != nil {

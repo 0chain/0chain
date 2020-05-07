@@ -3,9 +3,9 @@ package storagesc
 import (
 	"fmt"
 
-	c_state "0chain.net/chaincore/chain/state"
+	chainstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
-	"0chain.net/chaincore/smartcontractinterface"
+	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	metrics "github.com/rcrowley/go-metrics"
@@ -22,10 +22,10 @@ const (
 )
 
 type StorageSmartContract struct {
-	*smartcontractinterface.SmartContract
+	*sci.SmartContract
 }
 
-func (ssc *StorageSmartContract) SetSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {
+func (ssc *StorageSmartContract) SetSC(sc *sci.SmartContract, bcContext sci.BCContextI) {
 	ssc.SmartContract = sc
 	// sc configurations
 	ssc.SmartContract.RestHandlers["/getConfig"] = ssc.getConfigHandler
@@ -65,8 +65,9 @@ func (ssc *StorageSmartContract) SetSC(sc *smartcontractinterface.SmartContract,
 	// stake pool
 	ssc.SmartContract.RestHandlers["/getStakePoolStat"] = ssc.getStakePoolStatHandler
 	ssc.SmartContractExecutionStats["stake_pool_lock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "stake_pool_lock"), nil)
-	ssc.SmartContractExecutionStats["stake_pool_unlock_rewards"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "stake_pool_unlock_rewards"), nil)
 	ssc.SmartContractExecutionStats["stake_pool_unlock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "stake_pool_unlock"), nil)
+	ssc.SmartContractExecutionStats["stake_pool_pay_interests"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "stake_pool_pay_interests"), nil)
+	ssc.SmartContractExecutionStats["stake_pool_take_rewards"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "stake_pool_take_rewards"), nil)
 	// challenge pool
 	ssc.SmartContract.RestHandlers["/getChallengePoolStat"] = ssc.getChallengePoolStatHandler
 }
@@ -79,12 +80,12 @@ func (ssc *StorageSmartContract) GetAddress() string {
 	return ADDRESS
 }
 
-func (ssc *StorageSmartContract) GetRestPoints() map[string]smartcontractinterface.SmartContractRestHandler {
+func (ssc *StorageSmartContract) GetRestPoints() map[string]sci.SmartContractRestHandler {
 	return ssc.RestHandlers
 }
 
 func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
-	funcName string, input []byte, balances c_state.StateContextI) (
+	funcName string, input []byte, balances chainstate.StateContextI) (
 	resp string, err error) {
 
 	switch funcName {
@@ -155,14 +156,16 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 	case "write_pool_unlock":
 		resp, err = sc.writePoolUnlock(t, input, balances)
 
-	// stake pool
+		// stake pool
 
 	case "stake_pool_lock":
 		resp, err = sc.stakePoolLock(t, input, balances)
-	case "stake_pool_unlock_rewards":
-		resp, err = sc.stakePoolUnlockRewards(t, input, balances)
 	case "stake_pool_unlock":
 		resp, err = sc.stakePoolUnlock(t, input, balances)
+	case "stake_pool_pay_interests":
+		resp, err = sc.stakePoolPayInterests(t, input, balances)
+	case "stake_pool_take_rewards":
+		resp, err = sc.stakePoolTakeRewards(t, input, balances)
 
 	// case "challenge_request":
 	// 	resp, err := sc.addChallenge(t, balances.GetBlock(), input, balances)
