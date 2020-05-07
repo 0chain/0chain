@@ -198,6 +198,20 @@ func sizeInGB(size int64) float64 {
 	return float64(size) / GB
 }
 
+// exclude blobbers with not enough token in stake pool to fit the size
+func (sc *StorageSmartContract) filterBlobbersByFreeSpace(now common.Timestamp,
+	size int64, balances chainstate.StateContextI) (filter filterBlobberFunc) {
+
+	return filterBlobberFunc(func(b *StorageNode) (kick bool) {
+		var sp, err = sc.getStakePool(b.ID, balances)
+		if err != nil {
+			return true
+		}
+		var free = sp.capacity(now, b.Terms.WritePrice)
+		return free < size // hasn't enough free space
+	})
+}
+
 // newAllocationRequest creates new allocation
 func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 	input []byte, balances chainstate.StateContextI) (string, error) {
@@ -239,7 +253,8 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 		bsize = (sa.Size + int64(size-1)) / int64(size)
 		// filtered list
 		list = sa.filterBlobbers(allBlobbersList.Nodes, t.CreationDate, bsize,
-			filterHealthyBlobbers(t.CreationDate))
+			filterHealthyBlobbers(t.CreationDate),
+			sc.filterBlobbersByFreeSpace(t.CreationDate, bsize, balances))
 	)
 
 	if len(list) < size {
@@ -1033,10 +1048,8 @@ func (sc *StorageSmartContract) cacnelAllocationRequest(
 					"moving tokens to stake pool of "+d.BlobberID+": "+
 						err.Error())
 			}
-			d.Spent += move          // }
-			d.FinalReward += move    // } stat
-			sp.BlobberReward += move // }
-			sp.Rewards += move       // } blobber rewards (not a stake)
+			d.Spent += move       // }
+			d.FinalReward += move // } stat
 		}
 		// min lock demand rest
 		var fctrml = conf.FailedChallengesToRevokeMinLock
@@ -1049,13 +1062,11 @@ func (sc *StorageSmartContract) cacnelAllocationRequest(
 						"paying min_lock for "+d.BlobberID+": "+err.Error())
 				}
 				d.Spent += lack
-				sp.BlobberReward += lack
-				sp.Rewards += lack
 				d.FinalReward += lack
 			}
 		}
 		// -------
-		_, err = sp.update(conf, sc.ID, t.CreationDate, b, balances)
+		_, err = sp.update(conf, sc.ID, t.CreationDate, balances)
 		if err != nil {
 			return "", common.NewError("alloc_cacnel_failed",
 				"updating stake pool of "+d.BlobberID+": "+err.Error())
@@ -1237,10 +1248,8 @@ func (sc *StorageSmartContract) finalizeAllocation(
 					"moving tokens to stake pool of "+d.BlobberID+": "+
 						err.Error())
 			}
-			d.Spent += move          // }
-			d.FinalReward += move    // } stat
-			sp.BlobberReward += move // }
-			sp.Rewards += move       // } blobber rewards (not a stake)
+			d.Spent += move       // }
+			d.FinalReward += move // } stat
 		}
 		// min lock demand rest
 		if lack := d.MinLockDemand - d.Spent; lack > 0 {
@@ -1251,12 +1260,10 @@ func (sc *StorageSmartContract) finalizeAllocation(
 					"paying min_lock for "+d.BlobberID+": "+err.Error())
 			}
 			d.Spent += lack
-			sp.BlobberReward += lack
-			sp.Rewards += lack
 			d.FinalReward += lack
 		}
 		// -------
-		_, err = sp.update(conf, sc.ID, t.CreationDate, b, balances)
+		_, err = sp.update(conf, sc.ID, t.CreationDate, balances)
 		if err != nil {
 			return "", common.NewError("fini_alloc_failed",
 				"updating stake pool of "+d.BlobberID+": "+err.Error())

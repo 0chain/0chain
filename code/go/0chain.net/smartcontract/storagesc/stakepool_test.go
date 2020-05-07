@@ -13,7 +13,7 @@ import (
 
 func Test_newStakePool(t *testing.T) {
 	var sp = newStakePool()
-	assert.NotNil(t, sp.ZcnPool)
+	assert.NotNil(t, sp.Pools)
 	assert.NotNil(t, sp.Offers)
 }
 
@@ -32,12 +32,12 @@ func Test_stakePool_offersStake(t *testing.T) {
 		sp  = newStakePool()
 		now = common.Now()
 	)
-	assert.Zero(t, sp.offersStake(now))
+	assert.Zero(t, sp.offersStake(now, false))
 	sp.Offers["alloc_id"] = &offerPool{
 		Lock:   90,
 		Expire: now,
 	}
-	assert.Equal(t, state.Balance(90), sp.offersStake(now))
+	assert.Equal(t, state.Balance(90), sp.offersStake(now, false))
 }
 
 func Test_stakePool_save(t *testing.T) {
@@ -68,8 +68,9 @@ func Test_stakePool_fill(t *testing.T) {
 	)
 
 	balances.txn = &tx
+	balances.balances[clienID] = 100e10
 
-	_, _, err = sp.fill(&tx, balances)
+	_, err = sp.dig(&tx, balances)
 	require.NoError(t, err)
-	assert.Equal(t, state.Balance(90), sp.Balance)
+	assert.Equal(t, state.Balance(90), sp.stake())
 }

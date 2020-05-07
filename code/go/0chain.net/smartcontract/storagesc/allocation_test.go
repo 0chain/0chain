@@ -258,10 +258,12 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 			"invalid character '}' looking for beginning of value"
 		errMsg5 = "allocation_creation_failed: " +
 			"invalid request: invalid read_price range"
+		errMsg5p9 = "allocation_creation_failed: " +
+			"invalid request: missing owner id"
 		errMsg6 = "allocation_creation_failed: " +
 			"Not enough blobbers to honor the allocation"
 		errMsg7 = "allocation_creation_failed: " +
-			"can't get blobber's stake pool: value not present"
+			"Not enough blobbers to honor the allocation"
 		errMsg8 = "allocation_creation_failed: " +
 			"not enough tokens to honor the min lock demand"
 		errMsg9 = "allocation_creation_failed: " +
@@ -323,8 +325,9 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
 	requireErrMsg(t, err, errMsg5)
 
-	// 6. not enough blobbers (filtered by request, by max_offer_duration)
+	// 6. missing owner id
 
+	nar.Owner = clientID
 	nar.ReadPriceRange = PriceRange{Min: 10, Max: 40}
 	nar.WritePriceRange = PriceRange{Min: 100, Max: 400}
 	nar.Size = 20 * GB
@@ -337,6 +340,12 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	nar.MaxChallengeCompletionTime = 200 * time.Hour // max cct
 
 	_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
+	requireErrMsg(t, err, errMsg5p9)
+
+	// 6 .filtered blobbers
+
+	nar.Owner = clientID
+	_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
 	requireErrMsg(t, err, errMsg6)
 
 	// 6. not enough blobbers (no health blobbers)
@@ -346,7 +355,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	_, err = ssc.newAllocationRequest(&tx, mustEncode(t, &nar), balances)
 	requireErrMsg(t, err, errMsg6)
 
-	// 7. missing stake pools
+	// 7. missing stake pools (not enough blobbers)
 
 	// make the blobbers health
 	allBlobbers.Nodes[0].LastHealthCheck = tx.CreationDate
@@ -359,7 +368,12 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 
 	// 8. not enough tokens
 
-	var sp1, sp2 = newStakePool(), newStakePool()
+	var (
+		sp1, sp2 = newStakePool(), newStakePool()
+		dp1, dp2 = new(delegatePool), new(delegatePool)
+	)
+	dp1.Balance, dp2.Balance = 20e10, 20e10
+	sp1.Pools["hash1"], sp2.Pools["hash2"] = dp1, dp2
 	require.NoError(t, sp1.save(ssc.ID, "b1", balances))
 	require.NoError(t, sp2.save(ssc.ID, "b2", balances))
 
@@ -591,14 +605,19 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 	nar.DataShards = 1
 	nar.ParityShards = 1
 	nar.Expiration = tx.CreationDate + toSeconds(48*time.Hour)
-	nar.Owner = "" // not set
+	nar.Owner = clientID
 	nar.OwnerPublicKey = pubKey
 	nar.PreferredBlobbers = nil                      // not set
 	nar.MaxChallengeCompletionTime = 200 * time.Hour //
 
 	nar.Expiration = tx.CreationDate + toSeconds(100*time.Second)
 
-	var sp1, sp2 = newStakePool(), newStakePool()
+	var (
+		sp1, sp2 = newStakePool(), newStakePool()
+		dp1, dp2 = new(delegatePool), new(delegatePool)
+	)
+	dp1.Balance, dp2.Balance = 20e10, 20e10
+	sp1.Pools["hash1"], sp2.Pools["hash2"] = dp1, dp2
 	require.NoError(t, sp1.save(ssc.ID, "b1", balances))
 	require.NoError(t, sp2.save(ssc.ID, "b2", balances))
 
@@ -1026,6 +1045,6 @@ func Test_finalize_allocation(t *testing.T) {
 
 	assert.True(t, alloc.Finalized)
 	assert.True(t,
-		alloc.BlobberDetails[0].MinLockDemand == alloc.BlobberDetails[0].Spent,
+		alloc.BlobberDetails[0].MinLockDemand <= alloc.BlobberDetails[0].Spent,
 		"should receive min_lock_demand")
 }

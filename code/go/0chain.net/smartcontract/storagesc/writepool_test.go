@@ -173,6 +173,7 @@ func TestStorageSmartContract_writePoolLock(t *testing.T) {
 		},
 		Expiration:              10,
 		ChallengeCompletionTime: 200 * time.Second,
+		Owner:                   client.id,
 	}
 
 	// 1. no pool

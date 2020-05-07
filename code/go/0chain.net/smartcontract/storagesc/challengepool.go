@@ -117,16 +117,18 @@ func (cp *challengePool) moveToBlobber(sp *stakePool, value state.Balance) (
 			cp.ID, cp.Balance, value)
 	}
 
-	_, _, err = cp.TransferTo(sp, value, nil)
+	_, _, err = cp.TransferTo(&sp.Rewards, value, nil)
 	if err != nil {
 		return fmt.Errorf("moving tokens to blobber: %v", err)
 	}
+	sp.Rewards.Blobber += value // blobber rewards
 
 	return
 }
 
 func (cp *challengePool) moveToValidators(reward state.Balance,
-	validatos []datastore.Key, vsps []*stakePool) (err error) {
+	validatos []datastore.Key, vsps []*stakePool) (moved state.Balance,
+	err error) {
 
 	if len(validatos) == 0 || reward == 0 {
 		return // nothing to move, or nothing to move to
@@ -137,18 +139,18 @@ func (cp *challengePool) moveToValidators(reward state.Balance,
 	for i, sp := range vsps {
 
 		if cp.Balance < oneReward {
-			return fmt.Errorf("not enough tokens in challenge pool: %v < %v",
+			return 0, fmt.Errorf("not enough tokens in challenge pool: %v < %v",
 				cp.Balance, oneReward)
 		}
 
-		_, _, err = cp.TransferTo(sp, oneReward, nil)
+		_, _, err = cp.TransferTo(&sp.Rewards, oneReward, nil)
 		if err != nil {
-			return fmt.Errorf("moving tokens to validator %s: %v",
+			return 0, fmt.Errorf("moving tokens to validator %s: %v",
 				validatos[i], err)
 		}
 
-		sp.ValidatorReward += oneReward
-		sp.Rewards += oneReward
+		sp.Rewards.Validator += oneReward
+		moved += oneReward
 	}
 
 	return

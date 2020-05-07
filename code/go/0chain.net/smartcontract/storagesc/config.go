@@ -20,6 +20,15 @@ func scConfigKey(scKey string) datastore.Key {
 	return datastore.Key(scKey + ":configurations")
 }
 
+// stake pool configs
+
+type stakePoolConfig struct {
+	MinLock int64 `json:"min_lock"`
+	// Interest rate of the stake pool
+	InterestRate     float64       `json:"interest_rate"`
+	InterestInterval time.Duration `json:"interest_interval"`
+}
+
 // read pool configs
 
 type readPoolConfig struct {
@@ -54,6 +63,8 @@ type scConfig struct {
 	ReadPool *readPoolConfig `json:"readpool"`
 	// WritePool related configurations.
 	WritePool *writePoolConfig `json:"writepool"`
+	// StakePool related configurations.
+	StakePool *stakePoolConfig `json:"stakepool"`
 	// ValidatorReward represents % (value in [0; 1] range) of blobbers' reward
 	// goes to validators. Even if a blobber doesn't pass a challenge validators
 	// receive this reward.
@@ -68,12 +79,6 @@ type scConfig struct {
 	MaxReadPrice state.Balance `json:"max_read_price"`
 	// MaxWrtiePrice
 	MaxWritePrice state.Balance `json:"max_write_price"`
-
-	// minting
-
-	// Interest rate of the stake pool
-	InterestRate     float64       `json:"interest_rate"`
-	InterestInterval time.Duration `json:"interest_interval"`
 
 	// allocation cancellation
 
@@ -131,16 +136,17 @@ func (sc *scConfig) validate() (err error) {
 	if sc.MaxWritePrice < 0 {
 		return fmt.Errorf("negative max_write_price: %v", sc.MaxWritePrice)
 	}
-	if sc.InterestRate < 0 {
-		return fmt.Errorf("negative interest_rate: %v", sc.InterestRate)
+	if sc.StakePool.MinLock <= 1 {
+		return fmt.Errorf("invalid stakepool.min_lock: %v <= 1",
+			sc.StakePool.MinLock)
 	}
-	if sc.InterestRate > 1 {
-		return fmt.Errorf("interest_rate is greater then 1: %v",
-			sc.InterestRate)
+	if sc.StakePool.InterestRate < 0 {
+		return fmt.Errorf("negative stakepool.interest_rate: %v",
+			sc.StakePool.InterestRate)
 	}
-	if sc.InterestInterval <= 0 {
-		return fmt.Errorf("invalid interest_interval <= 0: %v",
-			sc.InterestInterval)
+	if sc.StakePool.InterestInterval <= 0 {
+		return fmt.Errorf("invalid stakepool.interest_interval <= 0: %v",
+			sc.StakePool.InterestInterval)
 	}
 	if sc.FailedChallengesToCancel < 0 {
 		return fmt.Errorf("negative failed_challenges_to_cancel: %v",
@@ -224,11 +230,14 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 		prefix + "writepool.min_lock_period")
 	conf.WritePool.MaxLockPeriod = config.SmartContractConfig.GetDuration(
 		prefix + "writepool.max_lock_period")
-	// stake interests
-	conf.InterestRate = config.SmartContractConfig.GetFloat64(
-		prefix + "interest_rate")
-	conf.InterestInterval = config.SmartContractConfig.GetDuration(
-		prefix + "interest_interval")
+	// stake pool
+	conf.StakePool = new(stakePoolConfig)
+	conf.StakePool.MinLock = config.SmartContractConfig.GetInt64(
+		prefix + "stakepool.min_lock")
+	conf.StakePool.InterestRate = config.SmartContractConfig.GetFloat64(
+		prefix + "stakepool.interest_rate")
+	conf.StakePool.InterestInterval = config.SmartContractConfig.GetDuration(
+		prefix + "stakepool.interest_interval")
 	// allocation cancellation
 	conf.FailedChallengesToCancel = config.SmartContractConfig.GetInt(
 		prefix + "failed_challenges_to_cancel")
