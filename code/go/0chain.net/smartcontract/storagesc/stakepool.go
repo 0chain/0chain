@@ -163,6 +163,7 @@ func (sp *stakePool) dig(t *transaction.Transaction,
 	dp.MintAt = t.CreationDate
 
 	sp.Pools[t.Hash] = dp
+
 	return
 }
 
@@ -465,6 +466,7 @@ func (sp *stakePool) stat(conf *scConfig, sscKey string,
 	stat.Delegate = make([]delegatePoolStat, 0, len(sp.Pools))
 	for _, dp := range sp.orderedPools() {
 		stat.Delegate = append(stat.Delegate, delegatePoolStat{
+			ID:         dp.ID,
 			Balance:    dp.Balance,
 			DelegateID: dp.DelegateID,
 			Earnings:   dp.Earnings,
@@ -498,6 +500,7 @@ type rewardsStat struct {
 }
 
 type delegatePoolStat struct {
+	ID         datastore.Key `json:"id"`          // pool ID
 	Balance    state.Balance `json:"balance"`     // current balance
 	DelegateID datastore.Key `json:"delegate_id"` // wallet
 	Earnings   state.Balance `json:"earnings"`    // total for all time
@@ -631,7 +634,7 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 
 	if t.Value < int64(conf.StakePool.MinLock) {
 		return "", common.NewError("stake_pool_lock_failed",
-			"too small stake to lock: "+err.Error())
+			"too small stake to lock")
 	}
 
 	var spr stakePoolRequest
@@ -657,7 +660,7 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			"stake pool digging error: "+err.Error())
 	}
 
-	if err = sp.save(ssc.ID, t.ClientID, balances); err != nil {
+	if err = sp.save(ssc.ID, spr.BlobberID, balances); err != nil {
 		return "", common.NewError("stake_pool_lock_failed",
 			"saving stake pool: "+err.Error())
 	}
@@ -704,7 +707,7 @@ func (ssc *StorageSmartContract) stakePoolUnlock(t *transaction.Transaction,
 	}
 
 	// save the pool
-	if err = sp.save(ssc.ID, t.ClientID, balances); err != nil {
+	if err = sp.save(ssc.ID, spr.BlobberID, balances); err != nil {
 		return "", common.NewError("stake_pool_unlock_failed",
 			"saving stake pool: "+err.Error())
 	}
@@ -750,7 +753,7 @@ func (ssc *StorageSmartContract) stakePoolPayInterests(
 	}
 
 	// save the pool
-	if err = sp.save(ssc.ID, t.ClientID, balances); err != nil {
+	if err = sp.save(ssc.ID, spr.BlobberID, balances); err != nil {
 		return "", common.NewError("stake_pool_take_rewards_failed",
 			"saving stake pool: "+err.Error())
 	}
@@ -801,7 +804,7 @@ func (ssc *StorageSmartContract) stakePoolTakeRewards(
 	}
 
 	// save the pool
-	if err = sp.save(ssc.ID, t.ClientID, balances); err != nil {
+	if err = sp.save(ssc.ID, spr.BlobberID, balances); err != nil {
 		return "", common.NewError("stake_pool_take_rewards_failed",
 			"saving stake pool: "+err.Error())
 	}

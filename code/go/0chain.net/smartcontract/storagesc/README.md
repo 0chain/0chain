@@ -24,9 +24,7 @@ Provide
  - read_price                 tok / GB (by 64 KB chunks)
  - max_offer_duration         time.Duration
  - challenge_completion_time  time.Duration
-
- - number of tokens to lock
-
+ - delegate_wallets           []string
 
 The transaction also updates blobber's 'last health check' making it healthy.
 
@@ -248,16 +246,15 @@ free to use these zbox command.
     done
     ```
     This command does it all.
-3. Send some tokens to blobbers to allow them to register. In the example we
-   are using blobber1 and blobber2. Export blobber identifier first to simplify
-   commands
+3. Start blobbers (if not started yet) and export their IDs to use later.
     ```
     export BLOBBER1=f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
     export BLOBBER2=7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d
     ```
+    Add tokens to stake pool of the blobber to allow them to accept allocations.
     ```
-    ./zwallet send --to_client_id $BLOBBER1 --token 2 --desc "to register"
-    ./zwallet send --to_client_id $BLOBBER2 --token 2 --desc "to register"
+    ./zbox sp-lock --blobber_id $BLOBBER1 --token 2
+    ./zbox sp-lock --blobber_id $BLOBBER2 --token 2
     ```
 4. Setup blobbers' and validators' wallets in `~/.zcn/` directory to use them
     later. We will use them to check out balance. Blobber/Validator 1.
@@ -319,6 +316,9 @@ free to use these zbox command.
     # in the future, prices can be changed
     max_offer_duration: 744h # 31 day
     challenge_completion_time: 1m # 15m # duration to complete a challenge
+
+    # provide empty list to allow any client to be a delegate
+    delegate_wallets: []
 
     # [configurations below]
     ```
