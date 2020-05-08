@@ -272,18 +272,19 @@ type BlobberAllocation struct {
 }
 
 type StorageAllocation struct {
-	ID             string                        `json:"id"`
-	DataShards     int                           `json:"data_shards"`
-	ParityShards   int                           `json:"parity_shards"`
-	Size           int64                         `json:"size"`
-	Expiration     common.Timestamp              `json:"expiration_date"`
-	Blobbers       []*StorageNode                `json:"blobbers"`
-	Owner          string                        `json:"owner_id"`
-	OwnerPublicKey string                        `json:"owner_public_key"`
-	Payer          string                        `json:"payer_id"`
-	Stats          *StorageAllocationStats       `json:"stats"`
-	BlobberDetails []*BlobberAllocation          `json:"blobber_details"`
-	BlobberMap     map[string]*BlobberAllocation `json:"-"`
+	ID                string                        `json:"id"`
+	DataShards        int                           `json:"data_shards"`
+	ParityShards      int                           `json:"parity_shards"`
+	Size              int64                         `json:"size"`
+	Expiration        common.Timestamp              `json:"expiration_date"`
+	Blobbers          []*StorageNode                `json:"blobbers"`
+	Owner             string                        `json:"owner_id"`
+	OwnerPublicKey    string                        `json:"owner_public_key"`
+	Payer             string                        `json:"payer_id"`
+	Stats             *StorageAllocationStats       `json:"stats"`
+	PreferredBlobbers []string                      `json:"preferred_blobbers"`
+	BlobberDetails    []*BlobberAllocation          `json:"blobber_details"`
+	BlobberMap        map[string]*BlobberAllocation `json:"-"`
 }
 
 func (sn *StorageAllocation) GetKey(globalKey string) datastore.Key {

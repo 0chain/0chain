@@ -31,6 +31,7 @@ var (
 type StateContextI interface {
 	GetLastestFinalizedMagicBlock() *block.Block
 	GetBlock() *block.Block
+	SetMagicBlock(block *block.MagicBlock)
 	GetState() util.MerklePatriciaTrieI
 	GetTransaction() *transaction.Transaction
 	GetClientBalance(clientID datastore.Key) (state.Balance, error)
@@ -72,6 +73,10 @@ func NewStateContext(b *block.Block, s util.MerklePatriciaTrieI, csd state.Deser
 //GetBlock - get the block associated with this state context
 func (sc *StateContext) GetBlock() *block.Block {
 	return sc.block
+}
+
+func (sc *StateContext) SetMagicBlock(block *block.MagicBlock) {
+	sc.block.MagicBlock = block
 }
 
 //GetState - get the state MPT associated with this state context

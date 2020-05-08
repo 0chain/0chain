@@ -56,7 +56,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	var count int32
 	var roundMismatch bool
 	var roundTimeout bool
-	var hasOwnerTxn bool
+	//var hasOwnerTxn bool
 	var failedStateCount int32
 	var byteSize int64
 	txnMap := make(map[datastore.Key]bool, mc.BlockSize)
@@ -88,9 +88,9 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 			failedStateCount++
 			return false
 		}
-		if txn.ClientID == mc.OwnerID {
-			hasOwnerTxn = true
-		}
+		//if txn.ClientID == mc.OwnerID {
+		//	hasOwnerTxn = true
+		//}
 		//Setting the score lower so the next time blocks are generated these transactions don't show up at the top
 		txn.SetCollectionScore(txn.GetCollectionScore() - 10*60)
 		txnMap[txn.GetKey()] = true
@@ -485,7 +485,8 @@ func (mc *Chain) FinalizeBlock(ctx context.Context, b *block.Block) error {
 
 func getLatestBlockFromSharders(ctx context.Context) *block.Block {
 	mc := GetMinerChain()
-	mc.Sharders.OneTimeStatusMonitor(ctx)
+	mb := mc.GetCurrentMagicBlock()
+	mb.Sharders.OneTimeStatusMonitor(ctx)
 	lfBlocks := mc.GetLatestFinalizedBlockFromSharder(ctx)
 	//Sorting as per the latest finalized blocks from all the sharders
 	sort.Slice(lfBlocks, func(i int, j int) bool {

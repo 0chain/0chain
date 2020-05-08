@@ -43,13 +43,16 @@ const RoundTimeout = "round_timeout"
 //ErrRoundTimeout - an error object for round timeout error
 var ErrRoundTimeout = common.NewError(RoundTimeout, "round timed out")
 
-var minerChain = &Chain{}
+var (
+	minerChain = &Chain{}
+)
 
 /*SetupMinerChain - setup the miner's chain */
 func SetupMinerChain(c *chain.Chain) {
 	minerChain.Chain = c
 	minerChain.blockMessageChannel = make(chan *BlockMessage, 128)
-	minerChain.muDKG = &sync.Mutex{}
+	minerChain.muDKG = &sync.RWMutex{}
+	minerChain.roundDkg = round.NewRoundStartingStorage()
 	c.SetFetchedNotarizedBlockHandler(minerChain)
 	c.RoundF = MinerRoundFactory{}
 }
@@ -100,15 +103,14 @@ func (mrf MinerRoundFactory) CreateRoundF(roundNum int64) interface{} {
 type Chain struct {
 	*chain.Chain
 	blockMessageChannel chan *BlockMessage
-	muDKG               *sync.Mutex
-	currentDKG          *bls.DKG
+	muDKG               *sync.RWMutex
+	roundDkg            round.RoundStorage
 	viewChangeDKG       *bls.DKG
 	mutexMpks           sync.RWMutex
 	mpks                *block.Mpks
 	nextViewChange      int64
 	discoverClients     bool
 	started             uint32
-	dkgSet              bool
 }
 
 // SetDiscoverClients set the discover clients parameter
@@ -125,7 +127,7 @@ func (mc *Chain) GetBlockMessageChannel() chan *BlockMessage {
 func (mc *Chain) SetupGenesisBlock(hash string, magicBlock *block.MagicBlock) *block.Block {
 	gr, gb := mc.GenerateGenesisBlock(hash, magicBlock)
 	if gr == nil || gb == nil {
-		panic("Genesis round/block canot be null")
+		panic("Genesis round/block can't be null")
 	}
 	rr, ok := gr.(*round.Round)
 	if !ok {
@@ -155,7 +157,7 @@ func (mc *Chain) SetLatestFinalizedBlock(ctx context.Context, b *block.Block) {
 	var r = round.NewRound(b.Round)
 	mr := mc.CreateRound(r)
 	mr = mc.AddRound(mr).(*Round)
-	mc.SetRandomSeed(mr, b.RoundRandomSeed)
+	mc.SetRandomSeed(mr, b.GetRoundRandomSeed())
 	mc.AddRoundBlock(mr, b)
 	mc.AddNotarizedBlock(ctx, mr, b)
 	mc.Chain.SetLatestFinalizedBlock(b)
@@ -171,7 +173,7 @@ func (mc *Chain) deleteTxns(txns []datastore.Entity) error {
 /*SetPreviousBlock - set the previous block */
 func (mc *Chain) SetPreviousBlock(ctx context.Context, r round.RoundI, b *block.Block, pb *block.Block) {
 	b.SetPreviousBlock(pb)
-	b.RoundRandomSeed = r.GetRandomSeed()
+	b.SetRoundRandomSeed(r.GetRandomSeed())
 	mc.SetRoundRank(r, b)
 	b.ComputeChainWeight()
 }
@@ -217,16 +219,78 @@ func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) erro
 	return err
 }
 
-func (mc *Chain) ViewChange(ctx context.Context, round int64) {
-	if config.DevConfiguration.ViewChange && mc.nextViewChange <= round &&
-		(mc.currentDKG == nil || mc.currentDKG.StartingRound < mc.nextViewChange) {
-		if mc.ViewChangeMagicBlock != nil {
-			err := mc.UpdateMagicBlock(mc.ViewChangeMagicBlock)
+func (mc *Chain) isNeedViewChange(ctx context.Context, nround int64) bool {
+	currentDKG := mc.GetCurrentDKG(nround)
+	nextVC := mc.GetNextViewChange()
+	result := config.DevConfiguration.ViewChange &&
+		nextVC == nround &&
+		(currentDKG == nil || currentDKG.StartingRound <= nextVC)
+	return result
+}
+
+func (mc *Chain) ViewChange(ctx context.Context, nRound int64) (bool, error) {
+	viewChangeMutex.Lock()
+	defer viewChangeMutex.Unlock()
+
+	if !mc.isNeedViewChange(ctx, nRound) {
+		return false, nil
+	}
+	viewChangeMagicBlock := mc.GetViewChangeMagicBlock()
+	mb := mc.GetMagicBlock(nRound)
+	if viewChangeMagicBlock != nil {
+		if mb == nil || mb.MagicBlockNumber != viewChangeMagicBlock.MagicBlockNumber {
+			err := mc.UpdateMagicBlock(viewChangeMagicBlock)
 			if err != nil {
 				Logger.DPanic(err.Error())
 			}
+
 		}
-		mc.SetDKGSFromStore(ctx, mc.MagicBlock)
+		mc.UpdateNodesFromMagicBlock(viewChangeMagicBlock)
+
+		// Send the previous notarized block for new miners
+		mc.sendNotarizedBlockToNewMiners(ctx, nRound-1, viewChangeMagicBlock, mb)
+		mc.SetNextViewChange(0)
+		go mc.PruneRoundStorage(ctx, mc.getPruneCountRoundStorage(), mc.roundDkg, mc.MagicBlockStorage)
+	} else {
+		if err := mc.SetDKGSFromStore(ctx, mb); err != nil {
+			Logger.DPanic(err.Error())
+		}
+	}
+	return true, nil
+}
+
+// Send a notarized block for new miners
+func (mc *Chain) sendNotarizedBlockToNewMiners(ctx context.Context, nRound int64,
+	viewChangeMagicBlock, currentMagicBlock *block.MagicBlock) {
+	prevRound := mc.GetMinerRound(nRound)
+	prevMinerNodes := mc.GetMagicBlock(nRound).Miners
+	if prevRound == nil {
+		Logger.Error("round not found", zap.Any("round", nRound))
+		return
+	}
+	if prevRound.Block == nil {
+		Logger.Error("block round not found", zap.Any("round", nRound))
+		return
+	}
+	selfID := node.Self.Underlying().GetKey()
+	if currentMagicBlock.Miners.GetNode(selfID) == nil {
+		// A miner that was active in the previous VC can send a block
+		return
+	}
+
+	prevBlock := prevRound.Block
+	allMinersMB := make([]*node.Node, 0)
+	for _, n := range viewChangeMagicBlock.Miners.NodesMap {
+		if selfID == n.GetKey() {
+			continue
+		}
+		if prevMinerNodes.GetNode(n.GetKey()) == nil {
+			allMinersMB = append(allMinersMB, n)
+		}
+	}
+	if len(allMinersMB) != 0 {
+		go mc.SendNotarizedBlockToPoolNodes(ctx, prevBlock, viewChangeMagicBlock.Miners,
+			allMinersMB, chain.DefaultRetrySendNotarizedBlockNewMiner)
 	}
 }
 
@@ -240,13 +304,14 @@ func (mc *Chain) ChainStarted(ctx context.Context) bool {
 		case <-timer.C:
 			var start int
 			var started int
-			for _, n := range mc.Miners.CopyNodesMap() {
+			mb := mc.GetCurrentMagicBlock()
+			for _, n := range mb.Miners.CopyNodesMap() {
 				mc.RequestStartChain(n, &start, &started)
 			}
-			if start >= mc.T {
+			if start >= mb.T {
 				return false
 			}
-			if started >= mc.T {
+			if started >= mb.T {
 				return true
 			}
 			if timeoutCount == 20 || mc.isStarted() {
@@ -268,15 +333,19 @@ func (mc *Chain) GetMpks() map[string]*block.MPK {
 func StartChainRequestHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	nodeID := r.Header.Get(node.HeaderNodeID)
 	mc := GetMinerChain()
-	if !mc.Miners.HasNode(nodeID) {
-		Logger.Error("failed to send start chain", zap.Any("id", nodeID))
-		return nil, common.NewError("failed to send start chain", "miner is not in active set")
-	}
+
 	round, err := strconv.Atoi(r.FormValue("round"))
 	if err != nil {
 		Logger.Error("failed to send start chain", zap.Any("error", err))
 		return nil, err
 	}
+
+	mb := mc.GetMagicBlock(int64(round))
+	if mb == nil || !mb.Miners.HasNode(nodeID) {
+		Logger.Error("failed to send start chain", zap.Any("id", nodeID))
+		return nil, common.NewError("failed to send start chain", "miner is not in active set")
+	}
+
 	if mc.GetCurrentRound() != int64(round) {
 		Logger.Error("failed to send start chain -- different rounds", zap.Any("current_round", mc.GetCurrentRound()), zap.Any("requested_round", round))
 		return nil, common.NewError("failed to send start chain", fmt.Sprintf("differt_rounds -- current_round: %v, requested_round: %v", mc.GetCurrentRound(), round))
@@ -318,7 +387,7 @@ func (mc *Chain) RequestStartChain(n *node.Node, start, started *int) error {
 	return nil
 }
 
-func (mc *Chain) setStarted() {
+func (mc *Chain) SetStarted() {
 	if !atomic.CompareAndSwapUint32(&mc.started, 0, 1) {
 		Logger.Warn("chain already started")
 	}
@@ -326,4 +395,28 @@ func (mc *Chain) setStarted() {
 
 func (mc *Chain) isStarted() bool {
 	return atomic.LoadUint32(&mc.started) == 1
+}
+
+// SaveMagicBlock function (nil).
+func (mc *Chain) SaveMagicBlock() chain.MagicBlockSaveFunc {
+	return nil
+}
+
+// GetCurrentDKG returns DKG by round number
+func (mc *Chain) GetCurrentDKG(round int64) *bls.DKG {
+	mc.muDKG.RLock()
+	defer mc.muDKG.RUnlock()
+	entity := mc.roundDkg.Get(round)
+	if entity == nil {
+		return nil
+	}
+	return entity.(*bls.DKG)
+}
+
+// SetDKG sets DKG for the start round
+func (mc *Chain) SetDKG(dkg *bls.DKG, startingRound int64) error {
+	mc.muDKG.Lock()
+	defer mc.muDKG.Unlock()
+	return mc.roundDkg.Put(dkg, startingRound)
+
 }

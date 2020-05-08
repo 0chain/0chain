@@ -44,7 +44,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		return nil, common.NewError("put transaction error", fmt.Sprintf("client %v doesn't exist, please register", txn.ClientID))
 	}
 	if datastore.DoAsync(ctx, txn) {
-		TransactionCount++
+		IncTransactionCount()
 		return txn, nil
 	}
 	err = entity.GetEntityMetadata().GetStore().Write(ctx, txn)
@@ -52,6 +52,6 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		Logger.Info("put transaction", zap.Any("error", err), zap.Any("txn", txn.Hash), zap.Any("txn_obj", datastore.ToJSON(txn).String()))
 		return nil, err
 	}
-	TransactionCount++
+	IncTransactionCount()
 	return txn, nil
 }

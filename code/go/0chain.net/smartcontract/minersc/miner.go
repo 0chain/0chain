@@ -1,9 +1,6 @@
 package minersc
 
 import (
-	"errors"
-	"fmt"
-
 	c_state "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
@@ -11,6 +8,8 @@ import (
 	"0chain.net/core/datastore"
 	. "0chain.net/core/logging"
 	"0chain.net/core/util"
+	"errors"
+	"fmt"
 	"go.uber.org/zap"
 )
 
@@ -27,7 +26,10 @@ func (msc *MinerSmartContract) doesMinerExist(pkey datastore.Key, statectx c_sta
 }
 
 //AddMiner Function to handle miner register
-func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction, input []byte, statectx c_state.StateContextI) (string, error) {
+func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction, input []byte, gn *globalNode, statectx c_state.StateContextI) (string, error) {
+	lockAllMiners.Lock()
+	defer lockAllMiners.Unlock()
+
 	Logger.Info("try to add miner", zap.Any("txn", t))
 	allMinersList, err := msc.getMinersList(statectx)
 	if err != nil {
@@ -40,7 +42,6 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction, input []byte
 	err = newMiner.Decode(input)
 	if err != nil {
 		Logger.Error("Error in decoding the input", zap.Error(err))
-
 		return "", err
 	}
 	Logger.Info("The new miner info", zap.String("base URL", newMiner.N2NHost), zap.String("ID", newMiner.ID), zap.String("pkey", newMiner.PublicKey), zap.Any("mscID", msc.ID))
@@ -88,6 +89,12 @@ func (msc *MinerSmartContract) verifyMinerState(statectx c_state.StateContextI, 
 		Logger.Info("allminerslist", zap.String("url", miner.N2NHost), zap.String("ID", miner.ID))
 	}
 
+}
+
+func (msc *MinerSmartContract) GetMinersList(statectx c_state.StateContextI) (*MinerNodes, error) {
+	lockAllMiners.Lock()
+	defer lockAllMiners.Unlock()
+	return msc.getMinersList(statectx)
 }
 
 func (msc *MinerSmartContract) getMinersList(statectx c_state.StateContextI) (*MinerNodes, error) {

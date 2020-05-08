@@ -95,7 +95,8 @@ func main() {
 	if selfNode.GetKey() == "" {
 		Logger.Panic("node definition for self node doesn't exist")
 	}
-	if !sc.IsActiveNode(selfNode.GetKey(), 0) {
+	mb := sc.GetLatestMagicBlock()
+	if !mb.IsActiveNode(selfNode.GetKey(), 0) {
 		hostName, n2nHost, portNum, err := readNonGenesisHostAndPort(keysFile)
 		if err != nil {
 			Logger.Panic("Error reading keys file. Non-genesis miner has no host or port number", zap.Error(err))
@@ -110,7 +111,13 @@ func main() {
 		Logger.Panic("node not configured as sharder")
 	}
 
-	sc.LoadLatestBlocksFromStore(common.GetRootContext())
+	// start sharding from the LFB stored
+	if err = sc.LoadLatestBlocksFromStore(common.GetRootContext()); err != nil {
+		Logger.DPanic("load latest blocks from store: " + err.Error())
+		return
+	}
+
+	startBlocksInfoLogs(sc)
 
 	mode := "main net"
 	if config.Development() {
@@ -148,10 +155,18 @@ func main() {
 	initWorkers(ctx)
 	common.ConfigRateLimits()
 	initN2NHandlers()
-	getCurrentMagicBlock(sc)
+	if err := getCurrentMagicBlock(sc); err != nil {
+		Logger.Panic(err.Error()) //FIXME: remove panic
+	}
+	if serverChain.GetCurrentMagicBlock().MagicBlockNumber < serverChain.GetLatestMagicBlock().MagicBlockNumber {
+		serverChain.SetCurrentRound(0)
+	}
+
 	initServer()
 	initHandlers()
-	go sc.InitSetup()
+	sharder.SetupMinerSmartContract(sharder.GetSharderChain())
+	go sc.RegisterClient()
+	go sc.InitSetupSC()
 
 	// Do a deep scan from finalized block till DeepWindow
 	go sc.HealthCheckWorker(ctx, sharder.DeepScan) // 4) progressively checks the health for each round
@@ -159,9 +174,25 @@ func main() {
 	// Do a proximity scan from finalized block till ProximityWindow
 	go sc.HealthCheckWorker(ctx, sharder.ProximityScan) // 4) progressively checks the health for each round
 
+	defer done(ctx)
+
 	Logger.Info("Ready to listen to the requests")
 	chain.StartTime = time.Now().UTC()
 	log.Fatal(server.ListenAndServe())
+}
+
+func done(ctx context.Context) {
+	sc := sharder.GetSharderChain()
+	sc.Stop()
+}
+
+func startBlocksInfoLogs(sc *sharder.Chain) {
+	lfb, lfmb := sc.GetLatestFinalizedBlock(), sc.GetLatestFinalizedMagicBlock()
+	Logger.Info("start from LFB ", zap.Int64("round", lfb.Round),
+		zap.String("hash", lfb.Hash))
+	Logger.Info("start from LFMB",
+		zap.Int64("round", lfmb.MagicBlock.StartingRound),
+		zap.String("hash", lfmb.Hash)) // hash of block with the magic block
 }
 
 func initServer() {
@@ -205,8 +236,8 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, error) {
 
 func initHandlers() {
 	if config.Development() {
-		http.HandleFunc("/_hash", encryption.HashHandler)
-		http.HandleFunc("/_sign", common.ToJSONResponse(encryption.SignHandler))
+		http.HandleFunc("/_hash", common.Recover(encryption.HashHandler))
+		http.HandleFunc("/_sign", common.Recover(common.ToJSONResponse(encryption.SignHandler)))
 	}
 	config.SetupHandlers()
 	node.SetupHandlers()
@@ -250,24 +281,33 @@ func readMagicBlockFile(magicBlockFile *string, sc *sharder.Chain, serverChain *
 	return nil
 }
 
-func getCurrentMagicBlock(sc *sharder.Chain) {
+func getCurrentMagicBlock(sc *sharder.Chain) error {
 	mbs := sc.GetLatestFinalizedMagicBlockFromSharder(common.GetRootContext())
 	if len(mbs) == 0 {
-		Logger.DPanic("No finalized magic block from sharder")
+		return errors.New("no finalized magic block from sharder")
 	}
 	if len(mbs) > 1 {
 		sort.Slice(mbs, func(i, j int) bool {
-			return mbs[i].StartingRound < mbs[j].StartingRound
+			return mbs[i].StartingRound > mbs[j].StartingRound
 		})
 	}
 	magicBlock := mbs[0]
 	Logger.Info("get current magic block", zap.Any("magic_block", magicBlock))
-	sc.VerifyChainHistory(common.GetRootContext(), magicBlock)
-	err := sc.UpdateMagicBlock(magicBlock.MagicBlock)
+
+	var err = sc.MustVerifyChainHistory(common.GetRootContext(), magicBlock,
+		sc.SaveMagicBlockHandler)
 	if err != nil {
-		Logger.DPanic(fmt.Sprintf("failed to update magic block: %v", err.Error()))
+		return fmt.Errorf("failed to verify chain history: %v", err.Error())
 	}
+
+	err = sc.UpdateMagicBlock(magicBlock.MagicBlock)
+	if err != nil {
+		return fmt.Errorf("failed to update magic block: %v", err.Error())
+	}
+	sc.UpdateNodesFromMagicBlock(magicBlock.MagicBlock)
 	sc.SetLatestFinalizedMagicBlock(magicBlock)
+
+	return nil
 }
 
 func initEntities() {

@@ -45,6 +45,9 @@ func (c *Chain) GetSCRestOutput(ctx context.Context, r *http.Request) (interface
 	c.stateMutex.RLock()
 	defer c.stateMutex.RUnlock()
 	lfb := c.GetLatestFinalizedBlock()
+	if lfb == nil || lfb.ClientState == nil {
+		return nil, common.NewError("empty_lfb", "empty latest finalized block or state")
+	}
 	clientState := CreateTxnMPT(lfb.ClientState) // begin transaction
 	txn := &transaction.Transaction{}
 	sctx := bcstate.NewStateContext(lfb, clientState, c.clientStateDeserializer, txn, c.GetBlockSharders, c.GetLatestFinalizedMagicBlock, c.GetSignatureScheme)
@@ -148,8 +151,15 @@ func (c *Chain) GetSCRestPoints(w http.ResponseWriter, r *http.Request) {
 	scInt.SetSC(sc, nil)
 	fmt.Fprintf(w, `<!DOCTYPE html><html><body><table class='menu' style='border-collapse: collapse;'>`)
 	fmt.Fprintf(w, `<tr class='header'><td>Function</td><td>Link</td></tr>`)
-	for funcName := range scInt.GetRestPoints() {
-		fmt.Fprintf(w, `<tr><td>%v</td><td><li><a href='%v'>%v</a></li></td></tr>`, funcName, "/v1/screst/"+key+funcName, "/v1/screst/*"+funcName+"*")
+	restPoints := scInt.GetRestPoints()
+	names := make([]string, 0, len(restPoints))
+	for funcName := range restPoints {
+		names = append(names, funcName)
+	}
+	sort.Strings(names)
+	for _, funcName := range names {
+		friendlyName:=strings.TrimLeft(funcName, "/")
+		fmt.Fprintf(w, `<tr><td>%v</td><td><li><a href='%v'>%v</a></li></td></tr>`, friendlyName, "/v1/screst/"+key+funcName, "/v1/screst/*"+funcName+"*")
 	}
 
 	fmt.Fprintf(w, `</table></body></html>`)

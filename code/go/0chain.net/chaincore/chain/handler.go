@@ -27,8 +27,8 @@ import (
 
 /*SetupHandlers sets up the necessary API end points */
 func SetupHandlers() {
-	http.HandleFunc("/v1/chain/get", common.ToJSONResponse(memorystore.WithConnectionHandler(GetChainHandler)))
-	http.HandleFunc("/v1/chain/put", datastore.ToJSONEntityReqResponse(memorystore.WithConnectionEntityJSONHandler(PutChainHandler, chainEntityMetadata), chainEntityMetadata))
+	http.HandleFunc("/v1/chain/get", common.Recover(common.ToJSONResponse(memorystore.WithConnectionHandler(GetChainHandler))))
+	http.HandleFunc("/v1/chain/put", common.Recover(datastore.ToJSONEntityReqResponse(memorystore.WithConnectionEntityJSONHandler(PutChainHandler, chainEntityMetadata), chainEntityMetadata)))
 
 	// Miner can only provide recent blocks, sharders can provide any block (for content other than full) and the block they store for full
 	if node.Self.Underlying().Type == node.NodeTypeMiner {
@@ -63,13 +63,15 @@ func PutChainHandler(ctx context.Context, entity datastore.Entity) (interface{},
 /*GetMinersHandler - get the list of known miners */
 func (c *Chain) GetMinersHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain;charset=UTF-8")
-	c.Miners.Print(w)
+	mb := c.GetCurrentMagicBlock()
+	mb.Miners.Print(w)
 }
 
 /*GetShardersHandler - get the list of known sharders */
 func (c *Chain) GetShardersHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain;charset=UTF-8")
-	c.Sharders.Print(w)
+	mb := c.GetCurrentMagicBlock()
+	mb.Sharders.Print(w)
 }
 
 /*GetBlockHandler - get the block from local cache */
@@ -154,6 +156,8 @@ func (c *Chain) roundHealthInATable(w http.ResponseWriter, r *http.Request) {
 	proposals := 0
 	rrs := int64(0)
 
+	mb := c.GetCurrentMagicBlock()
+
 	if node.Self.Underlying().Type == node.NodeTypeMiner {
 		var shares int
 		check := "X"
@@ -166,7 +170,7 @@ func (c *Chain) roundHealthInATable(w http.ResponseWriter, r *http.Request) {
 		}
 
 		thresholdByCount := config.GetThresholdCount()
-		consensus := int(math.Ceil((float64(thresholdByCount) / 100) * float64(c.Miners.Size())))
+		consensus := int(math.Ceil((float64(thresholdByCount) / 100) * float64(mb.Miners.Size())))
 		if shares >= consensus {
 			check = "&#x2714;"
 		}
@@ -401,15 +405,16 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</tr>")
 	fmt.Fprintf(w, "</table>")
 
+	mb := sc.GetCurrentMagicBlock()
 	if selfNodeType == node.NodeTypeMiner {
-		fmt.Fprintf(w, "<div><div>Miners (%v) - median network time %.2f</div>", sc.Miners.Size(), sc.Miners.GetMedianNetworkTime()/1000000.)
+		fmt.Fprintf(w, "<div><div>Miners (%v) - median network time %.2f</div>", mb.Miners.Size(), mb.Miners.GetMedianNetworkTime()/1000000.)
 	} else {
-		fmt.Fprintf(w, "<div><div>Miners (%v)</div>", sc.Miners.Size())
+		fmt.Fprintf(w, "<div><div>Miners (%v)</div>", mb.Miners.Size())
 	}
-	sc.printNodePool(w, sc.Miners)
+	sc.printNodePool(w, mb.Miners)
 	fmt.Fprintf(w, "</div>")
-	fmt.Fprintf(w, "<div><div>Sharders (%v)</div>", sc.Sharders.Size())
-	sc.printNodePool(w, sc.Sharders)
+	fmt.Fprintf(w, "<div><div>Sharders (%v)</div>", mb.Sharders.Size())
+	sc.printNodePool(w, mb.Sharders)
 	fmt.Fprintf(w, "</div>")
 }
 
@@ -567,11 +572,12 @@ func (c *Chain) N2NStatsWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<div>%v - %v</div>", node.Self.Underlying().GetPseudoName(),
 		node.Self.Underlying().Description)
 	c.healthSummary(w, r)
+	mb := c.GetCurrentMagicBlock()
 	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr><td rowspan='2'>URI</td><td rowspan='2'>Count</td><td colspan='3'>Time</td><td colspan='3'>Size</td></tr>")
 	fmt.Fprintf(w, "<tr><td>Min</td><td>Average</td><td>Max</td><td>Min</td><td>Average</td><td>Max</td></tr>")
-	fmt.Fprintf(w, "<tr><td colspan='8'>Miners (%v/%v) - median network time = %.2f", c.Miners.GetActiveCount(), c.Miners.Size(), c.Miners.GetMedianNetworkTime()/1000000)
-	for _, nd := range c.Miners.CopyNodes() {
+	fmt.Fprintf(w, "<tr><td colspan='8'>Miners (%v/%v) - median network time = %.2f", mb.Miners.GetActiveCount(), mb.Miners.Size(), mb.Miners.GetMedianNetworkTime()/1000000)
+	for _, nd := range mb.Miners.CopyNodes() {
 		if node.Self.IsEqual(nd) {
 			continue
 		}
@@ -584,15 +590,15 @@ func (c *Chain) N2NStatsWriter(w http.ResponseWriter, r *http.Request) {
 		if olmt < lmt {
 			cls = cls + " optimal"
 		}
-		if olmt >= c.Miners.GetMedianNetworkTime() {
+		if olmt >= mb.Miners.GetMedianNetworkTime() {
 			cls = cls + " slow"
 		}
 		fmt.Fprintf(w, "<tr class='%s'><td colspan='8'><b>%s</b> (%.2f/%.2f) - %s</td></tr>", cls, nd.GetPseudoName(), olmt, lmt, nd.Description)
 		nd.PrintSendStats(w)
 	}
 
-	fmt.Fprintf(w, "<tr><td colspan='8'>Sharders (%v/%v) - median network time = %.2f", c.Sharders.GetActiveCount(), c.Sharders.Size(), c.Sharders.GetMedianNetworkTime()/1000000)
-	for _, nd := range c.Sharders.CopyNodes() {
+	fmt.Fprintf(w, "<tr><td colspan='8'>Sharders (%v/%v) - median network time = %.2f", mb.Sharders.GetActiveCount(), mb.Sharders.Size(), mb.Sharders.GetMedianNetworkTime()/1000000)
+	for _, nd := range mb.Sharders.CopyNodes() {
 		if node.Self.IsEqual(nd) {
 			continue
 		}
@@ -605,7 +611,7 @@ func (c *Chain) N2NStatsWriter(w http.ResponseWriter, r *http.Request) {
 		if olmt < lmt {
 			cls = cls + " optimal"
 		}
-		if olmt >= c.Sharders.GetMedianNetworkTime() {
+		if olmt >= mb.Sharders.GetMedianNetworkTime() {
 			cls = cls + " slow"
 		}
 		fmt.Fprintf(w, "<tr class='%s'><td colspan='8'><b>%s</b> (%.2f/%.2f) - %s </td></tr>", cls, nd.GetPseudoName(), olmt, lmt, nd.Description)
@@ -640,7 +646,7 @@ func RoundInfoHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	cr := sc.GetRound(sc.GetCurrentRound())
-
+	mb := sc.GetCurrentMagicBlock()
 	if sc.GetCurrentRound() > 0 && cr != nil {
 
 		rrs := int64(0)
@@ -648,7 +654,7 @@ func RoundInfoHandler(w http.ResponseWriter, r *http.Request) {
 			rrs = cr.GetRandomSeed()
 		}
 		thresholdByCount := config.GetThresholdCount()
-		consensus := int(math.Ceil((float64(thresholdByCount) / 100) * float64(sc.Miners.Size())))
+		consensus := int(math.Ceil((float64(thresholdByCount) / 100) * float64(mb.Miners.Size())))
 
 		fmt.Fprintf(w, "<div>Consensus: %v RRS: %v </div>", consensus, rrs)
 		fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
@@ -673,6 +679,7 @@ func RoundInfoHandler(w http.ResponseWriter, r *http.Request) {
 
 /*MinerStatsHandler - handler for the miner stats */
 func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
+	mb := c.GetCurrentMagicBlock()
 	PrintCSS(w)
 	fmt.Fprintf(w, "<div>%v - %v</div>", node.Self.Underlying().GetPseudoName(),
 		node.Self.Underlying().Description)
@@ -694,7 +701,7 @@ func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "<br>")
 		fmt.Fprintf(w, "<table>")
 		fmt.Fprintf(w, "<tr><td>Miner</td><td>Verification Failures</td></tr>")
-		for _, nd := range c.Miners.CopyNodes() {
+		for _, nd := range mb.Miners.CopyNodes() {
 			ms := nd.ProtocolStats.(*MinerStats)
 			fmt.Fprintf(w, "<tr><td>%v</td><td class='number'>%v</td></tr>", nd.GetPseudoName(), ms.VerificationFailures)
 		}
@@ -703,6 +710,7 @@ func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Chain) generationCountStats(w http.ResponseWriter) {
+	mb := c.GetCurrentMagicBlock()
 	fmt.Fprintf(w, "<table>")
 	fmt.Fprintf(w, "<tr><td>Miner</td>")
 	for i := 0; i < c.NumGenerators; i++ {
@@ -710,7 +718,7 @@ func (c *Chain) generationCountStats(w http.ResponseWriter) {
 	}
 	fmt.Fprintf(w, "<td>Total</td></tr>")
 	totals := make([]int64, c.NumGenerators)
-	for _, nd := range c.Miners.CopyNodes() {
+	for _, nd := range mb.Miners.CopyNodes() {
 		fmt.Fprintf(w, "<tr><td>%v</td>", nd.GetPseudoName())
 		ms := nd.ProtocolStats.(*MinerStats)
 		var total int64
@@ -732,6 +740,7 @@ func (c *Chain) generationCountStats(w http.ResponseWriter) {
 }
 
 func (c *Chain) verificationCountStats(w http.ResponseWriter) {
+	mb := c.GetCurrentMagicBlock()
 	fmt.Fprintf(w, "<table>")
 	fmt.Fprintf(w, "<tr><td>Miner</td>")
 	for i := 0; i < c.NumGenerators; i++ {
@@ -739,7 +748,7 @@ func (c *Chain) verificationCountStats(w http.ResponseWriter) {
 	}
 	fmt.Fprintf(w, "<td>Total</td></tr>")
 	totals := make([]int64, c.NumGenerators)
-	for _, nd := range c.Miners.CopyNodes() {
+	for _, nd := range mb.Miners.CopyNodes() {
 		fmt.Fprintf(w, "<tr><td>%v</td>", nd.GetPseudoName())
 		ms := nd.ProtocolStats.(*MinerStats)
 		var total int64
@@ -761,6 +770,7 @@ func (c *Chain) verificationCountStats(w http.ResponseWriter) {
 }
 
 func (c *Chain) finalizationCountStats(w http.ResponseWriter) {
+	mb := c.GetCurrentMagicBlock()
 	fmt.Fprintf(w, "<table>")
 	fmt.Fprintf(w, "<tr><td>Miner</td>")
 	for i := 0; i < c.NumGenerators; i++ {
@@ -768,7 +778,7 @@ func (c *Chain) finalizationCountStats(w http.ResponseWriter) {
 	}
 	fmt.Fprintf(w, "<td>Total</td></tr>")
 	totals := make([]int64, c.NumGenerators)
-	for _, nd := range c.Miners.CopyNodes() {
+	for _, nd := range mb.Miners.CopyNodes() {
 		fmt.Fprintf(w, "<tr><td>%v</td>", nd.GetPseudoName())
 		ms := nd.ProtocolStats.(*MinerStats)
 		var total int64

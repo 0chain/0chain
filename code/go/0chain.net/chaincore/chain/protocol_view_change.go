@@ -2,6 +2,7 @@ package chain
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"time"
@@ -23,22 +24,26 @@ import (
 )
 
 const (
-	scNameAddMiner          = "add_miner"
-	scRestAPIGetMinerList   = "/getMinerList"
-	scNameAddSharder        = "add_sharder"
-	scRestAPIGetSharderList = "/getSharderList"
+	scNameAddMiner    = "add_miner"
+	scNameAddSharder  = "add_sharder"
+	scNameSharderKeep = "sharder_keep"
+)
+const (
+	scRestAPIGetMinerList       = "/getMinerList"
+	scRestAPIGetSharderList     = "/getSharderList"
+	scRestAPIGetSharderKeepList = "/getSharderKeepList"
 )
 
-func (mc *Chain) InitSetup() {
-	mc.RegisterClient()
+func (mc *Chain) InitSetupSC() {
 	registered := mc.isRegistered()
 	for !registered {
 		txn, err := mc.RegisterNode()
-		if err == nil && mc.ConfirmTransaction(txn) {
-			registered = true
-		} else {
+		if err != nil {
+			Logger.Warn("failed to register node in SC -- init_setup_sc", zap.Error(err))
+		} else if !mc.ConfirmTransaction(txn) {
 			time.Sleep(time.Second)
 		}
+		registered = mc.isRegistered()
 	}
 }
 
@@ -56,8 +61,9 @@ func (mc *Chain) RegisterClient() {
 		}
 	}
 
+	mb := mc.GetCurrentMagicBlock()
 	nodeBytes, _ := json.Marshal(node.Self.Underlying().Client)
-	miners := mc.Miners.CopyNodesMap()
+	miners := mb.Miners.CopyNodesMap()
 	registered := 0
 	consensus := int(math.Ceil((float64(thresholdByCount) / 100) * float64(len(miners))))
 	if consensus > len(miners) {
@@ -79,16 +85,33 @@ func (mc *Chain) RegisterClient() {
 }
 
 func (mc *Chain) isRegistered() bool {
+	return mc.isRegisteredEx(
+		func(n *node.Node) util.Path {
+			if typ := n.Type; typ == node.NodeTypeMiner {
+				return util.Path(encryption.Hash(minersc.AllMinersKey))
+			} else if typ == node.NodeTypeSharder {
+				return util.Path(encryption.Hash(minersc.AllShardersKey))
+			}
+			return nil
+		},
+		func(n *node.Node) string {
+			if typ := n.Type; typ == node.NodeTypeMiner {
+				return scRestAPIGetMinerList
+			} else if typ == node.NodeTypeSharder {
+				return scRestAPIGetSharderList
+			}
+			return ""
+		})
+}
+
+func (mc *Chain) isRegisteredEx(getStatePath func(n *node.Node) util.Path,
+	getAPIPath func(n *node.Node) string) bool {
 	allMinersList := &minersc.MinerNodes{}
+	currentNode := node.Self.Underlying()
 	if mc.ActiveInChain() {
 		clientState := CreateTxnMPT(mc.GetLatestFinalizedBlock().ClientState)
-		var nodeList util.Serializable
-		var err error
-		if typ := node.Self.Underlying().Type; typ == node.NodeTypeMiner {
-			nodeList, err = clientState.GetNodeValue(util.Path(encryption.Hash(minersc.AllMinersKey)))
-		} else if typ == node.NodeTypeSharder {
-			nodeList, err = clientState.GetNodeValue(util.Path(encryption.Hash(minersc.AllShardersKey)))
-		}
+		statePath := getStatePath(currentNode)
+		nodeList, err := clientState.GetNodeValue(statePath)
 		if err != nil {
 			Logger.Error("failed to get magic block", zap.Any("error", err))
 			return false
@@ -102,36 +125,33 @@ func (mc *Chain) isRegistered() bool {
 			return false
 		}
 	} else {
+		mb := mc.GetCurrentMagicBlock()
 		var (
-			sharders = mc.Sharders.N2NURLs()
+			sharders = mb.Sharders.N2NURLs()
 			err      error
 		)
-		if typ := node.Self.Underlying().Type; typ == node.NodeTypeMiner {
-			err = httpclientutil.MakeSCRestAPICall(minersc.ADDRESS, scRestAPIGetMinerList, nil, sharders, allMinersList, 1)
-		} else if typ == node.NodeTypeSharder {
-			err = httpclientutil.MakeSCRestAPICall(minersc.ADDRESS, scRestAPIGetSharderList, nil, sharders, allMinersList, 1)
-		}
-
+		relPath := getAPIPath(currentNode)
+		err = httpclientutil.MakeSCRestAPICall(minersc.ADDRESS, relPath, nil, sharders, allMinersList, 1)
 		if err != nil {
 			Logger.Error("is registered", zap.Any("error", err))
 			return false
 		}
 	}
-	var registered bool
+
 	for _, miner := range allMinersList.Nodes {
-		if miner.ID == node.Self.Underlying().GetKey() {
-			registered = true
-			break
+		if miner.ID == currentNode.GetKey() {
+			return true
 		}
 	}
-	return registered
+	return false
 }
 
 func (mc *Chain) ConfirmTransaction(t *httpclientutil.Transaction) bool {
 	active := mc.ActiveInChain()
 	var found, pastTime bool
 	var urls []string
-	for _, sharder := range mc.Sharders.CopyNodesMap() {
+	mb := mc.GetCurrentMagicBlock()
+	for _, sharder := range mb.Sharders.CopyNodesMap() {
 		if !active || sharder.GetStatus() == node.NodeStatusActive {
 			urls = append(urls, sharder.GetN2NURLBase())
 		}
@@ -184,7 +204,54 @@ func (mc *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 
 	txn.ToClientID = minersc.ADDRESS
 	txn.PublicKey = selfNode.PublicKey
-	var minerUrls = mc.Miners.N2NURLs()
+	mb := mc.GetCurrentMagicBlock()
+	var minerUrls = mb.Miners.N2NURLs()
 	err := httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls)
 	return txn, err
+}
+
+func (mc *Chain) RegisterSharderKeep() (result *httpclientutil.Transaction, err2 error) {
+	selfNode := node.Self.Underlying()
+	if selfNode.Type != node.NodeTypeSharder {
+		return nil, errors.New("only sharder")
+	}
+	txn := httpclientutil.NewTransactionEntity(selfNode.GetKey(),
+		mc.ID, selfNode.PublicKey)
+
+	mn := minersc.NewMinerNode()
+	mn.ID = selfNode.GetKey()
+	mn.N2NHost = selfNode.N2NHost
+	mn.Host = selfNode.Host
+	mn.Port = selfNode.Port
+	mn.PublicKey = selfNode.PublicKey
+	mn.ShortName = selfNode.Description
+	mn.Percentage = .5 // add to config
+	mn.BuildTag = selfNode.Info.BuildTag
+
+	scData := &httpclientutil.SmartContractTxnData{}
+	scData.Name = scNameSharderKeep
+	scData.InputArgs = mn
+
+	txn.ToClientID = minersc.ADDRESS
+	txn.PublicKey = selfNode.PublicKey
+	mb := mc.GetCurrentMagicBlock()
+	var minerUrls = mb.Miners.N2NURLs()
+	err := httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls)
+	return txn, err
+}
+
+func (mc *Chain) IsRegisteredSharderKeep() bool {
+	return mc.isRegisteredEx(
+		func(n *node.Node) util.Path {
+			if typ := n.Type; typ == node.NodeTypeSharder {
+				return util.Path(encryption.Hash(minersc.ShardersKeepKey))
+			}
+			return nil
+		},
+		func(n *node.Node) string {
+			if typ := n.Type; typ == node.NodeTypeSharder {
+				return scRestAPIGetSharderKeepList
+			}
+			return ""
+		})
 }

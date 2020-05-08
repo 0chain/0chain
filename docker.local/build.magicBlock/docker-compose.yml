@@ -1,0 +1,13 @@
+version: '3'
+services:
+  magicblock:
+    environment:
+      - DOCKER=true
+    build:
+      context: ../../
+      dockerfile: ./docker.local/build.magicBlock/Dockerfile
+
+    volumes:
+      - ../config:/0chain/config
+
+    command: ./main --config_file magicBlock_3_miners_3_sharders

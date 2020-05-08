@@ -22,6 +22,8 @@ type ZRC20SmartContract struct {
 	*smartcontractinterface.SmartContract
 }
 
+func (zrc *ZRC20SmartContract) InitSC() {}
+
 func (zrc *ZRC20SmartContract) SetSC(sc *smartcontractinterface.SmartContract, bcContext smartcontractinterface.BCContextI) {
 	zrc.SmartContract = sc
 	zrc.SmartContractExecutionStats["createToken"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", zrc.ID, "createToken"), nil)

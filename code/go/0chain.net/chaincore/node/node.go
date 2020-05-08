@@ -23,7 +23,7 @@ import (
 var nodes = make(map[string]*Node)
 var nodesMutex = &sync.RWMutex{}
 
-/*RegisterNode - register a node to a global registery
+/*RegisterNode - register a node to a global registry
 * We need to keep track of a global register of nodes. This is required to ensure we can verify a signed request
 * coming from a node
  */
@@ -33,7 +33,7 @@ func RegisterNode(node *Node) {
 	nodes[node.GetKey()] = node
 }
 
-/*DeregisterNode - deregisters a node */
+/*DeregisterNode - deregister a node */
 func DeregisterNode(nodeID string) {
 	nodesMutex.Lock()
 	defer nodesMutex.Unlock()
@@ -112,7 +112,8 @@ type Node struct {
 	LargeMessagePullServeTime float64 `json:"-"`
 	SmallMessagePullServeTime float64 `json:"-"`
 
-	mutex sync.RWMutex
+	mutex     sync.RWMutex
+	mutexInfo sync.RWMutex
 
 	ProtocolStats interface{} `json:"-"`
 
@@ -154,7 +155,6 @@ func Setup(node *Node) {
 func (n *Node) GetErrorCount() int64 {
 	n.mutex.RLock()
 	defer n.mutex.RUnlock()
-
 	return n.ErrorCount
 }
 
@@ -170,7 +170,6 @@ func (n *Node) SetErrorCount(ec int64) {
 func (n *Node) AddErrorCount(ecd int64) {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
-
 	n.ErrorCount += ecd
 }
 
@@ -566,33 +565,39 @@ func (n *Node) getTime(uri string) float64 {
 }
 
 func (n *Node) SetNodeInfo(oldNode *Node) {
-	n.mutex.Lock()
-	defer n.mutex.Unlock()
+	n.mutexInfo.Lock()
+	defer n.mutexInfo.Unlock()
 
 	n.Sent = oldNode.Sent
 	n.SendErrors = oldNode.SendErrors
 	n.Received = oldNode.Received
-	n.TimersByURI = oldNode.TimersByURI
-	n.SizeByURI = oldNode.SizeByURI
+	for k, v := range oldNode.TimersByURI {
+		n.TimersByURI[k] = v
+	}
+	for k, v := range oldNode.SizeByURI {
+		n.SizeByURI[k] = v
+	}
 	n.SetLargeMessageSendTime(oldNode.GetLargeMessageSendTime())
 	n.SetSmallMessageSendTime(oldNode.GetSmallMessageSendTime())
 	n.LargeMessagePullServeTime = oldNode.LargeMessagePullServeTime
 	n.SmallMessagePullServeTime = oldNode.SmallMessagePullServeTime
-	n.ProtocolStats = oldNode.ProtocolStats
-	n.Info = oldNode.GetInfo()
+	if oldNode.ProtocolStats != nil {
+		n.ProtocolStats = oldNode.ProtocolStats.(interface{ Clone() interface{} }).Clone()
+	}
+	n.Info = oldNode.Info
 	n.Status = oldNode.Status
 }
 
 func (n *Node) SetInfo(info Info) {
-	n.mutex.Lock()
+	n.mutexInfo.Lock()
 	n.Info = info
-	n.mutex.Unlock()
+	n.mutexInfo.Unlock()
 }
 
 // GetInfo returns copy Info.
 func (n *Node) GetInfo() Info {
-	n.mutex.RLock()
-	defer n.mutex.RUnlock()
+	n.mutexInfo.RLock()
+	defer n.mutexInfo.RUnlock()
 
 	return n.Info
 }

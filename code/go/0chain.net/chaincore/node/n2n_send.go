@@ -59,6 +59,17 @@ func (np *Pool) SendToMultiple(handler SendHandler, nodes []*Node) (bool, error)
 	return false, common.NewError("send_to_given_nodes_unsuccessful", "Sending to given nodes not successful")
 }
 
+/*SendToMultipleNodes - send to multiple nodes */
+func (np *Pool) SendToMultipleNodes(handler SendHandler, nodes []*Node) (result []*Node) {
+	defer func() {
+		if r := recover(); r != nil {
+			Logger.Error("PANIC", zap.Any("error", r))
+		}
+	}()
+	result = np.sendTo(len(nodes), nodes, handler)
+	return
+}
+
 /*SendAtleast - It tries to communicate to at least the given number of active nodes */
 func (np *Pool) SendAtleast(numNodes int, handler SendHandler) []*Node {
 	nodes := np.shuffleNodesLock()
@@ -219,6 +230,7 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			N2n.Info("sending", zap.Int("from", selfNode.SetIndex), zap.Int("to", receiver.SetIndex), zap.String("handler", uri), zap.Duration("duration", time.Since(ts)), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()))
 			if err != nil {
 				receiver.SendErrors++
+				receiver.AddErrorCount(1)
 				N2n.Error("sending", zap.Int("from", selfNode.SetIndex), zap.Int("to", receiver.SetIndex), zap.String("handler", uri), zap.Duration("duration", time.Since(ts)), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()), zap.Error(err))
 				return false
 			}

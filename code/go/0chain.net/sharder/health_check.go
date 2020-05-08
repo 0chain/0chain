@@ -469,7 +469,7 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 	}
 
 	// Check for block presence.
-	canShard := sc.IsBlockSharderFromHash(bs.Hash, self.Underlying())
+	canShard := sc.IsBlockSharderFromHash(rNum, bs.Hash, self.Underlying())
 
 	needTxnSummary := false
 	// Check if the sharder has txn_summary

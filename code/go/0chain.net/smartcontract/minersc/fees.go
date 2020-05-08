@@ -1,6 +1,7 @@
 package minersc
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 
@@ -14,6 +15,10 @@ import (
 	"go.uber.org/zap"
 )
 
+var (
+	ErrExecutionStatsNotFound = errors.New("SmartContractExecutionStats stat not found")
+)
+
 func (msc *MinerSmartContract) payFees(t *transaction.Transaction, inputData []byte, gn *globalNode, balances c_state.StateContextI) (string, error) {
 	pn, err := msc.getPhaseNode(balances)
 	if err != nil {
@@ -25,7 +30,8 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction, inputData []b
 	}
 	block := balances.GetBlock()
 	if block.Round == gn.ViewChange && !msc.SetMagicBlock(balances) {
-		return "", common.NewError("pay_fees_failed", "can't set magic block")
+		return "", common.NewError("pay_fees_failed",
+			fmt.Sprintf("can't set magic block round=%d viewChange=%d", block.Round, gn.ViewChange))
 	}
 
 	if t.ClientID != block.MinerID {
@@ -35,7 +41,10 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction, inputData []b
 		return "", common.NewError("failed to pay fees", "jumped back in time?")
 	}
 	fee := msc.sumFee(block, true)
-	resp := msc.paySharders(fee, block, balances, "")
+	resp, err := msc.paySharders(fee, block, balances, "")
+	if err != nil {
+		return "", err
+	}
 	gn.LastRound = block.Round
 	_, err = balances.InsertTrieNode(GlobalNodeKey, gn)
 	if err != nil {
@@ -46,10 +55,13 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction, inputData []b
 
 func (msc *MinerSmartContract) sumFee(b *block.Block, updateStats bool) state.Balance {
 	var totalMaxFee int64
-	feeStats := msc.SmartContractExecutionStats["feesPaid"].(metrics.Histogram)
+	var feeStats metrics.Histogram
+	if stat := msc.SmartContractExecutionStats["feesPaid"]; stat != nil {
+		feeStats = stat.(metrics.Histogram)
+	}
 	for _, txn := range b.Txns {
 		totalMaxFee += txn.Fee
-		if updateStats {
+		if updateStats && feeStats != nil {
 			feeStats.Update(txn.Fee)
 		}
 	}
@@ -90,18 +102,22 @@ func (msc *MinerSmartContract) payMiners(fee state.Balance, mn *MinerNode, balan
 	return resp
 }
 
-func (msc *MinerSmartContract) paySharders(fee state.Balance, block *block.Block, balances c_state.StateContextI, resp string) string {
+func (msc *MinerSmartContract) paySharders(fee state.Balance, block *block.Block, balances c_state.StateContextI, resp string) (string, error) {
 	sharders := balances.GetBlockSharders(block.PrevBlock)
 	sort.Strings(sharders)
 	for _, sharder := range sharders {
 		//TODO: the mint amount will be controlled by governance
 		mint := state.NewMint(ADDRESS, sharder, fee/state.Balance(len(sharders)))
-		mintStats := msc.SmartContractExecutionStats["mintedTokens"].(metrics.Histogram)
+		mintStatsRaw, found := msc.SmartContractExecutionStats["mintedTokens"]
+		if !found {
+			return "", fmt.Errorf("%v: mintedTokens", ErrExecutionStatsNotFound)
+		}
+		mintStats := mintStatsRaw.(metrics.Histogram)
 		mintStats.Update(int64(mint.Amount))
 		err := balances.AddMint(mint)
 		if err != nil {
 			resp += common.NewError("failed to mint", fmt.Sprintf("errored while adding mint for sharder %v: %v", sharder, err.Error())).Error()
 		}
 	}
-	return resp
+	return resp, nil
 }

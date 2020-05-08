@@ -18,8 +18,8 @@ import (
 )
 
 /*VerifyTicket - verify the ticket */
-func (c *Chain) VerifyTicket(ctx context.Context, blockHash string, bvt *block.VerificationTicket, r round.RoundI) error {
-	sender := c.GetMiners(r).GetNode(bvt.VerifierID)
+func (c *Chain) VerifyTicket(ctx context.Context, blockHash string, bvt *block.VerificationTicket, round int64) error {
+	sender := c.GetMiners(round).GetNode(bvt.VerifierID)
 	if sender == nil {
 		return common.InvalidRequest(fmt.Sprintf("Verifier unknown or not authorized at this time: %v", bvt.VerifierID))
 	}
@@ -31,7 +31,7 @@ func (c *Chain) VerifyTicket(ctx context.Context, blockHash string, bvt *block.V
 }
 
 /*VerifyNotarization - verify that the notarization is correct */
-func (c *Chain) VerifyNotarization(ctx context.Context, blockHash string, bvt []*block.VerificationTicket, r round.RoundI) error {
+func (c *Chain) VerifyNotarization(ctx context.Context, blockHash string, bvt []*block.VerificationTicket, round int64) error {
 	if bvt == nil {
 		return common.NewError("no_verification_tickets", "No verification tickets for this block")
 	}
@@ -46,11 +46,11 @@ func (c *Chain) VerifyNotarization(ctx context.Context, blockHash string, bvt []
 		}
 		ticketsMap[vt.VerifierID] = true
 	}
-	if !c.reachedNotarization(bvt) {
+	if !c.reachedNotarization(round, bvt) {
 		return common.NewError("block_not_notarized", "Verification tickets not sufficient to reach notarization")
 	}
 	for _, vt := range bvt {
-		if err := c.VerifyTicket(ctx, blockHash, vt, r); err != nil {
+		if err := c.VerifyTicket(ctx, blockHash, vt, round); err != nil {
 			return err
 		}
 	}
@@ -62,20 +62,27 @@ func (c *Chain) IsBlockNotarized(ctx context.Context, b *block.Block) bool {
 	if b.IsBlockNotarized() {
 		return true
 	}
-	notarized := c.reachedNotarization(b.GetVerificationTickets())
+	notarized := c.reachedNotarization(b.Round, b.GetVerificationTickets())
 	if notarized {
 		b.SetBlockNotarized()
 	}
 	return notarized
 }
 
-func (c *Chain) reachedNotarization(bvt []*block.VerificationTicket) bool {
+func (c *Chain) reachedNotarization(round int64,
+	bvt []*block.VerificationTicket) bool {
+
+	var miners = c.GetMiners(round)
+	if miners == nil {
+		return false
+	}
+
 	if c.ThresholdByCount > 0 {
 		numSignatures := len(bvt)
-		if numSignatures < c.GetNotarizationThresholdCount() {
+		if numSignatures < c.GetNotarizationThresholdCount(miners) {
 			//ToDo: Remove this comment
 			Logger.Info("not reached notarization",
-				zap.Int("Threshold", c.GetNotarizationThresholdCount()),
+				zap.Int("Threshold", c.GetNotarizationThresholdCount(miners)),
 				zap.Int("num_signatures", numSignatures), zap.Int64("CurrentRound", c.GetCurrentRound()))
 			return false
 		}
@@ -108,9 +115,17 @@ Simple 3 miner scenario :
 */
 func (c *Chain) UpdateNodeState(b *block.Block) {
 	r := c.GetRound(b.Round)
+	if r == nil {
+		Logger.Error("UpdateNodeState: round unexpected nil")
+		return
+	}
 	for _, vt := range b.GetVerificationTickets() {
-
-		signer := c.GetMiners(r).GetNode(vt.VerifierID)
+		miners := c.GetMiners(r.GetRoundNumber())
+		if miners == nil {
+			Logger.Error("UpdateNodeState: miners unexpected nil")
+			continue
+		}
+		signer := miners.GetNode(vt.VerifierID)
 		if signer == nil {
 			Logger.Error("this should not happen!")
 			continue
@@ -140,10 +155,21 @@ func (c *Chain) MergeVerificationTickets(ctx context.Context, b *block.Block, vt
 }
 
 func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockStateHandler) {
-	bNode := node.GetNode(fb.MinerID)
-	ms := bNode.ProtocolStats.(*MinerStats)
-	Logger.Info("finalize block", zap.Int64("round", fb.Round), zap.Int64("current_round", c.GetCurrentRound()), zap.Int64("lf_round", c.GetLatestFinalizedBlock().Round), zap.String("hash", fb.Hash), zap.Int("round_rank", fb.RoundRank), zap.Int8("state", fb.GetBlockState()))
-	ms.FinalizationCountByRank[fb.RoundRank]++
+	Logger.Info("finalize block", zap.Int64("round", fb.Round), zap.Int64("current_round", c.GetCurrentRound()),
+		zap.Int64("lf_round", c.GetLatestFinalizedBlock().Round), zap.String("hash", fb.Hash),
+		zap.Int("round_rank", fb.RoundRank), zap.Int8("state", fb.GetBlockState()))
+	if fb.RoundRank >= c.NumGenerators || fb.RoundRank < 0 {
+		Logger.Warn("FB round rank is invalid or greater then num_generators",
+			zap.Int("round_rank", fb.RoundRank),
+			zap.Int("num_generators", c.NumGenerators))
+	} else {
+		bNode := node.GetNode(fb.MinerID)
+		if bNode.ProtocolStats != nil {
+			//FIXME: fix node stats
+			ms := bNode.ProtocolStats.(*MinerStats)
+			ms.FinalizationCountByRank[fb.RoundRank]++ // stat
+		}
+	}
 	fr := c.GetRound(fb.Round)
 	Logger.Info("finalize block -- round", zap.Any("round", fr))
 	if fr != nil {
@@ -159,6 +185,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	if time.Since(fb.ToTime()) < 100*time.Second {
 		StartToFinalizeTimer.UpdateSince(fb.ToTime())
 	}
+
 	ssFTs = time.Now()
 	c.UpdateChainInfo(fb)
 	c.SaveChanges(ctx, fb)
@@ -179,7 +206,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 
 	for pfb := fb; pfb != nil && pfb != c.LatestDeterministicBlock; pfb = pfb.PrevBlock {
 		if c.IsFinalizedDeterministically(pfb) {
-			c.LatestDeterministicBlock = pfb
+			c.SetLatestDeterministicBlock(pfb)
 			break
 		}
 	}
@@ -206,10 +233,11 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 //IsFinalizedDeterministically - checks if a block is finalized deterministically
 func (c *Chain) IsFinalizedDeterministically(b *block.Block) bool {
 	//TODO: The threshold count should happen w.r.t the view of the block
+	mb := c.GetMagicBlock(b.Round)
 	if c.GetLatestFinalizedBlock().Round < b.Round {
 		return false
 	}
-	if len(b.UniqueBlockExtensions)*100 >= c.Miners.Size()*c.ThresholdByCount {
+	if len(b.UniqueBlockExtensions)*100 >= mb.Miners.Size()*c.ThresholdByCount {
 		return true
 	}
 	return false
@@ -222,6 +250,7 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 	params := &url.Values{}
 	params.Add("block", blockHash)
 	ctx := common.GetRootContext()
+	mb := c.GetCurrentMagicBlock()
 	var b *block.Block
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		Logger.Info("get notarized block", zap.String("block", blockHash), zap.Int64("cround", cround), zap.Int64("current_round", c.GetCurrentRound()))
@@ -236,7 +265,7 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 			r = c.RoundF.CreateRoundF(nb.Round).(*round.Round)
 			c.AddRound(r)
 		}
-		if err := c.VerifyNotarization(ctx, nb.Hash, nb.GetVerificationTickets(), r); err != nil {
+		if err := c.VerifyNotarization(ctx, nb.Hash, nb.GetVerificationTickets(), r.GetRoundNumber()); err != nil {
 			Logger.Error("get notarized block - validate notarization", zap.Int64("round", nb.Round), zap.String("block", blockHash), zap.Error(err))
 			return nil, err
 		}
@@ -256,7 +285,7 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 		}
 		return b, nil
 	}
-	n2n := c.Miners
+	n2n := mb.Miners
 	n2n.RequestEntity(ctx, nbrequestor, params, handler)
 	if b == nil {
 		Logger.Info("unable to fetch notarized block", zap.String("block", blockHash))
@@ -279,7 +308,7 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 	Logger.Info("fetch previous block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
 	cb := b
 	for idx := 0; idx < 10; idx++ {
-		Logger.Error("fetching previous block", zap.Int("idx", idx), zap.Int64("cround", cb.Round), zap.String("cblock", cb.Hash), zap.String("cprev_block", cb.PrevHash))
+		Logger.Debug("fetching previous block", zap.Int("idx", idx), zap.Int64("cround", cb.Round), zap.String("cblock", cb.Hash), zap.String("cprev_block", cb.PrevHash))
 		nb := c.GetNotarizedBlock(cb.PrevHash)
 		if nb == nil {
 			Logger.Error("get previous block (unable to get prior blocks)", zap.Int64("current_round", c.GetCurrentRound()), zap.Int("idx", idx), zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("cround", cb.Round), zap.String("cblock", cb.Hash), zap.String("cprev_block", cb.PrevHash))

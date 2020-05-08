@@ -89,14 +89,15 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 	if b.MagicBlock != nil {
 		sc.UpdateMagicBlock(b.MagicBlock)
+		sc.UpdateNodesFromMagicBlock(b.MagicBlock)
 	}
 	er := sc.GetRound(b.Round)
 	if er == nil {
 		var r = round.NewRound(b.Round)
 		er, _ = sc.AddRound(r).(*round.Round)
-		sc.SetRandomSeed(er, b.RoundRandomSeed)
+		sc.SetRandomSeed(er, b.GetRoundRandomSeed())
 	}
-	if err := sc.VerifyNotarization(ctx, b.Hash, b.GetVerificationTickets(), er); err != nil {
+	if err := sc.VerifyNotarization(ctx, b.Hash, b.GetVerificationTickets(), er.GetRoundNumber()); err != nil {
 		Logger.Error("notarization verification failed", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
 		return
 	}
@@ -303,7 +304,8 @@ func (sc *Chain) requestForRoundSummaries(ctx context.Context, params *url.Value
 		rs = roundSummaries
 		return rs, nil
 	}
-	sc.Sharders.RequestEntity(ctx, RoundSummariesRequestor, params, handler)
+	mb := sc.GetCurrentMagicBlock()
+	mb.Sharders.RequestEntity(ctx, RoundSummariesRequestor, params, handler)
 	return rs
 }
 
@@ -321,7 +323,8 @@ func (sc *Chain) requestForRound(ctx context.Context, params *url.Values) *round
 		}
 		return nil, nil
 	}
-	sc.Sharders.RequestEntity(ctx, RoundRequestor, params, handler)
+	mb := sc.GetCurrentMagicBlock()
+	mb.Sharders.RequestEntity(ctx, RoundRequestor, params, handler)
 	return r
 }
 
@@ -336,7 +339,8 @@ func (sc *Chain) requestForBlockSummaries(ctx context.Context, params *url.Value
 		bs = blockSummaries
 		return bs, nil
 	}
-	sc.Sharders.RequestEntity(ctx, BlockSummariesRequestor, params, handler)
+	mb := sc.GetCurrentMagicBlock()
+	mb.Sharders.RequestEntity(ctx, BlockSummariesRequestor, params, handler)
 	return bs
 }
 
@@ -351,13 +355,14 @@ func (sc *Chain) requestForBlockSummary(ctx context.Context, params *url.Values)
 		blockS = bs
 		return blockS, nil
 	}
-	sc.Sharders.RequestEntity(ctx, BlockSummaryRequestor, params, handler)
+	mb := sc.GetCurrentMagicBlock()
+	mb.Sharders.RequestEntity(ctx, BlockSummaryRequestor, params, handler)
 	return blockS
 }
 
 func (sc *Chain) requestForBlock(ctx context.Context, params *url.Values, r *round.Round) *block.Block {
 	self := node.GetSelfNode(ctx)
-	_, nodes := sc.CanShardBlockWithReplicators(r.BlockHash, self.Underlying())
+	_, nodes := sc.CanShardBlockWithReplicators(r.Number, r.BlockHash, self.Underlying())
 
 	if len(nodes) == 0 {
 		Logger.Info("no replicators for this block (lost the block)", zap.Int64("round", r.Number))

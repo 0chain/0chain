@@ -16,7 +16,7 @@ var (
 	MemUsage *zap.Logger
 
 	mLogger    *MemLogger
-	mHCLogger *MemLogger
+	mHCLogger  *MemLogger
 	mN2nLogger *MemLogger
 	mMLogger   *MemLogger
 
@@ -59,14 +59,17 @@ func InitLogging(mode string) {
 	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 
 	mlcfg := zap.NewProductionConfig()
-	mlcfg.Level.SetLevel(zapcore.ErrorLevel)
+	if mode != "development" {
+		mlcfg.Level.SetLevel(zapcore.ErrorLevel)
+	} else {
+		mlcfg.Level.SetLevel(zapcore.DebugLevel)
+	}
 	mLogger = createMemLogger(mlcfg)
 	option := createOptionFromCores(createZapCore(logWriter, cfg), mLogger.GetCore())
 	l, err := cfg.Build(option)
 	if err != nil {
 		panic(err)
 	}
-
 
 	mn2ncfg := zap.NewProductionConfig()
 	mn2ncfg.Level.SetLevel(zapcore.InfoLevel)

@@ -1,7 +1,10 @@
 package miner
 
 import (
+	"0chain.net/chaincore/chain"
+	"0chain.net/chaincore/round"
 	"context"
+	"github.com/spf13/viper"
 	"time"
 
 	"0chain.net/core/logging"
@@ -17,6 +20,8 @@ func SetupWorkers(ctx context.Context) {
 	go mc.BlockWorker(ctx)              // 1) receives incoming blocks from the network
 	go mc.FinalizeRoundWorker(ctx, mc)  // 2) sequentially finalize the rounds
 	go mc.FinalizedBlockWorker(ctx, mc) // 3) sequentially processes finalized blocks
+
+	go mc.PruneStorageWorker(ctx, time.Minute*5, mc.getPruneCountRoundStorage(), mc.MagicBlockStorage, mc.roundDkg)
 }
 
 /*BlockWorker - a job that does all the work related to blocks in each round */
@@ -28,6 +33,9 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case msg := <-mc.GetBlockMessageChannel():
+			if !mc.isStarted() {
+				break
+			}
 			if msg.Sender != nil {
 				Logger.Debug("message", zap.Any("msg", GetMessageLookup(msg.Type)), zap.Any("sender_index", msg.Sender.SetIndex), zap.Any("id", msg.Sender.GetKey()))
 			} else {
@@ -56,7 +64,7 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 
 //RoundWorker - a worker that monitors the round progress
 func (mc *Chain) RoundWorker(ctx context.Context) {
-	var timer = time.NewTimer(time.Duration(4 * time.Second))
+	var timer = time.NewTimer(4 * time.Second)
 	var cround = mc.GetCurrentRound()
 	var protocol Protocol = mc
 
@@ -65,14 +73,19 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-timer.C:
+			if !mc.isStarted() {
+				break
+			}
 			if cround == mc.GetCurrentRound() {
 				round := mc.GetMinerRound(cround)
 
-				logging.Logger.Info("Round timeout", zap.Any("Number", round.Number),
-					zap.Int("VRF_shares", len(round.GetVRFShares())),
-					zap.Int("proposedBlocks", len(round.GetProposedBlocks())),
-					zap.Int("notarizedBlocks", len(round.GetNotarizedBlocks())))
-				protocol.HandleRoundTimeout(ctx)
+				if round != nil {
+					logging.Logger.Info("Round timeout", zap.Any("Number", round.Number),
+						zap.Int("VRF_shares", len(round.GetVRFShares())),
+						zap.Int("proposedBlocks", len(round.GetProposedBlocks())),
+						zap.Int("notarizedBlocks", len(round.GetNotarizedBlocks())))
+					protocol.HandleRoundTimeout(ctx)
+				}
 			} else {
 				cround = mc.GetCurrentRound()
 				mc.ResetRoundTimeoutCount()
@@ -82,5 +95,22 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 		next := mc.GetNextRoundTimeoutTime(ctx)
 		Logger.Info("got_timeout", zap.Int("next", next))
 		timer = time.NewTimer(time.Duration(next) * time.Millisecond)
+	}
+}
+
+func (mc *Chain) getPruneCountRoundStorage() func(storage round.RoundStorage) int {
+	viper.SetDefault("server_chain.round_magic_block_storage.prune_below_count", chain.DefaultCountPruneRoundStorage)
+	viper.SetDefault("server_chain.round_dkg_storage.prune_below_count", chain.DefaultCountPruneRoundStorage)
+	pruneBelowCountMB := viper.GetInt("server_chain.round_magic_block_storage.prune_below_count")
+	pruneBelowCountDKG := viper.GetInt("server_chain.round_dkg_storage.prune_below_count")
+	return func(storage round.RoundStorage) int {
+		switch storage {
+		case mc.roundDkg:
+			return pruneBelowCountDKG
+		case mc.MagicBlockStorage:
+			return pruneBelowCountMB
+		default:
+			return chain.DefaultCountPruneRoundStorage
+		}
 	}
 }

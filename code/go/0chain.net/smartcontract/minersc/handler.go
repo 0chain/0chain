@@ -36,8 +36,8 @@ func (msc *MinerSmartContract) GetPoolStatsHandler(ctx context.Context, params u
 		return nil, err
 	}
 	pool, ok := mn.Active[params.Get("pool_id")]
-	if ok {
-		return pool.PoolStats, nil
+	if !ok {
+		return nil, common.NewError("failed to get pool", "pool doesn't exist in miner pools")
 	}
 	pool, ok = mn.Pending[params.Get("pool_id")]
 	if ok {
@@ -70,7 +70,7 @@ func (msc *MinerSmartContract) GetNodepoolHandler(ctx context.Context, params ur
 }
 
 func (msc *MinerSmartContract) GetMinerListHandler(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
-	allMinersList, err := msc.getMinersList(balances)
+	allMinersList, err := msc.GetMinersList(balances)
 	if err != nil {
 		return "", err
 	}
@@ -78,7 +78,15 @@ func (msc *MinerSmartContract) GetMinerListHandler(ctx context.Context, params u
 }
 
 func (msc *MinerSmartContract) GetSharderListHandler(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
-	allShardersList, err := msc.getShardersList(balances)
+	allShardersList, err := msc.getShardersList(balances, AllShardersKey)
+	if err != nil {
+		return "", err
+	}
+	return allShardersList, nil
+}
+
+func (msc *MinerSmartContract) GetSharderKeepListHandler(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
+	allShardersList, err := msc.getShardersList(balances, ShardersKeepKey)
 	if err != nil {
 		return "", err
 	}
@@ -94,6 +102,8 @@ func (msc *MinerSmartContract) GetDKGMinerListHandler(ctx context.Context, param
 }
 
 func (msc *MinerSmartContract) GetMinersMpksListHandler(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error) {
+	msc.mutexMinerMPK.Lock()
+	defer msc.mutexMinerMPK.Unlock()
 	var mpks block.Mpks
 	mpksBytes, err := balances.GetTrieNode(MinersMPKKey)
 	if err != nil {

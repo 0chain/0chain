@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"sync"
+	"sync/atomic"
 
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
@@ -83,7 +84,8 @@ type Block struct {
 	RoundRank   int           `json:"-"` // rank of the block in the round it belongs to
 	PrevBlock   *Block        `json:"-"`
 
-	TxnsMap map[string]bool `json:"-"`
+	TxnsMap   map[string]bool `json:"-"`
+	mutexTxns sync.RWMutex
 
 	ClientState           util.MerklePatriciaTrieI `json:"-"`
 	stateStatus           int8
@@ -142,6 +144,8 @@ func (b *Block) ComputeProperties() {
 		b.ChainID = datastore.ToKey(config.GetServerChainID())
 	}
 	if b.Txns != nil {
+		b.mutexTxns.Lock()
+		defer b.mutexTxns.Unlock()
 		b.TxnsMap = make(map[string]bool, len(b.Txns))
 		for _, txn := range b.Txns {
 			txn.ComputeProperties()
@@ -174,11 +178,16 @@ func (b *Block) Validate(ctx context.Context) error {
 	if b.ChainWeight > float64(b.Round) {
 		return common.NewError("chain_weight_gt_round", "Chain weight can't be greater than the block round")
 	}
+
+	b.mutexTxns.RLock()
 	if b.TxnsMap != nil {
 		if len(b.Txns) != len(b.TxnsMap) {
+			b.mutexTxns.RUnlock()
 			return common.NewError("duplicate_transactions", "Block has duplicate transactions")
 		}
 	}
+	b.mutexTxns.RUnlock()
+
 	hash := b.ComputeHash()
 	if b.Hash != hash {
 		return common.NewError("incorrect_block_hash", fmt.Sprintf("computed block hash doesn't match with the hash of the block: %v: %v: %v", b.Hash, hash, b.getHashData()))
@@ -359,7 +368,7 @@ func (b *Block) getHashData() string {
 	merkleRoot := mt.GetRoot()
 	rmt := b.GetReceiptsMerkleTree()
 	rMerkleRoot := rmt.GetRoot()
-	hashData := b.MinerID + ":" + b.PrevHash + ":" + common.TimeToString(b.CreationDate) + ":" + strconv.FormatInt(b.Round, 10) + ":" + strconv.FormatInt(b.RoundRandomSeed, 10) + ":" + merkleRoot + ":" + rMerkleRoot
+	hashData := b.MinerID + ":" + b.PrevHash + ":" + common.TimeToString(b.CreationDate) + ":" + strconv.FormatInt(b.Round, 10) + ":" + strconv.FormatInt(b.GetRoundRandomSeed(), 10) + ":" + merkleRoot + ":" + rMerkleRoot
 	return hashData
 }
 
@@ -377,6 +386,8 @@ func (b *Block) HashBlock() {
 
 /*ComputeTxnMap - organize the transactions into a hashmap for check if the txn exists*/
 func (b *Block) ComputeTxnMap() {
+	b.mutexTxns.Lock()
+	defer b.mutexTxns.Unlock()
 	b.TxnsMap = make(map[string]bool, len(b.Txns))
 	for _, txn := range b.Txns {
 		b.TxnsMap[txn.Hash] = true
@@ -385,6 +396,8 @@ func (b *Block) ComputeTxnMap() {
 
 /*HasTransaction - check if the transaction exists in this block */
 func (b *Block) HasTransaction(hash string) bool {
+	b.mutexTxns.RLock()
+	defer b.mutexTxns.RUnlock()
 	_, ok := b.TxnsMap[hash]
 	return ok
 }
@@ -396,7 +409,7 @@ func (b *Block) GetSummary() *BlockSummary {
 	bs.Hash = b.Hash
 	bs.MinerID = b.MinerID
 	bs.Round = b.Round
-	bs.RoundRandomSeed = b.RoundRandomSeed
+	bs.RoundRandomSeed = b.GetRoundRandomSeed()
 	bs.CreationDate = b.CreationDate
 	bs.MerkleTreeRoot = b.GetMerkleTree().GetRoot()
 	bs.ClientStateHash = b.ClientStateHash
@@ -595,9 +608,19 @@ func (b *Block) PrevBlockVerificationTicketsSize() int {
 	return len(b.PrevBlockVerificationTickets)
 }
 
-//SetPrevBlockVerificationTickets - set previous block verification tickets
+// SetPrevBlockVerificationTickets - set previous block verification tickets
 func (b *Block) SetPrevBlockVerificationTickets(bvt []*VerificationTicket) {
 	b.ticketsMutex.Lock()
 	defer b.ticketsMutex.Unlock()
 	b.PrevBlockVerificationTickets = bvt
+}
+
+// SetRoundRandomSeed - set the random seed
+func (u *UnverifiedBlockBody) SetRoundRandomSeed(seed int64) {
+	atomic.StoreInt64(&u.RoundRandomSeed, seed)
+}
+
+// GetRoundRandomSeed - returns the random seed of the round
+func (u *UnverifiedBlockBody) GetRoundRandomSeed() int64 {
+	return atomic.LoadInt64(&u.RoundRandomSeed)
 }

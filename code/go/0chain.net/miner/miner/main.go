@@ -102,10 +102,11 @@ func main() {
 	if state.Debug() {
 		chain.SetupStateLogger("/tmp/state.txt")
 	}
-	mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"), magicBlock)
-	Logger.Info("Miners in main", zap.Int("size", mc.Miners.Size()))
+	gb := mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"), magicBlock)
+	mb := mc.GetLatestMagicBlock()
+	Logger.Info("Miners in main", zap.Int("size", mb.Miners.Size()))
 
-	if !mc.IsActiveNode(node.Self.Underlying().GetKey(), 0) {
+	if !mb.IsActiveNode(node.Self.Underlying().GetKey(), 0) {
 		hostName, n2nHostName, portNum, err := readNonGenesisHostAndPort(keysFile)
 		if err != nil {
 			Logger.Panic("Error reading keys file. Non-genesis miner has no host or port number", zap.Error(err))
@@ -167,44 +168,66 @@ func main() {
 	common.ConfigRateLimits()
 	initN2NHandlers()
 
-	if mc.StartingRound == 0 && mc.IsActiveNode(node.Self.Underlying().GetKey(), mc.StartingRound) {
+	if err := mc.WaitForActiveSharders(ctx); err != nil {
+		Logger.Error("failed to wait sharders", zap.Error(err))
+	}
+	if err := getCurrentMagicBlockFromSharders(mc); err != nil {
+		Logger.Panic(err.Error())
+	}
+	mb = mc.GetLatestMagicBlock()
+	if mb.StartingRound == 0 && mb.IsActiveNode(node.Self.Underlying().GetKey(), mb.StartingRound) {
 		dkgShare := &bls.DKGSummary{
 			SecretShares: make(map[string]string),
 		}
-		dkgShare.ID = strconv.FormatInt(mc.MagicBlockNumber, 10)
-		for k, v := range mc.ShareOrSigns.Shares {
+		dkgShare.ID = strconv.FormatInt(mb.MagicBlockNumber, 10)
+		for k, v := range mb.GetShareOrSigns().GetShares() {
 			dkgShare.SecretShares[miner.ComputeBlsID(k)] = v.ShareOrSigns[node.Self.Underlying().GetKey()].Share
 		}
 		err = miner.StoreDKGSummary(ctx, dkgShare)
+		if err != nil {
+			panic(err)
+		}
 	}
-	mc.WaitForActiveSharders(ctx)
-	getCurrentMagicBlock(mc)
-	initServer()
+
 	initHandlers()
 
+	go func() {
+		Logger.Info("Ready to listen to the requests")
+		log.Fatal(server.ListenAndServe())
+	}()
+
+	mc.RegisterClient()
 	chain.StartTime = time.Now().UTC()
-	activeMiner := mc.Miners.HasNode(node.Self.Underlying().GetKey())
+	activeMiner := mb.Miners.HasNode(node.Self.Underlying().GetKey())
 	if activeMiner {
-		miner.SetDKG(ctx, mc.MagicBlock)
-		go miner.StartProtocol()
+		mb = mc.GetLatestMagicBlock()
+		if err := miner.SetDKGFromMagicBlocksChainPrev(ctx, mb); err != nil {
+			Logger.Error("failed to set DKG", zap.Error(err))
+		} else {
+			miner.StartProtocol(ctx, gb)
+		}
 	}
+	mc.SetStarted()
+	miner.SetupWorkers(ctx)
 
 	if config.Development() {
 		go TransactionGenerator(mc.Chain)
 	}
-	go mc.InitSetup()
+
+	go mc.InitSetupSC()
+
 	if config.DevConfiguration.ViewChange {
 		go mc.DKGProcess(ctx)
 	}
-	Logger.Info("Ready to listen to the requests")
-	log.Fatal(server.ListenAndServe())
+
+	defer done(ctx)
+	<-ctx.Done()
+	time.Sleep(time.Second * 5)
 }
 
-func initServer() {
-	/* TODO: when a new server is brought up, it needs to first download
-	all the state before it can start accepting requests
-	*/
-	//time.Sleep(time.Second)
+func done(ctx context.Context) {
+	mc := miner.GetMinerChain()
+	mc.Stop()
 }
 
 func readNonGenesisHostAndPort(keysFile *string) (string, string, int, error) {
@@ -272,10 +295,22 @@ func readMagicBlockFile(magicBlockFile *string, mc *miner.Chain, serverChain *ch
 	return nil
 }
 
-func getCurrentMagicBlock(mc *miner.Chain) {
-	mbs := mc.GetLatestFinalizedMagicBlockFromSharder(common.GetRootContext())
-	if len(mbs) == 0 {
-		Logger.DPanic("No finalized magic block from sharder")
+func getCurrentMagicBlockFromSharders(mc *miner.Chain) error {
+	const limitAttempts = 10
+	attempt := 0
+	retryTimeout := time.Second * 5
+	var mbs []*block.Block
+	for len(mbs) == 0 {
+		mbs = mc.GetLatestFinalizedMagicBlockFromSharder(common.GetRootContext())
+		if len(mbs) == 0 {
+			attempt++
+			if attempt >= limitAttempts {
+				Logger.DPanic("No finalized magic block from sharder")
+			}
+			Logger.Warn("get_current_mb_sharder -- retry", zap.Any("attempt", attempt),
+				zap.Any("timeout", retryTimeout))
+			time.Sleep(retryTimeout)
+		}
 	}
 	if len(mbs) > 1 {
 		sort.Slice(mbs, func(i, j int) bool {
@@ -283,12 +318,15 @@ func getCurrentMagicBlock(mc *miner.Chain) {
 		})
 	}
 	magicBlock := mbs[0]
-	mc.VerifyChainHistory(common.GetRootContext(), magicBlock)
-	err := mc.UpdateMagicBlock(magicBlock.MagicBlock)
-	if err != nil {
-		Logger.DPanic(fmt.Sprintf("failed to update magic block: %v", err.Error()))
+	if err := mc.MustVerifyChainHistory(common.GetRootContext(), magicBlock, nil); err != nil {
+		return err
+	}
+	if err := mc.UpdateMagicBlock(magicBlock.MagicBlock); err != nil {
+		return fmt.Errorf("failed to update magic block: %v", err.Error())
 	}
 	mc.SetLatestFinalizedMagicBlock(magicBlock)
+	mc.UpdateNodesFromMagicBlock(magicBlock.MagicBlock)
+	return nil
 }
 
 func initEntities() {
@@ -315,6 +353,9 @@ func initEntities() {
 	bls.SetupDKGSummary(ememoryStorage)
 	bls.SetupDKGDB()
 	setupsc.SetupSmartContracts()
+
+	block.SetupMagicBlockData(ememoryStorage)
+	block.SetupMagicBlockDataDB()
 }
 
 func initHandlers() {
@@ -350,6 +391,6 @@ func initN2NHandlers() {
 func initWorkers(ctx context.Context) {
 	serverChain := chain.GetServerChain()
 	serverChain.SetupWorkers(ctx)
-	miner.SetupWorkers(ctx)
+	//miner.SetupWorkers(ctx)
 	transaction.SetupWorkers(ctx)
 }
