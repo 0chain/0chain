@@ -1,0 +1,1 @@
+docker-compose -f docker.local/build.magicBlock/docker-compose.yml up
