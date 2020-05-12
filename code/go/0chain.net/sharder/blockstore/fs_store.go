@@ -54,17 +54,18 @@ func (fbs *FSBlockStore) intializeMinio() {
 		viper.GetBool("minio.use_ssl"),
 	)
 	if err != nil {
-		Logger.Panic("Unable to initiaze minio cliet", zap.Error(err))
+		Logger.Error("Unable to initiaze minio cliet", zap.Error(err))
 		panic(err)
 	}
 	err = minioClient.MakeBucket(MinioConfig.BucketName, MinioConfig.BucketLocation)
 	if err != nil {
+		Logger.Error("Error with make bucket, Will check if bucket exists", zap.Error(err))
 		exists, errBucketExists := minioClient.BucketExists(MinioConfig.BucketName)
 		if errBucketExists == nil && exists {
 			Logger.Info("We already own ", zap.Any("bucket_name", MinioConfig.BucketName))
 		} else {
-			Logger.Panic("Minio bucket error", zap.Error(err), zap.Any("bucket_name", MinioConfig.BucketName))
-			panic(err)
+			Logger.Error("Minio bucket error", zap.Error(errBucketExists), zap.Any("bucket_name", MinioConfig.BucketName))
+			panic(errBucketExists)
 		}
 	} else {
 		Logger.Info(MinioConfig.BucketName + " bucket successfully created")
