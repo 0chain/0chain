@@ -10,6 +10,7 @@ smart_contracts:
     interest_rate: 0.5
     min_lock_period: 2190h # max units hours
     max_lock_period: 8760h # max units hours
+    max_mint: 4000000.0 # tokens, max amount of tokens can be minted by SC
   storagesc:
     # min possible allocations size in bytes allowed by the SC
     min_alloc_size: 1024
