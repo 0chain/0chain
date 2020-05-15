@@ -172,7 +172,10 @@ func (fbs *FSBlockStore) UploadToCloud(hash string, round int64) error {
 	if err != nil {
 		return err
 	}
-	return os.Remove(filePath)
+	if viper.GetBool("minio.delete_local_copy") {
+		return os.Remove(filePath)
+	}
+	return nil
 }
 
 func (fbs *FSBlockStore) DownloadFromCloud(hash string, round int64) error {

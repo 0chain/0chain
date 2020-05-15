@@ -118,6 +118,7 @@ minio:
   num_workers: 5
   use_ssl: false
   old_block_round_range: 20000000
+  delete_local_copy: true
 
 cassandra:
   connection:
