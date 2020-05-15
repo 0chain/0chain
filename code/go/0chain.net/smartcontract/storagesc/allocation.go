@@ -599,7 +599,7 @@ func (sc *StorageSmartContract) extendAllocation(t *transaction.Transaction,
 
 	// get related write pool
 	var wp *writePool
-	if wp, err = sc.getWritePool(t.ClientID, balances); err != nil {
+	if wp, err = sc.getWritePool(alloc.Owner, balances); err != nil {
 		return "", common.NewError("allocation_extending_failed",
 			"can't get write pool: "+err.Error())
 	}
@@ -630,7 +630,7 @@ func (sc *StorageSmartContract) extendAllocation(t *transaction.Transaction,
 	}
 
 	// save the write pool
-	if err = wp.save(sc.ID, t.ClientID, balances); err != nil {
+	if err = wp.save(sc.ID, alloc.Owner, balances); err != nil {
 		return "", common.NewError("allocation_extending_failed",
 			err.Error())
 	}
@@ -676,7 +676,7 @@ func (sc *StorageSmartContract) reduceAllocation(t *transaction.Transaction,
 
 	// get related write pool
 	var wp *writePool
-	if wp, err = sc.getWritePool(t.ClientID, balances); err != nil {
+	if wp, err = sc.getWritePool(alloc.Owner, balances); err != nil {
 		return "", common.NewError("allocation_reducing_failed",
 			"can't get write pool: "+err.Error())
 	}
@@ -695,7 +695,7 @@ func (sc *StorageSmartContract) reduceAllocation(t *transaction.Transaction,
 	}
 
 	// save the write pool
-	if err = wp.save(sc.ID, t.ClientID, balances); err != nil {
+	if err = wp.save(sc.ID, alloc.Owner, balances); err != nil {
 		return "", common.NewError("allocation_reducing_failed",
 			err.Error())
 	}
