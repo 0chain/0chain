@@ -170,10 +170,7 @@ func updateBlobbersInAll(all *StorageNodes, update []*StorageNode,
 
 	// update the blobbers in all blobbers list
 	for _, b := range update {
-		var i, ok = all.Nodes.getIndex(b.ID)
-		if ok {
-			all.Nodes[i] = b // replace only if found
-		}
+		all.Nodes.update(b)
 		// don't replace if blobber has removed from the all blobbers list;
 		// for example, if the blobber has removed, then it shouldn't be
 		// in the all blobbers list
@@ -252,8 +249,8 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 		// size of allocation for a blobber
 		bsize = (sa.Size + int64(size-1)) / int64(size)
 		// filtered list
-		list = sa.filterBlobbers(allBlobbersList.Nodes, t.CreationDate, bsize,
-			filterHealthyBlobbers(t.CreationDate),
+		list = sa.filterBlobbers(allBlobbersList.Nodes.copy(), t.CreationDate,
+			bsize, filterHealthyBlobbers(t.CreationDate),
 			sc.filterBlobbersByFreeSpace(t.CreationDate, bsize, balances))
 	)
 
@@ -1082,7 +1079,7 @@ func (sc *StorageSmartContract) cacnelAllocationRequest(
 				"saving blobber "+d.BlobberID+": "+err.Error())
 		}
 		// update the blobber in all (replace with existing one)
-		allb.Nodes.add(b)
+		allb.Nodes.update(b)
 	}
 
 	// move challenge pool left to write pool
@@ -1279,7 +1276,7 @@ func (sc *StorageSmartContract) finalizeAllocation(
 				"saving blobber "+d.BlobberID+": "+err.Error())
 		}
 		// update the blobber in all (replace with existing one)
-		allb.Nodes.add(b)
+		allb.Nodes.update(b)
 	}
 
 	// move challenge pool rest to write pool

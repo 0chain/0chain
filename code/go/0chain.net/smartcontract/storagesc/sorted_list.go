@@ -121,3 +121,21 @@ func (sb *sortedBlobbers) add(b *StorageNode) (ok bool) {
 	(*sb) = append((*sb)[:i], append([]*StorageNode{b}, (*sb)[i:]...)...)
 	return true // added
 }
+
+// replace if found
+func (sb *sortedBlobbers) update(b *StorageNode) (ok bool) {
+	var i int
+	if i, ok = sb.getIndex(b.ID); !ok {
+		return
+	}
+	(*sb)[i] = b // replace
+	return
+}
+
+func (sb sortedBlobbers) copy() (cp []*StorageNode) {
+	cp = make([]*StorageNode, 0, len(sb))
+	for _, b := range sb {
+		cp = append(cp, b)
+	}
+	return
+}
