@@ -55,8 +55,8 @@ type stakePool struct {
 	Offers map[string]*offerPool `json:"offers"`
 	// rewards information
 	Rewards stakePoolRewards `json:"rewards"`
-	// DelegateWallets allowed for pool owner.
-	DelegateWallets []string `json:"delegate_wallets"`
+	// DelegateWallet for pool owner.
+	DelegateWallet string `json:"delegate_wallet"`
 }
 
 func newStakePool() *stakePool {
@@ -124,25 +124,13 @@ func (sp *stakePool) stake() (stake state.Balance) {
 
 // is allowed delegate wallet
 func (sp *stakePool) isAllowed(id datastore.Key) bool {
-	if len(sp.DelegateWallets) == 0 {
-		return true // allow any
-	}
-	for _, dw := range sp.DelegateWallets {
-		if dw == id {
-			return true // found
-		}
-	}
-	return false // not found
+	return sp.DelegateWallet == "" ||
+		sp.DelegateWallet == id
 }
 
 // add delegate wallet
 func (sp *stakePool) dig(t *transaction.Transaction,
 	balances chainstate.StateContextI) (resp string, err error) {
-
-	if !sp.isAllowed(t.ClientID) {
-		return "", fmt.Errorf("delegate is not allowed by pool owner: %q",
-			t.ClientID)
-	}
 
 	if err = checkFill(t, balances); err != nil {
 		return
@@ -249,17 +237,15 @@ func minBalance(a, b state.Balance) state.Balance {
 type stakePoolUpdateInfo struct {
 	stake  state.Balance // stake of all delegate pools
 	offers state.Balance // offers stake
+	minted state.Balance // minted tokens
 }
 
 // mintPool for a period
 func (sp *stakePool) mintPool(sscID string, dp *delegatePool,
 	now common.Timestamp, rate float64, period common.Timestamp,
-	balances chainstate.StateContextI) (err error) {
+	balances chainstate.StateContextI) (mint state.Balance, err error) {
 
-	var (
-		at   = dp.MintAt   // last periodic mint
-		mint state.Balance // total mints for all periods
-	)
+	var at = dp.MintAt // last periodic mint
 
 	for ; at+period < now; at += period {
 		mint += state.Balance(rate * float64(dp.Balance))
@@ -278,7 +264,7 @@ func (sp *stakePool) mintPool(sscID string, dp *delegatePool,
 	})
 
 	if err != nil {
-		return fmt.Errorf("adding mint: %v", err)
+		return mint, fmt.Errorf("adding mint: %v", err)
 	}
 
 	dp.Earnings += mint
@@ -312,7 +298,8 @@ func (sp *stakePool) orderedPools() (dps []*delegatePool) {
 
 // pay interests for stake pool
 func (sp *stakePool) minting(conf *scConfig, sscID string,
-	now common.Timestamp, balances chainstate.StateContextI) (err error) {
+	now common.Timestamp, balances chainstate.StateContextI) (
+	minted state.Balance, err error) {
 
 	if len(sp.Pools) == 0 {
 		return
@@ -329,11 +316,13 @@ func (sp *stakePool) minting(conf *scConfig, sscID string,
 
 	// ordered
 
+	var mint state.Balance
 	for _, dp := range sp.orderedPools() {
-		err = sp.mintPool(sscID, dp, now, rate, period, balances)
+		mint, err = sp.mintPool(sscID, dp, now, rate, period, balances)
 		if err != nil {
 			return
 		}
+		minted += mint
 	}
 
 	return
@@ -344,13 +333,15 @@ func (sp *stakePool) update(conf *scConfig, sscID string, now common.Timestamp,
 	balances chainstate.StateContextI) (info *stakePoolUpdateInfo, err error) {
 
 	// mints
-	if err = sp.minting(conf, sscID, now, balances); err != nil {
+	var mint state.Balance
+	if mint, err = sp.minting(conf, sscID, now, balances); err != nil {
 		return
 	}
 
 	info = new(stakePoolUpdateInfo)
 	info.stake = sp.stake()                  // capacity stake
 	info.offers = sp.offersStake(now, false) // offers stake
+	info.minted = mint                       // minted tokens
 	return
 }
 
@@ -569,7 +560,7 @@ func (ssc *StorageSmartContract) getStakePool(blobberID datastore.Key,
 
 // get existing stake pool or create new one not saving it
 func (ssc *StorageSmartContract) getOrCreateStakePool(blobberID datastore.Key,
-	delegateWallets []string, balances chainstate.StateContextI) (
+	delegateWallet string, balances chainstate.StateContextI) (
 	sp *stakePool, err error) {
 
 	// the stake pool can be created by related validator
@@ -581,9 +572,9 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(blobberID datastore.Key,
 	if err == util.ErrValueNotPresent {
 		sp, err = newStakePool(), nil // create new, reset error
 		sp.Rewards.ZcnPool.ID = stakePoolID(ssc.ID, blobberID)
-		sp.DelegateWallets = delegateWallets // on create only
-	} else if len(sp.DelegateWallets) == 0 && len(delegateWallets) != 0 {
-		sp.DelegateWallets = delegateWallets // set instead of empty list
+		sp.DelegateWallet = delegateWallet // on create only
+	} else if sp.DelegateWallet == "" && len(delegateWallet) != 0 {
+		sp.DelegateWallet = delegateWallet // set instead of empty list
 	}
 
 	return
@@ -649,10 +640,19 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			"can't get stake pool: "+err.Error())
 	}
 
-	_, err = sp.update(conf, ssc.ID, t.CreationDate, balances)
+	var info *stakePoolUpdateInfo
+	info, err = sp.update(conf, ssc.ID, t.CreationDate, balances)
 	if err != nil {
 		return "", common.NewError("stake_pool_lock_failed",
 			"updating stake pool: "+err.Error())
+	}
+	conf.Minted += info.minted
+
+	// save configuration (minted tokens)
+	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
+	if err != nil {
+		return "", common.NewError("stake_pool_lock_failed",
+			"saving configurations: "+err.Error())
 	}
 
 	if resp, err = sp.dig(t, balances); err != nil {
@@ -699,6 +699,14 @@ func (ssc *StorageSmartContract) stakePoolUnlock(t *transaction.Transaction,
 		return "", common.NewError("stake_pool_unlock_failed",
 			"updating stake pool: "+err.Error())
 	}
+	conf.Minted += info.minted
+
+	// save configuration (minted tokens)
+	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
+	if err != nil {
+		return "", common.NewError("stake_pool_unlock_failed",
+			"saving configuration: "+err.Error())
+	}
 
 	resp, err = sp.empty(ssc.ID, spr.PoolID, t.ClientID, info, balances)
 	if err != nil {
@@ -741,15 +749,19 @@ func (ssc *StorageSmartContract) stakePoolPayInterests(
 			"can't get related stake pool: "+err.Error())
 	}
 
-	if !sp.isAllowed(t.ClientID) {
-		return "", common.NewError("stake_pool_take_rewards_failed",
-			"not allowed for the client")
-	}
-
-	_, err = sp.update(conf, ssc.ID, t.CreationDate, balances)
+	var info *stakePoolUpdateInfo
+	info, err = sp.update(conf, ssc.ID, t.CreationDate, balances)
 	if err != nil {
 		return "", common.NewError("stake_pool_take_rewards_failed",
 			"updating stake pool: "+err.Error())
+	}
+	conf.Minted += info.minted
+
+	// save configuration (minted tokens)
+	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
+	if err != nil {
+		return "", common.NewError("stake_pool_take_rewards_failed",
+			"saving configurations: "+err.Error())
 	}
 
 	// save the pool
@@ -792,10 +804,18 @@ func (ssc *StorageSmartContract) stakePoolTakeRewards(
 			"not allowed for the client")
 	}
 
-	_, err = sp.update(conf, ssc.ID, t.CreationDate, balances)
+	var info *stakePoolUpdateInfo
+	info, err = sp.update(conf, ssc.ID, t.CreationDate, balances)
 	if err != nil {
 		return "", common.NewError("stake_pool_take_rewards_failed",
 			"updating stake pool: "+err.Error())
+	}
+	// save configuration (minted tokens)
+	conf.Minted += info.minted
+	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
+	if err != nil {
+		return "", common.NewError("stake_pool_take_rewards_failed",
+			"saving configurations: "+err.Error())
 	}
 
 	if resp, err = sp.takeRewards(ssc.ID, t.ClientID, balances); err != nil {

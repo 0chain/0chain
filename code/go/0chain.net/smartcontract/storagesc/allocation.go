@@ -1063,7 +1063,8 @@ func (sc *StorageSmartContract) cacnelAllocationRequest(
 			}
 		}
 		// -------
-		_, err = sp.update(conf, sc.ID, t.CreationDate, balances)
+		var info *stakePoolUpdateInfo
+		info, err = sp.update(conf, sc.ID, t.CreationDate, balances)
 		if err != nil {
 			return "", common.NewError("alloc_cacnel_failed",
 				"updating stake pool of "+d.BlobberID+": "+err.Error())
@@ -1072,6 +1073,7 @@ func (sc *StorageSmartContract) cacnelAllocationRequest(
 			return "", common.NewError("alloc_cacnel_failed",
 				"saving stake pool of "+d.BlobberID+": "+err.Error())
 		}
+		conf.Minted += info.minted
 		// update the blobber
 		b.Used -= d.Size
 		if _, err = balances.InsertTrieNode(b.GetKey(sc.ID), b); err != nil {
@@ -1131,6 +1133,13 @@ func (sc *StorageSmartContract) cacnelAllocationRequest(
 	if err != nil {
 		return "", common.NewError("alloc_cacnel_failed",
 			"saving all allocations list: "+err.Error())
+	}
+
+	// save configuration (minted tokens)
+	_, err = balances.InsertTrieNode(scConfigKey(sc.ID), conf)
+	if err != nil {
+		return "", common.NewError("alloc_cacnel_failed",
+			"saving configurations: "+err.Error())
 	}
 
 	return "canceled", nil
@@ -1260,7 +1269,8 @@ func (sc *StorageSmartContract) finalizeAllocation(
 			d.FinalReward += lack
 		}
 		// -------
-		_, err = sp.update(conf, sc.ID, t.CreationDate, balances)
+		var info *stakePoolUpdateInfo
+		info, err = sp.update(conf, sc.ID, t.CreationDate, balances)
 		if err != nil {
 			return "", common.NewError("fini_alloc_failed",
 				"updating stake pool of "+d.BlobberID+": "+err.Error())
@@ -1269,6 +1279,7 @@ func (sc *StorageSmartContract) finalizeAllocation(
 			return "", common.NewError("fini_alloc_failed",
 				"saving stake pool of "+d.BlobberID+": "+err.Error())
 		}
+		conf.Minted += info.minted
 		// update the blobber
 		b.Used -= d.Size
 		if _, err = balances.InsertTrieNode(b.GetKey(sc.ID), b); err != nil {
@@ -1328,6 +1339,13 @@ func (sc *StorageSmartContract) finalizeAllocation(
 	if err != nil {
 		return "", common.NewError("fini_alloc_failed",
 			"saving all allocations list: "+err.Error())
+	}
+
+	// save configuration (minted tokens)
+	_, err = balances.InsertTrieNode(scConfigKey(sc.ID), conf)
+	if err != nil {
+		return "", common.NewError("fini_alloc_failed",
+			"saving configurations: "+err.Error())
 	}
 
 	return "finalized", nil

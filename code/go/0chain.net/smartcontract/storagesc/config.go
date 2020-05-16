@@ -47,6 +47,10 @@ type writePoolConfig struct {
 
 // scConfig represents SC configurations ('storagesc:' from sc.yaml).
 type scConfig struct {
+	// MaxMint is max minting.
+	MaxMint state.Balance `json:"max_mint"`
+	// Minted tokens by entire SC.
+	Minted state.Balance `json:"minted"`
 	// MinAllocSize is minimum possible size (bytes)
 	// of an allocation the SC accept.
 	MinAllocSize int64 `json:"min_alloc_size"`
@@ -127,6 +131,9 @@ func (sc *scConfig) validate() (err error) {
 		return fmt.Errorf("negative min_alloc_duration: %v",
 			sc.MinAllocDuration)
 	}
+	if sc.MaxMint < 0 {
+		return fmt.Errorf("negative max_mint: %v", sc.MaxMint)
+	}
 	if sc.MinAllocSize < 0 {
 		return fmt.Errorf("negative min_alloc_size: %v", sc.MinAllocSize)
 	}
@@ -167,6 +174,10 @@ func (sc *scConfig) validate() (err error) {
 	return
 }
 
+func (conf *scConfig) canMint() bool {
+	return conf.Minted < conf.MaxMint
+}
+
 func (conf *scConfig) Encode() (b []byte) {
 	var err error
 	if b, err = json.Marshal(conf); err != nil {
@@ -198,58 +209,52 @@ func (ssc *StorageSmartContract) getConfigBytes(
 // configs from sc.yaml
 func getConfiguredConfig() (conf *scConfig, err error) {
 
-	const prefix = "smart_contracts.storagesc."
+	const pfx = "smart_contracts.storagesc."
 
 	conf = new(scConfig)
+	var scc = config.SmartContractConfig
 	// sc
-	conf.MinAllocSize = config.SmartContractConfig.GetInt64(
-		prefix + "min_alloc_size")
-	conf.MinAllocDuration = config.SmartContractConfig.GetDuration(
-		prefix + "min_alloc_duration")
-	conf.ValidatorReward = config.SmartContractConfig.GetFloat64(
-		prefix + "validator_reward")
-	conf.BlobberSlash = config.SmartContractConfig.GetFloat64(
-		prefix + "blobber_slash")
-	conf.MaxReadPrice = state.Balance(config.SmartContractConfig.GetFloat64(
-		prefix+"max_read_price") * 1e10)
-	conf.MaxWritePrice = state.Balance(config.SmartContractConfig.GetFloat64(
-		prefix+"max_write_price") * 1e10)
+	conf.MaxMint = state.Balance(scc.GetFloat64(pfx+"max_mint") * 1e10)
+	conf.MinAllocSize = scc.GetInt64(pfx + "min_alloc_size")
+	conf.MinAllocDuration = scc.GetDuration(pfx + "min_alloc_duration")
+	conf.ValidatorReward = scc.GetFloat64(pfx + "validator_reward")
+	conf.BlobberSlash = scc.GetFloat64(pfx + "blobber_slash")
+	conf.MaxReadPrice = state.Balance(
+		scc.GetFloat64(pfx+"max_read_price") * 1e10)
+	conf.MaxWritePrice = state.Balance(
+		scc.GetFloat64(pfx+"max_write_price") * 1e10)
 	// read pool
 	conf.ReadPool = new(readPoolConfig)
-	conf.ReadPool.MinLock = config.SmartContractConfig.GetInt64(
-		prefix + "readpool.min_lock")
-	conf.ReadPool.MinLockPeriod = config.SmartContractConfig.GetDuration(
-		prefix + "readpool.min_lock_period")
-	conf.ReadPool.MaxLockPeriod = config.SmartContractConfig.GetDuration(
-		prefix + "readpool.max_lock_period")
+	conf.ReadPool.MinLock = scc.GetInt64(pfx + "readpool.min_lock")
+	conf.ReadPool.MinLockPeriod = scc.GetDuration(
+		pfx + "readpool.min_lock_period")
+	conf.ReadPool.MaxLockPeriod = scc.GetDuration(
+		pfx + "readpool.max_lock_period")
 	// write pool
 	conf.WritePool = new(writePoolConfig)
-	conf.WritePool.MinLock = config.SmartContractConfig.GetInt64(
-		prefix + "writepool.min_lock")
-	conf.WritePool.MinLockPeriod = config.SmartContractConfig.GetDuration(
-		prefix + "writepool.min_lock_period")
-	conf.WritePool.MaxLockPeriod = config.SmartContractConfig.GetDuration(
-		prefix + "writepool.max_lock_period")
+	conf.WritePool.MinLock = scc.GetInt64(pfx + "writepool.min_lock")
+	conf.WritePool.MinLockPeriod = scc.GetDuration(
+		pfx + "writepool.min_lock_period")
+	conf.WritePool.MaxLockPeriod = scc.GetDuration(
+		pfx + "writepool.max_lock_period")
 	// stake pool
 	conf.StakePool = new(stakePoolConfig)
-	conf.StakePool.MinLock = config.SmartContractConfig.GetInt64(
-		prefix + "stakepool.min_lock")
-	conf.StakePool.InterestRate = config.SmartContractConfig.GetFloat64(
-		prefix + "stakepool.interest_rate")
-	conf.StakePool.InterestInterval = config.SmartContractConfig.GetDuration(
-		prefix + "stakepool.interest_interval")
+	conf.StakePool.MinLock = scc.GetInt64(pfx + "stakepool.min_lock")
+	conf.StakePool.InterestRate = scc.GetFloat64(
+		pfx + "stakepool.interest_rate")
+	conf.StakePool.InterestInterval = scc.GetDuration(
+		pfx + "stakepool.interest_interval")
 	// allocation cancellation
-	conf.FailedChallengesToCancel = config.SmartContractConfig.GetInt(
-		prefix + "failed_challenges_to_cancel")
-	conf.FailedChallengesToRevokeMinLock = config.SmartContractConfig.GetInt(
-		prefix + "failed_challenges_to_revoke_min_lock")
+	conf.FailedChallengesToCancel = scc.GetInt(
+		pfx + "failed_challenges_to_cancel")
+	conf.FailedChallengesToRevokeMinLock = scc.GetInt(
+		pfx + "failed_challenges_to_revoke_min_lock")
 	// challenges generating
-	conf.ChallengeEnabled = config.SmartContractConfig.GetBool(
-		prefix + "challenge_enabled")
-	conf.MaxChallengesPerGeneration = config.SmartContractConfig.GetInt(
-		prefix + "max_challenges_per_generation")
-	conf.ChallengeGenerationRate = config.SmartContractConfig.GetFloat64(
-		prefix + "challenge_rate_per_mb_min")
+	conf.ChallengeEnabled = scc.GetBool(pfx + "challenge_enabled")
+	conf.MaxChallengesPerGeneration = scc.GetInt(
+		pfx + "max_challenges_per_generation")
+	conf.ChallengeGenerationRate = scc.GetFloat64(
+		pfx + "challenge_rate_per_mb_min")
 
 	err = conf.validate()
 	return
@@ -323,6 +328,12 @@ func (ssc *StorageSmartContract) updateConfig(t *transaction.Transaction,
 			"unauthorized access - only the owner can update the variables")
 	}
 
+	var conf *scConfig
+	if conf, err = ssc.getConfig(balances, true); err != nil {
+		return "", common.NewError("update_config",
+			"can't get config: "+err.Error())
+	}
+
 	var update scConfig
 	if err = update.Decode(input); err != nil {
 		return "", common.NewError("update_config", err.Error())
@@ -331,6 +342,8 @@ func (ssc *StorageSmartContract) updateConfig(t *transaction.Transaction,
 	if err = update.validate(); err != nil {
 		return
 	}
+
+	update.Minted = conf.Minted
 
 	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), &update)
 	if err != nil {

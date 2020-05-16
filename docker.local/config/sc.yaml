@@ -16,6 +16,8 @@ smart_contracts:
     min_stake: 100
     max_stake: 10000000000
   storagesc:
+    # max_mint
+    max_mint: 4000000.0 # tokens, max amount of tokens can be minted by SC
     # min possible allocations size in bytes allowed by the SC
     min_alloc_size: 1024
     # min possible allocation duration allowed by the SC

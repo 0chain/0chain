@@ -154,10 +154,10 @@ type StorageChallenge struct {
 }
 
 type ValidationNode struct {
-	ID              string   `json:"id"`
-	BaseURL         string   `json:"url"`
-	PublicKey       string   `json:"-"`
-	DelegateWallets []string `json:"delegate_wallets"`
+	ID             string `json:"id"`
+	BaseURL        string `json:"url"`
+	PublicKey      string `json:"-"`
+	DelegateWallet string `json:"delegate_wallet"`
 }
 
 func (sn *ValidationNode) GetKey(globalKey string) datastore.Key {
@@ -263,7 +263,7 @@ type StorageNode struct {
 	Used            int64            `json:"used"`     // allocated capacity
 	LastHealthCheck common.Timestamp `json:"last_health_check"`
 	PublicKey       string           `json:"-"`
-	DelegateWallets []string         `json:"delegate_wallets"`
+	DelegateWallet  string           `json:"delegate_wallet"`
 }
 
 // validate the blobber configurations

@@ -273,9 +273,17 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 
 		// make sure all mints not payed yet be payed before the stake
 		// pools will be slashed
-		_, err = sp.update(conf, sc.ID, t.CreationDate, balances)
+		var info *stakePoolUpdateInfo
+		info, err = sp.update(conf, sc.ID, t.CreationDate, balances)
 		if err != nil {
 			return fmt.Errorf("updating stake pool: %v", err)
+		}
+		conf.Minted += info.minted
+
+		// save configuration (minted tokens)
+		_, err = balances.InsertTrieNode(scConfigKey(sc.ID), conf)
+		if err != nil {
+			return fmt.Errorf("saving configurations: %v", err)
 		}
 
 		// move blobber's stake tokens to allocation's write pool
