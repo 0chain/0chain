@@ -47,10 +47,19 @@ func (ssc *StorageSmartContract) SetSC(sc *sci.SmartContract, bcContext sci.BCCo
 	ssc.SmartContractExecutionStats["challenge_request"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "challenge_request"), nil)
 	ssc.SmartContractExecutionStats["challenge_response"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "challenge_response"), nil)
 	// validator
-	ssc.SmartContractExecutionStats["add_validator"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "add_validator"), nil)
+	ssc.SmartContractExecutionStats["add_validator"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "add_validator (add/update SC function)"), nil)
+	// validators stat (not function calls)
+	ssc.SmartContractExecutionStats["stat: add validator"] = metrics.GetOrRegisterCounter(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "add_validator"), nil)
+	ssc.SmartContractExecutionStats["stat: update validator"] = metrics.GetOrRegisterCounter(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "update_validator"), nil)
+	ssc.SmartContractExecutionStats["stat: number of validators"] = metrics.GetOrRegisterCounter(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "number of validators"), nil)
 	// blobber
 	ssc.SmartContract.RestHandlers["/getblobbers"] = ssc.GetBlobbersHandler
-	ssc.SmartContractExecutionStats["add_blobber"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "add_blobber (add/update/remove/reborn)"), nil)
+	ssc.SmartContractExecutionStats["add_blobber"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "add_blobber (add/update/remove SC function)"), nil)
+	// blobber statistic (not function calls)
+	ssc.SmartContractExecutionStats["stat: number of blobbers"] = metrics.GetOrRegisterCounter(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "stat: number of blobbers"), nil)
+	ssc.SmartContractExecutionStats["stat: add_blobber"] = metrics.GetOrRegisterCounter(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "stat: add bblober"), nil)
+	ssc.SmartContractExecutionStats["stat: update_blobber"] = metrics.GetOrRegisterCounter(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "stat: update blobber"), nil)
+	ssc.SmartContractExecutionStats["stat: remove_blobber"] = metrics.GetOrRegisterCounter(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "stat: remove blobber"), nil)
 	// read pool
 	ssc.SmartContract.RestHandlers["/getReadPoolStat"] = ssc.getReadPoolStatHandler
 	ssc.SmartContract.RestHandlers["/getReadPoolAllocBlobberStat"] = ssc.getReadPoolAllocBlobberStatHandler
@@ -83,6 +92,50 @@ func (ssc *StorageSmartContract) GetAddress() string {
 func (ssc *StorageSmartContract) GetRestPoints() map[string]sci.SmartContractRestHandler {
 	return ssc.RestHandlers
 }
+
+// stat not belongs to SC function calls
+
+const (
+	statAddValidator       = "stat: add validator"
+	statUpdateValidator    = "stat: update validator"
+	statNumberOfValidators = "stat: number of validators"
+	statNumberOfBlobbers   = "stat: number of blobbers"
+	statAddBlobber         = "stat: add blobber"
+	statUpdateBlobber      = "stat: update blobber"
+	statRemoveBlobber      = "stat: remove blobber"
+)
+
+func (ssc *StorageSmartContract) statIncr(name string) {
+	var (
+		metric interface{}
+		count  metrics.Counter
+		ok     bool
+	)
+	if metric, ok = ssc.SmartContractExecutionStats[name]; !ok {
+		return
+	}
+	if count, ok = metric.(metrics.Counter); !ok {
+		return
+	}
+	count.Inc(1)
+}
+
+func (ssc *StorageSmartContract) statDecr(name string) {
+	var (
+		metric interface{}
+		count  metrics.Counter
+		ok     bool
+	)
+	if metric, ok = ssc.SmartContractExecutionStats[name]; !ok {
+		return
+	}
+	if count, ok = metric.(metrics.Counter); !ok {
+		return
+	}
+	count.Dec(1)
+}
+
+// functions execution
 
 func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 	funcName string, input []byte, balances chainstate.StateContextI) (

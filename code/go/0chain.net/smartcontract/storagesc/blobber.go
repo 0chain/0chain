@@ -90,6 +90,10 @@ func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
 
 	// remove from the all list, since the blobber can't accept new allocations
 	all.Nodes.remove(existingBlobber.ID)
+
+	// statistic
+	sc.statIncr(statRemoveBlobber)
+	sc.statDecr(statNumberOfBlobbers)
 	return // removed, opened offers are still opened
 }
 
@@ -113,6 +117,10 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	}
 
 	all.Nodes.add(blobber) // add to all
+
+	// statistic
+	sc.statIncr(statAddBlobber)
+	sc.statIncr(statNumberOfBlobbers)
 	return
 }
 
@@ -131,6 +139,13 @@ func (sc *StorageSmartContract) updateBlobber(t *transaction.Transaction,
 
 	// update in the list, or add to the list if the blobber was removed before
 	all.Nodes.add(blobber)
+
+	// statistics
+	sc.statIncr(statUpdateBlobber)
+	// if has removed (the reborn case)
+	if existingBlobber.Capacity == 0 {
+		sc.statIncr(statNumberOfBlobbers)
+	}
 	return // success
 }
 

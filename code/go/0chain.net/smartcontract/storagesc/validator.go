@@ -43,6 +43,10 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 		// allValidatorsBytes, _ := json.Marshal(allValidatorsList)
 		balances.InsertTrieNode(ALL_VALIDATORS_KEY, allValidatorsList)
 		balances.InsertTrieNode(newValidator.GetKey(sc.ID), newValidator)
+
+		sc.statIncr(statAddValidator)
+	} else {
+		sc.statIncr(statUpdateValidator)
 	}
 
 	// create stake pool for the validator to count its rewards
