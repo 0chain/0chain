@@ -1,19 +1,25 @@
 package minersc
 
 import (
-	"0chain.net/chaincore/transaction"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/url"
 	"sync"
 
+	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
+	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
+	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
+
+	. "0chain.net/core/logging"
+	"go.uber.org/zap"
 )
 
 // Phases
@@ -74,9 +80,9 @@ type globalNode struct {
 	KPercent   float64 `json:"k_percent"`
 	LastRound  int64   `json:"last_round"`
 	// MaxStake boundary of SC.
-	MaxStake int64 `json:"max_stake"`
+	MaxStake state.Balance `json:"max_stake"`
 	// MinStake boundary of SC.
-	MinStake int64 `json:"min_stake"`
+	MinStake state.Balance `json:"min_stake"`
 
 	// Stake interests.
 	InterestRate float64 `json:"interest_rate"`
@@ -87,7 +93,7 @@ type globalNode struct {
 	// BlockReward
 	BlockReward state.Balance `json:"block_reward"`
 	// MaxCharge can be set by a generator.
-	MaxCharge sate.Balance `json:"max_charge"`
+	MaxCharge float64 `json:"max_charge"` // %
 	// Epoch is number of rounds to decline interests and rewards.
 	Epoch int64 `json:"epoch"`
 	// RewardDeclineRate is ratio of epoch rewards declining.
@@ -99,6 +105,45 @@ type globalNode struct {
 
 	// Minted tokens by SC.
 	Minted state.Balance `json:"minted"`
+}
+
+func (gn *globalNode) canMint() bool {
+	return gn.Minted < gn.MaxMint
+}
+
+func (gn *globalNode) epochDecline() {
+	// keep existing value for logs
+	var ir, rr = gn.InterestRate, gn.RewardRate
+	// decline the value
+	gn.RewardRate = gn.RewardRate * (1.0 - gn.RewardDeclineRate)
+	gn.InterestRate = gn.InterestRate * (1.0 - gn.InterestDeclineRate)
+
+	// log about the epoch declining
+	Logger.Info("miner sc: epoch decline",
+		zap.Int64("round", gn.LastRound),
+		zap.Float64("reward_decline_rate", gn.RewardDeclineRate),
+		zap.Float64("interest_decline_rate", gn.InterestDeclineRate),
+		zap.Float64("prev_reward_rate", rr),
+		zap.Float64("prev_interest_rate", ir),
+		zap.Float64("new_reward_rate", gn.RewardRate),
+		zap.Float64("new_interest_rate", gn.InterestRate),
+	)
+}
+
+// calculate miner/block sharders fees
+func (gn *globalNode) splitByShareRatio(fees state.Balance) (
+	miner, sharders state.Balance) {
+
+	miner = state.Balance(float64(fees) * gn.ShareRatio)
+	sharders = fees - miner
+	return
+}
+
+func (gn *globalNode) setLastRound(round int64) {
+	gn.LastRound = round
+	if round%gn.Epoch == 0 {
+		gn.epochDecline()
+	}
 }
 
 func (gn *globalNode) save(balances cstate.StateContextI) (err error) {
@@ -145,8 +190,29 @@ func NewMinerNode() *MinerNode {
 	return mn
 }
 
+func getMinerKey(mid string) datastore.Key {
+	return datastore.Key(ADDRESS + mid)
+}
+
+func getSharderKey(sid string) datastore.Key {
+	return datastore.Key(ADDRESS + sid)
+}
+
 func (mn *MinerNode) getKey() datastore.Key {
 	return datastore.Key(ADDRESS + mn.ID)
+}
+
+// calculate service charge from fees
+func (mn *MinerNode) splitByServiceCharge(fees state.Balance) (
+	charge, rest state.Balance) {
+
+	charge = state.Balance(float64(fees) * mn.ServiceCharge)
+	rest = fees - charge
+	return
+}
+
+func (mn *MinerNode) numDelegates() int {
+	return len(mn.Pending) + len(mn.Active)
 }
 
 func (mn *MinerNode) save(balances cstate.StateContextI) (err error) {
@@ -217,17 +283,43 @@ func (mn *MinerNode) GetHashBytes() []byte {
 	return encryption.RawHash(mn.Encode())
 }
 
+type Stat struct {
+	// for miner (totals)
+	BlockReward      state.Balance `json:"block_reward,omitempty"`
+	ServiceCharge    state.Balance `json:"service_charge,omitempty"`
+	UsersFee         state.Balance `json:"users_fee,omitempty"`
+	BlockShardersFee state.Balance `json:"block_sharders_fee,omitempty"`
+	// for sharder (total)
+	SharderRewards state.Balance `json:"sharder_rewards,omitempty"`
+}
+
 type SimpleNode struct {
-	ID          string  `json:"id"`
-	N2NHost     string  `json:"n2n_host"`
-	Host        string  `json:"host"`
-	Port        int     `json:"port"`
-	PublicKey   string  `json:"public_key"`
-	ShortName   string  `json:"short_name"`
-	Percentage  float64 `json:"percentage"`
-	DelegateID  string  `json:"delegate_id"`
-	BuildTag    string  `json:"build_tag"`
-	TotalStaked int64   `json:"total_stake"`
+	ID          string `json:"id"`
+	N2NHost     string `json:"n2n_host"`
+	Host        string `json:"host"`
+	Port        int    `json:"port"`
+	PublicKey   string `json:"public_key"`
+	ShortName   string `json:"short_name"`
+	BuildTag    string `json:"build_tag"`
+	TotalStaked int64  `json:"total_stake"`
+
+	// settings and statistic
+
+	// DelegateWallet grabs node rewards (excluding stake rewards) and
+	// controls the node setting. If the DelegateWallet hasn't been provided,
+	// then node ID used (for genesis nodes, for example).
+	DelegateWallet string `json:"delegate_wallet"` // ID
+	// ServiceChange is % that miner node grabs where it's generator.
+	ServiceCharge float64 `json:"service_charge"` // %
+	// NumberOfDelegates is max allowed number of delegate pools.
+	NumberOfDelegates int `json:"number_of_delegates"`
+	// MinStake allowed by node.
+	MinStake state.Balance `json:"min_stake"`
+	// MaxStake allowed by node.
+	MaxStake state.Balance `json:"max_stake"`
+
+	// Stat contains node statistic.
+	Stat Stat `json:"stat"`
 }
 
 func (smn *SimpleNode) Encode() []byte {
@@ -284,13 +376,20 @@ func (vcl *ViewChangeLock) IsLocked(entity interface{}) bool {
 	if ok {
 		return !vcl.DeleteViewChangeSet || currentVC < vcl.DeleteVC
 	}
+	if currentVC == 0 {
+		return false // forced unlock
+	}
 	return true
 }
 
 func (vcl *ViewChangeLock) LockStats(entity interface{}) []byte {
 	currentVC, ok := entity.(int64)
 	if ok {
-		p := &poolStat{ViewChangeLock: vcl, CurrentVC: currentVC, Locked: vcl.IsLocked(currentVC)}
+		p := &poolStat{
+			ViewChangeLock: vcl,
+			CurrentVC:      currentVC,
+			Locked:         vcl.IsLocked(currentVC),
+		}
 		return p.encode()
 	}
 	return nil
@@ -323,7 +422,7 @@ func NewUserNode() *UserNode {
 func (un *UserNode) save(balances cstate.StateContextI) (err error) {
 
 	if len(un.Pools) > 0 {
-		if _, err = balances.InsertTrieNode(un.getKey(), un); err != nil {
+		if _, err = balances.InsertTrieNode(un.GetKey(), un); err != nil {
 			return fmt.Errorf("saving user node: %v", err)
 		}
 	} else {
@@ -357,9 +456,9 @@ func (un *UserNode) GetHashBytes() []byte {
 }
 
 type poolInfo struct {
-	PoolID  string `json:"pool_id"`
-	MinerID string `json:"miner_id"`
-	Balance int64  `json:"balance"`
+	PoolID  string        `json:"pool_id"`
+	MinerID string        `json:"miner_id"`
+	Balance state.Balance `json:"balance"`
 }
 
 type deletePool struct {
@@ -487,4 +586,20 @@ func (dmn *DKGMinerNodes) GetHash() string {
 
 func (dmn *DKGMinerNodes) GetHashBytes() []byte {
 	return encryption.RawHash(dmn.Encode())
+}
+
+//
+// contribute MPK and register if not registered yet
+//
+
+// Contribution used to contribute MPK and register
+// node it doesn't registered yet.
+type Contribution struct {
+	MPK  *block.MPK `json:"mpk"`
+	Node *MinerNode `json:"node"`
+}
+
+// decode encoded contribution
+func (c *Contribution) decode(p []byte) (err error) {
+	return json.Unmarshal(p, c)
 }

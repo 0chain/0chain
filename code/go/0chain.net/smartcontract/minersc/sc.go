@@ -7,15 +7,18 @@ import (
 	"strconv"
 	"sync"
 
-	c_state "0chain.net/chaincore/chain/state"
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 	sci "0chain.net/chaincore/smartcontractinterface"
+	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	. "0chain.net/core/logging"
 	"0chain.net/core/util"
+
 	"github.com/asaskevich/govalidator"
 	"github.com/rcrowley/go-metrics"
+
+	. "0chain.net/core/logging"
 )
 
 const (
@@ -36,7 +39,6 @@ var (
 	}
 
 	lockSmartContractExecute = map[string]*sync.Mutex{
-		"add_miner":          {},
 		"add_sharder":        {},
 		"sharder_keep":       {},
 		"contributeMpk":      {},
@@ -77,7 +79,6 @@ func (msc *MinerSmartContract) InitSC() {
 	moveFunctions[Publish] = msc.moveToWait
 	moveFunctions[Wait] = msc.moveToStart
 
-	msc.smartContractFunctions["add_miner"] = msc.AddMiner
 	msc.smartContractFunctions["add_sharder"] = msc.AddSharder
 	msc.smartContractFunctions["payFees"] = msc.payFees
 	msc.smartContractFunctions["addToDelegatePool"] = msc.addToDelegatePool
@@ -116,7 +117,7 @@ func (msc *MinerSmartContract) SetSC(sc *sci.SmartContract, bcContext sci.BCCont
 	msc.SmartContract.RestHandlers["/getGroupShareOrSigns"] = msc.GetGroupShareOrSignsHandler
 	msc.SmartContract.RestHandlers["/getMagicBlock"] = msc.GetMagicBlockHandler
 	msc.bcContext = bcContext
-	msc.SmartContractExecutionStats["add_miner"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "add_miner"), nil)
+	msc.SmartContractExecutionStats["add_miner"] = metrics.GetOrRegisterCounter(fmt.Sprintf("sc:%v:func:%v", msc.ID, "add_miner"), nil)
 	msc.SmartContractExecutionStats["add_sharder"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "add_sharder"), nil)
 	msc.SmartContractExecutionStats["viewchange_req"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "viewchange_req"), nil)
 	msc.SmartContractExecutionStats["payFees"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "payFees"), nil)
@@ -124,9 +125,35 @@ func (msc *MinerSmartContract) SetSC(sc *sci.SmartContract, bcContext sci.BCCont
 	msc.SmartContractExecutionStats["mintedTokens"] = metrics.GetOrRegisterHistogram(fmt.Sprintf("sc:%v:func:%v", msc.ID, "mintedTokens"), nil, metrics.NewUniformSample(1024))
 }
 
+func (msc *MinerSmartContract) addCounter(name string) {
+	var (
+		face, ok = msc.SmartContractExecutionStats[name]
+		counter  metrics.Counter
+	)
+	if !ok {
+		return
+	}
+	counter, ok = face.(metrics.Counter)
+	if !ok {
+		return
+	}
+	counter.Inc(1)
+}
+
+func (msc *MinerSmartContract) addMint(gn *globalNode, mint state.Balance) {
+	gn.Minted += mint
+
+	var mintStatsRaw, found = msc.SmartContractExecutionStats["mintedTokens"]
+	if !found {
+		panic("missing mintedTokens stat in miner SC")
+	}
+	var mintStats = mintStatsRaw.(metrics.Histogram)
+	mintStats.Update(int64(mint))
+}
+
 //Execute implementing the interface
 func (msc *MinerSmartContract) Execute(t *transaction.Transaction, funcName string,
-	input []byte, balances c_state.StateContextI) (string, error) {
+	input []byte, balances cstate.StateContextI) (string, error) {
 	gn, err := msc.getGlobalNode(balances)
 	if err != nil {
 		return "", err
@@ -176,7 +203,7 @@ func getHostnameAndPort(burl string) (string, int, error) {
 	return "", 0, errors.New(burl + " is not a valid url. It not a valid IP or valid DNS name")
 }
 
-func (msc *MinerSmartContract) getGlobalNode(balances c_state.StateContextI) (*globalNode, error) {
+func (msc *MinerSmartContract) getGlobalNode(balances cstate.StateContextI) (*globalNode, error) {
 	gn := &globalNode{}
 	gv, err := balances.GetTrieNode(GlobalNodeKey)
 	if err == nil {
@@ -198,7 +225,7 @@ func (msc *MinerSmartContract) getGlobalNode(balances c_state.StateContextI) (*g
 	gn.RewardRate = conf.GetFloat64("reward_rate")
 	gn.ShareRatio = conf.GetFloat64("share_ratio")
 	gn.BlockReward = state.Balance(conf.GetFloat64("block_reward") * 1e10)
-	gn.MaxCharge = state.Balance(conf.GetFloat64("max_charge") * 1e10)
+	gn.MaxCharge = conf.GetFloat64("max_charge")
 	gn.Epoch = conf.GetInt64("epoch")
 	gn.RewardDeclineRate = conf.GetFloat64("reward_decline_rate")
 	gn.InterestDeclineRate = conf.GetFloat64("interest_decline_rate")
@@ -207,7 +234,7 @@ func (msc *MinerSmartContract) getGlobalNode(balances c_state.StateContextI) (*g
 	return gn, nil
 }
 
-func (msc *MinerSmartContract) getUserNode(id string, balances c_state.StateContextI) (*UserNode, error) {
+func (msc *MinerSmartContract) getUserNode(id string, balances cstate.StateContextI) (*UserNode, error) {
 	un := NewUserNode()
 	un.ID = id
 	us, err := balances.GetTrieNode(un.GetKey())

@@ -1,16 +1,14 @@
 package minersc
 
 import (
-	"fmt"
-
 	cstate "0chain.net/chaincore/chain/state"
-
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	. "0chain.net/core/logging"
 	"0chain.net/core/util"
+
+	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -29,15 +27,36 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 		return "", common.NewErrorf("delegate_pool_add",
 			"getting user node: %v", err)
 	}
+
 	var (
-		mn       = NewMinerNode()
-		pool     = sci.NewDelegatePool()
+		pool = sci.NewDelegatePool()
+
+		mn       *MinerNode
 		transfer *state.Transfer
 	)
 	mn, err = msc.getMinerNode(dp.MinerID, balances)
 	if err != nil && err != util.ErrValueNotPresent {
 		return "", common.NewErrorf("delegate_pool_add",
 			"unexpected DB error: %v", err)
+	}
+
+	if err == util.ErrValueNotPresent {
+		return "", common.NewErrorf("delegate_pool_add",
+			"miner not found or genesis miner used")
+	}
+
+	if mn.numDelegates() >= mn.NumberOfDelegates {
+		return "", common.NewErrorf("delegate_pool_add",
+			"max delegates already reached: %d", mn.NumberOfDelegates)
+	}
+
+	if t.Value < int64(mn.MinStake) {
+		return "", common.NewErrorf("delegate_pool_add",
+			"stake is less then min allowed: %d < %d", t.Value, mn.MinStake)
+	}
+	if t.Value > int64(mn.MaxStake) {
+		return "", common.NewErrorf("delegate_pool_add",
+			"stake is greater then max allowed: %d > %d", t.Value, mn.MaxStake)
 	}
 
 	mn.TotalStaked += t.Value
@@ -47,11 +66,7 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 	}
 	pool.DelegateID = t.ClientID
 	pool.InterestRate = gn.InterestRate
-	pool.Status = ACTIVE
-
-	if err == util.ErrValueNotPresent {
-		mn.DelegateID, err = t.ClientID, nil
-	}
+	pool.Status = PENDING
 
 	Logger.Info("add delegate pool", zap.Any("pool", pool))
 
@@ -75,9 +90,17 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 	mn.Pending[t.Hash] = pool
 
 	// save user node and the miner/sharder
-	balances.InsertTrieNode(un.GetKey(), un)
-	balances.InsertTrieNode(mn.getKey(), mn)
-	return string(mn.Encode()) + string(transfer.Encode()) + string(un.Encode()), nil
+	if err = un.save(balances); err != nil {
+		return "", common.NewErrorf("delegate_pool_add",
+			"saving user node: %v", err)
+	}
+	if err = mn.save(balances); err != nil {
+		return "", common.NewErrorf("delegate_pool_add",
+			"saving miner node: %v", err)
+	}
+
+	resp = string(mn.Encode()) + string(transfer.Encode()) + string(un.Encode())
+	return
 }
 
 func (msc *MinerSmartContract) deleteFromDelegatePool(
@@ -128,7 +151,7 @@ func (msc *MinerSmartContract) deleteFromDelegatePool(
 			return "", common.NewError("delegate_pool_del", err.Error())
 		}
 
-		if err = mn.save(); err != nil {
+		if err = mn.save(balances); err != nil {
 			return "", common.NewError("delegate_pool_del", err.Error())
 		}
 
@@ -179,7 +202,7 @@ func (msc *MinerSmartContract) releaseFromDelegatePool(
 
 	var dp deletePool
 	if err = dp.Decode(inputData); err != nil {
-		return "", common.NewError("delegate_pool_release",
+		return "", common.NewErrorf("delegate_pool_release",
 			"error decoding request: %v", err)
 	}
 
@@ -212,7 +235,7 @@ func (msc *MinerSmartContract) releaseFromDelegatePool(
 		transfer       *state.Transfer
 	)
 
-	transfer, response, err = pool.EmptyPool(msc.ID, t.ClientID,
+	transfer, resp, err = pool.EmptyPool(msc.ID, t.ClientID,
 		balances.GetBlock().Round)
 	if err != nil {
 		return "", common.NewErrorf("delegate_pool_release",

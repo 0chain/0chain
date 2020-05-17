@@ -2,7 +2,6 @@ package minersc
 
 import (
 	"errors"
-	"fmt"
 	"math"
 	"reflect"
 	"runtime"
@@ -13,8 +12,9 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
-	. "0chain.net/core/logging"
 	"0chain.net/core/util"
+
+	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -331,112 +331,201 @@ func (msc *MinerSmartContract) createMagicBlockForWait(balances cstate.StateCont
 	return nil
 }
 
-func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction, inputData []byte,
-	gn *globalNode, balances cstate.StateContextI) (result string, err error) {
-	pn, err := msc.getPhaseNode(balances)
-	if err != nil {
-		return "", err
+func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction,
+	inputData []byte, gn *globalNode, balances cstate.StateContextI) (
+	resp string, err error) {
+
+	var pn *PhaseNode
+	if pn, err = msc.getPhaseNode(balances); err != nil {
+		return "", common.NewErrorf("contribute_mpk_failed",
+			"can't get phase node: %v", err)
 	}
+
 	if pn.Phase != Contribute {
-		return "", common.NewError("contribute_mpk_failed", "this is not the correct phase to contribute mpk")
+		return "", common.NewError("contribute_mpk_failed",
+			"this is not the correct phase to contribute mpk")
 	}
-	dmn, err := msc.getMinersDKGList(balances)
-	if err != nil {
+
+	var dmn *DKGMinerNodes
+	if dmn, err = msc.getMinersDKGList(balances); err != nil {
 		return "", err
 	}
-	if _, ok := dmn.SimpleNodes[t.ClientID]; !ok {
-		return "", common.NewError("contribute_mpk_failed", "miner not part of dkg set")
+
+	println("CONTRIBUTE MPK, CHECK MINER IS PART OF DKG SET:", t.ClientID)
+
+	var ok bool
+	if _, ok = dmn.SimpleNodes[t.ClientID]; !ok {
+		println("CONTRIBUTE MPK, CHECK MINER IS PART OF DKG SET:", t.ClientID, ". IS NOT. (FATALITY)")
+		return "", common.NewError("contribute_mpk_failed",
+			"miner not part of dkg set")
 	}
 
 	msc.mutexMinerMPK.Lock()
 	defer msc.mutexMinerMPK.Unlock()
 
-	mpks := block.NewMpks()
-	mpk := &block.MPK{ID: t.ClientID}
-	mpksBytes, err := balances.GetTrieNode(MinersMPKKey)
-	if mpksBytes != nil {
+	var (
+		mpks      = block.NewMpks()
+		mpk       = &block.MPK{ID: t.ClientID}
+		mpksBytes util.Serializable
+	)
+
+	if mpksBytes, _ = balances.GetTrieNode(MinersMPKKey); mpksBytes != nil {
 		if err = mpks.Decode(mpksBytes.Encode()); err != nil {
-			return "", err
+			return "", common.NewErrorf("contribute_mpk_failed",
+				"invalid state: decoding MPKS: %v", err)
 		}
 	}
-	err = mpk.Decode(inputData)
-	if err != nil {
-		return "", err
+
+	var contr Contribution
+	if err = contr.decode(inputData); err != nil {
+		return "", common.NewErrorf("contribute_mpk_failed",
+			"decoding request: %v", err)
 	}
+
+	if contr.MPK == nil {
+		return "", common.NewError("contribute_mpk_failed",
+			"missing MPK in request")
+	}
+
+	// validate and register node if it's not registered yet
+	if contr.Node != nil &&
+		!msc.doesMinerExist(getMinerKey(contr.Node.ID), balances) {
+
+		// validate and register or kick off
+		resp, err = msc.AddMiner(t, contr.Node, gn, balances)
+		if err != nil {
+			return
+		}
+		// miner has added, let's continue
+	}
+
+	mpk = contr.MPK
 	if len(mpk.Mpk) != dmn.T {
-		return "", common.NewError("contribute_mpk_failed", fmt.Sprintf("mpk sent (size: %v) is not correct size: %v", len(mpk.Mpk), dmn.T))
+		return "", common.NewErrorf("contribute_mpk_failed",
+			"mpk sent (size: %v) is not correct size: %v", len(mpk.Mpk), dmn.T)
 	}
-	if _, ok := mpks.Mpks[mpk.ID]; ok {
-		return "", common.NewError("contribute_mpk_failed", "already have mpk for miner")
+	if _, ok = mpks.Mpks[mpk.ID]; ok {
+		return "", common.NewError("contribute_mpk_failed",
+			"already have mpk for miner")
 	}
+
 	mpks.Mpks[mpk.ID] = mpk
 	_, err = balances.InsertTrieNode(MinersMPKKey, mpks)
 	if err != nil {
-		return "", err
+		return "", common.NewErrorf("contribute_mpk_failed",
+			"saving MPK key: %v", err)
 	}
+
 	return string(mpk.Encode()), nil
 }
 
-func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction, inputData []byte, gn *globalNode, balances cstate.StateContextI) (string, error) {
+func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction,
+	inputData []byte, gn *globalNode, balances cstate.StateContextI) (
+	resp string, err error) {
 
-	pn, err := msc.getPhaseNode(balances)
-	if err != nil {
-		return "", err
+	var pn *PhaseNode
+	if pn, err = msc.getPhaseNode(balances); err != nil {
+		return "", common.NewErrorf("share_signs_or_shares",
+			"can't get phase node: %v", err)
 	}
+
 	if pn.Phase != Publish {
-		return "", common.NewError("share_signs_or_shares", fmt.Sprintf("this is not the correct phase to publish signs or shares, phase node: %v", string(pn.Encode())))
+		return "", common.NewErrorf("share_signs_or_shares", "this is not the"+
+			" correct phase to publish signs or shares, phase node: %v",
+			string(pn.Encode()))
 	}
-	gsos := block.NewGroupSharesOrSigns()
-	groupBytes, err := balances.GetTrieNode(GroupShareOrSignsKey)
-	if groupBytes != nil {
-		gsos.Decode(groupBytes.Encode())
+
+	var (
+		gsos      = block.NewGroupSharesOrSigns()
+		gsosBytes util.Serializable
+	)
+	gsosBytes, err = balances.GetTrieNode(GroupShareOrSignsKey)
+	if err != nil && err != util.ErrValueNotPresent {
+		return "", common.NewErrorf("share_signs_or_shares",
+			"can't get group share of signs: %v", err)
 	}
-	if _, ok := gsos.Shares[t.ClientID]; ok {
-		return "", common.NewError("share_signs_or_shares", fmt.Sprintf("already have share or signs for miner %v", t.ClientID))
+
+	if err == nil {
+		if err = gsos.Decode(gsosBytes.Encode()); err != nil {
+			return "", common.NewErrorf("share_signs_or_shares",
+				"decoding group share of signs: %v", err)
+		}
 	}
-	dmn, err := msc.getMinersDKGList(balances)
-	if err != nil {
-		return "", err
+
+	err = nil // reset possible util.ErrValueNotPresent
+
+	var ok bool
+	if _, ok = gsos.Shares[t.ClientID]; ok {
+		return "", common.NewErrorf("share_signs_or_shares",
+			"already have share or signs for miner %v", t.ClientID)
 	}
-	sos := block.NewShareOrSigns()
-	err = sos.Decode(inputData)
-	if err != nil {
-		return "", nil
+
+	var dmn *DKGMinerNodes
+	if dmn, err = msc.getMinersDKGList(balances); err != nil {
+		return "", common.NewErrorf("share_signs_or_shares",
+			"getting miners DKG list %v", err)
 	}
+
+	var sos = block.NewShareOrSigns()
+	if err = sos.Decode(inputData); err != nil {
+		return "", common.NewErrorf("share_signs_or_shares",
+			"decoding input %v", err)
+	}
+
 	if len(sos.ShareOrSigns) < dmn.N-2 {
-		return "", common.NewError("failed to add share or signs", "number of share or signs doesn't equal N for this dkg")
+		return "", common.NewError("share_signs_or_shares",
+			"number of share or signs doesn't equal N for this dkg")
 	}
 
 	msc.mutexMinerMPK.Lock()
 	defer msc.mutexMinerMPK.Unlock()
 
-	mpks := block.NewMpks()
-	mpksBytes, err := balances.GetTrieNode(MinersMPKKey)
+	var (
+		mpks      = block.NewMpks()
+		mpksBytes util.Serializable
+	)
+	mpksBytes, err = balances.GetTrieNode(MinersMPKKey)
 	if err != nil {
-		return "", err
+		return "", common.NewErrorf("share_signs_or_shares",
+			"getting miners MPK: %v", err)
 	}
-	mpks.Decode(mpksBytes.Encode())
-	publicKeys := make(map[string]string)
+
+	if err = mpks.Decode(mpksBytes.Encode()); err != nil {
+		return "", common.NewErrorf("share_signs_or_shares",
+			"invalid state: decoding miners MPK: %v", err)
+	}
+
+	var publicKeys = make(map[string]string)
 	for key, miner := range dmn.SimpleNodes {
 		publicKeys[key] = miner.PublicKey
 	}
-	shares, ok := sos.Validate(mpks, publicKeys, balances.GetSignatureScheme())
+
+	var shares []string
+	shares, ok = sos.Validate(mpks, publicKeys, balances.GetSignatureScheme())
 	if !ok {
-		return "", common.NewError("failed to add share or sign", "share or signs failed validation")
+		return "", common.NewError("share_signs_or_shares",
+			"share or signs failed validation")
 	}
+
 	for _, share := range shares {
 		dmn.RevealedShares[share]++
 	}
+
 	sos.ID = t.ClientID
 	gsos.Shares[t.ClientID] = sos
+
 	_, err = balances.InsertTrieNode(GroupShareOrSignsKey, gsos)
 	if err != nil {
-		return "", err
+		return "", common.NewErrorf("share_signs_or_shares",
+			"saving group share of signs: %v")
 	}
+
 	_, err = balances.InsertTrieNode(DKGMinersKey, dmn)
 	if err != nil {
-		return "", err
+		return "", common.NewErrorf("share_signs_or_shares",
+			"saving DKG miners: %v")
 	}
+
 	return string(sos.Encode()), nil
 }
 

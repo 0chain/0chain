@@ -1,20 +1,23 @@
 package minersc
 
 import (
-	c_state "0chain.net/chaincore/chain/state"
-	sci "0chain.net/chaincore/smartcontractinterface"
+	"errors"
+	"fmt"
+
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	. "0chain.net/core/logging"
 	"0chain.net/core/util"
-	"errors"
-	"fmt"
+
+	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
-func (msc *MinerSmartContract) doesSharderExist(pkey datastore.Key, statectx c_state.StateContextI) bool {
-	mbits, err := statectx.GetTrieNode(pkey)
+func (msc *MinerSmartContract) doesSharderExist(pkey datastore.Key,
+	balances cstate.StateContextI) bool {
+
+	mbits, err := balances.GetTrieNode(pkey)
 	if err != nil {
 		Logger.Warn("unexpected error", zap.Error(err))
 	}
@@ -24,54 +27,116 @@ func (msc *MinerSmartContract) doesSharderExist(pkey datastore.Key, statectx c_s
 	return false
 }
 
-//AddMiner Function to handle miner register
-func (msc *MinerSmartContract) AddSharder(t *transaction.Transaction, input []byte, gn *globalNode, statectx c_state.StateContextI) (string, error) {
+// AddSharder function to handle miner register
+func (msc *MinerSmartContract) AddSharder(t *transaction.Transaction,
+	input []byte, gn *globalNode, balances cstate.StateContextI) (
+	resp string, err error) {
+
+	println("ADD SHARDER")
+
 	Logger.Info("try to add sharder", zap.Any("txn", t))
-	allShardersList, err := msc.getShardersList(statectx, AllShardersKey)
-	if err != nil {
+	var all *MinerNodes
+	if all, err = msc.getShardersList(balances, AllShardersKey); err != nil {
+		println("ADD SHARDER: E (1)")
 		Logger.Error("Error in getting list from the DB", zap.Error(err))
-		return "", errors.New("add_sharder_failed - Failed to get miner list" + err.Error())
+		return "", common.NewErrorf("add_sharder",
+			"getting miner list: %v", err)
 	}
-	msc.verifySharderState(statectx, AllShardersKey, "Checking allminerslist in the beginning")
 
-	newSharder := NewMinerNode()
-	err = newSharder.Decode(input)
-	if err != nil {
+	msc.verifySharderState(balances, AllShardersKey,
+		"Checking all sharders list in the beginning")
+
+	var newSharder = NewMinerNode()
+	if err = newSharder.Decode(input); err != nil {
+		println("ADD SHARDER: E (2)")
 		Logger.Error("Error in decoding the input", zap.Error(err))
-
-		return "", err
+		return "", common.NewErrorf("add_sharder", "decoding request: %v", err)
 	}
-	Logger.Info("The new sharder info", zap.String("base URL", newSharder.N2NHost), zap.String("ID", newSharder.ID), zap.String("pkey", newSharder.PublicKey), zap.Any("mscID", msc.ID))
+
+	if newSharder.DelegateWallet == "" {
+		newSharder.DelegateWallet = newSharder.ID
+	}
+
+	Logger.Info("The new sharder info",
+		zap.String("base URL", newSharder.N2NHost),
+		zap.String("ID", newSharder.ID),
+		zap.String("pkey", newSharder.PublicKey),
+		zap.Any("mscID", msc.ID),
+		zap.String("delegate_wallet", newSharder.DelegateWallet),
+		zap.Float64("service_charge", newSharder.ServiceCharge),
+		zap.Int("number_of_delegates", newSharder.NumberOfDelegates),
+		zap.Int64("min_stake", int64(newSharder.MinStake)),
+		zap.Int64("max_stake", int64(newSharder.MaxStake)))
+
 	Logger.Info("SharderNode", zap.Any("node", newSharder))
+
 	if newSharder.PublicKey == "" || newSharder.ID == "" {
 		Logger.Error("public key or ID is empty")
-		return "", errors.New("PublicKey or the ID is empty. Cannot proceed")
+		println("ADD SHARDER: E (3)")
+		return "", common.NewError("add_sharder",
+			"PublicKey or the ID is empty. Cannot proceed")
 	}
 
-	_, err = msc.getSharderNode(datastore.Key(ADDRESS+newSharder.ID), newSharder.ID, statectx)
-	if err != util.ErrValueNotPresent {
-		return "", common.NewError("failed to add sharder", "sharder already exists")
+	if newSharder.NumberOfDelegates < 0 {
+		return "", common.NewErrorf("add_sharder",
+			"invalid negative number_of_delegates: %v",
+			newSharder.ServiceCharge)
 	}
 
-	pool := sci.NewDelegatePool()
-	transfer, _, err := pool.DigPool(t.Hash, t)
+	if newSharder.MinStake < gn.MinStake {
+		return "", common.NewErrorf("add_sharder",
+			"min_stake is less then allowed by SC: %v > %v",
+			newSharder.MinStake, gn.MinStake)
+	}
+
+	if newSharder.MaxStake < gn.MaxStake {
+		return "", common.NewErrorf("add_sharder",
+			"max_stake is greater then allowed by SC: %v > %v",
+			newSharder.MaxStake, gn.MaxStake)
+	}
+
+	var exists bool
+	if exists, err = msc.isSharderExist(newSharder.ID, balances); err != nil {
+		return "", common.NewErrorf("add_sharder", "unexpected error: %v",
+			err)
+	}
+
+	if exists {
+		return "", common.NewError("add_sharder", "sharder already exists")
+	}
+
+	// DON'T CREATE INITIAL DELEGATE POOL
+
+	// pool = sci.NewDelegatePool()
+	// transfer, _, err := pool.DigPool(t.Hash, t)
+	// if err != nil {
+	// 	return "", common.NewError("failed to add sharder", fmt.Sprintf("error digging delegate pool: %v", err.Error()))
+	// }
+	// balances.AddTransfer(transfer)
+	// newSharder.Pending[t.Hash] = pool
+
+	// add to all
+	all.Nodes = append(all.Nodes, newSharder)
+	// save all sharders list
+	if _, err = balances.InsertTrieNode(AllShardersKey, all); err != nil {
+		return "", common.NewErrorf("add_sharder",
+			"saving all sharders list: %v", err)
+	}
+	// save the added sharder
+	_, err = balances.InsertTrieNode(newSharder.getKey(), newSharder)
 	if err != nil {
-		return "", common.NewError("failed to add sharder", fmt.Sprintf("error digging delegate pool: %v", err.Error()))
+		return "", common.NewErrorf("add_sharder",
+			"saving sharder: %v", err)
 	}
-	statectx.AddTransfer(transfer)
-	newSharder.Pending[t.Hash] = pool
-	allShardersList.Nodes = append(allShardersList.Nodes, newSharder)
-	statectx.InsertTrieNode(AllShardersKey, allShardersList)
-	statectx.InsertTrieNode(newSharder.getKey(), newSharder)
-	msc.verifyMinerState(statectx, "Checking allsharderslist afterInsert")
 
-	buff := newSharder.Encode()
-	return string(buff), nil
+	msc.verifyMinerState(balances, "checking all sharders list after insert")
+
+	return string(newSharder.Encode()), nil
 }
 
 //------------- local functions ---------------------
-func (msc *MinerSmartContract) verifySharderState(statectx c_state.StateContextI, key datastore.Key, msg string) {
-	allSharderList, err := msc.getShardersList(statectx, key)
+func (msc *MinerSmartContract) verifySharderState(balances cstate.StateContextI, key datastore.Key, msg string) {
+	allSharderList, err := msc.getShardersList(balances, key)
 	if err != nil {
 		Logger.Info(msg + " getShardersList_failed - Failed to retrieve existing miners list")
 		return
@@ -88,9 +153,9 @@ func (msc *MinerSmartContract) verifySharderState(statectx c_state.StateContextI
 
 }
 
-func (msc *MinerSmartContract) getShardersList(statectx c_state.StateContextI, key datastore.Key) (*MinerNodes, error) {
+func (msc *MinerSmartContract) getShardersList(balances cstate.StateContextI, key datastore.Key) (*MinerNodes, error) {
 	allMinersList := &MinerNodes{}
-	allMinersBytes, err := statectx.GetTrieNode(key)
+	allMinersBytes, err := balances.GetTrieNode(key)
 	if err != nil && err != util.ErrValueNotPresent {
 		return nil, common.NewError("getShardersList_failed",
 			fmt.Sprintf("Failed to retrieve existing sharders list: %v", err))
@@ -105,24 +170,43 @@ func (msc *MinerSmartContract) getShardersList(statectx c_state.StateContextI, k
 	return allMinersList, nil
 }
 
-func (msc *MinerSmartContract) getSharderNode(key datastore.Key, id string, balances c_state.StateContextI) (*MinerNode, error) {
-	mn := NewMinerNode()
-	mn.ID = id
-	ms, err := balances.GetTrieNode(key)
+func (msc *MinerSmartContract) isSharderExist(sid string,
+	balances cstate.StateContextI) (exists bool, err error) {
+
+	_, err = balances.GetTrieNode(getSharderKey(sid))
 	if err == util.ErrValueNotPresent {
-		return mn, err
-	} else if err != nil {
-		return nil, err
+		exists, err = true, nil
 	}
-	err = mn.Decode(ms.Encode())
-	if err != nil {
-		return nil, err
-	}
-	return mn, nil
+	return
 }
 
-func (msc *MinerSmartContract) sharderKeep(t *transaction.Transaction, input []byte, gn *globalNode,
-	balances c_state.StateContextI) (result string, err2 error) {
+func (msc *MinerSmartContract) getSharderNode(sid string,
+	balances cstate.StateContextI) (sn *MinerNode, err error) {
+
+	var ss util.Serializable
+	ss, err = balances.GetTrieNode(getSharderKey(sid))
+	if err != nil && err != util.ErrValueNotPresent {
+		return // unexpected error
+	}
+
+	sn = new(MinerNode)
+	sn.ID = sid
+
+	if err == util.ErrValueNotPresent {
+		return // with error ErrValueNotPresent (that's very stupid)
+	}
+
+	if err = sn.Decode(ss.Encode()); err != nil {
+		return nil, fmt.Errorf("invalid state: decoding sharder: %v", err)
+	}
+
+	return // got it!
+}
+
+func (msc *MinerSmartContract) sharderKeep(t *transaction.Transaction,
+	input []byte, gn *globalNode, balances cstate.StateContextI) (
+	resp string, err2 error) {
+
 	pn, err := msc.getPhaseNode(balances)
 	if err != nil {
 		return "", err
