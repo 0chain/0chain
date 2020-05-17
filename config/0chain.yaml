@@ -102,3 +102,12 @@ network:
     rate_limit: 1 # 1 per second
   n2n_handlers:
     rate_limit: 10 # 10 per second
+
+# delegate wallet is wallet that used for all rewards of a node (miner/sharder);
+# if delegate wallet is not set, then node id used;
+delegate_wallet: ''       # delegate wallet for all rewards
+# for miners for miner SC
+service_charge: 0.10      # [0; 1) of all fees
+number_of_delegates: 10   # max number of delegate pools
+min_stake_amount: 10.0    # tokens
+max_stake_amount: 1000.0  # tokens

@@ -62,11 +62,14 @@ func (msc *MinerSmartContract) InitSC() {
 	phaseFuncs[Contribute] = msc.widdleDKGMinersForShare
 	phaseFuncs[Publish] = msc.createMagicBlockForWait
 
-	PhaseRounds[Start] = config.SmartContractConfig.GetInt64("smart_contracts.minersc.start_rounds")
-	PhaseRounds[Contribute] = config.SmartContractConfig.GetInt64("smart_contracts.minersc.contribute_rounds")
-	PhaseRounds[Share] = config.SmartContractConfig.GetInt64("smart_contracts.minersc.share_rounds")
-	PhaseRounds[Publish] = config.SmartContractConfig.GetInt64("smart_contracts.minersc.publish_rounds")
-	PhaseRounds[Wait] = config.SmartContractConfig.GetInt64("smart_contracts.minersc.wait_rounds")
+	const pfx = "smart_contracts.minersc."
+	var scc = config.SmartContractConfig
+
+	PhaseRounds[Start] = scc.GetInt64(pfx + "start_rounds")
+	PhaseRounds[Contribute] = scc.GetInt64(pfx + "contribute_rounds")
+	PhaseRounds[Share] = scc.GetInt64(pfx + "share_rounds")
+	PhaseRounds[Publish] = scc.GetInt64(pfx + "publish_rounds")
+	PhaseRounds[Wait] = scc.GetInt64(pfx + "wait_rounds")
 
 	moveFunctions[Start] = msc.moveToContribute
 	moveFunctions[Contribute] = msc.moveToShareOrPublish
@@ -183,12 +186,24 @@ func (msc *MinerSmartContract) getGlobalNode(balances c_state.StateContextI) (*g
 		}
 		return gn, nil
 	}
-	gn.InterestRate = config.SmartContractConfig.GetFloat64("smart_contracts.minersc.interest_rate")
-	gn.MinStake = config.SmartContractConfig.GetInt64("smart_contracts.minersc.min_stake")
-	gn.MaxStake = config.SmartContractConfig.GetInt64("smart_contracts.minersc.max_stake")
-	gn.MaxN = config.SmartContractConfig.GetInt("smart_contracts.minersc.max_n")
-	gn.TPercent = config.SmartContractConfig.GetFloat64("smart_contracts.minersc.t_percent")
-	gn.KPercent = config.SmartContractConfig.GetFloat64("smart_contracts.minersc.k_percent")
+	const pfx = "smart_contracts.minersc."
+	var conf = config.SmartContractConfig
+	gn.MinStake = state.Balance(conf.GetFloat64(pfx+"min_stake") * 1e10)
+	gn.MaxStake = state.Balance(conf.GetFloat64(pfx+"max_stake") * 1e10)
+	gn.MaxN = conf.GetInt(pfx + "max_n")
+	gn.TPercent = conf.GetFloat64(pfx + "t_percent")
+	gn.KPercent = conf.GetFloat64(pfx + "k_percent")
+
+	gn.InterestRate = conf.GetFloat64("interest_rate")
+	gn.RewardRate = conf.GetFloat64("reward_rate")
+	gn.ShareRatio = conf.GetFloat64("share_ratio")
+	gn.BlockReward = state.Balance(conf.GetFloat64("block_reward") * 1e10)
+	gn.MaxCharge = state.Balance(conf.GetFloat64("max_charge") * 1e10)
+	gn.Epoch = conf.GetInt64("epoch")
+	gn.RewardDeclineRate = conf.GetFloat64("reward_decline_rate")
+	gn.InterestDeclineRate = conf.GetFloat64("interest_decline_rate")
+	gn.MaxMint = state.Balance(conf.GetFloat64("max_mint") * 1e10)
+
 	return gn, nil
 }
 

@@ -3,7 +3,7 @@ package minersc
 import (
 	"fmt"
 
-	c_state "0chain.net/chaincore/chain/state"
+	cstate "0chain.net/chaincore/chain/state"
 
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
@@ -14,147 +14,234 @@ import (
 	"go.uber.org/zap"
 )
 
-func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction, inputData []byte, gn *globalNode, balances c_state.StateContextI) (string, error) {
-	mn := NewMinerNode()
-	dp := &deletePool{}
-	err := dp.Decode(inputData)
-	if err != nil {
-		return "", common.NewError("failed to add to delegate pool", fmt.Sprintf("error decoding request: %v", err.Error()))
+func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
+	inputData []byte, gn *globalNode, balances cstate.StateContextI) (
+	resp string, err error) {
+
+	var dp deletePool
+	if err = dp.Decode(inputData); err != nil {
+		return "", common.NewErrorf("delegate_pool_add",
+			"decoding request: %v", err)
 	}
-	var transfer *state.Transfer
-	un, err := msc.getUserNode(t.ClientID, balances)
-	if err != nil {
-		return "", common.NewError("failed to add to delegate pool", fmt.Sprintf("error getting user node: %v", err.Error()))
+
+	var un *UserNode
+	if un, err = msc.getUserNode(t.ClientID, balances); err != nil {
+		return "", common.NewErrorf("delegate_pool_add",
+			"getting user node: %v", err)
 	}
-	pool := sci.NewDelegatePool()
+	var (
+		mn       = NewMinerNode()
+		pool     = sci.NewDelegatePool()
+		transfer *state.Transfer
+	)
 	mn, err = msc.getMinerNode(dp.MinerID, balances)
-	if err == util.ErrValueNotPresent {
-
-		mn.DelegateID = t.ClientID
-		mn.TotalStaked += t.Value
-		pool.TokenLockInterface = &ViewChangeLock{Owner: t.ClientID, DeleteViewChangeSet: false}
-		pool.DelegateID = t.ClientID
-		pool.InterestRate = gn.InterestRate
-		pool.Status = ACTIVE
-		Logger.Info("add pool", zap.Any("pool", pool))
-		transfer, _, err = pool.DigPool(t.Hash, t)
-		if err != nil {
-			return "", common.NewError("failed to add to delegate pool", fmt.Sprintf("error digging delegate pool: %v", err.Error()))
-		}
-
-	} else {
-		pool.TokenLockInterface = &ViewChangeLock{Owner: t.ClientID, DeleteViewChangeSet: false}
-		pool.DelegateID = t.ClientID
-		mn.TotalStaked += t.Value
-		pool.InterestRate = gn.InterestRate
-		pool.Status = ACTIVE
-		Logger.Info("add pool", zap.Any("pool", pool))
-		transfer, _, err = pool.DigPool(t.Hash, t)
-		if err != nil {
-			return "", common.NewError("failed to add to delegate pool", fmt.Sprintf("error digging delegate pool: %v", err.Error()))
-		}
+	if err != nil && err != util.ErrValueNotPresent {
+		return "", common.NewErrorf("delegate_pool_add",
+			"unexpected DB error: %v", err)
 	}
-	balances.AddTransfer(transfer)
-	un.Pools[t.Hash] = &poolInfo{MinerID: mn.ID, Balance: int64(transfer.Amount)}
 
-	mn.Active[t.Hash] = pool // needs to be Pending pool; doing this just for testing
-	// mn.Pending[t.Hash] = pool
+	mn.TotalStaked += t.Value
+	pool.TokenLockInterface = &ViewChangeLock{
+		Owner:               t.ClientID,
+		DeleteViewChangeSet: false,
+	}
+	pool.DelegateID = t.ClientID
+	pool.InterestRate = gn.InterestRate
+	pool.Status = ACTIVE
+
+	if err == util.ErrValueNotPresent {
+		mn.DelegateID, err = t.ClientID, nil
+	}
+
+	Logger.Info("add delegate pool", zap.Any("pool", pool))
+
+	if transfer, _, err = pool.DigPool(t.Hash, t); err != nil {
+		return "", common.NewErrorf("delegate_pool_add",
+			"digging delegate pool: %v", err)
+	}
+
+	if err = balances.AddTransfer(transfer); err != nil {
+		return "", common.NewErrorf("delegate_pool_add",
+			"adding transfer: %v", err)
+	}
+
+	// user node pool information
+	un.Pools[t.Hash] = &poolInfo{
+		MinerID: mn.ID,
+		Balance: transfer.Amount,
+	}
+
+	// add to pending making it active next VC
+	mn.Pending[t.Hash] = pool
+
+	// save user node and the miner/sharder
 	balances.InsertTrieNode(un.GetKey(), un)
 	balances.InsertTrieNode(mn.getKey(), mn)
 	return string(mn.Encode()) + string(transfer.Encode()) + string(un.Encode()), nil
 }
 
-func (msc *MinerSmartContract) deleteFromDelegatePool(t *transaction.Transaction, inputData []byte, gn *globalNode, balances c_state.StateContextI) (string, error) {
-	dp := &deletePool{}
-	err := dp.Decode(inputData)
-	if err != nil {
-		return "", common.NewError("failed to delete from delegate pool", fmt.Sprintf("error decoding request: %v", err.Error()))
+func (msc *MinerSmartContract) deleteFromDelegatePool(
+	t *transaction.Transaction, inputData []byte, gn *globalNode,
+	balances cstate.StateContextI) (resp string, err error) {
+
+	var dp deletePool
+	if err = dp.Decode(inputData); err != nil {
+		return "", common.NewErrorf("delegate_pool_del",
+			"error decoding request: %v", err)
 	}
-	mn, err := msc.getMinerNode(dp.MinerID, balances)
-	if err != nil {
-		return "", common.NewError("failed to delete from delegate pool", fmt.Sprintf("error getting miner node: %v", err.Error()))
+
+	var mn *MinerNode
+	if mn, err = msc.getMinerNode(dp.MinerID, balances); err != nil {
+		return "", common.NewErrorf("delegate_pool_del",
+			"error getting miner node: %v", err)
 	}
-	un, err := msc.getUserNode(t.ClientID, balances)
-	if err != nil {
-		return "", common.NewError("failed to delete from delegate pool", fmt.Sprintf("error getting user node: %v", err.Error()))
+
+	var un *UserNode
+	if un, err = msc.getUserNode(t.ClientID, balances); err != nil {
+		return "", common.NewErrorf("delegate_pool_del",
+			"error getting user node: %v", err)
 	}
+
+	// just delete it if it's still pending
 	if pool, ok := mn.Pending[dp.PoolID]; ok {
 		if pool.DelegateID != t.ClientID {
-			return "", common.NewError("failed to delete from delegate pool", fmt.Sprintf("you (%v) do not own the pool, it belongs to %v", t.ClientID, pool.DelegateID))
+			return "", common.NewErrorf("delegate_pool_del",
+				"you (%v) do not own the pool, it belongs to %v",
+				t.ClientID, pool.DelegateID)
 		}
-		transfer, response, err := pool.EmptyPool(msc.ID, t.ClientID, nil)
+		var transfer *state.Transfer
+		transfer, resp, err = pool.EmptyPool(msc.ID, t.ClientID, nil)
 		if err != nil {
-			return "", common.NewError("failed to delete from delegate pool", fmt.Sprintf("error emptying delegate pool: %v", err.Error()))
+			return "", common.NewErrorf("delegate_pool_del",
+				"error emptying delegate pool: %v", err)
 		}
-		balances.AddTransfer(transfer)
+
+		if err = balances.AddTransfer(transfer); err != nil {
+			return "", common.NewErrorf("delegate_pool_del",
+				"adding transfer: %v", err)
+		}
+
 		delete(un.Pools, dp.PoolID)
 		delete(mn.Pending, dp.PoolID)
-		if len(un.Pools) > 0 {
-			balances.InsertTrieNode(un.GetKey(), un)
-		} else {
-			balances.DeleteTrieNode(un.GetKey())
-		}
-		balances.InsertTrieNode(mn.getKey(), mn)
-		return response, nil
-	}
-	if pool, ok := mn.Active[dp.PoolID]; ok {
-		if pool.DelegateID != t.ClientID {
-			return "", common.NewError("failed to delete from delegate pool", fmt.Sprintf("you (%v) do not own the pool, it belongs to %v", t.ClientID, pool.DelegateID))
-		}
-		switch pool.Status {
-		case ACTIVE:
-			pool.Status = DELETING
-			mn.Active[dp.PoolID] = pool
-			balances.InsertTrieNode(mn.getKey(), mn)
-			return `{"action": "pool has been marked as deleting. Delete again to move to Deleting Pool"}`, nil
-		case DELETING:
-			// THIS WILL BE GONE ONCE VIEW CHANGE IS ADDED. VIEW CHAGNE WILL TAKE CARE OF THIS
-			pool.Status = CANDELETE
-			pool.TokenLockInterface = &ViewChangeLock{Owner: t.ClientID, DeleteViewChangeSet: true, DeleteVC: balances.GetBlock().Round}
-			mn.Deleting[dp.PoolID] = pool
-			delete(mn.Active, dp.PoolID)
-			balances.InsertTrieNode(mn.getKey(), mn)
-			return `{"action": "pool has been moved from active to deleting. Tokens are ready for release"}`, nil
+
+		if err = un.save(balances); err != nil {
+			return "", common.NewError("delegate_pool_del", err.Error())
 		}
 
+		if err = mn.save(); err != nil {
+			return "", common.NewError("delegate_pool_del", err.Error())
+		}
+
+		return resp, nil
 	}
-	return "", common.NewError("failed to delete from delegate pool", "pool does not exist for deletion")
+
+	// move to deleting if it's active
+
+	var pool, ok = mn.Active[dp.PoolID]
+	if !ok {
+		return "", common.NewError("delegate_pool_del",
+			"pool does not exist for deletion")
+	}
+
+	if pool.Status == DELETING {
+		return "", common.NewError("delegate_pool_del",
+			"pool already deleted")
+	}
+
+	if pool.DelegateID != t.ClientID {
+		return "", common.NewErrorf("delegate_pool_del",
+			"you (%v) do not own the pool, it belongs to %v",
+			t.ClientID, pool.DelegateID)
+	}
+
+	pool.Status = DELETING // mark as deleting
+	pool.TokenLockInterface = &ViewChangeLock{
+		Owner:               t.ClientID,
+		DeleteViewChangeSet: true,
+		DeleteVC:            balances.GetBlock().Round,
+	}
+	mn.Deleting[dp.PoolID] = pool // add to deleting
+
+	if err = mn.save(balances); err != nil {
+		return "", common.NewErrorf("delegate_pool_del",
+			"saving miner node: %v", err)
+	}
+
+	return `{"action": "pool will be released next VC"}`, nil
 }
 
-func (msc *MinerSmartContract) releaseFromDelegatePool(t *transaction.Transaction, inputData []byte, gn *globalNode, balances c_state.StateContextI) (string, error) {
-	dp := &deletePool{}
-	err := dp.Decode(inputData)
+// TODO: remade, pay interests every round
+func (msc *MinerSmartContract) releaseFromDelegatePool(
+	t *transaction.Transaction, inputData []byte, gn *globalNode,
+	balances cstate.StateContextI) (resp string, err error) {
+
+	panic("should not be called")
+
+	var dp deletePool
+	if err = dp.Decode(inputData); err != nil {
+		return "", common.NewError("delegate_pool_release",
+			"error decoding request: %v", err)
+	}
+
+	var mn *MinerNode
+	if mn, err = msc.getMinerNode(dp.MinerID, balances); err != nil {
+		return "", common.NewErrorf("delegate_pool_release",
+			"error getting miner node: %v", err)
+	}
+
+	var un *UserNode
+	if un, err = msc.getUserNode(t.ClientID, balances); err != nil {
+		return "", common.NewErrorf("delegate_pool_release",
+			"error getting user node: %v", err)
+	}
+
+	var pool, ok = mn.Deleting[dp.PoolID]
+	if !ok {
+		return "", common.NewError("delegate_pool_release",
+			"pool does not exist")
+	}
+
+	if pool.DelegateID != t.ClientID {
+		return "", common.NewErrorf("delegate_pool_release",
+			"you (%v) do not own the pool, it belongs to %v",
+			t.ClientID, pool.DelegateID)
+	}
+
+	var (
+		interestEarned = state.Balance(pool.InterestRate * float64(pool.Balance))
+		transfer       *state.Transfer
+	)
+
+	transfer, response, err = pool.EmptyPool(msc.ID, t.ClientID,
+		balances.GetBlock().Round)
 	if err != nil {
-		return "", common.NewError("failed to release from delegate pool", fmt.Sprintf("error decoding request: %v", err.Error()))
+		return "", common.NewErrorf("delegate_pool_release",
+			"error emptying delegate pool: %v", err)
 	}
-	mn, err := msc.getMinerNode(dp.MinerID, balances)
+
+	if err = balances.AddTransfer(transfer); err != nil {
+		return "", common.NewErrorf("delegate_pool_release",
+			"adding transfer: %v", err)
+	}
+
+	// TODO (sfxdx): IF CAN MINT
+	err = balances.AddMint(state.NewMint(ADDRESS, t.ClientID, interestEarned))
 	if err != nil {
-		return "", common.NewError("failed to release from delegate pool", fmt.Sprintf("error getting miner node: %v", err.Error()))
+		return "", common.NewErrorf("delegate_pool_release",
+			"adding mint: %v", err)
 	}
-	un, err := msc.getUserNode(t.ClientID, balances)
-	if err != nil {
-		return "", common.NewError("failed to release from delegate pool", fmt.Sprintf("error getting user node: %v", err.Error()))
+
+	delete(mn.Active, dp.PoolID)
+	delete(un.Pools, dp.PoolID)
+	delete(mn.Deleting, dp.PoolID)
+
+	if err = un.save(balances); err != nil {
+		return "", common.NewError("delegate_pool_release", err.Error())
 	}
-	if pool, ok := mn.Deleting[dp.PoolID]; ok {
-		if pool.DelegateID != t.ClientID {
-			return "", common.NewError("failed to release from delegate pool", fmt.Sprintf("you (%v) do not own the pool, it belongs to %v", t.ClientID, pool.DelegateID))
-		}
-		interestEarned := state.Balance(pool.InterestRate * float64(pool.Balance))
-		transfer, response, err := pool.EmptyPool(msc.ID, t.ClientID, balances.GetBlock().Round)
-		if err != nil {
-			return "", common.NewError("failed to release from delegate pool", fmt.Sprintf("error emptying delegate pool: %v", err.Error()))
-		}
-		balances.AddMint(state.NewMint(ADDRESS, t.ClientID, interestEarned))
-		balances.AddTransfer(transfer)
-		delete(un.Pools, dp.PoolID)
-		delete(mn.Deleting, dp.PoolID)
-		if len(un.Pools) > 0 {
-			balances.InsertTrieNode(un.GetKey(), un)
-		} else {
-			balances.DeleteTrieNode(un.GetKey())
-		}
-		balances.InsertTrieNode(mn.getKey(), mn)
-		return response, nil
+
+	if err = mn.save(balances); err != nil {
+		return "", common.NewError("delegate_pool_release", err.Error())
 	}
-	return "", common.NewError("failed to delete from release pool", "pool does not exist")
+
+	return resp, nil
 }

@@ -19,19 +19,23 @@ var (
 	ErrExecutionStatsNotFound = errors.New("SmartContractExecutionStats stat not found")
 )
 
-func (msc *MinerSmartContract) payFees(t *transaction.Transaction, inputData []byte, gn *globalNode, balances c_state.StateContextI) (string, error) {
-	pn, err := msc.getPhaseNode(balances)
-	if err != nil {
-		return "", err
+func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
+	inputData []byte, gn *globalNode, balances c_state.StateContextI) (
+	resp string, err error) {
+
+	var pn *PhaseNode
+	if pn, err = msc.getPhaseNode(balances); err != nil {
+		return
 	}
-	err = msc.setPhaseNode(balances, pn, gn)
-	if err != nil {
-		return "", common.NewError("pay_fees_failed", fmt.Sprintf("error insterting phase node: %v", err))
+	if err = msc.setPhaseNode(balances, pn, gn); err != nil {
+		return "", common.NewErrorf("pay_fees_failed",
+			"error inserting phase node: %v", err)
 	}
-	block := balances.GetBlock()
+	var block = balances.GetBlock()
 	if block.Round == gn.ViewChange && !msc.SetMagicBlock(balances) {
-		return "", common.NewError("pay_fees_failed",
-			fmt.Sprintf("can't set magic block round=%d viewChange=%d", block.Round, gn.ViewChange))
+		return "", common.NewErrorf("pay_fees_failed",
+			"can't set magic block round=%d viewChange=%d",
+			block.Round, gn.ViewChange)
 	}
 
 	if t.ClientID != block.MinerID {
@@ -40,15 +44,15 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction, inputData []b
 	if block.Round <= gn.LastRound {
 		return "", common.NewError("failed to pay fees", "jumped back in time?")
 	}
-	fee := msc.sumFee(block, true)
-	resp, err := msc.paySharders(fee, block, balances, "")
-	if err != nil {
+	var fee = msc.sumFee(block, true)
+	if resp, err = msc.paySharders(fee, block, balances, ""); err != nil {
 		return "", err
 	}
 	gn.LastRound = block.Round
 	_, err = balances.InsertTrieNode(GlobalNodeKey, gn)
 	if err != nil {
-		return "", common.NewError("pay_fees_failed", fmt.Sprintf("error insterting global node: %v", err))
+		return "", common.NewErrorf("pay_fees_failed",
+			"error inserting global node: %v", err)
 	}
 	return resp, nil
 }
@@ -68,8 +72,9 @@ func (msc *MinerSmartContract) sumFee(b *block.Block, updateStats bool) state.Ba
 	return state.Balance(totalMaxFee)
 }
 
-func (msc *MinerSmartContract) payMiners(fee state.Balance, mn *MinerNode, balances c_state.StateContextI, t *transaction.Transaction) string {
-	var resp string
+func (msc *MinerSmartContract) payMiners(fee state.Balance, mn *MinerNode,
+	balances c_state.StateContextI, t *transaction.Transaction) (resp string) {
+
 	minerFee := state.Balance(float64(fee) * mn.Percentage)
 	transfer := state.NewTransfer(ADDRESS, t.ClientID, minerFee)
 	balances.AddTransfer(transfer)
@@ -102,9 +107,13 @@ func (msc *MinerSmartContract) payMiners(fee state.Balance, mn *MinerNode, balan
 	return resp
 }
 
-func (msc *MinerSmartContract) paySharders(fee state.Balance, block *block.Block, balances c_state.StateContextI, resp string) (string, error) {
-	sharders := balances.GetBlockSharders(block.PrevBlock)
+func (msc *MinerSmartContract) paySharders(fee state.Balance,
+	block *block.Block, balances c_state.StateContextI, Resp string) (
+	string, error) {
+
+	var sharders = balances.GetBlockSharders(block.PrevBlock)
 	sort.Strings(sharders)
+
 	for _, sharder := range sharders {
 		//TODO: the mint amount will be controlled by governance
 		mint := state.NewMint(ADDRESS, sharder, fee/state.Balance(len(sharders)))
@@ -119,5 +128,6 @@ func (msc *MinerSmartContract) paySharders(fee state.Balance, block *block.Block
 			resp += common.NewError("failed to mint", fmt.Sprintf("errored while adding mint for sharder %v: %v", sharder, err.Error())).Error()
 		}
 	}
+
 	return resp, nil
 }

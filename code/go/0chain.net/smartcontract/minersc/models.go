@@ -7,28 +7,13 @@ import (
 	"net/url"
 	"sync"
 
-	c_state "0chain.net/chaincore/chain/state"
+	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
-)
-
-var (
-	AllMinersKey         = datastore.Key(ADDRESS + encryption.Hash("all_miners"))
-	AllShardersKey       = datastore.Key(ADDRESS + encryption.Hash("all_sharders"))
-	DKGMinersKey         = datastore.Key(ADDRESS + encryption.Hash("dkg_miners"))
-	MinersMPKKey         = datastore.Key(ADDRESS + encryption.Hash("miners_mpk"))
-	MagicBlockKey        = datastore.Key(ADDRESS + encryption.Hash("magic_block"))
-	GlobalNodeKey        = datastore.Key(ADDRESS + encryption.Hash("global_node"))
-	GroupShareOrSignsKey = datastore.Key(ADDRESS + encryption.Hash("group_share_or_signs"))
-	ShardersKeepKey      = datastore.Key(ADDRESS + encryption.Hash("sharders_keep"))
-)
-
-var (
-	lockAllMiners sync.Mutex
 )
 
 // Phases
@@ -49,28 +34,78 @@ const (
 	CANDELETE = "CAN DELETE"
 )
 
-type phaseFunctions func(balances c_state.StateContextI, gn *globalNode) error
+var (
+	AllMinersKey         = globalKeyHash("all_miners")
+	AllShardersKey       = globalKeyHash("all_sharders")
+	DKGMinersKey         = globalKeyHash("dkg_miners")
+	MinersMPKKey         = globalKeyHash("miners_mpk")
+	MagicBlockKey        = globalKeyHash("magic_block")
+	GlobalNodeKey        = globalKeyHash("global_node")
+	GroupShareOrSignsKey = globalKeyHash("group_share_or_signs")
+	ShardersKeepKey      = globalKeyHash("sharders_keep")
 
-type movePhaseFunctions func(balances c_state.StateContextI, pn *PhaseNode, gn *globalNode) bool
+	lockAllMiners sync.Mutex
+)
 
-type smartContractFunction func(t *transaction.Transaction, inputData []byte, gn *globalNode, balances c_state.StateContextI) (string, error)
+type (
+	phaseFunctions        func(balances cstate.StateContextI, gn *globalNode) error
+	movePhaseFunctions    func(balances cstate.StateContextI, pn *PhaseNode, gn *globalNode) bool
+	smartContractFunction func(t *transaction.Transaction, inputData []byte, gn *globalNode, balances cstate.StateContextI) (string, error)
+	SimpleNodes           = map[string]*SimpleNode
+)
 
-type SimpleNodes = map[string]*SimpleNode
+func globalKeyHash(name string) datastore.Key {
+	return datastore.Key(ADDRESS + encryption.Hash(name))
+}
 
 func NewSimpleNodes() SimpleNodes {
 	return make(map[string]*SimpleNode)
 }
 
+//
+// global
+//
+
 type globalNode struct {
-	ViewChange   int64   `json:"view_change"`
-	MaxN         int     `json:"max_n"`
-	MinN         int     `json:"min_n"`
-	TPercent     float64 `json:"t_percent"`
-	KPercent     float64 `json:"k_percent"`
-	LastRound    int64   `json:"last_round"`
-	MaxStake     int64   `json:"max_stake"`
-	MinStake     int64   `json:"min_stake"`
+	ViewChange int64   `json:"view_change"`
+	MaxN       int     `json:"max_n"`
+	MinN       int     `json:"min_n"`
+	TPercent   float64 `json:"t_percent"`
+	KPercent   float64 `json:"k_percent"`
+	LastRound  int64   `json:"last_round"`
+	// MaxStake boundary of SC.
+	MaxStake int64 `json:"max_stake"`
+	// MinStake boundary of SC.
+	MinStake int64 `json:"min_stake"`
+
+	// Stake interests.
 	InterestRate float64 `json:"interest_rate"`
+	// Reward rate.
+	RewardRate float64 `json:"reward_rate"`
+	// ShareRatio is miner/block sharders rewards ratio.
+	ShareRatio float64 `json:"share_ratio"`
+	// BlockReward
+	BlockReward state.Balance `json:"block_reward"`
+	// MaxCharge can be set by a generator.
+	MaxCharge sate.Balance `json:"max_charge"`
+	// Epoch is number of rounds to decline interests and rewards.
+	Epoch int64 `json:"epoch"`
+	// RewardDeclineRate is ratio of epoch rewards declining.
+	RewardDeclineRate float64 `json:"reward_decline_rate"`
+	// InterestDeclineRate is ratio of epoch interests declining.
+	InterestDeclineRate float64 `json:"interest_decline_rate"`
+	// MaxMint is minting boundary for SC.
+	MaxMint state.Balance `json:"max_mint"`
+
+	// Minted tokens by SC.
+	Minted state.Balance `json:"minted"`
+}
+
+func (gn *globalNode) save(balances cstate.StateContextI) (err error) {
+	if _, err = balances.InsertTrieNode(GlobalNodeKey, gn); err != nil {
+		return fmt.Errorf("saving global node: %v", err)
+	}
+	return
 }
 
 func (gn *globalNode) Encode() []byte {
@@ -90,6 +125,10 @@ func (gn *globalNode) GetHashBytes() []byte {
 	return encryption.RawHash(gn.Encode())
 }
 
+//
+// miner / sharder
+//
+
 //MinerNode struct that holds information about the registering miner
 type MinerNode struct {
 	*SimpleNode `json:"simple_miner"`
@@ -108,6 +147,13 @@ func NewMinerNode() *MinerNode {
 
 func (mn *MinerNode) getKey() datastore.Key {
 	return datastore.Key(ADDRESS + mn.ID)
+}
+
+func (mn *MinerNode) save(balances cstate.StateContextI) (err error) {
+	if _, err = balances.InsertTrieNode(mn.getKey(), mn); err != nil {
+		return fmt.Errorf("saving miner node: %v", err)
+	}
+	return
 }
 
 func (mn *MinerNode) Encode() []byte {
@@ -272,6 +318,21 @@ type UserNode struct {
 
 func NewUserNode() *UserNode {
 	return &UserNode{Pools: make(map[string]*poolInfo)}
+}
+
+func (un *UserNode) save(balances cstate.StateContextI) (err error) {
+
+	if len(un.Pools) > 0 {
+		if _, err = balances.InsertTrieNode(un.getKey(), un); err != nil {
+			return fmt.Errorf("saving user node: %v", err)
+		}
+	} else {
+		if _, err = balances.DeleteTrieNode(un.GetKey()); err != nil {
+			return fmt.Errorf("deleting user node: %v", err)
+		}
+	}
+
+	return
 }
 
 func (un *UserNode) Encode() []byte {
