@@ -9,19 +9,39 @@ smart_contracts:
     min_lock: 10 
     apr: 0.1
     min_lock_period: 1m
+
   minersc:
-    interest_rate: .10
-    min_stake: 100
-    max_stake: 10000000000
     max_n: 100
     min_n: 3
     t_percent: .51
     k_percent: .75
+    min_stake: 0.01 # min stake can be set by a node (boundary for all nodes)
+    max_stake: 100.0 # max stake can be set by a node (boundary for all nodes)
     start_rounds: 50
     contribute_rounds: 50
     share_rounds: 50
     publish_rounds: 50
     wait_rounds: 50
+    # stake interests, will be declined every epoch
+    interest_rate: 0.001 # [0; 1)
+    # reward rate for generators, will be declined every epoch
+    reward_rate: 1.0 # [0; 1)
+    # share ratio is miner/block sharders rewards ratio, for example 0.1
+    # gives 10% for miner and rest for block sharders
+    share_ratio: 0.10 # [0; 1)
+    # reward for a block
+    block_reward: 0.7 # tokens
+    # max service charge can be set by a generator
+    max_charge: 0.5 # %
+    # epoch is number of rounds before rewards and interest are decreased
+    epoch: 15000000 # rounds
+    # decline rewards every new epoch by this value (the block_reward)
+    reward_decline_rate: 0.1 # [0; 1), 0.1 = 10%
+    # decline interests every new epoch by this value (the interest_rate)
+    interest_decline_rate: 0.1 # [0; 1), 0.1 = 10%
+    # no mints after miner SC total mints reaches this boundary
+    max_mint: 4000000.0 # tokens
+
   storagesc:
     challenge_enabled: false
     challenge_rate_per_mb_min: 1
