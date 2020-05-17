@@ -3,6 +3,7 @@ package minersc
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 
 	"0chain.net/chaincore/block"
@@ -153,4 +154,62 @@ func (msc *MinerSmartContract) GetMagicBlockHandler(ctx context.Context, params 
 		return nil, err
 	}
 	return magicBlock, nil
+}
+
+/*
+
+new zwallet commands
+
+*/
+
+func (msc *MinerSmartContract) nodeStatHandler(ctx context.Context,
+	params url.Values, balances cstate.StateContextI) (
+	resp interface{}, err error) {
+
+	var (
+		id = params.Get("sharder_id")
+		sn *MinerNode
+	)
+
+	if sn, err = msc.getMinerNode(id, balances); err != nil {
+		return
+	}
+
+	return sn, nil
+}
+
+func (msc *MinerSmartContract) nodePoolStatHandler(ctx context.Context,
+	params url.Values, balances cstate.StateContextI) (
+	resp interface{}, err error) {
+
+	var (
+		id     = params.Get("id")
+		poolID = params.Get("pool_id")
+		sn     *MinerNode
+	)
+
+	if sn, err = msc.getMinerNode(id, balances); err != nil {
+		return
+	}
+
+	if pool, ok := sn.Pending[poolID]; ok {
+		return pool, nil
+	} else if pool, ok = sn.Active[poolID]; ok {
+		return pool, nil
+	} else if pool, ok = sn.Deleting[poolID]; ok {
+		return pool, nil
+	}
+
+	return nil, fmt.Errorf("not found")
+}
+
+func (msc *MinerSmartContract) configsHandler(ctx context.Context,
+	params url.Values, balances cstate.StateContextI) (
+	resp interface{}, err error) {
+
+	var gn *globalNode
+	if gn, err = msc.getGlobalNode(balances); err != nil {
+		return
+	}
+	return gn, nil
 }

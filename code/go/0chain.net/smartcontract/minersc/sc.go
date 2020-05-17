@@ -86,7 +86,6 @@ func (msc *MinerSmartContract) InitSC() {
 	msc.smartContractFunctions["payFees"] = msc.payFees
 	msc.smartContractFunctions["addToDelegatePool"] = msc.addToDelegatePool
 	msc.smartContractFunctions["deleteFromDelegatePool"] = msc.deleteFromDelegatePool
-	msc.smartContractFunctions["releaseFromDelegatePool"] = msc.releaseFromDelegatePool
 	msc.smartContractFunctions["contributeMpk"] = msc.contributeMpk
 	msc.smartContractFunctions["shareSignsOrShares"] = msc.shareSignsOrShares
 	msc.smartContractFunctions["sharder_keep"] = msc.sharderKeep
@@ -119,6 +118,11 @@ func (msc *MinerSmartContract) SetSC(sc *sci.SmartContract, bcContext sci.BCCont
 	msc.SmartContract.RestHandlers["/getMpksList"] = msc.GetMinersMpksListHandler
 	msc.SmartContract.RestHandlers["/getGroupShareOrSigns"] = msc.GetGroupShareOrSignsHandler
 	msc.SmartContract.RestHandlers["/getMagicBlock"] = msc.GetMagicBlockHandler
+
+	msc.SmartContract.RestHandlers["/nodeStat"] = msc.nodeStatHandler
+	msc.SmartContract.RestHandlers["/nodePoolStat"] = msc.nodePoolStatHandler
+	msc.SmartContract.RestHandlers["/configs"] = msc.configsHandler
+
 	msc.bcContext = bcContext
 	msc.SmartContractExecutionStats["add_miner"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "add_miner"), nil)
 	msc.SmartContractExecutionStats["add_sharder"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "add_sharder"), nil)
