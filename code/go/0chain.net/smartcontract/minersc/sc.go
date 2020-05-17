@@ -39,6 +39,7 @@ var (
 	}
 
 	lockSmartContractExecute = map[string]*sync.Mutex{
+		"add_miner":          {},
 		"add_sharder":        {},
 		"sharder_keep":       {},
 		"contributeMpk":      {},
@@ -79,6 +80,7 @@ func (msc *MinerSmartContract) InitSC() {
 	moveFunctions[Publish] = msc.moveToWait
 	moveFunctions[Wait] = msc.moveToStart
 
+	msc.smartContractFunctions["add_miner"] = msc.AddMiner
 	msc.smartContractFunctions["add_sharder"] = msc.AddSharder
 	msc.smartContractFunctions["payFees"] = msc.payFees
 	msc.smartContractFunctions["addToDelegatePool"] = msc.addToDelegatePool
@@ -117,27 +119,12 @@ func (msc *MinerSmartContract) SetSC(sc *sci.SmartContract, bcContext sci.BCCont
 	msc.SmartContract.RestHandlers["/getGroupShareOrSigns"] = msc.GetGroupShareOrSignsHandler
 	msc.SmartContract.RestHandlers["/getMagicBlock"] = msc.GetMagicBlockHandler
 	msc.bcContext = bcContext
-	msc.SmartContractExecutionStats["add_miner"] = metrics.GetOrRegisterCounter(fmt.Sprintf("sc:%v:func:%v", msc.ID, "add_miner"), nil)
+	msc.SmartContractExecutionStats["add_miner"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "add_miner"), nil)
 	msc.SmartContractExecutionStats["add_sharder"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "add_sharder"), nil)
 	msc.SmartContractExecutionStats["viewchange_req"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "viewchange_req"), nil)
 	msc.SmartContractExecutionStats["payFees"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", msc.ID, "payFees"), nil)
 	msc.SmartContractExecutionStats["feesPaid"] = metrics.GetOrRegisterHistogram(fmt.Sprintf("sc:%v:func:%v", msc.ID, "feesPaid"), nil, metrics.NewUniformSample(1024))
 	msc.SmartContractExecutionStats["mintedTokens"] = metrics.GetOrRegisterHistogram(fmt.Sprintf("sc:%v:func:%v", msc.ID, "mintedTokens"), nil, metrics.NewUniformSample(1024))
-}
-
-func (msc *MinerSmartContract) addCounter(name string) {
-	var (
-		face, ok = msc.SmartContractExecutionStats[name]
-		counter  metrics.Counter
-	)
-	if !ok {
-		return
-	}
-	counter, ok = face.(metrics.Counter)
-	if !ok {
-		return
-	}
-	counter.Inc(1)
 }
 
 func (msc *MinerSmartContract) addMint(gn *globalNode, mint state.Balance) {

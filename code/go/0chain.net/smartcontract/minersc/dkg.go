@@ -376,30 +376,11 @@ func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction,
 		}
 	}
 
-	var contr Contribution
-	if err = contr.decode(inputData); err != nil {
+	if err = mpk.Decode(inputData); err != nil {
 		return "", common.NewErrorf("contribute_mpk_failed",
 			"decoding request: %v", err)
 	}
 
-	if contr.MPK == nil {
-		return "", common.NewError("contribute_mpk_failed",
-			"missing MPK in request")
-	}
-
-	// validate and register node if it's not registered yet
-	if contr.Node != nil &&
-		!msc.doesMinerExist(getMinerKey(contr.Node.ID), balances) {
-
-		// validate and register or kick off
-		resp, err = msc.AddMiner(t, contr.Node, gn, balances)
-		if err != nil {
-			return
-		}
-		// miner has added, let's continue
-	}
-
-	mpk = contr.MPK
 	if len(mpk.Mpk) != dmn.T {
 		return "", common.NewErrorf("contribute_mpk_failed",
 			"mpk sent (size: %v) is not correct size: %v", len(mpk.Mpk), dmn.T)

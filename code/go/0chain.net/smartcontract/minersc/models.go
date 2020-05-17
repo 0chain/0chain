@@ -7,7 +7,6 @@ import (
 	"net/url"
 	"sync"
 
-	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
@@ -586,20 +585,4 @@ func (dmn *DKGMinerNodes) GetHash() string {
 
 func (dmn *DKGMinerNodes) GetHashBytes() []byte {
 	return encryption.RawHash(dmn.Encode())
-}
-
-//
-// contribute MPK and register if not registered yet
-//
-
-// Contribution used to contribute MPK and register
-// node it doesn't registered yet.
-type Contribution struct {
-	MPK  *block.MPK `json:"mpk"`
-	Node *MinerNode `json:"node"`
-}
-
-// decode encoded contribution
-func (c *Contribution) decode(p []byte) (err error) {
-	return json.Unmarshal(p, c)
 }

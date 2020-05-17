@@ -29,15 +29,14 @@ func (msc *MinerSmartContract) doesMinerExist(pkey datastore.Key,
 
 // AddMiner Function to handle miner register
 func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
-	newMiner *MinerNode, gn *globalNode, balances cstate.StateContextI) (
+	inputData []byte, gn *globalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 
-	// stat
-	defer func() {
-		if err == nil {
-			msc.addCounter("add_miner")
-		}
-	}()
+	var newMiner = NewMinerNode()
+	if err = newMiner.Decode(inputData); err != nil {
+		return "", common.NewErrorf("add_miner_failed",
+			"decoding request: %v", err)
+	}
 
 	lockAllMiners.Lock()
 	defer lockAllMiners.Unlock()
