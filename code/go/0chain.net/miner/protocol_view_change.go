@@ -198,7 +198,7 @@ func (mc *Chain) ContributeMpk() (txn *httpclientutil.Transaction, err error) {
 		mpk.Mpk = append(mpk.Mpk, v.GetHexString())
 	}
 
-	scData := &httpclientutil.SmartContractTxnData{}
+	scData := new(httpclientutil.SmartContractTxnData)
 	scData.Name = scNameContributeMpk
 	scData.InputArgs = mpk
 

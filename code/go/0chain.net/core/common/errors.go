@@ -30,11 +30,3 @@ func NewErrorf(code string, format string, args ...interface{}) *Error {
 func InvalidRequest(msg string) error {
 	return NewError("invalid_request", fmt.Sprintf("Invalid request (%v)", msg))
 }
-
-// NewErrorf - create a new error
-func NewErrorf(code string, format string, a ...interface{}) *Error {
-	return &Error{
-		Code: code,
-		Msg:  fmt.Sprintf(format, a...),
-	}
-}

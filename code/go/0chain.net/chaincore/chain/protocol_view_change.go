@@ -20,6 +20,7 @@ import (
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/minersc"
 
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
@@ -190,8 +191,14 @@ func (mc *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 	mn.Port = selfNode.Port
 	mn.PublicKey = selfNode.PublicKey
 	mn.ShortName = selfNode.Description
-	mn.Percentage = .5 // add to config
 	mn.BuildTag = selfNode.Info.BuildTag
+
+	// miner SC configurations
+	mn.DelegateWallet = viper.GetString("delegate_wallet")
+	mn.ServiceCharge = viper.GetFloat64("service_charge")
+	mn.NumberOfDelegates = viper.GetInt("number_of_delegates")
+	mn.MinStake = state.Balance(viper.GetFloat64("min_stake") * 1e10)
+	mn.MaxStake = state.Balance(viper.GetFloat64("max_stake") * 1e10)
 
 	scData := &httpclientutil.SmartContractTxnData{}
 	if selfNode.Type == node.NodeTypeMiner {
@@ -225,7 +232,6 @@ func (mc *Chain) RegisterSharderKeep() (result *httpclientutil.Transaction, err2
 	mn.Port = selfNode.Port
 	mn.PublicKey = selfNode.PublicKey
 	mn.ShortName = selfNode.Description
-	mn.Percentage = .5 // add to config
 	mn.BuildTag = selfNode.Info.BuildTag
 
 	scData := &httpclientutil.SmartContractTxnData{}
