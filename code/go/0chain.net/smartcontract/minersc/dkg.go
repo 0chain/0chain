@@ -351,11 +351,8 @@ func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction,
 		return "", err
 	}
 
-	println("CONTRIBUTE MPK, CHECK MINER IS PART OF DKG SET:", t.ClientID)
-
 	var ok bool
 	if _, ok = dmn.SimpleNodes[t.ClientID]; !ok {
-		println("CONTRIBUTE MPK, CHECK MINER IS PART OF DKG SET:", t.ClientID, ". IS NOT. (FATALITY)")
 		return "", common.NewError("contribute_mpk_failed",
 			"miner not part of dkg set")
 	}

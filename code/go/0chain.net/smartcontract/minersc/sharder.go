@@ -32,12 +32,9 @@ func (msc *MinerSmartContract) AddSharder(t *transaction.Transaction,
 	input []byte, gn *globalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 
-	println("ADD SHARDER")
-
 	Logger.Info("try to add sharder", zap.Any("txn", t))
 	var all *MinerNodes
 	if all, err = msc.getShardersList(balances, AllShardersKey); err != nil {
-		println("ADD SHARDER: E (1)")
 		Logger.Error("Error in getting list from the DB", zap.Error(err))
 		return "", common.NewErrorf("add_sharder",
 			"getting miner list: %v", err)
@@ -48,7 +45,6 @@ func (msc *MinerSmartContract) AddSharder(t *transaction.Transaction,
 
 	var newSharder = NewMinerNode()
 	if err = newSharder.Decode(input); err != nil {
-		println("ADD SHARDER: E (2)")
 		Logger.Error("Error in decoding the input", zap.Error(err))
 		return "", common.NewErrorf("add_sharder", "decoding request: %v", err)
 	}
@@ -72,7 +68,6 @@ func (msc *MinerSmartContract) AddSharder(t *transaction.Transaction,
 
 	if newSharder.PublicKey == "" || newSharder.ID == "" {
 		Logger.Error("public key or ID is empty")
-		println("ADD SHARDER: E (3)")
 		return "", common.NewError("add_sharder",
 			"PublicKey or the ID is empty. Cannot proceed")
 	}
@@ -189,7 +184,7 @@ func (msc *MinerSmartContract) getSharderNode(sid string,
 		return // unexpected error
 	}
 
-	sn = new(MinerNode)
+	sn = NewMinerNode()
 	sn.ID = sid
 
 	if err == util.ErrValueNotPresent {
