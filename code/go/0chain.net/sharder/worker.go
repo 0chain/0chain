@@ -1,8 +1,6 @@
 package sharder
 
 import (
-	"time"
-
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/sharder/blockstore"
@@ -12,8 +10,6 @@ import (
 
 	"context"
 	"time"
-
-	. "0chain.net/core/logging"
 
 	"0chain.net/chaincore/round"
 	"0chain.net/core/datastore"

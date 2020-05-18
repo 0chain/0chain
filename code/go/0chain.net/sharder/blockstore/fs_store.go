@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"compress/zlib"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 
@@ -21,8 +20,6 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 )
-
-const fileExt = ".dat.zlib"
 
 /*FSBlockStore - a block store implementation using file system */
 type FSBlockStore struct {
@@ -88,7 +85,7 @@ func (fbs *FSBlockStore) getFileWithoutExtension(hash string, round int64) strin
 }
 
 func (fbs *FSBlockStore) getFileName(hash string, round int64) string {
-	return fbs.getFileWithoutExtension(hash, round) + fileExt
+	return fbs.getFileWithoutExtension(hash, round) + ".dat.zlib"
 }
 
 /*Write - write the block to the file system */
@@ -101,13 +98,8 @@ func (fbs *FSBlockStore) Write(b *block.Block) error {
 		return err
 	}
 	bf := bufio.NewWriterSize(f, 64*1024)
-	w, err := zlib.NewWriterLevel(bf, zlib.BestCompression)
-	if err != nil {
-		return err
-	}
-	if err = datastore.WriteJSON(w, b); err != nil {
-		return err
-	}
+	w, _ := zlib.NewWriterLevel(bf, zlib.BestCompression)
+	datastore.WriteJSON(w, b)
 	w.Close()
 	bf.Flush()
 	f.Close()
@@ -119,8 +111,16 @@ func (fbs *FSBlockStore) ReadWithBlockSummary(bs *block.BlockSummary) (*block.Bl
 	return fbs.read(bs.Hash, bs.Round)
 }
 
-// readFile by its path
-func (fbs *FSBlockStore) readFile(fileName string) (*block.Block, error) {
+/*Read - read the block from the file system */
+func (fbs *FSBlockStore) Read(hash string) (*block.Block, error) {
+	return nil, common.NewError("interface_not_implemented", "FSBlockStore cannot provide this interface")
+}
+
+func (fbs *FSBlockStore) read(hash string, round int64) (*block.Block, error) {
+	if len(hash) != 64 {
+		return nil, encryption.ErrInvalidHash
+	}
+	fileName := fbs.getFileName(hash, round)
 	f, err := os.Open(fileName)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -149,67 +149,6 @@ func (fbs *FSBlockStore) readFile(fileName string) (*block.Block, error) {
 		return nil, err
 	}
 	return b, nil
-}
-
-// Read a block from the file system by its hash. Walk over round/RoundRange
-// directories looking for block with given hash.
-func (fbs *FSBlockStore) Read(hash string) (b *block.Block, err error) {
-
-	// check out hash can be ""
-	if len(hash) != 64 {
-		return nil, common.NewError("fbs_store_read", "invalid block hash length given")
-	}
-
-	// for example
-	// 01c/08c/7f5/4c43fb351ebc31161dd9572465ea1640b11b5629aefe3a4937f0394.dat.zlib
-	var s1, s2, s3, tail = hash[0:3], hash[3:6], hash[6:9], hash[9:] + fileExt
-
-	// walk over all 'round/RoundRange'
-	err = filepath.Walk(fbs.RootDirectory,
-		func(path string, fi os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			if !fi.IsDir() {
-				return nil
-			}
-			path = filepath.Join(path, s1, s2, s3, tail) // block path
-			fi, err = os.Stat(path)
-			if err != nil {
-				if os.IsNotExist(err) {
-					// can't use errors.Is(err, os.ErrNotExist) with go1.12
-					return nil // not an error (continue)
-				}
-				return err // filesystem error
-			}
-			// got the file
-			if b, err = fbs.readFile(path); err != nil {
-				return err
-			}
-			return io.EOF // ok (just stop walking loop)
-		})
-
-	if err != io.EOF {
-		return // unexpected error
-	}
-
-	err = nil // reset the io.EOF
-
-	// err is not nil doesn't mean we have the block
-
-	if b == nil {
-		return nil, os.ErrNotExist
-	}
-
-	return // got it
-}
-
-func (fbs *FSBlockStore) read(hash string, round int64) (*block.Block, error) {
-	if len(hash) != 64 {
-		return nil, encryption.ErrInvalidHash
-	}
-	fileName := fbs.getFileName(hash, round)
-	return fbs.readFile(fileName)
 }
 
 /*Delete - delete from the hash of the block*/
