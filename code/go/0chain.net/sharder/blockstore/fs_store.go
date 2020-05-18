@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"compress/zlib"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 
