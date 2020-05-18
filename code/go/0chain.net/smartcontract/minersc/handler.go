@@ -167,7 +167,7 @@ func (msc *MinerSmartContract) nodeStatHandler(ctx context.Context,
 	resp interface{}, err error) {
 
 	var (
-		id = params.Get("sharder_id")
+		id = params.Get("id")
 		sn *MinerNode
 	)
 
