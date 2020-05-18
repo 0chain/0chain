@@ -1,4 +1,4 @@
-package conductor
+package conductrpc
 
 import (
 	"sync"
