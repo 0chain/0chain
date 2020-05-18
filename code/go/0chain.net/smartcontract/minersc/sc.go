@@ -196,16 +196,26 @@ func getHostnameAndPort(burl string) (string, int, error) {
 	return "", 0, errors.New(burl + " is not a valid url. It not a valid IP or valid DNS name")
 }
 
-func (msc *MinerSmartContract) getGlobalNode(balances cstate.StateContextI) (*globalNode, error) {
-	gn := &globalNode{}
-	gv, err := balances.GetTrieNode(GlobalNodeKey)
+func (msc *MinerSmartContract) getGlobalNode(balances cstate.StateContextI) (
+	gn *globalNode, err error) {
+
+	gn = new(globalNode)
+	var p util.Serializable
+	p, err = balances.GetTrieNode(GlobalNodeKey)
+	if err != nil && err != util.ErrValueNotPresent {
+		return nil, err
+	}
+
 	if err == nil {
-		err := gn.Decode(gv.Encode())
-		if err != nil {
-			return nil, err
+		if err = gn.Decode(p.Encode()); err != nil {
+			return nil, fmt.Errorf(
+				"invalid state: decoding global node: %v", err)
 		}
 		return gn, nil
 	}
+
+	err = nil // reset the value not present error
+
 	const pfx = "smart_contracts.minersc."
 	var conf = config.SmartContractConfig
 	gn.MinStake = state.Balance(conf.GetFloat64(pfx+"min_stake") * 1e10)
@@ -214,15 +224,15 @@ func (msc *MinerSmartContract) getGlobalNode(balances cstate.StateContextI) (*gl
 	gn.TPercent = conf.GetFloat64(pfx + "t_percent")
 	gn.KPercent = conf.GetFloat64(pfx + "k_percent")
 
-	gn.InterestRate = conf.GetFloat64("interest_rate")
-	gn.RewardRate = conf.GetFloat64("reward_rate")
-	gn.ShareRatio = conf.GetFloat64("share_ratio")
-	gn.BlockReward = state.Balance(conf.GetFloat64("block_reward") * 1e10)
-	gn.MaxCharge = conf.GetFloat64("max_charge")
-	gn.Epoch = conf.GetInt64("epoch")
-	gn.RewardDeclineRate = conf.GetFloat64("reward_decline_rate")
-	gn.InterestDeclineRate = conf.GetFloat64("interest_decline_rate")
-	gn.MaxMint = state.Balance(conf.GetFloat64("max_mint") * 1e10)
+	gn.InterestRate = conf.GetFloat64(pfx + "interest_rate")
+	gn.RewardRate = conf.GetFloat64(pfx + "reward_rate")
+	gn.ShareRatio = conf.GetFloat64(pfx + "share_ratio")
+	gn.BlockReward = state.Balance(conf.GetFloat64(pfx+"block_reward") * 1e10)
+	gn.MaxCharge = conf.GetFloat64(pfx + "max_charge")
+	gn.Epoch = conf.GetInt64(pfx + "epoch")
+	gn.RewardDeclineRate = conf.GetFloat64(pfx + "reward_decline_rate")
+	gn.InterestDeclineRate = conf.GetFloat64(pfx + "interest_decline_rate")
+	gn.MaxMint = state.Balance(conf.GetFloat64(pfx+"max_mint") * 1e10)
 
 	return gn, nil
 }
