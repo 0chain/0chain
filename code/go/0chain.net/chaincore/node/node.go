@@ -87,13 +87,13 @@ var NodeTypeNames = common.CreateLookups("m", "Miner", "s", "Sharder", "b", "Blo
 
 /*Node - a struct holding the node information */
 type Node struct {
-	client.Client
-	N2NHost        string    `json:"n2n_host"`
-	Host           string    `json:"host"`
-	Port           int       `json:"port"`
+	client.Client            `yaml:",inline"`
+	N2NHost        string    `json:"n2n_host" yaml:"n2n_ip"`
+	Host           string    `json:"host" yaml:"public_ip"`
+	Port           int       `json:"port" yaml:"port"`
 	Type           int8      `json:"type"`
-	Description    string    `json:"description"`
-	SetIndex       int       `json:"set_index"`
+	Description    string    `json:"description" yaml:"description"`
+	SetIndex       int       `json:"set_index" yaml:"set_index"`
 	Status         int       `json:"status"`
 	LastActiveTime time.Time `json:"-"`
 	ErrorCount     int64     `json:"-"`

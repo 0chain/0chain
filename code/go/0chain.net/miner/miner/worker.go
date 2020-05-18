@@ -94,9 +94,6 @@ func TransactionGenerator(c *chain.Chain) {
 	trng := rand.New(ts)
 	for true {
 		numTxns = trng.Int31n(blockSize)
-		if numTxns < 1 {
-			numTxns = 1
-		}
 		numWorkerTxns := numTxns / int32(numWorkers)
 		if numWorkerTxns*int32(numWorkers) < numTxns {
 			numWorkerTxns++

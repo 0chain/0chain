@@ -1,14 +1,23 @@
-FROM zchain_build_base
+FROM zchain_build_base as magic_block_build
+ENV SRC_DIR=/0chain
 ENV GO111MODULE=on
 
-ENV BUILD_DIR=/0chain/go/src/magicBlock
-ENV CONFIG_DIR=/0chain/config
-ENV GOPATH=$GOPATH:$SRC_DIR/go
-
-COPY ./code/go/0chain.net/chaincore/block/magicBlock $BUILD_DIR
-COPY ./docker.local/config $CONFIG_DIR
-
-WORKDIR $BUILD_DIR
+COPY ./code/go/0chain.net/core/go.mod          ./code/go/0chain.net/core/go.sum          $SRC_DIR/go/0chain.net/core/
+COPY ./code/go/0chain.net/chaincore/go.mod     ./code/go/0chain.net/chaincore/go.sum     $SRC_DIR/go/0chain.net/chaincore/
+COPY ./code/go/0chain.net/smartcontract/go.mod ./code/go/0chain.net/smartcontract/go.sum $SRC_DIR/go/0chain.net/smartcontract/
+WORKDIR $SRC_DIR/go/0chain.net/chaincore/block/magicBlock
 RUN go mod download
+
+RUN cd $GOPATH/pkg/mod/github.com/valyala/gozstd* && \
+    chmod -R +w . && \
+    make clean libzstd.a
+
+# Add the source code:
+COPY ./code/go/0chain.net $SRC_DIR/go/0chain.net
+
 RUN go build -tags bn256 main.go
 
+FROM zchain_run_base
+ENV APP_DIR=/0chain
+WORKDIR $APP_DIR
+COPY --from=magic_block_build $APP_DIR/go/0chain.net/chaincore/block/magicBlock/main $APP_DIR/bin/magicBlock

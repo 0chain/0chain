@@ -28,10 +28,10 @@ func init() {
 /*Client - data structure that holds the client data */
 type Client struct {
 	datastore.CollectionMemberField
-	datastore.IDField
+	datastore.IDField `yaml:",inline"`
 	datastore.VersionField
 	datastore.CreationDateField
-	PublicKey      string `json:"public_key"`
+	PublicKey      string `yaml:"public_key" json:"public_key"`
 	PublicKeyBytes []byte `json:"-"`
 }
 
