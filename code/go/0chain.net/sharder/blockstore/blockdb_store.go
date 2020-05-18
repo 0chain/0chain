@@ -5,9 +5,10 @@ import (
 	"io"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/sharder/blockdb"
-	"0chain.net/core/datastore"
 	"0chain.net/chaincore/transaction"
+	"0chain.net/core/common"
+	"0chain.net/core/datastore"
+	"0chain.net/sharder/blockdb"
 )
 
 //BlockDBStore is a block store backed by blockdb
@@ -126,4 +127,12 @@ func (bdbs *BlockDBStore) DeleteBlock(b *block.Block) error {
 		return err
 	}
 	return db.Delete()
+}
+
+func (bdbs *BlockDBStore) UploadToCloud(hash string, round int64) error {
+	return common.NewError("interface_not_implemented", "BlockDBStore cannote provide this interface")
+}
+
+func (bdbs *BlockDBStore) DownloadFromCloud(hash string, round int64) error {
+	return common.NewError("interface_not_implemented", "BlockDBStore cannote provide this interface")
 }

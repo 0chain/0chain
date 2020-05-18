@@ -11,6 +11,8 @@ type BlockStore interface {
 	ReadWithBlockSummary(bs *block.BlockSummary) (*block.Block, error)
 	Delete(hash string) error
 	DeleteBlock(b *block.Block) error
+	UploadToCloud(hash string, round int64) error
+	DownloadFromCloud(hash string, round int64) error
 }
 
 var Store BlockStore

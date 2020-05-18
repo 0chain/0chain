@@ -10,6 +10,7 @@ import (
 	"0chain.net/core/datastore"
 	. "0chain.net/core/logging"
 	"github.com/gocql/gocql"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
@@ -33,7 +34,10 @@ var Session *gocql.Session
 
 /*InitSession - initialize a storage session */
 func InitSession() {
-	err := initSession(time.Second, 0)
+	cassandraDelay := viper.GetInt("cassandra.connection.delay")
+	cassandraRetries := viper.GetInt("cassandra.connection.retries")
+	delay := time.Duration(cassandraDelay) * time.Second
+	err := initSession(delay, cassandraRetries)
 	if Session == nil {
 		panic(err)
 	}
@@ -60,7 +64,7 @@ func initSession(delay time.Duration, maxTries int) error {
 	cluster.Keyspace = KeySpace
 	start0 := time.Now()
 	// We need to keep waiting till whatever time it takes for cassandra to come up and running that includes data operations which takes longer with growing data
-	for tries := 0; maxTries <= 0 || tries <= maxTries; tries++ {
+	for tries := 0; tries < maxTries; tries++ {
 		start := time.Now()
 		Session, err = cluster.CreateSession()
 		if err != nil {

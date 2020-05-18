@@ -16,6 +16,7 @@ development:
     interest: true
     miner: true
     fee: false
+    vesting: true
   txn_generation:
     wallets: 500
     transactions: 70
@@ -64,7 +65,7 @@ server_chain:
   transaction:
     payload:
       max_size: 98304 # bytes
-    timeout: 10 # seconds
+    timeout: 30 # seconds
   client:
     signature_scheme: ed25519  # ed25519 or bls0chain
     discover: true

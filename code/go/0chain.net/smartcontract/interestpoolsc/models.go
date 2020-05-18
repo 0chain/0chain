@@ -15,8 +15,10 @@ import (
 )
 
 type SimpleGlobalNode struct {
-	MinLock int64   `json:"min_lock"`
-	APR     float64 `json:"apr"`
+	MaxMint     state.Balance `json:"max_mint"`
+	TotalMinted state.Balance `json:"total_minted"`
+	MinLock     state.Balance `json:"min_lock"`
+	APR         float64       `json:"apr"`
 }
 
 func (sgn *SimpleGlobalNode) Encode() []byte {
@@ -85,6 +87,11 @@ func (gn *GlobalNode) getKey() datastore.Key {
 	return datastore.Key(gn.ID + gn.ID)
 }
 
+// canMint more tokens
+func (gn *GlobalNode) canMint() bool {
+	return gn.SimpleGlobalNode.TotalMinted < gn.SimpleGlobalNode.MaxMint
+}
+
 type newPoolRequest struct {
 	Duration time.Duration `json:"duration"`
 }
@@ -118,8 +125,8 @@ func (npr *newPoolRequest) decode(input []byte) error {
 
 type interestPool struct {
 	*tokenpool.ZcnLockingPool `json:"pool"`
-	APR                       float64 `json:"apr"`
-	TokensEarned              int64   `json:"tokens_earned"`
+	APR                       float64       `json:"apr"`
+	TokensEarned              state.Balance `json:"tokens_earned"`
 }
 
 func newInterestPool() *interestPool {
@@ -148,7 +155,7 @@ func (ip *interestPool) decode(input []byte) error {
 	}
 	ie, ok := objMap["tokens_earned"]
 	if ok {
-		var earned int64
+		var earned state.Balance
 		err = json.Unmarshal(*ie, &earned)
 		if err != nil {
 			return err
@@ -295,7 +302,7 @@ type poolStat struct {
 	TimeLeft     time.Duration    `json:"time_left"`
 	Locked       bool             `json:"locked"`
 	APR          float64          `json:"apr"`
-	TokensEarned int64            `json:"tokens_earned"`
+	TokensEarned state.Balance    `json:"tokens_earned"`
 	Balance      state.Balance    `json:"balance"`
 }
 

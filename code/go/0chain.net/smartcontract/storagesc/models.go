@@ -2,19 +2,24 @@ package storagesc
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"time"
 
 	"0chain.net/chaincore/chain"
+	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
 )
 
-var ALL_BLOBBERS_KEY = datastore.Key(ADDRESS + encryption.Hash("all_blobbers"))
-var ALL_VALIDATORS_KEY = datastore.Key(ADDRESS + encryption.Hash("all_validators"))
-var ALL_ALLOCATIONS_KEY = datastore.Key(ADDRESS + encryption.Hash("all_allocations"))
-var STORAGE_STATS_KEY = datastore.Key(ADDRESS + encryption.Hash("all_storage"))
+var (
+	ALL_BLOBBERS_KEY    = datastore.Key(ADDRESS + encryption.Hash("all_blobbers"))
+	ALL_VALIDATORS_KEY  = datastore.Key(ADDRESS + encryption.Hash("all_validators"))
+	ALL_ALLOCATIONS_KEY = datastore.Key(ADDRESS + encryption.Hash("all_allocations"))
+	STORAGE_STATS_KEY   = datastore.Key(ADDRESS + encryption.Hash("all_storage"))
+)
 
 type ClientAllocation struct {
 	ClientID    string       `json:"client_id"`
@@ -47,12 +52,13 @@ func (sn *ClientAllocation) GetHashBytes() []byte {
 }
 
 type Allocations struct {
-	List []string
+	List sortedList
 }
 
-// func (an *Allocations) Get(idx int) string {
-// 	return an[idx]
-// }
+func (a *Allocations) has(id string) (ok bool) {
+	_, ok = a.List.getIndex(id)
+	return // false
+}
 
 func (an *Allocations) Encode() []byte {
 	buff, _ := json.Marshal(an)
@@ -88,7 +94,7 @@ type BlobberChallenge struct {
 }
 
 func (sn *BlobberChallenge) GetKey(globalKey string) datastore.Key {
-	return datastore.Key(globalKey + sn.BlobberID)
+	return datastore.Key(globalKey + ":blobberchallenge:" + sn.BlobberID)
 }
 
 func (sn *BlobberChallenge) Encode() []byte {
@@ -148,9 +154,10 @@ type StorageChallenge struct {
 }
 
 type ValidationNode struct {
-	ID        string `json:"id"`
-	BaseURL   string `json:"url"`
-	PublicKey string `json:"-"`
+	ID             string `json:"id"`
+	BaseURL        string `json:"url"`
+	PublicKey      string `json:"-"`
+	DelegateWallet string `json:"delegate_wallet"`
 }
 
 func (sn *ValidationNode) GetKey(globalKey string) datastore.Key {
@@ -203,10 +210,71 @@ func (sn *ValidatorNodes) GetHashBytes() []byte {
 	return encryption.RawHash(sn.Encode())
 }
 
+// Terms represents Blobber terms. A Blobber can update its terms,
+// but any existing offer will use terms of offer signing time.
+type Terms struct {
+	// ReadPrice is price for reading. Token / GB.
+	ReadPrice state.Balance `json:"read_price"`
+	// WritePrice is price for reading. Token / GB. Also,
+	// it used to calculate min_lock_demand value.
+	WritePrice state.Balance `json:"write_price"`
+	// MinLockDemand in number in [0; 1] range. It represents part of
+	// allocation should be locked for the blobber rewards even if
+	// user never write something to the blobber.
+	MinLockDemand float64 `json:"min_lock_demand"`
+	// MaxOfferDuration with this prices and the demand.
+	MaxOfferDuration time.Duration `json:"max_offer_duration"`
+	// ChallengeCompletionTime is duration required to complete a challenge.
+	ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
+}
+
+// validate a received terms
+func (t *Terms) validate(conf *scConfig) (err error) {
+	if t.ReadPrice < 0 {
+		return errors.New("negative read_price")
+	}
+	if t.WritePrice < 0 {
+		return errors.New("negative write_price")
+	}
+	if t.MinLockDemand < 0.0 || t.MinLockDemand > 1.0 {
+		return errors.New("invalid min_lock_demand")
+	}
+	if t.MaxOfferDuration < conf.MinOfferDuration {
+		return errors.New("insufficient max_offer_duration")
+	}
+	if t.ChallengeCompletionTime < 0 {
+		return errors.New("negative challenge_completion_time")
+	}
+	if t.ReadPrice > conf.MaxReadPrice {
+		return errors.New("read_price is greater then max_read_price allowed")
+	}
+	if t.WritePrice > conf.MaxWritePrice {
+		return errors.New("write_price is greater then max_write_price allowed")
+	}
+	return // nil
+}
+
+// StorageNode represents Blobber configurations.
 type StorageNode struct {
-	ID        string `json:"id"`
-	BaseURL   string `json:"url"`
-	PublicKey string `json:"-"`
+	ID              string           `json:"id"`
+	BaseURL         string           `json:"url"`
+	Terms           Terms            `json:"terms"`    // terms
+	Capacity        int64            `json:"capacity"` // total blobber capacity
+	Used            int64            `json:"used"`     // allocated capacity
+	LastHealthCheck common.Timestamp `json:"last_health_check"`
+	PublicKey       string           `json:"-"`
+	DelegateWallet  string           `json:"delegate_wallet"`
+}
+
+// validate the blobber configurations
+func (sn *StorageNode) validate(conf *scConfig) (err error) {
+	if err = sn.Terms.validate(conf); err != nil {
+		return
+	}
+	if sn.Capacity <= conf.MinBlobberCapacity {
+		return errors.New("insufficient blobber capacity")
+	}
+	return
 }
 
 func (sn *StorageNode) GetKey(globalKey string) datastore.Key {
@@ -227,7 +295,7 @@ func (sn *StorageNode) Decode(input []byte) error {
 }
 
 type StorageNodes struct {
-	Nodes []*StorageNode
+	Nodes sortedBlobbers
 }
 
 func (sn *StorageNodes) Decode(input []byte) error {
@@ -269,10 +337,59 @@ type BlobberAllocation struct {
 	AllocationRoot  string                  `json:"allocation_root"`
 	LastWriteMarker *WriteMarker            `json:"write_marker"`
 	Stats           *StorageAllocationStats `json:"stats"`
+	// Terms of the BlobberAllocation represents weighted average terms
+	// for the allocation. The MinLockDemand can be increased only,
+	// to prevent some attacks. If a user extends an allocation then
+	// we calculate new weighted average terms based on previous terms,
+	// size and expiration and new terms size and expiration.
+	Terms Terms `json:"terms"`
+	// MinLockDemand for the allocation in tokens.
+	MinLockDemand state.Balance `json:"min_lock_demand"`
+	// Spent is number of tokens sent from write pool to challenge pool
+	// for this blobber. It's used to calculate min lock demand left
+	// for this blobber. For a case, where a client uses > 1 parity shards
+	// and don't sends a data to one of blobbers, the blobber should
+	// receive its min_lock_demand tokens. Thus, we can't use shared
+	// (for allocation) min_lock_demand and spent.
+	Spent state.Balance `json:"spent"`
+	// Penalty o the blobber for the allocation in tokens.
+	Penalty state.Balance `json:"penalty"`
+	// ReadReward of the blobber.
+	ReadReward state.Balance `json:"read_reward"`
+	// Returned back to write pool on challenge failed.
+	Returned state.Balance `json:"returned"`
+	// ChallengeReward of the blobber.
+	ChallengeReward state.Balance `json:"challenge_reward"`
+	// FinalReward is number of tokens moved to the blobber on finalization.
+	// It can be greater then zero, if user didn't spent the min lock demand
+	// during the allocation.
+	FinalReward state.Balance `json:"final_reward"`
 }
 
+// PriceRange represents a price range allowed by user to filter blobbers.
+type PriceRange struct {
+	Min state.Balance `json:"min"`
+	Max state.Balance `json:"max"`
+}
+
+// isValid price range.
+func (pr *PriceRange) isValid() bool {
+	return 0 <= pr.Min && pr.Min <= pr.Max
+}
+
+// isMatch given price
+func (pr *PriceRange) isMatch(price state.Balance) bool {
+	return pr.Min <= price && price <= pr.Max
+}
+
+// StorageAllocation request and entity.
 type StorageAllocation struct {
-	ID                string                        `json:"id"`
+	// ID is unique allocation ID that is equal to hash of transaction with
+	// which the allocation has created.
+	ID string `json:"id"`
+	// Tx keeps hash with which the allocation has created or updated.
+	Tx string `json:"tx"`
+
 	DataShards        int                           `json:"data_shards"`
 	ParityShards      int                           `json:"parity_shards"`
 	Size              int64                         `json:"size"`
@@ -280,11 +397,148 @@ type StorageAllocation struct {
 	Blobbers          []*StorageNode                `json:"blobbers"`
 	Owner             string                        `json:"owner_id"`
 	OwnerPublicKey    string                        `json:"owner_public_key"`
-	Payer             string                        `json:"payer_id"`
 	Stats             *StorageAllocationStats       `json:"stats"`
 	PreferredBlobbers []string                      `json:"preferred_blobbers"`
 	BlobberDetails    []*BlobberAllocation          `json:"blobber_details"`
 	BlobberMap        map[string]*BlobberAllocation `json:"-"`
+
+	// Requested ranges.
+	ReadPriceRange             PriceRange    `json:"read_price_range"`
+	WritePriceRange            PriceRange    `json:"write_price_range"`
+	MaxChallengeCompletionTime time.Duration `json:"max_challenge_completion_time"`
+
+	// ChallengeCompletionTime is max challenge completion time of
+	// all blobbers of the allocation.
+	ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
+	// StartTime is time when the allocation has been created. We will
+	// use it to check blobber's MaxOfferTime extending the allocation.
+	StartTime common.Timestamp `json:"start_time"`
+	// Finalized is true where allocation has been finalized.
+	Finalized bool `json:"finalized,omitempty"`
+	// Canceled set to true where allocation finalized by cancel_allocation
+	// transaction.
+	Canceled bool `json:"canceled,omitempty"`
+	// UsedSize used to calculate blobber reward ratio.
+	UsedSize int64 `json:"-"`
+
+	// MovedToChallenge is number of tokens moved to challenge pool.
+	MovedToChallenge state.Balance `json:"moved_to_challenge,omitempty"`
+	// MovedBack is number of tokens moved from challenge pool to
+	// related write pool (the Back) if a data has deleted.
+	MovedBack state.Balance `json:"moved_back,omitempty"`
+	// MovedToValidators is total number of tokens moved to validators
+	// of the allocation.
+	MovedToValidators state.Balance `json:"moved_to_validators,omitempty"`
+}
+
+// minLockDemandLeft returns number of tokens required as min_lock_demand;
+// if a blobber receive write marker, then some token moves to related
+// challenge pool and 'Spent' of this blobber is increased; thus, the 'Spent'
+// reduces the min_lock_demand left of this blobber; but, if a malfunctioning
+// client doesn't send a data to a blobber (or blobbers) then this blobbers
+// don't receive tokens, their spent will be zero, and the min lock demand
+//
+func (sa *StorageAllocation) minLockDemandLeft() (left state.Balance) {
+	for _, details := range sa.BlobberDetails {
+		if details.MinLockDemand > details.Spent {
+			left += details.MinLockDemand - details.Spent
+		}
+	}
+	return
+}
+
+func (sa *StorageAllocation) validate(now common.Timestamp,
+	conf *scConfig) (err error) {
+
+	if !sa.ReadPriceRange.isValid() {
+		return errors.New("invalid read_price range")
+	}
+	if !sa.WritePriceRange.isValid() {
+		return errors.New("invalid write_price range")
+	}
+	if sa.Size < conf.MinAllocSize {
+		return errors.New("insufficient allocation size")
+	}
+	var dur = common.ToTime(sa.Expiration).Sub(common.ToTime(now))
+	if dur < conf.MinAllocDuration {
+		return errors.New("insufficient allocation duration")
+	}
+
+	if sa.DataShards <= 0 {
+		return errors.New("invalid number of data shards")
+	}
+
+	if sa.OwnerPublicKey == "" {
+		return errors.New("missing owner public key")
+	}
+
+	if sa.Owner == "" {
+		return errors.New("missing owner id")
+	}
+
+	return // nil
+}
+
+type filterBlobberFunc func(blobber *StorageNode) (kick bool)
+
+func (sa *StorageAllocation) filterBlobbers(list []*StorageNode,
+	creationDate common.Timestamp, bsize int64, filters ...filterBlobberFunc) (
+	filtered []*StorageNode) {
+
+	var (
+		dur = common.ToTime(sa.Expiration).Sub(common.ToTime(creationDate))
+		i   int
+	)
+
+List:
+	for _, b := range list {
+		// filter by max offer duration
+		if b.Terms.MaxOfferDuration < dur {
+			continue
+		}
+		// filter by read price
+		if !sa.ReadPriceRange.isMatch(b.Terms.ReadPrice) {
+			continue
+		}
+		// filter by write price
+		if !sa.WritePriceRange.isMatch(b.Terms.WritePrice) {
+			continue
+		}
+		// filter by blobber's capacity left
+		if b.Capacity-b.Used < bsize {
+			continue
+		}
+		// filter by max challenge completion time
+		if b.Terms.ChallengeCompletionTime > sa.MaxChallengeCompletionTime {
+			continue
+		}
+		for _, filter := range filters {
+			if filter(b) {
+				continue List
+			}
+		}
+		list[i] = b
+		i++
+	}
+
+	return list[:i]
+}
+
+// Until returns allocation expiration.
+func (sa *StorageAllocation) Until() common.Timestamp {
+	return sa.Expiration + toSeconds(sa.ChallengeCompletionTime)
+}
+
+func (sa *StorageAllocation) IsValidFinalizer(id string) bool {
+	if sa.Owner == id {
+		return true // finalizing by owner
+	}
+	for _, d := range sa.BlobberDetails {
+		if d.BlobberID == id {
+			return true // one of blobbers
+		}
+	}
+	return false // unknown
 }
 
 func (sn *StorageAllocation) GetKey(globalKey string) datastore.Key {
@@ -298,6 +552,9 @@ func (sn *StorageAllocation) Decode(input []byte) error {
 	}
 	sn.BlobberMap = make(map[string]*BlobberAllocation)
 	for _, blobberAllocation := range sn.BlobberDetails {
+		if blobberAllocation.Stats != nil {
+			sn.UsedSize += blobberAllocation.Stats.UsedSize // total used
+		}
 		sn.BlobberMap[blobberAllocation.BlobberID] = blobberAllocation
 	}
 	return nil
@@ -370,12 +627,15 @@ func (wm *WriteMarker) VerifySignature(clientPublicKey string) bool {
 }
 
 func (wm *WriteMarker) GetHashData() string {
-	hashData := fmt.Sprintf("%v:%v:%v:%v:%v:%v:%v", wm.AllocationRoot, wm.PreviousAllocationRoot, wm.AllocationID, wm.BlobberID, wm.ClientID, wm.Size, wm.Timestamp)
+	hashData := fmt.Sprintf("%v:%v:%v:%v:%v:%v:%v", wm.AllocationRoot,
+		wm.PreviousAllocationRoot, wm.AllocationID, wm.BlobberID, wm.ClientID,
+		wm.Size, wm.Timestamp)
 	return hashData
 }
 
 func (wm *WriteMarker) Verify() bool {
-	if len(wm.AllocationID) == 0 || len(wm.AllocationRoot) == 0 || len(wm.BlobberID) == 0 || len(wm.ClientID) == 0 || wm.Timestamp == 0 {
+	if len(wm.AllocationID) == 0 || len(wm.AllocationRoot) == 0 ||
+		len(wm.BlobberID) == 0 || len(wm.ClientID) == 0 || wm.Timestamp == 0 {
 		return false
 	}
 	return true
@@ -386,7 +646,8 @@ type ReadConnection struct {
 }
 
 func (rc *ReadConnection) GetKey(globalKey string) datastore.Key {
-	return datastore.Key(globalKey + encryption.Hash(rc.ReadMarker.BlobberID+":"+rc.ReadMarker.ClientID))
+	return datastore.Key(globalKey +
+		encryption.Hash(rc.ReadMarker.BlobberID+":"+rc.ReadMarker.ClientID))
 }
 
 func (rc *ReadConnection) Decode(input []byte) error {

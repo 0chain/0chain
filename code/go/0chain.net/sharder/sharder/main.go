@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -42,10 +43,46 @@ import (
 	"go.uber.org/zap"
 )
 
+func processMinioConfig(reader io.Reader) error {
+	scanner := bufio.NewScanner(reader)
+	more := scanner.Scan()
+	if more == false {
+		return common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
+	}
+	blockstore.MinioConfig.StorageServiceURL = scanner.Text()
+	more = scanner.Scan()
+	if more == false {
+		return common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
+	}
+
+	blockstore.MinioConfig.AccessKeyID = scanner.Text()
+	more = scanner.Scan()
+	if more == false {
+		return common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
+	}
+
+	blockstore.MinioConfig.SecretAccessKey = scanner.Text()
+	more = scanner.Scan()
+	if more == false {
+		return common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
+	}
+
+	blockstore.MinioConfig.BucketName = scanner.Text()
+	more = scanner.Scan()
+	if more == false {
+		return common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
+	}
+
+	blockstore.MinioConfig.BucketLocation = scanner.Text()
+	return nil
+}
+
 func main() {
 	deploymentMode := flag.Int("deployment_mode", 2, "deployment_mode")
 	keysFile := flag.String("keys_file", "", "keys_file")
 	magicBlockFile := flag.String("magic_block_file", "", "magic_block_file")
+	minioFile := flag.String("minio_file", "", "minio_file")
+	flag.String("nodes_file", "", "nodes_file (deprecated)")
 	flag.Parse()
 	config.Configuration.DeploymentMode = byte(*deploymentMode)
 	config.SetupDefaultConfig()
@@ -58,9 +95,20 @@ func main() {
 		logging.InitLogging("production")
 	}
 
+	reader, err := os.Open(*minioFile)
+	if err != nil {
+		panic(err)
+	}
+
+	err = processMinioConfig(reader)
+	if err != nil {
+		panic(err)
+	}
+	reader.Close()
+
 	config.Configuration.ChainID = viper.GetString("server_chain.id")
 
-	reader, err := os.Open(*keysFile)
+	reader, err = os.Open(*keysFile)
 	if err != nil {
 		panic(err)
 	}

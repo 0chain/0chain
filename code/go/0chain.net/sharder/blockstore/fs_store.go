@@ -9,7 +9,12 @@ import (
 	"os"
 	"path/filepath"
 
+	"go.uber.org/zap"
+
 	"0chain.net/chaincore/chain"
+	. "0chain.net/core/logging"
+	"github.com/minio/minio-go"
+	"github.com/spf13/viper"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/common"
@@ -23,13 +28,52 @@ const fileExt = ".dat.zlib"
 type FSBlockStore struct {
 	RootDirectory         string
 	blockMetadataProvider datastore.EntityMetadata
+	Minio                 *minio.Client
 }
+
+type MinioConfiguration struct {
+	StorageServiceURL string
+	AccessKeyID       string
+	SecretAccessKey   string
+	BucketName        string
+	BucketLocation    string
+}
+
+var MinioConfig MinioConfiguration
 
 /*NewFSBlockStore - return a new fs block store */
 func NewFSBlockStore(rootDir string) *FSBlockStore {
 	store := &FSBlockStore{RootDirectory: rootDir}
 	store.blockMetadataProvider = datastore.GetEntityMetadata("block")
+	store.intializeMinio()
 	return store
+}
+
+func (fbs *FSBlockStore) intializeMinio() {
+	minioClient, err := minio.New(
+		MinioConfig.StorageServiceURL,
+		MinioConfig.AccessKeyID,
+		MinioConfig.SecretAccessKey,
+		viper.GetBool("minio.use_ssl"),
+	)
+	if err != nil {
+		Logger.Error("Unable to initiaze minio cliet", zap.Error(err))
+		panic(err)
+	}
+	err = minioClient.MakeBucket(MinioConfig.BucketName, MinioConfig.BucketLocation)
+	if err != nil {
+		Logger.Error("Error with make bucket, Will check if bucket exists", zap.Error(err))
+		exists, errBucketExists := minioClient.BucketExists(MinioConfig.BucketName)
+		if errBucketExists == nil && exists {
+			Logger.Info("We already own ", zap.Any("bucket_name", MinioConfig.BucketName))
+		} else {
+			Logger.Error("Minio bucket error", zap.Error(errBucketExists), zap.Any("bucket_name", MinioConfig.BucketName))
+			panic(errBucketExists)
+		}
+	} else {
+		Logger.Info(MinioConfig.BucketName + " bucket successfully created")
+	}
+	fbs.Minio = minioClient
 }
 
 func (fbs *FSBlockStore) getFileWithoutExtension(hash string, round int64) string {
@@ -79,7 +123,19 @@ func (fbs *FSBlockStore) ReadWithBlockSummary(bs *block.BlockSummary) (*block.Bl
 func (fbs *FSBlockStore) readFile(fileName string) (*block.Block, error) {
 	f, err := os.Open(fileName)
 	if err != nil {
-		return nil, err
+		if os.IsNotExist(err) {
+			err = fbs.DownloadFromCloud(hash, round)
+			if err != nil {
+				return nil, err
+			}
+			f, err = os.Open(fileName)
+			if err != nil {
+				return nil, err
+
+			}
+		} else {
+			return nil, err
+		}
 	}
 	defer f.Close()
 	r, err := zlib.NewReader(f)
@@ -169,4 +225,21 @@ func (fbs *FSBlockStore) DeleteBlock(b *block.Block) error {
 		return err
 	}
 	return nil
+}
+
+func (fbs *FSBlockStore) UploadToCloud(hash string, round int64) error {
+	filePath := fbs.getFileName(hash, round)
+	_, err := fbs.Minio.FPutObject(MinioConfig.BucketName, hash, filePath, minio.PutObjectOptions{})
+	if err != nil {
+		return err
+	}
+	if viper.GetBool("minio.delete_local_copy") {
+		return os.Remove(filePath)
+	}
+	return nil
+}
+
+func (fbs *FSBlockStore) DownloadFromCloud(hash string, round int64) error {
+	filePath := fbs.getFileName(hash, round)
+	return fbs.Minio.FGetObject(MinioConfig.BucketName, hash, filePath, minio.GetObjectOptions{})
 }

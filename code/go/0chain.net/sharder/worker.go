@@ -1,18 +1,25 @@
 package sharder
 
 import (
+	"time"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
+	"0chain.net/sharder/blockstore"
+	"github.com/remeh/sizedwaitgroup"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
+
+	"context"
 	"time"
+
+	. "0chain.net/core/logging"
 
 	"0chain.net/chaincore/round"
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
 	. "0chain.net/core/logging"
 	"0chain.net/core/persistencestore"
-	"context"
 )
 
 /*SetupWorkers - setup the background workers */
@@ -28,6 +35,10 @@ func SetupWorkers(ctx context.Context) {
 
 	go sc.PruneStorageWorker(ctx, time.Minute*5, sc.getPruneCountRoundStorage(), sc.MagicBlockStorage)
 	go sc.RegisterSharderKeepWorker(ctx)
+	// Move old blocks to cloud
+	if viper.GetBool("minio.enabled") {
+		go sc.MoveOldBlocksToCloud(ctx)
+	}
 }
 
 /*BlockWorker - stores the blocks */
@@ -128,6 +139,54 @@ func (sc *Chain) getPruneCountRoundStorage() func(storage round.RoundStorage) in
 			return pruneBelowCountMB
 		default:
 			return chain.DefaultCountPruneRoundStorage
+		}
+	}
+}
+
+func (sc *Chain) MoveOldBlocksToCloud(ctx context.Context) {
+	var iterInprogress = false
+	var oldBlockRoundRange = viper.GetInt64("minio.old_block_round_range")
+	var numWorkers = viper.GetInt("minio.num_workers")
+	var roundToProcess = int64(0)
+	ticker := time.NewTicker(time.Duration(viper.GetInt64("minio.worker_frequency")) * time.Second)
+	for true {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			if !iterInprogress {
+				iterInprogress = true
+
+				// Get total rounds to process
+				roundsToProcess := sc.CurrentRound - (oldBlockRoundRange + roundToProcess)
+				fs := blockstore.GetStore()
+				if roundsToProcess > 0 {
+					//Create sized wait group to do concurrent uploads
+					swg := sizedwaitgroup.New(numWorkers)
+					for roundToProcess <= roundsToProcess {
+						// Get block hash for the round to process
+						hash, err := sc.GetBlockHash(ctx, roundToProcess)
+						if err != nil {
+							Logger.Error("Unable to get block hash from round number", zap.Any("round", roundToProcess))
+							roundToProcess++
+							continue
+						}
+
+						swg.Add()
+						go func(hash string, round int64) {
+							err = fs.UploadToCloud(hash, round)
+							if err != nil {
+								Logger.Error("Error in uploading to cloud", zap.Error(err))
+							}
+							swg.Done()
+						}(hash, roundToProcess)
+						roundToProcess++
+					}
+					swg.Wait()
+				}
+				iterInprogress = false
+				Logger.Info("Moved old blocks to cloud successfully")
+			}
 		}
 	}
 }
