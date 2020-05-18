@@ -90,13 +90,7 @@ func (msc *MinerSmartContract) AddSharder(t *transaction.Transaction,
 			newSharder.MaxStake, gn.MaxStake)
 	}
 
-	var exists bool
-	if exists, err = msc.isSharderExist(newSharder.ID, balances); err != nil {
-		return "", common.NewErrorf("add_sharder", "unexpected error: %v",
-			err)
-	}
-
-	if exists {
+	if msc.doesSharderExist(getSharderKey(newSharder.ID), balances) {
 		return "", common.NewError("add_sharder", "sharder already exists")
 	}
 
@@ -112,16 +106,16 @@ func (msc *MinerSmartContract) AddSharder(t *transaction.Transaction,
 
 	// add to all
 	all.Nodes = append(all.Nodes, newSharder)
-	// save all sharders list
-	if _, err = balances.InsertTrieNode(AllShardersKey, all); err != nil {
-		return "", common.NewErrorf("add_sharder",
-			"saving all sharders list: %v", err)
-	}
 	// save the added sharder
 	_, err = balances.InsertTrieNode(newSharder.getKey(), newSharder)
 	if err != nil {
 		return "", common.NewErrorf("add_sharder",
 			"saving sharder: %v", err)
+	}
+	// save all sharders list
+	if _, err = balances.InsertTrieNode(AllShardersKey, all); err != nil {
+		return "", common.NewErrorf("add_sharder",
+			"saving all sharders list: %v", err)
 	}
 
 	msc.verifyMinerState(balances, "checking all sharders list after insert")
@@ -163,16 +157,6 @@ func (msc *MinerSmartContract) getShardersList(balances cstate.StateContextI, ke
 		return nil, err
 	}
 	return allMinersList, nil
-}
-
-func (msc *MinerSmartContract) isSharderExist(sid string,
-	balances cstate.StateContextI) (exists bool, err error) {
-
-	_, err = balances.GetTrieNode(getSharderKey(sid))
-	if err == util.ErrValueNotPresent {
-		exists, err = true, nil
-	}
-	return
 }
 
 func (msc *MinerSmartContract) getSharderNode(sid string,
