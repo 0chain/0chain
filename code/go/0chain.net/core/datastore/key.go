@@ -12,7 +12,7 @@ type Key = string
 
 /*IDField - Useful to embed this into all the entities and get consistent behavior */
 type IDField struct {
-	ID Key `json:"id"`
+	ID Key `json:"id" yaml:"id"`
 }
 
 /*SetKey sets the key */

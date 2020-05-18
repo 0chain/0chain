@@ -3,6 +3,7 @@ package logging
 import (
 	"container/ring"
 	"io"
+	"sync"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest/observer"
@@ -26,6 +27,7 @@ type MemCore struct {
 	zapcore.LevelEnabler
 	enc zapcore.Encoder
 	r   *ring.Ring
+	mu  *sync.RWMutex
 }
 
 /*MemLogger - a struct for ring buffered inmemory logger */
@@ -40,6 +42,7 @@ func NewMemLogger(enc zapcore.Encoder, enab zapcore.LevelEnabler) *MemLogger {
 			LevelEnabler: enab,
 			enc:          enc,
 			r:            ring.New(BufferSize),
+			mu:           &sync.RWMutex{},
 		},
 	}
 	mc := logger.core
@@ -106,6 +109,8 @@ func (ml *MemLogger) writeEntry(w io.Writer, encoder zapcore.Encoder, entry *obs
 /*With - implement interface */
 func (mc *MemCore) With(fields []zapcore.Field) zapcore.Core {
 	clone := mc.clone()
+	clone.mu.RLock()
+	defer clone.mu.RUnlock()
 	for i := range fields {
 		fields[i].AddTo(clone.enc)
 	}
@@ -122,6 +127,9 @@ func (mc *MemCore) Check(ent zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.C
 
 /*Write - implement interface */
 func (mc *MemCore) Write(ent zapcore.Entry, fields []zapcore.Field) error {
+	mc.mu.Lock()
+	defer mc.mu.Unlock()
+
 	var entry *observer.LoggedEntry
 	r := mc.r
 	v := r.Value
@@ -143,9 +151,12 @@ func (mc *MemCore) Sync() error {
 }
 
 func (mc *MemCore) clone() *MemCore {
+	mc.mu.RLock()
+	defer mc.mu.RUnlock()
 	return &MemCore{
 		LevelEnabler: mc.LevelEnabler,
 		enc:          mc.enc.Clone(),
 		r:            mc.r,
+		mu:           &sync.RWMutex{},
 	}
 }

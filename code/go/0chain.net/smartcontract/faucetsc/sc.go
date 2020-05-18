@@ -26,6 +26,8 @@ type FaucetSmartContract struct {
 	*smartcontractinterface.SmartContract
 }
 
+func (fc *FaucetSmartContract) InitSC() {}
+
 func (fc *FaucetSmartContract) GetName() string {
 	return name
 }

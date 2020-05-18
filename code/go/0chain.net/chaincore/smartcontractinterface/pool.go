@@ -14,6 +14,7 @@ type PoolStats struct {
 	InterestRate float64       `json:"interest_rate"`
 	TotalPaid    state.Balance `json:"total_paid"`
 	NumRounds    int64         `json:"number_rounds"`
+	Status       string        `json:"status"`
 }
 
 func (ps *PoolStats) Encode() []byte {
@@ -39,6 +40,27 @@ func (dp *DelegatePool) Encode() []byte {
 	return buff
 }
 
-func (dp *DelegatePool) Decode(input []byte) error {
-	return json.Unmarshal(input, dp)
+func (dp *DelegatePool) Decode(input []byte, tokenlock tokenpool.TokenLockInterface) error {
+	var objMap map[string]*json.RawMessage
+	err := json.Unmarshal(input, &objMap)
+	if err != nil {
+		return err
+	}
+	ps, ok := objMap["stats"]
+	if ok {
+		var stats *PoolStats
+		err = json.Unmarshal(*ps, &stats)
+		if err != nil {
+			return err
+		}
+		dp.PoolStats = stats
+	}
+	p, ok := objMap["pool"]
+	if ok {
+		err = dp.ZcnLockingPool.Decode(*p, tokenlock)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

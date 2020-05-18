@@ -27,6 +27,8 @@ type InterestPoolSmartContract struct {
 	*smartcontractinterface.SmartContract
 }
 
+func (ipsc *InterestPoolSmartContract) InitSC() {}
+
 func (ipsc *InterestPoolSmartContract) GetName() string {
 	return name
 }

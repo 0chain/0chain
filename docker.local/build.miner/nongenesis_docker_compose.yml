@@ -32,9 +32,6 @@ services:
     links:
       - redis:redis
       - redis_txns:redis_txns
-    build:
-      context: ../..
-      dockerfile: ./docker.local/build.miner/Dockerfile
 
     volumes:
       - ../config:/0chain/config
@@ -47,7 +44,7 @@ services:
       default:
       testnet0:
         ipv4_address: 198.18.0.7${MINER}
-    command: ./bin/miner  --deployment_mode 0 --keys_file "config/mnode${MINER}_keys.txt" --discovery_ips "config/discover_pool" --non_genesis true 
+    command: ./bin/miner  --deployment_mode 0 --keys_file "config/mnode${MINER}_keys.txt" --non_genesis true 
 
 networks:
   default:

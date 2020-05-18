@@ -36,7 +36,7 @@ type PoolMembersInfo struct {
   Smartcontracts using this must have validated the caller.
 */
 func (bc *BCContext) GetNodepoolInfo() interface{} {
-	nodes := node.GetNodes()
+	nodes := node.CopyNodes()
 	members := &PoolMembersInfo{}
 	members.MembersInfo = make([]PoolMemberInfo, 0, len(nodes))
 

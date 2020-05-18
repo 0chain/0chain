@@ -11,17 +11,14 @@ import (
 	"github.com/herumi/bls/ffi/go/bls"
 )
 
-type DKGID struct {
-	id    bls.ID
-	intID int
-}
+type DKGID = bls.ID
 
 type DKGKeyShareImpl struct {
 	wallet *wallet.Wallet
-	DKGID
+	id     DKGID
 
 	//This is private to the party
-	msk []bls.SecretKey // aik, coefficients of the polynomial, Si(x). ai0 = secret value of i
+	Msk []bls.SecretKey // aik, coefficients of the polynomial, Si(x). ai0 = secret value of i
 
 	//This is public information
 	mpk []bls.PublicKey // Aik (Fik in some papers) = (g^aik), coefficients of the polynomial, Pi(x). Ai0 = public value of i
@@ -42,7 +39,7 @@ type DKGKeyShareImpl struct {
 }
 
 type DKGSignatureShare struct {
-	DKGID
+	id        DKGID
 	signature bls.Sign
 }
 
@@ -68,13 +65,8 @@ func GenerateWallets(n int) {
 //InitializeDKGShares - initialize DKG Share structures
 func InitializeDKGShares(t int) {
 	dkgShares = dkgShares[:0]
-	for idx, wallet := range wallets {
+	for _, wallet := range wallets {
 		dkgShare := &DKGKeyShareImpl{wallet: wallet}
-		dkgShare.intID = idx + 1
-		/*if err := dkgShare.id.SetDecString(fmt.Sprintf("%v", dkgShare.intID)); err != nil {
-			panic(err)
-		}
-		fmt.Printf("id: %v %v\n", dkgShare.intID, dkgShare.id.GetDecString()) */
 		if err := dkgShare.id.SetHexString("1" + wallet.ClientID[:31]); err != nil {
 			fmt.Printf("client id: %v\n", wallet.ClientID)
 			panic(err)
@@ -88,8 +80,8 @@ func InitializeDKGShares(t int) {
 func (dkgs *DKGKeyShareImpl) GenerateDKGKeyShare(t int) {
 	var dsk bls.SecretKey
 	dsk.SetByCSPRNG()
-	dkgs.msk = dsk.GetMasterSecretKey(t)
-	dkgs.mpk = bls.GetMasterPublicKey(dkgs.msk)
+	dkgs.Msk = dsk.GetMasterSecretKey(t)
+	dkgs.mpk = bls.GetMasterPublicKey(dkgs.Msk)
 }
 
 //GenerateSij - generate secret key shares from i for each party j
@@ -97,10 +89,10 @@ func (dkgs *DKGKeyShareImpl) GenerateSij(ids []DKGID) {
 	dkgs.sij = make(map[bls.ID]bls.SecretKey)
 	for _, id := range ids {
 		var sij bls.SecretKey
-		if err := sij.Set(dkgs.msk, &id.id); err != nil {
+		if err := sij.Set(dkgs.Msk, &id); err != nil {
 			panic(err)
 		}
-		dkgs.sij[id.id] = sij
+		dkgs.sij[id] = sij
 	}
 }
 
@@ -120,7 +112,7 @@ func (dkgs *DKGKeyShareImpl) ValidateShare(jpk []bls.PublicKey, sij bls.SecretKe
 func (dkgs *DKGKeyShareImpl) AggregateSecretKeyShares(qual []DKGID, dkgShares map[bls.ID]*DKGKeyShareImpl) {
 	var sk bls.SecretKey
 	for _, id := range qual {
-		dkgsj, ok := dkgShares[id.id]
+		dkgsj, ok := dkgShares[id]
 		if !ok {
 			panic("no share")
 		}
@@ -135,7 +127,7 @@ func (dkgs *DKGKeyShareImpl) AggregateSecretKeyShares(qual []DKGID, dkgShares ma
 func (dkgs *DKGKeyShareImpl) ComputePublicKeyShare(qual []DKGID, dkgShares map[bls.ID]*DKGKeyShareImpl) bls.PublicKey {
 	var pk bls.PublicKey
 	for _, id := range qual {
-		dkgsj, ok := dkgShares[id.id]
+		dkgsj, ok := dkgShares[id]
 		if !ok {
 			panic("no share")
 		}
@@ -152,7 +144,7 @@ func (dkgs *DKGKeyShareImpl) AggregatePublicKeyShares(qual []DKGID, dkgShares ma
 	for k := 0; k < len(dkgs.mpk); k++ {
 		var pk bls.PublicKey
 		for _, id := range qual {
-			dkgsj, ok := dkgShares[id.id]
+			dkgsj, ok := dkgShares[id]
 			if !ok {
 				panic("no share")
 			}
@@ -183,8 +175,8 @@ func (dkgs *DKGKeyShareImpl) Recover(dkgSigShares []DKGSignatureShare) (*bls.Sig
 	var signatures []Sign
 	var ids []bls.ID
 	t := len(dkgSigShares)
-	if t > len(dkgs.msk) {
-		t = len(dkgs.msk)
+	if t > len(dkgs.Msk) {
+		t = len(dkgs.Msk)
 	}
 	for k := 0; k < t; k++ {
 		ids = append(ids, dkgSigShares[k].id)
@@ -215,7 +207,7 @@ func TestGenerateDKG(tt *testing.T) {
 	var qualDKGSharesMap map[bls.ID]*DKGKeyShareImpl
 
 	for _, dkgs := range dkgShares {
-		ids = append(ids, dkgs.DKGID)
+		ids = append(ids, dkgs.id)
 	}
 
 	//Generate aik for each party (the polynomial for sharing the secret)
@@ -251,7 +243,7 @@ func TestGenerateDKG(tt *testing.T) {
 	}
 	qualDKGSharesMap = make(map[bls.ID]*DKGKeyShareImpl)
 	for i := 0; i < q; i++ {
-		qualIDs = append(qualIDs, shuffled[i].DKGID)
+		qualIDs = append(qualIDs, shuffled[i].id)
 		qualDKGSharesMap[shuffled[i].id] = shuffled[i]
 	}
 
@@ -282,7 +274,7 @@ func TestGenerateDKG(tt *testing.T) {
 	//Sign a message
 	prng := rand.New(rand.NewSource(int64(time.Now().Nanosecond())))
 	for idx, id := range qualIDs {
-		dkgsi, ok := qualDKGSharesMap[id.id]
+		dkgsi, ok := qualDKGSharesMap[id]
 		if !ok {
 			panic(fmt.Sprintf("no share: %v\n", idx))
 		}
@@ -298,7 +290,7 @@ func TestGenerateDKG(tt *testing.T) {
 		if err := blsSig.SetHexString(sign); err != nil {
 			panic(err)
 		}
-		signature := DKGSignatureShare{signature: blsSig, DKGID: dkgsi.DKGID}
+		signature := DKGSignatureShare{signature: blsSig, id: dkgsi.id}
 		signatures = append(signatures, signature)
 	}
 	fmt.Printf("time to sign: %v\n", time.Since(start))
@@ -307,7 +299,7 @@ func TestGenerateDKG(tt *testing.T) {
 	count := 0
 	for _, id := range qualIDs {
 		count++
-		dkgsi, ok := qualDKGSharesMap[id.id]
+		dkgsi, ok := qualDKGSharesMap[id]
 		if !ok {
 			panic("no share")
 		}
@@ -323,14 +315,14 @@ func TestGenerateDKG(tt *testing.T) {
 					panic("no share")
 				}
 				if !dkgsj.VerifySignature(msg, &signature.signature) {
-					fmt.Printf("\tInvalid signature from: %v\n", signature.intID)
+					fmt.Printf("\tInvalid signature from: %v\n", signature.id)
 					continue
 				}
 			}
 			dkgSignature.shares = append(dkgSignature.shares, signature)
 		}
 		if len(dkgSignature.shares) < t {
-			fmt.Printf("signature %v %v(%3d): insufficient signature shares\n", count, dkgsi.wallet.ClientID[:7], dkgsi.intID)
+			fmt.Printf("signature %v %v(%3d): insufficient signature shares\n", count, dkgsi.wallet.ClientID[:7], dkgsi.id)
 			continue
 		}
 		shuffled := make([]DKGSignatureShare, len(dkgSignature.shares))
@@ -345,7 +337,7 @@ func TestGenerateDKG(tt *testing.T) {
 			continue
 		}
 		gsigValid := dkgsi.VerifyGroupSignature(msg, asign)
-		fmt.Printf("signature %v %v(%3d): %v %v\n", count, dkgsi.wallet.ClientID[:7], dkgsi.intID, asign.GetHexString()[:32], gsigValid)
+		fmt.Printf("signature %v %v(%3d): %v %v\n", count, dkgsi.wallet.ClientID[:7], dkgsi.id, asign.GetHexString()[:32], gsigValid)
 	}
 	fmt.Printf("time to finish: %v\n", time.Since(start))
 }

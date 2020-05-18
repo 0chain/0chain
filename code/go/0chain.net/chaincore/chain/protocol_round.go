@@ -4,9 +4,12 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"sort"
+	"sync"
 	"time"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -120,7 +123,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 		c.MultiNotarizedBlocksCount++
 	} else if nbCount > c.NumGenerators {
 		for _, blk := range notarizedBlocks {
-			Logger.Info("Too many Notarized Blks", zap.Int64("round", roundNumber), zap.String("hash", blk.Hash), zap.Int64("RRS", blk.RoundRandomSeed), zap.Int("blk_toc", blk.RoundTimeoutCount))
+			Logger.Info("Too many Notarized Blks", zap.Int64("round", roundNumber), zap.String("hash", blk.Hash), zap.Int64("RRS", blk.GetRoundRandomSeed()), zap.Int("blk_toc", blk.RoundTimeoutCount))
 		}
 	}
 	c.NotariedBlocksCounts[nbCount]++
@@ -178,7 +181,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 		}
 	}
 	c.SetLatestFinalizedBlock(lfb)
-	FinalizationLagMetric.Update(int64(c.CurrentRound - lfb.Round))
+	FinalizationLagMetric.Update(int64(c.GetCurrentRound() - lfb.Round))
 	Logger.Info("finalize round - latest finalized round", zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash))
 	for idx := range frchain {
 		fb := frchain[len(frchain)-1-idx]
@@ -195,6 +198,7 @@ func (c *Chain) GetHeaviestNotarizedBlock(r round.RoundI) *block.Block {
 	params := &url.Values{}
 	params.Add("round", fmt.Sprintf("%v", roundNumber))
 	ctx, cancelf := context.WithCancel(common.GetRootContext())
+	mb := c.GetMagicBlock(roundNumber)
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		Logger.Info("get notarized block for round", zap.Int64("round", roundNumber), zap.String("block", entity.GetKey()))
 		if b := r.GetHeaviestNotarizedBlock(); b != nil {
@@ -209,7 +213,7 @@ func (c *Chain) GetHeaviestNotarizedBlock(r round.RoundI) *block.Block {
 			return nil, common.NewError("invalid_block", "Block not from the requested round")
 		}
 
-		if err := c.VerifyNotarization(ctx, nb.Hash, nb.VerificationTickets); err != nil {
+		if err := c.VerifyNotarization(ctx, nb.Hash, nb.GetVerificationTickets(), r.GetRoundNumber()); err != nil {
 			Logger.Error("get notarized block for round - validate notarization", zap.Int64("round", roundNumber), zap.String("block", nb.Hash), zap.Error(err))
 			return nil, err
 		}
@@ -231,7 +235,66 @@ func (c *Chain) GetHeaviestNotarizedBlock(r round.RoundI) *block.Block {
 		b, _ = r.AddNotarizedBlock(b)
 		return b, nil
 	}
-	n2n := c.Miners
+	n2n := mb.Miners
 	n2n.RequestEntity(ctx, nbrequestor, params, handler)
 	return r.GetHeaviestNotarizedBlock()
+}
+
+/*GetLatestFinalizedBlockFromSharder - request for latest finalized block from all the sharders */
+func (c *Chain) GetLatestFinalizedMagicBlockFromSharder(ctx context.Context) []*block.Block {
+	mb := c.GetCurrentMagicBlock()
+	n2s := mb.Sharders
+
+	finalizedMagicBlocks := make([]*block.Block, 0, 1)
+	fmbMutex := &sync.Mutex{}
+	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+		mb, ok := entity.(*block.Block)
+		if mb == nil {
+			return nil, nil
+		}
+		if !ok {
+			return nil, datastore.ErrInvalidEntity
+		}
+		fmbMutex.Lock()
+		defer fmbMutex.Unlock()
+		for _, b := range finalizedMagicBlocks {
+			if b.Hash == mb.Hash {
+				return mb, nil
+			}
+		}
+		finalizedMagicBlocks = append(finalizedMagicBlocks, mb)
+		return mb, nil
+	}
+	n2s.RequestEntityFromAll(ctx, LatestFinalizedMagicBlockRequestor, nil, handler)
+	if n2s.HasNode(node.Self.Underlying().GetKey()) {
+		finalizedMagicBlocks = append(finalizedMagicBlocks, c.GetLatestFinalizedMagicBlock())
+	}
+	return finalizedMagicBlocks
+}
+
+// GetLatestFinalizedMagicBlockRound calculates and returns LFMB for by round number
+func (c *Chain) GetLatestFinalizedMagicBlockRound(_ context.Context, mr *round.Round) *block.Block {
+	c.lfmbMutex.RLock()
+	defer c.lfmbMutex.RUnlock()
+
+	foundLFMB := c.LatestFinalizedMagicBlock
+	roundBlock := mr.GetRoundNumber()
+	if len(c.magicBlockStartingRounds) > 0 {
+		startingRounds := make([]int64, 0, len(c.magicBlockStartingRounds))
+		for round := range c.magicBlockStartingRounds {
+			startingRounds = append(startingRounds, round)
+		}
+		sort.SliceStable(startingRounds, func(i, j int) bool {
+			return startingRounds[i] >= startingRounds[j]
+		})
+		foundRound := startingRounds[0]
+		for _, round := range startingRounds {
+			foundRound = round
+			if round <= roundBlock {
+				break
+			}
+		}
+		foundLFMB = c.magicBlockStartingRounds[foundRound]
+	}
+	return foundLFMB
 }

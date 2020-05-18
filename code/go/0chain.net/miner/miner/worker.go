@@ -87,15 +87,13 @@ func TransactionGenerator(c *chain.Chain) {
 	}
 
 	numGenerators := sc.NumGenerators
-	numMiners := sc.Miners.Size()
+	mb := sc.GetCurrentMagicBlock()
+	numMiners := mb.Miners.Size()
 	var timerCount int64
 	ts := rand.NewSource(time.Now().UnixNano())
 	trng := rand.New(ts)
 	for true {
 		numTxns = trng.Int31n(blockSize)
-		if numTxns < 1 {
-			numTxns = 1
-		}
 		numWorkerTxns := numTxns / int32(numWorkers)
 		if numWorkerTxns*int32(numWorkers) < numTxns {
 			numWorkerTxns++
@@ -111,7 +109,7 @@ func TransactionGenerator(c *chain.Chain) {
 		}
 		waitTime := time.Millisecond * time.Duration(1000./1.05/blocksPerMiner)
 		timer := time.NewTimer(waitTime)
-		if sc.CurrentRound%100 == 0 {
+		if sc.GetCurrentRound()%100 == 0 {
 			Logger.Info("background transactions generation", zap.Duration("frequency", waitTime), zap.Float64("blocks", blocksPerMiner))
 		}
 		select {

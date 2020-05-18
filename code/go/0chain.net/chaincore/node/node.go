@@ -8,11 +8,11 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
-	"0chain.net/core/build"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
@@ -21,32 +21,60 @@ import (
 )
 
 var nodes = make(map[string]*Node)
+var nodesMutex = &sync.RWMutex{}
 
-/*RegisterNode - register a node to a global registery
+/*RegisterNode - register a node to a global registry
 * We need to keep track of a global register of nodes. This is required to ensure we can verify a signed request
 * coming from a node
  */
 func RegisterNode(node *Node) {
+	nodesMutex.Lock()
+	defer nodesMutex.Unlock()
 	nodes[node.GetKey()] = node
 }
 
-/*DeregisterNode - deregisters a node */
+/*DeregisterNode - deregister a node */
 func DeregisterNode(nodeID string) {
+	nodesMutex.Lock()
+	defer nodesMutex.Unlock()
 	delete(nodes, nodeID)
 }
 
-func GetNodes() map[string]*Node {
-	return nodes
+// CopyNodes returns copy of all registered nodes.
+func CopyNodes() (cp map[string]*Node) {
+	nodesMutex.RLock()
+	defer nodesMutex.RUnlock()
+
+	cp = make(map[string]*Node, len(nodes))
+	for k, v := range nodes {
+		cp[k] = v
+	}
+
+	return
+}
+
+func GetMinerNodesKeys() []string {
+	nodesMutex.RLock()
+	defer nodesMutex.RUnlock()
+	var keys []string
+	for k, n := range nodes {
+		if n.Type == NodeTypeMiner {
+			keys = append(keys, k)
+		}
+	}
+	return keys
 }
 
 /*GetNode - get the node from the registery */
 func GetNode(nodeID string) *Node {
+	nodesMutex.RLock()
+	defer nodesMutex.RUnlock()
 	return nodes[nodeID]
 }
 
 var (
-	NodeStatusInactive = 0
-	NodeStatusActive   = 1
+	NodeStatusActive   = 0
+	NodeStatusInactive = 1
 )
 
 var (
@@ -59,34 +87,35 @@ var NodeTypeNames = common.CreateLookups("m", "Miner", "s", "Sharder", "b", "Blo
 
 /*Node - a struct holding the node information */
 type Node struct {
-	client.Client
-	N2NHost        string
-	Host           string
-	Port           int
-	Type           int8
-	Description    string
-	SetIndex       int
-	Status         int
-	LastActiveTime time.Time
-	ErrorCount     int
-	CommChannel    chan bool
+	client.Client            `yaml:",inline"`
+	N2NHost        string    `json:"n2n_host" yaml:"n2n_ip"`
+	Host           string    `json:"host" yaml:"public_ip"`
+	Port           int       `json:"port" yaml:"port"`
+	Type           int8      `json:"type"`
+	Description    string    `json:"description" yaml:"description"`
+	SetIndex       int       `json:"set_index" yaml:"set_index"`
+	Status         int       `json:"status"`
+	LastActiveTime time.Time `json:"-"`
+	ErrorCount     int64     `json:"-"`
+	CommChannel    chan bool `json:"-"`
 	//These are approximiate as we are not going to lock to update
-	Sent       int64 // messages sent to this node
-	SendErrors int64 // failed message sent to this node
-	Received   int64 // messages received from this node
+	Sent       int64 `json:"-"` // messages sent to this node
+	SendErrors int64 `json:"-"` // failed message sent to this node
+	Received   int64 `json:"-"` // messages received from this node
 
-	TimersByURI map[string]metrics.Timer
-	SizeByURI   map[string]metrics.Histogram
+	TimersByURI map[string]metrics.Timer     `json:"-"`
+	SizeByURI   map[string]metrics.Histogram `json:"-"`
 
-	LargeMessageSendTime float64
-	SmallMessageSendTime float64
+	largeMessageSendTime uint64
+	smallMessageSendTime uint64
 
-	LargeMessagePullServeTime float64
-	SmallMessagePullServeTime float64
+	LargeMessagePullServeTime float64 `json:"-"`
+	SmallMessagePullServeTime float64 `json:"-"`
 
-	mutex *sync.Mutex
+	mutex     sync.RWMutex
+	mutexInfo sync.RWMutex
 
-	ProtocolStats interface{}
+	ProtocolStats interface{} `json:"-"`
 
 	idBytes []byte
 
@@ -102,10 +131,86 @@ func Provider() *Node {
 	for i := 0; i < cap(node.CommChannel); i++ {
 		node.CommChannel <- true
 	}
-	node.mutex = &sync.Mutex{}
 	node.TimersByURI = make(map[string]metrics.Timer, 10)
 	node.SizeByURI = make(map[string]metrics.Histogram, 10)
 	return node
+}
+
+func Setup(node *Node) {
+	// queue up at most these many messages to a node
+	// because of this, we don't want the status monitoring to use this communication layer
+	node.mutex.Lock()
+	node.CommChannel = make(chan bool, 5)
+	for i := 0; i < cap(node.CommChannel); i++ {
+		node.CommChannel <- true
+	}
+	node.TimersByURI = make(map[string]metrics.Timer, 10)
+	node.SizeByURI = make(map[string]metrics.Histogram, 10)
+	node.mutex.Unlock()
+	node.ComputeProperties()
+	Self.SetNodeIfPublicKeyIsEqual(node)
+}
+
+// GetErrorCount asynchronously.
+func (n *Node) GetErrorCount() int64 {
+	n.mutex.RLock()
+	defer n.mutex.RUnlock()
+	return n.ErrorCount
+}
+
+// SetErrorCount asynchronously.
+func (n *Node) SetErrorCount(ec int64) {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+
+	n.ErrorCount = ec
+}
+
+// AddErrorCount add given value to errors count asynchronously.
+func (n *Node) AddErrorCount(ecd int64) {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+	n.ErrorCount += ecd
+}
+
+// GetInfo returns pointer to underlying Info.
+func (n *Node) GetInfoPtr() *Info {
+	n.mutex.RLock()
+	defer n.mutex.RUnlock()
+
+	return &n.Info
+}
+
+// GetStatus asynchronously.
+func (n *Node) GetStatus() int {
+	n.mutex.RLock()
+	defer n.mutex.RUnlock()
+
+	return n.Status
+}
+
+// SetStatus asynchronously.
+func (n *Node) SetStatus(st int) {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+
+	n.Status = st
+}
+
+// GetLastActiveTime asynchronously.
+func (n *Node) GetLastActiveTime() time.Time {
+	n.mutex.RLock()
+	defer n.mutex.RUnlock()
+
+	return n.LastActiveTime
+}
+
+// SetLastActiveTime asynchronously.
+func (n *Node) SetLastActiveTime(lat time.Time) {
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+
+	n.LastActiveTime = lat
 }
 
 /*Equals - if two nodes are equal. Only check by id, we don't accept configuration from anyone */
@@ -163,9 +268,7 @@ func Read(line string) (*Node, error) {
 		return nil, common.NewError("invalid_client_id", fmt.Sprintf("public key: %v, client_id: %v, hash: %v\n", node.PublicKey, node.ID, hash))
 	}
 	node.ComputeProperties()
-	if Self.PublicKey == node.PublicKey {
-		setSelfNode(node)
-	}
+	Self.SetNodeIfPublicKeyIsEqual(node)
 	return node, nil
 }
 
@@ -190,17 +293,8 @@ func NewNode(nc map[interface{}]interface{}) (*Node, error) {
 		return nil, common.NewError("invalid_client_id", fmt.Sprintf("public key: %v, client_id: %v, hash: %v\n", node.PublicKey, node.ID, hash))
 	}
 	node.ComputeProperties()
-	if Self.PublicKey == node.PublicKey {
-		setSelfNode(node)
-	}
+	Self.SetNodeIfPublicKeyIsEqual(node)
 	return node, nil
-}
-
-func setSelfNode(n *Node) {
-	Self.Node = n
-	Self.Node.Info.StateMissingNodes = -1
-	Self.Node.Info.BuildTag = build.BuildTag
-	Self.Node.Status = NodeStatusActive
 }
 
 /*ComputeProperties - implement entity interface */
@@ -242,6 +336,10 @@ func (n *Node) GetNodeTypeName() string {
 //Grab - grab a slot to send message
 func (n *Node) Grab() {
 	<-n.CommChannel
+
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+
 	n.Sent++
 }
 
@@ -254,6 +352,10 @@ func (n *Node) Release() {
 func (n *Node) GetTimer(uri string) metrics.Timer {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
+	return n.getTimer(uri)
+}
+
+func (n *Node) getTimer(uri string) metrics.Timer {
 	timer, ok := n.TimersByURI[uri]
 	if !ok {
 		timerID := fmt.Sprintf("%v.%v.time", n.ID, uri)
@@ -267,6 +369,11 @@ func (n *Node) GetTimer(uri string) metrics.Timer {
 func (n *Node) GetSizeMetric(uri string) metrics.Histogram {
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
+	return n.getSizeMetric(uri)
+}
+
+//getSizeMetric - get the size metric
+func (n *Node) getSizeMetric(uri string) metrics.Histogram {
 	metric, ok := n.SizeByURI[uri]
 	if !ok {
 		metricID := fmt.Sprintf("%v.%v.size", n.ID, uri)
@@ -279,12 +386,28 @@ func (n *Node) GetSizeMetric(uri string) metrics.Histogram {
 
 //GetLargeMessageSendTime - get the time it takes to send a large message to this node
 func (n *Node) GetLargeMessageSendTime() float64 {
-	return n.LargeMessageSendTime / 1000000
+	return math.Float64frombits(atomic.LoadUint64(&n.largeMessageSendTime))
+}
+
+func (n *Node) GetLargeMessageSendTimeSec() float64 {
+	return math.Float64frombits(atomic.LoadUint64(&n.largeMessageSendTime)) / 1000000
+}
+
+func (n *Node) SetLargeMessageSendTime(value float64) {
+	atomic.StoreUint64(&n.largeMessageSendTime, math.Float64bits(value))
 }
 
 //GetSmallMessageSendTime - get the time it takes to send a small message to this node
+func (n *Node) GetSmallMessageSendTimeSec() float64 {
+	return math.Float64frombits(atomic.LoadUint64(&n.smallMessageSendTime)) / 1000000
+}
+
 func (n *Node) GetSmallMessageSendTime() float64 {
-	return n.SmallMessageSendTime / 1000000
+	return math.Float64frombits(atomic.LoadUint64(&n.smallMessageSendTime))
+}
+
+func (n *Node) SetSmallMessageSendTime(value float64) {
+	atomic.StoreUint64(&n.smallMessageSendTime, math.Float64bits(value))
 }
 
 func (n *Node) updateMessageTimings() {
@@ -293,8 +416,6 @@ func (n *Node) updateMessageTimings() {
 }
 
 func (n *Node) updateSendMessageTimings() {
-	n.mutex.Lock()
-	defer n.mutex.Unlock()
 	var minval = math.MaxFloat64
 	var maxval float64
 	var maxCount int64
@@ -328,13 +449,11 @@ func (n *Node) updateSendMessageTimings() {
 			minval = maxval
 		}
 	}
-	n.LargeMessageSendTime = maxval
-	n.SmallMessageSendTime = minval
+	n.SetLargeMessageSendTime(maxval)
+	n.SetSmallMessageSendTime(minval)
 }
 
 func (n *Node) updateRequestMessageTimings() {
-	n.mutex.Lock()
-	defer n.mutex.Unlock()
 	var minval = math.MaxFloat64
 	var maxval float64
 	var minSize = math.MaxFloat64
@@ -397,6 +516,9 @@ func (n *Node) SetID(id string) error {
 
 //IsActive - returns if this node is active or not
 func (n *Node) IsActive() bool {
+	n.mutex.RLock()
+	defer n.mutex.RUnlock()
+
 	return n.Status == NodeStatusActive
 }
 
@@ -427,16 +549,55 @@ func (n *Node) GetOptimalLargeMessageSendTime() float64 {
 
 func (n *Node) getOptimalLargeMessageSendTime() float64 {
 	p2ptime := getPushToPullTime(n)
-	if p2ptime < n.LargeMessageSendTime {
+	sendTime := n.GetLargeMessageSendTime()
+	if p2ptime < sendTime {
 		return p2ptime
 	}
-	if n.LargeMessageSendTime == 0 {
+	if sendTime == 0 {
 		return p2ptime
 	}
-	return n.LargeMessageSendTime
+	return sendTime
 }
 
 func (n *Node) getTime(uri string) float64 {
 	pullTimer := n.GetTimer(uri)
 	return pullTimer.Mean()
+}
+
+func (n *Node) SetNodeInfo(oldNode *Node) {
+	n.mutexInfo.Lock()
+	defer n.mutexInfo.Unlock()
+
+	n.Sent = oldNode.Sent
+	n.SendErrors = oldNode.SendErrors
+	n.Received = oldNode.Received
+	for k, v := range oldNode.TimersByURI {
+		n.TimersByURI[k] = v
+	}
+	for k, v := range oldNode.SizeByURI {
+		n.SizeByURI[k] = v
+	}
+	n.SetLargeMessageSendTime(oldNode.GetLargeMessageSendTime())
+	n.SetSmallMessageSendTime(oldNode.GetSmallMessageSendTime())
+	n.LargeMessagePullServeTime = oldNode.LargeMessagePullServeTime
+	n.SmallMessagePullServeTime = oldNode.SmallMessagePullServeTime
+	if oldNode.ProtocolStats != nil {
+		n.ProtocolStats = oldNode.ProtocolStats.(interface{ Clone() interface{} }).Clone()
+	}
+	n.Info = oldNode.Info
+	n.Status = oldNode.Status
+}
+
+func (n *Node) SetInfo(info Info) {
+	n.mutexInfo.Lock()
+	n.Info = info
+	n.mutexInfo.Unlock()
+}
+
+// GetInfo returns copy Info.
+func (n *Node) GetInfo() Info {
+	n.mutexInfo.RLock()
+	defer n.mutexInfo.RUnlock()
+
+	return n.Info
 }

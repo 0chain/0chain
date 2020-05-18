@@ -25,6 +25,8 @@ type StorageSmartContract struct {
 	*sci.SmartContract
 }
 
+func (ssc *StorageSmartContract) InitSC() {}
+
 func (ssc *StorageSmartContract) SetSC(sc *sci.SmartContract, bcContext sci.BCContextI) {
 	ssc.SmartContract = sc
 	// sc configurations

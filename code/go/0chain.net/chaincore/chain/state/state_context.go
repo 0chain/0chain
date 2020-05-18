@@ -30,7 +30,9 @@ var (
 
 //StateContextI - a state context interface. These interface are available for the smart contract
 type StateContextI interface {
+	GetLastestFinalizedMagicBlock() *block.Block
 	GetBlock() *block.Block
+	SetMagicBlock(block *block.MagicBlock)
 	GetState() util.MerklePatriciaTrieI
 	GetTransaction() *transaction.Transaction
 	GetClientBalance(clientID datastore.Key) (state.Balance, error)
@@ -46,29 +48,36 @@ type StateContextI interface {
 	GetMints() []*state.Mint
 	Validate() error
 	GetBlockSharders(b *block.Block) []string
+	GetSignatureScheme() encryption.SignatureScheme
 }
 
 //StateContext - a context object used to manipulate global state
 type StateContext struct {
-	block                   *block.Block
-	state                   util.MerklePatriciaTrieI
-	txn                     *transaction.Transaction
-	transfers               []*state.Transfer
-	signedTransfers         []*state.SignedTransfer
-	mints                   []*state.Mint
-	clientStateDeserializer state.DeserializerI
-	getSharders             func(*block.Block) []string
+	block                         *block.Block
+	state                         util.MerklePatriciaTrieI
+	txn                           *transaction.Transaction
+	transfers                     []*state.Transfer
+	signedTransfers               []*state.SignedTransfer
+	mints                         []*state.Mint
+	clientStateDeserializer       state.DeserializerI
+	getSharders                   func(*block.Block) []string
+	getLastestFinalizedMagicBlock func() *block.Block
+	getSignature                  func() encryption.SignatureScheme
 }
 
 //NewStateContext - create a new state context
-func NewStateContext(b *block.Block, s util.MerklePatriciaTrieI, csd state.DeserializerI, t *transaction.Transaction, getSharderFunc func(*block.Block) []string) *StateContext {
-	ctx := &StateContext{block: b, state: s, clientStateDeserializer: csd, txn: t, getSharders: getSharderFunc}
+func NewStateContext(b *block.Block, s util.MerklePatriciaTrieI, csd state.DeserializerI, t *transaction.Transaction, getSharderFunc func(*block.Block) []string, getLastestFinalizedMagicBlock func() *block.Block, getChainSignature func() encryption.SignatureScheme) *StateContext {
+	ctx := &StateContext{block: b, state: s, clientStateDeserializer: csd, txn: t, getSharders: getSharderFunc, getLastestFinalizedMagicBlock: getLastestFinalizedMagicBlock, getSignature: getChainSignature}
 	return ctx
 }
 
 //GetBlock - get the block associated with this state context
 func (sc *StateContext) GetBlock() *block.Block {
 	return sc.block
+}
+
+func (sc *StateContext) SetMagicBlock(block *block.MagicBlock) {
+	sc.block.MagicBlock = block
 }
 
 //GetState - get the state MPT associated with this state context
@@ -191,6 +200,14 @@ func (sc *StateContext) GetClientBalance(clientID string) (state.Balance, error)
 
 func (sc *StateContext) GetBlockSharders(b *block.Block) []string {
 	return sc.getSharders(b)
+}
+
+func (sc *StateContext) GetLastestFinalizedMagicBlock() *block.Block {
+	return sc.getLastestFinalizedMagicBlock()
+}
+
+func (sc *StateContext) GetSignatureScheme() encryption.SignatureScheme {
+	return sc.getSignature()
 }
 
 func (sc *StateContext) GetTrieNode(key datastore.Key) (util.Serializable, error) {

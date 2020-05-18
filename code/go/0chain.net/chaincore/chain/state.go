@@ -84,8 +84,7 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 	}
 	pb := b.PrevBlock
 	if pb == nil {
-		c.GetPreviousBlock(ctx, b)
-		pb = b.PrevBlock
+		pb = c.GetPreviousBlock(ctx, b)
 		if pb == nil {
 			b.SetStateStatus(block.StateFailed)
 			if state.DebugBlock() {
@@ -165,9 +164,7 @@ func (c *Chain) SaveChanges(ctx context.Context, b *block.Block) error {
 	var err error
 	ts := time.Now()
 	switch b.GetStateStatus() {
-	case block.StateSynched:
-		err = b.ClientState.SaveChanges(c.stateDB, false)
-	case block.StateSuccessful:
+	case block.StateSynched, block.StateSuccessful:
 		err = b.ClientState.SaveChanges(c.stateDB, false)
 	default:
 		return common.NewError("state_save_without_success", "State can't be saved without successful computation")
@@ -246,15 +243,15 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) error 
 }
 
 func (c *Chain) updateState(b *block.Block, txn *transaction.Transaction) error {
-	clientState := createTxnMPT(b.ClientState) // begin transaction
+	clientState := CreateTxnMPT(b.ClientState) // begin transaction
 	startRoot := clientState.GetRoot()
-	sctx := bcstate.NewStateContext(b, clientState, c.clientStateDeserializer, txn, c.GetBlockSharders)
+	sctx := bcstate.NewStateContext(b, clientState, c.clientStateDeserializer, txn, c.GetBlockSharders, c.GetLatestFinalizedMagicBlock, c.GetSignatureScheme)
 
 	switch txn.TransactionType {
 	case transaction.TxnTypeSmartContract:
 		output, err := c.ExecuteSmartContract(txn, sctx)
 		if err != nil {
-			Logger.Info("Error executing the SC", zap.Any("txn", txn), zap.Error(err))
+			Logger.Error("Error executing the SC", zap.Any("txn", txn), zap.Error(err))
 			return err
 		}
 		txn.TransactionOutput = output
@@ -450,7 +447,7 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 	return nil
 }
 
-func createTxnMPT(mpt util.MerklePatriciaTrieI) util.MerklePatriciaTrieI {
+func CreateTxnMPT(mpt util.MerklePatriciaTrieI) util.MerklePatriciaTrieI {
 	tdb := util.NewLevelNodeDB(util.NewMemoryNodeDB(), mpt.GetNodeDB(), false)
 	tmpt := util.NewMerklePatriciaTrie(tdb, mpt.GetVersion())
 	tmpt.SetRoot(mpt.GetRoot())

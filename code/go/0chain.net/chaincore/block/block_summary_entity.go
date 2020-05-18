@@ -2,6 +2,8 @@ package block
 
 import (
 	"context"
+	"encoding/json"
+	"strconv"
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -23,6 +25,7 @@ type BlockSummary struct {
 	ClientStateHash       util.Key      `json:"state_hash"`
 	ReceiptMerkleTreeRoot string        `json:"receipt_merkle_tree_root"`
 	NumTxns               int           `json:"num_txns"`
+	*MagicBlock           `json:"maigc_block,omitempty"`
 }
 
 /*SetupBlockSummaryDB - sets up the block summary database */
@@ -72,6 +75,26 @@ func (b *BlockSummary) Write(ctx context.Context) error {
 /*Delete - store read */
 func (b *BlockSummary) Delete(ctx context.Context) error {
 	return b.GetEntityMetadata().GetStore().Delete(ctx, b)
+}
+
+func (b *BlockSummary) Encode() []byte {
+	buff, _ := json.Marshal(b)
+	return buff
+}
+
+func (b *BlockSummary) Decode(input []byte) error {
+	return json.Unmarshal(input, b)
+}
+
+/*GetMagicBlockMap - get the magic block map of this block */
+func (b *BlockSummary) GetMagicBlockMap() *MagicBlockMap {
+	if b.MagicBlock != nil {
+		mbm := datastore.GetEntityMetadata("magic_block_map").Instance().(*MagicBlockMap)
+		mbm.ID = strconv.FormatInt(b.MagicBlockNumber, 10)
+		mbm.Hash = b.Hash
+		return mbm
+	}
+	return nil
 }
 
 /*SetupBlockSummaryEntity - setup the block summary entity */

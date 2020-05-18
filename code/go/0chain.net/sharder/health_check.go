@@ -108,8 +108,8 @@ type CycleBounds struct {
 
 // RangeBounds -
 type RangeBounds struct {
-	roundLow int64
-	roundHigh int64
+	roundLow   int64
+	roundHigh  int64
 	roundRange int64
 }
 
@@ -132,6 +132,7 @@ func GetRangeBounds(roundEdge int64, roundRange int64) RangeBounds {
 	bounds.roundRange = bounds.roundHigh - bounds.roundLow + 1
 	return bounds
 }
+
 // CycleControl -
 type CycleControl struct {
 	ScanMode HealthCheckScan
@@ -140,7 +141,7 @@ type CycleControl struct {
 	inception time.Time
 	bounds    CycleBounds
 
-	CycleCount  int64
+	CycleCount int64
 
 	BlockSyncTimer metrics.Timer
 
@@ -183,7 +184,7 @@ func (sc *Chain) setCycleBounds(ctx context.Context, scanMode HealthCheckScan) {
 }
 
 // HealthCheckSetup - checks the health for each round
-func (sc *Chain)HealthCheckSetup(ctx context.Context, scanMode HealthCheckScan) {
+func (sc *Chain) HealthCheckSetup(ctx context.Context, scanMode HealthCheckScan) {
 	bss := sc.BlockSyncStats
 
 	// Get cycle control
@@ -195,6 +196,7 @@ func (sc *Chain)HealthCheckSetup(ctx context.Context, scanMode HealthCheckScan) 
 	cc.BlockSyncTimer = metrics.GetOrRegisterTimer(scanMode.String(), nil)
 
 }
+
 // HealthCheckWorker -
 func (sc *Chain) HealthCheckWorker(ctx context.Context, scanMode HealthCheckScan) {
 	bss := sc.BlockSyncStats
@@ -385,7 +387,7 @@ func (sc *Chain) waitForWork(ctx context.Context, scanMode HealthCheckScan) {
 		// Time to start a new cycle
 		sc.setCycleBounds(ctx, scanMode)
 		sc.initSyncStats(ctx, scanMode)
-		break;
+		break
 	}
 }
 
@@ -467,7 +469,7 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 	}
 
 	// Check for block presence.
-	canShard := sc.IsBlockSharderFromHash(bs.Hash, self.Node)
+	canShard := sc.IsBlockSharderFromHash(rNum, bs.Hash, self.Underlying())
 
 	needTxnSummary := false
 	// Check if the sharder has txn_summary
@@ -505,7 +507,7 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 			}
 		}
 
-		if canShard {
+		if canShard || b.MagicBlock != nil {
 			// The sharder has acquired the block and should save it.
 			err := sc.storeBlock(ctx, b)
 			if err != nil {

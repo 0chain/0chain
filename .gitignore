@@ -32,5 +32,13 @@ docker.local/sharder*
 *.log
 *.sublime-project
 *.sublime-workspace
-cover.out
+
+# executables
+
+code/go/0chain.net/sharder/sharder/sharder
+code/go/0chain.net/sharder/miner/miner
+
+# go test coverages
 cover.html
+cover.out
+

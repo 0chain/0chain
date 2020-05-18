@@ -56,7 +56,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	var count int32
 	var roundMismatch bool
 	var roundTimeout bool
-	var hasOwnerTxn bool
+	//var hasOwnerTxn bool
 	var failedStateCount int32
 	var byteSize int64
 	txnMap := make(map[datastore.Key]bool, mc.BlockSize)
@@ -88,9 +88,9 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 			failedStateCount++
 			return false
 		}
-		if txn.ClientID == mc.OwnerID {
-			hasOwnerTxn = true
-		}
+		//if txn.ClientID == mc.OwnerID {
+		//	hasOwnerTxn = true
+		//}
 		//Setting the score lower so the next time blocks are generated these transactions don't show up at the top
 		txn.SetCollectionScore(txn.GetCollectionScore() - 10*60)
 		txnMap[txn.GetKey()] = true
@@ -110,7 +110,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	var roundTimeoutCount = mc.GetRoundTimeoutCount()
 	var txnIterHandler = func(ctx context.Context, qe datastore.CollectionEntity) bool {
 		count++
-		if mc.CurrentRound > b.Round {
+		if mc.GetCurrentRound() > b.Round {
 			roundMismatch = true
 			return false
 		}
@@ -145,11 +145,11 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		go mc.deleteTxns(invalidTxns) // OK to do in background
 	}
 	if roundMismatch {
-		Logger.Debug("generate block (round mismatch)", zap.Any("round", b.Round), zap.Any("current_round", mc.CurrentRound))
+		Logger.Debug("generate block (round mismatch)", zap.Any("round", b.Round), zap.Any("current_round", mc.GetCurrentRound()))
 		return ErrRoundMismatch
 	}
 	if roundTimeout {
-		Logger.Debug("generate block (round timeout)", zap.Any("round", b.Round), zap.Any("current_round", mc.CurrentRound))
+		Logger.Debug("generate block (round timeout)", zap.Any("round", b.Round), zap.Any("current_round", mc.GetCurrentRound()))
 		return ErrRoundTimeout
 	}
 	if ierr != nil {
@@ -167,7 +167,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 			for _, txn := range ub.Txns {
 				rcount++
 				rtxn := mc.txnToReuse(txn)
-				needsVerification := (ub.MinerID != node.Self.GetKey() || ub.GetVerificationStatus() != block.VerificationSuccessful)
+				needsVerification := (ub.MinerID != node.Self.Underlying().GetKey() || ub.GetVerificationStatus() != block.VerificationSuccessful)
 				if needsVerification {
 					if err := rtxn.ValidateWrtTime(ctx, ub.CreationDate); err != nil {
 						continue
@@ -188,7 +188,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		Logger.Error("generate block (reused txns)", zap.Int64("round", b.Round), zap.Int("ub", len(blocks)), zap.Int32("reused", reusedTxns), zap.Int("rcount", rcount), zap.Int32("blockSize", idx))
 	}
 	if blockSize != mc.BlockSize && byteSize < mc.MaxByteSize {
-		if !waitOver || blockSize < mc.MinBlockSize {
+		if !waitOver && blockSize < mc.MinBlockSize {
 			b.Txns = nil
 			Logger.Debug("generate block (insufficient txns)", zap.Int64("round", b.Round), zap.Int32("iteration_count", count), zap.Int32("block_size", blockSize))
 			return common.NewError(InsufficientTxns, fmt.Sprintf("not sufficient txns to make a block yet for round %v (iterated %v,block_size %v,state failure %v, invalid %v,reused %v)", b.Round, count, blockSize, failedStateCount, len(invalidTxns), reusedTxns))
@@ -241,7 +241,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	mc.StateSanityCheck(ctx, b)
 	go b.ComputeTxnMap()
 	bsHistogram.Update(int64(len(b.Txns)))
-	node.Self.Node.Info.AvgBlockTxns = int(math.Round(bsHistogram.Mean()))
+	node.Self.Underlying().Info.AvgBlockTxns = int(math.Round(bsHistogram.Mean()))
 	return nil
 }
 
@@ -365,7 +365,7 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 				validChannel <- false
 				return
 			}
-			if mc.CurrentRound > b.Round {
+			if mc.GetCurrentRound() > b.Round {
 				cancel = true
 				roundMismatch = true
 				validChannel <- false
@@ -414,7 +414,7 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 	count := 0
 	for result := range validChannel {
 		if roundMismatch {
-			Logger.Info("validate transactions (round mismatch)", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("current_round", mc.CurrentRound))
+			Logger.Info("validate transactions (round mismatch)", zap.Any("round", b.Round), zap.Any("block", b.Hash), zap.Any("current_round", mc.GetCurrentRound()))
 			return common.NewError(RoundMismatch, "current round different from generation round")
 		}
 		if !result {
@@ -432,7 +432,7 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 		}
 	}
 	btvTimer.UpdateSince(ts)
-	if mc.DiscoverClients {
+	if mc.discoverClients {
 		go mc.SaveClients(ctx, b.GetClients())
 	}
 	return nil
@@ -445,7 +445,7 @@ func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (*block.BlockVer
 	bvt.Round = b.Round
 	self := node.GetSelfNode(ctx)
 	var err error
-	bvt.VerifierID = self.GetKey()
+	bvt.VerifierID = self.Underlying().GetKey()
 	bvt.Signature, err = self.Sign(b.Hash)
 	b.SetVerificationStatus(block.VerificationSuccessful)
 	if err != nil {
@@ -456,7 +456,7 @@ func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (*block.BlockVer
 
 /*UpdateFinalizedBlock - update the latest finalized block */
 func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
-	Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("lf_round", mc.GetLatestFinalizedBlock().Round), zap.Int64("current_round", mc.CurrentRound), zap.Float64("weight", b.Weight()), zap.Float64("chain_weight", b.ChainWeight))
+	Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("lf_round", mc.GetLatestFinalizedBlock().Round), zap.Int64("current_round", mc.GetCurrentRound()), zap.Float64("weight", b.Weight()), zap.Float64("chain_weight", b.ChainWeight))
 	if config.Development() {
 		for _, t := range b.Txns {
 			if !t.DebugTxn() {
@@ -485,10 +485,13 @@ func (mc *Chain) FinalizeBlock(ctx context.Context, b *block.Block) error {
 
 func getLatestBlockFromSharders(ctx context.Context) *block.Block {
 	mc := GetMinerChain()
-	mc.Sharders.OneTimeStatusMonitor(ctx)
+	mb := mc.GetCurrentMagicBlock()
+	mb.Sharders.OneTimeStatusMonitor(ctx)
 	lfBlocks := mc.GetLatestFinalizedBlockFromSharder(ctx)
 	//Sorting as per the latest finalized blocks from all the sharders
-	sort.Slice(lfBlocks, func(i int, j int) bool { return lfBlocks[i].Round >= lfBlocks[j].Round })
+	sort.Slice(lfBlocks, func(i int, j int) bool {
+		return lfBlocks[i].Round >= lfBlocks[j].Round
+	})
 	if len(lfBlocks) > 0 {
 		Logger.Info("bc-1 latest finalized Block", zap.Int64("lfb_round", lfBlocks[0].Round))
 		return lfBlocks[0]

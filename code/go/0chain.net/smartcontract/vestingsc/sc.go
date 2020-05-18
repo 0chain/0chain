@@ -20,6 +20,8 @@ type VestingSmartContract struct {
 	*smartcontractinterface.SmartContract
 }
 
+func (vsc *VestingSmartContract) InitSC() {}
+
 func (vsc *VestingSmartContract) GetName() string {
 	return "vesting"
 }

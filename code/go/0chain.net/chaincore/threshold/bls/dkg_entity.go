@@ -1,29 +1,42 @@
 package bls
 
 import (
+	"encoding/json"
+
 	"0chain.net/core/datastore"
 )
 
-type Dkg struct {
+type DKGKeyShare struct {
 	datastore.IDField
-	Share string `json:"share"`
+	Message string `json:"message"`
+	Share   string `json:"share"`
+	Sign    string `json:"sign"`
 }
 
-var dkgEntityMetadata *datastore.EntityMetadataImpl
+func (dks *DKGKeyShare) Encode() []byte {
+	buff, _ := json.Marshal(dks)
+	return buff
+}
 
-func (dkg *Dkg) GetEntityMetadata() datastore.EntityMetadata {
-	return dkgEntityMetadata
+func (dks *DKGKeyShare) Decode(input []byte) error {
+	return json.Unmarshal(input, dks)
+}
+
+var dkgsEntityMetadata *datastore.EntityMetadataImpl
+
+func (dkgs *DKGKeyShare) GetEntityMetadata() datastore.EntityMetadata {
+	return dkgsEntityMetadata
 }
 
 func DKGProvider() datastore.Entity {
-	dkg := &Dkg{}
-	return dkg
+	dkgs := &DKGKeyShare{}
+	return dkgs
 }
 
 func SetupDKGEntity() {
-	dkgEntityMetadata = datastore.MetadataProvider()
-	dkgEntityMetadata.Name = "dkg_share"
-	dkgEntityMetadata.Provider = DKGProvider
-	dkgEntityMetadata.IDColumnName = "dkg_id"
-	datastore.RegisterEntityMetadata("dkg_share", dkgEntityMetadata)
+	dkgsEntityMetadata = datastore.MetadataProvider()
+	dkgsEntityMetadata.Name = "dkg_share"
+	dkgsEntityMetadata.Provider = DKGProvider
+	dkgsEntityMetadata.IDColumnName = "id"
+	datastore.RegisterEntityMetadata("dkg_share", dkgsEntityMetadata)
 }

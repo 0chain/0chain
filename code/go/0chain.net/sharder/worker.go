@@ -2,6 +2,7 @@ package sharder
 
 import (
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/chain"
 	"0chain.net/sharder/blockstore"
 	"github.com/remeh/sizedwaitgroup"
 	"github.com/spf13/viper"
@@ -10,11 +11,10 @@ import (
 	"context"
 	"time"
 
-	. "0chain.net/core/logging"
-
 	"0chain.net/chaincore/round"
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
+	. "0chain.net/core/logging"
 	"0chain.net/core/persistencestore"
 )
 
@@ -29,6 +29,8 @@ func SetupWorkers(ctx context.Context) {
 	go sc.HealthCheckSetup(ctx, DeepScan)
 	go sc.HealthCheckSetup(ctx, ProximityScan)
 
+	go sc.PruneStorageWorker(ctx, time.Minute*5, sc.getPruneCountRoundStorage(), sc.MagicBlockStorage)
+	go sc.RegisterSharderKeepWorker(ctx)
 	// Move old blocks to cloud
 	if viper.GetBool("minio.enabled") {
 		go sc.MoveOldBlocksToCloud(ctx)
@@ -98,6 +100,45 @@ func (sc *Chain) hasTransactions(ctx context.Context, bs *block.BlockSummary) bo
 	return count == bs.NumTxns
 }
 
+func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
+	timerCheck := time.NewTicker(time.Minute)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-timerCheck.C:
+			if !sc.ActiveInChain() || !sc.IsRegisteredSharderKeep() {
+				for !sc.IsRegisteredSharderKeep() {
+					txn, err := sc.RegisterSharderKeep()
+					if err != nil {
+						Logger.Error("register_sharder_keep_worker", zap.Error(err))
+					} else {
+						if txn == nil || sc.ConfirmTransaction(txn) {
+							Logger.Info("register_sharder_keep_worker -- registered")
+						} else {
+							Logger.Debug("register_sharder_keep_worker -- failed to confirm transaction", zap.Any("txn", txn))
+						}
+					}
+					time.Sleep(time.Second)
+				}
+			}
+		}
+	}
+}
+
+func (sc *Chain) getPruneCountRoundStorage() func(storage round.RoundStorage) int {
+	viper.SetDefault("server_chain.round_magic_block_storage.prune_below_count", chain.DefaultCountPruneRoundStorage)
+	pruneBelowCountMB := viper.GetInt("server_chain.round_magic_block_storage.prune_below_count")
+	return func(storage round.RoundStorage) int {
+		switch storage {
+		case sc.MagicBlockStorage:
+			return pruneBelowCountMB
+		default:
+			return chain.DefaultCountPruneRoundStorage
+		}
+	}
+}
+
 func (sc *Chain) MoveOldBlocksToCloud(ctx context.Context) {
 	var iterInprogress = false
 	var oldBlockRoundRange = viper.GetInt64("minio.old_block_round_range")
@@ -144,5 +185,4 @@ func (sc *Chain) MoveOldBlocksToCloud(ctx context.Context) {
 			}
 		}
 	}
-
 }

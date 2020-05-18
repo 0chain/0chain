@@ -9,17 +9,18 @@ logging:
 development:
   state: true
   dkg: true
+  view_change: true
   smart_contract:
     storage: true
     faucet: true
     zrc20: true
     interest: true
-    miner: false
+    miner: true
     multisig: true
     vesting: true
   txn_generation:
     wallets: 50
-    max_transactions: 70
+    max_transactions: 7
     max_txn_fee: 10000
     min_txn_fee: 0
     max_txn_value: 10000000000
@@ -41,8 +42,8 @@ server_chain:
   genesis_block:
     id: "ed79cae70d439c11258236da1dfa6fc550f7cc569768304623e8fbd7d70efae4"
   block:
-    min_block_size: 10
-    max_block_size: 100
+    min_block_size: 1
+    max_block_size: 10
     max_byte_size: 1638400
     generators: 2
     #replicators: 3
@@ -57,8 +58,8 @@ server_chain:
       threshold_by_count: 66 # percentage
       threshold_by_stake: 0 # percent
     sharding:
-      min_active_sharders: 33 # percentage
-      min_active_replicators: 33 # percentage
+      min_active_sharders: 25 # percentage
+      min_active_replicators: 25 # percentage
     validation:
       batch_size: 1000
     reuse_txns: false
@@ -100,7 +101,7 @@ server_chain:
       batch_size: 50
 
 network:
-  nodes_file: config/b0single_machine_3_nodes.yaml
+  magic_block_file: config/b0magicBlock_4_miners_1_sharder.json
   relay_time: 200 # milliseconds
   max_concurrent_requests: 40
   timeout:
@@ -112,6 +113,19 @@ network:
   n2n_handlers:
     rate_limit: 1000 # 1000 per second
 
+# delegate wallet is wallet that used for all rewards of a node (miner/sharder);
+# if delegate wallet is not set, then node id used;
+delegate_wallet: ''       # delegate wallet for all rewards
+# % of fees for generator
+service_charge: 0.10      # [0; 1) of all fees
+# max number of delegate pools allowed by a node in miner SC
+number_of_delegates: 10   # max number of delegate pools
+# min stake pool amount allowed by node; should not conflict with
+# SC min_stake 
+min_stake: 10.0    # tokens
+# max stake pool amount allowed by node; should not conflict with
+# SC max_stake 
+max_stake: 1000.0  # tokens
 minio:
   enabled: false # Do not enable with deep scan ON
   worker_frequency: 3600

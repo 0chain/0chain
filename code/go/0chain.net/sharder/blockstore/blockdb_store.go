@@ -108,7 +108,7 @@ func (bdbs *BlockDBStore) ReadWithBlockSummary(bs *block.BlockSummary) (*block.B
 	}
 	defer db.Close()
 	handler := func(ctx context.Context, record blockdb.Record) error {
-		txn, _ := record.(*txnRecord)
+		txn := record.(*txnRecord)
 		block.Txns = append(block.Txns, txn.Transaction)
 		return nil
 	}

@@ -10,8 +10,10 @@
 - [Troubleshooting](#troubleshooting)
 - [Debugging](#debugging)
 - [Unit tests](#unittests)
+- [Creating The Magic Block](#creating-the-magic-block)
 - [Miscellaneous](#miscellaneous)
 	- [Cleanup](#cleanup)
+	- [View Change](docs/viewchange.md)
 
 ## Initial Setup
 
@@ -208,6 +210,24 @@ $ ./docker.local/bin/unit_test.sh [<packages>]
 ```
 
 The list of packages is optional, and if provided runs only the tests from those packages. If no packages are specified, all unit tests are run.
+
+## Creating The Magic Block
+
+First build the magic block image.
+
+```
+$ ./docker.local/bin/build.magic_block.sh
+```
+
+Next, set the configuration file. To do this edit the docker.local/build.magicBlock/docker-compose.yml file. On line 13 is a flag "--config_file" set it to the magic block configuration file you want to use.
+
+To create the magic block.
+
+```
+$ ./docker.local/bin/create.magic_block.sh
+```
+
+The magic block json file will appear in the docker.local/config under the name given in the configuration file.
 
 ## Miscellaneous
 

@@ -2,24 +2,25 @@ package httpclientutil
 
 import (
 	"bytes"
-	"context"
-	"crypto/sha1"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
-	"log"
 	"math"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
 	"sync"
 	"time"
 
+	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
+	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	. "0chain.net/core/logging"
+	"0chain.net/core/util"
 	"go.uber.org/zap"
 )
 
@@ -30,7 +31,7 @@ import (
 const maxRetries = 5
 
 //SleepBetweenRetries suggested time to sleep between retries
-const SleepBetweenRetries = 5
+const SleepBetweenRetries = 500
 
 //TxnConfirmationTime time to wait before checking the status
 const TxnConfirmationTime = 15
@@ -38,10 +39,31 @@ const TxnConfirmationTime = 15
 const clientBalanceURL = "v1/client/get/balance?client_id="
 const txnSubmitURL = "v1/transaction/put"
 const txnVerifyURL = "v1/transaction/get/confirmation?hash="
+const specificMagicBlockURL = "v1/block/magic/get?magic_block_number="
 const scRestAPIURL = "v1/screst/"
+const magicBlockURL = "v1/block/get/latest_finalized_magic_block"
+const finalizeBlockURL = "v1/block/get/latest_finalized"
 
 //RegisterClient path to RegisterClient
 const RegisterClient = "/v1/client/put"
+
+var httpClient *http.Client
+
+func init() {
+	var transport *http.Transport
+	transport = &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   1 * time.Second,
+			KeepAlive: 1 * time.Second,
+			DualStack: true,
+		}).DialContext,
+		MaxIdleConns:        100,
+		IdleConnTimeout:     1 * time.Second,
+		MaxIdleConnsPerHost: 5,
+	}
+	httpClient = &http.Client{Transport: transport}
+}
 
 //Signer for the transaction hash
 type Signer func(h string) (string, error)
@@ -62,10 +84,10 @@ func (t *Transaction) ComputeHashAndSign(handler Signer) error {
 /////////////// Plain Transaction ///////////
 
 //NewHTTPRequest to use in sending http requests
-func NewHTTPRequest(method string, url string, data []byte, ID string, pkey string) (*http.Request, context.Context, context.CancelFunc, error) {
+func NewHTTPRequest(method string, url string, data []byte, ID string, pkey string) (*http.Request, error) {
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(data))
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 	req.Header.Set("Access-Control-Allow-Origin", "*")
@@ -75,8 +97,7 @@ func NewHTTPRequest(method string, url string, data []byte, ID string, pkey stri
 	if pkey != "" {
 		req.Header.Set("X-App-Client-Key", pkey)
 	}
-	ctx, cncl := context.WithTimeout(context.Background(), time.Second*10)
-	return req, ctx, cncl, err
+	return req, err
 }
 
 //SendMultiPostRequest send same request to multiple URLs
@@ -96,48 +117,19 @@ func SendPostRequest(url string, data []byte, ID string, pkey string, wg *sync.W
 	if wg != nil {
 		defer wg.Done()
 	}
-	var resp *http.Response
-	var err error
-
-	for i := 0; i < maxRetries; i++ {
-		req, ctx, cncl, err := NewHTTPRequest(http.MethodPost, url, data, ID, pkey)
-		if err != nil {
-			Logger.Info("SendPostRequest failure", zap.String("url", url))
-			return nil, err
-		}
-
-		defer cncl()
-		resp, err = http.DefaultClient.Do(req.WithContext(ctx))
-		if err == nil {
-			if resp.StatusCode >= 200 && resp.StatusCode <= 299 {
-				//Logger.Info("Post call success", zap.Any("url", url))
-				break
-			}
-			body, _ := ioutil.ReadAll(resp.Body)
-			if resp.Body != nil {
-				resp.Body.Close()
-			}
-			err = common.NewError("http_error", "Error from HTTP call. "+string(body))
-		}
-		//TODO: Handle ctx cncl
-		Logger.Error("SendPostRequest Error", zap.String("error", err.Error()), zap.String("URL", url))
-
-		time.Sleep(SleepBetweenRetries * time.Second)
+	req, err := NewHTTPRequest(http.MethodPost, url, data, ID, pkey)
+	if err != nil {
+		Logger.Info("SendPostRequest failure", zap.String("url", url))
+		return nil, err
 	}
+	resp, err := httpClient.Do(req)
 	if resp == nil || err != nil {
 		Logger.Error("Failed after multiple retries", zap.Int("retried", maxRetries))
 		return nil, err
 	}
-	if resp.Body == nil {
-		return nil, common.NewError("empty_body", "empty body returned")
-	}
-	if resp.Body != nil {
-		defer resp.Body.Close()
-	}
-
-	body, _ := ioutil.ReadAll(resp.Body)
-	//Logger.Info("SendPostRequest success", zap.String("url", url))
-	return body, nil
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	return body, err
 }
 
 //SendTransaction send a transaction
@@ -159,19 +151,19 @@ func GetTransactionStatus(txnHash string, urls []string, sf int) (*Transaction, 
 	// currently transaction information an be obtained only from sharders
 	for _, sharder := range urls {
 		urlString := fmt.Sprintf("%v/%v%v", sharder, txnVerifyURL, txnHash)
-
-		response, err := http.Get(urlString)
+		response, err := httpClient.Get(urlString)
 		if err != nil {
-			Logger.Error("Error getting transaction confirmation", zap.Any("error", err))
+			Logger.Error("get transaction status -- failed", zap.Any("error", err))
 			numErrs++
 		} else {
+			contents, err := ioutil.ReadAll(response.Body)
 			if response.StatusCode != 200 {
+				response.Body.Close()
 				continue
 			}
-			defer response.Body.Close()
-			contents, err := ioutil.ReadAll(response.Body)
 			if err != nil {
 				Logger.Error("Error reading response from transaction confirmation", zap.Any("error", err))
+				response.Body.Close()
 				continue
 			}
 			var objmap map[string]*json.RawMessage
@@ -179,6 +171,7 @@ func GetTransactionStatus(txnHash string, urls []string, sf int) (*Transaction, 
 			if err != nil {
 				Logger.Error("Error unmarshalling response", zap.Any("error", err))
 				errString = errString + urlString + ":" + err.Error()
+				response.Body.Close()
 				continue
 			}
 			if *objmap["txn"] == nil {
@@ -195,7 +188,7 @@ func GetTransactionStatus(txnHash string, urls []string, sf int) (*Transaction, 
 			if len(txn.Signature) > 0 {
 				retTxn = txn
 			}
-
+			response.Body.Close()
 			numSuccess++
 		}
 	}
@@ -231,7 +224,7 @@ func MakeGetRequest(remoteUrl string, result interface{}) {
 	client := http.Client{}
 	request, err := http.NewRequest("GET", remoteUrl, nil)
 	if err != nil {
-		log.Fatalln(err)
+		panic(err)
 	}
 
 	resp, err := client.Do(request)
@@ -320,11 +313,11 @@ func MakeClientBalanceRequest(clientID string, urls []string, consensus int) (st
 }
 
 //MakeSCRestAPICall for smart contract REST API Call
-func MakeSCRestAPICall(scAddress string, relativePath string, params map[string]string, urls []string, entity interface{}, consensus int) error {
+func MakeSCRestAPICall(scAddress string, relativePath string, params map[string]string, urls []string, entity util.Serializable, consensus int) error {
 
 	//ToDo: This looks a lot like GetTransactionConfirmation. Need code reuse?
 	//responses := make(map[string]int)
-	var retObj interface{}
+	var retObj util.Serializable
 	//maxCount := 0
 	numSuccess := 0
 	numErrs := 0
@@ -340,8 +333,7 @@ func MakeSCRestAPICall(scAddress string, relativePath string, params map[string]
 			q.Add(k, v)
 		}
 		urlObj.RawQuery = q.Encode()
-		h := sha1.New()
-		response, err := http.Get(urlObj.String())
+		response, err := httpClient.Get(urlObj.String())
 		if err != nil {
 			Logger.Error("Error getting response for sc rest api", zap.Any("error", err))
 			numErrs++
@@ -351,13 +343,16 @@ func MakeSCRestAPICall(scAddress string, relativePath string, params map[string]
 				Logger.Error("Error getting response from", zap.String("URL", sharder), zap.Any("response Status", response.StatusCode))
 				numErrs++
 				errString = errString + sharder + ": response_code: " + strconv.Itoa(response.StatusCode)
+				response.Body.Close()
 				continue
 			}
-			defer response.Body.Close()
-			tReader := io.TeeReader(response.Body, h)
-			d := json.NewDecoder(tReader)
-			d.UseNumber()
-			err := d.Decode(entity)
+			bodyBytes, err := ioutil.ReadAll(response.Body)
+			Logger.Info("sc rest", zap.Any("body", string(bodyBytes)), zap.Any("err", err), zap.Any("code", response.StatusCode))
+			response.Body.Close()
+			if err != nil {
+				Logger.Error("Failed to read body response", zap.String("URL", sharder), zap.Any("error", err))
+			}
+			err = entity.Decode(bodyBytes)
 			if err != nil {
 				Logger.Error("Error unmarshalling response", zap.Any("error", err))
 				numErrs++
@@ -378,7 +373,7 @@ func MakeSCRestAPICall(scAddress string, relativePath string, params map[string]
 			*/
 		}
 	}
-
+	Logger.Info("sc rest consensus", zap.Any("success", numSuccess))
 	if numSuccess+numErrs == 0 {
 		return common.NewError("req_not_run", "Could not run the request") //why???
 
@@ -402,4 +397,193 @@ func MakeSCRestAPICall(scAddress string, relativePath string, params map[string]
 	//this should never happen
 	return common.NewError("unknown_err", "Not able to run the request. unknown reason")
 
+}
+
+//MakeSCRestAPICall for smart contract REST API Call
+func GetBlockSummaryCall(urls []string, consensus int, magicBlock bool) (*block.BlockSummary, error) {
+
+	//ToDo: This looks a lot like GetTransactionConfirmation. Need code reuse?
+	//responses := make(map[string]int)
+	var retObj interface{}
+	//maxCount := 0
+	numSuccess := 0
+	numErrs := 0
+	var errString string
+	summary := &block.BlockSummary{}
+	// magicBlock := block.NewMagicBlock()
+
+	//normally this goes to sharders
+	for _, sharder := range urls {
+		var blockUrl string
+		if magicBlock {
+			blockUrl = magicBlockURL
+		} else {
+			blockUrl = finalizeBlockURL
+		}
+		response, err := httpClient.Get(fmt.Sprintf("%v/%v", sharder, blockUrl))
+		if err != nil {
+			Logger.Error("Error getting response for sc rest api", zap.Any("error", err))
+			numErrs++
+			errString = errString + sharder + ":" + err.Error()
+		} else {
+			if response.StatusCode != 200 {
+				Logger.Error("Error getting response from", zap.String("URL", sharder), zap.Any("response Status", response.StatusCode))
+				numErrs++
+				errString = errString + sharder + ": response_code: " + strconv.Itoa(response.StatusCode)
+				response.Body.Close()
+				continue
+			}
+			bodyBytes, err := ioutil.ReadAll(response.Body)
+			response.Body.Close()
+			if err != nil {
+				Logger.Error("Failed to read body response", zap.String("URL", sharder), zap.Any("error", err))
+			}
+			summary.Decode(bodyBytes)
+			Logger.Info("get magic block -- entity", zap.Any("summary", summary))
+			// Logger.Info("get magic block -- entity", zap.Any("magic_block", entity), zap.Any("string of magic block", string(bodyBytes)))
+			if err != nil {
+				Logger.Error("Error unmarshalling response", zap.Any("error", err))
+				numErrs++
+				errString = errString + sharder + ":" + err.Error()
+				continue
+			}
+			retObj = summary
+			numSuccess++
+		}
+	}
+
+	if numSuccess+numErrs == 0 {
+		return nil, common.NewError("req_not_run", "Could not run the request") //why???
+
+	}
+	sr := int(math.Ceil((float64(numSuccess) * 100) / float64(numSuccess+numErrs)))
+	// We've at least one success and success rate sr is at least same as consensus
+	if numSuccess > 0 && sr >= consensus {
+		if retObj != nil {
+			return summary, nil
+		}
+		return nil, common.NewError("err_getting_resp", errString)
+	} else if numSuccess > 0 {
+		//we had some successes, but not sufficient to reach consensus
+		Logger.Error("Error Getting consensus", zap.Int("Success", numSuccess), zap.Int("Errs", numErrs), zap.Int("consensus", consensus))
+		return nil, common.NewError("err_getting_consensus", errString)
+	} else if numErrs > 0 {
+		//We have received only errors
+		Logger.Error("Error running the request", zap.Int("Success", numSuccess), zap.Int("Errs", numErrs), zap.Int("consensus", consensus))
+		return nil, common.NewError("err_running_req", errString)
+	}
+	//this should never happen
+	return nil, common.NewError("unknown_err", "Not able to run the request. unknown reason")
+
+}
+
+//GetMagicBlockCall for smart contract to get magic block
+func GetMagicBlockCall(urls []string, magicBlockNumber int64, consensus int) (*block.Block, error) {
+	var retObj interface{}
+	numSuccess := 0
+	numErrs := 0
+	var errString string
+	timeoutRetry := time.Millisecond * 500
+	receivedBlock := datastore.GetEntityMetadata("block").Instance().(*block.Block)
+	receivedBlock.MagicBlock = block.NewMagicBlock()
+
+	for _, sharder := range urls {
+		url := fmt.Sprintf("%v/%v%v", sharder, specificMagicBlockURL, strconv.FormatInt(magicBlockNumber, 10))
+
+		retried := 0
+		var response *http.Response
+		var err error
+		for {
+			response, err = httpClient.Get(url)
+			if err != nil || retried >= 4 || response.StatusCode != http.StatusTooManyRequests {
+				break
+			}
+			response.Body.Close()
+			Logger.Warn("attempt to retry the request",
+				zap.Any("response Status", response.StatusCode),
+				zap.Any("response Status text", response.Status), zap.String("URL", url),
+				zap.Any("retried", retried+1))
+			time.Sleep(timeoutRetry)
+			retried++
+		}
+
+		if err != nil {
+			Logger.Error("Error getting response for sc rest api", zap.Any("error", err))
+			numErrs++
+			errString = errString + sharder + ":" + err.Error()
+		} else {
+			if response.StatusCode != 200 {
+				Logger.Error("Error getting response from", zap.String("URL", url),
+					zap.Any("response Status", response.StatusCode),
+					zap.Any("response Status text", response.Status))
+				numErrs++
+				errString = errString + sharder + ": response_code: " + strconv.Itoa(response.StatusCode)
+				response.Body.Close()
+				continue
+			}
+			bodyBytes, err := ioutil.ReadAll(response.Body)
+			response.Body.Close()
+			if err != nil {
+				Logger.Error("Failed to read body response", zap.String("URL", sharder), zap.Any("error", err))
+			}
+			err = receivedBlock.Decode(bodyBytes)
+			if err != nil {
+				Logger.Error("failed to decode block", zap.Any("error", err))
+			}
+
+			if err != nil {
+				Logger.Error("Error unmarshalling response", zap.Any("error", err))
+				numErrs++
+				errString = errString + sharder + ":" + err.Error()
+				continue
+			}
+			retObj = receivedBlock
+			numSuccess++
+		}
+	}
+
+	if numSuccess+numErrs == 0 {
+		return nil, common.NewError("req_not_run", "Could not run the request")
+	}
+	sr := int(math.Ceil((float64(numSuccess) * 100) / float64(numSuccess+numErrs)))
+	if numSuccess > 0 && sr >= consensus {
+		if retObj != nil {
+			return receivedBlock, nil
+		}
+		return nil, common.NewError("err_getting_resp", errString)
+	} else if numSuccess > 0 {
+		Logger.Error("Error Getting consensus", zap.Int("Success", numSuccess), zap.Int("Errs", numErrs), zap.Int("consensus", consensus))
+		return nil, common.NewError("err_getting_consensus", errString)
+	} else if numErrs > 0 {
+		Logger.Error("Error running the request", zap.Int("Success", numSuccess), zap.Int("Errs", numErrs), zap.Int("consensus", consensus))
+		return nil, common.NewError("err_running_req", errString)
+	}
+	return nil, common.NewError("unknown_err", "Not able to run the request. unknown reason")
+
+}
+
+func SendSmartContractTxn(txn *Transaction, address string, value, fee int64, scData *SmartContractTxnData, minerUrls []string) error {
+	txn.ToClientID = address
+	txn.Value = value
+	txn.Fee = fee
+	txn.TransactionType = TxnTypeSmartContract
+	txnBytes, err := json.Marshal(scData)
+	if err != nil {
+		Logger.Error("Returning error", zap.Error(err))
+		return err
+	}
+	txn.TransactionData = string(txnBytes)
+
+	signer := func(hash string) (string, error) {
+		return node.Self.Sign(hash)
+	}
+
+	err = txn.ComputeHashAndSign(signer)
+	if err != nil {
+		Logger.Info("Signing Failed during registering miner to the mining network", zap.Error(err))
+		return err
+	}
+	SendTransaction(txn, minerUrls, node.Self.Underlying().GetKey(),
+		node.Self.Underlying().PublicKey)
+	return nil
 }

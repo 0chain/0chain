@@ -15,21 +15,29 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	CountErrorThresholdNodeInactive = 5
+)
+
 /*StatusMonitor - a background job that keeps checking the status of the nodes */
 func (np *Pool) StatusMonitor(ctx context.Context) {
 	np.statusMonitor(ctx)
-	timer := time.NewTimer(time.Second)
-	for true {
+	updateTimer := time.NewTimer(time.Second)
+	monitorTimer := time.NewTimer(time.Second)
+	for {
 		select {
 		case <-ctx.Done():
 			return
-		case _ = <-timer.C:
+		case <-monitorTimer.C:
 			np.statusMonitor(ctx)
 			if np.GetActiveCount()*10 < len(np.Nodes)*8 {
-				timer = time.NewTimer(2 * time.Second)
+				monitorTimer = time.NewTimer(5 * time.Second)
 			} else {
-				timer = time.NewTimer(5 * time.Second)
+				monitorTimer = time.NewTimer(10 * time.Second)
 			}
+		case <-updateTimer.C:
+			np.statusUpdate(ctx)
+			updateTimer = time.NewTimer(time.Second * 2)
 		}
 	}
 
@@ -40,13 +48,34 @@ func (np *Pool) OneTimeStatusMonitor(ctx context.Context) {
 	np.statusMonitor(ctx)
 }
 
-func (np *Pool) statusMonitor(ctx context.Context) {
+func (np *Pool) statusUpdate(ctx context.Context) {
+	np.mmx.RLock()
 	nodes := np.shuffleNodes()
+	np.mmx.RUnlock()
 	for _, node := range nodes {
-		if node == Self.Node {
+		if Self.IsEqual(node) {
 			continue
 		}
-		if common.Within(node.LastActiveTime.Unix(), 10) {
+		if common.Within(node.GetLastActiveTime().Unix(), 10) {
+			node.updateMessageTimings()
+			if time.Since(node.Info.AsOf) < 60*time.Second {
+				continue
+			}
+		}
+		if node.GetErrorCount() >= CountErrorThresholdNodeInactive {
+			node.SetStatus(NodeStatusInactive)
+		}
+	}
+	np.ComputeNetworkStats()
+}
+
+func (np *Pool) statusMonitor(context.Context) {
+	nodes := np.shuffleNodesLock()
+	for _, node := range nodes {
+		if Self.IsEqual(node) {
+			continue
+		}
+		if common.Within(node.GetLastActiveTime().Unix(), 10) {
 			node.updateMessageTimings()
 			if time.Since(node.Info.AsOf) < 60*time.Second {
 				continue
@@ -58,27 +87,29 @@ func (np *Pool) statusMonitor(ctx context.Context) {
 		if err != nil {
 			panic(err)
 		}
-		statusURL = fmt.Sprintf("%v?id=%v&data=%v&hash=%v&signature=%v", statusURL, Self.Node.GetKey(), data, hash, signature)
+		statusURL = fmt.Sprintf("%v?id=%v&data=%v&hash=%v&signature=%v", statusURL, Self.Underlying().GetKey(), data, hash, signature)
 		resp, err := httpClient.Get(statusURL)
 		if err != nil {
-			node.ErrorCount++
+			node.AddErrorCount(1) // ++
 			if node.IsActive() {
-				if node.ErrorCount > 5 {
-					node.Status = NodeStatusInactive
+				if node.GetErrorCount() >= CountErrorThresholdNodeInactive {
+					node.SetStatus(NodeStatusInactive)
 					N2n.Error("Node inactive", zap.String("node_type", node.GetNodeTypeName()), zap.Int("set_index", node.SetIndex), zap.Any("node_id", node.GetKey()), zap.Error(err))
 				}
 			}
 		} else {
-			if err := common.FromJSON(resp.Body, &node.Info); err == nil {
-				node.Info.AsOf = time.Now()
+			info := Info{}
+			if err := common.FromJSON(resp.Body, &info); err == nil {
+				info.AsOf = time.Now()
+				node.SetInfo(info)
 			}
 			resp.Body.Close()
 			if !node.IsActive() {
-				node.ErrorCount = 0
-				node.Status = NodeStatusActive
+				node.SetErrorCount(0)
+				node.SetStatus(NodeStatusActive)
 				N2n.Info("Node active", zap.String("node_type", node.GetNodeTypeName()), zap.Int("set_index", node.SetIndex), zap.Any("key", node.GetKey()))
 			}
-			node.LastActiveTime = ts
+			node.SetLastActiveTime(ts)
 		}
 	}
 	np.ComputeNetworkStats()
@@ -98,7 +129,7 @@ func (np *Pool) DownloadNodeData(node *Node) bool {
 	var changed = false
 	for _, node := range dnp.Nodes {
 		if _, ok := np.NodesMap[node.GetKey()]; !ok {
-			node.Status = NodeStatusActive
+			node.SetStatus(NodeStatusActive)
 			np.AddNode(node)
 			changed = true
 		}

@@ -28,6 +28,7 @@ var scs = []sci.SmartContractInterface{
 func SetupSmartContracts() {
 	for _, sc := range scs {
 		if viper.GetBool(fmt.Sprintf("development.smart_contract.%v", sc.GetName())) {
+			sc.InitSC()
 			smartcontract.ContractMap[sc.GetAddress()] = sc
 		}
 	}

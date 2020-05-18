@@ -27,14 +27,16 @@ import (
 
 /*SetupHandlers sets up the necessary API end points */
 func SetupHandlers() {
-	http.HandleFunc("/v1/chain/get", common.ToJSONResponse(memorystore.WithConnectionHandler(GetChainHandler)))
-	http.HandleFunc("/v1/chain/put", datastore.ToJSONEntityReqResponse(memorystore.WithConnectionEntityJSONHandler(PutChainHandler, chainEntityMetadata), chainEntityMetadata))
+	http.HandleFunc("/v1/chain/get", common.Recover(common.ToJSONResponse(memorystore.WithConnectionHandler(GetChainHandler))))
+	http.HandleFunc("/v1/chain/put", common.Recover(datastore.ToJSONEntityReqResponse(memorystore.WithConnectionEntityJSONHandler(PutChainHandler, chainEntityMetadata), chainEntityMetadata)))
 
 	// Miner can only provide recent blocks, sharders can provide any block (for content other than full) and the block they store for full
-	if node.Self.Type == node.NodeTypeMiner {
+	if node.Self.Underlying().Type == node.NodeTypeMiner {
 		http.HandleFunc("/v1/block/get", common.UserRateLimit(common.ToJSONResponse(GetBlockHandler)))
 	}
 	http.HandleFunc("/v1/block/get/latest_finalized", common.UserRateLimit(common.ToJSONResponse(LatestFinalizedBlockHandler)))
+	http.HandleFunc("/v1/block/get/latest_finalized_magic_block_summary", common.UserRateLimit(common.ToJSONResponse(LatestFinalizedMagicBlockSummaryHandler)))
+	http.HandleFunc("/v1/block/get/latest_finalized_magic_block", common.UserRateLimit(common.ToJSONResponse(LatestFinalizedMagicBlockHandler)))
 	http.HandleFunc("/v1/block/get/recent_finalized", common.UserRateLimit(common.ToJSONResponse(RecentFinalizedBlockHandler)))
 
 	http.HandleFunc("/", common.UserRateLimit(HomePageHandler))
@@ -61,13 +63,15 @@ func PutChainHandler(ctx context.Context, entity datastore.Entity) (interface{},
 /*GetMinersHandler - get the list of known miners */
 func (c *Chain) GetMinersHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain;charset=UTF-8")
-	c.Miners.Print(w)
+	mb := c.GetCurrentMagicBlock()
+	mb.Miners.Print(w)
 }
 
 /*GetShardersHandler - get the list of known sharders */
 func (c *Chain) GetShardersHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain;charset=UTF-8")
-	c.Sharders.Print(w)
+	mb := c.GetCurrentMagicBlock()
+	mb.Sharders.Print(w)
 }
 
 /*GetBlockHandler - get the block from local cache */
@@ -106,6 +110,16 @@ func LatestFinalizedBlockHandler(ctx context.Context, r *http.Request) (interfac
 	return GetServerChain().GetLatestFinalizedBlockSummary(), nil
 }
 
+/*LatestFinalizedMagicBlockHandler - provide the latest finalized magic block by this miner */
+func LatestFinalizedMagicBlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	return GetServerChain().GetLatestFinalizedMagicBlock(), nil
+}
+
+/*LatestFinalizedMagicBlockSummaryHandler - provide the latest finalized magic block summary by this miner */
+func LatestFinalizedMagicBlockSummaryHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	return GetServerChain().GetLatestFinalizedMagicBlockSummary(), nil
+}
+
 /*RecentFinalizedBlockHandler - provide the latest finalized block by this miner */
 func RecentFinalizedBlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	fbs := make([]*block.BlockSummary, 0, 10)
@@ -123,7 +137,9 @@ func HomePageHandler(w http.ResponseWriter, r *http.Request) {
 	sc := GetServerChain()
 	w.Header().Set("Content-Type", "text/html;charset=UTF-8")
 	PrintCSS(w)
-	fmt.Fprintf(w, "<div>I am %v working on the chain %v <ul><li>id:%v</li><li>public_key:%v</li><li>build_tag:%v</li></ul></div>\n", node.Self.GetPseudoName(), sc.GetKey(), node.Self.GetKey(), node.Self.PublicKey, build.BuildTag)
+	selfNode := node.Self.Underlying()
+	fmt.Fprintf(w, "<div>I am %v working on the chain %v <ul><li>id:%v</li><li>public_key:%v</li><li>build_tag:%v</li></ul></div>\n",
+		selfNode.GetPseudoName(), sc.GetKey(), selfNode.GetKey(), selfNode.PublicKey, build.BuildTag)
 }
 
 func (c *Chain) healthSummary(w http.ResponseWriter, r *http.Request) {
@@ -133,14 +149,16 @@ func (c *Chain) healthSummary(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Chain) roundHealthInATable(w http.ResponseWriter, r *http.Request) {
-	cr := c.GetRound(c.CurrentRound)
+	cr := c.GetRound(c.GetCurrentRound())
 
 	vrfMsg := "N/A"
 	notarizations := 0
 	proposals := 0
 	rrs := int64(0)
 
-	if node.Self.Type == node.NodeTypeMiner {
+	mb := c.GetCurrentMagicBlock()
+
+	if node.Self.Underlying().Type == node.NodeTypeMiner {
 		var shares int
 		check := "X"
 		if cr != nil {
@@ -152,7 +170,7 @@ func (c *Chain) roundHealthInATable(w http.ResponseWriter, r *http.Request) {
 		}
 
 		thresholdByCount := config.GetThresholdCount()
-		consensus := int(math.Ceil((float64(thresholdByCount) / 100) * float64(c.Miners.Size())))
+		consensus := int(math.Ceil((float64(thresholdByCount) / 100) * float64(mb.Miners.Size())))
 		if shares >= consensus {
 			check = "&#x2714;"
 		}
@@ -165,7 +183,7 @@ func (c *Chain) roundHealthInATable(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Current Round")
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "<td class='number'>")
-	fmt.Fprintf(w, "%v", c.CurrentRound)
+	fmt.Fprintf(w, "%v", c.GetCurrentRound())
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "</tr>")
 
@@ -237,7 +255,7 @@ func (c *Chain) chainHealthInATable(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "</tr>")
 
-	cr := c.GetRound(c.CurrentRound)
+	cr := c.GetRound(c.GetCurrentRound())
 	rtoc := c.GetRoundTimeoutCount()
 	if cr != nil {
 		rtoc = int64(cr.GetTimeoutCount())
@@ -295,7 +313,7 @@ func (c *Chain) infraHealthInATable(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "</tr>")
-	if node.Self.Type == node.NodeTypeMiner {
+	if node.Self.Underlying().Type == node.NodeTypeMiner {
 		txn, ok := transaction.Provider().(*transaction.Transaction)
 		if ok {
 			transactionEntityMetadata := txn.GetEntityMetadata()
@@ -350,19 +368,20 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<tr>")
 	fmt.Fprintf(w, "<td valign='top'>")
 	fmt.Fprintf(w, "<li><a href='/v1/config/get'>/v1/config/get</a></li>")
-	if node.Self.Type == node.NodeTypeMiner && config.Development() {
+	selfNodeType := node.Self.Underlying().Type
+	if selfNodeType == node.NodeTypeMiner && config.Development() {
 		fmt.Fprintf(w, "<li><a href='/v1/config/update'>/v1/config/update</a></li>")
 		fmt.Fprintf(w, "<li><a href='/v1/config/update_all'>/v1/config/update_all</a></li>")
 	}
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "<td valign='top'>")
 	fmt.Fprintf(w, "<li><a href='/_chain_stats'>/_chain_stats</a></li>")
-	if node.Self.Type == node.NodeTypeSharder {
+	if selfNodeType == node.NodeTypeSharder {
 		fmt.Fprintf(w, "<li><a href='/_health_check'>/_health_check</a></li>")
 	}
 
 	fmt.Fprintf(w, "<li><a href='/_diagnostics/miner_stats'>/_diagnostics/miner_stats</a>")
-	if node.Self.Type == node.NodeTypeMiner && config.Development() {
+	if selfNodeType == node.NodeTypeMiner && config.Development() {
 		fmt.Fprintf(w, "<li><a href='/_diagnostics/wallet_stats'>/_diagnostics/wallet_stats</a>")
 	}
 	fmt.Fprintf(w, "<li><a href='/_smart_contract_stats'>/_smart_contract_stats</a></li>")
@@ -371,7 +390,7 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<td valign='top'>")
 	fmt.Fprintf(w, "<li><a href='/_diagnostics/info'>/_diagnostics/info</a> (with <a href='/_diagnostics/info?ts=1'>ts</a>)</li>")
 	fmt.Fprintf(w, "<li><a href='/_diagnostics/n2n/info'>/_diagnostics/n2n/info</a></li>")
-	if node.Self.Type == node.NodeTypeMiner {
+	if selfNodeType == node.NodeTypeMiner {
 		//ToDo: For sharders show who all can store the blocks
 		fmt.Fprintf(w, "<li><a href='/_diagnostics/round_info'>/_diagnostics/round_info</a>")
 	}
@@ -386,31 +405,32 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</tr>")
 	fmt.Fprintf(w, "</table>")
 
-	if node.Self.Type == node.NodeTypeMiner {
-		fmt.Fprintf(w, "<div><div>Miners (%v) - median network time %.2f</div>", sc.Miners.Size(), sc.Miners.GetMedianNetworkTime()/1000000.)
+	mb := sc.GetCurrentMagicBlock()
+	if selfNodeType == node.NodeTypeMiner {
+		fmt.Fprintf(w, "<div><div>Miners (%v) - median network time %.2f</div>", mb.Miners.Size(), mb.Miners.GetMedianNetworkTime()/1000000.)
 	} else {
-		fmt.Fprintf(w, "<div><div>Miners (%v)</div>", sc.Miners.Size())
+		fmt.Fprintf(w, "<div><div>Miners (%v)</div>", mb.Miners.Size())
 	}
-	sc.printNodePool(w, sc.Miners)
+	sc.printNodePool(w, mb.Miners)
 	fmt.Fprintf(w, "</div>")
-	fmt.Fprintf(w, "<div><div>Sharders (%v)</div>", sc.Sharders.Size())
-	sc.printNodePool(w, sc.Sharders)
+	fmt.Fprintf(w, "<div><div>Sharders (%v)</div>", mb.Sharders.Size())
+	sc.printNodePool(w, mb.Sharders)
 	fmt.Fprintf(w, "</div>")
 }
 
 func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
-	nodes := np.Nodes
+	nodes := np.CopyNodes()
 	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr class='header'><td rowspan='2'>Set Index</td><td rowspan='2'>Node</td><td rowspan='2'>Sent</td><td rowspan='2'>Send Errors</td><td rowspan='2'>Received</td><td rowspan='2'>Last Active</td><td colspan='3' style='text-align:center'>Message Time</td><td rowspan='2'>Description</td><td colspan='4' style='text-align:center'>Remote Data</td></tr>")
 	fmt.Fprintf(w, "<tr class='header'><td>Small</td><td>Large</td><td>Large Optimal</td><td>Build Tag</td><td>State Health</td><td title='median network time'>Miners MNT</td><td>Avg Block Size</td></tr>")
-	r := c.GetRound(c.CurrentRound)
+	r := c.GetRound(c.GetCurrentRound())
 	hasRanks := r != nil && r.HasRandomSeed()
 	lfb := c.GetLatestFinalizedBlock()
 	for _, nd := range nodes {
-		if nd.Status == node.NodeStatusInactive {
+		if nd.GetStatus() == node.NodeStatusInactive {
 			fmt.Fprintf(w, "<tr class='inactive'>")
 		} else {
-			if nd == node.Self.Node && c.CurrentRound > lfb.Round+10 {
+			if node.Self.IsEqual(nd) && c.GetCurrentRound() > lfb.Round+10 {
 				fmt.Fprintf(w, "<tr class='warning'>")
 			} else {
 				fmt.Fprintf(w, "<tr>")
@@ -427,7 +447,7 @@ func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 			}
 		}
 		fmt.Fprintf(w, "</td>")
-		if nd == node.Self.Node {
+		if node.Self.IsEqual(nd) {
 			fmt.Fprintf(w, "<td>%v</td>", nd.GetPseudoName())
 		} else {
 			fmt.Fprintf(w, "<td><a href='http://%v:%v/_diagnostics'>%v</a></td>", nd.Host, nd.Port, nd.GetPseudoName())
@@ -435,9 +455,9 @@ func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 		fmt.Fprintf(w, "<td class='number'>%d</td>", nd.Sent)
 		fmt.Fprintf(w, "<td class='number'>%d</td>", nd.SendErrors)
 		fmt.Fprintf(w, "<td class='number'>%d</td>", nd.Received)
-		fmt.Fprintf(w, "<td>%v</td>", nd.LastActiveTime.Format(common.DateTimeFormat))
-		fmt.Fprintf(w, "<td class='number'>%.2f</td>", nd.GetSmallMessageSendTime())
-		lmt := nd.GetLargeMessageSendTime()
+		fmt.Fprintf(w, "<td>%v</td>", nd.GetLastActiveTime().Format(common.DateTimeFormat))
+		fmt.Fprintf(w, "<td class='number'>%.2f</td>", nd.GetSmallMessageSendTimeSec())
+		lmt := nd.GetLargeMessageSendTimeSec()
 		fmt.Fprintf(w, "<td class='number'>%.2f</td>", lmt)
 		olmt := nd.GetOptimalLargeMessageSendTime()
 		if olmt < lmt {
@@ -489,8 +509,8 @@ func InfoWriter(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<style>\n")
 	fmt.Fprintf(w, "tr:nth-child(10n + 3) { background-color: #abb2b9; }\n")
 	fmt.Fprintf(w, "</style>")
-	self := node.Self.Node
-	fmt.Fprintf(w, "<div>%v - %v</div>", self.GetPseudoName(), self.Description)
+	fmt.Fprintf(w, "<div>%v - %v</div>", node.Self.Underlying().GetPseudoName(),
+		node.Self.Underlying().Description)
 	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr>")
 	if showTs {
@@ -549,18 +569,19 @@ func InfoWriter(w http.ResponseWriter, r *http.Request) {
 //N2NStatsWriter - writes the n2n stats of all the nodes
 func (c *Chain) N2NStatsWriter(w http.ResponseWriter, r *http.Request) {
 	PrintCSS(w)
-	self := node.Self.Node
-	fmt.Fprintf(w, "<div>%v - %v</div>", self.GetPseudoName(), self.Description)
+	fmt.Fprintf(w, "<div>%v - %v</div>", node.Self.Underlying().GetPseudoName(),
+		node.Self.Underlying().Description)
 	c.healthSummary(w, r)
+	mb := c.GetCurrentMagicBlock()
 	fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr><td rowspan='2'>URI</td><td rowspan='2'>Count</td><td colspan='3'>Time</td><td colspan='3'>Size</td></tr>")
 	fmt.Fprintf(w, "<tr><td>Min</td><td>Average</td><td>Max</td><td>Min</td><td>Average</td><td>Max</td></tr>")
-	fmt.Fprintf(w, "<tr><td colspan='8'>Miners (%v/%v) - median network time = %.2f", c.Miners.GetActiveCount(), c.Miners.Size(), c.Miners.GetMedianNetworkTime()/1000000)
-	for _, nd := range c.Miners.Nodes {
-		if nd == node.Self.Node {
+	fmt.Fprintf(w, "<tr><td colspan='8'>Miners (%v/%v) - median network time = %.2f", mb.Miners.GetActiveCount(), mb.Miners.Size(), mb.Miners.GetMedianNetworkTime()/1000000)
+	for _, nd := range mb.Miners.CopyNodes() {
+		if node.Self.IsEqual(nd) {
 			continue
 		}
-		lmt := nd.GetLargeMessageSendTime()
+		lmt := nd.GetLargeMessageSendTimeSec()
 		olmt := nd.GetOptimalLargeMessageSendTime()
 		cls := ""
 		if !nd.IsActive() {
@@ -569,19 +590,19 @@ func (c *Chain) N2NStatsWriter(w http.ResponseWriter, r *http.Request) {
 		if olmt < lmt {
 			cls = cls + " optimal"
 		}
-		if olmt >= c.Miners.GetMedianNetworkTime() {
+		if olmt >= mb.Miners.GetMedianNetworkTime() {
 			cls = cls + " slow"
 		}
 		fmt.Fprintf(w, "<tr class='%s'><td colspan='8'><b>%s</b> (%.2f/%.2f) - %s</td></tr>", cls, nd.GetPseudoName(), olmt, lmt, nd.Description)
 		nd.PrintSendStats(w)
 	}
 
-	fmt.Fprintf(w, "<tr><td colspan='8'>Sharders (%v/%v) - median network time = %.2f", c.Sharders.GetActiveCount(), c.Sharders.Size(), c.Sharders.GetMedianNetworkTime()/1000000)
-	for _, nd := range c.Sharders.Nodes {
-		if nd == node.Self.Node {
+	fmt.Fprintf(w, "<tr><td colspan='8'>Sharders (%v/%v) - median network time = %.2f", mb.Sharders.GetActiveCount(), mb.Sharders.Size(), mb.Sharders.GetMedianNetworkTime()/1000000)
+	for _, nd := range mb.Sharders.CopyNodes() {
+		if node.Self.IsEqual(nd) {
 			continue
 		}
-		lmt := nd.GetLargeMessageSendTime()
+		lmt := nd.GetLargeMessageSendTimeSec()
 		olmt := nd.GetOptimalLargeMessageSendTime()
 		cls := ""
 		if !nd.IsActive() {
@@ -590,7 +611,7 @@ func (c *Chain) N2NStatsWriter(w http.ResponseWriter, r *http.Request) {
 		if olmt < lmt {
 			cls = cls + " optimal"
 		}
-		if olmt >= c.Sharders.GetMedianNetworkTime() {
+		if olmt >= mb.Sharders.GetMedianNetworkTime() {
 			cls = cls + " slow"
 		}
 		fmt.Fprintf(w, "<tr class='%s'><td colspan='8'><b>%s</b> (%.2f/%.2f) - %s </td></tr>", cls, nd.GetPseudoName(), olmt, lmt, nd.Description)
@@ -618,22 +639,22 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 func RoundInfoHandler(w http.ResponseWriter, r *http.Request) {
 	PrintCSS(w)
 	sc := GetServerChain()
-	fmt.Fprintf(w, "<div class='bold'>Current Round Number: %v</div>", sc.CurrentRound)
+	fmt.Fprintf(w, "<div class='bold'>Current Round Number: %v</div>", sc.GetCurrentRound())
 	fmt.Fprintf(w, "<div>&nbsp;</div>")
-	if node.Self.Type != node.NodeTypeMiner {
+	if node.Self.Underlying().Type != node.NodeTypeMiner {
 		//ToDo: Add Sharder related round info
 		return
 	}
-	cr := sc.GetRound(sc.CurrentRound)
-
-	if sc.CurrentRound > 0 && cr != nil {
+	cr := sc.GetRound(sc.GetCurrentRound())
+	mb := sc.GetCurrentMagicBlock()
+	if sc.GetCurrentRound() > 0 && cr != nil {
 
 		rrs := int64(0)
 		if cr.HasRandomSeed() {
 			rrs = cr.GetRandomSeed()
 		}
 		thresholdByCount := config.GetThresholdCount()
-		consensus := int(math.Ceil((float64(thresholdByCount) / 100) * float64(sc.Miners.Size())))
+		consensus := int(math.Ceil((float64(thresholdByCount) / 100) * float64(mb.Miners.Size())))
 
 		fmt.Fprintf(w, "<div>Consensus: %v RRS: %v </div>", consensus, rrs)
 		fmt.Fprintf(w, "<table style='border-collapse: collapse;'>")
@@ -658,9 +679,10 @@ func RoundInfoHandler(w http.ResponseWriter, r *http.Request) {
 
 /*MinerStatsHandler - handler for the miner stats */
 func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
+	mb := c.GetCurrentMagicBlock()
 	PrintCSS(w)
-	self := node.Self.Node
-	fmt.Fprintf(w, "<div>%v - %v</div>", self.GetPseudoName(), self.Description)
+	fmt.Fprintf(w, "<div>%v - %v</div>", node.Self.Underlying().GetPseudoName(),
+		node.Self.Underlying().Description)
 	c.healthSummary(w, r)
 	fmt.Fprintf(w, "<table>")
 	fmt.Fprintf(w, "<tr><td colspan='3' style='text-align:center'>")
@@ -675,11 +697,11 @@ func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 	c.finalizationCountStats(w)
 	fmt.Fprintf(w, "</td></tr>")
 	fmt.Fprintf(w, "</table>")
-	if node.Self.Type == node.NodeTypeMiner {
+	if node.Self.Underlying().Type == node.NodeTypeMiner {
 		fmt.Fprintf(w, "<br>")
 		fmt.Fprintf(w, "<table>")
 		fmt.Fprintf(w, "<tr><td>Miner</td><td>Verification Failures</td></tr>")
-		for _, nd := range c.Miners.Nodes {
+		for _, nd := range mb.Miners.CopyNodes() {
 			ms := nd.ProtocolStats.(*MinerStats)
 			fmt.Fprintf(w, "<tr><td>%v</td><td class='number'>%v</td></tr>", nd.GetPseudoName(), ms.VerificationFailures)
 		}
@@ -688,6 +710,7 @@ func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Chain) generationCountStats(w http.ResponseWriter) {
+	mb := c.GetCurrentMagicBlock()
 	fmt.Fprintf(w, "<table>")
 	fmt.Fprintf(w, "<tr><td>Miner</td>")
 	for i := 0; i < c.NumGenerators; i++ {
@@ -695,7 +718,7 @@ func (c *Chain) generationCountStats(w http.ResponseWriter) {
 	}
 	fmt.Fprintf(w, "<td>Total</td></tr>")
 	totals := make([]int64, c.NumGenerators)
-	for _, nd := range c.Miners.Nodes {
+	for _, nd := range mb.Miners.CopyNodes() {
 		fmt.Fprintf(w, "<tr><td>%v</td>", nd.GetPseudoName())
 		ms := nd.ProtocolStats.(*MinerStats)
 		var total int64
@@ -717,6 +740,7 @@ func (c *Chain) generationCountStats(w http.ResponseWriter) {
 }
 
 func (c *Chain) verificationCountStats(w http.ResponseWriter) {
+	mb := c.GetCurrentMagicBlock()
 	fmt.Fprintf(w, "<table>")
 	fmt.Fprintf(w, "<tr><td>Miner</td>")
 	for i := 0; i < c.NumGenerators; i++ {
@@ -724,7 +748,7 @@ func (c *Chain) verificationCountStats(w http.ResponseWriter) {
 	}
 	fmt.Fprintf(w, "<td>Total</td></tr>")
 	totals := make([]int64, c.NumGenerators)
-	for _, nd := range c.Miners.Nodes {
+	for _, nd := range mb.Miners.CopyNodes() {
 		fmt.Fprintf(w, "<tr><td>%v</td>", nd.GetPseudoName())
 		ms := nd.ProtocolStats.(*MinerStats)
 		var total int64
@@ -746,6 +770,7 @@ func (c *Chain) verificationCountStats(w http.ResponseWriter) {
 }
 
 func (c *Chain) finalizationCountStats(w http.ResponseWriter) {
+	mb := c.GetCurrentMagicBlock()
 	fmt.Fprintf(w, "<table>")
 	fmt.Fprintf(w, "<tr><td>Miner</td>")
 	for i := 0; i < c.NumGenerators; i++ {
@@ -753,7 +778,7 @@ func (c *Chain) finalizationCountStats(w http.ResponseWriter) {
 	}
 	fmt.Fprintf(w, "<td>Total</td></tr>")
 	totals := make([]int64, c.NumGenerators)
-	for _, nd := range c.Miners.Nodes {
+	for _, nd := range mb.Miners.CopyNodes() {
 		fmt.Fprintf(w, "<tr><td>%v</td>", nd.GetPseudoName())
 		ms := nd.ProtocolStats.(*MinerStats)
 		var total int64

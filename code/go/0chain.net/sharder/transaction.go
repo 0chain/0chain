@@ -79,7 +79,7 @@ func (sc *Chain) GetTransactionConfirmation(ctx context.Context, hash string) (*
 		b = bc.(*block.Block)
 		confirmation.Round = b.Round
 		confirmation.MinerID = b.MinerID
-		confirmation.RoundRandomSeed = b.RoundRandomSeed
+		confirmation.RoundRandomSeed = b.GetRoundRandomSeed()
 		confirmation.CreationDate = b.CreationDate
 	}
 	txn := b.GetTransaction(hash)

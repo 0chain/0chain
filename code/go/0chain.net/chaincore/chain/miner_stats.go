@@ -15,3 +15,16 @@ type MinerStats struct {
 	// Number of times verification failed
 	VerificationFailures int64
 }
+
+func (m *MinerStats) Clone() interface{} {
+	result := &MinerStats{
+		GenerationCountByRank:     make([]int64, len(m.GenerationCountByRank)),
+		FinalizationCountByRank:   make([]int64, len(m.FinalizationCountByRank)),
+		VerificationTicketsByRank: make([]int64, len(m.VerificationTicketsByRank)),
+		VerificationFailures:      m.VerificationFailures,
+	}
+	copy(result.GenerationCountByRank, m.GenerationCountByRank)
+	copy(result.FinalizationCountByRank, m.FinalizationCountByRank)
+	copy(result.VerificationTicketsByRank, m.VerificationTicketsByRank)
+	return result
+}

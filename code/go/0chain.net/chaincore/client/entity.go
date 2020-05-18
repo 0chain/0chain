@@ -28,16 +28,32 @@ func init() {
 /*Client - data structure that holds the client data */
 type Client struct {
 	datastore.CollectionMemberField
-	datastore.IDField
+	datastore.IDField `yaml:",inline"`
 	datastore.VersionField
 	datastore.CreationDateField
-	PublicKey      string `json:"public_key"`
+	PublicKey      string `yaml:"public_key" json:"public_key"`
 	PublicKeyBytes []byte `json:"-"`
 }
 
 //NewClient - create a new client object
 func NewClient() *Client {
 	return datastore.GetEntityMetadata("client").Instance().(*Client)
+}
+
+// Copy of the Client.
+func (c *Client) Copy() (cp *Client) {
+	cp = new(Client)
+	cp.CollectionMemberField.CollectionScore = c.CollectionMemberField.CollectionScore
+	cp.CollectionMemberField.EntityCollection = c.CollectionMemberField.EntityCollection.Copy()
+	cp.IDField.ID = c.IDField.ID
+	cp.VersionField.Version = c.VersionField.Version
+	cp.CreationDateField.CreationDate = c.CreationDateField.CreationDate
+	cp.PublicKey = c.PublicKey
+	if len(c.PublicKeyBytes) > 0 {
+		cp.PublicKeyBytes = make([]byte, len(c.PublicKeyBytes))
+		copy(cp.PublicKeyBytes, c.PublicKeyBytes)
+	}
+	return
 }
 
 var clientEntityMetadata *datastore.EntityMetadataImpl
@@ -178,7 +194,7 @@ func GetClient(ctx context.Context, key datastore.Key) (*Client, error) {
 func PutClient(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 	co, ok := entity.(*Client)
 	if !ok {
-		return nil, common.NewError("entity_invalid_type", "Invald entity type")
+		return nil, common.NewError("entity_invalid_type", "Invalid entity type")
 	}
 	response, err := datastore.PutEntityHandler(ctx, entity)
 	if err != nil {

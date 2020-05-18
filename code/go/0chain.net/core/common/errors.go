@@ -21,6 +21,11 @@ func NewError(code string, msg string) *Error {
 	return &Error{Code: code, Msg: msg}
 }
 
+/*NewErrorf - create a new formated error */
+func NewErrorf(code string, format string, args ...interface{}) *Error {
+	return &Error{Code: code, Msg: fmt.Sprintf(format, args...)}
+}
+
 /*InvalidRequest - create error messages that are needed when validating request input */
 func InvalidRequest(msg string) error {
 	return NewError("invalid_request", fmt.Sprintf("Invalid request (%v)", msg))

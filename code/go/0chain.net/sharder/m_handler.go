@@ -60,15 +60,5 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 
 /*LatestFinalizedBlockHandler - handle latest finalized block*/
 func LatestFinalizedBlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	sc := GetSharderChain()
-	var lfb *block.Block
-	roundEntity, err := sc.GetMostRecentRoundFromDB(ctx)
-	if err == nil {
-		lfb, err = sc.GetBlockFromStore(roundEntity.BlockHash, roundEntity.Number)
-		if err == nil {
-			return lfb, nil
-		}
-		return nil, err
-	}
-	return nil, err
+	return GetSharderChain().GetLatestFinalizedBlock(), nil
 }

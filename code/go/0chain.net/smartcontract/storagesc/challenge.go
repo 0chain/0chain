@@ -578,7 +578,10 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 
 func (sc *StorageSmartContract) addChallenge(challengeID string, creationDate common.Timestamp, r *rand.Rand, challengeSeed int64, balances c_state.StateContextI) (string, error) {
 
-	validatorList, _ := sc.getValidatorsList(balances)
+	validatorList, err := sc.getValidatorsList(balances)
+	if err != nil {
+		return "", common.NewError("adding_challenge_error", "Error gettting the validators list. "+err.Error())
+	}
 
 	if len(validatorList.Nodes) == 0 {
 		return "", common.NewError("no_validators", "Not enough validators for the challenge")

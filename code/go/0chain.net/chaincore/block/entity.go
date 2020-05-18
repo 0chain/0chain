@@ -2,9 +2,11 @@ package block
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"sync"
+	"sync/atomic"
 
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
@@ -54,9 +56,9 @@ type UnverifiedBlockBody struct {
 	datastore.VersionField
 	datastore.CreationDateField
 
-	MagicBlockHash               string                `json:"magic_block_hash"`
-	PrevHash                     string                `json:"prev_hash"`
-	PrevBlockVerificationTickets []*VerificationTicket `json:"prev_verification_tickets,omitempty"`
+	LatestFinalizedMagicBlockHash string                `json:"latest_finalized_magic_block_hash"`
+	PrevHash                      string                `json:"prev_hash"`
+	PrevBlockVerificationTickets  []*VerificationTicket `json:"prev_verification_tickets,omitempty"`
 
 	MinerID           datastore.Key `json:"miner_id"`
 	Round             int64         `json:"round"`
@@ -82,7 +84,8 @@ type Block struct {
 	RoundRank   int           `json:"-"` // rank of the block in the round it belongs to
 	PrevBlock   *Block        `json:"-"`
 
-	TxnsMap map[string]bool `json:"-"`
+	TxnsMap   map[string]bool `json:"-"`
+	mutexTxns sync.RWMutex
 
 	ClientState           util.MerklePatriciaTrieI `json:"-"`
 	stateStatus           int8
@@ -93,6 +96,7 @@ type Block struct {
 	verificationStatus    int
 	RunningTxnCount       int64           `json:"running_txn_count"`
 	UniqueBlockExtensions map[string]bool `json:"-"`
+	*MagicBlock           `json:"magic_block,omitempty"`
 }
 
 //NewBlock - create a new empty block
@@ -100,6 +104,31 @@ func NewBlock(chainID datastore.Key, round int64) *Block {
 	b := datastore.GetEntityMetadata("block").Instance().(*Block)
 	b.Round = round
 	return b
+}
+
+// GetVerificationTickets of the block async safe.
+func (b *Block) GetVerificationTickets() (vts []*VerificationTicket) {
+	b.ticketsMutex.RLock()
+	defer b.ticketsMutex.RUnlock()
+
+	if len(b.VerificationTickets) == 0 {
+		return // nil
+	}
+
+	vts = make([]*VerificationTicket, 0, len(b.VerificationTickets))
+	for _, tk := range b.VerificationTickets {
+		vts = append(vts, tk.Copy())
+	}
+
+	return
+}
+
+// VerificationTicketsSize returns number verification tickets of the Block.
+func (b *Block) VerificationTicketsSize() int {
+	b.ticketsMutex.RLock()
+	defer b.ticketsMutex.RUnlock()
+
+	return len(b.VerificationTickets)
 }
 
 var blockEntityMetadata *datastore.EntityMetadataImpl
@@ -115,12 +144,19 @@ func (b *Block) ComputeProperties() {
 		b.ChainID = datastore.ToKey(config.GetServerChainID())
 	}
 	if b.Txns != nil {
+		b.mutexTxns.Lock()
+		defer b.mutexTxns.Unlock()
 		b.TxnsMap = make(map[string]bool, len(b.Txns))
 		for _, txn := range b.Txns {
 			txn.ComputeProperties()
 			b.TxnsMap[txn.Hash] = true
 		}
 	}
+}
+
+/*ComputeProperties - Entity implementation */
+func (b *Block) Decode(input []byte) error {
+	return json.Unmarshal(input, b)
 }
 
 /*Validate - implementing the interface */
@@ -142,11 +178,16 @@ func (b *Block) Validate(ctx context.Context) error {
 	if b.ChainWeight > float64(b.Round) {
 		return common.NewError("chain_weight_gt_round", "Chain weight can't be greater than the block round")
 	}
+
+	b.mutexTxns.RLock()
 	if b.TxnsMap != nil {
 		if len(b.Txns) != len(b.TxnsMap) {
+			b.mutexTxns.RUnlock()
 			return common.NewError("duplicate_transactions", "Block has duplicate transactions")
 		}
 	}
+	b.mutexTxns.RUnlock()
+
 	hash := b.ComputeHash()
 	if b.Hash != hash {
 		return common.NewError("incorrect_block_hash", fmt.Sprintf("computed block hash doesn't match with the hash of the block: %v: %v: %v", b.Hash, hash, b.getHashData()))
@@ -205,11 +246,14 @@ func SetupEntity(store datastore.Store) {
 
 /*SetPreviousBlock - set the previous block of this block */
 func (b *Block) SetPreviousBlock(prevBlock *Block) {
+	b.ticketsMutex.Lock()
+	defer b.ticketsMutex.Unlock()
+
 	b.PrevBlock = prevBlock
 	b.PrevHash = prevBlock.Hash
 	b.Round = prevBlock.Round + 1
 	if len(b.PrevBlockVerificationTickets) == 0 {
-		b.PrevBlockVerificationTickets = prevBlock.VerificationTickets
+		b.PrevBlockVerificationTickets = prevBlock.GetVerificationTickets()
 	}
 }
 
@@ -275,32 +319,33 @@ func (b *Block) AddVerificationTicket(vt *VerificationTicket) bool {
 * Only appends without modifying the order of exisitng tickets to ensure concurrent marshalling doesn't cause duplicate tickets
  */
 func (b *Block) MergeVerificationTickets(vts []*VerificationTicket) {
-	unionVerificationTickets := func(tickets1 []*VerificationTicket, tickets2 []*VerificationTicket) []*VerificationTicket {
-		if len(tickets1) == 0 {
-			return tickets2
+	unionVerificationTickets := func(alreadyHave []*VerificationTicket, received []*VerificationTicket) []*VerificationTicket {
+		if len(alreadyHave) == 0 {
+			return received
 		}
-		if len(tickets2) == 0 {
-			return tickets1
+		if len(received) == 0 {
+			return alreadyHave
 		}
-		ticketsMap := make(map[string]*VerificationTicket, len(tickets1))
-		for _, t := range tickets1 {
-			ticketsMap[t.VerifierID] = t
+		alreadyHaveMap := make(map[string]*VerificationTicket, len(alreadyHave))
+		for _, t := range alreadyHave {
+			alreadyHaveMap[t.VerifierID] = t
 		}
-		utickets := make([]*VerificationTicket, len(tickets1))
-		copy(utickets, tickets1)
-		for _, v := range tickets2 {
-			if v == nil {
+		union := make([]*VerificationTicket, len(alreadyHave))
+		copy(union, alreadyHave)
+		for _, rec := range received {
+			if rec == nil {
 				Logger.Error("merge verification tickets - null ticket")
-				return tickets1
+				return alreadyHave
 			}
-			if _, ok := ticketsMap[v.VerifierID]; !ok {
-				utickets = append(utickets, v)
+			if _, ok := alreadyHaveMap[rec.VerifierID]; !ok {
+				union = append(union, rec)
+				alreadyHaveMap[rec.VerifierID] = rec
 			}
 		}
-		if len(utickets) == len(tickets1) {
-			return tickets1
+		if len(union) == len(alreadyHave) {
+			return alreadyHave
 		}
-		return utickets
+		return union
 	}
 	b.ticketsMutex.Lock()
 	defer b.ticketsMutex.Unlock()
@@ -323,7 +368,7 @@ func (b *Block) getHashData() string {
 	merkleRoot := mt.GetRoot()
 	rmt := b.GetReceiptsMerkleTree()
 	rMerkleRoot := rmt.GetRoot()
-	hashData := b.MinerID + ":" + b.PrevHash + ":" + common.TimeToString(b.CreationDate) + ":" + strconv.FormatInt(b.Round, 10) + ":" + strconv.FormatInt(b.RoundRandomSeed, 10) + ":" + merkleRoot + ":" + rMerkleRoot
+	hashData := b.MinerID + ":" + b.PrevHash + ":" + common.TimeToString(b.CreationDate) + ":" + strconv.FormatInt(b.Round, 10) + ":" + strconv.FormatInt(b.GetRoundRandomSeed(), 10) + ":" + merkleRoot + ":" + rMerkleRoot
 	return hashData
 }
 
@@ -341,6 +386,8 @@ func (b *Block) HashBlock() {
 
 /*ComputeTxnMap - organize the transactions into a hashmap for check if the txn exists*/
 func (b *Block) ComputeTxnMap() {
+	b.mutexTxns.Lock()
+	defer b.mutexTxns.Unlock()
 	b.TxnsMap = make(map[string]bool, len(b.Txns))
 	for _, txn := range b.Txns {
 		b.TxnsMap[txn.Hash] = true
@@ -349,6 +396,8 @@ func (b *Block) ComputeTxnMap() {
 
 /*HasTransaction - check if the transaction exists in this block */
 func (b *Block) HasTransaction(hash string) bool {
+	b.mutexTxns.RLock()
+	defer b.mutexTxns.RUnlock()
 	_, ok := b.TxnsMap[hash]
 	return ok
 }
@@ -360,12 +409,13 @@ func (b *Block) GetSummary() *BlockSummary {
 	bs.Hash = b.Hash
 	bs.MinerID = b.MinerID
 	bs.Round = b.Round
-	bs.RoundRandomSeed = b.RoundRandomSeed
+	bs.RoundRandomSeed = b.GetRoundRandomSeed()
 	bs.CreationDate = b.CreationDate
 	bs.MerkleTreeRoot = b.GetMerkleTree().GetRoot()
 	bs.ClientStateHash = b.ClientStateHash
 	bs.ReceiptMerkleTreeRoot = b.GetReceiptsMerkleTree().GetRoot()
 	bs.NumTxns = len(b.Txns)
+	bs.MagicBlock = b.MagicBlock
 	return bs
 }
 
@@ -440,7 +490,7 @@ func (b *Block) IsStateComputed() bool {
 
 /*SetStateStatus - set if the client state is computed or not for the block */
 func (b *Block) SetStateStatus(status int8) {
-	b.stateStatus = status
+	b.stateStatus = status //RACE
 }
 
 /*GetReceiptsMerkleTree - return the merkle tree of this block using the transactions as leaf nodes */
@@ -466,11 +516,17 @@ func (b *Block) GetTransaction(hash string) *transaction.Transaction {
 
 //SetBlockNotarized - set the block as notarized
 func (b *Block) SetBlockNotarized() {
+	b.ticketsMutex.Lock()
+	defer b.ticketsMutex.Unlock()
+
 	b.isNotarized = true
 }
 
 //IsBlockNotarized - is block notarized?
 func (b *Block) IsBlockNotarized() bool {
+	b.ticketsMutex.RLock()
+	defer b.ticketsMutex.RUnlock()
+
 	return b.isNotarized
 }
 
@@ -500,6 +556,7 @@ func (b *Block) UnknownTickets(vts []*VerificationTicket) []*VerificationTicket 
 		}
 		if _, ok := ticketsMap[t.VerifierID]; !ok {
 			newTickets = append(newTickets, t)
+			ticketsMap[t.VerifierID] = t
 		}
 	}
 	return newTickets
@@ -524,9 +581,46 @@ func (b *Block) DoReadUnlock() {
 	b.ticketsMutex.RUnlock()
 }
 
-//SetPrevBlockVerificationTickets - set previous block verification tickets
+// GetPrevBlockVerificationTickets returns
+// verification tickets of previous Block.
+func (b *Block) GetPrevBlockVerificationTickets() (pbvts []*VerificationTicket) {
+	b.ticketsMutex.Lock()
+	defer b.ticketsMutex.Unlock()
+
+	if len(b.PrevBlockVerificationTickets) == 0 {
+		return // nil
+	}
+
+	pbvts = make([]*VerificationTicket, 0, len(b.PrevBlockVerificationTickets))
+	for _, tk := range b.PrevBlockVerificationTickets {
+		pbvts = append(pbvts, tk.Copy())
+	}
+
+	return
+}
+
+// PrevBlockVerificationTicketsSize returns number of
+// verification tickets of previous Block.
+func (b *Block) PrevBlockVerificationTicketsSize() int {
+	b.ticketsMutex.Lock()
+	defer b.ticketsMutex.Unlock()
+
+	return len(b.PrevBlockVerificationTickets)
+}
+
+// SetPrevBlockVerificationTickets - set previous block verification tickets
 func (b *Block) SetPrevBlockVerificationTickets(bvt []*VerificationTicket) {
 	b.ticketsMutex.Lock()
 	defer b.ticketsMutex.Unlock()
 	b.PrevBlockVerificationTickets = bvt
+}
+
+// SetRoundRandomSeed - set the random seed
+func (u *UnverifiedBlockBody) SetRoundRandomSeed(seed int64) {
+	atomic.StoreInt64(&u.RoundRandomSeed, seed)
+}
+
+// GetRoundRandomSeed - returns the random seed of the round
+func (u *UnverifiedBlockBody) GetRoundRandomSeed() int64 {
+	return atomic.LoadInt64(&u.RoundRandomSeed)
 }
