@@ -14,19 +14,6 @@ import (
 	"go.uber.org/zap"
 )
 
-func (msc *MinerSmartContract) doesSharderExist(pkey datastore.Key,
-	balances cstate.StateContextI) bool {
-
-	mbits, err := balances.GetTrieNode(pkey)
-	if err != nil {
-		Logger.Warn("unexpected error", zap.Error(err))
-	}
-	if mbits != nil {
-		return true
-	}
-	return false
-}
-
 // AddSharder function to handle miner register
 func (msc *MinerSmartContract) AddSharder(t *transaction.Transaction,
 	input []byte, gn *globalNode, balances cstate.StateContextI) (
@@ -90,19 +77,21 @@ func (msc *MinerSmartContract) AddSharder(t *transaction.Transaction,
 			newSharder.MaxStake, gn.MaxStake)
 	}
 
-	if msc.doesSharderExist(getSharderKey(newSharder.ID), balances) {
-		return "", common.NewError("add_sharder", "sharder already exists")
+	var existing *MinerNode
+	existing, err = msc.getSharderNode(newSharder.ID, balances)
+	if err != nil && err != util.ErrValueNotPresent {
+		return "", common.NewErrorf("add_sharder", "unexpected error: %v", err)
 	}
 
-	// DON'T CREATE INITIAL DELEGATE POOL
-
-	// pool = sci.NewDelegatePool()
-	// transfer, _, err := pool.DigPool(t.Hash, t)
-	// if err != nil {
-	// 	return "", common.NewError("failed to add sharder", fmt.Sprintf("error digging delegate pool: %v", err.Error()))
-	// }
-	// balances.AddTransfer(transfer)
-	// newSharder.Pending[t.Hash] = pool
+	// if found
+	if err == nil {
+		// and found in all
+		if all.FindNodeById(newSharder.ID) != nil {
+			return "", common.NewError("add_sharder", "sharder already exists")
+		}
+		// otherwise the sharder has saved by block sharders reward
+		newSharder.Stat.SharderRewards = existing.Stat.SharderRewards
+	}
 
 	// add to all
 	all.Nodes = append(all.Nodes, newSharder)

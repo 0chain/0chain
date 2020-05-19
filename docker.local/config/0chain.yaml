@@ -114,7 +114,8 @@ network:
     rate_limit: 1000 # 1000 per second
 
 # delegate wallet is wallet that used for all rewards of a node (miner/sharder);
-# if delegate wallet is not set, then node id used;
+# if delegate wallet is not set, then node id used; the delegate wallet can't
+# be changed
 delegate_wallet: ''       # delegate wallet for all rewards
 # % of fees for generator
 service_charge: 0.10      # [0; 1) of all fees
@@ -126,6 +127,7 @@ min_stake: 10.0    # tokens
 # max stake pool amount allowed by node; should not conflict with
 # SC max_stake 
 max_stake: 1000.0  # tokens
+
 minio:
   enabled: false # Do not enable with deep scan ON
   worker_frequency: 3600

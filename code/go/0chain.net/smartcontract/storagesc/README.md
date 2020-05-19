@@ -24,7 +24,7 @@ Provide
  - read_price                 tok / GB (by 64 KB chunks)
  - max_offer_duration         time.Duration
  - challenge_completion_time  time.Duration
- - delegate_wallets           []string
+ - delegate_wallet            string
 
 The transaction also updates blobber's 'last health check' making it healthy.
 
@@ -63,6 +63,8 @@ Create related stake pool. Lock required tokens.
 ```
 required_stake = (capacity / GB) * write_price
 ```
+
+## Pools
 
 ## User
 
@@ -182,7 +184,6 @@ User can't extend size and close allocation. Such transactions are invalid.
 
 A size reducing doesn't reduce min_lock_demand to prevent the salvation attack.
 
-
 ### Cancel allocation.
 
 If blobbers doesn't work in reality, then an allocation can't be used.
@@ -216,19 +217,31 @@ The transaction:
  7. configure blobbers (remember capacity, write_price, id)
  8. create new wallet (zwallet), it creates read pool automatically
  9. add some tokens to the wallet (`./zwallet faucet --methodName pour --input “{Pay day}”`)
-10. send (capacity * write_price) tokens to blobbers to allow them register
-
-	- blobber 1 id: f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
-	- blobber 2 id: 7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d
-
-	./zwallet send --to_client_id f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25 --token 2 --desc "to register"
-	./zwallet send --to_client_id 7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d --token 2 --desc "to register"
-
-11. start blobbers, wait their registration
-12. create new allocation providing tokens to write pool
-13. check out write_pool
-14. check out blobbers
-15. check out blobbers stake pools
+10. find out your wallet ID
+    ```
+    cat ~/.zcn/wallet.json
+    ```
+    The client_id is the wallet ID.
+11. configure blobbers and validators (since they use the same stake pool
+    for rewards) making your wallet their delegate_wallet. E.g. edit
+    ```
+     config/0chain_blobber.yaml
+    ```
+    and
+    ```
+    config/0chain_validator.yaml
+    ```
+    in blobbers repository and add/set delegate_wallet setting to you wallet ID.
+12. start the blobbers and validators
+13. make a stake for the blobbers to allow them accept allocations
+    ```
+    ./zbox sp-lock --blobber_id f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25 --tokens 10
+    ./zbox sp-lock --blobber_id 7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d --tokens 10
+    ```
+14. create new allocation providing tokens to write pool
+15. check out write_pool
+16. check out blobbers stake pools
+17. etc, see below for example
 
 ## Step by step
 
@@ -238,6 +251,7 @@ free to use these zbox command.
 ### Initial
 
 1. Start Sharder. Wait it. Start miners. Wait blockchain starts.
+
 2. Create wallet, read pool, get some tokens
     ```
     for run in {1..20}
@@ -246,53 +260,14 @@ free to use these zbox command.
     done
     ```
     This command does it all.
-3. Start blobbers (if not started yet) and export their IDs to use later.
-    ```
-    export BLOBBER1=f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
-    export BLOBBER2=7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d
-    ```
-    Add tokens to stake pool of the blobber to allow them to accept allocations.
-    ```
-    ./zbox sp-lock --blobber_id $BLOBBER1 --token 2
-    ./zbox sp-lock --blobber_id $BLOBBER2 --token 2
-    ```
-4. Setup blobbers' and validators' wallets in `~/.zcn/` directory to use them
-    later. We will use them to check out balance. Blobber/Validator 1.
-    ```
-    cat > ~/.zcn/blobber1.json << EOF
-    {
-      "client_id": "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25",
-      "client_key": "de52c0a51872d5d2ec04dbc15a6f0696cba22657b80520e1d070e72de64c9b04e19ce3223cae3c743a20184158457582ffe9c369ca9218c04bfe83a26a62d88d",
-      "keys": [
-        {
-          "public_key": "de52c0a51872d5d2ec04dbc15a6f0696cba22657b80520e1d070e72de64c9b04e19ce3223cae3c743a20184158457582ffe9c369ca9218c04bfe83a26a62d88d",
-          "private_key": "17fa2ab0fb49249cb46dbc13e4e9e6853af8b1506e48d84c03e5e92f6348bb1d"
-        }
-      ],
-      "version": "1.0",
-      "date_created": "2020-03-16 00:47:58.247961953 +0400 +04 m=+0.015793530"
-    }
-    EOF
-    ```
-    Blobber/Validator 2.
-    ```
-    cat > ~/.zcn/blobber2.json << EOF
-    {
-      "client_id": "7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d",
-      "client_key": "e4dc5262ed8e20583e3293f358cc21aa77c2308ea773bab8913670ffeb5aa30d7e2effbce51f323b5b228ad01f71dc587b923e4aab7663a573ece5506f2e3b0e",
-      "keys": [
-        {
-          "public_key": "e4dc5262ed8e20583e3293f358cc21aa77c2308ea773bab8913670ffeb5aa30d7e2effbce51f323b5b228ad01f71dc587b923e4aab7663a573ece5506f2e3b0e",
-          "private_key": "4b6d9c5f7b0386e36b212324ea52f5ff17a9ed1338ca901d7f7fa7637159a912"
-        }
-      ],
-      "version": "1.0",
-      "date_created": "2020-03-16 00:47:58.247961953 +0400 +04 m=+0.015793530"
-    }
-    EOF
-    ```
-5. Start blobbers and validators. Wait their registration.
-    A storage SC related blobber configurations used for this examples.
+
+3. Configure blobbers and validators setting them own wallet as delegate_wallet.
+   Use cat ~/.zcn/wallet.json and use client_id field that is the wallet ID
+   and set it to 'delegate_wallet' setting of blobbers and validators.
+   Since, blobbers and validators uses the same delegate_wallets for rewards
+   the first registered will be used. E.g. it's important to set the
+   delegate_wallet for validators, because they registers fist as rule.
+   Example blobber configurations
     ```yaml
     # [configurations above]
 
@@ -317,20 +292,75 @@ free to use these zbox command.
     max_offer_duration: 744h # 31 day
     challenge_completion_time: 1m # 15m # duration to complete a challenge
 
-    # provide empty list to allow any client to be a delegate
-    delegate_wallets: []
-
-    # [configurations below]
+    # delegate wallet for all rewards, if it's empty, then blobber ID used
+    delegate_wallet: 'b145bf241eab00c9865a3551b18028a6d12b3ef84df8b4a5c317c8d184a82412'
     ```
-    Check blobbers' registrations.
+4. Start blobbers (if not started yet) and export their IDs to use later.
+    ```
+    export BLOBBER1=f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
+    export BLOBBER2=7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d
+    ```
+5. Wait some time and make sure the blobbers has registered in the storage SC:
     ```
     ./zbox ls-blobbers
     ```
-6. Check out stake pools of the blobbers. They should contains required stake.
+6. Add tokens to the stake pools of the blobber to allow them to accept
+   allocations.
+    ```
+    ./zbox sp-lock --blobber_id $BLOBBER1 --token 2
+    ./zbox sp-lock --blobber_id $BLOBBER2 --token 2
+    ```
+7. Check out stake pools of the blobbers. They should contains required stake.
     ```
     ./zbox sp-info --blobber_id $BLOBBER1
     ./zbox sp-info --blobber_id $BLOBBER2
     ```
+    For example
+    ```
+    pool_id: a7782f5a4a68a242c8dbb163a72ae1f65d3db8b35e017439b265edcf969935a1
+    balance: 12
+    capacity:
+      free:        120.0 GiB (for current write price)
+      capacity:    1.0 GiB (blobber bid)
+      write_price: 0.1 (blobber write price)
+    offers: no opened offers
+    delegate_pools:
+    - id:          860703e3c21b6b0e60a00894ea5ac8d4150874118f5462995cce80d0e9510264
+      balance:     10
+      delegate_id: b145bf241eab00c9865a3551b18028a6d12b3ef84df8b4a5c317c8d184a82412
+      earnings:    2 (payed interests for the delegate pool)
+      penalty:     0 (penalty for the delegate pool)
+      interests:   2 (interests not payed yet, can be given by 'sp-pay-interests' command)
+    - id:          f50cf63bed2c89c5b4328bd429a93d087a354a6d8b792aa237ee760bcd003236
+      balance:     1
+      delegate_id: b145bf241eab00c9865a3551b18028a6d12b3ef84df8b4a5c317c8d184a82412
+      earnings:    0.1 (payed interests for the delegate pool)
+      penalty:     0 (penalty for the delegate pool)
+      interests:   0.1 (interests not payed yet, can be given by 'sp-pay-interests' command)
+    - id:          f68d7aa17e649cbb65c5c6a021d06b3021f88b6301adc556add5ad16b719fc11
+      balance:     1
+      delegate_id: b145bf241eab00c9865a3551b18028a6d12b3ef84df8b4a5c317c8d184a82412
+      earnings:    0 (payed interests for the delegate pool)
+      penalty:     0 (penalty for the delegate pool)
+      interests:   0.1 (interests not payed yet, can be given by 'sp-pay-interests' command)
+    earnings: 2.1 (total interests earnings for all delegate pools for all time)
+    penalty: 0 (total blobber penalty for all time)
+    rewards: (excluding interests)
+      balance:   0 (current rewards can be unlocked)
+      blobber:   0 (for all time)
+      validator: 0 (for all time)
+    ```
+    This fields
+    ```
+    free:        120.0 GiB (for current write price)
+    capacity:    1.0 GiB (blobber bid)
+    write_price: 0.1 (blobber write price)
+    ```
+    The 'free' is staked capacity for current write price. A blobber can change
+    its write price anytime and it will be changed. Even if the 'free' capacity
+    is 100GB a blobber can't allocate more then its capacity bid. For example,
+    if a blobber has zero write_price it can't allocate infinity. Thus a blobber
+    can provide `min (free, bid)` for current time and terms.
 7. Create and fund two new allocations.
     ```
     ./zbox newallocation --read_price 0.001-10 --write_price 0.01-10 --size 104857600 --lock 2 --data 1 --parity 1 --expire 48h
