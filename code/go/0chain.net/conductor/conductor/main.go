@@ -13,6 +13,50 @@
 // 2 non-genesis sharders and 1 non-genesis miner.
 package main
 
+import (
+	"flag"
+	"log"
+	"os"
+
+	"gopkg.in/yaml.v2"
+
+	"0chain.net/conductor/conductrpc"
+	"0chain.net/conductor/config"
+
+	"github.com/kr/pretty"
+)
+
 func main() {
+
+	var (
+		configFile string = "conductor.yaml"
+		verbose    bool   = false
+	)
+
+	flag.StringVar(&configFile, "config", configFile, "configurations file")
+	flag.BoolVar(&verbose, "verbose", verbose, "verbose logs")
+	flag.Parse()
+
+	var conf = readConfig(configFile)
+
 	//
+
+	_ = conf
+
+	pretty.Print(conf)
+
+	var _ conductrpc.Server
+}
+
+func readConfig(configFile string) (conf *config.Config) {
+	conf = new(config.Config)
+	var fl, err = os.Open(configFile)
+	if err != nil {
+		log.Fatalf("opening configurations file %s: %v", configFile, err)
+	}
+	defer fl.Close()
+	if err = yaml.NewDecoder(fl).Decode(conf); err != nil {
+		log.Fatalf("decoding configurations file %s: %v", configFile, err)
+	}
+	return
 }
