@@ -17,6 +17,7 @@ import (
 	"flag"
 	"log"
 	"os"
+	"time"
 
 	"gopkg.in/yaml.v2"
 
@@ -59,4 +60,86 @@ func readConfig(configFile string) (conf *config.Config) {
 		log.Fatalf("decoding configurations file %s: %v", configFile, err)
 	}
 	return
+}
+
+type Runner struct {
+	server *conductrpc.Server
+	conf   *config.Config
+
+	verbose bool             // verbose logs
+	rounds  map[string]int64 // named rounds (the remember_round)
+}
+
+func (r *Runner) Run() (err error) {
+	for i, test := range r.conf.Tests {
+		if err = r.runTest(i, test); err != nil {
+			return
+		}
+	}
+	return
+}
+
+func (r *Runner) runTest(i int, test config.Case) (err error) {
+	log.Print("start %d %s", i, test.Name)
+	defer log.Print("end %d %s", i, test.Name)
+
+	for _, f := range test.Flow {
+		f.Execute(ex)
+	}
+
+}
+
+func (r *Runner) Start(names []string, lock bool) (err error) {
+	// start nodes
+	for _, name := range names {
+		var n, ok = r.conf.Nodes.NodeByName(name) //
+		if !ok {
+			return fmt.Errorf("(start): unknown node: %q", name)
+		}
+		r.server.AddNode(n.ID, lock)
+		if err = n.Start(r.conf.Logs); err != nil {
+			return
+		}
+	}
+	// wait nodes
+	var nm = make(map[string]struct{}, len(names))
+	for _, n := range names {
+		nm[n] = struct{}{}
+	}
+
+	// TODO (sfxdx): add timeout for nodes to start
+	for len(nm) > 0 {
+		select {
+		case minerID := <-r.server.OnAddMiner():
+			if _, ok := nm[string(minerID)]; !ok {
+				return fmt.Errorf("unexpected miner added: %q", minerID)
+			}
+			delete(mn, string(minerID))
+			log.Print("%q started", minerID)
+		case sharderID := <-r.server.OnAddSharder():
+			if _, ok := nm[string(sharderID)]; !ok {
+				return fmt.Errorf("unexpected sharder added: %q", sharderID)
+			}
+			delete(mn, string(sharderID))
+			log.Print("%q started", sharderID)
+		}
+	}
+
+	return
+}
+
+func (r *Runner) WaitViewChange(vc config.ViewChange) (err error) {
+	//
+}
+
+func (r *Runner) WaitPhase(phase int, timeout time.Duration) (err error) {
+	//
+}
+
+func (r *Runner) Unlock(names []string) (err error) {
+	//
+}
+
+func (r *Runner) Stop(names []string) (err error) {
+	//
 }
