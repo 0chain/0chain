@@ -1,6 +1,8 @@
 package conductrpc
 
 import (
+	"fmt"
+
 	"github.com/valyala/gorpc"
 )
 
@@ -27,6 +29,10 @@ func NewClient(address string) (c *Client) {
 	return
 }
 
+//
+// miner SC RPC
+//
+
 // ViewChange notification.
 func (c *Client) ViewChange(viewChange ViewChange) (err error) {
 	_, err = c.dispc.Call("onViewChange", viewChange)
@@ -45,14 +51,32 @@ func (c *Client) AddSharder(sharderID SharderID) (err error) {
 	return
 }
 
+//
+// nodes RPC
+//
+
 // MinerReady notification.
-func (c *Client) MinerReady(minerID MinerID) (err error) {
-	_, err = c.dispc.Call("onMinerReady", minerID)
+func (c *Client) MinerReady(minerID MinerID) (join Lock, err error) {
+	var face interface{}
+	if face, err = c.dispc.Call("onMinerReady", minerID); err != nil {
+		return
+	}
+	var ok bool
+	if join, ok = face.(Lock); !ok {
+		return false, fmt.Errorf("invalid response type %T", face)
+	}
 	return
 }
 
 // SharderReady notification.
-func (c *Client) SharderReady(sharderID SharderID) (err error) {
-	_, err = c.dispc.Call("onSharderReady", sharderID)
+func (c *Client) SharderReady(sharderID SharderID) (join Lock, err error) {
+	var face interface{}
+	if face, err = c.dispc.Call("onSharderReady", sharderID); err != nil {
+		return
+	}
+	var ok bool
+	if join, ok = face.(Lock); !ok {
+		return false, fmt.Errorf("invalid response type %T", face)
+	}
 	return
 }
