@@ -10,7 +10,6 @@ func init() {
 	gorpc.RegisterType(MinerID(""))
 	gorpc.RegisterType(SharderID(""))
 	gorpc.RegisterType(ViewChange{})
-	gorpc.RegisterType(Lock(false))
 }
 
 // common types
@@ -26,14 +25,16 @@ type ViewChange struct {
 	Sharders []SharderID // magic block sharders
 }
 
-// Lock miner or sharder to join BC.
-type Lock bool
-
 // known locks
 const (
 	Locked   = false // should wait
 	Unlocked = true  // can join
 )
+
+type nodeLock struct {
+	lock    bool //
+	counter int  //
+}
 
 type Server struct {
 	server *gorpc.Server
@@ -58,9 +59,8 @@ type Server struct {
 	onSharderReady chan SharderID
 
 	// add / lock  miner / sharder
-	mutex    sync.Mutex
-	miners   map[MinerID]Lock   // expected miner -> unlocked
-	sharders map[SharderID]Lock // expected sharder -> unlocked
+	mutex sync.Mutex
+	locks map[string]*nodeLock // expected miner/sharder -> locked/unlocked
 
 	quitOnce sync.Once
 	quit     chan struct{}
@@ -93,50 +93,32 @@ func NewServer(address string) (s *Server) {
 // add/lock miner/sharder
 //
 
-// AddMiner adds and, optionally, locks expected miner.
-func (s *Server) AddMiner(minerID MinerID, lock Lock) {
+// AddNode adds miner of sharder and, optionally, locks it.
+func (s *Server) AddNode(nodeID string, lock bool) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	s.miners[minerID] = lock
+	s.locks[nodeID] = nodeLock{counter: 0, lock: lock}
 }
 
-// AddSharder adds and, optionally, locks expected sharder.
-func (s *Server) AddSharder(sharderID SharderID, lock Lock) {
+// UnlockNode unlocks a miner.
+func (s *Server) UnlockNode(nodeID string) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	s.sharders[sharderID] = lock
+	s.locks[nodeID] = nodeLock{counter: 0, lock: Unlocked}
 }
 
-// UnlockMiner unlocks a miner.
-func (s *Server) UnlockMiner(minerID MinerID) {
+func (s *Server) nodeLock(nodeID string) (lock, ok bool) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	s.miners[minerID] = true // unlocked
-}
-
-// UnlockSharder unlocks a sharder.
-func (s *Server) UnlockSharder(sharderID SharderID) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
-	s.sharders[sharderID] = true // unlocked
-}
-
-func (s *Server) minerLock(minerID MinerID) (lock Lock) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
-	return s.miners[minerID]
-}
-
-func (s *Server) sharderLock(sharderID SharderID) (lock Lock) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
-	return s.sharders[sharderID]
+	var nl *nodeLock
+	nl, ok = s.locks[nodeID]
+	if !ok {
+		return
+	}
+	return nl.lock, ok
 }
 
 // events handling
@@ -198,19 +180,19 @@ func (s *Server) onAddSharderHandler(sharderID SharderID) {
 	}
 }
 
-func (s *Server) onMinerReadyHandler(minerID MinerID) (join Lock) {
+func (s *Server) onMinerReadyHandler(minerID MinerID) (join bool) {
 	select {
 	case s.onMinerReady <- minerID:
-		return s.minerLock(minerID)
+		return s.nodeLock(string(minerID))
 	case <-s.quit:
 	}
 	return
 }
 
-func (s *Server) onSharderReadyHandler(sharderID SharderID) (join Lock) {
+func (s *Server) onSharderReadyHandler(sharderID SharderID) (join bool) {
 	select {
 	case s.onSharderReady <- sharderID:
-		return s.sharderLock(sharderID)
+		return s.nodeLock(string(sharderID))
 	case <-s.quit:
 	}
 	return

@@ -56,26 +56,26 @@ func (c *Client) AddSharder(sharderID SharderID) (err error) {
 //
 
 // MinerReady notification.
-func (c *Client) MinerReady(minerID MinerID) (join Lock, err error) {
+func (c *Client) MinerReady(minerID MinerID) (join bool, err error) {
 	var face interface{}
 	if face, err = c.dispc.Call("onMinerReady", minerID); err != nil {
 		return
 	}
 	var ok bool
-	if join, ok = face.(Lock); !ok {
+	if join, ok = face.(bool); !ok {
 		return false, fmt.Errorf("invalid response type %T", face)
 	}
 	return
 }
 
 // SharderReady notification.
-func (c *Client) SharderReady(sharderID SharderID) (join Lock, err error) {
+func (c *Client) SharderReady(sharderID SharderID) (join bool, err error) {
 	var face interface{}
 	if face, err = c.dispc.Call("onSharderReady", sharderID); err != nil {
 		return
 	}
 	var ok bool
-	if join, ok = face.(Lock); !ok {
+	if join, ok = face.(bool); !ok {
 		return false, fmt.Errorf("invalid response type %T", face)
 	}
 	return

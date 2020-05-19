@@ -245,16 +245,27 @@ func (n *Node) Stop() (err error) {
 	return // nil or error
 }
 
+// Nodes is list of nodes.
+type Nodes []*Node
+
+// NodeByName returns node by name.
+func (ns Nodes) NodeByName(name string) (n *Node, ok bool) {
+	for _, x := range ns {
+		if x.Name == name {
+			return x, true
+		}
+	}
+	return // nil, false
+}
+
 // A Config represents conductor testing configurations.
 type Config struct {
 	// Address is RPC server address
 	Address string `json:"address" yaml:"address" mapstructure:"address"`
-	// WorkDir relative or absolute.
-	WorkDir string `json:"work_dir" yaml:"work_dir" mapstructure:"work_dir"`
 	// Logs is directory for stdin and stdout logs.
 	Logs string `json:"logs" yaml:"logs" mapstructure:"logs"`
 	// Nodes for tests.
-	Nodes []Node `json:"nodes" yaml:"nodes" mapstructure:"nodes"`
+	Nodes Nodes `json:"nodes" yaml:"nodes" mapstructure:"nodes"`
 	// Tests cases and related.
 	Tests []Case `json:"tests" yaml:"tests" mapstructure:"tests"`
 }
