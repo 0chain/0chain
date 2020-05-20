@@ -102,7 +102,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 			newMiner.MaxStake, gn.MaxStake)
 	}
 
-	if msc.doesMinerExist(newMiner.ID, balances) {
+	if msc.doesMinerExist(newMiner.getKey(), balances) {
 		return "", common.NewError("failed to add miner",
 			"miner already exists")
 	}
