@@ -1,6 +1,7 @@
 # docker.local
 FROM alpine:3.9
 RUN apk add bash
+RUN apk add ca-certificates
 RUN apk add libbz2 lz4-libs snappy zstd-libs  # For RocksDB
 RUN apk add gmp libcrypto1.1 libssl1.1               # For Herumi
 
