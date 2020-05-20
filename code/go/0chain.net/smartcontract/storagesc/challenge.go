@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"0chain.net/chaincore/block"
 	c_state "0chain.net/chaincore/chain/state"
@@ -20,6 +21,7 @@ import (
 	. "0chain.net/core/logging"
 	"0chain.net/core/util"
 
+	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
 
@@ -567,10 +569,17 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 			Logger.Error("Error in creating challenge seed", zap.Error(err), zap.Any("challengeID", challengeID))
 			continue
 		}
+		// statistics
+		var tp = time.Now()
 		challengeString, err := sc.addChallenge(challengeID, t.CreationDate, r, int64(challengeSeed), balances)
 		if err != nil {
 			Logger.Error("Error in adding challenge", zap.Error(err), zap.Any("challengeString", challengeString))
 			continue
+		}
+		if tm := sc.SmartContractExecutionStats["challenge_request"]; tm != nil {
+			if timer, ok := tm.(metrics.Timer); ok {
+				timer.Update(time.Since(tp))
+			}
 		}
 	}
 	return nil

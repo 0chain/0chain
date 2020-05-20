@@ -196,12 +196,16 @@ func (wp *writePool) getPool(poolID string) *allocationPool {
 func (wp *writePool) allocPool(allocID string, until common.Timestamp) (
 	ap *allocationPool) {
 
+	var zero *allocationPool
 	for _, ap := range wp.Pools.allocationCut(allocID) {
 		if ap.ExpireAt == until {
 			return ap
 		}
+		if ap.ExpireAt == 0 {
+			zero = ap
+		}
 	}
-	return
+	return zero
 }
 
 func (wp *writePool) stat(now common.Timestamp) (aps allocationPoolsStat) {

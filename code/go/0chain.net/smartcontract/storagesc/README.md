@@ -307,8 +307,8 @@ free to use these zbox command.
 6. Add tokens to the stake pools of the blobber to allow them to accept
    allocations.
     ```
-    ./zbox sp-lock --blobber_id $BLOBBER1 --token 2
-    ./zbox sp-lock --blobber_id $BLOBBER2 --token 2
+    ./zbox sp-lock --blobber_id $BLOBBER1 --tokens 2
+    ./zbox sp-lock --blobber_id $BLOBBER2 --tokens 2
     ```
 7. Check out stake pools of the blobbers. They should contains required stake.
     ```
@@ -436,12 +436,7 @@ free to use these zbox command.
     ```
     ./zbox delete --allocation $ALLOC1 --remotepath /remote/random.bin
     ```
-22. Check out challenge and write pools again.
-    ```
-    ./zbox cp-info --allocation $ALLOC1
-    ./zbox wp-info --allocation $ALLOC1
-    ```
-23. Generate and upload another file.
+22. Generate and upload another file.
     ```
     head -c 50M < /dev/urandom > random.bin
     ./zbox upload \
@@ -450,31 +445,31 @@ free to use these zbox command.
       --localpath=random.bin \
       --remotepath=/remote/random.bin
     ```
-24. Check out uploaded list
+23. Check out uploaded list
     ```
     ./zbox list --allocation $ALLOC1 --remotepath /remote
     ```
-25. Check out related challenge and write pool after blobbers commit their
+24. Check out related challenge and write pool after blobbers commit their
     write markers in SC.
     ```
     ./zbox cp-info --allocation $ALLOC1
     ./zbox wp-info --allocation $ALLOC1
     ```
-26. Commit some tokens to a read pool.
+25. Commit some tokens to a read pool.
     ```
-    ./zbox rp-lock --allocation $ALLOC1 --duration 40m --tokens 1
+    ./zbox rp-lock --allocation $ALLOC1 --duration 1h --tokens 1
     ```
-27. Check out locked tokens in the read pool.
+26. Check out locked tokens in the read pool.
     ```
     ./zbox rp-info --allocation $ALLOC1
     ```
-28. Download the file.
+27. Download the file.
     ```
     rm -f got.bin
     ./zbox download --allocation $ALLOC1 --localpath=got.bin \
         --remotepath /remote/random.bin
     ```
-30. Make the allocation expired.
+28. Make the allocation expired.
     ```
     ./zbox updateallocation --allocation $ALLOC1 --expiry -48h
     ./zbox get --allocation $ALLOC1
@@ -488,19 +483,67 @@ free to use these zbox command.
     ./zbox cp-info --allocation $ALLOC1
     ./zbox wp-info --allocation $ALLOC1
     ```
-31. Cancel second allocation.
+    Blobbers finalizes allocations automatically by some interval (see blobber
+    configurations 'update_allocations_interval'). And in this case,
+    the alloc-fini can fail with 'allocation already finalized'.
+29. Cancel second allocation.
+    ```
+    head -c 50M < /dev/urandom > random.bin
+    ./zbox upload                        \
+        --allocation $ALLOC2             \
+        --commit                         \
+        --localpath=random.bin           \
+        --remotepath=/remote/random.bin
+    ```
+    Then shutdown blobbers to make them fail their challenges for the new
+    uploaded file. It's not 100% guaranteed that the blobber receive a challenge
+    requests, since challenges generation based on some randomization.
+    Wait challenge completion time (use `./zbox get --allocation $ALLOC2`).
+    All generated challenges will be failed (due to time). Check out allocation
+    object.
+    ```
+    ./zbox get --allocation $ALLOC2
+    ``` 
+    Make sure `total challenges` reaches `failed_challenges_to_cancel`
+    configured in sc.yaml ('stroagesc'). Since, blobbers is down after the
+    challenge_completion_time all the challenges are failed. But the 
+    filed_challenges field will be zero, because blobber doesn't send a
+    challenge (the failed_challenges is where a blobber sends a failed
+    challenge, there is mechanism for challenges expired for a case blobber is
+    down).
     ```
     ./zbox alloc-cancel --allocation $ALLOC2
     ```
-32. Unlock read pool tokens
+    Now
+    ```
+    ./zbox get --allocation $ALLOC2
+    ```
+    should show
+    ```
+    finalized:                 true
+    canceled:                  true
+    ```
+30. Unlock read pool tokens
     ```
     ./zbox rp-info
     ```
-    Use pool id in next command
+    Use pool id in next command, but, make sure the pool has expired, wait
+    otherwise. It's duration is 1 hour. The min allowed duration can be
+    configured for BC in sc.yaml 'stroaagesc'.
     ```
     ./zbox rp-unlock --pool_id <POOL_ID>
     ```
-33. Check out blobbers. Should not have allocated space.
+31. Check out blobbers. Should not have allocated space.
     ```
     ./zbox ls-blobbers
+    ```
+32. Check out your wallet balance
+    ```
+    ./zwallet getbalance
+    ```
+33. Since, your wallet was configured and delegate_wallet for the blobbers,
+    then it should have rewards, and interests
+    ```
+    ./zbox sp-take-rewards --blobber_id $BLOBBER1
+    ./zbox sp-take-rewards --blobber_id $BLOBBER2
     ```

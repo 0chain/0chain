@@ -42,14 +42,21 @@ func (tb *testBalances) GetMints() []*state.Mint                  { return nil }
 func (tb *testBalances) SetStateContext(*state.State) error       { return nil }
 func (tb *testBalances) AddMint(*state.Mint) error                { return nil }
 func (tb *testBalances) GetTransfers() []*state.Transfer          { return nil }
+func (tb *testBalances) SetMagicBlock(block *block.MagicBlock)    {}
 func (tb *testBalances) AddSignedTransfer(st *state.SignedTransfer) {
-
 }
 func (tb *testBalances) GetSignedTransfers() []*state.SignedTransfer {
 	return nil
 }
 func (tb *testBalances) DeleteTrieNode(datastore.Key) (datastore.Key, error) {
 	return "", nil
+}
+func (tb *testBalances) GetLastestFinalizedMagicBlock() *block.Block {
+	return nil
+}
+
+func (tb *testBalances) GetSignatureScheme() encryption.SignatureScheme {
+	return encryption.NewBLS0ChainScheme()
 }
 
 func (tb *testBalances) GetClientBalance(clientID datastore.Key) (

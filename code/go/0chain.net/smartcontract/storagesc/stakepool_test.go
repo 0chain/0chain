@@ -37,7 +37,8 @@ func Test_stakePool_offersStake(t *testing.T) {
 		Lock:   90,
 		Expire: now,
 	}
-	assert.Equal(t, state.Balance(90), sp.offersStake(now, false))
+	assert.Equal(t, state.Balance(90), sp.offersStake(now-1, false))
+	assert.Equal(t, state.Balance(0), sp.offersStake(now, false))
 }
 
 func Test_stakePool_save(t *testing.T) {
