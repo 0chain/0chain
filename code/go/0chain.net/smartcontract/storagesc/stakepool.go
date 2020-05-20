@@ -95,7 +95,7 @@ func (sp *stakePool) offersStake(now common.Timestamp, dry bool) (
 	os state.Balance) {
 
 	for allocID, off := range sp.Offers {
-		if off.Expire < now {
+		if off.Expire <= now {
 			if !dry {
 				delete(sp.Offers, allocID) //remove expired
 			}

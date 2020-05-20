@@ -45,6 +45,14 @@ func (tb *testBalances) GetTransfers() []*state.Transfer          { return nil }
 func (tb *testBalances) AddSignedTransfer(st *state.SignedTransfer) {
 
 }
+func (tb *testBalances) SetMagicBlock(block *block.MagicBlock) {}
+func (tb *testBalances) GetLastestFinalizedMagicBlock() *block.Block {
+	return nil
+}
+
+func (tb *testBalances) GetSignatureScheme() encryption.SignatureScheme {
+	return encryption.NewBLS0ChainScheme()
+}
 func (tb *testBalances) GetSignedTransfers() []*state.SignedTransfer {
 	return nil
 }
