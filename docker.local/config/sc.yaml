@@ -9,6 +9,7 @@ smart_contracts:
     min_lock: 10 
     apr: 0.1
     min_lock_period: 1m
+    max_mint: 4000000.0
 
   minersc:
     max_n: 100
