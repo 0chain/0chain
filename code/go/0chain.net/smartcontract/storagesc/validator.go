@@ -45,6 +45,7 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 		balances.InsertTrieNode(newValidator.GetKey(sc.ID), newValidator)
 
 		sc.statIncr(statAddValidator)
+		sc.statIncr(statNumberOfValidators)
 	} else {
 		sc.statIncr(statUpdateValidator)
 	}

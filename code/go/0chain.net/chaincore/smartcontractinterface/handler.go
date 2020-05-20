@@ -33,6 +33,8 @@ func (sc *SmartContract) HandlerStats(ctx context.Context, params url.Values) (i
 			response += WriteHistogramStatisticsWithoutChain(stats)
 		case metrics.Timer:
 			response += WriteTimerStatisticsWithoutChain(stats, 1000000.0)
+		case metrics.Counter:
+			response += WriteCounterStatisticsWithoutChain(stats)
 		default:
 			response += fmt.Sprintf("This is wrong. You should not be seeing this")
 		}
@@ -44,6 +46,15 @@ func (sc *SmartContract) HandlerStats(ctx context.Context, params url.Values) (i
 	}
 	response += fmt.Sprintf(`</body></html>`)
 	return response, nil
+}
+
+// WriteCounterStatisticsWithoutChain writes the statistics of the given counter.
+func WriteCounterStatisticsWithoutChain(counter metrics.Counter) (resp string) {
+	return fmt.Sprintf(`
+	<table width='100%%'>
+		<tr><td>Count</td><td>%v</td></tr>
+	</table>
+`, counter.Count())
 }
 
 /*WriteTimerStatistics - write the statistics of the given timer */
