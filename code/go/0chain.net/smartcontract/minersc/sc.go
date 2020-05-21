@@ -19,6 +19,9 @@ import (
 	"github.com/rcrowley/go-metrics"
 
 	. "0chain.net/core/logging"
+	"go.uber.org/zap"
+
+	"0chain.net/conductor/conductrpc"
 )
 
 const (
@@ -51,6 +54,7 @@ var (
 type MinerSmartContract struct {
 	*sci.SmartContract
 	bcContext sci.BCContextI
+	client    *conductrpc.Client
 
 	mutexMinerMPK          sync.RWMutex
 	smartContractFunctions map[string]smartContractFunction
@@ -80,10 +84,20 @@ func (msc *MinerSmartContract) InitSC() {
 	moveFunctions[Publish] = msc.moveToWait
 	moveFunctions[Wait] = msc.moveToStart
 
-	msc.smartContractFunctions["add_miner"] = msc.AddMiner
-	msc.smartContractFunctions["add_sharder"] = msc.AddSharder
+	if isIntegrationTests() {
+		Logger.Debug("using integration test",
+			zap.String("address", msc.client.Address()))
+		msc.client = newConductRPCClient()
+		msc.smartContractFunctions["add_miner"] = msc.AddMinerIntegrationTests
+		msc.smartContractFunctions["add_sharder"] = msc.AddSharderIntegrationTests
+		msc.smartContractFunctions["payFees"] = msc.payFeesIntegrationTests
+	} else {
+		msc.smartContractFunctions["add_miner"] = msc.AddMiner
+		msc.smartContractFunctions["add_sharder"] = msc.AddSharder
+		msc.smartContractFunctions["payFees"] = msc.payFees
+	}
+
 	msc.smartContractFunctions["update_settings"] = msc.UpdateSettings
-	msc.smartContractFunctions["payFees"] = msc.payFees
 	msc.smartContractFunctions["addToDelegatePool"] = msc.addToDelegatePool
 	msc.smartContractFunctions["deleteFromDelegatePool"] = msc.deleteFromDelegatePool
 	msc.smartContractFunctions["contributeMpk"] = msc.contributeMpk
@@ -144,8 +158,10 @@ func (msc *MinerSmartContract) addMint(gn *globalNode, mint state.Balance) {
 }
 
 //Execute implementing the interface
-func (msc *MinerSmartContract) Execute(t *transaction.Transaction, funcName string,
-	input []byte, balances cstate.StateContextI) (string, error) {
+func (msc *MinerSmartContract) Execute(t *transaction.Transaction,
+	funcName string, input []byte, balances cstate.StateContextI) (
+	string, error) {
+
 	gn, err := msc.getGlobalNode(balances)
 	if err != nil {
 		return "", err

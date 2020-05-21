@@ -128,7 +128,9 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI, pn *P
 
 				if err != nil {
 					msc.RestartDKG(pn, balances)
-					Logger.Error("failed to set phase node", zap.Any("error", err), zap.Any("phase", pn.Phase))
+					Logger.Error("failed to set phase node",
+						zap.Any("error", err),
+						zap.Any("phase", pn.Phase))
 				}
 			}
 			if err == nil {
@@ -144,14 +146,16 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI, pn *P
 				}
 			}
 		} else {
-			Logger.Warn("failed to move phase", zap.Any("phase", pn.Phase),
+			Logger.Warn("failed to move phase",
+				zap.Any("phase", pn.Phase),
 				zap.Any("move_func", getFunctionName(currentMoveFunc)))
 			msc.RestartDKG(pn, balances)
 		}
 	}
 	_, err := balances.InsertTrieNode(pn.GetKey(), pn)
 	if err != nil && err != util.ErrValueNotPresent {
-		Logger.DPanic("failed to set phase node -- insert failed", zap.Any("error", err))
+		Logger.DPanic("failed to set phase node -- insert failed",
+			zap.Any("error", err))
 		return err
 	}
 	return nil
