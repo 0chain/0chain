@@ -140,3 +140,20 @@ cassandra:
   connection:
     delay: 3 # in seconds
     retries: 10
+
+
+##
+## TODO (sfxdx): move this to flags and another docker_compose file
+##               to avoid reconfiguration every time for a regular start
+##               and for a start for integration tests
+##
+
+# integration tests
+testing:
+  # miners and sharder started under control of integration test server
+  enabled: true
+  # address of the server
+  address: 198.18.0.121:15210
+  # lock_interval used by nodes to request server to connect to blockchain
+  # after start
+  lock_interval: 1s

@@ -1,6 +1,7 @@
 package conductrpc
 
 import (
+	"strings"
 	"sync"
 
 	"github.com/valyala/gorpc"
@@ -10,13 +11,41 @@ func init() {
 	gorpc.RegisterType(MinerID(""))
 	gorpc.RegisterType(SharderID(""))
 	gorpc.RegisterType(ViewChange{})
+	gorpc.RegisterType(Phase(0))
 }
 
 // common types
 type (
 	MinerID   string
 	SharderID string
+	Phase     int
 )
+
+// known phases
+const (
+	Unknown    = iota // illegal
+	Start             //
+	Contribute        //
+	Share             //
+	Publish           //
+	Wait              //
+)
+
+func PhaseFromString(phase string) Phase {
+	switch strings.ToLower(phase) {
+	case "start":
+		return Start
+	case "contribute":
+		return Contribute
+	case "share":
+		return Share
+	case "publish":
+		return Publish
+	case "wait":
+		return Wait
+	}
+	return Unknown
+}
 
 // ViewChange represents view change information.
 type ViewChange struct {
@@ -44,6 +73,8 @@ type Server struct {
 
 	// onViewChange occurs where BC made VC (round == view change round)
 	onViewChange chan ViewChange
+	// onPhase occurs for every phase change
+	onPhase chan Phase
 	// onAddMiner occurs where miner SC proceed add_miner function
 	onAddMiner chan MinerID
 	// onAddSharder occurs where miner SC proceed add_sharder function
@@ -80,6 +111,7 @@ func NewServer(address string) (s *Server) {
 
 	s.disp = gorpc.NewDispatcher()
 	s.disp.AddFunc("onViewChange", s.onViewChangeHandler)
+	s.disp.AddFunc("onPhase", s.onPhaseHandler)
 	s.disp.AddFunc("onAddMiner", s.onAddMinerHandler)
 	s.disp.AddFunc("onAddSharder", s.onAddSharderHandler)
 	s.disp.AddFunc("onMinerReady", s.onMinerReadyHandler)
@@ -98,7 +130,7 @@ func (s *Server) AddNode(nodeID string, lock bool) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	s.locks[nodeID] = nodeLock{counter: 0, lock: lock}
+	s.locks[nodeID] = &nodeLock{counter: 0, lock: lock}
 }
 
 // UnlockNode unlocks a miner.
@@ -106,7 +138,7 @@ func (s *Server) UnlockNode(nodeID string) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	s.locks[nodeID] = nodeLock{counter: 0, lock: Unlocked}
+	s.locks[nodeID] = &nodeLock{counter: 0, lock: Unlocked}
 }
 
 func (s *Server) nodeLock(nodeID string) (lock, ok bool) {
@@ -116,9 +148,9 @@ func (s *Server) nodeLock(nodeID string) (lock, ok bool) {
 	var nl *nodeLock
 	nl, ok = s.locks[nodeID]
 	if !ok {
-		return
+		return // false, false
 	}
-	return nl.lock, ok
+	return nl.lock, ok // lock, true
 }
 
 // events handling
@@ -166,6 +198,13 @@ func (s *Server) onViewChangeHandler(viewChange ViewChange) {
 	}
 }
 
+func (s *Server) onPhaseHandler(phase Phase) {
+	select {
+	case s.onPhase <- phase:
+	case <-s.quit:
+	}
+}
+
 func (s *Server) onAddMinerHandler(minerID MinerID) {
 	select {
 	case s.onAddMiner <- minerID:
@@ -181,18 +220,28 @@ func (s *Server) onAddSharderHandler(sharderID SharderID) {
 }
 
 func (s *Server) onMinerReadyHandler(minerID MinerID) (join bool) {
+
+	var ok bool
+	if join, ok = s.nodeLock(string(minerID)); ok {
+		return // don't trigger onMinerReady twice or more times
+	}
+
 	select {
 	case s.onMinerReady <- minerID:
-		return s.nodeLock(string(minerID))
 	case <-s.quit:
 	}
 	return
 }
 
 func (s *Server) onSharderReadyHandler(sharderID SharderID) (join bool) {
+
+	var ok bool
+	if join, ok = s.nodeLock(string(sharderID)); ok {
+		return // don't trigger onSharderReady twice or more times
+	}
+
 	select {
 	case s.onSharderReady <- sharderID:
-		return s.nodeLock(string(sharderID))
 	case <-s.quit:
 	}
 	return

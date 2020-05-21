@@ -8,8 +8,9 @@ import (
 
 // Client of the conductor RPC server.
 type Client struct {
-	client *gorpc.Client
-	dispc  *gorpc.DispatcherClient
+	address string
+	client  *gorpc.Client
+	dispc   *gorpc.DispatcherClient
 }
 
 // NewClient creates new client will be interacting
@@ -20,6 +21,7 @@ func NewClient(address string) (c *Client) {
 
 	var disp = gorpc.NewDispatcher()
 	disp.AddFunc("onViewChange", nil)
+	disp.AddFunc("onPhase", nil)
 	disp.AddFunc("onAddMiner", nil)
 	disp.AddFunc("onAddSharder", nil)
 	disp.AddFunc("onMinerReady", nil)
@@ -29,9 +31,19 @@ func NewClient(address string) (c *Client) {
 	return
 }
 
+// Address of RPC server.
+func (c *Client) Address() string {
+	return c.address
+}
+
 //
 // miner SC RPC
 //
+
+func (c *Client) Phase(phase Phase) (err error) {
+	_, err = c.dispc.Call("onPhase", phase)
+	return
+}
 
 // ViewChange notification.
 func (c *Client) ViewChange(viewChange ViewChange) (err error) {

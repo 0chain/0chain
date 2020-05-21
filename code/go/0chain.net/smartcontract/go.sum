@@ -88,6 +88,8 @@ github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXf
 github.com/stretchr/testify v1.3.0 h1:TivCn/peBQ7UY8ooIcPgZFpTNSz0Q2U6UrFlUfqbe0Q=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
 github.com/ugorji/go/codec v0.0.0-20181204163529-d75b2dcb6bc8/go.mod h1:VFNgLljTbGfSG7qAOspJ7OScBnGdDN/yBr0sguwnwf0=
+github.com/valyala/gorpc v0.0.0-20160519171614-908281bef774 h1:SUHFQHAaySqF0YHCmmm0EIFooFZpDPpi5KTom7YJ07c=
+github.com/valyala/gorpc v0.0.0-20160519171614-908281bef774/go.mod h1:8uNqM1i7pr0jO7gdvbNCgsSa8Ki2vMh7JCQxO9BlF90=
 github.com/valyala/gozstd v1.4.1 h1:3/+pPStlV5Py2TsGhzNUItnYgX2yaX2tHMw/32c/0dM=
 github.com/valyala/gozstd v1.4.1/go.mod h1:oYOS+oJovjw9ewtrwEYb9+ybolEXd6pHyLMuAWN5zts=
 github.com/vmihailenco/msgpack v4.0.4+incompatible h1:dSLoQfGFAo3F6OoNhwUmLwVgaUXK79GlxNBwueZn0xI=

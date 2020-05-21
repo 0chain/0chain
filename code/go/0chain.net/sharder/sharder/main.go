@@ -41,7 +41,33 @@ import (
 	"0chain.net/smartcontract/setupsc"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
+
+	"0chain.net/conductor/conductrpc"
 )
+
+// start lock, where the sharder is ready to connect to blockchain (BC)
+func integrationsTestsLock(id string) {
+	if !viper.GetBool("testing.enabled") {
+		return // regular start
+	}
+	var (
+		client   = conductrpc.NewClient(viper.GetString("testing.address"))
+		interval = viper.GetDuration("testing.lock_interval")
+		join     bool
+		err      error
+	)
+	for {
+		join, err = client.MinerReady(conductrpc.MinerID(id))
+		if err != nil {
+			log.Fatal(err)
+		}
+		if join {
+			return // can join blockchain
+		}
+		// otherwise, have to wait, retry after the interval
+		time.Sleep(interval)
+	}
+}
 
 func processMinioConfig(reader io.Reader) error {
 	scanner := bufio.NewScanner(reader)
