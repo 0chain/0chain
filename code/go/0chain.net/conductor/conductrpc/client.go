@@ -24,8 +24,7 @@ func NewClient(address string) (c *Client) {
 	disp.AddFunc("onPhase", nil)
 	disp.AddFunc("onAddMiner", nil)
 	disp.AddFunc("onAddSharder", nil)
-	disp.AddFunc("onMinerReady", nil)
-	disp.AddFunc("onSharderReady", nil)
+	disp.AddFunc("onNodeReady", nil)
 	c.dispc = disp.NewFuncClient(c.client)
 
 	return
@@ -40,26 +39,26 @@ func (c *Client) Address() string {
 // miner SC RPC
 //
 
-func (c *Client) Phase(phase Phase) (err error) {
+func (c *Client) Phase(phase PhaseEvent) (err error) {
 	_, err = c.dispc.Call("onPhase", phase)
 	return
 }
 
 // ViewChange notification.
-func (c *Client) ViewChange(viewChange ViewChange) (err error) {
+func (c *Client) ViewChange(viewChange ViewChangeEvent) (err error) {
 	_, err = c.dispc.Call("onViewChange", viewChange)
 	return
 }
 
 // AddMiner notification.
-func (c *Client) AddMiner(minerID MinerID) (err error) {
-	_, err = c.dispc.Call("onAddMiner", minerID)
+func (c *Client) AddMiner(nodeID NodeID) (err error) {
+	_, err = c.dispc.Call("onAddMiner", nodeID)
 	return
 }
 
 // AddSharder notification.
-func (c *Client) AddSharder(sharderID SharderID) (err error) {
-	_, err = c.dispc.Call("onAddSharder", sharderID)
+func (c *Client) AddSharder(nodeID NodeID) (err error) {
+	_, err = c.dispc.Call("onAddSharder", nodeID)
 	return
 }
 
@@ -67,23 +66,10 @@ func (c *Client) AddSharder(sharderID SharderID) (err error) {
 // nodes RPC
 //
 
-// MinerReady notification.
-func (c *Client) MinerReady(minerID MinerID) (join bool, err error) {
+// NodeReady notification.
+func (c *Client) NodeReady(nodeID NodeID) (join bool, err error) {
 	var face interface{}
-	if face, err = c.dispc.Call("onMinerReady", minerID); err != nil {
-		return
-	}
-	var ok bool
-	if join, ok = face.(bool); !ok {
-		return false, fmt.Errorf("invalid response type %T", face)
-	}
-	return
-}
-
-// SharderReady notification.
-func (c *Client) SharderReady(sharderID SharderID) (join bool, err error) {
-	var face interface{}
-	if face, err = c.dispc.Call("onSharderReady", sharderID); err != nil {
+	if face, err = c.dispc.Call("onNodeReady", nodeID); err != nil {
 		return
 	}
 	var ok bool
