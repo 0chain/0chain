@@ -12,6 +12,8 @@ func init() {
 	gorpc.RegisterType(NodeID(""))
 	gorpc.RegisterType(ViewChangeEvent{})
 	gorpc.RegisterType(PhaseEvent{})
+	gorpc.RegisterType(AddMinerEvent{})
+	gorpc.RegisterType(AddSharderEvent{})
 }
 
 // type aliases
@@ -24,7 +26,7 @@ type (
 
 // ViewChangeEvent represents view change information.
 type ViewChangeEvent struct {
-	Node     NodeID   // node that sends the VC
+	Sender   NodeID   // node that sends the VC
 	Round    Round    // view change round
 	Miners   []NodeID // magic block miners
 	Sharders []NodeID // magic block sharders
@@ -32,8 +34,20 @@ type ViewChangeEvent struct {
 
 // PhaseEvent represents phase switching.
 type PhaseEvent struct {
-	NodeID NodeID //
+	Sender NodeID //
 	Phase  Phase  //
+}
+
+// AddMinerEvent in miner SC.
+type AddMinerEvent struct {
+	Sender  NodeID // event emitter
+	MinerID NodeID // the added miner
+}
+
+// AddSharderEvent in miner SC.
+type AddSharderEvent struct {
+	Sender    NodeID // event emitter
+	SharderID NodeID // the added sharder
 }
 
 // known locks
@@ -58,9 +72,9 @@ type Server struct {
 	// onPhase occurs for every phase change
 	onPhase chan PhaseEvent
 	// onAddMiner occurs where miner SC proceed add_miner function
-	onAddMiner chan NodeID
+	onAddMiner chan AddMinerEvent
 	// onAddSharder occurs where miner SC proceed add_sharder function
-	onAddSharder chan NodeID
+	onAddSharder chan AddSharderEvent
 
 	// onNodeReady used by miner/sharder to notify the server that the node
 	// has started and ready to register (if needed) in miner SC and start
@@ -83,8 +97,8 @@ func NewServer(address string) (s *Server) {
 	// without a buffer
 	s.onViewChange = make(chan ViewChangeEvent)
 	s.onPhase = make(chan PhaseEvent)
-	s.onAddMiner = make(chan NodeID)
-	s.onAddSharder = make(chan NodeID)
+	s.onAddMiner = make(chan AddMinerEvent)
+	s.onAddSharder = make(chan AddSharderEvent)
 	s.onNodeReady = make(chan NodeID)
 
 	s.disp = gorpc.NewDispatcher()
@@ -145,13 +159,13 @@ func (s *Server) OnPhase() chan PhaseEvent {
 
 // OnAddMiner events channel. The event occurs
 // where miner SC proceed add_miner function.
-func (s *Server) OnAddMiner() chan NodeID {
+func (s *Server) OnAddMiner() chan AddMinerEvent {
 	return s.onAddMiner
 }
 
 // OnAddSharder events channel. The event occurs
 // where miner SC proceed add_sharder function.
-func (s *Server) OnAddSharder() chan NodeID {
+func (s *Server) OnAddSharder() chan AddSharderEvent {
 	return s.onAddSharder
 }
 
@@ -180,16 +194,16 @@ func (s *Server) onPhaseHandler(phase PhaseEvent) {
 	}
 }
 
-func (s *Server) onAddMinerHandler(minerID NodeID) {
+func (s *Server) onAddMinerHandler(add AddMinerEvent) {
 	select {
-	case s.onAddMiner <- minerID:
+	case s.onAddMiner <- add:
 	case <-s.quit:
 	}
 }
 
-func (s *Server) onAddSharderHandler(sharderID NodeID) {
+func (s *Server) onAddSharderHandler(add AddSharderEvent) {
 	select {
-	case s.onAddSharder <- sharderID:
+	case s.onAddSharder <- add:
 	case <-s.quit:
 	}
 }

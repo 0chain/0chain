@@ -51,14 +51,14 @@ func (c *Client) ViewChange(viewChange ViewChangeEvent) (err error) {
 }
 
 // AddMiner notification.
-func (c *Client) AddMiner(nodeID NodeID) (err error) {
-	_, err = c.dispc.Call("onAddMiner", nodeID)
+func (c *Client) AddMiner(add AddMinerEvent) (err error) {
+	_, err = c.dispc.Call("onAddMiner", add)
 	return
 }
 
 // AddSharder notification.
-func (c *Client) AddSharder(nodeID NodeID) (err error) {
-	_, err = c.dispc.Call("onAddSharder", nodeID)
+func (c *Client) AddSharder(add AddSharderEvent) (err error) {
+	_, err = c.dispc.Call("onAddSharder", add)
 	return
 }
 

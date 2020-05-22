@@ -57,7 +57,7 @@ func integrationsTestsLock(id string) {
 		err      error
 	)
 	for {
-		join, err = client.MinerReady(conductrpc.MinerID(id))
+		join, err = client.NodeReady(conductrpc.NodeID(id))
 		if err != nil {
 			log.Fatal(err)
 		}

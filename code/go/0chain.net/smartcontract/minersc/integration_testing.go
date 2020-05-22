@@ -2,6 +2,7 @@ package minersc
 
 import (
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/transaction"
 
 	"github.com/spf13/viper"
@@ -28,7 +29,10 @@ func (msc *MinerSmartContract) AddMinerIntegrationTests(
 	var mn = NewMinerNode()
 	mn.Decode(inputData)
 
-	if err = msc.client.AddMiner(conductrpc.MinerID(mn.ID)); err != nil {
+	var ame conductrpc.AddMinerEvent
+	ame.Sender = conductrpc.NodeID(node.Self.Underlying().GetKey())
+	ame.MinerID = conductrpc.NodeID(mn.ID)
+	if err = msc.client.AddMiner(ame); err != nil {
 		panic(err)
 	}
 	return
@@ -42,9 +46,12 @@ func (msc *MinerSmartContract) AddSharderIntegrationTests(
 	if err != nil {
 		return
 	}
-	var mn = NewMinerNode()
-	mn.Decode(inputData)
-	if err = msc.client.AddSharder(conductrpc.SharderID(mn.ID)); err != nil {
+	var sn = NewMinerNode()
+	sn.Decode(inputData)
+	var ase conductrpc.AddSharderEvent
+	ase.Sender = conductrpc.NodeID(node.Self.Underlying().GetKey())
+	ase.SharderID = conductrpc.NodeID(sn.ID)
+	if err = msc.client.AddSharder(ase); err != nil {
 		panic(err)
 	}
 	return
@@ -75,7 +82,10 @@ func (msc *MinerSmartContract) payFeesIntegrationTests(
 		return
 	}
 	if pn.Phase != phaseBefore {
-		if err = msc.client.Phase(conductrpc.Phase(pn.Phase)); err != nil {
+		var pe conductrpc.PhaseEvent
+		pe.Phase = conductrpc.Phase(pn.Phase)
+		pe.Sender = conductrpc.NodeID(node.Self.Underlying().GetKey())
+		if err = msc.client.Phase(pe); err != nil {
 			panic(err)
 		}
 	}
@@ -88,15 +98,16 @@ func (msc *MinerSmartContract) payFeesIntegrationTests(
 			panic("missing magic block on view change")
 		}
 
-		var vc conductrpc.ViewChange
-		vc.Round = balances.GetBlock().Round
+		var vc conductrpc.ViewChangeEvent
+		vc.Round = conductrpc.Round(balances.GetBlock().Round)
+		vc.Sender = conductrpc.NodeID(node.Self.Underlying().GetKey())
 
 		for _, sid := range mb.Sharders.Keys() {
-			vc.Sharders = append(vc.Sharders, conductrpc.SharderID(sid))
+			vc.Sharders = append(vc.Sharders, conductrpc.NodeID(sid))
 		}
 
 		for _, mid := range mb.Miners.Keys() {
-			vc.Miners = append(vc.Miners, conductrpc.MinerID(mid))
+			vc.Miners = append(vc.Miners, conductrpc.NodeID(mid))
 		}
 
 		if err = msc.client.ViewChange(vc); err != nil {

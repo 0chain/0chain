@@ -55,7 +55,7 @@ func integrationsTestsLock(id string) {
 		err      error
 	)
 	for {
-		join, err = client.MinerReady(conductrpc.MinerID(id))
+		join, err = client.MinerReady(conductrpc.NodeID(id))
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -172,7 +172,7 @@ func main() {
 	Logger.Info("Chain info", zap.String("chain_id", config.GetServerChainID()), zap.String("mode", mode))
 	Logger.Info("Self identity", zap.Any("set_index", node.Self.Underlying().SetIndex), zap.Any("id", node.Self.Underlying().GetKey()))
 
-	integrationsTestsLock(node.Self.Undelying().GetKey())
+	integrationsTestsLock(node.Self.Underlying().GetKey())
 
 	var server *http.Server
 	if config.Development() {
