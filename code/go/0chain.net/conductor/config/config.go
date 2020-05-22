@@ -12,6 +12,11 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+// CleanupBC represents blockchain cleaning.
+type CleanupBC struct {
+	Timeout time.Duration `json:"timeout" yaml:"timeout" mapstructure:"timeout"`
+}
+
 // MagicBlock represents expected magic block.
 type MagicBlock struct {
 	// Round ignored if it's zero. If set a positive value, then this
@@ -39,38 +44,73 @@ func (mb *MagicBlock) IsZero() bool {
 
 // ViewChange flow configuration.
 type ViewChange struct {
-	RememberRound    string        `json:"remember_round" yaml:"remember_round" mapstructure:"remember_round"`
-	ExpectMagicBlock MagicBlock    `json:"expect_magic_block" yaml:"expect_magic_block" mapstructure:"expect_magic_block"`
-	Timeout          time.Duration `json:"timeout" yaml:"timeout" mapstructure:"timeout"`
+	RememberRound    string     `json:"remember_round" yaml:"remember_round" mapstructure:"remember_round"`
+	ExpectMagicBlock MagicBlock `json:"expect_magic_block" yaml:"expect_magic_block" mapstructure:"expect_magic_block"`
 }
 
 // IsZero returns true if the ViewChagne is empty.
 func (vc *ViewChange) IsZero() bool {
 	return vc.RememberRound == "" &&
-		vc.ExpectMagicBlock.IsZero() &&
-		vc.Timeout == 0
+		vc.ExpectMagicBlock.IsZero()
+}
+
+type Phase int
+
+const (
+	Unknown    = iota // illegal
+	Start             //
+	Contribute        //
+	Share             //
+	Publish           //
+	Wait              //
+)
+
+func (p *Phase) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
+	var ps string
+	if err = unmarshal(&ps); err != nil {
+		return
+	}
+	switch strings.ToLower(ps) {
+	case "start":
+		(*p) = Start
+	case "contribute":
+		(*p) = Contribute
+	case "share":
+		(*p) = Share
+	case "publish":
+		(*p) = Publish
+	case "wait":
+		(*p) = Wait
+	default:
+		return fmt.Errorf("unknown phase: %q", ps)
+	}
+	return // nil
 }
 
 // WaitPhase flow configuration.
 type WaitPhase struct {
-	// Phase to wait for (number.
-	Phase int `json:"phase" yaml:"phase" mapstructure:"phase"`
-	// Timeout to wait (to fail).
-	Timeout time.Duration `json:"timeout" yaml:"timeout" mapstructure:"timeout"`
+	// Phase to wait for (number).
+	Phase Phase `json:"phase" yaml:"phase" mapstructure:"phase"`
+	// Node of which the phase expected.
+	Node string `json:"node" yaml:"node" mapstructure:"node"`
+	// ViewChangeRound after which the phase expected (and before next VC),
+	// value can be an empty string for any VC.
+	ViewChangeRound string `json:"view_change_round" yaml:"view_change_round" mapstructure:"view_change_round"`
 }
 
 // IsZero returns true if the WaitPhase is empty.
 func (wp *WaitPhase) IsZero() bool {
-	return wp.Phase == 0 && wp.Timeout == 0
+	return wp.Phase == 0 && wp.Node == "" && wp.ViewChangeRound == ""
 }
 
 // Executor used by a Flow to perform a flow directive.
 type Executor interface {
-	Start(names []string, lock bool) (err error)
-	WaitViewChange(vc ViewChange) (err error)
-	WaitPhase(phase int, timeout time.Duration) (err error)
-	Unlock(names []string) (err error)
-	Stop(names []string) (err error)
+	Start(names []string, lock bool, timeout time.Duration) (err error)
+	WaitViewChange(vc ViewChange, timeout time.Duration) (err error)
+	WaitPhase(wp WaitPhase, timeout time.Duration) (err error)
+	Unlock(names []string, timeout time.Duration) (err error)
+	Stop(names []string, timeout time.Duration) (err error)
+	CleanupBC(timeout time.Duration) (err error)
 }
 
 // The Flow represents single value map.
@@ -108,10 +148,29 @@ func (f Flow) Execute(ex Executor) (err error) {
 	if !ok {
 		return errors.New("invalid empty flow")
 	}
+
+	var tm time.Duration
+
+	// extract timeout
+	if msi, ok := val.(map[string]interface{}); ok {
+		if tmsi, ok := msi["timeout"]; ok {
+			tms, ok := tmsi.(string)
+			if !ok {
+				return fmt.Errorf("invalid 'timeout' type: %T", tmsi)
+			}
+			if tm, err = time.ParseDuration(tms); err != nil {
+				return fmt.Errorf("paring 'timeout' %q: %v", tms, err)
+			}
+			delete(msi, "timeout")
+		}
+	}
+
 	switch name {
+	case "cleanup_bc":
+		return ex.CleanupBC(tm)
 	case "start":
 		if ss, ok := getStrings(val); ok {
-			return ex.Start(ss, false)
+			return ex.Start(ss, false, tm)
 		}
 	case "wait_view_change":
 		var vc ViewChange
@@ -119,10 +178,10 @@ func (f Flow) Execute(ex Executor) (err error) {
 			return fmt.Errorf("invalid '%s' argument type: %T, "+
 				"decoding error: %v", name, val, err)
 		}
-		return ex.WaitViewChange(vc)
+		return ex.WaitViewChange(vc, tm)
 	case "start_lock":
 		if ss, ok := getStrings(val); ok {
-			return ex.Start(ss, true)
+			return ex.Start(ss, true, tm)
 		}
 	case "wait_phase":
 		var wp WaitPhase
@@ -130,14 +189,14 @@ func (f Flow) Execute(ex Executor) (err error) {
 			return fmt.Errorf("invalid '%s' argument type: %T, "+
 				"decoding error: %v", name, val, err)
 		}
-		return ex.WaitPhase(wp.Phase, wp.Timeout)
+		return ex.WaitPhase(wp, tm)
 	case "unlock":
 		if ss, ok := getStrings(val); ok {
-			return ex.Unlock(ss)
+			return ex.Unlock(ss, tm)
 		}
 	case "stop":
 		if ss, ok := getStrings(val); ok {
-			return ex.Stop(ss)
+			return ex.Stop(ss, tm)
 		}
 	default:
 		return fmt.Errorf("unknown flow directive: %q", name)
