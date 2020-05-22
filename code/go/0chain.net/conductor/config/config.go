@@ -37,9 +37,9 @@ type MagicBlock struct {
 	// 500 round (next VC after the remembered round). Empty string ignored.
 	RoundNextVCAfter RoundName `json:"round_next_vc_after" yaml:"round_next_vc_after" mapstructure:"round_next_vc_after"`
 	// Sharders expected in MB.
-	Sharders []NodeID `json:"sharders" yaml:"sharders" mapstructure:"sharders"`
+	Sharders []NodeName `json:"sharders" yaml:"sharders" mapstructure:"sharders"`
 	// Miners expected in MB.
-	Miners []NodeID `json:"miners" yaml:"miners" mapstructure:"miners"`
+	Miners []NodeName `json:"miners" yaml:"miners" mapstructure:"miners"`
 }
 
 // IsZero returns true if the MagicBlock is empty.
@@ -50,15 +50,14 @@ func (mb *MagicBlock) IsZero() bool {
 		len(mb.Miners) == 0
 }
 
-// ViewChange flow configuration.
-type ViewChange struct {
-	Node             NodeID
+// WaitViewChange flow configuration.
+type WaitViewChange struct {
 	RememberRound    RoundName  `json:"remember_round" yaml:"remember_round" mapstructure:"remember_round"`
 	ExpectMagicBlock MagicBlock `json:"expect_magic_block" yaml:"expect_magic_block" mapstructure:"expect_magic_block"`
 }
 
 // IsZero returns true if the ViewChagne is empty.
-func (vc *ViewChange) IsZero() bool {
+func (vc *WaitViewChange) IsZero() bool {
 	return vc.RememberRound == "" &&
 		vc.ExpectMagicBlock.IsZero()
 }
@@ -96,12 +95,27 @@ func (p *Phase) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 	return // nil
 }
 
+// String implements standard fmt.Stringer interface.
+func (p Phase) String() string {
+	switch p {
+	case Start:
+		return "start"
+	case Contribute:
+		return "contribute"
+	case Share:
+		return "share"
+	case Publish:
+		return "publish"
+	case Wait:
+		return "wait"
+	}
+	return fmt.Sprintf("Phase<%d>", int(p))
+}
+
 // WaitPhase flow configuration.
 type WaitPhase struct {
 	// Phase to wait for (number).
 	Phase Phase `json:"phase" yaml:"phase" mapstructure:"phase"`
-	// Node of which the phase expected.
-	Node NodeID `json:"node" yaml:"node" mapstructure:"node"`
 	// ViewChangeRound after which the phase expected (and before next VC),
 	// value can be an empty string for any VC.
 	ViewChangeRound RoundName `json:"view_change_round" yaml:"view_change_round" mapstructure:"view_change_round"`
@@ -109,13 +123,14 @@ type WaitPhase struct {
 
 // IsZero returns true if the WaitPhase is empty.
 func (wp *WaitPhase) IsZero() bool {
-	return wp.Phase == 0 && wp.Node == "" && wp.ViewChangeRound == ""
+	return wp.Phase == 0 && wp.ViewChangeRound == ""
 }
 
 // Executor used by a Flow to perform a flow directive.
 type Executor interface {
+	SetMonitor(name NodeName) (err error)
 	Start(names []NodeName, lock bool, timeout time.Duration) (err error)
-	WaitViewChange(vc ViewChange, timeout time.Duration) (err error)
+	WaitViewChange(vc WaitViewChange, timeout time.Duration) (err error)
 	WaitPhase(wp WaitPhase, timeout time.Duration) (err error)
 	Unlock(names []NodeName, timeout time.Duration) (err error)
 	Stop(names []NodeName, timeout time.Duration) (err error)
@@ -179,6 +194,10 @@ func (f Flow) Execute(ex Executor) (err error) {
 	}
 
 	switch name {
+	case "set_monitor":
+		if ss, ok := getNodeNames(val); ok && len(ss) == 1 {
+			return ex.SetMonitor(ss[0])
+		}
 	case "cleanup_bc":
 		return ex.CleanupBC(tm)
 	case "start":
@@ -186,7 +205,7 @@ func (f Flow) Execute(ex Executor) (err error) {
 			return ex.Start(ss, false, tm)
 		}
 	case "wait_view_change":
-		var vc ViewChange
+		var vc WaitViewChange
 		if err = mapstructure.Decode(val, &vc); err != nil {
 			return fmt.Errorf("invalid '%s' argument type: %T, "+
 				"decoding error: %v", name, val, err)
@@ -330,6 +349,16 @@ func (ns Nodes) NodeByName(name NodeName) (n *Node, ok bool) {
 	return // nil, false
 }
 
+// NodeByID returns node by ID.
+func (ns Nodes) NodeByID(id NodeID) (n *Node, ok bool) {
+	for _, x := range ns {
+		if x.ID == id {
+			return x, true
+		}
+	}
+	return // nil, false
+}
+
 // A Config represents conductor testing configurations.
 type Config struct {
 	// Address is RPC server address
@@ -342,6 +371,8 @@ type Config struct {
 	Tests []Case `json:"tests" yaml:"tests" mapstructure:"tests"`
 	// CleanupCommand used to cleanup BC. All nodes should be stopped before.
 	CleanupCommand string `json:"cleanup_command" yaml:"cleanup_command" mapstructure:"cleanup_command"`
+	// ViewChange is number of rounds for a view change (e.g. 250, 50 per phase).
+	ViewChange Round `json:"view_change" yaml:"view_change" mapstructure:"view_change"`
 }
 
 // CleanupBC used to execute the configured cleanup_command.

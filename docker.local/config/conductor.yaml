@@ -9,6 +9,8 @@ address: 127.0.0.1:15210
 logs: "conductor/logs"
 # cleanup blockchain command
 cleanup_command: ./docker.local/bin/docker-clean.sh
+# number of rounds per view change
+view_change: 250
 
 #
 # nodes used in tests
@@ -60,6 +62,10 @@ nodes:
 # test cases
 #
 tests:
+  # node used to monitor phases and view change
+  - name: "set monitor to 'sharder 1'"
+    flow:
+    - set_monitor: "sharder 1"
 
   # known phases
   # - start
@@ -78,11 +84,11 @@ tests:
   - name: "start s1 and m1-3"
     flow:
     - start:
-      - sharder 1
+      - "sharder 1"
     - start:
-      - miner 1
-      - miner 2
-      - miner 3
+      - "miner 1"
+      - "miner 2"
+      - "miner 3"
 
   # sharder 1, miner 1, 2, 3 is running
   # on a phase 0 miner 4 comes up BC
@@ -93,24 +99,23 @@ tests:
         timeout: 10m
         remember_round: "starting_round"
     - start_lock:
-      - miner 4
+        - "miner 4"
     - wait_phase:
-        phase: start
-        node: 'sharder 1'
-        timeout: 1 minute
+        phase: "start"
+        timeout: 1m
     - unlock:
-        - miner 4
+        - "miner 4"
     - wait_view_change:
-        timeout: 10 minute
+        timeout: 10m
         expect_magic_block:
           round_next_vc_after: "starting_round"
           sharders:
-            - sharder 1
+            - "sharder 1"
           miners:
-            - miner 1
-            - miner 2
-            - miner 3
-            - miner 4
+            - "miner 1"
+            - "miner 2"
+            - "miner 3"
+            - "miner 4"
 
   - name: "miner 4 goes down until next view change"
     flow:
@@ -120,19 +125,18 @@ tests:
     # wait where sharder 1 changes its phase to
     - wait_phase:
         phase: start
-        node: "sharder 1"
-        timeout: 1 minute
+        timeout: 1m
         view_change_round: "starting_round" # phase 0 after
     - stop:
         - miner 4
     - wait_view_change:
-        timeout: 10 minute
+        timeout: 10m
         expect_magic_block:
           round_next_vc_after: "starting_round"
           sharders:
-            - sharder 1
+            - "sharder 1"
           miners:
-            - miner 1
-            - miner 2
-            - miner 3
+            - "miner 1"
+            - "miner 2"
+            - "miner 3"
 ...
