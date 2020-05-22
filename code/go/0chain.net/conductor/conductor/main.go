@@ -42,15 +42,27 @@ func main() {
 	flag.StringVar(&configFile, "config", configFile, "configurations file")
 	flag.Parse()
 
-	var conf = readConfig(configFile)
+	var (
+		conf = readConfig(configFile)
+		r    Runner
+		err  error
+	)
 
-	//
+	r.conf = conf
+	r.server = conductrpc.NewServer(conf.Address)
 
-	_ = conf
+	go r.server.Serve()
+	defer r.server.Close()
 
-	pretty.Print(conf)
+	r.nodes = make(map[config.NodeID]struct{})
+	r.rounds = make(map[config.RoundName]config.Round)
+	r.setupTimeout(0)
 
-	var _ conductrpc.Server
+	if err = r.Run(); err != nil {
+		log.Print("[ERR] ", err)
+	}
+
+	_ = pretty.Print
 }
 
 func readConfig(configFile string) (conf *config.Config) {
@@ -86,7 +98,7 @@ type Runner struct {
 }
 
 func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
-	return r.timer, r.phase.IsZero() || r.viewChange.IsZero() ||
+	return r.timer, !r.phase.IsZero() || !r.viewChange.IsZero() ||
 		len(r.nodes) > 0
 }
 
@@ -133,7 +145,7 @@ func (r *Runner) printNodes(list []NodeID) {
 	}
 }
 
-func (r *Runner) acceptViewChange(vce conductrpc.ViewChangeEvent) (err error) {
+func (r *Runner) acceptViewChange(vce *conductrpc.ViewChangeEvent) (err error) {
 	if vce.Sender != r.monitor {
 		return // not the monitor node
 	}
@@ -205,7 +217,7 @@ func (r *Runner) acceptViewChange(vce conductrpc.ViewChangeEvent) (err error) {
 	return
 }
 
-func (r *Runner) acceptPhase(pe conductrpc.PhaseEvent) (err error) {
+func (r *Runner) acceptPhase(pe *conductrpc.PhaseEvent) (err error) {
 	if pe.Sender != r.monitor {
 		return // not the monitor node
 	}
@@ -239,7 +251,7 @@ func (r *Runner) acceptPhase(pe conductrpc.PhaseEvent) (err error) {
 	return
 }
 
-func (r *Runner) acceptAddMiner(addm conductrpc.AddMinerEvent) (err error) {
+func (r *Runner) acceptAddMiner(addm *conductrpc.AddMinerEvent) (err error) {
 	if addm.Sender != r.monitor {
 		return // not the monitor node
 	}
@@ -258,7 +270,7 @@ func (r *Runner) acceptAddMiner(addm conductrpc.AddMinerEvent) (err error) {
 	return
 }
 
-func (r *Runner) acceptAddSharder(adds conductrpc.AddSharderEvent) (err error) {
+func (r *Runner) acceptAddSharder(adds *conductrpc.AddSharderEvent) (err error) {
 	if adds.Sender != r.monitor {
 		return // not the monitor node
 	}
@@ -299,7 +311,7 @@ func (r *Runner) stopAll() {
 	for _, n := range r.conf.Nodes {
 		log.Printf("stopping %s...", n.Name)
 		if err := n.Stop(); err != nil {
-			log.Print("stopping node:", err)
+			log.Print("stopping node: ", err)
 		}
 	}
 }
@@ -320,7 +332,9 @@ func (r *Runner) Run() (err error) {
 			log.Printf("  %d flow step", j)
 
 			// proceed
+			println("FUCK IS WAITING?")
 			for tm, ok := r.isWaiting(); ok; {
+				println("YES IT IS?")
 				select {
 				case vce := <-r.server.OnViewChange():
 					err = r.acceptViewChange(vce)
@@ -346,6 +360,7 @@ func (r *Runner) Run() (err error) {
 			}
 
 			// execute
+			println("EXECUTE")
 			if err = f.Execute(r); err != nil {
 				return // fatality
 			}
@@ -364,10 +379,7 @@ func (r *Runner) Run() (err error) {
 func (r *Runner) setupTimeout(tm time.Duration) {
 	r.timer = time.NewTimer(tm)
 	if tm <= 0 {
-		select {
-		case <-r.timer.C: // drain zero timeout
-		default:
-		}
+		<-r.timer.C // drain zero timeout
 	}
 }
 

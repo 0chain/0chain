@@ -14,7 +14,7 @@ func isIntegrationTests() bool {
 	return viper.GetBool("testing.enabled")
 }
 
-func newConductRPCClient() (clinet *conductrpc.Client) {
+func newConductRPCClient() (client *conductrpc.Client) {
 	return conductrpc.NewClient(viper.GetString("testing.address"))
 }
 
@@ -32,7 +32,7 @@ func (msc *MinerSmartContract) AddMinerIntegrationTests(
 	var ame conductrpc.AddMinerEvent
 	ame.Sender = conductrpc.NodeID(node.Self.Underlying().GetKey())
 	ame.MinerID = conductrpc.NodeID(mn.ID)
-	if err = msc.client.AddMiner(ame); err != nil {
+	if err = msc.client.AddMiner(&ame); err != nil {
 		panic(err)
 	}
 	return
@@ -51,7 +51,7 @@ func (msc *MinerSmartContract) AddSharderIntegrationTests(
 	var ase conductrpc.AddSharderEvent
 	ase.Sender = conductrpc.NodeID(node.Self.Underlying().GetKey())
 	ase.SharderID = conductrpc.NodeID(sn.ID)
-	if err = msc.client.AddSharder(ase); err != nil {
+	if err = msc.client.AddSharder(&ase); err != nil {
 		panic(err)
 	}
 	return
@@ -85,7 +85,7 @@ func (msc *MinerSmartContract) payFeesIntegrationTests(
 		var pe conductrpc.PhaseEvent
 		pe.Phase = conductrpc.Phase(pn.Phase)
 		pe.Sender = conductrpc.NodeID(node.Self.Underlying().GetKey())
-		if err = msc.client.Phase(pe); err != nil {
+		if err = msc.client.Phase(&pe); err != nil {
 			panic(err)
 		}
 	}
@@ -110,7 +110,7 @@ func (msc *MinerSmartContract) payFeesIntegrationTests(
 			vc.Miners = append(vc.Miners, conductrpc.NodeID(mid))
 		}
 
-		if err = msc.client.ViewChange(vc); err != nil {
+		if err = msc.client.ViewChange(&vc); err != nil {
 			panic(err)
 		}
 	}

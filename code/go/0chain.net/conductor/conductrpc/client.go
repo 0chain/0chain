@@ -39,25 +39,25 @@ func (c *Client) Address() string {
 // miner SC RPC
 //
 
-func (c *Client) Phase(phase PhaseEvent) (err error) {
+func (c *Client) Phase(phase *PhaseEvent) (err error) {
 	_, err = c.dispc.Call("onPhase", phase)
 	return
 }
 
 // ViewChange notification.
-func (c *Client) ViewChange(viewChange ViewChangeEvent) (err error) {
+func (c *Client) ViewChange(viewChange *ViewChangeEvent) (err error) {
 	_, err = c.dispc.Call("onViewChange", viewChange)
 	return
 }
 
 // AddMiner notification.
-func (c *Client) AddMiner(add AddMinerEvent) (err error) {
+func (c *Client) AddMiner(add *AddMinerEvent) (err error) {
 	_, err = c.dispc.Call("onAddMiner", add)
 	return
 }
 
 // AddSharder notification.
-func (c *Client) AddSharder(add AddSharderEvent) (err error) {
+func (c *Client) AddSharder(add *AddSharderEvent) (err error) {
 	_, err = c.dispc.Call("onAddSharder", add)
 	return
 }

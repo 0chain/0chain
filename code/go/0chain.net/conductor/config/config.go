@@ -160,6 +160,16 @@ func getNodeNames(val interface{}) (ss []NodeName, ok bool) {
 	switch tt := val.(type) {
 	case string:
 		return []NodeName{NodeName(tt)}, true
+	case []interface{}:
+		ss = make([]NodeName, 0, len(tt))
+		for _, t := range tt {
+			if ts, ok := t.(string); ok {
+				ss = append(ss, NodeName(ts))
+			} else {
+				return nil, false
+			}
+		}
+		return ss, true
 	case []string:
 		ss = make([]NodeName, 0, len(tt))
 		for _, t := range tt {
