@@ -12,6 +12,14 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+// common types
+type (
+	NodeName  string // node name used in configurations
+	NodeID    string // a NodeID is ID of a miner or a sharder
+	Round     int64  // a Round number
+	RoundName string // round name (remember round, round next after VC)
+)
+
 // CleanupBC represents blockchain cleaning.
 type CleanupBC struct {
 	Timeout time.Duration `json:"timeout" yaml:"timeout" mapstructure:"timeout"`
@@ -21,17 +29,17 @@ type CleanupBC struct {
 type MagicBlock struct {
 	// Round ignored if it's zero. If set a positive value, then this
 	// round is expected.
-	Round int64 `json:"round" yaml:"round" mapstructure:"round"`
+	Round Round `json:"round" yaml:"round" mapstructure:"round"`
 	// RoundNextVCAfter used in combination with wait_view_change.remember_round
 	// that remember round with some name. This directive expects next VC round
 	// after the remembered one. For example, if round 340 has remembered as
 	// "enter_miner5", then "round_next_vc_after": "enter_miner5", expects
 	// 500 round (next VC after the remembered round). Empty string ignored.
-	RoundNextVCAfter string `json:"round_next_vc_after" yaml:"round_next_vc_after" mapstructure:"round_next_vc_after"`
+	RoundNextVCAfter RoundName `json:"round_next_vc_after" yaml:"round_next_vc_after" mapstructure:"round_next_vc_after"`
 	// Sharders expected in MB.
-	Sharders []string `json:"sharders" yaml:"sharders" mapstructure:"sharders"`
+	Sharders []NodeID `json:"sharders" yaml:"sharders" mapstructure:"sharders"`
 	// Miners expected in MB.
-	Miners []string `json:"miners" yaml:"miners" mapstructure:"miners"`
+	Miners []NodeID `json:"miners" yaml:"miners" mapstructure:"miners"`
 }
 
 // IsZero returns true if the MagicBlock is empty.
@@ -44,7 +52,8 @@ func (mb *MagicBlock) IsZero() bool {
 
 // ViewChange flow configuration.
 type ViewChange struct {
-	RememberRound    string     `json:"remember_round" yaml:"remember_round" mapstructure:"remember_round"`
+	Node             NodeID
+	RememberRound    RoundName  `json:"remember_round" yaml:"remember_round" mapstructure:"remember_round"`
 	ExpectMagicBlock MagicBlock `json:"expect_magic_block" yaml:"expect_magic_block" mapstructure:"expect_magic_block"`
 }
 
@@ -92,10 +101,10 @@ type WaitPhase struct {
 	// Phase to wait for (number).
 	Phase Phase `json:"phase" yaml:"phase" mapstructure:"phase"`
 	// Node of which the phase expected.
-	Node string `json:"node" yaml:"node" mapstructure:"node"`
+	Node NodeID `json:"node" yaml:"node" mapstructure:"node"`
 	// ViewChangeRound after which the phase expected (and before next VC),
 	// value can be an empty string for any VC.
-	ViewChangeRound string `json:"view_change_round" yaml:"view_change_round" mapstructure:"view_change_round"`
+	ViewChangeRound RoundName `json:"view_change_round" yaml:"view_change_round" mapstructure:"view_change_round"`
 }
 
 // IsZero returns true if the WaitPhase is empty.
@@ -105,11 +114,11 @@ func (wp *WaitPhase) IsZero() bool {
 
 // Executor used by a Flow to perform a flow directive.
 type Executor interface {
-	Start(names []string, lock bool, timeout time.Duration) (err error)
+	Start(names []NodeName, lock bool, timeout time.Duration) (err error)
 	WaitViewChange(vc ViewChange, timeout time.Duration) (err error)
 	WaitPhase(wp WaitPhase, timeout time.Duration) (err error)
-	Unlock(names []string, timeout time.Duration) (err error)
-	Stop(names []string, timeout time.Duration) (err error)
+	Unlock(names []NodeName, timeout time.Duration) (err error)
+	Stop(names []NodeName, timeout time.Duration) (err error)
 	CleanupBC(timeout time.Duration) (err error)
 }
 
@@ -132,12 +141,16 @@ func (f Flow) getFirst() (name string, val interface{}, ok bool) {
 	return
 }
 
-func getStrings(val interface{}) (ss []string, ok bool) {
+func getNodeNames(val interface{}) (ss []NodeName, ok bool) {
 	switch tt := val.(type) {
 	case string:
-		return []string{tt}, true
+		return []NodeName{NodeName(tt)}, true
 	case []string:
-		return tt, true
+		ss = make([]NodeName, 0, len(tt))
+		for _, t := range tt {
+			ss = append(ss, NodeName(t))
+		}
+		return ss, true
 	}
 	return // nil, false
 }
@@ -169,7 +182,7 @@ func (f Flow) Execute(ex Executor) (err error) {
 	case "cleanup_bc":
 		return ex.CleanupBC(tm)
 	case "start":
-		if ss, ok := getStrings(val); ok {
+		if ss, ok := getNodeNames(val); ok {
 			return ex.Start(ss, false, tm)
 		}
 	case "wait_view_change":
@@ -180,7 +193,7 @@ func (f Flow) Execute(ex Executor) (err error) {
 		}
 		return ex.WaitViewChange(vc, tm)
 	case "start_lock":
-		if ss, ok := getStrings(val); ok {
+		if ss, ok := getNodeNames(val); ok {
 			return ex.Start(ss, true, tm)
 		}
 	case "wait_phase":
@@ -191,11 +204,11 @@ func (f Flow) Execute(ex Executor) (err error) {
 		}
 		return ex.WaitPhase(wp, tm)
 	case "unlock":
-		if ss, ok := getStrings(val); ok {
+		if ss, ok := getNodeNames(val); ok {
 			return ex.Unlock(ss, tm)
 		}
 	case "stop":
-		if ss, ok := getStrings(val); ok {
+		if ss, ok := getNodeNames(val); ok {
 			return ex.Stop(ss, tm)
 		}
 	default:
@@ -216,9 +229,9 @@ type Case struct {
 // A Node used in tests.
 type Node struct {
 	// Name used in flow configurations and logs.
-	Name string `json:"name" yaml:"name" mapstructure:"name"`
+	Name NodeName `json:"name" yaml:"name" mapstructure:"name"`
 	// ID used in RPC.
-	ID string `json:"id" yaml:"id" mapstructure:"id"`
+	ID NodeID `json:"id" yaml:"id" mapstructure:"id"`
 	// WorkDir to start the node in.
 	WorkDir string `json:"work_dir" yaml:"work_dir" mapstructure:"work_dir"`
 	// StartCommand to start the node.
@@ -244,7 +257,7 @@ func (n *Node) Start(logsDir string) (err error) {
 	var cmd = exec.Command(command, ss[1:]...)
 	cmd.Dir = n.WorkDir
 
-	logsDir = filepath.Join(logsDir, n.Name)
+	logsDir = filepath.Join(logsDir, string(n.Name))
 	if err = os.MkdirAll(logsDir, 0755); err != nil {
 		return fmt.Errorf("creating logs directory %s: %v", logsDir, err)
 	}
@@ -308,7 +321,7 @@ func (n *Node) Stop() (err error) {
 type Nodes []*Node
 
 // NodeByName returns node by name.
-func (ns Nodes) NodeByName(name string) (n *Node, ok bool) {
+func (ns Nodes) NodeByName(name NodeName) (n *Node, ok bool) {
 	for _, x := range ns {
 		if x.Name == name {
 			return x, true
@@ -327,4 +340,20 @@ type Config struct {
 	Nodes Nodes `json:"nodes" yaml:"nodes" mapstructure:"nodes"`
 	// Tests cases and related.
 	Tests []Case `json:"tests" yaml:"tests" mapstructure:"tests"`
+	// CleanupCommand used to cleanup BC. All nodes should be stopped before.
+	CleanupCommand string `json:"cleanup_command" yaml:"cleanup_command" mapstructure:"cleanup_command"`
+}
+
+// CleanupBC used to execute the configured cleanup_command.
+func (c *Config) CleanupBC() (err error) {
+	if c.CleanupCommand == "" {
+		return errors.New("no cleanup_command given in conductor.yaml")
+	}
+
+	var (
+		ss  = strings.Fields(c.CleanupCommand)
+		cmd = exec.Command(ss[0], ss[1:]...)
+	)
+
+	return cmd.Run()
 }

@@ -29,13 +29,8 @@ import (
 
 func main() {
 
-	var (
-		configFile string = "conductor.yaml"
-		verbose    bool   = false
-	)
-
+	var configFile string = "conductor.yaml"
 	flag.StringVar(&configFile, "config", configFile, "configurations file")
-	flag.BoolVar(&verbose, "verbose", verbose, "verbose logs")
 	flag.Parse()
 
 	var conf = readConfig(configFile)
@@ -66,29 +61,113 @@ type Runner struct {
 	server *conductrpc.Server
 	conf   *config.Config
 
-	verbose bool             // verbose logs
-	rounds  map[string]int64 // named rounds (the remember_round)
+	// state
+
+	lastViewChange conductrpc.ViewChange // last view change
+	lastPhase      conductrpc.Phase      // last phase (can be restarted)
+
+	// wait for
+	phase      conductrpc.Phase    // wait for a phase
+	viewChange config.ViewChange   // wait for a view change
+	nodes      map[string]struct{} // wait starting nodes
+
+	// remembered rounds: name -> round number
+	rounds map[string]int64 // named rounds (the remember_round)
 }
 
-func (r *Runner) Run() (err error) {
-	for i, test := range r.conf.Tests {
-		if err = r.runTest(i, test); err != nil {
-			return
-		}
+func (r *Runner) isWaiting() bool {
+	return r.phase != 0 || !r.viewChange.IsZero() || len(r.nodes) > 0
+}
+
+func (r *Runner) acceptViewChange(vc conductrpc.ViewChange) (err error) {
+	log.Print("view change:", vc.Round)
+	// don't wait a VC
+	if r.viewChange.IsZero() {
+		r.lastViewChange = vc // just keep last
+		return
 	}
+	// remember the round
+	if r.viewChange.RememberRound != "" {
+		r.rounds[r.viewChange.RememberRound] = vc.Round
+	}
+	if r.viewChange.ExpectMagicBlock.IsZero() {
+		return // nothing more is here
+	}
+	if r.viewChange.ExpectMagicBlock.Round < vc.Round {
+		return fmt.Errorf("expected view change %d")
+	}
+}
+
+func (r *Runner) acceptPhase(phase conductrpc.Phase) {
+	//
+}
+
+func (r *Runner) acceptAddMiner(mid conductrpc.MinerID) {
+	//
+}
+
+func (r *Runner) acceptAddSharder(sid conductrpc.SharderID) {
+	//
+}
+
+func (r *Runner) acceptMinerReady(mid conductrpc.MinerID) {
+	//
+}
+
+func (r *Runner) acceptSharderReady(sid conductrpc.SharderID) {
+	//
+}
+
+// Run the tests.
+func (r *Runner) Run() (err error) {
+
+	log.Println("start testing...")
+	defer log.Println("end of testing")
+
+	// for every test case
+	for i, testCase := range r.conf.Tests {
+		log.Printf("start %d %s test case", testCase.Name)
+		for j, f := range testCase.Flow {
+			log.Printf("  %d flow step", j)
+
+			// proceed
+			for r.isWaiting() {
+				select {
+				case vc := <-OnViewChange():
+					err = r.acceptViewChange(vc)
+				case p := <-OnPhase():
+					err = r.acceptPhase(p)
+				case mid := <-OnAddMiner():
+					err = r.acceptAddMiner(mid)
+				case sid := <-OnAddSharder():
+					err = r.acceptAddSharder(sid)
+				case mid := <-OnMinerReady():
+					err = r.acceptMinerReady(mid)
+				case sid := <-OnSharderReady():
+					err = r.acceptSharderReady(sid)
+				}
+				if err != nil {
+					return
+				}
+			}
+
+			// execute
+			if err = f.Execute(r); err != nil {
+				return // fatality
+			}
+		}
+
+		log.Printf("end of %d %s test case", testCase.Name)
+	}
+
 	return
 }
 
-func (r *Runner) runTest(i int, test config.Case) (err error) {
-	log.Print("start %d %s", i, test.Name)
-	defer log.Print("end %d %s", i, test.Name)
+//
+// execute
+//
 
-	for _, f := range test.Flow {
-		f.Execute(ex)
-	}
-
-}
-
+// Start nodes, or start and lock them.
 func (r *Runner) Start(names []string, lock bool) (err error) {
 	// start nodes
 	for _, name := range names {
@@ -100,46 +179,41 @@ func (r *Runner) Start(names []string, lock bool) (err error) {
 		if err = n.Start(r.conf.Logs); err != nil {
 			return
 		}
+		r.nodes[n.ID] = struct{}{} // wait list
 	}
-	// wait nodes
-	var nm = make(map[string]struct{}, len(names))
-	for _, n := range names {
-		nm[n] = struct{}{}
-	}
-
-	// TODO (sfxdx): add timeout for nodes to start
-	for len(nm) > 0 {
-		select {
-		case minerID := <-r.server.OnAddMiner():
-			if _, ok := nm[string(minerID)]; !ok {
-				return fmt.Errorf("unexpected miner added: %q", minerID)
-			}
-			delete(mn, string(minerID))
-			log.Print("%q started", minerID)
-		case sharderID := <-r.server.OnAddSharder():
-			if _, ok := nm[string(sharderID)]; !ok {
-				return fmt.Errorf("unexpected sharder added: %q", sharderID)
-			}
-			delete(mn, string(sharderID))
-			log.Print("%q started", sharderID)
-		}
-	}
-
 	return
 }
 
 func (r *Runner) WaitViewChange(vc config.ViewChange) (err error) {
-	//
+	r.viewChange = vc
 }
 
 func (r *Runner) WaitPhase(phase int, timeout time.Duration) (err error) {
-	//
+	r.phase = phase
 }
 
 func (r *Runner) Unlock(names []string) (err error) {
-	//
+	for _, name := range names {
+		var n, ok = r.conf.Nodes.NodeByName(name) //
+		if !ok {
+			return fmt.Errorf("(start): unknown node: %q", name)
+		}
+		log.Print("node", n.Name, "unlock")
+		r.server.UnlockNode(n.ID)
+	}
 }
 
 func (r *Runner) Stop(names []string) (err error) {
-	//
+	for _, name := range names {
+		var n, ok = r.conf.Nodes.NodeByName(name) //
+		if !ok {
+			return fmt.Errorf("(start): unknown node: %q", name)
+		}
+		// TODO (sfxdx): send SIGINT to don't lock, or Stop asynchronously?
+		log.Print("node", n.Name, "stopping...")
+		if err = n.Stop(); err != nil {
+			return
+		}
+		log.Print("node", n.Name, "stopped")
+	}
 }

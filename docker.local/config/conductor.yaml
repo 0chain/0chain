@@ -7,11 +7,14 @@
 address: 127.0.0.1:15210
 # place for stdin and stdout logs of nodes (relative to the working_directory)
 logs: "conductor/logs"
+# cleanup blockchain command
+cleanup_command: ./docker.local/bin/docker-clean.sh
 
 #
 # nodes used in tests
 #
 nodes:
+  # sharders
   - name: "sharder 1"
     id: 57b416fcda1cf82b8a7e1fc3a47c68a94e617be873b5383ea2606bda757d3ce4
     work_dir: "docker.local/sharder1"
@@ -27,6 +30,7 @@ nodes:
     work_dir: "docker.local/sharder3"
     start_command: "../bin/start.b0sharder.sh"
 
+  # miners
   - name: "miner 1"
     id: 31810bd1258ae95955fb40c7ef72498a556d3587121376d9059119d280f34929
     work_dir: "docker.local/miner1"
@@ -56,8 +60,22 @@ nodes:
 # test cases
 #
 tests:
-  # preparation
-  - name: "prepare"
+
+  # known phases
+  # - start
+  # - contribute
+  # - share
+  # - publish
+  # - wait
+
+  # initialize
+  - name: "clean up BC"
+    flow:
+    - cleanup_bc: # cleanup blockchain (a'k'a unregister all nodes)
+        timeout: 1m
+
+  # prepare
+  - name: "start s1 and m1-3"
     flow:
     - start:
       - sharder 1
@@ -69,7 +87,7 @@ tests:
   # sharder 1, miner 1, 2, 3 is running
   # on a phase 0 miner 4 comes up BC
   # (miner 4 is not registered if BC cleaned before)
-  - name: "miner 4 comes up on phase 0"
+  - name: "miner 4 comes up on phase 'start'"
     flow:
     - wait_view_change:
         timeout: 10m
@@ -77,7 +95,8 @@ tests:
     - start_lock:
       - miner 4
     - wait_phase:
-        phase: 0
+        phase: start
+        node: 'sharder 1'
         timeout: 1 minute
     - unlock:
         - miner 4
@@ -98,9 +117,12 @@ tests:
     - wait_view_change:
         timeout: 10m
         remember_round: "starting_round"
+    # wait where sharder 1 changes its phase to
     - wait_phase:
-        phase: 0
+        phase: start
+        node: "sharder 1"
         timeout: 1 minute
+        view_change_round: "starting_round" # phase 0 after
     - stop:
         - miner 4
     - wait_view_change:

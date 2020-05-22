@@ -172,6 +172,8 @@ func main() {
 	Logger.Info("Chain info", zap.String("chain_id", config.GetServerChainID()), zap.String("mode", mode))
 	Logger.Info("Self identity", zap.Any("set_index", node.Self.Underlying().SetIndex), zap.Any("id", node.Self.Underlying().GetKey()))
 
+	integrationsTestsLock(node.Self.Undelying().GetKey())
+
 	var server *http.Server
 	if config.Development() {
 		// No WriteTimeout setup to enable pprof

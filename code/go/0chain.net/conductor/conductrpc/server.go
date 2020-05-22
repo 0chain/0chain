@@ -5,53 +5,29 @@ import (
 	"sync"
 
 	"github.com/valyala/gorpc"
+
+	"0chain.net/conductor/config"
 )
 
 func init() {
 	gorpc.RegisterType(MinerID(""))
 	gorpc.RegisterType(SharderID(""))
 	gorpc.RegisterType(ViewChange{})
-	gorpc.RegisterType(Phase(0))
+	gorpc.RegisterType(config.Phase(0))
 }
 
 // common types
 type (
-	MinerID   string
-	SharderID string
-	Phase     int
+	NodeID string
+	Phase  = config.Phase // type alias
 )
-
-// known phases
-const (
-	Unknown    = iota // illegal
-	Start             //
-	Contribute        //
-	Share             //
-	Publish           //
-	Wait              //
-)
-
-func PhaseFromString(phase string) Phase {
-	switch strings.ToLower(phase) {
-	case "start":
-		return Start
-	case "contribute":
-		return Contribute
-	case "share":
-		return Share
-	case "publish":
-		return Publish
-	case "wait":
-		return Wait
-	}
-	return Unknown
-}
 
 // ViewChange represents view change information.
 type ViewChange struct {
-	Round    int64       // view change round
-	Miners   []MinerID   // magic block miners
-	Sharders []SharderID // magic block sharders
+	Node     NodeID   // node that sends the VC
+	Round    int64    // view change round
+	Miners   []NodeID // magic block miners
+	Sharders []NodeID // magic block sharders
 }
 
 // known locks
@@ -159,6 +135,11 @@ func (s *Server) nodeLock(nodeID string) (lock, ok bool) {
 // BC made VC (round == view change round).
 func (s *Server) OnViewChange() chan ViewChange {
 	return s.onViewChange
+}
+
+// OnPhase events channel. The event occurs where miner SC changes its phase.
+func (s *Server) OnPhase() chan Phase {
+	return s.onPhase
 }
 
 // OnAddMiner events channel. The event occurs
