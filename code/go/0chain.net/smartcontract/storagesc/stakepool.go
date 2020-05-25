@@ -588,6 +588,8 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(conf *scConfig,
 		if err != nil {
 			return nil, err
 		}
+		sp.Settings.MinStake = settings.MinStake
+		sp.Settings.MaxStake = settings.MaxStake
 
 		if nd := settings.NumDelegates; nd <= 0 {
 			return nil, fmt.Errorf("invalid num_delegates: %d", nd)
