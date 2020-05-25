@@ -492,7 +492,7 @@ type rewardsStat struct {
 }
 
 type delegatePoolStat struct {
-	ID               datastore.Key `json:"id"`                // pool ID
+	ID               datastore.Key `json:"id"`                // blobber ID
 	Balance          state.Balance `json:"balance"`           // current balance
 	DelegateID       datastore.Key `json:"delegate_id"`       // wallet
 	Rewards          state.Balance `json:"rewards"`           // total for all time
