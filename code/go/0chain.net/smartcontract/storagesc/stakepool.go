@@ -463,7 +463,7 @@ func (sp *stakePool) stat(conf *scConfig, sscKey string,
 			Rewards:    dp.Rewards,
 			Penalty:    dp.Penalty,
 		}
-		stat.Earnings += dp.Rewards
+		stat.Interests += dp.Rewards
 		stat.Penalty += dp.Penalty
 		if conf.canMint() {
 			dps.PendingInterests = sp.interests(dp, now, rate, period)
@@ -474,6 +474,8 @@ func (sp *stakePool) stat(conf *scConfig, sscKey string,
 	// rewards
 	stat.Rewards.Blobber = sp.Rewards.Blobber     // total for all time
 	stat.Rewards.Validator = sp.Rewards.Validator // total for all time
+
+	stat.Settings = sp.Settings
 	return
 }
 
@@ -512,11 +514,14 @@ type stakePoolStat struct {
 	Offers      []offerPoolStat `json:"offers"`       //
 	OffersTotal state.Balance   `json:"offers_total"` //
 	// delegate pools
-	Delegate []delegatePoolStat `json:"delegate"`
-	Earnings state.Balance      `json:"earnings"` // total for all
-	Penalty  state.Balance      `json:"penalty"`  // total for all
+	Delegate  []delegatePoolStat `json:"delegate"`
+	Interests state.Balance      `json:"interests"` // total for all
+	Penalty   state.Balance      `json:"penalty"`   // total for all
 	// rewards
 	Rewards rewardsStat `json:"rewards"`
+
+	// Settings of the stake pool
+	Settings stakePoolSettings `json:"settings"`
 }
 
 func (stat *stakePoolStat) encode() (b []byte) {
