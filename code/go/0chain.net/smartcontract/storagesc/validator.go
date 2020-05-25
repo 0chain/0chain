@@ -50,10 +50,16 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 		sc.statIncr(statUpdateValidator)
 	}
 
+	var conf *scConfig
+	if conf, err = sc.getConfig(balances, true); err != nil {
+		return "", common.NewErrorf("add_vaidator",
+			"can't get SC configurations: %v", err)
+	}
+
 	// create stake pool for the validator to count its rewards
 	var sp *stakePool
-	sp, err = sc.getOrCreateStakePool(t.ClientID, newValidator.DelegateWallet,
-		balances)
+	sp, err = sc.getOrCreateStakePool(conf, t.ClientID,
+		newValidator.StakePoolSettings, balances)
 	if err != nil {
 		return "", common.NewError("add_validator_failed",
 			"get or create stake pool error: "+err.Error())

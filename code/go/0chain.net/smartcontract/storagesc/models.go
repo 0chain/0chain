@@ -154,10 +154,10 @@ type StorageChallenge struct {
 }
 
 type ValidationNode struct {
-	ID             string `json:"id"`
-	BaseURL        string `json:"url"`
-	PublicKey      string `json:"-"`
-	DelegateWallet string `json:"delegate_wallet"`
+	ID                string             `json:"id"`
+	BaseURL           string             `json:"url"`
+	PublicKey         string             `json:"-"`
+	StakePoolSettings *stakePoolSettings `json:"stake_pool_settings"`
 }
 
 func (sn *ValidationNode) GetKey(globalKey string) datastore.Key {
@@ -263,7 +263,8 @@ type StorageNode struct {
 	Used            int64            `json:"used"`     // allocated capacity
 	LastHealthCheck common.Timestamp `json:"last_health_check"`
 	PublicKey       string           `json:"-"`
-	DelegateWallet  string           `json:"delegate_wallet"`
+	// StakePoolSettings used initially to create and setup stake pool.
+	StakePoolSettings *stakePoolSettings `json:"stake_pool_settings"`
 }
 
 // validate the blobber configurations

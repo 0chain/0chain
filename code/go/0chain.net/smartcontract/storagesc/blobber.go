@@ -99,15 +99,15 @@ func (sc *StorageSmartContract) removeBlobber(t *transaction.Transaction,
 
 // insert new blobber, filling its stake pool
 func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
-	blobber *StorageNode, all *StorageNodes, balances cstate.StateContextI) (
-	err error) {
+	conf *scConfig, blobber *StorageNode, all *StorageNodes,
+	balances cstate.StateContextI) (err error) {
 
 	blobber.LastHealthCheck = t.CreationDate // set to now
 
 	// the stake pool can be created by related validator
 	var sp *stakePool
-	sp, err = sc.getOrCreateStakePool(blobber.ID, blobber.DelegateWallet,
-		balances)
+	sp, err = sc.getOrCreateStakePool(conf, blobber.ID,
+		blobber.StakePoolSettings, balances)
 	if err != nil {
 		return
 	}
@@ -259,7 +259,7 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 
 	// insert blobber case
 	case err == util.ErrValueNotPresent:
-		err = sc.insertBlobber(t, newBlobber, allBlobbersList, balances)
+		err = sc.insertBlobber(t, conf, newBlobber, allBlobbersList, balances)
 
 	// update blobber case
 	default:
@@ -359,8 +359,8 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"can't get related stake pool: "+err.Error())
 	}
 
-	err = rp.moveToBlobber(commitRead.ReadMarker.AllocationID,
-		commitRead.ReadMarker.BlobberID, sp, t.CreationDate, value)
+	err = rp.moveToBlobber(sc.ID, commitRead.ReadMarker.AllocationID,
+		commitRead.ReadMarker.BlobberID, sp, t.CreationDate, value, balances)
 	if err != nil {
 		return "", common.NewError("commit_read_failed",
 			"can't transfer tokens from read pool to stake pool: "+err.Error())

@@ -30,9 +30,8 @@ type offerPool struct {
 
 // stake pool internal rewards information
 type stakePoolRewards struct {
-	tokenpool.ZcnPool `json:"pool"` // rewards pool (excluding stake rewards)
-	Blobber           state.Balance `json:"blobber"`   //
-	Validator         state.Balance `json:"validator"` //
+	Blobber   state.Balance `json:"blobber"`   //
+	Validator state.Balance `json:"validator"` //
 }
 
 // delegate pool
@@ -40,8 +39,22 @@ type delegatePool struct {
 	tokenpool.ZcnPool `json:"pool"`    // the pool
 	MintAt            common.Timestamp `json:"mint_at"`     // last mint time
 	DelegateID        datastore.Key    `json:"delegate_id"` // user
-	Earnings          state.Balance    `json:"earned"`      // total
+	Interests         state.Balance    `json:"interests"`   // total
+	Rewards           state.Balance    `json:"rewards"`     // total
 	Penalty           state.Balance    `json:"penalty"`     // total
+}
+
+// stake pool settings
+
+type stakePoolSettings struct {
+	// DelegateWallet for pool owner.
+	DelegateWallet string `json:"delegate_wallet"`
+	// MinStake allowed.
+	MinStake state.Balance `json:"min_stake"`
+	// MaxStake allowed.
+	MaxStake state.Balance `json:"max_stake"`
+	// NumDelegates maximum allowed.
+	NumDelegates int `json:"num_delegates"`
 }
 
 // stake pool of a blobber
@@ -53,10 +66,10 @@ type stakePool struct {
 	// Offers represents tokens required by currently
 	// open offers of the blobber. It's allocation_id -> {lock, expire}
 	Offers map[string]*offerPool `json:"offers"`
-	// rewards information
+	// total rewards information
 	Rewards stakePoolRewards `json:"rewards"`
-	// DelegateWallet for pool owner.
-	DelegateWallet string `json:"delegate_wallet"`
+	// Settings of the stake pool.
+	Settings stakePoolSettings `json:"settings"`
 }
 
 func newStakePool() *stakePool {
@@ -124,8 +137,8 @@ func (sp *stakePool) stake() (stake state.Balance) {
 
 // is allowed delegate wallet
 func (sp *stakePool) isAllowed(id datastore.Key) bool {
-	return sp.DelegateWallet == "" ||
-		sp.DelegateWallet == id
+	return sp.Settings.DelegateWallet == "" ||
+		sp.Settings.DelegateWallet == id
 }
 
 // add delegate wallet
@@ -267,7 +280,7 @@ func (sp *stakePool) mintPool(sscID string, dp *delegatePool,
 		return mint, fmt.Errorf("adding mint: %v", err)
 	}
 
-	dp.Earnings += mint
+	dp.Interests += mint
 	return
 }
 
@@ -300,6 +313,10 @@ func (sp *stakePool) orderedPools() (dps []*delegatePool) {
 func (sp *stakePool) minting(conf *scConfig, sscID string,
 	now common.Timestamp, balances chainstate.StateContextI) (
 	minted state.Balance, err error) {
+
+	if !conf.canMint() {
+		return // can't mint anymore, max_mint reached
+	}
 
 	if len(sp.Pools) == 0 {
 		return
@@ -394,24 +411,6 @@ func (sp *stakePool) slash(allocID, blobID string, until common.Timestamp,
 	return
 }
 
-// move all rewards to given wallet
-func (sp *stakePool) takeRewards(sscID, clientID string,
-	balances chainstate.StateContextI) (resp string, err error) {
-
-	if sp.Rewards.Balance == 0 {
-		return "", errors.New("no rewards to take")
-	}
-
-	var transfer *state.Transfer
-	transfer, resp, err = sp.Rewards.EmptyPool(sscID, clientID, nil)
-	if err != nil {
-		return
-	}
-
-	err = balances.AddTransfer(transfer)
-	return
-}
-
 // free staked capacity of related blobber
 func (sp *stakePool) capacity(now common.Timestamp,
 	writePrice state.Balance) (free int64) {
@@ -427,7 +426,7 @@ func (sp *stakePool) stat(conf *scConfig, sscKey string,
 	now common.Timestamp, blobber *StorageNode) (stat *stakePoolStat) {
 
 	stat = new(stakePoolStat)
-	stat.ID = sp.Rewards.ID   // rewards pool ID
+	stat.ID = blobber.ID
 	stat.Balance = sp.stake() // total stake balance
 	// capacity related statistic
 	stat.Free = sp.capacity(now, blobber.Terms.WritePrice)
@@ -457,19 +456,19 @@ func (sp *stakePool) stat(conf *scConfig, sscKey string,
 	stat.Delegate = make([]delegatePoolStat, 0, len(sp.Pools))
 	for _, dp := range sp.orderedPools() {
 		stat.Delegate = append(stat.Delegate, delegatePoolStat{
-			ID:         dp.ID,
-			Balance:    dp.Balance,
-			DelegateID: dp.DelegateID,
-			Earnings:   dp.Earnings,
-			Penalty:    dp.Penalty,
-			Interests:  sp.interests(dp, now, rate, period),
+			ID:               dp.ID,
+			Balance:          dp.Balance,
+			DelegateID:       dp.DelegateID,
+			Interests:        dp.Interests,
+			Rewards:          dp.Rewards,
+			Penalty:          dp.Penalty,
+			PendingInterests: sp.interests(dp, now, rate, period),
 		})
-		stat.Earnings += dp.Earnings
+		stat.Earnings += dp.Rewards
 		stat.Penalty += dp.Penalty
 	}
 
 	// rewards
-	stat.Rewards.Balance = sp.Rewards.Balance     // current (can unlock)
 	stat.Rewards.Blobber = sp.Rewards.Blobber     // total for all time
 	stat.Rewards.Validator = sp.Rewards.Validator // total for all time
 	return
@@ -485,18 +484,18 @@ type offerPoolStat struct {
 }
 
 type rewardsStat struct {
-	Balance   state.Balance `json:"balance"`
 	Blobber   state.Balance `json:"blobber"`   // total for all time
 	Validator state.Balance `json:"validator"` // total for all time
 }
 
 type delegatePoolStat struct {
-	ID         datastore.Key `json:"id"`          // pool ID
-	Balance    state.Balance `json:"balance"`     // current balance
-	DelegateID datastore.Key `json:"delegate_id"` // wallet
-	Earnings   state.Balance `json:"earnings"`    // total for all time
-	Penalty    state.Balance `json:"penalty"`     // total for all time
-	Interests  state.Balance `json:"interests"`   // not payed yet
+	ID               datastore.Key `json:"id"`                // pool ID
+	Balance          state.Balance `json:"balance"`           // current balance
+	DelegateID       datastore.Key `json:"delegate_id"`       // wallet
+	Rewards          state.Balance `json:"rewards"`           // total for all time
+	Interests        state.Balance `json:"interests"`         // total for all time (payed)
+	Penalty          state.Balance `json:"penalty"`           // total for all time
+	PendingInterests state.Balance `json:"pending_interests"` // not payed yet
 }
 
 type stakePoolStat struct {
@@ -559,9 +558,9 @@ func (ssc *StorageSmartContract) getStakePool(blobberID datastore.Key,
 }
 
 // get existing stake pool or create new one not saving it
-func (ssc *StorageSmartContract) getOrCreateStakePool(blobberID datastore.Key,
-	delegateWallet string, balances chainstate.StateContextI) (
-	sp *stakePool, err error) {
+func (ssc *StorageSmartContract) getOrCreateStakePool(conf *scConfig,
+	blobberID datastore.Key, settings *stakePoolSettings,
+	balances chainstate.StateContextI) (sp *stakePool, err error) {
 
 	// the stake pool can be created by related validator
 	sp, err = ssc.getStakePool(blobberID, balances)
@@ -569,12 +568,29 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(blobberID datastore.Key,
 		return nil, fmt.Errorf("unexpected error: %v", err)
 	}
 
-	if err == util.ErrValueNotPresent {
+	switch {
+
+	// validate and set
+	case err == util.ErrValueNotPresent:
 		sp, err = newStakePool(), nil // create new, reset error
-		sp.Rewards.ZcnPool.ID = stakePoolID(ssc.ID, blobberID)
-		sp.DelegateWallet = delegateWallet // on create only
-	} else if sp.DelegateWallet == "" && len(delegateWallet) != 0 {
-		sp.DelegateWallet = delegateWallet // set instead of empty list
+
+		sp.Settings.DelegateWallet = settings.DelegateWallet // on create only
+
+		err = conf.validateStakeRange(settings.MinStake, conf.MaxStake)
+		if err != nil {
+			return nil, err
+		}
+
+		if nd := settings.NumDelegates; nd <= 0 {
+			return nil, fmt.Errorf("invalid num_delegates: %d", nd)
+		}
+
+		sp.Settings.NumDelegates = settings.NumDelegates
+
+	// set instead of empty list
+	case sp.Settings.DelegateWallet == "" && len(settings.DelegateWallet) != 0:
+		sp.Settings.DelegateWallet = settings.DelegateWallet
+
 	}
 
 	return
@@ -771,65 +787,6 @@ func (ssc *StorageSmartContract) stakePoolPayInterests(
 	}
 
 	return "interests has payed", nil
-}
-
-// take all rewards excluding interests
-func (ssc *StorageSmartContract) stakePoolTakeRewards(
-	t *transaction.Transaction, input []byte,
-	balances chainstate.StateContextI) (resp string, err error) {
-
-	var (
-		sp   *stakePool
-		conf *scConfig
-	)
-
-	if conf, err = ssc.getConfig(balances, true); err != nil {
-		return "", common.NewError("stake_pool_take_rewards_failed",
-			"can't get SC configurations: "+err.Error())
-	}
-
-	var spr stakePoolRequest
-	if err = spr.decode(input); err != nil {
-		return "", common.NewError("stake_pool_take_rewards_failed",
-			"can't get SC configurations: "+err.Error())
-	}
-
-	if sp, err = ssc.getStakePool(spr.BlobberID, balances); err != nil {
-		return "", common.NewError("stake_pool_take_rewards_failed",
-			"can't get related stake pool: "+err.Error())
-	}
-
-	if !sp.isAllowed(t.ClientID) {
-		return "", common.NewError("stake_pool_take_rewards_failed",
-			"not allowed for the client")
-	}
-
-	var info *stakePoolUpdateInfo
-	info, err = sp.update(conf, ssc.ID, t.CreationDate, balances)
-	if err != nil {
-		return "", common.NewError("stake_pool_take_rewards_failed",
-			"updating stake pool: "+err.Error())
-	}
-	// save configuration (minted tokens)
-	conf.Minted += info.minted
-	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
-	if err != nil {
-		return "", common.NewError("stake_pool_take_rewards_failed",
-			"saving configurations: "+err.Error())
-	}
-
-	if resp, err = sp.takeRewards(ssc.ID, t.ClientID, balances); err != nil {
-		return "", common.NewError("stake_pool_take_rewards_failed",
-			err.Error())
-	}
-
-	// save the pool
-	if err = sp.save(ssc.ID, spr.BlobberID, balances); err != nil {
-		return "", common.NewError("stake_pool_take_rewards_failed",
-			"saving stake pool: "+err.Error())
-	}
-
-	return
 }
 
 //
