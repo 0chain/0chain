@@ -455,17 +455,20 @@ func (sp *stakePool) stat(conf *scConfig, sscKey string,
 	// delegate pools
 	stat.Delegate = make([]delegatePoolStat, 0, len(sp.Pools))
 	for _, dp := range sp.orderedPools() {
-		stat.Delegate = append(stat.Delegate, delegatePoolStat{
-			ID:               dp.ID,
-			Balance:          dp.Balance,
-			DelegateID:       dp.DelegateID,
-			Interests:        dp.Interests,
-			Rewards:          dp.Rewards,
-			Penalty:          dp.Penalty,
-			PendingInterests: sp.interests(dp, now, rate, period),
-		})
+		var dps = delegatePoolStat{
+			ID:         dp.ID,
+			Balance:    dp.Balance,
+			DelegateID: dp.DelegateID,
+			Interests:  dp.Interests,
+			Rewards:    dp.Rewards,
+			Penalty:    dp.Penalty,
+		}
 		stat.Earnings += dp.Rewards
 		stat.Penalty += dp.Penalty
+		if conf.canMint() {
+			dps.PendingInterests = sp.interests(dp, now, rate, period)
+		}
+		stat.Delegate = append(stat.Delegate, dps)
 	}
 
 	// rewards
