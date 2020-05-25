@@ -50,6 +50,7 @@ func integrationsTestsLock(id string) {
 	if !viper.GetBool("testing.enabled") {
 		return // regular start
 	}
+	println("TESTING ENABLED")
 	var (
 		client   = conductrpc.NewClient(viper.GetString("testing.address"))
 		interval = viper.GetDuration("testing.lock_interval")
@@ -206,7 +207,7 @@ func main() {
 	Logger.Info("Chain info", zap.String("chain_id", config.GetServerChainID()), zap.String("mode", mode))
 	Logger.Info("Self identity", zap.Any("set_index", selfNode.SetIndex), zap.Any("id", selfNode.GetKey()))
 
-	integrationsTestsLock(node.Self.Undelying().GetKey())
+	integrationsTestsLock(node.Self.Underlying().GetKey())
 
 	var server *http.Server
 	if config.Development() {

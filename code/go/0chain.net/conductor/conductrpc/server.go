@@ -95,11 +95,11 @@ func NewServer(address string) (s *Server) {
 	s.quit = make(chan struct{})
 
 	// without a buffer
-	s.onViewChange = make(chan *ViewChangeEvent)
-	s.onPhase = make(chan *PhaseEvent)
-	s.onAddMiner = make(chan *AddMinerEvent)
-	s.onAddSharder = make(chan *AddSharderEvent)
-	s.onNodeReady = make(chan NodeID)
+	s.onViewChange = make(chan *ViewChangeEvent, 10)
+	s.onPhase = make(chan *PhaseEvent, 10)
+	s.onAddMiner = make(chan *AddMinerEvent, 10)
+	s.onAddSharder = make(chan *AddSharderEvent, 10)
+	s.onNodeReady = make(chan NodeID, 10)
 
 	s.disp = gorpc.NewDispatcher()
 	s.disp.AddFunc("onViewChange", s.onViewChangeHandler)
@@ -183,6 +183,7 @@ func (s *Server) OnNodeReady() chan NodeID {
 //
 
 func (s *Server) onViewChangeHandler(viewChange *ViewChangeEvent) {
+	println("SHIT, GOT IT!")
 	select {
 	case s.onViewChange <- viewChange:
 	case <-s.quit:
@@ -190,6 +191,7 @@ func (s *Server) onViewChangeHandler(viewChange *ViewChangeEvent) {
 }
 
 func (s *Server) onPhaseHandler(phase *PhaseEvent) {
+	println("SHIT, GOT IT!")
 	select {
 	case s.onPhase <- phase:
 	case <-s.quit:
@@ -197,6 +199,7 @@ func (s *Server) onPhaseHandler(phase *PhaseEvent) {
 }
 
 func (s *Server) onAddMinerHandler(add *AddMinerEvent) {
+	println("SHIT, GOT IT!")
 	select {
 	case s.onAddMiner <- add:
 	case <-s.quit:
@@ -204,6 +207,7 @@ func (s *Server) onAddMinerHandler(add *AddMinerEvent) {
 }
 
 func (s *Server) onAddSharderHandler(add *AddSharderEvent) {
+	println("SHIT, GOT IT!")
 	select {
 	case s.onAddSharder <- add:
 	case <-s.quit:
@@ -211,6 +215,7 @@ func (s *Server) onAddSharderHandler(add *AddSharderEvent) {
 }
 
 func (s *Server) onNodeReadyHandler(nodeID NodeID) (join bool) {
+	println("SHIT, GOT IT!")
 
 	var ok bool
 	if join, ok = s.nodeLock(nodeID); ok {

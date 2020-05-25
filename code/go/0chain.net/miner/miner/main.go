@@ -48,6 +48,7 @@ func integrationsTestsLock(id string) {
 	if !viper.GetBool("testing.enabled") {
 		return // regular start
 	}
+	println("TESTING ENABLED")
 	var (
 		client   = conductrpc.NewClient(viper.GetString("testing.address"))
 		interval = viper.GetDuration("testing.lock_interval")
@@ -55,7 +56,7 @@ func integrationsTestsLock(id string) {
 		err      error
 	)
 	for {
-		join, err = client.MinerReady(conductrpc.NodeID(id))
+		join, err = client.NodeReady(conductrpc.NodeID(id))
 		if err != nil {
 			log.Fatal(err)
 		}

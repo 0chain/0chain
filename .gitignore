@@ -45,4 +45,5 @@ cover.out
 
 # conductor executable
 code/go/0chain.net/conductor/conductor
+code/go/0chain.net/conductor/runner
 

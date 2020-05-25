@@ -20,12 +20,13 @@ func NewClient(address string) (c *Client) {
 	c.client = gorpc.NewTCPClient(address)
 
 	var disp = gorpc.NewDispatcher()
-	disp.AddFunc("onViewChange", nil)
-	disp.AddFunc("onPhase", nil)
-	disp.AddFunc("onAddMiner", nil)
-	disp.AddFunc("onAddSharder", nil)
-	disp.AddFunc("onNodeReady", nil)
+	disp.AddFunc("onViewChange", func(*ViewChangeEvent) {})
+	disp.AddFunc("onPhase", func(*PhaseEvent) {})
+	disp.AddFunc("onAddMiner", func(*AddMinerEvent) {})
+	disp.AddFunc("onAddSharder", func(*AddSharderEvent) {})
+	disp.AddFunc("onNodeReady", func(NodeID) (join bool) { return })
 	c.dispc = disp.NewFuncClient(c.client)
+	c.address = address
 
 	return
 }
@@ -69,9 +70,11 @@ func (c *Client) AddSharder(add *AddSharderEvent) (err error) {
 // NodeReady notification.
 func (c *Client) NodeReady(nodeID NodeID) (join bool, err error) {
 	var face interface{}
+	println("FUCK IT'S HERE!", c.address)
 	if face, err = c.dispc.Call("onNodeReady", nodeID); err != nil {
 		return
 	}
+	println("SHIT IT IS NOT!")
 	var ok bool
 	if join, ok = face.(bool); !ok {
 		return false, fmt.Errorf("invalid response type %T", face)

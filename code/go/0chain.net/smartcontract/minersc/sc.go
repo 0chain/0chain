@@ -85,9 +85,9 @@ func (msc *MinerSmartContract) InitSC() {
 	moveFunctions[Wait] = msc.moveToStart
 
 	if isIntegrationTests() {
+		msc.client = newConductRPCClient()
 		Logger.Debug("using integration test",
 			zap.String("address", msc.client.Address()))
-		msc.client = newConductRPCClient()
 		msc.smartContractFunctions["add_miner"] = msc.AddMinerIntegrationTests
 		msc.smartContractFunctions["add_sharder"] = msc.AddSharderIntegrationTests
 		msc.smartContractFunctions["payFees"] = msc.payFeesIntegrationTests

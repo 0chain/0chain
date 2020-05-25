@@ -280,9 +280,9 @@ func (n *Node) Start(logsDir string) (err error) {
 		command string
 	)
 	command = ss[0]
-	if filepath.Base(command) != command {
-		command = filepath.Join(n.WorkDir, command)
-	}
+	// if filepath.Base(command) != command {
+	// 	command = "./" + filepath.Join(n.WorkDir, command)
+	// }
 	var cmd = exec.Command(command, ss[1:]...)
 	cmd.Dir = n.WorkDir
 
@@ -328,6 +328,10 @@ func (n *Node) Kill() (err error) {
 	return
 }
 
+func (n *Node) IsStarted() bool {
+	return n.Command != nil
+}
+
 // Stop interrupts command and waits it. Then it closes STDIN and STDOUT
 // files (logs).
 func (n *Node) Stop() (err error) {
@@ -371,7 +375,14 @@ func (ns Nodes) NodeByID(id NodeID) (n *Node, ok bool) {
 
 // A Config represents conductor testing configurations.
 type Config struct {
-	// Address is RPC server address
+	// BindRunner endpoint to connect to.
+	BindRunner string `json:"bind_runner" yaml:"bind_runner" mapstructure:"bind_runner"`
+	// Runner endpoint to connect to.
+	Runner string `json:"runner" yaml:"runner" mapstructure:"runner"`
+	// Bind is address to start RPC server.
+	Bind string `json:"bind" yaml:"bind" mapstructure:"bind"`
+	// Address is address of RPC server in docker network (e.g.
+	// address to connect to).
 	Address string `json:"address" yaml:"address" mapstructure:"address"`
 	// Logs is directory for stdin and stdout logs.
 	Logs string `json:"logs" yaml:"logs" mapstructure:"logs"`

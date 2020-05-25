@@ -151,9 +151,9 @@ cassandra:
 # integration tests
 testing:
   # miners and sharder started under control of integration test server
-  enabled: true
+  enabled: false
   # address of the server
-  address: 198.18.0.121:15210
+  address: 198.18.0.152:15210
   # lock_interval used by nodes to request server to connect to blockchain
   # after start
   lock_interval: 1s
