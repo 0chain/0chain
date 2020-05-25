@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"net/url"
 
-	chainState "0chain.net/chaincore/chain/state"
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/tokenpool"
 	"0chain.net/chaincore/transaction"
@@ -61,7 +61,7 @@ func (cp *challengePool) Decode(input []byte) (err error) {
 
 // save the challenge pool
 func (cp *challengePool) save(sscKey, allocationID string,
-	balances chainState.StateContextI) (err error) {
+	balances cstate.StateContextI) (err error) {
 
 	_, err = balances.InsertTrieNode(challengePoolKey(sscKey, allocationID), cp)
 	return
@@ -105,8 +105,8 @@ func (cp *challengePool) moveToWritePool(allocID, blobID string,
 }
 
 // moveToBlobber moves tokens to given blobber on challenge passed
-func (cp *challengePool) moveToBlobber(sp *stakePool, value state.Balance) (
-	err error) {
+func (cp *challengePool) moveToBlobber(sscKey string, sp *stakePool,
+	value state.Balance, balances cstate.StateContextI) (err error) {
 
 	if value == 0 {
 		return // nothing to move
@@ -117,18 +117,74 @@ func (cp *challengePool) moveToBlobber(sp *stakePool, value state.Balance) (
 			cp.ID, cp.Balance, value)
 	}
 
-	_, _, err = cp.TransferTo(&sp.Rewards, value, nil)
-	if err != nil {
-		return fmt.Errorf("moving tokens to blobber: %v", err)
+	if len(sp.Pools) == 0 {
+		return fmt.Errorf("no stake pools to move tokens to %s", cp.ID)
 	}
-	sp.Rewards.Blobber += value // blobber rewards
+
+	var stake = float64(sp.stake())
+	for _, dp := range sp.orderedPools() {
+		var ratio float64
+
+		if stake == 0.0 {
+			ratio = 1.0 / float64(len(sp.Pools))
+		} else {
+			ratio = float64(dp.Balance) / stake
+		}
+		var (
+			move     = state.Balance(float64(value) * ratio)
+			transfer *state.Transfer
+		)
+		transfer, _, err = cp.DrainPool(sscKey, dp.DelegateID, move, nil)
+		if err != nil {
+			return fmt.Errorf("transferring tokens challenge_pool(%s) -> "+
+				"stake_pool_holder(%s): %v", cp.ID, dp.DelegateID, err)
+		}
+		if err = balances.AddTransfer(transfer); err != nil {
+			return fmt.Errorf("adding transfer: %v", err)
+		}
+		// stat
+		dp.Rewards += move         // add to stake_pool_holder rewards
+		sp.Rewards.Blobber += move // add to total blobber rewards
+	}
 
 	return
 }
 
-func (cp *challengePool) moveToValidators(reward state.Balance,
-	validatos []datastore.Key, vsps []*stakePool) (moved state.Balance,
+func (cp *challengePool) moveToValidator(sscKey string, sp *stakePool,
+	value state.Balance, balances cstate.StateContextI) (moved state.Balance,
 	err error) {
+
+	var stake = float64(sp.stake())
+	for _, dp := range sp.orderedPools() {
+		var ratio float64
+		if stake == 0.0 {
+			ratio = 1.0 / float64(len(sp.Pools))
+		} else {
+			ratio = float64(dp.Balance) / stake
+		}
+		var (
+			move     = state.Balance(float64(value) * ratio)
+			transfer *state.Transfer
+		)
+		transfer, _, err = cp.DrainPool(sscKey, dp.DelegateID, move, nil)
+		if err != nil {
+			return 0, fmt.Errorf("transferring tokens challenge_pool(%s) -> "+
+				"stake_pool_holder(%s): %v", cp.ID, dp.DelegateID, err)
+		}
+		if err = balances.AddTransfer(transfer); err != nil {
+			return 0, fmt.Errorf("adding transfer: %v", err)
+		}
+		// stat
+		dp.Rewards += move           // add to stake_pool_holder rewards
+		sp.Rewards.Validator += move // add to total blobber rewards
+		moved += move
+	}
+	return
+}
+
+func (cp *challengePool) moveToValidators(sscKey string, reward state.Balance,
+	validatos []datastore.Key, vsps []*stakePool,
+	balances cstate.StateContextI) (moved state.Balance, err error) {
 
 	if len(validatos) == 0 || reward == 0 {
 		return // nothing to move, or nothing to move to
@@ -137,20 +193,17 @@ func (cp *challengePool) moveToValidators(reward state.Balance,
 	var oneReward = state.Balance(float64(reward) / float64(len(validatos)))
 
 	for i, sp := range vsps {
-
 		if cp.Balance < oneReward {
 			return 0, fmt.Errorf("not enough tokens in challenge pool: %v < %v",
 				cp.Balance, oneReward)
 		}
-
-		_, _, err = cp.TransferTo(&sp.Rewards, oneReward, nil)
+		var oneMove state.Balance
+		oneMove, err = cp.moveToValidator(sscKey, sp, oneReward, balances)
 		if err != nil {
-			return 0, fmt.Errorf("moving tokens to validator %s: %v",
+			return 0, fmt.Errorf("moving to validator %s: %v",
 				validatos[i], err)
 		}
-
-		sp.Rewards.Validator += oneReward
-		moved += oneReward
+		moved += oneMove
 	}
 
 	return
@@ -184,8 +237,8 @@ type challengePoolStat struct {
 
 // getChallengePoolBytes of a client
 func (ssc *StorageSmartContract) getChallengePoolBytes(
-	allocationID datastore.Key, balances chainState.StateContextI) (
-	b []byte, err error) {
+	allocationID datastore.Key, balances cstate.StateContextI) (b []byte,
+	err error) {
 
 	var val util.Serializable
 	val, err = balances.GetTrieNode(challengePoolKey(ssc.ID, allocationID))
@@ -197,7 +250,7 @@ func (ssc *StorageSmartContract) getChallengePoolBytes(
 
 // getChallengePool of current client
 func (ssc *StorageSmartContract) getChallengePool(allocationID datastore.Key,
-	balances chainState.StateContextI) (cp *challengePool, err error) {
+	balances cstate.StateContextI) (cp *challengePool, err error) {
 
 	var poolb []byte
 	poolb, err = ssc.getChallengePoolBytes(allocationID, balances)
@@ -212,8 +265,8 @@ func (ssc *StorageSmartContract) getChallengePool(allocationID datastore.Key,
 // newChallengePool SC function creates new
 // challenge pool for a client don't saving it
 func (ssc *StorageSmartContract) newChallengePool(allocationID string,
-	creationDate, expiresAt common.Timestamp,
-	balances chainState.StateContextI) (cp *challengePool, err error) {
+	creationDate, expiresAt common.Timestamp, balances cstate.StateContextI) (
+	cp *challengePool, err error) {
 
 	_, err = ssc.getChallengePoolBytes(allocationID, balances)
 
@@ -235,7 +288,7 @@ func (ssc *StorageSmartContract) newChallengePool(allocationID string,
 
 // create, fill and save challenge pool for new allocation
 func (ssc *StorageSmartContract) createChallengePool(t *transaction.Transaction,
-	alloc *StorageAllocation, balances chainState.StateContextI) (err error) {
+	alloc *StorageAllocation, balances cstate.StateContextI) (err error) {
 
 	// create related challenge_pool expires with the allocation + challenge
 	// completion time
@@ -262,7 +315,7 @@ func (ssc *StorageSmartContract) createChallengePool(t *transaction.Transaction,
 
 // statistic for all locked tokens of a challenge pool
 func (ssc *StorageSmartContract) getChallengePoolStatHandler(
-	ctx context.Context, params url.Values, balances chainState.StateContextI) (
+	ctx context.Context, params url.Values, balances cstate.StateContextI) (
 	resp interface{}, err error) {
 
 	var (

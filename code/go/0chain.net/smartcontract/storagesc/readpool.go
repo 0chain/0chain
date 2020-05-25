@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"net/url"
 
-	chainState "0chain.net/chaincore/chain/state"
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -53,15 +53,49 @@ func (rp *readPool) Decode(p []byte) error {
 }
 
 // save the pool in tree
-func (rp *readPool) save(sscKey, clientID string,
-	balances chainState.StateContextI) (err error) {
+func (rp *readPool) save(sscKey, clientID string, balances cstate.StateContextI) (
+	err error) {
 
 	_, err = balances.InsertTrieNode(readPoolKey(sscKey, clientID), rp)
 	return
 }
 
-func (rp *readPool) moveToBlobber(allocID, blobID string,
-	sp *stakePool, now common.Timestamp, value state.Balance) (err error) {
+func (rp *readPool) movePartToBlobber(sscKey string, ap *allocationPool,
+	sp *stakePool, value state.Balance, balances cstate.StateContextI) (
+	err error) {
+
+	var stake = float64(sp.stake())
+	for _, dp := range sp.orderedPools() {
+		var ratio float64
+		if stake == 0.0 {
+			ratio = float64(dp.Balance) / float64(len(sp.Pools))
+		} else {
+			ratio = float64(dp.Balance) / stake
+		}
+
+		var (
+			move     = state.Balance(float64(value) * ratio)
+			transfer *state.Transfer
+		)
+		transfer, _, err = ap.DrainPool(sscKey, dp.DelegateID, move, nil)
+		if err != nil {
+			return fmt.Errorf("transferring tokens read_pool() -> "+
+				"stake_pool_holder(%s): %v", dp.DelegateID, err)
+		}
+		if err = balances.AddTransfer(transfer); err != nil {
+			return fmt.Errorf("adding transfer: %v", err)
+		}
+		// stat
+		dp.Rewards += move         // add to stake_pool_holder rewards
+		sp.Rewards.Blobber += move // add to total blobber rewards
+	}
+
+	return
+}
+
+func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
+	sp *stakePool, now common.Timestamp, value state.Balance,
+	balances cstate.StateContextI) (err error) {
 
 	var cut = rp.blobberCut(allocID, blobID, now)
 
@@ -88,8 +122,10 @@ func (rp *readPool) moveToBlobber(allocID, blobID string,
 		} else {
 			move, bp.Balance = value, bp.Balance-value
 		}
-		if _, _, err = ap.TransferTo(&sp.Rewards, move, nil); err != nil {
-			return // transferring error
+
+		err = rp.movePartToBlobber(sscKey, ap, sp, move, balances)
+		if err != nil {
+			return
 		}
 
 		value -= move
@@ -145,7 +181,7 @@ func (rp *readPool) stat(now common.Timestamp) allocationPoolsStat {
 
 // getReadPoolBytes of a client
 func (ssc *StorageSmartContract) getReadPoolBytes(clientID datastore.Key,
-	balances chainState.StateContextI) (b []byte, err error) {
+	balances cstate.StateContextI) (b []byte, err error) {
 
 	var val util.Serializable
 	val, err = balances.GetTrieNode(readPoolKey(ssc.ID, clientID))
@@ -157,7 +193,7 @@ func (ssc *StorageSmartContract) getReadPoolBytes(clientID datastore.Key,
 
 // getReadPool of current client
 func (ssc *StorageSmartContract) getReadPool(clientID datastore.Key,
-	balances chainState.StateContextI) (rp *readPool, err error) {
+	balances cstate.StateContextI) (rp *readPool, err error) {
 
 	var poolb []byte
 	if poolb, err = ssc.getReadPoolBytes(clientID, balances); err != nil {
@@ -170,7 +206,7 @@ func (ssc *StorageSmartContract) getReadPool(clientID datastore.Key,
 
 // newReadPool SC function creates new read pool for a client.
 func (ssc *StorageSmartContract) newReadPool(t *transaction.Transaction,
-	input []byte, balances chainState.StateContextI) (resp string, err error) {
+	input []byte, balances cstate.StateContextI) (resp string, err error) {
 
 	_, err = ssc.getReadPoolBytes(t.ClientID, balances)
 
@@ -190,7 +226,7 @@ func (ssc *StorageSmartContract) newReadPool(t *transaction.Transaction,
 	return string(rp.Encode()), nil
 }
 
-func checkFill(t *transaction.Transaction, balances chainState.StateContextI) (
+func checkFill(t *transaction.Transaction, balances cstate.StateContextI) (
 	err error) {
 
 	if t.Value < 0 {
@@ -217,7 +253,7 @@ func checkFill(t *transaction.Transaction, balances chainState.StateContextI) (
 
 // lock tokens for read pool of transaction's client
 func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
-	input []byte, balances chainState.StateContextI) (resp string, err error) {
+	input []byte, balances cstate.StateContextI) (resp string, err error) {
 
 	// configs
 
@@ -339,7 +375,7 @@ func (ssc *StorageSmartContract) readPoolLock(t *transaction.Transaction,
 
 // unlock tokens if expired
 func (ssc *StorageSmartContract) readPoolUnlock(t *transaction.Transaction,
-	input []byte, balances chainState.StateContextI) (resp string, err error) {
+	input []byte, balances cstate.StateContextI) (resp string, err error) {
 
 	// user read pool
 
@@ -388,7 +424,7 @@ func (ssc *StorageSmartContract) readPoolUnlock(t *transaction.Transaction,
 
 // statistic for an allocation/blobber (used by blobbers)
 func (ssc *StorageSmartContract) getReadPoolAllocBlobberStatHandler(
-	ctx context.Context, params url.Values, balances chainState.StateContextI) (
+	ctx context.Context, params url.Values, balances cstate.StateContextI) (
 	resp interface{}, err error) {
 
 	var (
@@ -424,7 +460,7 @@ func (ssc *StorageSmartContract) getReadPoolAllocBlobberStatHandler(
 
 // statistic for all locked tokens of the read pool
 func (ssc *StorageSmartContract) getReadPoolStatHandler(ctx context.Context,
-	params url.Values, balances chainState.StateContextI) (
+	params url.Values, balances cstate.StateContextI) (
 	resp interface{}, err error) {
 
 	var (

@@ -78,7 +78,6 @@ func (ssc *StorageSmartContract) SetSC(sc *sci.SmartContract, bcContext sci.BCCo
 	ssc.SmartContractExecutionStats["stake_pool_lock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "stake_pool_lock"), nil)
 	ssc.SmartContractExecutionStats["stake_pool_unlock"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "stake_pool_unlock"), nil)
 	ssc.SmartContractExecutionStats["stake_pool_pay_interests"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "stake_pool_pay_interests"), nil)
-	ssc.SmartContractExecutionStats["stake_pool_take_rewards"] = metrics.GetOrRegisterTimer(fmt.Sprintf("sc:%v:func:%v", ssc.ID, "stake_pool_take_rewards"), nil)
 	// challenge pool
 	ssc.SmartContract.RestHandlers["/getChallengePoolStat"] = ssc.getChallengePoolStatHandler
 }
@@ -219,8 +218,6 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 		resp, err = sc.stakePoolUnlock(t, input, balances)
 	case "stake_pool_pay_interests":
 		resp, err = sc.stakePoolPayInterests(t, input, balances)
-	case "stake_pool_take_rewards":
-		resp, err = sc.stakePoolTakeRewards(t, input, balances)
 
 	// case "challenge_request":
 	// 	resp, err := sc.addChallenge(t, balances.GetBlock(), input, balances)

@@ -1040,7 +1040,7 @@ func (sc *StorageSmartContract) cacnelAllocationRequest(
 				ratio = float64(d.Stats.UsedSize) / float64(alloc.UsedSize)
 				move  = state.Balance(float64(left) * ratio * passRate)
 			)
-			if err = cp.moveToBlobber(sp, move); err != nil {
+			if err = cp.moveToBlobber(sc.ID, sp, move, balances); err != nil {
 				return "", common.NewError("alloc_cacnel_failed",
 					"moving tokens to stake pool of "+d.BlobberID+": "+
 						err.Error())
@@ -1052,8 +1052,8 @@ func (sc *StorageSmartContract) cacnelAllocationRequest(
 		var fctrml = conf.FailedChallengesToRevokeMinLock
 		if d.Stats == nil || d.Stats.FailedChallenges < int64(fctrml) {
 			if lack := d.MinLockDemand - d.Spent; lack > 0 {
-				err = wp.moveToStake(alloc.ID, d.BlobberID, sp, t.CreationDate,
-					lack)
+				err = wp.moveToStake(sc.ID, alloc.ID, d.BlobberID, sp,
+					t.CreationDate, lack, balances)
 				if err != nil {
 					return "", common.NewError("alloc_cacnel_failed",
 						"paying min_lock for "+d.BlobberID+": "+err.Error())
@@ -1249,7 +1249,7 @@ func (sc *StorageSmartContract) finalizeAllocation(
 				ratio = float64(d.Stats.UsedSize) / float64(alloc.UsedSize)
 				move  = state.Balance(float64(left) * ratio * passRate)
 			)
-			if err = cp.moveToBlobber(sp, move); err != nil {
+			if err = cp.moveToBlobber(sc.ID, sp, move, balances); err != nil {
 				return "", common.NewError("fini_alloc_failed",
 					"moving tokens to stake pool of "+d.BlobberID+": "+
 						err.Error())
@@ -1259,8 +1259,8 @@ func (sc *StorageSmartContract) finalizeAllocation(
 		}
 		// min lock demand rest
 		if lack := d.MinLockDemand - d.Spent; lack > 0 {
-			err = wp.moveToStake(alloc.ID, d.BlobberID, sp, until,
-				lack)
+			err = wp.moveToStake(sc.ID, alloc.ID, d.BlobberID, sp, until,
+				lack, balances)
 			if err != nil {
 				return "", common.NewError("fini_alloc_failed",
 					"paying min_lock for "+d.BlobberID+": "+err.Error())

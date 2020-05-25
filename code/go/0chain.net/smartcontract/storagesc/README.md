@@ -427,7 +427,7 @@ free to use these zbox command.
     ./zbox wp-info --allocation $ALLOC1
     ```
 19. Wait a challenge some time. Check challenge pool again.
-20. Check out blobbers stake pools to see filling with rewards (OVERFILL column)
+20. Check out blobbers stake pools to see filling with rewards
     ```
     ./zbox sp-info --blobber_id $BLOBBER1
     ./zbox sp-info --blobber_id $BLOBBER2

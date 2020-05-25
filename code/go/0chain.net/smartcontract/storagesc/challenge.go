@@ -123,7 +123,7 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		return fmt.Errorf("can't get stake pool: %v", err)
 	}
 
-	if err = cp.moveToBlobber(sp, move); err != nil {
+	if err = cp.moveToBlobber(sc.ID, sp, move, balances); err != nil {
 		return fmt.Errorf("can't move tokens to blobber: %v", err)
 	}
 	details.ChallengeReward += move
@@ -135,7 +135,8 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	}
 
 	var moved state.Balance
-	moved, err = cp.moveToValidators(validatorsReward, validators, vsps)
+	moved, err = cp.moveToValidators(sc.ID, validatorsReward, validators, vsps,
+		balances)
 	if err != nil {
 		return fmt.Errorf("rewarding validators: %v", err)
 	}
@@ -244,7 +245,8 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 
 	// validators reward
 	var moved state.Balance
-	moved, err = cp.moveToValidators(validatorsReward, validators, vsps)
+	moved, err = cp.moveToValidators(sc.ID, validatorsReward, validators, vsps,
+		balances)
 	if err != nil {
 		return fmt.Errorf("rewarding validators: %v", err)
 	}

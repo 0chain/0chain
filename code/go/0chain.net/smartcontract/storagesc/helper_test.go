@@ -90,6 +90,9 @@ func (c *Client) addBlobRequest(t *testing.T) []byte {
 	sn.Capacity = c.cap
 	sn.Used = 0
 	sn.LastHealthCheck = 0
+	sn.StakePoolSettings.NumDelegates = 100
+	sn.StakePoolSettings.MinStake = 0
+	sn.StakePoolSettings.MaxStake = 1000e10
 	return mustEncode(t, &sn)
 }
 
@@ -103,6 +106,9 @@ func (c *Client) addValidatorRequest(t *testing.T) []byte {
 	var vn ValidationNode
 	vn.ID = c.id
 	vn.BaseURL = "http://" + c.id + ":10291/api/v1"
+	vn.StakePoolSettings.NumDelegates = 100
+	vn.StakePoolSettings.MinStake = 0
+	vn.StakePoolSettings.MaxStake = 1000e10
 	return mustEncode(t, &vn)
 }
 

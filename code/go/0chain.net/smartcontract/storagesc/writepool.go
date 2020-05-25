@@ -110,8 +110,43 @@ func (wp *writePool) moveToChallenge(allocID, blobID string,
 	return
 }
 
-func (wp *writePool) moveToStake(allocID, blobID string,
-	sp *stakePool, now common.Timestamp, value state.Balance) (err error) {
+func (wp *writePool) movePartToStake(sscKey string, ap *allocationPool,
+	sp *stakePool, value state.Balance, balances chainState.StateContextI) (
+	moved state.Balance, err error) {
+
+	var stake = float64(sp.stake())
+	for _, dp := range sp.orderedPools() {
+		var ratio float64
+		if stake == 0.0 {
+			ratio = 1.0 / float64(len(sp.Pools))
+		} else {
+			ratio = float64(dp.Balance) / stake
+		}
+		var (
+			move     = state.Balance(float64(value) * ratio)
+			transfer *state.Transfer
+		)
+		transfer, _, err = ap.DrainPool(sscKey, dp.DelegateID, move, nil)
+		if err != nil {
+			return 0, fmt.Errorf("transferring tokens"+
+				" write_pool/alloc_pool(%s) -> stake_pool_holder(%s): %v",
+				ap.ID, dp.DelegateID, err)
+		}
+		if err = balances.AddTransfer(transfer); err != nil {
+			return 0, fmt.Errorf("adding transfer: %v", err)
+		}
+		// stat
+		dp.Rewards += move           // add to stake_pool_holder rewards
+		sp.Rewards.Validator += move // add to total blobber rewards
+		moved += move
+	}
+
+	return
+}
+
+func (wp *writePool) moveToStake(sscKey, allocID, blobID string,
+	sp *stakePool, now common.Timestamp, value state.Balance,
+	balances chainState.StateContextI) (err error) {
 
 	var cut = wp.blobberCut(allocID, blobID, now)
 
@@ -138,8 +173,9 @@ func (wp *writePool) moveToStake(allocID, blobID string,
 		} else {
 			move, bp.Balance = value, bp.Balance-value
 		}
-		if _, _, err = ap.TransferTo(&sp.Rewards, move, nil); err != nil {
-			return // transferring error
+		_, err = wp.movePartToStake(sscKey, ap, sp, move, balances)
+		if err != nil {
+			return
 		}
 		sp.Rewards.Blobber += move
 		value -= move

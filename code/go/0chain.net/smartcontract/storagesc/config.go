@@ -104,6 +104,11 @@ type scConfig struct {
 	MaxChallengesPerGeneration int `json:"max_challenges_per_generation"`
 	// ChallengeGenerationRate is number of challenges generated for a MB/min.
 	ChallengeGenerationRate float64 `json:"challenge_rate_per_mb_min"`
+
+	// MinStake allowed by a blobber/validator (entire SC boundary).
+	MinStake state.Balance `json:"min_stake"`
+	// MaxStake allowed by a blobber/validator (entire SC boundary).
+	MaxStake state.Balance `json:"max_stake"`
 }
 
 func (sc *scConfig) validate() (err error) {
@@ -171,11 +176,33 @@ func (sc *scConfig) validate() (err error) {
 		return fmt.Errorf("negative challenge_rate_per_mb_min: %v",
 			sc.ChallengeGenerationRate)
 	}
+	if sc.MinStake < 0 {
+		return fmt.Errorf("negative min_stake: %v", sc.MinStake)
+	}
+	if sc.MaxStake < sc.MinStake {
+		return fmt.Errorf("max_stake less than min_stake: %v < %v", sc.MinStake,
+			sc.MaxStake)
+	}
 	return
 }
 
 func (conf *scConfig) canMint() bool {
 	return conf.Minted < conf.MaxMint
+}
+
+func (conf *scConfig) validateStakeRange(min, max state.Balance) (err error) {
+	if min < conf.MinStake {
+		return fmt.Errorf("min_stake is less than allowed by SC: %v < %v", min,
+			conf.MinStake)
+	}
+	if max > conf.MaxStake {
+		return fmt.Errorf("max_stake is greater than allowed by SC: %v < %v",
+			max, conf.MaxStake)
+	}
+	if max < min {
+		return fmt.Errorf("max_stake less than min_stake: %v < %v", min, max)
+	}
+	return
 }
 
 func (conf *scConfig) Encode() (b []byte) {
@@ -215,6 +242,8 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 	var scc = config.SmartContractConfig
 	// sc
 	conf.MaxMint = state.Balance(scc.GetFloat64(pfx+"max_mint") * 1e10)
+	conf.MinStake = state.Balance(scc.GetFloat64(pfx+"min_stake") * 1e10)
+	conf.MaxStake = state.Balance(scc.GetFloat64(pfx+"max_stake") * 1e10)
 	conf.MinAllocSize = scc.GetInt64(pfx + "min_alloc_size")
 	conf.MinAllocDuration = scc.GetDuration(pfx + "min_alloc_duration")
 	conf.ValidatorReward = scc.GetFloat64(pfx + "validator_reward")

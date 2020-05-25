@@ -44,6 +44,8 @@ smart_contracts:
     max_mint: 4000000.0 # tokens
 
   storagesc:
+    min_stake: 0.01 # min stake can be set by a node (boundary for all nodes)
+    max_stake: 100.0 # max stake can be set by a node (boundary for all nodes)
     # max_mint
     max_mint: 4000000.0 # tokens, max amount of tokens can be minted by SC
     # min possible allocations size in bytes allowed by the SC
