@@ -107,7 +107,7 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	// the stake pool can be created by related validator
 	var sp *stakePool
 	sp, err = sc.getOrCreateStakePool(conf, blobber.ID,
-		blobber.StakePoolSettings, balances)
+		&blobber.StakePoolSettings, balances)
 	if err != nil {
 		return
 	}
