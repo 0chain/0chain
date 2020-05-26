@@ -1,20 +1,12 @@
 package conductrpc
 
 import (
+	"net"
+	"net/rpc"
 	"sync"
-
-	"github.com/valyala/gorpc"
 
 	"0chain.net/conductor/config"
 )
-
-func init() {
-	gorpc.RegisterType(NodeID(""))
-	gorpc.RegisterType(&ViewChangeEvent{})
-	gorpc.RegisterType(&PhaseEvent{})
-	gorpc.RegisterType(&AddMinerEvent{})
-	gorpc.RegisterType(&AddSharderEvent{})
-}
 
 // type aliases
 type (
@@ -62,8 +54,9 @@ type nodeLock struct {
 }
 
 type Server struct {
-	server *gorpc.Server
-	disp   *gorpc.Dispatcher
+	server  *rpc.Server
+	address string
+	l       net.Listener
 
 	// server events
 
@@ -90,7 +83,7 @@ type Server struct {
 }
 
 // NewServer Conductor RPC server.
-func NewServer(address string) (s *Server) {
+func NewServer(address string) (s *Server, err error) {
 	s = new(Server)
 	s.quit = make(chan struct{})
 
@@ -101,16 +94,21 @@ func NewServer(address string) (s *Server) {
 	s.onAddSharder = make(chan *AddSharderEvent, 10)
 	s.onNodeReady = make(chan NodeID, 10)
 
-	s.disp = gorpc.NewDispatcher()
-	s.disp.AddFunc("onViewChange", s.onViewChangeHandler)
-	s.disp.AddFunc("onPhase", s.onPhaseHandler)
-	s.disp.AddFunc("onAddMiner", s.onAddMinerHandler)
-	s.disp.AddFunc("onAddSharder", s.onAddSharderHandler)
-	s.disp.AddFunc("onNodeReady", s.onNodeReadyHandler)
-
 	s.locks = make(map[NodeID]*nodeLock)
+	s.server = rpc.NewServer()
+	if err = s.server.Register(s); err != nil {
+		return nil, err
+	}
+	s.address = address
+	return
+}
 
-	s.server = gorpc.NewTCPServer(address, s.disp.NewHandlerFunc())
+func (s *Server) Serve() (err error) {
+	var l net.Listener
+	if l, err = net.Listen("tcp", s.address); err != nil {
+		return
+	}
+	go s.server.Accept(l)
 	return
 }
 
@@ -182,43 +180,46 @@ func (s *Server) OnNodeReady() chan NodeID {
 // handlers
 //
 
-func (s *Server) onViewChangeHandler(viewChange *ViewChangeEvent) {
-	println("SHIT, GOT IT!")
+func (s *Server) ViewChange(viewChange *ViewChangeEvent, _ *struct{}) (
+	err error) {
+
 	select {
 	case s.onViewChange <- viewChange:
 	case <-s.quit:
 	}
+	return
 }
 
-func (s *Server) onPhaseHandler(phase *PhaseEvent) {
-	println("SHIT, GOT IT!")
+func (s *Server) Phase(phase *PhaseEvent, _ *struct{}) (err error) {
 	select {
 	case s.onPhase <- phase:
 	case <-s.quit:
 	}
+	return
 }
 
-func (s *Server) onAddMinerHandler(add *AddMinerEvent) {
-	println("SHIT, GOT IT!")
+func (s *Server) AddMiner(add *AddMinerEvent, _ *struct{}) (err error) {
 	select {
 	case s.onAddMiner <- add:
 	case <-s.quit:
 	}
+	return
 }
 
-func (s *Server) onAddSharderHandler(add *AddSharderEvent) {
-	println("SHIT, GOT IT!")
+func (s *Server) AddSharder(add *AddSharderEvent, _ *struct{}) (err error) {
 	select {
 	case s.onAddSharder <- add:
 	case <-s.quit:
 	}
+	return
 }
 
-func (s *Server) onNodeReadyHandler(nodeID NodeID) (join bool) {
-	println("SHIT, GOT IT!")
+func (s *Server) NodeReady(nodeID NodeID, join *bool) (err error) {
+
+	(*join) = false
 
 	var ok bool
-	if join, ok = s.nodeLock(nodeID); ok {
+	if (*join), ok = s.nodeLock(nodeID); ok {
 		return // don't trigger onNodeReady twice or more times
 	}
 
@@ -226,6 +227,7 @@ func (s *Server) onNodeReadyHandler(nodeID NodeID) (join bool) {
 	case s.onNodeReady <- nodeID:
 	case <-s.quit:
 	}
+
 	return
 }
 
@@ -233,13 +235,13 @@ func (s *Server) onNodeReadyHandler(nodeID NodeID) (join bool) {
 // flow
 //
 
-// Serve starts the server blocking.
-func (s *Server) Serve() (err error) {
-	return s.server.Serve()
-}
-
 // Close the server waiting.
-func (s *Server) Close() {
-	s.quitOnce.Do(func() { close(s.quit) })
-	s.server.Stop()
+func (s *Server) Close() (err error) {
+	s.quitOnce.Do(func() {
+		close(s.quit)
+		if s.l != nil {
+			err = s.l.Close()
+		}
+	})
+	return
 }

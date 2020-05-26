@@ -50,13 +50,14 @@ func integrationsTestsLock(id string) {
 	if !viper.GetBool("testing.enabled") {
 		return // regular start
 	}
-	println("TESTING ENABLED")
 	var (
-		client   = conductrpc.NewClient(viper.GetString("testing.address"))
-		interval = viper.GetDuration("testing.lock_interval")
-		join     bool
-		err      error
+		client, err = conductrpc.NewClient(viper.GetString("testing.address"))
+		interval    = viper.GetDuration("testing.lock_interval")
+		join        bool
 	)
+	if err != nil {
+		panic("creating RPC client: " + err.Error())
+	}
 	for {
 		join, err = client.NodeReady(conductrpc.NodeID(id))
 		if err != nil {

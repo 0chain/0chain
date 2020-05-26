@@ -85,7 +85,10 @@ func (msc *MinerSmartContract) InitSC() {
 	moveFunctions[Wait] = msc.moveToStart
 
 	if isIntegrationTests() {
-		msc.client = newConductRPCClient()
+		var err error
+		if msc.client, err = newConductRPCClient(); err != nil {
+			panic(err)
+		}
 		Logger.Debug("using integration test",
 			zap.String("address", msc.client.Address()))
 		msc.smartContractFunctions["add_miner"] = msc.AddMinerIntegrationTests

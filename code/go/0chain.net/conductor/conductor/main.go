@@ -20,9 +20,6 @@ import (
 	"os"
 	"time"
 
-	"io"
-	"net"
-
 	"gopkg.in/yaml.v2"
 
 	"0chain.net/conductor/conductrpc"
@@ -43,33 +40,8 @@ type (
 	RoundName = config.RoundName
 )
 
-func fuckingEcho() {
-	println("FUCKING ECHO START")
-	defer println("FUCKING ECHO STOP")
-	l, err := net.Listen("tcp", "0.0.0.0:1515")
-	if err != nil {
-		log.Fatal(err)
-	}
-	println("FUCKING ECHO START LISTENER")
-	for {
-		conn, err := l.Accept()
-		if err != nil {
-			log.Print("FUCKING ECHO ACCEPTING: ", err)
-			continue
-		}
-		println("FUCKING ECHO ACCEPTED")
-		go func(conn net.Conn) {
-			defer conn.Close()
-			go io.Copy(os.Stdout, conn)
-			conn.Write([]byte("I AM FUCKING ECHO SERVER!!!!! FUCK YOU!!!!\n"))
-		}(conn)
-	}
-}
-
 func main() {
 	log.Print("start the conductor")
-
-	go fuckingEcho()
 
 	var configFile string = "conductor.yaml"
 	flag.StringVar(&configFile, "config", configFile, "configurations file")
@@ -84,9 +56,8 @@ func main() {
 
 	log.Print("create worker instance")
 	r.conf = conf
-	r.server = conductrpc.NewServer(conf.Bind)
-	if r.runner, err = newRunner(conf.BindRunner); err != nil {
-		log.Fatalf("creating runner listener: %v", err)
+	if r.server, err = conductrpc.NewServer(conf.Bind); err != nil {
+		log.Fatal("[ERR]", err)
 	}
 
 	log.Print("(rpc) start listening on:", conf.Bind)
@@ -124,7 +95,6 @@ func readConfig(configFile string) (conf *config.Config) {
 type Runner struct {
 	server *conductrpc.Server
 	conf   *config.Config
-	runner *runner
 
 	// state
 
@@ -354,7 +324,7 @@ func (r *Runner) stopAll() {
 	log.Print("stop all nodes")
 	for _, n := range r.conf.Nodes {
 		log.Printf("stop %s", n.Name)
-		r.runner.Stop(n)
+		n.Stop()
 	}
 }
 
@@ -374,9 +344,7 @@ func (r *Runner) Run() (err error) {
 			log.Printf("  %d flow step", j)
 
 			// proceed
-			println("FUCK IS WAITING?")
 			for tm, ok := r.isWaiting(); ok; {
-				println("YES IT IS?")
 				select {
 				case vce := <-r.server.OnViewChange():
 					err = r.acceptViewChange(vce)
@@ -397,7 +365,6 @@ func (r *Runner) Run() (err error) {
 			}
 
 			// execute
-			println("EXECUTE")
 			if err = f.Execute(r); err != nil {
 				return // fatality
 			}
@@ -433,8 +400,7 @@ func (r *Runner) SetMonitor(name NodeName) (err error) {
 // CleanupBC cleans up blockchain.
 func (r *Runner) CleanupBC(tm time.Duration) (err error) {
 	r.stopAll()
-	r.runner.Clean()
-	return // nil
+	return r.conf.CleanupBC()
 }
 
 // Start nodes, or start and lock them.
@@ -449,9 +415,11 @@ func (r *Runner) Start(names []NodeName, lock bool,
 		if !ok {
 			return fmt.Errorf("(start): unknown node: %q", name)
 		}
-		r.server.AddNode(n.ID, lock)
-		r.runner.Start(n)
-		r.nodes[n.ID] = struct{}{} // wait list
+		r.server.AddNode(n.ID, lock) // lock list
+		r.nodes[n.ID] = struct{}{}   // wait list
+		if err = n.Start(r.conf.Logs); err != nil {
+			return fmt.Errorf("starting %s: %v", n.Name, err)
+		}
 	}
 	return
 }
@@ -475,9 +443,9 @@ func (r *Runner) Unlock(names []NodeName, tm time.Duration) (err error) {
 	for _, name := range names {
 		var n, ok = r.conf.Nodes.NodeByName(name) //
 		if !ok {
-			return fmt.Errorf("(start): unknown node: %q", name)
+			return fmt.Errorf("(unlock): unknown node: %q", name)
 		}
-		log.Print("node", n.Name, "unlock")
+		log.Print("unlock ", n.Name)
 		r.server.UnlockNode(n.ID)
 	}
 	return
@@ -487,10 +455,10 @@ func (r *Runner) Stop(names []NodeName, tm time.Duration) (err error) {
 	for _, name := range names {
 		var n, ok = r.conf.Nodes.NodeByName(name) //
 		if !ok {
-			return fmt.Errorf("(start): unknown node: %q", name)
+			return fmt.Errorf("(stop): unknown node: %q", name)
 		}
-		log.Print("stop", n.Name)
-		r.runner.Stop(n)
+		log.Print("stopping ", n.Name, "...")
+		n.Stop()
 	}
 	return
 }

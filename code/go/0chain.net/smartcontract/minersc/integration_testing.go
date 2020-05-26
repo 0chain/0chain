@@ -14,7 +14,7 @@ func isIntegrationTests() bool {
 	return viper.GetBool("testing.enabled")
 }
 
-func newConductRPCClient() (client *conductrpc.Client) {
+func newConductRPCClient() (client *conductrpc.Client, err error) {
 	return conductrpc.NewClient(viper.GetString("testing.address"))
 }
 
