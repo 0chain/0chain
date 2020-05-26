@@ -51,7 +51,8 @@ func integrationsTestsLock(id string) {
 		return // regular start
 	}
 	var (
-		client, err = conductrpc.NewClient(viper.GetString("testing.address"))
+		address     = viper.GetString("testing.address")
+		client, err = conductrpc.NewClient(address)
 		interval    = viper.GetDuration("testing.lock_interval")
 		join        bool
 	)

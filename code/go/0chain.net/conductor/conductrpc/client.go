@@ -24,6 +24,11 @@ func NewClient(address string) (c *Client, err error) {
 	return
 }
 
+func (c *Client) dial() (err error) {
+	c.client, err = rpc.Dial("tcp", c.address)
+	return
+}
+
 // Address of RPC server.
 func (c *Client) Address() string {
 	return c.address
@@ -34,26 +39,60 @@ func (c *Client) Address() string {
 //
 
 func (c *Client) Phase(phase *PhaseEvent) (err error) {
-	return c.client.Call("Phase", phase, &struct{}{})
+	err = c.client.Call("Server.Phase", phase, &struct{}{})
+	if err == rpc.ErrShutdown {
+		if err = c.dial(); err != nil {
+			return
+		}
+		err = c.client.Call("Server.Phase", phase, &struct{}{})
+	}
+	return
 }
 
 // ViewChange notification.
 func (c *Client) ViewChange(viewChange *ViewChangeEvent) (err error) {
-	return c.client.Call("ViewChange", viewChange, &struct{}{})
+	err = c.client.Call("Server.ViewChange", viewChange, &struct{}{})
+	if err == rpc.ErrShutdown {
+		if err = c.dial(); err != nil {
+			return
+		}
+		err = c.client.Call("Server.ViewChange", viewChange, &struct{}{})
+	}
+	return
 }
 
 // AddMiner notification.
 func (c *Client) AddMiner(add *AddMinerEvent) (err error) {
-	return c.client.Call("AddMiner", add, &struct{}{})
+	err = c.client.Call("Server.AddMiner", add, &struct{}{})
+	if err == rpc.ErrShutdown {
+		if err = c.dial(); err != nil {
+			return
+		}
+		err = c.client.Call("Server.AddMiner", add, &struct{}{})
+	}
+	return
 }
 
 // AddSharder notification.
 func (c *Client) AddSharder(add *AddSharderEvent) (err error) {
-	return c.client.Call("AddSharder", add, &struct{}{})
+	err = c.client.Call("Server.AddSharder", add, &struct{}{})
+	if err == rpc.ErrShutdown {
+		if err = c.dial(); err != nil {
+			return
+		}
+		err = c.client.Call("Server.AddSharder", add, &struct{}{})
+	}
+	return
 }
 
 // NodeReady notification.
 func (c *Client) NodeReady(nodeID NodeID) (join bool, err error) {
-	err = c.client.Call("NodeReady", nodeID, &join)
+	err = c.client.Call("Server.NodeReady", nodeID, &join)
+	if err == rpc.ErrShutdown {
+		if err = c.dial(); err != nil {
+			return
+		}
+		err = c.client.Call("Server.NodeReady", nodeID, &join)
+	}
 	return
 }

@@ -43,8 +43,12 @@ type (
 func main() {
 	log.Print("start the conductor")
 
-	var configFile string = "conductor.yaml"
+	var (
+		configFile string = "conductor.yaml"
+		verbose    bool   = true
+	)
 	flag.StringVar(&configFile, "config", configFile, "configurations file")
+	flag.BoolVar(&verbose, "verbose", verbose, "verbose output")
 	flag.Parse()
 
 	log.Print("read configurations file: ", configFile)
@@ -56,6 +60,7 @@ func main() {
 
 	log.Print("create worker instance")
 	r.conf = conf
+	r.verbose = verbose
 	if r.server, err = conductrpc.NewServer(conf.Bind); err != nil {
 		log.Fatal("[ERR]", err)
 	}
@@ -93,8 +98,9 @@ func readConfig(configFile string) (conf *config.Config) {
 }
 
 type Runner struct {
-	server *conductrpc.Server
-	conf   *config.Config
+	server  *conductrpc.Server
+	conf    *config.Config
+	verbose bool
 
 	// state
 
@@ -112,8 +118,24 @@ type Runner struct {
 }
 
 func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
-	return r.timer, !r.phase.IsZero() || !r.viewChange.IsZero() ||
+	tm, ok = r.timer, !r.phase.IsZero() || !r.viewChange.IsZero() ||
 		len(r.nodes) > 0
+	if !ok {
+		return
+	}
+	if !r.phase.IsZero() {
+		log.Println("wait for phase", r.phase.Phase.String(), "of", r.monitor)
+		return
+	}
+	if !r.viewChange.IsZero() {
+		// log.Println("wait for VC of", r.monitor)
+		return
+	}
+	if len(r.nodes) > 0 {
+		log.Printf("wait for %d nodes", len(r.nodes))
+		return
+	}
+	return
 }
 
 func (r *Runner) toIDs(names []NodeName) (ids []NodeID, err error) {
@@ -159,15 +181,41 @@ func (r *Runner) printNodes(list []NodeID) {
 	}
 }
 
+func (r *Runner) printViewChange(vce *conductrpc.ViewChangeEvent) {
+	if !r.verbose {
+		return
+	}
+	log.Print(" [INF] VC ", vce.Round)
+	log.Print(" [INF] VC MB miners:")
+	for _, mn := range vce.Miners {
+		var n, ok = r.conf.Nodes.NodeByID(mn)
+		if !ok {
+			log.Print("   - ", mn, " (unknown)")
+			continue
+		}
+		log.Print("   - ", n.Name)
+	}
+	log.Print(" [INF] VC MB sharders:")
+	for _, sh := range vce.Sharders {
+		var n, ok = r.conf.Nodes.NodeByID(sh)
+		if !ok {
+			log.Print("   - ", sh, " (unknown)")
+			continue
+		}
+		log.Print("   - ", n.Name)
+	}
+}
+
 func (r *Runner) acceptViewChange(vce *conductrpc.ViewChangeEvent) (err error) {
 	if vce.Sender != r.monitor {
 		return // not the monitor node
 	}
+	r.printViewChange(vce) // if verbose
 	var sender, ok = r.conf.Nodes.NodeByID(vce.Sender)
 	if !ok {
 		return fmt.Errorf("unknown node %q sends view change", vce.Sender)
 	}
-	log.Print("view change:", vce.Round, sender.Name)
+	log.Println("view change:", vce.Round, sender.Name)
 	// don't wait a VC
 	if r.viewChange.IsZero() {
 		r.lastVCRound = vce.Round // keep last round number
@@ -180,24 +228,29 @@ func (r *Runner) acceptViewChange(vce *conductrpc.ViewChangeEvent) (err error) {
 	}
 	var emb = r.viewChange.ExpectMagicBlock
 	if emb.IsZero() {
-		r.lastVCRound = vce.Round // keep last round number
-		return                    // nothing more is here
+		r.lastVCRound = vce.Round              // keep last round number
+		r.viewChange = config.WaitViewChange{} // reset
+		return                                 // nothing more is here
 	}
 	if rnan := emb.RoundNextVCAfter; rnan != "" {
 		var rna, ok = r.rounds[rnan]
 		if !ok {
 			return fmt.Errorf("unknown round name: %q", rnan)
 		}
-		var vcr = emb.Round // VC round
+		var vcr = vce.Round // VC round
 		if vcr != r.conf.ViewChange+rna {
 			return fmt.Errorf("VC expected at %d, but given at %d",
 				r.conf.ViewChange+rna, vcr)
 		}
 		// ok, accept
+	} else if emb.Round != 0 && vce.Round != emb.Round {
+		return fmt.Errorf("VC expected at %d, but given at %d",
+			emb.Round, vce.Round)
 	}
 	if len(emb.Miners) == 0 && len(emb.Sharders) == 0 {
-		r.lastVCRound = vce.Round // keep the last VC round
-		return                    // doesn't check MB for nodes
+		r.lastVCRound = vce.Round              // keep the last VC round
+		r.viewChange = config.WaitViewChange{} // reset
+		return                                 // doesn't check MB for nodes
 	}
 	// check for nodes
 
@@ -209,25 +262,32 @@ func (r *Runner) acceptViewChange(vce *conductrpc.ViewChangeEvent) (err error) {
 		return fmt.Errorf("unknown sharder: %v", err)
 	}
 
+	var okm, oks bool
+
 	// check miners
-	if !isEqual(miners, vce.Miners) {
-		fmt.Println("expected miners list:")
+	if okm = isEqual(miners, vce.Miners); !okm {
+		fmt.Println("[ERR] expected miners list:")
 		r.printNodes(vce.Miners)
-		fmt.Println("got miners")
+		fmt.Println("[ERR] got miners")
 		r.printNodes(miners)
 	}
 
 	// check sharders
-	if !isEqual(sharders, vce.Sharders) {
-		fmt.Println("expected sharders list:")
+	if oks = isEqual(sharders, vce.Sharders); !oks {
+		fmt.Println("[ERR] expected sharders list:")
 		r.printNodes(vce.Sharders)
-		fmt.Println("got sharders")
+		fmt.Println("[ERR] got sharders")
 		r.printNodes(sharders)
 	}
 
-	log.Print("[OK] view change", vce.Round)
+	if !okm || !oks {
+		return fmt.Errorf("unexpected MB miners/sharders (see logs)")
+	}
 
-	r.lastVCRound = vce.Round // keep the last VC round
+	log.Println("[OK] view change", vce.Round)
+
+	r.lastVCRound = vce.Round              // keep the last VC round
+	r.viewChange = config.WaitViewChange{} // reset
 	return
 }
 
@@ -239,7 +299,9 @@ func (r *Runner) acceptPhase(pe *conductrpc.PhaseEvent) (err error) {
 	if !ok {
 		return fmt.Errorf("unknown 'phase' sender: %s", pe.Sender)
 	}
-	log.Print("phase: ", pe.Phase.String(), n.Name)
+	if r.verbose {
+		log.Print(" [INF] phase ", pe.Phase.String(), " ", n.Name)
+	}
 	if r.phase.IsZero() {
 		return // doesn't wait for a phase
 	}
@@ -262,6 +324,7 @@ func (r *Runner) acceptPhase(pe *conductrpc.PhaseEvent) (err error) {
 		// ok, accept it
 	}
 	log.Printf("[OK] accept phase %s by %s", pe.Phase.String(), n.Name)
+	r.phase = config.WaitPhase{} // reset
 	return
 }
 
@@ -316,7 +379,7 @@ func (r *Runner) acceptNodeReady(nodeID NodeID) (err error) {
 	if !ok {
 		return fmt.Errorf("unknown node: %s", nodeID)
 	}
-	log.Print("[OK] node ready", nodeID, n.Name)
+	log.Println("[OK] node ready", nodeID, n.Name)
 	return
 }
 
@@ -328,6 +391,37 @@ func (r *Runner) stopAll() {
 	}
 }
 
+func (r *Runner) killAll() {
+	log.Print("kill all nodes")
+	for _, n := range r.conf.Nodes {
+		log.Printf("kill %s", n.Name)
+		n.Kill()
+	}
+}
+
+func (r *Runner) proceedWaiting() (err error) {
+	for tm, ok := r.isWaiting(); ok; tm, ok = r.isWaiting() {
+		select {
+		case vce := <-r.server.OnViewChange():
+			err = r.acceptViewChange(vce)
+		case pe := <-r.server.OnPhase():
+			err = r.acceptPhase(pe)
+		case addm := <-r.server.OnAddMiner():
+			err = r.acceptAddMiner(addm)
+		case adds := <-r.server.OnAddSharder():
+			err = r.acceptAddSharder(adds)
+		case nid := <-r.server.OnNodeReady():
+			err = r.acceptNodeReady(nid)
+		case <-tm.C:
+			return fmt.Errorf("timeout error")
+		}
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
 // Run the tests.
 func (r *Runner) Run() (err error) {
 
@@ -335,39 +429,25 @@ func (r *Runner) Run() (err error) {
 	defer log.Println("end of testing")
 
 	// stop all nodes after all
-	defer r.stopAll()
+	defer r.killAll()
 
 	// for every test case
 	for i, testCase := range r.conf.Tests {
-		log.Printf("start %d %s test case", i, testCase.Name)
+		log.Print("===========================================================")
+		log.Printf("%d %s test case", i, testCase.Name)
 		for j, f := range testCase.Flow {
-			log.Printf("  %d flow step", j)
-
-			// proceed
-			for tm, ok := r.isWaiting(); ok; {
-				select {
-				case vce := <-r.server.OnViewChange():
-					err = r.acceptViewChange(vce)
-				case pe := <-r.server.OnPhase():
-					err = r.acceptPhase(pe)
-				case addm := <-r.server.OnAddMiner():
-					err = r.acceptAddMiner(addm)
-				case adds := <-r.server.OnAddSharder():
-					err = r.acceptAddSharder(adds)
-				case nid := <-r.server.OnNodeReady():
-					err = r.acceptNodeReady(nid)
-				case <-tm.C:
-					return fmt.Errorf("timeout error")
-				}
-				if err != nil {
-					return
-				}
-			}
+			log.Print("-------------------------------------------------------")
+			log.Printf("  %d/%d step", i, j)
 
 			// execute
 			if err = f.Execute(r); err != nil {
 				return // fatality
 			}
+
+			if err = r.proceedWaiting(); err != nil {
+				return
+			}
+
 		}
 
 		log.Printf("end of %d %s test case", i, testCase.Name)
@@ -446,7 +526,9 @@ func (r *Runner) Unlock(names []NodeName, tm time.Duration) (err error) {
 			return fmt.Errorf("(unlock): unknown node: %q", name)
 		}
 		log.Print("unlock ", n.Name)
-		r.server.UnlockNode(n.ID)
+		if err = r.server.UnlockNode(n.ID); err != nil {
+			return
+		}
 	}
 	return
 }
@@ -458,7 +540,11 @@ func (r *Runner) Stop(names []NodeName, tm time.Duration) (err error) {
 			return fmt.Errorf("(stop): unknown node: %q", name)
 		}
 		log.Print("stopping ", n.Name, "...")
-		n.Stop()
+		if err := n.Stop(); err != nil {
+			log.Printf("stopping %s: %v", n.Name, err)
+			n.Kill()
+		}
+		log.Print(n.Name, " stopped")
 	}
 	return
 }

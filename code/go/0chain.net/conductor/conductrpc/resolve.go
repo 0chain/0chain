@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os/exec"
+	"strings"
 )
 
 func Host(address string) (addr string, err error) {
@@ -20,9 +21,10 @@ func Host(address string) (addr string, err error) {
 	if stdout, err = cmd.Output(); err != nil {
 		return
 	}
-	if net.ParseIP(string(stdout)) == nil {
+	var ip = strings.TrimSpace(string(stdout))
+	if net.ParseIP(ip) == nil {
 		return "", fmt.Errorf("invalid 'host.docker.internal' resolution: %s",
-			string(stdout))
+			ip)
 	}
-	return string(stdout) + ":" + port, nil // host
+	return ip + ":" + port, nil // host
 }

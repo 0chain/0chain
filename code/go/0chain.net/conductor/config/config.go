@@ -65,34 +65,27 @@ func (vc *WaitViewChange) IsZero() bool {
 type Phase int
 
 const (
-	Unknown    = iota // illegal
-	Start             //
+	Start      = iota //
 	Contribute        //
 	Share             //
 	Publish           //
 	Wait              //
 )
 
-func (p *Phase) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
-	var ps string
-	if err = unmarshal(&ps); err != nil {
-		return
-	}
+func ParsePhase(ps string) (ph Phase, err error) {
 	switch strings.ToLower(ps) {
 	case "start":
-		(*p) = Start
+		return Start, nil
 	case "contribute":
-		(*p) = Contribute
+		return Contribute, nil
 	case "share":
-		(*p) = Share
+		return Share, nil
 	case "publish":
-		(*p) = Publish
+		return Publish, nil
 	case "wait":
-		(*p) = Wait
-	default:
-		return fmt.Errorf("unknown phase: %q", ps)
+		return Wait, nil
 	}
-	return // nil
+	return 0, fmt.Errorf("unknown phase: %q", ps)
 }
 
 // String implements standard fmt.Stringer interface.
@@ -226,10 +219,18 @@ func (f Flow) Execute(ex Executor) (err error) {
 			return ex.Start(ss, true, tm)
 		}
 	case "wait_phase":
-		var wp WaitPhase
-		if err = mapstructure.Decode(val, &wp); err != nil {
+		type waitPhase struct {
+			Phase           string    `mapstructure:"phase"`
+			ViewChangeRound RoundName `mapstructure:"view_change_round"`
+		}
+		var wps waitPhase
+		if err = mapstructure.Decode(val, &wps); err != nil {
 			return fmt.Errorf("invalid '%s' argument type: %T, "+
 				"decoding error: %v", name, val, err)
+		}
+		var wp WaitPhase
+		if wp.Phase, err = ParsePhase(wps.Phase); err != nil {
+			return fmt.Errorf("parsing phase: %v", err)
 		}
 		return ex.WaitPhase(wp, tm)
 	case "unlock":
@@ -263,6 +264,8 @@ type Node struct {
 	ID NodeID `json:"id" yaml:"id" mapstructure:"id"`
 	// WorkDir to start the node in.
 	WorkDir string `json:"work_dir" yaml:"work_dir" mapstructure:"work_dir"`
+	// Env added to os.Environ
+	Env string `json:"env" yaml:"env" mapstructure:"env"`
 	// StartCommand to start the node.
 	StartCommand string `json:"start_command" yaml:"start_command" mapstructure:"start_command"`
 
@@ -285,6 +288,9 @@ func (n *Node) Start(logsDir string) (err error) {
 	// }
 	var cmd = exec.Command(command, ss[1:]...)
 	cmd.Dir = n.WorkDir
+	if n.Env != "" {
+		cmd.Env = append(os.Environ(), n.Env)
+	}
 
 	logsDir = filepath.Join(logsDir, string(n.Name))
 	if err = os.MkdirAll(logsDir, 0755); err != nil {

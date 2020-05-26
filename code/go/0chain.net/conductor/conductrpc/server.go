@@ -1,6 +1,7 @@
 package conductrpc
 
 import (
+	"fmt"
 	"net"
 	"net/rpc"
 	"sync"
@@ -44,8 +45,8 @@ type AddSharderEvent struct {
 
 // known locks
 const (
-	Locked   = false // should wait
-	Unlocked = true  // can join
+	Locked   = true  // should wait
+	Unlocked = false // can join
 )
 
 type nodeLock struct {
@@ -125,23 +126,31 @@ func (s *Server) AddNode(nodeID NodeID, lock bool) {
 }
 
 // UnlockNode unlocks a miner.
-func (s *Server) UnlockNode(nodeID NodeID) {
+func (s *Server) UnlockNode(nodeID NodeID) (err error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	s.locks[nodeID] = &nodeLock{counter: 0, lock: Unlocked}
+	var nl, ok = s.locks[nodeID]
+	if !ok {
+		return fmt.Errorf("unexpected node: %s", nodeID)
+	}
+
+	nl.lock = false
+	return
 }
 
-func (s *Server) nodeLock(nodeID NodeID) (lock, ok bool) {
+func (s *Server) nodeLock(nodeID NodeID) (lock bool, cnt int, ok bool) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
 	var nl *nodeLock
-	nl, ok = s.locks[nodeID]
-	if !ok {
-		return // false, false
+	if nl, ok = s.locks[nodeID]; !ok {
+		return
 	}
-	return nl.lock, ok // lock, true
+
+	lock, cnt = nl.lock, nl.counter
+	nl.counter++
+	return
 }
 
 // events handling
@@ -216,10 +225,14 @@ func (s *Server) AddSharder(add *AddSharderEvent, _ *struct{}) (err error) {
 
 func (s *Server) NodeReady(nodeID NodeID, join *bool) (err error) {
 
-	(*join) = false
+	var lock, cnt, ok = s.nodeLock(nodeID)
+	if !ok {
+		return fmt.Errorf("unexpected node: %s", nodeID)
+	}
 
-	var ok bool
-	if (*join), ok = s.nodeLock(nodeID); ok {
+	(*join) = !lock
+
+	if cnt > 0 {
 		return // don't trigger onNodeReady twice or more times
 	}
 
