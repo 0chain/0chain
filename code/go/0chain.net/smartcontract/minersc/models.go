@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"sort"
 	"sync"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -282,14 +283,26 @@ func (mn *MinerNode) GetHashBytes() []byte {
 	return encryption.RawHash(mn.Encode())
 }
 
+func (mn *MinerNode) orderedActivePools() (ops []*sci.DelegatePool) {
+	var keys []string
+	for k := range mn.Active {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	ops = make([]*sci.DelegatePool, 0, len(keys))
+	for _, key := range keys {
+		ops = append(ops, mn.Active[key])
+	}
+	return
+}
+
 type Stat struct {
 	// for miner (totals)
-	BlockReward      state.Balance `json:"block_reward,omitempty"`
-	ServiceCharge    state.Balance `json:"service_charge,omitempty"`
-	UsersFee         state.Balance `json:"users_fee,omitempty"`
-	BlockShardersFee state.Balance `json:"block_sharders_fee,omitempty"`
-	// for sharder (total)
+	GeneratorRewards state.Balance `json:"generator_rewards,omitempty"`
+	GeneratorFees    state.Balance `json:"generator_rewards,omitempty"`
+	// for sharder (totals)
 	SharderRewards state.Balance `json:"sharder_rewards,omitempty"`
+	SharderFees    state.Balance `json:"sharder_rewards,omitempty"`
 }
 
 type SimpleNode struct {
