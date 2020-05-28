@@ -46,3 +46,4 @@ cover.out
 # conductor executable
 code/go/0chain.net/conductor/conductor/conductor
 
+conductor/logs/*
