@@ -239,14 +239,14 @@ func (mn *MinerNode) decodeFromValues(params url.Values) error {
 }
 
 func (mn *MinerNode) Decode(input []byte) error {
-	var objMap map[string]*json.RawMessage
+	var objMap map[string]json.RawMessage
 	err := json.Unmarshal(input, &objMap)
 	if err != nil {
 		return err
 	}
 	sm, ok := objMap["simple_miner"]
 	if ok {
-		err = mn.SimpleNode.Decode(*sm)
+		err = mn.SimpleNode.Decode(sm)
 		if err != nil {
 			return err
 		}
@@ -384,6 +384,9 @@ type ViewChangeLock struct {
 }
 
 func (vcl *ViewChangeLock) IsLocked(entity interface{}) bool {
+	if entity == nil {
+		return false
+	}
 	currentVC, ok := entity.(int64)
 	if ok {
 		return !vcl.DeleteViewChangeSet || currentVC < vcl.DeleteVC
@@ -547,15 +550,17 @@ func DeletePool(pools map[string]*sci.DelegatePool, poolID datastore.Key) error 
 	return nil
 }
 
-func DecodeDelegatePools(pools map[string]*sci.DelegatePool, poolsBytes *json.RawMessage, tokenlock tokenpool.TokenLockInterface) error {
-	var rawMessagesPools map[string]*json.RawMessage
-	err := json.Unmarshal(*poolsBytes, &rawMessagesPools)
+func DecodeDelegatePools(pools map[string]*sci.DelegatePool,
+	poolsBytes json.RawMessage, tokenlock tokenpool.TokenLockInterface) error {
+
+	var rawMessagesPools map[string]json.RawMessage
+	err := json.Unmarshal(poolsBytes, &rawMessagesPools)
 	if err != nil {
 		return err
 	}
 	for _, raw := range rawMessagesPools {
 		tempPool := sci.NewDelegatePool()
-		err = tempPool.Decode(*raw, tokenlock)
+		err = tempPool.Decode(raw, tokenlock)
 		if err != nil {
 			return err
 		}

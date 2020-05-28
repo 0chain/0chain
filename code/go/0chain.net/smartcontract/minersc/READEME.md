@@ -201,6 +201,27 @@ the max_mint. It's measured in tokens. The mints are
 There is `minetd` field in the _mn-config_ zwallet command that shows amount
 of tokens minted by Miner SC for current time.
 
+# Stake pools lifecycle.
+
+When a stake pool created it becomes PENDING. Next View Change it becomes
+ACTIVE and starts collecting interests. When user deletes his stake the
+stake pool becomes DELETING and waits next View Change. The next View Change
+the pool will be unlocked.
+
+A PENDING pool can be unlocked immediately.
+
+If a node leaves blockchain (leaves Magic Block) then Miner SC unlocks all
+stakes of the node returning tokens to owners.
+
+All interests and rewards payed directly to stake holders' wallets.
+
+It's impossible to make a stake for a offline node (any node doesn't
+participate blockchain, e.g. any node not from current magic block). Since,
+this nodes treated as offline and their tokens unlocked. Thus, (1) a node can't
+join blockchain, (2) still not join (a just started node) (3) leaves blockchain
+(turned off node) all are treated as offline. The Miner SC unlocks all stakes
+of all offline nodes returning tokens back.
+
 # Related zwallet commands
 
 ```
@@ -212,3 +233,87 @@ of tokens minted by Miner SC for current time.
   mn-unlock          Unlock miner/sharder stake.
   mn-update-settings Change miner/sharder settings in Miner SC.
 ```
+
+# Step by step guide.
+
+1. If 0chain has updated, cleanup blockchain and rebuild all.
+2. Start sharder 1 and 1-3 miners (genesis nodes).
+3. Create wallet in zwalelt and fill if with tokens
+    ```
+    for run in {1..10}; do ./zwallet faucet --methodName pour --input “{Pay day}”; done
+    ```
+    This takes a while.
+4. Determine ID of the wallet
+    ```
+    cat ~/.zcn/wallet.json
+    ```
+    The "client_id" field is the wallet ID.
+5. Check out Miner SC configurations to determine min_stake and max_sake of SC.
+6. Configure 5th miner (file `docker.local/config/0chain.yaml`)
+    ```
+    delegate_wallet: '<put the wallet ID here>'
+    service_charge: 0.10
+    number_of_delegates: 10
+    min_stake: 0.1
+    max_stake: 10.0
+    ```
+7. Start the 5th miner and wait some time to let the miner register in Miner SC.
+    Export the miner 5 ID to use in the commands
+    ```
+    export MINER5=53add50ff9501014df2cbd698c673f85e5785281cebba8772a64a6e74057d328
+    ```
+    Wait view change to let the 5th miner join blockchain.
+8. Stake 10 tokens for the 5th miner
+    ```
+    ./zwallet mn-lock --id $MINER5 --tokens 10.0
+    ```
+    end export returned pool id
+    ```
+    export POOL=<the returned pool ID>
+    ```
+9. Check out user (own) pools
+    ```
+    ./zwallet mn-user-info
+    ```
+10. Check 5th miner information. It should contain the pool.
+    ```
+    ./zwallet mn-info --id $MINER5
+    ```
+11. Check out the pool.
+    ```
+    ./zwallet mn-pool-info --id $MINER5 --pool_id $POOL
+    ```
+    Make sure status is ACTIVE, or wait a view change and check again.
+    A pool becomes ACTIVE after next view change its created. After it becomes
+    ACTIVE check own balance that should receive interests for the sake.
+12. Check out your balance. The total_paid" of above command and the balance
+    should be closer.
+13. It's possible to make a stake for genesis nodes too.
+14. Delete the stake
+    ```
+    ./zwallet mn-unlock --id $MINER5 --pool_id $POOL
+    ```
+    The stake will be unlocked next view change. Check out the pool
+    ```
+    ./zwallet mn-pool-info --id $MINER5 --pool_id $POOL
+    ```
+    It's status should be "DELETING".
+15. Wait a view change to let the stake be unlocked. Check the pool (should
+    be not found)
+    ```
+    ./zwallet mn-pool-info --id $MINER5 --pool_id $POOL
+    ```
+    Check the node, total_stake should be zero.
+    ```
+    ./zwallet mn-info --id $MINER5
+    ```
+    Check user pools, the list should b empty
+    ```
+    ./zwallet mn-user-info
+    ```
+16. Lock stake again.
+    ```
+    ./zwallet mn-lock --id $MINER5 --tokens 10.0
+    ```
+    Wait the pool becomes ACTIVE. Turn off the 5th miner. Wait View Change
+    again. The pool should be unlocked and all tokens returned to user.

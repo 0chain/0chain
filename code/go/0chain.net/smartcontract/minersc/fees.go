@@ -26,6 +26,7 @@ func (msc *MinerSmartContract) activatePending(mn *MinerNode) {
 	for id, pool := range mn.Pending {
 		pool.Status = ACTIVE
 		mn.Active[id] = pool
+		mn.TotalStaked += int64(pool.Balance)
 		delete(mn.Pending, id)
 	}
 }
@@ -59,9 +60,11 @@ func (msc *MinerSmartContract) emptyPool(mn *MinerNode,
 	pool *sci.DelegatePool, round int64, balances cstate.StateContextI) (
 	resp string, err error) {
 
+	mn.TotalStaked -= int64(pool.Balance)
+
 	// transfer, empty
 	var transfer *state.Transfer
-	transfer, resp, err = pool.EmptyPool(ADDRESS, pool.DelegateID, round)
+	transfer, resp, err = pool.EmptyPool(ADDRESS, pool.DelegateID, nil)
 	if err != nil {
 		return "", fmt.Errorf("error emptying delegate pool: %v", err)
 	}
