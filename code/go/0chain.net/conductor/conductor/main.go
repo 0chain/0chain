@@ -429,28 +429,33 @@ func (r *Runner) Run() (err error) {
 	defer log.Println("end of testing")
 
 	// stop all nodes after all
-	defer r.killAll()
+	defer r.stopAll()
 
-	// for every test case
-	for i, testCase := range r.conf.Tests {
-		log.Print("===========================================================")
-		log.Printf("%d %s test case", i, testCase.Name)
-		for j, f := range testCase.Flow {
-			log.Print("-------------------------------------------------------")
-			log.Printf("  %d/%d step", i, j)
-
-			// execute
-			if err = f.Execute(r); err != nil {
-				return // fatality
-			}
-
-			if err = r.proceedWaiting(); err != nil {
-				return
-			}
-
+	// for every enabled set
+	for _, set := range r.conf.Sets {
+		if !r.conf.IsEnabled(&set) {
+			continue
 		}
-
-		log.Printf("end of %d %s test case", i, testCase.Name)
+		log.Print("...........................................................")
+		log.Print("start set ", set.Name)
+		log.Print("...........................................................")
+		// for every test case
+		for i, testCase := range r.conf.TestsOfSet(&set) {
+			log.Print("=======================================================")
+			log.Printf("%d %s test case", i, testCase.Name)
+			for j, f := range testCase.Flow {
+				log.Print("---------------------------------------------------")
+				log.Printf("  %d/%d step", i, j)
+				// execute
+				if err = f.Execute(r); err != nil {
+					return // fatality
+				}
+				if err = r.proceedWaiting(); err != nil {
+					return
+				}
+			}
+			log.Printf("end of %d %s test case", i, testCase.Name)
+		}
 	}
 
 	return

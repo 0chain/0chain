@@ -379,6 +379,14 @@ func (ns Nodes) NodeByID(id NodeID) (n *Node, ok bool) {
 	return // nil, false
 }
 
+// Set of tests.
+type Set struct {
+	// Name of the Set that used in the 'Config.Enable'
+	Name string `json:"name" yaml:"name" mapstructure:"name"`
+	// Tests names of the Set.
+	Tests []string `json:"tests" yaml:"tests" mapstructure:"tests"`
+}
+
 // A Config represents conductor testing configurations.
 type Config struct {
 	// BindRunner endpoint to connect to.
@@ -400,6 +408,32 @@ type Config struct {
 	CleanupCommand string `json:"cleanup_command" yaml:"cleanup_command" mapstructure:"cleanup_command"`
 	// ViewChange is number of rounds for a view change (e.g. 250, 50 per phase).
 	ViewChange Round `json:"view_change" yaml:"view_change" mapstructure:"view_change"`
+	// Enable sets of tests.
+	Enable []string `json:"enable" yaml:"enable" mapstructure:"enable"`
+	// Sets or tests.
+	Sets []Set `json:"sets" yaml:"sets" mapstructure:"sets"`
+}
+
+// TestsOfSet returns test cases of given Set.
+func (c *Config) TestsOfSet(set *Set) (cs []Case) {
+	for _, name := range set.Tests {
+		for _, testCase := range c.Tests {
+			if testCase.Name == name {
+				cs = append(cs, testCase)
+			}
+		}
+	}
+	return
+}
+
+// IsEnabled returns true it given Set enabled.
+func (c *Config) IsEnabled(set *Set) bool {
+	for _, name := range c.Enable {
+		if set.Name == name {
+			return true
+		}
+	}
+	return false
 }
 
 // CleanupBC used to execute the configured cleanup_command.

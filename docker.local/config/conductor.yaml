@@ -67,6 +67,26 @@ nodes:
     start_command: "docker-compose -p miner5 -f ../build.miner/b0docker-compose.yml up"
 
 #
+# enabled test cases sets
+#
+enable:
+  - "Outside miner comes up in phase X"
+
+#
+# sets of test cases
+#
+sets:
+  # the name used in the enable list above
+  - name: "Outside miner comes up in phase X"
+    # tests of the set (tests  names), ordered
+    tests:
+      - "Outside miner comes up in phase 'start'"
+      - "Outside miner comes up in phase 'contribute'"
+      - "Outside miner comes up in phase 'share'"
+      - "Outside miner comes up in phase 'publish'"
+      - "Outside miner comes up in phase 'wait'"
+
+#
 # test cases
 #
 tests:
@@ -87,6 +107,9 @@ tests:
   # - Miner goes down in phase 0 (already registered) and comes up in phase 1
   # - Miner goes down in phase 1 (after sending mpk) and comes up in phase 2
   # - Miner goes down in phase 3 (after publishing signOrShares) and comes up in next view change
+  # - Artificially force x miners to only send y miners a sign for the signOrShare
+  # - Artificially force x miners' si to be revealed
+  # - Artificially force x miners to send bad share to y miners.
 
   # - Outside miner comes up in phase x (doesn't matter what phase, an outside miner only starts from phase 0)
   #
