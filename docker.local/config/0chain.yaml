@@ -113,20 +113,19 @@ network:
   n2n_handlers:
     rate_limit: 1000 # 1000 per second
 
-# delegate wallet is wallet that used for all rewards of a node (miner/sharder);
-# if delegate wallet is not set, then node id used; the delegate wallet can't
-# be changed
-delegate_wallet: ''       # delegate wallet for all rewards
-# % of fees for generator
+# delegate wallet is wallet that used to configure node in Miner SC; if its
+# empty, then node ID used
+delegate_wallet: ''
+# % of fees and rewards for generator
 service_charge: 0.10      # [0; 1) of all fees
 # max number of delegate pools allowed by a node in miner SC
 number_of_delegates: 10   # max number of delegate pools
 # min stake pool amount allowed by node; should not conflict with
 # SC min_stake 
-min_stake: 10.0    # tokens
+min_stake: 1.0    # tokens
 # max stake pool amount allowed by node; should not conflict with
 # SC max_stake 
-max_stake: 1000.0  # tokens
+max_stake: 100.0  # tokens
 
 minio:
   enabled: false # Do not enable with deep scan ON

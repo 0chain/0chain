@@ -59,7 +59,6 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 			"stake is greater then max allowed: %d > %d", t.Value, mn.MaxStake)
 	}
 
-	mn.TotalStaked += t.Value
 	pool.TokenLockInterface = &ViewChangeLock{
 		Owner:               t.ClientID,
 		DeleteViewChangeSet: false,
@@ -181,7 +180,7 @@ func (msc *MinerSmartContract) deleteFromDelegatePool(
 	pool.TokenLockInterface = &ViewChangeLock{
 		Owner:               t.ClientID,
 		DeleteViewChangeSet: true,
-		DeleteVC:            balances.GetBlock().Round,
+		DeleteVC:            gn.ViewChange,
 	}
 	mn.Deleting[dp.PoolID] = pool // add to deleting
 

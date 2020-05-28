@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"sort"
 	"sync"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -238,14 +239,14 @@ func (mn *MinerNode) decodeFromValues(params url.Values) error {
 }
 
 func (mn *MinerNode) Decode(input []byte) error {
-	var objMap map[string]*json.RawMessage
+	var objMap map[string]json.RawMessage
 	err := json.Unmarshal(input, &objMap)
 	if err != nil {
 		return err
 	}
 	sm, ok := objMap["simple_miner"]
 	if ok {
-		err = mn.SimpleNode.Decode(*sm)
+		err = mn.SimpleNode.Decode(sm)
 		if err != nil {
 			return err
 		}
@@ -282,14 +283,26 @@ func (mn *MinerNode) GetHashBytes() []byte {
 	return encryption.RawHash(mn.Encode())
 }
 
+func (mn *MinerNode) orderedActivePools() (ops []*sci.DelegatePool) {
+	var keys []string
+	for k := range mn.Active {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	ops = make([]*sci.DelegatePool, 0, len(keys))
+	for _, key := range keys {
+		ops = append(ops, mn.Active[key])
+	}
+	return
+}
+
 type Stat struct {
 	// for miner (totals)
-	BlockReward      state.Balance `json:"block_reward,omitempty"`
-	ServiceCharge    state.Balance `json:"service_charge,omitempty"`
-	UsersFee         state.Balance `json:"users_fee,omitempty"`
-	BlockShardersFee state.Balance `json:"block_sharders_fee,omitempty"`
-	// for sharder (total)
+	GeneratorRewards state.Balance `json:"generator_rewards,omitempty"`
+	GeneratorFees    state.Balance `json:"generator_rewards,omitempty"`
+	// for sharder (totals)
 	SharderRewards state.Balance `json:"sharder_rewards,omitempty"`
+	SharderFees    state.Balance `json:"sharder_rewards,omitempty"`
 }
 
 type SimpleNode struct {
@@ -371,6 +384,9 @@ type ViewChangeLock struct {
 }
 
 func (vcl *ViewChangeLock) IsLocked(entity interface{}) bool {
+	if entity == nil {
+		return false
+	}
 	currentVC, ok := entity.(int64)
 	if ok {
 		return !vcl.DeleteViewChangeSet || currentVC < vcl.DeleteVC
@@ -534,15 +550,17 @@ func DeletePool(pools map[string]*sci.DelegatePool, poolID datastore.Key) error 
 	return nil
 }
 
-func DecodeDelegatePools(pools map[string]*sci.DelegatePool, poolsBytes *json.RawMessage, tokenlock tokenpool.TokenLockInterface) error {
-	var rawMessagesPools map[string]*json.RawMessage
-	err := json.Unmarshal(*poolsBytes, &rawMessagesPools)
+func DecodeDelegatePools(pools map[string]*sci.DelegatePool,
+	poolsBytes json.RawMessage, tokenlock tokenpool.TokenLockInterface) error {
+
+	var rawMessagesPools map[string]json.RawMessage
+	err := json.Unmarshal(poolsBytes, &rawMessagesPools)
 	if err != nil {
 		return err
 	}
 	for _, raw := range rawMessagesPools {
 		tempPool := sci.NewDelegatePool()
-		err = tempPool.Decode(*raw, tokenlock)
+		err = tempPool.Decode(raw, tokenlock)
 		if err != nil {
 			return err
 		}
