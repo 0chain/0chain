@@ -10,7 +10,7 @@ logs: "conductor/logs"
 # cleanup blockchain command
 cleanup_command: ./docker.local/bin/docker-clean.sh
 # number of rounds per view change
-view_change: 250
+view_change: 250 # 100
 
 #
 # nodes used in tests
@@ -70,7 +70,9 @@ nodes:
 # enabled test cases sets
 #
 enable:
-  - "Outside miner comes up in phase X"
+  # - "Outside miner comes up in phase X"
+  # - "Miner goes down in phase X and doesn't come up in the same view change"
+  - "Miner goes down in phase X and comes up in phase Y"
 
 #
 # sets of test cases
@@ -85,6 +87,19 @@ sets:
       - "Outside miner comes up in phase 'share'"
       - "Outside miner comes up in phase 'publish'"
       - "Outside miner comes up in phase 'wait'"
+  - name: "Miner goes down in phase X and doesn't come up in the same view change"
+    tests:
+      - "Miner goes down in phase 'start' and doesn't come up"
+      - "Miner goes down in phase 'contribute' and doesn't come up"
+      - "Miner goes down in phase 'share' and doesn't come up"
+      - "Miner goes down in phase 'publish' and doesn't come up"
+      - "Miner goes down in phase 'wait' and doesn't come up"
+  - name: "Miner goes down in phase X and comes up in phase Y"
+    tests:
+      - "Miner goes down on 'start' and comes up shortly in the 'start'"
+      - "Miner goes down on 'start' and comes up phase 'contribute'"
+      - "Miner goes down on 'contribute' and comes up phase 'share'"
+      - "Miner goes down on 'share' and comes up in phase 'start' of next VC"
 
 #
 # test cases
@@ -98,18 +113,6 @@ tests:
   # 'share'
   # 'publish'
   # 'wait'
-
-  # miner join/leave blockchain
-
-  # - Outside miner comes up in phase x (doesn't matter what phase, an outside miner only starts from phase 0)
-  # - Miner goes down in phase x and doesn't come up in the same view change
-  # - Miner goes down in phase 0 and comes up in phase 0
-  # - Miner goes down in phase 0 (already registered) and comes up in phase 1
-  # - Miner goes down in phase 1 (after sending mpk) and comes up in phase 2
-  # - Miner goes down in phase 3 (after publishing signOrShares) and comes up in next view change
-  # - Artificially force x miners to only send y miners a sign for the signOrShare
-  # - Artificially force x miners' si to be revealed
-  # - Artificially force x miners to send bad share to y miners.
 
   # - Outside miner comes up in phase x (doesn't matter what phase, an outside miner only starts from phase 0)
   #
@@ -324,6 +327,294 @@ tests:
               - "miner 2"
               - "miner 3"
               - "miner 5"
+
+  # - Miner goes down in phase X and doesn't come up in the same view change
+  #
+  # miner leaves BC next view change
+  - name: "Miner goes down in phase 'start' and doesn't come up"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start:
+        - "sharder 1"
+        - "miner 1"
+        - "miner 2"
+        - "miner 3"
+        - "miner 4"
+      - wait_view_change:
+          expect_magic_block:
+            round: 251
+            sharders:
+              - "sharder 1"
+            miners:
+              - "miner 1"
+              - "miner 2"
+              - "miner 3"
+              - "miner 4"
+      - wait_phase:
+          phase: "start"
+      - stop:
+        - "miner 4"
+      - wait_view_change:
+          expect_magic_block:
+            round: 501
+            sharders:
+              - "sharder 1"
+            miners:
+              - "miner 1"
+              - "miner 2"
+              - "miner 3"
+
+  # miner leaves BC next view change
+  - name: "Miner goes down in phase 'contribute' and doesn't come up"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start:
+        - "sharder 1"
+        - "miner 1"
+        - "miner 2"
+        - "miner 3"
+        - "miner 4"
+      - wait_view_change:
+          expect_magic_block:
+            round: 251
+            sharders:
+              - "sharder 1"
+            miners:
+              - "miner 1"
+              - "miner 2"
+              - "miner 3"
+              - "miner 4"
+      - wait_phase:
+          phase: "contribute"
+      - stop:
+        - "miner 4"
+      - wait_view_change:
+          expect_magic_block:
+            round: 501
+            sharders:
+              - "sharder 1"
+            miners:
+              - "miner 1"
+              - "miner 2"
+              - "miner 3"
+
+  # miner leaves BC next view change
+  - name: "Miner goes down in phase 'share' and doesn't come up"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start:
+        - "sharder 1"
+        - "miner 1"
+        - "miner 2"
+        - "miner 3"
+        - "miner 4"
+      - wait_view_change:
+          expect_magic_block:
+            round: 251
+            sharders:
+              - "sharder 1"
+            miners:
+              - "miner 1"
+              - "miner 2"
+              - "miner 3"
+              - "miner 4"
+      - wait_phase:
+          phase: "share"
+      - stop:
+        - "miner 4"
+      - wait_view_change:
+          expect_magic_block:
+            round: 501
+            sharders:
+              - "sharder 1"
+            miners:
+              - "miner 1"
+              - "miner 2"
+              - "miner 3"
+
+  # miner leaves BC after two VC
+  - name: "Miner goes down in phase 'publish' and doesn't come up"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start:
+        - "sharder 1"
+        - "miner 1"
+        - "miner 2"
+        - "miner 3"
+        - "miner 4"
+      - wait_view_change:
+          expect_magic_block:
+            round: 251
+            sharders:
+              - "sharder 1"
+            miners:
+              - "miner 1"
+              - "miner 2"
+              - "miner 3"
+              - "miner 4"
+      - wait_phase:
+          phase: "publish"
+      - stop:
+        - "miner 4"
+      - wait_view_change:
+          expect_magic_block:
+            round: 501
+            sharders:
+              - "sharder 1"
+            miners:
+              - "miner 1"
+              - "miner 2"
+              - "miner 3"
+
+  # miner leaves BC after two VC
+  - name: "Miner goes down in phase 'wait' and doesn't come up"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start:
+        - "sharder 1"
+        - "miner 1"
+        - "miner 2"
+        - "miner 3"
+        - "miner 4"
+      - wait_view_change:
+          expect_magic_block:
+            round: 101 # 251
+            sharders:
+              - "sharder 1"
+            miners:
+              - "miner 1"
+              - "miner 2"
+              - "miner 3"
+              - "miner 4"
+      - wait_phase:
+          phase: "wait"
+      - stop:
+        - "miner 4"
+      - wait_view_change:
+          expect_magic_block:
+            round: 201 # 501
+            sharders:
+              - "sharder 1"
+            miners:
+              - "miner 1"
+              - "miner 2"
+              - "miner 3"
+              - "miner 4"
+      - wait_view_change:
+          expect_magic_block:
+            round: 301 # 751
+            sharders:
+              - "sharder 1"
+            miners:
+              - "miner 1"
+              - "miner 2"
+              - "miner 3"
+
+  # Miner goes down in phase X and comes up in phase Y
+  - name: "Miner goes down on 'start' and comes up shortly in the 'start'"
+    flow:
+      - set_monitor: 'sharder 1'
+      - cleanup_bc: {}
+      - start:
+        - 'sharder 1'
+        - 'miner 1'
+        - 'miner 2'
+        - 'miner 3'
+      - start_lock:
+        - 'miner 5'
+      - wait_view_change:
+          expect_magic_block:
+            round: 101
+            sharders:
+              - 'sharder 1'
+            miners:
+              - 'miner 1'
+              - 'miner 2'
+              - 'miner 3'
+      - wait_phase:
+          phase: 'start'
+      - unlock:
+          - 'miner 5'
+      - wait_add:
+          miners:
+            - 'miner 5'
+      - stop:
+          - 'miner 5'
+  - name: "Miner goes down on 'start' and comes up phase 'contribute'"
+    flow:
+      - set_monitor: 'sharder 1'
+      - cleanup_bc: {}
+      - start:
+        - 'sharder 1'
+        - 'miner 1'
+        - 'miner 2'
+        - 'miner 3'
+      - wait_view_change:
+          expect_magic_block:
+            round: 101
+            sharders:
+              - 'sharder 1'
+            miners:
+              - 'miner 1'
+              - 'miner 2'
+              - 'miner 3'
+      - wait_phase:
+          phase: 'start'
+  - name: "Miner goes down on 'contribute' and comes up phase 'share'"
+    flow:
+      - set_monitor: 'sharder 1'
+      - cleanup_bc: {}
+      - start:
+        - 'sharder 1'
+        - 'miner 1'
+        - 'miner 2'
+        - 'miner 3'
+      - wait_view_change:
+          expect_magic_block:
+            round: 101
+            sharders:
+              - 'sharder 1'
+            miners:
+              - 'miner 1'
+              - 'miner 2'
+              - 'miner 3'
+      - wait_phase:
+          phase: 'start'
+  - name: "Miner goes down on 'share' and comes up in phase 'start' of next VC"
+    flow:
+      - set_monitor: 'sharder 1'
+      - cleanup_bc: {}
+      - start:
+        - 'sharder 1'
+        - 'miner 1'
+        - 'miner 2'
+        - 'miner 3'
+      - wait_view_change:
+          expect_magic_block:
+            round: 101
+            sharders:
+              - 'sharder 1'
+            miners:
+              - 'miner 1'
+              - 'miner 2'
+              - 'miner 3'
+      - wait_phase:
+          phase: 'start'
+
+
+
+  # - Miner goes down in phase 'start' (already registered) and comes up in phase 'contribute'
+  # - Miner goes down in phase 'contribute' (after sending mpk) and comes up in phase 'share'
+  # - Miner goes down in phase 'publish' (after publishing signOrShares) and comes up in next view change
+  # - Artificially force x miners to only send y miners a sign for the signOrShare
+  # - Artificially force x miners' si to be revealed
+  # - Artificially force x miners to send bad share to y miners.
+
 
 #  # node used to monitor phases and view change
 #  - name: "set monitor to 'sharder 1'"

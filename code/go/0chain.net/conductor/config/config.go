@@ -119,12 +119,79 @@ func (wp *WaitPhase) IsZero() bool {
 	return wp.Phase == 0 && wp.ViewChangeRound == ""
 }
 
+// WaitRound waits a round.
+type WaitRound struct {
+	Round Round `json:"round" yaml:"round" mapstructure:"round"`
+}
+
+func (wr *WaitRound) IsZero() bool {
+	return wr.Round == 0
+}
+
+// WaitContibuteMpk wait for MPK contributing of a node.
+type WaitContributeMpk struct {
+	MinerID NodeID `json:"miner_id" yaml:"miner_id" mapstructure:"miner_id"`
+}
+
+func (wcm *WaitContributeMpk) IsZero() bool {
+	return wcm.MinerID == ""
+}
+
+// WaitShareSignsOrShares waits for SOSS of a node.
+type WaitShareSignsOrShares struct {
+	MinerID NodeID `json:"miner_id" yaml:"miner_id" mapstructure:"miner_id"`
+}
+
+func (wssos *WaitShareSignsOrShares) IsZero() bool {
+	return wssos.MinerID == ""
+}
+
+// WaitAdd used to wait for add_mienr and add_sharder SC calls.
+type WaitAdd struct {
+	Miners   []NodeID `json:"miners" yaml:"miners" mapstructure:"miners"`
+	Sharders []NodeID `json:"sharders" yaml:"sharders" mapstructure:"sharders"`
+}
+
+func (wa *WaitAdd) IsZero() bool {
+	return len(wa.Miners) == 0 && len(wa.Sharders) == 0
+}
+
+func (wa *WaitAdd) TakeMiner(id NodeID) (ok bool) {
+	var i int
+	for _, minerID := range wa.Miners {
+		if minerID == id {
+			ok = true
+			continue
+		}
+		wa.Miners[i], i = minerID, i+1
+	}
+	wa.Miners = wa.Miners[:i]
+	return
+}
+
+func (wa *WaitAdd) TakeSharder(id NodeID) (ok bool) {
+	var i int
+	for _, sharderID := range wa.Sharders {
+		if sharderID == id {
+			ok = true
+			continue
+		}
+		wa.Sharders[i], i = sharderID, i+1
+	}
+	wa.Sharders = wa.Sharders[:i]
+	return
+}
+
 // Executor used by a Flow to perform a flow directive.
 type Executor interface {
 	SetMonitor(name NodeName) (err error)
 	Start(names []NodeName, lock bool, timeout time.Duration) (err error)
 	WaitViewChange(vc WaitViewChange, timeout time.Duration) (err error)
 	WaitPhase(wp WaitPhase, timeout time.Duration) (err error)
+	WaitRound(wr WaitRound, timeout time.Duration) (err error)
+	WaitContributeMpk(wcmpk WaitContributeMpk, timeout time.Duration) (err error)
+	WaitShareSignsOrShares(ssos WaitShareSignsOrShares, timeout time.Duration) (err error)
+	WaitAdd(wadd WaitAdd, timeout time.Duration) (err error)
 	Unlock(names []NodeName, timeout time.Duration) (err error)
 	Stop(names []NodeName, timeout time.Duration) (err error)
 	CleanupBC(timeout time.Duration) (err error)
@@ -241,6 +308,30 @@ func (f Flow) Execute(ex Executor) (err error) {
 		if ss, ok := getNodeNames(val); ok {
 			return ex.Stop(ss, tm)
 		}
+	case "wait_round":
+		var wr WaitRound
+		if err = mapstructure.Decode(val, &wr); err != nil {
+			return fmt.Errorf("decoding 'wait_round': %v", err)
+		}
+		return ex.WaitRound(wr, tm)
+	case "wait_contribute_mpk":
+		var wcmpk WaitContributeMpk
+		if err = mapstructure.Decode(val, &wcmpk); err != nil {
+			return fmt.Errorf("decoding 'wait_contribute_mpk': %v", err)
+		}
+		return ex.WaitContributeMpk(wcmpk, tm)
+	case "wait_share_signs_or_shares":
+		var wsoss WaitShareSignsOrShares
+		if err = mapstructure.Decode(val, &wsoss); err != nil {
+			return fmt.Errorf("decoding 'wait_share_signs_or_shares': %v", err)
+		}
+		return ex.WaitShareSignsOrShares(wsoss, tm)
+	case "wait_add":
+		var wa WaitAdd
+		if err = mapstructure.Decode(val, &wa); err != nil {
+			return fmt.Errorf("decoding 'wait_add': %v", err)
+		}
+		return ex.WaitAdd(wa, tm)
 	default:
 		return fmt.Errorf("unknown flow directive: %q", name)
 	}

@@ -94,17 +94,19 @@ func (msc *MinerSmartContract) InitSC() {
 		msc.smartContractFunctions["add_miner"] = msc.AddMinerIntegrationTests
 		msc.smartContractFunctions["add_sharder"] = msc.AddSharderIntegrationTests
 		msc.smartContractFunctions["payFees"] = msc.payFeesIntegrationTests
+		msc.smartContractFunctions["contributeMpk"] = msc.contributeMpkIntegrationTests
+		msc.smartContractFunctions["shareSignsOrShares"] = msc.shareSignsOrSharesIntegrationTests
 	} else {
 		msc.smartContractFunctions["add_miner"] = msc.AddMiner
 		msc.smartContractFunctions["add_sharder"] = msc.AddSharder
 		msc.smartContractFunctions["payFees"] = msc.payFees
+		msc.smartContractFunctions["contributeMpk"] = msc.contributeMpk
+		msc.smartContractFunctions["shareSignsOrShares"] = msc.shareSignsOrShares
 	}
 
 	msc.smartContractFunctions["update_settings"] = msc.UpdateSettings
 	msc.smartContractFunctions["addToDelegatePool"] = msc.addToDelegatePool
 	msc.smartContractFunctions["deleteFromDelegatePool"] = msc.deleteFromDelegatePool
-	msc.smartContractFunctions["contributeMpk"] = msc.contributeMpk
-	msc.smartContractFunctions["shareSignsOrShares"] = msc.shareSignsOrShares
 	msc.smartContractFunctions["sharder_keep"] = msc.sharderKeep
 
 }

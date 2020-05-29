@@ -73,7 +73,7 @@ func main() {
 	}()
 	defer r.server.Close()
 
-	r.nodes = make(map[config.NodeID]struct{})
+	r.waitNodes = make(map[config.NodeID]struct{})
 	r.rounds = make(map[config.RoundName]config.Round)
 	r.setupTimeout(0)
 
@@ -107,35 +107,43 @@ type Runner struct {
 	lastVCRound Round // last view change round
 
 	// wait for
-	phase      config.WaitPhase           // wait for a phase
-	viewChange config.WaitViewChange      // wait for a view change
-	nodes      map[config.NodeID]struct{} // wait starting nodes
-	timer      *time.Timer                // waiting timer
-	monitor    NodeID                     // monitor node
+	waitPhase              config.WaitPhase              //
+	waitViewChange         config.WaitViewChange         //
+	waitNodes              map[config.NodeID]struct{}    // (start a node)
+	waitRound              config.WaitRound              //
+	waitContributeMPK      config.WaitContributeMpk      //
+	waitShareSignsOrShares config.WaitShareSignsOrShares //
+	waitAdd                config.WaitAdd                // add_miner, add_sharder
+	// timeout and monitor
+	timer   *time.Timer // waiting timer
+	monitor NodeID      // monitor node
 
 	// remembered rounds: name -> round number
 	rounds map[config.RoundName]config.Round // named rounds (the remember_round)
 }
 
 func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
-	tm, ok = r.timer, !r.phase.IsZero() || !r.viewChange.IsZero() ||
-		len(r.nodes) > 0
-	if !ok {
-		return
+	tm = r.timer
+
+	switch {
+	case len(r.waitNodes) > 0:
+		log.Printf("wait for %d nodes", len(r.waitNodes))
+		return tm, true
+	case !r.waitRound.IsZero():
+		return tm, true
+	case !r.waitPhase.IsZero():
+		return tm, true
+	case !r.waitContributeMPK.IsZero():
+		return tm, true
+	case !r.waitShareSignsOrShares.IsZero():
+		return tm, true
+	case !r.waitViewChange.IsZero():
+		return tm, true
+	case !r.waitAdd.IsZero():
+		return tm, true
 	}
-	if !r.phase.IsZero() {
-		log.Println("wait for phase", r.phase.Phase.String(), "of", r.monitor)
-		return
-	}
-	if !r.viewChange.IsZero() {
-		// log.Println("wait for VC of", r.monitor)
-		return
-	}
-	if len(r.nodes) > 0 {
-		log.Printf("wait for %d nodes", len(r.nodes))
-		return
-	}
-	return
+
+	return tm, false
 }
 
 func (r *Runner) toIDs(names []NodeName) (ids []NodeID, err error) {
@@ -217,20 +225,20 @@ func (r *Runner) acceptViewChange(vce *conductrpc.ViewChangeEvent) (err error) {
 	}
 	log.Println("view change:", vce.Round, sender.Name)
 	// don't wait a VC
-	if r.viewChange.IsZero() {
+	if r.waitViewChange.IsZero() {
 		r.lastVCRound = vce.Round // keep last round number
 		return
 	}
 	// remember the round
-	if rrn := r.viewChange.RememberRound; rrn != "" {
+	if rrn := r.waitViewChange.RememberRound; rrn != "" {
 		log.Printf("[OK] remember round %q: %d", rrn, vce.Round)
-		r.rounds[r.viewChange.RememberRound] = vce.Round
+		r.rounds[r.waitViewChange.RememberRound] = vce.Round
 	}
-	var emb = r.viewChange.ExpectMagicBlock
+	var emb = r.waitViewChange.ExpectMagicBlock
 	if emb.IsZero() {
-		r.lastVCRound = vce.Round              // keep last round number
-		r.viewChange = config.WaitViewChange{} // reset
-		return                                 // nothing more is here
+		r.lastVCRound = vce.Round                  // keep last round number
+		r.waitViewChange = config.WaitViewChange{} // reset
+		return                                     // nothing more is here
 	}
 	if rnan := emb.RoundNextVCAfter; rnan != "" {
 		var rna, ok = r.rounds[rnan]
@@ -248,9 +256,9 @@ func (r *Runner) acceptViewChange(vce *conductrpc.ViewChangeEvent) (err error) {
 			emb.Round, vce.Round)
 	}
 	if len(emb.Miners) == 0 && len(emb.Sharders) == 0 {
-		r.lastVCRound = vce.Round              // keep the last VC round
-		r.viewChange = config.WaitViewChange{} // reset
-		return                                 // doesn't check MB for nodes
+		r.lastVCRound = vce.Round                  // keep the last VC round
+		r.waitViewChange = config.WaitViewChange{} // reset
+		return                                     // doesn't check MB for nodes
 	}
 	// check for nodes
 
@@ -267,17 +275,17 @@ func (r *Runner) acceptViewChange(vce *conductrpc.ViewChangeEvent) (err error) {
 	// check miners
 	if okm = isEqual(miners, vce.Miners); !okm {
 		fmt.Println("[ERR] expected miners list:")
-		r.printNodes(vce.Miners)
-		fmt.Println("[ERR] got miners")
 		r.printNodes(miners)
+		fmt.Println("[ERR] got miners")
+		r.printNodes(vce.Miners)
 	}
 
 	// check sharders
 	if oks = isEqual(sharders, vce.Sharders); !oks {
 		fmt.Println("[ERR] expected sharders list:")
-		r.printNodes(vce.Sharders)
-		fmt.Println("[ERR] got sharders")
 		r.printNodes(sharders)
+		fmt.Println("[ERR] got sharders")
+		r.printNodes(vce.Sharders)
 	}
 
 	if !okm || !oks {
@@ -286,8 +294,8 @@ func (r *Runner) acceptViewChange(vce *conductrpc.ViewChangeEvent) (err error) {
 
 	log.Println("[OK] view change", vce.Round)
 
-	r.lastVCRound = vce.Round              // keep the last VC round
-	r.viewChange = config.WaitViewChange{} // reset
+	r.lastVCRound = vce.Round                  // keep the last VC round
+	r.waitViewChange = config.WaitViewChange{} // reset
 	return
 }
 
@@ -302,14 +310,14 @@ func (r *Runner) acceptPhase(pe *conductrpc.PhaseEvent) (err error) {
 	if r.verbose {
 		log.Print(" [INF] phase ", pe.Phase.String(), " ", n.Name)
 	}
-	if r.phase.IsZero() {
+	if r.waitPhase.IsZero() {
 		return // doesn't wait for a phase
 	}
-	if r.phase.Phase != pe.Phase {
+	if r.waitPhase.Phase != pe.Phase {
 		return // not this phase
 	}
 	var vcr Round
-	if vcrn := r.phase.ViewChangeRound; vcrn != "" {
+	if vcrn := r.waitPhase.ViewChangeRound; vcrn != "" {
 		if vcr, ok = r.rounds[vcrn]; !ok {
 			return fmt.Errorf("unknown view_change_round of phase: %s", vcrn)
 		}
@@ -324,7 +332,7 @@ func (r *Runner) acceptPhase(pe *conductrpc.PhaseEvent) (err error) {
 		// ok, accept it
 	}
 	log.Printf("[OK] accept phase %s by %s", pe.Phase.String(), n.Name)
-	r.phase = config.WaitPhase{} // reset
+	r.waitPhase = config.WaitPhase{} // reset
 	return
 }
 
@@ -343,7 +351,18 @@ func (r *Runner) acceptAddMiner(addm *conductrpc.AddMinerEvent) (err error) {
 		return fmt.Errorf("unexpected miner %q added by add_miner of %q",
 			addm.MinerID, sender.Name)
 	}
-	log.Printf("%s add_miner: %s", sender.Name, added.Name)
+
+	if r.verbose {
+		log.Print(" [INF] add_mienr", added.Name)
+	}
+
+	if r.waitAdd.IsZero() {
+		return // doesn't wait for a node
+	}
+
+	if r.waitAdd.TakeMiner(addm.MinerID) {
+		log.Print("[OK] add_miner ", added.Name)
+	}
 	return
 }
 
@@ -362,24 +381,140 @@ func (r *Runner) acceptAddSharder(adds *conductrpc.AddSharderEvent) (err error) 
 		return fmt.Errorf("unexpected sharder %q added by add_sharder of %q",
 			adds.SharderID, sender.Name)
 	}
-	log.Printf("%s add_sharder: %s", sender.Name, added.Name)
+
+	if r.verbose {
+		log.Print(" [INF] add_sharder", added.Name)
+	}
+
+	if r.waitAdd.IsZero() {
+		return // doesn't wait for a node
+	}
+
+	if r.waitAdd.TakeSharder(adds.SharderID) {
+		log.Print("[OK] add_sharder ", added.Name)
+	}
 	return
 }
 
 func (r *Runner) acceptNodeReady(nodeID NodeID) (err error) {
-	if _, ok := r.nodes[nodeID]; !ok {
+	if _, ok := r.waitNodes[nodeID]; !ok {
 		var n, ok = r.conf.Nodes.NodeByID(nodeID)
 		if !ok {
 			return fmt.Errorf("unexpected and unknown node: %s", nodeID)
 		}
 		return fmt.Errorf("unexpected node: %s (%s)", n.Name, nodeID)
 	}
-	delete(r.nodes, nodeID)
+	delete(r.waitNodes, nodeID)
 	var n, ok = r.conf.Nodes.NodeByID(nodeID)
 	if !ok {
 		return fmt.Errorf("unknown node: %s", nodeID)
 	}
 	log.Println("[OK] node ready", nodeID, n.Name)
+	return
+}
+
+func (r *Runner) acceptRound(re *conductrpc.RoundEvent) (err error) {
+	if re.Sender != r.monitor {
+		return // not the monitor node
+	}
+
+	var n, ok = r.conf.Nodes.NodeByID(re.Sender)
+	if !ok {
+		return fmt.Errorf("unknown 'round' sender: %s", re.Sender)
+	}
+	if r.verbose {
+		log.Print(" [INF] round ", re.Round, " ", n.Name)
+	}
+	if r.waitRound.IsZero() {
+		return // doesn't wait for a round
+	}
+
+	switch {
+	case r.waitRound.Round > re.Round:
+		return // not this round
+	case r.waitRound.Round == re.Round:
+		log.Print("[OK] accept round", re.Round)
+		r.waitRound.Round = 0 // doesn't wait anymore
+	case r.waitRound.Round < re.Round:
+		return fmt.Errorf("missing round: %d, got %d", r.waitRound, re.Round)
+	}
+
+	return
+}
+
+func (r *Runner) acceptContributeMPK(cmpke *conductrpc.ContributeMPKEvent) (
+	err error) {
+
+	if cmpke.Sender != r.monitor {
+		return // not the monitor node
+	}
+
+	var (
+		miner *config.Node
+		ok    bool
+	)
+	_, ok = r.conf.Nodes.NodeByID(cmpke.Sender)
+	if !ok {
+		return fmt.Errorf("unknown 'c mpk' sender: %s", cmpke.Sender)
+	}
+	miner, ok = r.conf.Nodes.NodeByID(cmpke.MinerID)
+	if !ok {
+		return fmt.Errorf("unknown 'c mpk' miner: %s", cmpke.MinerID)
+	}
+
+	if r.verbose {
+		log.Print(" [INF] contribute mpk ", miner.Name)
+	}
+
+	if r.waitContributeMPK.IsZero() {
+		return // doesn't wait for a contribute MPK
+	}
+
+	if r.waitContributeMPK.MinerID != cmpke.MinerID {
+		return // not the miner waiting for
+	}
+
+	log.Print("[OK] accept contribute MPK", miner.Name)
+	r.waitContributeMPK = config.WaitContributeMpk{}
+
+	return
+}
+
+func (r *Runner) acceptShareOrSignsShares(
+	sosse *conductrpc.ShareOrSignsSharesEvent) (err error) {
+
+	if sosse.Sender != r.monitor {
+		return // not the monitor node
+	}
+
+	var (
+		miner *config.Node
+		ok    bool
+	)
+	_, ok = r.conf.Nodes.NodeByID(sosse.Sender)
+	if !ok {
+		return fmt.Errorf("unknown 'soss' sender: %s", sosse.Sender)
+	}
+	miner, ok = r.conf.Nodes.NodeByID(sosse.MinerID)
+	if !ok {
+		return fmt.Errorf("unknown 'soss' miner: %s", sosse.MinerID)
+	}
+
+	if r.verbose {
+		log.Print(" [INF] share or sign shares ", miner.Name)
+	}
+
+	if r.waitShareSignsOrShares.IsZero() {
+		return // doesn't wait for a soss
+	}
+
+	if r.waitShareSignsOrShares.MinerID != sosse.MinerID {
+		return // not the miner waiting for
+	}
+
+	log.Print("[OK] accept share or signs shares", miner.Name)
+	r.waitShareSignsOrShares = config.WaitShareSignsOrShares{}
+
 	return
 }
 
@@ -412,6 +547,12 @@ func (r *Runner) proceedWaiting() (err error) {
 			err = r.acceptAddSharder(adds)
 		case nid := <-r.server.OnNodeReady():
 			err = r.acceptNodeReady(nid)
+		case re := <-r.server.OnRound():
+			err = r.acceptRound(re)
+		case cmpke := <-r.server.OnContributeMPK():
+			err = r.acceptContributeMPK(cmpke)
+		case sosse := <-r.server.OnShareOrSignsShares():
+			err = r.acceptShareOrSignsShares(sosse)
 		case <-tm.C:
 			return fmt.Errorf("timeout error")
 		}
@@ -492,6 +633,10 @@ func (r *Runner) CleanupBC(tm time.Duration) (err error) {
 func (r *Runner) Start(names []NodeName, lock bool,
 	tm time.Duration) (err error) {
 
+	if r.verbose {
+		log.Print(" [INF] start ", names)
+	}
+
 	r.setupTimeout(tm)
 
 	// start nodes
@@ -500,8 +645,8 @@ func (r *Runner) Start(names []NodeName, lock bool,
 		if !ok {
 			return fmt.Errorf("(start): unknown node: %q", name)
 		}
-		r.server.AddNode(n.ID, lock) // lock list
-		r.nodes[n.ID] = struct{}{}   // wait list
+		r.server.AddNode(n.ID, lock)   // lock list
+		r.waitNodes[n.ID] = struct{}{} // wait list
 		if err = n.Start(r.conf.Logs); err != nil {
 			return fmt.Errorf("starting %s: %v", n.Name, err)
 		}
@@ -512,18 +657,32 @@ func (r *Runner) Start(names []NodeName, lock bool,
 func (r *Runner) WaitViewChange(vc config.WaitViewChange, tm time.Duration) (
 	err error) {
 
+	if r.verbose {
+		log.Print(" [INF] wait for VC ", vc.ExpectMagicBlock.Round)
+	}
+
 	r.setupTimeout(tm)
-	r.viewChange = vc
+	r.waitViewChange = vc
 	return
 }
 
 func (r *Runner) WaitPhase(pe config.WaitPhase, tm time.Duration) (err error) {
+
+	if r.verbose {
+		log.Print(" [INF] wait phase ", pe.Phase.String())
+	}
+
 	r.setupTimeout(tm)
-	r.phase = pe
+	r.waitPhase = pe
 	return
 }
 
 func (r *Runner) Unlock(names []NodeName, tm time.Duration) (err error) {
+
+	if r.verbose {
+		log.Print(" [INF] unlock ", names)
+	}
+
 	r.setupTimeout(0)
 	for _, name := range names {
 		var n, ok = r.conf.Nodes.NodeByName(name) //
@@ -539,6 +698,11 @@ func (r *Runner) Unlock(names []NodeName, tm time.Duration) (err error) {
 }
 
 func (r *Runner) Stop(names []NodeName, tm time.Duration) (err error) {
+
+	if r.verbose {
+		log.Print(" [INF] stop ", names)
+	}
+
 	for _, name := range names {
 		var n, ok = r.conf.Nodes.NodeByName(name) //
 		if !ok {
@@ -551,5 +715,63 @@ func (r *Runner) Stop(names []NodeName, tm time.Duration) (err error) {
 		}
 		log.Print(n.Name, " stopped")
 	}
+	return
+}
+
+func (r *Runner) WaitRound(wr config.WaitRound, tm time.Duration) (err error) {
+
+	if r.verbose {
+		log.Print(" [INF] wait for round ", wr.Round)
+	}
+
+	r.setupTimeout(tm)
+	r.waitRound = wr
+	return
+}
+
+func (r *Runner) WaitContributeMpk(wcmpk config.WaitContributeMpk,
+	tm time.Duration) (err error) {
+
+	if r.verbose {
+		var miner, ok = r.conf.Nodes.NodeByID(wcmpk.MinerID)
+		if ok {
+			log.Print(" [INF] wait for contribute MPK by ", miner.Name)
+		} else {
+			log.Print(" [INF] wait for contribute MPK", wcmpk.MinerID,
+				"(unknown)")
+		}
+	}
+
+	r.setupTimeout(tm)
+	r.waitContributeMPK = wcmpk
+	return
+}
+
+func (r *Runner) WaitShareSignsOrShares(ssos config.WaitShareSignsOrShares,
+	tm time.Duration) (err error) {
+
+	if r.verbose {
+		var miner, ok = r.conf.Nodes.NodeByID(ssos.MinerID)
+		if ok {
+			log.Print(" [INF] wait for SOSS by ", miner.Name)
+		} else {
+			log.Print(" [INF] wait for SOSS by ", ssos.MinerID, "(unknown)")
+		}
+	}
+
+	r.setupTimeout(tm)
+	r.waitShareSignsOrShares = ssos
+	return
+}
+
+func (r *Runner) WaitAdd(wadd config.WaitAdd, tm time.Duration) (err error) {
+
+	if r.verbose {
+		log.Printf(" [INF] wait add miners: %s, sharders: %s",
+			wadd.Miners, wadd.Sharders)
+	}
+
+	r.setupTimeout(tm)
+	r.waitAdd = wadd
 	return
 }

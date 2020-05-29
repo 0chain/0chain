@@ -43,6 +43,24 @@ type AddSharderEvent struct {
 	SharderID NodeID // the added sharder
 }
 
+// Round proceed in pay_fees of Miner SC.
+type RoundEvent struct {
+	Sender NodeID // event emitter
+	Round  Round  // round number
+}
+
+// ContributeMPKEvent where a miner successfully sent its contribution.
+type ContributeMPKEvent struct {
+	Sender  NodeID // event emitter
+	MinerID NodeID // miner that contributes
+}
+
+// ShareOrSignsSharesEvent where a miner successfully sent its share or sign
+type ShareOrSignsSharesEvent struct {
+	Sender  NodeID // event emitter
+	MinerID NodeID // miner that sends
+}
+
 // known locks
 const (
 	Locked   = true  // should wait
@@ -75,6 +93,10 @@ type Server struct {
 	// it work. E.g. the node has started and waits the conductor to enter BC.
 	onNodeReady chan NodeID
 
+	onRoundEvent              chan *RoundEvent
+	onContributeMPKEvent      chan *ContributeMPKEvent
+	onShareOrSignsSharesEvent chan *ShareOrSignsSharesEvent
+
 	// add / lock  miner / sharder
 	mutex sync.Mutex
 	locks map[NodeID]*nodeLock // expected miner/sharder -> locked/unlocked
@@ -94,6 +116,10 @@ func NewServer(address string) (s *Server, err error) {
 	s.onAddMiner = make(chan *AddMinerEvent, 10)
 	s.onAddSharder = make(chan *AddSharderEvent, 10)
 	s.onNodeReady = make(chan NodeID, 10)
+
+	s.onRoundEvent = make(chan *RoundEvent, 100)
+	s.onContributeMPKEvent = make(chan *ContributeMPKEvent, 10)
+	s.onShareOrSignsSharesEvent = make(chan *ShareOrSignsSharesEvent, 10)
 
 	s.locks = make(map[NodeID]*nodeLock)
 	s.server = rpc.NewServer()
@@ -185,6 +211,18 @@ func (s *Server) OnNodeReady() chan NodeID {
 	return s.onNodeReady
 }
 
+func (s *Server) OnRound() chan *RoundEvent {
+	return s.onRoundEvent
+}
+
+func (s *Server) OnContributeMPK() chan *ContributeMPKEvent {
+	return s.onContributeMPKEvent
+}
+
+func (s *Server) OnShareOrSignsShares() chan *ShareOrSignsSharesEvent {
+	return s.onShareOrSignsSharesEvent
+}
+
 //
 // handlers
 //
@@ -241,6 +279,34 @@ func (s *Server) NodeReady(nodeID NodeID, join *bool) (err error) {
 	case <-s.quit:
 	}
 
+	return
+}
+
+func (s *Server) Round(rnd *RoundEvent, _ *struct{}) (err error) {
+	select {
+	case s.onRoundEvent <- rnd:
+	case <-s.quit:
+	}
+	return
+}
+
+func (s *Server) ContributeMPK(cmpke *ContributeMPKEvent, _ *struct{}) (
+	err error) {
+
+	select {
+	case s.onContributeMPKEvent <- cmpke:
+	case <-s.quit:
+	}
+	return
+}
+
+func (s *Server) ShareOrSignsShares(soss *ShareOrSignsSharesEvent,
+	_ *struct{}) (err error) {
+
+	select {
+	case s.onShareOrSignsSharesEvent <- soss:
+	case <-s.quit:
+	}
 	return
 }
 

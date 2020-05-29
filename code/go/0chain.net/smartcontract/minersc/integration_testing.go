@@ -73,21 +73,22 @@ func (msc *MinerSmartContract) payFeesIntegrationTests(
 	var isViewChange bool = (balances.GetBlock().Round == gn.ViewChange)
 	// }
 
+	// call the wrapped function {
 	if resp, err = msc.payFees(t, inputData, gn, balances); err != nil {
 		return
 	}
+	// }
 
-	// phase after {
-	if pn, err = msc.getPhaseNode(balances); err != nil {
-		return
-	}
-	if pn.Phase != phaseBefore {
-		var pe conductrpc.PhaseEvent
-		pe.Phase = conductrpc.Phase(pn.Phase)
-		pe.Sender = conductrpc.NodeID(node.Self.Underlying().GetKey())
-		if err = msc.client.Phase(&pe); err != nil {
-			panic(err)
-		}
+	// events order
+	// - round
+	// - view change
+	// - phase
+
+	// round {
+	var re conductrpc.RoundEvent
+	re.Sender = conductrpc.NodeID(node.Self.Underlying().GetKey())
+	if err = msc.client.Round(&re); err != nil {
+		panic(err)
 	}
 	// }
 
@@ -115,6 +116,58 @@ func (msc *MinerSmartContract) payFeesIntegrationTests(
 		}
 	}
 	// }
+
+	// phase after {
+	if pn, err = msc.getPhaseNode(balances); err != nil {
+		return
+	}
+	if pn.Phase != phaseBefore {
+		var pe conductrpc.PhaseEvent
+		pe.Phase = conductrpc.Phase(pn.Phase)
+		pe.Sender = conductrpc.NodeID(node.Self.Underlying().GetKey())
+		if err = msc.client.Phase(&pe); err != nil {
+			panic(err)
+		}
+	}
+	// }
+
+	return
+}
+
+func (msc *MinerSmartContract) contributeMpkIntegrationTests(
+	t *transaction.Transaction, inputData []byte, gn *globalNode,
+	balances cstate.StateContextI) (resp string, err error) {
+
+	resp, err = msc.contributeMpk(t, inputData, gn, balances)
+	if err != nil {
+		return
+	}
+
+	var cmpke conductrpc.ContributeMPKEvent
+	cmpke.Sender = conductrpc.NodeID(node.Self.Underlying().GetKey())
+	cmpke.MinerID = conductrpc.NodeID(t.ClientID)
+	if err = msc.client.ContributeMPK(&cmpke); err != nil {
+		panic(err)
+	}
+
+	return
+}
+
+func (msc *MinerSmartContract) shareSignsOrSharesIntegrationTests(
+	t *transaction.Transaction, inputData []byte, gn *globalNode,
+	balances cstate.StateContextI) (resp string, err error) {
+
+	resp, err = msc.shareSignsOrShares(t, inputData, gn, balances)
+	if err != nil {
+		return
+	}
+
+	var ssose conductrpc.ShareOrSignsSharesEvent
+	ssose.Sender = conductrpc.NodeID(node.Self.Underlying().GetKey())
+	ssose.MinerID = conductrpc.NodeID(t.ClientID)
+	if err = msc.client.ShareOrSignsShares(&ssose); err != nil {
+		panic(err)
+	}
 
 	return
 }

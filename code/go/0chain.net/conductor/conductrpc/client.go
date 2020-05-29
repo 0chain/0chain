@@ -96,3 +96,39 @@ func (c *Client) NodeReady(nodeID NodeID) (join bool, err error) {
 	}
 	return
 }
+
+// Round notification.
+func (c *Client) Round(re *RoundEvent) (err error) {
+	err = c.client.Call("Server.Round", re, &struct{}{})
+	if err == rpc.ErrShutdown {
+		if err = c.dial(); err != nil {
+			return
+		}
+		err = c.client.Call("Server.Round", re, &struct{}{})
+	}
+	return
+}
+
+// ContributeMPK notification.
+func (c *Client) ContributeMPK(cmpke *ContributeMPKEvent) (err error) {
+	err = c.client.Call("Server.ContributeMPK", cmpke, &struct{}{})
+	if err == rpc.ErrShutdown {
+		if err = c.dial(); err != nil {
+			return
+		}
+		err = c.client.Call("Server.ContributeMPK", cmpke, &struct{}{})
+	}
+	return
+}
+
+// ShareOrSignsShares notification.
+func (c *Client) ShareOrSignsShares(sosse *ShareOrSignsSharesEvent) (err error) {
+	err = c.client.Call("Server.ShareOrSignsShares", sosse, &struct{}{})
+	if err == rpc.ErrShutdown {
+		if err = c.dial(); err != nil {
+			return
+		}
+		err = c.client.Call("Server.ShareOrSignsShares", sosse, &struct{}{})
+	}
+	return
+}
