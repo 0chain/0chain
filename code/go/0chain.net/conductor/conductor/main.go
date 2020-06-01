@@ -528,14 +528,6 @@ func (r *Runner) stopAll() {
 	}
 }
 
-func (r *Runner) killAll() {
-	log.Print("kill all nodes")
-	for _, n := range r.conf.Nodes {
-		log.Printf("kill %s", n.Name)
-		n.Kill()
-	}
-}
-
 func (r *Runner) proceedWaiting() (err error) {
 	for tm, ok := r.isWaiting(); ok; tm, ok = r.isWaiting() {
 		select {
