@@ -52,34 +52,23 @@ func (msc *MinerSmartContract) InitSC() {
 	moveFunctions[Publish] = msc.moveToWait
 	moveFunctions[Wait] = msc.moveToStart
 
-	if isIntegrationTests() {
-		var err error
-		if msc.client, err = newConductRPCClient(); err != nil {
-			panic(err)
-		}
-		Logger.Debug("using integration test",
-			zap.String("address", msc.client.Address()))
-		msc.smartContractFunctions["add_miner"] = msc.AddMinerIntegrationTests
-		msc.smartContractFunctions["add_sharder"] = msc.AddSharderIntegrationTests
-		msc.smartContractFunctions["payFees"] = msc.payFeesIntegrationTests
-		msc.smartContractFunctions["contributeMpk"] = msc.contributeMpkIntegrationTests
-		msc.smartContractFunctions["shareSignsOrShares"] = msc.shareSignsOrSharesIntegrationTests
-	} else {
-		msc.smartContractFunctions["add_miner"] = msc.AddMiner
-		msc.smartContractFunctions["add_sharder"] = msc.AddSharder
-		msc.smartContractFunctions["payFees"] = msc.payFees
-		msc.smartContractFunctions["contributeMpk"] = msc.contributeMpk
-		msc.smartContractFunctions["shareSignsOrShares"] = msc.shareSignsOrShares
+	var err error
+	if msc.client, err = newConductRPCClient(); err != nil {
+		panic(err)
 	}
 
+	Logger.Debug("using integration test",
+		zap.String("address", msc.client.Address()))
+
+	msc.smartContractFunctions["add_miner"] = msc.AddMinerIntegrationTests
+	msc.smartContractFunctions["add_sharder"] = msc.AddSharderIntegrationTests
+	msc.smartContractFunctions["payFees"] = msc.payFeesIntegrationTests
+	msc.smartContractFunctions["contributeMpk"] = msc.contributeMpkIntegrationTests
+	msc.smartContractFunctions["shareSignsOrShares"] = msc.shareSignsOrSharesIntegrationTests
 	msc.smartContractFunctions["update_settings"] = msc.UpdateSettings
 	msc.smartContractFunctions["addToDelegatePool"] = msc.addToDelegatePool
 	msc.smartContractFunctions["deleteFromDelegatePool"] = msc.deleteFromDelegatePool
 	msc.smartContractFunctions["sharder_keep"] = msc.sharderKeep
-}
-
-func isIntegrationTests() bool {
-	return viper.GetBool("testing.enabled")
 }
 
 func newConductRPCClient() (client *conductrpc.Client, err error) {
