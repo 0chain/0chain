@@ -148,37 +148,31 @@ func (wssos *WaitShareSignsOrShares) IsZero() bool {
 
 // WaitAdd used to wait for add_mienr and add_sharder SC calls.
 type WaitAdd struct {
-	Miners   []NodeID `json:"miners" yaml:"miners" mapstructure:"miners"`
-	Sharders []NodeID `json:"sharders" yaml:"sharders" mapstructure:"sharders"`
+	Miners   []NodeName `json:"miners" yaml:"miners" mapstructure:"miners"`
+	Sharders []NodeName `json:"sharders" yaml:"sharders" mapstructure:"sharders"`
 }
 
 func (wa *WaitAdd) IsZero() bool {
 	return len(wa.Miners) == 0 && len(wa.Sharders) == 0
 }
 
-func (wa *WaitAdd) TakeMiner(id NodeID) (ok bool) {
-	var i int
-	for _, minerID := range wa.Miners {
-		if minerID == id {
-			ok = true
-			continue
+func (wa *WaitAdd) TakeMiner(name NodeName) (ok bool) {
+	for i, minerName := range wa.Miners {
+		if minerName == name {
+			wa.Miners = append(wa.Miners[:i], wa.Miners[i+1:]...)
+			return true
 		}
-		wa.Miners[i], i = minerID, i+1
 	}
-	wa.Miners = wa.Miners[:i]
-	return
+	return // false
 }
 
-func (wa *WaitAdd) TakeSharder(id NodeID) (ok bool) {
-	var i int
-	for _, sharderID := range wa.Sharders {
-		if sharderID == id {
-			ok = true
-			continue
+func (wa *WaitAdd) TakeSharder(name NodeName) (ok bool) {
+	for i, sharderName := range wa.Sharders {
+		if sharderName == name {
+			wa.Sharders = append(wa.Sharders[:i], wa.Sharders[i+1:]...)
+			return true
 		}
-		wa.Sharders[i], i = sharderID, i+1
 	}
-	wa.Sharders = wa.Sharders[:i]
 	return
 }
 
@@ -195,6 +189,8 @@ type Executor interface {
 	Unlock(names []NodeName, timeout time.Duration) (err error)
 	Stop(names []NodeName, timeout time.Duration) (err error)
 	CleanupBC(timeout time.Duration) (err error)
+	SendShareOnly(miner NodeID, only []NodeID) (err error)
+	SendShareBad(miner NodeID, bad []NodeID) (err error)
 }
 
 // The Flow represents single value map.
@@ -240,6 +236,154 @@ func getNodeNames(val interface{}) (ss []NodeName, ok bool) {
 	return // nil, false
 }
 
+func (f Flow) setMonitor(ex Executor, val interface{}, tm time.Duration) (
+	err error) {
+
+	if ss, ok := getNodeNames(val); ok && len(ss) == 1 {
+		return ex.SetMonitor(ss[0])
+	}
+	return fmt.Errorf("invalid 'set_monitor' argument type: %T", val)
+}
+
+func (f Flow) waitViewChange(ex Executor, val interface{}, tm time.Duration) (
+	err error) {
+
+	var vc WaitViewChange
+	if err = mapstructure.Decode(val, &vc); err != nil {
+		return fmt.Errorf("invalid 'wait_view_change' argument type: %T, "+
+			"decoding error: %v", val, err)
+	}
+	return ex.WaitViewChange(vc, tm)
+}
+
+func (f Flow) start(name string, ex Executor, val interface{}, lock bool,
+	tm time.Duration) (err error) {
+
+	if ss, ok := getNodeNames(val); ok {
+		return ex.Start(ss, lock, tm)
+	}
+	return fmt.Errorf("invalid '%s' argument type: %T", name, val)
+}
+
+func (f Flow) waitPhase(ex Executor, val interface{}, tm time.Duration) (
+	err error) {
+
+	type waitPhase struct {
+		Phase           string    `mapstructure:"phase"`
+		ViewChangeRound RoundName `mapstructure:"view_change_round"`
+	}
+	var wps waitPhase
+	if err = mapstructure.Decode(val, &wps); err != nil {
+		return fmt.Errorf("invalid 'wait_phase' argument type: %T, "+
+			"decoding error: %v", val, err)
+	}
+	var wp WaitPhase
+	if wp.Phase, err = ParsePhase(wps.Phase); err != nil {
+		return fmt.Errorf("parsing phase: %v", err)
+	}
+	return ex.WaitPhase(wp, tm)
+}
+
+func (f Flow) unlock(ex Executor, val interface{}, tm time.Duration) (
+	err error) {
+
+	if ss, ok := getNodeNames(val); ok {
+		return ex.Unlock(ss, tm)
+	}
+	return fmt.Errorf("invalid 'unlock' argument type: %T", val)
+}
+
+func (f Flow) stop(ex Executor, val interface{}, tm time.Duration) (
+	err error) {
+
+	if ss, ok := getNodeNames(val); ok {
+		return ex.Stop(ss, tm)
+	}
+	return fmt.Errorf("invalid 'stop' argument type: %T", val)
+}
+
+func (f Flow) waitRound(ex Executor, val interface{}, tm time.Duration) (
+	err error) {
+
+	var wr WaitRound
+	if err = mapstructure.Decode(val, &wr); err != nil {
+		return fmt.Errorf("decoding 'wait_round': %v", err)
+	}
+	return ex.WaitRound(wr, tm)
+}
+
+func (f Flow) waitContributeMpk(ex Executor, val interface{},
+	tm time.Duration) (err error) {
+
+	var wcmpk WaitContributeMpk
+	if err = mapstructure.Decode(val, &wcmpk); err != nil {
+		return fmt.Errorf("decoding 'wait_contribute_mpk': %v", err)
+	}
+	return ex.WaitContributeMpk(wcmpk, tm)
+}
+
+func (f Flow) waitShareSignsOrShares(ex Executor, val interface{},
+	tm time.Duration) (err error) {
+
+	var wsoss WaitShareSignsOrShares
+	if err = mapstructure.Decode(val, &wsoss); err != nil {
+		return fmt.Errorf("decoding 'wait_share_signs_or_shares': %v", err)
+	}
+	return ex.WaitShareSignsOrShares(wsoss, tm)
+}
+
+func (f Flow) waitAdd(ex Executor, val interface{}, tm time.Duration) (
+	err error) {
+
+	var wa WaitAdd
+	if err = mapstructure.Decode(val, &wa); err != nil {
+		return fmt.Errorf("decoding 'wait_add': %v", err)
+	}
+	return ex.WaitAdd(wa, tm)
+}
+
+func (f Flow) sendShareOnly(ex Executor, val interface{}, tm time.Duration) (
+	err error) {
+
+	type sendShareOnly struct {
+		Miner NodeID   `mapstructure:"miner"`
+		Only  []NodeID `mapstructure:"only"`
+	}
+
+	var sso sendShareOnly
+	if err = mapstructure.Decode(val, &sso); err != nil {
+		return fmt.Errorf("invalid 'send_share_only' argument type: %T, "+
+			"decoding error: %v", val, err)
+	}
+
+	if sso.Miner == "" {
+		return errors.New("'seed_share_only' missing miner ID")
+	}
+
+	return ex.SendShareOnly(sso.Miner, sso.Only)
+}
+
+func (f Flow) sendShareBad(ex Executor, val interface{}, tm time.Duration) (
+	err error) {
+
+	type sendShareBad struct {
+		Miner NodeID   `mapstructure:"miner"`
+		Bad   []NodeID `mapstructure:"bad"`
+	}
+
+	var ssb sendShareBad
+	if err = mapstructure.Decode(val, &ssb); err != nil {
+		return fmt.Errorf("invalid 'send_share_bad' argument type: %T, "+
+			"decoding error: %v", val, err)
+	}
+
+	if ssb.Miner == "" {
+		return errors.New("'seed_share_bad' missing miner ID")
+	}
+
+	return ex.SendShareBad(ssb.Miner, ssb.Bad)
+}
+
 // Execute the flow directive.
 func (f Flow) Execute(ex Executor) (err error) {
 	var name, val, ok = f.getFirst()
@@ -265,77 +409,36 @@ func (f Flow) Execute(ex Executor) (err error) {
 
 	switch name {
 	case "set_monitor":
-		if ss, ok := getNodeNames(val); ok && len(ss) == 1 {
-			return ex.SetMonitor(ss[0])
-		}
+		return f.setMonitor(ex, val, tm)
 	case "cleanup_bc":
 		return ex.CleanupBC(tm)
 	case "start":
-		if ss, ok := getNodeNames(val); ok {
-			return ex.Start(ss, false, tm)
-		}
+		return f.start(name, ex, val, false, tm)
 	case "wait_view_change":
-		var vc WaitViewChange
-		if err = mapstructure.Decode(val, &vc); err != nil {
-			return fmt.Errorf("invalid '%s' argument type: %T, "+
-				"decoding error: %v", name, val, err)
-		}
-		return ex.WaitViewChange(vc, tm)
+		return f.waitViewChange(ex, val, tm)
 	case "start_lock":
-		if ss, ok := getNodeNames(val); ok {
-			return ex.Start(ss, true, tm)
-		}
+		return f.start(name, ex, val, true, tm)
 	case "wait_phase":
-		type waitPhase struct {
-			Phase           string    `mapstructure:"phase"`
-			ViewChangeRound RoundName `mapstructure:"view_change_round"`
-		}
-		var wps waitPhase
-		if err = mapstructure.Decode(val, &wps); err != nil {
-			return fmt.Errorf("invalid '%s' argument type: %T, "+
-				"decoding error: %v", name, val, err)
-		}
-		var wp WaitPhase
-		if wp.Phase, err = ParsePhase(wps.Phase); err != nil {
-			return fmt.Errorf("parsing phase: %v", err)
-		}
-		return ex.WaitPhase(wp, tm)
+		return f.waitPhase(ex, val, tm)
 	case "unlock":
-		if ss, ok := getNodeNames(val); ok {
-			return ex.Unlock(ss, tm)
-		}
+		return f.unlock(ex, val, tm)
 	case "stop":
-		if ss, ok := getNodeNames(val); ok {
-			return ex.Stop(ss, tm)
-		}
+		return f.stop(ex, val, tm)
 	case "wait_round":
-		var wr WaitRound
-		if err = mapstructure.Decode(val, &wr); err != nil {
-			return fmt.Errorf("decoding 'wait_round': %v", err)
-		}
-		return ex.WaitRound(wr, tm)
+		return f.waitRound(ex, val, tm)
 	case "wait_contribute_mpk":
-		var wcmpk WaitContributeMpk
-		if err = mapstructure.Decode(val, &wcmpk); err != nil {
-			return fmt.Errorf("decoding 'wait_contribute_mpk': %v", err)
-		}
-		return ex.WaitContributeMpk(wcmpk, tm)
+		return f.waitContributeMpk(ex, val, tm)
 	case "wait_share_signs_or_shares":
-		var wsoss WaitShareSignsOrShares
-		if err = mapstructure.Decode(val, &wsoss); err != nil {
-			return fmt.Errorf("decoding 'wait_share_signs_or_shares': %v", err)
-		}
-		return ex.WaitShareSignsOrShares(wsoss, tm)
+		return f.waitShareSignsOrShares(ex, val, tm)
 	case "wait_add":
-		var wa WaitAdd
-		if err = mapstructure.Decode(val, &wa); err != nil {
-			return fmt.Errorf("decoding 'wait_add': %v", err)
-		}
-		return ex.WaitAdd(wa, tm)
+		return f.waitAdd(ex, val, tm)
+	case "send_share_only":
+		return f.sendShareOnly(ex, val, tm)
+	case "send_share_bad":
+		return f.sendShareBad(ex, val, tm)
 	default:
 		return fmt.Errorf("unknown flow directive: %q", name)
 	}
-	return fmt.Errorf("invalid '%s' argument type: %T", name, val)
 }
 
 // Flows represents order of start/stop miners/sharder and other BC events.
