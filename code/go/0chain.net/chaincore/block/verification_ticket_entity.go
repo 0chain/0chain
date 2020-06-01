@@ -23,7 +23,7 @@ func (vt *VerificationTicket) Copy() (cp *VerificationTicket) {
 /*BlockVerificationTicket - verification ticket with the block id.
 * As VerificationTickets are contained in a block, it doesn't need to have a reference to a block
 * However, when the verifiers verify and send the tickets, they need to indicate what block the
-* verification ticket is for. So, this wrapper data strcuture is used for that.
+* verification ticket is for. So, this wrapper data structure is used for that.
  */
 type BlockVerificationTicket struct {
 	datastore.NOIDField
