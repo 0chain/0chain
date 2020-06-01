@@ -1,3 +1,5 @@
+<!--
+
 REPORT
 ======
 
@@ -59,3 +61,5 @@ In this case the miner leaves MB after VC.
 # Artificially force x miners to send bad share to y miners.
 
 	TODO: WIP
+
+-->

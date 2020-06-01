@@ -353,16 +353,18 @@ func (r *Runner) acceptAddMiner(addm *conductrpc.AddMinerEvent) (err error) {
 	}
 
 	if r.verbose {
-		log.Print(" [INF] add_mienr", added.Name)
+		log.Print(" [INF] add_mienr ", added.Name)
 	}
 
 	if r.waitAdd.IsZero() {
 		return // doesn't wait for a node
 	}
 
-	if r.waitAdd.TakeMiner(addm.MinerID) {
+	println(fmt.Sprint("[B] W ADD MIENRS: ", r.waitAdd.Miners), "{")
+	if r.waitAdd.TakeMiner(added.Name) {
 		log.Print("[OK] add_miner ", added.Name)
 	}
+	println(fmt.Sprint("[A] W ADD MIENRS: ", r.waitAdd.Miners), "}")
 	return
 }
 
@@ -383,14 +385,14 @@ func (r *Runner) acceptAddSharder(adds *conductrpc.AddSharderEvent) (err error) 
 	}
 
 	if r.verbose {
-		log.Print(" [INF] add_sharder", added.Name)
+		log.Print(" [INF] add_sharder ", added.Name)
 	}
 
 	if r.waitAdd.IsZero() {
 		return // doesn't wait for a node
 	}
 
-	if r.waitAdd.TakeSharder(adds.SharderID) {
+	if r.waitAdd.TakeSharder(added.Name) {
 		log.Print("[OK] add_sharder ", added.Name)
 	}
 	return
@@ -418,12 +420,12 @@ func (r *Runner) acceptRound(re *conductrpc.RoundEvent) (err error) {
 		return // not the monitor node
 	}
 
-	var n, ok = r.conf.Nodes.NodeByID(re.Sender)
+	var _, ok = r.conf.Nodes.NodeByID(re.Sender)
 	if !ok {
 		return fmt.Errorf("unknown 'round' sender: %s", re.Sender)
 	}
 	if r.verbose {
-		log.Print(" [INF] round ", re.Round, " ", n.Name)
+		// log.Print(" [INF] round ", re.Round, " ", n.Name)
 	}
 	if r.waitRound.IsZero() {
 		return // doesn't wait for a round
@@ -773,5 +775,15 @@ func (r *Runner) WaitAdd(wadd config.WaitAdd, tm time.Duration) (err error) {
 
 	r.setupTimeout(tm)
 	r.waitAdd = wadd
+	return
+}
+
+func (r *Runner) SendShareOnly(miner NodeID, only []NodeID) (err error) {
+	r.server.SetSendShareOnly(miner, only)
+	return
+}
+
+func (r *Runner) SendShareBad(miner NodeID, bad []NodeID) (err error) {
+	r.server.SetSendShareBad(miner, bad)
 	return
 }
