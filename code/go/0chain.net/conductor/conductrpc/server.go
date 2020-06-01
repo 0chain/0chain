@@ -67,9 +67,18 @@ const (
 	Unlocked = false // can join
 )
 
-type nodeLock struct {
-	lock    bool //
-	counter int  //
+type nodeSetups struct {
+	lock    bool          // node should be locked on start, waiting unlocking
+	counter int           // node ready calling counter (server's channel sending condition)
+	only    chan []NodeID // send shares only to given nodes
+	bad     chan []NodeID // send bad shares to given node (regardless the 'only' list)
+}
+
+func newNodeSetups() (ns *nodeSetups) {
+	ns = new(nodeSetups)
+	ns.only = make(chan []NodeID, 10)
+	ns.bad = make(chan []NodeID, 10)
+	return
 }
 
 type Server struct {
@@ -97,9 +106,9 @@ type Server struct {
 	onContributeMPKEvent      chan *ContributeMPKEvent
 	onShareOrSignsSharesEvent chan *ShareOrSignsSharesEvent
 
-	// add / lock  miner / sharder
-	mutex sync.Mutex
-	locks map[NodeID]*nodeLock // expected miner/sharder -> locked/unlocked
+	// nodes lock/unlock/shares sending (send only, send bad)
+	mutex  sync.Mutex
+	setups map[NodeID]*nodeSetups
 
 	quitOnce sync.Once
 	quit     chan struct{}
@@ -121,7 +130,7 @@ func NewServer(address string) (s *Server, err error) {
 	s.onContributeMPKEvent = make(chan *ContributeMPKEvent, 10)
 	s.onShareOrSignsSharesEvent = make(chan *ShareOrSignsSharesEvent, 10)
 
-	s.locks = make(map[NodeID]*nodeLock)
+	s.setups = make(map[NodeID]*nodeSetups)
 	s.server = rpc.NewServer()
 	if err = s.server.Register(s); err != nil {
 		return nil, err
@@ -148,7 +157,7 @@ func (s *Server) AddNode(nodeID NodeID, lock bool) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	s.locks[nodeID] = &nodeLock{counter: 0, lock: lock}
+	s.setups[nodeID] = &nodeSetups{counter: 0, lock: lock}
 }
 
 // UnlockNode unlocks a miner.
@@ -156,12 +165,12 @@ func (s *Server) UnlockNode(nodeID NodeID) (err error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	var nl, ok = s.locks[nodeID]
+	var ns, ok = s.setups[nodeID]
 	if !ok {
 		return fmt.Errorf("unexpected node: %s", nodeID)
 	}
 
-	nl.lock = false
+	ns.lock = false
 	return
 }
 
@@ -169,14 +178,44 @@ func (s *Server) nodeLock(nodeID NodeID) (lock bool, cnt int, ok bool) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	var nl *nodeLock
-	if nl, ok = s.locks[nodeID]; !ok {
+	var ns *nodeSetups
+	if ns, ok = s.setups[nodeID]; !ok {
 		return
 	}
 
-	lock, cnt = nl.lock, nl.counter
-	nl.counter++
+	lock, cnt = ns.lock, ns.counter
+	ns.counter++
 	return
+}
+
+func (s *Server) nodeSendShareOnly(miner NodeID) chan []NodeID {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	var ns, ok = s.setups[miner]
+	if !ok {
+		return nil
+	}
+	return ns.only
+}
+
+func (s *Server) nodeSendShareBad(miner NodeID) chan []NodeID {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	var ns, ok = s.setups[miner]
+	if !ok {
+		return nil
+	}
+	return ns.bad
+}
+
+func (s *Server) SetSendShareOnly(miner NodeID, only []NodeID) {
+	go func() { s.nodeSendShareOnly(miner) <- only }()
+}
+
+func (s *Server) SetSendShareBad(miner NodeID, bad []NodeID) {
+	go func() { s.nodeSendShareBad(miner) <- bad }()
 }
 
 // events handling
@@ -306,6 +345,26 @@ func (s *Server) ShareOrSignsShares(soss *ShareOrSignsSharesEvent,
 	select {
 	case s.onShareOrSignsSharesEvent <- soss:
 	case <-s.quit:
+	}
+	return
+}
+
+func (s *Server) SendShareOnly(miner NodeID, only *[]NodeID) (err error) {
+	select {
+	case o := <-s.nodeSendShareOnly(miner):
+		*only = o
+	case <-s.quit:
+		return
+	}
+	return
+}
+
+func (s *Server) SendShareBad(miner NodeID, bad *[]NodeID) (err error) {
+	select {
+	case b := <-s.nodeSendShareBad(miner):
+		*bad = b
+	case <-s.quit:
+		return
 	}
 	return
 }
