@@ -133,7 +133,7 @@ func (c *Client) ShareOrSignsShares(sosse *ShareOrSignsSharesEvent) (err error) 
 	return
 }
 
-// SendShareOnly to configured nodes. The long pooling method, e.g. it blocks.
+// SendShareOnly to configured nodes. The long polling method, e.g. it blocks.
 func (c *Client) SendShareOnly(me NodeID) (only []NodeID, err error) {
 	err = c.client.Call("Server.SendShareOnly", me, &only)
 	for err == rpc.ErrShutdown {
@@ -144,7 +144,7 @@ func (c *Client) SendShareOnly(me NodeID) (only []NodeID, err error) {
 
 // SendShareBad sends bad share to resulting nodes. To send bad shares only to
 // X nodes, use SendShareOnly (nil, nil) with SendShareBad (list, nil).
-// The long pooling method, e.g. it blocks.
+// The long polling method, e.g. it blocks.
 func (c *Client) SendShareBad(me NodeID) (bad []NodeID, err error) {
 	err = c.client.Call("Server.SendShareBad", me, &bad)
 	for err == rpc.ErrShutdown {
