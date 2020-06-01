@@ -86,6 +86,7 @@ func (msc *MinerSmartContract) payFeesIntegrationTests(
 
 	// round {
 	var re conductrpc.RoundEvent
+	re.Round = conductrpc.Round(balances.GetBlock().Round)
 	re.Sender = conductrpc.NodeID(node.Self.Underlying().GetKey())
 	if err = msc.client.Round(&re); err != nil {
 		panic(err)
