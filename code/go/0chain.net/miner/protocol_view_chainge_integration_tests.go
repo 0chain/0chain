@@ -48,10 +48,8 @@ func (mc *Chain) SendDKGShare(n *node.Node) error {
 	case conductrpc.IsSendShareFor(n.GetKey()):
 		params.Add("secret_share", secShare.GetHexString())
 	case conductrpc.IsSendBadShareFor(n.GetKey()):
-		println("SEND BAD SHARE BY 'BAD' CONFIG", n.GetKey())
 		params.Add("secret_share", revertString(secShare.GetHexString()))
 	default:
-		println("SKIP NODE BY 'ONLY/BAD' CONFIG", n.GetKey()) // skip
 		return common.NewError("failed to send DKG share", "skipped by tests")
 	}
 
@@ -115,7 +113,6 @@ func (mc *Chain) PublishShareOrSigns() (*httpclientutil.Transaction, error) {
 		}
 		var _, ok = shareOrSigns.ShareOrSigns[k]
 		if isRevealed || !ok {
-			println("IS REVEALED (SHARE/SIGN):", isRevealed, ok)
 			share := mc.viewChangeDKG.Sij[bls.ComputeIDdkg(k)]
 			shareOrSigns.ShareOrSigns[k] = &bls.DKGKeyShare{
 				Share: share.GetHexString(),

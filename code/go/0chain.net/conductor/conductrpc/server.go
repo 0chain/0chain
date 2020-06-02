@@ -226,7 +226,6 @@ func (s *Server) nodeSetRevealed(node NodeID) chan bool {
 }
 
 func (s *Server) SetSendShareOnly(miner NodeID, only []NodeID) {
-	println("(SERVER) SEND SHARE ONLY")
 	go func() {
 		onlyChan := s.nodeSendShareOnly(miner)
 		if onlyChan == nil {
@@ -237,7 +236,6 @@ func (s *Server) SetSendShareOnly(miner NodeID, only []NodeID) {
 }
 
 func (s *Server) SetSendShareBad(miner NodeID, bad []NodeID) {
-	println("(SERVER) SEND SHARE BAD")
 	go func() {
 		badChan := s.nodeSendShareBad(miner)
 		if badChan == nil {
@@ -248,7 +246,6 @@ func (s *Server) SetSendShareBad(miner NodeID, bad []NodeID) {
 }
 
 func (s *Server) SetRevealed(nodes []NodeID, pin bool) {
-	println("(SERVER) SET REVEALED")
 	for _, nodeID := range nodes {
 		go func(nodeID NodeID) {
 			revChan := s.nodeSetRevealed(nodeID)

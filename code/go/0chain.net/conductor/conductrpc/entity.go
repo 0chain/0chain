@@ -5,8 +5,6 @@ import (
 	"sync"
 	"time"
 
-	"fmt" // TO REMOVE println
-
 	"github.com/spf13/viper"
 )
 
@@ -91,7 +89,6 @@ func (e *Entity) setRevealed(pin bool) {
 }
 
 func (e *Entity) pollSendShareOnly() {
-	println("POLL SEND SHARE BAD")
 	for {
 		select {
 		case <-e.quit:
@@ -100,17 +97,14 @@ func (e *Entity) pollSendShareOnly() {
 		}
 		var only, err = e.client.SendShareOnly(e.id)
 		if err != nil {
-			println("POLLING SEND SHARE ONLY: ", err.Error())
 			log.Printf("polling SendShareOnly: %v", err)
 			continue
 		}
-		println("SET SEND SHARE ONLY:", fmt.Sprintf("%s", only))
 		e.setShareOnly(only)
 	}
 }
 
 func (e *Entity) pollSendShareBad() {
-	println("POLL SEND SHARE BAD")
 	for {
 		select {
 		case <-e.quit:
@@ -119,17 +113,14 @@ func (e *Entity) pollSendShareBad() {
 		}
 		var bad, err = e.client.SendShareBad(e.id)
 		if err != nil {
-			println("POLLING SEND SHARE BAD: ", err.Error())
 			log.Printf("polling SendShareBad: %v", err)
 			continue
 		}
-		println("SET SEND BAD SHARE:", fmt.Sprintf("%s", bad))
 		e.setShareBad(bad)
 	}
 }
 
 func (e *Entity) pollIsRevealed() {
-	println("POLL IS REVEALED")
 	for {
 		select {
 		case <-e.quit:
@@ -138,11 +129,9 @@ func (e *Entity) pollIsRevealed() {
 		}
 		var pin, err = e.client.IsRevealed(e.id)
 		if err != nil {
-			println("POLLING IS REVEALED: ", err.Error())
 			log.Printf("polling IsRevealed: %v", err)
 			continue
 		}
-		println("SET REVEALED TO: ", pin)
 		e.setRevealed(pin)
 	}
 }

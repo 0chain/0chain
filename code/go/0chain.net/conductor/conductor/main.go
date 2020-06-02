@@ -368,11 +368,9 @@ func (r *Runner) acceptAddMiner(addm *conductrpc.AddMinerEvent) (err error) {
 		return // doesn't wait for a node
 	}
 
-	println(fmt.Sprint("[B] W ADD MIENRS: ", r.waitAdd.Miners), "{")
 	if r.waitAdd.TakeMiner(added.Name) {
 		log.Print("[OK] add_miner ", added.Name)
 	}
-	println(fmt.Sprint("[A] W ADD MIENRS: ", r.waitAdd.Miners), "}")
 	return
 }
 
@@ -561,7 +559,6 @@ func (r *Runner) proceedWaiting() (err error) {
 					r.waitNoProgressUntil = time.Time{} // reset
 					return
 				}
-				println("WIRED TIMEOUT")
 			}
 			return fmt.Errorf("timeout error")
 		}
@@ -815,7 +812,6 @@ func (r *Runner) SendShareBad(miner NodeName, bad []NodeName) (err error) {
 		minerID NodeID
 	)
 
-	println("SEND BAD BY", fmt.Sprintf("%q", miner))
 	var m, ok = r.conf.Nodes.NodeByName(miner)
 	if !ok {
 		return fmt.Errorf("SendShareBad: unexpected node: %q", miner)
@@ -823,7 +819,6 @@ func (r *Runner) SendShareBad(miner NodeName, bad []NodeName) (err error) {
 	minerID = m.ID
 
 	for _, name := range bad {
-		println("SEND BAD TO", fmt.Sprintf("%q", name))
 		if m, ok = r.conf.Nodes.NodeByName(name); !ok {
 			return fmt.Errorf("SendShareBad (to): unexpected node: %q", name)
 		}
@@ -842,7 +837,6 @@ func (r *Runner) SetRevealed(ss []NodeName, pin bool, tm time.Duration) (
 	)
 
 	for _, name := range ss {
-		println("SEND REV. TO", fmt.Sprintf("%q", name))
 		var m, ok = r.conf.Nodes.NodeByName(name)
 		if !ok {
 			return fmt.Errorf("SetRevealed (%t): unexpected node: %q", pin,
