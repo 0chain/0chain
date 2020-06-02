@@ -5,6 +5,8 @@ import (
 	"sync"
 	"time"
 
+	"fmt" // TO REMOVE println
+
 	"github.com/spf13/viper"
 )
 
@@ -18,9 +20,10 @@ type Entity struct {
 
 	client *Client
 
-	mutex sync.Mutex
-	only  []NodeID // send share only for this nodes
-	bad   []NodeID // send bad share for this nodes (regardless the 'only' list)
+	mutex    sync.Mutex
+	only     []NodeID // send share only for this nodes
+	bad      []NodeID // send bad share for this nodes (regardless the 'only' list)
+	revealed bool     // default is false
 
 	quitOnce sync.Once
 	quit     chan struct{}
@@ -47,6 +50,7 @@ func Init(id string) {
 
 	go globalEntity.pollSendShareOnly()
 	go globalEntity.pollSendShareBad()
+	go globalEntity.pollIsRevealed()
 
 	for {
 		join, err = client.NodeReady(NodeID(id))
@@ -79,7 +83,15 @@ func (e *Entity) setShareBad(bad []NodeID) {
 	e.bad = bad
 }
 
+func (e *Entity) setRevealed(pin bool) {
+	e.mutex.Lock()
+	defer e.mutex.Unlock()
+
+	e.revealed = pin
+}
+
 func (e *Entity) pollSendShareOnly() {
+	println("POLL SEND SHARE BAD")
 	for {
 		select {
 		case <-e.quit:
@@ -88,14 +100,17 @@ func (e *Entity) pollSendShareOnly() {
 		}
 		var only, err = e.client.SendShareOnly(e.id)
 		if err != nil {
+			println("POLLING SEND SHARE ONLY: ", err.Error())
 			log.Printf("polling SendShareOnly: %v", err)
 			continue
 		}
+		println("SET SEND SHARE ONLY:", fmt.Sprintf("%s", only))
 		e.setShareOnly(only)
 	}
 }
 
 func (e *Entity) pollSendShareBad() {
+	println("POLL SEND SHARE BAD")
 	for {
 		select {
 		case <-e.quit:
@@ -104,10 +119,31 @@ func (e *Entity) pollSendShareBad() {
 		}
 		var bad, err = e.client.SendShareBad(e.id)
 		if err != nil {
+			println("POLLING SEND SHARE BAD: ", err.Error())
 			log.Printf("polling SendShareBad: %v", err)
 			continue
 		}
+		println("SET SEND BAD SHARE:", fmt.Sprintf("%s", bad))
 		e.setShareBad(bad)
+	}
+}
+
+func (e *Entity) pollIsRevealed() {
+	println("POLL IS REVEALED")
+	for {
+		select {
+		case <-e.quit:
+			return
+		default:
+		}
+		var pin, err = e.client.IsRevealed(e.id)
+		if err != nil {
+			println("POLLING IS REVEALED: ", err.Error())
+			log.Printf("polling IsRevealed: %v", err)
+			continue
+		}
+		println("SET REVEALED TO: ", pin)
+		e.setRevealed(pin)
 	}
 }
 
@@ -117,18 +153,31 @@ func (e *Entity) shutdown() {
 	})
 }
 
+func isInList(ids []NodeID, id NodeID) bool {
+	for _, x := range ids {
+		if x == id {
+			return true
+		}
+	}
+	return false
+}
+
 func (e *Entity) isSendShareFor(id string) bool {
 	e.mutex.Lock()
 	defer e.mutex.Unlock()
 
 	if len(e.only) == 0 {
+		if isInList(e.bad, NodeID(id)) {
+			return false // bad share will be sent, skip
+		}
 		return true // allow all
 	}
 
-	for _, o := range e.only {
-		if id == string(o) {
-			return true // send for this node
+	if isInList(e.only, NodeID(id)) {
+		if isInList(e.bad, NodeID(id)) {
+			return false // bad share will be sent, skip
 		}
+		return true // send for this node
 	}
 
 	return false
@@ -142,13 +191,14 @@ func (e *Entity) isSendBadShareFor(id string) bool {
 		return false // don't send bad share
 	}
 
-	for _, b := range e.bad {
-		if id == string(b) {
-			return true // send bad share
-		}
-	}
+	return isInList(e.bad, NodeID(id))
+}
 
-	return false // don't send bad share
+func (e *Entity) isRevealed() bool {
+	e.mutex.Lock()
+	defer e.mutex.Unlock()
+
+	return e.revealed
 }
 
 // Shutdown Entity.
@@ -164,4 +214,8 @@ func IsSendShareFor(id string) bool {
 // IsSendShareFor returns true if this node should send bad share for given one.
 func IsSendBadShareFor(id string) bool {
 	return globalEntity.isSendBadShareFor(id)
+}
+
+func IsRevealed() bool {
+	return globalEntity.isRevealed()
 }

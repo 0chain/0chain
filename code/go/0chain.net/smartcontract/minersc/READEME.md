@@ -72,6 +72,8 @@ Otherwise the node can't be registered. Measured in tokens (101.12 for example).
   minersc:
     max_n: 100
     min_n: 3
+    sharders_max_n: 0.30 # 30%
+    sharders_min_n: 0.30 # 30%
     t_percent: .51
     k_percent: .75
     min_stake: 0.01 

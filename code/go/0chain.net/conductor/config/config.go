@@ -130,20 +130,20 @@ func (wr *WaitRound) IsZero() bool {
 
 // WaitContibuteMpk wait for MPK contributing of a node.
 type WaitContributeMpk struct {
-	MinerID NodeID `json:"miner_id" yaml:"miner_id" mapstructure:"miner_id"`
+	Miner NodeName `json:"miner" yaml:"miner" mapstructure:"miner"`
 }
 
 func (wcm *WaitContributeMpk) IsZero() bool {
-	return wcm.MinerID == ""
+	return wcm.Miner == ""
 }
 
 // WaitShareSignsOrShares waits for SOSS of a node.
 type WaitShareSignsOrShares struct {
-	MinerID NodeID `json:"miner_id" yaml:"miner_id" mapstructure:"miner_id"`
+	Miner NodeName `json:"miner" yaml:"miner" mapstructure:"miner"`
 }
 
 func (wssos *WaitShareSignsOrShares) IsZero() bool {
-	return wssos.MinerID == ""
+	return wssos.Miner == ""
 }
 
 // WaitAdd used to wait for add_mienr and add_sharder SC calls.
@@ -189,8 +189,10 @@ type Executor interface {
 	Unlock(names []NodeName, timeout time.Duration) (err error)
 	Stop(names []NodeName, timeout time.Duration) (err error)
 	CleanupBC(timeout time.Duration) (err error)
-	SendShareOnly(miner NodeID, only []NodeID) (err error)
-	SendShareBad(miner NodeID, bad []NodeID) (err error)
+	SendShareOnly(miner NodeName, only []NodeName) (err error)
+	SendShareBad(miner NodeName, bad []NodeName) (err error)
+	SetRevealed(miners []NodeName, pin bool, tm time.Duration) (err error)
+	WaitNoProgress(wait time.Duration) (err error)
 }
 
 // The Flow represents single value map.
@@ -346,8 +348,8 @@ func (f Flow) sendShareOnly(ex Executor, val interface{}, tm time.Duration) (
 	err error) {
 
 	type sendShareOnly struct {
-		Miner NodeID   `mapstructure:"miner"`
-		Only  []NodeID `mapstructure:"only"`
+		Miner NodeName   `mapstructure:"miner"`
+		Only  []NodeName `mapstructure:"only"`
 	}
 
 	var sso sendShareOnly
@@ -367,8 +369,8 @@ func (f Flow) sendShareBad(ex Executor, val interface{}, tm time.Duration) (
 	err error) {
 
 	type sendShareBad struct {
-		Miner NodeID   `mapstructure:"miner"`
-		Bad   []NodeID `mapstructure:"bad"`
+		Miner NodeName   `mapstructure:"miner"`
+		Bad   []NodeName `mapstructure:"bad"`
 	}
 
 	var ssb sendShareBad
@@ -384,6 +386,19 @@ func (f Flow) sendShareBad(ex Executor, val interface{}, tm time.Duration) (
 	return ex.SendShareBad(ssb.Miner, ssb.Bad)
 }
 
+func (f Flow) waitNoProgress(ex Executor, tm time.Duration) (err error) {
+	return ex.WaitNoProgress(tm)
+}
+
+func (f Flow) setRevealed(name string, ex Executor, val interface{}, pin bool,
+	tm time.Duration) (err error) {
+
+	if ss, ok := getNodeNames(val); ok {
+		return ex.SetRevealed(ss, pin, tm)
+	}
+	return fmt.Errorf("invalid '%s' argument type: %T", name, val)
+}
+
 // Execute the flow directive.
 func (f Flow) Execute(ex Executor) (err error) {
 	var name, val, ok = f.getFirst()
@@ -394,7 +409,7 @@ func (f Flow) Execute(ex Executor) (err error) {
 	var tm time.Duration
 
 	// extract timeout
-	if msi, ok := val.(map[string]interface{}); ok {
+	if msi, ok := val.(map[interface{}]interface{}); ok {
 		if tmsi, ok := msi["timeout"]; ok {
 			tms, ok := tmsi.(string)
 			if !ok {
@@ -436,6 +451,12 @@ func (f Flow) Execute(ex Executor) (err error) {
 		return f.sendShareOnly(ex, val, tm)
 	case "send_share_bad":
 		return f.sendShareBad(ex, val, tm)
+	case "wait_no_progress":
+		return f.waitNoProgress(ex, tm)
+	case "set_revealed":
+		return f.setRevealed(name, ex, val, true, tm)
+	case "unset_revealed":
+		return f.setRevealed(name, ex, val, false, tm)
 	default:
 		return fmt.Errorf("unknown flow directive: %q", name)
 	}

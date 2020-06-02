@@ -314,3 +314,37 @@ minio:
   old_block_round_range: 20000000
   delete_local_copy: true
 ```
+
+# Integration tests
+
+#### Introduction
+
+Integration tests uses RPC server which controls the launch and behavior of nodes.
+The server called 'conductor' and placed in code/go/0chain.net/conductor/conductor.
+
+All integration tests described in docker.local/config/conductor.yml. Comment out
+some tests to disable them. Add more tests by needs.
+
+To build miners and sharders for integration tests use
+
+```
+./docker.local/bin/build.sharders-integration-tests.sh && ./docker.local/bin/build.miners-integration-tests.sh
+```
+
+Note:
+> Don't forget to rebuild miners and sharders again to return them to
+> non-testing state after the tests.
+> ```
+> ./docker.local/bin/build.sharders.sh && ./docker.local/bin/build.miners.sh
+> ```
+
+#### Start the tests
+
+- Check out tests cases and configurations ./docker.local/config/conductor.yml.
+- Check out ./docker.local/config/0chain.yml the 'integration_tests' part.
+- Build miners and sharders, following instruction above.
+- Start all tests.
+
+```
+./docker.local/bin/start.conductor.sh
+```

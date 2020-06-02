@@ -73,12 +73,14 @@ func NewSimpleNodes() SimpleNodes {
 //
 
 type globalNode struct {
-	ViewChange int64   `json:"view_change"`
-	MaxN       int     `json:"max_n"`
-	MinN       int     `json:"min_n"`
-	TPercent   float64 `json:"t_percent"`
-	KPercent   float64 `json:"k_percent"`
-	LastRound  int64   `json:"last_round"`
+	ViewChange   int64   `json:"view_change"`
+	MaxN         int     `json:"max_n"`
+	MinN         int     `json:"min_n"`
+	ShardersMaxN float64 `json:"sharders_max_n"`
+	ShardersMinN float64 `json:"sharders_min_n"`
+	TPercent     float64 `json:"t_percent"`
+	KPercent     float64 `json:"k_percent"`
+	LastRound    int64   `json:"last_round"`
 	// MaxStake boundary of SC.
 	MaxStake state.Balance `json:"max_stake"`
 	// MinStake boundary of SC.
@@ -578,6 +580,8 @@ type DKGMinerNodes struct {
 	K              int
 	N              int
 	RevealedShares map[string]int
+	// S              int         // number of sharders
+	// Sharders       SimpleNodes // sharders
 }
 
 func NewDKGMinerNodes() *DKGMinerNodes {

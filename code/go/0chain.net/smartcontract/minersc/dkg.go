@@ -185,6 +185,24 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI, pn *P
 func (msc *MinerSmartContract) createDKGMinersForContribute(balances cstate.StateContextI, gn *globalNode) error {
 	println("CREATE DKG MINER FOR CONTRIBUTE")
 
+	// allsharderslist, err := msc.getShardersList(balances)
+	// if err != nil {
+	// 	Logger.Error("createDKGMinersForContribute -- failed to get sharders list", zap.Any("error", err))
+	// 	return err
+	// }
+	// var sn int
+	// if len(allsharderslist.Nodes) < int(float64(gn.MinN)*gn.ShardersMinN) {
+	// 	return common.NewError("failed to create dkg miners", "too few sharders for dkg")
+	// }
+	// if len(allsharderslist.Nodes) > int(float64(gn.MaxN)*gn.ShardersMaxN) {
+	// 	sn = int(float64(gn.MaxN) * gn.ShardersMaxN)
+	// 	sort.Slice(allsharderslist.Nodes, func(i, j int) bool {
+	// 		return allsharderslist.Nodes[i].TotalStaked > allsharderslist.Nodes[j].TotalStaked
+	// 	})
+	// } else {
+	// 	sn = len(allsharderslist.Nodes)
+	// }
+
 	allminerslist, err := msc.GetMinersList(balances)
 	if err != nil {
 		Logger.Error("createDKGMinersForContribute -- failed to get miner list", zap.Any("error", err))
@@ -212,6 +230,15 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(balances cstate.Stat
 			break
 		}
 	}
+
+	// dkgMiners.S = sn
+	// for _, node := range allsharderslist.Nodes {
+	// 	dkgMiners.Sharders.SimpleNodes[node.ID] = node.SimpleNode
+	// 	if len(dkgMiners.Sharders.SimpleNodes) == dkgMiners.S {
+	// 		break
+	// 	}
+	// }
+
 	_, err = balances.InsertTrieNode(DKGMinersKey, dkgMiners)
 	if err != nil {
 		return err
@@ -519,7 +546,9 @@ func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction,
 			"share or signs failed validation")
 	}
 
+	println("(ADD REVEALED SHARES)", len(sos.ShareOrSigns), len(shares))
 	for _, share := range shares {
+		println("(ADD) REVEALED SHARES: ", share)
 		dmn.RevealedShares[share]++
 	}
 

@@ -114,6 +114,7 @@ type Runner struct {
 	waitContributeMPK      config.WaitContributeMpk      //
 	waitShareSignsOrShares config.WaitShareSignsOrShares //
 	waitAdd                config.WaitAdd                // add_miner, add_sharder
+	waitNoProgressUntil    time.Time                     //
 	// timeout and monitor
 	timer   *time.Timer // waiting timer
 	monitor NodeID      // monitor node
@@ -140,6 +141,8 @@ func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
 	case !r.waitViewChange.IsZero():
 		return tm, true
 	case !r.waitAdd.IsZero():
+		return tm, true
+	case !r.waitNoProgressUntil.IsZero():
 		return tm, true
 	}
 
@@ -218,6 +221,11 @@ func (r *Runner) acceptViewChange(vce *conductrpc.ViewChangeEvent) (err error) {
 	if vce.Sender != r.monitor {
 		return // not the monitor node
 	}
+
+	if !r.waitNoProgressUntil.IsZero() {
+		return fmt.Errorf("got VC %d, but 'no progress' is expected", vce.Round)
+	}
+
 	r.printViewChange(vce) // if verbose
 	var sender, ok = r.conf.Nodes.NodeByID(vce.Sender)
 	if !ok {
@@ -472,7 +480,7 @@ func (r *Runner) acceptContributeMPK(cmpke *conductrpc.ContributeMPKEvent) (
 		return // doesn't wait for a contribute MPK
 	}
 
-	if r.waitContributeMPK.MinerID != cmpke.MinerID {
+	if r.waitContributeMPK.Miner != miner.Name {
 		return // not the miner waiting for
 	}
 
@@ -510,7 +518,7 @@ func (r *Runner) acceptShareOrSignsShares(
 		return // doesn't wait for a soss
 	}
 
-	if r.waitShareSignsOrShares.MinerID != sosse.MinerID {
+	if r.waitShareSignsOrShares.Miner != miner.Name {
 		return // not the miner waiting for
 	}
 
@@ -547,7 +555,14 @@ func (r *Runner) proceedWaiting() (err error) {
 			err = r.acceptContributeMPK(cmpke)
 		case sosse := <-r.server.OnShareOrSignsShares():
 			err = r.acceptShareOrSignsShares(sosse)
-		case <-tm.C:
+		case timeout := <-tm.C:
+			if !r.waitNoProgressUntil.IsZero() {
+				if timeout.UnixNano() >= r.waitNoProgressUntil.UnixNano() {
+					r.waitNoProgressUntil = time.Time{} // reset
+					return
+				}
+				println("WIRED TIMEOUT")
+			}
 			return fmt.Errorf("timeout error")
 		}
 		if err != nil {
@@ -726,14 +741,13 @@ func (r *Runner) WaitRound(wr config.WaitRound, tm time.Duration) (err error) {
 func (r *Runner) WaitContributeMpk(wcmpk config.WaitContributeMpk,
 	tm time.Duration) (err error) {
 
+	var miner, ok = r.conf.Nodes.NodeByName(wcmpk.Miner)
+	if !ok {
+		return fmt.Errorf("unknown miner: %q", wcmpk.Miner)
+	}
+
 	if r.verbose {
-		var miner, ok = r.conf.Nodes.NodeByID(wcmpk.MinerID)
-		if ok {
-			log.Print(" [INF] wait for contribute MPK by ", miner.Name)
-		} else {
-			log.Print(" [INF] wait for contribute MPK", wcmpk.MinerID,
-				"(unknown)")
-		}
+		log.Print(" [INF] wait for contribute MPK by ", miner.Name)
 	}
 
 	r.setupTimeout(tm)
@@ -744,13 +758,13 @@ func (r *Runner) WaitContributeMpk(wcmpk config.WaitContributeMpk,
 func (r *Runner) WaitShareSignsOrShares(ssos config.WaitShareSignsOrShares,
 	tm time.Duration) (err error) {
 
+	var miner, ok = r.conf.Nodes.NodeByName(ssos.Miner)
+	if !ok {
+		return fmt.Errorf("unknown miner: %v", ssos.Miner)
+	}
+
 	if r.verbose {
-		var miner, ok = r.conf.Nodes.NodeByID(ssos.MinerID)
-		if ok {
-			log.Print(" [INF] wait for SOSS by ", miner.Name)
-		} else {
-			log.Print(" [INF] wait for SOSS by ", ssos.MinerID, "(unknown)")
-		}
+		log.Print(" [INF] wait for SOSS by ", miner.Name)
 	}
 
 	r.setupTimeout(tm)
@@ -770,12 +784,83 @@ func (r *Runner) WaitAdd(wadd config.WaitAdd, tm time.Duration) (err error) {
 	return
 }
 
-func (r *Runner) SendShareOnly(miner NodeID, only []NodeID) (err error) {
-	r.server.SetSendShareOnly(miner, only)
+func (r *Runner) SendShareOnly(miner NodeName, only []NodeName) (err error) {
+
+	var (
+		minerID NodeID
+		onlyIDs = make([]NodeID, 0, len(only))
+	)
+
+	var m, ok = r.conf.Nodes.NodeByName(miner)
+	if !ok {
+		return fmt.Errorf("unexpected node: %q", miner)
+	}
+	minerID = m.ID
+
+	for _, name := range only {
+		if m, ok = r.conf.Nodes.NodeByName(name); !ok {
+			return fmt.Errorf("unexpected node: %q", miner)
+		}
+		onlyIDs = append(onlyIDs, m.ID)
+	}
+
+	r.server.SetSendShareOnly(minerID, onlyIDs)
 	return
 }
 
-func (r *Runner) SendShareBad(miner NodeID, bad []NodeID) (err error) {
-	r.server.SetSendShareBad(miner, bad)
+func (r *Runner) SendShareBad(miner NodeName, bad []NodeName) (err error) {
+
+	var (
+		badIDs  = make([]NodeID, 0, len(bad))
+		minerID NodeID
+	)
+
+	println("SEND BAD BY", fmt.Sprintf("%q", miner))
+	var m, ok = r.conf.Nodes.NodeByName(miner)
+	if !ok {
+		return fmt.Errorf("SendShareBad: unexpected node: %q", miner)
+	}
+	minerID = m.ID
+
+	for _, name := range bad {
+		println("SEND BAD TO", fmt.Sprintf("%q", name))
+		if m, ok = r.conf.Nodes.NodeByName(name); !ok {
+			return fmt.Errorf("SendShareBad (to): unexpected node: %q", name)
+		}
+		badIDs = append(badIDs, m.ID)
+	}
+
+	r.server.SetSendShareBad(minerID, badIDs)
+	return
+}
+
+func (r *Runner) SetRevealed(ss []NodeName, pin bool, tm time.Duration) (
+	err error) {
+
+	var (
+		ssIDs = make([]NodeID, 0, len(ss))
+	)
+
+	for _, name := range ss {
+		println("SEND REV. TO", fmt.Sprintf("%q", name))
+		var m, ok = r.conf.Nodes.NodeByName(name)
+		if !ok {
+			return fmt.Errorf("SetRevealed (%t): unexpected node: %q", pin,
+				name)
+		}
+		ssIDs = append(ssIDs, m.ID)
+	}
+
+	r.server.SetRevealed(ssIDs, pin)
+	return
+}
+
+func (r *Runner) WaitNoProgress(wait time.Duration) (err error) {
+	if r.verbose {
+		log.Print(" [INF] wait no progress ", wait.String())
+	}
+
+	r.waitNoProgressUntil = time.Now().Add(wait)
+	r.setupTimeout(wait)
 	return
 }

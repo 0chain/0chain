@@ -60,11 +60,13 @@ func (msc *MinerSmartContract) InitSC() {
 	Logger.Debug("using integration test",
 		zap.String("address", msc.client.Address()))
 
+	// wrapped
 	msc.smartContractFunctions["add_miner"] = msc.AddMinerIntegrationTests
 	msc.smartContractFunctions["add_sharder"] = msc.AddSharderIntegrationTests
 	msc.smartContractFunctions["payFees"] = msc.payFeesIntegrationTests
 	msc.smartContractFunctions["contributeMpk"] = msc.contributeMpkIntegrationTests
 	msc.smartContractFunctions["shareSignsOrShares"] = msc.shareSignsOrSharesIntegrationTests
+	// as is
 	msc.smartContractFunctions["update_settings"] = msc.UpdateSettings
 	msc.smartContractFunctions["addToDelegatePool"] = msc.addToDelegatePool
 	msc.smartContractFunctions["deleteFromDelegatePool"] = msc.deleteFromDelegatePool
@@ -72,7 +74,7 @@ func (msc *MinerSmartContract) InitSC() {
 }
 
 func newConductRPCClient() (client *conductrpc.Client, err error) {
-	return conductrpc.NewClient(viper.GetString("testing.address"))
+	return conductrpc.NewClient(viper.GetString("integration_tests.address"))
 }
 
 func (msc *MinerSmartContract) AddMinerIntegrationTests(

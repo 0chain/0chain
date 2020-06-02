@@ -152,3 +152,11 @@ func (c *Client) SendShareBad(me NodeID) (bad []NodeID, err error) {
 	}
 	return
 }
+
+func (c *Client) IsRevealed(node NodeID) (pin bool, err error) {
+	err = c.client.Call("Server.IsRevealed", node, &pin)
+	for err == rpc.ErrShutdown {
+		err = c.client.Call("Server.IsRevealed", node, &pin)
+	}
+	return
+}

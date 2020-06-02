@@ -39,35 +39,7 @@ import (
 	"0chain.net/smartcontract/setupsc"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
-
-	"0chain.net/conductor/conductrpc"
 )
-
-// start lock, where the sharder is ready to connect to blockchain (BC)
-func integrationsTestsLock(id string) {
-	if !viper.GetBool("testing.enabled") {
-		return // regular start
-	}
-	var (
-		client, err = conductrpc.NewClient(viper.GetString("testing.address"))
-		interval    = viper.GetDuration("testing.lock_interval")
-		join        bool
-	)
-	if err != nil {
-		panic("creating RPC client: " + err.Error())
-	}
-	for {
-		join, err = client.NodeReady(conductrpc.NodeID(id))
-		if err != nil {
-			log.Fatal(err)
-		}
-		if join {
-			return // can join blockchain
-		}
-		// otherwise, have to wait, retry after the interval
-		time.Sleep(interval)
-	}
-}
 
 var mpks map[bls.PartyID][]bls.PublicKey
 
@@ -174,7 +146,8 @@ func main() {
 	Logger.Info("Chain info", zap.String("chain_id", config.GetServerChainID()), zap.String("mode", mode))
 	Logger.Info("Self identity", zap.Any("set_index", node.Self.Underlying().SetIndex), zap.Any("id", node.Self.Underlying().GetKey()))
 
-	integrationsTestsLock(node.Self.Underlying().GetKey())
+	initIntegrationsTests(node.Self.Underlying().GetKey())
+	defer shutdownIntegrationTests()
 
 	var server *http.Server
 	if config.Development() {

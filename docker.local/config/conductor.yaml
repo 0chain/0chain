@@ -72,7 +72,12 @@ nodes:
 enable:
   # - "Outside miner comes up in phase X"
   # - "Miner goes down in phase X and doesn't come up in the same view change"
-  - "Outside miner goes down in phase X and doesn't come up in the same view change"
+  # - "Outside miner goes down in phase X and doesn't come up in the same view change"
+  # - "Miner goes down and up"
+  # - "Artificially force X miner to send bad share to Y miners"
+  # - "Artificially force X miner to send share to Y miners only"
+  # - "Down and up on VC rounds"
+  - "Revealed"
 
 #
 # sets of test cases
@@ -87,6 +92,7 @@ sets:
       - "Outside miner comes up in phase 'share'"
       - "Outside miner comes up in phase 'publish'"
       - "Outside miner comes up in phase 'wait'"
+
   - name: "Miner goes down in phase X and doesn't come up in the same view change"
     tests:
       - "Miner goes down in phase 'start' and doesn't come up"
@@ -94,21 +100,41 @@ sets:
       - "Miner goes down in phase 'share' and doesn't come up"
       - "Miner goes down in phase 'publish' and doesn't come up"
       - "Miner goes down in phase 'wait' and doesn't come up"
+
   - name: "Outside miner goes down in phase X and doesn't come up in the same view change"
     tests:
       - "Outside miner goes down in phase 'start' and doesn't come up"
       - "Outside miner goes down in phase 'contribute' and doesn't come up"
       - "Outside miner goes down in phase 'share' and doesn't come up"
       - "Outside miner goes down in phase 'publish' and doesn't come up"
-      - "Outside miner goes down in phase 'wait' and doesn't come up"
-  # TODO
-  - name: "Outside miner goes down in phase X and doesn't come up in the same view change"
+
+  - name: "Miner goes down and up"
     tests:
-      - "Outside miner goes down in phase 'start' and doesn't come up"
-      - "Outside miner goes down in phase 'contribute' and doesn't come up"
-      - "Outside miner goes down in phase 'share' and doesn't come up"
-      - "Outside miner goes down in phase 'publish' and doesn't come up"
-      - "Outside miner goes down in phase 'wait' and doesn't come up"
+      - "Miner goes down in phase 'start' and comes up in phase 'start'"
+      - "Miner goes down in phase 'start' (already registered) and comes up in phase 'contribute'"
+      - "Miner goes down in phase 'contribute' (after sending mpk) and comes up in phase 'share'"
+      - "Miner goes down in phase 'publish' (after publishing signOrShares) and comes up in next VC"
+
+  - name: "Artificially force X miner to send bad share to Y miners"
+    tests:
+      - "Artificially force 1 miner to send bad share to 1 miners"
+      - "Artificially force 1 miner to send bad share to 2 miners"
+      - "Artificially force 1 miner to send bad share to 3 miners"
+      - "Artificially force 2 miner to send bad share to 2 miners"
+
+  - name: "Artificially force X miner to send share to Y miners only"
+    tests:
+      - "Artificially force 1 miner to send share to 2 miners only"
+      - "Artificially force 1 miner to send share to 1 miners only"
+      - "Artificially force 2 miner to send share to 2 miners only"
+
+  - name: "Down and up on VC rounds"
+    tests:
+      - "Miner goes down on 497 round, and comes up on 500"
+
+  - name: "Revealed"
+    tests:
+      - "Revealed"
 
 
 #
@@ -475,6 +501,245 @@ tests:
             round: 501
             sharders: ['sharder 1']
             miners: ['miner 1', 'miner 2', 'miner 3', 'miner 5']
+      - wait_view_change:
+          expect_magic_block:
+            round: 751
+            sharders: ['sharder 1']
+            miners: ['miner 1', 'miner 2', 'miner 3']
+
+  # Miner goes down and up
+
+  - name: "Miner goes down in phase 'start' and comes up in phase 'start'"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4']
+      - wait_add:
+          miners: ['miner 4']
+      - stop: ['miner 4']
+      - start: ['miner 4']
+      - wait_view_change:
+          expect_magic_block:
+            round: 251
+            sharders: ['sharder 1']
+            miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
+
+  - name: "Miner goes down in phase 'start' (already registered) and comes up in phase 'contribute'"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4']
+      - wait_add:
+          miners: ['miner 4']
+      - stop: ['miner 4']
+      - start_lock: ['miner 4']
+      - wait_phase:
+          phase: 'contribute'
+      - unlock: ['miner 4']
+      - wait_view_change:
+          expect_magic_block:
+            round: 251
+            sharders: ['sharder 1']
+            miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
+
+  - name: "Miner goes down in phase 'contribute' (after sending mpk) and comes up in phase 'share'"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4']
+      - wait_contribute_mpk:
+          miner: 'miner 4'
+      - stop: ['miner 4']
+      - start_lock: ['miner 4']
+      - wait_phase:
+          phase: 'share'
+      - unlock: ['miner 4']
+      - wait_view_change:
+          expect_magic_block:
+            round: 251
+            sharders: ['sharder 1']
+            miners: ['miner 1', 'miner 2', 'miner 3']
+      - wait_view_change:
+          expect_magic_block:
+            round: 501
+            sharders: ['sharder 1']
+            miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
+
+  - name: "Miner goes down in phase 'publish' (after publishing signOrShares) and comes up in next VC"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4']
+      - wait_share_signs_or_shares:
+          miner: 'miner 4'
+      - stop: ['miner 4']
+      - start_lock: ['miner 4']
+      - wait_view_change:
+          expect_magic_block:
+            round: 251
+            sharders: ['sharder 1']
+            miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
+      - unlock: ['miner 4']
+      - wait_view_change:
+          expect_magic_block:
+            round: 501
+            sharders: ['sharder 1']
+            miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
+
+  # "Artificially force X miner to send bad share to Y miners"
+
+  - name: "Artificially force 1 miner to send bad share to 1 miners"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4']
+      - send_share_bad:
+          miner: 'miner 4'
+          bad: ['miner 1']
+      - wait_view_change:
+          expected_magic_block:
+            round: 251
+            sharders: ['sharder 1']
+            mienrs: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
+
+  - name: "Artificially force 1 miner to send bad share to 2 miners"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4']
+      - send_share_bad:
+          miner: 'miner 4'
+          bad: ['miner 1', 'miner 2']
+      - wait_view_change:
+          expected_magic_block:
+            round: 251
+            sharders: ['sharder 1']
+            mienrs: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
+
+  - name: "Artificially force 1 miner to send bad share to 3 miners"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4']
+      - send_share_bad:
+          miner: 'miner 4'
+          bad: ['miner 1', 'miner 2', 'miner 3']
+      - wait_view_change:
+          expected_magic_block:
+            round: 251
+            sharders: ['sharder 1']
+            mienrs: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
+
+  - name: "Artificially force 2 miner to send bad share to 2 miners"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4']
+      - send_share_bad:
+          miner: 'miner 4'
+          bad: ['miner 1', 'miner 2']
+      - send_share_bad:
+          miner: 'miner 3'
+          bad: ['miner 1', 'miner 2']
+      - wait_view_change:
+          expected_magic_block:
+            round: 251
+            sharders: ['sharder 1']
+            mienrs: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
+
+  # "Artificially force X miner to send share to Y miners only"
+
+  - name: "Artificially force 1 miner to send share to 2 miners only"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4']
+      - send_share_only:
+          miner: 'miner 4'
+          only: ['miner 1', 'miner 2']
+      - wait_view_change:
+          expect_magic_block:
+            round: 251
+            sharders: ['sharder 1']
+            miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
+
+  - name: "Artificially force 1 miner to send share to 1 miners only"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4']
+      - send_share_only:
+          miner: 'miner 4'
+          only: ['miner 1', 'miner 2']
+      - wait_view_change:
+          expect_magic_block:
+            round: 251
+            sharders: ['sharder 1']
+            miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
+
+  - name: "Artificially force 2 miner to send share to 2 miners only"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4']
+      - send_share_only:
+          miner: 'miner 4'
+          only: ['miner 1', 'miner 2']
+      - send_share_only:
+          miner: 'miner 3'
+          only: ['miner 1', 'miner 2']
+      - wait_view_change:
+          expect_magic_block:
+            round: 251
+            sharders: ['sharder 1']
+            miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
+
+  # between 497 and 500 rounds
+
+  - name: "Miner goes down on 497 round, and comes up on 500"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4', 'miner 5']
+      - wait_view_change:
+          expect_magic_block:
+            round: 251
+            sharders: ['sharder 1']
+            miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4', 'miner 5']
+      - stop: ['miner 5']
+      - wait_round:
+          round: 497
+      - stop: ['miner 3']         # async stop/start would be better to don't
+      - wait_view_change:
+          expect_magic_block:
+            round: 501
+            miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
+            sharders: ['sharder 1']
+      - start: ['miner 3']
+      - wait_view_change:
+          expect_magic_block:
+            round: 751
+            miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
+            sharders: ['sharder 1']
+
+  - name: "Revealed"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3']
+      - set_revealed: ['miner 1']
+      - wait_view_change:
+          expect_magic_block:
+            round: 251
+            sharders: ['sharder 1']
+            miners: ['miner 1', 'miner 2', 'miner 3']
+      - set_revealed: ['miner 2']
+      - wait_view_change:
+          expect_magic_block:
+            round: 501
+            sharders: ['sharder 1']
+            miners: ['miner 1', 'miner 2', 'miner 3']
+      - set_revealed: ['miner 3']
       - wait_view_change:
           expect_magic_block:
             round: 751

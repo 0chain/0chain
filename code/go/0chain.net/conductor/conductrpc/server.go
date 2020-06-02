@@ -68,16 +68,20 @@ const (
 )
 
 type nodeSetups struct {
-	lock    bool          // node should be locked on start, waiting unlocking
-	counter int           // node ready calling counter (server's channel sending condition)
-	only    chan []NodeID // send shares only to given nodes
-	bad     chan []NodeID // send bad shares to given node (regardless the 'only' list)
+	lock     bool          // node should be locked on start, waiting unlocking
+	counter  int           // node ready calling counter (server's channel sending condition)
+	only     chan []NodeID // send shares only to given nodes
+	bad      chan []NodeID // send bad shares to given node (regardless the 'only' list)
+	revealed chan bool     // reveled
 }
 
-func newNodeSetups() (ns *nodeSetups) {
+func newNodeSetups(lock bool) (ns *nodeSetups) {
 	ns = new(nodeSetups)
+	ns.counter = 0
+	ns.lock = lock
 	ns.only = make(chan []NodeID, 10)
 	ns.bad = make(chan []NodeID, 10)
+	ns.revealed = make(chan bool, 10)
 	return
 }
 
@@ -157,7 +161,7 @@ func (s *Server) AddNode(nodeID NodeID, lock bool) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	s.setups[nodeID] = &nodeSetups{counter: 0, lock: lock}
+	s.setups[nodeID] = newNodeSetups(lock)
 }
 
 // UnlockNode unlocks a miner.
@@ -210,12 +214,50 @@ func (s *Server) nodeSendShareBad(miner NodeID) chan []NodeID {
 	return ns.bad
 }
 
+func (s *Server) nodeSetRevealed(node NodeID) chan bool {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	var ns, ok = s.setups[node]
+	if !ok {
+		return nil
+	}
+	return ns.revealed
+}
+
 func (s *Server) SetSendShareOnly(miner NodeID, only []NodeID) {
-	go func() { s.nodeSendShareOnly(miner) <- only }()
+	println("(SERVER) SEND SHARE ONLY")
+	go func() {
+		onlyChan := s.nodeSendShareOnly(miner)
+		if onlyChan == nil {
+			panic("ONLY CHAN IS NIL (FATALITY)")
+		}
+		onlyChan <- only
+	}()
 }
 
 func (s *Server) SetSendShareBad(miner NodeID, bad []NodeID) {
-	go func() { s.nodeSendShareBad(miner) <- bad }()
+	println("(SERVER) SEND SHARE BAD")
+	go func() {
+		badChan := s.nodeSendShareBad(miner)
+		if badChan == nil {
+			panic("BAD CHAN IS NIL (FATALITY!)")
+		}
+		badChan <- bad
+	}()
+}
+
+func (s *Server) SetRevealed(nodes []NodeID, pin bool) {
+	println("(SERVER) SET REVEALED")
+	for _, nodeID := range nodes {
+		go func(nodeID NodeID) {
+			revChan := s.nodeSetRevealed(nodeID)
+			if revChan == nil {
+				panic("REV. CHAN IS NIL (FATALITY!)")
+			}
+			revChan <- pin
+		}(nodeID)
+	}
 }
 
 // events handling
@@ -363,6 +405,16 @@ func (s *Server) SendShareBad(miner NodeID, bad *[]NodeID) (err error) {
 	select {
 	case b := <-s.nodeSendShareBad(miner):
 		*bad = b
+	case <-s.quit:
+		return
+	}
+	return
+}
+
+func (s *Server) IsRevealed(node NodeID, pin *bool) (err error) {
+	select {
+	case p := <-s.nodeSetRevealed(node):
+		*pin = p
 	case <-s.quit:
 		return
 	}
