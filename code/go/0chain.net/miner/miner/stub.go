@@ -4,4 +4,4 @@ package main
 
 // stubs that does nothing
 func initIntegrationsTests(id string) {}
-func shutdownIntegrationTests()
+func shutdownIntegrationTests()       {}
