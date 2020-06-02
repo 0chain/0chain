@@ -246,6 +246,9 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 	conf.MaxStake = state.Balance(scc.GetFloat64(pfx+"max_stake") * 1e10)
 	conf.MinAllocSize = scc.GetInt64(pfx + "min_alloc_size")
 	conf.MinAllocDuration = scc.GetDuration(pfx + "min_alloc_duration")
+	conf.MaxChallengeCompletionTime = scc.GetDuration(pfx + "max_challenge_completion_time")
+	conf.MinOfferDuration = scc.GetDuration(pfx + "min_offer_duration")
+	conf.MinBlobberCapacity = scc.GetInt64(pfx + "min_blobber_capacity")
 	conf.ValidatorReward = scc.GetFloat64(pfx + "validator_reward")
 	conf.BlobberSlash = scc.GetFloat64(pfx + "blobber_slash")
 	conf.MaxReadPrice = state.Balance(

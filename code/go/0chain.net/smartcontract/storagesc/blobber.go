@@ -288,6 +288,140 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	return string(newBlobber.Encode()), nil
 }
 
+func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction,
+	input []byte, balances cstate.StateContextI) (resp string, err error) {
+
+	var conf *scConfig
+	if conf, err = sc.getConfig(balances, true); err != nil {
+		return "", common.NewError("update_blobber_settings_failed",
+			"can't get SC configurations: "+err.Error())
+	}
+
+	var all *StorageNodes
+	if all, err = sc.getBlobbersList(balances); err != nil {
+		return "", common.NewError("update_blobber_settings_failed",
+			"Failed to get blobber list: "+err.Error())
+	}
+
+	var update = new(StorageNode)
+	if err = update.Decode(input); err != nil {
+		return "", common.NewError("update_blobber_settings_failed",
+			"malformed request: "+err.Error())
+	}
+
+	// when capacity is 0, then the blobber want be removed
+	if update.Capacity > 0 {
+		// terms and capacity validated here
+		if err = update.validate(conf); err != nil {
+			return "", common.NewError("update_blobber_settings_failed",
+				"invalid values in request: "+err.Error())
+		}
+	} else {
+		// validate given terms anyway
+		if err = update.Terms.validate(conf); err != nil {
+			return "", common.NewError("update_blobber_settings_failed",
+				"invalid new terms in request: "+err.Error())
+		}
+	}
+
+	var blob *StorageNode
+	if blob, err = sc.getBlobber(update.ID, balances); err != nil {
+		return "", common.NewError("update_blobber_settings_failed",
+			"can't get the blobber: "+err.Error())
+	}
+
+	var sp *stakePool
+	if sp, err = sc.getStakePool(update.ID, balances); err != nil {
+		return "", common.NewError("update_blobber_settings_failed",
+			"can't get related stake pool: "+err.Error())
+	}
+
+	if sp.Settings.DelegateWallet == "" {
+		return "", common.NewError("update_blobber_settings_failed",
+			"blobber's delegate_wallet is not set")
+	}
+
+	if t.ClientID != sp.Settings.DelegateWallet {
+		return "", common.NewError("update_blobber_settings_failed",
+			"access denied, allowed for delegate_wallet owner only")
+	}
+
+	// stake pool settings
+
+	err = conf.validateStakeRange(
+		update.StakePoolSettings.MinStake, update.StakePoolSettings.MaxStake,
+	)
+	if err != nil {
+		return "", common.NewError("update_blobber_settings_failed",
+			"validating new settings: "+err.Error())
+	}
+
+	sp.Settings.MinStake = update.StakePoolSettings.MinStake
+	sp.Settings.MaxStake = update.StakePoolSettings.MaxStake
+
+	if nd := update.StakePoolSettings.NumDelegates; nd <= 0 {
+		return "", common.NewError("update_blobber_settings_failed",
+			"invalid num_delegates <= 0")
+	}
+
+	sp.Settings.NumDelegates = update.StakePoolSettings.NumDelegates
+
+	// blobber settings
+	blob.Terms = update.Terms
+	blob.Capacity = update.Capacity
+
+	if blob.Capacity == 0 {
+		// if already removed
+		if update.Capacity == 0 {
+			// keep removed
+		} else {
+			// reborn
+			sc.statIncr(statNumberOfBlobbers)
+			all.Nodes.add(blob)
+		}
+		sc.statIncr(statUpdateBlobber)
+	} else {
+		// alive blobber
+		if update.Capacity == 0 {
+			// remove
+			all.Nodes.remove(blob.ID)
+			sc.statIncr(statRemoveBlobber)
+			sc.statDecr(statNumberOfBlobbers)
+		} else {
+			// keep alive
+			all.Nodes.add(blob)
+			sc.statIncr(statUpdateBlobber)
+		}
+	}
+
+	if err != nil {
+		return "", common.NewError("update_blobber_settings_failed",
+			err.Error())
+	}
+
+	// save the all
+	_, err = balances.InsertTrieNode(ALL_BLOBBERS_KEY, all)
+	if err != nil {
+		return "", common.NewError("update_blobber_settings_failed",
+			"saving all blobbers: "+err.Error())
+	}
+
+	// save the blobber
+	_, err = balances.InsertTrieNode(blob.GetKey(sc.ID), blob)
+	if err != nil {
+		return "", common.NewError("update_blobber_settings_failed",
+			"saving blobber: "+err.Error())
+	}
+
+	// save stake pool
+	if err = sp.save(sc.ID, blob.ID, balances); err != nil {
+		return "", common.NewError("update_blobber_settings_failed",
+			"saving stake pool: "+err.Error())
+	}
+
+	return string(blob.Encode()), nil
+}
+
 func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	input []byte, balances cstate.StateContextI) (string, error) {
 

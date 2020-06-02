@@ -245,6 +245,10 @@ func (t *Terms) validate(conf *scConfig) (err error) {
 	if t.ChallengeCompletionTime < 0 {
 		return errors.New("negative challenge_completion_time")
 	}
+	if t.ChallengeCompletionTime > conf.MaxChallengeCompletionTime {
+		return errors.New("challenge_completion_time is greater then max " +
+			"allowed by SC")
+	}
 	if t.ReadPrice > conf.MaxReadPrice {
 		return errors.New("read_price is greater then max_read_price allowed")
 	}
