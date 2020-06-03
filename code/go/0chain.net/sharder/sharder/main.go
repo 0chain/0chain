@@ -67,7 +67,13 @@ func processMinioConfig(reader io.Reader) error {
 		return common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
 	}
 
-	blockstore.MinioConfig.BucketName = scanner.Text()
+	blockstore.MinioConfig.TierBucketName = scanner.Text()
+	more = scanner.Scan()
+	if more == false {
+		return common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
+	}
+
+	blockstore.MinioConfig.CopyBucketName = scanner.Text()
 	more = scanner.Scan()
 	if more == false {
 		return common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
