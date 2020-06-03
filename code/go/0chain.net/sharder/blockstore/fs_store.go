@@ -35,8 +35,10 @@ type MinioConfiguration struct {
 	StorageServiceURL string
 	AccessKeyID       string
 	SecretAccessKey   string
-	BucketName        string
+	TierBucketName    string
+	CopyBucketName    string
 	BucketLocation    string
+	DeleteLocal       bool
 }
 
 var MinioConfig MinioConfiguration
@@ -60,20 +62,28 @@ func (fbs *FSBlockStore) intializeMinio() {
 		Logger.Error("Unable to initiaze minio cliet", zap.Error(err))
 		panic(err)
 	}
-	err = minioClient.MakeBucket(MinioConfig.BucketName, MinioConfig.BucketLocation)
+	fbs.Minio = minioClient
+	fbs.checkBucket(MinioConfig.TierBucketName)
+	if len(MinioConfig.CopyBucketName) > 0 {
+		fbs.checkBucket(MinioConfig.CopyBucketName)
+	}
+	MinioConfig.DeleteLocal = viper.GetBool("minio.delete_local_copy")
+}
+
+func (fbs *FSBlockStore) checkBucket(bucketName string) {
+	err := fbs.Minio.MakeBucket(bucketName, MinioConfig.BucketLocation)
 	if err != nil {
 		Logger.Error("Error with make bucket, Will check if bucket exists", zap.Error(err))
-		exists, errBucketExists := minioClient.BucketExists(MinioConfig.BucketName)
+		exists, errBucketExists := fbs.Minio.BucketExists(bucketName)
 		if errBucketExists == nil && exists {
-			Logger.Info("We already own ", zap.Any("bucket_name", MinioConfig.BucketName))
+			Logger.Info("We already own ", zap.Any("bucket_name", bucketName))
 		} else {
-			Logger.Error("Minio bucket error", zap.Error(errBucketExists), zap.Any("bucket_name", MinioConfig.BucketName))
+			Logger.Error("Minio bucket error", zap.Error(errBucketExists), zap.Any("bucket_name", bucketName))
 			panic(errBucketExists)
 		}
 	} else {
-		Logger.Info(MinioConfig.BucketName + " bucket successfully created")
+		Logger.Info(bucketName + " bucket successfully created")
 	}
-	fbs.Minio = minioClient
 }
 
 func (fbs *FSBlockStore) getFileWithoutExtension(hash string, round int64) string {
@@ -223,11 +233,19 @@ func (fbs *FSBlockStore) DeleteBlock(b *block.Block) error {
 
 func (fbs *FSBlockStore) UploadToCloud(hash string, round int64) error {
 	filePath := fbs.getFileName(hash, round)
-	_, err := fbs.Minio.FPutObject(MinioConfig.BucketName, hash, filePath, minio.PutObjectOptions{})
+	_, err := fbs.Minio.FPutObject(MinioConfig.TierBucketName, hash, filePath, minio.PutObjectOptions{})
 	if err != nil {
 		return err
 	}
-	if viper.GetBool("minio.delete_local_copy") {
+
+	if len(MinioConfig.CopyBucketName) > 0 {
+		_, err := fbs.Minio.FPutObject(MinioConfig.CopyBucketName, hash, filePath, minio.PutObjectOptions{})
+		if err != nil {
+			return err
+		}
+	}
+
+	if MinioConfig.DeleteLocal {
 		return os.Remove(filePath)
 	}
 	return nil
@@ -235,5 +253,5 @@ func (fbs *FSBlockStore) UploadToCloud(hash string, round int64) error {
 
 func (fbs *FSBlockStore) DownloadFromCloud(hash string, round int64) error {
 	filePath := fbs.getFileName(hash, round)
-	return fbs.Minio.FGetObject(MinioConfig.BucketName, hash, filePath, minio.GetObjectOptions{})
+	return fbs.Minio.FGetObject(MinioConfig.TierBucketName, hash, filePath, minio.GetObjectOptions{})
 }
