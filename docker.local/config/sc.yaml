@@ -12,12 +12,12 @@ smart_contracts:
     max_mint: 4000000.0
 
   minersc:
-    max_n: 100
-    min_n: 3
+    max_n: 100 # 5
+    min_n: 3   # 2
     sharders_max_n: 0.30 # 30%
     sharders_min_n: 0.30 # 30%
     t_percent: .51
-    k_percent: .75
+    k_percent: .75 # 0.6
     min_stake: 0.01 # min stake can be set by a node (boundary for all nodes)
     max_stake: 100.0 # max stake can be set by a node (boundary for all nodes)
     start_rounds: 50 # 20

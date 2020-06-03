@@ -76,7 +76,7 @@ enable:
   - "Miner goes down and up"
   - "Artificially force X miner to send bad share to Y miners"
   - "Artificially force X miner to send share to Y miners only"
-  # - "Down and up on VC rounds" # FAILED
+  - "Down and up on VC rounds"
   - "Revealed"
 
 #
@@ -130,7 +130,8 @@ sets:
 
   - name: "Down and up on VC rounds"
     tests:
-      - "Miner goes down on 497 round, and comes up on 501"
+      - "Miner goes down on 497 round, and comes up on shortly"
+      - "Two mines goes down on 497 round, and comes up on shortly"
 
   - name: "Revealed"
     tests:
@@ -696,7 +697,7 @@ tests:
 
   # between 497 and 500 rounds
 
-  - name: "Miner goes down on 497 round, and comes up on 501"
+  - name: "Miner goes down on 497 round, and comes up on shortly"
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
@@ -709,16 +710,33 @@ tests:
       - stop: ['miner 5']
       - wait_round:
           round: 497
-      - stop: ['miner 3'] # todo(?): async stop/start would be better here
+      - stop: ['miner 3']
+      - start: ['miner 3']
       - wait_view_change:
+          timeout: 2m
           expect_magic_block:
             round: 501
             miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
             sharders: ['sharder 1']
-      - start: ['miner 3']
+
+  - name: "Two mines goes down on 497 round, and comes up on shortly"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4', 'miner 5']
       - wait_view_change:
           expect_magic_block:
-            round: 751
+            round: 251
+            sharders: ['sharder 1']
+            miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4', 'miner 5']
+      - wait_round:
+          round: 497
+      - stop: ['miner 3', 'miner 5']
+      - start: ['miner 3', 'miner 5']
+      - wait_view_change:
+          timeout: 2m
+          expect_magic_block:
+            round: 501
             miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
             sharders: ['sharder 1']
 

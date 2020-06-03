@@ -218,6 +218,7 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 		Logger.Error("failed to set hex share", zap.Any("vrfs_share", vrfs.Share), zap.Any("message", msg))
 		return false
 	}
+
 	partyID := bls.ComputeIDdkg(vrfs.GetParty().ID)
 
 	currentDKG := mc.GetCurrentDKG(roundNumber)
@@ -229,10 +230,19 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 	if !currentDKG.VerifySignature(&share, msg, partyID) {
 		stringID := (&partyID).GetHexString()
 		pi := currentDKG.GetPublicKeyByID(partyID)
-		Logger.Error("failed to verify share", zap.Any("share", share.GetHexString()), zap.Any("message", msg), zap.Any("from", stringID), zap.Any("pi", pi.GetHexString()))
+		Logger.Error("failed to verify share",
+			zap.Any("share", share.GetHexString()),
+			zap.Any("message", msg),
+			zap.Any("from", stringID),
+			zap.Any("pi", pi.GetHexString()),
+			zap.String("node_id", vrfs.GetParty().GetKey()))
 		return false
 	} else {
-		Logger.Info("verified vrf", zap.Any("share", share.GetHexString()), zap.Any("message", msg), zap.Any("from", (&partyID).GetHexString()))
+		Logger.Info("verified vrf",
+			zap.Any("share", share.GetHexString()),
+			zap.Any("message", msg),
+			zap.Any("from", (&partyID).GetHexString()),
+			zap.String("node_id", vrfs.GetParty().GetKey()))
 	}
 	if vrfs.GetRoundTimeoutCount() != mr.GetTimeoutCount() {
 		//Keep VRF timeout and round timeout in sync. Same vrfs will comeback during soft timeouts

@@ -177,6 +177,7 @@ func (msc *MinerSmartContract) getGlobalNode(balances cstate.StateContextI) (
 	gn.MinStake = state.Balance(conf.GetFloat64(pfx+"min_stake") * 1e10)
 	gn.MaxStake = state.Balance(conf.GetFloat64(pfx+"max_stake") * 1e10)
 	gn.MaxN = conf.GetInt(pfx + "max_n")
+	gn.MinN = conf.GetInt(pfx + "min_n")
 	gn.TPercent = conf.GetFloat64(pfx + "t_percent")
 	gn.KPercent = conf.GetFloat64(pfx + "k_percent")
 
