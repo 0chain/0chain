@@ -1,21 +1,27 @@
 package sharder
 
 import (
-	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/chain"
-	"0chain.net/sharder/blockstore"
-	"github.com/remeh/sizedwaitgroup"
-	"github.com/spf13/viper"
-	"go.uber.org/zap"
-
 	"context"
 	"time"
 
+	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/round"
+	"0chain.net/sharder/blockstore"
+
+	"0chain.net/core/encryption"
+	"0chain.net/core/util"
+	"0chain.net/smartcontract/minersc"
+
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
-	. "0chain.net/core/logging"
 	"0chain.net/core/persistencestore"
+
+	"github.com/remeh/sizedwaitgroup"
+	"github.com/spf13/viper"
+
+	. "0chain.net/core/logging"
+	"go.uber.org/zap"
 )
 
 /*SetupWorkers - setup the background workers */
@@ -100,6 +106,41 @@ func (sc *Chain) hasTransactions(ctx context.Context, bs *block.BlockSummary) bo
 	return count == bs.NumTxns
 }
 
+func sleepOrDone(ctx context.Context, sleep time.Duration) (done bool) {
+	var tm = time.NewTimer(sleep)
+	defer tm.Stop()
+	select {
+	case <-ctx.Done():
+		done = true
+	case <-tm.C:
+	}
+	return
+}
+
+func (sc *Chain) isPhaseContibute() (is bool) {
+	var (
+		cstate    = sc.GetLatestFinalizedBlock().ClientState
+		seri, err = cstate.GetNodeValue(
+			util.Path(encryption.Hash(minersc.PhaseKey)),
+		)
+	)
+	if err != nil {
+		Logger.Error("is_phase_contibute -- can't get phase node",
+			zap.Error(err))
+		return
+	}
+	var phaseNode = new(minersc.PhaseNode)
+	if err = phaseNode.Decode(seri.Encode()); err != nil {
+		Logger.Error("is_phase_contibute -- can't decode phase node",
+			zap.Error(err))
+		return
+	}
+	Logger.Debug("is_phase_contibute",
+		zap.Int("phase", phaseNode.Phase),
+		zap.Bool("is_contribute", phaseNode.Phase == minersc.Contribute))
+	return phaseNode.Phase == minersc.Contribute
+}
+
 func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
 	timerCheck := time.NewTicker(time.Minute)
 	for {
@@ -109,6 +150,13 @@ func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
 		case <-timerCheck.C:
 			if !sc.ActiveInChain() || !sc.IsRegisteredSharderKeep() {
 				for !sc.IsRegisteredSharderKeep() {
+
+					for !sc.isPhaseContibute() {
+						if sleepOrDone(ctx, time.Second) {
+							return
+						}
+					}
+
 					txn, err := sc.RegisterSharderKeep()
 					if err != nil {
 						Logger.Error("register_sharder_keep_worker", zap.Error(err))
@@ -119,7 +167,10 @@ func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
 							Logger.Debug("register_sharder_keep_worker -- failed to confirm transaction", zap.Any("txn", txn))
 						}
 					}
-					time.Sleep(time.Second)
+
+					if sleepOrDone(ctx, time.Second) {
+						return
+					}
 				}
 			}
 		}

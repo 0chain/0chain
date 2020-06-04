@@ -471,11 +471,48 @@ func SignShareRequestHandler(ctx context.Context, r *http.Request) (interface{},
 	return message, nil
 }
 
+/*
+func (mc *Chain) setDKGFromCurrentMagicBlock() (err error) {
+	var magicBlock = mc.GetCurrentMagicBlock()
+	if magicBlock == nil {
+		Logger.Error("set_dkg_from_current_magic_block",
+			zap.String("err", "current MB is nil"))
+		return common.NewError("set_dkg_from_current_magic_block",
+			"current magic block is nil")
+	}
+	var dmn *minersc.DKGMinerNodes
+	if dmn, err = mc.GetDKGMiners(); err != nil {
+		Logger.Error("set_dkg_from_current_magic_block: getting DKG miners",
+			zap.Error(err))
+		return common.NewError("set_dkg_from_current_magic_block",
+			"getting DKG miners: "+err.Error())
+	}
+	var selfNodeKey = node.Self.Underlying().GetKey()
+	if dmn.N == 0 {
+		Logger.Error("set_dkg_from_current_magic_block",
+			zap.String("err", "DKG is not set yet in chain"))
+		return common.NewError("set_dkg_from_current_magic_block",
+			"DKG is not set yet in chain")
+	}
+
+	var vc = bls.MakeDKG(dmn.T, dmn.N, selfNodeKey)
+	vc.ID = bls.ComputeIDdkg(selfNodeKey)
+	vc.MagicBlockNumber = magicBlock.MagicBlockNumber // don't add +1, we are in wait
+
+	viewChangeMutex.Lock()
+	mc.viewChangeDKG = vc
+	viewChangeMutex.Unlock()
+
+	return
+}
+*/
+
 func (mc *Chain) Wait() (result *httpclientutil.Transaction, err2 error) {
 	magicBlock, err := mc.GetMagicBlockFromSC()
 	if err != nil {
 		return nil, err
 	}
+
 	if !magicBlock.Miners.HasNode(node.Self.Underlying().GetKey()) {
 		err := mc.UpdateMagicBlock(magicBlock)
 		if err != nil {
@@ -489,6 +526,7 @@ func (mc *Chain) Wait() (result *httpclientutil.Transaction, err2 error) {
 	}
 
 	if !mc.isDKGSet() {
+		// mc.setDKGFromCurrentMagicBlock()
 		return nil, errors.New("unexpected not isDKGSet")
 	}
 
@@ -525,6 +563,9 @@ func (mc *Chain) Wait() (result *httpclientutil.Transaction, err2 error) {
 	mc.viewChangeDKG.AggregateSecretKeyShares()
 	mc.viewChangeDKG.StartingRound = magicBlock.StartingRound
 	mc.viewChangeDKG.MagicBlockNumber = magicBlock.MagicBlockNumber
+	// set T and N from the magic block
+	mc.viewChangeDKG.T = magicBlock.T
+	mc.viewChangeDKG.N = magicBlock.N
 	summary := mc.viewChangeDKG.GetDKGSummary()
 	ctx := common.GetRootContext()
 	if err := StoreDKGSummary(ctx, summary); err != nil {

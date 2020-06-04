@@ -7,7 +7,7 @@ import (
 /*BlockStore - an interface to read and write blocks to some storage */
 type BlockStore interface {
 	Write(b *block.Block) error
-	Read(hash string) (*block.Block, error)
+	Read(hash string, round int64) (*block.Block, error)
 	ReadWithBlockSummary(bs *block.BlockSummary) (*block.Block, error)
 	Delete(hash string) error
 	DeleteBlock(b *block.Block) error

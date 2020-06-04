@@ -418,5 +418,4 @@ func (mc *Chain) SetDKG(dkg *bls.DKG, startingRound int64) error {
 	mc.muDKG.Lock()
 	defer mc.muDKG.Unlock()
 	return mc.roundDkg.Put(dkg, startingRound)
-
 }

@@ -43,7 +43,9 @@ func SetDKG(ctx context.Context, mb *block.MagicBlock) error {
 	if config.DevConfiguration.IsDkgEnabled {
 		err := mc.SetDKGSFromStore(ctx, mb)
 		if err != nil {
-			return fmt.Errorf("error while setting dkg from store: %v\nstorage may be damaged or permissions may not be available?", err.Error())
+			return fmt.Errorf("error while setting dkg from store: %v\nstorage"+
+				" may be damaged or permissions may not be available?",
+				err.Error())
 		}
 	} else {
 		Logger.Info("DKG is not enabled. So, starting protocol")
@@ -157,7 +159,7 @@ func (mc *Chain) GetBlsMessageForRound(r *round.Round) (string, error) {
 	}
 
 	if pr.GetRandomSeed() == 0 {
-		Logger.Error("Bls sign vrfshare: error in getting prevRSeed")
+		Logger.Error("Bls sign vrfshare: error in getting prevRSeed", zap.Int64("prev_round", pr.Number))
 		return "", common.NewError("prev_round_rrs_zero", fmt.Sprintf("Prev round %d has randomseed of 0", pr.GetRoundNumber()))
 	}
 	prevRSeed := strconv.FormatInt(pr.GetRandomSeed(), 16) //pr.VRFOutput

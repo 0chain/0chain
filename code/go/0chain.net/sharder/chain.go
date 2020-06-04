@@ -186,12 +186,10 @@ func (sc *Chain) loadLatestFinalizedMagicBlockFromStore(ctx context.Context,
 	}
 
 	if lfb.LatestFinalizedMagicBlockHash == lfb.Hash {
-
 		if lfb.MagicBlock == nil {
 			// fatal
 			return nil, common.NewError("load_lfb", "missing MagicBlock field")
 		}
-
 		return lfb, nil // the same
 	}
 
@@ -199,9 +197,12 @@ func (sc *Chain) loadLatestFinalizedMagicBlockFromStore(ctx context.Context,
 
 	Logger.Debug("load lfmb from store",
 		zap.String("block_with_magic_block_hash",
-			lfb.LatestFinalizedMagicBlockHash))
+			lfb.LatestFinalizedMagicBlockHash),
+		zap.Int64("block_with_magic_block_round",
+			lfb.LatestFinalizedMagicBlockRound))
 
-	lfmb, err = blockstore.GetStore().Read(lfb.LatestFinalizedMagicBlockHash)
+	lfmb, err = blockstore.GetStore().Read(lfb.LatestFinalizedMagicBlockHash,
+		lfb.LatestFinalizedMagicBlockRound)
 	if err != nil {
 		// fatality, can't find related LFMB
 		return nil, common.NewError("load_lfb",

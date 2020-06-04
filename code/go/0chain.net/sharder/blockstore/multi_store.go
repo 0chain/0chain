@@ -28,11 +28,11 @@ func (mbs *MultiBlockStore) Write(b *block.Block) error {
 }
 
 //Read - implement interface
-func (mbs *MultiBlockStore) Read(hash string) (*block.Block, error) {
+func (mbs *MultiBlockStore) Read(hash string, round int64) (*block.Block, error) {
 	var b *block.Block
 	var err error
 	for _, bs := range mbs.BlockStores {
-		b, err = bs.Read(hash)
+		b, err = bs.Read(hash, round)
 		if err == nil {
 			break
 		}

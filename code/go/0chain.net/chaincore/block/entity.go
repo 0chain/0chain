@@ -56,9 +56,10 @@ type UnverifiedBlockBody struct {
 	datastore.VersionField
 	datastore.CreationDateField
 
-	LatestFinalizedMagicBlockHash string                `json:"latest_finalized_magic_block_hash"`
-	PrevHash                      string                `json:"prev_hash"`
-	PrevBlockVerificationTickets  []*VerificationTicket `json:"prev_verification_tickets,omitempty"`
+	LatestFinalizedMagicBlockHash  string                `json:"latest_finalized_magic_block_hash"`
+	LatestFinalizedMagicBlockRound int64                 `json:"latest_finalized_magic_block_round"`
+	PrevHash                       string                `json:"prev_hash"`
+	PrevBlockVerificationTickets   []*VerificationTicket `json:"prev_verification_tickets,omitempty"`
 
 	MinerID           datastore.Key `json:"miner_id"`
 	Round             int64         `json:"round"`

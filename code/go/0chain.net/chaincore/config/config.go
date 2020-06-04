@@ -197,5 +197,4 @@ func ValidChain(chain string) error {
 /*GetThresholdCount Gets the defined threshold count */
 func GetThresholdCount() int {
 	return viper.GetInt("server_chain.block.consensus.threshold_by_count")
-
 }

@@ -12,19 +12,19 @@ smart_contracts:
     max_mint: 4000000.0
 
   minersc:
-    max_n: 100 # 5
-    min_n: 3   # 2
+    max_n: 100
+    min_n: 3
     sharders_max_n: 0.30 # 30%
     sharders_min_n: 0.30 # 30%
     t_percent: .51
-    k_percent: .75 # 0.6
+    k_percent: .75
     min_stake: 0.01 # min stake can be set by a node (boundary for all nodes)
     max_stake: 100.0 # max stake can be set by a node (boundary for all nodes)
-    start_rounds: 50 # 20
-    contribute_rounds: 50 # 20
-    share_rounds: 50 # 20
-    publish_rounds: 50 # 20
-    wait_rounds: 50 # 20
+    start_rounds: 50
+    contribute_rounds: 50
+    share_rounds: 50
+    publish_rounds: 50
+    wait_rounds: 50
     # stake interests, will be declined every epoch
     interest_rate: 0.001 # [0; 1)
     # reward rate for generators, will be declined every epoch

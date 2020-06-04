@@ -86,8 +86,8 @@ func (mc *Chain) RegisterClient() {
 	}
 }
 
-func (mc *Chain) isRegistered() bool {
-	return mc.isRegisteredEx(
+func (mc *Chain) isRegistered() (is bool) {
+	is = mc.isRegisteredEx(
 		func(n *node.Node) util.Path {
 			if typ := n.Type; typ == node.NodeTypeMiner {
 				return util.Path(encryption.Hash(minersc.AllMinersKey))
@@ -104,6 +104,7 @@ func (mc *Chain) isRegistered() bool {
 			}
 			return ""
 		})
+	return
 }
 
 func (mc *Chain) isRegisteredEx(getStatePath func(n *node.Node) util.Path,

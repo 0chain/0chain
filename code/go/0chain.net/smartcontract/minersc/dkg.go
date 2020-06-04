@@ -2,10 +2,8 @@ package minersc
 
 import (
 	"errors"
-	"math"
 	"reflect"
 	"runtime"
-	"sort"
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
@@ -200,27 +198,15 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(balances cstate.Stat
 		Logger.Error("createDKGMinersForContribute -- failed to get miner list", zap.Any("error", err))
 		return err
 	}
-	var n int
+
 	if len(allminerslist.Nodes) < gn.MinN {
 		return common.NewError("failed to create dkg miners", "too few miners for dkg")
 	}
-	if len(allminerslist.Nodes) > gn.MaxN {
-		n = gn.MaxN
-		sort.Slice(allminerslist.Nodes, func(i, j int) bool {
-			return allminerslist.Nodes[i].TotalStaked > allminerslist.Nodes[j].TotalStaked
-		})
-	} else {
-		n = len(allminerslist.Nodes)
-	}
+
 	dkgMiners := NewDKGMinerNodes()
-	dkgMiners.N = n
-	dkgMiners.K = int(math.Ceil(gn.KPercent * float64(n)))
-	dkgMiners.T = int(math.Ceil(gn.TPercent * float64(n)))
+	dkgMiners.calculateTKN(gn, len(allminerslist.Nodes))
 	for _, node := range allminerslist.Nodes {
 		dkgMiners.SimpleNodes[node.ID] = node.SimpleNode
-		if len(dkgMiners.SimpleNodes) == dkgMiners.N {
-			break
-		}
 	}
 
 	// dkgMiners.S = sn
@@ -237,7 +223,7 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(balances cstate.Stat
 	}
 
 	//sharders
-	allSharderKeepList := NewMinerNode()
+	allSharderKeepList := new(MinerNodes)
 	_, err = balances.InsertTrieNode(ShardersKeepKey, allSharderKeepList)
 	if err != nil {
 		return err
@@ -270,6 +256,12 @@ func (msc *MinerSmartContract) widdleDKGMinersForShare(balances cstate.StateCont
 			delete(dkgMiners.SimpleNodes, k)
 		}
 	}
+
+	if err = dkgMiners.recalculateTKN(false); err != nil {
+		Logger.Error("widdle dkg miners", zap.Error(err))
+		return err
+	}
+
 	_, err = balances.InsertTrieNode(DKGMinersKey, dkgMiners)
 	if err != nil {
 		Logger.Error("widdle dkg miners -- failed to insert dkg miners", zap.Any("error", err))
@@ -345,6 +337,11 @@ func (msc *MinerSmartContract) createMagicBlockForWait(balances cstate.StateCont
 		}
 	}
 
+	if err = dkgMinersList.recalculateTKN(true); err != nil {
+		Logger.Error("create magic block for wait", zap.Error(err))
+		return err
+	}
+
 	magicBlock, err := msc.CreateMagicBlock(balances, sharders, dkgMinersList, gsos, mpks, pn)
 	if err != nil {
 		return err
@@ -371,7 +368,7 @@ func (msc *MinerSmartContract) createMagicBlockForWait(balances cstate.StateCont
 	if err != nil {
 		return err
 	}
-	allMinersList := NewMinerNode()
+	allMinersList := new(MinerNodes)
 	_, err = balances.InsertTrieNode(ShardersKeepKey, allMinersList)
 	if err != nil {
 		return err
@@ -636,7 +633,7 @@ func (msc *MinerSmartContract) RestartDKG(pn *PhaseNode, balances cstate.StateCo
 		Logger.Error("failed to restart dkg", zap.Any("error", err))
 	}
 
-	allMinersList := NewMinerNode()
+	allMinersList := new(MinerNodes)
 	_, err = balances.InsertTrieNode(ShardersKeepKey, allMinersList)
 	if err != nil {
 		Logger.Error("failed to restart dkg", zap.Any("error", err))

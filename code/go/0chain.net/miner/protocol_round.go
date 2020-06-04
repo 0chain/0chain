@@ -217,6 +217,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	b := block.NewBlock(mc.GetKey(), r.GetRoundNumber())
 	lfmb := mc.GetLatestFinalizedMagicBlockRound(ctx, r.Round)
 	b.LatestFinalizedMagicBlockHash = lfmb.Hash
+	b.LatestFinalizedMagicBlockRound = lfmb.Round
 
 	b.MinerID = node.Self.Underlying().GetKey()
 	mc.SetPreviousBlock(ctx, r, b, pb)
@@ -626,7 +627,11 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*bloc
 		}
 		err := fb.Validate(ctx)
 		if err != nil {
-			Logger.DPanic("lfb from sharder - invalid", zap.Int64("round", fb.Round), zap.String("block", fb.Hash))
+			Logger.Error("lfb from sharder - invalid",
+				zap.Int64("round", fb.Round),
+				zap.String("block", fb.Hash),
+				zap.Error(err))
+			return nil, err
 		}
 		r := mc.GetRound(fb.Round)
 		if r == nil {

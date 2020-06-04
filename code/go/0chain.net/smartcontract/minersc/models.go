@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"net/url"
 	"sort"
 	"sync"
@@ -49,6 +50,7 @@ var (
 	GlobalNodeKey        = globalKeyHash("global_node")
 	GroupShareOrSignsKey = globalKeyHash("group_share_or_signs")
 	ShardersKeepKey      = globalKeyHash("sharders_keep")
+	PhaseKey             = globalKeyHash("phase")
 
 	lockAllMiners sync.Mutex
 )
@@ -519,7 +521,7 @@ type PhaseNode struct {
 }
 
 func (pn *PhaseNode) GetKey() datastore.Key {
-	return datastore.Key(ADDRESS + encryption.Hash("PHASE"))
+	return PhaseKey
 }
 
 func (pn *PhaseNode) Encode() []byte {
@@ -575,13 +577,73 @@ func DecodeDelegatePools(pools map[string]*sci.DelegatePool,
 }
 
 type DKGMinerNodes struct {
-	SimpleNodes
-	T              int
-	K              int
-	N              int
-	RevealedShares map[string]int
+	MinN     int     `json:"min_n"`
+	MaxN     int     `json:"max_n"`
+	TPercent float64 `json:"t_percent"`
+	KPercent float64 `json:"k_percent"`
+
+	SimpleNodes    `json:"simple_nodes"`
+	T              int            `json:"t"`
+	K              int            `json:"k"`
+	N              int            `json:"n"`
+	RevealedShares map[string]int `json:"revealed_shares"`
 	// S              int         // number of sharders
 	// Sharders       SimpleNodes // sharders
+}
+
+func (dkgmn *DKGMinerNodes) setConfigs(gn *globalNode) {
+	dkgmn.MinN = gn.MinN
+	dkgmn.MaxN = gn.MaxN
+	dkgmn.TPercent = gn.TPercent
+	dkgmn.KPercent = gn.KPercent
+}
+
+func min(a, b int) int {
+	if a > b {
+		return b
+	}
+	return a
+}
+
+func (dkgmn *DKGMinerNodes) calculateTKN(gn *globalNode, n int) {
+	dkgmn.setConfigs(gn)
+	var m = min(dkgmn.MaxN, n)
+	dkgmn.N = n
+	dkgmn.K = int(math.Ceil(dkgmn.KPercent * float64(m)))
+	dkgmn.T = int(math.Ceil(dkgmn.TPercent * float64(m)))
+}
+
+func (dkgmn *DKGMinerNodes) reduce(n int) int {
+	var list []*SimpleNode
+	for _, node := range dkgmn.SimpleNodes {
+		list = append(list, node)
+	}
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].TotalStaked > list[j].TotalStaked
+	})
+	list = list[:n]
+	dkgmn.SimpleNodes = make(SimpleNodes)
+	for _, node := range list {
+		dkgmn.SimpleNodes[node.ID] = node
+	}
+	return dkgmn.MaxN
+}
+
+func (dkgmn *DKGMinerNodes) recalculateTKN(final bool) (err error) {
+	var n = len(dkgmn.SimpleNodes)
+	// check the lower boundary
+	if n < dkgmn.MinN {
+		return fmt.Errorf("to few miners: %d, want at least: %d", n, dkgmn.MinN)
+	}
+	// check upper boundary for a final recalculation
+	if final && n > dkgmn.MaxN {
+		n = dkgmn.reduce(dkgmn.MaxN)
+	}
+	var m = min(dkgmn.MaxN, n)
+	dkgmn.N = n
+	dkgmn.K = int(math.Ceil(dkgmn.KPercent * float64(m)))
+	dkgmn.T = int(math.Ceil(dkgmn.TPercent * float64(m)))
+	return
 }
 
 func NewDKGMinerNodes() *DKGMinerNodes {
