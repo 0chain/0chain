@@ -45,15 +45,17 @@ func main() {
 
 	var (
 		configFile string = "conductor.yaml"
+		testsFile  string = "conductor.view-change-1.yaml"
 		verbose    bool   = true
 	)
 	flag.StringVar(&configFile, "config", configFile, "configurations file")
+	flag.StringVar(&testsFile, "tests", testsFile, "tests file")
 	flag.BoolVar(&verbose, "verbose", verbose, "verbose output")
 	flag.Parse()
 
-	log.Print("read configurations file: ", configFile)
+	log.Print("read configurations files: ", configFile, testsFile)
 	var (
-		conf = readConfig(configFile)
+		conf = readConfigs(configFile, testsFile)
 		r    Runner
 		err  error
 	)
@@ -94,6 +96,15 @@ func readConfig(configFile string) (conf *config.Config) {
 	if err = yaml.NewDecoder(fl).Decode(conf); err != nil {
 		log.Fatalf("decoding configurations file %s: %v", configFile, err)
 	}
+	return
+}
+
+func readConfigs(configFile, testsFile string) (conf *config.Config) {
+	conf = readConfig(configFile)
+	var tests = readConfig(testsFile)
+	conf.Tests = tests.Tess    //
+	conf.Enable = tests.Enable // merge
+	conf.Sets = tests.Sets     //
 	return
 }
 

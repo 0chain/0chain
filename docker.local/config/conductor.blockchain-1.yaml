@@ -1,0 +1,208 @@
+###
+### Blockchain miners Byzantine tests
+###
+
+---
+
+# enabled test cases sets
+enable:
+  # comment out a line to disable
+  - "VRF"
+  - "Round timeout"
+  - "A block"
+  - "A verification ticket"
+  - "A notarized block"
+
+# sets of test cases
+sets:
+  - name: "VRF"
+    tests:
+      - "Send VRFS only to group"
+      - "Send only the group the correct VRFS (bad VRFS for everyone else)"
+      - "Send no VRFS"
+  - name: "Round timeout"
+    tests:
+      - "Don't send a round timeout"
+      - "Send timeouts only to group"
+      - "Send wrong timeout to everyone"
+      - "Send correct timeout only to group"
+  - name: "A block"
+    tests:
+      - "Create competing block"
+      - "Individual or group create competing block when not a generator"
+      - "Group only signs the competing blocks"
+      - "Send a transaction from an earlier block to create a double spend"
+      - "Incorrectly sign the block"
+      - "Sign the a different hash than the block hash"
+      - "Use a different private key to sign the block"
+      - "Hash the block incorrectly"
+  - name: "A verification ticket"
+    tests:
+      - "Only verify a block from the group"
+      - "Individuals or group can send no tickets to slow down or stall the chain"
+      - "Send bad verification ticket"
+      - "The signed with wrong key"
+      - "Signed wrong hash"
+  - name: "A notarized block"
+    tests:
+      - "Sign the block incorrectly"
+      - "Use the wrong hash"
+      - "Use the wrong private key"
+      - "Don't send the notarized block (don't send verification ticket as well)"
+      - "Only notarize/send competing block from C.1.b"
+
+
+#
+# test cases
+#
+tests:
+
+  # known phases
+
+  # 'start'
+  # 'contribute'
+  # 'share'
+  # 'publish'
+  # 'wait'
+
+  # VRF
+
+  - name: "Send VRFS only to group"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+  - name: "Send only the group the correct VRFS (bad VRFS for everyone else)"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+  - name: "Send no VRFS"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+
+  # Round timeout
+
+  - name: "Don't send a round timeout"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+  - name: "Send timeouts only to group"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+  - name: "Send wrong timeout to everyone"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+  - name: "Send correct timeout only to group"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+
+  # A block
+
+  - name: "Create competing block"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+  - name: "Individual or group create competing block when not a generator"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+  - name: "Group only signs the competing blocks"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+  - name: "Send a transaction from an earlier block to create a double spend"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+  - name: "Incorrectly sign the block"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+  - name: "Sign the a different hash than the block hash"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+  - name: "Use a different private key to sign the block"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+  - name: "Hash the block incorrectly"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+
+  # A verification ticket
+
+  - name: "Only verify a block from the group"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+  - name: "Individuals or group can send no tickets to slow down or stall the chain"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+  - name: "Send bad verification ticket"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+  - name: "The signed with wrong key"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+  - name: "Signed wrong hash"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+
+    # A notarized block
+
+  - name: "Sign the block incorrectly"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+  - name: "Use the wrong hash"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+  - name: "Use the wrong private key"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+  - name: "Don't send the notarized block (don't send verification ticket as well)"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+  - name: "Only notarize/send competing block from C.1.b"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+
+...

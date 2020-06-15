@@ -10,21 +10,47 @@ import (
 
 // Executor used by a Flow to perform a flow directive.
 type Executor interface {
+
+	// common setups
+
 	SetMonitor(name NodeName) (err error)
+	CleanupBC(timeout time.Duration) (err error)
+
+	// common control
+
 	Start(names []NodeName, lock bool, timeout time.Duration) (err error)
+	Unlock(names []NodeName, timeout time.Duration) (err error)
+	Stop(names []NodeName, timeout time.Duration) (err error)
+
+	// VC misbehavior
+
+	SendShareOnly(miner NodeName, only []NodeName) (err error)
+	SendShareBad(miner NodeName, bad []NodeName) (err error)
+	SetRevealed(miners []NodeName, pin bool, tm time.Duration) (err error)
+
+	// waiting
+
 	WaitViewChange(vc WaitViewChange, timeout time.Duration) (err error)
 	WaitPhase(wp WaitPhase, timeout time.Duration) (err error)
 	WaitRound(wr WaitRound, timeout time.Duration) (err error)
 	WaitContributeMpk(wcmpk WaitContributeMpk, timeout time.Duration) (err error)
 	WaitShareSignsOrShares(ssos WaitShareSignsOrShares, timeout time.Duration) (err error)
 	WaitAdd(wadd WaitAdd, timeout time.Duration) (err error)
-	Unlock(names []NodeName, timeout time.Duration) (err error)
-	Stop(names []NodeName, timeout time.Duration) (err error)
-	CleanupBC(timeout time.Duration) (err error)
-	SendShareOnly(miner NodeName, only []NodeName) (err error)
-	SendShareBad(miner NodeName, bad []NodeName) (err error)
-	SetRevealed(miners []NodeName, pin bool, tm time.Duration) (err error)
 	WaitNoProgress(wait time.Duration) (err error)
+
+	// Byzantine: BC tests, miners misbehavior
+
+	SendBadVRF(miners []NodeName) (err error)
+	NotSendVRF(miners []NodeName) (err error)
+	SendBadRoundTimeout(miners []NodeName) (err error)
+	NotSendRoundTimeout(miners []NodeName) (err error)
+	SendCompetingBlock(mienrs []NodeName) (err error)
+	SendBadBlock(miners []NodeName) (err error)
+	NotSendBlock(miners []NodeName) (err error)
+	SendBadVerificationTicket(miners []NodeName) (err error)
+	NotSendVerificationTicket(miners []NodeName) (err error)
+	SendBadNotarizedBlock(miners []NodeName) (err error)
+	NotSendNotarizedBlock(miners []NodeName) (err error)
 }
 
 //
