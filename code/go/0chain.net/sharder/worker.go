@@ -119,10 +119,15 @@ func sleepOrDone(ctx context.Context, sleep time.Duration) (done bool) {
 
 func (sc *Chain) isPhaseContibute() (is bool) {
 	var (
-		cstate    = sc.GetLatestFinalizedBlock().ClientState
-		seri, err = cstate.GetNodeValue(
-			util.Path(encryption.Hash(minersc.PhaseKey)),
-		)
+		cstate = sc.GetLatestFinalizedBlock().ClientState
+	)
+	if cstate == nil {
+		Logger.Error("is_phase_contibute -- can't get phase node",
+			zap.String("error", "missing LFB client state (nil)"))
+		return
+	}
+	var seri, err = cstate.GetNodeValue(
+		util.Path(encryption.Hash(minersc.PhaseKey)),
 	)
 	if err != nil {
 		Logger.Error("is_phase_contibute -- can't get phase node",
