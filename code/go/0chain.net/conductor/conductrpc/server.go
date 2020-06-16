@@ -62,30 +62,6 @@ type ShareOrSignsSharesEvent struct {
 	MinerID NodeName // miner that sends
 }
 
-// known locks
-const (
-	Locked   = true  // should wait
-	Unlocked = false // can join
-)
-
-type nodeSetups struct {
-	lock     bool          // node should be locked on start, waiting unlocking
-	counter  int           // node ready calling counter (server's channel sending condition)
-	only     chan []NodeID // send shares only to given nodes
-	bad      chan []NodeID // send bad shares to given node (regardless the 'only' list)
-	revealed chan bool     // reveled
-}
-
-func newNodeSetups(lock bool) (ns *nodeSetups) {
-	ns = new(nodeSetups)
-	ns.counter = 0
-	ns.lock = lock
-	ns.only = make(chan []NodeID, 10)
-	ns.bad = make(chan []NodeID, 10)
-	ns.revealed = make(chan bool, 10)
-	return
-}
-
 type Server struct {
 	server  *rpc.Server
 	address string
@@ -105,15 +81,15 @@ type Server struct {
 	// onNodeReady used by miner/sharder to notify the server that the node
 	// has started and ready to register (if needed) in miner SC and start
 	// it work. E.g. the node has started and waits the conductor to enter BC.
-	onNodeReady chan NodeID
+	onNodeReady chan NodeName
 
 	onRoundEvent              chan *RoundEvent
 	onContributeMPKEvent      chan *ContributeMPKEvent
 	onShareOrSignsSharesEvent chan *ShareOrSignsSharesEvent
 
 	// nodes lock/unlock/shares sending (send only, send bad)
-	mutex  sync.Mutex
-	setups map[NodeID]*nodeSetups
+	mutex sync.Mutex
+	nodes map[NodeName]*State
 
 	quitOnce sync.Once
 	quit     chan struct{}
@@ -389,30 +365,11 @@ func (s *Server) ShareOrSignsShares(soss *ShareOrSignsSharesEvent,
 	return
 }
 
-func (s *Server) SendShareOnly(miner NodeID, only *[]NodeID) (err error) {
+// state polling handler
+func (s *Server) State(miner NodeName, state *State) (err error) {
 	select {
 	case o := <-s.nodeSendShareOnly(miner):
 		*only = o
-	case <-s.quit:
-		return
-	}
-	return
-}
-
-func (s *Server) SendShareBad(miner NodeID, bad *[]NodeID) (err error) {
-	select {
-	case b := <-s.nodeSendShareBad(miner):
-		*bad = b
-	case <-s.quit:
-		return
-	}
-	return
-}
-
-func (s *Server) IsRevealed(node NodeID, pin *bool) (err error) {
-	select {
-	case p := <-s.nodeSetRevealed(node):
-		*pin = p
 	case <-s.quit:
 		return
 	}

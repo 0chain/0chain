@@ -11,9 +11,6 @@ import (
 type Client struct {
 	address string      // RPC server address
 	client  *rpc.Client // RPC client
-
-	mutex sync.RWMutex // state mutex
-	state *State       // current client state
 }
 
 // NewClient creates new client will be interacting
@@ -190,22 +187,7 @@ type State struct {
 	counter int
 }
 
+// Name returns NodeName by given NodeID.
 func (s *State) Name(id NodeID) NodeName {
 	return s.Nodes[id] // id -> name (or empty string)
-}
-
-func (s *State) IsSendShareFor(id NodeID) bool {
-	var name, ok = s.Nodes[id]
-	if !ok {
-		return false
-	}
-	return s.Shares == nil || isInList(s.Shares.Good, id)
-}
-
-func (e *Entity) IsSendBadShareFor(id string) bool {
-	var name, ok = s.Nodes[id]
-	if !ok {
-		return false
-	}
-	return s.Shares == nil || isInList(s.Shares.Bad, id)
 }

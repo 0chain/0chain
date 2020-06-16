@@ -154,16 +154,6 @@ func Shutdown() {
 	globalEntity.shutdown()
 }
 
-// IsSendShareFor returns true if this node should send share for given one.
-func IsSendShareFor(id string) bool {
-	return globalEntity.isSendShareFor(id)
-}
-
-// IsSendShareFor returns true if this node should send bad share for given one.
-func IsSendBadShareFor(id string) bool {
-	return globalEntity.isSendBadShareFor(id)
-}
-
-func IsRevealed() bool {
-	return globalEntity.isRevealed()
+func State() (state *State) {
+	return globalEntity.State()
 }
