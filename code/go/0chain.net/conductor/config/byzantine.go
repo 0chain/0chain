@@ -18,6 +18,8 @@ type Bad struct {
 	Of []NodeName `json:"of" yaml:"of" mapstructure:"of"`
 }
 
+// Unmarshal with given name and from given map[interface{}]interface{}
+// by mapstructure package.
 func (b *Bad) Unmarshal(name string, val interface{}) (err error)) {
 	if err = mapstructure.Decode(val, b); err != nil {
 		return fmt.Errorf("invalid '%s' argument type: %T, "+
@@ -27,6 +29,36 @@ func (b *Bad) Unmarshal(name string, val interface{}) (err error)) {
 		return fmt.Errorf("empty 'by' field of '%s'", name)
 	}
 	return
+}
+
+// Is given name in given names list.
+func isInList(ids []NodeName, id NodeName) bool {
+	for _, x := range ids {
+		if x == id {
+			return true
+		}
+	}
+	return false
+}
+
+// IsGood returns true if the Bad is nil or given name is in Good list.
+func (b *Bad) IsGood(name NodeName) bool {
+	return b == nil || isInList(b.Good, name)
+}
+
+// IsBad returns true if the Bad is nil or given name is in Bad list.
+func (b *Bad) IsBad(name NodeName) bool {
+	return b == nil || isInList(b.Bad, name)
+}
+
+// IsBy returns true if given name is in By list.
+func (b *Bad) IsBy(name NodeName) bool {
+	return isInList(b.By, name)
+}
+
+// IsBad returns true if the Bad is nil or given name is in Of list.
+func (b *Bad) IsOf(name NodeName) bool {
+	return b == nil || isInList(b.Of, name)
 }
 
 // common Byzantine scenarios

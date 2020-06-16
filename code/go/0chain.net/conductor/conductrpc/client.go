@@ -2,14 +2,18 @@ package conductrpc
 
 import (
 	"net/rpc"
+	"sync"
 
 	"0chain.net/conductor/config"
 )
 
 // Client of the conductor RPC server.
 type Client struct {
-	address string
-	client  *rpc.Client
+	address string      // RPC server address
+	client  *rpc.Client // RPC client
+
+	mutex sync.RWMutex // state mutex
+	state *State       // current client state
 }
 
 // NewClient creates new client will be interacting
@@ -87,7 +91,7 @@ func (c *Client) AddSharder(add *AddSharderEvent) (err error) {
 	return
 }
 
-// NodeReady notification.
+// NodeReady phase notification.
 func (c *Client) NodeReady(nodeID NodeID) (join bool, err error) {
 	err = c.client.Call("Server.NodeReady", nodeID, &join)
 	if err == rpc.ErrShutdown {
@@ -111,7 +115,7 @@ func (c *Client) Round(re *RoundEvent) (err error) {
 	return
 }
 
-// ContributeMPK notification.
+// ContributeMPK phase notification.
 func (c *Client) ContributeMPK(cmpke *ContributeMPKEvent) (err error) {
 	err = c.client.Call("Server.ContributeMPK", cmpke, &struct{}{})
 	if err == rpc.ErrShutdown {
@@ -123,7 +127,7 @@ func (c *Client) ContributeMPK(cmpke *ContributeMPKEvent) (err error) {
 	return
 }
 
-// ShareOrSignsShares notification.
+// ShareOrSignsShares phase notification.
 func (c *Client) ShareOrSignsShares(sosse *ShareOrSignsSharesEvent) (err error) {
 	err = c.client.Call("Server.ShareOrSignsShares", sosse, &struct{}{})
 	if err == rpc.ErrShutdown {
@@ -135,40 +139,25 @@ func (c *Client) ShareOrSignsShares(sosse *ShareOrSignsSharesEvent) (err error) 
 	return
 }
 
+// State requests current client state using long polling strategy. E.g.
+// when the state had updated, then the method returns.
+func (c *Client) State(me NodeID) (state *State, err error) {
+	err = c.client.Call("Server.State", me, &state)
+	for err == rpc.ErrShutdown {
+		err = c.client.Call("Server.State", me, &state)
+	}
+	return
+}
+
 //
-// state
+// state (long polling)
 //
 
-// SendShareOnly to configured nodes. The long polling method, e.g. it blocks.
-func (c *Client) SendShareOnly(me NodeID) (only []NodeID, err error) {
-	err = c.client.Call("Server.SendShareOnly", me, &only)
-	for err == rpc.ErrShutdown {
-		err = c.client.Call("Server.SendShareOnly", me, &only)
-	}
-	return
-}
-
-// SendShareBad sends bad share to resulting nodes. To send bad shares only to
-// X nodes, use SendShareOnly (nil, nil) with SendShareBad (list, nil).
-// The long polling method, e.g. it blocks.
-func (c *Client) SendShareBad(me NodeID) (bad []NodeID, err error) {
-	err = c.client.Call("Server.SendShareBad", me, &bad)
-	for err == rpc.ErrShutdown {
-		err = c.client.Call("Server.SendShareBad", me, &bad)
-	}
-	return
-}
-
-func (c *Client) IsRevealed(node NodeID) (pin bool, err error) {
-	err = c.client.Call("Server.IsRevealed", node, &pin)
-	for err == rpc.ErrShutdown {
-		err = c.client.Call("Server.IsRevealed", node, &pin)
-	}
-	return
-}
-
-// State is node state.
+// State is current node state.
 type State struct {
+	// Nodes maps NodeID -> NodeName.
+	Nodes map[NodeID]NodeName
+
 	IsMonitor  bool // send monitor events (round, phase, etc)
 	Lock       bool // node locked
 	IsRevealed bool // revealed shares
@@ -196,4 +185,27 @@ type State struct {
 	Shares     *config.Shares
 	Signatures *config.Signatures
 	Publish    *config.Publish
+
+	// internal, used by RPC server
+	counter int
+}
+
+func (s *State) Name(id NodeID) NodeName {
+	return s.Nodes[id] // id -> name (or empty string)
+}
+
+func (s *State) IsSendShareFor(id NodeID) bool {
+	var name, ok = s.Nodes[id]
+	if !ok {
+		return false
+	}
+	return s.Shares == nil || isInList(s.Shares.Good, id)
+}
+
+func (e *Entity) IsSendBadShareFor(id string) bool {
+	var name, ok = s.Nodes[id]
+	if !ok {
+		return false
+	}
+	return s.Shares == nil || isInList(s.Shares.Bad, id)
 }

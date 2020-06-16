@@ -12,6 +12,7 @@ import (
 // type aliases
 type (
 	NodeID    = config.NodeID
+	NodeName  = config.NodeName
 	Round     = config.Round
 	Phase     = config.Phase
 	RoundName = config.RoundName
@@ -19,46 +20,46 @@ type (
 
 // ViewChangeEvent represents view change information.
 type ViewChangeEvent struct {
-	Sender   NodeID   // node that sends the VC
-	Round    Round    // view change round
-	Miners   []NodeID // magic block miners
-	Sharders []NodeID // magic block sharders
+	Sender   NodeName   // node that sends the VC
+	Round    Round      // view change round
+	Miners   []NodeName // magic block miners
+	Sharders []NodeName // magic block sharders
 }
 
 // PhaseEvent represents phase switching.
 type PhaseEvent struct {
-	Sender NodeID //
-	Phase  Phase  //
+	Sender NodeName //
+	Phase  Phase    //
 }
 
 // AddMinerEvent in miner SC.
 type AddMinerEvent struct {
-	Sender  NodeID // event emitter
-	MinerID NodeID // the added miner
+	Sender  NodeName // event emitter
+	MinerID NodeName // the added miner
 }
 
 // AddSharderEvent in miner SC.
 type AddSharderEvent struct {
-	Sender    NodeID // event emitter
-	SharderID NodeID // the added sharder
+	Sender    NodeName // event emitter
+	SharderID NodeName // the added sharder
 }
 
 // Round proceed in pay_fees of Miner SC.
 type RoundEvent struct {
-	Sender NodeID // event emitter
-	Round  Round  // round number
+	Sender NodeName // event emitter
+	Round  Round    // round number
 }
 
 // ContributeMPKEvent where a miner successfully sent its contribution.
 type ContributeMPKEvent struct {
-	Sender  NodeID // event emitter
-	MinerID NodeID // miner that contributes
+	Sender  NodeName // event emitter
+	MinerID NodeName // miner that contributes
 }
 
 // ShareOrSignsSharesEvent where a miner successfully sent its share or sign
 type ShareOrSignsSharesEvent struct {
-	Sender  NodeID // event emitter
-	MinerID NodeID // miner that sends
+	Sender  NodeName // event emitter
+	MinerID NodeName // miner that sends
 }
 
 // known locks

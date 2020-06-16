@@ -24,8 +24,6 @@ type Executor interface {
 
 	// VC misbehavior
 
-	SendShareOnly(miner NodeName, only []NodeName) (err error)
-	SendShareBad(miner NodeName, bad []NodeName) (err error)
 	SetRevealed(miners []NodeName, pin bool, tm time.Duration) (err error)
 
 	// waiting
@@ -40,17 +38,25 @@ type Executor interface {
 
 	// Byzantine: BC tests, miners misbehavior
 
-	SendBadVRF(miners []NodeName) (err error)
-	NotSendVRF(miners []NodeName) (err error)
-	SendBadRoundTimeout(miners []NodeName) (err error)
-	NotSendRoundTimeout(miners []NodeName) (err error)
-	SendCompetingBlock(mienrs []NodeName) (err error)
-	SendBadBlock(miners []NodeName) (err error)
-	NotSendBlock(miners []NodeName) (err error)
-	SendBadVerificationTicket(miners []NodeName) (err error)
-	NotSendVerificationTicket(miners []NodeName) (err error)
-	SendBadNotarizedBlock(miners []NodeName) (err error)
-	NotSendNotarizedBlock(miners []NodeName) (err error)
+	VRFS(vrfs *VRFS)
+	RoundTimeout(rt *RoundTimeout)
+	CompetingBlock(cb *CompetingBlock)
+	SignOnlyCompetingBlocks(socb *SignOnlyCompetingBlocks)
+	DoubleSpendTransaction(dst *DoubleSpendTransaction)
+	WrongBlockSignHash(wbsh *WrongBlockSignHash)
+	WrongBlockSignKey(wbsk *WrongBlockSignKey)
+	WrongBlockHash(wbh *WrongBlockHash)
+	VerificationTicket(vt *VerificationTicket)
+	WrongVerificationTicketHash(wvth *WrongVerificationTicketHash)
+	WrongVerificationTicketKey(wvtk *WrongVerificationTicketKey)
+	WrongNotarizedBlockHash(wnbh *WrongNotarizedBlockHash)
+	WrongNotarizedBlockKey(wnbk *WrongNotarizedBlockKey)
+	NotarizeOnlyCompetingBlock(ncb *NotarizeOnlyCompetingBlock)
+	NotarizedBlock(nb *NotarizedBlock)
+	MPK(mpk *MPK)
+	Shares(s *Shares)
+	Signatures(s *Signatures)
+	Publish(p *Publish)
 }
 
 //

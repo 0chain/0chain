@@ -3,6 +3,7 @@ package conductrpc
 import (
 	"log"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/spf13/viper"
@@ -14,17 +15,26 @@ import (
 // the Entity). The Entity uses long polling
 // methods.
 type Entity struct {
-	id NodeID
+	id     NodeID  // this
+	client *Client // RPC client
 
-	client *Client
+	state atomic.Value // the last state (can be nil first time)
 
-	mutex    sync.Mutex
-	only     []NodeID // send share only for this nodes
-	bad      []NodeID // send bad share for this nodes (regardless the 'only' list)
-	revealed bool     // default is false
+	quitOnce sync.Once     //
+	quit     chan struct{} //
+}
 
-	quitOnce sync.Once
-	quit     chan struct{}
+// State returns current state.
+func (e *Entity) State() (state *State) {
+	if val := e.state.Load(); val != nil {
+		return val.(*State)
+	}
+	return // nil, not polled yet
+}
+
+// SetState sets current state.
+func (e *Entity) SetState(state *State) {
+	e.state.Store(state) // update
 }
 
 var globalEntity *Entity
@@ -35,7 +45,7 @@ func Init(id string) {
 	var (
 		client, err = NewClient(viper.GetString("integration_tests.address"))
 		interval    = viper.GetDuration("integration_tests.lock_interval")
-		join        bool
+		state       *State
 	)
 	if err != nil {
 		log.Fatalf("creating RPC client: %v", err)
@@ -46,17 +56,16 @@ func Init(id string) {
 	globalEntity.client = client
 	globalEntity.quit = make(chan struct{})
 
-	go globalEntity.pollSendShareOnly()
-	go globalEntity.pollSendShareBad()
-	go globalEntity.pollIsRevealed()
-
+	// initial state polling and wait node unlock
 	for {
-		join, err = client.NodeReady(NodeID(id))
+		// state polling can't return nil-State if err is nil
+		state, err = client.State(NodeID(id))
 		if err != nil {
-			panic("requesting RPC (NodeReady): " + err.Error())
+			panic("requesting RPC (State): " + err.Error())
 		}
-		if join {
-			return // can join blockchain
+		globalEntity.SetState(state)
+		if !state.IsLock {
+			break // can join blockchain
 		}
 		// otherwise, have to wait, retry after the interval
 
@@ -65,74 +74,24 @@ func Init(id string) {
 		time.Sleep(interval)
 	}
 
+	// start state polling
+	go globalEntity.pollState()
+
 }
 
-func (e *Entity) setShareOnly(only []NodeID) {
-	e.mutex.Lock()
-	defer e.mutex.Unlock()
-
-	e.only = only
-}
-
-func (e *Entity) setShareBad(bad []NodeID) {
-	e.mutex.Lock()
-	defer e.mutex.Unlock()
-
-	e.bad = bad
-}
-
-func (e *Entity) setRevealed(pin bool) {
-	e.mutex.Lock()
-	defer e.mutex.Unlock()
-
-	e.revealed = pin
-}
-
-func (e *Entity) pollSendShareOnly() {
+func (e *Entity) pollState() {
 	for {
 		select {
 		case <-e.quit:
 			return
 		default:
 		}
-		var only, err = e.client.SendShareOnly(e.id)
+		var state, err = e.client.State(e.id)
 		if err != nil {
-			log.Printf("polling SendShareOnly: %v", err)
+			log.Printf("polling State: %v", err)
 			continue
 		}
-		e.setShareOnly(only)
-	}
-}
-
-func (e *Entity) pollSendShareBad() {
-	for {
-		select {
-		case <-e.quit:
-			return
-		default:
-		}
-		var bad, err = e.client.SendShareBad(e.id)
-		if err != nil {
-			log.Printf("polling SendShareBad: %v", err)
-			continue
-		}
-		e.setShareBad(bad)
-	}
-}
-
-func (e *Entity) pollIsRevealed() {
-	for {
-		select {
-		case <-e.quit:
-			return
-		default:
-		}
-		var pin, err = e.client.IsRevealed(e.id)
-		if err != nil {
-			log.Printf("polling IsRevealed: %v", err)
-			continue
-		}
-		e.setRevealed(pin)
+		e.SetState(state)
 	}
 }
 
