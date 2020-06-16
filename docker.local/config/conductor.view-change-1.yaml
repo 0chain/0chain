@@ -1,12 +1,10 @@
 ###
-### view change tests from first set (from first milestone)
+### view change tests from the first set (from the first milestone)
 ###
 
 ---
 
-#
 # enabled test cases sets
-#
 enable:
   # comment out to disable
   - "Outside miner comes up in phase X"
@@ -18,9 +16,7 @@ enable:
   - "Down and up on VC rounds"
   - "Revealed"
 
-#
 # sets of test cases
-#
 sets:
   # the name used in the enable list above
   - name: "Outside miner comes up in phase X"
@@ -76,9 +72,7 @@ sets:
     tests:
       - "Revealed"
 
-#
 # test cases
-#
 tests:
 
   # known phases

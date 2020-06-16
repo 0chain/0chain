@@ -2,6 +2,8 @@ package conductrpc
 
 import (
 	"net/rpc"
+
+	"0chain.net/conductor/config"
 )
 
 // Client of the conductor RPC server.
@@ -133,6 +135,10 @@ func (c *Client) ShareOrSignsShares(sosse *ShareOrSignsSharesEvent) (err error) 
 	return
 }
 
+//
+// state
+//
+
 // SendShareOnly to configured nodes. The long polling method, e.g. it blocks.
 func (c *Client) SendShareOnly(me NodeID) (only []NodeID, err error) {
 	err = c.client.Call("Server.SendShareOnly", me, &only)
@@ -159,4 +165,35 @@ func (c *Client) IsRevealed(node NodeID) (pin bool, err error) {
 		err = c.client.Call("Server.IsRevealed", node, &pin)
 	}
 	return
+}
+
+// State is node state.
+type State struct {
+	IsMonitor  bool // send monitor events (round, phase, etc)
+	Lock       bool // node locked
+	IsRevealed bool // revealed shares
+	// Byzantine state. Below, if a value is nil, then node behaves as usual
+	// for it.
+	//
+	// Byzantine blockchain
+	VRFS                        *config.VRFS
+	RoundTimeout                *config.RoundTimeout
+	CompetingBlock              *config.CompetingBlock
+	SignOnlyCompetingBlocks     *config.SignOnlyCompetingBlocks
+	DoubleSpendTransaction      *config.DoubleSpendTransaction
+	WrongBlockSignHash          *config.WrongBlockSignHash
+	WrongBlockSignKey           *config.WrongBlockSignKey
+	WrongBlockHash              *config.WrongBlockHash
+	VerificationTicket          *config.VerificationTicket
+	WrongVerificationTicketHash *config.WrongVerificationTicketHash
+	WrongVerificationTicketKey  *config.WrongVerificationTicketKey
+	WrongNotarizedBlockHash     *config.WrongNotarizedBlockHash
+	WrongNotarizedBlockKey      *config.WrongNotarizedBlockKey
+	NotarizeOnlyCompetingBlock  *config.NotarizeOnlyCompetingBlock
+	NotarizedBlock              *config.NotarizedBlock
+	// Byzantine View Change
+	MPK        *config.MPK
+	Shares     *config.Shares
+	Signatures *config.Signatures
+	Publish    *config.Publish
 }

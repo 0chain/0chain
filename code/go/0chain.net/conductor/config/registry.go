@@ -95,4 +95,179 @@ func init() {
 		return f.setRevealed(name, ex, val, false, tm)
 	})
 
+	// Byzantine blockchain.
+
+	register("vrfs", func(f Flow, name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		var vrfs VRFS
+		if err = vrfs.Unmarshal(name, val); err != nil {
+			return
+		}
+		return ex.VRFS(&vrfs)
+	})
+
+	register("round_timeout", func(f Flow, name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		var rt RoundTimeout
+		if err = rt.Unmarshal(name, val); err != nil {
+			return
+		}
+		return ex.RoundTimeout(&rt)
+	})
+
+	register("competing_block", func(f Flow, name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		var cb CompetingBlock
+		if err = cb.Unmarshal(name, val); err != nil {
+			return
+		}
+		return ex.CompetingBlock(&cb)
+	})
+
+	register("sign_only_competing_blocks", func(f Flow, name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		var socb SignOnlyCompetingBlocks
+		if err = socb.Unmarshal(name, val); err != nil {
+			return
+		}
+		return ex.SignOnlyCompetingBlocks(&socb)
+	})
+
+	register("double_spend_transaction", func(f Flow, name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		var dst DoubleSpendTransaction
+		if err = dst.Unmarshal(name, val); err != nil {
+			return
+		}
+		return ex.DoubleSpendTransaction(&dst)
+	})
+
+	register("wrong_block_sign_hash", func(f Flow, name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		var wbsh WrongBlockSignHash
+		if err = wbsh.Unmarshal(name, val); err != nil {
+			return
+		}
+		return ex.WrongBlockSignHash(&wbsh)
+	})
+
+	register("wrong_block_sign_key", func(f Flow, name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		var wbsk WrongBlockSignKey
+		if err = wbsk.Unmarshal(name, val); err != nil {
+			return
+		}
+		return ex.WrongBlockSignKey(&wbsk)
+	})
+
+	register("wrong_block_hash", func(f Flow, name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		var wbh WrongBlockHash
+		if err = wbh.Unmarshal(name, val); err != nil {
+			return
+		}
+		return ex.WrongBlockHash(&wbh)
+	})
+
+	register("verification_ticket", func(f Flow, name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		var vt VerificationTicket
+		if err = vt.Unmarshal(name, val); err != nil {
+			return
+		}
+		return ex.VerificationTicket(&vt)
+	})
+
+	register("wrong_verification_ticket_hash", func(f Flow, name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		var wvth WrongVerificationTicketHash
+		if err = wvth.Unmarshal(name, val); err != nil {
+			return
+		}
+		return ex.WrongVerificationTicketHash(&wvth)
+	})
+
+	register("wrong_verification_ticket_key", func(f Flow, name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		var wvtk WrongVerificationTicketKey
+		if err = wvtk.Unmarshal(name, val); err != nil {
+			return
+		}
+		return ex.WrongVerificationTicketKey(&wvtk)
+	})
+
+	register("wrong_notarized_block_hash", func(f Flow, name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		var wnth WrongNotarizedBlockHash
+		if err = wnth.Unmarshal(name, val); err != nil {
+			return
+		}
+		return ex.WrongNotarizedBlockHash(&wnth)
+	})
+
+	register("wrong_notarized_block_key", func(f Flow, name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		var wnbk WrongNotarizedBlockKey
+		if err = wnbk.Unmarshal(name, val); err != nil {
+			return
+		}
+		return ex.WrongNotarizedBlockKey(&wnbk)
+	})
+
+	register("notarize_only_competing_block", func(f Flow, name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		var nocb NotarizeOnlyCompetingBlock
+		if err = nocb.Unmarshal(name, val); err != nil {
+			return
+		}
+		return ex.NotarizeOnlyCompetingBlock(&nocb)
+	})
+
+	register("notarized_block", func(f Flow, name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		var nb NotarizedBlock
+		if err = nb.Unmarshal(name, val); err != nil {
+			return
+		}
+		return ex.NotarizedBlock(&nb)
+	})
+
+	// Byzantine view change
+
+	register("mpk", func(f Flow, name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		var mpk MPK
+		if err = mpk.Unmarshal(name, val); err != nil {
+			return
+		}
+		return ex.MPK(&mpk)
+	})
+
+	register("shares", func(f Flow, name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		var shares Shares
+		if err = shares.Unmarshal(name, val); err != nil {
+			return
+		}
+		return ex.Shares(&shares)
+	})
+
+	register("signatures", func(f Flow, name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		var signatures Signatures
+		if err = signatures.Unmarshal(name, val); err != nil {
+			return
+		}
+		return ex.Signatures(&signatures)
+	})
+
+	register("publish", func(f Flow, name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		var publish Publish
+		if err = publish.Unmarshal(name, val); err != nil {
+			return
+		}
+		return ex.Publish(&publish)
+	})
+
 }
