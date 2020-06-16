@@ -1,9 +1,6 @@
 package round
 
 import (
-	"0chain.net/chaincore/node"
-	"0chain.net/core/ememorystore"
-	. "0chain.net/core/logging"
 	"context"
 	"fmt"
 	"math/rand"
@@ -15,7 +12,13 @@ import (
 	"time"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/node"
 	"0chain.net/core/datastore"
+	"0chain.net/core/ememorystore"
+
+	"github.com/spf13/viper"
+
+	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -29,6 +32,114 @@ const (
 	RoundStateFinalizing
 	RoundStateFinalized
 )
+
+type timeoutCounter struct {
+	mutex        sync.RWMutex        // async safe
+	count        int                 // current round timeout
+	skip         int                 // skip timeout incrementation
+	timeoutVotes map[int]int         // votes timeout -> votes
+	votersVoted  map[string]struct{} // voted node_id -> pin
+}
+
+// configurations prefix
+const roundTimeouts = "server_chain.round_timeouts."
+
+func (*timeoutCounter) mult() int {
+	return viper.GetInt(roundTimeouts + "round_timeout_mult")
+}
+
+func (*timeoutCounter) max() int {
+	return viper.GetInt(roundTimeouts + "round_timeout_max")
+}
+
+func (tc *timeoutCounter) resetVotes() {
+	tc.timeoutVotes = make(map[int]int)
+	tc.votersVoted = make(map[string]struct{})
+}
+
+func (tc *timeoutCounter) isVoted(id string) (ok bool) {
+	_, ok = tc.votersVoted[id]
+	return
+}
+
+func (tc *timeoutCounter) addVote(id string, num int) {
+	if tc.isVoted(id) {
+		return
+	}
+	tc.timeoutVotes[num]++
+	tc.votersVoted[id] = struct{}{}
+}
+
+func (tc *timeoutCounter) AddTimeoutVote(num int, id string) {
+	tc.mutex.Lock()
+	defer tc.mutex.Unlock()
+
+	tc.addVote(id, num)
+}
+
+// IncrementTimeoutCount - increments timeout count
+func (tc *timeoutCounter) IncrementTimeoutCount() {
+	tc.mutex.Lock()
+	defer tc.mutex.Unlock()
+
+	var mostVotes, mostTimeout int
+	for k, v := range tc.timeoutVotes {
+		if v > mostVotes || (v == mostVotes && k > mostTimeout) {
+			mostVotes = v
+			mostTimeout = k
+		}
+	}
+
+	tc.resetVotes() // for next voting
+
+	if mostTimeout > tc.count {
+		tc.count = mostTimeout // increase by an external vote
+		tc.skip = mostTimeout  //
+		return
+	}
+
+	if tc.count == 0 {
+		tc.count = 1 // first increasing
+		tc.skip = 1  //
+		return
+	}
+
+	// skip this incrementation
+	if tc.skip < tc.count {
+		tc.skip++
+		return
+	}
+
+	// increase by configured multiplier
+	tc.count = tc.count * tc.mult()
+	if max := tc.max(); tc.count > max {
+		tc.count = max
+		tc.skip = max
+	}
+}
+
+// SetTimeoutCount - sets the timeout count to given number if it is greater
+// than existing and returns true. Else false.
+func (tc *timeoutCounter) SetTimeoutCount(count int) (set bool) {
+	tc.mutex.Lock()
+	defer tc.mutex.Unlock()
+
+	if count <= tc.count {
+		return // false (not set)
+	}
+
+	tc.count = count
+	tc.skip = count
+	return true // set
+}
+
+// GetTimeoutCount - returns the timeout count
+func (tc *timeoutCounter) GetTimeoutCount() (count int) {
+	tc.mutex.Lock()
+	defer tc.mutex.Unlock()
+
+	return tc.count
+}
 
 /*Round - data structure for the round */
 type Round struct {
@@ -51,13 +162,10 @@ type Round struct {
 	mutex           sync.RWMutex
 	shares          map[string]*VRFShare
 
-	timeoutCount     int32
 	softTimeoutCount int32
 	vrfStartTime     atomic.Value
 
-	timeoutVotes map[int]int
-	votersVoted  map[string]bool
-	votesMutex   sync.Mutex
+	timeoutCounter
 }
 
 // RoundFactory - a factory to create a new round object specific to miner/sharder
@@ -87,48 +195,6 @@ func (r *Round) GetKey() datastore.Key {
 //GetRoundNumber - returns the round number
 func (r *Round) GetRoundNumber() int64 {
 	return r.Number
-}
-
-// GetTimeoutCount - returns the timeout count
-func (r *Round) GetTimeoutCount() int {
-	return r.getTimeoutCount()
-}
-
-func (r *Round) getTimeoutCount() int {
-	return int(atomic.LoadInt32(&r.timeoutCount))
-}
-
-func (r *Round) setTimeoutCount(tc int) {
-	atomic.StoreInt32(&r.timeoutCount, int32(tc))
-}
-
-// IncrementTimeoutCount - Increments timeout count
-func (r *Round) IncrementTimeoutCount() {
-	r.votesMutex.Lock()
-	defer r.votesMutex.Unlock()
-	var mostVotes, mostTimeout int
-	for k, v := range r.timeoutVotes {
-		if v > mostVotes || (v == mostVotes && k > mostTimeout) {
-			mostVotes = v
-			mostTimeout = k
-		}
-	}
-	r.timeoutVotes = make(map[int]int)
-	r.votersVoted = make(map[string]bool)
-	if mostTimeout > 0 {
-		r.setTimeoutCount(mostTimeout + 1)
-	} else {
-		atomic.AddInt32(&r.timeoutCount, 1)
-	}
-}
-
-// SetTimeoutCount - sets the timeout count to given number if it is greater than existing and returns true. Else false.
-func (r *Round) SetTimeoutCount(tc int) bool {
-	if tc <= r.getTimeoutCount() {
-		return false
-	}
-	r.setTimeoutCount(tc)
-	return true
 }
 
 //SetRandomSeed - set the random seed of the round
@@ -326,8 +392,7 @@ func (r *Round) isFinalized() bool {
 func Provider() datastore.Entity {
 	r := &Round{}
 	r.initialize()
-	r.timeoutVotes = make(map[int]int)
-	r.votersVoted = make(map[string]bool)
+	r.timeoutCounter.resetVotes() // create votes maps
 	return r
 }
 
@@ -520,15 +585,6 @@ func (r *Round) setState(state int) {
 //HasRandomSeed - implement interface
 func (r *Round) HasRandomSeed() bool {
 	return atomic.LoadUint32(&r.hasRandomSeed) == 1
-}
-
-func (r *Round) AddTimeoutVote(num int, id string) {
-	r.votesMutex.Lock()
-	defer r.votesMutex.Unlock()
-	if !r.votersVoted[id] {
-		r.timeoutVotes[num]++
-		r.votersVoted[id] = true
-	}
 }
 
 func (r *Round) GetSoftTimeoutCount() int {
