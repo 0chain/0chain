@@ -91,14 +91,20 @@ type Server struct {
 	mutex sync.Mutex
 	nodes map[NodeName]*State
 
+	// node id -> node name mapping
+	names map[NodeID]NodeName
+
 	quitOnce sync.Once
 	quit     chan struct{}
 }
 
 // NewServer Conductor RPC server.
-func NewServer(address string) (s *Server, err error) {
+func NewServer(address string, names map[NodeID]NodeName) (s *Server,
+	err error) {
+
 	s = new(Server)
 	s.quit = make(chan struct{})
+	s.names = names
 
 	// without a buffer
 	s.onViewChange = make(chan *ViewChangeEvent, 10)
@@ -111,7 +117,7 @@ func NewServer(address string) (s *Server, err error) {
 	s.onContributeMPKEvent = make(chan *ContributeMPKEvent, 10)
 	s.onShareOrSignsSharesEvent = make(chan *ShareOrSignsSharesEvent, 10)
 
-	s.setups = make(map[NodeID]*nodeSetups)
+	s.nodes = make(map[NodeID]*State)
 	s.server = rpc.NewServer()
 	if err = s.server.Register(s); err != nil {
 		return nil, err
@@ -138,7 +144,11 @@ func (s *Server) AddNode(nodeID NodeID, lock bool) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	s.setups[nodeID] = newNodeSetups(lock)
+	s.setups[nodeID] = &State{
+		Nodes:   s.names,
+		IsLock:  lock,
+		counter: 0,
+	}
 }
 
 // UnlockNode unlocks a miner.
@@ -316,27 +326,6 @@ func (s *Server) AddSharder(add *AddSharderEvent, _ *struct{}) (err error) {
 	return
 }
 
-func (s *Server) NodeReady(nodeID NodeID, join *bool) (err error) {
-
-	var lock, cnt, ok = s.nodeLock(nodeID)
-	if !ok {
-		return fmt.Errorf("unexpected node: %s", nodeID)
-	}
-
-	(*join) = !lock
-
-	if cnt > 0 {
-		return // don't trigger onNodeReady twice or more times
-	}
-
-	select {
-	case s.onNodeReady <- nodeID:
-	case <-s.quit:
-	}
-
-	return
-}
-
 func (s *Server) Round(rnd *RoundEvent, _ *struct{}) (err error) {
 	select {
 	case s.onRoundEvent <- rnd:
@@ -366,14 +355,32 @@ func (s *Server) ShareOrSignsShares(soss *ShareOrSignsSharesEvent,
 }
 
 // state polling handler
-func (s *Server) State(miner NodeName, state *State) (err error) {
-	select {
-	case o := <-s.nodeSendShareOnly(miner):
-		*only = o
-	case <-s.quit:
-		return
-	}
-	return
+func (s *Server) State(id NodeID, state *State) (err error) {
+	// node name is not known by the node requesting the State
+	// and thus, NodeID used here
+
+	//
+
+	/*
+	   	var lock, cnt, ok = s.nodeLock(nodeID)
+	   	if !ok {
+	   		return fmt.Errorf("unexpected node: %s", nodeID)
+	   	}
+
+	   	(*join) = !lock
+
+	   	if cnt > 0 {
+	   		return // don't trigger onNodeReady twice or more times
+	   	}
+
+	   	select {
+	   	case s.onNodeReady <- nodeID:
+	   	case <-s.quit:
+	   	}
+
+	   	return
+	   }
+	*/
 }
 
 //

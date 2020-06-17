@@ -24,25 +24,25 @@ type CleanupBC struct {
 type Phase int
 
 const (
-	Start      = iota //
-	Contribute        //
-	Share             //
-	Publish           //
-	Wait              //
+	PhaseStart      = iota //
+	PhaseContribute        //
+	PhaseShare             //
+	PhasePublish           //
+	PhaseWait              //
 )
 
 func ParsePhase(ps string) (ph Phase, err error) {
 	switch strings.ToLower(ps) {
 	case "start":
-		return Start, nil
+		return PhaseStart, nil
 	case "contribute":
-		return Contribute, nil
+		return PhaseContribute, nil
 	case "share":
-		return Share, nil
+		return PhaseShare, nil
 	case "publish":
-		return Publish, nil
+		return PhasePublish, nil
 	case "wait":
-		return Wait, nil
+		return PhaseWait, nil
 	}
 	return 0, fmt.Errorf("unknown phase: %q", ps)
 }
@@ -50,15 +50,15 @@ func ParsePhase(ps string) (ph Phase, err error) {
 // String implements standard fmt.Stringer interface.
 func (p Phase) String() string {
 	switch p {
-	case Start:
+	case PhaseStart:
 		return "start"
-	case Contribute:
+	case PhaseContribute:
 		return "contribute"
-	case Share:
+	case PhaseShare:
 		return "share"
-	case Publish:
+	case PhasePublish:
 		return "publish"
-	case Wait:
+	case PhaseWait:
 		return "wait"
 	}
 	return fmt.Sprintf("Phase<%d>", int(p))

@@ -78,14 +78,6 @@ func init() {
 
 	// control nodes behavior / misbehavior (view change)
 
-	register("send_share_only", func(f Flow, name string,
-		ex Executor, val interface{}, tm time.Duration) (err error) {
-		return f.sendShareOnly(ex, val, tm)
-	})
-	register("send_share_bad", func(f Flow, name string,
-		ex Executor, val interface{}, tm time.Duration) (err error) {
-		return f.sendShareBad(ex, val, tm)
-	})
 	register("set_revealed", func(f Flow, name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
 		return f.setRevealed(name, ex, val, true, tm)

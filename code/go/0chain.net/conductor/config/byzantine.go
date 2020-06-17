@@ -20,12 +20,12 @@ type Bad struct {
 
 // Unmarshal with given name and from given map[interface{}]interface{}
 // by mapstructure package.
-func (b *Bad) Unmarshal(name string, val interface{}) (err error)) {
+func (b *Bad) Unmarshal(name string, val interface{}) (err error) {
 	if err = mapstructure.Decode(val, b); err != nil {
 		return fmt.Errorf("invalid '%s' argument type: %T, "+
 			"decoding error: %v", name, val, err)
 	}
-	if len(b.By) == 0{
+	if len(b.By) == 0 {
 		return fmt.Errorf("empty 'by' field of '%s'", name)
 	}
 	return

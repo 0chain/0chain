@@ -1,7 +1,6 @@
 package config
 
 import (
-	"errors"
 	"fmt"
 	"time"
 
@@ -38,25 +37,25 @@ type Executor interface {
 
 	// Byzantine: BC tests, miners misbehavior
 
-	VRFS(vrfs *VRFS)
-	RoundTimeout(rt *RoundTimeout)
-	CompetingBlock(cb *CompetingBlock)
-	SignOnlyCompetingBlocks(socb *SignOnlyCompetingBlocks)
-	DoubleSpendTransaction(dst *DoubleSpendTransaction)
-	WrongBlockSignHash(wbsh *WrongBlockSignHash)
-	WrongBlockSignKey(wbsk *WrongBlockSignKey)
-	WrongBlockHash(wbh *WrongBlockHash)
-	VerificationTicket(vt *VerificationTicket)
-	WrongVerificationTicketHash(wvth *WrongVerificationTicketHash)
-	WrongVerificationTicketKey(wvtk *WrongVerificationTicketKey)
-	WrongNotarizedBlockHash(wnbh *WrongNotarizedBlockHash)
-	WrongNotarizedBlockKey(wnbk *WrongNotarizedBlockKey)
-	NotarizeOnlyCompetingBlock(ncb *NotarizeOnlyCompetingBlock)
-	NotarizedBlock(nb *NotarizedBlock)
-	MPK(mpk *MPK)
-	Shares(s *Shares)
-	Signatures(s *Signatures)
-	Publish(p *Publish)
+	VRFS(vrfs *VRFS) (err error)
+	RoundTimeout(rt *RoundTimeout) (err error)
+	CompetingBlock(cb *CompetingBlock) (err error)
+	SignOnlyCompetingBlocks(socb *SignOnlyCompetingBlocks) (err error)
+	DoubleSpendTransaction(dst *DoubleSpendTransaction) (err error)
+	WrongBlockSignHash(wbsh *WrongBlockSignHash) (err error)
+	WrongBlockSignKey(wbsk *WrongBlockSignKey) (err error)
+	WrongBlockHash(wbh *WrongBlockHash) (err error)
+	VerificationTicket(vt *VerificationTicket) (err error)
+	WrongVerificationTicketHash(wvth *WrongVerificationTicketHash) (err error)
+	WrongVerificationTicketKey(wvtk *WrongVerificationTicketKey) (err error)
+	WrongNotarizedBlockHash(wnbh *WrongNotarizedBlockHash) (err error)
+	WrongNotarizedBlockKey(wnbk *WrongNotarizedBlockKey) (err error)
+	NotarizeOnlyCompetingBlock(ncb *NotarizeOnlyCompetingBlock) (err error)
+	NotarizedBlock(nb *NotarizedBlock) (err error)
+	MPK(mpk *MPK) (err error)
+	Shares(s *Shares) (err error)
+	Signatures(s *Signatures) (err error)
+	Publish(p *Publish) (err error)
 }
 
 //
@@ -184,48 +183,6 @@ func (f Flow) waitNoProgress(ex Executor, tm time.Duration) (err error) {
 //
 // control nodes behavior / misbehavior (view change)
 //
-
-func (f Flow) sendShareOnly(ex Executor, val interface{}, tm time.Duration) (
-	err error) {
-
-	type sendShareOnly struct {
-		Miner NodeName   `mapstructure:"miner"`
-		Only  []NodeName `mapstructure:"only"`
-	}
-
-	var sso sendShareOnly
-	if err = mapstructure.Decode(val, &sso); err != nil {
-		return fmt.Errorf("invalid 'send_share_only' argument type: %T, "+
-			"decoding error: %v", val, err)
-	}
-
-	if sso.Miner == "" {
-		return errors.New("'seed_share_only' missing miner ID")
-	}
-
-	return ex.SendShareOnly(sso.Miner, sso.Only)
-}
-
-func (f Flow) sendShareBad(ex Executor, val interface{}, tm time.Duration) (
-	err error) {
-
-	type sendShareBad struct {
-		Miner NodeName   `mapstructure:"miner"`
-		Bad   []NodeName `mapstructure:"bad"`
-	}
-
-	var ssb sendShareBad
-	if err = mapstructure.Decode(val, &ssb); err != nil {
-		return fmt.Errorf("invalid 'send_share_bad' argument type: %T, "+
-			"decoding error: %v", val, err)
-	}
-
-	if ssb.Miner == "" {
-		return errors.New("'seed_share_bad' missing miner ID")
-	}
-
-	return ex.SendShareBad(ssb.Miner, ssb.Bad)
-}
 
 func (f Flow) setRevealed(name string, ex Executor, val interface{}, pin bool,
 	tm time.Duration) (err error) {
