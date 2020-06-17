@@ -249,7 +249,8 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	// the block generator
 	var mn *MinerNode
 	if mn, err = msc.getMinerNode(block.MinerID, balances); err != nil {
-		return "", common.NewErrorf("pay_fee", "can't get generator: %v", err)
+		return "", common.NewErrorf("pay_fee", "can't get generator '%s': %v",
+			block.MinerID, err)
 	}
 
 	var (
