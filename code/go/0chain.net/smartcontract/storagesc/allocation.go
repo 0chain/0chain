@@ -348,6 +348,7 @@ func (sc *StorageSmartContract) newAllocationRequest(t *transaction.Transaction,
 // update allocation request
 type updateAllocationRequest struct {
 	ID         string           `json:"id"`              // allocation id
+	OwnerID    string           `json:"owner_id"`        // Owner of the allocation
 	Size       int64            `json:"size"`            // difference
 	Expiration common.Timestamp `json:"expiration_date"` // difference
 }
@@ -745,7 +746,7 @@ func (sc *StorageSmartContract) updateAllocationRequest(
 	}
 
 	var clist *Allocations // client allocations list
-	if clist, err = sc.getAllocationsList(t.ClientID, balances); err != nil {
+	if clist, err = sc.getAllocationsList(request.OwnerID, balances); err != nil {
 		return "", common.NewError("allocation_updating_failed",
 			"can't get client's allocations list: "+err.Error())
 	}
