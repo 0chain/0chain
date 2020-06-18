@@ -20,6 +20,10 @@ func (r *Runner) setupTimeout(tm time.Duration) {
 	}
 }
 
+//
+// control the conductor (entire tests controls)
+//
+
 // SetMonitor for phases and view changes.
 func (r *Runner) SetMonitor(name NodeName) (err error) {
 	err = r.server.UpdateState(name, func(state *conductrpc.State) {
@@ -37,6 +41,10 @@ func (r *Runner) CleanupBC(tm time.Duration) (err error) {
 	r.stopAll()
 	return r.conf.CleanupBC()
 }
+
+//
+// control nodes
+//
 
 // Start nodes, or start and lock them.
 func (r *Runner) Start(names []NodeName, lock bool,
@@ -62,29 +70,6 @@ func (r *Runner) Start(names []NodeName, lock bool,
 			return fmt.Errorf("starting %s: %v", n.Name, err)
 		}
 	}
-	return
-}
-
-func (r *Runner) WaitViewChange(vc config.WaitViewChange, tm time.Duration) (
-	err error) {
-
-	if r.verbose {
-		log.Print(" [INF] wait for VC ", vc.ExpectMagicBlock.Round)
-	}
-
-	r.setupTimeout(tm)
-	r.waitViewChange = vc
-	return
-}
-
-func (r *Runner) WaitPhase(pe config.WaitPhase, tm time.Duration) (err error) {
-
-	if r.verbose {
-		log.Print(" [INF] wait phase ", pe.Phase.String())
-	}
-
-	r.setupTimeout(tm)
-	r.waitPhase = pe
 	return
 }
 
@@ -122,6 +107,33 @@ func (r *Runner) Stop(names []NodeName, tm time.Duration) (err error) {
 		}
 		log.Print(n.Name, " stopped")
 	}
+	return
+}
+
+//
+// waiters
+//
+
+func (r *Runner) WaitViewChange(vc config.WaitViewChange, tm time.Duration) (
+	err error) {
+
+	if r.verbose {
+		log.Print(" [INF] wait for VC ", vc.ExpectMagicBlock.Round)
+	}
+
+	r.setupTimeout(tm)
+	r.waitViewChange = vc
+	return
+}
+
+func (r *Runner) WaitPhase(pe config.WaitPhase, tm time.Duration) (err error) {
+
+	if r.verbose {
+		log.Print(" [INF] wait phase ", pe.Phase.String())
+	}
+
+	r.setupTimeout(tm)
+	r.waitPhase = pe
 	return
 }
 
@@ -186,22 +198,6 @@ func (r *Runner) WaitAdd(wadd config.WaitAdd, tm time.Duration) (err error) {
 	return
 }
 
-func (r *Runner) SetRevealed(ss []NodeName, pin bool, tm time.Duration) (
-	err error) {
-
-	if r.verbose {
-		log.Print(" [INF] set reveled of %s to %t", ss, pin)
-	}
-
-	err = r.server.UpdateStates(ss, func(state *conductrpc.State) {
-		state.IsRevealed = pin
-	})
-	if err != nil {
-		return fmt.Errorf("setting revealed to %t nodes: %v", pin, err)
-	}
-	return
-}
-
 func (r *Runner) WaitNoProgress(wait time.Duration) (err error) {
 	if r.verbose {
 		log.Print(" [INF] wait no progress ", wait.String())
@@ -211,6 +207,10 @@ func (r *Runner) WaitNoProgress(wait time.Duration) (err error) {
 	r.setupTimeout(wait)
 	return
 }
+
+//
+// Byzantine blockchain miners.
+//
 
 func (r *Runner) VRFS(vrfs *config.VRFS) (err error) {
 	if r.verbose {
@@ -444,6 +444,26 @@ func (r *Runner) NotarizedBlock(nb *config.NotarizedBlock) (err error) {
 	return
 }
 
+//
+// Byzantine VC miners.
+//
+
+func (r *Runner) SetRevealed(ss []NodeName, pin bool, tm time.Duration) (
+	err error) {
+
+	if r.verbose {
+		log.Print(" [INF] set reveled of %s to %t", ss, pin)
+	}
+
+	err = r.server.UpdateStates(ss, func(state *conductrpc.State) {
+		state.IsRevealed = pin
+	})
+	if err != nil {
+		return fmt.Errorf("setting revealed to %t nodes: %v", pin, err)
+	}
+	return
+}
+
 func (r *Runner) MPK(mpk *config.MPK) (err error) {
 	if r.verbose {
 		log.Print(" [INF] set 'MPK' of %s: good %s, bad %s", mpk.By,
@@ -497,6 +517,69 @@ func (r *Runner) Publish(p *config.Publish) (err error) {
 	})
 	if err != nil {
 		return fmt.Errorf("setting 'publish': %v", err)
+	}
+	return
+}
+
+//
+// Byzantine blockchain sharders
+//
+
+func (r *Runner) FinalizedBlock(fb *config.FinalizedBlock) (err error) {
+	if r.verbose {
+		log.Print(" [INF] set 'finalized block' of %s: good %s, bad %s", fb.By,
+			fb.Good, fb.Bad)
+	}
+
+	err = r.server.UpdateStates(fb.By, func(state *conductrpc.State) {
+		state.FinalizedBlock = fb
+	})
+	if err != nil {
+		return fmt.Errorf("setting 'finalized block': %v", err)
+	}
+	return
+}
+
+func (r *Runner) MagicBlock(mb *config.MagicBlock) (err error) {
+	if r.verbose {
+		log.Print(" [INF] set 'magic block' of %s: good %s, bad %s", mb.By,
+			mb.Good, mb.Bad)
+	}
+
+	err = r.server.UpdateStates(mb.By, func(state *conductrpc.State) {
+		state.MagicBlock = mb
+	})
+	if err != nil {
+		return fmt.Errorf("setting 'magic block': %v", err)
+	}
+	return
+}
+
+func (r *Runner) VerifyTransaction(vt *config.VerifyTransaction) (err error) {
+	if r.verbose {
+		log.Print(" [INF] set bad 'verify transaction' of %s to clients",
+			vt.By)
+	}
+
+	err = r.server.UpdateStates(vt.By, func(state *conductrpc.State) {
+		state.VerifyTransaction = vt
+	})
+	if err != nil {
+		return fmt.Errorf("setting bad 'verify transaction': %v", err)
+	}
+	return
+}
+
+func (r *Runner) SCState(scs *config.SCState) (err error) {
+	if r.verbose {
+		log.Print(" [INF] set bad 'SC state' of %s to clients", scs.By)
+	}
+
+	err = r.server.UpdateStates(scs.By, func(state *conductrpc.State) {
+		state.SCState = scs
+	})
+	if err != nil {
+		return fmt.Errorf("setting bad 'SC state': %v", err)
 	}
 	return
 }

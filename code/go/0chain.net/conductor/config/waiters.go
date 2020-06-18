@@ -1,7 +1,7 @@
 package config
 
-// MagicBlock represents expected magic block.
-type MagicBlock struct {
+// ExpectMagicBlock represents expected magic block.
+type ExpectMagicBlock struct {
 	// Round ignored if it's zero. If set a positive value, then this
 	// round is expected.
 	Round Round `json:"round" yaml:"round" mapstructure:"round"`
@@ -18,17 +18,17 @@ type MagicBlock struct {
 }
 
 // IsZero returns true if the MagicBlock is empty.
-func (mb *MagicBlock) IsZero() bool {
-	return mb.Round == 0 &&
-		mb.RoundNextVCAfter == "" &&
-		len(mb.Sharders) == 0 &&
-		len(mb.Miners) == 0
+func (emb *ExpectMagicBlock) IsZero() bool {
+	return emb.Round == 0 &&
+		emb.RoundNextVCAfter == "" &&
+		len(emb.Sharders) == 0 &&
+		len(emb.Miners) == 0
 }
 
 // WaitViewChange flow configuration.
 type WaitViewChange struct {
-	RememberRound    RoundName  `json:"remember_round" yaml:"remember_round" mapstructure:"remember_round"`
-	ExpectMagicBlock MagicBlock `json:"expect_magic_block" yaml:"expect_magic_block" mapstructure:"expect_magic_block"`
+	RememberRound    RoundName        `json:"remember_round" yaml:"remember_round" mapstructure:"remember_round"`
+	ExpectMagicBlock ExpectMagicBlock `json:"expect_magic_block" yaml:"expect_magic_block" mapstructure:"expect_magic_block"`
 }
 
 // IsZero returns true if the ViewChagne is empty.

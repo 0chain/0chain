@@ -79,6 +79,11 @@ type (
 	WrongNotarizedBlockKey      struct{ Bad } // wrong_notarized_block_key
 	NotarizeOnlyCompetingBlock  struct{ Bad } // notarize_only_competing_block
 	NotarizedBlock              struct{ Bad } // notarized_block
+	// Byzantine blockchain sharders side
+	FinalizedBlock    struct{ Bad } // finalized_block
+	MagicBlock        struct{ Bad } // magic_block
+	VerifyTransaction struct{ Bad } // verify_transaction (to clients)
+	SCState           struct{ Bad } // sc_state (to clients)
 	// Byzantine view change
 	MPK        struct{ Bad } // mpk
 	Shares     struct{ Bad } // shares

@@ -224,6 +224,44 @@ func init() {
 		return ex.NotarizedBlock(&nb)
 	})
 
+	// Byzantine blockchain sharders
+
+	register("finalized_block", func(f Flow, name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		var fb FinalizedBlock
+		if err = fb.Unmarshal(name, val); err != nil {
+			return
+		}
+		return ex.FinalizedBlock(&fb)
+	})
+
+	register("magic_block", func(f Flow, name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		var mb MagicBlock
+		if err = mb.Unmarshal(name, val); err != nil {
+			return
+		}
+		return ex.MagicBlock(&mb)
+	})
+
+	register("verify_transaction", func(f Flow, name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		var vt VerifyTransaction
+		if err = vt.Unmarshal(name, val); err != nil {
+			return
+		}
+		return ex.VerifyTransaction(&vt)
+	})
+
+	register("sc_state", func(f Flow, name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		var scs SCState
+		if err = scs.Unmarshal(name, val); err != nil {
+			return
+		}
+		return ex.SCState(&scs)
+	})
+
 	// Byzantine view change
 
 	register("mpk", func(f Flow, name string,

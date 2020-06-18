@@ -35,6 +35,13 @@ type Executor interface {
 	WaitAdd(wadd WaitAdd, timeout time.Duration) (err error)
 	WaitNoProgress(wait time.Duration) (err error)
 
+	// Byzantine: BC, sharders
+
+	FinalizedBlock(fb *FinalizedBlock) (err error)
+	MagicBlock(mb *MagicBlock) (err error)
+	VerifyTransaction(vt *VerifyTransaction) (err error)
+	SCState(scs *SCState) (err error)
+
 	// Byzantine: BC tests, miners misbehavior
 
 	VRFS(vrfs *VRFS) (err error)

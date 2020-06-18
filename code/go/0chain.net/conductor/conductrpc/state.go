@@ -35,6 +35,11 @@ type State struct {
 	WrongNotarizedBlockKey      *config.WrongNotarizedBlockKey
 	NotarizeOnlyCompetingBlock  *config.NotarizeOnlyCompetingBlock
 	NotarizedBlock              *config.NotarizedBlock
+	// Byzantine blockchain sharders
+	FinalizedBlock    *config.FinalizedBlock
+	MagicBlock        *config.MagicBlock
+	VerifyTransaction *config.VerifyTransaction
+	SCState           *config.SCState
 	// Byzantine View Change
 	MPK        *config.MPK
 	Shares     *config.Shares

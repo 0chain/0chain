@@ -37,14 +37,14 @@ type PhaseEvent struct {
 
 // AddMinerEvent in miner SC.
 type AddMinerEvent struct {
-	Sender  NodeName // event emitter
-	MinerID NodeName // the added miner
+	Sender NodeName // event emitter
+	Miner  NodeName // the added miner
 }
 
 // AddSharderEvent in miner SC.
 type AddSharderEvent struct {
-	Sender    NodeName // event emitter
-	SharderID NodeName // the added sharder
+	Sender  NodeName // event emitter
+	Sharder NodeName // the added sharder
 }
 
 // Round proceed in pay_fees of Miner SC.
@@ -55,14 +55,14 @@ type RoundEvent struct {
 
 // ContributeMPKEvent where a miner successfully sent its contribution.
 type ContributeMPKEvent struct {
-	Sender  NodeName // event emitter
-	MinerID NodeName // miner that contributes
+	Sender NodeName // event emitter
+	Miner  NodeName // miner that contributes
 }
 
 // ShareOrSignsSharesEvent where a miner successfully sent its share or sign
 type ShareOrSignsSharesEvent struct {
-	Sender  NodeName // event emitter
-	MinerID NodeName // miner that sends
+	Sender NodeName // event emitter
+	Miner  NodeName // miner that sends
 }
 
 type nodeState struct {

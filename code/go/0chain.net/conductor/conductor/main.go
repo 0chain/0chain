@@ -63,7 +63,8 @@ func main() {
 	log.Print("create worker instance")
 	r.conf = conf
 	r.verbose = verbose
-	if r.server, err = conductrpc.NewServer(conf.Bind); err != nil {
+	r.server, err = conductrpc.NewServer(conf.Bind, conf.Nodes.Names())
+	if err != nil {
 		log.Fatal("[ERR]", err)
 	}
 
@@ -75,7 +76,7 @@ func main() {
 	}()
 	defer r.server.Close()
 
-	r.waitNodes = make(map[config.NodeID]struct{})
+	r.waitNodes = make(map[config.NodeName]struct{})
 	r.rounds = make(map[config.RoundName]config.Round)
 	r.setupTimeout(0)
 
@@ -102,7 +103,7 @@ func readConfig(configFile string) (conf *config.Config) {
 func readConfigs(configFile, testsFile string) (conf *config.Config) {
 	conf = readConfig(configFile)
 	var tests = readConfig(testsFile)
-	conf.Tests = tests.Tess    //
+	conf.Tests = tests.Tests   //
 	conf.Enable = tests.Enable // merge
 	conf.Sets = tests.Sets     //
 	return
@@ -160,23 +161,24 @@ func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
 	return tm, false
 }
 
-func (r *Runner) toIDs(names []NodeName) (ids []NodeID, err error) {
-	ids = make([]NodeID, 0, len(names))
-	for _, name := range names {
-		var n, ok = r.conf.Nodes.NodeByName(name)
-		if !ok {
-			return nil, fmt.Errorf("unknown node %q", name)
-		}
-		ids = append(ids, n.ID)
-	}
-	return
-}
+// func (r *Runner) toIDs(names []NodeName) (ids []NodeID, err error) {
+// 	ids = make([]NodeID, 0, len(names))
+// 	for _, name := range names {
+// 		var n, ok = r.conf.Nodes.NodeByName(name)
+// 		if !ok {
+// 			return nil, fmt.Errorf("unknown node %q", name)
+// 		}
+// 		ids = append(ids, n.ID)
+// 	}
+// 	return
+// }
 
-func isEqual(a, b []NodeID) (ok bool) {
+// is equal set of elements in both slices (an order doesn't matter)
+func isEqual(a, b []NodeName) (ok bool) {
 	if len(a) != len(b) {
 		return false
 	}
-	var am = make(map[NodeID]struct{})
+	var am = make(map[NodeName]struct{})
 	for _, ax := range a {
 		am[ax] = struct{}{}
 	}
@@ -192,9 +194,9 @@ func isEqual(a, b []NodeID) (ok bool) {
 	return true
 }
 
-func (r *Runner) printNodes(list []NodeID) {
+func (r *Runner) printNodes(list []NodeName) {
 	for _, x := range list {
-		var n, ok = r.conf.Nodes.NodeByID(x)
+		var n, ok = r.conf.Nodes.NodeByName(x)
 		if !ok {
 			fmt.Println("  - ", x, "(unknown node)")
 			continue
@@ -210,21 +212,19 @@ func (r *Runner) printViewChange(vce *conductrpc.ViewChangeEvent) {
 	log.Print(" [INF] VC ", vce.Round)
 	log.Print(" [INF] VC MB miners:")
 	for _, mn := range vce.Miners {
-		var n, ok = r.conf.Nodes.NodeByID(mn)
-		if !ok {
-			log.Print("   - ", mn, " (unknown)")
+		if !r.conf.Nodes.Has(mn) {
+			log.Print("   - ", mn, " (unknown node)")
 			continue
 		}
-		log.Print("   - ", n.Name)
+		log.Print("   - ", mn)
 	}
 	log.Print(" [INF] VC MB sharders:")
 	for _, sh := range vce.Sharders {
-		var n, ok = r.conf.Nodes.NodeByID(sh)
-		if !ok {
-			log.Print("   - ", sh, " (unknown)")
+		if !r.conf.Nodes.Has(sh) {
+			log.Print("   - ", sh, " (unknown node)")
 			continue
 		}
-		log.Print("   - ", n.Name)
+		log.Print("   - ", sh)
 	}
 }
 
@@ -238,11 +238,10 @@ func (r *Runner) acceptViewChange(vce *conductrpc.ViewChangeEvent) (err error) {
 	}
 
 	r.printViewChange(vce) // if verbose
-	var sender, ok = r.conf.Nodes.NodeByID(vce.Sender)
-	if !ok {
+	if !r.conf.Nodes.Has(vce.Sender) {
 		return fmt.Errorf("unknown node %q sends view change", vce.Sender)
 	}
-	log.Println("view change:", vce.Round, sender.Name)
+	log.Println("view change:", vce.Round, vce.Sender)
 	// don't wait a VC
 	if r.waitViewChange.IsZero() {
 		r.lastVCRound = vce.Round // keep last round number
@@ -280,29 +279,19 @@ func (r *Runner) acceptViewChange(vce *conductrpc.ViewChangeEvent) (err error) {
 		return                                     // doesn't check MB for nodes
 	}
 	// check for nodes
-
-	var miners, sharders []NodeID
-	if miners, err = r.toIDs(emb.Miners); err != nil {
-		return fmt.Errorf("unknown miner: %v", err)
-	}
-	if sharders, err = r.toIDs(emb.Sharders); err != nil {
-		return fmt.Errorf("unknown sharder: %v", err)
-	}
-
 	var okm, oks bool
-
 	// check miners
-	if okm = isEqual(miners, vce.Miners); !okm {
+	if okm = isEqual(emb.Miners, vce.Miners); !okm {
 		fmt.Println("[ERR] expected miners list:")
-		r.printNodes(miners)
+		r.printNodes(emb.Miners)
 		fmt.Println("[ERR] got miners")
 		r.printNodes(vce.Miners)
 	}
 
 	// check sharders
-	if oks = isEqual(sharders, vce.Sharders); !oks {
+	if oks = isEqual(emb.Sharders, vce.Sharders); !oks {
 		fmt.Println("[ERR] expected sharders list:")
-		r.printNodes(sharders)
+		r.printNodes(emb.Sharders)
 		fmt.Println("[ERR] got sharders")
 		r.printNodes(vce.Sharders)
 	}
@@ -322,12 +311,11 @@ func (r *Runner) acceptPhase(pe *conductrpc.PhaseEvent) (err error) {
 	if pe.Sender != r.monitor {
 		return // not the monitor node
 	}
-	var n, ok = r.conf.Nodes.NodeByID(pe.Sender)
-	if !ok {
+	if !r.conf.Nodes.Has(pe.Sender) {
 		return fmt.Errorf("unknown 'phase' sender: %s", pe.Sender)
 	}
 	if r.verbose {
-		log.Print(" [INF] phase ", pe.Phase.String(), " ", n.Name)
+		log.Print(" [INF] phase ", pe.Phase.String(), " ", pe.Sender)
 	}
 	if r.waitPhase.IsZero() {
 		return // doesn't wait for a phase
@@ -335,7 +323,10 @@ func (r *Runner) acceptPhase(pe *conductrpc.PhaseEvent) (err error) {
 	if r.waitPhase.Phase != pe.Phase {
 		return // not this phase
 	}
-	var vcr Round
+	var (
+		vcr Round
+		ok  bool
+	)
 	if vcrn := r.waitPhase.ViewChangeRound; vcrn != "" {
 		if vcr, ok = r.rounds[vcrn]; !ok {
 			return fmt.Errorf("unknown view_change_round of phase: %s", vcrn)
@@ -350,7 +341,7 @@ func (r *Runner) acceptPhase(pe *conductrpc.PhaseEvent) (err error) {
 		}
 		// ok, accept it
 	}
-	log.Printf("[OK] accept phase %s by %s", pe.Phase.String(), n.Name)
+	log.Printf("[OK] accept phase %s by %s", pe.Phase.String(), pe.Sender)
 	r.waitPhase = config.WaitPhase{} // reset
 	return
 }
@@ -360,15 +351,15 @@ func (r *Runner) acceptAddMiner(addm *conductrpc.AddMinerEvent) (err error) {
 		return // not the monitor node
 	}
 	var (
-		sender, sok = r.conf.Nodes.NodeByID(addm.Sender)
-		added, aok  = r.conf.Nodes.NodeByID(addm.MinerID)
+		sender, sok = r.conf.Nodes.NodeByName(addm.Sender)
+		added, aok  = r.conf.Nodes.NodeByName(addm.Miner)
 	)
 	if !sok {
 		return fmt.Errorf("unexpected add_miner sender: %q", addm.Sender)
 	}
 	if !aok {
 		return fmt.Errorf("unexpected miner %q added by add_miner of %q",
-			addm.MinerID, sender.Name)
+			addm.Miner, sender.Name)
 	}
 
 	if r.verbose {
@@ -390,15 +381,15 @@ func (r *Runner) acceptAddSharder(adds *conductrpc.AddSharderEvent) (err error) 
 		return // not the monitor node
 	}
 	var (
-		sender, sok = r.conf.Nodes.NodeByID(adds.Sender)
-		added, aok  = r.conf.Nodes.NodeByID(adds.SharderID)
+		sender, sok = r.conf.Nodes.NodeByName(adds.Sender)
+		added, aok  = r.conf.Nodes.NodeByName(adds.Sharder)
 	)
 	if !sok {
 		return fmt.Errorf("unexpected add_sharder sender: %q", adds.Sender)
 	}
 	if !aok {
 		return fmt.Errorf("unexpected sharder %q added by add_sharder of %q",
-			adds.SharderID, sender.Name)
+			adds.Sharder, sender.Name)
 	}
 
 	if r.verbose {
@@ -415,20 +406,20 @@ func (r *Runner) acceptAddSharder(adds *conductrpc.AddSharderEvent) (err error) 
 	return
 }
 
-func (r *Runner) acceptNodeReady(nodeID NodeID) (err error) {
-	if _, ok := r.waitNodes[nodeID]; !ok {
-		var n, ok = r.conf.Nodes.NodeByID(nodeID)
+func (r *Runner) acceptNodeReady(nodeName NodeName) (err error) {
+	if _, ok := r.waitNodes[nodeName]; !ok {
+		var n, ok = r.conf.Nodes.NodeByName(nodeName)
 		if !ok {
-			return fmt.Errorf("unexpected and unknown node: %s", nodeID)
+			return fmt.Errorf("unexpected and unknown node: %s", nodeName)
 		}
-		return fmt.Errorf("unexpected node: %s (%s)", n.Name, nodeID)
+		return fmt.Errorf("unexpected node: %s (%s)", n.Name, nodeName)
 	}
-	delete(r.waitNodes, nodeID)
-	var n, ok = r.conf.Nodes.NodeByID(nodeID)
+	delete(r.waitNodes, nodeName)
+	var n, ok = r.conf.Nodes.NodeByName(nodeName)
 	if !ok {
-		return fmt.Errorf("unknown node: %s", nodeID)
+		return fmt.Errorf("unknown node: %s", nodeName)
 	}
-	log.Println("[OK] node ready", nodeID, n.Name)
+	log.Println("[OK] node ready", nodeName, n.Name)
 	return
 }
 
@@ -437,7 +428,7 @@ func (r *Runner) acceptRound(re *conductrpc.RoundEvent) (err error) {
 		return // not the monitor node
 	}
 
-	var _, ok = r.conf.Nodes.NodeByID(re.Sender)
+	var _, ok = r.conf.Nodes.NodeByName(re.Sender)
 	if !ok {
 		return fmt.Errorf("unknown 'round' sender: %s", re.Sender)
 	}
@@ -472,13 +463,13 @@ func (r *Runner) acceptContributeMPK(cmpke *conductrpc.ContributeMPKEvent) (
 		miner *config.Node
 		ok    bool
 	)
-	_, ok = r.conf.Nodes.NodeByID(cmpke.Sender)
+	_, ok = r.conf.Nodes.NodeByName(cmpke.Sender)
 	if !ok {
 		return fmt.Errorf("unknown 'c mpk' sender: %s", cmpke.Sender)
 	}
-	miner, ok = r.conf.Nodes.NodeByID(cmpke.MinerID)
+	miner, ok = r.conf.Nodes.NodeByName(cmpke.Miner)
 	if !ok {
-		return fmt.Errorf("unknown 'c mpk' miner: %s", cmpke.MinerID)
+		return fmt.Errorf("unknown 'c mpk' miner: %s", cmpke.Miner)
 	}
 
 	if r.verbose {
@@ -510,13 +501,13 @@ func (r *Runner) acceptShareOrSignsShares(
 		miner *config.Node
 		ok    bool
 	)
-	_, ok = r.conf.Nodes.NodeByID(sosse.Sender)
+	_, ok = r.conf.Nodes.NodeByName(sosse.Sender)
 	if !ok {
 		return fmt.Errorf("unknown 'soss' sender: %s", sosse.Sender)
 	}
-	miner, ok = r.conf.Nodes.NodeByID(sosse.MinerID)
+	miner, ok = r.conf.Nodes.NodeByName(sosse.Miner)
 	if !ok {
-		return fmt.Errorf("unknown 'soss' miner: %s", sosse.MinerID)
+		return fmt.Errorf("unknown 'soss' miner: %s", sosse.Miner)
 	}
 
 	if r.verbose {

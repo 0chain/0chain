@@ -130,3 +130,17 @@ func (ns Nodes) NodeByID(id NodeID) (n *Node, ok bool) {
 	}
 	return // nil, false
 }
+
+// Names returns map node_id -> node_name
+func (ns Nodes) Names() (names map[NodeID]NodeName) {
+	names = make(map[NodeID]NodeName, len(ns))
+	for _, n := range ns {
+		names[n.ID] = n.Name
+	}
+	return
+}
+
+func (ns Nodes) Has(name NodeName) (ok bool) {
+	_, ok = ns.NodeByName(name)
+	return
+}
