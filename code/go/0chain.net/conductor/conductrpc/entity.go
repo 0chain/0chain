@@ -162,7 +162,7 @@ func (e *Entity) ShareOrSignsShares(sosse *ShareOrSignsSharesEvent) (
 var global *Entity
 
 // Init creates global Entity and locks until unlocked.
-func (e *Entity) Init(id string) {
+func Init(id string) {
 	global = NewEntity(id)
 }
 

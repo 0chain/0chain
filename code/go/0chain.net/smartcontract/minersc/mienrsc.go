@@ -3,10 +3,7 @@
 package minersc
 
 import (
-	"sync"
-
 	"0chain.net/chaincore/config"
-	sci "0chain.net/chaincore/smartcontractinterface"
 )
 
 func (msc *MinerSmartContract) InitSC() {

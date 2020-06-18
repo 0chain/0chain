@@ -18,7 +18,7 @@ import (
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 
-	"0chain.net/conductor/conductrpc" // integration tests
+	crpc "0chain.net/conductor/conductrpc" // integration tests
 )
 
 func revertString(s string) string {
@@ -44,9 +44,9 @@ func (mc *Chain) SendDKGShare(n *node.Node) error {
 	defer viewChangeMutex.Unlock()
 	secShare := mc.viewChangeDKG.Sij[nodeID]
 
-	var state = conductrpc.Client().State()
+	var state = crpc.Client().State()
 
-	switch name := state.Name(n.GetKey()); {
+	switch name := state.Name(crpc.NodeID(n.GetKey())); {
 	case state.Shares.IsGood(name):
 		params.Add("secret_share", secShare.GetHexString())
 	case state.Shares.IsBad(name):
@@ -107,7 +107,7 @@ func (mc *Chain) PublishShareOrSigns() (*httpclientutil.Transaction, error) {
 		return nil, nil
 	}
 
-	var isRevealed = conductrpc.Client().State().IsRevealed
+	var isRevealed = crpc.Client().State().IsRevealed
 
 	for k := range mpks.Mpks {
 		if k == selfNodeKey {
