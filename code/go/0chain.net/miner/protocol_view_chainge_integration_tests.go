@@ -44,10 +44,12 @@ func (mc *Chain) SendDKGShare(n *node.Node) error {
 	defer viewChangeMutex.Unlock()
 	secShare := mc.viewChangeDKG.Sij[nodeID]
 
-	switch {
-	case conductrpc.IsSendShareFor(n.GetKey()):
+	var state = conductrpc.Client().State()
+
+	switch name := state.Name(n.GetKey()); {
+	case state.Shares.IsGood(name):
 		params.Add("secret_share", secShare.GetHexString())
-	case conductrpc.IsSendBadShareFor(n.GetKey()):
+	case state.Shares.IsBad(name):
 		params.Add("secret_share", revertString(secShare.GetHexString()))
 	default:
 		return common.NewError("failed to send DKG share", "skipped by tests")
@@ -105,7 +107,7 @@ func (mc *Chain) PublishShareOrSigns() (*httpclientutil.Transaction, error) {
 		return nil, nil
 	}
 
-	var isRevealed = conductrpc.IsRevealed()
+	var isRevealed = conductrpc.Client().State().IsRevealed
 
 	for k := range mpks.Mpks {
 		if k == selfNodeKey {

@@ -19,16 +19,6 @@ import (
 	"0chain.net/conductor/conductrpc"
 )
 
-type MinerSmartContract struct {
-	*sci.SmartContract
-	bcContext sci.BCContextI
-	client    *conductrpc.Client
-
-	mutexMinerMPK          sync.RWMutex
-	smartContractFunctions map[string]smartContractFunction
-	callbackPhase          func(int)
-}
-
 func (msc *MinerSmartContract) InitSC() {
 	if msc.smartContractFunctions == nil {
 		msc.smartContractFunctions = make(map[string]smartContractFunction)
@@ -52,14 +42,6 @@ func (msc *MinerSmartContract) InitSC() {
 	moveFunctions[Publish] = msc.moveToWait
 	moveFunctions[Wait] = msc.moveToStart
 
-	var err error
-	if msc.client, err = newConductRPCClient(); err != nil {
-		panic(err)
-	}
-
-	Logger.Debug("using integration test",
-		zap.String("address", msc.client.Address()))
-
 	// wrapped
 	msc.smartContractFunctions["add_miner"] = msc.AddMinerIntegrationTests
 	msc.smartContractFunctions["add_sharder"] = msc.AddSharderIntegrationTests
@@ -71,10 +53,6 @@ func (msc *MinerSmartContract) InitSC() {
 	msc.smartContractFunctions["addToDelegatePool"] = msc.addToDelegatePool
 	msc.smartContractFunctions["deleteFromDelegatePool"] = msc.deleteFromDelegatePool
 	msc.smartContractFunctions["sharder_keep"] = msc.sharderKeep
-}
-
-func newConductRPCClient() (client *conductrpc.Client, err error) {
-	return conductrpc.NewClient(viper.GetString("integration_tests.address"))
 }
 
 func (msc *MinerSmartContract) AddMinerIntegrationTests(

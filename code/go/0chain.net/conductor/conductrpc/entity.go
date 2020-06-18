@@ -101,7 +101,7 @@ func (e *Entity) isMonitor() bool {
 }
 
 //
-// RPC methods
+// RPC methods (events notification)
 //
 
 func (e *Entity) Phase(phase *PhaseEvent) (err error) {
@@ -173,7 +173,20 @@ func Shutdown() {
 	}
 }
 
-// client returns global Entity to interact with.
+// Client returns global Entity to interact with. Use it, for example,
+//
+//     var state = conductrpc.Client().State()
+//     for _, minerID := range miners {
+//         var name = state.Name(minerID)
+//         if state.VRFS.IsBad(name) {
+//             // send bad VRFS to this miner
+//         } else if state.VRFS.IsGood(name) {
+//             // send good VRFS to this miner
+//         } else {
+//             // don't send a VRFS to this miner
+//         }
+//     }
+//
 func Client() *Entity {
 	return global
 }
