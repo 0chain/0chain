@@ -40,13 +40,22 @@ type State struct {
 	Shares     *config.Shares
 	Signatures *config.Signatures
 	Publish    *config.Publish
-
-	// internal, used by RPC server
-	id      NodeID
-	counter int
 }
 
 // Name returns NodeName by given NodeID.
 func (s *State) Name(id NodeID) NodeName {
 	return s.Nodes[id] // id -> name (or empty string)
+}
+
+func (s *State) copy() (cp *State) {
+	cp = new(State)
+	(*cp) = (*s)
+	return
+
+}
+
+func (s *State) send(poll chan *State) {
+	go func(state *State) {
+		poll <- state
+	}(s.copy())
 }

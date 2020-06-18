@@ -1,6 +1,7 @@
 package conductrpc
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"net/rpc"
@@ -8,6 +9,8 @@ import (
 
 	"0chain.net/conductor/config"
 )
+
+var ErrShutdown = errors.New("server shutdown")
 
 // type aliases
 type (
@@ -62,6 +65,13 @@ type ShareOrSignsSharesEvent struct {
 	MinerID NodeName // miner that sends
 }
 
+type nodeState struct {
+	id      NodeID      //
+	state   *State      // current state
+	poll    chan *State // update stat
+	counter int         // used when node appears
+}
+
 type Server struct {
 	server  *rpc.Server
 	address string
@@ -89,7 +99,7 @@ type Server struct {
 
 	// nodes lock/unlock/shares sending (send only, send bad)
 	mutex sync.Mutex
-	nodes map[NodeName]*State
+	nodes map[NodeName]*nodeState
 
 	// node id -> node name mapping
 	names map[NodeID]NodeName
@@ -111,13 +121,13 @@ func NewServer(address string, names map[NodeID]NodeName) (s *Server,
 	s.onPhase = make(chan *PhaseEvent, 10)
 	s.onAddMiner = make(chan *AddMinerEvent, 10)
 	s.onAddSharder = make(chan *AddSharderEvent, 10)
-	s.onNodeReady = make(chan NodeID, 10)
+	s.onNodeReady = make(chan NodeName, 10)
 
 	s.onRoundEvent = make(chan *RoundEvent, 100)
 	s.onContributeMPKEvent = make(chan *ContributeMPKEvent, 10)
 	s.onShareOrSignsSharesEvent = make(chan *ShareOrSignsSharesEvent, 10)
 
-	s.nodes = make(map[NodeID]*State)
+	s.nodes = make(map[NodeName]*nodeState)
 	s.server = rpc.NewServer()
 	if err = s.server.Register(s); err != nil {
 		return nil, err
@@ -140,108 +150,68 @@ func (s *Server) Serve() (err error) {
 //
 
 // AddNode adds miner of sharder and, optionally, locks it.
-func (s *Server) AddNode(nodeID NodeID, lock bool) {
+func (s *Server) AddNode(nodeID NodeID, lock bool) (err error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	s.setups[nodeID] = &State{
-		Nodes:   s.names,
-		IsLock:  lock,
-		counter: 0,
-	}
-}
-
-// UnlockNode unlocks a miner.
-func (s *Server) UnlockNode(nodeID NodeID) (err error) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
-	var ns, ok = s.setups[nodeID]
+	var name, ok = s.names[nodeID]
 	if !ok {
 		return fmt.Errorf("unexpected node: %s", nodeID)
 	}
 
-	ns.lock = false
+	var ns = &nodeState{
+		id: nodeID,
+		state: &State{
+			Nodes:  s.names,
+			IsLock: lock,
+		},
+		poll:    make(chan *State, 10),
+		counter: 0,
+	}
+
+	ns.state.send(ns.poll) // initial state sending
+	s.nodes[name] = ns
 	return
 }
 
-func (s *Server) nodeLock(nodeID NodeID) (lock bool, cnt int, ok bool) {
+// not for updating
+func (s *Server) nodeState(name NodeName) (ns *nodeState, err error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	var ns *nodeSetups
-	if ns, ok = s.setups[nodeID]; !ok {
-		return
+	var ok bool
+	if ns, ok = s.nodes[name]; !ok {
+		return nil, fmt.Errorf("unexpected node: %s", name)
 	}
-
-	lock, cnt = ns.lock, ns.counter
 	ns.counter++
 	return
 }
 
-func (s *Server) nodeSendShareOnly(miner NodeID) chan []NodeID {
+type UpdateStateFunc func(state *State)
+
+func (s *Server) UpdateState(name NodeName, update UpdateStateFunc) (
+	err error) {
+
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	var ns, ok = s.setups[miner]
+	var n, ok = s.nodes[name]
 	if !ok {
-		return nil
+		return fmt.Errorf("unexpected node: %s", name)
 	}
-	return ns.only
+
+	update(n.state) // update
+	n.state.send(n.poll)
+	return
 }
 
-func (s *Server) nodeSendShareBad(miner NodeID) chan []NodeID {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
+func (s *Server) UpdateStates(names []NodeName, update UpdateStateFunc) (
+	err error) {
 
-	var ns, ok = s.setups[miner]
-	if !ok {
-		return nil
+	for _, name := range names {
+		s.UpdateState(name, update)
 	}
-	return ns.bad
-}
-
-func (s *Server) nodeSetRevealed(node NodeID) chan bool {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
-	var ns, ok = s.setups[node]
-	if !ok {
-		return nil
-	}
-	return ns.revealed
-}
-
-func (s *Server) SetSendShareOnly(miner NodeID, only []NodeID) {
-	go func() {
-		onlyChan := s.nodeSendShareOnly(miner)
-		if onlyChan == nil {
-			panic("ONLY CHAN IS NIL (FATALITY)")
-		}
-		onlyChan <- only
-	}()
-}
-
-func (s *Server) SetSendShareBad(miner NodeID, bad []NodeID) {
-	go func() {
-		badChan := s.nodeSendShareBad(miner)
-		if badChan == nil {
-			panic("BAD CHAN IS NIL (FATALITY!)")
-		}
-		badChan <- bad
-	}()
-}
-
-func (s *Server) SetRevealed(nodes []NodeID, pin bool) {
-	for _, nodeID := range nodes {
-		go func(nodeID NodeID) {
-			revChan := s.nodeSetRevealed(nodeID)
-			if revChan == nil {
-				panic("REV. CHAN IS NIL (FATALITY!)")
-			}
-			revChan <- pin
-		}(nodeID)
-	}
+	return
 }
 
 // events handling
@@ -272,7 +242,7 @@ func (s *Server) OnAddSharder() chan *AddSharderEvent {
 // OnNodeReady used by nodes to notify the server that the node has started
 // and ready to register (if needed) in miner SC and start it work. E.g.
 // the node has started and waits the conductor to enter BC.
-func (s *Server) OnNodeReady() chan NodeID {
+func (s *Server) OnNodeReady() chan NodeName {
 	return s.onNodeReady
 }
 
@@ -359,28 +329,32 @@ func (s *Server) State(id NodeID, state *State) (err error) {
 	// node name is not known by the node requesting the State
 	// and thus, NodeID used here
 
-	//
+	var name, ok = s.names[id]
+	if !ok {
+		return fmt.Errorf("unknown node ID: %s", id)
+	}
 
-	/*
-	   	var lock, cnt, ok = s.nodeLock(nodeID)
-	   	if !ok {
-	   		return fmt.Errorf("unexpected node: %s", nodeID)
-	   	}
+	var ns *nodeState
+	if ns, err = s.nodeState(name); err != nil {
+		return
+	}
 
-	   	(*join) = !lock
+	// trigger the node ready once
+	if ns.counter == 1 {
+		select {
+		case s.onNodeReady <- name:
+		case <-s.quit:
+			return ErrShutdown
+		}
+	}
 
-	   	if cnt > 0 {
-	   		return // don't trigger onNodeReady twice or more times
-	   	}
-
-	   	select {
-	   	case s.onNodeReady <- nodeID:
-	   	case <-s.quit:
-	   	}
-
-	   	return
-	   }
-	*/
+	select {
+	case x := <-ns.poll:
+		(*state) = (*x)
+	case <-s.quit:
+		return ErrShutdown
+	}
+	return
 }
 
 //
