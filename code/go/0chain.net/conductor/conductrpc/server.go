@@ -66,7 +66,6 @@ type ShareOrSignsSharesEvent struct {
 }
 
 type nodeState struct {
-	id      NodeID      //
 	state   *State      // current state
 	poll    chan *State // update stat
 	counter int         // used when node appears
@@ -150,17 +149,11 @@ func (s *Server) Serve() (err error) {
 //
 
 // AddNode adds miner of sharder and, optionally, locks it.
-func (s *Server) AddNode(nodeID NodeID, lock bool) (err error) {
+func (s *Server) AddNode(name NodeName, lock bool) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	var name, ok = s.names[nodeID]
-	if !ok {
-		return fmt.Errorf("unexpected node: %s", nodeID)
-	}
-
 	var ns = &nodeState{
-		id: nodeID,
 		state: &State{
 			Nodes:  s.names,
 			IsLock: lock,

@@ -120,7 +120,7 @@ type Runner struct {
 	// wait for
 	waitPhase              config.WaitPhase              //
 	waitViewChange         config.WaitViewChange         //
-	waitNodes              map[config.NodeID]struct{}    // (start a node)
+	waitNodes              map[config.NodeName]struct{}  // (start a node)
 	waitRound              config.WaitRound              //
 	waitContributeMPK      config.WaitContributeMpk      //
 	waitShareSignsOrShares config.WaitShareSignsOrShares //
@@ -128,7 +128,7 @@ type Runner struct {
 	waitNoProgressUntil    time.Time                     //
 	// timeout and monitor
 	timer   *time.Timer // waiting timer
-	monitor NodeID      // monitor node
+	monitor NodeName    // monitor node
 
 	// remembered rounds: name -> round number
 	rounds map[config.RoundName]config.Round // named rounds (the remember_round)
