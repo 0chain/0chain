@@ -283,7 +283,8 @@ The following order is used for the content :
 CONNECTION_URL
 ACCESS_KEY_ID
 SECRET_ACCESS_KEY
-BUCKET_NAME
+TIER_BUCKET_NAME
+COPY_BUCKET_NAME
 REGION
 ```
 
@@ -307,11 +308,17 @@ Sample config
 
 ```
 minio:
-  enabled: false # Do not enable with deep scan ON
-  worker_frequency: 3600
-  num_workers: 5
-  use_ssl: false
-  old_block_round_range: 20000000
+  # Enable or disable minio backup, Do not enable with deep scan ON
+  enabled: false 
+  # In Seconds, The frequency at which the worker should look for files, Ex: 3600 means it will run every 3600 seconds
+  worker_frequency: 3600 
+  # Number of workers to run in parallel, Just to make execution faster we can have mutiple workers running simultaneously
+  num_workers: 5 
+  # Use SSL for connection or not
+  use_ssl: false 
+  # How old the block should be to be considered for moving to cloud
+  old_block_round_range: 20000000 
+  # Delete local copy of block once it's moved to cloud
   delete_local_copy: true
 ```
 
@@ -332,8 +339,10 @@ To build miners and sharders for integration tests use
 ```
 
 Note:
+
 > Don't forget to rebuild miners and sharders again to return them to
 > non-testing state after the tests.
+>
 > ```
 > ./docker.local/bin/build.sharders.sh && ./docker.local/bin/build.miners.sh
 > ```
