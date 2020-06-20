@@ -14,8 +14,6 @@ type Bad struct {
 	Good []NodeName `json:"good" yaml:"good" mapstructure:"good"`
 	// Bad to these nodes.
 	Bad []NodeName `json:"bad" yaml:"bad" mapstructure:"bad"`
-	// Of nodes (sing only competing blocks of this nodes, for example)
-	Of []NodeName `json:"of" yaml:"of" mapstructure:"of"`
 }
 
 // Unmarshal with given name and from given map[interface{}]interface{}
@@ -41,24 +39,56 @@ func isInList(ids []NodeName, id NodeName) bool {
 	return false
 }
 
+type Namer interface {
+	Name(NodeID) NodeName
+}
+
 // IsGood returns true if the Bad is nil or given name is in Good list.
-func (b *Bad) IsGood(name NodeName) bool {
-	return b == nil || isInList(b.Good, name)
+func (b *Bad) IsGood(state Namer, id string) bool {
+	return b == nil || isInList(b.Good, state.Name(NodeID(id)))
 }
 
 // IsBad returns true if the Bad is nil or given name is in Bad list.
-func (b *Bad) IsBad(name NodeName) bool {
-	return b == nil || isInList(b.Bad, name)
+func (b *Bad) IsBad(state Namer, id string) bool {
+	return b == nil || isInList(b.Bad, state.Name(NodeID(id)))
 }
 
 // IsBy returns true if given name is in By list.
-func (b *Bad) IsBy(name NodeName) bool {
-	return isInList(b.By, name)
+func (b *Bad) IsBy(state Namer, id string) bool {
+	return isInList(b.By, state.Name(NodeID(id)))
 }
 
-// IsBad returns true if the Bad is nil or given name is in Of list.
-func (b *Bad) IsOf(name NodeName) bool {
-	return b == nil || isInList(b.Of, name)
+// IsCompetingRoundGenerator returns true for a group competing block generator.
+// The node shouldn't be a generator. For a group of block generators (if the By
+// field is a list of many items, they are the group) one of the nodes is
+// competing round generator. It uses special algorithm choosing one of the By
+// list.
+func (b *Bad) IsCompetingRoundGenerator(state Namer, id string,
+	round int64) (ok bool) {
+
+	if b == nil {
+		return false
+	}
+
+	var i = int(round % int64(len(b.By)))
+	return b.By[i] == state.Name(NodeID(id))
+}
+
+// IsCompetingGroupMember returns true if given id is one of By list. The
+// method regards nil, unlike the IsBy.
+func (b *Bad) IsCompetingGroupMember(state Namer, id string) (ok bool) {
+
+	if b == nil {
+		return true // sign every block
+	}
+
+	var name = state.Name(NodeID(id))
+	for _, member := range b.By {
+		if member == name {
+			return true
+		}
+	}
+	return // false
 }
 
 // common Byzantine scenarios

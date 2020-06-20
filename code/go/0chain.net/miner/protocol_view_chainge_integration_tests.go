@@ -45,11 +45,10 @@ func (mc *Chain) SendDKGShare(n *node.Node) error {
 	secShare := mc.viewChangeDKG.Sij[nodeID]
 
 	var state = crpc.Client().State()
-
-	switch name := state.Name(crpc.NodeID(n.GetKey())); {
-	case state.Shares.IsGood(name):
+	switch nodeID := n.GetKey(); {
+	case state.Shares.IsGood(state, nodeID):
 		params.Add("secret_share", secShare.GetHexString())
-	case state.Shares.IsBad(name):
+	case state.Shares.IsBad(state, nodeID):
 		params.Add("secret_share", revertString(secShare.GetHexString()))
 	default:
 		return common.NewError("failed to send DKG share", "skipped by tests")

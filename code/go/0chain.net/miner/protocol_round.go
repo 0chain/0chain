@@ -20,9 +20,9 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/memorystore"
 	"0chain.net/core/util"
-	"go.uber.org/zap"
 
 	. "0chain.net/core/logging"
+	"go.uber.org/zap"
 )
 
 var rbgTimer metrics.Timer // round block generation timer
@@ -34,6 +34,31 @@ func init() {
 //SetNetworkRelayTime - set the network relay time
 func SetNetworkRelayTime(delta time.Duration) {
 	chain.SetNetworkRelayTime(delta)
+}
+
+func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
+	currentDKG := mc.GetCurrentDKG(r.GetRoundNumber())
+	if currentDKG == nil {
+		Logger.Error("add_my_vrf_share --- currentDKG is nil. My vrf share is not added",
+			zap.Any("round", r.GetRoundNumber()))
+		return
+	}
+	var err error
+	vrfs := &round.VRFShare{}
+	vrfs.Round = r.GetRoundNumber()
+	vrfs.RoundTimeoutCount = r.GetTimeoutCount()
+	vrfs.Share, err = mc.GetBlsShare(ctx, r.Round)
+	if err != nil {
+		Logger.Error("add_my_vrf_share", zap.Any("round", vrfs.Round),
+			zap.Any("round_timeout", vrfs.RoundTimeoutCount),
+			zap.Error(err))
+		return
+	}
+	vrfs.SetParty(node.Self.Underlying())
+	r.vrfShare = vrfs
+	// TODO: do we need to check if AddVRFShare is success or not?
+	mc.AddVRFShare(ctx, r, r.vrfShare)
+	go mc.SendVRFShare(ctx, r.vrfShare)
 }
 
 /*StartNextRound - start the next round as a notarized block is discovered for the current round */
@@ -94,32 +119,6 @@ func (mc *Chain) RedoVrfShare(ctx context.Context, r *Round) bool {
 		return true
 	}
 	return false
-}
-
-func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
-	currentDKG := mc.GetCurrentDKG(r.GetRoundNumber())
-	if currentDKG == nil {
-		Logger.Error("add_my_vrf_share --- currentDKG is nil. My vrf share is not added",
-			zap.Any("round", r.GetRoundNumber()))
-		return
-	}
-	var err error
-	vrfs := &round.VRFShare{}
-	vrfs.Round = r.GetRoundNumber()
-	vrfs.RoundTimeoutCount = r.GetTimeoutCount()
-	vrfs.Share, err = mc.GetBlsShare(ctx, r.Round)
-	if err != nil {
-		Logger.Error("add_my_vrf_share", zap.Any("round", vrfs.Round),
-			zap.Any("round_timeout", vrfs.RoundTimeoutCount),
-			zap.Error(err))
-		return
-	}
-	vrfs.SetParty(node.Self.Underlying())
-	r.vrfShare = vrfs
-	// TODO: do we need to check if AddVRFShare is success or not?
-	mc.AddVRFShare(ctx, r, r.vrfShare)
-	go mc.SendVRFShare(ctx, r.vrfShare)
-
 }
 
 func (mc *Chain) startRound(ctx context.Context, r *Round, seed int64) {

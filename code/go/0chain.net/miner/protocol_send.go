@@ -11,13 +11,6 @@ import (
 	"0chain.net/core/datastore"
 )
 
-/*SendVRFShare - send the round vrf share */
-func (mc *Chain) SendVRFShare(ctx context.Context, vrfs *round.VRFShare) {
-	mb := mc.GetMagicBlock(vrfs.Round)
-	m2m := mb.Miners
-	m2m.SendAll(RoundVRFSender(vrfs))
-}
-
 /*SendBlock - send the block proposal to the network */
 func (mc *Chain) SendBlock(ctx context.Context, b *block.Block) {
 	mb := mc.GetMagicBlock(b.Round)

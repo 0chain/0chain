@@ -177,10 +177,9 @@ func Shutdown() {
 //
 //     var state = conductrpc.Client().State()
 //     for _, minerID := range miners {
-//         var name = state.Name(minerID)
-//         if state.VRFS.IsBad(name) {
+//         if state.VRFS.IsBad(state, minerID) {
 //             // send bad VRFS to this miner
-//         } else if state.VRFS.IsGood(name) {
+//         } else if state.VRFS.IsGood(state, minerID) {
 //             // send good VRFS to this miner
 //         } else {
 //             // don't send a VRFS to this miner

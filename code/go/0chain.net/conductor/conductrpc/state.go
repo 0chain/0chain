@@ -1,6 +1,8 @@
 package conductrpc
 
 import (
+	"0chain.net/chaincore/node"
+
 	"0chain.net/conductor/config"
 )
 
@@ -63,4 +65,23 @@ func (s *State) send(poll chan *State) {
 	go func(state *State) {
 		poll <- state
 	}(s.copy())
+}
+
+type IsGoodBader interface {
+	IsGood(state *State, id string) bool
+	IsBad(state *State, id string) bool
+}
+
+// Split nodes list by given IsGoodBader.
+func (s *State) Split(igb IsGoodBader, nodes []*node.Node) (
+	good, bad []*node.Node) {
+
+	for _, n := range nodes {
+		if igb.IsBad(s, n.GetKey()) {
+			bad = append(bad, n)
+		} else if igb.IsGood(s, n.GetKey()) {
+			good = append(good, n)
+		}
+	}
+	return
 }
