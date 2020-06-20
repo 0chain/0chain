@@ -736,7 +736,7 @@ func (mc *Chain) restartRound(ctx context.Context) {
 
 	if !lfbUpdated && r.GetRoundNumber() > 1 {
 		if r.GetHeaviestNotarizedBlock() != nil {
-			// mc.BroadcastNotarizedBlocks(ctx, r)
+			mc.BroadcastNotarizedBlocks(ctx, r)
 			Logger.Info("StartNextRound after sending notarized block in restartRound.", zap.Int64("current_round", r.GetRoundNumber()))
 			nextR := mc.GetRound(r.GetRoundNumber())
 			nr := mc.StartNextRound(ctx, r)
@@ -765,6 +765,10 @@ func (mc *Chain) restartRound(ctx context.Context) {
 			}
 			Logger.Error("Has notarized block in restartRound, but no randomseed.", zap.Int64("current_round", r.GetRoundNumber()))
 		}
+		pr := mc.GetMinerRound(r.GetRoundNumber() - 1)
+		if pr != nil {
+			mc.BroadcastNotarizedBlocks(ctx, pr)
+		}
 	}
 
 	r.Restart()
@@ -773,19 +777,22 @@ func (mc *Chain) restartRound(ctx context.Context) {
 	redo := mc.RedoVrfShare(ctx, r)
 
 	if !redo {
-		Logger.Info("Could not RedoVrfShare", zap.Int64("round", r.GetRoundNumber()), zap.Int("round_timeout", r.GetTimeoutCount()))
+		Logger.Info("Could not RedoVrfShare",
+			zap.Int64("round", r.GetRoundNumber()),
+			zap.Int("round_timeout", r.GetTimeoutCount()))
+		return
 	}
 
-	// push all heaviest notarized blocks from LFB to current round
-	// excluding finalized to all other miners from current MB
-	var lfb = mc.GetLatestFinalizedBlock()
-	for s, e := lfb.Round, mc.CurrentRound; s <= e; s++ {
-		var mr = mc.GetMinerRound(s)
-		if mr.IsFinalized() {
-			continue // skip finalized blocks (the LFB, for example)
-		}
-		mc.BroadcastNotarizedBlocks(ctx, mr)
-	}
+	// // push all heaviest notarized blocks from LFB to current round
+	// // excluding finalized to all other miners from current MB
+	// var lfb = mc.GetLatestFinalizedBlock()
+	// for s, e := lfb.Round, mc.CurrentRound; s <= e; s++ {
+	// 	var mr = mc.GetMinerRound(s)
+	// 	if mr.IsFinalized() {
+	// 		continue // skip finalized blocks (the LFB, for example)
+	// 	}
+	// 	mc.BroadcastNotarizedBlocks(ctx, mr)
+	// }
 }
 
 func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context, pnround int64) (bool, error) {

@@ -144,7 +144,7 @@ func (c *Chain) FinalizedBlockWorker(ctx context.Context, bsh BlockStateHandler)
 			// a magic block; we already have verified and valid MB chain at this
 			// moment, let's keep it updated and verified too
 
-			if fb.MagicBlock != nil {
+			if fb.MagicBlock != nil && node.Self.Type == node.NodeTypeSharder {
 				var err = c.repairChain(ctx, fb, bsh.SaveMagicBlock())
 				if err != nil {
 					Logger.Error("repairing mb chain", zap.Error(err))

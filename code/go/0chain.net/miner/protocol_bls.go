@@ -237,14 +237,16 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 			zap.Any("message", msg),
 			zap.Any("from", stringID),
 			zap.Any("pi", pi.GetHexString()),
-			zap.String("node_id", vrfs.GetParty().GetKey()))
+			zap.String("node_id", vrfs.GetParty().GetKey()),
+			zap.Int64("round", vrfs.Round))
 		return false
 	} else {
 		Logger.Info("verified vrf",
 			zap.Any("share", share.GetHexString()),
 			zap.Any("message", msg),
 			zap.Any("from", (&partyID).GetHexString()),
-			zap.String("node_id", vrfs.GetParty().GetKey()))
+			zap.String("node_id", vrfs.GetParty().GetKey()),
+			zap.Int64("round", vrfs.Round))
 	}
 	if vrfs.GetRoundTimeoutCount() != mr.GetTimeoutCount() {
 		//Keep VRF timeout and round timeout in sync. Same vrfs will comeback during soft timeouts
