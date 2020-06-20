@@ -130,12 +130,12 @@ min_stake: 1.0    # tokens
 max_stake: 100.0  # tokens
 
 minio:
-  enabled: false # Do not enable with deep scan ON
-  worker_frequency: 3600
-  num_workers: 5
-  use_ssl: false
-  old_block_round_range: 20000000
-  delete_local_copy: true
+  enabled: false # Enable or disable minio backup, Do not enable with deep scan ON
+  worker_frequency: 3600 # In Seconds, The frequency at which the worker should look for files, Ex: 3600 means it will run every 3600 seconds
+  num_workers: 5 # Number of workers to run in parallel, Just to make execution faster we can have mutiple workers running simultaneously
+  use_ssl: false # Use SSL for connection or not
+  old_block_round_range: 20000000 # How old the block should be to be considered for moving to cloud
+  delete_local_copy: true # Delete local copy of block once it's moved to cloud
 
 cassandra:
   connection:
