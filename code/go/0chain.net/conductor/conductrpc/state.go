@@ -23,31 +23,31 @@ type State struct {
 	// for it.
 	//
 	// Byzantine blockchain
-	VRFS                        *config.VRFS
-	RoundTimeout                *config.RoundTimeout
-	CompetingBlock              *config.CompetingBlock
-	SignOnlyCompetingBlocks     *config.SignOnlyCompetingBlocks
-	DoubleSpendTransaction      *config.DoubleSpendTransaction
-	WrongBlockSignHash          *config.WrongBlockSignHash
-	WrongBlockSignKey           *config.WrongBlockSignKey
-	WrongBlockHash              *config.WrongBlockHash
-	VerificationTicket          *config.VerificationTicket
-	WrongVerificationTicketHash *config.WrongVerificationTicketHash
-	WrongVerificationTicketKey  *config.WrongVerificationTicketKey
-	WrongNotarizedBlockHash     *config.WrongNotarizedBlockHash
-	WrongNotarizedBlockKey      *config.WrongNotarizedBlockKey
-	NotarizeOnlyCompetingBlock  *config.NotarizeOnlyCompetingBlock
-	NotarizedBlock              *config.NotarizedBlock
+	VRFS                        *config.Bad
+	RoundTimeout                *config.Bad
+	CompetingBlock              *config.Bad
+	SignOnlyCompetingBlocks     *config.Bad
+	DoubleSpendTransaction      *config.Bad
+	WrongBlockSignHash          *config.Bad
+	WrongBlockSignKey           *config.Bad
+	WrongBlockHash              *config.Bad
+	VerificationTicket          *config.Bad
+	WrongVerificationTicketHash *config.Bad
+	WrongVerificationTicketKey  *config.Bad
+	WrongNotarizedBlockHash     *config.Bad
+	WrongNotarizedBlockKey      *config.Bad
+	NotarizeOnlyCompetingBlock  *config.Bad
+	NotarizedBlock              *config.Bad
 	// Byzantine blockchain sharders
-	FinalizedBlock    *config.FinalizedBlock
-	MagicBlock        *config.MagicBlock
-	VerifyTransaction *config.VerifyTransaction
-	SCState           *config.SCState
+	FinalizedBlock    *config.Bad
+	MagicBlock        *config.Bad
+	VerifyTransaction *config.Bad
+	SCState           *config.Bad
 	// Byzantine View Change
-	MPK        *config.MPK
-	Shares     *config.Shares
-	Signatures *config.Signatures
-	Publish    *config.Publish
+	MPK        *config.Bad
+	Shares     *config.Bad
+	Signatures *config.Bad
+	Publish    *config.Bad
 
 	// persistent (persistent fields)
 	signature encryption.SignatureScheme

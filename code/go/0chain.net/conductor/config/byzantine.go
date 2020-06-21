@@ -66,9 +66,14 @@ func (b *Bad) IsBy(state Namer, id string) bool {
 func (b *Bad) IsCompetingRoundGenerator(state Namer, id string,
 	round int64) (ok bool) {
 
+	println("INSIDE IsCompetingRoundGenerator")
+
 	if b == nil {
+		println("INSIDE IsCompetingRoundGenerator --> IT'S NIL")
 		return false
 	}
+
+	println("INSIDE IsCompetingRoundGenerator --> IT ISN'T NIL")
 
 	var i = int(round % int64(len(b.By)))
 	return b.By[i] == state.Name(NodeID(id))
@@ -78,7 +83,10 @@ func (b *Bad) IsCompetingRoundGenerator(state Namer, id string,
 // method regards nil, unlike the IsBy.
 func (b *Bad) IsCompetingGroupMember(state Namer, id string) (ok bool) {
 
+	println("INSIDE IsCompetingGroupMember")
+
 	if b == nil {
+		println("INSIDE IsCompetingGroupMember --> IT ISN'T NIL")
 		return true // sign every block
 	}
 
@@ -90,33 +98,3 @@ func (b *Bad) IsCompetingGroupMember(state Namer, id string) (ok bool) {
 	}
 	return // false
 }
-
-// common Byzantine scenarios
-type (
-	// Byzantine blockchain
-	VRFS                        struct{ Bad } // vrfs
-	RoundTimeout                struct{ Bad } // round_timeout
-	CompetingBlock              struct{ Bad } // competing_block
-	SignOnlyCompetingBlocks     struct{ Bad } // sign_only_competing_blocks
-	DoubleSpendTransaction      struct{ Bad } // double_spend_transaction
-	WrongBlockSignHash          struct{ Bad } // wrong_block_sign_hash
-	WrongBlockSignKey           struct{ Bad } // wrong_block_sign_key
-	WrongBlockHash              struct{ Bad } // wrong_block_hash
-	VerificationTicket          struct{ Bad } // verification_ticket
-	WrongVerificationTicketHash struct{ Bad } // wrong_verification_ticket_hash
-	WrongVerificationTicketKey  struct{ Bad } // wrong_verification_ticket_key
-	WrongNotarizedBlockHash     struct{ Bad } // wrong_notarized_block_hash
-	WrongNotarizedBlockKey      struct{ Bad } // wrong_notarized_block_key
-	NotarizeOnlyCompetingBlock  struct{ Bad } // notarize_only_competing_block
-	NotarizedBlock              struct{ Bad } // notarized_block
-	// Byzantine blockchain sharders side
-	FinalizedBlock    struct{ Bad } // finalized_block
-	MagicBlock        struct{ Bad } // magic_block
-	VerifyTransaction struct{ Bad } // verify_transaction (to clients)
-	SCState           struct{ Bad } // sc_state (to clients)
-	// Byzantine view change
-	MPK        struct{ Bad } // mpk
-	Shares     struct{ Bad } // shares
-	Signatures struct{ Bad } // signatures
-	Publish    struct{ Bad } // publish
-)

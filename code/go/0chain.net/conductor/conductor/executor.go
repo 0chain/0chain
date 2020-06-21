@@ -26,6 +26,7 @@ func (r *Runner) setupTimeout(tm time.Duration) {
 
 // SetMonitor for phases and view changes.
 func (r *Runner) SetMonitor(name NodeName) (err error) {
+	r.server.AddNode(name, false) // the node must exists to be a monitor
 	err = r.server.UpdateState(name, func(state *conductrpc.State) {
 		state.IsMonitor = true
 	})
@@ -212,7 +213,7 @@ func (r *Runner) WaitNoProgress(wait time.Duration) (err error) {
 // Byzantine blockchain miners.
 //
 
-func (r *Runner) VRFS(vrfs *config.VRFS) (err error) {
+func (r *Runner) VRFS(vrfs *config.Bad) (err error) {
 	if r.verbose {
 		log.Print(" [INF] set VRFS of %s: good %s, bad %s", vrfs.By,
 			vrfs.Good, vrfs.Bad)
@@ -227,7 +228,7 @@ func (r *Runner) VRFS(vrfs *config.VRFS) (err error) {
 	return
 }
 
-func (r *Runner) RoundTimeout(rt *config.RoundTimeout) (err error) {
+func (r *Runner) RoundTimeout(rt *config.Bad) (err error) {
 
 	if r.verbose {
 		log.Print(" [INF] set 'wrong round timeout' "+
@@ -242,7 +243,7 @@ func (r *Runner) RoundTimeout(rt *config.RoundTimeout) (err error) {
 	return
 }
 
-func (r *Runner) CompetingBlock(cb *config.CompetingBlock) (err error) {
+func (r *Runner) CompetingBlock(cb *config.Bad) (err error) {
 
 	if r.verbose {
 		log.Print(" [INF] set 'competing block' "+
@@ -257,8 +258,7 @@ func (r *Runner) CompetingBlock(cb *config.CompetingBlock) (err error) {
 	return
 }
 
-func (r *Runner) SignOnlyCompetingBlocks(socb *config.SignOnlyCompetingBlocks) (
-	err error) {
+func (r *Runner) SignOnlyCompetingBlocks(socb *config.Bad) (err error) {
 
 	if r.verbose {
 		log.Print(" [INF] set 'sign only competing block' "+
@@ -273,8 +273,7 @@ func (r *Runner) SignOnlyCompetingBlocks(socb *config.SignOnlyCompetingBlocks) (
 	return
 }
 
-func (r *Runner) DoubleSpendTransaction(dst *config.DoubleSpendTransaction) (
-	err error) {
+func (r *Runner) DoubleSpendTransaction(dst *config.Bad) (err error) {
 
 	if r.verbose {
 		log.Print(" [INF] set 'double spend transaction' "+
@@ -289,8 +288,7 @@ func (r *Runner) DoubleSpendTransaction(dst *config.DoubleSpendTransaction) (
 	return
 }
 
-func (r *Runner) WrongBlockSignHash(wbsh *config.WrongBlockSignHash) (
-	err error) {
+func (r *Runner) WrongBlockSignHash(wbsh *config.Bad) (err error) {
 
 	if r.verbose {
 		log.Print(" [INF] set 'wrong block sign hash' "+
@@ -305,7 +303,7 @@ func (r *Runner) WrongBlockSignHash(wbsh *config.WrongBlockSignHash) (
 	return
 }
 
-func (r *Runner) WrongBlockSignKey(wbsk *config.WrongBlockSignKey) (err error) {
+func (r *Runner) WrongBlockSignKey(wbsk *config.Bad) (err error) {
 
 	if r.verbose {
 		log.Print(" [INF] set 'wrong block sign key' "+
@@ -320,7 +318,7 @@ func (r *Runner) WrongBlockSignKey(wbsk *config.WrongBlockSignKey) (err error) {
 	return
 }
 
-func (r *Runner) WrongBlockHash(wbh *config.WrongBlockHash) (err error) {
+func (r *Runner) WrongBlockHash(wbh *config.Bad) (err error) {
 
 	if r.verbose {
 		log.Print(" [INF] set 'wrong block hash' "+
@@ -335,7 +333,7 @@ func (r *Runner) WrongBlockHash(wbh *config.WrongBlockHash) (err error) {
 	return
 }
 
-func (r *Runner) VerificationTicket(vt *config.VerificationTicket) (err error) {
+func (r *Runner) VerificationTicket(vt *config.Bad) (err error) {
 
 	if r.verbose {
 		log.Print(" [INF] set 'wrong verification ticket' "+
@@ -350,8 +348,7 @@ func (r *Runner) VerificationTicket(vt *config.VerificationTicket) (err error) {
 	return
 }
 
-func (r *Runner) WrongVerificationTicketHash(
-	wvth *config.WrongVerificationTicketHash) (err error) {
+func (r *Runner) WrongVerificationTicketHash(wvth *config.Bad) (err error) {
 
 	if r.verbose {
 		log.Print(" [INF] set 'wrong verification ticket hash' "+
@@ -366,8 +363,7 @@ func (r *Runner) WrongVerificationTicketHash(
 	return
 }
 
-func (r *Runner) WrongVerificationTicketKey(
-	wvtk *config.WrongVerificationTicketKey) (err error) {
+func (r *Runner) WrongVerificationTicketKey(wvtk *config.Bad) (err error) {
 
 	if r.verbose {
 		log.Print(" [INF] set 'wrong verification ticket key' "+
@@ -382,8 +378,7 @@ func (r *Runner) WrongVerificationTicketKey(
 	return
 }
 
-func (r *Runner) WrongNotarizedBlockHash(wnbh *config.WrongNotarizedBlockHash) (
-	err error) {
+func (r *Runner) WrongNotarizedBlockHash(wnbh *config.Bad) (err error) {
 
 	if r.verbose {
 		log.Print(" [INF] set 'wrong notarized block hash' "+
@@ -398,8 +393,7 @@ func (r *Runner) WrongNotarizedBlockHash(wnbh *config.WrongNotarizedBlockHash) (
 	return
 }
 
-func (r *Runner) WrongNotarizedBlockKey(wnbk *config.WrongNotarizedBlockKey) (
-	err error) {
+func (r *Runner) WrongNotarizedBlockKey(wnbk *config.Bad) (err error) {
 
 	if r.verbose {
 		log.Print(" [INF] set 'wrong notarized block key' "+
@@ -414,8 +408,7 @@ func (r *Runner) WrongNotarizedBlockKey(wnbk *config.WrongNotarizedBlockKey) (
 	return
 }
 
-func (r *Runner) NotarizeOnlyCompetingBlock(
-	ncb *config.NotarizeOnlyCompetingBlock) (err error) {
+func (r *Runner) NotarizeOnlyCompetingBlock(ncb *config.Bad) (err error) {
 
 	if r.verbose {
 		log.Print(" [INF] set 'notarize only competing block' "+
@@ -430,7 +423,8 @@ func (r *Runner) NotarizeOnlyCompetingBlock(
 	return
 }
 
-func (r *Runner) NotarizedBlock(nb *config.NotarizedBlock) (err error) {
+func (r *Runner) NotarizedBlock(nb *config.Bad) (err error) {
+
 	if r.verbose {
 		log.Print(" [INF] set 'notarized block' of %s: good %s, bad %s", nb.By,
 			nb.Good, nb.Bad)
@@ -464,7 +458,7 @@ func (r *Runner) SetRevealed(ss []NodeName, pin bool, tm time.Duration) (
 	return
 }
 
-func (r *Runner) MPK(mpk *config.MPK) (err error) {
+func (r *Runner) MPK(mpk *config.Bad) (err error) {
 	if r.verbose {
 		log.Print(" [INF] set 'MPK' of %s: good %s, bad %s", mpk.By,
 			mpk.Good, mpk.Bad)
@@ -478,7 +472,7 @@ func (r *Runner) MPK(mpk *config.MPK) (err error) {
 	return
 }
 
-func (r *Runner) Shares(s *config.Shares) (err error) {
+func (r *Runner) Shares(s *config.Bad) (err error) {
 	if r.verbose {
 		log.Print(" [INF] set 'shares' of %s: good %s, bad %s", s.By,
 			s.Good, s.Bad)
@@ -492,7 +486,7 @@ func (r *Runner) Shares(s *config.Shares) (err error) {
 	return
 }
 
-func (r *Runner) Signatures(s *config.Signatures) (err error) {
+func (r *Runner) Signatures(s *config.Bad) (err error) {
 	if r.verbose {
 		log.Print(" [INF] set 'signatures' of %s: good %s, bad %s", s.By,
 			s.Good, s.Bad)
@@ -506,7 +500,7 @@ func (r *Runner) Signatures(s *config.Signatures) (err error) {
 	return
 }
 
-func (r *Runner) Publish(p *config.Publish) (err error) {
+func (r *Runner) Publish(p *config.Bad) (err error) {
 	if r.verbose {
 		log.Print(" [INF] set 'publish' of %s: good %s, bad %s", p.By,
 			p.Good, p.Bad)
@@ -525,7 +519,7 @@ func (r *Runner) Publish(p *config.Publish) (err error) {
 // Byzantine blockchain sharders
 //
 
-func (r *Runner) FinalizedBlock(fb *config.FinalizedBlock) (err error) {
+func (r *Runner) FinalizedBlock(fb *config.Bad) (err error) {
 	if r.verbose {
 		log.Print(" [INF] set 'finalized block' of %s: good %s, bad %s", fb.By,
 			fb.Good, fb.Bad)
@@ -540,7 +534,7 @@ func (r *Runner) FinalizedBlock(fb *config.FinalizedBlock) (err error) {
 	return
 }
 
-func (r *Runner) MagicBlock(mb *config.MagicBlock) (err error) {
+func (r *Runner) MagicBlock(mb *config.Bad) (err error) {
 	if r.verbose {
 		log.Print(" [INF] set 'magic block' of %s: good %s, bad %s", mb.By,
 			mb.Good, mb.Bad)
@@ -555,7 +549,7 @@ func (r *Runner) MagicBlock(mb *config.MagicBlock) (err error) {
 	return
 }
 
-func (r *Runner) VerifyTransaction(vt *config.VerifyTransaction) (err error) {
+func (r *Runner) VerifyTransaction(vt *config.Bad) (err error) {
 	if r.verbose {
 		log.Print(" [INF] set bad 'verify transaction' of %s to clients",
 			vt.By)
@@ -570,7 +564,7 @@ func (r *Runner) VerifyTransaction(vt *config.VerifyTransaction) (err error) {
 	return
 }
 
-func (r *Runner) SCState(scs *config.SCState) (err error) {
+func (r *Runner) SCState(scs *config.Bad) (err error) {
 	if r.verbose {
 		log.Print(" [INF] set bad 'SC state' of %s to clients", scs.By)
 	}

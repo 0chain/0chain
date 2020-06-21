@@ -153,10 +153,21 @@ func (s *Server) AddNode(name NodeName, lock bool) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
+	var monitor bool
+
+	// if already added (by SetMonitor, for example)
+	if ns, ok := s.nodes[name]; ok {
+		println("ADD NODE MONITOR:", name, lock, ns.state.IsMonitor)
+		monitor = ns.state.IsMonitor
+	}
+
+	println("ADD NODE", name, lock, "AND RESET ALL OTHER CONFIGS")
+
 	var ns = &nodeState{
 		state: &State{
-			Nodes:  s.names,
-			IsLock: lock,
+			IsMonitor: monitor,
+			Nodes:     s.names,
+			IsLock:    lock,
 		},
 		poll:    make(chan *State, 10),
 		counter: 0,
@@ -174,7 +185,7 @@ func (s *Server) nodeState(name NodeName) (ns *nodeState, err error) {
 
 	var ok bool
 	if ns, ok = s.nodes[name]; !ok {
-		return nil, fmt.Errorf("unexpected node: %s", name)
+		return nil, fmt.Errorf("(node state) unexpected node: %s", name)
 	}
 	ns.counter++
 	return
@@ -190,7 +201,11 @@ func (s *Server) UpdateState(name NodeName, update UpdateStateFunc) (
 
 	var n, ok = s.nodes[name]
 	if !ok {
-		return fmt.Errorf("unexpected node: %s", name)
+		println("UPDATE STATE", len(s.nodes))
+		for name, ns := range s.nodes {
+			println(" - SERVER NODES:", name, ns != nil)
+		}
+		return fmt.Errorf("(update state) unexpected node: %s", name)
 	}
 
 	update(n.state) // update

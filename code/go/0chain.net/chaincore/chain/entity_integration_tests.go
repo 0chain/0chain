@@ -22,8 +22,36 @@ func (c *Chain) IsRoundGenerator(r round.RoundI, nd *node.Node) bool {
 		return true // regular round generator
 	}
 
-	comp = state.CompetingBlock.IsCompetingRoundGenerator(state,
-		nd.GetKey(), r.GetRoundNumber())
+	if state == nil {
+		println("STATE IS NIL (UNEXPECTED!)")
+	} else {
+		println("STATE IS NOT NIL")
+	}
+
+	if state.CompetingBlock == nil {
+		println("STATE COMPETING BLOCK IS NIL (SHOULD BE OK)")
+	}
+
+	if nd == nil {
+		println("(IS ROUND GEN) ND IS NIL")
+	}
+
+	if r == nil {
+		println("(IS ROUND GEN) R IS NIL")
+	}
+
+	var competingBlock = state.CompetingBlock
+
+	if competingBlock == nil {
+		println("COMPETING BLOCK STILL NIL")
+	}
+
+	comp = competingBlock.
+		IsCompetingRoundGenerator(
+			state,
+			nd.GetKey(),
+			r.GetRoundNumber(),
+		)
 
 	if comp {
 		println("GENERATE COMPETING BLOCK")

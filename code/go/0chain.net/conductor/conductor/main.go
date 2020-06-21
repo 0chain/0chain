@@ -53,12 +53,23 @@ func main() {
 	flag.BoolVar(&verbose, "verbose", verbose, "verbose output")
 	flag.Parse()
 
-	log.Print("read configurations files: ", configFile, testsFile)
+	println("CONFIG FILE PATH:", configFile)
+	println("TESTS FILE PATH:", testsFile)
+
+	log.Print("read configurations files: ", configFile, ", ", testsFile)
 	var (
 		conf = readConfigs(configFile, testsFile)
 		r    Runner
 		err  error
 	)
+
+	if len(conf.Nodes) == 0 {
+		panic("NO NODES")
+	}
+
+	for _, n := range conf.Nodes {
+		println(" - NODE", n.Name)
+	}
 
 	log.Print("create worker instance")
 	r.conf = conf
@@ -103,9 +114,9 @@ func readConfig(configFile string) (conf *config.Config) {
 func readConfigs(configFile, testsFile string) (conf *config.Config) {
 	conf = readConfig(configFile)
 	var tests = readConfig(testsFile)
-	conf.Tests = tests.Tests   //
-	conf.Enable = tests.Enable // merge
-	conf.Sets = tests.Sets     //
+	conf.Tests = tests.Tests   // set
+	conf.Enable = tests.Enable // set
+	conf.Sets = tests.Sets     // set
 	return
 }
 

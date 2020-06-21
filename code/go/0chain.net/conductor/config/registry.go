@@ -91,7 +91,7 @@ func init() {
 
 	register("vrfs", func(f Flow, name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
-		var vrfs VRFS
+		var vrfs Bad
 		if err = vrfs.Unmarshal(name, val); err != nil {
 			return
 		}
@@ -100,7 +100,7 @@ func init() {
 
 	register("round_timeout", func(f Flow, name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
-		var rt RoundTimeout
+		var rt Bad
 		if err = rt.Unmarshal(name, val); err != nil {
 			return
 		}
@@ -109,7 +109,7 @@ func init() {
 
 	register("competing_block", func(f Flow, name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
-		var cb CompetingBlock
+		var cb Bad
 		if err = cb.Unmarshal(name, val); err != nil {
 			return
 		}
@@ -118,7 +118,7 @@ func init() {
 
 	register("sign_only_competing_blocks", func(f Flow, name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
-		var socb SignOnlyCompetingBlocks
+		var socb Bad
 		if err = socb.Unmarshal(name, val); err != nil {
 			return
 		}
@@ -127,7 +127,7 @@ func init() {
 
 	register("double_spend_transaction", func(f Flow, name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
-		var dst DoubleSpendTransaction
+		var dst Bad
 		if err = dst.Unmarshal(name, val); err != nil {
 			return
 		}
@@ -136,7 +136,7 @@ func init() {
 
 	register("wrong_block_sign_hash", func(f Flow, name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
-		var wbsh WrongBlockSignHash
+		var wbsh Bad
 		if err = wbsh.Unmarshal(name, val); err != nil {
 			return
 		}
@@ -145,7 +145,7 @@ func init() {
 
 	register("wrong_block_sign_key", func(f Flow, name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
-		var wbsk WrongBlockSignKey
+		var wbsk Bad
 		if err = wbsk.Unmarshal(name, val); err != nil {
 			return
 		}
@@ -154,7 +154,7 @@ func init() {
 
 	register("wrong_block_hash", func(f Flow, name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
-		var wbh WrongBlockHash
+		var wbh Bad
 		if err = wbh.Unmarshal(name, val); err != nil {
 			return
 		}
@@ -163,7 +163,7 @@ func init() {
 
 	register("verification_ticket", func(f Flow, name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
-		var vt VerificationTicket
+		var vt Bad
 		if err = vt.Unmarshal(name, val); err != nil {
 			return
 		}
@@ -172,7 +172,7 @@ func init() {
 
 	register("wrong_verification_ticket_hash", func(f Flow, name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
-		var wvth WrongVerificationTicketHash
+		var wvth Bad
 		if err = wvth.Unmarshal(name, val); err != nil {
 			return
 		}
@@ -181,7 +181,7 @@ func init() {
 
 	register("wrong_verification_ticket_key", func(f Flow, name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
-		var wvtk WrongVerificationTicketKey
+		var wvtk Bad
 		if err = wvtk.Unmarshal(name, val); err != nil {
 			return
 		}
@@ -190,7 +190,7 @@ func init() {
 
 	register("wrong_notarized_block_hash", func(f Flow, name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
-		var wnth WrongNotarizedBlockHash
+		var wnth Bad
 		if err = wnth.Unmarshal(name, val); err != nil {
 			return
 		}
@@ -199,7 +199,7 @@ func init() {
 
 	register("wrong_notarized_block_key", func(f Flow, name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
-		var wnbk WrongNotarizedBlockKey
+		var wnbk Bad
 		if err = wnbk.Unmarshal(name, val); err != nil {
 			return
 		}
@@ -208,7 +208,7 @@ func init() {
 
 	register("notarize_only_competing_block", func(f Flow, name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
-		var nocb NotarizeOnlyCompetingBlock
+		var nocb Bad
 		if err = nocb.Unmarshal(name, val); err != nil {
 			return
 		}
@@ -217,7 +217,7 @@ func init() {
 
 	register("notarized_block", func(f Flow, name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
-		var nb NotarizedBlock
+		var nb Bad
 		if err = nb.Unmarshal(name, val); err != nil {
 			return
 		}
@@ -228,7 +228,7 @@ func init() {
 
 	register("finalized_block", func(f Flow, name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
-		var fb FinalizedBlock
+		var fb Bad
 		if err = fb.Unmarshal(name, val); err != nil {
 			return
 		}
@@ -237,7 +237,7 @@ func init() {
 
 	register("magic_block", func(f Flow, name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
-		var mb MagicBlock
+		var mb Bad
 		if err = mb.Unmarshal(name, val); err != nil {
 			return
 		}
@@ -246,7 +246,7 @@ func init() {
 
 	register("verify_transaction", func(f Flow, name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
-		var vt VerifyTransaction
+		var vt Bad
 		if err = vt.Unmarshal(name, val); err != nil {
 			return
 		}
@@ -255,7 +255,7 @@ func init() {
 
 	register("sc_state", func(f Flow, name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
-		var scs SCState
+		var scs Bad
 		if err = scs.Unmarshal(name, val); err != nil {
 			return
 		}
@@ -266,7 +266,7 @@ func init() {
 
 	register("mpk", func(f Flow, name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
-		var mpk MPK
+		var mpk Bad
 		if err = mpk.Unmarshal(name, val); err != nil {
 			return
 		}
@@ -275,7 +275,7 @@ func init() {
 
 	register("shares", func(f Flow, name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
-		var shares Shares
+		var shares Bad
 		if err = shares.Unmarshal(name, val); err != nil {
 			return
 		}
@@ -284,7 +284,7 @@ func init() {
 
 	register("signatures", func(f Flow, name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
-		var signatures Signatures
+		var signatures Bad
 		if err = signatures.Unmarshal(name, val); err != nil {
 			return
 		}
@@ -293,7 +293,7 @@ func init() {
 
 	register("publish", func(f Flow, name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
-		var publish Publish
+		var publish Bad
 		if err = publish.Unmarshal(name, val); err != nil {
 			return
 		}
