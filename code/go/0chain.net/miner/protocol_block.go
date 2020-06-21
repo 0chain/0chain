@@ -227,12 +227,10 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	bgTimer.UpdateSince(start)
 	Logger.Debug("generate block (assemble+update)", zap.Int64("round", b.Round), zap.Duration("time", time.Since(start)))
 
-	self := node.GetSelfNode(ctx)
-	b.HashBlock()
-	b.Signature, err = self.Sign(b.Hash)
-	if err != nil {
+	if err = mc.hashAndSignGeneratedBlock(ctx, b); err != nil {
 		return err
 	}
+
 	b.SetBlockState(block.StateGenerated)
 	b.SetStateStatus(block.StateSuccessful)
 	Logger.Info("generate block (assemble+update+sign)", zap.Int64("round", b.Round), zap.Int32("block_size", blockSize), zap.Int32("reused_txns", reusedTxns), zap.Duration("time", time.Since(start)),
@@ -439,7 +437,7 @@ func (mc *Chain) ValidateTransactions(ctx context.Context, b *block.Block) error
 }
 
 /*SignBlock - sign the block and provide the verification ticket */
-func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (*block.BlockVerificationTicket, error) {
+func (mc *Chain) signBlock(ctx context.Context, b *block.Block) (*block.BlockVerificationTicket, error) {
 	var bvt = &block.BlockVerificationTicket{}
 	bvt.BlockID = b.Hash
 	bvt.Round = b.Round

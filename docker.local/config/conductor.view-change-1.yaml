@@ -526,9 +526,10 @@ tests:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
       - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4']
-      - send_share_bad:
-          miner: 'miner 4'
+      - share:
+          by: ['miner 4']
           bad: ['miner 1']
+          good: ['miner 2', 'miner 3']
       - wait_view_change:
           expected_magic_block:
             round: 251
@@ -540,9 +541,10 @@ tests:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
       - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4']
-      - send_share_bad:
-          miner: 'miner 4'
+      - share:
+          by: ['miner 4']
           bad: ['miner 1', 'miner 2']
+          good: ['miner 3']
       - wait_view_change:
           expected_magic_block:
             round: 251
@@ -554,8 +556,8 @@ tests:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
       - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4']
-      - send_share_bad:
-          miner: 'miner 4'
+      - share:
+          by: ['miner 4']
           bad: ['miner 1', 'miner 2', 'miner 3']
       - wait_view_change:
           expected_magic_block:
@@ -568,12 +570,14 @@ tests:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
       - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4']
-      - send_share_bad:
-          miner: 'miner 4'
+      - share:
+          by: ['miner 4']
           bad: ['miner 1', 'miner 2']
-      - send_share_bad:
-          miner: 'miner 3'
+          good: ['miner 3']
+      - share:
+          by: ['miner 3']
           bad: ['miner 1', 'miner 2']
+          good: ['miner 4']
       - wait_view_change:
           expected_magic_block:
             round: 251
@@ -587,9 +591,10 @@ tests:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
       - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4']
-      - send_share_only:
-          miner: 'miner 4'
-          only: ['miner 1', 'miner 2']
+      - share:
+          by: ['miner 4']
+          good: ['miner 1', 'miner 2']
+          bad: []
       - wait_view_change:
           expect_magic_block:
             round: 251
@@ -601,9 +606,10 @@ tests:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
       - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4']
-      - send_share_only:
-          miner: 'miner 4'
-          only: ['miner 1', 'miner 2']
+      - share:
+          by: ['miner 4']
+          good: ['miner 1']
+          bad: []
       - wait_view_change:
           expect_magic_block:
             round: 251
@@ -615,12 +621,14 @@ tests:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
       - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4']
-      - send_share_only:
-          miner: 'miner 4'
-          only: ['miner 1', 'miner 2']
-      - send_share_only:
-          miner: 'miner 3'
-          only: ['miner 1', 'miner 2']
+      - share:
+          by: ['miner 4']
+          good: ['miner 1', 'miner 2']
+          bad: []
+      - share:
+          by: ['miner 3']
+          good: ['miner 1', 'miner 2']
+          bad: []
       - wait_view_change:
           expect_magic_block:
             round: 251

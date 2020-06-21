@@ -48,9 +48,9 @@ func (b *Bad) IsGood(state Namer, id string) bool {
 	return b == nil || isInList(b.Good, state.Name(NodeID(id)))
 }
 
-// IsBad returns true if the Bad is nil or given name is in Bad list.
+// IsBad returns true if the Bad is not nil and given name is in Bad list.
 func (b *Bad) IsBad(state Namer, id string) bool {
-	return b == nil || isInList(b.Bad, state.Name(NodeID(id)))
+	return b != nil && isInList(b.Bad, state.Name(NodeID(id)))
 }
 
 // IsBy returns true if given name is in By list.

@@ -6,8 +6,6 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 
-	. "0chain.net/core/logging"
-
 	crpc "0chain.net/conductor/conductrpc"
 )
 
@@ -28,8 +26,9 @@ func (c *Chain) IsRoundGenerator(r round.RoundI, nd *node.Node) bool {
 		nd.GetKey(), r.GetRoundNumber())
 
 	if comp {
-		Logger.Info("generate competing block")
+		println("GENERATE COMPETING BLOCK")
+		return true // competing generator
 	}
 
-	return true // competing generator
+	return false // is not
 }

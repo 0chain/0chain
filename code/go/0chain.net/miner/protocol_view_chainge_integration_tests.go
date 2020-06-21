@@ -48,8 +48,10 @@ func (mc *Chain) SendDKGShare(n *node.Node) error {
 	switch nodeID := n.GetKey(); {
 	case state.Shares.IsGood(state, nodeID):
 		params.Add("secret_share", secShare.GetHexString())
+		println("(VC) SEND GOOD DKG SHARE")
 	case state.Shares.IsBad(state, nodeID):
 		params.Add("secret_share", revertString(secShare.GetHexString()))
+		println("(VC) SEND BAD DKG SHARE")
 	default:
 		return common.NewError("failed to send DKG share", "skipped by tests")
 	}
@@ -114,6 +116,9 @@ func (mc *Chain) PublishShareOrSigns() (*httpclientutil.Transaction, error) {
 		}
 		var _, ok = shareOrSigns.ShareOrSigns[k]
 		if isRevealed || !ok {
+			if isRevealed {
+				println("IS REVEALED")
+			}
 			share := mc.viewChangeDKG.Sij[bls.ComputeIDdkg(k)]
 			shareOrSigns.ShareOrSigns[k] = &bls.DKGKeyShare{
 				Share: share.GetHexString(),

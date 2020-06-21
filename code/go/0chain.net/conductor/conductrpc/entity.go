@@ -30,6 +30,7 @@ func (e *Entity) State() (state *State) {
 
 // SetState sets current state.
 func (e *Entity) SetState(state *State) {
+	state.Update(e.State())
 	e.state.Store(state) // update
 }
 
