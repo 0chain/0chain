@@ -8,9 +8,9 @@
 enable:
   # comment out to disable
   - "MPK"
-  - "Shares"
-  - "Signatures"
-  - "Publish"
+  # - "Shares"
+  # - "Signatures"
+  # - "Publish"
 
 # sets of test cases
 sets:
@@ -46,7 +46,7 @@ tests:
       - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
       - wait_round:
           round: 10 # wait a round to be sure it starts
-      - share:
+      - mpk:
           by: ["miner 3"]
           good: ["miner 1", "miner 2"]
           bad: ["miner 1", "miner 2"]
@@ -59,12 +59,13 @@ tests:
       - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
       - wait_round:
           round: 10 # wait a round to be sure it starts
-      - share:
+      - mpk:
           by: ["miner 3"]
           good: ["miner 1", "miner 2"]
           bad: ["miner 1", "miner 2"]
         - wait_no_progress:
             timeout: "2m"
+
   # Shares
   - name: "Send wrong share"
     flow:
@@ -105,6 +106,7 @@ tests:
           bad: ["miner 1", "miner 2"]
         - wait_no_progress:
             timeout: "2m"
+
   # Signatures
   - name: "Don't send a signature"
     flow:
@@ -113,7 +115,7 @@ tests:
       - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
       - wait_round:
           round: 10 # wait a round to be sure it starts
-      - share:
+      - signature:
           by: ["miner 3"]
           good: ["miner 1", "miner 2"]
           bad: ["miner 1", "miner 2"]
@@ -126,7 +128,7 @@ tests:
       - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
       - wait_round:
           round: 10 # wait a round to be sure it starts
-      - share:
+      - signature:
           by: ["miner 3"]
           good: ["miner 1", "miner 2"]
           bad: ["miner 1", "miner 2"]
@@ -139,12 +141,13 @@ tests:
       - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
       - wait_round:
           round: 10 # wait a round to be sure it starts
-      - share:
+      - signature:
           by: ["miner 3"]
           good: ["miner 1", "miner 2"]
           bad: ["miner 1", "miner 2"]
         - wait_no_progress:
             timeout: "2m"
+
   # Publish
   - name: "Only include groups signatures"
     flow:
@@ -153,7 +156,7 @@ tests:
       - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
       - wait_round:
           round: 10 # wait a round to be sure it starts
-      - share:
+      - publish:
           by: ["miner 3"]
           good: ["miner 1", "miner 2"]
           bad: ["miner 1", "miner 2"]
@@ -166,7 +169,7 @@ tests:
       - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
       - wait_round:
           round: 10 # wait a round to be sure it starts
-      - share:
+      - publish:
           by: ["miner 3"]
           good: ["miner 1", "miner 2"]
           bad: ["miner 1", "miner 2"]
@@ -179,7 +182,7 @@ tests:
       - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
       - wait_round:
           round: 10 # wait a round to be sure it starts
-      - share:
+      - publish:
           by: ["miner 3"]
           good: ["miner 1", "miner 2"]
           bad: ["miner 1", "miner 2"]
@@ -192,7 +195,7 @@ tests:
       - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
       - wait_round:
           round: 10 # wait a round to be sure it starts
-      - share:
+      - publish:
           by: ["miner 3"]
           good: ["miner 1", "miner 2"]
           bad: ["miner 1", "miner 2"]

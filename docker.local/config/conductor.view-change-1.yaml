@@ -7,12 +7,12 @@
 # enabled test cases sets
 enable:
   # comment out to disable
-  - "Outside miner comes up in phase X"
-  - "Miner goes down in phase X and doesn't come up in the same view change"
-  - "Outside miner goes down in phase X and doesn't come up in the same view change"
-  - "Miner goes down and up"
-  - "Artificially force X miner to send bad share to Y miners"
-  - "Artificially force X miner to send share to Y miners only"
+  # - "Outside miner comes up in phase X"
+  # - "Miner goes down in phase X and doesn't come up in the same view change"
+  # - "Outside miner goes down in phase X and doesn't come up in the same view change"
+  # - "Miner goes down and up"
+  # - "Artificially force X miner to send bad share to Y miners"
+  # - "Artificially force X miner to send share to Y miners only"
   - "Down and up on VC rounds"
   - "Revealed"
 
@@ -65,7 +65,7 @@ sets:
 
   - name: "Down and up on VC rounds"
     tests:
-      - "Miner goes down on 497 round, and comes up on shortly"
+      # - "Miner goes down on 497 round, and comes up on shortly"
       - "Two mines goes down on 497 round, and comes up on shortly"
 
   - name: "Revealed"
@@ -677,7 +677,7 @@ tests:
           timeout: 2m
           expect_magic_block:
             round: 501
-            miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
+            miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4', 'miner 5']
             sharders: ['sharder 1']
 
   - name: "Revealed"

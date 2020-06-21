@@ -6,6 +6,7 @@ import (
 	"context"
 	"net/url"
 
+	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/httpclientutil"
@@ -157,4 +158,91 @@ func (mc *Chain) PublishShareOrSigns() (*httpclientutil.Transaction, error) {
 	}
 	err = httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls)
 	return txn, err
+}
+
+func getBadMPK(mpk *block.MPK) (bad *block.MPK) {
+	bad = new(block.MPK)
+	bad.ID = mpk.ID
+	bad.Mpk = make([]string, 0, len(mpk.Mpk))
+	for _, x := range mpk.Mpk {
+		bad.Mpk = append(bad.Mpk, revertString(x))
+	}
+	return
+}
+
+func getBaseN2NURLs(nodes []*node.Node) (urls []string) {
+	urls = make([]string, 0, len(nodes))
+	for _, n := range nodes {
+		urls = append(urls, n.GetN2NURLBase())
+	}
+	return
+}
+
+func (mc *Chain) sendMpkTransaction(selfNode *node.Node, mpk *block.MPK,
+	urls []string) (txn *httpclientutil.Transaction, err error) {
+
+	var scData = new(httpclientutil.SmartContractTxnData)
+	scData.Name = scNameContributeMpk
+	scData.InputArgs = mpk
+	txn = httpclientutil.NewTransactionEntity(selfNode.GetKey(), mc.ID,
+		selfNode.PublicKey)
+	txn.ToClientID = minersc.ADDRESS
+	err = httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0,
+		scData, urls)
+	return
+}
+
+func (mc *Chain) ContributeMpk() (txn *httpclientutil.Transaction, err error) {
+	magicBlock := mc.GetCurrentMagicBlock()
+	if magicBlock == nil {
+		return nil, common.NewError("contribute_mpk", "magic block empty")
+	}
+	dmn, err := mc.GetDKGMiners()
+	if err != nil {
+		Logger.Error("can't contribute", zap.Any("error", err))
+		return nil, err
+	}
+	selfNode := node.Self.Underlying()
+	selfNodeKey := selfNode.GetKey()
+	mpk := &block.MPK{ID: selfNodeKey}
+	if !mc.isDKGSet() {
+		if dmn.N == 0 {
+			return nil, common.NewError("contribute_mpk",
+				"failed to contribute mpk:dkg is not set yet")
+		}
+		vc := bls.MakeDKG(dmn.T, dmn.N, selfNodeKey)
+		vc.ID = bls.ComputeIDdkg(selfNodeKey)
+		vc.MagicBlockNumber = magicBlock.MagicBlockNumber + 1
+		viewChangeMutex.Lock()
+		mc.viewChangeDKG = vc
+		viewChangeMutex.Unlock()
+	}
+
+	viewChangeMutex.Lock()
+	defer viewChangeMutex.Unlock()
+	for _, v := range mc.viewChangeDKG.Mpk {
+		mpk.Mpk = append(mpk.Mpk, v.GetHexString())
+	}
+
+	var (
+		state             = crpc.Client().State()
+		good, bad         = state.Split(state.MPK, magicBlock.Miners.Nodes)
+		goodurls, badurls = getBaseN2NURLs(good), getBaseN2NURLs(bad)
+		badMPK            = getBadMPK(mpk)
+	)
+
+	// send bad MPK first
+	if len(bad) > 0 {
+		txn, err = mc.sendMpkTransaction(selfNode, badMPK, badurls)
+		if err != nil {
+			return
+		}
+	}
+
+	// send good MPK second
+	if len(good) > 0 {
+		txn, err = mc.sendMpkTransaction(selfNode, mpk, goodurls)
+	}
+
+	return
 }

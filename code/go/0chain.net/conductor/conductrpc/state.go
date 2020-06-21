@@ -88,13 +88,9 @@ func (s *State) send(poll chan *State) {
 	}(s.copy())
 }
 
-type Namer interface {
-	Name(NodeID) NodeName // name by id (string)
-}
-
 type IsGoodBader interface {
-	IsGood(state Namer, id string) bool
-	IsBad(state Namer, id string) bool
+	IsGood(state config.Namer, id string) bool
+	IsBad(state config.Namer, id string) bool
 }
 
 // Split nodes list by given IsGoodBader.
@@ -112,7 +108,7 @@ func (s *State) Split(igb IsGoodBader, nodes []*node.Node) (
 }
 
 type IsByer interface {
-	IsBy(state Namer, id string) bool
+	IsBy(state config.Namer, id string) bool
 }
 
 // Filter return IsBy nodes only.

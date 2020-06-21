@@ -6,6 +6,7 @@ import (
 	"context"
 	"net/url"
 
+	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/httpclientutil"
@@ -122,6 +123,51 @@ func (mc *Chain) PublishShareOrSigns() (*httpclientutil.Transaction, error) {
 		} else {
 			Logger.Warn("failed to get node", zap.Any("id", id))
 		}
+	}
+	err = httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls)
+	return txn, err
+}
+
+func (mc *Chain) ContributeMpk() (txn *httpclientutil.Transaction, err error) {
+	magicBlock := mc.GetCurrentMagicBlock()
+	if magicBlock == nil {
+		return nil, common.NewError("contribute_mpk", "magic block empty")
+	}
+	dmn, err := mc.GetDKGMiners()
+	if err != nil {
+		Logger.Error("can't contribute", zap.Any("error", err))
+		return nil, err
+	}
+	selfNode := node.Self.Underlying()
+	selfNodeKey := selfNode.GetKey()
+	mpk := &block.MPK{ID: selfNodeKey}
+	if !mc.isDKGSet() {
+		if dmn.N == 0 {
+			return nil, common.NewError("contribute_mpk", "failed to contribute mpk:dkg is not set yet")
+		}
+		vc := bls.MakeDKG(dmn.T, dmn.N, selfNodeKey)
+		vc.ID = bls.ComputeIDdkg(selfNodeKey)
+		vc.MagicBlockNumber = magicBlock.MagicBlockNumber + 1
+		viewChangeMutex.Lock()
+		mc.viewChangeDKG = vc
+		viewChangeMutex.Unlock()
+	}
+
+	viewChangeMutex.Lock()
+	defer viewChangeMutex.Unlock()
+	for _, v := range mc.viewChangeDKG.Mpk {
+		mpk.Mpk = append(mpk.Mpk, v.GetHexString())
+	}
+
+	scData := new(httpclientutil.SmartContractTxnData)
+	scData.Name = scNameContributeMpk
+	scData.InputArgs = mpk
+
+	txn = httpclientutil.NewTransactionEntity(selfNodeKey, mc.ID, selfNode.PublicKey)
+	txn.ToClientID = minersc.ADDRESS
+	var minerUrls []string
+	for _, node := range magicBlock.Miners.CopyNodes() {
+		minerUrls = append(minerUrls, node.GetN2NURLBase())
 	}
 	err = httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls)
 	return txn, err

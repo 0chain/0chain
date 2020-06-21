@@ -273,7 +273,7 @@ func init() {
 		return ex.MPK(&mpk)
 	})
 
-	register("shares", func(f Flow, name string,
+	register("share", func(f Flow, name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
 		var shares Bad
 		if err = shares.Unmarshal(name, val); err != nil {
@@ -282,7 +282,7 @@ func init() {
 		return ex.Shares(&shares)
 	})
 
-	register("signatures", func(f Flow, name string,
+	register("signature", func(f Flow, name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
 		var signatures Bad
 		if err = signatures.Unmarshal(name, val); err != nil {
