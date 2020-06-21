@@ -34,6 +34,7 @@ type Executor interface {
 	WaitShareSignsOrShares(ssos WaitShareSignsOrShares, timeout time.Duration) (err error)
 	WaitAdd(wadd WaitAdd, timeout time.Duration) (err error)
 	WaitNoProgress(wait time.Duration) (err error)
+	WaitNoViewChainge(wnvc WaitNoViewChainge, timeout time.Duration) (err error)
 
 	// Byzantine: BC, sharders
 
@@ -181,6 +182,16 @@ func (f Flow) waitAdd(ex Executor, val interface{}, tm time.Duration) (
 		return fmt.Errorf("decoding 'wait_add': %v", err)
 	}
 	return ex.WaitAdd(wa, tm)
+}
+
+func (f Flow) waitNoViewChainge(ex Executor, val interface{},
+	tm time.Duration) (err error) {
+
+	var wnvc WaitNoViewChainge
+	if err = mapstructure.Decode(val, &wnvc); err != nil {
+		return fmt.Errorf("decoding 'wait_no_view_change': %v", err)
+	}
+	return ex.WaitNoViewChainge(wnvc, tm)
 }
 
 func (f Flow) waitNoProgress(ex Executor, tm time.Duration) (err error) {

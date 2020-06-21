@@ -138,6 +138,7 @@ type Runner struct {
 	waitShareSignsOrShares config.WaitShareSignsOrShares //
 	waitAdd                config.WaitAdd                // add_miner, add_sharder
 	waitNoProgressUntil    time.Time                     //
+	waitNoViewChainge      config.WaitNoViewChainge      // no VC expected
 	// timeout and monitor
 	timer   *time.Timer // waiting timer
 	monitor NodeName    // monitor node
@@ -166,6 +167,8 @@ func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
 	case !r.waitAdd.IsZero():
 		return tm, true
 	case !r.waitNoProgressUntil.IsZero():
+		return tm, true
+	case !r.waitNoViewChainge.IsZero():
 		return tm, true
 	}
 
@@ -246,6 +249,13 @@ func (r *Runner) acceptViewChange(vce *conductrpc.ViewChangeEvent) (err error) {
 
 	if !r.waitNoProgressUntil.IsZero() {
 		return fmt.Errorf("got VC %d, but 'no progress' is expected", vce.Round)
+	}
+
+	if !r.waitNoViewChainge.IsZero() {
+		if r.waitNoViewChainge.Round <= vce.Round {
+			return fmt.Errorf("no VC until %d round is expected, but got on %d",
+				r.waitNoViewChainge.Round, vce.Round)
+		}
 	}
 
 	r.printViewChange(vce) // if verbose
@@ -437,6 +447,12 @@ func (r *Runner) acceptNodeReady(nodeName NodeName) (err error) {
 func (r *Runner) acceptRound(re *conductrpc.RoundEvent) (err error) {
 	if re.Sender != r.monitor {
 		return // not the monitor node
+	}
+
+	if !r.waitNoViewChainge.IsZero() {
+		if re.Round > r.waitNoViewChainge.Round {
+			r.waitNoViewChainge = config.WaitNoViewChainge{} // reset
+		}
 	}
 
 	var _, ok = r.conf.Nodes.NodeByName(re.Sender)

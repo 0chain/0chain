@@ -107,3 +107,11 @@ func (wa *WaitAdd) TakeSharder(name NodeName) (ok bool) {
 	}
 	return
 }
+
+type WaitNoViewChainge struct {
+	Round Round `json:"round" yaml:"round" mapstructure:"round"`
+}
+
+func (wnvc *WaitNoViewChainge) IsZero() bool {
+	return (*wnvc) == (WaitNoViewChainge{})
+}

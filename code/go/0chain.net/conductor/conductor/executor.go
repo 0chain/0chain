@@ -577,3 +577,15 @@ func (r *Runner) SCState(scs *config.Bad) (err error) {
 	}
 	return
 }
+
+func (*Runner) WaitNoViewChainge(wnvc config.WaitNoViewChainge,
+	tm time.Duration) (err error) {
+
+	if r.verbose {
+		log.Printf(" [INF] wait no view change until %d round", wnvc.Round)
+	}
+
+	r.setupTimeout(tm)
+	r.waitNoViewChange = wnvc
+	return
+}

@@ -17,23 +17,24 @@ sets:
   - name: "MPK"
     tests:
       - "Send wrong MPK to blockchain"
-      - "Individuals or group send no MPK to blockchain"
+      - "Send no MPK to blockchain"
+      - "Group send no MPK to blockchain"
   - name: "Shares"
     tests:
       - "Send wrong share"
       - "Only send correct share to the group"
-    - "Send no shares"
+      - "Send no shares"
   - name: "Signatures"
     tests:
       - "Don't send a signature"
       - "Only send correct signature to the group"
-    - "Send no signatures"
+      - "Send no signatures"
   - name: "Publish"
     tests:
       - "Only include groups signatures"
       - "Send no signatures"
-    - "Send wrong signatures"
-    - "Send correct signatures only for the group"
+      - "Send wrong signatures"
+      - "Send correct signatures only for the group"
 
 # test cases
 tests:
@@ -48,11 +49,13 @@ tests:
           round: 10 # wait a round to be sure it starts
       - mpk:
           by: ["miner 3"]
-          good: ["miner 1", "miner 2"]
+          good: []
           bad: ["miner 1", "miner 2"]
-        - wait_no_progress:
-            timeout: "2m"
-  - name: "Individuals or group send no MPK to blockchain"
+      - wait_round:
+          round: 100
+      - wait_no_view_chainge:
+          round: 251
+  - name: "Send no MPK to blockchain"
     flow:
       - set_monitor: {}
       - cleanup_bc: {}
@@ -61,8 +64,21 @@ tests:
           round: 10 # wait a round to be sure it starts
       - mpk:
           by: ["miner 3"]
-          good: ["miner 1", "miner 2"]
-          bad: ["miner 1", "miner 2"]
+          good: []
+          bad: []
+        - wait_no_progress:
+            timeout: "2m"
+  - name: "Group send no MPK to blockchain"
+    flow:
+      - set_monitor: {}
+      - cleanup_bc: {}
+      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+      - wait_round:
+          round: 10 # wait a round to be sure it starts
+      - mpk:
+          by: ["miner 1", "miner 2"]
+          good: []
+          bad: []
         - wait_no_progress:
             timeout: "2m"
 

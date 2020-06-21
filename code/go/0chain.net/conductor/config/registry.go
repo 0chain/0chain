@@ -75,6 +75,10 @@ func init() {
 		ex Executor, val interface{}, tm time.Duration) (err error) {
 		return f.waitNoProgress(ex, tm)
 	})
+	register("wait_no_view_change", func(f Flow, name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		return f.waitNoViewChainge(ex, val, tm)
+	})
 
 	// control nodes behavior / misbehavior (view change)
 
