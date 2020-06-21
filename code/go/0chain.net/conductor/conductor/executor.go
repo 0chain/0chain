@@ -578,7 +578,7 @@ func (r *Runner) SCState(scs *config.Bad) (err error) {
 	return
 }
 
-func (*Runner) WaitNoViewChainge(wnvc config.WaitNoViewChainge,
+func (r *Runner) WaitNoViewChainge(wnvc config.WaitNoViewChainge,
 	tm time.Duration) (err error) {
 
 	if r.verbose {

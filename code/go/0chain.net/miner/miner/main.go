@@ -321,7 +321,9 @@ func getCurrentMagicBlockFromSharders(mc *miner.Chain) error {
 		})
 	}
 	magicBlock := mbs[0]
-	if err := mc.MustVerifyChainHistory(common.GetRootContext(), magicBlock, nil); err != nil {
+	err := mc.MustVerifyChainHistory(common.GetRootContext(), magicBlock,
+		mc.SaveMagicBlock())
+	if err != nil {
 		return err
 	}
 	if err := mc.UpdateMagicBlock(magicBlock.MagicBlock); err != nil {

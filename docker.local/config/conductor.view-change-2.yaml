@@ -51,10 +51,9 @@ tests:
           by: ["miner 3"]
           good: []
           bad: ["miner 1", "miner 2"]
-      - wait_round:
-          round: 100
       - wait_no_view_chainge:
           round: 251
+          timeout: '5m'
   - name: "Send no MPK to blockchain"
     flow:
       - set_monitor: {}
@@ -66,8 +65,9 @@ tests:
           by: ["miner 3"]
           good: []
           bad: []
-        - wait_no_progress:
-            timeout: "2m"
+      - wait_no_view_chainge:
+          round: 251
+          timeout: '5m'
   - name: "Group send no MPK to blockchain"
     flow:
       - set_monitor: {}
@@ -76,11 +76,12 @@ tests:
       - wait_round:
           round: 10 # wait a round to be sure it starts
       - mpk:
-          by: ["miner 1", "miner 2"]
+          by: ["miner 2", "miner 3"]
           good: []
           bad: []
-        - wait_no_progress:
-            timeout: "2m"
+      - wait_no_view_chainge:
+          round: 251
+          timeout: '5m'
 
   # Shares
   - name: "Send wrong share"
