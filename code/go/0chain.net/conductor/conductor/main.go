@@ -28,6 +28,8 @@ import (
 	"github.com/kr/pretty"
 )
 
+const noProgressRounds = 10
+
 func init() {
 	log.SetFlags(log.Lshortfile)
 }
@@ -137,7 +139,8 @@ type Runner struct {
 	waitContributeMPK      config.WaitContributeMpk      //
 	waitShareSignsOrShares config.WaitShareSignsOrShares //
 	waitAdd                config.WaitAdd                // add_miner, add_sharder
-	waitNoProgressUntil    time.Time                     //
+	waitNoProgressUntil    time.Time                     // }
+	waitNoPreogressCount   int                           // } got rounds
 	waitNoViewChange       config.WaitNoViewChainge      // no VC expected
 	// timeout and monitor
 	timer   *time.Timer // waiting timer
@@ -245,10 +248,6 @@ func (r *Runner) printViewChange(vce *conductrpc.ViewChangeEvent) {
 func (r *Runner) acceptViewChange(vce *conductrpc.ViewChangeEvent) (err error) {
 	if vce.Sender != r.monitor {
 		return // not the monitor node
-	}
-
-	if !r.waitNoProgressUntil.IsZero() {
-		return fmt.Errorf("got VC %d, but 'no progress' is expected", vce.Round)
 	}
 
 	if !r.waitNoViewChange.IsZero() {
@@ -449,6 +448,14 @@ func (r *Runner) acceptRound(re *conductrpc.RoundEvent) (err error) {
 		return // not the monitor node
 	}
 
+	if !r.waitNoProgressUntil.IsZero() {
+		r.waitNoPreogressCount++
+		if r.waitNoPreogressCount >= noProgressRounds {
+			return fmt.Errorf("got round %d, but 'no progress' is expected"+
+				" (got > %d rounds)", re.Round, r.waitNoPreogressCount)
+		}
+	}
+
 	if !r.waitNoViewChange.IsZero() {
 		if re.Round > r.waitNoViewChange.Round {
 			r.waitNoViewChange = config.WaitNoViewChainge{} // reset
@@ -586,6 +593,7 @@ func (r *Runner) proceedWaiting() (err error) {
 			if !r.waitNoProgressUntil.IsZero() {
 				if timeout.UnixNano() >= r.waitNoProgressUntil.UnixNano() {
 					r.waitNoProgressUntil = time.Time{} // reset
+					r.waitNoPreogressCount = 0          // reset
 					return
 				}
 			}
