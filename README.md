@@ -352,8 +352,41 @@ Note:
 - Check out tests cases and configurations ./docker.local/config/conductor.yml.
 - Check out ./docker.local/config/0chain.yml the 'integration_tests' part.
 - Build miners and sharders, following instruction above.
-- Start all tests.
+
+###### Start test View Change 1
+
+Test view change (part I).
 
 ```
-./docker.local/bin/start.conductor.sh
+./docker.local/bin/start.conductor.sh view-change-1
+```
+
+###### Start test View Change 2
+
+Test view change (part II).
+
+```
+./docker.local/bin/start.conductor.sh view-change-2
+```
+
+###### Blockchain 1
+
+Test blockchain.
+
+```
+./docker.local/bin/start.conductor.sh blockchain-1
+```
+
+###### Blobber 1
+
+Test blobbers.
+
+```
+```
+
+###### Client 1
+
+Test client transactions.
+
+```
 ```

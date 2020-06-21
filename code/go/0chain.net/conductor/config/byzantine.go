@@ -66,14 +66,9 @@ func (b *Bad) IsBy(state Namer, id string) bool {
 func (b *Bad) IsCompetingRoundGenerator(state Namer, id string,
 	round int64) (ok bool) {
 
-	println("INSIDE IsCompetingRoundGenerator")
-
 	if b == nil {
-		println("INSIDE IsCompetingRoundGenerator --> IT'S NIL")
 		return false
 	}
-
-	println("INSIDE IsCompetingRoundGenerator --> IT ISN'T NIL")
 
 	var i = int(round % int64(len(b.By)))
 	return b.By[i] == state.Name(NodeID(id))
@@ -83,10 +78,7 @@ func (b *Bad) IsCompetingRoundGenerator(state Namer, id string,
 // method regards nil, unlike the IsBy.
 func (b *Bad) IsCompetingGroupMember(state Namer, id string) (ok bool) {
 
-	println("INSIDE IsCompetingGroupMember")
-
 	if b == nil {
-		println("INSIDE IsCompetingGroupMember --> IT ISN'T NIL")
 		return true // sign every block
 	}
 

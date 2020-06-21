@@ -446,7 +446,7 @@ func (r *Runner) SetRevealed(ss []NodeName, pin bool, tm time.Duration) (
 	err error) {
 
 	if r.verbose {
-		log.Print(" [INF] set reveled of %s to %t", ss, pin)
+		log.Printf(" [INF] set reveled of %s to %t", ss, pin)
 	}
 
 	err = r.server.UpdateStates(ss, func(state *conductrpc.State) {

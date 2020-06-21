@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -379,88 +378,6 @@ func (mc *Chain) GetMagicBlockFromSC() (*block.MagicBlock, error) {
 	}
 	return magicBlock, nil
 }
-
-func SignShareRequestHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	nodeID := r.Header.Get(node.HeaderNodeID)
-	secShare := r.FormValue("secret_share")
-	mc := GetMinerChain()
-	if !mc.isDKGSet() {
-		return nil, common.NewError("failed to sign share", "dkg not set")
-	}
-
-	viewChangeMutex.Lock()
-	defer viewChangeMutex.Unlock()
-
-	mpks := mc.GetMpks()
-	if len(mpks) < mc.viewChangeDKG.T {
-		return nil, common.NewError("failed to sign", "don't have mpks yet")
-	}
-	message := datastore.GetEntityMetadata("dkg_share").Instance().(*bls.DKGKeyShare)
-	var share bls.Key
-	if err := share.SetHexString(secShare); err != nil {
-		Logger.Error("failed to set hex string", zap.Any("error", err))
-		return nil, err
-	}
-
-	mpk := bls.ConvertStringToMpk(mpks[nodeID].Mpk)
-	var mpkString []string
-	for _, pk := range mpk {
-		mpkString = append(mpkString, pk.GetHexString())
-	}
-
-	if !mc.viewChangeDKG.ValidateShare(mpk, share) {
-		Logger.Error("failed to verify dkg share", zap.Any("share", secShare), zap.Any("node_id", nodeID))
-		return nil, common.NewError("failed to sign", "failed to verify dkg share")
-	}
-	err := mc.viewChangeDKG.AddSecretShare(bls.ComputeIDdkg(nodeID), secShare, false)
-	if err != nil {
-		return nil, err
-	}
-
-	message.Message = node.Self.Underlying().GetKey()
-	message.Sign, err = node.Self.Sign(message.Message)
-	if err != nil {
-		Logger.Error("failed to sign dkg share message", zap.Any("error", err))
-		return nil, err
-	}
-	return message, nil
-}
-
-/*
-func (mc *Chain) setDKGFromCurrentMagicBlock() (err error) {
-	var magicBlock = mc.GetCurrentMagicBlock()
-	if magicBlock == nil {
-		Logger.Error("set_dkg_from_current_magic_block",
-			zap.String("err", "current MB is nil"))
-		return common.NewError("set_dkg_from_current_magic_block",
-			"current magic block is nil")
-	}
-	var dmn *minersc.DKGMinerNodes
-	if dmn, err = mc.GetDKGMiners(); err != nil {
-		Logger.Error("set_dkg_from_current_magic_block: getting DKG miners",
-			zap.Error(err))
-		return common.NewError("set_dkg_from_current_magic_block",
-			"getting DKG miners: "+err.Error())
-	}
-	var selfNodeKey = node.Self.Underlying().GetKey()
-	if dmn.N == 0 {
-		Logger.Error("set_dkg_from_current_magic_block",
-			zap.String("err", "DKG is not set yet in chain"))
-		return common.NewError("set_dkg_from_current_magic_block",
-			"DKG is not set yet in chain")
-	}
-
-	var vc = bls.MakeDKG(dmn.T, dmn.N, selfNodeKey)
-	vc.ID = bls.ComputeIDdkg(selfNodeKey)
-	vc.MagicBlockNumber = magicBlock.MagicBlockNumber // don't add +1, we are in wait
-
-	viewChangeMutex.Lock()
-	mc.viewChangeDKG = vc
-	viewChangeMutex.Unlock()
-
-	return
-}
-*/
 
 func (mc *Chain) Wait() (result *httpclientutil.Transaction, err2 error) {
 	magicBlock, err := mc.GetMagicBlockFromSC()

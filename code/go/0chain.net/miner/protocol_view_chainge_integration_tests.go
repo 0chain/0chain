@@ -4,6 +4,7 @@ package miner
 
 import (
 	"context"
+	"net/http"
 	"net/url"
 
 	"0chain.net/chaincore/block"
@@ -138,10 +139,30 @@ func (mc *Chain) PublishShareOrSigns() (*httpclientutil.Transaction, error) {
 	for _, node := range dkgMiners.SimpleNodes {
 		publicKeys[node.ID] = node.PublicKey
 	}
-	_, ok := shareOrSigns.Validate(mpks, publicKeys, chain.GetServerChain().GetSignatureScheme())
+	_, ok := shareOrSigns.Validate(mpks, publicKeys,
+		chain.GetServerChain().GetSignatureScheme())
 	if !ok {
 		Logger.Error("failed to verify share or signs", zap.Any("mpks", mpks))
 	}
+
+	var (
+		state = crpc.Client().State()
+		clone = shareOrSigns.Clone()
+	)
+
+	for id, share := range clone.ShareOrSigns {
+		switch {
+		case state.Publish.IsBad(state, id):
+			share.Sign = revertString(share.Sign)
+			share.Share = revertString(share.Share)
+			share.Message = revertString(share.Message)
+		case state.Publish.IsGood(state, id):
+			// keep as is
+		default:
+			delete(clone.ShareOrSigns, id) // don't send at all
+		}
+	}
+
 	scData := &httpclientutil.SmartContractTxnData{}
 	scData.Name = scNamePublishShares
 	scData.InputArgs = shareOrSigns.Clone()
@@ -245,4 +266,76 @@ func (mc *Chain) ContributeMpk() (txn *httpclientutil.Transaction, err error) {
 	}
 
 	return
+}
+
+func SignShareRequestHandler(ctx context.Context, r *http.Request) (
+	resp interface{}, err error) {
+
+	var (
+		nodeID   = r.Header.Get(node.HeaderNodeID)
+		secShare = r.FormValue("secret_share")
+		mc       = GetMinerChain()
+	)
+	if !mc.isDKGSet() {
+		return nil, common.NewError("failed to sign share", "dkg not set")
+	}
+
+	viewChangeMutex.Lock()
+	defer viewChangeMutex.Unlock()
+
+	var mpks = mc.GetMpks()
+	if len(mpks) < mc.viewChangeDKG.T {
+		return nil, common.NewError("failed to sign", "don't have mpks yet")
+	}
+
+	var (
+		message = datastore.GetEntityMetadata("dkg_share").
+			Instance().(*bls.DKGKeyShare)
+		share bls.Key
+	)
+	if err = share.SetHexString(secShare); err != nil {
+		Logger.Error("failed to set hex string", zap.Any("error", err))
+		return nil, err
+	}
+
+	var (
+		mpk       = bls.ConvertStringToMpk(mpks[nodeID].Mpk)
+		mpkString []string
+	)
+	for _, pk := range mpk {
+		mpkString = append(mpkString, pk.GetHexString())
+	}
+
+	if !mc.viewChangeDKG.ValidateShare(mpk, share) {
+		Logger.Error("failed to verify dkg share", zap.Any("share", secShare), zap.Any("node_id", nodeID))
+		return nil, common.NewError("failed to sign", "failed to verify dkg share")
+	}
+	err = mc.viewChangeDKG.AddSecretShare(bls.ComputeIDdkg(nodeID), secShare,
+		false)
+	if err != nil {
+		return nil, err
+	}
+
+	message.Message = node.Self.Underlying().GetKey()
+	message.Sign, err = node.Self.Sign(message.Message)
+	if err != nil {
+		Logger.Error("failed to sign dkg share message", zap.Any("error", err))
+		return nil, err
+	}
+
+	var state = crpc.Client().State()
+
+	switch {
+	case state.Signatures.IsBad(state, nodeID):
+		println("SEND BAD SIGNATURE")
+		message.Sign = revertString(message.Sign)
+	default:
+		println("SEND NO SIGNATURE")
+		return nil, common.NewError("integration_tests", "send_no_signatures")
+	case state.Signatures.IsGood(state, nodeID):
+		println("SEND GOOD SIGNATURE (USUAL)")
+		// as usual
+	}
+
+	return message, nil
 }
