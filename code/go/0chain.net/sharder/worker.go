@@ -9,6 +9,10 @@ import (
 	"0chain.net/chaincore/round"
 	"0chain.net/sharder/blockstore"
 
+	"0chain.net/core/encryption"
+	"0chain.net/core/util"
+	"0chain.net/smartcontract/minersc"
+
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
 	"0chain.net/core/persistencestore"
@@ -32,6 +36,7 @@ func SetupWorkers(ctx context.Context) {
 	go sc.HealthCheckSetup(ctx, ProximityScan)
 
 	go sc.PruneStorageWorker(ctx, time.Minute*5, sc.getPruneCountRoundStorage(), sc.MagicBlockStorage)
+	go sc.RegisterSharderKeepWorker(ctx)
 	// Move old blocks to cloud
 	if viper.GetBool("minio.enabled") {
 		go sc.MoveOldBlocksToCloud(ctx)
@@ -99,6 +104,89 @@ func (sc *Chain) hasTransactions(ctx context.Context, bs *block.BlockSummary) bo
 		return false
 	}
 	return count == bs.NumTxns
+}
+
+func sleepOrDone(ctx context.Context, sleep time.Duration) (done bool) {
+	var tm = time.NewTimer(sleep)
+	defer tm.Stop()
+	select {
+	case <-ctx.Done():
+		done = true
+	case <-tm.C:
+	}
+	return
+}
+
+func (sc *Chain) isPhaseContibute() (is bool) {
+
+	return true
+
+	var lfb = sc.GetLatestFinalizedBlock()
+	if lfb == nil {
+		Logger.Error("is_phase_contibute -- can't get lfb")
+		return
+	}
+
+	var cstate = chain.CreateTxnMPT(lfb.ClientState)
+	if cstate == nil {
+		Logger.Error("is_phase_contibute -- can't get phase node",
+			zap.String("error", "missing client state of LFB"))
+		return
+	}
+	var seri, err = cstate.GetNodeValue(
+		util.Path(encryption.Hash(minersc.PhaseKey)),
+	)
+	if err != nil {
+		Logger.Error("is_phase_contibute -- can't get phase node",
+			zap.Error(err))
+		return
+	}
+	var phaseNode = new(minersc.PhaseNode)
+	if err = phaseNode.Decode(seri.Encode()); err != nil {
+		Logger.Error("is_phase_contibute -- can't decode phase node",
+			zap.Error(err))
+		return
+	}
+	Logger.Debug("is_phase_contibute",
+		zap.Int("phase", phaseNode.Phase),
+		zap.Bool("is_contribute", phaseNode.Phase == minersc.Contribute))
+	return phaseNode.Phase == minersc.Contribute
+}
+
+func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
+	timerCheck := time.NewTicker(time.Minute)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-timerCheck.C:
+			if !sc.ActiveInChain() || !sc.IsRegisteredSharderKeep() {
+				for !sc.IsRegisteredSharderKeep() {
+
+					for !sc.isPhaseContibute() {
+						if sleepOrDone(ctx, time.Second) {
+							return
+						}
+					}
+
+					txn, err := sc.RegisterSharderKeep()
+					if err != nil {
+						Logger.Error("register_sharder_keep_worker", zap.Error(err))
+					} else {
+						if txn == nil || sc.ConfirmTransaction(txn) {
+							Logger.Info("register_sharder_keep_worker -- registered")
+						} else {
+							Logger.Debug("register_sharder_keep_worker -- failed to confirm transaction", zap.Any("txn", txn))
+						}
+					}
+
+					if sleepOrDone(ctx, time.Second) {
+						return
+					}
+				}
+			}
+		}
+	}
 }
 
 func (sc *Chain) getPruneCountRoundStorage() func(storage round.RoundStorage) int {
