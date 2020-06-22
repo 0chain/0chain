@@ -31,7 +31,7 @@ type State struct {
 	WrongBlockSignHash          *config.Bad
 	WrongBlockSignKey           *config.Bad
 	WrongBlockHash              *config.Bad
-	VerificationTicket          *config.Bad
+	VerificationTicketGroup     *config.Bad
 	WrongVerificationTicketHash *config.Bad
 	WrongVerificationTicketKey  *config.Bad
 	WrongNotarizedBlockHash     *config.Bad
@@ -42,7 +42,6 @@ type State struct {
 	FinalizedBlock    *config.Bad
 	MagicBlock        *config.Bad
 	VerifyTransaction *config.Bad
-	SCState           *config.Bad
 	// Byzantine View Change
 	MPK        *config.Bad
 	Shares     *config.Bad

@@ -165,13 +165,13 @@ func init() {
 		return ex.WrongBlockHash(&wbh)
 	})
 
-	register("verification_ticket", func(f Flow, name string,
+	register("verification_ticket_group", func(f Flow, name string,
 		ex Executor, val interface{}, tm time.Duration) (err error) {
-		var vt Bad
-		if err = vt.Unmarshal(name, val); err != nil {
+		var vtg Bad
+		if err = vtg.Unmarshal(name, val); err != nil {
 			return
 		}
-		return ex.VerificationTicket(&vt)
+		return ex.VerificationTicketGroup(&vtg)
 	})
 
 	register("wrong_verification_ticket_hash", func(f Flow, name string,
@@ -255,15 +255,6 @@ func init() {
 			return
 		}
 		return ex.VerifyTransaction(&vt)
-	})
-
-	register("sc_state", func(f Flow, name string,
-		ex Executor, val interface{}, tm time.Duration) (err error) {
-		var scs Bad
-		if err = scs.Unmarshal(name, val); err != nil {
-			return
-		}
-		return ex.SCState(&scs)
 	})
 
 	// Byzantine view change

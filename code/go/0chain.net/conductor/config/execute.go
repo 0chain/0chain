@@ -41,7 +41,6 @@ type Executor interface {
 	FinalizedBlock(fb *Bad) (err error)
 	MagicBlock(mb *Bad) (err error)
 	VerifyTransaction(vt *Bad) (err error)
-	SCState(scs *Bad) (err error)
 
 	// Byzantine: BC tests, miners misbehavior
 
@@ -53,7 +52,7 @@ type Executor interface {
 	WrongBlockSignHash(wbsh *Bad) (err error)
 	WrongBlockSignKey(wbsk *Bad) (err error)
 	WrongBlockHash(wbh *Bad) (err error)
-	VerificationTicket(vt *Bad) (err error)
+	VerificationTicketGroup(vtg *Bad) (err error)
 	WrongVerificationTicketHash(wvth *Bad) (err error)
 	WrongVerificationTicketKey(wvtk *Bad) (err error)
 	WrongNotarizedBlockHash(wnbh *Bad) (err error)
@@ -64,6 +63,9 @@ type Executor interface {
 	Shares(s *Bad) (err error)
 	Signatures(s *Bad) (err error)
 	Publish(p *Bad) (err error)
+
+	// system command (a bash script)
+	System(string) (err error)
 }
 
 //

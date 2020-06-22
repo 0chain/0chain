@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -78,6 +79,13 @@ type Set struct {
 	Tests []string `json:"tests" yaml:"tests" mapstructure:"tests"`
 }
 
+// A system command.
+type Command struct {
+	WorkDir    string `json:"work_dir" yaml:"work_dir" mapstructure:"work_dir"`
+	Exec       string `json:"exec" yaml:"exec" mapstructure:"exec"`
+	shouldFail bool   `json:"should_fail" yaml:"should_fail" mapstructure:"should_fail"`
+}
+
 // A Config represents conductor testing configurations.
 type Config struct {
 	// BindRunner endpoint to connect to.
@@ -103,6 +111,54 @@ type Config struct {
 	Enable []string `json:"enable" yaml:"enable" mapstructure:"enable"`
 	// Sets or tests.
 	Sets []Set `json:"sets" yaml:"sets" mapstructure:"sets"`
+	// Commands is list of system commands to perform.
+	Commands map[string]*Command `json:"commands" yaml:"commands" mapstructure:"commands"`
+}
+
+func (c *Config) Execute(name string) (err error) {
+	println("execute command", name)
+	var n, ok = c.Commands[name]
+	if !ok {
+		return fmt.Errorf("unknown system command: %q", name)
+	}
+
+	if n.WorkDir == "" {
+		n.WorkDir = "."
+	}
+
+	var (
+		ss      = strings.Fields(n.Exec)
+		command string
+	)
+	command = ss[0]
+	if filepath.Base(command) != command {
+		command = "./" + filepath.Join(n.WorkDir, command)
+	}
+	var cmd = exec.Command(command, ss[1:]...)
+	cmd.Dir = n.WorkDir
+
+	var out []byte
+	out, err = cmd.CombinedOutput()
+	if len(out) > 0 {
+		fmt.Println(string(out))
+	}
+
+	if err == nil {
+		if n.shouldFail {
+			return fmt.Errorf("command %q success (but should fail)", name)
+		}
+		return nil // ok
+	}
+
+	if _, ok := err.(*exec.ExitError); !ok {
+		return // not exit status error
+	}
+
+	if n.shouldFail {
+		return nil // ok
+	}
+
+	return err
 }
 
 // TestsOfSet returns test cases of given Set.

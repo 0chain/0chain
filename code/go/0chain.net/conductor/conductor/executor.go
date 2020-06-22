@@ -215,7 +215,7 @@ func (r *Runner) WaitNoProgress(wait time.Duration) (err error) {
 
 func (r *Runner) VRFS(vrfs *config.Bad) (err error) {
 	if r.verbose {
-		log.Print(" [INF] set VRFS of %s: good %s, bad %s", vrfs.By,
+		log.Printf(" [INF] set VRFS of %s: good %s, bad %s", vrfs.By,
 			vrfs.Good, vrfs.Bad)
 	}
 
@@ -231,7 +231,7 @@ func (r *Runner) VRFS(vrfs *config.Bad) (err error) {
 func (r *Runner) RoundTimeout(rt *config.Bad) (err error) {
 
 	if r.verbose {
-		log.Print(" [INF] set 'wrong round timeout' "+
+		log.Printf(" [INF] set 'wrong round timeout' "+
 			"of %s: good %s, bad %s", rt.By, rt.Good, rt.Bad)
 	}
 	err = r.server.UpdateStates(rt.By, func(state *conductrpc.State) {
@@ -246,7 +246,7 @@ func (r *Runner) RoundTimeout(rt *config.Bad) (err error) {
 func (r *Runner) CompetingBlock(cb *config.Bad) (err error) {
 
 	if r.verbose {
-		log.Print(" [INF] set 'competing block' "+
+		log.Printf(" [INF] set 'competing block' "+
 			"of %s: good %s, bad %s", cb.By, cb.Good, cb.Bad)
 	}
 	err = r.server.UpdateStates(cb.By, func(state *conductrpc.State) {
@@ -261,7 +261,7 @@ func (r *Runner) CompetingBlock(cb *config.Bad) (err error) {
 func (r *Runner) SignOnlyCompetingBlocks(socb *config.Bad) (err error) {
 
 	if r.verbose {
-		log.Print(" [INF] set 'sign only competing block' "+
+		log.Printf(" [INF] set 'sign only competing block' "+
 			"of %s: good %s, bad %s", socb.By, socb.Good, socb.Bad)
 	}
 	err = r.server.UpdateStates(socb.By, func(state *conductrpc.State) {
@@ -276,7 +276,7 @@ func (r *Runner) SignOnlyCompetingBlocks(socb *config.Bad) (err error) {
 func (r *Runner) DoubleSpendTransaction(dst *config.Bad) (err error) {
 
 	if r.verbose {
-		log.Print(" [INF] set 'double spend transaction' "+
+		log.Printf(" [INF] set 'double spend transaction' "+
 			"of %s: good %s, bad %s", dst.By, dst.Good, dst.Bad)
 	}
 	err = r.server.UpdateStates(dst.By, func(state *conductrpc.State) {
@@ -291,7 +291,7 @@ func (r *Runner) DoubleSpendTransaction(dst *config.Bad) (err error) {
 func (r *Runner) WrongBlockSignHash(wbsh *config.Bad) (err error) {
 
 	if r.verbose {
-		log.Print(" [INF] set 'wrong block sign hash' "+
+		log.Printf(" [INF] set 'wrong block sign hash' "+
 			"of %s: good %s, bad %s", wbsh.By, wbsh.Good, wbsh.Bad)
 	}
 	err = r.server.UpdateStates(wbsh.By, func(state *conductrpc.State) {
@@ -306,7 +306,7 @@ func (r *Runner) WrongBlockSignHash(wbsh *config.Bad) (err error) {
 func (r *Runner) WrongBlockSignKey(wbsk *config.Bad) (err error) {
 
 	if r.verbose {
-		log.Print(" [INF] set 'wrong block sign key' "+
+		log.Printf(" [INF] set 'wrong block sign key' "+
 			"of %s: good %s, bad %s", wbsk.By, wbsk.Good, wbsk.Bad)
 	}
 	err = r.server.UpdateStates(wbsk.By, func(state *conductrpc.State) {
@@ -321,7 +321,7 @@ func (r *Runner) WrongBlockSignKey(wbsk *config.Bad) (err error) {
 func (r *Runner) WrongBlockHash(wbh *config.Bad) (err error) {
 
 	if r.verbose {
-		log.Print(" [INF] set 'wrong block hash' "+
+		log.Printf(" [INF] set 'wrong block hash' "+
 			"of %s: good %s, bad %s", wbh.By, wbh.Good, wbh.Bad)
 	}
 	err = r.server.UpdateStates(wbh.By, func(state *conductrpc.State) {
@@ -333,17 +333,16 @@ func (r *Runner) WrongBlockHash(wbh *config.Bad) (err error) {
 	return
 }
 
-func (r *Runner) VerificationTicket(vt *config.Bad) (err error) {
+func (r *Runner) VerificationTicketGroup(vtg *config.Bad) (err error) {
 
 	if r.verbose {
-		log.Print(" [INF] set 'wrong verification ticket' "+
-			"of %s: good %s, bad %s", vt.By, vt.Good, vt.Bad)
+		log.Printf(" [INF] set 'verification_ticket_group' of %s", vtg.By)
 	}
-	err = r.server.UpdateStates(vt.By, func(state *conductrpc.State) {
-		state.VerificationTicket = vt
+	err = r.server.UpdateStates(vtg.By, func(state *conductrpc.State) {
+		state.VerificationTicketGroup = vtg
 	})
 	if err != nil {
-		return fmt.Errorf("setting 'wrong verification ticket': %v", err)
+		return fmt.Errorf("setting 'verification_ticket_group': %v", err)
 	}
 	return
 }
@@ -351,7 +350,7 @@ func (r *Runner) VerificationTicket(vt *config.Bad) (err error) {
 func (r *Runner) WrongVerificationTicketHash(wvth *config.Bad) (err error) {
 
 	if r.verbose {
-		log.Print(" [INF] set 'wrong verification ticket hash' "+
+		log.Printf(" [INF] set 'wrong verification ticket hash' "+
 			"of %s: good %s, bad %s", wvth.By, wvth.Good, wvth.Bad)
 	}
 	err = r.server.UpdateStates(wvth.By, func(state *conductrpc.State) {
@@ -366,7 +365,7 @@ func (r *Runner) WrongVerificationTicketHash(wvth *config.Bad) (err error) {
 func (r *Runner) WrongVerificationTicketKey(wvtk *config.Bad) (err error) {
 
 	if r.verbose {
-		log.Print(" [INF] set 'wrong verification ticket key' "+
+		log.Printf(" [INF] set 'wrong verification ticket key' "+
 			"of %s: good %s, bad %s", wvtk.By, wvtk.Good, wvtk.Bad)
 	}
 	err = r.server.UpdateStates(wvtk.By, func(state *conductrpc.State) {
@@ -381,7 +380,7 @@ func (r *Runner) WrongVerificationTicketKey(wvtk *config.Bad) (err error) {
 func (r *Runner) WrongNotarizedBlockHash(wnbh *config.Bad) (err error) {
 
 	if r.verbose {
-		log.Print(" [INF] set 'wrong notarized block hash' "+
+		log.Printf(" [INF] set 'wrong notarized block hash' "+
 			"of %s: good %s, bad %s", wnbh.By, wnbh.Good, wnbh.Bad)
 	}
 	err = r.server.UpdateStates(wnbh.By, func(state *conductrpc.State) {
@@ -396,7 +395,7 @@ func (r *Runner) WrongNotarizedBlockHash(wnbh *config.Bad) (err error) {
 func (r *Runner) WrongNotarizedBlockKey(wnbk *config.Bad) (err error) {
 
 	if r.verbose {
-		log.Print(" [INF] set 'wrong notarized block key' "+
+		log.Printf(" [INF] set 'wrong notarized block key' "+
 			"of %s: good %s, bad %s", wnbk.By, wnbk.Good, wnbk.Bad)
 	}
 	err = r.server.UpdateStates(wnbk.By, func(state *conductrpc.State) {
@@ -411,7 +410,7 @@ func (r *Runner) WrongNotarizedBlockKey(wnbk *config.Bad) (err error) {
 func (r *Runner) NotarizeOnlyCompetingBlock(ncb *config.Bad) (err error) {
 
 	if r.verbose {
-		log.Print(" [INF] set 'notarize only competing block' "+
+		log.Printf(" [INF] set 'notarize only competing block' "+
 			"of %s: good %s, bad %s", ncb.By, ncb.Good, ncb.Bad)
 	}
 	err = r.server.UpdateStates(ncb.By, func(state *conductrpc.State) {
@@ -426,7 +425,7 @@ func (r *Runner) NotarizeOnlyCompetingBlock(ncb *config.Bad) (err error) {
 func (r *Runner) NotarizedBlock(nb *config.Bad) (err error) {
 
 	if r.verbose {
-		log.Print(" [INF] set 'notarized block' of %s: good %s, bad %s", nb.By,
+		log.Printf(" [INF] set 'notarized block' of %s: good %s, bad %s", nb.By,
 			nb.Good, nb.Bad)
 	}
 	err = r.server.UpdateStates(nb.By, func(state *conductrpc.State) {
@@ -460,7 +459,7 @@ func (r *Runner) SetRevealed(ss []NodeName, pin bool, tm time.Duration) (
 
 func (r *Runner) MPK(mpk *config.Bad) (err error) {
 	if r.verbose {
-		log.Print(" [INF] set 'MPK' of %s: good %s, bad %s", mpk.By,
+		log.Printf(" [INF] set 'MPK' of %s: good %s, bad %s", mpk.By,
 			mpk.Good, mpk.Bad)
 	}
 	err = r.server.UpdateStates(mpk.By, func(state *conductrpc.State) {
@@ -474,7 +473,7 @@ func (r *Runner) MPK(mpk *config.Bad) (err error) {
 
 func (r *Runner) Shares(s *config.Bad) (err error) {
 	if r.verbose {
-		log.Print(" [INF] set 'shares' of %s: good %s, bad %s", s.By,
+		log.Printf(" [INF] set 'shares' of %s: good %s, bad %s", s.By,
 			s.Good, s.Bad)
 	}
 	err = r.server.UpdateStates(s.By, func(state *conductrpc.State) {
@@ -488,7 +487,7 @@ func (r *Runner) Shares(s *config.Bad) (err error) {
 
 func (r *Runner) Signatures(s *config.Bad) (err error) {
 	if r.verbose {
-		log.Print(" [INF] set 'signatures' of %s: good %s, bad %s", s.By,
+		log.Printf(" [INF] set 'signatures' of %s: good %s, bad %s", s.By,
 			s.Good, s.Bad)
 	}
 	err = r.server.UpdateStates(s.By, func(state *conductrpc.State) {
@@ -502,7 +501,7 @@ func (r *Runner) Signatures(s *config.Bad) (err error) {
 
 func (r *Runner) Publish(p *config.Bad) (err error) {
 	if r.verbose {
-		log.Print(" [INF] set 'publish' of %s: good %s, bad %s", p.By,
+		log.Printf(" [INF] set 'publish' of %s: good %s, bad %s", p.By,
 			p.Good, p.Bad)
 	}
 
@@ -521,7 +520,7 @@ func (r *Runner) Publish(p *config.Bad) (err error) {
 
 func (r *Runner) FinalizedBlock(fb *config.Bad) (err error) {
 	if r.verbose {
-		log.Print(" [INF] set 'finalized block' of %s: good %s, bad %s", fb.By,
+		log.Printf(" [INF] set 'finalized block' of %s: good %s, bad %s", fb.By,
 			fb.Good, fb.Bad)
 	}
 
@@ -536,7 +535,7 @@ func (r *Runner) FinalizedBlock(fb *config.Bad) (err error) {
 
 func (r *Runner) MagicBlock(mb *config.Bad) (err error) {
 	if r.verbose {
-		log.Print(" [INF] set 'magic block' of %s: good %s, bad %s", mb.By,
+		log.Printf(" [INF] set 'magic block' of %s: good %s, bad %s", mb.By,
 			mb.Good, mb.Bad)
 	}
 
@@ -551,7 +550,7 @@ func (r *Runner) MagicBlock(mb *config.Bad) (err error) {
 
 func (r *Runner) VerifyTransaction(vt *config.Bad) (err error) {
 	if r.verbose {
-		log.Print(" [INF] set bad 'verify transaction' of %s to clients",
+		log.Printf(" [INF] set bad 'verify transaction' of %s to clients",
 			vt.By)
 	}
 
@@ -560,20 +559,6 @@ func (r *Runner) VerifyTransaction(vt *config.Bad) (err error) {
 	})
 	if err != nil {
 		return fmt.Errorf("setting bad 'verify transaction': %v", err)
-	}
-	return
-}
-
-func (r *Runner) SCState(scs *config.Bad) (err error) {
-	if r.verbose {
-		log.Print(" [INF] set bad 'SC state' of %s to clients", scs.By)
-	}
-
-	err = r.server.UpdateStates(scs.By, func(state *conductrpc.State) {
-		state.SCState = scs
-	})
-	if err != nil {
-		return fmt.Errorf("setting bad 'SC state': %v", err)
 	}
 	return
 }
@@ -587,5 +572,12 @@ func (r *Runner) WaitNoViewChainge(wnvc config.WaitNoViewChainge,
 
 	r.setupTimeout(tm)
 	r.waitNoViewChange = wnvc
+	return
+}
+
+//
+
+func (r *Runner) System(name string) (err error) {
+	//
 	return
 }

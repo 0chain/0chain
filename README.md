@@ -371,10 +371,18 @@ Test view change (part II).
 
 ###### Blockchain 1
 
-Test blockchain.
+Test blockchain (part I, miners).
 
 ```
 ./docker.local/bin/start.conductor.sh blockchain-1
+```
+
+###### Blockchain 2
+
+Test blockchain, (part II, sharders).
+
+```
+./docker.local/bin/start.conductor.sh blockchain-2
 ```
 
 ###### Blobber 1

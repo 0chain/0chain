@@ -462,6 +462,12 @@ func (r *Runner) acceptRound(re *conductrpc.RoundEvent) (err error) {
 		}
 	}
 
+	if !r.waitViewChange.IsZero() {
+		if vcr := r.waitViewChange.ExpectMagicBlock.Round; vcr < re.Round {
+			return fmt.Errorf("missing VC at %d", vcr)
+		}
+	}
+
 	var _, ok = r.conf.Nodes.NodeByName(re.Sender)
 	if !ok {
 		return fmt.Errorf("unknown 'round' sender: %s", re.Sender)
