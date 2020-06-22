@@ -38,20 +38,15 @@ tests:
           expect_magic_block:
             round: 501
             miners: ['miner 1', 'miner 2', 'miner 3']
-            sharders: ['sharder 1']
-      - wait_view_change:
-          expect_magic_block:
-            round: 751
-            miners: ['miner 1', 'miner 2', 'miner 3']
             sharders: ['sharder 1', 'sharder 2']
       - wait_round:
-          round: 761
+          round: 511
       - stop: ["miner 1", "miner 2", "miner 3"]
       - finalized_block:
           by: ["sharder 2"]
       - start: ["miner 1", "miner 2", "miner 3"]
-      - wait_round:
-          round: 771
+      - wait_no_progress:
+          timeout: '2m'
   - name: "Send bad MB to miners when all miners are down and then they are brought up"
     flow:
       - set_monitor: "sharder 1"
@@ -69,20 +64,15 @@ tests:
           expect_magic_block:
             round: 501
             miners: ['miner 1', 'miner 2', 'miner 3']
-            sharders: ['sharder 1']
-      - wait_view_change:
-          expect_magic_block:
-            round: 751
-            miners: ['miner 1', 'miner 2', 'miner 3']
             sharders: ['sharder 1', 'sharder 2']
       - wait_round:
-          round: 761
+          round: 511
       - stop: ["miner 1", "miner 2", "miner 3"]
       - verify_transaction:
           by: ["sharder 2"]
       - start: ["miner 1", "miner 2", "miner 3"]
-      - wait_round:
-          round: 771
+      - wait_no_progress:
+          timeout: '2m'
 
 #  - name: "Send the wrong message to the client"
 #    flow:
@@ -101,19 +91,14 @@ tests:
 #          expect_magic_block:
 #            round: 501
 #            miners: ['miner 1', 'miner 2', 'miner 3']
-#            sharders: ['sharder 1']
-#      - wait_view_change:
-#          expect_magic_block:
-#            round: 751
-#            miners: ['miner 1', 'miner 2', 'miner 3']
 #            sharders: ['sharder 1', 'sharder 2']
 #      - wait_round:
-#          round: 761
+#          round: 511
 #      - stop: ["miner 1", "miner 2", "miner 3"]
 #      - bad_magic_block:
 #          by: ["sharder 2"]
 #      - start: ["miner 1", "miner 2", "miner 3"]
 #      - wait_round:
-#          round: 771
+#          round: 521
 
 ...
