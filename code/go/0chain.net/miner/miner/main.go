@@ -322,12 +322,12 @@ func getCurrentMagicBlockFromSharders(mc *miner.Chain) error {
 	}
 	magicBlock := mbs[0]
 	err := mc.MustVerifyChainHistory(common.GetRootContext(), magicBlock,
-		mc.SaveMagicBlock())
+		nil)
 	if err != nil {
 		return err
 	}
 	if err := mc.UpdateMagicBlock(magicBlock.MagicBlock); err != nil {
-		return fmt.Errorf("failed to update magic block: %v", err.Error())
+		return fmt.Errorf("failed to update magic block: %v", err)
 	}
 	mc.SetLatestFinalizedMagicBlock(magicBlock)
 	mc.UpdateNodesFromMagicBlock(magicBlock.MagicBlock)
