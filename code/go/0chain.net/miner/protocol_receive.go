@@ -63,6 +63,7 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 					b = mc.AddRoundBlock(mr, b)
 				}
 
+				println("NB FROM HANDLE", mr.GetRoundNumber(), b.Round)
 				mc.checkBlockNotarization(ctx, mr, b)
 				return
 			}
@@ -125,6 +126,7 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *Block
 		Logger.Debug("verification ticket", zap.Error(err))
 		return
 	}
+	println("PROC VT FROM HANDLE VT")
 	mc.ProcessVerifiedTicket(ctx, mr, b, &msg.BlockVerificationTicket.VerificationTicket)
 }
 

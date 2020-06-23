@@ -53,6 +53,7 @@ func (c *Chain) ComputeState(ctx context.Context, b *block.Block) error {
 	lock := b.StateMutex
 	lock.Lock()
 	defer lock.Unlock()
+
 	return c.computeState(ctx, b)
 }
 
@@ -249,6 +250,11 @@ func (c *Chain) UpdateState(b *block.Block, txn *transaction.Transaction) error 
 }
 
 func (c *Chain) updateState(b *block.Block, txn *transaction.Transaction) error {
+
+	if b.ClientState == nil {
+		println("UPDATE BLOCK STATE:", b.Round, "IS NIL")
+	}
+
 	clientState := CreateTxnMPT(b.ClientState) // begin transaction
 	startRoot := clientState.GetRoot()
 	sctx := bcstate.NewStateContext(b, clientState, c.clientStateDeserializer, txn, c.GetBlockSharders, c.GetLatestFinalizedMagicBlock, c.GetSignatureScheme)

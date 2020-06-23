@@ -55,11 +55,13 @@ func (c *Chain) StatusMonitor(ctx context.Context) {
 
 /*FinalizeRoundWorker - a worker that handles the finalized blocks */
 func (c *Chain) FinalizeRoundWorker(ctx context.Context, bsh BlockStateHandler) {
+	defer println("FINALIZE ROUND WORKER DONE <------------------||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||")
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case r := <-c.finalizedRoundsChannel:
+			println("FINALIZATION QUEUE LENGTH", len(c.finalizedRoundsChannel))
 			c.finalizeRound(ctx, r, bsh)
 			c.UpdateRoundInfo(r)
 		}
@@ -135,6 +137,9 @@ func (c *Chain) FinalizedBlockWorker(ctx context.Context, bsh BlockStateHandler)
 			return
 
 		case fb := <-c.finalizedBlocksChannel:
+			if len(c.finalizedBlocksChannel) > 2 {
+				println("FINALIZE BLOCK CHAN:", len(c.finalizedBlocksChannel))
+			}
 			lfb := c.GetLatestFinalizedBlock()
 			if fb.Round < lfb.Round-5 {
 				Logger.Error("slow finalized block processing", zap.Int64("lfb", lfb.Round), zap.Int64("fb", fb.Round))
@@ -144,13 +149,13 @@ func (c *Chain) FinalizedBlockWorker(ctx context.Context, bsh BlockStateHandler)
 			// a magic block; we already have verified and valid MB chain at this
 			// moment, let's keep it updated and verified too
 
-			if fb.MagicBlock != nil /*&& node.Self.Type == node.NodeTypeSharder*/ {
-				var err = c.repairChain(ctx, fb, bsh.SaveMagicBlock())
-				if err != nil {
-					Logger.Error("repairing mb chain", zap.Error(err))
-					return
-				}
-			}
+			// if fb.MagicBlock != nil /*&& node.Self.Type == node.NodeTypeSharder*/ {
+			// 	var err = c.repairChain(ctx, fb, bsh.SaveMagicBlock())
+			// 	if err != nil {
+			// 		Logger.Error("repairing mb chain", zap.Error(err))
+			// 		return
+			// 	}
+			// }
 
 			// finalize
 

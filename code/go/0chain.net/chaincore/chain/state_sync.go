@@ -135,6 +135,7 @@ func (c *Chain) SaveStateNodes(ctx context.Context, ns *state.Nodes) error {
 }
 
 func (c *Chain) getPartialState(ctx context.Context, key util.Key) (*state.PartialState, error) {
+	println("GET/REQUEST PARTIAL STATE FROM OTHER MINERS")
 	psRequestor := PartialStateRequestor
 	params := &url.Values{}
 	params.Add("node", util.ToHex(key))

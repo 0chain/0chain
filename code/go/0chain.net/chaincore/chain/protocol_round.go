@@ -97,10 +97,14 @@ func (c *Chain) ComputeFinalizedBlock(ctx context.Context, r round.RoundI) *bloc
 /*FinalizeRound - starting from the given round work backwards and identify the round that can be assumed to be finalized as all forks after
 that extend from a single block in that round. */
 func (c *Chain) FinalizeRound(ctx context.Context, r round.RoundI, bsh BlockStateHandler) {
+	println("FINALIZE ROUND", r.GetRoundNumber())
 	if !r.SetFinalizing() {
-		return
+		println("FINALIZE ROUND", r.GetRoundNumber(), "ALREADY FINALAZING")
+		// return
+		println("(KICK AGAIN) FINALIZE ROUND", r.GetRoundNumber())
 	}
 	if r.GetHeaviestNotarizedBlock() == nil {
+		println("FINALIZE ROUND", r.GetRoundNumber(), "NO NOTARIZED BLOCKS")
 		Logger.Error("finalize round: no notarized blocks", zap.Int64("round", r.GetRoundNumber()))
 		go c.GetHeaviestNotarizedBlock(r)
 	}
@@ -110,6 +114,7 @@ func (c *Chain) FinalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 }
 
 func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStateHandler) {
+	println("(f) FINALIZE ROUND", r.GetRoundNumber())
 	roundNumber := r.GetRoundNumber()
 	notarizedBlocks := r.GetNotarizedBlocks()
 	nbCount := len(notarizedBlocks)
@@ -130,17 +135,21 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 	//This check is useful when we allow the finalizeRound route is not sequential and end up with out-of-band execution
 	if r.GetRoundNumber() <= plfb.Round {
 		Logger.Error("finalize round - round number <= latest finalized round", zap.Int64("round", r.GetRoundNumber()), zap.Int64("lf_round", plfb.Round))
+		println("(f) FINALIZE ROUND", r.GetRoundNumber(), "finalize round - round number <= latest finalized round")
 		return
 	}
 	lfb := c.ComputeFinalizedBlock(ctx, r)
 	if lfb == nil {
 		Logger.Debug("finalize round - no decisive block to finalize yet or don't have all the necessary blocks", zap.Int64("round", roundNumber), zap.Int("notarized_blocks", nbCount))
+		println("(f) FINALIZE ROUND", r.GetRoundNumber(), "no decisive block")
 		return
 	}
 	if lfb.Hash == plfb.Hash {
+		println("(f) FINALIZE ROUND", r.GetRoundNumber(), "hash == hash", lfb.Round, plfb.Round)
 		return
 	}
 	if lfb.Round <= plfb.Round {
+		println("(f) FINALIZE ROUND", r.GetRoundNumber(), "lfb <= plfb", lfb.Round, plfb.Round)
 		b := c.commonAncestor(ctx, plfb, lfb)
 		if b != nil {
 			// Recovering from incorrectly finalized block
@@ -183,6 +192,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 	c.SetLatestFinalizedBlock(lfb)
 	FinalizationLagMetric.Update(int64(c.GetCurrentRound() - lfb.Round))
 	Logger.Info("finalize round - latest finalized round", zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash))
+	println("(f) FINALIZE ROUND", r.GetRoundNumber(), "frchain", len(frchain))
 	for idx := range frchain {
 		fb := frchain[len(frchain)-1-idx]
 		c.finalizedBlocksChannel <- fb
@@ -226,6 +236,8 @@ func (c *Chain) GetHeaviestNotarizedBlock(r round.RoundI) *block.Block {
 			Logger.Info("Timeoutcount on Round and NB are out-of-sync", zap.Int64("round", roundNumber), zap.Int("nb_toc", nb.RoundTimeoutCount), zap.Int("round_toc", r.GetTimeoutCount()))
 
 		}
+
+		println("GET HEAV. NOT. B: ADD ONE TO ROUND", r.GetRoundNumber(), nb.Hash)
 
 		var b *block.Block
 		//This is a notarized block. So, use this method to sync round info with the notarized block.

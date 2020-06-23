@@ -21,6 +21,10 @@ import (
 	"0chain.net/core/memorystore"
 	"0chain.net/core/util"
 
+	// temporary, explore
+	"0chain.net/core/encryption"
+	"0chain.net/smartcontract/minersc"
+
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
@@ -424,6 +428,7 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 		}
 		if bnb == nil {
 			r.Block = b
+			println("PROC VT FROM COLLECT")
 			mc.ProcessVerifiedTicket(ctx, r, b, &bvt.VerificationTicket)
 		}
 		if b.RoundRank >= mc.NumGenerators || b.RoundRank < 0 {
@@ -546,6 +551,7 @@ func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.B
 
 		return
 	}
+	println("NB FROM PROC. VT", r.GetRoundNumber(), b.Round)
 	mc.checkBlockNotarization(ctx, r, b)
 }
 
@@ -576,6 +582,7 @@ func (mc *Chain) MergeNotarization(ctx context.Context, r *Round, b *block.Block
 	if notarized {
 		return
 	}
+	println("NB FROM MERGE NOT", r.GetRoundNumber(), b.Round)
 	mc.checkBlockNotarization(ctx, r, b)
 }
 
@@ -598,6 +605,7 @@ func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *Round, b *block.Block
 
 /*CancelRoundVerification - cancel verifications happening within a round */
 func (mc *Chain) CancelRoundVerification(ctx context.Context, r *Round) {
+	println("CANCEL ROUND VERIFICATION", r.GetRoundNumber())
 	r.CancelVerification() // No need for further verification of any blocks
 }
 
@@ -717,6 +725,43 @@ func (mc *Chain) handleNoProgress(ctx context.Context) {
 }
 
 func (mc *Chain) restartRound(ctx context.Context) {
+
+	println("RESTART ROUND, EXPLORE MINER STATE")
+	{
+		cr := mc.GetCurrentRound()
+		for i, e := cr, cr-5; i > e; i-- {
+			r := mc.GetRound(i)
+			if r == nil {
+				println("ROUND", i, "NIL")
+				continue
+			}
+			println("ROUND", i, "IS FINALIZING", r.IsFinalizing(), "IS FINALIZED", r.IsFinalized())
+			hnb := r.GetHeaviestNotarizedBlock()
+			if hnb == nil {
+				println("ROUND", i, "NO HNB")
+				continue
+			}
+			println("ROUND", i, "HNB", hnb.Hash, "IS NOTARIZED", hnb.IsBlockNotarized())
+			if hnb.ClientState == nil {
+				println("ROUND", i, "HNB", "NO CLIENT STATE")
+				continue
+			}
+			state := chain.CreateTxnMPT(hnb.ClientState)
+			mbSeri, err := state.GetNodeValue(
+				util.Path(encryption.Hash(minersc.MagicBlockKey)),
+			)
+			if err != nil {
+				println("ROUND", i, "HNB", "GETTING MB KEY", err.Error())
+				continue
+			}
+			if mbSeri == nil {
+				println("ROUND", i, "HNB", "GETTING MB KEY", "IS NIL")
+			}
+			println("ROUND", i, "HNB", "GETTING MB KEY", "OK")
+		}
+	}
+	println("==================================")
+
 	mc.IncrementRoundTimeoutCount()
 	r := mc.GetMinerRound(mc.GetCurrentRound())
 	switch crt := mc.GetRoundTimeoutCount(); {
@@ -780,7 +825,24 @@ func (mc *Chain) restartRound(ctx context.Context) {
 		Logger.Info("Could not RedoVrfShare",
 			zap.Int64("round", r.GetRoundNumber()),
 			zap.Int("round_timeout", r.GetTimeoutCount()))
-		return
+		// return
+	}
+
+	// kick all blocks finalization
+	{
+		lfb := mc.GetLatestFinalizedBlock()
+		if lfb.ClientState == nil {
+			println("(restart round) LFB client state still NIL (KICK IT)")
+			mc.InitBlockState(lfb)
+		}
+		for i, e := lfb.Round, mc.CurrentRound; i < e; i++ {
+			mr := mc.GetMinerRound(i)
+			if mr.IsFinalized() {
+				println("(restart round): skip finalized block", i)
+				continue
+			}
+			go mc.FinalizeRound(ctx, mr.Round, mc) // KICK
+		}
 	}
 
 	// // push all heaviest notarized blocks from LFB to current round
@@ -816,7 +878,12 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context, pnround int64)
 		mr, _ = mc.AddRound(mr).(*Round)
 		mc.SetRandomSeed(mr, lfbs.GetRoundRandomSeed())
 		mc.AddBlock(lfbs)
-		mc.InitBlockState(lfbs)
+		var err = mc.InitBlockState(lfbs)
+		for ; err != nil; err = mc.InitBlockState(lfbs) {
+			println("initialize LFB state in restart_round", err.Error())
+			Logger.Error("initialize LFB state in restart_round",
+				zap.Error(err))
+		}
 		mc.SetLatestFinalizedBlock(ctx, lfbs)
 		if mc.GetCurrentRound() < mr.GetRoundNumber() {
 			mc.startNewRound(ctx, mr)

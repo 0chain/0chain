@@ -363,6 +363,9 @@ func (r *Round) Finalize(b *block.Block) {
 func (r *Round) SetFinalizing() bool {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
+
+	println("||||||||||||||||||||||||||||||||||||||||", r.Number, "SET FINALIZING")
+
 	if r.isFinalized() || r.isFinalizing() {
 		return false
 	}
