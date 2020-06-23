@@ -116,9 +116,6 @@ func (mc *Chain) PublishShareOrSigns() (*httpclientutil.Transaction, error) {
 		}
 		var _, ok = shareOrSigns.ShareOrSigns[k]
 		if isRevealed || !ok {
-			if isRevealed {
-				println("IS REVEALED")
-			}
 			share := mc.viewChangeDKG.Sij[bls.ComputeIDdkg(k)]
 			shareOrSigns.ShareOrSigns[k] = &bls.DKGKeyShare{
 				Share: share.GetHexString(),

@@ -387,9 +387,29 @@ Test blockchain, (part II, sharders).
 
 ###### Blobber 1
 
+Directories tree should be
+
+```
+0chain/
+blobber/
+zboxcli/
+zwalletcli/
+blockWorker/
+```
+
+Otherwise, fix tests configurations, and scripts in docker.local/bin/conductor.
+
+1. Build blobbers as usual.
+2. Build zbox and zwallet.
+3. Build blockWorker.
+
+Note: cleanup blobbers and cleanup block worker requires sudo
+(enter password during tests).
+
 Test blobbers.
 
 ```
+./docker.local/bin/start.conductor.sh blobber-1
 ```
 
 ###### Client 1

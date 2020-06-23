@@ -618,9 +618,13 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	}
 	if GetServerChain().TxnMaxPayload > 0 {
 		if len(txn.TransactionData) > GetServerChain().TxnMaxPayload {
+			println("TX MAX PAYLOADS")
 			s := fmt.Sprintf("transaction payload exceeds the max payload (%d)", GetServerChain().TxnMaxPayload)
 			return nil, common.NewError("txn_exceed_max_payload", s)
 		}
+	}
+	if txn.ToClientID == "6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d7" {
+		println("PUT TRANSACTION FRO STORAGE SC", txn.TransactionData)
 	}
 	return transaction.PutTransaction(ctx, txn)
 }

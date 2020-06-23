@@ -580,6 +580,11 @@ func (r *Runner) WaitNoViewChainge(wnvc config.WaitNoViewChainge,
 
 // Command executing.
 func (r *Runner) Command(name string, async bool) (err error) {
+
+	if r.verbose {
+		log.Printf(" [INF] command %q, async: %t", name, async)
+	}
+
 	if async {
 		go r.asyncCommand(name)
 		return

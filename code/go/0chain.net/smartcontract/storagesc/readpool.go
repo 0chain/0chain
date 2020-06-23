@@ -208,21 +208,27 @@ func (ssc *StorageSmartContract) getReadPool(clientID datastore.Key,
 func (ssc *StorageSmartContract) newReadPool(t *transaction.Transaction,
 	input []byte, balances cstate.StateContextI) (resp string, err error) {
 
+	println("NEW READ POOL CALLED", t.ClientID)
+
 	_, err = ssc.getReadPoolBytes(t.ClientID, balances)
 
 	if err != nil && err != util.ErrValueNotPresent {
+		println("NEW READ POOL ERROR", t.ClientID, "UNEXPECTED", err.Error())
 		return "", common.NewError("new_read_pool_failed", err.Error())
 	}
 
 	if err == nil {
+		println("NEW READ POOL ERROR", t.ClientID, "ALREADY HAVE")
 		return "", common.NewError("new_read_pool_failed", "already exist")
 	}
 
 	var rp = new(readPool)
 	if err = rp.save(ssc.ID, t.ClientID, balances); err != nil {
+		println("NEW READ POOL ERROR", t.ClientID, "SAVING", err.Error())
 		return "", common.NewError("new_read_pool_failed", err.Error())
 	}
 
+	println("NEW READ POOL SUCCESS", t.ClientID)
 	return string(rp.Encode()), nil
 }
 

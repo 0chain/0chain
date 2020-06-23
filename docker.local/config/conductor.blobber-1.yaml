@@ -18,14 +18,22 @@ sets:
 tests:
   - name: "Send wrong or not send a response"
     flow:
+      - command:
+          name: "stop_block_worker"
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
       - command:
           name: "cleanup_blobbers"
+      - command:
+          name: "cleanup_block_worker"
       - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3']
       - start: ['blobber 1', 'blobber 2', 'blobber 3']
       - wait_add:
           blobber: ['blobber 1', 'blobber 2', 'blobber 3']
+      - command:
+          name: "start_block_worker"
+      - command:
+          name: "sleep_20s" # wait the block worker starts
       - command:
           name: "init_allocation"
       - stop: ['blobber 3']

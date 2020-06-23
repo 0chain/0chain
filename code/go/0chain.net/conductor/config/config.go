@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -84,6 +85,7 @@ type Command struct {
 	WorkDir    string `json:"work_dir" yaml:"work_dir" mapstructure:"work_dir"`
 	Exec       string `json:"exec" yaml:"exec" mapstructure:"exec"`
 	ShouldFail bool   `json:"should_fail" yaml:"should_fail" mapstructure:"should_fail"`
+	CanFail    bool   `json:"can_fail" yaml:"can_fail" mapstructure:"can_fail"`
 }
 
 // CommandName
@@ -150,16 +152,17 @@ func (c *Config) Execute(name string) (err error) {
 		command string
 	)
 	command = ss[0]
-	if filepath.Base(command) != command {
+	if filepath.Base(command) != command && !strings.HasPrefix(command, ".") {
 		command = "./" + filepath.Join(n.WorkDir, command)
 	}
 	var cmd = exec.Command(command, ss[1:]...)
 	cmd.Dir = n.WorkDir
 
-	var out []byte
-	out, err = cmd.CombinedOutput()
-	if len(out) > 0 {
-		fmt.Println(string(out))
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err = cmd.Run()
+	if n.CanFail {
+		return nil // ignore an error
 	}
 
 	if err == nil {

@@ -229,8 +229,6 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 	}
 	blsThreshold := currentDKG.T
 
-	println("VERIFY SHARE", "DKG SR", currentDKG.StartingRound, "R", mr.GetRoundNumber(), "VRFS R", vrfs.Round)
-
 	if !currentDKG.VerifySignature(&share, msg, partyID) {
 		stringID := (&partyID).GetHexString()
 		pi := currentDKG.GetPublicKeyByID(partyID)

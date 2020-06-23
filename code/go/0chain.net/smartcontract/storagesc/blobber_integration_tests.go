@@ -1,4 +1,5 @@
 // +build integration_tests
+
 package storagesc
 
 import (
@@ -43,7 +44,7 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 	)
 	abe.Sender = state.Name(crpc.NodeID(node.Self.Underlying().GetKey()))
 	abe.Blobber = state.Name(crpc.NodeID(blobber.ID))
-	if err = client.AddBlobber(abe); err != nil {
+	if err = client.AddBlobber(&abe); err != nil {
 		panic(err)
 	}
 	return

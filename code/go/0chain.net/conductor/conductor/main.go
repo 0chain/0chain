@@ -55,9 +55,6 @@ func main() {
 	flag.BoolVar(&verbose, "verbose", verbose, "verbose output")
 	flag.Parse()
 
-	println("CONFIG FILE PATH:", configFile)
-	println("TESTS FILE PATH:", testsFile)
-
 	log.Print("read configurations files: ", configFile, ", ", testsFile)
 	var (
 		conf = readConfigs(configFile, testsFile)

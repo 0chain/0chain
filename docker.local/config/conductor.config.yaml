@@ -92,28 +92,40 @@ commands:
   cleanup_blobbers:
     work_dir: "../blobber"
     exec: "sudo ../blobber/docker.local/bin/clean.sh"
-    should_fail: false
+    can_fail: true
+  cleanup_block_worker:
+    work_dir: "../blockWorker"
+    exec: "sudo ../blockWorker/docker.local/bin/clean.sh"
+    can_fail: true
+  start_block_worker:
+    work_dir: "../blockWorker/docker.local/bin"
+    exec: "./start.sh"
+  stop_block_worker:
+    work_dir: "."
+    exec: "docker stop blockworker_blockworker_1 blockworker_mongodb_1"
   # build_bad_blobbers:
   #   work_dir: "../blobber"
   #   exec: "../blobber/docker.local/bin/build.bad-blobber.sh"
   #   should_fail: false
   init_allocation:
     work_dir: "../"
-    exec: "sh ./docker.local/bin/conductor/init_allocation.sh"
+    exec: "sh -x 0chain/docker.local/bin/conductor/init_allocation.sh"
     should_fail: false
+  sleep_20s:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/sleep_20s.sh"
   sleep_1m:
     work_dir: "../"
-    exec: "sh ./docker.local/bin/conductor/sleep_1m.sh"
-    should_fail: false
+    exec: "sh -x 0chain/docker.local/bin/conductor/sleep_1m.sh"
   wrong_download:
     work_dir: "../"
-    exec: "sh ./docker.local/bin/conductor/wrong_download.sh"
+    exec: "sh -x 0chain/docker.local/bin/conductor/wrong_download.sh"
     should_fail: true
   wrong_upload:
     work_dir: "../"
-    exec: "sh ./docker.local/bin/conductor/wrong_upload.sh"
+    exec: "sh -x 0chain/docker.local/bin/conductor/wrong_upload.sh"
     should_fail: true
   wrong_delete:
     work_dir: "../"
-    exec: "sh ./docker.local/bin/conductor/wrong_delete.sh"
+    exec: "sh -x 0chain/docker.local/bin/conductor/wrong_delete.sh"
     should_fail: true
