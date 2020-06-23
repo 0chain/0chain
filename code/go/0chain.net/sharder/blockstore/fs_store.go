@@ -34,8 +34,7 @@ type MinioConfiguration struct {
 	StorageServiceURL string
 	AccessKeyID       string
 	SecretAccessKey   string
-	TierBucketName    string
-	CopyBucketName    string
+	BucketName        string
 	BucketLocation    string
 	DeleteLocal       bool
 }
@@ -62,10 +61,7 @@ func (fbs *FSBlockStore) intializeMinio() {
 		panic(err)
 	}
 	fbs.Minio = minioClient
-	fbs.checkBucket(MinioConfig.TierBucketName)
-	if len(MinioConfig.CopyBucketName) > 0 {
-		fbs.checkBucket(MinioConfig.CopyBucketName)
-	}
+	fbs.checkBucket(MinioConfig.BucketName)
 	MinioConfig.DeleteLocal = viper.GetBool("minio.delete_local_copy")
 }
 
@@ -238,16 +234,9 @@ func (fbs *FSBlockStore) DeleteBlock(b *block.Block) error {
 
 func (fbs *FSBlockStore) UploadToCloud(hash string, round int64) error {
 	filePath := fbs.getFileName(hash, round)
-	_, err := fbs.Minio.FPutObject(MinioConfig.TierBucketName, hash, filePath, minio.PutObjectOptions{})
+	_, err := fbs.Minio.FPutObject(MinioConfig.BucketName, hash, filePath, minio.PutObjectOptions{})
 	if err != nil {
 		return err
-	}
-
-	if len(MinioConfig.CopyBucketName) > 0 {
-		_, err := fbs.Minio.FPutObject(MinioConfig.CopyBucketName, hash, filePath, minio.PutObjectOptions{})
-		if err != nil {
-			return err
-		}
 	}
 
 	if MinioConfig.DeleteLocal {
@@ -258,5 +247,5 @@ func (fbs *FSBlockStore) UploadToCloud(hash string, round int64) error {
 
 func (fbs *FSBlockStore) DownloadFromCloud(hash string, round int64) error {
 	filePath := fbs.getFileName(hash, round)
-	return fbs.Minio.FGetObject(MinioConfig.TierBucketName, hash, filePath, minio.GetObjectOptions{})
+	return fbs.Minio.FGetObject(MinioConfig.BucketName, hash, filePath, minio.GetObjectOptions{})
 }
