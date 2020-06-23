@@ -133,6 +133,13 @@ func (e *Entity) AddSharder(add *AddSharderEvent) (err error) {
 	return e.client.addSharder(add)
 }
 
+func (e *Entity) AddBlobber(add *AddBlobberEvent) (err error) {
+	if !e.isMonitor() {
+		return // not a monitor
+	}
+	return e.client.addBlobber(add)
+}
+
 func (e *Entity) Round(re *RoundEvent) (err error) {
 	if !e.isMonitor() {
 		return // not a monitor

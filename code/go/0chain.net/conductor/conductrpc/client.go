@@ -86,6 +86,18 @@ func (c *client) addSharder(add *AddSharderEvent) (err error) {
 	return
 }
 
+// addBlobber notification.
+func (c *client) addBlobber(add *AddBlobberEvent) (err error) {
+	err = c.client.Call("Server.AddBlobber", add, &struct{}{})
+	if err == rpc.ErrShutdown {
+		if err = c.dial(); err != nil {
+			return
+		}
+		err = c.client.Call("Server.AddBlobber", add, &struct{}{})
+	}
+	return
+}
+
 // round notification.
 func (c *client) round(re *RoundEvent) (err error) {
 	err = c.client.Call("Server.Round", re, &struct{}{})

@@ -43,6 +43,9 @@ func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
 			zap.Any("round", r.GetRoundNumber()))
 		return
 	}
+
+	println("ADD MY VRF SHARE", "ROUND", r.GetRoundNumber(), "DKG SR", currentDKG.StartingRound)
+
 	var err error
 	vrfs := &round.VRFShare{}
 	vrfs.Round = r.GetRoundNumber()

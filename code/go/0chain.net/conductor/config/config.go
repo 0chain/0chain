@@ -83,7 +83,13 @@ type Set struct {
 type Command struct {
 	WorkDir    string `json:"work_dir" yaml:"work_dir" mapstructure:"work_dir"`
 	Exec       string `json:"exec" yaml:"exec" mapstructure:"exec"`
-	shouldFail bool   `json:"should_fail" yaml:"should_fail" mapstructure:"should_fail"`
+	ShouldFail bool   `json:"should_fail" yaml:"should_fail" mapstructure:"should_fail"`
+}
+
+// CommandName
+type CommandName struct {
+	Name  string `json:"name" yaml:"name" mapstructure:"name"`
+	Async bool   `json:"async" yaml:"async" mapstructure:"async"`
 }
 
 // A Config represents conductor testing configurations.
@@ -113,8 +119,21 @@ type Config struct {
 	Sets []Set `json:"sets" yaml:"sets" mapstructure:"sets"`
 	// Commands is list of system commands to perform.
 	Commands map[string]*Command `json:"commands" yaml:"commands" mapstructure:"commands"`
+	// SkipWait nodes waiting (blobbers)
+	SkipWait []NodeName `json:"skip_wait" yaml:"skip_wait" mapstructure:"skip_wait"`
 }
 
+// IsSkipWait skips waiting node initialization message.
+func (c *Config) IsSkipWait(name NodeName) (ok bool) {
+	for _, skip := range c.SkipWait {
+		if name == skip {
+			return true
+		}
+	}
+	return // wait
+}
+
+// Execute system command by its name.
 func (c *Config) Execute(name string) (err error) {
 	println("execute command", name)
 	var n, ok = c.Commands[name]
@@ -144,7 +163,7 @@ func (c *Config) Execute(name string) (err error) {
 	}
 
 	if err == nil {
-		if n.shouldFail {
+		if n.ShouldFail {
 			return fmt.Errorf("command %q success (but should fail)", name)
 		}
 		return nil // ok
@@ -154,7 +173,7 @@ func (c *Config) Execute(name string) (err error) {
 		return // not exit status error
 	}
 
-	if n.shouldFail {
+	if n.ShouldFail {
 		return nil // ok
 	}
 

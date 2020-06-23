@@ -50,10 +50,8 @@ func (mc *Chain) SendDKGShare(n *node.Node) error {
 	switch nodeID := n.GetKey(); {
 	case state.Shares.IsGood(state, nodeID):
 		params.Add("secret_share", secShare.GetHexString())
-		println("(VC) SEND GOOD DKG SHARE")
 	case state.Shares.IsBad(state, nodeID):
 		params.Add("secret_share", revertString(secShare.GetHexString()))
-		println("(VC) SEND BAD DKG SHARE")
 	default:
 		return common.NewError("failed to send DKG share", "skipped by tests")
 	}
@@ -327,13 +325,10 @@ func SignShareRequestHandler(ctx context.Context, r *http.Request) (
 
 	switch {
 	case state.Signatures.IsBad(state, nodeID):
-		println("SEND BAD SIGNATURE")
 		message.Sign = revertString(message.Sign)
 	default:
-		println("SEND NO SIGNATURE")
 		return nil, common.NewError("integration_tests", "send_no_signatures")
 	case state.Signatures.IsGood(state, nodeID):
-		println("SEND GOOD SIGNATURE (USUAL)")
 		// as usual
 	}
 

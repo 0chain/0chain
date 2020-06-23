@@ -41,11 +41,9 @@ func (mc *Chain) SendVRFShare(ctx context.Context, vrfs *round.VRFShare) {
 	case state.VRFS != nil:
 		badVRFS = getBadVRFS(vrfs)
 		good, bad = state.Split(state.VRFS, mb.Miners.CopyNodes())
-		println("SEND GOOD/BAD VRFS", len(good), len(bad))
 	case state.RoundTimeout != nil:
 		badVRFS = withTimeout(vrfs, vrfs.RoundTimeoutCount+1) // just increase
 		good, bad = state.Split(state.RoundTimeout, mb.Miners.CopyNodes())
-		println("SEND BAD ROUND TIMEOUT COUNT", len(good), len(bad))
 	default:
 		good = mb.Miners.CopyNodes() // all good
 	}
@@ -116,7 +114,6 @@ func (mc *Chain) SendVerificationTicket(ctx context.Context, b *block.Block,
 			} else if state.WrongVerificationTicketHash.IsBad(state, b.MinerID) {
 				var badvt = getBadBVTHash(ctx, b)
 				mb.Miners.SendTo(VerificationTicketSender(badvt), b.MinerID)
-				println("SEND BAD VT")
 			}
 		case state.WrongVerificationTicketKey != nil:
 			// (wrong secret key)
@@ -125,7 +122,6 @@ func (mc *Chain) SendVerificationTicket(ctx context.Context, b *block.Block,
 			} else if state.WrongVerificationTicketKey.IsBad(state, b.MinerID) {
 				var badvt = getBadBVTKey(ctx, b)
 				mb.Miners.SendTo(VerificationTicketSender(badvt), b.MinerID)
-				println("SEND BAD VT")
 			}
 		default:
 			// (usual sending)
@@ -154,8 +150,6 @@ func (mc *Chain) SendVerificationTicket(ctx context.Context, b *block.Block,
 		mb.Miners.SendAll(VerificationTicketSender(bvt)) // (usual sending)
 		return
 	}
-
-	println("SEND BAD VT", len(good), len(bad))
 
 	if len(good) > 0 {
 		mb.Miners.SendToMultipleNodes(VerificationTicketSender(bvt), good)

@@ -11,10 +11,8 @@ logs: "conductor/logs"
 cleanup_command: ./docker.local/bin/docker-clean.sh
 # number of rounds per view change
 view_change: 250 # 100
-
-####
-#### TODO (sfxdx): start/clean block_worker/blobber
-####
+# skip blobbers from initialization message waiting
+skip_wait: ['blobber 1', 'blobber 2', 'blobber 3']
 
 #
 # nodes used in tests
@@ -69,3 +67,53 @@ nodes:
     work_dir: "docker.local/miner5"
     env: MINER=5
     start_command: "docker-compose -p miner5 -f ../build.miner/b0docker-compose.yml up"
+
+  # blobbers
+  - name: "blobber 1"
+    id: f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
+    work_dir: "../blobber/docker.local/blobber1"
+    env: BLOBBER=1
+    start_command: "docker-compose -p blobber1 -f ../blobber/docker.local/b0docker-compose.yml up"
+
+  - name: "blobber 2"
+    id: 7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d
+    work_dir: "../blobber/docker.local/blobber1"
+    env: BLOBBER=2
+    start_command: "docker-compose -p blobber2 -f ../blobber/docker.local/b0docker-compose.yml up"
+
+  - name: "blobber 3"
+    id: 2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18
+    work_dir: "../blobber/docker.local/blobber1"
+    env: BLOBBER=3
+    start_command: "docker-compose -p blobber3 -f ../blobber/docker.local/b0docker-compose.yml up"
+
+# named system commands
+commands:
+  cleanup_blobbers:
+    work_dir: "../blobber"
+    exec: "sudo ../blobber/docker.local/bin/clean.sh"
+    should_fail: false
+  # build_bad_blobbers:
+  #   work_dir: "../blobber"
+  #   exec: "../blobber/docker.local/bin/build.bad-blobber.sh"
+  #   should_fail: false
+  init_allocation:
+    work_dir: "../"
+    exec: "sh ./docker.local/bin/conductor/init_allocation.sh"
+    should_fail: false
+  sleep_1m:
+    work_dir: "../"
+    exec: "sh ./docker.local/bin/conductor/sleep_1m.sh"
+    should_fail: false
+  wrong_download:
+    work_dir: "../"
+    exec: "sh ./docker.local/bin/conductor/wrong_download.sh"
+    should_fail: true
+  wrong_upload:
+    work_dir: "../"
+    exec: "sh ./docker.local/bin/conductor/wrong_upload.sh"
+    should_fail: true
+  wrong_delete:
+    work_dir: "../"
+    exec: "sh ./docker.local/bin/conductor/wrong_delete.sh"
+    should_fail: true

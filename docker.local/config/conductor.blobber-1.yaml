@@ -1,0 +1,52 @@
+###
+### Blockchain miners Byzantine tests
+###
+
+---
+
+# enabled test cases sets
+enable:
+  - "Blobber"
+
+# sets of test cases
+sets:
+  - name: "Blobber"
+    tests:
+      - "Send wrong or not send a response"
+
+# test cases
+tests:
+  - name: "Send wrong or not send a response"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - command:
+          name: "cleanup_blobbers"
+      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3']
+      - start: ['blobber 1', 'blobber 2', 'blobber 3']
+      - wait_add:
+          blobber: ['blobber 1', 'blobber 2', 'blobber 3']
+      - command:
+          name: "init_allocation"
+      - stop: ['blobber 3']
+      # where blobber 3 not responding
+      - command:
+          name: "wrong_download"
+      - command:
+          name: "wrong_upload"
+      - command:
+          name: "wrong_delete"
+      #- command:
+      #    name: "build_bad_blobbers"
+      - start: ['blobber 3']
+      # wait the blobber starts, we can't use wait_add for it anymore
+      - command:
+          name: "sleep_1m"
+      - command:
+          name: "wrong_download"
+      - command:
+          name: "wrong_upload"
+      - command:
+          name: "wrong_delete"
+
+...

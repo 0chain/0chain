@@ -64,8 +64,11 @@ func (r *Runner) Start(names []NodeName, lock bool,
 			return fmt.Errorf("(start): unknown node: %q", name)
 		}
 
-		r.server.AddNode(name, lock)
-		r.waitNodes[name] = struct{}{} // wait list
+		// miners and sharders, but skip blobbers
+		if !r.conf.IsSkipWait(name) {
+			r.server.AddNode(name, lock)   // expected server interaction
+			r.waitNodes[name] = struct{}{} // wait list
+		}
 
 		if err = n.Start(r.conf.Logs); err != nil {
 			return fmt.Errorf("starting %s: %v", n.Name, err)
@@ -190,8 +193,8 @@ func (r *Runner) WaitShareSignsOrShares(ssos config.WaitShareSignsOrShares,
 func (r *Runner) WaitAdd(wadd config.WaitAdd, tm time.Duration) (err error) {
 
 	if r.verbose {
-		log.Printf(" [INF] wait add miners: %s, sharders: %s",
-			wadd.Miners, wadd.Sharders)
+		log.Printf(" [INF] wait add miners: %s, sharders: %s, blobbers: %s",
+			wadd.Miners, wadd.Sharders, wadd.Blobbers)
 	}
 
 	r.setupTimeout(tm)
@@ -575,9 +578,17 @@ func (r *Runner) WaitNoViewChainge(wnvc config.WaitNoViewChainge,
 	return
 }
 
-//
+// Command executing.
+func (r *Runner) Command(name string, async bool) (err error) {
+	if async {
+		go r.asyncCommand(name)
+		return
+	}
+	return r.conf.Execute(name)
+}
 
-func (r *Runner) System(name string) (err error) {
-	//
-	return
+func (r *Runner) asyncCommand(name string) {
+	if err := r.conf.Execute(name); err != nil {
+		log.Fatal("executing command %q: %v", err)
+	}
 }

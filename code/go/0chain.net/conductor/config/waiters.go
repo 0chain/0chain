@@ -82,10 +82,11 @@ func (wssos *WaitShareSignsOrShares) IsZero() bool {
 type WaitAdd struct {
 	Miners   []NodeName `json:"miners" yaml:"miners" mapstructure:"miners"`
 	Sharders []NodeName `json:"sharders" yaml:"sharders" mapstructure:"sharders"`
+	Blobbers []NodeName `json:"blobbers" yaml:"blobbers" mapstructure:"blobbers"`
 }
 
 func (wa *WaitAdd) IsZero() bool {
-	return len(wa.Miners) == 0 && len(wa.Sharders) == 0
+	return len(wa.Miners) == 0 && len(wa.Sharders) == 0 && len(wa.Blobbers) == 0
 }
 
 func (wa *WaitAdd) TakeMiner(name NodeName) (ok bool) {
@@ -102,6 +103,16 @@ func (wa *WaitAdd) TakeSharder(name NodeName) (ok bool) {
 	for i, sharderName := range wa.Sharders {
 		if sharderName == name {
 			wa.Sharders = append(wa.Sharders[:i], wa.Sharders[i+1:]...)
+			return true
+		}
+	}
+	return
+}
+
+func (wa *WaitAdd) TakeBlobber(name NodeName) (ok bool) {
+	for i, blobberName := range wa.Blobbers {
+		if blobberName == name {
+			wa.Blobbers = append(wa.Blobbers[:i], wa.Blobbers[i+1:]...)
 			return true
 		}
 	}

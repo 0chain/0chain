@@ -64,8 +64,8 @@ type Executor interface {
 	Signatures(s *Bad) (err error)
 	Publish(p *Bad) (err error)
 
-	// system command (a bash script)
-	System(string) (err error)
+	// system command (a bash script, etc)
+	Command(name string, async bool) (err error)
 }
 
 //

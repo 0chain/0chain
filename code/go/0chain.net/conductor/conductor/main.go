@@ -426,6 +426,38 @@ func (r *Runner) acceptAddSharder(adds *conductrpc.AddSharderEvent) (err error) 
 	return
 }
 
+func (r *Runner) acceptAddBlobber(addb *conductrpc.AddBlobberEvent) (
+	err error) {
+
+	if addb.Sender != r.monitor {
+		return // not the monitor node
+	}
+	var (
+		sender, sok = r.conf.Nodes.NodeByName(addb.Sender)
+		added, aok  = r.conf.Nodes.NodeByName(addb.Blobber)
+	)
+	if !sok {
+		return fmt.Errorf("unexpected add_miner sender: %q", addb.Sender)
+	}
+	if !aok {
+		return fmt.Errorf("unexpected blobber %q added by add_blobber of %q",
+			addb.Blobber, sender.Name)
+	}
+
+	if r.verbose {
+		log.Print(" [INF] add_blobber ", added.Name)
+	}
+
+	if r.waitAdd.IsZero() {
+		return // doesn't wait for a node
+	}
+
+	if r.waitAdd.TakeBlobber(added.Name) {
+		log.Print("[OK] add_blobber ", added.Name)
+	}
+	return
+}
+
 func (r *Runner) acceptNodeReady(nodeName NodeName) (err error) {
 	if _, ok := r.waitNodes[nodeName]; !ok {
 		var n, ok = r.conf.Nodes.NodeByName(nodeName)
@@ -587,6 +619,8 @@ func (r *Runner) proceedWaiting() (err error) {
 			err = r.acceptAddMiner(addm)
 		case adds := <-r.server.OnAddSharder():
 			err = r.acceptAddSharder(adds)
+		case addb := <-r.server.OnAddBlobber():
+			err = r.acceptAddBlobber(addb)
 		case nid := <-r.server.OnNodeReady():
 			err = r.acceptNodeReady(nid)
 		case re := <-r.server.OnRound():

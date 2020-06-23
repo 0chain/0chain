@@ -656,6 +656,7 @@ func (msc *MinerSmartContract) SetMagicBlock(balances cstate.StateContextI) bool
 		Logger.Error("could not decode magic block from MPT", zap.Error(err))
 		return false
 	}
+
 	balances.SetMagicBlock(magicBlock)
 	return true
 }

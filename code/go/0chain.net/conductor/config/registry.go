@@ -1,7 +1,10 @@
 package config
 
 import (
+	"fmt"
 	"time"
+
+	"github.com/mitchellh/mapstructure"
 )
 
 type flowExecuteFunc func(f Flow, name string, ex Executor, val interface{},
@@ -293,6 +296,17 @@ func init() {
 			return
 		}
 		return ex.Publish(&publish)
+	})
+
+	// a system command
+
+	register("command", func(f Flow, name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		var cn CommandName
+		if err = mapstructure.Decode(val, &cn); err != nil {
+			return fmt.Errorf("decoding '%s': %v", name, err)
+		}
+		return ex.Command(cn.Name, cn.Async)
 	})
 
 }
