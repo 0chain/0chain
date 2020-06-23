@@ -411,10 +411,3 @@ Test blobbers.
 ```
 ./docker.local/bin/start.conductor.sh blobber-1
 ```
-
-###### Client 1
-
-Test client transactions.
-
-```
-```
