@@ -385,7 +385,15 @@ Test blockchain, (part II, sharders).
 ./docker.local/bin/start.conductor.sh blockchain-2
 ```
 
+<!--
+
 #### Blobber 1
+
+##### Note
+
+It's not recommended to start automated blobber tests, since they are unstable.
+Sometimes, zwalelt/zbox transactions can't be confirmed due to, probably, some
+problems in block worker, or another side.
 
 ##### Prepare all.
 
@@ -439,3 +447,10 @@ that requires `sudo` password entering sometimes.
 ```
 ./docker.local/bin/start.conductor.sh blobber-1
 ```
+
+#### After all
+
+Don't forget to rollback changes, clean and rebuild applications for
+regular usage.
+
+-->

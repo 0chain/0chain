@@ -32,7 +32,6 @@ func (c *Chain) IsRoundGenerator(r round.RoundI, nd *node.Node) bool {
 		)
 
 	if comp {
-		println("GENERATE COMPETING BLOCK")
 		return true // competing generator
 	}
 

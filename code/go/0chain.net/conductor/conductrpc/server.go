@@ -166,11 +166,8 @@ func (s *Server) AddNode(name NodeName, lock bool) {
 
 	// if already added (by SetMonitor, for example)
 	if ns, ok := s.nodes[name]; ok {
-		println("ADD NODE MONITOR:", name, lock, ns.state.IsMonitor)
 		monitor = ns.state.IsMonitor
 	}
-
-	println("ADD NODE", name, lock, "AND RESET ALL OTHER CONFIGS")
 
 	var ns = &nodeState{
 		state: &State{
@@ -210,10 +207,6 @@ func (s *Server) UpdateState(name NodeName, update UpdateStateFunc) (
 
 	var n, ok = s.nodes[name]
 	if !ok {
-		println("UPDATE STATE", len(s.nodes))
-		for name, ns := range s.nodes {
-			println(" - SERVER NODES:", name, ns != nil)
-		}
 		return fmt.Errorf("(update state) unexpected node: %s", name)
 	}
 

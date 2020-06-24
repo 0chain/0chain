@@ -6,11 +6,11 @@
 
 # enabled test cases sets
 enable:
-  # - "VRF"
-  # - "Round timeout"
+  - "VRF"
+  - "Round timeout"
   - "Verification tickets"
   - "Bad block"
-  # - "Notarized block"
+  - "Notarized block"
 
 # sets of test cases
 sets:
@@ -28,24 +28,19 @@ sets:
       - "Send correct timeout only to group"
   - name: "Verification tickets"
     tests:
-      # - "Send no tickets to slow down or stall the chain"
-      # - "Group send no tickets to slow down or stall the chain"
+      - "Send no tickets to slow down or stall the chain"
+      - "Group send no tickets to slow down or stall the chain"
       - "Send bad verification ticket with wrong key"
       - "Send bad verification ticket with wrong hash"
   - name: "Bad block"
     tests:
-      # - "Create competing block when not a generator"
+      - "Create competing block when not a generator"
       - "Group only signs the competing blocks"
       - "Send a transaction from an earlier block to create a double spend"
       - "Sign the a different hash than the block hash"
       - "Use a different private key to sign the block"
       - "Hash the block incorrectly"
-#  - name: "Notarized block"
-#    tests:
-#      - "(Sign the block incorrectly) Use the wrong hash"
-#      - "(Sign the block incorrectly) Use the wrong private key"
-#      - "Don't send the notarized block (don't send verification ticket as well)"
-#      - "Only notarize/send competing block from C.1.b. (Group only signs the competing blocks)"
+
 
 
 #
@@ -237,12 +232,6 @@ tests:
           by: ["miner 3", "miner 4"]
       - wait_no_progress:
           timeout: '2m'
-# TOOD
-#  - name: "Send a transaction from an earlier block to create a double spend"
-#    flow:
-#      - set_monitor: "sharder 1"
-#      - cleanup_bc: {}
-#      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
 
   - name: "Sign the a different hash than the block hash"
     flow:
@@ -277,61 +266,5 @@ tests:
           by: ["miner 3"]
       - wait_round:
           round: 20 # it keeps going
-
-
-
-#  # Notarized block
-#  - name: "(Sign the block incorrectly) Use the wrong hash"
-#    flow:
-#      - set_monitor: "sharder 1"
-#      - cleanup_bc: {}
-#      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
-#      - wait_round:
-#          round: 10
-#      - vrfs:
-#          by: ["miner 3"]
-#          good: ["miner 1"]
-#          bad: ["miner 2"]
-#      - wait_no_progress:
-#          timeout: "2m"
-#  - name: "(Sign the block incorrectly) Use the wrong private key"
-#    flow:
-#      - set_monitor: "sharder 1"
-#      - cleanup_bc: {}
-#      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
-#      - wait_round:
-#          round: 10
-#      - vrfs:
-#          by: ["miner 3"]
-#          good: ["miner 1"]
-#          bad: ["miner 2"]
-#      - wait_no_progress:
-#          timeout: "2m"
-#  - name: "Don't send the notarized block (don't send verification ticket as well)"
-#    flow:
-#      - set_monitor: "sharder 1"
-#      - cleanup_bc: {}
-#      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
-#      - wait_round:
-#          round: 10
-#      - vrfs:
-#          by: ["miner 3"]
-#          good: ["miner 1"]
-#          bad: ["miner 2"]
-#      - wait_no_progress:
-#          timeout: "2m"
-#  - name: "Only notarize/send competing block from C.1.b. (Group only signs the competing blocks)"
-#    flow:
-#      - set_monitor: "sharder 1"
-#      - cleanup_bc: {}
-#      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
-#      - wait_round:
-#          round: 10
-#      - vrfs:
-#          by: ["miner 3"]
-#          good: ["miner 1"]
-#          bad: ["miner 2"]
-#      - wait_no_progress:
-#          timeout: "2m"
 
 ...

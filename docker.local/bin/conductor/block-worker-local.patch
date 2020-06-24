@@ -16,6 +16,27 @@ index 9e2279a..6e50749 100644
 +```
 +
 +It uses `config/genesis_magic_block_local.json` and the same clean command.
+diff --git a/code/go/blockworker/blockworkercore/worker/worker.go b/code/go/blockworker/blockworkercore/worker/worker.go
+index 178e175..32d1995 100644
+--- a/code/go/blockworker/blockworkercore/worker/worker.go
++++ b/code/go/blockworker/blockworkercore/worker/worker.go
+@@ -22,9 +22,15 @@ const (
+ 
+ func SetupWorkers(ctx context.Context) {
+ 	latestBlock, err := zcncore.GetLatestFinalized(ctx, 1)
++	for i := 0; i < 10 && err != nil; i++ {
++		if err != nil {
++			Logger.Error("Failed to get latest finalized block from blockchain", zap.Error(err))
++		}
++		latestBlock, err = zcncore.GetLatestFinalized(ctx, 1)
++	}
+ 	if err != nil {
+ 		Logger.Error("Failed to get latest finalized block from blockchain", zap.Error(err))
+-		panic("GetLatestFinalized failed")
++		panic("GetLatestFinalized failed after 10 attempts")
+ 	}
+ 	roundToProcess := latestBlock.Round
+ 	go LedgerSync(ctx, roundToProcess)
 diff --git a/docker.local/bin/start_local.sh b/docker.local/bin/start_local.sh
 new file mode 100755
 index 0000000..fe6f260

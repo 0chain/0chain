@@ -18,7 +18,6 @@ func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (
 	var state = crpc.Client().State()
 
 	if !state.SignOnlyCompetingBlocks.IsCompetingGroupMember(state, b.MinerID) {
-		println("SIGN ONLY COMPETING BLOCK SKIP")
 		return nil, errors.New("skip block signing -- not competing block")
 	}
 
@@ -40,13 +39,10 @@ func (mc *Chain) hashAndSignGeneratedBlock(ctx context.Context,
 	case state.WrongBlockHash != nil:
 		b.Hash = revertString(b.Hash) // just wrong block hash
 		b.Signature, err = self.Sign(b.Hash)
-		println("(GENERATE BLOCK) SET AND SIGN WRONG BLOCK HASH")
 	case state.WrongBlockSignHash != nil:
 		b.Signature, err = self.Sign(revertString(b.Hash)) // sign another hash
-		println("(GENERATE BLOCK) SIGN ANOTHER HASH NEIGHER THEN BLOCK HASH")
 	case state.WrongBlockSignKey != nil:
 		b.Signature, err = state.Sign(b.Hash) // wrong secret key
-		println("(GENERATE BLOCK) SIGN WITH ANOTHER SECRET KEY")
 	default:
 		b.Signature, err = self.Sign(b.Hash)
 	}

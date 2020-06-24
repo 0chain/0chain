@@ -44,6 +44,7 @@ func (c *Chain) GetSCRestOutput(ctx context.Context, r *http.Request) (interface
 	scRestPath := "/" + pathParams[2]
 	c.stateMutex.RLock()
 	defer c.stateMutex.RUnlock()
+
 	lfb := c.GetLatestFinalizedBlock()
 	if lfb == nil || lfb.ClientState == nil {
 		return nil, common.NewError("empty_lfb", "empty latest finalized block or state")
@@ -158,7 +159,7 @@ func (c *Chain) GetSCRestPoints(w http.ResponseWriter, r *http.Request) {
 	}
 	sort.Strings(names)
 	for _, funcName := range names {
-		friendlyName:=strings.TrimLeft(funcName, "/")
+		friendlyName := strings.TrimLeft(funcName, "/")
 		fmt.Fprintf(w, `<tr><td>%v</td><td><li><a href='%v'>%v</a></li></td></tr>`, friendlyName, "/v1/screst/"+key+funcName, "/v1/screst/*"+funcName+"*")
 	}
 

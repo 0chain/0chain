@@ -90,8 +90,7 @@ type Command struct {
 
 // CommandName
 type CommandName struct {
-	Name  string `json:"name" yaml:"name" mapstructure:"name"`
-	Async bool   `json:"async" yaml:"async" mapstructure:"async"`
+	Name string `json:"name" yaml:"name" mapstructure:"name"`
 }
 
 // A Config represents conductor testing configurations.
@@ -137,7 +136,6 @@ func (c *Config) IsSkipWait(name NodeName) (ok bool) {
 
 // Execute system command by its name.
 func (c *Config) Execute(name string) (err error) {
-	println("execute command", name)
 	var n, ok = c.Commands[name]
 	if !ok {
 		return fmt.Errorf("unknown system command: %q", name)

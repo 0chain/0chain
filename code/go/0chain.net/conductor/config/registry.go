@@ -306,7 +306,8 @@ func init() {
 		if err = mapstructure.Decode(val, &cn); err != nil {
 			return fmt.Errorf("decoding '%s': %v", name, err)
 		}
-		return ex.Command(cn.Name, cn.Async)
+		ex.Command(cn.Name, tm) // async command
+		return nil
 	})
 
 }

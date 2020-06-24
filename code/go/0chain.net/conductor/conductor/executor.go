@@ -579,21 +579,22 @@ func (r *Runner) WaitNoViewChainge(wnvc config.WaitNoViewChainge,
 }
 
 // Command executing.
-func (r *Runner) Command(name string, async bool) (err error) {
+func (r *Runner) Command(name string, tm time.Duration) {
+	r.setupTimeout(tm)
 
 	if r.verbose {
-		log.Printf(" [INF] command %q, async: %t", name, async)
+		log.Printf(" [INF] command %q", name)
 	}
 
-	if async {
-		go r.asyncCommand(name)
-		return
-	}
-	return r.conf.Execute(name)
+	r.waitCommand = r.asyncCommand(name)
 }
 
-func (r *Runner) asyncCommand(name string) {
-	if err := r.conf.Execute(name); err != nil {
-		log.Fatal("executing command %q: %v", err)
-	}
+func (r *Runner) asyncCommand(name string) (reply chan error) {
+	reply = make(chan error)
+	go r.runAsyncCommand(reply, name)
+	return
+}
+
+func (r *Runner) runAsyncCommand(reply chan error, name string) {
+	reply <- r.conf.Execute(name)
 }

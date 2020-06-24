@@ -24,8 +24,6 @@ import (
 
 	"0chain.net/conductor/conductrpc"
 	"0chain.net/conductor/config"
-
-	"github.com/kr/pretty"
 )
 
 const noProgressRounds = 10
@@ -66,10 +64,6 @@ func main() {
 		panic("NO NODES")
 	}
 
-	for _, n := range conf.Nodes {
-		println(" - NODE", n.Name)
-	}
-
 	log.Print("create worker instance")
 	r.conf = conf
 	r.verbose = verbose
@@ -93,8 +87,6 @@ func main() {
 	if err = r.Run(); err != nil {
 		log.Print("[ERR] ", err)
 	}
-
-	_ = pretty.Print
 }
 
 func readConfig(configFile string) (conf *config.Config) {
@@ -139,6 +131,7 @@ type Runner struct {
 	waitNoProgressUntil    time.Time                     // }
 	waitNoPreogressCount   int                           // } got rounds
 	waitNoViewChange       config.WaitNoViewChainge      // no VC expected
+	waitCommand            chan error                    // wait a command
 	// timeout and monitor
 	timer   *time.Timer // waiting timer
 	monitor NodeName    // monitor node
@@ -169,6 +162,8 @@ func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
 	case !r.waitNoProgressUntil.IsZero():
 		return tm, true
 	case !r.waitNoViewChange.IsZero():
+		return tm, true
+	case r.waitCommand != nil:
 		return tm, true
 	}
 
@@ -512,7 +507,7 @@ func (r *Runner) acceptRound(re *conductrpc.RoundEvent) (err error) {
 	case r.waitRound.Round > re.Round:
 		return // not this round
 	case r.waitRound.Round == re.Round:
-		log.Print("[OK] accept round", re.Round)
+		log.Print("[OK] accept round ", re.Round)
 		r.waitRound.Round = 0 // doesn't wait anymore
 	case r.waitRound.Round < re.Round:
 		return fmt.Errorf("missing round: %d, got %d", r.waitRound, re.Round)
@@ -626,6 +621,11 @@ func (r *Runner) proceedWaiting() (err error) {
 			err = r.acceptContributeMPK(cmpke)
 		case sosse := <-r.server.OnShareOrSignsShares():
 			err = r.acceptShareOrSignsShares(sosse)
+		case err = <-r.waitCommand:
+			if err != nil {
+				err = fmt.Errorf("executing command: %v", err)
+			}
+			r.waitCommand = nil // reset
 		case timeout := <-tm.C:
 			if !r.waitNoProgressUntil.IsZero() {
 				if timeout.UnixNano() >= r.waitNoProgressUntil.UnixNano() {
