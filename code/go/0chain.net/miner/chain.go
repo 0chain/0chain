@@ -154,9 +154,6 @@ func (mc *Chain) CreateRound(r *round.Round) *Round {
 
 /*SetLatestFinalizedBlock - Set latest finalized block */
 func (mc *Chain) SetLatestFinalizedBlock(ctx context.Context, b *block.Block) {
-	if b.ClientState == nil {
-		println("SET LATEST FINALIZED BLOK", b.Round, "WITH NIL CLIENT SATE <------------------------------")
-	}
 	var r = round.NewRound(b.Round)
 	mr := mc.CreateRound(r)
 	mr = mc.AddRound(mr).(*Round)

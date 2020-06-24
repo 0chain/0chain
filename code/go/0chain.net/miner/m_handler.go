@@ -225,7 +225,6 @@ func BlockStateChangeHandler(ctx context.Context, r *http.Request) (interface{},
 
 //PartialStateHandler - return the partial state from a given root
 func PartialStateHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	println("PARTIAL STATE REQUESTED")
 	node := r.FormValue("node")
 	mc := GetMinerChain()
 	nodeKey, err := hex.DecodeString(node)

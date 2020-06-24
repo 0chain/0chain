@@ -192,7 +192,6 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	c.rebaseState(fb)
 
 	if fb.MagicBlock != nil {
-		println("(f) FINALIZE BLOCK: SET MB", "R", fb.Round, "SR", fb.MagicBlock.StartingRound)
 		c.SetLatestFinalizedMagicBlock(fb)
 	}
 	if config.Development() {

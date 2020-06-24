@@ -428,7 +428,6 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 		}
 		if bnb == nil {
 			r.Block = b
-			println("PROC VT FROM COLLECT")
 			mc.ProcessVerifiedTicket(ctx, r, b, &bvt.VerificationTicket)
 		}
 		if b.RoundRank >= mc.NumGenerators || b.RoundRank < 0 {
@@ -551,7 +550,6 @@ func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.B
 
 		return
 	}
-	println("NB FROM PROC. VT", r.GetRoundNumber(), b.Round)
 	mc.checkBlockNotarization(ctx, r, b)
 }
 
@@ -582,7 +580,6 @@ func (mc *Chain) MergeNotarization(ctx context.Context, r *Round, b *block.Block
 	if notarized {
 		return
 	}
-	println("NB FROM MERGE NOT", r.GetRoundNumber(), b.Round)
 	mc.checkBlockNotarization(ctx, r, b)
 }
 
@@ -605,7 +602,6 @@ func (mc *Chain) AddNotarizedBlock(ctx context.Context, r *Round, b *block.Block
 
 /*CancelRoundVerification - cancel verifications happening within a round */
 func (mc *Chain) CancelRoundVerification(ctx context.Context, r *Round) {
-	println("CANCEL ROUND VERIFICATION", r.GetRoundNumber())
 	r.CancelVerification() // No need for further verification of any blocks
 }
 
@@ -726,60 +722,32 @@ func (mc *Chain) handleNoProgress(ctx context.Context) {
 
 func (mc *Chain) restartRound(ctx context.Context) {
 
-	println("RESTART ROUND, EXPLORE MINER STATE")
-	{
-		cr := mc.GetCurrentRound()
-		for i, e := cr, cr-5; i > e; i-- {
-			r := mc.GetRound(i)
-			if r == nil {
-				println("ROUND", i, "NIL")
-				continue
-			}
-			println("ROUND", i, "IS FINALIZING", r.IsFinalizing(), "IS FINALIZED", r.IsFinalized())
-			hnb := r.GetHeaviestNotarizedBlock()
-			if hnb == nil {
-				println("ROUND", i, "NO HNB")
-				continue
-			}
-			println("ROUND", i, "HNB", hnb.Hash, "IS NOTARIZED", hnb.IsBlockNotarized())
-			if hnb.ClientState == nil {
-				println("ROUND", i, "HNB", "NO CLIENT STATE")
-				continue
-			}
-			state := chain.CreateTxnMPT(hnb.ClientState)
-			mbSeri, err := state.GetNodeValue(
-				util.Path(encryption.Hash(minersc.MagicBlockKey)),
-			)
-			if err != nil {
-				println("ROUND", i, "HNB", "GETTING MB KEY", err.Error())
-				continue
-			}
-			if mbSeri == nil {
-				println("ROUND", i, "HNB", "GETTING MB KEY", "IS NIL")
-			}
-			println("ROUND", i, "HNB", "GETTING MB KEY", "OK")
-		}
-	}
-	println("==================================")
-
 	mc.IncrementRoundTimeoutCount()
-	r := mc.GetMinerRound(mc.GetCurrentRound())
+	var r = mc.GetMinerRound(mc.GetCurrentRound())
+
 	switch crt := mc.GetRoundTimeoutCount(); {
 	case crt < 10:
-		Logger.Error("restartRound - round timeout occured", zap.Any("round", mc.GetCurrentRound()), zap.Int64("count", crt), zap.Any("num_vrf_share", len(r.GetVRFShares())))
+		Logger.Error("restartRound - round timeout occured",
+			zap.Any("round", mc.GetCurrentRound()), zap.Int64("count", crt),
+			zap.Any("num_vrf_share", len(r.GetVRFShares())))
 	case crt == 10:
-		Logger.Error("restartRound - round timeout occured (no further timeout messages will be displayed)", zap.Any("round", mc.GetCurrentRound()), zap.Int64("count", crt), zap.Any("num_vrf_share", len(r.GetVRFShares())))
-		//TODO: should have a means to send an email/SMS to someone or something like that
+		Logger.Error("restartRound - round timeout occured (no further"+
+			" timeout messages will be displayed)",
+			zap.Any("round", mc.GetCurrentRound()), zap.Int64("count", crt),
+			zap.Any("num_vrf_share", len(r.GetVRFShares())))
+		// TODO: should have a means to send an email/SMS to someone or
+		// something like that
 	}
 	mc.RoundTimeoutsCount++
 
-	lfbUpdated, err := mc.ensureLatestFinalizedBlocks(ctx, mc.GetCurrentRound())
+	// get LFMB and LFB from sharders
+	var updated, err = mc.ensureLatestFinalizedBlocks(ctx, mc.GetCurrentRound())
 	if err != nil {
 		Logger.Error("restartRound - ensure lfb", zap.Error(err))
-		lfbUpdated = false
+		updated = false
 	}
 
-	if !lfbUpdated && r.GetRoundNumber() > 1 {
+	if !updated && r.GetRoundNumber() > 1 {
 		if r.GetHeaviestNotarizedBlock() != nil {
 			mc.BroadcastNotarizedBlocks(ctx, r)
 			Logger.Info("StartNextRound after sending notarized block in restartRound.", zap.Int64("current_round", r.GetRoundNumber()))
@@ -825,39 +793,26 @@ func (mc *Chain) restartRound(ctx context.Context) {
 		Logger.Info("Could not RedoVrfShare",
 			zap.Int64("round", r.GetRoundNumber()),
 			zap.Int("round_timeout", r.GetTimeoutCount()))
-		// return
 	}
 
 	// kick all blocks finalization
-	{
-		lfb := mc.GetLatestFinalizedBlock()
-		if lfb.ClientState == nil {
-			println("(restart round) LFB client state still NIL (KICK IT)")
-			mc.InitBlockState(lfb)
-		}
-		for i, e := lfb.Round, mc.CurrentRound; i < e; i++ {
-			mr := mc.GetMinerRound(i)
-			if mr.IsFinalized() {
-				println("(restart round): skip finalized block", i)
-				continue
-			}
-			go mc.FinalizeRound(ctx, mr.Round, mc) // KICK
-		}
+	var lfb = mc.GetLatestFinalizedBlock()
+	if lfb.ClientState == nil {
+		Logger.Debug("(restart round) LFB client state still nil (initialize)")
+		mc.InitBlockState(lfb) // ignore error
 	}
-
-	// // push all heaviest notarized blocks from LFB to current round
-	// // excluding finalized to all other miners from current MB
-	// var lfb = mc.GetLatestFinalizedBlock()
-	// for s, e := lfb.Round, mc.CurrentRound; s <= e; s++ {
-	// 	var mr = mc.GetMinerRound(s)
-	// 	if mr.IsFinalized() {
-	// 		continue // skip finalized blocks (the LFB, for example)
-	// 	}
-	// 	mc.BroadcastNotarizedBlocks(ctx, mr)
-	// }
+	for i, e := lfb.Round, mc.CurrentRound; i < e; i++ {
+		var mr = mc.GetMinerRound(i)
+		if mr.IsFinalized() {
+			continue // skip finalized blocks
+		}
+		go mc.FinalizeRound(ctx, mr.Round, mc) // kick finalization again
+	}
 }
 
-func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context, pnround int64) (bool, error) {
+func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context,
+	pnround int64) (bool, error) {
+
 	result := false
 	// LFB
 	var lfbs *block.Block
@@ -880,7 +835,6 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context, pnround int64)
 		mc.AddBlock(lfbs)
 		var err = mc.InitBlockState(lfbs)
 		for ; err != nil; err = mc.InitBlockState(lfbs) {
-			println("initialize LFB state in restart_round", err.Error())
 			Logger.Error("initialize LFB state in restart_round",
 				zap.Error(err))
 		}

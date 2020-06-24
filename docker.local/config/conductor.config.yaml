@@ -11,8 +11,8 @@ logs: "conductor/logs"
 cleanup_command: ./docker.local/bin/docker-clean.sh
 # number of rounds per view change
 view_change: 250 # 100
-# skip blobbers from initialization message waiting
-skip_wait: ['blobber 1', 'blobber 2', 'blobber 3']
+# skip blobbers and block worker from initialization message waiting
+skip_wait: ['blobber 1', 'blobber 2', 'blobber 3', 'block worker']
 
 #
 # nodes used in tests
@@ -87,22 +87,25 @@ nodes:
     env: BLOBBER=3
     start_command: "docker-compose -p blobber3 -f ../blobber/docker.local/b0docker-compose.yml up"
 
+  # block worker (patched version, add start_local.sh, local MB, not demonized)
+  - name: "block worker"                                #
+    id: "block worker"                                  # no real ID
+    work_dir: "../blockWorker/"                         #
+    env: ""                                             # no ENV needed
+    start_command: "../docker.local/bin/start_local.sh" # not demonized instance
+
 # named system commands
 commands:
+  # attention: requires sudo password
   cleanup_blobbers:
     work_dir: "../blobber"
     exec: "sudo ../blobber/docker.local/bin/clean.sh"
     can_fail: true
+  # attention: requires sudo password
   cleanup_block_worker:
     work_dir: "../blockWorker"
     exec: "sudo ../blockWorker/docker.local/bin/clean.sh"
     can_fail: true
-  start_block_worker:
-    work_dir: "../blockWorker/docker.local/bin"
-    exec: "./start.sh"
-  stop_block_worker:
-    work_dir: "."
-    exec: "docker stop blockworker_blockworker_1 blockworker_mongodb_1"
   # build_bad_blobbers:
   #   work_dir: "../blobber"
   #   exec: "../blobber/docker.local/bin/build.bad-blobber.sh"
