@@ -21,10 +21,6 @@ import (
 	"0chain.net/core/memorystore"
 	"0chain.net/core/util"
 
-	// temporary, explore
-	"0chain.net/core/encryption"
-	"0chain.net/smartcontract/minersc"
-
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
