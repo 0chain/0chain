@@ -26,6 +26,7 @@ import (
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/diagnostics"
+	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"
@@ -42,6 +43,8 @@ import (
 )
 
 var mpks map[bls.PartyID][]bls.PublicKey
+
+const MAGIC_BLOCK_ENDPOINT = "/magic_block"
 
 func main() {
 	deploymentMode := flag.Int("deployment_mode", 2, "deployment_mode")
@@ -269,33 +272,45 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, error) {
 }
 
 func readMagicBlockFile(magicBlockFile *string, mc *miner.Chain, serverChain *chain.Chain) *block.MagicBlock {
-	magicBlockConfigFile := viper.GetString("network.magic_block_file")
-	if magicBlockConfigFile == "" {
-		magicBlockConfigFile = *magicBlockFile
-	}
-	if magicBlockConfigFile == "" {
-		panic("Please specify --nodes_file file.txt option with a file.txt containing nodes including self")
-	}
-	if strings.HasSuffix(magicBlockConfigFile, "json") {
-		mBfile, err := ioutil.ReadFile(magicBlockConfigFile)
-		if err != nil {
-			Logger.Panic(fmt.Sprintf("failed to read magic block file: %v", err))
+	mB := block.NewMagicBlock()
+	blockWorkerURL := viper.GetString("network.block_worker_url")
+	if len(blockWorkerURL) == 0 {
+		magicBlockConfigFile := viper.GetString("network.magic_block_file")
+		if magicBlockConfigFile == "" {
+			magicBlockConfigFile = *magicBlockFile
 		}
-		mB := block.NewMagicBlock()
-		err = mB.Decode([]byte(mBfile))
-		if err != nil {
-			Logger.Panic(fmt.Sprintf("failed to decode magic block file: %v", err))
+		if magicBlockConfigFile == "" {
+			panic("Please specify --nodes_file file.txt option with a file.txt containing nodes including self")
 		}
-		mB.Hash = mB.GetHash()
-		mpks = make(map[bls.PartyID][]bls.PublicKey)
-		for k, v := range mB.Mpks.Mpks {
-			mpks[bls.ComputeIDdkg(k)] = bls.ConvertStringToMpk(v.Mpk)
+
+		if strings.HasSuffix(magicBlockConfigFile, "json") {
+			mBfile, err := ioutil.ReadFile(magicBlockConfigFile)
+			if err != nil {
+				Logger.Panic(fmt.Sprintf("failed to read magic block file: %v", err))
+			}
+
+			err = mB.Decode([]byte(mBfile))
+			if err != nil {
+				Logger.Panic(fmt.Sprintf("failed to decode magic block file: %v", err))
+			}
+			Logger.Info("parse magic block", zap.Any("block", mB))
+		} else {
+			Logger.Panic(fmt.Sprintf("magic block file (%v) is in the wrong format. It should be a json", magicBlockConfigFile))
 		}
-		return mB
 	} else {
-		Logger.Panic(fmt.Sprintf("magic block file (%v) is in the wrong format. It should be a json", magicBlockConfigFile))
+		err := httpclientutil.MakeGetRequest(blockWorkerURL+MAGIC_BLOCK_ENDPOINT, mB)
+		if err != nil {
+			panic("failed to call blockWorker to get magic block with err : " + err.Error())
+		}
 	}
-	return nil
+	mB.Hash = mB.GetHash()
+	mpks = make(map[bls.PartyID][]bls.PublicKey)
+	for k, v := range mB.Mpks.Mpks {
+		mpks[bls.ComputeIDdkg(k)] = bls.ConvertStringToMpk(v.Mpk)
+	}
+	Logger.Info("number of miners", zap.Any("number of miners", mB.Miners.Size()),
+		zap.Any("number of sharders", mB.Sharders.Size()))
+	return mB
 }
 
 func getCurrentMagicBlockFromSharders(mc *miner.Chain) error {

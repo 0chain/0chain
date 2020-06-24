@@ -104,6 +104,7 @@ server_chain:
 
 network:
   magic_block_file: config/b0magicBlock_4_miners_1_sharder.json
+  block_worker_url: 
   relay_time: 200 # milliseconds
   max_concurrent_requests: 40
   timeout:
