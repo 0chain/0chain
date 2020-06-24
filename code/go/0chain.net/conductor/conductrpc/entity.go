@@ -3,60 +3,64 @@ package conductrpc
 import (
 	"log"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/spf13/viper"
 )
 
 // Entity represents client long polling instance.
-// The Client used in Miner SC (one instance) and
-// in miners and sharders code (another instance,
-// the Entity). The Entity uses long polling
-// methods.
 type Entity struct {
-	id NodeID
+	id     NodeID  // this
+	client *client // RPC client
 
-	client *Client
+	state atomic.Value // the last state (can be nil first time)
 
-	mutex    sync.Mutex
-	only     []NodeID // send share only for this nodes
-	bad      []NodeID // send bad share for this nodes (regardless the 'only' list)
-	revealed bool     // default is false
-
-	quitOnce sync.Once
-	quit     chan struct{}
+	quitOnce sync.Once     //
+	quit     chan struct{} //
 }
 
-var globalEntity *Entity
+// State returns current state.
+func (e *Entity) State() (state *State) {
+	if val := e.state.Load(); val != nil {
+		return val.(*State)
+	}
+	return // nil, not polled yet
+}
 
-// Init integration tests
-func Init(id string) {
+// SetState sets current state.
+func (e *Entity) SetState(state *State) {
+	state.Update(e.State())
+	e.state.Store(state) // update
+}
+
+// NewEntity creates RPC client for integration tests.
+func NewEntity(id string) (e *Entity) {
 
 	var (
-		client, err = NewClient(viper.GetString("integration_tests.address"))
+		client, err = newClient(viper.GetString("integration_tests.address"))
 		interval    = viper.GetDuration("integration_tests.lock_interval")
-		join        bool
+		state       *State
 	)
 	if err != nil {
 		log.Fatalf("creating RPC client: %v", err)
 	}
 
-	globalEntity = new(Entity)
-	globalEntity.id = NodeID(id)
-	globalEntity.client = client
-	globalEntity.quit = make(chan struct{})
+	e = new(Entity)
+	e.id = NodeID(id)
+	e.client = client
+	e.quit = make(chan struct{})
 
-	go globalEntity.pollSendShareOnly()
-	go globalEntity.pollSendShareBad()
-	go globalEntity.pollIsRevealed()
-
+	// initial state polling and wait node unlock
 	for {
-		join, err = client.NodeReady(NodeID(id))
+		// state polling can't return nil-State if err is nil
+		state, err = client.state(NodeID(id))
 		if err != nil {
-			panic("requesting RPC (NodeReady): " + err.Error())
+			panic("requesting RPC (State): " + err.Error())
 		}
-		if join {
-			return // can join blockchain
+		e.SetState(state)
+		if !state.IsLock {
+			break // can join blockchain
 		}
 		// otherwise, have to wait, retry after the interval
 
@@ -65,146 +69,131 @@ func Init(id string) {
 		time.Sleep(interval)
 	}
 
+	// start state polling
+	go e.pollState()
+	return
 }
 
-func (e *Entity) setShareOnly(only []NodeID) {
-	e.mutex.Lock()
-	defer e.mutex.Unlock()
-
-	e.only = only
-}
-
-func (e *Entity) setShareBad(bad []NodeID) {
-	e.mutex.Lock()
-	defer e.mutex.Unlock()
-
-	e.bad = bad
-}
-
-func (e *Entity) setRevealed(pin bool) {
-	e.mutex.Lock()
-	defer e.mutex.Unlock()
-
-	e.revealed = pin
-}
-
-func (e *Entity) pollSendShareOnly() {
+func (e *Entity) pollState() {
 	for {
 		select {
 		case <-e.quit:
 			return
 		default:
 		}
-		var only, err = e.client.SendShareOnly(e.id)
+		var state, err = e.client.state(e.id)
 		if err != nil {
-			log.Printf("polling SendShareOnly: %v", err)
+			log.Printf("polling State: %v", err)
 			continue
 		}
-		e.setShareOnly(only)
+		e.SetState(state)
 	}
 }
 
-func (e *Entity) pollSendShareBad() {
-	for {
-		select {
-		case <-e.quit:
-			return
-		default:
-		}
-		var bad, err = e.client.SendShareBad(e.id)
-		if err != nil {
-			log.Printf("polling SendShareBad: %v", err)
-			continue
-		}
-		e.setShareBad(bad)
-	}
-}
-
-func (e *Entity) pollIsRevealed() {
-	for {
-		select {
-		case <-e.quit:
-			return
-		default:
-		}
-		var pin, err = e.client.IsRevealed(e.id)
-		if err != nil {
-			log.Printf("polling IsRevealed: %v", err)
-			continue
-		}
-		e.setRevealed(pin)
-	}
-}
-
-func (e *Entity) shutdown() {
+func (e *Entity) Shutdown() {
 	e.quitOnce.Do(func() {
 		close(e.quit)
 	})
 }
 
-func isInList(ids []NodeID, id NodeID) bool {
-	for _, x := range ids {
-		if x == id {
-			return true
-		}
-	}
-	return false
+func (e *Entity) isMonitor() bool {
+	var state = e.State()
+	return state != nil && state.IsMonitor
 }
 
-func (e *Entity) isSendShareFor(id string) bool {
-	e.mutex.Lock()
-	defer e.mutex.Unlock()
+//
+// RPC methods (events notification)
+//
 
-	if len(e.only) == 0 {
-		if isInList(e.bad, NodeID(id)) {
-			return false // bad share will be sent, skip
-		}
-		return true // allow all
+func (e *Entity) Phase(phase *PhaseEvent) (err error) {
+	if !e.isMonitor() {
+		return // not a monitor
 	}
-
-	if isInList(e.only, NodeID(id)) {
-		if isInList(e.bad, NodeID(id)) {
-			return false // bad share will be sent, skip
-		}
-		return true // send for this node
-	}
-
-	return false
+	return e.client.phase(phase)
 }
 
-func (e *Entity) isSendBadShareFor(id string) bool {
-	e.mutex.Lock()
-	defer e.mutex.Unlock()
-
-	if len(e.bad) == 0 {
-		return false // don't send bad share
+func (e *Entity) ViewChange(viewChange *ViewChangeEvent) (err error) {
+	if !e.isMonitor() {
+		return // not a monitor
 	}
-
-	return isInList(e.bad, NodeID(id))
+	return e.client.viewChange(viewChange)
 }
 
-func (e *Entity) isRevealed() bool {
-	e.mutex.Lock()
-	defer e.mutex.Unlock()
-
-	return e.revealed
+func (e *Entity) AddMiner(add *AddMinerEvent) (err error) {
+	if !e.isMonitor() {
+		return // not a monitor
+	}
+	return e.client.addMiner(add)
 }
 
-// Shutdown Entity.
+func (e *Entity) AddSharder(add *AddSharderEvent) (err error) {
+	if !e.isMonitor() {
+		return // not a monitor
+	}
+	return e.client.addSharder(add)
+}
+
+func (e *Entity) AddBlobber(add *AddBlobberEvent) (err error) {
+	if !e.isMonitor() {
+		return // not a monitor
+	}
+	return e.client.addBlobber(add)
+}
+
+func (e *Entity) Round(re *RoundEvent) (err error) {
+	if !e.isMonitor() {
+		return // not a monitor
+	}
+	return e.client.round(re)
+}
+
+func (e *Entity) ContributeMPK(cmpke *ContributeMPKEvent) (err error) {
+	if !e.isMonitor() {
+		return // not a monitor
+	}
+	return e.client.contributeMPK(cmpke)
+}
+
+func (e *Entity) ShareOrSignsShares(sosse *ShareOrSignsSharesEvent) (
+	err error) {
+
+	if !e.isMonitor() {
+		return // not a monitor
+	}
+	return e.client.shareOrSignsShares(sosse)
+}
+
+//
+// global
+//
+
+var global *Entity
+
+// Init creates global Entity and locks until unlocked.
+func Init(id string) {
+	global = NewEntity(id)
+}
+
+// Shutdown the global Entity.
 func Shutdown() {
-	globalEntity.shutdown()
+	if global != nil {
+		global.Shutdown()
+	}
 }
 
-// IsSendShareFor returns true if this node should send share for given one.
-func IsSendShareFor(id string) bool {
-	return globalEntity.isSendShareFor(id)
-}
-
-// IsSendShareFor returns true if this node should send bad share for given one.
-func IsSendBadShareFor(id string) bool {
-	return globalEntity.isSendBadShareFor(id)
-}
-
-func IsRevealed() bool {
-	return globalEntity.isRevealed()
+// Client returns global Entity to interact with. Use it, for example,
+//
+//     var state = conductrpc.Client().State()
+//     for _, minerID := range miners {
+//         if state.VRFS.IsBad(state, minerID) {
+//             // send bad VRFS to this miner
+//         } else if state.VRFS.IsGood(state, minerID) {
+//             // send good VRFS to this miner
+//         } else {
+//             // don't send a VRFS to this miner
+//         }
+//     }
+//
+func Client() *Entity {
+	return global
 }

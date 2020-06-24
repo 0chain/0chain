@@ -20,9 +20,9 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/memorystore"
 	"0chain.net/core/util"
-	"go.uber.org/zap"
 
 	. "0chain.net/core/logging"
+	"go.uber.org/zap"
 )
 
 var rbgTimer metrics.Timer // round block generation timer
@@ -34,6 +34,32 @@ func init() {
 //SetNetworkRelayTime - set the network relay time
 func SetNetworkRelayTime(delta time.Duration) {
 	chain.SetNetworkRelayTime(delta)
+}
+
+func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
+	currentDKG := mc.GetCurrentDKG(r.GetRoundNumber())
+	if currentDKG == nil {
+		Logger.Error("add_my_vrf_share --- currentDKG is nil. My vrf share is not added",
+			zap.Any("round", r.GetRoundNumber()))
+		return
+	}
+
+	var err error
+	vrfs := &round.VRFShare{}
+	vrfs.Round = r.GetRoundNumber()
+	vrfs.RoundTimeoutCount = r.GetTimeoutCount()
+	vrfs.Share, err = mc.GetBlsShare(ctx, r.Round)
+	if err != nil {
+		Logger.Error("add_my_vrf_share", zap.Any("round", vrfs.Round),
+			zap.Any("round_timeout", vrfs.RoundTimeoutCount),
+			zap.Error(err))
+		return
+	}
+	vrfs.SetParty(node.Self.Underlying())
+	r.vrfShare = vrfs
+	// TODO: do we need to check if AddVRFShare is success or not?
+	mc.AddVRFShare(ctx, r, r.vrfShare)
+	go mc.SendVRFShare(ctx, r.vrfShare)
 }
 
 /*StartNextRound - start the next round as a notarized block is discovered for the current round */
@@ -94,32 +120,6 @@ func (mc *Chain) RedoVrfShare(ctx context.Context, r *Round) bool {
 		return true
 	}
 	return false
-}
-
-func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
-	currentDKG := mc.GetCurrentDKG(r.GetRoundNumber())
-	if currentDKG == nil {
-		Logger.Error("add_my_vrf_share --- currentDKG is nil. My vrf share is not added",
-			zap.Any("round", r.GetRoundNumber()))
-		return
-	}
-	var err error
-	vrfs := &round.VRFShare{}
-	vrfs.Round = r.GetRoundNumber()
-	vrfs.RoundTimeoutCount = r.GetTimeoutCount()
-	vrfs.Share, err = mc.GetBlsShare(ctx, r.Round)
-	if err != nil {
-		Logger.Error("add_my_vrf_share", zap.Any("round", vrfs.Round),
-			zap.Any("round_timeout", vrfs.RoundTimeoutCount),
-			zap.Error(err))
-		return
-	}
-	vrfs.SetParty(node.Self.Underlying())
-	r.vrfShare = vrfs
-	// TODO: do we need to check if AddVRFShare is success or not?
-	mc.AddVRFShare(ctx, r, r.vrfShare)
-	go mc.SendVRFShare(ctx, r.vrfShare)
-
 }
 
 func (mc *Chain) startRound(ctx context.Context, r *Round, seed int64) {
@@ -717,24 +717,33 @@ func (mc *Chain) handleNoProgress(ctx context.Context) {
 }
 
 func (mc *Chain) restartRound(ctx context.Context) {
+
 	mc.IncrementRoundTimeoutCount()
-	r := mc.GetMinerRound(mc.GetCurrentRound())
+	var r = mc.GetMinerRound(mc.GetCurrentRound())
+
 	switch crt := mc.GetRoundTimeoutCount(); {
 	case crt < 10:
-		Logger.Error("restartRound - round timeout occured", zap.Any("round", mc.GetCurrentRound()), zap.Int64("count", crt), zap.Any("num_vrf_share", len(r.GetVRFShares())))
+		Logger.Error("restartRound - round timeout occured",
+			zap.Any("round", mc.GetCurrentRound()), zap.Int64("count", crt),
+			zap.Any("num_vrf_share", len(r.GetVRFShares())))
 	case crt == 10:
-		Logger.Error("restartRound - round timeout occured (no further timeout messages will be displayed)", zap.Any("round", mc.GetCurrentRound()), zap.Int64("count", crt), zap.Any("num_vrf_share", len(r.GetVRFShares())))
-		//TODO: should have a means to send an email/SMS to someone or something like that
+		Logger.Error("restartRound - round timeout occured (no further"+
+			" timeout messages will be displayed)",
+			zap.Any("round", mc.GetCurrentRound()), zap.Int64("count", crt),
+			zap.Any("num_vrf_share", len(r.GetVRFShares())))
+		// TODO: should have a means to send an email/SMS to someone or
+		// something like that
 	}
 	mc.RoundTimeoutsCount++
 
-	lfbUpdated, err := mc.ensureLatestFinalizedBlocks(ctx, mc.GetCurrentRound())
+	// get LFMB and LFB from sharders
+	var updated, err = mc.ensureLatestFinalizedBlocks(ctx, mc.GetCurrentRound())
 	if err != nil {
 		Logger.Error("restartRound - ensure lfb", zap.Error(err))
-		lfbUpdated = false
+		updated = false
 	}
 
-	if !lfbUpdated && r.GetRoundNumber() > 1 {
+	if !updated && r.GetRoundNumber() > 1 {
 		if r.GetHeaviestNotarizedBlock() != nil {
 			mc.BroadcastNotarizedBlocks(ctx, r)
 			Logger.Info("StartNextRound after sending notarized block in restartRound.", zap.Int64("current_round", r.GetRoundNumber()))
@@ -780,22 +789,26 @@ func (mc *Chain) restartRound(ctx context.Context) {
 		Logger.Info("Could not RedoVrfShare",
 			zap.Int64("round", r.GetRoundNumber()),
 			zap.Int("round_timeout", r.GetTimeoutCount()))
-		return
 	}
 
-	// // push all heaviest notarized blocks from LFB to current round
-	// // excluding finalized to all other miners from current MB
-	// var lfb = mc.GetLatestFinalizedBlock()
-	// for s, e := lfb.Round, mc.CurrentRound; s <= e; s++ {
-	// 	var mr = mc.GetMinerRound(s)
-	// 	if mr.IsFinalized() {
-	// 		continue // skip finalized blocks (the LFB, for example)
-	// 	}
-	// 	mc.BroadcastNotarizedBlocks(ctx, mr)
-	// }
+	// kick all blocks finalization
+	var lfb = mc.GetLatestFinalizedBlock()
+	if lfb.ClientState == nil {
+		Logger.Debug("(restart round) LFB client state still nil (initialize)")
+		mc.InitBlockState(lfb) // ignore error
+	}
+	for i, e := lfb.Round, mc.CurrentRound; i < e; i++ {
+		var mr = mc.GetMinerRound(i)
+		if mr.IsFinalized() {
+			continue // skip finalized blocks
+		}
+		go mc.FinalizeRound(ctx, mr.Round, mc) // kick finalization again
+	}
 }
 
-func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context, pnround int64) (bool, error) {
+func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context,
+	pnround int64) (bool, error) {
+
 	result := false
 	// LFB
 	var lfbs *block.Block
@@ -816,7 +829,11 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context, pnround int64)
 		mr, _ = mc.AddRound(mr).(*Round)
 		mc.SetRandomSeed(mr, lfbs.GetRoundRandomSeed())
 		mc.AddBlock(lfbs)
-		mc.InitBlockState(lfbs)
+		var err = mc.InitBlockState(lfbs)
+		for ; err != nil; err = mc.InitBlockState(lfbs) {
+			Logger.Error("initialize LFB state in restart_round",
+				zap.Error(err))
+		}
 		mc.SetLatestFinalizedBlock(ctx, lfbs)
 		if mc.GetCurrentRound() < mr.GetRoundNumber() {
 			mc.startNewRound(ctx, mr)

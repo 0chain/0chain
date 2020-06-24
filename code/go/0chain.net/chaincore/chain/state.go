@@ -53,6 +53,7 @@ func (c *Chain) ComputeState(ctx context.Context, b *block.Block) error {
 	lock := b.StateMutex
 	lock.Lock()
 	defer lock.Unlock()
+
 	return c.computeState(ctx, b)
 }
 
@@ -83,6 +84,9 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 		return nil
 	}
 	pb := b.PrevBlock
+	if pb == b {
+		b.PrevBlock = nil // reset (a real case, may be unexpected)
+	}
 	if pb == nil {
 		pb = c.GetPreviousBlock(ctx, b)
 		if pb == nil {
@@ -94,6 +98,13 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 			}
 			return ErrPreviousBlockUnavailable
 		}
+	}
+	if pb == b || pb.StateMutex == b.StateMutex {
+		b.PrevBlock = nil // reset (a real case, may be unexpected)
+		Logger.Error("computing block state", zap.String("error",
+			"block_prev points to itself, or its state mutex does it"))
+		return common.NewError("computing block state",
+			"prev_block points to itself, or its state mutex does it")
 	}
 	if !pb.IsStateComputed() {
 		if pb.GetStateStatus() == block.StateFailed {

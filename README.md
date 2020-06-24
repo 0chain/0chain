@@ -323,7 +323,7 @@ minio:
 
 # Integration tests
 
-#### Introduction
+### Introduction
 
 Integration tests uses RPC server which controls the launch and behavior of nodes.
 The server called 'conductor' and placed in code/go/0chain.net/conductor/conductor.
@@ -346,13 +346,110 @@ Note:
 > ./docker.local/bin/build.sharders.sh && ./docker.local/bin/build.miners.sh
 > ```
 
-#### Start the tests
+### Start the tests
 
 - Check out tests cases and configurations ./docker.local/config/conductor.yml.
 - Check out ./docker.local/config/0chain.yml the 'integration_tests' part.
 - Build miners and sharders, following instruction above.
-- Start all tests.
+
+#### Start test View Change 1
+
+Test view change (part I).
 
 ```
-./docker.local/bin/start.conductor.sh
+./docker.local/bin/start.conductor.sh view-change-1
 ```
+
+#### Start test View Change 2
+
+Test view change (part II).
+
+```
+./docker.local/bin/start.conductor.sh view-change-2
+```
+
+#### Blockchain 1
+
+Test blockchain (part I, miners).
+
+```
+./docker.local/bin/start.conductor.sh blockchain-1
+```
+
+#### Blockchain 2
+
+Test blockchain, (part II, sharders).
+
+```
+./docker.local/bin/start.conductor.sh blockchain-2
+```
+
+<!--
+
+#### Blobber 1
+
+##### Note
+
+It's not recommended to start automated blobber tests, since they are unstable.
+Sometimes, zwalelt/zbox transactions can't be confirmed due to, probably, some
+problems in block worker, or another side.
+
+##### Prepare all.
+
+Directories tree should be:
+
+```
+0chain/
+blobber/
+zboxcli/
+zwalletcli/
+blockWorker/
+```
+
+Otherwise, it requires corrections in tests, configurations, tests scripts and
+following steps.
+
+##### Prepare block worker.
+
+The blockWorker should be patched. Go to the blockWorker directory and
+apply patch provided in the 0chain repository. Make sure your haven't changes
+you haven't commit yet in the blockWorker repository. Since, you can loose the
+changes.
+
+```
+git apply --check ../0chain/docker.local/bin/conductor/block-worker-local.patch # check first
+git apply --check ../0chain/docker.local/bin/conductor/block-worker-local.patch # and apply
+```
+
+To revert blockWorker repository to its latest commit state use
+```
+git reset --hard
+git clean -f
+```
+That removes all changes and all new files.
+
+##### Prepare blobbers.
+
+Use the same approach to patch blobbers with
+`../0chain/docker.local/bin/conductor/blobber-tests.patch`. And the same
+approach to revert it.
+
+##### Build all.
+
+Build blobbers, blockWorker, zbox and zwallet as usual.
+
+##### Start tests.
+
+Test blobbers. Note: the tests requires cleaning up blobbers and the blockWorker
+that requires `sudo` password entering sometimes.
+
+```
+./docker.local/bin/start.conductor.sh blobber-1
+```
+
+#### After all
+
+Don't forget to rollback changes, clean and rebuild applications for
+regular usage.
+
+-->

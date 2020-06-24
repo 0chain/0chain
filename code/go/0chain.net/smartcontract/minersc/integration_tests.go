@@ -3,31 +3,13 @@
 package minersc
 
 import (
-	"sync"
-
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
-	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 
-	"github.com/spf13/viper"
-
-	. "0chain.net/core/logging"
-	"go.uber.org/zap"
-
-	"0chain.net/conductor/conductrpc"
+	crpc "0chain.net/conductor/conductrpc"
 )
-
-type MinerSmartContract struct {
-	*sci.SmartContract
-	bcContext sci.BCContextI
-	client    *conductrpc.Client
-
-	mutexMinerMPK          sync.RWMutex
-	smartContractFunctions map[string]smartContractFunction
-	callbackPhase          func(int)
-}
 
 func (msc *MinerSmartContract) InitSC() {
 	if msc.smartContractFunctions == nil {
@@ -52,14 +34,6 @@ func (msc *MinerSmartContract) InitSC() {
 	moveFunctions[Publish] = msc.moveToWait
 	moveFunctions[Wait] = msc.moveToStart
 
-	var err error
-	if msc.client, err = newConductRPCClient(); err != nil {
-		panic(err)
-	}
-
-	Logger.Debug("using integration test",
-		zap.String("address", msc.client.Address()))
-
 	// wrapped
 	msc.smartContractFunctions["add_miner"] = msc.AddMinerIntegrationTests
 	msc.smartContractFunctions["add_sharder"] = msc.AddSharderIntegrationTests
@@ -73,10 +47,6 @@ func (msc *MinerSmartContract) InitSC() {
 	msc.smartContractFunctions["sharder_keep"] = msc.sharderKeep
 }
 
-func newConductRPCClient() (client *conductrpc.Client, err error) {
-	return conductrpc.NewClient(viper.GetString("integration_tests.address"))
-}
-
 func (msc *MinerSmartContract) AddMinerIntegrationTests(
 	t *transaction.Transaction, inputData []byte, gn *globalNode,
 	balances cstate.StateContextI) (resp string, err error) {
@@ -88,10 +58,14 @@ func (msc *MinerSmartContract) AddMinerIntegrationTests(
 	var mn = NewMinerNode()
 	mn.Decode(inputData)
 
-	var ame conductrpc.AddMinerEvent
-	ame.Sender = conductrpc.NodeID(node.Self.Underlying().GetKey())
-	ame.MinerID = conductrpc.NodeID(mn.ID)
-	if err = msc.client.AddMiner(&ame); err != nil {
+	var (
+		client = crpc.Client()
+		state  = client.State()
+		ame    crpc.AddMinerEvent
+	)
+	ame.Sender = state.Name(crpc.NodeID(node.Self.Underlying().GetKey()))
+	ame.Miner = state.Name(crpc.NodeID(mn.ID))
+	if err = client.AddMiner(&ame); err != nil {
 		panic(err)
 	}
 	return
@@ -107,10 +81,14 @@ func (msc *MinerSmartContract) AddSharderIntegrationTests(
 	}
 	var sn = NewMinerNode()
 	sn.Decode(inputData)
-	var ase conductrpc.AddSharderEvent
-	ase.Sender = conductrpc.NodeID(node.Self.Underlying().GetKey())
-	ase.SharderID = conductrpc.NodeID(sn.ID)
-	if err = msc.client.AddSharder(&ase); err != nil {
+	var (
+		client = crpc.Client()
+		state  = client.State()
+		ase    crpc.AddSharderEvent
+	)
+	ase.Sender = state.Name(crpc.NodeID(node.Self.Underlying().GetKey()))
+	ase.Sharder = state.Name(crpc.NodeID(sn.ID))
+	if err = client.AddSharder(&ase); err != nil {
 		panic(err)
 	}
 	return
@@ -144,10 +122,14 @@ func (msc *MinerSmartContract) payFeesIntegrationTests(
 	// - phase
 
 	// round {
-	var re conductrpc.RoundEvent
-	re.Round = conductrpc.Round(balances.GetBlock().Round)
-	re.Sender = conductrpc.NodeID(node.Self.Underlying().GetKey())
-	if err = msc.client.Round(&re); err != nil {
+	var (
+		client = crpc.Client()
+		state  = client.State()
+		re     crpc.RoundEvent
+	)
+	re.Round = crpc.Round(balances.GetBlock().Round)
+	re.Sender = state.Name(crpc.NodeID(node.Self.Underlying().GetKey()))
+	if err = client.Round(&re); err != nil {
 		panic(err)
 	}
 	// }
@@ -159,19 +141,19 @@ func (msc *MinerSmartContract) payFeesIntegrationTests(
 			panic("missing magic block on view change")
 		}
 
-		var vc conductrpc.ViewChangeEvent
-		vc.Round = conductrpc.Round(balances.GetBlock().Round)
-		vc.Sender = conductrpc.NodeID(node.Self.Underlying().GetKey())
+		var vc crpc.ViewChangeEvent
+		vc.Round = crpc.Round(balances.GetBlock().Round)
+		vc.Sender = state.Name(crpc.NodeID(node.Self.Underlying().GetKey()))
 
 		for _, sid := range mb.Sharders.Keys() {
-			vc.Sharders = append(vc.Sharders, conductrpc.NodeID(sid))
+			vc.Sharders = append(vc.Sharders, state.Name(crpc.NodeID(sid)))
 		}
 
 		for _, mid := range mb.Miners.Keys() {
-			vc.Miners = append(vc.Miners, conductrpc.NodeID(mid))
+			vc.Miners = append(vc.Miners, state.Name(crpc.NodeID(mid)))
 		}
 
-		if err = msc.client.ViewChange(&vc); err != nil {
+		if err = client.ViewChange(&vc); err != nil {
 			panic(err)
 		}
 	}
@@ -182,10 +164,10 @@ func (msc *MinerSmartContract) payFeesIntegrationTests(
 		return
 	}
 	if pn.Phase != phaseBefore {
-		var pe conductrpc.PhaseEvent
-		pe.Phase = conductrpc.Phase(pn.Phase)
-		pe.Sender = conductrpc.NodeID(node.Self.Underlying().GetKey())
-		if err = msc.client.Phase(&pe); err != nil {
+		var pe crpc.PhaseEvent
+		pe.Phase = crpc.Phase(pn.Phase)
+		pe.Sender = state.Name(crpc.NodeID(node.Self.Underlying().GetKey()))
+		if err = client.Phase(&pe); err != nil {
 			panic(err)
 		}
 	}
@@ -203,10 +185,14 @@ func (msc *MinerSmartContract) contributeMpkIntegrationTests(
 		return
 	}
 
-	var cmpke conductrpc.ContributeMPKEvent
-	cmpke.Sender = conductrpc.NodeID(node.Self.Underlying().GetKey())
-	cmpke.MinerID = conductrpc.NodeID(t.ClientID)
-	if err = msc.client.ContributeMPK(&cmpke); err != nil {
+	var (
+		client = crpc.Client()
+		state  = client.State()
+		cmpke  crpc.ContributeMPKEvent
+	)
+	cmpke.Sender = state.Name(crpc.NodeID(node.Self.Underlying().GetKey()))
+	cmpke.Miner = state.Name(crpc.NodeID(t.ClientID))
+	if err = client.ContributeMPK(&cmpke); err != nil {
 		panic(err)
 	}
 
@@ -222,10 +208,14 @@ func (msc *MinerSmartContract) shareSignsOrSharesIntegrationTests(
 		return
 	}
 
-	var ssose conductrpc.ShareOrSignsSharesEvent
-	ssose.Sender = conductrpc.NodeID(node.Self.Underlying().GetKey())
-	ssose.MinerID = conductrpc.NodeID(t.ClientID)
-	if err = msc.client.ShareOrSignsShares(&ssose); err != nil {
+	var (
+		client = crpc.Client()
+		state  = client.State()
+		ssose  crpc.ShareOrSignsSharesEvent
+	)
+	ssose.Sender = state.Name(crpc.NodeID(node.Self.Underlying().GetKey()))
+	ssose.Miner = state.Name(crpc.NodeID(t.ClientID))
+	if err = client.ShareOrSignsShares(&ssose); err != nil {
 		panic(err)
 	}
 

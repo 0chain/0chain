@@ -97,15 +97,19 @@ func (c *Chain) ComputeFinalizedBlock(ctx context.Context, r round.RoundI) *bloc
 /*FinalizeRound - starting from the given round work backwards and identify the round that can be assumed to be finalized as all forks after
 that extend from a single block in that round. */
 func (c *Chain) FinalizeRound(ctx context.Context, r round.RoundI, bsh BlockStateHandler) {
+	// The SetFinalizing is not condition check it changes round state.
 	if !r.SetFinalizing() {
-		return
+		Logger.Debug("finalize_round: already finalizing, kick it again",
+			zap.Int64("round", r.GetRoundNumber()))
 	}
 	if r.GetHeaviestNotarizedBlock() == nil {
-		Logger.Error("finalize round: no notarized blocks", zap.Int64("round", r.GetRoundNumber()))
+		Logger.Error("finalize round: no notarized blocks",
+			zap.Int64("round", r.GetRoundNumber()))
 		go c.GetHeaviestNotarizedBlock(r)
 	}
 	time.Sleep(FINALIZATION_TIME)
-	Logger.Debug("finalize round", zap.Int64("round", r.GetRoundNumber()), zap.Int64("lf_round", c.GetLatestFinalizedBlock().Round))
+	Logger.Debug("finalize round", zap.Int64("round", r.GetRoundNumber()),
+		zap.Int64("lf_round", c.GetLatestFinalizedBlock().Round))
 	c.finalizedRoundsChannel <- r
 }
 
@@ -182,7 +186,8 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 	}
 	c.SetLatestFinalizedBlock(lfb)
 	FinalizationLagMetric.Update(int64(c.GetCurrentRound() - lfb.Round))
-	Logger.Info("finalize round - latest finalized round", zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash))
+	Logger.Info("finalize round - latest finalized round",
+		zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash))
 	for idx := range frchain {
 		fb := frchain[len(frchain)-1-idx]
 		c.finalizedBlocksChannel <- fb

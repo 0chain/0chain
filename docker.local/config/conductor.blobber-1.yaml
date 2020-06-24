@@ -1,0 +1,81 @@
+###
+### Blockchain miners Byzantine tests
+###
+
+---
+
+# enabled test cases sets
+enable:
+  - "Blobber"
+  #- "Invalid sharder response"
+
+# sets of test cases
+sets:
+  - name: "Blobber"
+    tests:
+      - "Send wrong or not send a response"
+  - name: "Invalid sharder response"
+    tests:
+      - "Sharder sends wrong transaction verification"
+
+# test cases
+tests:
+  - name: "Send wrong or not send a response"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - command:
+          name: "cleanup_blobbers"
+      - command:
+          name: "cleanup_block_worker"
+      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3']
+      - wait_round:
+          round: 15 # just wait the BC starts
+      - start: ['block worker']
+      # wait the block worker starts
+      - command:
+          name: "sleep_20s"
+      - start: ['blobber 1', 'blobber 2', 'blobber 3']
+      - wait_add:
+          blobbers: ['blobber 1', 'blobber 2', 'blobber 3']
+          timeout: '5m'
+      - command:
+          name: 'init_allocation'
+          timeout: '15m'
+      - stop: ['blobber 3']
+      # where blobber 3 not responding
+      - command:
+          name: 'wrong_download'
+      - command:
+          name: 'wrong_upload'
+      - command:
+          name: 'wrong_delete'
+      - start: ['blobber 3']
+      # wait the blobber starts, we can't use wait_add for it anymore
+      - command:
+          name: 'sleep_1m'
+      - command:
+          name: 'wrong_download'
+      - command:
+          name: 'wrong_upload'
+      - command:
+          name: 'wrong_delete'
+
+
+  - name: "Sharder sends wrong transaction verification"
+    flow:
+      - set_monitor: "sharder 1"
+      - cleanup_bc: {}
+      - command:
+          name: "cleanup_blobbers"
+      - command:
+          name: "cleanup_block_worker"
+      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3']
+      - wait_round:
+          round: 15 # just wait the BC starts
+      - start: ['block worker']
+      # wait the block worker starts
+      - command:
+          name: "sleep_1m"
+      #
+...

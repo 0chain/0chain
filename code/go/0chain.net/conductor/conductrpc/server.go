@@ -1,6 +1,7 @@
 package conductrpc
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"net/rpc"
@@ -9,9 +10,12 @@ import (
 	"0chain.net/conductor/config"
 )
 
+var ErrShutdown = errors.New("server shutdown")
+
 // type aliases
 type (
 	NodeID    = config.NodeID
+	NodeName  = config.NodeName
 	Round     = config.Round
 	Phase     = config.Phase
 	RoundName = config.RoundName
@@ -19,70 +23,58 @@ type (
 
 // ViewChangeEvent represents view change information.
 type ViewChangeEvent struct {
-	Sender   NodeID   // node that sends the VC
-	Round    Round    // view change round
-	Miners   []NodeID // magic block miners
-	Sharders []NodeID // magic block sharders
+	Sender   NodeName   // node that sends the VC
+	Round    Round      // view change round
+	Miners   []NodeName // magic block miners
+	Sharders []NodeName // magic block sharders
 }
 
 // PhaseEvent represents phase switching.
 type PhaseEvent struct {
-	Sender NodeID //
-	Phase  Phase  //
+	Sender NodeName //
+	Phase  Phase    //
 }
 
 // AddMinerEvent in miner SC.
 type AddMinerEvent struct {
-	Sender  NodeID // event emitter
-	MinerID NodeID // the added miner
+	Sender NodeName // event emitter
+	Miner  NodeName // the added miner
 }
 
 // AddSharderEvent in miner SC.
 type AddSharderEvent struct {
-	Sender    NodeID // event emitter
-	SharderID NodeID // the added sharder
+	Sender  NodeName // event emitter
+	Sharder NodeName // the added sharder
+}
+
+// AddBlobberEvent in miner SC.
+type AddBlobberEvent struct {
+	Sender  NodeName // event emitter
+	Blobber NodeName // the added blobber
 }
 
 // Round proceed in pay_fees of Miner SC.
 type RoundEvent struct {
-	Sender NodeID // event emitter
-	Round  Round  // round number
+	Sender NodeName // event emitter
+	Round  Round    // round number
 }
 
 // ContributeMPKEvent where a miner successfully sent its contribution.
 type ContributeMPKEvent struct {
-	Sender  NodeID // event emitter
-	MinerID NodeID // miner that contributes
+	Sender NodeName // event emitter
+	Miner  NodeName // miner that contributes
 }
 
 // ShareOrSignsSharesEvent where a miner successfully sent its share or sign
 type ShareOrSignsSharesEvent struct {
-	Sender  NodeID // event emitter
-	MinerID NodeID // miner that sends
+	Sender NodeName // event emitter
+	Miner  NodeName // miner that sends
 }
 
-// known locks
-const (
-	Locked   = true  // should wait
-	Unlocked = false // can join
-)
-
-type nodeSetups struct {
-	lock     bool          // node should be locked on start, waiting unlocking
-	counter  int           // node ready calling counter (server's channel sending condition)
-	only     chan []NodeID // send shares only to given nodes
-	bad      chan []NodeID // send bad shares to given node (regardless the 'only' list)
-	revealed chan bool     // reveled
-}
-
-func newNodeSetups(lock bool) (ns *nodeSetups) {
-	ns = new(nodeSetups)
-	ns.counter = 0
-	ns.lock = lock
-	ns.only = make(chan []NodeID, 10)
-	ns.bad = make(chan []NodeID, 10)
-	ns.revealed = make(chan bool, 10)
-	return
+type nodeState struct {
+	state   *State      // current state
+	poll    chan *State // update stat
+	counter int         // used when node appears
 }
 
 type Server struct {
@@ -100,41 +92,50 @@ type Server struct {
 	onAddMiner chan *AddMinerEvent
 	// onAddSharder occurs where miner SC proceed add_sharder function
 	onAddSharder chan *AddSharderEvent
+	// onAddBlobber occurs where blobber added in storage SC
+	onAddBlobber chan *AddBlobberEvent
 
 	// onNodeReady used by miner/sharder to notify the server that the node
 	// has started and ready to register (if needed) in miner SC and start
 	// it work. E.g. the node has started and waits the conductor to enter BC.
-	onNodeReady chan NodeID
+	onNodeReady chan NodeName
 
 	onRoundEvent              chan *RoundEvent
 	onContributeMPKEvent      chan *ContributeMPKEvent
 	onShareOrSignsSharesEvent chan *ShareOrSignsSharesEvent
 
 	// nodes lock/unlock/shares sending (send only, send bad)
-	mutex  sync.Mutex
-	setups map[NodeID]*nodeSetups
+	mutex sync.Mutex
+	nodes map[NodeName]*nodeState
+
+	// node id -> node name mapping
+	names map[NodeID]NodeName
 
 	quitOnce sync.Once
 	quit     chan struct{}
 }
 
 // NewServer Conductor RPC server.
-func NewServer(address string) (s *Server, err error) {
+func NewServer(address string, names map[NodeID]NodeName) (s *Server,
+	err error) {
+
 	s = new(Server)
 	s.quit = make(chan struct{})
+	s.names = names
 
 	// without a buffer
 	s.onViewChange = make(chan *ViewChangeEvent, 10)
 	s.onPhase = make(chan *PhaseEvent, 10)
 	s.onAddMiner = make(chan *AddMinerEvent, 10)
 	s.onAddSharder = make(chan *AddSharderEvent, 10)
-	s.onNodeReady = make(chan NodeID, 10)
+	s.onAddBlobber = make(chan *AddBlobberEvent, 10)
+	s.onNodeReady = make(chan NodeName, 10)
 
 	s.onRoundEvent = make(chan *RoundEvent, 100)
 	s.onContributeMPKEvent = make(chan *ContributeMPKEvent, 10)
 	s.onShareOrSignsSharesEvent = make(chan *ShareOrSignsSharesEvent, 10)
 
-	s.setups = make(map[NodeID]*nodeSetups)
+	s.nodes = make(map[NodeName]*nodeState)
 	s.server = rpc.NewServer()
 	if err = s.server.Register(s); err != nil {
 		return nil, err
@@ -157,104 +158,70 @@ func (s *Server) Serve() (err error) {
 //
 
 // AddNode adds miner of sharder and, optionally, locks it.
-func (s *Server) AddNode(nodeID NodeID, lock bool) {
+func (s *Server) AddNode(name NodeName, lock bool) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	s.setups[nodeID] = newNodeSetups(lock)
-}
+	var monitor bool
 
-// UnlockNode unlocks a miner.
-func (s *Server) UnlockNode(nodeID NodeID) (err error) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
-	var ns, ok = s.setups[nodeID]
-	if !ok {
-		return fmt.Errorf("unexpected node: %s", nodeID)
+	// if already added (by SetMonitor, for example)
+	if ns, ok := s.nodes[name]; ok {
+		monitor = ns.state.IsMonitor
 	}
 
-	ns.lock = false
+	var ns = &nodeState{
+		state: &State{
+			IsMonitor: monitor,
+			Nodes:     s.names,
+			IsLock:    lock,
+		},
+		poll:    make(chan *State, 10),
+		counter: 0,
+	}
+
+	ns.state.send(ns.poll) // initial state sending
+	s.nodes[name] = ns
 	return
 }
 
-func (s *Server) nodeLock(nodeID NodeID) (lock bool, cnt int, ok bool) {
+// not for updating
+func (s *Server) nodeState(name NodeName) (ns *nodeState, err error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	var ns *nodeSetups
-	if ns, ok = s.setups[nodeID]; !ok {
-		return
+	var ok bool
+	if ns, ok = s.nodes[name]; !ok {
+		return nil, fmt.Errorf("(node state) unexpected node: %s", name)
 	}
-
-	lock, cnt = ns.lock, ns.counter
 	ns.counter++
 	return
 }
 
-func (s *Server) nodeSendShareOnly(miner NodeID) chan []NodeID {
+type UpdateStateFunc func(state *State)
+
+func (s *Server) UpdateState(name NodeName, update UpdateStateFunc) (
+	err error) {
+
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	var ns, ok = s.setups[miner]
+	var n, ok = s.nodes[name]
 	if !ok {
-		return nil
+		return fmt.Errorf("(update state) unexpected node: %s", name)
 	}
-	return ns.only
+
+	update(n.state) // update
+	n.state.send(n.poll)
+	return
 }
 
-func (s *Server) nodeSendShareBad(miner NodeID) chan []NodeID {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
+func (s *Server) UpdateStates(names []NodeName, update UpdateStateFunc) (
+	err error) {
 
-	var ns, ok = s.setups[miner]
-	if !ok {
-		return nil
+	for _, name := range names {
+		s.UpdateState(name, update)
 	}
-	return ns.bad
-}
-
-func (s *Server) nodeSetRevealed(node NodeID) chan bool {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
-	var ns, ok = s.setups[node]
-	if !ok {
-		return nil
-	}
-	return ns.revealed
-}
-
-func (s *Server) SetSendShareOnly(miner NodeID, only []NodeID) {
-	go func() {
-		onlyChan := s.nodeSendShareOnly(miner)
-		if onlyChan == nil {
-			panic("ONLY CHAN IS NIL (FATALITY)")
-		}
-		onlyChan <- only
-	}()
-}
-
-func (s *Server) SetSendShareBad(miner NodeID, bad []NodeID) {
-	go func() {
-		badChan := s.nodeSendShareBad(miner)
-		if badChan == nil {
-			panic("BAD CHAN IS NIL (FATALITY!)")
-		}
-		badChan <- bad
-	}()
-}
-
-func (s *Server) SetRevealed(nodes []NodeID, pin bool) {
-	for _, nodeID := range nodes {
-		go func(nodeID NodeID) {
-			revChan := s.nodeSetRevealed(nodeID)
-			if revChan == nil {
-				panic("REV. CHAN IS NIL (FATALITY!)")
-			}
-			revChan <- pin
-		}(nodeID)
-	}
+	return
 }
 
 // events handling
@@ -282,10 +249,14 @@ func (s *Server) OnAddSharder() chan *AddSharderEvent {
 	return s.onAddSharder
 }
 
+func (s *Server) OnAddBlobber() chan *AddBlobberEvent {
+	return s.onAddBlobber
+}
+
 // OnNodeReady used by nodes to notify the server that the node has started
 // and ready to register (if needed) in miner SC and start it work. E.g.
 // the node has started and waits the conductor to enter BC.
-func (s *Server) OnNodeReady() chan NodeID {
+func (s *Server) OnNodeReady() chan NodeName {
 	return s.onNodeReady
 }
 
@@ -339,24 +310,11 @@ func (s *Server) AddSharder(add *AddSharderEvent, _ *struct{}) (err error) {
 	return
 }
 
-func (s *Server) NodeReady(nodeID NodeID, join *bool) (err error) {
-
-	var lock, cnt, ok = s.nodeLock(nodeID)
-	if !ok {
-		return fmt.Errorf("unexpected node: %s", nodeID)
-	}
-
-	(*join) = !lock
-
-	if cnt > 0 {
-		return // don't trigger onNodeReady twice or more times
-	}
-
+func (s *Server) AddBlobber(add *AddBlobberEvent, _ *struct{}) (err error) {
 	select {
-	case s.onNodeReady <- nodeID:
+	case s.onAddBlobber <- add:
 	case <-s.quit:
 	}
-
 	return
 }
 
@@ -388,32 +346,35 @@ func (s *Server) ShareOrSignsShares(soss *ShareOrSignsSharesEvent,
 	return
 }
 
-func (s *Server) SendShareOnly(miner NodeID, only *[]NodeID) (err error) {
-	select {
-	case o := <-s.nodeSendShareOnly(miner):
-		*only = o
-	case <-s.quit:
+// state polling handler
+func (s *Server) State(id NodeID, state *State) (err error) {
+	// node name is not known by the node requesting the State
+	// and thus, NodeID used here
+
+	var name, ok = s.names[id]
+	if !ok {
+		return fmt.Errorf("unknown node ID: %s", id)
+	}
+
+	var ns *nodeState
+	if ns, err = s.nodeState(name); err != nil {
 		return
 	}
-	return
-}
 
-func (s *Server) SendShareBad(miner NodeID, bad *[]NodeID) (err error) {
-	select {
-	case b := <-s.nodeSendShareBad(miner):
-		*bad = b
-	case <-s.quit:
-		return
+	// trigger the node ready once
+	if ns.counter == 1 {
+		select {
+		case s.onNodeReady <- name:
+		case <-s.quit:
+			return ErrShutdown
+		}
 	}
-	return
-}
 
-func (s *Server) IsRevealed(node NodeID, pin *bool) (err error) {
 	select {
-	case p := <-s.nodeSetRevealed(node):
-		*pin = p
+	case x := <-ns.poll:
+		(*state) = (*x)
 	case <-s.quit:
-		return
+		return ErrShutdown
 	}
 	return
 }

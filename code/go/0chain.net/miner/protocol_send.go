@@ -7,35 +7,14 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/round"
 	"0chain.net/core/datastore"
 )
-
-/*SendVRFShare - send the round vrf share */
-func (mc *Chain) SendVRFShare(ctx context.Context, vrfs *round.VRFShare) {
-	mb := mc.GetMagicBlock(vrfs.Round)
-	m2m := mb.Miners
-	m2m.SendAll(RoundVRFSender(vrfs))
-}
 
 /*SendBlock - send the block proposal to the network */
 func (mc *Chain) SendBlock(ctx context.Context, b *block.Block) {
 	mb := mc.GetMagicBlock(b.Round)
 	m2m := mb.Miners
 	m2m.SendAll(VerifyBlockSender(b))
-}
-
-/*SendVerificationTicket - send the block verification ticket */
-func (mc *Chain) SendVerificationTicket(ctx context.Context, b *block.Block, bvt *block.BlockVerificationTicket) {
-	mb := mc.GetMagicBlock(b.Round)
-	m2m := mb.Miners
-	if mc.VerificationTicketsTo == chain.Generator {
-		if b.MinerID != node.Self.Underlying().GetKey() {
-			m2m.SendTo(VerificationTicketSender(bvt), b.MinerID)
-		}
-	} else {
-		m2m.SendAll(VerificationTicketSender(bvt))
-	}
 }
 
 /*SendNotarization - send the block notarization (collection of verification tickets enough to say notarization is reached) */

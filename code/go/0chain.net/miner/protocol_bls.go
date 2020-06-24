@@ -278,7 +278,8 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round, blsT
 
 	if mr.IsVRFComplete() {
 		//BLS has completed already for this round, But, received a BLS message from a node now
-		Logger.Info("DKG ThresholdNumSigReceived VRF is already completed.", zap.Int64("round", mr.GetRoundNumber()))
+		Logger.Info("DKG ThresholdNumSigReceived VRF is already completed.",
+			zap.Int64("round", mr.GetRoundNumber()))
 		return
 	}
 
@@ -301,14 +302,19 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round, blsT
 			Logger.Error("calculates the Gp Sign", zap.Error(err))
 		}
 		rbOutput := encryption.Hash(groupSignature.GetHexString())
-		Logger.Info("recieve bls sign", zap.Any("sigs", recSig), zap.Any("from", recFrom), zap.Any("group_signature", groupSignature.GetHexString()))
+		Logger.Info("recieve bls sign", zap.Any("sigs", recSig),
+			zap.Any("from", recFrom),
+			zap.Any("group_signature", groupSignature.GetHexString()))
 
 		// rbOutput := bs.CalcRandomBeacon(recSig, recFrom)
 		Logger.Debug("VRF ", zap.String("rboOutput", rbOutput), zap.Int64("Round", mr.Number))
 		mc.computeRBO(ctx, mr, rbOutput)
 	} else {
 		//TODO: remove this log
-		Logger.Info("Not yet reached threshold", zap.Int("vrfShares_num", len(shares)), zap.Int("threshold", blsThreshold))
+		Logger.Info("Not yet reached threshold",
+			zap.Int("vrfShares_num", len(shares)),
+			zap.Int("threshold", blsThreshold),
+			zap.Int64("round", mr.GetRoundNumber()))
 	}
 }
 

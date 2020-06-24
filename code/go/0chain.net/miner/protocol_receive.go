@@ -18,7 +18,7 @@ func (mc *Chain) HandleVRFShare(ctx context.Context, msg *BlockMessage) {
 	}
 }
 
-/*HandleVerifyBlockMessage - handles the verify block message */
+/*handleVerifyBlockMessage - handles the verify block message */
 func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage) {
 	b := msg.Block
 	if b.Round < mc.GetCurrentRound()-1 {

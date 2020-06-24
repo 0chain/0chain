@@ -2,6 +2,7 @@ package sharder
 
 import (
 	"context"
+	"sort"
 	"time"
 
 	"0chain.net/chaincore/block"
@@ -9,6 +10,7 @@ import (
 	"0chain.net/chaincore/round"
 	"0chain.net/sharder/blockstore"
 
+	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/minersc"
@@ -117,40 +119,70 @@ func sleepOrDone(ctx context.Context, sleep time.Duration) (done bool) {
 	return
 }
 
-func (sc *Chain) isPhaseContibute() (is bool) {
+// isPhaseContibute
+func (sc *Chain) isPhaseContibute(ctx context.Context) (is bool) {
 
-	return true
+	if sc.ActiveInChain() {
+		var lfb = sc.GetLatestFinalizedBlock()
+		if lfb == nil {
+			Logger.Error("is_phase_contibute -- can't get lfb")
+			return
+		}
 
-	var lfb = sc.GetLatestFinalizedBlock()
-	if lfb == nil {
-		Logger.Error("is_phase_contibute -- can't get lfb")
-		return
+		var cstate = chain.CreateTxnMPT(lfb.ClientState)
+		if cstate == nil {
+			Logger.Error("is_phase_contibute -- can't get phase node",
+				zap.String("error", "missing client state of LFB"))
+			return
+		}
+		var seri, err = cstate.GetNodeValue(
+			util.Path(encryption.Hash(minersc.PhaseKey)),
+		)
+		if err != nil {
+			Logger.Error("is_phase_contibute -- can't get phase node",
+				zap.Error(err))
+			return
+		}
+		var phaseNode = new(minersc.PhaseNode)
+		if err = phaseNode.Decode(seri.Encode()); err != nil {
+			Logger.Error("is_phase_contibute -- can't decode phase node",
+				zap.Error(err))
+			return
+		}
+		Logger.Debug("is_phase_contibute",
+			zap.Int("phase", phaseNode.Phase),
+			zap.Bool("is_contribute", phaseNode.Phase == minersc.Contribute))
+		return phaseNode.Phase == minersc.Contribute
 	}
 
-	var cstate = chain.CreateTxnMPT(lfb.ClientState)
-	if cstate == nil {
-		Logger.Error("is_phase_contibute -- can't get phase node",
-			zap.String("error", "missing client state of LFB"))
-		return
+	// not active in chain, use REST API call
+
+	var mbs = sc.GetLatestFinalizedMagicBlockFromSharder(ctx)
+	if len(mbs) == 0 {
+		Logger.Error("is_phase_contibute -- no LFMB from sharders")
+		return false
 	}
-	var seri, err = cstate.GetNodeValue(
-		util.Path(encryption.Hash(minersc.PhaseKey)),
+	if len(mbs) > 1 {
+		sort.Slice(mbs, func(i, j int) bool {
+			return mbs[i].StartingRound > mbs[j].StartingRound
+		})
+	}
+
+	var (
+		magicBlock = mbs[0]                        // the latest one
+		sharders   = magicBlock.Sharders.N2NURLs() // sharders
+		pn         = new(minersc.PhaseNode)        //
+		err        error                           //
 	)
+	err = httpclientutil.MakeSCRestAPICall(minersc.ADDRESS, "/getPhase", nil,
+		sharders, pn, 1)
 	if err != nil {
-		Logger.Error("is_phase_contibute -- can't get phase node",
-			zap.Error(err))
-		return
+		Logger.Error("is_phase_contibute -- requesting phase from sharders"+
+			" using REST API call", zap.Error(err))
+		return false
 	}
-	var phaseNode = new(minersc.PhaseNode)
-	if err = phaseNode.Decode(seri.Encode()); err != nil {
-		Logger.Error("is_phase_contibute -- can't decode phase node",
-			zap.Error(err))
-		return
-	}
-	Logger.Debug("is_phase_contibute",
-		zap.Int("phase", phaseNode.Phase),
-		zap.Bool("is_contribute", phaseNode.Phase == minersc.Contribute))
-	return phaseNode.Phase == minersc.Contribute
+
+	return pn.Phase == minersc.Contribute
 }
 
 func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
@@ -163,7 +195,7 @@ func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
 			if !sc.ActiveInChain() || !sc.IsRegisteredSharderKeep() {
 				for !sc.IsRegisteredSharderKeep() {
 
-					for !sc.isPhaseContibute() {
+					for !sc.isPhaseContibute(ctx) {
 						if sleepOrDone(ctx, time.Second) {
 							return
 						}

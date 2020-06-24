@@ -3,21 +3,8 @@
 package minersc
 
 import (
-	"sync"
-
 	"0chain.net/chaincore/config"
-	sci "0chain.net/chaincore/smartcontractinterface"
 )
-
-//MinerSmartContract Smartcontract that takes care of all miner related requests
-type MinerSmartContract struct {
-	*sci.SmartContract
-	bcContext sci.BCContextI
-
-	mutexMinerMPK          sync.RWMutex
-	smartContractFunctions map[string]smartContractFunction
-	callbackPhase          func(int)
-}
 
 func (msc *MinerSmartContract) InitSC() {
 	if msc.smartContractFunctions == nil {

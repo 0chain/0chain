@@ -1,75 +1,12 @@
-#
-# conductor BC testing configurations
-#
+###
+### view change tests from the first set (from the first milestone)
+###
+
 ---
 
-# RPC server address (listen on)
-bind: 0.0.0.0:15210
-# place for stdin and stdout logs of nodes (relative to the working_directory)
-logs: "conductor/logs"
-# cleanup blockchain command
-cleanup_command: ./docker.local/bin/docker-clean.sh
-# number of rounds per view change
-view_change: 250 # 100
-
-#
-# nodes used in tests
-#
-nodes:
-  # sharders
-  - name: "sharder 1"
-    id: 57b416fcda1cf82b8a7e1fc3a47c68a94e617be873b5383ea2606bda757d3ce4
-    work_dir: "docker.local/sharder1"
-    env: SHARDER=1
-    start_command: "docker-compose -p sharder1 -f ../build.sharder/b0docker-compose.yml up"
-
-  - name: "sharder 2"
-    id: b098d2d56b087ee910f3ee2d2df173630566babb69f0be0e2e9a0c98d63f0b0b
-    work_dir: "docker.local/sharder2"
-    env: SHARDER=2
-    start_command: "docker-compose -p sharder2 -f ../build.sharder/b0docker-compose.yml up"
-
-  - name: "sharder 3"
-    id: d9558143f8e976126367603bff34125f5eb94720df8d7acefffdd66675d134c2
-    work_dir: "docker.local/sharder3"
-    env: SHARDER=3
-    start_command: "docker-compose -p sharder3 -f ../build.sharder/b0docker-compose.yml up"
-
-  # miners
-  - name: "miner 1"
-    id: 31810bd1258ae95955fb40c7ef72498a556d3587121376d9059119d280f34929
-    work_dir: "docker.local/miner1"
-    env: MINER=1
-    start_command: "docker-compose -p miner1 -f ../build.miner/b0docker-compose.yml up"
-
-  - name: "miner 2"
-    id: 585732eb076d07455fbebcf3388856b6fd00449a25c47c0f72d961c7c4e7e7c2
-    work_dir: "docker.local/miner2"
-    env: MINER=2
-    start_command: "docker-compose -p miner2 -f ../build.miner/b0docker-compose.yml up"
-
-  - name: "miner 3"
-    id: bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8
-    work_dir: "docker.local/miner3"
-    env: MINER=3
-    start_command: "docker-compose -p miner3 -f ../build.miner/b0docker-compose.yml up"
-
-  - name: "miner 4"
-    id: 8877e3da19b4cb51e59b4646ec7c0cf4849bc7b860257d69ddbf753b9a981e1b
-    work_dir: "docker.local/miner4"
-    env: MINER=4
-    start_command: "docker-compose -p miner4 -f ../build.miner/b0docker-compose.yml up"
-
-  - name: "miner 5"
-    id: 53add50ff9501014df2cbd698c673f85e5785281cebba8772a64a6e74057d328
-    work_dir: "docker.local/miner5"
-    env: MINER=5
-    start_command: "docker-compose -p miner5 -f ../build.miner/b0docker-compose.yml up"
-
-#
 # enabled test cases sets
-#
 enable:
+  # comment out to disable
   - "Outside miner comes up in phase X"
   - "Miner goes down in phase X and doesn't come up in the same view change"
   - "Outside miner goes down in phase X and doesn't come up in the same view change"
@@ -79,9 +16,7 @@ enable:
   - "Down and up on VC rounds"
   - "Revealed"
 
-#
 # sets of test cases
-#
 sets:
   # the name used in the enable list above
   - name: "Outside miner comes up in phase X"
@@ -137,10 +72,7 @@ sets:
     tests:
       - "Revealed"
 
-
-#
 # test cases
-#
 tests:
 
   # known phases
@@ -594,9 +526,10 @@ tests:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
       - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4']
-      - send_share_bad:
-          miner: 'miner 4'
+      - share:
+          by: ['miner 4']
           bad: ['miner 1']
+          good: ['miner 2', 'miner 3']
       - wait_view_change:
           expected_magic_block:
             round: 251
@@ -608,9 +541,10 @@ tests:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
       - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4']
-      - send_share_bad:
-          miner: 'miner 4'
+      - share:
+          by: ['miner 4']
           bad: ['miner 1', 'miner 2']
+          good: ['miner 3']
       - wait_view_change:
           expected_magic_block:
             round: 251
@@ -622,8 +556,8 @@ tests:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
       - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4']
-      - send_share_bad:
-          miner: 'miner 4'
+      - share:
+          by: ['miner 4']
           bad: ['miner 1', 'miner 2', 'miner 3']
       - wait_view_change:
           expected_magic_block:
@@ -636,12 +570,14 @@ tests:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
       - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4']
-      - send_share_bad:
-          miner: 'miner 4'
+      - share:
+          by: ['miner 4']
           bad: ['miner 1', 'miner 2']
-      - send_share_bad:
-          miner: 'miner 3'
+          good: ['miner 3']
+      - share:
+          by: ['miner 3']
           bad: ['miner 1', 'miner 2']
+          good: ['miner 4']
       - wait_view_change:
           expected_magic_block:
             round: 251
@@ -655,9 +591,10 @@ tests:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
       - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4']
-      - send_share_only:
-          miner: 'miner 4'
-          only: ['miner 1', 'miner 2']
+      - share:
+          by: ['miner 4']
+          good: ['miner 1', 'miner 2']
+          bad: []
       - wait_view_change:
           expect_magic_block:
             round: 251
@@ -669,9 +606,10 @@ tests:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
       - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4']
-      - send_share_only:
-          miner: 'miner 4'
-          only: ['miner 1', 'miner 2']
+      - share:
+          by: ['miner 4']
+          good: ['miner 1']
+          bad: []
       - wait_view_change:
           expect_magic_block:
             round: 251
@@ -683,12 +621,14 @@ tests:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
       - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4']
-      - send_share_only:
-          miner: 'miner 4'
-          only: ['miner 1', 'miner 2']
-      - send_share_only:
-          miner: 'miner 3'
-          only: ['miner 1', 'miner 2']
+      - share:
+          by: ['miner 4']
+          good: ['miner 1', 'miner 2']
+          bad: []
+      - share:
+          by: ['miner 3']
+          good: ['miner 1', 'miner 2']
+          bad: []
       - wait_view_change:
           expect_magic_block:
             round: 251
@@ -734,10 +674,10 @@ tests:
       - stop: ['miner 3', 'miner 5']
       - start: ['miner 3', 'miner 5']
       - wait_view_change:
-          timeout: 2m
+          timeout: 5m
           expect_magic_block:
             round: 501
-            miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
+            miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4', 'miner 5']
             sharders: ['sharder 1']
 
   - name: "Revealed"

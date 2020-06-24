@@ -55,11 +55,11 @@ func getSmartContract(scAddress string) (sci.SmartContractInterface, *sci.SmartC
 	contracti, ok := ContractMap[scAddress]
 	if ok {
 		scLock.Lock()
-		sc := sci.NewSC(scAddress)
+		defer scLock.Unlock()
 
+		sc := sci.NewSC(scAddress)
 		bc := &BCContext{}
 		contracti.SetSC(sc, bc)
-		scLock.Unlock()
 		return contracti, sc
 	}
 	return nil, nil

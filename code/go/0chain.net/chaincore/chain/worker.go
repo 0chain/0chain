@@ -140,17 +140,19 @@ func (c *Chain) FinalizedBlockWorker(ctx context.Context, bsh BlockStateHandler)
 				Logger.Error("slow finalized block processing", zap.Int64("lfb", lfb.Round), zap.Int64("fb", fb.Round))
 			}
 
+			// TODO/TOTHINK: move the repair chain outside the finalized worker?
+
 			// make sure we have valid verified MB chain if the block contains
 			// a magic block; we already have verified and valid MB chain at this
 			// moment, let's keep it updated and verified too
 
-			if fb.MagicBlock != nil && node.Self.Type == node.NodeTypeSharder {
-				var err = c.repairChain(ctx, fb, bsh.SaveMagicBlock())
-				if err != nil {
-					Logger.Error("repairing mb chain", zap.Error(err))
-					return
-				}
-			}
+			// if fb.MagicBlock != nil /*&& node.Self.Type == node.NodeTypeSharder*/ {
+			// 	var err = c.repairChain(ctx, fb, bsh.SaveMagicBlock())
+			// 	if err != nil {
+			// 		Logger.Error("repairing mb chain", zap.Error(err))
+			// 		return
+			// 	}
+			// }
 
 			// finalize
 

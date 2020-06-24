@@ -4,19 +4,19 @@ import (
 	"net/rpc"
 )
 
-// Client of the conductor RPC server.
-type Client struct {
-	address string
-	client  *rpc.Client
+// client of the conductor RPC server.
+type client struct {
+	address string      // RPC server address
+	client  *rpc.Client // RPC client
 }
 
-// NewClient creates new client will be interacting
+// newClient creates new client will be interacting
 // with server with given address.
-func NewClient(address string) (c *Client, err error) {
+func newClient(address string) (c *client, err error) {
 	if address, err = Host(address); err != nil {
 		return
 	}
-	c = new(Client)
+	c = new(client)
 	if c.client, err = rpc.Dial("tcp", address); err != nil {
 		return nil, err
 	}
@@ -24,13 +24,13 @@ func NewClient(address string) (c *Client, err error) {
 	return
 }
 
-func (c *Client) dial() (err error) {
+func (c *client) dial() (err error) {
 	c.client, err = rpc.Dial("tcp", c.address)
 	return
 }
 
 // Address of RPC server.
-func (c *Client) Address() string {
+func (c *client) Address() string {
 	return c.address
 }
 
@@ -38,7 +38,8 @@ func (c *Client) Address() string {
 // miner SC RPC
 //
 
-func (c *Client) Phase(phase *PhaseEvent) (err error) {
+// phase change event
+func (c *client) phase(phase *PhaseEvent) (err error) {
 	err = c.client.Call("Server.Phase", phase, &struct{}{})
 	if err == rpc.ErrShutdown {
 		if err = c.dial(); err != nil {
@@ -49,8 +50,8 @@ func (c *Client) Phase(phase *PhaseEvent) (err error) {
 	return
 }
 
-// ViewChange notification.
-func (c *Client) ViewChange(viewChange *ViewChangeEvent) (err error) {
+// viewChange notification.
+func (c *client) viewChange(viewChange *ViewChangeEvent) (err error) {
 	err = c.client.Call("Server.ViewChange", viewChange, &struct{}{})
 	if err == rpc.ErrShutdown {
 		if err = c.dial(); err != nil {
@@ -61,8 +62,8 @@ func (c *Client) ViewChange(viewChange *ViewChangeEvent) (err error) {
 	return
 }
 
-// AddMiner notification.
-func (c *Client) AddMiner(add *AddMinerEvent) (err error) {
+// addMiner notification.
+func (c *client) addMiner(add *AddMinerEvent) (err error) {
 	err = c.client.Call("Server.AddMiner", add, &struct{}{})
 	if err == rpc.ErrShutdown {
 		if err = c.dial(); err != nil {
@@ -73,8 +74,8 @@ func (c *Client) AddMiner(add *AddMinerEvent) (err error) {
 	return
 }
 
-// AddSharder notification.
-func (c *Client) AddSharder(add *AddSharderEvent) (err error) {
+// addSharder notification.
+func (c *client) addSharder(add *AddSharderEvent) (err error) {
 	err = c.client.Call("Server.AddSharder", add, &struct{}{})
 	if err == rpc.ErrShutdown {
 		if err = c.dial(); err != nil {
@@ -85,20 +86,20 @@ func (c *Client) AddSharder(add *AddSharderEvent) (err error) {
 	return
 }
 
-// NodeReady notification.
-func (c *Client) NodeReady(nodeID NodeID) (join bool, err error) {
-	err = c.client.Call("Server.NodeReady", nodeID, &join)
+// addBlobber notification.
+func (c *client) addBlobber(add *AddBlobberEvent) (err error) {
+	err = c.client.Call("Server.AddBlobber", add, &struct{}{})
 	if err == rpc.ErrShutdown {
 		if err = c.dial(); err != nil {
 			return
 		}
-		err = c.client.Call("Server.NodeReady", nodeID, &join)
+		err = c.client.Call("Server.AddBlobber", add, &struct{}{})
 	}
 	return
 }
 
-// Round notification.
-func (c *Client) Round(re *RoundEvent) (err error) {
+// round notification.
+func (c *client) round(re *RoundEvent) (err error) {
 	err = c.client.Call("Server.Round", re, &struct{}{})
 	if err == rpc.ErrShutdown {
 		if err = c.dial(); err != nil {
@@ -109,8 +110,8 @@ func (c *Client) Round(re *RoundEvent) (err error) {
 	return
 }
 
-// ContributeMPK notification.
-func (c *Client) ContributeMPK(cmpke *ContributeMPKEvent) (err error) {
+// contributeMPK phase notification.
+func (c *client) contributeMPK(cmpke *ContributeMPKEvent) (err error) {
 	err = c.client.Call("Server.ContributeMPK", cmpke, &struct{}{})
 	if err == rpc.ErrShutdown {
 		if err = c.dial(); err != nil {
@@ -121,8 +122,8 @@ func (c *Client) ContributeMPK(cmpke *ContributeMPKEvent) (err error) {
 	return
 }
 
-// ShareOrSignsShares notification.
-func (c *Client) ShareOrSignsShares(sosse *ShareOrSignsSharesEvent) (err error) {
+// shareOrSignsShares phase notification.
+func (c *client) shareOrSignsShares(sosse *ShareOrSignsSharesEvent) (err error) {
 	err = c.client.Call("Server.ShareOrSignsShares", sosse, &struct{}{})
 	if err == rpc.ErrShutdown {
 		if err = c.dial(); err != nil {
@@ -133,30 +134,12 @@ func (c *Client) ShareOrSignsShares(sosse *ShareOrSignsSharesEvent) (err error) 
 	return
 }
 
-// SendShareOnly to configured nodes. The long polling method, e.g. it blocks.
-func (c *Client) SendShareOnly(me NodeID) (only []NodeID, err error) {
-	err = c.client.Call("Server.SendShareOnly", me, &only)
+// state requests current client state using long polling strategy. E.g.
+// when the state had updated, then the method returns.
+func (c *client) state(me NodeID) (state *State, err error) {
+	err = c.client.Call("Server.State", me, &state)
 	for err == rpc.ErrShutdown {
-		err = c.client.Call("Server.SendShareOnly", me, &only)
-	}
-	return
-}
-
-// SendShareBad sends bad share to resulting nodes. To send bad shares only to
-// X nodes, use SendShareOnly (nil, nil) with SendShareBad (list, nil).
-// The long polling method, e.g. it blocks.
-func (c *Client) SendShareBad(me NodeID) (bad []NodeID, err error) {
-	err = c.client.Call("Server.SendShareBad", me, &bad)
-	for err == rpc.ErrShutdown {
-		err = c.client.Call("Server.SendShareBad", me, &bad)
-	}
-	return
-}
-
-func (c *Client) IsRevealed(node NodeID) (pin bool, err error) {
-	err = c.client.Call("Server.IsRevealed", node, &pin)
-	for err == rpc.ErrShutdown {
-		err = c.client.Call("Server.IsRevealed", node, &pin)
+		err = c.client.Call("Server.State", me, &state)
 	}
 	return
 }

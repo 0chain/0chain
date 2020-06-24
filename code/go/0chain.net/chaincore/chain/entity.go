@@ -627,12 +627,6 @@ func (c *Chain) ValidateMagicBlock(ctx context.Context, mr *round.Round, b *bloc
 	return b.LatestFinalizedMagicBlockHash == blockMagicBlock.Hash
 }
 
-//IsRoundGenerator - is this miner a generator for this round
-func (c *Chain) IsRoundGenerator(r round.RoundI, nd *node.Node) bool {
-	rank := r.GetMinerRank(nd)
-	return rank != -1 && rank < c.NumGenerators
-}
-
 /*GetGenerators - get all the block generators for a given round */
 func (c *Chain) GetGenerators(r round.RoundI) []*node.Node {
 	var miners []*node.Node
