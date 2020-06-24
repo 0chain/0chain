@@ -24,6 +24,7 @@ import (
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/diagnostics"
+	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"
@@ -39,7 +40,6 @@ import (
 	"0chain.net/sharder"
 	"0chain.net/sharder/blockstore"
 	"0chain.net/smartcontract/setupsc"
-	"github.com/0chain/0chain/code/go/0chain.net/chaincore/httpclientutil"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
