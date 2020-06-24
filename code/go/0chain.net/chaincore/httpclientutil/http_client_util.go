@@ -218,7 +218,7 @@ func sendTransactionToURL(url string, txn *Transaction, ID string, pkey string, 
 }
 
 //MakeGetRequest make a generic get request. url should have complete path.
-func MakeGetRequest(remoteUrl string, result interface{}) {
+func MakeGetRequest(remoteUrl string, result interface{}) error {
 	Logger.Info(fmt.Sprintf("making GET request to %s", remoteUrl))
 	//ToDo: add parameter support
 	client := http.Client{}
@@ -230,18 +230,21 @@ func MakeGetRequest(remoteUrl string, result interface{}) {
 	resp, err := client.Do(request)
 	if err != nil {
 		Logger.Info("Failed to run get", zap.Error(err))
-		return
+		return err
 	}
 
 	if resp.Body != nil {
+		defer resp.Body.Close()
 		if resp.StatusCode == http.StatusOK {
 			json.NewDecoder(resp.Body).Decode(result)
+		} else {
+			return fmt.Errorf("response status is not ok")
 		}
-
-		resp.Body.Close()
 	} else {
 		Logger.Info("resp.Body is nil")
+		return fmt.Errorf("response body is nil")
 	}
+	return nil
 }
 
 //MakeClientBalanceRequest to get a client's balance
