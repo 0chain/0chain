@@ -263,21 +263,21 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 		scc.GetFloat64(pfx+"max_write_price") * 1e10)
 	// read pool
 	conf.ReadPool = new(readPoolConfig)
-	conf.ReadPool.MinLock = scc.GetInt64(pfx + "readpool.min_lock")
+	conf.ReadPool.MinLock = int64(scc.GetFloat64(pfx+"readpool.min_lock") * 1e10)
 	conf.ReadPool.MinLockPeriod = scc.GetDuration(
 		pfx + "readpool.min_lock_period")
 	conf.ReadPool.MaxLockPeriod = scc.GetDuration(
 		pfx + "readpool.max_lock_period")
 	// write pool
 	conf.WritePool = new(writePoolConfig)
-	conf.WritePool.MinLock = scc.GetInt64(pfx + "writepool.min_lock")
+	conf.WritePool.MinLock = int64(scc.GetFloat64(pfx+"writepool.min_lock") * 1e10)
 	conf.WritePool.MinLockPeriod = scc.GetDuration(
 		pfx + "writepool.min_lock_period")
 	conf.WritePool.MaxLockPeriod = scc.GetDuration(
 		pfx + "writepool.max_lock_period")
 	// stake pool
 	conf.StakePool = new(stakePoolConfig)
-	conf.StakePool.MinLock = scc.GetInt64(pfx + "stakepool.min_lock")
+	conf.StakePool.MinLock = int64(scc.GetFloat64(pfx+"stakepool.min_lock") * 1e10)
 	conf.StakePool.InterestRate = scc.GetFloat64(
 		pfx + "stakepool.interest_rate")
 	conf.StakePool.InterestInterval = scc.GetDuration(
