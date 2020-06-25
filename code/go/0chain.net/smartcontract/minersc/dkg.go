@@ -72,7 +72,7 @@ func (msc *MinerSmartContract) moveToShareOrPublish(
 		return false
 	}
 
-	if len(shardersKeep.Nodes) <= gn.MinS {
+	if len(shardersKeep.Nodes) < gn.MinS {
 		Logger.Error("not enough sharders in keep list to move phase",
 			zap.Int("keep", len(shardersKeep.Nodes)),
 			zap.Int("min_s", gn.MinS))
@@ -354,20 +354,12 @@ func (msc *MinerSmartContract) createMagicBlockForWait(balances cstate.StateCont
 
 	if sharders == nil || len(sharders.Nodes) == 0 {
 		sharders = allSharderList
-		println("NO SHARDERS IN KEEP LIST")
 	} else {
-		println(len(sharders.Nodes), "SHARDERS IN KEEP LIST")
 		sharders.Nodes, err = msc.reduceShardersList(sharders, allSharderList,
 			gn)
 		if err != nil {
 			return err
 		}
-		// currentNode := node.Self.Underlying()
-		// if sharders.FindNodeById(currentNode.ID) == nil {
-		// 	if selfNode := allSharderList.FindNodeById(currentNode.ID); selfNode != nil {
-		// 		sharders.Nodes = append(sharders.Nodes, selfNode)
-		// 	}
-		// }
 	}
 
 	if err = dkgMinersList.recalculateTKN(true); err != nil {

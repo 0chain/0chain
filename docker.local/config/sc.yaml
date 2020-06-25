@@ -19,7 +19,7 @@ smart_contracts:
     max_s: 30
     min_s: 1
     # max delegates allowed by SC
-    max_delegaes: 200
+    max_delegates: 200 #
     # DKG
     t_percent: .51
     k_percent: .75

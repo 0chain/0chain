@@ -212,7 +212,7 @@ func (msc *MinerSmartContract) getGlobalNode(balances cstate.StateContextI) (
 	}
 
 	if gn.MaxDelegates <= 0 {
-		return nil, fmt.Errorf("max_delegaes is too small: %d", gn.MaxDelegates)
+		return nil, fmt.Errorf("max_delegates is too small: %d", gn.MaxDelegates)
 	}
 
 	gn.InterestRate = conf.GetFloat64(pfx + "interest_rate")
