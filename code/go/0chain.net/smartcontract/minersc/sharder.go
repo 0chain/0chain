@@ -180,7 +180,8 @@ func (msc *MinerSmartContract) sharderKeep(t *transaction.Transaction,
 		return "", err
 	}
 	if pn.Phase != Contribute {
-		return "", common.NewError("sharder_keep_failed", "this is not the correct phase to contribute (sharder keep)")
+		return "", common.NewError("sharder_keep_failed",
+			"this is not the correct phase to contribute (sharder keep)")
 	}
 
 	sharderKeepList, err := msc.getShardersList(balances, ShardersKeepKey)
@@ -197,7 +198,11 @@ func (msc *MinerSmartContract) sharderKeep(t *transaction.Transaction,
 
 		return "", err
 	}
-	Logger.Info("The new sharder info", zap.String("base URL", newSharder.N2NHost), zap.String("ID", newSharder.ID), zap.String("pkey", newSharder.PublicKey), zap.Any("mscID", msc.ID))
+	Logger.Info("The new sharder info",
+		zap.String("base URL", newSharder.N2NHost),
+		zap.String("ID", newSharder.ID),
+		zap.String("pkey", newSharder.PublicKey),
+		zap.Any("mscID", msc.ID))
 	Logger.Info("SharderNode", zap.Any("node", newSharder))
 	if newSharder.PublicKey == "" || newSharder.ID == "" {
 		Logger.Error("public key or ID is empty")
