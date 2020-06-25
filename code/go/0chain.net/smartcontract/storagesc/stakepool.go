@@ -666,6 +666,12 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			"can't get stake pool: "+err.Error())
 	}
 
+	if len(sp.Pools) >= conf.MaxDelegates {
+		return "", common.NewErrorf("stake_pool_lock_failed",
+			"max_delegates reached: %v, no more stake pools allowed",
+			conf.MaxDelegates)
+	}
+
 	var info *stakePoolUpdateInfo
 	info, err = sp.update(conf, ssc.ID, t.CreationDate, balances)
 	if err != nil {

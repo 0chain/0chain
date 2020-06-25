@@ -111,6 +111,8 @@ smart_contracts:
     challenge_rate_per_mb_min: 1
     # max number of challenges can be generated at once
     max_challenges_per_generation: 100
+    # max delegates per stake pool allowed by SC
+    max_delegates: 200
   vestingsc:
     min_lock: 0.01
     min_duration: '2m'

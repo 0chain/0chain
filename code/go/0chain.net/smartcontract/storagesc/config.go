@@ -109,6 +109,9 @@ type scConfig struct {
 	MinStake state.Balance `json:"min_stake"`
 	// MaxStake allowed by a blobber/validator (entire SC boundary).
 	MaxStake state.Balance `json:"max_stake"`
+
+	// max delegates per stake pool
+	MaxDelegates int `json:"max_delegates"`
 }
 
 func (sc *scConfig) validate() (err error) {
@@ -182,6 +185,9 @@ func (sc *scConfig) validate() (err error) {
 	if sc.MaxStake < sc.MinStake {
 		return fmt.Errorf("max_stake less than min_stake: %v < %v", sc.MinStake,
 			sc.MaxStake)
+	}
+	if sc.MaxDelegates < 1 {
+		return fmt.Errorf("max_delegates is too small %v", sc.MaxDelegates)
 	}
 	return
 }
@@ -287,6 +293,8 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 		pfx + "max_challenges_per_generation")
 	conf.ChallengeGenerationRate = scc.GetFloat64(
 		pfx + "challenge_rate_per_mb_min")
+
+	conf.MaxDelegates = scc.GetInt(pfx + "max_delegates")
 
 	err = conf.validate()
 	return
