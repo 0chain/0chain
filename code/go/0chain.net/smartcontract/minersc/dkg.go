@@ -540,13 +540,13 @@ func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction,
 	_, err = balances.InsertTrieNode(GroupShareOrSignsKey, gsos)
 	if err != nil {
 		return "", common.NewErrorf("share_signs_or_shares",
-			"saving group share of signs: %v")
+			"saving group share of signs: %v", err)
 	}
 
 	_, err = balances.InsertTrieNode(DKGMinersKey, dmn)
 	if err != nil {
 		return "", common.NewErrorf("share_signs_or_shares",
-			"saving DKG miners: %v")
+			"saving DKG miners: %v", err)
 	}
 
 	return string(sos.Encode()), nil

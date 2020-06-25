@@ -76,10 +76,11 @@ func NewSimpleNodes() SimpleNodes {
 
 type globalNode struct {
 	ViewChange   int64   `json:"view_change"`
-	MaxN         int     `json:"max_n"`
-	MinN         int     `json:"min_n"`
-	ShardersMaxN float64 `json:"sharders_max_n"`
-	ShardersMinN float64 `json:"sharders_min_n"`
+	MaxN         int     `json:"max_n"`         // } miners limits
+	MinN         int     `json:"min_n"`         // }
+	MaxS         int     `json:"max_s"`         // } sharders limits
+	MinS         int     `json:"min_s"`         // }
+	MaxDelegates int     `json:"max_delegates"` // } limited by the SC
 	TPercent     float64 `json:"t_percent"`
 	KPercent     float64 `json:"k_percent"`
 	LastRound    int64   `json:"last_round"`
@@ -303,10 +304,10 @@ func (mn *MinerNode) orderedActivePools() (ops []*sci.DelegatePool) {
 type Stat struct {
 	// for miner (totals)
 	GeneratorRewards state.Balance `json:"generator_rewards,omitempty"`
-	GeneratorFees    state.Balance `json:"generator_rewards,omitempty"`
+	GeneratorFees    state.Balance `json:"generator_fees,omitempty"`
 	// for sharder (totals)
 	SharderRewards state.Balance `json:"sharder_rewards,omitempty"`
-	SharderFees    state.Balance `json:"sharder_rewards,omitempty"`
+	SharderFees    state.Balance `json:"sharder_fees,omitempty"`
 }
 
 type SimpleNode struct {

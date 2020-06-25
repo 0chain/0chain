@@ -12,12 +12,18 @@ smart_contracts:
     max_mint: 4000000.0
 
   minersc:
+    # miners
     max_n: 100
     min_n: 3
-    sharders_max_n: 0.30 # 30%
-    sharders_min_n: 0.30 # 30%
+    # sharders
+    max_s: 30
+    min_s: 1
+    # max delegates allowed by SC
+    max_delegaes: 200
+    # DKG
     t_percent: .51
     k_percent: .75
+    # etc
     min_stake: 0.01 # min stake can be set by a node (boundary for all nodes)
     max_stake: 100.0 # max stake can be set by a node (boundary for all nodes)
     start_rounds: 50
@@ -73,7 +79,7 @@ smart_contracts:
     # stake pool configurations
     stakepool:
       # minimal lock for a delegate pool
-      min_lock: 10
+      min_lock: 0.1
       # interest_rate is tokens earned by a blobber for its stake
       interest_rate: 0.1
       # interest_interval is interval to pay interests for a stake

@@ -190,6 +190,30 @@ func (msc *MinerSmartContract) getGlobalNode(balances cstate.StateContextI) (
 	gn.MinN = conf.GetInt(pfx + "min_n")
 	gn.TPercent = conf.GetFloat64(pfx + "t_percent")
 	gn.KPercent = conf.GetFloat64(pfx + "k_percent")
+	gn.MaxS = conf.GetInt(pfx + "max_s")
+	gn.MinS = conf.GetInt(pfx + "min_s")
+	gn.MaxDelegates = conf.GetInt(pfx + "max_delegates")
+
+	// check bounds
+	if gn.MinN < 1 {
+		return nil, fmt.Errorf("min_n is too small: %d", gn.MinN)
+	}
+	if gn.MaxN < gn.MinN {
+		return nil, fmt.Errorf("max_n is less then min_n: %d < %d",
+			gn.MaxN, gn.MinN)
+	}
+
+	if gn.MinS < 1 {
+		return nil, fmt.Errorf("min_s is too small: %d", gn.MinS)
+	}
+	if gn.MaxS < gn.MinS {
+		return nil, fmt.Errorf("max_s is less then min_s: %d < %d",
+			gn.MaxS, gn.MinS)
+	}
+
+	if gn.MaxDelegates <= 0 {
+		return nil, fmt.Errorf("max_delegaes is too small: %d", gn.MaxDelegates)
+	}
 
 	gn.InterestRate = conf.GetFloat64(pfx + "interest_rate")
 	gn.RewardRate = conf.GetFloat64(pfx + "reward_rate")

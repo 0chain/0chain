@@ -91,6 +91,12 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 			"invalid negative number_of_delegates: %v", newMiner.ServiceCharge)
 	}
 
+	if newMiner.NumberOfDelegates > gn.MaxDelegates {
+		return "", common.NewErrorf("add_miner_failed",
+			"number_of_delegates greater then max_delegates of SC: %v > %v",
+			newMiner.ServiceCharge, gn.MaxDelegates)
+	}
+
 	if newMiner.MinStake < gn.MinStake {
 		return "", common.NewErrorf("add_miner_failed",
 			"min_stake is less then allowed by SC: %v > %v",
@@ -149,6 +155,12 @@ func (msc *MinerSmartContract) UpdateSettings(t *transaction.Transaction,
 	if update.NumberOfDelegates < 0 {
 		return "", common.NewErrorf("update_settings",
 			"invalid negative number_of_delegates: %v", update.ServiceCharge)
+	}
+
+	if update.NumberOfDelegates > gn.MaxDelegates {
+		return "", common.NewErrorf("add_miner_failed",
+			"number_of_delegates greater then max_delegates of SC: %v > %v",
+			update.ServiceCharge, gn.MaxDelegates)
 	}
 
 	if update.MinStake < gn.MinStake {
