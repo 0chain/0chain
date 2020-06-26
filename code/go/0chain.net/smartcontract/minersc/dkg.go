@@ -51,6 +51,13 @@ func (msc *MinerSmartContract) moveToContribute(balances cstate.StateContextI,
 		return false
 	}
 
+	if len(allShardersList.Nodes) < gn.MinS {
+		Logger.Error("not enough sharders in all sharders list to move phase",
+			zap.Int("all", len(allShardersList.Nodes)),
+			zap.Int("min_s", gn.MinS))
+		return false
+	}
+
 	return allMinersList != nil &&
 		len(allMinersList.Nodes) >= dkgMinersList.K &&
 		len(allShardersList.Nodes) >= gn.MinS

@@ -354,8 +354,15 @@ func getCurrentMagicBlock(sc *sharder.Chain) error {
 			return mbs[i].StartingRound > mbs[j].StartingRound
 		})
 	}
-	magicBlock := mbs[0]
-	Logger.Info("get current magic block", zap.Any("magic_block", magicBlock))
+	var (
+		magicBlock = mbs[0]
+		cmb        = sc.GetCurrentMagicBlock()
+	)
+	Logger.Info("get current magic block from sharders",
+		zap.Any("magic_block", magicBlock))
+	if magicBlock.StartingRound <= cmb.StartingRound {
+		return nil
+	}
 
 	var err = sc.MustVerifyChainHistory(common.GetRootContext(), magicBlock,
 		sc.SaveMagicBlockHandler)

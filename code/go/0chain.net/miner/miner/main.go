@@ -315,9 +315,11 @@ func readMagicBlockFile(magicBlockFile *string, mc *miner.Chain, serverChain *ch
 
 func getCurrentMagicBlockFromSharders(mc *miner.Chain) error {
 	const limitAttempts = 10
-	attempt := 0
-	retryTimeout := time.Second * 5
-	var mbs []*block.Block
+	var (
+		attempt      = 0
+		retryTimeout = time.Second * 5
+		mbs          []*block.Block
+	)
 	for len(mbs) == 0 {
 		mbs = mc.GetLatestFinalizedMagicBlockFromSharder(common.GetRootContext())
 		if len(mbs) == 0 {
@@ -335,13 +337,19 @@ func getCurrentMagicBlockFromSharders(mc *miner.Chain) error {
 			return mbs[i].StartingRound < mbs[j].StartingRound
 		})
 	}
-	magicBlock := mbs[0]
-	err := mc.MustVerifyChainHistory(common.GetRootContext(), magicBlock,
+	var (
+		magicBlock = mbs[0]
+		cmb        = mc.GetCurrentMagicBlock()
+	)
+	if magicBlock.StartingRound <= cmb.StartingRound {
+		return nil // already set
+	}
+	var err = mc.MustVerifyChainHistory(common.GetRootContext(), magicBlock,
 		nil)
 	if err != nil {
 		return err
 	}
-	if err := mc.UpdateMagicBlock(magicBlock.MagicBlock); err != nil {
+	if err = mc.UpdateMagicBlock(magicBlock.MagicBlock); err != nil {
 		return fmt.Errorf("failed to update magic block: %v", err)
 	}
 	mc.SetLatestFinalizedMagicBlock(magicBlock)

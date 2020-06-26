@@ -14,16 +14,21 @@ func SetupMinerSmartContract(serverChain *Chain) {
 	setterCallback := scs.(interface{ SetCallbackPhase(func(int)) })
 	setterCallback.SetCallbackPhase(func(phase int) {
 		if phase == minersc.Contribute {
-			txn, err := serverChain.RegisterSharderKeep()
-			if err != nil {
-				Logger.Error("register_sharder_keep", zap.Error(err))
-			} else {
-				if txn == nil || serverChain.ConfirmTransaction(txn) {
-					Logger.Info("register_sharder_keep -- registered")
-				} else {
-					Logger.Debug("register_sharder_keep -- failed to confirm transaction", zap.Any("txn", txn))
-				}
-			}
+			go registerSharderKeepOnContributeInCallback(serverChain)
 		}
 	})
+}
+
+func registerSharderKeepOnContributeInCallback(sc *Chain) {
+	var txn, err = sc.RegisterSharderKeep()
+	if err != nil {
+		Logger.Error("register_sharder_keep", zap.Error(err))
+		return
+	}
+	if txn == nil || sc.ConfirmTransaction(txn) {
+		Logger.Info("register_sharder_keep -- registered")
+		return
+	}
+	Logger.Debug("register_sharder_keep -- failed to confirm transaction",
+		zap.Any("txn", txn))
 }

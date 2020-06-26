@@ -799,8 +799,8 @@ func (mc *Chain) restartRound(ctx context.Context) {
 	}
 	for i, e := lfb.Round, mc.CurrentRound; i < e; i++ {
 		var mr = mc.GetMinerRound(i)
-		if mr.IsFinalized() {
-			continue // skip finalized blocks
+		if mr == nil || mr.IsFinalized() {
+			continue // skip finalized blocks, skip nil miner rounds
 		}
 		go mc.FinalizeRound(ctx, mr.Round, mc) // kick finalization again
 	}
@@ -842,9 +842,11 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context,
 	}
 
 	// LFMB
-	lfmb := mc.GetLatestFinalizedMagicBlock()
-	var magicBlock *block.Block
-	mbs := mc.GetLatestFinalizedMagicBlockFromSharder(common.GetRootContext())
+	var (
+		lfmb       = mc.GetLatestFinalizedMagicBlock()
+		mbs        = mc.GetLatestFinalizedMagicBlockFromSharder(ctx)
+		magicBlock *block.Block
+	)
 	if len(mbs) >= 1 {
 		sort.Slice(mbs, func(i, j int) bool {
 			return mbs[i].StartingRound < mbs[j].StartingRound
