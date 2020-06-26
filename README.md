@@ -384,8 +384,6 @@ Test blockchain, (part II, sharders).
 ./docker.local/bin/start.conductor.sh blockchain-2
 ```
 
-<!--
-
 #### Blobber 1
 
 ##### Note
@@ -436,7 +434,8 @@ approach to revert it.
 
 ##### Build all.
 
-Build blobbers, blockWorker, zbox and zwallet as usual.
+Build blockWorker, zbox and zwallet as usual. Blobbers will be build
+automatically but after tests don't forget to rebuild them as usual.
 
 ##### Start tests.
 
@@ -451,5 +450,3 @@ that requires `sudo` password entering sometimes.
 
 Don't forget to rollback changes, clean and rebuild applications for
 regular usage.
-
--->

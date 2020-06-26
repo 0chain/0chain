@@ -23,6 +23,8 @@ import (
 
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
+	// temporary debug
+	// "runtime"
 )
 
 const (
@@ -150,15 +152,20 @@ func (mc *Chain) isRegisteredEx(getStatePath func(n *node.Node) util.Path,
 }
 
 func (mc *Chain) ConfirmTransaction(t *httpclientutil.Transaction) bool {
-	active := mc.ActiveInChain()
-	var found, pastTime bool
-	var urls []string
-	mb := mc.GetCurrentMagicBlock()
+	var (
+		active = mc.ActiveInChain()
+		mb     = mc.GetCurrentMagicBlock()
+
+		found, pastTime bool
+		urls            []string
+	)
+
 	for _, sharder := range mb.Sharders.CopyNodesMap() {
 		if !active || sharder.GetStatus() == node.NodeStatusActive {
 			urls = append(urls, sharder.GetN2NURLBase())
 		}
 	}
+
 	for !found && !pastTime {
 		txn, err := httpclientutil.GetTransactionStatus(t.Hash, urls, 1)
 		if active {
@@ -178,7 +185,6 @@ func (mc *Chain) ConfirmTransaction(t *httpclientutil.Transaction) bool {
 		}
 	}
 	return found
-
 }
 
 func (mc *Chain) RegisterNode() (*httpclientutil.Transaction, error) {

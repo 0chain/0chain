@@ -110,6 +110,7 @@ func main() {
 	reader.Close()
 
 	config.Configuration.ChainID = viper.GetString("server_chain.id")
+	transaction.SetTxnTimeout(int64(viper.GetInt("server_chain.transaction.timeout")))
 
 	reader, err = os.Open(*keysFile)
 	if err != nil {

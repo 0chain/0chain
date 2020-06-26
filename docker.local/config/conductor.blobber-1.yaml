@@ -7,7 +7,7 @@
 # enabled test cases sets
 enable:
   - "Blobber"
-  #- "Invalid sharder response"
+  - "Invalid sharder response"
 
 # sets of test cases
 sets:
@@ -22,6 +22,8 @@ sets:
 tests:
   - name: "Send wrong or not send a response"
     flow:
+      - command:
+          name: 'build_blobbers'
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
       - command:
@@ -41,41 +43,41 @@ tests:
           timeout: '5m'
       - command:
           name: 'init_allocation'
-          timeout: '15m'
+          timeout: '35m'
       - stop: ['blobber 3']
-      # where blobber 3 not responding
       - command:
-          name: 'wrong_download'
-      - command:
-          name: 'wrong_upload'
-      - command:
-          name: 'wrong_delete'
+          name: 'build_bad_blobbers'
       - start: ['blobber 3']
       # wait the blobber starts, we can't use wait_add for it anymore
       - command:
           name: 'sleep_1m'
       - command:
-          name: 'wrong_download'
+          name: 'list'
       - command:
-          name: 'wrong_upload'
+          name: 'download'
       - command:
-          name: 'wrong_delete'
-
+          name: 'delete'
+      - command:
+          name: 'upload'
 
   - name: "Sharder sends wrong transaction verification"
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
       - command:
-          name: "cleanup_blobbers"
-      - command:
           name: "cleanup_block_worker"
-      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3']
-      - wait_round:
-          round: 15 # just wait the BC starts
+      - start: ['sharder 1', 'sharder 2', 'miner 1', 'miner 2', 'miner 3']
+      - wait_view_change:
+          expect_magic_block:
+            round: 251
+            miners: ['miner 1', 'miner 2', 'miner 3']
+            sharders: ['sharder 1', 'sharder 2']
+      - verify_transaction:
+          by: ['sharder 2']
       - start: ['block worker']
-      # wait the block worker starts
       - command:
-          name: "sleep_1m"
-      #
+          name: "sleep_1m" # wait the block worker starts
+      - command:
+          name: 'unverified_transaction'
+
 ...

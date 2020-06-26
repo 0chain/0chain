@@ -158,6 +158,8 @@ func GetTransactionStatus(txnHash string, urls []string, sf int) (*Transaction, 
 		} else {
 			contents, err := ioutil.ReadAll(response.Body)
 			if response.StatusCode != 200 {
+				Logger.Error("transaction confirmation response code",
+					zap.Any("code", response.StatusCode))
 				response.Body.Close()
 				continue
 			}
