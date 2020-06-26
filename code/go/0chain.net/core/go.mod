@@ -1,5 +1,7 @@
 module 0chain.net/core
 
+go 1.14
+
 require (
 	github.com/0chain/gorocksdb v0.0.0-20181010114359-8752a9433481
 	github.com/bitly/go-hostpool v0.0.0-20171023180738-a3a6125de932 // indirect
@@ -37,4 +39,3 @@ require (
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 )
-

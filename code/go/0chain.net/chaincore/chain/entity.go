@@ -675,11 +675,12 @@ func (c *Chain) CanShardBlockWithReplicators(nRound int64, hash string, sharder 
 }
 
 //GetBlockSharders - get the list of sharders who would be replicating the block
-func (c *Chain) GetBlockSharders(b *block.Block) []string {
-	var sharders []string
+func (c *Chain) GetBlockSharders(b *block.Block) (sharders []string) {
 	//TODO: sharders list needs to get resolved per the magic block of the block
-	var sharderPool = c.GetMagicBlock(b.Round).Sharders
-	var sharderNodes = sharderPool.Nodes
+	var (
+		sharderPool  = c.GetMagicBlock(b.Round).Sharders
+		sharderNodes = sharderPool.Nodes
+	)
 	if c.NumReplicators > 0 {
 		scores := c.nodePoolScorer.ScoreHashString(sharderPool, b.Hash)
 		sharderNodes = node.GetTopNNodes(scores, c.NumReplicators)

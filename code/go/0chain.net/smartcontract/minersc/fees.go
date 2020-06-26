@@ -440,6 +440,11 @@ func (msc *MinerSmartContract) payStakeHolders(value state.Balance,
 func (msc *MinerSmartContract) getBlockSharders(block *block.Block,
 	balances cstate.StateContextI) (sharders []*MinerNode, err error) {
 
+	if block.PrevBlock == nil {
+		return nil, fmt.Errorf("missing previous block in state context",
+			block.Round, block.Hash)
+	}
+
 	var sids = balances.GetBlockSharders(block.PrevBlock)
 	sort.Strings(sids)
 
