@@ -588,8 +588,9 @@ type DKGMinerNodes struct {
 	K              int            `json:"k"`
 	N              int            `json:"n"`
 	RevealedShares map[string]int `json:"revealed_shares"`
-	// S              int         // number of sharders
-	// Sharders       SimpleNodes // sharders
+
+	// StartRound used to filter responses from old MB where sharders comes up.
+	StartRound int64 `json:"start_round"`
 }
 
 func (dkgmn *DKGMinerNodes) setConfigs(gn *globalNode) {

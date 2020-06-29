@@ -224,6 +224,7 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(balances cstate.Stat
 		dkgMiners.SimpleNodes[node.ID] = node.SimpleNode
 	}
 
+	dkgMiners.StartRound = gn.LastRound
 	_, err = balances.InsertTrieNode(DKGMinersKey, dkgMiners)
 	if err != nil {
 		return err
@@ -661,6 +662,7 @@ func (msc *MinerSmartContract) RestartDKG(pn *PhaseNode, balances cstate.StateCo
 		Logger.Error("failed to restart dkg", zap.Any("error", err))
 	}
 	dkgMinersList := NewDKGMinerNodes()
+	dkgMinersList.StartRound = pn.CurrentRound
 	_, err = balances.InsertTrieNode(DKGMinersKey, dkgMinersList)
 	if err != nil {
 		Logger.Error("failed to restart dkg", zap.Any("error", err))

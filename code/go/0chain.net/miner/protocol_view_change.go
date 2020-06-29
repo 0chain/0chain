@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
+	"reflect"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -116,6 +118,118 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 	}
 }
 
+func makeSCRESTAPICall(address, relative, sharder string,
+	seri util.Serializable, collect chan util.Serializable) {
+
+	var err = httpclientutil.MakeSCRestAPICall(address, relative, nil,
+		[]string{sharder}, seri, 1)
+	if err != nil {
+		Logger.Error("requesting phase node from sharder",
+			zap.String("sharder", sharder),
+			zap.Error(err))
+	}
+	collect <- seri // regardless error
+}
+
+// is given reflect value zero (reflect.Value.IsZero added in go1.13)
+func isValueZero(v reflect.Value) bool {
+	switch v.Kind() {
+	case reflect.Bool:
+		return !v.Bool()
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return v.Int() == 0
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32,
+		reflect.Uint64, reflect.Uintptr:
+		return v.Uint() == 0
+	case reflect.Float32, reflect.Float64:
+		return math.Float64bits(v.Float()) == 0
+	case reflect.Complex64, reflect.Complex128:
+		c := v.Complex()
+		return math.Float64bits(real(c)) == 0 && math.Float64bits(imag(c)) == 0
+	case reflect.Array:
+		for i := 0; i < v.Len(); i++ {
+			if !isValueZero(v.Index(i)) {
+				return false
+			}
+		}
+		return true
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map,
+		reflect.Ptr, reflect.Slice, reflect.UnsafePointer:
+		return v.IsNil()
+	case reflect.String:
+		return v.Len() == 0
+	case reflect.Struct:
+		for i := 0; i < v.NumField(); i++ {
+			if !isValueZero(v.Field(i)) {
+				return false
+			}
+		}
+		return true
+	default:
+		panic("reflect.Value.IsZero")
+	}
+	return false
+}
+
+func isZero(val interface{}) bool {
+	if val == nil {
+		return true
+	}
+	var rval = reflect.ValueOf(val)
+	if isValueZero(rval) {
+		return true
+	}
+	if rval.Kind() == reflect.Ptr {
+		return isValueZero(rval.Elem())
+	}
+	return false
+}
+
+func mostConsensus(list []util.Serializable) (elem util.Serializable) {
+
+	type valueCount struct {
+		value util.Serializable
+		count int
+	}
+
+	var cons = make(map[string]*valueCount, len(list))
+	for _, val := range list {
+		var str = string(val.Encode())
+		if vc, ok := cons[str]; ok {
+			vc.count++
+		} else {
+			cons[str] = &valueCount{value: val, count: 1}
+		}
+	}
+
+	var most int
+	for _, vc := range cons {
+		if vc.count > most {
+			elem = vc.value // use this
+			most = vc.count // update
+		}
+	}
+	return
+}
+
+func getFromSharders(address, relative string, sharders []string,
+	newFunc func() util.Serializable,
+	rejectFunc func(seri util.Serializable) bool) (got util.Serializable) {
+
+	var collect = make(chan util.Serializable, len(sharders))
+	for _, sharder := range sharders {
+		go makeSCRESTAPICall(address, relative, sharder,
+			newFunc(), collect)
+	}
+	var list = make([]util.Serializable, 0, len(sharders))
+	for range sharders {
+		if val := <-collect; !isZero(val) && !rejectFunc(val) {
+			list = append(list, val) // don't add zero values
+		}
+	}
+	return mostConsensus(list)
+}
+
 func (mc *Chain) GetPhase(fromSharder bool) (*minersc.PhaseNode, error) {
 	pn := &minersc.PhaseNode{}
 	active := mc.ActiveInChain()
@@ -137,24 +251,41 @@ func (mc *Chain) GetPhase(fromSharder bool) (*minersc.PhaseNode, error) {
 		}
 	}
 
-	mb := mc.GetCurrentMagicBlock()
-	pnSharder := &minersc.PhaseNode{}
-	var sharders = mb.Sharders.N2NURLs()
-	err := httpclientutil.MakeSCRestAPICall(minersc.ADDRESS, scRestAPIGetPhase, nil, sharders, pnSharder, 1)
-	if err != nil {
-		return nil, err
+	var (
+		mb  = mc.GetCurrentMagicBlock()
+		got util.Serializable
+	)
+
+	got = getFromSharders(minersc.ADDRESS, scRestAPIGetPhase,
+		mb.Sharders.N2NURLs(), func() util.Serializable {
+			return new(minersc.PhaseNode)
+		}, func(val util.Serializable) bool {
+			if pn, ok := val.(*minersc.PhaseNode); ok {
+				if pn.StartRound < mb.StartingRound {
+					return true // reject
+				}
+				return false // keep
+			}
+			return true // reject
+		})
+
+	var phase, ok = got.(*minersc.PhaseNode)
+	if !ok {
+		return nil, common.NewError("get_dkg_phase_from_sharders",
+			"can't get, no phases given")
 	}
-	if active && (pn.Phase != pnSharder.Phase || pn.StartRound != pnSharder.StartRound) {
+
+	if active && (pn.Phase != phase.Phase || pn.StartRound != phase.StartRound) {
 		Logger.Warn("dkg_process -- phase in state does not match shader",
-			zap.Any("phase_state", pn.Phase), zap.Any("phase_sharder", pnSharder.Phase),
+			zap.Any("phase_state", pn.Phase), zap.Any("phase_sharder", phase.Phase),
 			zap.Any("start_round_state", pn.StartRound),
-			zap.Any("start_round_sharder", pnSharder.StartRound))
-		return pnSharder, nil
+			zap.Any("start_round_sharder", phase.StartRound))
+		return phase, nil
 	}
 	if active {
 		return pn, nil
 	}
-	return pnSharder, nil
+	return phase, nil
 }
 
 func (mc *Chain) DKGProcessStart() (*httpclientutil.Transaction, error) {
@@ -279,13 +410,31 @@ func (mc *Chain) GetDKGMiners() (*minersc.DKGMinerNodes, error) {
 		}
 
 	} else {
-		mb := mc.GetCurrentMagicBlock()
-		var sharders = mb.Sharders.N2NURLs()
-		err := httpclientutil.MakeSCRestAPICall(minersc.ADDRESS, scRestAPIGetDKGMiners, nil, sharders, dmn, 1)
-		if err != nil {
-			return nil, err
+		var (
+			mb  = mc.GetCurrentMagicBlock()
+			got util.Serializable
+			ok  bool
+		)
+
+		got = getFromSharders(minersc.ADDRESS, scRestAPIGetDKGMiners,
+			mb.Sharders.N2NURLs(), func() util.Serializable {
+				return new(minersc.DKGMinerNodes)
+			}, func(val util.Serializable) bool {
+				if dmn, ok := val.(*minersc.DKGMinerNodes); ok {
+					if dmn.StartRound < mb.StartingRound {
+						return true // reject
+					}
+					return false // keep
+				}
+				return true // reject
+			})
+
+		if dmn, ok = got.(*minersc.DKGMinerNodes); !ok {
+			return nil, common.NewError("get_dkg_miner_nodes_from_sharders",
+				"no DKG miner nodes given")
 		}
 	}
+
 	return dmn, nil
 }
 
@@ -306,11 +455,22 @@ func (mc *Chain) GetMinersMpks() (*block.Mpks, error) {
 			return nil, err
 		}
 	} else {
-		mb := mc.GetCurrentMagicBlock()
-		var sharders = mb.Sharders.N2NURLs()
-		err := httpclientutil.MakeSCRestAPICall(minersc.ADDRESS, scRestAPIGetMinersMPKS, nil, sharders, mpks, 1)
-		if err != nil {
-			return nil, err
+		var (
+			mb  = mc.GetCurrentMagicBlock()
+			got util.Serializable
+			ok  bool
+		)
+
+		got = getFromSharders(minersc.ADDRESS, scRestAPIGetMinersMPKS,
+			mb.Sharders.N2NURLs(), func() util.Serializable {
+				return block.NewMpks()
+			}, func(val util.Serializable) bool {
+				return false // keep all (how to reject old?)
+			})
+
+		if mpks, ok = got.(*block.Mpks); !ok {
+			return nil, common.NewError("get_mpks_from_sharders",
+				"no MPKs given")
 		}
 	}
 	return mpks, nil
@@ -335,7 +495,8 @@ func (mc *Chain) GetFinalizedMagicBlock() (*block.MagicBlock, error) {
 	} else {
 		mbs := mc.GetLatestFinalizedMagicBlockFromSharder(common.GetRootContext())
 		if len(mbs) == 0 {
-			return nil, common.NewError("failed to get magic block", "no magic block available")
+			return nil, common.NewError("failed to get magic block",
+				"no magic block available")
 		}
 		if len(mbs) > 1 {
 			sort.Slice(mbs, func(i, j int) bool {
@@ -366,14 +527,28 @@ func (mc *Chain) GetMagicBlockFromSC() (*block.MagicBlock, error) {
 			return nil, err
 		}
 	} else {
-		mb := mc.GetCurrentMagicBlock()
 		var (
-			sharders = mb.Sharders.N2NURLs()
-			err      error
+			mb  = mc.GetCurrentMagicBlock()
+			got util.Serializable
+			ok  bool
 		)
-		err = httpclientutil.MakeSCRestAPICall(minersc.ADDRESS, scRestAPIGetMagicBlock, nil, sharders, magicBlock, 1)
-		if err != nil {
-			return nil, err
+
+		got = getFromSharders(minersc.ADDRESS, scRestAPIGetMagicBlock,
+			mb.Sharders.N2NURLs(), func() util.Serializable {
+				return block.NewMagicBlock()
+			}, func(val util.Serializable) bool {
+				if mx, ok := val.(*block.MagicBlock); ok {
+					if mx.StartingRound < mb.StartingRound {
+						return true // reject
+					}
+					return false // keep
+				}
+				return true // reject
+			})
+
+		if magicBlock, ok = got.(*block.MagicBlock); !ok {
+			return nil, common.NewError("get_magic_block_from_sharders",
+				"no magic block given")
 		}
 	}
 	return magicBlock, nil
