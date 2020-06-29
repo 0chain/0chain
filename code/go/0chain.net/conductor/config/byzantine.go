@@ -55,7 +55,7 @@ func (b *Bad) IsBad(state Namer, id string) bool {
 
 // IsBy returns true if given name is in By list.
 func (b *Bad) IsBy(state Namer, id string) bool {
-	return isInList(b.By, state.Name(NodeID(id)))
+	return b != nil && isInList(b.By, state.Name(NodeID(id)))
 }
 
 // IsCompetingRoundGenerator returns true for a group competing block generator.
