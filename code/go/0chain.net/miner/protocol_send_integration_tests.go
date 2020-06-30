@@ -11,6 +11,7 @@ import (
 	"0chain.net/chaincore/round"
 
 	crpc "0chain.net/conductor/conductrpc"
+	crpcutils "0chain.net/conductor/utils"
 )
 
 func getBadVRFS(vrfs *round.VRFShare) (bad *round.VRFShare) {
@@ -40,10 +41,11 @@ func (mc *Chain) SendVRFShare(ctx context.Context, vrfs *round.VRFShare) {
 	switch {
 	case state.VRFS != nil:
 		badVRFS = getBadVRFS(vrfs)
-		good, bad = state.Split(state.VRFS, mb.Miners.CopyNodes())
+		good, bad = crpcutils.Split(state, state.VRFS, mb.Miners.CopyNodes())
 	case state.RoundTimeout != nil:
 		badVRFS = withTimeout(vrfs, vrfs.RoundTimeoutCount+1) // just increase
-		good, bad = state.Split(state.RoundTimeout, mb.Miners.CopyNodes())
+		good, bad = crpcutils.Split(state, state.RoundTimeout,
+			mb.Miners.CopyNodes())
 	default:
 		good = mb.Miners.CopyNodes() // all good
 	}
@@ -81,12 +83,11 @@ func getBadBVTKey(ctx context.Context, b *block.Block) (
 	bad.BlockID = b.Hash
 	bad.Round = b.Round
 	var (
-		state = crpc.Client().State()
-		self  = node.GetSelfNode(ctx)
-		err   error
+		self = node.GetSelfNode(ctx)
+		err  error
 	)
 	bad.VerifierID = self.Underlying().GetKey()
-	bad.Signature, err = state.Sign(b.Hash) // wrong private key
+	bad.Signature, err = crpcutils.Sign(b.Hash) // wrong private key
 	if err != nil {
 		panic(err)
 	}
@@ -136,12 +137,12 @@ func (mc *Chain) SendVerificationTicket(ctx context.Context, b *block.Block,
 	case state.WrongVerificationTicketHash != nil:
 		// (wrong hash)
 		badvt = getBadBVTHash(ctx, b)
-		good, bad = state.Split(state.WrongVerificationTicketHash,
+		good, bad = crpcutils.Split(state, state.WrongVerificationTicketHash,
 			mb.Miners.CopyNodes())
 	case state.WrongVerificationTicketKey != nil:
 		// (wrong secret key)
 		badvt = getBadBVTKey(ctx, b)
-		good, bad = state.Split(state.WrongVerificationTicketKey,
+		good, bad = crpcutils.Split(state, state.WrongVerificationTicketKey,
 			mb.Miners.CopyNodes())
 	default:
 	}

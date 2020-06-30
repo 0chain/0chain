@@ -1,9 +1,6 @@
 package conductrpc
 
 import (
-	"0chain.net/chaincore/node"
-	"0chain.net/core/encryption"
-
 	"0chain.net/conductor/config"
 )
 
@@ -47,26 +44,6 @@ type State struct {
 	Shares     *config.Bad
 	Signatures *config.Bad
 	Publish    *config.Bad
-
-	// persistent (persistent fields)
-	signature encryption.SignatureScheme
-}
-
-func (s *State) Update(prev *State) {
-	if prev != nil && prev.signature != nil {
-		s.signature = prev.signature // keep signature scheme unchanged
-		return
-	}
-	s.signature = encryption.NewBLS0ChainScheme()
-	var err error
-	if err = s.signature.GenerateKeys(); err != nil {
-		panic(err)
-	}
-}
-
-// Sign by internal ("wrong") secret key generated randomly once client created.
-func (s *State) Sign(hash string) (sign string, err error) {
-	return s.signature.Sign(hash)
 }
 
 // Name returns NodeName by given NodeID.
@@ -92,30 +69,6 @@ type IsGoodBader interface {
 	IsBad(state config.Namer, id string) bool
 }
 
-// Split nodes list by given IsGoodBader.
-func (s *State) Split(igb IsGoodBader, nodes []*node.Node) (
-	good, bad []*node.Node) {
-
-	for _, n := range nodes {
-		if igb.IsBad(s, n.GetKey()) {
-			bad = append(bad, n)
-		} else if igb.IsGood(s, n.GetKey()) {
-			good = append(good, n)
-		}
-	}
-	return
-}
-
 type IsByer interface {
 	IsBy(state config.Namer, id string) bool
-}
-
-// Filter return IsBy nodes only.
-func (s *State) Filter(ib IsByer, nodes []*node.Node) (rest []*node.Node) {
-	for _, n := range nodes {
-		if ib.IsBy(s, n.GetKey()) {
-			rest = append(rest, n)
-		}
-	}
-	return
 }

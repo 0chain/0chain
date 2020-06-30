@@ -24,6 +24,7 @@ import (
 	"go.uber.org/zap"
 
 	crpc "0chain.net/conductor/conductrpc"
+	crpcutils "0chain.net/conductor/utils"
 )
 
 func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (
@@ -56,7 +57,7 @@ func (mc *Chain) hashAndSignGeneratedBlock(ctx context.Context,
 	case state.WrongBlockSignHash != nil:
 		b.Signature, err = self.Sign(revertString(b.Hash)) // sign another hash
 	case state.WrongBlockSignKey != nil:
-		b.Signature, err = state.Sign(b.Hash) // wrong secret key
+		b.Signature, err = crpcutils.Sign(b.Hash) // wrong secret key
 	default:
 		b.Signature, err = self.Sign(b.Hash)
 	}

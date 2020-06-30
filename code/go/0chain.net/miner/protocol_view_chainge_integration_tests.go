@@ -21,6 +21,7 @@ import (
 	"go.uber.org/zap"
 
 	crpc "0chain.net/conductor/conductrpc" // integration tests
+	crpcutils "0chain.net/conductor/utils"
 )
 
 func revertString(s string) string {
@@ -241,8 +242,9 @@ func (mc *Chain) ContributeMpk() (txn *httpclientutil.Transaction, err error) {
 	}
 
 	var (
-		state             = crpc.Client().State()
-		good, bad         = state.Split(state.MPK, magicBlock.Miners.Nodes)
+		state     = crpc.Client().State()
+		good, bad = crpcutils.Split(state, state.MPK,
+			magicBlock.Miners.Nodes)
 		goodurls, badurls = getBaseN2NURLs(good), getBaseN2NURLs(bad)
 		badMPK            = getBadMPK(mpk)
 	)
