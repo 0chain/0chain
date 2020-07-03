@@ -18,6 +18,74 @@ import (
 	"0chain.net/core/util"
 )
 
+// A userStakePools collects stake pools references for a user.
+type userStakePools struct {
+	// Pools is map blobber_id -> []pool_id.
+	Pools map[datastore.Key][]datastore.Key `json:"pools"`
+}
+
+func newUserStakePools() (usp *userStakePools) {
+	usp = new(userStakePools)
+	usp.Pools = make(map[datastore.Key][]datastore.Key)
+	return
+}
+
+// add or overwrite
+func (usp *userStakePools) add(blobberID, poolID datastore.Key) {
+	usp.Pools[blobberID] = append(usp.Pools[blobberID], poolID)
+}
+
+// delete by id
+func (usp *userStakePools) del(blobberID, poolID datastore.Key) (empty bool) {
+	var (
+		list = usp.Pools[blobberID]
+		i    int
+	)
+	for _, id := range list {
+		if id == poolID {
+			continue
+		}
+		list[i], i = id, i+1
+	}
+	list = list[:i]
+	if len(list) == 0 {
+		delete(usp.Pools, blobberID)
+	}
+	return len(usp.Pools) == 0
+}
+
+func (usp *userStakePools) Encode() []byte {
+	var p, err = json.Marshal(usp)
+	if err != nil {
+		panic(err) // must never happen
+	}
+	return p
+}
+
+func (usp *userStakePools) Decode(p []byte) error {
+	return json.Unmarshal(p, usp)
+}
+
+// save the user stake pools
+func (usp *userStakePools) save(scKey, clientID datastore.Key,
+	balances chainstate.StateContextI) (err error) {
+
+	_, err = balances.InsertTrieNode(userStakePoolsKey(scKey, clientID), usp)
+	return
+}
+
+// remove the entire user stake pools node
+func (usp *userStakePools) remove(scKey, clientID datastore.Key,
+	balances chainstate.StateContextI) (err error) {
+
+	_, err = balances.DeleteTrieNode(userStakePoolsKey(scKey, clientID))
+	return
+}
+
+func userStakePoolsKey(scKey, clientID datastore.Key) datastore.Key {
+	return datastore.Key(scKey + ":stakepool:userpools:" + clientID)
+}
+
 // offerPool represents stake tokens of a blobber locked
 // for an allocation, it required for cases where blobber
 // changes terms or changes its capacity including reducing
@@ -143,13 +211,14 @@ func (sp *stakePool) isAllowed(id datastore.Key) bool {
 
 // add delegate wallet
 func (sp *stakePool) dig(t *transaction.Transaction,
-	balances chainstate.StateContextI) (resp string, err error) {
+	balances chainstate.StateContextI) (
+	resp string, dp *delegatePool, err error) {
 
 	if err = checkFill(t, balances); err != nil {
 		return
 	}
 
-	var dp = new(delegatePool)
+	dp = new(delegatePool)
 
 	var transfer *state.Transfer
 	if transfer, resp, err = dp.DigPool(t.Hash, t); err != nil {
@@ -540,6 +609,57 @@ func (stat *stakePoolStat) decode(input []byte) error {
 // smart contract methods
 //
 
+// user stake pools (e.g. user delegate pools)
+//
+
+// getUserStakePoolBytes of a client
+func (ssc *StorageSmartContract) getUserStakePoolBytes(clientID datastore.Key,
+	balances chainstate.StateContextI) (b []byte, err error) {
+
+	var val util.Serializable
+	val, err = balances.GetTrieNode(userStakePoolsKey(ssc.ID, clientID))
+	if err != nil {
+		return
+	}
+	return val.Encode(), nil
+}
+
+// getUserStakePool of given client
+func (ssc *StorageSmartContract) getUserStakePool(clientID datastore.Key,
+	balances chainstate.StateContextI) (usp *userStakePools, err error) {
+
+	var poolb []byte
+	if poolb, err = ssc.getUserStakePoolBytes(clientID, balances); err != nil {
+		return
+	}
+	usp = newUserStakePools()
+	err = usp.Decode(poolb)
+	return
+}
+
+// getOrCreateUserStakePool of given client
+func (ssc *StorageSmartContract) getOrCreateUserStakePool(
+	clientID datastore.Key, balances chainstate.StateContextI) (
+	usp *userStakePools, err error) {
+
+	var poolb []byte
+	poolb, err = ssc.getUserStakePoolBytes(clientID, balances)
+	if err != nil && err != util.ErrNodeNotFound {
+		return
+	}
+
+	if err == util.ErrNodeNotFound {
+		return newUserStakePools(), nil
+	}
+
+	usp = newUserStakePools()
+	err = usp.Decode(poolb)
+	return
+}
+
+// blobber's and validator's stake pool
+//
+
 // getStakePoolBytes of a blobber
 func (ssc *StorageSmartContract) getStakePoolBytes(blobberID datastore.Key,
 	balances chainstate.StateContextI) (b []byte, err error) {
@@ -564,6 +684,9 @@ func (ssc *StorageSmartContract) getStakePool(blobberID datastore.Key,
 	err = sp.Decode(poolb)
 	return
 }
+
+// initial or successive method should be used by add_blobber/add_validator
+// SC functions
 
 // get existing stake pool or create new one not saving it
 func (ssc *StorageSmartContract) getOrCreateStakePool(conf *scConfig,
@@ -624,7 +747,6 @@ func (ssc *StorageSmartContract) updateSakePoolOffer(ba *BlobberAllocation,
 	}
 
 	return
-
 }
 
 type stakePoolRequest struct {
@@ -687,9 +809,24 @@ func (ssc *StorageSmartContract) stakePoolLock(t *transaction.Transaction,
 			"saving configurations: "+err.Error())
 	}
 
-	if resp, err = sp.dig(t, balances); err != nil {
+	var dp *delegatePool // created delegate pool
+	if resp, dp, err = sp.dig(t, balances); err != nil {
 		return "", common.NewError("stake_pool_lock_failed",
 			"stake pool digging error: "+err.Error())
+	}
+
+	// add to user pools
+	var usp *userStakePools
+	usp, err = ssc.getOrCreateUserStakePool(t.ClientID, balances)
+	if err != nil {
+		return "", common.NewError("stake_pool_lock_failed",
+			"can't get user pools list: "+err.Error())
+	}
+	usp.add(spr.BlobberID, dp.ID) // add the new delegate pool
+
+	if err = usp.save(ssc.ID, t.ClientID, balances); err != nil {
+		return "", common.NewError("stake_pool_lock_failed",
+			"saving user pools: "+err.Error())
 	}
 
 	if err = sp.save(ssc.ID, spr.BlobberID, balances); err != nil {
@@ -740,10 +877,28 @@ func (ssc *StorageSmartContract) stakePoolUnlock(t *transaction.Transaction,
 			"saving configuration: "+err.Error())
 	}
 
+	var usp *userStakePools
+	usp, err = ssc.getUserStakePool(t.ClientID, balances)
+	if err != nil {
+		return "", common.NewError("stake_pool_unlock_failed",
+			"can't get related user stake pools: "+err.Error())
+	}
+
 	resp, err = sp.empty(ssc.ID, spr.PoolID, t.ClientID, info, balances)
 	if err != nil {
 		return "", common.NewError("stake_pool_unlock_failed",
 			"unlocking tokens: "+err.Error())
+	}
+
+	if !usp.del(spr.BlobberID, spr.PoolID) {
+		err = usp.save(ssc.ID, t.ClientID, balances)
+	} else {
+		err = usp.remove(ssc.ID, t.ClientID, balances)
+	}
+
+	if err != nil {
+		return "", common.NewError("stake_pool_unlock_failed",
+			"saving user pools: "+err.Error())
 	}
 
 	// save the pool
@@ -834,4 +989,67 @@ func (ssc *StorageSmartContract) getStakePoolStatHandler(ctx context.Context,
 	}
 
 	return sp.stat(conf, ssc.ID, common.Now(), blobber), nil
+}
+
+type userPoolStat struct {
+	Pools map[datastore.Key][]*delegatePoolStat `json:"pools"`
+}
+
+// user oriented statistic
+func (ssc *StorageSmartContract) getUserStakePoolStatHandler(ctx context.Context,
+	params url.Values, balances chainstate.StateContextI) (
+	resp interface{}, err error) {
+
+	var (
+		clientID = datastore.Key(params.Get("client_id"))
+		now      = common.Now()
+		conf     *scConfig
+		usp      *userStakePools
+	)
+
+	if conf, err = ssc.getConfig(balances, false); err != nil {
+		return nil, fmt.Errorf("can't get SC configurations: %v", err)
+	}
+
+	var (
+		rate   = conf.StakePool.InterestRate
+		period = toSeconds(conf.StakePool.InterestInterval)
+	)
+
+	usp, err = ssc.getUserStakePool(clientID, balances)
+	if err != nil {
+		return nil, fmt.Errorf("can't get user stake pools: %v", err)
+	}
+
+	var ups = new(userPoolStat)
+	ups.Pools = make(map[datastore.Key][]*delegatePoolStat)
+
+	for blobberID, poolIDs := range usp.Pools {
+
+		var sp *stakePool
+		if sp, err = ssc.getStakePool(blobberID, balances); err != nil {
+			return nil, fmt.Errorf("can't get related stake pool: %v", err)
+		}
+
+		for _, id := range poolIDs {
+			var dp, ok = sp.Pools[id]
+			if !ok {
+				return nil, errors.New("invalid state: missing delegate pool")
+			}
+			var dps = delegatePoolStat{
+				ID:         dp.ID,
+				Balance:    dp.Balance,
+				DelegateID: dp.DelegateID,
+				Interests:  dp.Interests,
+				Rewards:    dp.Rewards,
+				Penalty:    dp.Penalty,
+			}
+			if conf.canMint() {
+				dps.PendingInterests = sp.interests(dp, now, rate, period)
+			}
+			ups.Pools[blobberID] = append(ups.Pools[blobberID], &dps)
+		}
+	}
+
+	return ups, nil
 }
