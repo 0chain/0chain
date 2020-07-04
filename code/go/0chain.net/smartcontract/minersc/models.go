@@ -387,7 +387,7 @@ type SimpleNode struct {
 	Stat Stat `json:"stat"`
 
 	// NodeType used for delegate pools statistic.
-	NodeType `json:"node_type,omitempty"`
+	NodeType NodeType `json:"node_type,omitempty"`
 }
 
 func (smn *SimpleNode) Encode() []byte {
