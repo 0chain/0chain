@@ -114,6 +114,8 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 			"miner already exists")
 	}
 
+	newMiner.NodeType = NodeTypeMiner // set node type
+
 	// add to all miners list
 	all.Nodes = append(all.Nodes, newMiner)
 	if _, err = balances.InsertTrieNode(AllMinersKey, all); err != nil {
@@ -122,7 +124,6 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	}
 
 	// set node type -- miner
-	newMiner.NodeType = NodeTypeMiner
 	if err = newMiner.save(balances); err != nil {
 		return "", common.NewError("failed to add miner", err.Error())
 	}
