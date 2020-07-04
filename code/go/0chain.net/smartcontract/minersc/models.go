@@ -482,19 +482,36 @@ func (ps *poolStat) decode(input []byte) error {
 	return json.Unmarshal(input, ps)
 }
 
-type nodeTypeID struct {
-	NodeID   datastore.Key `json:"node_id"`
-	NodeType NodeType      `json:"node_type"`
+type delegatePoolStat struct {
+	ID           datastore.Key `json:"id"`            // pool ID
+	Balance      state.Balance `json:"balance"`       //
+	InterestPaid state.Balance `json:"interest_paid"` //
+	RewardPaid   state.Balance `json:"reward_paid"`   //
+	Status       string        `json:"status"`        //
+	High         state.Balance `json:"high"`          // }
+	Low          state.Balance `json:"low"`           // }
+}
+
+func newDelegatePoolStat(dp *sci.DelegatePool) (dps *delegatePoolStat) {
+	dps = new(delegatePoolStat)
+	dps.ID = dp.ID
+	dps.Balance = dp.Balance
+	dps.InterestPaid = dp.InterestPaid
+	dps.RewardPaid = dp.RewardPaid
+	dps.Status = dp.Status
+	dps.High = dp.High
+	dps.Low = dp.Low
+	return
 }
 
 // A userPools represents response for user pools requests.
 type userPools struct {
-	Pools map[nodeTypeID][]*sci.DelegatePool `json:"pools"`
+	Pools map[string][]*delegatePoolStat `json:"pools"`
 }
 
 func newUserPools() (ups *userPools) {
 	ups = new(userPools)
-	ups.Pools = make(map[nodeTypeID][]*sci.DelegatePool)
+	ups.Pools = make(map[string][]*delegatePoolStat)
 	return
 }
 

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/url"
 
+	"encoding/json"
+
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 
@@ -32,17 +34,16 @@ func (msc *MinerSmartContract) GetUserPoolsHandler(ctx context.Context,
 		if mn, err = msc.getMinerNode(nodeID, balances); err != nil {
 			return nil, fmt.Errorf("can't get node %s: %v", nodeID, err)
 		}
-		var nit = nodeTypeID{
-			NodeID:   mn.ID,
-			NodeType: mn.NodeType,
-		}
+		var nit = mn.ID + " (" + mn.NodeType.String() + ")"
 		for _, id := range poolIDs {
 			var dp, ok = mn.Pending[id]
 			if ok {
-				ups.Pools[nit] = append(ups.Pools[nit], dp)
+				ups.Pools[nit] = append(ups.Pools[nit],
+					newDelegatePoolStat(dp))
 			}
 			if dp, ok = mn.Active[id]; ok {
-				ups.Pools[nit] = append(ups.Pools[nit], dp)
+				ups.Pools[nit] = append(ups.Pools[nit],
+					newDelegatePoolStat(dp))
 			}
 		}
 	}
