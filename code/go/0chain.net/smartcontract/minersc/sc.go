@@ -74,7 +74,6 @@ func (msc *MinerSmartContract) SetSC(sc *sci.SmartContract, bcContext sci.BCCont
 	msc.SmartContract = sc
 	msc.SmartContract.RestHandlers["/getNodepool"] = msc.GetNodepoolHandler
 	msc.SmartContract.RestHandlers["/getUserPools"] = msc.GetUserPoolsHandler
-	msc.SmartContract.RestHandlers["/getPoolsStats"] = msc.GetPoolStatsHandler
 	msc.SmartContract.RestHandlers["/getMinerList"] = msc.GetMinerListHandler
 	msc.SmartContract.RestHandlers["/getSharderList"] = msc.GetSharderListHandler
 	msc.SmartContract.RestHandlers["/getSharderKeepList"] = msc.GetSharderKeepListHandler

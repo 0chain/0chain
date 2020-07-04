@@ -96,6 +96,7 @@ func (msc *MinerSmartContract) AddSharder(t *transaction.Transaction,
 	// add to all
 	all.Nodes = append(all.Nodes, newSharder)
 	// save the added sharder
+	newSharder.NodeType = NodeTypeSharder
 	_, err = balances.InsertTrieNode(newSharder.getKey(), newSharder)
 	if err != nil {
 		return "", common.NewErrorf("add_sharder",

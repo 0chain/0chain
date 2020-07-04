@@ -69,7 +69,6 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 		DeleteViewChangeSet: false,
 	}
 	pool.DelegateID = t.ClientID
-	pool.InterestRate = gn.InterestRate
 	pool.Status = PENDING
 
 	Logger.Info("add delegate pool", zap.Any("pool", pool))
@@ -85,10 +84,7 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 	}
 
 	// user node pool information
-	un.Pools[t.Hash] = &poolInfo{
-		MinerID: mn.ID,
-		Balance: transfer.Amount,
-	}
+	un.Pools[mn.ID] = append(un.Pools[mn.ID], t.Hash)
 
 	// add to pending making it active next VC
 	mn.Pending[t.Hash] = pool

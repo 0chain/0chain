@@ -50,7 +50,44 @@ func (msc *MinerSmartContract) payInterests(mn *MinerNode, gn *globalNode,
 			return common.NewErrorf("pay_fees/pay_interests",
 				"error adding mint for stake %v-%v: %v", mn.ID, pool.ID, err)
 		}
-		msc.addMint(gn, mint.Amount)
+		msc.addMint(gn, mint.Amount) //
+		pool.AddInterests(amount)    // stat
+	}
+
+	return
+}
+
+// LRU cache in action.
+func (msc *MinerSmartContract) deletePoolFromUserNode(delegateID, nodeID,
+	poolID string, balances cstate.StateContextI) (err error) {
+
+	var un *UserNode
+	if un, err = msc.getUserNode(delegateID, balances); err != nil {
+		return fmt.Errorf("getting user node: %v", err)
+	}
+
+	var pools, ok = un.Pools[nodeID]
+	if !ok {
+		return // not found (invalid state?)
+	}
+
+	var i int
+	for _, id := range pools {
+		if id == poolID {
+			continue
+		}
+		pools[i], i = id, i+1
+	}
+	pools = pools[:i]
+
+	if len(pools) == 0 {
+		delete(un.Pools, nodeID) // delete empty
+	} else {
+		un.Pools[nodeID] = pools // update
+	}
+
+	if err = un.save(balances); err != nil {
+		return fmt.Errorf("saving user node: %v", err)
 	}
 
 	return
@@ -72,15 +109,7 @@ func (msc *MinerSmartContract) emptyPool(mn *MinerNode,
 		return "", fmt.Errorf("adding transfer: %v", err)
 	}
 
-	// delete fro muser node
-	var un *UserNode
-	if un, err = msc.getUserNode(pool.DelegateID, balances); err != nil {
-		return "", fmt.Errorf("getting user node: %v", err)
-	}
-	delete(un.Pools, pool.ID)
-	if err = un.save(balances); err != nil {
-		return "", fmt.Errorf("saving user node: %v", err)
-	}
+	err = msc.deletePoolFromUserNode(pool.DelegateID, mn.ID, pool.ID, balances)
 	return
 }
 
@@ -367,16 +396,7 @@ func (msc *MinerSmartContract) mintStakeHolders(value state.Balance,
 			continue
 		}
 		msc.addMint(gn, mint.Amount)
-
-		pool.TotalPaid += mint.Amount
-
-		if pool.High < mint.Amount {
-			pool.High = mint.Amount
-		}
-
-		if pool.Low == -1 || pool.Low > mint.Amount {
-			pool.Low = mint.Amount
-		}
+		pool.AddRewards(userMint)
 
 		resp += string(mint.Encode())
 	}
@@ -419,17 +439,7 @@ func (msc *MinerSmartContract) payStakeHolders(value state.Balance,
 			return "", fmt.Errorf("adding transfer: %v", err)
 		}
 
-		pool.TotalPaid += transfer.Amount
-		pool.NumRounds++
-
-		if pool.High < transfer.Amount {
-			pool.High = transfer.Amount
-		}
-
-		if pool.Low == -1 || pool.Low > transfer.Amount {
-			pool.Low = transfer.Amount
-		}
-
+		pool.AddRewards(userFee)
 		resp += string(transfer.Encode())
 	}
 

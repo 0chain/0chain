@@ -8,52 +8,46 @@ import (
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/state"
-	"0chain.net/core/common"
 
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
+// user oriented pools requests handler
 func (msc *MinerSmartContract) GetUserPoolsHandler(ctx context.Context,
-	params url.Values, balances cstate.StateContextI) (interface{}, error) {
+	params url.Values, balances cstate.StateContextI) (
+	resp interface{}, err error) {
 
-	un, err := msc.getUserNode(params.Get("client_id"), balances)
-	if err != nil {
-		return nil, err
+	var (
+		clientID = params.Get("client_id")
+		un       *UserNode
+	)
+	if un, err = msc.getUserNode(clientID, balances); err != nil {
+		return nil, fmt.Errorf("can't get user node: %v", err)
 	}
-	var totalInvested state.Balance
-	for _, p := range un.Pools {
-		totalInvested += p.Balance
-	}
-	var response userResponse
-	for key, pool := range un.Pools {
-		stakePercent := float64(pool.Balance) / float64(totalInvested)
-		response.Pools = append(response.Pools, &userPoolsResponse{poolInfo: pool, StakeDiversity: stakePercent, PoolID: key})
 
+	var ups = newUserPools()
+	for nodeID, poolIDs := range un.Pools {
+		var mn *MinerNode
+		if mn, err = msc.getMinerNode(nodeID, balances); err != nil {
+			return nil, fmt.Errorf("can't get node %s: %v", nodeID, err)
+		}
+		var nit = nodeTypeID{
+			NodeID:   mn.ID,
+			NodeType: mn.NodeType,
+		}
+		for _, id := range poolIDs {
+			var dp, ok = mn.Pending[id]
+			if ok {
+				ups.Pools[nit] = append(ups.Pools[nit], dp)
+			}
+			if dp, ok = mn.Active[id]; ok {
+				ups.Pools[nit] = append(ups.Pools[nit], dp)
+			}
+		}
 	}
-	return response, nil
-}
 
-func (msc *MinerSmartContract) GetPoolStatsHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
-	mn, err := msc.getMinerNode(params.Get("miner_id"), balances)
-	if err != nil {
-		return nil, err
-	}
-	pool, ok := mn.Active[params.Get("pool_id")]
-	if !ok {
-		return nil, common.NewError("failed to get pool",
-			"pool doesn't exist in miner pools")
-	}
-	pool, ok = mn.Pending[params.Get("pool_id")]
-	if ok {
-		return pool.PoolStats, nil
-	}
-	pool, ok = mn.Deleting[params.Get("pool_id")]
-	if ok {
-		return pool.PoolStats, nil
-	}
-	return nil, common.NewError("failed to get stats", "pool doesn't exist")
+	return ups, nil
 }
 
 //REST API Handlers

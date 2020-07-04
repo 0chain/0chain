@@ -49,7 +49,9 @@ func (usp *userStakePools) del(blobberID, poolID datastore.Key) (empty bool) {
 	}
 	list = list[:i]
 	if len(list) == 0 {
-		delete(usp.Pools, blobberID)
+		delete(usp.Pools, blobberID) // delete empty
+	} else {
+		usp.Pools[blobberID] = list // update
 	}
 	return len(usp.Pools) == 0
 }

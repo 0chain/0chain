@@ -301,6 +301,54 @@ func (mn *MinerNode) orderedActivePools() (ops []*sci.DelegatePool) {
 	return
 }
 
+// NodeType used in pools statistic.
+type NodeType int
+
+// known node types of the Miner SC
+const (
+	NodeTypeUnknown NodeType = iota // unknown (zero)
+	NodeTypeMiner                   // miner node
+	NodeTypeSharder                 // sharder node
+)
+
+// String converted NodeType to string.
+func (nt NodeType) String() string {
+	switch nt {
+	case NodeTypeUnknown:
+		return "unknown"
+	case NodeTypeMiner:
+		return "miner"
+	case NodeTypeSharder:
+		return "sharder"
+	default:
+		return fmt.Sprintf("unknown node type: %d", int(nt))
+	}
+}
+
+// MarshalJSON converts NodeType to appropriate JSON
+// value represented as string.
+func (nt NodeType) MarshalJSON() (p []byte, err error) {
+	return json.Marshal(nt.String())
+}
+
+// UnmarsalJOSN converts JOSN value back to NodeType.
+func (nt *NodeType) UnmarshalJSON(p []byte) (err error) {
+	var nts string
+	if err = json.Unmarshal(p, &nts); err != nil {
+		return
+	}
+	switch nts {
+	case "unknown":
+		(*nt) = NodeTypeUnknown
+	case "miner":
+		(*nt) = NodeTypeMiner
+	case "sharder":
+		(*nt) = NodeTypeSharder
+	default:
+	}
+	return fmt.Errorf("unknown node type: %q", nts)
+}
+
 type Stat struct {
 	// for miner (totals)
 	GeneratorRewards state.Balance `json:"generator_rewards,omitempty"`
@@ -337,6 +385,9 @@ type SimpleNode struct {
 
 	// Stat contains node statistic.
 	Stat Stat `json:"stat"`
+
+	// NodeType used for delegate pools statistic.
+	NodeType `json:"node_type,omitempty"`
 }
 
 func (smn *SimpleNode) Encode() []byte {
@@ -430,13 +481,30 @@ func (ps *poolStat) decode(input []byte) error {
 	return json.Unmarshal(input, ps)
 }
 
+type nodeTypeID struct {
+	NodeID   datastore.Key `json:"node_id"`
+	NodeType NodeType      `json:"node_type"`
+}
+
+// A userPools represents response for user pools requests.
+type userPools struct {
+	Pools map[nodeTypeID][]*sci.DelegatePool `json:"pools"`
+}
+
+func newUserPools() (ups *userPools) {
+	ups = new(userPools)
+	ups.Pools = make(map[nodeTypeID][]*sci.DelegatePool)
+	return
+}
+
+// UserNode keeps references to all user's pools.
 type UserNode struct {
-	ID    string               `json:"id"`
-	Pools map[string]*poolInfo `json:"pool_map"`
+	ID    string                            `json:"id"`       // client ID
+	Pools map[datastore.Key][]datastore.Key `json:"pool_map"` // node_id -> [pool_id]
 }
 
 func NewUserNode() *UserNode {
-	return &UserNode{Pools: make(map[string]*poolInfo)}
+	return &UserNode{Pools: make(map[datastore.Key][]datastore.Key)}
 }
 
 func (un *UserNode) save(balances cstate.StateContextI) (err error) {
@@ -475,12 +543,6 @@ func (un *UserNode) GetHashBytes() []byte {
 	return encryption.RawHash(un.Encode())
 }
 
-type poolInfo struct {
-	PoolID  string        `json:"pool_id"`
-	MinerID string        `json:"miner_id"`
-	Balance state.Balance `json:"balance"`
-}
-
 type deletePool struct {
 	MinerID string `json:"id"`
 	PoolID  string `json:"pool_id"`
@@ -493,25 +555,6 @@ func (dp *deletePool) Encode() []byte {
 
 func (dp *deletePool) Decode(input []byte) error {
 	return json.Unmarshal(input, dp)
-}
-
-type userPoolsResponse struct {
-	*poolInfo
-	StakeDiversity float64 `json:"stake_diversity"`
-	PoolID         string  `json:"pool_id"`
-}
-
-type userResponse struct {
-	Pools []*userPoolsResponse `json:"pools"`
-}
-
-func (ur *userResponse) Encode() []byte {
-	buff, _ := json.Marshal(ur)
-	return buff
-}
-
-func (ur *userResponse) Decode(input []byte) error {
-	return json.Unmarshal(input, ur)
 }
 
 type PhaseNode struct {

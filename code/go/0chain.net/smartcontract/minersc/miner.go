@@ -121,6 +121,8 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 			"saving all miners list: %v", err)
 	}
 
+	// set node type -- miner
+	newMiner.NodeType = NodeTypeMiner
 	if err = newMiner.save(balances); err != nil {
 		return "", common.NewError("failed to add miner", err.Error())
 	}
