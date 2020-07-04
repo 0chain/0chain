@@ -345,8 +345,9 @@ func (nt *NodeType) UnmarshalJSON(p []byte) (err error) {
 	case "sharder":
 		(*nt) = NodeTypeSharder
 	default:
+		err = fmt.Errorf("unknown node type: %q", nts)
 	}
-	return fmt.Errorf("unknown node type: %q", nts)
+	return
 }
 
 type Stat struct {

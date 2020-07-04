@@ -590,7 +590,8 @@ func (msc *MinerSmartContract) getMinersDKGList(statectx cstate.StateContextI) (
 	allMinersList := NewDKGMinerNodes()
 	allMinersBytes, err := statectx.GetTrieNode(DKGMinersKey)
 	if err != nil && err != util.ErrValueNotPresent {
-		return nil, errors.New("getMinersList_failed - Failed to retrieve existing miners list")
+		return nil, errors.New("get_miners_dkg_list_failed - " +
+			"failed to retrieve existing miners list: " + err.Error())
 	}
 	if allMinersBytes == nil {
 		return allMinersList, nil

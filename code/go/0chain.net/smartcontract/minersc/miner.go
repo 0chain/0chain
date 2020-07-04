@@ -205,7 +205,8 @@ func (msc *MinerSmartContract) verifyMinerState(balances cstate.StateContextI,
 
 	allMinersList, err := msc.getMinersList(balances)
 	if err != nil {
-		Logger.Info(msg + " getMinersList_failed - Failed to retrieve existing miners list")
+		Logger.Info(msg + " (verifyMinerState) getMinersList_failed - " +
+			"Failed to retrieve existing miners list: " + err.Error())
 		return
 	}
 	if allMinersList == nil || len(allMinersList.Nodes) == 0 {
@@ -236,7 +237,8 @@ func (msc *MinerSmartContract) getMinersList(balances cstate.StateContextI) (
 	all = new(MinerNodes)
 	allMinersBytes, err := balances.GetTrieNode(AllMinersKey)
 	if err != nil && err != util.ErrValueNotPresent {
-		return nil, errors.New("getMinersList_failed - Failed to retrieve existing miners list")
+		return nil, errors.New("get_miners_list_failed - " +
+			"failed to retrieve existing miners list: " + err.Error())
 	}
 	if allMinersBytes == nil {
 		return all, nil
