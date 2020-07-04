@@ -646,11 +646,11 @@ func (ssc *StorageSmartContract) getOrCreateUserStakePool(
 
 	var poolb []byte
 	poolb, err = ssc.getUserStakePoolBytes(clientID, balances)
-	if err != nil && err != util.ErrNodeNotFound {
+	if err != nil && err != util.ErrValueNotPresent {
 		return
 	}
 
-	if err == util.ErrNodeNotFound {
+	if err == util.ErrValueNotPresent {
 		return newUserStakePools(), nil
 	}
 

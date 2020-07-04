@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"net/url"
 
-	"encoding/json"
-
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 
