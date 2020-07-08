@@ -71,7 +71,7 @@ func Test_stakePool_fill(t *testing.T) {
 	balances.txn = &tx
 	balances.balances[clienID] = 100e10
 
-	_, err = sp.dig(&tx, balances)
+	_, _, err = sp.dig(&tx, balances)
 	require.NoError(t, err)
 	assert.Equal(t, state.Balance(90), sp.stake())
 }
