@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/core/common"
@@ -74,27 +75,44 @@ func (fbf *FinalizedBlockFetcher) StartFinalizedBlockFetcherWorker(
 	println("C StartFinalizedBlockFetcherWorker")
 
 	var (
+		lt       = config.GetFBFetchingLifetime()
+		tick     = time.NewTicker(lt)
 		fetching = make(map[string]time.Time)
 
 		now time.Time
 	)
 
+	defer tick.Stop()
+
 	for {
-
-		now = time.Now()
-
 		select {
+
+		// the FB has fetched or received another way
 		case hash := <-fbf.got:
 			println("C StartFinalizedBlockFetcherWorker: GOT")
 			delete(fetching, hash)
+
+		// fetch new FB
 		case hash := <-fbf.add:
+			now = time.Now()
 			println("C StartFinalizedBlockFetcherWorker: ADD")
-			if tp, ok := fetching[hash]; ok && now.Sub(tp) < 10*time.Second {
+			if tp, ok := fetching[hash]; ok && now.Sub(tp) < lt {
 				println("C StartFinalizedBlockFetcherWorker: ADD (ALREADY)")
 				continue // fetching
 			}
 			fetching[hash] = time.Now()
 			go fbf.getter.asyncFetchFinalizedBlock(ctx, hash, fbf.got)
+
+		// cleanup the fetching list every 'lifetime' from old FB requested
+		case <-tick.C:
+			now = time.Now()
+			for hash, tp := range fetching {
+				if now.Sub(tp) >= lt {
+					delete(fetching, hash) // lifetime exceeded
+				}
+			}
+
+		// stop when context is done
 		case <-ctx.Done():
 			println("C StartFinalizedBlockFetcherWorker: DONE -> END")
 			return

@@ -61,6 +61,7 @@ func SetupDefaultConfig() {
 	// LFB tickets
 	viper.SetDefault("server_chain.lfb_ticket.rebroadcast_timeout", time.Second*16)
 	viper.SetDefault("server_chain.lfb_ticket.ahead", 2)
+	viper.SetDefault("server_chain.lfb_ticket.fb_fetching_lifetime", time.Second*10)
 }
 
 /*SetupConfig - setup the configuration system */
@@ -209,4 +210,8 @@ func GetReBroadcastLFBTicketTimeout() time.Duration {
 
 func GetLFBTicketAhead() int {
 	return viper.GetInt("server_chain.lfb_ticket.ahead")
+}
+
+func GetFBFetchingLifetime() time.Duration {
+	return viper.GetDuration("server_chain.lfb_ticket.fb_fetching_lifetime")
 }
