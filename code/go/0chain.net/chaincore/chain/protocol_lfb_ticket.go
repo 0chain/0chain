@@ -192,6 +192,15 @@ func (c *Chain) UnsubLFBTicket(ctx context.Context, sub chan *LFBTicket) {
 	return
 }
 
+// GetLatestLFBTicket
+func (c *Chain) GetLatestLFBTicket(ctx context.Context) (tk *LFBTicket) {
+	select {
+	case tk = <-c.getLFBTicket:
+	case <-ctx.Done():
+	}
+	return
+}
+
 // StartLFBTicketWorker should work in a goroutine. It process received
 // and generated LFB tickets. It works until context done.
 func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {

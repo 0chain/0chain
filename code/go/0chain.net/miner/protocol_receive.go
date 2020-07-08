@@ -28,7 +28,9 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 	mr := mc.GetMinerRound(b.Round)
 	if mr == nil {
 		Logger.Error("handle verify block - got block proposal before starting round", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("miner", b.MinerID))
-		mr = mc.getRound(ctx, b.Round)
+		if mr = mc.getRound(ctx, b.Round); mr == nil {
+			return // miner is far ahead of sharders, skip for now
+		}
 		//TODO: Byzantine
 		mc.startRound(ctx, mr, b.GetRoundRandomSeed())
 	} else {
@@ -97,6 +99,9 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *Block
 		mr = mc.GetMinerRound(msg.BlockVerificationTicket.Round)
 		if mr == nil {
 			mr = mc.getRound(ctx, msg.BlockVerificationTicket.Round)
+			if mr == nil {
+				return // miner is far ahead of sharders, skip for now
+			}
 		}
 	}
 	b, err := mc.GetBlock(ctx, msg.BlockVerificationTicket.BlockID)
@@ -163,7 +168,9 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMess
 	mb := msg.Block
 	mr := mc.GetMinerRound(mb.Round)
 	if mr == nil {
-		mr = mc.getRound(ctx, mb.Round)
+		if mr = mc.getRound(ctx, mb.Round); mr == nil {
+			return // miner is far ahead of sharders, skip for now
+		}
 		mc.startRound(ctx, mr, mb.GetRoundRandomSeed())
 	} else {
 		nb := mr.GetNotarizedBlocks()
@@ -180,5 +187,5 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMess
 	if !mc.AddNotarizedBlock(ctx, mr, b) {
 		return
 	}
-	mc.StartNextRound(ctx, mr)
+	mc.StartNextRound(ctx, mr) // start next or skip
 }
