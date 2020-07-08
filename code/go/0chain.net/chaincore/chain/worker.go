@@ -30,6 +30,7 @@ func (c *Chain) SetupWorkers(ctx context.Context) {
 	go c.PruneClientStateWorker(ctx)
 	go c.BlockFetchWorker(ctx)
 	go c.StartLFBTicketWorker(ctx, c.GetLatestFinalizedBlock())
+	go c.StartFinalizedBlockFetcherWorker(ctx)
 	go node.Self.Underlying().MemoryUsage()
 }
 

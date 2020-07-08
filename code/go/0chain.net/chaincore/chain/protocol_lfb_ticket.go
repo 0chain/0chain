@@ -155,7 +155,7 @@ func (c *Chain) sendLFBTicket(ticket *LFBTicket) {
 	Logger.Debug("broadcast LFB ticket", zap.Int64("round", ticket.Round),
 		zap.String("hash", ticket.LFBHash))
 
-	var mb = c.GetMagicBlock(ticket.Round)
+	var mb = c.GetCurrentMagicBlock() // to all current
 	mb.Miners.SendAll(LFBTicketSender(ticket))
 	mb.Sharders.SendAll(LFBTicketSender(ticket))
 	return
@@ -250,7 +250,9 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 
 			if _, err := c.getBlock(ctx, ticket.LFBHash); err != nil {
 				println("update received: fetch")
-				c.AsyncFetchNotarizedBlock(ticket.LFBHash)
+				if node.Self.Type == node.NodeTypeSharder {
+					c.AsyncFetchFinalizedBlockFromSharders(ctx, ticket.LFBHash)
+				}
 				continue // if haven't the block, then don't update the latest
 			}
 

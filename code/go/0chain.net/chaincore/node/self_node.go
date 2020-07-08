@@ -88,13 +88,17 @@ func ValidateSignatureTime(data string) (bool, error) {
 	return true, nil
 }
 
-// IsEqual returns true if given node pointer is equal to
-// pointer to underlying Node.
+// IsEqual returns true if given node ID is equal to
+// ID of underlying Node.
 func (sn *SelfNode) IsEqual(node *Node) bool {
 	sn.mx.RLock()
 	defer sn.mx.RUnlock()
 
-	return sn.Node == node
+	if node == nil || sn.Node == nil {
+		return false
+	}
+
+	return sn.Node.ID == node.ID
 }
 
 func (sn *SelfNode) SetNodeIfPublicKeyIsEqual(node *Node) {

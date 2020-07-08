@@ -680,12 +680,99 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*Bloc
 	}
 	m2s.RequestEntityFromAll(ctx, MinerLatestFinalizedBlockRequestor, nil, handler)
 
-	// sort by consensus first, then by round
+	// highest (the first sorting order), most popular (the second order)
 	sort.Slice(finalizedBlocks, func(i int, j int) bool {
-		return finalizedBlocks[i].Consensus > finalizedBlocks[j].Consensus ||
-			finalizedBlocks[i].Round >= finalizedBlocks[j].Round
+		return finalizedBlocks[i].Round >= finalizedBlocks[j].Round ||
+			finalizedBlocks[i].Consensus > finalizedBlocks[j].Consensus
+
 	})
 	return finalizedBlocks
+}
+
+// SyncFetchFinalizedBlockFromSharders fetches FB from sharders by hash.
+// It used by miner to get FB by LFB ticket in restart round.
+func (mc *Chain) SyncFetchFinalizedBlockFromSharders(ctx context.Context,
+	hash string) (fb *block.Block) {
+
+	var b, err = mc.GetBlock(ctx, hash)
+	if b != nil && err == nil {
+		return b // already have the block
+	}
+
+	type blockConsensus struct {
+		*block.Block
+		consensus int
+	}
+
+	var (
+		mb              = mc.GetCurrentMagicBlock()
+		sharders        = mb.Sharders
+		finalizedBlocks = make([]*blockConsensus, 0, 1)
+
+		fbMutex sync.Mutex
+	)
+
+	var handler = func(ctx context.Context, entity datastore.Entity) (
+		resp interface{}, err error) {
+
+		var fb, ok = entity.(*block.Block)
+		if !ok {
+			return nil, datastore.ErrInvalidEntity
+		}
+
+		if err = fb.Validate(ctx); err != nil {
+			Logger.Error("FB from sharder - invalid",
+				zap.Int64("round", fb.Round),
+				zap.String("block", fb.Hash),
+				zap.Error(err))
+			return nil, err
+		}
+
+		var r = mc.GetRound(fb.Round)
+		if r == nil {
+			r = mc.getRound(ctx, fb.Round)
+		}
+		err = mc.VerifyNotarization(ctx, fb.Hash, fb.GetVerificationTickets(),
+			r.GetRoundNumber())
+		if err != nil {
+			Logger.Error("FB from sharder - notarization failed",
+				zap.Int64("round", fb.Round),
+				zap.String("block", fb.Hash), zap.Error(err))
+			return nil, err
+		}
+
+		fbMutex.Lock()
+		defer fbMutex.Unlock()
+		for i, b := range finalizedBlocks {
+			if b.Hash == fb.Hash {
+				finalizedBlocks[i].consensus++
+				return fb, nil
+			}
+		}
+		finalizedBlocks = append(finalizedBlocks, &blockConsensus{
+			Block:     fb,
+			consensus: 1,
+		})
+
+		return fb, nil
+	}
+
+	sharders.RequestEntityFromAll(ctx, chain.FBRequestor, nil, handler)
+
+	// highest (the first sorting order), most popular (the second order)
+	sort.Slice(finalizedBlocks, func(i int, j int) bool {
+		return finalizedBlocks[i].Round >= finalizedBlocks[j].Round ||
+			finalizedBlocks[i].consensus > finalizedBlocks[j].consensus
+
+	})
+
+	if len(finalizedBlocks) == 0 {
+		Logger.Error("FB from sharders -- no block given",
+			zap.String("hash", hash))
+		return nil
+	}
+
+	return finalizedBlocks[0].Block
 }
 
 // GetNextRoundTimeoutTime returns time in milliseconds
@@ -767,7 +854,7 @@ func (mc *Chain) restartRound(ctx context.Context) {
 	mc.RoundTimeoutsCount++
 
 	// get LFMB and LFB from sharders
-	var updated, err = mc.ensureLatestFinalizedBlocks(ctx, mc.GetCurrentRound())
+	var updated, err = mc.ensureLatestFinalizedBlocks(ctx)
 	if err != nil {
 		Logger.Error("restartRound - ensure lfb", zap.Error(err))
 		updated = false
@@ -785,11 +872,11 @@ func (mc *Chain) restartRound(ctx context.Context) {
 				tk := mc.GetLatestLFBTicket(ctx)
 
 				for s, c := tk.Round, mc.CurrentRound; s < c; s++ {
-					println("RESEND NOTARIZATION FOR (?)", s, c)
+					println("RESEND NOT. BLOCK FOR (?)", s, c)
 					var mr = mc.GetMinerRound(s)
 					// send block to sharders again, if missing sharders side
 					if mr != nil && mr.Block != nil && mr.Block.IsBlockNotarized() {
-						println("RESEND NOTARIZATION FOR (t)", s)
+						println("RESEND NOT. BLOCK FOR (t)", s)
 						go mc.SendNotarizedBlock(ctx, mr.Block)
 					}
 				}
@@ -861,42 +948,73 @@ func (mc *Chain) restartRound(ctx context.Context) {
 	}
 }
 
-func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context,
-	pnround int64) (bool, error) {
+func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
+	updated bool, err error) {
 
-	result := false
-	// LFB
-	var lfbs *block.Block
-	lfb := mc.GetLatestFinalizedBlock()
+	println("ENSURE LFB")
 
-	lfBlocks := mc.GetLatestFinalizedBlockFromSharder(ctx)
-	if len(lfBlocks) > 0 {
-		lfbs = lfBlocks[0].Block
+	// LFB by LFB ticket
+	var (
+		lfbs   *block.Block
+		lfb    = mc.GetLatestFinalizedBlock()
+		ticket = mc.GetLatestLFBTicket(ctx)
+	)
+
+	if ticket == nil {
+		println("ENSURE LFB: no ticket")
+		return // ticket can be nil if context.Done
 	}
 
-	if lfbs != nil &&
-		(lfb == nil || lfb.Round == 0 || lfb.Round < lfbs.Round) {
-		sr := round.NewRound(lfbs.Round)
-		mr := mc.CreateRound(sr)
-		mr, _ = mc.AddRound(mr).(*Round)
-		mc.SetRandomSeed(mr, lfbs.GetRoundRandomSeed())
-		mc.AddBlock(lfbs)
-		var err = mc.InitBlockState(lfbs)
-		for ; err != nil; err = mc.InitBlockState(lfbs) {
-			Logger.Error("initialize LFB state in restart_round",
-				zap.Error(err))
-			select {
-			case <-time.After(time.Second):
-				// retry after a second
-			case <-ctx.Done():
-				return false, nil
-			}
+	if lfbs, err = mc.GetBlock(ctx, ticket.LFBHash); err != nil {
+		println("ENSURE LFB: can't get block (emit sync fetch FB)", ticket.Round)
+		lfbs = mc.SyncFetchFinalizedBlockFromSharders(ctx, ticket.LFBHash)
+		if lfbs == nil {
+			println("ENSURE LFB: can't get block (sync fetch FB): no blocks given",
+				ticket.Round)
+			return // no blocks given, try next restart
 		}
-		mc.SetLatestFinalizedBlock(ctx, lfbs)
-		if mc.GetCurrentRound() < mr.GetRoundNumber() {
-			mc.startNewRound(ctx, mr)
-		}
-		result = true
+	}
+
+	if lfbs == nil {
+		println("ENSURE LFB: nil block")
+		return // no FB block given
+	}
+
+	if !(lfb == nil || lfb.Round == 0 || lfb.Round < lfbs.Round) {
+		println("ENSURE LFB: nothing to update")
+		return // nothing to update
+	}
+
+	println("ENSURE LFB: update", lfbs.Round)
+
+	var (
+		sr = round.NewRound(lfbs.Round)
+		mr = mc.CreateRound(sr)
+	)
+	mr, _ = mc.AddRound(mr).(*Round)
+	mc.SetRandomSeed(mr, lfbs.GetRoundRandomSeed())
+	mc.AddBlock(lfbs)
+	if err = mc.InitBlockState(lfbs); err != nil {
+		// don't stop on this error, it should be resolved in
+		// finalize round kicking
+		Logger.Error("initialize LFB state in restart_round", zap.Error(err))
+	}
+	mc.SetLatestFinalizedBlock(ctx, lfbs)
+	if mc.GetCurrentRound() < mr.GetRoundNumber() {
+		mc.startNewRound(ctx, mr)
+	}
+
+	println("ENSURE LFB: UPDATED", lfbs.Round)
+
+	return true, nil // updated
+}
+
+func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context) (
+	updated bool, err error) {
+
+	// LFB
+	if updated, err = mc.ensureLatestFinalizedBlock(ctx); err != nil {
+		return
 	}
 
 	// LFMB
@@ -922,9 +1040,10 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context,
 		}
 		mc.UpdateNodesFromMagicBlock(magicBlock.MagicBlock)
 		mc.SetLatestFinalizedMagicBlock(magicBlock)
-		result = true
+		updated = true
 	}
-	return result, nil
+
+	return
 }
 
 func StartProtocol(ctx context.Context, gb *block.Block) {

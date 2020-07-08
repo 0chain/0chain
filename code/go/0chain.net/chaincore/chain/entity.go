@@ -146,6 +146,8 @@ type Chain struct {
 	broadcastLFBTicket chan *block.Block    // broadcast (update by LFB)
 	subLFBTicket       chan chan *LFBTicket // } wait for a received LFBTicket
 	unsubLFBTicket     chan chan *LFBTicket // }
+
+	*FinalizedBlockFetcher // fetch FB by LFB tickets
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
@@ -351,6 +353,8 @@ func Provider() datastore.Entity {
 	c.broadcastLFBTicket = make(chan *block.Block, 10) //
 	c.subLFBTicket = make(chan chan *LFBTicket, 1)     //
 	c.unsubLFBTicket = make(chan chan *LFBTicket, 1)   //
+
+	c.FinalizedBlockFetcher = NewFinalizedBlockFetcher(c) //
 	return c
 }
 
