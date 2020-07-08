@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"path/filepath"
+	"time"
 
 	"github.com/spf13/viper"
 )
@@ -57,6 +58,9 @@ func SetupDefaultConfig() {
 	viper.SetDefault("server_chain.health_check.proximity_scan.repeat_interval_mins", 60)
 	viper.SetDefault("server_chain.health_check.deep_scan.report_status_mins", 15)
 
+	// LFB tickets
+	viper.SetDefault("server_chain.lfb_ticket.rebroadcast_timeout", time.Second*16)
+	viper.SetDefault("server_chain.lfb_ticket.ahead", 2)
 }
 
 /*SetupConfig - setup the configuration system */
@@ -197,4 +201,12 @@ func ValidChain(chain string) error {
 /*GetThresholdCount Gets the defined threshold count */
 func GetThresholdCount() int {
 	return viper.GetInt("server_chain.block.consensus.threshold_by_count")
+}
+
+func GetReBroadcastLFBTicketTimeout() time.Duration {
+	return viper.GetDuration("server_chain.lfb_ticket.rebroadcast_timeout")
+}
+
+func GetLFBTicketAhead() int {
+	return viper.GetInt("server_chain.lfb_ticket.ahead")
 }

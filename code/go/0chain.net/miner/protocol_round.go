@@ -610,11 +610,16 @@ func (mc *Chain) BroadcastNotarizedBlocks(ctx context.Context, pr *Round) {
 	}
 }
 
+type BlockConsensus struct {
+	*block.Block
+	Consensus int
+}
+
 /*GetLatestFinalizedBlockFromSharder - request for latest finalized block from all the sharders */
-func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*block.Block {
+func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*BlockConsensus {
 	mb := mc.GetCurrentMagicBlock()
 	m2s := mb.Sharders
-	finalizedBlocks := make([]*block.Block, 0, 1)
+	finalizedBlocks := make([]*BlockConsensus, 0, 1)
 	fbMutex := &sync.Mutex{}
 	//Params are nil? Do we need to send any params like sending the miner ID ?
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
@@ -646,15 +651,25 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*bloc
 		}
 		fbMutex.Lock()
 		defer fbMutex.Unlock()
-		for _, b := range finalizedBlocks {
+		for i, b := range finalizedBlocks {
 			if b.Hash == fb.Hash {
+				finalizedBlocks[i].Consensus++
 				return fb, nil
 			}
 		}
-		finalizedBlocks = append(finalizedBlocks, fb)
+		finalizedBlocks = append(finalizedBlocks, &BlockConsensus{
+			Block:     fb,
+			Consensus: 1,
+		})
 		return fb, nil
 	}
 	m2s.RequestEntityFromAll(ctx, MinerLatestFinalizedBlockRequestor, nil, handler)
+
+	// sort by consensus first, then by round
+	sort.Slice(finalizedBlocks, func(i int, j int) bool {
+		return finalizedBlocks[i].Consensus > finalizedBlocks[j].Consensus ||
+			finalizedBlocks[i].Round >= finalizedBlocks[j].Round
+	})
 	return finalizedBlocks
 }
 
@@ -815,11 +830,8 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context,
 	lfb := mc.GetLatestFinalizedBlock()
 
 	lfBlocks := mc.GetLatestFinalizedBlockFromSharder(ctx)
-	sort.Slice(lfBlocks, func(i int, j int) bool {
-		return lfBlocks[i].Round >= lfBlocks[j].Round
-	})
 	if len(lfBlocks) > 0 {
-		lfbs = lfBlocks[0]
+		lfbs = lfBlocks[0].Block
 	}
 
 	if lfbs != nil &&

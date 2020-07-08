@@ -48,6 +48,7 @@ func SetupHandlers() {
 
 	http.HandleFunc("/_diagnostics/state_dump", common.UserRateLimit(StateDumpHandler))
 
+	http.HandleFunc("/v1/block/get/latest_finalized_ticket", common.UserRateLimit(common.ToJSONResponse(LFBTicketHandler)))
 }
 
 /*GetChainHandler - given an id returns the chain information */

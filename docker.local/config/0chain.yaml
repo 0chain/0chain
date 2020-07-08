@@ -101,6 +101,9 @@ server_chain:
       repeat_interval_mins: 1 #minutes
       report_status_mins: 1 #minutes
       batch_size: 50
+  lfb_ticket:
+    rebroadcast_timeout: '15s' #
+    ahead: 2                   #
 
 network:
   magic_block_file: config/b0magicBlock_4_miners_1_sharder.json

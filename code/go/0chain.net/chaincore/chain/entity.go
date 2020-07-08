@@ -139,6 +139,13 @@ type Chain struct {
 	RoundF          round.RoundFactory
 
 	magicBlockStartingRounds map[int64]*block.Block // block MB by starting round VC
+
+	// LFB tickets channels
+	getLFBTicket       chan *LFBTicket      // check out (any time)
+	updateLFBTicket    chan *LFBTicket      // receive
+	broadcastLFBTicket chan *block.Block    // broadcast (update by LFB)
+	subLFBTicket       chan chan *LFBTicket // } wait for a received LFBTicket
+	unsubLFBTicket     chan chan *LFBTicket // }
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
@@ -338,6 +345,12 @@ func Provider() datastore.Entity {
 	c.SetMagicBlock(mb)
 	c.Stats = &Stats{}
 	c.blockFetcher = NewBlockFetcher()
+
+	c.getLFBTicket = make(chan *LFBTicket)             // should be unbuffered
+	c.updateLFBTicket = make(chan *LFBTicket, 1)       //
+	c.broadcastLFBTicket = make(chan *block.Block, 10) //
+	c.subLFBTicket = make(chan chan *LFBTicket, 1)     //
+	c.unsubLFBTicket = make(chan chan *LFBTicket, 1)   //
 	return c
 }
 
@@ -1044,6 +1057,7 @@ func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
 	c.LatestFinalizedBlock = b
 	if b != nil {
 		c.lfbSummary = b.GetSummary()
+		c.BroadcastLFBTicket(common.GetRootContext(), b)
 	}
 }
 
