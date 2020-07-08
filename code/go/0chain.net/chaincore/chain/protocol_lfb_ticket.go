@@ -123,11 +123,6 @@ func (c *Chain) verifyLFBTicket(lfbt *LFBTicket) bool {
 		return false // unknown or missing node
 	}
 	var ok, err = sharder.Verify(lfbt.Sign, lfbt.Hash())
-	if err != nil {
-		println("INVALID LFB TICKET SIGNATURE, ERR", err.Error())
-	} else if !ok {
-		println("INVALID LFB TICKET SIGNATURE, FALSE")
-	}
 	return err == nil && ok
 }
 
@@ -204,7 +199,6 @@ func (c *Chain) GetLatestLFBTicket(ctx context.Context) (tk *LFBTicket) {
 // StartLFBTicketWorker should work in a goroutine. It process received
 // and generated LFB tickets. It works until context done.
 func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
-	println("StartLFBTicketWorker", on.Round)
 
 	var (
 		// configurations (resend the latest by timer)
@@ -242,14 +236,11 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 		// request current
 		case c.getLFBTicket <- latest:
 			// request latest LFB Ticket generated or received at any time
-			println("latest given", latest.Round)
 
 		// a received LFB
 		case ticket = <-c.updateLFBTicket:
-			println("update received", ticket.Round)
 
 			if _, err := c.getBlock(ctx, ticket.LFBHash); err != nil {
-				println("update received: fetch")
 				if node.Self.Type == node.NodeTypeSharder {
 					c.AsyncFetchFinalizedBlockFromSharders(ctx, ticket.LFBHash)
 				}
@@ -257,11 +248,8 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 			}
 
 			if ticket.Round <= latest.Round {
-				println("update received: not a new")
 				continue // not updated
 			}
-
-			println("update received: a new")
 
 			// only if updated
 
@@ -279,11 +267,9 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 
 		// broadcast about new LFB
 		case b = <-c.broadcastLFBTicket:
-			println("broadcast", b.Round)
 			ticket = c.newLFBTicket(b)
 			c.sendLFBTicket(ticket)
 			if ticket.Round > latest.Round {
-				println("broadcast", b.Round, "set")
 				latest = ticket // update
 			}
 
@@ -292,18 +278,14 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 		// rebroadcast after some timeout
 		case <-rebroadcast.C:
 			c.sendLFBTicket(latest)
-			println("re-broadcast", latest.Round)
 
 		// subscribe / unsubscribe for new *received* LFB Tickets
 		case sub := <-c.subLFBTicket:
-			println("subscribe")
 			subs[sub] = struct{}{}
 		case unsub := <-c.unsubLFBTicket:
-			println("unsubscribe")
 			delete(subs, unsub)
 
 		case <-ctx.Done():
-			println("done")
 			return
 		}
 	}

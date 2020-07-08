@@ -33,7 +33,6 @@ func (mc *Chain) SendNotarization(ctx context.Context, b *block.Block) {
 /*SendNotarizedBlock - send the notarized block */
 func (mc *Chain) SendNotarizedBlock(ctx context.Context, b *block.Block) {
 	if mc.BlocksToSharder == chain.NOTARIZED {
-		println("SEND NOT. BLOCK TO SHARDERS", b.Round)
 		mb := mc.GetMagicBlock(b.Round)
 		m2s := mb.Sharders
 		m2s.SendAll(NotarizedBlockSender(b))
@@ -43,7 +42,6 @@ func (mc *Chain) SendNotarizedBlock(ctx context.Context, b *block.Block) {
 /*SendFinalizedBlock - send the finalized block to the sharders */
 func (mc *Chain) SendFinalizedBlock(ctx context.Context, b *block.Block) {
 	if mc.BlocksToSharder == chain.FINALIZED {
-		println("SEND FIN. BLOCK TO SHARDERS", b.Round)
 		mb := mc.GetMagicBlock(b.Round)
 		m2s := mb.Sharders
 		m2s.SendAll(FinalizedBlockSender(b))

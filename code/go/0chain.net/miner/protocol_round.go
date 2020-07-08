@@ -872,11 +872,9 @@ func (mc *Chain) restartRound(ctx context.Context) {
 				tk := mc.GetLatestLFBTicket(ctx)
 
 				for s, c := tk.Round, mc.CurrentRound; s < c; s++ {
-					println("RESEND NOT. BLOCK FOR (?)", s, c)
 					var mr = mc.GetMinerRound(s)
 					// send block to sharders again, if missing sharders side
 					if mr != nil && mr.Block != nil && mr.Block.IsBlockNotarized() {
-						println("RESEND NOT. BLOCK FOR (t)", s)
 						go mc.SendNotarizedBlock(ctx, mr.Block)
 					}
 				}
@@ -951,8 +949,6 @@ func (mc *Chain) restartRound(ctx context.Context) {
 func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
 	updated bool, err error) {
 
-	println("ENSURE LFB")
-
 	// LFB by LFB ticket
 	var (
 		lfbs   *block.Block
@@ -961,31 +957,23 @@ func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
 	)
 
 	if ticket == nil {
-		println("ENSURE LFB: no ticket")
 		return // ticket can be nil if context.Done
 	}
 
 	if lfbs, err = mc.GetBlock(ctx, ticket.LFBHash); err != nil {
-		println("ENSURE LFB: can't get block (emit sync fetch FB)", ticket.Round)
 		lfbs = mc.SyncFetchFinalizedBlockFromSharders(ctx, ticket.LFBHash)
 		if lfbs == nil {
-			println("ENSURE LFB: can't get block (sync fetch FB): no blocks given",
-				ticket.Round)
 			return // no blocks given, try next restart
 		}
 	}
 
 	if lfbs == nil {
-		println("ENSURE LFB: nil block")
 		return // no FB block given
 	}
 
 	if !(lfb == nil || lfb.Round == 0 || lfb.Round < lfbs.Round) {
-		println("ENSURE LFB: nothing to update")
 		return // nothing to update
 	}
-
-	println("ENSURE LFB: update", lfbs.Round)
 
 	var (
 		sr = round.NewRound(lfbs.Round)
@@ -1003,8 +991,6 @@ func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
 	if mc.GetCurrentRound() < mr.GetRoundNumber() {
 		mc.startNewRound(ctx, mr)
 	}
-
-	println("ENSURE LFB: UPDATED", lfbs.Round)
 
 	return true, nil // updated
 }

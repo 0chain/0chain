@@ -72,8 +72,6 @@ func (fbf *FinalizedBlockFetcher) AsyncFetchFinalizedBlockFromSharders(
 func (fbf *FinalizedBlockFetcher) StartFinalizedBlockFetcherWorker(
 	ctx context.Context) {
 
-	println("C StartFinalizedBlockFetcherWorker")
-
 	var (
 		lt       = config.GetFBFetchingLifetime()
 		tick     = time.NewTicker(lt)
@@ -89,15 +87,12 @@ func (fbf *FinalizedBlockFetcher) StartFinalizedBlockFetcherWorker(
 
 		// the FB has fetched or received another way
 		case hash := <-fbf.got:
-			println("C StartFinalizedBlockFetcherWorker: GOT")
 			delete(fetching, hash)
 
 		// fetch new FB
 		case hash := <-fbf.add:
 			now = time.Now()
-			println("C StartFinalizedBlockFetcherWorker: ADD")
 			if tp, ok := fetching[hash]; ok && now.Sub(tp) < lt {
-				println("C StartFinalizedBlockFetcherWorker: ADD (ALREADY)")
 				continue // fetching
 			}
 			fetching[hash] = time.Now()
@@ -114,7 +109,6 @@ func (fbf *FinalizedBlockFetcher) StartFinalizedBlockFetcherWorker(
 
 		// stop when context is done
 		case <-ctx.Done():
-			println("C StartFinalizedBlockFetcherWorker: DONE -> END")
 			return
 		}
 	}
@@ -123,8 +117,6 @@ func (fbf *FinalizedBlockFetcher) StartFinalizedBlockFetcherWorker(
 
 func (c *Chain) asyncFetchFinalizedBlock(ctx context.Context,
 	hash string, got chan<- string) {
-
-	println("C asyncFetchFinalizedBlock")
 
 	var err error
 	if _, err = c.getBlock(ctx, hash); err == nil {
@@ -179,12 +171,11 @@ func (c *Chain) asyncFetchFinalizedBlock(ctx context.Context,
 	if b == fb {
 		go c.fetchedNotarizedBlockHandler.NotarizedBlockFetched(ctx, fb)
 		if node.Self.Type == node.NodeTypeSharder {
-			// set finalized block if the given is greater then current
-			println("TODO: set finalized block if the given is greater then current")
+			// TODO (sfxdx): do we need an additional work here for
+			//               sharders to force blocks finalization?
 		}
 	}
 
-	println("C asyncFetchFinalizedBlock: GOT")
 	select {
 	case got <- hash:
 	case <-ctx.Done():
@@ -196,8 +187,6 @@ func (c *Chain) asyncFetchFinalizedBlock(ctx context.Context,
 // sharders from current magic block.
 func (c *Chain) GetFinalizedBlockFromSharders(ctx context.Context,
 	hash string) (fb *block.Block, err error) {
-
-	println("C GetFinalizedBlockFromSharders")
 
 	type blockConsensus struct {
 		*block.Block
@@ -250,8 +239,6 @@ func (c *Chain) GetFinalizedBlockFromSharders(ctx context.Context,
 	if len(finalizedBlocks) == 0 {
 		return nil, common.NewError("fb_fetcher", "no FB given")
 	}
-
-	println("C GetFinalizedBlockFromSharders: GOT")
 
 	return finalizedBlocks[0].Block, nil // highest, most popular
 }
