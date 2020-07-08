@@ -450,7 +450,7 @@ func (msc *MinerSmartContract) getBlockSharders(block *block.Block,
 	balances cstate.StateContextI) (sharders []*MinerNode, err error) {
 
 	if block.PrevBlock == nil {
-		return nil, fmt.Errorf("missing previous block in state context",
+		return nil, fmt.Errorf("missing previous block in state context %d, %s",
 			block.Round, block.Hash)
 	}
 
