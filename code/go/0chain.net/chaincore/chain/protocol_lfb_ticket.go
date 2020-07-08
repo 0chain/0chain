@@ -161,7 +161,7 @@ func (c *Chain) sendLFBTicket(ticket *LFBTicket) {
 	return
 }
 
-// BloadcastLFBTicket sends LFB ticket to all other nodes from
+// BroadcastLFBTicket sends LFB ticket to all other nodes from
 // corresponding Magic Block.
 func (c *Chain) BroadcastLFBTicket(ctx context.Context, b *block.Block) {
 	if node.Self.Type != node.NodeTypeSharder {
@@ -316,6 +316,7 @@ func (c *Chain) AddReceivedLFBTicket(ctx context.Context, ticket *LFBTicket) {
 	}
 }
 
+// LFBTicketHandler handles LFB tickets.
 func LFBTicketHandler(ctx context.Context, r *http.Request) (
 	resp interface{}, err error) {
 

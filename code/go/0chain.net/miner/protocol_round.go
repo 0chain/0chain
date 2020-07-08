@@ -776,7 +776,8 @@ func (mc *Chain) restartRound(ctx context.Context) {
 	if !updated && r.GetRoundNumber() > 1 {
 		if r.GetHeaviestNotarizedBlock() != nil {
 			mc.BroadcastNotarizedBlocks(ctx, r)
-			Logger.Info("StartNextRound after sending notarized block in restartRound.", zap.Int64("current_round", r.GetRoundNumber()))
+			Logger.Info("StartNextRound after sending notarized block in restartRound.",
+				zap.Int64("current_round", r.GetRoundNumber()))
 			nextR := mc.GetRound(r.GetRoundNumber())
 			nr := mc.StartNextRound(ctx, r)
 			if nr == nil {
@@ -786,15 +787,11 @@ func (mc *Chain) restartRound(ctx context.Context) {
 				for s, c := tk.Round, mc.CurrentRound; s < c; s++ {
 					println("RESEND NOTARIZATION FOR (?)", s, c)
 					var mr = mc.GetMinerRound(s)
-					if mr == nil {
-						continue // skip finalized blocks, skip nil miner rounds
-					}
-					if !mr.IsFinalized() {
-						continue // skip not finalized rounds
-					}
 					// send block to sharders again, if missing sharders side
-					println("RESEND NOTARIZATION FOR (t)", s)
-					go mc.SendNotarization(ctx, mr.GetHeaviestNotarizedBlock())
+					if mr != nil && mr.Block != nil && mr.Block.IsBlockNotarized() {
+						println("RESEND NOTARIZATION FOR (t)", s)
+						go mc.SendNotarizedBlock(ctx, mr.Block)
+					}
 				}
 
 				r.IncrementTimeoutCount()
@@ -806,24 +803,31 @@ func (mc *Chain) restartRound(ctx context.Context) {
 			*/
 			if r.HasRandomSeed() {
 				if nextR != nil {
-					Logger.Info("RedoVRFshare after sending notarized block in restartRound.", zap.Int64("round", nr.GetRoundNumber()), zap.Int("round_toc", nr.GetTimeoutCount()))
+					Logger.Info("RedoVRFshare after sending notarized block in restartRound.",
+						zap.Int64("round", nr.GetRoundNumber()),
+						zap.Int("round_toc", nr.GetTimeoutCount()))
 
 					nr.Restart()
 					//Recalculate VRF shares and send
 					nr.IncrementTimeoutCount()
 					redo := mc.RedoVrfShare(ctx, nr)
 					if !redo {
-						Logger.Info("Could not  RedoVrfShare", zap.Int64("round", r.GetRoundNumber()), zap.Int("round_timeout", r.GetTimeoutCount()))
+						Logger.Info("Could not  RedoVrfShare",
+							zap.Int64("round", r.GetRoundNumber()),
+							zap.Int("round_timeout", r.GetTimeoutCount()))
 					}
 
 				} else {
 					//StartNextRound would have sent the VRFs. No need to do that again
-					Logger.Info("after sending notarized block in restartRound NextR was nil. startNextRound would have sent VRF.", zap.Int64("round", nr.GetRoundNumber()), zap.Int("round_toc", nr.GetTimeoutCount()))
+					Logger.Info("after sending notarized block in restartRound NextR was nil. startNextRound would have sent VRF.",
+						zap.Int64("round", nr.GetRoundNumber()),
+						zap.Int("round_toc", nr.GetTimeoutCount()))
 
 				}
 				return
 			}
-			Logger.Error("Has notarized block in restartRound, but no randomseed.", zap.Int64("current_round", r.GetRoundNumber()))
+			Logger.Error("Has notarized block in restartRound, but no randomseed.",
+				zap.Int64("current_round", r.GetRoundNumber()))
 		}
 		pr := mc.GetMinerRound(r.GetRoundNumber() - 1)
 		if pr != nil {
@@ -881,6 +885,12 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context,
 		for ; err != nil; err = mc.InitBlockState(lfbs) {
 			Logger.Error("initialize LFB state in restart_round",
 				zap.Error(err))
+			select {
+			case <-time.After(time.Second):
+				// retry after a second
+			case <-ctx.Done():
+				return false, nil
+			}
 		}
 		mc.SetLatestFinalizedBlock(ctx, lfbs)
 		if mc.GetCurrentRound() < mr.GetRoundNumber() {
