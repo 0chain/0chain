@@ -103,7 +103,7 @@ server_chain:
       batch_size: 50
   lfb_ticket:
     rebroadcast_timeout: '15s' #
-    ahead: 2                   #
+    ahead: 5                   #
 
 network:
   magic_block_file: config/b0magicBlock_4_miners_1_sharder.json
@@ -143,7 +143,7 @@ minio:
 
 cassandra:
   connection:
-    delay: 3 # in seconds
+    delay: 10 # in seconds
     retries: 10
 
 # integration tests related configurations

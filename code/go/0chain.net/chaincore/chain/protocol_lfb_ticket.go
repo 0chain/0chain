@@ -210,6 +210,7 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 		// configurations (resend the latest by timer)
 		rebroadcastTimeout = config.GetReBroadcastLFBTicketTimeout()
 		rebroadcast        = time.NewTimer(rebroadcastTimeout)
+		isSharder          = (node.Self.Type == node.NodeTypeSharder)
 
 		// internals
 		latest = c.newLFBTicket(on)                 //
@@ -222,8 +223,19 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 
 	defer rebroadcast.Stop()
 
+	// don't broadcast if miner
+	if !isSharder {
+		rebroadcast.Stop()
+		select {
+		case <-rebroadcast.C:
+		default:
+		}
+	}
+
 	for {
-		rebroadcast.Reset(rebroadcastTimeout)
+		if isSharder {
+			rebroadcast.Reset(rebroadcastTimeout)
+		}
 
 		select {
 
@@ -321,7 +333,8 @@ func LFBTicketHandler(ctx context.Context, r *http.Request) (
 
 	var chain = GetServerChain()
 	if !chain.verifyLFBTicket(&ticket) {
-		Logger.Error("handling LFB ticket", zap.String("err", "can't verify"))
+		Logger.Error("handling LFB ticket", zap.String("err", "can't verify"),
+			zap.Int64("round", ticket.Round))
 		return nil, common.NewError("lfb_ticket_handler", "can't verify")
 	}
 	chain.AddReceivedLFBTicket(ctx, &ticket)

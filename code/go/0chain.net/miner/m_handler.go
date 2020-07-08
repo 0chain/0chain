@@ -193,7 +193,7 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 	r := mc.GetRound(b.Round)
 	if r == nil {
 		if r = mc.getRound(ctx, b.Round); r == nil {
-			return // miner is far ahead of sharders, skip
+			return nil, nil // miner is far ahead of sharders, skip
 		}
 	}
 	if err := mc.VerifyNotarization(ctx, b.Hash, b.GetVerificationTickets(), r.GetRoundNumber()); err != nil {

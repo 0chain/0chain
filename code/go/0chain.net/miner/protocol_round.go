@@ -75,7 +75,7 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 		return nil // context done
 	}
 
-	if r.GetRoundNumber()+1 > tk.Round+ahead {
+	if r.GetRoundNumber()+1 > tk.Round+int64(ahead) {
 		return nil // don't go far ahead of sharders
 	}
 
@@ -780,6 +780,23 @@ func (mc *Chain) restartRound(ctx context.Context) {
 			nextR := mc.GetRound(r.GetRoundNumber())
 			nr := mc.StartNextRound(ctx, r)
 			if nr == nil {
+				// push notarized blocks to sharders again (the fag ahead state)
+				tk := mc.GetLatestLFBTicket(ctx)
+
+				for s, c := tk.Round, mc.CurrentRound; s < c; s++ {
+					println("RESEND NOTARIZATION FOR (?)", s, c)
+					var mr = mc.GetMinerRound(s)
+					if mr == nil {
+						continue // skip finalized blocks, skip nil miner rounds
+					}
+					if !mr.IsFinalized() {
+						continue // skip not finalized rounds
+					}
+					// send block to sharders again, if missing sharders side
+					println("RESEND NOTARIZATION FOR (t)", s)
+					go mc.SendNotarization(ctx, mr.GetHeaviestNotarizedBlock())
+				}
+
 				r.IncrementTimeoutCount()
 				return // skip, due to far ahead of sharders going
 			}
@@ -930,18 +947,18 @@ func StartProtocol(ctx context.Context, gb *block.Block) {
 	} else {
 		mr = mc.getRound(ctx, gb.Round)
 	}
-	number := mc.StartNextRound(ctx, mr).Number
-	for number == nil {
+	nr := mc.StartNextRound(ctx, mr)
+	for nr == nil {
 		select {
 		case <-time.After(time.Second):
 			// repeat after some time
 		case <-ctx.Done():
 			return
 		}
-		number = mc.StartNextRound(ctx, mr).Number
+		nr = mc.StartNextRound(ctx, mr)
 	}
-	mc.SetCurrentRound(number)
-	Logger.Info("starting the blockchain ...", zap.Int64("round", number))
+	mc.SetCurrentRound(nr.Number)
+	Logger.Info("starting the blockchain ...", zap.Int64("round", nr.Number))
 }
 
 func (mc *Chain) WaitForActiveSharders(ctx context.Context) error {
