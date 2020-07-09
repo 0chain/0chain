@@ -1,6 +1,7 @@
 package minersc
 
 import (
+	"encoding/json"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -76,19 +77,23 @@ func newClient(balance state.Balance, balances cstate.StateContextI) (
 	return
 }
 
-// func (c *Client) addBlobRequest(t *testing.T) []byte {
-// 	var sn StorageNode
-// 	sn.ID = c.id
-// 	sn.BaseURL = "http://" + c.id + ":9081/api/v1"
-// 	sn.Terms = c.terms
-// 	sn.Capacity = c.cap
-// 	sn.Used = 0
-// 	sn.LastHealthCheck = 0
-// 	sn.StakePoolSettings.NumDelegates = 100
-// 	sn.StakePoolSettings.MinStake = 0
-// 	sn.StakePoolSettings.MaxStake = 1000e10
-// 	return mustEncode(t, &sn)
-// }
+// add_miner or add_sharder transaction data
+func (c *Client) addNodeRequest(t *testing.T, delegateWallet string) []byte {
+	var mn = NewMinerNode()
+	mn.ID = c.id
+	mn.N2NHost = "http://" + c.id + ":9081/api/v1"
+	mn.Host = c.id + ".host.miners"
+	mn.Port = 9081
+	mn.PublicKey = c.pk
+	mn.ShortName = "test_miner(" + c.id + ")"
+	mn.BuildTag = "commit"
+	mn.DelegateWallet = delegateWallet
+	mn.ServiceCharge = 0.5
+	mn.NumberOfDelegates = 10
+	mn.MinStake = 1e10
+	mn.MaxStake = 100e10
+	return mustEncode(t, mn)
+}
 
 func newTransaction(f, t string, val, now int64) (tx *transaction.Transaction) {
 	tx = new(transaction.Transaction)
@@ -100,46 +105,84 @@ func newTransaction(f, t string, val, now int64) (tx *transaction.Transaction) {
 	return
 }
 
-// func (c *Client) callAddBlobber(t *testing.T, msc *MinerSmartContract,
-// 	now int64, balances cstate.StateContextI) (resp string, err error) {
-//
-// 	var tx = newTransaction(c.id, ADDRESS,
-// 		int64(float64(c.terms.WritePrice)*sizeInGB(c.cap)), now)
-// 	balances.(*testBalances).txn = tx
-// 	var input = c.addBlobRequest(t)
-// 	return msc.addBlobber(tx, input, balances)
-// }
+func (c *Client) callAddMiner(t *testing.T, msc *MinerSmartContract,
+	now int64, delegateWallet string, balances cstate.StateContextI) (
+	resp string, err error) {
 
-// // addBlobber to SC
-// func addBlobber(t *testing.T, msc *MinerSmartContract, cap, now int64,
-// 	terms Terms, balacne state.Balance, balances cstate.StateContextI) (
-// 	blob *Client) {
-//
-// 	var scheme = encryption.NewBLS0ChainScheme()
-// 	scheme.GenerateKeys()
-//
-// 	blob = new(Client)
-// 	blob.terms = terms
-// 	blob.cap = cap
-// 	blob.balance = balacne
-// 	blob.scheme = scheme
-//
-// 	blob.pk = scheme.GetPublicKey()
-// 	blob.id = encryption.Hash(blob.pk)
-//
-// 	balances.(*testBalances).balances[blob.id] = balacne
-//
-// 	var _, err = blob.callAddBlobber(t, ssc, now, balances)
-// 	require.NoError(t, err)
-//
-// 	// add stake for the blobber as blobber owner
-// 	var tx = newTransaction(blob.id, ADDRESS,
-// 		int64(float64(terms.WritePrice)*sizeInGB(cap)), now)
-// 	balances.(*testBalances).txn = tx
-// 	_, err = ssc.stakePoolLock(tx, blob.stakeLockRequest(t), balances)
-// 	require.NoError(t, err)
-// 	return
-// }
+	var tx = newTransaction(c.id, ADDRESS, 0, now)
+	balances.(*testBalances).txn = tx
+	var (
+		input = c.addNodeRequest(t, delegateWallet)
+		gn    *globalNode
+	)
+	gn, err = msc.getGlobalNode(balances)
+	require.NoError(t, err, "missing global node")
+	return msc.AddMiner(tx, input, gn, balances)
+}
+
+func (c *Client) callAddSharder(t *testing.T, msc *MinerSmartContract,
+	now int64, delegateWallet string, balances cstate.StateContextI) (
+	resp string, err error) {
+
+	var tx = newTransaction(c.id, ADDRESS, 0, now)
+	balances.(*testBalances).txn = tx
+	var (
+		input = c.addNodeRequest(t, delegateWallet)
+		gn    *globalNode
+	)
+	gn, err = msc.getGlobalNode(balances)
+	require.NoError(t, err, "missing global node")
+	return msc.AddSharder(tx, input, gn, balances)
+}
+
+func addMiner(t *testing.T, msc *MinerSmartContract, now int64,
+	balances cstate.StateContextI) (miner, delegate *Client) {
+
+	miner, delegate = newClient(0, balances), newClient(0, balances)
+	var err error
+	_, err = miner.callAddMiner(t, msc, now, delegate.id, balances)
+	require.NoError(t, err, "add_miner")
+	return
+}
+
+func addSharder(t *testing.T, msc *MinerSmartContract, now int64,
+	balances cstate.StateContextI) (miner, delegate *Client) {
+
+	miner, delegate = newClient(0, balances), newClient(0, balances)
+	var err error
+	_, err = miner.callAddSharder(t, msc, now, delegate.id, balances)
+	require.NoError(t, err, "add_sharder")
+	return
+}
+
+func (c *Client) addToDelegatePoolRequest(t *testing.T, nodeID string) []byte {
+	var mn = NewMinerNode()
+	mn.ID = nodeID
+	return mustEncode(t, mn)
+}
+
+// stake a miner or a sharder
+func (c *Client) callAddToDelegatePool(t *testing.T, msc *MinerSmartContract,
+	now, val int64, nodeID string, balances cstate.StateContextI) (resp string,
+	err error) {
+
+	var tx = newTransaction(c.id, ADDRESS, val, now)
+	balances.(*testBalances).txn = tx
+	var (
+		input = c.addToDelegatePoolRequest(t, nodeID)
+		gn    *globalNode
+	)
+	gn, err = msc.getGlobalNode(balances)
+	require.NoError(t, err, "missing global node")
+	return msc.addToDelegatePool(tx, input, gn, balances)
+}
+
+func mustEncode(t *testing.T, val interface{}) []byte {
+	var err error
+	b, err := json.Marshal(val)
+	require.NoError(t, err)
+	return b
+}
 
 func mustSave(t *testing.T, key datastore.Key, val util.Serializable,
 	balances cstate.StateContextI) {
