@@ -350,4 +350,68 @@ func Test_payFees(t *testing.T) {
 
 	})
 
+	// reset all balances
+	balances.balances = make(map[string]state.Balance)
+
+	t.Run("pay fees -> view change interests", func(t *testing.T) {
+
+		setRounds(t, msc, 500, 501, balances)
+		var (
+			b         = block.Provider().(*block.Block)
+			generator = miners[1]
+		)
+		b.Round = 501                                 // VC round
+		b.MinerID = generator.miner.id                // block generator
+		b.PrevBlock = block.Provider().(*block.Block) // stub
+		// payFees transaction
+		now += 10
+		var tx = newTransaction(generator.miner.id, ADDRESS, 0, now)
+		balances.txn = tx
+		balances.block = b
+		balances.blockSharders = extractBlockSharders(sharders, 3)
+		// add fees
+		var gn, err = msc.getGlobalNode(balances)
+		require.NoError(t, err, "getting global node")
+		_, err = msc.payFees(tx, nil, gn, balances)
+		require.NoError(t, err, "pay_fees error")
+
+		// pools are active, rewards as above and +fees
+
+		var (
+			expected = make(map[string]state.Balance)
+			got      = make(map[string]state.Balance)
+		)
+
+		for _, mn := range miners {
+			assert.Zero(t, balances.balances[mn.miner.id])
+			assert.Zero(t, balances.balances[mn.delegate.id])
+			for _, st := range mn.stakers {
+				if mn == generator {
+					expected[st.id] += 77e7 + 1e10
+				} else {
+					expected[st.id] += 1e10
+				}
+				got[st.id] = balances.balances[st.id]
+			}
+		}
+
+		for _, sh := range sharders {
+			assert.Zero(t, balances.balances[sh.sharder.id])
+			assert.Zero(t, balances.balances[sh.delegate.id])
+			for _, st := range sh.stakers {
+				expected[st.id] += 1e10
+				got[st.id] = balances.balances[st.id]
+			}
+		}
+
+		for _, sh := range getBlockSharders(sharders, balances.blockSharders) {
+			for _, st := range sh.stakers {
+				expected[st.id] += 21e7
+			}
+		}
+
+		assert.Equal(t, expected, got, "balances")
+
+	})
+
 }

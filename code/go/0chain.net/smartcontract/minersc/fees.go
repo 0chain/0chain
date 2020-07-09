@@ -315,6 +315,12 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	}
 	resp += iresp
 
+	// save node first, for the VC pools work
+	if err = mn.save(balances); err != nil {
+		return "", common.NewErrorf("pay_fees",
+			"saving generator node: %v", err)
+	}
+
 	// view change stuff
 	if block.Round == gn.ViewChange {
 		var mb = balances.GetBlock().MagicBlock
@@ -322,11 +328,6 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		if err != nil {
 			return "", err
 		}
-	}
-
-	if err = mn.save(balances); err != nil {
-		return "", common.NewErrorf("pay_fees",
-			"saving generator node: %v", err)
 	}
 
 	gn.setLastRound(block.Round)
