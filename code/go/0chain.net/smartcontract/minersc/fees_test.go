@@ -415,35 +415,12 @@ func Test_payFees(t *testing.T) {
 	})
 
 	t.Run("epoch", func(t *testing.T) {
-
-		/*
-		   func (gn *globalNode) epochDecline() {
-		   	// keep existing value for logs
-		   	var ir, rr = gn.InterestRate, gn.RewardRate
-		   	// decline the value
-		   	gn.RewardRate = gn.RewardRate * (1.0 - gn.RewardDeclineRate)
-		   	gn.InterestRate = gn.InterestRate * (1.0 - gn.InterestDeclineRate)
-
-		   	// log about the epoch declining
-		   	Logger.Info("miner sc: epoch decline",
-		   		zap.Int64("round", gn.LastRound),
-		   		zap.Float64("reward_decline_rate", gn.RewardDeclineRate),
-		   		zap.Float64("interest_decline_rate", gn.InterestDeclineRate),
-		   		zap.Float64("prev_reward_rate", rr),
-		   		zap.Float64("prev_interest_rate", ir),
-		   		zap.Float64("new_reward_rate", gn.RewardRate),
-		   		zap.Float64("new_interest_rate", gn.InterestRate),
-		   	)
-		   }
-		*/
-
 		var gn, err = msc.getGlobalNode(balances)
 		require.NoError(t, err)
 		var ir, rr = gn.InterestRate, gn.RewardRate
 		gn.epochDecline()
 		assert.True(t, gn.InterestRate < ir)
 		assert.True(t, gn.RewardRate < rr)
-
 	})
 
 }
