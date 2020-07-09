@@ -87,7 +87,7 @@ var NodeTypeNames = common.CreateLookups("m", "Miner", "s", "Sharder", "b", "Blo
 
 /*Node - a struct holding the node information */
 type Node struct {
-	client.Client            `yaml:",inline"`
+	client.Client  `yaml:",inline"`
 	N2NHost        string    `json:"n2n_host" yaml:"n2n_ip"`
 	Host           string    `json:"host" yaml:"public_ip"`
 	Port           int       `json:"port" yaml:"port"`
@@ -290,7 +290,9 @@ func NewNode(nc map[interface{}]interface{}) (*Node, error) {
 	node.Client.SetPublicKey(node.PublicKey)
 	hash := encryption.Hash(node.PublicKeyBytes)
 	if node.ID != hash {
-		return nil, common.NewError("invalid_client_id", fmt.Sprintf("public key: %v, client_id: %v, hash: %v\n", node.PublicKey, node.ID, hash))
+		return nil, common.NewErrorf("invalid_client_id",
+			"public key: %v, client_id: %v, hash: %v\n", node.PublicKey,
+			node.ID, hash)
 	}
 	node.ComputeProperties()
 	Self.SetNodeIfPublicKeyIsEqual(node)
