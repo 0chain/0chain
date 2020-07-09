@@ -15,10 +15,12 @@ import (
 //
 
 type testBalances struct {
-	balances  map[datastore.Key]state.Balance
-	txn       *transaction.Transaction
-	transfers []*state.Transfer
-	tree      map[datastore.Key]util.Serializable
+	balances      map[datastore.Key]state.Balance
+	txn           *transaction.Transaction
+	transfers     []*state.Transfer
+	tree          map[datastore.Key]util.Serializable
+	block         *block.Block
+	blockSharders []string
 }
 
 func newTestBalances() *testBalances {
@@ -32,17 +34,27 @@ func (tb *testBalances) setBalance(key datastore.Key, b state.Balance) {
 	tb.balances[key] = b
 }
 
+func (tb *testBalances) GetBlock() *block.Block {
+	return tb.block
+}
+
+func (tb *testBalances) SetMagicBlock(mb *block.MagicBlock) {
+	if tb.block != nil {
+		tb.block.MagicBlock = mb
+	}
+}
+
+func (tb *testBalances) GetBlockSharders(*block.Block) []string {
+	return tb.blockSharders
+}
+
 // stubs
-func (tb *testBalances) GetBlock() *block.Block                   { return nil }
 func (tb *testBalances) GetState() util.MerklePatriciaTrieI       { return nil }
 func (tb *testBalances) GetTransaction() *transaction.Transaction { return nil }
-func (tb *testBalances) GetBlockSharders(b *block.Block) []string { return nil }
 func (tb *testBalances) Validate() error                          { return nil }
 func (tb *testBalances) GetMints() []*state.Mint                  { return nil }
 func (tb *testBalances) SetStateContext(*state.State) error       { return nil }
-func (tb *testBalances) AddMint(*state.Mint) error                { return nil }
 func (tb *testBalances) GetTransfers() []*state.Transfer          { return nil }
-func (tb *testBalances) SetMagicBlock(block *block.MagicBlock)    {}
 func (tb *testBalances) AddSignedTransfer(st *state.SignedTransfer) {
 }
 func (tb *testBalances) GetSignedTransfers() []*state.SignedTransfer {
@@ -98,5 +110,13 @@ func (tb *testBalances) AddTransfer(t *state.Transfer) error {
 	tb.balances[t.ClientID] -= t.Amount
 	tb.balances[t.ToClientID] += t.Amount
 	tb.transfers = append(tb.transfers, t)
+	return nil
+}
+
+func (tb *testBalances) AddMint(mint *state.Mint) error {
+	if mint.Minter != ADDRESS {
+		panic("invalid miner: " + mint.Minter)
+	}
+	tb.balances[mint.ToClientID] += mint.Amount // mint!
 	return nil
 }

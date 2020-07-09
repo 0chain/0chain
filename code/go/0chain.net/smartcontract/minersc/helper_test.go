@@ -9,16 +9,20 @@ import (
 	"time"
 
 	// "0chain.net/chaincore/chain"
+	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
-	"0chain.net/core/logging"
 	"0chain.net/core/util"
 
+	"github.com/rcrowley/go-metrics"
+
+	"0chain.net/core/logging"
 	"go.uber.org/zap"
 
 	"github.com/stretchr/testify/require"
@@ -38,7 +42,20 @@ func init() {
 	// chain.ServerChain.Config = new(chain.Config)
 	// chain.ServerChain.ClientSignatureScheme = "bls0chain"
 
-	logging.Logger = zap.NewNop()
+	// node.Self.Node = node.Provider() // stub
+	logging.Logger = zap.NewNop() // /dev/null
+
+	moveFunctions[Start] = moveTrue
+	moveFunctions[Contribute] = moveTrue
+	moveFunctions[Share] = moveTrue
+	moveFunctions[Publish] = moveTrue
+	moveFunctions[Wait] = moveTrue
+}
+
+func moveTrue(balances cstate.StateContextI, pn *PhaseNode, gn *globalNode) (
+	result bool) {
+
+	return true
 }
 
 func randString(n int) string {
@@ -58,6 +75,8 @@ type Client struct {
 	pk      string                     // public key
 	scheme  encryption.SignatureScheme // pk/sk
 	balance state.Balance              // client wallet balance
+
+	keep state.Balance // keep latest know balance (manual control)
 }
 
 func newClient(balance state.Balance, balances cstate.StateContextI) (
@@ -156,9 +175,9 @@ func addSharder(t *testing.T, msc *MinerSmartContract, now int64,
 }
 
 func (c *Client) addToDelegatePoolRequest(t *testing.T, nodeID string) []byte {
-	var mn = NewMinerNode()
-	mn.ID = nodeID
-	return mustEncode(t, mn)
+	var dp deletePool
+	dp.MinerID = nodeID
+	return mustEncode(t, &dp)
 }
 
 // stake a miner or a sharder
@@ -166,6 +185,7 @@ func (c *Client) callAddToDelegatePool(t *testing.T, msc *MinerSmartContract,
 	now, val int64, nodeID string, balances cstate.StateContextI) (resp string,
 	err error) {
 
+	t.Helper()
 	var tx = newTransaction(c.id, ADDRESS, val, now)
 	balances.(*testBalances).txn = tx
 	var (
@@ -221,9 +241,47 @@ func setConfig(t *testing.T, balances cstate.StateContextI) (
 	return
 }
 
+func setMagicBlock(t *testing.T, miners []*Client, sharders []*Client,
+	balances cstate.StateContextI) {
+
+	var mb = block.NewMagicBlock()
+	mb.Miners = node.NewPool(node.NodeTypeMiner)
+	mb.Sharders = node.NewPool(node.NodeTypeSharder)
+	for _, mn := range miners {
+		var n = node.Provider()
+		n.SetID(mn.id)
+		n.Type = node.NodeTypeMiner
+		mb.Miners.AddNode(n)
+	}
+	for _, sh := range sharders {
+		var n = node.Provider()
+		n.SetID(sh.id)
+		n.Type = node.NodeTypeSharder
+		mb.Sharders.AddNode(n)
+	}
+
+	var err error
+	_, err = balances.InsertTrieNode(MagicBlockKey, mb)
+	require.NoError(t, err, "setting magic block")
+}
+
+func setRounds(t *testing.T, msc *MinerSmartContract, last, vc int64,
+	balances cstate.StateContextI) {
+
+	var gn, err = msc.getGlobalNode(balances)
+	require.NoError(t, err, "getting global node")
+	gn.LastRound = last
+	gn.ViewChange = vc
+	require.NoError(t, gn.save(balances), "saving global node")
+
+}
+
 func newTestMinerSC() (msc *MinerSmartContract) {
 	msc = new(MinerSmartContract)
 	msc.SmartContract = new(smartcontractinterface.SmartContract)
 	msc.ID = ADDRESS
+	msc.SmartContractExecutionStats = make(map[string]interface{})
+	msc.SmartContractExecutionStats["mintedTokens"] =
+		metrics.GetOrRegisterCounter("mintedTokens", nil)
 	return
 }
