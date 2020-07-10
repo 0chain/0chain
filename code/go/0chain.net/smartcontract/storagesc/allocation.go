@@ -934,6 +934,7 @@ func (sc *StorageSmartContract) adjustChallenges(alloc *StorageAllocation,
 		}
 		if success == 0 && failure == 0 {
 			passRates = append(passRates, 1.0)
+			continue
 		}
 		// success rate for the blobber allocation
 		passRates = append(passRates, float64(success)/float64(success+failure))
@@ -1024,6 +1025,8 @@ func (sc *StorageSmartContract) cacnelAllocationRequest(
 			"can't get all blobbers list: "+err.Error())
 	}
 
+	var until = alloc.Until()
+
 	// we can use the i for the blobbers list above because of algorithm
 	// of the getAllocationBlobbers method; also, we can use the i in the
 	// passRates list above because of algorithm of the adjustChallenges
@@ -1061,7 +1064,7 @@ func (sc *StorageSmartContract) cacnelAllocationRequest(
 		if d.Stats == nil || d.Stats.FailedChallenges < int64(fctrml) {
 			if lack := d.MinLockDemand - d.Spent; lack > 0 {
 				err = wp.moveToStake(sc.ID, alloc.ID, d.BlobberID, sp,
-					t.CreationDate, lack, balances)
+					until, lack, balances)
 				if err != nil {
 					return "", common.NewError("alloc_cacnel_failed",
 						"paying min_lock for "+d.BlobberID+": "+err.Error())
@@ -1266,15 +1269,18 @@ func (sc *StorageSmartContract) finalizeAllocation(
 			d.FinalReward += move // } stat
 		}
 		// min lock demand rest
-		if lack := d.MinLockDemand - d.Spent; lack > 0 {
-			err = wp.moveToStake(sc.ID, alloc.ID, d.BlobberID, sp, until,
-				lack, balances)
-			if err != nil {
-				return "", common.NewError("fini_alloc_failed",
-					"paying min_lock for "+d.BlobberID+": "+err.Error())
+		var fctrml = conf.FailedChallengesToRevokeMinLock
+		if d.Stats == nil || d.Stats.FailedChallenges < int64(fctrml) {
+			if lack := d.MinLockDemand - d.Spent; lack > 0 {
+				err = wp.moveToStake(sc.ID, alloc.ID, d.BlobberID, sp,
+					until, lack, balances)
+				if err != nil {
+					return "", common.NewError("alloc_cacnel_failed",
+						"paying min_lock for "+d.BlobberID+": "+err.Error())
+				}
+				d.Spent += lack
+				d.FinalReward += lack
 			}
-			d.Spent += lack
-			d.FinalReward += lack
 		}
 		// -------
 		var info *stakePoolUpdateInfo

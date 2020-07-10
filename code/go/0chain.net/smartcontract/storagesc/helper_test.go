@@ -375,3 +375,10 @@ func newTestStorageSC() (ssc *StorageSmartContract) {
 	ssc.ID = ADDRESS
 	return
 }
+
+func stakePoolTotal(sp *stakePool) (total state.Balance) {
+	for _, pool := range sp.orderedPools() {
+		total += pool.Balance
+	}
+	return
+}
