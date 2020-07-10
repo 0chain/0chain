@@ -319,3 +319,7 @@ of all offline nodes returning tokens back.
     ```
     Wait the pool becomes ACTIVE. Turn off the 5th miner. Wait View Change
     again. The pool should be unlocked and all tokens returned to user.
+
+# Client specific API
+
+Use `./zwallet mn-user-info` to get all stake pools of current user.

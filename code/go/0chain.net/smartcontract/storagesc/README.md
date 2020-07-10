@@ -361,7 +361,7 @@ free to use these zbox command.
     is 100GB a blobber can't allocate more then its capacity bid. For example,
     if a blobber has zero write_price it can't allocate infinity. Thus a blobber
     can provide `min (free, bid)` for current time and terms.
-7. Create and fund two new allocations.
+8. Create and fund two new allocations.
     ```
     ./zbox newallocation --read_price 0.001-10 --write_price 0.01-10 --size 104857600 --lock 2 --data 1 --parity 1 --expire 48h
     ./zbox newallocation --read_price 0.001-10 --write_price 0.01-10 --size 104857600 --lock 2 --data 1 --parity 1 --expire 48h
@@ -371,44 +371,44 @@ free to use these zbox command.
     export ALLOC1=<put allocation 1 ID here>
     export ALLOC2=<put allocation 2 ID here>
     ```
-8. Check out user's allocations list.
+9. Check out user's allocations list.
     ```
     ./zbox listallocations
     ```
-9. Check out allocations independently.
+10. Check out allocations independently.
     ```
     ./zbox get --allocation $ALLOC1
     ./zbox get --allocation $ALLOC2
     ```
-10. Check out stake pools again, that should have offers for these allocations
+11. Check out stake pools again, that should have offers for these allocations
     ```
     ./zbox sp-info --blobber_id $BLOBBER1
     ./zbox sp-info --blobber_id $BLOBBER2
     ```
-11. Check out write pools of the allocations.
+12. Check out write pools of the allocations.
     ```
     ./zbox wp-info --allocation $ALLOC1
     ./zbox wp-info --allocation $ALLOC2
     ```
-12. Update the first allocation, increasing its size. We don't provide more
+13. Update the first allocation, increasing its size. We don't provide more
     tokens, since related write pool already has enough tokens for the updating.
     ```
     ./zbox updateallocation --allocation $ALLOC1 --size 209715200
     ```
-13. Check out its write pool again. Shouldn't be changed.
+14. Check out its write pool again. Shouldn't be changed.
     ```
     ./zbox wp-info --allocation $ALLOC1
     ```
-14. Check out blobbers offers again.
+15. Check out blobbers offers again.
     ```
     ./zbox sp-info --blobber_id $BLOBBER1
     ./zbox sp-info --blobber_id $BLOBBER2
     ```
-15. Generate random file to upload
+16. Generate random file to upload
     ```
     head -c 20M < /dev/urandom > random.bin
     ```
-16. Upload it to the first allocations.
+17. Upload it to the first allocations.
     ```
     ./zbox upload \
       --allocation $ALLOC1 \
@@ -416,27 +416,27 @@ free to use these zbox command.
       --localpath=random.bin \
       --remotepath=/remote/random.bin
     ```
-17. Check out uploaded list
+18. Check out uploaded list
     ```
     ./zbox list --allocation $ALLOC1 --remotepath /remote
     ```
-18. Check out related challenge and write pools after blobbers commit their
+19. Check out related challenge and write pools after blobbers commit their
     write markers in SC.
     ```
     ./zbox cp-info --allocation $ALLOC1
     ./zbox wp-info --allocation $ALLOC1
     ```
-19. Wait a challenge some time. Check challenge pool again.
-20. Check out blobbers stake pools to see filling with rewards
+20. Wait a challenge some time. Check challenge pool again.
+21. Check out blobbers stake pools to see filling with rewards
     ```
     ./zbox sp-info --blobber_id $BLOBBER1
     ./zbox sp-info --blobber_id $BLOBBER2
     ```
-21. Delete the file
+22. Delete the file
     ```
     ./zbox delete --allocation $ALLOC1 --remotepath /remote/random.bin
     ```
-22. Generate and upload another file.
+23. Generate and upload another file.
     ```
     head -c 50M < /dev/urandom > random.bin
     ./zbox upload \
@@ -445,31 +445,31 @@ free to use these zbox command.
       --localpath=random.bin \
       --remotepath=/remote/random.bin
     ```
-23. Check out uploaded list
+24. Check out uploaded list
     ```
     ./zbox list --allocation $ALLOC1 --remotepath /remote
     ```
-24. Check out related challenge and write pool after blobbers commit their
+25. Check out related challenge and write pool after blobbers commit their
     write markers in SC.
     ```
     ./zbox cp-info --allocation $ALLOC1
     ./zbox wp-info --allocation $ALLOC1
     ```
-25. Commit some tokens to a read pool.
+26. Commit some tokens to a read pool.
     ```
     ./zbox rp-lock --allocation $ALLOC1 --duration 1h --tokens 1
     ```
-26. Check out locked tokens in the read pool.
+27. Check out locked tokens in the read pool.
     ```
     ./zbox rp-info --allocation $ALLOC1
     ```
-27. Download the file.
+28. Download the file.
     ```
     rm -f got.bin
     ./zbox download --allocation $ALLOC1 --localpath=got.bin \
         --remotepath /remote/random.bin
     ```
-28. Make the allocation expired.
+29. Make the allocation expired.
     ```
     ./zbox updateallocation --allocation $ALLOC1 --expiry -48h
     ./zbox get --allocation $ALLOC1
@@ -486,7 +486,7 @@ free to use these zbox command.
     Blobbers finalizes allocations automatically by some interval (see blobber
     configurations 'update_allocations_interval'). And in this case,
     the alloc-fini can fail with 'allocation already finalized'.
-29. Cancel second allocation.
+30. Cancel second allocation.
     ```
     head -c 50M < /dev/urandom > random.bin
     ./zbox upload                        \
@@ -523,7 +523,7 @@ free to use these zbox command.
     finalized:                 true
     canceled:                  true
     ```
-30. Unlock read pool tokens
+31. Unlock read pool tokens
     ```
     ./zbox rp-info
     ```
@@ -533,17 +533,21 @@ free to use these zbox command.
     ```
     ./zbox rp-unlock --pool_id <POOL_ID>
     ```
-31. Check out blobbers. Should not have allocated space.
+32. Check out blobbers. Should not have allocated space.
     ```
     ./zbox ls-blobbers
     ```
-32. Check out your wallet balance
+33. Check out your wallet balance
     ```
     ./zwallet getbalance
     ```
-33. Since, your wallet was configured and delegate_wallet for the blobbers,
+34. Since, your wallet was configured and delegate_wallet for the blobbers,
     then it should have rewards, and interests
     ```
     ./zbox sp-take-rewards --blobber_id $BLOBBER1
     ./zbox sp-take-rewards --blobber_id $BLOBBER2
     ```
+
+# Client specific API
+
+Use `./zbox sp-user-info` to get all stake pools of current user.
