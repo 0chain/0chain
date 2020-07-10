@@ -868,7 +868,7 @@ func (mc *Chain) restartRound(ctx context.Context) {
 			nextR := mc.GetRound(r.GetRoundNumber())
 			nr := mc.StartNextRound(ctx, r)
 			if nr == nil {
-				// push notarized blocks to sharders again (the fag ahead state)
+				// push notarized blocks to sharders again (the far ahead state)
 				tk := mc.GetLatestLFBTicket(ctx)
 
 				for s, c := tk.Round, mc.CurrentRound; s < c; s++ {
@@ -935,7 +935,16 @@ func (mc *Chain) restartRound(ctx context.Context) {
 	var lfb = mc.GetLatestFinalizedBlock()
 	if lfb.ClientState == nil {
 		Logger.Debug("(restart round) LFB client state still nil (initialize)")
-		mc.InitBlockState(lfb) // ignore error
+		err = mc.InitBlockState(lfb)
+		// retry 10 times
+		for i := 0; i < 10 && err != nil; i, err = i+1, mc.InitBlockState(lfb) {
+			Logger.Error("(restart round) init block state", zap.Error(err))
+			select {
+			case <-time.After(2 * time.Second):
+			case <-ctx.Done():
+				return
+			}
+		}
 	}
 	for i, e := lfb.Round, mc.CurrentRound; i < e; i++ {
 		var mr = mc.GetMinerRound(i)
@@ -949,27 +958,18 @@ func (mc *Chain) restartRound(ctx context.Context) {
 func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
 	updated bool, err error) {
 
-	// LFB by LFB ticket
+	// LFB regardless a ticket
 	var (
-		lfbs   *block.Block
-		lfb    = mc.GetLatestFinalizedBlock()
-		ticket = mc.GetLatestLFBTicket(ctx)
+		lfbs *block.Block
+		lfb  = mc.GetLatestFinalizedBlock()
+		list = mc.GetLatestFinalizedBlockFromSharder(ctx)
 	)
 
-	if ticket == nil {
-		return // ticket can be nil if context.Done
+	if len(list) == 0 {
+		return // no LFB given
 	}
 
-	if lfbs, err = mc.GetBlock(ctx, ticket.LFBHash); err != nil {
-		lfbs = mc.SyncFetchFinalizedBlockFromSharders(ctx, ticket.LFBHash)
-		if lfbs == nil {
-			return // no blocks given, try next restart
-		}
-	}
-
-	if lfbs == nil {
-		return // no FB block given
-	}
+	lfbs = list[0].Block
 
 	if !(lfb == nil || lfb.Round == 0 || lfb.Round < lfbs.Round) {
 		return // nothing to update
@@ -982,10 +982,14 @@ func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
 	mr, _ = mc.AddRound(mr).(*Round)
 	mc.SetRandomSeed(mr, lfbs.GetRoundRandomSeed())
 	mc.AddBlock(lfbs)
-	if err = mc.InitBlockState(lfbs); err != nil {
-		// don't stop on this error, it should be resolved in
-		// finalize round kicking
+	// retry 10 times to repair the state, then ignore the error
+	err = mc.InitBlockState(lfbs)
+	for i := 0; i < 10 && err != nil; i, err = i+1, mc.InitBlockState(lfbs) {
 		Logger.Error("initialize LFB state in restart_round", zap.Error(err))
+		select {
+		case <-time.After(2 * time.Second):
+		case <-ctx.Done():
+		}
 	}
 	mc.SetLatestFinalizedBlock(ctx, lfbs)
 	if mc.GetCurrentRound() < mr.GetRoundNumber() {

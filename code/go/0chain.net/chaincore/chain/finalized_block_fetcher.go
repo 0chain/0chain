@@ -119,7 +119,7 @@ func (c *Chain) asyncFetchFinalizedBlock(ctx context.Context,
 	hash string, got chan<- string) {
 
 	var err error
-	if _, err = c.getBlock(ctx, hash); err == nil {
+	if _, err = c.GetBlock(ctx, hash); err == nil {
 		select {
 		case got <- hash:
 		case <-ctx.Done():

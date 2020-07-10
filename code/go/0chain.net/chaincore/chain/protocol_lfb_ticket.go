@@ -240,7 +240,7 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 		// a received LFB
 		case ticket = <-c.updateLFBTicket:
 
-			if _, err := c.getBlock(ctx, ticket.LFBHash); err != nil {
+			if _, err := c.GetBlock(ctx, ticket.LFBHash); err != nil {
 				if node.Self.Type == node.NodeTypeSharder {
 					c.AsyncFetchFinalizedBlockFromSharders(ctx, ticket.LFBHash)
 				}
