@@ -14,6 +14,13 @@ import (
 // test extension
 //
 
+func (aps allocationPools) gimmeAll() (total state.Balance) {
+	for _, ap := range aps {
+		total += ap.Balance
+	}
+	return
+}
+
 func (aps allocationPools) total(now int64) (total state.Balance) {
 
 	for _, ap := range aps {

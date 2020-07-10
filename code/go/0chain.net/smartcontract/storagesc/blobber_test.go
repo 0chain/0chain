@@ -753,19 +753,32 @@ func Test_flow_penalty(t *testing.T) {
 
 }
 
+func isAllocBlobber(id string, alloc *StorageAllocation) bool {
+	for _, d := range alloc.BlobberDetails {
+		if d.BlobberID == id {
+			return true
+		}
+	}
+	return false
+}
+
 // no challenge responses, finalize
 func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 
 	var (
-		ssc            = newTestStorageSC()
-		balances       = newTestBalances()
-		client         = newClient(100*x10, balances)
-		tp, exp  int64 = 0, int64(toSeconds(time.Hour))
+		ssc      = newTestStorageSC()
+		balances = newTestBalances()
+		client   = newClient(100*x10, balances)
+		tp, exp  = int64(0), int64(toSeconds(time.Hour))
+		conf     = setConfig(t, balances)
 
 		err error
 	)
 
-	setConfig(t, balances)
+	conf.FailedChallengesToCancel = 100
+	conf.FailedChallengesToRevokeMinLock = 50
+	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
+	require.NoError(t, err)
 
 	tp += 100
 	var allocID, blobs = addAllocation(t, ssc, client, tp, exp, balances)
@@ -773,15 +786,6 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 	var alloc *StorageAllocation
 	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
-
-	var b1 *Client
-	for _, b := range blobs {
-		if b.id == alloc.BlobberDetails[0].BlobberID {
-			b1 = b
-			break
-		}
-	}
-	require.NotNil(t, b1)
 
 	require.EqualValues(t, 10000000040, alloc.minLockDemandLeft())
 
@@ -794,51 +798,52 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 		balances.balances[valid.id] = 0 // reset the balance
 	}
 
-	// get 4th blobber and reset all blobbers balances
-	// (blobber stakes itself)
-	var b4 *Client
+	// reset all blobbers balances (blobber stakes itself)
 	for _, b := range blobs {
-		if b.id == alloc.BlobberDetails[3].BlobberID {
-			b4 = b
-		}
 		balances.balances[b.id] = 0 // reset the balance
 	}
-	require.NotNil(t, b4)
 
-	assert.Zero(t, balances.balances[b4.id])
+	var wp *writePool
+	wp, err = ssc.getWritePool(client.id, balances)
+	require.NoError(t, err)
+	var wps = wp.allocUntil(alloc.ID, alloc.Until())
 
 	t.Run("challenges without a response", func(t *testing.T) {
 
 		const allocRoot = "alloc-root-1"
 
-		// write 100 MB
-		tp += 100
-		var cc = &BlobberCloseConnection{
-			AllocationRoot:     allocRoot,
-			PrevAllocationRoot: "",
-			WriteMarker: &WriteMarker{
-				AllocationRoot:         allocRoot,
-				PreviousAllocationRoot: "",
-				AllocationID:           allocID,
-				Size:                   100 * 1024 * 1024, // 100 MB
-				BlobberID:              b4.id,
-				Timestamp:              common.Timestamp(tp),
-				ClientID:               client.id,
-			},
-		}
-		cc.WriteMarker.Signature, err = client.scheme.Sign(
-			encryption.Hash(cc.WriteMarker.GetHashData()))
-		require.NoError(t, err)
+		tp += 10
 
-		// write
-		tp += 100
-		var tx = newTransaction(b4.id, ssc.ID, 0, tp)
-		balances.txn = tx
-		var resp string
-		resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc),
-			balances)
-		require.NoError(t, err)
-		require.NotZero(t, resp)
+		for _, b := range blobs {
+			if !isAllocBlobber(b.id, alloc) {
+				continue
+			}
+			// write 100 MB
+			var cc = &BlobberCloseConnection{
+				AllocationRoot:     allocRoot,
+				PrevAllocationRoot: "",
+				WriteMarker: &WriteMarker{
+					AllocationRoot:         allocRoot,
+					PreviousAllocationRoot: "",
+					AllocationID:           allocID,
+					Size:                   100 * 1024 * 1024, // 100 MB
+					BlobberID:              b.id,
+					Timestamp:              common.Timestamp(tp),
+					ClientID:               client.id,
+				},
+			}
+			cc.WriteMarker.Signature, err = client.scheme.Sign(
+				encryption.Hash(cc.WriteMarker.GetHashData()))
+			require.NoError(t, err)
+			// write
+			var tx = newTransaction(b.id, ssc.ID, 0, tp)
+			balances.txn = tx
+			var resp string
+			resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc),
+				balances)
+			require.NoError(t, err)
+			require.NotZero(t, resp)
+		}
 
 		// balances
 		var cp *challengePool
@@ -849,12 +854,28 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 		wp, err = ssc.getWritePool(client.id, balances)
 		require.NoError(t, err)
 
-		var sp *stakePool
-		sp, err = ssc.getStakePool(b4.id, balances)
-		require.NoError(t, err)
+		// offer balance, stake pool total balance
+		for _, b := range blobs {
+			if !isAllocBlobber(b.id, alloc) {
+				continue
+			}
+			var sp *stakePool
+			sp, err = ssc.getStakePool(b.id, balances)
+			require.NoError(t, err)
 
-		var offer = sp.findOffer(allocID)
-		require.NotNil(t, offer)
+			var offer = sp.findOffer(allocID)
+			require.NotNil(t, offer)
+			require.EqualValues(t, 10e10, stakePoolTotal(sp))
+			require.EqualValues(t, 5000000027, offer.Lock)
+		}
+
+		// values before
+		var (
+			wpb = wp.allocUntil(alloc.ID, alloc.Until())
+			cpb = cp.Balance
+		)
+
+		require.EqualValues(t, wps, wpb+cpb)
 
 		// until the end
 		alloc, err = ssc.getAllocation(allocID, balances)
@@ -865,23 +886,37 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 		validators, err = ssc.getValidatorsList(balances)
 		require.NoError(t, err)
 
-		// load blobber
-		var blobber *StorageNode
-		blobber, err = ssc.getBlobber(b4.id, balances)
-		require.NoError(t, err)
+		// ---------------
 
-		var challID, prevID string
+		tp += 10
+
+		var gfc int
+
 		// generate challenges leaving them without a response
-		for i := int64(0); i < 10+1; i++ {
-			tp += int64(toSeconds(avgTerms.ChallengeCompletionTime))
+		// (don't got the 'failed challenges to revoke min lock')
+		for i := int64(0); i < 2; i++ {
+			for _, b := range blobs {
+				if !isAllocBlobber(b.id, alloc) {
+					continue
+				}
+				// load blobber
+				var blobber *StorageNode
+				blobber, err = ssc.getBlobber(b.id, balances)
+				require.NoError(t, err)
 
-			challID = fmt.Sprintf("chall-%d", i)
-			genChall(t, ssc, b4.id, tp, prevID, challID, i, validators.Nodes,
-				alloc.ID, blobber, allocRoot, balances)
-
-			// next stage
-			prevID = challID
+				var challID, prevID string
+				challID = fmt.Sprintf("chall-%s-%d", b.id, i)
+				if i > 0 {
+					prevID = fmt.Sprintf("chall-%s-%d", b.id, i-1)
+				}
+				genChall(t, ssc, b.id, tp, prevID, challID, i,
+					validators.Nodes, alloc.ID, blobber, allocRoot, balances)
+				gfc++
+			}
 		}
+
+		// let expire all the challenges
+		tp += int64(toSeconds(avgTerms.ChallengeCompletionTime))
 
 		// add open challenges to allocation stats
 		alloc, err = ssc.getAllocation(allocID, balances)
@@ -893,45 +928,61 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 		_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
 		require.NoError(t, err)
 
-		tp += exp // allocation expired, let's finalize it
+		tp += exp // expire the allocation
 
 		var req lockRequest
 		req.AllocationID = allocID
 
-		println("ENTRY")
-
-		tx = newTransaction(client.id, ssc.ID, 0, tp)
+		var tx = newTransaction(client.id, ssc.ID, 0, tp)
 		balances.txn = tx
 		_, err = ssc.finalizeAllocation(tx, mustEncode(t, &req), balances)
+		require.NoError(t, err)
+
+		alloc, err = ssc.getAllocation(allocID, balances)
 		require.NoError(t, err)
 
 		// check out pools, blobbers, validators balances
 		wp, err = ssc.getWritePool(client.id, balances)
 		require.NoError(t, err)
-		_ = wp
-
-		// TODO : explore the write pool
 
 		// challenge pool should be empty
 		cp, err = ssc.getChallengePool(allocID, balances)
 		require.NoError(t, err)
 		assert.Zero(t, cp.Balance)
 
-		// offer pool should be reduced (blobber slash)
-		sp, err = ssc.getStakePool(b4.id, balances)
-		require.NoError(t, err)
-
-		// the offer should be closed
-		require.Nil(t, sp.findOffer(allocID))
-
-		for _, pool := range sp.orderedPools() {
-			println("SP P", pool.Balance/1e10)
+		// offer balance, stake pool total balance
+		for _, b := range blobs {
+			if !isAllocBlobber(b.id, alloc) {
+				continue
+			}
+			var sp *stakePool
+			sp, err = ssc.getStakePool(b.id, balances)
+			require.NoError(t, err)
+			require.Nil(t, sp.findOffer(allocID)) // no offers expected
+			require.EqualValues(t, 10e10, stakePoolTotal(sp))
 		}
 
-		// no rewards for the blobber
-		assert.Zero(t, balances.balances[b4.id])
+		// values before
+		var (
+			wpa = wp.allocUntil(alloc.ID, alloc.Until())
+			cpa = cp.Balance
+		)
 
-		// validators reward
+		require.Zero(t, cpa)
+		require.EqualValues(t, wpa, wps)
+		require.EqualValues(t, wps, wp.Pools.gimmeAll())
+
+		require.Equal(t, alloc.MovedBack, cpb)
+
+		// no rewards for the blobber
+		for _, b := range blobs {
+			if !isAllocBlobber(b.id, alloc) {
+				continue
+			}
+			assert.Zero(t, balances.balances[b.id])
+		}
+
+		// no rewards for validators
 		for _, val := range valids {
 			var vsp *stakePool
 			vsp, err = ssc.getStakePool(val.id, balances)
@@ -957,21 +1008,17 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 		err error
 	)
 
+	conf.FailedChallengesToCancel = 10
+	conf.FailedChallengesToRevokeMinLock = 5
+	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
+	require.NoError(t, err)
+
 	tp += 100
 	var allocID, blobs = addAllocation(t, ssc, client, tp, exp, balances)
 
 	var alloc *StorageAllocation
 	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
-
-	var b1 *Client
-	for _, b := range blobs {
-		if b.id == alloc.BlobberDetails[0].BlobberID {
-			b1 = b
-			break
-		}
-	}
-	require.NotNil(t, b1)
 
 	require.EqualValues(t, 10000000040, alloc.minLockDemandLeft())
 
@@ -984,51 +1031,52 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 		balances.balances[valid.id] = 0 // reset the balance
 	}
 
-	// get 4th blobber and reset all blobbers balances
-	// (blobber stakes itself)
-	var b4 *Client
+	// reset all blobbers balances (blobber stakes itself)
 	for _, b := range blobs {
-		if b.id == alloc.BlobberDetails[3].BlobberID {
-			b4 = b
-		}
 		balances.balances[b.id] = 0 // reset the balance
 	}
-	require.NotNil(t, b4)
 
-	assert.Zero(t, balances.balances[b4.id])
+	var wp *writePool
+	wp, err = ssc.getWritePool(client.id, balances)
+	require.NoError(t, err)
+	var wps = wp.allocUntil(alloc.ID, alloc.Until())
 
 	t.Run("challenges without a response", func(t *testing.T) {
 
 		const allocRoot = "alloc-root-1"
 
-		// write 100 MB
-		tp += 100
-		var cc = &BlobberCloseConnection{
-			AllocationRoot:     allocRoot,
-			PrevAllocationRoot: "",
-			WriteMarker: &WriteMarker{
-				AllocationRoot:         allocRoot,
-				PreviousAllocationRoot: "",
-				AllocationID:           allocID,
-				Size:                   100 * 1024 * 1024, // 100 MB
-				BlobberID:              b4.id,
-				Timestamp:              common.Timestamp(tp),
-				ClientID:               client.id,
-			},
-		}
-		cc.WriteMarker.Signature, err = client.scheme.Sign(
-			encryption.Hash(cc.WriteMarker.GetHashData()))
-		require.NoError(t, err)
+		tp += 10
 
-		// write
-		tp += 100
-		var tx = newTransaction(b4.id, ssc.ID, 0, tp)
-		balances.txn = tx
-		var resp string
-		resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc),
-			balances)
-		require.NoError(t, err)
-		require.NotZero(t, resp)
+		for _, b := range blobs {
+			if !isAllocBlobber(b.id, alloc) {
+				continue
+			}
+			// write 100 MB
+			var cc = &BlobberCloseConnection{
+				AllocationRoot:     allocRoot,
+				PrevAllocationRoot: "",
+				WriteMarker: &WriteMarker{
+					AllocationRoot:         allocRoot,
+					PreviousAllocationRoot: "",
+					AllocationID:           allocID,
+					Size:                   100 * 1024 * 1024, // 100 MB
+					BlobberID:              b.id,
+					Timestamp:              common.Timestamp(tp),
+					ClientID:               client.id,
+				},
+			}
+			cc.WriteMarker.Signature, err = client.scheme.Sign(
+				encryption.Hash(cc.WriteMarker.GetHashData()))
+			require.NoError(t, err)
+			// write
+			var tx = newTransaction(b.id, ssc.ID, 0, tp)
+			balances.txn = tx
+			var resp string
+			resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc),
+				balances)
+			require.NoError(t, err)
+			require.NotZero(t, resp)
+		}
 
 		// balances
 		var cp *challengePool
@@ -1039,27 +1087,28 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 		wp, err = ssc.getWritePool(client.id, balances)
 		require.NoError(t, err)
 
-		var sp *stakePool
-		sp, err = ssc.getStakePool(b4.id, balances)
-		require.NoError(t, err)
+		// offer balance, stake pool total balance
+		for _, b := range blobs {
+			if !isAllocBlobber(b.id, alloc) {
+				continue
+			}
+			var sp *stakePool
+			sp, err = ssc.getStakePool(b.id, balances)
+			require.NoError(t, err)
 
-		var offer = sp.findOffer(allocID)
-		require.NotNil(t, offer)
+			var offer = sp.findOffer(allocID)
+			require.NotNil(t, offer)
+			require.EqualValues(t, 10e10, stakePoolTotal(sp))
+			require.EqualValues(t, 5000000027, offer.Lock)
+		}
 
 		// values before
 		var (
 			wpb = wp.allocUntil(alloc.ID, alloc.Until())
 			cpb = cp.Balance
-			opb = offer.Lock
-			sob = sp.offersStake(common.Timestamp(tp), true)
-			spb = stakePoolTotal(sp)
 		)
 
-		println("WPB", wpb)
-		println("CPB", cpb)
-		println("OPB", opb)
-		println("SOB", sob)
-		println("SPB", spb)
+		require.EqualValues(t, wps, wpb+cpb)
 
 		// until the end
 		alloc, err = ssc.getAllocation(allocID, balances)
@@ -1070,27 +1119,32 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 		validators, err = ssc.getValidatorsList(balances)
 		require.NoError(t, err)
 
-		// load blobber
-		var blobber *StorageNode
-		blobber, err = ssc.getBlobber(b4.id, balances)
-		require.NoError(t, err)
-
 		// ---------------
 
 		var fc = int64(maxInt(conf.FailedChallengesToCancel,
 			conf.FailedChallengesToRevokeMinLock))
 
-		var challID, prevID string
+		tp += 10
+
 		// generate challenges leaving them without a response
 		for i := int64(0); i < fc; i++ {
-			tp += 10
+			for _, b := range blobs {
+				if !isAllocBlobber(b.id, alloc) {
+					continue
+				}
+				// load blobber
+				var blobber *StorageNode
+				blobber, err = ssc.getBlobber(b.id, balances)
+				require.NoError(t, err)
 
-			challID = fmt.Sprintf("chall-%d", i)
-			genChall(t, ssc, b4.id, tp, prevID, challID, i, validators.Nodes,
-				alloc.ID, blobber, allocRoot, balances)
-
-			// next stage
-			prevID = challID
+				var challID, prevID string
+				challID = fmt.Sprintf("chall-%s-%d", b.id, i)
+				if i > 0 {
+					prevID = fmt.Sprintf("chall-%s-%d", b.id, i-1)
+				}
+				genChall(t, ssc, b.id, tp, prevID, challID, i,
+					validators.Nodes, alloc.ID, blobber, allocRoot, balances)
+			}
 		}
 
 		// let expire all the challenges
@@ -1111,11 +1165,12 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 		var req lockRequest
 		req.AllocationID = allocID
 
-		println("C A ENTRY")
-
-		tx = newTransaction(client.id, ssc.ID, 0, tp)
+		var tx = newTransaction(client.id, ssc.ID, 0, tp)
 		balances.txn = tx
 		_, err = ssc.cacnelAllocationRequest(tx, mustEncode(t, &req), balances)
+		require.NoError(t, err)
+
+		alloc, err = ssc.getAllocation(allocID, balances)
 		require.NoError(t, err)
 
 		// check out pools, blobbers, validators balances
@@ -1127,33 +1182,37 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 		require.NoError(t, err)
 		assert.Zero(t, cp.Balance)
 
-		// offer pool should be reduced (blobber slash)
-		sp, err = ssc.getStakePool(b4.id, balances)
-		require.NoError(t, err)
-
-		// the offer should be closed
-		require.Nil(t, sp.findOffer(allocID))
+		// offer balance, stake pool total balance
+		for _, b := range blobs {
+			if !isAllocBlobber(b.id, alloc) {
+				continue
+			}
+			var sp *stakePool
+			sp, err = ssc.getStakePool(b.id, balances)
+			require.NoError(t, err)
+			require.Nil(t, sp.findOffer(allocID)) // no offers expected
+			require.EqualValues(t, 10e10, stakePoolTotal(sp))
+		}
 
 		// values before
 		var (
 			wpa = wp.allocUntil(alloc.ID, alloc.Until())
 			cpa = cp.Balance
-			soa = sp.offersStake(common.Timestamp(tp), true)
-			spa = stakePoolTotal(sp)
 		)
 
-		for _, pool := range sp.orderedPools() {
-			println("PBA -", pool.Balance)
-		}
+		require.Zero(t, cpa)
+		require.EqualValues(t, wpb, wpa)
+		require.EqualValues(t, wps, wp.Pools.gimmeAll())
 
-		println("WPA", wpa)
-		println("CPA", cpa)
-		println("OPA", "-")
-		println("SOA", soa)
-		println("SPA", spa)
+		require.Equal(t, alloc.MovedBack, cpb)
 
 		// no rewards for the blobber
-		assert.Zero(t, balances.balances[b4.id])
+		for _, b := range blobs {
+			if !isAllocBlobber(b.id, alloc) {
+				continue
+			}
+			assert.Zero(t, balances.balances[b.id])
+		}
 
 		// no rewards for validators
 		for _, val := range valids {
