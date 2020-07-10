@@ -48,10 +48,6 @@ func (*timeoutCounter) mult() int {
 	return viper.GetInt(roundTimeouts + "round_timeout_mult")
 }
 
-func (*timeoutCounter) max() int {
-	return viper.GetInt(roundTimeouts + "round_timeout_max")
-}
-
 func (tc *timeoutCounter) resetVotes() {
 	tc.timeoutVotes = make(map[int]int)
 	tc.votersVoted = make(map[string]struct{})
@@ -112,10 +108,6 @@ func (tc *timeoutCounter) IncrementTimeoutCount() {
 
 	// increase by configured multiplier
 	tc.count = tc.count * tc.mult()
-	if max := tc.max(); tc.count > max {
-		tc.count = max
-		tc.skip = max
-	}
 }
 
 // SetTimeoutCount - sets the timeout count to given number if it is greater
