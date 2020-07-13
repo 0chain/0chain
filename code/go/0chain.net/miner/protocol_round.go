@@ -655,7 +655,14 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*Bloc
 		}
 		r := mc.GetRound(fb.Round)
 		if r == nil {
-			r = mc.getRound(ctx, fb.Round)
+			if r = mc.getRound(ctx, fb.Round); r == nil {
+				// for a far ahead sharders case
+				var (
+					rx = round.NewRound(fb.Round)
+					mr = mc.CreateRound(rx)
+				)
+				r = mc.AddRound(mr).(*Round)
+			}
 		}
 		err = mc.VerifyNotarization(ctx, fb.Hash, fb.GetVerificationTickets(),
 			r.GetRoundNumber())
@@ -875,7 +882,7 @@ func (mc *Chain) restartRound(ctx context.Context) {
 					var mr = mc.GetMinerRound(s)
 					// send block to sharders again, if missing sharders side
 					if mr != nil && mr.Block != nil && mr.Block.IsBlockNotarized() {
-						go mc.SendNotarizedBlock(ctx, mr.Block)
+						mc.ForcePushNotarizedBlock(ctx, mr.Block)
 					}
 				}
 
@@ -921,7 +928,7 @@ func (mc *Chain) restartRound(ctx context.Context) {
 	}
 
 	r.Restart()
-	//Recalculate VRF shares and send
+	// Recalculate VRF shares and send
 	r.IncrementTimeoutCount()
 	redo := mc.RedoVrfShare(ctx, r)
 
@@ -953,6 +960,9 @@ func (mc *Chain) restartRound(ctx context.Context) {
 		}
 		go mc.FinalizeRound(ctx, mr.Round, mc) // kick finalization again
 	}
+
+	// kick far behind sharders
+	//	var tk =
 }
 
 func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (

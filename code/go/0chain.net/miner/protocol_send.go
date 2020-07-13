@@ -39,6 +39,15 @@ func (mc *Chain) SendNotarizedBlock(ctx context.Context, b *block.Block) {
 	}
 }
 
+// ForcePushNotarizedBlock pushes notarized blocks to sharders.
+func (mc *Chain) ForcePushNotarizedBlock(ctx context.Context, b *block.Block) {
+	if mc.BlocksToSharder == chain.NOTARIZED {
+		mb := mc.GetMagicBlock(b.Round)
+		m2s := mb.Sharders
+		m2s.SendAll(NotarizedBlockForcePushSender(b))
+	}
+}
+
 /*SendFinalizedBlock - send the finalized block to the sharders */
 func (mc *Chain) SendFinalizedBlock(ctx context.Context, b *block.Block) {
 	if mc.BlocksToSharder == chain.FINALIZED {

@@ -203,7 +203,6 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			} else {
 				buffer = bytes.NewBuffer(nil)
 			}
-
 			req, err := http.NewRequest("POST", url, buffer)
 			if err != nil {
 				return false

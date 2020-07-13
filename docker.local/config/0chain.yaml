@@ -1,7 +1,7 @@
 version: 1.0
 
 logging:
-  level: "debug"
+  level: "info"
   console: false # printing log to console is only supported in development mode
   goroutines: false
   memlog: false
@@ -115,9 +115,9 @@ network:
     large_message: 3000 # milliseconds
   large_message_th_size: 5120 # anything greater than this size in bytes
   user_handlers:
-    rate_limit: 10 # 10 per second
+    rate_limit: 100 # 100 per second
   n2n_handlers:
-    rate_limit: 1000 # 1000 per second
+    rate_limit: 10000 # 10000 per second
 
 # delegate wallet is wallet that used to configure node in Miner SC; if its
 # empty, then node ID used
