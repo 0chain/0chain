@@ -321,22 +321,14 @@ func (sc *StorageSmartContract) updateBlobberSettings(t *transaction.Transaction
 
 	// stake pool settings
 
-	err = conf.validateStakeRange(
-		update.StakePoolSettings.MinStake, update.StakePoolSettings.MaxStake,
-	)
-	if err != nil {
+	if err = update.StakePoolSettings.validate(conf); err != nil {
 		return "", common.NewError("update_blobber_settings_failed",
-			"validating new settings: "+err.Error())
+			"validating new stake pool settings: "+err.Error())
 	}
 
 	sp.Settings.MinStake = update.StakePoolSettings.MinStake
 	sp.Settings.MaxStake = update.StakePoolSettings.MaxStake
-
-	if nd := update.StakePoolSettings.NumDelegates; nd <= 0 {
-		return "", common.NewError("update_blobber_settings_failed",
-			"invalid num_delegates <= 0")
-	}
-
+	sp.Settings.ServiceCharge = update.StakePoolSettings.ServiceCharge
 	sp.Settings.NumDelegates = update.StakePoolSettings.NumDelegates
 
 	// blobber settings

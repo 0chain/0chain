@@ -60,9 +60,48 @@ func (rp *readPool) save(sscKey, clientID string, balances cstate.StateContextI)
 	return
 }
 
+func (rp *readPool) moveBlobberCharge(sscKey string, sp *stakePool,
+	ap *allocationPool, value state.Balance, balances cstate.StateContextI) (
+	err error) {
+
+	if value == 0 {
+		return // avoid insufficient transfer
+	}
+
+	var (
+		dw       = sp.Settings.DelegateWallet
+		transfer *state.Transfer
+	)
+	transfer, _, err = ap.DrainPool(sscKey, dw, value, nil)
+	if err != nil {
+		return fmt.Errorf("transferring tokens read_pool() -> "+
+			"blobber_charge(%s): %v", dw, err)
+	}
+	if err = balances.AddTransfer(transfer); err != nil {
+		return fmt.Errorf("adding transfer: %v", err)
+	}
+
+	// blobber service charge
+	sp.Rewards.Charge += value
+	return
+}
+
 func (rp *readPool) movePartToBlobber(sscKey string, ap *allocationPool,
 	sp *stakePool, value state.Balance, balances cstate.StateContextI) (
 	err error) {
+
+	var blobberCharge state.Balance
+	blobberCharge = state.Balance(sp.Settings.ServiceCharge * float64(value))
+	err = rp.moveBlobberCharge(sscKey, sp, ap, blobberCharge, balances)
+	if err != nil {
+		return
+	}
+
+	value = value - blobberCharge // left for stake holders
+
+	if value == 0 {
+		return // avoid insufficient transfer
+	}
 
 	var stake = float64(sp.stake())
 	for _, dp := range sp.orderedPools() {

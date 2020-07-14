@@ -110,8 +110,11 @@ type scConfig struct {
 	// MaxStake allowed by a blobber/validator (entire SC boundary).
 	MaxStake state.Balance `json:"max_stake"`
 
-	// max delegates per stake pool
+	// MaxDelegates per stake pool
 	MaxDelegates int `json:"max_delegates"`
+
+	// MaxCharge that blobber gets from rewards to its delegate_wallet.
+	MaxCharge float64 `json:"max_charge"`
 }
 
 func (sc *scConfig) validate() (err error) {
@@ -189,6 +192,13 @@ func (sc *scConfig) validate() (err error) {
 	if sc.MaxDelegates < 1 {
 		return fmt.Errorf("max_delegates is too small %v", sc.MaxDelegates)
 	}
+	if sc.MaxCharge < 0 {
+		return fmt.Errorf("negative max_charge: %v", sc.MaxCharge)
+	}
+	if sc.MaxCharge > 1.0 {
+		return fmt.Errorf("max_change >= 1.0 (> 100%%, invalid): %v",
+			sc.MaxCharge)
+	}
 	return
 }
 
@@ -202,7 +212,7 @@ func (conf *scConfig) validateStakeRange(min, max state.Balance) (err error) {
 			conf.MinStake)
 	}
 	if max > conf.MaxStake {
-		return fmt.Errorf("max_stake is greater than allowed by SC: %v < %v",
+		return fmt.Errorf("max_stake is greater than allowed by SC: %v > %v",
 			max, conf.MaxStake)
 	}
 	if max < min {
@@ -295,6 +305,7 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 		pfx + "challenge_rate_per_mb_min")
 
 	conf.MaxDelegates = scc.GetInt(pfx + "max_delegates")
+	conf.MaxCharge = scc.GetFloat64(pfx + "max_charge")
 
 	err = conf.validate()
 	return

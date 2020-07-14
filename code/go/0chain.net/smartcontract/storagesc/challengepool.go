@@ -104,6 +104,31 @@ func (cp *challengePool) moveToWritePool(allocID, blobID string,
 	return
 }
 
+func (cp *challengePool) moveBlobberCharge(sscKey string, sp *stakePool,
+	value state.Balance, balances cstate.StateContextI) (err error) {
+
+	if value == 0 {
+		return // avoid insufficient transfer
+	}
+
+	var (
+		dw       = sp.Settings.DelegateWallet
+		transfer *state.Transfer
+	)
+	transfer, _, err = cp.DrainPool(sscKey, dw, value, nil)
+	if err != nil {
+		return fmt.Errorf("transferring tokens challenge_pool() -> "+
+			"blobber_charge(%s): %v", dw, err)
+	}
+	if err = balances.AddTransfer(transfer); err != nil {
+		return fmt.Errorf("adding transfer: %v", err)
+	}
+
+	// blobber service charge
+	sp.Rewards.Charge += value
+	return
+}
+
 // moveToBlobber moves tokens to given blobber on challenge passed
 func (cp *challengePool) moveToBlobber(sscKey string, sp *stakePool,
 	value state.Balance, balances cstate.StateContextI) (err error) {
@@ -115,6 +140,20 @@ func (cp *challengePool) moveToBlobber(sscKey string, sp *stakePool,
 	if cp.Balance < value {
 		return fmt.Errorf("not enough tokens in challenge pool %s: %d < %d",
 			cp.ID, cp.Balance, value)
+	}
+
+	var blobberCharge state.Balance
+	blobberCharge = state.Balance(sp.Settings.ServiceCharge * float64(value))
+
+	err = cp.moveBlobberCharge(sscKey, sp, blobberCharge, balances)
+	if err != nil {
+		return
+	}
+
+	value = value - blobberCharge
+
+	if value == 0 {
+		return // nothing to move
 	}
 
 	if len(sp.Pools) == 0 {

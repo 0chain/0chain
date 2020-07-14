@@ -93,6 +93,7 @@ func (c *Client) addBlobRequest(t *testing.T) []byte {
 	sn.StakePoolSettings.NumDelegates = 100
 	sn.StakePoolSettings.MinStake = 0
 	sn.StakePoolSettings.MaxStake = 1000e10
+	sn.StakePoolSettings.ServiceCharge = 0.30 // 30%
 	return mustEncode(t, &sn)
 }
 
@@ -318,6 +319,9 @@ func setConfig(t *testing.T, balances chainState.StateContextI) (
 	conf.MaxWritePrice = 100e10 // 100 tokens per GB max allowed
 	conf.MaxDelegates = 200
 	conf.MaxChallengeCompletionTime = 5 * time.Minute
+	conf.MaxCharge = 0.50   // 50%
+	conf.MinStake = 0.0     // 0 toks
+	conf.MaxStake = 1000e10 // 100 toks
 
 	conf.ReadPool = &readPoolConfig{
 		MinLock:       10,

@@ -151,7 +151,8 @@ func Test_flow_reward(t *testing.T) {
 		var sp *stakePool
 		sp, err = ssc.getStakePool(b1.id, balances)
 		require.NoError(t, err)
-		require.EqualValues(t, 1e10, sp.Rewards.Blobber+sp.Rewards.Validator)
+		require.EqualValues(t, 1e10,
+			sp.Rewards.Blobber+sp.Rewards.Validator+sp.Rewards.Charge)
 
 		rp, err = ssc.getReadPool(client.id, balances)
 		require.NoError(t, err)
@@ -215,7 +216,10 @@ func Test_flow_reward(t *testing.T) {
 		var sp *stakePool
 		sp, err = ssc.getStakePool(b1.id, balances)
 		require.NoError(t, err)
-		require.EqualValues(t, 2e10, sp.Rewards.Blobber+sp.Rewards.Validator)
+		require.EqualValues(t, 2e10,
+			sp.Rewards.Blobber+sp.Rewards.Validator+sp.Rewards.Charge)
+
+		assert.EqualValues(t, 6e9, sp.Rewards.Charge)
 
 		var rp *readPool
 		rp, err = ssc.getReadPool(reader.id, balances)
@@ -287,7 +291,8 @@ func Test_flow_reward(t *testing.T) {
 		var sp *stakePool
 		sp, err = ssc.getStakePool(b1.id, balances)
 		require.NoError(t, err)
-		require.EqualValues(t, 2e10, sp.Rewards.Blobber+sp.Rewards.Validator)
+		require.EqualValues(t, 2e10,
+			sp.Rewards.Blobber+sp.Rewards.Validator+sp.Rewards.Charge)
 
 		cp, err = ssc.getChallengePool(allocID, balances)
 		require.NoError(t, err)
@@ -353,7 +358,8 @@ func Test_flow_reward(t *testing.T) {
 		var sp *stakePool
 		sp, err = ssc.getStakePool(b1.id, balances)
 		require.NoError(t, err)
-		require.EqualValues(t, 2e10, sp.Rewards.Blobber+sp.Rewards.Validator)
+		require.EqualValues(t, 2e10,
+			sp.Rewards.Blobber+sp.Rewards.Validator+sp.Rewards.Charge)
 
 		cp, err = ssc.getChallengePool(allocID, balances)
 		require.NoError(t, err)

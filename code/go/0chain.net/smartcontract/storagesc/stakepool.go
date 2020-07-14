@@ -100,8 +100,9 @@ type offerPool struct {
 
 // stake pool internal rewards information
 type stakePoolRewards struct {
-	Blobber   state.Balance `json:"blobber"`   //
-	Validator state.Balance `json:"validator"` //
+	Charge    state.Balance `json:"charge"`    // blobber charge
+	Blobber   state.Balance `json:"blobber"`   // blobber stake holders reward
+	Validator state.Balance `json:"validator"` // validator stake holders reward
 }
 
 // delegate pool
@@ -125,6 +126,27 @@ type stakePoolSettings struct {
 	MaxStake state.Balance `json:"max_stake"`
 	// NumDelegates maximum allowed.
 	NumDelegates int `json:"num_delegates"`
+	// ServiceCharge of the blobber. The blobber gets this % (actually, value in
+	// [0; 1) range). If the ServiceCharge greater then max_charge of the SC
+	// then the blobber can't be registered / updated.
+	ServiceCharge float64 `json:"service_charge"`
+}
+
+func (sps *stakePoolSettings) validate(conf *scConfig) (err error) {
+	err = conf.validateStakeRange(sps.MinStake, sps.MaxStake)
+	if err != nil {
+		return
+	}
+	if sps.ServiceCharge < 0.0 {
+		return errors.New("negative service charge")
+	}
+	if sps.ServiceCharge > conf.MaxCharge {
+		return errors.New("service_charge is greater then max allowed by SC")
+	}
+	if sps.NumDelegates <= 0 {
+		return errors.New("num_delegates <= 0")
+	}
+	return
 }
 
 // stake pool of a blobber
@@ -543,6 +565,7 @@ func (sp *stakePool) stat(conf *scConfig, sscKey string,
 	}
 
 	// rewards
+	stat.Rewards.Charge = sp.Rewards.Charge       // total for all time
 	stat.Rewards.Blobber = sp.Rewards.Blobber     // total for all time
 	stat.Rewards.Validator = sp.Rewards.Validator // total for all time
 
@@ -560,6 +583,7 @@ type offerPoolStat struct {
 }
 
 type rewardsStat struct {
+	Charge    state.Balance `json:"charge"`    // total for all time
 	Blobber   state.Balance `json:"blobber"`   // total for all time
 	Validator state.Balance `json:"validator"` // total for all time
 }
@@ -695,39 +719,25 @@ func (ssc *StorageSmartContract) getOrCreateStakePool(conf *scConfig,
 	blobberID datastore.Key, settings *stakePoolSettings,
 	balances chainstate.StateContextI) (sp *stakePool, err error) {
 
+	if err = settings.validate(conf); err != nil {
+		return nil, fmt.Errorf("invalid stake_pool settings: %v", err)
+	}
+
 	// the stake pool can be created by related validator
 	sp, err = ssc.getStakePool(blobberID, balances)
 	if err != nil && err != util.ErrValueNotPresent {
 		return nil, fmt.Errorf("unexpected error: %v", err)
 	}
 
-	switch {
-
-	// validate and set
-	case err == util.ErrValueNotPresent:
-		sp, err = newStakePool(), nil // create new, reset error
-
-		sp.Settings.DelegateWallet = settings.DelegateWallet // on create only
-
-		err = conf.validateStakeRange(settings.MinStake, conf.MaxStake)
-		if err != nil {
-			return nil, err
-		}
-		sp.Settings.MinStake = settings.MinStake
-		sp.Settings.MaxStake = settings.MaxStake
-
-		if nd := settings.NumDelegates; nd <= 0 {
-			return nil, fmt.Errorf("invalid num_delegates: %d", nd)
-		}
-
-		sp.Settings.NumDelegates = settings.NumDelegates
-
-	// set instead of empty list
-	case sp.Settings.DelegateWallet == "" && len(settings.DelegateWallet) != 0:
+	if err == util.ErrValueNotPresent {
+		sp, err = newStakePool(), nil
 		sp.Settings.DelegateWallet = settings.DelegateWallet
-
 	}
 
+	sp.Settings.MinStake = settings.MinStake
+	sp.Settings.MaxStake = settings.MaxStake
+	sp.Settings.ServiceCharge = settings.ServiceCharge
+	sp.Settings.NumDelegates = settings.NumDelegates
 	return
 }
 
