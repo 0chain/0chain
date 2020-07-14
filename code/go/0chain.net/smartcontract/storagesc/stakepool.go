@@ -141,7 +141,8 @@ func (sps *stakePoolSettings) validate(conf *scConfig) (err error) {
 		return errors.New("negative service charge")
 	}
 	if sps.ServiceCharge > conf.MaxCharge {
-		return errors.New("service_charge is greater then max allowed by SC")
+		return fmt.Errorf("service_charge (%f) is greater then"+
+			" max allowed by SC (%f)", sps.ServiceCharge, conf.MaxCharge)
 	}
 	if sps.NumDelegates <= 0 {
 		return errors.New("num_delegates <= 0")
