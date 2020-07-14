@@ -50,6 +50,10 @@ smart_contracts:
     interest_decline_rate: 0.1 # [0; 1), 0.1 = 10%
     # no mints after miner SC total mints reaches this boundary
     max_mint: 4000000.0 # tokens
+    # max_charge allowed for blobbers; the charge is part of blobber rewards
+    # goes to blobber's delegate wallets, other part goes to related stake
+    # holders
+    max_charge: 0.50
 
   storagesc:
     min_stake: 0.01 # min stake can be set by a node (boundary for all nodes)
