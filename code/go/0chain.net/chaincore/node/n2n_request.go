@@ -277,7 +277,10 @@ func ToN2NSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 			updatePullStats(sender, uri, len(sdata), ts)
 		}
 		N2n.Info("message received", zap.Int("from", sender.SetIndex),
-			zap.Int("to", Self.Underlying().SetIndex), zap.String("handler", r.RequestURI), zap.Duration("duration", time.Since(ts)), zap.Int("codec", options.CODEC))
+			zap.Int("to", Self.Underlying().SetIndex),
+			zap.String("handler", r.RequestURI),
+			zap.Duration("duration", time.Since(ts)),
+			zap.Int("codec", options.CODEC))
 	}
 }
 

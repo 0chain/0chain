@@ -11,6 +11,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	// TORM
+	"encoding/json"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/httpclientutil"
@@ -554,6 +557,14 @@ func (mc *Chain) GetMagicBlockFromSC() (*block.MagicBlock, error) {
 	return magicBlock, nil
 }
 
+func mustJSON(val interface{}) string {
+	b, err := json.Marshal(val)
+	if err != nil {
+		panic("JSON MARSHALING ERR: " + err.Error())
+	}
+	return string(b)
+}
+
 func (mc *Chain) Wait() (result *httpclientutil.Transaction, err2 error) {
 	magicBlock, err := mc.GetMagicBlockFromSC()
 	if err != nil {
@@ -615,9 +626,11 @@ func (mc *Chain) Wait() (result *httpclientutil.Transaction, err2 error) {
 	mc.viewChangeDKG.N = magicBlock.N
 	summary := mc.viewChangeDKG.GetDKGSummary()
 	ctx := common.GetRootContext()
+	println("SAVE DKG SUMMARY FOR", magicBlock.StartingRound, mustJSON(summary))
 	if err := StoreDKGSummary(ctx, summary); err != nil {
 		Logger.DPanic(err.Error())
 	}
+	println("SET DKG FOR", magicBlock.StartingRound)
 	if err := mc.SetDKG(mc.viewChangeDKG, magicBlock.StartingRound); err != nil {
 		Logger.Error("failed to set dkg", zap.Error(err))
 	}

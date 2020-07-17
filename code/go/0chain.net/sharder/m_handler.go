@@ -50,6 +50,10 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 	if !ok {
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
+	var lfb = sc.GetLatestFinalizedBlock()
+	if b.Round <= lfb.Round {
+		return true, nil // doesn't need a not. block for the round
+	}
 	_, err := sc.GetBlock(ctx, b.Hash)
 	if err == nil {
 		return true, nil

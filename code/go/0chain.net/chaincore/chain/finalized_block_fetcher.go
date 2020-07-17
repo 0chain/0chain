@@ -50,9 +50,9 @@ func NewFinalizedBlockFetcher(chain FinalizedBlockFromShardersGetter) (
 	fbf *FinalizedBlockFetcher) {
 
 	fbf = new(FinalizedBlockFetcher)
-	fbf.add = make(chan string, 10)
-	fbf.got = make(chan string, 10)
-	fbf.fetch = make(chan string, 10)
+	fbf.add = make(chan string, 100)
+	fbf.got = make(chan string, 100)
+	fbf.fetch = make(chan string, 100)
 	fbf.getter = chain
 	return
 }

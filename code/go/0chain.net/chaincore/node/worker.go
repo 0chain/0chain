@@ -63,21 +63,27 @@ func (np *Pool) statusUpdate(ctx context.Context) {
 			}
 		}
 		if node.GetErrorCount() >= CountErrorThresholdNodeInactive {
+			println("SET INACTIVE BY UPDATE TIMER")
 			node.SetStatus(NodeStatusInactive)
 		}
 	}
 	np.ComputeNetworkStats()
 }
 
-func (np *Pool) statusMonitor(context.Context) {
+func (np *Pool) statusMonitor(ctx context.Context) {
 	nodes := np.shuffleNodesLock()
+	if np.Type == NodeTypeSharder {
+		println("STATUS MONITOR FOR SHARDERS", np.Size(), len(nodes))
+	}
 	for _, node := range nodes {
 		if Self.IsEqual(node) {
+			println("STATUS MONITOR SKIP SELF", node.GetN2NURLBase())
 			continue
 		}
 		if common.Within(node.GetLastActiveTime().Unix(), 10) {
 			node.updateMessageTimings()
 			if time.Since(node.Info.AsOf) < 60*time.Second {
+				println("STATUS MONITOR SKIP LAST ACTIVE NODE", node.GetN2NURLBase())
 				continue
 			}
 		}
@@ -88,8 +94,28 @@ func (np *Pool) statusMonitor(context.Context) {
 			panic(err)
 		}
 		statusURL = fmt.Sprintf("%v?id=%v&data=%v&hash=%v&signature=%v", statusURL, Self.Underlying().GetKey(), data, hash, signature)
-		resp, err := httpClient.Get(statusURL)
+		if np.Type == NodeTypeSharder {
+			println("STATUS MONITOR FOR SHARDERS: GET", node.GetN2NURLBase())
+		}
+		req, err := http.NewRequest(http.MethodGet, statusURL, nil)
 		if err != nil {
+			println("CREAETING HTTP REQUEST:", err.Error())
+			continue
+		}
+		reqctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		req = req.WithContext(reqctx)
+		resp, err := httpClient.Do(req)
+		cancel()
+		if np.Type == NodeTypeSharder {
+			println("STATUS MONITOR FOR SHARDERS: GOT", node.GetN2NURLBase(), err == nil)
+			if err != nil {
+				println("ERROR:", err.Error())
+			}
+		}
+		if err != nil {
+			if np.Type == NodeTypeSharder {
+				println("NODE INACTIVE", node.GetN2NURLBase())
+			}
 			node.AddErrorCount(1) // ++
 			if node.IsActive() {
 				if node.GetErrorCount() >= CountErrorThresholdNodeInactive {
@@ -98,6 +124,9 @@ func (np *Pool) statusMonitor(context.Context) {
 				}
 			}
 		} else {
+			if np.Type == NodeTypeSharder {
+				println("NODE ACTIVE", node.GetN2NURLBase())
+			}
 			info := Info{}
 			if err := common.FromJSON(resp.Body, &info); err == nil {
 				info.AsOf = time.Now()

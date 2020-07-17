@@ -20,7 +20,7 @@ development:
     vesting: true
   txn_generation:
     wallets: 50
-    max_transactions: 7
+    max_transactions: 0
     max_txn_fee: 10000
     min_txn_fee: 0
     max_txn_value: 10000000000
@@ -70,7 +70,6 @@ server_chain:
     softto_min: 3000 #in miliseconds
     softto_mult: 3 #multiples of mean network time (mnt)  softto = max{softo_min, softto_mult * mnt}
     round_restart_mult: 2 #number of soft timeouts before round is restarted
-    round_timeout_mult: 2 # increase round timeout by this multiplier if need
   transaction:
     payload:
       max_size: 98304 # bytes
@@ -102,7 +101,7 @@ server_chain:
       batch_size: 50
   lfb_ticket:
     rebroadcast_timeout: '15s'  #
-    ahead: 5                    #
+    ahead: 75                   #
     fb_fetching_lifetime: '10s' #
 
 network:
@@ -115,9 +114,9 @@ network:
     large_message: 3000 # milliseconds
   large_message_th_size: 5120 # anything greater than this size in bytes
   user_handlers:
-    rate_limit: 100 # 100 per second
+    rate_limit: 100000000 # 100 per second
   n2n_handlers:
-    rate_limit: 10000 # 10000 per second
+    rate_limit: 10000000000 # 10000 per second
 
 # delegate wallet is wallet that used to configure node in Miner SC; if its
 # empty, then node ID used
@@ -128,7 +127,7 @@ service_charge: 0.10      # [0; 1) of all fees
 number_of_delegates: 10   # max number of delegate pools
 # min stake pool amount allowed by node; should not conflict with
 # SC min_stake 
-min_stake: 1.0    # tokens
+min_stake: 0.0    # tokens
 # max stake pool amount allowed by node; should not conflict with
 # SC max_stake 
 max_stake: 100.0  # tokens

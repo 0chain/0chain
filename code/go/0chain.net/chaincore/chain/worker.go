@@ -38,6 +38,7 @@ func (c *Chain) SetupWorkers(ctx context.Context) {
 func (c *Chain) StatusMonitor(ctx context.Context) {
 	smctx, cancel := context.WithCancel(ctx)
 	mb := c.GetCurrentMagicBlock()
+	println("START STATUS MONITOR", mb.Miners.Size(), mb.Sharders.Size())
 	go mb.Miners.StatusMonitor(smctx)
 	go mb.Sharders.StatusMonitor(smctx)
 	for true {
@@ -49,6 +50,7 @@ func (c *Chain) StatusMonitor(ctx context.Context) {
 			Logger.Info("the status monitor is dead, long live the status monitor", zap.Any("miners", mb.Miners), zap.Any("sharders", mb.Sharders))
 			smctx, cancel = context.WithCancel(ctx)
 			mb := c.GetMagicBlock(nRound)
+			println("RESTART STATUS MONITOR", mb.Miners.Size(), mb.Sharders.Size())
 			go mb.Miners.StatusMonitor(smctx)
 			go mb.Sharders.StatusMonitor(smctx)
 		}

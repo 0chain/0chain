@@ -97,10 +97,16 @@ func (c *Chain) ComputeFinalizedBlock(ctx context.Context, r round.RoundI) *bloc
 /*FinalizeRound - starting from the given round work backwards and identify the round that can be assumed to be finalized as all forks after
 that extend from a single block in that round. */
 func (c *Chain) FinalizeRound(ctx context.Context, r round.RoundI, bsh BlockStateHandler) {
+	if r.IsFinalized() {
+		return // round already finalized
+	}
 	// The SetFinalizing is not condition check it changes round state.
 	if !r.SetFinalizing() {
-		Logger.Debug("finalize_round: already finalizing, kick it again",
+		Logger.Debug("finalize_round: already finalizing",
 			zap.Int64("round", r.GetRoundNumber()))
+		if node.Self.Type == node.NodeTypeSharder {
+			return
+		}
 	}
 	if r.GetHeaviestNotarizedBlock() == nil {
 		Logger.Error("finalize round: no notarized blocks",
@@ -228,8 +234,10 @@ func (c *Chain) GetHeaviestNotarizedBlock(r round.RoundI) *block.Block {
 		}
 
 		if nb.RoundTimeoutCount != r.GetTimeoutCount() {
-			Logger.Info("Timeoutcount on Round and NB are out-of-sync", zap.Int64("round", roundNumber), zap.Int("nb_toc", nb.RoundTimeoutCount), zap.Int("round_toc", r.GetTimeoutCount()))
-
+			Logger.Info("Timeoutcount on Round and NB are out-of-sync",
+				zap.Int64("round", roundNumber),
+				zap.Int("nb_toc", nb.RoundTimeoutCount),
+				zap.Int("round_toc", r.GetTimeoutCount()))
 		}
 
 		var b *block.Block

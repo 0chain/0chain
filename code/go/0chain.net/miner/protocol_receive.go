@@ -173,6 +173,9 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMess
 		}
 		mc.startRound(ctx, mr, mb.GetRoundRandomSeed())
 	} else {
+		if mr.IsVerificationComplete() {
+			return // verification for the round complete
+		}
 		nb := mr.GetNotarizedBlocks()
 		for _, blk := range nb {
 			if blk.Hash == mb.Hash {

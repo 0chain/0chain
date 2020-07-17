@@ -150,10 +150,20 @@ func (c *Chain) sendLFBTicket(ticket *LFBTicket) {
 	Logger.Debug("broadcast LFB ticket", zap.Int64("round", ticket.Round),
 		zap.String("hash", ticket.LFBHash))
 
-	var mb = c.GetCurrentMagicBlock() // to all current
+	var mb = c.GetMagicBlock(ticket.Round)
+	if mb == nil {
+		Logger.Debug("broadcast LFB ticket: skip due to missing magic block",
+			zap.Int64("round", ticket.Round),
+			zap.String("hash", ticket.LFBHash))
+		return
+	}
+
 	mb.Miners.SendAll(LFBTicketSender(ticket))
 	mb.Sharders.SendAll(LFBTicketSender(ticket))
-	return
+}
+
+func (c *Chain) asyncSendLFBTicket(ticket *LFBTicket) {
+	go c.sendLFBTicket(ticket)
 }
 
 // BroadcastLFBTicket sends LFB ticket to all other nodes from
@@ -239,6 +249,24 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 
 		// a received LFB
 		case ticket = <-c.updateLFBTicket:
+			continue // DEBUG
+
+			// drain all in the channel, choosing the latest one
+			var prev = ticket
+			for len(c.updateLFBTicket) > 0 {
+				ticket = <-c.updateLFBTicket
+				if ticket.Round > prev.Round {
+					prev = ticket
+				}
+			}
+
+			ticket = prev // the latest in the channel
+
+			if ticket.Round <= latest.Round {
+				continue // not updated
+			}
+
+			// only if updated
 
 			if _, err := c.GetBlock(ctx, ticket.LFBHash); err != nil {
 				if node.Self.Type == node.NodeTypeSharder {
@@ -246,12 +274,6 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 				}
 				continue // if haven't the block, then don't update the latest
 			}
-
-			if ticket.Round <= latest.Round {
-				continue // not updated
-			}
-
-			// only if updated
 
 			// send for all subscribers
 			for s := range subs {
@@ -265,19 +287,53 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 			// update latest
 			latest = ticket //
 
+			// don't broadcast a received LFB ticket, since its already
+			// broadcasted by its sender
+
 		// broadcast about new LFB
 		case b = <-c.broadcastLFBTicket:
-			ticket = c.newLFBTicket(b)
-			c.sendLFBTicket(ticket)
-			if ticket.Round > latest.Round {
-				latest = ticket // update
+			if node.Self.Type != node.NodeTypeSharder {
+				println("MINER SHOULD NEVER BROADCAST LFB TICKETS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 			}
 
-			// add to list
+			// drain all pending blocks in the broadcastLFBTicket channel
+			for len(c.broadcastLFBTicket) > 0 {
+				if b.Round <= latest.Round {
+					continue
+				}
+				b = <-c.broadcastLFBTicket
+			}
+
+			if b.Round <= latest.Round {
+				continue // not updated
+			}
+
+			ticket = c.newLFBTicket(b)
+
+			// send newer tickets
+			// DUBUG, enable it later
+			if false {
+				c.asyncSendLFBTicket(ticket)
+			}
+
+			// send for all subscribers, if any
+			for s := range subs {
+				select {
+				case s <- ticket:
+				case <-ctx.Done():
+					return
+				}
+			}
+
+			latest = ticket // update
 
 		// rebroadcast after some timeout
 		case <-rebroadcast.C:
-			c.sendLFBTicket(latest)
+			// send newer tickets
+			// DEBUG, enable it later
+			if false {
+				c.asyncSendLFBTicket(latest)
+			}
 
 		// subscribe / unsubscribe for new *received* LFB Tickets
 		case sub := <-c.subLFBTicket:

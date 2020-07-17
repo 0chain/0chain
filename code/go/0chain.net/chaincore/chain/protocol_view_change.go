@@ -75,7 +75,10 @@ func (mc *Chain) RegisterClient() {
 	}
 	for registered < consensus {
 		for key, miner := range miners {
-			body, err := httpclientutil.SendPostRequest(miner.GetN2NURLBase()+httpclientutil.RegisterClient, nodeBytes, "", "", nil)
+			println("REGISTER IN:", miner.GetN2NURLBase(), "OF", mb.MagicBlockNumber, mb.StartingRound)
+			body, err := httpclientutil.SendPostRequest(
+				miner.GetN2NURLBase()+httpclientutil.RegisterClient, nodeBytes, "", "", nil,
+			)
 			if err != nil {
 				Logger.Error("error in register client", zap.Error(err), zap.Any("body", body))
 			} else {

@@ -64,9 +64,12 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 
 //RoundWorker - a worker that monitors the round progress
 func (mc *Chain) RoundWorker(ctx context.Context) {
-	var timer = time.NewTimer(4 * time.Second)
-	var cround = mc.GetCurrentRound()
-	var protocol Protocol = mc
+
+	var (
+		timer             = time.NewTimer(4 * time.Second)
+		cround            = mc.GetCurrentRound()
+		protocol Protocol = mc
+	)
 
 	for true {
 		select {
@@ -89,11 +92,11 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 			} else {
 				cround = mc.GetCurrentRound()
 				mc.ResetRoundTimeoutCount()
-				timer = time.NewTimer(time.Duration(mc.GetNextRoundTimeoutTime(ctx)) * time.Millisecond)
 			}
 		}
-		next := mc.GetNextRoundTimeoutTime(ctx)
+		var next = mc.GetNextRoundTimeoutTime(ctx)
 		Logger.Info("got_timeout", zap.Int("next", next))
+		println("(TM W) NEXT TIMEOUT", (time.Duration(next) * time.Millisecond).String())
 		timer = time.NewTimer(time.Duration(next) * time.Millisecond)
 	}
 }

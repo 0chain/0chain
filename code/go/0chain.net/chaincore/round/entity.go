@@ -16,8 +16,6 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
 
-	"github.com/spf13/viper"
-
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
@@ -33,19 +31,12 @@ const (
 	RoundStateFinalized
 )
 
+// timeoutCounter represents TC votes and incrementation
 type timeoutCounter struct {
-	mutex        sync.RWMutex        // async safe
+	mutex        sync.RWMutex        // asynchronous safe
 	count        int                 // current round timeout
-	skip         int                 // skip timeout incrementation
 	timeoutVotes map[int]int         // votes timeout -> votes
 	votersVoted  map[string]struct{} // voted node_id -> pin
-}
-
-// configurations prefix
-const roundTimeouts = "server_chain.round_timeouts."
-
-func (*timeoutCounter) mult() int {
-	return viper.GetInt(roundTimeouts + "round_timeout_mult")
 }
 
 func (tc *timeoutCounter) resetVotes() {
@@ -78,7 +69,7 @@ func (tc *timeoutCounter) IncrementTimeoutCount() {
 	tc.mutex.Lock()
 	defer tc.mutex.Unlock()
 
-	var mostVotes, mostTimeout int
+	var mostVotes, mostTimeout = 0, tc.count
 	for k, v := range tc.timeoutVotes {
 		if v > mostVotes || (v == mostVotes && k > mostTimeout) {
 			mostVotes = v
@@ -88,26 +79,14 @@ func (tc *timeoutCounter) IncrementTimeoutCount() {
 
 	tc.resetVotes() // for next voting
 
-	if mostTimeout > tc.count {
-		tc.count = mostTimeout // increase by an external vote
-		tc.skip = mostTimeout  //
+	if mostTimeout <= tc.count {
+		println("INCREMENT TC", tc.count+1)
+		tc.count++ // increment
 		return
 	}
 
-	if tc.count == 0 {
-		tc.count = 1 // first increasing
-		tc.skip = 1  //
-		return
-	}
-
-	// skip this incrementation
-	if tc.skip < tc.count {
-		tc.skip++
-		return
-	}
-
-	// increase by configured multiplier
-	tc.count = tc.count * tc.mult()
+	println("INCREASE TC BY VOTES", mostTimeout)
+	tc.count = mostTimeout // increased by votes
 }
 
 // SetTimeoutCount - sets the timeout count to given number if it is greater
@@ -117,11 +96,12 @@ func (tc *timeoutCounter) SetTimeoutCount(count int) (set bool) {
 	defer tc.mutex.Unlock()
 
 	if count <= tc.count {
+		println("DON'T SET TC, LESS", count, "<", tc.count)
 		return // false (not set)
 	}
 
 	tc.count = count
-	tc.skip = count
+	println("SET TC", count)
 	return true // set
 }
 

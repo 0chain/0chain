@@ -205,6 +205,7 @@ func (c *Chain) GetPrevMagicBlockFromMB(mb *block.MagicBlock) *block.MagicBlock 
 func (c *Chain) SetMagicBlock(mb *block.MagicBlock) {
 	c.mbMutex.Lock()
 	defer c.mbMutex.Unlock()
+	println("SET MAGIC BLOCK:", mb.MagicBlockNumber, mb.StartingRound)
 	if err := c.MagicBlockStorage.Put(mb, mb.StartingRound); err != nil {
 		Logger.Error("failed to put magic block", zap.Error(err))
 	}
@@ -348,11 +349,11 @@ func Provider() datastore.Entity {
 	c.Stats = &Stats{}
 	c.blockFetcher = NewBlockFetcher()
 
-	c.getLFBTicket = make(chan *LFBTicket)             // should be unbuffered
-	c.updateLFBTicket = make(chan *LFBTicket, 1)       //
-	c.broadcastLFBTicket = make(chan *block.Block, 10) //
-	c.subLFBTicket = make(chan chan *LFBTicket, 1)     //
-	c.unsubLFBTicket = make(chan chan *LFBTicket, 1)   //
+	c.getLFBTicket = make(chan *LFBTicket)              // should be unbuffered
+	c.updateLFBTicket = make(chan *LFBTicket, 100)      //
+	c.broadcastLFBTicket = make(chan *block.Block, 100) //
+	c.subLFBTicket = make(chan chan *LFBTicket, 1)      //
+	c.unsubLFBTicket = make(chan chan *LFBTicket, 1)    //
 
 	c.FinalizedBlockFetcher = NewFinalizedBlockFetcher(c) //
 	return c

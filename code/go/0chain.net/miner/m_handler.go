@@ -111,10 +111,58 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (interface{},
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
 	mc := GetMinerChain()
+
+	// skip all VRFS before LFB
 	lfb := mc.GetLatestFinalizedBlock()
 	if vrfs.GetRoundNumber() < lfb.Round {
 		Logger.Info("Rejecting VRFShare: old round", zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()),
 			zap.Int64("lfb_round_num", lfb.Round))
+		return nil, nil
+	}
+
+	// push not. block to a miner behind
+	if vrfs.Round < mc.GetCurrentRound() {
+		var mr = mc.GetMinerRound(vrfs.Round)
+		if mr == nil {
+			Logger.Info("Rejecting VRFShare: missing miner round",
+				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()))
+			return nil, nil
+		}
+		var hnb = mr.GetHeaviestNotarizedBlock()
+		if hnb == nil {
+			Logger.Info("Rejecting VRFShare: missing HNB for the round",
+				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()))
+			return nil, nil
+		}
+		var (
+			mb    = mc.GetMagicBlock(vrfs.Round)
+			party = node.GetSender(ctx)
+		)
+		if mb == nil {
+			Logger.Info("Rejecting VRFShare: missing MB for the round",
+				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()))
+			return nil, nil
+		}
+		if party == nil {
+			Logger.Info("Rejecting VRFShare: missing party",
+				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()))
+			return nil, nil
+		}
+		var found *node.Node
+		for _, miner := range mb.Miners.Nodes {
+			if miner.ID == party.ID {
+				found = miner
+				break
+			}
+		}
+		if found == nil {
+			Logger.Info("Rejecting VRFShare: missing party in MB",
+				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()))
+			return nil, nil
+		}
+		go mb.Miners.SendTo(MinerNotarizedBlockSender(hnb), found.ID)
+		Logger.Info("Rejecting VRFShare: push not. block for the miner behind",
+			zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()))
 		return nil, nil
 	}
 
@@ -190,13 +238,25 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 		Logger.Debug("notarized block handler (round older than the current round)", zap.String("block", b.Hash), zap.Any("round", b.Round))
 		return nil, nil
 	}
+
 	r := mc.GetRound(b.Round)
 	if r == nil {
-		if r = mc.getRound(ctx, b.Round); r == nil {
+		if r = mc.getRound(ctx, b.Round); isNilRound(r) {
 			return nil, nil // miner is far ahead of sharders, skip
 		}
 	}
-	if err := mc.VerifyNotarization(ctx, b.Hash, b.GetVerificationTickets(), r.GetRoundNumber()); err != nil {
+
+	if r.IsFinalizing() || r.IsFinalized() {
+		return nil, nil // doesn't need a not. block
+	}
+
+	var lfb = mc.GetLatestFinalizedBlock()
+	if b.Round <= lfb.Round {
+		return nil, nil // doesn't need a not. block
+	}
+
+	if err := mc.VerifyNotarization(ctx, b.Hash, b.GetVerificationTickets(),
+		r.GetRoundNumber()); err != nil {
 		return nil, err
 	}
 	msg := &BlockMessage{Sender: node.GetSender(ctx), Type: MessageNotarizedBlock, Block: b}

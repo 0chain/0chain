@@ -213,6 +213,25 @@ func (c *Chain) roundHealthInATable(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%v", notarizations)
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "</tr>")
+
+	var (
+		tk      = c.GetLatestLFBTicket(r.Context())
+		tkRound int64
+	)
+
+	if tk != nil {
+		tkRound = tk.Round
+	}
+
+	fmt.Fprintf(w, "<tr class='active'>")
+	fmt.Fprintf(w, "<td>")
+	fmt.Fprintf(w, "LFB Ticket")
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "<td class='number'>")
+	fmt.Fprintf(w, "%v", tkRound)
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "</tr>")
+
 	fmt.Fprintf(w, "</table>")
 }
 
