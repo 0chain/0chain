@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/chain"
-	"0chain.net/chaincore/config"
+	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -282,7 +282,7 @@ func (sn *StorageNode) validate(conf *scConfig) (err error) {
 		return errors.New("insufficient blobber capacity")
 	}
 
-	if strings.Contains(sn.BaseURL, "localhost") && config.Configuration.Host != "localhost" {
+	if strings.Contains(sn.BaseURL, "localhost") && node.Self.Host != "localhost" {
 		return errors.New("invalid blobber base url")
 	}
 	return
