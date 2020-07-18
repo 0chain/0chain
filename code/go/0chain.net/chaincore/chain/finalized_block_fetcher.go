@@ -229,10 +229,9 @@ func (c *Chain) GetFinalizedBlockFromSharders(ctx context.Context,
 
 	sharders.RequestEntityFromAll(ctx, FBRequestor, nil, handler)
 
-	// highest (the first sorting order), most popular (the second order)
+	// most popular
 	sort.Slice(finalizedBlocks, func(i int, j int) bool {
-		return finalizedBlocks[i].Round >= finalizedBlocks[j].Round ||
-			finalizedBlocks[i].consensus > finalizedBlocks[j].consensus
+		return finalizedBlocks[i].consensus > finalizedBlocks[j].consensus
 
 	})
 

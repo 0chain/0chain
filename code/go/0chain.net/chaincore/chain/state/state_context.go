@@ -65,7 +65,7 @@ type StateContext struct {
 	getSignature                  func() encryption.SignatureScheme
 }
 
-//NewStateContext - create a new state context
+// NewStateContext - create a new state context
 func NewStateContext(b *block.Block, s util.MerklePatriciaTrieI, csd state.DeserializerI, t *transaction.Transaction, getSharderFunc func(*block.Block) []string, getLastestFinalizedMagicBlock func() *block.Block, getChainSignature func() encryption.SignatureScheme) *StateContext {
 	ctx := &StateContext{block: b, state: s, clientStateDeserializer: csd, txn: t, getSharders: getSharderFunc, getLastestFinalizedMagicBlock: getLastestFinalizedMagicBlock, getSignature: getChainSignature}
 	return ctx

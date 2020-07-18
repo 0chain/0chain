@@ -69,6 +69,8 @@ func (tc *timeoutCounter) IncrementTimeoutCount() {
 	tc.mutex.Lock()
 	defer tc.mutex.Unlock()
 
+	return // keep as is
+
 	var mostVotes, mostTimeout = 0, tc.count
 	for k, v := range tc.timeoutVotes {
 		if v > mostVotes || (v == mostVotes && k > mostTimeout) {
@@ -81,7 +83,7 @@ func (tc *timeoutCounter) IncrementTimeoutCount() {
 
 	if mostTimeout <= tc.count {
 		println("INCREMENT TC", tc.count+1)
-		tc.count++ // increment
+		tc.count++ // increment by restart round
 		return
 	}
 
@@ -96,7 +98,6 @@ func (tc *timeoutCounter) SetTimeoutCount(count int) (set bool) {
 	defer tc.mutex.Unlock()
 
 	if count <= tc.count {
-		println("DON'T SET TC, LESS", count, "<", tc.count)
 		return // false (not set)
 	}
 

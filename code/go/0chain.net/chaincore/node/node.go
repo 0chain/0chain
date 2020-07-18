@@ -72,6 +72,15 @@ func GetNode(nodeID string) *Node {
 	return nodes[nodeID]
 }
 
+func Dump() {
+	nodesMutex.RLock()
+	defer nodesMutex.RUnlock()
+	println("Registered nodes:", len(nodes))
+	for _, n := range nodes {
+		println(" -", n.GetNodeType(), n.N2NHost)
+	}
+}
+
 var (
 	NodeStatusActive   = 0
 	NodeStatusInactive = 1

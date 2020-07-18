@@ -96,7 +96,6 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 		}
 		var next = mc.GetNextRoundTimeoutTime(ctx)
 		Logger.Info("got_timeout", zap.Int("next", next))
-		println("(TM W) NEXT TIMEOUT", (time.Duration(next) * time.Millisecond).String())
 		timer = time.NewTimer(time.Duration(next) * time.Millisecond)
 	}
 }

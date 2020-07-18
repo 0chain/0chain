@@ -87,15 +87,28 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 }
 
 func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
+	// moved down
+	// {
+	if b.MagicBlock != nil { // <-------------------- <-------------------------
+		sc.UpdateMagicBlock(b.MagicBlock)          // <-------------------------
+		sc.UpdateNodesFromMagicBlock(b.MagicBlock) // <-------------------------
+	} // <------------------------------------------- <-------------------------
+	// }
+
 	er := sc.GetRound(b.Round)
 	if er == nil {
 		var r = round.NewRound(b.Round)
 		er, _ = sc.AddRound(r).(*round.Round)
 		sc.SetRandomSeed(er, b.GetRoundRandomSeed())
 	}
-	if er.IsFinalizing() || er.IsFinalized() {
-		return
-	}
+
+	// injected here
+	// {
+	// if er.IsFinalizing() || er.IsFinalized() { // <--------------------------
+	// 	return // <-------------------------------------------------------------
+	// } // <-------------------------------------------------------------------
+	// }
+
 	if err := sc.VerifyNotarization(ctx, b.Hash, b.GetVerificationTickets(), er.GetRoundNumber()); err != nil {
 		Logger.Error("notarization verification failed", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
 		return
@@ -105,10 +118,13 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 		return
 	}
 
-	if b.MagicBlock != nil {
-		sc.UpdateMagicBlock(b.MagicBlock)
-		sc.UpdateNodesFromMagicBlock(b.MagicBlock)
-	}
+	// moved here
+	// {
+	// if b.MagicBlock != nil { // <-------------------- <-------------------------
+	// 	sc.UpdateMagicBlock(b.MagicBlock)          // <-------------------------
+	// 	sc.UpdateNodesFromMagicBlock(b.MagicBlock) // <-------------------------
+	// } // <------------------------------------------- <-------------------------
+	// }
 
 	sc.AddNotarizedBlockToRound(er, b)
 	sc.SetRoundRank(er, b)

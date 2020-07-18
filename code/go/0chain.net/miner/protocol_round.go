@@ -728,16 +728,13 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*Bloc
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		fb, ok := entity.(*block.Block)
 		if fb.Round == 0 {
-			println("GetLatestFinalizedBlockFromSharder: ZERO ROUND (NO LFB)")
 			return nil, nil
 		}
 		if !ok {
-			println("GetLatestFinalizedBlockFromSharder: INVALID ENTITY")
 			return nil, datastore.ErrInvalidEntity
 		}
 		err := fb.Validate(ctx)
 		if err != nil {
-			println("GetLatestFinalizedBlockFromSharder: INVALID", err.Error(), fb.Round)
 			Logger.Error("lfb from sharder - invalid",
 				zap.Int64("round", fb.Round),
 				zap.String("block", fb.Hash),
@@ -746,9 +743,7 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*Bloc
 		}
 		var r = mc.GetRound(fb.Round)
 		if r == nil {
-			println("GetLatestFinalizedBlockFromSharder: GetRound is NIL")
 			if r = mc.getRound(ctx, fb.Round); isNilRound(r) {
-				println("GetLatestFinalizedBlockFromSharder: getRound is NIL")
 				// for a far ahead sharders case, create round, since the
 				// getRound can return nil
 				var (
@@ -761,7 +756,6 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*Bloc
 		err = mc.VerifyNotarization(ctx, fb.Hash, fb.GetVerificationTickets(),
 			r.GetRoundNumber())
 		if err != nil {
-			println("GetLatestFinalizedBlockFromSharder: NOT. FAILED")
 			Logger.Error("lfb from sharder - notarization failed", zap.Int64("round", fb.Round),
 				zap.String("block", fb.Hash), zap.Error(err))
 			return nil, err
@@ -781,8 +775,6 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*Bloc
 		})
 		return fb, nil
 	}
-
-	println("GetLatestFinalizedBlockFromSharder", "SR", mb.StartingRound, "MN", mb.MagicBlockNumber, "MB SHARDERS", fmt.Sprint(mb.Sharders.N2NURLs()))
 
 	m2s.RequestEntityFromAll(ctx, MinerLatestFinalizedBlockRequestor, nil, handler)
 
@@ -1025,17 +1017,19 @@ func isNilRound(r round.RoundI) bool {
 //
 // func (mc *Chain) kickMinersBehind(ctx context.Context, r round.RoundI) {
 // 	println("KICK MINERS BEHIND", r.GetRoundNumber())
-// 	const kickThreshold = 5
+// 	const kickThreshold = 10
 // 	var (
-// 		i, rx = 0, r.GetRoundNumber() - 1
+// 		i, rx = 0, r.GetRoundNumber()
 // 		ahead = config.GetLFBTicketAhead()
 // 	)
 // 	if ahead > kickThreshold {
-// 		ahead = kickThreshold // don't kick more then 5 blocks
+// 		ahead = kickThreshold // don't kick more then 10 blocks
 // 	}
 // 	r = mc.GetMinerRound(rx) // for previous round
 // 	for ; i < ahead && !isNilRound(r); rx, i = rx-1, i+1 {
-// 		mc.BroadcastNotarizedBlocks(ctx, r)
+// 		if r.GetHeaviestNotarizedBlock() != nil {
+// 			mc.BroadcastNotarizedBlocks(ctx, r)
+// 		}
 // 		r = mc.GetMinerRound(rx - 1)
 // 		println("KICK MINERS BEHIND", rx, "<--- KICK")
 // 	}
@@ -1059,6 +1053,7 @@ func (mc *Chain) kickRoundByLFB(ctx context.Context, lfb *block.Block) {
 	if nr = mc.StartNextRound(ctx, mr); nr == nil {
 		return
 	}
+	println("MC kickRoundByLFB", lfb.Round, ":::::::::::::::::::::::::::::::::")
 	mc.SetCurrentRound(nr.Number)
 }
 
@@ -1066,6 +1061,7 @@ func (mc *Chain) restartRound(ctx context.Context) {
 
 	mc.IncrementRoundTimeoutCount()
 	var r = mc.GetMinerRound(mc.GetCurrentRound())
+	println("RR", r.GetRoundNumber())
 
 	switch crt := mc.GetRoundTimeoutCount(); {
 	case crt < 10:
@@ -1094,6 +1090,7 @@ func (mc *Chain) restartRound(ctx context.Context) {
 	)
 
 	if updated {
+		println("RR", r.GetRoundNumber(), "UPDATED")
 		// kick new round from the new LFB from sharders, if it's newer
 		// then the current one
 		var lfb = mc.GetLatestFinalizedBlock()
@@ -1102,14 +1099,17 @@ func (mc *Chain) restartRound(ctx context.Context) {
 			return
 		}
 	} else {
+		println("RR", r.GetRoundNumber(), "NOT UPDATED")
 		if isAhead {
+			println("RR", r.GetRoundNumber(), "NOT UPDATED (AHEAD)")
 			mc.kickSharders(ctx) // not updated, kick sharders
 		}
+		// mc.kickMinersBehind(ctx, r) //
+		// mc.kickFinalization(ctx)    // this miner (pull not. blocks)
 	}
 
-	// mc.kickFinalization(ctx) // this miner (pull not. blocks)
-
 	if !updated && rn > 1 && !isAhead {
+		println("RR", r.GetRoundNumber(), "NOT UPDATED NOT AHEAD 'SNR'")
 		if r.GetHeaviestNotarizedBlock() != nil {
 			Logger.Info("StartNextRound after sending notarized "+
 				"block in restartRound.",
@@ -1126,6 +1126,7 @@ func (mc *Chain) restartRound(ctx context.Context) {
 				So to be sure send it.
 			*/
 			if r.HasRandomSeed() {
+				println("RR", r.GetRoundNumber(), "NOT UPDATED NOT AHEAD 'SNR' HAS RANDOM SEED")
 				if nextR != nil {
 					Logger.Info("RedoVRFshare after sending notarized"+
 						" block in restartRound.",
@@ -1189,7 +1190,7 @@ func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
 	lfbs = list[0].Block
 
 	if !(lfb == nil || lfb.Round == 0 || lfb.Round < lfbs.Round) {
-		println("DON'T UPDATE LFB FROM SHARDERS: ", lfbs.Round, "<", lfb.Round)
+		println("OLD LFB")
 		return // nothing to update
 	}
 
@@ -1207,6 +1208,7 @@ func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
 		mr = mc.CreateRound(sr)
 	)
 	mr, _ = mc.AddRound(mr).(*Round)
+	println("MC ensureLatestFinalizedBlock", lfbs.Round, "::::::::::::::::::::")
 	mc.SetRandomSeed(mr, lfbs.GetRoundRandomSeed())
 	mc.AddBlock(lfbs)
 	// retry 10 times to repair the state, then ignore the error
@@ -1243,48 +1245,55 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context) (
 		mbs        = mc.GetLatestFinalizedMagicBlockFromSharder(ctx)
 		magicBlock *block.Block
 	)
-	if len(mbs) >= 1 {
-		sort.Slice(mbs, func(i, j int) bool {
-			return mbs[i].StartingRound < mbs[j].StartingRound
+
+	if len(mbs) == 0 {
+		println("NO MBs FROM SHARDERS")
+		return
+	}
+
+	sort.Slice(mbs, func(i, j int) bool {
+		return mbs[i].StartingRound < mbs[j].StartingRound
+	})
+	magicBlock = mbs[0]
+
+	if !(lfmb == nil || lfmb.MagicBlockNumber < magicBlock.MagicBlockNumber) {
+		println("OLD MB OR", lfmb == nil)
+		return
+	}
+
+	if err := mc.MustVerifyChainHistory(ctx, magicBlock, nil); err != nil {
+		println("VERIFYING CHAIN HISTORY", err.Error())
+		return false, err
+	}
+	if err := mc.UpdateMagicBlock(magicBlock.MagicBlock); err != nil {
+		println("UPDATING MAGIC BLOCK", err.Error())
+		return false, err
+	}
+	mc.UpdateNodesFromMagicBlock(magicBlock.MagicBlock)
+	mc.SetLatestFinalizedMagicBlock(magicBlock)
+
+	// ensure DKG
+	var dkg = mc.GetCurrentDKG(magicBlock.StartingRound)
+	if dkg == nil || dkg.StartingRound < magicBlock.StartingRound {
+		println("ENSURE DKG, SET FROM STORE")
+		err = mc.SetDKGSFromStore(ctx, magicBlock.MagicBlock)
+		if err != nil {
+			println("ENSURE DKG, SET FROM STORE ERROR:", err.Error())
+			Logger.Error("setting DKG from store", zap.Error(err))
+			err = nil // reset the error, don't affect function reply
+		}
+	}
+
+	// bump the ticket if necessary
+	var tk = mc.GetLatestLFBTicket(ctx)
+	if tk == nil || tk.Round < magicBlock.Round {
+		println("UPDATE LFB TICKET BY LF(M)B FROM SHARDERS")
+		mc.AddReceivedLFBTicket(ctx, &chain.LFBTicket{
+			Round: magicBlock.Round,
 		})
-		magicBlock = mbs[0]
-	}
-	if magicBlock != nil &&
-		(lfmb == nil || lfmb.MagicBlockNumber < magicBlock.MagicBlockNumber) {
-
-		if err := mc.MustVerifyChainHistory(ctx, magicBlock, nil); err != nil {
-			return false, err
-		}
-		if err := mc.UpdateMagicBlock(magicBlock.MagicBlock); err != nil {
-			return false, err
-		}
-		mc.UpdateNodesFromMagicBlock(magicBlock.MagicBlock)
-		mc.SetLatestFinalizedMagicBlock(magicBlock)
-
-		// ensure DKG
-		var dkg = mc.GetCurrentDKG(magicBlock.StartingRound)
-		if dkg == nil || dkg.StartingRound < magicBlock.StartingRound {
-			println("ENSURE DKG, SET FROM STORE")
-			err = mc.SetDKGSFromStore(ctx, magicBlock.MagicBlock)
-			if err != nil {
-				println("ENSURE DKG, SET FROM STORE ERROR:", err.Error())
-				Logger.Error("setting DKG from store", zap.Error(err))
-				err = nil // reset the error, don't affect function reply
-			}
-		}
-
-		// bump the ticket if necessary
-		var tk = mc.GetLatestLFBTicket(ctx)
-		if tk == nil || tk.Round < magicBlock.Round {
-			println("UPDATE LFB TICKET BY LF(M)B FROM SHARDERS")
-			mc.AddReceivedLFBTicket(ctx, &chain.LFBTicket{
-				Round: magicBlock.Round,
-			})
-		}
-
-		updated = true
 	}
 
+	updated = true
 	return
 }
 
@@ -1296,6 +1305,7 @@ func StartProtocol(ctx context.Context, gb *block.Block) {
 		sr := round.NewRound(lfb.Round)
 		mr = mc.CreateRound(sr)
 		mr, _ = mc.AddRound(mr).(*Round)
+		println("START PROTOCOL", lfb.Round, "::::::::::::::::::::::::::::::::")
 		mc.SetRandomSeed(sr, lfb.RoundRandomSeed)
 		mc.AddBlock(lfb)
 		//ugly hack: for error "node not found"

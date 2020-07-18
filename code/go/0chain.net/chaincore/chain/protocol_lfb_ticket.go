@@ -249,9 +249,9 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 
 		// a received LFB
 		case ticket = <-c.updateLFBTicket:
-			continue // DEBUG
 
 			// drain all in the channel, choosing the latest one
+			// (https://play.golang.org/p/PrLs7KaUgGF)
 			var prev = ticket
 			for len(c.updateLFBTicket) > 0 {
 				ticket = <-c.updateLFBTicket
@@ -264,6 +264,12 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 
 			if ticket.Round <= latest.Round {
 				continue // not updated
+			}
+
+			// for self updating case (kick itself)
+			if ticket.Sign == "" {
+				latest = ticket
+				continue // don't need a block for the blank kick ticket
 			}
 
 			// only if updated
@@ -292,17 +298,17 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 
 		// broadcast about new LFB
 		case b = <-c.broadcastLFBTicket:
-			if node.Self.Type != node.NodeTypeSharder {
-				println("MINER SHOULD NEVER BROADCAST LFB TICKETS!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+			// drain all pending blocks in the broadcastLFBTicket channel
+			// (https://play.golang.org/p/PrLs7KaUgGF)
+			var prev = b
+			for len(c.broadcastLFBTicket) > 0 {
+				b = <-c.broadcastLFBTicket
+				if b.Round > prev.Round {
+					prev = b
+				}
 			}
 
-			// drain all pending blocks in the broadcastLFBTicket channel
-			for len(c.broadcastLFBTicket) > 0 {
-				if b.Round <= latest.Round {
-					continue
-				}
-				b = <-c.broadcastLFBTicket
-			}
+			b = prev // use latest, regardless order in the channel
 
 			if b.Round <= latest.Round {
 				continue // not updated
@@ -311,10 +317,7 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 			ticket = c.newLFBTicket(b)
 
 			// send newer tickets
-			// DUBUG, enable it later
-			if false {
-				c.asyncSendLFBTicket(ticket)
-			}
+			c.asyncSendLFBTicket(ticket)
 
 			// send for all subscribers, if any
 			for s := range subs {
@@ -330,10 +333,7 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 		// rebroadcast after some timeout
 		case <-rebroadcast.C:
 			// send newer tickets
-			// DEBUG, enable it later
-			if false {
-				c.asyncSendLFBTicket(latest)
-			}
+			c.asyncSendLFBTicket(latest)
 
 		// subscribe / unsubscribe for new *received* LFB Tickets
 		case sub := <-c.subLFBTicket:

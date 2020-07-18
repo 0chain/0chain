@@ -584,7 +584,6 @@ func (mc *Chain) Wait() (result *httpclientutil.Transaction, err2 error) {
 	}
 
 	if !mc.isDKGSet() {
-		// mc.setDKGFromCurrentMagicBlock()
 		return nil, errors.New("unexpected not isDKGSet")
 	}
 

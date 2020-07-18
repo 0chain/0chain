@@ -235,6 +235,9 @@ func (mc *Chain) ViewChange(ctx context.Context, nRound int64) (bool, error) {
 	if !mc.isNeedViewChange(ctx, nRound) {
 		return false, nil
 	}
+
+	println("IS NEED VIEW CHANGE", nRound, "======================================================")
+
 	viewChangeMagicBlock := mc.GetViewChangeMagicBlock()
 	mb := mc.GetMagicBlock(nRound)
 	if viewChangeMagicBlock != nil {
@@ -243,7 +246,6 @@ func (mc *Chain) ViewChange(ctx context.Context, nRound int64) (bool, error) {
 			if err != nil {
 				Logger.DPanic(err.Error())
 			}
-
 		}
 		mc.UpdateNodesFromMagicBlock(viewChangeMagicBlock)
 

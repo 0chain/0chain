@@ -32,7 +32,6 @@ type JSONReqResponderF func(ctx context.Context, json map[string]interface{}) (i
 
 /*Respond - respond either data or error as a response */
 func Respond(w http.ResponseWriter, r *http.Request, data interface{}, err error) {
-	defer println("Respond ENDING")
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		data := make(map[string]interface{}, 2)
@@ -49,21 +48,12 @@ func Respond(w http.ResponseWriter, r *http.Request, data interface{}, err error
 	if data != nil {
 		w.Header().Set("Content-Type", "application/json")
 		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
-			println("Respond WRITTING RAW DATA")
-			if err := json.NewEncoder(w).Encode(data); err != nil {
-				println("(RAW) JSON ENCODING IN RESPOND:", err.Error())
-			}
+			json.NewEncoder(w).Encode(data)
 		} else {
-			println("Respond WRITTING GZIP DATA")
 			w.Header().Set("Content-Encoding", "gzip")
 			gzw := gzip.NewWriter(w)
 			defer gzw.Close()
-			if err := json.NewEncoder(gzw).Encode(data); err != nil {
-				println("(GZIP) JSON ENCODING IN RESPOND:", err.Error())
-			}
-			if err := gzw.Flush(); err != nil {
-				println("(GZIP) FLUSHING ERORR", err.Error())
-			}
+			json.NewEncoder(gzw).Encode(data)
 		}
 		return
 	}

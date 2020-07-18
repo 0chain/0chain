@@ -85,7 +85,7 @@ func (mc *Chain) RegisterClient() {
 				delete(miners, key)
 				registered++
 			}
-			time.Sleep(httpclientutil.SleepBetweenRetries * time.Millisecond)
+			// time.Sleep(httpclientutil.SleepBetweenRetries * time.Millisecond)
 		}
 		time.Sleep(httpclientutil.SleepBetweenRetries * time.Millisecond)
 	}

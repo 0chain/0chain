@@ -245,7 +245,6 @@ func (c *Chain) IsFinalizedDeterministically(b *block.Block) bool {
 
 /*GetNotarizedBlock - get a notarized block for a round */
 func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
-	nbrequestor := MinerNotarizedBlockRequestor
 	cround := c.GetCurrentRound()
 	params := &url.Values{}
 	params.Add("block", blockHash)
@@ -286,9 +285,23 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 		return b, nil
 	}
 	n2n := mb.Miners
-	n2n.RequestEntity(ctx, nbrequestor, params, handler)
+	n2n.RequestEntity(ctx, MinerNotarizedBlockRequestor, params, handler)
 	if b == nil {
-		Logger.Info("unable to fetch notarized block", zap.String("block", blockHash))
+		// try to get the block from sharder, if it's finalized and pushed
+		// to the sharders
+		var err error
+		b, err = c.GetFinalizedBlockFromSharders(ctx, blockHash)
+		if err != nil {
+			Logger.Info("unable to fetch notarized->finalized block from sharders",
+				zap.String("block", blockHash), zap.Error(err))
+			return nil
+		}
+
+		if _, err = handler(ctx, b); err != nil {
+			Logger.Info("unable to handle notarized->finalized block from sharders",
+				zap.String("block", blockHash), zap.Error(err))
+			return nil
+		}
 
 	}
 	return b

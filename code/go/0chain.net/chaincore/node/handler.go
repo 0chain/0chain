@@ -63,27 +63,24 @@ func (n *Node) PrintSendStats(w io.Writer) {
 	}
 }
 
-func respondWithTimeout(tm time.Duration, respond func()) {
-	var (
-		done  = make(chan struct{})
-		timer = time.NewTimer(tm)
-	)
-	defer timer.Stop()
-	go func() {
-		defer close(done)
-		respond()
-	}()
-	select {
-	case <-done:
-	case <-timer.C:
-	}
-}
+// func respondWithTimeout(tm time.Duration, respond func()) {
+// 	var (
+// 		done  = make(chan struct{})
+// 		timer = time.NewTimer(tm)
+// 	)
+// 	defer timer.Stop()
+// 	go func() {
+// 		defer close(done)
+// 		respond()
+// 	}()
+// 	select {
+// 	case <-done:
+// 	case <-timer.C:
+// 	}
+// }
 
 /*StatusHandler - allows checking the status of the node */
 func StatusHandler(w http.ResponseWriter, r *http.Request) {
-	println("STATUS HANDLER {")
-	defer println("STATUS HANDLER }")
-
 	id := r.FormValue("id")
 	if id == "" {
 		N2n.Error("status handler -- missing id", zap.Any("from", r.RemoteAddr))
@@ -96,11 +93,8 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if nd.IsActive() {
 		info := Self.Underlying().Info
-		println("SENDING DATA IN THE MIDDLE")
 		N2n.Info("status handler -- sending data", zap.Any("data", info))
-		respondWithTimeout(5*time.Second, func() {
-			common.Respond(w, r, info, nil)
-		})
+		common.Respond(w, r, info, nil)
 		return
 	}
 	data := r.FormValue("data")
@@ -130,10 +124,7 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	info := Self.Underlying().Info
 	N2n.Info("status handler -- sending data", zap.Any("data", info))
-	println("SENDING DATA AT TAIL")
-	respondWithTimeout(5*time.Second, func() {
-		common.Respond(w, r, info, nil)
-	})
+	common.Respond(w, r, info, nil)
 }
 
 //ToDo: Move this to MagicBlock logic

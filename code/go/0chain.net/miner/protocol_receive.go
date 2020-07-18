@@ -3,6 +3,10 @@ package miner
 import (
 	"context"
 
+	"0chain.net/chaincore/chain"
+	"0chain.net/chaincore/node"
+	"0chain.net/chaincore/round"
+
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
@@ -29,9 +33,49 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 	if mr == nil {
 		Logger.Error("handle verify block - got block proposal before starting round", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("miner", b.MinerID))
 		if mr = mc.getRound(ctx, b.Round); mr == nil {
-			return // miner is far ahead of sharders, skip for now
+			// first round after joining BC case, the node have to
+			// handle the block, even if it's far ahead of sharders,
+			// because sharders don't send LFB tickets to it (not
+			// active in chain) and sharders don't allow to get LFB
+			// because node it not registered in the sharders yet;
+			// this block contains MB with this node, that joining
+			// BC -- that is the case; thus, a block generator makes
+			// this node joining BC
+
+			if b.MagicBlock == nil {
+				Logger.Error("handle verify block - far ahead of sharders, no MB case",
+					zap.Int64("round", b.Round),
+					zap.String("block", b.Hash),
+					zap.String("miner", b.MinerID))
+				return
+			}
+
+			var selfKey = node.Self.GetKey()
+			if !b.MagicBlock.Miners.HasNode(selfKey) {
+				Logger.Error("handle verify block - far ahead of sharders, MB hasn't this miner",
+					zap.Int64("round", b.Round),
+					zap.String("block", b.Hash),
+					zap.String("miner", b.MinerID))
+				return
+			}
+
+			// advance LFB ticket for this case
+			var pmb = mc.GetMagicBlock(b.Round - 1)
+			if !pmb.Miners.HasNode(selfKey) {
+				println("ADVANCE LFB TICKET BY RECEIVED BLOCK", b.Round, " <------------------------------------------------")
+				mc.AddReceivedLFBTicket(ctx, &chain.LFBTicket{
+					Round: b.Round,
+				})
+			}
+
+			var r = round.NewRound(b.Round)
+			mr = mc.CreateRound(r)
+			mr = mc.AddRound(mr).(*Round)
+			println("KICK NEW ROUND BY RECEIVED BLOCK WITH MB", b.Round, " <------------------------------------------------")
+			// mc.SetCurrentRound(mr.GetRoundNumber()) // use it as current ?
 		}
 		//TODO: Byzantine
+		println("HandleVerifyBlockMessage (1)", mr.GetRoundNumber(), "::::::::::::::::::::::::::::::::::::::::::::::::::::")
 		mc.startRound(ctx, mr, b.GetRoundRandomSeed())
 	} else {
 		if !mr.IsVRFComplete() {
@@ -44,6 +88,7 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 				return
 			}
 			//TODO: Byzantine
+			println("HandleVerifyBlockMessage (2)", mr.GetRoundNumber(), "::::::::::::::::::::::::::::::::::::::::::::::::::::")
 			mc.startRound(ctx, mr, b.GetRoundRandomSeed())
 		}
 		vts := mr.GetVerificationTickets(b.Hash)
@@ -171,18 +216,34 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMess
 		if mr = mc.getRound(ctx, mb.Round); mr == nil {
 			return // miner is far ahead of sharders, skip for now
 		}
+		println("HandleNotarizedBlockMessage (1)", mr.GetRoundNumber(), "::::::::::::::::::::::::::::::::::::::::::::::::::::")
 		mc.startRound(ctx, mr, mb.GetRoundRandomSeed())
 	} else {
 		if mr.IsVerificationComplete() {
 			return // verification for the round complete
 		}
-		nb := mr.GetNotarizedBlocks()
-		for _, blk := range nb {
+		for _, blk := range mr.GetNotarizedBlocks() {
 			if blk.Hash == mb.Hash {
-				return
+				return // already have
 			}
 		}
 		if !mr.IsVRFComplete() {
+			println("HandleNotarizedBlockMessage (2)", mr.GetRoundNumber(), "::::::::::::::::::::::::::::::::::::::::::::::::::::")
+			println("::: is need VC", mc.isNeedViewChange(ctx, mb.Round), mc.isNeedViewChange(ctx, mb.Round+1), " :::")
+			if mc.isNeedViewChange(ctx, mb.Round+1) {
+				// kick new miners, joining the VC
+				//
+				// since the AddReceivedLFBTicket uses buffered channel
+				// we have to make sure, the ticket set before the
+				// startRound
+				for mc.isAheadOfSharders(ctx, mb.Round) {
+					mc.AddReceivedLFBTicket(ctx, &chain.LFBTicket{
+						Round: mb.Round,
+					})
+					println("KICK TICK")
+				}
+				println("KICK MINERS JOINING VC")
+			}
 			mc.startRound(ctx, mr, mb.GetRoundRandomSeed())
 		}
 	}

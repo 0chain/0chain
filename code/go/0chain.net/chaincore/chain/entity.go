@@ -1139,6 +1139,7 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 }
 
 func (c *Chain) UpdateNodesFromMagicBlock(newMagicBlock *block.MagicBlock) {
+	println("UpdateNodesFromMagicBlock", newMagicBlock.StartingRound, newMagicBlock.MagicBlockNumber)
 	oldNodes := node.CopyNodes()
 	c.SetupNodes(newMagicBlock)
 	newMagicBlock.Sharders.ComputeProperties()
@@ -1147,6 +1148,7 @@ func (c *Chain) UpdateNodesFromMagicBlock(newMagicBlock *block.MagicBlock) {
 	c.GetNodesPreviousInfo(newMagicBlock)
 	c.deregisterNodes(oldNodes)
 	UpdateNodes <- newMagicBlock.StartingRound
+	node.Dump() // DEBUG
 }
 
 func (c *Chain) SetupNodes(mb *block.MagicBlock) {
