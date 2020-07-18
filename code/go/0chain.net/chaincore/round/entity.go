@@ -80,12 +80,10 @@ func (tc *timeoutCounter) IncrementTimeoutCount() {
 	tc.resetVotes() // for next voting
 
 	if mostTimeout <= tc.count {
-		println("INCREMENT TC", tc.count+1)
 		tc.count++ // increment by restart round
 		return
 	}
 
-	println("INCREASE TC BY VOTES", mostTimeout)
 	tc.count = mostTimeout + 1 // increased by votes
 }
 
@@ -100,7 +98,6 @@ func (tc *timeoutCounter) SetTimeoutCount(count int) (set bool) {
 	}
 
 	tc.count = count
-	println("SET TC", count)
 	return true // set
 }
 

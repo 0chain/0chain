@@ -46,31 +46,6 @@ func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
 		return
 	}
 
-	// debug
-	{
-		b := r.Block
-		if b == nil {
-			b = r.GetHeaviestNotarizedBlock()
-		}
-		if b == nil {
-			if nbs := r.GetNotarizedBlocks(); len(nbs) > 0 {
-				b = nbs[0]
-			}
-		}
-		if b == nil {
-			if pbs := r.GetProposedBlocks(); len(pbs) > 0 {
-				b = pbs[0]
-			}
-		}
-		if b != nil {
-			if b.MagicBlock != nil {
-				println("ADD MY VRF S, HAS MB", b.MagicBlock.StartingRound)
-			} else {
-				println("ADD MY VRF S, HAS NO MB", b.MagicBlockNumber, b.LatestFinalizedMagicBlockHash, b.LatestFinalizedMagicBlockRound)
-			}
-		}
-	}
-
 	var err error
 	vrfs := &round.VRFShare{}
 	vrfs.Round = r.GetRoundNumber()
@@ -106,12 +81,10 @@ func (mc *Chain) isAheadOfSharders(ctx context.Context, round int64) bool {
 	)
 
 	if tk == nil {
-		println("is ahead: NIL")
 		return true // context done, treat it as ahead
 	}
 
 	if round+1 > tk.Round+int64(ahead) {
-		println("is ahead: AHEAD", tk.Round)
 		return true // is ahead
 	}
 
@@ -768,7 +741,6 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*Bloc
 				return fb, nil
 			}
 		}
-		println("GetLatestFinalizedBlockFromSharder: ADD", fb.Round)
 		finalizedBlocks = append(finalizedBlocks, &BlockConsensus{
 			Block:     fb,
 			Consensus: 1,
@@ -895,7 +867,6 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
 	}
 
 	var tp = time.Now()
-	println("HandleRoundTimeout: r.GetSoftTimeoutCount(), mc.RoundRestartMult", r.GetSoftTimeoutCount(), mc.RoundRestartMult, "AFTER", time.Now().Sub(lastTimePoint).String())
 	lastTimePoint = tp
 	if r.GetSoftTimeoutCount() == mc.RoundRestartMult {
 		Logger.Info("triggering restartRound", zap.Int64("round", r.GetRoundNumber()))
@@ -986,7 +957,6 @@ func (mc *Chain) kickSharders(ctx context.Context) {
 	)
 
 	if lfb.Round <= tk.Round {
-		println("DON'K KICK SHARDERS: SHARDERS AHEAD", lfb.Round, "<=", tk.Round)
 		return
 	}
 
@@ -1003,7 +973,6 @@ func (mc *Chain) kickSharders(ctx context.Context) {
 		if mr != nil && mr.Block != nil && mr.Block.IsBlockNotarized() {
 			Logger.Info("restartRound->kickSharders: kick sharder FB",
 				zap.Int64("round", mr.GetRoundNumber()))
-			println("KICK SHARDER:", mr.GetRoundNumber())
 			go mc.ForcePushNotarizedBlock(ctx, mr.Block)
 		}
 	}
@@ -1016,7 +985,6 @@ func isNilRound(r round.RoundI) bool {
 // TO REMOVE
 //
 // func (mc *Chain) kickMinersBehind(ctx context.Context, r round.RoundI) {
-// 	println("KICK MINERS BEHIND", r.GetRoundNumber())
 // 	const kickThreshold = 10
 // 	var (
 // 		i, rx = 0, r.GetRoundNumber()
@@ -1031,7 +999,6 @@ func isNilRound(r round.RoundI) bool {
 // 			mc.BroadcastNotarizedBlocks(ctx, r)
 // 		}
 // 		r = mc.GetMinerRound(rx - 1)
-// 		println("KICK MINERS BEHIND", rx, "<--- KICK")
 // 	}
 // }
 
@@ -1053,7 +1020,6 @@ func (mc *Chain) kickRoundByLFB(ctx context.Context, lfb *block.Block) {
 	if nr = mc.StartNextRound(ctx, mr); nr == nil {
 		return
 	}
-	println("MC kickRoundByLFB", lfb.Round, ":::::::::::::::::::::::::::::::::")
 	mc.SetCurrentRound(nr.Number)
 }
 
@@ -1061,7 +1027,6 @@ func (mc *Chain) restartRound(ctx context.Context) {
 
 	mc.IncrementRoundTimeoutCount()
 	var r = mc.GetMinerRound(mc.GetCurrentRound())
-	println("RR", r.GetRoundNumber())
 
 	switch crt := mc.GetRoundTimeoutCount(); {
 	case crt < 10:
@@ -1090,7 +1055,6 @@ func (mc *Chain) restartRound(ctx context.Context) {
 	)
 
 	if updated {
-		println("RR", r.GetRoundNumber(), "UPDATED")
 		// kick new round from the new LFB from sharders, if it's newer
 		// then the current one
 		var lfb = mc.GetLatestFinalizedBlock()
@@ -1099,9 +1063,7 @@ func (mc *Chain) restartRound(ctx context.Context) {
 			return
 		}
 	} else {
-		println("RR", r.GetRoundNumber(), "NOT UPDATED")
 		if isAhead {
-			println("RR", r.GetRoundNumber(), "NOT UPDATED (AHEAD)")
 			mc.kickSharders(ctx) // not updated, kick sharders
 		}
 		// mc.kickMinersBehind(ctx, r) //
@@ -1109,7 +1071,6 @@ func (mc *Chain) restartRound(ctx context.Context) {
 	}
 
 	if !updated && rn > 1 && !isAhead {
-		println("RR", r.GetRoundNumber(), "NOT UPDATED NOT AHEAD 'SNR'")
 		if r.GetHeaviestNotarizedBlock() != nil {
 			Logger.Info("StartNextRound after sending notarized "+
 				"block in restartRound.",
@@ -1118,7 +1079,6 @@ func (mc *Chain) restartRound(ctx context.Context) {
 			nr := mc.StartNextRound(ctx, r)
 			if nr == nil {
 				Logger.Info("restartRound: skip due to far ahead")
-				println("SHOULDN'T HAPPEN")
 				return // shouldn't happen
 			}
 			/*
@@ -1126,7 +1086,6 @@ func (mc *Chain) restartRound(ctx context.Context) {
 				So to be sure send it.
 			*/
 			if r.HasRandomSeed() {
-				println("RR", r.GetRoundNumber(), "NOT UPDATED NOT AHEAD 'SNR' HAS RANDOM SEED")
 				if nextR != nil {
 					Logger.Info("RedoVRFshare after sending notarized"+
 						" block in restartRound.",
@@ -1167,8 +1126,6 @@ func (mc *Chain) restartRound(ctx context.Context) {
 		Logger.Info("Could not RedoVrfShare",
 			zap.Int64("round", r.GetRoundNumber()),
 			zap.Int("round_timeout", r.GetTimeoutCount()))
-	} else {
-		println("REDO VRF SHARE", r.GetRoundNumber())
 	}
 }
 
@@ -1183,23 +1140,18 @@ func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
 	)
 
 	if len(list) == 0 {
-		println("DON'T UPDATE LFB FROM SHARDERS: no LFB given")
 		return // no LFB given
 	}
 
 	lfbs = list[0].Block
 
 	if !(lfb == nil || lfb.Round == 0 || lfb.Round < lfbs.Round) {
-		println("OLD LFB")
 		return // nothing to update
 	}
-
-	println("UPDATE LFB FROM SHARDERS:", lfb.Round, "->", lfbs.Round)
 
 	// bump the ticket if necessary
 	var tk = mc.GetLatestLFBTicket(ctx)
 	if tk == nil || tk.Round < lfbs.Round {
-		println("UPDATE LFB TICKET BY LFB FROM SHARDERS")
 		mc.AddReceivedLFBTicket(ctx, &chain.LFBTicket{Round: lfbs.Round})
 	}
 
@@ -1208,7 +1160,6 @@ func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
 		mr = mc.CreateRound(sr)
 	)
 	mr, _ = mc.AddRound(mr).(*Round)
-	println("MC ensureLatestFinalizedBlock", lfbs.Round, "::::::::::::::::::::")
 	mc.SetRandomSeed(mr, lfbs.GetRoundRandomSeed())
 	mc.AddBlock(lfbs)
 	// retry 10 times to repair the state, then ignore the error
@@ -1247,7 +1198,6 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context) (
 	)
 
 	if len(mbs) == 0 {
-		println("NO MBs FROM SHARDERS")
 		return
 	}
 
@@ -1257,16 +1207,13 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context) (
 	magicBlock = mbs[0]
 
 	if !(lfmb == nil || lfmb.MagicBlockNumber < magicBlock.MagicBlockNumber) {
-		println("OLD MB OR", lfmb == nil)
 		return
 	}
 
 	if err := mc.MustVerifyChainHistory(ctx, magicBlock, nil); err != nil {
-		println("VERIFYING CHAIN HISTORY", err.Error())
 		return false, err
 	}
 	if err := mc.UpdateMagicBlock(magicBlock.MagicBlock); err != nil {
-		println("UPDATING MAGIC BLOCK", err.Error())
 		return false, err
 	}
 	mc.UpdateNodesFromMagicBlock(magicBlock.MagicBlock)
@@ -1275,10 +1222,8 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context) (
 	// ensure DKG
 	var dkg = mc.GetCurrentDKG(magicBlock.StartingRound)
 	if dkg == nil || dkg.StartingRound < magicBlock.StartingRound {
-		println("ENSURE DKG, SET FROM STORE")
 		err = mc.SetDKGSFromStore(ctx, magicBlock.MagicBlock)
 		if err != nil {
-			println("ENSURE DKG, SET FROM STORE ERROR:", err.Error())
 			Logger.Error("setting DKG from store", zap.Error(err))
 			err = nil // reset the error, don't affect function reply
 		}
@@ -1287,7 +1232,6 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context) (
 	// bump the ticket if necessary
 	var tk = mc.GetLatestLFBTicket(ctx)
 	if tk == nil || tk.Round < magicBlock.Round {
-		println("UPDATE LFB TICKET BY LF(M)B FROM SHARDERS")
 		mc.AddReceivedLFBTicket(ctx, &chain.LFBTicket{
 			Round: magicBlock.Round,
 		})
@@ -1305,7 +1249,6 @@ func StartProtocol(ctx context.Context, gb *block.Block) {
 		sr := round.NewRound(lfb.Round)
 		mr = mc.CreateRound(sr)
 		mr, _ = mc.AddRound(mr).(*Round)
-		println("START PROTOCOL", lfb.Round, "::::::::::::::::::::::::::::::::")
 		mc.SetRandomSeed(sr, lfb.RoundRandomSeed)
 		mc.AddBlock(lfb)
 		//ugly hack: for error "node not found"

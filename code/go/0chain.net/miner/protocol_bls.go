@@ -73,11 +73,9 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) err
 	self := node.GetSelfNode(ctx)
 	dkgSummary, err := GetDKGSummaryFromStore(ctx, strconv.FormatInt(mb.MagicBlockNumber, 10))
 	if err != nil {
-		println("MC SetDKGSFromStore get DKG summary from store", err.Error())
 		return err
 	}
 	if dkgSummary.SecretShares == nil {
-		println("MC SetDKGSFromStore get DKG summary from store:", "failed to set dkg from store", "no saved shares for dkg")
 		return common.NewError("failed to set dkg from store", "no saved shares for dkg")
 	}
 
@@ -94,7 +92,6 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) err
 		}
 	}
 	if !newDKG.HasAllSecretShares() {
-		println("MC SetDKGSFromStore get DKG summary from store:", "failed to set dkg from store", "not enough secret shares for dkg")
 		return common.NewError("failed to set dkg from store", "not enough secret shares for dkg")
 	}
 	newDKG.AggregateSecretKeyShares()
@@ -102,7 +99,6 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) err
 	newDKG.AggregatePublicKeyShares(mb.Mpks.GetMpkMap())
 
 	if err := mc.SetDKG(newDKG, mb.StartingRound); err != nil {
-		println("MC SetDKGSFromStore get DKG summary from store:", "failed to set dkg", err.Error())
 		Logger.Error("failed to set dkg", zap.Error(err))
 	}
 	return nil
@@ -254,11 +250,6 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 			zap.Int("round_tc", mr.GetTimeoutCount()),
 			zap.String("pr_seed", prSeed),
 		)
-		if vtc, rtc := vrfs.GetRoundTimeoutCount(), mr.GetTimeoutCount(); vtc != rtc {
-			println("FAILED VRF BECAUSE OF TC", "VTC", vtc, "RTC", rtc)
-		} else {
-			println("FAILED VRF BY ANOTHER REASON")
-		}
 		return false
 	} else {
 		Logger.Info("verified vrf",

@@ -22,9 +22,6 @@ type Store struct {
 }
 
 func (ems *Store) Read(ctx context.Context, key datastore.Key, entity datastore.Entity) error {
-	if entity.GetEntityMetadata().GetName() == "dkgsummary" {
-		println("READ dkgsummary HEAD")
-	}
 	entity.SetKey(key)
 	emd := entity.GetEntityMetadata()
 	c := GetEntityCon(ctx, emd)
@@ -45,9 +42,6 @@ func (ems *Store) Read(ctx context.Context, key datastore.Key, entity datastore.
 		return err
 	}
 	defer data.Free()
-	if entity.GetEntityMetadata().GetName() == "dkgsummary" {
-		println("READ dkgsummary JSON:", string(data.Data()))
-	}
 	err = datastore.FromJSON(data.Data(), entity)
 	if err != nil {
 		return err

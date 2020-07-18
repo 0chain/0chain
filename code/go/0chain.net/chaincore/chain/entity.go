@@ -205,7 +205,6 @@ func (c *Chain) GetPrevMagicBlockFromMB(mb *block.MagicBlock) *block.MagicBlock 
 func (c *Chain) SetMagicBlock(mb *block.MagicBlock) {
 	c.mbMutex.Lock()
 	defer c.mbMutex.Unlock()
-	println("SET MAGIC BLOCK:", mb.MagicBlockNumber, mb.StartingRound)
 	if err := c.MagicBlockStorage.Put(mb, mb.StartingRound); err != nil {
 		Logger.Error("failed to put magic block", zap.Error(err))
 	}
@@ -1139,7 +1138,6 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 }
 
 func (c *Chain) UpdateNodesFromMagicBlock(newMagicBlock *block.MagicBlock) {
-	println("UpdateNodesFromMagicBlock", newMagicBlock.StartingRound, newMagicBlock.MagicBlockNumber)
 	oldNodes := node.CopyNodes()
 	c.SetupNodes(newMagicBlock)
 	newMagicBlock.Sharders.ComputeProperties()
@@ -1148,7 +1146,6 @@ func (c *Chain) UpdateNodesFromMagicBlock(newMagicBlock *block.MagicBlock) {
 	c.GetNodesPreviousInfo(newMagicBlock)
 	c.deregisterNodes(oldNodes)
 	UpdateNodes <- newMagicBlock.StartingRound
-	node.Dump() // DEBUG
 }
 
 func (c *Chain) SetupNodes(mb *block.MagicBlock) {

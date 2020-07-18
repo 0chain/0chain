@@ -50,7 +50,6 @@ func (bf *BlockFetcher) FetchPreviousBlock(ctx context.Context, c *Chain, b *blo
 	if !bf.IsFetching(b.PrevHash) {
 		bf.fblocks.Add(b.PrevHash, true)
 		go c.GetPreviousBlock(ctx, b)
-		println("FETCH PREVIOUS BLOCK")
 	}
 }
 
@@ -59,7 +58,6 @@ func (bf *BlockFetcher) FetchBlock(ctx context.Context, c *Chain, hash string) {
 	if !c.blockFetcher.IsFetching(hash) {
 		c.blockFetcher.fblocks.Add(hash, true)
 		go c.GetNotarizedBlock(hash)
-		println("FETCH BLOCK")
 	}
 }
 

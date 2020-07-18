@@ -62,7 +62,6 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 			// advance LFB ticket for this case
 			var pmb = mc.GetMagicBlock(b.Round - 1)
 			if !pmb.Miners.HasNode(selfKey) {
-				println("ADVANCE LFB TICKET BY RECEIVED BLOCK", b.Round, " <------------------------------------------------")
 				mc.AddReceivedLFBTicket(ctx, &chain.LFBTicket{
 					Round: b.Round,
 				})
@@ -71,11 +70,9 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 			var r = round.NewRound(b.Round)
 			mr = mc.CreateRound(r)
 			mr = mc.AddRound(mr).(*Round)
-			println("KICK NEW ROUND BY RECEIVED BLOCK WITH MB", b.Round, " <------------------------------------------------")
 			// mc.SetCurrentRound(mr.GetRoundNumber()) // use it as current ?
 		}
 		//TODO: Byzantine
-		println("HandleVerifyBlockMessage (1)", mr.GetRoundNumber(), "::::::::::::::::::::::::::::::::::::::::::::::::::::")
 		mc.startRound(ctx, mr, b.GetRoundRandomSeed())
 	} else {
 		if !mr.IsVRFComplete() {
@@ -88,7 +85,6 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 				return
 			}
 			//TODO: Byzantine
-			println("HandleVerifyBlockMessage (2)", mr.GetRoundNumber(), "::::::::::::::::::::::::::::::::::::::::::::::::::::")
 			mc.startRound(ctx, mr, b.GetRoundRandomSeed())
 		}
 		vts := mr.GetVerificationTickets(b.Hash)
@@ -216,7 +212,6 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMess
 		if mr = mc.getRound(ctx, mb.Round); mr == nil {
 			return // miner is far ahead of sharders, skip for now
 		}
-		println("HandleNotarizedBlockMessage (1)", mr.GetRoundNumber(), "::::::::::::::::::::::::::::::::::::::::::::::::::::")
 		mc.startRound(ctx, mr, mb.GetRoundRandomSeed())
 	} else {
 		if mr.IsVerificationComplete() {
@@ -228,8 +223,6 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMess
 			}
 		}
 		if !mr.IsVRFComplete() {
-			println("HandleNotarizedBlockMessage (2)", mr.GetRoundNumber(), "::::::::::::::::::::::::::::::::::::::::::::::::::::")
-			println("::: is need VC", mc.isNeedViewChange(ctx, mb.Round), mc.isNeedViewChange(ctx, mb.Round+1), " :::")
 			if mc.isNeedViewChange(ctx, mb.Round+1) {
 				// kick new miners, joining the VC
 				//
@@ -240,9 +233,7 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMess
 					mc.AddReceivedLFBTicket(ctx, &chain.LFBTicket{
 						Round: mb.Round,
 					})
-					println("KICK TICK")
 				}
-				println("KICK MINERS JOINING VC")
 			}
 			mc.startRound(ctx, mr, mb.GetRoundRandomSeed())
 		}

@@ -23,8 +23,6 @@ import (
 
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
-	// temporary debug
-	// "runtime"
 )
 
 const (
@@ -75,7 +73,6 @@ func (mc *Chain) RegisterClient() {
 	}
 	for registered < consensus {
 		for key, miner := range miners {
-			println("REGISTER IN:", miner.GetN2NURLBase(), "OF", mb.MagicBlockNumber, mb.StartingRound)
 			body, err := httpclientutil.SendPostRequest(
 				miner.GetN2NURLBase()+httpclientutil.RegisterClient, nodeBytes, "", "", nil,
 			)

@@ -14,9 +14,6 @@ import (
 func (mc *Chain) SendBlock(ctx context.Context, b *block.Block) {
 	mb := mc.GetMagicBlock(b.Round)
 	m2m := mb.Miners
-	if b.MagicBlock != nil && mb.StartingRound != b.MagicBlock.StartingRound {
-		println("FATALITY: SEND GENERATED BLOCK WITH DIFFERENT MB", mb.StartingRound, b.MagicBlock.StartingRound)
-	}
 	m2m.SendAll(VerifyBlockSender(b))
 }
 
@@ -64,15 +61,12 @@ func (mc *Chain) SendFinalizedBlock(ctx context.Context, b *block.Block) {
 func (mc *Chain) SendNotarizedBlockToMiners(ctx context.Context, b *block.Block) {
 	mb := mc.GetMagicBlock(b.Round)
 	m2m := mb.Miners
-	println("SendNotarizedBlockToMiners", mb.StartingRound, mb.MagicBlockNumber)
 	m2m.SendAll(MinerNotarizedBlockSender(b))
 }
 
 /*SendNotarizedBlockToMiners - send a notarized block to a miner from pool */
 func (mc *Chain) SendNotarizedBlockToPoolNodes(ctx context.Context, b *block.Block,
 	pool *node.Pool, nodes []*node.Node, retry int) {
-
-	println("SendNotarizedBlockToPoolNodes <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<", b.Round)
 
 	if retry <= 0 {
 		retry = 1

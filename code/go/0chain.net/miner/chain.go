@@ -236,8 +236,6 @@ func (mc *Chain) ViewChange(ctx context.Context, nRound int64) (bool, error) {
 		return false, nil
 	}
 
-	println("IS NEED VIEW CHANGE", nRound, "======================================================")
-
 	viewChangeMagicBlock := mc.GetViewChangeMagicBlock()
 	mb := mc.GetMagicBlock(nRound)
 	if viewChangeMagicBlock != nil {

@@ -625,11 +625,9 @@ func (mc *Chain) Wait() (result *httpclientutil.Transaction, err2 error) {
 	mc.viewChangeDKG.N = magicBlock.N
 	summary := mc.viewChangeDKG.GetDKGSummary()
 	ctx := common.GetRootContext()
-	println("SAVE DKG SUMMARY FOR", magicBlock.StartingRound, mustJSON(summary))
 	if err := StoreDKGSummary(ctx, summary); err != nil {
 		Logger.DPanic(err.Error())
 	}
-	println("SET DKG FOR", magicBlock.StartingRound)
 	if err := mc.SetDKG(mc.viewChangeDKG, magicBlock.StartingRound); err != nil {
 		Logger.Error("failed to set dkg", zap.Error(err))
 	}
