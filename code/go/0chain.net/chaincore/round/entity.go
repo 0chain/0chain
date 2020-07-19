@@ -133,7 +133,7 @@ func (tc *timeoutCounter) GetTimeoutCount() (count int) {
 	defer tc.mutex.Unlock()
 
 	return tc.count
-}}
+}
 
 /*Round - data structure for the round */
 type Round struct {
