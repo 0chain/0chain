@@ -73,51 +73,83 @@ func (mc *Chain) initSetup() {
 
 func (mc *Chain) DKGProcess(ctx context.Context) {
 	mc.initSetup()
-	const timeoutPhase = 5
-	const thresholdCheckPhase = 2
-	var timer = time.NewTimer(time.Duration(time.Second))
-	counterCheckPhaseSharder := 0
-	var oldPhaseRound int
-	var oldCurrentRound int64
-	for true {
+
+	const (
+		timeoutPhase        = 5
+		thresholdCheckPhase = 2
+	)
+
+	var (
+		timer                    = time.NewTimer(time.Duration(time.Second))
+		counterCheckPhaseSharder = thresholdCheckPhase + 1 // check on sharders
+
+		oldPhaseRound   int
+		oldCurrentRound int64
+	)
+
+	for {
+
 		select {
 		case <-ctx.Done():
 			return
 		case <-timer.C:
-			checkOnSharder := counterCheckPhaseSharder >= thresholdCheckPhase
-			pn, err := mc.GetPhase(checkOnSharder)
-			if err == nil {
-				if !checkOnSharder && pn.Phase == oldPhaseRound && pn.CurrentRound == oldCurrentRound {
-					counterCheckPhaseSharder++
-				} else {
-					counterCheckPhaseSharder = 0
-					oldPhaseRound = pn.Phase
-					oldCurrentRound = pn.CurrentRound
-				}
-			}
-
-			Logger.Debug("dkg process trying", zap.Any("next_phase", pn), zap.Any("phase", currentPhase), zap.Any("sc funcs", len(scFunctions)))
-			if err == nil && pn != nil && pn.Phase != currentPhase {
-				Logger.Info("dkg process start", zap.Any("next_phase", pn), zap.Any("phase", currentPhase), zap.Any("sc funcs", len(scFunctions)))
-				if scFunc, ok := scFunctions[pn.Phase]; ok {
-					txn, err := scFunc()
-					if err != nil {
-						Logger.Error("smart contract function failed", zap.Any("error", err), zap.Any("next_phase", pn))
-					} else {
-						Logger.Debug("dkg process move phase", zap.Any("next_phase", pn), zap.Any("phase", currentPhase), zap.Any("txn", txn))
-						if txn == nil || (txn != nil && mc.ConfirmTransaction(txn)) {
-							oldPhase := currentPhase
-							currentPhase = pn.Phase
-							Logger.Debug("dkg process moved phase", zap.Any("old_phase", oldPhase), zap.Any("phase", currentPhase))
-
-						}
-					}
-				}
-			} else if err != nil {
-				Logger.Error("dkg process", zap.Any("error", err), zap.Any("sc funcs", len(scFunctions)), zap.Any("phase", pn))
-			}
-			timer = time.NewTimer(timeoutPhase * time.Second)
 		}
+
+		var (
+			checkOnSharder = counterCheckPhaseSharder >= thresholdCheckPhase
+			pn, err        = mc.GetPhase(checkOnSharder)
+		)
+
+		if err == nil {
+			if !checkOnSharder && pn.Phase == oldPhaseRound && pn.CurrentRound == oldCurrentRound {
+				counterCheckPhaseSharder++
+			} else {
+				counterCheckPhaseSharder = 0
+				oldPhaseRound = pn.Phase
+				oldCurrentRound = pn.CurrentRound
+			}
+		}
+
+		Logger.Debug("dkg process trying", zap.Any("next_phase", pn),
+			zap.Any("phase", currentPhase),
+			zap.Any("sc funcs", len(scFunctions)))
+
+		if err == nil && pn != nil && pn.Phase != currentPhase {
+
+			Logger.Info("dkg process start", zap.Any("next_phase", pn),
+				zap.Any("phase", currentPhase),
+				zap.Any("sc funcs", len(scFunctions)))
+
+			if scFunc, ok := scFunctions[pn.Phase]; ok {
+				txn, err := scFunc()
+
+				if err != nil {
+					Logger.Error("smart contract function failed",
+						zap.Any("error", err), zap.Any("next_phase", pn))
+				} else {
+
+					Logger.Debug("dkg process move phase",
+						zap.Any("next_phase", pn),
+						zap.Any("phase", currentPhase),
+						zap.Any("txn", txn))
+
+					if txn == nil || (txn != nil && mc.ConfirmTransaction(txn)) {
+						var oldPhase = currentPhase
+						currentPhase = pn.Phase
+						Logger.Debug("dkg process moved phase",
+							zap.Any("old_phase", oldPhase),
+							zap.Any("phase", currentPhase))
+					}
+
+				}
+			}
+
+		} else if err != nil {
+			Logger.Error("dkg process", zap.Any("error", err),
+				zap.Any("sc funcs", len(scFunctions)), zap.Any("phase", pn))
+		}
+
+		timer.Reset(timeoutPhase * time.Second)
 	}
 }
 

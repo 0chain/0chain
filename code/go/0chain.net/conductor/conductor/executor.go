@@ -83,7 +83,7 @@ func (r *Runner) Unlock(names []NodeName, tm time.Duration) (err error) {
 		log.Print(" [INF] unlock ", names)
 	}
 
-	r.setupTimeout(0)
+	r.setupTimeout(tm)
 	err = r.server.UpdateStates(names, func(state *conductrpc.State) {
 		state.IsLock = false
 	})

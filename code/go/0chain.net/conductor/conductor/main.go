@@ -170,18 +170,6 @@ func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
 	return tm, false
 }
 
-// func (r *Runner) toIDs(names []NodeName) (ids []NodeID, err error) {
-// 	ids = make([]NodeID, 0, len(names))
-// 	for _, name := range names {
-// 		var n, ok = r.conf.Nodes.NodeByName(name)
-// 		if !ok {
-// 			return nil, fmt.Errorf("unknown node %q", name)
-// 		}
-// 		ids = append(ids, n.ID)
-// 	}
-// 	return
-// }
-
 // is equal set of elements in both slices (an order doesn't matter)
 func isEqual(a, b []NodeName) (ok bool) {
 	if len(a) != len(b) {
@@ -375,7 +363,7 @@ func (r *Runner) acceptAddMiner(addm *conductrpc.AddMinerEvent) (err error) {
 	}
 
 	if r.verbose {
-		log.Print(" [INF] add_mienr ", added.Name)
+		log.Print(" [INF] add_miner ", added.Name)
 	}
 
 	if r.waitAdd.IsZero() {

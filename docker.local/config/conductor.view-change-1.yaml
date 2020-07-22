@@ -10,10 +10,10 @@ enable:
   - "Outside miner comes up in phase X"
   - "Miner goes down in phase X and doesn't come up in the same view change"
   - "Outside miner goes down in phase X and doesn't come up in the same view change"
-  - "Miner goes down and up"
+  # - "Miner goes down and up"
   - "Artificially force X miner to send bad share to Y miners"
   - "Artificially force X miner to send share to Y miners only"
-  - "Down and up on VC rounds"
+  # - "Down and up on VC rounds"
   - "Revealed"
 
 # sets of test cases
@@ -45,10 +45,10 @@ sets:
 
   - name: "Miner goes down and up"
     tests:
-      - "Miner goes down in phase 'start' and comes up in phase 'start'"
-      - "Miner goes down in phase 'start' (already registered) and comes up in phase 'contribute'"
-      - "Miner goes down in phase 'contribute' (after sending mpk) and comes up in phase 'share'"
-      - "Miner goes down in phase 'publish' (after publishing signOrShares) and comes up in next VC"
+      # - "Miner goes down in phase 'start' and comes up in phase 'start'"
+      # - "Miner goes down in phase 'start' (already registered) and comes up in phase 'contribute'"
+      # - "Miner goes down in phase 'contribute' (after sending mpk) and comes up in phase 'share'"
+      # - "Miner goes down in phase 'publish' (after publishing signOrShares) and comes up in next VC"
 
   - name: "Artificially force X miner to send bad share to Y miners"
     tests:
@@ -446,11 +446,15 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4']
+      - start: ['sharder 1']
+      - start_lock: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
+      - unlock: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
       - wait_add:
-          miners: ['miner 4']
+          miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
       - stop: ['miner 4']
       - start: ['miner 4']
+      - wait_phase:
+          phase: 'contribute'
       - wait_view_change:
           expect_magic_block:
             round: 251
@@ -653,7 +657,6 @@ tests:
       - stop: ['miner 3']
       - start: ['miner 3']
       - wait_view_change:
-          timeout: 2m
           expect_magic_block:
             round: 501
             miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
@@ -674,7 +677,6 @@ tests:
       - stop: ['miner 3', 'miner 5']
       - start: ['miner 3', 'miner 5']
       - wait_view_change:
-          timeout: 5m
           expect_magic_block:
             round: 501
             miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4', 'miner 5']

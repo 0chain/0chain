@@ -78,7 +78,7 @@ func (wssos *WaitShareSignsOrShares) IsZero() bool {
 	return wssos.Miner == ""
 }
 
-// WaitAdd used to wait for add_mienr and add_sharder SC calls.
+// WaitAdd used to wait for add_miner and add_sharder SC calls.
 type WaitAdd struct {
 	Miners   []NodeName `json:"miners" yaml:"miners" mapstructure:"miners"`
 	Sharders []NodeName `json:"sharders" yaml:"sharders" mapstructure:"sharders"`
