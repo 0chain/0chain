@@ -32,16 +32,16 @@ func (msc *MinerSmartContract) GetUserPoolsHandler(ctx context.Context,
 		if mn, err = msc.getMinerNode(nodeID, balances); err != nil {
 			return nil, fmt.Errorf("can't get node %s: %v", nodeID, err)
 		}
-		var nit = mn.ID + " (" + mn.NodeType.String() + ")"
+		if ups.Pools[mn.NodeType.String()] == nil {
+			ups.Pools[mn.NodeType.String()] = make(map[string][]*delegatePoolStat)
+		}
 		for _, id := range poolIDs {
 			var dp, ok = mn.Pending[id]
 			if ok {
-				ups.Pools[nit] = append(ups.Pools[nit],
-					newDelegatePoolStat(dp))
+				ups.Pools[mn.NodeType.String()][mn.ID] = append(ups.Pools[mn.NodeType.String()][mn.ID], newDelegatePoolStat(dp))
 			}
 			if dp, ok = mn.Active[id]; ok {
-				ups.Pools[nit] = append(ups.Pools[nit],
-					newDelegatePoolStat(dp))
+				ups.Pools[mn.NodeType.String()][mn.ID] = append(ups.Pools[mn.NodeType.String()][mn.ID], newDelegatePoolStat(dp))
 			}
 		}
 	}
