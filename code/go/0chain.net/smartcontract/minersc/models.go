@@ -506,12 +506,12 @@ func newDelegatePoolStat(dp *sci.DelegatePool) (dps *delegatePoolStat) {
 
 // A userPools represents response for user pools requests.
 type userPools struct {
-	Pools map[string][]*delegatePoolStat `json:"pools"`
+	Pools map[string]map[string][]*delegatePoolStat `json:"pools"`
 }
 
 func newUserPools() (ups *userPools) {
 	ups = new(userPools)
-	ups.Pools = make(map[string][]*delegatePoolStat)
+	ups.Pools = make(map[string]map[string][]*delegatePoolStat)
 	return
 }
 
