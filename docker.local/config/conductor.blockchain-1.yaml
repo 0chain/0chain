@@ -45,7 +45,7 @@ sets:
     tests:
       - "Double spend transaction: 1/3"
       - "Double spend transaction: 2/3"
-      - "Double spend transaction: 3/3"
+      # - "Double spend transaction: 3/3"
 
 
 
@@ -310,6 +310,6 @@ tests:
       - double_spend_transaction:
           by: ['miner 1', 'miner 2', 'miner 3']
       - wait_no_progress: #
-          timeout: '2m'   # moves very slow, but moves
+          timeout: '2m'  # moves very slow, but moves
 
 ...
