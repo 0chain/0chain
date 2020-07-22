@@ -78,8 +78,6 @@ func (tc *timeoutCounter) IncrementTimeoutCount() {
 	tc.mutex.Lock()
 	defer tc.mutex.Unlock()
 
-	return // don't increments the round timeout keeping it zero every time
-
 	var mostVotes, mostTimeout int
 	for k, v := range tc.timeoutVotes {
 		if v > mostVotes || (v == mostVotes && k > mostTimeout) {
