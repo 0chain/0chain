@@ -2,6 +2,14 @@ module 0chain.net/core
 
 go 1.14
 
+replace 0chain.net/core => ../core
+
+replace 0chain.net/smartcontract => ../smartcontract
+
+replace 0chain.net/chaincore => ../chaincore
+
+replace 0chain.net/conductor => ../conductor
+
 require (
 	github.com/0chain/gorocksdb v0.0.0-20181010114359-8752a9433481
 	github.com/bitly/go-hostpool v0.0.0-20171023180738-a3a6125de932 // indirect

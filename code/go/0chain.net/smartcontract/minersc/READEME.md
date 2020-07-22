@@ -1,6 +1,17 @@
 Miner SC
 ========
 
+# Unit tests
+
+## Test in docker container
+
+From 0chain project root execute the following command to run unit-tests
+
+```
+./docker.local/bin/sc_unit_test.sh 0chain.net/smartcontract/minersc
+```
+
+
 # Node settings
 
 #### Example

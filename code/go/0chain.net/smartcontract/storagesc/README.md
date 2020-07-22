@@ -1,14 +1,15 @@
 STORAGE SC
 ==========
 
-# SC testing
+# Unit tests
 
-1. Enter the SC directory (directory with this README)
-2. Execute unit-tests
-    ```
-    go test -cover -coverprofile=cover.out && go tool cover -html=cover.out -o=cover.html
-    ```
-3. Open generated cover.html file to see tests coverage.
+## Test in docker container.
+
+From 0chain project root execute the following command to run unit-tests
+
+```
+./docker.local/bin/sc_unit_test.sh 0chain.net/smartcontract/storagesc
+```
 
 # Flow
 

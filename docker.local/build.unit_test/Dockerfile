@@ -11,6 +11,8 @@ COPY ./code/go/0chain.net/miner/go.mod           ./code/go/0chain.net/miner/go.s
 COPY ./code/go/0chain.net/miner/miner/go.mod     ./code/go/0chain.net/miner/miner/go.sum     $SRC_DIR/go/0chain.net/miner/miner/
 COPY ./code/go/0chain.net/sharder/go.mod         ./code/go/0chain.net/sharder/go.sum         $SRC_DIR/go/0chain.net/sharder/
 COPY ./code/go/0chain.net/sharder/sharder/go.mod ./code/go/0chain.net/sharder/sharder/go.sum $SRC_DIR/go/0chain.net/sharder/sharder/
+COPY ./code/go/0chain.net/conductor/go.mod       ./code/go/0chain.net/conductor/go.sum       $SRC_DIR/go/0chain.net/conductor/
+
 RUN cd $SRC_DIR/go/0chain.net/core && \
     go mod download && \
     cd $SRC_DIR/go/0chain.net/chaincore && \
@@ -24,7 +26,7 @@ RUN cd $SRC_DIR/go/0chain.net/core && \
     cd $SRC_DIR/go/0chain.net/sharder && \
     go mod download && \
     cd $SRC_DIR/go/0chain.net/sharder/sharder && \
-    go mod download
+    go mod download && \
 
 # Build libzstd:
 # FIXME: Change this after https://github.com/valyala/gozstd/issues/6 is fixed.
