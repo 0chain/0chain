@@ -33,7 +33,7 @@ sets:
     tests:
       - "Publish: Don't send a signature"
       - "Publish: Only send correct signature to the group"
-      - "Publish: Send no signatures"
+      # - "Publish: Send no signatures"
 
 # test cases
 tests:
