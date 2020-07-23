@@ -111,6 +111,16 @@ func readConfigs(configFile, testsFile string) (conf *config.Config) {
 	return
 }
 
+type reportTest struct {
+	name  string
+	tests []reportCase
+}
+
+type reportCase struct {
+	success bool
+	err     error
+}
+
 type Runner struct {
 	server  *conductrpc.Server
 	conf    *config.Config
@@ -138,6 +148,9 @@ type Runner struct {
 
 	// remembered rounds: name -> round number
 	rounds map[config.RoundName]config.Round // named rounds (the remember_round)
+
+	// final report
+	report []reportTest
 }
 
 func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
@@ -631,6 +644,36 @@ func (r *Runner) proceedWaiting() (err error) {
 	return
 }
 
+func isOk(cs []reportCase) (ok bool) {
+	for _, c := range cs {
+		if !c.success {
+			return false
+		}
+	}
+	return true
+}
+
+func okString(t bool) string {
+	if t {
+		return "[PASS]"
+	}
+	return "[FAIL]"
+}
+
+func (r *Runner) printReport() {
+	fmt.Println("........................ R E P O R T ........................")
+	for _, rx := range r.report {
+		fmt.Printf("- %s %s\n", rx.name, okString(isOk(rx.tests)))
+		for _, t := range rx.tests {
+			if t.err != nil {
+				fmt.Printf("  - [ERR] %v\n", t.err)
+				continue
+			}
+		}
+	}
+	fmt.Println(".............................................................")
+}
+
 // Run the tests.
 func (r *Runner) Run() (err error) {
 
@@ -638,6 +681,7 @@ func (r *Runner) Run() (err error) {
 	defer log.Println("end of testing")
 
 	// stop all nodes after all
+	defer r.printReport()
 	defer r.stopAll()
 
 	// for every enabled set
@@ -649,7 +693,10 @@ func (r *Runner) Run() (err error) {
 		log.Print("start set ", set.Name)
 		log.Print("...........................................................")
 		// for every test case
+	Tests:
 		for i, testCase := range r.conf.TestsOfSet(&set) {
+			var report reportTest
+			report.name = testCase.Name
 			log.Print("=======================================================")
 			log.Printf("%d %s test case", i, testCase.Name)
 			for j, f := range testCase.Flow {
@@ -660,9 +707,23 @@ func (r *Runner) Run() (err error) {
 					return // fatality
 				}
 				if err = r.proceedWaiting(); err != nil {
-					return
+					report.tests = append(report.tests, reportCase{
+						success: false,
+						err:     err,
+					})
+					r.report = append(r.report, report) // add to report
+					r.stopAll()
+					log.Printf("[ERR] end of %d %s test case, %v", i,
+						testCase.Name, err)
+					continue Tests // test case failed
 				}
+				// test case succeeded
+				report.tests = append(report.tests, reportCase{
+					success: true,
+					err:     err,
+				})
 			}
+			r.report = append(r.report, report) // add to report
 			log.Printf("end of %d %s test case", i, testCase.Name)
 		}
 	}

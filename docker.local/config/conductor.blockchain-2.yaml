@@ -44,7 +44,8 @@ tests:
       - finalized_block:
           by: ["sharder 2"]
       - start: ["miner 1", "miner 2", "miner 3"]
-      - wait_no_progress:
+      - wait_round:
+          round: 520
           timeout: '2m'
   - name: "Send bad MB to miners when all miners are down and then they are brought up"
     flow:
