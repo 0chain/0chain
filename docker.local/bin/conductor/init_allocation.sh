@@ -5,7 +5,7 @@ set -e
 rm -rf ~/.zcn/testing.json
 rm -rf ~/.zcn/allocation.txt
 
-for run in {1..10}
+for run in {1..20}
 do
    ./zwalletcli/zwallet --wallet testing.json faucet --methodName pour --input “{Pay day}”
 done
@@ -27,16 +27,26 @@ BLOBBER3=2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18
 ./zboxcli/zbox --wallet testing.json sp-lock --blobber_id $BLOBBER2 --tokens 2
 ./zboxcli/zbox --wallet testing.json sp-lock --blobber_id $BLOBBER3 --tokens 2
 
-./zboxcli/zbox --wallet testing.json ls-blobbers # for test logs
+# for test logs
+./zboxcli/zbox --wallet testing.json ls-blobbers
 
 # create allocation
 ./zboxcli/zbox --wallet testing.json newallocation --read_price 0.001-10 \
     --write_price 0.01-10 --size 104857600 --lock 4 --data 2 --parity 1  \
     --expire 48h
 
+# add to read pools
+./zboxcli/zbox --wallet testing.json rp-lock --blobber $BLOBBER1 \
+    --duration=1h --allocation `cat ~/.zcn/allocation.txt` --tokens 2.0
+./zboxcli/zbox --wallet testing.json rp-lock --blobber $BLOBBER2 \
+    --duration=1h --allocation `cat ~/.zcn/allocation.txt` --tokens 2.0
+./zboxcli/zbox --wallet testing.json rp-lock --blobber $BLOBBER3 \
+    --duration=1h --allocation `cat ~/.zcn/allocation.txt` --tokens 2.0
+
 # create random file
 head -c 5M < /dev/urandom > random.bin
 
+# upload initial file
 ./zboxcli/zbox --wallet testing.json upload \
     --allocation `cat ~/.zcn/allocation.txt` \
     --commit \

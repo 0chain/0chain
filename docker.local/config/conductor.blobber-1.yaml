@@ -66,10 +66,19 @@ tests:
       - cleanup_bc: {}
       - command:
           name: "cleanup_block_worker"
-      - start: ['sharder 1', 'sharder 2', 'miner 1', 'miner 2', 'miner 3']
+      - start_lock: ['sharder 2']
+      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3']
+      - wait_phase:
+          phase: 'share'
+      - unlock: ['sharder 2']
       - wait_view_change:
           expect_magic_block:
             round: 251
+            miners: ['miner 1', 'miner 2', 'miner 3']
+            sharders: ['sharder 1']
+      - wait_view_change:
+          expect_magic_block:
+            round: 501
             miners: ['miner 1', 'miner 2', 'miner 3']
             sharders: ['sharder 1', 'sharder 2']
       - verify_transaction:

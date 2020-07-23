@@ -96,15 +96,13 @@ nodes:
 
 # named system commands
 commands:
-  # attention: requires sudo password
   cleanup_blobbers:
     work_dir: "../blobber"
-    exec: "sudo ../blobber/docker.local/bin/clean.sh"
+    exec: "../blobber/docker.local/bin/docker-clean.sh"
     can_fail: true
-  # attention: requires sudo password
   cleanup_block_worker:
     work_dir: "../blockWorker"
-    exec: "sudo ../blockWorker/docker.local/bin/clean.sh"
+    exec: "../blockWorker/docker.local/bin/docker-clean.sh"
     can_fail: true
   build_blobbers:
      work_dir: "../blobber"
@@ -124,20 +122,20 @@ commands:
   list:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/list.sh"
-    should_fail: false # consensus 66.6%
+    should_fail: false # consensus
   download:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/download.sh"
-    should_fail: true
+    should_fail: false # shouldn't fail because of Rid-Solomon
   delete:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/delete.sh"
-    should_fail: false # consensus 66.6%
+    should_fail: false # consensus
   upload:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/upload.sh"
-    should_fail: true
+    should_fail: true # should fail, consensus 66.6%, but expected is 76.6%
   unverified_transaction:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/unverified_transaction.sh"
-    should_fail: true
+    should_fail: false

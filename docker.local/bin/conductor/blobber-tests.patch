@@ -460,3 +460,78 @@ index 0000000..130bbde
 +done
 +
 +docker.local/bin/sync_clock.sh
+diff --git a/docker.local/bin/docker-clean.sh b/docker.local/bin/docker-clean.sh
+new file mode 100755
+index 0000000..769f357
+--- /dev/null
++++ b/docker.local/bin/docker-clean.sh
+@@ -0,0 +1,7 @@
++#!/bin/sh
++
++set -e
++docker-compose                                                \
++    -f ./docker.local/docker-clean/docker-clean-compose.yml   \
++    up                                                        \
++    --build docker-clean
+diff --git a/docker.local/docker-clean/Dockerfile b/docker.local/docker-clean/Dockerfile
+new file mode 100644
+index 0000000..84bc652
+--- /dev/null
++++ b/docker.local/docker-clean/Dockerfile
+@@ -0,0 +1,7 @@
++
++#
++# clean up blockchain without sudo (as 'docker' system group member)
++#
++
++FROM alpine:latest
++COPY docker-clean.sh ./docker-clean.sh
+diff --git a/docker.local/docker-clean/docker-clean-compose.yml b/docker.local/docker-clean/docker-clean-compose.yml
+new file mode 100644
+index 0000000..afcf1b4
+--- /dev/null
++++ b/docker.local/docker-clean/docker-clean-compose.yml
+@@ -0,0 +1,23 @@
++version: '3'
++services:
++  docker-clean:
++    build:
++      context: .
++      dockerfile: Dockerfile
++    volumes:
++      # 1-6 blobbers
++      - ../blobber1/:/blobber1
++      - ../blobber2/:/blobber2
++      - ../blobber3/:/blobber3
++      - ../blobber4/:/blobber4
++      - ../blobber5/:/blobber5
++      - ../blobber6/:/blobber6
++    command: /bin/sh docker-clean.sh
++
++volumes:
++  blobber1:
++  blobber2:
++  blobber3:
++  blobber4:
++  blobber5:
++  blobber6:
+diff --git a/docker.local/docker-clean/docker-clean.sh b/docker.local/docker-clean/docker-clean.sh
+new file mode 100644
+index 0000000..aa1255c
+--- /dev/null
++++ b/docker.local/docker-clean/docker-clean.sh
+@@ -0,0 +1,14 @@
++#!/bin/sh
++
++echo "cleaning 6 blobbers..."
++for i in $(seq 1 6)
++do
++  echo "deleting blobber$i logs"
++  rm -rf ./blobber$i/log/*
++  echo "deleting blobber$i postgresql data"
++  rm -rf ./blobber$i/data/postgresql/*
++  echo "deleting blobber$i files"
++  rm -rf ./blobber$i/data/files/*
++done
++
++echo "cleaned up"

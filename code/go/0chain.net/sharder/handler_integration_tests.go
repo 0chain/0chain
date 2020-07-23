@@ -50,6 +50,8 @@ func TransactionConfirmationHandler(ctx context.Context, r *http.Request) (
 
 	if confirmation != nil && state.VerifyTransaction != nil {
 		confirmation.Hash = revertString(confirmation.Hash)
+		confirmation.BlockHash = revertString(confirmation.BlockHash)
+		confirmation.Round = confirmation.Round - 10
 	}
 
 	if content == "confirmation" {
@@ -64,6 +66,10 @@ func TransactionConfirmationHandler(ctx context.Context, r *http.Request) (
 	}
 
 	if lfbSummary := sc.GetLatestFinalizedBlockSummary(); lfbSummary != nil {
+		if state.VerifyTransaction != nil {
+			lfbSummary.Hash = revertString(lfbSummary.Hash)
+			lfbSummary.Round = lfbSummary.Round - 10
+		}
 		data["latest_finalized_block"] = lfbSummary
 	}
 

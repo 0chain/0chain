@@ -416,7 +416,7 @@ changes.
 
 ```
 git apply --check ../0chain/docker.local/bin/conductor/block-worker-local.patch # check first
-git apply --check ../0chain/docker.local/bin/conductor/block-worker-local.patch # and apply
+git apply ../0chain/docker.local/bin/conductor/block-worker-local.patch # and apply
 ```
 
 To revert blockWorker repository to its latest commit state use

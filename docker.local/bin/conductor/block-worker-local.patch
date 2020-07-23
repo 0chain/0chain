@@ -1,8 +1,8 @@
 diff --git a/README.md b/README.md
-index 9e2279a..6e50749 100644
+index ab59ef8..731f6e7 100644
 --- a/README.md
 +++ b/README.md
-@@ -120,3 +120,13 @@ If there is no test network, run the following command
+@@ -134,3 +134,13 @@ If there is no test network, run the following command
  ```
  docker network create --driver=bridge --subnet=198.18.0.0/15 --gateway=198.18.0.255 testnet0
  ```
@@ -17,26 +17,39 @@ index 9e2279a..6e50749 100644
 +
 +It uses `config/genesis_magic_block_local.json` and the same clean command.
 diff --git a/code/go/blockworker/blockworkercore/worker/worker.go b/code/go/blockworker/blockworkercore/worker/worker.go
-index 178e175..32d1995 100644
+index faf3395..5ac12f9 100644
 --- a/code/go/blockworker/blockworkercore/worker/worker.go
 +++ b/code/go/blockworker/blockworkercore/worker/worker.go
-@@ -22,9 +22,15 @@ const (
- 
+@@ -24,9 +24,15 @@ const (
  func SetupWorkers(ctx context.Context) {
- 	latestBlock, err := zcncore.GetLatestFinalized(ctx, 1)
-+	for i := 0; i < 10 && err != nil; i++ {
-+		if err != nil {
-+			Logger.Error("Failed to get latest finalized block from blockchain", zap.Error(err))
+ 	if !config.Configuration.DNSOnly {
+ 		latestBlock, err := zcncore.GetLatestFinalized(ctx, 1)
++		for i := 0; i < 10 && err != nil; i++ {
++			if err != nil {
++				Logger.Error("Failed to get latest finalized block from blockchain", zap.Error(err))
++			}
++			latestBlock, err = zcncore.GetLatestFinalized(ctx, 1)
 +		}
-+		latestBlock, err = zcncore.GetLatestFinalized(ctx, 1)
-+	}
- 	if err != nil {
- 		Logger.Error("Failed to get latest finalized block from blockchain", zap.Error(err))
--		panic("GetLatestFinalized failed")
-+		panic("GetLatestFinalized failed after 10 attempts")
- 	}
- 	roundToProcess := latestBlock.Round
- 	go LedgerSync(ctx, roundToProcess)
+ 		if err != nil {
+ 			Logger.Error("Failed to get latest finalized block from blockchain", zap.Error(err))
+-			panic("GetLatestFinalized failed")
++			panic("GetLatestFinalized failed after 10 attempts")
+ 		}
+ 		roundToProcess := latestBlock.Round
+ 		go LedgerSync(ctx, roundToProcess)
+diff --git a/docker.local/bin/docker-clean.sh b/docker.local/bin/docker-clean.sh
+new file mode 100755
+index 0000000..769f357
+--- /dev/null
++++ b/docker.local/bin/docker-clean.sh
+@@ -0,0 +1,7 @@
++#!/bin/sh
++
++set -e
++docker-compose                                                \
++    -f ./docker.local/docker-clean/docker-clean-compose.yml   \
++    up                                                        \
++    --build docker-clean
 diff --git a/docker.local/bin/start_local.sh b/docker.local/bin/start_local.sh
 new file mode 100755
 index 0000000..fe6f260
@@ -362,6 +375,51 @@ index 0000000..dff96c8
 +  "n": 4
 +}
 \ No newline at end of file
+diff --git a/docker.local/docker-clean/Dockerfile b/docker.local/docker-clean/Dockerfile
+new file mode 100644
+index 0000000..84bc652
+--- /dev/null
++++ b/docker.local/docker-clean/Dockerfile
+@@ -0,0 +1,7 @@
++
++#
++# clean up blockchain without sudo (as 'docker' system group member)
++#
++
++FROM alpine:latest
++COPY docker-clean.sh ./docker-clean.sh
+diff --git a/docker.local/docker-clean/docker-clean-compose.yml b/docker.local/docker-clean/docker-clean-compose.yml
+new file mode 100644
+index 0000000..0173030
+--- /dev/null
++++ b/docker.local/docker-clean/docker-clean-compose.yml
+@@ -0,0 +1,15 @@
++version: '3'
++services:
++  docker-clean:
++    build:
++      context: .
++      dockerfile: Dockerfile
++    volumes:
++      - ./blockworker/mongodata:/data/db
++      - ./config:/blockworker/config
++      - ./blockworker/log:/blockworker/log
++    command: /bin/sh docker-clean.sh
++
++volumes:
++  config:
++  mongodata:
+diff --git a/docker.local/docker-clean/docker-clean.sh b/docker.local/docker-clean/docker-clean.sh
+new file mode 100644
+index 0000000..622648a
+--- /dev/null
++++ b/docker.local/docker-clean/docker-clean.sh
+@@ -0,0 +1,5 @@
++#!/bin/sh
++
++echo "cleaning block worker"
++rm -rf ./blockworker/log/*
++rm -rf ./blockworker/mongodata/*
 diff --git a/docker.local/docker-compose-local.yml b/docker.local/docker-compose-local.yml
 new file mode 100644
 index 0000000..e08e676
