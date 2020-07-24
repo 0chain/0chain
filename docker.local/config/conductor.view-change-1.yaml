@@ -7,14 +7,14 @@
 # enabled test cases sets
 enable:
   # comment out to disable
-  - "Outside miner comes up in phase X"
-  - "Miner goes down in phase X and doesn't come up in the same view change"
-  - "Outside miner goes down in phase X and doesn't come up in the same view change"
+  # - "Outside miner comes up in phase X"
+  # - "Miner goes down in phase X and doesn't come up in the same view change"
+  # - "Outside miner goes down in phase X and doesn't come up in the same view change"
   # - "Miner goes down and up"
-  - "Artificially force X miner to send bad share to Y miners"
-  - "Artificially force X miner to send share to Y miners only"
-  # - "Down and up on VC rounds"
-  - "Revealed"
+  # - "Artificially force X miner to send bad share to Y miners"
+  # - "Artificially force X miner to send share to Y miners only"
+  - "Down and up on VC rounds"
+  # - "Revealed"
 
 # sets of test cases
 sets:
@@ -45,10 +45,10 @@ sets:
 
   - name: "Miner goes down and up"
     tests:
-      # - "Miner goes down in phase 'start' and comes up in phase 'start'"
-      # - "Miner goes down in phase 'start' (already registered) and comes up in phase 'contribute'"
-      # - "Miner goes down in phase 'contribute' (after sending mpk) and comes up in phase 'share'"
-      # - "Miner goes down in phase 'publish' (after publishing signOrShares) and comes up in next VC"
+      - "Miner goes down in phase 'start' and comes up in phase 'start'"
+      - "Miner goes down in phase 'start' (already registered) and comes up in phase 'contribute'"
+      - "Miner goes down in phase 'contribute' (after sending mpk) and comes up in phase 'share'"
+      - "Miner goes down in phase 'publish' (after publishing signOrShares) and comes up in next VC"
 
   - name: "Artificially force X miner to send bad share to Y miners"
     tests:
@@ -61,12 +61,12 @@ sets:
     tests:
       - "Artificially force 1 miner to send share to 2 miners only"
       - "Artificially force 1 miner to send share to 1 miners only"
-      - "Artificially force 2 miner to send share to 2 miners only"
+      - "Artificially force 2 miner to send share to 2 miners only, 'miner 4'"
 
   - name: "Down and up on VC rounds"
     tests:
-      - "Miner goes down on 497 round, and comes up on shortly"
-      - "Two mines goes down on 497 round, and comes up on shortly"
+      - "Miner goes down on 497 round, and comes up shortly"
+      - "Two mines goes down on 497 round, and comes up shortly"
 
   - name: "Revealed"
     tests:
@@ -452,14 +452,15 @@ tests:
       - wait_add:
           miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
       - stop: ['miner 4']
-      - start: ['miner 4']
-      - wait_phase:
-          phase: 'contribute'
+      - start_lock: ['miner 4']
+      - wait_round:
+          round: 48
+      - unlock: ['miner 4']
       - wait_view_change:
           expect_magic_block:
             round: 251
             sharders: ['sharder 1']
-            miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
+            miners: ['miner 1', 'miner 2', 'miner 3']
 
   - name: "Miner goes down in phase 'start' (already registered) and comes up in phase 'contribute'"
     flow:
@@ -477,7 +478,7 @@ tests:
           expect_magic_block:
             round: 251
             sharders: ['sharder 1']
-            miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
+            miners: ['miner 1', 'miner 2', 'miner 3']
 
   - name: "Miner goes down in phase 'contribute' (after sending mpk) and comes up in phase 'share'"
     flow:
@@ -500,7 +501,7 @@ tests:
           expect_magic_block:
             round: 501
             sharders: ['sharder 1']
-            miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
+            miners: ['miner 1', 'miner 2', 'miner 3']
 
   - name: "Miner goes down in phase 'publish' (after publishing signOrShares) and comes up in next VC"
     flow:
@@ -521,7 +522,7 @@ tests:
           expect_magic_block:
             round: 501
             sharders: ['sharder 1']
-            miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
+            miners: ['miner 1', 'miner 2', 'miner 3']
 
   # "Artificially force X miner to send bad share to Y miners"
 
@@ -641,7 +642,7 @@ tests:
 
   # between 497 and 500 rounds
 
-  - name: "Miner goes down on 497 round, and comes up on shortly"
+  - name: "Miner goes down on 497 round, and comes up shortly"
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
@@ -651,6 +652,8 @@ tests:
             round: 251
             sharders: ['sharder 1']
             miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4', 'miner 5']
+      - wait_round:
+          round: 262
       - stop: ['miner 5']
       - wait_round:
           round: 497
@@ -662,7 +665,7 @@ tests:
             miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
             sharders: ['sharder 1']
 
-  - name: "Two mines goes down on 497 round, and comes up on shortly"
+  - name: "Two mines goes down on 497 round, and comes up shortly"
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
