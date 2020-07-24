@@ -33,7 +33,7 @@ sets:
     tests:
       - "Publish: Don't send a signature"
       - "Publish: Only send correct signature to the group"
-      # - "Publish: Send no signatures"
+      - "Publish: Send no signatures"
 
 # test cases
 tests:
@@ -213,11 +213,11 @@ tests:
       - wait_round:
           round: 10 # wait a round to be sure it starts
       - publish:
-          by: ["miner 3"]
+          by: ["miner 2", "miner 3"]
           good: []
           bad: []
       - wait_no_view_change:
-          round: 255
-          timeout: '5m'
+          round: 400
+          timeout: '15m'
 
 ...

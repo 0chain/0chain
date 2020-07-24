@@ -6,11 +6,11 @@
 
 # enabled test cases sets
 enable:
-  # - "VRF"
-  # - "Round timeout"
-  # - "Verification tickets"
-  # - "Bad block"
-  # - "Notarized block"
+  - "VRF"
+  - "Round timeout"
+  - "Verification tickets"
+  - "Bad block"
+  - "Notarized block"
   - "Double spend transaction"
 
 # sets of test cases
@@ -43,8 +43,8 @@ sets:
       - "Hash the block incorrectly"
   - name: "Double spend transaction"
     tests:
-      # - "Double spend transaction: 1/3"
-      # - "Double spend transaction: 2/3"
+      - "Double spend transaction: 1/3"
+      - "Double spend transaction: 2/3"
       - "Double spend transaction: 3/3"
 
 #
