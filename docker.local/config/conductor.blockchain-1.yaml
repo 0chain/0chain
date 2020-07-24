@@ -6,11 +6,11 @@
 
 # enabled test cases sets
 enable:
-  - "VRF"
-  - "Round timeout"
-  - "Verification tickets"
-  - "Bad block"
-  - "Notarized block"
+  # - "VRF"
+  # - "Round timeout"
+  # - "Verification tickets"
+  # - "Bad block"
+  # - "Notarized block"
   - "Double spend transaction"
 
 # sets of test cases
@@ -43,9 +43,9 @@ sets:
       - "Hash the block incorrectly"
   - name: "Double spend transaction"
     tests:
-      - "Double spend transaction: 1/3"
-      - "Double spend transaction: 2/3"
-      # - "Double spend transaction: 3/3"
+      # - "Double spend transaction: 1/3"
+      # - "Double spend transaction: 2/3"
+      - "Double spend transaction: 3/3"
 
 #
 # test cases
@@ -309,6 +309,6 @@ tests:
           by: ['miner 1', 'miner 2', 'miner 3']
       - wait_round:
           round: 110     #
-          timeout: '10m' # moves very slow, but moves
+          timeout: '30m' # moves very slow, but moves
 
 ...
