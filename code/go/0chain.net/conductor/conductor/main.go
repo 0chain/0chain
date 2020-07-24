@@ -674,6 +674,24 @@ func (r *Runner) printReport() {
 	fmt.Println(".............................................................")
 }
 
+func (r *Runner) resetWaiters() {
+
+	r.waitNodes = make(map[NodeName]struct{})                  //
+	r.waitRound = config.WaitRound{}                           //
+	r.waitPhase = config.WaitPhase{}                           //
+	r.waitContributeMPK = config.WaitContributeMpk{}           //
+	r.waitShareSignsOrShares = config.WaitShareSignsOrShares{} //
+	r.waitViewChange = config.WaitViewChange{}                 //
+	r.waitAdd = config.WaitAdd{}                               //
+	r.waitNoProgressUntil = time.Time{}                        //
+	r.waitNoViewChange = config.WaitNoViewChainge{}            //
+	if r.waitCommand != nil {
+		go func(wc chan error) { <-wc }(r.waitCommand)
+		r.waitCommand = nil
+	}
+
+}
+
 // Run the tests.
 func (r *Runner) Run() (err error) {
 
@@ -713,6 +731,7 @@ func (r *Runner) Run() (err error) {
 					})
 					r.report = append(r.report, report) // add to report
 					r.stopAll()
+					r.resetWaiters()
 					log.Printf("[ERR] end of %d %s test case, %v", i,
 						testCase.Name, err)
 					continue Tests // test case failed
