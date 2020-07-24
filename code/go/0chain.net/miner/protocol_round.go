@@ -1018,6 +1018,7 @@ func (mc *Chain) kickRoundByLFB(ctx context.Context, lfb *block.Block) {
 	mc.InitBlockState(lfb)
 	mc.AsyncFetchNotarizedPreviousBlock(lfb)
 	if nr = mc.StartNextRound(ctx, mr); nr == nil {
+		println("NEXT ROUND IS NIL")
 		return
 	}
 	mc.SetCurrentRound(nr.Number)
@@ -1025,8 +1026,18 @@ func (mc *Chain) kickRoundByLFB(ctx context.Context, lfb *block.Block) {
 
 func (mc *Chain) restartRound(ctx context.Context) {
 
+	var crn = mc.GetCurrentRound()
+
 	mc.IncrementRoundTimeoutCount()
-	var r = mc.GetMinerRound(mc.GetCurrentRound())
+	var r = mc.GetMinerRound(crn)
+
+	if crn > 0 && mc.GetMinerRound(crn-1) == nil {
+		if lfb := mc.GetLatestFinalizedBlock(); lfb != nil {
+			mc.kickRoundByLFB(ctx, lfb)
+			mc.restartRound(ctx)
+			return
+		}
+	}
 
 	switch crt := mc.GetRoundTimeoutCount(); {
 	case crt < 10:

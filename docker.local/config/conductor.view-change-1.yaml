@@ -65,7 +65,7 @@ sets:
 
   - name: "Down and up on VC rounds"
     tests:
-      - "Miner goes down on 497 round, and comes up shortly"
+      # - "Miner goes down on 497 round, and comes up shortly"
       - "Two mines goes down on 497 round, and comes up shortly"
 
   - name: "Revealed"
@@ -679,11 +679,8 @@ tests:
           round: 497
       - stop: ['miner 3', 'miner 5']
       - start: ['miner 3', 'miner 5']
-      - wait_view_change:
-          expect_magic_block:
-            round: 501
-            miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4', 'miner 5']
-            sharders: ['sharder 1']
+      - wait_no_progress:
+          timeout: '2m'
 
   - name: "Revealed"
     flow:

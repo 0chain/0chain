@@ -35,7 +35,7 @@ func (sc *Chain) AcceptMessage(entityName string, entityID string) bool {
 
 /*SetupM2SResponders - setup handlers for all the requests from the miner */
 func SetupM2SResponders() {
-	http.HandleFunc("/v1/_m2s/block/latest_finalized/get", common.N2NRateLimit(node.ToN2NSendEntityHandler(LatestFinalizedBlockHandler)))
+	http.HandleFunc("/v1/_m2s/block/latest_finalized/get", common.N2NRateLimit(node.ToS2MSendEntityHandler(LatestFinalizedBlockHandler)))
 }
 
 /*FinalizedBlockHandler - handle the finalized block */

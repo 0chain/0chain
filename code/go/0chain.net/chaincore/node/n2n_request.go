@@ -284,4 +284,59 @@ func ToN2NSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 	}
 }
 
+func ToS2MSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandlerf {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.TODO()
+		ts := time.Now()
+		data, err := handler(ctx, r)
+		if err != nil {
+			common.Respond(w, r, nil, err)
+			N2n.Error("message received",
+				zap.Int("to", Self.Underlying().SetIndex),
+				zap.String("handler", r.RequestURI), zap.Error(err))
+			return
+		}
+		options := &SendOptions{Compress: true}
+		var buffer *bytes.Buffer
+		switch v := data.(type) {
+		case datastore.Entity:
+			entity := v
+			codec := r.Header.Get(HeaderRequestCODEC)
+			switch codec {
+			case "JSON":
+				options.CODEC = CODEC_JSON
+			case "Msgpack":
+				options.CODEC = CODEC_MSGPACK
+			}
+			w.Header().Set(HeaderRequestCODEC, codec)
+			buffer = getResponseData(options, entity)
+		case *pushDataCacheEntry:
+			options.CODEC = v.Options.CODEC
+			if options.CODEC == 0 {
+				w.Header().Set(HeaderRequestCODEC, CodecJSON)
+			} else {
+				w.Header().Set(HeaderRequestCODEC, CodecMsgpack)
+			}
+			w.Header().Set(HeaderRequestEntityName, v.EntityName)
+			buffer = bytes.NewBuffer(v.Data)
+		}
+		if options.Compress {
+			w.Header().Set("Content-Encoding", compDecomp.Encoding())
+		}
+		w.Header().Set("Content-Type", "application/json")
+		sdata := buffer.Bytes()
+		w.Write(sdata)
+		if isPullRequest(r) {
+			if flusher, ok := w.(http.Flusher); ok {
+				flusher.Flush()
+			}
+		}
+		N2n.Info("message received",
+			zap.Int("to", Self.Underlying().SetIndex),
+			zap.String("handler", r.RequestURI),
+			zap.Duration("duration", time.Since(ts)),
+			zap.Int("codec", options.CODEC))
+	}
+}
+
 var randGenerator = rand.New(rand.NewSource(time.Now().UnixNano()))
