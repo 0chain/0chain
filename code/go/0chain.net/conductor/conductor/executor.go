@@ -122,7 +122,8 @@ func (r *Runner) WaitViewChange(vc config.WaitViewChange, tm time.Duration) (
 	err error) {
 
 	if r.verbose {
-		log.Print(" [INF] wait for VC ", vc.ExpectMagicBlock.Round)
+		log.Print(" [INF] wait for VC ", vc.ExpectMagicBlock.Round, "/",
+			vc.ExpectMagicBlock.Number)
 	}
 
 	r.setupTimeout(tm)

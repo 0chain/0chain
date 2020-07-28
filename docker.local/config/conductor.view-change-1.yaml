@@ -90,11 +90,12 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3"]
       - start_lock: ["miner 5"]
       - wait_view_change:
           expect_magic_block:
-            round: 251
+            number: 2 # 251 round
             sharders: ["sharder 1"]
             miners: ["miner 1", "miner 2", "miner 3"]
       - wait_phase:
@@ -102,7 +103,7 @@ tests:
       - unlock: ["miner 5"]
       - wait_view_change:
           expect_magic_block:
-            round: 501
+            number: 3 # 501 round
             sharders: ["sharder 1"]
             miners: ["miner 1", "miner 2", "miner 3", "miner 5"]
 
@@ -110,11 +111,12 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3"]
       - start_lock: ["miner 5"]
       - wait_view_change:
           expect_magic_block:
-            round: 251
+            number: 2 # 251 round
             sharders: ["sharder 1"]
             miners: ["miner 1", "miner 2", "miner 3"]
       - wait_phase:
@@ -122,12 +124,12 @@ tests:
       - unlock: ["miner 5"]
       - wait_view_change:
           expect_magic_block:
-            round: 501
+            number: 3 # 501 round
             sharders: ["sharder 1"]
             miners: ["miner 1", "miner 2", "miner 3"]
       - wait_view_change:
           expect_magic_block:
-            round: 751
+            number: 4 # 751 round
             sharders: ["sharder 1"]
             miners: ["miner 1", "miner 2", "miner 3", "miner 5"]
 
@@ -135,11 +137,12 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3"]
       - start_lock: ["miner 5"]
       - wait_view_change:
           expect_magic_block:
-            round: 251
+            number: 2 # 251 round
             sharders: ["sharder 1"]
             miners: ["miner 1", "miner 2", "miner 3"]
       - wait_phase:
@@ -147,12 +150,12 @@ tests:
       - unlock: ["miner 5"]
       - wait_view_change:
           expect_magic_block:
-            round: 501
+            number: 3 # 501 round
             sharders: ["sharder 1"]
             miners: ["miner 1", "miner 2", "miner 3"]
       - wait_view_change:
           expect_magic_block:
-            round: 751
+            number: 4 # 751 round
             sharders: ["sharder 1"]
             miners: ["miner 1", "miner 2", "miner 3", "miner 5"]
 
@@ -160,11 +163,12 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3"]
       - start_lock: ["miner 5"]
       - wait_view_change:
           expect_magic_block:
-            round: 251
+            number: 2 # 251 round
             sharders: ["sharder 1"]
             miners: ["miner 1", "miner 2", "miner 3"]
       - wait_phase:
@@ -172,12 +176,12 @@ tests:
       - unlock: ["miner 5"]
       - wait_view_change:
           expect_magic_block:
-            round: 501
+            number: 3 # 501 round
             sharders: ["sharder 1"]
             miners: ["miner 1", "miner 2", "miner 3"]
       - wait_view_change:
           expect_magic_block:
-            round: 751
+            number: 4 # 751 round
             sharders: ["sharder 1"]
             miners: ["miner 1", "miner 2", "miner 3", "miner 5"]
 
@@ -185,11 +189,12 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3"]
       - start_lock: ["miner 5"]
       - wait_view_change:
           expect_magic_block:
-            round: 251
+            number: 2 # 251 round
             sharders: ["sharder 1"]
             miners: ["miner 1", "miner 2", "miner 3"]
       - wait_phase:
@@ -197,12 +202,12 @@ tests:
       - unlock: ["miner 5"]
       - wait_view_change:
           expect_magic_block:
-            round: 501
+            number: 3 # 501 round
             sharders: ["sharder 1"]
             miners: ["miner 1", "miner 2", "miner 3"]
       - wait_view_change:
           expect_magic_block:
-            round: 751
+            number: 4 # 751 round
             sharders: ["sharder 1"]
             miners: ["miner 1", "miner 2", "miner 3", "miner 5"]
 
@@ -213,10 +218,11 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3", "miner 4"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3", "miner 4"]
       - wait_view_change:
           expect_magic_block:
-            round: 251
+            number: 2 # 251 round
             sharders: ["sharder 1"]
             miners: ["miner 1", "miner 2", "miner 3", "miner 4"]
       - wait_phase:
@@ -224,7 +230,7 @@ tests:
       - stop: ["miner 4"]
       - wait_view_change:
           expect_magic_block:
-            round: 501
+            number: 3 # 501 round
             sharders: ["sharder 1"]
             miners: ["miner 1", "miner 2", "miner 3"]
 
@@ -233,10 +239,11 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3", "miner 4"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3", "miner 4"]
       - wait_view_change:
           expect_magic_block:
-            round: 251
+            number: 2 # 251 round
             sharders: ["sharder 1"]
             miners: ["miner 1", "miner 2", "miner 3", "miner 4"]
       - wait_phase:
@@ -244,7 +251,7 @@ tests:
       - stop: ["miner 4"]
       - wait_view_change:
           expect_magic_block:
-            round: 501
+            number: 3 # 501 round
             sharders: ["sharder 1"]
             miners: ["miner 1", "miner 2", "miner 3"]
 
@@ -253,10 +260,11 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3", "miner 4"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3", "miner 4"]
       - wait_view_change:
           expect_magic_block:
-            round: 251
+            number: 2 # 251 round
             sharders: ["sharder 1"]
             miners: ["miner 1", "miner 2", "miner 3", "miner 4"]
       - wait_phase:
@@ -264,7 +272,7 @@ tests:
       - stop: ["miner 4"]
       - wait_view_change:
           expect_magic_block:
-            round: 501
+            number: 3 # 501 round
             sharders: ["sharder 1"]
             miners: ["miner 1", "miner 2", "miner 3"]
 
@@ -273,10 +281,11 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3", "miner 4"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3", "miner 4"]
       - wait_view_change:
           expect_magic_block:
-            round: 251
+            number: 2 # 251 round
             sharders: ["sharder 1"]
             miners: ["miner 1", "miner 2", "miner 3", "miner 4"]
       - wait_phase:
@@ -284,7 +293,7 @@ tests:
       - stop: ["miner 4"]
       - wait_view_change:
           expect_magic_block:
-            round: 501
+            number: 3 # 501 round
             sharders: ["sharder 1"]
             miners: ["miner 1", "miner 2", "miner 3"]
 
@@ -293,10 +302,11 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3", "miner 4"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3", "miner 4"]
       - wait_view_change:
           expect_magic_block:
-            round: 251
+            number: 2 # 251 round
             sharders: ["sharder 1"]
             miners: ["miner 1", "miner 2", "miner 3", "miner 4"]
       - wait_phase:
@@ -305,12 +315,12 @@ tests:
         - "miner 4"
       - wait_view_change:
           expect_magic_block:
-            round: 501
+            number: 3 # 501 round
             sharders: ["sharder 1"]
             miners: ["miner 1", "miner 2", "miner 3", "miner 4"]
       - wait_view_change:
           expect_magic_block:
-            round: 751
+            number: 4 # 751 round
             sharders: ["sharder 1"]
             miners: ["miner 1", "miner 2", "miner 3"]
 
@@ -319,11 +329,12 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3']
+      - start: ['sharder 1']
+      - start: [miner 1', 'miner 2', 'miner 3']
       - start_lock: ['miner 5']
       - wait_view_change:
           expect_magic_block:
-            round: 251
+            number: 2 # 251 round
             sharders: ['sharder 1']
             miners: ['miner 1', 'miner 2', 'miner 3']
       - unlock: ['miner 5']
@@ -334,7 +345,7 @@ tests:
       - stop: ['miner 5']
       - wait_view_change:
           expect_magic_block:
-            round: 501
+            number: 3 # 501 round
             sharders: ['sharder 1']
             miners: ['miner 1', 'miner 2', 'miner 3']
 
@@ -342,11 +353,12 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3']
+      - start: ['sharder 1']
+      - start: ['miner 1', 'miner 2', 'miner 3']
       - start_lock: ['miner 5']
       - wait_view_change:
           expect_magic_block:
-            round: 251
+            number: 2 # 251 round
             sharders: ['sharder 1']
             miners: ['miner 1', 'miner 2', 'miner 3']
       - unlock: ['miner 5']
@@ -357,7 +369,7 @@ tests:
       - stop: ['miner 5']
       - wait_view_change:
           expect_magic_block:
-            round: 501
+            number: 3 # 501 round
             sharders: ['sharder 1']
             miners: ['miner 1', 'miner 2', 'miner 3']
 
@@ -365,11 +377,12 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3']
+      - start: ['sharder 1']
+      - start: ['miner 1', 'miner 2', 'miner 3']
       - start_lock: ['miner 5']
       - wait_view_change:
           expect_magic_block:
-            round: 251
+            number: 2 # 251 round
             sharders: ['sharder 1']
             miners: ['miner 1', 'miner 2', 'miner 3']
       - unlock: ['miner 5']
@@ -380,7 +393,7 @@ tests:
       - stop: ['miner 5']
       - wait_view_change:
           expect_magic_block:
-            round: 501
+            number: 3 # 501 round
             sharders: ['sharder 1']
             miners: ['miner 1', 'miner 2', 'miner 3']
 
@@ -388,11 +401,12 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3']
+      - start: ['sharder 1']
+      - start: ['miner 1', 'miner 2', 'miner 3']
       - start_lock: ['miner 5']
       - wait_view_change:
           expect_magic_block:
-            round: 251
+            number: 2 # 251 round
             sharders: ['sharder 1']
             miners: ['miner 1', 'miner 2', 'miner 3']
       - unlock: ['miner 5']
@@ -403,12 +417,12 @@ tests:
       - stop: ['miner 5']
       - wait_view_change:
           expect_magic_block:
-            round: 501
+            number: 3 # 501 round
             sharders: ['sharder 1']
             miners: ['miner 1', 'miner 2', 'miner 3', 'miner 5']
       - wait_view_change:
           expect_magic_block:
-            round: 751
+            number: 4 # 751 round
             sharders: ['sharder 1']
             miners: ['miner 1', 'miner 2', 'miner 3']
 
@@ -416,11 +430,12 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3']
+      - start: ['sharder 1']
+      - start: ['miner 1', 'miner 2', 'miner 3']
       - start_lock: ['miner 5']
       - wait_view_change:
           expect_magic_block:
-            round: 251
+            number: 2 # 251 round
             sharders: ['sharder 1']
             miners: ['miner 1', 'miner 2', 'miner 3']
       - unlock: ['miner 5']
@@ -431,12 +446,12 @@ tests:
       - stop: ['miner 5']
       - wait_view_change:
           expect_magic_block:
-            round: 501
+            number: 3 # 501 round
             sharders: ['sharder 1']
             miners: ['miner 1', 'miner 2', 'miner 3', 'miner 5']
       - wait_view_change:
           expect_magic_block:
-            round: 751
+            number: 4 # 751 round
             sharders: ['sharder 1']
             miners: ['miner 1', 'miner 2', 'miner 3']
 
@@ -458,7 +473,7 @@ tests:
       - unlock: ['miner 4']
       - wait_view_change:
           expect_magic_block:
-            round: 251
+            number: 2 # 251 round
             sharders: ['sharder 1']
             miners: ['miner 1', 'miner 2', 'miner 3']
 
@@ -466,7 +481,8 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4']
+      - start: ['sharder 1']
+      - start: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
       - wait_add:
           miners: ['miner 4']
       - stop: ['miner 4']
@@ -476,7 +492,7 @@ tests:
       - unlock: ['miner 4']
       - wait_view_change:
           expect_magic_block:
-            round: 251
+            number: 2 # 251 round
             sharders: ['sharder 1']
             miners: ['miner 1', 'miner 2', 'miner 3']
 
@@ -484,7 +500,8 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4']
+      - start: ['sharder 1']
+      - start: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
       - wait_contribute_mpk:
           miner: 'miner 4'
       - stop: ['miner 4']
@@ -494,12 +511,12 @@ tests:
       - unlock: ['miner 4']
       - wait_view_change:
           expect_magic_block:
-            round: 251
+            number: 2 # 251 round
             sharders: ['sharder 1']
             miners: ['miner 1', 'miner 2', 'miner 3']
       - wait_view_change:
           expect_magic_block:
-            round: 501
+            number: 3 # 501 round
             sharders: ['sharder 1']
             miners: ['miner 1', 'miner 2', 'miner 3']
 
@@ -507,20 +524,21 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4']
+      - start: ['sharder 1']
+      - start: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
       - wait_share_signs_or_shares:
           miner: 'miner 4'
       - stop: ['miner 4']
       - start_lock: ['miner 4']
       - wait_view_change:
           expect_magic_block:
-            round: 251
+            number: 2 # 251 round
             sharders: ['sharder 1']
             miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
       - unlock: ['miner 4']
       - wait_view_change:
           expect_magic_block:
-            round: 501
+            number: 3 # 501 round
             sharders: ['sharder 1']
             miners: ['miner 1', 'miner 2', 'miner 3']
 
@@ -530,14 +548,15 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4']
+      - start: ['sharder 1']
+      - start: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
       - share:
           by: ['miner 4']
           bad: ['miner 1']
           good: ['miner 2', 'miner 3']
       - wait_view_change:
           expected_magic_block:
-            round: 251
+            number: 2 # 251 round
             sharders: ['sharder 1']
             mienrs: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
 
@@ -545,14 +564,15 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4']
+      - start: ['sharder 1']
+      - start: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
       - share:
           by: ['miner 4']
           bad: ['miner 1', 'miner 2']
           good: ['miner 3']
       - wait_view_change:
           expected_magic_block:
-            round: 251
+            number: 2 # 251 round
             sharders: ['sharder 1']
             mienrs: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
 
@@ -560,13 +580,14 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4']
+      - start: ['sharder 1']
+      - start: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
       - share:
           by: ['miner 4']
           bad: ['miner 1', 'miner 2', 'miner 3']
       - wait_view_change:
           expected_magic_block:
-            round: 251
+            number: 2 # 251 round
             sharders: ['sharder 1']
             mienrs: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
 
@@ -574,7 +595,8 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4']
+      - start: ['sharder 1']
+      - start: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
       - share:
           by: ['miner 4']
           bad: ['miner 1', 'miner 2']
@@ -585,7 +607,7 @@ tests:
           good: ['miner 4']
       - wait_view_change:
           expected_magic_block:
-            round: 251
+            number: 2 # 251 round
             sharders: ['sharder 1']
             mienrs: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
 
@@ -595,14 +617,15 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4']
+      - start: ['sharder 1']
+      - start: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
       - share:
           by: ['miner 4']
           good: ['miner 1', 'miner 2']
           bad: []
       - wait_view_change:
           expect_magic_block:
-            round: 251
+            number: 2 # 251 round
             sharders: ['sharder 1']
             miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
 
@@ -610,14 +633,15 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4']
+      - start: ['sharder 1']
+      - start: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
       - share:
           by: ['miner 4']
           good: ['miner 1']
           bad: []
       - wait_view_change:
           expect_magic_block:
-            round: 251
+            number: 2 # 251 round
             sharders: ['sharder 1']
             miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
 
@@ -625,7 +649,8 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4']
+      - start: ['sharder 1']
+      - start: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
       - share:
           by: ['miner 4']
           good: ['miner 1', 'miner 2']
@@ -636,7 +661,7 @@ tests:
           bad: []
       - wait_view_change:
           expect_magic_block:
-            round: 251
+            number: 2 # 251 round
             sharders: ['sharder 1']
             miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
 
@@ -646,10 +671,11 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4', 'miner 5']
+      - start: ['sharder 1']
+      - start: ['miner 1', 'miner 2', 'miner 3', 'miner 4', 'miner 5']
       - wait_view_change:
           expect_magic_block:
-            round: 251
+            number: 2 # 251 round
             sharders: ['sharder 1']
             miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4', 'miner 5']
       - wait_round:
@@ -661,7 +687,7 @@ tests:
       - start: ['miner 3']
       - wait_view_change:
           expect_magic_block:
-            round: 501
+            number: 3 # 501 round
             miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
             sharders: ['sharder 1']
 
@@ -669,10 +695,11 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3', 'miner 4', 'miner 5']
+      - start: ['sharder 1']
+      - start: ['miner 1', 'miner 2', 'miner 3', 'miner 4', 'miner 5']
       - wait_view_change:
           expect_magic_block:
-            round: 251
+            number: 2 # 251 round
             sharders: ['sharder 1']
             miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4', 'miner 5']
       - wait_round:
@@ -686,23 +713,24 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3']
+      - start: ['sharder 1']
+      - start: ['miner 1', 'miner 2', 'miner 3']
       - set_revealed: ['miner 1']
       - wait_view_change:
           expect_magic_block:
-            round: 251
+            number: 2 # 251 round
             sharders: ['sharder 1']
             miners: ['miner 1', 'miner 2', 'miner 3']
       - set_revealed: ['miner 2']
       - wait_view_change:
           expect_magic_block:
-            round: 501
+            number: 3 # 501 round
             sharders: ['sharder 1']
             miners: ['miner 1', 'miner 2', 'miner 3']
       - set_revealed: ['miner 3']
       - wait_view_change:
           expect_magic_block:
-            round: 751
+            number: 4 # 751 round
             sharders: ['sharder 1']
             miners: ['miner 1', 'miner 2', 'miner 3']
 

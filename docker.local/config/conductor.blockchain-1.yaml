@@ -57,7 +57,8 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3"]
       - wait_round:
           round: 10
       - vrfs:
@@ -70,7 +71,8 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3", "miner 4"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3", "miner 4"]
       - wait_round:
           round: 10
       - vrfs:
@@ -83,7 +85,8 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3", "miner 4"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3", "miner 4"]
       - wait_round:
           round: 10
       - vrfs:
@@ -96,7 +99,8 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3"]
       - wait_round:
           round: 10
       - vrfs:
@@ -111,7 +115,8 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3"]
       - wait_round:
           round: 10
       - round_timeout:
@@ -124,7 +129,8 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3", "miner 4"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3", "miner 4"]
       - wait_round:
           round: 10
       - round_timeout:
@@ -137,7 +143,8 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3"]
       - wait_round:
           round: 10
       - round_timeout:
@@ -150,7 +157,8 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3", "miner 4"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3", "miner 4"]
       - wait_round:
           round: 10
       - round_timeout:
@@ -164,7 +172,8 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3"]
       - wait_round:
           round: 10
       - wrong_verification_ticket_hash:
@@ -177,7 +186,8 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3", "miner 4"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3", "miner 4"]
       - wait_round:
           round: 10
       - wrong_verification_ticket_hash:
@@ -190,7 +200,8 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3"]
       - wait_round:
           round: 10
       - wrong_verification_ticket_key:
@@ -203,7 +214,8 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3"]
       - wait_round:
           round: 10
       - wrong_verification_ticket_hash:
@@ -218,7 +230,8 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3"]
       - wait_round:
           round: 10
       - competing_block:
@@ -229,7 +242,8 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3", "miner 4"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3", "miner 4"]
       - competing_block:
           by: ["miner 3"]
       - sign_only_competing_blocks:
@@ -241,7 +255,8 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3"]
       - wait_round:
           round: 10
       - wrong_block_sign_hash:
@@ -252,7 +267,8 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3"]
       - wait_round:
           round: 10
       - wrong_block_sign_key:
@@ -263,7 +279,8 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3"]
       - wait_round:
           round: 10
       - wrong_block_hash:
@@ -277,7 +294,8 @@ tests:
     flow:
       - set_monitor: 'sharder 1'
       - cleanup_bc: {}
-      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3']
+      - start: ['sharder 1']
+      - start: ['miner 1', 'miner 2', 'miner 3']
       - wait_round:
           round: 100
       - double_spend_transaction:
@@ -289,7 +307,8 @@ tests:
     flow:
       - set_monitor: 'sharder 1'
       - cleanup_bc: {}
-      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3']
+      - start: ['sharder 1']
+      - start: ['miner 1', 'miner 2', 'miner 3']
       - wait_round:
           round: 100
       - double_spend_transaction:
@@ -302,7 +321,8 @@ tests:
     flow:
       - set_monitor: 'sharder 1'
       - cleanup_bc: {}
-      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3']
+      - start: ['sharder 1']
+      - start: ['miner 1', 'miner 2', 'miner 3']
       - wait_round:
           round: 100
       - double_spend_transaction:

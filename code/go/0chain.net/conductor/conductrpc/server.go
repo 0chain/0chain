@@ -19,12 +19,14 @@ type (
 	Round     = config.Round
 	Phase     = config.Phase
 	RoundName = config.RoundName
+	Number    = config.Number
 )
 
 // ViewChangeEvent represents view change information.
 type ViewChangeEvent struct {
 	Sender   NodeName   // node that sends the VC
 	Round    Round      // view change round
+	Number   Number     // magic block number
 	Miners   []NodeName // magic block miners
 	Sharders []NodeName // magic block sharders
 }

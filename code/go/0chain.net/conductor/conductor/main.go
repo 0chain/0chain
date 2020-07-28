@@ -219,7 +219,7 @@ func (r *Runner) printViewChange(vce *conductrpc.ViewChangeEvent) {
 	if !r.verbose {
 		return
 	}
-	log.Print(" [INF] VC ", vce.Round)
+	log.Print(" [INF] VC round: ", vce.Round, ", number: ", vce.Number)
 	log.Print(" [INF] VC MB miners:")
 	for _, mn := range vce.Miners {
 		if !r.conf.Nodes.Has(mn) {
@@ -285,6 +285,9 @@ func (r *Runner) acceptViewChange(vce *conductrpc.ViewChangeEvent) (err error) {
 	} else if emb.Round != 0 && vce.Round != emb.Round {
 		return fmt.Errorf("VC expected at %d, but given at %d",
 			emb.Round, vce.Round)
+	} else if emb.Number != 0 && vce.Number != emb.Number {
+		return fmt.Errorf("VC expected with %d number, but given number is %d",
+			emb.Number, vce.Number)
 	}
 	if len(emb.Miners) == 0 && len(emb.Sharders) == 0 {
 		r.lastVCRound = vce.Round                  // keep the last VC round
@@ -488,7 +491,8 @@ func (r *Runner) acceptRound(re *conductrpc.RoundEvent) (err error) {
 	}
 
 	if !r.waitViewChange.IsZero() {
-		if vcr := r.waitViewChange.ExpectMagicBlock.Round; vcr < re.Round {
+		var vcr = r.waitViewChange.ExpectMagicBlock.Round
+		if vcr != 0 && vcr < re.Round {
 			return fmt.Errorf("missing VC at %d", vcr)
 		}
 	}

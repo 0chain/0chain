@@ -43,7 +43,8 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3"]
       - wait_round:
           round: 10 # wait a round to be sure it starts
       - mpk:
@@ -57,7 +58,8 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3"]
       - wait_round:
           round: 10 # wait a round to be sure it starts
       - mpk:
@@ -71,7 +73,8 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3"]
       - wait_round:
           round: 10 # wait a round to be sure it starts
       - mpk:
@@ -87,7 +90,8 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3"]
       - wait_round:
           round: 10 # wait a round to be sure it starts
       - share:
@@ -101,7 +105,8 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3", "miner 4"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3", "miner 4"]
       - wait_round:
           round: 10 # wait a round to be sure it starts
       - share:
@@ -110,14 +115,15 @@ tests:
           bad: []
       - wait_view_change:
           expect_magic_block:
-            round: 251
+            number: 2 # round 251
             miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4'] # miner 4 as revealed
             sharders: ['sharder 1']
   - name: "Send no shares"
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3"]
       - wait_round:
           round: 10 # wait a round to be sure it starts
       - share:
@@ -133,7 +139,8 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3"]
       - wait_round:
           round: 10 # wait a round to be sure it starts
       - signature:
@@ -147,7 +154,8 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3", "miner 4"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3", "miner 4"]
       - wait_round:
           round: 10 # wait a round to be sure it starts
       - signature:
@@ -156,14 +164,15 @@ tests:
           bad: []
       - wait_view_change:
           expect_magic_block:
-            round: 251
+            number: 2 # round 251
             miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4'] # miner 4 through revealed
             sharders: ['sharder 1']
   - name: "Send no signatures"
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3"]
       - wait_round:
           round: 10 # wait a round to be sure it starts
       - signature:
@@ -179,7 +188,8 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3"]
       - wait_round:
           publish: 10 # wait a round to be sure it starts
       - signature:
@@ -193,7 +203,8 @@ tests:
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3", "miner 4"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3", "miner 4"]
       - wait_round:
           round: 10 # wait a round to be sure it starts
       - publish:
@@ -202,14 +213,15 @@ tests:
           bad: []
       - wait_view_change:
           expect_magic_block:
-            round: 251
+            number: 2 # round 251
             miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4'] # miner 4 through revealed
             sharders: ['sharder 1']
   - name: "Publish: Send no signatures"
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
-      - start: ["sharder 1", "miner 1", "miner 2", "miner 3"]
+      - start: ['sharder 1']
+      - start: ["miner 1", "miner 2", "miner 3"]
       - wait_round:
           round: 10 # wait a round to be sure it starts
       - publish:

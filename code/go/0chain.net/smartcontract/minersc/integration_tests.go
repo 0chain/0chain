@@ -144,6 +144,7 @@ func (msc *MinerSmartContract) payFeesIntegrationTests(
 		var vc crpc.ViewChangeEvent
 		vc.Round = crpc.Round(balances.GetBlock().Round)
 		vc.Sender = state.Name(crpc.NodeID(node.Self.Underlying().GetKey()))
+		vc.Number = crpc.Number(mb.MagicBlockNumber)
 
 		for _, sid := range mb.Sharders.Keys() {
 			vc.Sharders = append(vc.Sharders, state.Name(crpc.NodeID(sid)))

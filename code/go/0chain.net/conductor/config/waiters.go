@@ -2,6 +2,10 @@ package config
 
 // ExpectMagicBlock represents expected magic block.
 type ExpectMagicBlock struct {
+	// Number is expected Magic Block number. Use of MB number is
+	// more stable for the tests, since miners can vote for restart
+	// DKG process from start.
+	Number Number `json:"number" yaml:"number" mapstructure:"number"`
 	// Round ignored if it's zero. If set a positive value, then this
 	// round is expected.
 	Round Round `json:"round" yaml:"round" mapstructure:"round"`
@@ -19,7 +23,8 @@ type ExpectMagicBlock struct {
 
 // IsZero returns true if the MagicBlock is empty.
 func (emb *ExpectMagicBlock) IsZero() bool {
-	return emb.Round == 0 &&
+	return emb.Number == 0 &&
+		emb.Round == 0 &&
 		emb.RoundNextVCAfter == "" &&
 		len(emb.Sharders) == 0 &&
 		len(emb.Miners) == 0

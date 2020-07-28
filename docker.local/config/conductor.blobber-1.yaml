@@ -73,12 +73,12 @@ tests:
       - unlock: ['sharder 2']
       - wait_view_change:
           expect_magic_block:
-            round: 251
+            number: 2 # round 251
             miners: ['miner 1', 'miner 2', 'miner 3']
             sharders: ['sharder 1']
       - wait_view_change:
           expect_magic_block:
-            round: 501
+            number: 3 # round 501
             miners: ['miner 1', 'miner 2', 'miner 3']
             sharders: ['sharder 1', 'sharder 2']
       - verify_transaction:
