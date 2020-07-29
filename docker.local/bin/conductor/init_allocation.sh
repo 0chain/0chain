@@ -5,9 +5,9 @@ set -e
 rm -rf ~/.zcn/testing.json
 rm -rf ~/.zcn/allocation.txt
 
-for run in {1..20}
+for run in $(seq 1 20)
 do
-   ./zwalletcli/zwallet --wallet testing.json faucet --methodName pour --input “{Pay day}”
+   ./zwalletcli/zwallet --wallet testing.json faucet --methodName pour --input "{Pay day}"
 done
 
 # sometimes the getbalance fails
@@ -37,18 +37,18 @@ BLOBBER3=2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18
 
 # add to read pools
 ./zboxcli/zbox --wallet testing.json rp-lock --blobber $BLOBBER1 \
-    --duration=1h --allocation `cat ~/.zcn/allocation.txt` --tokens 2.0
+    --duration=1h --allocation "$(cat ~/.zcn/allocation.txt)" --tokens 2.0
 ./zboxcli/zbox --wallet testing.json rp-lock --blobber $BLOBBER2 \
-    --duration=1h --allocation `cat ~/.zcn/allocation.txt` --tokens 2.0
+    --duration=1h --allocation "$(cat ~/.zcn/allocation.txt)" --tokens 2.0
 ./zboxcli/zbox --wallet testing.json rp-lock --blobber $BLOBBER3 \
-    --duration=1h --allocation `cat ~/.zcn/allocation.txt` --tokens 2.0
+    --duration=1h --allocation "$(cat ~/.zcn/allocation.txt)" --tokens 2.0
 
 # create random file
 head -c 5M < /dev/urandom > random.bin
 
 # upload initial file
 ./zboxcli/zbox --wallet testing.json upload \
-    --allocation `cat ~/.zcn/allocation.txt` \
+    --allocation "$(cat ~/.zcn/allocation.txt)" \
     --commit \
     --localpath=random.bin \
     --remotepath=/remote/random.bin
