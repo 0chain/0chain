@@ -113,6 +113,7 @@ func readConfigs(configFile, testsFile string) (conf *config.Config) {
 
 type reportTest struct {
 	name  string
+	s, e  time.Time // start at, end at
 	tests []reportCase
 }
 
@@ -665,9 +666,12 @@ func okString(t bool) string {
 }
 
 func (r *Runner) printReport() {
+	var totalDuration time.Duration
 	fmt.Println("........................ R E P O R T ........................")
 	for _, rx := range r.report {
-		fmt.Printf("- %s %s\n", rx.name, okString(isOk(rx.tests)))
+		fmt.Printf("- %s %s, after %s\n", rx.name, okString(isOk(rx.tests)),
+			rx.e.Sub(rx.s).Round(time.Second))
+		totalDuration += rx.e.Sub(rx.s)
 		for _, t := range rx.tests {
 			if t.err != nil {
 				fmt.Printf("  - [ERR] %v\n", t.err)
@@ -675,6 +679,7 @@ func (r *Runner) printReport() {
 			}
 		}
 	}
+	fmt.Println("total duration:", totalDuration.Round(time.Second))
 	fmt.Println(".............................................................")
 }
 
@@ -719,6 +724,7 @@ func (r *Runner) Run() (err error) {
 		for i, testCase := range r.conf.TestsOfSet(&set) {
 			var report reportTest
 			report.name = testCase.Name
+			report.s = time.Now()
 			log.Print("=======================================================")
 			log.Printf("%d %s test case", i, testCase.Name)
 			for j, f := range testCase.Flow {
@@ -733,6 +739,7 @@ func (r *Runner) Run() (err error) {
 						success: false,
 						err:     err,
 					})
+					report.e = time.Now()
 					r.report = append(r.report, report) // add to report
 					r.stopAll()
 					r.resetWaiters()
@@ -746,6 +753,7 @@ func (r *Runner) Run() (err error) {
 					err:     err,
 				})
 			}
+			report.e = time.Now()
 			r.report = append(r.report, report) // add to report
 			log.Printf("end of %d %s test case", i, testCase.Name)
 		}
