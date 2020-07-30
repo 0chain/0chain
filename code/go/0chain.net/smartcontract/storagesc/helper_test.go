@@ -82,10 +82,22 @@ func newClient(balance state.Balance, balances chainState.StateContextI) (
 	return
 }
 
+func getBlobberURL(id string) string {
+	return "http://" + id + ":9081/api/v1"
+}
+
+func blobberIDByURL(url string) (id string) {
+	return url[len("http://") : len(url)-len(":9081/api/v1")]
+}
+
+func getValidatorURL(id string) string {
+	return "http://" + id + ":10291/api/v1"
+}
+
 func (c *Client) addBlobRequest(t *testing.T) []byte {
 	var sn StorageNode
 	sn.ID = c.id
-	sn.BaseURL = "http://" + c.id + ":9081/api/v1"
+	sn.BaseURL = getBlobberURL(c.id)
 	sn.Terms = c.terms
 	sn.Capacity = c.cap
 	sn.Used = 0
@@ -106,7 +118,7 @@ func (c *Client) stakeLockRequest(t *testing.T) []byte {
 func (c *Client) addValidatorRequest(t *testing.T) []byte {
 	var vn ValidationNode
 	vn.ID = c.id
-	vn.BaseURL = "http://" + c.id + ":10291/api/v1"
+	vn.BaseURL = getValidatorURL(c.id)
 	vn.StakePoolSettings.NumDelegates = 100
 	vn.StakePoolSettings.MinStake = 0
 	vn.StakePoolSettings.MaxStake = 1000e10
@@ -153,6 +165,19 @@ func updateBlobber(t *testing.T, blob *StorageNode, value, now int64,
 	balances.(*testBalances).txn = tx
 	return ssc.addBlobber(tx, input, balances)
 }
+
+// pseudo-random IPv4 address by ID (never used)
+//
+// func blobAddress(t *testing.T, id string) (ip string) {
+// 	t.Helper()
+// 	require.True(t, len(id) < 8)
+// 	var seed int64
+// 	fmt.Sscanf(id[:8], "%x", &seed)
+// 	var rnd = rand.New(rand.NewSource(seed))
+// 	ip = fmt.Sprintf("http://%d.%d.%d.%d/api", rnd.Int63n(255), rnd.Int63n(255),
+// 		rnd.Int63n(255), rnd.Int63n(255))
+// 	return
+// }
 
 // addBlobber to SC
 func addBlobber(t *testing.T, ssc *StorageSmartContract, cap, now int64,

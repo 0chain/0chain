@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
@@ -52,6 +53,44 @@ func TestStorageSmartContract_addBlobber(t *testing.T) {
 	var ab, ok = all.Nodes.get(b.ID)
 	require.True(t, ok)
 	require.NotNil(t, ab)
+}
+
+func TestStorageSmartContract_addBlobber_invalidParams(t *testing.T) {
+	var (
+		ssc            = newTestStorageSC() //
+		balances       = newTestBalances()  //
+		terms          = avgTerms           // copy
+		tp       int64 = 100                //
+	)
+
+	var add = func(t *testing.T, ssc *StorageSmartContract, cap, now int64,
+		terms Terms, balacne state.Balance, balances chainState.StateContextI) (
+		err error) {
+
+		var blob = newClient(0, balances)
+		blob.terms = terms
+		blob.cap = cap
+
+		_, err = blob.callAddBlobber(t, ssc, now, balances)
+		return
+	}
+
+	setConfig(t, balances)
+
+	var conf, err = ssc.getConfig(balances, false)
+	require.NoError(t, err)
+
+	terms.ChallengeCompletionTime = conf.MaxChallengeCompletionTime +
+		1*time.Second
+
+	err = add(t, ssc, 2*GB, tp, terms, 0, balances)
+	require.Error(t, err)
+
+	terms.ChallengeCompletionTime = conf.MaxChallengeCompletionTime -
+		1*time.Second
+	terms.MaxOfferDuration = conf.MinOfferDuration - 1*time.Second
+	err = add(t, ssc, 2*GB, tp, terms, 0, balances)
+	require.Error(t, err)
 }
 
 // - create allocation
@@ -1231,4 +1270,27 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 
 	})
 
+}
+
+// Client cancels a transaction before the blobber has written a
+// transaction to the blockchain confirming storage.
+//
+// The storage SC doesn't care about this confirmation. If a
+// blobber chosen, then it should be rewarded by the SC regardless
+// any its side confirmation. A blobber can loose it rewards only
+// by the challenges mechanism.
+
+func Test_blobber_cacnel_good_blobber_rewards(t *testing.T) {
+	// user creates allocation; there are bad blobbers don't
+	// send a challenge response; there is a good blobber works
+	// fine; client cancels the allocation; check out the good
+	// blobber rewards
+
+	//
+}
+
+// Blobber makes an agreement with itself for a huge amount of
+// very cheap storage, in the hopes of starving other blobbers.
+func Test_blobber_itself_agreement(t *testing.T) {
+	//
 }
