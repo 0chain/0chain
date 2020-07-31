@@ -58,11 +58,13 @@ func (wp *WaitPhase) IsZero() bool {
 
 // WaitRound waits a round.
 type WaitRound struct {
-	Round Round `json:"round" yaml:"round" mapstructure:"round"`
+	Round Round     `json:"round" yaml:"round" mapstructure:"round"`
+	Name  RoundName `json:"name" yaml:"name" mapstructure:"name"`
+	Shift Round     `json:"shift" yaml:"shift" mapstructure:"shift"`
 }
 
 func (wr *WaitRound) IsZero() bool {
-	return wr.Round == 0
+	return wr.Round == 0 && wr.Name == "" && wr.Shift == 0
 }
 
 // WaitContibuteMpk wait for MPK contributing of a node.

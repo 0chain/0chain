@@ -12,7 +12,7 @@ enable:
 sets:
   - name: "Sharder"
     tests:
-      - "Send bad FB to miners when all miners are down and then they are brought up"
+    #  - "Send bad FB to miners when all miners are down and then they are brought up"
       - "Send bad MB to miners when all miners are down and then they are brought up"
 
 #
@@ -25,10 +25,11 @@ tests:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
       - start: ['sharder 1']
+      - start_lock: ["sharder 2"]
       - start: ["miner 1", "miner 2", "miner 3"]
       - wait_round:
-          round: 10
-      - start: ["sharder 2"]
+          shift: 10
+      - unlock: ["sharder 2"]
       - wait_view_change:
           expect_magic_block:
             number: 2 # round: 251
@@ -40,23 +41,25 @@ tests:
             miners: ['miner 1', 'miner 2', 'miner 3']
             sharders: ['sharder 1', 'sharder 2']
       - wait_round:
-          round: 511
+          shift: 10
       - stop: ["miner 1", "miner 2", "miner 3"]
       - finalized_block:
           by: ["sharder 2"]
       - start: ["miner 1", "miner 2", "miner 3"]
       - wait_round:
-          round: 520
+          shift: 10
           timeout: '2m'
+
   - name: "Send bad MB to miners when all miners are down and then they are brought up"
     flow:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
       - start: ['sharder 1']
+      - start_lock: ['sharder 2']
       - start: ["miner 1", "miner 2", "miner 3"]
       - wait_round:
-          round: 10
-      - start: ["sharder 2"]
+          shift: 10
+      - unlock: ['sharder 2']
       - wait_view_change:
           expect_magic_block:
             number: 2 # round: 251
@@ -68,12 +71,12 @@ tests:
             miners: ['miner 1', 'miner 2', 'miner 3']
             sharders: ['sharder 1', 'sharder 2']
       - wait_round:
-          round: 511
+          shift: 10
       - stop: ["miner 1", "miner 2", "miner 3"]
       - magic_block:
-          by: ["sharder 2"]
+          by: ['sharder 2']
       - start: ["miner 1", "miner 2", "miner 3"]
-      - wait_no_progress:
-          timeout: '2m'
+      - wait_round:
+          shift: 50
 
 ...

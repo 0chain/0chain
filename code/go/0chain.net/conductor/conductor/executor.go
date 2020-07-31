@@ -40,6 +40,7 @@ func (r *Runner) SetMonitor(name NodeName) (err error) {
 // CleanupBC cleans up blockchain.
 func (r *Runner) CleanupBC(tm time.Duration) (err error) {
 	r.stopAll()
+	r.resetRounds()
 	return r.conf.CleanupBC()
 }
 
@@ -144,12 +145,39 @@ func (r *Runner) WaitPhase(pe config.WaitPhase, tm time.Duration) (err error) {
 
 func (r *Runner) WaitRound(wr config.WaitRound, tm time.Duration) (err error) {
 
+	if wr.Round == 0 {
+		if wr.Name != "" {
+			// by a named round
+			var rx, ok = r.rounds[wr.Name]
+			if !ok {
+				return fmt.Errorf(
+					"wait_round: no round with %q name is registered",
+					wr.Name)
+			}
+			wr.Round = rx // by the named round
+			if wr.Shift != 0 {
+				wr.Round += wr.Shift // shift the named round
+			} else {
+				return fmt.Errorf(
+					"wait_round: wait named round %q without a shift",
+					wr.Name)
+			}
+		} else if wr.Shift != 0 {
+			// shift without a name means shift from current round
+			wr.Round = r.lastRound + wr.Shift
+		}
+	}
+
+	// reset all fields excluding the 'Round'
+	wr.Name, wr.Shift = "", 0
+
+	r.setupTimeout(tm)
+	r.waitRound = wr
+
 	if r.verbose {
 		log.Print(" [INF] wait for round ", wr.Round)
 	}
 
-	r.setupTimeout(tm)
-	r.waitRound = wr
 	return
 }
 

@@ -130,6 +130,7 @@ type Runner struct {
 	// state
 
 	lastVCRound Round // last view change round
+	lastRound   Round // last accepted round
 
 	// wait for
 	waitPhase              config.WaitPhase              //
@@ -505,6 +506,10 @@ func (r *Runner) acceptRound(re *conductrpc.RoundEvent) (err error) {
 	if r.verbose {
 		// log.Print(" [INF] round ", re.Round, " ", n.Name)
 	}
+
+	// set last round
+	r.lastRound = re.Round
+
 	if r.waitRound.IsZero() {
 		return // doesn't wait for a round
 	}
@@ -516,7 +521,8 @@ func (r *Runner) acceptRound(re *conductrpc.RoundEvent) (err error) {
 		log.Print("[OK] accept round ", re.Round)
 		r.waitRound.Round = 0 // doesn't wait anymore
 	case r.waitRound.Round < re.Round:
-		return fmt.Errorf("missing round: %d, got %d", r.waitRound, re.Round)
+		return fmt.Errorf("missing round: %d, got %d", r.waitRound.Round,
+			re.Round)
 	}
 
 	return
@@ -699,6 +705,11 @@ func (r *Runner) resetWaiters() {
 		r.waitCommand = nil
 	}
 
+}
+
+func (r *Runner) resetRounds() {
+	r.lastRound = 0
+	r.lastVCRound = 0
 }
 
 // Run the tests.
