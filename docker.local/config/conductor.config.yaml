@@ -12,7 +12,7 @@ cleanup_command: ./docker.local/bin/docker-clean.sh
 # number of rounds per view change
 view_change: 250 # 100
 # skip blobbers and block worker from initialization message waiting
-skip_wait: ['blobber 1', 'blobber 2', 'blobber 3', 'block worker']
+skip_wait: ['block worker']
 
 #
 # nodes used in tests
@@ -104,12 +104,9 @@ commands:
     work_dir: "../blockWorker"
     exec: "../blockWorker/docker.local/bin/docker-clean.sh"
     can_fail: true
-  build_blobbers:
+  build_test_blobbers:
      work_dir: "../blobber"
-     exec: "../blobber/docker.local/bin/build.blobber.sh"
-  build_bad_blobbers:
-     work_dir: "../blobber"
-     exec: "../blobber/docker.local/bin/build.bad-blobber.sh"
+     exec: "../blobber/docker.local/bin/build.blobber-integration-tests.sh"
   init_allocation:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/init_allocation.sh"

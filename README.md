@@ -392,6 +392,12 @@ It's not recommended to start automated blobber tests, since they are unstable.
 Sometimes, zwalelt/zbox transactions can't be confirmed due to, probably, some
 problems in block worker, or another side.
 
+The problem is zbox and zwallet commands sometimes fails with
+```
+<an error message> consensus_failed: consensus failed on sharders
+```
+without a real reason.
+
 ##### Prepare all.
 
 Directories tree should be:
