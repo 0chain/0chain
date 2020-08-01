@@ -599,3 +599,49 @@ func (r *Runner) asyncCommand(name string) (reply chan error) {
 func (r *Runner) runAsyncCommand(reply chan error, name string) {
 	reply <- r.conf.Execute(name)
 }
+
+//
+// blobber related commands
+//
+
+func (r *Runner) StorageTree(st *config.Bad) (err error) {
+	if r.verbose {
+		log.Printf(" [INF] set bad 'storage_tree' of %s", st.Bad)
+	}
+
+	err = r.server.UpdateStates(st.Bad, func(state *conductrpc.State) {
+		state.StorageTree = st
+	})
+	if err != nil {
+		return fmt.Errorf("setting bad 'storage_tree': %v", err)
+	}
+	return
+}
+
+func (r *Runner) ValidatorProof(vp *config.Bad) (err error) {
+	if r.verbose {
+		log.Printf(" [INF] set bad 'validator_proof' of %s", vp.Bad)
+	}
+
+	err = r.server.UpdateStates(vp.Bad, func(state *conductrpc.State) {
+		state.ValidatorProof = vp
+	})
+	if err != nil {
+		return fmt.Errorf("setting bad 'storage_tree': %v", err)
+	}
+	return
+}
+
+func (r *Runner) Challenges(cs *config.Bad) (err error) {
+	if r.verbose {
+		log.Printf(" [INF] set bad 'challenges' of %s", cs.Bad)
+	}
+
+	err = r.server.UpdateStates(cs.Bad, func(state *conductrpc.State) {
+		state.Challenges = cs
+	})
+	if err != nil {
+		return fmt.Errorf("setting bad 'challenges': %v", err)
+	}
+	return
+}

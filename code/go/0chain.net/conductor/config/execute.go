@@ -66,6 +66,11 @@ type Executor interface {
 
 	// system command (a bash script, etc)
 	Command(name string, timeout time.Duration)
+
+	// Blobber related executors
+	StorageTree(st *Bad) (err error)
+	ValidatorProof(vp *Bad) (err error)
+	Challenges(cs *Bad) (err error)
 }
 
 //
