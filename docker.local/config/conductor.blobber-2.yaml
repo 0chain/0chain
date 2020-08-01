@@ -19,7 +19,7 @@ tests:
   - name: "All blobber tests"
     flow:
       - command:
-          name: 'build__test_blobbers'
+          name: 'build_test_blobbers'
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
       - command:
@@ -33,52 +33,36 @@ tests:
       # wait the block worker starts
       - command:
           name: "sleep_20s"
-      - start: ['blobber 1', 'blobber 2', 'blobber 3']
+      - start: ['blobber 1', 'blobber 2']
       - wait_add:
-          blobbers: ['blobber 1', 'blobber 2', 'blobber 3']
+          blobbers: ['blobber 1', 'blobber 2']
           timeout: '5m'
+      # setup blobbers and create allocation with minimum write pool lock
       - command:
-          name: 'init_allocation'
+          name: 'init_pour_allocation'
           timeout: '35m'
-      # 3th blobber becomes 'bad', sending 'bad' responses to zbox
-      - storage_tree:
-          bad: ['blobber 3']
+      # upload random file to spend tokens in write pool
+      # <manual setup first>
       - command:
-          name: 'list'
-      - command:
-          name: 'download'
-      - command:
-          name: 'delete'
-      - command:
-          name: 'upload'
+          name: "sleep_1m"
 
-  - name: "Sharder sends wrong transaction verification"
-    flow:
-      - set_monitor: "sharder 1"
-      - cleanup_bc: {}
-      - command:
-          name: "cleanup_block_worker"
-      - start_lock: ['sharder 2']
-      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3']
-      - wait_phase:
-          phase: 'share'
-      - unlock: ['sharder 2']
-      - wait_view_change:
-          expect_magic_block:
-            number: 2 # round 251
-            miners: ['miner 1', 'miner 2', 'miner 3']
-            sharders: ['sharder 1']
-      - wait_view_change:
-          expect_magic_block:
-            number: 3 # round 501
-            miners: ['miner 1', 'miner 2', 'miner 3']
-            sharders: ['sharder 1', 'sharder 2']
-      - verify_transaction:
-          by: ['sharder 2']
-      - start: ['block worker']
-      - command:
-          name: "sleep_1m" # wait the block worker starts
-      - command:
-          name: 'unverified_transaction'
+# Client does not have sufficient coins in the write pool.
+# Owner does not have sufficient coins in the read pool.
+
+# Client sends files, but not the metadata, or vice versa.
+# Client fails to send a write marker, or sends an invalid write marker.
+# Read marker invalid/missing.
+
+# Client sends unordered read/write/delete markers.
+
+#Prove that simultaneous CRUDS operations work as part of conductor test even
+#  with parity blobbers down. Upload, update, download by authtoken, download by
+#  allocation, delete, rename, repair.
+
+# Same time (rename -> update).
+
+# Same time, temorary files (dm -> wm).
+
+# Blobber submits an invalid proof to the validators.
 
 ...

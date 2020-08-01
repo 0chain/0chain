@@ -7,7 +7,7 @@
 # enabled test cases sets
 enable:
   - "Blobber"
-  # - "Invalid sharder response"
+  - "Invalid sharder response"
 
 # sets of test cases
 sets:
