@@ -84,7 +84,11 @@ tests:
           by: ['sharder 2']
       - start: ['block worker']
       - command:
-          name: "sleep_1m" # wait the block worker starts
+          name: "sleep_20s" # wait the block worker starts
+      - command:
+          name: "sleep_20s" # wait the block worker starts
+      - command:
+          name: "sleep_20s" # wait the block worker starts
       - command:
           name: 'unverified_transaction'
 

@@ -625,7 +625,11 @@ func (r *Runner) asyncCommand(name string) (reply chan error) {
 }
 
 func (r *Runner) runAsyncCommand(reply chan error, name string) {
-	reply <- r.conf.Execute(name)
+	var err = r.conf.Execute(name)
+	if err != nil {
+		err = fmt.Errorf("%q: %v", name, err)
+	}
+	reply <- err // nil or error
 }
 
 //
