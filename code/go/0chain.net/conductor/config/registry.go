@@ -310,4 +310,33 @@ func init() {
 		return nil
 	})
 
+	// Blobber related executors
+
+	register("storage_tree", func(f Flow, name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		var st Bad
+		if err = mapstructure.Decode(val, &st); err != nil {
+			return fmt.Errorf("decoding '%s': %v", name, err)
+		}
+		return ex.StorageTree(&st)
+	})
+
+	register("validator_proof", func(f Flow, name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		var vp Bad
+		if err = mapstructure.Decode(val, &vp); err != nil {
+			return fmt.Errorf("decoding '%s': %v", name, err)
+		}
+		return ex.ValidatorProof(&vp)
+	})
+
+	register("challenges", func(f Flow, name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		var cs Bad
+		if err = mapstructure.Decode(val, &cs); err != nil {
+			return fmt.Errorf("decoding '%s': %v", name, err)
+		}
+		return ex.Challenges(&cs)
+	})
+
 }

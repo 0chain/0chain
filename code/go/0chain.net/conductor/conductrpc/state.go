@@ -44,6 +44,11 @@ type State struct {
 	Shares     *config.Bad
 	Signatures *config.Bad
 	Publish    *config.Bad
+
+	// Blobbers related states
+	StorageTree    *config.Bad // blobber sends bad files/tree responses
+	ValidatorProof *config.Bad // blobber sends invalid proof to validators
+	Challenges     *config.Bad // blobber ignores challenges
 }
 
 // Name returns NodeName by given NodeID.

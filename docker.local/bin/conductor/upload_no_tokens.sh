@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # create random file
-head -c 5M < /dev/urandom > upload.bin
+head -c 52428800 < /dev/urandom > random.bin
 
 try_five_times_on_error () {
   n=0

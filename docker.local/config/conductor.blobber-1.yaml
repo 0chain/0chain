@@ -23,7 +23,7 @@ tests:
   - name: "Send wrong or not send a response"
     flow:
       - command:
-          name: 'build_blobbers'
+          name: 'build_test_blobbers'
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
       - command:
@@ -44,13 +44,12 @@ tests:
       - command:
           name: 'init_allocation'
           timeout: '35m'
-      - stop: ['blobber 3']
+      # 3th blobber becomes 'bad', sending 'bad' responses to zbox
+      - storage_tree:
+          bad: ['blobber 3']
+      # just wait some time the blobber 3 pools new 'bad' state
       - command:
-          name: 'build_bad_blobbers'
-      - start: ['blobber 3']
-      # wait the blobber starts, we can't use wait_add for it anymore
-      - command:
-          name: 'sleep_1m'
+          name: 'sleep_20s'
       - command:
           name: 'list'
       - command:

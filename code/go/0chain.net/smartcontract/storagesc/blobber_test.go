@@ -2,9 +2,13 @@ package storagesc
 
 import (
 	"fmt"
+	"math/rand"
+	"sort"
+	"strconv"
 	"testing"
 	"time"
 
+	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
@@ -52,6 +56,44 @@ func TestStorageSmartContract_addBlobber(t *testing.T) {
 	var ab, ok = all.Nodes.get(b.ID)
 	require.True(t, ok)
 	require.NotNil(t, ab)
+}
+
+func TestStorageSmartContract_addBlobber_invalidParams(t *testing.T) {
+	var (
+		ssc            = newTestStorageSC() //
+		balances       = newTestBalances()  //
+		terms          = avgTerms           // copy
+		tp       int64 = 100                //
+	)
+
+	var add = func(t *testing.T, ssc *StorageSmartContract, cap, now int64,
+		terms Terms, balacne state.Balance, balances chainState.StateContextI) (
+		err error) {
+
+		var blob = newClient(0, balances)
+		blob.terms = terms
+		blob.cap = cap
+
+		_, err = blob.callAddBlobber(t, ssc, now, balances)
+		return
+	}
+
+	setConfig(t, balances)
+
+	var conf, err = ssc.getConfig(balances, false)
+	require.NoError(t, err)
+
+	terms.ChallengeCompletionTime = conf.MaxChallengeCompletionTime +
+		1*time.Second
+
+	err = add(t, ssc, 2*GB, tp, terms, 0, balances)
+	require.Error(t, err)
+
+	terms.ChallengeCompletionTime = conf.MaxChallengeCompletionTime -
+		1*time.Second
+	terms.MaxOfferDuration = conf.MinOfferDuration - 1*time.Second
+	err = add(t, ssc, 2*GB, tp, terms, 0, balances)
+	require.Error(t, err)
 }
 
 // - create allocation
@@ -1230,5 +1272,135 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 		}
 
 	})
+
+}
+
+// Client cancels a transaction before the blobber has written a
+// transaction to the blockchain confirming storage.
+//
+// The storage SC doesn't care about this confirmation. If a
+// blobber chosen, then it should be rewarded by the SC regardless
+// any its side confirmation. A blobber can loose it rewards only
+// by the challenges mechanism.
+
+// Blobber makes an agreement with itself for a huge amount of
+// very cheap storage, in the hopes of starving other blobbers.
+func Test_blobber_choose_randomization(t *testing.T) {
+
+	var (
+		ssc      = newTestStorageSC()
+		balances = newTestBalances()
+		client   = newClient(10000*x10, balances)
+		tp, exp  = int64(0), int64(toSeconds(time.Hour))
+		conf     = setConfig(t, balances)
+
+		blobs = make([]*Client, 0, 30)
+		err   error
+	)
+
+	conf.StakePool.MinLock = 1
+	conf.MinAllocSize = 10 * MB
+	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
+	require.NoError(t, err)
+
+	// terms, capacity ranges
+	//
+	// read price      [1; 31]
+	// write price     [1; 31]
+	// min_lock_demand [0.0; 0.03]
+	// capacity        [20 GB; 620 GB]
+
+	var terms = avgTerms      // copy
+	terms.ReadPrice = 1       // cheapest greater then zero
+	terms.WritePrice = 1      // cheapest greater then zero
+	terms.MinLockDemand = 0.0 // no min lock demand
+	var bcap int64 = 20 * GB  // capacity, starting from 2 GB
+
+	for i := 0; i < 30; i++ {
+		tp += 1
+		var b = addBlobber(t, ssc, bcap, tp, terms,
+			state.Balance(float64(terms.WritePrice)*sizeInGB(bcap)), balances)
+		blobs = append(blobs, b)
+
+		terms.ReadPrice++
+		terms.WritePrice++
+		terms.MinLockDemand += 0.001
+		bcap += 20 * GB
+	}
+
+	// add few allocations
+
+	// add allocation without adding new 30 blobbers and without setting
+	// configurations
+	var addAlloc = func(t *testing.T, ssc *StorageSmartContract, client *Client,
+		now, exp int64, balances chainState.StateContextI) (allocID string) {
+
+		var nar = new(newAllocationRequest)
+		nar.DataShards = 10
+		nar.ParityShards = 10
+		nar.Expiration = common.Timestamp(exp)
+		nar.Owner = client.id
+		nar.OwnerPublicKey = client.pk
+		nar.ReadPriceRange = PriceRange{0, 10 * x10}
+		nar.WritePriceRange = PriceRange{0, 20 * x10}
+		nar.Size = 100 * MB // 100 MB
+		nar.MaxChallengeCompletionTime = 200 * time.Hour
+
+		var resp, err = nar.callNewAllocReq(t, client.id, 15*x10, ssc, now,
+			balances)
+		require.NoError(t, err)
+
+		var deco StorageAllocation
+		require.NoError(t, deco.Decode([]byte(resp)))
+
+		return deco.ID
+	}
+
+	// sort blobs, since all blobbers list is sorted
+	sort.Slice(blobs, func(i, j int) bool {
+		return blobs[i].id < blobs[j].id
+	})
+
+	const n = 10 + 10 // n is blobbers required for an allocation (data+parity)
+
+	for i := 0; i < 100; i++ {
+		tp += 1
+
+		var (
+			allocID = addAlloc(t, ssc, client, tp, tp+exp, balances)
+
+			seed     int64
+			rnd      *rand.Rand
+			expected []string
+		)
+
+		// just make sure that blobbers selected pseudo-random transaction
+		// hash-based, regardless a price or size
+		seed, err = strconv.ParseInt(allocID[0:8], 16, 64)
+		require.NoError(t, err)
+		rnd = rand.New(rand.NewSource(seed))
+	Outer:
+		for i := 0; len(expected) < n; i++ {
+			var x = rnd.Intn(len(blobs))
+			for _, id := range expected {
+				if blobs[x].id == id {
+					continue Outer // already have the blobber in the list
+				}
+			}
+			expected = append(expected, blobs[x].id)
+		}
+
+		var (
+			alloc *StorageAllocation
+			got   []string
+		)
+		alloc, err = ssc.getAllocation(allocID, balances)
+		require.NoError(t, err)
+		for _, d := range alloc.BlobberDetails {
+			got = append(got, d.BlobberID)
+		}
+
+		require.Equal(t, expected, got)
+	}
 
 }

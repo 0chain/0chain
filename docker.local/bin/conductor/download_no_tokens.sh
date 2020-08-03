@@ -1,8 +1,5 @@
 #!/bin/sh
 
-# create random file
-head -c 5M < /dev/urandom > upload.bin
-
 try_five_times_on_error () {
   n=0
   until [ "$n" -ge 5 ]
@@ -19,8 +16,18 @@ try_five_times_on_error () {
   done
 }
 
-# upload it
+
+head -c 52428800 < /dev/urandom > random.bin
+
+# upload a file to download it
 try_five_times_on_error ./zboxcli/zbox --wallet testing.json upload \
     --allocation "$(cat ~/.zcn/allocation.txt)" \
-    --localpath=upload.bin \
-    --remotepath=/remote/upload.bin
+    --localpath=random.bin \
+    --remotepath=/remote/random.bin
+
+rm -f got.bin
+
+try_five_times_on_error ./zboxcli/zbox --wallet testing.json download \
+    --allocation "$(cat ~/.zcn/allocation.txt)" \
+    --localpath=got.bin \
+    --remotepath /remote/random.bin
