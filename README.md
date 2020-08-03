@@ -452,6 +452,12 @@ that requires `sudo` password entering sometimes.
 ./docker.local/bin/start.conductor.sh blobber-1
 ```
 
+And
+
+```
+./docker.local/bin/start.conductor.sh blobber-2
+```
+
 #### After all
 
 Don't forget to rollback changes, clean and rebuild applications for

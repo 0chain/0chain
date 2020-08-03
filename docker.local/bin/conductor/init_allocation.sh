@@ -44,14 +44,7 @@ try_five_times ./zboxcli/zbox --wallet testing.json newallocation \
 
 # add to read pools
 try_five_times ./zboxcli/zbox --wallet testing.json rp-lock \
-    --blobber "$BLOBBER1" --duration=1h \
-    --allocation "$(cat ~/.zcn/allocation.txt)" --tokens 2.0
-try_five_times ./zboxcli/zbox --wallet testing.json rp-lock \
-    --blobber "$BLOBBER2" --duration=1h \
-    --allocation "$(cat ~/.zcn/allocation.txt)" --tokens 2.0
-try_five_times ./zboxcli/zbox --wallet testing.json rp-lock \
-    --blobber "$BLOBBER3" --duration=1h \
-    --allocation "$(cat ~/.zcn/allocation.txt)" --tokens 2.0
+    --duration=1h --allocation "$(cat ~/.zcn/allocation.txt)" --tokens 6.0
 
 try_five_times_on_error () {
   n=0
@@ -76,6 +69,5 @@ head -c 5M < /dev/urandom > random.bin
 # upload initial file
 try_five_times_on_error ./zboxcli/zbox --wallet testing.json upload \
     --allocation "$(cat ~/.zcn/allocation.txt)" \
-    --commit \
     --localpath=random.bin \
     --remotepath=/remote/random.bin

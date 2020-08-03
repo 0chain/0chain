@@ -136,3 +136,33 @@ commands:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/unverified_transaction.sh"
     should_fail: false
+  init_pour_allocation:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/init_pour_allocation.sh"
+  upload_no_tokens:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/upload_no_tokens.sh"
+    should_fail: true
+  download_no_tokens:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/download_no_tokens.sh"
+    should_fail: true
+  fill_pools:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/fill_pools.sh"
+  upload_no_meta:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/upload_no_meta.sh"
+    should_fail: true
+  upload_no_file:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/upload_no_file.sh"
+    should_fail: true
+  upload_no_wm:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/upload_no_wm.sh"
+    should_fail: true
+  download_no_rm:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/download_no_rm.sh"
+    should_fail: true

@@ -36,33 +36,38 @@ tests:
       - start: ['blobber 1', 'blobber 2']
       - wait_add:
           blobbers: ['blobber 1', 'blobber 2']
-          timeout: '5m'
+          timeout: '15m'
       # setup blobbers and create allocation with minimum write pool lock
       - command:
           name: 'init_pour_allocation'
           timeout: '35m'
-      # upload random file to spend tokens in write pool
-      # <manual setup first>
+      # upload/download without enough tokens in read/write pools
+      - command:
+          name: "upload_no_tokens"
+          timeout: '5m'
+      # upload without metadata (add tokens to write pool)
+      - command:
+          name: "upload_no_meta"
+          timeout: '5m'
+      # upload without file
+      - command:
+          name: "upload_no_file"
+          timeout: '5m'
+      # upload without write_marker
+      - command:
+          name: "upload_no_wm"
+          timeout: '5m'
+      # download without tokens
+      - command:
+          name: "download_no_tokens"
+          timeout: '5m'
+      # download without read_marker
+      - command:
+          name: "download_no_rm"
+          timeout: '5m'
+      # service
       - command:
           name: "sleep_1m"
-
-# Client does not have sufficient coins in the write pool.
-# Owner does not have sufficient coins in the read pool.
-
-# Client sends files, but not the metadata, or vice versa.
-# Client fails to send a write marker, or sends an invalid write marker.
-# Read marker invalid/missing.
-
-# Client sends unordered read/write/delete markers.
-
-#Prove that simultaneous CRUDS operations work as part of conductor test even
-#  with parity blobbers down. Upload, update, download by authtoken, download by
-#  allocation, delete, rename, repair.
-
-# Same time (rename -> update).
-
-# Same time, temorary files (dm -> wm).
-
-# Blobber submits an invalid proof to the validators.
+          timeout: '100h'
 
 ...

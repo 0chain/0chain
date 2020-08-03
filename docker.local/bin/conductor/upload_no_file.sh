@@ -1,8 +1,5 @@
 #!/bin/sh
 
-# create random file
-head -c 5M < /dev/urandom > upload.bin
-
 try_five_times_on_error () {
   n=0
   until [ "$n" -ge 5 ]
@@ -19,8 +16,17 @@ try_five_times_on_error () {
   done
 }
 
-# upload it
-try_five_times_on_error ./zboxcli/zbox --wallet testing.json upload \
+trap "kill 0" EXIT
+
+go run 0chain/code/go/0chain.net/conductor/sdkproxy/main.go -f uploadFile &
+sleep 3
+
+# create random file
+head -c 52428800 < /dev/urandom > random.bin
+
+# upload initial file
+HTTP_PROXY="http://0.0.0.0:15211" try_five_times_on_error ./zboxcli/zbox \
+    --wallet testing.json upload \
     --allocation "$(cat ~/.zcn/allocation.txt)" \
-    --localpath=upload.bin \
+    --localpath=random.bin \
     --remotepath=/remote/upload.bin
