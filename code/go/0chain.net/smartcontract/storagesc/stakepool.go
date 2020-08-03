@@ -611,7 +611,7 @@ type stakePoolStat struct {
 	OffersTotal state.Balance   `json:"offers_total"` //
 	// delegate pools
 	Delegate  []delegatePoolStat `json:"delegate"`
-	Interests state.Balance      `json:"interests"` // total for all
+	Interests state.Balance      `json:"interests"` // total for all (TO REMOVE)
 	Penalty   state.Balance      `json:"penalty"`   // total for all
 	// rewards
 	Rewards rewardsStat `json:"rewards"`
