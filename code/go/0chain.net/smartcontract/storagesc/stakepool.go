@@ -456,14 +456,23 @@ func (sp *stakePool) update(conf *scConfig, sscID string, now common.Timestamp,
 	return
 }
 
-// slash represents blobber penalty
+// slash represents blobber penalty; it returns number of tokens moved in
+// reality, with regards to division errors
 func (sp *stakePool) slash(allocID, blobID string, until common.Timestamp,
-	wp *writePool, offer state.Balance, slash float64) (
+	wp *writePool, offer, slash state.Balance) (
 	move state.Balance, err error) {
 
-	if offer == 0 {
+	if offer == 0 || slash == 0 {
 		return // nothing to move
 	}
+
+	if slash > offer {
+		slash = offer // can't move the offer left
+	}
+
+	// the move is total movements, but it should be divided by all
+	// related stake holders, that can loose some tokens due to
+	// division error;
 
 	var ap = wp.allocPool(allocID, until)
 	if ap == nil {
@@ -474,8 +483,9 @@ func (sp *stakePool) slash(allocID, blobID string, until common.Timestamp,
 	}
 
 	// offer ratio of entire stake; we are slashing only part of the offer
-	// moving the tokens to allocation user
-	var ratio = (float64(offer) / float64(sp.stake())) * slash
+	// moving the tokens to allocation user; the ratio is part of entire
+	// stake should be moved;
+	var ratio = (float64(move) / float64(sp.stake()))
 
 	for _, dp := range sp.orderedPools() {
 		var one = state.Balance(float64(dp.Balance) * ratio)

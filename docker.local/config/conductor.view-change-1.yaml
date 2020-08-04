@@ -679,15 +679,19 @@ tests:
             sharders: ['sharder 1']
             miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4', 'miner 5']
       - wait_round:
-          round: 262
+          shift: 12
       - stop: ['miner 5']
+      - wait_phase:
+          phase: 'wait'
       - wait_round:
-          round: 497
+          shift: 47
       - stop: ['miner 3']
       - start: ['miner 3']
       - wait_view_change:
           expect_magic_block:
-            number: 3 # 501 round
+            # it can be 3 or 4, since 1, 2 and 4 mines can move on
+            # and the tests accepts VC no. 3 before miner 3 starts
+            # number: 3 # 501 round
             miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
             sharders: ['sharder 1']
 
@@ -702,12 +706,14 @@ tests:
             number: 2 # 251 round
             sharders: ['sharder 1']
             miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4', 'miner 5']
+      - wait_phase:
+          phase: 'wait'
       - wait_round:
-          round: 497
+          shift: 47
       - stop: ['miner 3', 'miner 5']
       - start: ['miner 3', 'miner 5']
-      - wait_no_progress:
-          timeout: '2m'
+      - wait_round:
+          shift: 10 # just make sure it moves
 
   - name: "Revealed"
     flow:
