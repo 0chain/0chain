@@ -116,8 +116,6 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			zap.Any("phase", currentPhase),
 			zap.Any("sc funcs", len(scFunctions)))
 
-		println("DKG PROCESS LOOP", currentPhase)
-
 		if err == nil && pn != nil && pn.Phase != currentPhase {
 
 			Logger.Info("dkg process start", zap.Any("next_phase", pn),
@@ -286,7 +284,6 @@ func (mc *Chain) GetPhase(fromSharder bool) (*minersc.PhaseNode, error) {
 			return nil, err
 		}
 		if !fromSharder {
-			println("PHASE", pn.Phase)
 			return pn, nil
 		}
 	}
@@ -325,7 +322,6 @@ func (mc *Chain) GetPhase(fromSharder bool) (*minersc.PhaseNode, error) {
 	if active {
 		return pn, nil
 	}
-	println("PHASE", pn.Phase, "(FORCE FORM SHARDERS)")
 	return phase, nil
 }
 
@@ -334,7 +330,6 @@ func (mc *Chain) GetPhase(fromSharder bool) (*minersc.PhaseNode, error) {
 // }
 
 func (mc *Chain) DKGProcessStart() (*httpclientutil.Transaction, error) {
-	println("(MC VC) (re) start DKG")
 	viewChangeMutex.Lock()
 	defer viewChangeMutex.Unlock()
 	mc.clearViewChange()
@@ -399,15 +394,12 @@ func (mc *Chain) CreateSijs() error {
 }
 
 func (mc *Chain) SendSijs() (*httpclientutil.Transaction, error) {
-	println("(MC VC) send sijs")
 	dkgMiners, err := mc.GetDKGMiners()
 	if err != nil {
-		println("(MC VC) (send sijs) can't get DKG miners:", err.Error())
 		return nil, err
 	}
 	selfNodeKey := node.Self.Underlying().GetKey()
 	if _, ok := dkgMiners.SimpleNodes[selfNodeKey]; !mc.isDKGSet() || !ok {
-		println("(MC VC) (send sijs) failed to send sijs:", "is_dkg_set", mc.isDKGSet(), "ok", ok)
 		Logger.Error("failed to send sijs", zap.Any("dkg_set", mc.isDKGSet()), zap.Any("ok", ok))
 		return nil, nil
 	}
@@ -419,7 +411,6 @@ func (mc *Chain) SendSijs() (*httpclientutil.Transaction, error) {
 	if needCreateSijs {
 		err := mc.CreateSijs()
 		if err != nil {
-			println("(MC VC) (send sijs) creating sijs:", err.Error())
 			return nil, err
 		}
 	}
@@ -437,11 +428,9 @@ func (mc *Chain) SendSijs() (*httpclientutil.Transaction, error) {
 		}
 	}
 	if len(failedSend) > 0 {
-		println("(MC VC) (send sijs) failed to send sijs", fmt.Sprint(failedSend))
 		return nil, common.NewError("failed to send sijs", fmt.Sprintf("failed to send share to miners: %v", failedSend))
 	}
 
-	println("(MC VC) (send sijs) ok")
 	return nil, nil
 }
 
