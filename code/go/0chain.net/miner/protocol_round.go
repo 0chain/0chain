@@ -1018,7 +1018,6 @@ func (mc *Chain) kickRoundByLFB(ctx context.Context, lfb *block.Block) {
 	mc.InitBlockState(lfb)
 	mc.AsyncFetchNotarizedPreviousBlock(lfb)
 	if nr = mc.StartNextRound(ctx, mr); nr == nil {
-		println("NEXT ROUND IS NIL")
 		return
 	}
 	mc.SetCurrentRound(nr.Number)
