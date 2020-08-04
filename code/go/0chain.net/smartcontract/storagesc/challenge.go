@@ -267,7 +267,10 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 	details.Returned += move
 
 	// blobber stake penalty
-	if conf.BlobberSlash > 0 {
+	if conf.BlobberSlash > 0 && move > 0 &&
+		state.Balance(conf.BlobberSlash*float64(move)) > 0 {
+
+		var slash = state.Balance(conf.BlobberSlash * float64(move))
 
 		// load stake pool
 		var sp *stakePool
@@ -300,7 +303,7 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 
 		var move state.Balance
 		move, err = sp.slash(alloc.ID, details.BlobberID, until, wp, offer.Lock,
-			conf.BlobberSlash)
+			slash)
 		if err != nil {
 			return fmt.Errorf("can't move tokens to write pool: %v", err)
 		}

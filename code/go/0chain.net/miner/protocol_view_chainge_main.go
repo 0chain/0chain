@@ -130,6 +130,7 @@ func (mc *Chain) PublishShareOrSigns() (*httpclientutil.Transaction, error) {
 }
 
 func (mc *Chain) ContributeMpk() (txn *httpclientutil.Transaction, err error) {
+	// mc.DKGProcessStart() // force to clear VC
 	magicBlock := mc.GetCurrentMagicBlock()
 	if magicBlock == nil {
 		return nil, common.NewError("contribute_mpk", "magic block empty")
