@@ -105,16 +105,11 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 				oldPhaseRound = pn.Phase
 				oldCurrentRound = pn.CurrentRound
 			}
-
-			if checkOnSharder {
-				currentPhase = pn.Phase // force phase from sharders
-			}
-
 		}
 
 		Logger.Debug("dkg process trying", zap.Any("next_phase", pn),
-			zap.Any("phase", currentPhase),
-			zap.Any("sc funcs", len(scFunctions)))
+			zap.Int("phase", currentPhase),
+			zap.Int("sc funcs", len(scFunctions)))
 
 		if err == nil && pn != nil && pn.Phase != currentPhase {
 
