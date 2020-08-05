@@ -485,7 +485,7 @@ func (sp *stakePool) slash(allocID, blobID string, until common.Timestamp,
 	// offer ratio of entire stake; we are slashing only part of the offer
 	// moving the tokens to allocation user; the ratio is part of entire
 	// stake should be moved;
-	var ratio = (float64(move) / float64(sp.stake()))
+	var ratio = (float64(slash) / float64(sp.stake()))
 
 	for _, dp := range sp.orderedPools() {
 		var one = state.Balance(float64(dp.Balance) * ratio)
