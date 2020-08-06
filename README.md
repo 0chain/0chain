@@ -368,6 +368,14 @@ Test view change (part II).
 ./docker.local/bin/start.conductor.sh view-change-2
 ```
 
+#### Start test View Change 3
+
+Test view change (part III).
+
+```
+./docker.local/bin/start.conductor.sh view-change-3
+```
+
 #### Blockchain 1
 
 Test blockchain (part I, miners).
