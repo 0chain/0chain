@@ -157,7 +157,9 @@ func (msc *MinerSmartContract) getPhaseNode(statectx cstate.StateContextI) (*Pha
 	return pn, nil
 }
 
-func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI, pn *PhaseNode, gn *globalNode) error {
+func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI, pn *PhaseNode, gn *globalNode,
+	t *transaction.Transaction) error {
+
 	if pn.CurrentRound-pn.StartRound >= PhaseRounds[pn.Phase] {
 		currentMoveFunc := moveFunctions[pn.Phase]
 		if currentMoveFunc(balances, pn, gn) {
@@ -172,6 +174,7 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI, pn *P
 				}
 
 				if err != nil {
+					println("(MINER SC) restart DKG: phase function error")
 					msc.RestartDKG(pn, balances)
 					Logger.Error("failed to set phase node",
 						zap.Any("error", err),
@@ -180,8 +183,10 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI, pn *P
 			}
 			if err == nil {
 				if len(PhaseRounds)-1 > pn.Phase {
+					println("(MIENR SC) increment phase", t.ClientID)
 					pn.Phase++
 				} else {
+					println("(MIENR SC) increment phase (round)")
 					pn.Phase = 0
 					pn.Restarts = 0
 				}
@@ -194,6 +199,7 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI, pn *P
 			Logger.Warn("failed to move phase",
 				zap.Any("phase", pn.Phase),
 				zap.Any("move_func", getFunctionName(currentMoveFunc)))
+			println("(MINER SC) restart DKG: can't move on")
 			msc.RestartDKG(pn, balances)
 		}
 	}
@@ -686,6 +692,7 @@ func (msc *MinerSmartContract) RestartDKG(pn *PhaseNode, balances cstate.StateCo
 	if err != nil {
 		Logger.Error("failed to restart dkg", zap.Any("error", err))
 	}
+	println("MINER SC -- RESTART DKG", Start)
 	pn.Phase = Start
 	pn.Restarts++
 	pn.StartRound = pn.CurrentRound

@@ -254,7 +254,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	if pn, err = msc.getPhaseNode(balances); err != nil {
 		return
 	}
-	if err = msc.setPhaseNode(balances, pn, gn); err != nil {
+	if err = msc.setPhaseNode(balances, pn, gn, t); err != nil {
 		return "", common.NewErrorf("pay_fees",
 			"error inserting phase node: %v", err)
 	}

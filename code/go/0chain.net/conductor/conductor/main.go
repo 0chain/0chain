@@ -140,6 +140,7 @@ type Runner struct {
 	waitContributeMPK      config.WaitContributeMpk      //
 	waitShareSignsOrShares config.WaitShareSignsOrShares //
 	waitAdd                config.WaitAdd                // add_miner, add_sharder
+	waitSharderKeep        config.WaitSharderKeep        // sharder_keep
 	waitNoProgressUntil    time.Time                     // }
 	waitNoPreogressCount   int                           // } got rounds
 	waitNoViewChange       config.WaitNoViewChainge      // no VC expected
@@ -173,6 +174,8 @@ func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
 	case !r.waitViewChange.IsZero():
 		return tm, true
 	case !r.waitAdd.IsZero():
+		return tm, true
+	case !r.waitSharderKeep.IsZero():
 		return tm, true
 	case !r.waitNoProgressUntil.IsZero():
 		return tm, true
@@ -456,6 +459,38 @@ func (r *Runner) acceptAddBlobber(addb *conductrpc.AddBlobberEvent) (
 	return
 }
 
+func (r *Runner) acceptSharderKeep(ske *conductrpc.SharderKeepEvent) (
+	err error) {
+
+	if ske.Sender != r.monitor {
+		return // not the monitor node
+	}
+	var (
+		sender, sok = r.conf.Nodes.NodeByName(ske.Sender)
+		added, aok  = r.conf.Nodes.NodeByName(ske.Sharder)
+	)
+	if !sok {
+		return fmt.Errorf("unexpected sharder_keep sender: %q", ske.Sender)
+	}
+	if !aok {
+		return fmt.Errorf("unexpected sharder %q added by sharder_keep of %q",
+			ske.Sharder, sender.Name)
+	}
+
+	if r.verbose {
+		log.Print(" [INF] sharder_keep ", added.Name)
+	}
+
+	if r.waitSharderKeep.IsZero() {
+		return // doesn't wait for a node
+	}
+
+	if r.waitSharderKeep.TakeSharder(added.Name) {
+		log.Print("[OK] sharder_keep ", added.Name)
+	}
+	return
+}
+
 func (r *Runner) acceptNodeReady(nodeName NodeName) (err error) {
 	if _, ok := r.waitNodes[nodeName]; !ok {
 		var n, ok = r.conf.Nodes.NodeByName(nodeName)
@@ -625,6 +660,8 @@ func (r *Runner) proceedWaiting() (err error) {
 			err = r.acceptAddSharder(adds)
 		case addb := <-r.server.OnAddBlobber():
 			err = r.acceptAddBlobber(addb)
+		case sk := <-r.server.OnSharderKeep():
+			err = r.acceptSharderKeep(sk)
 		case nid := <-r.server.OnNodeReady():
 			err = r.acceptNodeReady(nid)
 		case re := <-r.server.OnRound():
@@ -700,6 +737,7 @@ func (r *Runner) resetWaiters() {
 	r.waitAdd = config.WaitAdd{}                               //
 	r.waitNoProgressUntil = time.Time{}                        //
 	r.waitNoViewChange = config.WaitNoViewChainge{}            //
+	r.waitSharderKeep = config.WaitSharderKeep{}               //
 	if r.waitCommand != nil {
 		go func(wc chan error) { <-wc }(r.waitCommand)
 		r.waitCommand = nil

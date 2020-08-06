@@ -35,6 +35,7 @@ type Executor interface {
 	WaitAdd(wadd WaitAdd, timeout time.Duration) (err error)
 	WaitNoProgress(wait time.Duration) (err error)
 	WaitNoViewChainge(wnvc WaitNoViewChainge, timeout time.Duration) (err error)
+	WaitSharderKeep(wsk WaitSharderKeep, timeout time.Duration) (err error)
 
 	// Byzantine: BC, sharders
 
@@ -203,6 +204,16 @@ func (f Flow) waitNoViewChainge(ex Executor, val interface{},
 
 func (f Flow) waitNoProgress(ex Executor, tm time.Duration) (err error) {
 	return ex.WaitNoProgress(tm)
+}
+
+func (f Flow) waitSharderKeep(ex Executor, val interface{},
+	tm time.Duration) (err error) {
+
+	var wsk WaitSharderKeep
+	if err = mapstructure.Decode(val, &wsk); err != nil {
+		return fmt.Errorf("decoding 'wait_sharder_keep': %v", err)
+	}
+	return ex.WaitSharderKeep(wsk, tm)
 }
 
 //

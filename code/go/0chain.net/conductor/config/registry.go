@@ -82,6 +82,10 @@ func init() {
 		ex Executor, val interface{}, tm time.Duration) (err error) {
 		return f.waitNoViewChainge(ex, val, tm)
 	})
+	register("wait_sharder_keep", func(f Flow, name string,
+		ex Executor, val interface{}, tm time.Duration) (err error) {
+		return f.waitSharderKeep(ex, val, tm)
+	})
 
 	// control nodes behavior / misbehavior (view change)
 

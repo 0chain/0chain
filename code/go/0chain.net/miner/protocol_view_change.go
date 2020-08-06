@@ -74,6 +74,8 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 	const (
 		timeoutPhase        = 5
 		thresholdCheckPhase = 2
+
+		thisNodeMovements = -1
 	)
 
 	var (
@@ -105,20 +107,22 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 				oldPhaseRound = pn.Phase
 				oldCurrentRound = pn.CurrentRound
 			}
-
-			if checkOnSharder {
-				currentPhase = pn.Phase // force phase from sharders
-			}
-
 		}
 
 		Logger.Debug("dkg process trying", zap.Any("next_phase", pn),
 			zap.Any("phase", currentPhase),
 			zap.Any("sc funcs", len(scFunctions)))
 
-		println("DKG PROCESS LOOP", currentPhase)
+		println("DKG PROCESS LOOP", currentPhase, "CCPS", counterCheckPhaseSharder, "/", thresholdCheckPhase)
 
 		if err == nil && pn != nil && pn.Phase != currentPhase {
+
+			if pn.Phase != 0 && pn.Phase != currentPhase+1 {
+				println("JUMP OVER A PHASE: ROLLBACK TO ZERO (set CF, -1)")
+				currentPhase = -1
+				timer.Reset(timeoutPhase * time.Second)
+				continue
+			}
 
 			Logger.Info("dkg process start", zap.Any("next_phase", pn),
 				zap.Any("phase", currentPhase),
@@ -149,6 +153,7 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			}
 
 		} else if err != nil {
+			println("GOT PHASE ERROR (SKIP PHASE EXECUTION):", err.Error())
 			Logger.Error("dkg process", zap.Any("error", err),
 				zap.Any("sc funcs", len(scFunctions)), zap.Any("phase", pn))
 		}
@@ -286,7 +291,7 @@ func (mc *Chain) GetPhase(fromSharder bool) (*minersc.PhaseNode, error) {
 			return nil, err
 		}
 		if !fromSharder {
-			println("PHASE", pn.Phase)
+			println("PHASE", pn.Phase, "(ACTIVE)")
 			return pn, nil
 		}
 	}
@@ -302,6 +307,7 @@ func (mc *Chain) GetPhase(fromSharder bool) (*minersc.PhaseNode, error) {
 		}, func(val util.Serializable) bool {
 			if pn, ok := val.(*minersc.PhaseNode); ok {
 				if pn.StartRound < mb.StartingRound {
+					println("PHASE FROM SHARDER REJECTED BY ROND:", pn.StartRound, mb.StartingRound)
 					return true // reject
 				}
 				return false // keep
@@ -320,18 +326,16 @@ func (mc *Chain) GetPhase(fromSharder bool) (*minersc.PhaseNode, error) {
 			zap.Any("phase_state", pn.Phase), zap.Any("phase_sharder", phase.Phase),
 			zap.Any("start_round_state", pn.StartRound),
 			zap.Any("start_round_sharder", phase.StartRound))
+		println("PHASE", phase.Phase, "(FORCE FORM SHARDERS)")
 		return phase, nil
 	}
 	if active {
+		println("PHASE", phase.Phase, "(SAME AS ON SHARDERS)")
 		return pn, nil
 	}
-	println("PHASE", pn.Phase, "(FORCE FORM SHARDERS)")
+	println("PHASE", phase.Phase, "(FORCE FORM SHARDERS)")
 	return phase, nil
 }
-
-// func (mc *Chain) DKGProcessFakeStart() (*httpclientutil.Transaction, error) {
-// 	return nil, nil
-// }
 
 func (mc *Chain) DKGProcessStart() (*httpclientutil.Transaction, error) {
 	println("(MC VC) (re) start DKG")
