@@ -74,6 +74,8 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 	const (
 		timeoutPhase        = 5
 		thresholdCheckPhase = 2
+
+		thisNodeMovements = -1
 	)
 
 	var (
@@ -112,6 +114,15 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			zap.Int("sc funcs", len(scFunctions)))
 
 		if err == nil && pn != nil && pn.Phase != currentPhase {
+
+			if pn.Phase != 0 && pn.Phase != currentPhase+1 {
+				Logger.Debug("jumping over a phase; skip, wait for 'start'",
+					zap.Int("current_phase", currentPhase),
+					zap.Int("phase", pn.Phase))
+				currentPhase = -1
+				timer.Reset(timeoutPhase * time.Second)
+				continue
+			}
 
 			Logger.Info("dkg process start", zap.Any("next_phase", pn),
 				zap.Any("phase", currentPhase),
@@ -320,10 +331,6 @@ func (mc *Chain) GetPhase(fromSharder bool) (*minersc.PhaseNode, error) {
 	return phase, nil
 }
 
-// func (mc *Chain) DKGProcessFakeStart() (*httpclientutil.Transaction, error) {
-// 	return nil, nil
-// }
-
 func (mc *Chain) DKGProcessStart() (*httpclientutil.Transaction, error) {
 	viewChangeMutex.Lock()
 	defer viewChangeMutex.Unlock()
@@ -423,7 +430,8 @@ func (mc *Chain) SendSijs() (*httpclientutil.Transaction, error) {
 		}
 	}
 	if len(failedSend) > 0 {
-		return nil, common.NewError("failed to send sijs", fmt.Sprintf("failed to send share to miners: %v", failedSend))
+		return nil, common.NewError("failed to send sijs",
+			fmt.Sprintf("failed to send share to miners: %v", failedSend))
 	}
 
 	return nil, nil

@@ -157,7 +157,9 @@ func (msc *MinerSmartContract) getPhaseNode(statectx cstate.StateContextI) (*Pha
 	return pn, nil
 }
 
-func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI, pn *PhaseNode, gn *globalNode) error {
+func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI, pn *PhaseNode, gn *globalNode,
+	t *transaction.Transaction) error {
+
 	if pn.CurrentRound-pn.StartRound >= PhaseRounds[pn.Phase] {
 		currentMoveFunc := moveFunctions[pn.Phase]
 		if currentMoveFunc(balances, pn, gn) {

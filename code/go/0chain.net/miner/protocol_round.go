@@ -1023,6 +1023,31 @@ func (mc *Chain) kickRoundByLFB(ctx context.Context, lfb *block.Block) {
 	mc.SetCurrentRound(nr.Number)
 }
 
+func (mc *Chain) recheckLast100Blocks(ctx context.Context) {
+	var cr = mc.GetCurrentRound()
+	if cr == 0 {
+		return // zero round
+	}
+	var pr = mc.GetMinerRound(cr - 1)
+	if pr == nil {
+		Logger.Error("missing previous round for", zap.Int64("round", cr))
+		return
+	}
+	var b = pr.GetHeaviestNotarizedBlock()
+	if b == nil {
+		Logger.Error("missing HNB for", zap.Int64("round", pr.GetRoundNumber()))
+		return
+	}
+	for i := 0; i < 100 && b.Round > 0; i++ {
+		mc.InitBlockState(b) // ignore error
+		if b.PrevBlock == nil {
+			mc.AsyncFetchNotarizedPreviousBlock(b)
+			return // stop on first block can't find
+		}
+		b = b.PrevBlock
+	}
+}
+
 func (mc *Chain) restartRound(ctx context.Context) {
 
 	var crn = mc.GetCurrentRound()
@@ -1050,6 +1075,8 @@ func (mc *Chain) restartRound(ctx context.Context) {
 			zap.Any("num_vrf_share", len(r.GetVRFShares())))
 		// TODO: should have a means to send an email/SMS to someone or
 		// something like that
+	case (crt > 10) && (crt%10 == 0):
+		mc.recheckLast100Blocks(ctx) // every 10 restarts after 10th
 	}
 	mc.RoundTimeoutsCount++
 
@@ -1192,6 +1219,20 @@ func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
 	return true, nil // updated
 }
 
+func (mc *Chain) ensureDKG(ctx context.Context, mb *block.Block) {
+	if mb == nil {
+		return
+	}
+	if !config.DevConfiguration.ViewChange {
+		return
+	}
+	var err error
+	if err = mc.SetDKGSFromStore(ctx, mb.MagicBlock); err != nil {
+		Logger.Error("setting DKG from store",
+			zap.Int64("mb_round", mb.Round))
+	}
+}
+
 func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context) (
 	updated bool, err error) {
 
@@ -1206,6 +1247,8 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context) (
 		mbs        = mc.GetLatestFinalizedMagicBlockFromSharder(ctx)
 		magicBlock *block.Block
 	)
+
+	mc.ensureDKG(ctx, lfmb)
 
 	if len(mbs) == 0 {
 		return
@@ -1229,15 +1272,17 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context) (
 	mc.UpdateNodesFromMagicBlock(magicBlock.MagicBlock)
 	mc.SetLatestFinalizedMagicBlock(magicBlock)
 
-	// ensure DKG
-	var dkg = mc.GetCurrentDKG(magicBlock.StartingRound)
-	if dkg == nil || dkg.StartingRound < magicBlock.StartingRound {
-		err = mc.SetDKGSFromStore(ctx, magicBlock.MagicBlock)
-		if err != nil {
-			Logger.Error("setting DKG from store", zap.Error(err))
-			err = nil // reset the error, don't affect function reply
-		}
-	}
+	mc.ensureDKG(ctx, magicBlock)
+
+	// // ensure DKG
+	// var dkg = mc.GetCurrentDKG(magicBlock.StartingRound)
+	// if dkg == nil || dkg.StartingRound < magicBlock.StartingRound {
+	// 	err = mc.SetDKGSFromStore(ctx, magicBlock.MagicBlock)
+	// 	if err != nil {
+	// 		Logger.Error("setting DKG from store", zap.Error(err))
+	// 		err = nil // reset the error, don't affect function reply
+	// 	}
+	// }
 
 	// bump the ticket if necessary
 	var tk = mc.GetLatestLFBTicket(ctx)
@@ -1251,11 +1296,23 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context) (
 	return
 }
 
+// bump the ticket if necessary
+func (mc *Chain) bumpLFBTicket(ctx context.Context, lfbs *block.Block) {
+	if lfbs == nil {
+		return
+	}
+	var tk = mc.GetLatestLFBTicket(ctx) // is the worker starts
+	if tk == nil || tk.Round < lfbs.Round {
+		mc.AddReceivedLFBTicket(ctx, &chain.LFBTicket{Round: lfbs.Round})
+	}
+}
+
 func StartProtocol(ctx context.Context, gb *block.Block) {
 	mc := GetMinerChain()
 	lfb := getLatestBlockFromSharders(ctx)
 	var mr *Round
 	if lfb != nil {
+		mc.bumpLFBTicket(ctx, lfb)
 		sr := round.NewRound(lfb.Round)
 		mr = mc.CreateRound(sr)
 		mr, _ = mc.AddRound(mr).(*Round)
@@ -1279,13 +1336,15 @@ func StartProtocol(ctx context.Context, gb *block.Block) {
 		mc.SetLatestFinalizedBlock(ctx, lfb)
 		mc.AsyncFetchNotarizedPreviousBlock(lfb)
 	} else {
+		mc.bumpLFBTicket(ctx, gb)
 		mr = mc.getRound(ctx, gb.Round)
 	}
 	nr := mc.StartNextRound(ctx, mr)
 	for nr == nil {
 		select {
-		case <-time.After(time.Second):
-			// repeat after some time
+		case <-time.After(4 * time.Second): // repeat after some time
+			lfb := getLatestBlockFromSharders(ctx)
+			mc.bumpLFBTicket(ctx, lfb)
 		case <-ctx.Done():
 			return
 		}

@@ -36,11 +36,11 @@ func newWaitOrder() (wo *waitOrder) {
 
 // run in goroutine
 func (wo *waitOrder) perform(orders []string) {
-	println("PERFORM", fmt.Sprint(orders))
+	log.Println("[DBG] perform", orders)
 	for _, marker := range orders {
 		var release = wo.wait[marker]
 		close(release)
-		println("RELEASE", marker)
+		log.Println("[DBG] release", marker)
 		<-wo.sent // wait maker sent report and release next
 	}
 }
@@ -74,7 +74,7 @@ func (ao *appOrders) addBlobber(host string) (wo *waitOrder) {
 	if wo, ok = ao.blobbers[host]; ok {
 		return // already have
 	}
-	println("add blobber", host)
+	log.Println("[DBG] add blobber", host)
 	wo = newWaitOrder()
 	ao.blobbers[host] = wo
 	return // nil
@@ -86,10 +86,10 @@ func (ao *appOrders) drain() {
 }
 
 func (ao *appOrders) addOrder(host, marker string) (sent, rel chan struct{}) {
-	println("add order", host, marker)
+	log.Println("[DBG] add order", host, marker)
 
 	if len(ao.orders) == 0 {
-		println("add order", host, marker, "NO ORDERS")
+		log.Println("[DBG] add order", host, marker, "(no orders)")
 		return ao.draining, ao.unlocked // released
 	}
 
@@ -102,17 +102,17 @@ func (ao *appOrders) addOrder(host, marker string) (sent, rel chan struct{}) {
 	)
 
 	if rel, ok = wo.wait[marker]; ok {
-		println("add order", host, marker, "ALREADY HAVE")
+		log.Println("[DBG] add order", host, marker, "(already have)")
 		return wo.sent, rel
 	}
 
-	println("add order", host, marker, "ADD")
+	log.Println("[DBG] add order", host, marker, "(add)")
 
 	rel = make(chan struct{})
 	wo.wait[marker] = rel
 
 	if len(wo.wait) == len(ao.orders) {
-		println("add order", host, marker, "PERMORM")
+		log.Println("add order", host, marker, "PERMORM")
 		go wo.perform(ao.orders) // have all required request in the queue
 		// delete(ao.blobbers, host) // and remove the reference
 	}
@@ -184,7 +184,7 @@ func skipFormField(skip string, r *http.Request) (q *http.Request, err error) {
 		}
 
 		for _, fh := range files {
-			println("-", name, ":", fh.Filename, fh.Size)
+			log.Println("-", name, ":", fh.Filename, fh.Size)
 			var file io.Writer
 			if file, err = mp.CreateFormFile(name, fh.Filename); err != nil {
 				log.Print("creating mp file: ", err)
@@ -210,7 +210,7 @@ func skipFormField(skip string, r *http.Request) (q *http.Request, err error) {
 		}
 
 		for _, val := range values {
-			println("-", name, ":", val)
+			log.Println("-", name, ":", val)
 			if err = mp.WriteField(name, val); err != nil {
 				log.Print("writing mp field: ", err)
 				return
@@ -288,22 +288,22 @@ func handle(w http.ResponseWriter, r *http.Request, markers, filter string) {
 		switch {
 		case hasField(r, "write_marker"):
 			if isDeleteMarker(r) {
-				println("GOT DELETE MARKER")
+				log.Println("[DBG] for dm")
 				sent, release = markersOrders.addOrder(r.URL.Host, "dm")
 			} else {
-				println("GOT WRITE MARKER")
+				log.Println("[DBG] for wm")
 				sent, release = markersOrders.addOrder(r.URL.Host, "wm")
 			}
 		case hasField(r, "read_marker"):
-			println("GOT READ MARKER")
+			log.Println("[DBG] for rm")
 			sent, release = markersOrders.addOrder(r.URL.Host, "rm")
 		}
 
 		// send on release
-		println(":::: WAIT RELEASING")
+		log.Println("[DBG] wait for order...")
 		defer func(sent chan struct{}) { sent <- struct{}{} }(sent)
 		<-release
-		println(":::: RELEASED")
+		log.Println("[DBG] released")
 
 	default:
 		log.Print("[INF] forward: ", r.URL.String())
@@ -361,7 +361,7 @@ func main() {
 	// disable HTTP/2
 	s.TLSNextProto = make(map[string]func(*http.Server, *tls.Conn, http.Handler))
 
-	println("START ON", addr)
+	log.Println("[INF] start on", addr)
 
 	// start the proxy
 	log.Fatal(s.ListenAndServe())

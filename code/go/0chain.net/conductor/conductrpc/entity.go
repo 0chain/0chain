@@ -139,6 +139,13 @@ func (e *Entity) AddBlobber(add *AddBlobberEvent) (err error) {
 	return e.client.addBlobber(add)
 }
 
+func (e *Entity) SharderKeep(sk *SharderKeepEvent) (err error) {
+	if !e.isMonitor() {
+		return // not a monitor
+	}
+	return e.client.sharderKeep(sk)
+}
+
 func (e *Entity) Round(re *RoundEvent) (err error) {
 	if !e.isMonitor() {
 		return // not a monitor

@@ -55,6 +55,12 @@ type AddBlobberEvent struct {
 	Blobber NodeName // the added blobber
 }
 
+// SharderKeepEvent in miner SC.
+type SharderKeepEvent struct {
+	Sender  NodeName // event emitter
+	Sharder NodeName // the sharder to keep
+}
+
 // Round proceed in pay_fees of Miner SC.
 type RoundEvent struct {
 	Sender NodeName // event emitter
@@ -96,6 +102,8 @@ type Server struct {
 	onAddSharder chan *AddSharderEvent
 	// onAddBlobber occurs where blobber added in storage SC
 	onAddBlobber chan *AddBlobberEvent
+	// onSharderKeep occurs where miner SC proceed sharder_keep function
+	onSharderKeep chan *SharderKeepEvent
 
 	// onNodeReady used by miner/sharder to notify the server that the node
 	// has started and ready to register (if needed) in miner SC and start
@@ -131,6 +139,7 @@ func NewServer(address string, names map[NodeID]NodeName) (s *Server,
 	s.onAddMiner = make(chan *AddMinerEvent, 10)
 	s.onAddSharder = make(chan *AddSharderEvent, 10)
 	s.onAddBlobber = make(chan *AddBlobberEvent, 10)
+	s.onSharderKeep = make(chan *SharderKeepEvent, 10)
 	s.onNodeReady = make(chan NodeName, 10)
 
 	s.onRoundEvent = make(chan *RoundEvent, 100)
@@ -255,6 +264,10 @@ func (s *Server) OnAddBlobber() chan *AddBlobberEvent {
 	return s.onAddBlobber
 }
 
+func (s *Server) OnSharderKeep() chan *SharderKeepEvent {
+	return s.onSharderKeep
+}
+
 // OnNodeReady used by nodes to notify the server that the node has started
 // and ready to register (if needed) in miner SC and start it work. E.g.
 // the node has started and waits the conductor to enter BC.
@@ -315,6 +328,14 @@ func (s *Server) AddSharder(add *AddSharderEvent, _ *struct{}) (err error) {
 func (s *Server) AddBlobber(add *AddBlobberEvent, _ *struct{}) (err error) {
 	select {
 	case s.onAddBlobber <- add:
+	case <-s.quit:
+	}
+	return
+}
+
+func (s *Server) SharderKeep(sk *SharderKeepEvent, _ *struct{}) (err error) {
+	select {
+	case s.onSharderKeep <- sk:
 	case <-s.quit:
 	}
 	return

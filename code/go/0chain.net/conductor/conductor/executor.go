@@ -231,6 +231,18 @@ func (r *Runner) WaitAdd(wadd config.WaitAdd, tm time.Duration) (err error) {
 	return
 }
 
+func (r *Runner) WaitSharderKeep(wsk config.WaitSharderKeep,
+	tm time.Duration) (err error) {
+
+	if r.verbose {
+		log.Printf(" [INF] wait shader keep: %s", wsk.Sharders)
+	}
+
+	r.setupTimeout(tm)
+	r.waitSharderKeep = wsk
+	return
+}
+
 func (r *Runner) WaitNoProgress(wait time.Duration) (err error) {
 	if r.verbose {
 		log.Print(" [INF] wait no progress ", wait.String())

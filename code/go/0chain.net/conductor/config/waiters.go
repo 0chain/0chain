@@ -133,3 +133,23 @@ type WaitNoViewChainge struct {
 func (wnvc *WaitNoViewChainge) IsZero() bool {
 	return (*wnvc) == (WaitNoViewChainge{})
 }
+
+// WaitSharderKeep used to wait for sharder_keep
+// SC successful function call.
+type WaitSharderKeep struct {
+	Sharders []NodeName `json:"sharders" yaml:"sharders" mapstructure:"sharders"`
+}
+
+func (wsk *WaitSharderKeep) IsZero() bool {
+	return len(wsk.Sharders) == 0
+}
+
+func (wsk *WaitSharderKeep) TakeSharder(name NodeName) (ok bool) {
+	for i, sharderName := range wsk.Sharders {
+		if sharderName == name {
+			wsk.Sharders = append(wsk.Sharders[:i], wsk.Sharders[i+1:]...)
+			return true
+		}
+	}
+	return
+}

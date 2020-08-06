@@ -40,11 +40,11 @@ func (msc *MinerSmartContract) InitSC() {
 	msc.smartContractFunctions["payFees"] = msc.payFeesIntegrationTests
 	msc.smartContractFunctions["contributeMpk"] = msc.contributeMpkIntegrationTests
 	msc.smartContractFunctions["shareSignsOrShares"] = msc.shareSignsOrSharesIntegrationTests
+	msc.smartContractFunctions["sharder_keep"] = msc.sharderKeepIntegrationTests
 	// as is
 	msc.smartContractFunctions["update_settings"] = msc.UpdateSettings
 	msc.smartContractFunctions["addToDelegatePool"] = msc.addToDelegatePool
 	msc.smartContractFunctions["deleteFromDelegatePool"] = msc.deleteFromDelegatePool
-	msc.smartContractFunctions["sharder_keep"] = msc.sharderKeep
 }
 
 func (msc *MinerSmartContract) AddMinerIntegrationTests(
@@ -217,6 +217,33 @@ func (msc *MinerSmartContract) shareSignsOrSharesIntegrationTests(
 	ssose.Sender = state.Name(crpc.NodeID(node.Self.Underlying().GetKey()))
 	ssose.Miner = state.Name(crpc.NodeID(t.ClientID))
 	if err = client.ShareOrSignsShares(&ssose); err != nil {
+		panic(err)
+	}
+
+	return
+}
+
+func (msc *MinerSmartContract) sharderKeepIntegrationTests(
+	t *transaction.Transaction, input []byte, gn *globalNode,
+	balances cstate.StateContextI) (resp string, err error) {
+
+	if resp, err = msc.sharderKeep(t, input, gn, balances); err != nil {
+		return // error
+	}
+
+	var mn = NewMinerNode()
+	if err = mn.Decode(input); err != nil {
+		panic(err) // must not happen, because of the successful call above
+	}
+
+	var (
+		client = crpc.Client()
+		state  = client.State()
+		ske    crpc.SharderKeepEvent
+	)
+	ske.Sender = state.Name(crpc.NodeID(node.Self.Underlying().GetKey()))
+	ske.Sharder = state.Name(crpc.NodeID(mn.ID))
+	if err = client.SharderKeep(&ske); err != nil {
 		panic(err)
 	}
 
