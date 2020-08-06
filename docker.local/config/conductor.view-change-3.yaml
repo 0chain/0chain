@@ -9,10 +9,10 @@
 ---
 
 enable:
-  #- "Miner down/up"
-  #- "Sharder down/up"
-  #- "All miners down/up"
-  #- "All sharders down/up"
+  - "Miner down/up"
+  - "Sharder down/up"
+  - "All miners down/up"
+  - "All sharders down/up"
   - "All nodes down/up"
 
 sets:
