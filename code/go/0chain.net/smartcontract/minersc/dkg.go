@@ -174,7 +174,6 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI, pn *P
 				}
 
 				if err != nil {
-					println("(MINER SC) restart DKG: phase function error")
 					msc.RestartDKG(pn, balances)
 					Logger.Error("failed to set phase node",
 						zap.Any("error", err),
@@ -183,10 +182,8 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI, pn *P
 			}
 			if err == nil {
 				if len(PhaseRounds)-1 > pn.Phase {
-					println("(MIENR SC) increment phase", t.ClientID)
 					pn.Phase++
 				} else {
-					println("(MIENR SC) increment phase (round)")
 					pn.Phase = 0
 					pn.Restarts = 0
 				}
@@ -199,7 +196,6 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI, pn *P
 			Logger.Warn("failed to move phase",
 				zap.Any("phase", pn.Phase),
 				zap.Any("move_func", getFunctionName(currentMoveFunc)))
-			println("(MINER SC) restart DKG: can't move on")
 			msc.RestartDKG(pn, balances)
 		}
 	}
@@ -312,26 +308,20 @@ func (msc *MinerSmartContract) reduceShardersList(keep, all *MinerNodes,
 
 func (msc *MinerSmartContract) createMagicBlockForWait(balances cstate.StateContextI, gn *globalNode) error {
 
-	println("(MINER SC) CREATE MB FOR WAIT")
-
 	pn, err := msc.getPhaseNode(balances)
 	if err != nil {
-		println("(MINER SC) (E) no phase node")
 		return err
 	}
 	dkgMinersList, err := msc.getMinersDKGList(balances)
 	if err != nil {
-		println("(MINER SC) (E) no DKG miners list")
 		return err
 	}
 	gsos := block.NewGroupSharesOrSigns()
 	groupBytes, err := balances.GetTrieNode(GroupShareOrSignsKey)
 	if err != nil {
-		println("(MINER SC) (E) no group share or signs")
 		return err
 	}
 	if err = gsos.Decode(groupBytes.Encode()); err != nil {
-		println("(MINER SC) (E) decoding group share or signs")
 		return err
 	}
 
@@ -341,7 +331,6 @@ func (msc *MinerSmartContract) createMagicBlockForWait(balances cstate.StateCont
 	mpks := block.NewMpks()
 	mpksBytes, err := balances.GetTrieNode(MinersMPKKey)
 	if err != nil {
-		println("(MINER SC) (E) can't get miners MPKS")
 		return common.NewErrorf("create_magic_block_failed", "error with miner's mpk: %v", err)
 	}
 	if err = mpks.Decode(mpksBytes.Encode()); err != nil {
@@ -475,7 +464,6 @@ func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction,
 			"mpk sent (size: %v) is not correct size: %v", len(mpk.Mpk), dmn.T)
 	}
 	if _, ok = mpks.Mpks[mpk.ID]; ok {
-		println("(MIENR SC) CMPK: already have MPK for", mpk.ID, ", sender:", t.ClientID, "mpks l", len(mpks.Mpks))
 		return "", common.NewError("contribute_mpk_failed",
 			"already have mpk for miner")
 	}
@@ -574,10 +562,6 @@ func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction,
 	var shares []string
 	shares, ok = sos.Validate(mpks, publicKeys, balances.GetSignatureScheme())
 	if !ok {
-		println("(MINER SC) SOS validation failed", sos.ID, "sos l", len(sos.ShareOrSigns))
-		for k, v := range sos.ShareOrSigns {
-			println(" - (inspect sos)", k, "M-S-Si", v.Message, v.Share, v.Sign)
-		}
 		return "", common.NewError("share_signs_or_shares",
 			"share or signs failed validation")
 	}
@@ -692,7 +676,6 @@ func (msc *MinerSmartContract) RestartDKG(pn *PhaseNode, balances cstate.StateCo
 	if err != nil {
 		Logger.Error("failed to restart dkg", zap.Any("error", err))
 	}
-	println("MINER SC -- RESTART DKG", Start)
 	pn.Phase = Start
 	pn.Restarts++
 	pn.StartRound = pn.CurrentRound

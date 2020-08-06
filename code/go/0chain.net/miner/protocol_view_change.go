@@ -113,12 +113,12 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			zap.Any("phase", currentPhase),
 			zap.Any("sc funcs", len(scFunctions)))
 
-		println("DKG PROCESS LOOP", currentPhase, "CCPS", counterCheckPhaseSharder, "/", thresholdCheckPhase)
-
 		if err == nil && pn != nil && pn.Phase != currentPhase {
 
 			if pn.Phase != 0 && pn.Phase != currentPhase+1 {
-				println("JUMP OVER A PHASE: ROLLBACK TO ZERO (set CF, -1)")
+				Logger.Debug("jumping over a phase; skip, wait for 'start'",
+					zap.Int("current_phase", currentPhase),
+					zap.Int("phase", pn.Phase))
 				currentPhase = -1
 				timer.Reset(timeoutPhase * time.Second)
 				continue
@@ -153,7 +153,6 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			}
 
 		} else if err != nil {
-			println("GOT PHASE ERROR (SKIP PHASE EXECUTION):", err.Error())
 			Logger.Error("dkg process", zap.Any("error", err),
 				zap.Any("sc funcs", len(scFunctions)), zap.Any("phase", pn))
 		}
@@ -291,7 +290,6 @@ func (mc *Chain) GetPhase(fromSharder bool) (*minersc.PhaseNode, error) {
 			return nil, err
 		}
 		if !fromSharder {
-			println("PHASE", pn.Phase, "(ACTIVE)")
 			return pn, nil
 		}
 	}
@@ -307,7 +305,6 @@ func (mc *Chain) GetPhase(fromSharder bool) (*minersc.PhaseNode, error) {
 		}, func(val util.Serializable) bool {
 			if pn, ok := val.(*minersc.PhaseNode); ok {
 				if pn.StartRound < mb.StartingRound {
-					println("PHASE FROM SHARDER REJECTED BY ROND:", pn.StartRound, mb.StartingRound)
 					return true // reject
 				}
 				return false // keep
@@ -326,19 +323,15 @@ func (mc *Chain) GetPhase(fromSharder bool) (*minersc.PhaseNode, error) {
 			zap.Any("phase_state", pn.Phase), zap.Any("phase_sharder", phase.Phase),
 			zap.Any("start_round_state", pn.StartRound),
 			zap.Any("start_round_sharder", phase.StartRound))
-		println("PHASE", phase.Phase, "(FORCE FORM SHARDERS)")
 		return phase, nil
 	}
 	if active {
-		println("PHASE", phase.Phase, "(SAME AS ON SHARDERS)")
 		return pn, nil
 	}
-	println("PHASE", phase.Phase, "(FORCE FORM SHARDERS)")
 	return phase, nil
 }
 
 func (mc *Chain) DKGProcessStart() (*httpclientutil.Transaction, error) {
-	println("(MC VC) (re) start DKG")
 	viewChangeMutex.Lock()
 	defer viewChangeMutex.Unlock()
 	mc.clearViewChange()
@@ -403,15 +396,12 @@ func (mc *Chain) CreateSijs() error {
 }
 
 func (mc *Chain) SendSijs() (*httpclientutil.Transaction, error) {
-	println("(MC VC) send sijs")
 	dkgMiners, err := mc.GetDKGMiners()
 	if err != nil {
-		println("(MC VC) (send sijs) can't get DKG miners:", err.Error())
 		return nil, err
 	}
 	selfNodeKey := node.Self.Underlying().GetKey()
 	if _, ok := dkgMiners.SimpleNodes[selfNodeKey]; !mc.isDKGSet() || !ok {
-		println("(MC VC) (send sijs) failed to send sijs:", "is_dkg_set", mc.isDKGSet(), "ok", ok)
 		Logger.Error("failed to send sijs", zap.Any("dkg_set", mc.isDKGSet()), zap.Any("ok", ok))
 		return nil, nil
 	}
@@ -423,7 +413,6 @@ func (mc *Chain) SendSijs() (*httpclientutil.Transaction, error) {
 	if needCreateSijs {
 		err := mc.CreateSijs()
 		if err != nil {
-			println("(MC VC) (send sijs) creating sijs:", err.Error())
 			return nil, err
 		}
 	}
@@ -441,11 +430,10 @@ func (mc *Chain) SendSijs() (*httpclientutil.Transaction, error) {
 		}
 	}
 	if len(failedSend) > 0 {
-		println("(MC VC) (send sijs) failed to send sijs", fmt.Sprint(failedSend))
-		return nil, common.NewError("failed to send sijs", fmt.Sprintf("failed to send share to miners: %v", failedSend))
+		return nil, common.NewError("failed to send sijs",
+			fmt.Sprintf("failed to send share to miners: %v", failedSend))
 	}
 
-	println("(MC VC) (send sijs) ok")
 	return nil, nil
 }
 

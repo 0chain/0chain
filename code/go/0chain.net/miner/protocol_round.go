@@ -1018,7 +1018,6 @@ func (mc *Chain) kickRoundByLFB(ctx context.Context, lfb *block.Block) {
 	mc.InitBlockState(lfb)
 	mc.AsyncFetchNotarizedPreviousBlock(lfb)
 	if nr = mc.StartNextRound(ctx, mr); nr == nil {
-		println("NEXT ROUND IS NIL")
 		return
 	}
 	mc.SetCurrentRound(nr.Number)
@@ -1039,33 +1038,25 @@ func (mc *Chain) recheckLast100Blocks(ctx context.Context) {
 		Logger.Error("missing HNB for", zap.Int64("round", pr.GetRoundNumber()))
 		return
 	}
-	println("RECHECK LAST 100 BLOCKS")
 	for i := 0; i < 100 && b.Round > 0; i++ {
-		// TODO (sfxdx): ignore error
-		if err := mc.InitBlockState(b); err != nil {
-			println("INIT BLOCK STATE", b.Round, err.Error()) // ignore error
-		}
+		mc.InitBlockState(b) // ignore error
 		if b.PrevBlock == nil {
 			mc.AsyncFetchNotarizedPreviousBlock(b)
-			println("RECHECK LAST 100 BLOCKS: STOP ON", b.Round, "AFNPB")
 			return // stop on first block can't find
 		}
 		b = b.PrevBlock
 	}
-	println("RECHECK LAST 100 BLOCKS: OK")
 }
 
 func (mc *Chain) restartRound(ctx context.Context) {
 
 	var crn = mc.GetCurrentRound()
-	println("::::::: (RR)", crn)
 
 	mc.IncrementRoundTimeoutCount()
 	var r = mc.GetMinerRound(crn)
 
 	if crn > 0 && mc.GetMinerRound(crn-1) == nil {
 		if lfb := mc.GetLatestFinalizedBlock(); lfb != nil {
-			println("::::::: (RR)", crn, "kick round by LFB and retry the restart")
 			mc.kickRoundByLFB(ctx, lfb)
 			mc.restartRound(ctx)
 			return
@@ -1085,8 +1076,7 @@ func (mc *Chain) restartRound(ctx context.Context) {
 		// TODO: should have a means to send an email/SMS to someone or
 		// something like that
 	case (crt > 10) && (crt%10 == 0):
-		println("::::::: (RR)", crn, "recheck 100 latest")
-		mc.recheckLast100Blocks(ctx)
+		mc.recheckLast100Blocks(ctx) // every 10 restarts after 10th
 	}
 	mc.RoundTimeoutsCount++
 
@@ -1102,19 +1092,15 @@ func (mc *Chain) restartRound(ctx context.Context) {
 	)
 
 	if updated {
-		println("::::::: (RR)", crn, "LFB updated")
 		// kick new round from the new LFB from sharders, if it's newer
 		// then the current one
 		var lfb = mc.GetLatestFinalizedBlock()
 		if lfb.Round > r.GetRoundNumber() {
-			println("::::::: (RR)", crn, "LFB updated: kick round by LFB")
 			mc.kickRoundByLFB(ctx, lfb)
 			return
 		}
 	} else {
-		println("::::::: (RR)", crn, "LFB not updated")
 		if isAhead {
-			println("::::::: (RR)", crn, "is ahead: kick sharders")
 			mc.kickSharders(ctx) // not updated, kick sharders
 		}
 		// mc.kickMinersBehind(ctx, r) //
@@ -1122,16 +1108,13 @@ func (mc *Chain) restartRound(ctx context.Context) {
 	}
 
 	if !updated && rn > 1 && !isAhead {
-		println("::::::: (RR)", crn, "after sending not. block")
 		if r.GetHeaviestNotarizedBlock() != nil {
-			println("::::::: (RR)", crn, "after sending not. block: there is HNB")
 			Logger.Info("StartNextRound after sending notarized "+
 				"block in restartRound.",
 				zap.Int64("current_round", r.GetRoundNumber()))
 			nextR := mc.GetRound(r.GetRoundNumber())
 			nr := mc.StartNextRound(ctx, r)
 			if nr == nil {
-				println("::::::: (RR)", crn, "after sending not. block: skip due to far ahead")
 				Logger.Info("restartRound: skip due to far ahead")
 				return // shouldn't happen
 			}
@@ -1140,7 +1123,6 @@ func (mc *Chain) restartRound(ctx context.Context) {
 				So to be sure send it.
 			*/
 			if r.HasRandomSeed() {
-				println("::::::: (RR)", crn, "after sending not. block: has rnd seed")
 				if nextR != nil {
 					Logger.Info("RedoVRFshare after sending notarized"+
 						" block in restartRound.",
@@ -1158,7 +1140,6 @@ func (mc *Chain) restartRound(ctx context.Context) {
 					}
 
 				} else {
-					println("::::::: (RR)", crn, "after sending not. block: has not rnd seed")
 					//StartNextRound would have sent the VRFs. No need to do that again
 					Logger.Info("after sending notarized block in"+
 						" restartRound NextR was nil. startNextRound"+
@@ -1239,22 +1220,16 @@ func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
 }
 
 func (mc *Chain) ensureDKG(ctx context.Context, mb *block.Block) {
-	println("::::: (RR) [ENSURE DKG]")
 	if mb == nil {
-		println("::::: (RR) [ENSURE DKG]", "(NO MB)")
 		return
 	}
 	if !config.DevConfiguration.ViewChange {
-		println("::::: (RR) [ENSURE DKG]", "(NO VC)")
 		return
 	}
 	var err error
 	if err = mc.SetDKGSFromStore(ctx, mb.MagicBlock); err != nil {
-		println("::::: (RR) [ENSURE DKG]", mb.Round, "(ERR)", err.Error())
 		Logger.Error("setting DKG from store",
 			zap.Int64("mb_round", mb.Round))
-	} else {
-		println("::::: (RR) [ENSURE DKG]", "OK", mb.Round)
 	}
 }
 
@@ -1367,8 +1342,7 @@ func StartProtocol(ctx context.Context, gb *block.Block) {
 	nr := mc.StartNextRound(ctx, mr)
 	for nr == nil {
 		select {
-		case <-time.After(time.Second):
-			// repeat after some time
+		case <-time.After(4 * time.Second): // repeat after some time
 			lfb := getLatestBlockFromSharders(ctx)
 			mc.bumpLFBTicket(ctx, lfb)
 		case <-ctx.Done():

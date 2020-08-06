@@ -65,8 +65,6 @@ func (mc *Chain) BlockWorker(ctx context.Context) {
 //RoundWorker - a worker that monitors the round progress
 func (mc *Chain) RoundWorker(ctx context.Context) {
 
-	println("::: RW: START")
-
 	var (
 		timer             = time.NewTimer(4 * time.Second)
 		cround            = mc.GetCurrentRound()
@@ -76,11 +74,9 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 	for true {
 		select {
 		case <-ctx.Done():
-			println("::: RW: EXIT")
 			return
 		case <-timer.C:
 			if !mc.isStarted() {
-				println("::: RW: NOT STARTED, NO RESTART ROUND CALL")
 				break
 			}
 			if cround == mc.GetCurrentRound() {
@@ -92,11 +88,8 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 						zap.Int("proposedBlocks", len(round.GetProposedBlocks())),
 						zap.Int("notarizedBlocks", len(round.GetNotarizedBlocks())))
 					protocol.HandleRoundTimeout(ctx)
-				} else {
-					println("::: RW: ROND IS NIL, NO RESTART ROUND CALL")
 				}
 			} else {
-				println("::: RW: ROUND UPDATED, NO RESTART ROUND CALL")
 				cround = mc.GetCurrentRound()
 				mc.ResetRoundTimeoutCount()
 			}
