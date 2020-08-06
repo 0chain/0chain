@@ -713,7 +713,7 @@ tests:
       - stop: ['miner 3', 'miner 5']
       - start: ['miner 3', 'miner 5']
       - wait_round:
-          shift: 10 # just make sure it moves
+          shift: 10 # just make sure it moves on
 
   - name: "Revealed"
     flow:
