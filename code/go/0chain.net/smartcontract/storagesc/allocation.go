@@ -202,10 +202,13 @@ func (sc *StorageSmartContract) filterBlobbersByFreeSpace(now common.Timestamp,
 	return filterBlobberFunc(func(b *StorageNode) (kick bool) {
 		var sp, err = sc.getStakePool(b.ID, balances)
 		if err != nil {
-			return true
+			return true // kick off
+		}
+		if b.Terms.WritePrice == 0 {
+			return false // keep, ok or already filtered by bid
 		}
 		var free = sp.capacity(now, b.Terms.WritePrice)
-		return free < size // hasn't enough free space
+		return free < size // kick off if it hasn't enough free space
 	})
 }
 
