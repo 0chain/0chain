@@ -1307,44 +1307,59 @@ func (mc *Chain) bumpLFBTicket(ctx context.Context, lfbs *block.Block) {
 	}
 }
 
-func StartProtocol(ctx context.Context, gb *block.Block) {
-	mc := GetMinerChain()
-	lfb := getLatestBlockFromSharders(ctx)
-	var mr *Round
-	if lfb != nil {
-		mc.bumpLFBTicket(ctx, lfb)
-		sr := round.NewRound(lfb.Round)
-		mr = mc.CreateRound(sr)
-		mr, _ = mc.AddRound(mr).(*Round)
-		mc.SetRandomSeed(sr, lfb.RoundRandomSeed)
-		mc.AddBlock(lfb)
-		//ugly hack: for error "node not found"
-		if err := mc.InitBlockState(lfb); err != nil {
-			go func() {
-				lfbCheck := lfb
-				for {
-					err := mc.InitBlockState(lfbCheck)
-					if err == nil {
-						return
-					}
-					Logger.Error("start_protocol", zap.Error(err))
-					lfbCheck = mc.GetLatestFinalizedBlock()
-					time.Sleep(time.Second * 1)
-				}
-			}()
+func (mc *Chain) initLFBState(lfb *block.Block) {
+	var err error
+	if err = mc.InitBlockState(lfb); err != nil {
+		go mc.asyncInitLFBState()
+	}
+}
+
+func (mc *Chain) asyncInitLFBState() {
+	var (
+		lfb *block.Block
+		err error
+	)
+	for {
+		time.Sleep(time.Second * 1)
+		lfb = mc.GetLatestFinalizedBlock()
+		if err = mc.InitBlockState(lfb); err == nil {
+			return
 		}
-		mc.SetLatestFinalizedBlock(ctx, lfb)
-		mc.AsyncFetchNotarizedPreviousBlock(lfb)
+		Logger.Error("start_protocol", zap.Error(err))
+	}
+}
+
+func (mc *Chain) startProtocolOnLFB(ctx context.Context, lfb *block.Block) (mr *Round) {
+	mc.bumpLFBTicket(ctx, lfb)
+	var sr = round.NewRound(lfb.Round)
+	mr = mc.CreateRound(sr)
+	mr, _ = mc.AddRound(mr).(*Round)
+	mc.SetRandomSeed(sr, lfb.RoundRandomSeed)
+	mc.AddBlock(lfb)
+	mc.initLFBState(lfb)
+	mc.SetLatestFinalizedBlock(ctx, lfb)
+	mc.AsyncFetchNotarizedPreviousBlock(lfb)
+	return
+}
+
+func StartProtocol(ctx context.Context, gb *block.Block) {
+	var (
+		mc  = GetMinerChain()
+		lfb = getLatestBlockFromSharders(ctx)
+		mr  *Round
+	)
+	if lfb != nil {
+		mc.startProtocolOnLFB(ctx, lfb)
 	} else {
 		mc.bumpLFBTicket(ctx, gb)
 		mr = mc.getRound(ctx, gb.Round)
 	}
-	nr := mc.StartNextRound(ctx, mr)
+	var nr = mc.StartNextRound(ctx, mr)
 	for nr == nil {
 		select {
 		case <-time.After(4 * time.Second): // repeat after some time
-			lfb := getLatestBlockFromSharders(ctx)
-			mc.bumpLFBTicket(ctx, lfb)
+			lfb = getLatestBlockFromSharders(ctx)
+			mr = mc.startProtocolOnLFB(ctx, lfb)
 		case <-ctx.Done():
 			return
 		}

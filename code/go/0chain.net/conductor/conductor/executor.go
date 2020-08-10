@@ -202,7 +202,7 @@ func (r *Runner) WaitShareSignsOrShares(ssos config.WaitShareSignsOrShares,
 	tm time.Duration) (err error) {
 
 	if r.verbose {
-		log.Print(" [INF] wait for SOSS of %s", ssos.Miner)
+		log.Printf(" [INF] wait for SOSS of %s", ssos.Miner)
 	}
 
 	var miner, ok = r.conf.Nodes.NodeByName(ssos.Miner)

@@ -42,21 +42,23 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	lockAllMiners.Lock()
 	defer lockAllMiners.Unlock()
 
-	Logger.Info("try to add miner", zap.Any("txn", t))
+	Logger.Info("add_miner: try to add miner", zap.Any("txn", t))
 
 	var all *MinerNodes
 	if all, err = msc.getMinersList(balances); err != nil {
-		Logger.Error("Error in getting list from the DB", zap.Error(err))
+		Logger.Error("add_miner: Error in getting list from the DB",
+			zap.Error(err))
 		return "", common.NewErrorf("add_miner_failed",
 			"failed to get miner list: %v", err)
 	}
-	msc.verifyMinerState(balances, "checking all miners list in the beginning")
+	msc.verifyMinerState(balances,
+		"add_miner: checking all miners list in the beginning")
 
 	if newMiner.DelegateWallet == "" {
 		newMiner.DelegateWallet = newMiner.ID
 	}
 
-	Logger.Info("The new miner info",
+	Logger.Info("add_miner: The new miner info",
 		zap.String("base URL", newMiner.N2NHost),
 		zap.String("ID", newMiner.ID),
 		zap.String("pkey", newMiner.PublicKey),
@@ -67,10 +69,10 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 		zap.Int64("min_stake", int64(newMiner.MinStake)),
 		zap.Int64("max_stake", int64(newMiner.MaxStake)),
 	)
-	Logger.Info("MinerNode", zap.Any("node", newMiner))
+	Logger.Info("add_miner: MinerNode", zap.Any("node", newMiner))
 
 	if newMiner.PublicKey == "" || newMiner.ID == "" {
-		Logger.Error("public key or ID is empty")
+		Logger.Error("add_miner: public key or ID is empty")
 		return "", common.NewError("add_miner_failed",
 			"PublicKey or the ID is empty. Cannot proceed")
 	}
@@ -110,7 +112,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	}
 
 	if msc.doesMinerExist(newMiner.getKey(), balances) {
-		return "", common.NewError("failed to add miner",
+		return "", common.NewError("add_miner_failed",
 			"miner already exists")
 	}
 
@@ -119,16 +121,17 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	// add to all miners list
 	all.Nodes = append(all.Nodes, newMiner)
 	if _, err = balances.InsertTrieNode(AllMinersKey, all); err != nil {
-		return "", common.NewErrorf("failed to add miner",
+		return "", common.NewErrorf("add_miner_failed",
 			"saving all miners list: %v", err)
 	}
 
 	// set node type -- miner
 	if err = newMiner.save(balances); err != nil {
-		return "", common.NewError("failed to add miner", err.Error())
+		return "", common.NewError("add_miner_failed", err.Error())
 	}
 
-	msc.verifyMinerState(balances, "Checking all miners list afterInsert")
+	msc.verifyMinerState(balances,
+		"add_miner: Checking all miners list afterInsert")
 
 	resp = string(newMiner.Encode())
 	return

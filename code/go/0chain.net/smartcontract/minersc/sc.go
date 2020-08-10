@@ -114,7 +114,7 @@ func (msc *MinerSmartContract) Execute(t *transaction.Transaction,
 
 	gn, err := msc.getGlobalNode(balances)
 	if err != nil {
-		return "", err
+		return "", common.NewError("failed_to_get_global_node", err.Error())
 	}
 	if lock, ok := lockSmartContractExecute[funcName]; ok {
 		lock.Lock()

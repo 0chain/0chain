@@ -54,7 +54,7 @@ sets:
     tests:
       - "Artificially force 1 miner to send bad share to 1 miners"
       - "Artificially force 1 miner to send bad share to 2 miners"
-      - "Artificially force 1 miner to send bad share to 3 miners"
+      - "Artificially force 1 miner to send bad share to 3 miners"  
       - "Artificially force 2 miner to send bad share to 2 miners"
 
   - name: "Artificially force X miner to send share to Y miners only"
@@ -388,8 +388,10 @@ tests:
       - unlock: ['miner 5']
       - wait_add:
           miners: ['miner 5']
+      - wait_phase:
+          phase: 'contribute'
       - wait_round:
-          round: 398 # penultimate round of the 'share' phase
+          shift: 48 # penultimate round of the 'share' phase
       - stop: ['miner 5']
       - wait_view_change:
           expect_magic_block:
@@ -505,20 +507,17 @@ tests:
       - wait_contribute_mpk:
           miner: 'miner 4'
       - stop: ['miner 4']
-      - start_lock: ['miner 4']
       - wait_phase:
           phase: 'share'
-      - unlock: ['miner 4']
+      - start: ['miner 4']
       - wait_view_change:
           expect_magic_block:
             number: 2 # 251 round
-            sharders: ['sharder 1']
-            miners: ['miner 1', 'miner 2', 'miner 3']
+            # just check it moves on
       - wait_view_change:
           expect_magic_block:
             number: 3 # 501 round
-            sharders: ['sharder 1']
-            miners: ['miner 1', 'miner 2', 'miner 3']
+            # just check it moves on
 
   - name: "Miner goes down in phase 'publish' (after publishing signOrShares) and comes up in next VC"
     flow:
@@ -529,18 +528,16 @@ tests:
       - wait_share_signs_or_shares:
           miner: 'miner 4'
       - stop: ['miner 4']
-      - start_lock: ['miner 4']
       - wait_view_change:
+          timeout: '2m'
           expect_magic_block:
             number: 2 # 251 round
-            sharders: ['sharder 1']
-            miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
-      - unlock: ['miner 4']
+            # just check it moves on
+      - start: ['miner 4']
       - wait_view_change:
           expect_magic_block:
             number: 3 # 501 round
-            sharders: ['sharder 1']
-            miners: ['miner 1', 'miner 2', 'miner 3']
+            # just check it moves on
 
   # "Artificially force X miner to send bad share to Y miners"
 
@@ -627,7 +624,7 @@ tests:
           expect_magic_block:
             number: 2 # 251 round
             sharders: ['sharder 1']
-            miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
+            miners: ['miner 1', 'miner 2', 'miner 3']
 
   - name: "Artificially force 1 miner to send share to 1 miners only"
     flow:
@@ -643,7 +640,7 @@ tests:
           expect_magic_block:
             number: 2 # 251 round
             sharders: ['sharder 1']
-            miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4']
+            miners: ['miner 1', 'miner 2', 'miner 3']
 
   - name: "Artificially force 2 miner to send share to 2 miners only"
     flow:
