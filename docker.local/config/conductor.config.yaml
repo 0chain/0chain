@@ -166,3 +166,11 @@ commands:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/download_no_rm.sh"
     should_fail: true
+  markers_out_of_order:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/markers_out_of_order.sh"
+    should_fail: true
+  simultaneous:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/simultaneous.sh"
+    should_fail: true

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"flag"
@@ -10,6 +11,9 @@ import (
 	"log"
 	"mime/multipart"
 	"net/http"
+	"os"
+	"os/exec"
+	"os/signal"
 	"strings"
 	"sync"
 )
@@ -20,17 +24,34 @@ const (
 	DOWNLOAD = "/v1/file/download/"
 )
 
+func init() {
+	log.SetFlags(log.Ltime)
+	log.SetPrefix("[SDK PROXY] ")
+}
+
 var markersOrders *appOrders
 
+type sentRelease struct {
+	once    bool
+	sent    chan struct{}
+	release chan struct{}
+}
+
+func newSentRelease() (sr *sentRelease) {
+	sr = new(sentRelease)
+	sr.once = false
+	sr.sent = make(chan struct{})
+	sr.release = make(chan struct{})
+	return
+}
+
 type waitOrder struct {
-	sent chan struct{}            // request sent -> next order
-	wait map[string]chan struct{} // marker -> release
+	wait map[string]*sentRelease
 }
 
 func newWaitOrder() (wo *waitOrder) {
 	wo = new(waitOrder)
-	wo.sent = make(chan struct{})
-	wo.wait = make(map[string]chan struct{})
+	wo.wait = make(map[string]*sentRelease)
 	return
 }
 
@@ -38,10 +59,22 @@ func newWaitOrder() (wo *waitOrder) {
 func (wo *waitOrder) perform(orders []string) {
 	log.Println("[DBG] perform", orders)
 	for _, marker := range orders {
-		var release = wo.wait[marker]
-		close(release)
+		var sr = wo.wait[marker]
+		close(sr.release)
 		log.Println("[DBG] release", marker)
-		<-wo.sent // wait maker sent report and release next
+		if marker == "rm" {
+			if !sr.once {
+				<-sr.sent      // wait maker sent report and release next
+				sr.once = true //
+				// drain
+				go func(sent chan struct{}) {
+					for range sent {
+					}
+				}(sr.sent)
+			}
+		} else {
+			<-sr.sent // wait maker sent report and release next
+		}
 	}
 }
 
@@ -98,18 +131,21 @@ func (ao *appOrders) addOrder(host, marker string) (sent, rel chan struct{}) {
 
 	var (
 		wo = ao.addBlobber(host)
+		sr *sentRelease
 		ok bool
 	)
 
-	if rel, ok = wo.wait[marker]; ok {
+	if sr, ok = wo.wait[marker]; ok {
 		log.Println("[DBG] add order", host, marker, "(already have)")
-		return wo.sent, rel
+		return sr.sent, sr.release
 	}
 
 	log.Println("[DBG] add order", host, marker, "(add)")
 
 	rel = make(chan struct{})
-	wo.wait[marker] = rel
+	sr = newSentRelease()
+	sent, rel = sr.sent, sr.release
+	wo.wait[marker] = sr
 
 	if len(wo.wait) == len(ao.orders) {
 		log.Println("add order", host, marker, "PERMORM")
@@ -117,7 +153,7 @@ func (ao *appOrders) addOrder(host, marker string) (sent, rel chan struct{}) {
 		// delete(ao.blobbers, host) // and remove the reference
 	}
 
-	return wo.sent, rel
+	return
 }
 
 // split by "-"
@@ -284,24 +320,39 @@ func handle(w http.ResponseWriter, r *http.Request, markers, filter string) {
 			break
 		}
 
-		var sent, release chan struct{}
+		var (
+			sent, release chan struct{}
+			marker        string
+		)
 		switch {
 		case hasField(r, "write_marker"):
 			if isDeleteMarker(r) {
+				marker = "dm"
 				log.Println("[DBG] for dm")
 				sent, release = markersOrders.addOrder(r.URL.Host, "dm")
 			} else {
+				marker = "wm"
 				log.Println("[DBG] for wm")
 				sent, release = markersOrders.addOrder(r.URL.Host, "wm")
 			}
 		case hasField(r, "read_marker"):
+			marker = "rm"
 			log.Println("[DBG] for rm")
 			sent, release = markersOrders.addOrder(r.URL.Host, "rm")
 		}
 
 		// send on release
 		log.Println("[DBG] wait for order...")
-		defer func(sent chan struct{}) { sent <- struct{}{} }(sent)
+		defer func(sent chan struct{}, marker string) {
+			if marker == "rm" {
+				select {
+				case sent <- struct{}{}:
+				default:
+				}
+			} else {
+				sent <- struct{}{}
+			}
+		}(sent, marker)
 		<-release
 		log.Println("[DBG] released")
 
@@ -320,19 +371,66 @@ func handle(w http.ResponseWriter, r *http.Request, markers, filter string) {
 	simpleRoundTrip(w, q)
 }
 
+type Run []string
+
+func (r Run) String() string {
+	return fmt.Sprint([]string(r))
+}
+
+func (r *Run) Set(val string) (err error) {
+	(*r) = append((*r), val)
+	return
+}
+
+func waitSigInt() {
+	var c = make(chan os.Signal, 2)
+	signal.Notify(c, os.Interrupt, os.Kill)
+	log.Printf("got signal %s, exiting...", <-c)
+}
+
+func execute(r, address string, codes chan int) {
+	var (
+		cmd  = exec.Command("sh", "-x", r)
+		err  error
+		code int
+	)
+
+	log.Print("execute: ", r)
+	defer func() { log.Printf("executed (%s) with %d exit code", r, code) }()
+
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Env = append(os.Environ(), "HTTP_PROXY=http://"+address)
+
+	err = cmd.Run()
+	if err != nil {
+		if ee, ok := err.(*exec.ExitError); ok {
+			code = ee.ExitCode()
+		}
+		log.Printf("executing %s: %v", r, err)
+	}
+
+	codes <- code
+}
+
 func main() {
 
 	// address
 	var (
-		markers string      = ""              // markers arriving order
-		filter  string      = ""              // filter multipart forms fields
-		addr    string      = "0.0.0.0:15211" // bind
-		s       http.Server                   // server instance
+		markers string = ""              // markers arriving order
+		filter  string = ""              // filter multipart forms fields
+		addr    string = "0.0.0.0:15211" // bind
+
+		back = context.Background() //
+
+		s   http.Server // server instance
+		run Run         // run parallel with HTTP_PROXY
 	)
 
 	flag.StringVar(&markers, "m", markers, "markers arriving order")
 	flag.StringVar(&filter, "f", filter, "filter multipart form fields")
 	flag.StringVar(&addr, "a", addr, "bind proxy address")
+	flag.Var(&run, "run", "run sh scripts parallel with HTTP_PROXY and exit then")
 	flag.Parse()
 
 	// setup orders
@@ -364,7 +462,28 @@ func main() {
 	log.Println("[INF] start on", addr)
 
 	// start the proxy
-	log.Fatal(s.ListenAndServe())
+	go func() { log.Fatal(s.ListenAndServe()) }()
+	defer s.Shutdown(back)
+
+	if len(run) == 0 {
+		waitSigInt()
+		return
+	}
+
+	var codes = make(chan int, len(run))
+	for _, r := range run {
+		go execute(r, addr, codes)
+	}
+
+	var code int
+	for i := 0; i < len(run); i++ {
+		var x = <-codes
+		if code == 0 && x != 0 {
+			code = x
+		}
+	}
+
+	os.Exit(code)
 }
 
 // ========================================================================== //

@@ -65,9 +65,17 @@ tests:
       - command:
           name: "download_no_rm"
           timeout: '5m'
-      # service
+      # markers out of order
       - command:
-          name: "sleep_1m"
-          timeout: '100h'
+          name: "markers_out_of_order"
+          timeout: '5m'
+      # simultaneous
+      - command:
+          name: 'simultaneous'
+          timeout: '5m'
+      # service
+      #- command:
+      #    name: "sleep_1m"
+      #    timeout: '100h'
 
 ...

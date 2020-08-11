@@ -11,5 +11,5 @@ set -e
     --allocation "$(cat ~/.zcn/allocation.txt)" --tokens 2.0
 
 # auth user
-./zboxcli/zbox --wallet testing-auth.json rp-lock --duration=1h \
-    --allocation "$(cat ~/.zcn/allocation.txt)" --tokens 2.0
+# ./zboxcli/zbox --wallet testing-auth.json rp-lock --duration=1h \
+#    --allocation "$(cat ~/.zcn/allocation.txt)" --tokens 2.0

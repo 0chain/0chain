@@ -19,8 +19,8 @@ done
 #       --methodName pour --input "{Pay day}"
 # done
 
-try_five_times ./zwalletcli/zwallet --wallet testing.json getbalance
-# try_five_times ./zwalletcli/zwallet --wallet testing-auth.json getbalance
+./zwalletcli/zwallet --wallet testing.json getbalance
+# ./zwalletcli/zwallet --wallet testing-auth.json getbalance
 
 BLOBBER1=f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
 BLOBBER2=7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d
@@ -32,7 +32,7 @@ BLOBBER2=7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d
     --blobber_id $BLOBBER2 --tokens 2
 
 # for test logs
-try_five_times ./zboxcli/zbox --wallet testing.json ls-blobbers
+./zboxcli/zbox --wallet testing.json ls-blobbers
 
 # create allocation
 ./zboxcli/zbox --wallet testing.json newallocation \
@@ -59,7 +59,7 @@ head -c 52428800 < /dev/urandom > random.bin
 
 # get auth ticket
 #
-# "$(./zboxcli/zbox --wallet testing.json share --allocation "$(cat ~/.zcn/allocation.txt)" --remotepath=/remote/remote.bin | cut -c13-)"
+# "$(./zboxcli/zbox --wallet testing.json share --allocation "$(cat ~/.zcn/allocation.txt)" --remotepath=/remote/remote.bin --clientid "$(grep -Po '"client_id":.*?[^\\]"' ~/.zcn/testing-auth.json | awk -F':' '{print $2}')" | cut -c13-)"
 
 # 10% of 104857600 is
 #
