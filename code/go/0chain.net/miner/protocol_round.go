@@ -1349,7 +1349,7 @@ func StartProtocol(ctx context.Context, gb *block.Block) {
 		mr  *Round
 	)
 	if lfb != nil {
-		mc.startProtocolOnLFB(ctx, lfb)
+		mr = mc.startProtocolOnLFB(ctx, lfb)
 	} else {
 		mc.bumpLFBTicket(ctx, gb)
 		mr = mc.getRound(ctx, gb.Round)
