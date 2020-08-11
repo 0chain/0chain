@@ -63,6 +63,10 @@ func (wp *writePool) save(sscKey, clientID string,
 func (wp *writePool) moveToChallenge(allocID, blobID string,
 	cp *challengePool, now common.Timestamp, value state.Balance) (err error) {
 
+	if value == 0 {
+		return // nothing to move, ok
+	}
+
 	var cut = wp.blobberCut(allocID, blobID, now)
 
 	if len(cut) == 0 {
