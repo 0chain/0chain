@@ -10,9 +10,14 @@ import (
 	"go.uber.org/zap"
 )
 
+func shouldFinalize(r round.RoundI) bool {
+	return (r.IsFinalizing() || r.IsFinalized()) == false
+}
+
 /*AddNotarizedBlock - add a notarized block for a given round */
 func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI, b *block.Block) bool {
-	if _, ok := r.AddNotarizedBlock(b); !ok {
+	if _, ok := r.AddNotarizedBlock(b); !ok && !shouldFinalize(r) {
+		println("(SC) ADD NOT. BLOCK: FALSE", b.Round)
 		return false
 	}
 	if sc.BlocksToSharder == chain.FINALIZED {
@@ -24,7 +29,10 @@ func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI, b *block
 	sc.UpdateNodeState(b)
 	pr := sc.GetRound(r.GetRoundNumber() - 1)
 	if pr != nil {
+		println("(SC) ADD NOT. BLOCK: FINALIZE", b.Round, pr.GetRoundNumber(), "IS FIN.D:", pr.IsFinalized())
 		go sc.FinalizeRound(ctx, pr, sc)
+	} else {
+		println("(SC) ADD NOT. BLOCK: NO PREVIOUS ROUND", b.Round)
 	}
 	go sc.ComputeState(ctx, b)
 	return true

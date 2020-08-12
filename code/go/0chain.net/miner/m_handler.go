@@ -112,11 +112,15 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (interface{},
 	}
 	mc := GetMinerChain()
 
-	// skip all VRFS before LFB
-	lfb := mc.GetLatestFinalizedBlock()
-	if vrfs.GetRoundNumber() < lfb.Round {
-		Logger.Info("Rejecting VRFShare: old round", zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()),
-			zap.Int64("lfb_round_num", lfb.Round))
+	// skip all VRFS before LFB-ticket (sharders' LFB)
+	var tk = mc.GetLatestLFBTicket(ctx)
+	if tk == nil {
+		return nil, common.NewError("Reject VRFShare", "context done")
+	}
+	if vrfs.GetRoundNumber() < tk.Round {
+		Logger.Info("Rejecting VRFShare: old round",
+			zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()),
+			zap.Int64("lfb_ticket_round_num", tk.Round))
 		return nil, nil
 	}
 

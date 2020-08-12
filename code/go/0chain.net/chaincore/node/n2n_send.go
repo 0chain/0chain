@@ -347,9 +347,11 @@ func validateSendRequest(sender *Node, r *http.Request) bool {
 * into something suitable for Node 2 Node communication*/
 func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, options *ReceiveOptions) common.ReqRespHandlerf {
 	return func(w http.ResponseWriter, r *http.Request) {
+		println("N2N handler", r.RequestURI)
 		contentType := r.Header.Get("Content-type")
 		if !strings.HasPrefix(contentType, "application/json") {
 			http.Error(w, "Header Content-type=application/json not found", 400)
+			println("N2N handler", r.RequestURI, "no content type")
 			return
 		}
 		nodeID := r.Header.Get(HeaderNodeID)
@@ -357,9 +359,11 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 		if sender == nil {
 			N2n.Error("message received - request from unrecognized node", zap.String("from", nodeID),
 				zap.Int("to", Self.Underlying().SetIndex), zap.String("handler", r.RequestURI))
+			println("N2N handler", r.RequestURI, "unknown node sender")
 			return
 		}
 		if !validateSendRequest(sender, r) {
+			println("N2N handler", r.RequestURI, "invalid send request")
 			return
 		}
 		entityName := r.Header.Get(HeaderRequestEntityName)
@@ -368,7 +372,8 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 		if options != nil && options.MessageFilter != nil {
 			if !options.MessageFilter.AcceptMessage(entityName, entityID) {
 				readAndClose(r.Body)
-				//N2n.Debug("message receive - reject", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI), zap.String("entity_id", entityID))
+				// N2n.Debug("message receive - reject", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI), zap.String("entity_id", entityID))
+				println("N2N handler", r.RequestURI, "rejected (what does it mean?)")
 				return
 			}
 		}
@@ -377,6 +382,7 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 		if initialNodeID != "" {
 			initSender := GetNode(initialNodeID)
 			if initSender == nil {
+				println("N2N handler", r.RequestURI, "init sender (?)")
 				return
 			}
 			ctx = WithNode(ctx, initSender)
@@ -388,13 +394,16 @@ func ToN2NReceiveEntityHandler(handler datastore.JSONEntityReqResponderF, option
 			if err == NoDataErr {
 				go pullEntityHandler(ctx, sender, r.RequestURI, handler, entityName, entityID)
 				sender.Received++
+				println("N2N handler", r.RequestURI, "pull")
 				return
 			}
 			http.Error(w, fmt.Sprintf("Error reading entity: %v", err), 500)
+			println("N2N handler", r.RequestURI, "error reading entity")
 			return
 		}
 		if entity.GetKey() != entityID {
 			N2n.Error("message received - entity id doesn't match with signed id", zap.Int("from", sender.SetIndex), zap.Int("to", Self.SetIndex), zap.String("handler", r.RequestURI), zap.String("entity_id", entityID), zap.String("entity.id", entity.GetKey()))
+			println("N2N handler", r.RequestURI, "entity ID doesn't match with signed ID")
 			return
 		}
 		start := time.Now()

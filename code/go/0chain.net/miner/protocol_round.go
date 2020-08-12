@@ -103,6 +103,7 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 		case <-ctx.Done():
 		}
 		if mc.isAheadOfSharders(ctx, rn) {
+			println("CAN'T MOVE ON (StartNextRound)")
 			return nil // can't move on, still is far ahead of sharders
 		}
 	}
@@ -222,6 +223,7 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 		if mc.isAheadOfSharders(ctx, rn) {
 			Logger.Debug("start new round: can't move on, still is far ahead",
 				zap.Int64("round", rn))
+			println("CAN'T MVOE ON IN startNewRound")
 			return // can't move on, still is far ahead of sharders
 		}
 	}

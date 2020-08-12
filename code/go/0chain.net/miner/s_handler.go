@@ -25,9 +25,9 @@ func SetupM2SSenders() {
 	NotarizedBlockSender = node.SendEntityHandler("/v1/_m2s/block/notarized", options)
 
 	NotarizedBlockForcePushSender = node.SendEntityHandler(
-		"/v1/_m2s/block/notarized",
+		"/v1/_m2s/block/notarized/kick",
 		&node.SendOptions{
-			Timeout:            node.TimeoutSmallMessage,
+			Timeout:            node.TimeoutLargeMessage, // try to increase the timeout
 			MaxRelayLength:     0,
 			CurrentRelayLength: 0,
 			CODEC:              node.CODEC_MSGPACK,

@@ -1060,6 +1060,7 @@ func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
 
 	c.LatestFinalizedBlock = b
 	if b != nil {
+		println("set LFB", b.Round)
 		c.lfbSummary = b.GetSummary()
 		c.BroadcastLFBTicket(common.GetRootContext(), b)
 	}

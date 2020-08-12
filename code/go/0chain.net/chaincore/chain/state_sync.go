@@ -209,7 +209,6 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 		b.SetStateStatus(block.StateSynched)
 		return nil, nil
 	}
-	bscRequestor := BlockStateChangeRequestor
 	params := &url.Values{}
 	params.Add("block", b.Hash)
 	ctx, cancelf := context.WithCancel(common.GetRootContext())
@@ -238,7 +237,7 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 		return rsc, nil
 	}
 	mb := c.GetMagicBlock(b.Round)
-	mb.Miners.RequestEntity(ctx, bscRequestor, params, handler)
+	mb.Miners.RequestEntity(ctx, BlockStateChangeRequestor, params, handler)
 	if bsc == nil {
 		return nil, common.NewError("block_state_change_error", "Error getting the block state change")
 	}
