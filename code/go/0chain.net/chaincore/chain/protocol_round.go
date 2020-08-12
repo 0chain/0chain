@@ -148,7 +148,6 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 		return
 	}
 	if lfb.Hash == plfb.Hash {
-		println("F.R. HASH == P. HASH", lfb.Round, plfb.Round)
 		return
 	}
 	if lfb.Round <= plfb.Round {
