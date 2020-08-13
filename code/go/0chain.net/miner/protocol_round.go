@@ -103,12 +103,9 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 		case <-ctx.Done():
 		}
 		if mc.isAheadOfSharders(ctx, rn) {
-			println("CAN'T MOVE ON (StartNextRound)")
 			return nil // can't move on, still is far ahead of sharders
 		}
 	}
-
-	println("START NEXT ROUND", rn+1)
 
 	pr := mc.GetMinerRound(rn - 1)
 	if pr != nil {
@@ -225,11 +222,9 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 		if mc.isAheadOfSharders(ctx, rn) {
 			Logger.Debug("start new round: can't move on, still is far ahead",
 				zap.Int64("round", rn))
-			println("CAN'T MVOE ON IN startNewRound")
 			return // can't move on, still is far ahead of sharders
 		}
 	}
-	println("START NEW ROUND:", rn)
 
 	//NOTE: If there are not enough txns, this will not advance further even though rest of the network is. That's why this is a goroutine
 	go mc.GenerateRoundBlock(ctx, mr)

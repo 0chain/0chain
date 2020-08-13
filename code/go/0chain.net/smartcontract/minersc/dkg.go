@@ -618,7 +618,6 @@ func (msc *MinerSmartContract) CreateMagicBlock(balances cstate.StateContextI,
 	magicBlock.K = dkgMinersList.K
 	magicBlock.N = dkgMinersList.N
 	for _, v := range dkgMinersList.SimpleNodes {
-		println("CMB M", v.ID)
 		n := &node.Node{}
 		n.ID = v.ID
 		n.N2NHost = v.N2NHost
@@ -634,7 +633,6 @@ func (msc *MinerSmartContract) CreateMagicBlock(balances cstate.StateContextI,
 	prevMagicBlock := balances.GetLastestFinalizedMagicBlock()
 
 	for _, v := range sharderList.Nodes {
-		println("CMB S", v.ID)
 		n := &node.Node{}
 		n.ID = v.ID
 		n.N2NHost = v.N2NHost

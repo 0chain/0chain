@@ -106,9 +106,7 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 					b = mc.AddRoundBlock(mr, b)
 				}
 
-				if !mc.checkBlockNotarization(ctx, mr, b) {
-					println("HERE IS FALSE FOR", mr.GetRoundNumber(), b.Round)
-				}
+				mc.checkBlockNotarization(ctx, mr, b)
 				return
 			}
 		}
@@ -232,7 +230,6 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMess
 				// we have to make sure, the ticket set before the
 				// startRound
 				for mc.isAheadOfSharders(ctx, mb.Round) {
-					println("KICK MINER BY MINER JOINING VC")
 					mc.AddReceivedLFBTicket(ctx, &chain.LFBTicket{
 						Round: mb.Round,
 					})

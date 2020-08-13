@@ -75,7 +75,6 @@ func NotarizedBlockKickHandler(ctx context.Context, entity datastore.Entity) (in
 	if b.Round <= lfb.Round {
 		return true, nil // doesn't need a not. block for the round
 	}
-	println("KICK HANDLER: SEND TO BLOCK CHANNEL", b.Round)
 	sc.GetBlockChannel() <- b // even if we have the block
 	return true, nil
 }

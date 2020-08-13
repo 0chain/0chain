@@ -1,7 +1,7 @@
 version: 1.0
 
 logging:
-  level: "debug"
+  level: "info"
   console: false # printing log to console is only supported in development mode
   goroutines: false
   memlog: false
@@ -9,7 +9,7 @@ logging:
 development:
   state: true
   dkg: true
-  view_change: false
+  view_change: true
   smart_contract:
     storage: true
     faucet: true
@@ -102,7 +102,7 @@ server_chain:
       batch_size: 50
   lfb_ticket:
     rebroadcast_timeout: '15s'  #
-    ahead: 5                    #
+    ahead: 10                   #
     fb_fetching_lifetime: '10s' #
 
 network:

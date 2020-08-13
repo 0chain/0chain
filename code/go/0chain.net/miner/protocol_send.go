@@ -44,7 +44,6 @@ func (mc *Chain) ForcePushNotarizedBlock(ctx context.Context, b *block.Block) {
 	if mc.BlocksToSharder == chain.NOTARIZED {
 		mb := mc.GetMagicBlock(b.Round)
 		m2s := mb.Sharders
-		println("FORCE PUSH NB {}")
 		m2s.SendAll(NotarizedBlockForcePushSender(b))
 	}
 }

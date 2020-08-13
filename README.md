@@ -415,30 +415,34 @@ Directories tree should be:
 blobber/
 zboxcli/
 zwalletcli/
-blockWorker/
+0dns/
 ```
 
 Otherwise, it requires corrections in tests, configurations, tests scripts and
 following steps.
 
-##### Prepare block worker.
+##### Prepare 0dns.
 
-The blockWorker should be patched. Go to the blockWorker directory and
-apply patch provided in the 0chain repository. Make sure your haven't changes
-you haven't commit yet in the blockWorker repository. Since, you can loose the
-changes.
+The 0dns should be patched. Go to the 0dns directory and apply patch provided in
+the 0chain repository. Make sure your haven't changes you haven't commit yet in
+the 0dns repository. Otherwise, you can loose the changes.
 
 ```
-git apply --check ../0chain/docker.local/bin/conductor/block-worker-local.patch # check first
-git apply ../0chain/docker.local/bin/conductor/block-worker-local.patch # and apply
+git apply --check ../0chain/docker.local/bin/conductor/0dns-local.patch # check first
+git apply ../0chain/docker.local/bin/conductor/0dns-local.patch         # and apply
 ```
 
-To revert blockWorker repository to its latest commit state use
+To revert 0dns repository to its latest commit state use
 ```
 git reset --hard
 git clean -f
 ```
 That removes all changes and all new files.
+
+The path appends:
+
+- command to clean without 'sudo' being a member of docker group
+- command to start as not a daemon
 
 ##### Prepare blobbers.
 
@@ -448,8 +452,8 @@ approach to revert it.
 
 ##### Build all.
 
-Build blockWorker, zbox and zwallet as usual. Blobbers will be build
-automatically but after tests don't forget to rebuild them as usual.
+Initialize and build 0dns. Build zbox and zwallet as usual. Blobbers will be
+build automatically but after tests don't forget to rebuild them as usual.
 
 ##### Start tests.
 
