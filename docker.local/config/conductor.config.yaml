@@ -11,8 +11,8 @@ logs: "conductor/logs"
 cleanup_command: ./docker.local/bin/docker-clean.sh
 # number of rounds per view change
 view_change: 250 # 100
-# skip blobbers and block worker from initialization message waiting
-skip_wait: ['block worker']
+# skip 0dns from initialization message waiting
+skip_wait: ['0dns']
 
 #
 # nodes used in tests
@@ -68,7 +68,7 @@ nodes:
     env: MINER=5
     start_command: "docker-compose -p miner5 -f ../build.miner/b0docker-compose.yml up"
 
-  # blobbers
+  # blobbers (patched version)
   - name: "blobber 1"
     id: f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
     work_dir: "../blobber/docker.local/blobber1"
@@ -87,12 +87,12 @@ nodes:
     env: BLOBBER=3
     start_command: "docker-compose -p blobber3 -f ../b0docker-compose.yml up"
 
-  # block worker (patched version, add start_local.sh, local MB, not demonized)
-  - name: "block worker"                                            #
-    id: "block worker"                                              # no real ID
-    work_dir: "../blockWorker/"                                     #
-    env: ""                                                         # no ENV needed
-    start_command: "../blockWorker/docker.local/bin/start_local.sh" # not demonized instance
+  # 0dns (patched version, add docker-clean, start-no-daemon.sh)
+  - name: "0dns"                                                 #
+    id: "0dns"                                                   # no real ID used
+    work_dir: "../0dns/"                                         #
+    env: ""                                                      # no ENV needed
+    start_command: "../0dns/docker.local/bin/start-no-daemon.sh" # not demonized instance
 
 # named system commands
 commands:
@@ -100,9 +100,9 @@ commands:
     work_dir: "../blobber"
     exec: "../blobber/docker.local/bin/docker-clean.sh"
     can_fail: true
-  cleanup_block_worker:
-    work_dir: "../blockWorker"
-    exec: "../blockWorker/docker.local/bin/docker-clean.sh"
+  cleanup_0dns:
+    work_dir: "../0dns"
+    exec: "../0dns/docker.local/bin/docker-clean.sh"
     can_fail: true
   build_test_blobbers:
      work_dir: "../blobber"
@@ -113,7 +113,7 @@ commands:
   sleep_20s:
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/sleep_20s.sh"
-  sleep_1m:
+  sleep_1m: # it sleeps a hour in reality, used for debugging tests
     work_dir: "../"
     exec: "sh -x 0chain/docker.local/bin/conductor/sleep_1m.sh"
   list:

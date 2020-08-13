@@ -25,12 +25,12 @@ tests:
       - command:
           name: "cleanup_blobbers"
       - command:
-          name: "cleanup_block_worker"
+          name: "cleanup_0dns"
       - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3']
       - wait_round:
           round: 15 # just wait the BC starts
-      - start: ['block worker']
-      # wait the block worker starts
+      - start: ['0dns']
+      # wait the 0dns starts
       - command:
           name: "sleep_20s"
       - start: ['blobber 1', 'blobber 2']

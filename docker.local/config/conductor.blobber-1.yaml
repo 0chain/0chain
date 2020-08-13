@@ -29,12 +29,12 @@ tests:
       - command:
           name: "cleanup_blobbers"
       - command:
-          name: "cleanup_block_worker"
+          name: "cleanup_0dns"
       - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3']
       - wait_round:
           round: 15 # just wait the BC starts
-      - start: ['block worker']
-      # wait the block worker starts
+      - start: ['0dns']
+      # wait the 0dns starts
       - command:
           name: "sleep_20s"
       - start: ['blobber 1', 'blobber 2', 'blobber 3']
@@ -64,7 +64,7 @@ tests:
       - set_monitor: "sharder 1"
       - cleanup_bc: {}
       - command:
-          name: "cleanup_block_worker"
+          name: "cleanup_0dns"
       - start_lock: ['sharder 2']
       - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3']
       - wait_phase:
@@ -82,13 +82,14 @@ tests:
             sharders: ['sharder 1', 'sharder 2']
       - verify_transaction:
           by: ['sharder 2']
-      - start: ['block worker']
+      - start: ['0dns']
       - command:
-          name: "sleep_20s" # wait the block worker starts
+          name: "sleep_20s" # wait the 0dns starts
+      # double and triple sleep may help for a weak hardware
       - command:
-          name: "sleep_20s" # wait the block worker starts
+          name: "sleep_20s" # wait the 0dns starts
       - command:
-          name: "sleep_20s" # wait the block worker starts
+          name: "sleep_20s" # wait the 0dns starts
       - command:
           name: 'unverified_transaction'
 
