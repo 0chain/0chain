@@ -66,19 +66,16 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 // NotarizedBlockKickHandler - handle the notarized block where the sharder is
 // behind miners and don't finalized latest few rounds for a reason.
 func NotarizedBlockKickHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-	println("KICK HANDLER")
 	sc := GetSharderChain()
 	b, ok := entity.(*block.Block)
 	if !ok {
-		println("KICK HANDLER: INVALID ENTITY")
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
 	var lfb = sc.GetLatestFinalizedBlock()
 	if b.Round <= lfb.Round {
-		println("KICK HANDLER: ROUND < LFB ROUND")
 		return true, nil // doesn't need a not. block for the round
 	}
-	println("KICK HANDLER: SEND TO BLOCK CHANNEL")
+	println("KICK HANDLER: SEND TO BLOCK CHANNEL", b.Round)
 	sc.GetBlockChannel() <- b // even if we have the block
 	return true, nil
 }

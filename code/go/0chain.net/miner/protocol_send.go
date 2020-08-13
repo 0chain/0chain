@@ -44,14 +44,8 @@ func (mc *Chain) ForcePushNotarizedBlock(ctx context.Context, b *block.Block) {
 	if mc.BlocksToSharder == chain.NOTARIZED {
 		mb := mc.GetMagicBlock(b.Round)
 		m2s := mb.Sharders
-		if m2s.Size() == 0 {
-			println("NO SHARDERS?")
-		}
-		println("FORCE PUSH NB {")
+		println("FORCE PUSH NB {}")
 		m2s.SendAll(NotarizedBlockForcePushSender(b))
-		println("FORCE PUSH NB }")
-	} else {
-		println("IMPOSSIBLE CASE")
 	}
 }
 

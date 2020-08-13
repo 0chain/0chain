@@ -108,6 +108,8 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 		}
 	}
 
+	println("START NEXT ROUND", rn+1)
+
 	pr := mc.GetMinerRound(rn - 1)
 	if pr != nil {
 		mc.CancelRoundVerification(ctx, pr)
@@ -227,6 +229,7 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 			return // can't move on, still is far ahead of sharders
 		}
 	}
+	println("START NEW ROUND:", rn)
 
 	//NOTE: If there are not enough txns, this will not advance further even though rest of the network is. That's why this is a goroutine
 	go mc.GenerateRoundBlock(ctx, mr)
@@ -627,7 +630,8 @@ func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.B
 
 func (mc *Chain) checkBlockNotarization(ctx context.Context, r *Round, b *block.Block) bool {
 	if !b.IsBlockNotarized() {
-		Logger.Info("checkBlockNotarization --block is not Notarized. Returning", zap.Int64("round", b.Round))
+		Logger.Info("checkBlockNotarization -- block is not Notarized. Returning",
+			zap.Int64("round", b.Round))
 		return false
 	}
 	if !mc.AddNotarizedBlock(ctx, r, b) {
@@ -1097,7 +1101,7 @@ func (mc *Chain) restartRound(ctx context.Context) {
 		// kick new round from the new LFB from sharders, if it's newer
 		// then the current one
 		var lfb = mc.GetLatestFinalizedBlock()
-		if lfb.Round > r.GetRoundNumber() {
+		if lfb.Round > rn {
 			mc.kickRoundByLFB(ctx, lfb)
 			return
 		}

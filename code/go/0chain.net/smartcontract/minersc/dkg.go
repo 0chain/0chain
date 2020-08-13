@@ -299,7 +299,8 @@ func (msc *MinerSmartContract) reduceShardersList(keep, all *MinerNodes,
 
 	// get max staked
 	sort.Slice(list, func(i, j int) bool {
-		return list[i].TotalStaked > list[j].TotalStaked
+		return list[i].TotalStaked > list[j].TotalStaked ||
+			list[i].ID < list[j].ID
 	})
 
 	list = list[:gn.MaxS]
@@ -409,6 +410,7 @@ func (msc *MinerSmartContract) createMagicBlockForWait(balances cstate.StateCont
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -616,6 +618,7 @@ func (msc *MinerSmartContract) CreateMagicBlock(balances cstate.StateContextI,
 	magicBlock.K = dkgMinersList.K
 	magicBlock.N = dkgMinersList.N
 	for _, v := range dkgMinersList.SimpleNodes {
+		println("CMB M", v.ID)
 		n := &node.Node{}
 		n.ID = v.ID
 		n.N2NHost = v.N2NHost
@@ -631,6 +634,7 @@ func (msc *MinerSmartContract) CreateMagicBlock(balances cstate.StateContextI,
 	prevMagicBlock := balances.GetLastestFinalizedMagicBlock()
 
 	for _, v := range sharderList.Nodes {
+		println("CMB S", v.ID)
 		n := &node.Node{}
 		n.ID = v.ID
 		n.N2NHost = v.N2NHost

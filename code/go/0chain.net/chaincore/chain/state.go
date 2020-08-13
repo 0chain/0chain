@@ -272,7 +272,10 @@ func (c *Chain) updateState(b *block.Block, txn *transaction.Transaction) error 
 			return err
 		}
 		txn.TransactionOutput = output
-		Logger.Info("SC executed with output", zap.Any("txn_output", txn.TransactionOutput), zap.Any("txn_hash", txn.Hash))
+		Logger.Info("SC executed with output",
+			zap.Any("txn_output", txn.TransactionOutput),
+			zap.Any("txn_hash", txn.Hash))
+		//
 	case transaction.TxnTypeData:
 	case transaction.TxnTypeSend:
 		if err := sctx.AddTransfer(state.NewTransfer(txn.ClientID, txn.ToClientID, state.Balance(txn.Value))); err != nil {

@@ -206,6 +206,9 @@ func (r *Round) SetRandomSeed(seed int64) {
 	if atomic.LoadUint32(&r.hasRandomSeed) == 1 {
 		return
 	}
+	if seed == 0 {
+		println("SET RANDOM SED TO 0 FROM", r.RandomSeed, ":::::::::::::::::::")
+	}
 	r.setRandomSeed(seed)
 	r.setState(RoundVRFComplete)
 	r.setHasRandomSeed(true)

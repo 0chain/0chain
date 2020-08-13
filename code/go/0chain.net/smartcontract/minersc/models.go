@@ -682,7 +682,8 @@ func (dkgmn *DKGMinerNodes) reduce(n int) int {
 		list = append(list, node)
 	}
 	sort.Slice(list, func(i, j int) bool {
-		return list[i].TotalStaked > list[j].TotalStaked
+		return list[i].TotalStaked > list[j].TotalStaked ||
+			list[i].ID < list[j].ID
 	})
 	list = list[:n]
 	dkgmn.SimpleNodes = make(SimpleNodes)
