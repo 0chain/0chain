@@ -68,7 +68,7 @@ tests:
       - start: ['sharder 1']
       - start: ["sharder 2"]
       - start: ['miner 1', 'miner 2', 'miner 3']
-      - wait_shrder_keep:
+      - wait_sharder_keep:
           timeout: '5m'
           sharders: ['sharder 2']
       - wait_view_change:
