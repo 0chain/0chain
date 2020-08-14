@@ -455,6 +455,28 @@ approach to revert it.
 Initialize and build 0dns. Build zbox and zwallet as usual. Blobbers will be
 build automatically but after tests don't forget to rebuild them as usual.
 
+##### Configure zbox/zwallet
+
+Set `~/.zcn/config.yaml` to
+```
+---
+block_worker: http://127.0.0.1:9091
+signature_scheme: bls0chain
+min_submit: 50
+min_confirmation: 50
+confirmation_chain_length: 3
+max_txn_query: 5
+query_sleep_time: 5
+```
+
+If blobber tests fails with error
+`Transaction was not found on any of the sharders` then increase these values:
+```yaml
+max_txn_query: 5
+query_sleep_time: 5
+```
+Defaults are 5 and 5.
+
 ##### Start tests.
 
 Test blobbers. Note: the tests requires cleaning up blobbers and the blockWorker
