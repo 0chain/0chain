@@ -477,6 +477,17 @@ query_sleep_time: 5
 ```
 Defaults are 5 and 5.
 
+##### Setup system
+
+For Ubuntu 18.04. Follow this instruction to avoid some bugs in docker builds:
+
+- https://github.com/docker/for-linux/issues/563#issuecomment-547962928
+
+The bug in Ubuntu 18.04 related. It relates to docker-credential-secretservice
+package required by docker-compose and used by docker. A docker process
+(a build, for example) can sometimes fails due to the bug. Some tests have
+internal docker builds and can fail due to this bug.
+
 ##### Start tests.
 
 Test blobbers. Note: the tests requires cleaning up blobbers and the blockWorker
