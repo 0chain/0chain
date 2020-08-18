@@ -364,7 +364,7 @@ func getCurrentMagicBlock(sc *sharder.Chain) error {
 		return nil
 	}
 
-	var err = sc.MustVerifyChainHistory(common.GetRootContext(), magicBlock,
+	var err = sc.VerifyChainHistory(common.GetRootContext(), magicBlock,
 		sc.SaveMagicBlockHandler)
 	if err != nil {
 		return fmt.Errorf("failed to verify chain history: %v", err.Error())
@@ -417,6 +417,7 @@ func initN2NHandlers() {
 	chain.SetupX2SRequestors()
 	sharder.SetupS2SRequestors()
 	sharder.SetupS2SResponders()
+	sharder.SetupX2SResponders()
 }
 
 func initWorkers(ctx context.Context) {

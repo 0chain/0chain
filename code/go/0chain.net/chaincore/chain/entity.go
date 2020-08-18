@@ -1129,7 +1129,9 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 	Logger.Info("update magic block", zap.Any("old block", mb), zap.Any("new block", newMagicBlock))
 
 	if mb != nil && mb.Hash == newMagicBlock.PreviousMagicBlockHash {
-		Logger.Info("update magic block -- hashes don't match ", zap.Any("latest finalized magic block previous magic block hash", mb.Hash), zap.Any("new magic block previous hash", newMagicBlock.PreviousMagicBlockHash))
+		Logger.Info("update magic block -- hashes match ",
+			zap.Any("LFMB previous MB hash", mb.Hash),
+			zap.Any("new MB previous MB hash", newMagicBlock.PreviousMagicBlockHash))
 		c.PreviousMagicBlock = mb
 	}
 
@@ -1281,4 +1283,28 @@ func (c *Chain) SetLatestDeterministicBlock(b *block.Block) {
 	if lfb == nil || b.Round >= lfb.Round {
 		c.LatestDeterministicBlock = b
 	}
+}
+
+func (c *Chain) VerifyBlockLFMB(b *block.Block) (err error) {
+
+	// with no magic block, based on the latest one
+	var lfmb = c.GetLatestFinalizedMagicBlock()
+	if b.LatestFinalizedMagicBlockRound < lfmb.StartingRound {
+		println("UNEXPECTED LFMB ROUND:",
+			"GOT", b.LatestFinalizedMagicBlockRound,
+			"WANT", lfmb.StartingRound,
+			"BLOCK ROUND", b.Round,
+		)
+		return common.NewError("verify_block_lfmb",
+			"unexpected LFMB round")
+	}
+	// if b.LatestFinalizedMagicBlockHash != lfmb.Hash {
+	// 	println("UNEXPECTED LFMB HASH:",
+	// 		"WANT", lfmb.Hash,
+	// 		"GOT", b.LatestFinalizedMagicBlockHash)
+	// 	return common.NewError("verify_block_lfmb",
+	// 		"unexpected LFMB hash")
+	// }
+
+	return // ok
 }

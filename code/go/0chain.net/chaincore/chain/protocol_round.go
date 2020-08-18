@@ -139,7 +139,9 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 	c.NotariedBlocksCounts[nbCount]++
 	//This check is useful when we allow the finalizeRound route is not sequential and end up with out-of-band execution
 	if r.GetRoundNumber() <= plfb.Round {
-		Logger.Error("finalize round - round number <= latest finalized round", zap.Int64("round", r.GetRoundNumber()), zap.Int64("lf_round", plfb.Round))
+		Logger.Error("finalize round - round number <= latest finalized round",
+			zap.Int64("round", r.GetRoundNumber()),
+			zap.Int64("lf_round", plfb.Round))
 		return
 	}
 	lfb := c.ComputeFinalizedBlock(ctx, r)
@@ -257,6 +259,8 @@ func (c *Chain) GetHeaviestNotarizedBlock(r round.RoundI) *block.Block {
 func (c *Chain) GetLatestFinalizedMagicBlockFromSharder(ctx context.Context) []*block.Block {
 	mb := c.GetCurrentMagicBlock()
 	n2s := mb.Sharders
+
+	println("GetLatestFinalizedMagicBlockFromSharder:", fmt.Sprint(n2s.N2NURLs()))
 
 	finalizedMagicBlocks := make([]*block.Block, 0, 1)
 	fmbMutex := &sync.Mutex{}

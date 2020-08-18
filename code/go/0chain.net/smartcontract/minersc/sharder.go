@@ -189,7 +189,8 @@ func (msc *MinerSmartContract) sharderKeep(t *transaction.Transaction,
 	sharderKeepList, err := msc.getShardersList(balances, ShardersKeepKey)
 	if err != nil {
 		Logger.Error("Error in getting list from the DB", zap.Error(err))
-		return "", errors.New("sharder_keep_failed - Failed to get miner list" + err.Error())
+		return "", common.NewErrorf("sharder_keep_failed",
+			"Failed to get miner list: %v", err)
 	}
 	msc.verifySharderState(balances, ShardersKeepKey, "Checking sharderKeepList in the beginning")
 
@@ -215,7 +216,8 @@ func (msc *MinerSmartContract) sharderKeep(t *transaction.Transaction,
 	allShardersList, err := msc.getShardersList(balances, AllShardersKey)
 	if err != nil {
 		Logger.Error("Error in getting list from the DB", zap.Error(err))
-		return "", errors.New("sharder_keep_failed - Failed to get miner list" + err.Error())
+		return "", common.NewErrorf("sharder_keep_failed",
+			"Failed to get miner list: %v", err)
 	}
 	if allShardersList.FindNodeById(newSharder.ID) == nil {
 		return "", common.NewErrorf("failed to add sharder", "unknown sharder: %v", newSharder.ID)

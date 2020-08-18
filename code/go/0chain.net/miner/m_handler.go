@@ -277,9 +277,13 @@ func NotarizedBlockSendHandler(ctx context.Context, r *http.Request) (interface{
 func BlockStateChangeHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	b, err := getNotarizedBlock(ctx, r)
 	if err != nil {
+		println("BlockStateChangeHandler (ERR) NO NOT. BLOCK",
+			r.FormValue("round"), r.FormValue("block"))
 		return nil, err
 	}
 	if b.GetStateStatus() != block.StateSuccessful {
+		println("BlockStateChangeHandler (ERR) State is not computed and validated locally",
+			r.FormValue("round"), r.FormValue("block"), b.GetStateStatus())
 		return nil, common.NewError("state_not_verified", "State is not computed and validated locally")
 	}
 	bsc := block.NewBlockStateChange(b)

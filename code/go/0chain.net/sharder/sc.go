@@ -1,9 +1,11 @@
 package sharder
 
 import (
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/smartcontract"
-	. "0chain.net/core/logging"
 	"0chain.net/smartcontract/minersc"
+
+	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -13,6 +15,9 @@ func SetupMinerSmartContract(serverChain *Chain) {
 	scs := smartcontract.GetSmartContract(minersc.ADDRESS)
 	setterCallback := scs.(interface{ SetCallbackPhase(func(int)) })
 	setterCallback.SetCallbackPhase(func(phase int) {
+		if !config.DevConfiguration.ViewChange {
+			return // no view change, no sharder keep
+		}
 		if phase == minersc.Contribute {
 			go registerSharderKeepOnContributeInCallback(serverChain)
 		}

@@ -286,24 +286,26 @@ func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
 	}
 	n2n := mb.Miners
 	n2n.RequestEntity(ctx, MinerNotarizedBlockRequestor, params, handler)
-	if b == nil {
-		// try to get the block from sharder, if it's finalized and pushed
-		// to the sharders
-		var err error
-		b, err = c.GetFinalizedBlockFromSharders(ctx, blockHash)
-		if err != nil {
-			Logger.Info("unable to fetch notarized->finalized block from sharders",
-				zap.String("block", blockHash), zap.Error(err))
-			return nil
-		}
+	// if b == nil {
+	// 	// try to get the block from sharder, if it's finalized and pushed
+	// 	// to the sharders; omit round number (it's unknown) using optimistic
+	// 	// request
+	// 	var err error
+	// 	b, err = c.GetFinalizedBlockFromSharders(ctx,
+	// 		&LFBTicket{LFBHash: blockHash})
+	// 	if err != nil {
+	// 		Logger.Info("unable to fetch notarized->finalized block from sharders",
+	// 			zap.String("block", blockHash), zap.Error(err))
+	// 		return nil
+	// 	}
 
-		if _, err = handler(ctx, b); err != nil {
-			Logger.Info("unable to handle notarized->finalized block from sharders",
-				zap.String("block", blockHash), zap.Error(err))
-			return nil
-		}
+	// 	if _, err = handler(ctx, b); err != nil {
+	// 		Logger.Info("unable to handle notarized->finalized block from sharders",
+	// 			zap.String("block", blockHash), zap.Error(err))
+	// 		return nil
+	// 	}
 
-	}
+	// }
 	return b
 }
 

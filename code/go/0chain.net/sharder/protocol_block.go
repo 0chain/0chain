@@ -87,27 +87,19 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 }
 
 func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
-	// moved down
-	// {
-	if b.MagicBlock != nil { // <-------------------- <-------------------------
-		sc.UpdateMagicBlock(b.MagicBlock)          // <-------------------------
-		sc.UpdateNodesFromMagicBlock(b.MagicBlock) // <-------------------------
-	} // <------------------------------------------- <-------------------------
-	// }
-
-	er := sc.GetRound(b.Round)
-	if er == nil {
-		var r = round.NewRound(b.Round)
-		er, _ = sc.AddRound(r).(*round.Round)
-		sc.SetRandomSeed(er, b.GetRoundRandomSeed())
-	}
-
 	// injected here
 	// {
 	// if er.IsFinalizing() || er.IsFinalized() { // <--------------------------
 	// 	return // <-------------------------------------------------------------
 	// } // <-------------------------------------------------------------------
 	// }
+
+	er := sc.GetRound(b.Round)
+	if er == nil {
+		var r = round.NewRound(b.Round)
+		er, _ = sc.AddRound(r).(*round.Round)
+		sc.SetRandomSeed(er, b.GetRoundRandomSeed()) // incorrect round seed ?
+	}
 
 	if err := sc.VerifyNotarization(ctx, b.Hash, b.GetVerificationTickets(), er.GetRoundNumber()); err != nil {
 		Logger.Error("notarization verification failed", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
@@ -117,6 +109,28 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 		Logger.Error("block validation", zap.Any("round", b.Round), zap.Any("hash", b.Hash), zap.Error(err))
 		return
 	}
+
+	// make sure LFMB hash and round are correct
+	if err := sc.VerifyBlockLFMB(b); err != nil {
+		Logger.Error("block LFMB verification", zap.Error(err))
+		return
+	}
+
+	// get related magic block
+	var lfmb = sc.GetLatestFinalizedMagicBlock()
+	if b.LatestFinalizedMagicBlockHash != lfmb.Hash {
+		println("GET MISSING MB")
+		sc.AsyncFetchNotarizedBlock(b.LatestFinalizedMagicBlockHash)
+	}
+
+	// moved down
+	// {
+	if b.MagicBlock != nil { // <-------------------- <-------------------------
+		println("RECEIVE BLOCK WITH MAGIC BLOCK:", b.Round)
+		sc.UpdateMagicBlock(b.MagicBlock)          // <-------------------------
+		sc.UpdateNodesFromMagicBlock(b.MagicBlock) // <-------------------------
+	} // <------------------------------------------- <-------------------------
+	// }
 
 	// moved here
 	// {
@@ -553,5 +567,5 @@ func (sc *Chain) storeBlockTransactions(ctx context.Context, b *block.Block) err
 
 // NotarizedBlockFetched -
 func (sc *Chain) NotarizedBlockFetched(ctx context.Context, b *block.Block) {
-
+	sc.processBlock(ctx, b)
 }

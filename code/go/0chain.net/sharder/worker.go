@@ -7,6 +7,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/round"
 	"0chain.net/sharder/blockstore"
 
@@ -186,6 +187,11 @@ func (sc *Chain) isPhaseContibute(ctx context.Context) (is bool) {
 }
 
 func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
+
+	if !config.DevConfiguration.ViewChange {
+		return // don't send sharder_keep if view_change is false
+	}
+
 	timerCheck := time.NewTicker(time.Minute)
 	for {
 		select {

@@ -139,7 +139,8 @@ func (c *Chain) FinalizedBlockWorker(ctx context.Context, bsh BlockStateHandler)
 		case fb := <-c.finalizedBlocksChannel:
 			lfb := c.GetLatestFinalizedBlock()
 			if fb.Round < lfb.Round-5 {
-				Logger.Error("slow finalized block processing", zap.Int64("lfb", lfb.Round), zap.Int64("fb", fb.Round))
+				Logger.Error("slow finalized block processing",
+					zap.Int64("lfb", lfb.Round), zap.Int64("fb", fb.Round))
 			}
 
 			// TODO/TOTHINK: move the repair chain outside the finalized worker?
@@ -148,13 +149,13 @@ func (c *Chain) FinalizedBlockWorker(ctx context.Context, bsh BlockStateHandler)
 			// a magic block; we already have verified and valid MB chain at this
 			// moment, let's keep it updated and verified too
 
-			// if fb.MagicBlock != nil /*&& node.Self.Type == node.NodeTypeSharder*/ {
-			// 	var err = c.repairChain(ctx, fb, bsh.SaveMagicBlock())
-			// 	if err != nil {
-			// 		Logger.Error("repairing mb chain", zap.Error(err))
-			// 		return
-			// 	}
-			// }
+			if fb.MagicBlock != nil && node.Self.Type == node.NodeTypeSharder {
+				var err = c.repairChain(ctx, fb, bsh.SaveMagicBlock())
+				if err != nil {
+					Logger.Error("repairing MB chain", zap.Error(err))
+					return
+				}
+			}
 
 			// finalize
 
@@ -218,6 +219,7 @@ type MagicBlockSaveFunc func(context.Context, *block.Block) error
 func (c *Chain) VerifyChainHistory(ctx context.Context,
 	latestMagicBlock *block.Block, saveHandler MagicBlockSaveFunc) (err error) {
 	mb := c.GetCurrentMagicBlock()
+
 	var (
 		currentMagicBlock = c.GetLatestFinalizedMagicBlock()
 		sharders          = mb.Sharders.N2NURLs()
@@ -226,6 +228,8 @@ func (c *Chain) VerifyChainHistory(ctx context.Context,
 
 	// until we have got all MB from our from store to latest given
 	for currentMagicBlock.Hash != latestMagicBlock.Hash {
+		Logger.Debug("verify_chain_history",
+			zap.Int64("get_mb_number", currentMagicBlock.MagicBlockNumber+1))
 
 		magicBlock, err = httpclientutil.GetMagicBlockCall(sharders,
 			currentMagicBlock.MagicBlockNumber+1, 1)
@@ -243,7 +247,8 @@ func (c *Chain) VerifyChainHistory(ctx context.Context,
 		}
 
 		Logger.Info("verify chain history",
-			zap.Any("magicBlock_block", magicBlock))
+			zap.Any("mb_sr", magicBlock.StartingRound),
+			zap.Any("mb_hash", magicBlock.Hash))
 
 		if err = c.UpdateMagicBlock(magicBlock.MagicBlock); err != nil {
 			return common.NewError("get_lfmb_from_sharders",
@@ -269,15 +274,15 @@ func (c *Chain) VerifyChainHistory(ctx context.Context,
 	return
 }
 
-// MustVerifyChainHistory panics on error.
-func (c *Chain) MustVerifyChainHistory(ctx context.Context,
-	latestMagicBlock *block.Block, saveHandler MagicBlockSaveFunc) error {
-	err := c.VerifyChainHistory(ctx, latestMagicBlock, saveHandler)
-	if err != nil {
-		return common.NewErrorf("verify_chain_history", err.Error())
-	}
-	return nil
-}
+// // MustVerifyChainHistory panics on error.
+// func (c *Chain) MustVerifyChainHistory(ctx context.Context,
+// 	latestMagicBlock *block.Block, saveHandler MagicBlockSaveFunc) error {
+// 	err := c.VerifyChainHistory(ctx, latestMagicBlock, saveHandler)
+// 	if err != nil {
+// 		return common.NewErrorf("verify_chain_history", err.Error())
+// 	}
+// 	return nil
+// }
 
 // PruneStorageWorker pruning storage
 func (c *Chain) PruneStorageWorker(ctx context.Context, d time.Duration,

@@ -107,6 +107,7 @@ func main() {
 	}
 	gb := mc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"), magicBlock)
 	mb := mc.GetLatestMagicBlock()
+	println("LATEST MB ON LOAD:", mb.StartingRound)
 	Logger.Info("Miners in main", zap.Int("size", mb.Miners.Size()))
 
 	if !mb.IsActiveNode(node.Self.Underlying().GetKey(), 0) {
@@ -177,10 +178,15 @@ func main() {
 	if err := mc.WaitForActiveSharders(ctx); err != nil {
 		Logger.Error("failed to wait sharders", zap.Error(err))
 	}
+	{
+		cmb := mc.GetCurrentMagicBlock()
+		println("CURRENT MB BEFORE SHARDERS REQUESTING:", cmb.StartingRound)
+	}
 	if err := getCurrentMagicBlockFromSharders(mc); err != nil {
 		Logger.Panic(err.Error())
 	}
 	mb = mc.GetLatestMagicBlock()
+	println("MINER MAIN: GET LATEST MB AFTER MB FROM SHARDERS GETTING:", mb.StartingRound, mb.MagicBlockNumber, mb.Hash)
 	if mb.StartingRound == 0 && mb.IsActiveNode(node.Self.Underlying().GetKey(), mb.StartingRound) {
 		dkgShare := &bls.DKGSummary{
 			SecretShares: make(map[string]string),
@@ -207,6 +213,7 @@ func main() {
 	activeMiner := mb.Miners.HasNode(node.Self.Underlying().GetKey())
 	if activeMiner {
 		mb = mc.GetLatestMagicBlock()
+		println("MINER MAIN: GET LATEST MB AFTER MB FROM SHARDERS GETTING:", mb.StartingRound, mb.MagicBlockNumber, mb.Hash, ":::::")
 		if err := miner.SetDKGFromMagicBlocksChainPrev(ctx, mb); err != nil {
 			Logger.Error("failed to set DKG", zap.Error(err))
 		} else {
@@ -313,13 +320,17 @@ func readMagicBlockFile(magicBlockFile *string, mc *miner.Chain, serverChain *ch
 	return mB
 }
 
-func getCurrentMagicBlockFromSharders(mc *miner.Chain) error {
+func getCurrentMagicBlockFromSharders(mc *miner.Chain) (err error) {
+	println("getCurrentMagicBlockFromSharders")
+
 	const limitAttempts = 10
+
 	var (
 		attempt      = 0
 		retryTimeout = time.Second * 5
 		mbs          []*block.Block
 	)
+
 	for len(mbs) == 0 {
 		mbs = mc.GetLatestFinalizedMagicBlockFromSharder(common.GetRootContext())
 		if len(mbs) == 0 {
@@ -332,23 +343,40 @@ func getCurrentMagicBlockFromSharders(mc *miner.Chain) error {
 			time.Sleep(retryTimeout)
 		}
 	}
-	if len(mbs) > 1 {
-		sort.Slice(mbs, func(i, j int) bool {
-			return mbs[i].StartingRound < mbs[j].StartingRound
-		})
+
+	// TODO (sfxdx) reversed soring?
+	sort.Slice(mbs, func(i, j int) bool {
+		return mbs[i].StartingRound < mbs[j].StartingRound
+	})
+
+	println("GOT MBS:")
+	for _, mb := range mbs {
+		println("- MB", mb.StartingRound, mb.StartingRound, mb.Hash)
 	}
+
 	var (
 		magicBlock = mbs[0]
 		cmb        = mc.GetCurrentMagicBlock()
 	)
-	if magicBlock.StartingRound <= cmb.StartingRound {
-		return nil // already set
+
+	switch {
+	case magicBlock.StartingRound < cmb.StartingRound:
+		// can't initialize this magic block
+		return // nil
+	case magicBlock.StartingRound == cmb.StartingRound:
+		// ok, initialize the magicBlock
+	default: // magicBlock > cmb.StartingRoound, verify chain
+		err = mc.VerifyChainHistory(common.GetRootContext(), magicBlock, nil)
+		if err != nil {
+			return
+		}
 	}
-	var err = mc.MustVerifyChainHistory(common.GetRootContext(), magicBlock,
-		nil)
-	if err != nil {
-		return err
-	}
+
+	// if magicBlock.StartingRound <= cmb.StartingRound {
+	// 	println("MB FROM SHARDERS SR <= CURRENT MB:", magicBlock.StartingRound, "<=", cmb.StartingRound)
+	// 	return nil // already set
+	// }
+
 	if err = mc.UpdateMagicBlock(magicBlock.MagicBlock); err != nil {
 		return fmt.Errorf("failed to update magic block: %v", err)
 	}

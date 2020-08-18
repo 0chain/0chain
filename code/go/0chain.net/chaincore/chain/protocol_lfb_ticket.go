@@ -146,7 +146,6 @@ func (*LFBTicket) Delete(context.Context) error              { return nil }
 
 // sendLFBTicket to all appropriate nodes (by corresponding MB)
 func (c *Chain) sendLFBTicket(ticket *LFBTicket) {
-
 	Logger.Debug("broadcast LFB ticket", zap.Int64("round", ticket.Round),
 		zap.String("hash", ticket.LFBHash))
 
@@ -276,7 +275,8 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 
 			if _, err := c.GetBlock(ctx, ticket.LFBHash); err != nil {
 				if node.Self.Type == node.NodeTypeSharder {
-					c.AsyncFetchFinalizedBlockFromSharders(ctx, ticket.LFBHash)
+					println("GOT TICKET, BUT NO BLOCK -> FETCH", ticket.Round)
+					c.AsyncFetchFinalizedBlockFromSharders(ctx, *ticket)
 				}
 				continue // if haven't the block, then don't update the latest
 			}
@@ -360,8 +360,6 @@ func (c *Chain) AddReceivedLFBTicket(ctx context.Context, ticket *LFBTicket) {
 func LFBTicketHandler(ctx context.Context, r *http.Request) (
 	resp interface{}, err error) {
 
-	Logger.Debug("handle LFB ticket", zap.String("sharder", r.RemoteAddr))
-
 	var dec = json.NewDecoder(r.Body)
 	defer r.Body.Close()
 
@@ -378,6 +376,9 @@ func LFBTicketHandler(ctx context.Context, r *http.Request) (
 			zap.Int64("round", ticket.Round))
 		return nil, common.NewError("lfb_ticket_handler", "can't verify")
 	}
+
+	Logger.Debug("handle LFB ticket", zap.String("sharder", r.RemoteAddr),
+		zap.Int64("round", ticket.Round))
 	chain.AddReceivedLFBTicket(ctx, &ticket)
 	return // (nil, nil)
 }

@@ -289,9 +289,13 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	ctx = memorystore.WithEntityConnection(ctx, txnEntityMetadata)
 	defer memorystore.Close(ctx)
 	b := block.NewBlock(mc.GetKey(), r.GetRoundNumber())
+	if r.GetRoundNumber() != r.Round.GetRoundNumber() {
+		println("::::::: NOT EQUAL :::::", r.GetRoundNumber(), r.Round.GetRoundNumber())
+	}
 	lfmb := mc.GetLatestFinalizedMagicBlockRound(ctx, r.Round)
 	b.LatestFinalizedMagicBlockHash = lfmb.Hash
 	b.LatestFinalizedMagicBlockRound = lfmb.Round
+	println("GENERATE BLOCK WITH MB", lfmb.StartingRound, lfmb.Round, b.Round, r.GetRoundNumber())
 
 	b.MinerID = node.Self.Underlying().GetKey()
 	mc.SetPreviousBlock(ctx, r, b, pb)
@@ -1029,19 +1033,23 @@ func (mc *Chain) recheckLast100Blocks(ctx context.Context) {
 	if cr == 0 {
 		return // zero round
 	}
+	println("(restartRound) recheckLast100Blocks", cr)
 	var pr = mc.GetMinerRound(cr - 1)
 	if pr == nil {
+		println("(restartRound) recheckLast100Blocks", cr, "NO PR")
 		Logger.Error("missing previous round for", zap.Int64("round", cr))
 		return
 	}
 	var b = pr.GetHeaviestNotarizedBlock()
 	if b == nil {
+		println("(restartRound) recheckLast100Blocks", cr, "NO HNB FOR BLOCK", cr-1)
 		Logger.Error("missing HNB for", zap.Int64("round", pr.GetRoundNumber()))
 		return
 	}
 	for i := 0; i < 100 && b.Round > 0; i++ {
 		mc.InitBlockState(b) // ignore error
 		if b.PrevBlock == nil {
+			println("(restartRound) recheckLast100Blocks", cr, "fetch", b.Round)
 			mc.AsyncFetchNotarizedPreviousBlock(b)
 			return // stop on first block can't find
 		}
@@ -1199,6 +1207,9 @@ func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
 	)
 	mr, _ = mc.AddRound(mr).(*Round)
 	mc.SetRandomSeed(mr, lfbs.GetRoundRandomSeed())
+	if lfbs.GetRoundRandomSeed() == 0 {
+		println("ENSURE LFB::  RANDOM SEED IS ZERO:", lfbs.Round)
+	}
 	mc.AddBlock(lfbs)
 	// retry 10 times to repair the state, then ignore the error
 	if err = mc.InitBlockState(lfbs); err != nil {
@@ -1214,6 +1225,7 @@ func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
 	// }
 	mc.SetLatestFinalizedBlock(ctx, lfbs)
 	if mc.GetCurrentRound() < mr.GetRoundNumber() {
+		println("START NEW ROUND IN THE ENSURE", mc.GetCurrentRound(), mr.GetRoundNumber())
 		mc.startNewRound(ctx, mr)
 	}
 
@@ -1264,7 +1276,7 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context) (
 		return
 	}
 
-	if err := mc.MustVerifyChainHistory(ctx, magicBlock, nil); err != nil {
+	if err := mc.VerifyChainHistory(ctx, magicBlock, nil); err != nil {
 		return false, err
 	}
 	if err := mc.UpdateMagicBlock(magicBlock.MagicBlock); err != nil {

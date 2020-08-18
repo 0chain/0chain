@@ -2,9 +2,14 @@ package chain
 
 import (
 	"context"
+	"net/url"
 	"sort"
+	"strconv"
 	"sync"
 	"time"
+
+	// DEBUG
+	"fmt"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/config"
@@ -20,8 +25,8 @@ import (
 // FinalizedBlockFromShardersGetter represents
 // FB fetcher. The Chain implements it.
 type FinalizedBlockFromShardersGetter interface {
-	GetFinalizedBlockFromSharders(context.Context, string) (*block.Block, error)
-	asyncFetchFinalizedBlock(context.Context, string, chan<- string)
+	GetFinalizedBlockFromSharders(context.Context, *LFBTicket) (*block.Block, error)
+	asyncFetchFinalizedBlock(context.Context, *LFBTicket, chan<- string)
 }
 
 // FBRequestor represents FB from sharders requestor.
@@ -34,13 +39,13 @@ func SetupFBRequestor() {
 		CODEC:    node.CODEC_MSGPACK,
 		Compress: true,
 	}
-	FBRequestor = node.RequestEntityHandler("/v1/block/get", &options,
+	FBRequestor = node.RequestEntityHandler("/v1/_x2s/block/get", &options,
 		datastore.GetEntityMetadata("block"))
 }
 
 // FinalizedBlockFetcher fetches a FB from sharders.
 type FinalizedBlockFetcher struct {
-	add    chan string
+	add    chan LFBTicket
 	got    chan string
 	fetch  chan string
 	getter FinalizedBlockFromShardersGetter
@@ -50,7 +55,7 @@ func NewFinalizedBlockFetcher(chain FinalizedBlockFromShardersGetter) (
 	fbf *FinalizedBlockFetcher) {
 
 	fbf = new(FinalizedBlockFetcher)
-	fbf.add = make(chan string, 100)
+	fbf.add = make(chan LFBTicket, 100)
 	fbf.got = make(chan string, 100)
 	fbf.fetch = make(chan string, 100)
 	fbf.getter = chain
@@ -60,10 +65,11 @@ func NewFinalizedBlockFetcher(chain FinalizedBlockFromShardersGetter) (
 // AsyncFetchFinalizedBlockFromSharders fetches a FB from all sharders from
 // current MB.
 func (fbf *FinalizedBlockFetcher) AsyncFetchFinalizedBlockFromSharders(
-	ctx context.Context, hash string) {
+	ctx context.Context, ticket LFBTicket) {
 
 	select {
-	case fbf.add <- hash:
+	case fbf.add <- ticket:
+		println("SENT TO FETCH FROM FB SHARDERS:", ticket.LFBHash)
 	case <-ctx.Done():
 	}
 }
@@ -90,13 +96,13 @@ func (fbf *FinalizedBlockFetcher) StartFinalizedBlockFetcherWorker(
 			delete(fetching, hash)
 
 		// fetch new FB
-		case hash := <-fbf.add:
+		case ticket := <-fbf.add:
 			now = time.Now()
-			if tp, ok := fetching[hash]; ok && now.Sub(tp) < lt {
+			if tp, ok := fetching[ticket.LFBHash]; ok && now.Sub(tp) < lt {
 				continue // fetching
 			}
-			fetching[hash] = time.Now()
-			go fbf.getter.asyncFetchFinalizedBlock(ctx, hash, fbf.got)
+			fetching[ticket.LFBHash] = time.Now()
+			go fbf.getter.asyncFetchFinalizedBlock(ctx, &ticket, fbf.got)
 
 		// cleanup the fetching list every 'lifetime' from old FB requested
 		case <-tick.C:
@@ -116,31 +122,36 @@ func (fbf *FinalizedBlockFetcher) StartFinalizedBlockFetcherWorker(
 }
 
 func (c *Chain) asyncFetchFinalizedBlock(ctx context.Context,
-	hash string, got chan<- string) {
+	ticket *LFBTicket, got chan<- string) {
+
+	println("asyncFetchFinalizedBlock FROM SHARDERS", ticket.LFBHash)
 
 	var err error
-	if _, err = c.GetBlock(ctx, hash); err == nil {
+	if _, err = c.GetBlock(ctx, ticket.LFBHash); err == nil {
 		select {
-		case got <- hash:
+		case got <- ticket.LFBHash:
 		case <-ctx.Done():
 			return
 		}
 		return // already have the block
 	}
 
-	Logger.Info("get FB from sharders", zap.String("block", hash),
+	Logger.Info("get FB from sharders", zap.String("block", ticket.LFBHash),
 		zap.Int64("current_round", c.GetCurrentRound()))
 
 	var fb *block.Block
-	if fb, err = c.GetFinalizedBlockFromSharders(ctx, hash); err != nil {
+	fb, err = c.GetFinalizedBlockFromSharders(ctx, ticket)
+	if err != nil {
 		Logger.Error("getting FB from sharders", zap.Error(err))
 		return
 	}
 
+	println("BLOCK VT", fb.Hash, fb.Round, len(fb.VerificationTickets))
+
 	var r = c.GetRound(fb.Round)
 	if r == nil {
-		Logger.Info("get FB - no round will create...",
-			zap.Int64("round", fb.Round), zap.String("block", hash),
+		Logger.Info("get FB - no round, creating...",
+			zap.Int64("round", fb.Round), zap.String("block", ticket.LFBHash),
 			zap.Int64("current_round", c.GetCurrentRound()))
 
 		r = c.RoundF.CreateRoundF(fb.Round).(*round.Round)
@@ -151,14 +162,15 @@ func (c *Chain) asyncFetchFinalizedBlock(ctx context.Context,
 		r.GetRoundNumber())
 	if err != nil {
 		Logger.Error("get FB - validate notarization",
-			zap.Int64("round", fb.Round), zap.String("block", hash),
+			zap.Int64("round", fb.Round), zap.String("block", ticket.LFBHash),
 			zap.Error(err))
 		return
 	}
 
 	if err = fb.Validate(ctx); err != nil {
 		Logger.Error("get FB - validate", zap.Int64("round", fb.Round),
-			zap.String("block", hash), zap.Any("block_obj", fb), zap.Error(err))
+			zap.String("block", ticket.LFBHash), zap.Any("block_obj", fb),
+			zap.Error(err))
 		return
 	}
 
@@ -177,7 +189,7 @@ func (c *Chain) asyncFetchFinalizedBlock(ctx context.Context,
 	}
 
 	select {
-	case got <- hash:
+	case got <- ticket.LFBHash:
 	case <-ctx.Done():
 		return
 	}
@@ -186,7 +198,7 @@ func (c *Chain) asyncFetchFinalizedBlock(ctx context.Context,
 // GetFinalizedBlockFromSharders - request for a finalized block from all
 // sharders from current magic block.
 func (c *Chain) GetFinalizedBlockFromSharders(ctx context.Context,
-	hash string) (fb *block.Block, err error) {
+	ticket *LFBTicket) (fb *block.Block, err error) {
 
 	type blockConsensus struct {
 		*block.Block
@@ -197,6 +209,7 @@ func (c *Chain) GetFinalizedBlockFromSharders(ctx context.Context,
 		mb              = c.GetCurrentMagicBlock()
 		sharders        = mb.Sharders
 		finalizedBlocks = make([]*blockConsensus, 0, 1)
+		params          = make(url.Values)
 
 		fbMutex sync.Mutex
 	)
@@ -204,10 +217,15 @@ func (c *Chain) GetFinalizedBlockFromSharders(ctx context.Context,
 	var handler = func(ctx context.Context, entity datastore.Entity) (
 		resp interface{}, err error) {
 
+		println("FB REQUESTER HANDLER (TICK)")
+
 		var fb, ok = entity.(*block.Block)
 		if !ok {
+			println("FB REQUESTER HANDLER (TICK): INVALID")
 			return nil, datastore.ErrInvalidEntity
 		}
+
+		println("FB REQUESTER HANDLER (TICK): GOT", fb.Hash, fb.Round, len(fb.VerificationTickets))
 
 		// verify the block fist?
 
@@ -227,7 +245,18 @@ func (c *Chain) GetFinalizedBlockFromSharders(ctx context.Context,
 		return fb, nil
 	}
 
-	sharders.RequestEntityFromAll(ctx, FBRequestor, nil, handler)
+	println("GET FB FROM SHARDER(S)", fmt.Sprint(sharders.N2NURLs()))
+
+	params.Add("hash", ticket.LFBHash)
+	params.Add("round", strconv.FormatInt(ticket.Round, 10))
+
+	// request from ticket sender, or. if the sender is missing,
+	// try to fetch from all other sharders from the current MB
+	if sh := sharders.GetNode(ticket.SharderID); sh != nil {
+		sh.RequestEntityFromNode(ctx, FBRequestor, &params, handler)
+	} else {
+		sharders.RequestEntityFromAll(ctx, FBRequestor, &params, handler)
+	}
 
 	// most popular
 	sort.Slice(finalizedBlocks, func(i int, j int) bool {
