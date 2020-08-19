@@ -102,7 +102,7 @@ server_chain:
       batch_size: 50
   lfb_ticket:
     rebroadcast_timeout: '15s'  #
-    ahead: 10                   #
+    ahead: 5                    #
     fb_fetching_lifetime: '10s' #
 
 network:

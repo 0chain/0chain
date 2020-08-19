@@ -583,9 +583,9 @@ func (c *Chain) getBlock(ctx context.Context, hash string) (*block.Block, error)
 func (c *Chain) DeleteBlock(ctx context.Context, b *block.Block) {
 	c.blocksMutex.Lock()
 	defer c.blocksMutex.Unlock()
-	if _, ok := c.blocks[b.Hash]; !ok {
-		return
-	}
+	// if _, ok := c.blocks[b.Hash]; !ok {
+	// 	return
+	// }
 	delete(c.blocks, b.Hash)
 }
 
@@ -660,7 +660,8 @@ func (c *Chain) GetGenerators(r round.RoundI) []*node.Node {
 /*GetMiners - get all the miners for a given round */
 func (c *Chain) GetMiners(round int64) *node.Pool {
 	mb := c.GetMagicBlock(round)
-	Logger.Debug("get miners -- current magic block", zap.Any("miners", mb.Miners), zap.Any("round", round))
+	Logger.Debug("get miners -- current magic block",
+		zap.Any("miners", mb.Miners), zap.Any("round", round))
 
 	return mb.Miners
 }

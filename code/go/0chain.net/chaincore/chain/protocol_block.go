@@ -82,8 +82,10 @@ func (c *Chain) reachedNotarization(round int64,
 		if numSignatures < c.GetNotarizationThresholdCount(miners) {
 			//ToDo: Remove this comment
 			Logger.Info("not reached notarization",
-				zap.Int("Threshold", c.GetNotarizationThresholdCount(miners)),
-				zap.Int("num_signatures", numSignatures), zap.Int64("CurrentRound", c.GetCurrentRound()))
+				zap.Int("threshold", c.GetNotarizationThresholdCount(miners)),
+				zap.Int("num_signatures", numSignatures),
+				zap.Int64("current_round", c.GetCurrentRound()),
+				zap.Int64("round", round))
 			return false
 		}
 	}
@@ -96,8 +98,12 @@ func (c *Chain) reachedNotarization(round int64,
 			return false
 		}
 	}
-	//Todo: Remove this log
-	Logger.Info("Reached notarization!!!", zap.Int64("CurrentRound", c.GetCurrentRound()), zap.Int("num_signatures", len(bvt)))
+
+	Logger.Info("Reached notarization!!!",
+		zap.Int64("round", round),
+		zap.Int64("current_cound", c.GetCurrentRound()),
+		zap.Int("num_signatures", len(bvt)),
+		zap.Int("threshold", c.GetNotarizationThresholdCount(miners)))
 
 	return true
 }

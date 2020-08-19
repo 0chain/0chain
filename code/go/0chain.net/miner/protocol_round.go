@@ -633,8 +633,9 @@ func (mc *Chain) updatePriorBlock(ctx context.Context, r *round.Round, b *block.
 /*ProcessVerifiedTicket - once a verified ticket is received, do further processing with it */
 func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.Block, vt *block.VerificationTicket) {
 	notarized := b.IsBlockNotarized()
-	//NOTE: We keep collecting verification tickets even if a block is notarized.
-	// Knowing who all know about a block can be used to optimize other parts of the protocol
+	// NOTE: We keep collecting verification tickets even if a block is
+	// notarized. Knowing who all know about a block can be used to optimize
+	// other parts of the protocol.
 	if !mc.AddVerificationTicket(ctx, b, vt) {
 		return
 	}
@@ -1078,38 +1079,48 @@ func (mc *Chain) recheckLast100Blocks(ctx context.Context) {
 	}
 }
 
-func (mc *Chain) rollbackToLFB(ctx context.Context, crn int64) {
-	var lfb = mc.GetLatestFinalizedBlock()
-	println("(RR) ROLLBACK TO LFB", lfb.Round)
-	for i := crn; i > lfb.Round; i-- {
-		var mr = mc.GetMinerRound(i)
-		if mr == nil {
-			continue
-		}
-		if mr.Block != nil {
-			mc.DeleteBlock(ctx, mr.Block)
-		}
-		mc.DeleteRound(ctx, mr)
-		println(" - DELETE ROUND:", i)
-	}
-	var mr = mc.getRound(ctx, lfb.Round)
-	if mr == nil {
-		println("(RR) rollback -> MR IS NIL")
-		return // resolve next restart (ahead of sharders case)
-	}
-	var nr = mc.StartNextRound(ctx, mr)
-	if nr == nil {
-		println("(RR) rollback -> START IS NIL")
-		return // resolve next restart (ahead of sharders case)
-	}
-	println("(RR) rollback: current =", nr.Number)
-	mc.SetCurrentRound(nr.Number) // rollback
-}
+// TODO (sfxdx): REMVOE OR RESOLVE FEW PROBLEMS ON VIEW CHANGE
+//
+// func (mc *Chain) rollbackToLFB(ctx context.Context, crn int64) {
+// 	var lfb = mc.GetLatestFinalizedBlock()
+// 	println("(RR) ROLLBACK TO LFB", lfb.Round)
+// 	for i := crn; i > lfb.Round; i-- {
+// 		var mr = mc.GetMinerRound(i)
+// 		if mr == nil {
+// 			continue
+// 		}
+// 		if mr.Block != nil {
+// 			mc.DeleteBlock(ctx, mr.Block)
+// 		}
+// 		mc.DeleteRound(ctx, mr)
+// 		println(" - DELETE ROUND:", i)
+// 	}
+// 	var mr = mc.getRound(ctx, lfb.Round)
+// 	if mr == nil {
+// 		println("(RR) rollback -> MR IS NIL")
+// 		return // resolve next restart (ahead of sharders case)
+// 	}
+// 	var nr = mc.StartNextRound(ctx, mr)
+// 	if nr == nil {
+// 		println("(RR) rollback -> START IS NIL")
+// 		return // resolve next restart (ahead of sharders case)
+// 	}
+// 	println("(RR) rollback: current =", nr.Number)
+// 	mc.SetCurrentRound(nr.Number) // rollback
+// }
 
 func (mc *Chain) restartRound(ctx context.Context) {
-	println("(RR)")
 
 	var crn = mc.GetCurrentRound()
+
+	{
+		// INSPECTION
+		var (
+			lfb  = mc.GetLatestFinalizedBlock()
+			lfmb = mc.GetLatestFinalizedMagicBlock()
+		)
+		println("(RR)", "CRN", crn, "LFB", lfb.Round, "LFMB", lfmb.Round)
+	}
 
 	mc.IncrementRoundTimeoutCount()
 	var r = mc.GetMinerRound(crn)
@@ -1135,13 +1146,15 @@ func (mc *Chain) restartRound(ctx context.Context) {
 			zap.Any("round", mc.GetCurrentRound()), zap.Int64("count", crt),
 			zap.Any("num_vrf_share", len(r.GetVRFShares())))
 
-	// every 5th restart -- rollback to LFB
-	case crt%5 == 0:
-		mc.rollbackToLFB(ctx, crn)
-		return // do the rest in next restart
-
 		// TODO: should have a means to send an email/SMS to someone or
 		// something like that
+
+		// other commended out cases
+
+		// // every 5th restart -- rollback to LFB
+		// case crt%5 == 0:
+		//	// mc.rollbackToLFB(ctx, crn)
+		//	// return // do the rest in next restart
 
 		// case (crt > 10) && (crt%10 == 0):
 		//	// mc.recheckLast100Blocks(ctx) // every 10 restarts after 10th

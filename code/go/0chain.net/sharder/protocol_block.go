@@ -116,13 +116,6 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 		return
 	}
 
-	// get related magic block
-	var lfmb = sc.GetLatestFinalizedMagicBlock()
-	if b.LatestFinalizedMagicBlockHash != lfmb.Hash {
-		println("GET MISSING MB")
-		sc.AsyncFetchNotarizedBlock(b.LatestFinalizedMagicBlockHash)
-	}
-
 	// moved down
 	// {
 	if b.MagicBlock != nil { // <-------------------- <-------------------------
@@ -142,7 +135,9 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 
 	sc.AddNotarizedBlockToRound(er, b)
 	sc.SetRoundRank(er, b)
-	Logger.Info("received block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("client_state", util.ToHex(b.ClientStateHash)))
+	Logger.Info("received block", zap.Int64("round", b.Round),
+		zap.String("block", b.Hash),
+		zap.String("client_state", util.ToHex(b.ClientStateHash)))
 	sc.AddNotarizedBlock(ctx, er, b)
 }
 

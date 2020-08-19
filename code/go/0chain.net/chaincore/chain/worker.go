@@ -111,22 +111,15 @@ func (c *Chain) repairChain(ctx context.Context, newMB *block.Block,
 		zap.Int64("to", newMB.MagicBlockNumber))
 
 	// until the end of the days
-	for !isDone(ctx) {
-		if err = c.VerifyChainHistory(ctx, newMB, saveFunc); err != nil {
-			Logger.Error("repair_mb_chain", zap.Error(err))
-			if sleepOrCancel(ctx) {
-				return ctx.Err() // context canceled
-			}
-			continue // try again the reparation
-		}
-
-		// the VerifyChainHistory doesn't save the newMB
-		// finalizeRound will do it next step
-
-		return // ok
+	if err = c.VerifyChainHistory(ctx, newMB, saveFunc); err != nil {
+		Logger.Error("repair_mb_chain", zap.Error(err))
+		return common.NewErrorf("repair_mb_chain", err.Error())
 	}
 
-	return ctx.Err() // context canceled
+	// the VerifyChainHistory doesn't save the newMB
+	// finalizeRound will do it next step
+
+	return // ok
 }
 
 //FinalizedBlockWorker - a worker that processes finalized blocks
