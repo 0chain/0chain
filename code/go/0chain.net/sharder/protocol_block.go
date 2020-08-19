@@ -126,7 +126,7 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 	// moved down
 	// {
 	if b.MagicBlock != nil { // <-------------------- <-------------------------
-		println("RECEIVE BLOCK WITH MAGIC BLOCK:", b.Round)
+		println("RECEIVE BLOCK WITH MAGIC BLOCK:", b.Round, b.StartingRound)
 		sc.UpdateMagicBlock(b.MagicBlock)          // <-------------------------
 		sc.UpdateNodesFromMagicBlock(b.MagicBlock) // <-------------------------
 	} // <------------------------------------------- <-------------------------

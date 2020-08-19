@@ -226,6 +226,7 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMess
 		}
 		if !mr.IsVRFComplete() {
 			if mc.isNeedViewChange(ctx, mb.Round+1) {
+				println("KICK NEW MINERS JOINING THE VIEW CHANGE :::::::::::::::::::::::::::::::::::", mb.Round)
 				// kick new miners, joining the VC
 				//
 				// since the AddReceivedLFBTicket uses buffered channel
@@ -236,6 +237,11 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMess
 						Round: mb.Round,
 					})
 				}
+
+				// and take previous block required to move on
+				println("         fetch:", mb.Round-1, mb.PrevHash, ":::", mb.MagicBlock == nil)
+				go mc.AsyncFetchNotarizedBlock(mb.PrevHash)
+
 			}
 			mc.startRound(ctx, mr, mb.GetRoundRandomSeed())
 		}

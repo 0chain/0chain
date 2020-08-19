@@ -112,11 +112,13 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 		mc.CancelRoundVerification(ctx, pr)
 		go mc.FinalizeRound(ctx, pr.Round, mc)
 	}
+
 	var (
 		nr = round.NewRound(rn + 1)
 		mr = mc.CreateRound(nr)
 		er = mc.AddRound(mr)
 	)
+
 	if er != mr && mc.isStarted() {
 		Logger.Info("StartNextRound found nextround ready. No VRFs Sent",
 			zap.Int64("er_round", er.GetRoundNumber()),
@@ -168,6 +170,7 @@ func (mc *Chain) RedoVrfShare(ctx context.Context, r *Round) bool {
 
 func (mc *Chain) startRound(ctx context.Context, r *Round, seed int64) {
 	if !mc.SetRandomSeed(r.Round, seed) {
+		println("(startRound) can't set random seed", r.GetRoundNumber(), seed)
 		return
 	}
 	Logger.Info("Starting a new round", zap.Int64("round", r.GetRoundNumber()))
@@ -226,7 +229,8 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 		}
 	}
 
-	//NOTE: If there are not enough txns, this will not advance further even though rest of the network is. That's why this is a goroutine
+	// NOTE: If there are not enough txns, this will not advance further even
+	// though rest of the network is. That's why this is a goroutine
 	go mc.GenerateRoundBlock(ctx, mr)
 }
 
@@ -1074,6 +1078,34 @@ func (mc *Chain) recheckLast100Blocks(ctx context.Context) {
 	}
 }
 
+func (mc *Chain) rollbackToLFB(ctx context.Context, crn int64) {
+	var lfb = mc.GetLatestFinalizedBlock()
+	println("(RR) ROLLBACK TO LFB", lfb.Round)
+	for i := crn; i > lfb.Round; i-- {
+		var mr = mc.GetMinerRound(i)
+		if mr == nil {
+			continue
+		}
+		if mr.Block != nil {
+			mc.DeleteBlock(ctx, mr.Block)
+		}
+		mc.DeleteRound(ctx, mr)
+		println(" - DELETE ROUND:", i)
+	}
+	var mr = mc.getRound(ctx, lfb.Round)
+	if mr == nil {
+		println("(RR) rollback -> MR IS NIL")
+		return // resolve next restart (ahead of sharders case)
+	}
+	var nr = mc.StartNextRound(ctx, mr)
+	if nr == nil {
+		println("(RR) rollback -> START IS NIL")
+		return // resolve next restart (ahead of sharders case)
+	}
+	println("(RR) rollback: current =", nr.Number)
+	mc.SetCurrentRound(nr.Number) // rollback
+}
+
 func (mc *Chain) restartRound(ctx context.Context) {
 	println("(RR)")
 
@@ -1105,28 +1137,8 @@ func (mc *Chain) restartRound(ctx context.Context) {
 
 	// every 5th restart -- rollback to LFB
 	case crt%5 == 0:
-		println("(RR) ROLLBACK TO LFB")
-		var lfb = mc.GetLatestFinalizedBlock()
-		for i := crn; i > lfb.Round; i-- {
-			var mr = mc.GetMinerRound(i)
-			if mr == nil {
-				continue
-			}
-			if mr.Block != nil {
-				mc.DeleteBlock(ctx, mr.Block)
-			}
-			mc.DeleteRound(ctx, mr)
-		}
-		var mr = mc.getRound(ctx, lfb.Round)
-		if mr == nil {
-			return // resolve next restart (ahead of sharders case)
-		}
-		var nr = mc.StartNextRound(ctx, mr)
-		if nr == nil {
-			return // resolve next restart (ahead of sharders case)
-		}
-		mc.SetCurrentRound(nr.Number) // rollback
-		return                        // do the rest in next restart
+		mc.rollbackToLFB(ctx, crn)
+		return // do the rest in next restart
 
 		// TODO: should have a means to send an email/SMS to someone or
 		// something like that
