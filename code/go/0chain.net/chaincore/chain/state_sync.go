@@ -240,12 +240,12 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 		return rsc, nil
 	}
 	mb := c.GetMagicBlock(b.Round)
-	println("GET BLOCK STATE CHANGE {{{")
 	mb.Miners.RequestEntity(ctx, BlockStateChangeRequestor, params, handler)
-	println("GET BLOCK STATE CHANGE }}}")
 	if bsc == nil {
-		println("GET BLOCK STATE CHANGE --> (ALL REQUESTED NODES ERROR)")
+		println("GET BLOCK STATE CHANGE --> (ALL REQUESTED NODES ERROR)", b.Round, b.Hash)
 		return nil, common.NewError("block_state_change_error", "Error getting the block state change")
+	} else {
+		println("GET BLOCK STATE CHANGE --> OK", b.Round, b.Hash)
 	}
 	return bsc, nil
 }
@@ -281,7 +281,9 @@ func (c *Chain) applyBlockStateChange(b *block.Block, bsc *block.StateChange) er
 
 	err := b.ClientState.MergeDB(bsc.GetNodeDB(), bsc.GetRoot().GetHashBytes())
 	if err != nil {
-		Logger.Error("apply block state change - error merging", zap.Int64("round", b.Round), zap.String("block", b.Hash))
+		Logger.Error("apply block state change - error merging",
+			zap.Int64("round", b.Round), zap.String("block", b.Hash))
+		return err
 	}
 	b.SetStateStatus(block.StateSynched)
 	return nil

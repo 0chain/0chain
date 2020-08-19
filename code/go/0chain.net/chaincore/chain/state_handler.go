@@ -10,7 +10,6 @@ import (
 	"sort"
 	"strings"
 
-	bcstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontract"
 	sci "0chain.net/chaincore/smartcontractinterface"
 
@@ -50,8 +49,7 @@ func (c *Chain) GetSCRestOutput(ctx context.Context, r *http.Request) (interface
 		return nil, common.NewError("empty_lfb", "empty latest finalized block or state")
 	}
 	clientState := CreateTxnMPT(lfb.ClientState) // begin transaction
-	txn := &transaction.Transaction{}
-	sctx := bcstate.NewStateContext(lfb, clientState, c.clientStateDeserializer, txn, c.GetBlockSharders, c.GetLatestFinalizedMagicBlock, c.GetSignatureScheme)
+	sctx := c.newStateContext(lfb, clientState, &transaction.Transaction{})
 	resp, err := smartcontract.ExecuteRestAPI(ctx, scAddress, scRestPath, r.URL.Query(), sctx)
 
 	if err != nil {

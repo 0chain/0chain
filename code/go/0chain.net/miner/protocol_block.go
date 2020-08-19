@@ -49,7 +49,9 @@ func (mc *Chain) processFeeTxn(ctx context.Context, b *block.Block, clients map[
 		return common.NewError("process fee transaction", "transaction already exists")
 	}
 	if err := mc.UpdateState(b, feeTxn); err != nil {
-		Logger.Error("processFeeTxn", zap.String("txn", feeTxn.Hash), zap.String("txn_object", datastore.ToJSON(feeTxn).String()), zap.Error(err))
+		Logger.Error("processFeeTxn", zap.String("txn", feeTxn.Hash),
+			zap.String("txn_object", datastore.ToJSON(feeTxn).String()),
+			zap.Error(err))
 		return err
 	}
 	b.Txns = append(b.Txns, feeTxn)

@@ -62,6 +62,9 @@ func (tc *timeoutCounter) addVote(id string, num int) {
 	if tc.isVoted(id) {
 		return
 	}
+
+	println("ADD TIMEOUT VOTE:", id, num)
+
 	tc.timeoutVotes[num]++
 	tc.votersVoted[id] = struct{}{}
 }

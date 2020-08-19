@@ -132,10 +132,17 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (interface{},
 				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()))
 			return nil, nil
 		}
-		var hnb = mr.GetHeaviestNotarizedBlock()
+		// var hnb = mr.GetHeaviestNotarizedBlock()
+		var hnb = mr.Block // (round block)
 		if hnb == nil {
 			Logger.Info("Rejecting VRFShare: missing HNB for the round",
 				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()))
+			return nil, nil
+		}
+		if hnb.GetStateStatus() != block.StateSuccessful {
+			Logger.Info("Rejecting VRFShare: HNB state is not successful",
+				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()),
+				zap.String("hash", hnb.Hash))
 			return nil, nil
 		}
 		var (
@@ -164,9 +171,17 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (interface{},
 				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()))
 			return nil, nil
 		}
-		go mb.Miners.SendTo(MinerNotarizedBlockSender(hnb), found.ID)
-		Logger.Info("Rejecting VRFShare: push not. block for the miner behind",
-			zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()))
+
+		// send verify block message, then send notarized block
+		go func() {
+			mb.Miners.SendTo(VerifyBlockSender(hnb), found.ID)
+			mb.Miners.SendTo(MinerNotarizedBlockSender(hnb), found.ID)
+		}()
+
+		Logger.Info("Rejecting VRFShare: push not. block message for the miner behind",
+			zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()),
+			zap.String("to_miner_id", found.ID),
+			zap.String("to_miner_url", found.GetN2NURLBase()))
 		return nil, nil
 	}
 
@@ -239,7 +254,8 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 	}
 	mc := GetMinerChain()
 	if b.Round < mc.GetCurrentRound()-1 {
-		Logger.Debug("notarized block handler (round older than the current round)", zap.String("block", b.Hash), zap.Any("round", b.Round))
+		Logger.Debug("notarized block handler (round older than the current round)",
+			zap.String("block", b.Hash), zap.Any("round", b.Round))
 		return nil, nil
 	}
 

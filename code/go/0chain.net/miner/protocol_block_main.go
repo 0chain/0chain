@@ -188,7 +188,10 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 	if blockSize != mc.BlockSize && byteSize < mc.MaxByteSize {
 		if !waitOver && blockSize < mc.MinBlockSize {
 			b.Txns = nil
-			Logger.Debug("generate block (insufficient txns)", zap.Int64("round", b.Round), zap.Int32("iteration_count", count), zap.Int32("block_size", blockSize))
+			Logger.Debug("generate block (insufficient txns)",
+				zap.Int64("round", b.Round),
+				zap.Int32("iteration_count", count),
+				zap.Int32("block_size", blockSize))
 			return common.NewError(InsufficientTxns, fmt.Sprintf("not sufficient txns to make a block yet for round %v (iterated %v,block_size %v,state failure %v, invalid %v,reused %v)", b.Round, count, blockSize, failedStateCount, len(invalidTxns), reusedTxns))
 		}
 		b.Txns = b.Txns[:blockSize]
