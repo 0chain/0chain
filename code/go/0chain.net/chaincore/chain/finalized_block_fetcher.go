@@ -8,9 +8,6 @@ import (
 	"sync"
 	"time"
 
-	// DEBUG
-	"fmt"
-
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
