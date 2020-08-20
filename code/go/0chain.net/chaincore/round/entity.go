@@ -63,8 +63,6 @@ func (tc *timeoutCounter) addVote(id string, num int) {
 		return
 	}
 
-	println("ADD TIMEOUT VOTE:", id, num)
-
 	tc.timeoutVotes[num]++
 	tc.votersVoted[id] = struct{}{}
 }

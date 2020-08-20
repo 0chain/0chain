@@ -140,16 +140,6 @@ func (sc *Chain) GetSharderRound(roundNumber int64) *round.Round {
 func (sc *Chain) setupLatestBlocks(ctx context.Context, round *round.Round,
 	lfb, lfmb *block.Block) (err error) {
 
-	println("setupLatestBlocks", lfb.Round, lfmb.Round, lfb.LatestFinalizedMagicBlockHash, lfmb.Hash)
-
-	println("setup LFMB",
-		"H", lfmb.Hash,
-		"SR", lfmb.MagicBlock.StartingRound,
-		"R", lfmb.Round,
-		"MS", lfmb.Miners.Size(),
-		"SS", lfmb.Sharders.Size(),
-	)
-
 	// using ClientState of genesis block
 
 	if err = sc.InitBlockState(lfb); err != nil {
@@ -259,14 +249,12 @@ func (sc *Chain) iterateRoundsLookingForLFB(ctx context.Context) (
 	iter.SeekToLast() // from last
 
 	if !iter.Valid() {
-		println("iterateRoundsLookingForLFB", r.GetRoundNumber(), "invalid (1)")
 		return nil, nil, r, nil // round 0 (genesis, initial)
 	}
 
 	// loop
 
 	for ; iter.Valid(); iter.Prev() {
-		println("iterateRoundsLookingForLFB", r.GetRoundNumber(), "tick")
 		if err = datastore.FromJSON(iter.Value().Data(), r); err != nil {
 			return nil, nil, nil, common.NewError("load_lfb",
 				"decoding round info: "+err.Error()) // critical

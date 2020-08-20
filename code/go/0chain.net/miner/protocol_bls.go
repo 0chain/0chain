@@ -159,23 +159,10 @@ func (mc *Chain) GetBlsMessageForRound(r *round.Round) (string, error) {
 	}
 
 	if pr.GetRandomSeed() == 0 {
-		println("BLS MSG: PR IS NIL", pr.GetRoundNumber())
 		if pr.Block != nil {
-			println("  PR BLOCK", pr.Block.Hash)
-			if prrs := pr.Block.GetRoundRandomSeed(); prrs == 0 {
-				println("  PR BLOCK", pr.Block.Hash, "RANDOM SEED IS ZERO")
-			} else {
-				println("  PR BLOCK", pr.Block.Hash, "RANDOM SEED", prrs)
-			}
 			mc.SetRandomSeed(pr, pr.Block.GetRoundRandomSeed())
-		} else {
-			println("  PR BLOCK IS NIL")
-			if pr.BlockHash == "" {
-				println("  PR BLOCK IS NIL, AND ROUND BLOCK HASH IS EMPTY")
-			} else {
-				println("  PR BLOCK IS NIL, BUT ROUND BLOCK HASH ISN'T EMPTY (FETCH)", pr.BlockHash)
-				go mc.AsyncFetchNotarizedBlock(pr.BlockHash)
-			}
+		} else if pr.BlockHash != "" {
+			go mc.AsyncFetchNotarizedBlock(pr.BlockHash)
 		}
 		Logger.Error("Bls sign vrfshare: error in getting prevRSeed", zap.Int64("prev_round", pr.Number))
 		return "", common.NewError("prev_round_rrs_zero", fmt.Sprintf("Prev round %d has randomseed of 0", pr.GetRoundNumber()))

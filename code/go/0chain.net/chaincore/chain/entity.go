@@ -1291,21 +1291,9 @@ func (c *Chain) VerifyBlockLFMB(b *block.Block) (err error) {
 	// with no magic block, based on the latest one
 	var lfmb = c.GetLatestFinalizedMagicBlock()
 	if b.LatestFinalizedMagicBlockRound < lfmb.StartingRound {
-		println("UNEXPECTED LFMB ROUND:",
-			"GOT", b.LatestFinalizedMagicBlockRound,
-			"WANT", lfmb.StartingRound,
-			"BLOCK ROUND", b.Round,
-		)
 		return common.NewError("verify_block_lfmb",
 			"unexpected LFMB round")
 	}
-	// if b.LatestFinalizedMagicBlockHash != lfmb.Hash {
-	// 	println("UNEXPECTED LFMB HASH:",
-	// 		"WANT", lfmb.Hash,
-	// 		"GOT", b.LatestFinalizedMagicBlockHash)
-	// 	return common.NewError("verify_block_lfmb",
-	// 		"unexpected LFMB hash")
-	// }
 
 	return // ok
 }

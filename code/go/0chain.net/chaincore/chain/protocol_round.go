@@ -260,8 +260,6 @@ func (c *Chain) GetLatestFinalizedMagicBlockFromSharder(ctx context.Context) []*
 	mb := c.GetCurrentMagicBlock()
 	n2s := mb.Sharders
 
-	println("GetLatestFinalizedMagicBlockFromSharder:", fmt.Sprint(n2s.N2NURLs()))
-
 	finalizedMagicBlocks := make([]*block.Block, 0, 1)
 	fmbMutex := &sync.Mutex{}
 	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {

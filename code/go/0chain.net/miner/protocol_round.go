@@ -170,7 +170,6 @@ func (mc *Chain) RedoVrfShare(ctx context.Context, r *Round) bool {
 
 func (mc *Chain) startRound(ctx context.Context, r *Round, seed int64) {
 	if !mc.SetRandomSeed(r.Round, seed) {
-		println("(startRound) can't set random seed", r.GetRoundNumber(), seed)
 		return
 	}
 	Logger.Info("Starting a new round", zap.Int64("round", r.GetRoundNumber()))
@@ -293,13 +292,9 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	ctx = memorystore.WithEntityConnection(ctx, txnEntityMetadata)
 	defer memorystore.Close(ctx)
 	b := block.NewBlock(mc.GetKey(), r.GetRoundNumber())
-	if r.GetRoundNumber() != r.Round.GetRoundNumber() {
-		println("::::::: NOT EQUAL :::::", r.GetRoundNumber(), r.Round.GetRoundNumber())
-	}
 	lfmb := mc.GetLatestFinalizedMagicBlockRound(ctx, r.Round)
 	b.LatestFinalizedMagicBlockHash = lfmb.Hash
 	b.LatestFinalizedMagicBlockRound = lfmb.Round
-	println("GENERATE BLOCK WITH MB", lfmb.StartingRound, lfmb.Round, b.Round, r.GetRoundNumber())
 
 	b.MinerID = node.Self.Underlying().GetKey()
 	mc.SetPreviousBlock(ctx, r, b, pb)
@@ -317,17 +312,11 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		b.SetStateDB(pb)
 		generationTries++
 		if pb.GetStateStatus() != block.StateSuccessful {
-			println("GENERATE BLOCK WITH UNSUCCESFULL PREVIOUS BLOCK", b.Round, pb.Hash, b.Hash)
 			if err := mc.ComputeOrSyncState(ctx, pb); err != nil {
-				println("REPAIRING UNSUCCESFUL PB:", err.Error())
-			} else {
-				println("REPAIRING UNSUCCESFUL PB: OK")
+				Logger.Error("(re) computing previous block", zap.Error(err))
 			}
 		}
 		err := mc.GenerateBlock(ctx, b, mc, makeBlock)
-		if err != nil {
-			println("GENRATE BLOCK ERROR:", err.Error())
-		}
 		if err != nil {
 			cerr, ok := err.(*common.Error)
 			if ok {
@@ -381,7 +370,6 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	}
 	mc.addToRoundVerification(ctx, r, b)
 	r.AddProposedBlock(b)
-	println("SEND GENERATED BLOCK:", b.Round, b.Hash)
 	go mc.SendBlock(ctx, b)
 	return b, nil
 }
@@ -419,7 +407,6 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 		}
 	}
 	if mc.AddRoundBlock(mr, b) != b {
-		println("ADD ROUND BLOCK BLOCK IS NOT THE BLOCK", b.Round, b.Hash)
 		return
 	}
 	if b.PrevBlock != nil {
@@ -438,7 +425,6 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 			return
 		}
 	}
-	println("ADD TO ROUND VERIFICATION:", mr.GetRoundNumber(), b.Round, b.Hash)
 	mc.addToRoundVerification(ctx, mr, b)
 }
 
@@ -455,7 +441,6 @@ func (mc *Chain) addToRoundVerification(ctx context.Context, mr *Round, b *block
 		} else {
 			mr.delta = waitTime - minerNT
 		}
-		println("COLL. ", mr.GetRoundNumber(), b.Hash, b.Round)
 		go mc.CollectBlocksForVerification(vctx, mr)
 	}
 	mr.AddBlockToVerify(b)
@@ -1055,23 +1040,19 @@ func (mc *Chain) recheckLast100Blocks(ctx context.Context) {
 	if cr == 0 {
 		return // zero round
 	}
-	println("(restartRound) recheckLast100Blocks", cr)
 	var pr = mc.GetMinerRound(cr - 1)
 	if pr == nil {
-		println("(restartRound) recheckLast100Blocks", cr, "NO PR")
 		Logger.Error("missing previous round for", zap.Int64("round", cr))
 		return
 	}
 	var b = pr.GetHeaviestNotarizedBlock()
 	if b == nil {
-		println("(restartRound) recheckLast100Blocks", cr, "NO HNB FOR BLOCK", cr-1)
 		Logger.Error("missing HNB for", zap.Int64("round", pr.GetRoundNumber()))
 		return
 	}
 	for i := 0; i < 100 && b.Round > 0; i++ {
 		mc.InitBlockState(b) // ignore error
 		if b.PrevBlock == nil {
-			println("(restartRound) recheckLast100Blocks", cr, "fetch", b.Round)
 			mc.AsyncFetchNotarizedPreviousBlock(b)
 			return // stop on first block can't find
 		}
@@ -1079,57 +1060,16 @@ func (mc *Chain) recheckLast100Blocks(ctx context.Context) {
 	}
 }
 
-// TODO (sfxdx): REMVOE OR RESOLVE FEW PROBLEMS ON VIEW CHANGE
-//
-// func (mc *Chain) rollbackToLFB(ctx context.Context, crn int64) {
-// 	var lfb = mc.GetLatestFinalizedBlock()
-// 	println("(RR) ROLLBACK TO LFB", lfb.Round)
-// 	for i := crn; i > lfb.Round; i-- {
-// 		var mr = mc.GetMinerRound(i)
-// 		if mr == nil {
-// 			continue
-// 		}
-// 		if mr.Block != nil {
-// 			mc.DeleteBlock(ctx, mr.Block)
-// 		}
-// 		mc.DeleteRound(ctx, mr)
-// 		println(" - DELETE ROUND:", i)
-// 	}
-// 	var mr = mc.getRound(ctx, lfb.Round)
-// 	if mr == nil {
-// 		println("(RR) rollback -> MR IS NIL")
-// 		return // resolve next restart (ahead of sharders case)
-// 	}
-// 	var nr = mc.StartNextRound(ctx, mr)
-// 	if nr == nil {
-// 		println("(RR) rollback -> START IS NIL")
-// 		return // resolve next restart (ahead of sharders case)
-// 	}
-// 	println("(RR) rollback: current =", nr.Number)
-// 	mc.SetCurrentRound(nr.Number) // rollback
-// }
-
 func (mc *Chain) restartRound(ctx context.Context) {
 
 	var crn = mc.GetCurrentRound()
-
-	{
-		// INSPECTION
-		var (
-			lfb  = mc.GetLatestFinalizedBlock()
-			lfmb = mc.GetLatestFinalizedMagicBlock()
-		)
-		println("(RR)", "CRN", crn, "LFB", lfb.Round, "LFMB", lfmb.Round)
-	}
 
 	mc.IncrementRoundTimeoutCount()
 	var r = mc.GetMinerRound(crn)
 
 	if crn > 0 && mc.GetMinerRound(crn-1) == nil {
 		if lfb := mc.GetLatestFinalizedBlock(); lfb != nil {
-			println("(RR) KICK ROUND BY LFB")
 			mc.kickRoundByLFB(ctx, lfb)
-			// mc.restartRound(ctx)
 			return
 		}
 	}
@@ -1177,14 +1117,11 @@ func (mc *Chain) restartRound(ctx context.Context) {
 		// then the current one
 		var lfb = mc.GetLatestFinalizedBlock()
 		if lfb.Round > rn {
-			println("(RR) KICK ROUND BY LFB")
 			mc.kickRoundByLFB(ctx, lfb)
-			// mc.restartRound(ctx)
 			return
 		}
 	} else {
 		if isAhead {
-			println("(RR) KICK SHARDERS, MINER IS AHEAD")
 			mc.kickSharders(ctx) // not updated, kick sharders
 		}
 		// mc.kickMinersBehind(ctx, r) //
@@ -1201,7 +1138,6 @@ func (mc *Chain) restartRound(ctx context.Context) {
 		nr := mc.StartNextRound(ctx, r)
 		if nr == nil {
 			Logger.Info("restartRound: skip due to far ahead")
-			println("(RR) SKIP DUE TO AHEAD OF SHARDERS (2)")
 			return // shouldn't happen
 		}
 		/*
@@ -1234,7 +1170,6 @@ func (mc *Chain) restartRound(ctx context.Context) {
 					zap.Int("round_toc", nr.GetTimeoutCount()))
 
 			}
-			println("(RR) HASH RANDOM SEED")
 			return
 		}
 		Logger.Error("Has notarized block in restartRound, but no randomseed.",
@@ -1284,9 +1219,6 @@ func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
 	)
 	mr, _ = mc.AddRound(mr).(*Round)
 	mc.SetRandomSeed(mr, lfbs.GetRoundRandomSeed())
-	if lfbs.GetRoundRandomSeed() == 0 {
-		println("ENSURE LFB::  RANDOM SEED IS ZERO:", lfbs.Round)
-	}
 	mc.AddBlock(lfbs)
 	// retry 10 times to repair the state, then ignore the error
 	if err = mc.InitBlockState(lfbs); err != nil {
@@ -1302,7 +1234,6 @@ func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
 	// }
 	mc.SetLatestFinalizedBlock(ctx, lfbs)
 	if mc.GetCurrentRound() < mr.GetRoundNumber() {
-		println("START NEW ROUND IN THE ENSURE", mc.GetCurrentRound(), mr.GetRoundNumber())
 		mc.startNewRound(ctx, mr)
 	}
 

@@ -119,7 +119,6 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 	// moved down
 	// {
 	if b.MagicBlock != nil { // <-------------------- <-------------------------
-		println("RECEIVE BLOCK WITH MAGIC BLOCK:", b.Round, b.StartingRound)
 		sc.UpdateMagicBlock(b.MagicBlock)          // <-------------------------
 		sc.UpdateNodesFromMagicBlock(b.MagicBlock) // <-------------------------
 	} // <------------------------------------------- <-------------------------
@@ -562,5 +561,5 @@ func (sc *Chain) storeBlockTransactions(ctx context.Context, b *block.Block) err
 
 // NotarizedBlockFetched -
 func (sc *Chain) NotarizedBlockFetched(ctx context.Context, b *block.Block) {
-	sc.processBlock(ctx, b)
+	// sc.processBlock(ctx, b)
 }

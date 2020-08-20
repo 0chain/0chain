@@ -202,13 +202,11 @@ func (c *Chain) getStateNodes(ctx context.Context, keys []util.Key) (*state.Node
 
 func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) {
 	if b.PrevBlock == nil {
-		println("getBlockStateChange: no previous block")
 		return nil, ErrPreviousBlockUnavailable
 	}
 	if bytes.Compare(b.ClientStateHash, b.PrevBlock.ClientStateHash) == 0 {
 		b.SetStateDB(b.PrevBlock)
 		b.SetStateStatus(block.StateSynched)
-		println("getBlockStateChange: (nil, nil)")
 		return nil, nil
 	}
 	params := &url.Values{}
@@ -235,17 +233,13 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 			return nil, common.NewError("state_root_error", "Block state root calculcation error")
 		}
 		cancelf()
-		println("GOT BLOCK STATE", rsc == nil)
 		bsc = rsc
 		return rsc, nil
 	}
 	mb := c.GetMagicBlock(b.Round)
 	mb.Miners.RequestEntity(ctx, BlockStateChangeRequestor, params, handler)
 	if bsc == nil {
-		println("GET BLOCK STATE CHANGE --> (ALL REQUESTED NODES ERROR)", b.Round, b.Hash)
 		return nil, common.NewError("block_state_change_error", "Error getting the block state change")
-	} else {
-		println("GET BLOCK STATE CHANGE --> OK", b.Round, b.Hash)
 	}
 	return bsc, nil
 }

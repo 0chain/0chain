@@ -69,7 +69,6 @@ func (fbf *FinalizedBlockFetcher) AsyncFetchFinalizedBlockFromSharders(
 
 	select {
 	case fbf.add <- ticket:
-		println("SENT TO FETCH FROM FB SHARDERS:", ticket.LFBHash)
 	case <-ctx.Done():
 	}
 }
@@ -124,8 +123,6 @@ func (fbf *FinalizedBlockFetcher) StartFinalizedBlockFetcherWorker(
 func (c *Chain) asyncFetchFinalizedBlock(ctx context.Context,
 	ticket *LFBTicket, got chan<- string) {
 
-	println("asyncFetchFinalizedBlock FROM SHARDERS", ticket.LFBHash)
-
 	var err error
 	if _, err = c.GetBlock(ctx, ticket.LFBHash); err == nil {
 		select {
@@ -145,8 +142,6 @@ func (c *Chain) asyncFetchFinalizedBlock(ctx context.Context,
 		Logger.Error("getting FB from sharders", zap.Error(err))
 		return
 	}
-
-	println("BLOCK VT", fb.Hash, fb.Round, len(fb.VerificationTickets))
 
 	var r = c.GetRound(fb.Round)
 	if r == nil {
@@ -217,15 +212,10 @@ func (c *Chain) GetFinalizedBlockFromSharders(ctx context.Context,
 	var handler = func(ctx context.Context, entity datastore.Entity) (
 		resp interface{}, err error) {
 
-		println("FB REQUESTER HANDLER (TICK)")
-
 		var fb, ok = entity.(*block.Block)
 		if !ok {
-			println("FB REQUESTER HANDLER (TICK): INVALID")
 			return nil, datastore.ErrInvalidEntity
 		}
-
-		println("FB REQUESTER HANDLER (TICK): GOT", fb.Hash, fb.Round, len(fb.VerificationTickets))
 
 		// verify the block fist?
 
@@ -244,8 +234,6 @@ func (c *Chain) GetFinalizedBlockFromSharders(ctx context.Context,
 
 		return fb, nil
 	}
-
-	println("GET FB FROM SHARDER(S)", fmt.Sprint(sharders.N2NURLs()))
 
 	params.Add("hash", ticket.LFBHash)
 	params.Add("round", strconv.FormatInt(ticket.Round, 10))
