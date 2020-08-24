@@ -29,10 +29,10 @@ const (
 )
 
 var (
-	PhaseRounds = make(map[int]int64)
-	phaseFuncs  = make(map[int]phaseFunctions)
+	PhaseRounds = make(map[Phase]int64)
+	phaseFuncs  = make(map[Phase]phaseFunctions)
 
-	lockPhaseFunctions = map[int]*sync.Mutex{
+	lockPhaseFunctions = map[Phase]*sync.Mutex{
 		Start:      {},
 		Contribute: {},
 		Publish:    {},
@@ -54,7 +54,7 @@ type MinerSmartContract struct {
 
 	mutexMinerMPK          sync.RWMutex
 	smartContractFunctions map[string]smartContractFunction
-	callbackPhase          func(int)
+	callbackPhase          func(Phase)
 }
 
 func (msc *MinerSmartContract) GetName() string {
@@ -241,6 +241,6 @@ func (msc *MinerSmartContract) getUserNode(id string, balances cstate.StateConte
 	return un, err
 }
 
-func (msc *MinerSmartContract) SetCallbackPhase(CallbackPhase func(int)) {
+func (msc *MinerSmartContract) SetCallbackPhase(CallbackPhase func(Phase)) {
 	msc.callbackPhase = CallbackPhase
 }

@@ -17,7 +17,7 @@ import (
 	"go.uber.org/zap"
 )
 
-var moveFunctions = make(map[int]movePhaseFunctions)
+var moveFunctions = make(map[Phase]movePhaseFunctions)
 
 /*
 - Start      : moveToContribute
@@ -195,7 +195,7 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 				}
 			}
 			if err == nil {
-				if len(PhaseRounds)-1 > pn.Phase {
+				if Phase(len(PhaseRounds))-1 > pn.Phase {
 					pn.Phase++
 				} else {
 					pn.Phase = 0

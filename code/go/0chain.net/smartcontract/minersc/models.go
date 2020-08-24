@@ -23,15 +23,37 @@ import (
 	"go.uber.org/zap"
 )
 
-// Phases
+// Phase number.
+type Phase int
+
+// known phases
 const (
-	Unknown = iota - 1
+	Unknown Phase = iota - 1
 	Start
 	Contribute
 	Share
 	Publish
 	Wait
 )
+
+func (p Phase) String() string {
+	switch p {
+	case Unknown:
+		return "unknown"
+	case Start:
+		return "start"
+	case Contribute:
+		return "contribute"
+	case Share:
+		return "share"
+	case Publish:
+		return "publish"
+	case Wait:
+		return "wait"
+	default:
+	}
+	return fmt.Sprintf("Phase<%d>", int(p))
+}
 
 // Pool status
 const (
@@ -576,7 +598,7 @@ func (dp *deletePool) Decode(input []byte) error {
 }
 
 type PhaseNode struct {
-	Phase        int   `json:"phase"`
+	Phase        Phase `json:"phase"`
 	StartRound   int64 `json:"start_round"`
 	CurrentRound int64 `json:"current_round"`
 	Restarts     int64 `json:"restarts"`
