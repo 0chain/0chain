@@ -273,7 +273,11 @@ func (sc *Chain) MoveOldBlocksToCloud(ctx context.Context) {
 						go func(hash string, round int64) {
 							err = fs.UploadToCloud(hash, round)
 							if err != nil {
-								Logger.Error("Error in uploading to cloud", zap.Error(err), zap.Any("round", round))
+								if fs.CloudObjectExists(hash) {
+									Logger.Error("Error in uploading to cloud, The data is already present on cloud", zap.Error(err), zap.Any("round", round))
+								} else {
+									Logger.Error("Error in uploading to cloud, The data is also missing from cloud", zap.Error(err), zap.Any("round", round))
+								}
 							}
 							swg.Done()
 						}(hash, roundToProcess)

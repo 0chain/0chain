@@ -13,6 +13,7 @@ type BlockStore interface {
 	DeleteBlock(b *block.Block) error
 	UploadToCloud(hash string, round int64) error
 	DownloadFromCloud(hash string, round int64) error
+	CloudObjectExists(hash string) bool
 }
 
 var Store BlockStore
