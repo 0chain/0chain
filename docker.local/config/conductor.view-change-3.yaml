@@ -9,9 +9,9 @@
 ---
 
 enable:
-  - "Miner down/up"
-  - "Sharder down/up"
-  - "All miners down/up"
+  #- "Miner down/up"
+  #- "Sharder down/up"
+  #- "All miners down/up"
   - "All sharders down/up"
   - "All nodes down/up"
 
@@ -48,22 +48,22 @@ sets:
 
   - name: "All sharders down/up"
     tests:
-      - "All sharders: 50 (switch to contribute)"
-      - "All sharders: 100 (switch to share)"
-      - "All sharders: 150 (switch to publish)"
-      - "All sharders: 200 (switch to wait)"
-      - "All sharders: vc-1 round"
-      - "All sharders: vc round"
+      #- "All sharders: 50 (switch to contribute)"
+      #- "All sharders: 100 (switch to share)"
+      #- "All sharders: 150 (switch to publish)"
+      #- "All sharders: 200 (switch to wait)"
+      #- "All sharders: vc-1 round"
+      #- "All sharders: vc round"
       - "All sharders: vc+2 rounds"
 
   - name: "All nodes down/up"
     tests:
-      - "All nodes: 50 (switch to contribute)"
-      - "All nodes: 100 (switch to share)"
-      - "All nodes: 150 (switch to publish)"
-      - "All nodes: 200 (switch to wait)"
-      - "All nodes: vc-1 round"
-      - "All nodes: vc round"
+      #- "All nodes: 50 (switch to contribute)"
+      #- "All nodes: 100 (switch to share)"
+      #- "All nodes: 150 (switch to publish)"
+      #- "All nodes: 200 (switch to wait)"
+      #- "All nodes: vc-1 round"
+      #- "All nodes: vc round"
       - "All nodes: vc+2 rounds"
 
   # known phases
@@ -452,7 +452,8 @@ tests:
       - wait_phase:
           phase: 'contribute'
       - stop: ['sharder 1', 'sharder 2']
-      - start: ['sharder 1', 'sharder 2']
+      - start: ['sharder 1']
+      - start: ['sharder 2']
       - wait_sharder_keep:
           timeout: '5m'
           sharders: ['sharder 2']
@@ -479,7 +480,8 @@ tests:
       - wait_phase:
           phase: 'share'
       - stop: ['sharder 1', 'sharder 2']
-      - start: ['sharder 1', 'sharder 2']
+      - start: ['sharder 1']
+      - start: ['sharder 2']
       - wait_sharder_keep:
           timeout: '5m'
           sharders: ['sharder 2']
@@ -506,7 +508,8 @@ tests:
       - wait_phase:
           phase: 'publish'
       - stop: ['sharder 1', 'sharder 2']
-      - start: ['sharder 1', 'sharder 2']
+      - start: ['sharder 1']
+      - start: ['sharder 2']
       - wait_sharder_keep:
           timeout: '5m'
           sharders: ['sharder 2']
@@ -533,7 +536,8 @@ tests:
       - wait_phase:
           phase: 'wait'
       - stop: ['sharder 1', 'sharder 2']
-      - start: ['sharder 1', 'sharder 2']
+      - start: ['sharder 1']
+      - start: ['sharder 2']
       - wait_sharder_keep:
           timeout: '5m'
           sharders: ['sharder 2']
@@ -562,7 +566,8 @@ tests:
       - wait_round:
           shift: 48
       - stop: ['sharder 1', 'sharder 2']
-      - start: ['sharder 1', 'sharder 2']
+      - start: ['sharder 1']
+      - start: ['sharder 2']
       - wait_sharder_keep:
           timeout: '5m'
           sharders: ['sharder 2']
@@ -591,7 +596,8 @@ tests:
       - wait_round:
           shift: 49
       - stop: ['sharder 1', 'sharder 2']
-      - start: ['sharder 1', 'sharder 2']
+      - start: ['sharder 1']
+      - start: ['sharder 2']
       - wait_sharder_keep:
           timeout: '5m'
           sharders: ['sharder 2']
@@ -618,7 +624,8 @@ tests:
       - wait_round:
           shift: 2
       - stop: ['sharder 1', 'sharder 2']
-      - start: ['sharder 1', 'sharder 2']
+      - start: ['sharder 1']
+      - start: ['sharder 2']
       - wait_sharder_keep:
           timeout: '5m'
           sharders: ['sharder 2']

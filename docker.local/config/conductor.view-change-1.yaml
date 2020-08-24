@@ -271,6 +271,7 @@ tests:
           phase: "share"
       - stop: ["miner 4"]
       - wait_view_change:
+          timeout: '5m'
           expect_magic_block:
             number: 3 # 501 round
             sharders: ["sharder 1"]

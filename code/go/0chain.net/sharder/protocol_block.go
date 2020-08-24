@@ -87,6 +87,9 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 }
 
 func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
+	if b.Round == 698 || b.Round == 699 || b.Round == 700 || b.Round == 701 {
+		println("PROCESS B", b.Round, b.Hash)
+	}
 	// injected here
 	// {
 	// if er.IsFinalizing() || er.IsFinalized() { // <--------------------------
@@ -101,6 +104,14 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 		sc.SetRandomSeed(er, b.GetRoundRandomSeed()) // incorrect round seed ?
 	}
 
+	// moved down
+	// {
+	if b.MagicBlock != nil { // <-------------------- <-------------------------
+		sc.UpdateMagicBlock(b.MagicBlock)          // <-------------------------
+		sc.UpdateNodesFromMagicBlock(b.MagicBlock) // <-------------------------
+	} // <------------------------------------------- <-------------------------
+	// }
+
 	if err := sc.VerifyNotarization(ctx, b.Hash, b.GetVerificationTickets(), er.GetRoundNumber()); err != nil {
 		Logger.Error("notarization verification failed", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
 		return
@@ -110,18 +121,18 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 		return
 	}
 
-	// make sure LFMB hash and round are correct
-	if err := sc.VerifyBlockLFMB(b); err != nil {
-		Logger.Error("block LFMB verification", zap.Error(err))
-		return
-	}
+	// // make sure LFMB hash and round are correct
+	// if err := sc.VerifyBlockLFMB(b); err != nil {
+	// 	Logger.Error("block LFMB verification", zap.Error(err))
+	// 	return
+	// }
 
 	// moved down
 	// {
-	if b.MagicBlock != nil { // <-------------------- <-------------------------
-		sc.UpdateMagicBlock(b.MagicBlock)          // <-------------------------
-		sc.UpdateNodesFromMagicBlock(b.MagicBlock) // <-------------------------
-	} // <------------------------------------------- <-------------------------
+	//  if b.MagicBlock != nil { // <-------------------- <-------------------------
+	// 	sc.UpdateMagicBlock(b.MagicBlock)          // <-------------------------
+	// 	sc.UpdateNodesFromMagicBlock(b.MagicBlock) // <-------------------------
+	// } // <------------------------------------------- <-------------------------
 	// }
 
 	// moved here

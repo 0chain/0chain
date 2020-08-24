@@ -7,10 +7,10 @@
 # enabled test cases sets
 enable:
   # comment out to disable
-  - "MPK"
+  #- "MPK"
   - "Shares"
   - "Signatures"
-  - "Publish"
+  #- "Publish"
 
 # sets of test cases
 sets:
@@ -21,14 +21,14 @@ sets:
       - "Group send no MPK to blockchain"
   - name: "Shares"
     tests:
-      - "Send wrong share"
+      #- "Send wrong share"
       - "Only send correct share to the group"
-      - "Send no shares"
+      #- "Send no shares"
   - name: "Signatures"
     tests:
-      - "Don't send a signature"
+      #- "Don't send a signature"
       - "Only send correct signature to the group"
-      - "Send no signatures"
+      #- "Send no signatures"
   - name: "Publish"
     tests:
       - "Publish: Don't send a signature"
