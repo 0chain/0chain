@@ -98,7 +98,6 @@ func (c *Chain) ComputeFinalizedBlock(ctx context.Context, r round.RoundI) *bloc
 that extend from a single block in that round. */
 func (c *Chain) FinalizeRound(ctx context.Context, r round.RoundI, bsh BlockStateHandler) {
 	if r.IsFinalized() {
-		println("IS FINALIZED:", r.GetRoundNumber(), "ESC")
 		return // round already finalized
 	}
 	// The SetFinalizing is not condition check it changes round state.
@@ -106,7 +105,6 @@ func (c *Chain) FinalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 		Logger.Debug("finalize_round: already finalizing",
 			zap.Int64("round", r.GetRoundNumber()))
 		if node.Self.Type == node.NodeTypeSharder {
-			println("IS FINALIZING:", r.GetRoundNumber(), "ESC")
 			return
 		}
 	}
@@ -121,25 +119,13 @@ func (c *Chain) FinalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 	c.finalizedRoundsChannel <- r
 }
 
-func track(r round.RoundI, args ...interface{}) {
-	if rn := r.GetRoundNumber(); rn != 698 && rn != 699 && rn != 700 && rn != 701 {
-		return
-	}
-	println(r.GetRoundNumber(), fmt.Sprintln(args...))
-}
-
 func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStateHandler) {
-
-	track(r, "GOT")
-
 	roundNumber := r.GetRoundNumber()
 	notarizedBlocks := r.GetNotarizedBlocks()
 	nbCount := len(notarizedBlocks)
 	plfb := c.GetLatestFinalizedBlock()
 	Logger.Info("finalize round", zap.Int64("round", roundNumber), zap.Int64("lf_round", plfb.Round),
 		zap.Int("num_round_notarized", nbCount), zap.Int("num_chain_notarized", len(c.NotariedBlocksCounts)))
-
-	track(r, "IF-ELSE-1")
 
 	if nbCount == 0 {
 		c.ZeroNotarizedBlocksCount++
@@ -153,29 +139,22 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 	c.NotariedBlocksCounts[nbCount]++
 	//This check is useful when we allow the finalizeRound route is not sequential and end up with out-of-band execution
 	if r.GetRoundNumber() <= plfb.Round {
-		track(r, "ESC 1")
 		Logger.Error("finalize round - round number <= latest finalized round",
 			zap.Int64("round", r.GetRoundNumber()),
 			zap.Int64("lf_round", plfb.Round))
 		return
 	}
-	track(r, "COMPUTE FIN. BLOCK")
 	lfb := c.ComputeFinalizedBlock(ctx, r)
 	if lfb == nil {
-		track(r, "ESC 2")
 		Logger.Debug("finalize round - no decisive block to finalize yet or don't have all the necessary blocks", zap.Int64("round", roundNumber), zap.Int("notarized_blocks", nbCount))
 		return
 	}
-	track(r, "COMPUTED FIN. BLOCK", lfb.Round)
 	if lfb.Hash == plfb.Hash {
-		track(r, "HASHES EQUAL")
 		return
 	}
 	if lfb.Round <= plfb.Round {
-		track(r, "COMMON ANCESTOR CASE")
 		b := c.commonAncestor(ctx, plfb, lfb)
 		if b != nil {
-			track(r, "COMMON ANCESTOR CASE: TICK", b.Round)
 			// Recovering from incorrectly finalized block
 			c.RollbackCount++
 			rl := plfb.Round - b.Round
@@ -201,14 +180,10 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 		}
 		Logger.Error("finalize round - missing common ancestor", zap.Int64("cf_round", plfb.Round), zap.String("cf_block", plfb.Hash), zap.Int64("nf_round", lfb.Round), zap.String("nf_block", lfb.Hash))
 	}
-	track(r, "AFTER COMMON ANCESTOR CHECK")
 	frchain := make([]*block.Block, 0, 1)
-	track(r, "BEFORE B-LFB LOOP")
 	for b := lfb; b != nil && b.Hash != plfb.Hash; b = b.PrevBlock {
-		track(r, "B-LFB LOOP: TICK", b.Round)
 		frchain = append(frchain, b)
 	}
-	track(r, "AFTER B-LFB LOOP", lfb.Round)
 	fb := frchain[len(frchain)-1]
 	if fb.PrevBlock == nil {
 		pb := c.GetPreviousBlock(ctx, fb)
@@ -217,7 +192,6 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 			c.MissedBlocks += fb.Round - 1 - plfb.Round
 		}
 	}
-	track(r, "FINALIZED:", lfb.Round)
 	c.SetLatestFinalizedBlock(lfb)
 	FinalizationLagMetric.Update(int64(c.GetCurrentRound() - lfb.Round))
 	Logger.Info("finalize round - latest finalized round",
