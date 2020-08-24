@@ -80,9 +80,8 @@ type Chain struct {
 
 	MagicBlockStorage round.RoundStorage `json:"-"`
 
-	PreviousMagicBlock   *block.MagicBlock `json:"-"`
-	viewChangeMagicBlock *block.MagicBlock `json:"-"`
-	mbMutex              sync.RWMutex
+	PreviousMagicBlock *block.MagicBlock `json:"-"`
+	mbMutex            sync.RWMutex
 
 	LatestFinalizedMagicBlock *block.Block `json:"-"`
 	lfmbMutex                 sync.RWMutex
@@ -152,12 +151,21 @@ type Chain struct {
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
 
+func mbRoundOffset(rn int64) int64 {
+	if rn < 3 {
+		return rn // the same
+	}
+	return rn + 2 // MB offset
+}
+
 // GetCurrentMagicBlock returns MB for current round
 func (c *Chain) GetCurrentMagicBlock() *block.MagicBlock {
 	if c.GetCurrentRound() == 0 {
 		return c.GetLatestMagicBlock()
 	}
-	return c.GetMagicBlock(c.CurrentRound) //FIXME: race current round and deadlock
+
+	var round = mbRoundOffset(c.CurrentRound)
+	return c.GetMagicBlock(round) // FIXME: race current round and deadlock
 }
 
 func (c *Chain) GetLatestMagicBlock() *block.MagicBlock {
@@ -171,10 +179,14 @@ func (c *Chain) GetLatestMagicBlock() *block.MagicBlock {
 }
 
 func (c *Chain) GetMagicBlock(round int64) *block.MagicBlock {
+
+	round = mbRoundOffset(round)
+
 	c.mbMutex.RLock()
 	defer c.mbMutex.RUnlock()
 	entity := c.MagicBlockStorage.Get(round)
 	if entity == nil {
+		println(":::::::::: CHOOSE LATEST MB INSTEAD OF MB LOOKING FOR ::::::::::", round, "(with MB offset -- +2)")
 		entity = c.MagicBlockStorage.GetLatest()
 	}
 	if entity == nil {
@@ -184,6 +196,9 @@ func (c *Chain) GetMagicBlock(round int64) *block.MagicBlock {
 }
 
 func (c *Chain) GetPrevMagicBlock(round int64) *block.MagicBlock {
+
+	round = mbRoundOffset(round)
+
 	c.mbMutex.RLock()
 	defer c.mbMutex.RUnlock()
 	indexMB := c.MagicBlockStorage.FindRoundIndex(round)
@@ -198,8 +213,12 @@ func (c *Chain) GetPrevMagicBlock(round int64) *block.MagicBlock {
 	return c.PreviousMagicBlock
 }
 
-func (c *Chain) GetPrevMagicBlockFromMB(mb *block.MagicBlock) *block.MagicBlock {
-	return c.GetPrevMagicBlock(mb.StartingRound)
+func (c *Chain) GetPrevMagicBlockFromMB(mb *block.MagicBlock) (
+	pmb *block.MagicBlock) {
+
+	round = mbRoundOffset(mb.StartingRound)
+
+	return c.GetPrevMagicBlock(round)
 }
 
 func (c *Chain) SetMagicBlock(mb *block.MagicBlock) {
@@ -1227,20 +1246,6 @@ func (c *Chain) GetNodesPreviousInfo(mb *block.MagicBlock) {
 			sharder.SetNodeInfo(old)
 		}
 	}
-}
-
-// SetViewChangeMagicBlock sets the magic block after view change
-func (c *Chain) SetViewChangeMagicBlock(mb *block.MagicBlock) {
-	c.mutexViewChangeMB.Lock()
-	c.viewChangeMagicBlock = mb
-	c.mutexViewChangeMB.Unlock()
-}
-
-// GetViewChangeMagicBlock gets the magic block after view change
-func (c *Chain) GetViewChangeMagicBlock() *block.MagicBlock {
-	c.mutexViewChangeMB.RLock()
-	defer c.mutexViewChangeMB.RUnlock()
-	return c.viewChangeMagicBlock
 }
 
 func (c *Chain) Stop() {

@@ -316,3 +316,21 @@ func (np *Pool) Keys() (keys []string) {
 	}
 	return
 }
+
+// NewNodes returns list of nodes exist in
+// given Pool, but don't exist in this pool.
+func (np *Pool) NewNodes(newPool *Pool) (newNodes []*Node) {
+
+	var (
+		nps      = np.CopyNodesMap()
+		newPools = newPool.CopyNodesMap()
+	)
+
+	for id, node := range newPools {
+		if _, ok := nps[id]; !ok {
+			newNodes = append(newNodes, node)
+		}
+	}
+
+	return
+}

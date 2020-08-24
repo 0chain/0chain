@@ -21,7 +21,7 @@ import (
 	"go.uber.org/zap"
 )
 
-/*SendDKGShare sends the generated secShare to the given node */
+// SendDKGShare sends the generated secShare to the given node.
 func (mc *Chain) SendDKGShare(n *node.Node) error {
 	if !config.DevConfiguration.IsDkgEnabled {
 		return common.NewError("failed to send dkg share", "dkg is not enabled")

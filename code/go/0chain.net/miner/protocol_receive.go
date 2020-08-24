@@ -225,7 +225,7 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMess
 			}
 		}
 		if !mr.IsVRFComplete() {
-			if mc.isNeedViewChange(ctx, mb.Round+1) {
+			if mc.isNeedViewChange(mb.Round + 1) {
 				// kick new miners, joining the VC
 				//
 				// since the AddReceivedLFBTicket uses buffered channel

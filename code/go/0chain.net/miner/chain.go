@@ -55,6 +55,7 @@ func SetupMinerChain(c *chain.Chain) {
 	minerChain.roundDkg = round.NewRoundStartingStorage()
 	c.SetFetchedNotarizedBlockHandler(minerChain)
 	c.RoundF = MinerRoundFactory{}
+	mv.viewChangeProcess.init(minerChain)
 }
 
 /*GetMinerChain - get the miner's chain */
@@ -105,12 +106,11 @@ type Chain struct {
 	blockMessageChannel chan *BlockMessage
 	muDKG               *sync.RWMutex
 	roundDkg            round.RoundStorage
-	viewChangeDKG       *bls.DKG
-	mutexMpks           sync.RWMutex
-	mpks                *block.Mpks
-	nextViewChange      int64
 	discoverClients     bool
 	started             uint32
+
+	// view change process control
+	viewChangeProcess
 }
 
 // SetDiscoverClients set the discover clients parameter
@@ -219,80 +219,128 @@ func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) erro
 	return err
 }
 
-func (mc *Chain) isNeedViewChange(ctx context.Context, nround int64) bool {
-	currentDKG := mc.GetCurrentDKG(nround)
-	nextVC := mc.GetNextViewChange()
-	result := config.DevConfiguration.ViewChange &&
-		nextVC == nround &&
-		(currentDKG == nil || currentDKG.StartingRound <= nextVC)
-	return result
+// isViewChanging is period from, for example, 501 to 503 blocks inclusive.
+func (mc *Chain) isViewChanging(round int64) (is bool) {
+
+	if !config.DevConfiguration.ViewChange {
+		return
+	}
+
+	// don't offset the round, offset the next VC round and
+	// DKG starting round instead (below)
+
+	var (
+		cdkg = mc.GetCurrentDKG(round)
+
+		nvc    = mbRoundOffset(mc.GetNextViewChange()) // add MB offset
+		cdkgsr = mbRoundOffset(cdkg.StartingRound)     // add MB offset
+	)
+
+	// VC process consist of 3 rounds: 501, 502 and 503 (for example)
+	// - 501 and 502 -- VC preparation
+	// - 503         -- the view change in person
+
+	// 503 is view change round
+	// 502 and 501 are VC preparation rounds
+
+	is = (cdkg == nil || cdkgsr <= nvc) &&
+		((nvc-2 == round) || (nvc-1 == round) || (nvc == round))
+	return
 }
 
-func (mc *Chain) ViewChange(ctx context.Context, nRound int64) (bool, error) {
-	viewChangeMutex.Lock()
-	defer viewChangeMutex.Unlock()
+func (mc *Chain) isNeedViewChange(round int64) (is bool) {
 
-	if !mc.isNeedViewChange(ctx, nRound) {
+	if !config.DevConfiguration.ViewChange {
+		return
+	}
+
+	// don't offset the round, offset the next VC round and
+	// DKG starting round instead (below)
+
+	var (
+		cdkg = mc.GetCurrentDKG(round)
+
+		nvc    = mbRoundOffset(mc.GetNextViewChange()) // add MB offset
+		cdkgsr = mbRoundOffset(cdkg.StartingRound)     // add MB offset
+	)
+
+	is = (nvc == round) && (cdkg == nil || cdkgsr <= nvc)
+	return
+}
+
+func (mc *Chain) ViewChange(ctx context.Context, nRound int64) (
+	ok bool, err error) {
+
+	if !mc.isNeedViewChange(nRound) {
 		return false, nil
 	}
 
-	viewChangeMagicBlock := mc.GetViewChangeMagicBlock()
-	mb := mc.GetMagicBlock(nRound)
-	if viewChangeMagicBlock != nil {
-		if mb == nil || mb.MagicBlockNumber != viewChangeMagicBlock.MagicBlockNumber {
-			err := mc.UpdateMagicBlock(viewChangeMagicBlock)
-			if err != nil {
+	viewChangeMutex.Lock()
+	defer viewChangeMutex.Unlock()
+
+	var (
+		vcmb = mc.GetViewChangeMagicBlock(nRound)
+		mb   = mc.GetMagicBlock(nRound)
+	)
+
+	if vcmb != nil {
+		if mb == nil || mb.MagicBlockNumber != vcmb.MagicBlockNumber {
+			if err = mc.UpdateMagicBlock(vcmb); err != nil {
 				Logger.DPanic(err.Error())
 			}
 		}
-		mc.UpdateNodesFromMagicBlock(viewChangeMagicBlock)
 
-		// Send the previous notarized block for new miners
-		mc.sendNotarizedBlockToNewMiners(ctx, nRound-1, viewChangeMagicBlock, mb)
+		mc.UpdateNodesFromMagicBlock(vcmb)
+
 		mc.SetNextViewChange(0)
-		go mc.PruneRoundStorage(ctx, mc.getPruneCountRoundStorage(), mc.roundDkg, mc.MagicBlockStorage)
-	} else {
-		if err := mc.SetDKGSFromStore(ctx, mb); err != nil {
-			Logger.DPanic(err.Error())
-		}
+		go mc.PruneRoundStorage(ctx, mc.getPruneCountRoundStorage(),
+			mc.roundDkg, mc.MagicBlockStorage)
+
+		return true, nil
+	}
+
+	if err = mc.SetDKGSFromStore(ctx, mb); err != nil {
+		Logger.DPanic(err.Error())
 	}
 	return true, nil
 }
 
-// Send a notarized block for new miners
-func (mc *Chain) sendNotarizedBlockToNewMiners(ctx context.Context, nRound int64,
-	viewChangeMagicBlock, currentMagicBlock *block.MagicBlock) {
-	prevRound := mc.GetMinerRound(nRound)
-	prevMinerNodes := mc.GetMagicBlock(nRound).Miners
-	if prevRound == nil {
-		Logger.Error("round not found", zap.Any("round", nRound))
-		return
-	}
-	if prevRound.Block == nil {
-		Logger.Error("block round not found", zap.Any("round", nRound))
-		return
-	}
-	selfID := node.Self.Underlying().GetKey()
-	if currentMagicBlock.Miners.GetNode(selfID) == nil {
-		// A miner that was active in the previous VC can send a block
-		return
-	}
+// TODO (sfxdx): TO REMOVE
+//
+// // Send a notarized block for new miners
+// func (mc *Chain) sendNotarizedBlockToNewMiners(ctx context.Context, nRound int64,
+// 	viewChangeMagicBlock, currentMagicBlock *block.MagicBlock) {
+// 	prevRound := mc.GetMinerRound(nRound)
+// 	prevMinerNodes := mc.GetMagicBlock(nRound).Miners
+// 	if prevRound == nil {
+// 		Logger.Error("round not found", zap.Any("round", nRound))
+// 		return
+// 	}
+// 	if prevRound.Block == nil {
+// 		Logger.Error("block round not found", zap.Any("round", nRound))
+// 		return
+// 	}
+// 	selfID := node.Self.Underlying().GetKey()
+// 	if currentMagicBlock.Miners.GetNode(selfID) == nil {
+// 		// A miner that was active in the previous VC can send a block
+// 		return
+// 	}
 
-	prevBlock := prevRound.Block
-	allMinersMB := make([]*node.Node, 0)
-	for _, n := range viewChangeMagicBlock.Miners.NodesMap {
-		if selfID == n.GetKey() {
-			continue
-		}
-		if prevMinerNodes.GetNode(n.GetKey()) == nil {
-			allMinersMB = append(allMinersMB, n)
-		}
-	}
-	if len(allMinersMB) != 0 {
-		go mc.SendNotarizedBlockToPoolNodes(ctx, prevBlock, viewChangeMagicBlock.Miners,
-			allMinersMB, chain.DefaultRetrySendNotarizedBlockNewMiner)
-	}
-}
+// 	prevBlock := prevRound.Block
+// 	allMinersMB := make([]*node.Node, 0)
+// 	for _, n := range viewChangeMagicBlock.Miners.NodesMap {
+// 		if selfID == n.GetKey() {
+// 			continue
+// 		}
+// 		if prevMinerNodes.GetNode(n.GetKey()) == nil {
+// 			allMinersMB = append(allMinersMB, n)
+// 		}
+// 	}
+// 	if len(allMinersMB) != 0 {
+// 		go mc.SendNotarizedBlockToPoolNodes(ctx, prevBlock, viewChangeMagicBlock.Miners,
+// 			allMinersMB, chain.DefaultRetrySendNotarizedBlockNewMiner)
+// 	}
+// }
 
 func (mc *Chain) ChainStarted(ctx context.Context) bool {
 	timer := time.NewTimer(time.Second)
@@ -322,12 +370,6 @@ func (mc *Chain) ChainStarted(ctx context.Context) bool {
 		}
 	}
 	return false
-}
-
-func (mc *Chain) GetMpks() map[string]*block.MPK {
-	mc.mutexMpks.RLock()
-	defer mc.mutexMpks.RUnlock()
-	return mc.mpks.GetMpks()
 }
 
 func StartChainRequestHandler(ctx context.Context, r *http.Request) (interface{}, error) {
@@ -402,8 +444,18 @@ func (mc *Chain) SaveMagicBlock() chain.MagicBlockSaveFunc {
 	return nil
 }
 
+func mbRoundOffset(rn int64) int64 {
+	if rn < 3 {
+		return rn // the same
+	}
+	return rn + 2 // MB offset
+}
+
 // GetCurrentDKG returns DKG by round number
 func (mc *Chain) GetCurrentDKG(round int64) *bls.DKG {
+
+	round = mbRoundOffset(round)
+
 	mc.muDKG.RLock()
 	defer mc.muDKG.RUnlock()
 	entity := mc.roundDkg.Get(round)
