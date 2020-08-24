@@ -7,9 +7,11 @@ import (
 )
 
 func (msc *MinerSmartContract) InitSC() {
+
 	if msc.smartContractFunctions == nil {
 		msc.smartContractFunctions = make(map[string]smartContractFunction)
 	}
+
 	phaseFuncs[Start] = msc.createDKGMinersForContribute
 	phaseFuncs[Contribute] = msc.widdleDKGMinersForShare
 	phaseFuncs[Publish] = msc.createMagicBlockForWait
@@ -31,11 +33,17 @@ func (msc *MinerSmartContract) InitSC() {
 
 	msc.smartContractFunctions["add_miner"] = msc.AddMiner
 	msc.smartContractFunctions["add_sharder"] = msc.AddSharder
+
 	msc.smartContractFunctions["payFees"] = msc.payFees
+
 	msc.smartContractFunctions["contributeMpk"] = msc.contributeMpk
 	msc.smartContractFunctions["shareSignsOrShares"] = msc.shareSignsOrShares
+	msc.smartContractFunctions["wait"] = msc.wait
+
 	msc.smartContractFunctions["update_settings"] = msc.UpdateSettings
+
 	msc.smartContractFunctions["addToDelegatePool"] = msc.addToDelegatePool
 	msc.smartContractFunctions["deleteFromDelegatePool"] = msc.deleteFromDelegatePool
+
 	msc.smartContractFunctions["sharder_keep"] = msc.sharderKeep
 }

@@ -612,6 +612,30 @@ func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction,
 	return string(sos.Encode()), nil
 }
 
+// Wait used to notify SC that DKG summary and magic block data saved by
+// a miner locally and VC can moves on. If >= T miners don't save their
+// DKG/MB then we can't do a view change because some miners can save,
+// but some can not. And this case we got BC stuck.
+func (msc *MinerSmartContract) wait(t *transaction.Transaction,
+	inputData []byte, gn *globalNode, balances cstate.StateContextI) (
+	resp string, err error) {
+
+	var pn *PhaseNode
+	if pn, err = msc.getPhaseNode(balances); err != nil {
+		return "", common.NewErrorf("wait",
+			"can't get phase node: %v", err)
+	}
+
+	if pn.Phase != Wait {
+		return "", common.NewErrorf("wait", "this is not the"+
+			" correct phase to wait: %s", pn.Phase)
+	}
+
+	//
+
+	return
+}
+
 func (msc *MinerSmartContract) getMinersDKGList(statectx cstate.StateContextI) (
 	*DKGMinerNodes, error) {
 
