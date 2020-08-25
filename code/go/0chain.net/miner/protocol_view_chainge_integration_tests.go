@@ -297,8 +297,6 @@ func (mc *Chain) ContributeMpk(_ context.Context, _ *block.Block,
 	return
 }
 
-// TO REFACTOR
-
 func SignShareRequestHandler(ctx context.Context, r *http.Request) (
 	resp interface{}, err error) {
 

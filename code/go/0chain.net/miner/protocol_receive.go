@@ -225,22 +225,6 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMess
 			}
 		}
 		if !mr.IsVRFComplete() {
-			if mc.isNeedViewChange(mb.Round + 1) {
-				// kick new miners, joining the VC
-				//
-				// since the AddReceivedLFBTicket uses buffered channel
-				// we have to make sure, the ticket set before the
-				// startRound
-				for mc.isAheadOfSharders(ctx, mb.Round) {
-					mc.AddReceivedLFBTicket(ctx, &chain.LFBTicket{
-						Round: mb.Round,
-					})
-				}
-
-				// and take previous block required to move on
-				go mc.AsyncFetchNotarizedBlock(mb.PrevHash)
-
-			}
 			mc.startRound(ctx, mr, mb.GetRoundRandomSeed())
 		}
 	}

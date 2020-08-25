@@ -85,8 +85,22 @@ func (mc *Chain) isActiveInChain(lfb *block.Block, mb *block.MagicBlock) bool {
 		mb.StartingRound < mc.GetCurrentRound() && lfb.ClientState != nil
 }
 
+// After stop/start we have to repair nextViewCahnge round number from
+// store if there is "latest" MB saved in Miner SC;
+func (vcp *viewChangeProcess) setupNextViewChange(ctx context.Context) {
+	var mb, err = GetLatestMagicBlockFromStore(ctx)
+	if err != nil {
+		Logger.Info("getting latest MB from store", zap.Error(err))
+		return
+	}
+	Logger.Info("next view change", zap.Int64("round", mb.StartingRound))
+	vcp.SetNextViewChange(mb.StartingRound)
+}
+
 // DKGProcess starts DKG process and works on it. It blocks.
 func (mc *Chain) DKGProcess(ctx context.Context) {
+
+	mc.viewChangeProcess.setupNextViewChange(ctx)
 
 	const (
 		timeoutPhase        = 5
@@ -842,5 +856,17 @@ func GetMagicBlockDataFromStore(ctx context.Context, id string) (
 	defer ememorystore.Close(dctx)
 
 	err = mbd.Read(dctx, mbd.GetKey())
+	return
+}
+
+func GetLatestMagicBlockFromStore(ctx context.Context) (
+	magicBlock *block.MagicBlock, err error) {
+
+	var data *block.MagicBlockData
+	if data, err = GetMagicBlockDataFromStore(ctx, "latest"); err != nil {
+		return
+	}
+
+	magicBlock = data.MagicBlock
 	return
 }

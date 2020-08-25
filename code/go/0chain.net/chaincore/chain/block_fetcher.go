@@ -61,7 +61,13 @@ func (bf *BlockFetcher) FetchBlock(ctx context.Context, c *Chain, hash string) {
 	}
 }
 
-//FetchedNotarizedBlockHandler - a handler that processes a fetched notarized block
+// FetchedNotarizedBlockHandler - a handler that processes a fetched notarized block
 type FetchedNotarizedBlockHandler interface {
 	NotarizedBlockFetched(ctx context.Context, b *block.Block)
+}
+
+// ViewChanger represents node makes view change where a block
+// with new magic block finalized.
+type ViewChanger interface {
+	ViewChange(ctx context.Context, lfb *block.Block) (err error)
 }

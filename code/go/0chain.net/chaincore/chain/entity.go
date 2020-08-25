@@ -129,6 +129,7 @@ type Chain struct {
 	crtCount int64 // Continuous/Current Round Timeout Count
 
 	fetchedNotarizedBlockHandler FetchedNotarizedBlockHandler
+	viewChanger                  ViewChanger
 
 	pruneStats *util.PruneStats
 
@@ -659,7 +660,7 @@ func (c *Chain) PruneChain(_ context.Context, b *block.Block) {
 
 /*ValidateMagicBlock - validate the block for a given round has the right magic block */
 func (c *Chain) ValidateMagicBlock(ctx context.Context, mr *round.Round, b *block.Block) bool {
-	blockMagicBlock := c.GetLatestFinalizedMagicBlockRound(ctx, mr)
+	var blockMagicBlock = c.GetLatestFinalizedMagicBlockRound(mr.GetRoundNumber())
 	return b.LatestFinalizedMagicBlockHash == blockMagicBlock.Hash
 }
 
@@ -1051,6 +1052,10 @@ func (c *Chain) SetFetchedNotarizedBlockHandler(fnbh FetchedNotarizedBlockHandle
 	c.fetchedNotarizedBlockHandler = fnbh
 }
 
+func (c *Chain) SetViewChanger(vcr ViewChanger) {
+	c.viewChanger = vcr
+}
+
 //GetPruneStats - get the current prune stats
 func (c *Chain) GetPruneStats() *util.PruneStats {
 	return c.pruneStats
@@ -1073,7 +1078,7 @@ func (c *Chain) InitBlockState(b *block.Block) (err error) {
 	return
 }
 
-//SetLatestFinalizedBlock - set the latest finalized block
+// SetLatestFinalizedBlock - set the latest finalized block.
 func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
 	c.lfbMutex.Lock()
 	defer c.lfbMutex.Unlock()
@@ -1085,7 +1090,7 @@ func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
 	}
 }
 
-//GetLatestFinalizedBlock - get the latest finalized block
+// GetLatestFinalizedBlock - get the latest finalized block.
 func (c *Chain) GetLatestFinalizedBlock() *block.Block {
 	c.lfbMutex.RLock()
 	defer c.lfbMutex.RUnlock()

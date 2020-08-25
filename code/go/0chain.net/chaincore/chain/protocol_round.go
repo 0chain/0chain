@@ -175,6 +175,13 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 			for cfb := plfb.PrevBlock; cfb != nil && cfb != b; cfb = cfb.PrevBlock {
 				Logger.Error("finalize round - rolling back finalized block -> ", zap.Int64("round", cfb.Round), zap.String("block", cfb.Hash))
 			}
+			// perform view change or not perform
+			if err := c.viewChanger.ViewChange(ctx, b); err != nil {
+				Logger.Error("view_changing_lfb",
+					zap.Int64("lfb_round", b.Round),
+					zap.Error(err))
+				return
+			}
 			c.SetLatestFinalizedBlock(b)
 			return
 		}
@@ -191,6 +198,13 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 			Logger.Error("finalize round (missed blocks)", zap.Int64("from", plfb.Round+1), zap.Int64("to", fb.Round-1))
 			c.MissedBlocks += fb.Round - 1 - plfb.Round
 		}
+	}
+	// perform view change (or not perform)
+	if err := c.viewChanger.ViewChange(ctx, lfb); err != nil {
+		Logger.Error("view_changing_lfb",
+			zap.Int64("lfb_round", lfb.Round),
+			zap.Error(err))
+		return
 	}
 	c.SetLatestFinalizedBlock(lfb)
 	FinalizationLagMetric.Update(int64(c.GetCurrentRound() - lfb.Round))
@@ -288,12 +302,16 @@ func (c *Chain) GetLatestFinalizedMagicBlockFromSharder(ctx context.Context) []*
 }
 
 // GetLatestFinalizedMagicBlockRound calculates and returns LFMB for by round number
-func (c *Chain) GetLatestFinalizedMagicBlockRound(_ context.Context, mr *round.Round) *block.Block {
+func (c *Chain) GetLatestFinalizedMagicBlockRound(rn int64) (
+	lfmb *block.Block) {
+
 	c.lfmbMutex.RLock()
 	defer c.lfmbMutex.RUnlock()
 
-	foundLFMB := c.LatestFinalizedMagicBlock
-	roundBlock := mr.GetRoundNumber()
+	lfmb = c.LatestFinalizedMagicBlock
+
+	rn = mbRoundOffset(rn) // round number with MB offset
+
 	if len(c.magicBlockStartingRounds) > 0 {
 		startingRounds := make([]int64, 0, len(c.magicBlockStartingRounds))
 		for round := range c.magicBlockStartingRounds {
@@ -305,11 +323,12 @@ func (c *Chain) GetLatestFinalizedMagicBlockRound(_ context.Context, mr *round.R
 		foundRound := startingRounds[0]
 		for _, round := range startingRounds {
 			foundRound = round
-			if round <= roundBlock {
+			if round <= rn {
 				break
 			}
 		}
-		foundLFMB = c.magicBlockStartingRounds[foundRound]
+		lfmb = c.magicBlockStartingRounds[foundRound]
 	}
-	return foundLFMB
+
+	return
 }

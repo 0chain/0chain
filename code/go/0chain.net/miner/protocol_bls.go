@@ -69,19 +69,29 @@ func SetDKGFromMagicBlocksChainPrev(ctx context.Context, mb *block.MagicBlock) e
 	return nil
 }
 
-func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) error {
-	self := node.GetSelfNode(ctx)
-	dkgSummary, err := GetDKGSummaryFromStore(ctx, strconv.FormatInt(mb.MagicBlockNumber, 10))
-	if err != nil {
-		return err
-	}
-	if dkgSummary.SecretShares == nil {
-		return common.NewError("failed to set dkg from store", "no saved shares for dkg")
+func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (
+	err error) {
+
+	var (
+		selfNodeKey = node.GetSelfNode(ctx).Underlying().GetKey()
+		id          = strconv.FormatInt(mb.MagicBlockNumber, 10)
+
+		dkgSummary *bls.DKGSummary
+	)
+
+	if dkgSummary, err = GetDKGSummaryFromStore(ctx, id); err != nil {
+		return
 	}
 
-	newDKG := bls.MakeDKG(mb.T, mb.N, self.Underlying().GetKey())
+	if dkgSummary.SecretShares == nil {
+		return common.NewError("failed to set dkg from store",
+			"no saved shares for dkg")
+	}
+
+	var newDKG = bls.MakeDKG(mb.T, mb.N, selfNodeKey)
 	newDKG.MagicBlockNumber = mb.MagicBlockNumber
 	newDKG.StartingRound = mb.StartingRound
+
 	for k := range mb.Miners.CopyNodesMap() {
 		if savedShare, ok := dkgSummary.SecretShares[ComputeBlsID(k)]; ok {
 			newDKG.AddSecretShare(bls.ComputeIDdkg(k), savedShare, false)
@@ -91,17 +101,22 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) err
 			}
 		}
 	}
+
 	if !newDKG.HasAllSecretShares() {
-		return common.NewError("failed to set dkg from store", "not enough secret shares for dkg")
+		return common.NewError("failed to set dkg from store",
+			"not enough secret shares for dkg")
 	}
+
 	newDKG.AggregateSecretKeyShares()
 	newDKG.Pi = newDKG.Si.GetPublicKey()
 	newDKG.AggregatePublicKeyShares(mb.Mpks.GetMpkMap())
 
-	if err := mc.SetDKG(newDKG, mb.StartingRound); err != nil {
+	if err = mc.SetDKG(newDKG, mb.StartingRound); err != nil {
 		Logger.Error("failed to set dkg", zap.Error(err))
+		return // error
 	}
-	return nil
+
+	return // ok, set
 }
 
 func GetDKGSummaryFromStore(ctx context.Context, id string) (*bls.DKGSummary, error) {
@@ -190,15 +205,11 @@ func (mc *Chain) GetBlsShare(ctx context.Context, r *round.Round) (string, error
 	if err != nil {
 		return "", err
 	}
-	if _, err := mc.ViewChange(ctx, r.Number); err != nil {
-		return "", err
+	var dkg = mc.GetCurrentDKG(r.GetRoundNumber())
+	if dkg == nil {
+		return "", common.NewError("get_bls_share", "DKG is nil")
 	}
-
-	currentDKG := mc.GetCurrentDKG(r.GetRoundNumber())
-	if currentDKG == nil {
-		return "", common.NewError("get_bls_share", "DKG nil")
-	}
-	sigShare := currentDKG.Sign(msg)
+	sigShare := dkg.Sign(msg)
 	return sigShare.GetHexString(), nil
 }
 
@@ -217,31 +228,28 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 		Logger.Warn("failed to get bls message", zap.Any("vrfs_share", vrfs.Share), zap.Any("round", mr.Round))
 		return false
 	}
-	if _, err := mc.ViewChange(ctx, mr.Number); err != nil {
-		return false
-	}
-
 	var share bls.Sign
 	if err := share.SetHexString(vrfs.Share); err != nil {
 		Logger.Error("failed to set hex share", zap.Any("vrfs_share", vrfs.Share), zap.Any("message", msg))
 		return false
 	}
 
-	partyID := bls.ComputeIDdkg(vrfs.GetParty().ID)
-
-	currentDKG := mc.GetCurrentDKG(roundNumber)
-	if currentDKG == nil {
+	var (
+		partyID = bls.ComputeIDdkg(vrfs.GetParty().ID)
+		dkg     = mc.GetCurrentDKG(roundNumber)
+	)
+	if dkg == nil {
 		return false
 	}
-	blsThreshold := currentDKG.T
+	blsThreshold := dkg.T
 
-	if !currentDKG.VerifySignature(&share, msg, partyID) {
+	if !dkg.VerifySignature(&share, msg, partyID) {
 		var prSeed string
 		if pr := mc.GetMinerRound(roundNumber - 1); pr != nil {
 			prSeed = strconv.FormatInt(pr.GetRandomSeed(), 16)
 		}
 		stringID := (&partyID).GetHexString()
-		pi := currentDKG.GetPublicKeyByID(partyID)
+		pi := dkg.GetPublicKeyByID(partyID)
 		Logger.Error("failed to verify share",
 			zap.Any("share", share.GetHexString()),
 			zap.Any("message", msg),
@@ -249,8 +257,8 @@ func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShar
 			zap.Any("pi", pi.GetHexString()),
 			zap.String("node_id", vrfs.GetParty().GetKey()),
 			zap.Int64("round", vrfs.Round),
-			zap.Int64("dkg_starting_round", currentDKG.StartingRound),
-			zap.Int64("dkg_mb_number", currentDKG.MagicBlockNumber),
+			zap.Int64("dkg_starting_round", dkg.StartingRound),
+			zap.Int64("dkg_mb_number", dkg.MagicBlockNumber),
 			zap.Int("chain_tc", vrfs.GetRoundTimeoutCount()),
 			zap.Int("round_tc", mr.GetTimeoutCount()),
 			zap.String("pr_seed", prSeed),

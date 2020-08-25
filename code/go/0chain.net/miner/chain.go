@@ -54,6 +54,7 @@ func SetupMinerChain(c *chain.Chain) {
 	minerChain.muDKG = &sync.RWMutex{}
 	minerChain.roundDkg = round.NewRoundStartingStorage()
 	c.SetFetchedNotarizedBlockHandler(minerChain)
+	c.SetViewChanger(minerChain)
 	c.RoundF = MinerRoundFactory{}
 	minerChain.viewChangeProcess.init(minerChain)
 }
@@ -90,7 +91,7 @@ func SetupStartChainEntity() {
 // MinerRoundFactory -
 type MinerRoundFactory struct{}
 
-//CreateRoundF this returns an interface{} of type *miner.Round
+// CreateRoundF this returns an interface{} of type *miner.Round
 func (mrf MinerRoundFactory) CreateRoundF(roundNum int64) interface{} {
 	mc := GetMinerChain()
 	r := round.NewRound(roundNum)
@@ -100,7 +101,7 @@ func (mrf MinerRoundFactory) CreateRoundF(roundNum int64) interface{} {
 	return r
 }
 
-/*Chain - A miner chain to manage the miner activities */
+// Chain - A miner chain to manage the miner activities.
 type Chain struct {
 	*chain.Chain
 	blockMessageChannel chan *BlockMessage
@@ -118,12 +119,12 @@ func (mc *Chain) SetDiscoverClients(b bool) {
 	mc.discoverClients = b
 }
 
-/*GetBlockMessageChannel - get the block messages channel */
+// GetBlockMessageChannel - get the block messages channel.
 func (mc *Chain) GetBlockMessageChannel() chan *BlockMessage {
 	return mc.blockMessageChannel
 }
 
-/*SetupGenesisBlock - setup the genesis block for this chain */
+// SetupGenesisBlock - setup the genesis block for this chain.
 func (mc *Chain) SetupGenesisBlock(hash string, magicBlock *block.MagicBlock) *block.Block {
 	gr, gb := mc.GenerateGenesisBlock(hash, magicBlock)
 	if gr == nil || gb == nil {
@@ -143,7 +144,7 @@ func (mc *Chain) SetupGenesisBlock(hash string, magicBlock *block.MagicBlock) *b
 	return gb
 }
 
-/*CreateRound - create a round */
+// CreateRound - create a round.
 func (mc *Chain) CreateRound(r *round.Round) *Round {
 	var mr Round
 	mr.Round = r
@@ -152,7 +153,7 @@ func (mc *Chain) CreateRound(r *round.Round) *Round {
 	return &mr
 }
 
-/*SetLatestFinalizedBlock - Set latest finalized block */
+// SetLatestFinalizedBlock - sets the latest finalized block.
 func (mc *Chain) SetLatestFinalizedBlock(ctx context.Context, b *block.Block) {
 	var r = round.NewRound(b.Round)
 	mr := mc.CreateRound(r)
@@ -170,15 +171,17 @@ func (mc *Chain) deleteTxns(txns []datastore.Entity) error {
 	return transactionMetadataProvider.GetStore().MultiDelete(ctx, transactionMetadataProvider, txns)
 }
 
-/*SetPreviousBlock - set the previous block */
-func (mc *Chain) SetPreviousBlock(ctx context.Context, r round.RoundI, b *block.Block, pb *block.Block) {
+// SetPreviousBlock - set the previous block.
+func (mc *Chain) SetPreviousBlock(ctx context.Context, r round.RoundI,
+	b *block.Block, pb *block.Block) {
+
 	b.SetPreviousBlock(pb)
 	b.SetRoundRandomSeed(r.GetRandomSeed())
 	mc.SetRoundRank(r, b)
 	b.ComputeChainWeight()
 }
 
-//GetMinerRound - get the miner's version of the round
+// GetMinerRound - get the miner's version of the round.
 func (mc *Chain) GetMinerRound(roundNumber int64) *Round {
 	r := mc.GetRound(roundNumber)
 	if r == nil {
@@ -191,7 +194,7 @@ func (mc *Chain) GetMinerRound(roundNumber int64) *Round {
 	return mr
 }
 
-/*SaveClients - save clients from the block */
+// SaveClients - save clients from the block.
 func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) error {
 	var err error
 	clientKeys := make([]datastore.Key, len(clients))
@@ -239,45 +242,90 @@ func (mc *Chain) isNeedViewChange(round int64) (is bool) {
 	return
 }
 
-func (mc *Chain) ViewChange(ctx context.Context, nRound int64) (
-	ok bool, err error) {
+// isViewChanging returns true for 501, 502 and 503 rounds
+func (mc *Chain) isViewChanging(round int64) (is bool) {
+	var nvc = mc.NextViewChange()                           // expected
+	return nvc == round || nvc+1 == round || nvc+2 == round // 501, 502, or 503
+}
 
-	if !mc.isNeedViewChange(nRound) {
-		return false, nil
+// TO REMOVE (draft code)
+//
+// // in goroutine
+// func (mc *Chain) kickNewMiners(ctx context.Context, b *block.Block) {
+//
+// 	if node.Self.Underlying().Type != node.NodeTypeMiner {
+// 		return // only miner should do that
+// 	}
+//
+// 	// get previous magic block
+// 	var prev = mc.GetMagicBlock(b.Round)
+// 	if prev.MagicBlockNumber != b.MagicBlock.MagicBlockNumber-1 {
+// 		Logger.Error("unexpected previous magic block",
+// 			zap.Int64("mb_number", b.MagicBlock.MagicBlockNumber),
+// 			zap.Int64("prev_mb_number", prev.MagicBlockNumber))
+// 		return
+// 	}
+//
+// 	// TODO (sfxd): kick the new miners, force them to pull LFB from sharders
+// }
+
+// ViewChange on finalized (!) block. Miners check magic blocks during
+// generation and notarization. A finalized block should be trusted.
+func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
+
+	var (
+		mb  = b.MagicBlock
+		nvc = mc.NextViewChange()
+	)
+
+	// next view change is expected, but not given; it means the MB rejected
+	// by Miner SC and we have to reset NextViewChange to previous MB for
+	// block generation and verification process;
+	if b.Round == nvc && mb == nil {
+		var mbx = mc.GetMagicBlock(b.Round)
+		mc.SetNextViewChange(mbx.StartingRound)
+		return // no MB no VC
 	}
 
-	/*
-		viewChangeMutex.Lock()
-		defer viewChangeMutex.Unlock()
+	// just skip the block if it hasn't a MB
+	if mb == nil {
+		return // no MB, no VC
+	}
 
-		var (
-			vcmb = mc.GetViewChangeMagicBlock(nRound)
-			mb   = mc.GetMagicBlock(nRound)
-		)
+	// view change
 
-		if vcmb != nil {
-			if mb == nil || mb.MagicBlockNumber != vcmb.MagicBlockNumber {
-				if err = mc.UpdateMagicBlock(vcmb); err != nil {
-					Logger.DPanic(err.Error())
-				}
-			}
+	if err = mc.UpdateMagicBlock(mb); err != nil {
+		return common.NewErrorf("view_change", "updating MB: %v", err)
+	}
 
-			mc.UpdateNodesFromMagicBlock(vcmb)
+	mc.UpdateNodesFromMagicBlock(mb)
+	go mc.PruneRoundStorage(ctx, mc.getPruneCountRoundStorage(),
+		mc.roundDkg, mc.MagicBlockStorage)
 
-			mc.SetNextViewChange(0)
-			go mc.PruneRoundStorage(ctx, mc.getPruneCountRoundStorage(),
-				mc.roundDkg, mc.MagicBlockStorage)
+	// set corresponding DKG
+	if err = mc.SetDKGSFromStore(ctx, mb); err != nil {
+		return
+	}
 
-			return true, nil
-		}
+	// new miners has no previous round, and LFB, this block becomes
+	// LFB and new miners have to get it from miners or sharders to
+	// join BC; now we have to kick them to don't wait for while and
+	// get the block from sharders and join BC; anyway the new miners
+	// will pool LFB (501) from sharders and join; but the kick used
+	// to skip a waiting
 
-		if err = mc.SetDKGSFromStore(ctx, mb); err != nil {
-			Logger.DPanic(err.Error())
-		}
+	// to mine 503 round (new round with new nodes and new MB)
+	// the new miners need:
+	//    - 501 block with MB, corresponding DKG saved locally
+	//    - 502 block and round (for previous round random seed)
 
-	*/
+	// the flow:
+	//
+	//  - 501 - finalized block
+	//  - 502 - finalize round (notarization)
+	//  - 503 - generate (with new MB and new DKG)
 
-	return true, nil
+	return
 }
 
 // TODO (sfxdx): TO REMOVE

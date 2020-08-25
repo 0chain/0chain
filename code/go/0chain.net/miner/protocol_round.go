@@ -173,9 +173,6 @@ func (mc *Chain) startRound(ctx context.Context, r *Round, seed int64) {
 		return
 	}
 	Logger.Info("Starting a new round", zap.Int64("round", r.GetRoundNumber()))
-	if _, err := mc.ViewChange(ctx, r.Number); err != nil {
-		return
-	}
 	mc.startNewRound(ctx, r)
 }
 
@@ -229,7 +226,7 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 	}
 
 	// NOTE: If there are not enough txns, this will not advance further even
-	// though rest of the network is. That's why this is a goroutine
+	// though rest of the network is. That's why this is a goroutine.
 	go mc.GenerateRoundBlock(ctx, mr)
 }
 
@@ -270,7 +267,7 @@ func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) *block.Bl
 	return nil
 }
 
-/*GenerateRoundBlock - given a round number generates a block*/
+// GenerateRoundBlock - given a round number generates a block.
 func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block, error) {
 	ts := time.Now()
 	defer func() {
@@ -291,23 +288,50 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	txnEntityMetadata := datastore.GetEntityMetadata("txn")
 	ctx = memorystore.WithEntityConnection(ctx, txnEntityMetadata)
 	defer memorystore.Close(ctx)
-	b := block.NewBlock(mc.GetKey(), r.GetRoundNumber())
-	lfmb := mc.GetLatestFinalizedMagicBlockRound(ctx, r.Round)
+
+	var (
+		rn   = r.GetRoundNumber()
+		b    = block.NewBlock(mc.GetKey(), rn)
+		lfmb = mc.GetLatestFinalizedMagicBlockRound(rn)
+
+		nvc    = mc.NextViewChange()
+		nvcoff = mbRoundOffset(nvc)
+	)
+
+	if nvc > 0 && rn >= nvcoff && lfmb.StartingRound < nvc {
+		Logger.Error("gen_block",
+			zap.String("err", "required MB missing or still not finalized"),
+			zap.Int64("next_vc", nvc),
+			zap.Int64("round", rn),
+			zap.Int64("lfmb_sr", lfmb.StartingRound),
+		)
+		return nil, common.NewError("gen_block",
+			"required MB missing or still not finalized")
+	}
+
 	b.LatestFinalizedMagicBlockHash = lfmb.Hash
 	b.LatestFinalizedMagicBlockRound = lfmb.Round
 
 	b.MinerID = node.Self.Underlying().GetKey()
 	mc.SetPreviousBlock(ctx, r, b, pb)
-	start := time.Now()
-	makeBlock := false
-	generationTimeout := time.Millisecond * time.Duration(mc.GetGenerationTimeout())
-	generationTries := 0
-	var startLogging time.Time
+
+	var (
+		start             = time.Now()
+		generationTimeout = time.Millisecond * time.Duration(mc.GetGenerationTimeout())
+
+		makeBlock       bool
+		generationTries int
+		startLogging    time.Time
+	)
+
 	for true {
 		if mc.GetCurrentRound() > b.Round {
-			Logger.Error("generate block - round mismatch", zap.Any("round", roundNumber), zap.Any("current_round", mc.GetCurrentRound()))
+			Logger.Error("generate block - round mismatch",
+				zap.Any("round", roundNumber),
+				zap.Any("current_round", mc.GetCurrentRound()))
 			return nil, ErrRoundMismatch
 		}
+
 		txnCount := transaction.GetTransactionCount()
 		b.SetStateDB(pb)
 		generationTries++
@@ -316,6 +340,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 				Logger.Error("(re) computing previous block", zap.Error(err))
 			}
 		}
+
 		err := mc.GenerateBlock(ctx, b, mc, makeBlock)
 		if err != nil {
 			cerr, ok := err.(*common.Error)
@@ -327,10 +352,17 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 						time.Sleep(time.Duration(delay) * time.Millisecond)
 						if startLogging.IsZero() || time.Now().Sub(startLogging) > time.Second {
 							startLogging = time.Now()
-							Logger.Info("generate block", zap.Any("round", roundNumber), zap.Any("delay", delay), zap.Any("txn_count", txnCount), zap.Any("t.txn_count", transaction.GetTransactionCount()), zap.Any("error", cerr))
+							Logger.Info("generate block",
+								zap.Any("round", roundNumber),
+								zap.Any("delay", delay),
+								zap.Any("txn_count", txnCount),
+								zap.Any("t.txn_count", transaction.GetTransactionCount()),
+								zap.Any("error", cerr))
 						}
 						if mc.GetCurrentRound() > b.Round {
-							Logger.Error("generate block - round mismatch", zap.Any("round", roundNumber), zap.Any("current_round", mc.GetCurrentRound()))
+							Logger.Error("generate block - round mismatch",
+								zap.Any("round", roundNumber),
+								zap.Any("current_round", mc.GetCurrentRound()))
 							return nil, ErrRoundMismatch
 						}
 						if txnCount != transaction.GetTransactionCount() || time.Now().Sub(start) > generationTimeout {
@@ -343,31 +375,44 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 					Logger.Info("generate block", zap.Error(err))
 					continue
 				case RoundTimeout:
-					Logger.Error("generate block", zap.Int64("round", roundNumber), zap.Error(err))
+					Logger.Error("generate block",
+						zap.Int64("round", roundNumber),
+						zap.Error(err))
 					return nil, err
 				}
 			}
 			if startLogging.IsZero() || time.Now().Sub(startLogging) > time.Second {
 				startLogging = time.Now()
-				Logger.Info("generate block", zap.Any("round", roundNumber), zap.Any("txn_count", txnCount), zap.Any("t.txn_count", transaction.GetTransactionCount()), zap.Any("error", err))
+				Logger.Info("generate block", zap.Any("round", roundNumber),
+					zap.Any("txn_count", txnCount),
+					zap.Any("t.txn_count", transaction.GetTransactionCount()),
+					zap.Any("error", err))
 			}
 			return nil, err
 		}
 
 		if r.GetRandomSeed() != b.GetRoundRandomSeed() {
-			Logger.Error("round random seed mismatch", zap.Int64("round", b.Round), zap.Int64("round_rrs", r.GetRandomSeed()), zap.Int64("blk_rrs", b.GetRoundRandomSeed()))
+			Logger.Error("round random seed mismatch",
+				zap.Int64("round", b.Round),
+				zap.Int64("round_rrs", r.GetRandomSeed()),
+				zap.Int64("blk_rrs", b.GetRoundRandomSeed()))
 			return nil, ErrRRSMismatch
 		}
 		mc.AddRoundBlock(r, b)
 		if generationTries > 1 {
-			Logger.Error("generate block - multiple tries", zap.Int64("round", b.Round), zap.Int("tries", generationTries))
+			Logger.Error("generate block - multiple tries",
+				zap.Int64("round", b.Round), zap.Int("tries", generationTries))
 		}
 		break
 	}
+
 	if r.IsVerificationComplete() {
-		Logger.Error("generate block - verification complete", zap.Any("round", roundNumber), zap.Any("notarized", len(r.GetNotarizedBlocks())))
+		Logger.Error("generate block - verification complete",
+			zap.Any("round", roundNumber),
+			zap.Any("notarized", len(r.GetNotarizedBlocks())))
 		return nil, nil
 	}
+
 	mc.addToRoundVerification(ctx, r, b)
 	r.AddProposedBlock(b)
 	go mc.SendBlock(ctx, b)
@@ -1397,23 +1442,29 @@ func (mc *Chain) WaitForActiveSharders(ctx context.Context) error {
 	if err != nil {
 		Logger.Error("failed to get latest magic block from store", zap.Error(err))
 		latestMagicBlock = mc.GetCurrentMagicBlock()
-	} else {
-		mc.SetCurrentRound(latestMagicBlock.StartingRound)
-		defer chain.ResetStatusMonitor(oldRound)
 	}
+
+	mc.SetCurrentRound(latestMagicBlock.StartingRound)
+	defer chain.ResetStatusMonitor(oldRound)
+
 	if mc.CanShardBlocksSharders(latestMagicBlock.Sharders) {
 		return nil
 	}
+
 	waitingSharders := make([]string, 0, latestMagicBlock.Sharders.MapSize())
 	for _, nodeSharder := range latestMagicBlock.Sharders.CopyNodesMap() {
-		waitingSharders = append(waitingSharders, fmt.Sprintf("id: %s; n2nhost: %s ", nodeSharder.ID, nodeSharder.N2NHost))
+		waitingSharders = append(waitingSharders,
+			fmt.Sprintf("id: %s; n2nhost: %s ", nodeSharder.ID, nodeSharder.N2NHost))
 	}
+
 	Logger.Debug("Waiting for Sharders",
 		zap.Int64("magic_block_round", latestMagicBlock.StartingRound),
 		zap.Int64("magic_block_number", latestMagicBlock.MagicBlockNumber),
 		zap.Any("sharders", waitingSharders))
-	ticker := time.NewTicker(5 * chain.DELTA)
+
+	var ticker = time.NewTicker(5 * chain.DELTA)
 	defer ticker.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -1428,6 +1479,9 @@ func (mc *Chain) WaitForActiveSharders(ctx context.Context) error {
 	}
 }
 
+// TODO (sfxdx): THE LATEST BLOCK CAN BE REJECTED BY MINER SC AND THIS CASE
+//               WE SHOULDN'T USE IT. ADD ONE MORE WAY TO GET LATEST ACCEPTED
+//               MAGIC BLOCK (OR JUST USE GENESIS)
 func (mc *Chain) getLatestMagicBlockFromStore(ctx context.Context) (*block.MagicBlock, error) {
 	mbData, err := GetMagicBlockDataFromStore(ctx, "latest")
 	if err != nil {

@@ -18,7 +18,7 @@ func TestChain_GetLatestFinalizedMagicBlockRound(t *testing.T) {
 		Name        string
 		MagicBlocks []int64
 		CheckRounds []struct {
-			Round                int64
+			Round     int64
 			WantRound int64 //-1 from LatestFinalizedMagicBlock
 		}
 	}{
@@ -26,7 +26,7 @@ func TestChain_GetLatestFinalizedMagicBlockRound(t *testing.T) {
 			Name:        "FromLatestFinalizedMagicBlock",
 			MagicBlocks: []int64{},
 			CheckRounds: []struct {
-				Round                int64
+				Round     int64
 				WantRound int64
 			}{
 				{Round: 1, WantRound: -1},
@@ -37,7 +37,7 @@ func TestChain_GetLatestFinalizedMagicBlockRound(t *testing.T) {
 			Name:        "Correct",
 			MagicBlocks: []int64{1, 101, 201, 301, 401},
 			CheckRounds: []struct {
-				Round                int64
+				Round     int64
 				WantRound int64
 			}{
 				{Round: 1, WantRound: 1},
@@ -67,7 +67,7 @@ func TestChain_GetLatestFinalizedMagicBlockRound(t *testing.T) {
 
 			for _, checkRound := range test.CheckRounds {
 				mr := &round.Round{Number: checkRound.Round}
-				got := chain.GetLatestFinalizedMagicBlockRound(ctx, mr)
+				got := chain.GetLatestFinalizedMagicBlockRound(mr.GetRoundNumber())
 				assert.NotNil(t, got)
 				if checkRound.WantRound == -1 {
 					assert.Equal(t, lfmb, got)
