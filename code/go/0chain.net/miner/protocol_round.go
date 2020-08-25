@@ -872,7 +872,7 @@ var lastTimePoint = time.Now()
 // HandleRoundTimeout handle timeouts appropriately
 func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
 	r := mc.GetMinerRound(mc.GetCurrentRound())
-	if r.Number == 0 && mc.GetNextViewChange() == 0 {
+	if r.Number == 0 && mc.NextViewChange() == 0 {
 		return
 	}
 

@@ -22,200 +22,256 @@ import (
 )
 
 // SendDKGShare sends the generated secShare to the given node.
-func (mc *Chain) SendDKGShare(n *node.Node) error {
+func (mc *Chain) SendDKGShare(ctx context.Context, n *node.Node) (err error) {
+
 	if !config.DevConfiguration.IsDkgEnabled {
-		return common.NewError("failed to send dkg share", "dkg is not enabled")
+		return common.NewError("send_dkg_share", "dkg is not enabled")
 	}
+
 	if node.Self.Underlying().GetKey() == n.ID {
-		return nil
+		return // don't send to itself
 	}
-	params := &url.Values{}
-	nodeID := bls.ComputeIDdkg(n.ID)
 
-	viewChangeMutex.Lock()
-	defer viewChangeMutex.Unlock()
-	secShare := mc.viewChangeDKG.Sij[nodeID]
+	var (
+		params = &url.Values{}
+		nodeID = bls.ComputeIDdkg(n.ID)
+	)
 
+	mc.viewChangeProcess.Lock()
+	defer mc.viewChangeProcess.Unlock()
+
+	var (
+		secShare           = mc.viewChangeProcess.viewChangeDKG.Sij[nodeID]
+		shareOrSignSuccess = make(map[string]*bls.DKGKeyShare)
+	)
 	params.Add("secret_share", secShare.GetHexString())
-	shareOrSignSuccess := make(map[string]*bls.DKGKeyShare)
-	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-		share, ok := entity.(*bls.DKGKeyShare)
+
+	var handler = func(ctx context.Context, entity datastore.Entity) (
+		_ interface{}, _ error) {
+
+		var share, ok = entity.(*bls.DKGKeyShare)
 		if !ok {
 			Logger.Error("invalid share or sign", zap.Any("entity", entity))
-			return nil, nil
+			return
 		}
-		if share.Message != "" && share.Sign != "" {
-			signatureScheme := chain.GetServerChain().GetSignatureScheme()
-			signatureScheme.SetPublicKey(n.PublicKey)
-			sigOK, err := signatureScheme.Verify(share.Sign, share.Message)
-			if !sigOK || err != nil {
-				Logger.Error("invalid share or sign",
-					zap.Error(err), zap.Any("sign_status", sigOK),
-					zap.Any("message", share.Message), zap.Any("sign", share.Sign))
-				return nil, nil
-			}
-			shareOrSignSuccess[n.ID] = share
+
+		if share.Message == "" || share.Sign == "" {
+			return // do nothing
 		}
-		return nil, nil
+
+		var signatureScheme = chain.GetServerChain().GetSignatureScheme()
+		signatureScheme.SetPublicKey(n.PublicKey)
+
+		var err error
+		ok, err = signatureScheme.Verify(share.Sign, share.Message)
+		if !ok || err != nil {
+			Logger.Error("invalid share or sign",
+				zap.Error(err), zap.Any("sign_status", ok),
+				zap.Any("message", share.Message), zap.Any("sign", share.Sign))
+			return
+		}
+		shareOrSignSuccess[n.ID] = share
+
+		return
 	}
-	ctx := common.GetRootContext()
+
 	n.RequestEntityFromNode(ctx, DKGShareSender, params, handler)
+
 	if len(shareOrSignSuccess) == 0 {
-		return common.NewError("failed to send dkg", "miner returned error")
+		return common.NewError("send_dkg_share", "miner returned error")
 	}
+
 	for id, share := range shareOrSignSuccess {
-		shareOrSigns.ShareOrSigns[id] = share
+		mc.viewChangeProcess.shareOrSigns.ShareOrSigns[id] = share
 	}
-	return nil
+
+	return
 }
 
-func (mc *Chain) PublishShareOrSigns() (*httpclientutil.Transaction, error) {
-	if !mc.isDKGSet() {
-		Logger.Error("failed to publish share or signs", zap.Any("dkg_set", mc.isDKGSet()))
-		return nil, nil
+func (mc *Chain) PublishShareOrSigns(_ context.Context, lfb *block.Block,
+	mb *block.MagicBlock, active bool) (tx *httpclientutil.Transaction,
+	err error) {
+
+	mc.viewChangeProcess.Lock()
+	defer mc.viewChangeProcess.Unlock()
+
+	if !mc.viewChangeProcess.isDKGSet() {
+		return nil, common.NewError("publish_sos", "DKG is not set")
 	}
-	viewChangeMutex.Lock()
-	defer viewChangeMutex.Unlock()
 
-	selfNode := node.Self.Underlying()
-	selfNodeKey := selfNode.GetKey()
-	txn := httpclientutil.NewTransactionEntity(selfNodeKey, mc.ID, selfNode.PublicKey)
+	var (
+		selfNode    = node.Self.Underlying()
+		selfNodeKey = selfNode.GetKey()
+	)
 
-	mpks, err := mc.GetMinersMpks()
-	if err != nil {
+	var mpks *block.Mpks
+	if mpks, err = mc.getMinersMpks(lfb, mb, active); err != nil {
 		return nil, err
 	}
 	if _, ok := mpks.Mpks[selfNodeKey]; !ok {
-		return nil, nil
+		return // (nil, nil)
 	}
 
+	var sos = mc.viewChangeProcess.shareOrSigns // local reference
+
 	for k := range mpks.Mpks {
-		if _, ok := shareOrSigns.ShareOrSigns[k]; !ok && k != selfNodeKey {
+		if _, ok := sos.ShareOrSigns[k]; !ok && k != selfNodeKey {
 			share := mc.viewChangeDKG.Sij[bls.ComputeIDdkg(k)]
-			shareOrSigns.ShareOrSigns[k] = &bls.DKGKeyShare{Share: share.GetHexString()}
+			sos.ShareOrSigns[k] = &bls.DKGKeyShare{Share: share.GetHexString()}
 		}
 	}
 
-	dkgMiners, err := mc.GetDKGMiners()
-	if err != nil {
+	var dmn *minersc.DKGMinerNodes
+	if dmn, err = mc.getDKGMiners(lfb, mb, active); err != nil {
 		return nil, err
 	}
-	if len(dkgMiners.SimpleNodes) == 0 {
-		return nil, common.NewError("failed to publish share or signs", "no miners in DKG")
+	if len(dmn.SimpleNodes) == 0 {
+		return nil, common.NewError("publish_sos", "no miners in DKG")
 	}
-	publicKeys := make(map[string]string)
-	for _, node := range dkgMiners.SimpleNodes {
+
+	var publicKeys = make(map[string]string)
+	for _, node := range dmn.SimpleNodes {
 		publicKeys[node.ID] = node.PublicKey
 	}
-	_, ok := shareOrSigns.Validate(mpks, publicKeys, chain.GetServerChain().GetSignatureScheme())
+
+	var _, ok = sos.Validate(mpks, publicKeys,
+		chain.GetServerChain().GetSignatureScheme())
 	if !ok {
 		Logger.Error("failed to verify share or signs", zap.Any("mpks", mpks))
 	}
-	scData := &httpclientutil.SmartContractTxnData{}
-	scData.Name = scNamePublishShares
-	scData.InputArgs = shareOrSigns.Clone()
-	txn.ToClientID = minersc.ADDRESS
+
+	tx = httpclientutil.NewTransactionEntity(selfNodeKey, mc.ID,
+		selfNode.PublicKey)
+
+	var data = &httpclientutil.SmartContractTxnData{}
+	data.Name = scNamePublishShares
+	data.InputArgs = sos.Clone()
+
+	tx.ToClientID = minersc.ADDRESS
 
 	var minerUrls []string
-	for id := range dkgMiners.SimpleNodes {
-		nodeSend := node.GetNode(id)
-		if nodeSend != nil {
-			minerUrls = append(minerUrls, nodeSend.GetN2NURLBase())
-		} else {
+	for id := range dmn.SimpleNodes {
+		var nodeSend = node.GetNode(id)
+		if nodeSend == nil {
 			Logger.Warn("failed to get node", zap.Any("id", id))
+			continue
 		}
+		minerUrls = append(minerUrls, nodeSend.GetN2NURLBase())
 	}
-	err = httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls)
-	return txn, err
+	err = httpclientutil.SendSmartContractTxn(tx, minersc.ADDRESS, 0, 0, data,
+		minerUrls)
+	return
 }
 
-func (mc *Chain) ContributeMpk() (txn *httpclientutil.Transaction, err error) {
-	magicBlock := mc.GetCurrentMagicBlock()
-	if magicBlock == nil {
-		return nil, common.NewError("contribute_mpk", "magic block empty")
-	}
-	dmn, err := mc.GetDKGMiners()
-	if err != nil {
+func (mc *Chain) ContributeMpk(_ context.Context, lfb *block.Block,
+	mb *block.MagicBlock, active bool) (tx *httpclientutil.Transaction,
+	err error) {
+
+	var dmn *minersc.DKGMinerNodes
+	if dmn, err = mc.getDKGMiners(lfb, mb, active); err != nil {
 		Logger.Error("can't contribute", zap.Any("error", err))
-		return nil, err
-	}
-	selfNode := node.Self.Underlying()
-	selfNodeKey := selfNode.GetKey()
-	mpk := &block.MPK{ID: selfNodeKey}
-	if !mc.isDKGSet() {
-		if dmn.N == 0 {
-			return nil, common.NewError("contribute_mpk", "failed to contribute mpk:dkg is not set yet")
-		}
-		vc := bls.MakeDKG(dmn.T, dmn.N, selfNodeKey)
-		vc.ID = bls.ComputeIDdkg(selfNodeKey)
-		vc.MagicBlockNumber = magicBlock.MagicBlockNumber + 1
-		viewChangeMutex.Lock()
-		mc.viewChangeDKG = vc
-		viewChangeMutex.Unlock()
+		return
 	}
 
-	viewChangeMutex.Lock()
-	defer viewChangeMutex.Unlock()
-	for _, v := range mc.viewChangeDKG.Mpk {
+	var (
+		selfNode    = node.Self.Underlying()
+		selfNodeKey = selfNode.GetKey()
+		mpk         = &block.MPK{ID: selfNodeKey}
+	)
+
+	mc.viewChangeProcess.Lock()
+	defer mc.viewChangeProcess.Unlock()
+
+	if !mc.viewChangeProcess.isDKGSet() {
+		if dmn.N == 0 {
+			return nil, common.NewError("contribute_mpk",
+				"failed to contribute mpk: dkg is not set yet")
+		}
+
+		var vc = bls.MakeDKG(dmn.T, dmn.N, selfNodeKey)
+		vc.MagicBlockNumber = mb.MagicBlockNumber + 1
+		mc.viewChangeProcess.viewChangeDKG = vc
+	}
+
+	for _, v := range mc.viewChangeProcess.viewChangeDKG.Mpk {
 		mpk.Mpk = append(mpk.Mpk, v.GetHexString())
 	}
 
-	scData := new(httpclientutil.SmartContractTxnData)
-	scData.Name = scNameContributeMpk
-	scData.InputArgs = mpk
+	var data = new(httpclientutil.SmartContractTxnData)
+	data.Name = scNameContributeMpk
+	data.InputArgs = mpk
 
-	txn = httpclientutil.NewTransactionEntity(selfNodeKey, mc.ID, selfNode.PublicKey)
-	txn.ToClientID = minersc.ADDRESS
-	var minerUrls []string
-	for _, node := range magicBlock.Miners.CopyNodes() {
-		minerUrls = append(minerUrls, node.GetN2NURLBase())
-	}
-	err = httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls)
-	return txn, err
+	tx = httpclientutil.NewTransactionEntity(selfNodeKey, mc.ID,
+		selfNode.PublicKey)
+	tx.ToClientID = minersc.ADDRESS
+
+	err = httpclientutil.SendSmartContractTxn(tx, minersc.ADDRESS, 0, 0, data,
+		mb.Miners.N2NURLs())
+	return
 }
 
-func SignShareRequestHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	nodeID := r.Header.Get(node.HeaderNodeID)
-	secShare := r.FormValue("secret_share")
-	mc := GetMinerChain()
-	if !mc.isDKGSet() {
-		return nil, common.NewError("failed to sign share", "dkg not set")
+func SignShareRequestHandler(ctx context.Context, r *http.Request) (
+	resp interface{}, err error) {
+
+	var (
+		nodeID   = r.Header.Get(node.HeaderNodeID)
+		secShare = r.FormValue("secret_share")
+		mc       = GetMinerChain()
+	)
+
+	mc.viewChangeProcess.Lock()
+	defer mc.viewChangeProcess.Unlock()
+
+	if !mc.viewChangeProcess.isDKGSet() {
+		return nil, common.NewError("sign_share", "DKG is not set")
 	}
 
-	viewChangeMutex.Lock()
-	defer viewChangeMutex.Unlock()
-
-	mpks := mc.GetMpks()
-	if len(mpks) < mc.viewChangeDKG.T {
-		return nil, common.NewError("failed to sign", "don't have mpks yet")
+	var mpks = mc.viewChangeProcess.mpks.GetMpks()
+	if len(mpks) < mc.viewChangeProcess.viewChangeDKG.T {
+		return nil, common.NewError("sign_share", "don't have enough mpks yet")
 	}
-	message := datastore.GetEntityMetadata("dkg_share").Instance().(*bls.DKGKeyShare)
-	var share bls.Key
-	if err := share.SetHexString(secShare); err != nil {
+
+	var (
+		message = datastore.GetEntityMetadata("dkg_share").
+			Instance().(*bls.DKGKeyShare)
+
+		share bls.Key
+	)
+
+	if err = share.SetHexString(secShare); err != nil {
 		Logger.Error("failed to set hex string", zap.Any("error", err))
-		return nil, err
+		return nil, common.NewErrorf("sign_share",
+			"setting hex string: %v", err)
 	}
 
-	mpk := bls.ConvertStringToMpk(mpks[nodeID].Mpk)
-	var mpkString []string
+	var (
+		mpk       = bls.ConvertStringToMpk(mpks[nodeID].Mpk)
+		mpkString []string
+	)
 	for _, pk := range mpk {
 		mpkString = append(mpkString, pk.GetHexString())
 	}
 
-	if !mc.viewChangeDKG.ValidateShare(mpk, share) {
-		Logger.Error("failed to verify dkg share", zap.Any("share", secShare), zap.Any("node_id", nodeID))
-		return nil, common.NewError("failed to sign", "failed to verify dkg share")
+	if !mc.viewChangeProcess.viewChangeDKG.ValidateShare(mpk, share) {
+		Logger.Error("failed to verify dkg share", zap.Any("share", secShare),
+			zap.Any("node_id", nodeID))
+		return nil, common.NewError("sign_share", "failed to verify DKG share")
 	}
-	err := mc.viewChangeDKG.AddSecretShare(bls.ComputeIDdkg(nodeID), secShare, false)
+
+	err = mc.viewChangeProcess.viewChangeDKG.AddSecretShare(
+		bls.ComputeIDdkg(nodeID), secShare, false)
 	if err != nil {
-		return nil, err
+		return nil, common.NewErrorf("sign_share",
+			"adding secret share: %v", err)
 	}
 
 	message.Message = node.Self.Underlying().GetKey()
 	message.Sign, err = node.Self.Sign(message.Message)
 	if err != nil {
-		Logger.Error("failed to sign dkg share message", zap.Any("error", err))
-		return nil, err
+		Logger.Error("failed to sign DKG share message", zap.Any("error", err))
+		return nil, common.NewErrorf("sign_share",
+			"signing DKG share message: %v", err)
 	}
+
 	return message, nil
 }

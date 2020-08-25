@@ -55,7 +55,7 @@ func SetupMinerChain(c *chain.Chain) {
 	minerChain.roundDkg = round.NewRoundStartingStorage()
 	c.SetFetchedNotarizedBlockHandler(minerChain)
 	c.RoundF = MinerRoundFactory{}
-	mv.viewChangeProcess.init(minerChain)
+	minerChain.viewChangeProcess.init(minerChain)
 }
 
 /*GetMinerChain - get the miner's chain */
@@ -219,49 +219,20 @@ func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) erro
 	return err
 }
 
-// isViewChanging is period from, for example, 501 to 503 blocks inclusive.
-func (mc *Chain) isViewChanging(round int64) (is bool) {
-
-	if !config.DevConfiguration.ViewChange {
-		return
-	}
-
-	// don't offset the round, offset the next VC round and
-	// DKG starting round instead (below)
-
-	var (
-		cdkg = mc.GetCurrentDKG(round)
-
-		nvc    = mbRoundOffset(mc.GetNextViewChange()) // add MB offset
-		cdkgsr = mbRoundOffset(cdkg.StartingRound)     // add MB offset
-	)
-
-	// VC process consist of 3 rounds: 501, 502 and 503 (for example)
-	// - 501 and 502 -- VC preparation
-	// - 503         -- the view change in person
-
-	// 503 is view change round
-	// 502 and 501 are VC preparation rounds
-
-	is = (cdkg == nil || cdkgsr <= nvc) &&
-		((nvc-2 == round) || (nvc-1 == round) || (nvc == round))
-	return
-}
-
 func (mc *Chain) isNeedViewChange(round int64) (is bool) {
 
 	if !config.DevConfiguration.ViewChange {
 		return
 	}
 
-	// don't offset the round, offset the next VC round and
-	// DKG starting round instead (below)
+	// don't offset anything here, we have to do VC when round/block
+	// is finalized and thus we are using rounds without any offsets
 
 	var (
 		cdkg = mc.GetCurrentDKG(round)
 
-		nvc    = mbRoundOffset(mc.GetNextViewChange()) // add MB offset
-		cdkgsr = mbRoundOffset(cdkg.StartingRound)     // add MB offset
+		nvc    = mc.NextViewChange() // no MB offset
+		cdkgsr = cdkg.StartingRound  // no MB offset
 	)
 
 	is = (nvc == round) && (cdkg == nil || cdkgsr <= nvc)
@@ -275,33 +246,37 @@ func (mc *Chain) ViewChange(ctx context.Context, nRound int64) (
 		return false, nil
 	}
 
-	viewChangeMutex.Lock()
-	defer viewChangeMutex.Unlock()
+	/*
+		viewChangeMutex.Lock()
+		defer viewChangeMutex.Unlock()
 
-	var (
-		vcmb = mc.GetViewChangeMagicBlock(nRound)
-		mb   = mc.GetMagicBlock(nRound)
-	)
+		var (
+			vcmb = mc.GetViewChangeMagicBlock(nRound)
+			mb   = mc.GetMagicBlock(nRound)
+		)
 
-	if vcmb != nil {
-		if mb == nil || mb.MagicBlockNumber != vcmb.MagicBlockNumber {
-			if err = mc.UpdateMagicBlock(vcmb); err != nil {
-				Logger.DPanic(err.Error())
+		if vcmb != nil {
+			if mb == nil || mb.MagicBlockNumber != vcmb.MagicBlockNumber {
+				if err = mc.UpdateMagicBlock(vcmb); err != nil {
+					Logger.DPanic(err.Error())
+				}
 			}
+
+			mc.UpdateNodesFromMagicBlock(vcmb)
+
+			mc.SetNextViewChange(0)
+			go mc.PruneRoundStorage(ctx, mc.getPruneCountRoundStorage(),
+				mc.roundDkg, mc.MagicBlockStorage)
+
+			return true, nil
 		}
 
-		mc.UpdateNodesFromMagicBlock(vcmb)
+		if err = mc.SetDKGSFromStore(ctx, mb); err != nil {
+			Logger.DPanic(err.Error())
+		}
 
-		mc.SetNextViewChange(0)
-		go mc.PruneRoundStorage(ctx, mc.getPruneCountRoundStorage(),
-			mc.roundDkg, mc.MagicBlockStorage)
+	*/
 
-		return true, nil
-	}
-
-	if err = mc.SetDKGSFromStore(ctx, mb); err != nil {
-		Logger.DPanic(err.Error())
-	}
 	return true, nil
 }
 
