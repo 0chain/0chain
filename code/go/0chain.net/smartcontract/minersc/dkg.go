@@ -422,11 +422,11 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 		Logger.Error("failed to insert magic block", zap.Any("error", err))
 		return err
 	}
-	dkgMinersList = NewDKGMinerNodes()
-	_, err = balances.InsertTrieNode(DKGMinersKey, dkgMinersList)
-	if err != nil {
-		return err
-	}
+	// dkgMinersList = NewDKGMinerNodes()
+	// _, err = balances.InsertTrieNode(DKGMinersKey, dkgMinersList)
+	// if err != nil {
+	// 	return err
+	// }
 	allMinersList := new(MinerNodes)
 	_, err = balances.InsertTrieNode(ShardersKeepKey, allMinersList)
 	if err != nil {
@@ -631,7 +631,20 @@ func (msc *MinerSmartContract) wait(t *transaction.Transaction,
 			" correct phase to wait: %s", pn.Phase)
 	}
 
-	//
+	var dmn *DKGMinerNodes
+	if dmn, err = msc.getMinersDKGList(balances); err != nil {
+		return "", common.NewErrorf("wait", "can't get DKG miners: %v", err)
+	}
+
+	if already, ok := dmn.Waited[t.ClientID]; ok && already {
+		return "", common.NewError("wait", "already checked in")
+	}
+
+	dmn.Waited[t.ClientID] = true
+
+	if _, err = balances.InsertTrieNode(DKGMinersKey, dmn); err != nil {
+		return "", common.NewErrorf("wait", "saving DKG miners: %v", err)
+	}
 
 	return
 }

@@ -667,10 +667,11 @@ type DKGMinerNodes struct {
 	KPercent float64 `json:"k_percent"`
 
 	SimpleNodes    `json:"simple_nodes"`
-	T              int            `json:"t"`
-	K              int            `json:"k"`
-	N              int            `json:"n"`
-	RevealedShares map[string]int `json:"revealed_shares"`
+	T              int             `json:"t"`
+	K              int             `json:"k"`
+	N              int             `json:"n"`
+	RevealedShares map[string]int  `json:"revealed_shares"`
+	Waited         map[string]bool `json:"waited"`
 
 	// StartRound used to filter responses from old MB where sharders comes up.
 	StartRound int64 `json:"start_round"`
@@ -733,7 +734,11 @@ func (dkgmn *DKGMinerNodes) recalculateTKN(final bool) (err error) {
 }
 
 func NewDKGMinerNodes() *DKGMinerNodes {
-	return &DKGMinerNodes{SimpleNodes: NewSimpleNodes(), RevealedShares: make(map[string]int)}
+	return &DKGMinerNodes{
+		SimpleNodes:    NewSimpleNodes(),
+		RevealedShares: make(map[string]int),
+		Waited:         make(map[string]bool),
+	}
 }
 
 func (dmn *DKGMinerNodes) Encode() []byte {

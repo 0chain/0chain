@@ -246,6 +246,49 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *globalNode,
 	return
 }
 
+func (msc *MinerSmartContract) adjustViewChange(gn *globalNode,
+	balances cstate.StateContextI) (err error) {
+
+	var b = balances.GetBlock()
+
+	if b.Round != gn.ViewChange {
+		return // don't do anything, not a view change
+	}
+
+	var dmn *DKGMinerNodes
+	if dmn, err = msc.getMinersDKGList(balances); err != nil {
+		return common.NewErrorf("adjust_view_change",
+			"can't get DKG miners: %v", err)
+	}
+
+	for k := range dmn.SimpleNodes {
+		if !dmn.Waited[k] {
+			delete(dmn.SimpleNodes, k)
+		}
+	}
+
+	if err = dmn.recalculateTKN(true); err != nil {
+		Logger.Info("adjust_view_change", zap.Error(err))
+		gn.ViewChange = 0 // don't do this view change, save the gn later
+		return
+	}
+
+	// don't clear the nodes don't waited from MB, since MB
+	// already saved by miners; if T miners doesn't save their
+	// DKG summary and MB data, then we just doesn't do the
+	// view change
+
+	// clear DKG miners list
+	dmn = NewDKGMinerNodes()
+	_, err = balances.InsertTrieNode(DKGMinersKey, dmn)
+	if err != nil {
+		return common.NewErrorf("adjust_view_change",
+			"can't cleanup DKG miners: %v", err)
+	}
+
+	return
+}
+
 func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	inputData []byte, gn *globalNode, balances cstate.StateContextI) (
 	resp string, err error) {
@@ -257,6 +300,10 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	if err = msc.setPhaseNode(balances, pn, gn, t); err != nil {
 		return "", common.NewErrorf("pay_fees",
 			"error inserting phase node: %v", err)
+	}
+
+	if err = msc.adjustViewChange(gn, balances); err != nil {
+		return // adjusting view change error
 	}
 
 	var block = balances.GetBlock()
