@@ -6,9 +6,6 @@ import (
 	"math"
 	"reflect"
 	"sync"
-	//	"errors"
-	//	"sort"
-	//	"sync/atomic"
 	"time"
 
 	"0chain.net/chaincore/block"
