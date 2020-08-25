@@ -1165,14 +1165,24 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 }
 
 func (c *Chain) UpdateNodesFromMagicBlock(newMagicBlock *block.MagicBlock) {
-	oldNodes := node.CopyNodes()
+
+	var (
+		lfmb = c.GetLatestFinalizedMagicBlock()             //
+		keep = collectNodes(lfmb.MagicBlock, newMagicBlock) // this and new
+	)
+
 	c.SetupNodes(newMagicBlock)
+
 	newMagicBlock.Sharders.ComputeProperties()
 	newMagicBlock.Miners.ComputeProperties()
+
 	c.InitializeMinerPool(newMagicBlock)
 	c.GetNodesPreviousInfo(newMagicBlock)
-	c.deregisterNodes(oldNodes)
-	UpdateNodes <- newMagicBlock.StartingRound
+
+	node.DeregisterNodes(keep)
+
+	// reset the monitor
+	go ResetStatusMonitor(newMagicBlock.StartingRound)
 }
 
 func (c *Chain) SetupNodes(mb *block.MagicBlock) {
@@ -1186,13 +1196,17 @@ func (c *Chain) SetupNodes(mb *block.MagicBlock) {
 	}
 }
 
-func (c *Chain) deregisterNodes(oldNodes map[string]*node.Node) {
-	newNodes := node.CopyNodes()
-	for key := range oldNodes {
-		if _, found := newNodes[key]; !found {
-			node.DeregisterNode(key)
+// collect nodes from given MBs
+func collectNodes(mbs ...*block.MagicBlock) (keep map[string]struct{}) {
+	keep = make(map[string]struct{})
+	for _, mb := range mbs {
+		for _, pool := range []*node.Pool{mb.Miners, mb.Sharders} {
+			for _, k := range pool.Keys() {
+				keep[k] = struct{}{}
+			}
 		}
 	}
+	return
 }
 
 //SetLatestFinalizedBlock - set the latest finalized block

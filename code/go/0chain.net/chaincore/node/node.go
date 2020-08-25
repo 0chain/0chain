@@ -40,6 +40,21 @@ func DeregisterNode(nodeID string) {
 	delete(nodes, nodeID)
 }
 
+// DeregisterNodes unregisters all nodes not from given list.
+func DeregisterNodes(keep map[string]struct{}) {
+	nodesMutex.Lock()
+	defer nodesMutex.Unlock()
+
+	var newNodes = make(map[string]*Node)
+	for k := range keep {
+		if n, ok := nodes[k]; ok {
+			newNodes[k] = n
+		}
+	}
+
+	nodes = newNodes // replace with new list
+}
+
 // CopyNodes returns copy of all registered nodes.
 func CopyNodes() (cp map[string]*Node) {
 	nodesMutex.RLock()

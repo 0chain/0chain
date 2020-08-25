@@ -9,12 +9,19 @@ import (
 	"go.uber.org/zap"
 )
 
+type ContributeCallbackSetter interface {
+	SetCallbackPhase(callback func(phase minersc.Phase))
+}
+
 // SetupMinerSmartContract  sets callbacks for shader phases MinerSC
 // This solution is due to the fact that in MinerSC the shader did not want to complicate with a state machine with phases
 func SetupMinerSmartContract(serverChain *Chain) {
-	scs := smartcontract.GetSmartContract(minersc.ADDRESS)
-	setterCallback := scs.(interface{ SetCallbackPhase(func(int)) })
-	setterCallback.SetCallbackPhase(func(phase int) {
+	var (
+		scs    = smartcontract.GetSmartContract(minersc.ADDRESS)
+		setter = scs.(ContributeCallbackSetter)
+	)
+
+	setter.SetCallbackPhase(func(phase minersc.Phase) {
 		if !config.DevConfiguration.ViewChange {
 			return // no view change, no sharder keep
 		}

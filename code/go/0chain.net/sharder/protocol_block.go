@@ -86,62 +86,45 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 	sc.DeleteRoundsBelow(ctx, b.Round)
 }
 
-func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
-	if b.Round == 698 || b.Round == 699 || b.Round == 700 || b.Round == 701 {
-		println("PROCESS B", b.Round, b.Hash)
-	}
-	// injected here
-	// {
-	// if er.IsFinalizing() || er.IsFinalized() { // <--------------------------
-	// 	return // <-------------------------------------------------------------
-	// } // <-------------------------------------------------------------------
-	// }
+func (sc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 
-	er := sc.GetRound(b.Round)
+	var mb = b.MagicBlock
+
+	if mb == nil {
+		return // no MB, no VC
+	}
+
+	if err = sc.UpdateMagicBlock(mb); err != nil {
+		return
+	}
+	sc.UpdateNodesFromMagicBlock(mb)
+	return
+}
+
+func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
+	var er = sc.GetRound(b.Round)
 	if er == nil {
 		var r = round.NewRound(b.Round)
 		er, _ = sc.AddRound(r).(*round.Round)
 		sc.SetRandomSeed(er, b.GetRoundRandomSeed()) // incorrect round seed ?
 	}
 
-	// moved down
-	// {
-	if b.MagicBlock != nil { // <-------------------- <-------------------------
-		sc.UpdateMagicBlock(b.MagicBlock)          // <-------------------------
-		sc.UpdateNodesFromMagicBlock(b.MagicBlock) // <-------------------------
-	} // <------------------------------------------- <-------------------------
-	// }
-
-	if err := sc.VerifyNotarization(ctx, b.Hash, b.GetVerificationTickets(), er.GetRoundNumber()); err != nil {
-		Logger.Error("notarization verification failed", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
-		return
-	}
-	if err := b.Validate(ctx); err != nil {
-		Logger.Error("block validation", zap.Any("round", b.Round), zap.Any("hash", b.Hash), zap.Error(err))
+	var err error
+	err = sc.VerifyNotarization(ctx, b.Hash, b.GetVerificationTickets(),
+		er.GetRoundNumber())
+	if err != nil {
+		Logger.Error("notarization verification failed",
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.Error(err))
 		return
 	}
 
-	// // make sure LFMB hash and round are correct
-	// if err := sc.VerifyBlockLFMB(b); err != nil {
-	// 	Logger.Error("block LFMB verification", zap.Error(err))
-	// 	return
-	// }
-
-	// moved down
-	// {
-	//  if b.MagicBlock != nil { // <-------------------- <-------------------------
-	// 	sc.UpdateMagicBlock(b.MagicBlock)          // <-------------------------
-	// 	sc.UpdateNodesFromMagicBlock(b.MagicBlock) // <-------------------------
-	// } // <------------------------------------------- <-------------------------
-	// }
-
-	// moved here
-	// {
-	// if b.MagicBlock != nil { // <-------------------- <-------------------------
-	// 	sc.UpdateMagicBlock(b.MagicBlock)          // <-------------------------
-	// 	sc.UpdateNodesFromMagicBlock(b.MagicBlock) // <-------------------------
-	// } // <------------------------------------------- <-------------------------
-	// }
+	if err = b.Validate(ctx); err != nil {
+		Logger.Error("block validation", zap.Any("round", b.Round),
+			zap.Any("hash", b.Hash), zap.Error(err))
+		return
+	}
 
 	sc.AddNotarizedBlockToRound(er, b)
 	sc.SetRoundRank(er, b)

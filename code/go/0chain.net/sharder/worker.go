@@ -151,7 +151,7 @@ func (sc *Chain) isPhaseContibute(ctx context.Context) (is bool) {
 			return
 		}
 		Logger.Debug("is_phase_contibute",
-			zap.Int("phase", phaseNode.Phase),
+			zap.Int("phase", int(phaseNode.Phase)),
 			zap.Bool("is_contribute", phaseNode.Phase == minersc.Contribute))
 		return phaseNode.Phase == minersc.Contribute
 	}
