@@ -25,25 +25,28 @@ import (
 	"go.uber.org/zap"
 )
 
-//RoundMismatch - to indicate an error where the current round and the given round don't match
-const RoundMismatch = "round_mismatch"
-
-//ErrRoundMismatch - an error object for mismatched round error
-var ErrRoundMismatch = common.NewError(RoundMismatch, "Current round number of the chain doesn't match the block generation round")
-
-//RRSMismatch -- to indicate an error when the current round RRS is different than the block that is generated. Typically happens when timeout count changes while a block is being made
-const RRSMismatch = "rrs_mismatch"
-
-//ErrRRSMismatch - and error when rrs mismatch happens
-var ErrRRSMismatch = common.NewError(RRSMismatch, "RRS for current round of the chain doesn't match the block rrs")
-
-//RoundTimeout - to indicate an error where the round timeout has happened
-const RoundTimeout = "round_timeout"
-
-//ErrRoundTimeout - an error object for round timeout error
-var ErrRoundTimeout = common.NewError(RoundTimeout, "round timed out")
+const (
+	// RoundMismatch - to indicate an error where the current round and the
+	// given round don't match.
+	RoundMismatch = "round_mismatch"
+	// RRSMismatch -- to indicate an error when the current round RRS is
+	// different than the block that is generated. Typically happens when
+	// timeout count changes while a block is being made.
+	RRSMismatch = "rrs_mismatch"
+	// RoundTimeout - to indicate an error where the round timeout has happened.
+	RoundTimeout = "round_timeout"
+)
 
 var (
+	// ErrRoundMismatch - an error object for mismatched round error.
+	ErrRoundMismatch = common.NewError(RoundMismatch, "Current round number"+
+		" of the chain doesn't match the block generation round")
+	// ErrRRSMismatch - and error when rrs mismatch happens.
+	ErrRRSMismatch = common.NewError(RRSMismatch, "RRS for current round"+
+		" of the chain doesn't match the block rrs")
+	// ErrRoundTimeout - an error object for round timeout error.
+	ErrRoundTimeout = common.NewError(RoundTimeout, "round timed out")
+
 	minerChain = &Chain{}
 )
 
@@ -101,7 +104,7 @@ func (mrf MinerRoundFactory) CreateRoundF(roundNum int64) interface{} {
 	return r
 }
 
-// Chain - A miner chain to manage the miner activities.
+// Chain - a miner chain to manage the miner activities.
 type Chain struct {
 	*chain.Chain
 	blockMessageChannel chan *BlockMessage
@@ -222,25 +225,27 @@ func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) erro
 	return err
 }
 
-func (mc *Chain) isNeedViewChange(round int64) (is bool) {
-
-	if !config.DevConfiguration.ViewChange {
-		return
-	}
-
-	// don't offset anything here, we have to do VC when round/block
-	// is finalized and thus we are using rounds without any offsets
-
-	var (
-		cdkg = mc.GetCurrentDKG(round)
-
-		nvc    = mc.NextViewChange() // no MB offset
-		cdkgsr = cdkg.StartingRound  // no MB offset
-	)
-
-	is = (nvc == round) && (cdkg == nil || cdkgsr <= nvc)
-	return
-}
+// TODO (sfxdx): TO REMOVE (old code)
+//
+// func (mc *Chain) isNeedViewChange(round int64) (is bool) {
+//
+// 	if !config.DevConfiguration.ViewChange {
+// 		return
+// 	}
+//
+// 	// don't offset anything here, we have to do VC when round/block
+// 	// is finalized and thus we are using rounds without any offsets
+//
+// 	var (
+// 		cdkg = mc.GetCurrentDKG(round)
+//
+// 		nvc    = mc.NextViewChange() // no MB offset
+// 		cdkgsr = cdkg.StartingRound  // no MB offset
+// 	)
+//
+// 	is = (nvc == round) && (cdkg == nil || cdkgsr <= nvc)
+// 	return
+// }
 
 // isViewChanging returns true for 501, 502 and 503 rounds
 func (mc *Chain) isViewChanging(round int64) (is bool) {
@@ -248,7 +253,25 @@ func (mc *Chain) isViewChanging(round int64) (is bool) {
 	return nvc == round || nvc+1 == round || nvc+2 == round // 501, 502, or 503
 }
 
-// TO REMOVE (draft code)
+// TODO (sfdx): TO REMOVE OR TO KEEP OR TO MODIFY (questionable code)
+//
+//
+// // a node leaving BC on VC coming have to finalize its last round; since it
+// // can't start next round (504) and finalize 503 for 502 block; it returns
+// // true for 502 round only (the first round of new MB/DKG);
+// func (mc *Chain) isLeaving(round int64) (is bool) {
+// 	if !mc.isViewChanging(round) {
+// 		return // if not view changing, then not leaving (short circuit)
+// 	}
+// 	var mb, nmb = mc.GetMagicBlock(round), mc.GetMagicBlock(round + 1)
+// 	if mb.StartingRound >= nmb.StartingRound {
+// 		return // not leaving
+// 	}
+// 	var nmbsroff = mbRoundOffset(nmb.StartingRound)
+// 	return round == nmbsroff // is
+// }
+
+// TODO (sfxdx): TO REMOVE (draft code)
 //
 // // in goroutine
 // func (mc *Chain) kickNewMiners(ctx context.Context, b *block.Block) {
@@ -328,7 +351,7 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 	return
 }
 
-// TODO (sfxdx): TO REMOVE
+// TODO (sfxdx): TO REMOVE (old code)
 //
 // // Send a notarized block for new miners
 // func (mc *Chain) sendNotarizedBlockToNewMiners(ctx context.Context, nRound int64,
