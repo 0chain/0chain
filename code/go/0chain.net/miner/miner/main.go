@@ -395,7 +395,7 @@ func initEntities() {
 	block.SetupMagicBlockData(ememoryStorage)
 	block.SetupMagicBlockDataDB()
 
-	block.SetupLatestMagicBlockID(ememorystore)
+	block.SetupLatestMagicBlockID(ememoryStorage)
 	block.SetupLatestMagicBlockIDDB()
 }
 

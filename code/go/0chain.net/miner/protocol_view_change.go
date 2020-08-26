@@ -777,11 +777,11 @@ func (mc *Chain) Wait(ctx context.Context, lfb *block.Block,
 
 	// save DKG and MB
 
-	if err = StoreDKGPreview(ctx, summary); err != nil {
+	if err = StoreDKG(ctx, summary); err != nil {
 		return nil, common.NewErrorf("vc_wait", "saving DKG summary: %v", err)
 	}
 
-	if err = StoreMagicBlockPreview(ctx, magicBlock); err != nil {
+	if err = StoreMagicBlock(ctx, magicBlock); err != nil {
 		return nil, common.NewErrorf("vc_wait", "saving MB data: %v", err)
 	}
 
@@ -878,70 +878,3 @@ func LoadDKGSummary(ctx context.Context, id string) (dkgs *bls.DKGSummary,
 	err = dkgs.Read(dctx, dkgs.GetKey())
 	return
 }
-
-//
-// At phase 'wait' we save MB and DKG preview can be rejected by Miner SC
-// on view change. Thus we can't store them as usual MB and DKG to avoid
-// misuse later.
-//
-
-// MB load / store preview
-
-// StoreMagicBlockPreview stores prepared MB can ebe rejected later by
-// Miner SC. During VC we have to check VC MB and this MB and related DKG.
-// And reject (ignore) this "preview" MB and DKG or accept them and
-// store using real ID.
-func StoreMagicBlockPreview(ctx context.Context, mb *block.MagicBlock) (
-	err error) {
-
-	var (
-		data = block.NewMagicBlockData(magicBlock)
-		emd  = data.GetEntityMetadata()
-		dctx = ememorystore.WithEntityConnection(ctx, emd)
-	)
-	defer ememorystore.Close(dctx)
-
-	data.ID = "preview"
-	if err = data.Write(dctx); err != nil {
-		return
-	}
-
-	var connection = ememorystore.GetEntityCon(dctx, emd)
-	return connection.Commit()
-}
-
-// LoadMagicBlockPreview loads MB preview.
-func LoadMagicBlockPreview(ctx context.Context) (*block.MagicBlock, error) {
-	return LoadMagicBlock(ctx, "preview")
-}
-
-// DKG load /store preview
-
-// StoreDKGPreview in DB.
-func StoreDKGPreview(ctx context.Context, dkg *bls.DKG) (err error) {
-
-	var (
-		summary            = dkg.GetDKGSummary()
-		dkgSummaryMetadata = summary.GetEntityMetadata()
-		dctx               = ememorystore.WithEntityConnection(ctx,
-			dkgSummaryMetadata)
-	)
-	defer ememorystore.Close(dctx)
-
-	summary.ID = "preview"
-	if err = summary.Write(dctx); err != nil {
-		return
-	}
-
-	var con = ememorystore.GetEntityCon(dctx, dkgSummaryMetadata)
-	return con.Commit()
-}
-
-// LoadDKGSummaryPreview loads DKG of related preview MB.
-func LoadDKGSummaryPreview(ctx context.Context) (*bls.DKGSummary, error) {
-	return LoadDKGSummary(ctx, "preview")
-}
-
-//
-//
-//
