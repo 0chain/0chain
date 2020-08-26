@@ -1167,8 +1167,8 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 func (c *Chain) UpdateNodesFromMagicBlock(newMagicBlock *block.MagicBlock) {
 
 	var (
-		lfmb = c.GetLatestFinalizedMagicBlock()             //
-		keep = collectNodes(lfmb.MagicBlock, newMagicBlock) // this and new
+		prev = c.GetMagicBlock(newMagicBlock.StartingRound - 1) //
+		keep = collectNodes(prev, newMagicBlock)                // this and new
 	)
 
 	c.SetupNodes(newMagicBlock)
@@ -1182,7 +1182,7 @@ func (c *Chain) UpdateNodesFromMagicBlock(newMagicBlock *block.MagicBlock) {
 	node.DeregisterNodes(keep)
 
 	// reset the monitor
-	go ResetStatusMonitor(newMagicBlock.StartingRound)
+	ResetStatusMonitor(newMagicBlock.StartingRound)
 }
 
 func (c *Chain) SetupNodes(mb *block.MagicBlock) {
@@ -1200,6 +1200,9 @@ func (c *Chain) SetupNodes(mb *block.MagicBlock) {
 func collectNodes(mbs ...*block.MagicBlock) (keep map[string]struct{}) {
 	keep = make(map[string]struct{})
 	for _, mb := range mbs {
+		if mb == nil {
+			continue
+		}
 		for _, pool := range []*node.Pool{mb.Miners, mb.Sharders} {
 			for _, k := range pool.Keys() {
 				keep[k] = struct{}{}
