@@ -21,8 +21,8 @@ import (
 	"go.uber.org/zap"
 )
 
-// SendDKGShare sends the generated secShare to the given node.
-func (mc *Chain) SendDKGShare(ctx context.Context, n *node.Node) (err error) {
+// The sendDKGShare sends the generated secShare to the given node.
+func (mc *Chain) sendDKGShare(ctx context.Context, n *node.Node) (err error) {
 
 	if !config.DevConfiguration.IsDkgEnabled {
 		return common.NewError("send_dkg_share", "dkg is not enabled")
@@ -36,9 +36,6 @@ func (mc *Chain) SendDKGShare(ctx context.Context, n *node.Node) (err error) {
 		params = &url.Values{}
 		nodeID = bls.ComputeIDdkg(n.ID)
 	)
-
-	mc.viewChangeProcess.Lock()
-	defer mc.viewChangeProcess.Unlock()
 
 	var (
 		secShare           = mc.viewChangeProcess.viewChangeDKG.Sij[nodeID]
@@ -88,9 +85,15 @@ func (mc *Chain) SendDKGShare(ctx context.Context, n *node.Node) (err error) {
 	return
 }
 
+//
+// P U B L I S H
+//
+
 func (mc *Chain) PublishShareOrSigns(_ context.Context, lfb *block.Block,
 	mb *block.MagicBlock, active bool) (tx *httpclientutil.Transaction,
 	err error) {
+
+	println("DKG PUBLISH")
 
 	mc.viewChangeProcess.Lock()
 	defer mc.viewChangeProcess.Unlock()
@@ -163,9 +166,15 @@ func (mc *Chain) PublishShareOrSigns(_ context.Context, lfb *block.Block,
 	return
 }
 
+//
+// C O N T R I B U T E
+//
+
 func (mc *Chain) ContributeMpk(_ context.Context, lfb *block.Block,
 	mb *block.MagicBlock, active bool) (tx *httpclientutil.Transaction,
 	err error) {
+
+	println("DKG CONTRIBUTE")
 
 	var dmn *minersc.DKGMinerNodes
 	if dmn, err = mc.getDKGMiners(lfb, mb, active); err != nil {

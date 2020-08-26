@@ -306,6 +306,7 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 	if b.Round == nvc && mb == nil {
 		var mbx = mc.GetMagicBlock(b.Round)
 		mc.SetNextViewChange(mbx.StartingRound)
+		println("MINER VC: NO MB, NO VC", b.Round, "BUT EXPECTED")
 		return // no MB no VC
 	}
 
@@ -313,6 +314,8 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 	if mb == nil {
 		return // no MB, no VC
 	}
+
+	println("MINER VIEW CHANGE")
 
 	// view change
 

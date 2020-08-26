@@ -100,6 +100,8 @@ func (vcp *viewChangeProcess) setupNextViewChange(ctx context.Context) {
 // DKGProcess starts DKG process and works on it. It blocks.
 func (mc *Chain) DKGProcess(ctx context.Context) {
 
+	println("START DKG")
+
 	mc.viewChangeProcess.setupNextViewChange(ctx)
 
 	const (
@@ -117,6 +119,7 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 	)
 
 	for {
+		println("DKG TICK")
 		timer.Reset(timeoutPhase * time.Second) // setup timer to wait
 
 		select {
@@ -152,7 +155,7 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 		}
 
 		Logger.Debug("dkg process trying", zap.Any("next_phase", pn),
-			zap.Int("phase", int(mc.CurrentPhase())),
+			zap.Any("phase", mc.CurrentPhase()),
 			zap.Int("sc funcs", len(mc.viewChangeProcess.scFunctions)))
 
 		if pn == nil || pn.Phase == mc.CurrentPhase() {
@@ -160,9 +163,10 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 		}
 
 		if pn.Phase != 0 && pn.Phase != mc.CurrentPhase()+1 {
-			Logger.Debug("jumping over a phase; skip, wait for 'start'",
+			Logger.Debug("dkg process -- jumping over a phase;"+
+				" skip, wait for 'start'",
 				zap.Int("current_phase", int(mc.CurrentPhase())),
-				zap.Int("phase", int(pn.Phase)))
+				zap.Any("phase", pn.Phase))
 			mc.SetCurrentPhase(minersc.Unknown)
 			continue
 		}
@@ -405,6 +409,8 @@ func (vcp *viewChangeProcess) clearViewChange() {
 func (mc *Chain) DKGProcessStart(context.Context, *block.Block,
 	*block.MagicBlock, bool) (*httpclientutil.Transaction, error) {
 
+	println("DKG START")
+
 	mc.viewChangeProcess.Lock()
 	defer mc.viewChangeProcess.Unlock()
 
@@ -581,6 +587,8 @@ func (mc *Chain) SendSijs(ctx context.Context, lfb *block.Block,
 	mb *block.MagicBlock, active bool) (tx *httpclientutil.Transaction,
 	err error) {
 
+	println("DKG SHARE")
+
 	mc.viewChangeProcess.Lock()
 	defer mc.viewChangeProcess.Unlock()
 
@@ -614,7 +622,7 @@ func (mc *Chain) SendSijs(ctx context.Context, lfb *block.Block,
 			continue // don't send to self
 		}
 		if _, ok := mc.viewChangeProcess.shareOrSigns.ShareOrSigns[key]; !ok {
-			if err := mc.SendDKGShare(ctx, node.GetNode(key)); err != nil {
+			if err := mc.sendDKGShare(ctx, node.GetNode(key)); err != nil {
 				sendFail = append(sendFail, fmt.Sprintf("%s(%v);", key, err))
 			}
 		}
@@ -714,6 +722,8 @@ func (mc *Chain) Wait(ctx context.Context, lfb *block.Block,
 	mb *block.MagicBlock, active bool) (tx *httpclientutil.Transaction,
 	err error) {
 
+	println("DKG WAIT")
+
 	mc.viewChangeProcess.Lock()
 	defer mc.viewChangeProcess.Unlock()
 
@@ -795,6 +805,8 @@ func (mc *Chain) Wait(ctx context.Context, lfb *block.Block,
 		return nil, common.NewErrorf("vc_wait",
 			"sending 'wait' transaction: %v", err)
 	}
+
+	println("SEND WAIT TX")
 
 	return // the transaction
 }

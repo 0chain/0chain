@@ -32,8 +32,8 @@ func revertString(s string) string {
 	return string(r)
 }
 
-// SendDKGShare sends the generated secShare to the given node.
-func (mc *Chain) SendDKGShare(ctx context.Context, n *node.Node) (err error) {
+// The sendDKGShare sends the generated secShare to the given node.
+func (mc *Chain) sendDKGShare(ctx context.Context, n *node.Node) (err error) {
 
 	if !config.DevConfiguration.IsDkgEnabled {
 		return common.NewError("send_dkg_share", "dkg is not enabled")
@@ -47,9 +47,6 @@ func (mc *Chain) SendDKGShare(ctx context.Context, n *node.Node) (err error) {
 		params = &url.Values{}
 		nodeID = bls.ComputeIDdkg(n.ID)
 	)
-
-	mc.viewChangeProcess.Lock()
-	defer mc.viewChangeProcess.Unlock()
 
 	var (
 		secShare           = mc.viewChangeProcess.viewChangeDKG.Sij[nodeID]
