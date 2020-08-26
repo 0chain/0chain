@@ -889,7 +889,7 @@ func LoadDKGSummary(ctx context.Context, id string) (dkgs *bls.DKGSummary,
 func LoadLatestMB(ctx context.Context) (mb *block.MagicBlock, err error) {
 
 	var (
-		mbemd = datastore.GetEntityMetadata("round")
+		mbemd = datastore.GetEntityMetadata("magicblockdata")
 		rctx  = ememorystore.WithEntityConnection(ctx, mbemd)
 	)
 	defer ememorystore.Close(rctx)
