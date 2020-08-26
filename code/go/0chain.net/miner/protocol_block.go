@@ -116,11 +116,11 @@ func (mc *Chain) VerifyBlockMagicBlockReference(b *block.Block) (err error) {
 		rn   = b.Round
 		lfmb = mc.GetLatestFinalizedMagicBlockRound(rn)
 
-		nvc    = mc.NextViewChange()
-		nvcoff = mbRoundOffset(nvc)
+		nvc   = mc.NextViewChange()
+		rnoff = mbRoundOffset(rn)
 	)
 
-	if nvc > 0 && rn >= nvcoff && lfmb.StartingRound < nvc {
+	if nvc > 0 && rnoff >= nvc && lfmb.StartingRound < nvc {
 		return common.NewError("verfy_block",
 			"required MB missing or still not finalized")
 	}

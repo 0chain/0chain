@@ -153,10 +153,10 @@ type Chain struct {
 var chainEntityMetadata *datastore.EntityMetadataImpl
 
 func mbRoundOffset(rn int64) int64 {
-	if rn < 3 {
+	if rn < 5 {
 		return rn // the same
 	}
-	return rn + 2 // MB offset
+	return rn - 4 // MB offset
 }
 
 // GetCurrentMagicBlock returns MB for current round
@@ -681,7 +681,7 @@ func (c *Chain) GetGenerators(r round.RoundI) []*node.Node {
 func (c *Chain) GetMiners(round int64) *node.Pool {
 	mb := c.GetMagicBlock(round)
 	Logger.Debug("get miners -- current magic block",
-		zap.Any("miners", mb.Miners), zap.Any("round", round))
+		zap.Any("miners", mb.Miners.N2NURLs()), zap.Any("round", round))
 
 	return mb.Miners
 }
@@ -751,9 +751,9 @@ func (c *Chain) ValidGenerator(r round.RoundI, b *block.Block) bool {
 }
 
 /*GetNotarizationThresholdCount - gives the threshold count for block to be notarized*/
-func (c *Chain) GetNotarizationThresholdCount(miners *node.Pool) int {
+func (c *Chain) GetNotarizationThresholdCount(minersNumber int) int {
 	notarizedPercent := float64(c.ThresholdByCount) / 100
-	thresholdCount := float64(miners.Size()) * notarizedPercent
+	thresholdCount := float64(minersNumber) * notarizedPercent
 	return int(math.Ceil(thresholdCount))
 }
 
@@ -768,7 +768,7 @@ func (c *Chain) AreAllNodesActive() bool {
 func (c *Chain) CanStartNetwork() bool {
 	mb := c.GetCurrentMagicBlock()
 	active := mb.Miners.GetActiveCount()
-	threshold := c.GetNotarizationThresholdCount(mb.Miners)
+	threshold := c.GetNotarizationThresholdCount(mb.Miners.Size())
 	return active >= threshold && c.CanShardBlocks(c.GetCurrentRound())
 }
 

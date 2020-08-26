@@ -500,10 +500,10 @@ func (mc *Chain) SaveMagicBlock() chain.MagicBlockSaveFunc {
 }
 
 func mbRoundOffset(rn int64) int64 {
-	if rn < 3 {
+	if rn < 5 {
 		return rn // the same
 	}
-	return rn + 2 // MB offset
+	return rn - 4 // MB offset
 }
 
 // GetCurrentDKG returns DKG by round number

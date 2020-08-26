@@ -240,6 +240,10 @@ func (c *Chain) GetHeaviestNotarizedBlock(r round.RoundI) *block.Block {
 			return nil, common.NewError("invalid_block", "Block not from the requested round")
 		}
 
+		if nb.Round != r.GetRoundNumber() {
+			println("SOMETHING WIRED IS HERE (1)")
+		}
+
 		if err := c.VerifyNotarization(ctx, nb.Hash, nb.GetVerificationTickets(), r.GetRoundNumber()); err != nil {
 			Logger.Error("get notarized block for round - validate notarization", zap.Int64("round", roundNumber), zap.String("block", nb.Hash), zap.Error(err))
 			return nil, err

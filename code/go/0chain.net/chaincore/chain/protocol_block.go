@@ -72,17 +72,19 @@ func (c *Chain) IsBlockNotarized(ctx context.Context, b *block.Block) bool {
 func (c *Chain) reachedNotarization(round int64,
 	bvt []*block.VerificationTicket) bool {
 
-	var miners = c.GetMiners(round)
-	if miners == nil {
-		return false
-	}
+	var (
+		mb  = c.GetMagicBlock(round)
+		num = mb.Miners.Size()
+	)
 
 	if c.ThresholdByCount > 0 {
-		numSignatures := len(bvt)
-		if numSignatures < c.GetNotarizationThresholdCount(miners) {
+		var numSignatures = len(bvt)
+		if numSignatures < c.GetNotarizationThresholdCount(num) {
 			//ToDo: Remove this comment
 			Logger.Info("not reached notarization",
-				zap.Int("threshold", c.GetNotarizationThresholdCount(miners)),
+				zap.Int64("mb_sr", mb.StartingRound),
+				zap.Int("miners", num),
+				zap.Int("threshold", c.GetNotarizationThresholdCount(num)),
 				zap.Int("num_signatures", numSignatures),
 				zap.Int64("current_round", c.GetCurrentRound()),
 				zap.Int64("round", round))
@@ -100,10 +102,12 @@ func (c *Chain) reachedNotarization(round int64,
 	}
 
 	Logger.Info("Reached notarization!!!",
+		zap.Int64("mb_sr", mb.StartingRound),
+		zap.Int("miners", num),
 		zap.Int64("round", round),
 		zap.Int64("current_cound", c.GetCurrentRound()),
 		zap.Int("num_signatures", len(bvt)),
-		zap.Int("threshold", c.GetNotarizationThresholdCount(miners)))
+		zap.Int("threshold", c.GetNotarizationThresholdCount(num)))
 
 	return true
 }

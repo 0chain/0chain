@@ -148,9 +148,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 			failedStateCount++
 			return false
 		}
-		//if txn.ClientID == mc.OwnerID {
-		//	hasOwnerTxn = true
-		//}
+
 		//Setting the score lower so the next time blocks are generated these transactions don't show up at the top
 		txn.SetCollectionScore(txn.GetCollectionScore() - 10*60)
 		txnMap[txn.GetKey()] = true

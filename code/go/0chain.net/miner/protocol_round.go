@@ -294,11 +294,11 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		b    = block.NewBlock(mc.GetKey(), rn)
 		lfmb = mc.GetLatestFinalizedMagicBlockRound(rn)
 
-		nvc    = mc.NextViewChange()
-		nvcoff = mbRoundOffset(nvc)
+		nvc   = mc.NextViewChange()
+		rnoff = mbRoundOffset(rn)
 	)
 
-	if nvc > 0 && rn >= nvcoff && lfmb.StartingRound < nvc {
+	if nvc > 0 && rnoff >= nvc && lfmb.StartingRound < nvc {
 		Logger.Error("gen_block",
 			zap.String("err", "required MB missing or still not finalized"),
 			zap.Int64("next_vc", nvc),
@@ -792,6 +792,16 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*Bloc
 		err = mc.VerifyNotarization(ctx, fb.Hash, fb.GetVerificationTickets(),
 			r.GetRoundNumber())
 		if err != nil {
+			// TODO (sfxd): REMOVE THE INSPECTION
+			// INSPECT
+			{
+				mb := mc.GetMagicBlock(fb.Round)
+				println("VERIFY NOT. FAILED", "ROUND", fb.Round)
+				println("  MB SR", mb.StartingRound)
+				println("  MAGIC BLOCKS:", mc.MagicBlockStorage.Count())
+				println("  MB ROUNDS:", fmt.Sprint(mc.MagicBlockStorage.GetRounds()))
+			}
+
 			Logger.Error("lfb from sharder - notarization failed", zap.Int64("round", fb.Round),
 				zap.String("block", fb.Hash), zap.Error(err))
 			return nil, err

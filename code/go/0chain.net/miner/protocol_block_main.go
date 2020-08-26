@@ -44,20 +44,22 @@ func (mc *Chain) hashAndSignGeneratedBlock(ctx context.Context,
 * block published while working on this
  */
 func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.BlockStateHandler, waitOver bool) error {
-	clients := make(map[string]*client.Client)
 	b.Txns = make([]*transaction.Transaction, mc.BlockSize)
-	//wasting this because []interface{} != []*transaction.Transaction in Go
-	etxns := make([]datastore.Entity, mc.BlockSize)
-	var invalidTxns []datastore.Entity
-	var idx int32
-	var ierr error
-	var count int32
-	var roundMismatch bool
-	var roundTimeout bool
-	//var hasOwnerTxn bool
-	var failedStateCount int32
-	var byteSize int64
-	txnMap := make(map[datastore.Key]bool, mc.BlockSize)
+
+	var (
+		clients          = make(map[string]*client.Client)
+		etxns            = make([]datastore.Entity, mc.BlockSize)
+		invalidTxns      []datastore.Entity
+		idx              int32
+		ierr             error
+		count            int32
+		roundMismatch    bool
+		roundTimeout     bool
+		failedStateCount int32
+		byteSize         int64
+		txnMap           = make(map[datastore.Key]bool, mc.BlockSize)
+	)
+
 	var txnProcessor = func(ctx context.Context, txn *transaction.Transaction) bool {
 		if _, ok := txnMap[txn.GetKey()]; ok {
 			return false
@@ -86,9 +88,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 			failedStateCount++
 			return false
 		}
-		//if txn.ClientID == mc.OwnerID {
-		//	hasOwnerTxn = true
-		//}
+
 		//Setting the score lower so the next time blocks are generated these transactions don't show up at the top
 		txn.SetCollectionScore(txn.GetCollectionScore() - 10*60)
 		txnMap[txn.GetKey()] = true
