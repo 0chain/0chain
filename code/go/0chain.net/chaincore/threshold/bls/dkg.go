@@ -41,9 +41,8 @@ type DKG struct {
 
 type DKGSummary struct {
 	datastore.IDField
-	MagicBlockNumber int64             `json:"magic_block_number"`
-	StartingRound    int64             `json:"starting_round"`
-	SecretShares     map[string]string `json:"secret_shares"`
+	StartingRound int64             `json:"starting_round"`
+	SecretShares  map[string]string `json:"secret_shares"`
 }
 
 // LatestMagicBlockID keeps ID of latest MB accepted and stored.
@@ -377,9 +376,8 @@ func (dkgSummary *DKGSummary) Delete(ctx context.Context) error {
 
 func (dkg *DKG) GetDKGSummary() *DKGSummary {
 	dkgSummary := &DKGSummary{
-		MagicBlockNumber: dkg.MagicBlockNumber,
-		SecretShares:     make(map[string]string),
-		StartingRound:    dkg.StartingRound,
+		SecretShares:  make(map[string]string),
+		StartingRound: dkg.StartingRound,
 	}
 	dkg.secretSharesMutex.RLock()
 	defer dkg.secretSharesMutex.RUnlock()

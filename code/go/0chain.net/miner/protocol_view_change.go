@@ -878,3 +878,38 @@ func LoadDKGSummary(ctx context.Context, id string) (dkgs *bls.DKGSummary,
 	err = dkgs.Read(dctx, dkgs.GetKey())
 	return
 }
+
+//
+// Latest MB from store
+//
+
+func LoadLatestMB(ctx context.Context) (mb *block.MagicBlock, err error) {
+
+	var (
+		mbemd = datastore.GetEntityMetadata("round")
+		rctx  = ememorystore.WithEntityConnection(ctx, mbemd)
+	)
+	defer ememorystore.Close(rctx)
+
+	var (
+		conn = ememorystore.GetEntityCon(rctx, mbemd)
+		iter = conn.Conn.NewIterator(conn.ReadOptions)
+	)
+	defer iter.Close()
+
+	var data = mbemd.Instance().(*block.MagicBlockData)
+	iter.SeekToLast() // from last
+
+	if !iter.Valid() {
+		return nil, util.ErrValueNotPresent
+	}
+
+	if err = datastore.FromJSON(iter.Value().Data(), data); err != nil {
+		return nil, common.NewErrorf("load_latest_mb",
+			"decoding error: %v", err)
+	}
+
+	mb = data.MagicBlock
+	println("LOAD LATEST MB:", mb.StartingRound, "/", mb.MagicBlockNumber)
+	return
+}
