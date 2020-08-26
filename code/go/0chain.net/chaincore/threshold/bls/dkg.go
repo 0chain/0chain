@@ -41,8 +41,14 @@ type DKG struct {
 
 type DKGSummary struct {
 	datastore.IDField
-	StartingRound int64             `json:"starting_round"`
-	SecretShares  map[string]string `json:"secret_shares"`
+	MagicBlockNumber int64             `json:"magic_block_number"`
+	StartingRound    int64             `json:"starting_round"`
+	SecretShares     map[string]string `json:"secret_shares"`
+}
+
+// LatestMagicBlockID keeps ID of latest MB accepted and stored.
+type LatestMagicBlockID struct {
+	datastore.IDField
 }
 
 var dkgSummaryMetadata *datastore.EntityMetadataImpl
@@ -327,6 +333,10 @@ func ConvertStringToMpk(strMpk []string) []PublicKey {
 	return mpk
 }
 
+//
+// DKG summary storage.
+//
+
 func (dkgSummary *DKGSummary) GetEntityMetadata() datastore.EntityMetadata {
 	return dkgSummaryMetadata
 }
@@ -367,8 +377,9 @@ func (dkgSummary *DKGSummary) Delete(ctx context.Context) error {
 
 func (dkg *DKG) GetDKGSummary() *DKGSummary {
 	dkgSummary := &DKGSummary{
-		SecretShares:  make(map[string]string),
-		StartingRound: dkg.StartingRound,
+		MagicBlockNumber: dkg.MagicBlockNumber,
+		SecretShares:     make(map[string]string),
+		StartingRound:    dkg.StartingRound,
 	}
 	dkg.secretSharesMutex.RLock()
 	defer dkg.secretSharesMutex.RUnlock()

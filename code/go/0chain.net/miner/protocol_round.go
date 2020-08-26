@@ -413,6 +413,14 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		return nil, nil
 	}
 
+	// reset the next view change to previous MB starting round if
+	// Miner SC rejects the view change (by to few wait calls reason)
+	if b.Round == nvc && b.MagicBlock == nil {
+		Logger.Info("gen_block -- reset next VC round", zap.Int64("from", nvc),
+			zap.Int64("back_to", lfmb.StartingRound))
+		mc.SetNextViewChange(lfmb.StartingRound)
+	}
+
 	mc.addToRoundVerification(ctx, r, b)
 	r.AddProposedBlock(b)
 	go mc.SendBlock(ctx, b)
@@ -1433,6 +1441,13 @@ func StartProtocol(ctx context.Context, gb *block.Block) {
 	}
 	mc.SetCurrentRound(nr.Number)
 	Logger.Info("starting the blockchain ...", zap.Int64("round", nr.Number))
+}
+
+// LoadMagicBlocksAndDKG from store to start working. It loads MB and previous
+// MB (regardless Miner SC rejection) and related DKG and sets them.
+func (mc *Chain) LoadMagicBlocksAndDKG(ctx context.Context) (err error) {
+	//
+	return
 }
 
 func (mc *Chain) WaitForActiveSharders(ctx context.Context) error {

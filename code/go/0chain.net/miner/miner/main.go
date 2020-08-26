@@ -336,7 +336,7 @@ func getCurrentMagicBlockFromSharders(mc *miner.Chain) (err error) {
 		}
 	}
 
-	// TODO (sfxdx) reversed soring?
+	// TODO (sfxdx) reversed sorting?
 	sort.Slice(mbs, func(i, j int) bool {
 		return mbs[i].StartingRound < mbs[j].StartingRound
 	})
@@ -394,6 +394,9 @@ func initEntities() {
 
 	block.SetupMagicBlockData(ememoryStorage)
 	block.SetupMagicBlockDataDB()
+
+	block.SetupLatestMagicBlockID(ememorystore)
+	block.SetupLatestMagicBlockIDDB()
 }
 
 func initHandlers() {

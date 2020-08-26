@@ -777,23 +777,15 @@ func (mc *Chain) Wait(ctx context.Context, lfb *block.Block,
 
 	// save DKG and MB
 
-	var summary = vcdkg.GetDKGSummary()
-	if err = StoreDKGSummary(ctx, summary); err != nil {
+	if err = StoreDKGPreview(ctx, summary); err != nil {
 		return nil, common.NewErrorf("vc_wait", "saving DKG summary: %v", err)
 	}
 
-	var mbData = block.NewMagicBlockData(magicBlock)
-	if err = StoreMagicBlockDataLatest(ctx, mbData); err != nil {
+	if err = StoreMagicBlockPreview(ctx, magicBlock); err != nil {
 		return nil, common.NewErrorf("vc_wait", "saving MB data: %v", err)
 	}
 
 	// don't set DKG until MB finalized
-
-	// TODO (sfxdx): SET DKG WERE MB FINALIZED
-	//
-	// if err := mc.SetDKG(mc.viewChangeDKG, magicBlock.StartingRound); err != nil {
-	// 	Logger.Error("failed to set dkg", zap.Error(err))
-	// }
 
 	mc.viewChangeProcess.clearViewChange()
 	mc.SetNextViewChange(magicBlock.StartingRound)
@@ -807,29 +799,17 @@ func (mc *Chain) Wait(ctx context.Context, lfb *block.Block,
 	return // the transaction
 }
 
-//
-// other VC helpers
-//
+// ========================================================================== //
+//                            other VC helpers                                //
+// ========================================================================== //
 
-func StoreMagicBlockDataLatest(ctx context.Context,
-	data *block.MagicBlockData) (err error) {
+// MB save / load
 
-	if err = StoreMagicBlockData(ctx, data); err != nil {
-		return
-	}
-	// latest
-	var dataLatest = block.NewMagicBlockData(data.MagicBlock)
-	dataLatest.ID = "latest"
-	if err = StoreMagicBlockData(ctx, dataLatest); err != nil {
-		return
-	}
-	return // ok
-}
-
-func StoreMagicBlockData(ctx context.Context, data *block.MagicBlockData) (
+func StoreMagicBlock(ctx context.Context, magicBlock *block.MagicBlock) (
 	err error) {
 
 	var (
+		data = block.NewMagicBlockData(magicBlock)
 		emd  = data.GetEntityMetadata()
 		dctx = ememorystore.WithEntityConnection(ctx, emd)
 	)
@@ -843,10 +823,10 @@ func StoreMagicBlockData(ctx context.Context, data *block.MagicBlockData) (
 	return connection.Commit()
 }
 
-func GetMagicBlockDataFromStore(ctx context.Context, id string) (
-	mbd *block.MagicBlockData, err error) {
+func LoadMagicBlock(ctx context.Context, id string) (mb *block.MagicBlock,
+	err error) {
 
-	mbd = datastore.GetEntity("magicblockdata").(*block.MagicBlockData)
+	var mbd = datastore.GetEntity("magicblockdata").(*block.MagicBlockData)
 	mbd.ID = id
 
 	var (
@@ -855,18 +835,113 @@ func GetMagicBlockDataFromStore(ctx context.Context, id string) (
 	)
 	defer ememorystore.Close(dctx)
 
-	err = mbd.Read(dctx, mbd.GetKey())
+	if err = mbd.Read(dctx, mbd.GetKey()); err != nil {
+		return
+	}
+	mb = mbd.MagicBlock
 	return
 }
 
-func GetLatestMagicBlockFromStore(ctx context.Context) (
-	magicBlock *block.MagicBlock, err error) {
+// DKG save / load
 
-	var data *block.MagicBlockData
-	if data, err = GetMagicBlockDataFromStore(ctx, "latest"); err != nil {
+// StoreDKG in DB.
+func StoreDKG(ctx context.Context, dkg *bls.DKG) (err error) {
+
+	var (
+		summary            = dkg.GetDKGSummary()
+		dkgSummaryMetadata = summary.GetEntityMetadata()
+		dctx               = ememorystore.WithEntityConnection(ctx,
+			dkgSummaryMetadata)
+	)
+	defer ememorystore.Close(dctx)
+
+	if err = summary.Write(dctx); err != nil {
 		return
 	}
 
-	magicBlock = data.MagicBlock
+	var con = ememorystore.GetEntityCon(dctx, dkgSummaryMetadata)
+	return con.Commit()
+}
+
+// LoadDKGSummary loads DKG summary by stored DKG (that stores DKG summary).
+func LoadDKGSummary(ctx context.Context, id string) (dkgs *bls.DKGSummary,
+	err error) {
+
+	dkgs = datastore.GetEntity("dkgsummary").(*bls.DKGSummary)
+	dkgs.ID = id
+	var (
+		dkgSummaryMetadata = dkgs.GetEntityMetadata()
+		dctx               = ememorystore.WithEntityConnection(ctx,
+			dkgSummaryMetadata)
+	)
+	defer ememorystore.Close(dctx)
+	err = dkgs.Read(dctx, dkgs.GetKey())
 	return
 }
+
+//
+// At phase 'wait' we save MB and DKG preview can be rejected by Miner SC
+// on view change. Thus we can't store them as usual MB and DKG to avoid
+// misuse later.
+//
+
+// MB load / store preview
+
+// StoreMagicBlockPreview stores prepared MB can ebe rejected later by
+// Miner SC. During VC we have to check VC MB and this MB and related DKG.
+// And reject (ignore) this "preview" MB and DKG or accept them and
+// store using real ID.
+func StoreMagicBlockPreview(ctx context.Context, mb *block.MagicBlock) (
+	err error) {
+
+	var (
+		data = block.NewMagicBlockData(magicBlock)
+		emd  = data.GetEntityMetadata()
+		dctx = ememorystore.WithEntityConnection(ctx, emd)
+	)
+	defer ememorystore.Close(dctx)
+
+	data.ID = "preview"
+	if err = data.Write(dctx); err != nil {
+		return
+	}
+
+	var connection = ememorystore.GetEntityCon(dctx, emd)
+	return connection.Commit()
+}
+
+// LoadMagicBlockPreview loads MB preview.
+func LoadMagicBlockPreview(ctx context.Context) (*block.MagicBlock, error) {
+	return LoadMagicBlock(ctx, "preview")
+}
+
+// DKG load /store preview
+
+// StoreDKGPreview in DB.
+func StoreDKGPreview(ctx context.Context, dkg *bls.DKG) (err error) {
+
+	var (
+		summary            = dkg.GetDKGSummary()
+		dkgSummaryMetadata = summary.GetEntityMetadata()
+		dctx               = ememorystore.WithEntityConnection(ctx,
+			dkgSummaryMetadata)
+	)
+	defer ememorystore.Close(dctx)
+
+	summary.ID = "preview"
+	if err = summary.Write(dctx); err != nil {
+		return
+	}
+
+	var con = ememorystore.GetEntityCon(dctx, dkgSummaryMetadata)
+	return con.Commit()
+}
+
+// LoadDKGSummaryPreview loads DKG of related preview MB.
+func LoadDKGSummaryPreview(ctx context.Context) (*bls.DKGSummary, error) {
+	return LoadDKGSummary(ctx, "preview")
+}
+
+//
+//
+//

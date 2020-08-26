@@ -1309,15 +1309,3 @@ func (c *Chain) SetLatestDeterministicBlock(b *block.Block) {
 		c.LatestDeterministicBlock = b
 	}
 }
-
-func (c *Chain) VerifyBlockLFMB(b *block.Block) (err error) {
-
-	// with no magic block, based on the latest one
-	var lfmb = c.GetLatestFinalizedMagicBlock()
-	if b.LatestFinalizedMagicBlockRound < lfmb.StartingRound {
-		return common.NewError("verify_block_lfmb",
-			"unexpected LFMB round")
-	}
-
-	return // ok
-}

@@ -38,7 +38,8 @@ func SetupWorkers(ctx context.Context) {
 	go sc.HealthCheckSetup(ctx, DeepScan)
 	go sc.HealthCheckSetup(ctx, ProximityScan)
 
-	go sc.PruneStorageWorker(ctx, time.Minute*5, sc.getPruneCountRoundStorage(), sc.MagicBlockStorage)
+	go sc.PruneStorageWorker(ctx, time.Minute*5, sc.getPruneCountRoundStorage(),
+		sc.MagicBlockStorage)
 	go sc.RegisterSharderKeepWorker(ctx)
 	// Move old blocks to cloud
 	if viper.GetBool("minio.enabled") {

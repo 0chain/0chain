@@ -103,14 +103,39 @@ func (mc *Chain) verifySmartContracts(ctx context.Context, b *block.Block) error
 	return nil
 }
 
-/*VerifyBlock - given a set of transaction ids within a block, validate the block */
+// TODO (sfxdx): implement the method
+func (mc *Chain) VerifyBlockMagicBlockReference(b *block.Block) (err error) {
+
+	// TODO
+
+	var (
+		rn   = r.GetRoundNumber()
+		lfmb = mc.GetLatestFinalizedMagicBlockRound(rn)
+
+		nvc    = mc.NextViewChange()
+		nvcoff = mbRoundOffset(nvc)
+	)
+
+	// TODO
+
+	if nvc > 0 && rn >= nvcoff && lfmb.StartingRound < nvc {
+		return nil, common.NewError("verfy_block",
+			"required MB missing or still not finalized")
+	}
+
+	// TODO
+
+	return
+}
+
+// VerifyBlock - given a set of transaction ids within a block, validate the block.
 func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockVerificationTicket, error) {
 	start := time.Now()
 	err := b.Validate(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if err = mc.VerifyBlockLFMB(b); err != nil {
+	if err = mc.VerifyBlockMagicBlockReference(b); err != nil {
 		return nil, err
 	}
 	pb := mc.GetPreviousBlock(ctx, b)

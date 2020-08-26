@@ -119,32 +119,6 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (
 	return // ok, set
 }
 
-func GetDKGSummaryFromStore(ctx context.Context, id string) (*bls.DKGSummary, error) {
-	dkgSummary := datastore.GetEntity("dkgsummary").(*bls.DKGSummary)
-	dkgSummary.ID = id
-	dkgSummaryMetadata := dkgSummary.GetEntityMetadata()
-	dctx := ememorystore.WithEntityConnection(ctx, dkgSummaryMetadata)
-	defer ememorystore.Close(dctx)
-	err := dkgSummary.Read(dctx, dkgSummary.GetKey())
-	return dkgSummary, err
-}
-
-func StoreDKGSummary(ctx context.Context, dkgSummary *bls.DKGSummary) (err error) {
-	dkgSummaryMetadata := dkgSummary.GetEntityMetadata()
-	dctx := ememorystore.WithEntityConnection(ctx, dkgSummaryMetadata)
-	defer ememorystore.Close(dctx)
-	err = dkgSummary.Write(dctx)
-	if err != nil {
-		return err
-	}
-	con := ememorystore.GetEntityCon(dctx, dkgSummaryMetadata)
-	err = con.Commit()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 // VerifySigShares - Verify the bls sig share is correct
 func VerifySigShares() bool {
 	//TBD

@@ -12,7 +12,10 @@ type MagicBlockData struct {
 	*MagicBlock
 }
 
-var magicBlockMetadata *datastore.EntityMetadataImpl
+var (
+	magicBlockMetadata         *datastore.EntityMetadataImpl
+	latestMagicBlockIDMetadata *datastore.EntityMetadataImpl
+)
 
 func (m *MagicBlockData) GetEntityMetadata() datastore.EntityMetadata {
 	return magicBlockMetadata
@@ -56,4 +59,45 @@ func NewMagicBlockData(mb *MagicBlock) *MagicBlockData {
 	mbData.ID = strconv.FormatInt(mb.MagicBlockNumber, 10)
 	mbData.MagicBlock = mb
 	return mbData
+}
+
+//
+// Latest magic block ID storage.
+//
+
+func (lmbid *LatestMagicBlockID) GetEntityMetadata() datastore.EntityMetadata {
+	return latestMagicBlockIDMetadata
+}
+
+func LatestMagicBlockIDProvider() datastore.Entity {
+	return new(LatestMagicBlockID)
+}
+
+func SetupLatestMagicBlockID(store datastore.Store) {
+	latestMagicBlockIDMetadata = datastore.MetadataProvider()
+	latestMagicBlockIDMetadata.Name = "latestmbid"
+	latestMagicBlockIDMetadata.DB = "latestmbiddb"
+	latestMagicBlockIDMetadata.Store = store
+	latestMagicBlockIDMetadata.Provider = LatestMagicBlockIDProvider
+	datastore.RegisterEntityMetadata("latestmbid", latestMagicBlockIDMetadata)
+}
+
+func SetupLatestMagicBlockIDDB() {
+	db, err := ememorystore.CreateDB("data/rocksdb/latestmbid")
+	if err != nil {
+		panic(err)
+	}
+	ememorystore.AddPool("latestmbiddb", db)
+}
+
+func (lmbid *LatestMagicBlockID) Read(ctx context.Context, key string) error {
+	return lmbid.GetEntityMetadata().GetStore().Read(ctx, key, lmbid)
+}
+
+func (lmbid *LatestMagicBlockID) Write(ctx context.Context) error {
+	return lmbid.GetEntityMetadata().GetStore().Write(ctx, lmbid)
+}
+
+func (lmbid *LatestMagicBlockID) Delete(ctx context.Context) error {
+	return lmbid.GetEntityMetadata().GetStore().Delete(ctx, lmbid)
 }
