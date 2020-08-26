@@ -270,6 +270,9 @@ func (msc *MinerSmartContract) adjustViewChange(gn *globalNode,
 	if err = dmn.recalculateTKN(true); err != nil {
 		Logger.Info("adjust_view_change", zap.Error(err))
 		gn.ViewChange = 0 // don't do this view change, save the gn later
+		// reset this error, since it's not fatal, we just don't do
+		// this view change, because >= T miners didn't send 'wait' transaction
+		err = nil
 		return
 	}
 
