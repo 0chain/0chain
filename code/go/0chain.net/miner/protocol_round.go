@@ -1443,38 +1443,97 @@ func StartProtocol(ctx context.Context, gb *block.Block) {
 	Logger.Info("starting the blockchain ...", zap.Int64("round", nr.Number))
 }
 
-// LoadMagicBlocksAndDKG from store to start working. It loads MB and previous
-// MB (regardless Miner SC rejection) and related DKG and sets them.
-func (mc *Chain) LoadMagicBlocksAndDKG(ctx context.Context) (err error) {
-	//
+func (mc *Chain) setupLoadedMagicBlock(mb *block.MagicBlock) (err error) {
+	if err = mc.UpdateMagicBlock(mb); err != nil {
+		return
+	}
+	mc.UpdateNodesFromMagicBlock(mb)
 	return
 }
 
-func (mc *Chain) WaitForActiveSharders(ctx context.Context) error {
-	oldRound := mc.GetCurrentRound()
-	defer mc.SetCurrentRound(oldRound)
-	latestMagicBlock, err := mc.getLatestMagicBlockFromStore(ctx)
-	if err != nil {
-		Logger.Error("failed to get latest magic block from store", zap.Error(err))
-		latestMagicBlock = mc.GetCurrentMagicBlock()
-	}
+// LoadMagicBlocksAndDKG from store to start working. It loads MB and previous
+// MB (regardless Miner SC rejection) and related DKG and sets them. It can
+// return the latest MB and an error related to DKG or previous MB/DKG loading.
+// The method can write INFO logs that doesn't really mean an error. Since, the
+// method is optimistic and tries to load latest and previous MBs and related
+// DKGs. But in a normal case miner can have or haven't the MBs and the DKGs.
+func (mc *Chain) LoadMagicBlocksAndDKG(ctx context.Context) {
 
-	mc.SetCurrentRound(latestMagicBlock.StartingRound)
+	// latest MB
+	var (
+		latest *block.MagicBlock
+		err    error
+	)
+	if latest, err = LoadLatestMB(ctx); err != nil {
+		Logger.Info("load_mbs_and_dkg -- loading the latest MB",
+			zap.Error(err))
+		return // can't continue
+	}
+	if err = mc.setupLoadedMagicBlock(latest); err != nil {
+		Logger.Info("load_mbs_and_dkg -- updating the latest MB",
+			zap.Error(err))
+		return // can't continue
+	}
+	mc.SetMagicBlock(latest)
+	// related DKG (if any)
+	if err = mc.SetDKGSFromStore(ctx, latest); err != nil {
+		Logger.Info("load_mbs_and_dkg -- loading the latest DKG",
+			zap.Error(err))
+	}
+	if latest.MagicBlockNumber <= 1 {
+		return // done
+	}
+	// otherwise, load and setup previous
+	var (
+		prev *block.MagicBlock
+		id   = strconv.FormatInt(latest.MagicBlockNumber-1, 10)
+	)
+	if prev, err = LoadMagicBlock(ctx, id); err != nil {
+		Logger.Info("load_mbs_and_dkg -- loading previous MB",
+			zap.Error(err))
+		return // can't continue
+	}
+	if err = mc.setupLoadedMagicBlock(prev); err != nil {
+		Logger.Info("load_mbs_and_dkg -- updating previous MB",
+			zap.Error(err))
+		return // can't continue
+	}
+	mc.SetMagicBlock(prev)
+	// and then setup the latest again for proper nodes registration,
+	// ignoring its error
+	mc.setupLoadedMagicBlock(latest)
+	// DKG relates previous MB
+	if err = mc.SetDKGSFromStore(ctx, prev); err != nil {
+		Logger.Info("load_mbs_and_dkg -- loading previous DKG",
+			zap.Error(err))
+	}
+	// everything is OK
+}
+
+func (mc *Chain) WaitForActiveSharders(ctx context.Context) error {
+	var oldRound = mc.GetCurrentRound()
+	defer mc.SetCurrentRound(oldRound)
 	defer chain.ResetStatusMonitor(oldRound)
 
-	if mc.CanShardBlocksSharders(latestMagicBlock.Sharders) {
+	var lmb = mc.GetCurrentMagicBlock()
+
+	// we can't use the lmb.StartingRound as current round, since the lmb
+	// is saved in store but can be rejected by Miner SC if the LMB is not
+	// view changed yet (451-502 rounds)
+
+	if mc.CanShardBlocksSharders(lmb.Sharders) {
 		return nil
 	}
 
-	waitingSharders := make([]string, 0, latestMagicBlock.Sharders.MapSize())
-	for _, nodeSharder := range latestMagicBlock.Sharders.CopyNodesMap() {
+	var waitingSharders = make([]string, 0, lmb.Sharders.MapSize())
+	for _, nodeSharder := range lmb.Sharders.CopyNodesMap() {
 		waitingSharders = append(waitingSharders,
 			fmt.Sprintf("id: %s; n2nhost: %s ", nodeSharder.ID, nodeSharder.N2NHost))
 	}
 
-	Logger.Debug("Waiting for Sharders",
-		zap.Int64("magic_block_round", latestMagicBlock.StartingRound),
-		zap.Int64("magic_block_number", latestMagicBlock.MagicBlockNumber),
+	Logger.Debug("waiting for sharders",
+		zap.Int64("latest_magic_block_round", lmb.StartingRound),
+		zap.Int64("latest_magic_block_number", lmb.MagicBlockNumber),
 		zap.Any("sharders", waitingSharders))
 
 	var ticker = time.NewTicker(5 * chain.DELTA)
@@ -1485,27 +1544,11 @@ func (mc *Chain) WaitForActiveSharders(ctx context.Context) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		case ts := <-ticker.C:
-			if mc.CanShardBlocksSharders(latestMagicBlock.Sharders) {
+			if mc.CanShardBlocksSharders(lmb.Sharders) {
 				return nil
 			}
 			Logger.Info("Waiting for Sharders.", zap.Time("ts", ts),
 				zap.Any("sharders", waitingSharders))
 		}
 	}
-}
-
-// TODO (sfxdx): THE LATEST BLOCK CAN BE REJECTED BY MINER SC AND THIS CASE
-//               WE SHOULDN'T USE IT. ADD ONE MORE WAY TO GET LATEST ACCEPTED
-//               MAGIC BLOCK (OR JUST USE GENESIS)
-func (mc *Chain) getLatestMagicBlockFromStore(ctx context.Context) (*block.MagicBlock, error) {
-	mbData, err := GetMagicBlockDataFromStore(ctx, "latest")
-	if err != nil {
-		return nil, err
-	}
-	latestMagicBlock := mbData.MagicBlock
-	if err := mc.UpdateMagicBlock(latestMagicBlock); err != nil {
-		return nil, fmt.Errorf("failed to update magic block: %v", err.Error())
-	}
-	mc.UpdateNodesFromMagicBlock(latestMagicBlock)
-	return latestMagicBlock, nil
 }

@@ -7,19 +7,23 @@ import (
 	"strconv"
 	"time"
 
-	metrics "github.com/rcrowley/go-metrics"
+	// TODO (sfxdx): REMOVE
+	// "0chain.net/core/datastore"
+	// "0chain.net/core/ememorystore"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/threshold/bls"
+
 	"0chain.net/core/common"
-	"0chain.net/core/datastore"
-	"0chain.net/core/ememorystore"
 	"0chain.net/core/encryption"
+
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
+
+	metrics "github.com/rcrowley/go-metrics"
 )
 
 // ////////////  BLS-DKG Related stuff  /////////////////////
@@ -76,14 +80,14 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (
 		selfNodeKey = node.GetSelfNode(ctx).Underlying().GetKey()
 		id          = strconv.FormatInt(mb.MagicBlockNumber, 10)
 
-		dkgSummary *bls.DKGSummary
+		summary *bls.DKGSummary
 	)
 
-	if dkgSummary, err = GetDKGSummaryFromStore(ctx, id); err != nil {
+	if summary, err = LoadDKGSummary(ctx, id); err != nil {
 		return
 	}
 
-	if dkgSummary.SecretShares == nil {
+	if summary.SecretShares == nil {
 		return common.NewError("failed to set dkg from store",
 			"no saved shares for dkg")
 	}
@@ -93,7 +97,7 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (
 	newDKG.StartingRound = mb.StartingRound
 
 	for k := range mb.Miners.CopyNodesMap() {
-		if savedShare, ok := dkgSummary.SecretShares[ComputeBlsID(k)]; ok {
+		if savedShare, ok := summary.SecretShares[ComputeBlsID(k)]; ok {
 			newDKG.AddSecretShare(bls.ComputeIDdkg(k), savedShare, false)
 		} else if v, ok := mb.GetShareOrSigns().Get(k); ok {
 			if share, ok := v.ShareOrSigns[node.Self.Underlying().GetKey()]; ok && share.Share != "" {

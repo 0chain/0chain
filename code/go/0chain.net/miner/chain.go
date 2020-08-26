@@ -324,7 +324,14 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 	go mc.PruneRoundStorage(ctx, mc.getPruneCountRoundStorage(),
 		mc.roundDkg, mc.MagicBlockStorage)
 
-	// set corresponding DKG
+	// set DKG if this node is miner of new MB (it have to have the DKG)
+	var selfNodeKey = node.Self.Underlying().GetKey()
+
+	if !mb.Miners.HasNode(selfNodeKey) {
+		return // ok, all done
+	}
+
+	// this must be ok, if not -- return error
 	if err = mc.SetDKGSFromStore(ctx, mb); err != nil {
 		return
 	}

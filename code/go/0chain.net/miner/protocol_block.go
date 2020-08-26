@@ -1,36 +1,41 @@
 package miner
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
-	metrics "github.com/rcrowley/go-metrics"
-
+	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
+	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
+	"0chain.net/chaincore/node"
+	"0chain.net/chaincore/transaction"
+
+	"0chain.net/core/common"
+	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
 
-	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/client"
-	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/transaction"
-	"0chain.net/core/common"
-	"0chain.net/core/datastore"
-	. "0chain.net/core/logging"
 	"0chain.net/smartcontract/minersc"
 
+	. "0chain.net/core/logging"
 	"go.uber.org/zap"
+
+	metrics "github.com/rcrowley/go-metrics"
 )
 
 //InsufficientTxns - to indicate an error when the transactions are not sufficient to make a block
 const InsufficientTxns = "insufficient_txns"
 
-var bgTimer metrics.Timer  // block generation timer
-var bpTimer metrics.Timer  // block processing timer (includes block verification)
-var btvTimer metrics.Timer // block verification timer
-var bsHistogram metrics.Histogram
+var (
+	bgTimer     metrics.Timer // block generation timer
+	bpTimer     metrics.Timer // block processing timer (includes block verification)
+	btvTimer    metrics.Timer // block verification timer
+	bsHistogram metrics.Histogram
+)
 
 func init() {
 	bgTimer = metrics.GetOrRegisterTimer("bg_time", nil)
@@ -103,27 +108,68 @@ func (mc *Chain) verifySmartContracts(ctx context.Context, b *block.Block) error
 	return nil
 }
 
-// TODO (sfxdx): implement the method
+// VerifyBlockMagicBlockReference verifies LatestFinalizedMagicBlockHash and
+// LatestFinalizedMagicBlockRound fields of the block.
 func (mc *Chain) VerifyBlockMagicBlockReference(b *block.Block) (err error) {
 
-	// TODO
-
 	var (
-		rn   = r.GetRoundNumber()
+		rn   = b.Round
 		lfmb = mc.GetLatestFinalizedMagicBlockRound(rn)
 
 		nvc    = mc.NextViewChange()
 		nvcoff = mbRoundOffset(nvc)
 	)
 
-	// TODO
-
 	if nvc > 0 && rn >= nvcoff && lfmb.StartingRound < nvc {
-		return nil, common.NewError("verfy_block",
+		return common.NewError("verfy_block",
 			"required MB missing or still not finalized")
 	}
 
-	// TODO
+	if b.LatestFinalizedMagicBlockHash != lfmb.Hash {
+		return common.NewError("verfy_block",
+			"unexpected latest_finalized_mb_hash")
+	}
+
+	if b.LatestFinalizedMagicBlockRound != lfmb.Round {
+		return common.NewError("verfy_block",
+			"unexpected latest_finalized_mb_round")
+	}
+
+	return
+}
+
+// VerifyBlockMagicBlock verifies MagicBlock of the block. If this miner is
+// member of miners of the MagicBlock it can do the verification. Otherwise,
+// this method does nothing.
+func (mc *Chain) VerifyBlockMagicBlock(ctx context.Context, b *block.Block) (
+	err error) {
+
+	var (
+		mb          = b.MagicBlock
+		selfNodeKey = node.Self.Underlying().GetKey()
+	)
+
+	if mb == nil || !mb.Miners.HasNode(selfNodeKey) {
+		return // ok
+	}
+
+	// check out the MB if this miner is member of it
+	var (
+		id  = strconv.FormatInt(mb.MagicBlockNumber, 10)
+		lmb *block.MagicBlock
+	)
+
+	// get stored MB
+	if lmb, err = LoadMagicBlock(ctx, id); err != nil {
+		return common.NewErrorf("verfy_block",
+			"can't load related MB from store: %v", err)
+	}
+
+	// compare given MB and the stored one (should be equal)
+	if !bytes.Equal(mb.Encode(), lmb.Encode()) {
+		return common.NewError("verfy_block",
+			"MB given doesn't match the stored one")
+	}
 
 	return
 }
@@ -136,6 +182,9 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockV
 		return nil, err
 	}
 	if err = mc.VerifyBlockMagicBlockReference(b); err != nil {
+		return nil, err
+	}
+	if err = mc.VerifyBlockMagicBlock(ctx, b); err != nil {
 		return nil, err
 	}
 	pb := mc.GetPreviousBlock(ctx, b)

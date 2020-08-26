@@ -174,6 +174,9 @@ func main() {
 	common.ConfigRateLimits()
 	initN2NHandlers()
 
+	// load the latest and previous MB and related DKG if any
+	mc.LoadMagicBlocksAndDKG(ctx)
+
 	if err := mc.WaitForActiveSharders(ctx); err != nil {
 		Logger.Error("failed to wait sharders", zap.Error(err))
 	}
@@ -204,7 +207,8 @@ func main() {
 
 	mc.RegisterClient()
 	chain.StartTime = time.Now().UTC()
-	activeMiner := mb.Miners.HasNode(node.Self.Underlying().GetKey())
+
+	var activeMiner = mb.Miners.HasNode(node.Self.Underlying().GetKey())
 	if activeMiner {
 		mb = mc.GetLatestMagicBlock()
 		if err := miner.SetDKGFromMagicBlocksChainPrev(ctx, mb); err != nil {
@@ -394,9 +398,6 @@ func initEntities() {
 
 	block.SetupMagicBlockData(ememoryStorage)
 	block.SetupMagicBlockDataDB()
-
-	block.SetupLatestMagicBlockID(ememoryStorage)
-	block.SetupLatestMagicBlockIDDB()
 }
 
 func initHandlers() {

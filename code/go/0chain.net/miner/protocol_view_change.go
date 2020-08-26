@@ -86,9 +86,9 @@ func (mc *Chain) isActiveInChain(lfb *block.Block, mb *block.MagicBlock) bool {
 }
 
 // After stop/start we have to repair nextViewCahnge round number from
-// store if there is "latest" MB saved in Miner SC;
+// store if there is the latest MB saved by Miner SC.
 func (vcp *viewChangeProcess) setupNextViewChange(ctx context.Context) {
-	var mb, err = GetLatestMagicBlockFromStore(ctx)
+	var mb, err = LoadLatestMB(ctx)
 	if err != nil {
 		Logger.Info("getting latest MB from store", zap.Error(err))
 		return
@@ -777,7 +777,7 @@ func (mc *Chain) Wait(ctx context.Context, lfb *block.Block,
 
 	// save DKG and MB
 
-	if err = StoreDKG(ctx, summary); err != nil {
+	if err = StoreDKG(ctx, vcdkg); err != nil {
 		return nil, common.NewErrorf("vc_wait", "saving DKG summary: %v", err)
 	}
 
@@ -845,10 +845,13 @@ func LoadMagicBlock(ctx context.Context, id string) (mb *block.MagicBlock,
 // DKG save / load
 
 // StoreDKG in DB.
-func StoreDKG(ctx context.Context, dkg *bls.DKG) (err error) {
+func StoreDKG(ctx context.Context, dkg *bls.DKG) error {
+	return StoreDKGSummary(ctx, dkg.GetDKGSummary())
+}
 
+// StoreDKGSummary in DB.
+func StoreDKGSummary(ctx context.Context, summary *bls.DKGSummary) (err error) {
 	var (
-		summary            = dkg.GetDKGSummary()
 		dkgSummaryMetadata = summary.GetEntityMetadata()
 		dctx               = ememorystore.WithEntityConnection(ctx,
 			dkgSummaryMetadata)
