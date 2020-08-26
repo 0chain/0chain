@@ -133,13 +133,15 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (interface{},
 				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()))
 			return nil, nil
 		}
-		// var hnb = mr.GetHeaviestNotarizedBlock()
-		var hnb = mr.Block // (round block)
-		if hnb == nil {
-			Logger.Info("Rejecting VRFShare: missing HNB for the round",
+		if mr.Block == nil || !mr.Block.IsBlockNotarized() {
+			Logger.Info("Rejecting VRFShare: missing HNB for the round"+
+				" or it's not notarized",
+				zap.Bool("is_not_notarized", mr.Block != nil),
 				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()))
 			return nil, nil
 		}
+		// var hnb = mr.GetHeaviestNotarizedBlock()
+		var hnb = mr.Block
 		if hnb.GetStateStatus() != block.StateSuccessful {
 			Logger.Info("Rejecting VRFShare: HNB state is not successful",
 				zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()),

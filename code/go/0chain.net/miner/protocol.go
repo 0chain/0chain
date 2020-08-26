@@ -26,7 +26,8 @@ type ProtocolMessageSender interface {
 
 	SendFinalizedBlock(ctx context.Context, b *block.Block)
 
-	SendNotarizedBlockToMiners(ctx context.Context, b *block.Block)
+	// // TODO (sfxdx): TO REMOVE -- DEAD CODE
+	// SendNotarizedBlockToMiners(ctx context.Context, b *block.Block)
 }
 
 /*ProtocolMessageReceiver - this is the interface to understand teh messages the miner receives from the network */

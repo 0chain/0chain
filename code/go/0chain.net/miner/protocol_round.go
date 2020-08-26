@@ -739,15 +739,17 @@ func (mc *Chain) CancelRoundVerification(ctx context.Context, r *Round) {
 	r.CancelVerification() // No need for further verification of any blocks
 }
 
-/*BroadcastNotarizedBlocks - send the heaviest notarized block to all the miners */
-func (mc *Chain) BroadcastNotarizedBlocks(ctx context.Context, r round.RoundI) {
-	if nb := r.GetHeaviestNotarizedBlock(); nb != nil {
-		Logger.Info("sending notarized block",
-			zap.Int64("round", r.GetRoundNumber()),
-			zap.String("block", nb.Hash))
-		go mc.SendNotarizedBlockToMiners(ctx, nb)
-	}
-}
+// TODO (sfxdx): TO REMOVE - DEAD CODE
+//
+// /*BroadcastNotarizedBlocks - send the heaviest notarized block to all the miners */
+// func (mc *Chain) BroadcastNotarizedBlocks(ctx context.Context, r round.RoundI) {
+// 	if nb := r.GetHeaviestNotarizedBlock(); nb != nil {
+// 		Logger.Info("sending notarized block",
+// 			zap.Int64("round", r.GetRoundNumber()),
+// 			zap.String("block", nb.Hash))
+// 		go mc.SendNotarizedBlockToMiners(ctx, nb)
+// 	}
+// }
 
 type BlockConsensus struct {
 	*block.Block

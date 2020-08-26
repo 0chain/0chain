@@ -24,6 +24,7 @@ func (mc *Chain) SendNotarization(ctx context.Context, b *block.Block) {
 	notarization.Block = b
 	mb := mc.GetMagicBlock(b.Round)
 	m2m := mb.Miners
+	// TODO (sfxdx): kick up new VC miners here (by conditions)
 	go m2m.SendAll(BlockNotarizationSender(notarization))
 	mc.SendNotarizedBlock(ctx, b)
 }
@@ -55,12 +56,14 @@ func (mc *Chain) SendFinalizedBlock(ctx context.Context, b *block.Block) {
 	}
 }
 
-/*SendNotarizedBlockToMiners - send a notarized block to a miner */
-func (mc *Chain) SendNotarizedBlockToMiners(ctx context.Context, b *block.Block) {
-	mb := mc.GetMagicBlock(b.Round)
-	m2m := mb.Miners
-	m2m.SendAll(MinerNotarizedBlockSender(b))
-}
+// TODO (sfxdx): TO REMOVE -- DEAD CODE
+//
+// /*SendNotarizedBlockToMiners - send a notarized block to a miner */
+// func (mc *Chain) SendNotarizedBlockToMiners(ctx context.Context, b *block.Block) {
+// 	mb := mc.GetMagicBlock(b.Round)
+// 	m2m := mb.Miners
+// 	m2m.SendAll(MinerNotarizedBlockSender(b))
+// }
 
 // TODO (sfxdx): to remove
 //
