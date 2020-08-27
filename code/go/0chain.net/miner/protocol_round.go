@@ -1466,23 +1466,10 @@ func (mc *Chain) LoadMagicBlocksAndDKG(ctx context.Context) {
 
 	// latest MB
 	var (
-		preview *block.MagicBlock
-		latest  *block.MagicBlock
-		err     error
+		latest *block.MagicBlock
+		err    error
 	)
-
-	if preview, err = LoadMagicBlock(ctx, previewID); err != nil {
-		Logger.Info("load_mbs_and_dkg -- loading preview MB", zap.Error(err))
-		return // can't continue
-	}
-
-	if preview.MagicBlockNumber <= 1 {
-		return // no magic blocks
-	}
-
-	var latestID = strconv.FormatInt(preview.MagicBlockNumber, 10)
-
-	if latest, err = LoadMagicBlock(ctx, latestID); err != nil {
+	if latest, err = LoadLatestMB(ctx); err != nil {
 		Logger.Info("load_mbs_and_dkg -- loading the latest MB",
 			zap.Error(err))
 		return // can't continue
