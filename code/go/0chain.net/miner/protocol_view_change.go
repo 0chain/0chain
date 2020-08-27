@@ -696,7 +696,6 @@ func (mc *Chain) waitTransaction(mb *block.MagicBlock) (
 }
 
 func (mc *Chain) NextViewChange(lfb *block.Block) (round int64) {
-
 	var seri, err = mc.GetBlockStateNode(lfb, minersc.GlobalNodeKey)
 	if err != nil {
 		Logger.Error("next_vc -- can't get miner SC global node",
