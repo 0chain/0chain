@@ -16,7 +16,7 @@ import (
 
 // AddSharder function to handle miner register
 func (msc *MinerSmartContract) AddSharder(t *transaction.Transaction,
-	input []byte, gn *globalNode, balances cstate.StateContextI) (
+	input []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 
 	Logger.Info("try to add sharder", zap.Any("txn", t))
@@ -174,7 +174,7 @@ func (msc *MinerSmartContract) getSharderNode(sid string,
 }
 
 func (msc *MinerSmartContract) sharderKeep(t *transaction.Transaction,
-	input []byte, gn *globalNode, balances cstate.StateContextI) (
+	input []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err2 error) {
 
 	pn, err := msc.getPhaseNode(balances)

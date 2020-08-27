@@ -113,25 +113,26 @@ func (mc *Chain) verifySmartContracts(ctx context.Context, b *block.Block) error
 func (mc *Chain) VerifyBlockMagicBlockReference(b *block.Block) (err error) {
 
 	var (
-		rn   = b.Round
-		lfmb = mc.GetLatestFinalizedMagicBlockRound(rn)
+		rn    = b.Round
+		lfmbr = mc.GetLatestFinalizedMagicBlockRound(rn)
 
-		nvc   = mc.NextViewChange()
+		lfb   = mc.GetLatestFinalizedBlock()
+		nvc   = mc.NextViewChange(lfb)
 		rnoff = mbRoundOffset(rn)
 	)
 
-	if nvc > 0 && rnoff >= nvc && lfmb.StartingRound < nvc {
-		return common.NewError("verfy_block",
+	if nvc > 0 && rnoff >= nvc && lfmbr.StartingRound < nvc {
+		return common.NewError("verify_block",
 			"required MB missing or still not finalized")
 	}
 
-	if b.LatestFinalizedMagicBlockHash != lfmb.Hash {
-		return common.NewError("verfy_block",
+	if b.LatestFinalizedMagicBlockHash != lfmbr.Hash {
+		return common.NewError("verify_block",
 			"unexpected latest_finalized_mb_hash")
 	}
 
-	if b.LatestFinalizedMagicBlockRound != lfmb.Round {
-		return common.NewError("verfy_block",
+	if b.LatestFinalizedMagicBlockRound != lfmbr.Round {
+		return common.NewError("verify_block",
 			"unexpected latest_finalized_mb_round")
 	}
 
@@ -161,13 +162,13 @@ func (mc *Chain) VerifyBlockMagicBlock(ctx context.Context, b *block.Block) (
 
 	// get stored MB
 	if lmb, err = LoadMagicBlock(ctx, id); err != nil {
-		return common.NewErrorf("verfy_block",
+		return common.NewErrorf("verify_block",
 			"can't load related MB from store: %v", err)
 	}
 
 	// compare given MB and the stored one (should be equal)
 	if !bytes.Equal(mb.Encode(), lmb.Encode()) {
-		return common.NewError("verfy_block",
+		return common.NewError("verify_block",
 			"MB given doesn't match the stored one")
 	}
 

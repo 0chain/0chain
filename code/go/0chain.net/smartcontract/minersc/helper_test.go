@@ -52,7 +52,7 @@ func init() {
 	moveFunctions[Wait] = moveTrue
 }
 
-func moveTrue(balances cstate.StateContextI, pn *PhaseNode, gn *globalNode) (
+func moveTrue(balances cstate.StateContextI, pn *PhaseNode, gn *GlobalNode) (
 	result bool) {
 
 	return true
@@ -132,7 +132,7 @@ func (c *Client) callAddMiner(t *testing.T, msc *MinerSmartContract,
 	balances.(*testBalances).txn = tx
 	var (
 		input = c.addNodeRequest(t, delegateWallet)
-		gn    *globalNode
+		gn    *GlobalNode
 	)
 	gn, err = msc.getGlobalNode(balances)
 	require.NoError(t, err, "missing global node")
@@ -147,7 +147,7 @@ func (c *Client) callAddSharder(t *testing.T, msc *MinerSmartContract,
 	balances.(*testBalances).txn = tx
 	var (
 		input = c.addNodeRequest(t, delegateWallet)
-		gn    *globalNode
+		gn    *GlobalNode
 	)
 	gn, err = msc.getGlobalNode(balances)
 	require.NoError(t, err, "missing global node")
@@ -190,7 +190,7 @@ func (c *Client) callAddToDelegatePool(t *testing.T, msc *MinerSmartContract,
 	balances.(*testBalances).txn = tx
 	var (
 		input = c.addToDelegatePoolRequest(t, nodeID)
-		gn    *globalNode
+		gn    *GlobalNode
 	)
 	gn, err = msc.getGlobalNode(balances)
 	require.NoError(t, err, "missing global node")
@@ -212,9 +212,9 @@ func mustSave(t *testing.T, key datastore.Key, val util.Serializable,
 }
 
 func setConfig(t *testing.T, balances cstate.StateContextI) (
-	gn *globalNode) {
+	gn *GlobalNode) {
 
-	gn = new(globalNode)
+	gn = new(GlobalNode)
 	gn.ViewChange = 0
 	gn.MaxN = 100
 	gn.MinN = 3

@@ -49,7 +49,7 @@ func (msc *MinerSmartContract) InitSC() {
 }
 
 func (msc *MinerSmartContract) AddMinerIntegrationTests(
-	t *transaction.Transaction, inputData []byte, gn *globalNode,
+	t *transaction.Transaction, inputData []byte, gn *GlobalNode,
 	balances cstate.StateContextI) (resp string, err error) {
 
 	resp, err = msc.AddMiner(t, inputData, gn, balances)
@@ -73,7 +73,7 @@ func (msc *MinerSmartContract) AddMinerIntegrationTests(
 }
 
 func (msc *MinerSmartContract) AddSharderIntegrationTests(
-	t *transaction.Transaction, inputData []byte, gn *globalNode,
+	t *transaction.Transaction, inputData []byte, gn *GlobalNode,
 	balances cstate.StateContextI) (resp string, err error) {
 
 	resp, err = msc.AddSharder(t, inputData, gn, balances)
@@ -96,7 +96,7 @@ func (msc *MinerSmartContract) AddSharderIntegrationTests(
 }
 
 func (msc *MinerSmartContract) payFeesIntegrationTests(
-	t *transaction.Transaction, inputData []byte, gn *globalNode,
+	t *transaction.Transaction, inputData []byte, gn *GlobalNode,
 	balances cstate.StateContextI) (resp string, err error) {
 
 	// phase before {
@@ -179,7 +179,7 @@ func (msc *MinerSmartContract) payFeesIntegrationTests(
 }
 
 func (msc *MinerSmartContract) contributeMpkIntegrationTests(
-	t *transaction.Transaction, inputData []byte, gn *globalNode,
+	t *transaction.Transaction, inputData []byte, gn *GlobalNode,
 	balances cstate.StateContextI) (resp string, err error) {
 
 	resp, err = msc.contributeMpk(t, inputData, gn, balances)
@@ -202,7 +202,7 @@ func (msc *MinerSmartContract) contributeMpkIntegrationTests(
 }
 
 func (msc *MinerSmartContract) shareSignsOrSharesIntegrationTests(
-	t *transaction.Transaction, inputData []byte, gn *globalNode,
+	t *transaction.Transaction, inputData []byte, gn *GlobalNode,
 	balances cstate.StateContextI) (resp string, err error) {
 
 	resp, err = msc.shareSignsOrShares(t, inputData, gn, balances)
@@ -225,7 +225,7 @@ func (msc *MinerSmartContract) shareSignsOrSharesIntegrationTests(
 }
 
 func (msc *MinerSmartContract) sharderKeepIntegrationTests(
-	t *transaction.Transaction, input []byte, gn *globalNode,
+	t *transaction.Transaction, input []byte, gn *GlobalNode,
 	balances cstate.StateContextI) (resp string, err error) {
 
 	if resp, err = msc.sharderKeep(t, input, gn, balances); err != nil {

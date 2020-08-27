@@ -30,19 +30,25 @@ import (
 //PreviousBlockUnavailable - to indicate an error condition when the previous block of a given block is not available
 const PreviousBlockUnavailable = "previous_block_unavailable"
 
-//ErrPreviousBlockUnavailable - error for previous block is not available
-var ErrPreviousBlockUnavailable = common.NewError(PreviousBlockUnavailable, "Previous block is not available")
-var ErrInsufficientChain = common.NewError("insufficient_chain", "Chain length not sufficient to perform the logic")
+var (
+	// ErrPreviousBlockUnavailable - error for previous block is not available.
+	ErrPreviousBlockUnavailable = common.NewError(PreviousBlockUnavailable,
+		"Previous block is not available")
+	ErrInsufficientChain = common.NewError("insufficient_chain",
+		"Chain length not sufficient to perform the logic")
+)
 
 const (
 	NOTARIZED = 1
 	FINALIZED = 2
-)
 
-const (
 	AllMiners  = 11
 	Generator  = 12
 	Generators = 13
+
+	// ViewChangeOffset is offset between block with new MB (501) and the block
+	// where the new MB should be used (505).
+	ViewChangeOffset = 4
 )
 
 /*ServerChain - the chain object of the chain  the server is responsible for */
@@ -153,10 +159,10 @@ type Chain struct {
 var chainEntityMetadata *datastore.EntityMetadataImpl
 
 func mbRoundOffset(rn int64) int64 {
-	if rn < 5 {
+	if rn < ViewChangeOffset+1 {
 		return rn // the same
 	}
-	return rn - 4 // MB offset
+	return rn - ViewChangeOffset // MB offset
 }
 
 // GetCurrentMagicBlock returns MB for current round
@@ -187,7 +193,7 @@ func (c *Chain) GetMagicBlock(round int64) *block.MagicBlock {
 	defer c.mbMutex.RUnlock()
 	entity := c.MagicBlockStorage.Get(round)
 	if entity == nil {
-		println(":::::::::: CHOOSE LATEST MB INSTEAD OF MB LOOKING FOR ::::::::::", round, "(with MB offset -- +2)")
+		println(":::::::::: CHOOSE LATEST MB INSTEAD OF MB LOOKING FOR ::::::::::", round, "(with MB offset -4)")
 		entity = c.MagicBlockStorage.GetLatest()
 	}
 	if entity == nil {
@@ -1212,29 +1218,32 @@ func collectNodes(mbs ...*block.MagicBlock) (keep map[string]struct{}) {
 	return
 }
 
-//SetLatestFinalizedBlock - set the latest finalized block
+// SetLatestFinalizedBlock - set the latest finalized block.
 func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
-	if b != nil && b.MagicBlock != nil {
-		c.lfmbMutex.Lock()
-		defer c.lfmbMutex.Unlock()
 
-		var latest = c.LatestFinalizedMagicBlock
-
-		if latest != nil && latest.MagicBlock != nil &&
-			latest.MagicBlock.MagicBlockNumber == b.MagicBlock.MagicBlockNumber-1 &&
-			latest.MagicBlock.Hash != b.MagicBlock.PreviousMagicBlockHash {
-
-			Logger.DPanic(fmt.Sprintf("failed to set finalized magic block -- "+
-				"hashes don't match up: chain's finalized block hash %v,block's"+
-				" magic block previous hash %v",
-				c.LatestFinalizedMagicBlock.Hash,
-				b.MagicBlock.PreviousMagicBlockHash))
-		}
-
-		c.LatestFinalizedMagicBlock = b
-		c.magicBlockStartingRounds[b.MagicBlock.StartingRound] = b
-		c.lfmbSummary = b.GetSummary()
+	if b == nil || b.MagicBlock == nil {
+		return
 	}
+
+	c.lfmbMutex.Lock()
+	defer c.lfmbMutex.Unlock()
+
+	var latest = c.LatestFinalizedMagicBlock
+
+	if latest != nil && latest.MagicBlock != nil &&
+		latest.MagicBlock.MagicBlockNumber == b.MagicBlock.MagicBlockNumber-1 &&
+		latest.MagicBlock.Hash != b.MagicBlock.PreviousMagicBlockHash {
+
+		Logger.DPanic(fmt.Sprintf("failed to set finalized magic block -- "+
+			"hashes don't match up: chain's finalized block hash %v, block's"+
+			" magic block previous hash %v",
+			c.LatestFinalizedMagicBlock.Hash,
+			b.MagicBlock.PreviousMagicBlockHash))
+	}
+
+	c.LatestFinalizedMagicBlock = b
+	c.magicBlockStartingRounds[b.MagicBlock.StartingRound] = b
+	c.lfmbSummary = b.GetSummary()
 }
 
 func (c *Chain) GetLatestFinalizedMagicBlock() *block.Block {

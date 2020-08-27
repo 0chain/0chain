@@ -78,9 +78,9 @@ var (
 )
 
 type (
-	phaseFunctions        func(balances cstate.StateContextI, gn *globalNode) error
-	movePhaseFunctions    func(balances cstate.StateContextI, pn *PhaseNode, gn *globalNode) bool
-	smartContractFunction func(t *transaction.Transaction, inputData []byte, gn *globalNode, balances cstate.StateContextI) (string, error)
+	phaseFunctions        func(balances cstate.StateContextI, gn *GlobalNode) error
+	movePhaseFunctions    func(balances cstate.StateContextI, pn *PhaseNode, gn *GlobalNode) bool
+	smartContractFunction func(t *transaction.Transaction, inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (string, error)
 	SimpleNodes           = map[string]*SimpleNode
 )
 
@@ -96,7 +96,7 @@ func NewSimpleNodes() SimpleNodes {
 // global
 //
 
-type globalNode struct {
+type GlobalNode struct {
 	ViewChange   int64   `json:"view_change"`
 	MaxN         int     `json:"max_n"`         // } miners limits
 	MinN         int     `json:"min_n"`         // }
@@ -134,11 +134,11 @@ type globalNode struct {
 	Minted state.Balance `json:"minted"`
 }
 
-func (gn *globalNode) canMint() bool {
+func (gn *GlobalNode) canMint() bool {
 	return gn.Minted < gn.MaxMint
 }
 
-func (gn *globalNode) epochDecline() {
+func (gn *GlobalNode) epochDecline() {
 	// keep existing value for logs
 	var ir, rr = gn.InterestRate, gn.RewardRate
 	// decline the value
@@ -158,7 +158,7 @@ func (gn *globalNode) epochDecline() {
 }
 
 // calculate miner/block sharders fees
-func (gn *globalNode) splitByShareRatio(fees state.Balance) (
+func (gn *GlobalNode) splitByShareRatio(fees state.Balance) (
 	miner, sharders state.Balance) {
 
 	miner = state.Balance(float64(fees) * gn.ShareRatio)
@@ -166,34 +166,34 @@ func (gn *globalNode) splitByShareRatio(fees state.Balance) (
 	return
 }
 
-func (gn *globalNode) setLastRound(round int64) {
+func (gn *GlobalNode) setLastRound(round int64) {
 	gn.LastRound = round
 	if round%gn.Epoch == 0 {
 		gn.epochDecline()
 	}
 }
 
-func (gn *globalNode) save(balances cstate.StateContextI) (err error) {
+func (gn *GlobalNode) save(balances cstate.StateContextI) (err error) {
 	if _, err = balances.InsertTrieNode(GlobalNodeKey, gn); err != nil {
 		return fmt.Errorf("saving global node: %v", err)
 	}
 	return
 }
 
-func (gn *globalNode) Encode() []byte {
+func (gn *GlobalNode) Encode() []byte {
 	buff, _ := json.Marshal(gn)
 	return buff
 }
 
-func (gn *globalNode) Decode(input []byte) error {
+func (gn *GlobalNode) Decode(input []byte) error {
 	return json.Unmarshal(input, gn)
 }
 
-func (gn *globalNode) GetHash() string {
+func (gn *GlobalNode) GetHash() string {
 	return util.ToHex(gn.GetHashBytes())
 }
 
-func (gn *globalNode) GetHashBytes() []byte {
+func (gn *GlobalNode) GetHashBytes() []byte {
 	return encryption.RawHash(gn.Encode())
 }
 
@@ -677,7 +677,7 @@ type DKGMinerNodes struct {
 	StartRound int64 `json:"start_round"`
 }
 
-func (dkgmn *DKGMinerNodes) setConfigs(gn *globalNode) {
+func (dkgmn *DKGMinerNodes) setConfigs(gn *GlobalNode) {
 	dkgmn.MinN = gn.MinN
 	dkgmn.MaxN = gn.MaxN
 	dkgmn.TPercent = gn.TPercent
@@ -691,7 +691,7 @@ func min(a, b int) int {
 	return a
 }
 
-func (dkgmn *DKGMinerNodes) calculateTKN(gn *globalNode, n int) {
+func (dkgmn *DKGMinerNodes) calculateTKN(gn *GlobalNode, n int) {
 	dkgmn.setConfigs(gn)
 	var m = min(dkgmn.MaxN, n)
 	dkgmn.N = n

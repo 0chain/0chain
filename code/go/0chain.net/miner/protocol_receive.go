@@ -178,18 +178,25 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *Block
 
 /*HandleNotarizationMessage - handles the block notarization message */
 func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessage) {
-	lfb := mc.GetLatestFinalizedBlock()
+	var lfb = mc.GetLatestFinalizedBlock()
 	if msg.Notarization.Round < lfb.Round {
-		Logger.Debug("notarization message", zap.Int64("round", msg.Notarization.Round), zap.Int64("finalized_round", lfb.Round), zap.String("block", msg.Notarization.BlockID))
+		Logger.Debug("notarization message",
+			zap.Int64("round", msg.Notarization.Round),
+			zap.Int64("finalized_round", lfb.Round),
+			zap.String("block", msg.Notarization.BlockID))
 		return
 	}
 	r := mc.GetMinerRound(msg.Notarization.Round)
 	if r == nil {
 		if msg.ShouldRetry() {
-			Logger.Error("notarization receipt handler (round not started yet) retrying", zap.String("block", msg.Notarization.BlockID), zap.Int8("retry_count", msg.RetryCount))
+			Logger.Error("notarization receipt handler (round not started yet) retrying",
+				zap.String("block", msg.Notarization.BlockID),
+				zap.Int8("retry_count", msg.RetryCount))
 			msg.Retry(mc.blockMessageChannel)
 		} else {
-			Logger.Error("notarization receipt handler (round not started yet)", zap.String("block", msg.Notarization.BlockID), zap.Int8("retry_count", msg.RetryCount))
+			Logger.Error("notarization receipt handler (round not started yet)",
+				zap.String("block", msg.Notarization.BlockID),
+				zap.Int8("retry_count", msg.RetryCount))
 		}
 		return
 	}

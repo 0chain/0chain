@@ -200,7 +200,7 @@ func (msc *MinerSmartContract) configsHandler(ctx context.Context,
 	params url.Values, balances cstate.StateContextI) (
 	resp interface{}, err error) {
 
-	var gn *globalNode
+	var gn *GlobalNode
 	if gn, err = msc.getGlobalNode(balances); err != nil {
 		return
 	}

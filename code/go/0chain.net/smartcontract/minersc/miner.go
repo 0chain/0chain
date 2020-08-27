@@ -30,7 +30,7 @@ func (msc *MinerSmartContract) doesMinerExist(pkey datastore.Key,
 
 // AddMiner Function to handle miner register
 func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
-	inputData []byte, gn *globalNode, balances cstate.StateContextI) (
+	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 
 	var newMiner = NewMinerNode()
@@ -138,7 +138,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 }
 
 func (msc *MinerSmartContract) UpdateSettings(t *transaction.Transaction,
-	inputData []byte, gn *globalNode, balances cstate.StateContextI) (
+	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 
 	var update = NewMinerNode()

@@ -13,7 +13,7 @@ import (
 )
 
 func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
-	inputData []byte, gn *globalNode, balances cstate.StateContextI) (
+	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 
 	var dp deletePool
@@ -104,7 +104,7 @@ func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 }
 
 func (msc *MinerSmartContract) deleteFromDelegatePool(
-	t *transaction.Transaction, inputData []byte, gn *globalNode,
+	t *transaction.Transaction, inputData []byte, gn *GlobalNode,
 	balances cstate.StateContextI) (resp string, err error) {
 
 	var dp deletePool

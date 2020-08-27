@@ -248,7 +248,10 @@ func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) erro
 
 // isViewChanging returns true for 501, 502 and 503 rounds
 func (mc *Chain) isViewChanging(round int64) (is bool) {
-	var nvc = mc.NextViewChange()                           // expected
+	var (
+		lfb = mc.GetLatestFinalizedBlock() //
+		nvc = mc.NextViewChange(lfb)       // expected
+	)
 	return nvc == round || nvc+1 == round || nvc+2 == round // 501, 502, or 503
 }
 
@@ -296,16 +299,17 @@ func (mc *Chain) isViewChanging(round int64) (is bool) {
 func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 
 	var (
+		lfb = mc.GetLatestFinalizedBlock()
 		mb  = b.MagicBlock
-		nvc = mc.NextViewChange()
+		nvc = mc.NextViewChange(lfb)
 	)
 
 	// next view change is expected, but not given; it means the MB rejected
-	// by Miner SC and we have to reset NextViewChange to previous MB for
-	// block generation and verification process;
+	// by Miner SC (managed by miner SC: and we have to reset NextViewChange
+	// to previous MB for block generation and verification process);
 	if b.Round == nvc && mb == nil {
-		var mbx = mc.GetMagicBlock(b.Round)
-		mc.SetNextViewChange(mbx.StartingRound)
+		// var mbx = mc.GetMagicBlock(b.Round)
+		// mc.SetNextViewChange(mbx.StartingRound)
 		println("MINER VC: NO MB, NO VC", b.Round, "BUT EXPECTED")
 		return // no MB no VC
 	}
@@ -353,9 +357,11 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 
 	// the flow:
 	//
-	//  - 501 - finalized block
-	//  - 502 - finalize round (notarization)
-	//  - 503 - generate (with new MB and new DKG)
+	//  - 501 - finalized
+	//  - 502 - finalize round (finalize 501 block)
+	//  - 503 - verify round blocks
+	//  - 504 - generate round (new MB/DKG can be used, but slower)
+	//  - 505 - generate block (new MB/DKG)
 
 	return
 }
@@ -500,10 +506,10 @@ func (mc *Chain) SaveMagicBlock() chain.MagicBlockSaveFunc {
 }
 
 func mbRoundOffset(rn int64) int64 {
-	if rn < 5 {
+	if rn < chain.ViewChangeOffset+1 {
 		return rn // the same
 	}
-	return rn - 4 // MB offset
+	return rn - chain.ViewChangeOffset // MB offset
 }
 
 // GetCurrentDKG returns DKG by round number

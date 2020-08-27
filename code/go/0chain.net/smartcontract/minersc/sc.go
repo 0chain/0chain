@@ -96,7 +96,7 @@ func (msc *MinerSmartContract) SetSC(sc *sci.SmartContract, bcContext sci.BCCont
 	msc.SmartContractExecutionStats["mintedTokens"] = metrics.GetOrRegisterCounter("mintedTokens", nil)
 }
 
-func (msc *MinerSmartContract) addMint(gn *globalNode, mint state.Balance) {
+func (msc *MinerSmartContract) addMint(gn *GlobalNode, mint state.Balance) {
 	gn.Minted += mint
 
 	var mintStatsRaw, found = msc.SmartContractExecutionStats["mintedTokens"]
@@ -162,9 +162,9 @@ func getHostnameAndPort(burl string) (string, int, error) {
 }
 
 func (msc *MinerSmartContract) getGlobalNode(balances cstate.StateContextI) (
-	gn *globalNode, err error) {
+	gn *GlobalNode, err error) {
 
-	gn = new(globalNode)
+	gn = new(GlobalNode)
 	var p util.Serializable
 	p, err = balances.GetTrieNode(GlobalNodeKey)
 	if err != nil && err != util.ErrValueNotPresent {

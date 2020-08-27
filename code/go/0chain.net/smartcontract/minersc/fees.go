@@ -32,7 +32,7 @@ func (msc *MinerSmartContract) activatePending(mn *MinerNode) {
 }
 
 // pay interests for active pools
-func (msc *MinerSmartContract) payInterests(mn *MinerNode, gn *globalNode,
+func (msc *MinerSmartContract) payInterests(mn *MinerNode, gn *GlobalNode,
 	balances cstate.StateContextI) (err error) {
 
 	if !gn.canMint() {
@@ -158,7 +158,7 @@ func (msc *MinerSmartContract) unlockOffline(mn *MinerNode,
 	return
 }
 
-func (msc *MinerSmartContract) viewChangePoolsWork(gn *globalNode,
+func (msc *MinerSmartContract) viewChangePoolsWork(gn *GlobalNode,
 	mb *block.MagicBlock, round int64, balances cstate.StateContextI) (
 	err error) {
 
@@ -246,7 +246,7 @@ func (msc *MinerSmartContract) viewChangePoolsWork(gn *globalNode,
 	return
 }
 
-func (msc *MinerSmartContract) adjustViewChange(gn *globalNode,
+func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 	balances cstate.StateContextI) (err error) {
 
 	var b = balances.GetBlock()
@@ -269,7 +269,10 @@ func (msc *MinerSmartContract) adjustViewChange(gn *globalNode,
 
 	if err = dmn.recalculateTKN(true); err != nil {
 		Logger.Info("adjust_view_change", zap.Error(err))
-		gn.ViewChange = 0 // don't do this view change, save the gn later
+		// don't do this view change, save the gn later
+		// reset the ViewChange to previous one (for miners)
+		var lfmb = balances.GetLastestFinalizedMagicBlock()
+		gn.ViewChange = lfmb.StartingRound
 		// reset this error, since it's not fatal, we just don't do
 		// this view change, because >= T miners didn't send 'wait' transaction
 		err = nil
@@ -293,7 +296,7 @@ func (msc *MinerSmartContract) adjustViewChange(gn *globalNode,
 }
 
 func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
-	inputData []byte, gn *globalNode, balances cstate.StateContextI) (
+	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 
 	var pn *PhaseNode
@@ -408,7 +411,7 @@ func (msc *MinerSmartContract) sumFee(b *block.Block,
 }
 
 func (msc *MinerSmartContract) mintStakeHolders(value state.Balance,
-	node *MinerNode, gn *globalNode, isSharder bool,
+	node *MinerNode, gn *GlobalNode, isSharder bool,
 	balances cstate.StateContextI) (resp string, err error) {
 
 	if !gn.canMint() {
@@ -524,7 +527,7 @@ func (msc *MinerSmartContract) getBlockSharders(block *block.Block,
 
 // pay fees and mint sharders
 func (msc *MinerSmartContract) paySharders(fee, mint state.Balance,
-	block *block.Block, gn *globalNode, balances cstate.StateContextI) (
+	block *block.Block, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 
 	var sharders []*MinerNode

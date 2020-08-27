@@ -28,7 +28,7 @@ var moveFunctions = make(map[Phase]movePhaseFunctions)
 */
 
 func (msc *MinerSmartContract) moveToContribute(balances cstate.StateContextI,
-	pn *PhaseNode, gn *globalNode) (result bool) {
+	pn *PhaseNode, gn *GlobalNode) (result bool) {
 
 	var (
 		allMinersList *MinerNodes
@@ -64,7 +64,7 @@ func (msc *MinerSmartContract) moveToContribute(balances cstate.StateContextI,
 }
 
 func (msc *MinerSmartContract) moveToShareOrPublish(
-	balances cstate.StateContextI, pn *PhaseNode, gn *globalNode) (
+	balances cstate.StateContextI, pn *PhaseNode, gn *GlobalNode) (
 	result bool) {
 
 	// TODO (sfdx): (thinking)
@@ -118,7 +118,7 @@ func (msc *MinerSmartContract) moveToShareOrPublish(
 }
 
 func (msc *MinerSmartContract) moveToWait(balances cstate.StateContextI,
-	pn *PhaseNode, gn *globalNode) (result bool) {
+	pn *PhaseNode, gn *GlobalNode) (result bool) {
 
 	var err error
 	var dkgMinersList *DKGMinerNodes
@@ -148,7 +148,7 @@ func (msc *MinerSmartContract) moveToWait(balances cstate.StateContextI,
 }
 
 func (msc *MinerSmartContract) moveToStart(balances cstate.StateContextI,
-	pn *PhaseNode, gn *globalNode) bool {
+	pn *PhaseNode, gn *GlobalNode) bool {
 	return true
 }
 
@@ -172,7 +172,7 @@ func (msc *MinerSmartContract) getPhaseNode(statectx cstate.StateContextI) (
 }
 
 func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
-	pn *PhaseNode, gn *globalNode, t *transaction.Transaction) error {
+	pn *PhaseNode, gn *GlobalNode, t *transaction.Transaction) error {
 
 	if pn.CurrentRound-pn.StartRound >= PhaseRounds[pn.Phase] {
 		currentMoveFunc := moveFunctions[pn.Phase]
@@ -223,7 +223,7 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 }
 
 func (msc *MinerSmartContract) createDKGMinersForContribute(
-	balances cstate.StateContextI, gn *globalNode) error {
+	balances cstate.StateContextI, gn *GlobalNode) error {
 
 	allminerslist, err := msc.GetMinersList(balances)
 	if err != nil {
@@ -258,7 +258,7 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 }
 
 func (msc *MinerSmartContract) widdleDKGMinersForShare(
-	balances cstate.StateContextI, gn *globalNode) error {
+	balances cstate.StateContextI, gn *GlobalNode) error {
 
 	dkgMiners, err := msc.getMinersDKGList(balances)
 	if err != nil {
@@ -301,7 +301,7 @@ func (msc *MinerSmartContract) widdleDKGMinersForShare(
 }
 
 func (msc *MinerSmartContract) reduceShardersList(keep, all *MinerNodes,
-	gn *globalNode) (list []*MinerNode, err error) {
+	gn *GlobalNode) (list []*MinerNode, err error) {
 
 	list = make([]*MinerNode, 0, len(keep.Nodes))
 	for _, ksh := range keep.Nodes {
@@ -328,7 +328,7 @@ func (msc *MinerSmartContract) reduceShardersList(keep, all *MinerNodes,
 }
 
 func (msc *MinerSmartContract) createMagicBlockForWait(
-	balances cstate.StateContextI, gn *globalNode) error {
+	balances cstate.StateContextI, gn *GlobalNode) error {
 
 	pn, err := msc.getPhaseNode(balances)
 	if err != nil {
@@ -437,7 +437,7 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 }
 
 func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction,
-	inputData []byte, gn *globalNode, balances cstate.StateContextI) (
+	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 
 	var pn *PhaseNode
@@ -503,7 +503,7 @@ func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction,
 }
 
 func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction,
-	inputData []byte, gn *globalNode, balances cstate.StateContextI) (
+	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 
 	var pn *PhaseNode
@@ -617,7 +617,7 @@ func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction,
 // DKG/MB then we can't do a view change because some miners can save,
 // but some can not. And this case we got BC stuck.
 func (msc *MinerSmartContract) wait(t *transaction.Transaction,
-	inputData []byte, gn *globalNode, balances cstate.StateContextI) (
+	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 
 	var pn *PhaseNode

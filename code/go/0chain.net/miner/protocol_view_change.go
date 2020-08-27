@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/threshold/bls"
@@ -85,24 +84,24 @@ func (mc *Chain) isActiveInChain(lfb *block.Block, mb *block.MagicBlock) bool {
 		mb.StartingRound < mc.GetCurrentRound() && lfb.ClientState != nil
 }
 
-// After stop/start we have to repair nextViewCahnge round number from
-// store if there is the latest MB saved by Miner SC.
-func (vcp *viewChangeProcess) setupNextViewChange(ctx context.Context) {
-	var mb, err = LoadLatestMB(ctx)
-	if err != nil {
-		Logger.Info("getting latest MB from store", zap.Error(err))
-		return
-	}
-	Logger.Info("next view change", zap.Int64("round", mb.StartingRound))
-	vcp.SetNextViewChange(mb.StartingRound)
-}
+// // After stop/start we have to repair nextViewCahnge round number from
+// // store if there is the latest MB saved by Miner SC.
+// func (vcp *viewChangeProcess) setupNextViewChange(ctx context.Context) {
+// 	var mb, err = LoadLatestMB(ctx)
+// 	if err != nil {
+// 		Logger.Info("getting latest MB from store", zap.Error(err))
+// 		return
+// 	}
+// 	Logger.Info("next view change", zap.Int64("round", mb.StartingRound))
+// 	vcp.SetNextViewChange(mb.StartingRound)
+// }
 
 // DKGProcess starts DKG process and works on it. It blocks.
 func (mc *Chain) DKGProcess(ctx context.Context) {
 
 	println("START DKG")
 
-	mc.viewChangeProcess.setupNextViewChange(ctx)
+	// mc.viewChangeProcess.setupNextViewChange(ctx)
 
 	const (
 		timeoutPhase        = 5
@@ -321,17 +320,13 @@ func getNodePath(path string) util.Path {
 	return util.Path(encryption.Hash(path))
 }
 
-func (mc *Chain) GetLFBState() util.MerklePatriciaTrieI {
-	return chain.CreateTxnMPT(mc.GetLatestFinalizedBlock().ClientState)
-}
-
-func (mc *Chain) GetLFBStateNode(path string) (util.Serializable, error) {
-	var state = mc.GetLFBState()
-	return state.GetNodeValue(getNodePath(path))
-}
-
 func (mc *Chain) GetBlockStateNode(block *block.Block, path string) (
 	util.Serializable, error) {
+
+	if block.ClientState == nil {
+		return nil, common.NewErrorf("get_block_state_node",
+			"client state is nil, round %d", block.Round)
+	}
 
 	return block.ClientState.GetNodeValue(getNodePath(path))
 }
@@ -700,19 +695,29 @@ func (mc *Chain) waitTransaction(mb *block.MagicBlock) (
 	return
 }
 
-func (vcp *viewChangeProcess) NextViewChange() (round int64) {
-	vcp.nvcmx.RLock()
-	defer vcp.nvcmx.RUnlock()
+func (mc *Chain) NextViewChange(lfb *block.Block) (round int64) {
 
-	return vcp.nextViewChange
+	var seri, err = mc.GetBlockStateNode(lfb, minersc.GlobalNodeKey)
+	if err != nil {
+		Logger.Error("next_vc -- can't get miner SC global node",
+			zap.Error(err))
+		return
+	}
+	var gn minersc.GlobalNode
+	if err = gn.Decode(seri.Encode()); err != nil {
+		Logger.Error("next_vc -- can't decode miner SC global node",
+			zap.Error(err))
+	}
+
+	return gn.ViewChange // got it
 }
 
-func (vcp *viewChangeProcess) SetNextViewChange(round int64) {
-	vcp.nvcmx.Lock()
-	defer vcp.nvcmx.Unlock()
+// func (vcp *viewChangeProcess) SetNextViewChange(round int64) {
+// 	vcp.nvcmx.Lock()
+// 	defer vcp.nvcmx.Unlock()
 
-	vcp.nextViewChange = round
-}
+// 	vcp.nextViewChange = round
+// }
 
 //
 //                               W A I T
@@ -798,7 +803,7 @@ func (mc *Chain) Wait(ctx context.Context, lfb *block.Block,
 	// don't set DKG until MB finalized
 
 	mc.viewChangeProcess.clearViewChange()
-	mc.SetNextViewChange(magicBlock.StartingRound)
+	// mc.SetNextViewChange(magicBlock.StartingRound)
 
 	// create 'wait' transaction
 	if tx, err = mc.waitTransaction(mb); err != nil {

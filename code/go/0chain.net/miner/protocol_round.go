@@ -290,27 +290,28 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	defer memorystore.Close(ctx)
 
 	var (
-		rn   = r.GetRoundNumber()
-		b    = block.NewBlock(mc.GetKey(), rn)
-		lfmb = mc.GetLatestFinalizedMagicBlockRound(rn)
+		rn    = r.GetRoundNumber()                       //
+		b     = block.NewBlock(mc.GetKey(), rn)          //
+		lfmbr = mc.GetLatestFinalizedMagicBlockRound(rn) // related magic block
 
-		nvc   = mc.NextViewChange()
-		rnoff = mbRoundOffset(rn)
+		lfb   = mc.GetLatestFinalizedBlock() //
+		nvc   = mc.NextViewChange(lfb)       //
+		rnoff = mbRoundOffset(rn)            //
 	)
 
-	if nvc > 0 && rnoff >= nvc && lfmb.StartingRound < nvc {
+	if nvc > 0 && rnoff >= nvc && lfmbr.StartingRound < nvc {
 		Logger.Error("gen_block",
 			zap.String("err", "required MB missing or still not finalized"),
 			zap.Int64("next_vc", nvc),
 			zap.Int64("round", rn),
-			zap.Int64("lfmb_sr", lfmb.StartingRound),
+			zap.Int64("lfmbr_sr", lfmbr.StartingRound),
 		)
 		return nil, common.NewError("gen_block",
 			"required MB missing or still not finalized")
 	}
 
-	b.LatestFinalizedMagicBlockHash = lfmb.Hash
-	b.LatestFinalizedMagicBlockRound = lfmb.Round
+	b.LatestFinalizedMagicBlockHash = lfmbr.Hash
+	b.LatestFinalizedMagicBlockRound = lfmbr.Round
 
 	b.MinerID = node.Self.Underlying().GetKey()
 	mc.SetPreviousBlock(ctx, r, b, pb)
@@ -413,13 +414,15 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		return nil, nil
 	}
 
-	// reset the next view change to previous MB starting round if
-	// Miner SC rejects the view change (by to few wait calls reason)
-	if b.Round == nvc && b.MagicBlock == nil {
-		Logger.Info("gen_block -- reset next VC round", zap.Int64("from", nvc),
-			zap.Int64("back_to", lfmb.StartingRound))
-		mc.SetNextViewChange(lfmb.StartingRound)
-	}
+	// TODO (sfxdx): TO REMOVE
+	//
+	//	// reset the next view change to previous MB starting round if
+	//	// Miner SC rejects the view change (by to few wait calls reason)
+	//	if b.Round == nvc && b.MagicBlock == nil {
+	//		// Logger.Info("gen_block -- reset next VC round", zap.Int64("from", nvc),
+	//		//	zap.Int64("back_to", lfmb.StartingRound))
+	//		// mc.SetNextViewChange(lfmb.StartingRound)
+	//	}
 
 	mc.addToRoundVerification(ctx, r, b)
 	r.AddProposedBlock(b)
@@ -937,7 +940,7 @@ var lastTimePoint = time.Now()
 // HandleRoundTimeout handle timeouts appropriately
 func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
 	r := mc.GetMinerRound(mc.GetCurrentRound())
-	if r.Number == 0 && mc.NextViewChange() == 0 {
+	if r.Number == 0 /* && mc.NextViewChange() == 0 */ {
 		return
 	}
 
@@ -1154,7 +1157,7 @@ func (mc *Chain) restartRound(ctx context.Context) {
 		// TODO: should have a means to send an email/SMS to someone or
 		// something like that
 
-		// other commended out cases
+		// other commented out cases
 
 		// // every 5th restart -- rollback to LFB
 		// case crt%5 == 0:
@@ -1257,8 +1260,8 @@ func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
 
 	// LFB regardless a ticket
 	var (
-		lfbs *block.Block
-		lfb  = mc.GetLatestFinalizedBlock()
+		rcvd *block.Block
+		have = mc.GetLatestFinalizedBlock()
 		list = mc.GetLatestFinalizedBlockFromSharder(ctx)
 	)
 
@@ -1266,38 +1269,31 @@ func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
 		return // no LFB given
 	}
 
-	lfbs = list[0].Block
+	rcvd = list[0].Block // the highest received LFB
 
-	if !(lfb == nil || lfb.Round == 0 || lfb.Round < lfbs.Round) {
+	if !(have == nil || rcvd.Round <= have.Round) {
 		return // nothing to update
 	}
 
 	// bump the ticket if necessary
 	var tk = mc.GetLatestLFBTicket(ctx)
-	if tk == nil || tk.Round < lfbs.Round {
-		mc.AddReceivedLFBTicket(ctx, &chain.LFBTicket{Round: lfbs.Round})
+	if tk == nil || tk.Round < rcvd.Round {
+		mc.AddReceivedLFBTicket(ctx, &chain.LFBTicket{Round: rcvd.Round})
 	}
 
 	var (
-		sr = round.NewRound(lfbs.Round)
+		sr = round.NewRound(rcvd.Round)
 		mr = mc.CreateRound(sr)
 	)
 	mr, _ = mc.AddRound(mr).(*Round)
-	mc.SetRandomSeed(mr, lfbs.GetRoundRandomSeed())
-	mc.AddBlock(lfbs)
-	// retry 10 times to repair the state, then ignore the error
-	if err = mc.InitBlockState(lfbs); err != nil {
+	mc.SetRandomSeed(mr, rcvd.GetRoundRandomSeed())
+	mc.AddBlock(rcvd)
+	// just log the error
+	if err = mc.InitBlockState(rcvd); err != nil {
 		Logger.Error("initialize LFB state in restart_round", zap.Error(err))
 		err = nil // reset the error
 	}
-	// for i := 0; i < 10 && err != nil; i, err = i+1, mc.InitBlockState(lfbs) {
-	// 	Logger.Error("initialize LFB state in restart_round", zap.Error(err))
-	// 	select {
-	// 	case <-time.After(2 * time.Second):
-	// 	case <-ctx.Done():
-	// 	}
-	// }
-	mc.SetLatestFinalizedBlock(ctx, lfbs)
+	mc.SetLatestFinalizedBlock(ctx, rcvd)
 	if mc.GetCurrentRound() < mr.GetRoundNumber() {
 		mc.startNewRound(ctx, mr)
 	}
@@ -1329,54 +1325,46 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context) (
 
 	// LFMB
 	var (
-		lfmb       = mc.GetLatestFinalizedMagicBlock()
-		mbs        = mc.GetLatestFinalizedMagicBlockFromSharder(ctx)
-		magicBlock *block.Block
+		lfmb = mc.GetLatestFinalizedMagicBlock()
+		list = mc.GetLatestFinalizedMagicBlockFromSharder(ctx)
+		rcvd *block.Block
 	)
 
 	mc.ensureDKG(ctx, lfmb)
 
-	if len(mbs) == 0 {
+	if len(list) == 0 {
 		return
 	}
 
-	sort.Slice(mbs, func(i, j int) bool {
-		return mbs[i].StartingRound < mbs[j].StartingRound
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].StartingRound < list[j].StartingRound
 	})
-	magicBlock = mbs[0]
+	rcvd = list[0]
 
-	if !(lfmb == nil || lfmb.MagicBlockNumber < magicBlock.MagicBlockNumber) {
+	if !(lfmb == nil || lfmb.MagicBlockNumber < rcvd.MagicBlockNumber) {
 		return
 	}
 
-	if err := mc.VerifyChainHistory(ctx, magicBlock, nil); err != nil {
+	if err = mc.VerifyChainHistory(ctx, rcvd, nil); err != nil {
 		return false, err
 	}
-	if err := mc.UpdateMagicBlock(magicBlock.MagicBlock); err != nil {
+	if err = mc.UpdateMagicBlock(rcvd.MagicBlock); err != nil {
 		return false, err
 	}
-	mc.UpdateNodesFromMagicBlock(magicBlock.MagicBlock)
-	mc.SetLatestFinalizedMagicBlock(magicBlock)
-
-	mc.ensureDKG(ctx, magicBlock)
-
-	// // ensure DKG
-	// var dkg = mc.GetCurrentDKG(magicBlock.StartingRound)
-	// if dkg == nil || dkg.StartingRound < magicBlock.StartingRound {
-	// 	err = mc.SetDKGSFromStore(ctx, magicBlock.MagicBlock)
-	// 	if err != nil {
-	// 		Logger.Error("setting DKG from store", zap.Error(err))
-	// 		err = nil // reset the error, don't affect function reply
-	// 	}
-	// }
+	mc.UpdateNodesFromMagicBlock(rcvd.MagicBlock)
+	mc.SetLatestFinalizedMagicBlock(rcvd)
+	mc.ensureDKG(ctx, rcvd)
 
 	// bump the ticket if necessary
 	var tk = mc.GetLatestLFBTicket(ctx)
-	if tk == nil || tk.Round < magicBlock.Round {
+	if tk == nil || tk.Round < rcvd.Round {
 		mc.AddReceivedLFBTicket(ctx, &chain.LFBTicket{
-			Round: magicBlock.Round,
+			Round: rcvd.Round,
 		})
 	}
+
+	// don't set the MB as latest finalized MB; it should be done inside
+	// ensure view change;
 
 	updated = true
 	return
