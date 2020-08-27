@@ -99,7 +99,7 @@ func (mc *Chain) isActiveInChain(lfb *block.Block, mb *block.MagicBlock) bool {
 // DKGProcess starts DKG process and works on it. It blocks.
 func (mc *Chain) DKGProcess(ctx context.Context) {
 
-	println("START DKG")
+	println("START DKG PROCESS")
 
 	// mc.viewChangeProcess.setupNextViewChange(ctx)
 
@@ -118,7 +118,6 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 	)
 
 	for {
-		println("DKG TICK")
 		timer.Reset(timeoutPhase * time.Second) // setup timer to wait
 
 		select {

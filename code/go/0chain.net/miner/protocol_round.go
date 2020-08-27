@@ -399,6 +399,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 				zap.Int64("blk_rrs", b.GetRoundRandomSeed()))
 			return nil, ErrRRSMismatch
 		}
+
 		mc.AddRoundBlock(r, b)
 		if generationTries > 1 {
 			Logger.Error("generate block - multiple tries",
@@ -413,16 +414,6 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 			zap.Any("notarized", len(r.GetNotarizedBlocks())))
 		return nil, nil
 	}
-
-	// TODO (sfxdx): TO REMOVE
-	//
-	//	// reset the next view change to previous MB starting round if
-	//	// Miner SC rejects the view change (by to few wait calls reason)
-	//	if b.Round == nvc && b.MagicBlock == nil {
-	//		// Logger.Info("gen_block -- reset next VC round", zap.Int64("from", nvc),
-	//		//	zap.Int64("back_to", lfmb.StartingRound))
-	//		// mc.SetNextViewChange(lfmb.StartingRound)
-	//	}
 
 	mc.addToRoundVerification(ctx, r, b)
 	r.AddProposedBlock(b)
@@ -1135,12 +1126,12 @@ func (mc *Chain) restartRound(ctx context.Context) {
 	mc.IncrementRoundTimeoutCount()
 	var r = mc.GetMinerRound(crn)
 
-	if crn > 0 && mc.GetMinerRound(crn-1) == nil {
-		if lfb := mc.GetLatestFinalizedBlock(); lfb != nil {
-			mc.kickRoundByLFB(ctx, lfb)
-			return
-		}
-	}
+	// if crn > 0 && mc.GetMinerRound(crn-1) == nil {
+	// 	if lfb := mc.GetLatestFinalizedBlock(); lfb != nil {
+	// 		mc.kickRoundByLFB(ctx, lfb)
+	// 		return
+	// 	}
+	// }
 
 	switch crt := mc.GetRoundTimeoutCount(); {
 	case crt < 10:
