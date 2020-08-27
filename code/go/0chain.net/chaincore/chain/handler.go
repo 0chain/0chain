@@ -265,7 +265,8 @@ func (c *Chain) chainHealthInATable(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "</tr>")
 
-	cr := c.GetRound(c.GetCurrentRound())
+	var rn = c.GetCurrentRound()
+	cr := c.GetRound(rn)
 	rtoc := c.GetRoundTimeoutCount()
 	if cr != nil {
 		rtoc = int64(cr.GetTimeoutCount())
@@ -287,6 +288,21 @@ func (c *Chain) chainHealthInATable(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%v", rtoc)
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "</tr>")
+
+	var (
+		mb  = c.GetMagicBlock(rn)
+		fmb = c.GetLatestFinalizedMagicBlockRound(rn)
+	)
+
+	fmt.Fprintf(w, "<tr class='active'>")
+	fmt.Fprintf(w, "<td>")
+	fmt.Fprintf(w, "Related magic block / Related finalized magic block")
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "<td class='number'>")
+	fmt.Fprintf(w, "%v / %v", mb.StartingRound, fmb.StartingRound)
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "</tr>")
+
 	fmt.Fprintf(w, "</table>")
 }
 

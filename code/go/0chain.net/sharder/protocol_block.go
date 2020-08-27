@@ -101,6 +101,10 @@ func (sc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 		return
 	}
 	sc.UpdateNodesFromMagicBlock(mb)
+	println("REGISTERED NODES")
+	for _, n := range node.CopyNodes() {
+		println("  - ", n.GetNodeTypeName(), n.GetN2NURLBase())
+	}
 	return
 }
 

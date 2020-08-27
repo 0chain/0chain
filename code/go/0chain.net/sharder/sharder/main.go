@@ -180,9 +180,14 @@ func main() {
 
 	address := fmt.Sprintf(":%v", selfNode.Port)
 
-	Logger.Info("Starting sharder", zap.String("build_tag", build.BuildTag), zap.String("go_version", runtime.Version()), zap.Int("available_cpus", runtime.NumCPU()), zap.String("port", address))
-	Logger.Info("Chain info", zap.String("chain_id", config.GetServerChainID()), zap.String("mode", mode))
-	Logger.Info("Self identity", zap.Any("set_index", selfNode.SetIndex), zap.Any("id", selfNode.GetKey()))
+	Logger.Info("Starting sharder", zap.String("build_tag", build.BuildTag),
+		zap.String("go_version", runtime.Version()),
+		zap.Int("available_cpus", runtime.NumCPU()),
+		zap.String("port", address))
+	Logger.Info("Chain info", zap.String("chain_id", config.GetServerChainID()),
+		zap.String("mode", mode))
+	Logger.Info("Self identity", zap.Any("set_index", selfNode.SetIndex),
+		zap.Any("id", selfNode.GetKey()))
 
 	initIntegrationsTests(node.Self.Underlying().GetKey())
 	defer shutdownIntegrationTests()

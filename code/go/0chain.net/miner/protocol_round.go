@@ -113,6 +113,8 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 		go mc.FinalizeRound(ctx, pr.Round, mc)
 	}
 
+	// TODO (sfxdx): kick blocks leaving view change
+
 	var (
 		nr = round.NewRound(rn + 1)
 		mr = mc.CreateRound(nr)
@@ -1123,6 +1125,18 @@ func (mc *Chain) restartRound(ctx context.Context) {
 
 	var crn = mc.GetCurrentRound()
 
+	// TODO (sfxd): REMVOE THE INSPECTION
+	//
+	// INSPECT
+	{
+		var (
+			lfb   = mc.GetLatestFinalizedBlock()
+			lfmb  = mc.GetLatestFinalizedMagicBlock()
+			lfmbr = mc.GetLatestFinalizedMagicBlockRound(crn)
+		)
+		println("(RR)", "RN", crn, "LFB", lfb.Round, "LFMB", lfmb.Round, "LFMBR", lfmbr.Round)
+	}
+
 	mc.IncrementRoundTimeoutCount()
 	var r = mc.GetMinerRound(crn)
 
@@ -1452,10 +1466,23 @@ func (mc *Chain) LoadMagicBlocksAndDKG(ctx context.Context) {
 
 	// latest MB
 	var (
-		latest *block.MagicBlock
-		err    error
+		preview *block.MagicBlock
+		latest  *block.MagicBlock
+		err     error
 	)
-	if latest, err = LoadLatestMB(ctx); err != nil {
+
+	if preview, err = LoadMagicBlock(ctx, previewID); err != nil {
+		Logger.Info("load_mbs_and_dkg -- loading preview MB", zap.Error(err))
+		return // can't continue
+	}
+
+	if preview.MagicBlockNumber <= 1 {
+		return // no magic blocks
+	}
+
+	var latestID = strconv.FormatInt(preview.MagicBlockNumber, 10)
+
+	if latest, err = LoadMagicBlock(ctx, latestID); err != nil {
 		Logger.Info("load_mbs_and_dkg -- loading the latest MB",
 			zap.Error(err))
 		return // can't continue

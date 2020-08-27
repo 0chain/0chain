@@ -24,6 +24,7 @@ import (
 )
 
 const (
+	previewID = "preview"
 	// transactions
 	scNameContributeMpk = "contributeMpk"
 	scNamePublishShares = "shareSignsOrShares"
@@ -790,11 +791,14 @@ func (mc *Chain) Wait(ctx context.Context, lfb *block.Block,
 
 	// save DKG and MB
 
+	// save DKG as is, but store MB as 'preview' since it can be rejected
+	// by miner SC and we shouldn't load and use it on initialization
+
 	if err = StoreDKG(ctx, vcdkg); err != nil {
 		return nil, common.NewErrorf("vc_wait", "saving DKG summary: %v", err)
 	}
 
-	if err = StoreMagicBlock(ctx, magicBlock); err != nil {
+	if err = StoreMagicBlockPreview(ctx, magicBlock); err != nil {
 		return nil, common.NewErrorf("vc_wait", "saving MB data: %v", err)
 	}
 
@@ -819,6 +823,26 @@ func (mc *Chain) Wait(ctx context.Context, lfb *block.Block,
 // ========================================================================== //
 
 // MB save / load
+
+func StoreMagicBlockPreview(ctx context.Context, magicBlock *block.MagicBlock) (
+	err error) {
+
+	var (
+		data = block.NewMagicBlockData(magicBlock)
+		emd  = data.GetEntityMetadata()
+		dctx = ememorystore.WithEntityConnection(ctx, emd)
+	)
+	defer ememorystore.Close(dctx)
+
+	// magic block preview, can be rejected by miner SC
+	data.ID = previewID
+	if err = data.Write(dctx); err != nil {
+		return
+	}
+
+	var connection = ememorystore.GetEntityCon(dctx, emd)
+	return connection.Commit()
+}
 
 func StoreMagicBlock(ctx context.Context, magicBlock *block.MagicBlock) (
 	err error) {
@@ -901,33 +925,33 @@ func LoadDKGSummary(ctx context.Context, id string) (dkgs *bls.DKGSummary,
 // Latest MB from store
 //
 
-func LoadLatestMB(ctx context.Context) (mb *block.MagicBlock, err error) {
-
-	var (
-		mbemd = datastore.GetEntityMetadata("magicblockdata")
-		rctx  = ememorystore.WithEntityConnection(ctx, mbemd)
-	)
-	defer ememorystore.Close(rctx)
-
-	var (
-		conn = ememorystore.GetEntityCon(rctx, mbemd)
-		iter = conn.Conn.NewIterator(conn.ReadOptions)
-	)
-	defer iter.Close()
-
-	var data = mbemd.Instance().(*block.MagicBlockData)
-	iter.SeekToLast() // from last
-
-	if !iter.Valid() {
-		return nil, util.ErrValueNotPresent
-	}
-
-	if err = datastore.FromJSON(iter.Value().Data(), data); err != nil {
-		return nil, common.NewErrorf("load_latest_mb",
-			"decoding error: %v", err)
-	}
-
-	mb = data.MagicBlock
-	println("LOAD LATEST MB:", mb.StartingRound, "/", mb.MagicBlockNumber)
-	return
-}
+// func LoadLatestMB(ctx context.Context) (mb *block.MagicBlock, err error) {
+//
+// 	var (
+// 		mbemd = datastore.GetEntityMetadata("magicblockdata")
+// 		rctx  = ememorystore.WithEntityConnection(ctx, mbemd)
+// 	)
+// 	defer ememorystore.Close(rctx)
+//
+// 	var (
+// 		conn = ememorystore.GetEntityCon(rctx, mbemd)
+// 		iter = conn.Conn.NewIterator(conn.ReadOptions)
+// 	)
+// 	defer iter.Close()
+//
+// 	var data = mbemd.Instance().(*block.MagicBlockData)
+// 	iter.SeekToLast() // from last
+//
+// 	if !iter.Valid() {
+// 		return nil, util.ErrValueNotPresent
+// 	}
+//
+// 	if err = datastore.FromJSON(iter.Value().Data(), data); err != nil {
+// 		return nil, common.NewErrorf("load_latest_mb",
+// 			"decoding error: %v", err)
+// 	}
+//
+// 	mb = data.MagicBlock
+// 	println("LOAD LATEST MB:", mb.StartingRound, "/", mb.MagicBlockNumber)
+// 	return
+// }

@@ -3,8 +3,6 @@ package miner
 import (
 	"context"
 
-	"0chain.net/chaincore/chain"
-	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 
 	. "0chain.net/core/logging"
@@ -31,49 +29,22 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 	}
 	mr := mc.GetMinerRound(b.Round)
 	if mr == nil {
-		Logger.Error("handle verify block - got block proposal before starting round", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("miner", b.MinerID))
+
+		Logger.Error("handle verify block - got block proposal before starting round",
+			zap.Int64("round", b.Round), zap.String("block", b.Hash),
+			zap.String("miner", b.MinerID))
+
 		if mr = mc.getRound(ctx, b.Round); mr == nil {
-			// first round after joining BC case, the node have to
-			// handle the block, even if it's far ahead of sharders,
-			// because sharders don't send LFB tickets to it (not
-			// active in chain) and sharders don't allow to get LFB
-			// because node it not registered in the sharders yet;
-			// this block contains MB with this node, that joining
-			// BC -- that is the case; thus, a block generator makes
-			// this node joining BC
-
-			if b.MagicBlock == nil {
-				Logger.Error("handle verify block - far ahead of sharders, no MB case",
-					zap.Int64("round", b.Round),
-					zap.String("block", b.Hash),
-					zap.String("miner", b.MinerID))
-				return
-			}
-
-			var selfKey = node.Self.GetKey()
-			if !b.MagicBlock.Miners.HasNode(selfKey) {
-				Logger.Error("handle verify block - far ahead of sharders, MB hasn't this miner",
-					zap.Int64("round", b.Round),
-					zap.String("block", b.Hash),
-					zap.String("miner", b.MinerID))
-				return
-			}
-
-			// advance LFB ticket for this case
-			var pmb = mc.GetMagicBlock(b.Round - 1)
-			if !pmb.Miners.HasNode(selfKey) {
-				mc.AddReceivedLFBTicket(ctx, &chain.LFBTicket{
-					Round: b.Round,
-				})
-			}
-
 			var r = round.NewRound(b.Round)
 			mr = mc.CreateRound(r)
 			mr = mc.AddRound(mr).(*Round)
-			// mc.SetCurrentRound(mr.GetRoundNumber()) // use it as current ?
+			if mc.GetCurrentRound() < b.Round {
+				mc.SetCurrentRound(mr.GetRoundNumber())
+			}
 		}
 		//TODO: Byzantine
 		mc.startRound(ctx, mr, b.GetRoundRandomSeed())
+
 	} else {
 		if !mr.IsVRFComplete() {
 			Logger.Info("handle verify block - got block proposal before VRF is complete",
@@ -113,25 +84,34 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 			}
 		}
 	}
-	if mr != nil {
-		if mr.IsVerificationComplete() {
-			return
-		}
-		if mr.GetRandomSeed() != b.GetRoundRandomSeed() {
-			Logger.Error("Got a block for verification with wrong randomseed", zap.Int64("roundNum", mr.GetRoundNumber()),
-				zap.Int("roundToc", mr.GetTimeoutCount()), zap.Int("blockToc", b.RoundTimeoutCount),
-				zap.Int64("roundrrs", mr.GetRandomSeed()), zap.Int64("blockrrs", b.GetRoundRandomSeed()))
-			return
-		}
-		if !mc.ValidGenerator(mr.Round, b) {
-			Logger.Error("Not a valid generator. Ignoring block with hash = " + b.Hash)
-			return
-		}
-		Logger.Info("Added block to Round with hash = " + b.Hash)
-		mc.AddToRoundVerification(ctx, mr, b)
-	} else {
-		Logger.Error("this should not happen %v", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("cround", mc.GetCurrentRound()))
+
+	if mr == nil {
+		Logger.Error("this should not happen %v", zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.Int64("cround", mc.GetCurrentRound()))
+		return
 	}
+
+	// mr != nil
+
+	if mr.IsVerificationComplete() {
+		return
+	}
+	if mr.GetRandomSeed() != b.GetRoundRandomSeed() {
+		Logger.Error("Got a block for verification with wrong randomseed",
+			zap.Int64("roundNum", mr.GetRoundNumber()),
+			zap.Int("roundToc", mr.GetTimeoutCount()),
+			zap.Int("blockToc", b.RoundTimeoutCount),
+			zap.Int64("roundrrs", mr.GetRandomSeed()),
+			zap.Int64("blockrrs", b.GetRoundRandomSeed()))
+		return
+	}
+	if !mc.ValidGenerator(mr.Round, b) {
+		Logger.Error("Not a valid generator. Ignoring block with hash = " + b.Hash)
+		return
+	}
+	Logger.Info("Added block to Round with hash = " + b.Hash)
+	mc.AddToRoundVerification(ctx, mr, b)
 }
 
 /*HandleVerificationTicketMessage - handles the verification ticket message */

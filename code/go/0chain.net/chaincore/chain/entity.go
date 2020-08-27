@@ -1177,6 +1177,13 @@ func (c *Chain) UpdateNodesFromMagicBlock(newMagicBlock *block.MagicBlock) {
 		keep = collectNodes(prev, newMagicBlock)                // this and new
 	)
 
+	if prev != nil {
+		println("UNFMB", newMagicBlock.StartingRound, "/", newMagicBlock.MagicBlockNumber,
+			"::", prev.StartingRound, "/", prev.MagicBlockNumber)
+	} else {
+		println("UNFMB", newMagicBlock.StartingRound, "/", newMagicBlock.MagicBlockNumber, "NO PREV MB")
+	}
+
 	c.SetupNodes(newMagicBlock)
 
 	newMagicBlock.Sharders.ComputeProperties()
