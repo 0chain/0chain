@@ -82,3 +82,7 @@ func (mbs *MultiBlockStore) UploadToCloud(hash string, round int64) error {
 func (mbs *MultiBlockStore) DownloadFromCloud(hash string, round int64) error {
 	return common.NewError("interface_not_implemented", "MultiBlockStore cannote provide this interface")
 }
+
+func (mbs *MultiBlockStore) CloudObjectExists(hash string) bool {
+	return false
+}

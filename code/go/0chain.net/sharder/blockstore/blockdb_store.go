@@ -136,3 +136,7 @@ func (bdbs *BlockDBStore) UploadToCloud(hash string, round int64) error {
 func (bdbs *BlockDBStore) DownloadFromCloud(hash string, round int64) error {
 	return common.NewError("interface_not_implemented", "BlockDBStore cannote provide this interface")
 }
+
+func (bdbs *BlockDBStore) CloudObjectExists(hash string) bool {
+	return false
+}
