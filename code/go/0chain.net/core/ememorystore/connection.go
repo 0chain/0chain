@@ -169,7 +169,6 @@ func WithEntityConnection(ctx context.Context, entityMetadata datastore.EntityMe
 	}
 	cMap, ok := c.(connections)
 	if !ok {
-		println("CONNECTION IS NOT the connection: REPLACE")
 		cMap := make(connections)
 		cMap[dbpool.CtxKey] = GetTransaction(dbpool.Pool)
 		return context.WithValue(ctx, CONNECTION, cMap)

@@ -84,26 +84,8 @@ func (mc *Chain) isActiveInChain(lfb *block.Block, mb *block.MagicBlock) bool {
 		mb.StartingRound < mc.GetCurrentRound() && lfb.ClientState != nil
 }
 
-// TODO (sfxdx): TO REMOVE -- OLD CODE
-//
-// // After stop/start we have to repair nextViewCahnge round number from
-// // store if there is the latest MB saved by Miner SC.
-// func (vcp *viewChangeProcess) setupNextViewChange(ctx context.Context) {
-// 	var mb, err = LoadLatestMB(ctx)
-// 	if err != nil {
-// 		Logger.Info("getting latest MB from store", zap.Error(err))
-// 		return
-// 	}
-// 	Logger.Info("next view change", zap.Int64("round", mb.StartingRound))
-// 	vcp.SetNextViewChange(mb.StartingRound)
-// }
-
 // DKGProcess starts DKG process and works on it. It blocks.
 func (mc *Chain) DKGProcess(ctx context.Context) {
-
-	println("START DKG PROCESS")
-
-	// mc.viewChangeProcess.setupNextViewChange(ctx)
 
 	const (
 		timeoutPhase        = 5
@@ -405,8 +387,6 @@ func (vcp *viewChangeProcess) clearViewChange() {
 func (mc *Chain) DKGProcessStart(context.Context, *block.Block,
 	*block.MagicBlock, bool) (*httpclientutil.Transaction, error) {
 
-	println("DKG START")
-
 	mc.viewChangeProcess.Lock()
 	defer mc.viewChangeProcess.Unlock()
 
@@ -583,8 +563,6 @@ func (mc *Chain) SendSijs(ctx context.Context, lfb *block.Block,
 	mb *block.MagicBlock, active bool) (tx *httpclientutil.Transaction,
 	err error) {
 
-	println("DKG SHARE")
-
 	mc.viewChangeProcess.Lock()
 	defer mc.viewChangeProcess.Unlock()
 
@@ -728,8 +706,6 @@ func (mc *Chain) Wait(ctx context.Context, lfb *block.Block,
 	mb *block.MagicBlock, active bool) (tx *httpclientutil.Transaction,
 	err error) {
 
-	println("DKG WAIT")
-
 	mc.viewChangeProcess.Lock()
 	defer mc.viewChangeProcess.Unlock()
 
@@ -811,8 +787,6 @@ func (mc *Chain) Wait(ctx context.Context, lfb *block.Block,
 		return nil, common.NewErrorf("vc_wait",
 			"sending 'wait' transaction: %v", err)
 	}
-
-	println("SEND WAIT TX")
 
 	return // the transaction
 }
@@ -931,7 +905,6 @@ func LoadLatestMB(ctx context.Context) (mb *block.MagicBlock, err error) {
 	}
 
 	mb = data.MagicBlock
-	println("LOAD LATEST MB:", mb.StartingRound, "/", mb.MagicBlockNumber)
 	return
 }
 
@@ -957,11 +930,8 @@ func (mc *Chain) SetupLatestAndPreviousMagicBlocks(ctx context.Context) {
 
 	Logger.Info("setup latest and previous fmbs")
 
-	println("SETUP LATEST/PREVIOUS LFMBs")
-
 	var lfmb = mc.GetLatestFinalizedMagicBlock()
 	mc.SetDKGSFromStore(ctx, lfmb.MagicBlock)
-	println("  LFMB:", lfmb.StartingRound)
 
 	if lfmb.MagicBlockNumber <= 1 {
 		mc.updateMagicBlocks(lfmb)
@@ -972,7 +942,6 @@ func (mc *Chain) SetupLatestAndPreviousMagicBlocks(ctx context.Context) {
 
 	if pfmb.MagicBlock.Hash == lfmb.MagicBlock.PreviousMagicBlockHash {
 		mc.SetDKGSFromStore(ctx, lfmb.MagicBlock)
-		println("  PFMB:", pfmb.StartingRound, "(by round)")
 		mc.updateMagicBlocks(pfmb, lfmb)
 		return
 	}
@@ -982,7 +951,6 @@ func (mc *Chain) SetupLatestAndPreviousMagicBlocks(ctx context.Context) {
 	if err == nil && pfmb.MagicBlock != nil &&
 		pfmb.MagicBlock.Hash == lfmb.MagicBlock.PreviousMagicBlockHash {
 		mc.SetDKGSFromStore(ctx, pfmb.MagicBlock)
-		println("  PFMB:", pfmb.StartingRound, "(get block)")
 		mc.updateMagicBlocks(pfmb, lfmb)
 		return
 	}
@@ -1005,9 +973,5 @@ func (mc *Chain) SetupLatestAndPreviousMagicBlocks(ctx context.Context) {
 	}
 
 	mc.SetDKGSFromStore(ctx, pfmb.MagicBlock)
-	println("  PFMB:", pfmb.StartingRound, "(fetch)")
 	mc.updateMagicBlocks(pfmb, lfmb) // ok
-
-	// TODO (sfxdx): REMOVE THE INSPECTION
-	mc.InsepectLFMBSRs()
 }

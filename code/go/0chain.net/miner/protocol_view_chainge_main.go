@@ -93,8 +93,6 @@ func (mc *Chain) PublishShareOrSigns(_ context.Context, lfb *block.Block,
 	mb *block.MagicBlock, active bool) (tx *httpclientutil.Transaction,
 	err error) {
 
-	println("DKG PUBLISH")
-
 	mc.viewChangeProcess.Lock()
 	defer mc.viewChangeProcess.Unlock()
 
@@ -173,8 +171,6 @@ func (mc *Chain) PublishShareOrSigns(_ context.Context, lfb *block.Block,
 func (mc *Chain) ContributeMpk(_ context.Context, lfb *block.Block,
 	mb *block.MagicBlock, active bool) (tx *httpclientutil.Transaction,
 	err error) {
-
-	println("DKG CONTRIBUTE")
 
 	var dmn *minersc.DKGMinerNodes
 	if dmn, err = mc.getDKGMiners(lfb, mb, active); err != nil {

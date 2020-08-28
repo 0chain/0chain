@@ -140,6 +140,9 @@ func (mc *Chain) puulNotarizedBlocks(ctx context.Context, r *Round) {
 		return
 	}
 
+	// TO THINK (sfxdx): use the GetBlockToExtend to fetch block state change?
+	// mc.GetBlockToExtend(ctx, r)
+
 	Logger.Info("pull not. block for round -- got",
 		zap.Int64("round", rn))
 
@@ -163,8 +166,6 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 
 	var rn = r.GetRoundNumber()
 
-	Logger.Error("pew-pew-pew", zap.Int64("round", rn))
-
 	if mc.isAheadOfSharders(ctx, rn) {
 		// try to slow down generation where the miner is far ahead of sharders
 		select {
@@ -180,35 +181,6 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 	if pr != nil && !pr.IsFinalizing() && !pr.IsFinalized() {
 		mc.finalizeRound(ctx, pr) // finalize the previous round
 	}
-
-	// TODO (sfxdx): REMOVE THE INSPECTION
-	//
-	// INSPECT
-	if false {
-		println("START NEW ROUND INSPECTION:", rn, rn+1)
-		var lfb = mc.GetLatestFinalizedBlock()
-		for i := lfb.Round; i <= rn; i++ {
-			var mx = mc.GetMinerRound(i)
-			if mx == nil {
-				println("  - NIL", i)
-				continue
-			}
-			if mx.GetRandomSeed() == 0 {
-				println("  - NO RRS", i)
-				continue
-			}
-			if mx.GetHeaviestNotarizedBlock() == nil {
-				println("  - NO HNB", i)
-				continue
-			}
-			println("   - OK", i)
-		}
-	}
-
-	// TODO (sfxdx): USE OR REMOVE THE CODE BELOW
-	// else {
-	//	mc.finalizeRound(ctx, r) // then finalize this round
-	// }
 
 	var (
 		nr = round.NewRound(rn + 1)
@@ -866,18 +838,6 @@ func (mc *Chain) CancelRoundVerification(ctx context.Context, r *Round) {
 	r.CancelVerification() // No need for further verification of any blocks
 }
 
-// TODO (sfxdx): TO REMOVE - DEAD CODE
-//
-// /*BroadcastNotarizedBlocks - send the heaviest notarized block to all the miners */
-// func (mc *Chain) BroadcastNotarizedBlocks(ctx context.Context, r round.RoundI) {
-// 	if nb := r.GetHeaviestNotarizedBlock(); nb != nil {
-// 		Logger.Info("sending notarized block",
-// 			zap.Int64("round", r.GetRoundNumber()),
-// 			zap.String("block", nb.Hash))
-// 		go mc.SendNotarizedBlockToMiners(ctx, nb)
-// 	}
-// }
-
 type BlockConsensus struct {
 	*block.Block
 	Consensus int
@@ -921,16 +881,6 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*Bloc
 		err = mc.VerifyNotarization(ctx, fb.Hash, fb.GetVerificationTickets(),
 			r.GetRoundNumber())
 		if err != nil {
-			// TODO (sfxd): REMOVE THE INSPECTION
-			// INSPECT
-			{
-				mb := mc.GetMagicBlock(fb.Round)
-				println("VERIFY NOT. FAILED", "ROUND", fb.Round)
-				println("  MB SR", mb.StartingRound)
-				println("  MAGIC BLOCKS:", mc.MagicBlockStorage.Count())
-				println("  MB ROUNDS:", fmt.Sprint(mc.MagicBlockStorage.GetRounds()))
-			}
-
 			Logger.Error("lfb from sharder - notarization failed", zap.Int64("round", fb.Round),
 				zap.String("block", fb.Hash), zap.Error(err))
 			return nil, err
@@ -1186,31 +1136,8 @@ func isNilRound(r round.RoundI) bool {
 	return r == nil || r == round.RoundI((*Round)(nil))
 }
 
-// TO REMOVE
-//
-// func (mc *Chain) kickMinersBehind(ctx context.Context, r round.RoundI) {
-// 	const kickThreshold = 10
-// 	var (
-// 		i, rx = 0, r.GetRoundNumber()
-// 		ahead = config.GetLFBTicketAhead()
-// 	)
-// 	if ahead > kickThreshold {
-// 		ahead = kickThreshold // don't kick more then 10 blocks
-// 	}
-// 	r = mc.GetMinerRound(rx) // for previous round
-// 	for ; i < ahead && !isNilRound(r); rx, i = rx-1, i+1 {
-// 		if r.GetHeaviestNotarizedBlock() != nil {
-// 			mc.BroadcastNotarizedBlocks(ctx, r)
-// 		}
-// 		r = mc.GetMinerRound(rx - 1)
-// 	}
-// }
-
 func (mc *Chain) kickRoundByLFB(ctx context.Context, lfb *block.Block) {
-	// var lfmb = mc.GetLatestFinalizedMagicBlock()
-	// if _, ok := lfmb.Miners.NodesMap[node.Self.GetKey()]; !ok {
-	// 	return // not from MB, skip the restart round dry
-	// }
+
 	var (
 		sr = round.NewRound(lfb.Round)
 		mr = mc.CreateRound(sr)
@@ -1227,82 +1154,12 @@ func (mc *Chain) kickRoundByLFB(ctx context.Context, lfb *block.Block) {
 	mc.SetCurrentRound(nr.Number)
 }
 
-// TODO (sfxdx): TO REMOVE -- DEAD CODE
-//
-// func (mc *Chain) recheckLast100Blocks(ctx context.Context) {
-// 	var cr = mc.GetCurrentRound()
-// 	if cr == 0 {
-// 		return // zero round
-// 	}
-// 	var pr = mc.GetMinerRound(cr - 1)
-// 	if pr == nil {
-// 		Logger.Error("missing previous round for", zap.Int64("round", cr))
-// 		return
-// 	}
-// 	var b = pr.GetHeaviestNotarizedBlock()
-// 	if b == nil {
-// 		Logger.Error("missing HNB for", zap.Int64("round", pr.GetRoundNumber()))
-// 		return
-// 	}
-// 	for i := 0; i < 100 && b.Round > 0; i++ {
-// 		mc.InitBlockState(b) // ignore error
-// 		if b.PrevBlock == nil {
-// 			mc.AsyncFetchNotarizedPreviousBlock(b)
-// 			return // stop on first block can't find
-// 		}
-// 		b = b.PrevBlock
-// 	}
-// }
-
 func (mc *Chain) restartRound(ctx context.Context) {
 
 	var crn = mc.GetCurrentRound()
 
-	// TODO (sfxd): REMVOE THE INSPECTION
-	//
-	// INSPECT
-	{
-		var (
-			lfb   = mc.GetLatestFinalizedBlock()
-			lfmb  = mc.GetLatestFinalizedMagicBlock()
-			lfmbr = mc.GetLatestFinalizedMagicBlockRound(crn)
-		)
-		println("(RR)", "RN", crn, "LFB", lfb.Round, "LFMB", lfmb.Round, "LFMBR", lfmbr.Round)
-	}
-
-	// TODO (sfxdx): REMOVE THE INSPECTION
-	//
-	// INSPECT
-	{
-		println("RESTART ROUND INSPECTION:", crn)
-		var lfb = mc.GetLatestFinalizedBlock()
-		for i := lfb.Round; i <= crn; i++ {
-			var mx = mc.GetMinerRound(i)
-			if mx == nil {
-				println("  - NIL", i)
-				continue
-			}
-			if mx.GetRandomSeed() == 0 {
-				println("  - NO RRS", i)
-				continue
-			}
-			if mx.GetHeaviestNotarizedBlock() == nil {
-				println("  - NO HNB", i)
-				continue
-			}
-			println("   - OK", i)
-		}
-	}
-
 	mc.IncrementRoundTimeoutCount()
 	var r = mc.GetMinerRound(crn)
-
-	// if crn > 0 && mc.GetMinerRound(crn-1) == nil {
-	// 	if lfb := mc.GetLatestFinalizedBlock(); lfb != nil {
-	// 		mc.kickRoundByLFB(ctx, lfb)
-	// 		return
-	// 	}
-	// }
 
 	switch crt := mc.GetRoundTimeoutCount(); {
 	case crt < 10:
@@ -1318,16 +1175,6 @@ func (mc *Chain) restartRound(ctx context.Context) {
 
 		// TODO: should have a means to send an email/SMS to someone or
 		// something like that
-
-		// other commented out cases
-
-		// // every 5th restart -- rollback to LFB
-		// case crt%5 == 0:
-		//	// mc.rollbackToLFB(ctx, crn)
-		//	// return // do the rest in next restart
-
-		// case (crt > 10) && (crt%10 == 0):
-		//	// mc.recheckLast100Blocks(ctx) // every 10 restarts after 10th
 	}
 	mc.RoundTimeoutsCount++
 
@@ -1363,14 +1210,11 @@ func (mc *Chain) restartRound(ctx context.Context) {
 		if isAhead {
 			mc.kickSharders(ctx) // not updated, kick sharders
 		}
-		// mc.kickMinersBehind(ctx, r) //
-		// mc.kickFinalization(ctx)    // this miner (pull not. blocks)
 	}
 
 	if !updated && rn > 1 && !isAhead &&
 		r.GetHeaviestNotarizedBlock() != nil && r.HasRandomSeed() {
 
-		println("SNR IN RR", crn)
 		Logger.Info("StartNextRound after sending notarized "+
 			"block in restartRound.",
 			zap.Int64("current_round", r.GetRoundNumber()))

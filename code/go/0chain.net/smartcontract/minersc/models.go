@@ -697,12 +697,9 @@ func (dkgmn *DKGMinerNodes) calculateTKN(gn *GlobalNode, n int) {
 	dkgmn.N = n
 	dkgmn.K = int(math.Ceil(dkgmn.KPercent * float64(m)))
 	dkgmn.T = int(math.Ceil(dkgmn.TPercent * float64(m)))
-
-	println("  CALCULATE TKN:", "T", dkgmn.T, "K", dkgmn.K, "N", dkgmn.N)
 }
 
 func (dkgmn *DKGMinerNodes) reduce(n int) int {
-	println("  REDUCE", "TO", n, len(dkgmn.SimpleNodes), "{")
 	var list []*SimpleNode
 	for _, node := range dkgmn.SimpleNodes {
 		list = append(list, node)
@@ -716,14 +713,10 @@ func (dkgmn *DKGMinerNodes) reduce(n int) int {
 	for _, node := range list {
 		dkgmn.SimpleNodes[node.ID] = node
 	}
-	println("  REDUCE", "TO", n, len(dkgmn.SimpleNodes), "}")
 	return dkgmn.MaxN
 }
 
 func (dkgmn *DKGMinerNodes) recalculateTKN(final bool) (err error) {
-	defer func() {
-		println("  RECALCULATE TKN:", final, "T", dkgmn.T, "K", dkgmn.K, "N", dkgmn.N)
-	}()
 	var n = len(dkgmn.SimpleNodes)
 	// check the lower boundary
 	if n < dkgmn.MinN {

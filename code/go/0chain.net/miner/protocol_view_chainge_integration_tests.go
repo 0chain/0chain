@@ -223,25 +223,25 @@ func getBaseN2NURLs(nodes []*node.Node) (urls []string) {
 }
 
 func (mc *Chain) sendMpkTransaction(selfNode *node.Node, mpk *block.MPK,
-	urls []string) (txn *httpclientutil.Transaction, err error) {
+	urls []string) (tx *httpclientutil.Transaction, err error) {
 
 	var scData = new(httpclientutil.SmartContractTxnData)
 	scData.Name = scNameContributeMpk
 	scData.InputArgs = mpk
-	txn = httpclientutil.NewTransactionEntity(selfNode.GetKey(), mc.ID,
+	tx = httpclientutil.NewTransactionEntity(selfNode.GetKey(), mc.ID,
 		selfNode.PublicKey)
-	txn.ToClientID = minersc.ADDRESS
-	err = httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0,
+	tx.ToClientID = minersc.ADDRESS
+	err = httpclientutil.SendSmartContractTxn(tx, minersc.ADDRESS, 0, 0,
 		scData, urls)
 	return
 }
 
-func (mc *Chain) ContributeMpk(_ context.Context, _ *block.Block,
-	mb *block.MagicBlock, _ bool) (tx *httpclientutil.Transaction,
+func (mc *Chain) ContributeMpk(_ context.Context, lfb *block.Block,
+	mb *block.MagicBlock, active bool) (tx *httpclientutil.Transaction,
 	err error) {
 
 	var dmn *minersc.DKGMinerNodes
-	if dmn, err = mc.getDKGMiners(); err != nil {
+	if dmn, err = mc.getDKGMiners(lfb, mb, active); err != nil {
 		Logger.Error("can't contribute", zap.Any("error", err))
 		return
 	}
@@ -280,7 +280,7 @@ func (mc *Chain) ContributeMpk(_ context.Context, _ *block.Block,
 
 	// send bad MPK first
 	if len(bad) > 0 {
-		txn, err = mc.sendMpkTransaction(selfNode, badMPK, badurls)
+		tx, err = mc.sendMpkTransaction(selfNode, badMPK, badurls)
 		if err != nil {
 			return
 		}
@@ -288,7 +288,7 @@ func (mc *Chain) ContributeMpk(_ context.Context, _ *block.Block,
 
 	// send good MPK second
 	if len(good) > 0 {
-		txn, err = mc.sendMpkTransaction(selfNode, mpk, goodurls)
+		tx, err = mc.sendMpkTransaction(selfNode, mpk, goodurls)
 	}
 
 	return

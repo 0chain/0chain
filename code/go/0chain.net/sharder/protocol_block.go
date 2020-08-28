@@ -94,17 +94,10 @@ func (sc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 		return // no MB, no VC
 	}
 
-	println("SHARDERS VIEW CHANGE", b.Round, mb.StartingRound, mb.MagicBlockNumber)
-
 	if err = sc.UpdateMagicBlock(mb); err != nil {
-		println("SHARDERS VIEW CHANGE", b.Round, mb.StartingRound, mb.MagicBlockNumber, "ERR", err.Error())
 		return
 	}
 	sc.UpdateNodesFromMagicBlock(mb)
-	println("REGISTERED NODES")
-	for _, n := range node.CopyNodes() {
-		println("  - ", n.GetNodeTypeName(), n.GetN2NURLBase())
-	}
 	return
 }
 

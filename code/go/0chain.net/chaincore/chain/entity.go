@@ -194,7 +194,6 @@ func (c *Chain) GetMagicBlock(round int64) *block.MagicBlock {
 	defer c.mbMutex.RUnlock()
 	entity := c.MagicBlockStorage.Get(round)
 	if entity == nil {
-		println(":::::::::: CHOOSE LATEST MB INSTEAD OF MB LOOKING FOR ::::::::::", round, "(with MB offset -4)")
 		entity = c.MagicBlockStorage.GetLatest()
 	}
 	if entity == nil {
@@ -924,7 +923,7 @@ func (c *Chain) getBlocks() []*block.Block {
 	return bl
 }
 
-//SetRoundRank - set the round rank of the block
+// SetRoundRank - set the round rank of the block.
 func (c *Chain) SetRoundRank(r round.RoundI, b *block.Block) {
 	miners := c.GetMiners(r.GetRoundNumber())
 	if miners == nil || miners.MapSize() == 0 {
@@ -1028,7 +1027,6 @@ func (c *Chain) CanShardBlocks(nRound int64) bool {
 
 // CanShardBlocksSharders - is the network able to effectively shard the blocks?
 func (c *Chain) CanShardBlocksSharders(sharders *node.Pool) bool {
-	println("CAN SHARD BLOCK SHARDERS:", sharders.GetActiveCount()*100, ">=", sharders.Size()*c.MinActiveSharders, "SS", sharders.Size(), "MAS", c.MinActiveSharders)
 	return sharders.GetActiveCount()*100 >= sharders.Size()*c.MinActiveSharders
 }
 
@@ -1178,13 +1176,6 @@ func (c *Chain) UpdateNodesFromMagicBlock(newMagicBlock *block.MagicBlock) {
 		prev = c.GetMagicBlock(newMagicBlock.StartingRound - 1) //
 		keep = collectNodes(prev, newMagicBlock)                // this and new
 	)
-
-	if prev != nil {
-		println("UNFMB", newMagicBlock.StartingRound, "/", newMagicBlock.MagicBlockNumber,
-			"::", prev.StartingRound, "/", prev.MagicBlockNumber)
-	} else {
-		println("UNFMB", newMagicBlock.StartingRound, "/", newMagicBlock.MagicBlockNumber, "NO PREV MB")
-	}
 
 	c.SetupNodes(newMagicBlock)
 

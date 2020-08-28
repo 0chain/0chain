@@ -235,28 +235,6 @@ func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) erro
 	return err
 }
 
-// TODO (sfxdx): TO REMOVE (old code)
-//
-// func (mc *Chain) isNeedViewChange(round int64) (is bool) {
-//
-// 	if !config.DevConfiguration.ViewChange {
-// 		return
-// 	}
-//
-// 	// don't offset anything here, we have to do VC when round/block
-// 	// is finalized and thus we are using rounds without any offsets
-//
-// 	var (
-// 		cdkg = mc.GetDKG(round)
-//
-// 		nvc    = mc.NextViewChange() // no MB offset
-// 		cdkgsr = cdkg.StartingRound  // no MB offset
-// 	)
-//
-// 	is = (nvc == round) && (cdkg == nil || cdkgsr <= nvc)
-// 	return
-// }
-
 // isViewChanging returns true for 501-504 rounds
 func (mc *Chain) isViewChanging(round int64) (is bool) {
 	var (
@@ -283,60 +261,14 @@ func (mc *Chain) isJoining(rn int64) (is bool) {
 
 			key = node.Self.Underlying().GetKey()
 		)
-		// TODO (sfxdx): remove the logs
-		if nmb.StartingRound != nvc {
-			println("isJoining: unexpected next MB", "MB", mb.StartingRound, "NMB", nmb.StartingRound)
-			return false // unexpected next magic block
-		}
-		// TODO (sfxdx): remove the logs
-		if !mb.Miners.HasNode(key) && nmb.Miners.HasNode(key) {
-			println("VIEW CHANGING NODE START NEW ROUND")
-			println("  MB", mb.StartingRound, "NMB", nmb.StartingRound)
-			return true
-		}
+
+		return nmb.StartingRound == nvc &&
+			!mb.Miners.HasNode(key) &&
+			nmb.Miners.HasNode(key)
 	}
 
 	return // false
 }
-
-// TODO (sfdx): TO REMOVE OR TO KEEP OR TO MODIFY (questionable code)
-//
-//
-// // a node leaving BC on VC coming have to finalize its last round; since it
-// // can't start next round (504) and finalize 503 for 502 block; it returns
-// // true for 502 round only (the first round of new MB/DKG);
-// func (mc *Chain) isLeaving(round int64) (is bool) {
-// 	if !mc.isViewChanging(round) {
-// 		return // if not view changing, then not leaving (short circuit)
-// 	}
-// 	var mb, nmb = mc.GetMagicBlock(round), mc.GetMagicBlock(round + 1)
-// 	if mb.StartingRound >= nmb.StartingRound {
-// 		return // not leaving
-// 	}
-// 	var nmbsroff = mbRoundOffset(nmb.StartingRound)
-// 	return round == nmbsroff // is
-// }
-
-// TODO (sfxdx): TO REMOVE (draft code)
-//
-// // in goroutine
-// func (mc *Chain) kickNewMiners(ctx context.Context, b *block.Block) {
-//
-// 	if node.Self.Underlying().Type != node.NodeTypeMiner {
-// 		return // only miner should do that
-// 	}
-//
-// 	// get previous magic block
-// 	var prev = mc.GetMagicBlock(b.Round)
-// 	if prev.MagicBlockNumber != b.MagicBlock.MagicBlockNumber-1 {
-// 		Logger.Error("unexpected previous magic block",
-// 			zap.Int64("mb_number", b.MagicBlock.MagicBlockNumber),
-// 			zap.Int64("prev_mb_number", prev.MagicBlockNumber))
-// 		return
-// 	}
-//
-// 	// TODO (sfxd): kick the new miners, force them to pull LFB from sharders
-// }
 
 // ViewChange on finalized (!) block. Miners check magic blocks during
 // generation and notarization. A finalized block should be trusted.
@@ -348,13 +280,9 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 		nvc = mc.NextViewChange(lfb)
 	)
 
-	// next view change is expected, but not given; it means the MB rejected
-	// by Miner SC (managed by miner SC: and we have to reset NextViewChange
-	// to previous MB for block generation and verification process);
+	// next view change is expected, but not given;
+	// it means the MB rejected by Miner SC
 	if b.Round == nvc && mb == nil {
-		// var mbx = mc.GetMagicBlock(b.Round)
-		// mc.SetNextViewChange(mbx.StartingRound)
-		println("MINER VC: NO MB, NO VC", b.Round, "BUT EXPECTED")
 		return // no MB no VC
 	}
 
@@ -362,8 +290,6 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 	if mb == nil {
 		return // no MB, no VC
 	}
-
-	println("MINER VIEW CHANGE")
 
 	// view change
 
@@ -404,48 +330,11 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 	//  - 501 - finalized
 	//  - 502 - finalize round (finalize 501 block)
 	//  - 503 - verify round blocks
-	//  - 504 - generate round (new MB/DKG can be used, but slower)
+	//  - 504 - generate round (new MB/DKG can be used, but slower, use old)
 	//  - 505 - generate block (new MB/DKG)
 
 	return
 }
-
-// TODO (sfxdx): TO REMOVE (old code)
-//
-// // Send a notarized block for new miners
-// func (mc *Chain) sendNotarizedBlockToNewMiners(ctx context.Context, nRound int64,
-// 	viewChangeMagicBlock, currentMagicBlock *block.MagicBlock) {
-// 	prevRound := mc.GetMinerRound(nRound)
-// 	prevMinerNodes := mc.GetMagicBlock(nRound).Miners
-// 	if prevRound == nil {
-// 		Logger.Error("round not found", zap.Any("round", nRound))
-// 		return
-// 	}
-// 	if prevRound.Block == nil {
-// 		Logger.Error("block round not found", zap.Any("round", nRound))
-// 		return
-// 	}
-// 	selfID := node.Self.Underlying().GetKey()
-// 	if currentMagicBlock.Miners.GetNode(selfID) == nil {
-// 		// A miner that was active in the previous VC can send a block
-// 		return
-// 	}
-
-// 	prevBlock := prevRound.Block
-// 	allMinersMB := make([]*node.Node, 0)
-// 	for _, n := range viewChangeMagicBlock.Miners.NodesMap {
-// 		if selfID == n.GetKey() {
-// 			continue
-// 		}
-// 		if prevMinerNodes.GetNode(n.GetKey()) == nil {
-// 			allMinersMB = append(allMinersMB, n)
-// 		}
-// 	}
-// 	if len(allMinersMB) != 0 {
-// 		go mc.SendNotarizedBlockToPoolNodes(ctx, prevBlock, viewChangeMagicBlock.Miners,
-// 			allMinersMB, chain.DefaultRetrySendNotarizedBlockNewMiner)
-// 	}
-// }
 
 func (mc *Chain) ChainStarted(ctx context.Context) bool {
 	timer := time.NewTimer(time.Second)

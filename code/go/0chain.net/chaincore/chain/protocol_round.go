@@ -250,7 +250,6 @@ func (c *Chain) GetHeaviestNotarizedBlock(r round.RoundI) *block.Block {
 		}
 
 		if nb.Round != rn {
-			println("SOMETHING WIRED IS HERE (1)")
 			return nil, common.NewError("invalid_block",
 				"Block not from the requested round")
 		}
@@ -353,15 +352,4 @@ func (c *Chain) GetLatestFinalizedMagicBlockRound(rn int64) (
 	}
 
 	return
-}
-
-// TODO (sfxdx): REMOVE THE INSPECTION
-func (c *Chain) InsepectLFMBSRs() {
-	c.lfmbMutex.RLock()
-	defer c.lfmbMutex.RUnlock()
-
-	println("INSPECT LFMB SRs:")
-	for rn, bl := range c.magicBlockStartingRounds {
-		println("  -", rn, bl.MagicBlock.StartingRound, bl.Hash, bl.PreviousMagicBlockHash)
-	}
 }

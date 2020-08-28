@@ -201,7 +201,6 @@ func VerifyBlockHandler(ctx context.Context, entity datastore.Entity) (interface
 	}
 	mc := GetMinerChain()
 	if b.MinerID == node.Self.Underlying().GetKey() {
-		println("GOT OWN BLOCK TO VERIFY ::: SKIP (R)")
 		return nil, nil
 	}
 	var lfb = mc.GetLatestFinalizedBlock()
@@ -247,8 +246,10 @@ func NotarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (i
 	return nil, nil
 }
 
-/*NotarizedBlockHandler - handles a notarized block*/
-func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+// NotarizedBlockHandler - handles a notarized block.
+func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (
+	interface{}, error) {
+
 	b, ok := entity.(*block.Block)
 	if !ok {
 		return nil, common.InvalidRequest("Invalid Entity")
@@ -277,13 +278,6 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 		if r = mc.getRound(ctx, b.Round); isNilRound(r) {
 			return nil, nil // miner is far ahead of sharders, skip
 		}
-		if r.GetRandomSeed() == 0 {
-			println("HANDLE NOT. BLOCK: round created with no random seed (failure)", b.Round)
-		}
-	} else {
-		if r.GetRandomSeed() == 0 {
-			println("HANDLE NOT. BLOCK: round exists with no random seed (failure)", b.Round)
-		}
 	}
 
 	if r.IsFinalizing() || r.IsFinalized() {
@@ -297,12 +291,10 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (interf
 
 	if err := mc.VerifyNotarization(ctx, b.Hash, b.GetVerificationTickets(),
 		r.GetRoundNumber()); err != nil {
-		println("CAN'T VERIFY NOTARIZATION", b.Round)
 		return nil, err
 	}
 
 	if r.GetRandomSeed() == 0 {
-		println("HANDLE NOT. BLOCK: set round random seed by the block", b.Round, b.GetRoundRandomSeed())
 		r.SetRandomSeed(b.GetRoundRandomSeed())
 		r.ComputeMinerRanks(mc.GetMiners(b.Round))
 	}
