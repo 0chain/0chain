@@ -1,7 +1,7 @@
 version: 1.0
 
 logging:
-  level: "debug"
+  level: "info"
   console: false # printing log to console is only supported in development mode
   goroutines: false
   memlog: false
@@ -55,7 +55,7 @@ server_chain:
       max_wait_time: 180 # milliseconds
       wait_mode: static # static or dynamic
     consensus:
-      threshold_by_count: 51 # percentage
+      threshold_by_count: 66 # percentage
       threshold_by_stake: 0 # percent
     sharding:
       min_active_sharders: 25 # percentage
