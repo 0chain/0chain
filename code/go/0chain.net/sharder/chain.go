@@ -32,12 +32,19 @@ func SetupSharderChain(c *chain.Chain) {
 	sharderChain.BlockTxnCache = cache.NewLRUCache(transactionCacheSize)
 	c.SetFetchedNotarizedBlockHandler(sharderChain)
 	sharderChain.BlockSyncStats = &SyncStats{}
+	sharderChain.TieringStats = &MinioStats{}
 	c.RoundF = SharderRoundFactory{}
 }
 
 /*GetSharderChain - get the sharder's chain */
 func GetSharderChain() *Chain {
 	return sharderChain
+}
+
+type MinioStats struct {
+	TotalBlocksUploaded int64
+	LastRoundUploaded   int64
+	LastUploadTime      time.Time
 }
 
 /*Chain - A chain structure to manage the sharder activities */
@@ -49,6 +56,7 @@ type Chain struct {
 	BlockTxnCache  cache.Cache
 	SharderStats   Stats
 	BlockSyncStats *SyncStats
+	TieringStats   *MinioStats
 }
 
 /*GetBlockChannel - get the block channel where the incoming blocks from the network are put into for further processing */

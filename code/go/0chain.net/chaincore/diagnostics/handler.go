@@ -61,7 +61,7 @@ func WriteStatisticsCSS(w http.ResponseWriter) {
 
 /*WriteConfiguration - write summary information */
 func WriteConfiguration(w http.ResponseWriter, c *chain.Chain) {
-	fmt.Fprintf(w, "<table>")
+	fmt.Fprintf(w, "<table width='100%%'>")
 	fmt.Fprintf(w, "<tr><th class='sheader' colspan='2'>Configuration <a href='v1/config/get'>...</a></th></tr>")
 	fmt.Fprintf(w, "<tr><td>Round Generators/Replicators</td><td>%d/%d</td></tr>", c.NumGenerators, c.NumReplicators)
 	fmt.Fprintf(w, "<tr><td>Block Size</td><td>%v - %v</td></tr>", c.MinBlockSize, c.BlockSize)
@@ -120,7 +120,7 @@ func WriteHistogramStatistics(w http.ResponseWriter, c *chain.Chain, metric metr
 
 /*WriteCurrentStatus - write the current status of the chain */
 func WriteCurrentStatus(w http.ResponseWriter, c *chain.Chain) {
-	fmt.Fprintf(w, "<table>")
+	fmt.Fprintf(w, "<table width='100%%' >")
 	fmt.Fprintf(w, "<tr><th class='sheader' colspan='2'>Current Status</th></tr>")
 	fmt.Fprintf(w, "<tr><td>Current Round</td><td>%v</td></tr>", c.GetCurrentRound())
 	lfb := c.GetLatestFinalizedBlock()
