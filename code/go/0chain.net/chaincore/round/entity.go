@@ -251,6 +251,7 @@ func (r *Round) GetVRFOutput() string {
 func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
+
 	b, _ = r.addProposedBlock(b)
 	found := -1
 

@@ -211,11 +211,12 @@ type MagicBlockSaveFunc func(context.Context, *block.Block) error
 // VerifyChainHistory repairs and verifies magic blocks chain.
 func (c *Chain) VerifyChainHistory(ctx context.Context,
 	latestMagicBlock *block.Block, saveHandler MagicBlockSaveFunc) (err error) {
-	mb := c.GetCurrentMagicBlock()
 
 	var (
+		cmb = c.GetCurrentMagicBlock()
+
 		currentMagicBlock = c.GetLatestFinalizedMagicBlock()
-		sharders          = mb.Sharders.N2NURLs()
+		sharders          = cmb.Sharders.N2NURLs()
 		magicBlock        *block.Block
 	)
 

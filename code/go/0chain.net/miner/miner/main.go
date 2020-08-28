@@ -174,15 +174,21 @@ func main() {
 	common.ConfigRateLimits()
 	initN2NHandlers()
 
-	// load the latest and previous MB and related DKG if any
+	// Load previous MB and related DKG if any. Don't load the latest, since
+	// it can be promoted (not finalized).
 	mc.LoadMagicBlocksAndDKG(ctx)
 
-	if err := mc.WaitForActiveSharders(ctx); err != nil {
+	if err = mc.WaitForActiveSharders(ctx); err != nil {
 		Logger.Error("failed to wait sharders", zap.Error(err))
 	}
-	if err := getCurrentMagicBlockFromSharders(mc); err != nil {
+	if err = GetLatestMagicBlockFromSharders(ctx, mc); err != nil {
 		Logger.Panic(err.Error())
 	}
+
+	// ignoring error and without retries, restart round will resolve it
+	// if there is errors
+	mc.SetupLatestAndPreviousMagicBlocks(ctx)
+
 	mb = mc.GetLatestMagicBlock()
 	if mb.StartingRound == 0 && mb.IsActiveNode(node.Self.Underlying().GetKey(), mb.StartingRound) {
 		dkgShare := &bls.DKGSummary{
@@ -192,8 +198,7 @@ func main() {
 		for k, v := range mb.GetShareOrSigns().GetShares() {
 			dkgShare.SecretShares[miner.ComputeBlsID(k)] = v.ShareOrSigns[node.Self.Underlying().GetKey()].Share
 		}
-		err = miner.StoreDKGSummary(ctx, dkgShare)
-		if err != nil {
+		if err = miner.StoreDKGSummary(ctx, dkgShare); err != nil {
 			panic(err)
 		}
 	}
@@ -247,8 +252,8 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, error) {
 	}
 	defer reader.Close()
 	scanner := bufio.NewScanner(reader)
-	scanner.Scan() //throw away the publickey
-	scanner.Scan() //throw away the secretkey
+	scanner.Scan() // throw away the publickey
+	scanner.Scan() // throw away the secretkey
 	result := scanner.Scan()
 	if result == false {
 		return "", "", 0, errors.New("error reading Host")
@@ -317,57 +322,73 @@ func readMagicBlockFile(magicBlockFile *string, mc *miner.Chain, serverChain *ch
 	return mB
 }
 
-func getCurrentMagicBlockFromSharders(mc *miner.Chain) (err error) {
+func getMagicBlocksFromSharders(ctx context.Context, mc *miner.Chain) (
+	list []*block.Block, err error) {
 
 	const limitAttempts = 10
 
 	var (
 		attempt      = 0
 		retryTimeout = time.Second * 5
-		mbs          []*block.Block
 	)
 
-	for len(mbs) == 0 {
-		mbs = mc.GetLatestFinalizedMagicBlockFromSharder(common.GetRootContext())
-		if len(mbs) == 0 {
+	for len(list) == 0 {
+		list = mc.GetLatestFinalizedMagicBlockFromSharder(ctx)
+		if len(list) == 0 {
 			attempt++
 			if attempt >= limitAttempts {
-				Logger.DPanic("No finalized magic block from sharder")
+				return nil, common.NewErrorf("get_lfmbs_from_sharders",
+					"no lfmb given after %d attempts", attempt)
 			}
 			Logger.Warn("get_current_mb_sharder -- retry", zap.Any("attempt", attempt),
 				zap.Any("timeout", retryTimeout))
-			time.Sleep(retryTimeout)
+			select {
+			case <-ctx.Done():
+				return nil, common.NewError("get_lfmbs_from_sharders",
+					"context done: exiting")
+			case <-time.After(retryTimeout):
+			}
 		}
 	}
 
-	// TODO (sfxdx) reversed sorting?
-	sort.Slice(mbs, func(i, j int) bool {
-		return mbs[i].StartingRound < mbs[j].StartingRound
+	return
+}
+
+func GetLatestMagicBlockFromSharders(ctx context.Context, mc *miner.Chain) (
+	err error) {
+
+	var list []*block.Block
+	if list, err = getMagicBlocksFromSharders(ctx, mc); err != nil {
+		return
+	}
+
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].StartingRound > list[j].StartingRound
 	})
 
 	var (
-		magicBlock = mbs[0]
-		cmb        = mc.GetCurrentMagicBlock()
+		lfmb = list[0]
+		cmb  = mc.GetCurrentMagicBlock()
 	)
 
 	switch {
-	case magicBlock.StartingRound < cmb.StartingRound:
+	case lfmb.StartingRound < cmb.StartingRound:
 		// can't initialize this magic block
 		return // nil
-	case magicBlock.StartingRound == cmb.StartingRound:
+	case lfmb.StartingRound == cmb.StartingRound:
 		// ok, initialize the magicBlock
 	default: // magicBlock > cmb.StartingRoound, verify chain
-		err = mc.VerifyChainHistory(common.GetRootContext(), magicBlock, nil)
+		err = mc.VerifyChainHistory(common.GetRootContext(), lfmb, nil)
 		if err != nil {
 			return
 		}
 	}
 
-	if err = mc.UpdateMagicBlock(magicBlock.MagicBlock); err != nil {
+	if err = mc.UpdateMagicBlock(lfmb.MagicBlock); err != nil {
 		return fmt.Errorf("failed to update magic block: %v", err)
 	}
-	mc.SetLatestFinalizedMagicBlock(magicBlock)
-	mc.UpdateNodesFromMagicBlock(magicBlock.MagicBlock)
+	mc.SetLatestFinalizedMagicBlock(lfmb)
+	mc.UpdateNodesFromMagicBlock(lfmb.MagicBlock)
 	return nil
 }
 

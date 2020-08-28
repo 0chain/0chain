@@ -140,14 +140,15 @@ func (c *Chain) healthSummary(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Chain) roundHealthInATable(w http.ResponseWriter, r *http.Request) {
-	cr := c.GetRound(c.GetCurrentRound())
+	var rn = c.GetCurrentRound()
+	cr := c.GetRound(rn)
 
 	vrfMsg := "N/A"
 	notarizations := 0
 	proposals := 0
 	rrs := int64(0)
 
-	mb := c.GetCurrentMagicBlock()
+	var mb = c.GetMagicBlock(rn)
 
 	if node.Self.Underlying().Type == node.NodeTypeMiner {
 		var shares int
@@ -248,7 +249,7 @@ func (c *Chain) chainHealthInATable(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Fprintf(w, "</tr>")
 	fmt.Fprintf(w, "<tr class='active'>")
-	fmt.Fprintf(w, "<td class='number'>")
+	fmt.Fprintf(w, "<td>")
 	fmt.Fprintf(w, "Deterministic Finalized Round")
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "<td class='number'>")
@@ -296,7 +297,7 @@ func (c *Chain) chainHealthInATable(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Fprintf(w, "<tr class='active'>")
 	fmt.Fprintf(w, "<td>")
-	fmt.Fprintf(w, "Related magic block / Related finalized magic block")
+	fmt.Fprintf(w, "Related MB / finalized MB")
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "<td class='number'>")
 	fmt.Fprintf(w, "%v / %v", mb.StartingRound, fmb.StartingRound)

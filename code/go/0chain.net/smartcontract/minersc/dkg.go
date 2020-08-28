@@ -114,6 +114,8 @@ func (msc *MinerSmartContract) moveToShareOrPublish(
 		return false
 	}
 
+	println("MOVE TO SHARE OR PUBLISH:", mpks != nil && len(mpks.Mpks) >= dkgMinersList.K,
+		"MPKS != NIL", mpks != nil, "L(MPKS)", len(mpks.Mpks), ">=", dkgMinersList.K)
 	return mpks != nil && len(mpks.Mpks) >= dkgMinersList.K
 }
 

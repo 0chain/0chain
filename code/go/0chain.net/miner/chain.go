@@ -114,6 +114,17 @@ type Chain struct {
 
 	// view change process control
 	viewChangeProcess
+
+	// not. blocks pulling joining at VC
+	pullingPin int64
+}
+
+func (mc *Chain) startPulling() (ok bool) {
+	return atomic.CompareAndSwapInt64(&mc.pullingPin, 0, 1)
+}
+
+func (mc *Chain) stopPulling() (ok bool) {
+	return atomic.CompareAndSwapInt64(&mc.pullingPin, 1, 0)
 }
 
 // SetDiscoverClients set the discover clients parameter
@@ -236,7 +247,7 @@ func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) erro
 // 	// is finalized and thus we are using rounds without any offsets
 //
 // 	var (
-// 		cdkg = mc.GetCurrentDKG(round)
+// 		cdkg = mc.GetDKG(round)
 //
 // 		nvc    = mc.NextViewChange() // no MB offset
 // 		cdkgsr = cdkg.StartingRound  // no MB offset
@@ -246,13 +257,46 @@ func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) erro
 // 	return
 // }
 
-// isViewChanging returns true for 501, 502 and 503 rounds
+// isViewChanging returns true for 501-504 rounds
 func (mc *Chain) isViewChanging(round int64) (is bool) {
 	var (
 		lfb = mc.GetLatestFinalizedBlock() //
 		nvc = mc.NextViewChange(lfb)       // expected
 	)
-	return nvc == round || nvc+1 == round || nvc+2 == round // 501, 502, or 503
+	return round >= nvc && round < nvc+chain.ViewChangeOffset
+}
+
+// The sJoining returns true if this miner joins blockchain on current view
+// changing. For rounds, for example, from 501 to 504.
+func (mc *Chain) isJoining(rn int64) (is bool) {
+
+	var (
+		lfb = mc.GetLatestFinalizedBlock()
+		nvc = mc.NextViewChange(lfb)
+	)
+
+	if lfb.Round >= nvc && rn < nvc+chain.ViewChangeOffset {
+		// get current magic block
+		var (
+			mb  = mc.GetMagicBlock(rn)
+			nmb = mc.GetMagicBlock(nvc + chain.ViewChangeOffset)
+
+			key = node.Self.Underlying().GetKey()
+		)
+		// TODO (sfxdx): remove the logs
+		if nmb.StartingRound != nvc {
+			println("isJoining: unexpected next MB", "MB", mb.StartingRound, "NMB", nmb.StartingRound)
+			return false // unexpected next magic block
+		}
+		// TODO (sfxdx): remove the logs
+		if !mb.Miners.HasNode(key) && nmb.Miners.HasNode(key) {
+			println("VIEW CHANGING NODE START NEW ROUND")
+			println("  MB", mb.StartingRound, "NMB", nmb.StartingRound)
+			return true
+		}
+	}
+
+	return // false
 }
 
 // TODO (sfdx): TO REMOVE OR TO KEEP OR TO MODIFY (questionable code)
@@ -512,8 +556,8 @@ func mbRoundOffset(rn int64) int64 {
 	return rn - chain.ViewChangeOffset // MB offset
 }
 
-// GetCurrentDKG returns DKG by round number
-func (mc *Chain) GetCurrentDKG(round int64) *bls.DKG {
+// GetDKG returns DKG by round number.
+func (mc *Chain) GetDKG(round int64) *bls.DKG {
 
 	round = mbRoundOffset(round)
 

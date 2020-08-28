@@ -78,6 +78,7 @@ func (r *Round) isVerificationComplete() bool {
 func (r *Round) StartVerificationBlockCollection(ctx context.Context) context.Context {
 	r.muVerification.Lock()
 	defer r.muVerification.Unlock()
+
 	if r.verificationCancelf != nil {
 		return nil
 	}

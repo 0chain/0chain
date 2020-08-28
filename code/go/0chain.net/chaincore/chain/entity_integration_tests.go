@@ -23,13 +23,8 @@ func (c *Chain) IsRoundGenerator(r round.RoundI, nd *node.Node) bool {
 	}
 
 	var competingBlock = state.CompetingBlock
-
-	comp = competingBlock.
-		IsCompetingRoundGenerator(
-			state,
-			nd.GetKey(),
-			r.GetRoundNumber(),
-		)
+	comp = competingBlock.IsCompetingRoundGenerator(state, nd.GetKey(),
+		r.GetRoundNumber())
 
 	if comp {
 		return true // competing generator

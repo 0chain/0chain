@@ -9,7 +9,7 @@ import (
 	"go.uber.org/zap"
 )
 
-/*HandleVRFShare - handles the vrf share */
+// HandleVRFShare - handles the vrf share.
 func (mc *Chain) HandleVRFShare(ctx context.Context, msg *BlockMessage) {
 	mr := mc.GetMinerRound(msg.VRFShare.Round)
 	if mr == nil {
@@ -20,14 +20,20 @@ func (mc *Chain) HandleVRFShare(ctx context.Context, msg *BlockMessage) {
 	}
 }
 
-/*handleVerifyBlockMessage - handles the verify block message */
+// HandleVerifyBlockMessage - handles the verify block message.
 func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage) {
-	b := msg.Block
+
+	var b = msg.Block
+
 	if b.Round < mc.GetCurrentRound()-1 {
-		Logger.Debug("verify block (round mismatch)", zap.Int64("current_round", mc.GetCurrentRound()), zap.Int64("block_round", b.Round))
+		Logger.Debug("verify block (round mismatch)",
+			zap.Int64("current_round", mc.GetCurrentRound()),
+			zap.Int64("block_round", b.Round))
 		return
 	}
-	mr := mc.GetMinerRound(b.Round)
+
+	var mr = mc.GetMinerRound(b.Round)
+
 	if mr == nil {
 
 		Logger.Error("handle verify block - got block proposal before starting round",
@@ -193,29 +199,32 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 	go mc.MergeNotarization(ctx, r, b, vts)
 }
 
-/*HandleNotarizedBlockMessage - handles a notarized block for a previous round*/
+// HandleNotarizedBlockMessage - handles a notarized block for a previous round.
 func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMessage) {
-	mb := msg.Block
-	mr := mc.GetMinerRound(mb.Round)
+	var (
+		nb = msg.Block
+		mr = mc.GetMinerRound(nb.Round)
+	)
+
 	if mr == nil {
-		if mr = mc.getRound(ctx, mb.Round); mr == nil {
+		if mr = mc.getRound(ctx, nb.Round); mr == nil {
 			return // miner is far ahead of sharders, skip for now
 		}
-		mc.startRound(ctx, mr, mb.GetRoundRandomSeed())
+		mc.startRound(ctx, mr, nb.GetRoundRandomSeed())
 	} else {
 		if mr.IsVerificationComplete() {
 			return // verification for the round complete
 		}
 		for _, blk := range mr.GetNotarizedBlocks() {
-			if blk.Hash == mb.Hash {
+			if blk.Hash == nb.Hash {
 				return // already have
 			}
 		}
 		if !mr.IsVRFComplete() {
-			mc.startRound(ctx, mr, mb.GetRoundRandomSeed())
+			mc.startRound(ctx, mr, nb.GetRoundRandomSeed())
 		}
 	}
-	b := mc.AddRoundBlock(mr, mb)
+	b := mc.AddRoundBlock(mr, nb)
 	if !mc.AddNotarizedBlock(ctx, mr, b) {
 		return
 	}

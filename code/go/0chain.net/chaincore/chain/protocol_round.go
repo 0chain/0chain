@@ -218,58 +218,76 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 	c.PruneChain(ctx, frchain[len(frchain)-1])
 }
 
-/*GetHeaviestNotarizedBlock - get a notarized block for a round */
+// GetHeaviestNotarizedBlock - get a notarized block for a round.
 func (c *Chain) GetHeaviestNotarizedBlock(r round.RoundI) *block.Block {
-	nbrequestor := MinerNotarizedBlockRequestor
-	roundNumber := r.GetRoundNumber()
-	params := &url.Values{}
-	params.Add("round", fmt.Sprintf("%v", roundNumber))
-	ctx, cancelf := context.WithCancel(common.GetRootContext())
-	mb := c.GetMagicBlock(roundNumber)
-	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-		Logger.Info("get notarized block for round", zap.Int64("round", roundNumber), zap.String("block", entity.GetKey()))
+
+	var (
+		rn     = r.GetRoundNumber()
+		params = &url.Values{}
+	)
+
+	params.Add("round", fmt.Sprintf("%v", rn))
+
+	var (
+		ctx, cancelf = context.WithCancel(common.GetRootContext())
+		mb           = c.GetMagicBlock(rn)
+	)
+
+	var handler = func(ctx context.Context, entity datastore.Entity) (
+		resp interface{}, err error) {
+
+		Logger.Info("get notarized block for round", zap.Int64("round", rn),
+			zap.String("block", entity.GetKey()))
+
 		if b := r.GetHeaviestNotarizedBlock(); b != nil {
 			cancelf()
 			return b, nil
 		}
-		nb, ok := entity.(*block.Block)
+
+		var nb, ok = entity.(*block.Block)
 		if !ok {
 			return nil, datastore.ErrInvalidEntity
 		}
-		if nb.Round != roundNumber {
-			return nil, common.NewError("invalid_block", "Block not from the requested round")
-		}
 
-		if nb.Round != r.GetRoundNumber() {
+		if nb.Round != rn {
 			println("SOMETHING WIRED IS HERE (1)")
+			return nil, common.NewError("invalid_block",
+				"Block not from the requested round")
 		}
 
-		if err := c.VerifyNotarization(ctx, nb.Hash, nb.GetVerificationTickets(), r.GetRoundNumber()); err != nil {
-			Logger.Error("get notarized block for round - validate notarization", zap.Int64("round", roundNumber), zap.String("block", nb.Hash), zap.Error(err))
-			return nil, err
+		err = c.VerifyNotarization(ctx, nb.Hash,
+			nb.GetVerificationTickets(), rn)
+		if err != nil {
+			Logger.Error("get notarized block for round - validate notarization",
+				zap.Int64("round", rn), zap.String("block", nb.Hash),
+				zap.Error(err))
+			return
 		}
-		if err := nb.Validate(ctx); err != nil {
-			Logger.Error("get notarized block for round - validate", zap.Int64("round", roundNumber), zap.String("block", nb.Hash), zap.Error(err))
-			return nil, err
+		if err = nb.Validate(ctx); err != nil {
+			Logger.Error("get notarized block for round - validate",
+				zap.Int64("round", rn), zap.String("block", nb.Hash),
+				zap.Error(err))
+			return
 		}
 
 		if nb.RoundTimeoutCount != r.GetTimeoutCount() {
-			Logger.Info("Timeoutcount on Round and NB are out-of-sync",
-				zap.Int64("round", roundNumber),
+			Logger.Info("Timeout count on Round and NB are out-of-sync",
+				zap.Int64("round", rn),
 				zap.Int("nb_toc", nb.RoundTimeoutCount),
 				zap.Int("round_toc", r.GetTimeoutCount()))
 		}
 
 		var b *block.Block
-		//This is a notarized block. So, use this method to sync round info with the notarized block.
+		// This is a notarized block. So, use this method to sync round info with the notarized block.
 		b, r = c.AddNotarizedBlockToRound(r, nb)
 
-		//TODO: this may not be the best round block or the best chain weight block. Do we do that extra work?
+		// TODO: this may not be the best round block or the best chain weight
+		// block. Do we do that extra work?
 		b, _ = r.AddNotarizedBlock(b)
 		return b, nil
 	}
-	n2n := mb.Miners
-	n2n.RequestEntity(ctx, nbrequestor, params, handler)
+
+	mb.Miners.RequestEntity(ctx, MinerNotarizedBlockRequestor, params, handler)
 	return r.GetHeaviestNotarizedBlock()
 }
 
@@ -335,4 +353,15 @@ func (c *Chain) GetLatestFinalizedMagicBlockRound(rn int64) (
 	}
 
 	return
+}
+
+// TODO (sfxdx): REMOVE THE INSPECTION
+func (c *Chain) InsepectLFMBSRs() {
+	c.lfmbMutex.RLock()
+	defer c.lfmbMutex.RUnlock()
+
+	println("INSPECT LFMB SRs:")
+	for rn, bl := range c.magicBlockStartingRounds {
+		println("  -", rn, bl.MagicBlock.StartingRound, bl.Hash, bl.PreviousMagicBlockHash)
+	}
 }

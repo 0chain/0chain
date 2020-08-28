@@ -84,6 +84,8 @@ func (mc *Chain) isActiveInChain(lfb *block.Block, mb *block.MagicBlock) bool {
 		mb.StartingRound < mc.GetCurrentRound() && lfb.ClientState != nil
 }
 
+// TODO (sfxdx): TO REMOVE -- OLD CODE
+//
 // // After stop/start we have to repair nextViewCahnge round number from
 // // store if there is the latest MB saved by Miner SC.
 // func (vcp *viewChangeProcess) setupNextViewChange(ctx context.Context) {
@@ -705,6 +707,7 @@ func (mc *Chain) NextViewChange(lfb *block.Block) (round int64) {
 	if err = gn.Decode(seri.Encode()); err != nil {
 		Logger.Error("next_vc -- can't decode miner SC global node",
 			zap.Error(err))
+		return
 	}
 
 	return gn.ViewChange // got it
@@ -930,4 +933,81 @@ func LoadLatestMB(ctx context.Context) (mb *block.MagicBlock, err error) {
 	mb = data.MagicBlock
 	println("LOAD LATEST MB:", mb.StartingRound, "/", mb.MagicBlockNumber)
 	return
+}
+
+//
+// Setup miner (initialization).
+//
+
+func (mc *Chain) updateMagicBlocks(mbs ...*block.Block) {
+	for _, mb := range mbs {
+		if mb == nil {
+			continue
+		}
+		mc.UpdateMagicBlock(mb.MagicBlock)
+		mc.SetLatestFinalizedMagicBlock(mb)
+		mc.UpdateNodesFromMagicBlock(mb.MagicBlock)
+	}
+}
+
+// SetupLatestAndPreviousMagicBlocks used to be sure miner has latest and
+// previous MB and corresponding DKG. The previous MB can be useless in
+// some cases but this method just makes sure it is.
+func (mc *Chain) SetupLatestAndPreviousMagicBlocks(ctx context.Context) {
+
+	Logger.Info("setup latest and previous fmbs")
+
+	println("SETUP LATEST/PREVIOUS LFMBs")
+
+	var lfmb = mc.GetLatestFinalizedMagicBlock()
+	mc.SetDKGSFromStore(ctx, lfmb.MagicBlock)
+	println("  LFMB:", lfmb.StartingRound)
+
+	if lfmb.MagicBlockNumber <= 1 {
+		mc.updateMagicBlocks(lfmb)
+		return // no previous MB is expected
+	}
+
+	var pfmb = mc.GetLatestFinalizedMagicBlockRound(lfmb.StartingRound - 1)
+
+	if pfmb.MagicBlock.Hash == lfmb.MagicBlock.PreviousMagicBlockHash {
+		mc.SetDKGSFromStore(ctx, lfmb.MagicBlock)
+		println("  PFMB:", pfmb.StartingRound, "(by round)")
+		mc.updateMagicBlocks(pfmb, lfmb)
+		return
+	}
+
+	var err error
+	pfmb, err = mc.GetBlock(ctx, lfmb.LatestFinalizedMagicBlockHash)
+	if err == nil && pfmb.MagicBlock != nil &&
+		pfmb.MagicBlock.Hash == lfmb.MagicBlock.PreviousMagicBlockHash {
+		mc.SetDKGSFromStore(ctx, pfmb.MagicBlock)
+		println("  PFMB:", pfmb.StartingRound, "(get block)")
+		mc.updateMagicBlocks(pfmb, lfmb)
+		return
+	}
+
+	// load from sharders
+	pfmb, err = httpclientutil.GetMagicBlockCall(lfmb.Sharders.N2NURLs(),
+		lfmb.MagicBlockNumber-1, 1)
+	if err != nil || pfmb.MagicBlock == nil {
+		Logger.Error("getting previous FMB from sharder", zap.Error(err),
+			zap.Int64("num", lfmb.MagicBlockNumber-1),
+			zap.Bool("has_mb", pfmb.MagicBlock != nil))
+		return // error
+	}
+
+	if pfmb.MagicBlock.GetHash() != lfmb.MagicBlock.PreviousMagicBlockHash {
+		Logger.Error("getting previous FMB from sharder",
+			zap.String("err", "invalid hash"),
+			zap.Int64("num", lfmb.MagicBlockNumber-1))
+		return // error
+	}
+
+	mc.SetDKGSFromStore(ctx, pfmb.MagicBlock)
+	println("  PFMB:", pfmb.StartingRound, "(fetch)")
+	mc.updateMagicBlocks(pfmb, lfmb) // ok
+
+	// TODO (sfxdx): REMOVE THE INSPECTION
+	mc.InsepectLFMBSRs()
 }

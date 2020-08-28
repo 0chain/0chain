@@ -167,12 +167,13 @@ func mbRoundOffset(rn int64) int64 {
 
 // GetCurrentMagicBlock returns MB for current round
 func (c *Chain) GetCurrentMagicBlock() *block.MagicBlock {
-	if c.GetCurrentRound() == 0 {
+	var rn = c.GetCurrentRound()
+	if rn == 0 {
 		return c.GetLatestMagicBlock()
 	}
 
-	var round = mbRoundOffset(c.CurrentRound)
-	return c.GetMagicBlock(round) // FIXME: race current round and deadlock
+	rn = mbRoundOffset(rn)
+	return c.GetMagicBlock(rn)
 }
 
 func (c *Chain) GetLatestMagicBlock() *block.MagicBlock {
@@ -1019,14 +1020,15 @@ func (c *Chain) GetSignatureScheme() encryption.SignatureScheme {
 	return encryption.GetSignatureScheme(c.ClientSignatureScheme)
 }
 
-//CanShardBlocks - is the network able to effectively shard the blocks?
+// CanShardBlocks - is the network able to effectively shard the blocks?
 func (c *Chain) CanShardBlocks(nRound int64) bool {
 	mb := c.GetMagicBlock(nRound)
 	return mb.Sharders.GetActiveCount()*100 >= mb.Sharders.Size()*c.MinActiveSharders
 }
 
-//CanShardBlocksSharders - is the network able to effectively shard the blocks?
+// CanShardBlocksSharders - is the network able to effectively shard the blocks?
 func (c *Chain) CanShardBlocksSharders(sharders *node.Pool) bool {
+	println("CAN SHARD BLOCK SHARDERS:", sharders.GetActiveCount()*100, ">=", sharders.Size()*c.MinActiveSharders, "SS", sharders.Size(), "MAS", c.MinActiveSharders)
 	return sharders.GetActiveCount()*100 >= sharders.Size()*c.MinActiveSharders
 }
 
@@ -1259,7 +1261,7 @@ func (c *Chain) GetLatestFinalizedMagicBlock() *block.Block {
 	return c.LatestFinalizedMagicBlock
 }
 
-//GetLatestFinalizedBlockSummary - get the latest finalized block summary
+// GetLatestFinalizedBlockSummary - get the latest finalized block summary.
 func (c *Chain) GetLatestFinalizedMagicBlockSummary() *block.BlockSummary {
 	c.lfmbMutex.RLock()
 	defer c.lfmbMutex.RUnlock()
