@@ -25,6 +25,8 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 
 	var b = msg.Block
 
+	println("H verify block", b.Round)
+
 	if b.Round < mc.GetCurrentRound()-1 {
 		Logger.Debug("verify block (round mismatch)",
 			zap.Int64("current_round", mc.GetCurrentRound()),
@@ -59,8 +61,10 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 
 			if mr.GetTimeoutCount() < b.RoundTimeoutCount {
 				Logger.Info("Insync ignoring handle verify block - got block proposal before VRF is complete",
-					zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("miner", b.MinerID),
-					zap.Int("round_toc", mr.GetTimeoutCount()), zap.Int("round_toc", b.RoundTimeoutCount))
+					zap.Int64("round", b.Round), zap.String("block", b.Hash),
+					zap.String("miner", b.MinerID),
+					zap.Int("round_toc", mr.GetTimeoutCount()),
+					zap.Int("round_toc", b.RoundTimeoutCount))
 				return
 			}
 			//TODO: Byzantine
@@ -78,8 +82,11 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 					b = b1
 					mr = r1.(*Round)
 					Logger.Info("Added a notarizedBlockToRound - got notarized block with different ",
-						zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("miner", b.MinerID),
-						zap.Int("round_toc", mr.GetTimeoutCount()), zap.Int("round_toc", b.RoundTimeoutCount))
+						zap.Int64("round", b.Round),
+						zap.String("block", b.Hash),
+						zap.String("miner", b.MinerID),
+						zap.Int("round_toc", mr.GetTimeoutCount()),
+						zap.Int("round_toc", b.RoundTimeoutCount))
 
 				} else {
 					b = mc.AddRoundBlock(mr, b)
@@ -98,13 +105,14 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 		return
 	}
 
-	// mr != nil
+	// else if -> mr is not nil
 
 	if mr.IsVerificationComplete() {
 		return
 	}
+
 	if mr.GetRandomSeed() != b.GetRoundRandomSeed() {
-		Logger.Error("Got a block for verification with wrong randomseed",
+		Logger.Error("Got a block for verification with wrong random seed",
 			zap.Int64("roundNum", mr.GetRoundNumber()),
 			zap.Int("roundToc", mr.GetTimeoutCount()),
 			zap.Int("blockToc", b.RoundTimeoutCount),
@@ -112,10 +120,12 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 			zap.Int64("blockrrs", b.GetRoundRandomSeed()))
 		return
 	}
+
 	if !mc.ValidGenerator(mr.Round, b) {
 		Logger.Error("Not a valid generator. Ignoring block with hash = " + b.Hash)
 		return
 	}
+
 	Logger.Info("Added block to Round with hash = " + b.Hash)
 	mc.AddToRoundVerification(ctx, mr, b)
 }
@@ -162,8 +172,10 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context, msg *Block
 	mc.ProcessVerifiedTicket(ctx, mr, b, &msg.BlockVerificationTicket.VerificationTicket)
 }
 
-/*HandleNotarizationMessage - handles the block notarization message */
+// HandleNotarizationMessage - handles the block notarization message.
 func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessage) {
+	println("H not. msg", msg.Notarization.Round)
+
 	var lfb = mc.GetLatestFinalizedBlock()
 	if msg.Notarization.Round < lfb.Round {
 		Logger.Debug("notarization message",
@@ -174,6 +186,7 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 	}
 	r := mc.GetMinerRound(msg.Notarization.Round)
 	if r == nil {
+		println("H not. msg", msg.Notarization.Round, "no round")
 		if msg.ShouldRetry() {
 			Logger.Error("notarization receipt handler (round not started yet) retrying",
 				zap.String("block", msg.Notarization.BlockID),
@@ -190,10 +203,12 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 	b, err := mc.GetBlock(ctx, msg.Notarization.BlockID)
 	if err != nil {
 		mc.AsyncFetchNotarizedBlock(msg.Notarization.BlockID)
+		println("H not. msg", msg.Notarization.Round, "async fetch the block")
 		return
 	}
 	vts := b.UnknownTickets(msg.Notarization.VerificationTickets)
 	if len(vts) == 0 {
+		println("H not. msg", msg.Notarization.Round, "no vt")
 		return
 	}
 	go mc.MergeNotarization(ctx, r, b, vts)
@@ -205,18 +220,22 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMess
 		nb = msg.Block
 		mr = mc.GetMinerRound(nb.Round)
 	)
+	println("H not. block", nb.Round)
 
 	if mr == nil {
 		if mr = mc.getRound(ctx, nb.Round); mr == nil {
+			println("H not. block", nb.Round, "far ahead")
 			return // miner is far ahead of sharders, skip for now
 		}
 		mc.startRound(ctx, mr, nb.GetRoundRandomSeed())
 	} else {
 		if mr.IsVerificationComplete() {
+			println("H not. block", nb.Round, "verification complete")
 			return // verification for the round complete
 		}
 		for _, blk := range mr.GetNotarizedBlocks() {
 			if blk.Hash == nb.Hash {
+				println("H not. block", nb.Round, "already have the block")
 				return // already have
 			}
 		}
@@ -226,7 +245,9 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context, msg *BlockMess
 	}
 	b := mc.AddRoundBlock(mr, nb)
 	if !mc.AddNotarizedBlock(ctx, mr, b) {
+		println("H not. block", nb.Round, "not add not. block")
 		return
 	}
+	println("H not. block", nb.Round, "start next round")
 	mc.StartNextRound(ctx, mr) // start next or skip
 }

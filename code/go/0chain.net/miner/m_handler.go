@@ -194,12 +194,15 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 }
 
 // VerifyBlockHandler - verify the block that is received.
-func VerifyBlockHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-	b, ok := entity.(*block.Block)
+func VerifyBlockHandler(ctx context.Context, entity datastore.Entity) (
+	interface{}, error) {
+
+	var b, ok = entity.(*block.Block)
 	if !ok {
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
-	mc := GetMinerChain()
+
+	var mc = GetMinerChain()
 	if b.MinerID == node.Self.Underlying().GetKey() {
 		return nil, nil
 	}
@@ -208,10 +211,15 @@ func VerifyBlockHandler(ctx context.Context, entity datastore.Entity) (interface
 		Logger.Debug("verify block handler", zap.Int64("round", b.Round), zap.Int64("lf_round", lfb.Round))
 		return nil, nil
 	}
-	if err := b.Validate(ctx); err != nil {
+
+	var err error
+	if err = b.Validate(ctx); err != nil {
+		Logger.Debug("verify block handler -- can't validate",
+			zap.Int64("round", b.Round), zap.Error(err))
 		return nil, err
 	}
-	msg := NewBlockMessage(MessageVerify, node.GetSender(ctx), nil, b)
+
+	var msg = NewBlockMessage(MessageVerify, node.GetSender(ctx), nil, b)
 	mc.GetBlockMessageChannel() <- msg
 	return nil, nil
 }
@@ -228,19 +236,29 @@ func VerificationTicketReceiptHandler(ctx context.Context, entity datastore.Enti
 	return nil, nil
 }
 
-/*NotarizationReceiptHandler - handles the receipt of a notarization for a block */
-func NotarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-	notarization, ok := entity.(*Notarization)
+// NotarizationReceiptHandler - handles the receipt of a notarization
+// for a block.
+func NotarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (
+	interface{}, error) {
+
+	var notarization, ok = entity.(*Notarization)
 	if !ok {
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
-	mc := GetMinerChain()
-	lfb := mc.GetLatestFinalizedBlock()
+
+	var (
+		mc  = GetMinerChain()
+		lfb = mc.GetLatestFinalizedBlock()
+	)
+
 	if notarization.Round < lfb.Round {
-		Logger.Debug("notarization receipt handler", zap.Int64("round", notarization.Round), zap.Int64("lf_round", lfb.Round))
+		Logger.Debug("notarization receipt handler",
+			zap.Int64("round", notarization.Round),
+			zap.Int64("lf_round", lfb.Round))
 		return nil, nil
 	}
-	msg := NewBlockMessage(MessageNotarization, node.GetSender(ctx), nil, nil)
+
+	var msg = NewBlockMessage(MessageNotarization, node.GetSender(ctx), nil, nil)
 	msg.Notarization = notarization
 	mc.GetBlockMessageChannel() <- msg
 	return nil, nil
@@ -295,11 +313,16 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (
 	}
 
 	if r.GetRandomSeed() == 0 {
-		r.SetRandomSeed(b.GetRoundRandomSeed())
+		println("ROUND RANDOM SEED SET HERE! [OK]")
+		mc.SetRandomSeed(r, b.GetRoundRandomSeed())
 		r.ComputeMinerRanks(mc.GetMiners(b.Round))
 	}
 
-	msg := &BlockMessage{Sender: node.GetSender(ctx), Type: MessageNotarizedBlock, Block: b}
+	var msg = &BlockMessage{
+		Sender: node.GetSender(ctx),
+		Type:   MessageNotarizedBlock,
+		Block:  b,
+	}
 	mc.GetBlockMessageChannel() <- msg
 	return nil, nil
 }

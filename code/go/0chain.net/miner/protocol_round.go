@@ -113,7 +113,7 @@ func (mc *Chain) startNextRoundAfterPulling(ctx context.Context, r *Round) {
 	mc.StartNextRound(ctx, r)
 }
 
-func (mc *Chain) puulNotarizedBlocks(ctx context.Context, r *Round) {
+func (mc *Chain) pullNotarizedBlocks(ctx context.Context, r *Round) {
 
 	if !mc.startPulling() {
 		return // already pulling something (avoid async. start next round loop)
@@ -197,7 +197,7 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 		if mc.isJoining(rn + 1) {
 			Logger.Info("StartNextRound node is joining on VC (middle)",
 				zap.Int64("round", rn+1))
-			go mc.puulNotarizedBlocks(ctx, er.(*Round))
+			go mc.pullNotarizedBlocks(ctx, er.(*Round))
 			return er.(*Round) // no VRF share exchanging for joining node (no DKG no VRF)
 		}
 
@@ -207,7 +207,7 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 	if mc.isJoining(rn + 1) {
 		Logger.Info("StartNextRound node is joining on VC (below)",
 			zap.Int64("round", rn+1))
-		go mc.puulNotarizedBlocks(ctx, mr)
+		go mc.pullNotarizedBlocks(ctx, mr)
 		return mr // no VRF share exchanging for joining node (no DKG no VRF)
 	}
 
@@ -810,6 +810,7 @@ func (mc *Chain) MergeNotarization(ctx context.Context, r *Round, b *block.Block
 	notarized := b.IsBlockNotarized()
 	mc.MergeVerificationTickets(ctx, b, vts)
 	if notarized {
+		println("merge not.: already notarized")
 		return
 	}
 	mc.checkBlockNotarization(ctx, r, b)
@@ -1154,6 +1155,41 @@ func (mc *Chain) kickRoundByLFB(ctx context.Context, lfb *block.Block) {
 	mc.SetCurrentRound(nr.Number)
 }
 
+/* TODO (sfxdx): use or remove by needs
+
+func (mc *Chain) ensureBlockStateChange(ctx context.Context) {
+
+	var (
+		lfb = mc.GetLatestFinalizedBlock()
+		tk  = mc.GetLatestLFBTicket(ctx)
+	)
+
+	if lfb.Round <= tk.Round {
+		return
+	}
+
+	Logger.Info("restartRound->kickSharders: kick sharders")
+
+	// don't kick more then 5 blocks at once
+	var (
+		s, c, i = tk.Round, mc.GetCurrentRound(), 0 // loop variables
+		ahead   = config.GetLFBTicketAhead()
+	)
+	for ; s < c && i < ahead; s, i = s+1, i+1 {
+		var mr = mc.GetMinerRound(s)
+		// send block to sharders again, if missing sharders side
+		if mr != nil && mr.Block != nil && mr.Block.IsBlockNotarized() &&
+			mr.Block.GetStateStatus() == block.StateSuccessful {
+
+			Logger.Debug("get_block_to_extend_in_restart_round",
+				zap.Int64("round", s))
+			mc.GetBlockToExtend(ctx, mr)
+		}
+	}
+
+}
+*/
+
 func (mc *Chain) restartRound(ctx context.Context) {
 
 	var crn = mc.GetCurrentRound()
@@ -1189,7 +1225,7 @@ func (mc *Chain) restartRound(ctx context.Context) {
 	if mc.isJoining(crn) {
 		Logger.Info("restartRound node is joining on VC",
 			zap.Int64("round", crn))
-		go mc.puulNotarizedBlocks(ctx, r)
+		go mc.pullNotarizedBlocks(ctx, r)
 		return // no VRF share exchanging for joining node (no DKG no VRF)
 	}
 
@@ -1207,6 +1243,7 @@ func (mc *Chain) restartRound(ctx context.Context) {
 		if isAhead {
 			mc.kickSharders(ctx) // not updated, kick sharders
 		}
+		/* TODO or NOT TO DO: else { mc.ensureBlockStateChange(ctx) } */
 	}
 
 	if !updated && crn > 1 && !isAhead &&

@@ -888,7 +888,7 @@ func (c *Chain) DeleteRoundsBelow(ctx context.Context, roundNumber int64) {
 	}
 }
 
-/*SetRandomSeed - set the random seed for the round */
+// SetRandomSeed - set the random seed for the round.
 func (c *Chain) SetRandomSeed(r round.RoundI, randomSeed int64) bool {
 	c.roundsMutex.Lock()
 	defer c.roundsMutex.Unlock()
