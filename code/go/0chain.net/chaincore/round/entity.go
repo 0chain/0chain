@@ -247,7 +247,8 @@ func (r *Round) GetVRFOutput() string {
 	return r.VRFOutput
 }
 
-/*AddNotarizedBlock - this will be concurrent as notarization is recognized by verifying as well as notarization message from others */
+// AddNotarizedBlock - this will be concurrent as notarization is recognized by
+// verifying as well as notarization message from others.
 func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -269,9 +270,12 @@ func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool) {
 
 	if found > -1 {
 		fb := r.notarizedBlocks[found]
-		Logger.Info("Removing the old notarized block with the same rank", zap.Int64("round", r.GetRoundNumber()), zap.String("hash", fb.Hash),
-			zap.Int64("fb_RRS", fb.GetRoundRandomSeed()), zap.Int("fb_toc", fb.RoundTimeoutCount), zap.Any("fb_Sender", fb.MinerID))
-		//remove the old block with the same rank and add it below
+		Logger.Info("Removing the old notarized block with the same rank",
+			zap.Int64("round", r.GetRoundNumber()), zap.String("hash", fb.Hash),
+			zap.Int64("fb_RRS", fb.GetRoundRandomSeed()),
+			zap.Int("fb_toc", fb.RoundTimeoutCount),
+			zap.Any("fb_Sender", fb.MinerID))
+		// remove the old block with the same rank and add it below
 		r.notarizedBlocks = append(r.notarizedBlocks[:found], r.notarizedBlocks[found+1:]...)
 	}
 	b.SetBlockNotarized()
@@ -279,7 +283,9 @@ func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool) {
 		r.Block = b
 	}
 	rnb := append(r.notarizedBlocks, b)
-	sort.Slice(rnb, func(i int, j int) bool { return rnb[i].ChainWeight > rnb[j].ChainWeight })
+	sort.Slice(rnb, func(i int, j int) bool {
+		return rnb[i].ChainWeight > rnb[j].ChainWeight
+	})
 	r.notarizedBlocks = rnb
 	return b, true
 }
@@ -303,7 +309,9 @@ func (r *Round) addProposedBlock(b *block.Block) (*block.Block, bool) {
 		}
 	}
 	r.proposedBlocks = append(r.proposedBlocks, b)
-	sort.SliceStable(r.proposedBlocks, func(i, j int) bool { return r.proposedBlocks[i].RoundRank < r.proposedBlocks[j].RoundRank })
+	sort.SliceStable(r.proposedBlocks, func(i, j int) bool {
+		return r.proposedBlocks[i].RoundRank < r.proposedBlocks[j].RoundRank
+	})
 	return b, true
 }
 

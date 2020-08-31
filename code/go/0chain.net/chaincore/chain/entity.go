@@ -666,8 +666,13 @@ func (c *Chain) PruneChain(_ context.Context, b *block.Block) {
 
 /*ValidateMagicBlock - validate the block for a given round has the right magic block */
 func (c *Chain) ValidateMagicBlock(ctx context.Context, mr *round.Round, b *block.Block) bool {
-	var blockMagicBlock = c.GetLatestFinalizedMagicBlockRound(mr.GetRoundNumber())
-	return b.LatestFinalizedMagicBlockHash == blockMagicBlock.Hash
+	var mb = c.GetLatestFinalizedMagicBlockRound(mr.GetRoundNumber())
+	// TODO (sfxdx): REVERT BACK
+	if b.LatestFinalizedMagicBlockHash == mb.Hash {
+		return true
+	}
+	println("INVALID MAGIC BLOCK", mr.GetRoundNumber(), b.Round, mb.StartingRound, mb.MagicBlockNumber)
+	return false
 }
 
 /*GetGenerators - get all the block generators for a given round */

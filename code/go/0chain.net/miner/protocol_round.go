@@ -1193,16 +1193,13 @@ func (mc *Chain) restartRound(ctx context.Context) {
 		return // no VRF share exchanging for joining node (no DKG no VRF)
 	}
 
-	var (
-		rn      = r.GetRoundNumber()
-		isAhead = mc.isAheadOfSharders(ctx, rn)
-	)
+	var isAhead = mc.isAheadOfSharders(ctx, crn)
 
 	if updated {
 		// kick new round from the new LFB from sharders, if it's newer
 		// then the current one
 		var lfb = mc.GetLatestFinalizedBlock()
-		if lfb.Round > rn {
+		if lfb.Round > crn {
 			mc.kickRoundByLFB(ctx, lfb)
 			return
 		}
@@ -1212,7 +1209,7 @@ func (mc *Chain) restartRound(ctx context.Context) {
 		}
 	}
 
-	if !updated && rn > 1 && !isAhead &&
+	if !updated && crn > 1 && !isAhead &&
 		r.GetHeaviestNotarizedBlock() != nil && r.HasRandomSeed() {
 
 		Logger.Info("StartNextRound after sending notarized "+
@@ -1287,7 +1284,7 @@ func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
 
 	rcvd = list[0].Block // the highest received LFB
 
-	if !(have == nil || rcvd.Round <= have.Round) {
+	if have != nil && rcvd.Round <= have.Round {
 		return // nothing to update
 	}
 
@@ -1359,7 +1356,7 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context) (
 	})
 	rcvd = list[0]
 
-	if !(lfmb == nil || lfmb.MagicBlockNumber < rcvd.MagicBlockNumber) {
+	if lfmb != nil && rcvd.MagicBlockNumber <= lfmb.MagicBlockNumber {
 		return
 	}
 

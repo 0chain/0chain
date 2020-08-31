@@ -9,7 +9,7 @@ logging:
 development:
   state: true
   dkg: true
-  view_change: true
+  view_change: false
   smart_contract:
     storage: true
     faucet: true
