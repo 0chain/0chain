@@ -596,7 +596,7 @@ func (mc *Chain) SendSijs(ctx context.Context, lfb *block.Block,
 			continue // don't send to self
 		}
 		if _, ok := mc.viewChangeProcess.shareOrSigns.ShareOrSigns[key]; !ok {
-			if err := mc.sendDKGShare(ctx, node.GetNode(key)); err != nil {
+			if err := mc.sendDKGShare(ctx, key); err != nil {
 				sendFail = append(sendFail, fmt.Sprintf("%s(%v);", key, err))
 			}
 		}

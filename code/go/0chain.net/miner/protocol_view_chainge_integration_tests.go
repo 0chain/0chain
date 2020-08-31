@@ -33,10 +33,16 @@ func revertString(s string) string {
 }
 
 // The sendDKGShare sends the generated secShare to the given node.
-func (mc *Chain) sendDKGShare(ctx context.Context, n *node.Node) (err error) {
+func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 
 	if !config.DevConfiguration.IsDkgEnabled {
 		return common.NewError("send_dkg_share", "dkg is not enabled")
+	}
+
+	var n = node.GetNode(to)
+
+	if n == nil {
+		return common.NewErrorf("send_dkg_share", "node %q not found", to)
 	}
 
 	if node.Self.Underlying().GetKey() == n.ID {
