@@ -110,18 +110,14 @@ func (mc *Chain) startNextRoundAfterPulling(ctx context.Context, r *Round) {
 	}
 
 	// start
-	mc.StartNextRound(ctx, r) // TODO (sfxdx): IN GOROUTINE?
+	mc.StartNextRound(ctx, r)
 }
 
 func (mc *Chain) pullNotarizedBlocks(ctx context.Context, r *Round) {
 
-	println("PULL", r.GetRoundNumber(), mc.GetMinerRound(r.GetRoundNumber()) == nil)
-	defer println("PULLED", r.GetRoundNumber(), mc.GetMinerRound(r.GetRoundNumber()) == nil)
-
-	// if !mc.startPulling() {
-	// 	println("already pulling, don't pull: ", r.GetRoundNumber())
-	// 	return // already pulling something (avoid async. start next round loop)
-	// }
+	if !mc.startPulling() {
+		return // already pulling something (avoid async. start next round loop)
+	}
 
 	var (
 		crn = mc.GetCurrentRound()
@@ -138,8 +134,8 @@ func (mc *Chain) pullNotarizedBlocks(ctx context.Context, r *Round) {
 		if rn > crn {
 			mc.SetCurrentRound(rn) // update
 		}
-		// mc.stopPulling() // ignore result
-		// mc..(ctx, r)
+		mc.stopPulling() // ignore result
+		mc.startNextRoundAfterPulling(ctx, r)
 		return
 	}
 
@@ -147,12 +143,9 @@ func (mc *Chain) pullNotarizedBlocks(ctx context.Context, r *Round) {
 	if b == nil {
 		Logger.Info("pull not. block for round -- can't pull",
 			zap.Int64("round", rn), zap.Int64("rrs", r.GetRandomSeed()))
-		// mc.stopPulling()
+		mc.stopPulling()
 		return
 	}
-
-	// TO THINK (sfxdx): use the GetBlockToExtend to fetch block state change?
-	// mc.GetBlockToExtend(ctx, r)
 
 	Logger.Info("pull not. block for round -- got",
 		zap.Int64("round", rn))
@@ -165,15 +158,15 @@ func (mc *Chain) pullNotarizedBlocks(ctx context.Context, r *Round) {
 		r.ComputeMinerRanks(mc.GetMiners(rn))
 	}
 
-	// bum the round number explicitly for the pulled blocks
+	// bump the round number explicitly for the pulled blocks
 	if rn > crn {
 		mc.SetCurrentRound(rn) // update
 	}
 
 	Logger.Info("pull not. block for round -- start next round",
 		zap.Int64("round", rn), zap.Int64("rrs", r.GetRandomSeed()))
-	// mc.stopPulling()                      // ignore result
-	// mc.startNextRoundAfterPulling(ctx, r) //
+	mc.stopPulling()                      // ignore result
+	mc.startNextRoundAfterPulling(ctx, r) //
 }
 
 // StartNextRound - start the next round as a notarized
@@ -251,12 +244,6 @@ func (mc *Chain) getRound(ctx context.Context, rn int64) (mr *Round) {
 	Logger.Error("get_round -- no previous round", zap.Int64("round", rn),
 		zap.Int64("prev_round", rn-1))
 	return // (nil)
-
-	// TODO (sfxdx): changed
-	//
-	// var r = round.NewRound(rn)
-	// mr = mc.CreateRound(r)
-	// return mc.AddRound(mr).(*Round)
 }
 
 // RedoVrfShare re-calculateVrfShare and send.
@@ -870,7 +857,6 @@ func (mc *Chain) MergeNotarization(ctx context.Context, r *Round, b *block.Block
 	notarized := b.IsBlockNotarized()
 	mc.MergeVerificationTickets(ctx, b, vts)
 	if notarized {
-		println("merge not.: already notarized")
 		return
 	}
 	mc.checkBlockNotarization(ctx, r, b)
@@ -1215,49 +1201,6 @@ func (mc *Chain) kickRoundByLFB(ctx context.Context, lfb *block.Block) {
 	mc.SetCurrentRound(nr.Number)
 }
 
-/* TODO (sfxdx): use or remove by needs
-
-func (mc *Chain) ensureBlockStateChange(ctx context.Context) {
-
-	var (
-		lfb = mc.GetLatestFinalizedBlock()
-		tk  = mc.GetLatestLFBTicket(ctx)
-	)
-
-	if lfb.Round <= tk.Round {
-		return
-	}
-
-	Logger.Info("restartRound->kickSharders: kick sharders")
-
-	// don't kick more then 5 blocks at once
-	var (
-		s, c, i = tk.Round, mc.GetCurrentRound(), 0 // loop variables
-		ahead   = config.GetLFBTicketAhead()
-	)
-	for ; s < c && i < ahead; s, i = s+1, i+1 {
-		var mr = mc.GetMinerRound(s)
-		// send block to sharders again, if missing sharders side
-		if mr != nil && mr.Block != nil && mr.Block.IsBlockNotarized() &&
-			mr.Block.GetStateStatus() == block.StateSuccessful {
-
-			Logger.Debug("get_block_to_extend_in_restart_round",
-				zap.Int64("round", s))
-			mc.GetBlockToExtend(ctx, mr)
-		}
-	}
-
-}
-*/
-
-// TODO (sfxdx): remove result of the method below
-
-// just make sure the block have appropriate block state change (for an LFB)
-func (mc *Chain) ensureBlockStateChange(ctx context.Context, r round.RoundI) *block.Block {
-	// return mc.GetBlockToExtend(ctx, r)
-	return nil
-}
-
 func (mc *Chain) restartRound(ctx context.Context) {
 
 	var crn = mc.GetCurrentRound()
@@ -1288,23 +1231,6 @@ func (mc *Chain) restartRound(ctx context.Context) {
 		Logger.Error("restartRound - ensure lfb", zap.Error(err))
 	}
 
-	println("RR", crn, "rounds:")
-	{
-		var lfb = mc.GetLatestFinalizedBlock()
-		for i := lfb.Round; i <= crn; i++ {
-			var mr = mc.GetMinerRound(i)
-			if mr != nil {
-				if mr.Block != nil {
-					println("  R", i, "RRS", mr.GetRandomSeed(), "IS BLOCK NOT.:", mr.Block.IsBlockNotarized())
-				} else {
-					println("  R", i, "RRS", mr.GetRandomSeed(), "NO BLOCK")
-				}
-			} else {
-				println("  R", i, "NIL")
-			}
-		}
-	}
-
 	// node joining on VC, it hasn't DKG and can VRF, and should pull not.
 	// blocks to create and move rounds until VC, setting RRS by the blocks
 	if mc.isJoining(crn) {
@@ -1328,7 +1254,6 @@ func (mc *Chain) restartRound(ctx context.Context) {
 		if isAhead {
 			mc.kickSharders(ctx) // not updated, kick sharders
 		}
-		/* TODO or NOT TO DO: else { mc.ensureBlockStateChange(ctx) } */
 	}
 
 	if !updated && crn > 1 && !isAhead &&
@@ -1407,7 +1332,6 @@ func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
 	rcvd = list[0].Block // the highest received LFB
 
 	if have != nil && rcvd.Round <= have.Round {
-		mc.ensureBlockStateChange(ctx, mc.GetMinerRound(have.Round))
 		return // nothing to update
 	}
 
@@ -1431,8 +1355,7 @@ func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
 	}
 	mc.ComputeState(ctx, rcvd) // pull previous block using GetPreviousBlock
 	mc.SetLatestFinalizedBlock(ctx, rcvd)
-	mc.ensureBlockStateChange(ctx, mc.GetMinerRound(have.Round)) // fetch BSC
-	return true, nil                                             // updated
+	return true, nil // updated
 }
 
 func (mc *Chain) ensureDKG(ctx context.Context, mb *block.Block) {

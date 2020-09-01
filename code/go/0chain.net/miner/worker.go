@@ -71,8 +71,6 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 		protocol Protocol = mc
 	)
 
-	println("START ROUND WORKER")
-
 	for true {
 		select {
 		case <-ctx.Done():

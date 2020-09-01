@@ -320,7 +320,6 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (
 	}
 
 	if r.GetRandomSeed() == 0 {
-		println("ROUND RANDOM SEED SET HERE! [OK]")
 		mc.SetRandomSeed(r, b.GetRoundRandomSeed())
 		r.ComputeMinerRanks(mc.GetMiners(b.Round))
 	}

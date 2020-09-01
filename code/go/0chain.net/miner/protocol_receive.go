@@ -39,20 +39,13 @@ func (mc *Chain) enterOnViewChange(ctx context.Context, rn int64) {
 	if rn > lfb.Round && rn-lfb.Round > chain.ViewChangeOffset {
 		if _, err = mc.ensureLatestFinalizedBlocks(ctx); err != nil {
 			Logger.Error("get LFB/LFBM from sharder", zap.Error(err))
-			println("ENSURE IN THE ENTERING", err.Error())
 			return
 		}
 		mb = mc.GetMagicBlock(rn)          // update
 		lfb = mc.GetLatestFinalizedBlock() // update
 	}
 
-	// make sure the isJoining will work ok
-	var bsc = mc.ensureBlockStateChange(ctx, mc.GetMinerRound(lfb.Round))
-
-	println("ENTER", "RN", rn, "MB SR", mb.StartingRound, "LFB", lfb.Round, "BSC", bsc != nil)
-
 	if !mb.Miners.HasNode(selfNodeKey) {
-		println("(enter) hasn't this miner -> return")
 		return
 	}
 
@@ -61,15 +54,9 @@ func (mc *Chain) enterOnViewChange(ctx context.Context, rn int64) {
 		mc.SetCurrentRound(crn)
 	}
 
-	var nvc = mc.NextViewChange(mc.GetLatestFinalizedBlock())
-
-	println("(enter) (tail) CRN", crn, "LFB", lfb.Round, "MB SR", mb.StartingRound, "NVC", nvc)
-
 	if mc.isJoining(crn) {
-		println("(enter) pull not. blocks starting next round", crn)
 		go mc.StartNextRound(ctx, mc.GetMinerRound(crn))
 	}
-
 }
 
 // HandleVerifyBlockMessage - handles the verify block message.
@@ -77,8 +64,6 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 	msg *BlockMessage) {
 
 	var b = msg.Block
-
-	println("H verify block", b.Round, "CRN", mc.GetCurrentRound())
 
 	if b.Round < mc.GetCurrentRound()-1 {
 		Logger.Debug("verify block (round mismatch)",
@@ -92,7 +77,6 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 	if pr == nil {
 		Logger.Error("handle verify block -- no previous round (ignore)",
 			zap.Int64("round", b.Round), zap.Int64("prev_round", b.Round-1))
-		println("H verify block", b.Round, "enter")
 		mc.enterOnViewChange(ctx, b.Round)
 		return
 	}
@@ -107,16 +91,6 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 			Logger.Error("handle verify block -- far ahead of sharders (ignore)",
 				zap.Int64("round", b.Round))
 			return
-			// -------------------------------------------------------------- //
-			// TODO (sfxdx): USE OR REMOVE                                    //
-			// -------------------------------------------------------------- //
-			// var r = round.NewRound(b.Round)                                //
-			// mr = mc.CreateRound(r)                                         //
-			// mr = mc.AddRound(mr).(*Round)                                  //
-			// if mc.GetCurrentRound() < b.Round {                            //
-			// 	mc.SetCurrentRound(mr.GetRoundNumber())                       //
-			// }                                                              //
-			// -------------------------------------------------------------- //
 		}
 		//TODO: Byzantine
 		mc.startRound(ctx, mr, b.GetRoundRandomSeed())
@@ -257,7 +231,6 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context,
 
 // HandleNotarizationMessage - handles the block notarization message.
 func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessage) {
-	println("H not. msg", msg.Notarization.Round)
 
 	var lfb = mc.GetLatestFinalizedBlock()
 	if msg.Notarization.Round < lfb.Round {
@@ -270,7 +243,6 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 
 	var r = mc.GetMinerRound(msg.Notarization.Round)
 	if r == nil {
-		println("H not. msg", msg.Notarization.Round, "no round")
 		if msg.ShouldRetry() {
 			Logger.Error("handle notarization message (round not started yet) retrying",
 				zap.String("block", msg.Notarization.BlockID),
@@ -285,7 +257,6 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 	}
 
 	if mc.GetMinerRound(msg.Notarization.Round-1) == nil {
-		println("handle not. msg -- no previous round (ignore the message)")
 		Logger.Error("handle notarization message -- no previous round",
 			zap.Int64("round", msg.Notarization.Round),
 			zap.Int64("prev_round", msg.Notarization.Round-1))
@@ -297,13 +268,11 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 	var b, err = mc.GetBlock(ctx, msg.Notarization.BlockID)
 	if err != nil {
 		mc.AsyncFetchNotarizedBlock(msg.Notarization.BlockID)
-		println("H not. msg", msg.Notarization.Round, "async fetch the block")
 		return
 	}
 
 	var vts = b.UnknownTickets(msg.Notarization.VerificationTickets)
 	if len(vts) == 0 {
-		println("H not. msg", msg.Notarization.Round, "no vt")
 		return
 	}
 
@@ -319,11 +288,8 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context,
 		mr = mc.GetMinerRound(nb.Round)
 	)
 
-	println("H not. block", nb.Round)
-
 	if mr == nil {
 		if mr = mc.getRound(ctx, nb.Round); mr == nil {
-			println("H not. block", nb.Round, "far ahead")
 			return // miner is far ahead of sharders, skip for now
 		}
 		mc.startRound(ctx, mr, nb.GetRoundRandomSeed())
@@ -337,12 +303,10 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context,
 		}
 
 		if mr.IsVerificationComplete() {
-			println("H not. block", nb.Round, "verification complete")
 			return // verification for the round complete
 		}
 		for _, blk := range mr.GetNotarizedBlocks() {
 			if blk.Hash == nb.Hash {
-				println("H not. block", nb.Round, "already have the block")
 				return // already have
 			}
 		}
@@ -353,10 +317,8 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context,
 
 	var b = mc.AddRoundBlock(mr, nb)
 	if !mc.AddNotarizedBlock(ctx, mr, b) {
-		println("H not. block", nb.Round, "not add not. block")
 		return
 	}
 
-	println("H not. block", nb.Round, "start next round")
 	mc.StartNextRound(ctx, mr) // start next or skip
 }
