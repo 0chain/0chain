@@ -268,11 +268,12 @@ func NotarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (
 func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (
 	interface{}, error) {
 
-	b, ok := entity.(*block.Block)
+	var b, ok = entity.(*block.Block)
 	if !ok {
 		return nil, common.InvalidRequest("Invalid Entity")
 	}
-	mc := GetMinerChain()
+
+	var mc = GetMinerChain()
 	if b.Round < mc.GetCurrentRound()-1 {
 		Logger.Debug("notarized block handler (round older than the current round)",
 			zap.String("block", b.Hash), zap.Any("round", b.Round))
@@ -305,6 +306,12 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (
 	var lfb = mc.GetLatestFinalizedBlock()
 	if b.Round <= lfb.Round {
 		return nil, nil // doesn't need the not. block
+	}
+
+	if mc.GetMinerRound(b.Round-1) == nil {
+		Logger.Error("not. block handler -- no previous round (ignore)",
+			zap.Int64("round", b.Round), zap.Int64("prev_round", b.Round-1))
+		return nil, nil // no previous round
 	}
 
 	if err := mc.VerifyNotarization(ctx, b.Hash, b.GetVerificationTickets(),

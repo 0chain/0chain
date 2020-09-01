@@ -901,7 +901,7 @@ func LoadLatestMB(ctx context.Context) (mb *block.MagicBlock, err error) {
 
 	if err = datastore.FromJSON(iter.Value().Data(), data); err != nil {
 		return nil, common.NewErrorf("load_latest_mb",
-			"decoding error: %v", err)
+			"decoding error: %v, key: %q", err, string(iter.Key().Data()))
 	}
 
 	mb = data.MagicBlock

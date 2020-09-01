@@ -110,12 +110,16 @@ func (mc *Chain) startNextRoundAfterPulling(ctx context.Context, r *Round) {
 	}
 
 	// start
-	mc.StartNextRound(ctx, r)
+	mc.StartNextRound(ctx, r) // TODO (sfxdx): IN GOROUTINE?
 }
 
 func (mc *Chain) pullNotarizedBlocks(ctx context.Context, r *Round) {
 
+	println("PULL", r.GetRoundNumber(), mc.GetMinerRound(r.GetRoundNumber()) == nil)
+	defer println("PULLED", r.GetRoundNumber(), mc.GetMinerRound(r.GetRoundNumber()) == nil)
+
 	if !mc.startPulling() {
+		println("already pulling, don't pull: ", r.GetRoundNumber())
 		return // already pulling something (avoid async. start next round loop)
 	}
 
@@ -150,8 +154,13 @@ func (mc *Chain) pullNotarizedBlocks(ctx context.Context, r *Round) {
 		var rrs = b.GetRoundRandomSeed()
 		Logger.Info("pull not. block for round -- set rrs by the block",
 			zap.Int64("round", rn), zap.Int64("rrs", rrs))
-		r.SetRandomSeed(rrs)
+		mc.SetRandomSeed(r, rrs)
 		r.ComputeMinerRanks(mc.GetMiners(rn))
+	}
+
+	// bum the round number explicitly for the pulled blocks
+	if rn := r.GetRoundNumber(); rn < mc.GetCurrentRound() {
+		mc.SetCurrentRound(rn)
 	}
 
 	Logger.Info("pull not. block for round -- start next round",
@@ -185,57 +194,62 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 	var (
 		nr = round.NewRound(rn + 1)
 		mr = mc.CreateRound(nr)
-		er = mc.AddRound(mr)
+		er = mc.AddRound(mr).(*Round)
 	)
 
 	if er != mr && mc.isStarted() {
 		Logger.Info("StartNextRound found next round ready. No VRFs Sent",
 			zap.Int64("er_round", er.GetRoundNumber()),
-			zap.Int64("rrs", r.GetRandomSeed()))
+			zap.Int64("rrs", r.GetRandomSeed()),
+			zap.Bool("is_started", mc.isStarted()))
 
 		// joining at VC case
 		if mc.isJoining(rn + 1) {
 			Logger.Info("StartNextRound node is joining on VC (middle)",
 				zap.Int64("round", rn+1))
-			go mc.pullNotarizedBlocks(ctx, er.(*Round))
-			return er.(*Round) // no VRF share exchanging for joining node (no DKG no VRF)
+			go mc.pullNotarizedBlocks(ctx, er)
+			return er // no VRF share exchanging for joining node (no DKG no VRF)
 		}
-
-		return er.(*Round)
+		return er
 	}
 
 	if mc.isJoining(rn + 1) {
 		Logger.Info("StartNextRound node is joining on VC (below)",
 			zap.Int64("round", rn+1))
-		go mc.pullNotarizedBlocks(ctx, mr)
-		return mr // no VRF share exchanging for joining node (no DKG no VRF)
+		go mc.pullNotarizedBlocks(ctx, er)
+		return er // no VRF share exchanging for joining node (no DKG no VRF)
 	}
 
 	if r.HasRandomSeed() {
-		mc.addMyVRFShare(ctx, r, mr)
+		mc.addMyVRFShare(ctx, r, er)
 	} else {
 		Logger.Info("StartNextRound no VRFs sent -- "+
 			"current round has no random seed",
 			zap.Int64("rrs", r.GetRandomSeed()), zap.Int64("r_round", rn))
 	}
 
-	return mr
+	return er
 }
 
-func (mc *Chain) getRound(ctx context.Context, roundNumber int64) *Round {
-	var (
-		mr *Round
-		pr = mc.GetMinerRound(roundNumber - 1)
-	)
+func (mc *Chain) getRound(ctx context.Context, rn int64) (mr *Round) {
+
+	var pr = mc.GetMinerRound(rn - 1)
+
 	if pr != nil {
 		Logger.Info("Starting next round in getRound",
-			zap.Int64("nextRoundNum", roundNumber))
+			zap.Int64("nextRoundNum", rn))
 		return mc.StartNextRound(ctx, pr) // can return nil
 	}
 
-	var r = round.NewRound(roundNumber)
-	mr = mc.CreateRound(r)
-	return mc.AddRound(mr).(*Round)
+	Logger.Error("get_round -- no previous round", zap.Int64("round", rn),
+		zap.Int64("prev_round", rn-1))
+	return // (nil)
+
+	// TODO (sfxdx): changed
+	//
+	// var r = round.NewRound(rn)
+	// mr = mc.CreateRound(r)
+	// return mc.AddRound(mr).(*Round)
 }
 
 // RedoVrfShare re-calculateVrfShare and send.
@@ -373,10 +387,9 @@ func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) *block.Bl
 
 // GenerateRoundBlock - given a round number generates a block.
 func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block, error) {
-	ts := time.Now()
-	defer func() {
-		rbgTimer.UpdateSince(ts)
-	}()
+	var ts = time.Now()
+	defer func() { rbgTimer.UpdateSince(ts) }()
+
 	roundNumber := r.GetRoundNumber()
 	pround := mc.GetMinerRound(roundNumber - 1)
 	if pround == nil {
@@ -525,57 +538,90 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	return b, nil
 }
 
-/*AddToRoundVerification - Add a block to verify  */
+// AddToRoundVerification - add a block to verify.
 func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block.Block) {
+
 	mr.AddProposedBlock(b)
+
 	if mr.IsFinalizing() || mr.IsFinalized() {
 		b.SetBlockState(block.StateVerificationRejected)
-		Logger.Debug("add to verification", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Bool("finalizing", mr.IsFinalizing()), zap.Bool("finalized", mr.IsFinalized()))
+		Logger.Debug("add to verification", zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.Bool("finalizing", mr.IsFinalizing()),
+			zap.Bool("finalized", mr.IsFinalized()))
 		return
 	}
+
 	if !mc.ValidateMagicBlock(ctx, mr.Round, b) {
 		b.SetBlockState(block.StateVerificationRejected)
-		Logger.Error("add to verification (invalid magic block)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("magic_block", b.LatestFinalizedMagicBlockHash))
+		Logger.Error("add to verification (invalid magic block)",
+			zap.Int64("round", b.Round), zap.String("block", b.Hash),
+			zap.String("magic_block", b.LatestFinalizedMagicBlockHash))
 		return
 	}
-	bNode := mc.GetMiners(mr.GetRoundNumber()).GetNode(b.MinerID)
+
+	var bNode = mc.GetMiners(mr.GetRoundNumber()).GetNode(b.MinerID)
 	if bNode == nil {
 		b.SetBlockState(block.StateVerificationRejected)
-		Logger.Error("add to round verification (invalid miner)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("miner_id", b.MinerID))
+		Logger.Error("add to round verification (invalid miner)",
+			zap.Int64("round", b.Round), zap.String("block", b.Hash),
+			zap.String("miner_id", b.MinerID))
 		return
 	}
-	pr := mc.GetMinerRound(mr.Number - 1)
+
+	var pr = mc.GetMinerRound(mr.Number - 1)
 	if pr == nil {
-		Logger.Error("add to verification (prior block's verify round is nil)", zap.Int64("round", mr.Number-1),
-			zap.String("prev_block", b.PrevHash), zap.Int("pb_v_tickets", b.PrevBlockVerificationTicketsSize()))
+		Logger.Error("add to verification (prior block's verify round is nil)",
+			zap.Int64("round", mr.Number-1),
+			zap.String("prev_block", b.PrevHash),
+			zap.Int("pb_v_tickets", b.PrevBlockVerificationTicketsSize()))
 		return
 	}
+
 	if b.Round > 1 {
-		if err := mc.VerifyNotarization(ctx, b.PrevHash, b.GetPrevBlockVerificationTickets(), pr.GetRoundNumber()); err != nil {
-			Logger.Error("add to verification (prior block verify notarization)", zap.Int64("round", pr.Number),
-				zap.Any("miner_id", b.MinerID), zap.String("block", b.PrevHash), zap.Int("v_tickets", b.PrevBlockVerificationTicketsSize()), zap.Error(err))
+		var err = mc.VerifyNotarization(ctx, b.PrevHash,
+			b.GetPrevBlockVerificationTickets(), pr.GetRoundNumber())
+		if err != nil {
+			Logger.Error("add to verification (prior block verify notarization)",
+				zap.Int64("round", pr.Number), zap.Any("miner_id", b.MinerID),
+				zap.String("block", b.PrevHash),
+				zap.Int("v_tickets", b.PrevBlockVerificationTicketsSize()),
+				zap.Error(err))
 			return
 		}
 	}
+
 	if mc.AddRoundBlock(mr, b) != b {
 		return
 	}
+
 	if b.PrevBlock != nil {
 		if b.CreationDate < b.PrevBlock.CreationDate {
-			Logger.Error("add to verification (creation_date out of sequence", zap.Int64("round", mr.Number), zap.String("block", b.Hash), zap.Any("creation_date", b.CreationDate), zap.String("prev_block", b.PrevHash), zap.Any("prev_creation_date", b.PrevBlock.CreationDate))
+			Logger.Error("add to verification (creation_date out of sequence",
+				zap.Int64("round", mr.Number), zap.String("block", b.Hash),
+				zap.Any("creation_date", b.CreationDate),
+				zap.String("prev_block", b.PrevHash),
+				zap.Any("prev_creation_date", b.PrevBlock.CreationDate))
 			return
 		}
 		b.ComputeChainWeight()
 		mc.updatePriorBlock(ctx, mr.Round, b)
 	} else {
-		// We can establish an upper bound for chain weight at the current round, subtract 1 and add block's own weight and check if that's less than the chain weight sent
-		lfb := mc.GetLatestFinalizedBlock()
-		chainWeightUpperBound := lfb.ChainWeight + float64(b.Round-lfb.Round)
+		// We can establish an upper bound for chain weight at the current
+		// round, subtract 1 and add block's own weight and check if that's
+		// less than the chain weight sent.
+		var (
+			lfb                   = mc.GetLatestFinalizedBlock()
+			chainWeightUpperBound = lfb.ChainWeight + float64(b.Round-lfb.Round)
+		)
 		if b.ChainWeight > chainWeightUpperBound-1+b.Weight() {
-			Logger.Error("add to verification (wrong chain weight)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Float64("chain_weight", b.ChainWeight))
+			Logger.Error("add to verification (wrong chain weight)",
+				zap.Int64("round", b.Round), zap.String("block", b.Hash),
+				zap.Float64("chain_weight", b.ChainWeight))
 			return
 		}
 	}
+
 	mc.addToRoundVerification(ctx, mr, b)
 }
 
@@ -768,18 +814,22 @@ func (mc *Chain) updatePriorBlock(ctx context.Context, r *round.Round, b *block.
 
 /*ProcessVerifiedTicket - once a verified ticket is received, do further processing with it */
 func (mc *Chain) ProcessVerifiedTicket(ctx context.Context, r *Round, b *block.Block, vt *block.VerificationTicket) {
-	notarized := b.IsBlockNotarized()
+
+	var notarized = b.IsBlockNotarized()
+
 	// NOTE: We keep collecting verification tickets even if a block is
 	// notarized. Knowing who all know about a block can be used to optimize
 	// other parts of the protocol.
 	if !mc.AddVerificationTicket(ctx, b, vt) {
 		return
 	}
-	if notarized {
-		Logger.Info("Block is notarized", zap.Int64("round", r.Number), zap.String("block", b.Hash))
 
+	if notarized {
+		Logger.Info("Block is notarized", zap.Int64("round", r.Number),
+			zap.String("block", b.Hash))
 		return
 	}
+
 	mc.checkBlockNotarization(ctx, r, b)
 }
 
@@ -998,7 +1048,7 @@ func (mc *Chain) SyncFetchFinalizedBlockFromSharders(ctx context.Context,
 	return finalizedBlocks[0].Block
 }
 
-// GetNextRoundTimeoutTime returns time in milliseconds
+// GetNextRoundTimeoutTime returns time in milliseconds.
 func (mc *Chain) GetNextRoundTimeoutTime(ctx context.Context) int {
 
 	ssft := int(math.Ceil(chain.SteadyStateFinalizationTimer.Mean() / 1000000))
@@ -1010,25 +1060,29 @@ func (mc *Chain) GetNextRoundTimeoutTime(ctx context.Context) int {
 	return tick
 }
 
-var lastTimePoint = time.Now()
-
-// HandleRoundTimeout handle timeouts appropriately
+// HandleRoundTimeout handle timeouts appropriately.
 func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
-	r := mc.GetMinerRound(mc.GetCurrentRound())
-	if r.Number == 0 /* && mc.NextViewChange() == 0 */ {
+
+	var (
+		r   = mc.GetMinerRound(mc.GetCurrentRound())
+		lfb = mc.GetLatestFinalizedBlock()
+	)
+
+	if r.Number == 0 && mc.NextViewChange(lfb) == 0 {
 		return
 	}
 
-	var tp = time.Now()
-	lastTimePoint = tp
 	if r.GetSoftTimeoutCount() == mc.RoundRestartMult {
-		Logger.Info("triggering restartRound", zap.Int64("round", r.GetRoundNumber()))
+		Logger.Info("triggering restartRound",
+			zap.Int64("round", r.GetRoundNumber()))
 		mc.restartRound(ctx)
-	} else {
-		Logger.Info("triggering handleNoProgress", zap.Int64("round", r.GetRoundNumber()))
-		mc.handleNoProgress(ctx)
-		r.IncSoftTimeoutCount()
+		return
 	}
+
+	Logger.Info("triggering handleNoProgress",
+		zap.Int64("round", r.GetRoundNumber()))
+	mc.handleNoProgress(ctx)
+	r.IncSoftTimeoutCount()
 }
 
 func (mc *Chain) handleNoProgress(ctx context.Context) {
@@ -1218,6 +1272,23 @@ func (mc *Chain) restartRound(ctx context.Context) {
 	var updated, err = mc.ensureLatestFinalizedBlocks(ctx)
 	if err != nil {
 		Logger.Error("restartRound - ensure lfb", zap.Error(err))
+	}
+
+	println("RR", crn, "rounds:")
+	{
+		var lfb = mc.GetLatestFinalizedBlock()
+		for i := lfb.Round; i <= crn; i++ {
+			var mr = mc.GetMinerRound(i)
+			if mr != nil {
+				if mr.Block != nil {
+					println("  R", i, "RRS", mr.GetRandomSeed(), "IS BLOCK NOT.:", mr.Block.IsBlockNotarized())
+				} else {
+					println("  R", i, "RRS", mr.GetRandomSeed(), "NO BLOCK")
+				}
+			} else {
+				println("  R", i, "NIL")
+			}
+		}
 	}
 
 	// node joining on VC, it hasn't DKG and can VRF, and should pull not.
@@ -1477,8 +1548,13 @@ func StartProtocol(ctx context.Context, gb *block.Block) {
 	if lfb != nil {
 		mr = mc.startProtocolOnLFB(ctx, lfb)
 	} else {
+		// start on genesis block
 		mc.bumpLFBTicket(ctx, gb)
-		mr = mc.getRound(ctx, gb.Round)
+		// if mr = mc.getRound(ctx, gb.Round); mr == nil {
+		var r = round.NewRound(gb.Round)
+		mr = mc.CreateRound(r)
+		mr = mc.AddRound(mr).(*Round)
+		// }
 	}
 	var nr = mc.StartNextRound(ctx, mr)
 	for nr == nil {
@@ -1545,7 +1621,7 @@ func (mc *Chain) LoadMagicBlocksAndDKG(ctx context.Context) {
 	)
 	if prev, err = LoadMagicBlock(ctx, id); err != nil {
 		Logger.Info("load_mbs_and_dkg -- loading previous MB",
-			zap.Error(err))
+			zap.String("sr", id), zap.Error(err))
 		return // can't continue
 	}
 	if err = mc.setupLoadedMagicBlock(prev); err != nil {

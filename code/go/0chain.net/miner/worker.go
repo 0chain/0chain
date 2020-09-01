@@ -71,6 +71,8 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 		protocol Protocol = mc
 	)
 
+	println("START ROUND WORKER")
+
 	for true {
 		select {
 		case <-ctx.Done():
@@ -83,7 +85,8 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 				round := mc.GetMinerRound(cround)
 
 				if round != nil {
-					logging.Logger.Info("Round timeout", zap.Any("Number", round.Number),
+					logging.Logger.Info("Round timeout",
+						zap.Any("Number", round.Number),
 						zap.Int("VRF_shares", len(round.GetVRFShares())),
 						zap.Int("proposedBlocks", len(round.GetProposedBlocks())),
 						zap.Int("notarizedBlocks", len(round.GetNotarizedBlocks())))

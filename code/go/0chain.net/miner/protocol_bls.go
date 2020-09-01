@@ -62,7 +62,8 @@ func SetDKGFromMagicBlocksChainPrev(ctx context.Context, mb *block.MagicBlock) e
 	prevMB := mc.GetPrevMagicBlockFromMB(mb)
 	for prevMB != nil && prevMB != mb && prevMB.StartingRound != 0 {
 		if err := SetDKG(ctx, prevMB); err != nil {
-			Logger.Error("failed to set DKG", zap.Error(err))
+			Logger.Error("failed to set DKG", zap.Error(err),
+				zap.Int64("sr", prevMB.StartingRound))
 		}
 		prevMB = mc.GetPrevMagicBlockFromMB(prevMB)
 	}
@@ -176,7 +177,7 @@ func (mc *Chain) GetBlsMessageForRound(r *round.Round) (string, error) {
 	return blsMsg, nil
 }
 
-// GetBlsShare - Start the BLS process
+// GetBlsShare - Start the BLS process.
 func (mc *Chain) GetBlsShare(ctx context.Context, r *round.Round) (string, error) {
 
 	r.SetVrfStartTime(time.Now())
