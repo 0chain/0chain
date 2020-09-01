@@ -502,6 +502,14 @@ func (c *Chain) AddLoadedFinalizedBlocks(lfb, lfmb *block.Block) {
 	return
 }
 
+// AddBlockNoPrevious adds block to cache and never calls
+// async fetch previous block.
+func (c *Chain) AddBlockNoPrevious(b *block.Block) *block.Block {
+	c.blocksMutex.Lock()
+	defer c.blocksMutex.Unlock()
+	return c.addBlockNoPrevious(b)
+}
+
 /*AddBlock - adds a block to the cache */
 func (c *Chain) AddBlock(b *block.Block) *block.Block {
 	c.blocksMutex.Lock()
@@ -556,6 +564,31 @@ func (c *Chain) AddRoundBlock(r round.RoundI, b *block.Block) *block.Block {
 	return b
 }
 
+func (c *Chain) addBlockNoPrevious(b *block.Block) *block.Block {
+	if eb, ok := c.blocks[b.Hash]; ok {
+		if eb != b {
+			c.MergeVerificationTickets(common.GetRootContext(), eb, b.GetVerificationTickets())
+		}
+		return eb
+	}
+	c.blocks[b.Hash] = b
+	if b.PrevBlock == nil {
+		if pb, ok := c.blocks[b.PrevHash]; ok {
+			b.SetPreviousBlock(pb)
+		} else {
+			println(":::: DON'T FETCH PREVIOUS BLOCK HERE ::::", b.Round)
+		}
+	}
+	for pb := b.PrevBlock; pb != nil && pb != c.LatestDeterministicBlock; pb = pb.PrevBlock {
+		pb.AddUniqueBlockExtension(b)
+		if c.IsFinalizedDeterministically(pb) {
+			c.SetLatestDeterministicBlock(pb)
+			break
+		}
+	}
+	return b
+}
+
 func (c *Chain) addBlock(b *block.Block) *block.Block {
 	if eb, ok := c.blocks[b.Hash]; ok {
 		if eb != b {
@@ -568,6 +601,7 @@ func (c *Chain) addBlock(b *block.Block) *block.Block {
 		if pb, ok := c.blocks[b.PrevHash]; ok {
 			b.SetPreviousBlock(pb)
 		} else {
+			println(":::: ASYNC FETCH PB ::::", b.Round)
 			c.AsyncFetchNotarizedPreviousBlock(b)
 		}
 	}

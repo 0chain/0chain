@@ -3,6 +3,10 @@ package miner
 import (
 	"context"
 
+	"0chain.net/chaincore/chain"
+	"0chain.net/chaincore/config"
+	"0chain.net/chaincore/node"
+
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
@@ -16,6 +20,56 @@ func (mc *Chain) HandleVRFShare(ctx context.Context, msg *BlockMessage) {
 	if mr != nil {
 		mc.AddVRFShare(ctx, mr, msg.VRFShare)
 	}
+}
+
+func (mc *Chain) enterOnViewChange(ctx context.Context, rn int64) {
+
+	if !config.DevConfiguration.ViewChange {
+		return
+	}
+
+	var (
+		mb          = mc.GetMagicBlock(rn)
+		lfb         = mc.GetLatestFinalizedBlock()
+		selfNodeKey = node.Self.Underlying().GetKey()
+
+		err error
+	)
+
+	if rn > lfb.Round && rn-lfb.Round > chain.ViewChangeOffset {
+		if _, err = mc.ensureLatestFinalizedBlocks(ctx); err != nil {
+			Logger.Error("get LFB/LFBM from sharder", zap.Error(err))
+			println("ENSURE IN THE ENTERING", err.Error())
+			return
+		}
+		mb = mc.GetMagicBlock(rn)          // update
+		lfb = mc.GetLatestFinalizedBlock() // update
+	}
+
+	// make sure the isJoining will work ok
+	var bsc = mc.ensureBlockStateChange(ctx, mc.GetMinerRound(lfb.Round))
+
+	println("ENTER", "RN", rn, "MB SR", mb.StartingRound, "LFB", lfb.Round, "BSC", bsc != nil)
+
+	if !mb.Miners.HasNode(selfNodeKey) {
+		println("(enter) hasn't this miner -> return")
+		return
+	}
+
+	var crn = mc.GetCurrentRound()
+	if crn < lfb.Round {
+		mc.SetCurrentRound(crn)
+	}
+
+	var nvc = mc.NextViewChange(mc.GetLatestFinalizedBlock())
+
+	println("(enter) (tail) CRN", crn, "LFB", lfb.Round, "MB SR", mb.StartingRound, "NVC", nvc)
+
+	if mc.isJoining(crn) {
+		println("(enter) pull not. blocks starting next round", crn)
+		go mc.StartNextRound(ctx, mc.GetMinerRound(crn))
+	}
+
 }
 
 // HandleVerifyBlockMessage - handles the verify block message.
@@ -38,6 +92,8 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 	if pr == nil {
 		Logger.Error("handle verify block -- no previous round (ignore)",
 			zap.Int64("round", b.Round), zap.Int64("prev_round", b.Round-1))
+		println("H verify block", b.Round, "enter")
+		mc.enterOnViewChange(ctx, b.Round)
 		return
 	}
 

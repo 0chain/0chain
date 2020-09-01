@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"sync"
 	"time"
 
 	"0chain.net/chaincore/config"
@@ -18,8 +19,10 @@ import (
 )
 
 /*VerifyTicket - verify the ticket */
-func (c *Chain) VerifyTicket(ctx context.Context, blockHash string, bvt *block.VerificationTicket, round int64) error {
-	sender := c.GetMiners(round).GetNode(bvt.VerifierID)
+func (c *Chain) VerifyTicket(ctx context.Context, blockHash string,
+	bvt *block.VerificationTicket, round int64) error {
+
+	var sender = c.GetMiners(round).GetNode(bvt.VerifierID)
 	if sender == nil {
 		return common.InvalidRequest(fmt.Sprintf("Verifier unknown or not authorized at this time: %v", bvt.VerifierID))
 	}
@@ -253,92 +256,121 @@ func (c *Chain) IsFinalizedDeterministically(b *block.Block) bool {
 	return false
 }
 
-/*GetNotarizedBlock - get a notarized block for a round */
-func (c *Chain) GetNotarizedBlock(blockHash string) *block.Block {
-	cround := c.GetCurrentRound()
-	params := &url.Values{}
+// GetNotarizedBlock - get a notarized block for a round.
+func (c *Chain) GetNotarizedBlock(blockHash string) (b *block.Block) {
+
+	var (
+		cround = c.GetCurrentRound()
+		params = &url.Values{}
+	)
+
 	params.Add("block", blockHash)
-	ctx := common.GetRootContext()
-	mb := c.GetCurrentMagicBlock()
-	var b *block.Block
-	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-		Logger.Info("get notarized block", zap.String("block", blockHash), zap.Int64("cround", cround), zap.Int64("current_round", c.GetCurrentRound()))
-		nb, ok := entity.(*block.Block)
+
+	var (
+		ctx  = common.GetRootContext()
+		mb   = c.GetCurrentMagicBlock()
+		lock sync.Mutex
+	)
+
+	var handler = func(ctx context.Context, entity datastore.Entity) (
+		resp interface{}, err error) {
+
+		Logger.Info("get notarized block", zap.String("block", blockHash),
+			zap.Int64("cround", cround),
+			zap.Int64("current_round", c.GetCurrentRound()))
+
+		var nb, ok = entity.(*block.Block)
 		if !ok {
 			return nil, datastore.ErrInvalidEntity
 		}
-		r := c.GetRound(nb.Round)
+
+		var r = c.GetRound(nb.Round)
 		if r == nil {
-			Logger.Info("get notarized block - no round will create...", zap.Int64("round", nb.Round), zap.String("block", blockHash), zap.Int64("cround", cround), zap.Int64("current_round", c.GetCurrentRound()))
+			Logger.Info("get notarized block - no round will create...",
+				zap.Int64("round", nb.Round), zap.String("block", blockHash),
+				zap.Int64("cround", cround),
+				zap.Int64("current_round", c.GetCurrentRound()))
 
 			r = c.RoundF.CreateRoundF(nb.Round).(*round.Round)
 			c.AddRound(r)
 		}
-		if err := c.VerifyNotarization(ctx, nb.Hash, nb.GetVerificationTickets(), r.GetRoundNumber()); err != nil {
-			Logger.Error("get notarized block - validate notarization", zap.Int64("round", nb.Round), zap.String("block", blockHash), zap.Error(err))
+
+		err = c.VerifyNotarization(ctx, nb.Hash,
+			nb.GetVerificationTickets(), r.GetRoundNumber())
+		if err != nil {
+			Logger.Error("get notarized block - validate notarization",
+				zap.Int64("round", nb.Round), zap.String("block", blockHash),
+				zap.Error(err))
 			return nil, err
 		}
-		if err := nb.Validate(ctx); err != nil {
-			Logger.Error("get notarized block - validate", zap.Int64("round", nb.Round), zap.String("block", blockHash), zap.Any("block_obj", nb), zap.Error(err))
+
+		if err = nb.Validate(ctx); err != nil {
+			Logger.Error("get notarized block - validate",
+				zap.Int64("round", nb.Round), zap.String("block", blockHash),
+				zap.Any("block_obj", nb), zap.Error(err))
 			return nil, err
 		}
-		Logger.Info("got notarized block", zap.String("block", nb.Hash), zap.Int64("round", nb.Round), zap.Int("verifictation_tickers", nb.VerificationTicketsSize()))
+
+		Logger.Info("got notarized block", zap.String("block", nb.Hash),
+			zap.Int64("round", nb.Round),
+			zap.Int("verifictation_tickers", nb.VerificationTicketsSize()))
+
+		// using mutex for the b variable
+		lock.Lock()
+		defer lock.Unlock()
+
 		b = c.AddBlock(nb)
-		//This is a notarized block. So, use this method to sync round info with the notarized block.
+		// This is a notarized block. So, use this method to sync round info
+		// with the notarized block.
 		b, r = c.AddNotarizedBlockToRound(r, nb)
-
 		b, _ = r.AddNotarizedBlock(b)
-
 		if b == nb {
 			go c.fetchedNotarizedBlockHandler.NotarizedBlockFetched(ctx, nb)
 		}
+
 		return b, nil
 	}
-	n2n := mb.Miners
+
+	var n2n = mb.Miners
 	n2n.RequestEntity(ctx, MinerNotarizedBlockRequestor, params, handler)
-	// if b == nil {
-	// 	// try to get the block from sharder, if it's finalized and pushed
-	// 	// to the sharders; omit round number (it's unknown) using optimistic
-	// 	// request
-	// 	var err error
-	// 	b, err = c.GetFinalizedBlockFromSharders(ctx,
-	// 		&LFBTicket{LFBHash: blockHash})
-	// 	if err != nil {
-	// 		Logger.Info("unable to fetch notarized->finalized block from sharders",
-	// 			zap.String("block", blockHash), zap.Error(err))
-	// 		return nil
-	// 	}
 
-	// 	if _, err = handler(ctx, b); err != nil {
-	// 		Logger.Info("unable to handle notarized->finalized block from sharders",
-	// 			zap.String("block", blockHash), zap.Error(err))
-	// 		return nil
-	// 	}
-
-	// }
-	return b
+	return
 }
 
-/*GetPreviousBlock - get the previous block from the network */
+// GetPreviousBlock - get the previous block from the network.
 func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Block {
+
 	if b.PrevBlock != nil {
 		return b.PrevBlock
 	}
+
 	pb, err := c.GetBlock(ctx, b.PrevHash)
 	if err == nil {
 		b.SetPreviousBlock(pb)
 		return pb
 	}
+
 	blocks := make([]*block.Block, 0, 10)
-	Logger.Info("fetch previous block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
+	Logger.Info("fetch previous block", zap.Int64("round", b.Round),
+		zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
+
 	cb := b
 	for idx := 0; idx < 10; idx++ {
-		Logger.Debug("fetching previous block", zap.Int("idx", idx), zap.Int64("cround", cb.Round), zap.String("cblock", cb.Hash), zap.String("cprev_block", cb.PrevHash))
+		Logger.Debug("fetching previous block", zap.Int("idx", idx),
+			zap.Int64("cround", cb.Round), zap.String("cblock", cb.Hash),
+			zap.String("cprev_block", cb.PrevHash))
+
 		nb := c.GetNotarizedBlock(cb.PrevHash)
 		if nb == nil {
-			Logger.Error("get previous block (unable to get prior blocks)", zap.Int64("current_round", c.GetCurrentRound()), zap.Int("idx", idx), zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("cround", cb.Round), zap.String("cblock", cb.Hash), zap.String("cprev_block", cb.PrevHash))
+			Logger.Error("get previous block (unable to get prior blocks)",
+				zap.Int64("current_round", c.GetCurrentRound()),
+				zap.Int("idx", idx), zap.Int64("round", b.Round),
+				zap.String("block", b.Hash), zap.Int64("cround", cb.Round),
+				zap.String("cblock", cb.Hash),
+				zap.String("cprev_block", cb.PrevHash))
 			return nil
 		}
+
 		cb = nb
 		blocks = append(blocks, cb)
 		pb, err = c.GetBlock(ctx, cb.PrevHash)
@@ -347,26 +379,41 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 			break
 		}
 	}
-	if cb.PrevBlock == nil { // This happens after fetching as far as per the previous for loop and still not having the prior block
-		Logger.Error("get previous block (missing continuity)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("oldest_fetched_round", cb.Round), zap.String("oldest_fetched_block", cb.Hash), zap.String("missing_prior_block", cb.PrevHash))
+
+	// This happens after fetching as far as per the previous for loop and
+	// still not having the prior block.
+	if cb.PrevBlock == nil {
+		Logger.Error("get previous block (missing continuity)",
+			zap.Int64("round", b.Round), zap.String("block", b.Hash),
+			zap.Int64("oldest_fetched_round", cb.Round),
+			zap.String("oldest_fetched_block", cb.Hash),
+			zap.String("missing_prior_block", cb.PrevHash))
 		return nil
 	}
+
 	for idx := len(blocks) - 1; idx >= 0; idx-- {
 		cb := blocks[idx]
 		if cb.PrevBlock == nil {
 			pb, err := c.GetBlock(ctx, cb.PrevHash)
 			if err != nil {
-				Logger.Error("get previous block (missing continuity)", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("cb_round", cb.Round), zap.String("cb_block", cb.Hash), zap.String("missing_prior_block", cb.PrevHash))
+				Logger.Error("get previous block (missing continuity)",
+					zap.Int64("round", b.Round), zap.String("block", b.Hash),
+					zap.Int64("cb_round", cb.Round),
+					zap.String("cb_block", cb.Hash),
+					zap.String("missing_prior_block", cb.PrevHash))
 				return nil
 			}
 			cb.SetPreviousBlock(pb)
 		}
+		// TODO (sfxdx): complex deadlock is here
 		c.ComputeState(ctx, cb)
 	}
+
 	pb, err = c.GetBlock(ctx, b.PrevHash)
 	if err == nil {
 		b.SetPreviousBlock(pb)
 	}
+
 	return pb
 }
 

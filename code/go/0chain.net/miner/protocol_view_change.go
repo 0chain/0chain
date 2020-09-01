@@ -304,7 +304,14 @@ func getNodePath(path string) util.Path {
 }
 
 func (mc *Chain) GetBlockStateNode(block *block.Block, path string) (
-	util.Serializable, error) {
+	seri util.Serializable, err error) {
+
+	if block.ClientState == nil {
+		if err = mc.InitBlockState(block); err != nil {
+			return nil, common.NewErrorf("get_block_state_node",
+				"initializing block state: %v", err)
+		}
+	}
 
 	if block.ClientState == nil {
 		return nil, common.NewErrorf("get_block_state_node",

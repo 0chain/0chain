@@ -21,8 +21,10 @@ import (
 	"go.uber.org/zap"
 )
 
-var ErrBlockHashMismatch = common.NewError("block_hash_mismatch", "Block hash mismatch")
-var ErrBlockStateHashMismatch = common.NewError("block_state_hash_mismatch", "Block state hash mismatch")
+var (
+	ErrBlockHashMismatch      = common.NewError("block_hash_mismatch", "Block hash mismatch")
+	ErrBlockStateHashMismatch = common.NewError("block_state_hash_mismatch", "Block state hash mismatch")
+)
 
 const (
 	StateGenerated              = 1
