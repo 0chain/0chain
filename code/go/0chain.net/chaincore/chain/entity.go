@@ -575,8 +575,6 @@ func (c *Chain) addBlockNoPrevious(b *block.Block) *block.Block {
 	if b.PrevBlock == nil {
 		if pb, ok := c.blocks[b.PrevHash]; ok {
 			b.SetPreviousBlock(pb)
-		} else {
-			println(":::: DON'T FETCH PREVIOUS BLOCK HERE ::::", b.Round)
 		}
 	}
 	for pb := b.PrevBlock; pb != nil && pb != c.LatestDeterministicBlock; pb = pb.PrevBlock {
@@ -601,7 +599,6 @@ func (c *Chain) addBlock(b *block.Block) *block.Block {
 		if pb, ok := c.blocks[b.PrevHash]; ok {
 			b.SetPreviousBlock(pb)
 		} else {
-			println(":::: ASYNC FETCH PB ::::", b.Round)
 			c.AsyncFetchNotarizedPreviousBlock(b)
 		}
 	}
@@ -701,12 +698,7 @@ func (c *Chain) PruneChain(_ context.Context, b *block.Block) {
 /*ValidateMagicBlock - validate the block for a given round has the right magic block */
 func (c *Chain) ValidateMagicBlock(ctx context.Context, mr *round.Round, b *block.Block) bool {
 	var mb = c.GetLatestFinalizedMagicBlockRound(mr.GetRoundNumber())
-	// TODO (sfxdx): REVERT BACK
-	if b.LatestFinalizedMagicBlockHash == mb.Hash {
-		return true
-	}
-	println("INVALID MAGIC BLOCK", mr.GetRoundNumber(), b.Round, mb.StartingRound, mb.MagicBlockNumber)
-	return false
+	return b.LatestFinalizedMagicBlockHash == mb.Hash
 }
 
 /*GetGenerators - get all the block generators for a given round */
