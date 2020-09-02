@@ -180,8 +180,8 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 	sc.AddLoadedFinalizedBlocks(bl.lfb, bl.lfmb)
 
 	// check is it notarized
-	err = sc.VerifyNotarization(ctx, bl.lfb.Hash,
-		bl.lfb.GetVerificationTickets(), bl.r.GetRoundNumber())
+	err = sc.VerifyNotarization(ctx, bl.lfb, bl.lfb.GetVerificationTickets(),
+		bl.r.GetRoundNumber())
 	if err != nil {
 		err = nil // not a real error
 		return    // do nothing, if not notarized

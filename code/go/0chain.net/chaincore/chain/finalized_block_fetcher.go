@@ -150,7 +150,7 @@ func (c *Chain) asyncFetchFinalizedBlock(ctx context.Context,
 		c.AddRound(r)
 	}
 
-	err = c.VerifyNotarization(ctx, fb.Hash, fb.GetVerificationTickets(),
+	err = c.VerifyNotarization(ctx, fb, fb.GetVerificationTickets(),
 		r.GetRoundNumber())
 	if err != nil {
 		Logger.Error("get FB - validate notarization",

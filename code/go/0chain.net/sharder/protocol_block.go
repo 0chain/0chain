@@ -2,8 +2,11 @@ package sharder
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"math"
 	"net/url"
+	"sort"
 	"strconv"
 	"time"
 
@@ -101,6 +104,86 @@ func (sc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 	return
 }
 
+func (sc *Chain) hasRelatedMagicBlock(b *block.Block) (ok bool) {
+	var (
+		relatedmbr = b.LatestFinalizedMagicBlockRound
+		mb         = sc.GetMagicBlock(b.Round)
+	)
+	return mb.StartingRound == relatedmbr
+}
+
+// UpdateLatesMagicBlockFromSharders pulls latest finalized magic block
+// from another sharders and verifies magic blocks chain. The method blocks
+// execution flow (it's synchronous).
+func (sc *Chain) UpdateLatesMagicBlockFromSharders(ctx context.Context) (
+	err error) {
+
+	var mbs = sc.GetLatestFinalizedMagicBlockFromSharder(ctx)
+	if len(mbs) == 0 {
+		return errors.New("no finalized magic block from sharders given")
+	}
+
+	if len(mbs) > 1 {
+		sort.Slice(mbs, func(i, j int) bool {
+			return mbs[i].StartingRound > mbs[j].StartingRound
+		})
+	}
+
+	var (
+		magicBlock = mbs[0]
+		cmb        = sc.GetCurrentMagicBlock()
+	)
+
+	Logger.Info("get current magic block from sharders",
+		zap.Any("magic_block", magicBlock))
+
+	if magicBlock.StartingRound <= cmb.StartingRound {
+		return nil // earlier then the current one
+	}
+
+	err = sc.VerifyChainHistory(ctx, magicBlock, sc.SaveMagicBlockHandler)
+	if err != nil {
+		return fmt.Errorf("failed to verify chain history: %v", err.Error())
+	}
+
+	if err = sc.UpdateMagicBlock(magicBlock.MagicBlock); err != nil {
+		return fmt.Errorf("failed to update magic block: %v", err.Error())
+	}
+
+	sc.UpdateNodesFromMagicBlock(magicBlock.MagicBlock)
+	sc.SetLatestFinalizedMagicBlock(magicBlock)
+
+	return // ok, updated
+}
+
+// pull related magic block if missing (sync)
+func (sc *Chain) pullRelatedMagicBlock(ctx context.Context, b *block.Block) (
+	err error) {
+
+	if sc.hasRelatedMagicBlock(b) {
+		return // already have the MB, nothing to do
+	}
+
+	println("[INF] PULL RELATED MAGIC BLOCK", "R", b.Round, "SR", b.LatestFinalizedMagicBlockRound)
+
+	if err = sc.UpdateLatesMagicBlockFromSharders(ctx); err != nil {
+		return // got error
+	}
+
+	if !sc.hasRelatedMagicBlock(b) {
+		println("[ERR] CAN'T PULL")
+		return fmt.Errorf("can't pull related magic block for %d", b.Round)
+	}
+
+	println("[OK] PULLED")
+	return
+}
+
+// TODO (sfxdx): miners should send blocks to new sharders starting from 501
+//               round (instead of 505), otherwise the new sharder misses
+//               related view change and magic block; the pulling it workaround
+//               for an unexpected case (unsent block, network failure, etc)
+
 func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 	var er = sc.GetRound(b.Round)
 	if er == nil {
@@ -110,7 +193,20 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 	}
 
 	var err error
-	err = sc.VerifyNotarization(ctx, b.Hash, b.GetVerificationTickets(),
+
+	// skip for now
+	if false {
+
+		// pull related magic block if missing
+		if err = sc.pullRelatedMagicBlock(ctx, b); err != nil {
+			Logger.Error("pulling related magic block", zap.Error(err),
+				zap.Int64("round", b.Round), zap.String("block", b.Hash))
+			return
+		}
+
+	}
+
+	err = sc.VerifyNotarization(ctx, b, b.GetVerificationTickets(),
 		er.GetRoundNumber())
 	if err != nil {
 		Logger.Error("notarization verification failed",

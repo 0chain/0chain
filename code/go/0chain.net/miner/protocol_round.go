@@ -576,7 +576,7 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 	}
 
 	if b.Round > 1 {
-		var err = mc.VerifyNotarization(ctx, b.PrevHash,
+		var err = mc.VerifyNotarization(ctx, b,
 			b.GetPrevBlockVerificationTickets(), pr.GetRoundNumber())
 		if err != nil {
 			Logger.Error("add to verification (prior block verify notarization)",
@@ -925,7 +925,7 @@ func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*Bloc
 				r = mc.AddRound(mr).(*Round)
 			}
 		}
-		err = mc.VerifyNotarization(ctx, fb.Hash, fb.GetVerificationTickets(),
+		err = mc.VerifyNotarization(ctx, fb, fb.GetVerificationTickets(),
 			r.GetRoundNumber())
 		if err != nil {
 			Logger.Error("lfb from sharder - notarization failed", zap.Int64("round", fb.Round),
@@ -1001,7 +1001,7 @@ func (mc *Chain) SyncFetchFinalizedBlockFromSharders(ctx context.Context,
 		if r == nil {
 			r = mc.getRound(ctx, fb.Round)
 		}
-		err = mc.VerifyNotarization(ctx, fb.Hash, fb.GetVerificationTickets(),
+		err = mc.VerifyNotarization(ctx, fb, fb.GetVerificationTickets(),
 			r.GetRoundNumber())
 		if err != nil {
 			Logger.Error("FB from sharder - notarization failed",

@@ -314,7 +314,7 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (
 		return nil, nil // no previous round
 	}
 
-	if err := mc.VerifyNotarization(ctx, b.Hash, b.GetVerificationTickets(),
+	if err := mc.VerifyNotarization(ctx, b, b.GetVerificationTickets(),
 		r.GetRoundNumber()); err != nil {
 		return nil, err
 	}

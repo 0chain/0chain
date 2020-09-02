@@ -33,39 +33,85 @@ func (c *Chain) VerifyTicket(ctx context.Context, blockHash string,
 	return nil
 }
 
-/*VerifyNotarization - verify that the notarization is correct */
-func (c *Chain) VerifyNotarization(ctx context.Context, blockHash string, bvt []*block.VerificationTicket, round int64) error {
+// VerifyNotarization - verify that the notarization is correct.
+func (c *Chain) VerifyNotarization(ctx context.Context, b *block.Block,
+	bvt []*block.VerificationTicket, round int64) (err error) {
+
 	if bvt == nil {
-		return common.NewError("no_verification_tickets", "No verification tickets for this block")
+		return common.NewError("no_verification_tickets",
+			"No verification tickets for this block")
 	}
-	ticketsMap := make(map[string]bool, len(bvt))
+
+	if err = c.VerifyRelatedMagicBlockPresence(b); err != nil {
+		return
+	}
+
+	var ticketsMap = make(map[string]bool, len(bvt))
 	for _, vt := range bvt {
 		if vt == nil {
-			Logger.Error("verify notarization - null ticket", zap.String("block", blockHash))
+			Logger.Error("verify notarization - null ticket",
+				zap.String("block", b.Hash))
 			return common.NewError("null_ticket", "Verification ticket is null")
 		}
 		if _, ok := ticketsMap[vt.VerifierID]; ok {
-			return common.NewError("duplicate_ticket_signature", "Found duplicate signatures in the notarization of the block")
+			return common.NewError("duplicate_ticket_signature",
+				"Found duplicate signatures in the notarization of the block")
 		}
 		ticketsMap[vt.VerifierID] = true
 	}
+
 	if !c.reachedNotarization(round, bvt) {
-		return common.NewError("block_not_notarized", "Verification tickets not sufficient to reach notarization")
+		return common.NewError("block_not_notarized",
+			"Verification tickets not sufficient to reach notarization")
 	}
+
 	for _, vt := range bvt {
-		if err := c.VerifyTicket(ctx, blockHash, vt, round); err != nil {
+		if err := c.VerifyTicket(ctx, b.Hash, vt, round); err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
-/*IsBlockNotarized - check if the block is notarized */
+// VerifyRelatedMagicBlockPresence check is there related magic block and
+// returns detailed error or nil for successful case. Since GetMagicBlock
+// is optimistic it can returns different magic block for requested round.
+func (c *Chain) VerifyRelatedMagicBlockPresence(b *block.Block) (err error) {
+
+	return // force ok to check
+
+	var (
+		relatedmbr = b.LatestFinalizedMagicBlockRound
+		mb         = c.GetMagicBlock(b.Round)
+	)
+
+	if mb.StartingRound != relatedmbr {
+		println("ERROR IS HERE (VRMBP)")
+		return common.NewErrorf("verify_related_mb_presence",
+			"no corresponding MB, want_mb_sr: %d, got_mb_sr: %d",
+			relatedmbr, mb.StartingRound)
+	}
+
+	// we can't check MB hash here, because we got magic block, but hash is
+	// hash of block with the magic block
+
+	return // ok, there is
+}
+
+// IsBlockNotarized - check if the block is notarized.
 func (c *Chain) IsBlockNotarized(ctx context.Context, b *block.Block) bool {
 	if b.IsBlockNotarized() {
 		return true
 	}
-	notarized := c.reachedNotarization(b.Round, b.GetVerificationTickets())
+
+	if err := c.VerifyRelatedMagicBlockPresence(b); err != nil {
+		println("ERROR IS HERE (IBN)")
+		Logger.Error("is_block_notarized", zap.Error(err))
+		return false // false
+	}
+
+	var notarized = c.reachedNotarization(b.Round, b.GetVerificationTickets())
 	if notarized {
 		b.SetBlockNotarized()
 	}
@@ -295,8 +341,8 @@ func (c *Chain) GetNotarizedBlock(blockHash string) (b *block.Block) {
 			c.AddRound(r)
 		}
 
-		err = c.VerifyNotarization(ctx, nb.Hash,
-			nb.GetVerificationTickets(), r.GetRoundNumber())
+		err = c.VerifyNotarization(ctx, nb, nb.GetVerificationTickets(),
+			r.GetRoundNumber())
 		if err != nil {
 			Logger.Error("get notarized block - validate notarization",
 				zap.Int64("round", nb.Round), zap.String("block", blockHash),

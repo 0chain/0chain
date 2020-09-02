@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"os"
 	"runtime"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -215,9 +214,11 @@ func main() {
 	initWorkers(ctx)
 	common.ConfigRateLimits()
 	initN2NHandlers()
-	if err := getCurrentMagicBlock(sc); err != nil {
-		Logger.Panic(err.Error()) //FIXME: remove panic
+
+	if err := sc.UpdateLatesMagicBlockFromSharders(ctx); err != nil {
+		Logger.Panic(err.Error()) // FIXME: remove panic
 	}
+
 	if serverChain.GetCurrentMagicBlock().MagicBlockNumber < serverChain.GetLatestMagicBlock().MagicBlockNumber {
 		serverChain.SetCurrentRound(0)
 	}
@@ -347,42 +348,6 @@ func readMagicBlockFile(magicBlockFile *string, sc *sharder.Chain, serverChain *
 	Logger.Info("number of miners", zap.Any("number of miners", mB.Miners.Size()),
 		zap.Any("number of sharders", mB.Sharders.Size()))
 	return mB
-}
-
-func getCurrentMagicBlock(sc *sharder.Chain) error {
-	mbs := sc.GetLatestFinalizedMagicBlockFromSharder(common.GetRootContext())
-	if len(mbs) == 0 {
-		return errors.New("no finalized magic block from sharder")
-	}
-	if len(mbs) > 1 {
-		sort.Slice(mbs, func(i, j int) bool {
-			return mbs[i].StartingRound > mbs[j].StartingRound
-		})
-	}
-	var (
-		magicBlock = mbs[0]
-		cmb        = sc.GetCurrentMagicBlock()
-	)
-	Logger.Info("get current magic block from sharders",
-		zap.Any("magic_block", magicBlock))
-	if magicBlock.StartingRound <= cmb.StartingRound {
-		return nil
-	}
-
-	var err = sc.VerifyChainHistory(common.GetRootContext(), magicBlock,
-		sc.SaveMagicBlockHandler)
-	if err != nil {
-		return fmt.Errorf("failed to verify chain history: %v", err.Error())
-	}
-
-	err = sc.UpdateMagicBlock(magicBlock.MagicBlock)
-	if err != nil {
-		return fmt.Errorf("failed to update magic block: %v", err.Error())
-	}
-	sc.UpdateNodesFromMagicBlock(magicBlock.MagicBlock)
-	sc.SetLatestFinalizedMagicBlock(magicBlock)
-
-	return nil
 }
 
 func initEntities() {

@@ -254,8 +254,7 @@ func (c *Chain) GetHeaviestNotarizedBlock(r round.RoundI) *block.Block {
 				"Block not from the requested round")
 		}
 
-		err = c.VerifyNotarization(ctx, nb.Hash,
-			nb.GetVerificationTickets(), rn)
+		err = c.VerifyNotarization(ctx, nb, nb.GetVerificationTickets(), rn)
 		if err != nil {
 			Logger.Error("get notarized block for round - validate notarization",
 				zap.Int64("round", rn), zap.String("block", nb.Hash),

@@ -177,49 +177,55 @@ func (mc *Chain) VerifyBlockMagicBlock(ctx context.Context, b *block.Block) (
 
 // VerifyBlock - given a set of transaction ids within a block, validate the block.
 func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
-	*block.BlockVerificationTicket, error) {
+	bvt *block.BlockVerificationTicket, err error) {
 
-	start := time.Now()
-	err := b.Validate(ctx)
-	if err != nil {
-		return nil, err
+	var start = time.Now()
+	if err = b.Validate(ctx); err != nil {
+		return
 	}
+
 	if err = mc.VerifyBlockMagicBlockReference(b); err != nil {
-		return nil, err
+		return
 	}
 	if err = mc.VerifyBlockMagicBlock(ctx, b); err != nil {
-		return nil, err
+		return
 	}
-	pb := mc.GetPreviousBlock(ctx, b)
-	if pb == nil {
+
+	var pb *block.Block
+	if pb = mc.GetPreviousBlock(ctx, b); pb == nil {
 		return nil, chain.ErrPreviousBlockUnavailable
 	}
-	err = mc.ValidateTransactions(ctx, b)
-	if err != nil {
-		return nil, err
+
+	if err = mc.ValidateTransactions(ctx, b); err != nil {
+		return
 	}
-	serr := mc.ComputeState(ctx, b)
-	if serr != nil {
+
+	if err = mc.ComputeState(ctx, b); err != nil {
 		Logger.Error("verify block - error computing state",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash),
 			zap.String("prev_block", b.PrevHash),
 			zap.String("state_hash", util.ToHex(b.ClientStateHash)),
-			zap.Error(serr))
-		return nil, serr
+			zap.Error(err))
+		return // TODO (sfxdx): to return here or not to return (keep error)?
 	}
-	err = mc.verifySmartContracts(ctx, b)
-	if err != nil {
-		return nil, err
+
+	if err = mc.verifySmartContracts(ctx, b); err != nil {
+		return
 	}
-	bvt, err := mc.SignBlock(ctx, b)
-	if err != nil {
+
+	if bvt, err = mc.SignBlock(ctx, b); err != nil {
 		return nil, err
 	}
 	bpTimer.UpdateSince(start)
-	Logger.Info("verify block successful", zap.Any("round", b.Round), zap.Int("block_size", len(b.Txns)), zap.Any("time", time.Since(start)),
-		zap.Any("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Int8("state_status", b.GetStateStatus()),
-		zap.Float64("p_chain_weight", pb.ChainWeight), zap.Error(serr))
-	return bvt, nil
+
+	Logger.Info("verify block successful", zap.Any("round", b.Round),
+		zap.Int("block_size", len(b.Txns)), zap.Any("time", time.Since(start)),
+		zap.Any("block", b.Hash), zap.String("prev_block", b.PrevHash),
+		zap.String("state_hash", util.ToHex(b.ClientStateHash)),
+		zap.Int8("state_status", b.GetStateStatus()),
+		zap.Float64("p_chain_weight", pb.ChainWeight))
+
+	return
 }
 
 /*ValidateTransactions - validate the transactions in the block */
