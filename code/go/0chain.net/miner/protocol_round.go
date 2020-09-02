@@ -150,7 +150,9 @@ func (mc *Chain) pullNotarizedBlocks(ctx context.Context, r *Round) {
 	Logger.Info("pull not. block for round -- got",
 		zap.Int64("round", rn))
 
-	if r.GetRandomSeed() == 0 {
+	if r.GetRandomSeed() == 0 && b.IsBlockNotarized() &&
+		mc.AddNotarizedBlock(ctx, r, b) {
+
 		var rrs = b.GetRoundRandomSeed()
 		Logger.Info("pull not. block for round -- set rrs by the block",
 			zap.Int64("round", rn), zap.Int64("rrs", rrs))
@@ -235,15 +237,15 @@ func (mc *Chain) getRound(ctx context.Context, rn int64) (mr *Round) {
 
 	var pr = mc.GetMinerRound(rn - 1)
 
-	if pr != nil {
-		Logger.Info("Starting next round in getRound",
-			zap.Int64("nextRoundNum", rn))
-		return mc.StartNextRound(ctx, pr) // can return nil
+	if pr == nil {
+		Logger.Error("get_round -- no previous round", zap.Int64("round", rn),
+			zap.Int64("prev_round", rn-1))
+		return // (nil)
 	}
 
-	Logger.Error("get_round -- no previous round", zap.Int64("round", rn),
-		zap.Int64("prev_round", rn-1))
-	return // (nil)
+	Logger.Info("Starting next round in getRound",
+		zap.Int64("nextRoundNum", rn))
+	return mc.StartNextRound(ctx, pr) // can return nil
 }
 
 // RedoVrfShare re-calculateVrfShare and send.
@@ -576,7 +578,22 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 	}
 
 	if b.Round > 1 {
-		var err = mc.VerifyNotarization(ctx, b,
+		// if pr.Block == nil {
+		// 	println("PR HASN'T THE PB", b.Round)
+		// 	return // FATAL
+		// }
+		// if pr.Block.Hash != b.PrevHash {
+		// 	println("PR BLOCK HAS DIFFERENT HASH", b.Round)
+		// 	return // FATAL
+		// }
+
+		pb, err := mc.GetBlock(ctx, b.PrevHash)
+		if err != nil || pb == nil {
+			println("CAN'T GET PREVIOUS BLOCK", b.Round)
+			return
+		}
+
+		err = mc.VerifyNotarization(ctx, pb,
 			b.GetPrevBlockVerificationTickets(), pr.GetRoundNumber())
 		if err != nil {
 			Logger.Error("add to verification (prior block verify notarization)",

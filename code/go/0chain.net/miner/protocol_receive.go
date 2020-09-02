@@ -157,11 +157,11 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 
 	if mr.GetRandomSeed() != b.GetRoundRandomSeed() {
 		Logger.Error("Got a block for verification with wrong random seed",
-			zap.Int64("roundNum", mr.GetRoundNumber()),
+			zap.Int64("round", mr.GetRoundNumber()),
 			zap.Int("roundToc", mr.GetTimeoutCount()),
 			zap.Int("blockToc", b.RoundTimeoutCount),
-			zap.Int64("roundrrs", mr.GetRandomSeed()),
-			zap.Int64("blockrrs", b.GetRoundRandomSeed()))
+			zap.Int64("round_rrs", mr.GetRandomSeed()),
+			zap.Int64("block_rrs", b.GetRoundRandomSeed()))
 		return
 	}
 

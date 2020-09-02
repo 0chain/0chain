@@ -153,11 +153,6 @@ func (mc *Chain) GetBlsMessageForRound(r *round.Round) (string, error) {
 	}
 
 	if pr.GetRandomSeed() == 0 {
-		// if pr.Block != nil {
-		// 	mc.SetRandomSeed(pr, pr.Block.GetRoundRandomSeed())
-		// } else if pr.BlockHash != "" {
-		// 	go mc.AsyncFetchNotarizedBlock(pr.BlockHash)
-		// }
 		Logger.Error("BLS sign VRF share: error in getting prev. random seed",
 			zap.Int64("prev_round", pr.Number))
 		return "", common.NewErrorf("prev_round_rrs_zero",
