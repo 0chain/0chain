@@ -108,6 +108,28 @@ func createPreviousMagicBlock(miners []*miner, sharders []*sharder) (
 	return
 }
 
+func (msc *MinerSmartContract) setDKGMinersTestHelper(t *testing.T,
+	miners []*miner, balances *testBalances) {
+
+	t.Helper()
+
+	var gn, err = msc.getGlobalNode(balances)
+	require.NoError(t, err)
+
+	var dmn *DKGMinerNodes
+	dmn, err = msc.getMinersDKGList(balances)
+	require.NoError(t, err)
+
+	dmn.setConfigs(gn)
+	for _, mn := range miners {
+		dmn.SimpleNodes[mn.miner.id] = &SimpleNode{ID: mn.miner.id}
+		dmn.Waited[mn.miner.id] = true
+	}
+
+	_, err = balances.InsertTrieNode(DKGMinersKey, dmn)
+	require.NoError(t, err)
+}
+
 func Test_payFees(t *testing.T) {
 
 	const stakeVal, stakeHolders = 10e10, 5
@@ -140,6 +162,10 @@ func Test_payFees(t *testing.T) {
 		}
 	})
 
+	// add all the miners to DKG miners list
+	// add all the miners and the sharders to latest finalized magic block
+
+	msc.setDKGMinersTestHelper(t, miners, balances)
 	balances.setLFMB(createPreviousMagicBlock(miners, sharders))
 
 	t.Run("stake miners", func(t *testing.T) {
@@ -179,6 +205,9 @@ func Test_payFees(t *testing.T) {
 			}
 		}
 	})
+
+	// add all the miners to DKG miners list
+	msc.setDKGMinersTestHelper(t, miners, balances)
 
 	t.Run("pay fees -> view change", func(t *testing.T) {
 
@@ -236,6 +265,9 @@ func Test_payFees(t *testing.T) {
 		assert.EqualValues(t, 251, gn.LastRound)
 		assert.EqualValues(t, 0, gn.Minted)
 	})
+
+	// add all the miners to DKG miners list
+	msc.setDKGMinersTestHelper(t, miners, balances)
 
 	t.Run("pay fees -> no fees", func(t *testing.T) {
 
@@ -305,6 +337,8 @@ func Test_payFees(t *testing.T) {
 
 	})
 
+	// don't set DKG miners list, because no VC is expected
+
 	// reset all balances
 	balances.balances = make(map[string]state.Balance)
 
@@ -370,6 +404,8 @@ func Test_payFees(t *testing.T) {
 		assert.Equal(t, expected, got, "balances")
 
 	})
+
+	// don't set DKG miners list, because no VC is expected
 
 	// reset all balances
 	balances.balances = make(map[string]state.Balance)

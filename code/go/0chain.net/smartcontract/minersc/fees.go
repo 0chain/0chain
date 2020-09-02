@@ -276,7 +276,7 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 		// reset this error, since it's not fatal, we just don't do
 		// this view change, because >= T miners didn't send 'wait' transaction
 		err = nil
-		return
+		// don't return here -> reset DKG miners list first
 	}
 
 	// don't clear the nodes don't waited from MB, since MB
