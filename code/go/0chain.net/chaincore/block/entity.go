@@ -102,7 +102,7 @@ type Block struct {
 	*MagicBlock           `json:"magic_block,omitempty"`
 }
 
-//NewBlock - create a new empty block
+// NewBlock - create a new empty block
 func NewBlock(chainID datastore.Key, round int64) *Block {
 	b := datastore.GetEntityMetadata("block").Instance().(*Block)
 	b.Round = round

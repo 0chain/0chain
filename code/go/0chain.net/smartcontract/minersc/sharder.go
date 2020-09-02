@@ -133,7 +133,9 @@ func (msc *MinerSmartContract) verifySharderState(balances cstate.StateContextI,
 
 }
 
-func (msc *MinerSmartContract) getShardersList(balances cstate.StateContextI, key datastore.Key) (*MinerNodes, error) {
+func (msc *MinerSmartContract) getShardersList(balances cstate.StateContextI,
+	key datastore.Key) (*MinerNodes, error) {
+
 	allMinersList := &MinerNodes{}
 	allMinersBytes, err := balances.GetTrieNode(key)
 	if err != nil && err != util.ErrValueNotPresent {

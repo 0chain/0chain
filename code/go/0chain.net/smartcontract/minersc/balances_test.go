@@ -21,6 +21,7 @@ type testBalances struct {
 	tree          map[datastore.Key]util.Serializable
 	block         *block.Block
 	blockSharders []string
+	lfmb          *block.Block
 }
 
 func newTestBalances() *testBalances {
@@ -32,6 +33,10 @@ func newTestBalances() *testBalances {
 
 func (tb *testBalances) setBalance(key datastore.Key, b state.Balance) {
 	tb.balances[key] = b
+}
+
+func (tb *testBalances) setLFMB(lfmb *block.Block) {
+	tb.lfmb = lfmb
 }
 
 func (tb *testBalances) GetBlock() *block.Block {
@@ -64,7 +69,7 @@ func (tb *testBalances) DeleteTrieNode(datastore.Key) (datastore.Key, error) {
 	return "", nil
 }
 func (tb *testBalances) GetLastestFinalizedMagicBlock() *block.Block {
-	return nil
+	return tb.lfmb
 }
 
 func (tb *testBalances) GetSignatureScheme() encryption.SignatureScheme {

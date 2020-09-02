@@ -6,6 +6,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/state"
 
 	"github.com/stretchr/testify/assert"
@@ -89,6 +90,24 @@ func getBlockSharders(sharders []*sharder, bs []string) (got []*sharder) {
 	return
 }
 
+func createPreviousMagicBlock(miners []*miner, sharders []*sharder) (
+	b *block.Block) {
+
+	b = new(block.Block)
+
+	b.MagicBlock = block.NewMagicBlock()
+	b.MagicBlock.Miners = node.NewPool(node.NodeTypeMiner)
+	b.MagicBlock.Sharders = node.NewPool(node.NodeTypeSharder)
+
+	for _, mn := range miners {
+		b.MagicBlock.Miners.NodesMap[mn.miner.id] = new(node.Node)
+	}
+	for _, sh := range sharders {
+		b.MagicBlock.Sharders.NodesMap[sh.sharder.id] = new(node.Node)
+	}
+	return
+}
+
 func Test_payFees(t *testing.T) {
 
 	const stakeVal, stakeHolders = 10e10, 5
@@ -120,6 +139,8 @@ func Test_payFees(t *testing.T) {
 			now += 10
 		}
 	})
+
+	balances.setLFMB(createPreviousMagicBlock(miners, sharders))
 
 	t.Run("stake miners", func(t *testing.T) {
 		for _, mn := range miners {

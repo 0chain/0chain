@@ -267,12 +267,12 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 		}
 	}
 
-	if err = dmn.recalculateTKN(true); err != nil {
+	if err = dmn.recalculateTKN(true, gn, balances); err != nil {
 		Logger.Info("adjust_view_change", zap.Error(err))
 		// don't do this view change, save the gn later
 		// reset the ViewChange to previous one (for miners)
-		var lfmb = balances.GetLastestFinalizedMagicBlock()
-		gn.ViewChange = lfmb.StartingRound
+		var prev = gn.prevMagicBlock(balances)
+		gn.ViewChange = prev.StartingRound
 		// reset this error, since it's not fatal, we just don't do
 		// this view change, because >= T miners didn't send 'wait' transaction
 		err = nil
@@ -313,7 +313,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	}
 
 	var block = balances.GetBlock()
-	if block.Round == gn.ViewChange && !msc.SetMagicBlock(balances) {
+	if block.Round == gn.ViewChange && !msc.SetMagicBlock(gn, balances) {
 		return "", common.NewErrorf("pay_fee",
 			"can't set magic block round=%d viewChange=%d",
 			block.Round, gn.ViewChange)

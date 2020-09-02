@@ -9,6 +9,7 @@ import (
 	"sort"
 	"sync"
 
+	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
@@ -78,10 +79,14 @@ var (
 )
 
 type (
-	phaseFunctions        func(balances cstate.StateContextI, gn *GlobalNode) error
-	movePhaseFunctions    func(balances cstate.StateContextI, pn *PhaseNode, gn *GlobalNode) bool
-	smartContractFunction func(t *transaction.Transaction, inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (string, error)
-	SimpleNodes           = map[string]*SimpleNode
+	phaseFunctions func(balances cstate.StateContextI, gn *GlobalNode) (
+		err error)
+	movePhaseFunctions func(balances cstate.StateContextI, pn *PhaseNode,
+		gn *GlobalNode) bool
+	smartContractFunction func(t *transaction.Transaction, inputData []byte,
+		gn *GlobalNode, balances cstate.StateContextI) (string, error)
+
+	SimpleNodes = map[string]*SimpleNode
 )
 
 func globalKeyHash(name string) datastore.Key {
@@ -130,8 +135,163 @@ type GlobalNode struct {
 	// MaxMint is minting boundary for SC.
 	MaxMint state.Balance `json:"max_mint"`
 
+	// PrevMagicBlock keeps previous magic block to make Miner SC more stable.
+	// In case LatestFinalizedMagicBlock of a miner works incorrect. We are
+	// using this previous MB or LatestFinalizedMagicBlock for genesis block.
+	PrevMagicBlock *block.MagicBlock `json:"prev_magic_block"`
+
 	// Minted tokens by SC.
 	Minted state.Balance `json:"minted"`
+}
+
+// The prevMagicBlock from the global node (saved on previous VC) or LFMB of
+// the balances if missing (genesis case);
+func (gn *GlobalNode) prevMagicBlock(balances cstate.StateContextI) (
+	pmb *block.MagicBlock) {
+
+	if gn.PrevMagicBlock != nil {
+		return gn.PrevMagicBlock
+	}
+	return balances.GetLastestFinalizedMagicBlock().MagicBlock
+}
+
+// has previous miner in all miners list
+func (gn *GlobalNode) hasPrevMiner(miners *MinerNodes,
+	balances cstate.StateContextI) (has bool) {
+
+	var pmb = gn.prevMagicBlock(balances)
+
+	for _, mn := range miners.Nodes {
+		if pmb.Miners.HasNode(mn.ID) {
+			return true
+		}
+	}
+
+	return // false, hasn't
+}
+
+// has previous miner in given MPKs
+func (gn *GlobalNode) hasPrevMinerInMPKs(mpks *block.Mpks,
+	balances cstate.StateContextI) (has bool) {
+
+	var pmb = gn.prevMagicBlock(balances)
+
+	for id := range mpks.Mpks {
+		if pmb.Miners.HasNode(id) {
+			return true
+		}
+	}
+
+	return // false, hasn't
+}
+
+// has previous miner in given GSoS
+func (gn *GlobalNode) hasPrevMinerInGSoS(gsos *block.GroupSharesOrSigns,
+	balances cstate.StateContextI) (has bool) {
+
+	var pmb = gn.prevMagicBlock(balances)
+
+	for id := range gsos.Shares {
+		if pmb.Miners.HasNode(id) {
+			return true
+		}
+	}
+
+	return // false, hasn't
+}
+
+// of DKG miners
+func (gn *GlobalNode) hasPrevDKGMiner(dkgmns SimpleNodes,
+	balances cstate.StateContextI) (has bool) {
+
+	var pmb = gn.prevMagicBlock(balances)
+
+	for id := range dkgmns {
+		if pmb.Miners.HasNode(id) {
+			return true
+		}
+	}
+
+	return // false, hasn't
+}
+
+// of DKG miners sorted list
+func (gn *GlobalNode) hasPrevDKGMinerInList(list []*SimpleNode,
+	balances cstate.StateContextI) (has bool) {
+
+	var pmb = gn.prevMagicBlock(balances)
+
+	for _, node := range list {
+		if pmb.Miners.HasNode(node.ID) {
+			return true
+		}
+	}
+
+	return // false, hasn't
+}
+
+// Receive list of ranked miners and extract miners of previous MB preserving
+// order. The given list not modified.
+func (gn *GlobalNode) rankedPrevDKGMiners(list []*SimpleNode,
+	balances cstate.StateContextI) (prev []*SimpleNode) {
+
+	var pmb = gn.prevMagicBlock(balances)
+	prev = make([]*SimpleNode, 0, len(list))
+
+	for _, node := range list {
+		if pmb.Miners.HasNode(node.ID) {
+			prev = append(prev, node)
+		}
+	}
+
+	return // false, hasn't
+}
+
+//
+func (gn *GlobalNode) hasPrevSharderInList(list []*MinerNode,
+	balances cstate.StateContextI) (has bool) {
+
+	var pmb = gn.prevMagicBlock(balances)
+
+	for _, node := range list {
+		if pmb.Sharders.HasNode(node.ID) {
+			return true
+		}
+	}
+
+	return // false, hasn't
+}
+
+// Receive list of ranked sharders and extract sharder of previous MB preserving
+// order. The given list not modified.
+func (gn *GlobalNode) rankedPrevSharders(list []*MinerNode,
+	balances cstate.StateContextI) (prev []*MinerNode) {
+
+	var pmb = gn.prevMagicBlock(balances)
+	prev = make([]*MinerNode, 0, len(list))
+
+	for _, node := range list {
+		if pmb.Sharders.HasNode(node.ID) {
+			prev = append(prev, node)
+		}
+	}
+
+	return // false, hasn't
+}
+
+// has previous sharder in sharders keep list
+func (gn *GlobalNode) hasPrevShader(sharders *MinerNodes,
+	balances cstate.StateContextI) (has bool) {
+
+	var pmb = gn.prevMagicBlock(balances)
+
+	for _, sn := range sharders.Nodes {
+		if pmb.Sharders.HasNode(sn.ID) {
+			return true
+		}
+	}
+
+	return // false, hasn't
 }
 
 func (gn *GlobalNode) canMint() bool {
@@ -201,7 +361,7 @@ func (gn *GlobalNode) GetHashBytes() []byte {
 // miner / sharder
 //
 
-//MinerNode struct that holds information about the registering miner
+// MinerNode struct that holds information about the registering miner.
 type MinerNode struct {
 	*SimpleNode `json:"simple_miner"`
 	Pending     map[string]*sci.DelegatePool `json:"pending,omitempty"`
@@ -353,7 +513,7 @@ func (nt NodeType) MarshalJSON() (p []byte, err error) {
 	return json.Marshal(nt.String())
 }
 
-// UnmarsalJOSN converts JOSN value back to NodeType.
+// UnmarsalJSON converts JSON value back to NodeType.
 func (nt *NodeType) UnmarshalJSON(p []byte) (err error) {
 	var nts string
 	if err = json.Unmarshal(p, &nts); err != nil {
@@ -699,7 +859,9 @@ func (dkgmn *DKGMinerNodes) calculateTKN(gn *GlobalNode, n int) {
 	dkgmn.T = int(math.Ceil(dkgmn.TPercent * float64(m)))
 }
 
-func (dkgmn *DKGMinerNodes) reduce(n int) int {
+func (dkgmn *DKGMinerNodes) reduce(n int, gn *GlobalNode,
+	balances cstate.StateContextI) int {
+
 	var list []*SimpleNode
 	for _, node := range dkgmn.SimpleNodes {
 		list = append(list, node)
@@ -708,6 +870,15 @@ func (dkgmn *DKGMinerNodes) reduce(n int) int {
 		return list[i].TotalStaked > list[j].TotalStaked ||
 			list[i].ID < list[j].ID
 	})
+
+	if !gn.hasPrevDKGMinerInList(list[:n], balances) {
+		var prev = gn.rankedPrevDKGMiners(list, balances)
+		if len(prev) == 0 {
+			panic("must not happen")
+		}
+		list[n-1] = prev[0]
+	}
+
 	list = list[:n]
 	dkgmn.SimpleNodes = make(SimpleNodes)
 	for _, node := range list {
@@ -716,16 +887,33 @@ func (dkgmn *DKGMinerNodes) reduce(n int) int {
 	return dkgmn.MaxN
 }
 
-func (dkgmn *DKGMinerNodes) recalculateTKN(final bool) (err error) {
+func simpleNodesKeys(sns SimpleNodes) (ks []string) {
+	ks = make([]string, 0, len(sns))
+	for k := range sns {
+		ks = append(ks, k)
+	}
+	return
+}
+
+func (dkgmn *DKGMinerNodes) recalculateTKN(final bool, gn *GlobalNode,
+	balances cstate.StateContextI) (err error) {
+
 	var n = len(dkgmn.SimpleNodes)
 	// check the lower boundary
 	if n < dkgmn.MinN {
 		return fmt.Errorf("to few miners: %d, want at least: %d", n, dkgmn.MinN)
 	}
+
+	if !gn.hasPrevDKGMiner(dkgmn.SimpleNodes, balances) {
+		return fmt.Errorf("missing miner from previous set, n: %d, list: %s",
+			n, simpleNodesKeys(dkgmn.SimpleNodes))
+	}
+
 	// check upper boundary for a final recalculation
 	if final && n > dkgmn.MaxN {
-		n = dkgmn.reduce(dkgmn.MaxN)
+		n = dkgmn.reduce(dkgmn.MaxN, gn, balances)
 	}
+
 	var m = min(dkgmn.MaxN, n)
 	dkgmn.N = n
 	dkgmn.K = int(math.Ceil(dkgmn.KPercent * float64(m)))

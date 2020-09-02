@@ -58,6 +58,22 @@ func (msc *MinerSmartContract) moveToContribute(balances cstate.StateContextI,
 		return false
 	}
 
+	if !gn.hasPrevShader(allShardersList, balances) {
+		Logger.Error("invalid state: all sharders list hasn't a sharder"+
+			" from previous VC set",
+			zap.Int("all", len(allShardersList.Nodes)),
+			zap.Int("min_s", gn.MinS))
+		return false
+	}
+
+	if !gn.hasPrevMiner(allMinersList, balances) {
+		Logger.Error("invalid state: all miners list hasn't a miner"+
+			" from previous VC set",
+			zap.Int("all", len(allMinersList.Nodes)),
+			zap.Int("min_n", gn.MinN))
+		return false
+	}
+
 	return allMinersList != nil &&
 		len(allMinersList.Nodes) >= dkgMinersList.K &&
 		len(allShardersList.Nodes) >= gn.MinS
@@ -66,10 +82,6 @@ func (msc *MinerSmartContract) moveToContribute(balances cstate.StateContextI,
 func (msc *MinerSmartContract) moveToShareOrPublish(
 	balances cstate.StateContextI, pn *PhaseNode, gn *GlobalNode) (
 	result bool) {
-
-	// TODO (sfdx): (thinking)
-	// 1. deny to remove at least one sharder of previous set
-	// 2. deny to remove ?? miners from previous set
 
 	var (
 		dkgMinersList *DKGMinerNodes
@@ -85,6 +97,14 @@ func (msc *MinerSmartContract) moveToShareOrPublish(
 
 	if len(shardersKeep.Nodes) < gn.MinS {
 		Logger.Error("not enough sharders in keep list to move phase",
+			zap.Int("keep", len(shardersKeep.Nodes)),
+			zap.Int("min_s", gn.MinS))
+		return false
+	}
+
+	if !gn.hasPrevShader(shardersKeep, balances) {
+		Logger.Error("missing at least one sharder from previous set in "+
+			"sharders keep list to move phase",
 			zap.Int("keep", len(shardersKeep.Nodes)),
 			zap.Int("min_s", gn.MinS))
 		return false
@@ -111,6 +131,12 @@ func (msc *MinerSmartContract) moveToShareOrPublish(
 	if err = mpks.Decode(mpksBytes.Encode()); err != nil {
 		Logger.Error("failed to decode node MinersMPKKey",
 			zap.Any("error", err), zap.Any("phase", pn.Phase))
+		return false
+	}
+
+	// should have at least one miner from previous VC set
+	if !gn.hasPrevMinerInMPKs(mpks, balances) {
+		Logger.Error("no miner from previous VC set in MPKS")
 		return false
 	}
 
@@ -144,6 +170,12 @@ func (msc *MinerSmartContract) moveToWait(balances cstate.StateContextI,
 			zap.Any("error", err), zap.Any("phase", pn.Phase))
 		return false
 	}
+
+	if !gn.hasPrevMinerInGSoS(gsos, balances) {
+		Logger.Error("no miner from previous VC set in GSoS")
+		return false
+	}
+
 	return len(gsos.Shares) >= dkgMinersList.K
 }
 
@@ -286,7 +318,7 @@ func (msc *MinerSmartContract) widdleDKGMinersForShare(
 		}
 	}
 
-	if err = dkgMiners.recalculateTKN(false); err != nil {
+	if err = dkgMiners.recalculateTKN(false, gn, balances); err != nil {
 		Logger.Error("widdle dkg miners", zap.Error(err))
 		return err
 	}
@@ -301,7 +333,13 @@ func (msc *MinerSmartContract) widdleDKGMinersForShare(
 }
 
 func (msc *MinerSmartContract) reduceShardersList(keep, all *MinerNodes,
-	gn *GlobalNode) (list []*MinerNode, err error) {
+	gn *GlobalNode, balances cstate.StateContextI) (
+	list []*MinerNode, err error) {
+
+	var (
+		pmb  = gn.prevMagicBlock(balances)
+		hasp bool // TODO (sfxdx): remove the temporary debug code
+	)
 
 	list = make([]*MinerNode, 0, len(keep.Nodes))
 	for _, ksh := range keep.Nodes {
@@ -311,10 +349,15 @@ func (msc *MinerSmartContract) reduceShardersList(keep, all *MinerNodes,
 				" keep list doesn't exists in all sharders list: %s", ksh.ID)
 		}
 		list = append(list, ash)
+		hasp = hasp || pmb.Sharders.HasNode(ksh.ID)
+	}
+
+	if !hasp {
+		panic("must not happen")
 	}
 
 	if len(list) <= gn.MaxS {
-		return // doesn't need to sort
+		return // doesn't need to sort, has sharder from previous set
 	}
 
 	// get max staked
@@ -322,6 +365,14 @@ func (msc *MinerSmartContract) reduceShardersList(keep, all *MinerNodes,
 		return list[i].TotalStaked > list[j].TotalStaked ||
 			list[i].ID < list[j].ID
 	})
+
+	if !gn.hasPrevSharderInList(list[:gn.MaxS], balances) {
+		var prev = gn.rankedPrevSharders(list, balances)
+		if len(prev) == 0 {
+			panic("must not happen")
+		}
+		list[gn.MaxS-1] = prev[0] // best rank
+	}
 
 	list = list[:gn.MaxS]
 	return
@@ -389,13 +440,13 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 		sharders = allSharderList
 	} else {
 		sharders.Nodes, err = msc.reduceShardersList(sharders, allSharderList,
-			gn)
+			gn, balances)
 		if err != nil {
 			return err
 		}
 	}
 
-	if err = dkgMinersList.recalculateTKN(true); err != nil {
+	if err = dkgMinersList.recalculateTKN(true, gn, balances); err != nil {
 		Logger.Error("create magic block for wait", zap.Error(err))
 		return err
 	}
@@ -745,7 +796,8 @@ func (msc *MinerSmartContract) RestartDKG(pn *PhaseNode,
 	pn.StartRound = pn.CurrentRound
 }
 
-func (msc *MinerSmartContract) SetMagicBlock(balances cstate.StateContextI) bool {
+func (msc *MinerSmartContract) SetMagicBlock(gn *GlobalNode,
+	balances cstate.StateContextI) bool {
 
 	magicBlockBytes, err := balances.GetTrieNode(MagicBlockKey)
 	if err != nil {
@@ -758,6 +810,10 @@ func (msc *MinerSmartContract) SetMagicBlock(balances cstate.StateContextI) bool
 		Logger.Error("could not decode magic block from MPT", zap.Error(err))
 		return false
 	}
+
+	// keep the magic block to track previous nodes list next view change
+	// (deny VC leaving for at least 1 miner and 1 sharder of previous set)
+	gn.PrevMagicBlock = magicBlock
 
 	balances.SetMagicBlock(magicBlock)
 	return true
