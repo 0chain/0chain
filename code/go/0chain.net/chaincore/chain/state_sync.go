@@ -244,7 +244,7 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 	return bsc, nil
 }
 
-//ApplyBlockStateChange - apply the state chagnes to the block state
+// ApplyBlockStateChange - apply the state chagnes to the block state.
 func (c *Chain) ApplyBlockStateChange(b *block.Block, bsc *block.StateChange) error {
 	lock := b.StateMutex
 	lock.Lock()

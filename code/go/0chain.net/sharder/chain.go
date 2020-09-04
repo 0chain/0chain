@@ -159,16 +159,17 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 
 	// using ClientState of genesis block
 
-	if err = sc.InitBlockState(bl.lfb); err != nil {
-		return common.NewError("load_lfb",
-			"can't init block state: "+err.Error()) // fatal
-	}
 	bl.lfb.SetStateStatus(block.StateSuccessful)
+	if err = sc.InitBlockState(bl.lfb); err != nil {
+		bl.lfb.SetStateStatus(0)
+		return common.NewErrorf("load_lfb",
+			"can't init block state: %v", err) // fatal
+	}
 
 	// setup lfmb first
 	if err = sc.UpdateMagicBlock(bl.lfmb.MagicBlock); err != nil {
-		return common.NewError("load_lfb",
-			"can't update magic block: "+err.Error()) // fatal
+		return common.NewErrorf("load_lfb",
+			"can't update magic block: %v", err) // fatal
 	}
 	sc.UpdateNodesFromMagicBlock(bl.lfmb.MagicBlock)
 
@@ -194,8 +195,8 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 	// setup nlfmb
 	if bl.nlfmb != nil && bl.nlfmb.Round > bl.lfmb.Round {
 		if err = sc.UpdateMagicBlock(bl.nlfmb.MagicBlock); err != nil {
-			return common.NewError("load_lfb",
-				"can't update newer magic block: "+err.Error()) // fatal
+			return common.NewErrorf("load_lfb",
+				"can't update newer magic block: %v", err) // fatal
 		}
 		sc.UpdateNodesFromMagicBlock(bl.nlfmb.MagicBlock) //
 		sc.SetLatestFinalizedMagicBlock(bl.nlfmb)         // the real latest
@@ -234,8 +235,8 @@ func (sc *Chain) loadLatestFinalizedMagicBlockFromStore(ctx context.Context,
 		lfb.LatestFinalizedMagicBlockRound)
 	if err != nil {
 		// fatality, can't find related LFMB
-		return nil, common.NewError("load_lfb",
-			"related magic block not found: "+err.Error())
+		return nil, common.NewErrorf("load_lfb",
+			"related magic block not found: %v", err)
 	}
 
 	// with current implementation it's a case
@@ -265,8 +266,8 @@ func (sc *Chain) walkDownLookingForMagicBlock(iter *gorocksdb.Iterator,
 
 	for iter.Prev(); iter.Valid(); iter.Prev() {
 		if err = datastore.FromJSON(iter.Value().Data(), r); err != nil {
-			return nil, common.NewError("load_lfb",
-				"decoding round info: "+err.Error()) // critical
+			return nil, common.NewErrorf("load_lfb",
+				"decoding round info: %v", err) // critical
 		}
 
 		Logger.Debug("load_lfb (lfmb), got round", zap.Int64("round", r.Number),
@@ -290,8 +291,8 @@ func (sc *Chain) walkDownLookingForLFB(iter *gorocksdb.Iterator,
 
 	for ; iter.Valid(); iter.Prev() {
 		if err = datastore.FromJSON(iter.Value().Data(), r); err != nil {
-			return nil, common.NewError("load_lfb",
-				"decoding round info: "+err.Error()) // critical
+			return nil, common.NewErrorf("load_lfb",
+				"decoding round info: %v", err) // critical
 		}
 
 		Logger.Debug("load_lfb, got round", zap.Int64("round", r.Number),

@@ -235,23 +235,31 @@ func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) erro
 	return err
 }
 
-// isViewChanging returns true for 501-504 rounds
-func (mc *Chain) isViewChanging(round int64) (is bool) {
-	var (
-		lfb = mc.GetLatestFinalizedBlock() //
-		nvc = mc.NextViewChange(lfb)       // expected
-	)
-	return round >= nvc && round < nvc+chain.ViewChangeOffset
-}
+// TODO (sfxdx): USE OR REMOVE
+//
+// // isViewChanging returns true for 501-504 rounds
+// func (mc *Chain) isViewChanging(round int64) (is bool) {
+// 	var (
+// 		lfb = mc.GetLatestFinalizedBlock() //
+// 		nvc = mc.NextViewChange(lfb)       // expected
+// 	)
+// 	return round >= nvc && round < nvc+chain.ViewChangeOffset
+// }
 
 // The sJoining returns true if this miner joins blockchain on current view
 // changing. For rounds, for example, from 501 to 504.
 func (mc *Chain) isJoining(rn int64) (is bool) {
 
 	var (
-		lfb = mc.GetLatestFinalizedBlock()
-		nvc = mc.NextViewChange(lfb)
+		lfb      = mc.GetLatestFinalizedBlock()
+		nvc, err = mc.NextViewChange(lfb)
 	)
+
+	if err != nil {
+		Logger.Error("is_joining", zap.Error(err),
+			zap.Bool("is_state", lfb.IsStateComputed()))
+		return
+	}
 
 	if lfb.Round >= nvc && rn < nvc+chain.ViewChangeOffset {
 		// get current magic block
@@ -275,10 +283,22 @@ func (mc *Chain) isJoining(rn int64) (is bool) {
 func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 
 	var (
-		lfb = mc.GetLatestFinalizedBlock()
 		mb  = b.MagicBlock
-		nvc = mc.NextViewChange(lfb)
+		nvc int64
 	)
+
+	if !b.IsStateComputed() {
+		println("VC", b.Round, b.MagicBlock != nil, "block state not computed", b.ClientState != nil)
+	}
+
+	if !mc.ensureState(ctx, b) {
+		return common.NewErrorf("view_change", "block state not computed: %d",
+			b.Round)
+	}
+
+	if nvc, err = mc.NextViewChange(b); err != nil {
+		return common.NewError("view_change", err.Error())
+	}
 
 	// next view change is expected, but not given;
 	// it means the MB rejected by Miner SC

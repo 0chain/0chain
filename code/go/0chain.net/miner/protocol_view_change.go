@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/threshold/bls"
@@ -307,10 +308,12 @@ func (mc *Chain) GetBlockStateNode(block *block.Block, path string) (
 	seri util.Serializable, err error) {
 
 	if block.ClientState == nil {
-		if err = mc.InitBlockState(block); err != nil {
-			return nil, common.NewErrorf("get_block_state_node",
-				"initializing block state: %v", err)
-		}
+		return nil, common.NewError("get_block_state_node",
+			"no block state created")
+		// if err = mc.InitBlockState(block); err != nil {
+		//	return nil, common.NewErrorf("get_block_state_node",
+		//		"initializing block state: %v", err)
+		// }
 	}
 
 	if block.ClientState == nil {
@@ -681,21 +684,45 @@ func (mc *Chain) waitTransaction(mb *block.MagicBlock) (
 	return
 }
 
-func (mc *Chain) NextViewChange(lfb *block.Block) (round int64) {
-	var seri, err = mc.GetBlockStateNode(lfb, minersc.GlobalNodeKey)
+func (mc *Chain) NextViewChange(lfb *block.Block) (round int64, err error) {
+
+	if !config.DevConfiguration.ViewChange {
+		return lfb.LatestFinalizedMagicBlockRound, nil
+	}
+
+	// miner SC global node is not created yet, but firs block creates it
+	if lfb.Round < 1 {
+		return 0, nil
+	}
+
+	var seri util.Serializable
+	seri, err = mc.GetBlockStateNode(lfb, minersc.GlobalNodeKey)
 	if err != nil {
 		Logger.Error("next_vc -- can't get miner SC global node",
-			zap.Error(err))
-		return
+			zap.Error(err), zap.Int64("lfb", lfb.Round),
+			zap.Bool("is_state", lfb.IsStateComputed()),
+			zap.Bool("is_init", lfb.ClientState != nil),
+			zap.Any("state", lfb.ClientStateHash))
+		return 0, common.NewErrorf("next_vc",
+			"can't get miner SC global node, lfb: %d, error: %v (%s)",
+			lfb.Round, err, lfb.Hash)
 	}
 	var gn minersc.GlobalNode
 	if err = gn.Decode(seri.Encode()); err != nil {
 		Logger.Error("next_vc -- can't decode miner SC global node",
-			zap.Error(err))
-		return
+			zap.Error(err), zap.Int64("lfb", lfb.Round),
+			zap.Bool("is_state", lfb.IsStateComputed()),
+			zap.Bool("is_init", lfb.ClientState != nil),
+			zap.Any("state", lfb.ClientStateHash))
+		return 0, common.NewErrorf("next_vc",
+			"can't decode miner SC global node, lfb: %d, error: %v (%s)",
+			lfb.Round, err, lfb.Hash)
 	}
 
-	return gn.ViewChange // got it
+	Logger.Debug("next_vc -- ok", zap.Int64("lfb", lfb.Round),
+		zap.Int64("nvc", gn.ViewChange))
+
+	return gn.ViewChange, nil // got it
 }
 
 // func (vcp *viewChangeProcess) SetNextViewChange(round int64) {

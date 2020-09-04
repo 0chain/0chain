@@ -86,12 +86,17 @@ func (mc *Chain) validateTransaction(b *block.Block, txn *transaction.Transactio
 	return common.WithinTime(int64(b.CreationDate), int64(txn.CreationDate), transaction.TXN_TIME_TOLERANCE)
 }
 
-/*UpdatePendingBlock - updates the block that is generated and pending rest of the process */
+// UpdatePendingBlock - updates the block that is generated and pending
+// rest of the process.
 func (mc *Chain) UpdatePendingBlock(ctx context.Context, b *block.Block, txns []datastore.Entity) {
 	transactionMetadataProvider := datastore.GetEntityMetadata("txn")
 
-	//NOTE: Since we are not explicitly maintaining state in the db, we just need to adjust the collection score and don't need to write the entities themselves
-	//transactionMetadataProvider.GetStore().MultiWrite(ctx, transactionMetadataProvider, txns)
+	// NOTE: Since we are not explicitly maintaining state in the db, we just
+	//       need to adjust the collection score and don't need to write the
+	//       entities themselves
+	//
+	//     transactionMetadataProvider.GetStore().MultiWrite(ctx, transactionMetadataProvider, txns)
+	//
 	transactionMetadataProvider.GetStore().MultiAddToCollection(ctx, transactionMetadataProvider, txns)
 }
 
@@ -116,23 +121,31 @@ func (mc *Chain) VerifyBlockMagicBlockReference(b *block.Block) (err error) {
 		rn    = b.Round
 		lfmbr = mc.GetLatestFinalizedMagicBlockRound(rn)
 
-		lfb   = mc.GetLatestFinalizedBlock()
-		nvc   = mc.NextViewChange(lfb)
 		rnoff = mbRoundOffset(rn)
+		lfb   = mc.GetLatestFinalizedBlock()
+		nvc   int64
 	)
 
+	if !lfb.IsStateComputed() {
+		println("VERIFY B MB R: lfb state not computed (?)", lfb.Round, lfb.Hash)
+	}
+
+	if nvc, err = mc.NextViewChange(lfb); err != nil {
+		return common.NewError("verify_block_mb_reference", err.Error())
+	}
+
 	if nvc > 0 && rnoff >= nvc && lfmbr.StartingRound < nvc {
-		return common.NewError("verify_block",
+		return common.NewError("verify_block_mb_reference",
 			"required MB missing or still not finalized")
 	}
 
 	if b.LatestFinalizedMagicBlockHash != lfmbr.Hash {
-		return common.NewError("verify_block",
+		return common.NewError("verify_block_mb_reference",
 			"unexpected latest_finalized_mb_hash")
 	}
 
 	if b.LatestFinalizedMagicBlockRound != lfmbr.Round {
-		return common.NewError("verify_block",
+		return common.NewError("verify_block_mb_reference",
 			"unexpected latest_finalized_mb_round")
 	}
 
@@ -162,13 +175,13 @@ func (mc *Chain) VerifyBlockMagicBlock(ctx context.Context, b *block.Block) (
 
 	// get stored MB
 	if lmb, err = LoadMagicBlock(ctx, id); err != nil {
-		return common.NewErrorf("verify_block",
+		return common.NewErrorf("verify_block_mb",
 			"can't load related MB from store: %v", err)
 	}
 
 	// compare given MB and the stored one (should be equal)
 	if !bytes.Equal(mb.Encode(), lmb.Encode()) {
-		return common.NewError("verify_block",
+		return common.NewError("verify_block_mb",
 			"MB given doesn't match the stored one")
 	}
 
@@ -329,8 +342,10 @@ func (mc *Chain) signBlock(ctx context.Context, b *block.Block) (*block.BlockVer
 	var bvt = &block.BlockVerificationTicket{}
 	bvt.BlockID = b.Hash
 	bvt.Round = b.Round
-	self := node.GetSelfNode(ctx)
-	var err error
+	var (
+		self = node.Self
+		err  error
+	)
 	bvt.VerifierID = self.Underlying().GetKey()
 	bvt.Signature, err = self.Sign(b.Hash)
 	b.SetVerificationStatus(block.VerificationSuccessful)

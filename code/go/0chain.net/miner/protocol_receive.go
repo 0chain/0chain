@@ -51,12 +51,21 @@ func (mc *Chain) enterOnViewChange(ctx context.Context, rn int64) {
 
 	var crn = mc.GetCurrentRound()
 	if crn < lfb.Round {
-		mc.SetCurrentRound(crn)
+		mc.SetCurrentRound(lfb.Round)
+		crn = lfb.Round
 	}
 
-	if mc.isJoining(crn) {
-		go mc.StartNextRound(ctx, mc.GetMinerRound(crn))
+	// just kick next round
+
+	for i := lfb.Round + 1; mc.isJoining(i) && i < chain.ViewChangeOffset; i++ {
+		var mr = mc.GetMinerRound(i)
+		if mr == nil || mr.GetRandomSeed() == 0 {
+			go mc.StartNextRound(ctx, mc.GetMinerRound(i-1))
+			break
+		}
 	}
+
+	// ok
 }
 
 // HandleVerifyBlockMessage - handles the verify block message.
@@ -77,7 +86,7 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 	if pr == nil {
 		Logger.Error("handle verify block -- no previous round (ignore)",
 			zap.Int64("round", b.Round), zap.Int64("prev_round", b.Round-1))
-		mc.enterOnViewChange(ctx, b.Round)
+		go mc.enterOnViewChange(ctx, b.Round-1)
 		return
 	}
 
@@ -194,6 +203,7 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context,
 		Logger.Error("handle vt. msg -- no previous round (ignore)",
 			zap.Int64("round", msg.BlockVerificationTicket.Round),
 			zap.Int64("prev_round", msg.BlockVerificationTicket.Round-1))
+		go mc.enterOnViewChange(ctx, msg.BlockVerificationTicket.Round-1)
 		return
 	}
 
@@ -260,6 +270,7 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 		Logger.Error("handle notarization message -- no previous round",
 			zap.Int64("round", msg.Notarization.Round),
 			zap.Int64("prev_round", msg.Notarization.Round-1))
+		go mc.enterOnViewChange(ctx, msg.Notarization.Round-1)
 		return
 	}
 
@@ -299,6 +310,7 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context,
 			Logger.Error("handle not. block -- no previous round (ignore)",
 				zap.Int64("round", nb.Round),
 				zap.Int64("prev_round", nb.Round-1))
+			go mc.enterOnViewChange(ctx, nb.Round-1)
 			return
 		}
 

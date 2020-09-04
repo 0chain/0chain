@@ -37,9 +37,11 @@ func init() {
 
 // SetDKG - starts the DKG process
 func SetDKG(ctx context.Context, mb *block.MagicBlock) error {
-	mc := GetMinerChain()
-	self := node.GetSelfNode(ctx)
-	selfInd = self.Underlying().SetIndex
+	var (
+		mc   = GetMinerChain()
+		self = node.Self.Underlying()
+	)
+	selfInd = self.SetIndex
 	if config.DevConfiguration.IsDkgEnabled {
 		err := mc.SetDKGSFromStore(ctx, mb)
 		if err != nil {
@@ -74,7 +76,7 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (
 	err error) {
 
 	var (
-		selfNodeKey = node.GetSelfNode(ctx).Underlying().GetKey()
+		selfNodeKey = node.Self.Underlying().GetKey()
 		id          = strconv.FormatInt(mb.MagicBlockNumber, 10)
 
 		summary *bls.DKGSummary

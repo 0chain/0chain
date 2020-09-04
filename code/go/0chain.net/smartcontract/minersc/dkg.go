@@ -814,6 +814,7 @@ func (msc *MinerSmartContract) SetMagicBlock(gn *GlobalNode,
 	// keep the magic block to track previous nodes list next view change
 	// (deny VC leaving for at least 1 miner and 1 sharder of previous set)
 	gn.PrevMagicBlock = magicBlock
+	println("set previous MB:", magicBlock.StartingRound)
 
 	balances.SetMagicBlock(magicBlock)
 	return true

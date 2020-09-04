@@ -33,7 +33,7 @@ func (mc *Chain) SignBlock(ctx context.Context, b *block.Block) (
 func (mc *Chain) hashAndSignGeneratedBlock(ctx context.Context,
 	b *block.Block) (err error) {
 
-	var self = node.GetSelfNode(ctx)
+	var self = node.Self
 	b.HashBlock()
 	b.Signature, err = self.Sign(b.Hash)
 	return
@@ -89,7 +89,8 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 			return false
 		}
 
-		//Setting the score lower so the next time blocks are generated these transactions don't show up at the top
+		// Setting the score lower so the next time blocks are generated
+		// these transactions don't show up at the top.
 		txn.SetCollectionScore(txn.GetCollectionScore() - 10*60)
 		txnMap[txn.GetKey()] = true
 		b.Txns[idx] = txn

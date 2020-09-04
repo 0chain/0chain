@@ -114,6 +114,16 @@ func (mc *Chain) startNextRoundAfterPulling(ctx context.Context, r *Round) {
 }
 
 func (mc *Chain) pullNotarizedBlocks(ctx context.Context, r *Round) {
+	println("PULL NOT. BLOCK FOR ROUND", r.GetRoundNumber())
+	Logger.Info("PULL NOT. BLOCK FOR", zap.Int64("round", r.GetRoundNumber()))
+	if mc.GetBlockToExtend(ctx, r) != nil {
+		if r.GetRoundNumber() > mc.GetCurrentRound() {
+			mc.SetCurrentRound(r.GetRoundNumber())
+		}
+	}
+	return
+
+	// ignore everything later
 
 	if !mc.startPulling() {
 		return // already pulling something (avoid async. start next round loop)
@@ -135,7 +145,7 @@ func (mc *Chain) pullNotarizedBlocks(ctx context.Context, r *Round) {
 			mc.SetCurrentRound(rn) // update
 		}
 		mc.stopPulling() // ignore result
-		mc.startNextRoundAfterPulling(ctx, r)
+		// mc.startNextRoundAfterPulling(ctx, r)
 		return
 	}
 
@@ -167,8 +177,8 @@ func (mc *Chain) pullNotarizedBlocks(ctx context.Context, r *Round) {
 
 	Logger.Info("pull not. block for round -- start next round",
 		zap.Int64("round", rn), zap.Int64("rrs", r.GetRandomSeed()))
-	mc.stopPulling()                      // ignore result
-	mc.startNextRoundAfterPulling(ctx, r) //
+	mc.stopPulling() // ignore result
+	// mc.startNextRoundAfterPulling(ctx, r) //
 }
 
 // StartNextRound - start the next round as a notarized
@@ -240,6 +250,7 @@ func (mc *Chain) getRound(ctx context.Context, rn int64) (mr *Round) {
 	if pr == nil {
 		Logger.Error("get_round -- no previous round", zap.Int64("round", rn),
 			zap.Int64("prev_round", rn-1))
+		go mc.enterOnViewChange(ctx, rn-1)
 		return // (nil)
 	}
 
@@ -306,13 +317,13 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 	}
 
 	var (
-		self = node.GetSelfNode(ctx)
-		rank = mr.GetMinerRank(self.Underlying())
+		self = node.Self.Underlying()
+		rank = mr.GetMinerRank(self)
 	)
 
-	if !mc.IsRoundGenerator(mr, self.Underlying()) {
+	if !mc.IsRoundGenerator(mr, self) {
 		Logger.Info("TOC_FIX Not a generator", zap.Int64("round", rn),
-			zap.Int("index", self.Underlying().SetIndex),
+			zap.Int("index", self.SetIndex),
 			zap.Int("rank", rank),
 			zap.Int("timeout_count", mr.GetTimeoutCount()),
 			zap.Any("random_seed", mr.GetRandomSeed()))
@@ -320,7 +331,7 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 	}
 
 	Logger.Info("*** TOC_FIX starting round block generation ***",
-		zap.Int64("round", rn), zap.Int("index", self.Underlying().SetIndex),
+		zap.Int64("round", rn), zap.Int("index", self.SetIndex),
 		zap.Int("rank", rank), zap.Int("timeout_count", mr.GetTimeoutCount()),
 		zap.Any("random_seed", mr.GetRandomSeed()),
 		zap.Int64("lf_round", mc.GetLatestFinalizedBlock().Round))
@@ -346,8 +357,11 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 }
 
 // GetBlockToExtend - Get the block to extend from the given round.
-func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) *block.Block {
-	bnb := r.GetHeaviestNotarizedBlock()
+func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) (
+	bnb *block.Block) {
+
+	bnb = r.GetHeaviestNotarizedBlock()
+
 	if bnb == nil {
 		type pBlock struct {
 			Block     string
@@ -362,10 +376,16 @@ func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) *block.Bl
 			}
 			pcounts = append(pcounts, &pBlock{Block: pb.Hash, Proposals: pcount})
 		}
-		sort.SliceStable(pcounts, func(i, j int) bool { return pcounts[i].Proposals > pcounts[j].Proposals })
-		Logger.Error("get block to extend - no notarized block", zap.Int64("round", r.GetRoundNumber()), zap.Int("num_proposals", len(proposals)), zap.Any("verification_tickets", pcounts))
+		sort.SliceStable(pcounts, func(i, j int) bool {
+			return pcounts[i].Proposals > pcounts[j].Proposals
+		})
+		Logger.Error("get block to extend - no notarized block",
+			zap.Int64("round", r.GetRoundNumber()),
+			zap.Int("num_proposals", len(proposals)),
+			zap.Any("verification_tickets", pcounts))
 		bnb = mc.GetHeaviestNotarizedBlock(r)
 	}
+
 	if bnb != nil {
 		if !bnb.IsStateComputed() {
 			err := mc.ComputeOrSyncState(ctx, bnb)
@@ -378,10 +398,14 @@ func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) *block.Bl
 				}
 			}
 		}
-		return bnb
+		println("BNB", bnb.Round)
+		return // bnb
 	}
-	Logger.Debug("get block to extend - no block", zap.Int64("round", r.GetRoundNumber()), zap.Int64("current_round", mc.GetCurrentRound()))
-	return nil
+
+	Logger.Debug("get block to extend - no block",
+		zap.Int64("round", r.GetRoundNumber()),
+		zap.Int64("current_round", mc.GetCurrentRound()))
+	return // nil
 }
 
 // GenerateRoundBlock - given a round number generates a block.
@@ -410,10 +434,15 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		b     = block.NewBlock(mc.GetKey(), rn)          //
 		lfmbr = mc.GetLatestFinalizedMagicBlockRound(rn) // related magic block
 
-		lfb   = mc.GetLatestFinalizedBlock() //
-		nvc   = mc.NextViewChange(lfb)       //
-		rnoff = mbRoundOffset(rn)            //
+		lfb      = mc.GetLatestFinalizedBlock() //
+		rnoff    = mbRoundOffset(rn)            //
+		nvc, err = mc.NextViewChange(lfb)       //
 	)
+
+	if err != nil {
+		return nil, common.NewError("generate_round_block -- can't get next_vc",
+			err.Error())
+	}
 
 	if nvc > 0 && rnoff >= nvc && lfmbr.StartingRound < nvc {
 		Logger.Error("gen_block",
@@ -1135,20 +1164,27 @@ func (mc *Chain) handleNoProgress(ctx context.Context) {
 }
 
 func (mc *Chain) kickFinalization(ctx context.Context) {
+
 	Logger.Info("restartRound->kickFinalization")
+
 	// kick all blocks finalization
-	var (
-		lfb = mc.GetLatestFinalizedBlock()
-		err error
-	)
-	if lfb.ClientState == nil {
-		Logger.Info("restartRound->kickFinalization:" +
-			" LFB client state still nil (initialize)")
-		if err = mc.InitBlockState(lfb); err != nil {
-			Logger.Error("restartRound->kickFinalization: init block state",
-				zap.Error(err))
-		}
+
+	var lfb = mc.GetLatestFinalizedBlock()
+
+	if !mc.ensureState(ctx, lfb) {
+		println("LFB with no block state computed/initialized", lfb.Round)
+		return
 	}
+
+	// if lfb.ClientState == nil {
+	// 	Logger.Info("restartRound->kickFinalization:" +
+	// 		" LFB client state still nil (initialize)")
+	//  var err error
+	// 	if err = mc.InitBlockState(lfb); err != nil {
+	// 		Logger.Error("restartRound->kickFinalization: init block state",
+	// 			zap.Error(err))
+	// 	}
+	// }
 
 	// don't kick more then 5 blocks at once
 	var i, e, j = lfb.Round, mc.GetCurrentRound(), 0 // loop variables
@@ -1206,12 +1242,15 @@ func (mc *Chain) kickRoundByLFB(ctx context.Context, lfb *block.Block) {
 		mr = mc.CreateRound(sr)
 		nr *Round
 	)
+
+	if !mc.ensureState(ctx, lfb) {
+		println("kick round by lfb -- no state, no kick", lfb.Round)
+		return // don't kick -- no block state
+	}
+
 	mr, _ = mc.AddRound(mr).(*Round)
 	mc.SetRandomSeed(sr, lfb.RoundRandomSeed)
-	mc.AddBlockNoPrevious(lfb) //
-	mc.ComputeState(ctx, lfb)  // pull previous block using GetPreviousBlock
-	mc.InitBlockState(lfb)
-	mc.AsyncFetchNotarizedPreviousBlock(lfb)
+	mc.AddBlock(lfb)
 	if nr = mc.StartNextRound(ctx, mr); nr == nil {
 		return
 	}
@@ -1332,6 +1371,25 @@ func (mc *Chain) restartRound(ctx context.Context) {
 	}
 }
 
+func (mc *Chain) ensureState(ctx context.Context, b *block.Block) (ok bool) {
+
+	var err error
+	if !b.IsStateComputed() {
+		if err = mc.ComputeOrSyncState(ctx, b); err != nil {
+			Logger.Error("compute_or_sync_state -- compute or sync",
+				zap.Error(err), zap.Int64("round", b.Round))
+		}
+	}
+	if b.ClientState == nil {
+		if err = mc.InitBlockState(b); err != nil {
+			Logger.Error("compute_or_sync_state -- init block state",
+				zap.Error(err), zap.Int64("round", b.Round))
+		}
+	}
+
+	return b.IsStateComputed() && b.ClientState != nil
+}
+
 func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
 	updated bool, err error) {
 
@@ -1349,28 +1407,16 @@ func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
 	rcvd = list[0].Block // the highest received LFB
 
 	if have != nil && rcvd.Round <= have.Round {
+		mc.ensureState(ctx, have)
 		return // nothing to update
 	}
 
-	// bump the ticket if necessary
-	var tk = mc.GetLatestLFBTicket(ctx)
-	if tk == nil || tk.Round < rcvd.Round {
-		mc.AddReceivedLFBTicket(ctx, &chain.LFBTicket{Round: rcvd.Round})
+	mc.bumpLFBTicket(ctx, rcvd)
+	if !mc.ensureState(ctx, rcvd) {
+		println("start protocol on LFB: cant compute/sync/initialize state", rcvd.Round)
+		return // not updated
 	}
-
-	var (
-		sr = round.NewRound(rcvd.Round)
-		mr = mc.CreateRound(sr)
-	)
-	mr, _ = mc.AddRound(mr).(*Round)
-	mc.SetRandomSeed(mr, rcvd.GetRoundRandomSeed())
-	mc.AddBlockNoPrevious(rcvd)
-	// just log the error
-	if err = mc.InitBlockState(rcvd); err != nil {
-		Logger.Error("initialize LFB state in restart_round", zap.Error(err))
-		err = nil // reset the error
-	}
-	mc.ComputeState(ctx, rcvd) // pull previous block using GetPreviousBlock
+	// it create corresponding round or makes sure it exists
 	mc.SetLatestFinalizedBlock(ctx, rcvd)
 	return true, nil // updated
 }
@@ -1457,40 +1503,51 @@ func (mc *Chain) bumpLFBTicket(ctx context.Context, lfbs *block.Block) {
 	}
 }
 
-func (mc *Chain) initLFBState(lfb *block.Block) {
-	var err error
-	if err = mc.InitBlockState(lfb); err != nil {
-		go mc.asyncInitLFBState()
-	}
-}
+// func (mc *Chain) initLFBState(lfb *block.Block) {
+// 	var err error
+// 	if err = mc.InitBlockState(lfb); err != nil {
+// 		go mc.asyncInitLFBState()
+// 	}
+// }
 
-func (mc *Chain) asyncInitLFBState() {
-	var (
-		lfb *block.Block
-		err error
-	)
-	for {
-		time.Sleep(time.Second * 1)
-		lfb = mc.GetLatestFinalizedBlock()
-		if err = mc.InitBlockState(lfb); err == nil {
-			return
-		}
-		Logger.Error("start_protocol", zap.Error(err))
-	}
-}
+// func (mc *Chain) asyncInitLFBState() {
+// 	var (
+// 		lfb *block.Block
+// 		err error
+// 	)
+// 	for {
+// 		time.Sleep(time.Second * 1)
+// 		lfb = mc.GetLatestFinalizedBlock()
+// 		if err = mc.InitBlockState(lfb); err == nil {
+// 			return
+// 		}
+// 		Logger.Error("start_protocol", zap.Error(err))
+// 	}
+// }
 
-func (mc *Chain) startProtocolOnLFB(ctx context.Context, lfb *block.Block) (mr *Round) {
+func (mc *Chain) startProtocolOnLFB(ctx context.Context, lfb *block.Block) (
+	mr *Round) {
+
+	if lfb == nil {
+		return // nil
+	}
+
 	mc.bumpLFBTicket(ctx, lfb)
-	var sr = round.NewRound(lfb.Round)
-	mr = mc.CreateRound(sr)
-	mr, _ = mc.AddRound(mr).(*Round)
-	mc.SetRandomSeed(sr, lfb.RoundRandomSeed)
-	mc.AddBlockNoPrevious(lfb)
-	mc.initLFBState(lfb)
-	mc.ComputeState(ctx, lfb)
-	mc.SetLatestFinalizedBlock(ctx, lfb)
 	mc.AsyncFetchNotarizedPreviousBlock(lfb)
-	return
+
+	// we can't compute state in the start protocol
+
+	lfb.SetStateStatus(block.StateSuccessful)
+	if err := mc.InitBlockState(lfb); err != nil {
+		lfb.SetStateStatus(0)
+		println("START PROTOCOL: STATE SETUP ERROR:", err.Error())
+	}
+	// if !mc.ensureState(ctx, lfb) {
+	// 	println("start protocol on LFB: cant compute/sync/initialize state", lfb.Round)
+	// 	return nil
+	// }
+	mc.SetLatestFinalizedBlock(ctx, lfb)
+	return mc.GetMinerRound(lfb.Round)
 }
 
 func StartProtocol(ctx context.Context, gb *block.Block) {
@@ -1504,17 +1561,25 @@ func StartProtocol(ctx context.Context, gb *block.Block) {
 	} else {
 		// start on genesis block
 		mc.bumpLFBTicket(ctx, gb)
-		// if mr = mc.getRound(ctx, gb.Round); mr == nil {
 		var r = round.NewRound(gb.Round)
 		mr = mc.CreateRound(r)
 		mr = mc.AddRound(mr).(*Round)
-		// }
 	}
 	var nr = mc.StartNextRound(ctx, mr)
 	for nr == nil {
 		select {
 		case <-time.After(4 * time.Second): // repeat after some time
-			lfb = getLatestBlockFromSharders(ctx)
+			// // // // // // // // // // // // // // // // // // // // // // //
+			if _, err := mc.ensureLatestFinalizedBlocks(ctx); err != nil {
+				Logger.Error("getting latest blocks from sharders",
+					zap.Error(err))
+				continue
+			}
+			lfb = mc.GetLatestFinalizedBlock()
+
+			// instead of
+			// lfb = getLatestBlockFromSharders(ctx)
+			// // // // // // // // // // // // // // // // // // // // // // //
 			mr = mc.startProtocolOnLFB(ctx, lfb)
 		case <-ctx.Done():
 			return

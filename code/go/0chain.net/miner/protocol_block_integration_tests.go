@@ -45,7 +45,7 @@ func (mc *Chain) hashAndSignGeneratedBlock(ctx context.Context,
 	b *block.Block) (err error) {
 
 	var (
-		self  = node.GetSelfNode(ctx)
+		self  = node.Self
 		state = crpc.Client().State()
 	)
 	b.HashBlock()

@@ -899,7 +899,7 @@ func (mpt *MerklePatriciaTrie) Validate() error {
 	return nil
 }
 
-//MergeMPTChanges - implement interface
+// MergeMPTChanges - implement interface.
 func (mpt *MerklePatriciaTrie) MergeMPTChanges(mpt2 MerklePatriciaTrieI) error {
 	mpt.mutex.Lock()
 	defer mpt.mutex.Unlock()
@@ -925,7 +925,7 @@ func (mpt *MerklePatriciaTrie) MergeMPTChanges(mpt2 MerklePatriciaTrieI) error {
 	return nil
 }
 
-//MergeDB - implement interface
+// MergeDB - implement interface.
 func (mpt *MerklePatriciaTrie) MergeDB(ndb NodeDB, root Key) error {
 	handler := func(ctx context.Context, key Key, node Node) error {
 		mpt.mutex.Lock()

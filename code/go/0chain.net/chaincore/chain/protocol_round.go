@@ -61,7 +61,8 @@ func (c *Chain) ComputeFinalizedBlock(ctx context.Context, r round.RoundI) *bloc
 	roundNumber := r.GetRoundNumber()
 	tips := r.GetNotarizedBlocks()
 	if len(tips) == 0 {
-		Logger.Error("compute finalize block: no notarized blocks", zap.Int64("round", r.GetRoundNumber()))
+		Logger.Error("compute finalize block: no notarized blocks",
+			zap.Int64("round", r.GetRoundNumber()))
 		return nil
 	}
 	for true {
@@ -70,7 +71,10 @@ func (c *Chain) ComputeFinalizedBlock(ctx context.Context, r round.RoundI) *bloc
 			if b.PrevBlock == nil {
 				pb := c.GetPreviousBlock(ctx, b)
 				if pb == nil {
-					Logger.Error("compute finalized block: null prev block", zap.Int64("round", roundNumber), zap.Int64("block_round", b.Round), zap.String("block", b.Hash))
+					Logger.Error("compute finalized block: null prev block",
+						zap.Int64("round", roundNumber),
+						zap.Int64("block_round", b.Round),
+						zap.String("block", b.Hash))
 					return nil
 				}
 			}

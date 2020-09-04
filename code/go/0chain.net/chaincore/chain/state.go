@@ -256,9 +256,13 @@ func (c *Chain) rebaseState(lfb *block.Block) {
 	if ndb != c.stateDB {
 		lfb.ClientState.SetNodeDB(c.stateDB)
 		if lndb, ok := ndb.(*util.LevelNodeDB); ok {
-			Logger.Debug("finalize round - rebasing current state db", zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash), zap.String("hash", util.ToHex(lfb.ClientState.GetRoot())))
+			Logger.Debug("finalize round - rebasing current state db",
+				zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash),
+				zap.String("hash", util.ToHex(lfb.ClientState.GetRoot())))
 			lndb.RebaseCurrentDB(c.stateDB)
-			Logger.Debug("finalize round - rebased current state db", zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash), zap.String("hash", util.ToHex(lfb.ClientState.GetRoot())))
+			Logger.Debug("finalize round - rebased current state db",
+				zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash),
+				zap.String("hash", util.ToHex(lfb.ClientState.GetRoot())))
 		}
 	}
 }

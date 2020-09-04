@@ -274,17 +274,26 @@ func (b *Block) SetStateDB(prevBlock *Block) {
 		pndb = prevBlock.ClientState.GetNodeDB()
 	}
 	rootHash = prevBlock.ClientStateHash
-	Logger.Debug("prev state root", zap.Int64("round", b.Round), zap.String("prev_block", prevBlock.Hash), zap.String("root", util.ToHex(rootHash)))
+	Logger.Debug("prev state root", zap.Int64("round", b.Round),
+		zap.String("prev_block", prevBlock.Hash),
+		zap.String("root", util.ToHex(rootHash)))
 	b.CreateState(pndb)
 	b.ClientState.SetRoot(rootHash)
 }
 
-//InitStateDB - initialize the block's state from the db (assuming it's already computed)
-func (b *Block) InitStateDB(ndb util.NodeDB) error {
-	if _, err := ndb.GetNode(b.ClientStateHash); err != nil {
-		b.SetStateStatus(StateFailed)
-		return err
+// InitStateDB - initialize the block's state from the db (assuming it's already computed)
+func (b *Block) InitStateDB(ndb util.NodeDB) (err error) {
+	if !b.IsStateComputed() {
+		Logger.Error("init_state_db -- block state is not computed or synced",
+			zap.Int64("round", b.Round))
+		return common.NewError("init_state_db",
+			"block state is not computed or synced")
 	}
+	if _, err = ndb.GetNode(b.ClientStateHash); err != nil {
+		b.SetStateStatus(StateFailed)
+		return
+	}
+	println("(INIT) SET STATE", b.Round)
 	b.CreateState(ndb)
 	b.ClientState.SetRoot(b.ClientStateHash)
 	b.SetStateStatus(StateSuccessful)

@@ -65,7 +65,7 @@ func getBadBVTHash(ctx context.Context, b *block.Block) (
 	bad.BlockID = b.Hash
 	bad.Round = b.Round
 	var (
-		self = node.GetSelfNode(ctx)
+		self = node.Self
 		err  error
 	)
 	bad.VerifierID = self.Underlying().GetKey()
@@ -83,10 +83,10 @@ func getBadBVTKey(ctx context.Context, b *block.Block) (
 	bad.BlockID = b.Hash
 	bad.Round = b.Round
 	var (
-		self = node.GetSelfNode(ctx)
-		err  error
+		selfNodeKey = node.Self.Underlying().GetKey()
+		err         error
 	)
-	bad.VerifierID = self.Underlying().GetKey()
+	bad.VerifierID = selfNodeKey
 	bad.Signature, err = crpcutils.Sign(b.Hash) // wrong private key
 	if err != nil {
 		panic(err)

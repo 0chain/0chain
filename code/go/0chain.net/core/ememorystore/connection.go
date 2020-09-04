@@ -9,6 +9,10 @@ import (
 	"github.com/0chain/gorocksdb"
 )
 
+func panicf(format string, args ...interface{}) {
+	panic(fmt.Sprintf(format, args...))
+}
+
 type dbpool struct {
 	ID     string
 	CtxKey common.ContextKey
@@ -46,7 +50,7 @@ var DefaultPool *gorocksdb.TransactionDB
 func init1() {
 	dp, err := CreateDB("data/rocksdb")
 	if err != nil {
-		panic(err)
+		panicf("creating database: %v", err)
 	}
 	AddPool("", dp)
 	DefaultPool = dp
@@ -72,7 +76,7 @@ func getdbpool(entityMetadata datastore.EntityMetadata) *dbpool {
 	dbid := entityMetadata.GetDB()
 	dbpool, ok := pools[dbid]
 	if !ok {
-		panic(fmt.Sprintf("Invalid entity metadata setup, unknown dbpool %v\n", dbid))
+		panicf("Invalid entity metadata setup, unknown dbpool %v\n", dbid)
 	}
 	return dbpool
 }
@@ -96,7 +100,7 @@ func GetTransaction(db *gorocksdb.TransactionDB) *Connection {
 	return conn
 }
 
-/*GetEntityConnection - retuns a connection from the pool configured for the entity */
+/*GetEntityConnection - returns a connection from the pool configured for the entity */
 func GetEntityConnection(entityMetadata datastore.EntityMetadata) *Connection {
 	dbid := entityMetadata.GetDB()
 	if dbid == "" {
@@ -107,21 +111,21 @@ func GetEntityConnection(entityMetadata datastore.EntityMetadata) *Connection {
 }
 
 /*CONNECTION - key used to get the connection object from the context */
-const CONNECTION common.ContextKey = "connection."
+const CONNECTION common.ContextKey = "econnection."
 
 type connections map[common.ContextKey]*Connection
 
 /*WithConnection takes a context and adds a connection value to it */
 func WithConnection(ctx context.Context) context.Context {
-	cons := ctx.Value(CONNECTION)
-	if cons == nil {
+	c := ctx.Value(CONNECTION)
+	if c == nil {
 		cMap := make(connections)
 		cMap[CONNECTION] = GetConnection()
 		return context.WithValue(ctx, CONNECTION, cMap)
 	}
-	cMap, ok := cons.(connections)
+	cMap, ok := c.(connections)
 	if !ok {
-		panic("invalid setup")
+		panicf("invalid setup, type of connection is %T", c)
 	}
 	_, ok = cMap[CONNECTION]
 	if !ok {
@@ -136,16 +140,16 @@ func GetCon(ctx context.Context) *Connection {
 	if ctx == nil {
 		return GetConnection()
 	}
-	cons := ctx.Value(CONNECTION)
-	if cons == nil {
+	c := ctx.Value(CONNECTION)
+	if c == nil {
 		con := GetConnection()
 		cMap := make(connections)
 		cMap[CONNECTION] = con
 		return con
 	}
-	cMap, ok := cons.(connections)
+	cMap, ok := c.(connections)
 	if !ok {
-		panic("invalid setup")
+		panicf("invalid setup, type of connection is %T", c)
 	}
 	con, ok := cMap[CONNECTION]
 	if !ok {
@@ -169,9 +173,7 @@ func WithEntityConnection(ctx context.Context, entityMetadata datastore.EntityMe
 	}
 	cMap, ok := c.(connections)
 	if !ok {
-		cMap := make(connections)
-		cMap[dbpool.CtxKey] = GetTransaction(dbpool.Pool)
-		return context.WithValue(ctx, CONNECTION, cMap)
+		panicf("invalid setup, type of connection is %T", c)
 	}
 	_, ok = cMap[dbpool.CtxKey]
 	if !ok {
@@ -195,7 +197,9 @@ func GetEntityCon(ctx context.Context, entityMetadata datastore.EntityMetadata) 
 		return nil
 	}
 	cMap, ok := c.(connections)
-
+	if !ok {
+		panicf("invalid setup, type of connection is %T", c)
+	}
 	con, ok := cMap[dbpool.CtxKey]
 	if !ok {
 		con = GetEntityConnection(entityMetadata)
@@ -210,7 +214,10 @@ func Close(ctx context.Context) {
 	if c == nil {
 		return
 	}
-	cMap := c.(connections)
+	cMap, ok := c.(connections)
+	if !ok {
+		panicf("invalid setup, type of connection is %T", c)
+	}
 	for _, con := range cMap {
 		con.ReadOptions.Destroy()
 		con.WriteOptions.Destroy()
