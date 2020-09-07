@@ -16,11 +16,10 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
-	"0chain.net/core/encryption"
-	. "0chain.net/core/logging"
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/minersc"
 
+	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -298,30 +297,6 @@ func getFromSharders(address, relative string, sharders []string,
 		}
 	}
 	return mostConsensus(list)
-}
-
-func getNodePath(path string) util.Path {
-	return util.Path(encryption.Hash(path))
-}
-
-func (mc *Chain) GetBlockStateNode(block *block.Block, path string) (
-	seri util.Serializable, err error) {
-
-	if block.ClientState == nil {
-		return nil, common.NewError("get_block_state_node",
-			"no block state created")
-		// if err = mc.InitBlockState(block); err != nil {
-		//	return nil, common.NewErrorf("get_block_state_node",
-		//		"initializing block state: %v", err)
-		// }
-	}
-
-	if block.ClientState == nil {
-		return nil, common.NewErrorf("get_block_state_node",
-			"client state is nil, round %d", block.Round)
-	}
-
-	return block.ClientState.GetNodeValue(getNodePath(path))
 }
 
 func (mc *Chain) GetPhase(lfb *block.Block, mb *block.MagicBlock, active bool,

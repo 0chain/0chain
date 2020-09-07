@@ -14,8 +14,10 @@ func shouldNotFinalize(r round.RoundI) bool {
 	return r.IsFinalizing() || r.IsFinalized()
 }
 
-/*AddNotarizedBlock - add a notarized block for a given round */
-func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI, b *block.Block) bool {
+// AddNotarizedBlock - add a notarized block for a given round.
+func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
+	b *block.Block) bool {
+
 	if _, ok := r.AddNotarizedBlock(b); !ok && shouldNotFinalize(r) {
 		return false
 	}

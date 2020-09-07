@@ -15,13 +15,12 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/encryption"
-	. "0chain.net/core/logging"
 	"0chain.net/core/memorystore"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/minersc"
 
 	"github.com/spf13/viper"
+
+	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -29,8 +28,7 @@ const (
 	scNameAddMiner    = "add_miner"
 	scNameAddSharder  = "add_sharder"
 	scNameSharderKeep = "sharder_keep"
-)
-const (
+
 	scRestAPIGetMinerList       = "/getMinerList"
 	scRestAPIGetSharderList     = "/getSharderList"
 	scRestAPIGetSharderKeepList = "/getSharderKeepList"
@@ -50,40 +48,55 @@ func (mc *Chain) InitSetupSC() {
 	}
 }
 
-//RegisterClient registers client on BC
+// RegisterClient registers client on BC.
 func (mc *Chain) RegisterClient() {
-	thresholdByCount := config.GetThresholdCount()
+	var (
+		thresholdByCount = config.GetThresholdCount()
+		err              error
+	)
+
 	if node.Self.Underlying().Type == node.NodeTypeMiner {
-		clientMetadataProvider := datastore.GetEntityMetadata("client")
-		ctx := memorystore.WithEntityConnection(common.GetRootContext(), clientMetadataProvider)
+		var (
+			clientMetadataProvider = datastore.GetEntityMetadata("client")
+			ctx                    = memorystore.WithEntityConnection(
+				common.GetRootContext(), clientMetadataProvider)
+		)
 		defer memorystore.Close(ctx)
 		ctx = datastore.WithAsyncChannel(ctx, client.ClientEntityChannel)
-		_, err := client.PutClient(ctx, &node.Self.Underlying().Client)
+		_, err = client.PutClient(ctx, &node.Self.Underlying().Client)
 		if err != nil {
 			panic(err)
 		}
 	}
 
-	mb := mc.GetCurrentMagicBlock()
-	nodeBytes, _ := json.Marshal(node.Self.Underlying().Client)
-	miners := mb.Miners.CopyNodesMap()
-	registered := 0
-	consensus := int(math.Ceil((float64(thresholdByCount) / 100) * float64(len(miners))))
+	var (
+		mb           = mc.GetCurrentMagicBlock()
+		nodeBytes, _ = json.Marshal(node.Self.Underlying().Client)
+		miners       = mb.Miners.CopyNodesMap()
+		registered   = 0
+		consensus    = int(math.Ceil((float64(thresholdByCount) / 100) *
+			float64(len(miners))))
+	)
+
 	if consensus > len(miners) {
-		Logger.DPanic(fmt.Sprintf("number of miners %d is not enough relative to the threshold parameter %d%%(%d)", len(miners), thresholdByCount, consensus))
+		Logger.DPanic(fmt.Sprintf("number of miners %d is not enough"+
+			" relative to the threshold parameter %d%%(%d)", len(miners),
+			thresholdByCount, consensus))
 	}
+
 	for registered < consensus {
 		for key, miner := range miners {
 			body, err := httpclientutil.SendPostRequest(
-				miner.GetN2NURLBase()+httpclientutil.RegisterClient, nodeBytes, "", "", nil,
+				miner.GetN2NURLBase()+httpclientutil.RegisterClient, nodeBytes,
+				"", "", nil,
 			)
 			if err != nil {
-				Logger.Error("error in register client", zap.Error(err), zap.Any("body", body))
+				Logger.Error("error in register client", zap.Error(err),
+					zap.Any("body", body))
 			} else {
 				delete(miners, key)
 				registered++
 			}
-			// time.Sleep(httpclientutil.SleepBetweenRetries * time.Millisecond)
 		}
 		time.Sleep(httpclientutil.SleepBetweenRetries * time.Millisecond)
 	}
@@ -91,13 +104,13 @@ func (mc *Chain) RegisterClient() {
 
 func (mc *Chain) isRegistered() (is bool) {
 	is = mc.isRegisteredEx(
-		func(n *node.Node) util.Path {
+		func(n *node.Node) string {
 			if typ := n.Type; typ == node.NodeTypeMiner {
-				return util.Path(encryption.Hash(minersc.AllMinersKey))
+				return minersc.AllMinersKey
 			} else if typ == node.NodeTypeSharder {
-				return util.Path(encryption.Hash(minersc.AllShardersKey))
+				return minersc.AllShardersKey
 			}
-			return nil
+			return ""
 		},
 		func(n *node.Node) string {
 			if typ := n.Type; typ == node.NodeTypeMiner {
@@ -110,45 +123,61 @@ func (mc *Chain) isRegistered() (is bool) {
 	return
 }
 
-func (mc *Chain) isRegisteredEx(getStatePath func(n *node.Node) util.Path,
+func (mc *Chain) isRegisteredEx(getStatePath func(n *node.Node) string,
 	getAPIPath func(n *node.Node) string) bool {
-	allMinersList := &minersc.MinerNodes{}
-	currentNode := node.Self.Underlying()
+
+	var (
+		allNodesList = &minersc.MinerNodes{}
+		selfNode     = node.Self.Underlying()
+		selfNodeKey  = selfNode.GetKey()
+	)
+
 	if mc.ActiveInChain() {
-		clientState := CreateTxnMPT(mc.GetLatestFinalizedBlock().ClientState)
-		statePath := getStatePath(currentNode)
-		nodeList, err := clientState.GetNodeValue(statePath)
-		if err != nil {
-			Logger.Error("failed to get magic block", zap.Any("error", err))
-			return false
-		}
-		if nodeList == nil {
-			return false
-		}
-		err = allMinersList.Decode(nodeList.Encode())
-		if err != nil {
-			Logger.Error("failed to decode magic block", zap.Any("error", err))
-			return false
-		}
-	} else {
-		mb := mc.GetCurrentMagicBlock()
+
 		var (
+			sp        = getStatePath(selfNode)
+			list, err = mc.GetBlockStateNode(mc.GetLatestFinalizedBlock(), sp)
+		)
+
+		if err != nil {
+			Logger.Error("failed to get block state node",
+				zap.Any("error", err), zap.String("path", sp))
+			return false
+		}
+
+		if list == nil {
+			return false
+		}
+
+		if err = allNodesList.Decode(list.Encode()); err != nil {
+			Logger.Error("failed to decode block state node",
+				zap.Any("error", err))
+			return false
+		}
+
+	} else {
+
+		var (
+			mb       = mc.GetCurrentMagicBlock()
 			sharders = mb.Sharders.N2NURLs()
+			relPath  = getAPIPath(selfNode)
 			err      error
 		)
-		relPath := getAPIPath(currentNode)
-		err = httpclientutil.MakeSCRestAPICall(minersc.ADDRESS, relPath, nil, sharders, allMinersList, 1)
+
+		err = httpclientutil.MakeSCRestAPICall(minersc.ADDRESS, relPath, nil,
+			sharders, allNodesList, 1)
 		if err != nil {
 			Logger.Error("is registered", zap.Any("error", err))
 			return false
 		}
 	}
 
-	for _, miner := range allMinersList.Nodes {
-		if miner.ID == currentNode.GetKey() {
+	for _, miner := range allNodesList.Nodes {
+		if miner.ID == selfNodeKey {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -257,11 +286,11 @@ func (mc *Chain) RegisterSharderKeep() (result *httpclientutil.Transaction, err2
 
 func (mc *Chain) IsRegisteredSharderKeep() bool {
 	return mc.isRegisteredEx(
-		func(n *node.Node) util.Path {
+		func(n *node.Node) string {
 			if typ := n.Type; typ == node.NodeTypeSharder {
-				return util.Path(encryption.Hash(minersc.ShardersKeepKey))
+				return minersc.ShardersKeepKey
 			}
-			return nil
+			return ""
 		},
 		func(n *node.Node) string {
 			if typ := n.Type; typ == node.NodeTypeSharder {

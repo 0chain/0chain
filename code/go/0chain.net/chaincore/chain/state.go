@@ -316,7 +316,8 @@ func (c *Chain) newStateContext(b *block.Block, s util.MerklePatriciaTrieI,
 		c.GetSignatureScheme)
 }
 
-func (c *Chain) updateState(b *block.Block, txn *transaction.Transaction) (err error) {
+func (c *Chain) updateState(b *block.Block, txn *transaction.Transaction) (
+	err error) {
 
 	var (
 		clientState = CreateTxnMPT(b.ClientState) // begin transaction

@@ -158,6 +158,25 @@ type Chain struct {
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
 
+func getNodePath(path string) util.Path {
+	return util.Path(encryption.Hash(path))
+}
+
+func (mc *Chain) GetBlockStateNode(block *block.Block, path string) (
+	seri util.Serializable, err error) {
+
+	mc.stateMutex.Lock()
+	defer mc.stateMutex.Unlock()
+
+	if block.ClientState == nil {
+		return nil, common.NewErrorf("get_block_state_node",
+			"client state is nil, round %d", block.Round)
+	}
+
+	var state = CreateTxnMPT(block.ClientState)
+	return state.GetNodeValue(getNodePath(path))
+}
+
 func mbRoundOffset(rn int64) int64 {
 	if rn < ViewChangeOffset+1 {
 		return rn // the same
