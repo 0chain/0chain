@@ -283,12 +283,12 @@ func (b *Block) SetStateDB(prevBlock *Block) {
 
 // InitStateDB - initialize the block's state from the db (assuming it's already computed)
 func (b *Block) InitStateDB(ndb util.NodeDB) (err error) {
-	if !b.IsStateComputed() {
-		Logger.Error("init_state_db -- block state is not computed or synced",
-			zap.Int64("round", b.Round))
-		return common.NewError("init_state_db",
-			"block state is not computed or synced")
-	}
+	// if !b.IsStateComputed() {
+	// 	Logger.Error("init_state_db -- block state is not computed or synced",
+	// 		zap.Int64("round", b.Round))
+	// 	return common.NewError("init_state_db",
+	// 		"block state is not computed or synced")
+	// }
 	if _, err = ndb.GetNode(b.ClientStateHash); err != nil {
 		b.SetStateStatus(StateFailed)
 		return

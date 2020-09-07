@@ -684,7 +684,8 @@ func (mc *Chain) waitTransaction(mb *block.MagicBlock) (
 	return
 }
 
-func (mc *Chain) NextViewChange(lfb *block.Block) (round int64, err error) {
+// NextViewChangeOfBlock returns next view change value based on given block.
+func (mc *Chain) NextViewChangeOfBlock(lfb *block.Block) (round int64, err error) {
 
 	if !config.DevConfiguration.ViewChange {
 		return lfb.LatestFinalizedMagicBlockRound, nil
@@ -698,39 +699,49 @@ func (mc *Chain) NextViewChange(lfb *block.Block) (round int64, err error) {
 	var seri util.Serializable
 	seri, err = mc.GetBlockStateNode(lfb, minersc.GlobalNodeKey)
 	if err != nil {
-		Logger.Error("next_vc -- can't get miner SC global node",
+		Logger.Error("block_next_vc -- can't get miner SC global node",
 			zap.Error(err), zap.Int64("lfb", lfb.Round),
 			zap.Bool("is_state", lfb.IsStateComputed()),
 			zap.Bool("is_init", lfb.ClientState != nil),
 			zap.Any("state", lfb.ClientStateHash))
-		return 0, common.NewErrorf("next_vc",
+		return 0, common.NewErrorf("block_next_vc",
 			"can't get miner SC global node, lfb: %d, error: %v (%s)",
 			lfb.Round, err, lfb.Hash)
 	}
 	var gn minersc.GlobalNode
 	if err = gn.Decode(seri.Encode()); err != nil {
-		Logger.Error("next_vc -- can't decode miner SC global node",
+		Logger.Error("block_next_vc -- can't decode miner SC global node",
 			zap.Error(err), zap.Int64("lfb", lfb.Round),
 			zap.Bool("is_state", lfb.IsStateComputed()),
 			zap.Bool("is_init", lfb.ClientState != nil),
 			zap.Any("state", lfb.ClientStateHash))
-		return 0, common.NewErrorf("next_vc",
+		return 0, common.NewErrorf("block_next_vc",
 			"can't decode miner SC global node, lfb: %d, error: %v (%s)",
 			lfb.Round, err, lfb.Hash)
 	}
 
-	Logger.Debug("next_vc -- ok", zap.Int64("lfb", lfb.Round),
+	Logger.Debug("block_next_vc -- ok", zap.Int64("lfb", lfb.Round),
 		zap.Int64("nvc", gn.ViewChange))
 
 	return gn.ViewChange, nil // got it
 }
 
-// func (vcp *viewChangeProcess) SetNextViewChange(round int64) {
-// 	vcp.nvcmx.Lock()
-// 	defer vcp.nvcmx.Unlock()
+// NextViewChange round stored in view change protocol (RAM).
+func (vcp *viewChangeProcess) NextViewChange() (round int64) {
+	vcp.nvcmx.Lock()
+	defer vcp.nvcmx.Unlock()
 
-// 	vcp.nextViewChange = round
-// }
+	return vcp.nextViewChange
+}
+
+// SetNextViewChange round into view change protocol (RAM).
+func (vcp *viewChangeProcess) SetNextViewChange(round int64) {
+	vcp.nvcmx.Lock()
+	defer vcp.nvcmx.Unlock()
+
+	println("S NVC", round)
+	vcp.nextViewChange = round
+}
 
 //
 //                               W A I T

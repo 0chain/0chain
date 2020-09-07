@@ -181,10 +181,11 @@ func (sc *Chain) pullRelatedMagicBlock(ctx context.Context, b *block.Block) (
 
 // TODO (sfxdx): miners should send blocks to new sharders starting from 501
 //               round (instead of 505), otherwise the new sharder misses
-//               related view change and magic block; the pulling it workaround
+//               related view change and magic block; the pulling is workaround
 //               for an unexpected case (unsent block, network failure, etc)
 
 func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
+
 	var er = sc.GetRound(b.Round)
 	if er == nil {
 		var r = round.NewRound(b.Round)
@@ -194,7 +195,7 @@ func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {
 
 	var err error
 
-	// skip for now
+	// skip for now, check out MB pushing
 	if false {
 
 		// pull related magic block if missing

@@ -122,17 +122,8 @@ func (mc *Chain) VerifyBlockMagicBlockReference(b *block.Block) (err error) {
 		lfmbr = mc.GetLatestFinalizedMagicBlockRound(rn)
 
 		rnoff = mbRoundOffset(rn)
-		lfb   = mc.GetLatestFinalizedBlock()
-		nvc   int64
+		nvc   = mc.NextViewChange()
 	)
-
-	if !lfb.IsStateComputed() {
-		println("VERIFY B MB R: lfb state not computed (?)", lfb.Round, lfb.Hash)
-	}
-
-	if nvc, err = mc.NextViewChange(lfb); err != nil {
-		return common.NewError("verify_block_mb_reference", err.Error())
-	}
 
 	if nvc > 0 && rnoff >= nvc && lfmbr.StartingRound < nvc {
 		return common.NewError("verify_block_mb_reference",

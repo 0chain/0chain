@@ -1325,6 +1325,7 @@ func (c *Chain) Stop() {
 // PruneRoundStorage pruning storage
 func (c *Chain) PruneRoundStorage(_ context.Context, getTargetCount func(storage round.RoundStorage) int,
 	storages ...round.RoundStorage) {
+
 	for _, storage := range storages {
 		targetCount := getTargetCount(storage)
 		if targetCount == 0 {

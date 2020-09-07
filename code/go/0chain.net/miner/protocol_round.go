@@ -23,6 +23,8 @@ import (
 	"0chain.net/core/memorystore"
 	"0chain.net/core/util"
 
+	"0chain.net/smartcontract/minersc"
+
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
@@ -398,7 +400,6 @@ func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) (
 				}
 			}
 		}
-		println("BNB", bnb.Round)
 		return // bnb
 	}
 
@@ -406,6 +407,22 @@ func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) (
 		zap.Int64("round", r.GetRoundNumber()),
 		zap.Int64("current_round", mc.GetCurrentRound()))
 	return // nil
+}
+
+// TODO (sfxdx): REMOVE THE INSPECTION
+func (mc *Chain) InspectBlock(ctx context.Context, b *block.Block, name string) {
+
+	var err error
+	if b.ClientState == nil {
+		if err = mc.InitBlockState(b); err != nil {
+			println(name+" CAN'T INIT BLOCK STATE TO INSPECT", b.Round, b.Hash, err.Error())
+			return
+		}
+	}
+
+	if _, err = mc.GetBlockStateNode(b, minersc.GlobalNodeKey); err != nil {
+		println(name+" CAN'T GET MINER SC GLOBAL NODE OF", b.Round, b.Hash, err.Error())
+	}
 }
 
 // GenerateRoundBlock - given a round number generates a block.
@@ -425,6 +442,10 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		Logger.Error("generate round block - no block to extend", zap.Any("round", roundNumber))
 		return nil, common.NewError("block_gen_no_block_to_extend", "Do not have the block to extend this round")
 	}
+
+	// TOOD (sfxdx): REMOVE THE INSPECTION
+	mc.InspectBlock(ctx, pb, "BTE")
+
 	txnEntityMetadata := datastore.GetEntityMetadata("txn")
 	ctx = memorystore.WithEntityConnection(ctx, txnEntityMetadata)
 	defer memorystore.Close(ctx)
@@ -434,15 +455,9 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		b     = block.NewBlock(mc.GetKey(), rn)          //
 		lfmbr = mc.GetLatestFinalizedMagicBlockRound(rn) // related magic block
 
-		lfb      = mc.GetLatestFinalizedBlock() //
-		rnoff    = mbRoundOffset(rn)            //
-		nvc, err = mc.NextViewChange(lfb)       //
+		rnoff = mbRoundOffset(rn)   //
+		nvc   = mc.NextViewChange() //
 	)
-
-	if err != nil {
-		return nil, common.NewError("generate_round_block -- can't get next_vc",
-			err.Error())
-	}
 
 	if nvc > 0 && rnoff >= nvc && lfmbr.StartingRound < nvc {
 		Logger.Error("gen_block",
@@ -1171,21 +1186,6 @@ func (mc *Chain) kickFinalization(ctx context.Context) {
 
 	var lfb = mc.GetLatestFinalizedBlock()
 
-	if !mc.ensureState(ctx, lfb) {
-		println("LFB with no block state computed/initialized", lfb.Round)
-		return
-	}
-
-	// if lfb.ClientState == nil {
-	// 	Logger.Info("restartRound->kickFinalization:" +
-	// 		" LFB client state still nil (initialize)")
-	//  var err error
-	// 	if err = mc.InitBlockState(lfb); err != nil {
-	// 		Logger.Error("restartRound->kickFinalization: init block state",
-	// 			zap.Error(err))
-	// 	}
-	// }
-
 	// don't kick more then 5 blocks at once
 	var i, e, j = lfb.Round, mc.GetCurrentRound(), 0 // loop variables
 	for ; i < e && j < 5; i, j = i+1, j+1 {
@@ -1243,6 +1243,7 @@ func (mc *Chain) kickRoundByLFB(ctx context.Context, lfb *block.Block) {
 		nr *Round
 	)
 
+	// TODO (sfxdx): REMOVE
 	if !mc.ensureState(ctx, lfb) {
 		println("kick round by lfb -- no state, no kick", lfb.Round)
 		return // don't kick -- no block state
@@ -1371,23 +1372,39 @@ func (mc *Chain) restartRound(ctx context.Context) {
 	}
 }
 
+// ensureState makes sure block state is computed and initialized, it can't
+// be sure the block stat will not be changed later (or will not become invalid)
+// so, it's optimistic, let's track logs to find out how it's critical
+// in reality
 func (mc *Chain) ensureState(ctx context.Context, b *block.Block) (ok bool) {
 
 	var err error
 	if !b.IsStateComputed() {
 		if err = mc.ComputeOrSyncState(ctx, b); err != nil {
-			Logger.Error("compute_or_sync_state -- compute or sync",
+			Logger.Error("ensure_state -- compute or sync",
 				zap.Error(err), zap.Int64("round", b.Round))
 		}
 	}
 	if b.ClientState == nil {
 		if err = mc.InitBlockState(b); err != nil {
-			Logger.Error("compute_or_sync_state -- init block state",
+			Logger.Error("ensure_state -- initialize block state",
 				zap.Error(err), zap.Int64("round", b.Round))
 		}
 	}
 
-	return b.IsStateComputed() && b.ClientState != nil
+	// ensure next view change (from sharders)
+	if ok = (b.IsStateComputed() && b.ClientState != nil); ok {
+		var nvc int64
+		if nvc, err = mc.NextViewChangeOfBlock(b); err != nil {
+			Logger.Error("ensure_state -- next view change",
+				zap.Error(err), zap.Int64("round", b.Round))
+			println("S NVC ERROR", b.Round, err.Error())
+			return // but return result
+		}
+		mc.SetNextViewChange(nvc)
+	}
+
+	return
 }
 
 func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
@@ -1413,8 +1430,8 @@ func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
 
 	mc.bumpLFBTicket(ctx, rcvd)
 	if !mc.ensureState(ctx, rcvd) {
-		println("start protocol on LFB: cant compute/sync/initialize state", rcvd.Round)
-		return // not updated
+		println("get lfb from sharder: cant compute/sync/initialize state", rcvd.Round)
+		// but continue with the block
 	}
 	// it create corresponding round or makes sure it exists
 	mc.SetLatestFinalizedBlock(ctx, rcvd)
@@ -1536,8 +1553,6 @@ func (mc *Chain) startProtocolOnLFB(ctx context.Context, lfb *block.Block) (
 	mc.AsyncFetchNotarizedPreviousBlock(lfb)
 
 	// we can't compute state in the start protocol
-
-	lfb.SetStateStatus(block.StateSuccessful)
 	if err := mc.InitBlockState(lfb); err != nil {
 		lfb.SetStateStatus(0)
 		println("START PROTOCOL: STATE SETUP ERROR:", err.Error())

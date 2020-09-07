@@ -239,10 +239,7 @@ func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) erro
 //
 // // isViewChanging returns true for 501-504 rounds
 // func (mc *Chain) isViewChanging(round int64) (is bool) {
-// 	var (
-// 		lfb = mc.GetLatestFinalizedBlock() //
-// 		nvc = mc.NextViewChange(lfb)       // expected
-// 	)
+// 	var nvc = mc.NextViewChange()  // expected
 // 	return round >= nvc && round < nvc+chain.ViewChangeOffset
 // }
 
@@ -251,15 +248,9 @@ func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) erro
 func (mc *Chain) isJoining(rn int64) (is bool) {
 
 	var (
-		lfb      = mc.GetLatestFinalizedBlock()
-		nvc, err = mc.NextViewChange(lfb)
+		lfb = mc.GetLatestFinalizedBlock()
+		nvc = mc.NextViewChange()
 	)
-
-	if err != nil {
-		Logger.Error("is_joining", zap.Error(err),
-			zap.Bool("is_state", lfb.IsStateComputed()))
-		return
-	}
 
 	if lfb.Round >= nvc && rn < nvc+chain.ViewChangeOffset {
 		// get current magic block
@@ -282,23 +273,23 @@ func (mc *Chain) isJoining(rn int64) (is bool) {
 // generation and notarization. A finalized block should be trusted.
 func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 
+	mc.InspectBlock(ctx, b, "LFB")
+
 	var (
 		mb  = b.MagicBlock
 		nvc int64
 	)
 
-	if !b.IsStateComputed() {
-		println("VC", b.Round, b.MagicBlock != nil, "block state not computed", b.ClientState != nil)
-	}
-
-	if !mc.ensureState(ctx, b) {
-		return common.NewErrorf("view_change", "block state not computed: %d",
-			b.Round)
-	}
-
-	if nvc, err = mc.NextViewChange(b); err != nil {
+	if nvc, err = mc.NextViewChangeOfBlock(b); err != nil {
 		return common.NewError("view_change", err.Error())
 	}
+
+	// set / update the next view change of protocol view change (RAM)
+	//
+	// note: this approach works where a miners is active and finalizes blocks
+	//       but for inactive miners we have to set next view change based on
+	//       blocks fetched from sharders
+	mc.SetNextViewChange(nvc)
 
 	// next view change is expected, but not given;
 	// it means the MB rejected by Miner SC
@@ -351,7 +342,7 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 	//  - 502 - finalize round (finalize 501 block)
 	//  - 503 - verify round blocks
 	//  - 504 - generate round (new MB/DKG can be used, but slower, use old)
-	//  - 505 - generate block (new MB/DKG)
+	//  - 505 - generate block (use new MB/DKG)
 
 	return
 }
