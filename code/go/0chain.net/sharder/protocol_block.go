@@ -164,18 +164,14 @@ func (sc *Chain) pullRelatedMagicBlock(ctx context.Context, b *block.Block) (
 		return // already have the MB, nothing to do
 	}
 
-	println("[INF] PULL RELATED MAGIC BLOCK", "R", b.Round, "SR", b.LatestFinalizedMagicBlockRound)
-
 	if err = sc.UpdateLatesMagicBlockFromSharders(ctx); err != nil {
 		return // got error
 	}
 
 	if !sc.hasRelatedMagicBlock(b) {
-		println("[ERR] CAN'T PULL")
 		return fmt.Errorf("can't pull related magic block for %d", b.Round)
 	}
 
-	println("[OK] PULLED")
 	return
 }
 

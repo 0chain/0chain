@@ -27,8 +27,6 @@ func (mc *Chain) enterOnViewChange(ctx context.Context, rn int64) {
 		return
 	}
 
-	println("EOVC", rn)
-
 	// choose magic block for next view change set, e.g. for 501-504 rounds
 	// select MB for 505+ rounds; but the GetMagicBlock chooses the very
 	// magic block, or a latest one (can be earlier or newer depending current
@@ -45,7 +43,6 @@ func (mc *Chain) enterOnViewChange(ctx context.Context, rn int64) {
 	)
 
 	if rn <= lfb.Round {
-		println("EONV round is too earlier, or already got as finalized", "RN", rn, "LFB", lfb.Round)
 		return
 	}
 
@@ -54,7 +51,6 @@ func (mc *Chain) enterOnViewChange(ctx context.Context, rn int64) {
 	// TODO (sfxdx): proper condition to update LFB and LFMB from sharders
 	//               and add magic block updating condition
 	if lfb.Round+vco < rn || nmbr < rn-vco {
-		println("EONV update LFB/LFMB")
 		if _, err = mc.ensureLatestFinalizedBlocks(ctx); err != nil {
 			Logger.Error("get LFB/LFBM from sharder", zap.Error(err))
 			return
@@ -64,7 +60,6 @@ func (mc *Chain) enterOnViewChange(ctx context.Context, rn int64) {
 	}
 
 	if !mc.isJoining(rn) {
-		println("EONV not a joining round", "RN", rn, "LFB", lfb.Round, "MB SR", mb.StartingRound)
 		return
 	}
 
@@ -80,18 +75,14 @@ func (mc *Chain) enterOnViewChange(ctx context.Context, rn int64) {
 	//     2. pull corresponding notarized block
 	//     3. pull corresponding block state change (do we really need it?)
 
-	println("EOVC", "ITERATE", "FROM (LFB+1)", lfb.Round+1, "TO (NMBR)", nmbr)
 	for i := lfb.Round + 1; i < nmbr; i++ {
 		var mr = mc.GetMinerRound(i)
 		if mr != nil && mr.GetRandomSeed() != 0 {
-			println("EOVC", "ITERATE - TICK", "I", i, "HAVE ROUND WITH RRS")
 			continue
 		}
 		if mr = mc.GetMinerRound(i - 1); mr == nil {
-			println("EOVC", "ITERATE - TICK", "I", i, "INVALID STATE -- NO PREVIOUS ROUND")
 			return
 		}
-		println("EOVC", "ITERATE - TICK", "I", i, "PULL")
 		go mc.StartNextRound(ctx, mr)
 		break
 	}

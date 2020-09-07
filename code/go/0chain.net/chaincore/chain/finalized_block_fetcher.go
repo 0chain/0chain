@@ -174,10 +174,6 @@ func (c *Chain) asyncFetchFinalizedBlock(ctx context.Context,
 	b, _ = r.AddNotarizedBlock(b)
 	if b == fb {
 		go c.fetchedNotarizedBlockHandler.NotarizedBlockFetched(ctx, fb)
-		if node.Self.Type == node.NodeTypeSharder {
-			// TODO (sfxdx): do we need an additional work here for
-			//               sharders to force blocks finalization?
-		}
 	}
 
 	select {

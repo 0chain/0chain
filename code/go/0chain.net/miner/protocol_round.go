@@ -116,71 +116,12 @@ func (mc *Chain) startNextRoundAfterPulling(ctx context.Context, r *Round) {
 }
 
 func (mc *Chain) pullNotarizedBlocks(ctx context.Context, r *Round) {
-	println("PULL NOT. BLOCK FOR ROUND", r.GetRoundNumber())
-	Logger.Info("PULL NOT. BLOCK FOR", zap.Int64("round", r.GetRoundNumber()))
+	Logger.Info("pull not. block for", zap.Int64("round", r.GetRoundNumber()))
 	if mc.GetBlockToExtend(ctx, r) != nil {
 		if r.GetRoundNumber() > mc.GetCurrentRound() {
 			mc.SetCurrentRound(r.GetRoundNumber())
 		}
 	}
-	return
-
-	// ignore everything later
-
-	if !mc.startPulling() {
-		return // already pulling something (avoid async. start next round loop)
-	}
-
-	var (
-		crn = mc.GetCurrentRound()
-		rn  = r.GetRoundNumber()
-	)
-
-	Logger.Info("pull not. block for round", zap.Int64("round", rn))
-
-	var hnb = r.GetHeaviestNotarizedBlock()
-	if hnb != nil {
-		Logger.Info("pull not. block for round -- already have, start next round",
-			zap.Int64("round", rn), zap.Int64("rrs", r.GetRandomSeed()))
-		// bum the round number explicitly for the pulled blocks
-		if rn > crn {
-			mc.SetCurrentRound(rn) // update
-		}
-		mc.stopPulling() // ignore result
-		// mc.startNextRoundAfterPulling(ctx, r)
-		return
-	}
-
-	var b = mc.GetHeaviestNotarizedBlock(r)
-	if b == nil {
-		Logger.Info("pull not. block for round -- can't pull",
-			zap.Int64("round", rn), zap.Int64("rrs", r.GetRandomSeed()))
-		mc.stopPulling()
-		return
-	}
-
-	Logger.Info("pull not. block for round -- got",
-		zap.Int64("round", rn))
-
-	if r.GetRandomSeed() == 0 && b.IsBlockNotarized() &&
-		mc.AddNotarizedBlock(ctx, r, b) {
-
-		var rrs = b.GetRoundRandomSeed()
-		Logger.Info("pull not. block for round -- set rrs by the block",
-			zap.Int64("round", rn), zap.Int64("rrs", rrs))
-		mc.SetRandomSeed(r, rrs)
-		r.ComputeMinerRanks(mc.GetMiners(rn))
-	}
-
-	// bump the round number explicitly for the pulled blocks
-	if rn > crn {
-		mc.SetCurrentRound(rn) // update
-	}
-
-	Logger.Info("pull not. block for round -- start next round",
-		zap.Int64("round", rn), zap.Int64("rrs", r.GetRandomSeed()))
-	mc.stopPulling() // ignore result
-	// mc.startNextRoundAfterPulling(ctx, r) //
 }
 
 // StartNextRound - start the next round as a notarized
@@ -409,22 +350,6 @@ func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) (
 	return // nil
 }
 
-// TODO (sfxdx): REMOVE THE INSPECTION
-func (mc *Chain) InspectBlock(ctx context.Context, b *block.Block, name string) {
-
-	var err error
-	if b.ClientState == nil {
-		if err = mc.InitBlockState(b); err != nil {
-			println(name+" CAN'T INIT BLOCK STATE TO INSPECT", b.Round, b.Hash, err.Error())
-			return
-		}
-	}
-
-	if _, err = mc.GetBlockStateNode(b, minersc.GlobalNodeKey); err != nil {
-		println(name+" CAN'T GET MINER SC GLOBAL NODE OF", b.Round, b.Hash, err.Error())
-	}
-}
-
 // GenerateRoundBlock - given a round number generates a block.
 func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block, error) {
 	var ts = time.Now()
@@ -442,9 +367,6 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		Logger.Error("generate round block - no block to extend", zap.Any("round", roundNumber))
 		return nil, common.NewError("block_gen_no_block_to_extend", "Do not have the block to extend this round")
 	}
-
-	// TOOD (sfxdx): REMOVE THE INSPECTION
-	mc.InspectBlock(ctx, pb, "BTE")
 
 	txnEntityMetadata := datastore.GetEntityMetadata("txn")
 	ctx = memorystore.WithEntityConnection(ctx, txnEntityMetadata)
@@ -622,18 +544,8 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 	}
 
 	if b.Round > 1 {
-		// if pr.Block == nil {
-		// 	println("PR HASN'T THE PB", b.Round)
-		// 	return // FATAL
-		// }
-		// if pr.Block.Hash != b.PrevHash {
-		// 	println("PR BLOCK HAS DIFFERENT HASH", b.Round)
-		// 	return // FATAL
-		// }
-
 		pb, err := mc.GetBlock(ctx, b.PrevHash)
 		if err != nil || pb == nil {
-			println("CAN'T GET PREVIOUS BLOCK", b.Round)
 			return
 		}
 
@@ -1243,9 +1155,7 @@ func (mc *Chain) kickRoundByLFB(ctx context.Context, lfb *block.Block) {
 		nr *Round
 	)
 
-	// TODO (sfxdx): REMOVE
 	if !mc.ensureState(ctx, lfb) {
-		println("kick round by lfb -- no state, no kick", lfb.Round)
 		return // don't kick -- no block state
 	}
 
@@ -1398,7 +1308,6 @@ func (mc *Chain) ensureState(ctx context.Context, b *block.Block) (ok bool) {
 		if nvc, err = mc.NextViewChangeOfBlock(b); err != nil {
 			Logger.Error("ensure_state -- next view change",
 				zap.Error(err), zap.Int64("round", b.Round))
-			println("S NVC ERROR", b.Round, err.Error())
 			return // but return result
 		}
 		mc.SetNextViewChange(nvc)
@@ -1430,8 +1339,7 @@ func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
 
 	mc.bumpLFBTicket(ctx, rcvd)
 	if !mc.ensureState(ctx, rcvd) {
-		println("get lfb from sharder: cant compute/sync/initialize state", rcvd.Round)
-		// but continue with the block
+		// but continue with the block (?)
 	}
 	// it create corresponding round or makes sure it exists
 	mc.SetLatestFinalizedBlock(ctx, rcvd)
@@ -1555,12 +1463,8 @@ func (mc *Chain) startProtocolOnLFB(ctx context.Context, lfb *block.Block) (
 	// we can't compute state in the start protocol
 	if err := mc.InitBlockState(lfb); err != nil {
 		lfb.SetStateStatus(0)
-		println("START PROTOCOL: STATE SETUP ERROR:", err.Error())
 	}
-	// if !mc.ensureState(ctx, lfb) {
-	// 	println("start protocol on LFB: cant compute/sync/initialize state", lfb.Round)
-	// 	return nil
-	// }
+
 	mc.SetLatestFinalizedBlock(ctx, lfb)
 	return mc.GetMinerRound(lfb.Round)
 }
@@ -1584,7 +1488,6 @@ func StartProtocol(ctx context.Context, gb *block.Block) {
 	for nr == nil {
 		select {
 		case <-time.After(4 * time.Second): // repeat after some time
-			// // // // // // // // // // // // // // // // // // // // // // //
 			if _, err := mc.ensureLatestFinalizedBlocks(ctx); err != nil {
 				Logger.Error("getting latest blocks from sharders",
 					zap.Error(err))
@@ -1592,9 +1495,6 @@ func StartProtocol(ctx context.Context, gb *block.Block) {
 			}
 			lfb = mc.GetLatestFinalizedBlock()
 
-			// instead of
-			// lfb = getLatestBlockFromSharders(ctx)
-			// // // // // // // // // // // // // // // // // // // // // // //
 			mr = mc.startProtocolOnLFB(ctx, lfb)
 		case <-ctx.Done():
 			return

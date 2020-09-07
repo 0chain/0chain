@@ -255,8 +255,6 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 		return // don't do anything, not a view change
 	}
 
-	println("adjust vc", gn.ViewChange)
-
 	var dmn *DKGMinerNodes
 	if dmn, err = msc.getMinersDKGList(balances); err != nil {
 		return common.NewErrorf("adjust_view_change",
@@ -275,7 +273,6 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 		// reset the ViewChange to previous one (for miners)
 		var prev = gn.prevMagicBlock(balances)
 		gn.ViewChange = prev.StartingRound
-		println("adjust vc: reset to previous", gn.ViewChange)
 		// reset this error, since it's not fatal, we just don't do
 		// this view change, because >= T miners didn't send 'wait' transaction
 		err = nil
@@ -301,14 +298,6 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
-
-	defer func() {
-		if err == nil {
-			return
-		}
-		var block = balances.GetBlock()
-		println("payFees failure", block.Round, err.Error())
-	}()
 
 	var pn *PhaseNode
 	if pn, err = msc.getPhaseNode(balances); err != nil {

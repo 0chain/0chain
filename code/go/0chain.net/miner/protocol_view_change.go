@@ -714,7 +714,6 @@ func (vcp *viewChangeProcess) SetNextViewChange(round int64) {
 	vcp.nvcmx.Lock()
 	defer vcp.nvcmx.Unlock()
 
-	println("S NVC", round)
 	vcp.nextViewChange = round
 }
 

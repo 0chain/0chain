@@ -87,7 +87,6 @@ func (c *Chain) VerifyRelatedMagicBlockPresence(b *block.Block) (err error) {
 	)
 
 	if mb.StartingRound != relatedmbr {
-		println("ERROR IS HERE (VRMBP)")
 		return common.NewErrorf("verify_related_mb_presence",
 			"no corresponding MB, want_mb_sr: %d, got_mb_sr: %d",
 			relatedmbr, mb.StartingRound)
@@ -106,7 +105,6 @@ func (c *Chain) IsBlockNotarized(ctx context.Context, b *block.Block) bool {
 	}
 
 	if err := c.VerifyRelatedMagicBlockPresence(b); err != nil {
-		println("ERROR IS HERE (IBN)")
 		Logger.Error("is_block_notarized", zap.Error(err))
 		return false // false
 	}
