@@ -23,8 +23,6 @@ import (
 	"0chain.net/core/memorystore"
 	"0chain.net/core/util"
 
-	"0chain.net/smartcontract/minersc"
-
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
@@ -35,7 +33,7 @@ func init() {
 	rbgTimer = metrics.GetOrRegisterTimer("rbg_time", nil)
 }
 
-//SetNetworkRelayTime - set the network relay time
+// SetNetworkRelayTime - set the network relay time.
 func SetNetworkRelayTime(delta time.Duration) {
 	chain.SetNetworkRelayTime(delta)
 }
