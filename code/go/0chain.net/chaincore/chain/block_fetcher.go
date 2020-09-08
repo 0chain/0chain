@@ -7,23 +7,28 @@ import (
 	"0chain.net/core/cache"
 )
 
-//BlockFetcher - to fetch blocks from other nodes
+type hashRound struct {
+	hash  string
+	round int64
+}
+
+// BlockFetcher - to fetch blocks from other nodes.
 type BlockFetcher struct {
 	fblocks           cache.Cache
-	missingBlocks     chan string
+	missingBlocks     chan hashRound
 	missingLinkBlocks chan *block.Block
 }
 
-//NewBlockFetcher - create a block fetcher object
+// NewBlockFetcher - create a block fetcher object.
 func NewBlockFetcher() *BlockFetcher {
 	bf := &BlockFetcher{}
 	bf.fblocks = cache.NewLRUCache(100)
 	bf.missingLinkBlocks = make(chan *block.Block, 128)
-	bf.missingBlocks = make(chan string, 128)
+	bf.missingBlocks = make(chan hashRound, 128)
 	return bf
 }
 
-//AsyncFetchPreviousBlock - fetch previous block asynchronously
+// AsyncFetchPreviousBlock - fetch previous block asynchronously.
 func (bf *BlockFetcher) AsyncFetchPreviousBlock(b *block.Block) {
 	if bf.IsFetching(b.PrevHash) {
 		return
@@ -31,21 +36,21 @@ func (bf *BlockFetcher) AsyncFetchPreviousBlock(b *block.Block) {
 	bf.missingLinkBlocks <- b
 }
 
-//AsyncFetchBlock - fetch the block asynchronously
-func (bf *BlockFetcher) AsyncFetchBlock(hash string) {
+// AsyncFetchBlock - fetch the block asynchronously.
+func (bf *BlockFetcher) AsyncFetchBlock(hash string, round int64) {
 	if bf.IsFetching(hash) {
 		return
 	}
-	bf.missingBlocks <- hash
+	bf.missingBlocks <- hashRound{hash: hash, round: round}
 }
 
-//IsFetching - is the block being fetched (determined by cache)
+// IsFetching - is the block being fetched (determined by cache).
 func (bf *BlockFetcher) IsFetching(hash string) bool {
 	_, err := bf.fblocks.Get(hash)
 	return err == nil
 }
 
-//FetchPreviousBlock - fetch the previous block
+// FetchPreviousBlock - fetch the previous block.
 func (bf *BlockFetcher) FetchPreviousBlock(ctx context.Context, c *Chain, b *block.Block) {
 	if !bf.IsFetching(b.PrevHash) {
 		bf.fblocks.Add(b.PrevHash, true)
@@ -53,15 +58,18 @@ func (bf *BlockFetcher) FetchPreviousBlock(ctx context.Context, c *Chain, b *blo
 	}
 }
 
-//FetchBlock - fetch the block
-func (bf *BlockFetcher) FetchBlock(ctx context.Context, c *Chain, hash string) {
+// FetchBlock - fetch the block.
+func (bf *BlockFetcher) FetchBlock(ctx context.Context, c *Chain, hash string,
+	round int64) {
+
 	if !c.blockFetcher.IsFetching(hash) {
 		c.blockFetcher.fblocks.Add(hash, true)
-		go c.GetNotarizedBlock(hash)
+		go c.GetNotarizedBlock(hash, round)
 	}
 }
 
-// FetchedNotarizedBlockHandler - a handler that processes a fetched notarized block
+// FetchedNotarizedBlockHandler - a handler that processes a fetched
+// notarized block.
 type FetchedNotarizedBlockHandler interface {
 	NotarizedBlockFetched(ctx context.Context, b *block.Block)
 }

@@ -299,7 +299,8 @@ func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessag
 
 	var b, err = mc.GetBlock(ctx, msg.Notarization.BlockID)
 	if err != nil {
-		mc.AsyncFetchNotarizedBlock(msg.Notarization.BlockID)
+		mc.AsyncFetchNotarizedBlock(msg.Notarization.BlockID,
+			msg.Notarization.Round)
 		return
 	}
 

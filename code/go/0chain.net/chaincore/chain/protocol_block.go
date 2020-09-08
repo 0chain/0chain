@@ -301,14 +301,14 @@ func (c *Chain) IsFinalizedDeterministically(b *block.Block) bool {
 }
 
 // GetNotarizedBlock - get a notarized block for a round.
-func (c *Chain) GetNotarizedBlock(blockHash string) (b *block.Block) {
+func (c *Chain) GetNotarizedBlock(hash string, rn int64) (b *block.Block) {
 
 	var (
 		cround = c.GetCurrentRound()
 		params = &url.Values{}
 	)
 
-	params.Add("block", blockHash)
+	params.Add("block", hash)
 
 	var (
 		ctx  = common.GetRootContext()
@@ -319,7 +319,7 @@ func (c *Chain) GetNotarizedBlock(blockHash string) (b *block.Block) {
 	var handler = func(ctx context.Context, entity datastore.Entity) (
 		resp interface{}, err error) {
 
-		Logger.Info("get notarized block", zap.String("block", blockHash),
+		Logger.Info("get notarized block", zap.String("block", hash),
 			zap.Int64("cround", cround),
 			zap.Int64("current_round", c.GetCurrentRound()))
 
@@ -331,7 +331,7 @@ func (c *Chain) GetNotarizedBlock(blockHash string) (b *block.Block) {
 		var r = c.GetRound(nb.Round)
 		if r == nil {
 			Logger.Info("get notarized block - no round will create...",
-				zap.Int64("round", nb.Round), zap.String("block", blockHash),
+				zap.Int64("round", nb.Round), zap.String("block", hash),
 				zap.Int64("cround", cround),
 				zap.Int64("current_round", c.GetCurrentRound()))
 
@@ -343,14 +343,14 @@ func (c *Chain) GetNotarizedBlock(blockHash string) (b *block.Block) {
 			r.GetRoundNumber())
 		if err != nil {
 			Logger.Error("get notarized block - validate notarization",
-				zap.Int64("round", nb.Round), zap.String("block", blockHash),
+				zap.Int64("round", nb.Round), zap.String("block", hash),
 				zap.Error(err))
 			return nil, err
 		}
 
 		if err = nb.Validate(ctx); err != nil {
 			Logger.Error("get notarized block - validate",
-				zap.Int64("round", nb.Round), zap.String("block", blockHash),
+				zap.Int64("round", nb.Round), zap.String("block", hash),
 				zap.Any("block_obj", nb), zap.Error(err))
 			return nil, err
 		}
@@ -378,6 +378,23 @@ func (c *Chain) GetNotarizedBlock(blockHash string) (b *block.Block) {
 	var n2n = mb.Miners
 	n2n.RequestEntity(ctx, MinerNotarizedBlockRequestor, params, handler)
 
+	// if nil, then request it from sharders
+	if b == nil {
+		Logger.Info("get notarized block -- no block from miners, try sharders",
+			zap.String("hash", hash), zap.Int64("round", rn))
+		var x, err = c.GetFinalizedBlockFromSharders(ctx, &LFBTicket{
+			LFBHash: hash,
+			Round:   rn,
+		})
+		if err != nil {
+			Logger.Error("get notarized block from sharders",
+				zap.String("hash", hash), zap.Int64("round", rn),
+				zap.Error(err))
+			return
+		}
+		handler(ctx, x) // initialize the block and set the 'b' variable
+	}
+
 	return
 }
 
@@ -404,7 +421,7 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 			zap.Int64("cround", cb.Round), zap.String("cblock", cb.Hash),
 			zap.String("cprev_block", cb.PrevHash))
 
-		nb := c.GetNotarizedBlock(cb.PrevHash)
+		nb := c.GetNotarizedBlock(cb.PrevHash, cb.Round-1)
 		if nb == nil {
 			Logger.Error("get previous block (unable to get prior blocks)",
 				zap.Int64("current_round", c.GetCurrentRound()),

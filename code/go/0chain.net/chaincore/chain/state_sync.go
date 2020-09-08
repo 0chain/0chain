@@ -60,14 +60,17 @@ func (c *Chain) GetStateNodes(ctx context.Context, keys []util.Key) {
 		for idx, key := range keys {
 			skeys[idx] = util.ToHex(key)
 		}
-		Logger.Error("get state nodes", zap.Int("num_keys", len(keys)), zap.Any("keys", skeys), zap.Error(err))
+		Logger.Error("get state nodes", zap.Int("num_keys", len(keys)),
+			zap.Any("keys", skeys), zap.Error(err))
 		return
 	}
 	err = c.SaveStateNodes(ctx, ns)
 	if err != nil {
-		Logger.Error("get state nodes - error saving", zap.Int("num_keys", len(keys)), zap.Error(err))
+		Logger.Error("get state nodes - error saving",
+			zap.Int("num_keys", len(keys)), zap.Error(err))
 	} else {
-		Logger.Info("get state nodes - saving", zap.Int("num_keys", len(keys)), zap.Int("nodes", len(ns.Nodes)))
+		Logger.Info("get state nodes - saving", zap.Int("num_keys", len(keys)),
+			zap.Int("nodes", len(ns.Nodes)))
 	}
 	return
 }
@@ -209,38 +212,58 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 		b.SetStateStatus(block.StateSynched)
 		return nil, nil
 	}
-	params := &url.Values{}
+	var (
+		params       = &url.Values{}
+		ctx, cancelf = context.WithCancel(common.GetRootContext())
+		bsc          *block.StateChange
+	)
 	params.Add("block", b.Hash)
-	ctx, cancelf := context.WithCancel(common.GetRootContext())
-	var bsc *block.StateChange
-	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-		Logger.Debug("get block state change", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("bsc_id", entity.GetKey()))
-		rsc, ok := entity.(*block.StateChange)
+
+	var handler = func(ctx context.Context, entity datastore.Entity) (
+		resp interface{}, err error) {
+
+		Logger.Debug("get block state change", zap.Int64("round", b.Round),
+			zap.String("block", b.Hash), zap.String("bsc_id", entity.GetKey()))
+
+		var rsc, ok = entity.(*block.StateChange)
 		if !ok {
 			return nil, datastore.ErrInvalidEntity
 		}
+
 		if rsc.Block != b.Hash {
-			Logger.Error("get block state change - hash mismatch error", zap.Int64("round", b.Round), zap.String("block", b.Hash))
+			Logger.Error("get block state change - hash mismatch error",
+				zap.Int64("round", b.Round), zap.String("block", b.Hash))
 			return nil, block.ErrBlockHashMismatch
 		}
+
 		if bytes.Compare(b.ClientStateHash, rsc.Hash) != 0 {
-			Logger.Error("get block state change - state hash mismatch error", zap.Int64("round", b.Round), zap.String("block", b.Hash))
+			Logger.Error("get block state change - state hash mismatch error",
+				zap.Int64("round", b.Round), zap.String("block", b.Hash))
 			return nil, block.ErrBlockStateHashMismatch
 		}
-		root := rsc.GetRoot()
+
+		var root = rsc.GetRoot()
 		if root == nil {
-			Logger.Error("get block state change - state root error", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int("state_nodes", len(rsc.Nodes)))
-			return nil, common.NewError("state_root_error", "Block state root calculcation error")
+			Logger.Error("get block state change - state root error",
+				zap.Int64("round", b.Round), zap.String("block", b.Hash),
+				zap.Int("state_nodes", len(rsc.Nodes)))
+			return nil, common.NewError("state_root_error",
+				"Block state root calculcation error")
 		}
+
 		cancelf()
 		bsc = rsc
 		return rsc, nil
 	}
-	mb := c.GetMagicBlock(b.Round)
+
+	var mb = c.GetMagicBlock(b.Round)
 	mb.Miners.RequestEntity(ctx, BlockStateChangeRequestor, params, handler)
+
 	if bsc == nil {
-		return nil, common.NewError("block_state_change_error", "Error getting the block state change")
+		return nil, common.NewError("block_state_change_error",
+			"Error getting the block state change")
 	}
+
 	return bsc, nil
 }
 

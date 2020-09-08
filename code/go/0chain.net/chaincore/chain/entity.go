@@ -27,7 +27,8 @@ import (
 	"go.uber.org/zap"
 )
 
-//PreviousBlockUnavailable - to indicate an error condition when the previous block of a given block is not available
+//PreviousBlockUnavailable - to indicate an error condition when the previous
+// block of a given block is not available.
 const PreviousBlockUnavailable = "previous_block_unavailable"
 
 var (
@@ -640,8 +641,8 @@ func (c *Chain) AsyncFetchNotarizedPreviousBlock(b *block.Block) {
 }
 
 /*AsyncFetchNotarizedBlock - async fetching of a notarized block */
-func (c *Chain) AsyncFetchNotarizedBlock(hash string) {
-	c.blockFetcher.AsyncFetchBlock(hash)
+func (c *Chain) AsyncFetchNotarizedBlock(hash string, round int64) {
+	c.blockFetcher.AsyncFetchBlock(hash, round)
 }
 
 /*GetBlock - returns a known block for a given hash from the cache */
@@ -690,11 +691,17 @@ func (c *Chain) DeleteBlocksBelowRound(round int64) {
 	lfb := c.GetLatestFinalizedBlock()
 	for _, b := range c.blocks {
 		if b.Round < round && b.CreationDate < ts && b.Round < c.LatestDeterministicBlock.Round {
-			Logger.Debug("found block to delete", zap.Int64("round", round), zap.Int64("block_round", b.Round), zap.Int64("current_round", c.GetCurrentRound()), zap.Int64("lf_round", lfb.Round))
+			Logger.Debug("found block to delete", zap.Int64("round", round),
+				zap.Int64("block_round", b.Round),
+				zap.Int64("current_round", c.GetCurrentRound()),
+				zap.Int64("lf_round", lfb.Round))
 			blocks = append(blocks, b)
 		}
 	}
-	Logger.Info("delete blocks below round", zap.Int64("round", c.GetCurrentRound()), zap.Int64("below_round", round), zap.Any("before", ts), zap.Int("total", len(c.blocks)), zap.Int("count", len(blocks)))
+	Logger.Info("delete blocks below round",
+		zap.Int64("round", c.GetCurrentRound()),
+		zap.Int64("below_round", round), zap.Any("before", ts),
+		zap.Int("total", len(c.blocks)), zap.Int("count", len(blocks)))
 	for _, b := range blocks {
 		b.Clear()
 		delete(c.blocks, b.Hash)
@@ -1170,29 +1177,6 @@ func (c *Chain) ActiveInChain() bool {
 	mb := c.GetCurrentMagicBlock()
 	return mb.IsActiveNode(node.Self.Underlying().GetKey(), c.GetCurrentRound()) && c.GetLatestFinalizedBlock().ClientState != nil
 }
-
-// -------------------------------------------------------------------------- //
-// frozen until a sharder can receive blocks, while the
-// sharder doesn't have corresponding MB
-//
-
-// // SetInitialPreviousMagicBlock used to set previous magic block loaded from
-// // store on application start. After the call th UpdateMagicBlock should be
-// // called with latest finalized magic block (on startup, actually).
-// func (c *Chain) SetInitialPreviousMagicBlock(plfmb *block.MagicBlock) {
-//
-// 	c.mbMutex.Lock()
-// 	defer c.mbMutex.Unlock()
-//
-// 	c.PreviousMagicBlock = nil // reset it to nil for now
-// 	c.MagicBlock = plfmb
-// 	c.SetupNodes()
-// 	c.Sharders.ComputeProperties()
-// 	c.Miners.ComputeProperties()
-// 	c.InitializeMinerPool()
-// }
-
-// -------------------------------------------------------------------------- //
 
 func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 	if newMagicBlock.Miners == nil || newMagicBlock.Miners.MapSize() == 0 {

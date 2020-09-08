@@ -301,9 +301,7 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) (
 	bnb *block.Block) {
 
-	bnb = r.GetHeaviestNotarizedBlock()
-
-	if bnb == nil {
+	if bnb = r.GetHeaviestNotarizedBlock(); bnb == nil {
 		type pBlock struct {
 			Block     string
 			Proposals int
@@ -327,25 +325,26 @@ func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) (
 		bnb = mc.GetHeaviestNotarizedBlock(r)
 	}
 
-	if bnb != nil {
-		if !bnb.IsStateComputed() {
-			err := mc.ComputeOrSyncState(ctx, bnb)
-			if err != nil {
-				if state.DebugBlock() {
-					Logger.Error("get block to extend - best nb compute state",
-						zap.Any("round", r.GetRoundNumber()),
-						zap.Any("block", bnb.Hash), zap.Error(err))
-					return nil
-				}
-			}
-		}
-		return // bnb
+	if bnb == nil {
+		Logger.Debug("get block to extend - no block",
+			zap.Int64("round", r.GetRoundNumber()),
+			zap.Int64("current_round", mc.GetCurrentRound()))
+		return // nil
 	}
 
-	Logger.Debug("get block to extend - no block",
-		zap.Int64("round", r.GetRoundNumber()),
-		zap.Int64("current_round", mc.GetCurrentRound()))
-	return // nil
+	if !bnb.IsStateComputed() {
+		err := mc.ComputeOrSyncState(ctx, bnb)
+		if err != nil {
+			if state.DebugBlock() {
+				Logger.Error("get block to extend - best nb compute state",
+					zap.Any("round", r.GetRoundNumber()),
+					zap.Any("block", bnb.Hash), zap.Error(err))
+				return nil
+			}
+		}
+	}
+
+	return // bnb
 }
 
 // GenerateRoundBlock - given a round number generates a block.

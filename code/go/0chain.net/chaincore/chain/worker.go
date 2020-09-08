@@ -196,12 +196,12 @@ func (c *Chain) BlockFetchWorker(ctx context.Context) {
 			}
 
 			c.blockFetcher.FetchPreviousBlock(ctx, c, b)
-		case bHash := <-c.blockFetcher.missingBlocks:
-			_, err := c.GetBlock(ctx, bHash)
+		case hr := <-c.blockFetcher.missingBlocks:
+			_, err := c.GetBlock(ctx, hr.hash)
 			if err == nil {
 				continue
 			}
-			c.blockFetcher.FetchBlock(ctx, c, bHash)
+			c.blockFetcher.FetchBlock(ctx, c, hr.hash, hr.round)
 		}
 	}
 }

@@ -12,13 +12,15 @@ import (
 	"go.uber.org/zap"
 )
 
-//StateChange - an entity that captures all changes to the state by a given block
+// StateChange - an entity that captures all
+// changes to the state by a given block.
 type StateChange struct {
 	state.PartialState
 	Block string `json:"block"`
 }
 
-//NewBlockStateChange - if the block state computation is successfully completed, provide the changes
+// NewBlockStateChange - if the block state computation is successfully
+// completed, provide the changes.
 func NewBlockStateChange(b *Block) *StateChange {
 	bsc := datastore.GetEntityMetadata("block_state_change").Instance().(*StateChange)
 	bsc.Block = b.Hash
@@ -34,7 +36,7 @@ func NewBlockStateChange(b *Block) *StateChange {
 
 var stateChangeEntityMetadata *datastore.EntityMetadataImpl
 
-/*StateChangeProvider - a block summary instance provider */
+// StateChangeProvider - a block summary instance provider.
 func StateChangeProvider() datastore.Entity {
 	sc := &StateChange{}
 	sc.Version = "1.0"

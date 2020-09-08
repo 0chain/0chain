@@ -15,23 +15,20 @@ import (
 	"go.uber.org/zap"
 )
 
-// LatestRoundRequestor -
-var LatestRoundRequestor node.EntityRequestor
-
-// RoundRequestor -
-var RoundRequestor node.EntityRequestor
-
-// RoundSummariesRequestor -
-var RoundSummariesRequestor node.EntityRequestor
-
-// BlockRequestor -
-var BlockRequestor node.EntityRequestor
-
-// BlockSummaryRequestor -
-var BlockSummaryRequestor node.EntityRequestor
-
-// BlockSummariesRequestor -
-var BlockSummariesRequestor node.EntityRequestor
+var (
+	// LatestRoundRequestor -
+	LatestRoundRequestor node.EntityRequestor
+	// RoundRequestor -
+	RoundRequestor node.EntityRequestor
+	// RoundSummariesRequestor -
+	RoundSummariesRequestor node.EntityRequestor
+	// BlockRequestor -
+	BlockRequestor node.EntityRequestor
+	// BlockSummaryRequestor -
+	BlockSummaryRequestor node.EntityRequestor
+	// BlockSummariesRequestor -
+	BlockSummariesRequestor node.EntityRequestor
+)
 
 // SetupS2SRequestors -
 func SetupS2SRequestors() {

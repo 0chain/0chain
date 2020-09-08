@@ -18,28 +18,28 @@ enable:
 sets:
   - name: "Miner down/up"
     tests:
-      - "Miner: 50 (switch to contribute)"
-      - "Miner: 100 (switch to share)"
-      - "Miner: 150 (switch to publish)"
-      - "Miner: 200 (switch to wait)"
-      - "Miner: vc-1 round"
-      - "Miner: vc round"
-      - "Miner: vc+2 rounds"
+      # - "Miner: 50 (switch to contribute)"
+      # - "Miner: 100 (switch to share)"
+      # - "Miner: 150 (switch to publish)"
+      # - "Miner: 200 (switch to wait)"
+      # - "Miner: vc-1 round"
+      # - "Miner: vc round"
+      # - "Miner: vc+2 rounds"
 
   - name: "Sharder down/up"
     tests:
-      - "Sharder: 50 (switch to contribute)"
-      - "Sharder: 100 (switch to share)"
-      - "Sharder: 150 (switch to publish)"
-      - "Sharder: 200 (switch to wait)"
-      - "Sharder: vc-1 round"
-      - "Sharder: vc round"
-      - "Sharder: vc+2 rounds"
+      # - "Sharder: 50 (switch to contribute)"
+      # - "Sharder: 100 (switch to share)"
+      # - "Sharder: 150 (switch to publish)"
+      # - "Sharder: 200 (switch to wait)"
+      # - "Sharder: vc-1 round"
+      # - "Sharder: vc round"
+      # - "Sharder: vc+2 rounds"
 
   - name: "All miners down/up"
     tests:
       - "All miners: 50 (switch to contribute)"
-      - "All miners: 100 (switch to share)"
+      # - "All miners: 100 (switch to share)"
       - "All miners: 150 (switch to publish)"
       - "All miners: 200 (switch to wait)"
       - "All miners: vc-1 round"
@@ -148,7 +148,7 @@ tests:
       - wait_phase:
           phase: 'wait'
       - wait_round:
-          shift: 48
+          shift: 28
       - stop: ['miner 1']
       - start: ['miner 1']
       - wait_view_change:
@@ -167,7 +167,7 @@ tests:
       - wait_phase:
           phase: 'wait'
       - wait_round:
-          shift: 49
+          shift: 29
       - stop: ['miner 1']
       - start: ['miner 1']
       - wait_view_change:
@@ -269,7 +269,7 @@ tests:
       - wait_phase:
           phase: 'wait'
       - wait_round:
-          shift: 48
+          shift: 28
       - stop: ['sharder 1']
       - start: ['sharder 1']
       - wait_view_change:
@@ -286,7 +286,7 @@ tests:
       - wait_phase:
           phase: 'wait'
       - wait_round:
-          shift: 49
+          shift: 29
       - stop: ['sharder 1']
       - start: ['sharder 1']
       - wait_view_change:
@@ -386,7 +386,7 @@ tests:
       - wait_phase:
           phase: 'wait'
       - wait_round:
-          shift: 48
+          shift: 28
       - stop: ['miner 1', 'miner 2', 'miner 3']
       - start: ['miner 1', 'miner 2', 'miner 3']
       - wait_view_change:
@@ -403,7 +403,7 @@ tests:
       - wait_phase:
           phase: 'wait'
       - wait_round:
-          shift: 49
+          shift: 29
       - stop: ['miner 1', 'miner 2', 'miner 3']
       - start: ['miner 1', 'miner 2', 'miner 3']
       - wait_view_change:
@@ -564,7 +564,7 @@ tests:
       - wait_phase:
           phase: 'wait'
       - wait_round:
-          shift: 48
+          shift: 28
       - stop: ['sharder 1', 'sharder 2']
       - start: ['sharder 1']
       - start: ['sharder 2']
@@ -594,7 +594,7 @@ tests:
       - wait_phase:
           phase: 'wait'
       - wait_round:
-          shift: 49
+          shift: 29
       - stop: ['sharder 1', 'sharder 2']
       - start: ['sharder 1']
       - start: ['sharder 2']
@@ -771,7 +771,7 @@ tests:
       - wait_phase:
           phase: 'wait'
       - wait_round:
-          shift: 48
+          shift: 28
       - stop: ['sharder 1', 'sharder 2', 'miner 1', 'miner 2', 'miner 3']
       - start: ['sharder 1']
       - start: ['sharder 2']
@@ -802,7 +802,7 @@ tests:
       - wait_phase:
           phase: 'wait'
       - wait_round:
-          shift: 49
+          shift: 29
       - stop: ['sharder 1', 'sharder 2', 'miner 1', 'miner 2', 'miner 3']
       - start: ['sharder 1']
       - start: ['sharder 2']
