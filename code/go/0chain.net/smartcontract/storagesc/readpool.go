@@ -132,16 +132,34 @@ func (rp *readPool) movePartToBlobber(sscKey string, ap *allocationPool,
 	return
 }
 
+// The readPoolRedeem represents part of response of read markers redeeming.
+// A Blobber uses this response for internal read pools cache.
+type readPoolRedeem struct {
+	PoolID  string        `json:"pool_id"` // read pool ID
+	Balance state.Balance `json:"balance"` // balance reduction
+}
+
+func toJson(redeems []readPoolRedeem) string {
+	var b, err = json.Marshal(redeems)
+	if err != nil {
+		panic(err) // must not happen
+	}
+	return string(b)
+}
+
 func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 	sp *stakePool, now common.Timestamp, value state.Balance,
-	balances cstate.StateContextI) (err error) {
+	balances cstate.StateContextI) (resp string, err error) {
 
 	var cut = rp.blobberCut(allocID, blobID, now)
 
 	if len(cut) == 0 {
-		return fmt.Errorf("no tokens in read pool for allocation: %s,"+
+		return "", fmt.Errorf("no tokens in read pool for allocation: %s,"+
 			" blobber: %s", allocID, blobID)
 	}
+
+	// all redeems to response at the end
+	var redeems []readPoolRedeem
 
 	var torm []*allocationPool // to remove later (empty allocation pools)
 	for _, ap := range cut {
@@ -164,8 +182,13 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 
 		err = rp.movePartToBlobber(sscKey, ap, sp, move, balances)
 		if err != nil {
-			return
+			return // fatal, can't move, can't continue, rollback all
 		}
+
+		redeems = append(redeems, readPoolRedeem{
+			PoolID:  ap.ID,
+			Balance: move,
+		})
 
 		value -= move
 		sp.Rewards.Blobber += value
@@ -178,13 +201,15 @@ func (rp *readPool) moveToBlobber(sscKey, allocID, blobID string,
 	}
 
 	if value != 0 {
-		return fmt.Errorf("not enough tokens in read pool for allocation: %s,"+
-			" blobber: %s", allocID, blobID)
+		return "", fmt.Errorf("not enough tokens in read pool for "+
+			"allocation: %s, blobber: %s", allocID, blobID)
 	}
 
 	// remove empty allocation pools
 	rp.removeEmpty(allocID, torm)
-	return
+
+	// return the read redeems for blobbers read pools cache
+	return toJson(redeems), nil // ok
 }
 
 // take read pool by ID to unlock (the take is get and remove)
