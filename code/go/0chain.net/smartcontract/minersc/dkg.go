@@ -28,7 +28,7 @@ var moveFunctions = make(map[Phase]movePhaseFunctions)
 */
 
 func (msc *MinerSmartContract) moveToContribute(balances cstate.StateContextI,
-	pn *PhaseNode, gn *GlobalNode) (result bool) {
+	pn *PhaseNode, gn *GlobalNode) (ok bool) {
 
 	var (
 		allMinersList *MinerNodes
@@ -74,14 +74,22 @@ func (msc *MinerSmartContract) moveToContribute(balances cstate.StateContextI,
 		return false
 	}
 
-	return allMinersList != nil &&
+	ok = allMinersList != nil &&
 		len(allMinersList.Nodes) >= dkgMinersList.K &&
 		len(allShardersList.Nodes) >= gn.MinS
+
+	Logger.Debug("miner sc: move phase to contribute",
+		zap.Int("miners", len(allMinersList.Nodes)),
+		zap.Int("K", dkgMinersList.K),
+		zap.Int("sharders", len(allShardersList.Nodes)),
+		zap.Int("min_s", gn.MinS),
+		zap.Bool("ok", ok))
+	return
 }
 
 func (msc *MinerSmartContract) moveToShareOrPublish(
 	balances cstate.StateContextI, pn *PhaseNode, gn *GlobalNode) (
-	result bool) {
+	ok bool) {
 
 	var (
 		dkgMinersList *DKGMinerNodes
@@ -140,11 +148,18 @@ func (msc *MinerSmartContract) moveToShareOrPublish(
 		return false
 	}
 
-	return mpks != nil && len(mpks.Mpks) >= dkgMinersList.K
+	ok = mpks != nil && len(mpks.Mpks) >= dkgMinersList.K
+
+	Logger.Debug("miner sc: move phase to share or publish",
+		zap.Int("mpks", len(mpks.Mpks)),
+		zap.Int("K", dkgMinersList.K),
+		zap.Bool("ok", ok))
+
+	return
 }
 
 func (msc *MinerSmartContract) moveToWait(balances cstate.StateContextI,
-	pn *PhaseNode, gn *GlobalNode) (result bool) {
+	pn *PhaseNode, gn *GlobalNode) (ok bool) {
 
 	var err error
 	var dkgMinersList *DKGMinerNodes
@@ -176,7 +191,14 @@ func (msc *MinerSmartContract) moveToWait(balances cstate.StateContextI,
 		return false
 	}
 
-	return len(gsos.Shares) >= dkgMinersList.K
+	ok = len(gsos.Shares) >= dkgMinersList.K
+
+	Logger.Debug("miner sc: move phase to wait",
+		zap.Int("shares", len(gsos.Shares)),
+		zap.Int("K", dkgMinersList.K),
+		zap.Bool("ok", ok))
+
+	return
 }
 
 func (msc *MinerSmartContract) moveToStart(balances cstate.StateContextI,

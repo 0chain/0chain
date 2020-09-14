@@ -364,14 +364,14 @@ func LFBTicketHandler(ctx context.Context, r *http.Request) (
 
 	var ticket LFBTicket
 	if err = dec.Decode(&ticket); err != nil {
-		Logger.Error("handling LFB ticket", zap.String("from", r.RemoteAddr),
+		Logger.Debug("handling LFB ticket", zap.String("from", r.RemoteAddr),
 			zap.Error(err))
 		return // (nil, err)
 	}
 
 	var chain = GetServerChain()
 	if !chain.verifyLFBTicket(&ticket) {
-		Logger.Error("handling LFB ticket", zap.String("err", "can't verify"),
+		Logger.Debug("handling LFB ticket", zap.String("err", "can't verify"),
 			zap.Int64("round", ticket.Round))
 		return nil, common.NewError("lfb_ticket_handler", "can't verify")
 	}

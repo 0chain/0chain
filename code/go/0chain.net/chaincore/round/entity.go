@@ -479,7 +479,8 @@ func (r *Round) GetMinersByRank(miners *node.Pool) []*node.Node {
 	nodes := miners.CopyNodes()
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
-	Logger.Info("get miners by rank", zap.Any("num_miners", len(nodes)), zap.Any("round", r.Number), zap.Any("r.minerPerm", r.minerPerm))
+	Logger.Info("get miners by rank", zap.Any("num_miners", len(nodes)),
+		zap.Any("round", r.Number), zap.Any("r.minerPerm", r.minerPerm))
 	sort.Slice(nodes, func(i, j int) bool {
 		idxi, idxj := 0, 0
 		if nodes[i].SetIndex < len(r.minerPerm) {

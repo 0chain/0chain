@@ -730,11 +730,11 @@ func (c *Chain) ValidateMagicBlock(ctx context.Context, mr *round.Round, b *bloc
 	return b.LatestFinalizedMagicBlockHash == mb.Hash
 }
 
-/*GetGenerators - get all the block generators for a given round */
+// GetGenerators - get all the block generators for a given round.
 func (c *Chain) GetGenerators(r round.RoundI) []*node.Node {
 	var miners []*node.Node
 	miners = r.GetMinersByRank(c.GetMiners(r.GetRoundNumber()))
-	if c.NumGenerators >= len(miners) {
+	if c.NumGenerators > len(miners) {
 		Logger.Warn("get generators -- the number of generators is greater than the number of miners",
 			zap.Any("num_generators", c.NumGenerators), zap.Any("miner_by_rank", miners),
 			zap.Any("round", r.GetRoundNumber()))

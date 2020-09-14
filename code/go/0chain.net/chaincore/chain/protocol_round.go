@@ -141,7 +141,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 		}
 	}
 	c.NotariedBlocksCounts[nbCount]++
-	//This check is useful when we allow the finalizeRound route is not sequential and end up with out-of-band execution
+	// This check is useful when we allow the finalizeRound route is not sequential and end up with out-of-band execution
 	if r.GetRoundNumber() <= plfb.Round {
 		Logger.Error("finalize round - round number <= latest finalized round",
 			zap.Int64("round", r.GetRoundNumber()),
