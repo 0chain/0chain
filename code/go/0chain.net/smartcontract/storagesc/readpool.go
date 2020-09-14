@@ -139,8 +139,8 @@ type readPoolRedeem struct {
 	Balance state.Balance `json:"balance"` // balance reduction
 }
 
-func toJson(redeems []readPoolRedeem) string {
-	var b, err = json.Marshal(redeems)
+func toJson(val interface{}) string {
+	var b, err = json.Marshal(val)
 	if err != nil {
 		panic(err) // must not happen
 	}

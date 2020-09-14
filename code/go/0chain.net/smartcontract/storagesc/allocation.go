@@ -207,7 +207,8 @@ func (sc *StorageSmartContract) filterBlobbersByFreeSpace(now common.Timestamp,
 		if b.Terms.WritePrice == 0 {
 			return false // keep, ok or already filtered by bid
 		}
-		var free = sp.capacity(now, b.Terms.WritePrice)
+		// clean capacity (without delegate pools want to 'unstake')
+		var free = sp.cleanCapacity(now, b.Terms.WritePrice)
 		return free < size // kick off if it hasn't enough free space
 	})
 }
