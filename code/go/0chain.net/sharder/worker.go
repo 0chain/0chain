@@ -8,6 +8,7 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/config"
+	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/sharder/blockstore"
 
@@ -27,6 +28,8 @@ import (
 	"go.uber.org/zap"
 )
 
+const minerScSharderHealthCheck = "sharder_health_check"
+
 /*SetupWorkers - setup the background workers */
 func SetupWorkers(ctx context.Context) {
 	sc := GetSharderChain()
@@ -45,6 +48,8 @@ func SetupWorkers(ctx context.Context) {
 	if viper.GetBool("minio.enabled") {
 		go sc.MinioWorker(ctx)
 	}
+
+	go sc.SharderHealthCheck(ctx)
 }
 
 /*BlockWorker - stores the blocks */
@@ -295,4 +300,27 @@ func (sc *Chain) moveBlockToCloud(ctx context.Context, round int64, swg *sizedwa
 		sc.TieringStats.LastUploadTime = time.Now()
 	}
 	swg.Done()
+}
+
+func (sc *Chain) SharderHealthCheck(ctx context.Context) {
+	const HEALTH_CHECK_TIMER = 60 * 5 // 5 Minute
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			selfNode := node.Self.Underlying()
+			txn := httpclientutil.NewTransactionEntity(selfNode.GetKey(), sc.ID, selfNode.PublicKey)
+			scData := &httpclientutil.SmartContractTxnData{}
+			scData.Name = minerScSharderHealthCheck
+
+			txn.ToClientID = minersc.ADDRESS
+			txn.PublicKey = selfNode.PublicKey
+
+			mb := sc.GetCurrentMagicBlock()
+			var minerUrls = mb.Miners.N2NURLs()
+			go httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls)
+		}
+		time.Sleep(HEALTH_CHECK_TIMER * time.Second)
+	}
 }

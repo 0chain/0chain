@@ -571,6 +571,9 @@ type SimpleNode struct {
 
 	// NodeType used for delegate pools statistic.
 	NodeType NodeType `json:"node_type,omitempty"`
+
+	// LastHealthCheck used to check for active node
+	LastHealthCheck common.Timestamp `json:"last_health_check"`
 }
 
 func (smn *SimpleNode) Encode() []byte {

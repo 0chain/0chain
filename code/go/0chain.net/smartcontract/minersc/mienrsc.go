@@ -34,6 +34,9 @@ func (msc *MinerSmartContract) InitSC() {
 	msc.smartContractFunctions["add_miner"] = msc.AddMiner
 	msc.smartContractFunctions["add_sharder"] = msc.AddSharder
 
+	msc.smartContractFunctions["miner_health_check"] = msc.minerHealthCheck
+	msc.smartContractFunctions["sharder_health_check"] = msc.sharderHealthCheck
+
 	msc.smartContractFunctions["payFees"] = msc.payFees
 
 	msc.smartContractFunctions["contributeMpk"] = msc.contributeMpk
