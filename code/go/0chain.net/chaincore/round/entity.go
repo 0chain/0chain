@@ -16,8 +16,6 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
 
-	"github.com/spf13/viper"
-
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
@@ -34,83 +32,100 @@ const (
 )
 
 type timeoutCounter struct {
-	mutex        sync.RWMutex        // async safe
-	count        int                 // current round timeout
-	skip         int                 // skip timeout incrementation
-	timeoutVotes map[int]int         // votes timeout -> votes
-	votersVoted  map[string]struct{} // voted node_id -> pin
+	mutex sync.RWMutex // async safe
+
+	prrs int64    // previous round random seed
+	perm []string // miners of this (not previous) round sorted by the seed
+
+	count int // current round timeout
+
+	votes map[string]int // voted miner_id -> timeout
 }
 
-// configurations prefix
-const roundTimeouts = "server_chain.round_timeouts."
+// The rankTimeoutCounters computes ranks of miners to choose timeout counter.
+// Should be called under lock.
+func (tc *timeoutCounter) rankTimeoutCounters(prrs int64, miners *node.Pool) {
 
-func (*timeoutCounter) mult() int {
-	return viper.GetInt(roundTimeouts + "round_timeout_mult")
+	var nodes = miners.CopyNodes()
+
+	sort.Slice(nodes, func(i, j int) bool {
+		return nodes[i].ID < nodes[j].ID
+	})
+
+	var (
+		permi = rand.New(rand.NewSource(prrs)).Perm(len(nodes))
+		perms = make([]string, 0, len(nodes))
+	)
+
+	for _, ri := range permi {
+		perms = append(perms, nodes[ri].ID)
+	}
+
+	tc.prrs = prrs
+	tc.perm = perms
 }
 
 func (tc *timeoutCounter) resetVotes() {
-	tc.timeoutVotes = make(map[int]int)
-	tc.votersVoted = make(map[string]struct{})
-}
-
-func (tc *timeoutCounter) isVoted(id string) (ok bool) {
-	_, ok = tc.votersVoted[id]
-	return
-}
-
-func (tc *timeoutCounter) addVote(id string, num int) {
-	if tc.isVoted(id) {
-		return
-	}
-
-	tc.timeoutVotes[num]++
-	tc.votersVoted[id] = struct{}{}
+	tc.votes = make(map[string]int)
 }
 
 func (tc *timeoutCounter) AddTimeoutVote(num int, id string) {
 	tc.mutex.Lock()
 	defer tc.mutex.Unlock()
 
-	tc.addVote(id, num)
+	if tc.votes == nil {
+		tc.resetVotes() // it creates the map
+	}
+	println("ITC ADD", num, id)
+	tc.votes[id] = num
 }
 
 // IncrementTimeoutCount - increments timeout count
-func (tc *timeoutCounter) IncrementTimeoutCount() {
+func (tc *timeoutCounter) IncrementTimeoutCount(prrs int64, miners *node.Pool) {
+
+	if prrs == 0 {
+		println("ITC: NO PREVIOUS ROUND RANDOM SEED")
+		return // no PRRS, no timeout incrementation
+	}
+
+	println("ITC", prrs, miners.Size(), tc.count)
+
 	tc.mutex.Lock()
 	defer tc.mutex.Unlock()
 
-	var mostVotes, mostTimeout int
-	for k, v := range tc.timeoutVotes {
-		if v > mostVotes || (v == mostVotes && k > mostTimeout) {
-			mostVotes = v
-			mostTimeout = k
+	if tc.votes == nil {
+		tc.resetVotes() // it creates the map
+		tc.count++
+		println("ITC", prrs, miners.Size(), tc.count, "SHORT CIRCUIT")
+		return
+	}
+
+	if len(tc.perm) == 0 {
+		tc.rankTimeoutCounters(prrs, miners)
+	}
+
+	// initial count
+	var from = tc.count
+
+	// from most ranked to the lowest ranked one
+	for _, minerID := range tc.perm {
+		if vote, ok := tc.votes[minerID]; ok {
+			if tc.count < vote {
+				tc.count = vote
+				break
+			}
 		}
 	}
 
-	tc.resetVotes() // for next voting
+	tc.resetVotes()
 
-	if mostTimeout > tc.count {
-		tc.count = mostTimeout // increase by an external vote
-		if mostTimeout > tc.count*tc.mult() {
-			tc.skip = mostTimeout // to multiply the count
-		}
-		return
+	// increase if has not increased
+	if tc.count == from {
+		tc.count++
+		println("ITC", prrs, miners.Size(), tc.count, "FROM++")
+	} else {
+		println("ITC", prrs, miners.Size(), tc.count, "INCREASED")
 	}
-
-	if tc.count == 0 {
-		tc.count = 1 // first increasing
-		tc.skip = 1  //
-		return
-	}
-
-	// skip this incrementation
-	if tc.skip < tc.count {
-		tc.skip++
-		return
-	}
-
-	// increase by configured multiplier
-	tc.count = tc.count * tc.mult()
 }
 
 // SetTimeoutCount - sets the timeout count to given number if it is greater
@@ -124,7 +139,6 @@ func (tc *timeoutCounter) SetTimeoutCount(count int) (set bool) {
 	}
 
 	tc.count = count
-	tc.skip = count
 	return true // set
 }
 
@@ -143,12 +157,13 @@ type Round struct {
 	RandomSeed    int64 `json:"round_random_seed"`
 	hasRandomSeed uint32
 
-	// For generator, this is the block the miner is generating till a notraization is received
-	// For a verifier, this is the block that is currently the best block received for verification.
-	// Once a round is finalized, this is the finalized block of the given round
+	// For generator, this is the block the miner is generating till a
+	// notarization is received. For a verifier, this is the block that is
+	// currently the best block received for verification. Once a round is
+	// finalized, this is the finalized block of the given round.
 	Block     *block.Block `json:"-"`
 	BlockHash string       `json:"block_hash"`
-	VRFOutput string       `json:"vrf_output"` //TODO: VRFOutput == rbooutput?
+	VRFOutput string       `json:"vrf_output"` // TODO: VRFOutput == rbooutput?
 
 	minerPerm       []int
 	state           int32
@@ -228,19 +243,19 @@ func (r *Round) setHasRandomSeed(b bool) {
 	atomic.StoreUint32(&r.hasRandomSeed, value)
 }
 
-//GetRandomSeed - returns the random seed of the round
+// GetRandomSeed - returns the random seed of the round.
 func (r *Round) GetRandomSeed() int64 {
 	return atomic.LoadInt64(&r.RandomSeed)
 }
 
-// SetVRFOutput --sets the VRFOutput
+// SetVRFOutput --sets the VRFOutput.
 func (r *Round) SetVRFOutput(rboutput string) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 	r.VRFOutput = rboutput
 }
 
-// GetVRFOutput --gets the VRFOutput
+// GetVRFOutput --gets the VRFOutput.
 func (r *Round) GetVRFOutput() string {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
@@ -537,7 +552,7 @@ func (r *Round) AddVRFShare(share *VRFShare, threshold int) bool {
 	if len(r.getVRFShares()) >= threshold {
 		//if we already have enough shares, do not add.
 		Logger.Info("AddVRFShare Already at threshold. Returning false.")
-		return true
+		return false
 	}
 	if _, ok := r.shares[share.party.GetKey()]; ok {
 		Logger.Info("AddVRFShare Share is already there. Returning false.")
