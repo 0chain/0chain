@@ -115,9 +115,10 @@ func (mc *Chain) startNextRoundAfterPulling(ctx context.Context, r *Round) {
 
 func (mc *Chain) pullNotarizedBlocks(ctx context.Context, r *Round) {
 	Logger.Info("pull not. block for", zap.Int64("round", r.GetRoundNumber()))
-	if mc.GetBlockToExtend(ctx, r) != nil {
+	if mc.GetHeaviestNotarizedBlock(r) != nil {
 		if r.GetRoundNumber() > mc.GetCurrentRound() {
 			mc.SetCurrentRound(r.GetRoundNumber())
+			mc.StartNextRound(ctx, r)
 		}
 	}
 }
@@ -415,11 +416,11 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		txnCount := transaction.GetTransactionCount()
 		b.SetStateDB(pb)
 		generationTries++
-		if pb.GetStateStatus() != block.StateSuccessful {
-			if err := mc.ComputeOrSyncState(ctx, pb); err != nil {
-				Logger.Error("(re) computing previous block", zap.Error(err))
-			}
-		}
+		// if pb.GetStateStatus() != block.StateSuccessful {
+		// 	if err := mc.ComputeOrSyncState(ctx, pb); err != nil {
+		// 		Logger.Error("(re) computing previous block", zap.Error(err))
+		// 	}
+		// }
 
 		err := mc.GenerateBlock(ctx, b, mc, makeBlock)
 		if err != nil {
@@ -1031,13 +1032,17 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
 
 	var (
 		rn  = mc.GetCurrentRound()
+		mmb = mc.GetMagicBlock(rn + 1)
 		cmb = mc.GetMagicBlock(rn)
 
 		selfNodeKey = node.Self.Underlying().GetKey()
 	)
 
-	// miner should be member of current magic block
-	if cmb == nil || !cmb.Miners.HasNode(selfNodeKey) || rn == 0 {
+	// miner should be member of current magic block; also, we have to call the
+	// restartRound on last round of MB the miner is not member (on joining)
+	if cmb == nil || !cmb.Miners.HasNode(selfNodeKey) &&
+		!mmb.Miners.HasNode(selfNodeKey) {
+
 		return
 	}
 
@@ -1200,8 +1205,8 @@ func (mc *Chain) restartRound(ctx context.Context) {
 	if mc.isJoining(crn) {
 		Logger.Info("restartRound node is joining on VC",
 			zap.Int64("round", crn))
-		go mc.pullNotarizedBlocks(ctx, r)
-		return // no VRF share exchanging for joining node (no DKG no VRF)
+		mc.pullNotarizedBlocks(ctx, r)
+		//
 	}
 
 	var isAhead = mc.isAheadOfSharders(ctx, crn)
@@ -1245,7 +1250,8 @@ func (mc *Chain) restartRound(ctx context.Context) {
 
 				nr.Restart()
 				//Recalculate VRF shares and send
-				nr.IncrementTimeoutCount()
+				nr.IncrementTimeoutCount(r.GetRandomSeed(),
+					mc.GetMiners(nr.GetRoundNumber()))
 				redo := mc.RedoVrfShare(ctx, nr)
 				if !redo {
 					Logger.Info("Could not  RedoVrfShare",
@@ -1271,7 +1277,18 @@ func (mc *Chain) restartRound(ctx context.Context) {
 	r.Restart()
 
 	// recalculate VRF shares and send
-	r.IncrementTimeoutCount()
+	var pr = mc.GetMinerRound(crn - 1)
+	if pr == nil {
+		var nr = round.NewRound(crn - 1)
+		pr = mc.CreateRound(nr)
+		pr = mc.AddRound(pr).(*Round)
+	}
+	if !pr.HasRandomSeed() {
+		println("RR PULL (SYNC)", pr.GetRoundNumber())
+		mc.pullNotarizedBlocks(ctx, pr)
+		println("RR PULLED")
+	}
+	r.IncrementTimeoutCount(pr.GetRandomSeed(), mc.GetMiners(crn))
 	if redo := mc.RedoVrfShare(ctx, r); !redo {
 		Logger.Info("Could not RedoVrfShare",
 			zap.Int64("round", r.GetRoundNumber()),
