@@ -110,21 +110,10 @@ func (sc *Chain) hasTransactions(ctx context.Context, bs *block.BlockSummary) bo
 	return count == bs.NumTxns
 }
 
-func sleepOrDone(ctx context.Context, sleep time.Duration) (done bool) {
-	var tm = time.NewTimer(sleep)
-	defer tm.Stop()
-	select {
-	case <-ctx.Done():
-		done = true
-	case <-tm.C:
-	}
-	return
-}
-
 // isPhaseContibute
 func (sc *Chain) isPhaseContibute(ctx context.Context) (is bool) {
 
-	if sc.ActiveInChain() {
+	if sc.IsActiveInChain() {
 		var lfb = sc.GetLatestFinalizedBlock()
 		if lfb == nil {
 			Logger.Error("is_phase_contibute -- can't get lfb")
@@ -193,37 +182,39 @@ func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
 		return // don't send sharder_keep if view_change is false
 	}
 
-	timerCheck := time.NewTicker(time.Minute)
+	var (
+		timerCheck = time.NewTicker(5 * time.Second)
+		doneq      = ctx.Done()
+	)
+	defer timerCheck.Stop()
+
 	for {
 		select {
-		case <-ctx.Done():
+		case <-doneq:
 			return
 		case <-timerCheck.C:
-			if !sc.ActiveInChain() || !sc.IsRegisteredSharderKeep() {
-				for !sc.IsRegisteredSharderKeep() {
+			println("R S K W TICK", "A", sc.IsActiveInChain(), "R", sc.IsRegisteredSharderKeep(), "P", sc.isPhaseContibute(ctx))
 
-					for !sc.isPhaseContibute(ctx) {
-						if sleepOrDone(ctx, time.Second) {
-							return
-						}
-					}
+			if !sc.IsActiveInChain() &&
+				!sc.IsRegisteredSharderKeep() &&
+				sc.isPhaseContibute(ctx) {
 
-					txn, err := sc.RegisterSharderKeep()
-					if err != nil {
-						Logger.Error("register_sharder_keep_worker", zap.Error(err))
+				println("REGISTER SHARDER KEEP IN WORKER")
+				txn, err := sc.RegisterSharderKeep()
+				if err != nil {
+					Logger.Error("register_sharder_keep_worker", zap.Error(err))
+				} else {
+					if txn == nil || sc.ConfirmTransaction(txn) {
+						Logger.Info("register_sharder_keep_worker -- " +
+							"registered")
 					} else {
-						if txn == nil || sc.ConfirmTransaction(txn) {
-							Logger.Info("register_sharder_keep_worker -- registered")
-						} else {
-							Logger.Debug("register_sharder_keep_worker -- failed to confirm transaction", zap.Any("txn", txn))
-						}
-					}
-
-					if sleepOrDone(ctx, time.Second) {
-						return
+						Logger.Debug("register_sharder_keep_worker -- failed "+
+							"to confirm transaction", zap.Any("txn", txn))
 					}
 				}
+
 			}
+
 		}
 	}
 }

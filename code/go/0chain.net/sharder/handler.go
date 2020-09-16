@@ -18,7 +18,7 @@ import (
 	"0chain.net/core/common"
 )
 
-/*SetupHandlers sets up the necessary API end points */
+/* SetupHandlers sets up the necessary API end points */
 func SetupHandlers() {
 	http.HandleFunc("/v1/block/get", common.UserRateLimit(common.ToJSONResponse(BlockHandler)))
 	http.HandleFunc("/v1/block/magic/get", common.UserRateLimit(common.ToJSONResponse(MagicBlockHandler)))

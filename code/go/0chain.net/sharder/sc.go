@@ -25,6 +25,7 @@ func SetupMinerSmartContract(serverChain *Chain) {
 		if !config.DevConfiguration.ViewChange {
 			return // no view change, no sharder keep
 		}
+		println(":::: PHASE CALLBACK", phase)
 		if phase == minersc.Contribute {
 			go registerSharderKeepOnContributeInCallback(serverChain)
 		}
@@ -32,15 +33,19 @@ func SetupMinerSmartContract(serverChain *Chain) {
 }
 
 func registerSharderKeepOnContributeInCallback(sc *Chain) {
+	println("REGISTER SHARDER KEEP IN CONTRIBUTE CALLBACK")
 	var txn, err = sc.RegisterSharderKeep()
 	if err != nil {
+		println("REGISTER SHARDER KEEP IN CONTRIBUTE CALLBACK (ERR 1)")
 		Logger.Error("register_sharder_keep", zap.Error(err))
 		return
 	}
 	if txn == nil || sc.ConfirmTransaction(txn) {
+		println("REGISTER SHARDER KEEP IN CONTRIBUTE CALLBACK (OK 2)")
 		Logger.Info("register_sharder_keep -- registered")
 		return
 	}
+	println("REGISTER SHARDER KEEP IN CONTRIBUTE CALLBACK (ERR 3)")
 	Logger.Debug("register_sharder_keep -- failed to confirm transaction",
 		zap.Any("txn", txn))
 }
