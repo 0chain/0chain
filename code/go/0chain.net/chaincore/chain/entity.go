@@ -1182,8 +1182,6 @@ func (c *Chain) IsActiveInChain() bool {
 		selfNodeKey = node.Self.Underlying().GetKey()
 		crn         = c.GetCurrentRound()
 	)
-
-	println("IS ACTIVE IN CHAIN", "MB SR", mb.StartingRound, "SNK", selfNodeKey, "CRN", crn, "LFB", lfb.Round, "OLFBR", olfbr, "COND", mb.IsActiveNode(selfNodeKey, crn) && lfb.Round == olfbr)
 	return mb.IsActiveNode(selfNodeKey, crn) && lfb.Round == olfbr
 }
 

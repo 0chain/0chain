@@ -193,13 +193,11 @@ func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
 		case <-doneq:
 			return
 		case <-timerCheck.C:
-			println("R S K W TICK", "A", sc.IsActiveInChain(), "R", sc.IsRegisteredSharderKeep(), "P", sc.isPhaseContibute(ctx))
 
 			if !sc.IsActiveInChain() &&
 				!sc.IsRegisteredSharderKeep() &&
 				sc.isPhaseContibute(ctx) {
 
-				println("REGISTER SHARDER KEEP IN WORKER")
 				txn, err := sc.RegisterSharderKeep()
 				if err != nil {
 					Logger.Error("register_sharder_keep_worker", zap.Error(err))

@@ -76,7 +76,6 @@ func (tc *timeoutCounter) AddTimeoutVote(num int, id string) {
 	if tc.votes == nil {
 		tc.resetVotes() // it creates the map
 	}
-	println("ITC ADD", num, id)
 	tc.votes[id] = num
 }
 
@@ -84,11 +83,8 @@ func (tc *timeoutCounter) AddTimeoutVote(num int, id string) {
 func (tc *timeoutCounter) IncrementTimeoutCount(prrs int64, miners *node.Pool) {
 
 	if prrs == 0 {
-		println("ITC: NO PREVIOUS ROUND RANDOM SEED")
 		return // no PRRS, no timeout incrementation
 	}
-
-	println("ITC", prrs, miners.Size(), tc.count)
 
 	tc.mutex.Lock()
 	defer tc.mutex.Unlock()
@@ -96,7 +92,6 @@ func (tc *timeoutCounter) IncrementTimeoutCount(prrs int64, miners *node.Pool) {
 	if tc.votes == nil {
 		tc.resetVotes() // it creates the map
 		tc.count++
-		println("ITC", prrs, miners.Size(), tc.count, "SHORT CIRCUIT")
 		return
 	}
 
@@ -122,9 +117,6 @@ func (tc *timeoutCounter) IncrementTimeoutCount(prrs int64, miners *node.Pool) {
 	// increase if has not increased
 	if tc.count == from {
 		tc.count++
-		println("ITC", prrs, miners.Size(), tc.count, "FROM++")
-	} else {
-		println("ITC", prrs, miners.Size(), tc.count, "INCREASED")
 	}
 }
 

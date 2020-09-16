@@ -1284,9 +1284,7 @@ func (mc *Chain) restartRound(ctx context.Context) {
 		pr = mc.AddRound(pr).(*Round)
 	}
 	if !pr.HasRandomSeed() {
-		println("RR PULL (SYNC)", pr.GetRoundNumber())
 		mc.pullNotarizedBlocks(ctx, pr)
-		println("RR PULLED")
 	}
 	r.IncrementTimeoutCount(pr.GetRandomSeed(), mc.GetMiners(crn))
 	if redo := mc.RedoVrfShare(ctx, r); !redo {
