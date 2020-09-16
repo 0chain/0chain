@@ -19,20 +19,25 @@ func (c *Chain) SetupNodeHandlers() {
 	http.HandleFunc("/_nh/list/s", common.Recover(c.GetShardersHandler))
 }
 
-/*MinerNotarizedBlockRequestor - reuqest a notarized block from a node*/
-var MinerNotarizedBlockRequestor node.EntityRequestor
+var (
+	// MinerNotarizedBlockRequestor - reuqest a notarized block from a node.
+	MinerNotarizedBlockRequestor node.EntityRequestor
+	//BlockStateChangeRequestor - request state changes for the block.
+	BlockStateChangeRequestor node.EntityRequestor
 
-//BlockStateChangeRequestor - request state changes for the block
-var BlockStateChangeRequestor node.EntityRequestor
+	// disables (doesn't work, sharders doesn't give changes)
+	//
+	// ShardersBlockStateChangeRequestor is the same, but from sharders.
+	// ShardersBlockStateChangeRequestor node.EntityRequestor
 
-//PartialStateRequestor - request partial state from a given root
-var PartialStateRequestor node.EntityRequestor
-
-//StateNodesRequestor - request a set of state nodes given their keys
-var StateNodesRequestor node.EntityRequestor
-
-/*LatestFinalizedMagicBlockRequestor - RequestHandler for latest finalized magic block to a node */
-var LatestFinalizedMagicBlockRequestor node.EntityRequestor
+	// PartialStateRequestor - request partial state from a given root.
+	PartialStateRequestor node.EntityRequestor
+	// StateNodesRequestor - request a set of state nodes given their keys.
+	StateNodesRequestor node.EntityRequestor
+	// LatestFinalizedMagicBlockRequestor - RequestHandler for latest finalized
+	// magic block to a node.
+	LatestFinalizedMagicBlockRequestor node.EntityRequestor
+)
 
 /*SetupX2MRequestors - setup requestors */
 func SetupX2MRequestors() {
@@ -44,6 +49,7 @@ func SetupX2MRequestors() {
 	options = &node.SendOptions{Timeout: node.TimeoutLargeMessage, CODEC: node.CODEC_JSON, Compress: true}
 	blockStateChangeEntityMetadata := datastore.GetEntityMetadata("block_state_change")
 	BlockStateChangeRequestor = node.RequestEntityHandler("/v1/_x2m/block/state_change/get", options, blockStateChangeEntityMetadata)
+	// ShardersBlockStateChangeRequestor = node.RequestEntityHandler("/v1/_x2s/block/state_change/get", options, blockStateChangeEntityMetadata)
 
 	partialStateEntityMetadata := datastore.GetEntityMetadata("partial_state")
 	PartialStateRequestor = node.RequestEntityHandler("/v1/_x2m/state/get", options, partialStateEntityMetadata)

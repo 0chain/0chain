@@ -217,15 +217,24 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 			ctx, cancel := context.WithCancel(context.TODO())
 			req = req.WithContext(ctx)
 			// Keep the number of messages to a node bounded
-			receiver.Grab()
-			time.AfterFunc(timeout, cancel)
-			ts := time.Now()
-			selfNode := Self.Underlying()
-			selfNode.SetLastActiveTime(ts)
-			selfNode.InduceDelay(receiver)
-			//req = req.WithContext(httptrace.WithClientTrace(req.Context(), n2nTrace))
-			resp, err := httpClient.Do(req)
-			receiver.Release()
+			var (
+				ts       time.Time
+				selfNode *Node
+				resp     *http.Response
+			)
+			func() {
+				receiver.Grab()
+				defer receiver.Release()
+
+				time.AfterFunc(timeout, cancel)
+				ts = time.Now()
+				selfNode = Self.Underlying()
+				selfNode.SetLastActiveTime(ts)
+				selfNode.InduceDelay(receiver)
+				//req = req.WithContext(httptrace.WithClientTrace(req.Context(), n2nTrace))
+				resp, err = httpClient.Do(req)
+			}()
+
 			N2n.Info("sending", zap.Int("from", selfNode.SetIndex), zap.Int("to", receiver.SetIndex), zap.String("handler", uri), zap.Duration("duration", time.Since(ts)), zap.String("entity", entity.GetEntityMetadata().GetName()), zap.Any("id", entity.GetKey()))
 			if err != nil {
 				receiver.SendErrors++

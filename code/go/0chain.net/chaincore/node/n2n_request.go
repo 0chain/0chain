@@ -145,14 +145,25 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 			ctx, cancel := context.WithCancel(context.TODO())
 			req = req.WithContext(ctx)
 			// Keep the number of messages to a node bounded
-			provider.Grab()
-			time.AfterFunc(timeout, cancel)
-			ts := time.Now()
-			selfNode := Self.Underlying()
-			selfNode.SetLastActiveTime(ts)
-			selfNode.InduceDelay(provider)
-			resp, err := httpClient.Do(req)
-			provider.Release()
+
+			var (
+				ts       time.Time
+				selfNode *Node
+				resp     *http.Response
+			)
+
+			func() {
+				provider.Grab()
+				defer provider.Release()
+
+				time.AfterFunc(timeout, cancel)
+				ts = time.Now()
+				selfNode = Self.Underlying()
+				selfNode.SetLastActiveTime(ts)
+				selfNode.InduceDelay(provider)
+				resp, err = httpClient.Do(req)
+			}()
+
 			duration := time.Since(ts)
 
 			if err != nil {

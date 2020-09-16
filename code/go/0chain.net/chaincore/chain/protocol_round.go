@@ -191,6 +191,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 					zap.Error(err))
 				return
 			}
+			c.SetLatestOwnFinalizedBlockRound(b.Round)
 			c.SetLatestFinalizedBlock(b)
 			return
 		}
@@ -215,6 +216,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 			zap.Error(err))
 		return
 	}
+	c.SetLatestOwnFinalizedBlockRound(lfb.Round)
 	c.SetLatestFinalizedBlock(lfb)
 	FinalizationLagMetric.Update(int64(c.GetCurrentRound() - lfb.Round))
 	Logger.Info("finalize round - latest finalized round",

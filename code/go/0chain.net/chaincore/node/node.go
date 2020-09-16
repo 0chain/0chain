@@ -103,16 +103,16 @@ var NodeTypeNames = common.CreateLookups("m", "Miner", "s", "Sharder", "b", "Blo
 /*Node - a struct holding the node information */
 type Node struct {
 	client.Client  `yaml:",inline"`
-	N2NHost        string    `json:"n2n_host" yaml:"n2n_ip"`
-	Host           string    `json:"host" yaml:"public_ip"`
-	Port           int       `json:"port" yaml:"port"`
-	Type           int8      `json:"type"`
-	Description    string    `json:"description" yaml:"description"`
-	SetIndex       int       `json:"set_index" yaml:"set_index"`
-	Status         int       `json:"status"`
-	LastActiveTime time.Time `json:"-"`
-	ErrorCount     int64     `json:"-"`
-	CommChannel    chan bool `json:"-"`
+	N2NHost        string        `json:"n2n_host" yaml:"n2n_ip"`
+	Host           string        `json:"host" yaml:"public_ip"`
+	Port           int           `json:"port" yaml:"port"`
+	Type           int8          `json:"type"`
+	Description    string        `json:"description" yaml:"description"`
+	SetIndex       int           `json:"set_index" yaml:"set_index"`
+	Status         int           `json:"status"`
+	LastActiveTime time.Time     `json:"-"`
+	ErrorCount     int64         `json:"-"`
+	CommChannel    chan struct{} `json:"-"`
 	//These are approximiate as we are not going to lock to update
 	Sent       int64 `json:"-"` // messages sent to this node
 	SendErrors int64 `json:"-"` // failed message sent to this node
@@ -140,14 +140,9 @@ type Node struct {
 /*Provider - create a node object */
 func Provider() *Node {
 	node := &Node{}
-	// queue up at most these many messages to a node
-	// because of this, we don't want the status monitoring to use this communication layer
-	node.CommChannel = make(chan bool, 5)
-	for i := 0; i < cap(node.CommChannel); i++ {
-		node.CommChannel <- true
-	}
 	node.TimersByURI = make(map[string]metrics.Timer, 10)
 	node.SizeByURI = make(map[string]metrics.Histogram, 10)
+	node.setupCommChannel()
 	return node
 }
 
@@ -155,15 +150,21 @@ func Setup(node *Node) {
 	// queue up at most these many messages to a node
 	// because of this, we don't want the status monitoring to use this communication layer
 	node.mutex.Lock()
-	node.CommChannel = make(chan bool, 5)
-	for i := 0; i < cap(node.CommChannel); i++ {
-		node.CommChannel <- true
-	}
+	node.setupCommChannel()
 	node.TimersByURI = make(map[string]metrics.Timer, 10)
 	node.SizeByURI = make(map[string]metrics.Histogram, 10)
 	node.mutex.Unlock()
 	node.ComputeProperties()
 	Self.SetNodeIfPublicKeyIsEqual(node)
+}
+
+func (n *Node) setupCommChannel() {
+	// queue up at most these many messages to a node
+	// because of this, we don't want the status monitoring to use this
+	// communication layer
+	if n.CommChannel == nil {
+		n.CommChannel = make(chan struct{}, 5)
+	}
 }
 
 // GetErrorCount asynchronously.
@@ -352,7 +353,7 @@ func (n *Node) GetNodeTypeName() string {
 
 //Grab - grab a slot to send message
 func (n *Node) Grab() {
-	<-n.CommChannel
+	n.CommChannel <- struct{}{}
 
 	n.mutex.Lock()
 	defer n.mutex.Unlock()
@@ -362,7 +363,7 @@ func (n *Node) Grab() {
 
 //Release - release a slot after sending the message
 func (n *Node) Release() {
-	n.CommChannel <- true
+	<-n.CommChannel
 }
 
 //GetTimer - get the timer

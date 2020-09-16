@@ -90,9 +90,10 @@ type Chain struct {
 	PreviousMagicBlock *block.MagicBlock `json:"-"`
 	mbMutex            sync.RWMutex
 
-	LatestFinalizedMagicBlock *block.Block `json:"-"`
-	lfmbMutex                 sync.RWMutex
-	lfmbSummary               *block.BlockSummary
+	LatestFinalizedMagicBlock    *block.Block `json:"-"`
+	lfmbMutex                    sync.RWMutex
+	lfmbSummary                  *block.BlockSummary
+	latestOwnFinalizedBlockRound int64 // finalized by this node
 
 	/* This is a cache of blocks that may include speculative blocks */
 	blocks      map[datastore.Key]*block.Block
@@ -1173,9 +1174,17 @@ func (c *Chain) GetLatestFinalizedBlockSummary() *block.BlockSummary {
 	return c.lfbSummary
 }
 
-func (c *Chain) ActiveInChain() bool {
-	mb := c.GetCurrentMagicBlock()
-	return mb.IsActiveNode(node.Self.Underlying().GetKey(), c.GetCurrentRound()) && c.GetLatestFinalizedBlock().ClientState != nil
+func (c *Chain) IsActiveInChain() bool {
+	var (
+		mb          = c.GetCurrentMagicBlock()
+		lfb         = c.GetLatestFinalizedBlock()
+		olfbr       = c.LatestOwnFinalizedBlockRound()
+		selfNodeKey = node.Self.Underlying().GetKey()
+		crn         = c.GetCurrentRound()
+	)
+
+	println("IS ACTIVE IN CHAIN", "MB SR", mb.StartingRound, "SNK", selfNodeKey, "CRN", crn, "LFB", lfb.Round, "OLFBR", olfbr, "COND", mb.IsActiveNode(selfNodeKey, crn) && lfb.Round == olfbr)
+	return mb.IsActiveNode(selfNodeKey, crn) && lfb.Round == olfbr
 }
 
 func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
@@ -1256,6 +1265,20 @@ func collectNodes(mbs ...*block.MagicBlock) (keep map[string]struct{}) {
 		}
 	}
 	return
+}
+
+func (c *Chain) SetLatestOwnFinalizedBlockRound(r int64) {
+	c.lfbMutex.Lock()
+	defer c.lfbMutex.Unlock()
+
+	c.latestOwnFinalizedBlockRound = r
+}
+
+func (c *Chain) LatestOwnFinalizedBlockRound() int64 {
+	c.lfbMutex.RLock()
+	defer c.lfbMutex.RUnlock()
+
+	return c.latestOwnFinalizedBlockRound
 }
 
 // SetLatestFinalizedBlock - set the latest finalized block.

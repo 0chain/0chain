@@ -307,6 +307,13 @@ func (c *Chain) chainHealthInATable(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</table>")
 }
 
+func yn(t bool) string {
+	if t {
+		return "Y"
+	}
+	return "N"
+}
+
 func (c *Chain) infraHealthInATable(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<table class='menu' style='border-collapse: collapse;'>")
 	fmt.Fprintf(w, "<tr class='active'>")
@@ -359,6 +366,18 @@ func (c *Chain) infraHealthInATable(w http.ResponseWriter, r *http.Request) {
 				fmt.Fprintf(w, "</tr>")
 			}
 		}
+
+		var lfb = c.GetLatestFinalizedBlock()
+
+		fmt.Fprintf(w, "<tr class='active'>")
+		fmt.Fprintf(w, "<td>")
+		fmt.Fprintf(w, "LFB state (computed / initialized)")
+		fmt.Fprintf(w, "</td>")
+		fmt.Fprintf(w, "<td class='number'>")
+		fmt.Fprintf(w, "%s / %s", yn(lfb.IsStateComputed()), yn(lfb.ClientState != nil))
+		fmt.Fprintf(w, "</td>")
+		fmt.Fprintf(w, "</tr>")
+
 	}
 	fmt.Fprintf(w, "</table>")
 }

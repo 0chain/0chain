@@ -271,13 +271,14 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 				continue // don't need a block for the blank kick ticket
 			}
 
-			// only if updated
+			// only if updated, only for sharders
+			// (don't rebroadcast without a block verification)
 
-			if _, err := c.GetBlock(ctx, ticket.LFBHash); err != nil {
-				if node.Self.Type == node.NodeTypeSharder {
+			if isSharder {
+				if _, err := c.GetBlock(ctx, ticket.LFBHash); err != nil {
 					c.AsyncFetchFinalizedBlockFromSharders(ctx, *ticket)
+					continue // if haven't the block, then don't update the latest
 				}
-				continue // if haven't the block, then don't update the latest
 			}
 
 			// send for all subscribers

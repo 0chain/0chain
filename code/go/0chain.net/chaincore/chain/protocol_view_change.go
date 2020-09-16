@@ -132,7 +132,7 @@ func (mc *Chain) isRegisteredEx(getStatePath func(n *node.Node) string,
 		selfNodeKey  = selfNode.GetKey()
 	)
 
-	if mc.ActiveInChain() {
+	if mc.IsActiveInChain() {
 
 		var (
 			sp        = getStatePath(selfNode)
@@ -183,7 +183,7 @@ func (mc *Chain) isRegisteredEx(getStatePath func(n *node.Node) string,
 
 func (mc *Chain) ConfirmTransaction(t *httpclientutil.Transaction) bool {
 	var (
-		active = mc.ActiveInChain()
+		active = mc.IsActiveInChain()
 		mb     = mc.GetCurrentMagicBlock()
 
 		found, pastTime bool

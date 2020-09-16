@@ -79,9 +79,10 @@ func (c *Chain) VerifyNotarization(ctx context.Context, b *block.Block,
 // is optimistic it can returns different magic block for requested round.
 func (c *Chain) VerifyRelatedMagicBlockPresence(b *block.Block) (err error) {
 
-	return // force ok to check
+	// return // force ok to check
 
 	var (
+		lfb        = c.GetLatestFinalizedBlock()
 		relatedmbr = b.LatestFinalizedMagicBlockRound
 		mb         = c.GetMagicBlock(b.Round)
 	)
@@ -90,6 +91,10 @@ func (c *Chain) VerifyRelatedMagicBlockPresence(b *block.Block) (err error) {
 		return common.NewErrorf("verify_related_mb_presence",
 			"no corresponding MB, want_mb_sr: %d, got_mb_sr: %d",
 			relatedmbr, mb.StartingRound)
+	}
+
+	if b.Round < lfb.Round {
+		return // don't verify for blocks before LFB
 	}
 
 	// we can't check MB hash here, because we got magic block, but hash is
@@ -220,11 +225,17 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 			zap.Int("round_rank", fb.RoundRank),
 			zap.Int("num_generators", c.NumGenerators))
 	} else {
-		bNode := node.GetNode(fb.MinerID)
-		if bNode.ProtocolStats != nil {
-			//FIXME: fix node stats
-			ms := bNode.ProtocolStats.(*MinerStats)
-			ms.FinalizationCountByRank[fb.RoundRank]++ // stat
+		var bNode = node.GetNode(fb.MinerID)
+		if bNode != nil {
+			if bNode.ProtocolStats != nil {
+				//FIXME: fix node stats
+				ms := bNode.ProtocolStats.(*MinerStats)
+				ms.FinalizationCountByRank[fb.RoundRank]++ // stat
+			}
+		} else {
+			Logger.Error("generator is not registered",
+				zap.Int64("round", fb.Round),
+				zap.String("miner", fb.MinerID))
 		}
 	}
 	fr := c.GetRound(fb.Round)
