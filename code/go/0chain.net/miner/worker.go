@@ -1,17 +1,23 @@
 package miner
 
 import (
-	"0chain.net/chaincore/chain"
-	"0chain.net/chaincore/round"
 	"context"
-	"github.com/spf13/viper"
 	"time"
+
+	"0chain.net/chaincore/chain"
+	"0chain.net/chaincore/httpclientutil"
+	"0chain.net/chaincore/node"
+	"0chain.net/chaincore/round"
+	"0chain.net/smartcontract/minersc"
+	"github.com/spf13/viper"
 
 	"0chain.net/core/logging"
 	. "0chain.net/core/logging"
 
 	"go.uber.org/zap"
 )
+
+const minerScMinerHealthCheck = "miner_health_check"
 
 /*SetupWorkers - Setup the miner's workers */
 func SetupWorkers(ctx context.Context) {
@@ -22,6 +28,7 @@ func SetupWorkers(ctx context.Context) {
 	go mc.FinalizedBlockWorker(ctx, mc) // 3) sequentially processes finalized blocks
 
 	go mc.PruneStorageWorker(ctx, time.Minute*5, mc.getPruneCountRoundStorage(), mc.MagicBlockStorage, mc.roundDkg)
+	go mc.MinerHealthCheck(ctx)
 }
 
 /*BlockWorker - a job that does all the work related to blocks in each round */
@@ -115,5 +122,28 @@ func (mc *Chain) getPruneCountRoundStorage() func(storage round.RoundStorage) in
 		default:
 			return chain.DefaultCountPruneRoundStorage
 		}
+	}
+}
+
+func (mc *Chain) MinerHealthCheck(ctx context.Context) {
+	const HEALTH_CHECK_TIMER = 60 * 5 // 5 Minute
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			selfNode := node.Self.Underlying()
+			txn := httpclientutil.NewTransactionEntity(selfNode.GetKey(), mc.ID, selfNode.PublicKey)
+			scData := &httpclientutil.SmartContractTxnData{}
+			scData.Name = minerScMinerHealthCheck
+
+			txn.ToClientID = minersc.ADDRESS
+			txn.PublicKey = selfNode.PublicKey
+
+			mb := mc.GetCurrentMagicBlock()
+			var minerUrls = mb.Miners.N2NURLs()
+			go httpclientutil.SendSmartContractTxn(txn, minersc.ADDRESS, 0, 0, scData, minerUrls)
+		}
+		time.Sleep(HEALTH_CHECK_TIMER * time.Second)
 	}
 }

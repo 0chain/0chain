@@ -40,6 +40,8 @@ func (msc *MinerSmartContract) AddSharder(t *transaction.Transaction,
 		newSharder.DelegateWallet = newSharder.ID
 	}
 
+	newSharder.LastHealthCheck = t.CreationDate
+
 	Logger.Info("The new sharder info",
 		zap.String("base URL", newSharder.N2NHost),
 		zap.String("ID", newSharder.ID),

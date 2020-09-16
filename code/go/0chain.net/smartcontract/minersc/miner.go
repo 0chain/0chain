@@ -58,6 +58,8 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 		newMiner.DelegateWallet = newMiner.ID
 	}
 
+	newMiner.LastHealthCheck = t.CreationDate
+
 	Logger.Info("add_miner: The new miner info",
 		zap.String("base URL", newMiner.N2NHost),
 		zap.String("ID", newMiner.ID),
