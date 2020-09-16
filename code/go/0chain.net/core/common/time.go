@@ -1,6 +1,7 @@
 package common
 
 import (
+	"context"
 	"strconv"
 	"time"
 )
@@ -34,4 +35,17 @@ func Within(ts int64, seconds int64) bool {
 /*WithinTime ensures a given timestamp is within (+/- inclusive) certain number of seconds w.r.t to the reference time */
 func WithinTime(o int64, ts int64, seconds int64) bool {
 	return ts >= o-seconds && ts <= o+seconds
+}
+
+// SleepOrDone sleeps given timeout and returns true. But, if given context
+// expired, then it returns false immediately.
+func SleepOrDone(ctx context.Context, sleep time.Duration) (done bool) {
+	var tm = time.NewTimer(sleep)
+	defer tm.Stop()
+	select {
+	case <-ctx.Done():
+		done = true
+	case <-tm.C:
+	}
+	return
 }
