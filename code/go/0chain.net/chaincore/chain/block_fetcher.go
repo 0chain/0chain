@@ -64,7 +64,7 @@ func (bf *BlockFetcher) FetchBlock(ctx context.Context, c *Chain, hash string,
 
 	if !c.blockFetcher.IsFetching(hash) {
 		c.blockFetcher.fblocks.Add(hash, true)
-		go c.GetNotarizedBlock(hash, round)
+		go c.GetNotarizedBlock(ctx, hash, round)
 	}
 }
 

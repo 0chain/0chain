@@ -312,20 +312,24 @@ func (c *Chain) IsFinalizedDeterministically(b *block.Block) bool {
 }
 
 // GetNotarizedBlock - get a notarized block for a round.
-func (c *Chain) GetNotarizedBlock(hash string, rn int64) (b *block.Block) {
+func (c *Chain) GetNotarizedBlock(ctx context.Context, hash string, rn int64) (
+	b *block.Block) {
 
 	var (
 		cround = c.GetCurrentRound()
 		params = &url.Values{}
+		ticket = c.GetLatestLFBTicket(ctx)
 	)
 
 	params.Add("block", hash)
 
 	var (
-		ctx  = common.GetRootContext()
-		mb   = c.GetCurrentMagicBlock()
-		lock sync.Mutex
+		lctx, cancel = context.WithTimeout(ctx, node.TimeoutLargeMessage)
+		mb           = c.GetCurrentMagicBlock()
+		lock         sync.Mutex
 	)
+
+	defer cancel()
 
 	var handler = func(ctx context.Context, entity datastore.Entity) (
 		resp interface{}, err error) {
@@ -387,13 +391,16 @@ func (c *Chain) GetNotarizedBlock(hash string, rn int64) (b *block.Block) {
 	}
 
 	var n2n = mb.Miners
-	n2n.RequestEntity(ctx, MinerNotarizedBlockRequestor, params, handler)
+	n2n.RequestEntity(lctx, MinerNotarizedBlockRequestor, params, handler)
 
 	// if nil, then request it from sharders
-	if b == nil {
+	if b == nil && ticket != nil && rn > 0 && rn <= ticket.Round {
+		cancel()
+		lctx, cancel = context.WithTimeout(ctx, node.TimeoutLargeMessage)
+
 		Logger.Info("get notarized block -- no block from miners, try sharders",
 			zap.String("hash", hash), zap.Int64("round", rn))
-		var x, err = c.GetFinalizedBlockFromSharders(ctx, &LFBTicket{
+		var x, err = c.GetFinalizedBlockFromSharders(lctx, &LFBTicket{
 			LFBHash: hash,
 			Round:   rn,
 		})
@@ -403,7 +410,7 @@ func (c *Chain) GetNotarizedBlock(hash string, rn int64) (b *block.Block) {
 				zap.Error(err))
 			return
 		}
-		handler(ctx, x) // initialize the block and set the 'b' variable
+		handler(lctx, x) // initialize the block and set the 'b' variable
 	}
 
 	return
@@ -432,7 +439,7 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 			zap.Int64("cround", cb.Round), zap.String("cblock", cb.Hash),
 			zap.String("cprev_block", cb.PrevHash))
 
-		nb := c.GetNotarizedBlock(cb.PrevHash, cb.Round-1)
+		nb := c.GetNotarizedBlock(ctx, cb.PrevHash, cb.Round-1)
 		if nb == nil {
 			Logger.Error("get previous block (unable to get prior blocks)",
 				zap.Int64("current_round", c.GetCurrentRound()),
