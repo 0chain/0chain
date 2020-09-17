@@ -169,7 +169,8 @@ func (mc *Chain) GetBlsMessageForRound(r *round.Round) (string, error) {
 	Logger.Info("BLS sign VRF share calculated for ",
 		zap.Int64("round", r.GetRoundNumber()),
 		zap.Int("round_timeout", r.GetTimeoutCount()),
-		zap.String("prev. round random seed", prrs), zap.Any("bls_msg", blsMsg))
+		zap.String("prev. round random seed", prrs),
+		zap.Any("bls_msg", blsMsg))
 
 	return blsMsg, nil
 }
@@ -192,6 +193,17 @@ func (mc *Chain) GetBlsShare(ctx context.Context, r *round.Round) (string, error
 		return "", common.NewError("get_bls_share", "DKG is nil")
 	}
 	sigShare := dkg.Sign(msg)
+
+	var (
+		rn = r.GetRoundNumber()
+		mb = mc.GetMagicBlock(rn)
+	)
+
+	Logger.Debug("get_bls_share", zap.Int64("round", rn),
+		zap.Int("rtc", r.GetTimeoutCount()),
+		zap.Int64("dkg_sr", dkg.StartingRound),
+		zap.Int64("mb_sr", mb.StartingRound))
+
 	return sigShare.GetHexString(), nil
 }
 

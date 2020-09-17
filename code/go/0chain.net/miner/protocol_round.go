@@ -1032,7 +1032,7 @@ func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
 
 	var (
 		rn  = mc.GetCurrentRound()
-		mmb = mc.GetMagicBlock(rn + 1)
+		mmb = mc.GetMagicBlock(rn + chain.ViewChangeOffset + 1)
 		cmb = mc.GetMagicBlock(rn)
 
 		selfNodeKey = node.Self.Underlying().GetKey()
@@ -1368,7 +1368,7 @@ func (mc *Chain) ensureDKG(ctx context.Context, mb *block.Block) {
 	var err error
 	if err = mc.SetDKGSFromStore(ctx, mb.MagicBlock); err != nil {
 		Logger.Error("setting DKG from store",
-			zap.Int64("mb_round", mb.Round))
+			zap.Int64("mb_round", mb.Round), zap.Error(err))
 	}
 }
 

@@ -473,6 +473,22 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 		return err
 	}
 
+	// 1. remove GSOS not listed in DKG
+	// 2. remove MPKS not listed in DKG
+	// 3. continue as usual
+
+	for id := range gsos.Shares {
+		if _, ok := dkgMinersList.SimpleNodes[id]; !ok {
+			delete(gsos.Shares, id)
+		}
+	}
+
+	for id := range mpks.Mpks {
+		if _, ok := dkgMinersList.SimpleNodes[id]; !ok {
+			delete(mpks.Mpks, id)
+		}
+	}
+
 	magicBlock, err := msc.CreateMagicBlock(balances, sharders, dkgMinersList,
 		gsos, mpks, pn)
 	if err != nil {

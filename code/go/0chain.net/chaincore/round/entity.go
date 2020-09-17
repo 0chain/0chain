@@ -100,10 +100,16 @@ func (tc *timeoutCounter) IncrementTimeoutCount(prrs int64, miners *node.Pool) {
 	}
 
 	// initial count
-	var from = tc.count
+	var (
+		from = tc.count
+		snk  = node.Self.Underlying().GetKey()
+	)
 
 	// from most ranked to the lowest ranked one
 	for _, minerID := range tc.perm {
+		if snk == minerID {
+			continue
+		}
 		if vote, ok := tc.votes[minerID]; ok {
 			if tc.count < vote {
 				tc.count = vote

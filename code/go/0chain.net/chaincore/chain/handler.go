@@ -23,6 +23,8 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/memorystore"
 	"0chain.net/core/util"
+
+	"0chain.net/smartcontract/minersc"
 )
 
 /*SetupHandlers sets up the necessary API end points */
@@ -347,7 +349,7 @@ func (c *Chain) infraHealthInATable(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "</tr>")
-	if node.Self.Underlying().Type == node.NodeTypeMiner {
+	if snt := node.Self.Underlying().Type; snt == node.NodeTypeMiner {
 		txn, ok := transaction.Provider().(*transaction.Transaction)
 		if ok {
 			transactionEntityMetadata := txn.GetEntityMetadata()
@@ -378,6 +380,26 @@ func (c *Chain) infraHealthInATable(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "</td>")
 		fmt.Fprintf(w, "</tr>")
 
+	} else if snt == node.NodeTypeSharder {
+		var (
+			lfb       = c.GetLatestFinalizedBlock()
+			seri, err = c.GetBlockStateNode(lfb, minersc.PhaseKey)
+			pn        minersc.PhaseNode
+			phase     minersc.Phase = minersc.Unknown
+		)
+		if err == nil {
+			if err = pn.Decode(seri.Encode()); err == nil {
+				phase = pn.Phase
+			}
+		}
+		fmt.Fprintf(w, "<tr class='active'>")
+		fmt.Fprintf(w, "<td>")
+		fmt.Fprintf(w, "Miner SC DKG phase")
+		fmt.Fprintf(w, "</td>")
+		fmt.Fprintf(w, "<td class='number'>")
+		fmt.Fprintf(w, "%s", phase.String())
+		fmt.Fprintf(w, "</td>")
+		fmt.Fprintf(w, "</tr>")
 	}
 	fmt.Fprintf(w, "</table>")
 }
