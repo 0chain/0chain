@@ -311,8 +311,70 @@ func (c *Chain) IsFinalizedDeterministically(b *block.Block) bool {
 	return false
 }
 
+// HandleNotarizedBlock used as handler requesting a notarized block from
+// miners or finalized block from sharders.
+func (c *Chain) HandleNotarizedBlock(ctx context.Context,
+	entity datastore.Entity) (resp interface{}, err error) {
+
+	Logger.Info("get notarized block", zap.String("block", hash),
+		zap.Int64("cround", cround),
+		zap.Int64("current_round", c.GetCurrentRound()))
+
+	var nb, ok = entity.(*block.Block)
+	if !ok {
+		return nil, datastore.ErrInvalidEntity
+	}
+
+	var r = c.GetRound(nb.Round)
+	if r == nil {
+		Logger.Info("get notarized block - no round will create...",
+			zap.Int64("round", nb.Round), zap.String("block", hash),
+			zap.Int64("cround", cround),
+			zap.Int64("current_round", c.GetCurrentRound()))
+
+		r = c.RoundF.CreateRoundF(nb.Round).(*round.Round)
+		c.AddRound(r)
+	}
+
+	err = c.VerifyNotarization(ctx, nb, nb.GetVerificationTickets(),
+		r.GetRoundNumber())
+	if err != nil {
+		Logger.Error("get notarized block - validate notarization",
+			zap.Int64("round", nb.Round), zap.String("block", hash),
+			zap.Error(err))
+		return nil, err
+	}
+
+	if err = nb.Validate(ctx); err != nil {
+		Logger.Error("get notarized block - validate",
+			zap.Int64("round", nb.Round), zap.String("block", hash),
+			zap.Any("block_obj", nb), zap.Error(err))
+		return nil, err
+	}
+
+	Logger.Info("got notarized block", zap.String("block", nb.Hash),
+		zap.Int64("round", nb.Round),
+		zap.Int("verifictation_tickers", nb.VerificationTicketsSize()))
+
+	// using mutex for the b variable
+	lock.Lock()
+	defer lock.Unlock()
+
+	b = c.AddBlock(nb)
+	// This is a notarized block. So, use this method to sync round info
+	// with the notarized block.
+	b, r = c.AddNotarizedBlockToRound(r, nb)
+	b, _ = r.AddNotarizedBlock(b)
+	if b == nb {
+		go c.fetchedNotarizedBlockHandler.NotarizedBlockFetched(ctx, nb)
+	}
+
+	return b, nil
+}
+
 // GetNotarizedBlock - get a notarized block for a round.
-func (c *Chain) GetNotarizedBlock(hash string, rn int64) (b *block.Block) {
+func (c *Chain) GetNotarizedBlock(ctx context.Context, hash string, rn int64) (
+	b *block.Block) {
 
 	var (
 		cround = c.GetCurrentRound()
@@ -321,11 +383,14 @@ func (c *Chain) GetNotarizedBlock(hash string, rn int64) (b *block.Block) {
 
 	params.Add("block", hash)
 
+	// force a request to be limited (recreate the context for a the sharders
+	// requesting fallback below)
 	var (
-		ctx  = common.GetRootContext()
-		mb   = c.GetCurrentMagicBlock()
-		lock sync.Mutex
+		lctx, cancel = context.WithTimeout(ctx, node.TimeoutLargeMessage)
+		mb           = c.GetCurrentMagicBlock()
+		lock         sync.Mutex
 	)
+	defer cancel() // terminate the context after all anyway
 
 	var handler = func(ctx context.Context, entity datastore.Entity) (
 		resp interface{}, err error) {
@@ -387,13 +452,17 @@ func (c *Chain) GetNotarizedBlock(hash string, rn int64) (b *block.Block) {
 	}
 
 	var n2n = mb.Miners
-	n2n.RequestEntity(ctx, MinerNotarizedBlockRequestor, params, handler)
+	n2n.RequestEntity(lctx, MinerNotarizedBlockRequestor, params, handler)
 
 	// if nil, then request it from sharders
 	if b == nil {
+		// recreate context can be expired or can expire soon
+		cancel()
+		lctx, cancel = context.WithTimeout(ctx, node.TimeoutLargeMessage)
+
 		Logger.Info("get notarized block -- no block from miners, try sharders",
 			zap.String("hash", hash), zap.Int64("round", rn))
-		var x, err = c.GetFinalizedBlockFromSharders(ctx, &LFBTicket{
+		var x, err = c.GetFinalizedBlockFromSharders(lctx, &LFBTicket{
 			LFBHash: hash,
 			Round:   rn,
 		})
@@ -403,7 +472,7 @@ func (c *Chain) GetNotarizedBlock(hash string, rn int64) (b *block.Block) {
 				zap.Error(err))
 			return
 		}
-		handler(ctx, x) // initialize the block and set the 'b' variable
+		handler(lctx, x) // initialize the block and set the 'b' variable
 	}
 
 	return

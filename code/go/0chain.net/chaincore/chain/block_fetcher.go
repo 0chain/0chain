@@ -5,12 +5,37 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/cache"
+	"0chain.net/core/config"
 )
 
+// block fetcher internal
 type hashRound struct {
 	hash  string
 	round int64
 }
+
+type BlockFetcher struct {
+	cache      cache.Cache
+	fetchBlock chan hashRound
+}
+
+func NewBlockFetcher() (bf *BlockFetcher) {
+
+	// short hands
+	var (
+		fm    = config.AsyncBlocksFetchingMaxSimultaneousFromMiners()
+		fs    = config.AsyncBlocksFetchingMaxSimultaneousFromSharders()
+		total = fm + fs
+	)
+
+	// the block fetcher
+	bf = new(BlockFetcher)
+	bf.cache = cache.NewLRUCache(total)
+	bf.fetchBlock = make(chan hashRound)
+	return
+}
+
+/*
 
 // BlockFetcher - to fetch blocks from other nodes.
 type BlockFetcher struct {
@@ -67,6 +92,8 @@ func (bf *BlockFetcher) FetchBlock(ctx context.Context, c *Chain, hash string,
 		go c.GetNotarizedBlock(hash, round)
 	}
 }
+
+*/
 
 // FetchedNotarizedBlockHandler - a handler that processes a fetched
 // notarized block.

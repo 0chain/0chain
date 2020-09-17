@@ -58,10 +58,14 @@ func SetupDefaultConfig() {
 	viper.SetDefault("server_chain.health_check.proximity_scan.repeat_interval_mins", 60)
 	viper.SetDefault("server_chain.health_check.deep_scan.report_status_mins", 15)
 
-	// LFB tickets
+	// LFB tickets.
 	viper.SetDefault("server_chain.lfb_ticket.rebroadcast_timeout", time.Second*16)
 	viper.SetDefault("server_chain.lfb_ticket.ahead", 2)
 	viper.SetDefault("server_chain.lfb_ticket.fb_fetching_lifetime", time.Second*10)
+
+	// Asynchronous blocks fetching.
+	viper.SetDefault("async_blocks_fetching.max_simultaneous_from_miners", 100)
+	viper.SetDefault("async_blocks_fetching.max_simultaneous_from_sharders", 30)
 }
 
 /*SetupConfig - setup the configuration system */
@@ -204,6 +208,8 @@ func GetThresholdCount() int {
 	return viper.GetInt("server_chain.block.consensus.threshold_by_count")
 }
 
+// LFB tickets.
+
 func GetReBroadcastLFBTicketTimeout() time.Duration {
 	return viper.GetDuration("server_chain.lfb_ticket.rebroadcast_timeout")
 }
@@ -214,4 +220,14 @@ func GetLFBTicketAhead() int {
 
 func GetFBFetchingLifetime() time.Duration {
 	return viper.GetDuration("server_chain.lfb_ticket.fb_fetching_lifetime")
+}
+
+// Asynchronous blocks fetching.
+
+func AsyncBlocksFetchingMaxSimultaneousFromMiners() int {
+	return viper.GetInt("async_blocks_fetching.max_simultaneous_from_miners")
+}
+
+func AsyncBlocksFetchingMaxSimultaneousFromSharders() int {
+	return viper.GetInt("async_blocks_fetching.max_simultaneous_from_sharders")
 }
