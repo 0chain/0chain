@@ -384,20 +384,26 @@ func (c *Chain) infraHealthInATable(w http.ResponseWriter, r *http.Request) {
 		var (
 			lfb       = c.GetLatestFinalizedBlock()
 			seri, err = c.GetBlockStateNode(lfb, minersc.PhaseKey)
-			pn        minersc.PhaseNode
-			phase     minersc.Phase = minersc.Unknown
+
+			phase    minersc.Phase = minersc.Unknown
+			restarts int64         = -1
+
+			pn minersc.PhaseNode
 		)
+
 		if err == nil {
 			if err = pn.Decode(seri.Encode()); err == nil {
 				phase = pn.Phase
+				restarts = pn.Restarts
 			}
 		}
+
 		fmt.Fprintf(w, "<tr class='active'>")
 		fmt.Fprintf(w, "<td>")
-		fmt.Fprintf(w, "Miner SC DKG phase")
+		fmt.Fprintf(w, "DKG phase / restarts")
 		fmt.Fprintf(w, "</td>")
 		fmt.Fprintf(w, "<td class='number'>")
-		fmt.Fprintf(w, "%s", phase.String())
+		fmt.Fprintf(w, "%s / %d", phase.String(), restarts)
 		fmt.Fprintf(w, "</td>")
 		fmt.Fprintf(w, "</tr>")
 	}
