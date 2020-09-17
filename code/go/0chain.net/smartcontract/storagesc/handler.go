@@ -7,6 +7,7 @@ import (
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/common"
+	"0chain.net/core/util"
 )
 
 // GetBlobberHandler returns Blobber object from its individual stored value.
@@ -70,22 +71,37 @@ func (ssc *StorageSmartContract) AllocationStatsHandler(ctx context.Context, par
 	return allocationObj, err
 }
 
-func (ssc *StorageSmartContract) LatestReadMarkerHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
-	clientID := params.Get("client")
-	blobberID := params.Get("blobber")
-	commitRead := &ReadConnection{}
-	commitRead.ReadMarker = &ReadMarker{BlobberID: blobberID, ClientID: clientID}
+func (ssc *StorageSmartContract) LatestReadMarkerHandler(ctx context.Context,
+	params url.Values, balances cstate.StateContextI) (
+	resp interface{}, err error) {
 
-	commitReadBytes, err := balances.GetTrieNode(commitRead.GetKey(ssc.ID))
-	if err != nil {
-		return nil, err
+	var (
+		clientID  = params.Get("client")
+		blobberID = params.Get("blobber")
+
+		commitRead = &ReadConnection{}
+	)
+
+	commitRead.ReadMarker = &ReadMarker{
+		BlobberID: blobberID,
+		ClientID:  clientID,
 	}
+
+	var commitReadBytes util.Serializable
+	commitReadBytes, err = balances.GetTrieNode(commitRead.GetKey(ssc.ID))
+	if err != nil && err != util.ErrValueNotPresent {
+		return
+	}
+
 	if commitReadBytes == nil {
 		return make(map[string]string), nil
 	}
-	commitRead.Decode(commitReadBytes.Encode())
 
-	return commitRead.ReadMarker, err
+	if err = commitRead.Decode(commitReadBytes.Encode()); err != nil {
+		return // decoding error (invalid state)
+	}
+
+	return commitRead.ReadMarker, nil // ok
 
 }
 
