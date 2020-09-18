@@ -154,8 +154,6 @@ type Chain struct {
 	broadcastLFBTicket chan *block.Block    // broadcast (update by LFB)
 	subLFBTicket       chan chan *LFBTicket // } wait for a received LFBTicket
 	unsubLFBTicket     chan chan *LFBTicket // }
-
-	*FinalizedBlockFetcher // fetch FB by LFB tickets
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
@@ -401,7 +399,6 @@ func Provider() datastore.Entity {
 	c.subLFBTicket = make(chan chan *LFBTicket, 1)      //
 	c.unsubLFBTicket = make(chan chan *LFBTicket, 1)    //
 
-	c.FinalizedBlockFetcher = NewFinalizedBlockFetcher(c) //
 	return c
 }
 
@@ -622,8 +619,6 @@ func (c *Chain) addBlock(b *block.Block) *block.Block {
 	if b.PrevBlock == nil {
 		if pb, ok := c.blocks[b.PrevHash]; ok {
 			b.SetPreviousBlock(pb)
-		} else {
-			c.AsyncFetchNotarizedPreviousBlock(b)
 		}
 	}
 	for pb := b.PrevBlock; pb != nil && pb != c.LatestDeterministicBlock; pb = pb.PrevBlock {
@@ -634,16 +629,6 @@ func (c *Chain) addBlock(b *block.Block) *block.Block {
 		}
 	}
 	return b
-}
-
-/*AsyncFetchNotarizedPreviousBlock - async fetching of the previous notarized block */
-func (c *Chain) AsyncFetchNotarizedPreviousBlock(b *block.Block) {
-	c.blockFetcher.AsyncFetchPreviousBlock(b)
-}
-
-/*AsyncFetchNotarizedBlock - async fetching of a notarized block */
-func (c *Chain) AsyncFetchNotarizedBlock(hash string, round int64) {
-	c.blockFetcher.AsyncFetchBlock(hash, round)
 }
 
 /*GetBlock - returns a known block for a given hash from the cache */
@@ -1382,4 +1367,10 @@ func (c *Chain) SetLatestDeterministicBlock(b *block.Block) {
 	if lfb == nil || b.Round >= lfb.Round {
 		c.LatestDeterministicBlock = b
 	}
+}
+
+// ViewChanger represents node makes view change where a block
+// with new magic block finalized.
+type ViewChanger interface {
+	ViewChange(ctx context.Context, lfb *block.Block) (err error)
 }

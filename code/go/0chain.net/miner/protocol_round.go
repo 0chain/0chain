@@ -1470,7 +1470,6 @@ func (mc *Chain) startProtocolOnLFB(ctx context.Context, lfb *block.Block) (
 	}
 
 	mc.bumpLFBTicket(ctx, lfb)
-	mc.AsyncFetchNotarizedPreviousBlock(lfb)
 
 	// we can't compute state in the start protocol
 	if err := mc.InitBlockState(lfb); err != nil {

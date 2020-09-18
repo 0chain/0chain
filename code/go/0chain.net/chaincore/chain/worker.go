@@ -28,9 +28,8 @@ func init() {
 func (c *Chain) SetupWorkers(ctx context.Context) {
 	go c.StatusMonitor(ctx)
 	go c.PruneClientStateWorker(ctx)
-	go c.BlockFetchWorker(ctx)
+	go c.blockFetcher.StartBlockFetchWorker(ctx, c)
 	go c.StartLFBTicketWorker(ctx, c.GetLatestFinalizedBlock())
-	go c.StartFinalizedBlockFetcherWorker(ctx)
 	go node.Self.Underlying().MemoryUsage()
 }
 
@@ -157,31 +156,6 @@ func (c *Chain) PruneClientStateWorker(ctx context.Context) {
 			} else {
 				timer = time.NewTimer(tick)
 			}
-		}
-	}
-}
-
-/*BlockFetchWorker - a worker that fetches the prior missing blocks */
-func (c *Chain) BlockFetchWorker(ctx context.Context) {
-	for true {
-		select {
-		case b := <-c.blockFetcher.missingLinkBlocks:
-			if b.PrevBlock != nil {
-				continue
-			}
-			pb, err := c.GetBlock(ctx, b.PrevHash)
-			if err == nil {
-				b.SetPreviousBlock(pb)
-				continue
-			}
-
-			c.blockFetcher.FetchPreviousBlock(ctx, c, b)
-		case hr := <-c.blockFetcher.missingBlocks:
-			_, err := c.GetBlock(ctx, hr.hash)
-			if err == nil {
-				continue
-			}
-			c.blockFetcher.FetchBlock(ctx, c, hr.hash, hr.round)
 		}
 	}
 }

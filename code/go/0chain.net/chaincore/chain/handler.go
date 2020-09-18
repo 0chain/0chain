@@ -218,15 +218,22 @@ func (c *Chain) roundHealthInATable(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</tr>")
 
 	var (
+		crn     = c.GetCurrentRound()
+		ahead   = int64(config.GetLFBTicketAhead())
 		tk      = c.GetLatestLFBTicket(r.Context())
 		tkRound int64
+		class   = "active"
 	)
 
 	if tk != nil {
 		tkRound = tk.Round
+
+		if tkRound+ahead <= crn {
+			class = "inactive"
+		}
 	}
 
-	fmt.Fprintf(w, "<tr class='active'>")
+	fmt.Fprintf(w, "<tr class='"+class+"'>")
 	fmt.Fprintf(w, "<td>")
 	fmt.Fprintf(w, "LFB Ticket")
 	fmt.Fprintf(w, "</td>")
@@ -407,6 +414,22 @@ func (c *Chain) infraHealthInATable(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "</td>")
 		fmt.Fprintf(w, "</tr>")
 	}
+
+	// add fetching statistics
+	var (
+		fqs = c.FetchStat(r.Context())
+		fm  = config.AsyncBlocksFetchingMaxSimultaneousFromMiners()
+		fs  = config.AsyncBlocksFetchingMaxSimultaneousFromSharders()
+	)
+	fmt.Fprintf(w, "<tr class='active'>")
+	fmt.Fprintf(w, "<td>")
+	fmt.Fprintf(w, "Fetching blocks from miners, sharders")
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "<td class='number'>")
+	fmt.Fprintf(w, "%d / %d, %d / %d", fqs.Miners, fm, fqs.Sharders, fs)
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "</tr>")
+
 	fmt.Fprintf(w, "</table>")
 }
 

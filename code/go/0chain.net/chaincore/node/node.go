@@ -35,6 +35,9 @@ func RegisterNode(node *Node) {
 
 /*DeregisterNode - deregister a node */
 func DeregisterNode(nodeID string) {
+
+	return // TODO (sfxdx): temporary disable nodes deregistering
+
 	nodesMutex.Lock()
 	defer nodesMutex.Unlock()
 	delete(nodes, nodeID)

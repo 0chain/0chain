@@ -284,7 +284,7 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 
 			if isSharder {
 				if _, err := c.GetBlock(ctx, ticket.LFBHash); err != nil {
-					c.AsyncFetchFinalizedBlockFromSharders(ctx, *ticket)
+					c.AsyncFetchFinalizedBlockFromSharders(ctx, ticket)
 					continue // if haven't the block, then don't update the latest
 				}
 			}

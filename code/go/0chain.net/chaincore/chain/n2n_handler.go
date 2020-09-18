@@ -37,6 +37,9 @@ var (
 	// LatestFinalizedMagicBlockRequestor - RequestHandler for latest finalized
 	// magic block to a node.
 	LatestFinalizedMagicBlockRequestor node.EntityRequestor
+
+	// FBRequestor represents FB from sharders reqeustor.
+	FBRequestor node.EntityRequestor
 )
 
 /*SetupX2MRequestors - setup requestors */
@@ -63,7 +66,13 @@ func SetupX2SRequestors() {
 	options := &node.SendOptions{Timeout: node.TimeoutLargeMessage, MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
 	LatestFinalizedMagicBlockRequestor = node.RequestEntityHandler("/v1/block/get/latest_finalized_magic_block", options, blockEntityMetadata)
 
-	SetupFBRequestor() // a finalized block from sharders
+	var opts = node.SendOptions{
+		Timeout:  node.TimeoutLargeMessage,
+		CODEC:    node.CODEC_MSGPACK,
+		Compress: true,
+	}
+	FBRequestor = node.RequestEntityHandler("/v1/_x2s/block/get", &opts,
+		datastore.GetEntityMetadata("block"))
 }
 
 func SetupX2XResponders() {
