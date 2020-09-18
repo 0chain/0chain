@@ -8,16 +8,24 @@ import (
 	"0chain.net/core/config"
 )
 
+type blockFetchReply struct {
+	Block *block.Block
+	Err   error
+}
+
 // block fetcher internal
 type hashRound struct {
 	next  string // hash of next block (or empty string) to set previous block
 	hash  string // hash of block to fetch
 	round int64  // round of the block to fetch (needed to fetch from sharders)
+
+	reply chan blockFetchReply // fetching reply
 }
 
 type BlockFetcher struct {
-	cache             cache.Cache    // are fetching now
-	fetchBlock        chan hashRound //
+	fetchBlock chan hashRound //
+
+	fetchFromMiners   chan hashRound // internal, main fetching channel
 	fetchFromSharders chan hashRound // internal, fallback fetching
 }
 
@@ -32,15 +40,10 @@ func NewBlockFetcher() (bf *BlockFetcher) {
 
 	// the block fetcher
 	bf = new(BlockFetcher)
-	bf.cache = cache.NewLRUCache(total)
-	bf.fetchBlock = make(chan hashRound, fm)
+	bf.fetchBlock = make(chan hashRound, total)
+	bf.fetchFromMiners = make(chan hashRound, fm)
 	bf.fetchFromSharders = make(chan hashRound, fs)
 	return
-}
-
-func (bf *BlockFetcher) isFetching(hash string) bool {
-	_, err := bf.cache.Get(hash)
-	return err == nil
 }
 
 func (bf *BlockFetcher) AsyncFetchBlock(next, hash string, rn int64) {
@@ -52,11 +55,22 @@ func (bf *BlockFetcher) AsyncFetchBlock(next, hash string, rn int64) {
 
 func (bf *BlockFetcher) BlockFetchWorker(ctx context.Context) {
 
-	//
+	var (
+		quit  = ctx.Done()
+		fetch = bf.fetchBlock
+	)
 
 	for {
 		//
 	}
+}
+
+func (bf *BlockFetcher) minersWorker(ctx context.Context) {
+	//
+}
+
+func (br *BlockFetcher) shardersWorker(ctx context.Context) {
+	//
 }
 
 /*

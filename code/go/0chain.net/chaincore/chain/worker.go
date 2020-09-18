@@ -68,26 +68,6 @@ func (c *Chain) FinalizeRoundWorker(ctx context.Context, bsh BlockStateHandler) 
 	}
 }
 
-func isDone(ctx context.Context) (done bool) {
-	select {
-	case <-ctx.Done():
-		return true
-	default:
-		return
-	}
-}
-
-func sleepOrCancel(ctx context.Context) bool {
-	var tm = time.NewTimer(1 * time.Second)
-	defer tm.Stop()
-	select {
-	case <-ctx.Done():
-		return true
-	case <-tm.C:
-		return false
-	}
-}
-
 func (c *Chain) repairChain(ctx context.Context, newMB *block.Block,
 	saveFunc MagicBlockSaveFunc) (err error) {
 
@@ -267,16 +247,6 @@ func (c *Chain) VerifyChainHistory(ctx context.Context,
 
 	return
 }
-
-// // MustVerifyChainHistory panics on error.
-// func (c *Chain) MustVerifyChainHistory(ctx context.Context,
-// 	latestMagicBlock *block.Block, saveHandler MagicBlockSaveFunc) error {
-// 	err := c.VerifyChainHistory(ctx, latestMagicBlock, saveHandler)
-// 	if err != nil {
-// 		return common.NewErrorf("verify_chain_history", err.Error())
-// 	}
-// 	return nil
-// }
 
 // PruneStorageWorker pruning storage
 func (c *Chain) PruneStorageWorker(ctx context.Context, d time.Duration,
