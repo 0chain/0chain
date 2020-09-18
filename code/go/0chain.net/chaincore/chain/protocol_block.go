@@ -379,6 +379,7 @@ func (c *Chain) GetNotarizedBlock(ctx context.Context, hash string, rn int64) (
 	var (
 		cround = c.GetCurrentRound()
 		params = &url.Values{}
+		ticket = c.GetLatestLFBTicket(ctx)
 	)
 
 	params.Add("block", hash)
@@ -454,9 +455,8 @@ func (c *Chain) GetNotarizedBlock(ctx context.Context, hash string, rn int64) (
 	var n2n = mb.Miners
 	n2n.RequestEntity(lctx, MinerNotarizedBlockRequestor, params, handler)
 
-	// if nil, then request it from sharders
-	if b == nil {
-		// recreate context can be expired or can expire soon
+	// recreate context can be expired or can expire soon
+	if b == nil && ticket != nil && rn > 0 && rn <= ticket.Round {
 		cancel()
 		lctx, cancel = context.WithTimeout(ctx, node.TimeoutLargeMessage)
 
@@ -501,7 +501,7 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 			zap.Int64("cround", cb.Round), zap.String("cblock", cb.Hash),
 			zap.String("cprev_block", cb.PrevHash))
 
-		nb := c.GetNotarizedBlock(cb.PrevHash, cb.Round-1)
+		nb := c.GetNotarizedBlock(ctx, cb.PrevHash, cb.Round-1)
 		if nb == nil {
 			Logger.Error("get previous block (unable to get prior blocks)",
 				zap.Int64("current_round", c.GetCurrentRound()),

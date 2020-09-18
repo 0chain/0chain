@@ -234,10 +234,10 @@ func (c *Chain) VerifyChainHistory(ctx context.Context,
 					currentMagicBlock.MagicBlockNumber+1, err))
 		}
 
-		if !magicBlock.VerifyMinersSignatures(currentMagicBlock) {
+		if !currentMagicBlock.VerifyMinersSignatures(magicBlock) {
 			return common.NewError("get_lfmb_from_sharders",
-				fmt.Sprintf("failed to verify magic block %d: %v",
-					currentMagicBlock.MagicBlockNumber+1, err))
+				fmt.Sprintf("failed to verify magic block %d miners signatures",
+					currentMagicBlock.MagicBlockNumber+1))
 		}
 
 		Logger.Info("verify chain history",

@@ -10,13 +10,15 @@ import (
 
 // block fetcher internal
 type hashRound struct {
-	hash  string
-	round int64
+	next  string // hash of next block (or empty string) to set previous block
+	hash  string // hash of block to fetch
+	round int64  // round of the block to fetch (needed to fetch from sharders)
 }
 
 type BlockFetcher struct {
-	cache      cache.Cache
-	fetchBlock chan hashRound
+	cache             cache.Cache    // are fetching now
+	fetchBlock        chan hashRound //
+	fetchFromSharders chan hashRound // internal, fallback fetching
 }
 
 func NewBlockFetcher() (bf *BlockFetcher) {
@@ -31,27 +33,33 @@ func NewBlockFetcher() (bf *BlockFetcher) {
 	// the block fetcher
 	bf = new(BlockFetcher)
 	bf.cache = cache.NewLRUCache(total)
-	bf.fetchBlock = make(chan hashRound)
+	bf.fetchBlock = make(chan hashRound, fm)
+	bf.fetchFromSharders = make(chan hashRound, fs)
 	return
 }
 
+func (bf *BlockFetcher) isFetching(hash string) bool {
+	_, err := bf.cache.Get(hash)
+	return err == nil
+}
+
+func (bf *BlockFetcher) AsyncFetchBlock(next, hash string, rn int64) {
+	if bf.isFetching(hash) {
+		return
+	}
+	bf.fetchBlock <- hashRound{next: next, hash: hash, rn: rn}
+}
+
+func (bf *BlockFetcher) BlockFetchWorker(ctx context.Context) {
+
+	//
+
+	for {
+		//
+	}
+}
+
 /*
-
-// BlockFetcher - to fetch blocks from other nodes.
-type BlockFetcher struct {
-	fblocks           cache.Cache
-	missingBlocks     chan hashRound
-	missingLinkBlocks chan *block.Block
-}
-
-// NewBlockFetcher - create a block fetcher object.
-func NewBlockFetcher() *BlockFetcher {
-	bf := &BlockFetcher{}
-	bf.fblocks = cache.NewLRUCache(100)
-	bf.missingLinkBlocks = make(chan *block.Block, 128)
-	bf.missingBlocks = make(chan hashRound, 128)
-	return bf
-}
 
 // AsyncFetchPreviousBlock - fetch previous block asynchronously.
 func (bf *BlockFetcher) AsyncFetchPreviousBlock(b *block.Block) {
@@ -69,12 +77,6 @@ func (bf *BlockFetcher) AsyncFetchBlock(hash string, round int64) {
 	bf.missingBlocks <- hashRound{hash: hash, round: round}
 }
 
-// IsFetching - is the block being fetched (determined by cache).
-func (bf *BlockFetcher) IsFetching(hash string) bool {
-	_, err := bf.fblocks.Get(hash)
-	return err == nil
-}
-
 // FetchPreviousBlock - fetch the previous block.
 func (bf *BlockFetcher) FetchPreviousBlock(ctx context.Context, c *Chain, b *block.Block) {
 	if !bf.IsFetching(b.PrevHash) {
@@ -89,7 +91,7 @@ func (bf *BlockFetcher) FetchBlock(ctx context.Context, c *Chain, hash string,
 
 	if !c.blockFetcher.IsFetching(hash) {
 		c.blockFetcher.fblocks.Add(hash, true)
-		go c.GetNotarizedBlock(hash, round)
+		go c.GetNotarizedBlock(ctx, hash, round)
 	}
 }
 

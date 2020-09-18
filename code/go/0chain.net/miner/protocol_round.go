@@ -115,7 +115,7 @@ func (mc *Chain) startNextRoundAfterPulling(ctx context.Context, r *Round) {
 
 func (mc *Chain) pullNotarizedBlocks(ctx context.Context, r *Round) {
 	Logger.Info("pull not. block for", zap.Int64("round", r.GetRoundNumber()))
-	if mc.GetHeaviestNotarizedBlock(r) != nil {
+	if mc.GetHeaviestNotarizedBlock(ctx, r) != nil {
 		if r.GetRoundNumber() > mc.GetCurrentRound() {
 			mc.SetCurrentRound(r.GetRoundNumber())
 			mc.StartNextRound(ctx, r)
@@ -323,7 +323,7 @@ func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) (
 			zap.Int64("round", r.GetRoundNumber()),
 			zap.Int("num_proposals", len(proposals)),
 			zap.Any("verification_tickets", pcounts))
-		bnb = mc.GetHeaviestNotarizedBlock(r)
+		bnb = mc.GetHeaviestNotarizedBlock(ctx, r)
 	}
 
 	if bnb == nil {

@@ -115,7 +115,7 @@ func (c *Chain) FinalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 	if r.GetHeaviestNotarizedBlock() == nil {
 		Logger.Error("finalize round: no notarized blocks",
 			zap.Int64("round", r.GetRoundNumber()))
-		go c.GetHeaviestNotarizedBlock(r)
+		go c.GetHeaviestNotarizedBlock(ctx, r)
 	}
 	time.Sleep(FINALIZATION_TIME)
 	Logger.Debug("finalize round", zap.Int64("round", r.GetRoundNumber()),
@@ -230,7 +230,8 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 }
 
 // GetHeaviestNotarizedBlock - get a notarized block for a round.
-func (c *Chain) GetHeaviestNotarizedBlock(r round.RoundI) *block.Block {
+func (c *Chain) GetHeaviestNotarizedBlock(ctx context.Context, r round.RoundI) (
+	_ *block.Block) {
 
 	var (
 		rn     = r.GetRoundNumber()
@@ -240,9 +241,10 @@ func (c *Chain) GetHeaviestNotarizedBlock(r round.RoundI) *block.Block {
 	params.Add("round", fmt.Sprintf("%v", rn))
 
 	var (
-		ctx, cancelf = context.WithCancel(common.GetRootContext())
+		lctx, cancel = context.WithTimeout(ctx, node.TimeoutLargeMessage)
 		mb           = c.GetMagicBlock(rn)
 	)
+	defer cancel()
 
 	var handler = func(ctx context.Context, entity datastore.Entity) (
 		resp interface{}, err error) {
@@ -251,7 +253,7 @@ func (c *Chain) GetHeaviestNotarizedBlock(r round.RoundI) *block.Block {
 			zap.String("block", entity.GetKey()))
 
 		if b := r.GetHeaviestNotarizedBlock(); b != nil {
-			cancelf()
+			cancel()
 			return b, nil
 		}
 
@@ -296,7 +298,7 @@ func (c *Chain) GetHeaviestNotarizedBlock(r round.RoundI) *block.Block {
 		return b, nil
 	}
 
-	mb.Miners.RequestEntity(ctx, MinerNotarizedBlockRequestor, params, handler)
+	mb.Miners.RequestEntity(lctx, MinerNotarizedBlockRequestor, params, handler)
 	return r.GetHeaviestNotarizedBlock()
 }
 

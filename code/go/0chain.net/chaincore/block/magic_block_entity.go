@@ -104,11 +104,10 @@ func (mb *MagicBlock) IsActiveNode(id string, round int64) bool {
 
 func (mb *MagicBlock) VerifyMinersSignatures(b *Block) bool {
 	for _, bvt := range b.GetVerificationTickets() {
-		sender := b.Miners.GetNode(bvt.VerifierID)
+		var sender = mb.Miners.GetNode(bvt.VerifierID)
 		if sender == nil {
 			return false
 		}
-
 		if ok, _ := sender.Verify(bvt.Signature, b.Hash); !ok {
 			return false
 		}
