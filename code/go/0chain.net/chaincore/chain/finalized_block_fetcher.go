@@ -188,44 +188,35 @@ func (c *Chain) asyncFetchFinalizedBlock(ctx context.Context,
 func (c *Chain) GetFinalizedBlockFromSharders(ctx context.Context,
 	ticket *LFBTicket) (fb *block.Block, err error) {
 
-	type blockConsensus struct {
-		*block.Block
-		consensus int
-	}
-
 	var (
-		mb              = c.GetCurrentMagicBlock()
-		sharders        = mb.Sharders
-		finalizedBlocks = make([]*blockConsensus, 0, 1)
-		params          = make(url.Values)
+		mb       = c.GetCurrentMagicBlock()
+		sharders = mb.Sharders
+		params   = make(url.Values)
 
-		fbMutex sync.Mutex
+		lctx, cancel = context.WithTimeout(ctx, node.TimeoutLargeMessage)
+		fbMutex      sync.Mutex
 	)
+	defer cancel()
 
 	var handler = func(ctx context.Context, entity datastore.Entity) (
 		resp interface{}, err error) {
 
-		var fb, ok = entity.(*block.Block)
+		var gfb, ok = entity.(*block.Block)
 		if !ok {
 			return nil, datastore.ErrInvalidEntity
 		}
 
-		// verify the block fist?
+		if gfb.ComputeHash() != ticket.LFBHash {
+			return nil, common.NewError("fetch_fb_from_sharders",
+				"wrong block hash")
+		}
 
 		fbMutex.Lock()
 		defer fbMutex.Unlock()
-		for i, b := range finalizedBlocks {
-			if b.Hash == fb.Hash {
-				finalizedBlocks[i].consensus++
-				return fb, nil
-			}
-		}
-		finalizedBlocks = append(finalizedBlocks, &blockConsensus{
-			Block:     fb,
-			consensus: 1,
-		})
+		fb = gfb
 
-		return fb, nil
+		cancel() // stop
+		return   // (nil, nil)
 	}
 
 	params.Add("hash", ticket.LFBHash)
@@ -234,20 +225,14 @@ func (c *Chain) GetFinalizedBlockFromSharders(ctx context.Context,
 	// request from ticket sender, or. if the sender is missing,
 	// try to fetch from all other sharders from the current MB
 	if sh := sharders.GetNode(ticket.SharderID); sh != nil {
-		sh.RequestEntityFromNode(ctx, FBRequestor, &params, handler)
+		sh.RequestEntityFromNode(lctx, FBRequestor, &params, handler)
 	} else {
-		sharders.RequestEntityFromAll(ctx, FBRequestor, &params, handler)
+		sharders.RequestEntityFromAll(lctx, FBRequestor, &params, handler)
 	}
 
-	// most popular
-	sort.Slice(finalizedBlocks, func(i int, j int) bool {
-		return finalizedBlocks[i].consensus > finalizedBlocks[j].consensus
-
-	})
-
-	if len(finalizedBlocks) == 0 {
-		return nil, common.NewError("fb_fetcher", "no FB given")
+	if fb == nil {
+		return nil, common.NewError("fetch_fb_from_sharders", "no FB given")
 	}
 
-	return finalizedBlocks[0].Block, nil // highest, most popular
+	return // return the first given
 }

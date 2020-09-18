@@ -268,6 +268,14 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 			// for self updating case (kick itself)
 			if ticket.Sign == "" {
 				latest = ticket
+				// send for all subscribers
+				for s := range subs {
+					select {
+					case s <- ticket:
+					case <-ctx.Done():
+						return
+					}
+				}
 				continue // don't need a block for the blank kick ticket
 			}
 
