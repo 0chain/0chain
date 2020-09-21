@@ -524,7 +524,7 @@ func (c *Chain) GetNotarizedBlock(ctx context.Context, hash string, rn int64) (
 
 	if rpl.Err != nil {
 		Logger.Error("get notarized block - error",
-			zap.Int64("cround", cround), zap.Int64("round", nb.Round),
+			zap.Int64("cround", cround), zap.Int64("round", rn),
 			zap.String("block", hash), zap.Error(rpl.Err))
 		return // nil
 	}
@@ -535,7 +535,7 @@ func (c *Chain) GetNotarizedBlock(ctx context.Context, hash string, rn int64) (
 	var r = c.GetRound(nb.Round)
 	if r == nil {
 		Logger.Info("get notarized block - no round, creating...",
-			zap.Int64("round", nb.Round), zap.String("block", hash),
+			zap.Int64("round", nb.Round), zap.String("block", nb.Hash),
 			zap.Int64("cround", cround))
 
 		r = c.RoundF.CreateRoundF(nb.Round).(*round.Round)
