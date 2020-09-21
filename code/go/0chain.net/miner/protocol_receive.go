@@ -196,11 +196,13 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 	}
 
 	if !mc.ValidGenerator(mr.Round, b) {
-		Logger.Error("Not a valid generator. Ignoring block with hash = " + b.Hash)
+		Logger.Error("Not a valid generator. Ignoring block",
+			zap.Int64("round", b.Round), zap.String("block", b.Hash))
 		return
 	}
 
-	Logger.Info("Added block to Round with hash = " + b.Hash)
+	Logger.Info("Added block to Round", zap.Int64("round", b.Round),
+		zap.String("block", b.Hash))
 	mc.AddToRoundVerification(ctx, mr, b)
 }
 

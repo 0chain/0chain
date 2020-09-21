@@ -32,7 +32,7 @@ func (sc *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI,
 	sc.UpdateNodeState(b)
 	pr := sc.GetRound(r.GetRoundNumber() - 1)
 	if pr != nil {
-		go sc.FinalizeRound(ctx, pr, sc)
+		sc.FinalizeRound(ctx, pr, sc)
 	}
 	go sc.ComputeState(ctx, b)
 	return true

@@ -21,8 +21,8 @@ smart_contracts:
     # max delegates allowed by SC
     max_delegates: 200 #
     # DKG
-    t_percent: .51
-    k_percent: .75
+    t_percent: .51 # of active
+    k_percent: .75 # of registered
     # etc
     min_stake: 0.0 # 0.01 # min stake can be set by a node (boundary for all nodes)
     max_stake: 100.0 # max stake can be set by a node (boundary for all nodes)

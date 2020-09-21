@@ -55,7 +55,7 @@ server_chain:
       max_wait_time: 180 # milliseconds
       wait_mode: static # static or dynamic
     consensus:
-      threshold_by_count: 66 # percentage
+      threshold_by_count: 66 # percentage (registration)
       threshold_by_stake: 0 # percent
     sharding:
       min_active_sharders: 25 # percentage
