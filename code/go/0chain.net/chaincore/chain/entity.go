@@ -138,6 +138,7 @@ type Chain struct {
 
 	fetchedNotarizedBlockHandler FetchedNotarizedBlockHandler
 	viewChanger                  ViewChanger
+	afterFetcher                 AfterFetcher
 
 	pruneStats *util.PruneStats
 
@@ -1108,6 +1109,10 @@ func (c *Chain) SetViewChanger(vcr ViewChanger) {
 	c.viewChanger = vcr
 }
 
+func (c *Chain) SetAfterFetcher(afr AfterFetcher) {
+	c.afterFetcher = afr
+}
+
 //GetPruneStats - get the current prune stats
 func (c *Chain) GetPruneStats() *util.PruneStats {
 	return c.pruneStats
@@ -1172,7 +1177,8 @@ func (c *Chain) IsActiveInChain() bool {
 
 func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 	if newMagicBlock.Miners == nil || newMagicBlock.Miners.MapSize() == 0 {
-		return common.NewError("failed to update magic block", "there are no miners in the magic block")
+		return common.NewError("failed to update magic block",
+			"there are no miners in the magic block")
 	}
 
 	var (
@@ -1369,8 +1375,18 @@ func (c *Chain) SetLatestDeterministicBlock(b *block.Block) {
 	}
 }
 
-// ViewChanger represents node makes view change where a block
-// with new magic block finalized.
+// The ViewChanger represents node makes view change where a block with new
+// magic block finalized.
 type ViewChanger interface {
 	ViewChange(ctx context.Context, lfb *block.Block) (err error)
+}
+
+// The AfterFetcher represents hooks performed during asynchronous finalized
+// blocks fetching.
+type AfterFetcher interface {
+	// AfterFetch performed just after a block fetched verified and validated.
+	// E.g. before the fetch function made some changes in the Chan. The
+	// AfterFetch can be used to reject the block returning error. It never
+	// receive an unverified and invalid block.
+	AfterFetch(ctx context.Context, b *block.Block) (err error)
 }

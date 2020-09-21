@@ -104,6 +104,9 @@ func (sc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 	return
 }
 
+// The hasRelatedMagicBlock reports true if the Chain has MB related to the
+// given block (checked by round number). It never checks persistent store,
+// checking MB in round magic block store (memory) only.
 func (sc *Chain) hasRelatedMagicBlock(b *block.Block) (ok bool) {
 	var (
 		relatedmbr = b.LatestFinalizedMagicBlockRound
@@ -173,6 +176,29 @@ func (sc *Chain) pullRelatedMagicBlock(ctx context.Context, b *block.Block) (
 	}
 
 	return
+}
+
+// AfterFetch used to pull related MB (if missing) for blocks fetched by
+// AsyncFetch* function in LFB-tickets worker. E.g. for blocks kicked by
+// a LFB ticket.
+func (sc *Chain) AfterFetch(ctx context.Context, b *block.Block) (err error) {
+
+	// pull related magic block if missing
+	if err = sc.pullRelatedMagicBlock(ctx, b); err != nil {
+		Logger.Error("after_fetch -- pulling related magic block",
+			zap.Int64("round", b.Round), zap.String("block", b.Hash),
+			zap.Error(err))
+		return
+	}
+
+	// ok, already have or just pulled, check out LFB
+
+	var lfb = sc.GetLatestFinalizedBlock()
+	if lfb.Round < b.Round {
+		sc.SetLatestFinalizedBlock(b) // bump by the newer one
+	}
+
+	return // everything is done
 }
 
 func (sc *Chain) processBlock(ctx context.Context, b *block.Block) {

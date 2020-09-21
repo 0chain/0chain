@@ -563,7 +563,7 @@ func (c *Chain) GetNotarizedBlock(ctx context.Context, hash string, rn int64) (
 type AfterBlockFetchFunc func(b *block.Block)
 
 func (c *Chain) AsyncFetchFinalizedBlockFromSharders(ctx context.Context,
-	ticket *LFBTicket, afterWork AfterBlockFetchFunc) {
+	ticket *LFBTicket, afterFetcher AfterFetcher) {
 
 	var bfr = new(blockFetchRequest)
 	bfr.hash = ticket.LFBHash        //
@@ -594,7 +594,19 @@ func (c *Chain) AsyncFetchFinalizedBlockFromSharders(ctx context.Context,
 	// the block validated and its notarization verified
 	var fb = rpl.Block
 
-	// after work
+	// after fetch hook (if any)
+	if afterFetcher != nil {
+		var err error
+		if err = afterFetcher.AfterFetch(ctx, fb); err != nil {
+			Logger.Error("async fetch fb from sharders - rejected by "+
+				"the 'after fetch' hook", zap.Int64("round", bfr.round),
+				zap.String("block", bfr.hash), zap.Error(err))
+			return // nil
+		}
+	}
+
+	// After the AfterFetch the following process can be terminated by an error
+	// thus, we can set LFB inside the AfterFetch.
 
 	var r = c.GetRound(fb.Round)
 	if r == nil {
@@ -614,10 +626,6 @@ func (c *Chain) AsyncFetchFinalizedBlockFromSharders(ctx context.Context,
 	// with the notarized block.
 	b, r = c.AddNotarizedBlockToRound(r, fb)
 	b, _ = r.AddNotarizedBlock(b)
-
-	if afterWork != nil {
-		afterWork(b)
-	}
 }
 
 // FetchStat returns numbers of current block

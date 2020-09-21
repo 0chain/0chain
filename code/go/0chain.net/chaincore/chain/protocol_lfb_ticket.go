@@ -285,7 +285,7 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 			if isSharder {
 				if _, err := c.GetBlock(ctx, ticket.LFBHash); err != nil {
 					c.AsyncFetchFinalizedBlockFromSharders(ctx, ticket,
-						c.shardersLFBAfterFetchHook)
+						c.afterFetcher)
 					continue // if haven't the block, then don't update the latest
 				}
 			}
@@ -390,11 +390,4 @@ func LFBTicketHandler(ctx context.Context, r *http.Request) (
 		zap.Int64("round", ticket.Round))
 	chain.AddReceivedLFBTicket(ctx, &ticket)
 	return // (nil, nil)
-}
-
-func (c *Chain) shardersLFBAfterFetchHook(b *block.Block) {
-	var lfb = c.GetLatestFinalizedBlock()
-	if lfb.Round < b.Round {
-		c.SetLatestFinalizedBlock(b) // update LFB for the sharder
-	}
 }
