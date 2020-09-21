@@ -340,8 +340,8 @@ func getMagicBlocksFromSharders(ctx context.Context, mc *miner.Chain) (
 				return nil, common.NewErrorf("get_lfmbs_from_sharders",
 					"no lfmb given after %d attempts", attempt)
 			}
-			Logger.Warn("get_current_mb_sharder -- retry", zap.Any("attempt", attempt),
-				zap.Any("timeout", retryTimeout))
+			Logger.Warn("get_current_mb_sharder -- retry",
+				zap.Any("attempt", attempt), zap.Any("timeout", retryTimeout))
 			select {
 			case <-ctx.Done():
 				return nil, common.NewError("get_lfmbs_from_sharders",

@@ -560,8 +560,10 @@ func (c *Chain) GetNotarizedBlock(ctx context.Context, hash string, rn int64) (
 	return b
 }
 
+type AfterBlockFetchFunc func(b *block.Block)
+
 func (c *Chain) AsyncFetchFinalizedBlockFromSharders(ctx context.Context,
-	ticket *LFBTicket) {
+	ticket *LFBTicket, afterWork AfterBlockFetchFunc) {
 
 	var bfr = new(blockFetchRequest)
 	bfr.hash = ticket.LFBHash        //
@@ -612,6 +614,10 @@ func (c *Chain) AsyncFetchFinalizedBlockFromSharders(ctx context.Context,
 	// with the notarized block.
 	b, r = c.AddNotarizedBlockToRound(r, fb)
 	b, _ = r.AddNotarizedBlock(b)
+
+	if afterWork != nil {
+		afterWork(b)
+	}
 }
 
 // FetchStat returns numbers of current block
