@@ -548,8 +548,8 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 	// SC configurations
 	var conf *scConfig
 	if conf, err = sc.getConfig(balances, false); err != nil {
-		return common.NewError("fini_alloc_failed",
-			"can't get SC configurations: "+err.Error())
+		return common.NewErrorf("generate_challenges",
+			"can't get SC configurations: %v", err)
 	}
 
 	var rated = conf.ChallengeGenerationRate * float64(numMins*sizeDiffMB)
@@ -662,8 +662,11 @@ func (sc *StorageSmartContract) addChallenge(challengeID string, creationDate co
 	if allocationObj == nil || allocationObj.Stats == nil ||
 		allocationObj.Stats.NumWrites == 0 {
 
-		return "", common.NewError("no_allocation_writes",
-			"No Allocation writes. challenge generation not possible")
+		Logger.Info("add_challenge: can't choose a random allocation" +
+			" with writes after 1000 attempts")
+
+		// it's not a real error.
+		return "", nil
 	}
 
 	sort.SliceStable(allocationObj.Blobbers, func(i, j int) bool {
