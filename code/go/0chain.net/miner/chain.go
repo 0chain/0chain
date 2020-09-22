@@ -253,18 +253,10 @@ func (mc *Chain) isJoining(rn int64) (is bool) {
 			key = node.Self.Underlying().GetKey()
 		)
 
-		// TODO (sfxdx): DEBUG, REMOVE THEN
-		is = (nmb.StartingRound == nvc &&
-			!mb.Miners.HasNode(key) &&
-			nmb.Miners.HasNode(key))
-		println("IS J", rn, is)
-
 		return nmb.StartingRound == nvc &&
 			!mb.Miners.HasNode(key) &&
 			nmb.Miners.HasNode(key)
 	}
-
-	println("IS J", rn, false)
 
 	return // false
 }

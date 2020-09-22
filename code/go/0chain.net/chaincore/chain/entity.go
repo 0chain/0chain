@@ -761,9 +761,7 @@ func (c *Chain) CanShardBlockWithReplicators(nRound int64, hash string, sharder 
 	if c.NumReplicators <= 0 {
 		return true, nil
 	}
-	var mb = c.GetMagicBlock(nRound) // TODO (sfxdx): DEBUG REMOVE
 	scores := c.nodePoolScorer.ScoreHashString(c.GetMagicBlock(nRound).Sharders, hash)
-	println("CSBWR", "R", nRound, "MB SR", mb.StartingRound, "SCORES", len(scores), "SHARDERRS", mb.Sharders.Size(), "NR", c.NumReplicators)
 	return sharder.IsInTopWithNodes(scores, c.NumReplicators)
 }
 

@@ -409,7 +409,6 @@ func (sc *Chain) hcUpdateBlockStatus(scanMode HealthCheckScan, status *BlockHeal
 }
 
 func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthCheckScan) {
-	println("SC healthCheck", rNum)
 
 	var hcStatus BlockHealthCheckStatus = HealthCheckSuccess
 
@@ -444,11 +443,6 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 	}
 
 	if sc.isValidRound(r) == false {
-		if r != nil {
-			println("SC healthCheck", rNum, "invalid round", r.GetRoundNumber(), "FRS", foundRoundSummary)
-		} else {
-			println("SC healthCheck", rNum, "invalid round", "NIL", "FRS", foundRoundSummary)
-		}
 		// Unable to get the round summary information.
 		hcStatus = HealthCheckFailure
 		return
@@ -469,7 +463,6 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 	}
 
 	if bs == nil {
-		println("SC healthCheck", rNum, "can't receive BS", r.GetRoundNumber(), r.BlockHash)
 		// Unable to retrieve block summary.
 		hcStatus = HealthCheckFailure
 		return
@@ -493,7 +486,6 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 
 	// The sharder needs txn_summary. Get the block
 	b, foundBlock := sc.hasBlock(bs.Hash, r.Number)
-	println("SC healthCheck", rNum, "found block", foundBlock, "can shard", canShard, "need txn sum", needTxnSummary)
 	if foundBlock == false {
 		if needTxnSummary || canShard {
 			// The sharder doesn't have the block.
@@ -511,14 +503,12 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 					zap.String("hash", r.BlockHash))
 				current.block.RepairFailure++
 				hcStatus = HealthCheckFailure
-				println("MISSING BLOCK")
 				return
 			}
 		}
 
 		if canShard || (b != nil && b.MagicBlock != nil) {
 			// The sharder has acquired the block and should save it.
-			println("HC STORE BLOCK", b.Round)
 			err := sc.storeBlock(ctx, b)
 			if err != nil {
 				Logger.Error("HC-DSWriteFailure",

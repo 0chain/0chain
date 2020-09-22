@@ -303,7 +303,6 @@ func (sc *Chain) walkDownLookingForLFB(iter *gorocksdb.Iterator,
 
 		lfb, err = sc.GetBlockFromStore(r.BlockHash, r.Number)
 		if err != nil {
-			println("block knot found", r.Number, r.BlockHash)
 			continue // TODO: can we use os.IsNotExist(err) or should not
 		}
 

@@ -47,7 +47,6 @@ func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
 	)
 
 	if !mb.Miners.HasNode(snk) {
-		println("don't add VRFS: not the active member")
 		return
 	}
 
@@ -1206,8 +1205,6 @@ func (mc *Chain) restartRound(ctx context.Context) {
 	}
 	mc.RoundTimeoutsCount++
 
-	println("RR ", "CRN", crn, "CTC", mc.RoundTimeoutsCount)
-
 	// get LFMB and LFB from sharders
 	var updated, err = mc.ensureLatestFinalizedBlocks(ctx)
 	if err != nil {
@@ -1228,11 +1225,9 @@ func (mc *Chain) restartRound(ctx context.Context) {
 		}
 		if !pr.HasRandomSeed() {
 			mc.pullNotarizedBlocks(ctx, pr)
-			println("RR IS J", "CRN", crn, "PULL PREV R.")
 		}
 		// pull current round
 		mc.pullNotarizedBlocks(ctx, r)
-		println("RR IS J", "PULL CRN")
 		return
 	}
 
@@ -1244,12 +1239,10 @@ func (mc *Chain) restartRound(ctx context.Context) {
 		var lfb = mc.GetLatestFinalizedBlock()
 		if lfb.Round > crn {
 			mc.kickRoundByLFB(ctx, lfb)
-			println("RR ", "CRN", crn, "KICK ROUND BY LFB", lfb.Round)
 			return
 		}
 	} else {
 		if isAhead {
-			println("RR ", "CRN", crn, "KICK SHARDERS")
 			mc.kickSharders(ctx) // not updated, kick sharders
 		}
 	}
@@ -1264,7 +1257,6 @@ func (mc *Chain) restartRound(ctx context.Context) {
 		nr := mc.StartNextRound(ctx, r)
 		if nr == nil {
 			Logger.Info("restartRound: skip due to far ahead")
-			println("RR ", "CRN", crn, "FAR AHEAD (1)")
 			return // shouldn't happen
 		}
 		/*
@@ -1272,7 +1264,6 @@ func (mc *Chain) restartRound(ctx context.Context) {
 			So to be sure send it.
 		*/
 		if r.HasRandomSeed() {
-			println("RR ", "CRN", crn, "HAS SEED -> NEXT ROUND", nextR != nil)
 			if nextR != nil {
 				Logger.Info("RedoVRFshare after sending notarized"+
 					" block in restartRound.",
@@ -1316,7 +1307,6 @@ func (mc *Chain) restartRound(ctx context.Context) {
 	}
 	if !pr.HasRandomSeed() {
 		mc.pullNotarizedBlocks(ctx, pr)
-		println("RR ", "CRN", crn, "PULL PREV R.")
 	}
 	r.IncrementTimeoutCount(pr.GetRandomSeed(), mc.GetMiners(crn))
 	if redo := mc.RedoVrfShare(ctx, r); !redo {
