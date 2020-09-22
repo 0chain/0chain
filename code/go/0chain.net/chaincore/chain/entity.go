@@ -761,7 +761,9 @@ func (c *Chain) CanShardBlockWithReplicators(nRound int64, hash string, sharder 
 	if c.NumReplicators <= 0 {
 		return true, nil
 	}
+	var mb = c.GetMagicBlock(nRound) // TODO (sfxdx): DEBUG REMOVE
 	scores := c.nodePoolScorer.ScoreHashString(c.GetMagicBlock(nRound).Sharders, hash)
+	println("CSBWR", "R", nRound, "MB SR", mb.StartingRound, "SCORES", len(scores), "SHARDERRS", mb.Sharders.Size(), "NR", c.NumReplicators)
 	return sharder.IsInTopWithNodes(scores, c.NumReplicators)
 }
 
@@ -1077,15 +1079,27 @@ func (c *Chain) CanShardBlocksSharders(sharders *node.Pool) bool {
 	return sharders.GetActiveCount()*100 >= sharders.Size()*c.MinActiveSharders
 }
 
-//CanReplicateBlock - can the given block be effectively replicated?
+// CanReplicateBlock - can the given block be effectively replicated?
 func (c *Chain) CanReplicateBlock(b *block.Block) bool {
+
 	if c.NumReplicators <= 0 || c.MinActiveReplicators == 0 {
 		return c.CanShardBlocks(b.Round)
 	}
-	mb := c.GetMagicBlock(b.Round)
-	scores := c.nodePoolScorer.ScoreHashString(mb.Sharders, b.Hash)
-	arCount := 0
-	minScore := scores[c.NumReplicators-1].Score
+
+	var (
+		mb     = c.GetMagicBlock(b.Round)
+		scores = c.nodePoolScorer.ScoreHashString(mb.Sharders, b.Hash)
+
+		arCount  int
+		minScore int32
+	)
+
+	if len(scores) == 0 {
+		return c.CanShardBlocks(b.Round)
+	}
+
+	minScore = scores[len(scores)-1].Score
+
 	for i := 0; i < len(scores); i++ {
 		if scores[i].Score < minScore {
 			break
@@ -1097,6 +1111,7 @@ func (c *Chain) CanReplicateBlock(b *block.Block) bool {
 			}
 		}
 	}
+
 	return false
 }
 

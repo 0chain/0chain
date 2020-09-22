@@ -46,8 +46,7 @@ server_chain:
     max_block_size: 10
     max_byte_size: 1638400
     generators: 2
-    #replicators: 3
-    replicators: 0
+    replicators: 3 # was 0
     generation:
       timeout: 15
       retry_wait_time: 5 #milliseconds

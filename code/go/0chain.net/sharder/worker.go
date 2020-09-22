@@ -66,7 +66,7 @@ func (sc *Chain) BlockWorker(ctx context.Context) {
 
 func (sc *Chain) hasRoundSummary(ctx context.Context, rNum int64) (*round.Round, bool) {
 	r, err := sc.GetRoundFromStore(ctx, rNum)
-	if err == nil {
+	if err == nil && sc.isValidRound(r) == true {
 		return r, true
 	}
 	return nil, false

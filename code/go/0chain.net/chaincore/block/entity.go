@@ -568,7 +568,7 @@ func (b *Block) UnknownTickets(vts []*VerificationTicket) []*VerificationTicket 
 	return newTickets
 }
 
-//AddUniqueBlockExtension - add unique block extensions
+// AddUniqueBlockExtension - add unique block extensions.
 func (b *Block) AddUniqueBlockExtension(eb *Block) {
 	//TODO: We need to compare for view change and add the eb.MinerID only if he was in the view that b belongs to
 	if b.UniqueBlockExtensions == nil {
@@ -577,12 +577,12 @@ func (b *Block) AddUniqueBlockExtension(eb *Block) {
 	b.UniqueBlockExtensions[eb.MinerID] = true
 }
 
-//DoReadLock - implement ReadLockable interface
+// DoReadLock - implement ReadLockable interface.
 func (b *Block) DoReadLock() {
 	b.ticketsMutex.RLock()
 }
 
-//DoReadUnlock - implement ReadLockable interface
+// DoReadUnlock - implement ReadLockable interface.
 func (b *Block) DoReadUnlock() {
 	b.ticketsMutex.RUnlock()
 }
@@ -614,19 +614,19 @@ func (b *Block) PrevBlockVerificationTicketsSize() int {
 	return len(b.PrevBlockVerificationTickets)
 }
 
-// SetPrevBlockVerificationTickets - set previous block verification tickets
+// SetPrevBlockVerificationTickets - set previous block verification tickets.
 func (b *Block) SetPrevBlockVerificationTickets(bvt []*VerificationTicket) {
 	b.ticketsMutex.Lock()
 	defer b.ticketsMutex.Unlock()
 	b.PrevBlockVerificationTickets = bvt
 }
 
-// SetRoundRandomSeed - set the random seed
+// SetRoundRandomSeed - set the random seed.
 func (u *UnverifiedBlockBody) SetRoundRandomSeed(seed int64) {
 	atomic.StoreInt64(&u.RoundRandomSeed, seed)
 }
 
-// GetRoundRandomSeed - returns the random seed of the round
+// GetRoundRandomSeed - returns the random seed of the round.
 func (u *UnverifiedBlockBody) GetRoundRandomSeed() int64 {
 	return atomic.LoadInt64(&u.RoundRandomSeed)
 }

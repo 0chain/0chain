@@ -96,11 +96,22 @@ func (n *Node) IsInTopWithNodes(nodeScores []*Score, topN int) (bool, []*Node) {
 	return inTop, nodes
 }
 
-//GetTopNNodes - get the top n nodes from the sorted scores
-func GetTopNNodes(scores []*Score, topN int) []*Node {
-	var nodes []*Node
-	for i := 0; i < topN; i++ {
+func min(a, b int) int {
+	if a > b {
+		return b
+	}
+	return a
+}
+
+// GetTopNNodes - get the top n nodes from the sorted scores.
+func GetTopNNodes(scores []*Score, topN int) (nodes []*Node) {
+
+	var n = min(topN, len(scores))
+
+	nodes = make([]*Node, 0, n)
+	for i := 0; i < n; i++ {
 		nodes = append(nodes, scores[i].Node)
 	}
-	return nodes
+
+	return
 }

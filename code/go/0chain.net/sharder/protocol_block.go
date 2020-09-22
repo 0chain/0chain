@@ -492,6 +492,9 @@ func (sc *Chain) requestForBlockSummary(ctx context.Context, params *url.Values)
 
 func (sc *Chain) requestForBlock(ctx context.Context, params *url.Values, r *round.Round) *block.Block {
 	self := node.GetSelfNode(ctx)
+
+	println("REQUEST FOR BLOCK (SHARDERS SYNC)", sc.NumReplicators, r.Number, r.BlockHash)
+
 	_, nodes := sc.CanShardBlockWithReplicators(r.Number, r.BlockHash, self.Underlying())
 
 	if len(nodes) == 0 {

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"html/template"
 	"io/ioutil"
 	"math"
 	"net/http"
@@ -43,6 +44,7 @@ func SetupHandlers() {
 
 	http.HandleFunc("/", common.UserRateLimit(HomePageHandler))
 	http.HandleFunc("/_diagnostics", common.UserRateLimit(DiagnosticsHomepageHandler))
+	http.HandleFunc("/_diagnostics/dkg_process", common.UserRateLimit(DiagnosticsDKGHandler))
 	http.HandleFunc("/_diagnostics/round_info", common.UserRateLimit(RoundInfoHandler))
 
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
@@ -491,6 +493,7 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 		//ToDo: For sharders show who all can store the blocks
 		fmt.Fprintf(w, "<li><a href='/_diagnostics/round_info'>/_diagnostics/round_info</a>")
 	}
+	fmt.Fprintf(w, "<li><a href='/_diagnostics/dkg_process'>/_diagnostics/dkg_process</a></li>")
 	fmt.Fprintf(w, "</td>")
 
 	fmt.Fprintf(w, "<td valign='top'>")
@@ -575,6 +578,317 @@ func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 		fmt.Fprintf(w, "</tr>")
 	}
 	fmt.Fprintf(w, "</table>")
+}
+
+type dkgInfo struct {
+	Phase        *minersc.PhaseNode
+	AllMiners    *minersc.MinerNodes
+	AllSharders  *minersc.MinerNodes
+	DKGMiners    *minersc.DKGMinerNodes
+	ShardersKeep *minersc.MinerNodes
+	MPKs         *block.Mpks
+	GSoS         *block.GroupSharesOrSigns
+	MB           *block.MagicBlock
+}
+
+func (*dkgInfo) boolString(t bool) string {
+	if t {
+		return "✔"
+	}
+	return "✗"
+}
+
+func (dkgi *dkgInfo) HasMPKs(id string) string {
+	if dkgi.DKGMiners == nil || dkgi.DKGMiners.SimpleNodes == nil ||
+		dkgi.MPKs == nil || dkgi.MPKs.Mpks == nil {
+		return dkgi.boolString(false)
+	}
+	if _, ok := dkgi.DKGMiners.SimpleNodes[id]; !ok {
+		return dkgi.boolString(false)
+	}
+	if _, ok := dkgi.MPKs.Mpks[id]; !ok {
+		return dkgi.boolString(false)
+	}
+	return dkgi.boolString(true)
+}
+
+func (dkgi *dkgInfo) HasGSoS(id string) string {
+	if dkgi.DKGMiners == nil || dkgi.DKGMiners.SimpleNodes == nil ||
+		dkgi.GSoS == nil || dkgi.GSoS.Shares == nil {
+		return dkgi.boolString(false)
+	}
+	if _, ok := dkgi.DKGMiners.SimpleNodes[id]; !ok {
+		return dkgi.boolString(false)
+	}
+	if _, ok := dkgi.GSoS.Shares[id]; !ok {
+		return dkgi.boolString(false)
+	}
+	return dkgi.boolString(true)
+}
+
+func (dkgi *dkgInfo) HasWait(id string) string {
+	if dkgi.DKGMiners == nil || dkgi.DKGMiners.SimpleNodes == nil ||
+		dkgi.DKGMiners.Waited == nil {
+		return dkgi.boolString(false)
+	}
+	if _, ok := dkgi.DKGMiners.SimpleNodes[id]; !ok {
+		return dkgi.boolString(false)
+	}
+	return dkgi.boolString(dkgi.DKGMiners.Waited[id])
+}
+
+func (c *Chain) dkgInfo() (dkgi *dkgInfo, err error) {
+
+	dkgi = new(dkgInfo)
+
+	dkgi.Phase = new(minersc.PhaseNode)
+	dkgi.AllMiners = new(minersc.MinerNodes)
+	dkgi.AllSharders = new(minersc.MinerNodes)
+	dkgi.DKGMiners = new(minersc.DKGMinerNodes)
+	dkgi.ShardersKeep = new(minersc.MinerNodes)
+	dkgi.MPKs = new(block.Mpks)
+	dkgi.GSoS = new(block.GroupSharesOrSigns)
+	dkgi.MB = new(block.MagicBlock)
+
+	var (
+		lfb  = c.GetLatestFinalizedBlock()
+		seri util.Serializable
+	)
+
+	type keySeri struct {
+		name string            // for errors
+		key  string            // key
+		inst util.Serializable // instance
+	}
+
+	for _, ks := range []keySeri{
+		{"phase", minersc.PhaseKey, dkgi.Phase},
+		{"all_miners", minersc.AllMinersKey, dkgi.AllMiners},
+		{"all_shardres", minersc.AllShardersKey, dkgi.AllSharders},
+		{"dkg_miners", minersc.DKGMinersKey, dkgi.DKGMiners},
+		{"sharder_keep", minersc.ShardersKeepKey, dkgi.ShardersKeep},
+		{"mpks", minersc.MinersMPKKey, dkgi.MPKs},
+		{"gsos", minersc.GroupShareOrSignsKey, dkgi.GSoS},
+		{"MB", minersc.MagicBlockKey, dkgi.MB},
+	} {
+		seri, err = c.GetBlockStateNode(lfb, ks.key)
+		if err != nil && err != util.ErrValueNotPresent {
+			return nil, fmt.Errorf("can't get %s node: %v", ks.name, err)
+		}
+		if err == util.ErrValueNotPresent {
+			err = nil // reset the error and leave the value blank
+			continue
+		}
+		if err = ks.inst.Decode(seri.Encode()); err != nil {
+			return nil, fmt.Errorf("can't decode %s node: %v", ks.name, err)
+		}
+	}
+
+	return
+}
+
+func DiagnosticsDKGHandler(w http.ResponseWriter, r *http.Request) {
+
+	var (
+		c         = GetServerChain()
+		dkgi, err = c.dkgInfo()
+	)
+
+	if err != nil {
+		http.Error(w, "error getting DKG info: "+err.Error(), 500)
+		return
+	}
+
+	const templ = `
+<doctype html>
+<html>
+<head>
+  <title>DKG process informations</title>
+    <style>
+      .number {
+      	text-align: right; }
+      .fixed-text {
+      	overflow: hidden;
+      	white-space: nowrap;
+      	word-break: break-all;
+      	word-wrap: break-word;
+      	text-overflow: ellipsis; }
+      .menu li {
+      	list-style-type: none; }
+      table, td, th {
+      	border: 1px solid black;
+      	border-collapse: collapse;
+        padding: .2em; }
+      tr.header {
+      	background-color: #E0E0E0; }
+      .inactive {
+      	background-color: #F44336; }
+      .warning {
+      	background-color: #FFEB3B; }
+      .optimal {
+      	color: #1B5E20; }
+      .slow {
+      	font-style: italic; }
+      .bold {
+      	font-weight:bold; }
+    </style>
+</head>
+<body>
+  <h1>DKG process information</h1>
+
+  <p>
+    <h3>Phase</h3>
+    <table>
+    <tr>
+      <th>phase</th>
+      <th>start round</th>
+      <th>current round</th>
+      <th>restarts</th>
+    </tr>
+    <tr>
+      <td>{{ .Phase.Phase }}</td>
+      <td>{{ .Phase.StartRound }}</td>
+      <td>{{ .Phase.CurrentRound }}</td>
+      <td>{{ .Phase.Restarts }}</td>
+    </tr>
+    </table>
+  </p>
+
+  <p>
+    <h3>All registered miners</h3>
+    {{ if .AllMiners.Nodes }}
+      <table>
+      <tr>
+        <th>ID</th>
+        <th>Host</th>
+        <th>Total stake</th>
+      </tr>
+      {{ range $n := .AllMiners.Nodes }}
+        <tr>
+          <td>{{ trim $n.ID }}</td>
+          <td>{{ $n.N2NHost }}</td>
+          <td>{{ $n.TotalStaked }}</td>
+        </tr>
+      {{ end }}
+      </table>
+    {{ else }}
+      no miners registered yet
+    {{ end }}
+  </p>
+
+  <p>
+    <h3>All registered sharders</h3>
+    {{ if .AllSharders.Nodes }}
+      <table>
+      <tr>
+        <th>ID</th>
+        <th>Host</th>
+        <th>Total stake</th>
+      </tr>
+      {{ range $n := .AllSharders.Nodes }}
+        <tr>
+          <td>{{ trim $n.ID }}</td>
+          <td>{{ $n.N2NHost }}</td>
+          <td>{{ $n.TotalStaked }}</td>
+        </tr>
+      {{ end }}
+      </table>
+    {{ else }}
+      no sharders registered yet
+    {{ end }}
+  </p>
+
+  <p>
+    <h3>Sharders keep list</h3>
+    {{ if .ShardersKeep.Nodes }}
+      <table>
+      <tr>
+        <th>ID</th>
+        <th>Host</th>
+        <th>Total stake</th>
+      </tr>
+      {{ range $n := .ShardersKeep.Nodes }}
+        <tr>
+          <td>{{ trim $n.ID }}</td>
+          <td>{{ $n.N2NHost }}</td>
+          <td>{{ $n.TotalStaked }}</td>
+        </tr>
+      {{ end }}
+      </table>
+    {{ else }}
+      empty list for now
+    {{ end }}
+  </p>
+
+  <p>
+    <h3>DKG miners</h3>
+    <table>
+    <tr>
+      <th>T</th>
+      <th>K</th>
+      <th>N</th>
+      <th>start round</th>
+    </tr>
+    <tr>
+      <td>{{ .DKGMiners.T }}</td>
+      <td>{{ .DKGMiners.K }}</td>
+      <td>{{ .DKGMiners.N }}</td>
+      <td>{{ .DKGMiners.StartRound }}</td>
+     </tr>
+    </table>
+    {{ if .DKGMiners.SimpleNodes }}
+      {{ $dot := . }}
+      <table>
+      <tr>
+        <th>ID</th>
+        <th>Host</th>
+        <th>Total Staked</th>
+        <th>MPKs</th>
+        <th>GSoS</th>
+        <th>Wait</th>
+      </tr>
+      {{ range $id, $val := .DKGMiners.SimpleNodes }}
+        <tr>
+          <td>{{ trim $id }}</td>
+          <td>{{ $val.N2NHost }}</td>
+          <td>{{ $val.TotalStaked }}</td>
+          <td>{{ $dot.HasMPKs $id }}</td>
+          <td>{{ $dot.HasGSoS $id }}</td>
+          <td>{{ $dot.HasWait $id }}</td>
+        </tr>
+      {{ end }}
+      </table>
+    {{ else }}
+      empty DKG miners list
+    {{ end }}
+  </p>
+
+</body>
+</html>
+`
+
+	var pt = template.New("root").Funcs(map[string]interface{}{
+		"trim": func(s string) string {
+			if len(s) > 10 {
+				return fmt.Sprintf("%10s...", s)
+			}
+			return s
+		},
+		"typ": func(val interface{}) string {
+			return fmt.Sprintf("%T", val)
+		},
+	})
+
+	if pt, err = pt.Parse(templ); err != nil {
+		http.Error(w, "parsing template error: "+err.Error(), 500)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html;charset=UTF-8")
+	if err = pt.Execute(w, dkgi); err != nil {
+		http.Error(w, "executing template error: "+err.Error(), 500)
+		return
+	}
 }
 
 /*InfoHandler - handler to get the information of the chain */
@@ -704,6 +1018,7 @@ func (c *Chain) N2NStatsWriter(w http.ResponseWriter, r *http.Request) {
 		cls := ""
 		if !nd.IsActive() {
 			cls = "inactive"
+
 		}
 		if olmt < lmt {
 			cls = cls + " optimal"

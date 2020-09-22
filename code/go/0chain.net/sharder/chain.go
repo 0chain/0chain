@@ -163,8 +163,10 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 	bl.lfb.SetStateStatus(block.StateSuccessful)
 	if err = sc.InitBlockState(bl.lfb); err != nil {
 		bl.lfb.SetStateStatus(0)
-		return common.NewErrorf("load_lfb",
-			"can't init block state: %v", err) // fatal
+		Logger.Info("load_lfb -- can't initialize stored block state",
+			zap.Error(err))
+		// return common.NewErrorf("load_lfb",
+		//	"can't init block state: %v", err) // fatal
 	}
 
 	// setup lfmb first
@@ -301,18 +303,22 @@ func (sc *Chain) walkDownLookingForLFB(iter *gorocksdb.Iterator,
 
 		lfb, err = sc.GetBlockFromStore(r.BlockHash, r.Number)
 		if err != nil {
+			println("block knot found", r.Number, r.BlockHash)
 			continue // TODO: can we use os.IsNotExist(err) or should not
 		}
 
 		// check out required corresponding state
 
-		if !sc.HasClientStateStored(lfb.ClientStateHash) {
-			Logger.Warn("load_lfb, missing corresponding state",
-				zap.Int64("round", r.Number),
-				zap.String("block_hash", r.BlockHash))
-			// we can't use this block, because of missing or malformed state
-			continue
-		}
+		// Don't check the state. It can be missing if the state had synced.
+		// But it works fine anyway.
+
+		// if !sc.HasClientStateStored(lfb.ClientStateHash) {
+		// 	Logger.Warn("load_lfb, missing corresponding state",
+		// 		zap.Int64("round", r.Number),
+		// 		zap.String("block_hash", r.BlockHash))
+		// 	// we can't use this block, because of missing or malformed state
+		// 	continue
+		// }
 
 		return // got it
 	}

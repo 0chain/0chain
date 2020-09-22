@@ -919,7 +919,10 @@ func (dkgmn *DKGMinerNodes) recalculateTKN(final bool, gn *GlobalNode,
 
 	var m = min(dkgmn.MaxN, n)
 	dkgmn.N = n
-	dkgmn.K = int(math.Ceil(dkgmn.KPercent * float64(m)))
+	//
+	// don't recalculate K to avoid VC set be reduced to < K of registered
+	//
+	// dkgmn.K = int(math.Ceil(dkgmn.KPercent * float64(m)))
 	dkgmn.T = int(math.Ceil(dkgmn.TPercent * float64(m)))
 	return
 }
