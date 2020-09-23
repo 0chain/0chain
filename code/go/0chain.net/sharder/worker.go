@@ -116,9 +116,9 @@ func (sc *Chain) hasTransactions(ctx context.Context, bs *block.BlockSummary) bo
 }
 
 // isPhaseContibute
-func (sc *Chain) isPhaseContibute(ctx context.Context) (is bool) {
+func (sc *Chain) isPhaseContibute(ctx context.Context, remote bool) (is bool) {
 
-	if sc.IsActiveInChain() {
+	if sc.IsActiveInChain() && remote == false {
 		var lfb = sc.GetLatestFinalizedBlock()
 		if lfb == nil {
 			Logger.Error("is_phase_contibute -- can't get lfb")
@@ -199,9 +199,13 @@ func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
 			return
 		case <-timerCheck.C:
 
-			if !sc.IsActiveInChain() &&
-				!sc.IsRegisteredSharderKeep() &&
-				sc.isPhaseContibute(ctx) {
+			// Force remote check since the IsActieInChain may work wrong for
+			// sharders in some cases (a forgotten/missing keep transaction).
+			// This way a sharder in rare cases can double send 'keep'
+			// transaction being active (send by the callback) and here. But
+			// it's (1) not critical (2).
+			if !sc.IsRegisteredSharderKeep(true) &&
+				sc.isPhaseContibute(ctx, true) {
 
 				txn, err := sc.RegisterSharderKeep()
 				if err != nil {
@@ -217,31 +221,6 @@ func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
 				}
 
 			}
-
-		}
-	}
-}
-
-// IsActiveInChainWorker fetches LFB from sharders in latest MB and
-// makes sure, this sharder is really active in chain. Since, LFB tickets
-// sent by a sharder to other nodes from active set only. And, thus, if
-// this sharder leaves an active set it keep treating itself as active
-// (it's latest MB member).
-func (sc *Chain) IsActiveInChainWorker(ctx context.Context) {
-
-	var (
-		timerCheck = time.NewTicker(5 * time.Second)
-		doneq      = ctx.Done()
-	)
-	defer timerCheck.Stop()
-
-	for {
-		select {
-		case <-doneq:
-			return
-		case <-timerCheck.C:
-
-			sc.GetLatestFinalizedMagicBlockFromSharder(ctx)
 
 		}
 	}

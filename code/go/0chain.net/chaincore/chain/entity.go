@@ -1170,7 +1170,7 @@ func (c *Chain) GetLatestFinalizedBlock() *block.Block {
 	return c.LatestFinalizedBlock
 }
 
-//GetLatestFinalizedBlockSummary - get the latest finalized block summary
+// GetLatestFinalizedBlockSummary - get the latest finalized block summary.
 func (c *Chain) GetLatestFinalizedBlockSummary() *block.BlockSummary {
 	c.lfbMutex.RLock()
 	defer c.lfbMutex.RUnlock()

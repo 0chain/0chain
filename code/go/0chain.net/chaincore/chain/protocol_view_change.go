@@ -120,12 +120,12 @@ func (mc *Chain) isRegistered() (is bool) {
 				return scRestAPIGetSharderList
 			}
 			return ""
-		})
+		}, false)
 	return
 }
 
 func (mc *Chain) isRegisteredEx(getStatePath func(n *node.Node) string,
-	getAPIPath func(n *node.Node) string) bool {
+	getAPIPath func(n *node.Node) string, remote bool) bool {
 
 	var (
 		allNodesList = &minersc.MinerNodes{}
@@ -133,7 +133,7 @@ func (mc *Chain) isRegisteredEx(getStatePath func(n *node.Node) string,
 		selfNodeKey  = selfNode.GetKey()
 	)
 
-	if mc.IsActiveInChain() {
+	if mc.IsActiveInChain() && remote == false {
 
 		var (
 			sp        = getStatePath(selfNode)
@@ -285,7 +285,7 @@ func (mc *Chain) RegisterSharderKeep() (result *httpclientutil.Transaction, err2
 	return txn, err
 }
 
-func (mc *Chain) IsRegisteredSharderKeep() bool {
+func (mc *Chain) IsRegisteredSharderKeep(remote bool) bool {
 	return mc.isRegisteredEx(
 		func(n *node.Node) string {
 			if typ := n.Type; typ == node.NodeTypeSharder {
@@ -298,5 +298,5 @@ func (mc *Chain) IsRegisteredSharderKeep() bool {
 				return scRestAPIGetSharderKeepList
 			}
 			return ""
-		})
+		}, remote)
 }
