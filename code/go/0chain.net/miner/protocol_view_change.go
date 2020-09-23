@@ -801,6 +801,13 @@ func (mc *Chain) Wait(ctx context.Context, lfb *block.Block,
 	mc.viewChangeProcess.clearViewChange()
 	// mc.SetNextViewChange(magicBlock.StartingRound)
 
+	// TODO (sfxdx): DEBUG the skip WAIT < T and > T
+	// // TODO (sfxdx): DEBUG, REMOVE THEN
+	// if false {
+	// 	println("skip wait transaction sending (storing DKG and MB data)")
+	// 	return
+	// }
+
 	// create 'wait' transaction
 	if tx, err = mc.waitTransaction(mb); err != nil {
 		return nil, common.NewErrorf("vc_wait",
