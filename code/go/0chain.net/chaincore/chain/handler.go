@@ -156,7 +156,7 @@ func (c *Chain) roundHealthInATable(w http.ResponseWriter, r *http.Request) {
 
 	if node.Self.Underlying().Type == node.NodeTypeMiner {
 		var shares int
-		check := "X"
+		check := "✗"
 		if cr != nil {
 
 			shares = len(cr.GetVRFShares())
@@ -432,6 +432,16 @@ func (c *Chain) infraHealthInATable(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "</tr>")
 
+	// is active in chain pin
+	fmt.Fprintf(w, "<tr class='active'>")
+	fmt.Fprintf(w, "<td>")
+	fmt.Fprintf(w, "Is active in chain")
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "<td class='number'>")
+	fmt.Fprint(w, boolString(c.IsActiveInChain()))
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "</tr>")
+
 	fmt.Fprintf(w, "</table>")
 }
 
@@ -587,11 +597,12 @@ type dkgInfo struct {
 	DKGMiners    *minersc.DKGMinerNodes
 	ShardersKeep *minersc.MinerNodes
 	MPKs         *block.Mpks
-	GSoS         *block.GroupSharesOrSigns
-	MB           *block.MagicBlock
+	GSoS         *block.GroupSharesOrSigns //
+	MB           *block.MagicBlock         // prepared magic block (miner SC MB)
+	CMB          *block.MagicBlock         // current magic block
 }
 
-func (*dkgInfo) boolString(t bool) string {
+func boolString(t bool) string {
 	if t {
 		return "✔"
 	}
@@ -601,43 +612,53 @@ func (*dkgInfo) boolString(t bool) string {
 func (dkgi *dkgInfo) HasMPKs(id string) string {
 	if dkgi.DKGMiners == nil || dkgi.DKGMiners.SimpleNodes == nil ||
 		dkgi.MPKs == nil || dkgi.MPKs.Mpks == nil {
-		return dkgi.boolString(false)
+		return boolString(false)
 	}
 	if _, ok := dkgi.DKGMiners.SimpleNodes[id]; !ok {
-		return dkgi.boolString(false)
+		return boolString(false)
 	}
 	if _, ok := dkgi.MPKs.Mpks[id]; !ok {
-		return dkgi.boolString(false)
+		return boolString(false)
 	}
-	return dkgi.boolString(true)
+	return boolString(true)
 }
 
 func (dkgi *dkgInfo) HasGSoS(id string) string {
 	if dkgi.DKGMiners == nil || dkgi.DKGMiners.SimpleNodes == nil ||
 		dkgi.GSoS == nil || dkgi.GSoS.Shares == nil {
-		return dkgi.boolString(false)
+		return boolString(false)
 	}
 	if _, ok := dkgi.DKGMiners.SimpleNodes[id]; !ok {
-		return dkgi.boolString(false)
+		return boolString(false)
 	}
 	if _, ok := dkgi.GSoS.Shares[id]; !ok {
-		return dkgi.boolString(false)
+		return boolString(false)
 	}
-	return dkgi.boolString(true)
+	return boolString(true)
 }
 
 func (dkgi *dkgInfo) HasWait(id string) string {
 	if dkgi.DKGMiners == nil || dkgi.DKGMiners.SimpleNodes == nil ||
 		dkgi.DKGMiners.Waited == nil {
-		return dkgi.boolString(false)
+		return boolString(false)
 	}
 	if _, ok := dkgi.DKGMiners.SimpleNodes[id]; !ok {
-		return dkgi.boolString(false)
+		return boolString(false)
 	}
-	return dkgi.boolString(dkgi.DKGMiners.Waited[id])
+	return boolString(dkgi.DKGMiners.Waited[id])
 }
 
-func (c *Chain) dkgInfo() (dkgi *dkgInfo, err error) {
+func (dkgi *dkgInfo) IsFromPrevSet(typ, id string) string {
+	if dkgi.CMB == nil {
+		return "unknown"
+	}
+	if typ == "miner" {
+		return boolString(dkgi.CMB.Miners.HasNode(id))
+	}
+	return boolString(dkgi.CMB.Sharders.HasNode(id))
+}
+
+func (c *Chain) dkgInfo(cmb *block.MagicBlock) (dkgi *dkgInfo, err error) {
 
 	dkgi = new(dkgInfo)
 
@@ -649,6 +670,7 @@ func (c *Chain) dkgInfo() (dkgi *dkgInfo, err error) {
 	dkgi.MPKs = new(block.Mpks)
 	dkgi.GSoS = new(block.GroupSharesOrSigns)
 	dkgi.MB = new(block.MagicBlock)
+	dkgi.CMB = cmb
 
 	var (
 		lfb  = c.GetLatestFinalizedBlock()
@@ -691,7 +713,8 @@ func DiagnosticsDKGHandler(w http.ResponseWriter, r *http.Request) {
 
 	var (
 		c         = GetServerChain()
-		dkgi, err = c.dkgInfo()
+		cmb       = c.GetCurrentMagicBlock()
+		dkgi, err = c.dkgInfo(cmb)
 	)
 
 	if err != nil {
@@ -801,17 +824,20 @@ func DiagnosticsDKGHandler(w http.ResponseWriter, r *http.Request) {
   <p>
     <h3>Sharders keep list</h3>
     {{ if .ShardersKeep.Nodes }}
+      {{ $dot := . }}
       <table>
       <tr>
         <th>ID</th>
         <th>Host</th>
         <th>Total stake</th>
+        <th>Is from previous set</th>
       </tr>
       {{ range $n := .ShardersKeep.Nodes }}
         <tr>
           <td>{{ trim $n.ID }}</td>
           <td>{{ $n.N2NHost }}</td>
           <td>{{ $n.TotalStaked }}</td>
+          <td>{{ $dot.IsFromPrevSet "sharder" $n.ID }}</td>
         </tr>
       {{ end }}
       </table>
@@ -846,6 +872,7 @@ func DiagnosticsDKGHandler(w http.ResponseWriter, r *http.Request) {
         <th>MPKs</th>
         <th>GSoS</th>
         <th>Wait</th>
+        <th>Is from previous set</th>
       </tr>
       {{ range $id, $val := .DKGMiners.SimpleNodes }}
         <tr>
@@ -855,6 +882,7 @@ func DiagnosticsDKGHandler(w http.ResponseWriter, r *http.Request) {
           <td>{{ $dot.HasMPKs $id }}</td>
           <td>{{ $dot.HasGSoS $id }}</td>
           <td>{{ $dot.HasWait $id }}</td>
+          <td>{{ $dot.IsFromPrevSet "miner" $id }}</td>
         </tr>
       {{ end }}
       </table>
@@ -870,7 +898,7 @@ func DiagnosticsDKGHandler(w http.ResponseWriter, r *http.Request) {
 	var pt = template.New("root").Funcs(map[string]interface{}{
 		"trim": func(s string) string {
 			if len(s) > 10 {
-				return fmt.Sprintf("%10s...", s)
+				return fmt.Sprintf("%.10s...", s)
 			}
 			return s
 		},

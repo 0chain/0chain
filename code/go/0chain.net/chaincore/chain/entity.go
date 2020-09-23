@@ -759,18 +759,18 @@ func (c *Chain) IsBlockSharderFromHash(nRound int64, bHash string, sharder *node
 /*CanShardBlockWithReplicators - checks if the sharder can store the block with nodes that store this block*/
 func (c *Chain) CanShardBlockWithReplicators(nRound int64, hash string, sharder *node.Node) (bool, []*node.Node) {
 	if c.NumReplicators <= 0 {
-		return true, nil
+		return true, c.GetMagicBlock(nRound).Sharders.CopyNodes()
 	}
 	scores := c.nodePoolScorer.ScoreHashString(c.GetMagicBlock(nRound).Sharders, hash)
 	return sharder.IsInTopWithNodes(scores, c.NumReplicators)
 }
 
-//GetBlockSharders - get the list of sharders who would be replicating the block
+// GetBlockSharders - get the list of sharders who would be replicating the block.
 func (c *Chain) GetBlockSharders(b *block.Block) (sharders []string) {
 	//TODO: sharders list needs to get resolved per the magic block of the block
 	var (
 		sharderPool  = c.GetMagicBlock(b.Round).Sharders
-		sharderNodes = sharderPool.Nodes
+		sharderNodes = sharderPool.CopyNodes()
 	)
 	if c.NumReplicators > 0 {
 		scores := c.nodePoolScorer.ScoreHashString(sharderPool, b.Hash)

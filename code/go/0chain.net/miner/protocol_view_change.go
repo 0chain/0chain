@@ -799,7 +799,6 @@ func (mc *Chain) Wait(ctx context.Context, lfb *block.Block,
 	// don't set DKG until MB finalized
 
 	mc.viewChangeProcess.clearViewChange()
-	// mc.SetNextViewChange(magicBlock.StartingRound)
 
 	// TODO (sfxdx): DEBUG the skip WAIT < T and > T
 	// // TODO (sfxdx): DEBUG, REMOVE THEN

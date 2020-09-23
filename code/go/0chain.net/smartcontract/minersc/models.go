@@ -854,6 +854,7 @@ func min(a, b int) int {
 	return a
 }
 
+// the min_n is checked before the calculateTKN call, so, the n >= min_n
 func (dkgmn *DKGMinerNodes) calculateTKN(gn *GlobalNode, n int) {
 	dkgmn.setConfigs(gn)
 	var m = min(dkgmn.MaxN, n)

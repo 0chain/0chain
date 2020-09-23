@@ -28,6 +28,8 @@ var (
 	BlockSummaryRequestor node.EntityRequestor
 	// BlockSummariesRequestor -
 	BlockSummariesRequestor node.EntityRequestor
+	// LFBRequestor represents sharder-to-sharder LFB requester.
+	LFBRequestor node.EntityRequestor
 )
 
 // SetupS2SRequestors -
@@ -50,6 +52,18 @@ func SetupS2SRequestors() {
 
 	blockSummariesEntityMetadata := datastore.GetEntityMetadata("block_summaries")
 	BlockSummariesRequestor = node.RequestEntityHandler("/v1/_s2s/blocksummaries/get", options, blockSummariesEntityMetadata)
+
+	// sharder-to-sharder latest finalized block requester
+	var opts = &node.SendOptions{
+		Timeout:  node.TimeoutLargeMessage,
+		CODEC:    node.CODEC_MSGPACK,
+		Compress: true,
+	}
+
+	LFBRequestor = node.RequestEntityHandler(
+		"/v1/_s2s/block/latest_finalized/get",
+		opts,
+		blockEntityMetadata)
 }
 
 // SetupS2SResponders -
@@ -60,6 +74,7 @@ func SetupS2SResponders() {
 	http.HandleFunc("/v1/_s2s/block/get", node.ToN2NSendEntityHandler(RoundBlockRequestHandler))
 	http.HandleFunc("/v1/_s2s/blocksummary/get", node.ToN2NSendEntityHandler(BlockSummaryRequestHandler))
 	http.HandleFunc("/v1/_s2s/blocksummaries/get", node.ToN2NSendEntityHandler(BlockSummariesHandler))
+	http.HandlerFunc("/v1/_s2s/block/latest_finalized/get", node.ToN2NSendEntityHandler(LFBHandler))
 }
 
 // SetupX2SRespondes setups sharders responders for miner and sharders.
@@ -152,15 +167,20 @@ func BlockSummariesHandler(ctx context.Context, r *http.Request) (interface{}, e
 
 }
 
-// LatestRoundRequestHandler -
-func LatestRoundRequestHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	sc := GetSharderChain()
-	currRound := sc.GetRound(sc.GetCurrentRound())
-	if currRound != nil {
-		lr := currRound.(*round.Round)
-		return lr, nil
+// LatestRoundRequestHandler - returns latest finalized round info.
+func LatestRoundRequestHandler(ctx context.Context, r *http.Request) (
+	resp interface{}, err error) {
+
+	var (
+		sc  = GetSharderChain()
+		lfb = sc.LatestFinalizedBlock
+	)
+	var lfr = sc.GetRound(lfb.Round)
+	if lfr == nil {
+		return nil, common.NewError("no_round_info",
+			"cannot retrieve the round info")
 	}
-	return nil, common.NewError("no_round_info", "cannot retrieve the round info")
+	return lfr, nil
 }
 
 // RoundRequestHandler -
@@ -239,4 +259,12 @@ func (sc *Chain) getRoundSummaries(ctx context.Context, bounds RangeBounds) []*r
 		loop++
 	}
 	return roundS
+}
+
+// LFBHandler returns LFB to other sharders.
+func LFBHandler(ctx context.Context, r *http.Request) (
+	resp interface{}, err error) {
+
+	var sc = GetSharderChain()
+	return sc.GetLatestFinalizedBlock(), nil
 }

@@ -222,6 +222,31 @@ func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
 	}
 }
 
+// IsActiveInChainWorker fetches LFB from sharders in latest MB and
+// makes sure, this sharder is really active in chain. Since, LFB tickets
+// sent by a sharder to other nodes from active set only. And, thus, if
+// this sharder leaves an active set it keep treating itself as active
+// (it's latest MB member).
+func (sc *Chain) IsActiveInChainWorker(ctx context.Context) {
+
+	var (
+		timerCheck = time.NewTicker(5 * time.Second)
+		doneq      = ctx.Done()
+	)
+	defer timerCheck.Stop()
+
+	for {
+		select {
+		case <-doneq:
+			return
+		case <-timerCheck.C:
+
+			sc.GetLatestFinalizedMagicBlockFromSharder(ctx)
+
+		}
+	}
+}
+
 func (sc *Chain) getPruneCountRoundStorage() func(storage round.RoundStorage) int {
 	viper.SetDefault("server_chain.round_magic_block_storage.prune_below_count", chain.DefaultCountPruneRoundStorage)
 	pruneBelowCountMB := viper.GetInt("server_chain.round_magic_block_storage.prune_below_count")

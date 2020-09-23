@@ -493,7 +493,8 @@ func (sc *Chain) requestForBlockSummary(ctx context.Context, params *url.Values)
 func (sc *Chain) requestForBlock(ctx context.Context, params *url.Values, r *round.Round) *block.Block {
 	self := node.GetSelfNode(ctx)
 
-	_, nodes := sc.CanShardBlockWithReplicators(r.Number, r.BlockHash, self.Underlying())
+	_, nodes := sc.CanShardBlockWithReplicators(r.Number, r.BlockHash,
+		self.Underlying())
 
 	if len(nodes) == 0 {
 		Logger.Info("no replicators for this block (lost the block)", zap.Int64("round", r.Number))

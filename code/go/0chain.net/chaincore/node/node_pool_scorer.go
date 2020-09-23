@@ -75,7 +75,7 @@ func (n *Node) IsInTop(nodeScores []*Score, topN int) bool {
 	return false
 }
 
-// IsInTopWithNodes gets all the nodes in topN
+// IsInTopWithNodes gets all the nodes in topN.
 func (n *Node) IsInTopWithNodes(nodeScores []*Score, topN int) (bool, []*Node) {
 	nodes := make([]*Node, 0, 1)
 	inTop := false
