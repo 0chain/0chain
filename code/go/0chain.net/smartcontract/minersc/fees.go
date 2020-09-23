@@ -261,13 +261,21 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 			"can't get DKG miners: %v", err)
 	}
 
+	var waited int
 	for k := range dmn.SimpleNodes {
 		if !dmn.Waited[k] {
 			delete(dmn.SimpleNodes, k)
+			continue
 		}
+		waited++
 	}
 
-	if err = dmn.recalculateTKN(true, gn, balances); err != nil {
+	err = dmn.recalculateTKN(true, gn, balances)
+	if err == nil && waited < dmn.K {
+		err = fmt.Errorf("< K miners succeed 'wait' phase: %d < %d",
+			waited, dmn.K)
+	}
+	if err != nil {
 		Logger.Info("adjust_view_change", zap.Error(err))
 		// don't do this view change, save the gn later
 		// reset the ViewChange to previous one (for miners)

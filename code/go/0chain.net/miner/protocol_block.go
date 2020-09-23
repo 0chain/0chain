@@ -152,10 +152,46 @@ func (mc *Chain) VerifyBlockMagicBlock(ctx context.Context, b *block.Block) (
 	var (
 		mb          = b.MagicBlock
 		selfNodeKey = node.Self.Underlying().GetKey()
+		nvc         int64
 	)
 
 	if mb == nil || !mb.Miners.HasNode(selfNodeKey) {
 		return // ok
+	}
+
+	if !b.IsStateComputed() {
+		return common.NewErrorf("verify_block_mb",
+			"block state is not computed or synced %d", b.Round)
+	}
+
+	// the block state required for the NextViewChangeOfBlock to
+	// get fresh NVC value
+	if b.ClientState == nil {
+		if err = mc.InitBlockState(b); err != nil {
+			return common.NewErrorf("verify_block_mb",
+				"can't initialize block state %d: %v", b.Round, err)
+		}
+	}
+
+	if nvc, err = mc.NextViewChangeOfBlock(b); err != nil {
+		return common.NewErrorf("verify_block_mb",
+			"can't get NVC of the block %d: %v", b.Round, err)
+	}
+
+	Logger.Debug("verify_block_mb", zap.Int64("round", b.Round),
+		zap.Int64("mb_sr", mb.StartingRound), zap.Int64("nvc", nvc))
+
+	if mb.StartingRound != b.Round {
+		return common.NewErrorf("verify_block_mb", "got block with invalid "+
+			"MB, MB starting round not equal to the block round: R: %d, SR: %d",
+			b.Round, mb.StartingRound)
+	}
+
+	// check out next view change (miner SC MB rejection)
+	if mb.StartingRound != nvc {
+		return common.NewErrorf("verify_block_mb",
+			"got block with MB rejected by miner SC: %d, %d",
+			mb.StartingRound, nvc)
 	}
 
 	// check out the MB if this miner is member of it
@@ -191,9 +227,6 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 	if err = mc.VerifyBlockMagicBlockReference(b); err != nil {
 		return
 	}
-	if err = mc.VerifyBlockMagicBlock(ctx, b); err != nil {
-		return
-	}
 
 	var pb *block.Block
 	if pb = mc.GetPreviousBlock(ctx, b); pb == nil {
@@ -214,6 +247,10 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 	}
 
 	if err = mc.verifySmartContracts(ctx, b); err != nil {
+		return
+	}
+
+	if err = mc.VerifyBlockMagicBlock(ctx, b); err != nil {
 		return
 	}
 

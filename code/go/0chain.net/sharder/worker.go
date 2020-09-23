@@ -203,7 +203,7 @@ func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
 			// sharders in some cases (a forgotten/missing keep transaction).
 			// This way a sharder in rare cases can double send 'keep'
 			// transaction being active (send by the callback) and here. But
-			// it's (1) not critical (2).
+			// it's (1) not critical (2) not often.
 			if !sc.IsRegisteredSharderKeep(true) &&
 				sc.isPhaseContibute(ctx, true) {
 

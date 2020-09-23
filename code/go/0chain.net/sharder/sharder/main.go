@@ -239,7 +239,19 @@ func main() {
 
 	Logger.Info("Ready to listen to the requests")
 	chain.StartTime = time.Now().UTC()
-	log.Fatal(server.ListenAndServe())
+	Listen(server)
+	defer server.Shutdown(ctx)
+
+	// wait for SIGINT to exit
+	common.WaitSigInt()
+}
+
+func Listen(server *http.Server) {
+	var err = server.ListenAndServe()
+	if err != nil && err != http.ErrServerClosed {
+		log.Fatal(err) // fatal listening error
+	}
+	// (best effort) graceful shutdown
 }
 
 func done(ctx context.Context) {

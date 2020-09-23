@@ -122,6 +122,7 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 				zap.Int64("round", b.Round))
 			return
 		}
+
 		//TODO: Byzantine
 		mc.startRound(ctx, mr, b.GetRoundRandomSeed())
 

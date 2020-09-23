@@ -1,7 +1,9 @@
 package common
 
 import (
+	"fmt"
 	"os"
+	"os/signal"
 	"runtime"
 	"runtime/pprof"
 
@@ -20,4 +22,11 @@ func LogRuntime(logger *zap.Logger, ref zap.Field) {
 	if viper.GetBool("logging.goroutines") {
 		pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
 	}
+}
+
+// WaitSigInt blocks until SIGIN received. It logs about it to STDOUT.
+func WaitSigInt() {
+	var c = make(chan os.Signal, 2)
+	signal.Notify(c, os.Interrupt, os.Kill) // the Kill doesn't matter
+	fmt.Printf("got signal %s, exiting...\n", <-c)
 }

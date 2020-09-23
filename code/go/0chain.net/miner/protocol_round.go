@@ -386,7 +386,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		lfmbr = mc.GetLatestFinalizedMagicBlockRound(rn) // related magic block
 
 		rnoff = mbRoundOffset(rn)   //
-		nvc   = mc.NextViewChange() //
+		nvc   = mc.NextViewChange() // we can use LFB because there is VC offset
 	)
 
 	if nvc > 0 && rnoff >= nvc && lfmbr.StartingRound < nvc {
@@ -653,7 +653,9 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 		b.SetBlockState(block.StateVerificationAccepted)
 		miner := mc.GetMiners(r.GetRoundNumber()).GetNode(b.MinerID)
 		if miner == nil || miner.ProtocolStats == nil {
-			Logger.Error("verify round block -- failed miner", zap.Any("round", r.Number), zap.Any("block", b.Hash), zap.Any("miner", b.MinerID))
+			Logger.Error("verify round block -- failed miner",
+				zap.Any("round", r.Number), zap.Any("block", b.Hash),
+				zap.Any("miner", b.MinerID))
 			b.SetBlockState(block.StateVerificationFailed)
 			return false
 		}
@@ -664,12 +666,17 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			minerStats.VerificationFailures++
 			if cerr, ok := err.(*common.Error); ok {
 				if cerr.Code == RoundMismatch {
-					Logger.Debug("verify round block", zap.Any("round", r.Number), zap.Any("block", b.Hash), zap.Any("current_round", mc.GetCurrentRound()))
+					Logger.Debug("verify round block",
+						zap.Any("round", r.Number), zap.Any("block", b.Hash),
+						zap.Any("current_round", mc.GetCurrentRound()))
 				} else {
-					Logger.Error("verify round block", zap.Any("round", r.Number), zap.Any("block", b.Hash), zap.Error(err))
+					Logger.Error("verify round block",
+						zap.Any("round", r.Number), zap.Any("block", b.Hash),
+						zap.Error(err))
 				}
 			} else {
-				Logger.Error("verify round block", zap.Any("round", r.Number), zap.Any("block", b.Hash), zap.Error(err))
+				Logger.Error("verify round block", zap.Any("round", r.Number),
+					zap.Any("block", b.Hash), zap.Error(err))
 			}
 			return false
 		}

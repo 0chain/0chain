@@ -113,9 +113,15 @@ func (fbs *FSBlockStore) Write(b *block.Block) error {
 	if err = datastore.WriteJSON(w, b); err != nil {
 		return err
 	}
-	w.Close()
-	bf.Flush()
-	f.Close()
+	if err = w.Close(); err != nil {
+		return err
+	}
+	if err = bf.Flush(); err != nil {
+		return err
+	}
+	if err = f.Close(); err != nil {
+		return err
+	}
 	return nil
 }
 

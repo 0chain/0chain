@@ -43,7 +43,9 @@ func (mc *Chain) hashAndSignGeneratedBlock(ctx context.Context,
 * The context should be a background context which can be used to stop this logic if there is a new
 * block published while working on this
  */
-func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.BlockStateHandler, waitOver bool) error {
+func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
+	bsh chain.BlockStateHandler, waitOver bool) error {
+
 	b.Txns = make([]*transaction.Transaction, mc.BlockSize)
 
 	var (

@@ -519,11 +519,9 @@ func (sc *Chain) healthCheck(ctx context.Context, rNum int64, scanMode HealthChe
 					zap.Error(err))
 				current.block.RepairFailure++
 				hcStatus = HealthCheckFailure
-				println("(PS SYNC) STORE BLOCK ERROR", err.Error())
 				return
 			}
 			current.block.RepairSuccess++
-			println("(PS SYNC) STORE BLOCK", b.Round)
 		}
 	}
 
