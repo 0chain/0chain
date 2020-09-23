@@ -68,12 +68,17 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		if !mc.validateTransaction(b, txn) {
 			invalidTxns = append(invalidTxns, txn)
 			if debugTxn {
-				Logger.Info("generate block (debug transaction) error - txn creation not within tolerance", zap.String("txn", txn.Hash), zap.Int32("idx", idx), zap.Any("now", common.Now()))
+				Logger.Info("generate block (debug transaction) error - "+
+					"txn creation not within tolerance",
+					zap.String("txn", txn.Hash), zap.Int32("idx", idx),
+					zap.Any("now", common.Now()))
 			}
 			return false
 		}
 		if debugTxn {
-			Logger.Info("generate block (debug transaction)", zap.String("txn", txn.Hash), zap.Int32("idx", idx), zap.String("txn_object", datastore.ToJSON(txn).String()))
+			Logger.Info("generate block (debug transaction)",
+				zap.String("txn", txn.Hash), zap.Int32("idx", idx),
+				zap.String("txn_object", datastore.ToJSON(txn).String()))
 		}
 		if ok, err := mc.ChainHasTransaction(ctx, b.PrevBlock, txn); ok || err != nil {
 			if err != nil {
@@ -83,7 +88,10 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block, bsh chain.Bl
 		}
 		if err := mc.UpdateState(b, txn); err != nil {
 			if debugTxn {
-				Logger.Error("generate block (debug transaction) update state", zap.String("txn", txn.Hash), zap.Int32("idx", idx), zap.String("txn_object", datastore.ToJSON(txn).String()), zap.Error(err))
+				Logger.Error("generate block (debug transaction) update state",
+					zap.String("txn", txn.Hash), zap.Int32("idx", idx),
+					zap.String("txn_object", datastore.ToJSON(txn).String()),
+					zap.Error(err))
 			}
 			failedStateCount++
 			return false
