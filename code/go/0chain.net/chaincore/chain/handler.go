@@ -471,7 +471,7 @@ func (c *Chain) blocksHealthInATable(w http.ResponseWriter, r *http.Request) {
 		lfb  = c.GetLatestFinalizedBlock()
 		plfb = c.GetLocalPreviousBlock(ctx, lfb)
 
-		next [5]*block.Block // blocks after LFB
+		next [4]*block.Block // blocks after LFB
 	)
 
 	for i := range next {
@@ -480,10 +480,15 @@ func (c *Chain) blocksHealthInATable(w http.ResponseWriter, r *http.Request) {
 			continue // no round, no block
 		}
 		var hnb = r.GetHeaviestNotarizedBlock()
-		if hnb == nil {
-			continue // no notarized blocks at all
+		if hnb != nil {
+			next[i] = hnb // keep the block
+			continue
 		}
-		next[i] = hnb // keep the block
+		var pbs = r.GetProposedBlocks()
+		if len(pbs) == 0 {
+			continue
+		}
+		next[i] = pbs[0] // use first one
 	}
 
 	type blockName struct {
@@ -500,7 +505,6 @@ func (c *Chain) blocksHealthInATable(w http.ResponseWriter, r *http.Request) {
 		{itoa(lfb.Round + 2), "", next[1]},
 		{itoa(lfb.Round + 3), "", next[2]},
 		{itoa(lfb.Round + 4), "", next[3]},
-		{itoa(lfb.Round + 5), "", next[4]},
 	} {
 		var hash = "-"
 		if bn.block != nil {
@@ -508,7 +512,7 @@ func (c *Chain) blocksHealthInATable(w http.ResponseWriter, r *http.Request) {
 				boolString(bn.block.IsBlockNotarized()),
 				bn.block.PrevHash)
 		}
-		fmt.Fprintf(w, row, bn.name, hash)
+		fmt.Fprintf(w, row, bn.style, bn.name, hash)
 	}
 
 	// latest known magic block (finalized)
@@ -1338,8 +1342,8 @@ func PrintCSS(w http.ResponseWriter) {
 	fmt.Fprintf(w, ".optimal { color: #1B5E20; }\n")
 	fmt.Fprintf(w, ".slow { font-style: italic; }\n")
 	fmt.Fprintf(w, ".bold {font-weight:bold;}")
-	fmt.Fprintf(w, ".green {background-color:light-green;}")
-	fmt.Fprintf(w, ".grey {background-color:light-grey;}")
+	fmt.Fprintf(w, "tr.green td {background-color:light-green;}")
+	fmt.Fprintf(w, "tr.grey td {background-color:light-grey;}")
 	fmt.Fprintf(w, "</style>")
 }
 

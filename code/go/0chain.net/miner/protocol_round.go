@@ -881,7 +881,7 @@ type BlockConsensus struct {
 
 /*GetLatestFinalizedBlockFromSharder - request for latest finalized block from all the sharders */
 func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) []*BlockConsensus {
-	mb := mc.GetCurrentMagicBlock()
+	mb := mc.GetLatestFinalizedMagicBlock()
 	m2s := mb.Sharders
 	finalizedBlocks := make([]*BlockConsensus, 0, 1)
 	fbMutex := &sync.Mutex{}

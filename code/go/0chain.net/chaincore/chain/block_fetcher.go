@@ -333,7 +333,7 @@ func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context,
 	ticket *LFBTicket) (fb *block.Block, err error) {
 
 	var (
-		mb       = c.GetCurrentMagicBlock()
+		mb       = c.GetLatestFinalizedMagicBlock()
 		sharders = mb.Sharders
 		params   = make(url.Values)
 
@@ -418,7 +418,7 @@ func (c *Chain) getNotarizedBlockFromMiners(ctx context.Context, hash string) (
 	// requesting fallback below)
 	var (
 		lctx, cancel = context.WithTimeout(ctx, node.TimeoutLargeMessage)
-		mb           = c.GetCurrentMagicBlock()
+		mb           = c.GetLatestFinalizedMagicBlock()
 		lock         sync.Mutex
 	)
 	defer cancel() // terminate the context after all anyway

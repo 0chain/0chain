@@ -112,7 +112,7 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 
 		var (
 			lfb    = mc.GetLatestFinalizedBlock()
-			mb     = mc.GetMagicBlock(lfb.Round)
+			mb     = mc.GetLatestFinalizedMagicBlock().MagicBlock
 			active = mc.isActiveInChain(lfb, mb)
 
 			checkOnSharder = counterCheckPhaseSharder >= thresholdCheckPhase

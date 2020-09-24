@@ -28,6 +28,7 @@ func SetupWorkers(ctx context.Context) {
 	go mc.FinalizedBlockWorker(ctx, mc) // 3) sequentially processes finalized blocks
 
 	go mc.PruneStorageWorker(ctx, time.Minute*5, mc.getPruneCountRoundStorage(), mc.MagicBlockStorage, mc.roundDkg)
+	go mc.UpdateMagicBlockWorker(ctx)
 	go mc.MinerHealthCheck(ctx)
 }
 

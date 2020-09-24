@@ -43,6 +43,7 @@ func SetupWorkers(ctx context.Context) {
 
 	go sc.PruneStorageWorker(ctx, time.Minute*5, sc.getPruneCountRoundStorage(),
 		sc.MagicBlockStorage)
+	go sc.UpdateMagicBlockWorker(ctx)
 	go sc.RegisterSharderKeepWorker(ctx)
 	// Move old blocks to cloud
 	if viper.GetBool("minio.enabled") {
