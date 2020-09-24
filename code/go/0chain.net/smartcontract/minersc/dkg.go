@@ -273,6 +273,7 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 			zap.Any("error", err))
 		return err
 	}
+
 	return nil
 }
 

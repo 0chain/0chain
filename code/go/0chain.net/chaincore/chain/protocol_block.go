@@ -307,6 +307,18 @@ func (c *Chain) IsFinalizedDeterministically(b *block.Block) bool {
 	return false
 }
 
+// GetLocalPreviousBlock returns previous block for the block. Without a network
+// request. And without a storage lookup.
+func (c *Chain) GetLocalPreviousBlock(ctx context.Context, b *block.Block) (
+	pb *block.Block) {
+
+	if b.PrevBlock != nil {
+		return b.PrevBlock
+	}
+	pb, _ = c.GetBlock(ctx, b.PrevHash)
+	return
+}
+
 // GetPreviousBlock - get the previous block from the network.
 func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Block {
 

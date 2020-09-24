@@ -854,11 +854,12 @@ func min(a, b int) int {
 	return a
 }
 
-// the min_n is checked before the calculateTKN call, so, the n >= min_n
+// The min_n is checked before the calculateTKN call, so, the n >= min_n.
+// The calculateTKN used to set initial T, K, and N.
 func (dkgmn *DKGMinerNodes) calculateTKN(gn *GlobalNode, n int) {
 	dkgmn.setConfigs(gn)
 	var m = min(dkgmn.MaxN, n)
-	dkgmn.N = n
+	dkgmn.N = m
 	dkgmn.K = int(math.Ceil(dkgmn.KPercent * float64(m)))
 	dkgmn.T = int(math.Ceil(dkgmn.TPercent * float64(m)))
 }
@@ -899,10 +900,13 @@ func simpleNodesKeys(sns SimpleNodes) (ks []string) {
 	return
 }
 
+// The recalculateTKN reconstructs and checks current DKG list. It never affects
+// T, K, and N.
 func (dkgmn *DKGMinerNodes) recalculateTKN(final bool, gn *GlobalNode,
 	balances cstate.StateContextI) (err error) {
 
 	var n = len(dkgmn.SimpleNodes)
+
 	// check the lower boundary
 	if n < dkgmn.MinN {
 		return fmt.Errorf("to few miners: %d, want at least: %d", n, dkgmn.MinN)
@@ -915,16 +919,15 @@ func (dkgmn *DKGMinerNodes) recalculateTKN(final bool, gn *GlobalNode,
 
 	// check upper boundary for a final recalculation
 	if final && n > dkgmn.MaxN {
-		n = dkgmn.reduce(dkgmn.MaxN, gn, balances)
+		dkgmn.reduce(dkgmn.MaxN, gn, balances)
 	}
 
-	var m = min(dkgmn.MaxN, n)
-	dkgmn.N = n
-	//
-	// don't recalculate K to avoid VC set be reduced to < K of registered
-	//
+	// Note: don't recalculate anything here.
+
+	// var m = min(dkgmn.MaxN, n)
+	// dkgmn.N = m
 	// dkgmn.K = int(math.Ceil(dkgmn.KPercent * float64(m)))
-	dkgmn.T = int(math.Ceil(dkgmn.TPercent * float64(m)))
+	// dkgmn.T = int(math.Ceil(dkgmn.TPercent * float64(m)))
 	return
 }
 

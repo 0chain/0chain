@@ -9,6 +9,7 @@ import (
 	"math"
 	"net/http"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -124,7 +125,7 @@ func RecentFinalizedBlockHandler(ctx context.Context, r *http.Request) (interfac
 	return fbs, nil
 }
 
-//StartTime - time when the server has started
+// StartTime - time when the server has started.
 var StartTime time.Time
 
 /*HomePageHandler - provides basic info when accessing the home page of the server */
@@ -445,9 +446,73 @@ func (c *Chain) infraHealthInATable(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</table>")
 }
 
+func trim(s string) string {
+	if len(s) > 10 {
+		return fmt.Sprintf("%.10s...", s)
+	}
+	return s
+}
+
+func itoa(i int64) string {
+	return strconv.FormatInt(i, 10)
+}
+
+func (c *Chain) blocksHealthInATable(w http.ResponseWriter, r *http.Request) {
+
+	const row = "<tr class='active'><td>%s</td><td class='number'>%s</td></tr>"
+
+	var (
+		ctx  = r.Context()
+		lfb  = c.GetLatestFinalizedBlock()
+		plfb = c.GetLocalPreviousBlock(ctx, lfb)
+
+		next [4]*block.Block // blocks after LFB
+	)
+
+	var cb = lfb
+	for i := range next {
+		if cb == nil {
+			continue // no blocks earlier
+		}
+		var r = c.GetRound(cb.Round + 1)
+		if r == nil {
+			continue // no round, no block
+		}
+		var hnb = r.GetHeaviestNotarizedBlock()
+		if hnb == nil {
+			continue // no notarized blocks at all
+		}
+		next[i] = hnb // keep the block
+	}
+
+	type blockName struct {
+		block *block.Block
+		name  string
+	}
+
+	fmt.Fprintf(w, "<table class='menu' style='border-collapse: collapse;'>")
+	for i, bn := range []blockName{
+		{itoa(lfb.Round - 1), plfb},
+		{"LFB", lfb},
+		{itoa(lfb.Round + 1), next[0]},
+		{itoa(lfb.Round + 2), next[1]},
+		{itoa(lfb.Round + 3), next[2]},
+		{itoa(lfb.Round + 4), next[3]},
+	} {
+		var hash = "-"
+		if bn.block != nil {
+			hash = trim(bn.block.Hash) + " "           //
+			+boolString(bn.block.IsBlockNotarized()) + //
+				" -> " + trim(bn.block.PrevHash) // the chain
+		}
+		fmt.Fprintf(w, row, bn.name, hash)
+	}
+	fmt.Fprintf(w, "</table>")
+}
+
 func (c *Chain) healthSummaryInTables(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<table class='menu' cellspacing='10' style='border-collapse: collapse;'>")
-	fmt.Fprintf(w, "<tr class='header'><td>Round Health</td><td>Chain Health</td><td>Infra Health</td></tr>")
+	fmt.Fprintf(w, "<tr class='header'><td>Round Health</td><td>Chain Health</td><td>Infra Health</td><td>Blocks</td></tr>")
 	fmt.Fprintf(w, "<tr>")
 
 	fmt.Fprintf(w, "<td valign='top'>")
@@ -459,6 +524,10 @@ func (c *Chain) healthSummaryInTables(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Fprintf(w, "<td valign='top'>")
 	c.infraHealthInATable(w, r)
+	fmt.Fprintf(w, "</td>")
+
+	fmt.Fprintf(w, "<td valign='top'>")
+	c.blocksHealthInATable(w, r)
 	fmt.Fprintf(w, "</td>")
 
 	fmt.Fprintf(w, "</tr>")
@@ -896,12 +965,7 @@ func DiagnosticsDKGHandler(w http.ResponseWriter, r *http.Request) {
 `
 
 	var pt = template.New("root").Funcs(map[string]interface{}{
-		"trim": func(s string) string {
-			if len(s) > 10 {
-				return fmt.Sprintf("%.10s...", s)
-			}
-			return s
-		},
+		"trim": trim,
 		"typ": func(val interface{}) string {
 			return fmt.Sprintf("%T", val)
 		},
