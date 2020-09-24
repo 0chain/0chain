@@ -1,7 +1,7 @@
 #!/bin/sh
 
-echo "cleaning 7 mines..."
-for i in $(seq 1 7)
+echo "cleaning 8 mines..."
+for i in $(seq 1 8)
 do
   echo "deleting miner$i logs"
   rm -rf ./miner$i/log/*

@@ -13,10 +13,10 @@ smart_contracts:
 
   minersc:
     # miners
-    max_n: 7 # 100
+    max_n: 6 # 100
     min_n: 2 # 3
     # sharders
-    max_s: 3 # 30
+    max_s: 2 # 30
     min_s: 1 # 1
     # max delegates allowed by SC
     max_delegates: 200 #
