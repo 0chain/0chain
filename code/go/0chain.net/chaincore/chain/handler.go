@@ -459,22 +459,23 @@ func itoa(i int64) string {
 
 func (c *Chain) blocksHealthInATable(w http.ResponseWriter, r *http.Request) {
 
-	const row = "<tr class='active'><td>%s</td><td class='number'>%s</td></tr>"
+	// formats
+	const (
+		row  = "<tr%s><td>%s</td><td class='number'>%s</td></tr>"
+		info = "%.10s %s -> %.5s"
+		lkmb = "<tr class='grey'><td>LFMB</td><td class='number'>%d %.10s</td></tr>"
+	)
 
 	var (
 		ctx  = r.Context()
 		lfb  = c.GetLatestFinalizedBlock()
 		plfb = c.GetLocalPreviousBlock(ctx, lfb)
 
-		next [4]*block.Block // blocks after LFB
+		next [5]*block.Block // blocks after LFB
 	)
 
-	var cb = lfb
 	for i := range next {
-		if cb == nil {
-			continue // no blocks earlier
-		}
-		var r = c.GetRound(cb.Round + 1)
+		var r = c.GetRound(lfb.Round + 1 + int64(i))
 		if r == nil {
 			continue // no round, no block
 		}
@@ -486,27 +487,33 @@ func (c *Chain) blocksHealthInATable(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type blockName struct {
-		block *block.Block
 		name  string
+		style string
+		block *block.Block
 	}
 
 	fmt.Fprintf(w, "<table class='menu' style='border-collapse: collapse;'>")
-	for i, bn := range []blockName{
-		{itoa(lfb.Round - 1), plfb},
-		{"LFB", lfb},
-		{itoa(lfb.Round + 1), next[0]},
-		{itoa(lfb.Round + 2), next[1]},
-		{itoa(lfb.Round + 3), next[2]},
-		{itoa(lfb.Round + 4), next[3]},
+	for _, bn := range []blockName{
+		{itoa(lfb.Round - 1), " class='green'", plfb},
+		{"LFB", " class='green'", lfb},
+		{itoa(lfb.Round + 1), "", next[0]},
+		{itoa(lfb.Round + 2), "", next[1]},
+		{itoa(lfb.Round + 3), "", next[2]},
+		{itoa(lfb.Round + 4), "", next[3]},
+		{itoa(lfb.Round + 5), "", next[4]},
 	} {
 		var hash = "-"
 		if bn.block != nil {
-			hash = trim(bn.block.Hash) + " "           //
-			+boolString(bn.block.IsBlockNotarized()) + //
-				" -> " + trim(bn.block.PrevHash) // the chain
+			hash = fmt.Sprintf(info, bn.block.Hash,
+				boolString(bn.block.IsBlockNotarized()),
+				bn.block.PrevHash)
 		}
 		fmt.Fprintf(w, row, bn.name, hash)
 	}
+
+	// latest known magic block (finalized)
+	var lfmb = c.GetLatestMagicBlock()
+	fmt.Fprintf(w, lkmb, lfmb.StartingRound, lfmb.Hash)
 	fmt.Fprintf(w, "</table>")
 }
 
@@ -1331,6 +1338,8 @@ func PrintCSS(w http.ResponseWriter) {
 	fmt.Fprintf(w, ".optimal { color: #1B5E20; }\n")
 	fmt.Fprintf(w, ".slow { font-style: italic; }\n")
 	fmt.Fprintf(w, ".bold {font-weight:bold;}")
+	fmt.Fprintf(w, ".green {background-color:light-green;}")
+	fmt.Fprintf(w, ".grey {background-color:light-grey;}")
 	fmt.Fprintf(w, "</style>")
 }
 

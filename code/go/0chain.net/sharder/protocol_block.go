@@ -2,11 +2,9 @@ package sharder
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math"
 	"net/url"
-	"sort"
 	"strconv"
 	"time"
 
@@ -113,50 +111,6 @@ func (sc *Chain) hasRelatedMagicBlock(b *block.Block) (ok bool) {
 		mb         = sc.GetMagicBlock(b.Round)
 	)
 	return mb.StartingRound == relatedmbr
-}
-
-// UpdateLatesMagicBlockFromSharders pulls latest finalized magic block
-// from another sharders and verifies magic blocks chain. The method blocks
-// execution flow (it's synchronous).
-func (sc *Chain) UpdateLatesMagicBlockFromSharders(ctx context.Context) (
-	err error) {
-
-	var mbs = sc.GetLatestFinalizedMagicBlockFromSharder(ctx)
-	if len(mbs) == 0 {
-		return errors.New("no finalized magic block from sharders given")
-	}
-
-	if len(mbs) > 1 {
-		sort.Slice(mbs, func(i, j int) bool {
-			return mbs[i].StartingRound > mbs[j].StartingRound
-		})
-	}
-
-	var (
-		magicBlock = mbs[0]
-		cmb        = sc.GetCurrentMagicBlock()
-	)
-
-	Logger.Info("get current magic block from sharders",
-		zap.Any("magic_block", magicBlock))
-
-	if magicBlock.StartingRound <= cmb.StartingRound {
-		return nil // earlier then the current one
-	}
-
-	err = sc.VerifyChainHistory(ctx, magicBlock, sc.SaveMagicBlockHandler)
-	if err != nil {
-		return fmt.Errorf("failed to verify chain history: %v", err.Error())
-	}
-
-	if err = sc.UpdateMagicBlock(magicBlock.MagicBlock); err != nil {
-		return fmt.Errorf("failed to update magic block: %v", err.Error())
-	}
-
-	sc.UpdateNodesFromMagicBlock(magicBlock.MagicBlock)
-	sc.SetLatestFinalizedMagicBlock(magicBlock)
-
-	return // ok, updated
 }
 
 // pull related magic block if missing (sync)

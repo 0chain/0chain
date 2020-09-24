@@ -304,12 +304,18 @@ func (c *Chain) GetHeaviestNotarizedBlock(ctx context.Context, r round.RoundI) (
 
 /*GetLatestFinalizedBlockFromSharder - request for latest finalized block from all the sharders */
 func (c *Chain) GetLatestFinalizedMagicBlockFromSharder(ctx context.Context) []*block.Block {
-	mb := c.GetCurrentMagicBlock()
-	n2s := mb.Sharders
 
-	finalizedMagicBlocks := make([]*block.Block, 0, 1)
-	fmbMutex := &sync.Mutex{}
-	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
+	var (
+		mb  = c.GetLatestFinalizedMagicBlock() // use LFMB
+		n2s = mb.Sharders
+
+		snk = node.Self.Underlying().GetKey()
+
+		finalizedMagicBlocks = make([]*block.Block, 0, 1)
+		fmbMutex             sync.Mutex
+	)
+
+	var handler = func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 		mb, ok := entity.(*block.Block)
 		if mb == nil {
 			return nil, nil
@@ -317,6 +323,7 @@ func (c *Chain) GetLatestFinalizedMagicBlockFromSharder(ctx context.Context) []*
 		if !ok {
 			return nil, datastore.ErrInvalidEntity
 		}
+
 		fmbMutex.Lock()
 		defer fmbMutex.Unlock()
 		for _, b := range finalizedMagicBlocks {
@@ -327,10 +334,15 @@ func (c *Chain) GetLatestFinalizedMagicBlockFromSharder(ctx context.Context) []*
 		finalizedMagicBlocks = append(finalizedMagicBlocks, mb)
 		return mb, nil
 	}
-	n2s.RequestEntityFromAll(ctx, LatestFinalizedMagicBlockRequestor, nil, handler)
-	if n2s.HasNode(node.Self.Underlying().GetKey()) {
-		finalizedMagicBlocks = append(finalizedMagicBlocks, c.GetLatestFinalizedMagicBlock())
+
+	n2s.RequestEntityFromAll(ctx, LatestFinalizedMagicBlockRequestor, nil,
+		handler)
+
+	if n2s.HasNode(snk) {
+		finalizedMagicBlocks = append(finalizedMagicBlocks,
+			c.GetLatestFinalizedMagicBlock())
 	}
+
 	return finalizedMagicBlocks
 }
 

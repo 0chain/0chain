@@ -1,18 +1,16 @@
 package chain
 
-/*
-LOOKS GOOD. NEEDS MORE TESTING BEFORE COMMITED!!!!
-*/
-
 import (
-	"0chain.net/chaincore/round"
 	"context"
+	"errors"
 	"fmt"
+	"sort"
 	"time"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
+	"0chain.net/chaincore/round"
 	"0chain.net/core/common"
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -235,4 +233,88 @@ func (c *Chain) PruneStorageWorker(ctx context.Context, d time.Duration,
 			c.PruneRoundStorage(ctx, getCountRoundStorage, storage...)
 		}
 	}
+}
+
+// MagicBlockSaver represents a node with ability to save a received and
+// verified magic block.
+type MagicBlockSaver interface {
+	SaveMagicBlock() MagicBlockSaveFunc // get the saving function
+}
+
+// UpdateLatesMagicBlockFromSharders pulls latest finalized magic block
+// from sharders and verifies magic blocks chain. The method blocks
+// execution flow (it's synchronous).
+func (sc *Chain) UpdateLatesMagicBlockFromSharders(ctx context.Context) (
+	err error) {
+
+	var mbs = sc.GetLatestFinalizedMagicBlockFromSharder(ctx)
+	if len(mbs) == 0 {
+		return errors.New("no finalized magic block from sharders given")
+	}
+
+	if len(mbs) > 1 {
+		sort.Slice(mbs, func(i, j int) bool {
+			return mbs[i].StartingRound > mbs[j].StartingRound
+		})
+	}
+
+	var (
+		magicBlock = mbs[0]
+		cmb        = sc.GetCurrentMagicBlock()
+	)
+
+	Logger.Info("get current magic block from sharders",
+		zap.Any("magic_block", magicBlock))
+
+	if magicBlock.StartingRound <= cmb.StartingRound {
+		return nil // earlier then the current one
+	}
+
+	var saveMagicBlock MagicBlockSaveFunc
+	if sc.magicBlockSaver != nil {
+		saveMagicBlock = sc.magicBlockSaver.SaveMagicBlock()
+	}
+
+	err = sc.VerifyChainHistory(ctx, magicBlock, saveMagicBlock)
+	if err != nil {
+		return fmt.Errorf("failed to verify chain history: %v", err.Error())
+	}
+
+	if err = sc.UpdateMagicBlock(magicBlock.MagicBlock); err != nil {
+		return fmt.Errorf("failed to update magic block: %v", err.Error())
+	}
+
+	sc.UpdateNodesFromMagicBlock(magicBlock.MagicBlock)
+	sc.SetLatestFinalizedMagicBlock(magicBlock)
+
+	return // ok, updated
+}
+
+// UpdateMagicBlockWorker updates latest finalized magic block from active
+// sharders periodically.
+func (c *Chain) UpdateMagicBlockWorker(ctx context.Context) {
+
+	var (
+		tick = time.NewTicker(5 * time.Second)
+
+		tickq = tick.C
+		doneq = ctx.Done()
+
+		err error
+	)
+
+	defer tick.Stop()
+
+	for {
+		select {
+		case <-doneq:
+			return
+		case <-tickq:
+		}
+
+		if err = c.UpdateLatesMagicBlockFromSharders(ctx); err != nil {
+			Logger.Error("update_mb_worker", zap.Error(err))
+		}
+	}
+
 }

@@ -34,6 +34,7 @@ func SetupSharderChain(c *chain.Chain) {
 	c.SetFetchedNotarizedBlockHandler(sharderChain)
 	c.SetViewChanger(sharderChain)
 	c.SetAfterFetcher(sharderChain)
+	c.SetMagicBlockSaver(sharderChain)
 	sharderChain.BlockSyncStats = &SyncStats{}
 	sharderChain.TieringStats = &MinioStats{}
 	c.RoundF = SharderRoundFactory{}
