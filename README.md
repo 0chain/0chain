@@ -507,3 +507,12 @@ And
 
 Don't forget to rollback changes, clean and rebuild applications for
 regular usage.
+
+# Dump all logs.
+
+To dump 0chain and n2n logs of all nodes use
+```
+./docker.local/bin/dump_logs.sh
+```
+The dump will be place in `./docker.local/log_dumps/` under file name
+with current timestamp. This directory is ignored by git VCS.

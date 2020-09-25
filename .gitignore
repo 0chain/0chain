@@ -47,3 +47,6 @@ cover.out
 code/go/0chain.net/conductor/conductor/conductor
 
 conductor/logs/*
+
+# log dumps
+docker.local/log_dumps
