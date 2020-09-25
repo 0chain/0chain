@@ -55,7 +55,7 @@ func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 	)
 
 	var (
-		secShare           = mc.viewChangeProcess.viewChangeDKG.Sij[nodeID]
+		secShare           = mc.getNodeSij(nodeID)
 		shareOrSignSuccess = make(map[string]*bls.DKGKeyShare)
 	)
 
@@ -104,10 +104,7 @@ func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 		return common.NewError("send_dkg_share", "miner returned error")
 	}
 
-	for id, share := range shareOrSignSuccess {
-		mc.viewChangeProcess.shareOrSigns.ShareOrSigns[id] = share
-	}
-
+	mc.setSecretShares(shareOrSignSuccess)
 	return
 }
 

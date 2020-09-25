@@ -1224,19 +1224,7 @@ func (mc *Chain) restartRound(ctx context.Context) {
 	if mc.isJoining(crn) {
 		Logger.Info("restartRound node is joining on VC",
 			zap.Int64("round", crn))
-		// pull previous round
-		var pr = mc.GetMinerRound(crn - 1)
-		if pr == nil {
-			var nr = round.NewRound(crn - 1)
-			pr = mc.CreateRound(nr)
-			pr = mc.AddRound(pr).(*Round)
-		}
-		if !pr.HasRandomSeed() {
-			mc.pullNotarizedBlocks(ctx, pr)
-		}
-		// pull current round
-		mc.pullNotarizedBlocks(ctx, r)
-		return
+		mc.pullNotarizedBlocks(ctx, r) // pull current round if missing
 	}
 
 	var isAhead = mc.isAheadOfSharders(ctx, crn)

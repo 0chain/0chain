@@ -47,7 +47,7 @@ func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 	)
 
 	var (
-		secShare           = mc.viewChangeProcess.viewChangeDKG.Sij[nodeID]
+		secShare           = mc.getNodeSij(nodeID)
 		shareOrSignSuccess = make(map[string]*bls.DKGKeyShare)
 	)
 
@@ -88,10 +88,7 @@ func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 		return common.NewError("send_dkg_share", "miner returned error")
 	}
 
-	for id, share := range shareOrSignSuccess {
-		mc.viewChangeProcess.shareOrSigns.ShareOrSigns[id] = share
-	}
-
+	mc.setSecretShares(shareOrSignSuccess)
 	return
 }
 
@@ -110,7 +107,6 @@ func (mc *Chain) PublishShareOrSigns(_ context.Context, lfb *block.Block,
 	defer mc.viewChangeProcess.Unlock()
 
 	if !mc.viewChangeProcess.isDKGSet() {
-		println("VC: PUBLISH SOS: NO DKG (1)")
 		return nil, common.NewError("publish_sos", "DKG is not set")
 	}
 
@@ -121,11 +117,9 @@ func (mc *Chain) PublishShareOrSigns(_ context.Context, lfb *block.Block,
 
 	var mpks *block.Mpks
 	if mpks, err = mc.getMinersMpks(lfb, mb, active); err != nil {
-		println("VC: PUBLISH SOS: GET MPKS ERROR:", err.Error())
 		return nil, err
 	}
 	if _, ok := mpks.Mpks[selfNodeKey]; !ok {
-		println("VC: PUBLISH SOS: NO SELF IN MPKS")
 		return // (nil, nil)
 	}
 
@@ -140,11 +134,9 @@ func (mc *Chain) PublishShareOrSigns(_ context.Context, lfb *block.Block,
 
 	var dmn *minersc.DKGMinerNodes
 	if dmn, err = mc.getDKGMiners(lfb, mb, active); err != nil {
-		println("VC: PUBLISH SOS: ERROR GETTING DKG MINERS", err.Error())
 		return nil, err
 	}
 	if len(dmn.SimpleNodes) == 0 {
-		println("VC: PUBLISH SOS: NO MINERS IN DKG ERROR")
 		return nil, common.NewError("publish_sos", "no miners in DKG")
 	}
 
@@ -156,7 +148,6 @@ func (mc *Chain) PublishShareOrSigns(_ context.Context, lfb *block.Block,
 	var _, ok = sos.Validate(mpks, publicKeys,
 		chain.GetServerChain().GetSignatureScheme())
 	if !ok {
-		println("VC: PUBLISH SOS: FAILED TO VERIFY SOS")
 		Logger.Error("failed to verify share or signs", zap.Any("mpks", mpks))
 	}
 
@@ -174,7 +165,6 @@ func (mc *Chain) PublishShareOrSigns(_ context.Context, lfb *block.Block,
 		var nodeSend = node.GetNode(id)
 		if nodeSend == nil {
 			Logger.Warn("failed to get node", zap.Any("id", id))
-			println("VC: PUBLISH SOS: FAILED TO GET NODE")
 			continue
 		}
 		minerUrls = append(minerUrls, nodeSend.GetN2NURLBase())
@@ -182,7 +172,6 @@ func (mc *Chain) PublishShareOrSigns(_ context.Context, lfb *block.Block,
 	err = httpclientutil.SendSmartContractTxn(tx, minersc.ADDRESS, 0, 0, data,
 		minerUrls)
 	if err != nil {
-		println("SENDING TRANSACTION ERROR:", err.Error())
 	}
 	return
 }

@@ -19,6 +19,8 @@ import (
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/minersc"
 
+	hbls "github.com/herumi/bls/ffi/go/bls"
+
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
@@ -397,12 +399,8 @@ func (vcp *viewChangeProcess) isDKGSet() bool {
 //                                 S H A R E
 //
 
-func (mc *Chain) SendSijs(ctx context.Context, lfb *block.Block,
-	mb *block.MagicBlock, active bool) (tx *httpclientutil.Transaction,
-	err error) {
-
-	var tp = before("DKG send sijs {")
-	defer after(tp, "DKG send sijs }")
+func (mc *Chain) sendSijsPrepare(ctx context.Context, lfb *block.Block,
+	mb *block.MagicBlock, active bool) (sendTo []string, err error) {
 
 	mc.viewChangeProcess.Lock()
 	defer mc.viewChangeProcess.Unlock()
@@ -431,21 +429,61 @@ func (mc *Chain) SendSijs(ctx context.Context, lfb *block.Block,
 	// createSijs registers them; and after a restart ('deregister')
 	// we have to restart DKG for this miner, since secret key is lost
 
-	var sendFail []string
 	for key := range dkgMiners.SimpleNodes {
 		if key == selfNodeKey {
 			continue // don't send to self
 		}
 		if _, ok := mc.viewChangeProcess.shareOrSigns.ShareOrSigns[key]; !ok {
-			if err := mc.sendDKGShare(ctx, key); err != nil {
-				sendFail = append(sendFail, fmt.Sprintf("%s(%v);", key, err))
-			}
+			sendTo = append(sendTo, key)
+		}
+	}
+
+	return
+}
+
+func (mc *Chain) getNodeSij(nodeID hbls.ID) (secShare hbls.SecretKey) {
+	mc.viewChangeProcess.Lock()
+	defer mc.viewChangeProcess.Unlock()
+
+	return mc.viewChangeProcess.viewChangeDKG.Sij[nodeID]
+}
+
+func (mc *Chain) setSecretShares(shareOrSignSuccess map[string]*bls.DKGKeyShare) {
+
+	mc.viewChangeProcess.Lock()
+	defer mc.viewChangeProcess.Unlock()
+
+	for id, share := range shareOrSignSuccess {
+		mc.viewChangeProcess.shareOrSigns.ShareOrSigns[id] = share
+	}
+}
+
+func (mc *Chain) SendSijs(ctx context.Context, lfb *block.Block,
+	mb *block.MagicBlock, active bool) (tx *httpclientutil.Transaction,
+	err error) {
+
+	var tp = before("DKG send sijs {")
+	defer after(tp, "DKG send sijs }")
+
+	var (
+		sendFail []string
+		sendTo   []string
+	)
+
+	// it locks the mutex, but after, its free
+	if sendTo, err = mc.sendSijsPrepare(ctx, lfb, mb, active); err != nil {
+		return
+	}
+
+	for _, key := range sendTo {
+		if err := mc.sendDKGShare(ctx, key); err != nil {
+			sendFail = append(sendFail, fmt.Sprintf("%s(%v);", key, err))
 		}
 	}
 
 	if len(sendFail) > 0 {
-		return nil, common.NewError("failed to send sijs",
-			fmt.Sprintf("failed to send share to miners: %v", sendFail))
+		return nil, common.NewErrorf("failed to send sijs",
+			"failed to send share to miners: %v", sendFail)
 	}
 
 	return // (nil, nil)
