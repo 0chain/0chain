@@ -257,9 +257,6 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 					pn.Restarts = 0
 				}
 				pn.StartRound = pn.CurrentRound
-				if msc.callbackPhase != nil {
-					msc.callbackPhase(pn.Phase)
-				}
 			}
 		} else {
 			Logger.Warn("failed to move phase",

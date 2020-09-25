@@ -88,7 +88,7 @@ func (tc *timeoutCounter) AddTimeoutVote(num int, id string) {
 			}
 			return -1
 		}
-		println("VRFS (ADD T V):")
+		println("VRFS (ADD T V) (own count:", tc.count, "):")
 		for id, nuum := range tc.votes {
 			println("  -", num, id, "rank", rank(tc, id))
 		}

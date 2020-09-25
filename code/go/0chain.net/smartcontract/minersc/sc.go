@@ -54,7 +54,6 @@ type MinerSmartContract struct {
 
 	mutexMinerMPK          sync.RWMutex
 	smartContractFunctions map[string]smartContractFunction
-	callbackPhase          func(Phase)
 }
 
 func (msc *MinerSmartContract) GetName() string {
@@ -241,8 +240,4 @@ func (msc *MinerSmartContract) getUserNode(id string, balances cstate.StateConte
 	}
 	un.Decode(us.Encode())
 	return un, err
-}
-
-func (msc *MinerSmartContract) SetCallbackPhase(CallbackPhase func(Phase)) {
-	msc.callbackPhase = CallbackPhase
 }
