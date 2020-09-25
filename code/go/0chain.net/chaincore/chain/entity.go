@@ -21,9 +21,13 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	. "0chain.net/core/logging"
+
 	"0chain.net/core/util"
+	"0chain.net/smartcontract/minersc"
+
 	"github.com/spf13/viper"
+
+	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -156,6 +160,9 @@ type Chain struct {
 	broadcastLFBTicket chan *block.Block    // broadcast (update by LFB)
 	subLFBTicket       chan chan *LFBTicket // } wait for a received LFBTicket
 	unsubLFBTicket     chan chan *LFBTicket // }
+
+	// precise DKG phases tracking
+	phaseEvents chan PhaseEvent
 }
 
 var chainEntityMetadata *datastore.EntityMetadataImpl
@@ -400,6 +407,8 @@ func Provider() datastore.Entity {
 	c.broadcastLFBTicket = make(chan *block.Block, 100) //
 	c.subLFBTicket = make(chan chan *LFBTicket, 1)      //
 	c.unsubLFBTicket = make(chan chan *LFBTicket, 1)    //
+
+	c.phaseEvents = make(chan PhaseEvent, 1) // at least 1 for buffer required
 
 	return c
 }
@@ -1393,9 +1402,32 @@ func (c *Chain) SetLatestDeterministicBlock(b *block.Block) {
 	}
 }
 
+func (c *Chain) callViewChange(ctx context.Context, lfb *block.Block) (
+	err error) {
+
+	if c.viewChanger == nil {
+		return // no ViewChanger no work here
+	}
+
+	// extract and send DKG phase first
+	var pn minersc.PhaseNode
+	if pn, err = c.GetPhaseOfBlock(lfb); err != nil {
+		return common.NewErrorf("view_change", "getting phase node: %v", err)
+	}
+
+	// even if it executed on a shader we don't treat this phase as obtained
+	// from sharders
+	c.sendPhase(pn, false) // optimistic, never block here
+
+	// this work is different for miners and sharders
+	return c.viewChanger.ViewChange(ctx, lfb)
+}
+
 // The ViewChanger represents node makes view change where a block with new
-// magic block finalized.
+// magic block finalized. It called for every finalized block and used not
+// only for a ViewChange.
 type ViewChanger interface {
+	// ViewCahgne is method called for every finalized block.
 	ViewChange(ctx context.Context, lfb *block.Block) (err error)
 }
 

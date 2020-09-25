@@ -3,12 +3,11 @@ package miner
 import (
 	"context"
 	"fmt"
-	"math"
-	"reflect"
 	"sync"
 	"time"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
@@ -30,7 +29,6 @@ const (
 	scNamePublishShares = "shareSignsOrShares"
 	scNameWait          = "wait"
 	// REST API requests
-	scRestAPIGetPhase      = "/getPhase"
 	scRestAPIGetDKGMiners  = "/getDkgList"
 	scRestAPIGetMinersMPKS = "/getMpksList"
 	scRestAPIGetMagicBlock = "/getMagicBlock"
@@ -42,12 +40,6 @@ const (
 type SmartContractFunctions func(ctx context.Context, lfb *block.Block,
 	lfmb *block.MagicBlock, isActive bool) (tx *httpclientutil.Transaction,
 	err error)
-
-// The phaseEvent represents phases changes tracking.
-type phaseEvent struct {
-	phase   minersc.PhaseNode // current phase node
-	sharder bool              // synced from sharders
-}
 
 // view change process controlling
 type viewChangeProcess struct {
@@ -62,9 +54,6 @@ type viewChangeProcess struct {
 	// round we expect next view change (can be adjusted)
 	nvcmx          sync.RWMutex
 	nextViewChange int64 // expected
-
-	// phase events (should be buffered)
-	phaseEvents chan phaseEvent
 }
 
 func (vcp *viewChangeProcess) CurrentPhase() minersc.Phase {
@@ -87,16 +76,6 @@ func (vcp *viewChangeProcess) init(mc *Chain) {
 	vcp.shareOrSigns.ID = node.Self.Underlying().GetKey()
 	vcp.currentPhase = minersc.Unknown
 	vcp.mpks = block.NewMpks()
-	vcp.phaseEvents = make(chan phaseEvent, 1)
-}
-
-// The sendPhase optimistically (never blocks) triggers DKG phase changes.
-func (vcp *viewChangeProcess) sendPhase(pn minersc.PhaseNode, sharder bool) {
-	select {
-	case vcp.phaseEvents <- phaseEvent{phase: pn, sharder: sharder}:
-	default:
-		// don't block
-	}
 }
 
 // DKGProcess starts DKG process and works on it. It blocks.
@@ -108,9 +87,9 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 	)
 
 	var (
-		phaseq = mc.viewChangeProcess.phaseEvents //
-		pe     phaseEvent                         //
-		last   time.Time                          // last time phase event given
+		phaseq = mc.PhaseEvents() //
+		pe     chain.PhaseEvent   //
+		last   time.Time          // last time phase event given
 
 		// if a phase event didn't given after the 'repeat' period,
 		// then request it from sharders; so, for an inactive node we
@@ -136,16 +115,17 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			// goroutine here, and phases events sending is non-blocking (can
 			// skip, reject the event); then the pahsesEvent channel should be
 			// buffered (at least 1 element in the buffer)
-			mc.getPhaseFromSharders()
+			mc.GetPhaseFromSharders()
+			continue
 		case pe = <-phaseq:
-			if !pe.sharder {
+			if !pe.Sharders {
 				last = time.Now() // keep last time the phase given by the miner
 			}
 		}
 
-		println("DKG PE", pe.phase.Phase.String(), "GOT", pe.phase.StartRound, "HAVE", phaseRound, "CP", mc.CurrentPhase())
+		println("DKG PE", pe.Phase.Phase.String(), "GOT", pe.Phase.StartRound, "HAVE", phaseRound, "CP", mc.CurrentPhase())
 
-		if pe.phase.StartRound == phaseRound {
+		if pe.Phase.StartRound == phaseRound {
 			continue // phase already accepted
 		}
 
@@ -154,10 +134,10 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			mb     = mc.GetLatestFinalizedMagicBlock().MagicBlock
 			active = mc.IsActiveInChain()
 
-			pn = pe.phase
+			pn = pe.Phase
 		)
 
-		if active && pe.sharder {
+		if active && pe.Sharders {
 			active = false // obviously, miner is not active, or is stuck
 		}
 
@@ -208,219 +188,6 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 	}
 
 }
-
-func makeSCRESTAPICall(address, relative, sharder string,
-	seri util.Serializable, collect chan util.Serializable) {
-
-	var err = httpclientutil.MakeSCRestAPICall(address, relative, nil,
-		[]string{sharder}, seri, 1)
-	if err != nil {
-		Logger.Error("requesting phase node from sharder",
-			zap.String("sharder", sharder),
-			zap.Error(err))
-	}
-	collect <- seri // regardless error
-}
-
-// is given reflect value zero (reflect.Value.IsZero added in go1.13)
-func isValueZero(v reflect.Value) bool {
-	switch v.Kind() {
-	case reflect.Bool:
-		return !v.Bool()
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return v.Int() == 0
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32,
-		reflect.Uint64, reflect.Uintptr:
-		return v.Uint() == 0
-	case reflect.Float32, reflect.Float64:
-		return math.Float64bits(v.Float()) == 0
-	case reflect.Complex64, reflect.Complex128:
-		c := v.Complex()
-		return math.Float64bits(real(c)) == 0 && math.Float64bits(imag(c)) == 0
-	case reflect.Array:
-		for i := 0; i < v.Len(); i++ {
-			if !isValueZero(v.Index(i)) {
-				return false
-			}
-		}
-		return true
-	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map,
-		reflect.Ptr, reflect.Slice, reflect.UnsafePointer:
-		return v.IsNil()
-	case reflect.String:
-		return v.Len() == 0
-	case reflect.Struct:
-		for i := 0; i < v.NumField(); i++ {
-			if !isValueZero(v.Field(i)) {
-				return false
-			}
-		}
-		return true
-	default:
-		panic("reflect.Value.IsZero")
-	}
-	return false
-}
-
-func isZero(val interface{}) bool {
-	if val == nil {
-		return true
-	}
-	var rval = reflect.ValueOf(val)
-	if isValueZero(rval) {
-		return true
-	}
-	if rval.Kind() == reflect.Ptr {
-		return isValueZero(rval.Elem())
-	}
-	return false
-}
-
-func mostConsensus(list []util.Serializable) (elem util.Serializable) {
-
-	type valueCount struct {
-		value util.Serializable
-		count int
-	}
-
-	var cons = make(map[string]*valueCount, len(list))
-	for _, val := range list {
-		var str = string(val.Encode())
-		if vc, ok := cons[str]; ok {
-			vc.count++
-		} else {
-			cons[str] = &valueCount{value: val, count: 1}
-		}
-	}
-
-	var most int
-	for _, vc := range cons {
-		if vc.count > most {
-			elem = vc.value // use this
-			most = vc.count // update
-		}
-	}
-	return
-}
-
-func getFromSharders(address, relative string, sharders []string,
-	newFunc func() util.Serializable,
-	rejectFunc func(seri util.Serializable) bool) (got util.Serializable) {
-
-	var collect = make(chan util.Serializable, len(sharders))
-	for _, sharder := range sharders {
-		go makeSCRESTAPICall(address, relative, sharder,
-			newFunc(), collect)
-	}
-	var list = make([]util.Serializable, 0, len(sharders))
-	for range sharders {
-		if val := <-collect; !isZero(val) && !rejectFunc(val) {
-			list = append(list, val) // don't add zero values
-		}
-	}
-	return mostConsensus(list)
-}
-
-// The getPhaseFromSharders obtains minersc.PhaseNode from sharders and sends
-// it to phases events channel.
-func (mc *Chain) getPhaseFromSharders() {
-
-	var (
-		mb  = mc.GetLatestFinalizedMagicBlock().MagicBlock
-		got util.Serializable
-	)
-
-	got = getFromSharders(minersc.ADDRESS, scRestAPIGetPhase,
-		mb.Sharders.N2NURLs(), func() util.Serializable {
-			return new(minersc.PhaseNode)
-		}, func(val util.Serializable) bool {
-			if pn, ok := val.(*minersc.PhaseNode); ok {
-				if pn.StartRound < mb.StartingRound {
-					return true // reject
-				}
-				return false // keep
-			}
-			return true // reject
-		})
-
-	var phase, ok = got.(*minersc.PhaseNode)
-	if !ok {
-		Logger.Error("get_dkg_phase_from_sharders -- no phases given")
-		return
-	}
-
-	Logger.Info("dkg_process -- phase from sharders",
-		zap.String("phase", phase.Phase.String()),
-		zap.Int64("start_round", phase.StartRound),
-		zap.Int64("restarts", phase.Restarts))
-
-	const givenFromSharders = true
-	mc.viewChangeProcess.sendPhase(*phase, givenFromSharders)
-}
-
-/*
-
-
-TODO (sfxdx): remove, dead code, never used anymore
-
-func (mc *Chain) GetPhase(lfb *block.Block, mb *block.MagicBlock, active bool,
-	fromSharder bool) (pn *minersc.PhaseNode, err error) {
-
-	pn = &minersc.PhaseNode{}
-
-	if active {
-		var node util.Serializable
-		if node, err = mc.GetBlockStateNode(lfb, pn.GetKey()); err != nil {
-			return nil, err
-		}
-		if node == nil {
-			return nil, common.NewError("key_not_found", "key was not found")
-		}
-		if err = pn.Decode(node.Encode()); err != nil {
-			return nil, err
-		}
-		if !fromSharder {
-			return pn, nil
-		}
-	}
-
-	var got util.Serializable
-
-	got = getFromSharders(minersc.ADDRESS, scRestAPIGetPhase,
-		mb.Sharders.N2NURLs(), func() util.Serializable {
-			return new(minersc.PhaseNode)
-		}, func(val util.Serializable) bool {
-			if pn, ok := val.(*minersc.PhaseNode); ok {
-				if pn.StartRound < mb.StartingRound {
-					return true // reject
-				}
-				return false // keep
-			}
-			return true // reject
-		})
-
-	var phase, ok = got.(*minersc.PhaseNode)
-	if !ok {
-		return nil, common.NewError("get_dkg_phase_from_sharders",
-			"can't get, no phases given")
-	}
-
-	if active && (pn.Phase != phase.Phase || pn.StartRound != phase.StartRound) {
-		Logger.Warn("dkg_process -- phase in state does not match shader",
-			zap.Any("phase_state", pn.Phase),
-			zap.Any("phase_sharder", phase.Phase),
-			zap.Any("start_round_state", pn.StartRound),
-			zap.Any("start_round_sharder", phase.StartRound))
-		return phase, nil
-	}
-
-	if active {
-		return pn, nil
-	}
-
-	return phase, nil
-}
-*/
 
 func (vcp *viewChangeProcess) clearViewChange() {
 	vcp.shareOrSigns = block.NewShareOrSigns()
@@ -489,11 +256,13 @@ func (mc *Chain) getMinersMpks(lfb *block.Block, mb *block.MagicBlock,
 		ok  bool
 	)
 
-	got = getFromSharders(minersc.ADDRESS, scRestAPIGetMinersMPKS,
+	got = chain.GetFromSharders(minersc.ADDRESS, scRestAPIGetMinersMPKS,
 		mb.Sharders.N2NURLs(), func() util.Serializable {
 			return block.NewMpks()
 		}, func(val util.Serializable) bool {
 			return false // keep all (how to reject old?)
+		}, func(val util.Serializable) int64 {
+			return 0 // no highness for MPKs
 		})
 
 	if mpks, ok = got.(*block.Mpks); !ok {
@@ -527,21 +296,27 @@ func (mc *Chain) getDKGMiners(lfb *block.Block, mb *block.MagicBlock,
 	}
 
 	var (
+		cmb = mc.GetCurrentMagicBlock() // mb is for request, cmb is for filter
 		got util.Serializable
 		ok  bool
 	)
 
-	got = getFromSharders(minersc.ADDRESS, scRestAPIGetDKGMiners,
+	got = chain.GetFromSharders(minersc.ADDRESS, scRestAPIGetDKGMiners,
 		mb.Sharders.N2NURLs(), func() util.Serializable {
 			return new(minersc.DKGMinerNodes)
 		}, func(val util.Serializable) bool {
 			if dmn, ok := val.(*minersc.DKGMinerNodes); ok {
-				if dmn.StartRound < mb.StartingRound {
+				if dmn.StartRound < cmb.StartingRound {
 					return true // reject
 				}
 				return false // keep
 			}
 			return true // reject
+		}, func(val util.Serializable) (high int64) {
+			if dmn, ok := val.(*minersc.DKGMinerNodes); ok {
+				return dmn.StartRound // its starting round
+			}
+			return // zero
 		})
 
 	if dmn, ok = got.(*minersc.DKGMinerNodes); !ok {
@@ -698,21 +473,27 @@ func (mc *Chain) GetMagicBlockFromSC(lfb *block.Block, mb *block.MagicBlock,
 	}
 
 	var (
+		cmb = mc.GetCurrentMagicBlock() // mb is for requests, cmb is for filter
 		got util.Serializable
 		ok  bool
 	)
 
-	got = getFromSharders(minersc.ADDRESS, scRestAPIGetMagicBlock,
+	got = chain.GetFromSharders(minersc.ADDRESS, scRestAPIGetMagicBlock,
 		mb.Sharders.N2NURLs(), func() util.Serializable {
 			return block.NewMagicBlock()
 		}, func(val util.Serializable) bool {
 			if mx, ok := val.(*block.MagicBlock); ok {
-				if mx.StartingRound < mb.StartingRound {
+				if mx.StartingRound < cmb.StartingRound {
 					return true // reject
 				}
 				return false // keep
 			}
 			return true // reject
+		}, func(val util.Serializable) (high int64) {
+			if mx, ok := val.(*block.MagicBlock); ok {
+				return mx.StartingRound
+			}
+			return // zero
 		})
 
 	if magicBlock, ok = got.(*block.MagicBlock); !ok {

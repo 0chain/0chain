@@ -2,7 +2,6 @@ package sharder
 
 import (
 	"context"
-	"sort"
 	"time"
 
 	"0chain.net/chaincore/block"
@@ -13,8 +12,6 @@ import (
 	"0chain.net/sharder/blockstore"
 
 	"0chain.net/chaincore/httpclientutil"
-	"0chain.net/core/encryption"
-	"0chain.net/core/util"
 	"0chain.net/smartcontract/minersc"
 
 	"0chain.net/core/datastore"
@@ -105,125 +102,79 @@ func (sc *Chain) hasBlockTransactions(ctx context.Context, b *block.Block) bool 
 	return true
 }
 
-func (sc *Chain) hasTransactions(ctx context.Context, bs *block.BlockSummary) bool {
-	if bs == nil {
-		return false
-	}
-	count, err := sc.getTxnCountForRound(ctx, bs.Round)
-	if err != nil {
-		return false
-	}
-	return count == bs.NumTxns
-}
-
-// isPhaseContibute
-func (sc *Chain) isPhaseContibute(ctx context.Context, remote bool) (is bool) {
-
-	if sc.IsActiveInChain() && remote == false {
-		var lfb = sc.GetLatestFinalizedBlock()
-		if lfb == nil {
-			Logger.Error("is_phase_contibute -- can't get lfb")
-			return
-		}
-
-		var cstate = chain.CreateTxnMPT(lfb.ClientState)
-		if cstate == nil {
-			Logger.Error("is_phase_contibute -- can't get phase node",
-				zap.String("error", "missing client state of LFB"))
-			return
-		}
-		var seri, err = cstate.GetNodeValue(
-			util.Path(encryption.Hash(minersc.PhaseKey)),
-		)
-		if err != nil {
-			Logger.Error("is_phase_contibute -- can't get phase node",
-				zap.Error(err))
-			return
-		}
-		var phaseNode = new(minersc.PhaseNode)
-		if err = phaseNode.Decode(seri.Encode()); err != nil {
-			Logger.Error("is_phase_contibute -- can't decode phase node",
-				zap.Error(err))
-			return
-		}
-		Logger.Debug("is_phase_contibute",
-			zap.Int("phase", int(phaseNode.Phase)),
-			zap.Bool("is_contribute", phaseNode.Phase == minersc.Contribute))
-		return phaseNode.Phase == minersc.Contribute
-	}
-
-	// not active in chain, use REST API call
-
-	var mbs = sc.GetLatestFinalizedMagicBlockFromSharder(ctx)
-	if len(mbs) == 0 {
-		Logger.Error("is_phase_contibute -- no LFMB from sharders")
-		return false
-	}
-	if len(mbs) > 1 {
-		sort.Slice(mbs, func(i, j int) bool {
-			return mbs[i].StartingRound > mbs[j].StartingRound
-		})
-	}
-
-	var (
-		magicBlock = mbs[0]                        // the latest one
-		sharders   = magicBlock.Sharders.N2NURLs() // sharders
-		pn         = new(minersc.PhaseNode)        //
-		err        error                           //
-	)
-	err = httpclientutil.MakeSCRestAPICall(minersc.ADDRESS, "/getPhase", nil,
-		sharders, pn, 1)
-	if err != nil {
-		Logger.Error("is_phase_contibute -- requesting phase from sharders"+
-			" using REST API call", zap.Error(err))
-		return false
-	}
-
-	return pn.Phase == minersc.Contribute
-}
-
 func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
 
 	if !config.DevConfiguration.ViewChange {
 		return // don't send sharder_keep if view_change is false
 	}
 
-	var (
-		timerCheck = time.NewTicker(5 * time.Second)
-		doneq      = ctx.Done()
+	// common register sharder keep constants
+	const (
+		repeat = 5 * time.Second // repeat every 5 seconds
 	)
-	defer timerCheck.Stop()
+
+	var (
+		ticker = time.NewTicker(repeat)
+
+		tickerq = ticker.C
+		phaseq  = sc.PhaseEvents()
+		doneq   = ctx.Done()
+
+		pe     chain.PhaseEvent //
+		latest time.Time        // last time phase updated by the node itself
+
+		phaseRound int64 // starting round of latest accepted phase
+	)
+
+	defer ticker.Stop()
 
 	for {
 		select {
 		case <-doneq:
 			return
-		case <-timerCheck.C:
-
-			// Force remote check since the IsActieInChain may work wrong for
-			// sharders in some cases (a forgotten/missing keep transaction).
-			// This way a sharder in rare cases can double send 'keep'
-			// transaction being active (send by the callback) and here. But
-			// it's (1) not critical (2) not often.
-			if !sc.IsRegisteredSharderKeep(true) &&
-				sc.isPhaseContibute(ctx, true) {
-
-				txn, err := sc.RegisterSharderKeep()
-				if err != nil {
-					Logger.Error("register_sharder_keep_worker", zap.Error(err))
-				} else {
-					if txn == nil || sc.ConfirmTransaction(txn) {
-						Logger.Info("register_sharder_keep_worker -- " +
-							"registered")
-					} else {
-						Logger.Debug("register_sharder_keep_worker -- failed "+
-							"to confirm transaction", zap.Any("txn", txn))
-					}
-				}
-
+		case tp := <-tickerq:
+			if tp.Sub(latest) < repeat || len(phaseq) > 0 {
+				continue // already have a fresh phase
 			}
-
+			sc.GetPhaseFromSharders() // not in a goroutine
+			continue
+		case pe = <-phaseq:
+			if !pe.Sharders {
+				latest = time.Now()
+			}
 		}
+
+		if pe.Phase.StartRound == phaseRound {
+			continue // the phase already accepted
+		}
+
+		if pe.Phase.Phase != minersc.Contribute {
+			phaseRound = pe.Phase.StartRound
+			continue // we are interesting in contribute phase only on sharders
+		}
+
+		if sc.IsRegisteredSharderKeep(false) {
+			phaseRound = pe.Phase.StartRound // already registered
+			continue
+		}
+
+		var txn, err = sc.RegisterSharderKeep()
+		if err != nil {
+			Logger.Error("register_sharder_keep_worker", zap.Error(err))
+			continue // repeat next time
+		}
+
+		// so, transaction sent, let's verify it
+
+		if !sc.ConfirmTransaction(txn) {
+			Logger.Debug("register_sharder_keep_worker -- failed "+
+				"to confirm transaction", zap.Any("txn", txn))
+			continue
+		}
+
+		Logger.Info("register_sharder_keep_worker -- registered")
+		phaseRound = pe.Phase.StartRound // accepted
+
 	}
 }
 

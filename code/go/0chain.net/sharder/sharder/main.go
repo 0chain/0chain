@@ -219,13 +219,15 @@ func main() {
 		Logger.Panic(err.Error()) // FIXME: remove panic
 	}
 
-	if serverChain.GetCurrentMagicBlock().MagicBlockNumber < serverChain.GetLatestMagicBlock().MagicBlockNumber {
+	if serverChain.GetCurrentMagicBlock().MagicBlockNumber <
+		serverChain.GetLatestMagicBlock().MagicBlockNumber {
+
 		serverChain.SetCurrentRound(0)
 	}
 
 	initServer()
 	initHandlers()
-	sharder.SetupMinerSmartContract(sharder.GetSharderChain())
+
 	go sc.RegisterClient()
 	go sc.InitSetupSC()
 
