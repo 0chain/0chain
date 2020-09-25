@@ -24,9 +24,6 @@ import (
 // The sendDKGShare sends the generated secShare to the given node.
 func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 
-	var tp = before("send DKG share {")
-	defer after(tp, "send DKG share }")
-
 	if !config.DevConfiguration.IsDkgEnabled {
 		return common.NewError("send_dkg_share", "dkg is not enabled")
 	}
@@ -99,9 +96,6 @@ func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 func (mc *Chain) PublishShareOrSigns(_ context.Context, lfb *block.Block,
 	mb *block.MagicBlock, active bool) (tx *httpclientutil.Transaction,
 	err error) {
-
-	var tp = before("DKG publish sos {")
-	defer after(tp, "DKG publish sos }")
 
 	mc.viewChangeProcess.Lock()
 	defer mc.viewChangeProcess.Unlock()
@@ -184,9 +178,6 @@ func (mc *Chain) ContributeMpk(_ context.Context, lfb *block.Block,
 	mb *block.MagicBlock, active bool) (tx *httpclientutil.Transaction,
 	err error) {
 
-	var tp = before("DKG contribute mpk {")
-	defer after(tp, "DKG contribute mpk }")
-
 	var dmn *minersc.DKGMinerNodes
 	if dmn, err = mc.getDKGMiners(lfb, mb, active); err != nil {
 		Logger.Error("can't contribute", zap.Any("error", err))
@@ -237,9 +228,6 @@ func (mc *Chain) ContributeMpk(_ context.Context, lfb *block.Block,
 
 func SignShareRequestHandler(ctx context.Context, r *http.Request) (
 	resp interface{}, err error) {
-
-	var tp = before("sign DKG share {")
-	defer after(tp, "sign DKG share }")
 
 	var (
 		nodeID   = r.Header.Get(node.HeaderNodeID)

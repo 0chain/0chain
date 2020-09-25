@@ -125,8 +125,6 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			}
 		}
 
-		println("DKG PE", pe.Phase.Phase.String(), "GOT", pe.Phase.StartRound, "HAVE", phaseRound, "CP", mc.CurrentPhase())
-
 		if pe.Phase.StartRound == phaseRound {
 			continue // phase already accepted
 		}
@@ -198,16 +196,6 @@ func (vcp *viewChangeProcess) clearViewChange() {
 	vcp.viewChangeDKG = nil
 }
 
-func before(args ...interface{}) (tp time.Time) {
-	tp = time.Now()
-	println(fmt.Sprint(args...))
-	return
-}
-
-func after(tp time.Time, args ...interface{}) {
-	println(fmt.Sprint(args...), "after", time.Now().Sub(tp).String())
-}
-
 //
 //                               S T A R T
 //
@@ -215,9 +203,6 @@ func after(tp time.Time, args ...interface{}) {
 // DKGProcessStart represents 'start' phase function.
 func (mc *Chain) DKGProcessStart(context.Context, *block.Block,
 	*block.MagicBlock, bool) (*httpclientutil.Transaction, error) {
-
-	var tp = before("DKG start {")
-	defer after(tp, "DKG start }")
 
 	mc.viewChangeProcess.Lock()
 	defer mc.viewChangeProcess.Unlock()
@@ -462,9 +447,6 @@ func (mc *Chain) SendSijs(ctx context.Context, lfb *block.Block,
 	mb *block.MagicBlock, active bool) (tx *httpclientutil.Transaction,
 	err error) {
 
-	var tp = before("DKG send sijs {")
-	defer after(tp, "DKG send sijs }")
-
 	var (
 		sendFail []string
 		sendTo   []string
@@ -624,9 +606,6 @@ func (vcp *viewChangeProcess) SetNextViewChange(round int64) {
 func (mc *Chain) Wait(ctx context.Context, lfb *block.Block,
 	mb *block.MagicBlock, active bool) (tx *httpclientutil.Transaction,
 	err error) {
-
-	var tp = before("DKG wait {")
-	defer after(tp, "DKG wait }")
 
 	mc.viewChangeProcess.Lock()
 	defer mc.viewChangeProcess.Unlock()

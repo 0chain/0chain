@@ -144,8 +144,6 @@ func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
 			}
 		}
 
-		println("DKG PE", pe.Phase.Phase.String(), "GOT", pe.Phase.StartRound, "HAVE", phaseRound)
-
 		if pe.Phase.StartRound == phaseRound {
 			continue // the phase already accepted
 		}
@@ -159,8 +157,6 @@ func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
 			phaseRound = pe.Phase.StartRound // already registered
 			continue
 		}
-
-		println("DKG PE", pe.Phase.Phase.String(), "REGISTER")
 
 		var txn, err = sc.RegisterSharderKeep()
 		if err != nil {
