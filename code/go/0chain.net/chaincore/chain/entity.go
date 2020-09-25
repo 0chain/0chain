@@ -1190,7 +1190,7 @@ func (c *Chain) IsActiveInChain() bool {
 		selfNodeKey = node.Self.Underlying().GetKey()
 		crn         = c.GetCurrentRound()
 	)
-	return mb.IsActiveNode(selfNodeKey, crn) && lfb.Round == olfbr
+	return lfb.Round == olfbr && mb.IsActiveNode(selfNodeKey, crn)
 }
 
 func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {

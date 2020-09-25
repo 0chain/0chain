@@ -77,9 +77,25 @@ func (tc *timeoutCounter) AddTimeoutVote(num int, id string) {
 		tc.resetVotes() // it creates the map
 	}
 	tc.votes[id] = num
+
+	// TODO (sfxdx): DEBUG, REMOVE THEN
+	{
+		var rank = func(tc *timeoutCounter, id string) int {
+			for i, x := range tc.perm {
+				if x == id {
+					return i
+				}
+			}
+			return -1
+		}
+		println("VRFS (ADD T V):")
+		for id, nuum := range tc.votes {
+			println("  -", num, id, "rank", rank(tc, id))
+		}
+	}
 }
 
-// IncrementTimeoutCount - increments timeout count
+// IncrementTimeoutCount - increments timeout count.
 func (tc *timeoutCounter) IncrementTimeoutCount(prrs int64, miners *node.Pool) {
 
 	if prrs == 0 {

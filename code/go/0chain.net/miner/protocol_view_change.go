@@ -16,6 +16,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
+
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/minersc"
 
@@ -42,6 +43,12 @@ type SmartContractFunctions func(ctx context.Context, lfb *block.Block,
 	lfmb *block.MagicBlock, isActive bool) (tx *httpclientutil.Transaction,
 	err error)
 
+// The phaseEvent represents phases changes tracking.
+type phaseEvent struct {
+	phase   minersc.PhaseNode // current phase node
+	sharder bool              // synced from sharders
+}
+
 // view change process controlling
 type viewChangeProcess struct {
 	sync.Mutex
@@ -55,6 +62,9 @@ type viewChangeProcess struct {
 	// round we expect next view change (can be adjusted)
 	nvcmx          sync.RWMutex
 	nextViewChange int64 // expected
+
+	// phase events (should be buffered)
+	phaseEvents chan phaseEvent
 }
 
 func (vcp *viewChangeProcess) CurrentPhase() minersc.Phase {
@@ -77,72 +87,83 @@ func (vcp *viewChangeProcess) init(mc *Chain) {
 	vcp.shareOrSigns.ID = node.Self.Underlying().GetKey()
 	vcp.currentPhase = minersc.Unknown
 	vcp.mpks = block.NewMpks()
+	vcp.phaseEvents = make(chan phaseEvent, 1)
 }
 
-func (mc *Chain) isActiveInChain(lfb *block.Block, mb *block.MagicBlock) bool {
-	return mb.Miners.HasNode(node.Self.GetKey()) &&
-		mb.StartingRound < mc.GetCurrentRound() && lfb.ClientState != nil
+// The sendPhase optimistically (never blocks) triggers DKG phase changes.
+func (vcp *viewChangeProcess) sendPhase(pn minersc.PhaseNode, sharder bool) {
+	select {
+	case vcp.phaseEvents <- phaseEvent{phase: pn, sharder: sharder}:
+	default:
+		// don't block
+	}
 }
 
 // DKGProcess starts DKG process and works on it. It blocks.
 func (mc *Chain) DKGProcess(ctx context.Context) {
 
+	// DKG process constants
 	const (
-		timeoutPhase        = 5
-		thresholdCheckPhase = 2
-		thisNodeMovements   = -1
+		repeat = 5 * time.Second // repeat phase from sharders requesting
 	)
 
 	var (
-		timer                    = time.NewTimer(time.Duration(time.Second))
-		counterCheckPhaseSharder = thresholdCheckPhase + 1 // check on sharders
+		phaseq = mc.viewChangeProcess.phaseEvents //
+		pe     phaseEvent                         //
+		last   time.Time                          // last time phase event given
 
-		oldPhaseRound   minersc.Phase
-		oldCurrentRound int64
+		// if a phase event didn't given after the 'repeat' period,
+		// then request it from sharders; so, for an inactive node we
+		// will request for sharders every 'repeat x2' = 10s
+		ticker  = time.NewTicker(repeat) //
+		tcikerq = ticker.C               //
+
+		phaseRound int64 // phase starting round
+		err        error
 	)
 
-	for {
-		timer.Reset(timeoutPhase * time.Second) // setup timer to wait
+	defer ticker.Stop()
 
+	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-timer.C:
+		case tp := <-tcikerq:
+			if tp.Sub(last) <= repeat || len(phaseq) > 0 {
+				continue // already have a fresh phase
+			}
+			// otherwise, request phase from sharders; since we aren't using
+			// goroutine here, and phases events sending is non-blocking (can
+			// skip, reject the event); then the pahsesEvent channel should be
+			// buffered (at least 1 element in the buffer)
+			mc.getPhaseFromSharders()
+		case pe = <-phaseq:
+			if !pe.sharder {
+				last = time.Now() // keep last time the phase given by the miner
+			}
+		}
+
+		println("DKG PE", pe.phase.Phase.String(), "GOT", pe.phase.StartRound, "HAVE", phaseRound, "CP", mc.CurrentPhase())
+
+		if pe.phase.StartRound == phaseRound {
+			continue // phase already accepted
 		}
 
 		var (
 			lfb    = mc.GetLatestFinalizedBlock()
 			mb     = mc.GetLatestFinalizedMagicBlock().MagicBlock
-			active = mc.isActiveInChain(lfb, mb)
+			active = mc.IsActiveInChain()
 
-			checkOnSharder = counterCheckPhaseSharder >= thresholdCheckPhase
-			pn, err        = mc.GetPhase(lfb, mb, active, checkOnSharder)
+			pn = pe.phase
 		)
 
-		if err != nil {
-			Logger.Error("dkg process getting phase", zap.Any("error", err),
-				zap.Int("sc funcs", len(mc.viewChangeProcess.scFunctions)),
-				zap.Any("phase", pn))
-			continue
-		}
-
-		if !checkOnSharder && pn.Phase == oldPhaseRound &&
-			pn.CurrentRound == oldCurrentRound {
-
-			counterCheckPhaseSharder++
-		} else {
-			counterCheckPhaseSharder = 0
-			oldPhaseRound = pn.Phase
-			oldCurrentRound = pn.CurrentRound
+		if active && pe.sharder {
+			active = false // obviously, miner is not active, or is stuck
 		}
 
 		Logger.Debug("dkg process trying", zap.Any("next_phase", pn),
 			zap.Any("phase", mc.CurrentPhase()),
 			zap.Int("sc funcs", len(mc.viewChangeProcess.scFunctions)))
-
-		if pn == nil || pn.Phase == mc.CurrentPhase() {
-			continue
-		}
 
 		if pn.Phase != 0 && pn.Phase != mc.CurrentPhase()+1 {
 			Logger.Debug("dkg process -- jumping over a phase;"+
@@ -178,7 +199,8 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 
 		if txn == nil || (txn != nil && mc.ConfirmTransaction(txn)) {
 			var oldPhase = mc.CurrentPhase()
-			mc.SetCurrentPhase(pn.Phase)
+			mc.SetCurrentPhase(pn.Phase) //
+			phaseRound = pn.StartRound   //
 			Logger.Debug("dkg process moved phase",
 				zap.Any("old_phase", oldPhase),
 				zap.Any("phase", mc.CurrentPhase()))
@@ -299,6 +321,48 @@ func getFromSharders(address, relative string, sharders []string,
 	return mostConsensus(list)
 }
 
+// The getPhaseFromSharders obtains minersc.PhaseNode from sharders and sends
+// it to phases events channel.
+func (mc *Chain) getPhaseFromSharders() {
+
+	var (
+		mb  = mc.GetLatestFinalizedMagicBlock().MagicBlock
+		got util.Serializable
+	)
+
+	got = getFromSharders(minersc.ADDRESS, scRestAPIGetPhase,
+		mb.Sharders.N2NURLs(), func() util.Serializable {
+			return new(minersc.PhaseNode)
+		}, func(val util.Serializable) bool {
+			if pn, ok := val.(*minersc.PhaseNode); ok {
+				if pn.StartRound < mb.StartingRound {
+					return true // reject
+				}
+				return false // keep
+			}
+			return true // reject
+		})
+
+	var phase, ok = got.(*minersc.PhaseNode)
+	if !ok {
+		Logger.Error("get_dkg_phase_from_sharders -- no phases given")
+		return
+	}
+
+	Logger.Info("dkg_process -- phase from sharders",
+		zap.String("phase", phase.Phase.String()),
+		zap.Int64("start_round", phase.StartRound),
+		zap.Int64("restarts", phase.Restarts))
+
+	const givenFromSharders = true
+	mc.viewChangeProcess.sendPhase(*phase, givenFromSharders)
+}
+
+/*
+
+
+TODO (sfxdx): remove, dead code, never used anymore
+
 func (mc *Chain) GetPhase(lfb *block.Block, mb *block.MagicBlock, active bool,
 	fromSharder bool) (pn *minersc.PhaseNode, err error) {
 
@@ -356,12 +420,23 @@ func (mc *Chain) GetPhase(lfb *block.Block, mb *block.MagicBlock, active bool,
 
 	return phase, nil
 }
+*/
 
 func (vcp *viewChangeProcess) clearViewChange() {
 	vcp.shareOrSigns = block.NewShareOrSigns()
 	vcp.shareOrSigns.ID = node.Self.Underlying().GetKey()
 	vcp.mpks = block.NewMpks()
 	vcp.viewChangeDKG = nil
+}
+
+func before(args ...interface{}) (tp time.Time) {
+	tp = time.Now()
+	println(fmt.Sprint(args...))
+	return
+}
+
+func after(tp time.Time, args ...interface{}) {
+	println(fmt.Sprint(args...), "after", time.Now().Sub(tp).String())
 }
 
 //
@@ -371,6 +446,9 @@ func (vcp *viewChangeProcess) clearViewChange() {
 // DKGProcessStart represents 'start' phase function.
 func (mc *Chain) DKGProcessStart(context.Context, *block.Block,
 	*block.MagicBlock, bool) (*httpclientutil.Transaction, error) {
+
+	var tp = before("DKG start {")
+	defer after(tp, "DKG start }")
 
 	mc.viewChangeProcess.Lock()
 	defer mc.viewChangeProcess.Unlock()
@@ -548,6 +626,9 @@ func (mc *Chain) SendSijs(ctx context.Context, lfb *block.Block,
 	mb *block.MagicBlock, active bool) (tx *httpclientutil.Transaction,
 	err error) {
 
+	var tp = before("DKG send sijs {")
+	defer after(tp, "DKG send sijs }")
+
 	mc.viewChangeProcess.Lock()
 	defer mc.viewChangeProcess.Unlock()
 
@@ -724,6 +805,9 @@ func (vcp *viewChangeProcess) SetNextViewChange(round int64) {
 func (mc *Chain) Wait(ctx context.Context, lfb *block.Block,
 	mb *block.MagicBlock, active bool) (tx *httpclientutil.Transaction,
 	err error) {
+
+	var tp = before("DKG wait {")
+	defer after(tp, "DKG wait }")
 
 	mc.viewChangeProcess.Lock()
 	defer mc.viewChangeProcess.Unlock()

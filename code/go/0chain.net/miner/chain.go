@@ -20,6 +20,9 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/memorystore"
 
+	"0chain.net/core/util"
+	"0chain.net/smartcontract/minersc"
+
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
@@ -261,6 +264,31 @@ func (mc *Chain) isJoining(rn int64) (is bool) {
 	return // false
 }
 
+func (mc *Chain) getPhaseOfBlock(b *block.Block) (pn minersc.PhaseNode,
+	err error) {
+
+	var seri util.Serializable
+	seri, err = mc.GetBlockStateNode(b, minersc.PhaseKey)
+	if err != nil && err != util.ErrValueNotPresent {
+		err = fmt.Errorf("get_block_phase -- can't get: %v, block %d",
+			err, b.Round)
+		return
+	}
+
+	if err == util.ErrValueNotPresent {
+		err = nil // not a real error, Miner SC just is not started yet
+		return
+	}
+
+	if err = pn.Decode(seri.Encode()); err != nil {
+		err = fmt.Errorf("get_block_phase -- can't decode: %v, block %d",
+			err, b.Round)
+		return
+	}
+
+	return // ok
+}
+
 // ViewChange on finalized (!) block. Miners check magic blocks during
 // generation and notarization. A finalized block should be trusted.
 func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
@@ -268,10 +296,17 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 	var (
 		mb  = b.MagicBlock
 		nvc int64
+		pn  minersc.PhaseNode
 	)
 
+	// update phase for DKG process
+	if pn, err = mc.getPhaseOfBlock(b); err != nil {
+		return common.NewErrorf("view_change", "getting phase node: %v", err)
+	}
+	mc.sendPhase(pn, false) // optimistic, never block here
+
 	if nvc, err = mc.NextViewChangeOfBlock(b); err != nil {
-		return common.NewError("view_change", err.Error())
+		return common.NewErrorf("view_change", "getting nvc: %v", err)
 	}
 
 	// set / update the next view change of protocol view change (RAM)

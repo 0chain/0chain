@@ -97,9 +97,10 @@ func (mb *MagicBlock) IsActiveNode(id string, round int64) bool {
 	if mb == nil || mb.Miners == nil || mb.Sharders == nil {
 		return false
 	}
-	mok := mb.Miners.HasNode(id)
-	sok := mb.Sharders.HasNode(id)
-	return (sok || mok) && mb.StartingRound <= round
+	if mb.Miners.HasNode(id) {
+		return mb.StartingRound <= round
+	}
+	return mb.Sharders.HasNode(id) && mb.StartingRound <= round
 }
 
 func (mb *MagicBlock) VerifyMinersSignatures(b *Block) bool {

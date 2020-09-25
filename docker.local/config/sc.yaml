@@ -26,11 +26,11 @@ smart_contracts:
     # etc
     min_stake: 0.0 # 0.01 # min stake can be set by a node (boundary for all nodes)
     max_stake: 100.0 # max stake can be set by a node (boundary for all nodes)
-    start_rounds: 30
-    contribute_rounds: 30
-    share_rounds: 30
-    publish_rounds: 30
-    wait_rounds: 30
+    start_rounds: 20
+    contribute_rounds: 20
+    share_rounds: 20
+    publish_rounds: 20
+    wait_rounds: 20
     # stake interests, will be declined every epoch
     interest_rate: 0.001 # [0; 1)
     # reward rate for generators, will be declined every epoch

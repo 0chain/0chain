@@ -187,7 +187,8 @@ func (msc *MinerSmartContract) moveToWait(balances cstate.StateContextI,
 	}
 
 	if !gn.hasPrevMinerInGSoS(gsos, balances) {
-		Logger.Error("no miner from previous VC set in GSoS")
+		Logger.Error("no miner from previous VC set in GSoS",
+			zap.Int("l_gsos", len(gsos.Shares)), zap.Int("K", dkgMinersList.K))
 		return false
 	}
 
@@ -280,6 +281,8 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 func (msc *MinerSmartContract) createDKGMinersForContribute(
 	balances cstate.StateContextI, gn *GlobalNode) error {
 
+	println("MINER SC (START): CRATE DKG MINERS FOR CONTRIBUTE")
+
 	allminerslist, err := msc.GetMinersList(balances)
 	if err != nil {
 		Logger.Error("createDKGMinersForContribute -- failed to get miner list",
@@ -296,6 +299,8 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 	for _, node := range allminerslist.Nodes {
 		dkgMiners.SimpleNodes[node.ID] = node.SimpleNode
 	}
+
+	println("CREATE DKG MS TO CONTRIBUTE (A'K'A START):", "MINERS", len(allminerslist.Nodes), "T", dkgMiners.T, "K", dkgMiners.K, "N", dkgMiners.N)
 
 	dkgMiners.StartRound = gn.LastRound
 	_, err = balances.InsertTrieNode(DKGMinersKey, dkgMiners)
@@ -314,6 +319,8 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 
 func (msc *MinerSmartContract) widdleDKGMinersForShare(
 	balances cstate.StateContextI, gn *GlobalNode) error {
+
+	println("MINER SC (CONTRIBUTE): WIDDLE DKG MINERS FOR SHARE")
 
 	dkgMiners, err := msc.getMinersDKGList(balances)
 	if err != nil {
@@ -403,6 +410,8 @@ func (msc *MinerSmartContract) reduceShardersList(keep, all *MinerNodes,
 
 func (msc *MinerSmartContract) createMagicBlockForWait(
 	balances cstate.StateContextI, gn *GlobalNode) error {
+
+	println("MINER SC (PUBLISH): CREATE MB FOR WAIT")
 
 	pn, err := msc.getPhaseNode(balances)
 	if err != nil {

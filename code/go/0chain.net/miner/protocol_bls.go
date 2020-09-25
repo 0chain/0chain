@@ -209,7 +209,7 @@ func (mc *Chain) GetBlsShare(ctx context.Context, r *round.Round) (string, error
 
 //  ///////////  End fo BLS-DKG Related Stuff   ////////////////
 
-//AddVRFShare - implement the interface for the RoundRandomBeacon protocol
+// AddVRFShare - implement the interface for the RoundRandomBeacon protocol.
 func (mc *Chain) AddVRFShare(ctx context.Context, mr *Round, vrfs *round.VRFShare) bool {
 	var rn = mr.GetRoundNumber()
 	Logger.Info("DKG AddVRFShare", zap.Int64("Round", rn), zap.Int("RoundTimeoutCount", mr.GetTimeoutCount()),
