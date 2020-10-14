@@ -62,7 +62,10 @@ func (np *Pool) RequestEntity(ctx context.Context, requestor EntityRequestor, pa
 }
 
 //RequestEntityFromAll - request an entity from all the nodes
-func (np *Pool) RequestEntityFromAll(ctx context.Context, requestor EntityRequestor, params *url.Values, handler datastore.JSONEntityReqResponderF) {
+func (np *Pool) RequestEntityFromAll(ctx context.Context,
+	requestor EntityRequestor, params *url.Values,
+	handler datastore.JSONEntityReqResponderF) {
+
 	rhandler := requestor(params, handler)
 	var nodes []*Node
 	if GetFetchStrategy() == FetchStrategyRandom {

@@ -101,6 +101,18 @@ func NewSimpleNodes() SimpleNodes {
 // global
 //
 
+// The Config represents GlobalNode with phases rounds.
+// It used in SC /config handler as response.
+type Config struct {
+	GlobalNode
+
+	StartRounds      int64 `json:"start_rounds"`
+	ContributeRounds int64 `json:"contribute_rounds"`
+	ShareRounds      int64 `json:"share_rounds"`
+	PublishRounds    int64 `json:"publish_rounds"`
+	WaitRounds       int64 `json:"wait_rounds"`
+}
+
 type GlobalNode struct {
 	ViewChange   int64   `json:"view_change"`
 	MaxN         int     `json:"max_n"`         // } miners limits

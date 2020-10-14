@@ -8,6 +8,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/config"
 
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -204,5 +205,19 @@ func (msc *MinerSmartContract) configsHandler(ctx context.Context,
 	if gn, err = msc.getGlobalNode(balances); err != nil {
 		return
 	}
-	return gn, nil
+
+	var conf = new(Config)
+	conf.GlobalNode = (*gn)
+
+	// setup phases rounds values
+	const pfx = "smart_contracts.minersc."
+	var scc = config.SmartContractConfig
+
+	conf.StartRounds = scc.GetInt64(pfx + "start_rounds")
+	conf.ContributeRounds = scc.GetInt64(pfx + "contribute_rounds")
+	conf.ShareRounds = scc.GetInt64(pfx + "share_rounds")
+	conf.PublishRounds = scc.GetInt64(pfx + "publish_rounds")
+	conf.WaitRounds = scc.GetInt64(pfx + "wait_rounds")
+
+	return &conf, nil
 }
