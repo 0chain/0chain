@@ -602,7 +602,7 @@ func (sc *StorageSmartContract) addChallenge(challengeID string, creationDate co
 
 	allocationList, err := sc.getAllAllocationsList(balances)
 	if err != nil {
-		return "", common.NewError("adding_challenge_error", "Error gettting the allocation list. "+err.Error())
+		return "", common.NewError("adding_challenge_error", "Error getting the allocation list. "+err.Error())
 	}
 	if len(allocationList.List) == 0 {
 		return "", common.NewError("adding_challenge_error", "No allocations at this time")
