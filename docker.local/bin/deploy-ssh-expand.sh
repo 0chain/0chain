@@ -2,6 +2,36 @@
 
 set -x
 
+##
+## 1st and the singe argument must be external IP address of the server
+##
+
+# patch localhost -> real IP address
+ip_address="${@}"
+
+if [ -z "${ip_address}" ]; then
+	echo "./docker.local/bin/deploy-ssh-expand.sh 'ip_address'"
+	exit 1
+fi
+
+echo "IP address: ${ip_address}"
+
+###
+### patch localhost to given IP (script argument)
+###
+
+echo "patch localhost to given IP address"
+
+# patch magic block file
+temp_mb=$(mktemp)
+jq '.miners.nodes[].host = "'"${ip_address}"'"' docker.local/config/b0magicBlock_4_miners_1_sharder.json > "${temp_mb}"
+mv -v "${temp_mb}" docker.local/config/b0magicBlock_4_miners_1_sharder.json
+
+# patch *_keys.txt files for non-genesis nodes
+sed -i 's/localhost/'"${ip_address}"'/g' docker.local/config/b0snode{2,3}_keys.txt
+sed -i 's/localhost/'"${ip_address}"'/g' docker.local/config/b0mnode{5,6,7,8}_keys.txt
+
+
 # setup nodes
 
 echo "setup directories"

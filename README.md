@@ -535,10 +535,10 @@ Start docker service (or make sure it's started).
 sudo systemctl start docker
 ```
 
-Install docker-compose or make sure it's installed.
+Install docker-compose and jq or make sure they are installed.
 
 ```
-sudo apt-get update && sudo apt-get install docker-compose
+sudo apt-get update && sudo apt-get install docker-compose jq
 ```
 
 For Ubuntu 18.04, follow instruction in this comment https://github.com/docker/for-linux/issues/563#issuecomment-547962928
@@ -549,8 +549,13 @@ For Ubuntu 18.04, follow instruction in this comment https://github.com/docker/f
 + Upload images via SSH.
 
 ```
-./docker.local/bin/deploy-ssh-images.sh 'ssh user@server'
+./docker.local/bin/deploy-ssh-images.sh 'ssh user@server' 'address'
 ```
+
+The 'ssh user@server' is your SSH command to connect to the server. And the
+'address' is external address of the server. The external address will be
+used by 0chain nodes as 'host'. E.g. it can be DNS-name or IP address. It can
+be 'localhost', this way nodes will communicate through loopback.
 
 3. Deploy and expand minimal 0chain to the server (configs and scripts only).
 
@@ -568,3 +573,14 @@ sudo systemctl start miner1 # 2, 3, 4, 5, 6, 7, 8
 And the same with 'stop/status/enable/disable'.
 
 Also, `systemctl list-units {sharder,miner}*.service` to list.
+
+5. For example
+
+```
+./docker.local/bin/deploy-ssh.sh 'ssh -i ../ssh/0chain.pem ubuntu@3.14.28.109' '3.14.28.109'
+```
+
+The `deploy-ssh.sh` command stops all remote nodes and cleans up remote BC.
+Then it uploads or updates minimal 0chain with configs. It never starts a unit.
+And it never updates docker images, use `deploy-ssh-images.sh` to update
+miner and sharders images on remote host.

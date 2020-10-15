@@ -4,14 +4,21 @@
 set -x
 
 # check out provided ssh command
-ssh_command="${@}"
+ssh_command="${1}"
+ip_address="${2}"
 
 if [ -z "${ssh_command}" ]; then
-	echo "use ./docker.local/bin/deploy-ssh.sh 'ssh user@host'"
+	echo "use ./docker.local/bin/deploy-ssh.sh 'ssh user@host' '3.14.28.109'"
 	exit 1
 fi
 
-echo "ssh command: ${ssh_command}"
+if [ -z "${ip_address}" ]; then
+	echo "use ./docker.local/bin/deploy-ssh.sh 'ssh user@host' '3.14.28.109'"
+	exit 1
+fi
+
+echo "ssh command:    ${ssh_command}"
+echo "server address: ${ip_address}"
 
 # clean up all previous archives
 rm -f 0chain-ssh-*.tar.gz
@@ -32,6 +39,7 @@ tar -czvf "${archive}" \
     ../0chain/docker.local/bin/stop.b0miner.sh \
     ../0chain/docker.local/build.sharder/b0docker-compose.yml \
     ../0chain/docker.local/build.miner/b0docker-compose.yml \
+    ../0chain/docker.local/docker-clean/ \
     ../0chain/bin/ \
     ../0chain/sql/ \
     ../0chain/config/cassandra \
@@ -48,7 +56,7 @@ tar -czvf "${archive}" \
 
 # upload the archive
 cat "${archive}" | pv | 
-    ${ssh_command} 'tar -C ./ -zxvf - && cd 0chain && pwd && ./docker.local/bin/deploy-ssh-expand.sh'
+    ${ssh_command} 'tar -C ./ -zxvf - && cd 0chain && pwd && ./docker.local/bin/deploy-ssh-expand.sh '"${ip_address}"''
 
 # clean the created archive
 rm -f 0chain-ssh-*.tar.gz

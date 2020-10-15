@@ -13,10 +13,10 @@ smart_contracts:
 
   minersc:
     # miners
-    max_n: 3 # 100
+    max_n: 8 # 100
     min_n: 2 # 3
     # sharders
-    max_s: 2 # 30
+    max_s: 3 # 30
     min_s: 1 # 1
     # max delegates allowed by SC
     max_delegates: 200 #
@@ -26,11 +26,11 @@ smart_contracts:
     # etc
     min_stake: 0.0 # 0.01 # min stake can be set by a node (boundary for all nodes)
     max_stake: 100.0 # max stake can be set by a node (boundary for all nodes)
-    start_rounds: 30
-    contribute_rounds: 30
-    share_rounds: 30
+    start_rounds: 50
+    contribute_rounds: 50
+    share_rounds: 50
     publish_rounds: 50
-    wait_rounds: 30
+    wait_rounds: 50
     # stake interests, will be declined every epoch
     interest_rate: 0.001 # [0; 1)
     # reward rate for generators, will be declined every epoch
