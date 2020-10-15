@@ -535,8 +535,15 @@ Start docker service (or make sure it's started).
 sudo systemctl start docker
 ```
 
-2. Upload images.
+Install docker-compose or make sure it's installed.
 
+```
+sudo apt-get update && sudo apt-get install docker-compose
+```
+
+For Ubuntu 18.04, follow instruction in this comment https://github.com/docker/for-linux/issues/563#issuecomment-547962928
+
+2. Upload or update uploaded images.
 
 + Build miners and sharders as usual.
 + Upload images via SSH.
@@ -559,3 +566,5 @@ sudo systemctl start miner1 # 2, 3, 4, 5, 6, 7, 8
 ```
 
 And the same with 'stop/status/enable/disable'.
+
+Also, `systemctl list-units {sharder,miner}*.service` to list.

@@ -41,7 +41,8 @@ User=$(id -nu)
 Group=$(id -ng)
 ExecStart=$(pwd)/docker.local/bin/start.b0miner.sh
 ExecStop=$(pwd)/docker.local/bin/stop.b0miner.sh
-TimeoutSec=300
+TimeoutSec=30
+RestartSec=15
 Restart=always
 
 [Install]
@@ -52,7 +53,7 @@ done
 
 for i in $(seq 1 3)
 do
-  sudo cat > /etc/systemd/system/sharder${i}.service << EOF
+  cat > sharder${i}.service << EOF
 [Unit]
 After=network.target
 After=multi-user.target
@@ -66,12 +67,17 @@ User=$(id -nu)
 Group=$(id -ng)
 ExecStart=$(pwd)/docker.local/bin/start.b0sharder.sh
 ExecStop=$(pwd)/docker.local/bin/stop.b0sharder.sh
-TimeoutSec=300
+TimeoutSec=180
+RestartSec=15
 Restart=always
 
 [Install]
 WantedBy=multi-user.target
 EOF
+	sudo mv -v sharder${i}.service /etc/systemd/system/
 done
+
+echo "reload systemd daemon"
+sudo systemctl daemon-reload
 
 echo "done, no units started, start them manually"

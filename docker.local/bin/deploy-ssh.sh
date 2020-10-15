@@ -14,7 +14,7 @@ fi
 echo "ssh command: ${ssh_command}"
 
 # clean up all previous archives
-rm -f 0chain-ssh-*.tag.gz
+rm -f 0chain-ssh-*.tar.gz
 
 # use commit hash
 commit="$(git rev-parse HEAD)"
@@ -51,4 +51,4 @@ cat "${archive}" | pv |
     ${ssh_command} 'tar -C ./ -zxvf - && cd 0chain && pwd && ./docker.local/bin/deploy-ssh-expand.sh'
 
 # clean the created archive
-rm -f 0chain-ssh-*.tag.gz
+rm -f 0chain-ssh-*.tar.gz
