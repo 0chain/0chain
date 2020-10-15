@@ -516,3 +516,46 @@ To dump 0chain and n2n logs of all nodes use
 ```
 The dump will be place in `./docker.local/log_dumps/` under file name
 with current timestamp. This directory is ignored by git VCS.
+
+
+# Deploy via SSH.
+
+1. Setup.
+
+Connect to SSH server and add the user to docker group.
+
+```
+sudo gpasswd -a $USER docker
+newgrp docker
+```
+
+Start docker service (or make sure it's started).
+
+```
+sudo systemctl start docker
+```
+
+2. Upload images.
+
+
++ Build miners and sharders as usual.
++ Upload images via SSH.
+
+```
+./docker.local/bin/deploy-ssh-images.sh 'ssh user@server'
+```
+
+3. Deploy and expand minimal 0chain to the server (configs and scripts only).
+
+```
+./docker.local/bin/deploy-ssh.sh 'ssh user@server'
+```
+
+4. Use on the server.
+
+```
+sudo systemctl start sharder1 # 2, 3
+sudo systemctl start miner1 # 2, 3, 4, 5, 6, 7, 8
+```
+
+And the same with 'stop/status/enable/disable'.

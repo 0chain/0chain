@@ -50,3 +50,6 @@ conductor/logs/*
 
 # log dumps
 docker.local/log_dumps
+
+# tar archives
+*.tar.gz
