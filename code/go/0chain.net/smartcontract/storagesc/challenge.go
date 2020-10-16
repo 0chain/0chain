@@ -589,23 +589,30 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 	return nil
 }
 
-func (sc *StorageSmartContract) addChallenge(challengeID string, creationDate common.Timestamp, r *rand.Rand, challengeSeed int64, balances c_state.StateContextI) (string, error) {
+func (sc *StorageSmartContract) addChallenge(challengeID string,
+	creationDate common.Timestamp, r *rand.Rand, challengeSeed int64,
+	balances c_state.StateContextI) (resp string, err error) {
 
-	validatorList, err := sc.getValidatorsList(balances)
-	if err != nil {
-		return "", common.NewError("adding_challenge_error", "Error gettting the validators list. "+err.Error())
+	var validators *ValidatorNodes
+	if validators, err = sc.getValidatorsList(balances); err != nil {
+		return "", common.NewErrorf("adding_challenge_error",
+			"error getting the validators list: %v", err)
 	}
 
-	if len(validatorList.Nodes) == 0 {
-		return "", common.NewError("no_validators", "Not enough validators for the challenge")
+	if len(validators.Nodes) == 0 {
+		return "", common.NewError("no_validators",
+			"not enough validators for the challenge")
 	}
 
-	allocationList, err := sc.getAllAllocationsList(balances)
-	if err != nil {
-		return "", common.NewError("adding_challenge_error", "Error getting the allocation list. "+err.Error())
+	var all *Allocations
+	if all, err = sc.getAllAllocationsList(balances); err != nil {
+		return "", common.NewErrorf("adding_challenge_error",
+			"error getting the allocation list: %v", err)
 	}
-	if len(allocationList.List) == 0 {
-		return "", common.NewError("adding_challenge_error", "No allocations at this time")
+
+	if len(all.List) == 0 {
+		return "", common.NewError("adding_challenge_error",
+			"no allocations at this time")
 	}
 
 	const LIMIT = 1000 // attempts limit
@@ -613,13 +620,17 @@ func (sc *StorageSmartContract) addChallenge(challengeID string, creationDate co
 	var allocationObj *StorageAllocation
 
 	var selectAlloc = func(i int) (alloc *StorageAllocation, err error) {
-		alloc, err = sc.getAllocation(allocationList.List[i], balances)
-		if err != nil {
-			Logger.Error("Client state has invalid allocations",
-				zap.Any("allocation_list", allocationList.List),
-				zap.Any("selected_allocation", allocationList.List[i]))
-			return nil, common.NewError("invalid_allocation",
-				"Client state has invalid allocations")
+		alloc, err = sc.getAllocation(all.List[i], balances)
+		if err != nil && err != util.ErrValueNotPresent {
+			return nil, common.NewErrorf("adding_challenge_error",
+				"unexpected error getting allocation: %v", err)
+		}
+		if err == util.ErrValueNotPresent {
+			Logger.Error("client state has invalid allocations",
+				zap.Any("allocation_list", all.List),
+				zap.Any("selected_allocation", all.List[i]))
+			return nil, common.NewErrorf("invalid_allocation",
+				"client state has invalid allocations")
 		}
 		if alloc.Expiration < creationDate {
 			return nil, nil
@@ -638,8 +649,8 @@ func (sc *StorageSmartContract) addChallenge(challengeID string, creationDate co
 	// range over all allocations if the SC consist of < LIMIT allocations,
 	// otherwise, range over LIMIT random allocations
 
-	if len(allocationList.List) < LIMIT {
-		for _, i := range r.Perm(len(allocationList.List)) {
+	if len(all.List) < LIMIT {
+		for _, i := range r.Perm(len(all.List)) {
 			if allocationObj, err = selectAlloc(i); err != nil {
 				return "", err
 			}
@@ -649,7 +660,7 @@ func (sc *StorageSmartContract) addChallenge(challengeID string, creationDate co
 		}
 	} else {
 		for i := 0; i < LIMIT; i++ {
-			allocationObj, err = selectAlloc(r.Intn(len(allocationList.List)))
+			allocationObj, err = selectAlloc(r.Intn(len(all.List)))
 			if err != nil {
 				return "", err
 			}
@@ -701,11 +712,11 @@ func (sc *StorageSmartContract) addChallenge(challengeID string, creationDate co
 	}
 
 	selectedValidators := make([]*ValidationNode, 0)
-	perm := r.Perm(minInt(len(validatorList.Nodes), allocationObj.DataShards+1))
+	perm := r.Perm(minInt(len(validators.Nodes), allocationObj.DataShards+1))
 	for _, v := range perm {
-		if validatorList.Nodes[v].ID != selectedBlobberObj.ID {
+		if validators.Nodes[v].ID != selectedBlobberObj.ID {
 			selectedValidators = append(selectedValidators,
-				validatorList.Nodes[v])
+				validators.Nodes[v])
 		}
 	}
 
