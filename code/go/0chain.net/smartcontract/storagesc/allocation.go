@@ -71,22 +71,22 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 
 	clients, err := sc.getAllocationsList(alloc.Owner, balances)
 	if err != nil {
-		return "", common.NewError("add_allocation_failed",
-			"Failed to get allocation list"+err.Error())
+		return "", common.NewErrorf("add_allocation_failed",
+			"Failed to get allocation list: %v", err)
 	}
 	all, err := sc.getAllAllocationsList(balances)
 	if err != nil {
-		return "", common.NewError("add_allocation_failed",
-			"Failed to get allocation list"+err.Error())
+		return "", common.NewErrorf("add_allocation_failed",
+			"Failed to get allocation list: %v", err)
 	}
 
 	if _, err = balances.GetTrieNode(alloc.GetKey(sc.ID)); err == nil {
-		return "", common.NewError("add_allocation_failed",
-			"allocation id already used in trie: "+alloc.GetKey(sc.ID))
+		return "", common.NewErrorf("add_allocation_failed",
+			"allocation id already used in trie: %v", alloc.GetKey(sc.ID))
 	}
 	if err != util.ErrValueNotPresent {
-		return "", common.NewError("add_allocation_failed",
-			"unexpected error: "+err.Error())
+		return "", common.NewErrorf("add_allocation_failed",
+			"unexpected error: %v", err)
 	}
 
 	clients.List.add(alloc.ID)
@@ -96,9 +96,23 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 	clientAllocation.ClientID = alloc.Owner
 	clientAllocation.Allocations = clients
 
-	balances.InsertTrieNode(ALL_ALLOCATIONS_KEY, all)
-	balances.InsertTrieNode(clientAllocation.GetKey(sc.ID), clientAllocation)
-	balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+	if _, err = balances.InsertTrieNode(ALL_ALLOCATIONS_KEY, all); err != nil {
+		return "", common.NewErrorf("add_allocation_failed",
+			"saving all allocations list: %v", err)
+	}
+
+	_, err = balances.InsertTrieNode(clientAllocation.GetKey(sc.ID),
+		clientAllocation)
+	if err != nil {
+		return "", common.NewErrorf("add_allocation_failed",
+			"saving client allocations list (client: %s): %v",
+			alloc.Owner, err)
+	}
+	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+	if err != nil {
+		return "", common.NewErrorf("add_allocation_failed",
+			"saving new allocation: %v", err)
+	}
 
 	buff := alloc.Encode()
 	return string(buff), nil
