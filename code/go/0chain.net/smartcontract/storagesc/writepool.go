@@ -343,7 +343,7 @@ func (ssc *StorageSmartContract) createWritePool(t *transaction.Transaction,
 		wp = new(writePool)
 	}
 
-	var mld = alloc.minLockDemandLeft()
+	var mld = alloc.restMinLockDemand()
 	if t.Value < int64(mld) {
 		return errors.New("not enough tokens to honor the min lock demand")
 	}
@@ -522,7 +522,7 @@ func (ssc *StorageSmartContract) writePoolUnlock(t *transaction.Transaction,
 
 	if !alloc.Finalized && !alloc.Canceled {
 		var (
-			want  = alloc.minLockDemandLeft()
+			want  = alloc.restMinLockDemand()
 			unitl = alloc.Until()
 			leave = wp.allocUntil(ap.AllocationID, unitl) - ap.Balance
 		)

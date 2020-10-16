@@ -17,6 +17,12 @@ func Now() Timestamp {
 	return Timestamp(time.Now().Unix())
 }
 
+// Duration returns the Timestamp as time.Duration. Used where the Timestamp
+// represents a duration.
+func (t Timestamp) Duration() time.Duration {
+	return time.Second * time.Duration(t)
+}
+
 //TimeToString - return the time stamp as a string
 func TimeToString(ts Timestamp) string {
 	return strconv.FormatInt(int64(ts), 10)

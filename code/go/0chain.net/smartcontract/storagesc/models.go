@@ -215,9 +215,9 @@ func (sn *ValidatorNodes) GetHashBytes() []byte {
 // Terms represents Blobber terms. A Blobber can update its terms,
 // but any existing offer will use terms of offer signing time.
 type Terms struct {
-	// ReadPrice is price for reading. Token / GB.
+	// ReadPrice is price for reading. Token / GB (no time unit).
 	ReadPrice state.Balance `json:"read_price"`
-	// WritePrice is price for reading. Token / GB. Also,
+	// WritePrice is price for reading. Token / GB / time unit. Also,
 	// it used to calculate min_lock_demand value.
 	WritePrice state.Balance `json:"write_price"`
 	// MinLockDemand in number in [0; 1] range. It represents part of
@@ -228,6 +228,15 @@ type Terms struct {
 	MaxOfferDuration time.Duration `json:"max_offer_duration"`
 	// ChallengeCompletionTime is duration required to complete a challenge.
 	ChallengeCompletionTime time.Duration `json:"challenge_completion_time"`
+}
+
+// The minLockDemand returns min lock demand value for this Terms (the
+// WritePrice and the MinLockDemand must be already set). Given size in GB and
+// rest of allocation duration in time units are used.
+func (t *Terms) minLockDemand(gbSize, rditu float64) (mdl state.Balance) {
+
+	var mldf = float64(t.WritePrice) * gbSize * t.MinLockDemand //
+	return state.Balance(mldf * rditu)                          //
 }
 
 // validate a received terms
@@ -282,7 +291,8 @@ func (sn *StorageNode) validate(conf *scConfig) (err error) {
 		return errors.New("insufficient blobber capacity")
 	}
 
-	if strings.Contains(sn.BaseURL, "localhost") && node.Self.Host != "localhost" {
+	if strings.Contains(sn.BaseURL, "localhost") &&
+		node.Self.Host != "localhost" {
 		return errors.New("invalid blobber base url")
 	}
 	return
@@ -440,19 +450,23 @@ type StorageAllocation struct {
 	// MovedToValidators is total number of tokens moved to validators
 	// of the allocation.
 	MovedToValidators state.Balance `json:"moved_to_validators,omitempty"`
+
+	// TimeUnit configured in Storage SC when the allocation created. It can't
+	// be changed for this allocation anymore. Even using expire allocation.
+	TimeUnit time.Duration `json:"time_unit"`
 }
 
-// minLockDemandLeft returns number of tokens required as min_lock_demand;
+// The restMinLockDemand returns number of tokens required as min_lock_demand;
 // if a blobber receive write marker, then some token moves to related
 // challenge pool and 'Spent' of this blobber is increased; thus, the 'Spent'
-// reduces the min_lock_demand left of this blobber; but, if a malfunctioning
+// reduces the rest of min_lock_demand of this blobber; but, if a malfunctioning
 // client doesn't send a data to a blobber (or blobbers) then this blobbers
 // don't receive tokens, their spent will be zero, and the min lock demand
 //
-func (sa *StorageAllocation) minLockDemandLeft() (left state.Balance) {
+func (sa *StorageAllocation) restMinLockDemand() (rest state.Balance) {
 	for _, details := range sa.BlobberDetails {
 		if details.MinLockDemand > details.Spent {
-			left += details.MinLockDemand - details.Spent
+			rest += details.MinLockDemand - details.Spent
 		}
 	}
 	return
@@ -540,6 +554,14 @@ func (sa *StorageAllocation) Until() common.Timestamp {
 	return sa.Expiration + toSeconds(sa.ChallengeCompletionTime)
 }
 
+// The restDurationInTimeUnits return rest duration of the allocation in time
+// units as a float64 value.
+func (sa *StorageAllocation) restDurationInTimeUnits(now common.Timestamp) (
+	rditu float64) {
+
+	return float64((sa.Expiration - now).Duration()) / float64(sa.TimeUnit)
+}
+
 func (sa *StorageAllocation) IsValidFinalizer(id string) bool {
 	if sa.Owner == id {
 		return true // finalizing by owner
@@ -599,12 +621,16 @@ func (bc *BlobberCloseConnection) Verify() bool {
 	}
 
 	if bc.WriteMarker.AllocationRoot != bc.AllocationRoot {
-		//return "", common.NewError("invalid_parameters", "Invalid Allocation root. Allocation root in write marker does not match the commit")
+		// return "", common.NewError("invalid_parameters",
+		//     "Invalid Allocation root. Allocation root in write marker " +
+		//     "does not match the commit")
 		return false
 	}
 
 	if bc.WriteMarker.PreviousAllocationRoot != bc.PrevAllocationRoot {
-		//return "", common.NewError("invalid_parameters", "Invalid Previous Allocation root. Previous Allocation root in write marker does not match the commit")
+		// return "", common.NewError("invalid_parameters",
+		//     "Invalid Previous Allocation root. Previous Allocation root " +
+		//     "in write marker does not match the commit")
 		return false
 	}
 	return bc.WriteMarker.Verify()
@@ -709,24 +735,37 @@ func (rm *ReadMarker) VerifySignature(clientPublicKey string) bool {
 }
 
 func (rm *ReadMarker) GetHashData() string {
-	hashData := fmt.Sprintf("%v:%v:%v:%v:%v:%v:%v", rm.AllocationID, rm.BlobberID, rm.ClientID, rm.ClientPublicKey, rm.OwnerID, rm.ReadCounter, rm.Timestamp)
+	hashData := fmt.Sprintf("%v:%v:%v:%v:%v:%v:%v", rm.AllocationID,
+		rm.BlobberID, rm.ClientID, rm.ClientPublicKey, rm.OwnerID,
+		rm.ReadCounter, rm.Timestamp)
 	return hashData
 }
 
 func (rm *ReadMarker) Verify(prevRM *ReadMarker) error {
-	if rm.ReadCounter <= 0 || len(rm.BlobberID) == 0 || len(rm.ClientID) == 0 || rm.Timestamp == 0 {
-		return common.NewError("invalid_read_marker", "length validations of fields failed")
+
+	if rm.ReadCounter <= 0 || len(rm.BlobberID) == 0 || len(rm.ClientID) == 0 ||
+		rm.Timestamp == 0 {
+
+		return common.NewError("invalid_read_marker",
+			"length validations of fields failed")
 	}
+
 	if prevRM != nil {
-		if rm.ClientID != prevRM.ClientID || rm.BlobberID != prevRM.BlobberID || rm.Timestamp < prevRM.Timestamp || rm.ReadCounter < prevRM.ReadCounter {
-			return common.NewError("invalid_read_marker", "validations with previous marker failed.")
+		if rm.ClientID != prevRM.ClientID || rm.BlobberID != prevRM.BlobberID ||
+			rm.Timestamp < prevRM.Timestamp ||
+			rm.ReadCounter < prevRM.ReadCounter {
+
+			return common.NewError("invalid_read_marker",
+				"validations with previous marker failed.")
 		}
 	}
-	ok := rm.VerifySignature(rm.ClientPublicKey)
-	if ok {
+
+	if ok := rm.VerifySignature(rm.ClientPublicKey); ok {
 		return nil
 	}
-	return common.NewError("invalid_read_marker", "Signature verification failed for the read marker")
+
+	return common.NewError("invalid_read_marker",
+		"Signature verification failed for the read marker")
 }
 
 type ValidationTicket struct {
@@ -742,7 +781,8 @@ type ValidationTicket struct {
 }
 
 func (vt *ValidationTicket) VerifySign() (bool, error) {
-	hashData := fmt.Sprintf("%v:%v:%v:%v:%v:%v", vt.ChallengeID, vt.BlobberID, vt.ValidatorID, vt.ValidatorKey, vt.Result, vt.Timestamp)
+	hashData := fmt.Sprintf("%v:%v:%v:%v:%v:%v", vt.ChallengeID, vt.BlobberID,
+		vt.ValidatorID, vt.ValidatorKey, vt.Result, vt.Timestamp)
 	hash := encryption.Hash(hashData)
 	signatureScheme := chain.GetServerChain().GetSignatureScheme()
 	signatureScheme.SetPublicKey(vt.ValidatorKey)

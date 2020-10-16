@@ -47,6 +47,10 @@ type writePoolConfig struct {
 
 // scConfig represents SC configurations ('storagesc:' from sc.yaml).
 type scConfig struct {
+	// TimeUnit is a duration used as divider for a write price. A write price
+	// measured in tok / GB / time unit. Where the time unit is this
+	// configuration.
+	TimeUnit time.Duration `json:"time_unit"`
 	// MaxMint is max minting.
 	MaxMint state.Balance `json:"max_mint"`
 	// Minted tokens by entire SC.
@@ -118,6 +122,9 @@ type scConfig struct {
 }
 
 func (sc *scConfig) validate() (err error) {
+	if sc.TimeUnit <= 1*time.Second {
+		return fmt.Errorf("time_unit less then 1s: %s", sc.TimeUnit)
+	}
 	if sc.ValidatorReward < 0.0 || 1.0 < sc.ValidatorReward {
 		return fmt.Errorf("validator_reward not in [0; 1] range: %v",
 			sc.ValidatorReward)
@@ -257,6 +264,7 @@ func getConfiguredConfig() (conf *scConfig, err error) {
 	conf = new(scConfig)
 	var scc = config.SmartContractConfig
 	// sc
+	conf.TimeUnit = scc.GetDuration(pfx + "time_unit")
 	conf.MaxMint = state.Balance(scc.GetFloat64(pfx+"max_mint") * 1e10)
 	conf.MinStake = state.Balance(scc.GetFloat64(pfx+"min_stake") * 1e10)
 	conf.MaxStake = state.Balance(scc.GetFloat64(pfx+"max_stake") * 1e10)

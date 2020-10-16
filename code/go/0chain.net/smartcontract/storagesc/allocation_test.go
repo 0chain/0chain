@@ -459,7 +459,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 			Size:          10 * GB,
 			Stats:         &StorageAllocationStats{},
 			Terms:         sb.Nodes[0].Terms,
-			MinLockDemand: 200, // write_price * (size/GB) * min_lock_demand
+			MinLockDemand: 200, // write_price * (size/GB) * min_lock_demand (TODO (sfxdx): time unit?)
 			Spent:         0,
 		},
 		&BlobberAllocation{
@@ -468,7 +468,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 			Size:          10 * GB,
 			Stats:         &StorageAllocationStats{},
 			Terms:         sb.Nodes[1].Terms,
-			MinLockDemand: 125, // write_price * (size/GB) * min_lock_demand
+			MinLockDemand: 125, // write_price * (size/GB) * min_lock_demand (TODO (sfxdx): time unit?)
 			Spent:         0,
 		},
 	}
