@@ -92,6 +92,7 @@ func (b *BlockSummary) GetMagicBlockMap() *MagicBlockMap {
 		mbm := datastore.GetEntityMetadata("magic_block_map").Instance().(*MagicBlockMap)
 		mbm.ID = strconv.FormatInt(b.MagicBlockNumber, 10)
 		mbm.Hash = b.Hash
+		mbm.BlockRound = b.Round
 		return mbm
 	}
 	return nil

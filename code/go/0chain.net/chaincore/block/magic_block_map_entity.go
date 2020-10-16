@@ -10,7 +10,8 @@ import (
 /*MagicBlockSummary - the summary of the transaction */
 type MagicBlockMap struct {
 	datastore.IDField
-	Hash string `json:"hash"`
+	Hash       string `json:"hash"`
+	BlockRound int64  `json:"block_round"`
 }
 
 var magicBlockMapEntityMetadata *datastore.EntityMetadataImpl

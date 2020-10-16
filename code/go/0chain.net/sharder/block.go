@@ -2,6 +2,7 @@ package sharder
 
 import (
 	"context"
+	"strconv"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
@@ -165,4 +166,39 @@ func (sc *Chain) GetMagicBlockMap(ctx context.Context, magicBlockNumber string) 
 		return nil, err
 	}
 	return magicBlockMap, nil
+}
+
+// GetHighestMagicBlockMap returns highest stored MB map. The highest means with
+// greatest MB number. It works with Cassandra only.
+func (sc *Chain) GetHighestMagicBlockMap(ctx context.Context) (
+	mbm *block.MagicBlockMap, err error) {
+
+	var mbmemd = datastore.GetEntityMetadata("magic_block_map")
+	mbm = mbmemd.Instance().(*block.MagicBlockMap)
+
+	var mctx = persistencestore.WithEntityConnection(ctx, mbmemd)
+	defer persistencestore.Close(mctx)
+
+	const query = `SELECT MAX(id) FROM zerochain.magic_block_map;`
+
+	var (
+		cql    = persistencestore.GetCon(mctx)
+		number int64
+	)
+
+	if err = cql.Query(query).Scan(&number); err != nil {
+		println("SCANNING NUMBER:", err.Error())
+		return nil, common.NewErrorf("get_highest_mbm",
+			"scanning CQL result: %v", err)
+	}
+
+	println("SCANNED NUMBER:", number)
+	var mbn = strconv.FormatInt(number, 10)
+	err = mbmemd.GetStore().Read(mctx, datastore.ToKey(mbn), mbm)
+	if err != nil {
+		return nil, common.NewErrorf("get_highest_mbm",
+			"getting latest MB map: %v", err)
+	}
+
+	return
 }

@@ -261,30 +261,33 @@ func (sc *Chain) loadLatestFinalizedMagicBlockFromStore(ctx context.Context,
 	return
 }
 
-func (sc *Chain) walkDownLookingForMagicBlock(iter *gorocksdb.Iterator,
-	lfb *block.Block, r *round.Round) (lfmb *block.Block, err error) {
+// just get highest known MB
+func (sc *Chain) loadHighestMagicBlock(ctx context.Context,
+	lfb *block.Block) (lfmb *block.Block, err error) {
 
 	if lfb.MagicBlock != nil {
 		return lfb, nil
 	}
 
-	for iter.Prev(); iter.Valid(); iter.Prev() {
-		if err = datastore.FromJSON(iter.Value().Data(), r); err != nil {
-			return nil, common.NewErrorf("load_lfb",
-				"decoding round info: %v", err) // critical
-		}
+	var hmbm *block.MagicBlockMap
+	if hmbm, err = sc.GetHighestMagicBlockMap(ctx); err != nil {
+		return nil, common.NewErrorf("load_lfb",
+			"getting highest MB map: %v", err) // critical
+	}
 
-		Logger.Debug("load_lfb (lfmb), got round", zap.Int64("round", r.Number),
-			zap.String("block_hash", r.BlockHash))
+	Logger.Debug("load_lfb (lfmb), got round",
+		zap.Int64("round", hmbm.BlockRound),
+		zap.String("block_hash", hmbm.Hash))
 
-		lfb, err = sc.GetBlockFromStore(r.BlockHash, r.Number)
-		if err != nil {
-			continue // TODO: can we use os.IsNotExist(err) or should not
-		}
+	var bl *block.Block
+	bl, err = sc.GetBlockFromStore(hmbm.Hash, hmbm.BlockRound)
+	if err != nil {
+		return nil, common.NewErrorf("load_lfb",
+			"getting block with highest MB: %v", err) // critical
+	}
 
-		if lfb.MagicBlock != nil {
-			return lfb, nil // got it
-		}
+	if bl.MagicBlock != nil {
+		return bl, nil // got it
 	}
 
 	return // not found
@@ -381,10 +384,9 @@ func (sc *Chain) iterateRoundsLookingForLFB(ctx context.Context) (
 	// it is the latest magic block, we have to load it and setup
 
 	// using another round instance
-	bl.nlfmb, err = sc.walkDownLookingForMagicBlock(iter, bl.lfb,
-		remd.Instance().(*round.Round))
+	bl.nlfmb, err = sc.loadHighestMagicBlock(ctx, bl.lfb)
 	if err != nil {
-		Logger.Warn("load_lfb, loading nearest magic block", zap.Error(err))
+		Logger.Warn("load_lfb, loading highest magic block", zap.Error(err))
 		err = nil // reset this error and exit
 	}
 
