@@ -265,7 +265,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		errMsg7 = "allocation_creation_failed: " +
 			"Not enough blobbers to honor the allocation"
 		errMsg8 = "allocation_creation_failed: " +
-			"not enough tokens to honor the min lock demand"
+			"not enough tokens to honor the min lock demand (0 < 270)"
 		errMsg9 = "allocation_creation_failed: " +
 			"no tokens to lock"
 	)
@@ -275,7 +275,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		balances = newTestBalances()
 
 		tx   transaction.Transaction
-		conf scConfig
+		conf *scConfig
 
 		resp string
 		err  error
@@ -288,11 +288,13 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 
 	balances.txn = &tx
 
+	conf = setConfig(t, balances)
 	conf.MaxChallengeCompletionTime = 20 * time.Second
 	conf.MinAllocDuration = 20 * time.Second
 	conf.MinAllocSize = 20 * GB
+	conf.TimeUnit = 2 * time.Minute
 
-	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), &conf)
+	_, err = balances.InsertTrieNode(scConfigKey(ssc.ID), conf)
 	require.NoError(t, err)
 
 	// 1.
@@ -459,7 +461,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 			Size:          10 * GB,
 			Stats:         &StorageAllocationStats{},
 			Terms:         sb.Nodes[0].Terms,
-			MinLockDemand: 200, // write_price * (size/GB) * min_lock_demand (TODO (sfxdx): time unit?)
+			MinLockDemand: 166, // (wp * (size/GB) * mld) / time_unit
 			Spent:         0,
 		},
 		&BlobberAllocation{
@@ -468,7 +470,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 			Size:          10 * GB,
 			Stats:         &StorageAllocationStats{},
 			Terms:         sb.Nodes[1].Terms,
-			MinLockDemand: 125, // write_price * (size/GB) * min_lock_demand (TODO (sfxdx): time unit?)
+			MinLockDemand: 104, // (wp * (size/GB) * mld) / time_unit
 			Spent:         0,
 		},
 	}
@@ -824,7 +826,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 		bsize = (alloc.Size + (numb - 1)) / numb
 	)
 	assert.Equal(t, tbs, bsize*numb)
-	assert.Equal(t, int64(11938983100), mld)
+	assert.Equal(t, int64(8100000020), mld)
 
 	//
 	// reduce
@@ -858,7 +860,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	bsize = (alloc.Size + (numb - 1)) / numb
 	assert.Equal(t, tbs, bsize*numb)
 	// MLD can't be reduced
-	assert.Equal(t, int64(11938983100), mld)
+	assert.Equal(t, int64(8100000020), mld)
 
 }
 
