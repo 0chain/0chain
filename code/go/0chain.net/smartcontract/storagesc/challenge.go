@@ -24,7 +24,10 @@ import (
 	"go.uber.org/zap"
 )
 
-func (sc *StorageSmartContract) completeChallengeForBlobber(blobberChallengeObj *BlobberChallenge, challengeCompleted *StorageChallenge, challengeResponse *ChallengeResponse) bool {
+func (sc *StorageSmartContract) completeChallengeForBlobber(
+	blobberChallengeObj *BlobberChallenge, challengeCompleted *StorageChallenge,
+	challengeResponse *ChallengeResponse) bool {
+
 	found := false
 	idx := -1
 	if len(blobberChallengeObj.Challenges) > 0 {
@@ -346,8 +349,8 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	var blobberChall *BlobberChallenge
 	blobberChall, err = sc.getBlobberChallenge(t.ClientID, balances)
 	if err != nil {
-		return "", common.NewError("verify_challenge",
-			"can't get the blobber challenge "+t.ClientID+": "+err.Error())
+		return "", common.NewErrorf("verify_challenge",
+			"can't get the blobber challenge %s: %v", t.ClientID, err)
 	}
 
 	var challReq, ok = blobberChall.ChallengeMap[challResp.ID]
@@ -358,8 +361,8 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 
 			return "Challenge Already redeemed by Blobber", nil
 		}
-		return "", common.NewError("verify_challenge",
-			"Cannot find the challenge with ID "+challResp.ID)
+		return "", common.NewErrorf("verify_challenge",
+			"Cannot find the challenge with ID %s", challResp.ID)
 	}
 
 	if challReq.Blobber.ID != t.ClientID {
@@ -371,8 +374,8 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	var alloc *StorageAllocation
 	alloc, err = sc.getAllocation(challReq.AllocationID, balances)
 	if err != nil {
-		return "", common.NewError("verify_challenge",
-			"can't get related allocation: "+err.Error())
+		return "", common.NewErrorf("verify_challenge",
+			"can't get related allocation: %v", err)
 	}
 
 	details, ok := alloc.BlobberMap[t.ClientID]
