@@ -233,10 +233,10 @@ type Terms struct {
 // The minLockDemand returns min lock demand value for this Terms (the
 // WritePrice and the MinLockDemand must be already set). Given size in GB and
 // rest of allocation duration in time units are used.
-func (t *Terms) minLockDemand(gbSize, rditu float64) (mdl state.Balance) {
+func (t *Terms) minLockDemand(gbSize, rdtu float64) (mdl state.Balance) {
 
 	var mldf = float64(t.WritePrice) * gbSize * t.MinLockDemand //
-	return state.Balance(mldf * rditu)                          //
+	return state.Balance(mldf * rdtu)                           //
 }
 
 // validate a received terms
@@ -462,7 +462,7 @@ type StorageAllocation struct {
 // reduces the rest of min_lock_demand of this blobber; but, if a malfunctioning
 // client doesn't send a data to a blobber (or blobbers) then this blobbers
 // don't receive tokens, their spent will be zero, and the min lock demand
-//
+// will be blobber reward anyway.
 func (sa *StorageAllocation) restMinLockDemand() (rest state.Balance) {
 	for _, details := range sa.BlobberDetails {
 		if details.MinLockDemand > details.Spent {
@@ -554,12 +554,108 @@ func (sa *StorageAllocation) Until() common.Timestamp {
 	return sa.Expiration + toSeconds(sa.ChallengeCompletionTime)
 }
 
+// The durationInTimeUnits returns given duration (represented as
+// common.Timestamp) as duration in time units (float point value) for
+// this allocation (time units for the moment of the allocation creation).
+func (sa *StorageAllocation) durationInTimeUnits(dur common.Timestamp) (
+	dtu float64) {
+
+	dtu = float64(dur.Duration()) / float64(sa.TimeUnit)
+	return
+}
+
 // The restDurationInTimeUnits return rest duration of the allocation in time
 // units as a float64 value.
 func (sa *StorageAllocation) restDurationInTimeUnits(now common.Timestamp) (
-	rditu float64) {
+	rdtu float64) {
 
-	return float64((sa.Expiration - now).Duration()) / float64(sa.TimeUnit)
+	rdtu = sa.durationInTimeUnits(sa.Expiration - now)
+	return
+}
+
+// For a stored files (size). Changing an allocation duration and terms
+// (weighted average). We need to move more tokens to related challenge pool.
+// Or move some tokens from the challenge pool back.
+//
+// For example, we have allocation for 1 time unit (let it be mouth), with
+// 1 GB of stored files. For the 1GB related challenge pool originally filled
+// up with
+//
+//     (integral): write_price * size * duration
+//     e.g.: (integral) write_price * 1 GB * 1 month
+//
+// After some time (a half or the month, for example) some tokens from the
+// challenge pool moved back to write_pool. Some tokens moved to blobbers. And
+// the challenge pool contains the rest (rest_challenge_pool).
+//
+// Then, we are extending the allocation to:
+//
+// 1) 2 months, write_price changed
+// 2) 0.7 month, write_price changed
+//
+// For (1) case, we should move more tokens to the challenge pool. The
+// difference is
+//
+//     a = (old_write_price * size) / old_duration_remaining (old expiration)
+//     b = (new_write_price * size) / new_duration_remaining (new expiration)
+//
+//  And the difference is
+//
+//     b - a (move to challenge pool, or move back from challenge pool)
+//
+// This movement should be performed during allocation extension or reduction.
+// So, if positive, then we should add more tokens to related challenge pool.
+// Otherwise, move some tokens back to write pool.
+//
+// In result, the changes is ordered as BlobberDetails field is ordered.
+//
+// For a case of allocation reducing, where no expiration, nor size changed
+// we are using the same terms. And for this method, the oterms argument is
+// nil for this case (meaning, terms hasn't changed).
+func (sa *StorageAllocation) challengePoolChanges(odr, ndr common.Timestamp,
+	oterms []Terms) (values []state.Balance) {
+
+	// odr -- old duration remaining
+	// ndr -- new duration remaining
+
+	// in time units, instead of common.Timestamp
+	var (
+		odrtu = sa.durationInTimeUnits(odr)
+		ndrtu = sa.durationInTimeUnits(ndr)
+	)
+
+	values = make([]state.Balance, 0, len(sa.BlobberDetails))
+
+	for i, d := range sa.BlobberDetails {
+
+		if d.Stats == nil || d.Stats.UsedSize == 0 {
+			values = append(values, 0) // no data, no changes
+			continue
+		}
+
+		var (
+			size = sizeInGB(d.Stats.UsedSize)  // in GB
+			nwp  = float64(d.Terms.WritePrice) // new write price
+			owp  float64                       // original write price
+
+			a, b, diff float64 // original value, new value, value difference
+		)
+
+		if oterms != nil {
+			owp = float64(oterms[i].WritePrice) // original write price
+		} else {
+			owp = float64(d.Terms.WritePrice) // terms weren't changed
+		}
+
+		a = (owp * size) / odrtu // original value (by original terms)
+		b = (nwp * size) / ndrtu // new value (by new terms)
+
+		diff = b - a // value difference
+
+		values = append(values, state.Balance(diff))
+	}
+
+	return
 }
 
 func (sa *StorageAllocation) IsValidFinalizer(id string) bool {
