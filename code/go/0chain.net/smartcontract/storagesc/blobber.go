@@ -518,17 +518,14 @@ func allocLeftRatio(start, expire, last common.Timestamp) float64 {
 }
 
 // commitMoveTokens moves tokens on connection commit (on write marker),
-// if data written (size > 0) -- from write pool to challenge pool
+// if data written (size > 0) -- from write pool to challenge pool, otherwise
+// (delete write marker) from challenge back to write pool
 func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
-	size int64, details *BlobberAllocation, balances cstate.StateContextI) (
-	err error) {
+	size int64, details *BlobberAllocation, now common.Timestamp,
+	balances cstate.StateContextI) (err error) {
 
 	if size == 0 {
 		return errors.New("zero size write marker given")
-	}
-
-	if size < 0 {
-		return // data has deleted, nothing to do here
 	}
 
 	// write pool
@@ -545,20 +542,32 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 
 	var (
 		until = alloc.Until()
-		value state.Balance
+		value = state.Balance(
+			(float64(details.Terms.WritePrice) * sizeInGB(size)) /
+				alloc.restDurationInTimeUnits(now),
+		)
 	)
 
 	if size > 0 {
-		// write
-		value = state.Balance(float64(details.Terms.WritePrice) *
-			sizeInGB(size))
-
-		err = wp.moveToChallenge(alloc.ID, details.BlobberID, cp, until, value)
+		// upload (write_pool -> challenge_pool)
+		err = wp.moveToChallenge(alloc.ID, details.BlobberID, cp, now, value)
 		if err != nil {
 			return fmt.Errorf("can't move tokens to challenge pool: %v", err)
 		}
 		alloc.MovedToChallenge += value
 		details.Spent += value
+	} else /* if size < 0  do we allow zero size write markers? */ {
+		// delete (challenge_pool -> write_pool)
+		value = -value // negative -> positive
+		if cp.Balance < value {
+			value = cp.Balance // adjust due to challenges
+		}
+		err = cp.moveToWritePool(alloc.ID, details.BlobberID, until, wp, value)
+		if err != nil {
+			return fmt.Errorf("can't move tokens to write pool: %v", err)
+		}
+		alloc.MovedBack += value
+		details.Returned += value
 	}
 
 	// save pools
@@ -663,7 +672,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	}
 
 	err = sc.commitMoveTokens(alloc, commitConnection.WriteMarker.Size, details,
-		balances)
+		t.CreationDate, balances)
 	if err != nil {
 		return "", common.NewError("commit_connection_failed",
 			"moving tokens: "+err.Error())

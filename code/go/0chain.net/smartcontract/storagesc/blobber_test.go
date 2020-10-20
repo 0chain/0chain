@@ -10,6 +10,7 @@ import (
 
 	chainState "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
+	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 
@@ -94,6 +95,29 @@ func TestStorageSmartContract_addBlobber_invalidParams(t *testing.T) {
 	terms.MaxOfferDuration = conf.MinOfferDuration - 1*time.Second
 	err = add(t, ssc, 2*GB, tp, terms, 0, balances)
 	require.Error(t, err)
+}
+
+func addTokensToWritePool(t *testing.T, ssc *StorageSmartContract,
+	allocID, clientID string, toks int64, tp int64, dur time.Duration,
+	balances *testBalances) {
+
+	var tx = transaction.Transaction{
+		Value:        toks,
+		ClientID:     clientID,
+		CreationDate: common.Timestamp(tp),
+	}
+
+	var keep = balances.txn // back up
+
+	balances.txn = &tx
+	var _, err = ssc.writePoolLock(&tx, mustEncode(t, &lockRequest{
+		AllocationID: allocID,
+		Duration:     dur,
+	}), balances)
+	require.NoError(t, err)
+
+	balances.txn = keep // restore
+
 }
 
 // - create allocation
@@ -287,6 +311,10 @@ func Test_flow_reward(t *testing.T) {
 
 	var until = int64(alloc.Until())
 
+	balances.balances[client.id] += 200e10
+	addTokensToWritePool(t, ssc, allocID, client.id, 200e10, tp,
+		20*time.Minute, balances)
+
 	t.Run("write", func(t *testing.T) {
 
 		var cp *challengePool
@@ -339,14 +367,17 @@ func Test_flow_reward(t *testing.T) {
 		cp, err = ssc.getChallengePool(allocID, balances)
 		require.NoError(t, err)
 
-		var moved = int64(sizeInGB(cc.WriteMarker.Size) *
-			float64(avgTerms.WritePrice))
+		var moved = int64(
+			(sizeInGB(cc.WriteMarker.Size) * float64(avgTerms.WritePrice)) /
+				alloc.restDurationInTimeUnits(common.Timestamp(tp)),
+		)
 		require.EqualValues(t, moved, cp.Balance)
 
 		wp, err = ssc.getWritePool(client.id, balances)
 		require.NoError(t, err)
 
-		require.EqualValues(t, 15*x10-moved, wp.allocTotal(allocID, until))
+		require.EqualValues(t, (200e10+15*x10)-moved,
+			wp.allocTotal(allocID, tp))
 
 		// min lock demand reducing
 		alloc, err = ssc.getAllocation(allocID, balances)
@@ -364,9 +395,9 @@ func Test_flow_reward(t *testing.T) {
 		wp, err = ssc.getWritePool(client.id, balances)
 		require.NoError(t, err)
 
-		var wpb, cpb = wp.allocTotal(allocID, until), cp.Balance
-		require.EqualValues(t, 145117187500, wpb)
-		require.EqualValues(t, 4882812500, cpb)
+		var wpb, cpb = wp.allocTotal(allocID, tp), cp.Balance
+		require.EqualValues(t, 2142357336957, wpb)
+		require.EqualValues(t, 7642663043, cpb)
 
 		tp += 100
 		var cc = &BlobberCloseConnection{
@@ -406,13 +437,12 @@ func Test_flow_reward(t *testing.T) {
 		cp, err = ssc.getChallengePool(allocID, balances)
 		require.NoError(t, err)
 
-		// nothing has moved
-		require.EqualValues(t, int64(cpb), cp.Balance)
+		require.EqualValues(t, 3457395186, cp.Balance)
 
 		wp, err = ssc.getWritePool(client.id, balances)
 		require.NoError(t, err)
 
-		require.EqualValues(t, int64(wpb), wp.allocTotal(allocID, until))
+		require.EqualValues(t, 2146542604814, wp.allocTotal(allocID, tp))
 
 		alloc, err = ssc.getAllocation(allocID, balances)
 		require.NoError(t, err)
@@ -447,9 +477,9 @@ func Test_flow_reward(t *testing.T) {
 
 		var blobb1 = balances.balances[b3.id]
 
-		var wpb1, cpb1 = wp.allocTotal(allocID, until), cp.Balance
-		require.EqualValues(t, 145117187500, wpb1)
-		require.EqualValues(t, 4882812500, cpb1)
+		var wpb1, cpb1 = wp.allocTotal(allocID, tp), cp.Balance
+		require.EqualValues(t, 2146542604814, wpb1)
+		require.EqualValues(t, 3457395186, cpb1)
 		require.EqualValues(t, 40*x10, blobb1)
 
 		const allocRoot = "alloc-root-1"
@@ -492,9 +522,9 @@ func Test_flow_reward(t *testing.T) {
 
 		var blobb2 = balances.balances[b3.id]
 
-		var wpb2, cpb2 = wp.allocTotal(allocID, until), cp.Balance
-		require.EqualValues(t, 140234375000, wpb2)
-		require.EqualValues(t, 9765625000, cpb2)
+		var wpb2, cpb2 = wp.allocTotal(allocID, tp), cp.Balance
+		require.EqualValues(t, 2136776979814, wpb2)
+		require.EqualValues(t, 13223020186, cpb2)
 		require.EqualValues(t, 40*x10, blobb2)
 
 		// until the end
@@ -561,7 +591,7 @@ func Test_flow_reward(t *testing.T) {
 			require.NoError(t, err)
 
 			// write pool balance should be the same
-			require.EqualValues(t, wpb2, wp.allocTotal(allocID, until))
+			require.EqualValues(t, wpb2, wp.allocTotal(allocID, 0))
 
 			cp, err = ssc.getChallengePool(allocID, balances)
 			require.NoError(t, err)
