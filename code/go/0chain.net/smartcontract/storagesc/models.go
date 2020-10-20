@@ -385,6 +385,64 @@ type BlobberAllocation struct {
 	// It can be greater then zero, if user didn't spent the min lock demand
 	// during the allocation.
 	FinalReward state.Balance `json:"final_reward"`
+
+	// IntegralSize represents integral size * dt for this blobber. Since,
+	// a user can upload and delete file, and a challenge request can
+	// be invoked at any time, then we have to use integral blobber size.
+	//
+	// For example, if user uploads a file 100 GB for 100 time_units (until
+	// allocation ends). Challenge pool value increased by
+	//
+	//     challenge_pool_value += 100 GB * 100 time_units * blobber_write_price
+	//
+	// Then a challenge (a challenge is for entire allocation of the blobber)
+	// will affect
+	//
+	//     100 GB * ((chall_time - prev_chall_time) / time_unit)
+	//
+	// For example, for 1 time_unit a challenge moves to blobber
+	//
+	//     100 GB * 1 time_unit * blobber_write_price
+	//
+	// Then, after the challenge if user waits 1 time_unit and deletes the file,
+	// the challenge pool will contain
+	//
+	//     100 GB * 1 time_unit * blobber_write_price
+	//
+	// And after one more time unit next challenge (after 2 time_units) will
+	// want
+	//
+	//     100 GB * 2 time_unit * blobber_write_price
+	//
+	// But the challenge pool have only the same for 1 time_unit (file has
+	// deleted a time_unit ago).
+	//
+	// Thus, we have to use this integral size that is affected by
+	//
+	//     - challenges
+	//     - uploads
+	//     - deletions
+	//
+	// A challenge reduces the integral size. An upload increases it. A deletion
+	// reduces it too as a challenge.
+	//
+	// The integral size is size*dt. E.g. its formulas for every of the
+	// operations:
+	//
+	//     1. Upload
+	//
+	//         integral_size += file_size * rest_dtu * blobber_write_price
+	//
+	//     2. Delete
+	//
+	//         integral_size -= file_size * rest_dtu * blobber_write_price
+	//
+	//     3. Challenge (successful or failed)
+	//
+	//         integral_size -= integral_size * chall_dtu * blobber_wrtie_price
+	//
+	// So, the integral size needed to calculate challenges values properly.
+	IntegralSize state.Balance `json:"integral_size"`
 }
 
 // PriceRange represents a price range allowed by user to filter blobbers.
