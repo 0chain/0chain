@@ -525,7 +525,7 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 	balances cstate.StateContextI) (err error) {
 
 	if size == 0 {
-		return errors.New("zero size write marker given")
+		return // zero size write marker -- no tokens movements
 	}
 
 	// write pool
