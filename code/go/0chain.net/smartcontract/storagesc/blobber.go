@@ -674,15 +674,15 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	err = sc.commitMoveTokens(alloc, commitConnection.WriteMarker.Size, details,
 		t.CreationDate, balances)
 	if err != nil {
-		return "", common.NewError("commit_connection_failed",
-			"moving tokens: "+err.Error())
+		return "", common.NewErrorf("commit_connection_failed",
+			"moving tokens: %v", err)
 	}
 
 	// save allocation object
 	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
-		return "", common.NewError("commit_connection_failed",
-			"saving allocation object: "+err.Error())
+		return "", common.NewErrorf("commit_connection_failed",
+			"saving allocation object: %v", err)
 	}
 
 	detailsBytes, err = json.Marshal(details.LastWriteMarker)
