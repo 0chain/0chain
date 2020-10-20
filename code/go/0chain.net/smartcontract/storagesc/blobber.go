@@ -521,7 +521,7 @@ func allocLeftRatio(start, expire, last common.Timestamp) float64 {
 // if data written (size > 0) -- from write pool to challenge pool, otherwise
 // (delete write marker) from challenge back to write pool
 func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
-	size int64, details *BlobberAllocation, now common.Timestamp,
+	size int64, details *BlobberAllocation, wmTime, now common.Timestamp,
 	balances cstate.StateContextI) (err error) {
 
 	if size == 0 {
@@ -544,7 +544,7 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 		until = alloc.Until()
 		value = state.Balance(
 			(float64(details.Terms.WritePrice) * sizeInGB(size)) /
-				alloc.restDurationInTimeUnits(now),
+				alloc.restDurationInTimeUnits(wmTime),
 		)
 	)
 
@@ -672,7 +672,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	}
 
 	err = sc.commitMoveTokens(alloc, commitConnection.WriteMarker.Size, details,
-		t.CreationDate, balances)
+		commitConnection.WriteMarker.Timestamp, t.CreationDate, balances)
 	if err != nil {
 		return "", common.NewErrorf("commit_connection_failed",
 			"moving tokens: %v", err)

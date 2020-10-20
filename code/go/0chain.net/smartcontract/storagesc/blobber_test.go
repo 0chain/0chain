@@ -369,7 +369,7 @@ func Test_flow_reward(t *testing.T) {
 
 		var moved = int64(
 			(sizeInGB(cc.WriteMarker.Size) * float64(avgTerms.WritePrice)) /
-				alloc.restDurationInTimeUnits(common.Timestamp(tp)),
+				alloc.restDurationInTimeUnits(cc.WriteMarker.Timestamp),
 		)
 		require.EqualValues(t, moved, cp.Balance)
 
@@ -396,8 +396,8 @@ func Test_flow_reward(t *testing.T) {
 		require.NoError(t, err)
 
 		var wpb, cpb = wp.allocTotal(allocID, tp), cp.Balance
-		require.EqualValues(t, 2142357336957, wpb)
-		require.EqualValues(t, 7642663043, cpb)
+		require.EqualValues(t, 2142675781250, wpb)
+		require.EqualValues(t, 7324218750, cpb)
 
 		tp += 100
 		var cc = &BlobberCloseConnection{
@@ -437,12 +437,12 @@ func Test_flow_reward(t *testing.T) {
 		cp, err = ssc.getChallengePool(allocID, balances)
 		require.NoError(t, err)
 
-		require.EqualValues(t, 3457395186, cp.Balance)
+		require.EqualValues(t, 3329190341, cp.Balance)
 
 		wp, err = ssc.getWritePool(client.id, balances)
 		require.NoError(t, err)
 
-		require.EqualValues(t, 2146542604814, wp.allocTotal(allocID, tp))
+		require.EqualValues(t, 2146670809659, wp.allocTotal(allocID, tp))
 
 		alloc, err = ssc.getAllocation(allocID, balances)
 		require.NoError(t, err)
@@ -478,8 +478,8 @@ func Test_flow_reward(t *testing.T) {
 		var blobb1 = balances.balances[b3.id]
 
 		var wpb1, cpb1 = wp.allocTotal(allocID, tp), cp.Balance
-		require.EqualValues(t, 2146542604814, wpb1)
-		require.EqualValues(t, 3457395186, cpb1)
+		require.EqualValues(t, 2146670809659, wpb1)
+		require.EqualValues(t, 3329190341, cpb1)
 		require.EqualValues(t, 40*x10, blobb1)
 
 		const allocRoot = "alloc-root-1"
@@ -523,8 +523,8 @@ func Test_flow_reward(t *testing.T) {
 		var blobb2 = balances.balances[b3.id]
 
 		var wpb2, cpb2 = wp.allocTotal(allocID, tp), cp.Balance
-		require.EqualValues(t, 2136776979814, wpb2)
-		require.EqualValues(t, 13223020186, cpb2)
+		require.EqualValues(t, 2137419164923, wpb2)
+		require.EqualValues(t, 12580835077, cpb2)
 		require.EqualValues(t, 40*x10, blobb2)
 
 		// until the end
