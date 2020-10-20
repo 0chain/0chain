@@ -329,7 +329,7 @@ func setConfig(t *testing.T, balances chainState.StateContextI) (
 
 	conf = new(scConfig)
 
-	conf.TimeUnit = 1 * time.Hour // use one hour as the time unit in the tests
+	conf.TimeUnit = 48 * time.Hour // use one hour as the time unit in the tests
 	conf.ChallengeEnabled = true
 	conf.ChallengeGenerationRate = 1
 	conf.FailedChallengesToCancel = 100

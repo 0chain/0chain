@@ -616,8 +616,8 @@ func (sc *StorageSmartContract) extendAllocation(t *transaction.Transaction,
 	alloc.Size += uar.Size             // new size
 
 	// 1. update terms
-	for i, ba := range alloc.BlobberDetails {
-		oterms = append(oterms, ba.Terms) // keep original terms will be changed
+	for i, details := range alloc.BlobberDetails {
+		oterms = append(oterms, details.Terms) // keep original terms will be changed
 
 		var b = blobbers[i]
 		if b.Capacity == 0 {
@@ -634,28 +634,35 @@ func (sc *StorageSmartContract) extendAllocation(t *transaction.Transaction,
 		b.Used += diff // new capacity used
 
 		// update terms using weighted average
-		ba.Terms = weightedAverage(&ba.Terms, &b.Terms, t.CreationDate,
-			prevExpiration, alloc.Expiration, ba.Size, diff)
+		details.Terms = weightedAverage(&details.Terms, &b.Terms,
+			t.CreationDate, prevExpiration, alloc.Expiration, details.Size,
+			diff)
 
-		ba.Size = size // new size
+		details.Size = size // new size
 
 		if uar.Expiration > toSeconds(b.Terms.MaxOfferDuration) {
 			return "", common.NewErrorf("allocation_extending_failed",
-				"blobber %s doesn't allow too long offers", b.ID)
+				"blobber %s doesn't allow so long offers", b.ID)
 		}
 
 		if b.Terms.ChallengeCompletionTime > cct {
-			cct = b.Terms.ChallengeCompletionTime
+			cct = b.Terms.ChallengeCompletionTime // seek max CCT
 		}
+
+		// since, new terms is weighted average based on previous terms and
+		// past allocation time and new terms and new allocation time; then
+		// we can easily recalculate new min_lock_demand value from allocation
+		// start to its new end using the new weighted average terms; but, we
+		// can't reduce the min_lock_demand_value; that's all;
 
 		// new blobber's min lock demand (alloc.Expiration is already updated
 		// and we can use restDurationInTimeUnits method here)
-		var nbmld = b.Terms.minLockDemand(gbSize,
-			alloc.restDurationInTimeUnits(t.CreationDate))
+		var nbmld = details.Terms.minLockDemand(gbSize,
+			alloc.restDurationInTimeUnits(alloc.StartTime))
 
 		// min_lock_demand can be increased only
-		if nbmld > ba.MinLockDemand {
-			ba.MinLockDemand = nbmld
+		if nbmld > details.MinLockDemand {
+			details.MinLockDemand = nbmld
 		}
 	}
 

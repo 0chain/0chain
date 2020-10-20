@@ -596,8 +596,8 @@ func (sa *StorageAllocation) restDurationInTimeUnits(now common.Timestamp) (
 // For (1) case, we should move more tokens to the challenge pool. The
 // difference is
 //
-//     a = (old_write_price * size) / old_duration_remaining (old expiration)
-//     b = (new_write_price * size) / new_duration_remaining (new expiration)
+//     a = old_write_price * size * old_duration_remaining (old expiration)
+//     b = new_write_price * size * new_duration_remaining (new expiration)
 //
 //  And the difference is
 //
@@ -647,8 +647,8 @@ func (sa *StorageAllocation) challengePoolChanges(odr, ndr common.Timestamp,
 			owp = float64(d.Terms.WritePrice) // terms weren't changed
 		}
 
-		a = (owp * size) / odrtu // original value (by original terms)
-		b = (nwp * size) / ndrtu // new value (by new terms)
+		a = owp * size * odrtu // original value (by original terms)
+		b = nwp * size * ndrtu // new value (by new terms)
 
 		diff = b - a // value difference
 

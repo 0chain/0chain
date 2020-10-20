@@ -542,10 +542,8 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 
 	var (
 		until = alloc.Until()
-		value = state.Balance(
-			(float64(details.Terms.WritePrice) * sizeInGB(size)) /
-				alloc.restDurationInTimeUnits(wmTime),
-		)
+		value = state.Balance(float64(details.Terms.WritePrice) *
+			sizeInGB(size) * alloc.restDurationInTimeUnits(wmTime))
 	)
 
 	if size > 0 {

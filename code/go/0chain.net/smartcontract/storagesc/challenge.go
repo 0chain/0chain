@@ -101,16 +101,12 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 		return fmt.Errorf("can't get allocation's challenge pool: %v", err)
 	}
 
-	var ratio = float64(tp-prev) / float64(alloc.Expiration-alloc.StartTime)
-
-	if tp > alloc.Expiration {
-		ratio = 1 // all left (allocation expired, challenge completion time)
-	}
-
 	var (
-		stake = sizeInGB(details.Stats.UsedSize) *
-			float64(details.Terms.WritePrice)
-		move = state.Balance(stake * ratio)
+		dtu          = alloc.durationInTimeUnits(tp - prev)
+		usedSizeInGB = sizeInGB(details.Stats.UsedSize)
+		price        = float64(details.Terms.WritePrice)
+
+		move = state.Balance(usedSizeInGB * price * dtu)
 	)
 
 	// part of this tokens goes to related validators
@@ -223,16 +219,12 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 		return fmt.Errorf("can't get allocation's write pool: %v", err)
 	}
 
-	var ratio = float64(tp-prev) / float64(alloc.Expiration-alloc.StartTime)
-
-	if tp > alloc.Expiration {
-		ratio = 1 // all left (allocation expired, challenge completion time)
-	}
-
 	var (
-		stake = sizeInGB(details.Stats.UsedSize) *
-			float64(details.Terms.WritePrice)
-		move = state.Balance(stake * ratio)
+		dtu          = alloc.durationInTimeUnits(tp - prev)
+		usedSizeInGB = sizeInGB(details.Stats.UsedSize)
+		price        = float64(details.Terms.WritePrice)
+
+		move = state.Balance(usedSizeInGB * price * dtu)
 	)
 
 	// part of this tokens goes to related validators

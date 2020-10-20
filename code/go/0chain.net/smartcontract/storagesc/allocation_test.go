@@ -817,16 +817,27 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	assert.Equal(t, alloc.Expiration, cp.Expiration*3)
 
 	var tbs, mld int64
-	for _, detail := range alloc.BlobberDetails {
-		tbs += detail.Size
-		mld += int64(detail.MinLockDemand)
+	for _, d := range alloc.BlobberDetails {
+		tbs += d.Size
+		mld += int64(d.MinLockDemand)
 	}
 	var (
 		numb  = int64(alloc.DataShards + alloc.ParityShards)
 		bsize = (alloc.Size + (numb - 1)) / numb
+
+		// expected min lock demand
+		emld int64
 	)
+	for _, d := range alloc.BlobberDetails {
+		emld += int64(
+			sizeInGB(d.Size) * d.Terms.MinLockDemand *
+				float64(d.Terms.WritePrice) *
+				alloc.restDurationInTimeUnits(alloc.StartTime),
+		)
+	}
+
 	assert.Equal(t, tbs, bsize*numb)
-	assert.Equal(t, int64(8100000020), mld)
+	assert.Equal(t, emld, mld)
 
 	//
 	// reduce
@@ -860,7 +871,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	bsize = (alloc.Size + (numb - 1)) / numb
 	assert.Equal(t, tbs, bsize*numb)
 	// MLD can't be reduced
-	assert.Equal(t, int64(8100000020), mld)
+	assert.Equal(t, emld /*as it was*/, mld)
 
 }
 

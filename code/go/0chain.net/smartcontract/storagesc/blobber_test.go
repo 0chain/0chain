@@ -367,10 +367,10 @@ func Test_flow_reward(t *testing.T) {
 		cp, err = ssc.getChallengePool(allocID, balances)
 		require.NoError(t, err)
 
-		var moved = int64(
-			(sizeInGB(cc.WriteMarker.Size) * float64(avgTerms.WritePrice)) /
-				alloc.restDurationInTimeUnits(cc.WriteMarker.Timestamp),
-		)
+		var moved = int64(sizeInGB(cc.WriteMarker.Size) *
+			float64(avgTerms.WritePrice) *
+			alloc.restDurationInTimeUnits(cc.WriteMarker.Timestamp))
+
 		require.EqualValues(t, moved, cp.Balance)
 
 		wp, err = ssc.getWritePool(client.id, balances)
@@ -396,8 +396,8 @@ func Test_flow_reward(t *testing.T) {
 		require.NoError(t, err)
 
 		var wpb, cpb = wp.allocTotal(allocID, tp), cp.Balance
-		require.EqualValues(t, 2142675781250, wpb)
-		require.EqualValues(t, 7324218750, cpb)
+		require.EqualValues(t, 2146744791667, wpb)
+		require.EqualValues(t, 3255208333, cpb)
 
 		tp += 100
 		var cc = &BlobberCloseConnection{
@@ -437,12 +437,12 @@ func Test_flow_reward(t *testing.T) {
 		cp, err = ssc.getChallengePool(allocID, balances)
 		require.NoError(t, err)
 
-		require.EqualValues(t, 3329190341, cp.Balance)
+		require.EqualValues(t, 1763237847, cp.Balance)
 
 		wp, err = ssc.getWritePool(client.id, balances)
 		require.NoError(t, err)
 
-		require.EqualValues(t, 2146670809659, wp.allocTotal(allocID, tp))
+		require.EqualValues(t, 2148236762153, wp.allocTotal(allocID, tp))
 
 		alloc, err = ssc.getAllocation(allocID, balances)
 		require.NoError(t, err)
