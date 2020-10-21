@@ -440,7 +440,7 @@ type BlobberAllocation struct {
 	//
 	//     3. Challenge (successful or failed)
 	//
-	//         integral_value -= integral_value * chall_dtu * blobber_wrtie_price
+	//         integral_value -= (chall_dtu / rest_dtu) * integral_value
 	//
 	// So, the integral value needed to calculate challenges values properly.
 	//
@@ -482,7 +482,7 @@ func (d *BlobberAllocation) delete(size int64, now common.Timestamp,
 // previous challenge time. And the DTU should be based on previous - current
 // challenge time.
 func (d *BlobberAllocation) challenge(dtu, rdtu float64) (move state.Balance) {
-	move = state.Balance(dtu / rdtu * float64(d.ChallengePoolIntegralValue))
+	move = state.Balance((dtu / rdtu) * float64(d.ChallengePoolIntegralValue))
 	d.ChallengePoolIntegralValue -= move
 	return
 }
