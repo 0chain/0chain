@@ -542,30 +542,32 @@ func (sc *StorageSmartContract) commitMoveTokens(alloc *StorageAllocation,
 
 	var (
 		until = alloc.Until()
-		value = state.Balance(float64(details.Terms.WritePrice) *
-			sizeInGB(size) * alloc.restDurationInTimeUnits(wmTime))
+		move  state.Balance
 	)
 
+	// the details will be saved in caller with allocation object (the details
+	// is part of the allocation object)
+
 	if size > 0 {
+		move = details.upload(size, wmTime,
+			alloc.restDurationInTimeUnits(wmTime))
 		// upload (write_pool -> challenge_pool)
-		err = wp.moveToChallenge(alloc.ID, details.BlobberID, cp, now, value)
+		err = wp.moveToChallenge(alloc.ID, details.BlobberID, cp, now, move)
 		if err != nil {
 			return fmt.Errorf("can't move tokens to challenge pool: %v", err)
 		}
-		alloc.MovedToChallenge += value
-		details.Spent += value
-	} else /* if size < 0  do we allow zero size write markers? */ {
+		alloc.MovedToChallenge += move
+		details.Spent += move
+	} else {
 		// delete (challenge_pool -> write_pool)
-		value = -value // negative -> positive
-		if cp.Balance < value {
-			value = cp.Balance // adjust due to challenges
-		}
-		err = cp.moveToWritePool(alloc.ID, details.BlobberID, until, wp, value)
+		move = details.delete(-size, wmTime,
+			alloc.restDurationInTimeUnits(wmTime))
+		err = cp.moveToWritePool(alloc.ID, details.BlobberID, until, wp, move)
 		if err != nil {
 			return fmt.Errorf("can't move tokens to write pool: %v", err)
 		}
-		alloc.MovedBack += value
-		details.Returned += value
+		alloc.MovedBack += move
+		details.Returned += move
 	}
 
 	// save pools

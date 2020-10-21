@@ -623,6 +623,21 @@ func Test_flow_reward(t *testing.T) {
 
 }
 
+func inspectCPIV(t *testing.T, name string, ssc *StorageSmartContract,
+	allocID string, balances *testBalances) {
+
+	t.Helper()
+
+	var alloc, err = ssc.getAllocation(allocID, balances)
+	require.NoError(t, err)
+	for _, d := range alloc.BlobberDetails {
+		if d.ChallengePoolIntegralValue == 0 {
+			continue
+		}
+		t.Log(name, "CPIV", d.BlobberID, d.ChallengePoolIntegralValue)
+	}
+}
+
 // challenge failed
 func Test_flow_penalty(t *testing.T) {
 
@@ -655,7 +670,7 @@ func Test_flow_penalty(t *testing.T) {
 	}
 	require.NotNil(t, b1)
 
-	require.EqualValues(t, 9722222260, alloc.restMinLockDemand())
+	require.EqualValues(t, 202546280, alloc.restMinLockDemand())
 
 	// add 10 validators
 	var valids []*Client
@@ -696,6 +711,8 @@ func Test_flow_penalty(t *testing.T) {
 			encryption.Hash(cc.WriteMarker.GetHashData()))
 		require.NoError(t, err)
 
+		inspectCPIV(t, "before", ssc, allocID, balances)
+
 		// write
 		tp += 100
 		var tx = newTransaction(b4.id, ssc.ID, 0, tp)
@@ -705,6 +722,8 @@ func Test_flow_penalty(t *testing.T) {
 			balances)
 		require.NoError(t, err)
 		require.NotZero(t, resp)
+
+		inspectCPIV(t, "after commit", ssc, allocID, balances)
 
 		// balances
 		var cp *challengePool
@@ -782,6 +801,9 @@ func Test_flow_penalty(t *testing.T) {
 			resp, err = ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
 			require.NoError(t, err)
 			require.NotZero(t, resp)
+
+			inspectCPIV(t, fmt.Sprintf("after challenge %d", i), ssc, allocID,
+				balances)
 
 			// check out pools, blobbers, validators balances
 			wp, err = ssc.getWritePool(client.id, balances)
@@ -865,7 +887,7 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
 
-	require.EqualValues(t, 9722222260, alloc.restMinLockDemand())
+	require.EqualValues(t, 202546280, alloc.restMinLockDemand())
 
 	// add 10 validators
 	var valids []*Client
@@ -1098,7 +1120,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
 
-	require.EqualValues(t, 9722222260, alloc.restMinLockDemand())
+	require.EqualValues(t, 202546280, alloc.restMinLockDemand())
 
 	// add 10 validators
 	var valids []*Client

@@ -386,9 +386,10 @@ type BlobberAllocation struct {
 	// during the allocation.
 	FinalReward state.Balance `json:"final_reward"`
 
-	// IntegralSize represents integral size * dt for this blobber. Since,
-	// a user can upload and delete file, and a challenge request can
-	// be invoked at any time, then we have to use integral blobber size.
+	// ChallengePoolIntegralValue represents integral price * size * dt for this
+	// blobber. Since, a user can upload and delete file, and a challenge
+	// request can be invoked at any time, then we have to use integral blobber
+	// value.
 	//
 	// For example, if user uploads a file 100 GB for 100 time_units (until
 	// allocation ends). Challenge pool value increased by
@@ -426,23 +427,64 @@ type BlobberAllocation struct {
 	// A challenge reduces the integral size. An upload increases it. A deletion
 	// reduces it too as a challenge.
 	//
-	// The integral size is size*dt. E.g. its formulas for every of the
+	// The integral value is price*size*dt. E.g. its formulas for every of the
 	// operations:
 	//
 	//     1. Upload
 	//
-	//         integral_size += file_size * rest_dtu * blobber_write_price
+	//         integral_value += file_size * rest_dtu * blobber_write_price
 	//
 	//     2. Delete
 	//
-	//         integral_size -= file_size * rest_dtu * blobber_write_price
+	//         integral_value -= file_size * rest_dtu * blobber_write_price
 	//
 	//     3. Challenge (successful or failed)
 	//
-	//         integral_size -= integral_size * chall_dtu * blobber_wrtie_price
+	//         integral_value -= integral_value * chall_dtu * blobber_wrtie_price
 	//
-	// So, the integral size needed to calculate challenges values properly.
-	IntegralSize state.Balance `json:"integral_size"`
+	// So, the integral value needed to calculate challenges values properly.
+	//
+	// Also, the integral value is challenge pool for this blobber-allocation.
+	// Since, a challenge pool of an allocation contains tokens for all related
+	// blobbers, then we should track value of every blobber to calculate
+	// rewards and penalties properly.
+	//
+	// For any case, total value of all ChallengePoolIntegralValue of all
+	// blobber of an allocation should be equal to related challenge pool
+	// balance.
+	ChallengePoolIntegralValue state.Balance `json:"challenge_pool_integral_value"`
+}
+
+// The upload used after commitBlobberConnection (size > 0) to calculate
+// internal integral value.
+func (d *BlobberAllocation) upload(size int64, now common.Timestamp,
+	rdtu float64) (move state.Balance) {
+
+	move = state.Balance(sizeInGB(size) * float64(d.Terms.WritePrice) * rdtu)
+	d.ChallengePoolIntegralValue += move
+	return
+}
+
+// The upload used after commitBlobberConnection (size < 0) to calculate
+// internal integral value. The size argument expected to be positive (not
+// negative).
+func (d *BlobberAllocation) delete(size int64, now common.Timestamp,
+	rdtu float64) (move state.Balance) {
+
+	move = state.Balance(sizeInGB(size) * float64(d.Terms.WritePrice) * rdtu)
+	d.ChallengePoolIntegralValue -= move
+	return
+}
+
+// The upload used after commitBlobberConnection (size < 0) to calculate
+// internal integral value. It returns tokens should be moved for the blobber
+// challenge (doesn't matter rewards or penalty). The RDTU should be based on
+// previous challenge time. And the DTU should be based on previous - current
+// challenge time.
+func (d *BlobberAllocation) challenge(dtu, rdtu float64) (move state.Balance) {
+	move = state.Balance(dtu / rdtu * float64(d.ChallengePoolIntegralValue))
+	d.ChallengePoolIntegralValue -= move
+	return
 }
 
 // PriceRange represents a price range allowed by user to filter blobbers.

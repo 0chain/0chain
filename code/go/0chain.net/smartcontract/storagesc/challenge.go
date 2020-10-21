@@ -102,11 +102,9 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	}
 
 	var (
-		dtu          = alloc.durationInTimeUnits(tp - prev)
-		usedSizeInGB = sizeInGB(details.Stats.UsedSize)
-		price        = float64(details.Terms.WritePrice)
-
-		move = state.Balance(usedSizeInGB * price * dtu)
+		rdtu = alloc.restDurationInTimeUnits(prev)
+		dtu  = alloc.durationInTimeUnits(tp - prev)
+		move = details.challenge(dtu, rdtu)
 	)
 
 	// part of this tokens goes to related validators
@@ -114,17 +112,38 @@ func (sc *StorageSmartContract) blobberReward(t *transaction.Transaction,
 	move -= validatorsReward
 
 	// for a case of a partial verification
-	move = state.Balance(float64(move) * partial)
+	var reward, back state.Balance
+	reward = state.Balance(float64(move) * partial) // blobber (partial) reward
+	back = move - reward                            // return back to write pool
+
+	if back > 0 {
+		// move back to write pool
+		var wp *writePool
+		if wp, err = sc.getWritePool(alloc.Owner, balances); err != nil {
+			return fmt.Errorf("can't get allocation's write pool: %v", err)
+		}
+		var until = alloc.Until()
+		err = cp.moveToWritePool(alloc.ID, details.BlobberID, until, wp, back)
+		if err != nil {
+			return fmt.Errorf("moving partial challenge to write pool: %v", err)
+		}
+		alloc.MovedBack += back
+		details.Returned += back
+		// save the write pool
+		if err = wp.save(sc.ID, alloc.Owner, balances); err != nil {
+			return fmt.Errorf("can't save allocation's write pool: %v", err)
+		}
+	}
 
 	var sp *stakePool
 	if sp, err = sc.getStakePool(bc.BlobberID, balances); err != nil {
 		return fmt.Errorf("can't get stake pool: %v", err)
 	}
 
-	if err = cp.moveToBlobber(sc.ID, sp, move, balances); err != nil {
+	if err = cp.moveToBlobber(sc.ID, sp, reward, balances); err != nil {
 		return fmt.Errorf("can't move tokens to blobber: %v", err)
 	}
-	details.ChallengeReward += move
+	details.ChallengeReward += reward
 
 	// validators' stake pools
 	var vsps []*stakePool
@@ -220,11 +239,9 @@ func (sc *StorageSmartContract) blobberPenalty(t *transaction.Transaction,
 	}
 
 	var (
-		dtu          = alloc.durationInTimeUnits(tp - prev)
-		usedSizeInGB = sizeInGB(details.Stats.UsedSize)
-		price        = float64(details.Terms.WritePrice)
-
-		move = state.Balance(usedSizeInGB * price * dtu)
+		rdtu = alloc.restDurationInTimeUnits(prev)
+		dtu  = alloc.durationInTimeUnits(tp - prev)
+		move = details.challenge(dtu, rdtu)
 	)
 
 	// part of this tokens goes to related validators
