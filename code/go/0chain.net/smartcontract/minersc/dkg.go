@@ -8,6 +8,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -229,7 +230,12 @@ func (msc *MinerSmartContract) getPhaseNode(statectx cstate.StateContextI) (
 func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 	pn *PhaseNode, gn *GlobalNode, t *transaction.Transaction) error {
 
-	if pn.CurrentRound-pn.StartRound >= PhaseRounds[pn.Phase] {
+	// move phase condition
+	var movePhase = config.DevConfiguration.ViewChange &&
+		pn.CurrentRound-pn.StartRound >= PhaseRounds[pn.Phase]
+
+	// move
+	if movePhase {
 		currentMoveFunc := moveFunctions[pn.Phase]
 		if currentMoveFunc(balances, pn, gn) {
 			var err error
