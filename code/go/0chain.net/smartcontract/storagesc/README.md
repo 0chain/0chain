@@ -11,6 +11,22 @@ From 0chain project root execute the following command to run unit-tests
 ./docker.local/bin/sc_unit_test.sh 0chain.net/smartcontract/storagesc
 ```
 
+# Time unit.
+
+The Storage SC has time_unit configuration. Once applied it can't be changed
+then (excluding blockchain full reset case, that works). All write prices is
+measured in tokens / GB / time_unit. E.g. tokens for size for some duration.
+
+If user creates allocation for, say, 4 days. And uploads a file. Then the file
+is uploaded for 4 days (rest of the allocation). If user deletes the file,
+then part of tokens moved back to the user (to one of his write pools).
+
+If time_unit configured as 48h, then for a write_price 1 tok / GB / time_unit
+the user pays 2 tok (4 days = 2 * 48h). That's all.
+
+The time_unit configured in sc.yaml in storagesc part. It can be given by REST
+API as other SC configurations.
+
 # Flow
 
 ## Blobber
