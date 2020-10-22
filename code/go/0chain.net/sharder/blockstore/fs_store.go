@@ -246,7 +246,11 @@ func (fbs *FSBlockStore) UploadToCloud(hash string, round int64) error {
 	}
 
 	if MinioConfig.DeleteLocal {
-		return os.Remove(filePath)
+		err = os.Remove(filePath)
+		if err != nil {
+			Logger.Error("Failed to delete block which is moved to cloud", zap.Any("round", round), zap.Any("path", filePath))
+		}
+		Logger.Info("Local block successfully deleted, moved to cloud", zap.Any("round", round), zap.Any("path", filePath))
 	}
 	return nil
 }
