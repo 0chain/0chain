@@ -12,8 +12,11 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/core/common"
+
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
+
+	"github.com/spf13/viper"
 )
 
 var UpdateNodes chan int64
@@ -43,7 +46,8 @@ func (c *Chain) StatusMonitor(ctx context.Context) {
 			return
 		case nRound := <-UpdateNodes:
 			cancel()
-			Logger.Info("the status monitor is dead, long live the status monitor", zap.Any("miners", mb.Miners), zap.Any("sharders", mb.Sharders))
+			Logger.Info("the status monitor is dead, long live the status monitor",
+				zap.Any("miners", mb.Miners), zap.Any("sharders", mb.Sharders))
 			smctx, cancel = context.WithCancel(ctx)
 			mb := c.GetMagicBlock(nRound)
 			go mb.Miners.StatusMonitor(smctx)
@@ -99,8 +103,10 @@ func (c *Chain) repairChain(ctx context.Context, newMB *block.Block,
 	return // ok
 }
 
-//FinalizedBlockWorker - a worker that processes finalized blocks
-func (c *Chain) FinalizedBlockWorker(ctx context.Context, bsh BlockStateHandler) {
+// FinalizedBlockWorker - a worker that processes finalized blocks.
+func (c *Chain) FinalizedBlockWorker(ctx context.Context,
+	bsh BlockStateHandler) {
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -160,13 +166,13 @@ func (c *Chain) PruneClientStateWorker(ctx context.Context) {
 
 type MagicBlockSaveFunc func(context.Context, *block.Block) error
 
-// VerifyChainHistory repairs and verifies magic blocks chain.
-func (c *Chain) VerifyChainHistory(ctx context.Context,
-	latestMagicBlock *block.Block, saveHandler MagicBlockSaveFunc) (err error) {
+// VerifyChainHistoryOn repairs and verifies magic blocks chain using given
+// current MagicBlock to request other nodes.
+func (c *Chain) VerifyChainHistoryOn(ctx context.Context,
+	latestMagicBlock *block.Block, cmb *block.MagicBlock,
+	saveHandler MagicBlockSaveFunc) (err error) {
 
 	var (
-		cmb = c.GetCurrentMagicBlock()
-
 		currentMagicBlock = c.GetLatestFinalizedMagicBlock()
 		sharders          = cmb.Sharders.N2NURLs()
 		magicBlock        *block.Block
@@ -220,6 +226,15 @@ func (c *Chain) VerifyChainHistory(ctx context.Context,
 	return
 }
 
+// VerifyChainHistory repairs and verifies magic blocks chain. It uses
+// GetCurrnetMagicBlock to get sharders to request data from.
+func (c *Chain) VerifyChainHistory(ctx context.Context,
+	latestMagicBlock *block.Block, saveHandler MagicBlockSaveFunc) (err error) {
+
+	return c.VerifyChainHistoryOn(ctx, latestMagicBlock,
+		c.GetCurrentMagicBlock(), saveHandler)
+}
+
 // PruneStorageWorker pruning storage
 func (c *Chain) PruneStorageWorker(ctx context.Context, d time.Duration,
 	getCountRoundStorage func(storage round.RoundStorage) int,
@@ -241,13 +256,14 @@ type MagicBlockSaver interface {
 	SaveMagicBlock() MagicBlockSaveFunc // get the saving function
 }
 
-// UpdateLatesMagicBlockFromSharders pulls latest finalized magic block
+// UpdateLatesMagicBlockFromShardersOn pulls latest finalized magic block
 // from sharders and verifies magic blocks chain. The method blocks
-// execution flow (it's synchronous).
-func (sc *Chain) UpdateLatesMagicBlockFromSharders(ctx context.Context) (
-	err error) {
+// execution flow (it's synchronous). It uses given MagicBlock to get list
+// of sharders to request.
+func (sc *Chain) UpdateLatesMagicBlockFromShardersOn(ctx context.Context,
+	mb *block.MagicBlock) (err error) {
 
-	var mbs = sc.GetLatestFinalizedMagicBlockFromSharder(ctx)
+	var mbs = sc.GetLatestFinalizedMagicBlockFromShardersOn(ctx, mb)
 	if len(mbs) == 0 {
 		return errors.New("no finalized magic block from sharders given")
 	}
@@ -290,6 +306,30 @@ func (sc *Chain) UpdateLatesMagicBlockFromSharders(ctx context.Context) (
 	return // ok, updated
 }
 
+// UpdateLatesMagicBlockFromSharders pulls latest finalized magic block
+// from sharders and verifies magic blocks chain. The method blocks
+// execution flow (it's synchronous).
+func (sc *Chain) UpdateLatesMagicBlockFromSharders(ctx context.Context) (
+	err error) {
+	return sc.UpdateLatesMagicBlockFromShardersOn(ctx, sc.GetLatestMagicBlock())
+}
+
+// UpdateLatesMagicBlockFrom0DNS pulls latest finalized magic block
+// from configured 0dns and verifies magic blocks chain (pulling rest from
+// sharders). The method blocks execution flow (it's synchronous).
+func (sc *Chain) UpdateLatesMagicBlockFrom0DNS(ctx context.Context) (
+	err error) {
+
+	var mb *block.MagicBlock
+	mb, err = GetMagicBlockFrom0DNS(viper.GetString("network.0dns_url"))
+	if err != nil {
+		return
+	}
+
+	// using the given magic block
+	return sc.UpdateLatesMagicBlockFromShardersOn(ctx, mb)
+}
+
 // UpdateMagicBlockWorker updates latest finalized magic block from active
 // sharders periodically.
 func (c *Chain) UpdateMagicBlockWorker(ctx context.Context) {
@@ -312,7 +352,7 @@ func (c *Chain) UpdateMagicBlockWorker(ctx context.Context) {
 		case <-tickq:
 		}
 
-		if err = c.UpdateLatesMagicBlockFromSharders(ctx); err != nil {
+		if err = c.UpdateLatesMagicBlockFrom0DNS(ctx); err != nil {
 			Logger.Error("update_mb_worker", zap.Error(err))
 		}
 	}

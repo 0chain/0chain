@@ -7,13 +7,11 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"runtime"
 	"strconv"
-	"strings"
 	"time"
 
 	_ "net/http/pprof"
@@ -23,7 +21,6 @@ import (
 	"0chain.net/chaincore/client"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/diagnostics"
-	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"
@@ -42,8 +39,6 @@ import (
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
-
-const MAGIC_BLOCK_ENDPOINT = "/magic_block"
 
 func processMinioConfig(reader io.Reader) error {
 	scanner := bufio.NewScanner(reader)
@@ -135,18 +130,28 @@ func main() {
 	chain.SetServerChain(serverChain)
 	chain.SetNetworkRelayTime(viper.GetDuration("network.relay_time") * time.Millisecond)
 	node.ReadConfig()
-	magicBlock := readMagicBlockFile(magicBlockFile, sc, serverChain)
+
+	var magicBlock *block.MagicBlock
+	if magicBlock, err = chain.ReadMagicBlockFile(*magicBlockFile); err != nil {
+		Logger.Panic("can't get initial MB file", zap.Error(err))
+		return
+	}
+
 	if state.Debug() {
 		chain.SetupStateLogger("/tmp/state.txt")
 	}
+
 	setupBlockStorageProvider()
-	sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"), magicBlock)
+	sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"),
+		magicBlock)
 	Logger.Info("sharder node", zap.Any("node", node.Self))
-	selfNode := node.Self.Underlying()
+
+	var selfNode = node.Self.Underlying()
 	if selfNode.GetKey() == "" {
 		Logger.Panic("node definition for self node doesn't exist")
 	}
-	mb := sc.GetLatestMagicBlock()
+
+	var mb = sc.GetLatestMagicBlock()
 	if !mb.IsActiveNode(selfNode.GetKey(), 0) {
 		hostName, n2nHost, portNum, err := readNonGenesisHostAndPort(keysFile)
 		if err != nil {
@@ -215,8 +220,9 @@ func main() {
 	common.ConfigRateLimits()
 	initN2NHandlers()
 
-	if err := sc.UpdateLatesMagicBlockFromSharders(ctx); err != nil {
-		Logger.Panic(err.Error()) // FIXME: remove panic
+	// TOOD (sxdx): wait for 0DNS in loop?
+	if err := sc.UpdateLatesMagicBlockFrom0DNS(ctx); err != nil {
+		Logger.Fatal("update LFMB from 0DNS and sharders", zap.Error(err))
 	}
 
 	if serverChain.GetCurrentMagicBlock().MagicBlockNumber <
@@ -324,44 +330,6 @@ func initHandlers() {
 
 	serverChain := chain.GetServerChain()
 	serverChain.SetupNodeHandlers()
-}
-
-func readMagicBlockFile(magicBlockFile *string, sc *sharder.Chain, serverChain *chain.Chain) *block.MagicBlock {
-	mB := block.NewMagicBlock()
-	blockWorkerURL := viper.GetString("network.block_worker_url")
-	if len(blockWorkerURL) == 0 {
-		magicBlockConfigFile := viper.GetString("network.magic_block_file")
-		if magicBlockConfigFile == "" {
-			magicBlockConfigFile = *magicBlockFile
-		}
-		if magicBlockConfigFile == "" {
-			panic("Please specify --nodes_file file.txt option with a file.txt containing nodes including self")
-		}
-
-		if strings.HasSuffix(magicBlockConfigFile, "json") {
-			mBfile, err := ioutil.ReadFile(magicBlockConfigFile)
-			if err != nil {
-				Logger.Panic(fmt.Sprintf("failed to read magic block file: %v", err))
-			}
-
-			err = mB.Decode([]byte(mBfile))
-			if err != nil {
-				Logger.Panic(fmt.Sprintf("failed to decode magic block file: %v", err))
-			}
-			Logger.Info("parse magic block", zap.Any("block", mB))
-		} else {
-			Logger.Panic(fmt.Sprintf("magic block file (%v) is in the wrong format. It should be a json", magicBlockConfigFile))
-		}
-	} else {
-		err := httpclientutil.MakeGetRequest(blockWorkerURL+MAGIC_BLOCK_ENDPOINT, mB)
-		if err != nil {
-			panic("failed to call blockWorker to get magic block with err : " + err.Error())
-		}
-	}
-	mB.Hash = mB.GetHash()
-	Logger.Info("number of miners", zap.Any("number of miners", mB.Miners.Size()),
-		zap.Any("number of sharders", mB.Sharders.Size()))
-	return mB
 }
 
 func initEntities() {

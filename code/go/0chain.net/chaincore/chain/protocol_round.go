@@ -155,7 +155,10 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI, bsh BlockStat
 	}
 	lfb := c.ComputeFinalizedBlock(ctx, r)
 	if lfb == nil {
-		Logger.Debug("finalize round - no decisive block to finalize yet or don't have all the necessary blocks", zap.Int64("round", roundNumber), zap.Int("notarized_blocks", nbCount))
+		Logger.Debug("finalize round - no decisive block to finalize yet"+
+			" or don't have all the necessary blocks",
+			zap.Int64("round", roundNumber),
+			zap.Int("notarized_blocks", nbCount))
 		return
 	}
 	if lfb.Hash == plfb.Hash {
@@ -302,48 +305,61 @@ func (c *Chain) GetHeaviestNotarizedBlock(ctx context.Context, r round.RoundI) (
 	return r.GetHeaviestNotarizedBlock()
 }
 
-/*GetLatestFinalizedBlockFromSharder - request for latest finalized block from all the sharders */
-func (c *Chain) GetLatestFinalizedMagicBlockFromSharder(ctx context.Context) []*block.Block {
+// GetLatestFinalizedMagicBlockFromShardersOn - request for latest finalized
+// magic blocks from all the sharders. It uses provided MagicBlock to get list
+// of sharders to request data from.
+func (c *Chain) GetLatestFinalizedMagicBlockFromShardersOn(ctx context.Context,
+	mb *block.MagicBlock) (list []*block.Block) {
 
 	var (
-		mb  = c.GetLatestFinalizedMagicBlock() // use LFMB
-		n2s = mb.Sharders
+		sharders = mb.Sharders
+		snk      = node.Self.Underlying().GetKey()
 
-		snk = node.Self.Underlying().GetKey()
-
-		finalizedMagicBlocks = make([]*block.Block, 0, 1)
-		fmbMutex             sync.Mutex
+		listMutex sync.Mutex
 	)
 
-	var handler = func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-		mb, ok := entity.(*block.Block)
-		if mb == nil {
-			return nil, nil
-		}
-		if !ok {
+	list = make([]*block.Block, 0, 1)
+
+	var handler = func(ctx context.Context, entity datastore.Entity) (
+		resp interface{}, err error) {
+
+		var mb, ok = entity.(*block.Block)
+		if !ok || mb == nil {
 			return nil, datastore.ErrInvalidEntity
 		}
 
-		fmbMutex.Lock()
-		defer fmbMutex.Unlock()
-		for _, b := range finalizedMagicBlocks {
+		listMutex.Lock()
+		defer listMutex.Unlock()
+
+		for _, b := range list {
 			if b.Hash == mb.Hash {
 				return mb, nil
 			}
 		}
-		finalizedMagicBlocks = append(finalizedMagicBlocks, mb)
+		list = append(list, mb)
+
 		return mb, nil
 	}
 
-	n2s.RequestEntityFromAll(ctx, LatestFinalizedMagicBlockRequestor, nil,
+	sharders.RequestEntityFromAll(ctx, LatestFinalizedMagicBlockRequestor, nil,
 		handler)
 
-	if n2s.HasNode(snk) {
-		finalizedMagicBlocks = append(finalizedMagicBlocks,
-			c.GetLatestFinalizedMagicBlock())
+	// add own LFMB
+	if sharders.HasNode(snk) {
+		list = append(list, c.GetLatestFinalizedMagicBlock())
 	}
 
-	return finalizedMagicBlocks
+	return // the list
+}
+
+// GetLatestFinalizedMagicBlockFromSharders - request for latest finalized magic
+// block from all the sharders. It uses GetLatestFinalizedMagicBlock to get list
+// of sharders to request data from.
+func (c *Chain) GetLatestFinalizedMagicBlockFromSharders(ctx context.Context) (
+	list []*block.Block) {
+
+	return c.GetLatestFinalizedMagicBlockFromShardersOn(ctx,
+		c.GetLatestFinalizedMagicBlock().MagicBlock)
 }
 
 // GetLatestFinalizedMagicBlockRound calculates and returns LFMB for by round number

@@ -121,6 +121,8 @@ func (sc *Chain) pullRelatedMagicBlock(ctx context.Context, b *block.Block) (
 		return // already have the MB, nothing to do
 	}
 
+	// TODO (sfxdx): get magic block by number/hash/round to be sure its
+	//               really related, not just latest
 	if err = sc.UpdateLatesMagicBlockFromSharders(ctx); err != nil {
 		return // got error
 	}

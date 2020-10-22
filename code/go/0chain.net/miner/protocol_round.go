@@ -1393,17 +1393,25 @@ func (mc *Chain) ensureDKG(ctx context.Context, mb *block.Block) {
 func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context) (
 	updated bool, err error) {
 
+	// So, there is worker that updates LFMB from configured 0DNS sever.
+	// This MB used to request other nodes.
+
 	defer mc.SetupLatestAndPreviousMagicBlocks(ctx)
 
 	// LFB
+
 	if updated, err = mc.ensureLatestFinalizedBlock(ctx); err != nil {
 		return
 	}
 
-	// LFMB
+	// LFMB. The LFMB can be already update by LFMD worker (which uses 0DNS)
+	// and here we just set correct DKG.
+
 	var (
 		lfmb = mc.GetLatestFinalizedMagicBlock()
-		list = mc.GetLatestFinalizedMagicBlockFromSharder(ctx)
+		list = mc.GetLatestFinalizedMagicBlockFromShardersOn(ctx,
+			lfmb.MagicBlock)
+
 		rcvd *block.Block
 	)
 

@@ -219,34 +219,38 @@ func sendTransactionToURL(url string, txn *Transaction, ID string, pkey string, 
 	return SendPostRequest(url, jsObj, ID, pkey, nil)
 }
 
-//MakeGetRequest make a generic get request. url should have complete path.
-func MakeGetRequest(remoteUrl string, result interface{}) error {
-	Logger.Info(fmt.Sprintf("making GET request to %s", remoteUrl))
-	//ToDo: add parameter support
-	client := http.Client{}
-	request, err := http.NewRequest("GET", remoteUrl, nil)
+// MakeGetRequest make a generic get request. URL should have complete path.
+// It allows 200 responses only, returning error for all other, even successful.
+func MakeGetRequest(remoteUrl string, result interface{}) (err error) {
+	Logger.Info("make GET request", zap.String("url", remoteUrl))
+
+	var (
+		client http.Client
+		rq     *http.Request
+	)
+
+	rq, err = http.NewRequest(http.MethodGet, remoteUrl, nil)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("make GET: can't create HTTP request "+
+			"on given URL %q: %v", remoteUrl, err)
 	}
 
-	resp, err := client.Do(request)
-	if err != nil {
-		Logger.Info("Failed to run get", zap.Error(err))
-		return err
+	var resp *http.Response
+	if resp, err = client.Do(rq); err != nil {
+		return fmt.Errorf("make GET: requesting %q: %v", remoteUrl, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("make GET: non-200 response code %d: %s",
+			resp.StatusCode, resp.Status)
 	}
 
-	if resp.Body != nil {
-		defer resp.Body.Close()
-		if resp.StatusCode == http.StatusOK {
-			json.NewDecoder(resp.Body).Decode(result)
-		} else {
-			return fmt.Errorf("response status is not ok")
-		}
-	} else {
-		Logger.Info("resp.Body is nil")
-		return fmt.Errorf("response body is nil")
+	if err = json.NewDecoder(resp.Body).Decode(result); err != nil {
+		return fmt.Errorf("make GET: decoding response: %v", err)
 	}
-	return nil
+
+	return // ok
 }
 
 //MakeClientBalanceRequest to get a client's balance
