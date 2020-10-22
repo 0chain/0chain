@@ -54,7 +54,10 @@ func ReadMagicBlockFile(path string) (mb *block.MagicBlock, err error) {
 		return nil, fmt.Errorf("decoding magic block file: %v", err)
 	}
 
-	Logger.Info("read magic block file", zap.Any("mb", mb))
+	Logger.Info("read magic block file",
+		zap.Any("number", mb.MagicBlockNumber),
+		zap.Any("sr", mb.StartingRound),
+		zap.Any("hash", mb.Hash))
 	return
 }
 
@@ -71,7 +74,9 @@ func GetMagicBlockFrom0DNS(urlBase string) (mb *block.MagicBlock, err error) {
 	if err = httpclientutil.MakeGetRequest(full, mb); err != nil {
 		return nil, fmt.Errorf("getting MB from 0DNS %q: %v", full, err)
 	}
-	Logger.Info("get magic block file from 0DNS", zap.Any("mb", mb),
-		zap.String("0dns", full))
+	Logger.Info("get magic block file from 0DNS", zap.String("0dns", full),
+		zap.Any("number", mb.MagicBlockNumber),
+		zap.Any("sr", mb.StartingRound),
+		zap.Any("hash", mb.Hash))
 	return
 }

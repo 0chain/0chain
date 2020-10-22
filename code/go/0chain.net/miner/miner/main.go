@@ -91,6 +91,11 @@ func main() {
 	miner.SetNetworkRelayTime(viper.GetDuration("network.relay_time") * time.Millisecond)
 	node.ReadConfig()
 
+	// if there's no magic_block_file commandline flag, use configured then
+	if *magicBlockFile == "" {
+		*magicBlockFile = viper.GetString("network.magic_block_file")
+	}
+
 	var magicBlock *block.MagicBlock
 	magicBlock, err = chain.ReadMagicBlockFile(*magicBlockFile)
 	if err != nil {
@@ -184,7 +189,7 @@ func main() {
 	}
 
 	if err = mc.UpdateLatesMagicBlockFrom0DNS(ctx); err != nil {
-		Logger.Panic("can't update LFMB from 0DNS and sharders", zap.Error(err))
+		Logger.Fatal("can't update LFMB from 0DNS and sharders", zap.Error(err))
 	}
 
 	// ignoring error and without retries, restart round will resolve it

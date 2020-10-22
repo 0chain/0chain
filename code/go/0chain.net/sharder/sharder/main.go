@@ -131,9 +131,14 @@ func main() {
 	chain.SetNetworkRelayTime(viper.GetDuration("network.relay_time") * time.Millisecond)
 	node.ReadConfig()
 
+	// if there's no magic_block_file commandline flag, use configured then
+	if *magicBlockFile == "" {
+		*magicBlockFile = viper.GetString("network.magic_block_file")
+	}
+
 	var magicBlock *block.MagicBlock
 	if magicBlock, err = chain.ReadMagicBlockFile(*magicBlockFile); err != nil {
-		Logger.Panic("can't get initial MB file", zap.Error(err))
+		Logger.Fatal("can't get initial MB file", zap.Error(err))
 		return
 	}
 

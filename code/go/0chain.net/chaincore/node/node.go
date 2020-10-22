@@ -45,6 +45,8 @@ func DeregisterNode(nodeID string) {
 
 // DeregisterNodes unregisters all nodes not from given list.
 func DeregisterNodes(keep map[string]struct{}) {
+	return // never deregister nodes for now
+
 	nodesMutex.Lock()
 	defer nodesMutex.Unlock()
 

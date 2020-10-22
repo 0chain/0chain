@@ -2,7 +2,6 @@ package chain
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sort"
 	"time"
@@ -265,7 +264,8 @@ func (sc *Chain) UpdateLatesMagicBlockFromShardersOn(ctx context.Context,
 
 	var mbs = sc.GetLatestFinalizedMagicBlockFromShardersOn(ctx, mb)
 	if len(mbs) == 0 {
-		return errors.New("no finalized magic block from sharders given")
+		return fmt.Errorf("no finalized magic block from sharders (%s) given",
+			mb.Sharders.N2NURLs())
 	}
 
 	if len(mbs) > 1 {
@@ -280,7 +280,9 @@ func (sc *Chain) UpdateLatesMagicBlockFromShardersOn(ctx context.Context,
 	)
 
 	Logger.Info("get current magic block from sharders",
-		zap.Any("magic_block", magicBlock))
+		zap.Any("number", magicBlock.MagicBlockNumber),
+		zap.Any("sr", magicBlock.StartingRound),
+		zap.Any("hash", magicBlock.Hash))
 
 	if magicBlock.StartingRound <= cmb.StartingRound {
 		return nil // earlier then the current one
@@ -325,6 +327,8 @@ func (sc *Chain) UpdateLatesMagicBlockFrom0DNS(ctx context.Context) (
 	if err != nil {
 		return
 	}
+
+	sc.UpdateNodesFromMagicBlock(mb)
 
 	// using the given magic block
 	return sc.UpdateLatesMagicBlockFromShardersOn(ctx, mb)
