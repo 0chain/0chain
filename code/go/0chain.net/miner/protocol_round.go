@@ -1189,6 +1189,23 @@ func (mc *Chain) kickRoundByLFB(ctx context.Context, lfb *block.Block) {
 	mc.SetCurrentRound(nr.Number)
 }
 
+func (mc *Chain) adjustPreviousRound(crn int64) {
+	var pr = mc.GetMinerRound(crn - 1)
+	if pr == nil {
+		var nr = round.NewRound(crn - 1)
+		pr = mc.CreateRound(nr)
+		pr = mc.AddRound(pr).(*Round)
+	}
+	// get not. block for previous round, if missing, and make sure
+	// PRRS is set to HNB of the round (e.g. use RS of best block)
+	var prhnb = pr.GetHeaviestNotarizedBlock()
+	if prhnb == nil || !pr.HasRandomSeed() {
+		mc.pullNotarizedBlocks(ctx, pr)
+	} else if prhnb.GetRoundRandomSeed() != pr.GetRandomSeed() {
+		mc.AddNotarizedBlockToRound(pr, prhnb)
+	}
+}
+
 func (mc *Chain) restartRound(ctx context.Context) {
 
 	var crn = mc.GetCurrentRound()
@@ -1265,6 +1282,7 @@ func (mc *Chain) restartRound(ctx context.Context) {
 					" block in restartRound.",
 					zap.Int64("round", nr.GetRoundNumber()),
 					zap.Int("round_toc", nr.GetTimeoutCount()))
+				mc.adjustPreviousRound(crn + 1)
 
 				nr.Restart()
 				//Recalculate VRF shares and send
@@ -1295,15 +1313,7 @@ func (mc *Chain) restartRound(ctx context.Context) {
 	r.Restart()
 
 	// recalculate VRF shares and send
-	var pr = mc.GetMinerRound(crn - 1)
-	if pr == nil {
-		var nr = round.NewRound(crn - 1)
-		pr = mc.CreateRound(nr)
-		pr = mc.AddRound(pr).(*Round)
-	}
-	if !pr.HasRandomSeed() {
-		mc.pullNotarizedBlocks(ctx, pr)
-	}
+	mc.adjustPreviousRound(crn)
 	r.IncrementTimeoutCount(pr.GetRandomSeed(), mc.GetMiners(crn))
 	if redo := mc.RedoVrfShare(ctx, r); !redo {
 		Logger.Info("Could not RedoVrfShare",
