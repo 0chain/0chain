@@ -1204,6 +1204,7 @@ func (mc *Chain) adjustPreviousRound(ctx context.Context, crn int64) (
 	if prhnb == nil || !pr.HasRandomSeed() {
 		mc.pullNotarizedBlocks(ctx, pr)
 	} else if prhnb.GetRoundRandomSeed() != pr.GetRandomSeed() {
+		Logger.Info("adjust PRRS", zap.Int64("round", crn-1))
 		mc.AddNotarizedBlockToRound(pr, prhnb)
 	}
 	// reply with PRRS can be zero sometimes
