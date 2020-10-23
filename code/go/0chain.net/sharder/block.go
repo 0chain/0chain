@@ -187,12 +187,10 @@ func (sc *Chain) GetHighestMagicBlockMap(ctx context.Context) (
 	)
 
 	if err = cql.Query(query).Scan(&number); err != nil {
-		println("SCANNING NUMBER:", err.Error())
 		return nil, common.NewErrorf("get_highest_mbm",
 			"scanning CQL result: %v", err)
 	}
 
-	println("SCANNED NUMBER:", number)
 	var mbn = strconv.FormatInt(number, 10)
 	err = mbmemd.GetStore().Read(mctx, datastore.ToKey(mbn), mbm)
 	if err != nil {
