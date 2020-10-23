@@ -138,7 +138,7 @@ func main() {
 
 	var magicBlock *block.MagicBlock
 	if magicBlock, err = chain.ReadMagicBlockFile(*magicBlockFile); err != nil {
-		Logger.Fatal("can't get initial MB file", zap.Error(err))
+		Logger.Panic("can't get initial MB file", zap.Error(err))
 		return
 	}
 

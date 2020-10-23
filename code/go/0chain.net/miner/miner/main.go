@@ -99,7 +99,7 @@ func main() {
 	var magicBlock *block.MagicBlock
 	magicBlock, err = chain.ReadMagicBlockFile(*magicBlockFile)
 	if err != nil {
-		Logger.Fatal("can't read magic block file", zap.Error(err))
+		Logger.Panic("can't read magic block file", zap.Error(err))
 		return
 	}
 
@@ -189,7 +189,7 @@ func main() {
 	}
 
 	if err = mc.UpdateLatesMagicBlockFrom0DNS(ctx); err != nil {
-		Logger.Fatal("can't update LFMB from 0DNS and sharders", zap.Error(err))
+		Logger.Panic("can't update LFMB from 0DNS and sharders", zap.Error(err))
 	}
 
 	// ignoring error and without retries, restart round will resolve it
