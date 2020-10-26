@@ -510,7 +510,10 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	}
 
 	// save read marker
-	balances.InsertTrieNode(commitRead.GetKey(sc.ID), commitRead)
+	_, err = balances.InsertTrieNode(commitRead.GetKey(sc.ID), commitRead)
+	if err != nil {
+		return "", common.NewError("saving read marker", err.Error())
+	}
 	sc.newRead(balances, numReads)
 
 	return // ok, the response and nil
