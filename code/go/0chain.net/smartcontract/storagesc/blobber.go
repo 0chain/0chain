@@ -436,6 +436,11 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"can't get related allocation: %v", err)
 	}
 
+	if commitRead.ReadMarker.Timestamp > alloc.Until() {
+		return "", common.NewError("commit_blobber_read",
+			"late reading, allocation expired")
+	}
+
 	var details *BlobberAllocation
 	for _, d := range alloc.BlobberDetails {
 		if d.BlobberID == commitRead.ReadMarker.BlobberID {
