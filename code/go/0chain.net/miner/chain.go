@@ -59,6 +59,7 @@ func SetupMinerChain(c *chain.Chain) {
 	c.SetViewChanger(minerChain)
 	c.RoundF = MinerRoundFactory{}
 	minerChain.viewChangeProcess.init(minerChain)
+	minerChain.restartRoundEventSubscribers = make(map[chan struct{}]struct{})
 }
 
 /*GetMinerChain - get the miner's chain */
@@ -117,6 +118,31 @@ type Chain struct {
 
 	// not. blocks pulling joining at VC
 	pullingPin int64
+
+	// restart round event
+	rresmx                       sync.Mutex
+	restartRoundEventSubscribers map[chan struct{}]struct{}
+}
+
+func (mc *Chain) subRestartRoundEvent(ctx context.Context) (
+	subq chan struct{}) {
+
+	mc.rresmx.Lock()
+	defer mc.rresmx.Unlock()
+
+	subq = make(chan struct{})
+	mc.restartRoundEventSubscribers[subq] = struct{}{}
+	return
+}
+
+func (mc *Chain) unsubRestartRoundEvent(ctx context.Context,
+	subq chan struct{}) {
+
+	mc.rresmx.Lock()
+	defer mc.rresmx.Unlock()
+
+	delete(mc.restartRoundEventSubscribers, subq)
+	return
 }
 
 func (mc *Chain) startPulling() (ok bool) {

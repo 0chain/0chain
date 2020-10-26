@@ -88,6 +88,7 @@ func (mc *Chain) addMyVRFShare(ctx context.Context, pr *Round, r *Round) {
 }
 
 func (mc *Chain) isAheadOfSharders(ctx context.Context, round int64) bool {
+
 	var (
 		ahead = config.GetLFBTicketAhead()
 		tk    = mc.GetLatestLFBTicket(ctx)
@@ -102,6 +103,64 @@ func (mc *Chain) isAheadOfSharders(ctx context.Context, round int64) bool {
 	}
 
 	return false // is not ahead, can move on
+}
+
+// The waitNoAhead is similar to the isAheadOfSharders but it checks state and,
+// if it's ahead, waits to be non-ahead or context is done or restart round
+// event. Only in first case (successful case) it returns true. In two other
+// cases it returns false and new round should not be created.
+//
+// The waitNotAhead may block for restart round time.
+func (mc *Chain) waitNotAhead(ctx context.Context, round int64) (ok bool) {
+
+	Logger.Debug("[wait not ahead]")
+
+	// subscribe to new LFB-tickets events (we should use context of LFB-ticket
+	// worker loop here, otherwise we got undefined behavior and possible
+	// infinity operations; so, it's not a best solution...)
+	var (
+		root   = common.GetRootContext()
+		tksubq = mc.SubLFBTicket(root)
+		rrsubq = mc.subRestartRoundEvent(root)
+	)
+	defer mc.UnsubLFBTicket(root, tksubq)
+	defer mc.unsubRestartRoundEvent(root, rrsubq)
+
+	// check the current ticket
+
+	var (
+		ahead = config.GetLFBTicketAhead()
+		tk    = mc.GetLatestLFBTicket(ctx)
+	)
+
+	if tk == nil {
+		Logger.Debug("[wait not ahead] [1] context is done")
+		return // context is done, can't wait anymore
+	}
+
+	if round+1 <= tk.Round+int64(ahead) {
+		Logger.Debug("[wait not ahead] [2] not ahead, can move on")
+		return true // not ahead, can move on
+	}
+
+	// wait in loop
+	for {
+		select {
+		case ntk := <-tksubq: // the ntk can't be nil
+			if round+1 <= ntk.Round+int64(ahead) {
+				Logger.Debug("[wait not ahead] [3] not ahead, can move on")
+				return true // not ahead, can move on
+			}
+			Logger.Debug("[wait not ahead] [4] still ahead, can't move on")
+		case <-rrsubq:
+			Logger.Debug("[wait not ahead] [5] restart round triggered")
+			return // false, shouldn't move on
+		case <-ctx.Done():
+			Logger.Debug("[wait not ahead] [6] context is done")
+			return // context is done, shouldn't move on
+		}
+	}
+
 }
 
 func (mc *Chain) finalizeRound(ctx context.Context, r *Round) {
@@ -139,7 +198,9 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 
 	var rn = r.GetRoundNumber()
 
-	if mc.isAheadOfSharders(ctx, rn) {
+	if !mc.waitNotAhead(ctx, rn) {
+		Logger.Info("start_next_round -- can't move on, far ahead of sharders",
+			zap.Int64("round", rn))
 		return nil // can't move on, still is far ahead of sharders
 	}
 
@@ -281,7 +342,9 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 		zap.Any("random_seed", mr.GetRandomSeed()),
 		zap.Int64("lf_round", mc.GetLatestFinalizedBlock().Round))
 
-	if mc.isAheadOfSharders(ctx, rn) {
+	// only for generators
+
+	if !mc.waitNotAhead(ctx, rn) {
 		// try to slow down generation where the miner is far ahead of sharders
 		Logger.Info("start new round: can't move on, still is far ahead",
 			zap.Int64("round", rn))
@@ -1196,7 +1259,23 @@ func (mc *Chain) adjustPreviousRound(ctx context.Context, crn int64) (
 	return pr.GetRandomSeed()
 }
 
+func (mc *Chain) sendRestartRoundEvent(ctx context.Context) {
+	mc.rresmx.Lock()
+	defer mc.rresmx.Unlock()
+
+	for s := range mc.restartRoundEventSubscribers {
+		select {
+		case s <- struct{}{}:
+		case <-ctx.Done():
+			return
+		}
+	}
+
+}
+
 func (mc *Chain) restartRound(ctx context.Context) {
+
+	mc.sendRestartRoundEvent(ctx) // trigger restart round event
 
 	var crn = mc.GetCurrentRound()
 
