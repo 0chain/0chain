@@ -8,17 +8,22 @@ ssh_command="${1}"
 ip_address="${2}"
 
 if [ -z "${ssh_command}" ]; then
-	echo "use ./docker.local/bin/deploy-ssh.sh 'ssh user@host' '3.14.28.109'"
+	echo "use: sh docker.local/deploy-ssh/deploy-ssh.sh 'ssh user@host' '3.14.28.109'"
 	exit 1
 fi
 
 if [ -z "${ip_address}" ]; then
-	echo "use ./docker.local/bin/deploy-ssh.sh 'ssh user@host' '3.14.28.109'"
+	echo "use: sh docker.local/deploy-ssh/deploy-ssh.sh 'ssh user@host' '3.14.28.109'"
 	exit 1
 fi
 
-echo "ssh command:    ${ssh_command}"
-echo "server address: ${ip_address}"
+if [ -z "${ip_address}" ]; then
+    echo "use: sh docker.local/deploy-ssh/deploy-ssh.sh 'ssh user@host' '3.14.28.109'"
+    exit 1
+fi
+
+echo "ssh command:     ${ssh_command}"
+echo "server address:  ${ip_address}"
 
 # clean up all previous archives
 rm -f 0chain-ssh-*.tar.gz
@@ -29,7 +34,6 @@ archive="0chain-ssh-${commit}.tar.gz"
 
 # create minimal archive
 tar -czvf "${archive}" \
-	../0chain/docker.local/bin/deploy-ssh-expand.sh \
     ../0chain/docker.local/bin/init.setup.sh \
     ../0chain/docker.local/bin/setup_network.sh \
     ../0chain/docker.local/bin/docker-clean.sh \
@@ -52,11 +56,12 @@ tar -czvf "${archive}" \
     ../0chain/docker.local/config/minio_config.txt \
     ../0chain/docker.local/config/0chain.yaml \
     ../0chain/docker.local/config/sc.yaml \
-    ../0chain/docker.local/config/b0owner_keys.txt
+    ../0chain/docker.local/config/b0owner_keys.txt \
+    ../0chain/docker.local/deploy-ssh/
 
 # upload the archive
 cat "${archive}" | pv | 
-    ${ssh_command} 'tar -C ./ -zxvf - && cd 0chain && pwd && ./docker.local/bin/deploy-ssh-expand.sh '"${ip_address}"''
+    ${ssh_command} 'tar -C ./ -zxvf - && cd 0chain && pwd && sh docker.local/deploy-ssh/deploy-ssh-expand.sh '"${ip_address}"''
 
 # clean the created archive
 rm -f 0chain-ssh-*.tar.gz
