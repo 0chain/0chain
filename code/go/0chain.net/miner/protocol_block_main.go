@@ -194,7 +194,10 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 		}
 		reusedTxns = idx - blockSize
 		blockSize = idx
-		Logger.Error("generate block (reused txns)", zap.Int64("round", b.Round), zap.Int("ub", len(blocks)), zap.Int32("reused", reusedTxns), zap.Int("rcount", rcount), zap.Int32("blockSize", idx))
+		Logger.Error("generate block (reused txns)",
+			zap.Int64("round", b.Round), zap.Int("ub", len(blocks)),
+			zap.Int32("reused", reusedTxns), zap.Int("rcount", rcount),
+			zap.Int32("blockSize", idx))
 	}
 	if blockSize != mc.BlockSize && byteSize < mc.MaxByteSize {
 		if !waitOver && blockSize < mc.MinBlockSize {

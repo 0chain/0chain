@@ -140,14 +140,7 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 	var rn = r.GetRoundNumber()
 
 	if mc.isAheadOfSharders(ctx, rn) {
-		// try to slow down generation where the miner is far ahead of sharders
-		select {
-		case <-time.After(400 * time.Millisecond):
-		case <-ctx.Done():
-		}
-		if mc.isAheadOfSharders(ctx, rn) {
-			return nil // can't move on, still is far ahead of sharders
-		}
+		return nil // can't move on, still is far ahead of sharders
 	}
 
 	var pr = mc.GetMinerRound(rn - 1)
@@ -288,19 +281,11 @@ func (mc *Chain) startNewRound(ctx context.Context, mr *Round) {
 		zap.Any("random_seed", mr.GetRandomSeed()),
 		zap.Int64("lf_round", mc.GetLatestFinalizedBlock().Round))
 
-	const freezeTime = 400 * time.Millisecond
-
 	if mc.isAheadOfSharders(ctx, rn) {
 		// try to slow down generation where the miner is far ahead of sharders
-		select {
-		case <-time.After(freezeTime):
-		case <-ctx.Done():
-		}
-		if mc.isAheadOfSharders(ctx, rn) {
-			Logger.Info("start new round: can't move on, still is far ahead",
-				zap.Int64("round", rn))
-			return // can't move on, still is far ahead of sharders
-		}
+		Logger.Info("start new round: can't move on, still is far ahead",
+			zap.Int64("round", rn))
+		return // can't move on, still is far ahead of sharders
 	}
 
 	// NOTE: If there are not enough txns, this will not advance further even

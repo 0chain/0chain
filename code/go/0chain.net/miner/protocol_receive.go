@@ -27,6 +27,8 @@ func (mc *Chain) enterOnViewChange(ctx context.Context, rn int64) {
 		return
 	}
 
+	// TODO (sfxdx): need 'else' for a 'VC: false' case, where there's no PRRS
+
 	// choose magic block for next view change set, e.g. for 501-504 rounds
 	// select MB for 505+ rounds; but the GetMagicBlock chooses the very
 	// magic block, or a latest one (can be earlier or newer depending current
