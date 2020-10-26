@@ -320,6 +320,7 @@ minio:
   # Delete local copy of block once it's moved to cloud
   delete_local_copy: true
 ```
+- In minio the folders do not get deleted and will cause a slight increase in volume over time.
 
 # Integration tests
 
