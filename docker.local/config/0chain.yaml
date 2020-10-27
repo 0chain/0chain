@@ -109,7 +109,6 @@ server_chain:
 
 network:
   magic_block_file: config/b0magicBlock_4_miners_1_sharder.json
-  0dns_url: http://0dns_0dns_1:9091 # docker network
   relay_time: 200 # milliseconds
   max_concurrent_requests: 40
   timeout:

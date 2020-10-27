@@ -165,8 +165,6 @@ func (mc *Chain) PublishShareOrSigns(_ context.Context, lfb *block.Block,
 	}
 	err = httpclientutil.SendSmartContractTxn(tx, minersc.ADDRESS, 0, 0, data,
 		minerUrls)
-	if err != nil {
-	}
 	return
 }
 
@@ -242,9 +240,13 @@ func SignShareRequestHandler(ctx context.Context, r *http.Request) (
 		return nil, common.NewError("sign_share", "DKG is not set")
 	}
 
-	var mpks = mc.viewChangeProcess.mpks.GetMpks()
-	if len(mpks) < mc.viewChangeProcess.viewChangeDKG.T {
-		return nil, common.NewError("sign_share", "don't have enough mpks yet")
+	var (
+		mpks        = mc.viewChangeProcess.mpks.GetMpks()
+		lmpks, dkgt = len(mpks), mc.viewChangeProcess.viewChangeDKG.T
+	)
+	if lmpks < dkgt {
+		return nil, common.NewErrorf("sign_share", "don't have enough mpks"+
+			" yet, l mpks (%d) < dkg t (%d)", lmpks, dkgt)
 	}
 
 	var (

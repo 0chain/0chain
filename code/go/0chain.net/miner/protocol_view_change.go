@@ -401,8 +401,8 @@ func (mc *Chain) sendSijsPrepare(ctx context.Context, lfb *block.Block,
 
 	var selfNodeKey = node.Self.Underlying().GetKey()
 	if _, ok := dkgMiners.SimpleNodes[selfNodeKey]; !mc.isDKGSet() || !ok {
-		Logger.Error("failed to send sijs",
-			zap.Any("dkg_set", mc.isDKGSet()), zap.Any("ok", ok))
+		Logger.Error("failed to send sijs", zap.Any("dkg_set", mc.isDKGSet()),
+			zap.Any("ok", ok))
 		return // (nil, nil)
 	}
 

@@ -155,11 +155,12 @@ type Chain struct {
 	magicBlockStartingRounds map[int64]*block.Block // block MB by starting round VC
 
 	// LFB tickets channels
-	getLFBTicket       chan *LFBTicket      // check out (any time)
-	updateLFBTicket    chan *LFBTicket      // receive
-	broadcastLFBTicket chan *block.Block    // broadcast (update by LFB)
-	subLFBTicket       chan chan *LFBTicket // } wait for a received LFBTicket
-	unsubLFBTicket     chan chan *LFBTicket // }
+	getLFBTicket          chan *LFBTicket      // check out (any time)
+	updateLFBTicket       chan *LFBTicket      // receive
+	broadcastLFBTicket    chan *block.Block    // broadcast (update by LFB)
+	subLFBTicket          chan chan *LFBTicket // } wait for a received LFBTicket
+	unsubLFBTicket        chan chan *LFBTicket // }
+	lfbTickerWorkerIsDone chan struct{}        // get rid out of context misuse
 
 	// precise DKG phases tracking
 	phaseEvents chan PhaseEvent
@@ -407,6 +408,7 @@ func Provider() datastore.Entity {
 	c.broadcastLFBTicket = make(chan *block.Block, 100) //
 	c.subLFBTicket = make(chan chan *LFBTicket, 1)      //
 	c.unsubLFBTicket = make(chan chan *LFBTicket, 1)    //
+	c.lfbTickerWorkerIsDone = make(chan struct{})       //
 
 	c.phaseEvents = make(chan PhaseEvent, 1) // at least 1 for buffer required
 

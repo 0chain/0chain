@@ -178,20 +178,20 @@ func (c *Chain) BroadcastLFBTicket(ctx context.Context, b *block.Block) {
 }
 
 // SubLFBTicket subscribes for received LFB tickets notifications.
-func (c *Chain) SubLFBTicket(ctx context.Context) (sub chan *LFBTicket) {
-	sub = make(chan *LFBTicket)
+func (c *Chain) SubLFBTicket() (sub chan *LFBTicket) {
+	sub = make(chan *LFBTicket, 1)
 	select {
 	case c.subLFBTicket <- sub:
-	case <-ctx.Done():
+	case <-c.lfbTickerWorkerIsDone:
 	}
 	return
 }
 
 // UnsubLFBTicket unsubscribes from received LFB tickets notifications.
-func (c *Chain) UnsubLFBTicket(ctx context.Context, sub chan *LFBTicket) {
+func (c *Chain) UnsubLFBTicket(sub chan *LFBTicket) {
 	select {
 	case c.unsubLFBTicket <- sub:
-	case <-ctx.Done():
+	case <-c.lfbTickerWorkerIsDone:
 	}
 	return
 }
@@ -224,6 +224,7 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 		b      *block.Block
 	)
 
+	defer close(c.lfbTickerWorkerIsDone)
 	defer rebroadcast.Stop()
 
 	// don't broadcast if miner
@@ -271,9 +272,8 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 				// send for all subscribers
 				for s := range subs {
 					select {
-					case s <- ticket:
-					case <-ctx.Done():
-						return
+					case s <- ticket: // the sending must be non-blocking
+					default:
 					}
 				}
 				continue // don't need a block for the blank kick ticket
@@ -293,9 +293,8 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 			// send for all subscribers
 			for s := range subs {
 				select {
-				case s <- ticket:
-				case <-ctx.Done():
-					return
+				case s <- ticket: // the sending must be non-blocking
+				default:
 				}
 			}
 
@@ -331,9 +330,8 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 			// send for all subscribers, if any
 			for s := range subs {
 				select {
-				case s <- ticket:
-				case <-ctx.Done():
-					return
+				case s <- ticket: // the sending must be non-blocking
+				default:
 				}
 			}
 

@@ -189,7 +189,8 @@ func (msc *MinerSmartContract) moveToWait(balances cstate.StateContextI,
 
 	if !gn.hasPrevMinerInGSoS(gsos, balances) {
 		Logger.Error("no miner from previous VC set in GSoS",
-			zap.Int("l_gsos", len(gsos.Shares)), zap.Int("K", dkgMinersList.K))
+			zap.Int("l_gsos", len(gsos.Shares)), zap.Int("K", dkgMinersList.K),
+			zap.Any("gsos_shares", gsos.Shares))
 		return false
 	}
 
@@ -649,6 +650,8 @@ func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction,
 			"decoding input %v", err)
 	}
 
+	// TODO (sfxdx): What the dmn.N-2 means here?
+	//               Should it be T or K, shouldn't it?
 	if len(sos.ShareOrSigns) < dmn.N-2 {
 		return "", common.NewError("share_signs_or_shares",
 			"number of share or signs doesn't equal N for this dkg")

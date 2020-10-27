@@ -14,8 +14,6 @@ import (
 
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
-
-	"github.com/spf13/viper"
 )
 
 var UpdateNodes chan int64
@@ -316,24 +314,6 @@ func (sc *Chain) UpdateLatesMagicBlockFromSharders(ctx context.Context) (
 	return sc.UpdateLatesMagicBlockFromShardersOn(ctx, sc.GetLatestMagicBlock())
 }
 
-// UpdateLatesMagicBlockFrom0DNS pulls latest finalized magic block
-// from configured 0dns and verifies magic blocks chain (pulling rest from
-// sharders). The method blocks execution flow (it's synchronous).
-func (sc *Chain) UpdateLatesMagicBlockFrom0DNS(ctx context.Context) (
-	err error) {
-
-	var mb *block.MagicBlock
-	mb, err = GetMagicBlockFrom0DNS(viper.GetString("network.0dns_url"))
-	if err != nil {
-		return
-	}
-
-	sc.UpdateNodesFromMagicBlock(mb)
-
-	// using the given magic block
-	return sc.UpdateLatesMagicBlockFromShardersOn(ctx, mb)
-}
-
 // UpdateMagicBlockWorker updates latest finalized magic block from active
 // sharders periodically.
 func (c *Chain) UpdateMagicBlockWorker(ctx context.Context) {
@@ -356,7 +336,7 @@ func (c *Chain) UpdateMagicBlockWorker(ctx context.Context) {
 		case <-tickq:
 		}
 
-		if err = c.UpdateLatesMagicBlockFrom0DNS(ctx); err != nil {
+		if err = c.UpdateLatesMagicBlockFromSharders(ctx); err != nil {
 			Logger.Error("update_mb_worker", zap.Error(err))
 		}
 	}

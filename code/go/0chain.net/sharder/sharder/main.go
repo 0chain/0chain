@@ -225,9 +225,8 @@ func main() {
 	common.ConfigRateLimits()
 	initN2NHandlers()
 
-	// TOOD (sxdx): wait for 0DNS in loop?
-	if err := sc.UpdateLatesMagicBlockFrom0DNS(ctx); err != nil {
-		Logger.Fatal("update LFMB from 0DNS and sharders", zap.Error(err))
+	if err := sc.UpdateLatesMagicBlockFromSharders(ctx); err != nil {
+		Logger.Fatal("update LFMB from sharders", zap.Error(err))
 	}
 
 	if serverChain.GetCurrentMagicBlock().MagicBlockNumber <

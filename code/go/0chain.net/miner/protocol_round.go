@@ -115,16 +115,13 @@ func (mc *Chain) waitNotAhead(ctx context.Context, round int64) (ok bool) {
 
 	Logger.Debug("[wait not ahead]")
 
-	// subscribe to new LFB-tickets events (we should use context of LFB-ticket
-	// worker loop here, otherwise we got undefined behavior and possible
-	// infinity operations; so, it's not a best solution...)
+	// subscribe to new LFB-tickets events; subscribe to restart round events
 	var (
-		root   = common.GetRootContext()
-		tksubq = mc.SubLFBTicket(root)
-		rrsubq = mc.subRestartRoundEvent(root)
+		tksubq = mc.SubLFBTicket()
+		rrsubq = mc.subRestartRoundEvent()
 	)
-	defer mc.UnsubLFBTicket(root, tksubq)
-	defer mc.unsubRestartRoundEvent(root, rrsubq)
+	defer mc.UnsubLFBTicket(tksubq)
+	defer mc.unsubRestartRoundEvent(rrsubq)
 
 	// check the current ticket
 
@@ -134,7 +131,7 @@ func (mc *Chain) waitNotAhead(ctx context.Context, round int64) (ok bool) {
 	)
 
 	if tk == nil {
-		Logger.Debug("[wait not ahead] [1] context is done")
+		Logger.Debug("[wait not ahead] [1] context is done or restart round")
 		return // context is done, can't wait anymore
 	}
 
@@ -1259,20 +1256,6 @@ func (mc *Chain) adjustPreviousRound(ctx context.Context, crn int64) (
 	return pr.GetRandomSeed()
 }
 
-func (mc *Chain) sendRestartRoundEvent(ctx context.Context) {
-	mc.rresmx.Lock()
-	defer mc.rresmx.Unlock()
-
-	for s := range mc.restartRoundEventSubscribers {
-		select {
-		case s <- struct{}{}:
-		case <-ctx.Done():
-			return
-		}
-	}
-
-}
-
 func (mc *Chain) restartRound(ctx context.Context) {
 
 	mc.sendRestartRoundEvent(ctx) // trigger restart round event
@@ -1586,6 +1569,7 @@ func (mc *Chain) startProtocolOnLFB(ctx context.Context, lfb *block.Block) (
 }
 
 func StartProtocol(ctx context.Context, gb *block.Block) {
+
 	var (
 		mc  = GetMinerChain()
 		lfb = getLatestBlockFromSharders(ctx)

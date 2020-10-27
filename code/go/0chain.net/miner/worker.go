@@ -109,6 +109,41 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 	}
 }
 
+func (mc *Chain) RestartRoundEventWorker(ctx context.Context) {
+
+	// restart round events subscribers
+
+	var (
+		subs = make(map[chan struct{}]struct{})
+
+		subq   = mc.subRestartRoundEventChannel
+		unsubq = mc.unsubRestartRoundEventChannel
+		rrq    = mc.restartRoundEventChannel
+
+		doneq = ctx.Done()
+	)
+
+	defer close(mc.restartRoundEventWorkerIsDoneChannel)
+
+	for {
+		select {
+		case <-doneq:
+			return
+		case ch := <-subq:
+			subs[ch] = struct{}{}
+		case ch := <-unsubq:
+			delete(subs, ch)
+		case <-rrq:
+			for ch := range subs {
+				select {
+				case ch <- struct{}{}: // trigger for the subscriber
+				default: // non-blocking
+				}
+			}
+		}
+	}
+}
+
 func (mc *Chain) getPruneCountRoundStorage() func(storage round.RoundStorage) int {
 	viper.SetDefault("server_chain.round_magic_block_storage.prune_below_count", chain.DefaultCountPruneRoundStorage)
 	viper.SetDefault("server_chain.round_dkg_storage.prune_below_count", chain.DefaultCountPruneRoundStorage)

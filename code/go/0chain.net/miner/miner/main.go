@@ -188,8 +188,8 @@ func main() {
 		Logger.Error("failed to wait sharders", zap.Error(err))
 	}
 
-	if err = mc.UpdateLatesMagicBlockFrom0DNS(ctx); err != nil {
-		Logger.Panic("can't update LFMB from 0DNS and sharders", zap.Error(err))
+	if err = mc.UpdateLatesMagicBlockFromSharders(ctx); err != nil {
+		Logger.Panic("can't update LFMB from sharders", zap.Error(err))
 	}
 
 	// ignoring error and without retries, restart round will resolve it
@@ -219,6 +219,10 @@ func main() {
 
 	mc.RegisterClient()
 	chain.StartTime = time.Now().UTC()
+
+	// start restart round event worker before the StartProtocol to be able
+	// to subscribe to its events
+	go mc.RestartRoundEventWorker(ctx)
 
 	var activeMiner = mb.Miners.HasNode(node.Self.Underlying().GetKey())
 	if activeMiner {

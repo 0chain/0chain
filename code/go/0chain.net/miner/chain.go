@@ -58,8 +58,13 @@ func SetupMinerChain(c *chain.Chain) {
 	c.SetFetchedNotarizedBlockHandler(minerChain)
 	c.SetViewChanger(minerChain)
 	c.RoundF = MinerRoundFactory{}
+	// view change / DKG
 	minerChain.viewChangeProcess.init(minerChain)
-	minerChain.restartRoundEventSubscribers = make(map[chan struct{}]struct{})
+	// restart round event
+	minerChain.subRestartRoundEventChannel = make(chan chan struct{})
+	minerChain.unsubRestartRoundEventChannel = make(chan chan struct{})
+	minerChain.restartRoundEventChannel = make(chan struct{})
+	minerChain.restartRoundEventWorkerIsDoneChannel = make(chan struct{})
 }
 
 /*GetMinerChain - get the miner's chain */
@@ -119,30 +124,35 @@ type Chain struct {
 	// not. blocks pulling joining at VC
 	pullingPin int64
 
-	// restart round event
-	rresmx                       sync.Mutex
-	restartRoundEventSubscribers map[chan struct{}]struct{}
+	// restart round event (rre)
+	subRestartRoundEventChannel          chan chan struct{} // subscribe for rre
+	unsubRestartRoundEventChannel        chan chan struct{} // unsubscribe rre
+	restartRoundEventChannel             chan struct{}      // trigger rre
+	restartRoundEventWorkerIsDoneChannel chan struct{}      // rre worker closed
 }
 
-func (mc *Chain) subRestartRoundEvent(ctx context.Context) (
-	subq chan struct{}) {
+func (mc *Chain) sendRestartRoundEvent(ctx context.Context) {
+	select {
+	case <-ctx.Done(): // caller context is done
+	case <-mc.restartRoundEventWorkerIsDoneChannel: // worker context is done
+	case mc.restartRoundEventChannel <- struct{}{}:
+	}
+}
 
-	mc.rresmx.Lock()
-	defer mc.rresmx.Unlock()
-
-	subq = make(chan struct{})
-	mc.restartRoundEventSubscribers[subq] = struct{}{}
+func (mc *Chain) subRestartRoundEvent() (subq chan struct{}) {
+	subq = make(chan struct{}, 1)
+	select {
+	case <-mc.restartRoundEventWorkerIsDoneChannel: // worker context is done
+	case mc.subRestartRoundEventChannel <- subq:
+	}
 	return
 }
 
-func (mc *Chain) unsubRestartRoundEvent(ctx context.Context,
-	subq chan struct{}) {
-
-	mc.rresmx.Lock()
-	defer mc.rresmx.Unlock()
-
-	delete(mc.restartRoundEventSubscribers, subq)
-	return
+func (mc *Chain) unsubRestartRoundEvent(subq chan struct{}) {
+	select {
+	case <-mc.restartRoundEventWorkerIsDoneChannel: // worker context is done
+	case mc.unsubRestartRoundEventChannel <- subq:
+	}
 }
 
 func (mc *Chain) startPulling() (ok bool) {

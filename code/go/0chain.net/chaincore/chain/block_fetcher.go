@@ -132,9 +132,9 @@ func (bf *BlockFetcher) StartBlockFetchWorker(ctx context.Context,
 		got      = make(chan BlockFetchReply)
 
 		// track latest round known by sharders
-		tickets = chainer.SubLFBTicket(ctx) // subscribe to new tickets
-		tk      *LFBTicket                  // internal
-		latest  int64                       // latest given LFB ticket
+		tickets = chainer.SubLFBTicket() // subscribe to new tickets
+		tk      *LFBTicket               // internal
+		latest  int64                    // latest given LFB ticket
 
 		// limits
 		minersl   = make(chan struct{}, fm)
@@ -142,6 +142,8 @@ func (bf *BlockFetcher) StartBlockFetchWorker(ctx context.Context,
 
 		stat FetchQueueStat
 	)
+
+	defer chainer.UnsubLFBTicket(tickets)
 
 	for {
 
@@ -314,7 +316,8 @@ type FetchedNotarizedBlockHandler interface {
 // The Chainer represents Chain.
 type Chainer interface {
 	// LFB tickets work
-	SubLFBTicket(ctx context.Context) (sub chan *LFBTicket)
+	SubLFBTicket() (sub chan *LFBTicket)
+	UnsubLFBTicket(sub chan *LFBTicket)
 	GetLatestLFBTicket(ctx context.Context) (tk *LFBTicket)
 	// blocks fetching
 	getFinalizedBlockFromSharders(ctx context.Context, ticket *LFBTicket) (
