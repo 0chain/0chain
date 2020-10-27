@@ -29,6 +29,10 @@ func (i *Info) Copy() (cp Info) {
 	i.mx.Lock()
 	defer i.mx.Unlock()
 
-	cp = *i
+	cp.AsOf = i.AsOf
+	cp.BuildTag = i.BuildTag
+	cp.StateMissingNodes = i.StateMissingNodes
+	cp.MinersMedianNetworkTime = i.MinersMedianNetworkTime
+	cp.AvgBlockTxns = i.AvgBlockTxns
 	return
 }
