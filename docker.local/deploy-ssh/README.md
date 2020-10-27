@@ -50,3 +50,9 @@ The `deploy-ssh.sh` command stops all remote nodes and cleans up remote BC.
 Then it uploads or updates minimal 0chain with configs. It never starts a unit.
 And it never updates docker images, use `deploy-ssh-images.sh` to update miners
 and sharders images on remote host.
+
+To dump all current logs use
+```
+./docker.local/bin/dump_logs.sh
+```
+that's inside 0chain directory on the ssh server.

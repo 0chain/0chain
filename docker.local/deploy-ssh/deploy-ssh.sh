@@ -41,6 +41,7 @@ tar -czvf "${archive}" \
     ../0chain/docker.local/bin/start.b0miner.sh \
     ../0chain/docker.local/bin/stop.b0sharder.sh \
     ../0chain/docker.local/bin/stop.b0miner.sh \
+    ../0chain/docker.local/bin/dump_logs.sh \
     ../0chain/docker.local/build.sharder/b0docker-compose.yml \
     ../0chain/docker.local/build.miner/b0docker-compose.yml \
     ../0chain/docker.local/docker-clean/ \
