@@ -27,7 +27,6 @@ set -x
 
 sudo systemctl start docker
 sudo apt-get update && sudo apt-get install docker-compose jq
-sudo snap install yq
 
 cd "${HOME}"
 wget https://github.com/docker/docker-credential-helpers/releases/download/v0.6.3/docker-credential-secretservice-v0.6.3-amd64.tar.gz
