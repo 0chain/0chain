@@ -464,8 +464,14 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 		numReads = commitRead.ReadMarker.ReadCounter - lastKnownCtr
 		sizeRead = sizeInGB(numReads * CHUNK_SIZE)
 		value    = state.Balance(float64(details.Terms.ReadPrice) * sizeRead)
-		userID   = commitRead.ReadMarker.ClientID
+		userID   = commitRead.ReadMarker.PayerID
 	)
+
+	// if 3rd party pays
+	err = commitRead.ReadMarker.verifyAuthTicket(alloc, t.CreationDate)
+	if err != nil {
+		return "", common.NewError("commit_blobber_read", err.Error())
+	}
 
 	// move tokens from read pool to blobber
 	var rp *readPool
