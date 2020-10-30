@@ -9,7 +9,7 @@ logging:
 development:
   state: true
   dkg: true
-  view_change: true
+  view_change: false
   smart_contract:
     storage: true
     faucet: true
@@ -135,7 +135,7 @@ min_stake: 0.0    # tokens
 max_stake: 100.0  # tokens
 
 minio:
-  enabled: true # Enable or disable minio backup, Do not enable with deep scan ON
+  enabled: false # Enable or disable minio backup, Do not enable with deep scan ON
   worker_frequency: 1800 # In Seconds, The frequency at which the worker should look for files, Ex: 3600 means it will run every 3600 seconds
   num_workers: 5 # Number of workers to run in parallel, Just to make execution faster we can have mutiple workers running simultaneously
   use_ssl: false # Use SSL for connection or not

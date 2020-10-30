@@ -50,6 +50,9 @@ func NewFSBlockStore(rootDir string) *FSBlockStore {
 }
 
 func (fbs *FSBlockStore) intializeMinio() {
+	if !viper.GetBool("minio.enabled") {
+		return
+	}
 	minioClient, err := minio.New(
 		MinioConfig.StorageServiceURL,
 		MinioConfig.AccessKeyID,

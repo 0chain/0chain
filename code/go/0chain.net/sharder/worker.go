@@ -192,6 +192,9 @@ func (sc *Chain) getPruneCountRoundStorage() func(storage round.RoundStorage) in
 }
 
 func (sc *Chain) MinioWorker(ctx context.Context) {
+	if !viper.GetBool("minio.enabled") {
+		return
+	}
 	var iterInprogress = false
 	var oldBlockRoundRange = viper.GetInt64("minio.old_block_round_range")
 	var numWorkers = viper.GetInt("minio.num_workers")
