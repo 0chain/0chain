@@ -74,6 +74,8 @@ server_chain:
     payload:
       max_size: 98304 # bytes
     timeout: 30 # seconds
+    min_fee: 0
+    max_fee: 1000000000
   client:
     signature_scheme: bls0chain # ed25519 or bls0chain
     discover: true
@@ -100,9 +102,9 @@ server_chain:
       report_status_mins: 1 #minutes
       batch_size: 50
   lfb_ticket:
-    rebroadcast_timeout: '15s'  #
-    ahead: 5                    # should be >= 5
-    fb_fetching_lifetime: '10s' #
+    rebroadcast_timeout: "15s" #
+    ahead: 5 # should be >= 5
+    fb_fetching_lifetime: "10s" #
   async_blocks_fetching:
     max_simultaneous_from_miners: 100
     max_simultaneous_from_sharders: 30
@@ -122,17 +124,17 @@ network:
 
 # delegate wallet is wallet that used to configure node in Miner SC; if its
 # empty, then node ID used
-delegate_wallet: ''
+delegate_wallet: ""
 # % of fees and rewards for generator
-service_charge: 0.10      # [0; 1) of all fees
+service_charge: 0.10 # [0; 1) of all fees
 # max number of delegate pools allowed by a node in miner SC
-number_of_delegates: 10   # max number of delegate pools
+number_of_delegates: 10 # max number of delegate pools
 # min stake pool amount allowed by node; should not conflict with
-# SC min_stake 
-min_stake: 0.0    # tokens
+# SC min_stake
+min_stake: 0.0 # tokens
 # max stake pool amount allowed by node; should not conflict with
-# SC max_stake 
-max_stake: 100.0  # tokens
+# SC max_stake
+max_stake: 100.0 # tokens
 
 minio:
   enabled: false # Enable or disable minio backup, Do not enable with deep scan ON
