@@ -280,15 +280,9 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (
 		return nil, nil
 	}
 
-	var r = mc.GetRound(b.Round)
+	var r = mc.getOrStartRound(ctx, b.Round)
 	if r == nil {
-		// the getRound can returns nil, in case the node is far ahead of
-		// sharders; a new node, joining BC on VC coming, is in the far ahead
-		// state and here it kicks itself to be able to join; but we do it
-		// only for the entering case
-		if r = mc.getRound(ctx, b.Round); isNilRound(r) {
-			return nil, nil // miner is far ahead of sharders, skip
-		}
+		return nil, nil // can't handle yet
 	}
 
 	if r.IsFinalizing() || r.IsFinalized() {

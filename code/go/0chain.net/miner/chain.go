@@ -271,7 +271,7 @@ func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) erro
 	return err
 }
 
-// The sJoining returns true if this miner joins blockchain on current view
+// The isJoining returns true if this miner joins blockchain on current view
 // changing. For rounds, for example, from 501 to 504.
 func (mc *Chain) isJoining(rn int64) (is bool) {
 

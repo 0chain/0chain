@@ -12,16 +12,19 @@ import (
 
 // HandleVRFShare - handles the vrf share.
 func (mc *Chain) HandleVRFShare(ctx context.Context, msg *BlockMessage) {
-	mr := mc.GetMinerRound(msg.VRFShare.Round)
+
+	var mr = mc.getOrStartRoundNotAhead(ctx, msg.VRFShare.Round)
 	if mr == nil {
-		mr = mc.getRound(ctx, msg.VRFShare.Round)
+		return
 	}
-	if mr != nil {
-		mc.AddVRFShare(ctx, mr, msg.VRFShare)
-	}
+
+	// add the VRFS
+	mc.AddVRFShare(ctx, mr, msg.VRFShare)
 }
 
 func (mc *Chain) enterOnViewChange(ctx context.Context, rn int64) {
+
+	return // disabled at all, keep code to use it later
 
 	if !config.DevConfiguration.ViewChange {
 		return
@@ -109,7 +112,6 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 	if pr == nil {
 		Logger.Error("handle verify block -- no previous round (ignore)",
 			zap.Int64("round", b.Round), zap.Int64("prev_round", b.Round-1))
-		go mc.enterOnViewChange(ctx, b.Round-1)
 		return
 	}
 
@@ -119,13 +121,13 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 			zap.Int64("round", b.Round), zap.String("block", b.Hash),
 			zap.String("miner", b.MinerID))
 
-		if mr = mc.getRound(ctx, b.Round); mr == nil {
-			Logger.Error("handle verify block -- far ahead of sharders (ignore)",
+		var mr = mc.getOrStartRoundNotAhead(ctx, b.Round)
+		if mr == nil {
+			Logger.Error("handle verify block -- can't start new round",
 				zap.Int64("round", b.Round))
 			return
 		}
 
-		//TODO: Byzantine
 		mc.startRound(ctx, mr, b.GetRoundRandomSeed())
 
 	} else {
@@ -142,7 +144,6 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 					zap.Int("round_toc", b.RoundTimeoutCount))
 				return
 			}
-			//TODO: Byzantine
 			mc.startRound(ctx, mr, b.GetRoundRandomSeed())
 		}
 
@@ -152,9 +153,7 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 			mc.MergeVerificationTickets(ctx, b, vts)
 			if b.IsBlockNotarized() {
 				if mr.GetRandomSeed() != b.GetRoundRandomSeed() {
-					/* Since this is a notarized block, we are accepting it.
-					   TODO: Byzantine
-					*/
+					/* Since this is a notarized block, we are accepting it. */
 					b1, r1 := mc.AddNotarizedBlockToRound(mr, b)
 					b = b1
 					mr = r1.(*Round)
@@ -213,36 +212,32 @@ func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,
 func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context,
 	msg *BlockMessage) {
 
-	var mr = msg.Round
+	var (
+		bvt = msg.BlockVerificationTicket
+		rn  = bvt.Round
+	)
 
+	var mr = mc.getOrStartRoundNotAhead(ctx, rn)
 	if mr == nil {
-		mr = mc.GetMinerRound(msg.BlockVerificationTicket.Round)
-		if mr == nil {
-			mr = mc.getRound(ctx, msg.BlockVerificationTicket.Round)
-			if mr == nil {
-				return // miner is far ahead of sharders, skip for now
-			}
-		}
-	}
-
-	if mc.GetMinerRound(msg.BlockVerificationTicket.Round-1) == nil {
-		Logger.Error("handle vt. msg -- no previous round (ignore)",
-			zap.Int64("round", msg.BlockVerificationTicket.Round),
-			zap.Int64("prev_round", msg.BlockVerificationTicket.Round-1))
-		go mc.enterOnViewChange(ctx, msg.BlockVerificationTicket.Round-1)
+		Logger.Error("handle vt. msg -- ahead of sharders",
+			zap.Int64("round", rn))
 		return
 	}
 
-	var b, err = mc.GetBlock(ctx, msg.BlockVerificationTicket.BlockID)
+	if mc.GetMinerRound(rn-1) == nil {
+		Logger.Error("handle vt. msg -- no previous round (ignore)",
+			zap.Int64("round", rn), zap.Int64("pr", rn-1))
+		return
+	}
+
+	var b, err = mc.GetBlock(ctx, bvt.BlockID)
 	if err != nil {
-		err = mc.VerifyTicket(ctx, msg.BlockVerificationTicket.BlockID,
-			&msg.BlockVerificationTicket.VerificationTicket,
-			mr.GetRoundNumber())
+		err = mc.VerifyTicket(ctx, bvt.BlockID, &bvt.VerificationTicket, rn)
 		if err != nil {
 			Logger.Debug("verification ticket", zap.Error(err))
 			return
 		}
-		mr.AddVerificationTicket(msg.BlockVerificationTicket)
+		mr.AddVerificationTicket(bvt)
 		return
 	}
 
@@ -250,66 +245,66 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context,
 	if b.Round < lfb.Round {
 		Logger.Debug("verification message (round mismatch)",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash),
-			zap.Int64("finalized_round", lfb.Round))
+			zap.Int64("lfb", lfb.Round))
 		return
 	}
 
-	err = mc.VerifyTicket(ctx, b.Hash,
-		&msg.BlockVerificationTicket.VerificationTicket, mr.GetRoundNumber())
+	err = mc.VerifyTicket(ctx, b.Hash, &bvt.VerificationTicket, rn)
 	if err != nil {
 		Logger.Debug("verification ticket", zap.Error(err))
 		return
 	}
 
-	mc.ProcessVerifiedTicket(ctx, mr, b,
-		&msg.BlockVerificationTicket.VerificationTicket)
+	mc.ProcessVerifiedTicket(ctx, mr, b, &bvt.VerificationTicket)
 }
 
 // HandleNotarizationMessage - handles the block notarization message.
 func (mc *Chain) HandleNotarizationMessage(ctx context.Context, msg *BlockMessage) {
 
-	var lfb = mc.GetLatestFinalizedBlock()
-	if msg.Notarization.Round < lfb.Round {
+	var (
+		lfb = mc.GetLatestFinalizedBlock()
+		not = msg.Notarization
+	)
+
+	if not.Round < lfb.Round {
 		Logger.Debug("handle notarization message",
-			zap.Int64("round", msg.Notarization.Round),
+			zap.Int64("round", not.Round),
 			zap.Int64("finalized_round", lfb.Round),
-			zap.String("block", msg.Notarization.BlockID))
+			zap.String("block", not.BlockID))
 		return
 	}
 
-	var r = mc.GetMinerRound(msg.Notarization.Round)
+	var r = mc.GetMinerRound(not.Round)
 	if r == nil {
 		if msg.ShouldRetry() {
 			Logger.Error("handle notarization message (round not started yet) retrying",
-				zap.String("block", msg.Notarization.BlockID),
+				zap.String("block", not.BlockID),
 				zap.Int8("retry_count", msg.RetryCount))
 			msg.Retry(mc.blockMessageChannel)
 		} else {
 			Logger.Error("handle notarization message (round not started yet)",
-				zap.String("block", msg.Notarization.BlockID),
+				zap.String("block", not.BlockID),
 				zap.Int8("retry_count", msg.RetryCount))
 		}
 		return
 	}
 
-	if mc.GetMinerRound(msg.Notarization.Round-1) == nil {
+	if mc.GetMinerRound(not.Round-1) == nil {
 		Logger.Error("handle notarization message -- no previous round",
-			zap.Int64("round", msg.Notarization.Round),
-			zap.Int64("prev_round", msg.Notarization.Round-1))
-		go mc.enterOnViewChange(ctx, msg.Notarization.Round-1)
+			zap.Int64("round", not.Round),
+			zap.Int64("prev_round", not.Round-1))
 		return
 	}
 
 	msg.Round = r
 
-	var b, err = mc.GetBlock(ctx, msg.Notarization.BlockID)
+	var b, err = mc.GetBlock(ctx, not.BlockID)
 	if err != nil {
-		go mc.GetNotarizedBlock(ctx, msg.Notarization.BlockID,
-			msg.Notarization.Round)
+		go mc.GetNotarizedBlock(ctx, not.BlockID, not.Round)
 		return
 	}
 
-	var vts = b.UnknownTickets(msg.Notarization.VerificationTickets)
+	var vts = b.UnknownTickets(not.VerificationTickets)
 	if len(vts) == 0 {
 		return
 	}
@@ -327,35 +322,49 @@ func (mc *Chain) HandleNotarizedBlockMessage(ctx context.Context,
 	)
 
 	if mr == nil {
-		if mr = mc.getRound(ctx, nb.Round); mr == nil {
-			return // miner is far ahead of sharders, skip for now
+
+		if mr = mc.getOrStartRoundNotAhead(ctx, nb.Round); mr == nil {
+			Logger.Error("handle not. block -- ahead of sharders or no pr",
+				zap.Int64("round", nb.Round),
+				zap.Bool("has_pr", mc.GetMinerRound(nb.Round-1) != nil))
+			return
 		}
+
 		mc.startRound(ctx, mr, nb.GetRoundRandomSeed())
+
 	} else {
 
 		if mc.GetMinerRound(nb.Round-1) == nil {
 			Logger.Error("handle not. block -- no previous round (ignore)",
 				zap.Int64("round", nb.Round),
 				zap.Int64("prev_round", nb.Round-1))
-			go mc.enterOnViewChange(ctx, nb.Round-1)
 			return
 		}
 
 		if mr.IsVerificationComplete() {
 			return // verification for the round complete
 		}
+
 		for _, blk := range mr.GetNotarizedBlocks() {
 			if blk.Hash == nb.Hash {
 				return // already have
 			}
 		}
+
 		if !mr.IsVRFComplete() {
 			mc.startRound(ctx, mr, nb.GetRoundRandomSeed())
 		}
+
 	}
 
 	var b = mc.AddRoundBlock(mr, nb)
 	if !mc.AddNotarizedBlock(ctx, mr, b) {
+		return
+	}
+
+	if mc.isAheadOfSharders(ctx, nb.Round+1) {
+		Logger.Error("handle not. block -- ahead of sharders",
+			zap.Int64("round", nb.Round+1))
 		return
 	}
 
