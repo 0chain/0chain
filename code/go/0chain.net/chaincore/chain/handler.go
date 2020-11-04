@@ -1159,6 +1159,10 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 			return nil, common.NewError("txn_exceed_max_payload", s)
 		}
 	}
+
+	// Calculate and update fee
+	txn.ComputeFee(StartToFinalizeTxnTimer.RateMean())
+
 	return transaction.PutTransaction(ctx, txn)
 }
 
