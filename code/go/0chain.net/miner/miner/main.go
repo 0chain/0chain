@@ -98,10 +98,19 @@ func main() {
 	}
 
 	var magicBlock *block.MagicBlock
-	magicBlock, err = chain.ReadMagicBlockFile(*magicBlockFile)
-	if err != nil {
-		Logger.Panic("can't read magic block file", zap.Error(err))
-		return
+	dnsURL := viper.GetString("network.dns_url")
+	if dnsURL == "" {
+		magicBlock, err = chain.ReadMagicBlockFile(*magicBlockFile)
+		if err != nil {
+			Logger.Panic("can't read magic block file", zap.Error(err))
+			return
+		}
+	} else {
+		magicBlock, err = chain.GetMagicBlockFrom0DNS(dnsURL)
+		if err != nil {
+			Logger.Panic("can't read magic block from DNS", zap.Error(err))
+			return
+		}
 	}
 
 	if state.Debug() {

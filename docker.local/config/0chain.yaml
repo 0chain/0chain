@@ -75,7 +75,7 @@ server_chain:
       max_size: 98304 # bytes
     timeout: 30 # seconds
     min_fee: 0
-    max_fee: 1000000000
+    max_fee: 0
   client:
     signature_scheme: bls0chain # ed25519 or bls0chain
     discover: true
@@ -111,6 +111,7 @@ server_chain:
 
 network:
   magic_block_file: config/b0magicBlock_4_miners_1_sharder.json
+  dns_url: http://198.18.0.98:9091
   relay_time: 200 # milliseconds
   max_concurrent_requests: 40
   timeout:
