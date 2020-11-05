@@ -266,7 +266,7 @@ func NotarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (
 
 // NotarizedBlockHandler - handles a notarized block.
 func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (
-	interface{}, error) {
+	resp interface{}, err error) {
 
 	var b, ok = entity.(*block.Block)
 	if !ok {
@@ -277,16 +277,22 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (
 	if b.Round < mc.GetCurrentRound()-1 {
 		Logger.Debug("notarized block handler (round older than the current round)",
 			zap.String("block", b.Hash), zap.Any("round", b.Round))
-		return nil, nil
+		return
 	}
 
-	var r = mc.getOrStartRound(ctx, b.Round)
+	var r = mc.getOrStartRoundNotAhead(ctx, b.Round)
 	if r == nil {
-		return nil, nil // can't handle yet
+		if mc.isAheadOfSharders(ctx, b.Round) {
+			Logger.Debug("notarized block handler -- is ahead or no pr",
+				zap.String("block", b.Hash), zap.Any("round", b.Round),
+				zap.Bool("has_pr", mc.GetMinerRound(b.Round-1) != nil))
+			return
+		}
+		return // can't handle yet
 	}
 
 	if r.IsFinalizing() || r.IsFinalized() {
-		return nil, nil // doesn't need a not. block
+		return // doesn't need a not. block
 	}
 
 	var lfb = mc.GetLatestFinalizedBlock()
@@ -297,7 +303,6 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (
 	if mc.GetMinerRound(b.Round-1) == nil {
 		Logger.Error("not. block handler -- no previous round (ignore)",
 			zap.Int64("round", b.Round), zap.Int64("prev_round", b.Round-1))
-		go mc.enterOnViewChange(ctx, b.Round-1)
 		return nil, nil // no previous round
 	}
 
