@@ -199,9 +199,11 @@ func (fbs *FSBlockStore) read(hash string, round int64) (*block.Block, error) {
 	f, err := os.Open(fileName)
 	if err != nil {
 		if os.IsNotExist(err) {
-			err = fbs.DownloadFromCloud(hash, round)
-			if err != nil {
-				return nil, err
+			if viper.GetBool("minio.enabled") {
+				err = fbs.DownloadFromCloud(hash, round)
+				if err != nil {
+					return nil, err
+				}
 			}
 			f, err = os.Open(fileName)
 			if err != nil {
