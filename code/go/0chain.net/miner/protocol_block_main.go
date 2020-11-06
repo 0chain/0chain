@@ -222,22 +222,10 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 		Logger.Info("generate block (too much iteration)", zap.Int64("round", b.Round), zap.Int32("iteration_count", count))
 	}
 
-	/// TODO (sfxdx): DEBUG, REMOVE THEN
-	//
-	//
-	var debugClients = make(map[string]struct{}, len(clients))
-	{
-		for id := range clients {
-			if cx, _ := client.GetClient(ctx, id); cx != nil && cx.PublicKey != "" {
-				debugClients[id] = struct{}{}
-			}
-		}
+	if err = client.GetClients(ctx, clients); err != nil {
+		Logger.Error("generate block (get clients error)", zap.Error(err))
+		return common.NewError("get_clients_error", err.Error())
 	}
-	//
-	//
-	/// ---------------------------------
-
-	client.GetClients(ctx, clients)
 	Logger.Debug("generate block (assemble)", zap.Int64("round", b.Round), zap.Duration("time", time.Since(start)))
 
 	bsh.UpdatePendingBlock(ctx, b, etxns)
@@ -248,22 +236,6 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 		}
 		cl := clients[txn.ClientID]
 		if cl == nil || cl.PublicKey == "" {
-
-			/// TODO (sfxdx): DEBUG, REMOVE THEN
-			//
-			//
-			// so, client is missing
-			if _, ok := debugClients[txn.ClientID]; ok {
-				println("CLIENT IS MISSING", txn.ClientID, "BUT FOUND BEFORE")
-			}
-
-			if cx, _ := client.GetClient(ctx, txn.ClientID); cx != nil && cx.PublicKey != "" {
-				println("CLIENT IS MISSING", txn.ClientID, "BUT FOUND AFTER")
-			}
-			//
-			//
-			/// ---------------------------------
-
 			Logger.Error("generate block (invalid client)", zap.String("client_id", txn.ClientID))
 			return common.NewError("invalid_client", "client not available")
 		}

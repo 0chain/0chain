@@ -205,6 +205,20 @@ func (c *Chain) GetLatestLFBTicket(ctx context.Context) (tk *LFBTicket) {
 	return
 }
 
+func (c *Chain) sendLFBTicketEventToSubscribers(
+	subs map[chan *LFBTicket]struct{}, ticket *LFBTicket) {
+
+	Logger.Debug("[send LFB-ticket event to subscribers]",
+		zap.Int("subs", len(subs)), zap.Int64("round", ticket.Round))
+	for s := range subs {
+		select {
+		case s <- ticket: // the sending must be non-blocking
+		default:
+			Logger.Debug("[send LFB-ticket event to subscribers] ignore one")
+		}
+	}
+}
+
 // StartLFBTicketWorker should work in a goroutine. It process received
 // and generated LFB tickets. It works until context done.
 func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
@@ -270,12 +284,7 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 			if ticket.Sign == "" {
 				latest = ticket
 				// send for all subscribers
-				for s := range subs {
-					select {
-					case s <- ticket: // the sending must be non-blocking
-					default:
-					}
-				}
+				c.sendLFBTicketEventToSubscribers(subs, ticket)
 				continue // don't need a block for the blank kick ticket
 			}
 
@@ -291,12 +300,7 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 			}
 
 			// send for all subscribers
-			for s := range subs {
-				select {
-				case s <- ticket: // the sending must be non-blocking
-				default:
-				}
-			}
+			c.sendLFBTicketEventToSubscribers(subs, ticket)
 
 			// update latest
 			latest = ticket //
@@ -328,14 +332,9 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 			c.asyncSendLFBTicket(ticket)
 
 			// send for all subscribers, if any
-			for s := range subs {
-				select {
-				case s <- ticket: // the sending must be non-blocking
-				default:
-				}
-			}
+			c.sendLFBTicketEventToSubscribers(subs, ticket)
 
-			latest = ticket // update
+			latest = ticket // update the latest
 
 		// rebroadcast after some timeout
 		case <-rebroadcast.C:

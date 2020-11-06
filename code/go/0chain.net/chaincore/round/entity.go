@@ -467,6 +467,13 @@ func (r *Round) ComputeMinerRanks(miners *node.Pool) {
 	r.mutex.Unlock()
 }
 
+func (r *Round) IsRanksComputed() bool {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+
+	return r.minerPerm != nil
+}
+
 /*GetMinerRank - get the rank of element at the elementIdx position based on the permutation of the round */
 func (r *Round) GetMinerRank(miner *node.Node) int {
 	r.mutex.RLock()

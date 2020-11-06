@@ -168,8 +168,7 @@ func GetClients(ctx context.Context, clients map[string]*Client) (err error) {
 	err = clientEntityMetadata.GetStore().MultiRead(ctx, clientEntityMetadata,
 		clientIDs, cEntities)
 	if err != nil {
-		println("EMS MR ERROR:", err.Error())
-		return // TODO (sfxdx): OR IGNORE
+		return
 	}
 
 	for _, cl := range cEntities {

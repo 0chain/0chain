@@ -221,7 +221,7 @@ func (mc *Chain) HandleVerificationTicketMessage(ctx context.Context,
 
 	var mr = mc.getOrStartRoundNotAhead(ctx, rn)
 	if mr == nil {
-		Logger.Error("handle vt. msg -- ahead of sharders",
+		Logger.Error("handle vt. msg -- ahead of sharders or no pr",
 			zap.Int64("round", rn))
 		return
 	}

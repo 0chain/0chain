@@ -563,14 +563,19 @@ func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block
 		Logger.Info("Adding a notarized block for current round", zap.Int64("Round", r.GetRoundNumber()))
 	}
 
-	// Get round data insync as it is the notarized block.
-	if r.GetRandomSeed() != b.GetRoundRandomSeed() || r.GetTimeoutCount() != b.RoundTimeoutCount {
+	// Only for blocks with greater RTC (elder blocks)
+	if r.GetRandomSeed() != b.GetRoundRandomSeed() &&
+		r.GetTimeoutCount() <= b.RoundTimeoutCount {
+
 		Logger.Info("AddNotarizedBlockToRound round and block random seed different",
 			zap.Int64("Round", r.GetRoundNumber()),
 			zap.Int64("Round_rrs", r.GetRandomSeed()),
 			zap.Int64("Block_rrs", b.GetRoundRandomSeed()))
 		r.SetRandomSeedForNotarizedBlock(b.GetRoundRandomSeed())
 		r.SetTimeoutCount(b.RoundTimeoutCount)
+	}
+
+	if !r.IsRanksComputed() {
 		r.ComputeMinerRanks(c.GetMiners(r.GetRoundNumber()))
 	}
 

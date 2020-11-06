@@ -99,9 +99,13 @@ func (mc *Chain) isAheadOfSharders(ctx context.Context, round int64) bool {
 	}
 
 	if round+1 > tk.Round+int64(ahead) {
+		Logger.Debug("[is ahead]", zap.Int64("round", round),
+			zap.Int64("ticket", tk.Round), zap.Int("ahead", ahead))
 		return true // is ahead
 	}
 
+	Logger.Debug("[is not ahead]", zap.Int64("round", round),
+		zap.Int64("ticket", tk.Round), zap.Int("ahead", ahead))
 	return false // is not ahead, can move on
 }
 
@@ -185,7 +189,7 @@ func (mc *Chain) finalizeRound(ctx context.Context, r *Round) {
 func (mc *Chain) pullNotarizedBlocks(ctx context.Context, r *Round) {
 	Logger.Info("pull not. block for", zap.Int64("round", r.GetRoundNumber()))
 	if mc.GetHeaviestNotarizedBlock(ctx, r) != nil {
-		if r.GetRoundNumber() > mc.GetCurrentRound() {
+		if r.GetRoundNumber() >= mc.GetCurrentRound() {
 			mc.SetCurrentRound(r.GetRoundNumber())
 			mc.StartNextRound(ctx, r)
 		}
@@ -1268,7 +1272,7 @@ func (mc *Chain) kickRoundByLFB(ctx context.Context, lfb *block.Block) {
 	)
 
 	if !mc.ensureState(ctx, lfb) {
-		return // don't kick -- no block state
+		// ignore state error
 	}
 
 	mr, _ = mc.AddRound(mr).(*Round)
@@ -1280,54 +1284,32 @@ func (mc *Chain) kickRoundByLFB(ctx context.Context, lfb *block.Block) {
 	mc.SetCurrentRound(nr.Number)
 }
 
-// The adjustPreviousRounds makes sure we have all rounds with corresponding RRS
-// from LFB to previous round (the current round is given).
-func (mc *Chain) adjustPreviousRounds(ctx context.Context, crn int64) (
-	prrs int64) {
+func (mc *Chain) getRoundRandomSeed(rn int64) (seed int64) {
+	var mr = mc.GetMinerRound(rn)
+	if mr == nil {
+		return // zero, no seed
+	}
+	return mr.GetRandomSeed() // can be zero too
+}
 
-	var (
-		lfb   = mc.GetLatestFinalizedBlock()
-		ahead = int64(config.GetLFBTicketAhead())
-	)
+func (mc *Chain) startNextRoundInRestartRound(ctx context.Context, i int64) {
 
-	// don't pull blocks for so long missing chain part
-	if lfb.Round+ahead < crn {
-		println("APRS: so long missing chain part", lfb.Round, ahead, crn)
+	// don't start the round if the miner is ahead of sharders
+	if mc.isAheadOfSharders(ctx, i) {
+		Logger.Error("[start next round in RR] is ahead, don't start")
 		return
 	}
 
-	for i := lfb.Round + 1; i < crn; i++ {
-
-		// get round, make sure RRS is set, if not pull related not. block and
-		// set the seed; etc, etc
-
-		var xr = mc.GetMinerRound(i)
-		if xr == nil {
-			var nr = round.NewRound(i)
-			xr = mc.CreateRound(nr)
-			xr = mc.AddRound(xr).(*Round)
-		}
-
-		var xrhnb = xr.GetHeaviestNotarizedBlock()
-		if xrhnb == nil || !xr.HasRandomSeed() {
-			mc.pullNotarizedBlocks(ctx, xr)
-		} else if xrhnb.GetRoundRandomSeed() != xr.GetRandomSeed() {
-			Logger.Info("adjust PRRS", zap.Int64("round", i))
-			mc.AddNotarizedBlockToRound(xr, xrhnb)
-		}
-
-		// ///////////////////////////////////////////////////////////////////
-
-	}
-
-	// previous round
-	var pr = mc.GetMinerRound(crn - 1)
+	// previous round required
+	var pr = mc.GetMinerRound(i - 1)
 	if pr == nil {
-		return // zero, missing
+		Logger.Error("[start next round in RR] no previous round",
+			zap.Int64("pr", i-1)) // critical, critical, critical, critical
+		return
 	}
 
-	// reply with PRRS can be zero sometimes
-	return pr.GetRandomSeed()
+	// start the next
+	mc.StartNextRound(ctx, pr)
 }
 
 func (mc *Chain) restartRound(ctx context.Context) {
@@ -1362,81 +1344,50 @@ func (mc *Chain) restartRound(ctx context.Context) {
 		Logger.Error("restartRound - ensure lfb", zap.Error(err))
 	}
 
-	var isAhead = mc.isAheadOfSharders(ctx, crn)
+	var (
+		isAhead = mc.isAheadOfSharders(ctx, crn)
+		lfb     = mc.GetLatestFinalizedBlock()
+	)
 
+	// kick new round from the new LFB from sharders, if it's newer
+	// then the current one
 	if updated {
-		// kick new round from the new LFB from sharders, if it's newer
-		// then the current one
-		var lfb = mc.GetLatestFinalizedBlock()
 		if lfb.Round > crn {
-			mc.kickRoundByLFB(ctx, lfb)
-			return
+			mc.kickRoundByLFB(ctx, lfb) // and continue
+			crn = mc.GetCurrentRound()
 		}
-	} else {
-		if isAhead {
-			mc.kickSharders(ctx) // not updated, kick sharders
-		}
+	} else if isAhead {
+		mc.kickSharders(ctx) // not updated, kick sharders finalization
 	}
 
-	if !updated && crn > 1 && !isAhead &&
-		r.GetHeaviestNotarizedBlock() != nil && r.HasRandomSeed() {
-
-		Logger.Info("StartNextRound after sending notarized "+
-			"block in restartRound.",
-			zap.Int64("current_round", r.GetRoundNumber()))
-		nextR := mc.GetRound(r.GetRoundNumber())
-		nr := mc.StartNextRound(ctx, r)
-		if nr == nil {
-			Logger.Info("restartRound: skip due to far ahead")
-			return // shouldn't happen
+	// walk up for first round with no not. block of all nodes
+	for i := lfb.Round + 1; ; i++ {
+		var xr = mc.GetMinerRound(i)
+		if xr == nil {
+			mc.startNextRoundInRestartRound(ctx, i)
+			return // <============================================= [exit loop]
 		}
-		/*
-			if the next round object already exists, StartNextRound does not send VRFs.
-			So to be sure send it.
-		*/
-		if r.HasRandomSeed() {
-			if nextR != nil {
-				Logger.Info("RedoVRFshare after sending notarized"+
-					" block in restartRound.",
-					zap.Int64("round", nr.GetRoundNumber()),
-					zap.Int("round_toc", nr.GetTimeoutCount()))
-				mc.adjustPreviousRounds(ctx, crn+1)
-
-				nr.Restart()
-				//Recalculate VRF shares and send
-				nr.IncrementTimeoutCount(r.GetRandomSeed(),
-					mc.GetMiners(nr.GetRoundNumber()))
-				redo := mc.RedoVrfShare(ctx, nr)
-				if !redo {
-					Logger.Info("Could not  RedoVrfShare",
-						zap.Int64("round", r.GetRoundNumber()),
-						zap.Int("round_timeout", r.GetTimeoutCount()))
-				}
-
-			} else {
-				//StartNextRound would have sent the VRFs. No need to do that again
-				Logger.Info("after sending notarized block in"+
-					" restartRound NextR was nil. startNextRound"+
-					" would have sent VRF.",
-					zap.Int64("round", nr.GetRoundNumber()),
-					zap.Int("round_toc", nr.GetTimeoutCount()))
-
-			}
-			return
+		if xr.IsFinalized() || xr.IsFinalizing() {
+			continue // skip rounds finalizing or finalized <=== [continue loop]
 		}
-		Logger.Error("Has notarized block in restartRound, but no randomseed.",
-			zap.Int64("current_round", r.GetRoundNumber()))
-	}
-
-	r.Restart()
-
-	// recalculate VRF shares and send
-	var prrs = mc.adjustPreviousRounds(ctx, crn)
-	r.IncrementTimeoutCount(prrs, mc.GetMiners(crn))
-	if redo := mc.RedoVrfShare(ctx, r); !redo {
-		Logger.Info("Could not RedoVrfShare",
-			zap.Int64("round", r.GetRoundNumber()),
-			zap.Int("round_timeout", r.GetTimeoutCount()))
+		// check out corresponding not. block
+		var xrhnb = xr.GetHeaviestNotarizedBlock()
+		if xrhnb == nil {
+			mc.pullNotarizedBlocks(ctx, xr)        // try to pull a not. block
+			xrhnb = xr.GetHeaviestNotarizedBlock() //
+		}
+		// if no not. block for the round, then we just redo VRFS sending
+		// (previous round random seed required for it)
+		if xrhnb == nil {
+			xr.Restart()
+			xr.IncrementTimeoutCount(mc.getRoundRandomSeed(i-1),
+				mc.GetMiners(i))
+			mc.RedoVrfShare(ctx, xr)
+			return // the round has restarted <===================== [exit loop]
+		}
+		if xr.GetRandomSeed() != xrhnb.GetRoundRandomSeed() {
+			mc.AddNotarizedBlockToRound(xr, xrhnb)
+		}
 	}
 }
 

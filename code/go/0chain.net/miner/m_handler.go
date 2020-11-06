@@ -8,14 +8,14 @@ import (
 	"strconv"
 
 	"0chain.net/chaincore/block"
-	// "0chain.net/chaincore/chain"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	. "0chain.net/core/logging"
 	"0chain.net/core/memorystore"
+
+	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -116,10 +116,19 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 	if tk == nil {
 		return nil, common.NewError("Reject VRFShare", "context done")
 	}
-	if vrfs.GetRoundNumber() < tk.Round {
+	var (
+		lfb   = mc.GetLatestFinalizedBlock()
+		bound = tk.Round
+	)
+	if lfb.Round < tk.Round {
+		bound = lfb.Round // use lower one
+	}
+	if vrfs.GetRoundNumber() < bound {
 		Logger.Info("Rejecting VRFShare: old round",
-			zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()),
-			zap.Int64("lfb_ticket_round_num", tk.Round))
+			zap.Int64("vrfs_round", vrfs.GetRoundNumber()),
+			zap.Int64("lfb_ticket_round", tk.Round),
+			zap.Int64("lfb_round", lfb.Round),
+			zap.Int64("bound", bound))
 		return nil, nil
 	}
 

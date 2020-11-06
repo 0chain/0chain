@@ -16,6 +16,7 @@ type RoundI interface {
 	SetTimeoutCount(tc int) bool
 	SetRandomSeedForNotarizedBlock(seed int64)
 
+	IsRanksComputed() bool
 	ComputeMinerRanks(miners *node.Pool)
 	GetMinerRank(miner *node.Node) int
 	GetMinersByRank(miners *node.Pool) []*node.Node
@@ -37,5 +38,4 @@ type RoundI interface {
 	SetState(state int)
 	AddVRFShare(share *VRFShare, threshold int) bool
 	GetVRFShares() map[string]*VRFShare
-
 }
