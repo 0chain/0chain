@@ -169,23 +169,6 @@ func (mc *Chain) finalizeRound(ctx context.Context, r *Round) {
 	go mc.FinalizeRound(ctx, r.Round, mc)
 }
 
-// TODO (sfxdx): DEAD CODE, REMOVE
-//
-// func (mc *Chain) startNextRoundAfterPulling(ctx context.Context, r *Round) {
-// 	var rn = r.GetRoundNumber()
-//
-// 	// don't start if the round already exists
-// 	if mc.GetCurrentRound() > r.GetRoundNumber() {
-// 		Logger.Info("start next round after pulling -- behind current round",
-// 			zap.Int64("round", rn))
-// 		return // miner is ahead
-// 	}
-//
-// 	// start
-// 	mc.StartNextRound(ctx, r)
-// }
-//
-
 func (mc *Chain) pullNotarizedBlocks(ctx context.Context, r *Round) {
 	Logger.Info("pull not. block for", zap.Int64("round", r.GetRoundNumber()))
 	if mc.GetHeaviestNotarizedBlock(ctx, r) != nil {
@@ -233,23 +216,6 @@ func (mc *Chain) StartNextRound(ctx context.Context, r *Round) *Round {
 
 	return er
 }
-
-// TODO (sfxdx): DEAD CODE, TO REMOVE, NEVER USED
-//
-// func (mc *Chain) getRound(ctx context.Context, rn int64) (mr *Round) {
-//
-// 	var pr = mc.GetMinerRound(rn - 1)
-// 	if pr == nil {
-// 		Logger.Error("get_round -- no previous round", zap.Int64("round", rn),
-// 			zap.Int64("prev_round", rn-1))
-// 		return // (nil)
-// 	}
-//
-// 	Logger.Info("Starting next round in getRound",
-// 		zap.Int64("nextRoundNum", rn))
-// 	return mc.StartNextRound(ctx, pr) // can return nil
-// }
-//
 
 // The getOrStartRound returns existing miner round, or starts new if there is
 // previous one. It never checks and waits 'ahead of sharders' cases.
@@ -1595,7 +1561,6 @@ func StartProtocol(ctx context.Context, gb *block.Block) {
 	if lfb != nil {
 		mr = mc.startProtocolOnLFB(ctx, lfb)
 	} else {
-		// TODO (sfxdx): IGNORE WNA, LFB OR GENESIS BLOCK
 		// start on genesis block
 		mc.bumpLFBTicket(ctx, gb)
 		var r = round.NewRound(gb.Round)

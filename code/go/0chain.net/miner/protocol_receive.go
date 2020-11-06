@@ -3,9 +3,6 @@ package miner
 import (
 	"context"
 
-	// "0chain.net/chaincore/chain"
-	// "0chain.net/chaincore/config"
-
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
@@ -21,80 +18,6 @@ func (mc *Chain) HandleVRFShare(ctx context.Context, msg *BlockMessage) {
 	// add the VRFS
 	mc.AddVRFShare(ctx, mr, msg.VRFShare)
 }
-
-// TODO (sfxdx): DEAD CODE, NEED REFACTOR
-//
-// func (mc *Chain) enterOnViewChange(ctx context.Context, rn int64) {
-//
-// 	return // disabled at all, keep code to use it later
-//
-// 	if !config.DevConfiguration.ViewChange {
-// 		return
-// 	}
-//
-// 	// TODO (sfxdx): need 'else' for a 'VC: false' case, where there's no PRRS
-//
-// 	// choose magic block for next view change set, e.g. for 501-504 rounds
-// 	// select MB for 505+ rounds; but the GetMagicBlock chooses the very
-// 	// magic block, or a latest one (can be earlier or newer depending current
-// 	// miner state)
-// 	var (
-// 		vco int64 = chain.ViewChangeOffset       // short hand
-// 		mb        = mc.GetMagicBlock(rn + vco)   //
-// 		lfb       = mc.GetLatestFinalizedBlock() //
-//
-// 		// new magic block round, the round from which new magic block (e.g.
-// 		// new miners set) will be used to generate blocks
-// 		nmbr = mb.StartingRound + vco
-// 		err  error
-// 	)
-//
-// 	if rn <= lfb.Round {
-// 		return
-// 	}
-//
-// 	// so, now rn is > lfb
-//
-// 	// TODO (sfxdx): proper condition to update LFB and LFMB from sharders
-// 	//               and add magic block updating condition
-// 	if lfb.Round+vco < rn || nmbr < rn-vco {
-// 		if _, err = mc.ensureLatestFinalizedBlocks(ctx); err != nil {
-// 			Logger.Error("get LFB/LFBM from sharder", zap.Error(err))
-// 			return
-// 		}
-// 		mb = mc.GetMagicBlock(rn + vco)    // update
-// 		lfb = mc.GetLatestFinalizedBlock() // update
-// 	}
-//
-// 	if !mc.isJoining(rn) {
-// 		return
-// 	}
-//
-// 	// make sure the current round is set correctly for the joining node
-// 	var crn = mc.GetCurrentRound()
-// 	if crn < lfb.Round {
-// 		mc.SetCurrentRound(lfb.Round)
-// 		crn = lfb.Round
-// 	}
-//
-// 	// follow from lfb to next MB round (exclusive both the ends) and
-// 	//     1. create and start round
-// 	//     2. pull corresponding notarized block
-// 	//     3. pull corresponding block state change (do we really need it?)
-//
-// 	for i := lfb.Round + 1; i < nmbr; i++ {
-// 		var mr = mc.GetMinerRound(i)
-// 		if mr != nil && mr.GetRandomSeed() != 0 {
-// 			continue
-// 		}
-// 		if mr = mc.GetMinerRound(i - 1); mr == nil {
-// 			return
-// 		}
-// 		go mc.StartNextRound(ctx, mr)
-// 		break
-// 	}
-//
-// }
 
 // HandleVerifyBlockMessage - handles the verify block message.
 func (mc *Chain) HandleVerifyBlockMessage(ctx context.Context,

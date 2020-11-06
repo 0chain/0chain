@@ -271,35 +271,6 @@ func (mc *Chain) SaveClients(ctx context.Context, clients []*client.Client) erro
 	return err
 }
 
-// TODO (sfxdx): DEAD CODE, NEED REWORK FOR VC: TRUE
-//
-// // The isJoining returns true if this miner joins blockchain on current view
-// // changing. For rounds, for example, from 501 to 504.
-// func (mc *Chain) isJoining(rn int64) (is bool) {
-//
-// 	var (
-// 		lfb = mc.GetLatestFinalizedBlock()
-// 		nvc = mc.NextViewChange()
-// 	)
-//
-// 	if lfb.Round >= nvc && rn < nvc+chain.ViewChangeOffset {
-// 		// get current magic block
-// 		var (
-// 			mb  = mc.GetMagicBlock(rn)
-// 			nmb = mc.GetMagicBlock(nvc + chain.ViewChangeOffset)
-//
-// 			key = node.Self.Underlying().GetKey()
-// 		)
-//
-// 		return nmb.StartingRound == nvc &&
-// 			!mb.Miners.HasNode(key) &&
-// 			nmb.Miners.HasNode(key)
-// 	}
-//
-// 	return // false
-// }
-//
-
 // ViewChange on finalized (!) block. Miners check magic blocks during
 // generation and notarization. A finalized block should be trusted.
 func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
