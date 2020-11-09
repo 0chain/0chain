@@ -8,14 +8,14 @@ import (
 	"strconv"
 
 	"0chain.net/chaincore/block"
-	// "0chain.net/chaincore/chain"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	. "0chain.net/core/logging"
 	"0chain.net/core/memorystore"
+
+	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 
@@ -116,10 +116,19 @@ func VRFShareHandler(ctx context.Context, entity datastore.Entity) (
 	if tk == nil {
 		return nil, common.NewError("Reject VRFShare", "context done")
 	}
-	if vrfs.GetRoundNumber() < tk.Round {
+	var (
+		lfb   = mc.GetLatestFinalizedBlock()
+		bound = tk.Round
+	)
+	if lfb.Round < tk.Round {
+		bound = lfb.Round // use lower one
+	}
+	if vrfs.GetRoundNumber() < bound {
 		Logger.Info("Rejecting VRFShare: old round",
-			zap.Int64("vrfs_round_num", vrfs.GetRoundNumber()),
-			zap.Int64("lfb_ticket_round_num", tk.Round))
+			zap.Int64("vrfs_round", vrfs.GetRoundNumber()),
+			zap.Int64("lfb_ticket_round", tk.Round),
+			zap.Int64("lfb_round", lfb.Round),
+			zap.Int64("bound", bound))
 		return nil, nil
 	}
 
@@ -266,7 +275,7 @@ func NotarizationReceiptHandler(ctx context.Context, entity datastore.Entity) (
 
 // NotarizedBlockHandler - handles a notarized block.
 func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (
-	interface{}, error) {
+	resp interface{}, err error) {
 
 	var b, ok = entity.(*block.Block)
 	if !ok {
@@ -277,22 +286,22 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (
 	if b.Round < mc.GetCurrentRound()-1 {
 		Logger.Debug("notarized block handler (round older than the current round)",
 			zap.String("block", b.Hash), zap.Any("round", b.Round))
-		return nil, nil
+		return
 	}
 
-	var r = mc.GetRound(b.Round)
+	var r = mc.getOrStartRoundNotAhead(ctx, b.Round)
 	if r == nil {
-		// the getRound can returns nil, in case the node is far ahead of
-		// sharders; a new node, joining BC on VC coming, is in the far ahead
-		// state and here it kicks itself to be able to join; but we do it
-		// only for the entering case
-		if r = mc.getRound(ctx, b.Round); isNilRound(r) {
-			return nil, nil // miner is far ahead of sharders, skip
+		if mc.isAheadOfSharders(ctx, b.Round) {
+			Logger.Debug("notarized block handler -- is ahead or no pr",
+				zap.String("block", b.Hash), zap.Any("round", b.Round),
+				zap.Bool("has_pr", mc.GetMinerRound(b.Round-1) != nil))
+			return
 		}
+		return // can't handle yet
 	}
 
 	if r.IsFinalizing() || r.IsFinalized() {
-		return nil, nil // doesn't need a not. block
+		return // doesn't need a not. block
 	}
 
 	var lfb = mc.GetLatestFinalizedBlock()
@@ -303,7 +312,6 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (
 	if mc.GetMinerRound(b.Round-1) == nil {
 		Logger.Error("not. block handler -- no previous round (ignore)",
 			zap.Int64("round", b.Round), zap.Int64("prev_round", b.Round-1))
-		go mc.enterOnViewChange(ctx, b.Round-1)
 		return nil, nil // no previous round
 	}
 

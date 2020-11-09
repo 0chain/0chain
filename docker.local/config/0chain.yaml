@@ -9,7 +9,7 @@ logging:
 development:
   state: true
   dkg: true
-  view_change: false
+  view_change: true
   smart_contract:
     storage: true
     faucet: true
@@ -102,8 +102,8 @@ server_chain:
       report_status_mins: 1 #minutes
       batch_size: 50
   lfb_ticket:
-    rebroadcast_timeout: "15s" #
-    ahead: 5 # should be >= 5
+    rebroadcast_timeout: "15s"  #
+    ahead: 5                    # should be >= 5
     fb_fetching_lifetime: "10s" #
   async_blocks_fetching:
     max_simultaneous_from_miners: 100
@@ -111,7 +111,7 @@ server_chain:
 
 network:
   magic_block_file: config/b0magicBlock_4_miners_1_sharder.json
-  dns_url: http://198.18.0.98:9091
+  dns_url: '' # http://198.18.0.98:9091
   relay_time: 200 # milliseconds
   max_concurrent_requests: 40
   timeout:

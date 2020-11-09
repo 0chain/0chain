@@ -86,6 +86,7 @@ func PutEntityHandler(ctx context.Context, object interface{}) (interface{}, err
 	if DoAsync(ctx, entity) {
 		return entity, nil
 	}
+
 	err := entity.Write(ctx)
 	if err != nil {
 		return nil, err

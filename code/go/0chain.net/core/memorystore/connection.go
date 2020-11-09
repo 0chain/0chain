@@ -114,7 +114,7 @@ func GetInfo() {
 	}
 }
 
-/*GetEntityConnection - retuns a connection from the pool configured for the entity */
+/*GetEntityConnection - returns a connection from the pool configured for the entity */
 func GetEntityConnection(entityMetadata datastore.EntityMetadata) redis.Conn {
 	dbid := entityMetadata.GetDB()
 	if dbid == "" {

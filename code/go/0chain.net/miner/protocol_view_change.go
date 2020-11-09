@@ -145,6 +145,18 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			zap.Any("phase", mc.CurrentPhase()),
 			zap.Int("sc funcs", len(mc.viewChangeProcess.scFunctions)))
 
+		// skip the check only for share
+		if pn.Phase != minersc.Share {
+			if pn.Phase != 0 && pn.Phase != mc.CurrentPhase()+1 {
+				Logger.Debug("dkg process -- jumping over a phase;"+
+					" skip, wait for 'start'",
+					zap.Int("current_phase", int(mc.CurrentPhase())),
+					zap.Any("phase", pn.Phase))
+				mc.SetCurrentPhase(minersc.Unknown)
+				continue
+			}
+		}
+
 		Logger.Info("dkg process start", zap.Any("next_phase", pn),
 			zap.Any("phase", mc.CurrentPhase()),
 			zap.Int("sc funcs", len(mc.viewChangeProcess.scFunctions)))

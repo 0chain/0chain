@@ -153,27 +153,32 @@ func SetupEntity(store datastore.Store) {
 var ClientEntityChannel chan datastore.QueuedEntity
 
 /*GetClients - given a set of client ids, return the clients */
-func GetClients(ctx context.Context, clients map[string]*Client) {
-	clientIDs := make([]string, len(clients))
-	idx := 0
+func GetClients(ctx context.Context, clients map[string]*Client) (err error) {
+
+	var (
+		clientIDs = make([]string, 0, len(clients))
+		cEntities = make([]datastore.Entity, 0, len(clients))
+	)
+
 	for key := range clients {
-		clientIDs[idx] = key
-		idx++
+		clientIDs = append(clientIDs, key)
+		cEntities = append(cEntities, clientEntityMetadata.Instance().(*Client))
 	}
-	for i, start := 0, 0; start < len(clients); start += memorystore.BATCH_SIZE {
-		end := start + memorystore.BATCH_SIZE
-		if end > len(clients) {
-			end = len(clients)
-		}
-		cEntities := make([]datastore.Entity, end-start)
-		for j := 0; j < len(cEntities); j++ {
-			cEntities[j] = clientEntityMetadata.Instance().(*Client)
-		}
-		clientEntityMetadata.GetStore().MultiRead(ctx, clientEntityMetadata, clientIDs[start:end], cEntities)
-		for j := 0; i < end; i, j = i+1, j+1 {
-			clients[clientIDs[i]] = cEntities[j].(*Client)
-		}
+
+	err = clientEntityMetadata.GetStore().MultiRead(ctx, clientEntityMetadata,
+		clientIDs, cEntities)
+	if err != nil {
+		return
 	}
+
+	for _, cl := range cEntities {
+		if cl == nil {
+			continue
+		}
+		clients[cl.GetKey()] = cl.(*Client)
+	}
+
+	return
 }
 
 /*GetClient - gets client from either cache or database*/

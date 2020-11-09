@@ -14,6 +14,7 @@ require (
 	0chain.net/chaincore v0.0.0
 	0chain.net/core v0.0.0
 	0chain.net/smartcontract v0.0.0
+	github.com/0chain/gorocksdb v0.0.0-20181010114359-8752a9433481
 	github.com/go-ini/ini v1.55.0 // indirect
 	github.com/minio/minio-go v6.0.14+incompatible
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
