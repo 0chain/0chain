@@ -267,7 +267,12 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 	if count > 10*mc.BlockSize {
 		Logger.Info("generate block (too much iteration)", zap.Int64("round", b.Round), zap.Int32("iteration_count", count))
 	}
-	client.GetClients(ctx, clients)
+
+	if err = client.GetClients(ctx, clients); err != nil {
+		Logger.Error("generate block (get clients error)", zap.Error(err))
+		return common.NewError("get_clients_error", err.Error())
+	}
+
 	Logger.Debug("generate block (assemble)", zap.Int64("round", b.Round), zap.Duration("time", time.Since(start)))
 
 	bsh.UpdatePendingBlock(ctx, b, etxns)
@@ -276,12 +281,12 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 			txn.ClientID = datastore.EmptyKey
 			continue
 		}
-		client := clients[txn.ClientID]
-		if client == nil || client.PublicKey == "" {
+		cl := clients[txn.ClientID]
+		if cl == nil || cl.PublicKey == "" {
 			Logger.Error("generate block (invalid client)", zap.String("client_id", txn.ClientID))
 			return common.NewError("invalid_client", "client not available")
 		}
-		txn.PublicKey = client.PublicKey
+		txn.PublicKey = cl.PublicKey
 		txn.ClientID = datastore.EmptyKey
 	}
 	b.ClientStateHash = b.ClientState.GetRoot()
