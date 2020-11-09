@@ -1342,20 +1342,22 @@ func (c *Chain) GetLatestFinalizedMagicBlockSummary() *block.BlockSummary {
 
 func (c *Chain) GetNodesPreviousInfo(mb *block.MagicBlock) {
 	prevMB := c.GetPrevMagicBlockFromMB(mb)
-	for key, miner := range mb.Miners.CopyNodesMap() {
-		if old := prevMB.Miners.GetNode(key); old != nil {
-			miner.SetNodeInfo(old)
-			if miner.ProtocolStats == nil {
-				ms := &MinerStats{}
-				ms.GenerationCountByRank = make([]int64, c.NumGenerators)
-				ms.FinalizationCountByRank = make([]int64, c.NumGenerators)
-				ms.VerificationTicketsByRank = make([]int64, c.NumGenerators)
+	if prevMB != nil {
+		for key, miner := range mb.Miners.CopyNodesMap() {
+			if old := prevMB.Miners.GetNode(key); old != nil {
+				miner.SetNodeInfo(old)
+				if miner.ProtocolStats == nil {
+					ms := &MinerStats{}
+					ms.GenerationCountByRank = make([]int64, c.NumGenerators)
+					ms.FinalizationCountByRank = make([]int64, c.NumGenerators)
+					ms.VerificationTicketsByRank = make([]int64, c.NumGenerators)
+				}
 			}
 		}
-	}
-	for key, sharder := range mb.Sharders.CopyNodesMap() {
-		if old := prevMB.Sharders.GetNode(key); old != nil {
-			sharder.SetNodeInfo(old)
+		for key, sharder := range mb.Sharders.CopyNodesMap() {
+			if old := prevMB.Sharders.GetNode(key); old != nil {
+				sharder.SetNodeInfo(old)
+			}
 		}
 	}
 }
