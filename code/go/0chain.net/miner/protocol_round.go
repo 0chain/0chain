@@ -1110,20 +1110,21 @@ func (mc *Chain) GetNextRoundTimeoutTime(ctx context.Context) int {
 func (mc *Chain) HandleRoundTimeout(ctx context.Context) {
 
 	var (
-		rn  = mc.GetCurrentRound()
-		mmb = mc.GetMagicBlock(rn + chain.ViewChangeOffset + 1)
-		cmb = mc.GetMagicBlock(rn)
-
-		selfNodeKey = node.Self.Underlying().GetKey()
+		rn = mc.GetCurrentRound()
 	)
+	// 	mmb = mc.GetMagicBlock(rn + chain.ViewChangeOffset + 1)
+	// 	cmb = mc.GetMagicBlock(rn)
 
-	// miner should be member of current magic block; also, we have to call the
-	// restartRound on last round of MB the miner is not member (on joining)
-	if cmb == nil || !cmb.Miners.HasNode(selfNodeKey) &&
-		!mmb.Miners.HasNode(selfNodeKey) {
+	// 	selfNodeKey = node.Self.Underlying().GetKey()
+	// )
 
-		return
-	}
+	// // miner should be member of current magic block; also, we have to call the
+	// // restartRound on last round of MB the miner is not member (on joining)
+	// if cmb == nil || !cmb.Miners.HasNode(selfNodeKey) &&
+	// 	!mmb.Miners.HasNode(selfNodeKey) {
+
+	// 	return
+	// }
 
 	var r = mc.GetMinerRound(rn)
 
