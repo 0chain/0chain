@@ -359,15 +359,15 @@ network:
   dns_url: ''
 ```
 
-The tests designed to work with 20 rounds per View Change phase.
-Configure `sc.yaml` for the 20 rounds per a phase
+The tests designed to work with 50 rounds per View Change phase.
+Configure `sc.yaml` for the 50 rounds per a phase or make sure it is already 50.
 
 ```
-    start_rounds: 20
-    contribute_rounds: 20
-    share_rounds: 20
-    publish_rounds: 20
-    wait_rounds: 20
+    start_rounds: 50
+    contribute_rounds: 50
+    share_rounds: 50
+    publish_rounds: 50
+    wait_rounds: 50
 ```
 
 ### Start the tests

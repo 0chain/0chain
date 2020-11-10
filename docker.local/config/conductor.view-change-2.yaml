@@ -7,10 +7,10 @@
 # enabled test cases sets
 enable:
   # comment out to disable
-  - "MPK"
+  # - "MPK"
   - "Shares"
-  - "Signatures"
-  - "Publish"
+  # - "Signatures"
+  # - "Publish"
 
 # sets of test cases
 sets:
@@ -22,7 +22,7 @@ sets:
   - name: "Shares"
     tests:
       - "Send wrong share"
-      - "Only send correct share to the group"
+      - "Only send correct share to the group" # only send correct share to the group
       - "Send no shares"
   - name: "Signatures"
     tests:
@@ -116,7 +116,7 @@ tests:
       - wait_view_change:
           expect_magic_block:
             number: 2 # round 251
-            miners: ['miner 1', 'miner 2', 'miner 3', 'miner 4'] # miner 4 as revealed
+            miners: ['miner 1', 'miner 2', 'miner 3']
             sharders: ['sharder 1']
   - name: "Send no shares"
     flow:
