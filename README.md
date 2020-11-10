@@ -347,6 +347,11 @@ Note:
 > ./docker.local/bin/build.sharders.sh && ./docker.local/bin/build.miners.sh
 > ```
 
+For a separate server for tests also:
+
+- install docker, docker-compose, golang-go
+- setup the 0chain and build 0chain base as usual
+
 ### Start the tests
 
 - Check out tests cases and configurations ./docker.local/config/conductor.yml.

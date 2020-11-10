@@ -59,7 +59,7 @@ func (f Flow) Execute(ex Executor) (err error) {
 		return errors.New("invalid empty flow")
 	}
 
-	var tm time.Duration
+	var tm = 2 * time.Minute // default timeout is 2 minute
 
 	// extract timeout
 	if msi, ok := val.(map[interface{}]interface{}); ok {
