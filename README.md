@@ -352,6 +352,24 @@ For a separate server for tests also:
 - install docker, docker-compose, golang-go
 - setup the 0chain and build 0chain base as usual
 
+Disable 0dns in 0chain.yaml
+
+```
+network:
+  dns_url: ''
+```
+
+The tests designed to work with 20 rounds per View Change phase.
+Configure `sc.yaml` for the 20 rounds per a phase
+
+```
+    start_rounds: 20
+    contribute_rounds: 20
+    share_rounds: 20
+    publish_rounds: 20
+    wait_rounds: 20
+```
+
 ### Start the tests
 
 - Check out tests cases and configurations ./docker.local/config/conductor.yml.
