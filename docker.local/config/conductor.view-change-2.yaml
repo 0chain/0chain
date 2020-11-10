@@ -52,7 +52,7 @@ tests:
           good: []
           bad: ["miner 1", "miner 2"]
       - wait_no_view_change:
-          round: 150 # 255
+          round: 300 # 255
           timeout: '5m'
   - name: "Send no MPK to blockchain"
     flow:
@@ -67,7 +67,7 @@ tests:
           good: []
           bad: []
       - wait_no_view_change:
-          round: 150 # 255
+          round: 300 # 255
           timeout: '5m'
   - name: "Group send no MPK to blockchain"
     flow:
@@ -82,7 +82,7 @@ tests:
           good: []
           bad: []
       - wait_no_view_change:
-          round: 150 # 255
+          round: 300 # 255
           timeout: '5m'
 
   # Shares
@@ -99,7 +99,7 @@ tests:
           good: []
           bad: ["miner 1", "miner 2"]
       - wait_no_view_change:
-          round: 150 # 255
+          round: 300 # 255
           timeout: '5m'
   - name: "Only send correct share to the group"
     flow:
@@ -131,7 +131,7 @@ tests:
           good: []
           bad: []
       - wait_no_view_change:
-          round: 150 # 255
+          round: 300 # 255
           timeout: '5m'
 
   # Signatures
@@ -148,7 +148,7 @@ tests:
           good: []
           bad: []
       - wait_no_view_change:
-          round: 150 # 255
+          round: 300 # 255
           timeout: '5m'
   - name: "Only send correct signature to the group"
     flow:
@@ -180,7 +180,7 @@ tests:
           good: []
           bad: []
       - wait_no_view_change:
-          round: 150 # 255
+          round: 300 # 255
           timeout: '5m'
 
   # Publish
@@ -197,7 +197,7 @@ tests:
           good: []
           bad: []
       - wait_no_view_change:
-          round: 150 # 255
+          round: 300 # 255
           timeout: '5m'
   - name: "Publish: Only send correct signature to the group"
     flow:
@@ -229,7 +229,7 @@ tests:
           good: []
           bad: []
       - wait_no_view_change:
-          round: 200
+          round: 300
           timeout: '15m'
 
 ...
