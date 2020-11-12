@@ -198,7 +198,6 @@ func (sc *Chain) MinioWorker(ctx context.Context) {
 	var iterInprogress = false
 	var oldBlockRoundRange = viper.GetInt64("minio.old_block_round_range")
 	var numWorkers = viper.GetInt("minio.num_workers")
-	var roundProcessed = int64(0)
 	ticker := time.NewTicker(time.Duration(viper.GetInt64("minio.worker_frequency")) * time.Second)
 	for true {
 		select {
@@ -207,17 +206,26 @@ func (sc *Chain) MinioWorker(ctx context.Context) {
 		case <-ticker.C:
 			if !iterInprogress {
 				iterInprogress = true
-				roundDifference := sc.CurrentRound - roundProcessed
-				if roundDifference > oldBlockRoundRange {
-					roundsTillProcess := roundProcessed + (roundDifference - oldBlockRoundRange)
-					swg := sizedwaitgroup.New(numWorkers)
-					for roundProcessed <= roundsTillProcess {
-						swg.Add()
-						roundProcessed++
-						go sc.moveBlockToCloud(ctx, roundProcessed, &swg)
+				roundToProcess := sc.CurrentRound - oldBlockRoundRange
+				fs := blockstore.GetStore()
+				swg := sizedwaitgroup.New(numWorkers)
+				for roundToProcess > 0 {
+					hash, err := sc.GetBlockHash(ctx, roundToProcess)
+					if err != nil {
+						Logger.Error("Unable to get block hash from round number", zap.Any("round", roundToProcess))
+						roundToProcess--
+						continue
 					}
-					swg.Wait()
+					if fs.CloudObjectExists(hash) {
+						Logger.Info("The data is already present on cloud, Terminating the worker...", zap.Any("round", roundToProcess))
+						break
+					} else {
+						swg.Add()
+						go sc.moveBlockToCloud(ctx, roundToProcess, hash, fs, &swg)
+						roundToProcess--
+					}
 				}
+				swg.Wait()
 				iterInprogress = false
 				Logger.Info("Moved old blocks to cloud successfully")
 			}
@@ -225,22 +233,10 @@ func (sc *Chain) MinioWorker(ctx context.Context) {
 	}
 }
 
-func (sc *Chain) moveBlockToCloud(ctx context.Context, round int64, swg *sizedwaitgroup.SizedWaitGroup) {
-	hash, err := sc.GetBlockHash(ctx, round)
+func (sc *Chain) moveBlockToCloud(ctx context.Context, round int64, hash string, fs blockstore.BlockStore, swg *sizedwaitgroup.SizedWaitGroup) {
+	err := fs.UploadToCloud(hash, round)
 	if err != nil {
-		Logger.Error("Unable to get block hash from round number", zap.Any("round", round))
-		swg.Done()
-		return
-	}
-
-	fs := blockstore.GetStore()
-	err = fs.UploadToCloud(hash, round)
-	if err != nil {
-		if fs.CloudObjectExists(hash) {
-			Logger.Error("Error in uploading to cloud, The data is already present on cloud", zap.Error(err), zap.Any("round", round))
-		} else {
-			Logger.Error("Error in uploading to cloud, The data is also missing from cloud", zap.Error(err), zap.Any("round", round))
-		}
+		Logger.Error("Error in uploading to cloud, The data is also missing from cloud", zap.Error(err), zap.Any("round", round))
 	} else {
 		Logger.Info("Block successfully uploaded to cloud", zap.Any("round", round))
 		sc.TieringStats.TotalBlocksUploaded++
