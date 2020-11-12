@@ -525,17 +525,40 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		"Not enough validations, no successful validations")
 }
 
-func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
-	b *block.Block, input []byte, balances c_state.StateContextI) error {
+func (sc *StorageSmartContract) addGenerateChallengesStat(tp time.Time,
+	err *error) {
 
-	stats := &StorageStats{}
+	if (*err) != nil {
+		return // failed call, don't calculate stat
+	}
+
+	var tm = sc.SmartContractExecutionStats["generate_challenges"]
+	if tm == nil {
+		return // missing timer (unexpected)
+	}
+
+	if timer, ok := tm.(metrics.Timer); ok {
+		timer.Update(time.Since(tp))
+	}
+}
+
+func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
+	b *block.Block, input []byte, balances c_state.StateContextI) (err error) {
+
+	var tp = time.Now()
+	defer sc.addGenerateChallengesStat(tp, &err)
+
+	var stats = &StorageStats{}
 	stats.Stats = &StorageAllocationStats{}
-	statsBytes, err := balances.GetTrieNode(stats.GetKey(sc.ID))
+	var statsBytes util.Serializable
+	statsBytes, err = balances.GetTrieNode(stats.GetKey(sc.ID))
+	if err != nil && err != util.ErrValueNotPresent {
+		return // unexpected MPT error
+	}
 	if statsBytes != nil {
-		err = stats.Decode(statsBytes.Encode())
-		if err != nil {
+		if err = stats.Decode(statsBytes.Encode()); err != nil {
 			Logger.Error("storage stats decode error")
-			return err
+			return
 		}
 	}
 	//Logger.Info("Stats for generating challenge", zap.Any("stats", stats))
@@ -572,9 +595,11 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 		float64(conf.MaxChallengesPerGeneration)))
 	//	Logger.Info("Generating challenges", zap.Any("mins_since_last", numMins), zap.Any("mb_size_diff", sizeDiffMB))
 	hashString := encryption.Hash(t.Hash + b.PrevHash)
-	randomSeed, err := strconv.ParseUint(hashString[0:16], 16, 64)
+	var randomSeed uint64
+	randomSeed, err = strconv.ParseUint(hashString[0:16], 16, 64)
 	if err != nil {
-		Logger.Error("Error in creating seed for creating challenges", zap.Error(err))
+		Logger.Error("Error in creating seed for creating challenges",
+			zap.Error(err))
 		return err
 	}
 	r := rand.New(rand.NewSource(int64(randomSeed)))
@@ -650,15 +675,19 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 		// found
 
 		challengeID := encryption.Hash(hashString + strconv.FormatInt(i, 10))
-		challengeSeed, err := strconv.ParseUint(challengeID[0:16], 16, 64)
+		var challengeSeed uint64
+		challengeSeed, err = strconv.ParseUint(challengeID[0:16], 16, 64)
 		if err != nil {
 			Logger.Error("Error in creating challenge seed", zap.Error(err),
 				zap.Any("challengeID", challengeID))
 			continue
 		}
 		// statistics
-		var tp = time.Now()
-		challengeString, err := sc.addChallenge(alloc, validators, challengeID,
+		var (
+			tp              = time.Now()
+			challengeString string
+		)
+		challengeString, err = sc.addChallenge(alloc, validators, challengeID,
 			t.CreationDate, r, int64(challengeSeed), balances)
 		if err != nil {
 			Logger.Error("Error in adding challenge", zap.Error(err),
