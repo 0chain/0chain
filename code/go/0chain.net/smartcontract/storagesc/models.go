@@ -14,8 +14,6 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util"
-
-	"github.com/spf13/viper"
 )
 
 var (
@@ -955,7 +953,7 @@ func (at *AuthTicket) verify(alloc *StorageAllocation, now common.Timestamp,
 	}
 
 	var (
-		ssn = viper.GetString("server_chain.client.signature_scheme")
+		ssn = chain.GetServerChain().ClientSignatureScheme
 		ss  = encryption.GetSignatureScheme(ssn)
 	)
 	if err = ss.SetPublicKey(alloc.OwnerPublicKey); err != nil {

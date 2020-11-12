@@ -578,58 +578,30 @@ func (sc *StorageSmartContract) generateChallenges(t *transaction.Transaction,
 		return err
 	}
 	r := rand.New(rand.NewSource(int64(randomSeed)))
-	for i := int64(0); i < numChallenges; i++ {
-		challengeID := encryption.Hash(hashString + strconv.FormatInt(i, 10))
-		challengeSeed, err := strconv.ParseUint(challengeID[0:16], 16, 64)
-		if err != nil {
-			Logger.Error("Error in creating challenge seed", zap.Error(err), zap.Any("challengeID", challengeID))
-			continue
-		}
-		// statistics
-		var tp = time.Now()
-		challengeString, err := sc.addChallenge(challengeID, t.CreationDate, r, int64(challengeSeed), balances)
-		if err != nil {
-			Logger.Error("Error in adding challenge", zap.Error(err), zap.Any("challengeString", challengeString))
-			continue
-		}
-		if tm := sc.SmartContractExecutionStats["challenge_request"]; tm != nil {
-			if timer, ok := tm.(metrics.Timer); ok {
-				timer.Update(time.Since(tp))
-			}
-		}
-	}
-	return nil
-}
 
-func (sc *StorageSmartContract) addChallenge(challengeID string,
-	creationDate common.Timestamp, r *rand.Rand, challengeSeed int64,
-	balances c_state.StateContextI) (resp string, err error) {
+	// select allocations for the challenges
 
 	var validators *ValidatorNodes
 	if validators, err = sc.getValidatorsList(balances); err != nil {
-		return "", common.NewErrorf("adding_challenge_error",
+		return common.NewErrorf("adding_challenge_error",
 			"error getting the validators list: %v", err)
 	}
 
 	if len(validators.Nodes) == 0 {
-		return "", common.NewError("no_validators",
+		return common.NewError("no_validators",
 			"not enough validators for the challenge")
 	}
 
 	var all *Allocations
 	if all, err = sc.getAllAllocationsList(balances); err != nil {
-		return "", common.NewErrorf("adding_challenge_error",
+		return common.NewErrorf("adding_challenge_error",
 			"error getting the allocation list: %v", err)
 	}
 
 	if len(all.List) == 0 {
-		return "", common.NewError("adding_challenge_error",
+		return common.NewError("adding_challenge_error",
 			"no allocations at this time")
 	}
-
-	const LIMIT = 1000 // attempts limit
-
-	var allocationObj *StorageAllocation
 
 	var selectAlloc = func(i int) (alloc *StorageAllocation, err error) {
 		alloc, err = sc.getAllocation(all.List[i], balances)
@@ -644,11 +616,11 @@ func (sc *StorageSmartContract) addChallenge(challengeID string,
 			return nil, common.NewErrorf("invalid_allocation",
 				"client state has invalid allocations")
 		}
-		if alloc.Expiration < creationDate {
+		if alloc.Expiration < t.CreationDate {
 			return nil, nil
 		}
 		if alloc.Stats == nil {
-			alloc.Stats = new(StorageAllocationStats)
+			return nil, nil
 		}
 		if alloc.Stats.NumWrites > 0 {
 			return alloc, nil // found
@@ -656,44 +628,71 @@ func (sc *StorageSmartContract) addChallenge(challengeID string,
 		return nil, nil
 	}
 
-	// looking for allocation with NumWrites > 0:
 	//
-	// range over all allocations if the SC consist of < LIMIT allocations,
-	// otherwise, range over LIMIT random allocations
+	//
+	//
 
-	if len(all.List) < LIMIT {
-		for _, i := range r.Perm(len(all.List)) {
-			if allocationObj, err = selectAlloc(i); err != nil {
-				return "", err
-			}
-			if allocationObj != nil {
-				break // found
-			}
+	var alloc *StorageAllocation
+
+	for i := int64(0); i < numChallenges; i++ {
+
+		// looking for allocation with NumWrites > 0
+
+		alloc, err = selectAlloc(r.Intn(len(all.List)))
+		if err != nil {
+			return err
 		}
-	} else {
-		for i := 0; i < LIMIT; i++ {
-			allocationObj, err = selectAlloc(r.Intn(len(all.List)))
-			if err != nil {
-				return "", err
-			}
-			if allocationObj != nil {
-				break // found
+
+		if alloc == nil {
+			continue // try another one
+		}
+
+		// found
+
+		challengeID := encryption.Hash(hashString + strconv.FormatInt(i, 10))
+		challengeSeed, err := strconv.ParseUint(challengeID[0:16], 16, 64)
+		if err != nil {
+			Logger.Error("Error in creating challenge seed", zap.Error(err),
+				zap.Any("challengeID", challengeID))
+			continue
+		}
+		// statistics
+		var tp = time.Now()
+		challengeString, err := sc.addChallenge(alloc, validators, challengeID,
+			t.CreationDate, r, int64(challengeSeed), balances)
+		if err != nil {
+			Logger.Error("Error in adding challenge", zap.Error(err),
+				zap.Any("challengeString", challengeString))
+			continue
+		}
+		if tm := sc.SmartContractExecutionStats["challenge_request"]; tm != nil {
+			if timer, ok := tm.(metrics.Timer); ok {
+				timer.Update(time.Since(tp))
 			}
 		}
 	}
+	return nil
+}
 
-	if allocationObj == nil || allocationObj.Stats == nil ||
-		allocationObj.Stats.NumWrites == 0 {
+func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
+	validators *ValidatorNodes, challengeID string,
+	creationDate common.Timestamp, r *rand.Rand, challengeSeed int64,
+	balances c_state.StateContextI) (resp string, err error) {
 
-		Logger.Info("add_challenge: can't choose a random allocation" +
-			" with writes after 1000 attempts")
+	// TODO (sfxdx): DEAD CODE, REMOVE THEN
 
-		// it's not a real error.
-		return "", nil
-	}
+	// if alloc == nil || alloc.Stats == nil ||
+	// 	alloc.Stats.NumWrites == 0 {
+	//
+	// 	Logger.Info("add_challenge: can't choose a random allocation" +
+	// 		" with writes after 1000 attempts")
+	//
+	// 	// it's not a real error.
+	// 	return "", nil
+	// }
 
-	sort.SliceStable(allocationObj.Blobbers, func(i, j int) bool {
-		return allocationObj.Blobbers[i].ID < allocationObj.Blobbers[j].ID
+	sort.SliceStable(alloc.Blobbers, func(i, j int) bool {
+		return alloc.Blobbers[i].ID < alloc.Blobbers[j].ID
 	})
 
 	selectedBlobberObj := &StorageNode{}
@@ -701,17 +700,17 @@ func (sc *StorageSmartContract) addChallenge(challengeID string,
 	blobberAllocation := &BlobberAllocation{}
 	blobberAllocation.Stats = &StorageAllocationStats{}
 
-	for _, ri := range r.Perm(len(allocationObj.Blobbers)) {
-		selectedBlobberObj = allocationObj.Blobbers[ri]
-		_, ok := allocationObj.BlobberMap[selectedBlobberObj.ID]
+	for _, ri := range r.Perm(len(alloc.Blobbers)) {
+		selectedBlobberObj = alloc.Blobbers[ri]
+		_, ok := alloc.BlobberMap[selectedBlobberObj.ID]
 		if !ok {
 			Logger.Error("Selected blobber not found in allocation state",
 				zap.Any("selected_blobber", selectedBlobberObj),
-				zap.Any("blobber_map", allocationObj.BlobberMap))
+				zap.Any("blobber_map", alloc.BlobberMap))
 			return "", common.NewError("invalid_parameters",
 				"Blobber is not part of the allocation. Could not find blobber")
 		}
-		blobberAllocation = allocationObj.BlobberMap[selectedBlobberObj.ID]
+		blobberAllocation = alloc.BlobberMap[selectedBlobberObj.ID]
 		if blobberAllocation.AllocationRoot != "" {
 			break // found
 		}
@@ -720,11 +719,11 @@ func (sc *StorageSmartContract) addChallenge(challengeID string,
 	if blobberAllocation.AllocationRoot == "" {
 		return "", common.NewErrorf("no_blobber_writes", "no blobber writes, "+
 			"challenge generation not possible, allocation %s, blobber: %s",
-			allocationObj.ID, blobberAllocation.BlobberID)
+			alloc.ID, blobberAllocation.BlobberID)
 	}
 
 	selectedValidators := make([]*ValidationNode, 0)
-	perm := r.Perm(minInt(len(validators.Nodes), allocationObj.DataShards+1))
+	perm := r.Perm(minInt(len(validators.Nodes), alloc.DataShards+1))
 	for _, v := range perm {
 		if validators.Nodes[v].ID != selectedBlobberObj.ID {
 			selectedValidators = append(selectedValidators,
@@ -732,14 +731,14 @@ func (sc *StorageSmartContract) addChallenge(challengeID string,
 		}
 	}
 
-	// Logger.Info("Challenge blobber selected.", zap.Any("challenge", challengeID), zap.Any("selected_blobber", allocationObj.Blobbers[randIdx]), zap.Any("blobbers", allocationObj.Blobbers), zap.Any("random_index", randIdx))
+	// Logger.Info("Challenge blobber selected.", zap.Any("challenge", challengeID), zap.Any("selected_blobber", alloc.Blobbers[randIdx]), zap.Any("blobbers", alloc.Blobbers), zap.Any("random_index", randIdx))
 
 	var storageChallenge StorageChallenge
 	storageChallenge.ID = challengeID
 	storageChallenge.Validators = selectedValidators
 	storageChallenge.Blobber = selectedBlobberObj
 	storageChallenge.RandomNumber = challengeSeed
-	storageChallenge.AllocationID = allocationObj.ID
+	storageChallenge.AllocationID = alloc.ID
 
 	storageChallenge.AllocationRoot = blobberAllocation.AllocationRoot
 
@@ -765,11 +764,11 @@ func (sc *StorageSmartContract) addChallenge(challengeID string,
 
 	balances.InsertTrieNode(blobberChallengeObj.GetKey(sc.ID), blobberChallengeObj)
 
-	allocationObj.Stats.OpenChallenges++
-	allocationObj.Stats.TotalChallenges++
+	alloc.Stats.OpenChallenges++
+	alloc.Stats.TotalChallenges++
 	blobberAllocation.Stats.OpenChallenges++
 	blobberAllocation.Stats.TotalChallenges++
-	balances.InsertTrieNode(allocationObj.GetKey(sc.ID), allocationObj)
+	balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	//Logger.Info("Adding a new challenge", zap.Any("blobberChallengeObj", blobberChallengeObj), zap.Any("challenge", storageChallenge.ID))
 	challengeBytes, err := json.Marshal(storageChallenge)
 	sc.newChallenge(balances, storageChallenge.Created)
