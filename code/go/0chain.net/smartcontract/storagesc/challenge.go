@@ -708,18 +708,6 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	creationDate common.Timestamp, r *rand.Rand, challengeSeed int64,
 	balances c_state.StateContextI) (resp string, err error) {
 
-	// TODO (sfxdx): DEAD CODE, REMOVE THEN
-
-	// if alloc == nil || alloc.Stats == nil ||
-	// 	alloc.Stats.NumWrites == 0 {
-	//
-	// 	Logger.Info("add_challenge: can't choose a random allocation" +
-	// 		" with writes after 1000 attempts")
-	//
-	// 	// it's not a real error.
-	// 	return "", nil
-	// }
-
 	sort.SliceStable(alloc.Blobbers, func(i, j int) bool {
 		return alloc.Blobbers[i].ID < alloc.Blobbers[j].ID
 	})
