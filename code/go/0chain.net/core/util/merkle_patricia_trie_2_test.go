@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"os"
 	"strconv"
 	"testing"
 )
@@ -29,7 +28,7 @@ func (as *AState) Decode(buf []byte) error {
 func TestMerkleTreeSaveToDB(t *testing.T) {
 	pndb, err := NewPNodeDB("/tmp/mpt", "/tmp/mpt/log")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	defer pndb.db.Close()
 
@@ -37,123 +36,123 @@ func TestMerkleTreeSaveToDB(t *testing.T) {
 	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
 	mpt2 := NewMerklePatriciaTrie(db, Sequence(2016))
 
-	doStateValInsert("add 100 to c1", mpt2, "0123456", 100, false)
-	doStateValInsert("add 1000 to c2", mpt2, "0123457", 1000, false)
-	doStateValInsert("add 1000 to c3", mpt2, "0123458", 1000000, false)
-	doStateValInsert("add 1000 to c4", mpt2, "0133458", 1000000000, true)
+	doStateValInsert(t, "add 100 to c1", mpt2, "0123456", 100)
+	doStateValInsert(t, "add 1000 to c2", mpt2, "0123457", 1000)
+	doStateValInsert(t, "add 1000 to c3", mpt2, "0123458", 1000000)
+	doStateValInsert(t, "add 1000 to c4", mpt2, "0133458", 1000000000)
 
-	printChanges(mpt2.GetChangeCollector())
+	printChanges(t, mpt2.GetChangeCollector())
 
 	err = mpt2.SaveChanges(pndb, false)
 	if err != nil {
-		panic(err)
+		t.Error(err)
 	}
 
-	err = mpt2.Iterate(context.TODO(), iterHandler, NodeTypeValueNode|NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
+	err = mpt2.Iterate(context.TODO(), iterHandler(t),
+		NodeTypeValueNode|NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
 
 	mpt.SetRoot(mpt2.GetRoot())
 
-	fmt.Printf("\nReading from persistent db\n")
-	err = mpt.Iterate(context.TODO(), iterHandler, NodeTypeValueNode|NodeTypeFullNode|NodeTypeExtensionNode)
+	t.Logf("Reading from persistent db")
+	err = mpt.Iterate(context.TODO(), iterHandler(t),
+		NodeTypeValueNode|NodeTypeFullNode|NodeTypeExtensionNode)
 	if err != nil {
-		fmt.Printf("iterate error: %v\n", err)
+		t.Errorf("iterate error: %v", err)
 	}
 }
 
 func TestMerkeTreePruning(t *testing.T) {
 	pndb, err := NewPNodeDB("/tmp/mpt", "/tmp/mpt/log")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	defer pndb.db.Close()
-	if err != nil {
-		panic(err)
-	}
 
 	mpt := NewMerklePatriciaTrie(pndb, Sequence(0))
 	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
 	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
 	origin := 2016
 	roots := make([]Key, 0, 10)
+
 	for i := int64(0); i < 1000; i++ {
 		mpt2.ResetChangeCollector(mpt2.GetRoot())
 		mpt2.SetVersion(Sequence(origin))
 		if i%2 == 0 {
-			doStateValInsert("add 100 to c1", mpt2, "0123456", 100+i, false)
+			doStateValInsert(t, "add 100 to c1", mpt2, "0123456", 100+i)
 		}
 		if i%3 == 0 {
-			doStateValInsert("add 1000 to c2", mpt2, "0123457", 1000+i, false)
+			doStateValInsert(t, "add 1000 to c2", mpt2, "0123457", 1000+i)
 		}
 		if i%5 == 0 {
-			doStateValInsert("add 1000 to c3", mpt2, "0123458", 1000000+i, false)
+			doStateValInsert(t, "add 1000 to c3", mpt2, "0123458", 1000000+i)
 		}
 		if i%7 == 0 {
-			doStateValInsert("add 1000 to c4", mpt2, "0133458", 1000000000+i, true)
+			doStateValInsert(t, "add 1000 to c4", mpt2, "0133458", 1000000000+i)
 		}
 		roots = append(roots, mpt2.GetRoot())
-		fmt.Printf("root(%v) = %v: changes: %v\n", origin, ToHex(mpt2.GetRoot()), len(mpt2.GetChangeCollector().GetChanges()))
+		t.Logf("root(%v) = %v: changes: %v\n", origin, ToHex(mpt2.GetRoot()),
+			len(mpt2.GetChangeCollector().GetChanges()))
 		err = mpt2.SaveChanges(pndb, false)
 		if err != nil {
-			panic(err)
+			t.Error(err)
 		}
 		mpt.SetRoot(mpt2.GetRoot())
-		mpt.PrettyPrint(os.Stdout)
-		fmt.Printf("\n")
+		prettyPrint(t, mpt)
 		origin++
 	}
+
 	numStates := 200
 	newOrigin := Sequence(origin - numStates)
 	root := roots[len(roots)-numStates]
-	fmt.Printf("pruning to origin: %v %v\n", newOrigin, ToHex(root))
+	t.Logf("pruning to origin: %v %v", newOrigin, ToHex(root))
 	mpt.SetRoot(root)
-	mpt.PrettyPrint(os.Stdout)
-	fmt.Printf("\n")
+	prettyPrint(t, mpt)
 
-	err = mpt.Iterate(context.TODO(), iterHandler, NodeTypeValueNode|NodeTypeFullNode|NodeTypeExtensionNode)
+	err = mpt.Iterate(context.TODO(), iterHandler(t),
+		NodeTypeValueNode|NodeTypeFullNode|NodeTypeExtensionNode)
 	if err != nil {
-		fmt.Printf("iterate error: %v\n", err)
+		t.Errorf("iterate error: %v", err)
 	}
 
-	pndb.Iterate(context.TODO(), dbIteratorHandler)
+	pndb.Iterate(context.TODO(), dbIteratorHandler(t))
 
 	missingNodeHandler := func(ctx context.Context, path Path, key Key) error {
-		fmt.Printf("missing node: %v %v\n", path, key)
+		t.Logf("missing node: %v %v", path, key)
 		return nil
 	}
 	err = mpt.UpdateVersion(context.TODO(), newOrigin, missingNodeHandler)
 	if err != nil {
-		fmt.Printf("error updating origin: %v\n", err)
+		t.Error("error updating origin:", err)
 	}
 
 	mpt.SetRoot(mpt2.GetRoot())
-	err = mpt.Iterate(context.TODO(), iterHandler, NodeTypeValueNode|NodeTypeFullNode|NodeTypeExtensionNode)
+	err = mpt.Iterate(context.TODO(), iterHandler(t),
+		NodeTypeValueNode|NodeTypeFullNode|NodeTypeExtensionNode)
 	if err != nil {
-		fmt.Printf("iterate error: %v\n", err)
+		t.Error("iterate error:", err)
 	}
-	fmt.Printf("pruning db\n")
+	t.Log("pruning db")
 	err = pndb.PruneBelowVersion(context.TODO(), newOrigin)
-	pndb.Iterate(context.TODO(), dbIteratorHandler)
+	pndb.Iterate(context.TODO(), dbIteratorHandler(t))
 
 	if err != nil {
-		fmt.Printf("error pruning origin: %v\n", err)
+		t.Error("error pruning origin:", err)
 	}
 
 	mpt.SetRoot(mpt2.GetRoot())
-	err = mpt.Iterate(context.TODO(), iterHandler, NodeTypeValueNode|NodeTypeFullNode|NodeTypeExtensionNode)
+	err = mpt.Iterate(context.TODO(), iterHandler(t),
+		NodeTypeValueNode|NodeTypeFullNode|NodeTypeExtensionNode)
 	if err != nil {
-		fmt.Printf("iterate error: %v\n", err)
+		t.Error("iterate error:", err)
 	}
 }
 
 func TestMerkeTreeGetChanges(t *testing.T) {
 	pndb, err := NewPNodeDB("/tmp/mpt", "/tmp/mpt/log")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	defer pndb.db.Close()
-	if err != nil {
-		panic(err)
-	}
 
 	mpt := NewMerklePatriciaTrie(pndb, Sequence(0))
 	var mndb = NewMemoryNodeDB()
@@ -161,75 +160,96 @@ func TestMerkeTreeGetChanges(t *testing.T) {
 	mpt2 := NewMerklePatriciaTrie(db, Sequence(0))
 	origin := 2016
 	roots := make([]Key, 0, 10)
+
 	for i := int64(0); i < 10; i++ {
 		mpt2.ResetChangeCollector(mpt2.GetRoot())
 		mpt2.SetVersion(Sequence(origin))
-		doStateValInsert("add 100 to c1", mpt2, "0123456", 100+i, false)
-		doStateValInsert("add 1000 to c2", mpt2, "0123457", 1000+i, false)
-		doStateValInsert("add 1000 to c3", mpt2, "0123458", 1000000+i, false)
-		doStateValInsert("add 1000 to c4", mpt2, "0133458", 1000000000+i, false)
+
+		doStateValInsert(t, "add 100 to c1", mpt2, "0123456", 100+i)
+		doStateValInsert(t, "add 1000 to c2", mpt2, "0123457", 1000+i)
+		doStateValInsert(t, "add 1000 to c3", mpt2, "0123458", 1000000+i)
+		doStateValInsert(t, "add 1000 to c4", mpt2, "0133458", 1000000000+i)
+
 		roots = append(roots, mpt2.GetRoot())
-		fmt.Printf("root(%v) = %v: changes: %v ndb size: %v\n", origin, ToHex(mpt2.GetRoot()), len(mpt2.GetChangeCollector().GetChanges()), len(mndb.Nodes))
-		err = mpt2.SaveChanges(pndb, false)
-		if err != nil {
+
+		t.Logf("root(%v) = %v: changes: %v ndb size: %v", origin,
+			ToHex(mpt2.GetRoot()), len(mpt2.GetChangeCollector().GetChanges()),
+			len(mndb.Nodes))
+
+		if err = mpt2.SaveChanges(pndb, false); err != nil {
 			panic(err)
 		}
-		mpt2.PrettyPrint(os.Stdout)
+
+		prettyPrint(t, mpt2)
 		origin++
 	}
-	fmt.Printf("get changes\n")
-	mpts, err := GetChanges(context.TODO(), mndb, Sequence(origin-3), Sequence(origin))
+
+	t.Log("get changes")
+	mpts, err := GetChanges(context.TODO(), mndb, Sequence(origin-3),
+		Sequence(origin))
 	if err != nil {
-		panic(err)
+		t.Error(err)
 	}
+
 	for origin, mpt := range mpts {
-		fmt.Printf("origin:%v: root:%v\n", origin, ToHex(mpt.GetRoot()))
-		mpt.PrettyPrint(os.Stdout)
-		mpt.Iterate(context.TODO(), iterHandler, NodeTypeValueNode)
+		t.Logf("origin: %v: root: %v", origin, ToHex(mpt.GetRoot()))
+		prettyPrint(t, mpt)
+		mpt.Iterate(context.TODO(), iterHandler(t), NodeTypeValueNode)
 	}
+
 }
 
-func doStateValInsert(testcase string, mpt MerklePatriciaTrieI, key string, value int64, print bool) {
+func doStateValInsert(t *testing.T, testcase string, mpt MerklePatriciaTrieI,
+	key string, value int64) {
+
 	state := &AState{}
 	state.balance = value
 	newRoot, err := mpt.Insert([]byte(key), state)
 	if err != nil {
-		fmt.Printf("error: %v\n", err)
+		t.Error(err)
 	}
 	mpt.SetRoot(newRoot)
-	if print {
-		fmt.Printf("test: %v [%v,%v]\n", testcase, key, value)
-		mpt.PrettyPrint(os.Stdout)
-		fmt.Printf("\n")
-	}
-	doGetStateValue(mpt, key, value)
+
+	t.Logf("test: %v [%v,%v]", testcase, key, value)
+	prettyPrint(t, mpt)
+
+	doGetStateValue(t, mpt, key, value)
 }
 
-func doGetStateValue(mpt MerklePatriciaTrieI, key string, value int64) {
+func doGetStateValue(t *testing.T, mpt MerklePatriciaTrieI,
+	key string, value int64) {
+
 	val, err := mpt.GetNodeValue([]byte(key))
 	if err != nil {
-		fmt.Printf("error: getting inserted value: %v %v", key, value)
-		panic("doGetStrValueError")
+		t.Fatalf("getting inserted value: %v %v", key, value)
 	}
 	if val == nil {
-		fmt.Printf("error: inserted value not found: %v %v", key, value)
-		panic("doGetStrValueError")
+		t.Fatalf("inserted value not found: %v %v", key, value)
 	}
 }
 
-func stateIterHandler(ctx context.Context, path Path, key Key, node Node) error {
+func stateIterHandler(t *testing.T, ctx context.Context, path Path, key Key,
+	node Node) error {
+
 	vn, ok := node.(*ValueNode)
 	if ok {
 		astate := &AState{}
 		astate.Decode(vn.GetValue().Encode())
-		fmt.Printf("iterate:%20s:  p=%v k=%v v=%v\n", fmt.Sprintf("%T", node), hex.EncodeToString(path), hex.EncodeToString(key), astate.balance)
+		t.Logf("iterate:%20s:  p=%v k=%v v=%v", fmt.Sprintf("%T", node),
+			hex.EncodeToString(path), hex.EncodeToString(key), astate.balance)
 	} else {
-		fmt.Printf("iterate:%20s: orig=%v ver=%v p=%v k=%v\n", fmt.Sprintf("%T", node), node.GetOrigin(), node.GetVersion(), hex.EncodeToString(path), hex.EncodeToString(key))
+		t.Logf("iterate:%20s: orig=%v ver=%v p=%v k=%v",
+			fmt.Sprintf("%T", node), node.GetOrigin(), node.GetVersion(),
+			hex.EncodeToString(path), hex.EncodeToString(key))
 	}
+
 	return nil
 }
 
-func dbIteratorHandler(ctx context.Context, key Key, node Node) error {
-	fmt.Printf("iteratedb: %v %v %v\n", ToHex(key), node.GetOrigin(), string(node.Encode()))
-	return nil
+func dbIteratorHandler(t *testing.T) func(ctx context.Context, key Key, node Node) error {
+	return func(ctx context.Context, key Key, node Node) error {
+		t.Logf("iteratedb: %v %v %v", ToHex(key), node.GetOrigin(),
+			string(node.Encode()))
+		return nil
+	}
 }
