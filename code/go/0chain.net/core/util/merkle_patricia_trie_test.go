@@ -121,20 +121,20 @@ func TestMPTDelete(t *testing.T) {
 	doStrValInsert(t, "insert a leaf node", mpt2, "612512", "612512")
 	doStrValInsert(t, "insert a leaf node to create a full node under the child of the extension node", mpt2, "612522", "612522")
 
-	doDelete(t, "delete a leaf node as root", mpt2, "12345")
-	doDelete(t, "delete value of a full node", mpt2, "12")
-	doDelete(t, "delete a leaf from a full node with two children and no value", mpt2, "34577")
-	doDelete(t, "delete a single leaf of a full node with value", mpt2, "124")
+	doDelete(t, "delete a leaf node as root", mpt2, "12345", nil)
+	doDelete(t, "delete value of a full node", mpt2, "12", nil)
+	doDelete(t, "delete a leaf from a full node with two children and no value", mpt2, "34577", nil)
+	doDelete(t, "delete a single leaf of a full node with value", mpt2, "124", nil)
 
 	// lift up
-	doDelete(t, "delete a leaf node and lift up extension node", mpt2, "42234")
-	doDelete(t, "delete a leaf node and lift up full node", mpt2, "52234")
+	doDelete(t, "delete a leaf node and lift up extension node", mpt2, "42234", nil)
+	doDelete(t, "delete a leaf node and lift up full node", mpt2, "52234", nil)
 	doStrValInsert(t, "delete a leaf node so the only other full node is lifted up", mpt2, "612345", "")
 
 	// delete not existent node
-	doDelete(t, "delete non existent node", mpt2, "abcdef123")
-	doDelete(t, "delete non existent node detected at leaf", mpt2, "6125123")
-	doDelete(t, "delete non existent node detected at extension", mpt2, "613512")
+	doDelete(t, "delete non existent node", mpt2, "abcdef123", ErrNodeNotFound)
+	doDelete(t, "delete non existent node detected at leaf", mpt2, "6125123", ErrNodeNotFound)
+	doDelete(t, "delete non existent node detected at extension", mpt2, "613512", ErrNodeNotFound)
 
 }
 
@@ -276,10 +276,12 @@ func iterStrPathHandler(t *testing.T) func(ctx context.Context, path Path, key K
 	}
 }
 
-func doDelete(t *testing.T, testcase string, mpt MerklePatriciaTrieI, key string) {
+func doDelete(t *testing.T, testcase string, mpt MerklePatriciaTrieI,
+	key string, expErr error) {
+
 	t.Logf("test: %v [%v]", testcase, key)
 	newRoot, err := mpt.Delete([]byte(key))
-	if err != nil {
+	if err != expErr {
 		t.Error(err)
 		return
 	}
@@ -325,9 +327,9 @@ func TestCasePEFLEdeleteL(t *testing.T) {
 	doStrValInsert(t, "setup data", mpt2, "123459023", "saturn")
 	doStrValInsert(t, "setup data", mpt2, "123459024", "uranus")
 
-	doDelete(t, "delete a leaf node and merge the extension node", mpt2, "1235")
+	doDelete(t, "delete a leaf node and merge the extension node", mpt2, "1235", nil)
 	doStrValInsert(t, "reinsert data", mpt2, "1235", "venus")
-	doDelete(t, "delete a leaf node and merge the extension node", mpt2, "1235")
+	doDelete(t, "delete a leaf node and merge the extension node", mpt2, "1235", nil)
 	doStrValInsert(t, "update after delete", mpt2, "12345903", "neptune")
 
 	mpt2.Iterate(context.TODO(), iterHandler(t), NodeTypeLeafNode|NodeTypeFullNode|NodeTypeExtensionNode)
