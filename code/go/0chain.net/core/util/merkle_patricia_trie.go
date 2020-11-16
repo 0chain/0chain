@@ -893,7 +893,7 @@ func (mpt *MerklePatriciaTrie) Validate() error {
 			continue
 		}
 		if _, err := db.GetNode(c.Old.GetHashBytes()); err == nil {
-			return fmt.Errorf(ErrIntermediateNodeExists.Error(), c.Old, c.Old.GetHash(), c.New, c.New.GetHash())
+			return fmt.Errorf(FmtIntermediateNodeExists, c.Old, c.Old.GetHash(), c.New, c.New.GetHash())
 		}
 	}
 	return nil

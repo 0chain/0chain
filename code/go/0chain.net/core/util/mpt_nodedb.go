@@ -11,17 +11,24 @@ import (
 	"go.uber.org/zap"
 )
 
-//BatchSize - for batching multiple db operations
-const BatchSize = 256
+// common constant
+const (
+	// BatchSize - for batching multiple db operations.
+	BatchSize = 256
+	// FmtIntermediateNodeExists - error format indicating deleted intermediate
+	// node still exists.
+	FmtIntermediateNodeExists = "removed intermediate node still present" +
+		" (%T) %v - new (%T) %v"
+)
 
-/*ErrNodeNotFound - error indicating that the node is not found */
-var ErrNodeNotFound = errors.New("node not found")
-
-/*ErrValueNotPresent - error indicating given path is not present in the db */
-var ErrValueNotPresent = errors.New("value not present")
-
-/*ErrIntermediateNodeExists - error indicating deleted intermediate node still exists */
-var ErrIntermediateNodeExists = errors.New("removed intermediate node still present (%T) %v - new (%T) %v")
+// common errors
+var (
+	// ErrNodeNotFound - error indicating that the node is not found.
+	ErrNodeNotFound = errors.New("node not found")
+	// ErrValueNotPresent - error indicating given path is not present in the
+	// db.
+	ErrValueNotPresent = errors.New("value not present")
+)
 
 /*NodeDBIteratorHandler is a nodedb iteration handler function type */
 type NodeDBIteratorHandler func(ctx context.Context, key Key, node Node) error
@@ -41,16 +48,17 @@ type NodeDB interface {
 	PruneBelowVersion(ctx context.Context, version Sequence) error
 }
 
-/*StrKey - data type for the key used to store the node into some storage (this is needed as hashmap keys can't be []byte */
+// StrKey - data type for the key used to store the node into some storage
+// (this is needed as hashmap keys can't be []byte.
 type StrKey string
 
-/*MemoryNodeDB - an inmemory node db */
+// MemoryNodeDB - an inmemory node db.
 type MemoryNodeDB struct {
 	Nodes map[StrKey]Node
 	mutex *sync.RWMutex
 }
 
-/*NewMemoryNodeDB - create a memory node db */
+// NewMemoryNodeDB - create a memory node db.
 func NewMemoryNodeDB() *MemoryNodeDB {
 	mndb := &MemoryNodeDB{}
 	mndb.Nodes = make(map[StrKey]Node)
@@ -251,7 +259,8 @@ func (mndb *MemoryNodeDB) Validate(root Node) error {
 	return nil
 }
 
-/*LevelNodeDB - a multi-level node db. It has a current node db and a previous node db. This is useful to update without changing the previous db. */
+// LevelNodeDB - a multi-level node db. It has a current node db and a previous
+// node db. This is useful to update without changing the previous db.
 type LevelNodeDB struct {
 	mu               *sync.RWMutex
 	current          NodeDB
