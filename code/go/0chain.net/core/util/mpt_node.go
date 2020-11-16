@@ -108,7 +108,7 @@ type ValueNode struct {
 //NewValueNode - create a new value node
 func NewValueNode() *ValueNode {
 	vn := &ValueNode{}
-	//vn.OriginTrackerNode = NewOriginTrackerNode()
+	vn.OriginTrackerNode = NewOriginTrackerNode()
 	return vn
 }
 

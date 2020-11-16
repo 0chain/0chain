@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"0chain.net/core/common"
+
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
@@ -114,10 +115,7 @@ func (mndb *MemoryNodeDB) MultiGetNode(keys []Key) ([]Node, error) {
 /*MultiPutNode - implement interface */
 func (mndb *MemoryNodeDB) MultiPutNode(keys []Key, nodes []Node) error {
 	for idx, key := range keys {
-		err := mndb.PutNode(key, nodes[idx])
-		if err != nil {
-			return err
-		}
+		mndb.PutNode(key, nodes[idx])
 	}
 	return nil
 }
@@ -125,10 +123,7 @@ func (mndb *MemoryNodeDB) MultiPutNode(keys []Key, nodes []Node) error {
 /*MultiDeleteNode - implement interface */
 func (mndb *MemoryNodeDB) MultiDeleteNode(keys []Key) error {
 	for _, key := range keys {
-		err := mndb.DeleteNode(key)
-		if err != nil {
-			return err
-		}
+		mndb.DeleteNode(key)
 	}
 	return nil
 }
@@ -224,9 +219,11 @@ func (mndb *MemoryNodeDB) ComputeRoot() Node {
   Note: The root itself can reach nodes not present in this db
 */
 func (mndb *MemoryNodeDB) Validate(root Node) error {
-	nodes := make(map[StrKey]Node)
-	var iterater func(node Node)
-	iterate := func(node Node) {
+	var (
+		nodes   = make(map[StrKey]Node)
+		iterate func(node Node)
+	)
+	iterate = func(node Node) {
 		switch nodeImpl := node.(type) {
 		case *FullNode:
 			for _, ckey := range nodeImpl.Children {
@@ -234,7 +231,7 @@ func (mndb *MemoryNodeDB) Validate(root Node) error {
 					cnode, err := mndb.GetNode(ckey)
 					if err == nil {
 						nodes[StrKey(ckey)] = cnode
-						iterater(cnode)
+						iterate(cnode)
 					}
 				}
 			}
@@ -243,16 +240,17 @@ func (mndb *MemoryNodeDB) Validate(root Node) error {
 			cnode, err := mndb.GetNode(ckey)
 			if err == nil {
 				nodes[StrKey(ckey)] = cnode
-				iterater(cnode)
+				iterate(cnode)
 			}
 		}
 	}
-	iterater = iterate
 	nodes[StrKey(root.GetHashBytes())] = root
 	iterate(root)
 	for _, nd := range mndb.Nodes {
 		if _, ok := nodes[StrKey(nd.GetHashBytes())]; !ok {
-			Logger.Error("mndb validate", zap.String("node_type", fmt.Sprintf("%T", nd)), zap.String("node_key", nd.GetHash()))
+			Logger.Error("mndb validate",
+				zap.String("node_type", fmt.Sprintf("%T", nd)),
+				zap.String("node_key", nd.GetHash()))
 			return common.NewError("nodes_outside_tree", "not all nodes are from the root")
 		}
 	}
@@ -332,8 +330,8 @@ func (lndb *LevelNodeDB) PutNode(key Key, node Node) error {
 
 /*DeleteNode - implement interface */
 func (lndb *LevelNodeDB) DeleteNode(key Key) error {
-	lndb.mu.RLock()
-	defer lndb.mu.RUnlock()
+	lndb.mu.Lock()
+	defer lndb.mu.Unlock()
 
 	c := lndb.current
 	p := lndb.prev
@@ -415,21 +413,22 @@ func (lndb *LevelNodeDB) Size(ctx context.Context) int64 {
 	return size
 }
 
-/*PruneBelowVersion - implement interface */
+// PruneBelowVersion - implement interface.
 func (lndb *LevelNodeDB) PruneBelowVersion(ctx context.Context, version Sequence) error {
 	// TODO
 	return nil
 }
 
-/*RebaseCurrentDB - set the current database */
+// RebaseCurrentDB - set the current database.
 func (lndb *LevelNodeDB) RebaseCurrentDB(ndb NodeDB) {
 	lndb.mu.Lock()
 	defer lndb.mu.Unlock()
+
 	lndb.current = ndb
-	lndb.prev = lndb.current
+	lndb.prev = ndb
 }
 
-//MergeState - merge the state from another node db
+// MergeState - merge the state from another node db.
 func MergeState(ctx context.Context, fndb NodeDB, tndb NodeDB) error {
 	var nodes []Node
 	var keys []Key
