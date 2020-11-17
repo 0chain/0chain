@@ -710,6 +710,13 @@ func TestMergeState(t *testing.T) {
 
 }
 
+func noNodeNotFound(err error) error {
+	if err == ErrNodeNotFound {
+		return nil
+	}
+	return err
+}
+
 // launch test with -race or make the case sense
 func TestNodeDB_parallel(t *testing.T) {
 
@@ -728,7 +735,8 @@ func TestNodeDB_parallel(t *testing.T) {
 		mndb = NewMemoryNodeDB()
 		lndb = NewLevelNodeDB(mndb, pndb, false)
 
-		kvs = getTestKeyValues(n)
+		kvs         = getTestKeyValues(n)
+		keys, nodes = getTestKeysAndValues(kvs)
 	)
 	defer cleanup()
 
@@ -737,18 +745,29 @@ func TestNodeDB_parallel(t *testing.T) {
 		lndb,
 		mndb,
 	} {
+		t.Logf("parallel tests for %T", ndb)
 		t.Run(fmt.Sprintf("%T", ndb), func(t *testing.T) {
 			for i := 0; i < parallel; i++ {
 				t.Run("parallel access", func(t *testing.T) {
 					t.Parallel()
 					for j := 0; j < len(kvs); j++ {
-						switch (i + j) % 3 {
+						var err error
+						switch (i + j) % 6 {
 						case 0:
-							ndb.GetNode(kvs[j].key)
+							_, err = ndb.GetNode(kvs[j].key)
+							require.NoError(t, noNodeNotFound(err))
 						case 1:
-							ndb.PutNode(kvs[j].key, kvs[j].node)
+							err = ndb.PutNode(kvs[j].key, kvs[j].node)
+							require.NoError(t, err)
 						case 2:
-							ndb.DeleteNode(kvs[j].key)
+							require.NoError(t, ndb.DeleteNode(kvs[j].key))
+						case 3:
+							_, err = ndb.MultiGetNode(keys)
+							require.NoError(t, noNodeNotFound(err))
+						case 4:
+							require.NoError(t, ndb.MultiPutNode(keys, nodes))
+						case 5:
+							require.NoError(t, ndb.MultiDeleteNode(keys))
 						}
 					}
 				})
