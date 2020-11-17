@@ -17,7 +17,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	flag.Parse() // verbose and short
+	flag.Parse() // verbose and short testing flags
 
 	var err error
 	if testing.Verbose() {
