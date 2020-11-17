@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -775,4 +776,251 @@ func TestNodeDB_parallel(t *testing.T) {
 		})
 	}
 
+}
+
+func TestRaceMemoryNodeDB_Full(t *testing.T) {
+
+	const N = 100
+
+	var (
+		mndb = NewMemoryNodeDB()
+		kvs  = getTestKeyValues(N)
+		back = context.Background()
+	)
+
+	require.NotNil(t, mndb)
+	require.NotNil(t, mndb.mutex)
+	require.NotNil(t, mndb.Nodes)
+
+	//
+	// get / put / delete
+	//
+
+	var wg sync.WaitGroup
+
+	t.Run("get_put_delete", func(t *testing.T) {
+		require.Zero(t, mndb.Size(back))
+
+		// node not found
+		for i := range kvs {
+			kv := kvs[i]
+			wg.Add(1)
+			go func() {
+				node, err := mndb.GetNode(kv.key)
+				require.Nil(t, node)
+				require.Equal(t, ErrNodeNotFound, err)
+
+				require.NoError(t, mndb.DeleteNode(kv.key))
+				wg.Done()
+			}()
+		}
+		wg.Wait()
+
+		// insert
+		for i := range kvs {
+			kv := kvs[i]
+			wg.Add(1)
+			go func() {
+				require.NoError(t, mndb.PutNode(kv.key, kv.node))
+				wg.Done()
+			}()
+		}
+		wg.Wait()
+		require.EqualValues(t, N, mndb.Size(back))
+
+		// double insert
+		for i := range kvs {
+			kv := kvs[i]
+			wg.Add(1)
+			go func() {
+				require.NoError(t, mndb.PutNode(kv.key, kv.node))
+				wg.Done()
+			}()
+		}
+		wg.Wait()
+		require.EqualValues(t, N, mndb.Size(back))
+
+		// found
+		for i := range kvs {
+			kv := kvs[i]
+			wg.Add(1)
+			go func() {
+				node, err := mndb.GetNode(kv.key)
+				require.NoError(t, err)
+				// require.Equalf(t, kv.node, node, "wrong value: %d", i) // i captured by next iteration tested with const 0 below
+				require.Equalf(t, kv.node, node, "wrong value: %d", 0)
+				wg.Done()
+			}()
+		}
+		wg.Wait()
+
+		// delete
+		for i := range kvs {
+			kv := kvs[i]
+			wg.Add(1)
+			go func() {
+				require.NoError(t, mndb.DeleteNode(kv.key))
+				wg.Done()
+			}()
+		}
+		wg.Wait()
+		require.Zero(t, mndb.Size(back))
+	})
+}
+
+func TestRaceLevelNodeDB_Full(t *testing.T) {
+
+	const N = 100
+
+	var (
+		prev, curr = NewMemoryNodeDB(), NewMemoryNodeDB()
+		lndb       = NewLevelNodeDB(curr, prev, true)
+		kvs        = getTestKeyValues(N)
+		back       = context.Background()
+	)
+
+	//
+	// get / put / delete
+	//
+	var wg sync.WaitGroup
+	t.Run("get_put_delete", func(t *testing.T) {
+		require.Zero(t, lndb.Size(back))
+
+		// node not found
+		for i := range kvs {
+			kv := kvs[i]
+			wg.Add(1)
+			go func() {
+
+				node, err := lndb.GetNode(kv.key)
+				require.Nil(t, node)
+				require.Equal(t, ErrNodeNotFound, err)
+
+				require.NoError(t, lndb.DeleteNode(kv.key))
+				wg.Done()
+			}()
+		}
+		wg.Wait()
+		require.Zero(t, lndb.Size(back))
+		require.Len(t, lndb.DeletedNodes, 0)
+
+		// insert
+		for i := range kvs {
+			kv := kvs[i]
+			wg.Add(1)
+			go func() {
+				require.NoError(t, lndb.PutNode(kv.key, kv.node))
+				wg.Done()
+			}()
+		}
+		wg.Wait()
+		require.EqualValues(t, N, lndb.Size(back))
+		require.Len(t, lndb.DeletedNodes, 0)
+
+		// double insert
+		for i := range kvs {
+			kv := kvs[i]
+			wg.Add(1)
+			go func() {
+				require.NoError(t, lndb.PutNode(kv.key, kv.node))
+				wg.Done()
+			}()
+		}
+		wg.Wait()
+		require.EqualValues(t, N, lndb.Size(back))
+		require.Len(t, lndb.DeletedNodes, 0)
+
+		// found
+		for i := range kvs {
+			kv := kvs[i]
+			wg.Add(1)
+			go func() {
+				node, err := lndb.GetNode(kv.key)
+				require.NoError(t, err)
+				// require.Equalf(t, kv.node, node, "wrong value: %d", i) // i captured by next iteration using constant
+				require.Equalf(t, kv.node, node, "wrong value: %d", 0)
+				wg.Done()
+			}()
+		}
+		wg.Wait()
+		// delete
+		for i := range kvs {
+			kv := kvs[i]
+			wg.Add(1)
+			go func() {
+				require.NoError(t, lndb.DeleteNode(kv.key))
+				wg.Done()
+			}()
+		}
+		wg.Wait()
+		require.Zero(t, lndb.Size(back))
+		require.Len(t, lndb.DeletedNodes, 0)
+
+		// insert in previous
+		for i := range kvs {
+			kv := kvs[i]
+			wg.Add(1)
+			go func() {
+				require.NoError(t, prev.PutNode(kv.key, kv.node))
+				wg.Done()
+			}()
+		}
+		wg.Wait()
+		require.EqualValues(t, N, lndb.Size(back))
+		require.Len(t, lndb.DeletedNodes, 0)
+
+		// insert over existing
+		for i := range kvs {
+			kv := kvs[i]
+			wg.Add(1)
+			go func() {
+				require.NoError(t, lndb.PutNode(kv.key, kv.node))
+				wg.Done()
+			}()
+		}
+		wg.Wait()
+		require.EqualValues(t, N*2, lndb.Size(back)) // x2 (?!)
+		require.Len(t, lndb.DeletedNodes, 0)
+
+		// delete in current
+		for i := range kvs {
+			kv := kvs[i]
+			wg.Add(1)
+			go func() {
+				require.NoError(t, lndb.DeleteNode(kv.key))
+				wg.Done()
+			}()
+
+		}
+		wg.Wait()
+		require.EqualValues(t, N, lndb.Size(back))
+		require.Len(t, lndb.DeletedNodes, 0)
+
+		// delete propagated
+		for i := range kvs {
+			kv := kvs[i]
+			wg.Add(1)
+			go func() {
+				require.NoError(t, lndb.DeleteNode(kv.key))
+				wg.Done()
+			}()
+		}
+		wg.Wait()
+		require.Zero(t, lndb.Size(back))
+		require.Len(t, lndb.DeletedNodes, 0)
+
+		// mark as deleted
+		for i := range kvs {
+			kv := kvs[i]
+			wg.Add(1)
+			go func() {
+				require.NoError(t, lndb.DeleteNode(kv.key))
+				wg.Done()
+			}()
+		}
+		wg.Wait()
+		require.Zero(t, lndb.Size(back))
+		// should be 100 if deletes is not propagated
+		require.Len(t, lndb.DeletedNodes, 0)
+	})
 }
