@@ -688,4 +688,12 @@ func TestMergeState(t *testing.T) {
 		require.EqualValues(t, n, lndb.Size(back))
 	})
 
+	var pndb, cleanup = newPNodeDB(t)
+	defer cleanup()
+
+	t.Run("pnode_db", func(t *testing.T) {
+		require.NoError(t, MergeState(back, fmdb, pndb))
+		require.EqualValues(t, n, pndb.Size(back))
+	})
+
 }
