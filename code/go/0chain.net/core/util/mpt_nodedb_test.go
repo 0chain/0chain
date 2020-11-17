@@ -9,7 +9,6 @@ import (
 	"os"
 	"testing"
 
-	//"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"0chain.net/core/logging"
@@ -708,5 +707,53 @@ func TestMergeState(t *testing.T) {
 		require.NoError(t, MergeState(back, fmdb, pndb))
 		require.EqualValues(t, n, pndb.Size(back))
 	})
+
+}
+
+// launch test with -race or make the case sense
+func TestNodeDB_parallel(t *testing.T) {
+
+	if testing.Short() {
+		t.Skip("skip the parallel tests due to -short flag")
+	}
+
+	const (
+		parallel = 100
+		n        = 100
+	)
+
+	var (
+		pndb, cleanup = newPNodeDB(t)
+
+		mndb = NewMemoryNodeDB()
+		lndb = NewLevelNodeDB(mndb, pndb, false)
+
+		kvs = getTestKeyValues(n)
+	)
+	defer cleanup()
+
+	for _, ndb := range []NodeDB{
+		pndb,
+		lndb,
+		mndb,
+	} {
+		t.Run(fmt.Sprintf("%T", ndb), func(t *testing.T) {
+			for i := 0; i < parallel; i++ {
+				t.Run("parallel access", func(t *testing.T) {
+					t.Parallel()
+					for j := 0; j < len(kvs); j++ {
+						switch (i + j) % 3 {
+						case 0:
+							ndb.GetNode(kvs[j].key)
+						case 1:
+							ndb.PutNode(kvs[j].key, kvs[j].node)
+						case 2:
+							ndb.DeleteNode(kvs[j].key)
+						}
+					}
+				})
+			}
+		})
+	}
 
 }
