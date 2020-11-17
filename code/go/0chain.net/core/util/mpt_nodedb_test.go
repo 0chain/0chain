@@ -451,6 +451,10 @@ func requireOneOf(t *testing.T, db NodeDB, list ...NodeDB) {
 // launch test with -race or make the case sense
 func TestLevelNodeDB_Current_Prev_Rebase(t *testing.T) {
 
+	if testing.Short() {
+		t.Skip("skip the parallel tests due to -short flag")
+	}
+
 	const (
 		parallel = 100
 		n        = 100
@@ -497,6 +501,158 @@ func TestLevelNodeDB_Current_Prev_Rebase(t *testing.T) {
 			requireOneOf(t, lndb.GetPrev(), curr, fcurr, prev, fprev)
 		})
 	}
+
+}
+
+func TestPNodeDB_Full(t *testing.T) {
+
+	const N = 100
+
+	var (
+		mndb, cleanup = newPNodeDB(t)
+
+		kvs  = getTestKeyValues(N)
+		back = context.Background()
+
+		node Node
+		err  error
+	)
+	defer cleanup()
+
+	//
+	// get / put / delete
+	//
+
+	t.Run("get_put_delete", func(t *testing.T) {
+		require.Zero(t, mndb.Size(back))
+
+		// node not found
+		for _, kv := range kvs {
+			node, err = mndb.GetNode(kv.key)
+			require.Nil(t, node)
+			require.Equal(t, ErrNodeNotFound, err)
+
+			require.NoError(t, mndb.DeleteNode(kv.key))
+		}
+
+		// insert
+		for _, kv := range kvs {
+			require.NoError(t, mndb.PutNode(kv.key, kv.node))
+		}
+		require.EqualValues(t, N, mndb.Size(back))
+
+		// double insert
+		for _, kv := range kvs {
+			require.NoError(t, mndb.PutNode(kv.key, kv.node))
+		}
+		require.EqualValues(t, N, mndb.Size(back))
+
+		// found
+		for i, kv := range kvs {
+			node, err = mndb.GetNode(kv.key)
+			require.NoError(t, err)
+			require.EqualValuesf(t, kv.node.Encode(), node.Encode(),
+				"wrong value: %d", i)
+		}
+
+		// delete
+		for _, kv := range kvs {
+			require.NoError(t, mndb.DeleteNode(kv.key))
+		}
+		require.Zero(t, mndb.Size(back))
+	})
+
+	//
+	// multi get / put / delete
+	//
+
+	var keys, nodes = getTestKeysAndValues(kvs)
+	nodes = nil // reset the list for the next tests
+
+	t.Run("multi_get_put_delete", func(t *testing.T) {
+		// node not found
+		nodes, err = mndb.MultiGetNode(keys)
+		require.Nil(t, nodes)
+		require.Equal(t, ErrNodeNotFound, err)
+
+		require.NoError(t, mndb.MultiDeleteNode(keys))
+		require.Zero(t, mndb.Size(back))
+
+		// insert
+		for _, kv := range kvs {
+			nodes = append(nodes, kv.node)
+		}
+
+		err = mndb.MultiPutNode(keys, nodes)
+		require.NoError(t, err)
+		require.EqualValues(t, N, mndb.Size(back))
+
+		// double insert
+		err = mndb.MultiPutNode(keys, nodes)
+		require.NoError(t, err)
+		require.EqualValues(t, N, mndb.Size(back))
+
+		// found
+		nodes, err = mndb.MultiGetNode(keys)
+		require.NoError(t, err)
+		require.Len(t, nodes, len(kvs))
+		for i, kv := range kvs {
+			require.EqualValuesf(t, kv.node.Encode(), nodes[i].Encode(),
+				"wrong node: %d", i)
+		}
+
+		// delete
+		require.NoError(t, mndb.MultiDeleteNode(keys))
+		require.Zero(t, mndb.Size(back))
+	})
+
+	t.Run("iterate", func(t *testing.T) {
+		keys, nodes = getTestKeysAndValues(kvs)
+
+		require.NoError(t, mndb.MultiPutNode(keys, nodes))
+		require.EqualValues(t, N, mndb.Size(back))
+
+		var kvm = make(map[string]Node)
+
+		var i int
+		err = mndb.Iterate(back,
+			func(ctx context.Context, key Key, node Node) (err error) {
+				kvm[string(key)] = node
+				i++
+				return
+			})
+		require.NoError(t, err)       // no error
+		require.Len(t, kvm, len(kvs)) // all keys
+		require.Equal(t, len(kvm), i) // no double handling
+
+		for _, kv := range kvs {
+			require.NotZero(t, kvm[string(kv.key)])
+			require.Equal(t, kv.node.Encode(), kvm[string(kv.key)].Encode())
+		}
+
+		// iterate handler returns error
+		var testError = errors.New("test error")
+		i = 0
+		err = mndb.Iterate(back,
+			func(ctx context.Context, key Key, node Node) (err error) {
+				i++
+				return testError
+			})
+		require.Equal(t, testError, err)
+		require.Equal(t, 1, i)
+	})
+
+	t.Run("prune_below_version", func(t *testing.T) {
+		require.NoError(t, mndb.PruneBelowVersion(back, Sequence(100)))
+		require.Zero(t, mndb.Size(back))
+		for _, kv := range kvs {
+			kv.node.SetVersion(300)
+		}
+		keys, nodes = getTestKeysAndValues(kvs)
+		require.NoError(t, mndb.MultiPutNode(keys, nodes))
+		mndb.PruneBelowVersion(back, Sequence(200))
+		require.EqualValues(t, N, mndb.Size(back))
+	})
 
 }
 
