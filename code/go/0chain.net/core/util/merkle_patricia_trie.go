@@ -644,9 +644,7 @@ func (mpt *MerklePatriciaTrie) deleteAfterPathTraversal(node Node) (Node, Key, e
 func (mpt *MerklePatriciaTrie) iterate(ctx context.Context, path Path, key Key, handler MPTIteratorHandler, visitNodeTypes byte) error {
 	node, err := mpt.db.GetNode(key)
 	if err != nil {
-		if Logger != nil {
-			Logger.Error("iterate - get node error", zap.Error(err))
-		}
+		Logger.Error("iterate - get node error", zap.Error(err))
 		if herr := handler(ctx, path, key, node); herr != nil {
 			return herr
 		}
@@ -686,9 +684,7 @@ func (mpt *MerklePatriciaTrie) iterate(ctx context.Context, path Path, key Key, 
 				if err == ErrNodeNotFound || err == ErrIteratingChildNodes {
 					ecount++
 				} else {
-					if Logger != nil {
-						Logger.Error("iterate - child node", zap.Error(err))
-					}
+					Logger.Error("iterate - child node", zap.Error(err))
 					return err
 				}
 			}
@@ -709,7 +705,7 @@ func (mpt *MerklePatriciaTrie) iterate(ctx context.Context, path Path, key Key, 
 }
 
 func (mpt *MerklePatriciaTrie) insertNode(oldNode Node, newNode Node) (Node, Key, error) {
-	if DebugMPTNode && Logger != nil {
+	if DebugMPTNode {
 		ohash := ""
 		if oldNode != nil {
 			ohash = oldNode.GetHash()
@@ -732,7 +728,7 @@ func (mpt *MerklePatriciaTrie) insertNode(oldNode Node, newNode Node) (Node, Key
 }
 
 func (mpt *MerklePatriciaTrie) deleteNode(node Node) error {
-	if DebugMPTNode && Logger != nil {
+	if DebugMPTNode {
 		Logger.Info("delete node", zap.String("dn", node.GetHash()))
 	}
 	mpt.ChangeCollector.DeleteChange(node)
@@ -816,9 +812,7 @@ func (mpt *MerklePatriciaTrie) UpdateVersion(ctx context.Context, version Sequen
 			keys = keys[:0]
 			values = values[:0]
 			if err != nil {
-				if Logger != nil {
-					Logger.Error("update version - multi put", zap.String("path", string(path)), zap.String("key", ToHex(key)), zap.Any("old_version", node.GetVersion()), zap.Any("new_version", version), zap.Error(err))
-				}
+				Logger.Error("update version - multi put", zap.String("path", string(path)), zap.String("key", ToHex(key)), zap.Any("old_version", node.GetVersion()), zap.Any("new_version", version), zap.Error(err))
 			}
 			return err
 		}
@@ -832,9 +826,7 @@ func (mpt *MerklePatriciaTrie) UpdateVersion(ctx context.Context, version Sequen
 	if err == nil || err == ErrNodeNotFound || err == ErrIteratingChildNodes {
 		if len(keys) > 0 {
 			if err := mpt.db.MultiPutNode(keys, values); err != nil {
-				if Logger != nil {
-					Logger.Error("update version - multi put - last batch", zap.Error(err))
-				}
+				Logger.Error("update version - multi put - last batch", zap.Error(err))
 				return err
 			}
 		}
@@ -904,7 +896,7 @@ func (mpt *MerklePatriciaTrie) MergeMPTChanges(mpt2 MerklePatriciaTrieI) error {
 	mpt.mutex.Lock()
 	defer mpt.mutex.Unlock()
 
-	if DebugMPTNode && Logger != nil {
+	if DebugMPTNode {
 		if err := mpt2.GetChangeCollector().Validate(); err != nil {
 			Logger.Error("MergeMPTChanges - change collector validate", zap.Error(err))
 		}

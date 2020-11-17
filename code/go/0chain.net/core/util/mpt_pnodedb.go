@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"context"
 
-	. "0chain.net/core/logging"
 	"github.com/0chain/gorocksdb"
+
+	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
 

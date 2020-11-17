@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
+	"os"
 	"testing"
 
 	//"github.com/stretchr/testify/assert"
@@ -14,8 +16,19 @@ import (
 	"go.uber.org/zap"
 )
 
-func init() {
-	logging.Logger = zap.NewNop() // suppress all logs for the tests
+func TestMain(m *testing.M) {
+	flag.Parse() // verbose and short
+
+	var err error
+	if testing.Verbose() {
+		if logging.Logger, err = zap.NewProduction(); err != nil {
+			panic(err)
+		}
+	} else {
+		logging.Logger = zap.NewNop() // suppress all logs for the tests
+	}
+
+	os.Exit(m.Run())
 }
 
 type keyNode struct {
