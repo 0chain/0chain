@@ -116,7 +116,6 @@ func TestMPT_blockGenerationFlow(t *testing.T) {
 		// err = stateDB.PruneBelowVersion(wps, Sequence(round-1))
 		// require.NoError(t, err)
 
-		//var mpt = NewMerklePatriciaTrie(stateDB, Sequence(round))
 		prettyPrint(t, mpt)
 	}
 
