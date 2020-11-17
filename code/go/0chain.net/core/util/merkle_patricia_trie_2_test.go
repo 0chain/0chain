@@ -4,8 +4,13 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"strconv"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 type AState struct {
@@ -25,12 +30,30 @@ func (as *AState) Decode(buf []byte) error {
 	return nil
 }
 
-func TestMerkleTreeSaveToDB(t *testing.T) {
-	pndb, err := NewPNodeDB("/tmp/mpt", "/tmp/mpt/log")
+func newPNodeDB(t *testing.T) (pndb *PNodeDB, cleanup func()) {
+	t.Helper()
+
+	var dirname, err = ioutil.TempDir("", "mpt-pndb")
+	require.NoError(t, err)
+
+	pndb, err = NewPNodeDB(filepath.Join(dirname, "mpt"),
+		filepath.Join(dirname, "log"))
 	if err != nil {
-		t.Fatal(err)
+		os.RemoveAll(dirname) //
+		t.Fatal(err)          //
 	}
-	defer pndb.db.Close()
+
+	cleanup = func() {
+		pndb.db.Close()
+		os.RemoveAll(dirname)
+	}
+
+	return
+}
+
+func TestMerkleTreeSaveToDB(t *testing.T) {
+	pndb, cleanup := newPNodeDB(t)
+	defer cleanup()
 
 	mpt := NewMerklePatriciaTrie(pndb, Sequence(2016))
 	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
@@ -43,7 +66,7 @@ func TestMerkleTreeSaveToDB(t *testing.T) {
 
 	printChanges(t, mpt2.GetChangeCollector())
 
-	err = mpt2.SaveChanges(pndb, false)
+	var err = mpt2.SaveChanges(pndb, false)
 	if err != nil {
 		t.Error(err)
 	}
@@ -62,11 +85,8 @@ func TestMerkleTreeSaveToDB(t *testing.T) {
 }
 
 func TestMerkeTreePruning(t *testing.T) {
-	pndb, err := NewPNodeDB("/tmp/mpt", "/tmp/mpt/log")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer pndb.db.Close()
+	pndb, cleanup := newPNodeDB(t)
+	defer cleanup()
 
 	mpt := NewMerklePatriciaTrie(pndb, Sequence(0))
 	db := NewLevelNodeDB(NewMemoryNodeDB(), mpt.db, false)
@@ -92,7 +112,7 @@ func TestMerkeTreePruning(t *testing.T) {
 		roots = append(roots, mpt2.GetRoot())
 		t.Logf("root(%v) = %v: changes: %v\n", origin, ToHex(mpt2.GetRoot()),
 			len(mpt2.GetChangeCollector().GetChanges()))
-		err = mpt2.SaveChanges(pndb, false)
+		var err = mpt2.SaveChanges(pndb, false)
 		if err != nil {
 			t.Error(err)
 		}
@@ -108,7 +128,7 @@ func TestMerkeTreePruning(t *testing.T) {
 	mpt.SetRoot(root)
 	prettyPrint(t, mpt)
 
-	err = mpt.Iterate(context.TODO(), iterHandler(t),
+	var err = mpt.Iterate(context.TODO(), iterHandler(t),
 		NodeTypeValueNode|NodeTypeFullNode|NodeTypeExtensionNode)
 	if err != nil {
 		t.Errorf("iterate error: %v", err)
@@ -148,11 +168,8 @@ func TestMerkeTreePruning(t *testing.T) {
 }
 
 func TestMerkeTreeGetChanges(t *testing.T) {
-	pndb, err := NewPNodeDB("/tmp/mpt", "/tmp/mpt/log")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer pndb.db.Close()
+	pndb, cleanup := newPNodeDB(t)
+	defer cleanup()
 
 	mpt := NewMerklePatriciaTrie(pndb, Sequence(0))
 	var mndb = NewMemoryNodeDB()
@@ -176,7 +193,7 @@ func TestMerkeTreeGetChanges(t *testing.T) {
 			ToHex(mpt2.GetRoot()), len(mpt2.GetChangeCollector().GetChanges()),
 			len(mndb.Nodes))
 
-		if err = mpt2.SaveChanges(pndb, false); err != nil {
+		if err := mpt2.SaveChanges(pndb, false); err != nil {
 			panic(err)
 		}
 

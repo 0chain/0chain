@@ -501,5 +501,35 @@ func TestLevelNodeDB_Current_Prev_Rebase(t *testing.T) {
 }
 
 func TestMergeState(t *testing.T) {
-	//
+
+	const (
+		parallel = 100
+		n        = 100
+	)
+
+	var (
+		fmdb, tmdb = NewMemoryNodeDB(), NewMemoryNodeDB()
+		kvs        = getTestKeyValues(n)
+		back       = context.Background()
+	)
+
+	for _, kv := range kvs {
+		require.NoError(t, fmdb.PutNode(kv.key, kv.node))
+	}
+
+	t.Run("memory_db", func(t *testing.T) {
+		require.NoError(t, MergeState(back, fmdb, tmdb))
+		require.EqualValues(t, n, tmdb.Size(back))
+	})
+
+	var (
+		prev, curr = NewMemoryNodeDB(), NewMemoryNodeDB()
+		lndb       = NewLevelNodeDB(curr, prev, true)
+	)
+
+	t.Run("level_db", func(t *testing.T) {
+		require.NoError(t, MergeState(back, fmdb, lndb))
+		require.EqualValues(t, n, lndb.Size(back))
+	})
+
 }
