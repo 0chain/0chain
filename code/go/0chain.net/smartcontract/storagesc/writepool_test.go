@@ -72,7 +72,7 @@ func TestStorageSmartContract_getWritePoolBytes(t *testing.T) {
 
 	var (
 		ssc      = newTestStorageSC()
-		balances = newTestBalances()
+		balances = newTestBalances(t, false)
 
 		wp *writePool
 
@@ -95,7 +95,7 @@ func TestStorageSmartContract_getWritePool(t *testing.T) {
 
 	var (
 		ssc      = newTestStorageSC()
-		balances = newTestBalances()
+		balances = newTestBalances(t, false)
 		wps, err = ssc.getWritePool(clientID, balances)
 		nrps     = new(writePool)
 	)
@@ -138,7 +138,7 @@ func TestStorageSmartContract_writePoolLock(t *testing.T) {
 
 	var (
 		ssc      = newTestStorageSC()
-		balances = newTestBalances()
+		balances = newTestBalances(t, false)
 		client   = newClient(0, balances)
 		tx       = transaction.Transaction{
 			ClientID:   client.id,
@@ -152,7 +152,7 @@ func TestStorageSmartContract_writePoolLock(t *testing.T) {
 
 	// setup transaction
 
-	balances.txn = &tx
+	balances.setTransaction(t, &tx)
 	tx.Hash = txHash
 
 	// setup config
@@ -212,7 +212,7 @@ func TestStorageSmartContract_writePoolLock(t *testing.T) {
 
 	balances.balances[client.id] = 200e10
 	var aid, _ = addAllocation(t, ssc, client, 10, int64(toSeconds(time.Hour)),
-		balances)
+		0, balances)
 	// lock
 	lr.AllocationID = aid
 	resp, err = ssc.writePoolLock(&tx, mustEncode(t, &lr), balances)

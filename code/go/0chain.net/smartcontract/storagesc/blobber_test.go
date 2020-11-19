@@ -21,7 +21,7 @@ import (
 func TestStorageSmartContract_addBlobber(t *testing.T) {
 	var (
 		ssc      = newTestStorageSC()
-		balances = newTestBalances()
+		balances = newTestBalances(t, false)
 
 		tp int64 = 100
 	)
@@ -61,10 +61,10 @@ func TestStorageSmartContract_addBlobber(t *testing.T) {
 
 func TestStorageSmartContract_addBlobber_invalidParams(t *testing.T) {
 	var (
-		ssc            = newTestStorageSC() //
-		balances       = newTestBalances()  //
-		terms          = avgTerms           // copy
-		tp       int64 = 100                //
+		ssc            = newTestStorageSC()        //
+		balances       = newTestBalances(t, false) //
+		terms          = avgTerms                  // copy
+		tp       int64 = 100                       //
 	)
 
 	var add = func(t *testing.T, ssc *StorageSmartContract, cap, now int64,
@@ -130,7 +130,7 @@ func Test_flow_reward(t *testing.T) {
 
 	var (
 		ssc            = newTestStorageSC()
-		balances       = newTestBalances()
+		balances       = newTestBalances(t, false)
 		client         = newClient(100*x10, balances)
 		tp, exp  int64 = 0, int64(toSeconds(time.Hour))
 
@@ -142,7 +142,7 @@ func Test_flow_reward(t *testing.T) {
 	setConfig(t, balances)
 
 	tp += 100
-	var allocID, blobs = addAllocation(t, ssc, client, tp, exp, balances)
+	var allocID, blobs = addAllocation(t, ssc, client, tp, exp, 0, balances)
 
 	// blobbers: stake 10k, balance 40k
 
@@ -180,14 +180,14 @@ func Test_flow_reward(t *testing.T) {
 
 		tp += 100
 		var tx = newTransaction(b1.id, ssc.ID, 0, tp)
-		balances.txn = tx
+		balances.setTransaction(t, tx)
 		_, err = ssc.commitBlobberRead(tx, mustEncode(t, &rm), balances)
 		require.Error(t, err)
 
 		// create read pool
 		tp += 100
 		tx = newTransaction(client.id, ssc.ID, 0, tp)
-		balances.txn = tx
+		balances.setTransaction(t, tx)
 		_, err = ssc.newReadPool(tx, nil, balances)
 		require.NoError(t, err)
 
@@ -195,7 +195,7 @@ func Test_flow_reward(t *testing.T) {
 		tp += 100
 		var readPoolFund = int64(len(alloc.BlobberDetails)) * 2 * 1e10
 		tx = newTransaction(client.id, ssc.ID, readPoolFund, tp)
-		balances.txn = tx
+		balances.setTransaction(t, tx)
 		_, err = ssc.readPoolLock(tx, mustEncode(t, &lockRequest{
 			Duration:     20 * time.Minute,
 			AllocationID: allocID,
@@ -210,7 +210,7 @@ func Test_flow_reward(t *testing.T) {
 		// read
 		tp += 100
 		tx = newTransaction(b1.id, ssc.ID, 0, tp)
-		balances.txn = tx
+		balances.setTransaction(t, tx)
 		_, err = ssc.commitBlobberRead(tx, mustEncode(t, &rm), balances)
 		require.NoError(t, err)
 
@@ -263,14 +263,14 @@ func Test_flow_reward(t *testing.T) {
 
 		tp += 100
 		var tx = newTransaction(b1.id, ssc.ID, 0, tp)
-		balances.txn = tx
+		balances.setTransaction(t, tx)
 		_, err = ssc.commitBlobberRead(tx, mustEncode(t, &rm), balances)
 		require.Error(t, err)
 
 		// create read pool
 		tp += 100
 		tx = newTransaction(reader.id, ssc.ID, 0, tp)
-		balances.txn = tx
+		balances.setTransaction(t, tx)
 		_, err = ssc.newReadPool(tx, nil, balances)
 		require.NoError(t, err)
 
@@ -278,7 +278,7 @@ func Test_flow_reward(t *testing.T) {
 		tp += 100
 		tx = newTransaction(reader.id, ssc.ID,
 			int64(len(alloc.BlobberDetails))*2*x10, tp)
-		balances.txn = tx
+		balances.setTransaction(t, tx)
 		_, err = ssc.readPoolLock(tx, mustEncode(t, &lockRequest{
 			Duration:     20 * time.Minute,
 			AllocationID: allocID,
@@ -288,7 +288,7 @@ func Test_flow_reward(t *testing.T) {
 		// read
 		tp += 100
 		tx = newTransaction(b1.id, ssc.ID, 0, tp)
-		balances.txn = tx
+		balances.setTransaction(t, tx)
 		_, err = ssc.commitBlobberRead(tx, mustEncode(t, &rm), balances)
 		require.NoError(t, err)
 
@@ -364,7 +364,7 @@ func Test_flow_reward(t *testing.T) {
 		// write
 		tp += 100
 		var tx = newTransaction(b2.id, ssc.ID, 0, tp)
-		balances.txn = tx
+		balances.setTransaction(t, tx)
 		var resp string
 		resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc),
 			balances)
@@ -434,7 +434,7 @@ func Test_flow_reward(t *testing.T) {
 		// write
 		tp += 100
 		var tx = newTransaction(b2.id, ssc.ID, 0, tp)
-		balances.txn = tx
+		balances.setTransaction(t, tx)
 		var resp string
 		resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc),
 			balances)
@@ -520,7 +520,7 @@ func Test_flow_reward(t *testing.T) {
 		// write
 		tp += 100
 		var tx = newTransaction(b3.id, ssc.ID, 0, tp)
-		balances.txn = tx
+		balances.setTransaction(t, tx)
 		var resp string
 		resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc),
 			balances)
@@ -594,7 +594,7 @@ func Test_flow_reward(t *testing.T) {
 
 			tp += step / 2
 			tx = newTransaction(b3.id, ssc.ID, 0, tp)
-			balances.txn = tx
+			balances.setTransaction(t, tx)
 			var resp string
 			resp, err = ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
 			require.NoError(t, err)
@@ -657,7 +657,7 @@ func Test_flow_penalty(t *testing.T) {
 
 	var (
 		ssc            = newTestStorageSC()
-		balances       = newTestBalances()
+		balances       = newTestBalances(t, false)
 		client         = newClient(100*x10, balances)
 		tp, exp  int64 = 0, int64(toSeconds(time.Hour))
 
@@ -667,7 +667,7 @@ func Test_flow_penalty(t *testing.T) {
 	setConfig(t, balances)
 
 	tp += 100
-	var allocID, blobs = addAllocation(t, ssc, client, tp, exp, balances)
+	var allocID, blobs = addAllocation(t, ssc, client, tp, exp, 0, balances)
 
 	// blobbers: stake 10k, balance 40k
 
@@ -730,7 +730,7 @@ func Test_flow_penalty(t *testing.T) {
 		// write
 		tp += 100
 		var tx = newTransaction(b4.id, ssc.ID, 0, tp)
-		balances.txn = tx
+		balances.setTransaction(t, tx)
 		var resp string
 		resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc),
 			balances)
@@ -810,7 +810,7 @@ func Test_flow_penalty(t *testing.T) {
 
 			tp += step / 2
 			tx = newTransaction(b4.id, ssc.ID, 0, tp)
-			balances.txn = tx
+			balances.setTransaction(t, tx)
 			var resp string
 			resp, err = ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
 			require.NoError(t, err)
@@ -881,7 +881,7 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 
 	var (
 		ssc      = newTestStorageSC()
-		balances = newTestBalances()
+		balances = newTestBalances(t, false)
 		client   = newClient(100*x10, balances)
 		tp, exp  = int64(0), int64(toSeconds(time.Hour))
 		conf     = setConfig(t, balances)
@@ -895,7 +895,7 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 	require.NoError(t, err)
 
 	tp += 100
-	var allocID, blobs = addAllocation(t, ssc, client, tp, exp, balances)
+	var allocID, blobs = addAllocation(t, ssc, client, tp, exp, 0, balances)
 
 	var alloc *StorageAllocation
 	alloc, err = ssc.getAllocation(allocID, balances)
@@ -951,7 +951,7 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 			require.NoError(t, err)
 			// write
 			var tx = newTransaction(b.id, ssc.ID, 0, tp)
-			balances.txn = tx
+			balances.setTransaction(t, tx)
 			var resp string
 			resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc),
 				balances)
@@ -1048,7 +1048,7 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 		req.AllocationID = allocID
 
 		var tx = newTransaction(client.id, ssc.ID, 0, tp)
-		balances.txn = tx
+		balances.setTransaction(t, tx)
 		_, err = ssc.finalizeAllocation(tx, mustEncode(t, &req), balances)
 		require.NoError(t, err)
 
@@ -1114,7 +1114,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 
 	var (
 		ssc      = newTestStorageSC()
-		balances = newTestBalances()
+		balances = newTestBalances(t, false)
 		client   = newClient(100*x10, balances)
 		tp, exp  = int64(0), int64(toSeconds(time.Hour))
 		conf     = setConfig(t, balances)
@@ -1128,7 +1128,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 	require.NoError(t, err)
 
 	tp += 100
-	var allocID, blobs = addAllocation(t, ssc, client, tp, exp, balances)
+	var allocID, blobs = addAllocation(t, ssc, client, tp, exp, 0, balances)
 
 	var alloc *StorageAllocation
 	alloc, err = ssc.getAllocation(allocID, balances)
@@ -1184,7 +1184,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 			require.NoError(t, err)
 			// write
 			var tx = newTransaction(b.id, ssc.ID, 0, tp)
-			balances.txn = tx
+			balances.setTransaction(t, tx)
 			var resp string
 			resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc),
 				balances)
@@ -1280,7 +1280,7 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 		req.AllocationID = allocID
 
 		var tx = newTransaction(client.id, ssc.ID, 0, tp)
-		balances.txn = tx
+		balances.setTransaction(t, tx)
 		_, err = ssc.cacnelAllocationRequest(tx, mustEncode(t, &req), balances)
 		require.NoError(t, err)
 
@@ -1355,7 +1355,7 @@ func Test_blobber_choose_randomization(t *testing.T) {
 
 	var (
 		ssc      = newTestStorageSC()
-		balances = newTestBalances()
+		balances = newTestBalances(t, false)
 		client   = newClient(10000*x10, balances)
 		tp, exp  = int64(0), int64(toSeconds(time.Hour))
 		conf     = setConfig(t, balances)

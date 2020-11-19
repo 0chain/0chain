@@ -35,7 +35,7 @@ func (rp *readPool) allocBlobberTotal(allocID, blobberID string,
 	return rp.Pools.allocBlobberTotal(allocID, blobberID, now)
 }
 
-func mustEncode(t *testing.T, val interface{}) []byte {
+func mustEncode(t testing.TB, val interface{}) []byte {
 	var err error
 	b, err := json.Marshal(val)
 	require.NoError(t, err)
@@ -97,7 +97,7 @@ func TestStorageSmartContract_getReadPoolBytes(t *testing.T) {
 
 	var (
 		ssc      = newTestStorageSC()
-		balances = newTestBalances()
+		balances = newTestBalances(t, false)
 
 		rp *readPool
 
@@ -120,7 +120,7 @@ func TestStorageSmartContract_getReadPool(t *testing.T) {
 
 	var (
 		ssc      = newTestStorageSC()
-		balances = newTestBalances()
+		balances = newTestBalances(t, false)
 		rps, err = ssc.getReadPool(clientID, balances)
 		nrps     = new(readPool)
 	)
@@ -141,7 +141,7 @@ func TestStorageSmartContract_newReadPool(t *testing.T) {
 
 	var (
 		ssc      = newTestStorageSC()
-		balances = newTestBalances()
+		balances = newTestBalances(t, false)
 		tx       = transaction.Transaction{
 			ClientID:   clientID,
 			ToClientID: ssc.ID,
@@ -151,7 +151,7 @@ func TestStorageSmartContract_newReadPool(t *testing.T) {
 		err  error
 	)
 
-	balances.txn = &tx
+	balances.setTransaction(t, &tx)
 	tx.Hash = txHash
 
 	resp, err = ssc.newReadPool(&tx, nil, balances)
@@ -193,7 +193,7 @@ func TestStorageSmartContract_readPoolLock(t *testing.T) {
 
 	var (
 		ssc      = newTestStorageSC()
-		balances = newTestBalances()
+		balances = newTestBalances(t, false)
 		client   = newClient(0, balances)
 		tx       = transaction.Transaction{
 			ClientID:   client.id,
@@ -207,7 +207,7 @@ func TestStorageSmartContract_readPoolLock(t *testing.T) {
 
 	// setup transaction
 
-	balances.txn = &tx
+	balances.setTransaction(t, &tx)
 	tx.Hash = txHash
 
 	// setup config
@@ -251,7 +251,7 @@ func TestStorageSmartContract_readPoolLock(t *testing.T) {
 
 	balances.balances[client.id] = 200e10
 	var aid, _ = addAllocation(t, ssc, client, 10, int64(toSeconds(time.Hour)),
-		balances)
+		0, balances)
 	// lock
 	lr.AllocationID = aid
 	resp, err = ssc.readPoolLock(&tx, mustEncode(t, &lr), balances)

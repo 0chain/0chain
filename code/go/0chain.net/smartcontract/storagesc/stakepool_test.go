@@ -45,7 +45,7 @@ func Test_stakePool_save(t *testing.T) {
 	const blobID = "blob_id"
 	var (
 		sp       = newStakePool()
-		balances = newTestBalances()
+		balances = newTestBalances(t, false)
 	)
 	require.NoError(t, sp.save(ADDRESS, blobID, balances))
 	assert.NotZero(t, balances.tree[stakePoolKey(ADDRESS, blobID)])
@@ -59,7 +59,7 @@ func Test_stakePool_fill(t *testing.T) {
 
 	var (
 		sp       = newStakePool()
-		balances = newTestBalances()
+		balances = newTestBalances(t, false)
 		tx       = transaction.Transaction{
 			ClientID:   clienID,
 			ToClientID: ADDRESS,
@@ -68,7 +68,7 @@ func Test_stakePool_fill(t *testing.T) {
 		err error
 	)
 
-	balances.txn = &tx
+	balances.setTransaction(t, &tx)
 	balances.balances[clienID] = 100e10
 
 	_, _, err = sp.dig(&tx, balances)

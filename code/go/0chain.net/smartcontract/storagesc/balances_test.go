@@ -1,6 +1,8 @@
 package storagesc
 
 import (
+	"testing"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -19,17 +21,35 @@ type testBalances struct {
 	txn       *transaction.Transaction
 	transfers []*state.Transfer
 	tree      map[datastore.Key]util.Serializable
+
+	mpts *mptStore // use for benchmarks
 }
 
-func newTestBalances() *testBalances {
-	return &testBalances{
+func newTestBalances(t testing.TB, mpts bool) (tb *testBalances) {
+	tb = &testBalances{
 		balances: make(map[datastore.Key]state.Balance),
 		tree:     make(map[datastore.Key]util.Serializable),
 	}
+
+	if mpts {
+		tb.mpts = newMptStore(t)
+	}
+
+	return
 }
 
 func (tb *testBalances) setBalance(key datastore.Key, b state.Balance) {
 	tb.balances[key] = b
+}
+
+func (tb *testBalances) setTransaction(t testing.TB,
+	txn *transaction.Transaction) {
+
+	tb.txn = txn
+
+	if tb.mpts != nil {
+		tb.mpts.merge(t)
+	}
 }
 
 // stubs
@@ -48,7 +68,19 @@ func (tb *testBalances) AddSignedTransfer(st *state.SignedTransfer) {
 func (tb *testBalances) GetSignedTransfers() []*state.SignedTransfer {
 	return nil
 }
-func (tb *testBalances) DeleteTrieNode(datastore.Key) (datastore.Key, error) {
+func (tb *testBalances) DeleteTrieNode(key datastore.Key) (
+	datastore.Key, error) {
+
+	if tb.mpts != nil {
+		if encryption.IsHash(key) {
+			return "", common.NewError("failed to get trie node",
+				"key is too short")
+		}
+		var btkey, err = tb.mpts.mpt.Delete(util.Path(encryption.Hash(key)))
+		return datastore.Key(btkey), err
+	}
+
+	delete(tb.tree, key)
 	return "", nil
 }
 func (tb *testBalances) GetLastestFinalizedMagicBlock() *block.Block {
@@ -77,6 +109,10 @@ func (tb *testBalances) GetTrieNode(key datastore.Key) (
 			"key is too short")
 	}
 
+	if tb.mpts != nil {
+		return tb.mpts.mpt.GetNodeValue(util.Path(encryption.Hash(key)))
+	}
+
 	var ok bool
 	if node, ok = tb.tree[key]; !ok {
 		return nil, util.ErrValueNotPresent
@@ -85,10 +121,19 @@ func (tb *testBalances) GetTrieNode(key datastore.Key) (
 }
 
 func (tb *testBalances) InsertTrieNode(key datastore.Key,
-	node util.Serializable) (_ datastore.Key, _ error) {
+	node util.Serializable) (datastore.Key, error) {
+
+	if tb.mpts != nil {
+		if encryption.IsHash(key) {
+			return "", common.NewError("failed to get trie node",
+				"key is too short")
+		}
+		var btkey, err = tb.mpts.mpt.Insert(util.Path(encryption.Hash(key)), node)
+		return datastore.Key(btkey), err
+	}
 
 	tb.tree[key] = node
-	return
+	return "", nil
 }
 
 func (tb *testBalances) AddTransfer(t *state.Transfer) error {

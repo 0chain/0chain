@@ -28,7 +28,7 @@ func TestStorageSmartContract_getAllocation(t *testing.T) {
 	const allocID, clientID, clientPk = "alloc_hex", "client_hex", "pk"
 	var (
 		ssc      = newTestStorageSC()
-		balances = newTestBalances()
+		balances = newTestBalances(t, false)
 		alloc    *StorageAllocation
 		err      error
 	)
@@ -112,7 +112,7 @@ func TestStorageSmartContract_addBlobbersOffers(t *testing.T) {
 	var (
 		alloc    StorageAllocation
 		b1, b2   StorageNode
-		balances = newTestBalances()
+		balances = newTestBalances(t, false)
 		ssc      = newTestStorageSC()
 
 		err error
@@ -164,7 +164,7 @@ func TestStorageSmartContract_addBlobbersOffers(t *testing.T) {
 func Test_updateBlobbersInAll(t *testing.T) {
 	var (
 		all        StorageNodes
-		balances   = newTestBalances()
+		balances   = newTestBalances(t, false)
 		b1, b2, b3 StorageNode
 		u1, u2     StorageNode
 		decode     StorageNodes
@@ -272,7 +272,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 
 	var (
 		ssc      = newTestStorageSC()
-		balances = newTestBalances()
+		balances = newTestBalances(t, false)
 
 		tx   transaction.Transaction
 		conf *scConfig
@@ -286,7 +286,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	tx.ClientID = clientID
 	tx.CreationDate = toSeconds(2 * time.Hour)
 
-	balances.txn = &tx
+	balances.setTransaction(t, &tx)
 
 	conf = setConfig(t, balances)
 	conf.MaxChallengeCompletionTime = 20 * time.Second
@@ -586,7 +586,7 @@ func createNewTestAllocation(t *testing.T, ssc *StorageSmartContract,
 	tx.ClientID = clientID
 	tx.CreationDate = toSeconds(2 * time.Hour)
 
-	balances.(*testBalances).txn = &tx
+	balances.(*testBalances).setTransaction(t, &tx)
 
 	conf.MaxChallengeCompletionTime = 20 * time.Second
 	conf.MinAllocDuration = 20 * time.Second
@@ -645,7 +645,7 @@ func Test_updateAllocationRequest_getNewBlobbersSize(t *testing.T) {
 
 	var (
 		ssc      = newTestStorageSC()
-		balances = newTestBalances()
+		balances = newTestBalances(t, false)
 
 		uar   updateAllocationRequest
 		alloc *StorageAllocation
@@ -677,7 +677,7 @@ func TestStorageSmartContract_getAllocationBlobbers(t *testing.T) {
 
 	var (
 		ssc      = newTestStorageSC()
-		balances = newTestBalances()
+		balances = newTestBalances(t, false)
 
 		alloc *StorageAllocation
 		err   error
@@ -709,7 +709,7 @@ func TestStorageSmartContract_closeAllocation(t *testing.T) {
 
 	var (
 		ssc      = newTestStorageSC()
-		balances = newTestBalances()
+		balances = newTestBalances(t, false)
 		tx       transaction.Transaction
 
 		alloc *StorageAllocation
@@ -767,13 +767,15 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 
 	var (
 		ssc                  = newTestStorageSC()
-		balances             = newTestBalances()
+		balances             = newTestBalances(t, false)
 		client               = newClient(50*x10, balances)
 		tp, exp        int64 = 100, 1000
-		allocID, blobs       = addAllocation(t, ssc, client, tp, exp, balances)
-		alloc          *StorageAllocation
-		resp           string
-		err            error
+		allocID, blobs       = addAllocation(t, ssc, client, tp, exp, 0,
+			balances)
+
+		alloc *StorageAllocation
+		resp  string
+		err   error
 	)
 
 	alloc, err = ssc.getAllocation(allocID, balances)
@@ -893,7 +895,7 @@ func Test_finalize_allocation(t *testing.T) {
 
 	var (
 		ssc            = newTestStorageSC()
-		balances       = newTestBalances()
+		balances       = newTestBalances(t, false)
 		client         = newClient(100*x10, balances)
 		tp, exp  int64 = 0, int64(toSeconds(time.Hour))
 		err      error
@@ -902,7 +904,7 @@ func Test_finalize_allocation(t *testing.T) {
 	setConfig(t, balances)
 
 	tp += 100
-	var allocID, blobs = addAllocation(t, ssc, client, tp, exp, balances)
+	var allocID, blobs = addAllocation(t, ssc, client, tp, exp, 0, balances)
 
 	// blobbers: stake 10k, balance 40k
 
@@ -952,7 +954,7 @@ func Test_finalize_allocation(t *testing.T) {
 	// write
 	tp += 100
 	var tx = newTransaction(b1.id, ssc.ID, 0, tp)
-	balances.txn = tx
+	balances.setTransaction(t, tx)
 	var resp string
 	resp, err = ssc.commitBlobberConnection(tx, mustEncode(t, &cc),
 		balances)
@@ -997,7 +999,7 @@ func Test_finalize_allocation(t *testing.T) {
 
 		tp += step / 2
 		tx = newTransaction(b1.id, ssc.ID, 0, tp)
-		balances.txn = tx
+		balances.setTransaction(t, tx)
 		var resp string
 		resp, err = ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
 		require.NoError(t, err)
@@ -1031,7 +1033,7 @@ func Test_finalize_allocation(t *testing.T) {
 	req.AllocationID = allocID
 
 	tx = newTransaction(client.id, ssc.ID, 0, tp)
-	balances.txn = tx
+	balances.setTransaction(t, tx)
 	_, err = ssc.finalizeAllocation(tx, mustEncode(t, &req), balances)
 	require.NoError(t, err)
 
@@ -1069,7 +1071,7 @@ func Test_preferred_blobbers(t *testing.T) {
 
 	var (
 		ssc            = newTestStorageSC()
-		balances       = newTestBalances()
+		balances       = newTestBalances(t, false)
 		client         = newClient(100*x10, balances)
 		tp, exp  int64 = 0, int64(toSeconds(time.Hour))
 	)
@@ -1078,7 +1080,7 @@ func Test_preferred_blobbers(t *testing.T) {
 	// and adds them to SC; also the addAllocation sets SC configurations
 	// (e.g. create allocation for side effects)
 	tp += 100
-	var _, blobs = addAllocation(t, ssc, client, tp, exp, balances)
+	var _, blobs = addAllocation(t, ssc, client, tp, exp, 0, balances)
 
 	// we need at least 4 blobbers to use them as preferred blobbers
 	require.True(t, len(blobs) > 4)
