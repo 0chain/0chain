@@ -9,8 +9,10 @@ import (
 	"testing"
 	"time"
 
+	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/core/encryption"
 	"0chain.net/core/util"
 
 	"github.com/stretchr/testify/require"
@@ -41,6 +43,9 @@ func newMptStore(tb testing.TB) (mpts *mptStore) {
 }
 
 func (mpts *mptStore) Close() (err error) {
+	if mpts == nil {
+		return
+	}
 	if mpts.pndb != nil {
 		mpts.pndb.Flush()
 	}
@@ -51,6 +56,9 @@ func (mpts *mptStore) Close() (err error) {
 }
 
 func (mpts *mptStore) merge(tb testing.TB) {
+	if mpts == nil {
+		return
+	}
 
 	var root util.Key
 
@@ -71,6 +79,15 @@ func (mpts *mptStore) merge(tb testing.TB) {
 	mpts.mpt.SetRoot(root)
 }
 
+//
+// 2) Also need to check how fast are the allocations created in storageSC
+//    if there are 1000 blobbers.
+//
+
+//
+// go test -v -timeout 1h -bench Benchmark_newAllocationRequest | prettybench
+//
+
 func Benchmark_newAllocationRequest(b *testing.B) {
 
 	for _, n := range []int{
@@ -88,23 +105,25 @@ func Benchmark_newAllocationRequest(b *testing.B) {
 				client         = newClient(100000*x10, balances)
 				tp, exp  int64 = 0, int64(toSeconds(time.Hour))
 
-				blobs []*Client
-				conf  *scConfig
-				err   error
+				conf *scConfig
+				err  error
 			)
 
 			defer balances.mpts.Close()
 
+			balances.skipMerge = true
 			conf = setConfig(b, balances)
 
 			// call the addAllocation to create and stake n blobbers, the resulting
 			// allocation will not be used
-			tp += 100
-			_, blobs = addAllocation(b, ssc, client, tp, exp, n, balances)
-			_ = blobs
+			tp += 1
+			addAllocation(b, ssc, client, tp, exp, n, balances)
 
 			conf.MinAllocSize = 1 * KB
 			mustSave(b, scConfigKey(ADDRESS), conf, balances)
+
+			balances.skipMerge = false
+			balances.mpts.merge(b)
 
 			b.ResetTimer()
 
@@ -144,4 +163,137 @@ func Benchmark_newAllocationRequest(b *testing.B) {
 
 		})
 	}
+}
+
+//
+// 3) And how fast the challenges are created if there are 1000 blobbers,
+//    1000 allocations, 10000 files.
+//
+
+//
+// go test -v -timeout 1h -bench Benchmark_generateChallenges | prettybench
+//
+
+func Benchmark_generateChallenges(b *testing.B) {
+
+	var (
+		ssc            = newTestStorageSC()
+		balances       = newTestBalances(b, true)
+		client         = newClient(100000*x10, balances)
+		tp, exp  int64 = 0, int64(toSeconds(time.Hour))
+
+		tx    *transaction.Transaction
+		blobs []*Client
+		conf  *scConfig
+		err   error
+	)
+
+	defer balances.mpts.Close()
+
+	balances.skipMerge = true
+	conf = setConfig(b, balances)
+
+	// 1. just create 1000 blobbers
+	b.Log("add 1k blobbers")
+	tp += 1
+	balances.skipMerge = true // don't merge transactions for now
+	_, blobs = addAllocation(b, ssc, client, tp, exp, 1000, balances)
+
+	// 2. and 1000 corresponding validators
+	b.Log("add 1k corresponding validators")
+	for _, bl := range blobs {
+		tp += 1
+		tx = newTransaction(bl.id, ssc.ID, 0, tp)
+		_, err = ssc.addValidator(tx, bl.addValidatorRequest(b), balances)
+		require.NoError(b, err)
+	}
+
+	conf.MinAllocSize = 1 * KB
+	mustSave(b, scConfigKey(ADDRESS), conf, balances)
+
+	// 3. create 1000 allocations
+	b.Log("add 1k allocations")
+	var allocs []string
+	for i := 0; i < 1000; i++ {
+
+		var nar = new(newAllocationRequest)
+		nar.DataShards = 10
+		nar.ParityShards = 10
+		nar.Expiration = common.Timestamp(exp)
+		nar.Owner = client.id
+		nar.OwnerPublicKey = client.pk
+		nar.ReadPriceRange = PriceRange{1 * x10, 10 * x10}
+		nar.WritePriceRange = PriceRange{2 * x10, 20 * x10}
+		nar.Size = 1 * KB
+		nar.MaxChallengeCompletionTime = 200 * time.Hour
+
+		var resp, err = nar.callNewAllocReq(b, client.id, 15*x10, ssc, tp,
+			balances)
+		require.NoError(b, err)
+
+		var deco StorageAllocation
+		require.NoError(b, deco.Decode([]byte(resp)))
+
+		allocs = append(allocs, deco.ID)
+	}
+
+	// 4. "write" 10 files for every one of the allocations
+	b.Log("write 10k files")
+	var stats StorageStats
+	stats.Stats = new(StorageAllocationStats)
+	for _, allocID := range allocs {
+		var alloc *StorageAllocation
+		alloc, err = ssc.getAllocation(allocID, balances)
+		require.NoError(b, err)
+		alloc.Stats = new(StorageAllocationStats)
+		alloc.Stats.NumWrites += 10 // 10 files
+		for _, d := range alloc.BlobberDetails {
+			d.AllocationRoot = "allocation-root"
+		}
+		_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
+		require.NoError(b, err)
+		stats.Stats.NumWrites += 10    // total stats
+		stats.Stats.UsedSize += 1 * GB // fake size just for the challenges
+	}
+	_, err = balances.InsertTrieNode(stats.GetKey(ssc.ID), &stats)
+	require.NoError(b, err)
+
+	// 5. merge all transactions into p node db
+	b.Log("merge all into p node db")
+	balances.skipMerge = false
+	balances.mpts.merge(b)
+
+	b.ResetTimer()
+	b.Log("start benchmark loop")
+
+	var blk = new(block.Block)
+
+	// 6. generate challenges
+	for i := 0; i < b.N; i++ {
+
+		b.StopTimer()
+		{
+			// revert the stats to allow generation
+			tp += 1
+			var statsb util.Serializable
+			statsb, err = balances.GetTrieNode(stats.GetKey(ssc.ID))
+			require.NoError(b, err)
+			require.NoError(b, stats.Decode(statsb.Encode()))
+			stats.LastChallengedSize = 0
+			stats.LastChallengedTime = 0
+			_, err = balances.InsertTrieNode(stats.GetKey(ssc.ID), &stats)
+			require.NoError(b, err)
+
+			tp += 1
+			blk.PrevHash = encryption.Hash(fmt.Sprintf("block-%d", i))
+			tx = newTransaction(client.id, ssc.ID, 0, tp)
+			balances.setTransaction(b, tx)
+		}
+		b.StartTimer()
+
+		err = ssc.generateChallenges(tx, blk, nil, balances)
+		require.NoError(b, err)
+	}
+	b.ReportAllocs()
+
 }

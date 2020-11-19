@@ -22,7 +22,8 @@ type testBalances struct {
 	transfers []*state.Transfer
 	tree      map[datastore.Key]util.Serializable
 
-	mpts *mptStore // use for benchmarks
+	mpts      *mptStore // use for benchmarks
+	skipMerge bool      // don't merge for now
 }
 
 func newTestBalances(t testing.TB, mpts bool) (tb *testBalances) {
@@ -47,7 +48,7 @@ func (tb *testBalances) setTransaction(t testing.TB,
 
 	tb.txn = txn
 
-	if tb.mpts != nil {
+	if tb.mpts != nil && !tb.skipMerge {
 		tb.mpts.merge(t)
 	}
 }
