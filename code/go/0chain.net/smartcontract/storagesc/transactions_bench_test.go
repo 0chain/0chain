@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -58,7 +59,7 @@ func (mpts *mptStore) merge(tb testing.TB) {
 		require.NoError(tb, util.MergeState(
 			context.Background(), mpts.mndb, mpts.pndb,
 		))
-		mpts.pndb.Flush()
+		// mpts.pndb.Flush()
 	}
 
 	// for a worst case, no cached data, and we have to get everything from
@@ -72,63 +73,75 @@ func (mpts *mptStore) merge(tb testing.TB) {
 
 func Benchmark_newAllocationRequest(b *testing.B) {
 
-	var (
-		ssc            = newTestStorageSC()
-		balances       = newTestBalances(b, true)
-		client         = newClient(100000*x10, balances)
-		tp, exp  int64 = 0, int64(toSeconds(time.Hour))
+	for _, n := range []int{
+		20,
+		100,
+		500,
+		1000,
+		2000,
+	} {
+		b.Run(fmt.Sprintf("%d blobbers", n), func(b *testing.B) {
 
-		blobs []*Client
-		conf  *scConfig
-		err   error
-	)
+			var (
+				ssc            = newTestStorageSC()
+				balances       = newTestBalances(b, true)
+				client         = newClient(100000*x10, balances)
+				tp, exp  int64 = 0, int64(toSeconds(time.Hour))
 
-	defer balances.mpts.Close()
+				blobs []*Client
+				conf  *scConfig
+				err   error
+			)
 
-	conf = setConfig(b, balances)
+			defer balances.mpts.Close()
 
-	// call the addAllocation to create and stake 1000 blobbers, the resulting
-	// allocation will not be used
-	tp += 100
-	_, blobs = addAllocation(b, ssc, client, tp, exp, 1000, balances)
-	_ = blobs
+			conf = setConfig(b, balances)
 
-	conf.MinAllocSize = 1 * KB
-	mustSave(b, scConfigKey(ADDRESS), conf, balances)
+			// call the addAllocation to create and stake n blobbers, the resulting
+			// allocation will not be used
+			tp += 100
+			_, blobs = addAllocation(b, ssc, client, tp, exp, n, balances)
+			_ = blobs
 
-	b.ResetTimer()
+			conf.MinAllocSize = 1 * KB
+			mustSave(b, scConfigKey(ADDRESS), conf, balances)
 
-	var (
-		input []byte
-		tx    *transaction.Transaction
-	)
+			b.ResetTimer()
 
-	// create an allocation
-	for i := 0; i < b.N; i++ {
+			var (
+				input []byte
+				tx    *transaction.Transaction
+			)
 
-		b.StopTimer()
-		{
-			tp += 1
+			// create an allocation
+			for i := 0; i < b.N; i++ {
 
-			var nar = new(newAllocationRequest)
-			nar.DataShards = 10
-			nar.ParityShards = 10
-			nar.Expiration = common.Timestamp(exp)
-			nar.Owner = client.id
-			nar.OwnerPublicKey = client.pk
-			nar.ReadPriceRange = PriceRange{1e10, 10e10}
-			nar.WritePriceRange = PriceRange{2e10, 20e10}
-			nar.Size = 1 * KB // 2 GB
-			nar.MaxChallengeCompletionTime = 200 * time.Hour
+				b.StopTimer()
+				{
+					tp += 1
 
-			input = mustEncode(b, nar)                        //
-			tx = newTransaction(client.id, ADDRESS, 1e10, tp) //
-			balances.setTransaction(b, tx)
-		}
-		b.StartTimer()
+					var nar = new(newAllocationRequest)
+					nar.DataShards = 10
+					nar.ParityShards = 10
+					nar.Expiration = common.Timestamp(exp)
+					nar.Owner = client.id
+					nar.OwnerPublicKey = client.pk
+					nar.ReadPriceRange = PriceRange{1e10, 10e10}
+					nar.WritePriceRange = PriceRange{2e10, 20e10}
+					nar.Size = 1 * KB // 2 GB
+					nar.MaxChallengeCompletionTime = 200 * time.Hour
 
-		_, err = ssc.newAllocationRequest(tx, input, balances)
-		require.NoError(b, err)
+					input = mustEncode(b, nar)                        //
+					tx = newTransaction(client.id, ADDRESS, 1e10, tp) //
+					balances.setTransaction(b, tx)
+				}
+				b.StartTimer()
+
+				_, err = ssc.newAllocationRequest(tx, input, balances)
+				require.NoError(b, err)
+			}
+			b.ReportAllocs()
+
+		})
 	}
-	b.ReportAllocs()
 }
