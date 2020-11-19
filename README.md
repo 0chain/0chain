@@ -10,6 +10,7 @@
 - [Unit tests](#unittests)
 - [Creating The Magic Block](#creating-the-magic-block)
 - [Miscellaneous](#miscellaneous) - [Cleanup](#cleanup) - [View Change](docs/viewchange.md) - [Minio Setup](#minio)
+- [Run 0chain on ec2 instance](https://github.com/0chain/0chain/blob/master/docker.aws/README.md)
 
 ## Initial Setup
 
