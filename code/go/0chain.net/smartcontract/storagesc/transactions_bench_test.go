@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"testing"
@@ -85,7 +86,7 @@ func (mpts *mptStore) merge(tb testing.TB) {
 //
 
 //
-// go test -v -timeout 1h -bench Benchmark_newAllocationRequest | prettybench
+// go test -v -timeout 1h -bench newAllocationRequest | prettybench
 //
 
 func Benchmark_newAllocationRequest(b *testing.B) {
@@ -171,7 +172,7 @@ func Benchmark_newAllocationRequest(b *testing.B) {
 //
 
 //
-// go test -v -timeout 1h -bench Benchmark_generateChallenges | prettybench
+// go test -v -timeout 1h -bench generateChallenges | prettybench
 //
 
 func Benchmark_generateChallenges(b *testing.B) {
@@ -264,36 +265,228 @@ func Benchmark_generateChallenges(b *testing.B) {
 	balances.mpts.merge(b)
 
 	b.ResetTimer()
-	b.Log("start benchmark loop")
+	b.Log("start benchmarks")
 
 	var blk = new(block.Block)
 
-	// 6. generate challenges
-	for i := 0; i < b.N; i++ {
+	for _, mcpg := range []int{
+		5, 10, 15, 20, 30, 100,
+	} {
 
-		b.StopTimer()
-		{
-			// revert the stats to allow generation
-			tp += 1
-			var statsb util.Serializable
-			statsb, err = balances.GetTrieNode(stats.GetKey(ssc.ID))
-			require.NoError(b, err)
-			require.NoError(b, stats.Decode(statsb.Encode()))
-			stats.LastChallengedSize = 0
-			stats.LastChallengedTime = 0
-			_, err = balances.InsertTrieNode(stats.GetKey(ssc.ID), &stats)
-			require.NoError(b, err)
+		conf.MaxChallengesPerGeneration = mcpg
+		mustSave(b, scConfigKey(ssc.ID), conf, balances)
 
-			tp += 1
-			blk.PrevHash = encryption.Hash(fmt.Sprintf("block-%d", i))
-			tx = newTransaction(client.id, ssc.ID, 0, tp)
-			balances.setTransaction(b, tx)
-		}
-		b.StartTimer()
+		b.Run(fmt.Sprintf("max chall per gen %d", mcpg), func(b *testing.B) {
 
-		err = ssc.generateChallenges(tx, blk, nil, balances)
+			// 6. generate challenges
+			for i := 0; i < b.N; i++ {
+
+				b.StopTimer()
+				{
+					// revert the stats to allow generation
+					tp += 1
+					var statsb util.Serializable
+					statsb, err = balances.GetTrieNode(stats.GetKey(ssc.ID))
+					require.NoError(b, err)
+					require.NoError(b, stats.Decode(statsb.Encode()))
+					stats.LastChallengedSize = 0
+					stats.LastChallengedTime = 0
+					_, err = balances.InsertTrieNode(stats.GetKey(ssc.ID), &stats)
+					require.NoError(b, err)
+
+					tp += 1
+					blk.PrevHash = encryption.Hash(fmt.Sprintf("block-%d", i))
+					tx = newTransaction(client.id, ssc.ID, 0, tp)
+					balances.setTransaction(b, tx) // merge into p node db
+				}
+				b.StartTimer()
+
+				err = ssc.generateChallenges(tx, blk, nil, balances)
+				require.NoError(b, err)
+			}
+			b.ReportAllocs()
+		})
+	}
+
+}
+
+//
+// benchmark for a challenge response
+//
+
+//
+// go test -v -timeout 1h -benchtime=5s -bench verifyChallenge | prettybench
+//
+
+func Benchmark_verifyChallenge(b *testing.B) {
+
+	var (
+		ssc            = newTestStorageSC()
+		balances       = newTestBalances(b, true)
+		client         = newClient(100000*x10, balances)
+		tp, exp  int64 = 0, int64(toSeconds(time.Hour))
+
+		tx    *transaction.Transaction
+		blobs []*Client
+		conf  *scConfig
+		err   error
+	)
+
+	defer balances.mpts.Close()
+
+	balances.skipMerge = true
+	conf = setConfig(b, balances)
+
+	// 1. just create 1000 blobbers
+	b.Log("add 1k blobbers")
+	tp += 1
+	balances.skipMerge = true // don't merge transactions for now
+	_, blobs = addAllocation(b, ssc, client, tp, exp, 1000, balances)
+
+	// 2. and 1000 corresponding validators
+	b.Log("add 1k corresponding validators")
+	for _, bl := range blobs {
+		tp += 1
+		tx = newTransaction(bl.id, ssc.ID, 0, tp)
+		_, err = ssc.addValidator(tx, bl.addValidatorRequest(b), balances)
 		require.NoError(b, err)
 	}
-	b.ReportAllocs()
+
+	// build blobbers/validators mapping id -> instance
+	var blobsMap = make(map[string]*Client, len(blobs))
+	for _, b := range blobs {
+		blobsMap[b.id] = b
+	}
+
+	conf.MinAllocSize = 1 * KB
+	mustSave(b, scConfigKey(ADDRESS), conf, balances)
+
+	// 3. create 1000 allocations
+	b.Log("add 1k allocations")
+	var allocs []string
+	for i := 0; i < 1000; i++ {
+
+		var nar = new(newAllocationRequest)
+		nar.DataShards = 10
+		nar.ParityShards = 10
+		nar.Expiration = common.Timestamp(exp)
+		nar.Owner = client.id
+		nar.OwnerPublicKey = client.pk
+		nar.ReadPriceRange = PriceRange{1 * x10, 10 * x10}
+		nar.WritePriceRange = PriceRange{2 * x10, 20 * x10}
+		nar.Size = 1 * KB
+		nar.MaxChallengeCompletionTime = 200 * time.Hour
+
+		var resp, err = nar.callNewAllocReq(b, client.id, 15*x10, ssc, tp,
+			balances)
+		require.NoError(b, err)
+
+		var deco StorageAllocation
+		require.NoError(b, deco.Decode([]byte(resp)))
+
+		allocs = append(allocs, deco.ID)
+	}
+
+	// 4. "write" 10 files for every one of the allocations
+	b.Log("write 10k files")
+	var stats StorageStats
+	stats.Stats = new(StorageAllocationStats)
+	for _, allocID := range allocs {
+		var alloc *StorageAllocation
+		alloc, err = ssc.getAllocation(allocID, balances)
+		require.NoError(b, err)
+		alloc.Stats = new(StorageAllocationStats)
+		alloc.Stats.NumWrites += 10 // 10 files
+		for _, d := range alloc.BlobberDetails {
+			d.AllocationRoot = "allocation-root"
+		}
+		_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
+		require.NoError(b, err)
+		stats.Stats.NumWrites += 10    // total stats
+		stats.Stats.UsedSize += 1 * GB // fake size just for the challenges
+	}
+	_, err = balances.InsertTrieNode(stats.GetKey(ssc.ID), &stats)
+	require.NoError(b, err)
+
+	// 5. merge all transactions into p node db
+	b.Log("merge all into p node db")
+	balances.skipMerge = false
+	balances.mpts.merge(b)
+
+	b.ResetTimer()
+	b.Log("start benchmark")
+
+	var valids *ValidatorNodes
+	valids, err = ssc.getValidatorsList(balances)
+	require.NoError(b, err)
+
+	// 6. add challenge for an allocation and verify it (successive case)
+	b.Run("verify challenge", func(b *testing.B) {
+
+		for i := 0; i < b.N; i++ {
+
+			var (
+				allocID   string
+				blobberID string
+				input     []byte
+				tx        *transaction.Transaction
+			)
+
+			b.StopTimer()
+			{
+				// 6.1 generate challenge
+				tp += 1
+				allocID = allocs[i%len(allocs)]
+
+				var (
+					r     = rand.New(rand.NewSource(tp))
+					alloc *StorageAllocation
+				)
+				alloc, err = ssc.getAllocation(allocID, balances)
+				require.NoError(b, err)
+
+				var (
+					challID    = encryption.Hash(fmt.Sprintf("chall-%d", tp))
+					challBytes string
+				)
+				challBytes, err = ssc.addChallenge(alloc, valids, challID,
+					common.Timestamp(tp), r, tp, balances)
+				require.NoError(b, err)
+
+				var chall StorageChallenge
+				mustDecode(b, []byte(challBytes), &chall)
+
+				// 6.2 create challenge response (with tickets)
+				tp += 1
+
+				var challResp ChallengeResponse
+				challResp.ID = chall.ID
+
+				for _, v := range chall.Validators {
+					var vx = blobsMap[v.ID]
+					challResp.ValidationTickets = append(
+						challResp.ValidationTickets,
+						vx.validTicket(b, chall.ID, chall.Blobber.ID, true, tp),
+					)
+				}
+
+				// 6.3 keep for the benchmark
+				blobberID = chall.Blobber.ID
+
+				// 6.4 prepare transaction
+				tp += 1
+				tx = newTransaction(blobberID, ssc.ID, 0, tp)
+				input = mustEncode(b, challResp)
+				balances.setTransaction(b, tx)
+			}
+			b.StartTimer()
+
+			var resp string
+			resp, err = ssc.verifyChallenge(tx, input, balances)
+			require.NoError(b, err)
+			require.Equal(b, resp, "challenge passed by blobber")
+		}
+		b.ReportAllocs()
+	})
 
 }

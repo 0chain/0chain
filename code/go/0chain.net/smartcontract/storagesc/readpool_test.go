@@ -42,6 +42,10 @@ func mustEncode(t testing.TB, val interface{}) []byte {
 	return b
 }
 
+func mustDecode(t testing.TB, b []byte, val interface{}) {
+	require.NoError(t, json.Unmarshal(b, val))
+}
+
 func requireErrMsg(t *testing.T, err error, msg string) {
 	t.Helper()
 	require.Error(t, err, "missing error")
