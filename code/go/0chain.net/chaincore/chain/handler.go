@@ -566,11 +566,11 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<tr class='header'><td>Config</td><td>Stats</td><td>Info</td><td>Debug</td></tr>")
 	fmt.Fprintf(w, "<tr>")
 	fmt.Fprintf(w, "<td valign='top'>")
-	fmt.Fprintf(w, "<li><a href='/v1/config/get'>/v1/config/get</a></li>")
+	fmt.Fprintf(w, "<li><a href='v1/config/get'>/v1/config/get</a></li>")
 	selfNodeType := node.Self.Underlying().Type
 	if selfNodeType == node.NodeTypeMiner && config.Development() {
-		fmt.Fprintf(w, "<li><a href='/v1/config/update'>/v1/config/update</a></li>")
-		fmt.Fprintf(w, "<li><a href='/v1/config/update_all'>/v1/config/update_all</a></li>")
+		fmt.Fprintf(w, "<li><a href='v1/config/update'>/v1/config/update</a></li>")
+		fmt.Fprintf(w, "<li><a href='v1/config/update_all'>/v1/config/update_all</a></li>")
 	}
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "<td valign='top'>")
@@ -600,7 +600,7 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<li>/_diagnostics/logs [Level <a href='_diagnostics/logs?detail=1'>1</a>, <a href='_diagnostics/logs?detail=2'>2</a>, <a href='_diagnostics/logs?detail=3'>3</a>]</li>")
 	fmt.Fprintf(w, "<li>/_diagnostics/n2n_logs [Level <a href='_diagnostics/n2n_logs?detail=1'>1</a>, <a href='_diagnostics/n2n_logs?detail=2'>2</a>, <a href='_diagnostics/n2n_logs?detail=3'>3</a>]</li>")
 	fmt.Fprintf(w, "<li>/_diagnostics/mem_logs [Level <a href='_diagnostics/mem_logs?detail=1'>1</a>, <a href='_diagnostics/mem_logs?detail=2'>2</a>, <a href='_diagnostics/mem_logs?detail=3'>3</a>]</li>")
-	fmt.Fprintf(w, "<li><a href='/debug/pprof/'>/debug/pprof/</a></li>")
+	fmt.Fprintf(w, "<li><a href='debug/pprof/'>/debug/pprof/</a></li>")
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "</tr>")
 	fmt.Fprintf(w, "</table>")
