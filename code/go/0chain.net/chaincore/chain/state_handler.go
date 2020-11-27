@@ -129,7 +129,7 @@ func (c *Chain) SCStats(w http.ResponseWriter, r *http.Request) {
 	for _, k := range keys {
 		sc := smartcontract.ContractMap[k]
 		scType := re.ReplaceAllString(reflect.TypeOf(sc).String(), "")
-		fmt.Fprintf(w, `<tr><td>%v</td><td>%v</td><td><li><a href='%v'>%v</a></li></td><td><li><a href='%v'>%v</a></li></td></tr>`, scType, strings.ToLower(k), "/v1/scstats/"+k, "/v1/scstats/"+scType, "/v1/scrests/"+k, "/v1/scrests/*key*")
+		fmt.Fprintf(w, `<tr><td>%v</td><td>%v</td><td><li><a href='%v'>%v</a></li></td><td><li><a href='%v'>%v</a></li></td></tr>`, scType, strings.ToLower(k), "v1/scstats/"+k, "/v1/scstats/"+scType, "v1/scrests/"+k, "/v1/scrests/*key*")
 	}
 	fmt.Fprintf(w, "</table>")
 }
@@ -158,7 +158,7 @@ func (c *Chain) GetSCRestPoints(w http.ResponseWriter, r *http.Request) {
 	sort.Strings(names)
 	for _, funcName := range names {
 		friendlyName := strings.TrimLeft(funcName, "/")
-		fmt.Fprintf(w, `<tr><td>%v</td><td><li><a href='%v'>%v</a></li></td></tr>`, friendlyName, "/v1/screst/"+key+funcName, "/v1/screst/*"+funcName+"*")
+		fmt.Fprintf(w, `<tr><td>%v</td><td><li><a href='%v'>%v</a></li></td></tr>`, friendlyName, "v1/screst/"+key+funcName, "/v1/screst/*"+funcName+"*")
 	}
 
 	fmt.Fprintf(w, `</table></body></html>`)
