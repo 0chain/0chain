@@ -42,6 +42,7 @@ func SetupHandlers() {
 	http.HandleFunc("/v1/block/get/latest_finalized_magic_block_summary", common.UserRateLimit(common.ToJSONResponse(LatestFinalizedMagicBlockSummaryHandler)))
 	http.HandleFunc("/v1/block/get/latest_finalized_magic_block", common.UserRateLimit(common.ToJSONResponse(LatestFinalizedMagicBlockHandler)))
 	http.HandleFunc("/v1/block/get/recent_finalized", common.UserRateLimit(common.ToJSONResponse(RecentFinalizedBlockHandler)))
+	http.HandleFunc("/v1/block/get/fee_stats", common.UserRateLimit(common.ToJSONResponse(LatestBlockFeeStatsHandler)))
 
 	http.HandleFunc("/", common.UserRateLimit(HomePageHandler))
 	http.HandleFunc("/_diagnostics", common.UserRateLimit(DiagnosticsHomepageHandler))
@@ -59,6 +60,10 @@ func SetupHandlers() {
 /*GetChainHandler - given an id returns the chain information */
 func GetChainHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	return datastore.GetEntityHandler(ctx, r, chainEntityMetadata, "id")
+}
+
+func LatestBlockFeeStatsHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	return GetServerChain().FeeStats, nil
 }
 
 /*PutChainHandler - Given a chain data, it stores it */

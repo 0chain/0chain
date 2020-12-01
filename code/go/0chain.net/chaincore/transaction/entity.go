@@ -59,6 +59,12 @@ type Transaction struct {
 	Status            int    `json:"transaction_status" msgpack:"sot"`
 }
 
+type TransactionFeeStats struct {
+	MaxFees  int64 `json:"max_fees"`
+	MeanFees int64 `json:"mean_fees"`
+	MinFees  int64 `json:"min_fees"`
+}
+
 var transactionEntityMetadata *datastore.EntityMetadataImpl
 
 /*GetEntityMetadata - implementing the interface */

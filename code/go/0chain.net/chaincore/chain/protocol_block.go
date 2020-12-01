@@ -254,6 +254,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	c.UpdateChainInfo(fb)
 	c.SaveChanges(ctx, fb)
 	c.rebaseState(fb)
+	c.updateFeeStats(fb)
 
 	if fb.MagicBlock != nil {
 		c.SetLatestFinalizedMagicBlock(fb)
@@ -427,4 +428,19 @@ func (c *Chain) commonAncestor(ctx context.Context, b1 *block.Block, b2 *block.B
 		}
 	}
 	return b1
+}
+
+func (c *Chain) updateFeeStats(fb *block.Block) {
+	var totalFees int64
+	for _, txn := range fb.Txns {
+		totalFees += txn.Fee
+	}
+	meanFees := totalFees / int64(len(fb.Txns))
+	c.FeeStats.MeanFees = meanFees
+	if meanFees > c.FeeStats.MaxFees {
+		c.FeeStats.MaxFees = meanFees
+	}
+	if meanFees < c.FeeStats.MinFees {
+		c.FeeStats.MinFees = meanFees
+	}
 }
