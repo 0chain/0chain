@@ -75,7 +75,6 @@ server_chain:
       max_size: 98304 # bytes
     timeout: 30 # seconds
     min_fee: 0
-    max_fee: 0
   client:
     signature_scheme: bls0chain # ed25519 or bls0chain
     discover: true

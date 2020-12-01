@@ -23,7 +23,7 @@ import (
 /*TXN_TIME_TOLERANCE - the txn creation date should be within these many seconds before/after of current time */
 
 var TXN_TIME_TOLERANCE int64
-var TXN_MIN_FEE, TXN_MAX_FEE int64
+var TXN_MIN_FEE int64
 
 var transactionCount uint64 = 0
 var redis_txns string
@@ -76,12 +76,11 @@ func (t *Transaction) ComputeProperties() {
 }
 
 // ComputeFee - Calculate fee
-func (t *Transaction) ComputeFee(meanRate float64) {
-	if meanRate == 0 {
-		t.Fee = TXN_MIN_FEE
-		return
+func (t *Transaction) ComputeFee() error {
+	if t.Fee < TXN_MIN_FEE {
+		return common.InvalidRequest("The given fee is less than the minimum required fee to process the txn")
 	}
-	t.Fee = int64(float64(TXN_MAX_FEE) * meanRate)
+	return nil
 }
 
 /*ComputeClientID - compute the client id if there is a public key in the transaction */
@@ -341,9 +340,8 @@ func SetTxnTimeout(timeout int64) {
 	TXN_TIME_TOLERANCE = timeout
 }
 
-func SetTxnFee(min, max int64) {
+func SetTxnFee(min int64) {
 	TXN_MIN_FEE = min
-	TXN_MAX_FEE = max
 }
 
 func GetTransactionCount() uint64 {

@@ -1161,7 +1161,9 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	}
 
 	// Calculate and update fee
-	txn.ComputeFee(StartToFinalizeTxnTimer.RateMean())
+	if err := txn.ComputeFee(); err != nil {
+		return nil, err
+	}
 
 	return transaction.PutTransaction(ctx, txn)
 }

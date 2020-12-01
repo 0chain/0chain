@@ -11,7 +11,6 @@ import (
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/diagnostics"
 	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 
 	"0chain.net/chaincore/client"
@@ -182,23 +181,14 @@ func MinerStatsHandler(ctx context.Context, r *http.Request) (interface{}, error
 		networkTimes[k] = v.Info.MinersMedianNetworkTime
 	}
 
-	var currentTxnFee int64
-	meanRate := chain.StartToFinalizeTxnTimer.RateMean()
-	if meanRate == 0 {
-		currentTxnFee = transaction.TXN_MIN_FEE
-	} else {
-		currentTxnFee = int64(float64(transaction.TXN_MAX_FEE) * meanRate)
-	}
-
 	return ExplorerStats{BlockFinality: chain.SteadyStateFinalizationTimer.Mean() / 1000000.0,
-		LastFinalizedRound:    c.GetLatestFinalizedBlock().Round,
-		BlocksFinalized:       total,
-		StateHealth:           node.Self.Underlying().Info.StateMissingNodes,
-		CurrentRound:          c.GetCurrentRound(),
-		RoundTimeout:          rtoc,
-		Timeouts:              c.RoundTimeoutsCount,
-		AverageBlockSize:      node.Self.Underlying().Info.AvgBlockTxns,
-		NetworkTime:           networkTimes,
-		CurrentTransactionFee: currentTxnFee,
+		LastFinalizedRound: c.GetLatestFinalizedBlock().Round,
+		BlocksFinalized:    total,
+		StateHealth:        node.Self.Underlying().Info.StateMissingNodes,
+		CurrentRound:       c.GetCurrentRound(),
+		RoundTimeout:       rtoc,
+		Timeouts:           c.RoundTimeoutsCount,
+		AverageBlockSize:   node.Self.Underlying().Info.AvgBlockTxns,
+		NetworkTime:        networkTimes,
 	}, nil
 }
