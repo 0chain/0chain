@@ -2,6 +2,7 @@ package transaction
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
@@ -81,8 +82,34 @@ func (t *Transaction) ComputeProperties() {
 	t.ComputeClientID()
 }
 
-// ComputeFee - Calculate fee
-func (t *Transaction) ComputeFee() error {
+type smartContractTransactionData struct {
+	FunctionName string          `json:"name"`
+	InputData    json.RawMessage `json:"input"`
+}
+
+var exemptedSCFunctions = map[string]bool{
+	"add_miner":            true,
+	"miner_health_check":   true,
+	"add_sharder":          true,
+	"sharder_health_check": true,
+	"contributeMpk":        true,
+	"sharder_keep":         true,
+	"shareSignsOrShares":   true,
+	"wait":                 true,
+}
+
+// ValidateFee - Validate fee
+func (t *Transaction) ValidateFee() error {
+	if t.TransactionData != "" {
+		var smartContractData smartContractTransactionData
+		dataBytes := []byte(t.TransactionData)
+		err := json.Unmarshal(dataBytes, &smartContractData)
+		if err == nil {
+			if _, ok := exemptedSCFunctions[smartContractData.FunctionName]; ok {
+				return nil
+			}
+		}
+	}
 	if t.Fee < TXN_MIN_FEE {
 		return common.InvalidRequest("The given fee is less than the minimum required fee to process the txn")
 	}

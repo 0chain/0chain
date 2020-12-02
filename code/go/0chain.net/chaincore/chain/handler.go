@@ -1166,7 +1166,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 	}
 
 	// Calculate and update fee
-	if err := txn.ComputeFee(); err != nil {
+	if err := txn.ValidateFee(); err != nil {
 		return nil, err
 	}
 
