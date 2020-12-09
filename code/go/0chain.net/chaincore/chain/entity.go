@@ -566,7 +566,7 @@ func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block
 	}
 
 	// Only for blocks with greater RTC (elder blocks)
-	if r.GetRandomSeed() != b.GetRoundRandomSeed() &&
+	if r.GetRandomSeed() != b.GetRoundRandomSeed() ||
 		r.GetTimeoutCount() <= b.RoundTimeoutCount {
 
 		Logger.Info("AddNotarizedBlockToRound round and block random seed different",

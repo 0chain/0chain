@@ -322,7 +322,6 @@ func NotarizedBlockHandler(ctx context.Context, entity datastore.Entity) (
 
 	if r.GetRandomSeed() == 0 {
 		mc.SetRandomSeed(r, b.GetRoundRandomSeed())
-		r.ComputeMinerRanks(mc.GetMiners(b.Round))
 	}
 
 	var msg = &BlockMessage{
