@@ -574,11 +574,8 @@ func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block
 			zap.Int64("Round_rrs", r.GetRandomSeed()),
 			zap.Int64("Block_rrs", b.GetRoundRandomSeed()))
 		r.SetRandomSeedForNotarizedBlock(b.GetRoundRandomSeed())
-		r.SetTimeoutCount(b.RoundTimeoutCount)
-	}
-
-	if !r.IsRanksComputed() {
 		r.ComputeMinerRanks(c.GetMiners(r.GetRoundNumber()))
+		r.SetTimeoutCount(b.RoundTimeoutCount)
 	}
 
 	c.SetRoundRank(r, b)
