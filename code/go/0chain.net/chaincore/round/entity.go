@@ -460,9 +460,10 @@ func SetupRoundSummaryDB() {
 
 /*ComputeMinerRanks - Compute random order of n elements given the random seed of the round */
 func (r *Round) ComputeMinerRanks(miners *node.Pool) {
-	Logger.Info("compute miner ranks", zap.Any("num_miners", miners.Size()), zap.Any("round", r.Number))
+	Logger.Info("waiting to compute miner ranks", zap.Any("num_miners", miners.Size()), zap.Any("round", r.Number))
 	seed := r.GetRandomSeed()
 	r.mutex.Lock()
+	Logger.Info("compute miner ranks", zap.Any("num_miners", miners.Size()), zap.Any("round", r.Number))
 	r.minerPerm = rand.New(rand.NewSource(seed)).Perm(miners.Size())
 	r.mutex.Unlock()
 }
@@ -480,7 +481,7 @@ func (r *Round) GetMinerRank(miner *node.Node) int {
 	defer r.mutex.RUnlock()
 	if r.minerPerm == nil {
 		pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
-		Logger.DPanic(fmt.Sprintf("miner ranks not computed yet: %v", r.GetState()))
+		Logger.DPanic(fmt.Sprintf("miner ranks not computed yet: %v, random seed: %v", r.GetState(), r.GetRandomSeed()))
 	}
 	Logger.Info("get miner rank", zap.Any("minerPerm", r.minerPerm),
 		zap.Any("miner", miner), zap.Any("round", r.Number),
