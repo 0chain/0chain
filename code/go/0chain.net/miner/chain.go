@@ -184,7 +184,6 @@ func (mc *Chain) SetupGenesisBlock(hash string, magicBlock *block.MagicBlock) *b
 		panic("Genesis round cannot convert to *round.Round")
 	}
 	mgr := mc.CreateRound(rr)
-	mgr.ComputeMinerRanks(gb.MagicBlock.Miners)
 	mc.AddRound(mgr)
 	mc.AddGenesisBlock(gb)
 	for _, sharder := range gb.Sharders.Nodes {

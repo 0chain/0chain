@@ -178,7 +178,6 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 	sc.UpdateNodesFromMagicBlock(bl.lfmb.MagicBlock)
 
 	sc.SetRandomSeed(bl.r, bl.r.GetRandomSeed())
-	bl.r.ComputeMinerRanks(bl.lfmb.MagicBlock.Miners)
 	bl.r.Block = bl.lfb
 
 	// set LFB and LFMB of the Chain, add the block to internal Chain's map

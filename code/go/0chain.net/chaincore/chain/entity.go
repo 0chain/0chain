@@ -508,7 +508,6 @@ func (c *Chain) GenerateGenesisBlock(hash string, genesisMagicBlock *block.Magic
 	c.UpdateNodesFromMagicBlock(gb.MagicBlock)
 	gr := round.NewRound(0)
 	c.SetRandomSeed(gr, 839695260482366273)
-	gr.ComputeMinerRanks(gb.MagicBlock.Miners)
 	gr.Block = gb
 	gr.AddNotarizedBlock(gb)
 	return gr, gb
@@ -573,8 +572,7 @@ func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block
 			zap.Int64("Round", r.GetRoundNumber()),
 			zap.Int64("Round_rrs", r.GetRandomSeed()),
 			zap.Int64("Block_rrs", b.GetRoundRandomSeed()))
-		r.SetRandomSeedForNotarizedBlock(b.GetRoundRandomSeed())
-		r.ComputeMinerRanks(c.GetMiners(r.GetRoundNumber()))
+		r.SetRandomSeedForNotarizedBlock(b.GetRoundRandomSeed(), c.GetMiners(r.GetRoundNumber()))
 		r.SetTimeoutCount(b.RoundTimeoutCount)
 	}
 
@@ -953,8 +951,7 @@ func (c *Chain) SetRandomSeed(r round.RoundI, randomSeed int64) bool {
 	if r.HasRandomSeed() && randomSeed == r.GetRandomSeed() {
 		return false
 	}
-	r.SetRandomSeed(randomSeed)
-	r.ComputeMinerRanks(c.GetMiners(r.GetRoundNumber()))
+	r.SetRandomSeed(randomSeed, c.GetMiners(r.GetRoundNumber()))
 	roundNumber := r.GetRoundNumber()
 	if roundNumber > c.CurrentRound {
 		c.CurrentRound = roundNumber
