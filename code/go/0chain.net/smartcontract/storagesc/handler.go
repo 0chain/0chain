@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"net/url"
+	"time"
 
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
 	"0chain.net/core/util"
 )
@@ -56,6 +58,88 @@ func (ssc *StorageSmartContract) GetAllocationsHandler(ctx context.Context,
 		result = append(result, allocationObj)
 	}
 	return result, nil
+}
+
+func (ssc *StorageSmartContract) GetAllocationMinLockHandler(ctx context.Context,
+	params url.Values, balances cstate.StateContextI) (interface{}, error) {
+
+	var err error
+	var creationDate = common.Timestamp(time.Now().Unix())
+
+	allocData := params.Get("allocation_data")
+	var request newAllocationRequest
+	if err = request.decode([]byte(allocData)); err != nil {
+		return "", common.NewErrorf("allocation_min_lock_failed", "malformed request: %v", err)
+	}
+
+	var conf *scConfig
+	if conf, err = ssc.getConfig(balances, true); err != nil {
+		return "", common.NewErrorf("allocation_min_lock_failed",
+			"can't get config: %v", err)
+	}
+
+	var allBlobbersList *StorageNodes
+	allBlobbersList, err = ssc.getBlobbersList(balances)
+	if err != nil || len(allBlobbersList.Nodes) == 0 {
+		return "", common.NewError("allocation_min_lock_failed",
+			"No Blobbers registered. Failed to check min allocation lock")
+	}
+
+	var sa = request.storageAllocation() // (set fields, including expiration)
+	sa.TimeUnit = conf.TimeUnit          // keep the initial time unit
+
+	if err = sa.validate(creationDate, conf); err != nil {
+		return "", common.NewErrorf("allocation_min_lock_failed",
+			"invalid request: %v", err)
+	}
+
+	var (
+		// number of blobbers required
+		size = sa.DataShards + sa.ParityShards
+		// size of allocation for a blobber
+		bsize = (sa.Size + int64(size-1)) / int64(size)
+		// filtered list
+		list = sa.filterBlobbers(allBlobbersList.Nodes.copy(), creationDate,
+			bsize, filterHealthyBlobbers(creationDate),
+			ssc.filterBlobbersByFreeSpace(creationDate, bsize, balances))
+	)
+
+	if len(list) < size {
+		return "", common.NewError("allocation_min_lock_failed",
+			"Not enough blobbers to honor the allocation")
+	}
+
+	sa.BlobberDetails = make([]*BlobberAllocation, 0)
+
+	var blobberNodes []*StorageNode
+	preferredBlobbersSize := len(sa.PreferredBlobbers)
+	if preferredBlobbersSize > 0 {
+		blobberNodes, err = getPreferredBlobbers(sa.PreferredBlobbers, list)
+		if err != nil {
+			return "", common.NewError("allocation_min_lock_failed",
+				err.Error())
+		}
+	}
+
+	// randomize blobber nodes
+	if len(blobberNodes) < size {
+		blobberNodes = randomizeNodes(list, blobberNodes, size, int64(creationDate))
+	}
+
+	blobberNodes = blobberNodes[:size]
+
+	var gbSize = sizeInGB(bsize) // size in gigabytes
+	var minLockDemand state.Balance
+	for _, b := range blobberNodes {
+		minLockDemand += b.Terms.minLockDemand(gbSize,
+			sa.restDurationInTimeUnits(creationDate))
+	}
+
+	var response = map[string]interface{}{
+		"min_lock_demand": minLockDemand,
+	}
+
+	return response, nil
 }
 
 func (ssc *StorageSmartContract) AllocationStatsHandler(ctx context.Context, params url.Values, balances cstate.StateContextI) (interface{}, error) {
