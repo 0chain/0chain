@@ -92,6 +92,7 @@ type Block struct {
 
 	ClientState           util.MerklePatriciaTrieI `json:"-"`
 	stateStatus           int8
+	stateStatusMutex      *sync.RWMutex `json:"_"`
 	StateMutex            *sync.RWMutex `json:"_"`
 	blockState            int8
 	isNotarized           bool
@@ -483,11 +484,15 @@ func (b *Block) GetClients() []*client.Client {
 
 /*GetStateStatus - indicates if the client state of the block is computed */
 func (b *Block) GetStateStatus() int8 {
+	b.stateStatusMutex.RLock()
+	defer b.stateStatusMutex.RUnlock()
 	return b.stateStatus
 }
 
 /*IsStateComputed - is the state of this block computed? */
 func (b *Block) IsStateComputed() bool {
+	b.stateStatusMutex.RLock()
+	defer b.stateStatusMutex.RUnlock()
 	if b.stateStatus >= StateSuccessful {
 		return true
 	}
@@ -496,7 +501,9 @@ func (b *Block) IsStateComputed() bool {
 
 /*SetStateStatus - set if the client state is computed or not for the block */
 func (b *Block) SetStateStatus(status int8) {
-	b.stateStatus = status //RACE
+	b.stateStatusMutex.Lock()
+	defer b.stateStatusMutex.Unlock()
+	b.stateStatus = status
 }
 
 /*GetReceiptsMerkleTree - return the merkle tree of this block using the transactions as leaf nodes */
