@@ -233,6 +233,7 @@ func Provider() datastore.Entity {
 	b.ChainID = datastore.ToKey(config.GetServerChainID())
 	b.InitializeCreationDate()
 	b.StateMutex = &sync.RWMutex{}
+	b.stateStatusMutex = &sync.RWMutex{}
 	b.ticketsMutex = &sync.RWMutex{}
 	return b
 }
