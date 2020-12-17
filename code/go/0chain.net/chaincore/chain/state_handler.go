@@ -26,10 +26,27 @@ func SetupStateHandlers() {
 	c := GetServerChain()
 	http.HandleFunc("/v1/client/get/balance", common.UserRateLimit(common.ToJSONResponse(c.GetBalanceHandler)))
 	http.HandleFunc("/v1/scstate/get", common.UserRateLimit(common.ToJSONResponse(c.GetNodeFromSCState)))
-	http.HandleFunc("/v1/screst/", common.UserRateLimit(common.ToJSONResponse(c.GetSCRestOutput)))
 	http.HandleFunc("/v1/scstats/", common.UserRateLimit(c.GetSCStats))
-	http.HandleFunc("/v1/scrests/", common.UserRateLimit(c.GetSCRestPoints))
+	http.HandleFunc("/v1/screst/", common.UserRateLimit(c.HandleSCRest))
 	http.HandleFunc("/_smart_contract_stats", common.UserRateLimit(c.SCStats))
+}
+
+func (c *Chain) HandleSCRest(w http.ResponseWriter, r *http.Request) {
+	scRestRE := regexp.MustCompile(`/v1/screst/(.*)`)
+	pathParams := scRestRE.FindStringSubmatch(r.URL.Path)
+	if len(pathParams) < 2 {
+		return
+	}
+
+	if len(pathParams) == 2 {
+		scRestRE = regexp.MustCompile(`/v1/screst/(.*)?/(.*)`)
+		pathParams = scRestRE.FindStringSubmatch(r.URL.Path)
+		if len(pathParams) == 3 {
+			common.ToJSONResponse(c.GetSCRestOutput)(w, r)
+		} else {
+			c.GetSCRestPoints(w, r)
+		}
+	}
 }
 
 func (c *Chain) GetSCRestOutput(ctx context.Context, r *http.Request) (interface{}, error) {
@@ -129,13 +146,13 @@ func (c *Chain) SCStats(w http.ResponseWriter, r *http.Request) {
 	for _, k := range keys {
 		sc := smartcontract.ContractMap[k]
 		scType := re.ReplaceAllString(reflect.TypeOf(sc).String(), "")
-		fmt.Fprintf(w, `<tr><td>%v</td><td>%v</td><td><li><a href='%v'>%v</a></li></td><td><li><a href='%v'>%v</a></li></td></tr>`, scType, strings.ToLower(k), "v1/scstats/"+k, "/v1/scstats/"+scType, "v1/scrests/"+k, "/v1/scrests/*key*")
+		fmt.Fprintf(w, `<tr><td>%v</td><td>%v</td><td><li><a href='%v'>%v</a></li></td><td><li><a href='%v'>%v</a></li></td></tr>`, scType, strings.ToLower(k), "v1/scstats/"+k, "/v1/scstats/"+scType, "v1/screst/"+k, "/v1/screst/*key*")
 	}
 	fmt.Fprintf(w, "</table>")
 }
 
 func (c *Chain) GetSCRestPoints(w http.ResponseWriter, r *http.Request) {
-	scRestRE := regexp.MustCompile(`/v1/scrests/(.*)`)
+	scRestRE := regexp.MustCompile(`/v1/screst/(.*)`)
 	pathParams := scRestRE.FindStringSubmatch(r.URL.Path)
 	if len(pathParams) < 2 {
 		return
@@ -148,8 +165,8 @@ func (c *Chain) GetSCRestPoints(w http.ResponseWriter, r *http.Request) {
 	PrintCSS(w)
 	sc := sci.NewSC(key)
 	scInt.SetSC(sc, nil)
-	fmt.Fprintf(w, `<!DOCTYPE html><html><body><table class='menu' style='border-collapse: collapse;'>`)
-	fmt.Fprintf(w, `<tr class='header'><td>Function</td><td>Link</td></tr>`)
+	fmt.Fprintf(w, "<table class='menu' style='border-collapse: collapse;'>")
+	fmt.Fprintf(w, "<tr class='header'><td>Function</td><td>Link</td></tr>")
 	restPoints := scInt.GetRestPoints()
 	names := make([]string, 0, len(restPoints))
 	for funcName := range restPoints {
@@ -158,8 +175,7 @@ func (c *Chain) GetSCRestPoints(w http.ResponseWriter, r *http.Request) {
 	sort.Strings(names)
 	for _, funcName := range names {
 		friendlyName := strings.TrimLeft(funcName, "/")
-		fmt.Fprintf(w, `<tr><td>%v</td><td><li><a href='%v'>%v</a></li></td></tr>`, friendlyName, "v1/screst/"+key+funcName, "/v1/screst/*"+funcName+"*")
+		fmt.Fprintf(w, `<tr><td>%v</td><td><li><a href='%v'>%v</a></li></td></tr>`, friendlyName, key+funcName, "/v1/screst/*"+funcName+"*")
 	}
-
-	fmt.Fprintf(w, `</table></body></html>`)
+	fmt.Fprintf(w, "</table>")
 }
