@@ -7,7 +7,7 @@ import (
 
 //Info - (informal) info of a node that can be shared with other nodes
 type Info struct {
-	mx sync.RWMutex
+	mx sync.Mutex
 
 	AsOf                    time.Time     `json:"-"`
 	BuildTag                string        `json:"build_tag"`
