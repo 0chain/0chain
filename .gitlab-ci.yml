@@ -1,0 +1,24 @@
+stages:
+- prepare
+- check
+
+.template: &env-info
+  before_script:
+  - env | grep -e CARGO -e CI_COMMIT -e CI_PIPELINE
+  - bash --version
+
+build-base:
+  <<: *env-info
+  stage: prepare
+  tags:
+  - normal
+  script:
+  - ./docker.local/bin/build.base.sh
+
+unit-tests:
+  <<: *env-info
+  stage: check
+  tags:
+  - normal
+  script:
+  - ./docker.local/bin/unit_test.sh --ci

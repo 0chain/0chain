@@ -1,6 +1,7 @@
 \.*
 !.gitignore
 !.github
+!.gitlab-ci.yml
 !.dockerignore
 *.class
 *.jar
