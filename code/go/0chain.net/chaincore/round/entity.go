@@ -178,7 +178,7 @@ type Round struct {
 
 // RoundFactory - a factory to create a new round object specific to miner/sharder
 type RoundFactory interface {
-	CreateRoundF(roundNum int64) interface{}
+	CreateRoundF(roundNum int64) RoundI
 }
 
 //NewRound - Create a new round object
@@ -295,6 +295,9 @@ func (r *Round) AddNotarizedBlock(b *block.Block) (*block.Block, bool) {
 	if r.Block == nil || r.Block.RoundRank > b.RoundRank {
 		r.Block = b
 	}
+	// TODO: this is not a deterministic action, the append function will reallocate
+	// the slice when r.notarizedBlocks' capacity is full. Before that rnb is
+	// the same as r.notarizedBlocks.
 	rnb := append(r.notarizedBlocks, b)
 	sort.Slice(rnb, func(i int, j int) bool {
 		return rnb[i].ChainWeight > rnb[j].ChainWeight
@@ -479,7 +482,7 @@ func (r *Round) GetMinerRank(miner *node.Node) int {
 	defer r.mutex.RUnlock()
 	if r.minerPerm == nil {
 		pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
-		Logger.DPanic(fmt.Sprintf("miner ranks not computed yet: %v, random seed: %v", r.GetState(), r.GetRandomSeed()))
+		Logger.DPanic(fmt.Sprintf("miner ranks not computed yet: %v, random seed: %v, round: %v", r.GetState(), r.GetRandomSeed(), r.GetRoundNumber()))
 	}
 	Logger.Info("get miner rank", zap.Any("minerPerm", r.minerPerm),
 		zap.Any("miner", miner), zap.Any("round", r.Number),

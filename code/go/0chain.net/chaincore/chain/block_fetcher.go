@@ -9,7 +9,6 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/round"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 
@@ -541,8 +540,7 @@ func (c *Chain) GetNotarizedBlock(ctx context.Context, hash string, rn int64) (
 			zap.Int64("round", nb.Round), zap.String("block", nb.Hash),
 			zap.Int64("cround", cround))
 
-		r = c.RoundF.CreateRoundF(nb.Round).(*round.Round)
-		c.AddRound(r)
+		r = c.RoundF.CreateRoundF(nb.Round)
 	}
 
 	Logger.Info("got notarized block", zap.String("block", nb.Hash),
@@ -550,11 +548,15 @@ func (c *Chain) GetNotarizedBlock(ctx context.Context, hash string, rn int64) (
 		zap.Int("verifictation_tickers", nb.VerificationTicketsSize()))
 
 	var b *block.Block
-	b = c.AddBlock(nb)
 	// This is a notarized block. So, use this method to sync round info
 	// with the notarized block.
 	b, r = c.AddNotarizedBlockToRound(r, nb)
 	b, _ = r.AddNotarizedBlock(b)
+
+	// Add the round if chain does not have it
+	if c.GetRound(nb.Round) == nil {
+		c.AddRound(r)
+	}
 
 	if b == nb {
 		go c.fetchedNotarizedBlockHandler.NotarizedBlockFetched(ctx, nb)
@@ -616,19 +618,22 @@ func (c *Chain) AsyncFetchFinalizedBlockFromSharders(ctx context.Context,
 		Logger.Info("async fetch fb from sharders - no round, creating...",
 			zap.Int64("round", fb.Round), zap.String("block", fb.Hash))
 
-		r = c.RoundF.CreateRoundF(fb.Round).(*round.Round)
-		c.AddRound(r)
+		r = c.RoundF.CreateRoundF(fb.Round)
 	}
 
 	Logger.Info("async fetch fb from sharders", zap.String("block", fb.Hash),
 		zap.Int64("round", fb.Round))
 
 	var b *block.Block
-	b = c.AddBlock(fb)
 	// This is a notarized block. So, use this method to sync round info
 	// with the notarized block.
 	b, r = c.AddNotarizedBlockToRound(r, fb)
 	b, _ = r.AddNotarizedBlock(b)
+
+	//  Add the round to chain if does not in the chain yet
+	if c.GetRound(fb.Round) == nil {
+		c.AddRound(r)
+	}
 }
 
 // FetchStat returns numbers of current block

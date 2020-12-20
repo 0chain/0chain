@@ -100,13 +100,10 @@ func SetupStartChainEntity() {
 type MinerRoundFactory struct{}
 
 // CreateRoundF this returns an interface{} of type *miner.Round
-func (mrf MinerRoundFactory) CreateRoundF(roundNum int64) interface{} {
+func (mrf MinerRoundFactory) CreateRoundF(roundNum int64) round.RoundI {
 	mc := GetMinerChain()
 	r := round.NewRound(roundNum)
-	mr := mc.CreateRound(r)
-	mc.AddRound(mr)
-
-	return r
+	return mc.CreateRound(r)
 }
 
 // Chain - a miner chain to manage the miner activities.

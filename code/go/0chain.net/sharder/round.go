@@ -86,7 +86,7 @@ func (hr *HealthyRound) GetKey() datastore.Key {
 type SharderRoundFactory struct{}
 
 // CreateRoundF the interface{} here returns generic round
-func (mrf SharderRoundFactory) CreateRoundF(roundNum int64) interface{} {
+func (mrf SharderRoundFactory) CreateRoundF(roundNum int64) round.RoundI {
 	mr := round.NewRound(roundNum)
 	return mr
 }
