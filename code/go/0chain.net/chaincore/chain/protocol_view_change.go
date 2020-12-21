@@ -234,6 +234,7 @@ func (mc *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 	mn.N2NHost = selfNode.N2NHost
 	mn.Host = selfNode.Host
 	mn.Port = selfNode.Port
+	mn.Path = selfNode.Path
 	mn.PublicKey = selfNode.PublicKey
 	mn.ShortName = selfNode.Description
 	mn.BuildTag = selfNode.Info.BuildTag

@@ -567,6 +567,7 @@ type SimpleNode struct {
 	N2NHost     string `json:"n2n_host"`
 	Host        string `json:"host"`
 	Port        int    `json:"port"`
+	Path        string `json:"path"`
 	PublicKey   string `json:"public_key"`
 	ShortName   string `json:"short_name"`
 	BuildTag    string `json:"build_tag"`
