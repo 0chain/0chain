@@ -1,10 +1,12 @@
 stages:
 - prepare
 - check
+- build
+- test
 
 .template: &env-info
   before_script:
-  - env | grep -e CARGO -e CI_COMMIT -e CI_PIPELINE
+  - env | grep -e CI_COMMIT -e CI_PIPELINE
   - bash --version
 
 build-base:
@@ -18,7 +20,41 @@ build-base:
 unit-tests:
   <<: *env-info
   stage: check
+  allow_failure: true
   tags:
   - normal
   script:
   - ./docker.local/bin/unit_test.sh --ci
+
+build-miners:
+  <<: *env-info
+  stage: build
+  tags:
+  - normal
+  script:
+  - ./docker.local/bin/build.miners-integration-tests.sh
+  - docker login www.0chain-ci.net:5050 -u $DEPLOY_USERNAME -p $DEPLOY_PASSWORD 
+  - docker tag miner www.0chain-ci.net:5050/root/0chain:miner-$CI_COMMIT_SHORT_SHA
+  - docker tag miner www.0chain-ci.net:5050/root/0chain:miner-latest
+  - docker push www.0chain-ci.net:5050/root/0chain:miner-$CI_COMMIT_SHORT_SHA
+  - docker push www.0chain-ci.net:5050/root/0chain:miner-latest
+
+build-sharders:
+  <<: *env-info
+  stage: build
+  tags:
+  - normal
+  script:
+  - ./docker.local/bin/build.sharders-integration-tests.sh
+  - docker login www.0chain-ci.net:5050 -u $DEPLOY_USERNAME -p $DEPLOY_PASSWORD 
+  - docker tag sharder www.0chain-ci.net:5050/root/0chain:sharder-$CI_COMMIT_SHORT_SHA
+  - docker tag sharder www.0chain-ci.net:5050/root/0chain:sharder-latest
+  - docker push www.0chain-ci.net:5050/root/0chain:sharder-$CI_COMMIT_SHORT_SHA
+  - docker push www.0chain-ci.net:5050/root/0chain:sharder-latest
+
+STUB-run-tests:
+  <<: *env-info
+  stage: test
+  script:
+  - ./docker.local/bin/sync_clock.sh
+  - echo "hey there"
