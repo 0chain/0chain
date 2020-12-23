@@ -381,8 +381,13 @@ func (mc *Chain) GetBlockToExtend(ctx context.Context, r round.RoundI) (
 	}
 
 	if !bnb.IsStateComputed() {
+		Logger.Debug("best notarized block not computed yet", zap.Int64("round", r.GetRoundNumber()))
 		err := mc.ComputeOrSyncState(ctx, bnb)
 		if err != nil {
+			Logger.Debug("failed to compute or sync state of best notarized block",
+				zap.Int64("round", r.GetRoundNumber()),
+				zap.String("block", bnb.Hash),
+				zap.Error(err))
 			if state.DebugBlock() {
 				Logger.Error("get block to extend - best nb compute state",
 					zap.Any("round", r.GetRoundNumber()),
@@ -412,6 +417,11 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	if pb == nil {
 		Logger.Error("generate round block - no block to extend", zap.Any("round", roundNumber))
 		return nil, common.NewError("block_gen_no_block_to_extend", "Do not have the block to extend this round")
+	}
+
+	if !pb.IsStateComputed() {
+		Logger.Debug("GenerateRoundBlock, state of prior round block not computed",
+			zap.Any("state status", pb.GetStateStatus()))
 	}
 
 	txnEntityMetadata := datastore.GetEntityMetadata("txn")
@@ -452,7 +462,6 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		generationTries int
 		startLogging    time.Time
 	)
-
 	for true {
 		if mc.GetCurrentRound() > b.Round {
 			Logger.Error("generate block - round mismatch",
@@ -464,11 +473,15 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		txnCount := transaction.GetTransactionCount()
 		b.SetStateDB(pb)
 		generationTries++
-		// if pb.GetStateStatus() != block.StateSuccessful {
-		// 	if err := mc.ComputeOrSyncState(ctx, pb); err != nil {
-		// 		Logger.Error("(re) computing previous block", zap.Error(err))
-		// 	}
-		// }
+		if pb.GetStateStatus() != block.StateSuccessful {
+			Logger.Debug("GenerateRoundBlock, previous block state is not computed",
+				zap.Int64("round", b.Round),
+				zap.Int64("pre round", pb.Round),
+				zap.Any("prior_block_state", pb.GetStateStatus()))
+			//if err := mc.ComputeOrSyncState(ctx, pb); err != nil {
+			//	Logger.Error("(re) computing previous block", zap.Error(err))
+			//}
+		}
 
 		err := mc.GenerateBlock(ctx, b, mc, makeBlock)
 		if err != nil {
