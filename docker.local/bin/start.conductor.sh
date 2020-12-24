@@ -2,8 +2,10 @@
 
 set -e
 
-# stop all running container may be still alive after previous tests
-docker stop $(docker ps -a -q)
+for running in $(docker ps -q)
+do
+    docker stop $running
+done
 
 # go caches all build by default
 (cd ./code/go/0chain.net/conductor/conductor/ && go build)

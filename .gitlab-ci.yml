@@ -8,6 +8,7 @@ stages:
   before_script:
   - env | grep -e CI_COMMIT -e CI_PIPELINE
   - bash --version
+  - hostname && hostname -I
 
 build-base:
   <<: *env-info
@@ -52,9 +53,53 @@ build-sharders:
   - docker push www.0chain-ci.net:5050/root/0chain:sharder-$CI_COMMIT_SHORT_SHA
   - docker push www.0chain-ci.net:5050/root/0chain:sharder-latest
 
-STUB-run-tests:
-  <<: *env-info
-  stage: test
-  script:
+.template: &run-integration-tests
+  before_script:
+  - env | grep -e CI_COMMIT -e CI_PIPELINE
+  - bash --version
+  - hostname && hostname -I
+  - docker pull www.0chain-ci.net:5050/root/0chain:miner-latest
+  - docker pull www.0chain-ci.net:5050/root/0chain:sharder-latest
+  - docker tag  www.0chain-ci.net:5050/root/0chain:miner-latest miner
+  - docker tag  www.0chain-ci.net:5050/root/0chain:sharder-latest sharder
   - ./docker.local/bin/sync_clock.sh
-  - echo "hey there"
+
+run-view-change-1:
+  <<: *run-integration-tests
+  stage: test
+  tags:
+  - virtual
+  script:
+  - ./docker.local/bin/start.conductor.sh view-change-1
+
+run-view-change-2:
+  <<: *run-integration-tests
+  stage: test
+  tags:
+  - virtual
+  script:
+  - ./docker.local/bin/start.conductor.sh view-change-2
+
+run-view-change-3:
+  <<: *run-integration-tests
+  stage: test
+  tags:
+  - virtual
+  script:
+  - ./docker.local/bin/start.conductor.sh view-change-3
+
+run-blockchain-1:
+  <<: *run-integration-tests
+  stage: test
+  tags:
+  - virtual
+  script:
+  - ./docker.local/bin/start.conductor.sh blockchain-1
+
+run-blockchain-2:
+  <<: *run-integration-tests
+  stage: test
+  tags:
+  - virtual
+  script:
+  - ./docker.local/bin/start.conductor.sh blockchain-2
