@@ -344,7 +344,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		}
 
 		if all == nil {
-			Logger.Debug("miners list is empty")
+			Logger.DPanic("miners list is empty")
 		} else {
 			ids := []string{}
 			for _, n := range all.Nodes {
