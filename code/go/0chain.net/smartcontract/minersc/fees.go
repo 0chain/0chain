@@ -338,13 +338,14 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	// the block generator
 	var mn *MinerNode
 	if mn, err = msc.getMinerNode(block.MinerID, balances); err != nil {
+		// TODO: remove this debug info after issue is fixed.
 		all, err := msc.getMinersList(balances)
 		if err != nil {
 			Logger.Debug("get miners list failed", zap.Error(err))
 		}
 
 		if all == nil {
-			Logger.DPanic("miners list is empty")
+			Logger.Debug("miners list is empty")
 		} else {
 			ids := []string{}
 			for _, n := range all.Nodes {
