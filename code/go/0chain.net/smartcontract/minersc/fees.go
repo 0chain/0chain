@@ -351,9 +351,10 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 				ids = append(ids, n.ID)
 			}
 			Logger.Debug("all miners", zap.Strings("miners", ids))
-			return "", common.NewErrorf("pay_fee", "can't get generator '%s': %v",
-				block.MinerID, err)
 		}
+
+		return "", common.NewErrorf("pay_fee", "can't get generator '%s': %v",
+			block.MinerID, err)
 	}
 
 	var (
