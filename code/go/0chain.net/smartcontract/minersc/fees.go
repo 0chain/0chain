@@ -3,6 +3,7 @@ package minersc
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"sort"
 
 	"0chain.net/chaincore/block"
@@ -353,6 +354,8 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 			}
 			Logger.Debug("all miners", zap.Strings("miners", ids))
 		}
+
+		Logger.Debug("MPT DB", zap.Any("type:", reflect.TypeOf(balances.GetState().GetNodeDB())))
 
 		return "", common.NewErrorf("pay_fee", "can't get generator '%s': %v",
 			block.MinerID, err)
