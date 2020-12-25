@@ -20,22 +20,22 @@ tests:
     flow:
       - command:
           name: 'build_test_blobbers'
-      - set_monitor: "sharder 1"
+      - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - command:
           name: "cleanup_blobbers"
       - command:
           name: "cleanup_0dns"
-      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3']
+      - start: ['sharder-1', 'miner-1', 'miner-2', 'miner-3']
       - wait_round:
           round: 15 # just wait the BC starts
       - start: ['0dns']
       # wait the 0dns starts
       - command:
           name: "sleep_20s"
-      - start: ['blobber 1', 'blobber 2']
+      - start: ['blobber-1', 'blobber-2']
       - wait_add:
-          blobbers: ['blobber 1', 'blobber 2']
+          blobbers: ['blobber-1', 'blobber-2']
           timeout: '15m'
       # setup blobbers and create allocation with minimum write pool lock
       - command:

@@ -24,30 +24,30 @@ tests:
     flow:
       - command:
           name: 'build_test_blobbers'
-      - set_monitor: "sharder 1"
+      - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - command:
           name: "cleanup_blobbers"
       - command:
           name: "cleanup_0dns"
-      - start: ['sharder 1', 'miner 1', 'miner 2', 'miner 3']
+      - start: ['sharder-1', 'miner-1', 'miner-2', 'miner-3']
       - wait_round:
           round: 15 # just wait the BC starts
       - start: ['0dns']
       # wait the 0dns starts
       - command:
           name: "sleep_20s"
-      - start: ['blobber 1', 'blobber 2', 'blobber 3']
+      - start: ['blobber-1', 'blobber-2', 'blobber-3']
       - wait_add:
-          blobbers: ['blobber 1', 'blobber 2', 'blobber 3']
+          blobbers: ['blobber-1', 'blobber-2', 'blobber-3']
           timeout: '5m'
       - command:
           name: 'init_allocation'
           timeout: '35m'
       # 3th blobber becomes 'bad', sending 'bad' responses to zbox
       - storage_tree:
-          bad: ['blobber 3']
-      # just wait some time the blobber 3 pools new 'bad' state
+          bad: ['blobber-3']
+      # just wait some time the blobber-3 pools new 'bad' state
       - command:
           name: 'sleep_20s'
       - command:
@@ -61,22 +61,22 @@ tests:
 
   - name: "Sharder sends wrong transaction verification"
     flow:
-      - set_monitor: "sharder 1"
+      - set_monitor: "sharder-1"
       - cleanup_bc: {}
       - command:
           name: "cleanup_0dns"
-      - start: ['sharder 1']
-      - start: ["sharder 2"]
-      - start: ['miner 1', 'miner 2', 'miner 3']
+      - start: ['sharder-1']
+      - start: ["sharder-2"]
+      - start: ['miner-1', 'miner-2', 'miner-3']
       - wait_sharder_keep:
           timeout: '5m'
-          sharders: ['sharder 2']
+          sharders: ['sharder-2']
       - wait_view_change:
           expect_magic_block:
-            miners: ['miner 1', 'miner 2', 'miner 3']
-            sharders: ['sharder 1', 'sharder 2']
+            miners: ['miner-1', 'miner-2', 'miner-3']
+            sharders: ['sharder-1', 'sharder-2']
       - verify_transaction:
-          by: ['sharder 2']
+          by: ['sharder-2']
       - start: ['0dns']
       - command:
           name: "sleep_20s" # wait the 0dns starts

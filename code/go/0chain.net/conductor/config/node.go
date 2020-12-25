@@ -36,7 +36,7 @@ func (n *Node) Start(logsDir string) (err error) {
 		command string
 	)
 	command = ss[0]
-	// if filepath.Base(command) != command {
+	//if filepath.Base(command) != command {
 	// 	command = "./" + filepath.Join(n.WorkDir, command)
 	// }
 	var cmd = exec.Command(command, ss[1:]...)
@@ -50,12 +50,12 @@ func (n *Node) Start(logsDir string) (err error) {
 		return fmt.Errorf("creating logs directory %s: %v", logsDir, err)
 	}
 
-	cmd.Stdout, err = os.Create(filepath.Join(logsDir, "STDOUT.log"))
+	cmd.Stdout, err = os.Create(filepath.Join(logsDir, "stdout.log"))
 	if err != nil {
 		return fmt.Errorf("creating STDOUT file: %v", err)
 	}
 
-	cmd.Stderr, err = os.Create(filepath.Join(logsDir, "STDERR.log"))
+	cmd.Stderr, err = os.Create(filepath.Join(logsDir, "stderr.log"))
 	if err != nil {
 		return fmt.Errorf("creating STDERR file: %v", err)
 	}
