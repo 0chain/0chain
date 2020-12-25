@@ -339,9 +339,9 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	var mn *MinerNode
 	if mn, err = msc.getMinerNode(block.MinerID, balances); err != nil {
 		// TODO: remove this debug info after issue is fixed.
-		all, err := msc.getMinersList(balances)
-		if err != nil {
-			Logger.Debug("get miners list failed", zap.Error(err))
+		all, er := msc.getMinersList(balances)
+		if er != nil {
+			Logger.Debug("get miners list failed", zap.Error(er))
 		}
 
 		if all == nil {
