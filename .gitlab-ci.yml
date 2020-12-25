@@ -6,9 +6,8 @@ stages:
 
 .template: &env-info
   before_script:
-  - env | grep -e CI_COMMIT -e CI_PIPELINE
-  - bash --version
   - hostname && hostname -I
+  - env | grep -e CI_COMMIT -e CI_PIPELINE
 
 build-base:
   <<: *env-info
@@ -55,13 +54,14 @@ build-sharders:
 
 .template: &run-integration-tests
   before_script:
-  - env | grep -e CI_COMMIT -e CI_PIPELINE
-  - bash --version
+  - pwd
   - hostname && hostname -I
+  - env | grep -e CI_COMMIT -e CI_PIPELINE
   - docker pull www.0chain-ci.net:5050/root/0chain:miner-latest
   - docker pull www.0chain-ci.net:5050/root/0chain:sharder-latest
   - docker tag  www.0chain-ci.net:5050/root/0chain:miner-latest miner
   - docker tag  www.0chain-ci.net:5050/root/0chain:sharder-latest sharder
+  - ./docker.local/bin/init.setup.sh
   - ./docker.local/bin/sync_clock.sh
 
 run-view-change-1:

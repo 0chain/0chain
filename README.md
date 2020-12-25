@@ -94,6 +94,18 @@ On the respective miner terminal, use
 $ ../bin/start.b0miner.sh
 ```
 
+### Running on systems with SELinux enabled
+
+Library by `herumi` for working with BLS threshold signatures requires this flag turned on:
+
+```
+setsebool -P selinuxuser_execheap 1
+```
+
+If you are curious about the reasons for this, this thread sheds some light on the topic:
+
+https://github.com/herumi/xbyak/issues/9
+
 ## Setting up Cassandra Schema
 
 The following is no longer required as the schema is automatically loaded.
