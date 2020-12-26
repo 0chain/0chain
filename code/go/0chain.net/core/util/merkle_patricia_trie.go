@@ -893,21 +893,23 @@ func (mpt *MerklePatriciaTrie) Validate() error {
 
 // MergeMPTChanges - implement interface.
 func (mpt *MerklePatriciaTrie) MergeMPTChanges(mpt2 MerklePatriciaTrieI) error {
-	mpt.mutex.Lock()
-	defer mpt.mutex.Unlock()
+	changes := mpt2.GetChangeCollector().GetChanges()
+	deletes := mpt2.GetChangeCollector().GetDeletes()
 
 	if DebugMPTNode {
 		if err := mpt2.GetChangeCollector().Validate(); err != nil {
 			Logger.Error("MergeMPTChanges - change collector validate", zap.Error(err))
 		}
 	}
-	changes := mpt2.GetChangeCollector().GetChanges()
+
+	mpt.mutex.Lock()
+	defer mpt.mutex.Unlock()
+
 	for _, c := range changes {
 		if _, _, err := mpt.insertNode(c.Old, c.New); err != nil {
 			return err
 		}
 	}
-	deletes := mpt2.GetChangeCollector().GetDeletes()
 	for _, d := range deletes {
 		if err := mpt.deleteNode(d); err != nil {
 			return err
