@@ -360,7 +360,9 @@ func (c *Chain) updateState(b *block.Block, txn *transaction.Transaction) (
 		if err != nil {
 			return
 		}
-
+	default:
+		Logger.Error("Invalid transaction type", zap.Int("txn type", txn.TransactionType))
+		return fmt.Errorf("invalid transaction type: %v", txn.TransactionType)
 	}
 
 	if config.DevConfiguration.IsFeeEnabled {
