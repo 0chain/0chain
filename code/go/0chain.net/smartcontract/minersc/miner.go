@@ -264,6 +264,9 @@ func (msc *MinerSmartContract) getMinerNode(id string,
 	} else if err != nil {
 		return nil, err
 	}
-	mn.Decode(ms.Encode())
-	return mn, err
+
+	if err := mn.Decode(ms.Encode()); err != nil {
+		return nil, err
+	}
+	return mn, nil
 }
