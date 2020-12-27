@@ -309,6 +309,8 @@ func (lndb *LevelNodeDB) isCurrentPersistent() bool {
 func (lndb *LevelNodeDB) GetNode(key Key) (Node, error) {
 	lndb.mu.RLock()
 	defer lndb.mu.RUnlock()
+	Logger.Debug("LevelNodeDB db ptr",
+		zap.Any("db pointer", fmt.Sprintf("%p", lndb)))
 	c := lndb.current
 	p := lndb.prev
 	node, err := c.GetNode(key)
