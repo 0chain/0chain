@@ -748,6 +748,7 @@ func (mpt *MerklePatriciaTrie) deleteNode(node Node) error {
 	if DebugMPTNode {
 		Logger.Info("delete node", zap.String("dn", node.GetHash()))
 	}
+	Logger.Debug("delete node", zap.String("dn", node.GetHash()))
 	mpt.ChangeCollector.DeleteChange(node)
 	return mpt.db.DeleteNode(node.GetHashBytes())
 }
