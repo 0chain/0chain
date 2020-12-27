@@ -7,6 +7,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/node"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
@@ -359,6 +360,20 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 
 		return "", common.NewErrorf("pay_fee", "can't get generator '%s': %v",
 			block.MinerID, err)
+	}
+
+	Logger.Debug("Pay fees, get miner id successfully",
+		zap.String("miner id", block.MinerID),
+		zap.Int64("round", block.Round),
+		zap.String("hash", block.Hash))
+
+	selfID := node.Self.Underlying().GetKey()
+	if _, err := msc.getMinerNode(selfID, balances); err != nil {
+		Logger.Debug("Pay fees, get self miner id failed",
+			zap.String("id", selfID),
+			zap.Error(err))
+	} else {
+		Logger.Debug("Pay fees, get self miner id successfully")
 	}
 
 	var (
