@@ -286,7 +286,7 @@ func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node) (Serializable,
 		}
 		return nil, ErrValueNotPresent
 	case *FullNode:
-		Logger.Debug("Full node")
+		Logger.Debug("Full node", zap.String("path", string(path)))
 		if len(path) == 0 {
 			return nodeImpl.GetValue(), nil
 		}
