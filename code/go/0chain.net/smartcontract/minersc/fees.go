@@ -3,7 +3,6 @@ package minersc
 import (
 	"errors"
 	"fmt"
-	"reflect"
 	"sort"
 
 	"0chain.net/chaincore/block"
@@ -342,7 +341,10 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		// TODO: remove this debug info after issue is fixed.
 		all, er := msc.getMinersList(balances)
 		if er != nil {
-			Logger.Debug("get miners list failed", zap.Error(er))
+			Logger.Debug("get miners list failed",
+				zap.Error(er),
+				zap.Int64("round", block.Round),
+				zap.String("block hash", block.Hash))
 		}
 
 		if all == nil {
@@ -354,8 +356,6 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 			}
 			Logger.Debug("all miners", zap.Strings("miners", ids))
 		}
-
-		Logger.Debug("MPT DB", zap.Any("type:", reflect.TypeOf(balances.GetState().GetNodeDB())))
 
 		return "", common.NewErrorf("pay_fee", "can't get generator '%s': %v",
 			block.MinerID, err)

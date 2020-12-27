@@ -267,8 +267,9 @@ func (b *Block) SetStateDB(prevBlock *Block) {
 	var pndb util.NodeDB
 	var rootHash util.Key
 	if prevBlock.ClientState == nil {
+		Logger.Debug("Set state db -- prior state not available")
 		if state.Debug() {
-			Logger.DPanic("set state db - prior state not available")
+			Logger.DPanic("Set state db - prior state not available")
 		} else {
 			pndb = util.NewMemoryNodeDB()
 		}
@@ -276,7 +277,7 @@ func (b *Block) SetStateDB(prevBlock *Block) {
 		pndb = prevBlock.ClientState.GetNodeDB()
 	}
 	rootHash = prevBlock.ClientStateHash
-	Logger.Debug("prev state root", zap.Int64("round", b.Round),
+	Logger.Debug("Prev state root", zap.Int64("round", b.Round),
 		zap.String("prev_block", prevBlock.Hash),
 		zap.String("root", util.ToHex(rootHash)))
 	b.CreateState(pndb)

@@ -3,6 +3,7 @@ package util
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"sync"
@@ -292,6 +293,13 @@ func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node) (Serializable,
 		}
 		nnode, err := mpt.db.GetNode(ckey)
 		if err != nil || nnode == nil {
+			if err != nil {
+				Logger.Error("full node get node failed",
+					zap.Int("path len", len(path)),
+					zap.String("path", string(path)),
+					zap.String("key", hex.EncodeToString(ckey)),
+					zap.Error(err))
+			}
 			return nil, ErrNodeNotFound
 		}
 		return mpt.getNodeValue(path[1:], nnode)
@@ -303,6 +311,9 @@ func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node) (Serializable,
 		if bytes.Compare(nodeImpl.Path, prefix) == 0 {
 			nnode, err := mpt.db.GetNode(nodeImpl.NodeKey)
 			if err != nil || nnode == nil {
+				if err != nil {
+					Logger.Error("extension node get node failed", zap.Error(err))
+				}
 				return nil, ErrNodeNotFound
 			}
 			return mpt.getNodeValue(path[len(prefix):], nnode)
@@ -919,7 +930,7 @@ func (mpt *MerklePatriciaTrie) MergeMPTChanges(mpt2 MerklePatriciaTrieI) error {
 		if err := mpt.deleteNode(d); err != nil {
 			return err
 		}
-		Logger.Debug("Delete node", zap.ByteString("key", d.GetHashBytes()))
+		Logger.Debug("Delete node", zap.String("key", hex.EncodeToString(d.GetHashBytes())))
 	}
 	mpt.setRoot(mpt2.GetRoot())
 	return nil
