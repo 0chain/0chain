@@ -423,7 +423,7 @@ func (lndb *LevelNodeDB) PruneBelowVersion(ctx context.Context, version Sequence
 func (lndb *LevelNodeDB) RebaseCurrentDB(ndb NodeDB) {
 	lndb.mu.Lock()
 	defer lndb.mu.Unlock()
-
+	Logger.Debug("LevelNodeDB rebase db")
 	lndb.current = ndb
 	lndb.prev = ndb
 }
