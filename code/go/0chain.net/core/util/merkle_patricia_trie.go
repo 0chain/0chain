@@ -279,11 +279,14 @@ func (mpt *MerklePatriciaTrie) PrettyPrint(w io.Writer) error {
 func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node) (Serializable, error) {
 	switch nodeImpl := node.(type) {
 	case *LeafNode:
+		Logger.Debug("Leaf node")
 		if bytes.Compare(nodeImpl.Path, path) == 0 {
+			Logger.Debug("get leaf node", zap.String("path", string(path)))
 			return nodeImpl.GetValue(), nil
 		}
 		return nil, ErrValueNotPresent
 	case *FullNode:
+		Logger.Debug("Full node")
 		if len(path) == 0 {
 			return nodeImpl.GetValue(), nil
 		}
@@ -291,6 +294,7 @@ func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node) (Serializable,
 		if ckey == nil {
 			return nil, ErrValueNotPresent
 		}
+
 		nnode, err := mpt.db.GetNode(ckey)
 		if err != nil || nnode == nil {
 			if err != nil {
@@ -304,6 +308,7 @@ func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node) (Serializable,
 		}
 		return mpt.getNodeValue(path[1:], nnode)
 	case *ExtensionNode:
+		Logger.Debug("Extension node")
 		prefix := mpt.matchingPrefix(path, nodeImpl.Path)
 		if len(prefix) == 0 {
 			return nil, ErrValueNotPresent
