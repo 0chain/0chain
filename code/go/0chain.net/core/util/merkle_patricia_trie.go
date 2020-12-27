@@ -46,6 +46,7 @@ func CloneMPT(mpt MerklePatriciaTrieI) *MerklePatriciaTrie {
 func (mpt *MerklePatriciaTrie) SetNodeDB(ndb NodeDB) {
 	mpt.mutex.Lock()
 	defer mpt.mutex.Unlock()
+	Logger.Debug("MPT SetNodeDB")
 	mpt.db = ndb
 }
 
@@ -902,6 +903,10 @@ func (mpt *MerklePatriciaTrie) MergeMPTChanges(mpt2 MerklePatriciaTrieI) error {
 		}
 	}
 
+	Logger.Debug("MergeMPTChanges",
+		zap.Int("change num", len(changes)),
+		zap.Int("delete num", len(deletes)))
+
 	mpt.mutex.Lock()
 	defer mpt.mutex.Unlock()
 
@@ -914,6 +919,7 @@ func (mpt *MerklePatriciaTrie) MergeMPTChanges(mpt2 MerklePatriciaTrieI) error {
 		if err := mpt.deleteNode(d); err != nil {
 			return err
 		}
+		Logger.Debug("Delete node", zap.ByteString("key", d.GetHashBytes()))
 	}
 	mpt.setRoot(mpt2.GetRoot())
 	return nil
