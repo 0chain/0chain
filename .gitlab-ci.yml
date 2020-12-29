@@ -61,7 +61,9 @@ build-sharders:
   - docker pull www.0chain-ci.net:5050/root/0chain:sharder-latest
   - docker tag  www.0chain-ci.net:5050/root/0chain:miner-latest miner
   - docker tag  www.0chain-ci.net:5050/root/0chain:sharder-latest sharder
+  - setsebool -P selinuxuser_execheap 1
   - ./docker.local/bin/init.setup.sh
+  - ./docker.local/bin/setup_network.sh || true
   - ./docker.local/bin/sync_clock.sh
 
 run-view-change-1:
