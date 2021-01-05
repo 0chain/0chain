@@ -142,9 +142,15 @@ func (c *Chain) PruneClientStateWorker(ctx context.Context) {
 	tick := time.Duration(c.PruneStateBelowCount) * time.Second
 	timer := time.NewTimer(time.Second)
 	pruning := false
+	Logger.Debug("PruneClientStateWorker start")
+	defer func() {
+		Logger.Debug("PruneClientStateWorker stopped, we should not see this...")
+	}()
+
 	for true {
 		select {
 		case <-timer.C:
+			Logger.Debug("Do prune client state worker")
 			if pruning {
 				Logger.Info("pruning still going on")
 				continue
