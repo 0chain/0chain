@@ -322,6 +322,13 @@ func (c *Chain) GetLocalPreviousBlock(ctx context.Context, b *block.Block) (
 
 // GetPreviousBlock - get the previous block from the network and compute its state.
 func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Block {
+	// check if the previous block points to itself
+	if b.PrevBlock == b || b.PrevHash == b.Hash {
+		Logger.DPanic("block->PrevBlock points to itself",
+			zap.Int64("round", b.Round),
+			zap.String("hash", b.Hash),
+			zap.String("prev_hash", b.PrevHash))
+	}
 
 	if b.PrevBlock != nil {
 		return b.PrevBlock
@@ -338,9 +345,8 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 		return nil
 	}
 
-	// compute the state of the acquired previous block
 	if pb.PrevBlock == nil {
-		Logger.Error("get previous block (missing continuity)",
+		Logger.Info("get previous block (missing continuity)",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash),
 			zap.String("missing_prior_block", b.PrevHash))
 		return nil
@@ -348,6 +354,30 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 
 	if pb.IsStateComputed() {
 		return pb
+	}
+
+	// compute state of the previous block when its prior block is not nil and has completed the state computation.
+	if pb.PrevBlock == nil {
+		ppb, err := c.GetBlock(ctx, pb.PrevHash)
+		if err != nil {
+			Logger.Error("get previous block failed",
+				zap.Error(err),
+				zap.Int64("round", pb.Round),
+				zap.String("hash", pb.Hash),
+				zap.String("prev_hash", pb.PrevHash))
+			return nil
+		}
+
+		pb.SetPreviousBlock(ppb)
+	}
+
+	if !pb.PrevBlock.IsStateComputed() {
+		Logger.Error("could not compute state of the previous block, its state of prior block has not been computed yet.",
+			zap.Int64("round", b.Round),
+			zap.String("hash", b.Hash),
+			zap.String("prev_hash", pb.Hash),
+			zap.Int8("prev_prev_block_state_status", pb.PrevBlock.GetStateStatus()))
+		return nil
 	}
 
 	if err := c.ComputeState(ctx, pb); err != nil {
@@ -365,11 +395,6 @@ func (c *Chain) fetchPreviousBlock(ctx context.Context, b *block.Block) *block.B
 	Logger.Info("fetch previous block", zap.Int64("round", b.Round),
 		zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
 
-	Logger.Debug("fetching previous block",
-		zap.Int64("cround", b.Round),
-		zap.String("cblock", b.Hash),
-		zap.String("cprev_block", b.PrevHash))
-
 	pb := c.GetNotarizedBlock(ctx, b.PrevHash, b.Round-1)
 	if pb == nil {
 		Logger.Error("get previous block (unable to get prior blocks)",
@@ -385,7 +410,7 @@ func (c *Chain) fetchPreviousBlock(ctx context.Context, b *block.Block) *block.B
 	// called above should have updated the chain's blocks in memory.
 	pb, err := c.GetBlock(ctx, b.PrevHash)
 	if err != nil {
-		Logger.DPanic("previous notarized block not found", zap.Error(err))
+		Logger.DPanic("get previous notarized block failed", zap.Error(err))
 	}
 
 	b.SetPreviousBlock(pb)
