@@ -49,6 +49,7 @@ func (c *Chain) pruneClientState(ctx context.Context) {
 		}
 	} else {
 		if lfb.Round == 0 {
+			Logger.Debug("Last finalized block round is 0")
 			return
 		}
 	}
