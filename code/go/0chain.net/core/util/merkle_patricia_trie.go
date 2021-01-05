@@ -279,14 +279,11 @@ func (mpt *MerklePatriciaTrie) PrettyPrint(w io.Writer) error {
 func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node) (Serializable, error) {
 	switch nodeImpl := node.(type) {
 	case *LeafNode:
-		Logger.Debug("Leaf node")
 		if bytes.Compare(nodeImpl.Path, path) == 0 {
-			Logger.Debug("get leaf node", zap.String("path", string(path)))
 			return nodeImpl.GetValue(), nil
 		}
 		return nil, ErrValueNotPresent
 	case *FullNode:
-		Logger.Debug("Full node", zap.String("path", string(path)))
 		if len(path) == 0 {
 			return nodeImpl.GetValue(), nil
 		}
@@ -308,7 +305,6 @@ func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node) (Serializable,
 		}
 		return mpt.getNodeValue(path[1:], nnode)
 	case *ExtensionNode:
-		Logger.Debug("Extension node")
 		prefix := mpt.matchingPrefix(path, nodeImpl.Path)
 		if len(prefix) == 0 {
 			return nil, ErrValueNotPresent
@@ -748,7 +744,6 @@ func (mpt *MerklePatriciaTrie) deleteNode(node Node) error {
 	if DebugMPTNode {
 		Logger.Info("delete node", zap.String("dn", node.GetHash()))
 	}
-	Logger.Debug("delete node", zap.String("dn", node.GetHash()))
 	mpt.ChangeCollector.DeleteChange(node)
 	return mpt.db.DeleteNode(node.GetHashBytes())
 }
@@ -936,7 +931,6 @@ func (mpt *MerklePatriciaTrie) MergeMPTChanges(mpt2 MerklePatriciaTrieI) error {
 		if err := mpt.deleteNode(d); err != nil {
 			return err
 		}
-		Logger.Debug("Delete node", zap.String("key", hex.EncodeToString(d.GetHashBytes())))
 	}
 	mpt.setRoot(mpt2.GetRoot())
 	return nil
