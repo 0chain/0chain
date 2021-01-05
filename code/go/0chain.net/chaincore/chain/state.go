@@ -7,11 +7,10 @@ import (
 	"math"
 	"time"
 
-	"0chain.net/chaincore/smartcontract"
-
 	"0chain.net/chaincore/block"
 	bcstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/config"
+	"0chain.net/chaincore/smartcontract"
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -102,15 +101,9 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 		pb = c.GetPreviousBlock(ctx, b)
 		if pb == nil {
 			b.SetStateStatus(block.StateFailed)
-			if state.DebugBlock() {
-				Logger.Error("compute state - previous block not available",
-					zap.Int64("round", b.Round), zap.String("block", b.Hash),
-					zap.String("prev_block", b.PrevHash))
-			} else {
-				Logger.Error("compute state - previous block not available",
-					zap.Int64("round", b.Round), zap.String("block", b.Hash),
-					zap.String("prev_block", b.PrevHash))
-			}
+			Logger.Error("compute state - previous block not available",
+				zap.Int64("round", b.Round), zap.String("block", b.Hash),
+				zap.String("prev_block", b.PrevHash))
 			return ErrPreviousBlockUnavailable
 		}
 	}
