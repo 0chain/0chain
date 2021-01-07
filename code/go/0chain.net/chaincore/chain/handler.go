@@ -650,7 +650,11 @@ func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 		if node.Self.IsEqual(nd) {
 			fmt.Fprintf(w, "<td>%v</td>", nd.GetPseudoName())
 		} else {
-			fmt.Fprintf(w, "<td><a href='https://%v/%v/_diagnostics'>%v</a></td>", nd.Host, nd.Path, nd.GetPseudoName())
+			if len(nd.Path) > 0 {
+				fmt.Fprintf(w, "<td><a href='https://%v/%v/_diagnostics'>%v</a></td>", nd.Host, nd.Path, nd.GetPseudoName())
+			} else {
+				fmt.Fprintf(w, "<td><a href='http://%v:%v/_diagnostics'>%v</a></td>", nd.Host, nd.Port, nd.GetPseudoName())
+			}
 		}
 		fmt.Fprintf(w, "<td class='number'>%d</td>", nd.Sent)
 		fmt.Fprintf(w, "<td class='number'>%d</td>", nd.SendErrors)
