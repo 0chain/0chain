@@ -123,10 +123,14 @@ func (mpt *MerklePatriciaTrie) GetNodeValue(path Path) (Serializable, error) {
 /*Insert - inserts (updates) a value into this trie and updates the trie all the way up and produces a new root */
 func (mpt *MerklePatriciaTrie) Insert(path Path, value Serializable) (Key, error) {
 	if value == nil {
+		Logger.Debug("Insert nil value, delete data on path:",
+			zap.String("path", string(path)))
 		return mpt.Delete(path)
 	}
 	eval := value.Encode()
 	if eval == nil || len(eval) == 0 {
+		Logger.Debug("Insert encoded nil value, delete data on path:",
+			zap.String("path", string(path)))
 		return mpt.Delete(path)
 	}
 
