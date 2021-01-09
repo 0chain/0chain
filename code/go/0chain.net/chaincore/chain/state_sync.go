@@ -64,12 +64,20 @@ func (c *Chain) GetStateNodes(ctx context.Context, keys []util.Key) {
 			zap.Any("keys", skeys), zap.Error(err))
 		return
 	}
+	keysStr := make([]string, len(keys))
+	for i := range keys {
+		keysStr[i] = util.ToHex(keys[i])
+	}
 	err = c.SaveStateNodes(ctx, ns)
 	if err != nil {
 		Logger.Error("get state nodes - error saving",
-			zap.Int("num_keys", len(keys)), zap.Error(err))
+			zap.Int("num_keys", len(keys)),
+			zap.Strings("keys:", keysStr),
+			zap.Error(err))
 	} else {
-		Logger.Info("get state nodes - saving", zap.Int("num_keys", len(keys)),
+		Logger.Info("get state nodes - saving",
+			zap.Int("num_keys", len(keys)),
+			zap.Strings("keys:", keysStr),
 			zap.Int("nodes", len(ns.Nodes)))
 	}
 	return
