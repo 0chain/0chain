@@ -10,17 +10,18 @@ import (
 	"testing"
 
 	"0chain.net/core/encryption"
+	"0chain.net/sharder/blockstore"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/client"
-	"0chain.net/core/common"
 	"0chain.net/chaincore/config"
-	"0chain.net/core/datastore"
-	"0chain.net/core/memorystore"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/transaction"
+	"0chain.net/core/common"
+	"0chain.net/core/datastore"
+	"0chain.net/core/memorystore"
 )
 
 var numOfTransactions int
@@ -29,10 +30,12 @@ func init() {
 	flag.IntVar(&numOfTransactions, "num_txns", 4000, "number of transactions per block")
 }
 
-func getContext() context.Context {
+func getContext() (context.Context, func()) {
 	ctx := common.GetRootContext()
 	ctx = memorystore.WithConnection(ctx)
-	return ctx
+	return ctx, func() {
+		memorystore.Close(ctx)
+	}
 }
 
 func generateSingleBlock(ctx context.Context, prevBlock *block.Block, r *Round) (*block.Block, error) {
@@ -68,7 +71,9 @@ func CreateRound(number int64) *Round {
 func TestBlockVerification(t *testing.T) {
 	SetUpSingleSelf()
 	mc := GetMinerChain()
-	ctx := getContext()
+	ctx, clean := getContext()
+	defer clean()
+
 	mr := CreateRound(1)
 	b, err := generateSingleBlock(ctx, nil, mr)
 	if b != nil {
@@ -84,7 +89,8 @@ func TestBlockVerification(t *testing.T) {
 
 func TestTwoCorrectBlocks(t *testing.T) {
 	SetUpSingleSelf()
-	ctx := getContext()
+	ctx, clean := getContext()
+	defer clean()
 	mr := CreateRound(1)
 	b0, err := generateSingleBlock(ctx, nil, mr)
 	mc := GetMinerChain()
@@ -103,7 +109,8 @@ func TestTwoCorrectBlocks(t *testing.T) {
 }
 func TestTwoBlocksWrongRound(t *testing.T) {
 	SetUpSingleSelf()
-	ctx := getContext()
+	ctx, clean := getContext()
+	defer clean()
 	mr := CreateRound(1)
 	b0, err := generateSingleBlock(ctx, nil, mr)
 	//mc := GetMinerChain()
@@ -123,7 +130,8 @@ func TestTwoBlocksWrongRound(t *testing.T) {
 
 func TestBlockVerificationBadHash(t *testing.T) {
 	SetUpSingleSelf()
-	ctx := getContext()
+	ctx, clean := getContext()
+	defer clean()
 	mr := CreateRound(1)
 	b, err := generateSingleBlock(ctx, nil, mr)
 	mc := GetMinerChain()
@@ -141,7 +149,8 @@ func TestBlockVerificationBadHash(t *testing.T) {
 
 func TestBlockVerificationTooFewTransactions(t *testing.T) {
 	SetUpSingleSelf()
-	ctx := getContext()
+	ctx, clean := getContext()
+	defer clean()
 	mr := CreateRound(1)
 	b, err := generateSingleBlock(ctx, nil, mr)
 	if err != nil {
@@ -169,7 +178,9 @@ func TestBlockVerificationTooFewTransactions(t *testing.T) {
 
 func BenchmarkGenerateALotTransactions(b *testing.B) {
 	SetUpSingleSelf()
-	ctx := getContext()
+	ctx, clean := getContext()
+	defer clean()
+
 	mr := CreateRound(1)
 	block, _ := generateSingleBlock(ctx, nil, mr)
 	if block != nil {
@@ -181,7 +192,8 @@ func BenchmarkGenerateALotTransactions(b *testing.B) {
 
 func BenchmarkGenerateAndVerifyALotTransactions(b *testing.B) {
 	SetUpSingleSelf()
-	ctx := getContext()
+	ctx, clean := getContext()
+	defer clean()
 	mr := CreateRound(1)
 	block, err := generateSingleBlock(ctx, nil, mr)
 	mc := GetMinerChain()
@@ -280,6 +292,7 @@ func TestBlockGeneration(t *testing.T) {
 	setupSelf()
 	ctx := common.GetRootContext()
 	ctx = memorystore.WithConnection(ctx)
+	defer memorystore.Close(ctx)
 	SetupGenesisBlock()
 	r := round.Provider().(*round.Round)
 	r.Number = 1

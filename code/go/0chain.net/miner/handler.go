@@ -142,6 +142,7 @@ func GetWalletTable(latest bool) (int64, int64, int64, int64) {
 	entity := client.NewClient()
 	emd := entity.GetEntityMetadata()
 	ctx := memorystore.WithEntityConnection(common.GetRootContext(), emd)
+	defer memorystore.Close(ctx)
 	collectionName := entity.GetCollectionName()
 	mstore, ok := emd.GetStore().(*memorystore.Store)
 	var b *block.Block

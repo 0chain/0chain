@@ -41,6 +41,7 @@ func TransactionConfirmationHandler(ctx context.Context, r *http.Request) (
 		"txn_confirmation")
 	ctx = persistencestore.WithEntityConnection(ctx,
 		transactionConfirmationEntityMetadata)
+	defer persistencestore.Close(ctx)
 
 	var (
 		state             = crpc.Client().State()

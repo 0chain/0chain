@@ -20,6 +20,7 @@ func SetupWorkers(ctx context.Context) {
 func CleanupWorker(ctx context.Context) {
 	ticker := time.NewTicker(time.Second)
 	cctx := memorystore.WithEntityConnection(ctx, transactionEntityMetadata)
+	defer memorystore.Close(cctx)
 	mstore, ok := transactionEntityMetadata.GetStore().(*memorystore.Store)
 	if !ok {
 		return

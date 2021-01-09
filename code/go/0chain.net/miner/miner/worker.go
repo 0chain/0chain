@@ -74,6 +74,7 @@ func TransactionGenerator(c *chain.Chain) {
 	}
 	txnMetadataProvider := datastore.GetEntityMetadata("txn")
 	ctx := memorystore.WithEntityConnection(common.GetRootContext(), txnMetadataProvider)
+	defer memorystore.Close(ctx)
 	txn := txnMetadataProvider.Instance().(*transaction.Transaction)
 	txn.ChainID = miner.GetMinerChain().ID
 	collectionName := txn.GetCollectionName()

@@ -371,6 +371,7 @@ func (c *Chain) infraHealthInATable(w http.ResponseWriter, r *http.Request) {
 			collectionName := txn.GetCollectionName()
 			ctx := common.GetRootContext()
 			cctx := memorystore.WithEntityConnection(ctx, transactionEntityMetadata)
+			defer memorystore.Close(cctx)
 			mstore, ok := transactionEntityMetadata.GetStore().(*memorystore.Store)
 			if ok {
 				fmt.Fprintf(w, "<tr class='active'>")
