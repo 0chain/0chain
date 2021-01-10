@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"sort"
 	"sync"
 	"time"
 
@@ -64,20 +65,15 @@ func newIDStats() *idStats {
 }
 
 func (s *idStats) Add(id int64) {
-	if s == nil {
-		return
-	}
 	s.Lock()
 	s.ids[id] = time.Now()
 	s.Unlock()
 }
 
 func (s *idStats) Del(id int64) {
-	if s == nil {
-		return
-	}
 	s.Lock()
 	delete(s.ids, id)
+	Logger.Debug("idState removes id", zap.Int64("id", id))
 	s.Unlock()
 }
 
@@ -90,6 +86,9 @@ func (s *idStats) CheckExpiredIDs() {
 		}
 	}
 	s.Unlock()
+	sort.Slice(expiredIDS, func(i, j int) bool {
+		return expiredIDS[i] < expiredIDS[j]
+	})
 	Logger.Debug("expired connections", zap.Int64s("ids", expiredIDS))
 }
 
