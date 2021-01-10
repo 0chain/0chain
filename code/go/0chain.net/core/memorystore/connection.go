@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"sync"
 	"time"
 
 	"0chain.net/core/common"
@@ -51,11 +52,51 @@ type dbpool struct {
 	Pool   *redis.Pool
 }
 
+type idStats struct {
+	ids map[int64]time.Time
+	sync.Mutex
+}
+
+func (s *idStats) Add(id int64) {
+	s.Lock()
+	s.ids[id] = time.Now()
+	s.Unlock()
+}
+
+func (s *idStats) Del(id int64) {
+	s.Lock()
+	delete(s.ids, id)
+	s.Unlock()
+}
+
+func (s *idStats) CheckExpiredIDs() {
+	var expiredIDS []int64
+	s.Lock()
+	for id, t := range s.ids {
+		if time.Since(t) > 3*time.Second {
+			expiredIDS = append(expiredIDS, id)
+		}
+	}
+	s.Unlock()
+	Logger.Debug("expired connections", zap.Int64s("ids", expiredIDS))
+}
+
 var pools = make(map[string]*dbpool)
+var idS idStats
 
 func init() {
 	DefaultPool = NewPool(os.Getenv("REDIS_HOST"), 6379)
 	pools[""] = &dbpool{ID: "", CtxKey: CONNECTION, Pool: DefaultPool}
+	tkt := time.NewTicker(3 * time.Second)
+	go func() {
+		for {
+			select {
+			case <-tkt.C:
+				idS.CheckExpiredIDs()
+			default:
+			}
+		}
+	}()
 }
 
 func getConnectionCtxKey(dbid string) common.ContextKey {
@@ -96,6 +137,7 @@ func getdbpool(entityMetadata datastore.EntityMetadata) *dbpool {
 func GetConnection() *Conn {
 	st := DefaultPool.Stats()
 	id := connID.Add(1)
+	idS.Add(id)
 	Logger.Debug("GetConnection defualt redis pool stats",
 		zap.Int("active", st.ActiveCount),
 		zap.Int("idle", st.IdleCount),
@@ -133,6 +175,7 @@ func GetEntityConnection(entityMetadata datastore.EntityMetadata) *Conn {
 	}
 	dbpool := getdbpool(entityMetadata)
 	id := connID.Add(1)
+	idS.Add(id)
 	st := dbpool.Pool.Stats()
 	Logger.Debug("GetEntityConnection redis pool stats",
 		zap.Int("active", st.ActiveCount),
@@ -208,6 +251,7 @@ func WithEntityConnection(ctx context.Context, entityMetadata datastore.EntityMe
 	if c == nil {
 		cMap := make(connections)
 		id := connID.Add(1)
+		idS.Add(id)
 		st := dbpool.Pool.Stats()
 		Logger.Debug("WithEntityConnection redis pool stats",
 			zap.Int("active", st.ActiveCount),
@@ -220,6 +264,7 @@ func WithEntityConnection(ctx context.Context, entityMetadata datastore.EntityMe
 	_, ok = cMap[dbpool.CtxKey]
 	if !ok {
 		id := connID.Add(1)
+		idS.Add(id)
 		st := dbpool.Pool.Stats()
 		Logger.Debug("WithEntityConnection redis pool stats",
 			zap.Int("active", st.ActiveCount),
@@ -269,6 +314,7 @@ func Close(ctx context.Context) {
 		}
 
 		st := con.Pool.Stats()
+		idS.Del(con.ID)
 		Logger.Debug("Close redis connections",
 			zap.Any("context key", ck),
 			zap.Any("connection duration", time.Since(con.Tm)),
