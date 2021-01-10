@@ -53,6 +53,7 @@ type dbpool struct {
 	Pool   *redis.Pool
 }
 
+// idStats collects redis connection ids and those not closed in specific time
 type idStats struct {
 	ids map[int64]time.Time
 	sync.Mutex
@@ -89,7 +90,7 @@ func (s *idStats) CheckExpiredIDs() {
 	sort.Slice(expiredIDS, func(i, j int) bool {
 		return expiredIDS[i] < expiredIDS[j]
 	})
-	Logger.Debug("expired connections", zap.Int64s("ids", expiredIDS))
+	Logger.Debug("connections still in use", zap.Int64s("ids", expiredIDS))
 }
 
 var pools = make(map[string]*dbpool)
