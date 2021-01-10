@@ -57,13 +57,25 @@ type idStats struct {
 	sync.Mutex
 }
 
+func newIDStats() *idStats {
+	return &idStats{
+		ids: make(map[int64]time.Time),
+	}
+}
+
 func (s *idStats) Add(id int64) {
+	if s == nil {
+		return
+	}
 	s.Lock()
 	s.ids[id] = time.Now()
 	s.Unlock()
 }
 
 func (s *idStats) Del(id int64) {
+	if s == nil {
+		return
+	}
 	s.Lock()
 	delete(s.ids, id)
 	s.Unlock()
@@ -82,12 +94,13 @@ func (s *idStats) CheckExpiredIDs() {
 }
 
 var pools = make(map[string]*dbpool)
-var idS idStats
+var idS *idStats
 
 func init() {
 	DefaultPool = NewPool(os.Getenv("REDIS_HOST"), 6379)
 	pools[""] = &dbpool{ID: "", CtxKey: CONNECTION, Pool: DefaultPool}
 	tkt := time.NewTicker(3 * time.Second)
+	idS = newIDStats()
 	go func() {
 		for {
 			select {
