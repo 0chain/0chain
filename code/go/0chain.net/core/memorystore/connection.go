@@ -151,7 +151,7 @@ func GetConnection() *Conn {
 	st := DefaultPool.Stats()
 	id := connID.Add(1)
 	idS.Add(id)
-	Logger.Error("GetConnection defualt redis pool stats",
+	Logger.Debug("GetConnection defualt redis pool stats",
 		zap.Int("active", st.ActiveCount),
 		zap.Int("idle", st.IdleCount),
 		zap.Int64("id", id))
