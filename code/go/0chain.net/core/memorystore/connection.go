@@ -252,12 +252,19 @@ func Close(ctx context.Context) {
 			Logger.Error("Connection not closed", zap.Error(err))
 		}
 
-		st := con.Pool.Stats()
-		Logger.Debug("Close redis connections",
-			zap.Any("context key", ck),
-			zap.Any("connection duration", time.Since(con.Tm)),
-			zap.Int64("id", con.ID),
-			zap.Int("active", st.ActiveCount),
-			zap.Int("idle", st.IdleCount))
+		if con.Pool != nil {
+			st := con.Pool.Stats()
+			Logger.Debug("Close redis connections",
+				zap.Any("context key", ck),
+				zap.Any("connection duration", time.Since(con.Tm)),
+				zap.Int64("id", con.ID),
+				zap.Int("active", st.ActiveCount),
+				zap.Int("idle", st.IdleCount))
+		} else {
+			Logger.Debug("Close redis connections, con.pool is nil",
+				zap.Any("context key", ck),
+				zap.Any("connection duration", time.Since(con.Tm)),
+				zap.Int64("id", con.ID))
+		}
 	}
 }
