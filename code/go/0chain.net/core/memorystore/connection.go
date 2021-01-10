@@ -11,14 +11,18 @@ import (
 	"0chain.net/core/datastore"
 	. "0chain.net/core/logging"
 	"github.com/gomodule/redigo/redis"
+	"go.uber.org/atomic"
 	"go.uber.org/zap"
 )
 
 /* Redis host environment variables
 
 
+ */
 /*DefaultPool - the default redis pool against a service (host) named redis */
 var DefaultPool *redis.Pool
+
+var connID atomic.Int64
 
 /*NewPool - create a new redis pool accessible at the given address */
 func NewPool(host string, port int) *redis.Pool {
@@ -94,7 +98,8 @@ func GetConnection() *Conn {
 	Logger.Debug("GetConnection defualt redis pool stats",
 		zap.Int("active", st.ActiveCount),
 		zap.Int("idle", st.IdleCount))
-	return &Conn{Conn: DefaultPool.Get(), Tm: time.Now()}
+	id := connID.Add(1)
+	return &Conn{Conn: DefaultPool.Get(), Tm: time.Now(), ID: id, Pool: DefaultPool}
 }
 
 /*GetInfo - returns a connection from the Pool and will do info persistence on Redis to see the status of redis
@@ -137,7 +142,9 @@ const CONNECTION common.ContextKey = "connection."
 
 type Conn struct {
 	redis.Conn
-	Tm time.Time
+	Tm   time.Time
+	ID   int64
+	Pool *redis.Pool
 }
 
 type connections map[common.ContextKey]*Conn
@@ -244,8 +251,13 @@ func Close(ctx context.Context) {
 		if err != nil {
 			Logger.Error("Connection not closed", zap.Error(err))
 		}
+
+		st := con.Pool.Stats()
 		Logger.Debug("Close redis connections",
 			zap.Any("context key", ck),
-			zap.Any("connection duration", time.Since(con.Tm)))
+			zap.Any("connection duration", time.Since(con.Tm)),
+			zap.Int64("id", con.ID),
+			zap.Int("active", st.ActiveCount),
+			zap.Int("idle", st.IdleCount))
 	}
 }
