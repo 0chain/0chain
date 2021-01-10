@@ -90,6 +90,10 @@ func getdbpool(entityMetadata datastore.EntityMetadata) *dbpool {
 * defer c.Close()
  */
 func GetConnection() redis.Conn {
+	st := DefaultPool.Stats()
+	Logger.Debug("GetConnection defualt redis pool stats",
+		zap.Int("active", st.ActiveCount),
+		zap.Int("idle", st.IdleCount))
 	return DefaultPool.Get()
 }
 
@@ -121,6 +125,10 @@ func GetEntityConnection(entityMetadata datastore.EntityMetadata) redis.Conn {
 		return GetConnection()
 	}
 	dbpool := getdbpool(entityMetadata)
+	st := dbpool.Pool.Stats()
+	Logger.Debug("GetEntityConnection redis pool stats",
+		zap.Int("active", st.ActiveCount),
+		zap.Int("idle", st.IdleCount))
 	return dbpool.Pool.Get()
 }
 
@@ -196,6 +204,7 @@ func WithEntityConnection(ctx context.Context, entityMetadata datastore.EntityMe
 
 /*GetEntityCon returns a connection stored in the context which got created via WithEntityConnection */
 func GetEntityCon(ctx context.Context, entityMetadata datastore.EntityMetadata) redis.Conn {
+	Logger.Debug("memorystore GetEntityCon")
 	if ctx == nil {
 		return GetEntityConnection(entityMetadata)
 	}
@@ -225,10 +234,11 @@ func Close(ctx context.Context) {
 		return
 	}
 	cMap := c.(connections)
-	for _, con := range cMap {
+	for ck, con := range cMap {
 		err := con.Close()
 		if err != nil {
 			Logger.Error("Connection not closed", zap.Error(err))
 		}
+		Logger.Debug("Close redis connections", zap.Any("context key", ck))
 	}
 }
