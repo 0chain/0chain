@@ -9,6 +9,11 @@ stages:
   - hostname && hostname -I
   - env | grep -e CI_COMMIT -e CI_PIPELINE
 
+.template: &only-protected
+  only:
+    variables:
+    - $CI_COMMIT_REF_PROTECTED
+
 build-base:
   <<: *env-info
   stage: prepare
@@ -28,6 +33,7 @@ unit-tests:
 
 build-miners:
   <<: *env-info
+  <<: *only-protected
   stage: build
   tags:
   - normal
@@ -41,6 +47,7 @@ build-miners:
 
 build-sharders:
   <<: *env-info
+  <<: *only-protected
   stage: build
   tags:
   - normal
