@@ -70,12 +70,14 @@ func main() {
 	r.server, err = conductrpc.NewServer(conf.Bind, conf.Nodes.Names())
 	if err != nil {
 		log.Fatal("[ERR]", err)
+		os.Exit(1)
 	}
 
 	log.Print("(rpc) start listening on:", conf.Bind)
 	go func() {
 		if err := r.server.Serve(); err != nil {
-			log.Fatal("staring RPC server:", err)
+			log.Fatal("Error while starting RPC server:", err)
+			os.Exit(1)
 		}
 	}()
 	defer r.server.Close()
@@ -84,8 +86,18 @@ func main() {
 	r.rounds = make(map[config.RoundName]config.Round)
 	r.setupTimeout(0)
 
-	if err = r.Run(); err != nil {
+	var success bool
+	// not always error means failure
+
+	err, success = r.Run()
+	if err != nil {
 		log.Print("[ERR] ", err)
+	}
+
+	if success {
+		os.Exit(0)
+	} else {
+		os.Exit(1)
 	}
 }
 
@@ -708,22 +720,29 @@ func okString(t bool) string {
 	return "[FAIL]"
 }
 
-func (r *Runner) printReport() {
+func (r *Runner) processReport() (success bool) {
+	success = true
 	var totalDuration time.Duration
+
 	fmt.Println("........................ R E P O R T ........................")
+
 	for _, rx := range r.report {
 		fmt.Printf("- %s %s, after %s\n", rx.name, okString(isOk(rx.tests)),
 			rx.e.Sub(rx.s).Round(time.Second))
 		totalDuration += rx.e.Sub(rx.s)
 		for _, t := range rx.tests {
+			success = success && t.success
 			if t.err != nil {
 				fmt.Printf("  - [ERR] %v\n", t.err)
 				continue
 			}
 		}
 	}
+
 	fmt.Println("total duration:", totalDuration.Round(time.Second))
+	fmt.Println("success:", success)
 	fmt.Println(".............................................................")
+	return success
 }
 
 func (r *Runner) resetWaiters() {
@@ -751,13 +770,13 @@ func (r *Runner) resetRounds() {
 }
 
 // Run the tests.
-func (r *Runner) Run() (err error) {
+// Not always presence of an error means failure
+func (r *Runner) Run() (err error, success bool) {
 
 	log.Println("start testing...")
 	defer log.Println("end of testing")
 
 	// stop all nodes after all
-	defer r.printReport()
 	defer r.stopAll()
 
 	// for every enabled set
@@ -808,5 +827,6 @@ func (r *Runner) Run() (err error) {
 		}
 	}
 
-	return
+	success = r.processReport()
+	return err, success
 }
