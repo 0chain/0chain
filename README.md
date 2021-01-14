@@ -413,20 +413,20 @@ Test view change (part III).
 ./docker.local/bin/start.conductor.sh view-change-3
 ```
 
-#### Blockchain 1
+#### Miners
 
-Test blockchain (part I, miners).
-
-```
-./docker.local/bin/start.conductor.sh blockchain-1
-```
-
-#### Blockchain 2
-
-Test blockchain, (part II, sharders).
+Test miners.
 
 ```
-./docker.local/bin/start.conductor.sh blockchain-2
+./docker.local/bin/start.conductor.sh miners
+```
+
+#### Sharders
+
+Test sharders.
+
+```
+./docker.local/bin/start.conductor.sh sharders
 ```
 
 #### Blobber 1

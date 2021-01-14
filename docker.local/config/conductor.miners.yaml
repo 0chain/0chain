@@ -38,7 +38,7 @@ sets:
       - "Create competing block when not a generator"
       - "Group only signs the competing blocks"
       - "Send a transaction from an earlier block to create a double spend"
-      - "Sign the a different hash than the block hash"
+      - "Sign a different hash than the block hash"
       - "Use a different private key to sign the block"
       - "Hash the block incorrectly"
   - name: "Double spend transaction"
@@ -251,7 +251,7 @@ tests:
       - wait_no_progress:
           timeout: '2m'
 
-  - name: "Sign the a different hash than the block hash"
+  - name: "Sign a different hash than the block hash"
     flow:
       - set_monitor: "sharder-1"
       - cleanup_bc: {}
@@ -263,6 +263,7 @@ tests:
           by: ["miner-3"]
       - wait_round:
           round: 20 # it keeps going
+          timeout: '5m'
   - name: "Use a different private key to sign the block"
     flow:
       - set_monitor: "sharder-1"
@@ -275,6 +276,7 @@ tests:
           by: ["miner-3"]
       - wait_round:
           round: 20 # it keeps going
+          timeout: '5m'
   - name: "Hash the block incorrectly"
     flow:
       - set_monitor: "sharder-1"
@@ -287,6 +289,7 @@ tests:
           by: ["miner-3"]
       - wait_round:
           round: 20 # it keeps going
+          timeout: '5m'
 
   # Double spend transaction
 
@@ -297,6 +300,7 @@ tests:
       - start: ['sharder-1']
       - start: ['miner-1', 'miner-2', 'miner-3']
       - wait_round:
+          timeout: '5m'
           round: 100
       - double_spend_transaction:
           by: ['miner-3']

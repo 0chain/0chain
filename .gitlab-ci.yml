@@ -105,7 +105,7 @@ build-sharders-integration:
   - ./docker.local/bin/setup_network.sh || true
   - ./docker.local/bin/sync_clock.sh
 
-run-view-change-1:
+test-view-change-1:
   <<: *only-protected
   <<: *run-integration-tests
   stage: test
@@ -115,6 +115,7 @@ run-view-change-1:
   - ./docker.local/bin/start.conductor.sh view-change-1
 
 run-view-change-2:
+test-view-change-2:
   <<: *only-protected
   <<: *run-integration-tests
   stage: test
@@ -123,7 +124,7 @@ run-view-change-2:
   script:
   - ./docker.local/bin/start.conductor.sh view-change-2
 
-run-view-change-3:
+test-view-change-3:
   <<: *only-protected
   <<: *run-integration-tests
   stage: test
@@ -132,20 +133,20 @@ run-view-change-3:
   script:
   - ./docker.local/bin/start.conductor.sh view-change-3
 
-run-blockchain-1:
+test-miners:
   <<: *only-protected
   <<: *run-integration-tests
   stage: test
   tags:
   - virtual
   script:
-  - ./docker.local/bin/start.conductor.sh blockchain-1
+  - ./docker.local/bin/start.conductor.sh miners
 
-run-blockchain-2:
+test-sharders:
   <<: *only-protected
   <<: *run-integration-tests
   stage: test
   tags:
   - virtual
   script:
-  - ./docker.local/bin/start.conductor.sh blockchain-2
+  - ./docker.local/bin/start.conductor.sh sharders
