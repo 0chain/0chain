@@ -122,18 +122,19 @@ func main() {
 	Logger.Info("Miners in main", zap.Int("size", mb.Miners.Size()))
 
 	if !mb.IsActiveNode(node.Self.Underlying().GetKey(), 0) {
-		hostName, n2nHostName, portNum, err := readNonGenesisHostAndPort(keysFile)
+		hostName, n2nHostName, portNum, path, err := readNonGenesisHostAndPort(keysFile)
 		if err != nil {
 			Logger.Panic("Error reading keys file. Non-genesis miner has no host or port number",
 				zap.Error(err))
 		}
 
 		Logger.Info("Inside nonGenesis", zap.String("host_name", hostName),
-			zap.Any("n2n_host_name", n2nHostName), zap.Int("port_num", portNum))
+			zap.Any("n2n_host_name", n2nHostName), zap.Int("port_num", portNum), zap.String("path", path))
 
 		node.Self.Underlying().Host = hostName
 		node.Self.Underlying().N2NHost = n2nHostName
 		node.Self.Underlying().Port = portNum
+		node.Self.Underlying().Path = path
 	}
 
 	if node.Self.Underlying().GetKey() == "" {
@@ -266,7 +267,7 @@ func done(ctx context.Context) {
 	mc.Stop()
 }
 
-func readNonGenesisHostAndPort(keysFile *string) (string, string, int, error) {
+func readNonGenesisHostAndPort(keysFile *string) (string, string, int, string, error) {
 	reader, err := os.Open(*keysFile)
 	if err != nil {
 		panic(err)
@@ -277,7 +278,7 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, error) {
 	scanner.Scan() // throw away the secretkey
 	result := scanner.Scan()
 	if result == false {
-		return "", "", 0, errors.New("error reading Host")
+		return "", "", 0, "", errors.New("error reading Host")
 	}
 
 	h := scanner.Text()
@@ -285,7 +286,7 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, error) {
 
 	result = scanner.Scan()
 	if result == false {
-		return "", "", 0, errors.New("error reading n2n host")
+		return "", "", 0, "", errors.New("error reading n2n host")
 	}
 
 	n2nh := scanner.Text()
@@ -295,9 +296,17 @@ func readNonGenesisHostAndPort(keysFile *string) (string, string, int, error) {
 	po, err := strconv.ParseInt(scanner.Text(), 10, 32)
 	p := int(po)
 	if err != nil {
-		return "", "", 0, err
+		return "", "", 0, "", err
 	}
-	return h, n2nh, p, nil
+
+	result = scanner.Scan()
+	if result == false {
+		return "", "", 0, "", errors.New("error reading path")
+	}
+
+	path := scanner.Text()
+	Logger.Info("Path inside", zap.String("path", path))
+	return h, n2nh, p, path, nil
 
 }
 
