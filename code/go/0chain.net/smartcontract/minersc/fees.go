@@ -7,7 +7,6 @@ import (
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/config"
 	"0chain.net/chaincore/node"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/state"
@@ -382,16 +381,12 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		blockReward = state.Balance(
 			float64(gn.BlockReward) * gn.RewardRate,
 		)
-
-		minerr, sharderr = gn.splitByShareRatio(blockReward)
-		charger, _       = mn.splitByServiceCharge(minerr)
-		scharger, _      = mn.splitByServiceCharge(sharderr)
-
+		charger, restr   = mn.splitByServiceCharge(blockReward)
+		minerr, sharderr = gn.splitByShareRatio(restr)
 		// fees         -- total fees for the block
 		fees             = msc.sumFee(block, true)
-		minerf, sharderf = gn.splitByShareRatio(fees)
-		chargef, _       = mn.splitByServiceCharge(minerf)
-		schargef, _      = mn.splitByServiceCharge(sharderf)
+		chargef, restf   = mn.splitByServiceCharge(fees)
+		minerf, sharderf = gn.splitByShareRatio(restf)
 		// intermediate response
 		iresp string
 	)
@@ -409,7 +404,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	}
 	resp += iresp
 	// pay and mint rest for block sharders
-	iresp, err = msc.paySharders(sharderf+schargef, sharderr+scharger, block, gn, balances)
+	iresp, err = msc.paySharders(sharderf, sharderr, block, gn, balances)
 	if err != nil {
 		return "", err
 	}
@@ -421,22 +416,12 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 			"saving generator node: %v", err)
 	}
 
-	// view change stuff, Either run on view change or round reward frequency
-	if config.DevConfiguration.ViewChange {
-		if block.Round == gn.ViewChange {
-			var mb = balances.GetBlock().MagicBlock
-			err = msc.viewChangePoolsWork(gn, mb, block.Round, balances)
-			if err != nil {
-				return "", err
-			}
-		}
-	} else if gn.RewardRoundFrequency != 0 && block.Round%gn.RewardRoundFrequency == 0 {
+	// view change stuff
+	if block.Round == gn.ViewChange {
 		var mb = balances.GetBlock().MagicBlock
-		if mb != nil {
-			err = msc.viewChangePoolsWork(gn, mb, block.Round, balances)
-			if err != nil {
-				return "", err
-			}
+		err = msc.viewChangePoolsWork(gn, mb, block.Round, balances)
+		if err != nil {
+			return "", err
 		}
 	}
 

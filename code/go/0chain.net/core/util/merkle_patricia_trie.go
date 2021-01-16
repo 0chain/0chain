@@ -23,13 +23,15 @@ type MerklePatriciaTrie struct {
 	db              NodeDB
 	ChangeCollector ChangeCollectorI
 	Version         Sequence
+	rootHashTrack   map[string]struct{}
 }
 
 /*NewMerklePatriciaTrie - create a new patricia merkle trie */
 func NewMerklePatriciaTrie(db NodeDB, version Sequence) *MerklePatriciaTrie {
 	mpt := &MerklePatriciaTrie{
-		mutex: &sync.RWMutex{},
-		db:    db,
+		mutex:         &sync.RWMutex{},
+		db:            db,
+		rootHashTrack: map[string]struct{}{},
 	}
 	mpt.ResetChangeCollector(nil)
 	mpt.SetVersion(version)
@@ -83,7 +85,15 @@ func (mpt *MerklePatriciaTrie) SetRoot(root Key) {
 
 /*setRoot - implement interface */
 func (mpt *MerklePatriciaTrie) setRoot(root Key) {
+	rs := hex.EncodeToString(root)
+	if bytes.Compare(mpt.Root, root) != 0 {
+		if _, ok := mpt.rootHashTrack[rs]; ok {
+			Logger.DPanic("MPT set root back, which should not happen",
+				zap.String("root key", rs))
+		}
+	}
 	mpt.Root = root
+	mpt.rootHashTrack[rs] = struct{}{}
 }
 
 /*GetRoot - implement interface */
@@ -299,11 +309,13 @@ func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node) (Serializable,
 		nnode, err := mpt.db.GetNode(ckey)
 		if err != nil || nnode == nil {
 			if err != nil {
-				Logger.Error("full node get node failed [debug]",
+				Logger.Error("full node get node failed",
 					zap.Any("version", mpt.Version),
 					zap.Int("path len", len(path)),
 					zap.String("path", string(path)),
 					zap.String("key", hex.EncodeToString(ckey)),
+					zap.String("root key", hex.EncodeToString(mpt.GetRoot())),
+					zap.String("node hash", node.GetHash()),
 					zap.Error(err))
 			}
 			return nil, ErrNodeNotFound
@@ -740,8 +752,13 @@ func (mpt *MerklePatriciaTrie) insertNode(oldNode Node, newNode Node) (Node, Key
 		if oldNode != nil {
 			ohash = oldNode.GetHash()
 		}
-		Logger.Info("insert node", zap.String("nn", newNode.GetHash()), zap.String("on", ohash))
+		Logger.Debug("insert node",
+			zap.Any("version", mpt.Version),
+			zap.Any("root", hex.EncodeToString(mpt.Root)),
+			zap.String("old node key", ohash),
+			zap.String("new node key", newNode.GetHash()))
 	}
+
 	ckey := newNode.GetHashBytes()
 	if err := mpt.db.PutNode(ckey, newNode); err != nil {
 		return nil, nil, err
@@ -759,9 +776,9 @@ func (mpt *MerklePatriciaTrie) insertNode(oldNode Node, newNode Node) (Node, Key
 
 func (mpt *MerklePatriciaTrie) deleteNode(node Node) error {
 	if DebugMPTNode {
-		Logger.Info("delete node", zap.String("dn", node.GetHash()))
+		Logger.Debug("delete node", zap.Any("version", mpt.Version), zap.String("key", node.GetHash()))
 	}
-	Logger.Debug("delete node [debug]", zap.Any("version", mpt.Version), zap.String("key", node.GetHash()))
+
 	mpt.ChangeCollector.DeleteChange(node)
 	return mpt.db.DeleteNode(node.GetHashBytes())
 }
@@ -924,6 +941,11 @@ func (mpt *MerklePatriciaTrie) Validate() error {
 
 // MergeMPTChanges - implement interface.
 func (mpt *MerklePatriciaTrie) MergeMPTChanges(mpt2 MerklePatriciaTrieI) error {
+	if bytes.Compare(mpt.GetRoot(), mpt2.GetRoot()) == 0 {
+		Logger.Debug("MergeMPTChanges - MPT merge changes with the same root")
+		return nil
+	}
+
 	changes := mpt2.GetChangeCollector().GetChanges()
 	deletes := mpt2.GetChangeCollector().GetDeletes()
 
@@ -931,13 +953,15 @@ func (mpt *MerklePatriciaTrie) MergeMPTChanges(mpt2 MerklePatriciaTrieI) error {
 		if err := mpt2.GetChangeCollector().Validate(); err != nil {
 			Logger.Error("MergeMPTChanges - change collector validate", zap.Error(err))
 		}
-	}
 
-	Logger.Debug("MergeMPTChanges",
-		zap.Int("change num", len(changes)),
-		zap.Int("delete num", len(deletes)),
-		zap.Any("old mpt version", mpt.Version),
-		zap.Any("new mpt version", mpt.Version))
+		Logger.Debug("MergeMPTChanges",
+			zap.Int("change num", len(changes)),
+			zap.Int("delete num", len(deletes)),
+			zap.Any("old mpt version", mpt.Version),
+			zap.Any("new mpt version", mpt2.GetVersion()),
+			zap.String("old mpt root key", hex.EncodeToString(mpt.GetRoot())),
+			zap.String("new mpt root key", hex.EncodeToString(mpt2.GetRoot())))
+	}
 
 	mpt.mutex.Lock()
 	defer mpt.mutex.Unlock()
