@@ -154,6 +154,9 @@ type GlobalNode struct {
 
 	// Minted tokens by SC.
 	Minted state.Balance `json:"minted"`
+
+	// If viewchange is false then this will be used to pay interests and rewards to miner/sharders.
+	RewardRoundFrequency int64 `json:"reward_round_frequency"`
 }
 
 // The prevMagicBlock from the global node (saved on previous VC) or LFMB of
