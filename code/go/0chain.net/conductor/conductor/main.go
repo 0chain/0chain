@@ -123,13 +123,13 @@ func readConfigs(configFile, testsFile string) (conf *config.Config) {
 	return
 }
 
-type reportTest struct {
-	name  string
-	s, e  time.Time // start at, end at
-	tests []reportCase
+type reportTestCase struct {
+	name       string
+	s, e       time.Time // start at, end at
+	directives []reportFlowDirective
 }
 
-type reportCase struct {
+type reportFlowDirective struct {
 	success bool
 	err     error
 }
@@ -165,7 +165,7 @@ type Runner struct {
 	rounds map[config.RoundName]config.Round // named rounds (the remember_round)
 
 	// final report
-	report []reportTest
+	report []reportTestCase
 }
 
 func (r *Runner) isWaiting() (tm *time.Timer, ok bool) {
@@ -704,7 +704,7 @@ func (r *Runner) proceedWaiting() (err error) {
 	return
 }
 
-func isOk(cs []reportCase) (ok bool) {
+func isOk(cs []reportFlowDirective) (ok bool) {
 	for _, c := range cs {
 		if !c.success {
 			return false
@@ -721,32 +721,47 @@ func okString(t bool) string {
 }
 
 func (r *Runner) processReport() (success bool) {
-	success = true
-	var totalDuration time.Duration
+    success = true
 
-	fmt.Println("........................ R E P O R T ........................")
+    var totalDuration time.Duration
 
-	for _, rx := range r.report {
-		fmt.Printf("- %s %s, after %s\n", rx.name, okString(isOk(rx.tests)),
-			rx.e.Sub(rx.s).Round(time.Second))
-		totalDuration += rx.e.Sub(rx.s)
-		for _, t := range rx.tests {
-			success = success && t.success
-			if t.err != nil {
-				fmt.Printf("  - [ERR] %v\n", t.err)
-				continue
-			}
-		}
-	}
+    fmt.Println("........................ R E P O R T ........................")
 
-	fmt.Println("total duration:", totalDuration.Round(time.Second))
-	fmt.Println("success:", success)
-	fmt.Println(".............................................................")
-	return success
+    for _, testCase := range r.report {
+        fmt.Println("- ", testCase.name)
+
+		var caseError error = nil
+		var caseSuccess bool = true
+        totalDuration += testCase.e.Sub(testCase.s)
+
+        for _, flowDirective := range testCase.directives {
+            caseSuccess = caseSuccess && flowDirective.success
+
+            if flowDirective.err != nil {
+                caseError = flowDirective.err
+                break
+            }
+        }
+
+        fmt.Printf("  %s after %s\n", okString(caseSuccess),
+            testCase.e.Sub(testCase.s).Round(time.Second))
+
+        success = success && caseSuccess
+
+        if caseError != nil {
+            fmt.Printf("  - [ERR] %v\n", caseError)
+            break
+        }
+    }
+
+    fmt.Println("total duration:", totalDuration.Round(time.Second))
+    fmt.Println("overall success:", success)
+    fmt.Println(".............................................................")
+
+    return success
 }
 
 func (r *Runner) resetWaiters() {
-
 	r.waitNodes = make(map[NodeName]struct{})                  //
 	r.waitRound = config.WaitRound{}                           //
 	r.waitPhase = config.WaitPhase{}                           //
@@ -772,7 +787,6 @@ func (r *Runner) resetRounds() {
 // Run the tests.
 // Not always presence of an error means failure
 func (r *Runner) Run() (err error, success bool) {
-
 	log.Println("start testing...")
 	defer log.Println("end of testing")
 
@@ -787,42 +801,53 @@ func (r *Runner) Run() (err error, success bool) {
 		log.Print("...........................................................")
 		log.Print("start set ", set.Name)
 		log.Print("...........................................................")
-		// for every test case
-	Tests:
+
+		cases:
 		for i, testCase := range r.conf.TestsOfSet(&set) {
-			var report reportTest
+			var report reportTestCase
 			report.name = testCase.Name
 			report.s = time.Now()
+
 			log.Print("=======================================================")
-			log.Printf("%d %s test case", i, testCase.Name)
-			for j, f := range testCase.Flow {
+			log.Printf("Test case %d: %s", i, testCase.Name)
+			for j, d := range testCase.Flow {
 				log.Print("---------------------------------------------------")
 				log.Printf("  %d/%d step", i, j)
-				// execute
-				if err = f.Execute(r); err != nil {
-					return // fatality
+
+				err, mustFail := d.Execute(r)
+				if err == nil {
+					err = r.proceedWaiting()
 				}
-				if err = r.proceedWaiting(); err != nil {
-					report.tests = append(report.tests, reportCase{
-						success: false,
+
+				if err != nil {
+					// this is a failure, but might be an expected one
+					report.directives = append(report.directives, reportFlowDirective{
+						success: mustFail,
 						err:     err,
 					})
+
 					report.e = time.Now()
 					r.report = append(r.report, report) // add to report
 					r.stopAll()
 					r.resetWaiters()
-					log.Printf("[ERR] end of %d %s test case, %v", i,
-						testCase.Name, err)
-					continue Tests // test case failed
+
+					log.Printf("[ERR] at the end of %d test case: %v", i, err)
+					if mustFail {
+						log.Printf("[The error is expected result of the test case]")
+					}
+
+					continue cases
 				}
+
 				// test case succeeded
-				report.tests = append(report.tests, reportCase{
-					success: true,
+				report.directives = append(report.directives, reportFlowDirective{
+					success: !mustFail,
 					err:     err,
 				})
 			}
+
 			report.e = time.Now()
-			r.report = append(r.report, report) // add to report
+			r.report = append(r.report, report)
 			log.Printf("end of %d %s test case", i, testCase.Name)
 		}
 	}

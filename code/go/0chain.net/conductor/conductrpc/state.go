@@ -69,11 +69,11 @@ func (s *State) send(poll chan *State) {
 	}(s.copy())
 }
 
-type IsGoodBader interface {
+type IsGoodOrBad interface {
 	IsGood(state config.Namer, id string) bool
 	IsBad(state config.Namer, id string) bool
 }
 
-type IsByer interface {
+type IsBy interface {
 	IsBy(state config.Namer, id string) bool
 }

@@ -43,7 +43,7 @@ tests:
       - start: ["miner-1", "miner-2", "miner-3"]
       - wait_round:
           shift: 10
-          timeout: '2m'
+          timeout: '5m'
 
   - name: "Send bad MB to miners when all miners are down and then they are brought up"
     flow:
@@ -68,5 +68,6 @@ tests:
       - start: ["miner-1", "miner-2", "miner-3"]
       - wait_round:
           shift: 50
+          timeout: '10m'
 
 ...

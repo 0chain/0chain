@@ -275,8 +275,7 @@ func (mc *Chain) ContributeMpk(_ context.Context, lfb *block.Block,
 
 	var (
 		state     = crpc.Client().State()
-		good, bad = crpcutils.Split(state, state.MPK,
-			mb.Miners.Nodes)
+		good, bad = crpcutils.Split(state, state.MPK, mb.Miners.Nodes)
 		goodurls, badurls = getBaseN2NURLs(good), getBaseN2NURLs(bad)
 		badMPK            = getBadMPK(mpk)
 	)

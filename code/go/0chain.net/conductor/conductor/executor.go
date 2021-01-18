@@ -144,7 +144,6 @@ func (r *Runner) WaitPhase(pe config.WaitPhase, tm time.Duration) (err error) {
 }
 
 func (r *Runner) WaitRound(wr config.WaitRound, tm time.Duration) (err error) {
-
 	if wr.Round == 0 {
 		if wr.Name != "" {
 			// by a named round

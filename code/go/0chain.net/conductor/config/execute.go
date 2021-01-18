@@ -78,7 +78,7 @@ type Executor interface {
 // common setups
 //
 
-func (f Flow) setMonitor(ex Executor, val interface{}, tm time.Duration) (
+func setMonitor(ex Executor, val interface{}, tm time.Duration) (
 	err error) {
 
 	if ss, ok := getNodeNames(val); ok && len(ss) == 1 {
@@ -91,7 +91,7 @@ func (f Flow) setMonitor(ex Executor, val interface{}, tm time.Duration) (
 // common nodes control (start / stop, lock / unlock)
 //
 
-func (f Flow) start(name string, ex Executor, val interface{}, lock bool,
+func start(name string, ex Executor, val interface{}, lock bool,
 	tm time.Duration) (err error) {
 
 	if ss, ok := getNodeNames(val); ok {
@@ -100,7 +100,7 @@ func (f Flow) start(name string, ex Executor, val interface{}, lock bool,
 	return fmt.Errorf("invalid '%s' argument type: %T", name, val)
 }
 
-func (f Flow) unlock(ex Executor, val interface{}, tm time.Duration) (
+func unlock(ex Executor, val interface{}, tm time.Duration) (
 	err error) {
 
 	if ss, ok := getNodeNames(val); ok {
@@ -109,7 +109,7 @@ func (f Flow) unlock(ex Executor, val interface{}, tm time.Duration) (
 	return fmt.Errorf("invalid 'unlock' argument type: %T", val)
 }
 
-func (f Flow) stop(ex Executor, val interface{}, tm time.Duration) (
+func stop(ex Executor, val interface{}, tm time.Duration) (
 	err error) {
 
 	if ss, ok := getNodeNames(val); ok {
@@ -122,7 +122,7 @@ func (f Flow) stop(ex Executor, val interface{}, tm time.Duration) (
 // wait for an event of the monitor
 //
 
-func (f Flow) waitViewChange(ex Executor, val interface{}, tm time.Duration) (
+func waitViewChange(ex Executor, val interface{}, tm time.Duration) (
 	err error) {
 
 	var vc WaitViewChange
@@ -133,7 +133,7 @@ func (f Flow) waitViewChange(ex Executor, val interface{}, tm time.Duration) (
 	return ex.WaitViewChange(vc, tm)
 }
 
-func (f Flow) waitPhase(ex Executor, val interface{}, tm time.Duration) (
+func waitPhase(ex Executor, val interface{}, tm time.Duration) (
 	err error) {
 
 	type waitPhase struct {
@@ -152,7 +152,7 @@ func (f Flow) waitPhase(ex Executor, val interface{}, tm time.Duration) (
 	return ex.WaitPhase(wp, tm)
 }
 
-func (f Flow) waitRound(ex Executor, val interface{}, tm time.Duration) (
+func waitRound(ex Executor, val interface{}, tm time.Duration) (
 	err error) {
 
 	var wr WaitRound
@@ -162,8 +162,8 @@ func (f Flow) waitRound(ex Executor, val interface{}, tm time.Duration) (
 	return ex.WaitRound(wr, tm)
 }
 
-func (f Flow) waitContributeMpk(ex Executor, val interface{},
-	tm time.Duration) (err error) {
+func waitContributeMpk(ex Executor, val interface{}, tm time.Duration) (
+	err error) {
 
 	var wcmpk WaitContributeMpk
 	if err = mapstructure.Decode(val, &wcmpk); err != nil {
@@ -172,8 +172,8 @@ func (f Flow) waitContributeMpk(ex Executor, val interface{},
 	return ex.WaitContributeMpk(wcmpk, tm)
 }
 
-func (f Flow) waitShareSignsOrShares(ex Executor, val interface{},
-	tm time.Duration) (err error) {
+func waitShareSignsOrShares(ex Executor, val interface{}, tm time.Duration) (
+	err error) {
 
 	var wsoss WaitShareSignsOrShares
 	if err = mapstructure.Decode(val, &wsoss); err != nil {
@@ -182,7 +182,7 @@ func (f Flow) waitShareSignsOrShares(ex Executor, val interface{},
 	return ex.WaitShareSignsOrShares(wsoss, tm)
 }
 
-func (f Flow) waitAdd(ex Executor, val interface{}, tm time.Duration) (
+func waitAdd(ex Executor, val interface{}, tm time.Duration) (
 	err error) {
 
 	var wa WaitAdd
@@ -192,7 +192,7 @@ func (f Flow) waitAdd(ex Executor, val interface{}, tm time.Duration) (
 	return ex.WaitAdd(wa, tm)
 }
 
-func (f Flow) waitNoViewChainge(ex Executor, val interface{},
+func waitNoViewChainge(ex Executor, val interface{},
 	tm time.Duration) (err error) {
 
 	var wnvc WaitNoViewChainge
@@ -202,11 +202,11 @@ func (f Flow) waitNoViewChainge(ex Executor, val interface{},
 	return ex.WaitNoViewChainge(wnvc, tm)
 }
 
-func (f Flow) waitNoProgress(ex Executor, tm time.Duration) (err error) {
+func waitNoProgress(ex Executor, tm time.Duration) (err error) {
 	return ex.WaitNoProgress(tm)
 }
 
-func (f Flow) waitSharderKeep(ex Executor, val interface{},
+func waitSharderKeep(ex Executor, val interface{},
 	tm time.Duration) (err error) {
 
 	var wsk WaitSharderKeep
@@ -220,7 +220,7 @@ func (f Flow) waitSharderKeep(ex Executor, val interface{},
 // control nodes behavior / misbehavior (view change)
 //
 
-func (f Flow) setRevealed(name string, ex Executor, val interface{}, pin bool,
+func setRevealed(name string, ex Executor, val interface{}, pin bool,
 	tm time.Duration) (err error) {
 
 	if ss, ok := getNodeNames(val); ok {

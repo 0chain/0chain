@@ -114,7 +114,6 @@ test-view-change-1:
   script:
   - ./docker.local/bin/start.conductor.sh view-change-1
 
-run-view-change-2:
 test-view-change-2:
   <<: *only-protected
   <<: *run-integration-tests
