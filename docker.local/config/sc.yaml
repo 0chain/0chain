@@ -1,6 +1,7 @@
 smart_contracts:
   faucetsc: 
     pour_amount: 10000000000
+    max_pour_amount: 100000000000
     periodic_limit: 10000000000000
     global_limit: 1000000000000000
     individual_reset: 3h # in hours

@@ -86,6 +86,10 @@ func (fc *FaucetSmartContract) updateLimits(t *transaction.Transaction, inputDat
 	if newRequest.PourAmount > 0 {
 		gn.PourAmount = newRequest.PourAmount
 	}
+
+	if newRequest.MaxPourAmount > 0 {
+		gn.MaxPourAmount = newRequest.MaxPourAmount
+	}
 	if newRequest.PeriodicLimit > 0 {
 		gn.PeriodicLimit = newRequest.PeriodicLimit
 	}
@@ -110,7 +114,7 @@ func (fc *FaucetSmartContract) pour(t *transaction.Transaction, inputData []byte
 	ok, err := user.validPourRequest(t, balances, gn)
 	if ok {
 		var pourAmount = gn.PourAmount
-		if t.Value > 0 {
+		if t.Value > 0 && t.Value < int64(gn.MaxPourAmount) {
 			pourAmount = state.Balance(t.Value)
 		}
 		tokensPoured := fc.SmartContractExecutionStats["tokens Poured"].(metrics.Histogram)
@@ -194,6 +198,7 @@ func (fc *FaucetSmartContract) getGlobalVariables(t *transaction.Transaction, ba
 		return gn
 	}
 	gn.PourAmount = state.Balance(config.SmartContractConfig.GetInt("smart_contracts.faucetsc.pour_amount"))
+	gn.MaxPourAmount = state.Balance(config.SmartContractConfig.GetInt("smart_contracts.faucetsc.max_pour_amount"))
 	gn.PeriodicLimit = state.Balance(config.SmartContractConfig.GetInt("smart_contracts.faucetsc.periodic_limit"))
 	gn.GlobalLimit = state.Balance(config.SmartContractConfig.GetInt("smart_contracts.faucetsc.global_limit"))
 	gn.IndividualReset = config.SmartContractConfig.GetDuration("smart_contracts.faucetsc.individual_reset")
