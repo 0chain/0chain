@@ -109,8 +109,12 @@ func (fc *FaucetSmartContract) pour(t *transaction.Transaction, inputData []byte
 	user := fc.getUserVariables(t, gn, balances)
 	ok, err := user.validPourRequest(t, balances, gn)
 	if ok {
+		var pourAmount = gn.PourAmount
+		if t.Value > 0 {
+			pourAmount = state.Balance(t.Value)
+		}
 		tokensPoured := fc.SmartContractExecutionStats["tokens Poured"].(metrics.Histogram)
-		transfer := state.NewTransfer(t.ToClientID, t.ClientID, gn.PourAmount)
+		transfer := state.NewTransfer(t.ToClientID, t.ClientID, pourAmount)
 		balances.AddTransfer(transfer)
 		user.Used += transfer.Amount
 		gn.Used += transfer.Amount
