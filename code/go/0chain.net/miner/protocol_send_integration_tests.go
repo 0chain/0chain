@@ -29,7 +29,6 @@ func withTimeout(vrfs *round.VRFShare, timeout int) (bad *round.VRFShare) {
 }
 
 func (mc *Chain) SendVRFShare(ctx context.Context, vrfs *round.VRFShare) {
-
 	var (
 		mb        = mc.GetMagicBlock(vrfs.Round)
 		state     = crpc.Client().State()

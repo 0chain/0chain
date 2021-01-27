@@ -300,8 +300,8 @@ tests:
       - start: ['sharder-1']
       - start: ['miner-1', 'miner-2', 'miner-3']
       - wait_round:
-          timeout: '5m'
           round: 100
+          timeout: '5m'
       - double_spend_transaction:
           by: ['miner-3']
       - wait_round:
@@ -315,11 +315,12 @@ tests:
       - start: ['miner-1', 'miner-2', 'miner-3']
       - wait_round:
           round: 100
+          timeout: '5m'
       - double_spend_transaction:
           by: ['miner-2', 'miner-3']
       - wait_round:
-          round: 110    # can be very slow, but with progress
-          timeout: '5m' #
+          round: 110
+          timeout: '5m' # can be very slow, but with progress
 
   - name: 'Double spend transaction: 3/3'
     flow:
@@ -329,10 +330,11 @@ tests:
       - start: ['miner-1', 'miner-2', 'miner-3']
       - wait_round:
           round: 100
+          timeout: '5m'
       - double_spend_transaction:
           by: ['miner-1', 'miner-2', 'miner-3']
       - wait_round:
-          round: 110     #
-          timeout: '30m' # moves very slow, but moves
+          round: 110
+          timeout: '5m' # moves very slow, but moves
 
 ...

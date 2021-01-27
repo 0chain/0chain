@@ -226,6 +226,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 		Logger.Error("generate block (get clients error)", zap.Error(err))
 		return common.NewError("get_clients_error", err.Error())
 	}
+
 	Logger.Debug("generate block (assemble)", zap.Int64("round", b.Round), zap.Duration("time", time.Since(start)))
 
 	bsh.UpdatePendingBlock(ctx, b, etxns)
