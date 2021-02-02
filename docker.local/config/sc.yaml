@@ -33,14 +33,14 @@ smart_contracts:
     publish_rounds: 50
     wait_rounds: 50
     # stake interests, will be declined every epoch
-    interest_rate: 0.001 # [0; 1)
+    interest_rate: 0.000000555 # [0; 1)
     # reward rate for generators, will be declined every epoch
     reward_rate: 1.0 # [0; 1)
     # share ratio is miner/block sharders rewards ratio, for example 0.1
     # gives 10% for miner and rest for block sharders
-    share_ratio: 0.10 # [0; 1)
+    share_ratio: 0.8 # [0; 1)
     # reward for a block
-    block_reward: 0.7 # tokens
+    block_reward: 0.21 # tokens
     # max service charge can be set by a generator
     max_charge: 0.5 # %
     # epoch is number of rounds before rewards and interest are decreased
@@ -58,7 +58,7 @@ smart_contracts:
     # the time_unit is a duration used as divider for a write price; a write
     # price measured in tok / GB / time_unit, where the time_unit is this
     # configuration; for example 1h, 24h (a day), 720h (a month -- 30 days);
-    time_unit: '48h'
+    time_unit: '720h'
     min_stake: 0.01 # min stake can be set by a node (boundary for all nodes)
     max_stake: 100.0 # max stake can be set by a node (boundary for all nodes)
     # max_mint
@@ -88,7 +88,7 @@ smart_contracts:
       # minimal lock for a delegate pool
       min_lock: 0.1 # tokens
       # interest_rate is tokens earned by a blobber for its stake
-      interest_rate: 0.1
+      interest_rate: 0.0000334
       # interest_interval is interval to pay interests for a stake
       interest_interval: 1m
     # validator_reward represents part of blobbers' rewards goes to validators
