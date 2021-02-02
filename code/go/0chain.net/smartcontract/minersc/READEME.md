@@ -146,17 +146,15 @@ share_ratio.
 
 The formula
 ```
-generator_reward_service_charge = block_reward * service_charge
-generator_fee_service_charge    = block_fees * service_charge
+generator_rewards = block_reward * share_ratio
+sharders_rewards  = block_reward - generator_rewards
 
-rest_reward = block_reward - generator_reward_service_charge
-rest_fees = block_fees - generator_fee_service_charge
+generator_reward_service_charge = generator_rewards * service_charge
 
-generator_rewards = rest_reward * share_ratio
-sharders_rewards  = rest_reward - generator_rewards
+generator_fees = block_fees * share_ratio
+sharders_fees  = block_fees - generator_fees
 
-generator_fees = rest_fees * share_ratio
-sharders_fees  = rest_fees - generator_fees
+generator_fee_service_charge = generator_fees * service_charge
 ```
 
 The _generator_rewards_ and _generator_fees_ divided between generator's stake

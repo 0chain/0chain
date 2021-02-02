@@ -382,12 +382,14 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		blockReward = state.Balance(
 			float64(gn.BlockReward) * gn.RewardRate,
 		)
-		charger, restr   = mn.splitByServiceCharge(blockReward)
-		minerr, sharderr = gn.splitByShareRatio(restr)
+
+		minerr, sharderr = gn.splitByShareRatio(blockReward)
+		charger, _       = mn.splitByServiceCharge(minerr)
+
 		// fees         -- total fees for the block
 		fees             = msc.sumFee(block, true)
-		chargef, restf   = mn.splitByServiceCharge(fees)
-		minerf, sharderf = gn.splitByShareRatio(restf)
+		minerf, sharderf = gn.splitByShareRatio(fees)
+		chargef, _       = mn.splitByServiceCharge(minerf)
 		// intermediate response
 		iresp string
 	)
