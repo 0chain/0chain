@@ -150,11 +150,13 @@ generator_rewards = block_reward * share_ratio
 sharders_rewards  = block_reward - generator_rewards
 
 generator_reward_service_charge = generator_rewards * service_charge
+sharder_reward_service_charge = sharders_rewards * service_charge
 
 generator_fees = block_fees * share_ratio
 sharders_fees  = block_fees - generator_fees
 
 generator_fee_service_charge = generator_fees * service_charge
+sharder_fee_service_charge = sharders_fees * service_charge
 ```
 
 The _generator_rewards_ and _generator_fees_ divided between generator's stake
