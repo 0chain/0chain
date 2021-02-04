@@ -18,7 +18,7 @@ func init() {
 func TestInsert(t *testing.T) {
 	b := block.BlockSummaryProvider().(*block.BlockSummary)
 	b.Hash = "abcd"
-	b.MerkleRoot = "defd"
+	b.MerkleTreeRoot = "defd"
 	b.Round = 1
 	b.CreationDate = common.Now()
 	ctx := context.Background()
@@ -47,7 +47,7 @@ func TestRead(t *testing.T) {
 func TestInsertIfNE(t *testing.T) {
 	b := block.BlockSummaryProvider().(*block.BlockSummary)
 	b.Hash = "abc"
-	b.MerkleRoot = "def"
+	b.MerkleTreeRoot = "def"
 	b.Round = 1
 	b.CreationDate = common.Now()
 	ctx := context.Background()
@@ -64,7 +64,7 @@ func TestInsertIfNE(t *testing.T) {
 func TestDelete(t *testing.T) {
 	b := block.BlockSummaryProvider().(*block.BlockSummary)
 	b.Hash = "abc"
-	b.MerkleRoot = "def"
+	b.MerkleTreeRoot = "def"
 	b.Round = 0
 	b.CreationDate = common.Now()
 	ctx := context.Background()
