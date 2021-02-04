@@ -1,8 +1,13 @@
 package encryption
 
 import (
+	"0chain.net/core/logging"
 	"testing"
 )
+
+func init() {
+	logging.InitLogging("development")
+}
 
 func TestThresholdSignatures(t *testing.T) {
 	T := 7

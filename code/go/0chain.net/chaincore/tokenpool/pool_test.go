@@ -1,10 +1,15 @@
 package tokenpool
 
 import (
+	"0chain.net/core/logging"
 	"testing"
 
 	"0chain.net/chaincore/transaction"
 )
+
+func init() {
+	logging.InitLogging("development")
+}
 
 func TestDigPool(t *testing.T) {
 	txn := transaction.Transaction{}

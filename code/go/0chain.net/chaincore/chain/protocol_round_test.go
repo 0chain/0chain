@@ -4,7 +4,6 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/round"
 	"0chain.net/core/datastore"
-	"context"
 	"github.com/stretchr/testify/assert"
 	"strconv"
 	"testing"
@@ -57,7 +56,6 @@ func TestChain_GetLatestFinalizedMagicBlockRound(t *testing.T) {
 	for _, test := range cases {
 		t.Run(test.Name, func(t *testing.T) {
 			t.Parallel()
-			ctx := context.Background()
 			chain := &Chain{LatestFinalizedMagicBlock: lfmb, magicBlockStartingRounds: map[int64]*block.Block{}}
 			for _, r := range test.MagicBlocks {
 				chain.magicBlockStartingRounds[r] = &block.Block{

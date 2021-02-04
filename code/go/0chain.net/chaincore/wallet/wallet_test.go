@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"0chain.net/core/logging"
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
@@ -32,6 +33,7 @@ const (
 )
 
 func init() {
+	logging.InitLogging("development")
 	var rs = rand.NewSource(randTime)
 	prng = rand.New(rs)
 }

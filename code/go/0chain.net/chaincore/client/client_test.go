@@ -1,6 +1,7 @@
 package client
 
 import (
+	"0chain.net/core/logging"
 	"context"
 	"fmt"
 	"testing"
@@ -11,6 +12,10 @@ import (
 	"0chain.net/core/encryption"
 	"0chain.net/core/memorystore"
 )
+
+func init() {
+	logging.InitLogging("testing")
+}
 
 func TestClientChunkSave(t *testing.T) {
 	common.SetupRootContext(context.Background())

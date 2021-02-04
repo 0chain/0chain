@@ -1,6 +1,7 @@
 package persistencestore
 
 import (
+	"0chain.net/core/logging"
 	"context"
 	"fmt"
 	"testing"
@@ -12,6 +13,7 @@ import (
 )
 
 func init() {
+	logging.InitLogging("testing")
 	block.SetupBlockSummaryEntity(GetStorageProvider())
 }
 

@@ -1,6 +1,7 @@
 package bls
 
 import (
+	"0chain.net/core/logging"
 	"fmt"
 	"math"
 	"math/rand"
@@ -186,6 +187,10 @@ func (dkgs *DKGKeyShareImpl) Recover(dkgSigShares []DKGSignatureShare) (*bls.Sig
 		return nil, err
 	}
 	return &aggSig, nil
+}
+
+func init() {
+	logging.InitLogging("development")
 }
 
 func TestGenerateDKG(tt *testing.T) {

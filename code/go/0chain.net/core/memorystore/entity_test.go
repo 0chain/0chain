@@ -1,6 +1,7 @@
 package memorystore
 
 import (
+	"0chain.net/core/logging"
 	"context"
 	"fmt"
 	"testing"
@@ -22,6 +23,7 @@ type Company struct {
 var companyEntityMetadata = &datastore.EntityMetadataImpl{Name: "company", DB: "company", Store: GetStorageProvider(), Provider: CompanyProvider}
 
 func init() {
+	logging.InitLogging("development")
 	AddPool("company", DefaultPool)
 }
 
