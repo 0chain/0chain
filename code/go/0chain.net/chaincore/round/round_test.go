@@ -6,11 +6,15 @@ import (
 	"testing"
 
 	"0chain.net/chaincore/node"
+	"0chain.net/core/logging"
 )
+
+func init() {
+	logging.InitLogging("testing")
+}
 
 func TestRoundStableRandomization(t *testing.T) {
 	r := Round{Number: 1234}
-	r.SetRandomSeed(2009)
 	pool := node.NewPool(node.NodeTypeMiner)
 	nd := &node.Node{Type: node.NodeTypeMiner, SetIndex: 0}
 	nd.SetID("0")
@@ -23,12 +27,13 @@ func TestRoundStableRandomization(t *testing.T) {
 	pool.AddNode(nd)
 	pool.ComputeProperties()
 	numElements := pool.Size()
+	r.SetRandomSeed(2009, numElements)
 	fmt.Printf("pool size %v\n", numElements)
-	r.ComputeMinerRanks(pool)
+
 	p1 := make([]int, numElements)
 	copy(p1, r.minerPerm)
 	p2 := make([]int, numElements)
-	r.ComputeMinerRanks(pool)
+	r.computeMinerRanks(pool.Size())
 	copy(p2, r.minerPerm)
 	if !reflect.DeepEqual(p1, p2) {
 		t.Errorf("Permutations are not the same: %v %v\n", p1, p2)

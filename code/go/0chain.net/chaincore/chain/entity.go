@@ -572,7 +572,7 @@ func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block
 			zap.Int64("Round", r.GetRoundNumber()),
 			zap.Int64("Round_rrs", r.GetRandomSeed()),
 			zap.Int64("Block_rrs", b.GetRoundRandomSeed()))
-		r.SetRandomSeedForNotarizedBlock(b.GetRoundRandomSeed(), c.GetMiners(r.GetRoundNumber()))
+		r.SetRandomSeedForNotarizedBlock(b.GetRoundRandomSeed(), c.GetMiners(r.GetRoundNumber()).Size())
 		r.SetTimeoutCount(b.RoundTimeoutCount)
 	}
 
@@ -951,7 +951,7 @@ func (c *Chain) SetRandomSeed(r round.RoundI, randomSeed int64) bool {
 	if r.HasRandomSeed() && randomSeed == r.GetRandomSeed() {
 		return false
 	}
-	r.SetRandomSeed(randomSeed, c.GetMiners(r.GetRoundNumber()))
+	r.SetRandomSeed(randomSeed, c.GetMiners(r.GetRoundNumber()).Size())
 	roundNumber := r.GetRoundNumber()
 	if roundNumber > c.CurrentRound {
 		c.CurrentRound = roundNumber
