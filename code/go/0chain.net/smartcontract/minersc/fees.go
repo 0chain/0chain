@@ -430,11 +430,13 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 				return "", err
 			}
 		}
-	} else if block.Round%gn.RewardRoundFrequency == 0 {
+	} else if gn.RewardRoundFrequency != 0 && block.Round%gn.RewardRoundFrequency == 0 {
 		var mb = balances.GetBlock().MagicBlock
-		err = msc.viewChangePoolsWork(gn, mb, block.Round, balances)
-		if err != nil {
-			return "", err
+		if mb != nil {
+			err = msc.viewChangePoolsWork(gn, mb, block.Round, balances)
+			if err != nil {
+				return "", err
+			}
 		}
 	}
 
