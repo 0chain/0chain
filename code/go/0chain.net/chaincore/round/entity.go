@@ -206,17 +206,17 @@ func (r *Round) GetRoundNumber() int64 {
 }
 
 //SetRandomSeed - set the random seed of the round
-func (r *Round) SetRandomSeedForNotarizedBlock(seed int64, miners *node.Pool) {
+func (r *Round) SetRandomSeedForNotarizedBlock(seed int64, minersNum int) {
 	r.setRandomSeed(seed)
 	//r.setState(RoundVRFComplete) RoundStateFinalizing??
 	r.setHasRandomSeed(true)
 	r.mutex.Lock()
-	r.computeMinerRanks(miners)
+	r.computeMinerRanks(minersNum)
 	r.mutex.Unlock()
 }
 
 //SetRandomSeed - set the random seed of the round
-func (r *Round) SetRandomSeed(seed int64, miners *node.Pool) {
+func (r *Round) SetRandomSeed(seed int64, minersNum int) {
 	if atomic.LoadUint32(&r.hasRandomSeed) == 1 {
 		return
 	}
@@ -225,7 +225,7 @@ func (r *Round) SetRandomSeed(seed int64, miners *node.Pool) {
 	r.setHasRandomSeed(true)
 
 	r.mutex.Lock()
-	r.computeMinerRanks(miners)
+	r.computeMinerRanks(minersNum)
 	r.mutex.Unlock()
 }
 
@@ -462,11 +462,15 @@ func SetupRoundSummaryDB() {
 }
 
 /*ComputeMinerRanks - Compute random order of n elements given the random seed of the round */
-func (r *Round) computeMinerRanks(miners *node.Pool) {
-	Logger.Info("waiting to compute miner ranks", zap.Any("num_miners", miners.Size()), zap.Any("round", r.Number))
+func (r *Round) computeMinerRanks(minersNum int) {
+	Logger.Info("waiting to compute miner ranks",
+		zap.Any("num_miners", minersNum),
+		zap.Any("round", r.Number))
 	seed := r.GetRandomSeed()
-	Logger.Info("compute miner ranks", zap.Any("num_miners", miners.Size()), zap.Any("round", r.Number))
-	r.minerPerm = rand.New(rand.NewSource(seed)).Perm(miners.Size())
+	Logger.Info("compute miner ranks",
+		zap.Any("num_miners", minersNum),
+		zap.Any("round", r.Number))
+	r.minerPerm = rand.New(rand.NewSource(seed)).Perm(minersNum)
 }
 
 func (r *Round) IsRanksComputed() bool {
