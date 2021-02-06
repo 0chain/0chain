@@ -96,8 +96,24 @@ func (s *idStats) CheckExpiredIDs() {
 var pools = make(map[string]*dbpool)
 var idS *idStats
 
-func init() {
-	DefaultPool = NewPool(os.Getenv("REDIS_HOST"), 6379)
+//func init() {
+//	DefaultPool = NewPool(os.Getenv("REDIS_HOST"), 6379)
+//	pools[""] = &dbpool{ID: "", CtxKey: CONNECTION, Pool: DefaultPool}
+//	tkt := time.NewTicker(3 * time.Second)
+//	idS = newIDStats()
+//	go func() {
+//		for {
+//			select {
+//			case <-tkt.C:
+//				idS.CheckExpiredIDs()
+//			default:
+//			}
+//		}
+//	}()
+//}
+
+func InitDefaultPool(host string, port int) {
+	DefaultPool = NewPool(host, port)
 	pools[""] = &dbpool{ID: "", CtxKey: CONNECTION, Pool: DefaultPool}
 	tkt := time.NewTicker(3 * time.Second)
 	idS = newIDStats()

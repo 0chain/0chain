@@ -110,6 +110,10 @@ func (ms *Store) Delete(ctx context.Context, entity datastore.Entity) error {
 
 /*MultiRead - allows reading multiple entities at the same time */
 func (ms *Store) MultiRead(ctx context.Context, entityMetadata datastore.EntityMetadata, keys []datastore.Key, entities []datastore.Entity) error {
+	if len(keys) == 0 {
+		return nil
+	}
+
 	if len(entities) <= BATCH_SIZE {
 		return ms.multiReadAux(ctx, entityMetadata, keys, entities)
 	}

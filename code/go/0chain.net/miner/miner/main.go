@@ -372,6 +372,7 @@ func GetLatestMagicBlockFromSharders(ctx context.Context, mc *miner.Chain) (
 }
 
 func initEntities() {
+	memorystore.InitDefaultPool(os.Getenv("REDIS_HOST"), 6379)
 	memoryStorage := memorystore.GetStorageProvider()
 
 	chain.SetupEntity(memoryStorage)
