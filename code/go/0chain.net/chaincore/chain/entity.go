@@ -455,6 +455,11 @@ func SetupStateDB() {
 	stateDB = db
 }
 
+// CloseStateDB closes the state db (rocksdb)
+func CloseStateDB() {
+	stateDB.Close()
+}
+
 func (c *Chain) SetupConfigInfoDB() {
 	c.configInfoDB = "configdb"
 	c.configInfoStore = ememorystore.GetStorageProvider()
