@@ -46,11 +46,11 @@ func (mc *Chain) hashAndSignGeneratedBlock(ctx context.Context,
 func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 	bsh chain.BlockStateHandler, waitOver bool) error {
 
-	b.Txns = make([]*transaction.Transaction, mc.BlockSize)
+	b.Txns = make([]*transaction.Transaction, 0, mc.BlockSize)
 
 	var (
 		clients          = make(map[string]*client.Client)
-		etxns            = make([]datastore.Entity, mc.BlockSize)
+		etxns            = make([]datastore.Entity, 0, mc.BlockSize)
 		invalidTxns      []datastore.Entity
 		idx              int32
 		ierr             error
@@ -107,7 +107,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 		if debugTxn {
 			Logger.Info("generate block (debug transaction) success in processing Txn hash: " + txn.Hash + " blockHash? = " + b.Hash)
 		}
-		etxns[idx] = txn
+		etxns = append(etxns, txn)
 		b.AddTransaction(txn)
 		byteSize += int64(len(txn.TransactionData)) + int64(len(txn.TransactionOutput))
 		if txn.PublicKey == "" {
