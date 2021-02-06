@@ -222,3 +222,8 @@ func (pndb *PNodeDB) Size(ctx context.Context) int64 {
 	}
 	return count
 }
+
+// Close close the rocksdb
+func (pndb *PNodeDB) Close() {
+	pndb.db.Close()
+}
