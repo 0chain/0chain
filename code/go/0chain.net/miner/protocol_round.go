@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"0chain.net/core/memorystore"
 	metrics "github.com/rcrowley/go-metrics"
 
 	"0chain.net/chaincore/block"
@@ -20,7 +21,6 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/memorystore"
 	"0chain.net/core/util"
 
 	. "0chain.net/core/logging"
@@ -452,7 +452,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	b.LatestFinalizedMagicBlockRound = lfmbr.Round
 
 	b.MinerID = node.Self.Underlying().GetKey()
-	mc.SetPreviousBlock(ctx, r, b, pb)
+	mc.SetPreviousBlock(r, b, pb)
 
 	var (
 		start             = time.Now()
