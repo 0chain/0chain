@@ -241,7 +241,9 @@ func TestBlockVerificationBadHash(t *testing.T) {
 	common.Done()
 }
 
-//func TestBlockVerificationTooFewTransactions(t *testing.T) {
+//todo: rebuild this test case
+func TestBlockVerificationTooFewTransactions(t *testing.T) {
+	t.Error("FAIL: Test case needs to be re-implemented ")
 //	cleanSS := SetUpSingleSelf()
 //	defer cleanSS()
 //	ctx, clean := getContext()
@@ -269,7 +271,7 @@ func TestBlockVerificationBadHash(t *testing.T) {
 //		t.Log("SUCCESS: Block with too few transactions failed verifcation")
 //	}
 //	common.Done()
-//}
+}
 
 func BenchmarkGenerateALotTransactions(b *testing.B) {
 	cleanSS := SetUpSingleSelf()
@@ -307,7 +309,7 @@ func BenchmarkGenerateAndVerifyALotTransactions(b *testing.B) {
 	}
 }
 
-func setupTempRocketDBDir() func() {
+func setupTempRocksDBDir() func() {
 	if err := os.MkdirAll("data/rocksdb/state", 0766); err != nil {
 		panic(err)
 	}
@@ -350,7 +352,7 @@ func SetupGenesisBlock() *block.Block {
 
 func SetUpSingleSelf() func() {
 	// create rocksdb state dir
-	clean := setupTempRocketDBDir()
+	clean := setupTempRocksDBDir()
 	s, err := miniredis.Run()
 	if err != nil {
 		panic(err)
@@ -425,7 +427,7 @@ func SetUpSingleSelf() func() {
 }
 
 func setupSelf() func() {
-	clean := setupTempRocketDBDir()
+	clean := setupTempRocksDBDir()
 	s, err := miniredis.Run()
 	if err != nil {
 		panic(err)
