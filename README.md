@@ -66,19 +66,19 @@ $ ./docker.local/bin/sync_clock.sh
 
 ## Configuring the nodes
 
-1. Use ./docker.local/config/0chain.yaml to configure the blockchain properties. The default options are setup for running the blockchain fast in development.
+1. Use `./docker.local/config/0chain.yaml` to configure the blockchain properties. The default options are setup for running the blockchain fast in development.
 
-1.1) If you want the logs to appear on the console - change logging.console from false to true
+1.1) If you want the logs to appear on the console - change `logging.console` from `false` to `true`
 
-1.2) If you want the debug statements in the logs to appear - change logging.level from 'info' to 'debug'
+1.2) If you want the debug statements in the logs to appear - change `logging.level` from `"info"` to `"debug"`
 
-1.3) If you want to change the block size, set the value of server_chain.block.size
+1.3) If you want to change the block size, set the value of `server_chain.block.size`
 
-1.4) If you want to adjust the network relay time, set the value of network.relay_time
+1.4) If you want to adjust the network relay time, set the value of `network.relay_time`
 
 ## Starting the nodes
 
-1. Starting the nodes. On each of the miner terminals use the commands (note the .. at the beginning. This is because, these commands are run from within the docker.local/<miner/sharder|i> directories and the bin is one level above relative to these directories)
+1. Starting the nodes. On each of the miner terminals use the commands (note the `..` at the beginning. This is because, these commands are run from within the `docker.local/<miner/sharder|i>` directories and the `bin` is one level above relative to these directories)
 
 On the sharder terminal, use
 
