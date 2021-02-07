@@ -14,9 +14,9 @@ import (
 
 func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
-	resp string, err error) {
+		resp string, err error) {
 
-	var dp deletePool
+	var dp delegatePool
 	if err = dp.Decode(inputData); err != nil {
 		return "", common.NewErrorf("delegate_pool_add",
 			"decoding request: %v", err)
@@ -107,7 +107,7 @@ func (msc *MinerSmartContract) deleteFromDelegatePool(
 	t *transaction.Transaction, inputData []byte, gn *GlobalNode,
 	balances cstate.StateContextI) (resp string, err error) {
 
-	var dp deletePool
+	var dp delegatePool
 	if err = dp.Decode(inputData); err != nil {
 		return "", common.NewErrorf("delegate_pool_del",
 			"error decoding request: %v", err)

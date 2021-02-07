@@ -59,7 +59,6 @@ func moveTrue(balances cstate.StateContextI, pn *PhaseNode, gn *GlobalNode) (
 }
 
 func randString(n int) string {
-
 	const hexLetters = "abcdef0123456789"
 
 	var sb strings.Builder
@@ -96,22 +95,92 @@ func newClient(balance state.Balance, balances cstate.StateContextI) (
 	return
 }
 
+func newClientWithDelegate(isMiner bool, t *testing.T, msc *MinerSmartContract, now int64,
+	balances cstate.StateContextI) (client, delegate *Client) {
+
+	client, delegate = newClient(0, balances), newClient(0, balances)
+
+	var err error
+	_, err = client.callAddMinerOrSharder(isMiner, t, msc, now, delegate.id, balances)
+
+	require.NoError(t, err, "add_client")
+	return
+}
+
+// create and add miner/sharder, create stake holders, don't stake
+func newClientWithStakers(isMiner bool, t *testing.T,
+	msc *MinerSmartContract, now, stakersAmount int64,
+	val state.Balance, balances cstate.StateContextI) (
+	client *TestClient) {
+
+	client = new(TestClient)
+	client.client, client.delegate = newClientWithDelegate(true, t, msc, now, balances)
+	for i := int64(0); i < stakersAmount; i++ {
+		client.stakers = append(client.stakers, newClient(val, balances))
+	}
+	return
+}
+
+// stake a miner or a sharder
+func (c *Client) callAddToDelegatePool(t *testing.T, msc *MinerSmartContract,
+	now, val int64, nodeId string, balances cstate.StateContextI) (
+		resp string, err error) {
+
+	t.Helper()
+
+	var tx = newTransaction(c.id, ADDRESS, val, now)
+	balances.(*testBalances).txn = tx
+
+	var dp delegatePool
+	dp.MinerID = nodeId
+
+	var (
+		input = mustEncode(t, &dp)
+		gn    *GlobalNode
+	)
+	gn, err = msc.getGlobalNode(balances)
+	require.NoError(t, err, "missing global node")
+	return msc.addToDelegatePool(tx, input, gn, balances)
+}
+
+func (c *Client) callAddMinerOrSharder(isMiner bool, t *testing.T,
+	msc *MinerSmartContract, now int64, delegateWallet string,
+	balances cstate.StateContextI) (
+	resp string, err error) {
+
+	var tx = newTransaction(c.id, ADDRESS, 0, now)
+	balances.(*testBalances).txn = tx
+	var (
+		input  = c.addNodeRequest(t, delegateWallet)
+		global *GlobalNode
+	)
+	global, err = msc.getGlobalNode(balances)
+	require.NoError(t, err, "missing global node")
+
+	if isMiner {
+		return msc.AddMiner(tx, input, global, balances)
+	} else {
+		return msc.AddSharder(tx, input, global, balances)
+	}
+}
+
 // add_miner or add_sharder transaction data
 func (c *Client) addNodeRequest(t *testing.T, delegateWallet string) []byte {
-	var mn = NewMinerNode()
-	mn.ID = c.id
-	mn.N2NHost = "http://" + c.id + ":9081/api/v1"
-	mn.Host = c.id + ".host.miners"
-	mn.Port = 9081
-	mn.PublicKey = c.pk
-	mn.ShortName = "test_miner(" + c.id + ")"
-	mn.BuildTag = "commit"
-	mn.DelegateWallet = delegateWallet
-	mn.ServiceCharge = 0.5
-	mn.NumberOfDelegates = 10
-	mn.MinStake = 1e10
-	mn.MaxStake = 100e10
-	return mustEncode(t, mn)
+	var node = NewMinerNode()
+	node.ID = c.id
+	node.N2NHost = "http://" + c.id + ":9081/api/v1"
+	node.Host = c.id + ".host.miners"
+	node.Port = 9081
+	node.PublicKey = c.pk
+	node.ShortName = "test_miner(" + c.id + ")"
+	node.BuildTag = "commit"
+	node.DelegateWallet = delegateWallet
+	node.ServiceCharge = 0.5
+	node.NumberOfDelegates = 10
+	node.MinStake = 1e10
+	node.MaxStake = 100e10
+
+	return mustEncode(t, node)
 }
 
 func newTransaction(f, t string, val, now int64) (tx *transaction.Transaction) {
@@ -122,79 +191,6 @@ func newTransaction(f, t string, val, now int64) (tx *transaction.Transaction) {
 	tx.Value = val
 	tx.CreationDate = common.Timestamp(now)
 	return
-}
-
-func (c *Client) callAddMiner(t *testing.T, msc *MinerSmartContract,
-	now int64, delegateWallet string, balances cstate.StateContextI) (
-	resp string, err error) {
-
-	var tx = newTransaction(c.id, ADDRESS, 0, now)
-	balances.(*testBalances).txn = tx
-	var (
-		input = c.addNodeRequest(t, delegateWallet)
-		gn    *GlobalNode
-	)
-	gn, err = msc.getGlobalNode(balances)
-	require.NoError(t, err, "missing global node")
-	return msc.AddMiner(tx, input, gn, balances)
-}
-
-func (c *Client) callAddSharder(t *testing.T, msc *MinerSmartContract,
-	now int64, delegateWallet string, balances cstate.StateContextI) (
-	resp string, err error) {
-
-	var tx = newTransaction(c.id, ADDRESS, 0, now)
-	balances.(*testBalances).txn = tx
-	var (
-		input = c.addNodeRequest(t, delegateWallet)
-		gn    *GlobalNode
-	)
-	gn, err = msc.getGlobalNode(balances)
-	require.NoError(t, err, "missing global node")
-	return msc.AddSharder(tx, input, gn, balances)
-}
-
-func addMiner(t *testing.T, msc *MinerSmartContract, now int64,
-	balances cstate.StateContextI) (miner, delegate *Client) {
-
-	miner, delegate = newClient(0, balances), newClient(0, balances)
-	var err error
-	_, err = miner.callAddMiner(t, msc, now, delegate.id, balances)
-	require.NoError(t, err, "add_miner")
-	return
-}
-
-func addSharder(t *testing.T, msc *MinerSmartContract, now int64,
-	balances cstate.StateContextI) (miner, delegate *Client) {
-
-	miner, delegate = newClient(0, balances), newClient(0, balances)
-	var err error
-	_, err = miner.callAddSharder(t, msc, now, delegate.id, balances)
-	require.NoError(t, err, "add_sharder")
-	return
-}
-
-func (c *Client) addToDelegatePoolRequest(t *testing.T, nodeID string) []byte {
-	var dp deletePool
-	dp.MinerID = nodeID
-	return mustEncode(t, &dp)
-}
-
-// stake a miner or a sharder
-func (c *Client) callAddToDelegatePool(t *testing.T, msc *MinerSmartContract,
-	now, val int64, nodeID string, balances cstate.StateContextI) (resp string,
-	err error) {
-
-	t.Helper()
-	var tx = newTransaction(c.id, ADDRESS, val, now)
-	balances.(*testBalances).txn = tx
-	var (
-		input = c.addToDelegatePoolRequest(t, nodeID)
-		gn    *GlobalNode
-	)
-	gn, err = msc.getGlobalNode(balances)
-	require.NoError(t, err, "missing global node")
-	return msc.addToDelegatePool(tx, input, gn, balances)
 }
 
 func mustEncode(t *testing.T, val interface{}) []byte {
@@ -211,10 +207,9 @@ func mustSave(t *testing.T, key datastore.Key, val util.Serializable,
 	require.NoError(t, err)
 }
 
-func setConfig(t *testing.T, balances cstate.StateContextI) (
-	gn *GlobalNode) {
-
+func setConfig(t *testing.T, balances cstate.StateContextI) (gn *GlobalNode) {
 	gn = new(GlobalNode)
+
 	gn.ViewChange = 0
 	gn.MaxN = 100
 	gn.MinN = 3
@@ -233,6 +228,7 @@ func setConfig(t *testing.T, balances cstate.StateContextI) (
 	gn.MaxCharge = 0.5 // %
 	gn.Epoch = 15e6    // 15M
 	gn.RewardDeclineRate = 0.1
+	gn.RewardRoundPeriod = 250
 	gn.InterestDeclineRate = 0.1
 	gn.MaxMint = state.Balance(4e6 * 1e10)
 	gn.Minted = 0

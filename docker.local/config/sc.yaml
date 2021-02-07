@@ -52,7 +52,7 @@ smart_contracts:
     # no mints after miner SC total mints reaches this boundary
     max_mint: 4000000.0 # tokens
     # if view change is false then reward round frequency is used to send rewards and interests 
-    reward_round_frequency: 250
+    reward_round_period: 250
 
   storagesc:
     # the time_unit is a duration used as divider for a write price; a write

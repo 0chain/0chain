@@ -52,19 +52,76 @@ The delegate wallet can't be changed even if node ID used instead.
 The `mn-update-config` command of the _zwallet_ should be called by owner of the
 delegate wallet. Otherwise, command will fail.
 
+#### Reward rate.
+
+Reward rate is initially 1.0. It's % (value in [0; 1) range) that used to
+decline block rewards every epoch. Initially it's 1.0 (100%). E.g. a generator
+gives 100% of rewards (see _block_reward_ below).
+
+The formula
+```
+block_reward (mint) = reward_rate * block_reward
+```
+
+Every _epoch_ the reward_rate declined by reward_decline_rate. And the reward
+declined with it.
+
+#### Block reward.
+
+Even if fee is zero, a generator receive block_reward (minted). The block_reward
+measured in tokens (0.7 tokens, for example). The real block_reward depends on
+reward_rate.
+
+The formula
+```
+block_reward (mint) = block_reward (configured) * reward_rate
+```
+
+Since, the reward_rate is declining every epoch, the block_reward is declining
+too.
+
+### Share ratio and service charge
+
+All block rewards and fees are being split between generator and sharders
+according to share ratio. After, each node splits received payments
+between the node itself and its stake holders, using service charge.
+
+#### Share ratio.
+
+Share ratio is percentage (value in [0; 1) range) of all payments (block
+rewards and fees) which go to the generator (and its stake holders).
+The rest goes to sharders and their stake holders.
+
+```
+generator_payment = (block_reward + block_fees) * share_ratio
+sharders_payments = (block_reward + block_fees) * (1 - share_ratio)
+                  = block_reward + block_fees - generator_payment
+```
+
+The generator's payments are being split between generator's stake
+holders depending on their stake capacities and the node's service charge.
+
+The sharders' payments are being split between all block sharders equally
+and these equal parts are being split between their stake holders depending
+on their stake capacities and the node's service charge.
+
 #### Service charge.
 
-Service charge is % (value in [0; 1) range) of all fees and rewards of a block
-that goes to block generator stake holders.
+Service charge is percentage (value in [0; 1) range) of all payments for a block
+that goes to block generator or a sharder, while the rest goes to their stake holders.
 
 The formulas
 ```
-generator_fees = all_fees * service_charge
-generator_rewards = all_rewards * service_charge
+generator_service_payment        = generator_payment * service_charge
+generator_stake_holders_payments = generator_payment * (1 - service_charge)
+                                 = generator_payment - generator_service_payment
+
+sharder_service_payment        = sharder_payment * service_charge
+sharder_stake_holders_payments = sharder_payment * (1 - service_charge)
+                               = sharder_payment - sharder_stake_holders_payments
 ```
 
-Thus, generator receives `generator_fees`, `generator_rewards` and plus
-share_ratio of rest (see _share_ratio_ below).
+Payments per node are calculated first using share ratio.
 
 #### Number of delegates.
 
@@ -122,63 +179,6 @@ interest_rewrds (mint) = stake_capacity * interest_rate
 
 The interest_rate decreased by `interest_decline_rate` every epoch (see _epoch_
 below).
-
-
-#### Reward rate.
-
-Reward rate is initially 1.0. It's % (value in [0; 1) range) that used to
-decline block rewards every epoch. Initially it's 1.0 (100%). E.g. a generator
-gives 100% of rewards (see _block_reward_ below).
-
-The formula
-```
-block_reward (mint) = reward_rate * block_reward
-```
-
-Every _epoch_ the reward_rate declined by reward_decline_rate. And the reward
-declined with it.
-
-#### Share ratio.
-
-After a generator subtracts its service_charge the rest of fees divided by
-block sharders (stake holders) and the generator stake holders by the
-share_ratio.
-
-The formula
-```
-generator_rewards = block_reward * share_ratio
-sharders_rewards  = block_reward - generator_rewards
-
-generator_reward_service_charge = generator_rewards * service_charge
-sharder_reward_service_charge = sharders_rewards * service_charge
-
-generator_fees = block_fees * share_ratio
-sharders_fees  = block_fees - generator_fees
-
-generator_fee_service_charge = generator_fees * service_charge
-sharder_fee_service_charge = sharders_fees * service_charge
-```
-
-The _generator_rewards_ and _generator_fees_ divided between generator's stake
-holders depending their stake capacities.
-
-The sharders_rewards and sharders_fees divided between all block sharders
-equally and this equal parts divided between sharders' stake holder depending
-their stake capacities.
-
-#### Block reward.
-
-Even if fee is zero, a generator receive block_reward (minted). The block_reward
-measured in tokens (0.7 tokens, for example). The real block_reward depends on
-reward_rate.
-
-The formula
-```
-block_reward (mint) = block_reward (configured) * reward_rate
-```
-
-Since, the reward_rate is declining every epoch, the block_reward is declining
-too.
 
 #### Max charge
 
