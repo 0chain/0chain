@@ -103,7 +103,7 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 		// these transactions don't show up at the top.
 		txn.SetCollectionScore(txn.GetCollectionScore() - 10*60)
 		txnMap[txn.GetKey()] = true
-		b.Txns[idx] = txn
+		b.Txns = append(b.Txns, txn)
 		if debugTxn {
 			Logger.Info("generate block (debug transaction) success in processing Txn hash: " + txn.Hash + " blockHash? = " + b.Hash)
 		}
