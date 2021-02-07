@@ -407,7 +407,7 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	defer func() { rbgTimer.UpdateSince(ts) }()
 
 	roundNumber := r.GetRoundNumber()
-	pround := mc.GetMinerRound(roundNumber - 1)
+	pround := mc.GetRound(roundNumber - 1)
 	if pround == nil {
 		Logger.Error("generate round block - no prior round", zap.Any("round", roundNumber-1))
 		return nil, common.NewError("invalid_round,", "Round not available")
@@ -810,14 +810,14 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 }
 
 /*VerifyRoundBlock - given a block is verified for a round*/
-func (mc *Chain) VerifyRoundBlock(ctx context.Context, r *Round, b *block.Block) (*block.BlockVerificationTicket, error) {
-	if !mc.CanShardBlocks(r.Number) {
+func (mc *Chain) VerifyRoundBlock(ctx context.Context, r round.RoundI, b *block.Block) (*block.BlockVerificationTicket, error) {
+	if !mc.CanShardBlocks(r.GetRoundNumber()) {
 		return nil, common.NewError("fewer_active_sharders", "Number of active sharders not sufficient")
 	}
 	if !mc.CanReplicateBlock(b) {
 		return nil, common.NewError("fewer_active_replicators", "Number of active replicators not sufficient")
 	}
-	if mc.GetCurrentRound() != r.Number {
+	if mc.GetCurrentRound() != r.GetRoundNumber() {
 		return nil, ErrRoundMismatch
 	}
 	if b.MinerID == node.Self.Underlying().GetKey() {
@@ -830,19 +830,22 @@ func (mc *Chain) VerifyRoundBlock(ctx context.Context, r *Round, b *block.Block)
 		return nil, err
 	}
 	if !hasPriorBlock && b.PrevBlock != nil {
-		mc.updatePriorBlock(ctx, r.Round, b)
+		mc.updatePriorBlock(ctx, r, b)
 	}
 	return bvt, nil
 }
 
-func (mc *Chain) updatePriorBlock(ctx context.Context, r *round.Round, b *block.Block) {
+func (mc *Chain) updatePriorBlock(ctx context.Context, r round.RoundI, b *block.Block) {
 	pb := b.PrevBlock
 	mc.MergeVerificationTickets(ctx, pb, b.GetPrevBlockVerificationTickets())
 	pr := mc.GetMinerRound(pb.Round)
 	if pr != nil {
 		mc.AddNotarizedBlock(ctx, pr, pb)
 	} else {
-		Logger.Error("verify round - previous round not present", zap.Int64("round", r.Number), zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash))
+		Logger.Error("verify round - previous round not present",
+			zap.Int64("round", r.GetRoundNumber()),
+			zap.String("block", b.Hash),
+			zap.String("prev_block", b.PrevHash))
 	}
 	if pb.VerificationTicketsSize() > b.PrevBlockVerificationTicketsSize() {
 		b.SetPrevBlockVerificationTickets(pb.GetVerificationTickets())
