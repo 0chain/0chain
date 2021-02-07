@@ -5,6 +5,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"os/user"
 	"strconv"
@@ -24,6 +25,7 @@ import (
 	"0chain.net/core/memorystore"
 	"0chain.net/sharder/blockstore"
 	"github.com/gomodule/redigo/redis"
+	"github.com/stretchr/testify/require"
 
 	"github.com/alicebob/miniredis/v2"
 )
@@ -44,7 +46,7 @@ func getContext() (context.Context, func()) {
 	}
 }
 
-func generateSingleBlock(ctx context.Context, prevBlock *block.Block, r *Round) (*block.Block, error) {
+func generateSingleBlock(ctx context.Context, prevBlock *block.Block, r round.RoundI) (*block.Block, error) {
 	b := block.Provider().(*block.Block)
 	mc := GetMinerChain()
 	if prevBlock == nil {
@@ -58,18 +60,33 @@ func generateSingleBlock(ctx context.Context, prevBlock *block.Block, r *Round) 
 	if err != nil {
 		panic(err)
 	}
-	blockstore.SetupStore(blockstore.NewFSBlockStore(fmt.Sprintf("%v%s.0chain.net", usr.HomeDir, string(os.PathSeparator))))
-	b, err = mc.GenerateRoundBlock(ctx, r)
+	blockstore.SetupStore(blockstore.NewFSBlockStore(fmt.Sprintf("%v%s.0chain.net",
+		usr.HomeDir, string(os.PathSeparator))))
+
+	var rd *Round
+	switch rr := r.(type) {
+	case *MockRound:
+		rd = rr.Round
+	case *Round:
+		rd = rr
+	default:
+		log.Fatalf("unknow round type:%v", rr)
+	}
+
+	b, err = mc.GenerateRoundBlock(ctx, rd)
 	if err != nil {
 		return nil, err
 	}
 	b.ComputeProperties()
 	blockstore.GetStore().Write(b)
+	if mkr, ok := r.(*MockRound); ok {
+		mkr.HeaviestNotarizedBlock = b
+	}
 	return b, nil
 }
 
 type MockRound struct {
-	Round
+	*Round
 	HeaviestNotarizedBlock *block.Block
 }
 
@@ -81,6 +98,17 @@ func CreateRound(number int64) *Round {
 	mc := GetMinerChain()
 	r := round.NewRound(number)
 	mr := mc.CreateRound(r)
+	mc.AddRound(mr)
+	mc.SetCurrentRound(mr.Number)
+	return mr
+}
+
+func CreateMockRound(number int64) *MockRound {
+	mc := GetMinerChain()
+	r := round.NewRound(number)
+	mr := &MockRound{
+		Round: mc.CreateRound(r),
+	}
 	mc.AddRound(mr)
 	mc.SetCurrentRound(mr.Number)
 	return mr
@@ -109,15 +137,17 @@ func TestBlockVerification(t *testing.T) {
 func TestTwoCorrectBlocks(t *testing.T) {
 	cleanSS := SetUpSingleSelf()
 	defer cleanSS()
-	ctx, clean := getContext()
-	defer clean()
-	mr := CreateRound(1)
+	ctx := context.Background()
+	mr := CreateMockRound(1)
 	b0, err := generateSingleBlock(ctx, nil, mr)
 	mc := GetMinerChain()
+	rd := mc.GetRound(1)
+	require.NotNil(t, rd)
 	if b0 != nil {
 		var b1 *block.Block
-		mr2 := CreateRound(2)
-		b1, err = generateSingleBlock(ctx, b0, mr2)
+		mr2 := CreateMockRound(2)
+		b1, err = generateSingleBlock(ctx, b0, mr2.Round)
+		require.NoError(t, err)
 		_, err = mc.VerifyRoundBlock(ctx, mr2, b1)
 	}
 	if err != nil {
@@ -127,6 +157,7 @@ func TestTwoCorrectBlocks(t *testing.T) {
 	}
 	common.Done()
 }
+
 func TestTwoBlocksWrongRound(t *testing.T) {
 	cleanSS := SetUpSingleSelf()
 	defer cleanSS()
@@ -235,89 +266,6 @@ func BenchmarkGenerateAndVerifyALotTransactions(b *testing.B) {
 	}
 }
 
-func SetUpSingleSelf() func() {
-	// create rocksdb state dir
-	clean := setupTempRocketDBDir()
-	s, err := miniredis.Run()
-	if err != nil {
-		panic(err)
-	}
-	p, err := strconv.Atoi(s.Port())
-	if err != nil {
-		panic(err)
-	}
-	memorystore.InitDefaultPool(s.Host(), p)
-
-	memorystore.AddPool("txndb", &redis.Pool{
-		MaxIdle:   80,
-		MaxActive: 1000, // max number of connections
-		Dial: func() (redis.Conn, error) {
-			c, err := redis.Dial("tcp", s.Addr())
-			if err != nil {
-				panic(err.Error())
-			}
-			return c, err
-		},
-	})
-
-	//n1 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7071, Status: node.NodeStatusActive}
-	//n1.ID = "24e23c52e2e40689fdb700180cd68ac083a42ed292d90cc021119adaa4d21509"
-	//node.Self = &node.SelfNode{}
-	//node.Self.Node = n1
-	//np := node.NewPool(node.NodeTypeMiner)
-	//np.AddNode(n1)
-
-	n1 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7071, Status: node.NodeStatusActive}
-	n1.ID = "24e23c52e2e40689fdb700180cd68ac083a42ed292d90cc021119adaa4d21509"
-	n2 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7072, Status: node.NodeStatusActive}
-	n2.ID = "5fbb6924c222e96df6c491dfc4a542e1bbfc75d821bcca992544899d62121b55"
-	n3 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7073, Status: node.NodeStatusActive}
-	n3.ID = "103c274502661e78a2b5c470057e57699e372a4382a4b96b29c1bec993b1d19c"
-
-	node.Self = &node.SelfNode{}
-	node.Self.Node = n1
-
-	setupSelfNodeKeys()
-
-	np := node.NewPool(node.NodeTypeMiner)
-	np.AddNode(n1)
-	np.AddNode(n2)
-	np.AddNode(n3)
-
-	mb := block.NewMagicBlock()
-	mb.Miners = np
-
-	config.SetServerChainID(config.GetMainChainID())
-	common.SetupRootContext(node.GetNodeContext())
-	transaction.SetupEntity(memorystore.GetStorageProvider())
-
-	block.SetupEntity(memorystore.GetStorageProvider())
-	block.SetupBlockSummaryEntity(memorystore.GetStorageProvider())
-	client.SetupEntity(memorystore.GetStorageProvider())
-
-	chain.SetupEntity(memorystore.GetStorageProvider())
-	round.SetupEntity(memorystore.GetStorageProvider())
-
-	c := chain.Provider().(*chain.Chain)
-	c.ID = datastore.ToKey(config.GetServerChainID())
-	c.SetMagicBlock(mb)
-	c.NumGenerators = 1
-	c.RoundRange = 10000000
-	c.MinBlockSize = 1
-	c.MaxByteSize = 1638400
-	c.SetGenerationTimeout(15)
-	chain.SetServerChain(c)
-	SetupMinerChain(c)
-	mc := GetMinerChain()
-	mc.SetMagicBlock(mb)
-	SetupM2MSenders()
-	return func() {
-		chain.CloseStateDB()
-		clean()
-		s.Close()
-	}
-}
-
 func setupTempRocketDBDir() func() {
 	if err := os.MkdirAll("data/rocksdb/state", 0766); err != nil {
 		panic(err)
@@ -359,7 +307,31 @@ func SetupGenesisBlock() *block.Block {
 	return gb
 }
 
-func setupSelf() {
+func SetUpSingleSelf() func() {
+	// create rocksdb state dir
+	clean := setupTempRocketDBDir()
+	s, err := miniredis.Run()
+	if err != nil {
+		panic(err)
+	}
+	p, err := strconv.Atoi(s.Port())
+	if err != nil {
+		panic(err)
+	}
+	memorystore.InitDefaultPool(s.Host(), p)
+
+	memorystore.AddPool("txndb", &redis.Pool{
+		MaxIdle:   80,
+		MaxActive: 1000, // max number of connections
+		Dial: func() (redis.Conn, error) {
+			c, err := redis.Dial("tcp", s.Addr())
+			if err != nil {
+				panic(err.Error())
+			}
+			return c, err
+		},
+	})
+
 	n1 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7071, Status: node.NodeStatusActive}
 	n1.ID = "24e23c52e2e40689fdb700180cd68ac083a42ed292d90cc021119adaa4d21509"
 	n2 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7072, Status: node.NodeStatusActive}
@@ -376,10 +348,86 @@ func setupSelf() {
 	np.AddNode(n1)
 	np.AddNode(n2)
 	np.AddNode(n3)
+
+	mb := block.NewMagicBlock()
+	mb.Miners = np
+
 	common.SetupRootContext(node.GetNodeContext())
 	config.SetServerChainID(config.GetMainChainID())
-	common.SetupRootContext(node.GetNodeContext())
 	transaction.SetupEntity(memorystore.GetStorageProvider())
+
+	block.SetupEntity(memorystore.GetStorageProvider())
+	block.SetupBlockSummaryEntity(memorystore.GetStorageProvider())
+	client.SetupEntity(memorystore.GetStorageProvider())
+
+	chain.SetupEntity(memorystore.GetStorageProvider())
+	round.SetupEntity(memorystore.GetStorageProvider())
+
+	c := chain.Provider().(*chain.Chain)
+	c.ID = datastore.ToKey(config.GetServerChainID())
+	c.SetMagicBlock(mb)
+	c.NumGenerators = 1
+	c.RoundRange = 10000000
+	c.MinBlockSize = 1
+	c.MaxByteSize = 1638400
+	c.SetGenerationTimeout(15)
+	chain.SetServerChain(c)
+	SetupMinerChain(c)
+	mc := GetMinerChain()
+	mc.SetMagicBlock(mb)
+	SetupM2MSenders()
+	return func() {
+		chain.CloseStateDB()
+		clean()
+		s.Close()
+	}
+}
+
+func setupSelf() func() {
+	clean := setupTempRocketDBDir()
+	s, err := miniredis.Run()
+	if err != nil {
+		panic(err)
+	}
+	p, err := strconv.Atoi(s.Port())
+	if err != nil {
+		panic(err)
+	}
+	memorystore.InitDefaultPool(s.Host(), p)
+
+	memorystore.AddPool("txndb", &redis.Pool{
+		MaxIdle:   80,
+		MaxActive: 1000, // max number of connections
+		Dial: func() (redis.Conn, error) {
+			c, err := redis.Dial("tcp", s.Addr())
+			if err != nil {
+				panic(err.Error())
+			}
+			return c, err
+		},
+	})
+
+	n1 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7071, Status: node.NodeStatusActive}
+	n1.ID = "24e23c52e2e40689fdb700180cd68ac083a42ed292d90cc021119adaa4d21509"
+	n2 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7072, Status: node.NodeStatusActive}
+	n2.ID = "5fbb6924c222e96df6c491dfc4a542e1bbfc75d821bcca992544899d62121b55"
+	n3 := &node.Node{Type: node.NodeTypeMiner, Host: "", Port: 7073, Status: node.NodeStatusActive}
+	n3.ID = "103c274502661e78a2b5c470057e57699e372a4382a4b96b29c1bec993b1d19c"
+
+	node.Self = &node.SelfNode{}
+	node.Self.Node = n1
+
+	setupSelfNodeKeys()
+
+	np := node.NewPool(node.NodeTypeMiner)
+	np.AddNode(n1)
+	np.AddNode(n2)
+	np.AddNode(n3)
+
+	common.SetupRootContext(node.GetNodeContext())
+	config.SetServerChainID(config.GetMainChainID())
+	transaction.SetupEntity(memorystore.GetStorageProvider())
+
 	block.SetupEntity(memorystore.GetStorageProvider())
 	client.SetupEntity(memorystore.GetStorageProvider())
 	chain.SetupEntity(memorystore.GetStorageProvider())
@@ -396,10 +444,17 @@ func setupSelf() {
 	mc := GetMinerChain()
 	mc.SetMagicBlock(mb)
 	SetupM2MSenders()
+
+	return func() {
+		chain.CloseStateDB()
+		clean()
+		s.Close()
+	}
 }
 
 func TestBlockGeneration(t *testing.T) {
-	setupSelf()
+	clean := SetUpSingleSelf()
+	defer clean()
 	ctx := common.GetRootContext()
 	ctx = memorystore.WithConnection(ctx)
 	defer memorystore.Close(ctx)
