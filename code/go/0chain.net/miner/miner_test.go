@@ -114,6 +114,47 @@ func CreateMockRound(number int64) *MockRound {
 	return mr
 }
 
+func TestBlockGeneration(t *testing.T) {
+	clean := SetUpSingleSelf()
+	defer clean()
+	ctx := common.GetRootContext()
+	ctx = memorystore.WithConnection(ctx)
+	defer memorystore.Close(ctx)
+
+	mc := GetMinerChain()
+	gb := SetupGenesisBlock()
+	mc.AddGenesisBlock(gb)
+
+	b := block.Provider().(*block.Block)
+	b.ChainID = datastore.ToKey(config.GetServerChainID())
+	usr, err := user.Current()
+	if err != nil {
+		panic(err)
+	}
+	blockstore.SetupStore(blockstore.NewFSBlockStore(fmt.Sprintf("%v%s.0chain.net", usr.HomeDir, string(os.PathSeparator))))
+
+	r := CreateRound(1)
+
+	b, err = mc.GenerateRoundBlock(ctx, r)
+
+	if err != nil {
+		t.Errorf("Error generating block: %v\n", err)
+		return
+	}
+
+	t.Logf("json length: %v\n", datastore.ToJSON(b).Len())
+	t.Logf("msgpack length: %v\n", datastore.ToMsgpack(b).Len())
+	err = blockstore.Store.Write(b)
+	require.NoError(t, err)
+
+	b2, err := blockstore.Store.Read(b.Hash, r.Number)
+	require.NoError(t, err)
+
+	t.Logf("Block hash is: %v\n", b2.Hash)
+
+	common.Done()
+}
+
 func TestBlockVerification(t *testing.T) {
 	clean := SetUpSingleSelf()
 	defer clean()
@@ -450,49 +491,4 @@ func setupSelf() func() {
 		clean()
 		s.Close()
 	}
-}
-
-func TestBlockGeneration(t *testing.T) {
-	clean := SetUpSingleSelf()
-	defer clean()
-	ctx := common.GetRootContext()
-	ctx = memorystore.WithConnection(ctx)
-	defer memorystore.Close(ctx)
-	SetupGenesisBlock()
-	r := round.Provider().(*round.Round)
-	r.Number = 1
-	mc := GetMinerChain()
-	mr := mc.CreateRound(r)
-	mc.AddRound(mr)
-	b := block.Provider().(*block.Block)
-	b.ChainID = datastore.ToKey(config.GetServerChainID())
-	usr, err := user.Current()
-	if err != nil {
-		panic(err)
-	}
-	blockstore.SetupStore(blockstore.NewFSBlockStore(fmt.Sprintf("%v%s.0chain.net", usr.HomeDir, string(os.PathSeparator))))
-
-	b, err = mc.GenerateRoundBlock(ctx, mr)
-
-	if err != nil {
-		t.Errorf("Error generating block: %v\n", err)
-	} else {
-		/* fmt.Printf("%v\n", datastore.ToJSON(b))
-		fmt.Printf("%v\n", datastore.ToMsgpack(b))
-		*/
-		t.Logf("json length: %v\n", datastore.ToJSON(b).Len())
-		t.Logf("msgpack length: %v\n", datastore.ToMsgpack(b).Len())
-		err = blockstore.Store.Write(b)
-		if err != nil {
-			t.Errorf("Error writing the block: %v\n", err)
-		} else {
-			b2, err := blockstore.Store.Read(b.Hash, r.Number)
-			if err != nil {
-				t.Errorf("Error reading the block: %v\n", err)
-			} else {
-				t.Logf("Block hash is: %v\n", b2.Hash)
-			}
-		}
-	}
-	common.Done()
 }
