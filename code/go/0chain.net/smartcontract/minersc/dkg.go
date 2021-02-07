@@ -229,11 +229,11 @@ func (msc *MinerSmartContract) getPhaseNode(statectx cstate.StateContextI) (
 }
 
 func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
-	pn *PhaseNode, gn *GlobalNode, t *transaction.Transaction) error {
+	pn *PhaseNode, gn *GlobalNode) error {
 
 	// move phase condition
 	var movePhase = config.DevConfiguration.ViewChange &&
-		pn.CurrentRound-pn.StartRound >= PhaseRounds[pn.Phase]
+			pn.CurrentRound - pn.StartRound >= PhaseRounds[pn.Phase]
 
 	// move
 	if movePhase {
@@ -257,7 +257,7 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 				}
 			}
 			if err == nil {
-				if Phase(len(PhaseRounds))-1 > pn.Phase {
+				if Phase(len(PhaseRounds)) - 1 > pn.Phase {
 					pn.Phase++
 				} else {
 					pn.Phase = 0

@@ -9,16 +9,14 @@ import (
 
 var ErrInvalidMint = common.NewError("invalid_mint", "invalid minter")
 
-//Transfer - a data structure to hold state transfer from one client to another
 type Mint struct {
-	Minter     datastore.Key `json:"minter"`
-	ToClientID datastore.Key `json:"to"`
-	Amount     Balance       `json:"amount"`
+	Minter   datastore.Key `json:"minter"`
+	Receiver datastore.Key `json:"to"`
+	Amount   Balance       `json:"amount"`
 }
 
-//NewTransfer - create a new transfer
-func NewMint(minter, toClientID datastore.Key, amount Balance) *Mint {
-	m := &Mint{Minter: minter, ToClientID: toClientID, Amount: amount}
+func NewMint(minter, receiver datastore.Key, amount Balance) *Mint {
+	m := &Mint{Minter: minter, Receiver: receiver, Amount: amount}
 	return m
 }
 

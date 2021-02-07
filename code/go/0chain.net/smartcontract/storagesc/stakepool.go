@@ -453,9 +453,9 @@ func (sp *stakePool) mintPool(sscID string, dp *delegatePool,
 	}
 
 	err = balances.AddMint(&state.Mint{
-		Minter:     sscID,         // storage SC
-		ToClientID: dp.DelegateID, // delegate wallet
-		Amount:     mint,          // move total mints at once
+		Minter:   sscID,         // storage SC
+		Receiver: dp.DelegateID, // delegate wallet
+		Amount:   mint,          // move total mints at once
 	})
 
 	if err != nil {

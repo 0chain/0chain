@@ -85,9 +85,9 @@ func (ip *InterestPoolSmartContract) lock(t *transaction.Transaction, un *UserNo
 			float64(transfer.Amount) * gn.APR * float64(npr.Duration) / float64(YEAR),
 		)
 		balances.AddMint(&state.Mint{
-			Minter:     ip.ID,
-			ToClientID: transfer.ClientID,
-			Amount:     pool.TokensEarned,
+			Minter:   ip.ID,
+			Receiver: transfer.Sender,
+			Amount:   pool.TokensEarned,
 		})
 		// add to total minted
 		gn.TotalMinted += pool.TokensEarned

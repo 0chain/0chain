@@ -11,7 +11,7 @@ import (
 )
 
 //
-// helper for tests implements chainState.StateContextI
+// helper for tests implementing chainState.StateContextI
 //
 
 type testBalances struct {
@@ -109,11 +109,11 @@ func (tb *testBalances) InsertTrieNode(key datastore.Key,
 }
 
 func (tb *testBalances) AddTransfer(t *state.Transfer) error {
-	if t.ClientID != tb.txn.ClientID && t.ClientID != tb.txn.ToClientID {
+	if t.Sender != tb.txn.ClientID && t.Sender != tb.txn.ToClientID {
 		return state.ErrInvalidTransfer
 	}
-	tb.balances[t.ClientID] -= t.Amount
-	tb.balances[t.ToClientID] += t.Amount
+	tb.balances[t.Sender] -= t.Amount
+	tb.balances[t.Receiver] += t.Amount
 	tb.transfers = append(tb.transfers, t)
 	return nil
 }
@@ -122,6 +122,6 @@ func (tb *testBalances) AddMint(mint *state.Mint) error {
 	if mint.Minter != ADDRESS {
 		panic("invalid miner: " + mint.Minter)
 	}
-	tb.balances[mint.ToClientID] += mint.Amount // mint!
+	tb.balances[mint.Receiver] += mint.Amount // mint!
 	return nil
 }

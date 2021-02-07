@@ -409,30 +409,30 @@ func (c *Chain) updateState(b *block.Block, txn *transaction.Transaction) (
 	)
 
 	switch txn.TransactionType {
+		case transaction.TxnTypeSmartContract:
+			var output string
+			if output, err = c.ExecuteSmartContract(txn, sctx); err != nil {
+				Logger.Error("Error executing the SC", zap.Any("txn", txn),
+					zap.Error(err))
+				return
+			}
+			txn.TransactionOutput = output
+			Logger.Info("SC executed with output",
+				zap.Any("txn_output", txn.TransactionOutput),
+				zap.Any("txn_hash", txn.Hash))
 
-	case transaction.TxnTypeSmartContract:
-		var output string
-		if output, err = c.ExecuteSmartContract(txn, sctx); err != nil {
-			Logger.Error("Error executing the SC", zap.Any("txn", txn),
-				zap.Error(err))
-			return
-		}
-		txn.TransactionOutput = output
-		Logger.Info("SC executed with output",
-			zap.Any("txn_output", txn.TransactionOutput),
-			zap.Any("txn_hash", txn.Hash))
+		case transaction.TxnTypeData:
 
-	case transaction.TxnTypeData:
+		case transaction.TxnTypeSend:
+			err = sctx.AddTransfer(state.NewTransfer(txn.ClientID, txn.ToClientID,
+				state.Balance(txn.Value)))
+			if err != nil {
+				return
+			}
 
-	case transaction.TxnTypeSend:
-		err = sctx.AddTransfer(state.NewTransfer(txn.ClientID, txn.ToClientID,
-			state.Balance(txn.Value)))
-		if err != nil {
-			return
-		}
-	default:
-		Logger.Error("Invalid transaction type", zap.Int("txn type", txn.TransactionType))
-		return fmt.Errorf("invalid transaction type: %v", txn.TransactionType)
+		default:
+			Logger.Error("Invalid transaction type", zap.Int("txn type", txn.TransactionType))
+			return fmt.Errorf("invalid transaction type: %v", txn.TransactionType)
 	}
 
 	if config.DevConfiguration.IsFeeEnabled {
@@ -448,7 +448,7 @@ func (c *Chain) updateState(b *block.Block, txn *transaction.Transaction) (
 	}
 
 	for _, transfer := range sctx.GetTransfers() {
-		err = c.transferAmount(sctx, transfer.ClientID, transfer.ToClientID,
+		err = c.transferAmount(sctx, transfer.Sender, transfer.Receiver,
 			state.Balance(transfer.Amount))
 		if err != nil {
 			return
@@ -456,15 +456,15 @@ func (c *Chain) updateState(b *block.Block, txn *transaction.Transaction) (
 	}
 
 	for _, signedTransfer := range sctx.GetSignedTransfers() {
-		err = c.transferAmount(sctx, signedTransfer.ClientID,
-			signedTransfer.ToClientID, state.Balance(signedTransfer.Amount))
+		err = c.transferAmount(sctx, signedTransfer.Sender,
+			signedTransfer.Receiver, state.Balance(signedTransfer.Amount))
 		if err != nil {
 			return
 		}
 	}
 
 	for _, mint := range sctx.GetMints() {
-		err = c.mintAmount(sctx, mint.ToClientID, state.Balance(mint.Amount))
+		err = c.mintAmount(sctx, mint.Receiver, state.Balance(mint.Amount))
 		if err != nil {
 			Logger.Error("mint error", zap.Any("error", err),
 				zap.Any("transaction", txn.Hash))
