@@ -21,10 +21,5 @@ if [[ -n "$PACKAGE" ]]; then
     docker run $INTERACTIVE zchain_unit_test sh -c "cd $PACKAGE; go test -tags bn256"
 else
     # Run all tests.
-    docker run $INTERACTIVE zchain_unit_test sh -c '
-        for mod_file in $(find * -name go.mod); do
-            mod_dir=$(dirname $mod_file)
-            (cd $mod_dir; go test -tags bn256 $mod_dir/...)
-        done
-    '
+    docker run $INTERACTIVE zchain_unit_test sh -c "cd 0chain.net; ls; go test -tags bn256 ./..."
 fi
