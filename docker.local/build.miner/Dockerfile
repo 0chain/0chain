@@ -10,6 +10,7 @@ COPY ./code/go/0chain.net/chaincore/go.mod     ./code/go/0chain.net/chaincore/go
 COPY ./code/go/0chain.net/smartcontract/go.mod ./code/go/0chain.net/smartcontract/go.sum $SRC_DIR/go/0chain.net/smartcontract/
 COPY ./code/go/0chain.net/conductor/go.mod     ./code/go/0chain.net/conductor/go.sum     $SRC_DIR/go/0chain.net/conductor/
 COPY ./code/go/0chain.net/miner/go.mod         ./code/go/0chain.net/miner/go.sum         $SRC_DIR/go/0chain.net/miner/
+COPY ./code/go/0chain.net/sharder/go.mod         ./code/go/0chain.net/sharder/go.sum         $SRC_DIR/go/0chain.net/sharder/
 COPY ./code/go/0chain.net/miner/miner/go.mod   ./code/go/0chain.net/miner/miner/go.sum   $SRC_DIR/go/0chain.net/miner/miner/
 WORKDIR $SRC_DIR/go/0chain.net/miner/miner
 RUN go mod download

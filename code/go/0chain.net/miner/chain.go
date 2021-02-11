@@ -217,8 +217,7 @@ func (mc *Chain) deleteTxns(txns []datastore.Entity) error {
 }
 
 // SetPreviousBlock - set the previous block.
-func (mc *Chain) SetPreviousBlock(ctx context.Context, r round.RoundI,
-	b *block.Block, pb *block.Block) {
+func (mc *Chain) SetPreviousBlock(r round.RoundI, b *block.Block, pb *block.Block) {
 
 	b.SetPreviousBlock(pb)
 	b.SetRoundRandomSeed(r.GetRandomSeed())

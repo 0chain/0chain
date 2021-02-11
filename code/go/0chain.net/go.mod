@@ -68,4 +68,10 @@ require (
 	github.com/valyala/gorpc v0.0.0-20160519171614-908281bef774 // indirect
 	gopkg.in/yaml.v2 v2.3.0
 	gopkg.in/yaml.v2 v2.2.2
+	github.com/alicebob/miniredis/v2 v2.14.2
+	github.com/gomodule/redigo v2.0.0+incompatible
+	github.com/herumi/bls v0.0.0-20190423083323-d414f74643cb
+	github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a
+	github.com/spf13/viper v1.7.0
+	github.com/stretchr/testify v1.3.0
 )

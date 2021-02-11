@@ -347,6 +347,7 @@ func initHandlers() {
 }
 
 func initEntities() {
+	memorystore.InitDefaultPool(os.Getenv("REDIS_HOST"), 6379)
 	memoryStorage := memorystore.GetStorageProvider()
 
 	chain.SetupEntity(memoryStorage)
