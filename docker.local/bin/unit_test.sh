@@ -21,5 +21,5 @@ if [[ -n "$PACKAGE" ]]; then
     docker run $INTERACTIVE zchain_unit_test sh -c "cd $PACKAGE; go test -tags bn256"
 else
     # Run all tests.
-    docker run $INTERACTIVE zchain_unit_test sh -c "cd 0chain.net; ls; go test -tags bn256 ./..."
+    docker run $INTERACTIVE zchain_unit_test sh -c "cd 0chain.net; go test -tags bn256 ./..."
 fi
