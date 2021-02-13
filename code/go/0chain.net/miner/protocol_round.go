@@ -229,7 +229,9 @@ func (mc *Chain) getOrStartRound(ctx context.Context, rn int64) (
 	var pr = mc.GetMinerRound(rn - 1)
 	if pr == nil {
 		Logger.Error("get_or_start_round -- no previous round",
-			zap.Int64("round", rn), zap.Int64("pr", rn-1))
+			zap.Int64("current_round", mc.GetCurrentRound()),
+			zap.Int64("round", rn),
+			zap.Int64("pr", rn-1))
 		return
 	}
 
@@ -471,9 +473,8 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		}
 
 		txnCount := transaction.GetTransactionCount()
-		b.SetStateDB(pb)
 		generationTries++
-		if pb.GetStateStatus() != block.StateSuccessful {
+		if !pb.IsStateComputed() {
 			Logger.Debug("GenerateRoundBlock, previous block state is not computed",
 				zap.Int64("round", b.Round),
 				zap.Int64("pre round", pb.Round),
@@ -482,6 +483,8 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 			//	Logger.Error("(re) computing previous block", zap.Error(err))
 			//}
 		}
+
+		b.SetStateDB(pb)
 
 		err := mc.GenerateBlock(ctx, b, mc, makeBlock)
 		if err != nil {
@@ -565,8 +568,6 @@ func (mc *Chain) GenerateRoundBlock(ctx context.Context, r *Round) (*block.Block
 // AddToRoundVerification - add a block to verify.
 func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block.Block) {
 
-	mr.AddProposedBlock(b)
-
 	if mr.IsFinalizing() || mr.IsFinalized() {
 		b.SetBlockState(block.StateVerificationRejected)
 		Logger.Debug("add to verification", zap.Int64("round", b.Round),
@@ -608,8 +609,7 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 			return
 		}
 
-		err = mc.VerifyNotarization(ctx, pb,
-			b.GetPrevBlockVerificationTickets(), pr.GetRoundNumber())
+		err = mc.VerifyNotarization(ctx, pb, b.GetPrevBlockVerificationTickets(), pr.GetRoundNumber())
 		if err != nil {
 			Logger.Error("add to verification (prior block verify notarization)",
 				zap.Int64("round", pr.Number), zap.Any("miner_id", b.MinerID),
@@ -620,6 +620,12 @@ func (mc *Chain) AddToRoundVerification(ctx context.Context, mr *Round, b *block
 		}
 	}
 
+	if err := mc.ComputeState(ctx, b); err != nil {
+		Logger.Error("AddToRoundVerification compute state failed", zap.Error(err))
+		return
+	}
+
+	mr.AddProposedBlock(b)
 	if mc.AddRoundBlock(mr, b) != b {
 		return
 	}
@@ -1197,8 +1203,11 @@ func (mc *Chain) kickFinalization(ctx context.Context) {
 	var lfb = mc.GetLatestFinalizedBlock()
 
 	// don't kick more then 5 blocks at once
-	var i, e, j = lfb.Round, mc.GetCurrentRound(), 0 // loop variables
-	for ; i < e && j < 5; i, j = i+1, j+1 {
+	e := mc.GetCurrentRound() // loop variables
+	var count int
+	i := lfb.Round
+
+	for i < e && count < 5 {
 		var mr = mc.GetMinerRound(i)
 		if mr == nil || mr.IsFinalized() {
 			continue // skip finalized blocks, skip nil miner rounds
@@ -1206,6 +1215,8 @@ func (mc *Chain) kickFinalization(ctx context.Context) {
 		Logger.Info("restartRound->kickFinalization:",
 			zap.Int64("round", mr.GetRoundNumber()))
 		go mc.FinalizeRound(ctx, mr.Round, mc) // kick finalization again
+		i++
+		count++
 	}
 }
 

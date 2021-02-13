@@ -206,7 +206,9 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 				zap.Int64("round", b.Round),
 				zap.Int32("iteration_count", count),
 				zap.Int32("block_size", blockSize))
-			return common.NewError(InsufficientTxns, fmt.Sprintf("not sufficient txns to make a block yet for round %v (iterated %v,block_size %v,state failure %v, invalid %v,reused %v)", b.Round, count, blockSize, failedStateCount, len(invalidTxns), reusedTxns))
+			return common.NewError(InsufficientTxns,
+				fmt.Sprintf("not sufficient txns to make a block yet for round %v (iterated %v,block_size %v,state failure %v, invalid %v,reused %v)",
+					b.Round, count, blockSize, failedStateCount, len(invalidTxns), 0))
 		}
 		b.Txns = b.Txns[:blockSize]
 		etxns = etxns[:blockSize]
@@ -253,9 +255,18 @@ func (mc *Chain) GenerateBlock(ctx context.Context, b *block.Block,
 
 	b.SetBlockState(block.StateGenerated)
 	b.SetStateStatus(block.StateSuccessful)
-	Logger.Info("generate block (assemble+update+sign)", zap.Int64("round", b.Round), zap.Int32("block_size", blockSize), zap.Int32("reused_txns", reusedTxns), zap.Duration("time", time.Since(start)),
-		zap.String("block", b.Hash), zap.String("prev_block", b.PrevHash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Int8("state_status", b.GetStateStatus()),
-		zap.Float64("p_chain_weight", b.PrevBlock.ChainWeight), zap.Int32("iteration_count", count))
+	Logger.Info("generate block (assemble+update+sign)",
+		zap.Int64("round", b.Round),
+		zap.Int32("block_size", blockSize),
+		zap.Int32("reused_txns", 0),
+		zap.Int32("reused_txns", reusedTxns),
+		zap.Duration("time", time.Since(start)),
+		zap.String("block", b.Hash),
+		zap.String("prev_block", b.PrevHash),
+		zap.String("state_hash", util.ToHex(b.ClientStateHash)),
+		zap.Int8("state_status", b.GetStateStatus()),
+		zap.Float64("p_chain_weight", b.PrevBlock.ChainWeight),
+		zap.Int32("iteration_count", count))
 	mc.StateSanityCheck(ctx, b)
 	go b.ComputeTxnMap()
 	bsHistogram.Update(int64(len(b.Txns)))
