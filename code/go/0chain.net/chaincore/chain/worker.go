@@ -10,8 +10,8 @@ import (
 	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
+	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
-
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
 )
@@ -131,6 +131,40 @@ func (c *Chain) FinalizedBlockWorker(ctx context.Context,
 			}
 
 			// finalize
+			if !fb.IsStateComputed() {
+				err := c.ComputeOrSyncState(ctx, fb)
+				if err != nil {
+					Logger.Error("save changes - save state not successful",
+						zap.Int64("round", fb.Round),
+						zap.String("hash", fb.Hash),
+						zap.Int8("state", fb.GetBlockState()),
+						zap.Error(err))
+					if state.Debug() {
+						Logger.DPanic("save changes - state not successful")
+					}
+				}
+			}
+
+			switch fb.GetStateStatus() {
+			case block.StateSynched, block.StateSuccessful:
+			default:
+				Logger.Error("state_save_without_success, state can't be saved without successful computation")
+				return
+			}
+
+			// Fetch block state changes and apply them would reduce the blocks finalize speed
+			if fb.ClientState == nil {
+				Logger.Error("Finalize block - client state is null, get state changes from network",
+					zap.Int64("round", fb.Round),
+					zap.String("hash", fb.Hash))
+				if err := c.GetBlockStateChange(fb); err != nil {
+					Logger.Error("Finalize block - get block state changes failed",
+						zap.Error(err),
+						zap.Int64("round", fb.Round),
+						zap.String("block hash", fb.Hash))
+					return
+				}
+			}
 
 			c.finalizeBlock(ctx, fb, bsh)
 		}

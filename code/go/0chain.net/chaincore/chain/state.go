@@ -284,17 +284,18 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 //SaveChanges - persist the state changes
 func (c *Chain) SaveChanges(ctx context.Context, b *block.Block) error {
 	if !b.IsStateComputed() {
-		err := c.ComputeOrSyncState(ctx, b)
-		if err != nil {
-			Logger.Error("save changes - save state not successful", zap.Int64("round", b.Round), zap.String("hash", b.Hash), zap.Int8("state", b.GetBlockState()), zap.Error(err))
-			if state.Debug() {
-				Logger.DPanic("save changes - state not successful")
-			}
-		}
+		err := errors.New("block state not computed")
+		Logger.Error("save changes failed", zap.Error(err),
+			zap.Int64("round", b.Round),
+			zap.String("hash", b.Hash))
+		return err
 	}
+
 	if b.ClientState == nil {
-		Logger.Error("save changes - client state is null", zap.Int64("round", b.Round), zap.String("hash", b.Hash))
-		return nil
+		Logger.Error("save changes - client state is nil",
+			zap.Int64("round", b.Round),
+			zap.String("hash", b.Hash))
+		return errors.New("save changes - client state is nil")
 	}
 
 	lock := b.StateMutex
@@ -305,6 +306,10 @@ func (c *Chain) SaveChanges(ctx context.Context, b *block.Block) error {
 	switch b.GetStateStatus() {
 	case block.StateSynched, block.StateSuccessful:
 		err = b.ClientState.SaveChanges(c.stateDB, false)
+		lndb, ok := b.ClientState.GetNodeDB().(*util.LevelNodeDB)
+		if ok {
+			c.stateDB.(*util.PNodeDB).TrackDBVersion(lndb.GetDBVersion())
+		}
 	default:
 		return common.NewError("state_save_without_success", "State can't be saved without successful computation")
 	}
