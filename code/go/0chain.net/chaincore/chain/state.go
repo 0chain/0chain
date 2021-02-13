@@ -18,6 +18,7 @@ import (
 	. "0chain.net/core/logging"
 	"0chain.net/core/util"
 	"0chain.net/smartcontract/minersc"
+	"errors"
 	metrics "github.com/rcrowley/go-metrics"
 	"go.uber.org/zap"
 )
@@ -89,6 +90,77 @@ func (c *Chain) ComputeOrSyncState(ctx context.Context, b *block.Block) error {
 	return nil
 }
 
+func (c *Chain) updateStateFromNetwork(ctx context.Context, b *block.Block) error {
+	if b.IsStateComputed() {
+		return nil
+	}
+
+	var blocks []*block.Block
+	blocks = append(blocks, b)
+	cb := b
+	fbr := c.GetLatestFinalizedBlock().Round
+
+	if fbr == b.Round {
+		Logger.Error("Finalized block is not computed")
+		return errors.New("finalized block is not computed")
+	}
+
+	for i := 0; i < 10; i++ {
+		pb := c.GetLocalPreviousBlock(ctx, cb)
+		if pb == nil {
+			Logger.Error("Found no local previous block",
+				zap.String("hash", cb.Hash),
+				zap.Int64("round", cb.Round))
+			return errors.New("no local previous block")
+		}
+
+		blocks = append(blocks, pb)
+		if pb.IsStateComputed() {
+			switch ndb := pb.ClientState.GetNodeDB().(type) {
+			case *util.LevelNodeDB:
+				prevDB := ndb.GetPrev()
+				// break if the previous block's db is either level node db or pnode db
+				if _, ok := prevDB.(*util.MemoryNodeDB); !ok {
+					break
+				}
+			case *util.PNodeDB:
+				break
+			}
+		}
+
+		if pb.Round <= fbr {
+			// reached out to the last finalized block
+			if !pb.IsStateComputed() {
+				Logger.Error("Finalized block is not computed")
+				return errors.New("finalized block is not computed")
+			}
+			break
+		}
+
+		cb = pb
+	}
+
+	Logger.Debug("fetchMissingStates, blocks behind",
+		zap.Int("num", len(blocks)-1),
+		zap.Int64("round", b.Round),
+		zap.Int64("lfb round", fbr))
+
+	lastBlock := blocks[len(blocks)-1]
+	if !lastBlock.IsStateComputed() {
+		return errors.New("could not find block with computed state")
+	}
+
+	// calculate the state changes from the block of computed state
+	for i := len(blocks) - 2; i >= 0; i-- {
+		// get state change of the block
+		blocks[i].CreateState(lastBlock.ClientState.GetNodeDB())
+		c.GetBlockStateChange(blocks[i])
+		lastBlock = blocks[i]
+	}
+
+	return nil
+}
+
 func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 	if b.IsStateComputed() {
 		return nil
@@ -116,7 +188,10 @@ func (c *Chain) computeState(ctx context.Context, b *block.Block) error {
 	}
 	if !pb.IsStateComputed() {
 		if pb.GetStateStatus() == block.StateFailed {
-			c.GetBlockStateChange(pb)
+			if err := c.updateStateFromNetwork(ctx, pb); err != nil {
+				Logger.Error("fetchMissingStates failed", zap.Error(err))
+				return err
+			}
 			if !pb.IsStateComputed() {
 				return ErrPreviousStateUnavailable
 			}
@@ -260,6 +335,9 @@ func (c *Chain) rebaseState(lfb *block.Block) {
 	defer c.stateMutex.Unlock()
 	ndb := lfb.ClientState.GetNodeDB()
 	if ndb != c.stateDB {
+		Logger.Debug("finalize round - rebasing current state db",
+			zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash),
+			zap.String("hash", util.ToHex(lfb.ClientState.GetRoot())))
 		lfb.ClientState.SetNodeDB(c.stateDB)
 		if lndb, ok := ndb.(*util.LevelNodeDB); ok {
 			Logger.Debug("finalize round - rebasing current state db",
@@ -270,6 +348,9 @@ func (c *Chain) rebaseState(lfb *block.Block) {
 				zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash),
 				zap.String("hash", util.ToHex(lfb.ClientState.GetRoot())))
 		}
+		Logger.Debug("finalize round - rebased current state db",
+			zap.Int64("round", lfb.Round), zap.String("block", lfb.Hash),
+			zap.String("hash", util.ToHex(lfb.ClientState.GetRoot())))
 	}
 }
 
