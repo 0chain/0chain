@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"sync"
@@ -23,15 +24,13 @@ type MerklePatriciaTrie struct {
 	db              NodeDB
 	ChangeCollector ChangeCollectorI
 	Version         Sequence
-	rootHashTrack   map[string]struct{}
 }
 
 /*NewMerklePatriciaTrie - create a new patricia merkle trie */
 func NewMerklePatriciaTrie(db NodeDB, version Sequence) *MerklePatriciaTrie {
 	mpt := &MerklePatriciaTrie{
-		mutex:         &sync.RWMutex{},
-		db:            db,
-		rootHashTrack: map[string]struct{}{},
+		mutex: &sync.RWMutex{},
+		db:    db,
 	}
 	mpt.ResetChangeCollector(nil)
 	mpt.SetVersion(version)
@@ -49,7 +48,6 @@ func CloneMPT(mpt MerklePatriciaTrieI) *MerklePatriciaTrie {
 func (mpt *MerklePatriciaTrie) SetNodeDB(ndb NodeDB) {
 	mpt.mutex.Lock()
 	defer mpt.mutex.Unlock()
-	Logger.Debug("MPT SetNodeDB")
 	mpt.db = ndb
 }
 
@@ -85,15 +83,7 @@ func (mpt *MerklePatriciaTrie) SetRoot(root Key) {
 
 /*setRoot - implement interface */
 func (mpt *MerklePatriciaTrie) setRoot(root Key) {
-	rs := hex.EncodeToString(root)
-	if bytes.Compare(mpt.Root, root) != 0 {
-		if _, ok := mpt.rootHashTrack[rs]; ok {
-			Logger.DPanic("MPT set root back, which should not happen",
-				zap.String("root key", rs))
-		}
-	}
 	mpt.Root = root
-	mpt.rootHashTrack[rs] = struct{}{}
 }
 
 /*GetRoot - implement interface */
@@ -316,6 +306,7 @@ func (mpt *MerklePatriciaTrie) getNodeValue(path Path, node Node) (Serializable,
 					zap.String("key", hex.EncodeToString(ckey)),
 					zap.String("root key", hex.EncodeToString(mpt.GetRoot())),
 					zap.String("node hash", node.GetHash()),
+					zap.Int64s("db versions", mpt.db.(*LevelNodeDB).versions),
 					zap.Error(err))
 			}
 			return nil, ErrNodeNotFound
@@ -355,19 +346,7 @@ func (mpt *MerklePatriciaTrie) insert(value Serializable, key Key, path Path) (N
 }
 
 func (mpt *MerklePatriciaTrie) insertLeaf(oldNode Node, value Serializable, path Path) (Node, Key, error) {
-	n, k, err := mpt.insertNode(oldNode, NewLeafNode(path, mpt.Version, value))
-	if oldNode != nil {
-		Logger.Debug("insertLeaf",
-			zap.String("path", string(path)),
-			zap.String("key", hex.EncodeToString(k)),
-			zap.String("old node key", oldNode.GetHash()))
-	} else {
-		Logger.Debug("insertLeaf",
-			zap.String("path", string(path)),
-			zap.String("key", hex.EncodeToString(k)))
-	}
-
-	return n, k, err
+	return mpt.insertNode(oldNode, NewLeafNode(path, mpt.Version, value))
 }
 
 func (mpt *MerklePatriciaTrie) insertExtension(oldNode Node, path Path, key Key) (Node, Key, error) {
@@ -752,12 +731,25 @@ func (mpt *MerklePatriciaTrie) insertNode(oldNode Node, newNode Node) (Node, Key
 		if oldNode != nil {
 			ohash = oldNode.GetHash()
 		}
-		Logger.Debug("insert node",
-			zap.Any("version", mpt.Version),
-			zap.Any("root", hex.EncodeToString(mpt.Root)),
-			zap.String("old node key", ohash),
-			zap.String("new node key", newNode.GetHash()))
+		Logger.Info("insert node", zap.String("nn", newNode.GetHash()), zap.String("on", ohash))
 	}
+
+	ohash := ""
+	if oldNode != nil {
+		ohash = oldNode.GetHash()
+	}
+
+	dbVersion := int64(-1)
+	lndb, ok := mpt.db.(*LevelNodeDB)
+	if ok {
+		dbVersion = lndb.version
+	}
+	Logger.Debug("insert node",
+		zap.Any("version", mpt.Version),
+		zap.Int64("db version", dbVersion),
+		zap.Any("root", hex.EncodeToString(mpt.Root)),
+		zap.String("old node key", ohash),
+		zap.String("new node key", newNode.GetHash()))
 
 	ckey := newNode.GetHashBytes()
 	if err := mpt.db.PutNode(ckey, newNode); err != nil {
@@ -776,9 +768,9 @@ func (mpt *MerklePatriciaTrie) insertNode(oldNode Node, newNode Node) (Node, Key
 
 func (mpt *MerklePatriciaTrie) deleteNode(node Node) error {
 	if DebugMPTNode {
-		Logger.Debug("delete node", zap.Any("version", mpt.Version), zap.String("key", node.GetHash()))
+		Logger.Info("delete node", zap.String("dn", node.GetHash()))
 	}
-
+	Logger.Debug("delete node", zap.Any("version", mpt.Version), zap.String("key", node.GetHash()))
 	mpt.ChangeCollector.DeleteChange(node)
 	return mpt.db.DeleteNode(node.GetHashBytes())
 }
@@ -946,25 +938,48 @@ func (mpt *MerklePatriciaTrie) MergeMPTChanges(mpt2 MerklePatriciaTrieI) error {
 		return nil
 	}
 
-	changes := mpt2.GetChangeCollector().GetChanges()
-	deletes := mpt2.GetChangeCollector().GetDeletes()
-
 	if DebugMPTNode {
 		if err := mpt2.GetChangeCollector().Validate(); err != nil {
 			Logger.Error("MergeMPTChanges - change collector validate", zap.Error(err))
 		}
-
-		Logger.Debug("MergeMPTChanges",
-			zap.Int("change num", len(changes)),
-			zap.Int("delete num", len(deletes)),
-			zap.Any("old mpt version", mpt.Version),
-			zap.Any("new mpt version", mpt2.GetVersion()),
-			zap.String("old mpt root key", hex.EncodeToString(mpt.GetRoot())),
-			zap.String("new mpt root key", hex.EncodeToString(mpt2.GetRoot())))
 	}
+
+	newDB := mpt2.GetNodeDB()
+	newLNDB, ok := newDB.(*LevelNodeDB)
+	if !ok {
+		Logger.Error("MergeMPTChanges, new MPT's DB is not a LevelNodeDB")
+		return errors.New("invalid mpt db")
+	}
+
+	preDB := newLNDB.GetPrev()
+	if preDB != mpt.GetNodeDB() {
+		Logger.Error("MergeMPTChanges does not merge direct child mpt")
+		return errors.New("mpt does not merge changes from its child")
+	}
+
+	changes := mpt2.GetChangeCollector().GetChanges()
+	deletes := mpt2.GetChangeCollector().GetDeletes()
+	newRoot := mpt2.GetRoot()
+	v := mpt2.GetVersion()
 
 	mpt.mutex.Lock()
 	defer mpt.mutex.Unlock()
+	if bytes.Compare(mpt.Root, newRoot) == 0 {
+		Logger.Error("MergeMPTChanges - MPT merge changes with the same root")
+		return nil
+	}
+
+	db := mpt.db.(*LevelNodeDB)
+
+	Logger.Debug("MergeMPTChanges",
+		zap.Int("change num", len(changes)),
+		zap.Int("delete num", len(deletes)),
+		zap.Any("old mpt version", mpt.Version),
+		zap.Any("new mpt version", v),
+		zap.Any("db prev ", db.version),
+		zap.Any("db after ", newLNDB.version),
+		zap.String("old mpt root key", hex.EncodeToString(mpt.Root)),
+		zap.String("new mpt root key", hex.EncodeToString(newRoot)))
 
 	for _, c := range changes {
 		if _, _, err := mpt.insertNode(c.Old, c.New); err != nil {
@@ -976,7 +991,15 @@ func (mpt *MerklePatriciaTrie) MergeMPTChanges(mpt2 MerklePatriciaTrieI) error {
 			return err
 		}
 	}
-	mpt.setRoot(mpt2.GetRoot())
+
+	mpt.setRoot(newRoot)
+	Logger.Debug("replaced db version",
+		zap.Int64("version", db.version),
+		zap.Int64("new version", newLNDB.version))
+	db.versions = append(db.versions, newLNDB.version)
+	db.version = newLNDB.version
+	db.versions[len(db.versions)-1] = newLNDB.version
+
 	return nil
 }
 

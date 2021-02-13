@@ -7,6 +7,9 @@ import (
 	"sync"
 
 	"0chain.net/core/common"
+	"go.uber.org/atomic"
+
+	"reflect"
 
 	. "0chain.net/core/logging"
 	"go.uber.org/zap"
@@ -31,6 +34,9 @@ var (
 	ErrValueNotPresent = errors.New("value not present")
 )
 
+// global node db version
+var levelNodeVersion atomic.Int64
+
 /*NodeDBIteratorHandler is a nodedb iteration handler function type */
 type NodeDBIteratorHandler func(ctx context.Context, key Key, node Node) error
 
@@ -47,6 +53,8 @@ type NodeDB interface {
 	MultiDeleteNode(keys []Key) error
 
 	PruneBelowVersion(ctx context.Context, version Sequence) error
+
+	GetDBVersions() []int64
 }
 
 // StrKey - data type for the key used to store the node into some storage
@@ -65,6 +73,11 @@ func NewMemoryNodeDB() *MemoryNodeDB {
 	mndb.Nodes = make(map[StrKey]Node)
 	mndb.mutex = &sync.RWMutex{}
 	return mndb
+}
+
+// GetDBVersions, not implemented
+func (mndb *MemoryNodeDB) GetDBVersions() []int64 {
+	return []int64{}
 }
 
 /*GetNode - implement interface */
@@ -265,18 +278,55 @@ type LevelNodeDB struct {
 	prev             NodeDB
 	PropagateDeletes bool // Setting this to false (default) will not propagate delete to lower level db
 	DeletedNodes     map[StrKey]bool
+	version          int64
+	versions         []int64
 }
 
-/*NewLevelNodeDB - create a level node db */
+// NewLevelNodeDB - create a level node db
 func NewLevelNodeDB(curNDB NodeDB, prevNDB NodeDB, propagateDeletes bool) *LevelNodeDB {
+	vs := prevNDB.GetDBVersions()
+	v := levelNodeVersion.Add(1)
+
+	if len(vs) == 0 {
+		Logger.Error("NewLevelNodeDB new thread",
+			zap.Any("predb type", reflect.TypeOf(prevNDB)),
+			zap.Any("new start db version", v),
+		)
+	}
+
+	vs = append(vs, v)
+	if len(vs) > 40 {
+		vs = vs[len(vs)-40:]
+	}
+
 	lndb := &LevelNodeDB{
 		current:          curNDB,
 		prev:             prevNDB,
 		PropagateDeletes: propagateDeletes,
 		mu:               &sync.RWMutex{},
+		version:          v,
+		versions:         vs,
 	}
 	lndb.DeletedNodes = make(map[StrKey]bool)
 	return lndb
+}
+
+// GetDBVersion get the current level node db version
+func (lndb *LevelNodeDB) GetDBVersion() int64 {
+	lndb.mu.Lock()
+	defer lndb.mu.Unlock()
+	return lndb.version
+}
+
+// GetDBVersions returns all tracked db versions
+func (lndb *LevelNodeDB) GetDBVersions() []int64 {
+	lndb.mu.Lock()
+	defer lndb.mu.Unlock()
+	vs := make([]int64, len(lndb.versions))
+	for i, v := range lndb.versions {
+		vs[i] = v
+	}
+	return vs
 }
 
 // GetCurrent returns current node db
@@ -332,6 +382,11 @@ func (lndb *LevelNodeDB) PutNode(key Key, node Node) error {
 func (lndb *LevelNodeDB) DeleteNode(key Key) error {
 	lndb.mu.Lock()
 	defer lndb.mu.Unlock()
+
+	Logger.Debug("LevelNodeDB delete node",
+		zap.String("key", ToHex(key)),
+		zap.Int64("version", lndb.version),
+		zap.Int64s("db versions", lndb.versions))
 
 	c := lndb.current
 	p := lndb.prev
