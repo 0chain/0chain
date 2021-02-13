@@ -252,7 +252,13 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 
 	ssFTs = time.Now()
 	c.UpdateChainInfo(fb)
-	c.SaveChanges(ctx, fb)
+	if err := c.SaveChanges(ctx, fb); err != nil {
+		Logger.Error("Finaliz block save changes failed",
+			zap.Error(err),
+			zap.Int64("round", fb.Round),
+			zap.String("hash", fb.Hash))
+		return
+	}
 	c.rebaseState(fb)
 	c.updateFeeStats(fb)
 

@@ -185,7 +185,7 @@ func (mc *Chain) GetBlockStateNode(block *block.Block, path string) (
 			"client state is nil, round %d", block.Round)
 	}
 
-	var state = CreateTxnMPT(block.ClientState)
+	state := CreateTxnMPT(block.ClientState)
 	return state.GetNodeValue(getNodePath(path))
 }
 
