@@ -1360,6 +1360,7 @@ func PrintCSS(w http.ResponseWriter) {
 	fmt.Fprintf(w, ".fixed-text { overflow:hidden;white-space: nowrap;word-break: break-all;word-wrap: break-word; text-overflow: ellipsis; }\n")
 	fmt.Fprintf(w, ".menu li { list-style-type: none; }\n")
 	fmt.Fprintf(w, "table, td, th { border: 1px solid black;  border-collapse: collapse;}\n")
+	fmt.Fprintf(w, ".tname { width: 70%%}\n")
 	fmt.Fprintf(w, "tr.header { background-color: #E0E0E0;  }\n")
 	fmt.Fprintf(w, ".inactive { background-color: #F44336; }\n")
 	fmt.Fprintf(w, ".warning { background-color: #FFEB3B; }\n")
