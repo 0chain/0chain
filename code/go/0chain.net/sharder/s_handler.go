@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"go.uber.org/zap"
+
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
@@ -12,7 +14,6 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
 	. "0chain.net/core/logging"
-	"go.uber.org/zap"
 )
 
 var (
@@ -155,7 +156,6 @@ func BlockSummariesHandler(ctx context.Context, r *http.Request) (interface{}, e
 // LatestRoundRequestHandler - returns latest finalized round info.
 func LatestRoundRequestHandler(ctx context.Context, r *http.Request) (
 	resp interface{}, err error) {
-
 	var (
 		sc = GetSharderChain()
 		cr = sc.GetRound(sc.GetCurrentRound())
