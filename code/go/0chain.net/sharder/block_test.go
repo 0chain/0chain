@@ -1,53 +1,37 @@
-package sharder
+package sharder_test
 
 import (
 	"context"
-	"os"
 	"reflect"
 	"testing"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
-	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/core/cache"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
-	"0chain.net/core/ememorystore"
-	"0chain.net/core/logging"
-	"0chain.net/core/memorystore"
+	"0chain.net/sharder"
 )
 
-func init() {
-	SetupBlockSummaries()
-
-	common.SetupRootContext(node.GetNodeContext())
-
-	if err := os.MkdirAll("data/rocksdb/state", 0700); err != nil {
-		panic(err)
-	}
-
-	memoryStorage := memorystore.GetStorageProvider()
-	block.SetupBlockSummaryEntity(memoryStorage)
-	block.SetupBlockSummaryDB()
-	block.SetupBlockSummaryEntity(ememorystore.GetStorageProvider())
-
-	logging.InitLogging("testing")
-}
-
 func TestNewBlockSummaries(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name string
-		want *BlockSummaries
+		want *sharder.BlockSummaries
 	}{
 		{
 			name: "Test_NewBlockSummaries_OK",
-			want: datastore.GetEntityMetadata("block_summaries").Instance().(*BlockSummaries),
+			want: datastore.GetEntityMetadata("block_summaries").Instance().(*sharder.BlockSummaries),
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewBlockSummaries(); !reflect.DeepEqual(got, tt.want) {
+			t.Parallel()
+
+			if got := sharder.NewBlockSummaries(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NewBlockSummaries() = %v, want %v", got, tt.want)
 			}
 		})
@@ -55,18 +39,23 @@ func TestNewBlockSummaries(t *testing.T) {
 }
 
 func TestBlockSummariesProvider(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name string
 		want datastore.Entity
 	}{
 		{
 			name: "Test_BlockSummariesProvider_OK",
-			want: &BlockSummaries{},
+			want: &sharder.BlockSummaries{},
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			if got := BlockSummariesProvider(); !reflect.DeepEqual(got, tt.want) {
+			t.Parallel()
+
+			if got := sharder.BlockSummariesProvider(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("BlockSummariesProvider() = %v, want %v", got, tt.want)
 			}
 		})
@@ -79,8 +68,7 @@ func TestChain_GetBlockBySummary(t *testing.T) {
 	b := block.NewBlock("", 1)
 	b.HashBlock()
 
-	sharderChain.Chain = chain.Provider().(*chain.Chain)
-	sharderChain.AddBlock(b)
+	chain.GetServerChain().AddBlock(b)
 
 	type fields struct {
 		Chain          *chain.Chain
@@ -88,9 +76,9 @@ func TestChain_GetBlockBySummary(t *testing.T) {
 		RoundChannel   chan *round.Round
 		BlockCache     cache.Cache
 		BlockTxnCache  cache.Cache
-		SharderStats   Stats
-		BlockSyncStats *SyncStats
-		TieringStats   *MinioStats
+		SharderStats   sharder.Stats
+		BlockSyncStats *sharder.SyncStats
+		TieringStats   *sharder.MinioStats
 	}
 	type args struct {
 		ctx context.Context
@@ -105,7 +93,7 @@ func TestChain_GetBlockBySummary(t *testing.T) {
 	}{
 		{
 			name:    "Test_Chain_GetBlockBySummary_OK",
-			fields:  fields{Chain: sharderChain.Chain},
+			fields:  fields{Chain: sharder.GetSharderChain().Chain},
 			args:    args{bs: &block.BlockSummary{Hash: b.Hash}},
 			want:    b,
 			wantErr: false,
@@ -116,7 +104,7 @@ func TestChain_GetBlockBySummary(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			sc := &Chain{
+			sc := &sharder.Chain{
 				Chain:          tt.fields.Chain,
 				BlockChannel:   tt.fields.BlockChannel,
 				RoundChannel:   tt.fields.RoundChannel,
@@ -144,8 +132,7 @@ func TestChain_GetBlockFromHash(t *testing.T) {
 	b := block.NewBlock("", 1)
 	b.HashBlock()
 
-	sharderChain.Chain = chain.Provider().(*chain.Chain)
-	sharderChain.AddBlock(b)
+	sharder.GetSharderChain().AddBlock(b)
 
 	type fields struct {
 		Chain          *chain.Chain
@@ -153,9 +140,9 @@ func TestChain_GetBlockFromHash(t *testing.T) {
 		RoundChannel   chan *round.Round
 		BlockCache     cache.Cache
 		BlockTxnCache  cache.Cache
-		SharderStats   Stats
-		BlockSyncStats *SyncStats
-		TieringStats   *MinioStats
+		SharderStats   sharder.Stats
+		BlockSyncStats *sharder.SyncStats
+		TieringStats   *sharder.MinioStats
 	}
 	type args struct {
 		ctx      context.Context
@@ -171,7 +158,7 @@ func TestChain_GetBlockFromHash(t *testing.T) {
 	}{
 		{
 			name:    "Test_Chain_GetBlockFromHash_OK",
-			fields:  fields{Chain: sharderChain.Chain},
+			fields:  fields{Chain: sharder.GetSharderChain().Chain},
 			args:    args{hash: b.Hash},
 			want:    b,
 			wantErr: false,
@@ -182,7 +169,7 @@ func TestChain_GetBlockFromHash(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			sc := &Chain{
+			sc := &sharder.Chain{
 				Chain:          tt.fields.Chain,
 				BlockChannel:   tt.fields.BlockChannel,
 				RoundChannel:   tt.fields.RoundChannel,
@@ -216,9 +203,9 @@ func TestChain_StoreBlockSummaryFromBlock(t *testing.T) {
 		RoundChannel   chan *round.Round
 		BlockCache     cache.Cache
 		BlockTxnCache  cache.Cache
-		SharderStats   Stats
-		BlockSyncStats *SyncStats
-		TieringStats   *MinioStats
+		SharderStats   sharder.Stats
+		BlockSyncStats *sharder.SyncStats
+		TieringStats   *sharder.MinioStats
 	}
 	type args struct {
 		ctx context.Context
@@ -241,7 +228,7 @@ func TestChain_StoreBlockSummaryFromBlock(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			sc := &Chain{
+			sc := &sharder.Chain{
 				Chain:          tt.fields.Chain,
 				BlockChannel:   tt.fields.BlockChannel,
 				RoundChannel:   tt.fields.RoundChannel,
@@ -269,9 +256,9 @@ func TestChain_StoreBlockSummary(t *testing.T) {
 		RoundChannel   chan *round.Round
 		BlockCache     cache.Cache
 		BlockTxnCache  cache.Cache
-		SharderStats   Stats
-		BlockSyncStats *SyncStats
-		TieringStats   *MinioStats
+		SharderStats   sharder.Stats
+		BlockSyncStats *sharder.SyncStats
+		TieringStats   *sharder.MinioStats
 	}
 	type args struct {
 		ctx context.Context
@@ -294,7 +281,7 @@ func TestChain_StoreBlockSummary(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			sc := &Chain{
+			sc := &sharder.Chain{
 				Chain:          tt.fields.Chain,
 				BlockChannel:   tt.fields.BlockChannel,
 				RoundChannel:   tt.fields.RoundChannel,

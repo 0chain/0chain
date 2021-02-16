@@ -1,4 +1,4 @@
-package sharder
+package sharder_test
 
 import (
 	"fmt"
@@ -10,20 +10,15 @@ import (
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/round"
 	"0chain.net/core/common"
-	"0chain.net/core/memorystore"
+	"0chain.net/sharder"
 )
-
-func init() {
-	memoryStorage := memorystore.GetStorageProvider()
-	round.SetupEntity(memoryStorage)
-}
 
 func TestLatestRoundRequestHandler(t *testing.T) {
 	t.Parallel()
 
 	const baseUrl = "/v1/_s2s/latest_round/get"
 
-	sc := GetSharderChain()
+	sc := sharder.GetSharderChain()
 	var num int64 = 1
 	sc.CurrentRound = num
 	r := round.NewRound(num)
@@ -56,7 +51,7 @@ func TestLatestRoundRequestHandler(t *testing.T) {
 			t.Parallel()
 
 			rr := httptest.NewRecorder()
-			handler := http.HandlerFunc(common.UserRateLimit(common.ToJSONResponse(LatestRoundRequestHandler)))
+			handler := http.HandlerFunc(common.UserRateLimit(common.ToJSONResponse(sharder.LatestRoundRequestHandler)))
 
 			handler.ServeHTTP(rr, tt.request)
 
@@ -106,7 +101,7 @@ func TestBlockSummaryRequestHandler(t *testing.T) {
 			t.Parallel()
 
 			rr := httptest.NewRecorder()
-			handler := http.HandlerFunc(common.UserRateLimit(common.ToJSONResponse(BlockSummaryRequestHandler)))
+			handler := http.HandlerFunc(common.UserRateLimit(common.ToJSONResponse(sharder.BlockSummaryRequestHandler)))
 
 			handler.ServeHTTP(rr, tt.request)
 
@@ -149,7 +144,7 @@ func TestRoundBlockRequestHandler(t *testing.T) {
 			t.Parallel()
 
 			rr := httptest.NewRecorder()
-			handler := http.HandlerFunc(common.UserRateLimit(common.ToJSONResponse(RoundBlockRequestHandler)))
+			handler := http.HandlerFunc(common.UserRateLimit(common.ToJSONResponse(sharder.RoundBlockRequestHandler)))
 
 			handler.ServeHTTP(rr, tt.request)
 
