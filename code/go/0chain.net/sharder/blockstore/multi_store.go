@@ -10,6 +10,11 @@ type MultiBlockStore struct {
 	BlockStores []BlockStore
 }
 
+var (
+	// Make sure MultiBlockStore implements BlockStore.
+	_ BlockStore = (*MultiBlockStore)(nil)
+)
+
 //NewMultiBlockStore - create a new multi block store
 func NewMultiBlockStore(blockstores []BlockStore) *MultiBlockStore {
 	mbs := &MultiBlockStore{BlockStores: blockstores}

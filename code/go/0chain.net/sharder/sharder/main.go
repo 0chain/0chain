@@ -9,12 +9,14 @@ import (
 	"io"
 	"log"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"runtime"
 	"strconv"
 	"time"
 
-	_ "net/http/pprof"
+	"github.com/spf13/viper"
+	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -36,8 +38,6 @@ import (
 	"0chain.net/sharder"
 	"0chain.net/sharder/blockstore"
 	"0chain.net/smartcontract/setupsc"
-	"github.com/spf13/viper"
-	"go.uber.org/zap"
 )
 
 func processMinioConfig(reader io.Reader) error {

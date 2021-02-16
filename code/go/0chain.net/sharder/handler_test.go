@@ -1,4 +1,4 @@
-package sharder
+package sharder_test
 
 import (
 	"net/http"
@@ -9,13 +9,15 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/core/common"
+	"0chain.net/sharder"
 )
 
-func init() {
-	common.ConfigRateLimits()
-	serverChain := chain.NewChainFromConfig()
-	SetupSharderChain(serverChain)
-}
+//
+//func init() {
+//	common.ConfigRateLimits()
+//	serverChain := chain.NewChainFromConfig()
+//	SetupSharderChain(serverChain)
+//}
 
 func makeTestURL(url url.URL, values map[string]string) string {
 	q := url.Query()
@@ -86,7 +88,7 @@ func TestBlockHandler(t *testing.T) {
 			t.Parallel()
 
 			rr := httptest.NewRecorder()
-			handler := http.HandlerFunc(common.UserRateLimit(common.ToJSONResponse(BlockHandler)))
+			handler := http.HandlerFunc(common.UserRateLimit(common.ToJSONResponse(sharder.BlockHandler)))
 
 			handler.ServeHTTP(rr, tt.request)
 
@@ -129,7 +131,7 @@ func TestChainStatsWriter(t *testing.T) {
 			t.Parallel()
 
 			rr := httptest.NewRecorder()
-			handler := http.HandlerFunc(common.UserRateLimit(ChainStatsWriter))
+			handler := http.HandlerFunc(common.UserRateLimit(sharder.ChainStatsWriter))
 
 			handler.ServeHTTP(rr, tt.request)
 
@@ -144,8 +146,6 @@ func TestSharderStatsHandler(t *testing.T) {
 	t.Parallel()
 
 	const baseUrl = "/v1/sharder/get/stats"
-
-	GetSharderChain().HealthCheckSetup(nil, ProximityScan)
 
 	type test struct {
 		name       string
@@ -174,7 +174,7 @@ func TestSharderStatsHandler(t *testing.T) {
 			t.Parallel()
 
 			rr := httptest.NewRecorder()
-			handler := http.HandlerFunc(common.UserRateLimit(common.ToJSONResponse(SharderStatsHandler)))
+			handler := http.HandlerFunc(common.UserRateLimit(common.ToJSONResponse(sharder.SharderStatsHandler)))
 
 			handler.ServeHTTP(rr, tt.request)
 

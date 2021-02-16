@@ -157,7 +157,7 @@ type SyncStats struct {
 	cycle [2]CycleControl
 }
 
-func (sc *Chain) setCycleBounds(ctx context.Context, scanMode HealthCheckScan) {
+func (sc *Chain) setCycleBounds(_ context.Context, scanMode HealthCheckScan) {
 	bss := sc.BlockSyncStats
 	cb := &bss.cycle[scanMode].bounds
 
@@ -167,9 +167,9 @@ func (sc *Chain) setCycleBounds(ctx context.Context, scanMode HealthCheckScan) {
 	cb.window = config.Window
 
 	//roundEntity, err := sc.GetMostRecentRoundFromDB(ctx)
-	round := sc.GetLatestFinalizedBlock().Round
-	cb.highRound = round
-	if round == 0 {
+	r := sc.GetLatestFinalizedBlock().Round
+	cb.highRound = r
+	if r == 0 {
 		cb.highRound = 1
 	}
 
@@ -184,7 +184,7 @@ func (sc *Chain) setCycleBounds(ctx context.Context, scanMode HealthCheckScan) {
 }
 
 // HealthCheckSetup - checks the health for each round
-func (sc *Chain) HealthCheckSetup(ctx context.Context, scanMode HealthCheckScan) {
+func (sc *Chain) HealthCheckSetup(_ context.Context, scanMode HealthCheckScan) {
 	bss := sc.BlockSyncStats
 
 	// Get cycle control
@@ -276,7 +276,7 @@ func (sc *Chain) HealthCheckWorker(ctx context.Context, scanMode HealthCheckScan
 	}
 }
 
-func (sc *Chain) initSyncStats(ctx context.Context, scanMode HealthCheckScan) {
+func (sc *Chain) initSyncStats(_ context.Context, scanMode HealthCheckScan) {
 
 	bss := sc.BlockSyncStats
 
@@ -305,7 +305,7 @@ func (sc *Chain) initSyncStats(ctx context.Context, scanMode HealthCheckScan) {
 		zap.Time("start", cc.counters.current.CycleStart.Truncate(time.Second)))
 }
 
-func (sc *Chain) updateSyncStats(ctx context.Context, current int64, duration time.Duration, scanMode HealthCheckScan) {
+func (sc *Chain) updateSyncStats(_ context.Context, _ int64, duration time.Duration, scanMode HealthCheckScan) {
 
 	// var highRound int64
 	bss := sc.BlockSyncStats

@@ -1,22 +1,12 @@
-package sharder
+package sharder_test
 
 import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/rcrowley/go-metrics"
-
-	"0chain.net/chaincore/chain"
+	"0chain.net/sharder"
 )
-
-func init() {
-	serverChain := chain.NewChainFromConfig()
-	SetupSharderChain(serverChain)
-
-	GetSharderChain().BlockSyncStats.cycle[DeepScan].BlockSyncTimer = metrics.NewTimer()
-	GetSharderChain().BlockSyncStats.cycle[ProximityScan].BlockSyncTimer = metrics.NewTimer()
-}
 
 func TestHealthCheckWriter(t *testing.T) {
 	req, err := http.NewRequest(http.MethodGet, "/_health_check", nil)
@@ -25,7 +15,7 @@ func TestHealthCheckWriter(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(HealthCheckWriter)
+	handler := http.HandlerFunc(sharder.HealthCheckWriter)
 
 	handler.ServeHTTP(rr, req)
 
