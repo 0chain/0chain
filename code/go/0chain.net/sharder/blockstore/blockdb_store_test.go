@@ -40,7 +40,7 @@ func TestNewBlockDBStore(t *testing.T) {
 	)
 
 	type args struct {
-		rootDir string
+		fsbs *FSBlockStore
 	}
 	tests := []struct {
 		name string
@@ -49,7 +49,7 @@ func TestNewBlockDBStore(t *testing.T) {
 	}{
 		{
 			name: "Test_NewBlockDBStore_OK",
-			args: args{rootDir: store.RootDirectory},
+			args: args{fsbs: store.FSBlockStore},
 			want: store,
 		},
 	}
@@ -58,7 +58,7 @@ func TestNewBlockDBStore(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			if got := NewBlockDBStore(tt.args.rootDir); !reflect.DeepEqual(got, tt.want) {
+			if got := NewBlockDBStore(tt.args.fsbs); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NewBlockDBStore() = %v, want %v", got, tt.want)
 			}
 		})

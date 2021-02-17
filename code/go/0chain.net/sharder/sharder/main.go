@@ -40,38 +40,46 @@ import (
 	"0chain.net/smartcontract/setupsc"
 )
 
-func processMinioConfig(reader io.Reader) error {
-	scanner := bufio.NewScanner(reader)
-	more := scanner.Scan()
+func processMinioConfig(reader io.Reader) (blockstore.MinioConfiguration, error) {
+	var (
+		mConf   blockstore.MinioConfiguration
+		scanner = bufio.NewScanner(reader)
+		more    = scanner.Scan()
+	)
+
 	if more == false {
-		return common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
+		return blockstore.MinioConfiguration{}, common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
 	}
-	blockstore.MinioConfig.StorageServiceURL = scanner.Text()
+	mConf.StorageServiceURL = scanner.Text()
 	more = scanner.Scan()
 	if more == false {
-		return common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
+		return blockstore.MinioConfiguration{}, common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
 	}
 
-	blockstore.MinioConfig.AccessKeyID = scanner.Text()
+	mConf.AccessKeyID = scanner.Text()
 	more = scanner.Scan()
 	if more == false {
-		return common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
+		return blockstore.MinioConfiguration{}, common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
 	}
 
-	blockstore.MinioConfig.SecretAccessKey = scanner.Text()
+	mConf.SecretAccessKey = scanner.Text()
 	more = scanner.Scan()
 	if more == false {
-		return common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
+		return blockstore.MinioConfiguration{}, common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
 	}
 
-	blockstore.MinioConfig.BucketName = scanner.Text()
+	mConf.BucketName = scanner.Text()
 	more = scanner.Scan()
 	if more == false {
-		return common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
+		return blockstore.MinioConfiguration{}, common.NewError("process_minio_config_failed", "Unable to read minio config from minio config file")
 	}
 
-	blockstore.MinioConfig.BucketLocation = scanner.Text()
-	return nil
+	mConf.BucketLocation = scanner.Text()
+
+	mConf.DeleteLocal = viper.GetBool("minio.delete_local_copy")
+	mConf.Secure = viper.GetBool("minio.use_ssl")
+
+	return mConf, nil
 }
 
 func main() {
@@ -97,7 +105,7 @@ func main() {
 		panic(err)
 	}
 
-	err = processMinioConfig(reader)
+	mConf, err := processMinioConfig(reader)
 	if err != nil {
 		panic(err)
 	}
@@ -156,7 +164,7 @@ func main() {
 		chain.SetupStateLogger("/tmp/state.txt")
 	}
 
-	setupBlockStorageProvider()
+	setupBlockStorageProvider(mConf)
 	sc.SetupGenesisBlock(viper.GetString("server_chain.genesis_block.id"),
 		magicBlock)
 	Logger.Info("sharder node", zap.Any("node", node.Self))
@@ -392,16 +400,49 @@ func initWorkers(ctx context.Context) {
 	sharder.SetupWorkers(ctx)
 }
 
-func setupBlockStorageProvider() {
+func setupBlockStorageProvider(mConf blockstore.MinioConfiguration) {
+	// setting up minio client from configs if minio enabled
+	var (
+		mClient blockstore.MinioClient
+		err     error
+	)
+	if viper.GetBool("minio.enabled") {
+		mClient, err = blockstore.CreateMinioClientFromConfig(mConf)
+		if err != nil {
+			panic("can not create minio client")
+		}
+
+		// trying to initialize bucket.
+		if err := mClient.MakeBucket(mConf.BucketName, mConf.BucketLocation); err != nil {
+			Logger.Error("Error with make bucket, Will check if bucket exists", zap.Error(err))
+			exists, errBucketExists := mClient.BucketExists(mConf.BucketName)
+			if errBucketExists == nil && exists {
+				Logger.Info("We already own ", zap.Any("bucket_name", mConf.BucketName))
+			} else {
+				Logger.Error("Minio bucket error", zap.Error(errBucketExists), zap.Any("bucket_name", mConf.BucketName))
+				panic(err)
+			}
+		} else {
+			Logger.Info(mConf.BucketName + " bucket successfully created")
+		}
+	}
+
+	fsbs := blockstore.NewFSBlockStore("data/blocks", mClient)
 	blockStorageProvider := viper.GetString("server_chain.block.storage.provider")
-	if blockStorageProvider == "" || blockStorageProvider == "blockstore.FSBlockStore" {
-		blockstore.SetupStore(blockstore.NewFSBlockStore("data/blocks"))
-	} else if blockStorageProvider == "blockstore.BlockDBStore" {
-		blockstore.SetupStore(blockstore.NewBlockDBStore("data/blocksdb"))
-	} else if blockStorageProvider == "blockstore.MultiBlockstore" {
-		var bs = []blockstore.BlockStore{blockstore.NewFSBlockStore("data/blocks"), blockstore.NewBlockDBStore("data/blocksdb")}
+	switch blockStorageProvider {
+	case "", "blockstore.FSBlockStore":
+		blockstore.SetupStore(fsbs)
+	case "blockstore.BlockDBStore":
+		blockstore.SetupStore(blockstore.NewBlockDBStore(fsbs))
+	case "blockstore.MultiBlockstore":
+		var bs = []blockstore.BlockStore{
+			fsbs,
+			blockstore.NewBlockDBStore(
+				blockstore.NewFSBlockStore("data/blocksdb", mClient),
+			),
+		}
 		blockstore.SetupStore(blockstore.NewMultiBlockStore(bs))
-	} else {
+	default:
 		panic(fmt.Sprintf("uknown block store provider - %v", blockStorageProvider))
 	}
 }
