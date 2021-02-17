@@ -3,3 +3,4 @@
 localhost
 198.18.0.77
 7077
+miner77
