@@ -5,8 +5,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/minio/minio-go"
-
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/core/datastore"
@@ -24,7 +22,7 @@ func init() {
 }
 
 func makeTestFSBlockStore(dir string) *FSBlockStore {
-	bs := NewFSBlockStore(dir)
+	bs := NewFSBlockStore(dir, &MinioClient{})
 	return bs
 }
 
@@ -45,7 +43,7 @@ func TestFSBlockStore_Delete(t *testing.T) {
 	type fields struct {
 		RootDirectory         string
 		blockMetadataProvider datastore.EntityMetadata
-		Minio                 *minio.Client
+		Minio                 *MinioClient
 	}
 	type args struct {
 		hash string
@@ -94,7 +92,7 @@ func TestFSBlockStore_DeleteBlock(t *testing.T) {
 	type fields struct {
 		RootDirectory         string
 		blockMetadataProvider datastore.EntityMetadata
-		Minio                 *minio.Client
+		Minio                 *MinioClient
 	}
 	type args struct {
 		b *block.Block
@@ -158,7 +156,7 @@ func TestFSBlockStore_Read(t *testing.T) {
 	type fields struct {
 		RootDirectory         string
 		blockMetadataProvider datastore.EntityMetadata
-		Minio                 *minio.Client
+		Minio                 *MinioClient
 	}
 	type args struct {
 		hash  string
@@ -236,7 +234,7 @@ func TestFSBlockStore_getFileName(t *testing.T) {
 	type fields struct {
 		RootDirectory         string
 		blockMetadataProvider datastore.EntityMetadata
-		Minio                 *minio.Client
+		Minio                 *MinioClient
 	}
 	type args struct {
 		hash  string
@@ -285,7 +283,7 @@ func TestFSBlockStore_getFileWithoutExtension(t *testing.T) {
 	type fields struct {
 		RootDirectory         string
 		blockMetadataProvider datastore.EntityMetadata
-		Minio                 *minio.Client
+		Minio                 *MinioClient
 	}
 	type args struct {
 		hash  string
@@ -343,7 +341,7 @@ func TestFSBlockStore_read(t *testing.T) {
 	type fields struct {
 		RootDirectory         string
 		blockMetadataProvider datastore.EntityMetadata
-		Minio                 *minio.Client
+		Minio                 *MinioClient
 	}
 	type args struct {
 		hash  string

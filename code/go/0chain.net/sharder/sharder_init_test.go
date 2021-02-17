@@ -130,15 +130,22 @@ func initEntities() {
 }
 
 func setupBlockStorageProvider() {
+	fsbs := blockstore.NewFSBlockStore("data/blocks", nil)
 	blockStorageProvider := viper.GetString("server_chain.block.storage.provider")
-	if blockStorageProvider == "" || blockStorageProvider == "blockstore.FSBlockStore" {
-		blockstore.SetupStore(blockstore.NewFSBlockStore("data/blocks"))
-	} else if blockStorageProvider == "blockstore.BlockDBStore" {
-		blockstore.SetupStore(blockstore.NewBlockDBStore("data/blocksdb"))
-	} else if blockStorageProvider == "blockstore.MultiBlockstore" {
-		var bs = []blockstore.BlockStore{blockstore.NewFSBlockStore("data/blocks"), blockstore.NewBlockDBStore("data/blocksdb")}
+	switch blockStorageProvider {
+	case "", "blockstore.FSBlockStore":
+		blockstore.SetupStore(fsbs)
+	case "blockstore.BlockDBStore":
+		blockstore.SetupStore(blockstore.NewBlockDBStore(fsbs))
+	case "blockstore.MultiBlockstore":
+		var bs = []blockstore.BlockStore{
+			fsbs,
+			blockstore.NewBlockDBStore(
+				blockstore.NewFSBlockStore("data/blocksdb", nil),
+			),
+		}
 		blockstore.SetupStore(blockstore.NewMultiBlockStore(bs))
-	} else {
+	default:
 		panic(fmt.Sprintf("uknown block store provider - %v", blockStorageProvider))
 	}
 }
