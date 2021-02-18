@@ -3,6 +3,7 @@ package chain
 import (
 	"bytes"
 	"context"
+	"errors"
 	"net/url"
 
 	"0chain.net/chaincore/block"
@@ -21,20 +22,22 @@ var ErrStopIterator = common.NewError("stop_iterator", "Stop MPT Iteration")
 var MaxStateNodesForSync = 10000
 
 //GetBlockStateChange - get the state change of the block from the network
-func (c *Chain) GetBlockStateChange(b *block.Block) {
+func (c *Chain) GetBlockStateChange(b *block.Block) error {
 	bsc, err := c.getBlockStateChange(b)
 	if err != nil {
 		Logger.Error("get block state change - no bsc", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Error(err))
-		return
+		return errors.New("get block state changes - no bsc")
 	}
 	if bsc == nil {
-		return
+		return nil
 	}
 	Logger.Info("get block state change", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Int8("state_status", b.GetStateStatus()))
 	err = c.ApplyBlockStateChange(b, bsc)
 	if err != nil {
 		Logger.Error("get block state change", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.String("state_hash", util.ToHex(b.ClientStateHash)), zap.Error(err))
+		return err
 	}
+	return nil
 }
 
 //GetPartialState - get the partial state from the network
@@ -64,12 +67,20 @@ func (c *Chain) GetStateNodes(ctx context.Context, keys []util.Key) {
 			zap.Any("keys", skeys), zap.Error(err))
 		return
 	}
+	keysStr := make([]string, len(keys))
+	for i := range keys {
+		keysStr[i] = util.ToHex(keys[i])
+	}
 	err = c.SaveStateNodes(ctx, ns)
 	if err != nil {
 		Logger.Error("get state nodes - error saving",
-			zap.Int("num_keys", len(keys)), zap.Error(err))
+			zap.Int("num_keys", len(keys)),
+			zap.Strings("keys:", keysStr),
+			zap.Error(err))
 	} else {
-		Logger.Info("get state nodes - saving", zap.Int("num_keys", len(keys)),
+		Logger.Info("get state nodes - saving",
+			zap.Int("num_keys", len(keys)),
+			zap.Strings("keys:", keysStr),
 			zap.Int("nodes", len(ns.Nodes)))
 	}
 	return

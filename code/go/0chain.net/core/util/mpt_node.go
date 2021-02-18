@@ -214,7 +214,7 @@ func (ln *LeafNode) GetHashBytes() []byte {
 /*Clone - implement interface */
 func (ln *LeafNode) Clone() Node {
 	clone := &LeafNode{}
-	clone.OriginTrackerNode = NewOriginTrackerNode()
+	clone.OriginTrackerNode = ln.OriginTrackerNode.Clone()
 	clone.Path = ln.Path // path will never be updated inplace and so ok
 	clone.SetValue(ln.GetValue())
 	return clone
@@ -360,7 +360,7 @@ func (fn *FullNode) Decode(buf []byte) error {
 /*Clone - implement interface */
 func (fn *FullNode) Clone() Node {
 	clone := &FullNode{}
-	clone.OriginTrackerNode = NewOriginTrackerNode()
+	clone.OriginTrackerNode = fn.OriginTrackerNode.Clone()
 	for idx, ckey := range fn.Children {
 		clone.Children[idx] = ckey // ckey will never be updated inplace and so ok
 	}
@@ -468,7 +468,7 @@ func (en *ExtensionNode) GetHashBytes() []byte {
 /*Clone - implement interface */
 func (en *ExtensionNode) Clone() Node {
 	clone := &ExtensionNode{}
-	clone.OriginTrackerNode = NewOriginTrackerNode()
+	clone.OriginTrackerNode = en.OriginTrackerNode.Clone()
 	clone.Path = en.Path       // path will never be updated inplace and so ok
 	clone.NodeKey = en.NodeKey // nodekey will never be updated inplace and so ok
 	return clone

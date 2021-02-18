@@ -25,6 +25,7 @@ type ChangeCollectorI interface {
 	PrintChanges(w io.Writer)
 
 	Validate() error
+	Clone() ChangeCollectorI
 }
 
 /*ChangeCollector - node change collector interface implementation */
@@ -156,4 +157,29 @@ func (cc *ChangeCollector) Validate() error {
 		}
 	}
 	return nil
+}
+
+// Clone returns a copy of the change collector
+func (cc *ChangeCollector) Clone() ChangeCollectorI {
+	c := &ChangeCollector{
+		Changes: make(map[string]*NodeChange),
+		Deletes: make(map[string]Node),
+	}
+
+	for k, v := range cc.Changes {
+		change := &NodeChange{
+			New: v.New.Clone(),
+		}
+		if v.Old != nil {
+			change.Old = v.Old.Clone()
+		}
+
+		c.Changes[k] = change
+	}
+
+	for k, v := range cc.Deletes {
+		c.Deletes[k] = v.Clone()
+	}
+
+	return c
 }

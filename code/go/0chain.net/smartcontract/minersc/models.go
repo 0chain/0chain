@@ -1,6 +1,7 @@
 package minersc
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -418,9 +419,14 @@ func (mn *MinerNode) numDelegates() int {
 }
 
 func (mn *MinerNode) save(balances cstate.StateContextI) (err error) {
-	if _, err = balances.InsertTrieNode(mn.getKey(), mn); err != nil {
+	var key datastore.Key
+	if key, err = balances.InsertTrieNode(mn.getKey(), mn); err != nil {
 		return fmt.Errorf("saving miner node: %v", err)
 	}
+
+	Logger.Debug("MinerNode save successfully",
+		zap.String("path", encryption.Hash(mn.getKey())),
+		zap.String("new root key", hex.EncodeToString([]byte(key))))
 	return
 }
 

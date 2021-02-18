@@ -185,7 +185,7 @@ func (mc *Chain) GetBlockStateNode(block *block.Block, path string) (
 			"client state is nil, round %d", block.Round)
 	}
 
-	var state = CreateTxnMPT(block.ClientState)
+	state := CreateTxnMPT(block.ClientState)
 	return state.GetNodeValue(getNodePath(path))
 }
 
@@ -1000,13 +1000,9 @@ func (c *Chain) SetRoundRank(r round.RoundI, b *block.Block) {
 			zap.Any("block", b.Hash), zap.Any("miner_id", b.MinerID), zap.Any("miners", miners))
 		return
 	}
-	rank := r.GetMinerRank(bNode)
-	if rank >= c.NumGenerators {
-		Logger.Error(fmt.Sprintf("Round# %v generator miner ID %v rank is greater than num generators. State= %v, rank= %v, generators = %v", r.GetRoundNumber(), bNode.SetIndex, r.GetState(), rank, c.NumGenerators))
-	}
-	b.RoundRank = rank
+	b.RoundRank = r.GetMinerRank(bNode)
 	//TODO: Remove this log
-	Logger.Info(fmt.Sprintf("Round# %v generator miner ID %v State= %v, rank= %v", r.GetRoundNumber(), bNode.SetIndex, r.GetState(), rank))
+	Logger.Info(fmt.Sprintf("Round# %v generator miner ID %v State= %v, rank= %v", r.GetRoundNumber(), bNode.SetIndex, r.GetState(), b.RoundRank))
 }
 
 func (c *Chain) SetGenerationTimeout(newTimeout int) {

@@ -3,6 +3,7 @@ package util
 import (
 	"bytes"
 	"context"
+	"sync"
 
 	"github.com/0chain/gorocksdb"
 
@@ -12,12 +13,15 @@ import (
 
 /*PNodeDB - a node db that is persisted */
 type PNodeDB struct {
-	dataDir string
-	db      *gorocksdb.DB
-	ro      *gorocksdb.ReadOptions
-	wo      *gorocksdb.WriteOptions
-	to      *gorocksdb.TransactionOptions
-	fo      *gorocksdb.FlushOptions
+	dataDir  string
+	db       *gorocksdb.DB
+	ro       *gorocksdb.ReadOptions
+	wo       *gorocksdb.WriteOptions
+	to       *gorocksdb.TransactionOptions
+	fo       *gorocksdb.FlushOptions
+	mutex    sync.Mutex
+	version  int64
+	versions []int64
 }
 
 const (
@@ -226,4 +230,22 @@ func (pndb *PNodeDB) Size(ctx context.Context) int64 {
 // Close close the rocksdb
 func (pndb *PNodeDB) Close() {
 	pndb.db.Close()
+}
+
+// GetDBVersions retusn all tracked db versions
+func (pndb *PNodeDB) GetDBVersions() []int64 {
+	pndb.mutex.Lock()
+	defer pndb.mutex.Unlock()
+	vs := make([]int64, len(pndb.versions))
+	for i, v := range pndb.versions {
+		vs[i] = v
+	}
+	return vs
+}
+
+// TrackDBVersion appends the db version to tracked records
+func (pndb *PNodeDB) TrackDBVersion(v int64) {
+	pndb.mutex.Lock()
+	defer pndb.mutex.Unlock()
+	pndb.versions = append(pndb.versions, v)
 }

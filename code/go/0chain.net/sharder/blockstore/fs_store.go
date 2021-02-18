@@ -2,18 +2,19 @@ package blockstore
 
 import (
 	"bufio"
-	"bytes"
 	"compress/zlib"
-	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 
 	"go.uber.org/zap"
 
-	"0chain.net/chaincore/chain"
-	. "0chain.net/core/logging"
 	"github.com/minio/minio-go"
 	"github.com/spf13/viper"
+
+	"0chain.net/chaincore/chain"
+	. "0chain.net/core/logging"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/common"
@@ -23,25 +24,32 @@ import (
 
 const fileExt = ".dat.zlib"
 
-/*FSBlockStore - a block store implementation using file system */
-type FSBlockStore struct {
-	RootDirectory         string
-	blockMetadataProvider datastore.EntityMetadata
-	Minio                 *minio.Client
-}
+type (
+	// FSBlockStore - a block store implementation using file system.
+	FSBlockStore struct {
+		RootDirectory         string
+		blockMetadataProvider datastore.EntityMetadata
+		Minio                 *minio.Client
+	}
 
-type MinioConfiguration struct {
-	StorageServiceURL string
-	AccessKeyID       string
-	SecretAccessKey   string
-	BucketName        string
-	BucketLocation    string
-	DeleteLocal       bool
-}
+	MinioConfiguration struct {
+		StorageServiceURL string
+		AccessKeyID       string
+		SecretAccessKey   string
+		BucketName        string
+		BucketLocation    string
+		DeleteLocal       bool
+	}
+)
 
-var MinioConfig MinioConfiguration
+var (
+	MinioConfig MinioConfiguration
 
-/*NewFSBlockStore - return a new fs block store */
+	// Make sure FSBlockStore implements BlockStore.
+	_ BlockStore = (*FSBlockStore)(nil)
+)
+
+// NewFSBlockStore - return a new fs block store.
 func NewFSBlockStore(rootDir string) *FSBlockStore {
 	store := &FSBlockStore{RootDirectory: rootDir}
 	store.blockMetadataProvider = datastore.GetEntityMetadata("block")
@@ -85,13 +93,21 @@ func (fbs *FSBlockStore) checkBucket(bucketName string) {
 }
 
 func (fbs *FSBlockStore) getFileWithoutExtension(hash string, round int64) string {
-	var file bytes.Buffer
+	var file strings.Builder
 	var dirRoundRange = chain.GetServerChain().RoundRange
-	fmt.Fprintf(&file, "%s%s%v", fbs.RootDirectory, string(os.PathSeparator), round/dirRoundRange)
+
+	file.WriteString(fbs.RootDirectory)
+	file.WriteString(string(os.PathSeparator))
+	file.WriteString(strconv.Itoa(int(round/dirRoundRange)))
+
 	for i := 0; i < 3; i++ {
-		fmt.Fprintf(&file, "%s%s", string(os.PathSeparator), hash[3*i:3*i+3])
+		file.WriteString(string(os.PathSeparator))
+		file.WriteString(hash[3*i:3*i+3])
 	}
-	fmt.Fprintf(&file, "%s%s", string(os.PathSeparator), hash[9:])
+
+	file.WriteString(string(os.PathSeparator))
+	file.WriteString(hash[9:])
+
 	return file.String()
 }
 
@@ -99,11 +115,13 @@ func (fbs *FSBlockStore) getFileName(hash string, round int64) string {
 	return fbs.getFileWithoutExtension(hash, round) + fileExt
 }
 
-/*Write - write the block to the file system */
+// Write - write the block to the file system
 func (fbs *FSBlockStore) Write(b *block.Block) error {
 	fileName := fbs.getFileName(b.Hash, b.Round)
 	dir := filepath.Dir(fileName)
-	os.MkdirAll(dir, 0755)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
 	f, err := os.OpenFile(fileName, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		return err
@@ -128,7 +146,7 @@ func (fbs *FSBlockStore) Write(b *block.Block) error {
 	return nil
 }
 
-/*ReadWithBlockSummary - read the block given the block summary */
+// ReadWithBlockSummary - read the block given the block summary
 func (fbs *FSBlockStore) ReadWithBlockSummary(bs *block.BlockSummary) (*block.Block, error) {
 	return fbs.read(bs.Hash, bs.Round)
 }
@@ -228,12 +246,12 @@ func (fbs *FSBlockStore) read(hash string, round int64) (*block.Block, error) {
 	return b, nil
 }
 
-/*Delete - delete from the hash of the block*/
+// Delete - delete from the hash of the block
 func (fbs *FSBlockStore) Delete(hash string) error {
 	return common.NewError("interface_not_implemented", "FSBlockStore cannote provide this interface")
 }
 
-/*DeleteBlock - delete the given block from the file system */
+// DeleteBlock - delete the given block from the file system
 func (fbs *FSBlockStore) DeleteBlock(b *block.Block) error {
 	fileName := fbs.getFileName(b.Hash, b.Round)
 	err := os.Remove(fileName)

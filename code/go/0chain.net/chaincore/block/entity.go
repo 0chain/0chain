@@ -286,11 +286,12 @@ func (b *Block) SetStateDB(prevBlock *Block) {
 
 // InitStateDB - initialize the block's state from the db
 // (assuming it's already computed).
-func (b *Block) InitStateDB(ndb util.NodeDB) (err error) {
-	if _, err = ndb.GetNode(b.ClientStateHash); err != nil {
+func (b *Block) InitStateDB(ndb util.NodeDB) error {
+	if _, err := ndb.GetNode(b.ClientStateHash); err != nil {
 		b.SetStateStatus(StateFailed)
-		return
+		return err
 	}
+
 	b.CreateState(ndb)
 	b.ClientState.SetRoot(b.ClientStateHash)
 	b.SetStateStatus(StateSuccessful)
