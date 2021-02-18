@@ -60,8 +60,13 @@ func generateSingleBlock(ctx context.Context, prevBlock *block.Block, r round.Ro
 	if err != nil {
 		panic(err)
 	}
+
+	mClient, err := makeTestMinioClient()
+	if err != nil {
+		return nil, err
+	}
 	blockstore.SetupStore(blockstore.NewFSBlockStore(fmt.Sprintf("%v%s.0chain.net",
-		usr.HomeDir, string(os.PathSeparator))))
+		usr.HomeDir, string(os.PathSeparator)), mClient))
 
 	var rd *Round
 	switch rr := r.(type) {
@@ -114,6 +119,21 @@ func CreateMockRound(number int64) *MockRound {
 	return mr
 }
 
+func makeTestMinioClient() (blockstore.MinioClient, error) {
+    //todo: replace play.min.io with local service
+	mConf := blockstore.MinioConfiguration{
+		StorageServiceURL: "play.min.io",
+		AccessKeyID:       "Q3AM3UQ867SPQQA43P2F",
+		SecretAccessKey:   "zuf+tfteSlswRu7BJ86wekitnifILbZam1KYY3TG",
+		BucketName:        "mytestbucket",
+		BucketLocation:    "us-east-1",
+		DeleteLocal:       false,
+		Secure:            false,
+	}
+
+	return blockstore.CreateMinioClientFromConfig(mConf)
+}
+
 func TestBlockGeneration(t *testing.T) {
 	clean := SetUpSingleSelf()
 	defer clean()
@@ -131,7 +151,13 @@ func TestBlockGeneration(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	blockstore.SetupStore(blockstore.NewFSBlockStore(fmt.Sprintf("%v%s.0chain.net", usr.HomeDir, string(os.PathSeparator))))
+
+	mClient, err := makeTestMinioClient()
+	if err != nil {
+		t.Fatal(err)
+	}
+	blockstore.SetupStore(blockstore.NewFSBlockStore(fmt.Sprintf("%v%s.0chain.net",
+		usr.HomeDir, string(os.PathSeparator)), mClient))
 
 	r := CreateRound(1)
 
@@ -239,38 +265,6 @@ func TestBlockVerificationBadHash(t *testing.T) {
 		t.Log("SUCCESS: Block with bad hash failed verifcation")
 	}
 	common.Done()
-}
-
-//todo: rebuild this test case
-func TestBlockVerificationTooFewTransactions(t *testing.T) {
-	t.Error("FAIL: Test case needs to be re-implemented ")
-//	cleanSS := SetUpSingleSelf()
-//	defer cleanSS()
-//	ctx, clean := getContext()
-//	defer clean()
-//	mr := CreateRound(1)
-//	b, err := generateSingleBlock(ctx, nil, mr)
-//	if err != nil {
-//		t.Errorf("Error generating block: %v", err)
-//		return
-//	}
-//	mc := GetMinerChain()
-//	txnLength := numOfTransactions - 1
-//	b.Txns = make([]*transaction.Transaction, txnLength)
-//	if b != nil {
-//		for idx, txn := range b.Txns {
-//			if idx < txnLength {
-//				b.Txns[idx] = txn
-//			}
-//		}
-//		_, err = mc.VerifyRoundBlock(ctx, mr, b)
-//	}
-//	if err == nil {
-//		t.Error("FAIL: Block with too few transactions passed verification")
-//	} else {
-//		t.Log("SUCCESS: Block with too few transactions failed verifcation")
-//	}
-//	common.Done()
 }
 
 func BenchmarkGenerateALotTransactions(b *testing.B) {
