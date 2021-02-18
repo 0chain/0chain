@@ -1,16 +1,6 @@
 package miner
 
 import (
-	"bytes"
-	"context"
-	"flag"
-	"fmt"
-	"log"
-	"os"
-	"os/user"
-	"strconv"
-	"testing"
-
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/client"
@@ -24,18 +14,32 @@ import (
 	"0chain.net/core/logging"
 	"0chain.net/core/memorystore"
 	"0chain.net/sharder/blockstore"
-	"github.com/gomodule/redigo/redis"
-	"github.com/stretchr/testify/require"
-
+	"bytes"
+	"context"
+	"flag"
+	"fmt"
 	"github.com/alicebob/miniredis/v2"
+	"github.com/gomodule/redigo/redis"
+	"github.com/stretchr/testify/suite"
+	"log"
+	"os"
+	"os/user"
+	"strconv"
+	"testing"
 )
 
 var numOfTransactions int
 
-func init() {
+type MinerTestSuite struct {
+	suite.Suite
+}
+
+func TestMinerTestSuite(t *testing.T) {
 	flag.IntVar(&numOfTransactions, "num_txns", 4000, "number of transactions per block")
 
 	logging.InitLogging("testing")
+
+	suite.Run(t, &MinerTestSuite{})
 }
 
 func getContext() (context.Context, func()) {
@@ -114,7 +118,7 @@ func CreateMockRound(number int64) *MockRound {
 	return mr
 }
 
-func TestBlockGeneration(t *testing.T) {
+func (suite *MinerTestSuite) TestBlockGeneration() {
 	clean := SetUpSingleSelf()
 	defer clean()
 	ctx := common.GetRootContext()
@@ -137,25 +141,18 @@ func TestBlockGeneration(t *testing.T) {
 
 	b, err = mc.GenerateRoundBlock(ctx, r)
 
-	if err != nil {
-		t.Errorf("Error generating block: %v\n", err)
-		return
-	}
+	suite.Require().NoError(err, "error generating block")
 
-	t.Logf("json length: %v\n", datastore.ToJSON(b).Len())
-	t.Logf("msgpack length: %v\n", datastore.ToMsgpack(b).Len())
 	err = blockstore.Store.Write(b)
-	require.NoError(t, err)
+	suite.Require().NoError(err)
 
-	b2, err := blockstore.Store.Read(b.Hash, r.Number)
-	require.NoError(t, err)
-
-	t.Logf("Block hash is: %v\n", b2.Hash)
+	_, err = blockstore.Store.Read(b.Hash, r.Number)
+	suite.Require().NoError(err)
 
 	common.Done()
 }
 
-func TestBlockVerification(t *testing.T) {
+func (suite *MinerTestSuite) TestBlockVerification() {
 	clean := SetUpSingleSelf()
 	defer clean()
 	mc := GetMinerChain()
@@ -167,110 +164,100 @@ func TestBlockVerification(t *testing.T) {
 	if b != nil {
 		_, err = mc.VerifyRoundBlock(ctx, mr, b)
 	}
-	if err != nil {
-		t.Errorf("Block failed verification because %v", err.Error())
-	} else {
-		t.Log("Block passed verification")
-	}
+	suite.Require().NoError(err, "block failed verification")
 	common.Done()
 }
 
-func TestTwoCorrectBlocks(t *testing.T) {
+func (suite *MinerTestSuite) TestTwoCorrectBlocks() {
 	cleanSS := SetUpSingleSelf()
 	defer cleanSS()
 	ctx := context.Background()
 	mr := CreateMockRound(1)
 	b0, err := generateSingleBlock(ctx, nil, mr)
+	suite.Require().NoError(err, "block failed verification")
+	suite.Require().NotNil(b0)
+
 	mc := GetMinerChain()
 	rd := mc.GetRound(1)
-	require.NotNil(t, rd)
-	if b0 != nil {
-		var b1 *block.Block
-		mr2 := CreateMockRound(2)
-		b1, err = generateSingleBlock(ctx, b0, mr2.Round)
-		require.NoError(t, err)
-		_, err = mc.VerifyRoundBlock(ctx, mr2, b1)
-	}
-	if err != nil {
-		t.Errorf("Block failed verification because %v", err.Error())
-	} else {
-		t.Log("Block passed verification")
-	}
+	suite.Require().NotNil(rd)
+
+	var b1 *block.Block
+	mr2 := CreateMockRound(2)
+	b1, err = generateSingleBlock(ctx, b0, mr2.Round)
+	suite.Require().NoError(err)
+	_, err = mc.VerifyRoundBlock(ctx, mr2, b1)
+	suite.Require().NoError(err)
+
 	common.Done()
 }
 
-func TestTwoBlocksWrongRound(t *testing.T) {
+func (suite *MinerTestSuite) TestTwoBlocksWrongRound() {
 	cleanSS := SetUpSingleSelf()
 	defer cleanSS()
 	ctx, clean := getContext()
 	defer clean()
 	mr := CreateRound(1)
 	b0, err := generateSingleBlock(ctx, nil, mr)
+	suite.Require().NoError(err)
+	suite.Require().NotNil(b0)
 	//mc := GetMinerChain()
-	if b0 != nil {
-		//var b1 *block.Block
-		mr3 := CreateRound(3)
-		_, err = generateSingleBlock(ctx, b0, mr3)
-		//_, err = mc.VerifyRoundBlock(ctx, b1)
-	}
-	if err != nil {
-		t.Log("Second block failed to generate")
-	} else {
-		t.Error("Second block generated")
-	}
+	//var b1 *block.Block
+	mr3 := CreateRound(3)
+	_, err = generateSingleBlock(ctx, b0, mr3)
+	suite.Require().Error(err, "second block failed to generate")
+	//_, err = mc.VerifyRoundBlock(ctx, b1)
+
 	common.Done()
 }
 
-func TestBlockVerificationBadHash(t *testing.T) {
+func (suite *MinerTestSuite) TestBlockVerificationBadHash() {
 	cleanSS := SetUpSingleSelf()
 	defer cleanSS()
 	ctx, clean := getContext()
 	defer clean()
 	mr := CreateRound(1)
 	b, err := generateSingleBlock(ctx, nil, mr)
+	suite.Require().NoError(err)
+	suite.Require().NotNil(b)
+
 	mc := GetMinerChain()
-	if b != nil {
-		b.Hash = "bad hash"
-		_, err = mc.VerifyRoundBlock(ctx, mr, b)
-	}
-	if err == nil {
-		t.Error("FAIL: Block with bad hash passed verification")
-	} else {
-		t.Log("SUCCESS: Block with bad hash failed verifcation")
-	}
+	b.Hash = "bad hash"
+	_, err = mc.VerifyRoundBlock(ctx, mr, b)
+	suite.Require().Error(err)
+
 	common.Done()
 }
 
 //todo: rebuild this test case
-func TestBlockVerificationTooFewTransactions(t *testing.T) {
-//	t.Error("FAIL: Test case needs to be re-implemented ")
-////	cleanSS := SetUpSingleSelf()
-////	defer cleanSS()
-////	ctx, clean := getContext()
-////	defer clean()
-////	mr := CreateRound(1)
-////	b, err := generateSingleBlock(ctx, nil, mr)
-////	if err != nil {
-////		t.Errorf("Error generating block: %v", err)
-////		return
-////	}
-////	mc := GetMinerChain()
-////	txnLength := numOfTransactions - 1
-////	b.Txns = make([]*transaction.Transaction, txnLength)
-////	if b != nil {
-////		for idx, txn := range b.Txns {
-////			if idx < txnLength {
-////				b.Txns[idx] = txn
-////			}
-////		}
-////		_, err = mc.VerifyRoundBlock(ctx, mr, b)
-////	}
-////	if err == nil {
-////		t.Error("FAIL: Block with too few transactions passed verification")
-////	} else {
-////		t.Log("SUCCESS: Block with too few transactions failed verifcation")
-////	}
-////	common.Done()
+func (suite *MinerTestSuite) TestBlockVerificationTooFewTransactions() {
+	//	t.Error("FAIL: Test case needs to be re-implemented ")
+	////	cleanSS := SetUpSingleSelf()
+	////	defer cleanSS()
+	////	ctx, clean := getContext()
+	////	defer clean()
+	////	mr := CreateRound(1)
+	////	b, err := generateSingleBlock(ctx, nil, mr)
+	////	if err != nil {
+	////		t.Errorf("Error generating block: %v", err)
+	////		return
+	////	}
+	////	mc := GetMinerChain()
+	////	txnLength := numOfTransactions - 1
+	////	b.Txns = make([]*transaction.Transaction, txnLength)
+	////	if b != nil {
+	////		for idx, txn := range b.Txns {
+	////			if idx < txnLength {
+	////				b.Txns[idx] = txn
+	////			}
+	////		}
+	////		_, err = mc.VerifyRoundBlock(ctx, mr, b)
+	////	}
+	////	if err == nil {
+	////		t.Error("FAIL: Block with too few transactions passed verification")
+	////	} else {
+	////		t.Log("SUCCESS: Block with too few transactions failed verifcation")
+	////	}
+	////	common.Done()
 }
 
 func BenchmarkGenerateALotTransactions(b *testing.B) {

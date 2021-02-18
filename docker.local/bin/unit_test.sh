@@ -5,7 +5,7 @@ set -e
 INTERACTIVE="-it"
 PACKAGE=""
 
-if [[ "$1" == "--ci" ]]
+if [ "$1" == "--ci" ]
 then
     # But we need non-interactive mode for CI
     INTERACTIVE=""
