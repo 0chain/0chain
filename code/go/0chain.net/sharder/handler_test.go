@@ -12,13 +12,6 @@ import (
 	"0chain.net/sharder"
 )
 
-//
-//func init() {
-//	common.ConfigRateLimits()
-//	serverChain := chain.NewChainFromConfig()
-//	SetupSharderChain(serverChain)
-//}
-
 func makeTestURL(url url.URL, values map[string]string) string {
 	q := url.Query()
 
@@ -175,6 +168,10 @@ func TestSharderStatsHandler(t *testing.T) {
 
 			rr := httptest.NewRecorder()
 			handler := http.HandlerFunc(common.UserRateLimit(common.ToJSONResponse(sharder.SharderStatsHandler)))
+
+			// setting lfb because return handler function is panic with nil lfb
+			b := block.NewBlock("", 132)
+			sharder.GetSharderChain().SetLatestFinalizedBlock(b)
 
 			handler.ServeHTTP(rr, tt.request)
 
