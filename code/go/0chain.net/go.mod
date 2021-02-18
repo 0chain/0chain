@@ -33,6 +33,7 @@ require (
 	github.com/spf13/viper v1.7.0
 	github.com/stretchr/testify v1.3.0
 	github.com/valyala/gozstd v1.5.0
+	github.com/vektra/mockery/v2 v2.6.0 // indirect
 	github.com/vmihailenco/msgpack v4.0.4+incompatible
 	go.uber.org/atomic v1.4.0
 	go.uber.org/zap v1.10.0
