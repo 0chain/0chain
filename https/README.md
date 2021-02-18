@@ -26,9 +26,9 @@ $ ./docker.local/bin/setup_network.sh
 
 1. Update `network . dns_url` in `./docker.local/config/0chain.yaml` to point to `https://<network_url>/dns`
 
-2. Modify `docker.local/config/b0snode2_keys.txt` and replace `localhost` and `198.18.0.83` with your domain.
+2. Edit `docker.local/config/b0snode2_keys.txt` and replace `localhost` and `198.18.0.83` with your domain.
 
-3. Modify `docker.local/config/b0mnode5_keys.txt` and replace `localhost` and `198.18.0.83` with your domain.
+3. Edit `docker.local/config/b0mnode5_keys.txt` and replace `localhost` and `198.18.0.83` with your domain.
 
 ## Building the Nodes
 
@@ -87,7 +87,7 @@ $ ../bin/start.b0miner.sh
 cd /0chain/https
 ```
 
-2. Modify docker-compose.yml and replace <your_email>, <your_domain> with your email and domain. Make sure to add route53 A type record for your domain and ip address
+2. Edit docker-compose.yml and replace <your_email>, <your_domain> with your email and domain. Make sure to add route53 A type record for your domain and ip address
 
 
 3. Deploy nginx and certbot using the following command
