@@ -14,6 +14,16 @@ import (
 	"0chain.net/sharder/blockdb"
 )
 
+func init() {
+	transactionEntityMetadata := datastore.MetadataProvider()
+	transactionEntityMetadata.Name = "txn"
+	transactionEntityMetadata.DB = "txndb"
+	transactionEntityMetadata.Provider = transaction.Provider
+	transactionEntityMetadata.Store = memorystore.GetStorageProvider()
+
+	datastore.RegisterEntityMetadata("txn", transactionEntityMetadata)
+}
+
 func makeTestBlockDBStore() *BlockDBStore {
 	return &BlockDBStore{
 		FSBlockStore:        makeTestFSBlockStore("tmp/test/blockdbstore"),
@@ -504,6 +514,116 @@ func TestBlockDBStore_CloudObjectExists(t *testing.T) {
 			}
 			if got := bdbs.CloudObjectExists(tt.args.hash); got != tt.want {
 				t.Errorf("CloudObjectExists() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_txnRecordProvider_NewRecord(t *testing.T) {
+	t.Parallel()
+
+	type fields struct {
+		txnMetadataProvider datastore.EntityMetadata
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   blockdb.Record
+	}{
+		{
+			name:   "Test_txnRecordProvider_NewRecord_OK",
+			fields: fields{txnMetadataProvider: datastore.GetEntityMetadata("txn")},
+			want: &txnRecord{
+				Transaction: datastore.GetEntityMetadata("txn").Instance().(*transaction.Transaction),
+			},
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			trp := &txnRecordProvider{
+				txnMetadataProvider: tt.fields.txnMetadataProvider,
+			}
+			if got := trp.NewRecord(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("NewRecord() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestBlockDBStore_ReadWithBlockSummary(t *testing.T) {
+	t.Parallel()
+
+	bs := makeTestBlockDBStore()
+	b := block.NewBlock("", 1)
+	b.Hash = encryption.Hash("data")
+
+	type fields struct {
+		FSBlockStore        *FSBlockStore
+		txnMetadataProvider datastore.EntityMetadata
+		compress            bool
+	}
+	type args struct {
+		bs *block.BlockSummary
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    *block.Block
+		wantErr bool
+	}{
+		{
+			name: "Test_BlockDBStore_ReadWithBlockSummary_OK",
+			fields: fields{
+				FSBlockStore:        bs.FSBlockStore,
+				txnMetadataProvider: bs.txnMetadataProvider,
+				compress:            bs.compress,
+			},
+			args:    args{bs: b.GetSummary()},
+			want:    b,
+			wantErr: false,
+		},
+		{
+			name: "Test_BlockDBStore_ReadWithBlockSummary_ERR",
+			fields: fields{
+				FSBlockStore:        bs.FSBlockStore,
+				txnMetadataProvider: bs.txnMetadataProvider,
+				compress:            bs.compress,
+			},
+			args: func() args {
+				b := block.NewBlock("", 123)
+				b.Hash = encryption.Hash("another data")
+
+				return args{bs: b.GetSummary()}
+			}(),
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			bdbs := &BlockDBStore{
+				FSBlockStore:        tt.fields.FSBlockStore,
+				txnMetadataProvider: tt.fields.txnMetadataProvider,
+				compress:            tt.fields.compress,
+			}
+
+			if err := bs.Write(b); err != nil {
+				t.Fatal(err)
+			}
+
+			got, err := bdbs.ReadWithBlockSummary(tt.args.bs)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ReadWithBlockSummary() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != nil && !reflect.DeepEqual(got.Hash, tt.want.Hash) {
+				t.Errorf("ReadWithBlockSummary() got = %v, want %v", got, tt.want)
 			}
 		})
 	}
