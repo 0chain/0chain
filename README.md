@@ -150,6 +150,34 @@ However, you can use the <a href='https://github.com/0chain/block-explorer'>bloc
 
 2. In addition, use the '/\_diagnostics' link on any node to view internal details of the blockchain and the node.
 
+## Compiling
+
+TODO: I've written this short section just for the miner go code. Have not yet made sure this applies to the other parts, although there's a good chance it does.
+
+If you're making changes to the golang code and you just want to compile the golang code instead of running `./docker.local/bin/build.miners.sh` every single time (which is really expensive, mainly because it runs go mod download every single time, and that takes a couple minutes), here's how you can do it.
+
+1. Go to the miner directory `cd $TOP/code/go/0chain.net/miner`
+2. Then run the go build command: `go build -v -tags "bn256 development"`
+3. And that's it. You don't need to set $GOPATH, it'll default to your ~/go
+
+If you run that go build command and you hit errors like these (see code snippet), then it means you need to compile and install herumi/bls and rocksdb.
+
+```
+github.com/herumi/bls/ffi/go/bls
+# github.com/herumi/bls/ffi/go/bls
+/root/go/pkg/mod/github.com/herumi/bls@v0.0.0-20190423083323-d414f74643cb/ffi/go/bls/bls.go:15:10: fatal error: bls/bls.h: No such file or directory
+ #include <bls/bls.h>
+          ^~~~~~~~~~~
+compilation terminated.
+github.com/0chain/gorocksdb
+# github.com/0chain/gorocksdb
+/root/go/pkg/mod/github.com/0chain/gorocksdb@v0.0.0-20181010114359-8752a9433481/array.go:4:11: fatal error: rocksdb/c.h: No such file or directory
+ // #include "rocksdb/c.h"
+           ^~~~~~~~~~~~~
+```
+
+The steps to compile and install herumi/bls and rocksdb are in: `docker.local/build.base/Dockerfile.build_base`. It involves installing a bunch of common libraries, and then downloading rocksdb + herumi/bls source code, compiling and installing them.
+
 ## Troubleshooting
 
 1. Ensure the port mapping is all correct:
