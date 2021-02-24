@@ -24,7 +24,8 @@ $ ./docker.local/bin/setup_network.sh
 ```
 ## Modify Config and Keys files
 
-1. Update `network . dns_url` in `./docker.local/config/0chain.yaml` to point to `https://<network_url>/dns`
+1. Update `dns_url` in `./docker.local/config/0chain.yaml` to point to `https://<network_url>/dns`
+![alt text](https://github.com/0chain/0chain/blob/https_changes/https/example.png?raw=true)
 
 2. Edit `docker.local/config/b0snode2_keys.txt` and replace `localhost` and `198.18.0.83` with your domain.
 

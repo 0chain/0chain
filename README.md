@@ -78,6 +78,8 @@ $ ./docker.local/bin/sync_clock.sh
 
 1.4) If you want to adjust the network relay time, set the value of `network.relay_time`
 
+**_Note: Remove sharder72 and miner75 from docker.local/config/b0snode2_keys.txt and docker.local/config/b0mnode5_keys.txt respectively if you are joining to local network._**
+
 ## Starting the nodes
 
 1. Starting the nodes. On each of the miner terminals use the commands (note the `..` at the beginning. This is because, these commands are run from within the `docker.local/<miner/sharder|i>` directories and the `bin` is one level above relative to these directories)
